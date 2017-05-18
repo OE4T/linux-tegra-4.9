@@ -6822,6 +6822,28 @@ int tegra_dc_get_addr_info(int disp_id, struct resource *res)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_dc_get_addr_info);
+/*
+ * tegra_dc_get_vsync_timestamp() - Reads the vsync timestamp.
+ * @dc : pointer to struct tegra_dc for the current head.
+ *
+ * Currently supported for one chip version. TODO for others.
+ *
+ * Return : The 64 bit timestamp value.
+ */
+uint64_t tegra_dc_get_vsync_timestamp(struct tegra_dc *dc)
+{
+	if (!dc->enabled)
+		return 0;
+
+	if (tegra_dc_is_t21x() || tegra_dc_is_t18x())
+		return 0;
+	else if (tegra_dc_is_t19x())
+		return tegra_dc_get_vsync_timestamp_t19x(dc);
+
+	pr_warn("%s: Couldn't find the right chip version\n", __func__);
+
+	return 0;
+}
 
 int tegra_dc_get_numof_dispsors(void)
 {

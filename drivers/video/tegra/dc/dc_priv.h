@@ -808,4 +808,9 @@ int tegra_fb_release_fbmem(struct tegra_fb_info *);
 int tegra_dc_client_handle_event(struct tegra_dc *dc,
 		enum tegra_dc_client_cllbck_event_type event_type);
 
+uint64_t __attribute__((weak))
+	tegra_dc_get_vsync_timestamp_t19x(struct tegra_dc *dc);
+
+uint64_t tegra_dc_get_vsync_timestamp(struct tegra_dc *dc);
+
 #endif

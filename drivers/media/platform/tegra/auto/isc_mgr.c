@@ -679,8 +679,9 @@ static int isc_mgr_release(struct inode *inode, struct file *file)
 {
 	struct isc_mgr_priv *isc_mgr = file->private_data;
 
-	if (pwm_is_enabled(isc_mgr->pwm))
-		pwm_disable(isc_mgr->pwm);
+	if (isc_mgr->pwm)
+		if (pwm_is_enabled(isc_mgr->pwm))
+			pwm_disable(isc_mgr->pwm);
 
 	isc_mgr_misc_ctrl(isc_mgr, false);
 
@@ -950,6 +951,7 @@ static int isc_mgr_probe(struct platform_device *pdev)
 	atomic_set(&isc_mgr->in_use, 0);
 	INIT_LIST_HEAD(&isc_mgr->dev_list);
 	mutex_init(&isc_mgr->mutex);
+	isc_mgr->pwm = NULL;
 
 	if (pdev->dev.of_node) {
 		pd = of_isc_mgr_pdata(pdev);

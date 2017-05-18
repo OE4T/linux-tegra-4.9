@@ -134,6 +134,11 @@ static struct device_attribute *dev_attr_sm_icache_ecc_uncorrected_err_count_arr
 static struct device_attribute *dev_attr_gcc_l15_ecc_corrected_err_count_array;
 static struct device_attribute *dev_attr_gcc_l15_ecc_uncorrected_err_count_array;
 
+static struct device_attribute *dev_attr_fecs_ecc_corrected_err_count_array;
+static struct device_attribute *dev_attr_fecs_ecc_uncorrected_err_count_array;
+static struct device_attribute *dev_attr_gpccs_ecc_corrected_err_count_array;
+static struct device_attribute *dev_attr_gpccs_ecc_uncorrected_err_count_array;
+
 void gr_gv11b_create_sysfs(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -142,7 +147,7 @@ void gr_gv11b_create_sysfs(struct device *dev)
        initialized multiple times but we only need to create the ECC
        stats once. Therefore, add the following check to avoid
        creating duplicate stat sysfs nodes. */
-	if (g->gr.t19x.ecc_stats.sm_l1_tag_corrected_err_count.counters != NULL)
+	if (g->ecc.gr.t19x.sm_l1_tag_corrected_err_count.counters != NULL)
 		return;
 
 	gr_gp10b_create_sysfs(dev);
@@ -150,62 +155,90 @@ void gr_gv11b_create_sysfs(struct device *dev)
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_l1_tag_ecc_corrected_err_count",
-				&g->gr.t19x.ecc_stats.sm_l1_tag_corrected_err_count,
+				&g->ecc.gr.t19x.sm_l1_tag_corrected_err_count,
 				dev_attr_sm_l1_tag_ecc_corrected_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_l1_tag_ecc_uncorrected_err_count",
-				&g->gr.t19x.ecc_stats.sm_l1_tag_uncorrected_err_count,
+				&g->ecc.gr.t19x.sm_l1_tag_uncorrected_err_count,
 				dev_attr_sm_l1_tag_ecc_uncorrected_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_cbu_ecc_corrected_err_count",
-				&g->gr.t19x.ecc_stats.sm_cbu_corrected_err_count,
+				&g->ecc.gr.t19x.sm_cbu_corrected_err_count,
 				dev_attr_sm_cbu_ecc_corrected_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_cbu_ecc_uncorrected_err_count",
-				&g->gr.t19x.ecc_stats.sm_cbu_uncorrected_err_count,
+				&g->ecc.gr.t19x.sm_cbu_uncorrected_err_count,
 				dev_attr_sm_cbu_ecc_uncorrected_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_l1_data_ecc_corrected_err_count",
-				&g->gr.t19x.ecc_stats.sm_l1_data_corrected_err_count,
+				&g->ecc.gr.t19x.sm_l1_data_corrected_err_count,
 				dev_attr_sm_l1_data_ecc_corrected_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_l1_data_ecc_uncorrected_err_count",
-				&g->gr.t19x.ecc_stats.sm_l1_data_uncorrected_err_count,
+				&g->ecc.gr.t19x.sm_l1_data_uncorrected_err_count,
 				dev_attr_sm_l1_data_ecc_uncorrected_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_icache_ecc_corrected_err_count",
-				&g->gr.t19x.ecc_stats.sm_icache_corrected_err_count,
+				&g->ecc.gr.t19x.sm_icache_corrected_err_count,
 				dev_attr_sm_icache_ecc_corrected_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_icache_ecc_uncorrected_err_count",
-				&g->gr.t19x.ecc_stats.sm_icache_uncorrected_err_count,
+				&g->ecc.gr.t19x.sm_icache_uncorrected_err_count,
 				dev_attr_sm_icache_ecc_uncorrected_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"gcc_l15_ecc_corrected_err_count",
-				&g->gr.t19x.ecc_stats.gcc_l15_corrected_err_count,
+				&g->ecc.gr.t19x.gcc_l15_corrected_err_count,
 				dev_attr_gcc_l15_ecc_corrected_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"gcc_l15_ecc_uncorrected_err_count",
-				&g->gr.t19x.ecc_stats.gcc_l15_uncorrected_err_count,
+				&g->ecc.gr.t19x.gcc_l15_uncorrected_err_count,
 				dev_attr_gcc_l15_ecc_uncorrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"gpc",
+				"fecs_ecc_uncorrected_err_count",
+				&g->ecc.gr.t19x.fecs_uncorrected_err_count,
+				dev_attr_fecs_ecc_uncorrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"gpc",
+				"fecs_ecc_corrected_err_count",
+				&g->ecc.gr.t19x.fecs_corrected_err_count,
+				dev_attr_fecs_ecc_corrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				g->gr.gpc_count,
+				"gpc",
+				"gpccs_ecc_uncorrected_err_count",
+				&g->ecc.gr.t19x.gpccs_uncorrected_err_count,
+				dev_attr_gpccs_ecc_uncorrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				g->gr.gpc_count,
+				"gpc",
+				"gpccs_ecc_corrected_err_count",
+				&g->ecc.gr.t19x.gpccs_corrected_err_count,
+				dev_attr_gpccs_ecc_corrected_err_count_array);
 
 	if (error)
 		dev_err(dev, "Failed to create gv11b sysfs attributes!\n");
@@ -217,52 +250,71 @@ static void gr_gv11b_remove_sysfs(struct device *dev)
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.sm_l1_tag_corrected_err_count,
+			&g->ecc.gr.t19x.sm_l1_tag_corrected_err_count,
 			dev_attr_sm_l1_tag_ecc_corrected_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.sm_l1_tag_uncorrected_err_count,
+			&g->ecc.gr.t19x.sm_l1_tag_uncorrected_err_count,
 			dev_attr_sm_l1_tag_ecc_uncorrected_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.sm_cbu_corrected_err_count,
+			&g->ecc.gr.t19x.sm_cbu_corrected_err_count,
 			dev_attr_sm_cbu_ecc_corrected_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.sm_cbu_uncorrected_err_count,
+			&g->ecc.gr.t19x.sm_cbu_uncorrected_err_count,
 			dev_attr_sm_cbu_ecc_uncorrected_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.sm_l1_data_corrected_err_count,
+			&g->ecc.gr.t19x.sm_l1_data_corrected_err_count,
 			dev_attr_sm_l1_data_ecc_corrected_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.sm_l1_data_uncorrected_err_count,
+			&g->ecc.gr.t19x.sm_l1_data_uncorrected_err_count,
 			dev_attr_sm_l1_data_ecc_uncorrected_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.sm_icache_corrected_err_count,
+			&g->ecc.gr.t19x.sm_icache_corrected_err_count,
 			dev_attr_sm_icache_ecc_corrected_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.sm_icache_uncorrected_err_count,
+			&g->ecc.gr.t19x.sm_icache_uncorrected_err_count,
 			dev_attr_sm_icache_ecc_uncorrected_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.gcc_l15_corrected_err_count,
+			&g->ecc.gr.t19x.gcc_l15_corrected_err_count,
 			dev_attr_gcc_l15_ecc_corrected_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t19x.ecc_stats.gcc_l15_uncorrected_err_count,
+			&g->ecc.gr.t19x.gcc_l15_uncorrected_err_count,
 			dev_attr_gcc_l15_ecc_uncorrected_err_count_array);
 
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.gr.t19x.fecs_uncorrected_err_count,
+			dev_attr_fecs_ecc_uncorrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.gr.t19x.fecs_corrected_err_count,
+			dev_attr_fecs_ecc_corrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			g->gr.gpc_count,
+			&g->ecc.gr.t19x.gpccs_uncorrected_err_count,
+			dev_attr_gpccs_ecc_uncorrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			g->gr.gpc_count,
+			&g->ecc.gr.t19x.gpccs_corrected_err_count,
+			dev_attr_gpccs_ecc_corrected_err_count_array);
 }

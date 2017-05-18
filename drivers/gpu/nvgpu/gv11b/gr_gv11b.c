@@ -163,7 +163,7 @@ static int gr_gv11b_handle_l1_tag_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		l1_tag_corrected_err_count_delta +=
 			(is_l1_tag_ecc_corrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.sm_l1_tag_corrected_err_count.counters[tpc] +=
+		g->ecc.gr.t19x.sm_l1_tag_corrected_err_count.counters[tpc] +=
 							l1_tag_corrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_r() + offset,
@@ -178,7 +178,7 @@ static int gr_gv11b_handle_l1_tag_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		l1_tag_uncorrected_err_count_delta +=
 			(is_l1_tag_ecc_uncorrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.sm_l1_tag_uncorrected_err_count.counters[tpc] +=
+		g->ecc.gr.t19x.sm_l1_tag_uncorrected_err_count.counters[tpc] +=
 							l1_tag_uncorrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_r() + offset,
@@ -255,7 +255,7 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		lrf_corrected_err_count_delta +=
 			(is_lrf_ecc_corrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_total_s());
-		g->gr.t18x.ecc_stats.sm_lrf_single_err_count.counters[tpc] +=
+		g->ecc.gr.t18x.sm_lrf_single_err_count.counters[tpc] +=
 							lrf_corrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_r() + offset,
@@ -270,7 +270,7 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		lrf_uncorrected_err_count_delta +=
 			(is_lrf_ecc_uncorrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_total_s());
-		g->gr.t18x.ecc_stats.sm_lrf_double_err_count.counters[tpc] +=
+		g->ecc.gr.t18x.sm_lrf_double_err_count.counters[tpc] +=
 							lrf_uncorrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_r() + offset,
@@ -339,7 +339,7 @@ static int gr_gv11b_handle_cbu_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		cbu_corrected_err_count_delta +=
 			(is_cbu_ecc_corrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_cbu_ecc_corrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.sm_cbu_corrected_err_count.counters[tpc] +=
+		g->ecc.gr.t19x.sm_cbu_corrected_err_count.counters[tpc] +=
 							cbu_corrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_cbu_ecc_corrected_err_count_r() + offset,
@@ -354,7 +354,7 @@ static int gr_gv11b_handle_cbu_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		cbu_uncorrected_err_count_delta +=
 			(is_cbu_ecc_uncorrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_cbu_ecc_uncorrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.sm_cbu_uncorrected_err_count.counters[tpc] +=
+		g->ecc.gr.t19x.sm_cbu_uncorrected_err_count.counters[tpc] +=
 							cbu_uncorrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_cbu_ecc_uncorrected_err_count_r() + offset,
@@ -419,7 +419,7 @@ static int gr_gv11b_handle_l1_data_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		l1_data_corrected_err_count_delta +=
 			(is_l1_data_ecc_corrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.sm_l1_data_corrected_err_count.counters[tpc] +=
+		g->ecc.gr.t19x.sm_l1_data_corrected_err_count.counters[tpc] +=
 							l1_data_corrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_r() + offset,
@@ -434,7 +434,7 @@ static int gr_gv11b_handle_l1_data_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		l1_data_uncorrected_err_count_delta +=
 			(is_l1_data_ecc_uncorrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.sm_l1_data_uncorrected_err_count.counters[tpc] +=
+		g->ecc.gr.t19x.sm_l1_data_uncorrected_err_count.counters[tpc] +=
 							l1_data_uncorrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_r() + offset,
@@ -503,7 +503,7 @@ static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		icache_corrected_err_count_delta +=
 			(is_icache_ecc_corrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.sm_icache_corrected_err_count.counters[tpc] +=
+		g->ecc.gr.t19x.sm_icache_corrected_err_count.counters[tpc] +=
 							icache_corrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_r() + offset,
@@ -518,7 +518,7 @@ static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		icache_uncorrected_err_count_delta +=
 			(is_icache_ecc_uncorrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.sm_icache_uncorrected_err_count.counters[tpc] +=
+		g->ecc.gr.t19x.sm_icache_uncorrected_err_count.counters[tpc] +=
 							icache_uncorrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_r() + offset,
@@ -606,7 +606,7 @@ static int gr_gv11b_handle_gcc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		gcc_l15_corrected_err_count_delta +=
 			(is_gcc_l15_ecc_corrected_total_err_overflow <<
 			 gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.gcc_l15_corrected_err_count.counters[gpc] +=
+		g->ecc.gr.t19x.gcc_l15_corrected_err_count.counters[gpc] +=
 							gcc_l15_corrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_r() + offset,
@@ -621,7 +621,7 @@ static int gr_gv11b_handle_gcc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		gcc_l15_uncorrected_err_count_delta +=
 			(is_gcc_l15_ecc_uncorrected_total_err_overflow <<
 			 gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_total_s());
-		g->gr.t19x.ecc_stats.gcc_l15_uncorrected_err_count.counters[gpc] +=
+		g->ecc.gr.t19x.gcc_l15_uncorrected_err_count.counters[gpc] +=
 							gcc_l15_uncorrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_r() + offset,
@@ -639,6 +639,9 @@ static int gr_gv11b_handle_gpccs_ecc_exception(struct gk20a *g, u32 gpc,
 {
 	int ret = 0;
 	u32 ecc_status, ecc_addr, corrected_cnt, uncorrected_cnt;
+	u32 corrected_delta, uncorrected_delta;
+	u32 corrected_overflow, uncorrected_overflow;
+
 	int hww_esr;
 	u32 offset = proj_gpc_stride_v() * gpc;
 
@@ -657,10 +660,34 @@ static int gr_gv11b_handle_gpccs_ecc_exception(struct gk20a *g, u32 gpc,
 	uncorrected_cnt = gk20a_readl(g,
 		gr_gpc0_gpccs_falcon_ecc_uncorrected_err_count_r() + offset);
 
+	corrected_delta = gr_gpc0_gpccs_falcon_ecc_corrected_err_count_total_v(
+							corrected_cnt);
+	uncorrected_delta = gr_gpc0_gpccs_falcon_ecc_uncorrected_err_count_total_v(
+							uncorrected_cnt);
+	corrected_overflow = ecc_status &
+		gr_gpc0_gpccs_falcon_ecc_status_corrected_err_total_counter_overflow_m();
+
+	uncorrected_overflow = ecc_status &
+		gr_gpc0_gpccs_falcon_ecc_status_uncorrected_err_total_counter_overflow_m();
+
+
 	/* clear the interrupt */
+	if ((corrected_delta > 0) || corrected_overflow)
+		gk20a_writel(g,
+			gr_gpc0_gpccs_falcon_ecc_corrected_err_count_r() +
+			offset, 0);
+	if ((uncorrected_delta > 0) || uncorrected_overflow)
+		gk20a_writel(g,
+			gr_gpc0_gpccs_falcon_ecc_uncorrected_err_count_r() +
+			offset, 0);
+
 	gk20a_writel(g, gr_gpc0_gpccs_falcon_ecc_status_r() + offset,
 				gr_gpc0_gpccs_falcon_ecc_status_reset_task_f());
 
+	g->ecc.gr.t19x.gpccs_corrected_err_count.counters[gpc] +=
+							corrected_delta;
+	g->ecc.gr.t19x.gpccs_uncorrected_err_count.counters[gpc] +=
+							uncorrected_delta;
 	nvgpu_log(g, gpu_dbg_intr,
 			"gppcs gpc:%d ecc interrupt intr: 0x%x", gpc, hww_esr);
 
@@ -675,6 +702,8 @@ static int gr_gv11b_handle_gpccs_ecc_exception(struct gk20a *g, u32 gpc,
 	if (ecc_status &
 		gr_gpc0_gpccs_falcon_ecc_status_uncorrected_err_dmem_m())
 		nvgpu_log(g, gpu_dbg_intr, "dmem ecc error uncorrected");
+	if (corrected_overflow || uncorrected_overflow)
+		nvgpu_info(g, "gpccs ecc counter overflow!");
 
 	nvgpu_log(g, gpu_dbg_intr,
 		"ecc error row address: 0x%x",
@@ -682,8 +711,8 @@ static int gr_gv11b_handle_gpccs_ecc_exception(struct gk20a *g, u32 gpc,
 
 	nvgpu_log(g, gpu_dbg_intr,
 		"ecc error count corrected: %d, uncorrected %d",
-		gr_gpc0_gpccs_falcon_ecc_corrected_err_count_total_v(corrected_cnt),
-		gr_gpc0_gpccs_falcon_ecc_uncorrected_err_count_total_v(uncorrected_cnt));
+		g->ecc.gr.t19x.gpccs_corrected_err_count.counters[gpc],
+		g->ecc.gr.t19x.gpccs_uncorrected_err_count.counters[gpc]);
 
 	return ret;
 }
@@ -710,8 +739,8 @@ static void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
 		gr_gpcs_gpccs_gpc_exception_en_tpc_f((1 << gr->tpc_count) - 1);
 
 	gk20a_writel(g, gr_gpcs_gpccs_gpc_exception_en_r(),
-		(tpc_mask | gr_gpcs_gpccs_gpc_exception_en_gcc_f(1)
-			    gr_gpcs_gpccs_gpc_exception_en_gpccs_f(1));
+		(tpc_mask | gr_gpcs_gpccs_gpc_exception_en_gcc_f(1) |
+			    gr_gpcs_gpccs_gpc_exception_en_gpccs_f(1)));
 }
 
 static int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
@@ -1690,6 +1719,8 @@ static int gr_gv11b_get_cilp_preempt_pending_chid(struct gk20a *g, int *__chid)
 static void gr_gv11b_handle_fecs_ecc_error(struct gk20a *g, u32 intr)
 {
 	u32 ecc_status, ecc_addr, corrected_cnt, uncorrected_cnt;
+	u32 corrected_delta, uncorrected_delta;
+	u32 corrected_overflow, uncorrected_overflow;
 
 	if (intr & (gr_fecs_host_int_status_ecc_uncorrected_m() |
 		    gr_fecs_host_int_status_ecc_corrected_m())) {
@@ -1701,9 +1732,41 @@ static void gr_gv11b_handle_fecs_ecc_error(struct gk20a *g, u32 intr)
 		uncorrected_cnt = gk20a_readl(g,
 			gr_fecs_falcon_ecc_uncorrected_err_count_r());
 
+		corrected_delta =
+			gr_fecs_falcon_ecc_corrected_err_count_total_v(
+							corrected_cnt);
+		uncorrected_delta =
+			gr_fecs_falcon_ecc_uncorrected_err_count_total_v(
+							uncorrected_cnt);
+
+		corrected_overflow = ecc_status &
+			gr_fecs_falcon_ecc_status_corrected_err_total_counter_overflow_m();
+		uncorrected_overflow = ecc_status &
+			gr_fecs_falcon_ecc_status_uncorrected_err_total_counter_overflow_m();
+
+		/* clear the interrupt */
+		if ((corrected_delta > 0) || corrected_overflow)
+			gk20a_writel(g,
+				gr_fecs_falcon_ecc_corrected_err_count_r(), 0);
+		if ((uncorrected_delta > 0) || uncorrected_overflow)
+			gk20a_writel(g,
+				gr_fecs_falcon_ecc_uncorrected_err_count_r(),
+				0);
+
+
+		/* clear the interrupt */
+		gk20a_writel(g, gr_fecs_falcon_ecc_uncorrected_err_count_r(),
+				0);
+		gk20a_writel(g, gr_fecs_falcon_ecc_corrected_err_count_r(), 0);
+
 		/* clear the interrupt */
 		gk20a_writel(g, gr_fecs_falcon_ecc_status_r(),
 				gr_fecs_falcon_ecc_status_reset_task_f());
+
+		g->ecc.gr.t19x.fecs_corrected_err_count.counters[0] +=
+							corrected_delta;
+		g->ecc.gr.t19x.fecs_uncorrected_err_count.counters[0] +=
+							uncorrected_delta;
 
 		nvgpu_log(g, gpu_dbg_intr,
 			"fecs ecc interrupt intr: 0x%x", intr);
@@ -1722,6 +1785,8 @@ static void gr_gv11b_handle_fecs_ecc_error(struct gk20a *g, u32 intr)
 			gr_fecs_falcon_ecc_status_uncorrected_err_dmem_m())
 			nvgpu_log(g, gpu_dbg_intr,
 						"dmem ecc error uncorrected");
+		if (corrected_overflow || uncorrected_overflow)
+			nvgpu_info(g, "gpccs ecc counter overflow!");
 
 		nvgpu_log(g, gpu_dbg_intr,
 			"ecc error row address: 0x%x",
@@ -1729,10 +1794,8 @@ static void gr_gv11b_handle_fecs_ecc_error(struct gk20a *g, u32 intr)
 
 		nvgpu_log(g, gpu_dbg_intr,
 			"ecc error count corrected: %d, uncorrected %d",
-			gr_fecs_falcon_ecc_corrected_err_count_total_v(
-							corrected_cnt),
-			gr_fecs_falcon_ecc_uncorrected_err_count_total_v(
-							uncorrected_cnt));
+			g->ecc.gr.t19x.fecs_corrected_err_count.counters[0],
+			g->ecc.gr.t19x.fecs_uncorrected_err_count.counters[0]);
 	}
 }
 

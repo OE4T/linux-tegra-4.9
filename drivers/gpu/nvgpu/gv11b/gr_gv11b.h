@@ -35,21 +35,6 @@ enum {
 	VOLTA_DMA_COPY_A        = 0xC3B5,
 };
 
-struct gr_t19x {
-	struct {
-		struct gr_gp10b_ecc_stat sm_l1_tag_corrected_err_count;
-		struct gr_gp10b_ecc_stat sm_l1_tag_uncorrected_err_count;
-		struct gr_gp10b_ecc_stat sm_cbu_corrected_err_count;
-		struct gr_gp10b_ecc_stat sm_cbu_uncorrected_err_count;
-		struct gr_gp10b_ecc_stat sm_l1_data_corrected_err_count;
-		struct gr_gp10b_ecc_stat sm_l1_data_uncorrected_err_count;
-		struct gr_gp10b_ecc_stat sm_icache_corrected_err_count;
-		struct gr_gp10b_ecc_stat sm_icache_uncorrected_err_count;
-		struct gr_gp10b_ecc_stat gcc_l15_corrected_err_count;
-		struct gr_gp10b_ecc_stat gcc_l15_uncorrected_err_count;
-	} ecc_stats;
-};
-
 #define NVC397_SET_SHADER_EXCEPTIONS		0x1528
 #define NVC397_SET_CIRCULAR_BUFFER_SIZE 	0x1280
 #define NVC397_SET_ALPHA_CIRCULAR_BUFFER_SIZE 	0x02dc

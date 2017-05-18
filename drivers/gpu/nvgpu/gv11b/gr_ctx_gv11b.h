@@ -1,7 +1,7 @@
 /*
  * GV11B Graphics Context
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016 - 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,8 +21,10 @@
 #include "gk20a/gr_ctx_gk20a.h"
 
 /* production netlist, one and only one from below */
-#define GV11B_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_A
-
+/*
+ * Define netlist for silicon only
+ * #define GV11B_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_A
+*/
 void gv11b_init_gr_ctx(struct gpu_ops *gops);
 
 #endif /*__GR_CTX_GV11B_H__*/

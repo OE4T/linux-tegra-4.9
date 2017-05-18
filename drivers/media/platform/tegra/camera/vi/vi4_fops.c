@@ -726,6 +726,12 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 				* VI_CSI_CLK_SCALE * ppc_multiplier;
 		}
 
+		/* C-PHY sensors - 2.28 clock multiplier*/
+		if (chan->numlanes == 3) {
+			request_pixelrate *= 16/7;
+			csi_freq *= 16/7;
+		}
+
 		/* VI clk should be slightly faster than CSI clk*/
 		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video,
 				request_pixelrate, 0, NVHOST_PIXELRATE);

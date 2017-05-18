@@ -32,6 +32,16 @@ config VIDEO_IMX274
 	  To compile this driver as a module, choose M here: the module
 	  will be called imx274.
 
+config VIDEO_IMX318
+	tristate "IMX318 camera sensor support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	---help---
+	  This is a Video4Linux2 sensor-level driver for the Sony
+	  IMX318 camera sensor
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called imx318.
+
 config VIDEO_LC898212
 	tristate "LC898212 focuser support"
 	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API

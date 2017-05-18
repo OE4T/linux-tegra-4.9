@@ -947,16 +947,6 @@ skip_periph_reset:
 	if (i2c_dev->is_dvc)
 		tegra_dvc_init(i2c_dev);
 
-	/* configuring below register to default as per TRM*/
-	i2c_writel(i2c_dev, 0, I2C_TLOW_SEXT);
-	i2c_writel(i2c_dev, 0, I2C_CMD_ADDR0);
-	i2c_writel(i2c_dev, 0, I2C_CMD_ADDR1);
-	i2c_writel(i2c_dev, 0, I2C_CMD_DATA1);
-	i2c_writel(i2c_dev, 0, I2C_CMD_DATA2);
-	i2c_writel(i2c_dev, 0, I2C_DEBUG_CONTROL);
-	i2c_writel(i2c_dev, 0, I2C_INTERRUPT_SET_REGISTER);
-	i2c_writel(i2c_dev, 0, I2C_FIFO_CONTROL);
-
 	val = I2C_CNFG_NEW_MASTER_FSM | I2C_CNFG_PACKET_MODE_EN;
 	if (i2c_dev->bus_clk_rate != I2C_HS_MODE)
 		val |= (0x2 << I2C_CNFG_DEBOUNCE_CNT_SHIFT);

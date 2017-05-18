@@ -1674,9 +1674,6 @@ struct tegra_powergate_driver_ops *tegra210_powergate_init_chip_support(void)
 	tegra_pmc = ioremap(TEGRA_PMC_BASE, 4096);
 	tegra_mc = ioremap(TEGRA_MC_BASE, 4096);
 
-	if (tegra_platform_is_linsim())
-		return NULL;
-
 	return &tegra210_pg_ops;
 }
 

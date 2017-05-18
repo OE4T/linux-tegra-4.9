@@ -117,12 +117,6 @@ int tegra_kfuse_enable_sensing(void)
 		goto exit_unlock;
 	}
 
-	/* WAR to simulator bug in clockgating behavior; The register must
-	 * not be written or the users will not be able to access kfuse
-	 */
-	if (tegra_platform_is_linsim())
-		goto exit_unlock;
-
 	/* enable kfuse sensing */
 	tegra_kfuse_writel(kfuse, 1, KFUSE_CG1_0);
 

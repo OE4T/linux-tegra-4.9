@@ -936,6 +936,19 @@
 			iso-smmu;
 		};
 
+		nvcsi@150c0000 {
+			compatible = "nvidia,tegra194-nvcsi";
+			reg = <0x0 0x150c0000 0x0 0x00040000>;
+			resets = <&bpmp_resets TEGRA194_RESET_NVCSI>;
+			clocks = <&bpmp_clks TEGRA194_CLK_NVCSI>,
+				 <&bpmp_clks TEGRA194_CLK_NVCSILP>,
+				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
+			clock-names = "nvcsi", "nvcsilp", "nvcsilp_parent";
+			interrupts = <0 119 0x04>;
+			status = "disabled";
+			num-ports = <6>;
+		};
+
 		slvs-ec@15ac0000 {
 			compatible = "nvidia,tegra-slvs-ec";
 			reg = <0x0 0x15ac0000 0x0 0x00040000>;

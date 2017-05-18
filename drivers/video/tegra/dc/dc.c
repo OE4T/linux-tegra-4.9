@@ -1323,8 +1323,6 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 
 		/* create new - now restricted to fake_dp only */
 		if (out_type == TEGRA_DC_OUT_FAKE_DP) {
-			struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-
 			/* set to default bpp */
 			if (!dc->pdata->default_out->depth)
 				dc->pdata->default_out->depth = 24;
@@ -1334,10 +1332,6 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 			if (cur_dc_out != TEGRA_DC_OUT_DP) {
 				allocate = true;
 			}
-			if (dp)
-				tegra_dc_init_fake_panel_link_cfg(
-					&dp->link_cfg);
-
 		} else if ((out_type >= TEGRA_DC_OUT_FAKE_DSIA) &&
 				(out_type <= TEGRA_DC_OUT_FAKE_DSI_GANGED)) {
 			/* DSI and fake DSI use same data

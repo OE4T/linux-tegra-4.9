@@ -513,7 +513,7 @@ static int tsec_load_kfuse(struct platform_device *pdev)
 	u32 val;
 	u32 timeout;
 
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+	if (tegra_platform_is_vdk())
 		return 0;
 
 	val = host1x_readl(pdev, tsec_tegra_ctl_r());

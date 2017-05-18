@@ -1112,7 +1112,7 @@ static int nvhost_probe(struct platform_device *dev)
 	nvhost_device_list_init();
 
 	/* Disable timeouts in simulation */
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+	if (tegra_platform_is_vdk())
 		pdata->nvhost_timeout_default = 0;
 	else
 		pdata->nvhost_timeout_default =

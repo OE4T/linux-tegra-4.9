@@ -289,8 +289,7 @@ static int host1x_wait_dmaput_eq_dmaget(struct nvhost_cdma *cdma)
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(10);
 	u32 dmaput, dmaget;
 
-	while (time_before(jiffies, end_jiffies) ||
-		      tegra_platform_is_linsim() || tegra_platform_is_vdk()) {
+	while (time_before(jiffies, end_jiffies) || tegra_platform_is_vdk()) {
 		dmaput = host1x_channel_readl(ch, host1x_channel_dmaput_r());
 		dmaget = host1x_channel_readl(ch, host1x_channel_dmaget_r());
 		if (dmaput == dmaget)

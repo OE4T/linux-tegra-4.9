@@ -96,7 +96,6 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 		if (debug_mode) {
 			if (fw == host_nvdec_fw_bl) {
 				if (tegra_platform_is_qt() ||
-					tegra_platform_is_linsim() ||
 					tegra_platform_is_vdk())
 					snprintf(fw_name, FW_NAME_SIZE,
 							"nvhost_nvdec_bl_no_wpr0%d%d.fw",
@@ -112,7 +111,6 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 		} else {
 			if (fw == host_nvdec_fw_bl)
 				if (tegra_platform_is_qt() ||
-					tegra_platform_is_linsim() ||
 					tegra_platform_is_vdk()) {
 					dev_info(&dev->dev,
 						"Prod + No-WPR not allowed\n");
@@ -263,8 +261,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 					nvdec_scp_ctl_stat_r()) &
 					nvdec_scp_ctl_stat_debug_mode_m();
 		bool skip_wpr_settings = debug &&
-			(tegra_platform_is_qt() || tegra_platform_is_linsim() ||
-			 tegra_platform_is_vdk());
+			(tegra_platform_is_qt() || tegra_platform_is_vdk());
 
 
 		fb_data_offset = (m[0]->os.bin_data_offset +

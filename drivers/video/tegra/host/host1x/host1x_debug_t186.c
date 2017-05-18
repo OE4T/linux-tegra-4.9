@@ -127,7 +127,7 @@ static void show_channel_regs(struct output *o, struct nvhost_channel *ch,
 	nvhost_debug_output(o, "CMDFIFO_STAT_0:  %08x\n", val);
 	val = host1x_channel_readl(ch, host1x_channel_rdata_r());
 	nvhost_debug_output(o, "CMDFIFO_RDATA_0: %08x\n", val);
-	if (!tegra_platform_is_linsim() && !tegra_platform_is_vdk()) {
+	if (!tegra_platform_is_vdk()) {
 		val = host1x_channel_readl(ch, host1x_channel_cmdp_offset_r());
 		nvhost_debug_output(o, "CMDP_OFFSET_0:   %08x\n", val);
 		val = host1x_channel_readl(ch, host1x_channel_cmdp_class_r());

@@ -479,10 +479,6 @@ static void t186_set_nvhost_chanops(struct nvhost_channel *ch)
 		return;
 
 	ch->ops = host1x_channel_ops;
-
-	/* Disable gather filter in simulator */
-	if (tegra_platform_is_linsim())
-		ch->ops.init_gather_filter = NULL;
 }
 
 int nvhost_init_t186_channel_support(struct nvhost_master *host,
@@ -512,10 +508,6 @@ static void t186_init_regs(struct platform_device *pdev, bool prod)
 						 regs->disable);
 		regs++;
 	}
-
-	/* simulator cannot handle following writes - skip them */
-	if (tegra_platform_is_linsim())
-		return;
 
 	while (map_regs->host1x_offset) {
 		host1x_hypervisor_writel(pdev,
@@ -562,11 +554,10 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 	/* WAR to bugs 200094901 and 200082771: enable protection
 	 * only on silicon/emulation */
 
-	if (!tegra_platform_is_linsim()) {
-		op->syncpt.reset = t186_syncpt_reset;
-		op->syncpt.mark_used = t186_syncpt_mark_used;
-		op->syncpt.mark_unused = t186_syncpt_mark_unused;
-	}
+	op->syncpt.reset = t186_syncpt_reset;
+	op->syncpt.mark_used = t186_syncpt_mark_used;
+	op->syncpt.mark_unused = t186_syncpt_mark_unused;
+
 	op->syncpt.mutex_owner = t186_syncpt_mutex_owner;
 
 	op->remove_support = t186_remove_support;

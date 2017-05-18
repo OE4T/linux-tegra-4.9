@@ -682,11 +682,8 @@ int nvhost_module_init(struct platform_device *dev)
 			clk_disable_unprepare(pdata->clk[i]);
 	}
 
-
-	/* disable railgating if pm runtime is not available
-	 * and for linsim platform */
-	pdata->can_powergate = pdata->can_powergate &&
-		!tegra_platform_is_linsim() && !tegra_platform_is_vdk();
+	/* disable railgating if pm runtime is not available */
+	pdata->can_powergate = pdata->can_powergate && !tegra_platform_is_vdk();
 
 	if (nvhost_is_210()) {
 		struct generic_pm_domain *gpd = pd_to_genpd(dev->dev.pm_domain);

@@ -84,6 +84,8 @@ struct podgov_info_rec {
 	struct kobj_attribute	enable_3d_scaling_attr;
 	struct kobj_attribute	user_attr;
 	struct kobj_attribute	freq_request_attr;
+
+	struct mutex		lock;
 };
 
 /*******************************************************************************
@@ -127,42 +129,50 @@ static void scaling_limit(struct devfreq *df, unsigned long *freq)
 static void podgov_enable(struct devfreq *df, int enable)
 {
 	struct device *dev = df->dev.parent;
-	struct podgov_info_rec *podgov;
+	struct podgov_info_rec *podgov = df->data;
+	bool polling;
 
 	/* make sure the device is alive before doing any scaling */
 	pm_runtime_get_noresume(dev);
 
+	mutex_lock(&podgov->lock);
 	mutex_lock(&df->lock);
-
-	podgov = df->data;
 
 	trace_podgov_enabled(df->dev.parent, enable);
 
 	/* bad configuration. quit. */
-	if (df->min_freq == df->max_freq)
-		goto exit_unlock;
+	if (df->min_freq == df->max_freq) {
+		mutex_unlock(&df->lock);
+		mutex_unlock(&podgov->lock);
+		pm_runtime_put(dev);
+		return;
+	}
 
 	/* store the enable information */
 	podgov->enable = enable;
 
 	/* skip local adjustment if we are enabling or the device is
 	 * suspended */
-	if (enable || !pm_runtime_active(dev))
-		goto exit_unlock;
+	if (!enable && pm_runtime_active(dev)) {
+		/* full speed */
+		podgov->adjustment_frequency = df->max_freq;
+		podgov->adjustment_type = ADJUSTMENT_LOCAL;
+		update_devfreq(df);
+	}
 
-	/* full speed */
-	podgov->adjustment_frequency = df->max_freq;
-	podgov->adjustment_type = ADJUSTMENT_LOCAL;
-	update_devfreq(df);
+	polling = podgov->enable && !podgov->p_user;
 
+	/* Need to unlock to call devfreq_monitor_suspend/resume()
+	 * still holding podgov->lock to guarantee atomicity
+	 */
 	mutex_unlock(&df->lock);
 
-	pm_runtime_put(dev);
+	if (polling)
+		devfreq_monitor_resume(df);
+	else
+		devfreq_monitor_suspend(df);
 
-	return;
-
-exit_unlock:
-	mutex_unlock(&df->lock);
+	mutex_unlock(&podgov->lock);
 	pm_runtime_put(dev);
 }
 
@@ -177,14 +187,15 @@ exit_unlock:
 static void podgov_set_user_ctl(struct devfreq *df, int user)
 {
 	struct device *dev = df->dev.parent;
-	struct podgov_info_rec *podgov;
+	struct podgov_info_rec *podgov = df->data;
 	int old_user;
+	bool polling;
 
 	/* make sure the device is alive before doing any scaling */
 	pm_runtime_get_noresume(dev);
 
+	mutex_lock(&podgov->lock);
 	mutex_lock(&df->lock);
-	podgov = df->data;
 
 	trace_podgov_set_user_ctl(df->dev.parent, user);
 
@@ -194,22 +205,26 @@ static void podgov_set_user_ctl(struct devfreq *df, int user)
 
 	/* skip scaling, if scaling (or the whole device) is turned off
 	 * - or the scaling already was in user mode */
-	if (!pm_runtime_active(dev) || !podgov->enable ||
-	    !(user && !old_user))
-		goto exit_unlock;
+	if (pm_runtime_active(dev) && podgov->enable && user && !old_user) {
+		/* write request */
+		podgov->adjustment_frequency = podgov->p_freq_request;
+		podgov->adjustment_type = ADJUSTMENT_LOCAL;
+		update_devfreq(df);
+	}
 
-	/* write request */
-	podgov->adjustment_frequency = podgov->p_freq_request;
-	podgov->adjustment_type = ADJUSTMENT_LOCAL;
-	update_devfreq(df);
+	polling = podgov->enable && !podgov->p_user;
 
+	/* Need to unlock to call devfreq_monitor_suspend/resume()
+	 * still holding podgov->lock to guarantee atomicity
+	 */
 	mutex_unlock(&df->lock);
-	pm_runtime_put(dev);
 
-	return;
+	if (polling)
+		devfreq_monitor_resume(df);
+	else
+		devfreq_monitor_suspend(df);
 
-exit_unlock:
-	mutex_unlock(&df->lock);
+	mutex_unlock(&podgov->lock);
 	pm_runtime_put(dev);
 }
 
@@ -621,6 +636,8 @@ static int nvhost_pod_init(struct devfreq *df)
 	podgov->last_scale = now;
 
 	podgov->power_manager = df;
+
+	mutex_init(&podgov->lock);
 
 	attr = &podgov->enable_3d_scaling_attr;
 	attr->attr.name = "enable_3d_scaling";

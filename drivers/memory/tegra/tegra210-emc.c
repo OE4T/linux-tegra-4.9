@@ -2532,6 +2532,9 @@ static __init int tegra_emc_therm_init(void)
 {
 	void *ret;
 
+	if (!tegra_emc_init_done)
+		return -ENODEV;
+
 	ret = thermal_cooling_device_register("tegra-dram", NULL,
 					      &emc_dram_cd_ops);
 	if (IS_ERR(ret))

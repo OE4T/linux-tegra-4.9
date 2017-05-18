@@ -21,6 +21,7 @@
 #include <linux/version.h>
 #include <asm/io.h>
 
+#include <linux/platform/tegra/mc-regs-t18x.h>
 #include <linux/platform/tegra/tegra_emc.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/latency_allowance.h>

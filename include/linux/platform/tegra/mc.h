@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010-2012 Google, Inc.
- * Copyright (C) 2013-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2013-2017, NVIDIA Corporation.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -20,17 +20,9 @@
 #define __MACH_TEGRA_MC_H
 
 #include <linux/platform/tegra/tegra_mc.h>
-/* Pull in chip specific MC header - contains the regs for the platform. */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-#include <linux/platform/tegra/mc-regs-t21x.h>
-#define MC_LATENCY_ALLOWANCE_BASE	MC_LATENCY_ALLOWANCE_AFI_0
-#elif defined(CONFIG_ARCH_TEGRA_18x_SOC)
-#include <linux/platform/tegra/mc-regs-t18x.h>
-#define MC_LATENCY_ALLOWANCE_BASE	MC_LATENCY_ALLOWANCE_AFI_0
-#endif
 
 #define MC_MAX_INTR_COUNT	32
-#define MC_MAX_CHANNELS		8
+#define MC_MAX_CHANNELS		16
 
 #define MC_BROADCAST_CHANNEL	-1
 
@@ -213,5 +205,7 @@ int tegra_mc_flush_done(int id);
  * necessary.
  */
 #define MC_EMEM_ARB_MISC0_MC_EMC_SAME_FREQ_BIT			(1 << 27)
+
+u32 tegra_get_dvfs_clk_change_latency_nsec(unsigned long emc_freq_khz);
 
 #endif

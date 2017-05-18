@@ -32,6 +32,7 @@
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
 
+#include <linux/platform/tegra/mc-regs-t21x.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mcerr.h>
 
@@ -43,6 +44,7 @@
 #define MC_CLIENT_HOTRESET_STAT		0x204
 #define MC_CLIENT_HOTRESET_CTRL_1	0x970
 #define MC_CLIENT_HOTRESET_STAT_1	0x974
+#define MC_LATENCY_ALLOWANCE_BASE	MC_LATENCY_ALLOWANCE_AFI_0
 
 #define MC_TIMING_REG_NUM1					\
 	((MC_EMEM_ARB_TIMING_W2R - MC_EMEM_ARB_CFG) / 4 + 1)
@@ -163,7 +165,7 @@ static void tegra_mc_timing_save(void)
 		*ctx++ = mc_readl(off);
 #endif
 
-	*ctx++ = mc_readl(MC_INT_MASK);
+	*ctx++ = mc_readl(MC_INTMASK);
 }
 
 void tegra_mc_timing_restore(void)
@@ -192,8 +194,8 @@ void tegra_mc_timing_restore(void)
 		__mc_raw_writel(MC_BROADCAST_CHANNEL, *ctx++, off);
 #endif
 
-	mc_writel(*ctx++, MC_INT_MASK);
-	off = mc_readl(MC_INT_MASK);
+	mc_writel(*ctx++, MC_INTMASK);
+	off = mc_readl(MC_INTMASK);
 
 	mc_writel(0x1, MC_TIMING_CONTROL);
 	off = mc_readl(MC_TIMING_CONTROL);
@@ -501,6 +503,11 @@ static int tegra_mc_probe(struct platform_device *pdev)
 	tegra_mcerr_init(mc_debugfs_dir, pdev);
 
 	return 0;
+}
+
+u32 __weak tegra_get_dvfs_clk_change_latency_nsec(unsigned long emc_freq_khz)
+{
+	return 2000;
 }
 
 static int tegra_mc_remove(struct platform_device *pdev)

@@ -33,8 +33,7 @@
 #define MAX_PRINTS			5
 
 /* defines that are common across SOC's. */
-#define MC_INT_STATUS			0x0
-#define MC_INT_MASK			0x4
+#define MC_INTMASK			0x4
 
 #define MC_ERR_STATUS_WRITE		(1 << 16)
 #define MC_ERR_STATUS_SECURE		(1 << 17)

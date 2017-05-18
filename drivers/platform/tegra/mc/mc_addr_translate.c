@@ -11,6 +11,7 @@
 
 #include <linux/kernel.h>
 #include <linux/seq_file.h>
+#include <linux/platform/tegra/mc-regs-t18x.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mcerr_ecc_t18x.h>
 

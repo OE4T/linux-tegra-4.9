@@ -22,6 +22,7 @@
 
 #include <linux/bitops.h>
 #include <linux/of.h>
+#include <linux/platform/tegra/mc-regs-t18x.h>
 #include <linux/platform/tegra/mcerr.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <linux/interrupt.h>

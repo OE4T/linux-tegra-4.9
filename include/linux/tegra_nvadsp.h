@@ -1,7 +1,7 @@
 /*
  * A Header file for managing ADSP/APE
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -356,6 +356,16 @@ static inline long wait_for_nvadsp_app_complete_timeout(nvadsp_app_info_t *info,
 
 	return ret;
 }
+
+/*
+ * set adma reg dump callback function pointer
+ * @cb_adma_regdump: function pointer for callback
+ *
+ * This api is exported and can be accessed by adsp audio driver,
+ * which during adsp init, calls this api to set the callback
+ * function pointer
+ */
+void nvadsp_set_adma_dump_reg(void (*cb_adma_regdump)(void));
 
 #ifdef CONFIG_TEGRA_ADSP_DFS
 /*

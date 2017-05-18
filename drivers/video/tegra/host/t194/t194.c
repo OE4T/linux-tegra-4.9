@@ -687,7 +687,7 @@ static void t194_set_nvhost_chanops(struct nvhost_channel *ch)
 	ch->ops = host1x_channel_ops;
 
 	/* Disable gather filter in simulator */
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+	if (tegra_platform_is_vdk())
 		ch->ops.init_gather_filter = NULL;
 }
 
@@ -852,7 +852,7 @@ int nvhost_init_t194_support(struct nvhost_master *host,
 	/* WAR to bugs 200094901 and 200082771: enable protection
 	 * only on silicon/emulation */
 
-	if (!tegra_platform_is_linsim() && !tegra_platform_is_vdk()) {
+	if (!tegra_platform_is_vdk()) {
 		op->syncpt.reset = t186_syncpt_reset;
 		op->syncpt.mark_used = t186_syncpt_mark_used;
 		op->syncpt.mark_unused = t186_syncpt_mark_unused;

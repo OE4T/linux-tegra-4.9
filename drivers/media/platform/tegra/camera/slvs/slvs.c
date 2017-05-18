@@ -1095,9 +1095,8 @@ struct tegra_mc_slvs *tegra_slvs_media_controller_init(
 
 	slvs->syncgen_clock = SYNCGEN_CLOCK;
 
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk()) {
+	if (tegra_platform_is_vdk())
 		slvs->syncgen_clock = 72000; /* 72 MHz */
-	}
 
 	atomic_set(&slvs->power_ref, 0);
 

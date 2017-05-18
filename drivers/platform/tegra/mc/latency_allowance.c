@@ -34,6 +34,7 @@
 #include <asm/io.h>
 #include <asm/string.h>
 
+#include <linux/platform/tegra/mc-regs-t21x.h>
 #include <linux/platform/tegra/latency_allowance.h>
 #include <linux/platform/tegra/mc.h>
 

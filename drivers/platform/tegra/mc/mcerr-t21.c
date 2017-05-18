@@ -22,6 +22,7 @@
 
 #include <linux/of.h>
 #include <linux/moduleparam.h>
+#include <linux/platform/tegra/mc-regs-t21x.h>
 #include <linux/platform/tegra/mcerr.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
 

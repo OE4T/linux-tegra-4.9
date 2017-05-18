@@ -149,6 +149,7 @@
 #define I2C_MST_CORE_CLKEN_OVR			BIT(0)
 
 #define I2C_CONFIG_LOAD_TIMEOUT			1000000
+#define I2C_FLUSH_TIMEOUT			1000000
 
 #define I2C_INTERFACE_TIMING_0                  0x94
 #define I2C_TLOW_MASK                           0x3F
@@ -615,20 +616,27 @@ static void tegra_i2c_unmask_irq(struct tegra_i2c_dev *i2c_dev, u32 mask)
 
 static int tegra_i2c_flush_fifos(struct tegra_i2c_dev *i2c_dev)
 {
-	unsigned long timeout = jiffies + HZ;
-	u32 val = i2c_readl(i2c_dev, I2C_FIFO_CONTROL);
+	u32 flush_bits, reg, val, offset;
+	void __iomem *addr;
+	int err;
 
-	val |= I2C_FIFO_CONTROL_TX_FLUSH | I2C_FIFO_CONTROL_RX_FLUSH;
-	i2c_writel(i2c_dev, val, I2C_FIFO_CONTROL);
+	flush_bits = I2C_FIFO_CONTROL_TX_FLUSH | I2C_FIFO_CONTROL_RX_FLUSH;
+	reg = I2C_FIFO_CONTROL;
 
-	while (i2c_readl(i2c_dev, I2C_FIFO_CONTROL) &
-		(I2C_FIFO_CONTROL_TX_FLUSH | I2C_FIFO_CONTROL_RX_FLUSH)) {
-		if (time_after(jiffies, timeout)) {
-			dev_warn(i2c_dev->dev, "timeout waiting for fifo flush\n");
-			return -ETIMEDOUT;
-		}
-		msleep(1);
+	val = i2c_readl(i2c_dev, reg);
+	val |= flush_bits;
+	i2c_writel(i2c_dev, val, reg);
+
+	offset = tegra_i2c_reg_addr(i2c_dev, reg);
+	addr = i2c_dev->base + offset;
+
+	err = readl_poll_timeout(addr, val, !(val & flush_bits), 1000,
+				 I2C_FLUSH_TIMEOUT);
+	if (err) {
+		dev_warn(i2c_dev->dev, "timeout waiting for fifo flush\n");
+		return -ETIMEDOUT;
 	}
+
 	return 0;
 }
 

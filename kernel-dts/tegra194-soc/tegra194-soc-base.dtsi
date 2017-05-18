@@ -1107,6 +1107,13 @@
 			<&tegra_pinctrl TEGRA194_AON_GPIO_BASE(AA) TEGRA_PIN_BASE(AA) TEGRA194_AON_GPIO_RANGE(AA, EE) >;
 	};
 
+	tegra_pcie_pexclk_pinctrl: pinctrl@3790000 {
+		compatible = "nvidia,tegra194-pexclk-padctl";
+		reg = <0x0 0x03790000 0x0 0x1000>,
+		      <0x0 0x037a0000 0x0 0x1000>;
+		status = "disabled";
+	};
+
 	tegra_tachometer: tachometer@39c0000 {
 		compatible = "nvidia,tegra194-tachometer";
 		reg = <0x0 0x039c0000 0x0 0x10>;

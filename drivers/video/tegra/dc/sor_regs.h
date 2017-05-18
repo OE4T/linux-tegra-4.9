@@ -885,6 +885,7 @@
 #define NV_SOR_DP_SPARE_SOR_CLK_SEL_DEFAULT_MASK		(0x1 << 2)
 #define NV_SOR_DP_SPARE_SOR_CLK_SEL_SAFE_SORCLK			(0 << 2)
 #define NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK		(1 << 2)
+#define NV_SOR_DP_SPARE_PANEL_MASK                              (1 << 1)
 #define NV_SOR_DP_SPARE_PANEL_SHIFT				(1)
 #define NV_SOR_DP_SPARE_PANEL_EXTERNAL				(0 << 1)
 #define NV_SOR_DP_SPARE_PANEL_INTERNAL				(1 << 1)

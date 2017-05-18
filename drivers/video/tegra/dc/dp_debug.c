@@ -38,6 +38,7 @@ struct tegra_dp_test_settings default_dp_test_settings = {
 	SOR_LINK_SPEED_G5_4,
 	TRAINING_PATTERN_DISABLE,
 	NV_HEAD_STATE0_DYNRANGE_VESA,
+	0,
 	"hbr2",
 	"none",
 	"vesa",
@@ -179,6 +180,8 @@ static int parse_test_settings(const char __user *user_buf, size_t count,
 			pr_info("dp_debug: SSC is fixed, ignoring request\n");
 		else if (!strcmp(name, "tx_pu_disable"))
 			test_settings->disable_tx_pu = u8_val;
+		else if (!strcmp(name, "panel"))
+			test_settings->panel_type = u8_val;
 		else
 			goto parse_fail;
 	}
@@ -208,6 +211,8 @@ static int test_settings_show(struct seq_file *s, void *unused)
 							"dis" : "en");
 	seq_printf(s, "\tTX_PU %sabled\n", test_settings->disable_tx_pu ?
 							"dis" : "en");
+	seq_printf(s, "\t Panel type : %s\n", test_settings->panel_type ?
+						"Internal" : "External");
 
 	return 0;
 }
@@ -245,6 +250,16 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	tegra_sor_precharge_lanes(sor);
 
 	tegra_dc_io_start(dc);
+
+	/* Set panel type */
+	if (test_settings->panel_type)
+		tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
+					NV_SOR_DP_SPARE_PANEL_MASK,
+					NV_SOR_DP_SPARE_PANEL_INTERNAL);
+	else
+		tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
+					NV_SOR_DP_SPARE_PANEL_MASK,
+					NV_SOR_DP_SPARE_PANEL_EXTERNAL);
 
 	/* set lane count and bitrate */
 	cfg->lane_count = test_settings->lanes;

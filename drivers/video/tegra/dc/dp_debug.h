@@ -26,6 +26,7 @@ struct tegra_dp_test_settings {
 	u8	bitrate;
 	u8	tpg;
 	u8	dynrange_val;
+	u8    panel_type;
 	char	*bitrate_name;
 	char	*patt;
 	char	*dynrange;

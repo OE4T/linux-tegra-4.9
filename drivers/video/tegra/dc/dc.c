@@ -953,6 +953,39 @@ void dump_regs(struct tegra_dc *dc) {}
 
 #ifdef CONFIG_DEBUG_FS
 
+static int dbg_timestamp_show(struct seq_file *s, void *unused)
+{
+	u32 tmp;
+	u64 timestamp;
+	u32 frame_cnt;
+	struct tegra_dc *dc;
+
+	dc = s->private;
+
+	do {
+		tmp = (u32)(tegra_dc_readl(dc, DC_COM_RG_DPCA) >> 16);
+		timestamp = tegra_dc_get_vsync_timestamp(dc);
+		frame_cnt = (u32)(tegra_dc_readl(dc, DC_COM_RG_DPCA) >> 16);
+	} while (tmp != frame_cnt);
+
+	seq_printf(s, "vsync_timestamp : %llu\n"
+			"frame_no : %u\n", timestamp, frame_cnt);
+
+	return 0;
+}
+
+static int dbg_timestamp_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_timestamp_show, inode->i_private);
+}
+
+static const struct file_operations timestamp_fops = {
+	.open		= dbg_timestamp_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static void dbg_regs_print(void *data, const char *str)
 {
 	struct seq_file *s = data;
@@ -2488,6 +2521,11 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 	snprintf(devname, sizeof(devname), "tegradc.%d", dc->ndev->id);
 	dc->debugdir = debugfs_create_dir(devname, NULL);
 	if (!dc->debugdir)
+		goto remove_out;
+
+	retval = debugfs_create_file("timestamp", S_IRUGO, dc->debugdir, dc,
+		&timestamp_fops);
+	if (!retval)
 		goto remove_out;
 
 	retval = debugfs_create_file("regs", S_IRUGO, dc->debugdir, dc,

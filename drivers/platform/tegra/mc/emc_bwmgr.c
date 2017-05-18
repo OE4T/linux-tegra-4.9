@@ -390,6 +390,7 @@ int __init bwmgr_init(void)
 	int i;
 	struct device_node *dn;
 	long round_rate;
+	struct clk *emc_master_clk;
 
 	mutex_init(&bwmgr.lock);
 	bwmgr_eff_init();
@@ -408,7 +409,11 @@ int __init bwmgr_init(void)
 		return -ENODEV;
 	}
 
-	round_rate = clk_round_rate(bwmgr.emc_clk, 0);
+	emc_master_clk = bwmgr.emc_clk;
+	if (of_property_read_bool(dn, "nvidia,bwmgr-use-shared-master"))
+		emc_master_clk = clk_get_parent(emc_master_clk);
+
+	round_rate = clk_round_rate(emc_master_clk, 0);
 	if (round_rate < 0) {
 		bwmgr.emc_min_rate = 0;
 		pr_err("bwmgr: couldn't get emc clock min rate.\n");
@@ -416,7 +421,7 @@ int __init bwmgr_init(void)
 		bwmgr.emc_min_rate = (unsigned long)round_rate;
 
 	/* Use LONG_MAX as downstream functions treats rate arg as signed */
-	round_rate = clk_round_rate(bwmgr.emc_clk, LONG_MAX);
+	round_rate = clk_round_rate(emc_master_clk, LONG_MAX);
 	if (round_rate < 0) {
 		bwmgr.emc_max_rate = 0;
 		pr_err("bwmgr: couldn't get emc clock max rate.\n");

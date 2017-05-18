@@ -1997,6 +1997,13 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 		return PTR_ERR(dmabuf);
 	}
 
+	if (dmabuf->size < (buffer_offset + mapping_size)) {
+		nvgpu_err(gk20a_from_vm(vm),
+			"buf size %llx < (offset(%llx) + map_size(%llx))\n",
+			(u64)dmabuf->size, buffer_offset, mapping_size);
+		return -EINVAL;
+	}
+
 	err = gk20a_dmabuf_alloc_drvdata(dmabuf, dev_from_vm(vm));
 	if (err) {
 		dma_buf_put(dmabuf);

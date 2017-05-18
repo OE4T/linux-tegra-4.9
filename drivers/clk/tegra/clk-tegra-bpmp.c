@@ -48,8 +48,8 @@ static void __init tegra186_clock_init(struct device_node *np)
 {
 	tegra_bpmp_clk_init(np, 0);
 
-	/* Nvdisp linsim clock hack */
-	if (tegra_platform_is_linsim() || tegra_platform_is_fpga()) {
+	/* Nvdisp sim clock hack */
+	if (tegra_platform_is_fpga()) {
 		void __iomem *base;
 		base = of_iomap(np, 0);
 		if (!base) {

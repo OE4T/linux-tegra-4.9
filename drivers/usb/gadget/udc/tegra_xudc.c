@@ -617,6 +617,28 @@ static inline void dump_trb(struct tegra_xudc *xudc, const char *type,
 		trb->control);
 }
 
+static void tegra_fpga_hack_init(struct tegra_xudc *xudc)
+{
+	dev_info(xudc->dev, "setup mods values\n");
+	xudc_writel(xudc, 0x9C, 0x100);
+	xudc_writel(xudc, 0x1ADD, 0x104);
+	xudc_writel(xudc, 0x1871, 0x108);
+	xudc_writel(xudc, 0x1E848, 0x10c);
+	xudc_writel(xudc, 0x9c4, 0x110);
+	xudc_writel(xudc, 0xEA6, 0x114);
+	xudc_writel(xudc, 0x2DCB7, 0x118);
+	xudc_writel(xudc, 0x74, 0x11c);
+	xudc_writel(xudc, 0x5b, 0x120);
+	xudc_writel(xudc, 0x98968, 0x124);
+	xudc_writel(xudc, 0x1E87, 0x128);
+	xudc_writel(xudc, 0xF444, 0x12c);
+	xudc_writel(xudc, 0x1FE, 0x130);
+	xudc_writel(xudc, 0xC35, 0x134);
+	xudc_writel(xudc, 0x21, 0x18c);
+	xudc_writel(xudc, 0x5b, 0x190);
+	xudc_writel(xudc, 0x0, 0x19c);
+}
+
 static void fpga_hack_setup_car(const struct tegra_xudc *xudc)
 {
 	struct device *dev = xudc->dev;
@@ -3593,6 +3615,9 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	tegra_pd_add_device(&pdev->dev);
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
+
+	if (tegra_platform_is_fpga())
+		tegra_fpga_hack_init(xudc);
 
 	return 0;
 

@@ -368,6 +368,11 @@ static void tegra210_adsp_deallocate_dma_buffer(struct snd_dma_buffer *buf)
 	buf->addr = 0;
 }
 
+#if IS_ENABLED(CONFIG_TEGRA210_ADMA)
+/* implemented in adma driver */
+void tegra_adma_dump_ch_reg(void);
+#endif
+
 /* ADSP OS boot and init API */
 static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 {
@@ -395,6 +400,11 @@ static int tegra210_adsp_init(struct tegra210_adsp *adsp)
 						adsp_app_desc[i].name);
 		}
 	}
+
+#if IS_ENABLED(CONFIG_TEGRA210_ADMA)
+	/* set callback function for adsp to dump adma registers for debug */
+	nvadsp_set_adma_dump_reg(&tegra_adma_dump_ch_reg);
+#endif
 
 	/* Suspend OS for now. Resume will happen via runtime pm calls */
 	ret = nvadsp_os_suspend();

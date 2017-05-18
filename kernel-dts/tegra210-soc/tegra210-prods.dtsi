@@ -21,7 +21,6 @@
 		sor {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 				prod_c_dp {
 					    prod = <
 						0x0000005c 0x0f000f10 0x01000310	// SOR_NV_PDISP_SOR_PLL0_0	27:24=ICHPMP		0x01
@@ -55,7 +54,6 @@
 		sor1 {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 				prod_list_hdmi_soc = "prod_c_hdmi_0m_54m", "prod_c_hdmi_54m_111m",
 						     "prod_c_hdmi_111m_223m", "prod_c_hdmi_223m_300m",
 						     "prod_c_hdmi_300m_600m";
@@ -362,7 +360,6 @@
 		dpaux {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 
 				prod_c_dpaux_dp {
 					prod = <
@@ -380,7 +377,6 @@
 		dpaux1 {
 			prod-settings	{
 				#prod-cells = <3>;
-				mask-one-style;
 				prod_c_dpaux_dp {
 					prod = <
 						0x00000124 0x000037fe 0x000024c2
@@ -398,7 +394,6 @@
 	pinmux@700008d4 {
 		prod-settings {
 			#prod-cells = <4>;
-			mask-one-style;
 			prod {
 				status = "okay";
 				nvidia,prod-boot-init;
@@ -552,7 +547,6 @@
 	spi@7000d400 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod {
 			    prod = <0x04 0x00000fff 0x0>;
 			};
@@ -571,7 +565,6 @@
 	spi@7000d600 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod {
 			    prod = <0x04 0x00000fff 0x0>;
 			};
@@ -590,7 +583,6 @@
 	spi@7000d800 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod {
 			    prod = <0x04 0x00000fff 0x0>;
 			};
@@ -609,7 +601,6 @@
 	spi@7000da00 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod {
 			    prod = <0x04 0x00000fff 0x0>;
 			};
@@ -624,7 +615,6 @@
 	pinctrl@7009f000 {
 		prod-settings {
 			#prod-cells = <4>;
-			mask-one-style;
 			prod_c_bias {
 			    prod = <
 				0 0x00000284 0x0000003f 0x0000003a
@@ -703,7 +693,6 @@
 	sata@70020000 {
 		prod-settings {
 			#prod-cells = <4>;
-			mask-one-style;
 			prod {
 				prod = <
 					0 0x00000680 0x00000001 0x00000001	// SATA_CHX_INDEX_0		0
@@ -719,7 +708,6 @@
 	pcie-controller@1003000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod_c_pad {
 				prod = <
 					0x000000C8 0xFFFFFFFF 0x90b890b8	// PADS_REFCLK_CFG0		31:0	 0x90b890b8
@@ -743,7 +731,6 @@
 	sdhci@700b0600 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 
 			prod_c_ds {
 				prod = <0x00000100 0x00FF0000 0x00040000
@@ -805,7 +792,6 @@
 	sdhci@700b0400 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 
 			prod_c_ds {
 				prod = <0x00000100 0x00FF0000 0x00010000
@@ -870,7 +856,6 @@
 	sdhci@700b0200 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 
 			prod_c_ds {
 				prod = <0x00000100 0x00FF0000 0x00040000
@@ -953,7 +938,6 @@
 	sdhci@700b0000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 
 			prod_c_ds {
 				prod = <0x00000100 0x00FF0000 0x00040000

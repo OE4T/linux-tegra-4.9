@@ -201,3 +201,32 @@ dma_addr_t nvdisp_t19x_get_addr_flag(struct tegra_dc_win *win)
 
 	return addr_flag;
 }
+
+/*
+ * tegra_dc_get_vsync_timestamp_t19x - read the vsync from
+ *					the ptimer regs.
+ * @dc: pointer to struct tegra_dc for the current head.
+ *
+ * Return : timestamp value in ns.
+ */
+uint64_t tegra_dc_get_vsync_timestamp_t19x(struct tegra_dc *dc)
+{
+	u32 lsb = 0;
+	u64 msb = 0;
+
+#define DC_COM_RG_VSYNC_PTIMER0 0x35c
+#define DC_COM_RG_VSYNC_PTIMER1 0x35d
+
+	/*
+	 * TODO : Add t19x_hw_reg headerfile for the above
+	 * registers.
+	 */
+
+	lsb = tegra_dc_readl(dc, DC_COM_RG_VSYNC_PTIMER0);
+	msb = tegra_dc_readl(dc, DC_COM_RG_VSYNC_PTIMER1);
+
+#undef DC_COM_RG_VSYNC_PTIMER0
+#undef DC_COM_RG_VSYNC_PTIMER1
+
+	return (((msb << 32) | lsb) << 5);
+}

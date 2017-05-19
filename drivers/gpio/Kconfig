@@ -7,4 +7,14 @@ config GPIO_TEGRA186
 	help
 	Support for the NVIDIA Tegra186 GPIO controller driver.
 
+
+config GPIO_TMPM32X_I2C
+	tristate "GPIO support for Toshiba MCU TMPM32x I2C"
+	depends on I2C
+	depends on OF
+	select MFD_TMPM32X_I2C
+	select GPIOLIB_IRQCHIP
+	help
+	  GPIO driver for Toshiba MCU TMPM32x I2C.
+
 endif

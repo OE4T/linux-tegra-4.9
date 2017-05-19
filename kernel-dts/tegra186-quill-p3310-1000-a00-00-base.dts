@@ -26,8 +26,6 @@
 #include <t18x-common-prod/tegra186-priv-quill-p3310-1000-a00-prod.dtsi>
 #include <t18x-common-plugin-manager/tegra186-quill-camera-plugin-manager.dtsi>
 
-#include <dt-bindings/linux/driver-info.h>
-
 / {
 	model = "quill";
 	compatible = "nvidia,quill", "nvidia,tegra186";
@@ -66,7 +64,7 @@
 		phy-names = "otg-usb2";
 	};
 
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 	xudc@3550000 {
 		status = "okay";
 		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
@@ -88,7 +86,7 @@
 	};
 #endif
 
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 	xhci@3530000 {
 		status = "okay";
 		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
@@ -106,7 +104,7 @@
 	};
 #endif
 
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 	xusb_padctl@3520000 {
 		status = "okay";
 
@@ -299,6 +297,6 @@
         };
 };
 
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 #include "quill-platforms/tegra186-quill-kernel-4.9.dtsi"
 #endif

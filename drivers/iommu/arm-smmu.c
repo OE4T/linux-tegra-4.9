@@ -485,6 +485,7 @@ struct arm_smmu_domain {
 	phys_addr_t			inquired_phys;
 
 	struct iommu_domain             domain;
+	bool				sodev_map;
 };
 
 static struct iommu_domain *iommu_domains[NUM_SID]; /* To keep all allocated domains */
@@ -1828,6 +1829,11 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	if (!cfg)
 		return -ENODEV;
 
+	smmu_domain->sodev_map = of_property_read_bool(dev_get_dev_node(dev),
+						       "iommu_sodev_map");
+	if (smmu_domain->sodev_map)
+		pr_info("forcing sodev map for %s\n", dev_name(dev));
+
 	ret = arm_smmu_domain_add_master(smmu_domain, cfg);
 	if (!ret) {
 		dev->archdata.iommu = domain;
@@ -1875,11 +1881,12 @@ static bool arm_smmu_pte_is_contiguous_range(unsigned long addr,
 		!(phys & ~ARM_SMMU_PTE_CONT_MASK);
 }
 
-static int arm_smmu_alloc_init_pte(struct arm_smmu_device *smmu, pmd_t *pmd,
+static int arm_smmu_alloc_init_pte(struct arm_smmu_domain *domain, pmd_t *pmd,
 				   unsigned long addr, unsigned long end,
 				   unsigned long pfn, int prot, int stage)
 {
 	pte_t *pte, *start;
+	struct arm_smmu_device *smmu = domain->smmu;
 	pteval_t pteval = ARM_SMMU_PTE_PAGE | ARM_SMMU_PTE_AF | ARM_SMMU_PTE_XN;
 
 	if (pmd_none(*pmd)) {
@@ -1902,6 +1909,12 @@ static int arm_smmu_alloc_init_pte(struct arm_smmu_device *smmu, pmd_t *pmd,
 		if (prot & IOMMU_CACHE)
 			pteval |= (MAIR_ATTR_IDX_CACHE <<
 				   ARM_SMMU_PTE_ATTRINDX_SHIFT);
+		else if (domain->sodev_map)
+			pteval |= (MAIR_ATTR_IDX_DEV <<
+				   ARM_SMMU_PTE_ATTRINDX_SHIFT);
+		else
+			pteval |= (MAIR_ATTR_IDX_NC <<
+				   ARM_SMMU_PTE_ATTRINDX_SHIFT);
 	} else {
 		pteval |= ARM_SMMU_PTE_HAP_FAULT;
 		if (prot & IOMMU_READ)
@@ -1910,6 +1923,8 @@ static int arm_smmu_alloc_init_pte(struct arm_smmu_device *smmu, pmd_t *pmd,
 			pteval |= ARM_SMMU_PTE_HAP_WRITE;
 		if (prot & IOMMU_CACHE)
 			pteval |= ARM_SMMU_PTE_MEMATTR_OIWB;
+		else if (domain->sodev_map)
+			pteval |= ARM_SMMU_PTE_MEMATTR_DEV;
 		else
 			pteval |= ARM_SMMU_PTE_MEMATTR_NC;
 	}
@@ -1988,13 +2003,14 @@ static int arm_smmu_alloc_init_pte(struct arm_smmu_device *smmu, pmd_t *pmd,
 	return 0;
 }
 
-static int arm_smmu_alloc_init_pmd(struct arm_smmu_device *smmu, pud_t *pud,
+static int arm_smmu_alloc_init_pmd(struct arm_smmu_domain *domain, pud_t *pud,
 				   unsigned long addr, unsigned long end,
 				   phys_addr_t phys, int prot, int stage)
 {
 	int ret;
 	pmd_t *pmd;
 	unsigned long next, pfn = __phys_to_pfn(phys);
+	struct arm_smmu_device *smmu = domain->smmu;
 
 #ifndef __PAGETABLE_PMD_FOLDED
 	if (pud_none(*pud)) {
@@ -2013,7 +2029,7 @@ static int arm_smmu_alloc_init_pmd(struct arm_smmu_device *smmu, pud_t *pud,
 
 	do {
 		next = pmd_addr_end(addr, end);
-		ret = arm_smmu_alloc_init_pte(smmu, pmd, addr, next, pfn,
+		ret = arm_smmu_alloc_init_pte(domain, pmd, addr, next, pfn,
 					      prot, stage);
 		if (phys)
 			phys += next - addr;
@@ -2023,15 +2039,16 @@ static int arm_smmu_alloc_init_pmd(struct arm_smmu_device *smmu, pud_t *pud,
 	return ret;
 }
 
-static int arm_smmu_alloc_init_pud(struct arm_smmu_device *smmu, pgd_t *pgd,
+static int arm_smmu_alloc_init_pud(struct arm_smmu_domain *domain, pgd_t *pgd,
 				   unsigned long addr, unsigned long end,
 				   phys_addr_t phys, int prot, int stage)
 {
 	int ret = 0;
 	pud_t *pud;
 	unsigned long next;
-
 #ifndef __PAGETABLE_PUD_FOLDED
+	struct arm_smmu_device *smmu = domain->smmu;
+
 	if (pgd_none(*pgd)) {
 		pud = (pud_t *)get_zeroed_page(GFP_ATOMIC);
 		if (!pud)
@@ -2048,7 +2065,7 @@ static int arm_smmu_alloc_init_pud(struct arm_smmu_device *smmu, pgd_t *pgd,
 
 	do {
 		next = pud_addr_end(addr, end);
-		ret = arm_smmu_alloc_init_pmd(smmu, pud, addr, next, phys,
+		ret = arm_smmu_alloc_init_pmd(domain, pud, addr, next, phys,
 					      prot, stage);
 		if (phys)
 			phys += next - addr;
@@ -2143,7 +2160,7 @@ static int arm_smmu_handle_mapping(struct arm_smmu_domain *smmu_domain,
 	do {
 		unsigned long next = pgd_addr_end(iova, end);
 
-		ret = arm_smmu_alloc_init_pud(smmu, pgd, iova, next, paddr,
+		ret = arm_smmu_alloc_init_pud(smmu_domain, pgd, iova, next, paddr,
 					      prot, stage);
 		if (ret)
 			goto out_unlock;

@@ -5268,9 +5268,11 @@ int gk20a_init_gr_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = gk20a_init_gr_bind_fecs_elpg(g);
-	if (err)
-		return err;
+	if (g->can_elpg) {
+		err = gk20a_init_gr_bind_fecs_elpg(g);
+		if (err)
+			return err;
+	}
 
 	gr_gk20a_enable_elcg(g);
 	/* GR is inialized, signal possible waiters */

@@ -3370,6 +3370,10 @@ static inline u32 gr_gpcs_gpccs_gpc_exception_en_r(void)
 {
 	return 0x0041ac94;
 }
+static inline u32 gr_gpcs_gpccs_gpc_exception_en_gcc_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
 static inline u32 gr_gpcs_gpccs_gpc_exception_en_tpc_f(u32 v)
 {
 	return (v & 0xff) << 16;
@@ -3378,6 +3382,10 @@ static inline u32 gr_gpc0_gpccs_gpc_exception_r(void)
 {
 	return 0x00502c90;
 }
+static inline u32 gr_gpc0_gpccs_gpc_exception_gcc_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
 static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_v(u32 r)
 {
 	return (r >> 16) & 0xff;
@@ -3385,6 +3393,62 @@ static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_v(u32 r)
 static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_0_pending_v(void)
 {
 	return 0x00000001;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_status_r(void)
+{
+	return 0x00501048;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_status_corrected_err_bank0_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_status_corrected_err_bank1_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_status_uncorrected_err_bank0_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_status_uncorrected_err_bank1_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_status_corrected_err_total_counter_overflow_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_status_uncorrected_err_total_counter_overflow_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_status_reset_task_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_r(void)
+{
+	return 0x0050104c;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_r(void)
+{
+	return 0x00501054;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
 }
 static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_r(void)
 {

@@ -45,6 +45,8 @@ struct gr_t19x {
 		struct gr_gp10b_ecc_stat sm_l1_data_uncorrected_err_count;
 		struct gr_gp10b_ecc_stat sm_icache_corrected_err_count;
 		struct gr_gp10b_ecc_stat sm_icache_uncorrected_err_count;
+		struct gr_gp10b_ecc_stat gcc_l15_corrected_err_count;
+		struct gr_gp10b_ecc_stat gcc_l15_uncorrected_err_count;
 	} ecc_stats;
 };
 

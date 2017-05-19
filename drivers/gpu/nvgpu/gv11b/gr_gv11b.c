@@ -556,6 +556,84 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	return ret;
 }
 
+static int gr_gv11b_handle_gcc_exception(struct gk20a *g, u32 gpc, u32 tpc,
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc;
+	u32 gcc_l15_ecc_status, gcc_l15_ecc_corrected_err_status = 0;
+	u32 gcc_l15_ecc_uncorrected_err_status = 0;
+	u32 gcc_l15_corrected_err_count_delta = 0;
+	u32 gcc_l15_uncorrected_err_count_delta = 0;
+	bool is_gcc_l15_ecc_corrected_total_err_overflow = 0;
+	bool is_gcc_l15_ecc_uncorrected_total_err_overflow = 0;
+
+	/* Check for gcc l15 ECC errors. */
+	gcc_l15_ecc_status = gk20a_readl(g,
+		gr_pri_gpc0_gcc_l15_ecc_status_r() + offset);
+	gcc_l15_ecc_corrected_err_status = gcc_l15_ecc_status &
+		(gr_pri_gpc0_gcc_l15_ecc_status_corrected_err_bank0_m() |
+		 gr_pri_gpc0_gcc_l15_ecc_status_corrected_err_bank1_m());
+	gcc_l15_ecc_uncorrected_err_status = gcc_l15_ecc_status &
+		(gr_pri_gpc0_gcc_l15_ecc_status_uncorrected_err_bank0_m() |
+		 gr_pri_gpc0_gcc_l15_ecc_status_uncorrected_err_bank1_m());
+
+	if ((gcc_l15_ecc_corrected_err_status == 0) && (gcc_l15_ecc_uncorrected_err_status == 0))
+		return 0;
+
+	gcc_l15_corrected_err_count_delta =
+		gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_r() +
+				offset));
+	gcc_l15_uncorrected_err_count_delta =
+		gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_r() +
+				offset));
+	is_gcc_l15_ecc_corrected_total_err_overflow =
+		gr_pri_gpc0_gcc_l15_ecc_status_corrected_err_total_counter_overflow_v(gcc_l15_ecc_status);
+	is_gcc_l15_ecc_uncorrected_total_err_overflow =
+		gr_pri_gpc0_gcc_l15_ecc_status_uncorrected_err_total_counter_overflow_v(gcc_l15_ecc_status);
+
+	if ((gcc_l15_corrected_err_count_delta > 0) || is_gcc_l15_ecc_corrected_total_err_overflow) {
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
+			"corrected error (SBE) detected in GCC L1.5! err_mask [%08x] is_overf [%d]",
+			gcc_l15_ecc_corrected_err_status, is_gcc_l15_ecc_corrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		gcc_l15_corrected_err_count_delta +=
+			(is_gcc_l15_ecc_corrected_total_err_overflow <<
+			 gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.gcc_l15_corrected_err_count.counters[gpc] +=
+							gcc_l15_corrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_r() + offset,
+			0);
+	}
+	if ((gcc_l15_uncorrected_err_count_delta > 0) || is_gcc_l15_ecc_uncorrected_total_err_overflow) {
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
+			"Uncorrected error (DBE) detected in GCC L1.5! err_mask [%08x] is_overf [%d]",
+			gcc_l15_ecc_uncorrected_err_status, is_gcc_l15_ecc_uncorrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		gcc_l15_uncorrected_err_count_delta +=
+			(is_gcc_l15_ecc_uncorrected_total_err_overflow <<
+			 gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.gcc_l15_uncorrected_err_count.counters[gpc] +=
+							gcc_l15_uncorrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_r() + offset,
+			0);
+	}
+
+	gk20a_writel(g, gr_pri_gpc0_gcc_l15_ecc_status_r() + offset,
+			gr_pri_gpc0_gcc_l15_ecc_status_reset_task_f());
+
+	return 0;
+}
+
 static void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -567,7 +645,8 @@ static void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
 	tpc_mask =
 		gr_gpcs_gpccs_gpc_exception_en_tpc_f((1 << gr->tpc_count) - 1);
 
-	gk20a_writel(g, gr_gpcs_gpccs_gpc_exception_en_r(), tpc_mask);
+	gk20a_writel(g, gr_gpcs_gpccs_gpc_exception_en_r(),
+		(tpc_mask | gr_gpcs_gpccs_gpc_exception_en_gcc_f(1)));
 }
 
 static int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
@@ -2113,6 +2192,7 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.set_gpc_tpc_mask = gr_gv11b_set_gpc_tpc_mask;
 	gops->gr.get_access_map = gr_gv11b_get_access_map;
 	gops->gr.handle_sm_exception = gr_gv11b_handle_sm_exception;
+	gops->gr.handle_gcc_exception = gr_gv11b_handle_gcc_exception;
 	gops->gr.handle_tex_exception = gr_gv11b_handle_tex_exception;
 	gops->gr.enable_gpc_exceptions = gr_gv11b_enable_gpc_exceptions;
 	gops->gr.mask_hww_warp_esr = gv11b_mask_hww_warp_esr;

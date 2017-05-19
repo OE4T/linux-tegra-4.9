@@ -131,6 +131,8 @@ static struct device_attribute *dev_attr_sm_l1_data_ecc_corrected_err_count_arra
 static struct device_attribute *dev_attr_sm_l1_data_ecc_uncorrected_err_count_array;
 static struct device_attribute *dev_attr_sm_icache_ecc_corrected_err_count_array;
 static struct device_attribute *dev_attr_sm_icache_ecc_uncorrected_err_count_array;
+static struct device_attribute *dev_attr_gcc_l15_ecc_corrected_err_count_array;
+static struct device_attribute *dev_attr_gcc_l15_ecc_uncorrected_err_count_array;
 
 void gr_gv11b_create_sysfs(struct device *dev)
 {
@@ -193,6 +195,18 @@ void gr_gv11b_create_sysfs(struct device *dev)
 				&g->gr.t19x.ecc_stats.sm_icache_uncorrected_err_count,
 				dev_attr_sm_icache_ecc_uncorrected_err_count_array);
 
+	error |= gr_gp10b_ecc_stat_create(dev,
+				0,
+				"gcc_l15_ecc_corrected_err_count",
+				&g->gr.t19x.ecc_stats.gcc_l15_corrected_err_count,
+				dev_attr_gcc_l15_ecc_corrected_err_count_array);
+
+	error |= gr_gp10b_ecc_stat_create(dev,
+				0,
+				"gcc_l15_ecc_uncorrected_err_count",
+				&g->gr.t19x.ecc_stats.gcc_l15_uncorrected_err_count,
+				dev_attr_gcc_l15_ecc_uncorrected_err_count_array);
+
 	if (error)
 		dev_err(dev, "Failed to create gv11b sysfs attributes!\n");
 }
@@ -240,5 +254,15 @@ static void gr_gv11b_remove_sysfs(struct device *dev)
 			0,
 			&g->gr.t19x.ecc_stats.sm_icache_uncorrected_err_count,
 			dev_attr_sm_icache_ecc_uncorrected_err_count_array);
+
+	gr_gp10b_ecc_stat_remove(dev,
+			0,
+			&g->gr.t19x.ecc_stats.gcc_l15_corrected_err_count,
+			dev_attr_gcc_l15_ecc_corrected_err_count_array);
+
+	gr_gp10b_ecc_stat_remove(dev,
+			0,
+			&g->gr.t19x.ecc_stats.gcc_l15_uncorrected_err_count,
+			dev_attr_gcc_l15_ecc_uncorrected_err_count_array);
 
 }

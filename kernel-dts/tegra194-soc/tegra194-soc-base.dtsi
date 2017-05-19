@@ -1816,4 +1816,14 @@
 		compatible = "nvidia,carmel-ras";
 		status = "disabled";
 	};
+
+	cpufreq@d080000 {
+		compatible = "nvidia,tegra19x-cpufreq";
+		status = "disabled";
+		cpu_emc_map = <1500000 800000>,
+				<900000  675000>,
+				<550000  408000>,
+				<340000  204000>,
+				<000000  102000>;
+	};
 };

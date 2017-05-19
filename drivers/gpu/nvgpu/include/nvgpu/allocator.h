@@ -281,7 +281,10 @@ static inline void nvgpu_alloc_disable_dbg(struct nvgpu_allocator *a)
  */
 extern u32 nvgpu_alloc_tracing_on;
 
+#ifdef CONFIG_DEBUG_FS
+struct device;
 void nvgpu_alloc_debugfs_init(struct device *dev);
+#endif
 
 #define nvgpu_alloc_trace_func()			\
 	do {						\

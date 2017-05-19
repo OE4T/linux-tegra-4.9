@@ -201,9 +201,9 @@ void nvgpu_fini_alloc_debug(struct nvgpu_allocator *a)
 #endif
 }
 
+#ifdef CONFIG_DEBUG_FS
 void nvgpu_alloc_debugfs_init(struct device *dev)
 {
-#ifdef CONFIG_DEBUG_FS
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct dentry *gpu_root = platform->debugfs;
 	struct gk20a *g = get_gk20a(dev);
@@ -214,5 +214,5 @@ void nvgpu_alloc_debugfs_init(struct device *dev)
 
 	debugfs_create_u32("tracing", 0664, g->debugfs_allocators,
 			   &nvgpu_alloc_tracing_on);
-#endif
 }
+#endif

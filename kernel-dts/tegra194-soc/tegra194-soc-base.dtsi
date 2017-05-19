@@ -162,7 +162,9 @@
 					    TEGRA_SID(SE)
 					    TEGRA_SID(SE1)
 					    TEGRA_SID(SE2)
-					    TEGRA_SID(SE3)>;
+					    TEGRA_SID(SE3)
+					    TEGRA_SID(TSEC)
+					    TEGRA_SID(TSECB)>;
 			};
 			rce_domain {
 				address-space = <&camera_as>;
@@ -386,6 +388,28 @@
 
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVJPG>;
+		};
+
+		tsec@15500000 {
+			compatible = "nvidia,tegra194-tsec";
+			reg = <0x0 0x15500000 0x0 0x00040000>;
+			resets = <&bpmp_resets TEGRA194_RESET_TSEC>;
+			clocks = <&bpmp_clks TEGRA194_CLK_TSEC>;
+			clock-names = "tsec";
+
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_TSEC>;
+		};
+
+		tsecb@15100000 {
+			compatible = "nvidia,tegra194-tsec";
+			reg = <0x0 0x15100000 0x0 0x00040000>;
+			resets = <&bpmp_resets TEGRA194_RESET_TSECB>;
+			clocks = <&bpmp_clks TEGRA194_CLK_TSECB>;
+			clock-names = "tsecb";
+
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_TSECB>;
 		};
 
 		nvdec@15480000 {

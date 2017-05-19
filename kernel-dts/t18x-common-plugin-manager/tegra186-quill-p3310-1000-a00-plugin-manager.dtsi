@@ -77,7 +77,7 @@
 			ids = "<3310-1000-500";
 			odm-data = "enable-xusb-on-uphy-lane0";
 			override@0 {
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 				target = <&xusb_padctl>;
 				_overlay_ {
 					ports {
@@ -103,7 +103,7 @@
 			};
 			override@1 {
 				target = <&{/xhci@3530000}>;
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 				_overlay_ {
 					phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
 						<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-2}>,
@@ -204,7 +204,7 @@
 			ids = ">=3310-1000-500";
 			override@0 {
 				target = <&{/xhci@3530000}>;
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 				_overlay_ {
 					phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
 						<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>;
@@ -221,7 +221,7 @@
 #endif
 			};
 			override@1 {
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 				target = <&xusb_padctl>;
 				_overlay_ {
 					ports {
@@ -253,7 +253,7 @@
 			odm-data = "enable-pcie-on-uphy-lane0";
 			override@0 {
 				target = <&{/xhci@3530000}>;
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 				_overlay_ {
 					phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>;
 					phy-names = "usb2-1";

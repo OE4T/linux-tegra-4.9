@@ -17,7 +17,6 @@
 #include <dt-bindings/gpio/tegra186-gpio.h>
 #include <dt-bindings/thermal/thermal.h>
 #include <dt-bindings/interrupt-controller/irq.h>
-#include <dt-bindings/linux/driver-info.h>
 
 / {
 	bpmp_i2c {

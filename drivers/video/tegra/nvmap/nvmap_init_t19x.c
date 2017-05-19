@@ -39,7 +39,6 @@ int nvmap_register_cvsram_carveout(struct device *dma_dev,
 	struct nvmap_platform_carveout cvsram = {
 		.name = "cvsram",
 		.usage_mask = NVMAP_HEAP_CARVEOUT_CVSRAM,
-		.disable_dynamic_dma_map = true,
 		.no_cpu_access = true,
 	};
 

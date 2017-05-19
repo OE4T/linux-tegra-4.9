@@ -445,6 +445,7 @@
 
 		interrupt-parent = <&pm_irq>;
 		iommus = <&smmu TEGRA_SID_XUSB_HOST>;
+		iommu_sodev_map;
 		status = "disabled";
 		otg-controller = <&tegra_xotg>;
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
@@ -474,6 +475,7 @@
 			<0x0 0x03558000 0x0 0x1000>;
 		interrupts = <0 166 0x4>;
 		iommus = <&smmu TEGRA_SID_XUSB_DEV>;
+		iommu_sodev_map;
 		status = "disabled";
 		charger-detector = <&tegra_usb_cd>;
 		otg-controller = <&tegra_xotg>;
@@ -1582,6 +1584,7 @@
 		interrupt-map = <0 0 0 0 &intc 0 72 0x04>;// check this
 
 		iommus = <&smmu TEGRA_SID_AFI>;
+		iommu_sodev_map;
 
 		bus-range = <0x00 0xff>;
 		#address-cells = <3>;

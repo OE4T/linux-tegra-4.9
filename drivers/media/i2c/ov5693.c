@@ -337,6 +337,9 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 	usleep_range(2000, 2010);
 
 	pw->state = SWITCH_ON;
+
+	ov5693_write_reg(s_data, 0x0100, 0x1);
+	ov5693_write_reg(s_data, 0x0100, 0x0);
 	return 0;
 
 ov5693_iovdd_fail:

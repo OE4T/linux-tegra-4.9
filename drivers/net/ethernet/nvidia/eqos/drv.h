@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -78,6 +78,8 @@ static void eqos_config_rx_pbl(struct eqos_prv_data *pdata,
 
 static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 					struct ifr_data_struct *req);
+static int eqos_handle_prv_ts_ioctl(struct eqos_prv_data *pdata,
+				    struct ifreq *ifr);
 
 static int eqos_ioctl(struct net_device *, struct ifreq *, int);
 

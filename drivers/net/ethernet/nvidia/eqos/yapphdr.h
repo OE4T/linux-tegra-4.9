@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -49,7 +49,8 @@
 #define EQOS_MAX_RX_QUEUE_CNT 8
 
 /* Private IOCTL for handling device specific task */
-#define EQOS_PRV_IOCTL	SIOCDEVPRIVATE
+#define EQOS_PRV_IOCTL		SIOCDEVPRIVATE
+#define EQOS_PRV_TS_IOCTL	(SIOCDEVPRIVATE + 1)
 
 #define EQOS_POWERUP_MAGIC_CMD	1
 #define EQOS_POWERDOWN_MAGIC_CMD	2
@@ -282,6 +283,12 @@ typedef enum {
 /* common data structure between driver and application for
  * sharing info through ioctl
  */
+struct ifr_data_timestamp_struct {
+	clockid_t clockid;
+	struct timespec kernel_ts;
+	struct timespec hw_ptp_ts;
+};
+
 struct ifr_data_struct {
 	unsigned int flags;
 	unsigned int qinx;	/* dma channel no to be configured */

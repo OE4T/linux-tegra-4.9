@@ -28,6 +28,7 @@
 #include <dt-bindings/usb/tegra_xhci.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra21x-padctl-uphy.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
+#include "tegra210-soc/tegra210-soc-actmon.dtsi"
 
 / {
 	compatible = "nvidia,tegra210";
@@ -1848,6 +1849,13 @@
 			clocks = <&tegra_car TEGRA210_CLK_CLK_M>;
 			clock-names = "clk_m";
 			status = "disabled";
+		};
+	};
+
+	actmon@6000c800 {
+		status = "okay";
+		mc_all {        /* MC_ALL actmon device */
+			status = "okay";
 		};
 	};
 

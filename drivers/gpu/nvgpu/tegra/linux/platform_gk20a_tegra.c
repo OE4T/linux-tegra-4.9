@@ -996,7 +996,7 @@ static int gk20a_tegra_probe(struct device *dev)
 	return 0;
 }
 
-int gk20a_tegra_late_probe(struct device *dev)
+static int gk20a_tegra_late_probe(struct device *dev)
 {
 	/* Cause early VPR resize */
 	gk20a_tegra_secure_page_alloc(dev);

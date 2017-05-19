@@ -173,8 +173,10 @@ static ssize_t tegra_cec_write(struct file *file, const char __user *buf,
 	mutex_unlock(&cec->tx_lock);
 	if (ret)
 		return ret;
-	else
+	else {
+		dev_dbg(cec->dev, "%s: %*phC", __func__, (int)count, tx_buf);
 		return count;
+	}
 }
 
 static ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
@@ -201,6 +203,8 @@ static ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
 	if (copy_to_user(buffer, &(cec->rx_buffer), count))
 		return -EFAULT;
 
+	dev_dbg(cec->dev, "%s: %*phC", __func__, (int)count,
+		&(cec->rx_buffer));
 	cec->rx_buffer = 0x0;
 	cec->rx_wake = 0;
 	return count;
@@ -231,7 +235,7 @@ static irqreturn_t tegra_cec_irq_handler(int irq, void *data)
 		goto out;
 
 	if (status & TEGRA_CEC_INT_STAT_TX_REGISTER_UNDERRUN) {
-		dev_err(dev, "tegra_cec: TX underrun, interrupt timing issue!\n");
+		dev_err(dev, "TX underrun, interrupt timing issue!\n");
 
 		tegra_cec_error_recovery(cec);
 		writel(mask & ~TEGRA_CEC_INT_MASK_TX_REGISTER_EMPTY,
@@ -271,7 +275,7 @@ static irqreturn_t tegra_cec_irq_handler(int irq, void *data)
 
 		goto out;
 	} else if (status & TEGRA_CEC_INT_STAT_TX_FRAME_OR_BLOCK_NAKD)
-		dev_warn(dev, "tegra_cec: TX NAKed on the fly!\n");
+		dev_warn(dev, "TX NAKed on the fly!\n");
 
 	if (status & TEGRA_CEC_INT_STAT_TX_REGISTER_EMPTY) {
 		if (cec->tx_buf_cur == cec->tx_buf_cnt)
@@ -492,8 +496,7 @@ static ssize_t cec_logical_addr_store(struct device *dev,
 	if (ret)
 		return ret;
 
-
-	dev_dbg(dev, "tegra_cec: set logical address: 0x%x\n", (u32)addr);
+	dev_info(dev, "set logical address: 0x%x\n", (u32)addr);
 	cec->logical_addr = addr;
 	state = readl(cec->cec_base + TEGRA_CEC_HW_CONTROL);
 	state &= ~TEGRA_CEC_HWCTRL_RX_LADDR_MASK;

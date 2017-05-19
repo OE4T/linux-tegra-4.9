@@ -45,6 +45,7 @@
  */
 
 #include <linux/gpio.h>
+#include <linux/time.h>
 #include "yheader.h"
 #include "yapphdr.h"
 #include "drv.h"
@@ -56,6 +57,9 @@ extern ULONG eqos_base_addr;
 
 static INT eqos_status;
 static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx);
+
+/* raw spinlock to get HW PTP time and kernel time atomically */
+static DEFINE_RAW_SPINLOCK(eqos_ts_lock);
 
 /* SA(Source Address) operations on TX */
 unsigned char mac_addr0[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 };
@@ -3290,6 +3294,59 @@ static int eqos_config_pfc(struct net_device *dev, unsigned int flags)
 	return ret;
 }
 
+static int eqos_handle_prv_ts_ioctl(struct eqos_prv_data *pdata,
+				    struct ifreq *ifr)
+{
+	struct hw_if_struct *hw_if = &pdata->hw_if;
+	struct ifr_data_timestamp_struct req;
+	unsigned long flags;
+	u64 ns;
+	u32 remainder;
+	int ret = 0;
+
+	pr_debug("-->eqos_handle_prv_ts_ioctl\n");
+
+	if (copy_from_user(&req, ifr->ifr_data, sizeof(req)))
+		return -EFAULT;
+
+	raw_spin_lock_irqsave(&eqos_ts_lock, flags);
+
+	switch (req.clockid) {
+	case CLOCK_REALTIME:
+		ktime_get_real_ts(&req.kernel_ts);
+		break;
+
+	case CLOCK_MONOTONIC:
+		ktime_get_ts(&req.kernel_ts);
+		break;
+
+	default:
+		ret = -EINVAL;
+		pr_err("Unsupported clockid\n");
+	}
+
+	raw_spin_lock(&pdata->ptp_lock);
+
+	ns = hw_if->get_systime();
+
+	raw_spin_unlock(&pdata->ptp_lock);
+
+	raw_spin_unlock_irqrestore(&eqos_ts_lock, flags);
+
+	req.hw_ptp_ts.tv_sec = div_u64_rem(ns, 1000000000ULL, &remainder);
+	req.hw_ptp_ts.tv_nsec = remainder;
+
+	pr_debug("<--eqos_ptp_get_time: tv_sec = %ld, tv_nsec = %ld\n",
+		 req.hw_ptp_ts.tv_sec, req.hw_ptp_ts.tv_nsec);
+
+	if (copy_to_user(ifr->ifr_data, &req, sizeof(req)))
+		return -EFAULT;
+
+	pr_debug("<--eqos_handle_prv_ts_ioctl\n");
+
+	return ret;
+}
+
 /*!
  * \brief Driver IOCTL routine
  *
@@ -3950,6 +4007,10 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	case EQOS_PRV_IOCTL:
 		ret = eqos_handle_prv_ioctl(pdata, req);
 		req->command_error = ret;
+		break;
+
+	case EQOS_PRV_TS_IOCTL:
+		ret = eqos_handle_prv_ts_ioctl(pdata, ifr);
 		break;
 
 	case SIOCSHWTSTAMP:

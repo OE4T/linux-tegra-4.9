@@ -1501,10 +1501,6 @@ static void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 		gr_gpcs_tpcs_tex_rm_cb_1_valid_true_f(), patch);
 }
 
-static int gr_gv11b_init_fs_state(struct gk20a *g)
-{
-	return gr_gp10b_init_fs_state(g);
-}
 
 static void gr_gv11b_init_cyclestats(struct gk20a *g)
 {
@@ -2458,6 +2454,30 @@ static void gr_gv11b_write_preemption_ptr(struct gk20a *g,
 
 }
 
+static int gr_gv11b_init_fs_state(struct gk20a *g)
+{
+	u32 data;
+
+	gk20a_dbg_fn("");
+
+	data = gk20a_readl(g, gr_gpcs_tpcs_sm_texio_control_r());
+	data = set_field(data, gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_m(),
+			gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_arm_63_48_match_f());
+	gk20a_writel(g, gr_gpcs_tpcs_sm_texio_control_r(), data);
+
+	data = gk20a_readl(g, gr_gpcs_tpcs_sm_disp_ctrl_r());
+	data = set_field(data, gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_m(),
+			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());
+	gk20a_writel(g, gr_gpcs_tpcs_sm_disp_ctrl_r(), data);
+
+	if (g->gr.t18x.fecs_feature_override_ecc_val != 0) {
+		gk20a_writel(g,
+			gr_fecs_feature_override_ecc_r(),
+			g->gr.t18x.fecs_feature_override_ecc_val);
+	}
+
+	return gr_gm20b_init_fs_state(g);
+}
 
 void gv11b_init_gr(struct gpu_ops *gops)
 {

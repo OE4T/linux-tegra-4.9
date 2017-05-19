@@ -31,11 +31,10 @@ always		:= $(dtb-y)
 targets += dtbs
 
 DTC_FLAGS := -i $(tegra-dtstree)/soc/tegra/kernel-include
-DTC_FLAGS += -i $(tegra-dtstree)/soc/tegra/kernel-include/kernel-4.9
 DTC_FLAGS += -i $(tegra-dtstree)/platform/tegra/common/kernel-dts
 DTCCPP_FLAGS := -I$(tegra-dtstree)/soc/tegra/kernel-include
-DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/tegra/kernel-include/kernel-4.9
 DTCCPP_FLAGS += -I$(tegra-dtstree)/platform/tegra/common/kernel-dts
+DTCCPP_FLAGS += -DLINUX_VERSION=409
 
 ifeq ($(CONFIG_ARCH_TEGRA_210_SOC),y)
 DTC_FLAGS += -i $(tegra-dtstree)/soc/t210/kernel-dts

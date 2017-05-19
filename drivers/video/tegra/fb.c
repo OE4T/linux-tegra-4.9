@@ -510,7 +510,7 @@ static int tegra_get_modedb(struct tegra_dc *dc, struct tegra_fb_modedb *modedb,
 		fb_videomode_to_var(&var, &modelist->mode);
 		var.width = tegra_dc_get_out_width(dc);
 		var.height = tegra_dc_get_out_height(dc);
-
+		var.bits_per_pixel = dc->pdata->fb->bits_per_pixel;
 		if (i < modedb->modedb_len) {
 			void __user *ptr = &modedb_ptr[i];
 
@@ -766,6 +766,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
 			fb_add_videomode(&tegra_dc_vga_mode, &fb_info->info->modelist);
 			fb_videomode_to_var(&fb_info->info->var, &tegra_dc_vga_mode);
+			fb_info->info->var.bits_per_pixel = dc->pdata->fb->bits_per_pixel;
 			blank = FB_BLANK_POWERDOWN;
 			event.data = &blank;
 			fb_notifier_call_chain(FB_EVENT_BLANK, &event);
@@ -818,6 +819,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
 		tegra_dc_set_fb_mode(fb_info->win.dc, &fb_mode, false);
 		fb_videomode_to_var(&fb_info->info->var, &fb_mode);
+		fb_info->info->var.bits_per_pixel = dc->pdata->fb->bits_per_pixel;
 		/* event.data not used for FB_EVENT_MODE_CHANGE */
 		fb_notifier_call_chain(FB_EVENT_MODE_CHANGE_ALL, &event);
 		/* event.data not used for FB_EVENT_NEW_MODELIST */

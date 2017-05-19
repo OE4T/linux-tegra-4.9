@@ -2548,6 +2548,7 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 			data->mon_spec.modedb : &tegra_dc_vga_mode;
 		memset(&var, 0x0, sizeof(var));
 		fb_videomode_to_var(&var, target_videomode);
+		var.bits_per_pixel = dc->pdata->fb->bits_per_pixel;
 		tegra_fb_set_var(dc, &var);
 		if (!dp->dc->enabled)
 			tegra_dc_enable(dp->dc);

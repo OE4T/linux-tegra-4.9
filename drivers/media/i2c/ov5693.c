@@ -28,6 +28,9 @@
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include <media/ov5693.h>
+
+#include "soc/tegra/tegra-i2c-rtcpu.h"
+
 #include "../platform/tegra/camera/camera_gpio.h"
 #include "ov5693_mode_tbls.h"
 #include <soc/tegra/chip-id.h>
@@ -82,6 +85,7 @@ struct ov5693 {
 	u32				frame_length;
 	bool				group_hold_en;
 	struct regmap			*regmap;
+	struct camera_common_i2c	i2c_dev;
 	struct camera_common_data	*s_data;
 	struct camera_common_pdata	*pdata;
 	const struct ov5693_soc		*soc;
@@ -98,6 +102,10 @@ static struct regmap_config ov5693_regmap_config_single = {
 	.val_bits = 8,
 	.use_single_rw = true,
 	.cache_type = REGCACHE_NONE,
+};
+
+static struct tegra_i2c_rtcpu_config ov5693_i2c_rtcpu_config = {
+	.reg_bytes = 2,
 };
 
 static int ov5693_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
@@ -258,13 +266,9 @@ static inline int ov5693_read_reg(struct camera_common_data *s_data,
 				u16 addr, u8 *val)
 {
 	struct ov5693 *priv = (struct ov5693 *)s_data->priv;
-	int err = 0;
-	u32 reg_val = 0;
 
-	err = regmap_read(priv->regmap, addr, &reg_val);
-	*val = reg_val & 0xFF;
-
-	return err;
+	return camera_common_i2c_read_reg8(&priv->i2c_dev,
+		addr, val, 1);
 }
 
 static int ov5693_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
@@ -272,7 +276,8 @@ static int ov5693_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
 	int err;
 	struct ov5693 *priv = (struct ov5693 *)s_data->priv;
 
-	err = regmap_write(priv->regmap, addr, val);
+	err = camera_common_i2c_write_reg8(&priv->i2c_dev,
+		addr, &val, 1);
 	if (err)
 		pr_err("%s:i2c write failed, %x = %x\n",
 			__func__, addr, val);
@@ -283,11 +288,9 @@ static int ov5693_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
 static int ov5693_write_table(struct ov5693 *priv,
 			      const ov5693_reg table[])
 {
-	return regmap_util_write_table_8(priv->regmap,
-					 table,
-					 NULL, 0,
-					 OV5693_TABLE_WAIT_MS,
-					 OV5693_TABLE_END);
+	return camera_common_i2c_write_table_8(&priv->i2c_dev,
+		table, NULL, 0,
+		OV5693_TABLE_WAIT_MS, OV5693_TABLE_END);
 }
 
 static void ov5693_gpio_set(struct ov5693 *priv,
@@ -709,6 +712,7 @@ static int ov5693_set_group_hold(struct ov5693 *priv)
 	int gh_prev = switch_ctrl_qmenu[priv->group_hold_prev];
 
 	if (priv->group_hold_en == true && gh_prev == SWITCH_OFF) {
+		camera_common_i2c_aggregate(&priv->i2c_dev, true);
 		/* enter group hold */
 		err = ov5693_write_reg(priv->s_data,
 				       OV5693_GROUP_HOLD_ADDR, 0x01);
@@ -730,6 +734,8 @@ static int ov5693_set_group_hold(struct ov5693 *priv)
 				       OV5693_GROUP_HOLD_ADDR, 0x61);
 		if (err)
 			goto fail;
+
+		camera_common_i2c_aggregate(&priv->i2c_dev, false);
 
 		priv->group_hold_prev = 0;
 
@@ -1069,7 +1075,8 @@ static int ov5693_read_otp_bank(struct ov5693 *priv,
 		return err;
 
 	usleep_range(10000, 11000);
-	err = regmap_bulk_read(priv->regmap, addr, buf, size);
+	err = camera_common_i2c_read_reg8(&priv->i2c_dev,
+		addr, buf, size);
 	if (err)
 		return err;
 
@@ -1458,14 +1465,6 @@ static int ov5693_probe(struct i2c_client *client,
 	if (!priv)
 		return -ENOMEM;
 	priv->soc = soc_data;
-	priv->regmap = devm_regmap_init_i2c(client, soc_data->regmap_cfg);
-
-	if (IS_ERR(priv->regmap)) {
-		dev_err(&client->dev,
-			"regmap init failed: %ld\n", PTR_ERR(priv->regmap));
-		return -ENODEV;
-	}
-
 	priv->pdata = ov5693_parse_dt(client);
 	if (PTR_ERR(priv->pdata) == -EPROBE_DEFER)
 		return -EPROBE_DEFER;
@@ -1473,6 +1472,11 @@ static int ov5693_probe(struct i2c_client *client,
 		dev_err(&client->dev, "unable to get platform data\n");
 		return -EFAULT;
 	}
+
+	err = camera_common_i2c_init(&priv->i2c_dev, client,
+		&ov5693_regmap_config, &ov5693_i2c_rtcpu_config);
+	if (err)
+		return err;
 
 	common_data->ops		= &ov5693_common_ops;
 	common_data->ctrl_handler	= &priv->ctrl_handler;

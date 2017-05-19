@@ -1,2 +1,9 @@
+config VIDEO_ISC
+	tristate "ISC(Image Sensor Control) device support"
+	depends on I2C && PLATFORM_TEGRA
+	---help---
+	 This is a driver for the ISC
+	 for controlling power, interrupt and registering
+	 i2c clients related to image sensor.
 
 trysource "../nvidia/drivers/media/platform/tegra/Kconfig.nvidia"

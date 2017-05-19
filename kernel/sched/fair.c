@@ -5211,9 +5211,9 @@ unsigned long capacity_curr_of(int cpu)
 	       >> SCHED_CAPACITY_SHIFT;
 }
 
-static inline bool energy_aware(void)
+static inline bool capacity_aware(void)
 {
-	return sched_feat(ENERGY_AWARE);
+	return sched_feat(CAPACITY_AWARE);
 }
 
 struct energy_env {
@@ -6392,7 +6392,7 @@ static inline int find_best_target(struct task_struct *p, bool boosted, bool pre
 	return target_cpu;
 }
 
-static int energy_aware_wake_cpu(struct task_struct *p, int target, int sync)
+static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
 {
 	struct sched_domain *sd;
 	struct sched_group *sg, *sg_target;
@@ -6517,7 +6517,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 		record_wakee(p);
 		want_affine = (!wake_wide(p) && task_fits_max(p, cpu) &&
 			cpumask_test_cpu(cpu, tsk_cpus_allowed(p))) ||
-			energy_aware();
+			capacity_aware();
 	}
 
 	rcu_read_lock();
@@ -6548,8 +6548,8 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 	}
 
 	if (!sd) {
-		if (energy_aware() && !cpu_rq(cpu)->rd->overutilized)
-			new_cpu = energy_aware_wake_cpu(p, prev_cpu, sync);
+		if (capacity_aware() && !cpu_rq(cpu)->rd->overutilized)
+			new_cpu = capacity_aware_wake_cpu(p, prev_cpu, sync);
 		else if (sd_flag & SD_BALANCE_WAKE) /* XXX always ? */
 			new_cpu = select_idle_sibling(p, prev_cpu, new_cpu);
 
@@ -8485,7 +8485,7 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	 */
 	update_sd_lb_stats(env, &sds);
 
-	if (energy_aware() && !env->dst_rq->rd->overutilized)
+	if (capacity_aware() && !env->dst_rq->rd->overutilized)
 		goto out_balanced;
 
 	local = &sds.local_stat;
@@ -9036,7 +9036,7 @@ static int idle_balance(struct rq *this_rq)
 	 */
 	this_rq->idle_stamp = rq_clock(this_rq);
 
-	if (!energy_aware() &&
+	if (!capacity_aware() &&
 	    (this_rq->avg_idle < sysctl_sched_migration_cost ||
 	     !this_rq->rd->overload)) {
 		rcu_read_lock();
@@ -9566,15 +9566,15 @@ static inline bool nohz_kick_needed(struct rq *rq)
 		return false;
 
 	if (rq->nr_running >= 2 &&
-	    (!energy_aware() || cpu_overutilized(cpu)))
+	    (!capacity_aware() || cpu_overutilized(cpu)))
 		return true;
 
-	if (energy_aware() && rq->misfit_task)
+	if (capacity_aware() && rq->misfit_task)
 		return true;
 
 	rcu_read_lock();
 	sds = rcu_dereference(per_cpu(sd_llc_shared, cpu));
-	if (sds && !energy_aware()) {
+	if (sds && !capacity_aware()) {
 		/*
 		 * XXX: write a coherent comment on why we do this.
 		 * See also: http://lkml.kernel.org/r/20111202010832.602203411@sbsiddha-desk.sc.intel.com

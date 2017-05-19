@@ -70,11 +70,6 @@ SCHED_FEAT(LB_MIN, false)
 SCHED_FEAT(ATTACH_AGE_LOAD, true)
 
 /*
- * Energy aware scheduling. Use platform energy model to guide scheduling
- * decisions optimizing for energy efficiency.
+ * Capacity aware scheduling.
  */
-#ifdef CONFIG_DEFAULT_USE_ENERGY_AWARE
-SCHED_FEAT(ENERGY_AWARE, true)
-#else
-SCHED_FEAT(ENERGY_AWARE, false)
-#endif
+SCHED_FEAT(CAPACITY_AWARE, false)

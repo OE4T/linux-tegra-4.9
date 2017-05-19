@@ -247,10 +247,10 @@ u64 tegra_smmu_of_get_swgids(struct device *dev,
 				iommu_args.args, MAX_PHANDLE_ARGS);
 		iommu_args.np = of_node_get(iter.node);
 
-		if (!of_match_node(matches, iommu_args.np))
+		if (!of_match_node(matches, iommu_args.np)) {
 			of_node_put(iommu_args.np);
 			continue;
-
+		}
 		of_node_put(iommu_args.np);
 
 		if (iommu_args.args_count != 1) {

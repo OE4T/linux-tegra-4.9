@@ -155,11 +155,15 @@
 #define I2C_TLOW_MASK                           0x3F
 #define I2C_THIGH_SHIFT                         8
 #define I2C_THIGH_MASK                          (0x3F << I2C_THIGH_SHIFT)
+#define I2C_TLOW_NEW_MASK			0xFF
+#define I2C_THIGH_NEW_MASK			(0xFF << I2C_THIGH_SHIFT)
 
 #define I2C_HS_INTERFACE_TIMING			0x9c
 #define I2C_HS_TLOW_MASK			0x3F
 #define I2C_HS_THIGH_SHIFT                         8
 #define I2C_HS_THIGH_MASK			(0x3F << I2C_THIGH_SHIFT)
+#define I2C_HS_TLOW_NEW_MASK			0xFF
+#define I2C_HS_THIGH_NEW_MASK			(0xFF << I2C_THIGH_SHIFT)
 
 #define I2C_DEBUG_CONTROL                       0x0A4
 #define I2C_MASTER_RESET_CONTROL		0x0A8
@@ -255,6 +259,7 @@ struct tegra_i2c_hw_feature {
 	bool has_mst_fifo_reg;
 	u32 max_packet_transfer_len;
 	bool need_continue_xfer_workaround;
+	bool interface_timing_enhancement;
 };
 
 /**
@@ -956,13 +961,27 @@ static void tegra_i2c_get_clk_parameters(struct tegra_i2c_dev *i2c_dev)
 	u32 val;
 
 	val = i2c_readl(i2c_dev, I2C_INTERFACE_TIMING_0);
-	i2c_dev->low_clock_count = val & I2C_TLOW_MASK;
-	i2c_dev->high_clock_count = (val & I2C_THIGH_MASK) >> I2C_THIGH_SHIFT;
+
+	if (i2c_dev->hw->interface_timing_enhancement) {
+		i2c_dev->low_clock_count = val & I2C_TLOW_NEW_MASK;
+		i2c_dev->high_clock_count = (val & I2C_THIGH_NEW_MASK)
+			>> I2C_THIGH_SHIFT;
+	} else {
+		i2c_dev->low_clock_count = val & I2C_TLOW_MASK;
+		i2c_dev->high_clock_count = (val & I2C_THIGH_MASK)
+			>> I2C_THIGH_SHIFT;
+	}
 
 	val = i2c_readl(i2c_dev, I2C_HS_INTERFACE_TIMING);
-	i2c_dev->hs_low_clock_count = val & I2C_HS_TLOW_MASK;
-	i2c_dev->hs_high_clock_count = ((val & I2C_HS_THIGH_MASK)
-		>> I2C_HS_THIGH_SHIFT);
+	if (i2c_dev->hw->interface_timing_enhancement) {
+		i2c_dev->hs_low_clock_count = val & I2C_HS_TLOW_NEW_MASK;
+		i2c_dev->hs_high_clock_count = ((val & I2C_HS_THIGH_NEW_MASK)
+				>> I2C_HS_THIGH_SHIFT);
+	} else {
+		i2c_dev->hs_low_clock_count = val & I2C_HS_TLOW_MASK;
+		i2c_dev->hs_high_clock_count = ((val & I2C_HS_THIGH_MASK)
+				>> I2C_HS_THIGH_SHIFT);
+	}
 
 	val = i2c_readl(i2c_dev, I2C_CLK_DIVISOR);
 	i2c_dev->clk_divisor_hs_mode = val & I2C_CLK_DIVISOR_HS_MODE_MASK;
@@ -2133,6 +2152,7 @@ static const struct tegra_i2c_hw_feature tegra20_i2c_hw = {
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 	.need_continue_xfer_workaround = true,
+	.interface_timing_enhancement = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
@@ -2155,6 +2175,7 @@ static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 	.need_continue_xfer_workaround = true,
+	.interface_timing_enhancement = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
@@ -2177,6 +2198,7 @@ static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 	.need_continue_xfer_workaround = true,
+	.interface_timing_enhancement = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
@@ -2199,6 +2221,7 @@ static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 	.need_continue_xfer_workaround = true,
+	.interface_timing_enhancement = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
@@ -2221,6 +2244,7 @@ static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 	.need_continue_xfer_workaround = true,
+	.interface_timing_enhancement = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
@@ -2243,6 +2267,7 @@ static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 	.need_continue_xfer_workaround = true,
+	.interface_timing_enhancement = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra194_i2c_hw = {
@@ -2263,6 +2288,7 @@ static const struct tegra_i2c_hw_feature tegra194_i2c_hw = {
 	.has_mst_fifo_reg = true,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_64k,
 	.need_continue_xfer_workaround = false,
+	.interface_timing_enhancement = true,
 };
 
 /* Match table for of_platform binding */

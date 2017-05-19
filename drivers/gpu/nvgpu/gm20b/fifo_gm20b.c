@@ -199,6 +199,7 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.setup_userd = gk20a_fifo_setup_userd;
 	gops->fifo.userd_gp_get = gk20a_fifo_userd_gp_get;
 	gops->fifo.userd_gp_put = gk20a_fifo_userd_gp_put;
+	gops->fifo.userd_pb_get = gk20a_fifo_userd_pb_get;
 	gops->fifo.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val;
 
 	gops->fifo.preempt_channel = gk20a_fifo_preempt_channel;

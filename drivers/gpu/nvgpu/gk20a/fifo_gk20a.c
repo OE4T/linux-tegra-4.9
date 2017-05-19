@@ -4212,6 +4212,16 @@ u32 gk20a_fifo_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
 		c->userd_gpu_va + sizeof(u32) * ram_userd_gp_get_w());
 }
 
+u64 gk20a_fifo_userd_pb_get(struct gk20a *g, struct channel_gk20a *c)
+{
+	u32 lo = gk20a_bar1_readl(g,
+		c->userd_gpu_va + sizeof(u32) * ram_userd_get_w());
+	u32 hi = gk20a_bar1_readl(g,
+		c->userd_gpu_va + sizeof(u32) * ram_userd_get_hi_w());
+
+	return ((u64)hi << 32) | lo;
+}
+
 void gk20a_fifo_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 {
 	gk20a_bar1_writel(g,
@@ -4297,6 +4307,7 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.setup_userd = gk20a_fifo_setup_userd;
 	gops->fifo.userd_gp_get = gk20a_fifo_userd_gp_get;
 	gops->fifo.userd_gp_put = gk20a_fifo_userd_gp_put;
+	gops->fifo.userd_pb_get = gk20a_fifo_userd_pb_get;
 	gops->fifo.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val;
 	gops->fifo.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg;
 	gops->fifo.handle_sched_error = gk20a_fifo_handle_sched_error;

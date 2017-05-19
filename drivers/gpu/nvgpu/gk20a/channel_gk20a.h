@@ -104,6 +104,7 @@ struct channel_gk20a_timeout {
 	struct nvgpu_timeout timer;
 	bool running;
 	u32 gp_get;
+	u64 pb_get;
 };
 
 struct gk20a_event_id_data {

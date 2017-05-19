@@ -471,6 +471,7 @@ struct gpu_ops {
 					u32 *runlist);
 		u32 (*userd_gp_get)(struct gk20a *g, struct channel_gk20a *ch);
 		void (*userd_gp_put)(struct gk20a *g, struct channel_gk20a *ch);
+		u64 (*userd_pb_get)(struct gk20a *g, struct channel_gk20a *ch);
 		void (*free_channel_ctx_header)(struct channel_gk20a *ch);
 		bool (*is_fault_engine_subid_gpc)(struct gk20a *g,
 					 u32 engine_subid);

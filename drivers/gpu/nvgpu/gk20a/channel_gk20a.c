@@ -1482,6 +1482,7 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
 {
 	ch->timeout.gp_get = ch->g->ops.fifo.userd_gp_get(ch->g, ch);
+	ch->timeout.pb_get = ch->g->ops.fifo.userd_pb_get(ch->g, ch);
 	ch->timeout.running = true;
 	nvgpu_timeout_init(ch->g, &ch->timeout.timer,
 			gk20a_get_channel_watchdog_timeout(ch),
@@ -1602,16 +1603,23 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 {
 	struct gk20a *g = ch->g;
 	u32 gp_get;
+	u32 new_gp_get;
+	u64 pb_get;
+	u64 new_pb_get;
 
 	gk20a_dbg_fn("");
 
 	/* Get status and clear the timer */
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 	gp_get = ch->timeout.gp_get;
+	pb_get = ch->timeout.pb_get;
 	ch->timeout.running = false;
 	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
-	if (g->ops.fifo.userd_gp_get(ch->g, ch) != gp_get) {
+	new_gp_get = g->ops.fifo.userd_gp_get(ch->g, ch);
+	new_pb_get = g->ops.fifo.userd_pb_get(ch->g, ch);
+
+	if (new_gp_get != gp_get || new_pb_get != pb_get) {
 		/* Channel has advanced, reschedule */
 		gk20a_channel_timeout_start(ch);
 		return;

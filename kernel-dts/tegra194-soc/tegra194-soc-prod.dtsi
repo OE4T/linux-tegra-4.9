@@ -21,7 +21,6 @@
 	sdhci@3460000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 
 			prod_c_ds {
 				prod = <0x00000100 0x00FF0000 0x00090000
@@ -83,7 +82,6 @@
 	ahci-sata@3507000 {
 		prod-settings {
 			#prod-cells = <4>;
-			mask-one-style;
 			prod {
 				prod = <
 					1 0x00000338 0x10000000 0x10000000	// T_SATA0_AHCI_HBA_CYA_1_0     BIT(28)
@@ -96,7 +94,6 @@
 		sor {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 				prod_list_hdmi_soc = "prod_c_hdmi_0m_54m", "prod_c_hdmi_54m_111m",
 						     "prod_c_hdmi_111m_223m", "prod_c_hdmi_223m_300m",
 						     "prod_c_hdmi_300m_600m";
@@ -253,7 +250,6 @@
 		sor1 {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 				prod_list_hdmi_soc = "prod_c_hdmi_0m_54m", "prod_c_hdmi_54m_111m",
 						     "prod_c_hdmi_111m_223m", "prod_c_hdmi_223m_300m",
 						     "prod_c_hdmi_300m_600m";
@@ -411,7 +407,6 @@
 		dpaux@155c0000 {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 
 				prod_c_dpaux_dp {
 					prod = <
@@ -431,7 +426,6 @@
 		dpaux@155D0000 {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 
 				prod_c_dpaux_dp {
 					prod = <

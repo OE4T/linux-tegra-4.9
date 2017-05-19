@@ -156,6 +156,7 @@ static struct dvfs_rail tegra210b01_dvfs_rail_vdd_cpu = {
 	.stats = {
 		.bin_uv = 5000, /* 5.0mV */
 	},
+	.nvver = "p4v1",
 };
 
 static struct dvfs_rail tegra210b01_dvfs_rail_vdd_gpu = {
@@ -513,6 +514,9 @@ static struct cpu_dvfs cpu_fv_dvfs_table[] = {
 		{ 1581000000UL, {  1120000,        0,        0 } }, \
 		{ 1683000000UL, {  1120000,        0,        0 } }, \
 		{ 1785000000UL, {  1120000,        0,        0 } }, \
+		{ 1887000000UL, {  1120000,        0,        0 } }, \
+		{ 1989000000UL, {  1120000,        0,        0 } }, \
+		{ 2091000000UL, {  1120000,        0,        0 } }, \
 		{ 0,	        { } }, \
 	}, \
 	.pll_min_millivolts = 800

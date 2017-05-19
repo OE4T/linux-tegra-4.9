@@ -2167,9 +2167,13 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_hpd_switch;
 	}
 
-	if (((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
-		 (dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE)) &&
-		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+	if ((
+			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
+			(dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))
+			|| IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)
+		) &&
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP
+	) {
 		dp->early_enable = true;
 	} else {
 		dp->early_enable = false;
@@ -2343,11 +2347,6 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 				__func__, err);
 	}
 #endif
-
-	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
-		if (tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false))
-			dev_err(&dc->ndev->dev, "%s: mode-set for fb_console failed\n",
-					__func__);
 
 	tegra_dc_dp_debugfs_create(dp);
 	dp_instance++;
@@ -2553,8 +2552,12 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 		if (!dp->dc->enabled)
 			tegra_dc_enable(dp->dc);
 		dp->early_enable = false;
+		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
+			tegra_fb_update_monspecs(dc->fb,
+				&dp->hpd_data.mon_spec,
+				tegra_dc_dp_ops.mode_filter);
+		}
 	}
-
 	tegra_dc_io_end(dc);
 }
 

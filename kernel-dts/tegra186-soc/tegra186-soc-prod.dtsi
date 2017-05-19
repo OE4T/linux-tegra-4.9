@@ -316,7 +316,7 @@
 	};
 
 
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 	xusb_padctl@3520000 {
 		prod-settings {
 			#prod-cells = <4>;

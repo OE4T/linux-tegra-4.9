@@ -3382,6 +3382,10 @@ static inline u32 gr_gpc0_gpccs_gpc_exception_r(void)
 {
 	return 0x00502c90;
 }
+static inline u32 gr_gpc0_gpccs_gpc_exception_gcc_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
 static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_v(u32 r)
 {
 	return (r >> 16) & 0xff;

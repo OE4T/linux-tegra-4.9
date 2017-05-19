@@ -37,7 +37,6 @@
 	ether_qos@2490000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod {
 				prod = <
 					0x00008800 0x9800000F 0x08000007	// ETHER_QOS_SDMEMCOMPPADCTRL_0

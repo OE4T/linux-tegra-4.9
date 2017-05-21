@@ -48,6 +48,7 @@
 #define ECC_MODE_MIN_INDEX 7
 #define ECC_MODE_MAX_INDEX 13
 #define MAX_RSA_MSG_LEN 256
+#define MAX_RSA1_MSG_LEN 512
 
 enum tegra_se_pka1_ecc_type {
 	ECC_POINT_MUL,
@@ -356,6 +357,51 @@ static int sha_shash_hash_op(struct shash_desc *desc,
 	return ret;
 }
 
+static int tegra_cryptodev_rsa_set_key(struct crypto_akcipher *tfm,
+	char *key, unsigned int keylen,
+	unsigned int max_rsa_key_len,
+	enum tegra_rsa_op_mode op_mode)
+{
+	unsigned int total_key_len;
+	char *key_mem;
+	int ret = 0;
+
+	if (!keylen)
+		return -EINVAL;
+
+	if ((((keylen >> 16) & 0xFFFF) > max_rsa_key_len) ||
+	    ((keylen & 0xFFFF) > max_rsa_key_len)) {
+		pr_err("Invalid rsa key length\n");
+		return -EINVAL;
+	}
+
+	total_key_len = (((keylen >> 16) & 0xFFFF) +
+		(keylen & 0xFFFF));
+	key_mem = kzalloc(total_key_len, GFP_KERNEL);
+	if (!key_mem)
+		return -ENOMEM;
+
+	ret = copy_from_user(key_mem, (void __user *)key,
+			     total_key_len);
+	if (ret) {
+		pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
+		kfree(key_mem);
+		return -EINVAL;
+	}
+
+	if (op_mode == RSA_SET_PUB)
+		ret = crypto_akcipher_set_pub_key(tfm,
+						  key_mem,
+						  keylen);
+	else
+		ret = crypto_akcipher_set_priv_key(tfm,
+						   key_mem,
+						   keylen);
+	kfree(key_mem);
+
+	return ret;
+}
+
 static int tegra_crypt_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
 				struct tegra_rsa_req *rsa_req)
 {
@@ -366,33 +412,6 @@ static int tegra_crypt_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
 	int ret = 0;
 	unsigned long *xbuf[XBUFSIZE];
 	struct tegra_crypto_completion rsa_complete;
-	unsigned int total_key_len;
-	char *key_mem;
-
-	if ((((rsa_req->keylen >> 16) & 0xFFFF) >
-			MAX_RSA_MSG_LEN) ||
-		((rsa_req->keylen & 0xFFFF) >
-			MAX_RSA_MSG_LEN)) {
-		pr_err("Invalid rsa key length\n");
-		return -EINVAL;
-	}
-
-	total_key_len = (((rsa_req->keylen >> 16) & 0xFFFF) +
-				(rsa_req->keylen & 0xFFFF));
-
-	key_mem = kzalloc(total_key_len, GFP_KERNEL);
-	if (!key_mem)
-		return -ENOMEM;
-
-	ret = copy_from_user(key_mem, (void __user *)rsa_req->key,
-			total_key_len);
-	if (ret) {
-		pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
-		ret = -EINVAL;
-		goto out;
-	}
-
-	rsa_req->key = key_mem;
 
 	if (rsa_req->op_mode == RSA_INIT) {
 		tfm = crypto_alloc_akcipher("rsa-pka0",
@@ -400,45 +419,31 @@ static int tegra_crypt_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
 		if (IS_ERR(tfm)) {
 			pr_err("Failed to load transform for rsa-pka0: %ld\n",
 					PTR_ERR(tfm));
-			ret = PTR_ERR(tfm);
-			goto out;
+			return PTR_ERR(tfm);
 		}
 
 		ctx->rsa_tfm[rsa_req->algo] = tfm;
 		filp->private_data = ctx;
-		goto out;
+		return 0;
 	} else {
 		ctx = filp->private_data;
 		tfm =  ctx->rsa_tfm[rsa_req->algo];
 	}
 
-	if (rsa_req->op_mode == RSA_SET_PUB) {
-		if (!(rsa_req->keylen)) {
-			ret = -EINVAL;
-			goto out;
+	if ((rsa_req->op_mode == RSA_SET_PUB) ||
+	    (rsa_req->op_mode == RSA_SET_PRIV)) {
+		if (rsa_req->skip_key) {
+			pr_err("RSA skip key is set\n");
+			return -EINVAL;
 		}
 
-		if (!rsa_req->skip_key) {
-			ret = crypto_akcipher_set_pub_key(tfm,
-					rsa_req->key, rsa_req->keylen);
-			if (ret) {
-				pr_err("alg: rsa: set_pub_key failed\n");
-				goto out;
-			}
-		}
-	} else if (rsa_req->op_mode == RSA_SET_PRIV) {
-		if (!(rsa_req->keylen)) {
-			ret = -EINVAL;
-			goto out;
-		}
-
-		if (!rsa_req->skip_key) {
-			ret = crypto_akcipher_set_priv_key(tfm,
-					rsa_req->key, rsa_req->keylen);
-			if (ret) {
-				pr_err("alg: rsa: set_priv_key failed\n");
-				goto out;
-			}
+		ret = tegra_cryptodev_rsa_set_key(tfm, rsa_req->key,
+						  rsa_req->keylen,
+						  MAX_RSA_MSG_LEN,
+						  rsa_req->op_mode);
+		if (ret < 0) {
+			pr_err("alg: rsa: set key failed\n");
+			return ret;
 		}
 	} else if (rsa_req->op_mode == RSA_ENCRYPT ||
 		rsa_req->op_mode == RSA_DECRYPT	|| rsa_req->op_mode == RSA_SIGN
@@ -447,8 +452,7 @@ static int tegra_crypt_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
 		if (!req) {
 			pr_err("alg: rsa: Failed to allocate request: %s\n",
 					__func__);
-			ret = -ENOMEM;
-			goto out;
+			return -ENOMEM;
 		}
 
 		ret = alloc_bufs(xbuf);
@@ -520,8 +524,7 @@ buf_fail:
 	} else {
 		pr_err("alg: rsa: invalid rsa operation\n");
 	}
-out:
-	kfree(key_mem);
+
 	return ret;
 }
 
@@ -843,67 +846,32 @@ static int tegra_crypt_pka1_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
 	int len;
 	unsigned long *xbuf[XBUFSIZE];
 	struct tegra_crypto_completion rsa_complete;
-	unsigned int total_key_len;
-	char *key_mem;
-
-	total_key_len = (((rsa_req->keylen >> 16) & 0xFFFF) +
-				(rsa_req->keylen & 0xFFFF));
-
-	key_mem = kzalloc(total_key_len, GFP_KERNEL);
-	if (!key_mem)
-		return -ENOMEM;
-
-	ret = copy_from_user(key_mem, (void __user *)rsa_req->key,
-			total_key_len);
-	if (ret) {
-		pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
-		ret = -EINVAL;
-		goto out;
-	}
-
-	rsa_req->key = key_mem;
 
 	if (rsa_req->op_mode == RSA_INIT) {
 		tfm = crypto_alloc_akcipher("rsa", CRYPTO_ALG_TYPE_AKCIPHER, 0);
 		if (IS_ERR(tfm)) {
 			pr_err("Failed to load transform for rsa: %ld\n",
 				PTR_ERR(tfm));
-			ret = PTR_ERR(tfm);
-			goto out;
+			return PTR_ERR(tfm);
 		}
 		ctx->pka1_rsa_tfm = tfm;
 		filp->private_data = ctx;
 
-		ret = 0;
-		goto out;
+		return 0;
 	}
 
 	ctx = filp->private_data;
 	tfm =  ctx->pka1_rsa_tfm;
 
-	if (rsa_req->op_mode == RSA_SET_PUB) {
-		if (!(rsa_req->keylen)) {
-			ret = -EINVAL;
-			goto out_tfm;
-		}
-
-		ret = crypto_akcipher_set_pub_key(tfm, rsa_req->key,
-						  rsa_req->keylen);
-		if (ret) {
-			pr_err("alg: pka1:rsa: set_pub_key failed\n");
-			goto out_tfm;
-		}
-	} else if (rsa_req->op_mode == RSA_SET_PRIV) {
-		if (!(rsa_req->keylen)) {
-			ret = -EINVAL;
-			goto out_tfm;
-		}
-
-		ret = crypto_akcipher_set_priv_key(tfm, rsa_req->key,
-						   rsa_req->keylen);
-		if (ret) {
-			pr_err("alg: pka1:rsa: set_priv_key failed\n");
-			goto out_tfm;
+	if ((rsa_req->op_mode == RSA_SET_PUB) ||
+	    (rsa_req->op_mode == RSA_SET_PRIV)) {
+		ret = tegra_cryptodev_rsa_set_key(tfm, rsa_req->key,
+						  rsa_req->keylen,
+						  MAX_RSA1_MSG_LEN,
+						  rsa_req->op_mode);
+		if (ret < 0) {
+			pr_err("alg: pka1:rsa: set key failed\n");
+			return ret;
 		}
 	} else if (rsa_req->op_mode == RSA_ENCRYPT ||
 		   rsa_req->op_mode == RSA_DECRYPT ||
@@ -991,8 +959,6 @@ buf_fail:
 out_tfm:
 	if (ret)
 		crypto_free_akcipher(tfm);
-out:
-	kfree(key_mem);
 
 	return ret;
 }

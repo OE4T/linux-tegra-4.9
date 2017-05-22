@@ -34,6 +34,7 @@
 
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-powergate.h>
+#include <soc/tegra/chip-id.h>
 
 #include "xhci.h"
 
@@ -1115,15 +1116,26 @@ static int tegra_xusb_mbox_send(struct tegra_xusb *tegra,
 			if (value == MBOX_OWNER_NONE)
 				break;
 
+			/*
+			 * fpga WAR: SW is too slow to see OWNER=NONE before
+			 * FW issues next mbox command.
+			 */
+			if (tegra_platform_is_fpga() &&
+				value != MBOX_OWNER_SW)
+				break;
+
 			usleep_range(10, 20);
 		}
 
-		if (time_after(jiffies, timeout))
-			value = fpci_readl(tegra,
+		if (!tegra_platform_is_fpga()) {
+
+			if (time_after(jiffies, timeout))
+				value = fpci_readl(tegra,
 					tegra->soc->cfg_aru_mbox_owner);
 
-		if (value != MBOX_OWNER_NONE)
-			return -ETIMEDOUT;
+			if (value != MBOX_OWNER_NONE)
+				return -ETIMEDOUT;
+		}
 	}
 
 	return 0;
@@ -1814,6 +1826,11 @@ role_update:
 
 static void tegra_xhci_update_otg_role(struct tegra_xusb *tegra)
 {
+	if (tegra_platform_is_fpga()) {
+		tegra_xhci_set_host_mode(tegra, true);
+		return;
+	}
+
 	if (IS_ERR(tegra->id_extcon))
 		return;
 
@@ -2102,24 +2119,27 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 			return PTR_ERR(tegra->ipfs_base);
 	}
 
+	if (tegra_platform_is_silicon()) {
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-	tegra->pgid_ss = tegra_pd_get_powergate_id(tegra_xusba_pd);
+		tegra->pgid_ss = tegra_pd_get_powergate_id(tegra_xusba_pd);
 #else
-	tegra->pgid_ss = TEGRA_POWERGATE_XUSBA;
+		tegra->pgid_ss = TEGRA_POWERGATE_XUSBA;
 #endif
-	if (tegra->pgid_ss < 0) {
-		dev_err(&pdev->dev, "failed to get SS powergate id\n");
-		return tegra->pgid_ss;
-	}
+		if (tegra->pgid_ss < 0) {
+			dev_err(&pdev->dev, "failed to get SS powergate id\n");
+			return tegra->pgid_ss;
+		}
 
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-	tegra->pgid_host = tegra_pd_get_powergate_id(tegra_xusbc_pd);
+		tegra->pgid_host = tegra_pd_get_powergate_id(tegra_xusbc_pd);
 #else
-	tegra->pgid_host = TEGRA_POWERGATE_XUSBC
+		tegra->pgid_host = TEGRA_POWERGATE_XUSBC
 #endif
-	if (tegra->pgid_host < 0) {
-		dev_err(&pdev->dev, "failed to get Host powergate id\n");
-		return tegra->pgid_host;
+		if (tegra->pgid_host < 0) {
+			dev_err(&pdev->dev,
+				"failed to get Host powergate id\n");
+			return tegra->pgid_host;
+		}
 	}
 
 	tegra->xhci_irq = platform_get_irq(pdev, 0);
@@ -2138,100 +2158,115 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	if (IS_ERR(tegra->padctl))
 		return PTR_ERR(tegra->padctl);
 
-	tegra->host_clk = devm_clk_get(&pdev->dev, "xusb_host");
-	if (IS_ERR(tegra->host_clk)) {
-		err = PTR_ERR(tegra->host_clk);
-		dev_err(&pdev->dev, "failed to get xusb_host: %d\n", err);
-		goto put_padctl;
-	}
+	if (tegra_platform_is_silicon()) {
+		tegra->host_clk = devm_clk_get(&pdev->dev, "xusb_host");
+		if (IS_ERR(tegra->host_clk)) {
+			err = PTR_ERR(tegra->host_clk);
+			dev_err(&pdev->dev, "failed to get xusb_host: %d\n",
+					err);
+			goto put_padctl;
+		}
 
-	tegra->falcon_clk = devm_clk_get(&pdev->dev, "xusb_falcon_src");
-	if (IS_ERR(tegra->falcon_clk)) {
-		err = PTR_ERR(tegra->falcon_clk);
-		dev_err(&pdev->dev, "failed to get xusb_falcon_src: %d\n", err);
-		goto put_padctl;
-	}
+		tegra->falcon_clk = devm_clk_get(&pdev->dev, "xusb_falcon_src");
+		if (IS_ERR(tegra->falcon_clk)) {
+			err = PTR_ERR(tegra->falcon_clk);
+			dev_err(&pdev->dev,
+				"failed to get xusb_falcon_src: %d\n", err);
+			goto put_padctl;
+		}
 
-	tegra->ss_clk = devm_clk_get(&pdev->dev, "xusb_ss");
-	if (IS_ERR(tegra->ss_clk)) {
-		err = PTR_ERR(tegra->ss_clk);
-		dev_err(&pdev->dev, "failed to get xusb_ss: %d\n", err);
-		goto put_padctl;
-	}
+		tegra->ss_clk = devm_clk_get(&pdev->dev, "xusb_ss");
+		if (IS_ERR(tegra->ss_clk)) {
+			err = PTR_ERR(tegra->ss_clk);
+			dev_err(&pdev->dev, "failed to get xusb_ss: %d\n", err);
+			goto put_padctl;
+		}
 
-	tegra->ss_src_clk = devm_clk_get(&pdev->dev, "xusb_ss_src");
-	if (IS_ERR(tegra->ss_src_clk)) {
-		err = PTR_ERR(tegra->ss_src_clk);
-		dev_err(&pdev->dev, "failed to get xusb_ss_src: %d\n", err);
-		goto put_padctl;
-	}
+		tegra->ss_src_clk = devm_clk_get(&pdev->dev, "xusb_ss_src");
+		if (IS_ERR(tegra->ss_src_clk)) {
+			err = PTR_ERR(tegra->ss_src_clk);
+			dev_err(&pdev->dev, "failed to get xusb_ss_src: %d\n",
+					err);
+			goto put_padctl;
+		}
 
-	tegra->hs_src_clk = devm_clk_get(&pdev->dev, "xusb_hs_src");
-	if (IS_ERR(tegra->hs_src_clk)) {
-		err = PTR_ERR(tegra->hs_src_clk);
-		dev_err(&pdev->dev, "failed to get xusb_hs_src: %d\n", err);
-		goto put_padctl;
-	}
+		tegra->hs_src_clk = devm_clk_get(&pdev->dev, "xusb_hs_src");
+		if (IS_ERR(tegra->hs_src_clk)) {
+			err = PTR_ERR(tegra->hs_src_clk);
+			dev_err(&pdev->dev, "failed to get xusb_hs_src: %d\n",
+					err);
+			goto put_padctl;
+		}
 
-	tegra->fs_src_clk = devm_clk_get(&pdev->dev, "xusb_fs_src");
-	if (IS_ERR(tegra->fs_src_clk)) {
-		err = PTR_ERR(tegra->fs_src_clk);
-		dev_err(&pdev->dev, "failed to get xusb_fs_src: %d\n", err);
-		goto put_padctl;
-	}
+		tegra->fs_src_clk = devm_clk_get(&pdev->dev, "xusb_fs_src");
+		if (IS_ERR(tegra->fs_src_clk)) {
+			err = PTR_ERR(tegra->fs_src_clk);
+			dev_err(&pdev->dev, "failed to get xusb_fs_src: %d\n",
+					err);
+			goto put_padctl;
+		}
 
-	tegra->pll_u_480m = devm_clk_get(&pdev->dev, "pll_u_480m");
-	if (IS_ERR(tegra->pll_u_480m)) {
-		err = PTR_ERR(tegra->pll_u_480m);
-		dev_err(&pdev->dev, "failed to get pll_u_480m: %d\n", err);
-		goto put_padctl;
-	}
+		tegra->pll_u_480m = devm_clk_get(&pdev->dev, "pll_u_480m");
+		if (IS_ERR(tegra->pll_u_480m)) {
+			err = PTR_ERR(tegra->pll_u_480m);
+			dev_err(&pdev->dev, "failed to get pll_u_480m: %d\n",
+					err);
+			goto put_padctl;
+		}
 
-	tegra->clk_m = devm_clk_get(&pdev->dev, "clk_m");
-	if (IS_ERR(tegra->clk_m)) {
-		err = PTR_ERR(tegra->clk_m);
-		dev_err(&pdev->dev, "failed to get clk_m: %d\n", err);
-		goto put_padctl;
-	}
+		tegra->clk_m = devm_clk_get(&pdev->dev, "clk_m");
+		if (IS_ERR(tegra->clk_m)) {
+			err = PTR_ERR(tegra->clk_m);
+			dev_err(&pdev->dev, "failed to get clk_m: %d\n", err);
+			goto put_padctl;
+		}
 
-	tegra->pll_e = devm_clk_get(&pdev->dev, "pll_e");
-	if (IS_ERR(tegra->pll_e)) {
-		err = PTR_ERR(tegra->pll_e);
-		dev_err(&pdev->dev, "failed to get pll_e: %d\n", err);
-		goto put_padctl;
-	}
+		tegra->pll_e = devm_clk_get(&pdev->dev, "pll_e");
+		if (IS_ERR(tegra->pll_e)) {
+			err = PTR_ERR(tegra->pll_e);
+			dev_err(&pdev->dev, "failed to get pll_e: %d\n", err);
+			goto put_padctl;
+		}
 
-	tegra->supplies = devm_kcalloc(&pdev->dev, tegra->soc->num_supplies,
-				       sizeof(*tegra->supplies), GFP_KERNEL);
-	if (!tegra->supplies) {
-		err = -ENOMEM;
-		goto put_padctl;
-	}
+		tegra->supplies = devm_kcalloc(&pdev->dev,
+				tegra->soc->num_supplies,
+				sizeof(*tegra->supplies), GFP_KERNEL);
+		if (!tegra->supplies) {
+			err = -ENOMEM;
+			goto put_padctl;
+		}
 
-	for (i = 0; i < tegra->soc->num_supplies; i++)
-		tegra->supplies[i].supply = tegra->soc->supply_names[i];
+		for (i = 0; i < tegra->soc->num_supplies; i++)
+			tegra->supplies[i].supply = tegra->soc->supply_names[i];
 
-	err = devm_regulator_bulk_get(&pdev->dev, tegra->soc->num_supplies,
-				      tegra->supplies);
-	if (err) {
-		dev_err(&pdev->dev, "failed to get regulators: %d\n", err);
-		goto put_padctl;
+		err = devm_regulator_bulk_get(&pdev->dev,
+				tegra->soc->num_supplies, tegra->supplies);
+		if (err) {
+			dev_err(&pdev->dev, "failed to get regulators: %d\n",
+					err);
+			goto put_padctl;
+		}
 	}
 
 	err = tegra_xhci_phy_init(pdev);
 	if (err)
 		goto put_padctl;
 
-	err = tegra_xusb_clk_enable(tegra);
-	if (err) {
-		dev_err(&pdev->dev, "failed to enable clocks: %d\n", err);
-		goto put_padctl;
-	}
+	if (tegra_platform_is_silicon()) {
+		err = tegra_xusb_clk_enable(tegra);
+		if (err) {
+			dev_err(&pdev->dev, "failed to enable clocks: %d\n",
+					err);
+			goto put_padctl;
+		}
 
-	err = regulator_bulk_enable(tegra->soc->num_supplies, tegra->supplies);
-	if (err) {
-		dev_err(&pdev->dev, "failed to enable regulators: %d\n", err);
-		goto disable_clk;
+		err = regulator_bulk_enable(tegra->soc->num_supplies,
+				tegra->supplies);
+		if (err) {
+			dev_err(&pdev->dev, "failed to enable regulators: %d\n",
+					err);
+			goto disable_clk;
+		}
 	}
 
 	err = tegra_xusb_phy_enable(tegra);
@@ -2240,27 +2275,34 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 		goto disable_regulator;
 	}
 
-	err = tegra_xhci_unpowergate_partitions(tegra);
-	if (err) {
-		dev_err(&pdev->dev, "failed to unpowergate (%d)\n", err);
-		goto disable_phy;
+	if (tegra_platform_is_silicon()) {
+		err = tegra_xhci_unpowergate_partitions(tegra);
+		if (err) {
+			dev_err(&pdev->dev, "failed to unpowergate (%d)\n",
+					err);
+			goto disable_phy;
+		}
 	}
 
 	tegra_xusb_config(tegra);
 
 	tegra_xusb_debugfs_init(tegra);
 
-	INIT_WORK(&tegra->id_extcon_work, tegra_xhci_id_extcon_work);
-	tegra->id_extcon = extcon_get_extcon_dev_by_cable(&pdev->dev, "id");
-	if (!IS_ERR(tegra->id_extcon)) {
-		tegra->id_extcon_nb.notifier_call = tegra_xhci_id_notifier;
-		extcon_register_notifier(tegra->id_extcon, EXTCON_USB_HOST,
-					&tegra->id_extcon_nb);
-	} else if (PTR_ERR(tegra->id_extcon) == -EPROBE_DEFER) {
-		err = -EPROBE_DEFER;
-		goto powergate_partitions;
-	} else
-		dev_info(&pdev->dev, "no USB ID extcon found\n");
+	if (tegra_platform_is_silicon()) {
+		INIT_WORK(&tegra->id_extcon_work, tegra_xhci_id_extcon_work);
+		tegra->id_extcon = extcon_get_extcon_dev_by_cable(&pdev->dev,
+						"id");
+		if (!IS_ERR(tegra->id_extcon)) {
+			tegra->id_extcon_nb.notifier_call =
+					tegra_xhci_id_notifier;
+			extcon_register_notifier(tegra->id_extcon,
+					EXTCON_USB_HOST, &tegra->id_extcon_nb);
+		} else if (PTR_ERR(tegra->id_extcon) == -EPROBE_DEFER) {
+			err = -EPROBE_DEFER;
+			goto powergate_partitions;
+		} else
+			dev_info(&pdev->dev, "no USB ID extcon found\n");
+	}
 
 	INIT_DELAYED_WORK(&tegra->firmware_retry_work,
 					tegra_firmware_retry_work);
@@ -2280,20 +2322,26 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	return 0;
 
 unregister_extcon:
-	cancel_work_sync(&tegra->id_extcon_work);
-	if (!IS_ERR(tegra->id_extcon)) {
-		extcon_unregister_notifier(tegra->id_extcon, EXTCON_USB_HOST,
-					&tegra->id_extcon_nb);
+	if (tegra_platform_is_silicon()) {
+		cancel_work_sync(&tegra->id_extcon_work);
+		if (!IS_ERR(tegra->id_extcon)) {
+			extcon_unregister_notifier(tegra->id_extcon,
+					EXTCON_USB_HOST, &tegra->id_extcon_nb);
+		}
 	}
 powergate_partitions:
-	tegra_xhci_powergate_partitions(tegra);
+	if (tegra_platform_is_silicon())
+		tegra_xhci_powergate_partitions(tegra);
 disable_phy:
 	tegra_xusb_debugfs_deinit(tegra);
 	tegra_xusb_phy_disable(tegra);
 disable_regulator:
-	regulator_bulk_disable(tegra->soc->num_supplies, tegra->supplies);
+	if (tegra_platform_is_silicon())
+		regulator_bulk_disable(tegra->soc->num_supplies,
+				tegra->supplies);
 disable_clk:
-	tegra_xusb_clk_disable(tegra);
+	if (tegra_platform_is_silicon())
+		tegra_xusb_clk_disable(tegra);
 put_padctl:
 	tegra_xusb_padctl_put(tegra->padctl);
 	return err;
@@ -2320,9 +2368,12 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	fw_log_deinit(tegra);
 
 	tegra_xusb_phy_disable(tegra);
-	regulator_bulk_disable(tegra->soc->num_supplies, tegra->supplies);
-	tegra_xusb_clk_disable(tegra);
-	tegra_xhci_powergate_partitions(tegra);
+	if (tegra_platform_is_silicon()) {
+		regulator_bulk_disable(tegra->soc->num_supplies,
+				tegra->supplies);
+		tegra_xusb_clk_disable(tegra);
+		tegra_xhci_powergate_partitions(tegra);
+	}
 
 	tegra_xusb_padctl_put(tegra->padctl);
 
@@ -2573,16 +2624,19 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 
 	dev_info(dev, "exiting ELPG\n");
 
-	ret = tegra_xusb_clk_enable(tegra);
-	if (ret) {
-		dev_warn(dev, "failed to enable xhci clocks %d\n", ret);
-		goto out;
-	}
+	if (tegra_platform_is_silicon()) {
+		ret = tegra_xusb_clk_enable(tegra);
+		if (ret) {
+			dev_warn(dev, "failed to enable xhci clocks %d\n", ret);
+			goto out;
+		}
 
-	ret = tegra_xhci_unpowergate_partitions(tegra);
-	if (ret < 0) {
-		dev_warn(dev, "failed to unpowergate partitions %d\n", ret);
-		goto out;
+		ret = tegra_xhci_unpowergate_partitions(tegra);
+		if (ret < 0) {
+			dev_warn(dev, "failed to unpowergate partitions %d\n",
+					ret);
+			goto out;
+		}
 	}
 
 	if (do_wakeup)

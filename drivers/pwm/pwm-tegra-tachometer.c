@@ -45,7 +45,6 @@ struct pwm_tegra_tach {
 	struct reset_control	*rst;
 	unsigned int		pulse_per_rev;
 	unsigned int		capture_win_len;
-	bool			enable_clk_gate;
 	struct pwm_chip		chip;
 };
 
@@ -89,11 +88,10 @@ static int pwm_tegra_tacho_set_capture_wlen(struct pwm_chip *chip,
 {
 	struct pwm_tegra_tach *ptt = to_tegra_pwm_chip(chip);
 	u32 tach0, wlen;
-	int ret;
 
 	if (hweight8(window_length) != 1) {
 		dev_err(ptt->dev,
-			"Invalid window length, Valid values {1, 2, 4 or 8}n");
+			"Invalid window length,valid values {1, 2, 4 or 8}\n");
 		return -EINVAL;
 	}
 
@@ -103,24 +101,12 @@ static int pwm_tegra_tacho_set_capture_wlen(struct pwm_chip *chip,
 		return -EINVAL;
 	}
 
-	if (ptt->enable_clk_gate) {
-		ret = clk_prepare_enable(ptt->clk);
-		if (ret < 0) {
-			dev_err(ptt->dev, "Failed to clock enable: %d\n", ret);
-			return ret;
-		}
-	}
-
-
 	wlen = ffs(window_length) - 1;
 	tach0 = tachometer_readl(ptt, TACH_FAN_TACH0);
 	tach0 &= ~(TACH_FAN_TACH0_WIN_LENGTH_MASK <<
-			TACH_FAN_TACH0_WIN_LENGTH_SHIFT);;
+			TACH_FAN_TACH0_WIN_LENGTH_SHIFT);
 	tach0 |= wlen << TACH_FAN_TACH0_WIN_LENGTH_SHIFT;
 	tachometer_writel(ptt, tach0, TACH_FAN_TACH0);
-
-	if (ptt->enable_clk_gate)
-		clk_disable_unprepare(ptt->clk);
 
 	ptt->capture_win_len = window_length;
 
@@ -135,15 +121,6 @@ static int pwm_tegra_tacho_capture(struct pwm_chip *chip,
 	struct pwm_tegra_tach *ptt = to_tegra_pwm_chip(chip);
 	unsigned long period, nrps_clk, n_on_clks;
 	u32 tach0;
-	int ret;
-
-	if (ptt->enable_clk_gate) {
-		ret = clk_prepare_enable(ptt->clk);
-		if (ret < 0) {
-			dev_err(ptt->dev, "Failed to clock enalble: %d\n", ret);
-			return ret;
-		}
-	}
 
 	tach0 = tachometer_readl(ptt, TACH_FAN_TACH0);
 	if (tach0 & TACH_FAN_TACH0_OVERFLOW_MASK) {
@@ -151,9 +128,6 @@ static int pwm_tegra_tacho_capture(struct pwm_chip *chip,
 		dev_info(ptt->dev, "Tachometer Overflow is detected\n");
 		tachometer_writel(ptt, tach0, TACH_FAN_TACH0);
 	}
-
-	if (ptt->enable_clk_gate)
-		clk_disable_unprepare(ptt->clk);
 
 	period = tach0 & TACH_FAN_TACH0_PERIOD_MASK;
 	if ((period == TACH_FAN_TACH0_PERIOD_MIN) ||
@@ -192,12 +166,9 @@ static void pwm_tegra_tach_read_platform_data(struct pwm_tegra_tach *ptt)
 	if (!ret)
 		ptt->pulse_per_rev = pval;
 
-	ret = of_property_read_u32(np, "icapture-window-length", &pval);
+	ret = of_property_read_u32(np, "capture-window-length", &pval);
 	if (!ret)
 		ptt->capture_win_len = pval;
-
-	ptt->enable_clk_gate = of_property_read_bool(np,
-					"enable-dynamic-clock-gating");
 }
 
 static int pwm_tegra_tach_probe(struct platform_device *pdev)
@@ -275,9 +246,6 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 		goto pwm_remove;
 	}
 
-	if (ptt->enable_clk_gate)
-		clk_disable_unprepare(ptt->clk);
-
 	return 0;
 
 pwm_remove:
@@ -301,8 +269,7 @@ static int pwm_tegra_tach_remove(struct platform_device *pdev)
 
 	reset_control_assert(ptt->rst);
 
-	if (!ptt->enable_clk_gate)
-		clk_disable_unprepare(ptt->clk);
+	clk_disable_unprepare(ptt->clk);
 
 	return pwmchip_remove(&ptt->chip);
 }

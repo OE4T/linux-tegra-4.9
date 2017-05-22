@@ -1,6 +1,7 @@
 GCOV_PROFILE := y
 ccflags-y += -I$(srctree)/../nvhost/drivers/video/tegra/host
 ccflags-y += -I$(srctree)/../nvhost-t19x/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/../nvhost-t19x/include
 ccflags-y += -I$(srctree)/../nvmap-t19x/include
 ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar

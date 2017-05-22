@@ -1253,6 +1253,20 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 	 */
 	chan->subdev_on_csi = sd;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	if (!video_is_registered(&chan->video) &&
+			strstr(sd->name, "nvcsi") == NULL) {
+		int ret = 0;
+
+		ret = video_register_device(&chan->video, VFL_TYPE_GRABBER, -1);
+		if (ret < 0) {
+			dev_err(&chan->video.dev, "failed to register %s\n",
+				chan->video.name);
+			goto fail;
+		}
+	}
+#endif
+
 	/* initialize the available formats */
 	if (chan->num_subdevs)
 		tegra_channel_fmts_bitmap_init(chan);
@@ -1802,48 +1816,6 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 
 	media_entity_cleanup(&chan->video.entity);
 
-	return 0;
-}
-
-int tegra_vi_channels_register(struct tegra_mc_vi *vi)
-{
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	int ret = 0;
-	struct tegra_channel *it;
-	int count = 0;
-
-	list_for_each_entry(it, &vi->vi_chans, list) {
-		struct v4l2_subdev *sd = it->subdev_on_csi;
-		bool is_csi = false;
-
-		if (sd) {
-			/*
-			 * If subdevice on csi is csi itself,
-			 * then sensor subdevice is not connected
-			 */
-			is_csi = strstr(sd->name, "nvcsi") != NULL;
-
-			if (is_csi)
-				continue;
-		} else
-			continue;
-
-		if (!it->init_done)
-			continue;
-		ret = video_register_device(&it->video, VFL_TYPE_GRABBER, -1);
-		if (ret < 0) {
-			dev_err(&it->video.dev, "failed to register %s\n",
-				it->video.name);
-			continue;
-		}
-		count++;
-	}
-
-	if (count == 0) {
-		dev_err(vi->dev, "all channel register failed\n");
-		return ret;
-	}
-#endif
 	return 0;
 }
 

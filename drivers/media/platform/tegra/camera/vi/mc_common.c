@@ -228,26 +228,6 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 	if (err)
 		goto channel_init_error;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	i = 0;
-	list_for_each_entry(item, &mc_vi->vi_chans, list) {
-		if (!item->pg_mode)
-			continue;
-		err = video_register_device(&item->video, VFL_TYPE_GRABBER, -1);
-		if (err < 0) {
-			dev_err(&item->video.dev, "failed to register %s\n",
-				item->video.name);
-			continue;
-		}
-		i++;
-	}
-
-	if (i == 0) {
-		dev_err(mc_vi->dev, "all tpg register failed\n");
-		goto channel_init_error;
-	}
-#endif
-
 	return err;
 
 channel_init_error:

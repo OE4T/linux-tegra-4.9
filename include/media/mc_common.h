@@ -285,7 +285,6 @@ int tegra_vi_tpg_graph_init(struct tegra_mc_vi *vi);
 int tegra_vi_graph_init(struct tegra_mc_vi *vi);
 void tegra_vi_graph_cleanup(struct tegra_mc_vi *vi);
 int tegra_channel_init(struct tegra_channel *chan);
-int tegra_vi_channels_register(struct tegra_mc_vi *vi);
 void tegra_vi_channels_unregister(struct tegra_mc_vi *vi);
 int tegra_vi_channels_init(struct tegra_mc_vi *vi);
 int tegra_channel_cleanup(struct tegra_channel *chan);

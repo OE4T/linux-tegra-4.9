@@ -1147,11 +1147,6 @@ int gm20b_init_clk_setup_sw(struct gk20a *g)
 			clk->pll_poweron_uv = BOOT_GPU_UV_B1;
 	}
 
-	if (!gk20a_clk_get(g)) {
-		err = -EINVAL;
-		goto fail;
-	}
-
 	clk->gpc_pll.clk_in = g->ops.clk.get_ref_clock_rate(g) / KHZ;
 	if (clk->gpc_pll.clk_in == 0) {
 		nvgpu_err(g, "GPCPLL reference clock is zero");
@@ -1451,13 +1446,15 @@ void gm20b_init_clk_ops(struct gpu_ops *gops)
 static int rate_get(void *data, u64 *val)
 {
 	struct gk20a *g = (struct gk20a *)data;
-	*val = (u64)gk20a_clk_get_rate(g);
+	struct clk_gk20a *clk = &g->clk;
+
+	*val = (u64)rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
 	return 0;
 }
 static int rate_set(void *data, u64 val)
 {
 	struct gk20a *g = (struct gk20a *)data;
-	return gk20a_clk_set_rate(g, (u32)val);
+	return g->ops.clk.set_rate(g, CTRL_CLK_DOMAIN_GPCCLK, (u32)val);
 }
 DEFINE_SIMPLE_ATTRIBUTE(rate_fops, rate_get, rate_set, "%llu\n");
 

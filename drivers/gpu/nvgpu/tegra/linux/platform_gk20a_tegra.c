@@ -754,6 +754,27 @@ void gk20a_tegra_init_secure_alloc(struct gk20a *g)
 }
 
 #ifdef CONFIG_COMMON_CLK
+static struct clk *gk20a_clk_get(struct gk20a *g)
+{
+	if (!g->clk.tegra_clk) {
+		struct clk *clk;
+		char clk_dev_id[32];
+		struct device *dev = dev_from_gk20a(g);
+
+		snprintf(clk_dev_id, 32, "tegra_%s", dev_name(dev));
+
+		clk = clk_get_sys(clk_dev_id, "gpu");
+		if (IS_ERR(clk)) {
+			nvgpu_err(g, "fail to get tegra gpu clk %s/gpu\n",
+				  clk_dev_id);
+			return NULL;
+		}
+		g->clk.tegra_clk = clk;
+	}
+
+	return g->clk.tegra_clk;
+}
+
 static int gm20b_clk_prepare_ops(struct clk_hw *hw)
 {
 	struct clk_gk20a *clk = to_clk_gk20a(hw);
@@ -808,6 +829,10 @@ static int gm20b_register_gpcclk(struct gk20a *g)
 	struct clk_init_data init;
 	struct clk *c;
 	int err = 0;
+
+	/* make sure the clock is available */
+	if (!gk20a_clk_get(g))
+		return -ENOSYS;
 
 	err = gm20b_init_clk_setup_sw(g);
 	if (err)
@@ -958,7 +983,11 @@ static long gk20a_round_clk_rate(struct device *dev, unsigned long rate)
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 
-	return gk20a_clk_round_rate(g, rate);
+	/* make sure the clock is available */
+	if (!gk20a_clk_get(g))
+		return rate;
+
+	return clk_round_rate(clk_get_parent(g->clk.tegra_clk), rate);
 }
 
 static int gk20a_clk_get_freqs(struct device *dev,

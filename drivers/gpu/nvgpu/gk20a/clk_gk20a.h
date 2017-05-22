@@ -105,12 +105,6 @@ struct clk_gk20a {
 
 struct gpu_ops;
 
-/* APIs used for both GK20A and GM20B */
-unsigned long gk20a_clk_get_rate(struct gk20a *g);
-int gk20a_clk_set_rate(struct gk20a *g, unsigned long rate);
-long gk20a_clk_round_rate(struct gk20a *g, unsigned long rate);
-struct clk *gk20a_clk_get(struct gk20a *g);
-
 #define KHZ 1000
 #define MHZ 1000000
 

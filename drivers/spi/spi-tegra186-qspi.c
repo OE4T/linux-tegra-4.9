@@ -1752,30 +1752,25 @@ static struct tegra_qspi_device_controller_data *tegra_qspi_get_cdata_dt(
 	return cdata;
 }
 
-static struct tegra_qspi_platform_data *tegra_qspi_parse_dt(
-		struct platform_device *pdev)
+static void tegra_qspi_parse_dt(struct device *dev,
+				struct tegra_qspi_data *tqspi)
 {
-	struct tegra_qspi_platform_data *pdata;
+	struct device_node *np = dev->of_node;
 	const unsigned int *prop;
-	struct device_node *np = pdev->dev.of_node;
 	u32 of_dma[2];
-
-	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
-	if (!pdata)
-		return NULL;
 
 	if (of_property_read_u32_array(np, "nvidia,dma-request-selector",
 				       of_dma, 2) >= 0)
-		pdata->dma_req_sel = of_dma[1];
+		tqspi->dma_req_sel = of_dma[1];
 
 	prop = of_get_property(np, "spi-max-frequency", NULL);
 	if (prop)
-		pdata->qspi_max_frequency = be32_to_cpup(prop);
+		tqspi->qspi_max_frequency = be32_to_cpup(prop);
+	else
+		tqspi->qspi_max_frequency = 136000000; /* 136MHz */
 
 	if (of_find_property(np, "nvidia,clock-always-on", NULL))
-		pdata->is_clkon_always = true;
-
-	return pdata;
+		tqspi->clock_always_on = true;
 }
 
 static int tegra_qspi_probe(struct platform_device *pdev)
@@ -1784,32 +1779,13 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	struct spi_master	*master;
 	struct tegra_qspi_data	*tqspi;
 	struct resource		*r;
-	struct tegra_qspi_platform_data *pdata = pdev->dev.platform_data;
 	int ret, qspi_irq;
 	int bus_num;
 	u32 actual_speed = 0;
 
-	if (pdev->dev.of_node) {
-		bus_num = of_alias_get_id(pdev->dev.of_node, "qspi");
-		if (bus_num < 0) {
-			dev_warn(&pdev->dev,
-				 "Dynamic bus number will be registered\n");
-			bus_num = -1;
-		}
-	} else {
-		bus_num = pdev->id;
-	}
-
-	if (!pdata && pdev->dev.of_node)
-		pdata = tegra_qspi_parse_dt(pdev);
-
-	if (!pdata) {
-		dev_err(&pdev->dev, "No platform data, exiting\n");
-		return -ENODEV;
-	}
-
-	if (!pdata->qspi_max_frequency)
-		pdata->qspi_max_frequency = 136000000; /* 136MHz */
+	bus_num = of_alias_get_id(pdev->dev.of_node, "qspi");
+	if (bus_num < 0)
+		bus_num = -1;
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*tqspi));
 	if (!master) {
@@ -1828,8 +1804,8 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, master);
 	tqspi = spi_master_get_devdata(master);
 	tqspi->master = master;
-	tqspi->dma_req_sel = pdata->dma_req_sel;
-	tqspi->clock_always_on = pdata->is_clkon_always;
+
+	tegra_qspi_parse_dt(&pdev->dev, tqspi);
 	tqspi->dev = &pdev->dev;
 	tqspi->prod_list = devm_tegra_prod_get(&pdev->dev);
 	if (IS_ERR(tqspi->prod_list)) {
@@ -1887,7 +1863,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->is_ddr_mode = false;
 	tqspi->max_buf_size = QSPI_FIFO_DEPTH << 2;
 	tqspi->dma_buf_size = DEFAULT_SPI_DMA_BUF_LEN;
-	if (pdata->dma_req_sel) {
+	if (tqspi->dma_req_sel) {
 		ret = tegra_qspi_init_dma_param(tqspi, true);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "RxDma Init failed, err %d\n", ret);
@@ -1933,7 +1909,6 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "pm runtime get failed, e = %d\n", ret);
 		goto exit_pm_disable;
 	}
-	tqspi->qspi_max_frequency = pdata->qspi_max_frequency;
 	set_best_clk_source(tqspi);
 	ret = clk_set_rate(tqspi->clk, tqspi->qspi_max_frequency);
 	if (ret) {

@@ -981,31 +981,35 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
 	char prod_name[MAX_PROD_NAME];
+	int clk_mhz;
 	int err;
 
-	if (tqspi->prod_list) {
-		/* If available, initialise the config registers
-		 * for QSPI with the values mentioned in prod list.
-		 */
-		err = tegra_prod_set_by_name(&tqspi->base, "prod",
-					     tqspi->prod_list);
-		if (err < 0)
-			dev_dbg(tqspi->dev, "Prod config not found for QSPI: %d\n",
-				err);
-		if (tqspi->is_ddr_mode)
-			sprintf(prod_name, "prod_c_DDR%d",
-				(tqspi->cur_speed / 1000000));
-		else
-			sprintf(prod_name, "prod_c_SDR%d",
-				(tqspi->cur_speed / 1000000));
-		if (tegra_prod_set_by_name(&tqspi->base,
-					   prod_name, tqspi->prod_list))
-			dev_info_once(tqspi->dev,
-				      "Failed to apply prod name[%s] for qspi\n",
-				      prod_name);
-		else
-			return;
-	}
+	if (tqspi->prod_list)
+		goto regs_por;
+
+	/* If available, initialise the config registers
+	 * for QSPI with the values mentioned in prod list.
+	 */
+	err = tegra_prod_set_by_name(&tqspi->base, "prod", tqspi->prod_list);
+	if (err < 0)
+		dev_dbg(tqspi->dev, "Prod config not found for QSPI: %d\n",
+			err);
+
+	clk_mhz = tqspi->cur_speed / 1000000;
+
+	if (tqspi->is_ddr_mode)
+		sprintf(prod_name, "prod_c_DDR%d", clk_mhz);
+	else
+		sprintf(prod_name, "prod_c_SDR%d", clk_mhz);
+
+	err = tegra_prod_set_by_name(&tqspi->base, prod_name, tqspi->prod_list);
+	if (!err)
+		return;
+
+	dev_info_once(tqspi->dev, "Failed to apply prod name[%s] for qspi\n",
+		      prod_name);
+
+regs_por:
 	/* If NOT defined in prod list or error in applying prod settings,
 	 * then initialise golden registers with POR values.
 	 */
@@ -1731,19 +1735,6 @@ static struct tegra_qspi_device_controller_data *tegra_qspi_get_cdata_dt(
 	cdata = kzalloc(sizeof(*cdata), GFP_KERNEL);
 	if (!cdata)
 		return NULL;
-
-	ret = of_property_read_u32(data_np, "nvidia,rx-clk-tap-delay", &pval);
-	if (!ret)
-		cdata->rx_clk_tap_delay = pval;
-
-	ret = of_property_read_u32(data_np, "nvidia,tx-clk-tap-delay", &pval);
-	if (!ret)
-		cdata->tx_clk_tap_delay = pval;
-
-	cdata->tx_tap_delay = of_property_read_bool(data_np,
-						    "nvidia,tx_tap_delay");
-	cdata->rx_tap_delay = of_property_read_bool(data_np,
-						    "nvidia,rx_tap_delay");
 
 	ret = of_property_read_u32(data_np, "nvidia,x1-len-limit", &pval);
 	if (!ret)

@@ -55,12 +55,13 @@
 #define TEGRA_HV_VSE_MAX_TASKS_PER_SUBMIT 32
 #define TEGRA_HV_VSE_IVC_REQ_FRAME_SIZE 320
 #define TEGRA_HV_VSE_IVC_FRAME_SIZE 0x2840
-
 #define TEGRA_HV_VSE_TIMEOUT (msecs_to_jiffies(10000))
 #define TEGRA_HV_VSE_NUM_SERVER_REQ 4
+#define TEGRA_VIRTUAL_SE_RNG1_SIZE 300
 
 static struct task_struct *tegra_vse_task;
 static bool vse_thread_start;
+static bool is_rng1_registered;
 
 /* Security Engine Linked List */
 struct tegra_virtual_se_ll {
@@ -78,6 +79,14 @@ enum tegra_virtual_se_command {
 	VIRTUAL_SE_AES_CRYPTO,
 	VIRTUAL_SE_KEY_SLOT,
 	VIRTUAL_SE_PROCESS,
+	VIRTUAL_RNG1_PROCESS,
+};
+
+/* RNG1 response */
+struct tegra_vse_rng1_data {
+	u8 status;
+	u32 bytes_returned;
+	u8 data[TEGRA_VIRTUAL_SE_RNG1_SIZE];
 };
 
 struct tegra_vse_priv_data {
@@ -92,6 +101,7 @@ struct tegra_vse_priv_data {
 	struct scatterlist sg;
 	void *buf;
 	dma_addr_t buf_addr;
+	struct tegra_vse_rng1_data rng1;
 };
 
 struct tegra_virtual_se_dev {
@@ -184,6 +194,10 @@ union tegra_virtual_se_rsa_args {
 	} op;
 };
 
+struct tegra_virtual_se_rng1_args {
+	u32 length;
+};
+
 struct tegra_virtual_se_sha_args {
 	u32 msg_block_length;
 	u32 msg_total_length;
@@ -203,6 +217,14 @@ struct tegra_virtual_se_ivc_resp_msg_t {
 	u8 reserved[TEGRA_HV_VSE_IVC_REQ_FRAME_SIZE - 4];
 };
 
+struct tegra_virtual_se_ivc_rng {
+	u8 engine;
+	u8 tag;
+	u8 status;
+	u8 data_len[4];
+	u8 data[TEGRA_VIRTUAL_SE_RNG1_SIZE];
+};
+
 struct tegra_virtual_se_ivc_tx_msg_t {
 	u8 engine;
 	u8 tag;
@@ -211,6 +233,7 @@ struct tegra_virtual_se_ivc_tx_msg_t {
 		union tegra_virtual_se_aes_args aes;
 		struct tegra_virtual_se_sha_args sha;
 		union tegra_virtual_se_rsa_args rsa;
+		struct tegra_virtual_se_rng1_args rng1;
 	} args;
 };
 
@@ -315,11 +338,18 @@ struct tegra_virtual_se_rng_context {
 	dma_addr_t rng_buf_adr;
 };
 
+/* Security Engine rng1 trng context */
+struct tegra_virtual_se_rng1_trng_ctx {
+	/* Security Engine device */
+	struct tegra_virtual_se_dev *se_dev;
+};
+
 enum se_engine_id {
 	VIRTUAL_SE_AES0,
 	VIRTUAL_SE_AES1,
 	VIRTUAL_SE_RSA,
 	VIRTUAL_SE_SHA,
+	VIRTUAL_SE_RNG1,
 	VIRTUAL_MAX_SE_ENGINE_NUM,
 };
 
@@ -342,6 +372,8 @@ enum tegra_virual_se_aes_iv_type {
 #define VIRTUAL_SE_CMD_AES_DECRYPT 5
 #define VIRTUAL_SE_CMD_AES_CMAC 6
 #define VIRTUAL_SE_CMD_AES_RNG_DBRG 7
+#define VIRTUAL_SE_CMD_ELP_RNG1_RAND 1
+#define VIRTUAL_SE_CMD_ELP_RNG1_TRNG 2
 
 #define VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_512BIT (512 / 8)
 #define VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1024BIT (1024 / 8)
@@ -2183,6 +2215,108 @@ static int tegra_hv_vse_rng_drbg_reset(struct crypto_rng *tfm,
 	return 0;
 }
 
+static int tegra_hv_vse_rng1_get_trng(struct crypto_rng *tfm,
+		const u8 *src, unsigned int slen,
+		u8 *rdata, unsigned int dlen)
+{
+	struct tegra_virtual_se_rng1_trng_ctx *rng_ctx = crypto_rng_ctx(tfm);
+	struct tegra_virtual_se_dev *se_dev = rng_ctx->se_dev;
+	u8 *rdata_addr;
+	int err = 0, j, num_blocks, data_len = 0;
+	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx;
+	struct tegra_hv_ivc_cookie *pivck = g_ivck;
+	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
+	struct tegra_vse_priv_data *priv = NULL;
+	struct tegra_vse_tag *priv_data_ptr;
+	int time_left, total;
+
+	num_blocks = (dlen / TEGRA_VIRTUAL_SE_RNG1_SIZE);
+	data_len = (dlen % TEGRA_VIRTUAL_SE_RNG1_SIZE);
+	if (data_len == 0)
+		num_blocks = num_blocks - 1;
+	total = dlen;
+	ivc_req_msg = devm_kzalloc(se_dev->dev,
+				sizeof(*ivc_req_msg),
+				GFP_KERNEL);
+	if (!ivc_req_msg)
+		return 0;
+
+	ivc_tx = &ivc_req_msg->d[0].tx;
+	ivc_req_msg->hdr.num_reqs = 1;
+	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv) {
+		dev_err(se_dev->dev, "Priv Data allocation failed\n");
+		devm_kfree(se_dev->dev, ivc_req_msg);
+		return 0;
+	}
+
+	for (j = 0; j <= num_blocks; j++) {
+		ivc_tx->engine = VIRTUAL_SE_RNG1;
+		ivc_tx->cmd = VIRTUAL_SE_CMD_ELP_RNG1_TRNG;
+
+		if (total < TEGRA_VIRTUAL_SE_RNG1_SIZE)
+			ivc_tx->args.rng1.length = total;
+		else
+			ivc_tx->args.rng1.length =
+				TEGRA_VIRTUAL_SE_RNG1_SIZE;
+
+		priv_data_ptr =
+			(struct tegra_vse_tag *)ivc_req_msg->hdr.tag;
+		priv_data_ptr->priv_data = (unsigned int *)priv;
+		priv->cmd = VIRTUAL_RNG1_PROCESS;
+		priv->se_dev = se_dev;
+		init_completion(&priv->alg_complete);
+
+		err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
+				sizeof(struct tegra_virtual_se_ivc_msg_t));
+		if (err) {
+			dlen = 0;
+			goto exit;
+		}
+		vse_thread_start = true;
+		time_left = wait_for_completion_timeout(&priv->alg_complete,
+				TEGRA_HV_VSE_TIMEOUT);
+		if ((time_left == 0) || (priv->rng1.status)) {
+			dev_err(se_dev->dev, "%s rng1 failed\n", __func__);
+			dlen = 0;
+			goto exit;
+		}
+		rdata_addr =
+			(rdata + (j * TEGRA_VIRTUAL_SE_RNG1_SIZE));
+		if (data_len && num_blocks == j) {
+			memcpy(rdata_addr, priv->rng1.data, data_len);
+		} else {
+			memcpy(rdata_addr,
+				priv->rng1.data,
+				TEGRA_VIRTUAL_SE_RNG1_SIZE);
+		}
+		total -= TEGRA_VIRTUAL_SE_RNG1_SIZE;
+	}
+exit:
+	devm_kfree(se_dev->dev, priv);
+	devm_kfree(se_dev->dev, ivc_req_msg);
+	return dlen;
+}
+
+static int egra_hv_vse_rng1_trng_seed(struct crypto_rng *tfm, const u8 *seed,
+		unsigned int slen)
+{
+	return 0;
+}
+
+static int tegra_hv_vse_rng1_trng_init(struct crypto_tfm *tfm)
+{
+	struct tegra_virtual_se_rng1_trng_ctx *rng1_ctx =
+			crypto_tfm_ctx(tfm);
+	rng1_ctx->se_dev = g_virtual_se_dev[VIRTUAL_SE_RNG1];
+
+	return 0;
+}
+
+static void tegra_hv_vse_rng1_trng_exit(struct crypto_tfm *tfm)
+{
+}
+
 static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 	const u8 *key, u32 keylen)
 {
@@ -2380,6 +2514,24 @@ static struct rng_alg rng_alg[] = {
 			.cra_module = THIS_MODULE,
 			.cra_init = tegra_hv_vse_rng_drbg_init,
 			.cra_exit = tegra_hv_vse_rng_drbg_exit,
+		}
+	}
+};
+
+static struct rng_alg rng1_trng_alg[] = {
+	{
+		.generate = tegra_hv_vse_rng1_get_trng,
+		.seed = egra_hv_vse_rng1_trng_seed,
+		.base = {
+			.cra_name = "rng1_trng",
+			.cra_driver_name = "rng1-elp-tegra",
+			.cra_priority = 300,
+			.cra_flags = CRYPTO_ALG_TYPE_RNG,
+			.cra_ctxsize =
+				sizeof(struct tegra_virtual_se_rng1_trng_ctx),
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_hv_vse_rng1_trng_init,
+			.cra_exit = tegra_hv_vse_rng1_trng_exit,
 		}
 	}
 };
@@ -2588,7 +2740,7 @@ static struct ahash_alg rsa_algs[] = {
 static struct of_device_id tegra_hv_vse_of_match[] = {
 	{
 		.compatible = "nvidia,tegra186-hv-vse",
-	},
+	}, {}
 };
 MODULE_DEVICE_TABLE(of, tegra_hv_vse_of_match);
 
@@ -2608,8 +2760,10 @@ static int tegra_vse_kthread(void *unused)
 	struct tegra_vse_priv_data *priv;
 	int timeout;
 	struct tegra_virtual_se_ivc_resp_msg_t *ivc_rx;
+	struct tegra_virtual_se_ivc_rng *rng_res;
 	int ret;
 	int read_size = 0;
+	u32 len_32;
 
 	ivc_resp_msg =
 		kmalloc(sizeof(struct tegra_virtual_se_ivc_msg_t), GFP_KERNEL);
@@ -2683,6 +2837,20 @@ static int tegra_vse_kthread(void *unused)
 			case VIRTUAL_SE_PROCESS:
 				complete(&priv->alg_complete);
 				break;
+			case VIRTUAL_RNG1_PROCESS:
+				rng_res = (struct tegra_virtual_se_ivc_rng *)&ivc_resp_msg->d[0].rx;
+				len_32 = *(u32 *)&rng_res->data_len[0];
+				priv->rng1.status = rng_res->status;
+				priv->rng1.bytes_returned = len_32;
+				/* Copy rng data if status is success */
+				if (!rng_res->status) {
+					if (len_32 > TEGRA_VIRTUAL_SE_RNG1_SIZE)
+						len_32 = TEGRA_VIRTUAL_SE_RNG1_SIZE;
+					memcpy(priv->rng1.data, rng_res->data,
+						len_32);
+				}
+				complete(&priv->alg_complete);
+				break;
 			default:
 				dev_err(se_dev->dev, "Unknown command\n");
 			}
@@ -2714,9 +2882,13 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 		err = -ENODEV;
 		goto exit;
 	}
-	se_dev->stream_id = iommu_get_hwid(pdev->dev.archdata.iommu,
-			&pdev->dev, 0);
-	dev_info(se_dev->dev, "Virtual SE Stream ID: %d", se_dev->stream_id);
+
+	if (engine_id != VIRTUAL_SE_RNG1) {
+		se_dev->stream_id = iommu_get_hwid(pdev->dev.archdata.iommu,
+				&pdev->dev, 0);
+		dev_info(se_dev->dev, "Virtual SE Stream ID: %d",
+			se_dev->stream_id);
+	}
 
 	if (!g_ivck) {
 		err = of_property_read_u32(pdev->dev.of_node, "ivc", &ivc_id);
@@ -2764,6 +2936,7 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 			goto exit;
 		}
 	}
+
 
 	if (engine_id == VIRTUAL_SE_AES1) {
 		INIT_WORK(&se_dev->se_work, tegra_hv_vse_work_handler);
@@ -2817,6 +2990,17 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 			}
 		}
 	}
+
+	if (engine_id == VIRTUAL_SE_RNG1) {
+		err = crypto_register_rng(&rng1_trng_alg[0]);
+		if (err) {
+			dev_err(&pdev->dev,
+				"rng1 alg register failed. Err %d\n", err);
+			goto exit;
+		}
+		is_rng1_registered = true;
+	}
+
 	return 0;
 
 exit:
@@ -2832,6 +3016,9 @@ static int tegra_hv_vse_remove(struct platform_device *pdev)
 
 	for (i = 0; i < ARRAY_SIZE(rsa_algs); i++)
 		crypto_unregister_ahash(&rsa_algs[i]);
+
+	if (is_rng1_registered)
+		crypto_unregister_rng(&rng1_trng_alg[0]);
 
 	return 0;
 }

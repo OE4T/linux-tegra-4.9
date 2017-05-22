@@ -1963,7 +1963,6 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	i2c_dev->msg_add = msgs[0].addr;
 	i2c_dev->msgs = msgs;
 	i2c_dev->msg_num = num;
-	tegra_i2c_flush_fifos(i2c_dev);
 
 	if (i2c_dev->is_suspended)
 		return -EBUSY;
@@ -1973,6 +1972,7 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 		dev_err(i2c_dev->dev, "runtime resume failed %d\n", ret);
 		return ret;
 	}
+	tegra_i2c_flush_fifos(i2c_dev);
 
 	if (i2c_dev->is_shutdown && i2c_dev->bit_banging_xfer_after_shutdown)
 		return tegra_i2c_gpio_xfer(adap, msgs, num);

@@ -14,26 +14,23 @@
  */
 
 #include <linux/clk.h>
-#include <linux/reset.h>
 #include <linux/completion.h>
 #include <linux/delay.h>
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
-#include <linux/dmapool.h>
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
-#include <linux/kthread.h>
 #include <linux/module.h>
-#include <linux/platform_device.h>
-#include <linux/pm_runtime.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
+#include <linux/reset.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/qspi-tegra.h>
-#include <linux/clk/tegra.h>
 #include <linux/tegra_prod.h>
 
 #define QSPI_COMMAND1				0x000

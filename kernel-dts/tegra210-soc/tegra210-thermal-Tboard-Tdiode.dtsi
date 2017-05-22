@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra210-platforms/tegra210-thermal-Tboard-Tdiode.dtsi
  *
- * Copyright (c) 2014 - 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014 - 2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,7 +36,7 @@
 
 			trips {
 				tboard_dram_throttle: dram-throttle {
-					temperature = <80000>;
+					temperature = <70000>;
 					hysteresis = <1000>;
 					type = "passive";
 					writable;

@@ -23,7 +23,7 @@
 		spi2 = &spi2;
 		spi3 = &spi3;
 		spi4 = &aon_spi;
-		qspi6 = &qspi6;
+		spi6 = &qspi6;
 	};
 
 	spi0: spi@3210000 {

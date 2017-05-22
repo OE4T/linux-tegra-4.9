@@ -26,6 +26,7 @@
 		spi0 = &spi0;
 		spi2 = &spi2;
 		spi3 = &spi3;
+		spi6 = &qspi6;
 		serial0 = &uarta;
 		serial1 = &uartb;
 		serial2 = &uartc;
@@ -33,7 +34,6 @@
 		serial4 = &uarte;
 		serial5 = &uartf;
 		serial6 = &uartg;
-		qspi6 = &qspi6;
 		rtc1 = "/rtc@c2a0000";
 		rtc0 = "/bpmp_i2c/spmic@3c";
 	};

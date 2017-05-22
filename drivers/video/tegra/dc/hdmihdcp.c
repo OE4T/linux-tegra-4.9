@@ -1826,10 +1826,17 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(hdmi);
 	int e;
 	int ret;
-	struct hdcp_context_t hdcp_context;
+	struct hdcp_context_t *hdcp_context;
+
+	hdcp_context = kmalloc(sizeof(struct hdcp_context_t), GFP_KERNEL);
+	if (!hdcp_context) {
+		e = -ENOMEM;
+		goto failure;
+	}
+
 	g_seq_num_m_retries = 0;
 
-	e = tsec_hdcp_create_context(&hdcp_context);
+	e = tsec_hdcp_create_context(hdcp_context);
 	if (e) {
 		mutex_lock(&nvhdcp->lock);
 		goto err;
@@ -1853,7 +1860,7 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	nvhdcp_vdbg("%s():hpd=%d\n", __func__, nvhdcp->plugged);
 	mutex_unlock(&nvhdcp->lock);
 
-	ret = tsec_hdcp_authentication(nvhdcp, &hdcp_context);
+	ret = tsec_hdcp_authentication(nvhdcp, hdcp_context);
 	if (ret == HDCP_FALLBACK_1X) {
 		cancel_delayed_work(&nvhdcp->fallback_work);
 		queue_delayed_work(nvhdcp->fallback_wq, &nvhdcp->fallback_work,
@@ -1867,7 +1874,7 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 
 	mdelay(350);
 	nvhdcp_vdbg("link integrity check ...\n");
-	e = link_integrity_check(nvhdcp, &hdcp_context);
+	e = link_integrity_check(nvhdcp, hdcp_context);
 	if (e) {
 		nvhdcp_err("link integrity check failed err %d\n", e);
 		mutex_lock(&nvhdcp->lock);
@@ -1879,7 +1886,7 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	nvhdcp_info("link integrity check passed!\n");
 	mutex_unlock(&nvhdcp->lock);
 
-	e = tsec_hdcp_session_ctrl(&hdcp_context,
+	e = tsec_hdcp_session_ctrl(hdcp_context,
 		HDCP_SESSION_CTRL_FLAG_ACTIVATE);
 	if (e) {
 		nvhdcp_info("tsec_hdcp_session_ctrl failed\n");
@@ -1898,7 +1905,7 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 			goto failure;
 
 		mutex_unlock(&nvhdcp->lock);
-		e = link_integrity_check(nvhdcp, &hdcp_context);
+		e = link_integrity_check(nvhdcp, hdcp_context);
 		if (e) {
 			nvhdcp_err("link integrity check failed err %d\n", e);
 			mutex_lock(&nvhdcp->lock);
@@ -1939,7 +1946,8 @@ err:
 	nvhdcp->repeater = 0;
 	mutex_unlock(&nvhdcp->lock);
 	tegra_dc_io_end(dc);
-	e = tsec_hdcp_free_context(&hdcp_context);
+	e = tsec_hdcp_free_context(hdcp_context);
+	kfree(hdcp_context);
 	return;
 }
 

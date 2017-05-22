@@ -277,9 +277,41 @@ static void gp10b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
 		pbdma_intr_0_device_pending_f();
 }
 
+static void gp10b_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
+	struct mmu_fault_info *mmfault)
+{
+	u32 fault_info;
+	u32 addr_lo, addr_hi;
+
+	gk20a_dbg_fn("mmu_fault_id %d", mmu_fault_id);
+
+	memset(mmfault, 0, sizeof(*mmfault));
+
+	fault_info = gk20a_readl(g,
+		fifo_intr_mmu_fault_info_r(mmu_fault_id));
+	mmfault->fault_type =
+		fifo_intr_mmu_fault_info_type_v(fault_info);
+	mmfault->access_type =
+		fifo_intr_mmu_fault_info_access_type_v(fault_info);
+	mmfault->client_type =
+		fifo_intr_mmu_fault_info_client_type_v(fault_info);
+	mmfault->client_id =
+		fifo_intr_mmu_fault_info_client_v(fault_info);
+
+	addr_lo = gk20a_readl(g, fifo_intr_mmu_fault_lo_r(mmu_fault_id));
+	addr_hi = gk20a_readl(g, fifo_intr_mmu_fault_hi_r(mmu_fault_id));
+	mmfault->fault_addr = hi32_lo32_to_u64(addr_hi, addr_lo);
+	/* note:ignoring aperture */
+	mmfault->inst_ptr = fifo_intr_mmu_fault_inst_ptr_v(
+		 gk20a_readl(g, fifo_intr_mmu_fault_inst_r(mmu_fault_id)));
+	/* note: inst_ptr is a 40b phys addr.  */
+	mmfault->inst_ptr <<= fifo_intr_mmu_fault_inst_ptr_align_shift_v();
+}
+
 void gp10b_init_fifo(struct gpu_ops *gops)
 {
 	gm20b_init_fifo(gops);
+	gops->fifo.get_mmu_fault_info = gp10b_fifo_get_mmu_fault_info;
 	gops->fifo.setup_ramfc = channel_gp10b_setup_ramfc;
 	gops->fifo.get_pbdma_signature = gp10b_fifo_get_pbdma_signature;
 	gops->fifo.resetup_ramfc = gp10b_fifo_resetup_ramfc;

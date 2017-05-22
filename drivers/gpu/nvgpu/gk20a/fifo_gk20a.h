@@ -406,4 +406,6 @@ int gk20a_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 			u32 syncpt_id, struct nvgpu_mem *syncpt_buf);
 #endif
 
+void gk20a_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
+				struct mmu_fault_info *mmfault);
 #endif /*__GR_GK20A_H__*/

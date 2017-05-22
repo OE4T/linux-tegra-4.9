@@ -206,6 +206,7 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.preempt_tsg = gk20a_fifo_preempt_tsg;
 	gops->fifo.update_runlist = gk20a_fifo_update_runlist;
 	gops->fifo.trigger_mmu_fault = gm20b_fifo_trigger_mmu_fault;
+	gops->fifo.get_mmu_fault_info = gk20a_fifo_get_mmu_fault_info;
 	gops->fifo.wait_engine_idle = gk20a_fifo_wait_engine_idle;
 	gops->fifo.get_num_fifos = gm20b_fifo_get_num_fifos;
 	gops->fifo.get_pbdma_signature = gk20a_fifo_get_pbdma_signature;

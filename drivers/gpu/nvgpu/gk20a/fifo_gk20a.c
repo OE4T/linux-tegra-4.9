@@ -1165,29 +1165,12 @@ static const char * const does_not_exist[] = {
 	"does not exist"
 };
 
-/* reads info from hardware and fills in mmu fault info record */
-static void get_exception_mmu_fault_info(
-	struct gk20a *g, u32 mmu_fault_id,
+static void get_exception_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 	struct mmu_fault_info *mmfault)
 {
-	u32 fault_info;
-	u32 addr_lo, addr_hi;
+	g->ops.fifo.get_mmu_fault_info(g, mmu_fault_id, mmfault);
 
-	gk20a_dbg_fn("mmu_fault_id %d", mmu_fault_id);
-
-	memset(mmfault, 0, sizeof(*mmfault));
-
-	fault_info = gk20a_readl(g,
-		fifo_intr_mmu_fault_info_r(mmu_fault_id));
-	mmfault->fault_type =
-		fifo_intr_mmu_fault_info_type_v(fault_info);
-	mmfault->access_type =
-		fifo_intr_mmu_fault_info_write_v(fault_info);
-	mmfault->client_type =
-		fifo_intr_mmu_fault_info_engine_subid_v(fault_info);
-	mmfault->client_id =
-		fifo_intr_mmu_fault_info_client_v(fault_info);
-
+	/* parse info */
 	if (mmfault->fault_type >= ARRAY_SIZE(fault_type_descs)) {
 		WARN_ON(mmfault->fault_type >= ARRAY_SIZE(fault_type_descs));
 		mmfault->fault_type_desc =  does_not_exist[0];
@@ -1224,6 +1207,29 @@ static void get_exception_mmu_fault_info(
 			mmfault->client_id_desc =
 				 gpc_client_descs[mmfault->client_id];
 	}
+}
+
+/* reads info from hardware and fills in mmu fault info record */
+void gk20a_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
+	struct mmu_fault_info *mmfault)
+{
+	u32 fault_info;
+	u32 addr_lo, addr_hi;
+
+	gk20a_dbg_fn("mmu_fault_id %d", mmu_fault_id);
+
+	memset(mmfault, 0, sizeof(*mmfault));
+
+	fault_info = gk20a_readl(g,
+		fifo_intr_mmu_fault_info_r(mmu_fault_id));
+	mmfault->fault_type =
+		fifo_intr_mmu_fault_info_type_v(fault_info);
+	mmfault->access_type =
+		fifo_intr_mmu_fault_info_write_v(fault_info);
+	mmfault->client_type =
+		fifo_intr_mmu_fault_info_engine_subid_v(fault_info);
+	mmfault->client_id =
+		fifo_intr_mmu_fault_info_client_v(fault_info);
 
 	addr_lo = gk20a_readl(g, fifo_intr_mmu_fault_lo_r(mmu_fault_id));
 	addr_hi = gk20a_readl(g, fifo_intr_mmu_fault_hi_r(mmu_fault_id));
@@ -4381,6 +4387,7 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.preempt_tsg = gk20a_fifo_preempt_tsg;
 	gops->fifo.update_runlist = gk20a_fifo_update_runlist;
 	gops->fifo.trigger_mmu_fault = gk20a_fifo_trigger_mmu_fault;
+	gops->fifo.get_mmu_fault_info = gk20a_fifo_get_mmu_fault_info;
 	gops->fifo.apply_pb_timeout = gk20a_fifo_apply_pb_timeout;
 	gops->fifo.wait_engine_idle = gk20a_fifo_wait_engine_idle;
 	gops->fifo.get_num_fifos = gk20a_fifo_get_num_fifos;

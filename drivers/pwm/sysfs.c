@@ -333,8 +333,19 @@ static ssize_t rpm_show(struct device *child,
 			char *buf)
 {
 	struct pwm_device *pwm = child_to_pwm_device(child);
+	struct pwm_capture result;
+	unsigned int rpm = 0;
+	int err;
 
-	return sprintf(buf, "%d\n", pwm_get_rpm(pwm));
+	err = pwm_capture(pwm, &result, 0);
+	if (err < 0)
+		return err;
+
+	if (result.period)
+		rpm = DIV_ROUND_CLOSEST_ULL(60ULL * NSEC_PER_SEC,
+				result.period);
+
+	return sprintf(buf, "%u\n", rpm);
 }
 
 static DEVICE_ATTR_RW(period);

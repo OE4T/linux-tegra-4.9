@@ -30,13 +30,15 @@
 #define TACH_COUNTER_CLK				1010526
 
 #define TACH_FAN_TACH0					0x0
-#define TACH_FAN_TACH1					0x4
 #define TACH_FAN_TACH0_PERIOD_MASK			0x7FFFF
 #define TACH_FAN_TACH0_PERIOD_MAX			0x7FFFF
 #define TACH_FAN_TACH0_PERIOD_MIN			0x0
 #define TACH_FAN_TACH0_WIN_LENGTH_SHIFT			25
 #define TACH_FAN_TACH0_WIN_LENGTH_MASK			0x3
 #define TACH_FAN_TACH0_OVERFLOW_MASK			BIT(24)
+
+#define TACH_FAN_TACH1					0x4
+#define TACH_FAN_TACH1_HI_MASK				0x7FFFF
 
 struct pwm_tegra_tach {
 	struct device		*dev;
@@ -119,8 +121,11 @@ static int pwm_tegra_tacho_capture(struct pwm_chip *chip,
 				   unsigned long timeout)
 {
 	struct pwm_tegra_tach *ptt = to_tegra_pwm_chip(chip);
-	unsigned long period, nrps_clk, n_on_clks;
+	unsigned long period;
 	u32 tach0;
+
+	tach0 = tachometer_readl(ptt, TACH_FAN_TACH1);
+	result->duty_cycle = (tach0 & TACH_FAN_TACH1_HI_MASK);
 
 	tach0 = tachometer_readl(ptt, TACH_FAN_TACH0);
 	if (tach0 & TACH_FAN_TACH0_OVERFLOW_MASK) {
@@ -134,15 +139,22 @@ static int pwm_tegra_tacho_capture(struct pwm_chip *chip,
 	    (period == TACH_FAN_TACH0_PERIOD_MAX)) {
 		dev_dbg(ptt->dev, "Period set to min/max (0x%lx), Invalid RPM\n",
 			period);
-		result->rpm = 0;
+		result->period = 0;
+		result->duty_cycle = 0;
 		return 0;
 	}
 
 	period = period + 1; /* Bug 200046190 */
-	nrps_clk = 60 * TACH_COUNTER_CLK * ptt->capture_win_len;
-	n_on_clks = period * ptt->pulse_per_rev;
 
-	result->rpm = nrps_clk / n_on_clks;
+	period = DIV_ROUND_CLOSEST_ULL(period * ptt->pulse_per_rev * 1000000ULL,
+				       ptt->capture_win_len * TACH_COUNTER_CLK);
+
+	/*
+	 * period & duty cycles are in units of micro seconds. Hence,
+	 * convert them into nano seconds and store it in result.
+	 */
+	result->period = period * 1000;
+	result->duty_cycle = result->duty_cycle * 1000;
 
 	return 0;
 }

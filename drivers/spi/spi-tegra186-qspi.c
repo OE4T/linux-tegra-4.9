@@ -447,6 +447,7 @@ static int check_and_clear_fifo(struct tegra_qspi_data *tqspi)
 			"Rx/Tx fifo are not empty status 0x%08lx\n", status);
 		return -EIO;
 	}
+
 	return 0;
 }
 
@@ -467,18 +468,18 @@ static unsigned tegra_qspi_calculate_curr_xfer_param(
 #ifdef QSPI_BRINGUP_BUILD
 	if (!tqspi->qspi_force_unpacked_mode &&
 	    (bits_per_word % 8 == 0) && (t->len > 3)) {
-		tqspi->is_packed = 1;
+		tqspi->is_packed = true;
 		tqspi->words_per_32bit = 32 / bits_per_word;
 	} else {
-		tqspi->is_packed = 0;
+		tqspi->is_packed = false;
 		tqspi->words_per_32bit = 1;
 	}
 #else
 	if (bits_per_word == 8 || bits_per_word == 16 && (t->len > 3)) {
-		tqspi->is_packed = 1;
+		tqspi->is_packed = true;
 		tqspi->words_per_32bit = 32 / bits_per_word;
 	} else {
-		tqspi->is_packed = 0;
+		tqspi->is_packed = false;
 		tqspi->words_per_32bit = 1;
 	}
 #endif
@@ -492,6 +493,7 @@ static unsigned tegra_qspi_calculate_curr_xfer_param(
 		tqspi->curr_dma_words = max_word;
 		total_fifo_words = max_word;
 	}
+
 	return total_fifo_words;
 }
 
@@ -537,6 +539,7 @@ static unsigned tegra_qspi_fill_tx_fifo_from_client_txbuf(
 		}
 	}
 	tqspi->cur_tx_pos += written_words * tqspi->bytes_per_word;
+
 	return written_words;
 }
 
@@ -577,6 +580,7 @@ static unsigned int tegra_qspi_read_rx_fifo_to_client_rxbuf(
 		tqspi->cur_rx_pos += rx_full_count * tqspi->bytes_per_word;
 		read_words += rx_full_count;
 	}
+
 	return read_words;
 }
 
@@ -674,6 +678,7 @@ static int tegra_qspi_start_tx_dma(struct tegra_qspi_data *tqspi, int len)
 
 	dmaengine_submit(tqspi->tx_dma_desc);
 	dma_async_issue_pending(tqspi->tx_dma_chan);
+
 	return 0;
 }
 
@@ -693,6 +698,7 @@ static int tegra_qspi_start_rx_dma(struct tegra_qspi_data *tqspi, int len)
 
 	dmaengine_submit(tqspi->rx_dma_desc);
 	dma_async_issue_pending(tqspi->rx_dma_chan);
+
 	return 0;
 }
 
@@ -795,6 +801,7 @@ static int tegra_qspi_start_dma_based_transfer(
 	tegra_qspi_dump_regs(tqspi);
 #endif
 	tegra_qspi_writel(tqspi, val, QSPI_DMA_CTL);
+
 	return ret;
 }
 
@@ -849,6 +856,7 @@ static int tegra_qspi_start_cpu_based_transfer(
 #endif
 	val |= QSPI_PIO;
 	tegra_qspi_writel(tqspi, val, QSPI_COMMAND1);
+
 	return 0;
 }
 
@@ -902,11 +910,13 @@ static int tegra_qspi_init_dma_param(struct tegra_qspi_data *tqspi,
 		tqspi->tx_dma_buf = dma_buf;
 		tqspi->tx_dma_phys = dma_phys;
 	}
+
 	return 0;
 
 scrub:
 	dma_free_coherent(tqspi->dev, tqspi->dma_buf_size, dma_buf, dma_phys);
 	dma_release_channel(dma_chan);
+
 	return ret;
 }
 
@@ -1213,6 +1223,7 @@ static int tegra_qspi_setup(struct spi_device *spi)
 	tegra_qspi_writel(tqspi, tqspi->def_command1_reg, QSPI_COMMAND1);
 	spin_unlock_irqrestore(&tqspi->lock, flags);
 	pm_runtime_put(tqspi->dev);
+
 	return 0;
 }
 
@@ -1245,6 +1256,7 @@ static int tegra_qspi_cs_low(struct spi_device *spi, bool state)
 
 	spin_unlock_irqrestore(&tqspi->lock, flags);
 	pm_runtime_put(tqspi->dev);
+
 	return 0;
 }
 
@@ -1363,8 +1375,8 @@ static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
 		msg->actual_length += xfer->len;
 		transfer_phase++;
 	}
-	ret = 0;
-	return ret;
+
+	return 0;
 }
 
 static int tegra_qspi_non_combined_sequence_transfer
@@ -1422,8 +1434,8 @@ static int tegra_qspi_non_combined_sequence_transfer
 		}
 		msg->actual_length += xfer->len;
 	}
-	ret = 0;
-	return ret;
+
+	return 0;
 }
 
 static int tegra_qspi_transfer_one_message(struct spi_master *master,
@@ -1478,6 +1490,7 @@ exit:
 	pm_runtime_put(tqspi->dev);
 	msg->status = ret;
 	spi_finalize_current_message(master);
+
 	return ret;
 }
 
@@ -1515,6 +1528,7 @@ static irqreturn_t handle_cpu_based_xfer(struct tegra_qspi_data *tqspi)
 	tegra_qspi_start_cpu_based_transfer(tqspi, t);
 exit:
 	spin_unlock_irqrestore(&tqspi->lock, flags);
+
 	return IRQ_HANDLED;
 }
 
@@ -1595,6 +1609,7 @@ static irqreturn_t handle_dma_based_xfer(struct tegra_qspi_data *tqspi)
 
 exit:
 	spin_unlock_irqrestore(&tqspi->lock, flags);
+
 	return IRQ_HANDLED;
 }
 
@@ -1604,6 +1619,7 @@ static irqreturn_t tegra_qspi_isr_thread(int irq, void *context_data)
 
 	if (!tqspi->is_curr_dma_xfer)
 		return handle_cpu_based_xfer(tqspi);
+
 	return handle_dma_based_xfer(tqspi);
 }
 
@@ -2016,6 +2032,7 @@ static int tegra_qspi_suspend(struct device *dev)
 		clk_disable_unprepare(tqspi->sdr_ddr_clk);
 		clk_disable_unprepare(tqspi->clk);
 	}
+
 	return ret;
 }
 
@@ -2061,6 +2078,7 @@ static int tegra_qspi_runtime_suspend(struct device *dev)
 
 	clk_disable_unprepare(tqspi->sdr_ddr_clk);
 	clk_disable_unprepare(tqspi->clk);
+
 	return 0;
 }
 
@@ -2082,6 +2100,7 @@ static int tegra_qspi_runtime_resume(struct device *dev)
 			, ret);
 		return ret;
 	}
+
 	return 0;
 }
 
@@ -2100,7 +2119,6 @@ MODULE_DEVICE_TABLE(of, tegra_qspi_of_match);
 static struct platform_driver tegra_qspi_driver = {
 	.driver = {
 		.name		= "tegra186-qspi",
-		.owner		= THIS_MODULE,
 		.pm		= &tegra_qspi_pm_ops,
 		.of_match_table	= tegra_qspi_of_match,
 	},

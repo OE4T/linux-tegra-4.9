@@ -152,6 +152,11 @@
 #define QSPI_INTR_TX_FIFO_OVF_MASK		BIT(28)
 #define QSPI_INTR_RDY_MASK			BIT(29)
 
+#define QSPI_INTR_RX_TX_FIFO_ERR		(QSPI_INTR_RX_FIFO_UNF_MASK | \
+						 QSPI_INTR_RX_FIFO_OVF_MASK | \
+						 QSPI_INTR_TX_FIFO_UNF_MASK | \
+						 QSPI_INTR_TX_FIFO_OVF_MASK)
+
 #define QSPI_CMB_SEQ_CMD			0x19c
 #define QSPI_COMMAND_VALUE_SET(X)		(((x) & 0xFF) << 0)
 
@@ -289,15 +294,16 @@ static ssize_t force_unpacked_mode_set(struct device *dev,
 				       struct device_attribute *attr,
 				       const char *buf, size_t count)
 {
-	struct tegra_qspi_data *tqspi;
 	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
 
-	if (master) {
-		tqspi = spi_master_get_devdata(master);
-		if (tqspi && count) {
-			tqspi->qspi_force_unpacked_mode = ((buf[0] - '0')  > 0);
-			return count;
-		}
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	if (tqspi && count) {
+		tqspi->qspi_force_unpacked_mode = ((buf[0] - '0')  > 0);
+		return count;
 	}
 
 	return -ENODEV;
@@ -307,15 +313,14 @@ static ssize_t force_unpacked_mode_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
 {
-	struct tegra_qspi_data *tqspi;
 	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
 
-	if (master) {
-		tqspi = spi_master_get_devdata(master);
-		return sprintf(buf, "%d", tqspi->qspi_force_unpacked_mode);
-	}
+	if (!master)
+		return -ENODEV;
 
-	return -ENODEV;
+	tqspi = spi_master_get_devdata(master);
+	return sprintf(buf, "%d", tqspi->qspi_force_unpacked_mode);
 }
 
 static DEVICE_ATTR(qspi_force_unpacked_mode, 0644, force_unpacked_mode_show,
@@ -325,15 +330,16 @@ static ssize_t force_cmbseq_mode_set(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
 {
-	struct tegra_qspi_data *tqspi;
 	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
 
-	if (master) {
-		tqspi = spi_master_get_devdata(master);
-		if (tqspi && count) {
-			tqspi->qspi_enable_cmbseq_mode = ((buf[0] - '0')  > 0);
-			return count;
-		}
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	if (tqspi && count) {
+		tqspi->qspi_enable_cmbseq_mode = ((buf[0] - '0')  > 0);
+		return count;
 	}
 
 	return -ENODEV;
@@ -343,33 +349,34 @@ static ssize_t force_cmbseq_mode_show(struct device *dev,
 				      struct device_attribute *attr,
 				      char *buf)
 {
-	struct tegra_qspi_data *tqspi;
 	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
 
-	if (master) {
-		tqspi = spi_master_get_devdata(master);
-		return sprintf(buf, "%d", tqspi->qspi_enable_cmbseq_mode);
-	}
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	return sprintf(buf, "%d", tqspi->qspi_enable_cmbseq_mode);
 
 	return -ENODEV;
 }
 
 static DEVICE_ATTR(qspi_enable_cmbseq_mode, 0644, force_cmbseq_mode_show,
 						force_cmbseq_mode_set);
-
 #endif
+
 #ifdef QSPI_DUMP_REGISTERS
-static void tegra_qspi_dump_regs(struct tegra_qspi_data *tqspi)
+static void tegra_qspi_dump_regs(const char *heading,
+				 struct tegra_qspi_data *tqspi)
 {
 	u32 command1_reg;
 	u32 fifo_status_reg, misc_reg, global_config_reg;
 	u32 dma_ctrl_reg, dma_blk_reg, intr_mask_reg;
 	u32 trans_status_reg;
-
-	u32 cmd_config = 0;
-	u32 addr_config = 0;
-	u32 addr_value = 0;
-	u32 cmd_value = 0;
+	u32 cmd_config;
+	u32 addr_config;
+	u32 addr_value;
+	u32 cmd_value;
 
 	cmd_value = tegra_qspi_readl(tqspi, QSPI_CMB_SEQ_CMD);
 	addr_value = tegra_qspi_readl(tqspi, QSPI_CMB_SEQ_ADDR);
@@ -385,6 +392,9 @@ static void tegra_qspi_dump_regs(struct tegra_qspi_data *tqspi)
 	misc_reg = tegra_qspi_readl(tqspi, QSPI_MISC_REG);
 	global_config_reg = tegra_qspi_readl(tqspi, QSPI_GLOBAL_CONFIG);
 
+	if (heading)
+		dev_info(tqspi->dev, "%s\n", heading);
+
 	dev_err(tqspi->dev,
 		"QSPI_ERR: CMD_0: 0x%08x, FIFO_STS: 0x%08x\n",
 		command1_reg, fifo_status_reg);
@@ -399,6 +409,10 @@ static void tegra_qspi_dump_regs(struct tegra_qspi_data *tqspi)
 		"CMBSEQ_ERR: CMD_VAl: 0x%08x, ADR_VAL: 0x%08x, CMD_CFG: 0x%08x, ADR_CFG: 0x%08x\n",
 		cmd_value, addr_value, cmd_config, addr_config);
 }
+#else
+static void tegra_qspi_dump_regs(const char *heading,
+				 struct tegra_qspi_data *tqspi)
+{}
 #endif
 
 static void tegra_qspi_clear_status(struct tegra_qspi_data *tqspi)
@@ -411,11 +425,7 @@ static void tegra_qspi_clear_status(struct tegra_qspi_data *tqspi)
 
 	val = tegra_qspi_readl(tqspi, QSPI_INTR_MASK);
 	if (!(val & QSPI_INTR_RDY_MASK)) {
-		val |= (QSPI_INTR_RDY_MASK |
-				QSPI_INTR_RX_FIFO_UNF_MASK |
-				QSPI_INTR_TX_FIFO_UNF_MASK |
-				QSPI_INTR_RX_FIFO_OVF_MASK |
-				QSPI_INTR_TX_FIFO_OVF_MASK);
+		val |= (QSPI_INTR_RDY_MASK | QSPI_INTR_RX_TX_FIFO_ERR);
 		tegra_qspi_writel(tqspi, val, QSPI_INTR_MASK);
 	}
 
@@ -433,22 +443,23 @@ static int check_and_clear_fifo(struct tegra_qspi_data *tqspi)
 
 	/* Make sure that Rx and Tx fifo are empty */
 	status = tegra_qspi_readl(tqspi, QSPI_FIFO_STATUS);
-	if ((status & QSPI_FIFO_EMPTY) != QSPI_FIFO_EMPTY) {
-		/* flush the fifo */
-		status |= (QSPI_RX_FIFO_FLUSH | QSPI_TX_FIFO_FLUSH);
-		tegra_qspi_writel(tqspi, status, QSPI_FIFO_STATUS);
-		do {
-			status = tegra_qspi_readl(tqspi, QSPI_FIFO_STATUS);
-			if ((status & QSPI_FIFO_EMPTY) == QSPI_FIFO_EMPTY)
-				return 0;
-			udelay(1);
-		} while (cnt--);
-		dev_err(tqspi->dev,
-			"Rx/Tx fifo are not empty status 0x%08lx\n", status);
-		return -EIO;
-	}
+	if ((status & QSPI_FIFO_EMPTY) == QSPI_FIFO_EMPTY)
+		return 0;
 
-	return 0;
+	/* flush the fifo */
+	status |= (QSPI_RX_FIFO_FLUSH | QSPI_TX_FIFO_FLUSH);
+	tegra_qspi_writel(tqspi, status, QSPI_FIFO_STATUS);
+	do {
+		status = tegra_qspi_readl(tqspi, QSPI_FIFO_STATUS);
+		if ((status & QSPI_FIFO_EMPTY) == QSPI_FIFO_EMPTY)
+			return 0;
+		udelay(1);
+	} while (cnt--);
+
+	dev_err(tqspi->dev, "Failed to flush Rx/Tx fifo(status 0x%08lx)\n",
+		status);
+
+	return -EIO;
 }
 
 static unsigned tegra_qspi_calculate_curr_xfer_param(
@@ -602,10 +613,9 @@ static void tegra_qspi_copy_client_txbuf_to_qspi_txbuf(
 		u8 *tx_buf = (u8 *)t->tx_buf + tqspi->cur_tx_pos;
 		unsigned consume = tqspi->curr_dma_words *
 					tqspi->bytes_per_word;
-		unsigned int x;
 
 		for (count = 0; count < tqspi->curr_dma_words; count++) {
-			x = 0;
+			u32 x = 0;
 			for (i = 0; consume && (i < tqspi->bytes_per_word);
 					i++, consume--)
 				x |= ((*tx_buf++) << i * 8);
@@ -722,9 +732,8 @@ static int tegra_qspi_start_dma_based_transfer(
 	tegra_qspi_writel(tqspi, val, QSPI_DMA_BLK);
 
 	if (tqspi->is_packed)
-		len = DIV_ROUND_UP(tqspi->curr_dma_words
-				* tqspi->bytes_per_word,
-				4) * 4;
+		len = DIV_ROUND_UP(tqspi->curr_dma_words *
+				   tqspi->bytes_per_word, 4) * 4;
 	else
 		len = tqspi->curr_dma_words * 4;
 	val = 0;
@@ -742,11 +751,7 @@ static int tegra_qspi_start_dma_based_transfer(
 	if ((tqspi->cur_direction & DATA_DIR_TX) ||
 	    (tqspi->cur_direction & DATA_DIR_RX)) {
 		intr_mask = tegra_qspi_readl(tqspi, QSPI_INTR_MASK);
-		intr_mask &= ~(QSPI_INTR_RDY_MASK |
-				QSPI_INTR_RX_FIFO_UNF_MASK |
-				QSPI_INTR_TX_FIFO_UNF_MASK |
-				QSPI_INTR_RX_FIFO_OVF_MASK |
-				QSPI_INTR_TX_FIFO_OVF_MASK);
+		intr_mask &= ~(QSPI_INTR_RDY_MASK | QSPI_INTR_RX_TX_FIFO_ERR);
 		tegra_qspi_writel(tqspi, intr_mask, QSPI_INTR_MASK);
 	}
 
@@ -796,10 +801,7 @@ static int tegra_qspi_start_dma_based_transfer(
 	/* TX_EN/RX_EN need to set after DMA_BLK to avoid spurious interrupt */
 	tegra_qspi_writel(tqspi, command1, QSPI_COMMAND1);
 
-#ifdef QSPI_DUMP_REGISTERS
-	dev_info(tqspi->dev, "DMA Transfer started\n");
-	tegra_qspi_dump_regs(tqspi);
-#endif
+	tegra_qspi_dump_regs("DMA Transfer started", tqspi);
 	tegra_qspi_writel(tqspi, val, QSPI_DMA_CTL);
 
 	return ret;
@@ -833,11 +835,7 @@ static int tegra_qspi_start_cpu_based_transfer(
 	if ((tqspi->cur_direction & DATA_DIR_TX) ||
 	    (tqspi->cur_direction & DATA_DIR_RX)) {
 		intr_mask = tegra_qspi_readl(tqspi, QSPI_INTR_MASK);
-		intr_mask &= ~(QSPI_INTR_RDY_MASK |
-				QSPI_INTR_RX_FIFO_UNF_MASK |
-				QSPI_INTR_TX_FIFO_UNF_MASK |
-				QSPI_INTR_RX_FIFO_OVF_MASK |
-				QSPI_INTR_TX_FIFO_OVF_MASK);
+		intr_mask &= ~(QSPI_INTR_RDY_MASK | QSPI_INTR_RX_TX_FIFO_ERR);
 		tegra_qspi_writel(tqspi, intr_mask, QSPI_INTR_MASK);
 	}
 
@@ -850,10 +848,8 @@ static int tegra_qspi_start_cpu_based_transfer(
 		val |= QSPI_TX_EN;
 	tegra_qspi_writel(tqspi, val, QSPI_COMMAND1);
 
-#ifdef QSPI_DUMP_REGISTERS
-	dev_info(tqspi->dev, "CPU Transfer started\n");
-	tegra_qspi_dump_regs(tqspi);
-#endif
+	tegra_qspi_dump_regs("CPU Transfer started", tqspi);
+
 	val |= QSPI_PIO;
 	tegra_qspi_writel(tqspi, val, QSPI_COMMAND1);
 
@@ -872,7 +868,6 @@ static int tegra_qspi_init_dma_param(struct tegra_qspi_data *tqspi,
 	dma_chan = dma_request_slave_channel_reason(tqspi->dev,
 						    dma_to_memory ?
 							"rx" : "tx");
-
 	if (!dma_chan) {
 		dev_err(tqspi->dev,
 			"Dma channel is not available, will try later\n");
@@ -1626,10 +1621,8 @@ static irqreturn_t tegra_qspi_isr_thread(int irq, void *context_data)
 static irqreturn_t tegra_qspi_isr(int irq, void *context_data)
 {
 	struct tegra_qspi_data *tqspi = context_data;
-#ifdef QSPI_DUMP_REGISTERS
-	dev_info(tqspi->dev, "From QSPI ISR\n");
-	tegra_qspi_dump_regs(tqspi);
-#endif
+
+	tegra_qspi_dump_regs("From QSPI ISR", tqspi);
 	tqspi->status_reg = tegra_qspi_readl(tqspi, QSPI_FIFO_STATUS);
 	if (tqspi->cur_direction & DATA_DIR_TX)
 		tqspi->tx_status = tqspi->status_reg &

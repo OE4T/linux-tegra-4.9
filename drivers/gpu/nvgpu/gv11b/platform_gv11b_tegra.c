@@ -177,6 +177,9 @@ static struct device_attribute *dev_attr_fecs_ecc_uncorrected_err_count_array;
 static struct device_attribute *dev_attr_gpccs_ecc_corrected_err_count_array;
 static struct device_attribute *dev_attr_gpccs_ecc_uncorrected_err_count_array;
 
+static struct device_attribute *dev_attr_l2_cache_ecc_corrected_err_count_array;
+static struct device_attribute *dev_attr_l2_cache_ecc_uncorrected_err_count_array;
+
 void gr_gv11b_create_sysfs(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -249,6 +252,20 @@ void gr_gv11b_create_sysfs(struct device *dev)
 				"gcc_l15_ecc_uncorrected_err_count",
 				&g->ecc.gr.t19x.gcc_l15_uncorrected_err_count,
 				dev_attr_gcc_l15_ecc_uncorrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				g->ltc_count,
+				"ltc",
+				"l2_cache_uncorrected_err_count",
+				&g->ecc.ltc.t19x.l2_cache_uncorrected_err_count,
+				dev_attr_l2_cache_ecc_uncorrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				g->ltc_count,
+				"ltc",
+				"l2_cache_corrected_err_count",
+				&g->ecc.ltc.t19x.l2_cache_corrected_err_count,
+				dev_attr_l2_cache_ecc_corrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
@@ -335,6 +352,16 @@ static void gr_gv11b_remove_sysfs(struct device *dev)
 			0,
 			&g->ecc.gr.t19x.gcc_l15_uncorrected_err_count,
 			dev_attr_gcc_l15_ecc_uncorrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			g->ltc_count,
+			&g->ecc.ltc.t19x.l2_cache_uncorrected_err_count,
+			dev_attr_l2_cache_ecc_uncorrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			g->ltc_count,
+			&g->ecc.ltc.t19x.l2_cache_corrected_err_count,
+			dev_attr_l2_cache_ecc_corrected_err_count_array);
 
 	gp10b_ecc_stat_remove(dev,
 			1,

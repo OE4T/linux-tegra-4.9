@@ -374,6 +374,190 @@ static inline u32 ltc_ltc0_lts0_intr_r(void)
 {
 	return 0x0014040c;
 }
+static inline u32 ltc_ltcs_ltss_intr3_r(void)
+{
+	return 0x0017e388;
+}
+static inline u32 ltc_ltcs_ltss_intr3_ecc_corrected_m(void)
+{
+	return 0x1 << 7;
+}
+static inline u32 ltc_ltcs_ltss_intr3_ecc_uncorrected_m(void)
+{
+	return 0x1 << 8;
+}
+static inline u32 ltc_ltc0_lts0_intr3_r(void)
+{
+	return 0x00140588;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_r(void)
+{
+	return 0x001404f0;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_rstg_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_rstg_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_tstg_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_tstg_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_dstg_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_dstg_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_rstg_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_rstg_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_tstg_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_tstg_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_dstg_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_dstg_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_total_counter_overflow_f(u32 v)
+{
+	return (v & 0x1) << 18;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_total_counter_overflow_m(void)
+{
+	return 0x1 << 18;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_total_counter_overflow_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_total_counter_overflow_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_unique_counter_overflow_f(u32 v)
+{
+	return (v & 0x1) << 19;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_unique_counter_overflow_m(void)
+{
+	return 0x1 << 19;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_unique_counter_overflow_f(u32 v)
+{
+	return (v & 0x1) << 17;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_unique_counter_overflow_m(void)
+{
+	return 0x1 << 17;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_reset_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_status_reset_task_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_address_r(void)
+{
+	return 0x001404fc;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_r(void)
+{
+	return 0x001404f4;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_m(void)
+{
+	return 0xffff << 0;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_unique_total_s(void)
+{
+	return 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_unique_total_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_unique_total_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_unique_total_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_r(void)
+{
+	return 0x001404f8;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_m(void)
+{
+	return 0xffff << 0;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_unique_total_s(void)
+{
+	return 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_unique_total_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_unique_total_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_unique_total_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
 static inline u32 ltc_ltc0_lts0_dstg_ecc_report_r(void)
 {
 	return 0x0014051c;

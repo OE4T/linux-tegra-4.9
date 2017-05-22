@@ -1647,6 +1647,7 @@ static void set_best_clk_source(struct tegra_qspi_data *tqspi)
 
 	if (!of_property_count_strings(node, "nvidia,clk-parents"))
 		return;
+
 	of_property_for_each_string(node, "nvidia,clk-parents",
 				    prop, pclk_name) {
 		pclk = clk_get(tqspi->dev, pclk_name);
@@ -1685,8 +1686,9 @@ static struct tegra_qspi_device_controller_data *tegra_qspi_get_cdata_dt(
 			struct spi_device *spi)
 {
 	struct tegra_qspi_device_controller_data *cdata = NULL;
-	const unsigned int *prop;
 	struct device_node *np = spi->dev.of_node, *data_np = NULL;
+	u32 pval;
+	int ret;
 
 	if (!np) {
 		dev_dbg(&spi->dev, "Device node not found\n");
@@ -1703,51 +1705,49 @@ static struct tegra_qspi_device_controller_data *tegra_qspi_get_cdata_dt(
 	if (!cdata)
 		return NULL;
 
-	prop = of_get_property(data_np, "nvidia,rx-clk-tap-delay", NULL);
-	if (prop)
-		cdata->rx_clk_tap_delay = be32_to_cpup(prop);
+	ret = of_property_read_u32(data_np, "nvidia,rx-clk-tap-delay", &pval);
+	if (!ret)
+		cdata->rx_clk_tap_delay = pval;
 
-	prop = of_get_property(data_np, "nvidia,tx-clk-tap-delay", NULL);
-	if (prop)
-		cdata->tx_clk_tap_delay = be32_to_cpup(prop);
+	ret = of_property_read_u32(data_np, "nvidia,tx-clk-tap-delay", &pval);
+	if (!ret)
+		cdata->tx_clk_tap_delay = pval;
 
-	if (of_find_property(data_np, "nvidia,tx_tap_delay", NULL))
-		cdata->tx_tap_delay = true;
+	cdata->tx_tap_delay = of_property_read_bool(data_np,
+						    "nvidia,tx_tap_delay");
+	cdata->rx_tap_delay = of_property_read_bool(data_np,
+						    "nvidia,rx_tap_delay");
 
-	if (of_find_property(data_np, "nvidia,rx_tap_delay", NULL))
-		cdata->rx_tap_delay = true;
+	ret = of_property_read_u32(data_np, "nvidia,x1-len-limit", &pval);
+	if (!ret)
+		cdata->x1_len_limit = pval;
 
-	prop = of_get_property(data_np, "nvidia,x1-len-limit", NULL);
-	if (prop)
-		cdata->x1_len_limit = be32_to_cpup(prop);
+	ret = of_property_read_u32(data_np, "nvidia,x1-bus-speed", &pval);
+	if (!ret)
+		cdata->x1_bus_speed = pval;
 
-	prop = of_get_property(data_np, "nvidia,x1-bus-speed", NULL);
-	if (prop)
-		cdata->x1_bus_speed = be32_to_cpup(prop);
+	ret = of_property_read_u32(data_np, "nvidia,x1-dymmy-cycle", &pval);
+	if (!ret)
+		cdata->x1_dymmy_cycle = pval;
 
-	prop = of_get_property(data_np, "nvidia,x1-dymmy-cycle", NULL);
-	if (prop)
-		cdata->x1_dymmy_cycle = be32_to_cpup(prop);
+	ret = of_property_read_u32(data_np, "nvidia,x4-bus-speed", &pval);
+	if (!ret)
+		cdata->x4_bus_speed = pval;
 
-	prop = of_get_property(data_np, "nvidia,x4-bus-speed", NULL);
-	if (prop)
-		cdata->x4_bus_speed = be32_to_cpup(prop);
+	ret = of_property_read_u32(data_np, "nvidia,x4-dymmy-cycle", &pval);
+	if (!ret)
+		cdata->x4_dymmy_cycle = pval;
 
-	prop = of_get_property(data_np, "nvidia,x4-dymmy-cycle", NULL);
-	if (prop)
-		cdata->x4_dymmy_cycle = be32_to_cpup(prop);
+	ret = of_property_read_u32(data_np, "nvidia,x4-is-ddr", &pval);
+	if (!ret)
+		cdata->x4_is_ddr = pval;
 
-	prop = of_get_property(data_np, "nvidia,x4-is-ddr", NULL);
-	if (prop)
-		cdata->x4_is_ddr = be32_to_cpup(prop);
+	ret = of_property_read_u32(data_np, "nvidia,ifddr-div2-sdr", &pval);
+	if (!ret)
+		cdata->ifddr_div2_sdr = pval;
 
-	prop = of_get_property(data_np, "nvidia,ifddr-div2-sdr", NULL);
-	if (prop)
-		cdata->ifddr_div2_sdr = be32_to_cpup(prop);
-
-	prop = of_get_property(data_np, "nvidia,combined-seq-mode-en", NULL);
-	if (prop)
-		cdata->is_combined_seq_mode_en = true;
+	cdata->is_combined_seq_mode_en = of_property_read_bool(data_np,
+						"nvidia,combined-seq-mode-en");
 
 	return cdata;
 }
@@ -1756,21 +1756,22 @@ static void tegra_qspi_parse_dt(struct device *dev,
 				struct tegra_qspi_data *tqspi)
 {
 	struct device_node *np = dev->of_node;
-	const unsigned int *prop;
+	u32 pval;
 	u32 of_dma[2];
+	int ret;
 
 	if (of_property_read_u32_array(np, "nvidia,dma-request-selector",
 				       of_dma, 2) >= 0)
 		tqspi->dma_req_sel = of_dma[1];
 
-	prop = of_get_property(np, "spi-max-frequency", NULL);
-	if (prop)
-		tqspi->qspi_max_frequency = be32_to_cpup(prop);
+	ret = of_property_read_u32(np, "spi-max-frequency", &pval);
+	if (!ret)
+		tqspi->qspi_max_frequency = pval;
 	else
 		tqspi->qspi_max_frequency = 136000000; /* 136MHz */
 
-	if (of_find_property(np, "nvidia,clock-always-on", NULL))
-		tqspi->clock_always_on = true;
+	tqspi->clock_always_on = of_property_read_bool(np,
+						       "nvidia,clock-always-on");
 }
 
 static int tegra_qspi_probe(struct platform_device *pdev)

@@ -72,6 +72,10 @@ static int tegra_alt_pcm_open(struct snd_pcm_substream *substream)
 	/* Set HW params now that initialization is complete */
 	snd_soc_set_runtime_hwparams(substream, &tegra_alt_pcm_hardware);
 
+	/* Update buffer size from device tree */
+	if (dmap->buffer_size > substream->runtime->hw.buffer_bytes_max)
+		substream->runtime->hw.buffer_bytes_max = dmap->buffer_size;
+
 	/* Ensure period size is multiple of 8 */
 	ret = snd_pcm_hw_constraint_step(substream->runtime, 0,
 		SNDRV_PCM_HW_PARAM_PERIOD_BYTES, 0x8);

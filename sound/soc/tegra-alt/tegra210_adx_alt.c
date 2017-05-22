@@ -249,21 +249,12 @@ static int tegra210_adx_runtime_suspend(struct device *dev)
 	regcache_cache_only(adx->regmap, true);
 	regcache_mark_dirty(adx->regmap);
 
-	pm_runtime_put_sync(dev->parent);
-
 	return 0;
 }
 
 static int tegra210_adx_runtime_resume(struct device *dev)
 {
 	struct tegra210_adx *adx = dev_get_drvdata(dev);
-	int ret;
-
-	ret = pm_runtime_get_sync(dev->parent);
-	if (ret < 0) {
-		dev_err(dev, "parent get_sync failed: %d\n", ret);
-		return ret;
-	}
 
 	regcache_cache_only(adx->regmap, false);
 	regcache_sync(adx->regmap);

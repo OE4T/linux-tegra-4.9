@@ -243,8 +243,6 @@ static int tegra210_amx_runtime_suspend(struct device *dev)
 	regcache_cache_only(amx->regmap, true);
 	regcache_mark_dirty(amx->regmap);
 
-	pm_runtime_put_sync(dev->parent);
-
 	return 0;
 }
 
@@ -282,13 +280,6 @@ static unsigned int tegra210_amx_read_map_ram(struct tegra210_amx *amx,
 static int tegra210_amx_runtime_resume(struct device *dev)
 {
 	struct tegra210_amx *amx = dev_get_drvdata(dev);
-	int ret;
-
-	ret = pm_runtime_get_sync(dev->parent);
-	if (ret < 0) {
-		dev_err(dev, "parent get_sync failed: %d\n", ret);
-		return ret;
-	}
 
 	regcache_cache_only(amx->regmap, false);
 	regcache_sync(amx->regmap);

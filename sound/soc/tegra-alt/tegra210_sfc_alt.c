@@ -69,21 +69,12 @@ static int tegra210_sfc_runtime_suspend(struct device *dev)
 	regcache_cache_only(sfc->regmap, true);
 	regcache_mark_dirty(sfc->regmap);
 
-	pm_runtime_put_sync(dev->parent);
-
 	return 0;
 }
 
 static int tegra210_sfc_runtime_resume(struct device *dev)
 {
 	struct tegra210_sfc *sfc = dev_get_drvdata(dev);
-	int ret;
-
-	ret = pm_runtime_get_sync(dev->parent);
-	if (ret < 0) {
-		dev_err(dev, "parent get_sync failed: %d\n", ret);
-		return ret;
-	}
 
 	regcache_cache_only(sfc->regmap, false);
 	regcache_sync(sfc->regmap);

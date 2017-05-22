@@ -975,9 +975,7 @@ static int tegra_crypto_sha(struct file *filp, struct tegra_crypto_ctx *ctx,
 	struct tegra_crypto_completion sha_complete;
 	void *hash_buff;
 	unsigned long *xbuf[XBUFSIZE];
-	int ret = -ENOMEM, i;
-	char sha_algo[6][10] = {"sha1", "sha224", "sha256",
-				"sha384", "sha512", "cmac(aes)"};
+	int ret = -ENOMEM;
 
 	if (sha_req->plaintext_sz > PAGE_SIZE) {
 		pr_err("alg:hash: invalid plaintext_sz for sha_req\n");
@@ -996,14 +994,6 @@ static int tegra_crypto_sha(struct file *filp, struct tegra_crypto_ctx *ctx,
 			algo, PTR_ERR(tfm));
 		goto out_alloc;
 	}
-
-	for (i = 0; i < 6; i++) {
-		if (!strcmp(algo, sha_algo[i])) {
-			ctx->sha_tfm[i] = tfm;
-			break;
-		}
-	}
-	filp->private_data = ctx;
 
 	req = ahash_request_alloc(tfm, GFP_KERNEL);
 	if (!req) {

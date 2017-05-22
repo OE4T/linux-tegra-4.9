@@ -370,7 +370,7 @@ static void tegra_qspi_dump_regs(const char *heading,
 				 struct tegra_qspi_data *tqspi)
 {
 	u32 command1_reg;
-	u32 fifo_status_reg, misc_reg, global_config_reg;
+	u32 fifo_status_reg, misc_reg, gl_config_reg;
 	u32 dma_ctrl_reg, dma_blk_reg, intr_mask_reg;
 	u32 trans_status_reg;
 	u32 cmd_config;
@@ -390,25 +390,23 @@ static void tegra_qspi_dump_regs(const char *heading,
 	dma_blk_reg = tegra_qspi_readl(tqspi, QSPI_DMA_BLK);
 	intr_mask_reg = tegra_qspi_readl(tqspi, QSPI_INTR_MASK);
 	misc_reg = tegra_qspi_readl(tqspi, QSPI_MISC_REG);
-	global_config_reg = tegra_qspi_readl(tqspi, QSPI_GLOBAL_CONFIG);
+	gl_config_reg = tegra_qspi_readl(tqspi, QSPI_GLOBAL_CONFIG);
 
 	if (heading)
 		dev_info(tqspi->dev, "%s\n", heading);
 
-	dev_err(tqspi->dev,
-		"QSPI_ERR: CMD_0: 0x%08x, FIFO_STS: 0x%08x\n",
-		command1_reg, fifo_status_reg);
-	dev_err(tqspi->dev,
-		"QSPI_ERR: DMA_CTL: 0x%08x, TRANS_STS: 0x%08x GLOBAL_CONFIG::0x%08x\n",
-		dma_ctrl_reg, trans_status_reg, global_config_reg);
-	dev_err(tqspi->dev,
-		"QSPI_ERR: DMA_BLK: 0x%08x, INTR: 0x%08x MISC-REG::0x%08x\n",
-		dma_blk_reg, intr_mask_reg, misc_reg);
-
-	dev_err(tqspi->dev,
-		"CMBSEQ_ERR: CMD_VAl: 0x%08x, ADR_VAL: 0x%08x, CMD_CFG: 0x%08x, ADR_CFG: 0x%08x\n",
-		cmd_value, addr_value, cmd_config, addr_config);
-}
+	dev_err(tqspi->dev, "CMD_0: \t\t\t0x%08lx\n", command1_reg);
+	dev_err(tqspi->dev, "FIFO_STS: \t\t\t0x%08x\n", fifo_status_reg);
+	dev_err(tqspi->dev, "DMA_CTL: \t\t\t0x%08lx\n", dma_ctrl_reg);
+	dev_err(tqspi->dev, "TRANS_STS: \t\t\t0x%08lx\n", trans_status_reg);
+	dev_err(tqspi->dev, "GLOBAL_CONFIG: \t\t\t0x%08lx\n", gl_config_reg);
+	dev_err(tqspi->dev, "DMA_BLK:  \t\t\t0x%08lx\n", dma_blk_reg);
+	dev_err(tqspi->dev, "INTR:  \t\t\t0x%08lx\n", intr_mask_reg);
+	dev_err(tqspi->dev, "MISC-REG: \t\t\t0x%08lx\n", misc_reg);
+	dev_err(tqspi->dev, "CMD_VAl:  \t\t\t0x%08lx\n", cmd_value);
+	dev_err(tqspi->dev, "ADR_VAL:  \t\t\t0x%08lx\n", addr_value);
+	dev_err(tqspi->dev, "CMD_CFG:  \t\t\t0x%08lx\n", cmd_config);
+	dev_err(tqspi->dev, "ADR_CFG:  \t\t\t0x%08lx\n", addr_config);
 #else
 static void tegra_qspi_dump_regs(const char *heading,
 				 struct tegra_qspi_data *tqspi)
@@ -616,6 +614,7 @@ static void tegra_qspi_copy_client_txbuf_to_qspi_txbuf(
 
 		for (count = 0; count < tqspi->curr_dma_words; count++) {
 			u32 x = 0;
+
 			for (i = 0; consume && (i < tqspi->bytes_per_word);
 					i++, consume--)
 				x |= ((*tx_buf++) << i * 8);
@@ -679,7 +678,7 @@ static int tegra_qspi_start_tx_dma(struct tegra_qspi_data *tqspi, int len)
 			tqspi->tx_dma_phys, len, DMA_MEM_TO_DEV,
 			DMA_PREP_INTERRUPT |  DMA_CTRL_ACK);
 	if (!tqspi->tx_dma_desc) {
-		dev_err(tqspi->dev, "Not able to get desc for Tx\n");
+		dev_err(tqspi->dev, "Failed to get Tx DMA Desc\n");
 		return -EIO;
 	}
 
@@ -699,7 +698,7 @@ static int tegra_qspi_start_rx_dma(struct tegra_qspi_data *tqspi, int len)
 			tqspi->rx_dma_phys, len, DMA_DEV_TO_MEM,
 			DMA_PREP_INTERRUPT |  DMA_CTRL_ACK);
 	if (!tqspi->rx_dma_desc) {
-		dev_err(tqspi->dev, "Not able to get desc for Rx\n");
+		dev_err(tqspi->dev, "Failed to get Rx Dma Desc\n");
 		return -EIO;
 	}
 
@@ -768,8 +767,8 @@ static int tegra_qspi_start_dma_based_transfer(
 		tegra_qspi_copy_client_txbuf_to_qspi_txbuf(tqspi, t);
 		ret = tegra_qspi_start_tx_dma(tqspi, len);
 		if (ret < 0) {
-			dev_err(tqspi->dev,
-				"Starting tx dma failed, err %d\n", ret);
+			dev_err(tqspi->dev, "Failed to start Tx DMA: %d\n",
+				ret);
 			return ret;
 		}
 	}
@@ -787,8 +786,8 @@ static int tegra_qspi_start_dma_based_transfer(
 
 		ret = tegra_qspi_start_rx_dma(tqspi, len);
 		if (ret < 0) {
-			dev_err(tqspi->dev,
-				"Starting rx dma failed, err %d\n", ret);
+			dev_err(tqspi->dev, "Failed to start Rx DMA: %d\n",
+				ret);
 			if (tqspi->cur_direction & DATA_DIR_TX)
 				dmaengine_terminate_all(tqspi->tx_dma_chan);
 			return ret;
@@ -869,15 +868,14 @@ static int tegra_qspi_init_dma_param(struct tegra_qspi_data *tqspi,
 						    dma_to_memory ?
 							"rx" : "tx");
 	if (!dma_chan) {
-		dev_err(tqspi->dev,
-			"Dma channel is not available, will try later\n");
+		dev_err(tqspi->dev, "Failed to get DMA channel, will retry\n");
 		return -EPROBE_DEFER;
 	}
 
 	dma_buf = dma_alloc_coherent(tqspi->dev, tqspi->dma_buf_size,
 				     &dma_phys, GFP_KERNEL);
 	if (!dma_buf) {
-		dev_err(tqspi->dev, "Not able to allocate the dma buffer\n");
+		dev_err(tqspi->dev, "Failed to allocate coherant DMA buffer\n");
 		dma_release_channel(dma_chan);
 		return -ENOMEM;
 	}
@@ -951,7 +949,7 @@ static int tegra_qspi_validate_request(struct spi_device *spi,
 
 	req_mode = spi->mode & 0x3;
 	if ((req_mode == SPI_MODE_1) || (req_mode == SPI_MODE_2)) {
-		dev_err(tqspi->dev, "Qspi does not support mode %d\n",
+		dev_err(tqspi->dev, "QSPI does not support mode %d\n",
 			req_mode);
 		return -EINVAL;
 	}
@@ -963,14 +961,14 @@ static int tegra_qspi_validate_request(struct spi_device *spi,
 
 	if ((t->bits_per_word != 8) && (t->bits_per_word != 16) &&
 	    (t->bits_per_word != 32)) {
-		dev_err(tqspi->dev, "qspi does not support bpw = %d\n",
+		dev_err(tqspi->dev, "QSPI does not support bpw = %d\n",
 			t->bits_per_word);
 		return -EINVAL;
 	}
 
 	if (((t->bits_per_word == 16) && (t->len & 0x1)) ||
 	    ((t->bits_per_word == 32) && (t->len & 0x3))) {
-		dev_err(tqspi->dev, "unaligned len = %d, bits_per_word = %d not supported\n",
+		dev_err(tqspi->dev, "QSPI: length %d and bits-per-word %d must align\n",
 			t->len, t->bits_per_word);
 		return -EINVAL;
 	}
@@ -991,8 +989,8 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 		err = tegra_prod_set_by_name(&tqspi->base, "prod",
 					     tqspi->prod_list);
 		if (err < 0)
-			dev_dbg(tqspi->dev,
-				"failed to set prod for qspi by %d\n", err);
+			dev_dbg(tqspi->dev, "Prod config not found for QSPI: %d\n",
+				err);
 		if (tqspi->is_ddr_mode)
 			sprintf(prod_name, "prod_c_DDR%d",
 				(tqspi->cur_speed / 1000000));
@@ -1055,7 +1053,7 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 			speed = cdata->x1_bus_speed;
 		}
 	} else {
-		dev_err(tqspi->dev, "Controller Data is NULL\n");
+		dev_err(tqspi->dev, "Controller Data is not available\n");
 		return -EINVAL;
 	}
 #else
@@ -1078,9 +1076,9 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 #ifdef QSPI_BRINGUP
 	if (speed != tqspi->cur_speed) {
 		ret = clk_set_rate(tqspi->clk, speed);
-		if (ret) {
-			dev_err(tqspi->dev,
-				"Failed to set qspi clk freq %d\n", ret);
+		if (ret < 0) {
+			dev_err(tqspi->dev, "Failed to set QSPI clock freq: %d\n",
+				ret);
 			return -EINVAL;
 		}
 		tqspi->cur_speed = speed;
@@ -1092,9 +1090,9 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 					   (actual_speed >> 1));
 		else
 			ret = clk_set_rate(tqspi->sdr_ddr_clk, actual_speed);
-		if (ret) {
-			dev_err(tqspi->dev,
-				"Failed to set qspi_out clk freq %d\n", ret);
+		if (ret < 0) {
+			dev_err(tqspi->dev, "Failed to set QSPI-out clock freq: %d\n",
+				ret);
 			return -EINVAL;
 		}
 		tqspi->is_ddr_mode = is_ddr;
@@ -1113,7 +1111,8 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		} else if (req_mode == SPI_MODE_3) {
 			command1 |= QSPI_CONTROL_MODE_3;
 		} else {
-			dev_err(tqspi->dev, "invalid mode %d\n", req_mode);
+			dev_err(tqspi->dev, "QSPI does not support mode %d\n",
+				req_mode);
 			return -EINVAL;
 		}
 		/* Programming mode first suggested by HW - Bug 200082074 */
@@ -1189,7 +1188,7 @@ static int tegra_qspi_setup(struct spi_device *spi)
 		spi->max_speed_hz);
 
 	if (spi->chip_select >= MAX_CHIP_SELECT) {
-		dev_err(tqspi->dev, "Wrong chip select = %d\n",
+		dev_err(tqspi->dev, "QSPI Chip select %d is not supported\n",
 			spi->chip_select);
 		return -EINVAL;
 	}
@@ -1203,7 +1202,7 @@ static int tegra_qspi_setup(struct spi_device *spi)
 	spi->max_speed_hz = spi->max_speed_hz ? : tqspi->qspi_max_frequency;
 	ret = pm_runtime_get_sync(tqspi->dev);
 	if (ret < 0) {
-		dev_err(tqspi->dev, "pm runtime failed, e = %d\n", ret);
+		dev_err(tqspi->dev, "Failed to get runtime PM: %d\n", ret);
 		return ret;
 	}
 	spin_lock_irqsave(&tqspi->lock, flags);
@@ -1230,14 +1229,14 @@ static int tegra_qspi_cs_low(struct spi_device *spi, bool state)
 	unsigned long flags;
 
 	if (spi->chip_select >= MAX_CHIP_SELECT) {
-		dev_err(tqspi->dev, "Invalid Chip select %d\n",
+		dev_err(tqspi->dev, "QSPI Chip select %d is not supported\n",
 			spi->chip_select);
 		return -EINVAL;
 	}
 
 	ret = pm_runtime_get_sync(tqspi->dev);
 	if (ret < 0) {
-		dev_err(tqspi->dev, "pm runtime failed, e = %d\n", ret);
+		dev_err(tqspi->dev, "Failed to get runtime PM: %d\n", ret);
 		return ret;
 	}
 	spin_lock_irqsave(&tqspi->lock, flags);
@@ -1329,8 +1328,7 @@ static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
 							    single_xfer);
 
 			if (ret < 0) {
-				dev_err(tqspi->dev,
-					"qspi can not start transfer,err %d\n",
+				dev_err(tqspi->dev, "Failed to start transfer-one: %d\n",
 					ret);
 				return ret;
 			}
@@ -1341,7 +1339,7 @@ static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
 					QSPI_DMA_TIMEOUT);
 
 			if (WARN_ON(ret == 0)) {
-				dev_err(tqspi->dev, "spi transfer timeout, err %d\n",
+				dev_err(tqspi->dev, "QSPI Transfer failed with timeout: %d\n",
 					ret);
 				if (tqspi->is_curr_dma_xfer &&
 				    (tqspi->cur_direction & DATA_DIR_TX))
@@ -1360,7 +1358,7 @@ static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
 			}
 
 			if (tqspi->tx_status ||  tqspi->rx_status) {
-				dev_err(tqspi->dev, "Error in Transfer\n");
+				dev_err(tqspi->dev, "QSPI Transfer failed\n");
 				tqspi->tx_status = 0;
 				tqspi->rx_status = 0;
 				ret = -EIO;
@@ -1395,8 +1393,7 @@ static int tegra_qspi_non_combined_sequence_transfer
 						    is_first_msg,
 						    single_xfer);
 		if (ret < 0) {
-			dev_err(tqspi->dev,
-				"qspi can not start transfer, err %d\n",
+			dev_err(tqspi->dev, "Failed to start transfer-one: %d\n",
 				ret);
 			return ret;
 		}
@@ -1404,8 +1401,7 @@ static int tegra_qspi_non_combined_sequence_transfer
 		ret = wait_for_completion_timeout(&tqspi->xfer_completion,
 						  QSPI_DMA_TIMEOUT);
 		if (WARN_ON(ret == 0)) {
-			dev_err(tqspi->dev,
-				"spi transfer timeout, err %d\n", ret);
+			dev_err(tqspi->dev, "QSPI Transfer failed with timeout\n");
 			if (tqspi->is_curr_dma_xfer &&
 			    (tqspi->cur_direction & DATA_DIR_TX))
 				dmaengine_terminate_all(tqspi->tx_dma_chan);
@@ -1421,7 +1417,7 @@ static int tegra_qspi_non_combined_sequence_transfer
 		}
 
 		if (tqspi->tx_status ||  tqspi->rx_status) {
-			dev_err(tqspi->dev, "Error in Transfer\n");
+			dev_err(tqspi->dev, "QSPI Transfer failed\n");
 			tqspi->tx_status = 0;
 			tqspi->rx_status = 0;
 			ret = -EIO;
@@ -1445,7 +1441,7 @@ static int tegra_qspi_transfer_one_message(struct spi_master *master,
 	msg->actual_length = 0;
 	ret = pm_runtime_get_sync(tqspi->dev);
 	if (ret < 0) {
-		dev_err(tqspi->dev, "runtime PM get failed: %d\n", ret);
+		dev_err(tqspi->dev, "Failed to get runtime PM: %d\n", ret);
 		msg->status = ret;
 		spi_finalize_current_message(master);
 		return ret;
@@ -1464,8 +1460,7 @@ static int tegra_qspi_transfer_one_message(struct spi_master *master,
 		tqspi->dcycle_non_cmbseq_mode = false;
 		ret = tegra_qspi_combined_sequence_transfer(tqspi, msg);
 		if (ret < 0) {
-			dev_err(tqspi->dev,
-				"qspi combined sequence transfer failure, err %d\n",
+			dev_err(tqspi->dev, "QSPI combined sequence transfer failed: %d\n",
 				ret);
 			goto exit;
 		}
@@ -1473,8 +1468,7 @@ static int tegra_qspi_transfer_one_message(struct spi_master *master,
 		tqspi->dcycle_non_cmbseq_mode = true;
 		ret = tegra_qspi_non_combined_sequence_transfer(tqspi, msg);
 		if (ret < 0) {
-			dev_err(tqspi->dev,
-				"qspi non combined sequence transfer failure, err %d\n",
+			dev_err(tqspi->dev, "QSPI non-combined sequence transfer failed: %d\n",
 				ret);
 		   goto exit;
 		}
@@ -1496,9 +1490,9 @@ static irqreturn_t handle_cpu_based_xfer(struct tegra_qspi_data *tqspi)
 
 	spin_lock_irqsave(&tqspi->lock, flags);
 	if (tqspi->tx_status ||  tqspi->rx_status) {
-		dev_err(tqspi->dev, "CpuXfer ERROR bit set 0x%x\n",
+		dev_err(tqspi->dev, "CpuXfer ERROR, status 0x%08x\n",
 			tqspi->status_reg);
-		dev_err(tqspi->dev, "CpuXfer 0x%08x:0x%08x\n",
+		dev_err(tqspi->dev, "CpuXfer command1:dmacontro->0x%08x:0x%08x\n",
 			tqspi->command1_reg, tqspi->dma_control_reg);
 		reset_control_reset(tqspi->rstc);
 		complete(&tqspi->xfer_completion);
@@ -1569,9 +1563,9 @@ static irqreturn_t handle_dma_based_xfer(struct tegra_qspi_data *tqspi)
 
 	spin_lock_irqsave(&tqspi->lock, flags);
 	if (err) {
-		dev_err(tqspi->dev, "DmaXfer: ERROR bit set 0x%x\n",
+		dev_err(tqspi->dev, "DmaXfer ERROR, status 0x%08x\n",
 			tqspi->status_reg);
-		dev_err(tqspi->dev, "DmaXfer 0x%08x:0x%08x\n",
+		dev_err(tqspi->dev, "DmaXfer command1:dmacontro->0x%08x:0x%08x\n",
 			tqspi->command1_reg, tqspi->dma_control_reg);
 		reset_control_reset(tqspi->rstc);
 		complete(&tqspi->xfer_completion);
@@ -1634,7 +1628,7 @@ static irqreturn_t tegra_qspi_isr(int irq, void *context_data)
 
 	if (!(tqspi->cur_direction & DATA_DIR_TX) &&
 	    !(tqspi->cur_direction & DATA_DIR_RX))
-		dev_err(tqspi->dev, "spurious interrupt, status_reg = 0x%x\n",
+		dev_err(tqspi->dev, "QSPI get spurious interrupt, Status = 0x%08x\n",
 			tqspi->status_reg);
 
 	tegra_qspi_clear_status(tqspi);
@@ -1665,14 +1659,12 @@ static void set_best_clk_source(struct tegra_qspi_data *tqspi)
 
 		ret = clk_set_parent(tqspi->clk, pclk);
 		if (ret < 0) {
-			dev_warn(tqspi->dev,
-				 "Error in setting parent clk src %s: %d\n",
-				pclk_name, ret);
+			dev_warn(tqspi->dev, "Failed to set parent clk: %d\n",
+				 ret);
 			continue;
 		}
 
 		new_rate = clk_round_rate(tqspi->clk, rate);
-
 		if (new_rate < 0)
 			continue;
 
@@ -1685,8 +1677,7 @@ static void set_best_clk_source(struct tegra_qspi_data *tqspi)
 	}
 
 	if (fpclk) {
-		dev_dbg(tqspi->dev, "Setting clk_src %s\n",
-			fpclk_name);
+		dev_dbg(tqspi->dev, "Setting clk_src %s\n", fpclk_name);
 		clk_set_parent(tqspi->clk, fpclk);
 	}
 }
@@ -1700,7 +1691,7 @@ static struct tegra_qspi_device_controller_data *tegra_qspi_get_cdata_dt(
 	int ret;
 
 	if (!np) {
-		dev_dbg(&spi->dev, "Device node not found\n");
+		dev_dbg(&spi->dev, "Device must have DT node handle\n");
 		return NULL;
 	}
 
@@ -1799,7 +1790,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*tqspi));
 	if (!master) {
-		dev_err(&pdev->dev, "master allocation failed\n");
+		dev_err(&pdev->dev, "SPI master allocation failed\n");
 		return -ENOMEM;
 	}
 
@@ -1819,7 +1810,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->dev = &pdev->dev;
 	tqspi->prod_list = devm_tegra_prod_get(&pdev->dev);
 	if (IS_ERR(tqspi->prod_list)) {
-		dev_info(&pdev->dev, "Prod settings list not initialized\n");
+		dev_info(&pdev->dev, "Prod settings list not found\n");
 		tqspi->prod_list = NULL;
 	}
 
@@ -1828,22 +1819,24 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
 	if (!r) {
-		dev_err(&pdev->dev, "No IO memory resource\n");
+		dev_err(&pdev->dev, "Failed to get IO memory\n");
 		ret = -ENODEV;
 		goto exit_free_master;
 	}
 	tqspi->phys = r->start;
 	tqspi->base = devm_ioremap_resource(&pdev->dev, r);
-	if (!tqspi->base) {
-		dev_err(dev, "Cannot request memregion/iomap dma address\n");
-		ret = -EADDRNOTAVAIL;
+	if (IS_ERR(tqspi->base)) {
+		ret = PTR_ERR(tqspi->base);
+		dev_err(dev, "Failed to request memregion/iomap address: %d\n",
+			ret);
 		goto exit_free_master;
 	}
 
 	tqspi->rstc = devm_reset_control_get(&pdev->dev, "qspi");
 	if (IS_ERR(tqspi->rstc)) {
-		dev_err(&pdev->dev, "Missing controller reset\n");
-		return PTR_ERR(tqspi->rstc);
+		ret = PTR_ERR(tqspi->rstc);
+		dev_err(&pdev->dev, "Failed to get reset control: %d\n", ret);
+		goto exit_free_master;
 	}
 	reset_control_reset(tqspi->rstc);
 
@@ -1853,20 +1846,20 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 				   tegra_qspi_isr_thread, IRQF_ONESHOT,
 				   dev_name(&pdev->dev), tqspi);
 	if (ret < 0) {
-		dev_err(dev, "Failed to register ISR for IRQ %d\n", tqspi->irq);
+		dev_err(dev, "Failed to register interrupt: %d\n", tqspi->irq);
 		goto exit_free_master;
 	}
 	tqspi->clk = devm_clk_get(&pdev->dev, "qspi");
 	if (IS_ERR(tqspi->clk)) {
-		dev_err(&pdev->dev, "can not get clock\n");
 		ret = PTR_ERR(tqspi->clk);
+		dev_err(&pdev->dev, "Failed to get QSPI clock: %d\n", ret);
 		goto exit_free_irq;
 	}
 
 	tqspi->sdr_ddr_clk = devm_clk_get(&pdev->dev, "qspi_out");
 	if (IS_ERR(tqspi->sdr_ddr_clk)) {
-		dev_err(&pdev->dev, "can not get clock\n");
 		ret = PTR_ERR(tqspi->sdr_ddr_clk);
+		dev_err(&pdev->dev, "Failed to get QSPI-OUT: %d\n", ret);
 		goto exit_free_irq;
 	}
 	/* Set default mode to SDR */
@@ -1876,13 +1869,15 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	if (tqspi->dma_req_sel) {
 		ret = tegra_qspi_init_dma_param(tqspi, true);
 		if (ret < 0) {
-			dev_err(&pdev->dev, "RxDma Init failed, err %d\n", ret);
+			dev_err(&pdev->dev, "Failed to initialise RxDma: %d\n",
+				ret);
 			goto exit_free_irq;
 		}
 
 		ret = tegra_qspi_init_dma_param(tqspi, false);
 		if (ret < 0) {
-			dev_err(&pdev->dev, "TxDma Init failed, err %d\n", ret);
+			dev_err(&pdev->dev, "Failed to initialise TxDma: %d\n",
+				ret);
 			goto exit_rx_dma_free;
 		}
 		tqspi->max_buf_size = tqspi->dma_buf_size;
@@ -1895,14 +1890,14 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	if (tqspi->clock_always_on) {
 		ret = clk_prepare_enable(tqspi->clk);
 		if (ret < 0) {
-			dev_err(tqspi->dev, "clk_prepare failed qspi clk: %d\n"
-				, ret);
+			dev_err(tqspi->dev, "Failed to enable QSPI clock: %d\n",
+				ret);
 			goto exit_deinit_dma;
 		}
 		ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
 		if (ret < 0) {
-			dev_err(tqspi->dev, "clk_prepare failed for qspi_out clk: %d\n"
-				, ret);
+			dev_err(tqspi->dev, "Failed to enable QSPI-OUT clk: %d\n",
+				ret);
 			goto exit_deinit_dma;
 		}
 	}
@@ -1916,7 +1911,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 
 	ret = pm_runtime_get_sync(&pdev->dev);
 	if (ret < 0) {
-		dev_err(&pdev->dev, "pm runtime get failed, e = %d\n", ret);
+		dev_err(tqspi->dev, "Failed to get runtime PM: %d\n", ret);
 		goto exit_pm_disable;
 	}
 	set_best_clk_source(tqspi);
@@ -1944,7 +1939,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	master->dev.of_node = pdev->dev.of_node;
 	ret = spi_register_master(master);
 	if (ret < 0) {
-		dev_err(&pdev->dev, "can not register to master err %d\n", ret);
+		dev_err(dev, "Failed to register spi master: %d\n", ret);
 		goto exit_pm_disable;
 	}
 
@@ -2038,20 +2033,20 @@ static int tegra_qspi_resume(struct device *dev)
 	if (tqspi->clock_always_on) {
 		ret = clk_prepare_enable(tqspi->clk);
 		if (ret < 0) {
-			dev_err(tqspi->dev, "clk_prepare failed for qspi clk: %d\n"
-				, ret);
+			dev_err(tqspi->dev, "Failed to enable QSPI clock: %d\n",
+				ret);
 			return ret;
 		}
 		ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
 		if (ret < 0) {
-			dev_err(tqspi->dev, "clk_prepare failed for qspi_out clk: %d\n"
-				, ret);
+			dev_err(tqspi->dev, "Failed to enable QSPI-OUT clk: %d\n",
+				ret);
 			return ret;
 		}
 	}
 	ret = pm_runtime_get_sync(dev);
 	if (ret < 0) {
-		dev_err(dev, "pm runtime failed, e = %d\n", ret);
+		dev_err(tqspi->dev, "Failed to get runtime PM: %d\n", ret);
 		return ret;
 	}
 	tegra_qspi_writel(tqspi, tqspi->command1_reg, QSPI_COMMAND1);
@@ -2083,14 +2078,14 @@ static int tegra_qspi_runtime_resume(struct device *dev)
 
 	ret = clk_prepare_enable(tqspi->clk);
 	if (ret < 0) {
-		dev_err(tqspi->dev, "clk_prepare failed for qspi clk: %d\n"
-			, ret);
+		dev_err(tqspi->dev, "Failed to enable QSPI clock: %d\n",
+			ret);
 		return ret;
 	}
 	ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
 	if (ret < 0) {
-		dev_err(tqspi->dev, "clk_prepare failed for qspi_out clk: %d\n"
-			, ret);
+		dev_err(tqspi->dev, "Failed to enable QSPI-out clock: %d\n",
+			ret);
 		return ret;
 	}
 

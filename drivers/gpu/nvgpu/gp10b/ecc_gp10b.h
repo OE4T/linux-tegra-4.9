@@ -16,7 +16,7 @@
 #ifndef _NVGPU_ECC_GP10B_H_
 #define _NVGPU_ECC_GP10B_H_
 
-#include <linux/version.h>
+struct gk20a_ecc_stat;
 
 struct ecc_gr_t18x {
 	struct gk20a_ecc_stat sm_lrf_single_err_count;

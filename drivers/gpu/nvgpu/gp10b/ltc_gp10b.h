@@ -15,5 +15,6 @@
 #define LTC_GP10B_H
 struct gpu_ops;
 
+void gp10b_ltc_isr(struct gk20a *g);
 void gp10b_init_ltc(struct gpu_ops *gops);
 #endif

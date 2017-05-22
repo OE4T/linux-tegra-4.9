@@ -202,6 +202,16 @@ static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
 			offset + ram_userd_gp_get_w());
 }
 
+static u64 gv11b_userd_pb_get(struct gk20a *g, struct channel_gk20a *c)
+{
+	struct nvgpu_mem *userd_mem = &g->fifo.userd;
+	u32 offset = c->hw_chid * (g->fifo.userd_entry_size / sizeof(u32));
+	u32 lo = nvgpu_mem_rd32(g, userd_mem, offset + ram_userd_get_w());
+	u32 hi = nvgpu_mem_rd32(g, userd_mem, offset + ram_userd_get_hi_w());
+
+	return ((u64)hi << 32) | lo;
+}
+
 static void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct nvgpu_mem *userd_mem = &g->fifo.userd;
@@ -1412,6 +1422,7 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.get_num_fifos = gv11b_fifo_get_num_fifos;
 	gops->fifo.userd_gp_get = gv11b_userd_gp_get;
 	gops->fifo.userd_gp_put = gv11b_userd_gp_put;
+	gops->fifo.userd_pb_get = gv11b_userd_pb_get;
 	gops->fifo.setup_ramfc = channel_gv11b_setup_ramfc;
 	gops->fifo.resetup_ramfc = NULL;
 	gops->fifo.unbind_channel = channel_gv11b_unbind;

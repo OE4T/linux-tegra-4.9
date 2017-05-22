@@ -60,21 +60,12 @@ static int tegra210_mvc_runtime_suspend(struct device *dev)
 
 	regcache_cache_only(mvc->regmap, true);
 
-	pm_runtime_put_sync(dev->parent);
-
 	return 0;
 }
 
 static int tegra210_mvc_runtime_resume(struct device *dev)
 {
 	struct tegra210_mvc *mvc = dev_get_drvdata(dev);
-	int ret;
-
-	ret = pm_runtime_get_sync(dev->parent);
-	if (ret < 0) {
-		dev_err(dev, "parent get_sync failed: %d\n", ret);
-		return ret;
-	}
 
 	regcache_cache_only(mvc->regmap, false);
 

@@ -56,21 +56,12 @@ static int tegra210_ope_runtime_suspend(struct device *dev)
 	regcache_mark_dirty(ope->peq_regmap);
 	regcache_mark_dirty(ope->mbdrc_regmap);
 
-	pm_runtime_put_sync(dev->parent);
-
 	return 0;
 }
 
 static int tegra210_ope_runtime_resume(struct device *dev)
 {
 	struct tegra210_ope *ope = dev_get_drvdata(dev);
-	int ret;
-
-	ret = pm_runtime_get_sync(dev->parent);
-	if (ret < 0) {
-		dev_err(dev, "parent get_sync failed: %d\n", ret);
-		return ret;
-	}
 
 	regcache_cache_only(ope->regmap, false);
 	regcache_cache_only(ope->peq_regmap, false);

@@ -210,7 +210,7 @@ struct tegra_qspi_data {
 	void __iomem				*base;
 	phys_addr_t				phys;
 	unsigned				irq;
-	int					dma_req_sel;
+	bool					enable_dma_support;
 	bool					clock_always_on;
 	bool					is_ddr_mode;
 	u32					qspi_max_frequency;
@@ -867,9 +867,11 @@ static int tegra_qspi_init_dma_param(struct tegra_qspi_data *tqspi,
 	dma_chan = dma_request_slave_channel_reason(tqspi->dev,
 						    dma_to_memory ?
 							"rx" : "tx");
-	if (!dma_chan) {
-		dev_err(tqspi->dev, "Failed to get DMA channel, will retry\n");
-		return -EPROBE_DEFER;
+	if (IS_ERR(dma_chan)) {
+		ret = PTR_ERR(dma_chan);
+		dev_err(tqspi->dev, "Failed to get DMA channel, will retryi: %d\n",
+			ret);
+		return ret;
 	}
 
 	dma_buf = dma_alloc_coherent(tqspi->dev, tqspi->dma_buf_size,
@@ -880,7 +882,6 @@ static int tegra_qspi_init_dma_param(struct tegra_qspi_data *tqspi,
 		return -ENOMEM;
 	}
 
-	dma_sconfig.slave_id = tqspi->dma_req_sel;
 	if (dma_to_memory) {
 		dma_sconfig.src_addr = tqspi->phys + QSPI_RX_FIFO;
 		dma_sconfig.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
@@ -1757,12 +1758,9 @@ static void tegra_qspi_parse_dt(struct device *dev,
 {
 	struct device_node *np = dev->of_node;
 	u32 pval;
-	u32 of_dma[2];
 	int ret;
 
-	if (of_property_read_u32_array(np, "nvidia,dma-request-selector",
-				       of_dma, 2) >= 0)
-		tqspi->dma_req_sel = of_dma[1];
+	tqspi->enable_dma_support = of_property_read_bool(np, "dma-names");
 
 	ret = of_property_read_u32(np, "spi-max-frequency", &pval);
 	if (!ret)
@@ -1817,7 +1815,6 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	spin_lock_init(&tqspi->lock);
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-
 	if (!r) {
 		dev_err(&pdev->dev, "Failed to get IO memory\n");
 		ret = -ENODEV;
@@ -1868,7 +1865,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->is_ddr_mode = false;
 	tqspi->max_buf_size = QSPI_FIFO_DEPTH << 2;
 	tqspi->dma_buf_size = DEFAULT_SPI_DMA_BUF_LEN;
-	if (tqspi->dma_req_sel) {
+	if (tqspi->enable_dma_support) {
 		ret = tegra_qspi_init_dma_param(tqspi, true);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "Failed to initialise RxDma: %d\n",

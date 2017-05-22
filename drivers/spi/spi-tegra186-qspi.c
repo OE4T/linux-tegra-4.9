@@ -1637,6 +1637,32 @@ static irqreturn_t tegra_qspi_isr(int irq, void *context_data)
 	return IRQ_WAKE_THREAD;
 }
 
+static int tegra_qspi_clk_enable(struct tegra_qspi_data *tqspi)
+{
+	int ret;
+
+	ret = clk_prepare_enable(tqspi->clk);
+	if (ret < 0) {
+		dev_err(tqspi->dev, "Failed to enable QSPI clock: %d\n", ret);
+		return ret;
+	}
+
+	ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
+	if (ret < 0) {
+		dev_err(tqspi->dev, "Failed to enable QSPI-OUT clk: %d\n", ret);
+		clk_disable_unprepare(tqspi->clk);
+		return ret;
+	}
+
+	return ret;
+}
+
+static void tegra_qspi_clk_disable(struct tegra_qspi_data *tqspi)
+{
+	clk_disable_unprepare(tqspi->sdr_ddr_clk);
+	clk_disable_unprepare(tqspi->clk);
+}
+
 static void set_best_clk_source(struct tegra_qspi_data *tqspi)
 {
 	long new_rate;
@@ -1887,18 +1913,9 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	init_completion(&tqspi->xfer_completion);
 
 	if (tqspi->clock_always_on) {
-		ret = clk_prepare_enable(tqspi->clk);
-		if (ret < 0) {
-			dev_err(tqspi->dev, "Failed to enable QSPI clock: %d\n",
-				ret);
+		ret = tegra_qspi_clk_enable(tqspi);
+		if (ret < 0)
 			goto exit_deinit_dma;
-		}
-		ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
-		if (ret < 0) {
-			dev_err(tqspi->dev, "Failed to enable QSPI-OUT clk: %d\n",
-				ret);
-			goto exit_deinit_dma;
-		}
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -1958,10 +1975,8 @@ exit_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_qspi_runtime_suspend(&pdev->dev);
-	if (tqspi->clock_always_on) {
-		clk_disable_unprepare(tqspi->sdr_ddr_clk);
-		clk_disable_unprepare(tqspi->clk);
-	}
+	if (tqspi->clock_always_on)
+		tegra_qspi_clk_disable(tqspi);
 exit_deinit_dma:
 	tegra_qspi_deinit_dma_param(tqspi, false);
 exit_rx_dma_free:
@@ -1987,14 +2002,13 @@ static int tegra_qspi_remove(struct platform_device *pdev)
 
 	if (tqspi->rx_dma_chan)
 		tegra_qspi_deinit_dma_param(tqspi, true);
+
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_qspi_runtime_suspend(&pdev->dev);
 
-	if (tqspi->clock_always_on) {
-		clk_disable_unprepare(tqspi->sdr_ddr_clk);
-		clk_disable_unprepare(tqspi->clk);
-	}
+	if (tqspi->clock_always_on)
+		tegra_qspi_clk_disable(tqspi);
 
 	return 0;
 }
@@ -2008,10 +2022,8 @@ static int tegra_qspi_suspend(struct device *dev)
 
 	ret = spi_master_suspend(master);
 
-	if (tqspi->clock_always_on) {
-		clk_disable_unprepare(tqspi->sdr_ddr_clk);
-		clk_disable_unprepare(tqspi->clk);
-	}
+	if (tqspi->clock_always_on)
+		tegra_qspi_clk_disable(tqspi);
 
 	return ret;
 }
@@ -2023,18 +2035,9 @@ static int tegra_qspi_resume(struct device *dev)
 	int ret;
 
 	if (tqspi->clock_always_on) {
-		ret = clk_prepare_enable(tqspi->clk);
-		if (ret < 0) {
-			dev_err(tqspi->dev, "Failed to enable QSPI clock: %d\n",
-				ret);
+		ret = tegra_qspi_clk_enable(tqspi);
+		if (ret < 0)
 			return ret;
-		}
-		ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
-		if (ret < 0) {
-			dev_err(tqspi->dev, "Failed to enable QSPI-OUT clk: %d\n",
-				ret);
-			return ret;
-		}
 	}
 	ret = pm_runtime_get_sync(dev);
 	if (ret < 0) {
@@ -2048,6 +2051,7 @@ static int tegra_qspi_resume(struct device *dev)
 	return spi_master_resume(master);
 }
 #endif
+
 static int tegra_qspi_runtime_suspend(struct device *dev)
 {
 	struct spi_master *master = dev_get_drvdata(dev);
@@ -2056,8 +2060,7 @@ static int tegra_qspi_runtime_suspend(struct device *dev)
 	/* Flush all write which are in PPSB queue by reading back */
 	tegra_qspi_readl(tqspi, QSPI_COMMAND1);
 
-	clk_disable_unprepare(tqspi->sdr_ddr_clk);
-	clk_disable_unprepare(tqspi->clk);
+	tegra_qspi_clk_disable(tqspi);
 
 	return 0;
 }
@@ -2066,22 +2069,8 @@ static int tegra_qspi_runtime_resume(struct device *dev)
 {
 	struct spi_master *master = dev_get_drvdata(dev);
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(master);
-	int ret;
 
-	ret = clk_prepare_enable(tqspi->clk);
-	if (ret < 0) {
-		dev_err(tqspi->dev, "Failed to enable QSPI clock: %d\n",
-			ret);
-		return ret;
-	}
-	ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
-	if (ret < 0) {
-		dev_err(tqspi->dev, "Failed to enable QSPI-out clock: %d\n",
-			ret);
-		return ret;
-	}
-
-	return 0;
+	return tegra_qspi_clk_enable(tqspi);
 }
 
 static const struct dev_pm_ops tegra_qspi_pm_ops = {

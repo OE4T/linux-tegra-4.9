@@ -11,9 +11,6 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/clk.h>
@@ -41,21 +38,21 @@
 
 #define QSPI_COMMAND1				0x000
 #define QSPI_BIT_LENGTH(x)			(((x) & 0x1f) << 0)
-#define QSPI_PACKED				(1 << 5)
+#define QSPI_PACKED				BIT(5)
 #define QSPI_INTERFACE_WIDTH(x)			(((x) & 0x03) << 7)
 #define QSPI_INTERFACE_WIDTH_MASK		(0x03 << 7)
-#define QSPI_SDR_DDR_SEL			(1 << 9)
-#define QSPI_TX_EN				(1 << 11)
-#define QSPI_RX_EN				(1 << 12)
-#define QSPI_LSBYTE_FE				(1 << 15)
-#define QSPI_LSBIT_FE				(1 << 16)
+#define QSPI_SDR_DDR_SEL			BIT(9)
+#define QSPI_TX_EN				BIT(11)
+#define QSPI_RX_EN				BIT(12)
+#define QSPI_LSBYTE_FE				BIT(15)
+#define QSPI_LSBIT_FE				BIT(16)
 /* BIDIR can be enabled in x1 mode */
-#define QSPI_BIDIR				(1 << 17)
+#define QSPI_BIDIR				BIT(17)
 #define QSPI_IDLE_SDA_DRIVE_LOW			(0 << 18)
-#define QSPI_IDLE_SDA_DRIVE_HIGH		(1 << 18)
+#define QSPI_IDLE_SDA_DRIVE_HIGH		BIT(18)
 #define QSPI_IDLE_SDA_MASK			(3 << 18)
-#define QSPI_CS_SW_VAL				(1 << 20)
-#define QSPI_CS_SW_HW				(1 << 21)
+#define QSPI_CS_SW_VAL				BIT(20)
+#define QSPI_CS_SW_HW				BIT(21)
 /* QSPI_CS_POL_INACTIVE bits are default high */
 #define QSPI_CS_SEL_0				(0 << 26)
 #define QSPI_CS_SEL_MASK			(3 << 26)
@@ -64,8 +61,8 @@
 #define QSPI_CONTROL_MODE_3			(3 << 28)
 #define QSPI_CONTROL_MODE_MASK			(3 << 28)
 #define QSPI_MODE_SEL(x)			(((x) & 0x3) << 28)
-#define QSPI_M_S				(1 << 30)
-#define QSPI_PIO				(1 << 31)
+#define QSPI_M_S				BIT(30)
+#define QSPI_PIO				BIT(31)
 
 #define QSPI_COMMAND2				0x004
 #define QSPI_RX_TAP_DELAY(x)			(((x) & 0xFF) << 0)
@@ -84,29 +81,29 @@
 #define QSPI_CS_TIMING3				0x198
 
 #define CYCLES_BETWEEN_PACKETS_0(x)		(((x) & 0x1F) << 0)
-#define CS_ACTIVE_BETWEEN_PACKETS_0             (1 << 5)
+#define CS_ACTIVE_BETWEEN_PACKETS_0             BIT(5)
 #define QSPI_SET_CYCLES_BETWEEN_PACKETS(reg, cs, val)		\
 		(reg = (((val) & 0xF) << ((cs) * 8)) |		\
 			((reg) & ~(0xF << ((cs) * 8))))
 
-#define QSPI_HALF_FULL_CYCLE_SAMPLE		(1 << 31)
+#define QSPI_HALF_FULL_CYCLE_SAMPLE		BIT(31)
 
 #define QSPI_TRANS_STATUS			0x010
 #define QSPI_BLK_CNT(val)			(((val) >> 0) & 0xFFFF)
-#define QSPI_RDY				(1 << 30)
+#define QSPI_RDY				BIT(30)
 
 #define QSPI_FIFO_STATUS			0x014
-#define QSPI_RX_FIFO_EMPTY			(1 << 0)
-#define QSPI_RX_FIFO_FULL			(1 << 1)
-#define QSPI_TX_FIFO_EMPTY			(1 << 2)
-#define QSPI_TX_FIFO_FULL			(1 << 3)
-#define QSPI_RX_FIFO_UNF			(1 << 4)
-#define QSPI_RX_FIFO_OVF			(1 << 5)
-#define QSPI_TX_FIFO_UNF			(1 << 6)
-#define QSPI_TX_FIFO_OVF			(1 << 7)
-#define QSPI_ERR				(1 << 8)
-#define QSPI_TX_FIFO_FLUSH			(1 << 14)
-#define QSPI_RX_FIFO_FLUSH			(1 << 15)
+#define QSPI_RX_FIFO_EMPTY			BIT(0)
+#define QSPI_RX_FIFO_FULL			BIT(1)
+#define QSPI_TX_FIFO_EMPTY			BIT(2)
+#define QSPI_TX_FIFO_FULL			BIT(3)
+#define QSPI_RX_FIFO_UNF			BIT(4)
+#define QSPI_RX_FIFO_OVF			BIT(5)
+#define QSPI_TX_FIFO_UNF			BIT(6)
+#define QSPI_TX_FIFO_OVF			BIT(7)
+#define QSPI_ERR				BIT(8)
+#define QSPI_TX_FIFO_FLUSH			BIT(14)
+#define QSPI_RX_FIFO_FLUSH			BIT(15)
 #define QSPI_TX_FIFO_EMPTY_COUNT(val)		(((val) >> 16) & 0x7F)
 #define QSPI_RX_FIFO_FULL_COUNT(val)		(((val) >> 23) & 0x7F)
 
@@ -125,19 +122,21 @@
 #define QSPI_RX_DATA				0x01C
 
 #define QSPI_DMA_CTL				0x020
-#define QSPI_TX_TRIG_1				(0 << 15)
-#define QSPI_TX_TRIG_4				(1 << 15)
-#define QSPI_TX_TRIG_8				(2 << 15)
-#define QSPI_TX_TRIG_16				(3 << 15)
-#define QSPI_TX_TRIG_MASK			(3 << 15)
-#define QSPI_RX_TRIG_1				(0 << 19)
-#define QSPI_RX_TRIG_4				(1 << 19)
-#define QSPI_RX_TRIG_8				(2 << 19)
-#define QSPI_RX_TRIG_16				(3 << 19)
-#define QSPI_RX_TRIG_MASK			(3 << 19)
-#define QSPI_IE_TX				(1 << 28)
-#define QSPI_IE_RX				(1 << 29)
-#define QSPI_DMA				(1 << 31)
+#define QSPI_TX_TRIG(n)				(((n) & 0x3) << 15)
+#define QSPI_TX_TRIG_1				QSPI_TX_TRIG(0)
+#define QSPI_TX_TRIG_4				QSPI_TX_TRIG(1)
+#define QSPI_TX_TRIG_8				QSPI_TX_TRIG(2)
+#define QSPI_TX_TRIG_16				QSPI_TX_TRIG(3)
+
+#define QSPI_RX_TRIG(n)				(((n) & 0x3) << 19)
+#define QSPI_RX_TRIG_1				QSPI_RX_TRIG(0)
+#define QSPI_RX_TRIG_4				QSPI_RX_TRIG(1)
+#define QSPI_RX_TRIG_8				QSPI_RX_TRIG(2)
+#define QSPI_RX_TRIG_16				QSPI_RX_TRIG(3)
+
+#define QSPI_IE_TX				BIT(28)
+#define QSPI_IE_RX				BIT(29)
+#define QSPI_DMA				BIT(31)
 #define QSPI_DMA_EN				QSPI_DMA
 
 #define QSPI_DMA_BLK				0x024
@@ -147,11 +146,11 @@
 #define QSPI_RX_FIFO				0x188
 
 #define QSPI_INTR_MASK				0x18c
-#define QSPI_INTR_RX_FIFO_UNF_MASK		(1 << 25)
-#define QSPI_INTR_RX_FIFO_OVF_MASK		(1 << 26)
-#define QSPI_INTR_TX_FIFO_UNF_MASK		(1 << 27)
-#define QSPI_INTR_TX_FIFO_OVF_MASK		(1 << 28)
-#define QSPI_INTR_RDY_MASK			(1 << 29)
+#define QSPI_INTR_RX_FIFO_UNF_MASK		BIT(25)
+#define QSPI_INTR_RX_FIFO_OVF_MASK		BIT(26)
+#define QSPI_INTR_TX_FIFO_UNF_MASK		BIT(27)
+#define QSPI_INTR_TX_FIFO_OVF_MASK		BIT(28)
+#define QSPI_INTR_RDY_MASK			BIT(29)
 
 #define QSPI_CMB_SEQ_CMD			0x19c
 #define QSPI_COMMAND_VALUE_SET(X)		(((x) & 0xFF) << 0)
@@ -159,11 +158,11 @@
 #define QSPI_CMB_SEQ_CMD_CFG			0x1a0
 #define QSPI_COMMAND_X1_X2_X4(x)		(((x) & 0x3) << 13)
 #define QSPI_COMMAND_X1_X2_X4_MASK		(0x03 << 13)
-#define QSPI_COMMAND_SDR_DDR			(1 << 12)
+#define QSPI_COMMAND_SDR_DDR			BIT(12)
 #define QSPI_COMMAND_SIZE_SET(x)		(((x) & 0xFF) << 0)
 
 #define QSPI_GLOBAL_CONFIG			0x1a4
-#define QSPI_CMB_SEQ_EN				(1 << 0)
+#define QSPI_CMB_SEQ_EN				BIT(0)
 
 #define QSPI_CMB_SEQ_ADDR			0x1a8
 #define QSPI_ADDRESS_VALUE_SET(X)		(((x) & 0xFFFF) << 0)
@@ -171,14 +170,14 @@
 #define QSPI_CMB_SEQ_ADDR_CFG			0x1ac
 #define QSPI_ADDRESS_X1_X2_X4(x)		(((x) & 0x3) << 13)
 #define QSPI_ADDRESS_X1_X2_X4_MASK		(0x03 << 13)
-#define QSPI_ADDRESS_SDR_DDR			(1 << 12)
+#define QSPI_ADDRESS_SDR_DDR			BIT(12)
 #define QSPI_ADDRESS_SIZE_SET(x)		(((x) & 0xFF) << 0)
 
-#define DATA_DIR_TX				(1 << 0)
-#define DATA_DIR_RX				(1 << 1)
+#define DATA_DIR_TX				BIT(0)
+#define DATA_DIR_RX				BIT(1)
 
 #define QSPI_DMA_TIMEOUT			(msecs_to_jiffies(10000))
-#define DEFAULT_SPI_DMA_BUF_LEN			(64*1024)
+#define DEFAULT_SPI_DMA_BUF_LEN			(64 * 1024)
 #define TX_FIFO_EMPTY_COUNT_MAX			SPI_TX_FIFO_EMPTY_COUNT(0x40)
 #define RX_FIFO_FULL_COUNT_ZERO			SPI_RX_FIFO_FULL_COUNT(0)
 #define MAX_PROD_NAME                           15
@@ -197,6 +196,7 @@
 struct tegra_qspi_data {
 	struct device				*dev;
 	struct spi_master			*master;
+	/* Lock fro register access */
 	spinlock_t				lock;
 
 	struct clk				*clk;
@@ -262,21 +262,20 @@ struct tegra_qspi_data {
 #endif
 };
 
-
 static int tegra_qspi_runtime_suspend(struct device *dev);
 static int tegra_qspi_runtime_resume(struct device *dev);
 
 static struct tegra_qspi_device_controller_data
 	*tegra_qspi_get_cdata_dt(struct spi_device *spi);
 
-static inline unsigned long tegra_qspi_readl(struct tegra_qspi_data *tqspi,
-		unsigned long reg)
+static unsigned long tegra_qspi_readl(struct tegra_qspi_data *tqspi,
+				      unsigned long reg)
 {
 	return readl(tqspi->base + reg);
 }
 
-static inline void tegra_qspi_writel(struct tegra_qspi_data *tqspi,
-		unsigned long val, unsigned long reg)
+static void tegra_qspi_writel(struct tegra_qspi_data *tqspi,
+			      unsigned long val, unsigned long reg)
 {
 	writel(val, tqspi->base + reg);
 
@@ -284,13 +283,15 @@ static inline void tegra_qspi_writel(struct tegra_qspi_data *tqspi,
 	if (reg != QSPI_TX_FIFO)
 		readl(tqspi->base + QSPI_COMMAND1);
 }
+
 #ifdef QSPI_BRINGUP_BUILD
 static ssize_t force_unpacked_mode_set(struct device *dev,
-				  struct device_attribute *attr,
-				  const char *buf, size_t count)
+				       struct device_attribute *attr,
+				       const char *buf, size_t count)
 {
 	struct tegra_qspi_data *tqspi;
 	struct spi_master *master = dev_get_drvdata(dev);
+
 	if (master) {
 		tqspi = spi_master_get_devdata(master);
 		if (tqspi && count) {
@@ -298,19 +299,22 @@ static ssize_t force_unpacked_mode_set(struct device *dev,
 			return count;
 		}
 	}
+
 	return -ENODEV;
 }
 
 static ssize_t force_unpacked_mode_show(struct device *dev,
-				   struct device_attribute *attr,
-				   char *buf)
+					struct device_attribute *attr,
+					char *buf)
 {
 	struct tegra_qspi_data *tqspi;
 	struct spi_master *master = dev_get_drvdata(dev);
+
 	if (master) {
 		tqspi = spi_master_get_devdata(master);
 		return sprintf(buf, "%d", tqspi->qspi_force_unpacked_mode);
 	}
+
 	return -ENODEV;
 }
 
@@ -318,11 +322,12 @@ static DEVICE_ATTR(qspi_force_unpacked_mode, 0644, force_unpacked_mode_show,
 						force_unpacked_mode_set);
 
 static ssize_t force_cmbseq_mode_set(struct device *dev,
-				  struct device_attribute *attr,
-				  const char *buf, size_t count)
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
 {
 	struct tegra_qspi_data *tqspi;
 	struct spi_master *master = dev_get_drvdata(dev);
+
 	if (master) {
 		tqspi = spi_master_get_devdata(master);
 		if (tqspi && count) {
@@ -330,19 +335,22 @@ static ssize_t force_cmbseq_mode_set(struct device *dev,
 			return count;
 		}
 	}
+
 	return -ENODEV;
 }
 
 static ssize_t force_cmbseq_mode_show(struct device *dev,
-				   struct device_attribute *attr,
-				   char *buf)
+				      struct device_attribute *attr,
+				      char *buf)
 {
 	struct tegra_qspi_data *tqspi;
 	struct spi_master *master = dev_get_drvdata(dev);
+
 	if (master) {
 		tqspi = spi_master_get_devdata(master);
 		return sprintf(buf, "%d", tqspi->qspi_enable_cmbseq_mode);
 	}
+
 	return -ENODEV;
 }
 
@@ -378,19 +386,18 @@ static void tegra_qspi_dump_regs(struct tegra_qspi_data *tqspi)
 	global_config_reg = tegra_qspi_readl(tqspi, QSPI_GLOBAL_CONFIG);
 
 	dev_err(tqspi->dev,
-			"QSPI_ERR: CMD_0: 0x%08x, FIFO_STS: 0x%08x\n",
-			command1_reg, fifo_status_reg);
+		"QSPI_ERR: CMD_0: 0x%08x, FIFO_STS: 0x%08x\n",
+		command1_reg, fifo_status_reg);
 	dev_err(tqspi->dev,
-			"QSPI_ERR: DMA_CTL: 0x%08x, TRANS_STS: 0x%08x GLOBAL_CONFIG::0x%08x\n",
-			dma_ctrl_reg, trans_status_reg, global_config_reg);
+		"QSPI_ERR: DMA_CTL: 0x%08x, TRANS_STS: 0x%08x GLOBAL_CONFIG::0x%08x\n",
+		dma_ctrl_reg, trans_status_reg, global_config_reg);
 	dev_err(tqspi->dev,
-			"QSPI_ERR: DMA_BLK: 0x%08x, INTR: 0x%08x MISC-REG::0x%08x\n",
-			dma_blk_reg, intr_mask_reg, misc_reg);
+		"QSPI_ERR: DMA_BLK: 0x%08x, INTR: 0x%08x MISC-REG::0x%08x\n",
+		dma_blk_reg, intr_mask_reg, misc_reg);
 
 	dev_err(tqspi->dev,
-			"CMBSEQ_ERR: CMD_VAl: 0x%08x, ADR_VAL: 0x%08x, CMD_CFG: 0x%08x, ADR_CFG: 0x%08x\n",
-			cmd_value, addr_value, cmd_config, addr_config);
-
+		"CMBSEQ_ERR: CMD_VAl: 0x%08x, ADR_VAL: 0x%08x, CMD_CFG: 0x%08x, ADR_CFG: 0x%08x\n",
+		cmd_value, addr_value, cmd_config, addr_config);
 }
 #endif
 
@@ -416,7 +423,7 @@ static void tegra_qspi_clear_status(struct tegra_qspi_data *tqspi)
 	val = tegra_qspi_readl(tqspi, QSPI_FIFO_STATUS);
 	if (val & QSPI_ERR)
 		tegra_qspi_writel(tqspi, QSPI_ERR | QSPI_FIFO_ERROR,
-				QSPI_FIFO_STATUS);
+				  QSPI_FIFO_STATUS);
 }
 
 static int check_and_clear_fifo(struct tegra_qspi_data *tqspi)
@@ -443,7 +450,6 @@ static int check_and_clear_fifo(struct tegra_qspi_data *tqspi)
 	return 0;
 }
 
-
 static unsigned tegra_qspi_calculate_curr_xfer_param(
 		struct spi_device *spi, struct tegra_qspi_data *tqspi,
 		struct spi_transfer *t)
@@ -459,11 +465,10 @@ static unsigned tegra_qspi_calculate_curr_xfer_param(
 	tqspi->bytes_per_word = (bits_per_word - 1) / 8 + 1;
 
 #ifdef QSPI_BRINGUP_BUILD
-	if (!tqspi->qspi_force_unpacked_mode && (bits_per_word == 8
-		|| bits_per_word == 16
-		|| bits_per_word == 32) && (t->len > 3)) {
+	if (!tqspi->qspi_force_unpacked_mode &&
+	    (bits_per_word % 8 == 0) && (t->len > 3)) {
 		tqspi->is_packed = 1;
-		tqspi->words_per_32bit = 32/bits_per_word;
+		tqspi->words_per_32bit = 32 / bits_per_word;
 	} else {
 		tqspi->is_packed = 0;
 		tqspi->words_per_32bit = 1;
@@ -471,7 +476,7 @@ static unsigned tegra_qspi_calculate_curr_xfer_param(
 #else
 	if (bits_per_word == 8 || bits_per_word == 16 && (t->len > 3)) {
 		tqspi->is_packed = 1;
-		tqspi->words_per_32bit = 32/bits_per_word;
+		tqspi->words_per_32bit = 32 / bits_per_word;
 	} else {
 		tqspi->is_packed = 0;
 		tqspi->words_per_32bit = 1;
@@ -479,11 +484,11 @@ static unsigned tegra_qspi_calculate_curr_xfer_param(
 #endif
 	if (tqspi->is_packed) {
 		max_len = min(remain_len, tqspi->max_buf_size);
-		tqspi->curr_dma_words = max_len/tqspi->bytes_per_word;
-		total_fifo_words = (max_len + 3)/4;
+		tqspi->curr_dma_words = max_len / tqspi->bytes_per_word;
+		total_fifo_words = (max_len + 3) / 4;
 	} else {
 		max_word = (remain_len - 1) / tqspi->bytes_per_word + 1;
-		max_word = min(max_word, tqspi->max_buf_size/4);
+		max_word = min(max_word, tqspi->max_buf_size / 4);
 		tqspi->curr_dma_words = max_word;
 		total_fifo_words = max_word;
 	}
@@ -515,7 +520,7 @@ static unsigned tegra_qspi_fill_tx_fifo_from_client_txbuf(
 			x = 0;
 			for (i = 0; (i < 4) && nbytes; i++, nbytes--)
 				x |= (unsigned long)
-					(((unsigned)(*tx_buf++)) << (i*8));
+					(((unsigned)(*tx_buf++)) << (i * 8));
 			tegra_qspi_writel(tqspi, x, QSPI_TX_FIFO);
 		}
 	} else {
@@ -527,7 +532,7 @@ static unsigned tegra_qspi_fill_tx_fifo_from_client_txbuf(
 			for (i = 0; nbytes && (i < tqspi->bytes_per_word);
 					i++, nbytes--)
 				x |= (unsigned long)
-					(((unsigned)(*tx_buf++)) << (i*8));
+					(((unsigned)(*tx_buf++)) << (i * 8));
 			tegra_qspi_writel(tqspi, x, QSPI_TX_FIFO);
 		}
 	}
@@ -554,7 +559,7 @@ static unsigned int tegra_qspi_read_rx_fifo_to_client_rxbuf(
 		for (count = 0; count < rx_full_count; count++) {
 			x = tegra_qspi_readl(tqspi, QSPI_RX_FIFO);
 			for (i = 0; len && (i < 4); i++, len--)
-				*rx_buf++ = (x >> i*8) & 0xFF;
+				*rx_buf++ = (x >> i * 8) & 0xFF;
 		}
 		tqspi->cur_rx_pos += tqspi->curr_dma_words *
 					tqspi->bytes_per_word;
@@ -567,7 +572,7 @@ static unsigned int tegra_qspi_read_rx_fifo_to_client_rxbuf(
 		for (count = 0; count < rx_full_count; count++) {
 			x = tegra_qspi_readl(tqspi, QSPI_RX_FIFO);
 			for (i = 0; (i < tqspi->bytes_per_word); i++)
-				*rx_buf++ = (x >> (i*8)) & 0xFF;
+				*rx_buf++ = (x >> (i * 8)) & 0xFF;
 		}
 		tqspi->cur_rx_pos += rx_full_count * tqspi->bytes_per_word;
 		read_words += rx_full_count;
@@ -582,7 +587,7 @@ static void tegra_qspi_copy_client_txbuf_to_qspi_txbuf(
 
 	/* Make the dma buffer to read by cpu */
 	dma_sync_single_for_cpu(tqspi->dev, tqspi->tx_dma_phys,
-			tqspi->dma_buf_size, DMA_TO_DEVICE);
+				tqspi->dma_buf_size, DMA_TO_DEVICE);
 
 	if (tqspi->is_packed) {
 		len = tqspi->curr_dma_words * tqspi->bytes_per_word;
@@ -607,7 +612,7 @@ static void tegra_qspi_copy_client_txbuf_to_qspi_txbuf(
 
 	/* Make the dma buffer to read by dma */
 	dma_sync_single_for_device(tqspi->dev, tqspi->tx_dma_phys,
-			tqspi->dma_buf_size, DMA_TO_DEVICE);
+				   tqspi->dma_buf_size, DMA_TO_DEVICE);
 }
 
 static void tegra_qspi_copy_qspi_rxbuf_to_client_rxbuf(
@@ -617,7 +622,7 @@ static void tegra_qspi_copy_qspi_rxbuf_to_client_rxbuf(
 
 	/* Make the dma buffer to read by cpu */
 	dma_sync_single_for_cpu(tqspi->dev, tqspi->rx_dma_phys,
-			tqspi->dma_buf_size, DMA_FROM_DEVICE);
+				tqspi->dma_buf_size, DMA_FROM_DEVICE);
 
 	if (tqspi->is_packed) {
 		len = tqspi->curr_dma_words * tqspi->bytes_per_word;
@@ -636,14 +641,14 @@ static void tegra_qspi_copy_qspi_rxbuf_to_client_rxbuf(
 			x = tqspi->rx_dma_buf[count];
 			x &= rx_mask;
 			for (i = 0; (i < tqspi->bytes_per_word); i++)
-				*rx_buf++ = (x >> (i*8)) & 0xFF;
+				*rx_buf++ = (x >> (i * 8)) & 0xFF;
 		}
 	}
 	tqspi->cur_rx_pos += tqspi->curr_dma_words * tqspi->bytes_per_word;
 
 	/* Make the dma buffer to read by dma */
 	dma_sync_single_for_device(tqspi->dev, tqspi->rx_dma_phys,
-			tqspi->dma_buf_size, DMA_FROM_DEVICE);
+				   tqspi->dma_buf_size, DMA_FROM_DEVICE);
 }
 
 static void tegra_qspi_dma_complete(void *args)
@@ -729,7 +734,7 @@ static int tegra_qspi_start_dma_based_transfer(
 		maxburst = 8;
 	}
 	if ((tqspi->cur_direction & DATA_DIR_TX) ||
-			(tqspi->cur_direction & DATA_DIR_RX)) {
+	    (tqspi->cur_direction & DATA_DIR_RX)) {
 		intr_mask = tegra_qspi_readl(tqspi, QSPI_INTR_MASK);
 		intr_mask &= ~(QSPI_INTR_RDY_MASK |
 				QSPI_INTR_RX_FIFO_UNF_MASK |
@@ -762,7 +767,8 @@ static int tegra_qspi_start_dma_based_transfer(
 		command1 |= QSPI_RX_EN;
 		/* Make the dma buffer to read by dma */
 		dma_sync_single_for_device(tqspi->dev, tqspi->rx_dma_phys,
-				tqspi->dma_buf_size, DMA_FROM_DEVICE);
+					   tqspi->dma_buf_size,
+					   DMA_FROM_DEVICE);
 		dma_sconfig.src_addr = tqspi->phys + QSPI_RX_FIFO;
 		dma_sconfig.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		dma_sconfig.src_maxburst = maxburst;
@@ -818,7 +824,7 @@ static int tegra_qspi_start_cpu_based_transfer(
 	val = 0;
 
 	if ((tqspi->cur_direction & DATA_DIR_TX) ||
-			(tqspi->cur_direction & DATA_DIR_RX)) {
+	    (tqspi->cur_direction & DATA_DIR_RX)) {
 		intr_mask = tegra_qspi_readl(tqspi, QSPI_INTR_MASK);
 		intr_mask &= ~(QSPI_INTR_RDY_MASK |
 				QSPI_INTR_RX_FIFO_UNF_MASK |
@@ -827,7 +833,6 @@ static int tegra_qspi_start_cpu_based_transfer(
 				QSPI_INTR_TX_FIFO_OVF_MASK);
 		tegra_qspi_writel(tqspi, intr_mask, QSPI_INTR_MASK);
 	}
-
 
 	tqspi->is_curr_dma_xfer = false;
 	val = tqspi->command1_reg;
@@ -848,15 +853,17 @@ static int tegra_qspi_start_cpu_based_transfer(
 }
 
 static int tegra_qspi_init_dma_param(struct tegra_qspi_data *tqspi,
-		bool dma_to_memory)
+				     bool dma_to_memory)
 {
 	struct dma_chan *dma_chan;
 	u32 *dma_buf;
 	dma_addr_t dma_phys;
 	int ret;
 	struct dma_slave_config dma_sconfig;
+
 	dma_chan = dma_request_slave_channel_reason(tqspi->dev,
-					dma_to_memory ? "rx" : "tx");
+						    dma_to_memory ?
+							"rx" : "tx");
 
 	if (!dma_chan) {
 		dev_err(tqspi->dev,
@@ -865,7 +872,7 @@ static int tegra_qspi_init_dma_param(struct tegra_qspi_data *tqspi,
 	}
 
 	dma_buf = dma_alloc_coherent(tqspi->dev, tqspi->dma_buf_size,
-			&dma_phys, GFP_KERNEL);
+				     &dma_phys, GFP_KERNEL);
 	if (!dma_buf) {
 		dev_err(tqspi->dev, "Not able to allocate the dma buffer\n");
 		dma_release_channel(dma_chan);
@@ -904,7 +911,7 @@ scrub:
 }
 
 static void tegra_qspi_deinit_dma_param(struct tegra_qspi_data *tqspi,
-		bool dma_to_memory)
+					bool dma_to_memory)
 {
 	u32 *dma_buf;
 	dma_addr_t dma_phys;
@@ -931,15 +938,16 @@ static void tegra_qspi_deinit_dma_param(struct tegra_qspi_data *tqspi,
 }
 
 static int tegra_qspi_validate_request(struct spi_device *spi,
-		struct tegra_qspi_data *tqspi, struct spi_transfer *t,
-		bool is_ddr)
+				       struct tegra_qspi_data *tqspi,
+				       struct spi_transfer *t,
+				       bool is_ddr)
 {
 	int req_mode;
 
 	req_mode = spi->mode & 0x3;
 	if ((req_mode == SPI_MODE_1) || (req_mode == SPI_MODE_2)) {
 		dev_err(tqspi->dev, "Qspi does not support mode %d\n",
-				req_mode);
+			req_mode);
 		return -EINVAL;
 	}
 
@@ -948,17 +956,17 @@ static int tegra_qspi_validate_request(struct spi_device *spi,
 		return -EINVAL;
 	}
 
-	if ((t->bits_per_word != 8) && (t->bits_per_word != 16)
-			&& (t->bits_per_word != 32)) {
+	if ((t->bits_per_word != 8) && (t->bits_per_word != 16) &&
+	    (t->bits_per_word != 32)) {
 		dev_err(tqspi->dev, "qspi does not support bpw = %d\n",
-				t->bits_per_word);
+			t->bits_per_word);
 		return -EINVAL;
 	}
 
 	if (((t->bits_per_word == 16) && (t->len & 0x1)) ||
-		((t->bits_per_word == 32) && (t->len & 0x3))) {
+	    ((t->bits_per_word == 32) && (t->len & 0x3))) {
 		dev_err(tqspi->dev, "unaligned len = %d, bits_per_word = %d not supported\n",
-				t->len, t->bits_per_word);
+			t->len, t->bits_per_word);
 		return -EINVAL;
 	}
 
@@ -976,18 +984,21 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 		 * for QSPI with the values mentioned in prod list.
 		 */
 		err = tegra_prod_set_by_name(&tqspi->base, "prod",
-						tqspi->prod_list);
+					     tqspi->prod_list);
 		if (err < 0)
 			dev_dbg(tqspi->dev,
 				"failed to set prod for qspi by %d\n", err);
 		if (tqspi->is_ddr_mode)
-			sprintf(prod_name, "prod_c_DDR%d", (tqspi->cur_speed/1000000));
+			sprintf(prod_name, "prod_c_DDR%d",
+				(tqspi->cur_speed / 1000000));
 		else
-			sprintf(prod_name, "prod_c_SDR%d", (tqspi->cur_speed/1000000));
+			sprintf(prod_name, "prod_c_SDR%d",
+				(tqspi->cur_speed / 1000000));
 		if (tegra_prod_set_by_name(&tqspi->base,
-					prod_name, tqspi->prod_list))
-			dev_info_once(tqspi->dev, "failed to apply prod "
-					"name[%s] for qspi\n", prod_name);
+					   prod_name, tqspi->prod_list))
+			dev_info_once(tqspi->dev,
+				      "Failed to apply prod name[%s] for qspi\n",
+				      prod_name);
 		else
 			return;
 	}
@@ -1001,8 +1012,9 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 }
 
 static int tegra_qspi_start_transfer_one(struct spi_device *spi,
-		struct spi_transfer *t, bool is_first_of_msg,
-		bool is_single_xfer)
+					 struct spi_transfer *t,
+					 bool is_first_of_msg,
+					 bool is_single_xfer)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
 	u32 speed;
@@ -1063,7 +1075,7 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		ret = clk_set_rate(tqspi->clk, speed);
 		if (ret) {
 			dev_err(tqspi->dev,
-			"Failed to set qspi clk freq %d\n", ret);
+				"Failed to set qspi clk freq %d\n", ret);
 			return -EINVAL;
 		}
 		tqspi->cur_speed = speed;
@@ -1072,13 +1084,12 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		actual_speed = clk_get_rate(tqspi->clk);
 		if (is_ddr)
 			ret = clk_set_rate(tqspi->sdr_ddr_clk,
-				(actual_speed>>1));
+					   (actual_speed >> 1));
 		else
 			ret = clk_set_rate(tqspi->sdr_ddr_clk, actual_speed);
 		if (ret) {
 			dev_err(tqspi->dev,
-			"Failed to set qspi_out clk freq %d\n"
-			, ret);
+				"Failed to set qspi_out clk freq %d\n", ret);
 			return -EINVAL;
 		}
 		tqspi->is_ddr_mode = is_ddr;
@@ -1092,11 +1103,11 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 
 		command1 &= ~QSPI_CONTROL_MODE_MASK;
 		req_mode = spi->mode & 0x3;
-		if (req_mode == SPI_MODE_0)
+		if (req_mode == SPI_MODE_0) {
 			command1 |= QSPI_CONTROL_MODE_0;
-		else if (req_mode == SPI_MODE_3)
+		} else if (req_mode == SPI_MODE_3) {
 			command1 |= QSPI_CONTROL_MODE_3;
-		else {
+		} else {
 			dev_err(tqspi->dev, "invalid mode %d\n", req_mode);
 			return -EINVAL;
 		}
@@ -1154,8 +1165,7 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 
 static void tegra_qspi_clean(struct spi_device *spi)
 {
-	if (spi->controller_data)
-		kfree(spi->controller_data);
+	kfree(spi->controller_data);
 	spi->controller_data = NULL;
 }
 
@@ -1168,10 +1178,10 @@ static int tegra_qspi_setup(struct spi_device *spi)
 	int ret;
 
 	dev_dbg(&spi->dev, "setup %d bpw, %scpol, %scpha, %dHz\n",
-			spi->bits_per_word,
-			spi->mode & SPI_CPOL ? "" : "~",
-			spi->mode & SPI_CPHA ? "" : "~",
-			spi->max_speed_hz);
+		spi->bits_per_word,
+		spi->mode & SPI_CPOL ? "" : "~",
+		spi->mode & SPI_CPHA ? "" : "~",
+		spi->max_speed_hz);
 
 	if (spi->chip_select >= MAX_CHIP_SELECT) {
 		dev_err(tqspi->dev, "Wrong chip select = %d\n",
@@ -1206,15 +1216,19 @@ static int tegra_qspi_setup(struct spi_device *spi)
 	return 0;
 }
 
-static  int tegra_qspi_cs_low(struct spi_device *spi,
-		bool state)
+static int tegra_qspi_cs_low(struct spi_device *spi, bool state)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
 	int ret;
 	unsigned long val;
 	unsigned long flags;
 
-	BUG_ON(spi->chip_select >= MAX_CHIP_SELECT);
+	if (spi->chip_select >= MAX_CHIP_SELECT) {
+		dev_err(tqspi->dev, "Invalid Chip select %d\n",
+			spi->chip_select);
+		return -EINVAL;
+	}
+
 	ret = pm_runtime_get_sync(tqspi->dev);
 	if (ret < 0) {
 		dev_err(tqspi->dev, "pm runtime failed, e = %d\n", ret);
@@ -1235,7 +1249,7 @@ static  int tegra_qspi_cs_low(struct spi_device *spi,
 }
 
 static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
-	struct spi_message *msg)
+						 struct spi_message *msg)
 {
 	bool is_first_msg = true, is_ddr = false;
 	int single_xfer;
@@ -1257,9 +1271,7 @@ static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
 	/* Process individual transfer list */
 	list_for_each_entry(xfer, &msg->transfers, transfer_list) {
 		if (transfer_phase == CMD_TRANSFER) {
-
 			/* Extract Command configuration and value */
-
 			qspi_setting = xfer->delay_usecs;
 			is_ddr = get_sdr_ddr(qspi_setting);
 			bus_width = get_bus_width(qspi_setting);
@@ -1269,7 +1281,8 @@ static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
 			else
 				cmd_config &= ~QSPI_COMMAND_SDR_DDR;
 			cmd_config |= QSPI_COMMAND_X1_X2_X4(bus_width);
-			cmd_config |= QSPI_COMMAND_SIZE_SET((xfer->len*8) - 1);
+			cmd_config |= QSPI_COMMAND_SIZE_SET(
+						(xfer->len * 8) - 1);
 			cmd_value = *((const u8 *)(xfer->tx_buf));
 
 		} else if (transfer_phase == ADDR_TRANSFER) {
@@ -1286,29 +1299,32 @@ static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
 			else
 				addr_config &= ~QSPI_ADDRESS_SDR_DDR;
 			addr_config |= QSPI_ADDRESS_X1_X2_X4(bus_width);
-			addr_config |= QSPI_ADDRESS_SIZE_SET((xfer->len*8) - 1);
+			addr_config |= QSPI_ADDRESS_SIZE_SET(
+						(xfer->len * 8) - 1);
 			address_value = *((const u32 *)(xfer->tx_buf));
 		} else {
 			/* Program Command, Address value in register */
 			tegra_qspi_writel(tqspi, cmd_value, QSPI_CMB_SEQ_CMD);
 			tegra_qspi_writel(tqspi, address_value,
-						QSPI_CMB_SEQ_ADDR);
+					  QSPI_CMB_SEQ_ADDR);
 			/* Program Command and Address config in register */
 			tegra_qspi_writel(tqspi, cmd_config,
-						QSPI_CMB_SEQ_CMD_CFG);
+					  QSPI_CMB_SEQ_CMD_CFG);
 			tegra_qspi_writel(tqspi, addr_config,
-						QSPI_CMB_SEQ_ADDR_CFG);
+					  QSPI_CMB_SEQ_ADDR_CFG);
 
 			tqspi->qspi_num_dummy_cycle =
 				QSPI_NUM_DUMMY_CYCLE(num_dummy_cycles);
 			reinit_completion(&tqspi->xfer_completion);
 			/* Start Data transfer */
 			ret = tegra_qspi_start_transfer_one(spi, xfer,
-					is_first_msg, single_xfer);
+							    is_first_msg,
+							    single_xfer);
 
 			if (ret < 0) {
 				dev_err(tqspi->dev,
-				"qspi can not start transfer,err %d\n", ret);
+					"qspi can not start transfer,err %d\n",
+					ret);
 				return ret;
 			}
 
@@ -1319,17 +1335,18 @@ static int tegra_qspi_combined_sequence_transfer(struct tegra_qspi_data *tqspi,
 
 			if (WARN_ON(ret == 0)) {
 				dev_err(tqspi->dev, "spi transfer timeout, err %d\n",
-						ret);
-				if (tqspi->is_curr_dma_xfer
-					&& (tqspi->cur_direction & DATA_DIR_TX))
+					ret);
+				if (tqspi->is_curr_dma_xfer &&
+				    (tqspi->cur_direction & DATA_DIR_TX))
 					dmaengine_terminate_all(
 						tqspi->tx_dma_chan);
 
 				if (tqspi->is_curr_dma_xfer &&
-					(tqspi->cur_direction & DATA_DIR_RX))
+				    (tqspi->cur_direction & DATA_DIR_RX))
 					dmaengine_terminate_all(
 						tqspi->rx_dma_chan);
-				/* Reset controller in case of timeout happens */
+
+				/* Reset controller if timeout happens */
 				reset_control_reset(tqspi->rstc);
 				ret = -EIO;
 				return ret;
@@ -1368,7 +1385,8 @@ static int tegra_qspi_non_combined_sequence_transfer
 	list_for_each_entry(xfer, &msg->transfers, transfer_list) {
 		reinit_completion(&tqspi->xfer_completion);
 		ret = tegra_qspi_start_transfer_one(spi, xfer,
-				is_first_msg, single_xfer);
+						    is_first_msg,
+						    single_xfer);
 		if (ret < 0) {
 			dev_err(tqspi->dev,
 				"qspi can not start transfer, err %d\n",
@@ -1377,16 +1395,16 @@ static int tegra_qspi_non_combined_sequence_transfer
 		}
 		is_first_msg = false;
 		ret = wait_for_completion_timeout(&tqspi->xfer_completion,
-				QSPI_DMA_TIMEOUT);
+						  QSPI_DMA_TIMEOUT);
 		if (WARN_ON(ret == 0)) {
 			dev_err(tqspi->dev,
-			"spi transfer timeout, err %d\n", ret);
+				"spi transfer timeout, err %d\n", ret);
 			if (tqspi->is_curr_dma_xfer &&
-				(tqspi->cur_direction & DATA_DIR_TX))
+			    (tqspi->cur_direction & DATA_DIR_TX))
 				dmaengine_terminate_all(tqspi->tx_dma_chan);
 
 			if (tqspi->is_curr_dma_xfer &&
-				(tqspi->cur_direction & DATA_DIR_RX))
+			    (tqspi->cur_direction & DATA_DIR_RX))
 				dmaengine_terminate_all(tqspi->rx_dma_chan);
 
 			/* Reset controller in case of timeout happens */
@@ -1407,8 +1425,9 @@ static int tegra_qspi_non_combined_sequence_transfer
 	ret = 0;
 	return ret;
 }
+
 static int tegra_qspi_transfer_one_message(struct spi_master *master,
-		struct spi_message *msg)
+					   struct spi_message *msg)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(master);
 	struct spi_transfer *xfer;
@@ -1470,9 +1489,9 @@ static irqreturn_t handle_cpu_based_xfer(struct tegra_qspi_data *tqspi)
 	spin_lock_irqsave(&tqspi->lock, flags);
 	if (tqspi->tx_status ||  tqspi->rx_status) {
 		dev_err(tqspi->dev, "CpuXfer ERROR bit set 0x%x\n",
-				tqspi->status_reg);
+			tqspi->status_reg);
 		dev_err(tqspi->dev, "CpuXfer 0x%08x:0x%08x\n",
-				tqspi->command1_reg, tqspi->dma_control_reg);
+			tqspi->command1_reg, tqspi->dma_control_reg);
 		reset_control_reset(tqspi->rstc);
 		complete(&tqspi->xfer_completion);
 		tqspi->tx_status = 0;
@@ -1542,9 +1561,9 @@ static irqreturn_t handle_dma_based_xfer(struct tegra_qspi_data *tqspi)
 	spin_lock_irqsave(&tqspi->lock, flags);
 	if (err) {
 		dev_err(tqspi->dev, "DmaXfer: ERROR bit set 0x%x\n",
-				tqspi->status_reg);
+			tqspi->status_reg);
 		dev_err(tqspi->dev, "DmaXfer 0x%08x:0x%08x\n",
-				tqspi->command1_reg, tqspi->dma_control_reg);
+			tqspi->command1_reg, tqspi->dma_control_reg);
 		reset_control_reset(tqspi->rstc);
 		complete(&tqspi->xfer_completion);
 		tqspi->rx_status = 0;
@@ -1568,7 +1587,7 @@ static irqreturn_t handle_dma_based_xfer(struct tegra_qspi_data *tqspi)
 
 	/* Continue transfer in current message */
 	total_fifo_words = tegra_qspi_calculate_curr_xfer_param(tqspi->cur_qspi,
-			tqspi, t);
+								tqspi, t);
 	if (total_fifo_words > QSPI_FIFO_DEPTH)
 		err = tegra_qspi_start_dma_based_transfer(tqspi, t);
 	else
@@ -1605,9 +1624,9 @@ static irqreturn_t tegra_qspi_isr(int irq, void *context_data)
 			(QSPI_RX_FIFO_OVF | QSPI_RX_FIFO_UNF);
 
 	if (!(tqspi->cur_direction & DATA_DIR_TX) &&
-			!(tqspi->cur_direction & DATA_DIR_RX))
+	    !(tqspi->cur_direction & DATA_DIR_RX))
 		dev_err(tqspi->dev, "spurious interrupt, status_reg = 0x%x\n",
-				tqspi->status_reg);
+			tqspi->status_reg);
 
 	tegra_qspi_clear_status(tqspi);
 
@@ -1623,15 +1642,13 @@ static void set_best_clk_source(struct tegra_qspi_data *tqspi)
 	int ret;
 	struct clk *pclk, *fpclk = NULL;
 	const char *pclk_name, *fpclk_name;
-	struct device_node *node;
+	struct device_node *node = tqspi->dev->of_node;
 	struct property *prop;
-
-	node = (*(tqspi->dev)).of_node;
 
 	if (!of_property_count_strings(node, "nvidia,clk-parents"))
 		return;
 	of_property_for_each_string(node, "nvidia,clk-parents",
-				prop, pclk_name) {
+				    prop, pclk_name) {
 		pclk = clk_get(tqspi->dev, pclk_name);
 		if (IS_ERR(pclk))
 			continue;
@@ -1639,7 +1656,7 @@ static void set_best_clk_source(struct tegra_qspi_data *tqspi)
 		ret = clk_set_parent(tqspi->clk, pclk);
 		if (ret < 0) {
 			dev_warn(tqspi->dev,
-				"Error in setting parent clk src %s: %d\n",
+				 "Error in setting parent clk src %s: %d\n",
 				pclk_name, ret);
 			continue;
 		}
@@ -1659,12 +1676,13 @@ static void set_best_clk_source(struct tegra_qspi_data *tqspi)
 
 	if (fpclk) {
 		dev_dbg(tqspi->dev, "Setting clk_src %s\n",
-				fpclk_name);
+			fpclk_name);
 		clk_set_parent(tqspi->clk, fpclk);
 	}
 }
-static struct tegra_qspi_device_controller_data
-	*tegra_qspi_get_cdata_dt(struct spi_device *spi)
+
+static struct tegra_qspi_device_controller_data *tegra_qspi_get_cdata_dt(
+			struct spi_device *spi)
 {
 	struct tegra_qspi_device_controller_data *cdata = NULL;
 	const unsigned int *prop;
@@ -1682,10 +1700,8 @@ static struct tegra_qspi_device_controller_data
 	}
 
 	cdata = kzalloc(sizeof(*cdata), GFP_KERNEL);
-	if (!cdata) {
-		dev_err(&spi->dev, "Memory alloc for cdata failed\n");
+	if (!cdata)
 		return NULL;
-	}
 
 	prop = of_get_property(data_np, "nvidia,rx-clk-tap-delay", NULL);
 	if (prop)
@@ -1745,13 +1761,11 @@ static struct tegra_qspi_platform_data *tegra_qspi_parse_dt(
 	u32 of_dma[2];
 
 	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
-	if (!pdata) {
-		dev_err(&pdev->dev, "Memory alloc for pdata failed\n");
+	if (!pdata)
 		return NULL;
-	}
 
 	if (of_property_read_u32_array(np, "nvidia,dma-request-selector",
-				of_dma, 2) >= 0)
+				       of_dma, 2) >= 0)
 		pdata->dma_req_sel = of_dma[1];
 
 	prop = of_get_property(np, "spi-max-frequency", NULL);
@@ -1764,14 +1778,9 @@ static struct tegra_qspi_platform_data *tegra_qspi_parse_dt(
 	return pdata;
 }
 
-static struct of_device_id tegra_qspi_of_match[] = {
-	{ .compatible = "nvidia,tegra186-qspi", },
-	{}
-};
-MODULE_DEVICE_TABLE(of, tegra_qspi_of_match);
-
 static int tegra_qspi_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct spi_master	*master;
 	struct tegra_qspi_data	*tqspi;
 	struct resource		*r;
@@ -1784,7 +1793,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 		bus_num = of_alias_get_id(pdev->dev.of_node, "qspi");
 		if (bus_num < 0) {
 			dev_warn(&pdev->dev,
-				"Dynamic bus number will be registerd\n");
+				 "Dynamic bus number will be registered\n");
 			bus_num = -1;
 		}
 	} else {
@@ -1840,12 +1849,10 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->phys = r->start;
 	tqspi->base = devm_ioremap_resource(&pdev->dev, r);
 	if (!tqspi->base) {
-		dev_err(&pdev->dev,
-				"Cannot request memregion/iomap dma address\n");
+		dev_err(dev, "Cannot request memregion/iomap dma address\n");
 		ret = -EADDRNOTAVAIL;
 		goto exit_free_master;
 	}
-
 
 	tqspi->rstc = devm_reset_control_get(&pdev->dev, "qspi");
 	if (IS_ERR(tqspi->rstc)) {
@@ -1857,11 +1864,10 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	qspi_irq = platform_get_irq(pdev, 0);
 	tqspi->irq = qspi_irq;
 	ret = request_threaded_irq(tqspi->irq, tegra_qspi_isr,
-			tegra_qspi_isr_thread, IRQF_ONESHOT,
-			dev_name(&pdev->dev), tqspi);
+				   tegra_qspi_isr_thread, IRQF_ONESHOT,
+				   dev_name(&pdev->dev), tqspi);
 	if (ret < 0) {
-		dev_err(&pdev->dev, "Failed to register ISR for IRQ %d\n",
-				tqspi->irq);
+		dev_err(dev, "Failed to register ISR for IRQ %d\n", tqspi->irq);
 		goto exit_free_master;
 	}
 	tqspi->clk = devm_clk_get(&pdev->dev, "qspi");
@@ -1913,7 +1919,6 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 				, ret);
 			goto exit_deinit_dma;
 		}
-
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -1932,19 +1937,16 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	set_best_clk_source(tqspi);
 	ret = clk_set_rate(tqspi->clk, tqspi->qspi_max_frequency);
 	if (ret) {
-		dev_err(tqspi->dev,
-		"Failed to set qspi clk freq %d\n", ret);
+		dev_err(dev, "Failed to set qspi clk freq %d\n", ret);
 		goto exit_free_irq;
 	}
 	tqspi->cur_speed = tqspi->qspi_max_frequency;
 	actual_speed = clk_get_rate(tqspi->clk);
 	if (actual_speed > 0) {
-		ret = clk_set_rate(tqspi->sdr_ddr_clk,
-			(actual_speed>>1));
+		ret = clk_set_rate(tqspi->sdr_ddr_clk, actual_speed >> 1);
 		if (ret) {
-			dev_err(tqspi->dev,
-			"Failed to set qspi_out clk freq %d\n"
-			, ret);
+			dev_err(dev, "Failed to set qspi_out clk freq %d\n",
+				ret);
 			goto exit_free_irq;
 		}
 	}
@@ -1962,12 +1964,11 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	}
 
 #ifdef QSPI_BRINGUP_BUILD
-	ret = device_create_file(&pdev->dev,
-			&dev_attr_qspi_force_unpacked_mode);
+	ret = device_create_file(dev, &dev_attr_qspi_force_unpacked_mode);
 	if (ret != 0)
 		goto exit_unregister_master;
 
-	ret = device_create_file(&pdev->dev, &dev_attr_qspi_enable_cmbseq_mode);
+	ret = device_create_file(dev, &dev_attr_qspi_enable_cmbseq_mode);
 	if (ret != 0)
 		goto exit_unregister_master;
 
@@ -2025,6 +2026,7 @@ static int tegra_qspi_remove(struct platform_device *pdev)
 
 	return 0;
 }
+
 #ifdef CONFIG_PM_SLEEP
 static int tegra_qspi_suspend(struct device *dev)
 {
@@ -2109,23 +2111,29 @@ static int tegra_qspi_runtime_resume(struct device *dev)
 
 static const struct dev_pm_ops tegra_qspi_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra_qspi_runtime_suspend,
-			tegra_qspi_runtime_resume, NULL)
+			   tegra_qspi_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(tegra_qspi_suspend, tegra_qspi_resume)
 };
+
+static const struct of_device_id tegra_qspi_of_match[] = {
+	{ .compatible = "nvidia,tegra186-qspi", },
+	{}
+};
+MODULE_DEVICE_TABLE(of, tegra_qspi_of_match);
 
 static struct platform_driver tegra_qspi_driver = {
 	.driver = {
 		.name		= "tegra186-qspi",
 		.owner		= THIS_MODULE,
 		.pm		= &tegra_qspi_pm_ops,
-		.of_match_table	= of_match_ptr(tegra_qspi_of_match),
+		.of_match_table	= tegra_qspi_of_match,
 	},
 	.probe =	tegra_qspi_probe,
 	.remove =	tegra_qspi_remove,
 };
 module_platform_driver(tegra_qspi_driver);
 
-MODULE_ALIAS("platform:tegra186-qspi");
 MODULE_DESCRIPTION("NVIDIA Tegra186 QSPI Controller Driver");
-MODULE_AUTHOR("Laxman Dewangan <ldewangan@nvidia.com>, Amlan Kundu <akundu@nvidia.com>");
+MODULE_AUTHOR("Laxman Dewangan <ldewangan@nvidia.com>");
+MODULE_AUTHOR("Amlan Kundu <akundu@nvidia.com>");
 MODULE_LICENSE("GPL v2");

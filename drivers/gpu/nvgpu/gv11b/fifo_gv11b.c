@@ -1554,6 +1554,7 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.device_info_fault_id = top_device_info_data_fault_id_enum_v;
 	gops->fifo.is_fault_engine_subid_gpc = gv11b_is_fault_engine_subid_gpc;
 	gops->fifo.trigger_mmu_fault = NULL;
+	gops->fifo.get_mmu_fault_info = NULL;
 	gops->fifo.dump_pbdma_status = gk20a_dump_pbdma_status;
 	gops->fifo.dump_eng_status = gv11b_dump_eng_status;
 	gops->fifo.dump_channel_status_ramfc = gv11b_dump_channel_status_ramfc;

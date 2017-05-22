@@ -1793,12 +1793,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	struct tegra_qspi_data	*tqspi;
 	struct resource		*r;
 	int ret, qspi_irq;
-	int bus_num;
 	u32 actual_speed = 0;
-
-	bus_num = of_alias_get_id(pdev->dev.of_node, "qspi");
-	if (bus_num < 0)
-		bus_num = -1;
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*tqspi));
 	if (!master) {
@@ -1811,7 +1806,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	master->cleanup = tegra_qspi_clean;
 	master->transfer_one_message = tegra_qspi_transfer_one_message;
 	master->num_chipselect = MAX_CHIP_SELECT;
-	master->bus_num = bus_num;
+	master->bus_num = -1;
 	master->spi_cs_low  = tegra_qspi_cs_low;
 
 	dev_set_drvdata(&pdev->dev, master);

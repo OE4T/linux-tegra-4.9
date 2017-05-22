@@ -1,0 +1,12 @@
+config MODS
+	tristate "NVIDIA MODS driver"
+	default n
+	---help---
+	The NVIDIA MODS driver gives user space software direct access to
+	hardware.  The NVIDIA Diagnostic Software uses this to test hardware.
+	This driver should normally be disabled in all production builds.
+
+	Say Y here to compile the NVIDIA MODS driver into the kernel or say M
+	to compile it as a module.
+
+	If unsure, say N here.

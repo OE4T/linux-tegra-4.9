@@ -13,4 +13,5 @@ KBUILD_CFLAGS += -I$(srctree)/../nvidia/include
 
 obj-y += i2c/
 obj-y += media/
+obj-y += misc/
 obj-y += video/

@@ -1842,26 +1842,28 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 
 	qspi_irq = platform_get_irq(pdev, 0);
 	tqspi->irq = qspi_irq;
-	ret = request_threaded_irq(tqspi->irq, tegra_qspi_isr,
-				   tegra_qspi_isr_thread, IRQF_ONESHOT,
-				   dev_name(&pdev->dev), tqspi);
+	ret = devm_request_threaded_irq(dev, tqspi->irq, tegra_qspi_isr,
+					tegra_qspi_isr_thread, IRQF_ONESHOT,
+					dev_name(&pdev->dev), tqspi);
 	if (ret < 0) {
 		dev_err(dev, "Failed to register interrupt: %d\n", tqspi->irq);
 		goto exit_free_master;
 	}
+
 	tqspi->clk = devm_clk_get(&pdev->dev, "qspi");
 	if (IS_ERR(tqspi->clk)) {
 		ret = PTR_ERR(tqspi->clk);
 		dev_err(&pdev->dev, "Failed to get QSPI clock: %d\n", ret);
-		goto exit_free_irq;
+		goto exit_free_master;
 	}
 
 	tqspi->sdr_ddr_clk = devm_clk_get(&pdev->dev, "qspi_out");
 	if (IS_ERR(tqspi->sdr_ddr_clk)) {
 		ret = PTR_ERR(tqspi->sdr_ddr_clk);
 		dev_err(&pdev->dev, "Failed to get QSPI-OUT: %d\n", ret);
-		goto exit_free_irq;
+		goto exit_free_master;
 	}
+
 	/* Set default mode to SDR */
 	tqspi->is_ddr_mode = false;
 	tqspi->max_buf_size = QSPI_FIFO_DEPTH << 2;
@@ -1871,7 +1873,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 		if (ret < 0) {
 			dev_err(&pdev->dev, "Failed to initialise RxDma: %d\n",
 				ret);
-			goto exit_free_irq;
+			goto exit_free_master;
 		}
 
 		ret = tegra_qspi_init_dma_param(tqspi, false);
@@ -1918,7 +1920,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	ret = clk_set_rate(tqspi->clk, tqspi->qspi_max_frequency);
 	if (ret) {
 		dev_err(dev, "Failed to set qspi clk freq %d\n", ret);
-		goto exit_free_irq;
+		goto exit_pm_disable;
 	}
 	tqspi->cur_speed = tqspi->qspi_max_frequency;
 	actual_speed = clk_get_rate(tqspi->clk);
@@ -1927,7 +1929,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(dev, "Failed to set qspi_out clk freq %d\n",
 				ret);
-			goto exit_free_irq;
+			goto exit_pm_disable;
 		}
 	}
 
@@ -1937,7 +1939,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	pm_runtime_put(&pdev->dev);
 
 	master->dev.of_node = pdev->dev.of_node;
-	ret = spi_register_master(master);
+	ret = devm_spi_register_master(&pdev->dev, master);
 	if (ret < 0) {
 		dev_err(dev, "Failed to register spi master: %d\n", ret);
 		goto exit_pm_disable;
@@ -1945,20 +1947,16 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 
 #ifdef QSPI_BRINGUP_BUILD
 	ret = device_create_file(dev, &dev_attr_qspi_force_unpacked_mode);
-	if (ret != 0)
-		goto exit_unregister_master;
+	if (ret  < 0)
+		goto exit_pm_disable;
 
 	ret = device_create_file(dev, &dev_attr_qspi_enable_cmbseq_mode);
-	if (ret != 0)
-		goto exit_unregister_master;
+	if (ret  < 0)
+		goto exit_pm_disable;
 
-	return ret;
-
-exit_unregister_master:
-	spi_unregister_master(master);
-#else
 	return ret;
 #endif
+
 exit_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
@@ -1971,8 +1969,6 @@ exit_deinit_dma:
 	tegra_qspi_deinit_dma_param(tqspi, false);
 exit_rx_dma_free:
 	tegra_qspi_deinit_dma_param(tqspi, true);
-exit_free_irq:
-	free_irq(qspi_irq, tqspi);
 exit_free_master:
 	spi_master_put(master);
 
@@ -1983,12 +1979,11 @@ static int tegra_qspi_remove(struct platform_device *pdev)
 {
 	struct spi_master *master = dev_get_drvdata(&pdev->dev);
 	struct tegra_qspi_data	*tqspi = spi_master_get_devdata(master);
+
 #ifdef QSPI_BRINGUP_BUILD
 	device_remove_file(&pdev->dev, &dev_attr_qspi_force_unpacked_mode);
 	device_remove_file(&pdev->dev, &dev_attr_qspi_enable_cmbseq_mode);
 #endif
-	free_irq(tqspi->irq, tqspi);
-	spi_unregister_master(master);
 
 	if (tqspi->tx_dma_chan)
 		tegra_qspi_deinit_dma_param(tqspi, false);

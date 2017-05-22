@@ -177,7 +177,6 @@ struct nvhost_device_data {
 	u32		last_submit_syncpt_value;
 
 	bool		power_on;	/* If module is powered on */
-	bool		suspended;	/* If module is suspended as part of device suspend */
 
 	u32		class;		/* Device class */
 	bool		exclusive;	/* True if only one user at a time */

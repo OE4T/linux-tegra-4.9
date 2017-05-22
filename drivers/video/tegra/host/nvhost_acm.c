@@ -60,8 +60,6 @@ static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data);
 
 static int nvhost_module_prepare_suspend(struct device *dev);
-static int nvhost_module_suspend(struct device *dev);
-static int nvhost_module_resume(struct device *dev);
 static int nvhost_module_runtime_suspend(struct device *dev);
 static int nvhost_module_runtime_resume(struct device *dev);
 static int nvhost_module_prepare_poweroff(struct device *dev);
@@ -752,9 +750,9 @@ EXPORT_SYMBOL(nvhost_module_deinit);
 const struct dev_pm_ops nvhost_module_pm_ops = {
 	SET_RUNTIME_PM_OPS(nvhost_module_runtime_suspend,
 			   nvhost_module_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+				pm_runtime_force_resume)
 	.prepare = nvhost_module_prepare_suspend,
-	.suspend = nvhost_module_suspend,
-	.resume = nvhost_module_resume,
 };
 EXPORT_SYMBOL(nvhost_module_pm_ops);
 
@@ -881,44 +879,6 @@ static int nvhost_module_prepare_suspend(struct device *dev)
 {
 	if (atomic_read(&dev->power.usage_count) > 1)
 		return -EBUSY;
-
-	return 0;
-}
-
-static int nvhost_module_suspend(struct device *dev)
-{
-	int err;
-	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
-
-	if (!pdata->power_on)
-		return 0;
-
-	dev_dbg(dev, "suspending");
-
-	err = nvhost_module_runtime_suspend(dev);
-	if (err)
-		return err;
-
-	pdata->suspended = true;
-
-	return 0;
-}
-
-static int nvhost_module_resume(struct device *dev)
-{
-	int err;
-	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
-
-	if (!pdata->suspended)
-		return 0;
-
-	dev_dbg(dev, "resuming");
-
-	err = nvhost_module_runtime_resume(dev);
-	if (err)
-		return err;
-
-	pdata->suspended = false;
 
 	return 0;
 }

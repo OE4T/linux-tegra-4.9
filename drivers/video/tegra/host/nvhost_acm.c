@@ -59,7 +59,6 @@ static void nvhost_module_load_regs(struct platform_device *pdev, bool prod);
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data);
 
-#ifdef CONFIG_PM
 static int nvhost_module_prepare_suspend(struct device *dev);
 static int nvhost_module_suspend(struct device *dev);
 static int nvhost_module_resume(struct device *dev);
@@ -67,7 +66,6 @@ static int nvhost_module_runtime_suspend(struct device *dev);
 static int nvhost_module_runtime_resume(struct device *dev);
 static int nvhost_module_prepare_poweroff(struct device *dev);
 static int nvhost_module_finalize_poweron(struct device *dev);
-#endif
 
 static DEFINE_MUTEX(client_list_lock);
 
@@ -92,41 +90,9 @@ static bool nvhost_is_bwmgr_clk(struct nvhost_device_data *pdata, int index)
 		pdata->bwmgr_handle);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-static void dump_clock_status(struct platform_device *dev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	unsigned long rate = 0;
-
-	int i;
-
-	pr_info("\n%s: %s status:\n", __func__, dev_name(&dev->dev));
-
-	for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
-		if (!pdata->clocks[i].name)
-			break;
-
-#if defined(CONFIG_TEGRA_BWMGR)
-		if (nvhost_is_bwmgr_clk(pdata, i))
-			rate = tegra_bwmgr_get_emc_rate();
-		else
-#endif
-			if (pdata->clk[i])
-				rate = clk_get_rate(pdata->clk[i]);
-
-		pr_info("%s: clock %s: rate = %lu\n",
-			__func__, pdata->clocks[i].name,
-			rate);
-	}
-}
-#endif
-
 static void do_module_reset_locked(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	int ret;
-#endif
 
 	if (pdata->reset) {
 		pdata->reset(dev);
@@ -137,40 +103,6 @@ static void do_module_reset_locked(struct platform_device *dev)
 		reset_control_reset(pdata->reset_control);
 		return;
 	}
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	/* assert module and mc client reset */
-	if (pdata->clk[0] && pdata->clocks[0].reset) {
-		ret = tegra_mc_flush(pdata->clocks[0].reset);
-		if (ret) {
-			dump_clock_status(nvhost_get_host(dev)->dev);
-			dump_clock_status(dev);
-		}
-		tegra_periph_reset_assert(pdata->clk[0]);
-	}
-
-	if (pdata->clk[1] && pdata->clocks[1].reset) {
-		ret = tegra_mc_flush(pdata->clocks[1].reset);
-		if (ret) {
-			dump_clock_status(nvhost_get_host(dev)->dev);
-			dump_clock_status(dev);
-		}
-		tegra_periph_reset_assert(pdata->clk[1]);
-	}
-
-	udelay(POWERGATE_DELAY);
-
-	/* deassert reset */
-	if (pdata->clk[0] && pdata->clocks[0].reset) {
-		tegra_periph_reset_deassert(pdata->clk[0]);
-		tegra_mc_flush_done(pdata->clocks[0].reset);
-	}
-
-	if (pdata->clk[1] && pdata->clocks[1].reset) {
-		tegra_periph_reset_deassert(pdata->clk[1]);
-		tegra_mc_flush_done(pdata->clocks[1].reset);
-	}
-#endif
 }
 
 static unsigned long nvhost_emc_bw_to_freq_req(unsigned long rate)
@@ -226,9 +158,7 @@ void nvhost_module_busy_noresume(struct platform_device *dev)
 	if (dev->dev.parent && (dev->dev.parent != &platform_bus))
 		nvhost_module_busy_noresume(nvhost_get_parent(dev));
 
-#ifdef CONFIG_PM
 	pm_runtime_get_noresume(&dev->dev);
-#endif
 }
 
 int nvhost_module_busy(struct platform_device *dev)
@@ -255,7 +185,6 @@ int nvhost_module_busy(struct platform_device *dev)
 	if (ret)
 		return ret;
 
-#ifdef CONFIG_PM
 	ret = pm_runtime_get_sync(&dev->dev);
 	if (ret < 0) {
 		pm_runtime_put_noidle(&dev->dev);
@@ -264,24 +193,6 @@ int nvhost_module_busy(struct platform_device *dev)
 		nvhost_err(&dev->dev, "failed to power on, err %d", ret);
 		return ret;
 	}
-#else
-	if (!pdata->booted && pdata->finalize_poweron) {
-		ret = nvhost_vm_init_device(dev);
-		if (ret < 0) {
-			nvhost_err(&dev->dev, "failed to init vm, err %d",
-				   ret);
-			return ret;
-		}
-
-		ret = pdata->finalize_poweron(dev);
-		if (ret < 0) {
-			nvhost_err(&dev->dev, "failed to power on, err %d",
-				   ret);
-			return ret;
-		}
-		pdata->booted = true;
-	}
-#endif
 
 	if (pdata->busy)
 		pdata->busy(dev);
@@ -301,7 +212,6 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 	int original_refs = refs;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-#ifdef CONFIG_PM
 	/* call idle callback only if the device is turned on. */
 	if (atomic_read(&dev->dev.power.usage_count) == refs &&
 	    pm_runtime_active(&dev->dev)) {
@@ -316,10 +226,6 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 		else
 			pm_runtime_put(&dev->dev);
 	}
-#else
-	if (pdata->idle)
-		pdata->idle(dev);
-#endif
 
 	/* Explicitly turn off the host1x clocks */
 	if (dev->dev.parent && (dev->dev.parent != &platform_bus))
@@ -599,10 +505,6 @@ static int nvhost_module_set_parent(struct platform_device *dev,
 	char parent_name[MAX_DEVID_LENGTH];
 	int err;
 
-	/* set parent only if CCF is enabled. TCF handles this otherwise */
-	if (!IS_ENABLED(CONFIG_COMMON_CLK))
-		return 0;
-
 	snprintf(parent_name, sizeof(parent_name), "%s_parent", clock->name);
 
 	/* if parent is not available, assume that
@@ -668,16 +570,10 @@ int nvhost_module_init(struct platform_device *dev)
 			 (dev->id <= 0) ? "tegra_%s" : "tegra_%s.%d",
 			 dev->name, dev->id);
 
-		/* Get device managed clock if CCF is available, otherwise
-		 * assume tegra specific clock framework */
-
-		if (IS_ENABLED(CONFIG_COMMON_CLK))
-			c = devm_clk_get(&dev->dev, pdata->clocks[i].name);
-		else
-			c = clk_get_sys(devname, pdata->clocks[i].name);
+		c = devm_clk_get(&dev->dev, pdata->clocks[i].name);
 
 		if (IS_ERR(c)) {
-			dev_err(&dev->dev, "clk_get_sys failed for i=%d %s:%s",
+			dev_err(&dev->dev, "clk_get failed for i=%d %s:%s",
 				i, devname, pdata->clocks[i].name);
 			/* arguably we should fail init here instead... */
 			i++;
@@ -704,8 +600,6 @@ int nvhost_module_init(struct platform_device *dev)
 	}
 	pdata->num_clks = i;
 
-	/* try to get reset control - if it fails, we use Tegra specific
-	 * control as fall-back */
 	pdata->reset_control = devm_reset_control_get(&dev->dev, NULL);
 	if (IS_ERR(pdata->reset_control))
 		pdata->reset_control = NULL;
@@ -724,10 +618,8 @@ int nvhost_module_init(struct platform_device *dev)
 
 	/* disable railgating if pm runtime is not available
 	 * and for linsim platform */
-	pdata->can_powergate = IS_ENABLED(CONFIG_PM) &&
-		IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
-		pdata->can_powergate && !tegra_platform_is_linsim() &&
-		!tegra_platform_is_vdk();
+	pdata->can_powergate = pdata->can_powergate &&
+		!tegra_platform_is_linsim() && !tegra_platform_is_vdk();
 
 	if (nvhost_is_210()) {
 		struct generic_pm_domain *gpd = pd_to_genpd(dev->dev.pm_domain);
@@ -761,15 +653,6 @@ int nvhost_module_init(struct platform_device *dev)
 	 */
 	if (!pdata->can_powergate)
 		nvhost_module_busy_noresume(dev);
-
-	/* if genpd is not available, the domain is powered already.
-	 * just ensure that we load the gating registers now */
-	if (!(IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
-	      IS_ENABLED(CONFIG_PM))) {
-		nvhost_module_enable_clk(&dev->dev);
-		nvhost_module_load_regs(dev, pdata->engine_can_cg);
-		nvhost_module_disable_clk(&dev->dev);
-	}
 
 	/* Init the power sysfs attributes for this device */
 	pdata->power_attrib = devm_kzalloc(&dev->dev,
@@ -855,12 +738,6 @@ void nvhost_module_deinit(struct platform_device *dev)
 		tegra_bwmgr_unregister(pdata->bwmgr_handle);
 #endif
 
-	if (!IS_ENABLED(CONFIG_COMMON_CLK))
-		for (i = 0; i < pdata->num_clks; i++) {
-			if (pdata->clk[i])
-				clk_put(pdata->clk[i]);
-	}
-
 	if (pdata->power_kobj) {
 		for (i = 0; i < NVHOST_POWER_SYSFS_ATTRIB_MAX; i++) {
 			attr = &pdata->power_attrib->power_attr[i];
@@ -872,34 +749,12 @@ void nvhost_module_deinit(struct platform_device *dev)
 }
 EXPORT_SYMBOL(nvhost_module_deinit);
 
-/*
- * Suspend / resume control flow on different kernel versions:
- * 3.10:
- * Suspend:
- * - genpd's prepare calls runtime_resume
- * - System suspend calls runtime_suspend
- * Resume:
- * - System resume calls runtime_resume
- *
- * 3.18 / 4.4:
- * Suspend:
- * - genpd's prepare calls runtime_resume
- * - genpd's suspend_noirq calls runtime_suspend
- * Resume:
- * - genpd's complete calls runtime_resume
- */
 const struct dev_pm_ops nvhost_module_pm_ops = {
 	SET_RUNTIME_PM_OPS(nvhost_module_runtime_suspend,
 			   nvhost_module_runtime_resume, NULL)
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
-	/* On 3.18 and 4.4, genpd will call our runtime pm ops. */
-	SET_SYSTEM_SLEEP_PM_OPS(nvhost_module_runtime_suspend,
-				nvhost_module_runtime_resume)
-#else
 	.prepare = nvhost_module_prepare_suspend,
 	.suspend = nvhost_module_suspend,
 	.resume = nvhost_module_resume,
-#endif
 };
 EXPORT_SYMBOL(nvhost_module_pm_ops);
 
@@ -986,7 +841,6 @@ static void nvhost_module_load_regs(struct platform_device *pdev, bool prod)
 	}
 }
 
-#ifdef CONFIG_PM
 static int nvhost_module_runtime_suspend(struct device *dev)
 {
 	int err;
@@ -1182,7 +1036,6 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 
 	return ret;
 }
-#endif
 
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data)

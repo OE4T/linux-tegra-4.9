@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -337,6 +337,10 @@ static inline u32 fifo_intr_mmu_fault_info_r(u32 i)
 static inline u32 fifo_intr_mmu_fault_info_type_v(u32 r)
 {
 	return (r >> 0) & 0xf;
+}
+static inline u32 fifo_intr_mmu_fault_info_write_v(u32 r)
+{
+	return (r >> 7) & 0x1;
 }
 static inline u32 fifo_intr_mmu_fault_info_engine_subid_v(u32 r)
 {

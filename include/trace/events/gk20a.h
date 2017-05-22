@@ -463,39 +463,44 @@ TRACE_EVENT(gk20a_as_ioctl_get_va_regions,
 );
 
 TRACE_EVENT(gk20a_mmu_fault,
-	    TP_PROTO(u32 fault_hi, u32 fault_lo,
-		     u32 fault_info,
-		     u64 instance,
+	    TP_PROTO(u64 fault_addr,
+		     u32 fault_type,
+		     u32 access_type,
+		     u64 inst_ptr,
 		     u32 engine_id,
-		     const char *engine,
-		     const char *client,
-		     const char *fault_type),
-	    TP_ARGS(fault_hi, fault_lo, fault_info,
-		    instance, engine_id, engine, client, fault_type),
+		     const char *client_type_desc,
+		     const char *client_id_desc,
+		     const char *fault_type_desc),
+	    TP_ARGS(fault_addr, fault_type, access_type,
+		    inst_ptr, engine_id, client_type_desc,
+		    client_id_desc, fault_type_desc),
 	    TP_STRUCT__entry(
-			 __field(u32, fault_hi)
-			 __field(u32, fault_lo)
-			 __field(u32, fault_info)
-			 __field(u64, instance)
+			 __field(u64, fault_addr)
+			 __field(u32, fault_type)
+			 __field(u32, access_type)
+			 __field(u64, inst_ptr)
 			 __field(u32, engine_id)
-			 __field(const char *, engine)
-			 __field(const char *, client)
-			 __field(const char *, fault_type)
+			 __field(const char *, client_type_desc)
+			 __field(const char *, client_id_desc)
+			 __field(const char *, fault_type_desc)
 			 ),
 	    TP_fast_assign(
-		       __entry->fault_hi = fault_hi;
-		       __entry->fault_lo = fault_lo;
-		       __entry->fault_info = fault_info;
-		       __entry->instance = instance;
-		       __entry->engine_id = engine_id;
-		       __entry->engine = engine;
-		       __entry->client = client;
+		       __entry->fault_addr = fault_addr;
 		       __entry->fault_type = fault_type;
+		       __entry->access_type = access_type;
+		       __entry->inst_ptr = inst_ptr;
+		       __entry->engine_id = engine_id;
+		       __entry->client_type_desc = client_type_desc;
+		       __entry->client_id_desc = client_id_desc;
+		       __entry->fault_type_desc = fault_type_desc;
 		       ),
-	    TP_printk("fault=0x%x,%08x info=0x%x instance=0x%llx engine_id=%d engine=%s client=%s type=%s",
-		      __entry->fault_hi, __entry->fault_lo,
-		      __entry->fault_info, __entry->instance, __entry->engine_id,
-		      __entry->engine, __entry->client, __entry->fault_type)
+	    TP_printk("fault addr=0x%llx type=0x%x access_type=0x%x "
+			"instance=0x%llx engine_id=%d client_type=%s "
+			"client_id=%s fault type=%s",
+		      __entry->fault_addr, __entry->fault_type,
+			 __entry->access_type, __entry->inst_ptr,
+			 __entry->engine_id, __entry->client_type_desc,
+		      __entry->client_id_desc, __entry->fault_type_desc)
 );
 
 TRACE_EVENT(gk20a_ltc_cbc_ctrl_start,

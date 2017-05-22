@@ -36,6 +36,7 @@
 #include "gk20a.h"
 #include "debug_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
+#include "mm_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
@@ -1160,51 +1161,78 @@ static const char * const gpc_client_descs[] = {
 	"rgg utlb",
 };
 
+static const char * const does_not_exist[] = {
+	"does not exist"
+};
+
 /* reads info from hardware and fills in mmu fault info record */
-static inline void get_exception_mmu_fault_info(
-	struct gk20a *g, u32 engine_id,
-	struct fifo_mmu_fault_info_gk20a *f)
+static void get_exception_mmu_fault_info(
+	struct gk20a *g, u32 mmu_fault_id,
+	struct mmu_fault_info *mmfault)
 {
-	u32 fault_info_v;
+	u32 fault_info;
+	u32 addr_lo, addr_hi;
 
-	gk20a_dbg_fn("engine_id %d", engine_id);
+	gk20a_dbg_fn("mmu_fault_id %d", mmu_fault_id);
 
-	memset(f, 0, sizeof(*f));
+	memset(mmfault, 0, sizeof(*mmfault));
 
-	f->fault_info_v = fault_info_v = gk20a_readl(g,
-	     fifo_intr_mmu_fault_info_r(engine_id));
-	f->fault_type_v =
-		fifo_intr_mmu_fault_info_type_v(fault_info_v);
-	f->engine_subid_v =
-		fifo_intr_mmu_fault_info_engine_subid_v(fault_info_v);
-	f->client_v = fifo_intr_mmu_fault_info_client_v(fault_info_v);
+	fault_info = gk20a_readl(g,
+		fifo_intr_mmu_fault_info_r(mmu_fault_id));
+	mmfault->fault_type =
+		fifo_intr_mmu_fault_info_type_v(fault_info);
+	mmfault->access_type =
+		fifo_intr_mmu_fault_info_write_v(fault_info);
+	mmfault->client_type =
+		fifo_intr_mmu_fault_info_engine_subid_v(fault_info);
+	mmfault->client_id =
+		fifo_intr_mmu_fault_info_client_v(fault_info);
 
-	BUG_ON(f->fault_type_v >= ARRAY_SIZE(fault_type_descs));
-	f->fault_type_desc =  fault_type_descs[f->fault_type_v];
-
-	BUG_ON(f->engine_subid_v >= ARRAY_SIZE(engine_subid_descs));
-	f->engine_subid_desc = engine_subid_descs[f->engine_subid_v];
-
-	if (f->engine_subid_v ==
-	    fifo_intr_mmu_fault_info_engine_subid_hub_v()) {
-
-		BUG_ON(f->client_v >= ARRAY_SIZE(hub_client_descs));
-		f->client_desc = hub_client_descs[f->client_v];
-	} else if (f->engine_subid_v ==
-		   fifo_intr_mmu_fault_info_engine_subid_gpc_v()) {
-		BUG_ON(f->client_v >= ARRAY_SIZE(gpc_client_descs));
-		f->client_desc = gpc_client_descs[f->client_v];
+	if (mmfault->fault_type >= ARRAY_SIZE(fault_type_descs)) {
+		WARN_ON(mmfault->fault_type >= ARRAY_SIZE(fault_type_descs));
+		mmfault->fault_type_desc =  does_not_exist[0];
 	} else {
-		BUG_ON(1);
+		mmfault->fault_type_desc =
+			 fault_type_descs[mmfault->fault_type];
 	}
 
-	f->fault_hi_v = gk20a_readl(g, fifo_intr_mmu_fault_hi_r(engine_id));
-	f->fault_lo_v = gk20a_readl(g, fifo_intr_mmu_fault_lo_r(engine_id));
+	if (mmfault->client_type >= ARRAY_SIZE(engine_subid_descs)) {
+		WARN_ON(mmfault->client_type >= ARRAY_SIZE(engine_subid_descs));
+		mmfault->client_type_desc = does_not_exist[0];
+	} else {
+		mmfault->client_type_desc =
+				 engine_subid_descs[mmfault->client_type];
+	}
+
+	mmfault->client_id_desc = does_not_exist[0];
+	if (mmfault->client_type ==
+	    fifo_intr_mmu_fault_info_engine_subid_hub_v()) {
+
+		if (mmfault->client_id >=
+				 ARRAY_SIZE(hub_client_descs))
+			WARN_ON(mmfault->client_id >=
+				 ARRAY_SIZE(hub_client_descs));
+		else
+			mmfault->client_id_desc =
+				 hub_client_descs[mmfault->client_id];
+	} else if (mmfault->client_type ==
+			fifo_intr_mmu_fault_info_engine_subid_gpc_v()) {
+		if (mmfault->client_id >= ARRAY_SIZE(gpc_client_descs))
+			WARN_ON(mmfault->client_id >=
+				 ARRAY_SIZE(gpc_client_descs));
+		else
+			mmfault->client_id_desc =
+				 gpc_client_descs[mmfault->client_id];
+	}
+
+	addr_lo = gk20a_readl(g, fifo_intr_mmu_fault_lo_r(mmu_fault_id));
+	addr_hi = gk20a_readl(g, fifo_intr_mmu_fault_hi_r(mmu_fault_id));
+	mmfault->fault_addr = hi32_lo32_to_u64(addr_hi, addr_lo);
 	/* note:ignoring aperture on gk20a... */
-	f->inst_ptr = fifo_intr_mmu_fault_inst_ptr_v(
-		 gk20a_readl(g, fifo_intr_mmu_fault_inst_r(engine_id)));
+	mmfault->inst_ptr = fifo_intr_mmu_fault_inst_ptr_v(
+		 gk20a_readl(g, fifo_intr_mmu_fault_inst_r(mmu_fault_id)));
 	/* note: inst_ptr is a 40b phys addr.  */
-	f->inst_ptr <<= fifo_intr_mmu_fault_inst_ptr_align_shift_v();
+	mmfault->inst_ptr <<= fifo_intr_mmu_fault_inst_ptr_align_shift_v();
 }
 
 void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
@@ -1519,7 +1547,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 		 * engines. Convert engine_mmu_id to engine_id */
 		u32 engine_id = gk20a_mmu_id_to_engine_id(g,
 					engine_mmu_fault_id);
-		struct fifo_mmu_fault_info_gk20a f;
+		struct mmu_fault_info mmfault_info;
 		struct channel_gk20a *ch = NULL;
 		struct tsg_gk20a *tsg = NULL;
 		struct channel_gk20a *refch = NULL;
@@ -1533,26 +1561,29 @@ static bool gk20a_fifo_handle_mmu_fault(
 				|| ctx_status ==
 				fifo_engine_status_ctx_status_ctxsw_load_v());
 
-		get_exception_mmu_fault_info(g, engine_mmu_fault_id, &f);
-		trace_gk20a_mmu_fault(f.fault_hi_v,
-				      f.fault_lo_v,
-				      f.fault_info_v,
-				      f.inst_ptr,
+		get_exception_mmu_fault_info(g, engine_mmu_fault_id,
+						 &mmfault_info);
+		trace_gk20a_mmu_fault(mmfault_info.fault_addr,
+				      mmfault_info.fault_type,
+				      mmfault_info.access_type,
+				      mmfault_info.inst_ptr,
 				      engine_id,
-				      f.engine_subid_desc,
-				      f.client_desc,
-				      f.fault_type_desc);
+				      mmfault_info.client_type_desc,
+				      mmfault_info.client_id_desc,
+				      mmfault_info.fault_type_desc);
 		nvgpu_err(g, "%s mmu fault on engine %d, "
 			   "engine subid %d (%s), client %d (%s), "
-			   "addr 0x%08x:0x%08x, type %d (%s), info 0x%08x,"
-			   "inst_ptr 0x%llx",
+			   "addr 0x%llx, type %d (%s), access_type 0x%08x,"
+			   "inst_ptr 0x%llx\n",
 			   fake_fault ? "fake" : "",
 			   engine_id,
-			   f.engine_subid_v, f.engine_subid_desc,
-			   f.client_v, f.client_desc,
-			   f.fault_hi_v, f.fault_lo_v,
-			   f.fault_type_v, f.fault_type_desc,
-			   f.fault_info_v, f.inst_ptr);
+			   mmfault_info.client_type,
+			   mmfault_info.client_type_desc,
+			   mmfault_info.client_id, mmfault_info.client_id_desc,
+			   mmfault_info.fault_addr,
+			   mmfault_info.fault_type,
+			   mmfault_info.fault_type_desc,
+			   mmfault_info.access_type, mmfault_info.inst_ptr);
 
 		if (ctxsw) {
 			gk20a_fecs_dump_falcon_stats(g);
@@ -1589,7 +1620,8 @@ static bool gk20a_fifo_handle_mmu_fault(
 			}
 		} else {
 			/* read channel based on instruction pointer */
-			ch = gk20a_refch_from_inst_ptr(g, f.inst_ptr);
+			ch = gk20a_refch_from_inst_ptr(g,
+					mmfault_info.inst_ptr);
 			refch = ch;
 		}
 
@@ -1599,8 +1631,8 @@ static bool gk20a_fifo_handle_mmu_fault(
 		/* check if engine reset should be deferred */
 		if (engine_id != FIFO_INVAL_ENGINE_ID) {
 			bool defer = gk20a_fifo_should_defer_engine_reset(g,
-						engine_id, f.engine_subid_v,
-						fake_fault);
+					engine_id, mmfault_info.client_type,
+					fake_fault);
 			if ((ch || tsg) && defer) {
 				g->fifo.deferred_fault_engines |= BIT(engine_id);
 
@@ -1656,10 +1688,10 @@ static bool gk20a_fifo_handle_mmu_fault(
 						"mmu error in freed channel %d",
 						ch->hw_chid);
 			}
-		} else if (f.inst_ptr ==
+		} else if (mmfault_info.inst_ptr ==
 				gk20a_mm_inst_block_addr(g, &g->mm.bar1.inst_block)) {
 			nvgpu_err(g, "mmu fault from bar1");
-		} else if (f.inst_ptr ==
+		} else if (mmfault_info.inst_ptr ==
 				gk20a_mm_inst_block_addr(g, &g->mm.pmu.inst_block)) {
 			nvgpu_err(g, "mmu fault from pmu");
 		} else

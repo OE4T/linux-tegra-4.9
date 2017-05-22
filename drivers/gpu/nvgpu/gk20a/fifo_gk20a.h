@@ -104,19 +104,6 @@ struct fifo_engine_exception_info_gk20a {
 	bool faulted, idle, ctxsw_in_progress;
 };
 
-struct fifo_mmu_fault_info_gk20a {
-	u32 fault_info_v;
-	u32 fault_type_v;
-	u32 engine_subid_v;
-	u32 client_v;
-	u32 fault_hi_v;
-	u32 fault_lo_v;
-	u64 inst_ptr;
-	const char *fault_type_desc;
-	const char *engine_subid_desc;
-	const char *client_desc;
-};
-
 struct fifo_engine_info_gk20a {
 	u32 engine_id;
 	u32 runlist_id;
@@ -129,8 +116,6 @@ struct fifo_engine_info_gk20a {
 	u32 engine_enum;
 	struct fifo_pbdma_exception_info_gk20a pbdma_exception_info;
 	struct fifo_engine_exception_info_gk20a engine_exception_info;
-	struct fifo_mmu_fault_info_gk20a mmu_fault_info;
-
 };
 
 enum {

@@ -185,7 +185,7 @@ static void gk20a_ltc_isr(struct gk20a *g)
 	u32 intr;
 
 	intr = gk20a_readl(g, ltc_ltc0_ltss_intr_r());
-	nvgpu_err(g, "ltc: %08x\n", intr);
+	nvgpu_err(g, "ltc: %08x", intr);
 	gk20a_writel(g, ltc_ltc0_ltss_intr_r(), intr);
 }
 

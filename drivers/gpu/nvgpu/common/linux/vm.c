@@ -399,7 +399,7 @@ clean_up:
 		gk20a_mm_unpin(g->dev, dmabuf, bfr.sgt);
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
-	nvgpu_log_info(g, "err=%d\n", err);
+	nvgpu_log_info(g, "err=%d", err);
 	return 0;
 }
 

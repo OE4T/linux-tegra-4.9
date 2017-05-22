@@ -110,7 +110,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 		map_offset = __nvgpu_vm_alloc_va(vm, size,
 					  pgsz_idx);
 		if (!map_offset) {
-			nvgpu_err(g, "failed to allocate va space\n");
+			nvgpu_err(g, "failed to allocate va space");
 			err = -ENOMEM;
 			goto fail;
 		}
@@ -138,7 +138,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 				vm->gmmu_page_sizes[gmmu_page_size_big]) {
 			pgsz_idx = gmmu_page_size_big;
 		} else {
-			nvgpu_err(g, "invalid kernel page size %d\n",
+			nvgpu_err(g, "invalid kernel page size %d",
 				page_size);
 			goto fail;
 		}
@@ -160,7 +160,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 
 	return map_offset;
 fail:
-	nvgpu_err(g, "%s: failed with err=%d\n", __func__, err);
+	nvgpu_err(g, "%s: failed with err=%d", __func__, err);
 	return 0;
 }
 

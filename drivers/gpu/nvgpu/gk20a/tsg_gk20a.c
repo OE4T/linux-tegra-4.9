@@ -95,7 +95,7 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 		tsg->runlist_id = ch->runlist_id;
 	else if (tsg->runlist_id != ch->runlist_id) {
 		nvgpu_err(tsg->g,
-			"Error: TSG channel should be share same runlist ch[%d] tsg[%d]\n",
+			"Error: TSG channel should be share same runlist ch[%d] tsg[%d]",
 			ch->runlist_id, tsg->runlist_id);
 		return -EINVAL;
 	}

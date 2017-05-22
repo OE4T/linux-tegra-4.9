@@ -225,7 +225,7 @@ u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
 	if (val == 2) {
 		return base * 2;
 	} else if (val != 1) {
-		nvgpu_err(g, "Invalid number of active ltcs: %08x\n", val);
+		nvgpu_err(g, "Invalid number of active ltcs: %08x", val);
 	}
 
 	return base;

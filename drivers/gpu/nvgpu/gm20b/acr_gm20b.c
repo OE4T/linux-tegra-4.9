@@ -1418,7 +1418,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		err = nvgpu_dma_alloc_flags_sys(g,
 				NVGPU_DMA_READ_ONLY, bl_sz, &acr->hsbl_ucode);
 		if (err) {
-			nvgpu_err(g, "failed to allocate memory\n");
+			nvgpu_err(g, "failed to allocate memory");
 			goto err_done;
 		}
 

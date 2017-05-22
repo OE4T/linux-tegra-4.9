@@ -357,7 +357,7 @@ static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 		struct nvgpu_gpu_mmu_debug_mode_args *args)
 {
 	if (gk20a_busy(g)) {
-		nvgpu_err(g, "failed to power on gpu\n");
+		nvgpu_err(g, "failed to power on gpu");
 		return -EINVAL;
 	}
 
@@ -559,7 +559,7 @@ static inline int get_timestamps_zipper(struct gk20a *g,
 	unsigned int i = 0;
 
 	if (gk20a_busy(g)) {
-		nvgpu_err(g, "GPU not powered on\n");
+		nvgpu_err(g, "GPU not powered on");
 		err = -EINVAL;
 		goto end;
 	}
@@ -598,7 +598,7 @@ static int nvgpu_gpu_get_cpu_time_correlation_info(
 		get_cpu_timestamp = get_cpu_timestamp_timeofday;
 		break;
 	default:
-		nvgpu_err(g, "invalid cpu clock source id\n");
+		nvgpu_err(g, "invalid cpu clock source id");
 		return -EINVAL;
 	}
 
@@ -663,7 +663,7 @@ static int nvgpu_gpu_get_engine_info(
 			break;
 
 		default:
-			nvgpu_err(g, "Unmapped engine enum %u\n",
+			nvgpu_err(g, "Unmapped engine enum %u",
 				  engine_enum);
 			continue;
 		}

@@ -241,7 +241,7 @@ static int gk20a_dbg_gpu_events_ctrl(struct dbg_session_gk20a *dbg_s,
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch) {
 		nvgpu_err(dbg_s->g,
-			   "no channel bound to dbg session\n");
+			   "no channel bound to dbg session");
 		return -EINVAL;
 	}
 
@@ -759,7 +759,7 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 				   write_size);
 		nvgpu_mutex_release(&g->dbg_sessions_lock);
 		if (err) {
-			nvgpu_err(g, "copy_to_user failed!\n");
+			nvgpu_err(g, "copy_to_user failed!");
 			return err;
 		}
 
@@ -1197,7 +1197,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	/* be sure that ctx info is in place */
 	if (!g->is_virtual &&
 		!gr_context_info_available(dbg_s, &g->gr)) {
-		nvgpu_err(g, "gr context data not available\n");
+		nvgpu_err(g, "gr context data not available");
 		return -ENODEV;
 	}
 
@@ -1414,7 +1414,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	ch_gk20a = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch_gk20a) {
 		nvgpu_err(g,
-			  "no bound channel for smpc ctxsw mode update\n");
+			  "no bound channel for smpc ctxsw mode update");
 		err = -EINVAL;
 		goto clean_up;
 	}
@@ -1423,7 +1423,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 				args->mode == NVGPU_DBG_GPU_SMPC_CTXSW_MODE_CTXSW);
 	if (err) {
 		nvgpu_err(g,
-			  "error (%d) during smpc ctxsw mode update\n", err);
+			  "error (%d) during smpc ctxsw mode update", err);
 		goto clean_up;
 	}
 
@@ -1466,7 +1466,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	ch_gk20a = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch_gk20a) {
 		nvgpu_err(g,
-			  "no bound channel for pm ctxsw mode update\n");
+			  "no bound channel for pm ctxsw mode update");
 		err = -EINVAL;
 		goto clean_up;
 	}
@@ -1475,7 +1475,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 				args->mode == NVGPU_DBG_GPU_HWPM_CTXSW_MODE_CTXSW);
 	if (err)
 		nvgpu_err(g,
-			  "error (%d) during pm ctxsw mode update\n", err);
+			  "error (%d) during pm ctxsw mode update", err);
 
 	/* gk20a would require a WAR to set the core PM_ENABLE bit, not
 	 * added here with gk20a being deprecated
@@ -1528,7 +1528,7 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 
 	err = gr_gk20a_enable_ctxsw(g);
 	if (err)
-		nvgpu_err(g, "unable to restart ctxsw!\n");
+		nvgpu_err(g, "unable to restart ctxsw!");
 
 clean_up:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);

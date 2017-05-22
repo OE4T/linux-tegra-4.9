@@ -102,7 +102,7 @@ static u32 therm_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 				&handlerparams->success, 1);
 
 		if (handlerparams->success == 0) {
-			nvgpu_err(g, "could not process cmd\n");
+			nvgpu_err(g, "could not process cmd");
 			status = -ETIMEDOUT;
 			goto exit;
 		}

@@ -152,7 +152,7 @@ u32 gk20a_fifo_get_gr_engine_id(struct gk20a *g)
 			1, ENGINE_GR_GK20A);
 
 	if (!gr_engine_cnt) {
-		nvgpu_err(g, "No GR engine available on this device!\n");
+		nvgpu_err(g, "No GR engine available on this device!");
 	}
 
 	return gr_engine_id;
@@ -693,7 +693,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 			int err = nvgpu_dma_alloc_sys(g, runlist_size,
 					&runlist->mem[i]);
 			if (err) {
-				nvgpu_err(g, "memory allocation failed\n");
+				nvgpu_err(g, "memory allocation failed");
 				goto clean_up_runlist;
 			}
 		}
@@ -947,7 +947,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 		err = nvgpu_dma_alloc_sys(g, f->userd_entry_size *
 				f->num_channels, &f->userd);
 	if (err) {
-		nvgpu_err(g, "userd memory allocation failed\n");
+		nvgpu_err(g, "userd memory allocation failed");
 		goto clean_up;
 	}
 	gk20a_dbg(gpu_dbg_map, "userd gpu va = 0x%llx", f->userd.gpu_va);
@@ -1001,7 +1001,7 @@ void gk20a_fifo_handle_runlist_event(struct gk20a *g)
 {
 	u32 runlist_event = gk20a_readl(g, fifo_intr_runlist_r());
 
-	gk20a_dbg(gpu_dbg_intr, "runlist event %08x\n",
+	gk20a_dbg(gpu_dbg_intr, "runlist event %08x",
 		  runlist_event);
 
 	gk20a_writel(g, fifo_intr_runlist_r(), runlist_event);
@@ -1259,7 +1259,7 @@ static void gk20a_fifo_handle_chsw_fault(struct gk20a *g)
 	u32 intr;
 
 	intr = gk20a_readl(g, fifo_intr_chsw_error_r());
-	nvgpu_err(g, "chsw: %08x\n", intr);
+	nvgpu_err(g, "chsw: %08x", intr);
 	gk20a_fecs_dump_falcon_stats(g);
 	gk20a_writel(g, fifo_intr_chsw_error_r(), intr);
 }
@@ -1545,7 +1545,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 		nvgpu_err(g, "%s mmu fault on engine %d, "
 			   "engine subid %d (%s), client %d (%s), "
 			   "addr 0x%08x:0x%08x, type %d (%s), info 0x%08x,"
-			   "inst_ptr 0x%llx\n",
+			   "inst_ptr 0x%llx",
 			   fake_fault ? "fake" : "",
 			   engine_id,
 			   f.engine_subid_v, f.engine_subid_desc,
@@ -2136,7 +2136,7 @@ bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 
 	/* could not find the engine - should never happen */
 	if (!gk20a_fifo_is_valid_engine_id(g, engine_id)) {
-		nvgpu_err(g, "fifo sched error : 0x%08x, failed to find engine\n",
+		nvgpu_err(g, "fifo sched error : 0x%08x, failed to find engine",
 			sched_error);
 		ret = false;
 		goto err;
@@ -2193,7 +2193,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	if (fifo_intr & fifo_intr_0_pio_error_pending_f()) {
 		/* pio mode is unused.  this shouldn't happen, ever. */
 		/* should we clear it or just leave it pending? */
-		nvgpu_err(g, "fifo pio error!\n");
+		nvgpu_err(g, "fifo pio error!");
 		BUG_ON(1);
 	}
 
@@ -2547,7 +2547,7 @@ void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 		struct channel_gk20a *ch = NULL;
 
 		nvgpu_err(g,
-			"preempt TSG %d timeout\n", id);
+			"preempt TSG %d timeout", id);
 
 		down_read(&tsg->ch_list_lock);
 		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
@@ -2563,7 +2563,7 @@ void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 		struct channel_gk20a *ch = &g->fifo.channel[id];
 
 		nvgpu_err(g,
-			"preempt channel %d timeout\n", id);
+			"preempt channel %d timeout", id);
 
 		if (gk20a_channel_get(ch)) {
 			gk20a_set_error_notifier(ch,
@@ -2746,7 +2746,7 @@ int gk20a_fifo_enable_all_engine_activity(struct gk20a *g)
 				&g->fifo.engine_info[active_engine_id]);
 		if (err) {
 			nvgpu_err(g,
-				"failed to enable engine %d activity\n", active_engine_id);
+				"failed to enable engine %d activity", active_engine_id);
 			ret = err;
 		}
 	}
@@ -2819,7 +2819,7 @@ clean_up:
 		gk20a_dbg_fn("failed");
 		if (gk20a_fifo_enable_engine_activity(g, eng_info))
 			nvgpu_err(g,
-				"failed to enable gr engine activity\n");
+				"failed to enable gr engine activity");
 	} else {
 		gk20a_dbg_fn("done");
 	}
@@ -2839,7 +2839,7 @@ int gk20a_fifo_disable_all_engine_activity(struct gk20a *g,
 				&g->fifo.engine_info[active_engine_id],
 				wait_for_idle);
 		if (err) {
-			nvgpu_err(g, "failed to disable engine %d activity\n",
+			nvgpu_err(g, "failed to disable engine %d activity",
 				active_engine_id);
 			ret = err;
 			break;
@@ -2853,7 +2853,7 @@ int gk20a_fifo_disable_all_engine_activity(struct gk20a *g,
 					&g->fifo.engine_info[active_engine_id]);
 			if (err)
 				nvgpu_err(g,
-					"failed to re-enable engine %d activity\n",
+					"failed to re-enable engine %d activity",
 					active_engine_id);
 		}
 	}
@@ -4108,7 +4108,7 @@ int gk20a_fifo_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 	struct gk20a *g = ch->g;
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		nvgpu_err(g, "invalid operation for TSG!\n");
+		nvgpu_err(g, "invalid operation for TSG!");
 		return -EINVAL;
 	}
 
@@ -4127,7 +4127,7 @@ int gk20a_fifo_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 int gk20a_fifo_set_priority(struct channel_gk20a *ch, u32 priority)
 {
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		nvgpu_err(ch->g, "invalid operation for TSG!\n");
+		nvgpu_err(ch->g, "invalid operation for TSG!");
 		return -EINVAL;
 	}
 

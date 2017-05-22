@@ -315,7 +315,7 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (!channel_idle) {
-		nvgpu_err(ch->g, "jobs not freed for channel %d\n",
+		nvgpu_err(ch->g, "jobs not freed for channel %d",
 				ch->hw_chid);
 		return -EBUSY;
 	}
@@ -336,7 +336,7 @@ int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 	int ret;
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		nvgpu_err(g, "invalid operation for TSG!\n");
+		nvgpu_err(g, "invalid operation for TSG!");
 		return -EINVAL;
 	}
 
@@ -916,7 +916,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 
 	err = nvgpu_dma_alloc_map_sys(ch_vm, size, &q->mem);
 	if (err) {
-		nvgpu_err(g, "%s: memory allocation failed\n", __func__);
+		nvgpu_err(g, "%s: memory allocation failed", __func__);
 		goto clean_up;
 	}
 
@@ -1032,7 +1032,7 @@ static int channel_gk20a_alloc_job(struct channel_gk20a *c,
 			*job_out = &c->joblist.pre_alloc.jobs[put];
 		else {
 			nvgpu_warn(c->g,
-					"out of job ringbuffer space\n");
+					"out of job ringbuffer space");
 			err = -EAGAIN;
 		}
 	} else {
@@ -1261,7 +1261,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 			gpfifo_size * sizeof(struct nvgpu_gpfifo),
 			&c->gpfifo.mem);
 	if (err) {
-		nvgpu_err(g, "%s: memory allocation failed\n", __func__);
+		nvgpu_err(g, "%s: memory allocation failed", __func__);
 		goto clean_up;
 	}
 
@@ -1906,7 +1906,7 @@ int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 		/* read the entry's valid flag before reading its contents */
 		rmb();
 		if ((q->get != e->off) && e->off != 0)
-			nvgpu_err(g, "requests out-of-order, ch=%d\n",
+			nvgpu_err(g, "requests out-of-order, ch=%d",
 				  c->hw_chid);
 		q->get = e->off + e->size;
 	}

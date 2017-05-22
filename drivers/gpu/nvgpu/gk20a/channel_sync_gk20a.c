@@ -503,7 +503,7 @@ static void gk20a_channel_semaphore_launcher(
 			fence, fence->name);
 	err = sync_fence_wait(fence, -1);
 	if (err < 0)
-		nvgpu_err(g, "error waiting pre-fence: %d\n", err);
+		nvgpu_err(g, "error waiting pre-fence: %d", err);
 
 	gk20a_dbg_info(
 		  "wait completed (%d) for fence %p '%s', triggering gpu work",

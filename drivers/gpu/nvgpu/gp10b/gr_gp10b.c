@@ -1631,7 +1631,7 @@ static int gr_gp10b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 	ret = gk20a_disable_channel_tsg(g, fault_ch);
 	if (ret) {
 		nvgpu_err(g,
-				"CILP: failed to disable channel/TSG!\n");
+				"CILP: failed to disable channel/TSG!");
 		return ret;
 	}
 
@@ -1833,7 +1833,7 @@ static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
 			ret = gr_gp10b_set_cilp_preempt_pending(g, fault_ch);
 			if (ret) {
-				nvgpu_err(g, "CILP: error while setting CILP preempt pending!\n");
+				nvgpu_err(g, "CILP: error while setting CILP preempt pending!");
 				return ret;
 			}
 

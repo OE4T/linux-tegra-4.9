@@ -78,14 +78,14 @@ static int alloc_and_kmap_iopage(struct gk20a *g,
 
 	if (!*page) {
 		err = -ENOMEM;
-		nvgpu_err(g, "couldn't allocate io page\n");
+		nvgpu_err(g, "couldn't allocate io page");
 		goto fail;
 	}
 
 	*kvaddr = kmap(*page);
 	if (!*kvaddr) {
 		err = -ENOMEM;
-		nvgpu_err(g, "couldn't kmap io page\n");
+		nvgpu_err(g, "couldn't kmap io page");
 		goto fail;
 	}
 	*phys = page_to_phys(*page);
@@ -119,7 +119,7 @@ int gk20a_init_sim_support(struct platform_device *pdev)
 
 	if (!(g->sim.send_bfr.kvaddr && g->sim.recv_bfr.kvaddr &&
 	      g->sim.msg_bfr.kvaddr)) {
-		nvgpu_err(g, "couldn't allocate all sim buffers\n");
+		nvgpu_err(g, "couldn't allocate all sim buffers");
 		goto fail;
 	}
 
@@ -269,7 +269,7 @@ static int rpc_recv_poll(struct gk20a *g)
 				 (u64)recv_phys_addr_lo << PAGE_SHIFT;
 
 		if (recv_phys_addr != g->sim.msg_bfr.phys) {
-			nvgpu_err(g, "%s Error in RPC reply\n",
+			nvgpu_err(g, "%s Error in RPC reply",
 				__func__);
 			return -1;
 		}
@@ -296,21 +296,21 @@ static int issue_rpc_and_wait(struct gk20a *g)
 
 	err = rpc_send_message(g);
 	if (err) {
-		nvgpu_err(g, "%s failed rpc_send_message\n",
+		nvgpu_err(g, "%s failed rpc_send_message",
 			__func__);
 		return err;
 	}
 
 	err = rpc_recv_poll(g);
 	if (err) {
-		nvgpu_err(g, "%s failed rpc_recv_poll\n",
+		nvgpu_err(g, "%s failed rpc_recv_poll",
 			__func__);
 		return err;
 	}
 
 	/* Now check if RPC really succeeded */
 	if (*sim_msg_hdr(g, sim_msg_result_r()) != sim_msg_result_success_v()) {
-		nvgpu_err(g, "%s received failed status!\n",
+		nvgpu_err(g, "%s received failed status!",
 			__func__);
 		return -(*sim_msg_hdr(g, sim_msg_result_r()));
 	}

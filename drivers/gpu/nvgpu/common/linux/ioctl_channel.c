@@ -203,7 +203,7 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 
 	if (end > dmabuf->size || end < sizeof(struct nvgpu_notification)) {
 		dma_buf_put(dmabuf);
-		nvgpu_err(ch->g, "gk20a_init_error_notifier: invalid offset\n");
+		nvgpu_err(ch->g, "gk20a_init_error_notifier: invalid offset");
 		return -EINVAL;
 	}
 
@@ -462,7 +462,7 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 
 		if (end > dmabuf->size || end < sizeof(struct notification)) {
 			dma_buf_put(dmabuf);
-			nvgpu_err(g, "invalid notifier offset\n");
+			nvgpu_err(g, "invalid notifier offset");
 			return -EINVAL;
 		}
 

@@ -428,7 +428,7 @@ static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 
 	if (err || msg.ret) {
 		nvgpu_err(g,
-			"preempt channel %d failed\n", hw_chid);
+			"preempt channel %d failed", hw_chid);
 		err = -ENOMEM;
 	}
 
@@ -452,7 +452,7 @@ static int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 
 	if (err) {
 		nvgpu_err(g,
-			"preempt tsg %u failed\n", tsgid);
+			"preempt tsg %u failed", tsgid);
 	}
 
 	return err;

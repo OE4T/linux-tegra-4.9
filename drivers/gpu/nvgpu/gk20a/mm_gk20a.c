@@ -1171,7 +1171,7 @@ fail_validate:
 	if (allocated)
 		__nvgpu_vm_free_va(vm, map_offset, pgsz_idx);
 fail_alloc:
-	nvgpu_err(g, "%s: failed with err=%d\n", __func__, err);
+	nvgpu_err(g, "%s: failed with err=%d", __func__, err);
 	return 0;
 }
 
@@ -2670,7 +2670,7 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 
 	err = nvgpu_dma_alloc(g, ram_in_alloc_size_v(), inst_block);
 	if (err) {
-		nvgpu_err(g, "%s: memory allocation failed\n", __func__);
+		nvgpu_err(g, "%s: memory allocation failed", __func__);
 		return err;
 	}
 

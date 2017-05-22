@@ -141,7 +141,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 				vm->gmmu_page_sizes[gmmu_page_size_big]) {
 			pgsz_idx = gmmu_page_size_big;
 		} else {
-			nvgpu_err(g, "invalid kernel page size %d\n",
+			nvgpu_err(g, "invalid kernel page size %d",
 				page_size);
 			goto fail;
 		}
@@ -172,7 +172,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 fail:
 	if (handle)
 		tegra_gr_comm_oob_put_ptr(handle);
-	nvgpu_err(g, "%s: failed with err=%d\n", __func__, err);
+	nvgpu_err(g, "%s: failed with err=%d", __func__, err);
 	return 0;
 }
 

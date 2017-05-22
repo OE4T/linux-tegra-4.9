@@ -2193,7 +2193,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			get_pmu_sequence_out_alloc_ptr_v0;
 		break;
 	default:
-		nvgpu_err(g, "PMU code version not supported version: %d\n",
+		nvgpu_err(g, "PMU code version not supported version: %d",
 			pmu->desc->app_version);
 		err = -EINVAL;
 		goto fail_pmu_seq;
@@ -3227,7 +3227,7 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	err = nvgpu_dma_alloc_map_sys(vm, GK20A_PMU_SEQ_BUF_SIZE,
 			&pmu->seq_buf);
 	if (err) {
-		nvgpu_err(g, "failed to allocate memory\n");
+		nvgpu_err(g, "failed to allocate memory");
 		goto err_free_seq;
 	}
 
@@ -3244,7 +3244,7 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	err = nvgpu_dma_alloc_map(vm, GK20A_PMU_TRACE_BUFSIZE,
 			&pmu->trace_buf);
 	if (err) {
-		nvgpu_err(g, "failed to allocate pmu trace buffer\n");
+		nvgpu_err(g, "failed to allocate pmu trace buffer");
 		goto err_free_seq_buf;
 	}
 
@@ -4542,7 +4542,7 @@ void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 		nvgpu_err(g, "PMU_FALCON_REG_SP : 0x%x",
 			gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 	}
-	nvgpu_err(g, "elpg stat: %d\n",
+	nvgpu_err(g, "elpg stat: %d",
 			pmu->elpg_stat);
 
 	/* PMU may crash due to FECS crash. Dump FECS status */
@@ -4671,7 +4671,7 @@ static bool pmu_validate_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 	return true;
 
 invalid_cmd:
-	nvgpu_err(g, "invalid pmu cmd :\n"
+	nvgpu_err(g, "invalid pmu cmd :"
 		"queue_id=%d,\n"
 		"cmd_size=%d, cmd_unit_id=%d, msg=%p, msg_size=%d,\n"
 		"payload in=%p, in_size=%d, in_offset=%d,\n"
@@ -4756,7 +4756,7 @@ int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 
 	err = nvgpu_dma_alloc_map_sys(vm, size, mem);
 	if (err) {
-		nvgpu_err(g, "failed to allocate memory\n");
+		nvgpu_err(g, "failed to allocate memory");
 		return -ENOMEM;
 	}
 

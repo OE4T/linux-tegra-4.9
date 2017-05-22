@@ -784,13 +784,13 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 
 	ret = gk20a_disable_channel_tsg(g, c);
 	if (ret) {
-		nvgpu_err(g, "failed to disable channel/TSG\n");
+		nvgpu_err(g, "failed to disable channel/TSG");
 		goto clean_up;
 	}
 	ret = gk20a_fifo_preempt(g, c);
 	if (ret) {
 		gk20a_enable_channel_tsg(g, c);
-		nvgpu_err(g, "failed to preempt channel/TSG\n");
+		nvgpu_err(g, "failed to preempt channel/TSG");
 		goto clean_up;
 	}
 
@@ -1857,13 +1857,13 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 
 	ret = gk20a_disable_channel_tsg(g, c);
 	if (ret) {
-		nvgpu_err(g, "failed to disable channel/TSG\n");
+		nvgpu_err(g, "failed to disable channel/TSG");
 		goto out;
 	}
 	ret = gk20a_fifo_preempt(g, c);
 	if (ret) {
 		gk20a_enable_channel_tsg(g, c);
-		nvgpu_err(g, "failed to preempt channel/TSG\n");
+		nvgpu_err(g, "failed to preempt channel/TSG");
 		goto out;
 	}
 
@@ -1925,14 +1925,14 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 
 	ret = gk20a_disable_channel_tsg(g, c);
 	if (ret) {
-		nvgpu_err(g, "failed to disable channel/TSG\n");
+		nvgpu_err(g, "failed to disable channel/TSG");
 		return ret;
 	}
 
 	ret = gk20a_fifo_preempt(g, c);
 	if (ret) {
 		gk20a_enable_channel_tsg(g, c);
-		nvgpu_err(g, "failed to preempt channel/TSG\n");
+		nvgpu_err(g, "failed to preempt channel/TSG");
 		return ret;
 	}
 
@@ -2213,7 +2213,7 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 					false,
 					ucode_info->surface_desc.aperture);
 	if (!ucode_info->surface_desc.gpu_va) {
-		nvgpu_err(g, "failed to update gmmu ptes\n");
+		nvgpu_err(g, "failed to update gmmu ptes");
 		return -ENOMEM;
 	}
 
@@ -2977,7 +2977,7 @@ static int gr_gk20a_alloc_tsg_gr_ctx(struct gk20a *g,
 	int err;
 
 	if (!tsg->vm) {
-		nvgpu_err(tsg->g, "No address space bound\n");
+		nvgpu_err(tsg->g, "No address space bound");
 		return -ENOMEM;
 	}
 
@@ -3017,7 +3017,7 @@ void gr_gk20a_free_gr_ctx(struct gk20a *g,
 void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *tsg)
 {
 	if (!tsg->vm) {
-		nvgpu_err(tsg->g, "No address space bound\n");
+		nvgpu_err(tsg->g, "No address space bound");
 		return;
 	}
 	tsg->g->ops.gr.free_gr_ctx(tsg->g, tsg->vm, tsg->tsg_gr_ctx);
@@ -3942,7 +3942,7 @@ static void gr_gk20a_detect_sm_arch(struct gk20a *g)
 	if (raw_version == gr_gpc0_tpc0_sm_arch_spa_version_smkepler_lp_v())
 		version = 0x320; /* SM 3.2 */
 	else
-		nvgpu_err(g, "Unknown SM version 0x%x\n",
+		nvgpu_err(g, "Unknown SM version 0x%x",
 			  raw_version);
 
 	/* on Kepler, SM version == SPA version */
@@ -4056,7 +4056,7 @@ clean_up:
 	ret = gk20a_fifo_enable_engine_activity(g, gr_info);
 	if (ret) {
 		nvgpu_err(g,
-			"failed to enable gr engine activity\n");
+			"failed to enable gr engine activity");
 	}
 }
 
@@ -4181,7 +4181,7 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	case GK20A_ZBC_TYPE_COLOR:
 		if (index >= GK20A_ZBC_TABLE_SIZE) {
 			nvgpu_err(g,
-				"invalid zbc color table index\n");
+				"invalid zbc color table index");
 			return -EINVAL;
 		}
 		for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
@@ -4196,7 +4196,7 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	case GK20A_ZBC_TYPE_DEPTH:
 		if (index >= GK20A_ZBC_TABLE_SIZE) {
 			nvgpu_err(g,
-				"invalid zbc depth table index\n");
+				"invalid zbc depth table index");
 			return -EINVAL;
 		}
 		query_params->depth = gr->zbc_dep_tbl[index].depth;
@@ -4209,13 +4209,13 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 					 query_params);
 		} else {
 			nvgpu_err(g,
-				"invalid zbc table type\n");
+				"invalid zbc table type");
 			return -EINVAL;
 		}
 		break;
 	default:
 		nvgpu_err(g,
-				"invalid zbc table type\n");
+				"invalid zbc table type");
 		return -EINVAL;
 	}
 
@@ -4305,7 +4305,7 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 		gr->max_default_color_index = 3;
 	else {
 		nvgpu_err(g,
-			   "fail to load default zbc color table\n");
+			   "fail to load default zbc color table");
 		return err;
 	}
 
@@ -4324,7 +4324,7 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 		gr->max_default_depth_index = 2;
 	else {
 		nvgpu_err(g,
-			   "fail to load default zbc depth table\n");
+			   "fail to load default zbc depth table");
 		return err;
 	}
 
@@ -5212,7 +5212,7 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 	if (!pmu->pg_buf.cpu_va) {
 		err = nvgpu_dma_alloc_map_sys(vm, size, &pmu->pg_buf);
 		if (err) {
-			nvgpu_err(g, "failed to allocate memory\n");
+			nvgpu_err(g, "failed to allocate memory");
 			return -ENOMEM;
 		}
 	}
@@ -5589,7 +5589,7 @@ static int gk20a_gr_handle_semaphore_timeout_pending(struct gk20a *g,
 	gk20a_gr_set_error_notifier(g, isr_data,
 			 NVGPU_CHANNEL_GR_SEMAPHORE_TIMEOUT);
 	nvgpu_err(g,
-		   "gr semaphore timeout\n");
+		   "gr semaphore timeout");
 	return -EINVAL;
 }
 
@@ -5601,7 +5601,7 @@ static int gk20a_gr_intr_illegal_notify_pending(struct gk20a *g,
 			 NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY);
 	/* This is an unrecoverable error, reset is needed */
 	nvgpu_err(g,
-		   "gr semaphore timeout\n");
+		   "gr semaphore timeout");
 	return -EINVAL;
 }
 
@@ -5615,7 +5615,7 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 		gk20a_gr_set_error_notifier(g, isr_data,
 			 NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY);
 		nvgpu_err(g, "invalid method class 0x%08x"
-			", offset 0x%08x address 0x%08x\n",
+			", offset 0x%08x address 0x%08x",
 			isr_data->class_num, isr_data->offset, isr_data->addr);
 	}
 	return ret;
@@ -5675,7 +5675,7 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 			 NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 	nvgpu_err(g,
 		   "class error 0x%08x, offset 0x%08x,"
-			" unhandled intr 0x%08x for channel %u\n",
+			" unhandled intr 0x%08x for channel %u",
 		   isr_data->class_num, isr_data->offset,
 		   gr_class_error, isr_data->chid);
 
@@ -5690,7 +5690,7 @@ static int gk20a_gr_handle_firmware_method(struct gk20a *g,
 	gk20a_gr_set_error_notifier(g, isr_data,
 			 NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 	nvgpu_err(g,
-		   "firmware method 0x%08x, offset 0x%08x for channel %u\n",
+		   "firmware method 0x%08x, offset 0x%08x for channel %u",
 		   isr_data->class_num, isr_data->offset,
 		   isr_data->chid);
 	return -EINVAL;
@@ -5768,7 +5768,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 		if (offset + sizeof(struct share_buffer_head) > buffer_size ||
 		    offset + sizeof(struct share_buffer_head) < offset) {
 			nvgpu_err(g,
-				  "cyclestats buffer overrun at offset 0x%x\n",
+				  "cyclestats buffer overrun at offset 0x%x",
 				  offset);
 			break;
 		}
@@ -5786,7 +5786,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 		    offset + sh_hdr->size > buffer_size ||
 		    offset + sh_hdr->size < offset) {
 			nvgpu_err(g,
-				  "bad cyclestate buffer header size at offset 0x%x\n",
+				  "bad cyclestate buffer header size at offset 0x%x",
 				  offset);
 			sh_hdr->failed = true;
 			break;
@@ -5810,7 +5810,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 
 			if (!valid) {
 				nvgpu_err(g,
-					   "invalid cycletstats op offset: 0x%x\n",
+					   "invalid cycletstats op offset: 0x%x",
 					   op_elem->offset_bar0);
 
 				sh_hdr->failed = exit = true;
@@ -6065,7 +6065,7 @@ static int gk20a_gr_update_sm_error_state(struct gk20a *g,
 
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
-		nvgpu_err(g, "unable to stop gr ctxsw\n");
+		nvgpu_err(g, "unable to stop gr ctxsw");
 		goto fail;
 	}
 
@@ -6125,7 +6125,7 @@ static int gk20a_gr_clear_sm_error_state(struct gk20a *g,
 
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
-		nvgpu_err(g, "unable to stop gr ctxsw\n");
+		nvgpu_err(g, "unable to stop gr ctxsw");
 		goto fail;
 	}
 
@@ -6179,7 +6179,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	warp_esr = g->ops.gr.mask_hww_warp_esr(warp_esr);
 
 	if (!sm_debugger_attached) {
-		nvgpu_err(g, "sm hww global %08x warp %08x\n",
+		nvgpu_err(g, "sm hww global %08x warp %08x",
 			  global_esr, warp_esr);
 		return -EFAULT;
 	}
@@ -6199,7 +6199,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 				&early_exit,
 				&ignore_debugger);
 		if (ret) {
-			nvgpu_err(g, "could not pre-process sm error!\n");
+			nvgpu_err(g, "could not pre-process sm error!");
 			return ret;
 		}
 	}
@@ -6241,7 +6241,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	if (do_warp_sync) {
 		ret = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask, true);
 		if (ret) {
-			nvgpu_err(g, "sm did not lock down!\n");
+			nvgpu_err(g, "sm did not lock down!");
 			return ret;
 		}
 	}
@@ -7357,7 +7357,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 	num_gpcs = *(u32 *)(context + ctxsw_prog_main_image_num_gpcs_o());
 	if (gpc_num >= num_gpcs) {
 		nvgpu_err(g,
-		   "GPC 0x%08x is greater than total count 0x%08x!\n",
+		   "GPC 0x%08x is greater than total count 0x%08x!",
 			   gpc_num, num_gpcs);
 		return -EINVAL;
 	}
@@ -7378,7 +7378,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 	context += ctxsw_prog_ucode_header_size_in_bytes();
 	if (!check_local_header_magic(context)) {
 		nvgpu_err(g,
-			   "Invalid local header: magic value\n");
+			   "Invalid local header: magic value");
 		return -EINVAL;
 	}
 
@@ -7409,7 +7409,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 
 			if (chk_addr != addr) {
 				nvgpu_err(g,
-				   "Oops addr miss-match! : 0x%08x != 0x%08x\n",
+				   "Oops addr miss-match! : 0x%08x != 0x%08x",
 					   addr, chk_addr);
 				return -EINVAL;
 			}
@@ -7440,7 +7440,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 
 				if (chk_addr != addr) {
 					nvgpu_err(g,
-						   "Oops addr miss-match! : 0x%08x != 0x%08x\n",
+						   "Oops addr miss-match! : 0x%08x != 0x%08x",
 						   addr, chk_addr);
 					return -EINVAL;
 
@@ -7509,7 +7509,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 	 * extended buffer? */
 	if (offset_to_segment > offset_to_segment_end) {
 		nvgpu_err(g,
-			   "Overflow ctxsw buffer! 0x%08x > 0x%08x\n",
+			   "Overflow ctxsw buffer! 0x%08x > 0x%08x",
 			   offset_to_segment, offset_to_segment_end);
 		return -EINVAL;
 	}
@@ -7710,7 +7710,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	context += ctxsw_prog_ucode_header_size_in_bytes();
 	if (!check_local_header_magic(context)) {
 		nvgpu_err(g,
-			   "Invalid FECS local header: magic value\n");
+			   "Invalid FECS local header: magic value");
 		return -EINVAL;
 	}
 	data32 = *(u32 *)(context + ctxsw_prog_local_priv_register_ctl_o());
@@ -7745,7 +7745,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 
 	if ((gpc_num + 1) > num_gpcs)  {
 		nvgpu_err(g,
-			   "GPC %d not in this context buffer.\n",
+			   "GPC %d not in this context buffer.",
 			   gpc_num);
 		return -EINVAL;
 	}
@@ -7755,7 +7755,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 		context += ctxsw_prog_ucode_header_size_in_bytes();
 		if (!check_local_header_magic(context)) {
 			nvgpu_err(g,
-				   "Invalid GPCCS local header: magic value\n");
+				   "Invalid GPCCS local header: magic value");
 			return -EINVAL;
 
 		}
@@ -7772,7 +7772,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 
 		if ((i == gpc_num) && ((tpc_num + 1) > num_tpcs)) {
 			nvgpu_err(g,
-			   "GPC %d TPC %d not in this context buffer.\n",
+			   "GPC %d TPC %d not in this context buffer.",
 				   gpc_num, tpc_num);
 			return -EINVAL;
 		}
@@ -8547,7 +8547,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 
 	tmp_err = gr_gk20a_enable_ctxsw(g);
 	if (tmp_err) {
-		nvgpu_err(g, "unable to restart ctxsw!\n");
+		nvgpu_err(g, "unable to restart ctxsw!");
 		err = tmp_err;
 	}
 
@@ -8718,7 +8718,7 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 	nvgpu_err(g,
 		"GPC%d TPC%d: timed out while trying to lock down SM", gpc, tpc);
 	nvgpu_err(g,
-		"STATUS0(0x%x)=0x%x CONTROL0=0x%x VALID_MASK=0x%llx PAUSE_MASK=0x%llx TRAP_MASK=0x%llx\n",
+		"STATUS0(0x%x)=0x%x CONTROL0=0x%x VALID_MASK=0x%llx PAUSE_MASK=0x%llx TRAP_MASK=0x%llx",
 		gr_gpc0_tpc0_sm_dbgr_status0_r() + offset, dbgr_status0, dbgr_control0,
 		warps_valid, warps_paused, warps_trapped);
 
@@ -8739,7 +8739,7 @@ void gk20a_suspend_single_sm(struct gk20a *g,
 	/* if an SM debugger isn't attached, skip suspend */
 	if (!gk20a_gr_sm_debugger_attached(g)) {
 		nvgpu_err(g,
-			"SM debugger not attached, skipping suspend!\n");
+			"SM debugger not attached, skipping suspend!");
 		return;
 	}
 
@@ -8754,7 +8754,7 @@ void gk20a_suspend_single_sm(struct gk20a *g,
 			global_esr_mask, check_errors);
 	if (err) {
 		nvgpu_err(g,
-			"SuspendSm failed\n");
+			"SuspendSm failed");
 		return;
 	}
 }
@@ -8770,7 +8770,7 @@ void gk20a_suspend_all_sms(struct gk20a *g,
 	/* if an SM debugger isn't attached, skip suspend */
 	if (!gk20a_gr_sm_debugger_attached(g)) {
 		nvgpu_err(g,
-			"SM debugger not attached, skipping suspend!\n");
+			"SM debugger not attached, skipping suspend!");
 		return;
 	}
 
@@ -8791,7 +8791,7 @@ void gk20a_suspend_all_sms(struct gk20a *g,
 					global_esr_mask, check_errors);
 			if (err) {
 				nvgpu_err(g,
-					"SuspendAllSms failed\n");
+					"SuspendAllSms failed");
 				return;
 			}
 		}
@@ -9099,7 +9099,7 @@ int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 
 	err = gr_gk20a_exec_ctx_ops(ch, ops, i, i, 0);
 	if (err)
-		nvgpu_err(g, "Failed to access register\n");
+		nvgpu_err(g, "Failed to access register");
 	nvgpu_kfree(g, ops);
 	return err;
 }
@@ -9237,7 +9237,7 @@ int gr_gk20a_suspend_contexts(struct gk20a *g,
 
 	err = gr_gk20a_enable_ctxsw(g);
 	if (err)
-		nvgpu_err(g, "unable to restart ctxsw!\n");
+		nvgpu_err(g, "unable to restart ctxsw!");
 
 	*ctx_resident_ch_fd = local_ctx_resident_ch_fd;
 
@@ -9275,7 +9275,7 @@ int gr_gk20a_resume_contexts(struct gk20a *g,
 
 	err = gr_gk20a_enable_ctxsw(g);
 	if (err)
-		nvgpu_err(g, "unable to restart ctxsw!\n");
+		nvgpu_err(g, "unable to restart ctxsw!");
 
 	*ctx_resident_ch_fd = local_ctx_resident_ch_fd;
 

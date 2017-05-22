@@ -346,7 +346,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		speed = 1 << (fls(speed) - 1);
 		err = g->ops.xve.set_speed(g, speed);
 		if (err) {
-			nvgpu_err(g, "Failed to set PCIe bus speed!\n");
+			nvgpu_err(g, "Failed to set PCIe bus speed!");
 			goto done;
 		}
 	}

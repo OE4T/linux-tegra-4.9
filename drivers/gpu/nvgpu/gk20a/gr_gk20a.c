@@ -6155,6 +6155,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 {
 	int ret = 0;
 	bool do_warp_sync = false, early_exit = false, ignore_debugger = false;
+	bool disable_sm_exceptions = true;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
@@ -6209,9 +6210,17 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		return ret;
 	}
 
-	/* if an sm debugger is attached, disable forwarding of tpc exceptions.
-	 * the debugger will reenable exceptions after servicing them. */
-	if (!ignore_debugger && sm_debugger_attached) {
+	/*
+	 * Disable forwarding of tpc exceptions,
+	 * the debugger will reenable exceptions after servicing them.
+	 *
+	 * Do not disable exceptions if the only SM exception is BPT_INT
+	 */
+	if ((global_esr == gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f())
+			&& (warp_esr == 0))
+		disable_sm_exceptions = false;
+
+	if (!ignore_debugger && disable_sm_exceptions) {
 		u32 tpc_exception_en = gk20a_readl(g,
 				gr_gpc0_tpc0_tpccs_tpc_exception_en_r() +
 				offset);
@@ -6219,11 +6228,11 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		gk20a_writel(g,
 			     gr_gpc0_tpc0_tpccs_tpc_exception_en_r() + offset,
 			     tpc_exception_en);
-		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "SM debugger attached");
+		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "SM Exceptions disabled");
 	}
 
 	/* if a debugger is present and an error has occurred, do a warp sync */
-	if (!ignore_debugger && sm_debugger_attached &&
+	if (!ignore_debugger &&
 	    ((warp_esr != 0) || ((global_esr & ~global_mask) != 0))) {
 		gk20a_dbg(gpu_dbg_intr, "warp sync needed");
 		do_warp_sync = true;

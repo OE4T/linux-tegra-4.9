@@ -13,10 +13,9 @@
  * more details.
  */
 
-#include <soc/tegra/fuse.h>
-
 #include <nvgpu/pmu.h>
 #include <nvgpu/log.h>
+#include <nvgpu/fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -383,7 +382,7 @@ static void pmu_dump_security_fuses_gp10b(struct gk20a *g)
 			gk20a_readl(g, fuse_opt_sec_debug_en_r()));
 	nvgpu_err(g, "FUSE_OPT_PRIV_SEC_EN_0 : 0x%x",
 			gk20a_readl(g, fuse_opt_priv_sec_en_r()));
-	tegra_fuse_readl(FUSE_GCPLEX_CONFIG_FUSE_0, &val);
+	nvgpu_tegra_fuse_read_gcplex_config_fuse(&val);
 	nvgpu_err(g, "FUSE_GCPLEX_CONFIG_FUSE_0 : 0x%x",
 			val);
 }

@@ -30,11 +30,6 @@ struct nvgpu_firmware;
 
 #define ZBC_MASK(i)			(~(~(0) << ((i)+1)) & 0xfffe)
 
-/*Fuse defines*/
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
-#define FUSE_GCPLEX_CONFIG_FUSE_0           0x2C8
-#endif
-
 bool gk20a_pmu_is_interrupted(struct nvgpu_pmu *pmu);
 void gk20a_pmu_isr(struct gk20a *g);
 

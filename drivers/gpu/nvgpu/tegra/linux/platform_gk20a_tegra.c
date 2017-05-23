@@ -32,9 +32,6 @@
 #if defined(CONFIG_COMMON_CLK)
 #include <soc/tegra/tegra-dvfs.h>
 #endif
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
-#include <soc/tegra/fuse.h>
-#endif
 #ifdef CONFIG_TEGRA_BWMGR
 #include <linux/platform/tegra/emc_bwmgr.h>
 #endif

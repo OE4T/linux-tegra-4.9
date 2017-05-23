@@ -240,8 +240,6 @@ found_match:
 
 /* GPCPLL NA/DVFS mode methods */
 
-#define FUSE_RESERVED_CALIB 0x204
-
 static inline int fuse_get_gpcpll_adc_rev(u32 val)
 {
 	return (val >> 30) & 0x3;
@@ -264,7 +262,7 @@ static int nvgpu_fuse_calib_gpcpll_get_adc(int *slope_uv, int *intercept_uv)
 	u32 val;
 	int ret;
 
-	ret = nvgpu_tegra_fuse_read(FUSE_RESERVED_CALIB, &val);
+	ret = nvgpu_tegra_fuse_read_reserved_calib(&val);
 	if (ret)
 		return ret;
 

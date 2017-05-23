@@ -13,14 +13,13 @@
  * more details.
  */
 
-#include <soc/tegra/fuse.h>
-
 #include <dt-bindings/soc/gm20b-fuse.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -548,18 +547,18 @@ static u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 
 static void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
-	tegra_fuse_control_write(0x1, FUSE_FUSEBYPASS_0);
-	tegra_fuse_control_write(0x0, FUSE_WRITE_ACCESS_SW_0);
+	nvgpu_tegra_fuse_write_bypass(0x1);
+	nvgpu_tegra_fuse_write_access_sw(0x0);
 
 	if (g->gr.gpc_tpc_mask[gpc_index] == 0x1) {
-		tegra_fuse_control_write(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
-		tegra_fuse_control_write(0x1, FUSE_OPT_GPU_TPC1_DISABLE_0);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(0x0);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc1_disable(0x1);
 	} else if (g->gr.gpc_tpc_mask[gpc_index] == 0x2) {
-		tegra_fuse_control_write(0x1, FUSE_OPT_GPU_TPC0_DISABLE_0);
-		tegra_fuse_control_write(0x0, FUSE_OPT_GPU_TPC1_DISABLE_0);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(0x1);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc1_disable(0x0);
 	} else {
-		tegra_fuse_control_write(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
-		tegra_fuse_control_write(0x0, FUSE_OPT_GPU_TPC1_DISABLE_0);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(0x0);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc1_disable(0x0);
 	}
 }
 

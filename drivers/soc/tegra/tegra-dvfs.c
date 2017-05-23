@@ -1958,6 +1958,8 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 		}
 		seq_printf(s, "   %-26s %-4d mV\n", "nominal",
 			   rail->nominal_millivolts);
+		seq_printf(s, "   %-26s %-4d mV\n", "minimum",
+			   rail->min_millivolts);
 		seq_printf(s, "   %-26s %-4d mV\n", "offset", rail->dbg_mv_offs);
 
 		if (rail->dfll_mode) {

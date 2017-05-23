@@ -617,9 +617,22 @@ static spinlock_t *tegra210_pg_get_lock(void)
 
 static bool tegra210_pg_skip(int id)
 {
+	u32 hid, chipid, major;
+
+	hid = tegra_read_chipid();
+	chipid = tegra_hidrev_get_chipid(hid);
+	major = tegra_hidrev_get_majorrev(hid);
+
 	switch (t210_pg_info[id].part_id) {
 	case TEGRA210_POWER_DOMAIN_GPU:
 		return true;
+	case TEGRA210_POWER_DOMAIN_VENC:
+	case TEGRA210_POWER_DOMAIN_VE2:
+		/* T214 has SE2 in place of ISP2 and powergate
+		 * is not supported for SE2.
+		 */
+		if (chipid == TEGRA210B01 && major >= 2)
+			return true;
 	default:
 		return false;
 	}

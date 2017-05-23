@@ -1070,7 +1070,7 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 			tegra_se_write_key_table(req->info,
 				TEGRA_SE_AES_IV_SIZE,
 				aes_ctx->slot->slot_num,
-				SE_KEY_TABLE_TYPE_ORGIV);
+				SE_KEY_TABLE_TYPE_UPDTDIV);
 		}
 	}
 	tegra_se_setup_ablk_req(se_dev, req);
@@ -1083,7 +1083,7 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 				req_ctx->encrypt, aes_ctx->keylen);
 		tegra_se_config_crypto(se_dev, req_ctx->op_mode,
 			req_ctx->encrypt, aes_ctx->slot->slot_num,
-			req->info ? true : false);
+			false);
 	}
 
 	ret = tegra_se_start_operation(se_dev, req->nbytes, false,

@@ -91,7 +91,18 @@ static int tegra210_afc_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_afc_suspend(struct device *dev)
 {
-	return 0;
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return tegra210_afc_runtime_suspend(dev);
+}
+
+static int tegra210_afc_resume(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return tegra210_afc_runtime_resume(dev);
 }
 #endif
 
@@ -646,7 +657,7 @@ static int tegra210_afc_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra210_afc_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_afc_runtime_suspend,
 			   tegra210_afc_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(tegra210_afc_suspend, NULL)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(tegra210_afc_suspend, tegra210_afc_resume)
 };
 
 static struct platform_driver tegra210_afc_driver = {

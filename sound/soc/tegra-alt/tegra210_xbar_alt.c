@@ -609,7 +609,7 @@ err:
 static const struct dev_pm_ops tegra210_xbar_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra_xbar_runtime_suspend,
 			   tegra_xbar_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(tegra_xbar_suspend, NULL)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(tegra_xbar_suspend, tegra_xbar_resume)
 };
 
 static struct platform_driver tegra210_xbar_driver = {

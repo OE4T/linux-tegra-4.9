@@ -377,7 +377,8 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 			 */
 			if (!mode_dirty)
 				ret = tegra_dc_restore(dc);
-			if (!ret) {
+			/* Update only valid fb window, i.e. win.idx != -1 */
+			if (!ret && (tegra_fb->win.idx != ((u8)-1))) {
 				struct tegra_dc_win *win = &tegra_fb->win;
 
 				tegra_dc_update_windows(&win, 1, NULL, true,

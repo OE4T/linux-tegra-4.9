@@ -2359,6 +2359,66 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 	}
 }
 
+static int dsi_pinctrl_state_inactive(struct tegra_dc_dsi_data *dsi)
+{
+	int err = 0;
+
+	if (!dsi->pin)
+		return 0;
+
+	if (dsi->pin_state[PAD_AB_INACTIVE]) {
+		err = pinctrl_select_state(dsi->pin,
+				dsi->pin_state[PAD_AB_INACTIVE]);
+		if (err < 0) {
+			dev_err(&dsi->dc->ndev->dev,
+					"dsi: can't disable ab pads\n");
+			return err;
+		}
+	}
+
+	if (dsi->pin_state[PAD_CD_INACTIVE]) {
+		err = pinctrl_select_state(dsi->pin,
+				dsi->pin_state[PAD_CD_INACTIVE]);
+		if (err < 0) {
+			dev_err(&dsi->dc->ndev->dev,
+					"dsi: can't disable cd pads\n");
+			return err;
+		}
+	}
+
+	return err;
+}
+
+static int dsi_pinctrl_state_active(struct tegra_dc_dsi_data *dsi)
+{
+	int err = 0;
+
+	if (!dsi->pin)
+		return 0;
+
+	if (dsi->pin_state[PAD_AB_ACTIVE]) {
+		err = pinctrl_select_state(dsi->pin,
+				dsi->pin_state[PAD_AB_ACTIVE]);
+		if (err < 0) {
+			dev_err(&dsi->dc->ndev->dev,
+					"dsi: can't enable ab pads\n");
+			return err;
+		}
+	}
+
+	if (dsi->pin_state[PAD_CD_ACTIVE]) {
+		err = pinctrl_select_state(dsi->pin,
+				dsi->pin_state[PAD_CD_ACTIVE]);
+		if (err < 0) {
+			dev_err(&dsi->dc->ndev->dev,
+					"dsi: can't enable cd pads\n");
+			return err;
+		}
+	}
+
+	return err;
+}
+
 static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
@@ -2447,9 +2507,14 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	tegra_dsi_clk_enable(dsi);
 	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
 
+	err = dsi_pinctrl_state_active(dsi);
+	if (err < 0)
+		return err;
+
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	tegra_dsi_pad_calibration(dsi);
 #endif
+
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
 	 * from bootloader to kernel driver
@@ -4440,6 +4505,15 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi->dsi_io_padctrl[i] = dsi_io_padctrl;
 	}
 
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
+	dsi->pin = devm_pinctrl_get(&dc->ndev->dev);
+	if (IS_ERR_OR_NULL(dsi->pin)) {
+		dev_info(&dc->ndev->dev, "missing pinctrl [%ld]\n",
+				PTR_ERR(dsi->pin));
+		dsi->pin = NULL;
+	}
+#endif
+
 	/* Initialise pad registers needed for split link */
 	if (dc->out->dsi->split_link_type) {
 		dsi->pad_control_base = of_iomap(np_dsi, DSI_PADCTRL_INDEX);
@@ -4655,6 +4729,10 @@ static int _tegra_dsi_host_suspend(struct tegra_dc *dc,
 		val |= DSI_PAD_PDVCLAMP(0x1);
 		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
 
+		err = dsi_pinctrl_state_inactive(dsi);
+		if (err < 0)
+			goto fail;
+
 		/* fall through */
 	case DSI_HOST_SUSPEND_LV1:
 		/* Disable dsi fast and slow clock */
@@ -4698,6 +4776,10 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 	case DSI_HOST_SUSPEND_LV2:
 		tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_ENABLE);
 		tegra_dsi_clk_enable(dsi);
+
+		err = dsi_pinctrl_state_active(dsi);
+		if (err < 0)
+			goto fail;
 
 		/* enable HS logic */
 		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);
@@ -5005,6 +5087,7 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
 		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi, 2);
 
+	dsi_pinctrl_state_inactive(dsi);
 fail:
 	mutex_unlock(&dsi->lock);
 	tegra_dc_io_end(dc);
@@ -5064,6 +5147,25 @@ static void tegra_dc_dsi_resume(struct tegra_dc *dc)
 }
 #endif
 
+static void dsi_pinctrl_init(struct tegra_dc *dc)
+{
+	int i;
+	const char *pinctrl_state[PAD_INVALID] = {"pad_ab_default", "pad_ab_idle",
+					"pad_cd_default", "pad_cd_idle"};
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+
+	for (i = 0; i < ARRAY_SIZE(dsi->pin_state); i++) {
+		dsi->pin_state[i] = pinctrl_lookup_state(
+				dsi->pin, pinctrl_state[i]);
+		if (IS_ERR_OR_NULL(dsi->pin_state[i])) {
+			dev_info(&dc->ndev->dev, "%s not found %ld\n",
+					pinctrl_state[i],
+					PTR_ERR(dsi->pin_state[i]));
+			dsi->pin_state[i] = NULL;
+		}
+	}
+}
+
 static int tegra_dc_dsi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi;
@@ -5106,6 +5208,9 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_padctrl;
 	}
 #endif
+	if (dsi->pin)
+		dsi_pinctrl_init(dc);
+
 	sprintf(sysedp_name, "dsi_%d", dsi->dc->ndev->id);
 #ifdef CONFIG_TEGRA_SYS_EDP
 	dsi->sysedpc = sysedp_create_consumer(dc->ndev->dev.of_node,

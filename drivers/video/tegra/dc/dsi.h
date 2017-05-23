@@ -35,6 +35,14 @@
 
 #define DSI_PADCTRL_INDEX	4
 
+enum {
+	PAD_AB_ACTIVE,
+	PAD_AB_INACTIVE,
+	PAD_CD_ACTIVE,
+	PAD_CD_INACTIVE,
+	PAD_INVALID,
+};
+
 /* Defines the DSI phy timing parameters */
 struct dsi_phy_timing_inclk {
 	unsigned	t_hsdexit;
@@ -139,6 +147,8 @@ struct tegra_dc_dsi_data {
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dsi_padctrl *pad_ctrl;
 #endif
+	struct pinctrl *pin;
+	struct pinctrl_state *pin_state[PAD_INVALID];
 };
 
 /* Max number of data lanes supported */

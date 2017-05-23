@@ -478,8 +478,7 @@ long gk20a_sched_dev_ioctl(struct file *filp, unsigned int cmd,
 			(struct nvgpu_sched_tsg_refcount_args *)buf);
 		break;
 	default:
-		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x",
-			cmd);
+		nvgpu_log_info(g, "unrecognized gpu ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
 	}
 

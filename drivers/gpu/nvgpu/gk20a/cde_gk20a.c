@@ -20,7 +20,6 @@
 #include <linux/fs.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
-#include "platform_gk20a.h"
 #endif
 #include <linux/dma-buf.h>
 
@@ -42,6 +41,7 @@
 #include "fence_gk20a.h"
 #include "gr_gk20a.h"
 #include "debug_gk20a.h"
+#include "platform_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

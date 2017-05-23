@@ -424,7 +424,7 @@ void gk20a_ce_suspend(struct gk20a *g)
 }
 
 /* CE app utility functions */
-u32 gk20a_ce_create_context_with_cb(struct device *dev,
+u32 gk20a_ce_create_context_with_cb(struct gk20a *g,
 		int runlist_id,
 		int priority,
 		int timeslice,
@@ -432,7 +432,6 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 		ce_event_callback user_event_callback)
 {
 	struct gk20a_gpu_ctx *ce_ctx;
-	struct gk20a *g = gk20a_from_dev(dev);
 	struct gk20a_ce_app *ce_app = &g->ce_app;
 	u32 ctx_id = ~0;
 	int err = 0;
@@ -548,7 +547,7 @@ end:
 }
 EXPORT_SYMBOL(gk20a_ce_create_context_with_cb);
 
-int gk20a_ce_execute_ops(struct device *dev,
+int gk20a_ce_execute_ops(struct gk20a *g,
 		u32 ce_ctx_id,
 		u64 src_buf,
 		u64 dst_buf,
@@ -561,7 +560,6 @@ int gk20a_ce_execute_ops(struct device *dev,
 		struct gk20a_fence **gk20a_fence_out)
 {
 	int ret = -EPERM;
-	struct gk20a *g = gk20a_from_dev(dev);
 	struct gk20a_ce_app *ce_app = &g->ce_app;
 	struct gk20a_gpu_ctx *ce_ctx, *ce_ctx_save;
 	bool found = false;
@@ -700,10 +698,9 @@ end:
 }
 EXPORT_SYMBOL(gk20a_ce_execute_ops);
 
-void gk20a_ce_delete_context(struct device *dev,
+void gk20a_ce_delete_context(struct gk20a *g,
 		u32 ce_ctx_id)
 {
-	struct gk20a *g = gk20a_from_dev(dev);
 	gk20a_ce_delete_context_priv(g, ce_ctx_id);
 }
 

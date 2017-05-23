@@ -502,7 +502,7 @@ static int gk20a_vidmem_clear_all(struct gk20a *g)
 	if (mm->vidmem.ce_ctx_id == (u32)~0)
 		return -EINVAL;
 
-	err = gk20a_ce_execute_ops(g->dev,
+	err = gk20a_ce_execute_ops(g,
 			mm->vidmem.ce_ctx_id,
 			0,
 			mm->vidmem.base,
@@ -521,7 +521,7 @@ static int gk20a_vidmem_clear_all(struct gk20a *g)
 
 	region2_base = mm->vidmem.bootstrap_base + mm->vidmem.bootstrap_size;
 
-	err = gk20a_ce_execute_ops(g->dev,
+	err = gk20a_ce_execute_ops(g,
 			mm->vidmem.ce_ctx_id,
 			0,
 			region2_base,
@@ -765,7 +765,7 @@ void gk20a_init_mm_ce_context(struct gk20a *g)
 #if defined(CONFIG_GK20A_VIDMEM)
 	if (g->mm.vidmem.size && (g->mm.vidmem.ce_ctx_id == (u32)~0)) {
 		g->mm.vidmem.ce_ctx_id =
-			gk20a_ce_create_context_with_cb(g->dev,
+			gk20a_ce_create_context_with_cb(g,
 				gk20a_fifo_get_fast_ce_runlist_id(g),
 				-1,
 				-1,
@@ -1683,7 +1683,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 		if (gk20a_last_fence)
 			gk20a_fence_put(gk20a_last_fence);
 
-		err = gk20a_ce_execute_ops(g->dev,
+		err = gk20a_ce_execute_ops(g,
 			g->mm.vidmem.ce_ctx_id,
 			0,
 			chunk->base,

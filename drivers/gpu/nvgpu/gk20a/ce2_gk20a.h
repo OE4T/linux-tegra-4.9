@@ -134,13 +134,13 @@ void gk20a_ce_suspend(struct gk20a *g);
 void gk20a_ce_destroy(struct gk20a *g);
 
 /* CE app utility functions */
-u32 gk20a_ce_create_context_with_cb(struct device *dev,
+u32 gk20a_ce_create_context_with_cb(struct gk20a *g,
 		int runlist_id,
 		int priority,
 		int timeslice,
 		int runlist_level,
 		ce_event_callback user_event_callback);
-int gk20a_ce_execute_ops(struct device *dev,
+int gk20a_ce_execute_ops(struct gk20a *g,
 		u32 ce_ctx_id,
 		u64 src_buf,
 		u64 dst_buf,
@@ -153,7 +153,7 @@ int gk20a_ce_execute_ops(struct device *dev,
 		struct gk20a_fence **gk20a_fence_out);
 void gk20a_ce_delete_context_priv(struct gk20a *g,
 		u32 ce_ctx_id);
-void gk20a_ce_delete_context(struct device *dev,
+void gk20a_ce_delete_context(struct gk20a *g,
 		u32 ce_ctx_id);
 
 

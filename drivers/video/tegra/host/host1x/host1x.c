@@ -1083,9 +1083,6 @@ static int nvhost_probe(struct platform_device *dev)
 		goto fail;
 	}
 
-	if (host_device_op().load_gating_regs)
-		host_device_op().load_gating_regs(dev, pdata->engine_can_cg);
-
 	err = nvhost_alloc_channels(host);
 	if (err) {
 		nvhost_module_idle(dev);

@@ -282,8 +282,6 @@ static void __init tegra186_timer_init(struct device_node *np)
 #endif
 
 	register_syscore_ops(&tegra186_timer_syscore_ops);
-
-	of_node_put(np);
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)

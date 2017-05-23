@@ -400,6 +400,7 @@ struct mmc_host {
 #define MMC_CAP2_NO_SLEEP_CMD	(1 << 28)	/* cannot support sleep mode */
 #define MMC_CAP2_PERIODIC_CACHE_FLUSH	(1 << 29)
 #define MMC_CAP2_EN_CLK_TO_ACCESS_REG		(1 << 30) /* Enable clock to access register */
+#define MMC_CAP2_FORCE_RESCAN	(1 << 31) /* Force rescan requests for the device if this cap is set */
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 

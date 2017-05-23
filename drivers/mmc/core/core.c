@@ -3112,7 +3112,8 @@ int mmc_detect_card_removed(struct mmc_host *host)
 	if (!card)
 		return 1;
 
-	if (!mmc_card_is_removable(host))
+	if (!mmc_card_is_removable(host) &&
+		!(host->caps2 & MMC_CAP2_FORCE_RESCAN))
 		return 0;
 
 	ret = mmc_card_removed(card);
@@ -3167,8 +3168,10 @@ void mmc_rescan(struct work_struct *work)
 	 * if there is a _removable_ card registered, check whether it is
 	 * still present
 	 */
-	if (host->bus_ops && !host->bus_dead && mmc_card_is_removable(host))
+	if (host->bus_ops && !host->bus_dead &&
+		(mmc_card_is_removable(host) || (host->caps2 & MMC_CAP2_FORCE_RESCAN))) {
 		host->bus_ops->detect(host);
+	}
 
 	host->detect_change = 0;
 

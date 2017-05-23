@@ -450,6 +450,15 @@ static int dvfs_rail_connect_to_regulator(struct device *dev,
 			rail->min_millivolts = min_uv / 1000;
 	}
 
+	if (v > rail->nominal_millivolts * 1000) {
+		if (dvfs_rail_set_voltage_reg(rail, rail->nominal_millivolts)) {
+			pr_err("tegra_dvfs: failed lower %s voltage %d to %d\n",
+			       rail->reg_id, v, rail->nominal_millivolts);
+			return -EINVAL;
+		}
+		v = rail->nominal_millivolts * 1000;
+	}
+
 	rail->millivolts = v / 1000;
 	rail->new_millivolts = rail->millivolts;
 	dvfs_rail_stats_init(rail, rail->millivolts);
@@ -1826,7 +1835,13 @@ static int tegra_dvfs_regulator_init(struct device *dev)
 
 	list_for_each_entry(rail, &dvfs_rail_list, node) {
 		tegra_config_dvfs(rail);
-		__tegra_dvfs_rail_enable(rail);
+		if (rail->disabled) {
+			/* Overwrite boot voltage with nominal */
+			rail->disabled = false;
+			__tegra_dvfs_rail_disable(rail);
+		} else {
+			__tegra_dvfs_rail_enable(rail);  /* update to clks */
+		}
 	}
 
 	core_dvfs_started = true;

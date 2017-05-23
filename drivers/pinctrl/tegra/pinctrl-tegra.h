@@ -193,6 +193,7 @@ struct tegra_pingroup {
 	s32 drvtype_width:6;
 	s32 rfu_in_width:6;
 	s32 pad_bit:6;
+	const char *pwr_domain;
 };
 
 /**

@@ -107,10 +107,10 @@ static struct mc_client mc_clients[] = {
 	client("xusb_host", "csw_xusb_hostw", XUSB_HOST),
 	client("xusb_dev", "csr_xusb_devr", XUSB_DEV),
 	client("xusb_dev", "csw_xusb_devw", XUSB_DEV),
-	client("isp2b", "csr_isprab", ISP2B),
+	client("isp2b/se2", "csr_isprab/csr_se2srd", ISP2B), /* isp2b is replaced with se2 on T214 */
 	dummy_client,
-	client("isp2b", "csw_ispwab", ISP2B),
-	client("isp2b", "csw_ispwbb", ISP2B),
+	client("isp2b/se2", "csw_ispw/csw_se2swr", ISP2B),
+	client("isp2b/se2", "csw_ispwbb/unused", ISP2B),
 	dummy_client,
 	dummy_client,
 	client("tsec", "csr_tsecsrd", TSEC),

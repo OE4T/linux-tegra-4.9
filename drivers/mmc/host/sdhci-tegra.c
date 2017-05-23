@@ -210,6 +210,7 @@ struct sdhci_tegra {
 	u8 uhs_mask;
 	unsigned int instance;
 	int volt_switch_gpio;
+	bool force_non_rem_rescan;
 };
 
 /* Module params */
@@ -1567,6 +1568,8 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	}
 	of_property_read_u32(np, "uhs-mask", (u32 *)&tegra_host->uhs_mask);
 
+	tegra_host->force_non_rem_rescan = of_property_read_bool(np,
+		"force-non-removable-rescan");
 	return 0;
 }
 
@@ -1697,6 +1700,9 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		host->mmc->caps2 |= MMC_CAP2_PERIODIC_CACHE_FLUSH;
 
 	host->mmc->caps2 |= MMC_CAP2_EN_CLK_TO_ACCESS_REG;
+
+	if (tegra_host->force_non_rem_rescan)
+		host->mmc->caps2 |= MMC_CAP2_FORCE_RESCAN;
 
 #ifdef CONFIG_MMC_CQ_HCI
 	if (tegra_host->enable_hwcq) {

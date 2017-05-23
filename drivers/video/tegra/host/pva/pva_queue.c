@@ -268,16 +268,19 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 			err = -EFAULT;					\
 			goto err_map_handle;				\
 		}							\
+									\
 		((dst_name).dmabuf) = dma_buf_get(dmabuf_fd);		\
 		if (IS_ERR_OR_NULL((dst_name).dmabuf)) {		\
 			(dst_name).dmabuf = NULL;			\
 			err = -EFAULT;					\
 			goto err_map_handle;				\
 		}							\
+									\
 		err = nvhost_buffer_submit_pin(task->buffers,		\
 				&(dst_name).dmabuf, 1,			\
 				&(dst_name).dma_addr,			\
-				&(dst_name).size);			\
+				&(dst_name).size,			\
+				&(dst_name).heap);			\
 		if (err < 0)						\
 			goto err_map_handle;				\
 	} while (0)
@@ -295,7 +298,8 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 
 			task->input_surfaces_ext[i].dma_addr = cvsram_base;
 			task->input_surfaces_ext[i].size = cvsram_sz - offset;
-			task->input_surfaces_ext[i].cvsram = true;
+			task->input_surfaces_ext[i].heap =
+				NVHOST_BUFFERS_HEAP_CVNAS;
 		} else {
 			PIN_MEMORY(task->input_surfaces_ext[i],
 				task->input_surfaces[i].surface_handle);
@@ -319,7 +323,8 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 
 			task->output_surfaces_ext[i].dma_addr = cvsram_base;
 			task->output_surfaces_ext[i].size = cvsram_sz - offset;
-			task->output_surfaces_ext[i].cvsram = true;
+			task->output_surfaces_ext[i].heap =
+				NVHOST_BUFFERS_HEAP_CVNAS;
 		} else {
 			PIN_MEMORY(task->output_surfaces_ext[i],
 				task->output_surfaces[i].surface_handle);
@@ -427,8 +432,7 @@ static void pva_task_write_surfaces(struct pva_task_surface *hw_surface,
 		if (surface[i].layout == PVA_TASK_SURFACE_LAYOUT_BLOCK_LINEAR)
 			hw_surface[i].address |= PVA_BIT64(39);
 
-		/* Only DRAM is supported currently */
-		hw_surface[i].memory = surface_ext[i].cvsram;
+		hw_surface[i].memory = surface_ext[i].heap;
 	}
 }
 

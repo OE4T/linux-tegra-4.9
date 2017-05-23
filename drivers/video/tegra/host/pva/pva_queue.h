@@ -20,7 +20,10 @@
 #define PVA_QUEUE_H
 
 #include <uapi/linux/nvhost_pva_ioctl.h>
+
 #include "nvhost_queue.h"
+#include "nvhost_buffer.h"
+
 #include "pva-interface.h"
 
 struct dma_buf;
@@ -31,7 +34,7 @@ struct pva_parameter_ext {
 	dma_addr_t dma_addr;
 	size_t size;
 	struct dma_buf *dmabuf;
-	bool cvsram;
+	enum nvhost_buffers_heap heap;
 };
 
 /**

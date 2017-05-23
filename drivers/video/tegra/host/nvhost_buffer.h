@@ -21,6 +21,11 @@
 
 #include <linux/dma-buf.h>
 
+enum nvhost_buffers_heap {
+	NVHOST_BUFFERS_HEAP_DRAM = 0,
+	NVHOST_BUFFERS_HEAP_CVNAS
+};
+
 /**
  * @brief		Information needed for buffers
  *
@@ -94,12 +99,16 @@ void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers,
  * @param count			Number of memhandles in the list
  * @param paddr			Pointer to IOVA list
  * @param psize			Pointer to size of buffer to return
+ * @param heap			Pointer to a list of heaps. This is
+ *				filled by the routine.
+ *
  * @return			0 on success or negative on error
  *
  */
 int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
-				struct dma_buf **dmabufs, u32 count,
-				dma_addr_t *paddr, size_t *psize);
+			     struct dma_buf **dmabufs, u32 count,
+			     dma_addr_t *paddr, size_t *psize,
+			     enum nvhost_buffers_heap *heap);
 
 /**
  * @brief		UnPins the mapped address space on task completion.

@@ -46,6 +46,7 @@ struct nvhost_vm_buffer {
 
 	dma_addr_t addr;
 	size_t size;
+	enum nvhost_buffers_heap heap;
 
 	s32 user_map_count;
 	s32 submit_map_count;
@@ -128,9 +129,13 @@ static int nvhost_buffer_map(struct platform_device *pdev,
 				struct dma_buf *dmabuf,
 				struct nvhost_vm_buffer *vm)
 {
+	/* TBD: These should be queried from the CVNAS driver */
+	const dma_addr_t cvnas_begin = 0x50000000;
+	const dma_addr_t cvnas_end = cvnas_begin + 0x400000;
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
-	dma_addr_t addr;
+	dma_addr_t dma_addr;
+	dma_addr_t phys_addr;
 	int err = 0;
 
 	get_dma_buf(dmabuf);
@@ -149,15 +154,24 @@ static int nvhost_buffer_map(struct platform_device *pdev,
 		goto buf_map_err;
 	}
 
-	addr = sg_dma_address(sgt->sgl);
-	if (!addr)
-		addr = sg_phys(sgt->sgl);
+	phys_addr = sg_phys(sgt->sgl);
+	dma_addr = sg_dma_address(sgt->sgl);
+
+	/* If dma address is not available, we should use the phys address */
+	if (!dma_addr)
+		dma_addr = phys_addr;
+
+	/* Check whether the buffer resides in cvnas using the phys address */
+	if (phys_addr >= cvnas_begin && phys_addr < cvnas_end)
+		vm->heap = NVHOST_BUFFERS_HEAP_CVNAS;
+	else
+		vm->heap = NVHOST_BUFFERS_HEAP_DRAM;
 
 	vm->sgt = sgt;
 	vm->attach = attach;
 	vm->dmabuf = dmabuf;
 	vm->size = dmabuf->size;
-	vm->addr = addr;
+	vm->addr = dma_addr;
 	vm->user_map_count = 1;
 
 	return err;
@@ -220,7 +234,8 @@ nvhost_buffer_init_err:
 
 int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 			     struct dma_buf **dmabufs, u32 count,
-			     dma_addr_t *paddr, size_t *psize)
+			     dma_addr_t *paddr, size_t *psize,
+			     enum nvhost_buffers_heap *heap)
 {
 	struct nvhost_vm_buffer *vm;
 	int i = 0;
@@ -237,6 +252,10 @@ int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 		vm->submit_map_count++;
 		paddr[i] = vm->addr;
 		psize[i] = vm->size;
+
+		/* Return heap only if requested */
+		if (heap != NULL)
+			heap[i] = vm->heap;
 	}
 
 	mutex_unlock(&nvhost_buffers->mutex);

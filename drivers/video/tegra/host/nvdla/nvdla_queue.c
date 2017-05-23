@@ -408,7 +408,7 @@ static int nvdla_map_task_memory(struct nvdla_task *task)
 
 		err = nvhost_buffer_submit_pin(buffers,
 				&task->memory_dmabuf[jj],
-				1, &dma_addr, &dma_size);
+				1, &dma_addr, &dma_size, NULL);
 		if (err) {
 			nvdla_dbg_err(pdev, "fail to pin address list");
 			goto fail_to_pin_mem;
@@ -462,7 +462,7 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->out_task_status_dmabuf[j],
-					1, &dma_addr, &dma_size)) {
+					1, &dma_addr, &dma_size, NULL)) {
 				nvdla_dbg_err(pdev, "fail to pin out status");
 				break;
 			}
@@ -538,7 +538,7 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->postfences_sem_dmabuf[i],
-					1, &dma_addr, &dma_size)) {
+					1, &dma_addr, &dma_size, NULL)) {
 				nvdla_dbg_err(pdev, "fail to pin OUT TSSEM");
 				break;
 			}
@@ -568,7 +568,7 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->postfences_sem_dmabuf[i],
-					1, &dma_addr, &dma_size)) {
+					1, &dma_addr, &dma_size, NULL)) {
 				nvdla_dbg_err(pdev, "fail to pin OUT SEM");
 				break;
 			}
@@ -732,7 +732,7 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->prefences_sem_dmabuf[i],
-					1, &dma_addr, &dma_size)) {
+					1, &dma_addr, &dma_size, NULL)) {
 				nvdla_dbg_err(pdev, "fail to pin IN SEM");
 				break;
 			}
@@ -770,7 +770,7 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->in_task_status_dmabuf[j],
-					1, &dma_addr, &dma_size)) {
+					1, &dma_addr, &dma_size, NULL)) {
 				nvdla_dbg_err(pdev, "fail to pin in status");
 				break;
 			}

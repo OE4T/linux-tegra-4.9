@@ -98,7 +98,7 @@ int tegra_xbar_remove(struct platform_device *pdev);
 int tegra_xbar_runtime_resume(struct device *dev);
 int tegra_xbar_runtime_suspend(struct device *dev);
 int tegra_xbar_suspend(struct device *dev);
-int tegra_xbar_child_suspend(struct device *dev, void *data);
+int tegra_xbar_resume(struct device *dev);
 int tegra_xbar_codec_probe(struct snd_soc_codec *codec);
 int tegra_xbar_probe(struct platform_device *pdev,
 					struct tegra_xbar_soc_data *soc_data);

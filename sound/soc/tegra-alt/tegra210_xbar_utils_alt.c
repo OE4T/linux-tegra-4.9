@@ -291,29 +291,23 @@ int tegra_xbar_runtime_resume(struct device *dev)
 EXPORT_SYMBOL_GPL(tegra_xbar_runtime_resume);
 
 #ifdef CONFIG_PM_SLEEP
-int tegra_xbar_child_suspend(struct device *dev, void *data)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm)
-		if (drv->pm->suspend)
-			ret = drv->pm->suspend(dev);
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(tegra_xbar_child_suspend);
-
 int tegra_xbar_suspend(struct device *dev)
 {
-	device_for_each_child(dev, NULL, tegra_xbar_child_suspend);
+	if (pm_runtime_status_suspended(dev))
+		return 0;
 
-	return 0;
+	return tegra_xbar_runtime_suspend(dev);
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_suspend);
+
+int tegra_xbar_resume(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return tegra_xbar_runtime_resume(dev);
+}
+EXPORT_SYMBOL_GPL(tegra_xbar_resume);
 #endif
 
 int tegra_xbar_remove(struct platform_device *pdev)

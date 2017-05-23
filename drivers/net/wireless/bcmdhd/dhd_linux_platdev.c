@@ -237,6 +237,7 @@ int wifi_dts_set_carddetect(wifi_adapter_info_t *adapter, bool device_present)
 	DHD_INFO(("%s Calling %s card detect\n", __func__, mmc_hostname(host->mmc)));
 	if (device_present == 1) {
 		host->mmc->rescan_disable = 0;
+		host->mmc->rescan_entered = 0;
 		mmc_detect_change(host->mmc, 0);
 	} else {
 		host->mmc->detect_change = 0;

@@ -2478,6 +2478,20 @@ static struct tegra_dvfs_data tegra210b01_dvfs_data = {
 	.core_caps_ucm2 = tegra210b01_core_therm_caps_ucm2,
 };
 
+static void disable_rail_scaling(struct device_node *np)
+{
+	/* With DFLL as clock source CPU rail scaling cannot be disabled */
+
+	if (tegra_dvfs_core_disabled ||
+	    of_property_read_bool(np, "nvidia,core-rail-scaling-disabled")) {
+		vdd_dvfs_rails[VDD_CORE_INDEX]->disabled = true;
+	}
+	if (tegra_dvfs_gpu_disabled ||
+	    of_property_read_bool(np, "nvidia,gpu-rail-scaling-disabled")) {
+		vdd_dvfs_rails[VDD_GPU_INDEX]->disabled = true;
+	}
+}
+
 static int tegra210x_init_dvfs(struct device *dev, bool cpu_lp_init)
 {
 	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
@@ -2563,6 +2577,8 @@ static int tegra210x_init_dvfs(struct device *dev, bool cpu_lp_init)
 	if (cpu_lp_init)
 		init_dvfs_one(&cpu_lp_dvfs, cpu_lp_max_freq_index);
 	init_dvfs_one(&gpu_dvfs, gpu_max_freq_index);
+
+	disable_rail_scaling(node);
 
 	for (i = 0; i < dvfs_data->rails_num; i++) {
 		struct dvfs_rail *rail = vdd_dvfs_rails[i];

@@ -183,9 +183,12 @@ int nvhost_module_busy(struct platform_device *dev)
 	if (ret)
 		return ret;
 
+	down_read(&pdata->busy_lock);
+
 	ret = pm_runtime_get_sync(&dev->dev);
 	if (ret < 0) {
 		pm_runtime_put_noidle(&dev->dev);
+		up_read(&pdata->busy_lock);
 		if (dev->dev.parent && (dev->dev.parent != &platform_bus))
 			nvhost_module_idle(nvhost_get_parent(dev));
 		nvhost_err(&dev->dev, "failed to power on, err %d", ret);
@@ -194,6 +197,8 @@ int nvhost_module_busy(struct platform_device *dev)
 
 	if (pdata->busy)
 		pdata->busy(dev);
+
+	up_read(&pdata->busy_lock);
 
 	return 0;
 }
@@ -228,6 +233,69 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 	/* Explicitly turn off the host1x clocks */
 	if (dev->dev.parent && (dev->dev.parent != &platform_bus))
 		nvhost_module_idle_mult(nvhost_get_parent(dev), original_refs);
+}
+
+int nvhost_module_do_idle(struct device *dev)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+	int ref_cnt;
+	unsigned long end_jiffies;
+	int err;
+
+	/* acquire busy lock to block other busy() calls */
+	down_write(&pdata->busy_lock);
+
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	/* prevent suspend by incrementing usage counter */
+	pm_runtime_get_sync(dev);
+
+	/* check and wait until module is idle (with a timeout) */
+	end_jiffies = jiffies + msecs_to_jiffies(2000);
+	do {
+		msleep(1);
+		ref_cnt = atomic_read(&dev->power.usage_count);
+	} while (ref_cnt != 1 && time_before(jiffies, end_jiffies));
+
+	if (ref_cnt != 1) {
+		nvhost_err(dev, "failed to idle - refcount %d != 1",
+			ref_cnt);
+		goto fail_drop_usage_count;
+	}
+
+	err = nvhost_module_runtime_suspend(dev);
+	if (err)
+		goto fail_drop_usage_count;
+
+	pdata->forced_idle = true;
+
+	return 0;
+
+fail_drop_usage_count:
+	pm_runtime_put_noidle(dev);
+	up_write(&pdata->busy_lock);
+
+	return -EBUSY;
+}
+
+int nvhost_module_do_unidle(struct device *dev)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+	int err = 0;
+
+	if (!pdata->forced_idle)
+		goto done;
+
+	err = nvhost_module_runtime_resume(dev);
+
+	/* balance usage counter */
+	pm_runtime_put_sync(dev);
+	pdata->forced_idle = false;
+
+done:
+	up_write(&pdata->busy_lock);
+	return err;
 }
 
 int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
@@ -640,6 +708,7 @@ int nvhost_module_init(struct platform_device *dev)
 
 	/* initialize no_poweroff_req_mutex */
 	mutex_init(&pdata->no_poweroff_req_mutex);
+	init_rwsem(&pdata->busy_lock);
 
 	/* turn on pm runtime */
 	pm_runtime_enable(&dev->dev);

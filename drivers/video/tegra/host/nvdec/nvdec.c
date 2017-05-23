@@ -581,6 +581,54 @@ static struct of_device_id tegra_nvdec_of_match[] = {
 	{ },
 };
 
+int nvdec_do_idle(void)
+{
+	struct device_node *node;
+	struct platform_device *pdev;
+	/* MAX 2 NVDEC devices supported - so keep track of first dev only */
+	struct platform_device *prev_dev = NULL;
+	int ret = 0;
+
+	node = of_find_matching_node(NULL, tegra_nvdec_of_match);
+	while (node) {
+		pdev = of_find_device_by_node(node);
+
+		ret =  nvhost_module_do_idle(&pdev->dev);
+		if (ret)
+			goto fail;
+
+		node = of_find_matching_node(node, tegra_nvdec_of_match);
+
+		prev_dev = pdev;
+	}
+
+	return 0;
+
+fail:
+	of_node_put(node);
+	if (prev_dev)
+		nvhost_module_do_unidle(&prev_dev->dev);
+	return ret;
+}
+
+int nvdec_do_unidle(void)
+{
+	struct device_node *node;
+	struct platform_device *pdev;
+	int ret = 0;
+
+	node = of_find_matching_node(NULL, tegra_nvdec_of_match);
+	while (node) {
+		pdev = of_find_device_by_node(node);
+
+		ret |=  nvhost_module_do_unidle(&pdev->dev);
+
+		node = of_find_matching_node(node, tegra_nvdec_of_match);
+	}
+
+	return ret;
+}
+
 static int nvdec_open(struct inode *inode, struct file *file)
 {
 	struct nvhost_device_data *pdata;

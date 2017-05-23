@@ -263,6 +263,9 @@ struct nvhost_device_data {
 
 	struct notifier_block		toggle_slcg_notifier;
 
+	struct rw_semaphore busy_lock;
+	bool forced_idle;
+
 	/* Finalize power on. Can be used for context restore. */
 	int (*finalize_poweron)(struct platform_device *dev);
 
@@ -828,6 +831,9 @@ extern struct nvhost_device_data t20_vi_info;
 extern struct nvhost_device_data t30_vi_info;
 extern struct nvhost_device_data t11_vi_info;
 extern struct nvhost_device_data t14_vi_info;
+
+int nvdec_do_idle(void);
+int nvdec_do_unidle(void);
 
 #endif
 

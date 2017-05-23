@@ -654,9 +654,10 @@ int nvhost_module_init(struct platform_device *dev)
 		struct clk *c;
 
 #if defined(CONFIG_TEGRA_BWMGR)
-		if (nvhost_is_bwmgr_clk(pdata, i)) {
-			tegra_bwmgr_set_emc(pdata->bwmgr_handle, 0,
-				pdata->clocks[i].bwmgr_request_type);
+		if (nvhost_module_emc_clock(&pdata->clocks[i])) {
+			if (nvhost_is_bwmgr_clk(pdata, i))
+				tegra_bwmgr_set_emc(pdata->bwmgr_handle, 0,
+					pdata->clocks[i].bwmgr_request_type);
 			pdata->clk[pdata->num_clks++] = NULL;
 			i++;
 			continue;

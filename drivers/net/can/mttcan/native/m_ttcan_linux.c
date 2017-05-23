@@ -1502,7 +1502,6 @@ static int mttcan_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	struct device_node *np;
 
-
 	match = of_match_device(mttcan_of_table, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Failed to find matching dt id\n");
@@ -1665,6 +1664,7 @@ static int mttcan_probe(struct platform_device *pdev)
 
 	dev_info(&dev->dev, "%s device registered (regs=%p, irq=%d)\n",
 		 KBUILD_MODNAME, priv->ttcan->base, dev->irq);
+
 	return 0;
 
 exit_unreg_candev:
@@ -1711,14 +1711,15 @@ static int mttcan_suspend(struct platform_device *pdev, pm_message_t state)
 		netif_stop_queue(ndev);
 		netif_device_detach(ndev);
 	}
-	ret = mttcan_power_down(ndev);
-	if (ret) {
-		netdev_err(ndev, "failed to enter power down mode\n");
-		return ret;
-	}
 
-	if (ndev->flags & IFF_UP)
+	if (ndev->flags & IFF_UP) {
+		ret = mttcan_power_down(ndev);
+		if (ret) {
+			netdev_err(ndev, "failed to enter power down mode\n");
+			return ret;
+		}
 		mttcan_stop(priv);
+	}
 
 	priv->can.state = CAN_STATE_SLEEPING;
 	return 0;
@@ -1730,9 +1731,11 @@ static int mttcan_resume(struct platform_device *pdev)
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct mttcan_priv *priv = netdev_priv(ndev);
 
-	ret = mttcan_power_up(priv);
-	if (ret)
-		return ret;
+	if (ndev->flags & IFF_UP) {
+		ret = mttcan_power_up(priv);
+		if (ret)
+			return ret;
+	}
 
 	if (priv->hwts_rx_en)
 		mod_timer(&priv->timer,

@@ -3333,12 +3333,12 @@ static __init void tegra210_shared_clk_init(char *sclk_high_clk)
 	pllc4_params->flags |= TEGRA_PLL_FIXED;
 
 	clk = tegra_clk_register_cbus("c2bus", "pll_c2", 0, "pll_p", 0,
-					1000000000);
+					1200000000);
 	clk_register_clkdev(clk, "c2bus", NULL);
 	clks[TEGRA210_CLK_C2BUS] = clk;
 
 	clk = tegra_clk_register_cbus("c3bus", "pll_c3", 0, "pll_p", 0,
-					1000000000);
+					1200000000);
 	clk_register_clkdev(clk, "c3bus", NULL);
 	clks[TEGRA210_CLK_C3BUS] = clk;
 
@@ -3368,7 +3368,7 @@ static __init void tegra210_shared_clk_init(char *sclk_high_clk)
 
 	clk = tegra_clk_register_cbus("abus", "pll_a1",
 				      TEGRA_SHARED_BUS_RETENTION | TEGRA_SHARED_BUS_ROUND_PASS_THRU,
-				      "pll_p", 38400000, 1000000000);
+				      "pll_p", 38400000, t210b01 ? 1200000000 : 844800000);
 	clks[TEGRA210_CLK_ABUS] = clk;
 
 	if (clks[TEGRA210_CLK_SCLK_SKIPPER]) {
@@ -3410,7 +3410,7 @@ static __init void tegra210_shared_clk_init(char *sclk_high_clk)
 	clks[TEGRA210_CLK_APE_MASTER] = clk;
 
 	clk = tegra_clk_register_cbus("cbus", "pll_c", 0, "pll_p", 0,
-					1000000000);
+				      1200000000);
 	clk_register_clkdev(clk, "cbus", NULL);
 	clks[TEGRA210_CLK_CBUS] = clk;
 

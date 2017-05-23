@@ -398,6 +398,8 @@ module_param_named(t19x_force_stage, force_stage, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(t19x_force_stage,
 	"Force SMMU mappings to be installed at a particular stage of translation. A value of '1' or '2' forces the corresponding stage. All other values are ignored (i.e. no stage is forced). Note that selecting a specific stage will disable support for nested translation.");
 
+static s8 debug_smmu_id;
+
 enum arm_smmu_arch_version {
 	ARM_SMMU_V1 = 1,
 	ARM_SMMU_V2,
@@ -2950,7 +2952,7 @@ static int smmu_reg32_debugfs_set(void *data, u64 val)
 {
 	struct debugfs_reg32 *regs = (struct debugfs_reg32 *)data;
 
-	writel(val, (smmu_handle->base[0] + regs->offset));
+	writel(val, (smmu_handle->base[debug_smmu_id] + regs->offset));
 	return 0;
 }
 
@@ -2958,7 +2960,7 @@ static int smmu_reg32_debugfs_get(void *data, u64 *val)
 {
 	struct debugfs_reg32 *regs = (struct debugfs_reg32 *)data;
 
-	*val = readl(smmu_handle->base[0] + regs->offset);
+	*val = readl(smmu_handle->base[debug_smmu_id] + regs->offset);
 	return 0;
 }
 
@@ -3014,6 +3016,29 @@ static void arm_smmu_debugfs_delete(struct arm_smmu_device *smmu)
 	debugfs_remove_recursive(smmu->debugfs_root);
 }
 
+static int debug_smmu_id_debugfs_set(void *data, u64 val)
+{
+	struct arm_smmu_device *smmu = (struct arm_smmu_device *)data;
+
+	if (val < 0 || val >= smmu->num_smmus)
+		return -EINVAL;
+
+	debug_smmu_id = (s8)val;
+	smmu->regset->base = smmu->base[debug_smmu_id];
+	smmu->perf_regset->base = smmu->regset->base + 3 * (1 << smmu->pgshift);
+	return 0;
+}
+
+static int debug_smmu_id_debugfs_get(void *data, u64 *val)
+{
+	*val = debug_smmu_id;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(debug_smmu_id_debugfs_fops,
+			debug_smmu_id_debugfs_get,
+			debug_smmu_id_debugfs_set, "%08llx\n");
+
 static void arm_smmu_debugfs_create(struct arm_smmu_device *smmu)
 {
 	int i;
@@ -3024,6 +3049,9 @@ static void arm_smmu_debugfs_create(struct arm_smmu_device *smmu)
 	smmu->debugfs_root = debugfs_create_dir(dev_name(smmu->dev), NULL);
 	if (!smmu->debugfs_root)
 		return;
+
+	debugfs_create_file("debug_smmu_id", S_IRUGO | S_IWUSR,
+			smmu->debugfs_root, smmu, &debug_smmu_id_debugfs_fops);
 
 	dent_gr = debugfs_create_dir("gr", smmu->debugfs_root);
 	if (!dent_gr)

@@ -588,10 +588,29 @@ submit_fail:
 	return err;
 }
 
+static int vi_capture_read_syncpt(struct tegra_channel *chan,
+		uint32_t index, uint32_t *val)
+{
+	struct vi_capture *capture = chan->capture_data;
+	int err;
+
+	err = nvhost_syncpt_read_ext_check(chan->vi->ndev,
+			capture->syncpts[index], val);
+	if (err < 0) {
+		dev_err(chan->vi->dev,
+			 "%s: get progress syncpt %i val failed\n", __func__,
+			 index);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int vi_capture_get_info(struct tegra_channel *chan,
 		struct vi_capture_info *info)
 {
 	struct vi_capture *capture = chan->capture_data;
+	int err;
 
 	if (capture == NULL) {
 		dev_err(chan->vi->dev,
@@ -611,6 +630,19 @@ int vi_capture_get_info(struct tegra_channel *chan,
 	info->syncpts.progress_syncpt = capture->syncpts[PROGRESS_SP_IDX];
 	info->syncpts.emb_data_syncpt = capture->syncpts[EMBDATA_SP_IDX];
 	info->syncpts.line_timer_syncpt = capture->syncpts[LINETIMER_SP_IDX];
+
+	err = vi_capture_read_syncpt(chan, PROGRESS_SP_IDX,
+			&info->syncpts.progress_syncpt_val);
+	if (err < 0)
+		return err;
+	err = vi_capture_read_syncpt(chan, EMBDATA_SP_IDX,
+			&info->syncpts.emb_data_syncpt_val);
+	if (err < 0)
+		return err;
+	err = vi_capture_read_syncpt(chan, LINETIMER_SP_IDX,
+			&info->syncpts.line_timer_syncpt_val);
+	if (err < 0)
+		return err;
 
 	return 0;
 }

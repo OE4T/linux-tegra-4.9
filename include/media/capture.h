@@ -58,9 +58,11 @@ struct vi_capture_setup {
 struct vi_capture_info {
 	struct vi_capture_syncpts {
 		uint32_t progress_syncpt;
+		uint32_t progress_syncpt_val;
 		uint32_t emb_data_syncpt;
+		uint32_t emb_data_syncpt_val;
 		uint32_t line_timer_syncpt;
-		uint32_t __pad;
+		uint32_t line_timer_syncpt_val;
 	} syncpts;
 } __VI_CAPTURE_ALIGN;
 
@@ -73,9 +75,7 @@ struct vi_capture_control_msg {
 
 struct vi_capture_req {
 	uint32_t buffer_index;
-	uint32_t sequence;
 	uint32_t num_relocs;
-	uint32_t __pad;
 	uint64_t reloc_relatives;
 } __VI_CAPTURE_ALIGN;
 

@@ -19,6 +19,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -745,7 +746,7 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	if (g->is_fmodel) {
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(7),
 			gr_fecs_ctxsw_mailbox_value_f(0xc0de7777));
 		gk20a_writel(g, gr_gpccs_ctxsw_mailbox_r(7),

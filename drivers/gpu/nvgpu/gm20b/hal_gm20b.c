@@ -39,6 +39,7 @@
 #include "hal_gm20b.h"
 
 #include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/hw/gm20b/hw_proj_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
@@ -192,7 +193,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->securegpccs = false;
 	gops->pmupstate = false;
 #ifdef CONFIG_TEGRA_ACR
-	if (g->is_fmodel) {
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gops->privsecurity = 1;
 	} else {
 		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
@@ -204,7 +205,7 @@ int gm20b_init_hal(struct gk20a *g)
 		}
 	}
 #else
-	if (g->is_fmodel) {
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gk20a_dbg_info("running ASIM with PRIV security disabled");
 		gops->privsecurity = 0;
 	} else {

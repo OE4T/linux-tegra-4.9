@@ -20,6 +20,7 @@
 
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -358,10 +359,16 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 		return -ENOMEM;
 	}
 
+	nvgpu_kmem_init(g);
+
+	err = nvgpu_init_enabled_flags(g);
+	if (err) {
+		kfree(g);
+		return err;
+	}
+
 	platform->g = g;
 	g->dev = &pdev->dev;
-
-	nvgpu_kmem_init(g);
 
 	err = pci_enable_device(pdev);
 	if (err)

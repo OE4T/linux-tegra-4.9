@@ -45,6 +45,7 @@
 #include "hal_gp10b.h"
 
 #include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
@@ -197,7 +198,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->clock_gating = gp10b_ops.clock_gating;
 	gops->pmupstate = false;
 #ifdef CONFIG_TEGRA_ACR
-	if (g->is_fmodel) {
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gops->privsecurity = 0;
 		gops->securegpccs = 0;
 	} else if (g->is_virtual) {
@@ -215,7 +216,7 @@ int gp10b_init_hal(struct gk20a *g)
 		}
 	}
 #else
-	if (g->is_fmodel) {
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gk20a_dbg_info("running simulator with PRIV security disabled");
 		gops->privsecurity = 0;
 		gops->securegpccs = 0;

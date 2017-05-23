@@ -20,6 +20,7 @@
 
 #include <nvgpu/log.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_pri_ringmaster_gp10b.h>
@@ -34,7 +35,7 @@ static void gp10b_priv_ring_isr(struct gk20a *g)
 	u32 gpc;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return;
 
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());

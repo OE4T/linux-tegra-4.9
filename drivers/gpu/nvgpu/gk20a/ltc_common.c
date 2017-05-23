@@ -19,6 +19,7 @@
  */
 
 #include <nvgpu/dma.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -92,7 +93,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	u64 compbit_store_iova;
 	u64 compbit_base_post_divide64;
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		compbit_store_iova = gk20a_mem_phys(&gr->compbit_store.mem);
 	else
 		compbit_store_iova = g->ops.mm.get_iova_addr(g,

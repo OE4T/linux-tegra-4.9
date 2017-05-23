@@ -29,6 +29,7 @@
 #include <nvgpu/list.h>
 #include <nvgpu/circ_buf.h>
 #include <nvgpu/cond.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -126,7 +127,7 @@ static void free_channel(struct fifo_gk20a *f,
 	 * On teardown it is not possible to dereference platform, but ignoring
 	 * this is fine then because no new channels would be created.
 	 */
-	if (!g->driver_is_dying) {
+	if (!nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING)) {
 		if (g->aggressive_sync_destroy_thresh &&
 			(f->used_channels <
 			 g->aggressive_sync_destroy_thresh))
@@ -2418,7 +2419,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	struct nvgpu_gpfifo __user *user_gpfifo = args ?
 		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : NULL;
 
-	if (g->driver_is_dying)
+	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
 		return -ENODEV;
 
 	if (c->has_timedout)

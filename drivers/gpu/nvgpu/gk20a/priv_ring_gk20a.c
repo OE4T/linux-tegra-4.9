@@ -20,6 +20,7 @@
 
 #include <nvgpu/log.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
@@ -28,7 +29,7 @@
 
 void gk20a_enable_priv_ring(struct gk20a *g)
 {
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return;
 
 	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
@@ -53,7 +54,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	u32 gpc;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return;
 
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());

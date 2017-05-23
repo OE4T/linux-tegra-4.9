@@ -28,6 +28,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -873,10 +874,14 @@ static int gk20a_probe(struct platform_device *dev)
 	set_gk20a(dev, gk20a);
 	gk20a->dev = &dev->dev;
 
-	if (nvgpu_platform_is_simulation(gk20a))
-		gk20a->is_fmodel = true;
-
 	nvgpu_kmem_init(gk20a);
+
+	err = nvgpu_init_enabled_flags(gk20a);
+	if (err)
+		return err;
+
+	if (nvgpu_platform_is_simulation(gk20a))
+		__nvgpu_set_enabled(gk20a, NVGPU_IS_FMODEL, true);
 
 	gk20a->irq_stall = platform_get_irq(dev, 0);
 	gk20a->irq_nonstall = platform_get_irq(dev, 1);

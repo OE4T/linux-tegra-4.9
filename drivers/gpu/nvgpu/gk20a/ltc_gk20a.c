@@ -20,6 +20,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a.h"
 #include "ltc_gk20a.h"
@@ -83,7 +84,7 @@ static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_dbg_info("max comptag lines : %d",
 		max_comptag_lines);
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		err = gk20a_ltc_alloc_phys_cbc(g, compbit_backing_size);
 	else
 		err = gk20a_ltc_alloc_virt_cbc(g, compbit_backing_size);

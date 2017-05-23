@@ -47,6 +47,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/linux/dma.h>
 
@@ -120,7 +121,7 @@ int gk20a_tegra_secure_page_alloc(struct device *dev)
 	dma_addr_t iova;
 	size_t size = PAGE_SIZE;
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return -EINVAL;
 
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
@@ -401,7 +402,7 @@ static bool gk20a_tegra_is_railgated(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	bool ret = false;
 
-	if (!g->is_fmodel)
+	if (!nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		ret = !tegra_dvfs_is_rail_up(platform->gpu_rail);
 
 	return ret;
@@ -419,7 +420,7 @@ static int gm20b_tegra_railgate(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
-	if (g->is_fmodel ||
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL) ||
 	    !tegra_dvfs_is_rail_up(platform->gpu_rail))
 		return 0;
 
@@ -483,7 +484,7 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 	int ret = 0;
 	bool first = false;
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return 0;
 
 	ret = tegra_dvfs_rail_power_up(platform->gpu_rail);

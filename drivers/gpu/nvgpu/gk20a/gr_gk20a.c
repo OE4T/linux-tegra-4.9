@@ -29,6 +29,7 @@
 #include <nvgpu/sort.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/firmware.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
@@ -386,7 +387,7 @@ int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long duration_ms,
 	u32 delay = expect_delay;
 	struct nvgpu_timeout timeout;
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return 0;
 
 	gk20a_dbg_fn("");
@@ -1597,7 +1598,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (gr->ctx_vars.golden_image_initialized) {
 		goto clean_up;
 	}
-	if (!g->is_fmodel) {
+	if (!nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		struct nvgpu_timeout timeout;
 
 		nvgpu_timeout_init(g, &timeout,
@@ -1642,7 +1643,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
 	nvgpu_udelay(10);
 
-	if (!g->is_fmodel) {
+	if (!nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		struct nvgpu_timeout timeout;
 
 		nvgpu_timeout_init(g, &timeout,
@@ -2582,7 +2583,7 @@ int gr_gk20a_load_ctxsw_ucode(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	if (g->is_fmodel) {
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(7),
 			gr_fecs_ctxsw_mailbox_value_f(0xc0de7777));
 		gk20a_writel(g, gr_gpccs_ctxsw_mailbox_r(7),

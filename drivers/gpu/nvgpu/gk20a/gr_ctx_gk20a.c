@@ -23,6 +23,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/firmware.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a.h"
 #include "gr_ctx_gk20a.h"
@@ -442,7 +443,7 @@ done:
 
 int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr)
 {
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return gr_gk20a_init_ctx_vars_sim(g, gr);
 	else
 		return gr_gk20a_init_ctx_vars_fw(g, gr);

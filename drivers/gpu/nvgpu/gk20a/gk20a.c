@@ -23,6 +23,7 @@
 #include <nvgpu/allocator.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/enabled.h>
 
 #include <trace/events/gk20a.h>
 
@@ -364,20 +365,20 @@ done:
  */
 int gk20a_can_busy(struct gk20a *g)
 {
-	if (g->driver_is_dying)
+	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
 		return 0;
 	return 1;
 }
 
 /*
- * Start the process for unloading the driver. Set g->driver_is_dying.
+ * Start the process for unloading the driver. Set NVGPU_DRIVER_IS_DYING.
  */
 void gk20a_driver_start_unload(struct gk20a *g)
 {
 	gk20a_dbg(gpu_dbg_shutdown, "Driver is now going down!\n");
 
 	down_write(&g->busy_lock);
-	g->driver_is_dying = 1;
+	__nvgpu_set_enabled(g, NVGPU_DRIVER_IS_DYING, true);
 	up_write(&g->busy_lock);
 
 	if (g->is_virtual)

@@ -18,6 +18,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/gmmu.h>
 #include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -74,7 +75,7 @@ static int nvgpu_alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	u32 len = num_pages * PAGE_SIZE;
 	int err;
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return alloc_gmmu_phys_pages(vm, order, entry);
 
 	/*

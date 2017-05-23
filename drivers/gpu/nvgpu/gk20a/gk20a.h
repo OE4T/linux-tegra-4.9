@@ -1,7 +1,7 @@
 /*
- * GK20A Graphics
- *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * GK20A Graphics
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -971,14 +971,16 @@ struct gk20a {
 	struct device *dev;
 	struct platform_device *host1x_dev;
 
+	/*
+	 * Used by <nvgpu/enabled.h>. Do not access directly!
+	 */
+	unsigned long *enabled_flags;
+
 	atomic_t usage_count;
-	int driver_is_dying;
 
 	atomic_t nonstall_ops;
 	struct work_struct nonstall_fn_work;
 	struct workqueue_struct *nonstall_work_queue;
-
-	bool is_fmodel;
 
 	struct kref refcount;
 

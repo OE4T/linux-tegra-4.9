@@ -16,6 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <nvgpu/enabled.h>
+
 #include "gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
@@ -123,7 +125,7 @@ int gk20a_elcg_init_idle_filters(struct gk20a *g)
 		active_engine_id = f->active_engines_list[engine_id];
 		gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(active_engine_id));
 
-		if (g->is_fmodel) {
+		if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 			gate_ctrl = set_field(gate_ctrl,
 				therm_gate_ctrl_eng_delay_after_m(),
 				therm_gate_ctrl_eng_delay_after_f(4));

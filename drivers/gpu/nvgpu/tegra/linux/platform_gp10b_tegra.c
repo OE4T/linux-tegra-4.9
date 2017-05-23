@@ -28,6 +28,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
 #include <nvgpu/hashtable.h>
 
 #include "clk.h"
@@ -78,7 +79,7 @@ int gp10b_tegra_get_clocks(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	unsigned int i;
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return 0;
 
 	platform->num_clks = 0;

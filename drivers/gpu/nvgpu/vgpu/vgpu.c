@@ -21,6 +21,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
 
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
@@ -581,13 +582,19 @@ int vgpu_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	nvgpu_kmem_init(gk20a);
+
+	err = nvgpu_init_enabled_flags(gk20a);
+	if (err) {
+		kfree(gk20a);
+		return err;
+	}
+
 	gk20a->dev = dev;
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
-		gk20a->is_fmodel = true;
+		__nvgpu_set_enabled(gk20a, NVGPU_IS_FMODEL, true);
 
 	gk20a->is_virtual = true;
-
-	nvgpu_kmem_init(gk20a);
 
 	priv = nvgpu_kzalloc(gk20a, sizeof(*priv));
 	if (!priv) {

@@ -39,6 +39,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/linux/dma.h>
 
@@ -824,7 +825,7 @@ void free_gmmu_pages(struct vm_gk20a *vm,
 	if (entry->woffset) /* fake shadow mem */
 		return;
 
-	if (g->is_fmodel) {
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		free_gmmu_phys_pages(vm, entry);
 		return;
 	}
@@ -836,7 +837,7 @@ int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
 	gk20a_dbg_fn("");
 
-	if (g->is_fmodel)
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return map_gmmu_phys_pages(entry);
 
 	if (IS_ENABLED(CONFIG_ARM64)) {
@@ -860,7 +861,7 @@ void unmap_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
 	gk20a_dbg_fn("");
 
-	if (g->is_fmodel) {
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		unmap_gmmu_phys_pages(entry);
 		return;
 	}

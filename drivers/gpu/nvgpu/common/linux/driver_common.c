@@ -20,6 +20,7 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/gk20a.h"
@@ -132,6 +133,9 @@ static void nvgpu_init_mm_vars(struct gk20a *g)
 	g->mm.bypass_smmu = platform->bypass_smmu;
 	g->mm.disable_bigpage = platform->disable_bigpage;
 	g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
+
+	__nvgpu_set_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES,
+			    platform->unify_address_spaces);
 
 	nvgpu_mutex_init(&g->mm.tlb_lock);
 	nvgpu_mutex_init(&g->mm.priv_lock);

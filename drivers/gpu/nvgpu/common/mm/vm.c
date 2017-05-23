@@ -22,10 +22,10 @@
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
 #include <nvgpu/semaphore.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
-#include "gk20a/platform_gk20a.h"
 
 int vm_aspace_id(struct vm_gk20a *vm)
 {
@@ -255,7 +255,6 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 	u64 user_lp_vma_start, user_lp_vma_limit;
 	u64 kernel_vma_start, kernel_vma_limit;
 	struct gk20a *g = mm->g;
-	struct gk20a_platform *p = gk20a_get_platform(g->dev);
 
 	if (WARN_ON(kernel_reserved + low_hole > aperture_size))
 		return -ENOMEM;
@@ -275,7 +274,7 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 	vm->vma[gmmu_page_size_small]  = &vm->user;
 	vm->vma[gmmu_page_size_big]    = &vm->user;
 	vm->vma[gmmu_page_size_kernel] = &vm->kernel;
-	if (!p->unify_address_spaces)
+	if (!nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES))
 		vm->vma[gmmu_page_size_big] = &vm->user_lp;
 
 	vm->va_start  = low_hole;
@@ -293,7 +292,7 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 
 	/* Setup vma limits. */
 	if (kernel_reserved + low_hole < aperture_size) {
-		if (p->unify_address_spaces) {
+		if (nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES)) {
 			user_vma_start = low_hole;
 			user_vma_limit = vm->va_limit - kernel_reserved;
 			user_lp_vma_start = user_vma_limit;
@@ -346,7 +345,7 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 	 * Determine if big pages are possible in this VM. If a split address
 	 * space is used then check the user_lp vma instead of the user vma.
 	 */
-	if (p->unify_address_spaces)
+	if (nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES))
 		vm->big_pages = nvgpu_big_pages_possible(vm, user_vma_start,
 					 user_vma_limit - user_vma_start);
 	else

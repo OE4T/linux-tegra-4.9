@@ -245,6 +245,9 @@ static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 	g->ptimer_src_freq = platform->ptimer_src_freq;
 	g->can_railgate = platform->can_railgate_init;
 	g->railgate_delay = platform->railgate_delay_init;
+
+	__nvgpu_set_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES,
+			    platform->unify_address_spaces);
 }
 
 static int vgpu_init_support(struct platform_device *pdev)

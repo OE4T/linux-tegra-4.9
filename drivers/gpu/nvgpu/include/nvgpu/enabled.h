@@ -29,6 +29,11 @@ struct gk20a;
 #define NVGPU_DRIVER_IS_DYING			2
 
 /*
+ * MM flags.
+ */
+#define NVGPU_MM_UNIFY_ADDRESS_SPACES		16
+
+/*
  * Must be greater than the largest bit offset in the above list.
  */
 #define NVGPU_MAX_ENABLED_BITS			64

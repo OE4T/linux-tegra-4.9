@@ -2432,12 +2432,12 @@ static enum gmmu_pgsz_gk20a __get_pte_size_split_addr(struct vm_gk20a *vm,
  */
 enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
 {
-	struct gk20a_platform *p = gk20a_get_platform(vm->mm->g->dev);
+	struct gk20a *g = gk20a_from_vm(vm);
 
 	if (!vm->big_pages)
 		return gmmu_page_size_small;
 
-	if (!p->unify_address_spaces)
+	if (!nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES))
 		return __get_pte_size_split_addr(vm, base, size);
 
 	if (base)

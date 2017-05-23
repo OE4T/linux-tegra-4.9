@@ -350,6 +350,7 @@
 		resets = <&bpmp_resets TEGRA194_RESET_HOST1X>;
 		clocks = <&bpmp_clks TEGRA194_CLK_HOST1X>,
 			 <&bpmp_clks TEGRA194_CLK_ACTMON>;
+		clock-names = "host1x", "actmon";
 		nvidia,vmid = <1>;
 
 		#stream-id-cells = <9>;

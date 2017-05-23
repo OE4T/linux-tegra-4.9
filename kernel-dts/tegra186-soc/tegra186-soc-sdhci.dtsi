@@ -97,6 +97,7 @@
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC3A>;
 		nvidia,en-periodic-calib;
+		force-non-removable-rescan;
 		status = "disabled";
 	};
 

@@ -50,6 +50,10 @@ static void ap_callback_init_and_enable_ctrl(
 		struct gk20a *g, struct pmu_msg *msg,
 		void *param, u32 seq_desc, u32 status);
 
+static int nvgpu_init_task_pg_init(struct gk20a *g);
+static void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
+		bool post_change_event);
+
 static int pmu_init_powergating(struct gk20a *g);
 
 static u32 pmu_perfmon_cntr_sz_v0(struct pmu_gk20a *pmu)
@@ -3176,6 +3180,9 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	/* start with elpg disabled until first enable call */
 	pmu->elpg_refcnt = 0;
 
+	/* Create thread to handle PMU state machine */
+	nvgpu_init_task_pg_init(g);
+
 	if (pmu->sw_ready) {
 		for (i = 0; i < pmu->mutex_cnt; i++) {
 			pmu->mutex[i].id    = i;
@@ -3215,8 +3222,6 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	}
 
 	pmu_seq_init(pmu);
-
-	INIT_WORK(&pmu->pg_init, pmu_setup_hw);
 
 	err = nvgpu_dma_alloc_map_sys(vm, GK20A_PMU_SEQ_BUF_SIZE,
 			&pmu->seq_buf);
@@ -3278,7 +3283,7 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 	    (pmu->pmu_state == PMU_STATE_LOADING_PG_BUF))
 		nvgpu_err(g, "failed to load PGENG buffer");
 	else {
-	  schedule_work(&pmu->pg_init);
+	  nvgpu_pmu_state_change(g, pmu->pmu_state, true);
 	}
 }
 
@@ -3319,36 +3324,93 @@ static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 static void pmu_setup_hw_load_zbc(struct gk20a *g);
 static void pmu_setup_hw_enable_elpg(struct gk20a *g);
 
-void pmu_setup_hw(struct work_struct *work)
+static void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
+		bool post_change_event)
 {
-	struct pmu_gk20a *pmu = container_of(work, struct pmu_gk20a, pg_init);
-	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct pmu_gk20a *pmu = &g->pmu;
 
-	switch (pmu->pmu_state) {
-	case PMU_STATE_INIT_RECEIVED:
-		gk20a_dbg_pmu("pmu starting");
-		if (g->can_elpg)
-			pmu_init_powergating(g);
-		break;
-	case PMU_STATE_ELPG_BOOTED:
-		gk20a_dbg_pmu("elpg booted");
-		gk20a_init_pmu_bind_fecs(g);
-		break;
-	case PMU_STATE_LOADING_PG_BUF:
-		gk20a_dbg_pmu("loaded pg buf");
-		pmu_setup_hw_load_zbc(g);
-		break;
-	case PMU_STATE_LOADING_ZBC:
-		gk20a_dbg_pmu("loaded zbc");
-		pmu_setup_hw_enable_elpg(g);
-		break;
-	case PMU_STATE_STARTED:
-		gk20a_dbg_pmu("PMU booted");
-		break;
-	default:
-		gk20a_dbg_pmu("invalid state");
-		break;
+	pmu->pmu_state = pmu_state;
+
+	if (post_change_event) {
+		pmu->pg_init.state_change = true;
+		nvgpu_cond_signal(&pmu->pg_init.wq);
 	}
+
+	/* make status visible */
+	smp_mb();
+}
+
+static int nvgpu_pg_init_task(void *arg)
+{
+	struct gk20a *g = (struct gk20a *)arg;
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pg_init *pg_init = &pmu->pg_init;
+	u32 pmu_state = 0;
+
+	while (true) {
+
+		NVGPU_COND_WAIT(&pg_init->wq,
+			(pg_init->state_change == true), 0);
+
+		pmu->pg_init.state_change = false;
+		pmu_state = ACCESS_ONCE(pmu->pmu_state);
+
+		if (pmu_state == PMU_STATE_EXIT) {
+			gk20a_dbg_pmu("pmu state exit");
+			break;
+		}
+
+		switch (pmu_state) {
+		case PMU_STATE_INIT_RECEIVED:
+			gk20a_dbg_pmu("pmu starting");
+			if (g->can_elpg)
+				pmu_init_powergating(g);
+			break;
+		case PMU_STATE_ELPG_BOOTED:
+			gk20a_dbg_pmu("elpg booted");
+			gk20a_init_pmu_bind_fecs(g);
+			break;
+		case PMU_STATE_LOADING_PG_BUF:
+			gk20a_dbg_pmu("loaded pg buf");
+			pmu_setup_hw_load_zbc(g);
+			break;
+		case PMU_STATE_LOADING_ZBC:
+			gk20a_dbg_pmu("loaded zbc");
+			pmu_setup_hw_enable_elpg(g);
+			break;
+		case PMU_STATE_STARTED:
+			gk20a_dbg_pmu("PMU booted");
+			break;
+		default:
+			gk20a_dbg_pmu("invalid state");
+			break;
+		}
+
+	}
+
+	while (!nvgpu_thread_should_stop(&pg_init->state_task))
+		nvgpu_msleep(5);
+
+	return 0;
+}
+
+static int nvgpu_init_task_pg_init(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	char thread_name[64];
+	int err = 0;
+
+	nvgpu_cond_init(&pmu->pg_init.wq);
+
+	snprintf(thread_name, sizeof(thread_name),
+				"nvgpu_pg_init_%s", g->name);
+
+	err = nvgpu_thread_create(&pmu->pg_init.state_task, g,
+			nvgpu_pg_init_task, thread_name);
+	if (err)
+		nvgpu_err(g, "failed to start nvgpu_pg_init thread");
+
+	return err;
 }
 
 int gk20a_init_pmu_bind_fecs(struct gk20a *g)
@@ -3386,7 +3448,7 @@ int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 	gk20a_dbg_pmu("cmd post PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_FECS");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
-	pmu->pmu_state = PMU_STATE_LOADING_PG_BUF;
+	nvgpu_pmu_state_change(g, PMU_STATE_LOADING_PG_BUF, false);
 	return err;
 }
 
@@ -3422,7 +3484,7 @@ static void pmu_setup_hw_load_zbc(struct gk20a *g)
 	gk20a_dbg_pmu("cmd post PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_ZBC");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
-	pmu->pmu_state = PMU_STATE_LOADING_ZBC;
+	nvgpu_pmu_state_change(g, PMU_STATE_LOADING_ZBC, false);
 }
 
 static void pmu_setup_hw_enable_elpg(struct gk20a *g)
@@ -3438,7 +3500,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 	gk20a_writel(g, 0x10a164, 0x109ff);
 
 	pmu->initialized = true;
-	pmu->pmu_state = PMU_STATE_STARTED;
+	nvgpu_pmu_state_change(g, PMU_STATE_STARTED, false);
 
 	if (g->ops.pmu_ver.is_pmu_zbc_save_supported) {
 		/* Save zbc table after PMU is initialized. */
@@ -3550,7 +3612,7 @@ int gk20a_init_pmu_support(struct gk20a *g)
 		if (err)
 			return err;
 
-		pmu->pmu_state = PMU_STATE_STARTING;
+		nvgpu_pmu_state_change(g, PMU_STATE_STARTING, false);
 	}
 
 	return err;
@@ -3598,14 +3660,14 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
 				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
 				pmu->initialized = true;
-				pmu->pmu_state = PMU_STATE_STARTED;
+				nvgpu_pmu_state_change(g, PMU_STATE_STARTED,
+					false);
 				WRITE_ONCE(pmu->mscg_stat, PMU_MSCG_DISABLED);
 				/* make status visible */
 				smp_mb();
-			} else {
-				pmu->pmu_state = PMU_STATE_ELPG_BOOTED;
-				schedule_work(&pmu->pg_init);
-			}
+			} else
+				nvgpu_pmu_state_change(g, PMU_STATE_ELPG_BOOTED,
+					true);
 		}
 		break;
 	default:
@@ -3722,7 +3784,8 @@ static int pmu_init_powergating(struct gk20a *g)
 		if (BIT(pg_engine_id) & pg_engine_id_list) {
 			pmu_pg_init_send(g, pg_engine_id);
 			if (pmu->pmu_state == PMU_STATE_INIT_RECEIVED)
-				pmu->pmu_state = PMU_STATE_ELPG_BOOTING;
+				nvgpu_pmu_state_change(g,
+					PMU_STATE_ELPG_BOOTING, false);
 		}
 	}
 
@@ -3931,8 +3994,9 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 	}
 
 	pmu->pmu_ready = true;
-	pmu->pmu_state = PMU_STATE_INIT_RECEIVED;
-	schedule_work(&pmu->pg_init);
+
+	nvgpu_pmu_state_change(g, PMU_STATE_INIT_RECEIVED, true);
+
 	gk20a_dbg_pmu("init received end\n");
 
 	return 0;
@@ -5178,6 +5242,7 @@ int gk20a_pmu_destroy(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_pg_stats_data pg_stat_data = { 0 };
+	struct nvgpu_timeout timeout;
 	int i;
 
 	gk20a_dbg_fn("");
@@ -5186,7 +5251,23 @@ int gk20a_pmu_destroy(struct gk20a *g)
 		return 0;
 
 	/* make sure the pending operations are finished before we continue */
-	cancel_work_sync(&pmu->pg_init);
+	if (nvgpu_thread_is_running(&pmu->pg_init.state_task)) {
+
+		/* post PMU_STATE_EXIT to exit PMU state machine loop */
+		nvgpu_pmu_state_change(g, PMU_STATE_EXIT, true);
+
+		/* Make thread stop*/
+		nvgpu_thread_stop(&pmu->pg_init.state_task);
+
+		/* wait to confirm thread stopped */
+		nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
+		do {
+			if (!nvgpu_thread_is_running(&pmu->pg_init.state_task))
+				break;
+			nvgpu_udelay(2);
+		} while (!nvgpu_timeout_expired_msg(&timeout,
+			"timeout - waiting PMU state machine thread stop"));
+	}
 
 	gk20a_pmu_get_pg_stats(g,
 		PMU_PG_ELPG_ENGINE_ID_GRAPHICS,	&pg_stat_data);
@@ -5206,7 +5287,7 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	for (i = 0; i < PMU_QUEUE_COUNT; i++)
 		nvgpu_mutex_destroy(&pmu->queue[i].mutex);
 
-	pmu->pmu_state = PMU_STATE_OFF;
+	nvgpu_pmu_state_change(g, PMU_STATE_OFF, false);
 	pmu->pmu_ready = false;
 	pmu->perfmon_ready = false;
 	pmu->zbc_ready = false;

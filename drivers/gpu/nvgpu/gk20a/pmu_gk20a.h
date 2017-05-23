@@ -307,8 +307,13 @@ struct pmu_pg_stats_data {
 #define PMU_STATE_LOADING_PG_BUF	5 /* Loading PG buf */
 #define PMU_STATE_LOADING_ZBC		6 /* Loading ZBC buf */
 #define PMU_STATE_STARTED		7 /* Fully unitialized */
+#define PMU_STATE_EXIT			8 /* Exit PMU state machine */
 
-
+struct nvgpu_pg_init {
+	bool state_change;
+	struct nvgpu_cond wq;
+	struct nvgpu_thread state_task;
+};
 
 struct pmu_gk20a {
 
@@ -356,7 +361,7 @@ struct pmu_gk20a {
 	int pmu_state;
 
 #define PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC	1 /* msec */
-	struct work_struct pg_init;
+	struct nvgpu_pg_init pg_init;
 	struct nvgpu_mutex pg_mutex; /* protect pg-RPPG/MSCG enable/disable */
 	struct nvgpu_mutex elpg_mutex; /* protect elpg enable/disable */
 	int elpg_refcnt; /* disable -1, enable +1, <=0 elpg disabled, > 0 elpg enabled */
@@ -440,7 +445,6 @@ int pmu_bootstrap(struct pmu_gk20a *pmu);
 int gk20a_init_pmu(struct pmu_gk20a *pmu);
 void pmu_dump_falcon_stats(struct pmu_gk20a *pmu);
 void gk20a_remove_pmu_support(struct pmu_gk20a *pmu);
-void pmu_setup_hw(struct work_struct *work);
 void pmu_seq_init(struct pmu_gk20a *pmu);
 
 int gk20a_init_pmu(struct pmu_gk20a *pmu);

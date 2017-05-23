@@ -1997,7 +1997,15 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 		return PTR_ERR(dmabuf);
 	}
 
-	if (dmabuf->size < (buffer_offset + mapping_size)) {
+	/* verify that we're not overflowing the buffer, i.e.
+	 * (buffer_offset + mapping_size)> dmabuf->size.
+	 *
+	 * Since buffer_offset + mapping_size could overflow, first check
+	 * that mapping size < dmabuf_size, at which point we can subtract
+	 * mapping_size from both sides for the final comparison.
+	 */
+	if ((mapping_size > dmabuf->size) ||
+			(buffer_offset > (dmabuf->size - mapping_size))) {
 		nvgpu_err(gk20a_from_vm(vm),
 			"buf size %llx < (offset(%llx) + map_size(%llx))\n",
 			(u64)dmabuf->size, buffer_offset, mapping_size);

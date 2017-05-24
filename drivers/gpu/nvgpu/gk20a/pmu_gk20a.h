@@ -426,7 +426,6 @@ int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int gk20a_pmu_destroy(struct gk20a *g);
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load);
 int gk20a_pmu_load_update(struct gk20a *g);
-int gk20a_pmu_debugfs_init(struct device *dev);
 void gk20a_pmu_reset_load_counters(struct gk20a *g);
 void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 		u32 *total_cycles);
@@ -468,5 +467,11 @@ int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size);
 int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size);
+int gk20a_pmu_get_pg_stats(struct gk20a *g,
+		u32 pg_engine_id, struct pmu_pg_stats_data *pg_stat_data);
+bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos);
+
+int nvgpu_pmu_perfmon_start_sampling(struct pmu_gk20a *pmu);
+int nvgpu_pmu_perfmon_stop_sampling(struct pmu_gk20a *pmu);
 
 #endif /*__PMU_GK20A_H__*/

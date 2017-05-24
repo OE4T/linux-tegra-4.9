@@ -1,7 +1,5 @@
 /*
- * GM20B Debug functionality
- *
- * Copyright (C) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2017 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -14,11 +12,15 @@
  *
  */
 
-#ifndef _DEBUG_GM20B_H_
-#define _DEBUG_GM20B_H_
+#include "debug_mm.h"
+#include "gk20a/platform_gk20a.h"
 
-struct gpu_ops;
+#include <linux/debugfs.h>
 
-void gm20b_init_debug_ops(struct gpu_ops *gops);
+void gk20a_mm_debugfs_init(struct gk20a *g)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
-#endif
+	debugfs_create_bool("force_pramin", 0664, platform->debugfs,
+			   &g->mm.force_pramin);
+}

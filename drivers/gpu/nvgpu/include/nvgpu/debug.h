@@ -14,14 +14,11 @@
  *
  */
 
-#ifndef _DEBUG_GK20A_H_
-#define _DEBUG_GK20A_H_
+#ifndef __NVGPU_DEBUG_H__
+#define __NVGPU_DEBUG_H__
 
-struct platform_device;
 struct gk20a;
 struct gpu_ops;
-
-extern unsigned int gk20a_debug_trace_cmdbuf;
 
 struct gk20a_debug_output {
 	void (*fn)(void *ctx, const char *str, size_t len);
@@ -29,13 +26,30 @@ struct gk20a_debug_output {
 	char buf[256];
 };
 
+#ifdef CONFIG_DEBUG_FS
+extern unsigned int gk20a_debug_trace_cmdbuf;
+
 void gk20a_debug_output(struct gk20a_debug_output *o,
 					const char *fmt, ...);
 
-void gk20a_debug_dump(struct device *pdev);
+void gk20a_debug_dump(struct gk20a *g);
 void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o);
-int gk20a_gr_debug_dump(struct device *pdev);
-void gk20a_debug_init(struct device *dev, const char *debugfs_symlink);
+int gk20a_gr_debug_dump(struct gk20a *g);
 void gk20a_init_debug_ops(struct gpu_ops *gops);
-void gk20a_debug_dump_device(void *dev);
+
+void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink);
+void gk20a_debug_deinit(struct gk20a *g);
+#else
+static inline void gk20a_debug_output(struct gk20a_debug_output *o,
+					const char *fmt, ...) {}
+
+static inline void gk20a_debug_dump(struct gk20a *g) {}
+static inline void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o) {}
+static inline int gk20a_gr_debug_dump(struct gk20a *g) { return 0;}
+static inline void gk20a_init_debug_ops(struct gpu_ops *gops) {}
+
+static inline void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink) {}
+static inline void gk20a_debug_deinit(struct gk20a *g) {}
 #endif
+
+#endif /* __NVGPU_DEBUG_H__ */

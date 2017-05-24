@@ -21,6 +21,7 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/debug.h>
 
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/gk20a.h"
@@ -182,7 +183,7 @@ int nvgpu_probe(struct gk20a *g,
 	nvgpu_init_mm_vars(g);
 
 	gk20a_create_sysfs(g->dev);
-	gk20a_debug_init(g->dev, debugfs_symlink);
+	gk20a_debug_init(g, debugfs_symlink);
 
 	g->dbg_regops_tmp_buf = nvgpu_kzalloc(g, SZ_4K);
 	if (!g->dbg_regops_tmp_buf) {

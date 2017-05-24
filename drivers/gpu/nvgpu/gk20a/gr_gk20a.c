@@ -30,6 +30,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/firmware.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/debug.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
@@ -37,12 +38,7 @@
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"
-#include "debug_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
-
-#ifdef CONFIG_DEBUG_FS
-#include "platform_gk20a.h"
-#endif
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
@@ -514,7 +510,7 @@ int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 		nvgpu_err(g,
 			   "timeout waiting on ucode response");
 		gk20a_fecs_dump_falcon_stats(g);
-		gk20a_gr_debug_dump(g->dev);
+		gk20a_gr_debug_dump(g);
 		return -1;
 	} else if (check == WAIT_UCODE_ERROR) {
 		nvgpu_err(g,
@@ -9031,20 +9027,6 @@ static int gr_gk20a_dump_gr_status_regs(struct gk20a *g,
 		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_exception_en_r()));
 	return 0;
 }
-
-#ifdef CONFIG_DEBUG_FS
-int gr_gk20a_debugfs_init(struct gk20a *g)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
-
-	g->debugfs_gr_default_attrib_cb_size =
-		debugfs_create_u32("gr_default_attrib_cb_size",
-				   S_IRUGO|S_IWUSR, platform->debugfs,
-				   &g->gr.attrib_cb_default_size);
-
-	return 0;
-}
-#endif
 
 static void gr_gk20a_init_cyclestats(struct gk20a *g)
 {

@@ -37,6 +37,7 @@
 #include "pramin_gk20a.h"
 #include "priv_ring_gk20a.h"
 
+#include <nvgpu/debug.h>
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
 

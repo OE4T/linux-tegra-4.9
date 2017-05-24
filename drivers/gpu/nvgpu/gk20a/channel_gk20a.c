@@ -30,9 +30,9 @@
 #include <nvgpu/circ_buf.h>
 #include <nvgpu/cond.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/debug.h>
 
 #include "gk20a.h"
-#include "debug_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "fence_gk20a.h"
@@ -1403,6 +1403,7 @@ static u32 get_gp_free_count(struct channel_gk20a *c)
 	return gp_free_count(c);
 }
 
+#ifdef CONFIG_DEBUG_FS
 static void trace_write_pushbuffer(struct channel_gk20a *c,
 				   struct nvgpu_gpfifo *g)
 {
@@ -1439,6 +1440,7 @@ static void trace_write_pushbuffer(struct channel_gk20a *c,
 		dma_buf_vunmap(dmabuf, mem);
 	}
 }
+#endif
 
 static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 					 struct nvgpu_gpfifo *g,
@@ -1446,6 +1448,7 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 					 int offset,
 					 int count)
 {
+#ifdef CONFIG_DEBUG_FS
 	u32 size;
 	int i;
 	struct nvgpu_gpfifo *gp;
@@ -1478,6 +1481,7 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 
 	if (gpfifo_allocated)
 		nvgpu_big_free(c->g, g);
+#endif
 }
 
 static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
@@ -1629,8 +1633,8 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 	nvgpu_err(g, "Job on channel %d timed out",
 		  ch->hw_chid);
 
-	gk20a_debug_dump(g->dev);
-	gk20a_gr_debug_dump(g->dev);
+	gk20a_debug_dump(g);
+	gk20a_gr_debug_dump(g);
 
 	g->ops.fifo.force_reset_ch(ch,
 		NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT, true);

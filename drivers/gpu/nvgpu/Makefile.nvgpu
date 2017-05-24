@@ -66,7 +66,6 @@ nvgpu-y := \
 	gk20a/fifo_gk20a.o \
 	gk20a/channel_gk20a.o \
 	gk20a/channel_sync_gk20a.o \
-	gk20a/debug_gk20a.o \
 	gk20a/dbg_gpu_gk20a.o \
 	gk20a/regops_gk20a.o \
 	gk20a/gr_gk20a.o \
@@ -107,7 +106,6 @@ nvgpu-y := \
 	gm20b/mm_gm20b.o \
 	gm20b/regops_gm20b.o \
 	gm20b/mc_gm20b.o \
-	gm20b/debug_gm20b.o \
 	gm20b/cde_gm20b.o \
 	gm20b/therm_gm20b.o \
 	gm206/bios_gm206.o \
@@ -116,6 +114,18 @@ nvgpu-y := \
 	boardobj/boardobjgrpmask.o \
 	boardobj/boardobjgrp_e255.o \
 	boardobj/boardobjgrp_e32.o
+
+nvgpu-$(CONFIG_DEBUG_FS) += \
+	common/linux/debug.o \
+	common/linux/debug_gr.o \
+	common/linux/debug_fifo.o \
+	common/linux/debug_cde.o \
+	common/linux/debug_ce.o \
+	common/linux/debug_pmu.o \
+	common/linux/debug_sched.o \
+	common/linux/debug_mm.o \
+	common/linux/debug_allocator.o \
+	common/linux/debug_kmem.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += tegra/linux/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o

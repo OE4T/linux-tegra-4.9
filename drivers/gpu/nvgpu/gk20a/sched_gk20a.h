@@ -48,7 +48,6 @@ void gk20a_sched_ctrl_tsg_added(struct gk20a *, struct tsg_gk20a *);
 void gk20a_sched_ctrl_tsg_removed(struct gk20a *, struct tsg_gk20a *);
 int gk20a_sched_ctrl_init(struct gk20a *);
 
-void gk20a_sched_debugfs_init(struct device *dev);
 void gk20a_sched_ctrl_cleanup(struct gk20a *g);
 
 #endif /* __SCHED_GK20A_H */

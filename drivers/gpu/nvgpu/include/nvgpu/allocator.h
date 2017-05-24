@@ -256,11 +256,13 @@ static inline struct gk20a *nvgpu_alloc_to_gpu(struct nvgpu_allocator *a)
 	return a->g;
 }
 
+#ifdef CONFIG_DEBUG_FS
 /*
  * Common functionality for the internals of the allocators.
  */
 void nvgpu_init_alloc_debug(struct gk20a *g, struct nvgpu_allocator *a);
 void nvgpu_fini_alloc_debug(struct nvgpu_allocator *a);
+#endif
 
 int  __nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
 			       const char *name, void *priv, bool dbg,
@@ -280,11 +282,6 @@ static inline void nvgpu_alloc_disable_dbg(struct nvgpu_allocator *a)
  * Debug stuff.
  */
 extern u32 nvgpu_alloc_tracing_on;
-
-#ifdef CONFIG_DEBUG_FS
-struct device;
-void nvgpu_alloc_debugfs_init(struct device *dev);
-#endif
 
 #define nvgpu_alloc_trace_func()			\
 	do {						\

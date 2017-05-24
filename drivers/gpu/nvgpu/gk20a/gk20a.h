@@ -30,6 +30,7 @@ struct acr_desc;
 struct nvgpu_mem_alloc_tracker;
 struct dbg_profiler_object_data;
 struct ecc_gk20a;
+struct gk20a_debug_output;
 
 #include <linux/sched.h>
 #include <nvgpu/lock.h>
@@ -61,7 +62,6 @@ struct ecc_gk20a;
 #include "therm_gk20a.h"
 #include "gm20b/acr_gm20b.h"
 #include "cde_gk20a.h"
-#include "debug_gk20a.h"
 #include "sched_gk20a.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "clk/clk.h"
@@ -1543,10 +1543,6 @@ void nvgpu_wait_for_deferred_interrupts(struct gk20a *g);
 
 struct gk20a * __must_check gk20a_get(struct gk20a *g);
 void gk20a_put(struct gk20a *g);
-
-#ifdef CONFIG_DEBUG_FS
-int gk20a_railgating_debugfs_init(struct device *dev);
-#endif
 
 static inline bool gk20a_platform_has_syncpoints(struct gk20a *g)
 {

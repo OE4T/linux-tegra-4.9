@@ -20,6 +20,8 @@
 #include <nvgpu/rbtree.h>
 #include <nvgpu/lock.h>
 
+struct seq_file;
+
 #define __pstat(s, fmt, msg...)				\
 	do {						\
 		if (s)					\
@@ -92,6 +94,12 @@ struct nvgpu_mem_alloc_tracker {
 	unsigned long max_alloc;
 };
 
+void nvgpu_lock_tracker(struct nvgpu_mem_alloc_tracker *tracker);
+void nvgpu_unlock_tracker(struct nvgpu_mem_alloc_tracker *tracker);
+
+void kmem_print_mem_alloc(struct gk20a *g,
+			 struct nvgpu_mem_alloc *alloc,
+			 struct seq_file *s);
 #endif /* CONFIG_NVGPU_TRACK_MEM_USAGE */
 
 #endif /* __KMEM_PRIV_H__ */

@@ -20,6 +20,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/debug.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"

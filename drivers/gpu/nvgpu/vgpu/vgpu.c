@@ -22,10 +22,10 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/debug.h>
 
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
-#include "gk20a/debug_gk20a.h"
 #include "gk20a/hal_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
@@ -667,7 +667,7 @@ int vgpu_probe(struct platform_device *pdev)
 	if (err)
 		return err;
 
-	gk20a_debug_init(dev, "gpu.0");
+	gk20a_debug_init(gk20a, "gpu.0");
 
 	/* Set DMA parameters to allow larger sgt lists */
 	dev->dma_parms = &gk20a->dma_parms;

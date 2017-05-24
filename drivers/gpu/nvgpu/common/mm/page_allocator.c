@@ -916,7 +916,9 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	if (err)
 		goto fail;
 
+#ifdef CONFIG_DEBUG_FS
 	nvgpu_init_alloc_debug(g, __a);
+#endif
 	palloc_dbg(a, "New allocator: type      page\n");
 	palloc_dbg(a, "               base      0x%llx\n", a->base);
 	palloc_dbg(a, "               size      0x%llx\n", a->length);

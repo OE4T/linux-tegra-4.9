@@ -23,9 +23,10 @@
 
 #include "channel_gk20a.h"
 #include "tsg_gk20a.h"
-#include "debug_gk20a.h"
 
 #include <nvgpu/kref.h>
+
+struct gk20a_debug_output;
 
 #define MAX_RUNLIST_BUFFERS		2
 
@@ -287,8 +288,6 @@ int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
 int gk20a_fifo_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice);
 
 
-void gk20a_fifo_debugfs_init(struct device *dev);
-
 const char *gk20a_fifo_interleave_level_name(u32 interleave_level);
 
 int gk20a_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
@@ -341,6 +340,8 @@ void gk20a_dump_channel_status_ramfc(struct gk20a *g,
 				     struct gk20a_debug_output *o,
 				     u32 hw_chid,
 				     struct ch_state *ch_state);
+void gk20a_debug_dump_all_channel_status_ramfc(struct gk20a *g,
+		 struct gk20a_debug_output *o);
 void gk20a_dump_pbdma_status(struct gk20a *g,
 				 struct gk20a_debug_output *o);
 void gk20a_dump_eng_status(struct gk20a *g,

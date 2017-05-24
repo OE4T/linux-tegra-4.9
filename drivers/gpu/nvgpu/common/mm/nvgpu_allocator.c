@@ -20,11 +20,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
-#ifdef CONFIG_DEBUG_FS
-#include "gk20a/platform_gk20a.h"
-#endif
-
-u32 nvgpu_alloc_tracing_on;
 
 u64 nvgpu_alloc_length(struct nvgpu_allocator *a)
 {
@@ -151,68 +146,3 @@ int __nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
 
 	return 0;
 }
-
-#ifdef CONFIG_DEBUG_FS
-void nvgpu_alloc_print_stats(struct nvgpu_allocator *__a,
-			     struct seq_file *s, int lock)
-{
-	__a->ops->print_stats(__a, s, lock);
-}
-
-static int __alloc_show(struct seq_file *s, void *unused)
-{
-	struct nvgpu_allocator *a = s->private;
-
-	nvgpu_alloc_print_stats(a, s, 1);
-
-	return 0;
-}
-
-static int __alloc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, __alloc_show, inode->i_private);
-}
-
-static const struct file_operations __alloc_fops = {
-	.open = __alloc_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-#endif
-
-void nvgpu_init_alloc_debug(struct gk20a *g, struct nvgpu_allocator *a)
-{
-#ifdef CONFIG_DEBUG_FS
-	if (!g->debugfs_allocators)
-		return;
-
-	a->debugfs_entry = debugfs_create_file(a->name, S_IRUGO,
-					       g->debugfs_allocators,
-					       a, &__alloc_fops);
-#endif
-}
-
-void nvgpu_fini_alloc_debug(struct nvgpu_allocator *a)
-{
-#ifdef CONFIG_DEBUG_FS
-	if (!IS_ERR_OR_NULL(a->debugfs_entry))
-		debugfs_remove(a->debugfs_entry);
-#endif
-}
-
-#ifdef CONFIG_DEBUG_FS
-void nvgpu_alloc_debugfs_init(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct dentry *gpu_root = platform->debugfs;
-	struct gk20a *g = get_gk20a(dev);
-
-	g->debugfs_allocators = debugfs_create_dir("allocators", gpu_root);
-	if (IS_ERR_OR_NULL(g->debugfs_allocators))
-		return;
-
-	debugfs_create_u32("tracing", 0664, g->debugfs_allocators,
-			   &nvgpu_alloc_tracing_on);
-}
-#endif

@@ -29,6 +29,7 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/debug.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -970,10 +971,7 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 
 	gk20a_user_deinit(dev, &nvgpu_class);
 
-#ifdef CONFIG_DEBUG_FS
-	debugfs_remove_recursive(platform->debugfs);
-	debugfs_remove_recursive(platform->debugfs_alias);
-#endif
+	gk20a_debug_deinit(g);
 
 	gk20a_remove_sysfs(dev);
 

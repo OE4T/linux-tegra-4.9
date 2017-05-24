@@ -44,6 +44,7 @@
 #include "gp10b.h"
 #include "hal_gp10b.h"
 
+#include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 

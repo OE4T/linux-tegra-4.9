@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2017 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -12,10 +12,10 @@
  *
  */
 
-#include "gk20a/gk20a.h"
-#include "debug_gm20b.h"
+#ifndef __NVGPU_DEBUG_ALLOCATOR_H__
+#define __NVGPU_DEBUG_ALLOCATOR_H__
 
-void gm20b_init_debug_ops(struct gpu_ops *gops)
-{
-	gops->debug.show_dump = gk20a_debug_show_dump;
-}
+struct gk20a;
+void nvgpu_alloc_debugfs_init(struct gk20a *g);
+
+#endif /* __NVGPU_DEBUG_ALLOCATOR_H__ */

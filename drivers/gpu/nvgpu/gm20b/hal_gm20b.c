@@ -33,11 +33,11 @@
 #include "clk_gm20b.h"
 #include "mc_gm20b.h"
 #include "regops_gm20b.h"
-#include "debug_gm20b.h"
 #include "cde_gm20b.h"
 #include "therm_gm20b.h"
 #include "hal_gm20b.h"
 
+#include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 
@@ -234,7 +234,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
-	gm20b_init_debug_ops(gops);
+	gk20a_init_debug_ops(gops);
 	gk20a_init_dbg_session_ops(gops);
 	gm20b_init_cde_ops(gops);
 	gm20b_init_therm_ops(gops);

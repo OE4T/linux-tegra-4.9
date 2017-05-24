@@ -295,7 +295,6 @@ int gk20a_cde_convert(struct gk20a *g,
 		struct nvgpu_fence *fence,
 		u32 __flags, struct gk20a_cde_param *params,
 		int num_params, struct gk20a_fence **fence_out);
-void gk20a_cde_debugfs_init(struct device *dev);
 
 int gk20a_prepare_compressible_read(
 		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,

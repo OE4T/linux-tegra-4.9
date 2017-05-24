@@ -13,15 +13,10 @@
  * more details.
  */
 
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#endif
-
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
 
 #include "gk20a.h"
-#include "debug_gk20a.h"
 
 #include <nvgpu/log.h>
 
@@ -32,10 +27,6 @@
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
-
-#ifdef CONFIG_DEBUG_FS
-#include "platform_gk20a.h"
-#endif
 
 static u32 ce2_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {
@@ -728,18 +719,3 @@ void gk20a_ce_delete_context_priv(struct gk20a *g,
 	return;
 }
 EXPORT_SYMBOL(gk20a_ce_delete_context);
-
-#ifdef CONFIG_DEBUG_FS
-void gk20a_ce_debugfs_init(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct gk20a *g = get_gk20a(dev);
-
-	debugfs_create_u32("ce_app_ctx_count", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->ce_app.ctx_count);
-	debugfs_create_u32("ce_app_state", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->ce_app.app_state);
-	debugfs_create_u32("ce_app_next_ctx_id", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->ce_app.next_ctx_id);
-}
-#endif

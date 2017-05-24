@@ -2563,13 +2563,13 @@ priv_exist_or_err:
 	return 0;
 }
 
-int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
+int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct gk20a *g,
 			   u64 offset, struct gk20a_buffer_state **state)
 {
 	int err = 0;
 	struct gk20a_dmabuf_priv *priv;
 	struct gk20a_buffer_state *s;
-	struct gk20a *g = get_gk20a(dev);
+	struct device *dev = g->dev;
 
 	if (WARN_ON(offset >= (u64)dmabuf->size))
 		return -EINVAL;
@@ -3122,18 +3122,6 @@ static bool gk20a_mm_is_bar1_supported(struct gk20a *g)
 {
 	return true;
 }
-
-#ifdef CONFIG_DEBUG_FS
-void gk20a_mm_debugfs_init(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct dentry *gpu_root = platform->debugfs;
-	struct gk20a *g = gk20a_get_platform(dev)->g;
-
-	debugfs_create_bool("force_pramin", 0664, gpu_root,
-			   &g->mm.force_pramin);
-}
-#endif
 
 void gk20a_init_mm(struct gpu_ops *gops)
 {

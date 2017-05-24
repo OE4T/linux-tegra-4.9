@@ -156,10 +156,4 @@ void gk20a_ce_delete_context_priv(struct gk20a *g,
 void gk20a_ce_delete_context(struct gk20a *g,
 		u32 ce_ctx_id);
 
-
-#ifdef CONFIG_DEBUG_FS
-/* CE app debugfs api */
-void gk20a_ce_debugfs_init(struct device *dev);
-#endif
-
 #endif /*__CE2_GK20A_H__*/

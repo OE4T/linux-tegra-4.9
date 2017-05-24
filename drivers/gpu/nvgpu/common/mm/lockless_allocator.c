@@ -99,7 +99,9 @@ static void nvgpu_lockless_alloc_destroy(struct nvgpu_allocator *a)
 {
 	struct nvgpu_lockless_allocator *pa = a->priv;
 
+#ifdef CONFIG_DEBUG_FS
 	nvgpu_fini_alloc_debug(a);
+#endif
 
 	nvgpu_vfree(a->g, pa->next);
 	nvgpu_kfree(nvgpu_alloc_to_gpu(a), pa);
@@ -191,7 +193,9 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	wmb();
 	a->inited = true;
 
+#ifdef CONFIG_DEBUG_FS
 	nvgpu_init_alloc_debug(g, __a);
+#endif
 	alloc_dbg(__a, "New allocator: type          lockless\n");
 	alloc_dbg(__a, "               base          0x%llx\n", a->base);
 	alloc_dbg(__a, "               nodes         %d\n", a->nr_nodes);

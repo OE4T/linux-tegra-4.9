@@ -18,9 +18,6 @@
 
 #include <linux/dma-mapping.h>
 #include <linux/fs.h>
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#endif
 #include <linux/dma-buf.h>
 
 #include <trace/events/gk20a.h>
@@ -40,8 +37,6 @@
 #include "cde_gk20a.h"
 #include "fence_gk20a.h"
 #include "gr_gk20a.h"
-#include "debug_gk20a.h"
-#include "platform_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
@@ -1585,8 +1580,7 @@ int gk20a_prepare_compressible_read(
 	if (IS_ERR(dmabuf))
 		return -EINVAL;
 
-	err = gk20a_dmabuf_get_state(dmabuf, dev_from_gk20a(g),
-				     offset, &state);
+	err = gk20a_dmabuf_get_state(dmabuf, g, offset, &state);
 	if (err) {
 		dma_buf_put(dmabuf);
 		return err;
@@ -1650,7 +1644,7 @@ int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,
 		return -EINVAL;
 	}
 
-	err = gk20a_dmabuf_get_state(dmabuf, dev_from_gk20a(g), offset, &state);
+	err = gk20a_dmabuf_get_state(dmabuf, g, offset, &state);
 	if (err) {
 		nvgpu_err(g, "could not get state from dmabuf");
 		dma_buf_put(dmabuf);
@@ -1671,38 +1665,3 @@ int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,
 	dma_buf_put(dmabuf);
 	return 0;
 }
-
-#ifdef CONFIG_DEBUG_FS
-static ssize_t gk20a_cde_reload_write(struct file *file,
-	const char __user *userbuf, size_t count, loff_t *ppos)
-{
-	struct gk20a *g = file->private_data;
-	gk20a_cde_reload(g);
-	return count;
-}
-
-static const struct file_operations gk20a_cde_reload_fops = {
-	.open		= simple_open,
-	.write		= gk20a_cde_reload_write,
-};
-
-void gk20a_cde_debugfs_init(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct gk20a *g = get_gk20a(dev);
-
-	if (!platform->has_cde)
-		return;
-
-	debugfs_create_u32("cde_parameter", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->cde_app.shader_parameter);
-	debugfs_create_u32("cde_ctx_count", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->cde_app.ctx_count);
-	debugfs_create_u32("cde_ctx_usecount", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->cde_app.ctx_usecount);
-	debugfs_create_u32("cde_ctx_count_top", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->cde_app.ctx_count_top);
-	debugfs_create_file("reload_cde_firmware", S_IWUSR, platform->debugfs,
-			    g, &gk20a_cde_reload_fops);
-}
-#endif

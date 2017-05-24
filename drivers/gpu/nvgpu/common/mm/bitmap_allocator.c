@@ -411,7 +411,9 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	wmb();
 	a->inited = true;
 
+#ifdef CONFIG_DEBUG_FS
 	nvgpu_init_alloc_debug(g, __a);
+#endif
 	alloc_dbg(__a, "New allocator: type      bitmap\n");
 	alloc_dbg(__a, "               base      0x%llx\n", a->base);
 	alloc_dbg(__a, "               bit_offs  0x%llx\n", a->bit_offs);

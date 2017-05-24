@@ -251,7 +251,9 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 
 	alloc_lock(__a);
 
+#ifdef CONFIG_DEBUG_FS
 	nvgpu_fini_alloc_debug(__a);
+#endif
 
 	/*
 	 * Free the fixed allocs first.
@@ -1290,7 +1292,9 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	wmb();
 	a->initialized = 1;
 
+#ifdef CONFIG_DEBUG_FS
 	nvgpu_init_alloc_debug(g, __a);
+#endif
 	alloc_dbg(__a, "New allocator: type      buddy\n");
 	alloc_dbg(__a, "               base      0x%llx\n", a->base);
 	alloc_dbg(__a, "               size      0x%llx\n", a->length);

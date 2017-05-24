@@ -26,9 +26,9 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/list.h>
+#include <nvgpu/debug.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/debug_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"

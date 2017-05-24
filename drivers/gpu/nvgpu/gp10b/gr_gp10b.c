@@ -23,6 +23,7 @@
 #include <nvgpu/gmmu.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/debug.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"

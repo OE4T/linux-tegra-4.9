@@ -31,12 +31,6 @@ void *__nvgpu_track_kcalloc(struct gk20a *g, size_t n, size_t size,
 			    unsigned long ip);
 void  __nvgpu_track_vfree(struct gk20a *g, void *addr);
 void  __nvgpu_track_kfree(struct gk20a *g, void *addr);
-
-void nvgpu_kmem_debugfs_init(struct device *dev);
-#else
-static inline void nvgpu_kmem_debugfs_init(struct device *dev)
-{
-}
 #endif
 
 /**

@@ -481,6 +481,10 @@ static int tegra_channel_notify_disable(
 	int ret = 0;
 	struct tegra_vi4_syncpts_req req;
 
+	/* clear vi notify callbacks */
+	vi_notify_channel_set_notify_funcs(chan->vnc[index],
+			NULL, NULL, NULL);
+
 	/* free syncpts */
 	nvhost_syncpt_put_ref_ext(
 		chan->vi->ndev, chan->syncpt[index][SOF_SYNCPT_IDX]);

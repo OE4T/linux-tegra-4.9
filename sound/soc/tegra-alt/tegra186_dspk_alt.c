@@ -141,7 +141,18 @@ static int tegra186_dspk_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra186_dspk_suspend(struct device *dev)
 {
-	return 0;
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return tegra186_dspk_runtime_suspend(dev);
+}
+
+static int tegra186_dspk_resume(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return tegra186_dspk_runtime_resume(dev);
 }
 #endif
 
@@ -625,7 +636,8 @@ static int tegra186_dspk_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra186_dspk_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra186_dspk_runtime_suspend,
 				tegra186_dspk_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(tegra186_dspk_suspend, NULL)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(tegra186_dspk_suspend,
+				     tegra186_dspk_resume)
 };
 
 static struct platform_driver tegra186_dspk_driver = {

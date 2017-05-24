@@ -107,7 +107,6 @@ static int tegra186_dspk_runtime_suspend(struct device *dev)
 		clk_disable_unprepare(dspk->clk_dspk);
 	}
 
-	pm_runtime_put_sync(dev->parent);
 	return 0;
 }
 
@@ -115,12 +114,6 @@ static int tegra186_dspk_runtime_resume(struct device *dev)
 {
 	struct tegra186_dspk *dspk = dev_get_drvdata(dev);
 	int ret;
-
-	ret = pm_runtime_get_sync(dev->parent);
-	if (ret < 0) {
-		dev_err(dev, "parent get_sync failed: %d\n", ret);
-		return ret;
-	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		if (!IS_ERR(dspk->pin_active_state) && dspk->is_pinctrl) {

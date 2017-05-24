@@ -167,20 +167,13 @@ static int tegra186_asrc_runtime_suspend(struct device *dev)
 	regcache_cache_only(asrc->regmap, true);
 	regcache_mark_dirty(asrc->regmap);
 
-	pm_runtime_put_sync(dev->parent);
-
 	return 0;
 }
 
 static int tegra186_asrc_runtime_resume(struct device *dev)
 {
 	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
-	int ret, lane_id;
-	ret = pm_runtime_get_sync(dev->parent);
-	if (ret < 0) {
-		dev_err(dev, "parent get_sync failed: %d\n", ret);
-		return ret;
-	}
+	int lane_id;
 
 	regcache_cache_only(asrc->regmap, false);
 

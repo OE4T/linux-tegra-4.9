@@ -306,12 +306,8 @@ static int bpmp_probe(struct platform_device *pdev)
 	}
 
 	root = bpmp_init_debug(pdev);
-	if (!root) {
-		r = -ENOMEM;
-		goto err_out;
-	}
 
-	if (cfg->cpuidle) {
+	if (root && cfg->cpuidle) {
 		r = bpmp_init_cpuidle_debug(root);
 		if (r)
 			goto err_out;

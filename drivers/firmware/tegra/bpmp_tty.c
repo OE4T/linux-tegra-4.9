@@ -372,7 +372,8 @@ static int bpmp_tty_probe(struct platform_device *pdev)
 
 	root = pdev->dev.platform_data;
 
-	bpmp_tty_create_debugfs(pdev, root);
+	if (root)
+		bpmp_tty_create_debugfs(pdev, root);
 
 	return 0;
 

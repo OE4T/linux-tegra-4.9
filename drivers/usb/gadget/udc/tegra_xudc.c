@@ -1,7 +1,7 @@
 /*
 * NVIDIA XUSB device mode controller
 *
-* Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
 * Copyright (c) 2015, Google Inc.
 *
 * This program is free software; you can redistribute it and/or modify it
@@ -201,11 +201,14 @@
 /* Device ID */
 #define XUDC_DEVICE_ID_T210     0x0fad
 #define XUDC_DEVICE_ID_T186     0x10e2
+#define XUDC_DEVICE_ID_T194     0x10ff
 
 #define XUDC_IS_T210(t) \
 	(t->soc ? (t->soc->device_id == XUDC_DEVICE_ID_T210) : false)
 #define XUDC_IS_T186(t) \
 	(t->soc ? (t->soc->device_id == XUDC_DEVICE_ID_T186) : false)
+#define XUDC_IS_T194(t) \
+	(t->soc ? (t->soc->device_id == XUDC_DEVICE_ID_T194) : false)
 
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 static struct of_device_id tegra_xusba_pd[] = {
@@ -3260,6 +3263,19 @@ static const char * const tegra186_xudc_supply_names[] = {
 	"hvdd-pex-pll",
 };
 
+static const char * const tegra194_xudc_supply_names[] = {
+	/* for USB2 pads */
+	"avdd-usb",
+
+	/* for PEX USB pads */
+	"dvdd-pex",
+	"hvdd-pex",
+
+	/* for PEX PLL */
+	"dvdd-pex-pll",
+	"hvdd-pex-pll",
+};
+
 static struct tegra_xudc_soc_data tegra210_xudc_soc_data = {
 	.device_id = XUDC_DEVICE_ID_T210,
 	.supply_names = tegra210_xudc_supply_names,
@@ -3280,6 +3296,16 @@ static struct tegra_xudc_soc_data tegra186_xudc_soc_data = {
 	.invalid_seq_num = false,
 };
 
+static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
+	.device_id = XUDC_DEVICE_ID_T194,
+	.supply_names = tegra194_xudc_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra194_xudc_supply_names),
+	.u1_enable = true,
+	.u2_enable = true,
+	.lpm_enable = false,
+	.invalid_seq_num = false,
+};
+
 static struct of_device_id tegra_xudc_of_match[] = {
 	{
 		.compatible = "nvidia,tegra210-xudc-new",
@@ -3288,6 +3314,10 @@ static struct of_device_id tegra_xudc_of_match[] = {
 	{
 		.compatible = "nvidia,tegra186-xudc",
 		.data = &tegra186_xudc_soc_data
+	},
+	{
+		.compatible = "nvidia,tegra194-xudc",
+		.data = &tegra194_xudc_soc_data
 	},
 	{ }
 };

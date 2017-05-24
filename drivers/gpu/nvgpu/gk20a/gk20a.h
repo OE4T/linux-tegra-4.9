@@ -32,6 +32,7 @@ struct dbg_profiler_object_data;
 struct ecc_gk20a;
 struct gk20a_debug_output;
 struct nvgpu_clk_pll_debug_data;
+struct nvgpu_nvhost_dev;
 
 #include <linux/sched.h>
 #include <nvgpu/lock.h>
@@ -981,6 +982,7 @@ struct nvgpu_bios {
 struct gk20a {
 	struct device *dev;
 	struct platform_device *host1x_dev;
+	struct nvgpu_nvhost_dev *nvhost_dev;
 
 	/*
 	 * Used by <nvgpu/enabled.h>. Do not access directly!

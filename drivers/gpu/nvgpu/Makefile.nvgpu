@@ -131,6 +131,7 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 nvgpu-$(CONFIG_TEGRA_GK20A) += tegra/linux/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o
 nvgpu-$(CONFIG_GK20A_PCI) += common/linux/pci.o
+nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += common/linux/nvhost.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	gk20a/platform_vgpu_tegra.o \

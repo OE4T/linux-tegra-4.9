@@ -24,8 +24,8 @@
 #include "nvhost_vm.h"
 #include "iommu_context_dev.h"
 
-/* timeout big enough to not flood the screen with warns */
-#define NVHOST_VM_WAIT_TIMEOUT_MASK (0x3fff)
+/* 5 second timeout */
+#define NVHOST_VM_WAIT_TIMEOUT (5000)
 
 static int host1x_vm_init(struct nvhost_vm *vm)
 {
@@ -38,9 +38,11 @@ static int host1x_vm_init(struct nvhost_vm *vm)
 		if (!pdev) {
 			++i;
 			mdelay(1);
-			if ((i & NVHOST_VM_WAIT_TIMEOUT_MASK) == 0)
+			if (i > NVHOST_VM_WAIT_TIMEOUT) {
 				nvhost_err(&vm->pdev->dev,
 					   "host1x_vm_init active waiting for %u ms\n", i);
+				return -ETIMEDOUT;
+			}
 		}
 	} while (!pdev);
 

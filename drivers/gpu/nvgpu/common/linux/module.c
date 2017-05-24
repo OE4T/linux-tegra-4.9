@@ -502,9 +502,6 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 
 void gk20a_remove_support(struct gk20a *g)
 {
-#ifdef CONFIG_TEGRA_COMMON
-	tegra_unregister_idle_unidle();
-#endif
 	nvgpu_kfree(g, g->dbg_regops_tmp_buf);
 
 	if (g->pmu.remove_support)
@@ -541,10 +538,6 @@ static int gk20a_init_support(struct platform_device *dev)
 {
 	int err = 0;
 	struct gk20a *g = get_gk20a(&dev->dev);
-
-#ifdef CONFIG_TEGRA_COMMON
-	tegra_register_idle_unidle(gk20a_do_idle, gk20a_do_unidle);
-#endif
 
 	g->regs = gk20a_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
 					 &g->reg_mem);

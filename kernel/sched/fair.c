@@ -6460,15 +6460,14 @@ static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
 			if (new_util > capacity_orig_of(i))
 				continue;
 
-			if (new_util < capacity_curr_of(i)) {
-				target_cpu = i;
-				if (cpu_rq(i)->nr_running)
-					break;
-			}
-
 			/* cpu has capacity at higher OPP, keep it as fallback */
 			if (target_cpu == task_cpu(p))
 				target_cpu = i;
+
+			if (idle_cpu(i)) {
+				target_cpu = i;
+				break;
+			}
 		}
 	} else {
 		/*

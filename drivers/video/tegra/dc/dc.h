@@ -966,7 +966,7 @@ int tegra_dc_ext_get_scanline(struct tegra_dc_ext *dc_ext);
 struct tegra_fb_info;
 struct resource;
 
-#ifdef CONFIG_FB_TEGRA
+#if IS_ENABLED(CONFIG_FB_TEGRA)
 struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 					struct tegra_dc *dc,
 					struct tegra_fb_data *fb_data,

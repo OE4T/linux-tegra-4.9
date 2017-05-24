@@ -25,6 +25,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/gmmu.h>
+#include <nvgpu/soc.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -1122,19 +1123,13 @@ static int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 
 
 	timeout = gk20a_readl(g, fifo_fb_timeout_r());
-	timeout = set_field(timeout, fifo_fb_timeout_period_m(),
-			fifo_fb_timeout_period_init_f());
-	gk20a_dbg_info("fifo_fb_timeout reg val = 0x%08x", timeout);
-	gk20a_writel(g, fifo_fb_timeout_r(), timeout);
-
-	/* write pbdma timeout value */
+	nvgpu_log_info(g, "fifo_fb_timeout reg val = 0x%08x", timeout);
 	for (i = 0; i < host_num_pbdma; i++) {
 		timeout = gk20a_readl(g, pbdma_timeout_r(i));
-		timeout = set_field(timeout, pbdma_timeout_period_m(),
-				    pbdma_timeout_period_init_f());
-		gk20a_dbg_info("pbdma_timeout reg val = 0x%08x", timeout);
-		gk20a_writel(g, pbdma_timeout_r(i), timeout);
+		nvgpu_log_info(g, "pbdma_timeout reg val = 0x%08x",
+						 timeout);
 	}
+
 	/* clear and enable pbdma interrupt */
 	for (i = 0; i < host_num_pbdma; i++) {
 		gk20a_writel(g, pbdma_intr_0_r(i), 0xFFFFFFFF);

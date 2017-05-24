@@ -48,6 +48,9 @@
 #define XUSB_CFG_4				0x010
 #define  XUSB_BASE_ADDR_SHIFT			15
 #define  XUSB_BASE_ADDR_MASK			0x1ffff
+#define  XUSB_T194_BASE_ADDR_SHIFT		18
+#define  XUSB_T194_BASE_ADDR_MASK		0x3fff
+
 #define XUSB_CFG_16				0x040
 #define XUSB_CFG_24				0x060
 #define XUSB_CFG_AXI_CFG			0x0f8
@@ -80,6 +83,11 @@
 #define XUSB_CFG_ARU_SMI_INTR			0x428
 #define  MBOX_SMI_INTR_FW_HANG			BIT(1)
 #define  MBOX_SMI_INTR_EN			BIT(3)
+
+#define XUSB_CFG_ARU_T194_MBOX_CMD		0x068
+#define XUSB_CFG_ARU_T194_MBOX_DATA_IN		0x06c
+#define XUSB_CFG_ARU_T194_MBOX_DATA_OUT		0x070
+#define XUSB_CFG_ARU_T194_MBOX_OWNER		0x074
 
 /* IPFS registers */
 #define XUSB_HOST_MSI_BAR_SZ_0			0x0c0
@@ -289,6 +297,13 @@ struct tegra_xusb_soc {
 			unsigned int count;
 		} usb2, hsic, usb3;
 	} ports;
+
+	u32 cfg_4_addr_shift;
+	u32 cfg_4_addr_mask;
+	u32 cfg_aru_mbox_cmd;
+	u32 cfg_aru_mbox_data_in;
+	u32 cfg_aru_mbox_data_out;
+	u32 cfg_aru_mbox_owner;
 
 	bool scale_ss_clock;
 	bool has_ipfs;
@@ -1066,15 +1081,16 @@ static int tegra_xusb_mbox_send(struct tegra_xusb *tegra,
 	 * ACK/NAK messages.
 	 */
 	if (!(msg->cmd == MBOX_CMD_ACK || msg->cmd == MBOX_CMD_NAK)) {
-		value = fpci_readl(tegra, XUSB_CFG_ARU_MBOX_OWNER);
+		value = fpci_readl(tegra, tegra->soc->cfg_aru_mbox_owner);
 		if (value != MBOX_OWNER_NONE) {
 			dev_err(tegra->dev, "mailbox is busy\n");
 			return -EBUSY;
 		}
 
-		fpci_writel(tegra, MBOX_OWNER_SW, XUSB_CFG_ARU_MBOX_OWNER);
+		fpci_writel(tegra, MBOX_OWNER_SW,
+				tegra->soc->cfg_aru_mbox_owner);
 
-		value = fpci_readl(tegra, XUSB_CFG_ARU_MBOX_OWNER);
+		value = fpci_readl(tegra, tegra->soc->cfg_aru_mbox_owner);
 		if (value != MBOX_OWNER_SW) {
 			dev_err(tegra->dev, "failed to acquire mailbox\n");
 			return -EBUSY;
@@ -1084,17 +1100,18 @@ static int tegra_xusb_mbox_send(struct tegra_xusb *tegra,
 	}
 
 	value = tegra_xusb_mbox_pack(msg);
-	fpci_writel(tegra, value, XUSB_CFG_ARU_MBOX_DATA_IN);
+	fpci_writel(tegra, value, tegra->soc->cfg_aru_mbox_data_in);
 
-	value = fpci_readl(tegra, XUSB_CFG_ARU_MBOX_CMD);
+	value = fpci_readl(tegra, tegra->soc->cfg_aru_mbox_cmd);
 	value |= MBOX_INT_EN | MBOX_DEST_FALC;
-	fpci_writel(tegra, value, XUSB_CFG_ARU_MBOX_CMD);
+	fpci_writel(tegra, value, tegra->soc->cfg_aru_mbox_cmd);
 
 	if (wait_for_idle) {
 		unsigned long timeout = jiffies + msecs_to_jiffies(250);
 
 		while (time_before(jiffies, timeout)) {
-			value = fpci_readl(tegra, XUSB_CFG_ARU_MBOX_OWNER);
+			value = fpci_readl(tegra,
+					tegra->soc->cfg_aru_mbox_owner);
 			if (value == MBOX_OWNER_NONE)
 				break;
 
@@ -1102,7 +1119,8 @@ static int tegra_xusb_mbox_send(struct tegra_xusb *tegra,
 		}
 
 		if (time_after(jiffies, timeout))
-			value = fpci_readl(tegra, XUSB_CFG_ARU_MBOX_OWNER);
+			value = fpci_readl(tegra,
+					tegra->soc->cfg_aru_mbox_owner);
 
 		if (value != MBOX_OWNER_NONE)
 			return -ETIMEDOUT;
@@ -1269,16 +1287,17 @@ static irqreturn_t tegra_xusb_mbox_thread(int irq, void *data)
 
 	mutex_lock(&tegra->lock);
 
-	value = fpci_readl(tegra, XUSB_CFG_ARU_MBOX_DATA_OUT);
+	value = fpci_readl(tegra, tegra->soc->cfg_aru_mbox_data_out);
 	tegra_xusb_mbox_unpack(&msg, value);
 
-	value = fpci_readl(tegra, XUSB_CFG_ARU_MBOX_CMD);
+	value = fpci_readl(tegra, tegra->soc->cfg_aru_mbox_cmd);
 	value &= ~MBOX_DEST_SMI;
-	fpci_writel(tegra, value, XUSB_CFG_ARU_MBOX_CMD);
+	fpci_writel(tegra, value, tegra->soc->cfg_aru_mbox_cmd);
 
 	/* clear mailbox owner if no ACK/NAK is required */
 	if (!tegra_xusb_mbox_cmd_requires_ack(msg.cmd))
-		fpci_writel(tegra, MBOX_OWNER_NONE, XUSB_CFG_ARU_MBOX_OWNER);
+		fpci_writel(tegra, MBOX_OWNER_NONE,
+				tegra->soc->cfg_aru_mbox_owner);
 
 	tegra_xusb_mbox_handle(tegra, &msg);
 
@@ -1304,8 +1323,9 @@ static void tegra_xusb_config(struct tegra_xusb *tegra)
 
 	/* Program BAR0 space */
 	value = fpci_readl(tegra, XUSB_CFG_4);
-	value &= ~(XUSB_BASE_ADDR_MASK << XUSB_BASE_ADDR_SHIFT);
-	value |= regs->start & (XUSB_BASE_ADDR_MASK << XUSB_BASE_ADDR_SHIFT);
+	value &= ~(tegra->soc->cfg_4_addr_mask << tegra->soc->cfg_4_addr_shift);
+	value |= regs->start &
+		(tegra->soc->cfg_4_addr_mask << tegra->soc->cfg_4_addr_shift);
 	fpci_writel(tegra, value, XUSB_CFG_4);
 
 	usleep_range(100, 200);
@@ -2767,6 +2787,14 @@ static const struct tegra_xusb_soc tegra124_soc = {
 		.hsic = { .offset = 6, .count = 2, },
 		.usb3 = { .offset = 0, .count = 2, },
 	},
+
+	.cfg_4_addr_shift = XUSB_BASE_ADDR_SHIFT,
+	.cfg_4_addr_mask = XUSB_BASE_ADDR_MASK,
+	.cfg_aru_mbox_cmd = XUSB_CFG_ARU_MBOX_CMD,
+	.cfg_aru_mbox_data_in = XUSB_CFG_ARU_MBOX_DATA_IN,
+	.cfg_aru_mbox_data_out = XUSB_CFG_ARU_MBOX_DATA_OUT,
+	.cfg_aru_mbox_owner = XUSB_CFG_ARU_MBOX_OWNER,
+
 	.scale_ss_clock = true,
 	.has_ipfs = true,
 };
@@ -2796,6 +2824,14 @@ static const struct tegra_xusb_soc tegra210_soc = {
 		.hsic = { .offset = 8, .count = 1, },
 		.usb3 = { .offset = 0, .count = 4, },
 	},
+
+	.cfg_4_addr_shift = XUSB_BASE_ADDR_SHIFT,
+	.cfg_4_addr_mask = XUSB_BASE_ADDR_MASK,
+	.cfg_aru_mbox_cmd = XUSB_CFG_ARU_MBOX_CMD,
+	.cfg_aru_mbox_data_in = XUSB_CFG_ARU_MBOX_DATA_IN,
+	.cfg_aru_mbox_data_out = XUSB_CFG_ARU_MBOX_DATA_OUT,
+	.cfg_aru_mbox_owner = XUSB_CFG_ARU_MBOX_OWNER,
+
 	.scale_ss_clock = false,
 	.has_ipfs = true,
 };
@@ -2816,15 +2852,52 @@ static const struct tegra_xusb_soc tegra186_soc = {
 		.usb2 = { .offset = 3, .count = 3, },
 		.hsic = { .offset = 6, .count = 1, },
 	},
+
+	.cfg_4_addr_shift = XUSB_BASE_ADDR_SHIFT,
+	.cfg_4_addr_mask = XUSB_BASE_ADDR_MASK,
+	.cfg_aru_mbox_cmd = XUSB_CFG_ARU_MBOX_CMD,
+	.cfg_aru_mbox_data_in = XUSB_CFG_ARU_MBOX_DATA_IN,
+	.cfg_aru_mbox_data_out = XUSB_CFG_ARU_MBOX_DATA_OUT,
+	.cfg_aru_mbox_owner = XUSB_CFG_ARU_MBOX_OWNER,
+
 	.scale_ss_clock = false,
 	.has_ipfs = false,
 };
 MODULE_FIRMWARE("tegra18x_xusb_firmware");
 
+static const char * const tegra194_supply_names[] = {
+};
+
+static const struct tegra_xusb_soc tegra194_soc = {
+	.firmware = "tegra19x_xusb_firmware",
+	.supply_names = tegra194_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
+	.num_typed_phys[USB3_PHY] = 4,
+	.num_typed_phys[USB2_PHY] = 4,
+	.num_typed_phys[HSIC_PHY] = 0,
+	.ports = {
+		.usb3 = { .offset = 0, .count = 4, },
+		.usb2 = { .offset = 4, .count = 4, },
+		.hsic = { .offset = 8, .count = 0, },
+	},
+
+	.cfg_4_addr_shift = XUSB_T194_BASE_ADDR_SHIFT,
+	.cfg_4_addr_mask = XUSB_T194_BASE_ADDR_MASK,
+	.cfg_aru_mbox_cmd = XUSB_CFG_ARU_T194_MBOX_CMD,
+	.cfg_aru_mbox_data_in = XUSB_CFG_ARU_T194_MBOX_DATA_IN,
+	.cfg_aru_mbox_data_out = XUSB_CFG_ARU_T194_MBOX_DATA_OUT,
+	.cfg_aru_mbox_owner = XUSB_CFG_ARU_T194_MBOX_OWNER,
+
+	.scale_ss_clock = false,
+	.has_ipfs = false,
+};
+MODULE_FIRMWARE("tegra19x_xusb_firmware");
+
 static const struct of_device_id tegra_xusb_of_match[] = {
 	{ .compatible = "nvidia,tegra124-xusb", .data = &tegra124_soc },
 	{ .compatible = "nvidia,tegra210-xusb", .data = &tegra210_soc },
 	{ .compatible = "nvidia,tegra186-xhci", .data = &tegra186_soc },
+	{ .compatible = "nvidia,tegra194-xhci", .data = &tegra194_soc },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_xusb_of_match);

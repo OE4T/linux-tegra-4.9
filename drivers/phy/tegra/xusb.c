@@ -74,6 +74,12 @@ static const struct of_device_id tegra_xusb_padctl_of_match[] = {
 		.data = &tegra186_xusb_padctl_soc,
 	},
 #endif
+#if defined(CONFIG_ARCH_TEGRA_19x_SOC)
+	{
+		.compatible = "nvidia,tegra19x-xusb-padctl",
+		.data = &tegra194_xusb_padctl_soc,
+	},
+#endif
 	{ }
 };
 MODULE_DEVICE_TABLE(of, tegra_xusb_padctl_of_match);

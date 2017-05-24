@@ -1367,7 +1367,10 @@ static int tegra_pcie_port_get_phy(struct tegra_pcie_port *port)
 
 	phy = devm_of_phy_get(dev, port->np, "pcie-phy");
 	if (IS_ERR(phy)) {
-		dev_err(dev, "failed to get PHY: %ld\n", PTR_ERR(phy));
+		if (PTR_ERR(phy) == -EPROBE_DEFER)
+			dev_info(dev, "failed to get PHY: %ld\n", PTR_ERR(phy));
+		else
+			dev_err(dev, "failed to get PHY: %ld\n", PTR_ERR(phy));
 		return PTR_ERR(phy);
 	}
 
@@ -4748,7 +4751,10 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	if (pcie->soc_data->program_uphy) {
 		ret = tegra_pcie_phys_get(pcie);
 		if (ret < 0) {
-			dev_err(pcie->dev, "failed to get PHYs: %d\n", ret);
+			if (ret == -EPROBE_DEFER)
+				dev_info(pcie->dev, "failed to get PHYs: %d\n", ret);
+			else
+				dev_err(pcie->dev, "failed to get PHYs: %d\n", ret);
 			goto release_regulators;
 		}
 	}

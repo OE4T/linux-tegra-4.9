@@ -331,11 +331,12 @@ enum {
    DSI/DSIB pads' DPD for DSI_INSTANCE_1 can be enabled, respectively,
  * but in SW, sometimes pins from one pad can be used by
  * more than one module, so it may be dependent on board design.
+ * 0:A
+ * 1:B
+ * 2:C
+ * 3:D
  */
-#define DSI_DPD_EN		(1 << 0)
-#define DSIB_DPD_EN		(1 << 1)
-#define DSIC_DPD_EN		(1 << 2)
-#define DSID_DPD_EN		(1 << 3)
+#define DSI_DPD_EN(i)		(1 << i)
 
 struct tegra_dsi_board_info {
 	u32 platform_boardid;

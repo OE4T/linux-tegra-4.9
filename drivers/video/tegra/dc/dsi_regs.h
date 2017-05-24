@@ -139,6 +139,7 @@ enum {
 #define DSI_INIT_SEQ_DATA_6 0x21
 #define DSI_INIT_SEQ_DATA_7 0x22
 #define DSI_INIT_SEQ_DATA_15 0x5f
+#define DSI_INIT_SEQ_DATA_15_B01 0x62
 
 #define DSI_PKT_SEQ_0_LO 0x23
 #define   DSI_PKT_SEQ_0_LO_SEQ_0_FORCE_LP(x)	(((x) & 0x1) << 30)
@@ -390,17 +391,24 @@ enum {
 #define DSI_PAD_TXBW_EN(x)	(((x) & 0x1) << 4)
 #define DSI_PAD_REV_CLK(x)	(((x) & 0x1) << 0)
 
+#define DSI_PAD_CONTROL_5_VS1_B01 0x53
+#define DSI_PAD_CONTROL_6_VS1_B01 0x54
+#define DSI_PAD_CONTROL_7_VS1_B01 0x55
+
 #define DSI_VID_MODE_CONTROL 0x4e
 #define DSI_LINE_TYPE(x)	(((x) & 0x7) << 1)
 #define DSI_CMD_PKT_VID_ENABLE(x)	(((x) & 0x1) << 0)
 
 #define DSI_GANGED_MODE_CONTROL 0x53
+#define DSI_GANGED_MODE_CONTROL_B01 0x56
 #define DSI_GANGED_MODE_CONTROL_EN(x)			(((x) & 0x1) << 0)
 
 #define DSI_GANGED_MODE_START 0x54
+#define DSI_GANGED_MODE_START_B01 0x57
 #define DSI_GANGED_MODE_START_POINTER(x)		(((x) & 0x1fff) << 0)
 
 #define DSI_GANGED_MODE_SIZE 0x55
+#define DSI_GANGED_MODE_SIZE_B01 0x58
 #define DSI_GANGED_MODE_SIZE_VALID_LOW_WIDTH(x)		(((x) & 0x1fff) << 16)
 #define DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(x)	(((x) & 0x1fff) << 0)
 
@@ -416,6 +424,7 @@ enum {
 #define DSC_FOUR_COMP_PKTS_PER_ROW	4
 
 #define DSI_DSC_CONTROL 0x61
+#define DSI_DSC_CONTROL_B01 0x64
 #define DSI_DSC_CONROL_VALID_NUM_COMPRESS_PKTS_PER_ROW(x)	(((x) & 0x3) << 16)
 #define DSI_DSC_CONTROL_VALID_COMPRESS_RATE(x)	(((x) & 0x3FF) << 2)
 #define DSI_DSC_CONTROL_COMPRESS_MODE_EN	0x1

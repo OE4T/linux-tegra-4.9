@@ -81,6 +81,17 @@ struct dsi_status {
 	unsigned dc_stream:1;
 };
 
+struct dsi_regs {
+	int init_seq_data_15; /* convert into an array if at all needed */
+	int slew_impedance[4];
+	int preemphasis;
+	int bias;
+	int ganged_mode_control;
+	int ganged_mode_start;
+	int ganged_mode_size;
+	int dsi_dsc_control;
+};
+
 struct tegra_dc_dsi_data {
 	struct tegra_dc *dc;
 	void __iomem *base[MAX_DSI_INSTANCE];
@@ -149,6 +160,8 @@ struct tegra_dc_dsi_data {
 #endif
 	struct pinctrl *pin;
 	struct pinctrl_state *pin_state[PAD_INVALID];
+
+	const struct dsi_regs *regs;
 };
 
 /* Max number of data lanes supported */

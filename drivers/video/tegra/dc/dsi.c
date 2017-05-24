@@ -14,6 +14,7 @@
  *
  */
 
+#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -255,7 +256,7 @@ static const u32 dsi_pkt_seq_cmd_mode[NUMOF_PKT_SEQ] = {
 	0,
 };
 
-static const u32 init_reg[] = {
+static const u32 common_init_reg[] = {
 	DSI_INT_ENABLE,
 	DSI_INT_STATUS,
 	DSI_INT_MASK,
@@ -267,7 +268,6 @@ static const u32 init_reg[] = {
 	DSI_INIT_SEQ_DATA_5,
 	DSI_INIT_SEQ_DATA_6,
 	DSI_INIT_SEQ_DATA_7,
-	DSI_INIT_SEQ_DATA_15,
 	DSI_DCS_CMDS,
 	DSI_PKT_SEQ_0_LO,
 	DSI_PKT_SEQ_1_LO,
@@ -295,19 +295,56 @@ static const u32 init_reg[] = {
 	DSI_PKT_LEN_6_7,
 };
 
-static const u32 init_reg_vs1_ext[] = {
+static const u32 common_init_reg_vs1_ext[] = {
 	DSI_PAD_CONTROL_0_VS1,
 	DSI_PAD_CONTROL_CD_VS1,
 	DSI_PAD_CD_STATUS_VS1,
 	DSI_PAD_CONTROL_1_VS1,
-	DSI_PAD_CONTROL_2_VS1,
-	DSI_PAD_CONTROL_3_VS1,
-	DSI_PAD_CONTROL_4_VS1,
 	DSI_GANGED_MODE_CONTROL,
 	DSI_GANGED_MODE_START,
 	DSI_GANGED_MODE_SIZE,
 	DSI_PADCTL_GLOBAL_CNTRLS,
 };
+
+static const struct dsi_regs chip_t210 = {
+	.init_seq_data_15 = DSI_INIT_SEQ_DATA_15,
+	.slew_impedance = { DSI_PAD_CONTROL_2_VS1 },
+	.preemphasis = DSI_PAD_CONTROL_3_VS1,
+	.bias = DSI_PAD_CONTROL_4_VS1,
+	.ganged_mode_control = DSI_GANGED_MODE_CONTROL,
+	.ganged_mode_start = DSI_GANGED_MODE_START,
+	.ganged_mode_size = DSI_GANGED_MODE_SIZE,
+	.dsi_dsc_control = DSI_DSC_CONTROL,
+};
+
+static const struct dsi_regs chip_t210b01 = {
+	.init_seq_data_15 = DSI_INIT_SEQ_DATA_15_B01,
+	.slew_impedance = {
+		DSI_PAD_CONTROL_2_VS1,
+		DSI_PAD_CONTROL_3_VS1,
+		DSI_PAD_CONTROL_4_VS1,
+		DSI_PAD_CONTROL_5_VS1_B01,
+	},
+	.preemphasis = DSI_PAD_CONTROL_6_VS1_B01,
+	.bias = DSI_PAD_CONTROL_7_VS1_B01,
+	.ganged_mode_control = DSI_GANGED_MODE_CONTROL_B01,
+	.ganged_mode_start = DSI_GANGED_MODE_START_B01,
+	.ganged_mode_size = DSI_GANGED_MODE_SIZE_B01,
+	.dsi_dsc_control = DSI_DSC_CONTROL_B01,
+};
+
+static const struct of_device_id dsi_of_match[] = {
+	{
+		.compatible = "tegra210-dsi",
+		.data = &chip_t210,
+	},
+	{
+		.compatible = "tegra210b01-dsi",
+		.data = &chip_t210b01,
+	},
+	{ },
+};
+MODULE_DEVICE_TABLE(of, dsi_of_match);
 
 static int tegra_dsi_host_suspend(struct tegra_dc *dc);
 static int tegra_dsi_host_resume(struct tegra_dc *dc);
@@ -2289,7 +2326,7 @@ static void tegra_dsi_set_control_reg_hs(struct tegra_dc_dsi_data *dsi,
 	}
 	tegra_dsi_writel(dsi, max_threshold, DSI_MAX_THRESHOLD);
 	tegra_dsi_writel(dsi, dcs_cmd, DSI_DCS_CMDS);
-	tegra_dsi_writel(dsi, dsc_control, DSI_DSC_CONTROL);
+	tegra_dsi_writel(dsi, dsc_control, dsi->regs->dsi_dsc_control);
 	tegra_dsi_writel(dsi, dsi_control, DSI_CONTROL);
 	tegra_dsi_writel(dsi, host_dsi_control, DSI_HOST_DSI_CONTROL);
 }
@@ -2422,6 +2459,7 @@ static int dsi_pinctrl_state_active(struct tegra_dc_dsi_data *dsi)
 static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
+	int i;
 #if !defined(CONFIG_TEGRA_NVDISPLAY)
 	struct clk *clk72mhz = NULL;
 	struct device_node *np_dsi = tegra_dc_get_conn_np(dsi->dc);
@@ -2435,14 +2473,18 @@ static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 	/* Calibration settings begin */
 
 	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_1_VS1);
-	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_2_VS1);
 
-	val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);
+	for (i = 0; i < ARRAY_SIZE(dsi->regs->slew_impedance); i++) {
+		if (dsi->regs->slew_impedance[i])
+			tegra_dsi_writel(dsi, 0, dsi->regs->slew_impedance[i]);
+	}
+
+	val = tegra_dsi_readl(dsi, dsi->regs->preemphasis);
 	val |= (DSI_PAD_PREEMP_PD_CLK(0x3) | DSI_PAD_PREEMP_PU_CLK(0x3) |
 		   DSI_PAD_PREEMP_PD(0x3) | DSI_PAD_PREEMP_PU(0x3));
-	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
+	tegra_dsi_writel(dsi, val, dsi->regs->preemphasis);
 
-	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_4_VS1);
+	tegra_dsi_writel(dsi, 0, dsi->regs->bias);
 
 	/* When switch to the 16ff pad brick in T210, the clock lane
 	 * termination control is separated from data lane termination.
@@ -2535,11 +2577,11 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	tegra_dsi_set_phy_timing(dsi, DSI_LPHS_IN_LP_MODE);
 
 	/* Initialize DSI registers */
-	for (i = 0; i < ARRAY_SIZE(init_reg); i++)
-		tegra_dsi_writel(dsi, 0, init_reg[i]);
+	for (i = 0; i < ARRAY_SIZE(common_init_reg); i++)
+		tegra_dsi_writel(dsi, 0, common_init_reg[i]);
 	if (dsi->info.controller_vs == DSI_VS_1) {
-		for (i = 0; i < ARRAY_SIZE(init_reg_vs1_ext); i++)
-			tegra_dsi_writel(dsi, 0, init_reg_vs1_ext[i]);
+		for (i = 0; i < ARRAY_SIZE(common_init_reg_vs1_ext); i++)
+			tegra_dsi_writel(dsi, 0, common_init_reg_vs1_ext[i]);
 	}
 
 #if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
@@ -2547,7 +2589,7 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 		if (dsi->info.video_data_type ==
 				TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE) {
 			/* HW fpga WAR: dsi byte clk to dsi pixel clk ratio */
-			tegra_dsi_writel(dsi, 0x8, DSI_INIT_SEQ_DATA_15);
+			tegra_dsi_writel(dsi, 0x8, dsi->regs->init_seq_data_15);
 		}
 	}
 #endif
@@ -2659,11 +2701,11 @@ static void tegra_dsi_ganged(struct tegra_dc *dc,
 		/* DSI 0 */
 		tegra_dsi_controller_writel(dsi,
 			DSI_GANGED_MODE_START_POINTER(0),
-			DSI_GANGED_MODE_START, dsi_instances[0]);
+			dsi->regs->ganged_mode_start, dsi_instances[0]);
 		/* DSI 1 */
 		tegra_dsi_controller_writel(dsi,
 			DSI_GANGED_MODE_START_POINTER(ganged_pointer),
-			DSI_GANGED_MODE_START, dsi_instances[1]);
+			dsi->regs->ganged_mode_start, dsi_instances[1]);
 
 		low_width = ganged_pointer;
 		high_width = h_active - low_width;
@@ -2675,12 +2717,12 @@ static void tegra_dsi_ganged(struct tegra_dc *dc,
 		/* DSI 0 */
 		tegra_dsi_controller_writel(dsi,
 			DSI_GANGED_MODE_START_POINTER(0),
-			DSI_GANGED_MODE_START, dsi_instances[0]);
+			dsi->regs->ganged_mode_start, dsi_instances[0]);
 		/* DSI 1 */
 		tegra_dsi_controller_writel(dsi,
 			DSI_GANGED_MODE_START_POINTER(
 				dsi->info.even_odd_split_width),
-			DSI_GANGED_MODE_START, dsi_instances[1]);
+			dsi->regs->ganged_mode_start, dsi_instances[1]);
 
 		low_width = dsi->info.even_odd_split_width;
 		high_width = dsi->info.even_odd_split_width;
@@ -2688,10 +2730,10 @@ static void tegra_dsi_ganged(struct tegra_dc *dc,
 			DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(high_width);
 	}
 
-	tegra_dsi_writel(dsi, val, DSI_GANGED_MODE_SIZE);
+	tegra_dsi_writel(dsi, val, dsi->regs->ganged_mode_size);
 
 	tegra_dsi_writel(dsi, DSI_GANGED_MODE_CONTROL_EN(TEGRA_DSI_ENABLE),
-						DSI_GANGED_MODE_CONTROL);
+						dsi->regs->ganged_mode_control);
 }
 
 static void tegra_dsi_split_link(struct tegra_dc *dc,
@@ -2733,31 +2775,31 @@ static void tegra_dsi_split_link(struct tegra_dc *dc,
 		/* DSI 0 */
 		tegra_dsi_controller_writel(dsi,
 			DSI_GANGED_MODE_START_POINTER(0),
-			DSI_GANGED_MODE_START, dsi_instances[0]);
+			dsi->regs->ganged_mode_start, dsi_instances[0]);
 		/* DSI 1 */
 		tegra_dsi_controller_writel(dsi,
 			DSI_GANGED_MODE_START_POINTER(ganged_pointer),
-			DSI_GANGED_MODE_START, dsi_instances[1]);
+			dsi->regs->ganged_mode_start, dsi_instances[1]);
 
 		low_width = ganged_pointer;
 		high_width = h_active - low_width;
 		val = DSI_GANGED_MODE_SIZE_VALID_LOW_WIDTH(low_width) |
 			DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(high_width);
 
-		tegra_dsi_writel(dsi, val, DSI_GANGED_MODE_SIZE);
+		tegra_dsi_writel(dsi, val, dsi->regs->ganged_mode_size);
 	} else if (dsi->info.split_link_type == TEGRA_DSI_SPLIT_LINK_A_B_C_D) {
 		for (i = 0; i < dsi->max_instances; i++) {
 			ganged_pointer = i * frame_width;
 			tegra_dsi_controller_writel(dsi,
 				DSI_GANGED_MODE_START_POINTER(ganged_pointer),
-				DSI_GANGED_MODE_START, i);
+				dsi->regs->ganged_mode_start, i);
 			high_width = frame_width;
 			low_width = h_active - (ganged_pointer + high_width);
 			val = DSI_GANGED_MODE_SIZE_VALID_LOW_WIDTH(low_width) |
 			DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(high_width);
 
 			tegra_dsi_controller_writel(dsi, val,
-						DSI_GANGED_MODE_SIZE, i);
+					dsi->regs->ganged_mode_size, i);
 		}
 	} else {
 		dev_err(&dc->ndev->dev,
@@ -2786,7 +2828,7 @@ static void tegra_dsi_split_link(struct tegra_dc *dc,
 	tegra_dsi_pad_control_writel(dsi, val, DSI_PADCTL_GLOBAL_CNTRLS);
 
 	tegra_dsi_writel(dsi, DSI_GANGED_MODE_CONTROL_EN(TEGRA_DSI_ENABLE),
-						DSI_GANGED_MODE_CONTROL);
+						dsi->regs->ganged_mode_control);
 }
 
 static int tegra_dsi_set_to_hs_mode(struct tegra_dc *dc,
@@ -4431,6 +4473,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	char *dsi_fixed_clk_name = "pll_p_out3";
 #endif
 	struct device_node *np_dsi = tegra_dc_get_conn_np(dc);
+	const struct of_device_id *of_dev;
 
 	if (!np_dsi || !of_device_is_available(np_dsi)) {
 		dev_err(&dc->ndev->dev, "dsi not available\n");
@@ -4440,6 +4483,11 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	dsi = kzalloc(sizeof(*dsi), GFP_KERNEL);
 	if (!dsi)
 		return -ENOMEM;
+
+	dsi->regs = &chip_t210; /* FIXME: quirk for non t210 chips */
+	of_dev = of_match_node(dsi_of_match, np_dsi);
+	if (of_dev)
+		dsi->regs = of_dev->data;
 
 	dsi->max_instances = is_simple_dsi(dc->out->dsi) ? 1 : MAX_DSI_INSTANCE;
 	dsi_instance = (int)dc->out->dsi->dsi_instance;
@@ -4725,9 +4773,9 @@ static int _tegra_dsi_host_suspend(struct tegra_dc *dc,
 		tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);
 
 		/* disable HS logic */
-		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);
+		val = tegra_dsi_readl(dsi, dsi->regs->preemphasis);
 		val |= DSI_PAD_PDVCLAMP(0x1);
-		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
+		tegra_dsi_writel(dsi, val, dsi->regs->preemphasis);
 
 		err = dsi_pinctrl_state_inactive(dsi);
 		if (err < 0)
@@ -4782,9 +4830,9 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 			goto fail;
 
 		/* enable HS logic */
-		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_3_VS1);
+		val = tegra_dsi_readl(dsi, dsi->regs->preemphasis);
 		val &= ~DSI_PAD_PDVCLAMP(0x1);
-		tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL_3_VS1);
+		tegra_dsi_writel(dsi, val, dsi->regs->preemphasis);
 
 		tegra_dsi_writel(dsi,
 			DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE),

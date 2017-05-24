@@ -1054,6 +1054,10 @@ static int nct1008_get_trend_as_sensor(int sensor, void *data, int trip,
 	int ret, temp, trip_temp, last_temp;
 	struct nct1008_data *nct_data = (struct nct1008_data *)data;
 	struct thermal_zone_device *thz = nct_data->sensors[sensor].thz;
+	*trend = THERMAL_TREND_STABLE;
+
+	if (!thz)
+		return 0;
 
 	ret = thz->ops->get_trip_temp(thz, trip, &trip_temp);
 	if (ret)

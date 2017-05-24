@@ -575,23 +575,42 @@ static struct tegra_function tegra186_functions[] = {
 #define PINGROUP_REG_Y(r) ((r))
 #define PINGROUP_REG_N(r) -1
 
-#define PINGROUP(pg_name, f0, f1, f2, f3, r, bank, pupd, e_io_hv, e_input, e_lpdr, e_pbias_buf, \
-			gpio_sfio_sel, e_od, schmitt_b, drvtype, epreemp, io_reset, rfu_in)	\
-	{							\
-		.name = #pg_name,				\
-		.pins = pg_name##_pins,				\
-		.npins = ARRAY_SIZE(pg_name##_pins),		\
-			.funcs = {				\
-				TEGRA_MUX_ ## f0,		\
-				TEGRA_MUX_ ## f1,		\
-				TEGRA_MUX_ ## f2,		\
-				TEGRA_MUX_ ## f3,		\
-			},					\
-		.mux_reg = PINGROUP_REG_Y(r), 			\
+
+#define DRV_PINGROUP_Y(r) ((r))
+#define DRV_PINGROUP_N(r) -1
+
+#define DRV_PINGROUP_ENTRY_N(pg_name)				\
+		.drv_reg = -1,					\
+		.drv_bank = -1,					\
 		.drvdn_bit = -1,				\
+		.drvdn_width = -1,				\
 		.drvup_bit = -1,				\
+		.drvup_width = -1,				\
 		.slwr_bit = -1,					\
+		.slwr_width = -1,				\
 		.slwf_bit = -1,					\
+		.slwf_width = -1
+
+#define DRV_PINGROUP_ENTRY_Y(r, drvdn_b, drvdn_w, drvup_b,	\
+			     drvup_w, slwr_b, slwr_w, slwf_b,	\
+			     slwf_w, bank)			\
+		.drv_reg = DRV_PINGROUP_Y(r),			\
+		.drv_bank = bank,				\
+		.drvdn_bit = drvdn_b,				\
+		.drvdn_width = drvdn_w,				\
+		.drvup_bit = drvup_b,				\
+		.drvup_width = drvup_w,				\
+		.slwr_bit = slwr_b,				\
+		.slwr_width = slwr_w,				\
+		.slwf_bit = slwf_b,				\
+		.slwf_width = slwf_w
+
+
+#define PIN_PINGROUP_ENTRY_Y(r, bank, pupd, e_io_hv, e_input,	\
+			     e_lpdr, e_pbias_buf, gpio_sfio_sel, \
+			     e_od, schmitt_b, drvtype, epreemp,	\
+			     io_reset, rfu_in)			\
+		.mux_reg = PINGROUP_REG_Y(r), 			\
 		.lpmd_bit = -1,					\
 		.lock_bit = -1,					\
 		.hsm_bit = -1,					\
@@ -614,18 +633,9 @@ static struct tegra_function tegra186_functions[] = {
 		.lpdr_bit = e_lpdr,				\
 		.pbias_buf_bit = e_io_hv,			\
 		.preemp_bit = e_io_hv,				\
-		.rfu_in_bit = 20,				\
-		.drv_reg = -1,					\
-	}
+		.rfu_in_bit = 20
 
-#define DRV_PINGROUP_Y(r) ((r))
-#define DRV_PINGROUP_N(r) -1
-
-#define DRV_PINGROUP(pg_name, r, drvdn_b, drvdn_w, drvup_b, drvup_w, slwr_b, slwr_w, slwf_b, slwf_w, bank)	\
-	{							\
-		.name = "drive_" #pg_name,			\
-		.pins = drive_##pg_name##_pins,			\
-		.npins = ARRAY_SIZE(drive_##pg_name##_pins),	\
+#define PIN_PINGROUP_ENTRY_N(pg_name)				\
 		.mux_reg = -1,					\
 		.pupd_reg = -1,					\
 		.tri_reg = -1,					\
@@ -640,17 +650,38 @@ static struct tegra_function tegra186_functions[] = {
 		.lpdr_bit = -1,					\
 		.pbias_buf_bit = -1,				\
 		.preemp_bit = -1,				\
-		.rfu_in_bit = -1,				\
-		.drv_reg = DRV_PINGROUP_Y(r),			\
-		.drv_bank = bank,				\
-		.drvdn_bit = drvdn_b,				\
-		.drvdn_width = drvdn_w,				\
-		.drvup_bit = drvup_b,				\
-		.drvup_width = drvup_w,				\
-		.slwr_bit = slwr_b,				\
-		.slwr_width = slwr_w,				\
-		.slwf_bit = slwf_b,				\
-		.slwf_width = slwf_w,				\
+		.rfu_in_bit = -1
+
+#define DRV_PINGROUP(pg_name, r, drvdn_b, drvdn_w, drvup_b, drvup_w,	\
+		     slwr_b, slwr_w, slwf_b, slwf_w, bank)		\
+	{								\
+		.name = "drive_" #pg_name,				\
+		.pins = drive_##pg_name##_pins,				\
+		.npins = ARRAY_SIZE(drive_##pg_name##_pins),		\
+		PIN_PINGROUP_ENTRY_N(pg_name),				\
+		DRV_PINGROUP_ENTRY_Y(r, drvdn_b, drvdn_w, drvup_b,	\
+				     drvup_w, slwr_b, slwr_w, slwf_b,	\
+				     slwf_w, bank),			\
+	}
+
+#define PINGROUP(pg_name, f0, f1, f2, f3, r, bank, pupd, e_io_hv,	\
+		 e_input, e_lpdr, e_pbias_buf, gpio_sfio_sel, e_od,	\
+		 schmitt_b, drvtype, epreemp, io_reset, rfu_in)		\
+	{								\
+		.name = #pg_name,					\
+		.pins = pg_name##_pins,					\
+		.npins = ARRAY_SIZE(pg_name##_pins),			\
+			.funcs = {					\
+				TEGRA_MUX_ ## f0,			\
+				TEGRA_MUX_ ## f1,			\
+				TEGRA_MUX_ ## f2,			\
+				TEGRA_MUX_ ## f3,			\
+			},						\
+		PIN_PINGROUP_ENTRY_Y(r, bank, pupd, e_io_hv, e_input,	\
+				     e_lpdr, e_pbias_buf, gpio_sfio_sel, \
+				     e_od, schmitt_b, drvtype, epreemp,	\
+				     io_reset, rfu_in),			\
+		DRV_PINGROUP_ENTRY_N(pg_name),				\
 	}
 
 static const struct tegra_pingroup tegra186_groups[] = {

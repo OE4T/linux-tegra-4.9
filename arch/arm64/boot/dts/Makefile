@@ -63,6 +63,10 @@ DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/t18x/kernel-include
 DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/t19x/kernel-dts
 endif
 
+ifeq ($(CONFIG_ANDROID),y)
+DTCCPP_FLAGS += -DCONFIG_ANDROID
+endif
+
 # dtb-list will contain all dtb-y
 DTB_LIST := $(dtb-y)
 dtb-y :=

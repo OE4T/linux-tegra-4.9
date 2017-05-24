@@ -1682,11 +1682,33 @@ bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	return true;
 }
 
+int tegra_dc_init_default_panel_link_cfg(struct tegra_dc_dp_link_config *cfg)
+{
+	/*
+	 * Default HBR2 settings
+	 */
+	if (!cfg->is_valid) {
+		cfg->max_lane_count = 4;
+		cfg->tps3_supported = false;
+		cfg->support_enhanced_framing = true;
+		cfg->downspread = true;
+		cfg->support_fast_lt = true;
+		cfg->aux_rd_interval = 0;
+		cfg->alt_scramber_reset_cap = true;
+		cfg->only_enhanced_framing = true;
+		cfg->edp_cap = true;
+		cfg->max_link_bw = 20;
+		cfg->scramble_ena = 0;
+		cfg->lt_data_valid = 0;
+	}
+	return 0;
+}
+
 static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 					struct tegra_dc_dp_link_config *cfg)
 {
 	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		tegra_dc_init_fake_panel_link_cfg(cfg);
+		tegra_dc_init_default_panel_link_cfg(cfg);
 	else {
 		u8 dpcd_data;
 		int ret;
@@ -2314,6 +2336,14 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		hdmi2fpd_init(dc);
 		hdmi2fpd_enable(dc);
 	}
+
+	/*
+	 * Adding default link configuration at init. Since
+	 * we check for max link bandwidth during modeset,
+	 * this addresses usecases where modeset happens
+	 * before unblank without preset default configuration
+	 */
+	tegra_dc_init_default_panel_link_cfg(&dp->link_cfg);
 
 	/*
 	 * We don't really need hpd driver for eDP.

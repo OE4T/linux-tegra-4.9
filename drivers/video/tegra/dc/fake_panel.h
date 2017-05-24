@@ -31,12 +31,6 @@
 #include "dp.h"
 #include "dsi.h"
 
-#ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
-int tegra_dc_init_fake_panel_link_cfg(struct tegra_dc_dp_link_config *cfg);
-#else
-static inline int tegra_dc_init_fake_panel_link_cfg(struct tegra_dc_dp_link_config *cfg)
-{ return 0; }
-#endif
 int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype);
 int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype);
 int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype);

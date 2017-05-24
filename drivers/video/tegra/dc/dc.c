@@ -2602,6 +2602,20 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 	if (!retval)
 		goto remove_out;
 
+	if (dc->out_ops->get_connector_instance) {
+		char sor_path[CHAR_BUF_SIZE_MAX];
+		int ctrl_num = -1;
+
+		ctrl_num = dc->out_ops->get_connector_instance(dc);
+		if (ctrl_num < 0)
+			goto remove_out;
+
+		snprintf(sor_path, sizeof(sor_path),
+				"/sys/kernel/debug/tegra_sor%d", ctrl_num);
+		retval = debugfs_create_symlink("sor", dc->debugdir, sor_path);
+		if (!retval)
+			goto remove_out;
+	}
 /*Create directory for elements common to all DC heads*/
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	if (!dc->ndev->id) {

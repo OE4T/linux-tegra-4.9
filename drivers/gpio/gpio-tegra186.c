@@ -458,7 +458,8 @@ static int tegra186_gpio_to_wake(struct tegra_gpio_info *tgi, int gpio)
 		if (tgi->soc->wake_table[i] == gpio) {
 			pr_info("gpio %s wake%d for gpio=%d(%s:%d)\n",
 				tgi->soc->name, i, gpio,
-				tgi->soc->port[GPIO_PORT(gpio)].port_name, gpio % 7);
+				tgi->soc->port[GPIO_PORT(gpio)].port_name,
+				gpio % 8);
 			return i;
 		}
 	}

@@ -150,7 +150,7 @@ struct sdhci_tegra_clk_src_data {
 	const char *parent_clk_name[MAX_CLK_PARENTS];
 	unsigned long parent_clk_rate[MAX_CLK_PARENTS];
 	u8 parent_clk_src_cnt;
-	u8 curr_parent_clk_idx;
+	int curr_parent_clk_idx;
 };
 
 struct sdhci_tegra {
@@ -683,6 +683,7 @@ static void tegra_sdhci_set_clk_parent(struct sdhci_host *host,
 	dev_dbg(mmc_dev(host->mmc), "chosen clk parent %s, parent rate %lu\n",
 		clk_src_data->parent_clk_name[sel_parent_idx],
 		clk_src_data->parent_clk_rate[sel_parent_idx]);
+
 	/* Do nothing if the desired parent is already set */
 	if (clk_src_data->curr_parent_clk_idx == sel_parent_idx)
 		return;
@@ -1150,6 +1151,10 @@ static int sdhci_tegra_get_parent_pll_from_dt(struct sdhci_host *host,
 
 	/* Count valid parent clock sources with clk structures */
 	clk_src_data->parent_clk_src_cnt = j;
+	/*
+	 * Set current parent clock index to -1 to force parent clock setting.
+	 */
+	clk_src_data->curr_parent_clk_idx = -1;
 
 	return 0;
 }

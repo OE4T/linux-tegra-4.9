@@ -23,7 +23,7 @@
 		Tboard_tegra {
 			status = "disabled";
 			polling-delay = <0>;
-			polling-delay-passive = <0>;
+			polling-delay-passive = <5000>;
 			thermal-sensors = <&tegra_nct72 0>;
 
 			thermal-zone-params {
@@ -38,7 +38,7 @@
 				tboard_dram_throttle: dram-throttle {
 					temperature = <80000>;
 					hysteresis = <1000>;
-					type = "active";
+					type = "passive";
 					writable;
 				};
 			};

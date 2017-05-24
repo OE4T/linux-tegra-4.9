@@ -31,21 +31,40 @@
 
 static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 {
-	void __iomem *soc1 = ioremap(0x02b10010, 4096);
-	void __iomem *soc2 = ioremap(0x02b20010, 4096);
-	void __iomem *soc3 = ioremap(0x02b30010, 4096);
-	void __iomem *soc4 = ioremap(0x02b40010, 4096);
+	void __iomem *soc0 = ioremap(0x01f00010, 4096); //MSS_NVLINK_0_BASE
+	void __iomem *soc1 = ioremap(0x01f20010, 4096); //MSS_NVLINK_1_BASE
+	void __iomem *soc2 = ioremap(0x01f40010, 4096); //MSS_NVLINK_2_BASE
+	void __iomem *soc3 = ioremap(0x01f60010, 4096); //MSS_NVLINK_3_BASE
+	void __iomem *soc4 = ioremap(0x01f80010, 4096); //MSS_NVLINK_4_BASE
+	u32 val;
 
+	/* TODO : replace this code with proper nvlink API */
 	nvgpu_info(g, "init nvlink soc credits");
 
-	writel_relaxed(0x14050000, soc1);
-	writel_relaxed(0x08020000, soc1 + 4);
-	writel_relaxed(0x14050000, soc2);
-	writel_relaxed(0x08020000, soc2 + 4);
-	writel_relaxed(0x14050000, soc3);
-	writel_relaxed(0x08020000, soc3 + 4);
-	writel_relaxed(0x14050000, soc4);
-	writel_relaxed(0x08020000, soc4 + 4);
+	val = readl_relaxed(soc0);
+	writel_relaxed(val, soc0);
+	val = readl_relaxed(soc0 + 4);
+	writel_relaxed(val, soc0 + 4);
+
+	val = readl_relaxed(soc1);
+	writel_relaxed(val, soc1);
+	val = readl_relaxed(soc1 + 4);
+	writel_relaxed(val, soc1 + 4);
+
+	val = readl_relaxed(soc2);
+	writel_relaxed(val, soc2);
+	val = readl_relaxed(soc2 + 4);
+	writel_relaxed(val, soc2 + 4);
+
+	val = readl_relaxed(soc3);
+	writel_relaxed(val, soc3);
+	val = readl_relaxed(soc3 + 4);
+	writel_relaxed(val, soc3 + 4);
+
+	val = readl_relaxed(soc4);
+	writel_relaxed(val, soc4);
+	val = readl_relaxed(soc4 + 4);
+	writel_relaxed(val, soc4 + 4);
 
 }
 

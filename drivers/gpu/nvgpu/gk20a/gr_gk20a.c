@@ -6378,6 +6378,16 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 								gpc_exception);
 			ret = ret ? ret : ret_ecc;
 		}
+
+		/* Handle GPCMMU exceptions */
+		if (g->ops.gr.handle_gpc_gpcmmu_exception) {
+			int ret_mmu = 0;
+
+			ret_mmu = g->ops.gr.handle_gpc_gpcmmu_exception(g, gpc,
+								gpc_exception);
+			ret = ret ? ret : ret_mmu;
+		}
+
 	}
 
 	return ret;

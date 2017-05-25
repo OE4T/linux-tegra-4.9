@@ -313,6 +313,8 @@ struct gpu_ops {
 						bool *post_event);
 		int (*handle_gpc_gpccs_exception)(struct gk20a *g, u32 gpc,
 						u32 gpc_exception);
+		int (*handle_gpc_gpcmmu_exception)(struct gk20a *g, u32 gpc,
+						u32 gpc_exception);
 		void (*enable_gpc_exceptions)(struct gk20a *g);
 		void (*enable_exceptions)(struct gk20a *g);
 		void (*create_gr_sysfs)(struct device *dev);

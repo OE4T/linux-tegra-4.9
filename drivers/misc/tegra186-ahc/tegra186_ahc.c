@@ -1,7 +1,7 @@
 /*
  * tegra186_ahc.c - Tegra186 ASRC driver
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,6 +30,7 @@
 
 #define DRV_NAME "tegra186-ahc"
 
+static struct device *ahc_priv;
 static const struct of_device_id tegra186_ahc_of_match[] = {
 	{ .compatible = "nvidia,tegra186-ahc"},
 	{},
@@ -111,9 +112,46 @@ static void tegra186_ahc_run_tasklet(unsigned long data)
 		list_del(&task->list);
 		spin_unlock_irqrestore(&ahc->int_lock, flags);
 		task->func(task->data);
-		devm_kfree(data, task);
+		devm_kfree((struct device *)data, task);
 	}
 }
+
+void tegra186_free_ahc_interrupts()
+{
+	struct tegra186_ahc *ahc;
+
+	if (!ahc_priv)
+		return;
+
+	ahc = dev_get_drvdata(ahc_priv);
+	if (ahc->is_intr_enabled) {
+		devm_free_irq(ahc_priv, ahc->irq, ahc_priv);
+		ahc->is_intr_enabled = false;
+	}
+
+}
+EXPORT_SYMBOL_GPL(tegra186_free_ahc_interrupts);
+
+void tegra186_setup_ahc_interrupts()
+{
+	int ret;
+	struct tegra186_ahc *ahc;
+
+	if (!ahc_priv)
+		return;
+	ahc = dev_get_drvdata(ahc_priv);
+	if (ahc->is_intr_enabled)
+		return;
+
+	ret = devm_request_irq(ahc_priv, ahc->irq, tegra186_ahc_int_handler,
+			0, DRV_NAME, ahc_priv);
+	if (ret) {
+		dev_err(ahc_priv, "Failed to register AHUB interrupt\n");
+		return;
+	}
+	ahc->is_intr_enabled = true;
+}
+EXPORT_SYMBOL_GPL(tegra186_setup_ahc_interrupts);
 
 static int tegra186_ahc_platform_probe(struct platform_device *pdev)
 {
@@ -162,18 +200,14 @@ static int tegra186_ahc_platform_probe(struct platform_device *pdev)
 	}
 
 	ahc->irq = platform_get_irq(pdev, 0);
-	ret = devm_request_irq(&pdev->dev,
-			ahc->irq,
-			tegra186_ahc_int_handler,
-			0, pdev->name, &pdev->dev);
-	if (ret)
-		dev_err(&pdev->dev, "Failed to register AHUB interrupt\n");
+
 	spin_lock_init(&ahc->int_lock);
 
 	INIT_LIST_HEAD(&ahc->task_list);
 
 	tasklet_init(&ahc->tasklet, tegra186_ahc_run_tasklet,
 			(unsigned long)&pdev->dev);
+	ahc_priv = &pdev->dev;
 
 	if (!ret)
 		dev_info(&pdev->dev, "ahc platform probe successful\n");
@@ -185,7 +219,6 @@ err:
 static int tegra186_ahc_platform_remove(struct platform_device *pdev)
 {
 	struct tegra186_ahc *ahc = dev_get_drvdata(&pdev->dev);
-	devm_free_irq(&pdev->dev, ahc->irq, &pdev->dev);
 	tasklet_kill(&ahc->tasklet);
 	devm_kfree(&pdev->dev, ahc);
 	return 0;

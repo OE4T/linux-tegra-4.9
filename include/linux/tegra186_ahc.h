@@ -1,7 +1,7 @@
 /*
- * tegra186_ahc.h - Definitions for Tegra186 ASRC driver
+ * tegra186_ahc.h - Definitions for Tegra186 AHC driver
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,8 +45,11 @@ struct tegra186_ahc {
 	void __iomem *ahc_base;
 	struct tasklet_struct tasklet;
 	struct list_head task_list;
+	bool is_intr_enabled;
 };
 
+void tegra186_setup_ahc_interrupts(void);
+void tegra186_free_ahc_interrupts(void);
 void tegra186_ahc_register_cb(tegra186_ahc_cb func, int idx, void *data);
 void tegra186_ahc_register_deferred_cb(tegra186_ahc_cb func, int idx, void *data);
 

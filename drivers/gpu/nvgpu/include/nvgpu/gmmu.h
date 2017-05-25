@@ -27,8 +27,6 @@
 #include <nvgpu/gmmu_t19x.h>
 #endif
 
-struct scatterlist;
-
 /*
  * This is the GMMU API visible to blocks outside of the GMMU. Basically this
  * API supports all the different types of mappings that might be done in the

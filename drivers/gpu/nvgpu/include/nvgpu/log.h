@@ -71,6 +71,7 @@ enum nvgpu_log_categories {
 	gpu_dbg_pd_cache   = BIT(20),	/* PD cache traces. */
 	gpu_dbg_alloc      = BIT(21),	/* Allocator debugging. */
 	gpu_dbg_dma        = BIT(22),	/* DMA allocation prints. */
+	gpu_dbg_sgl        = BIT(23),	/* SGL related traces. */
 	gpu_dbg_mem        = BIT(31),	/* memory accesses; very verbose. */
 };
 

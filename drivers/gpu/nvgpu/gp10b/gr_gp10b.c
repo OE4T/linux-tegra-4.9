@@ -904,7 +904,7 @@ int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 
 	mem->gpu_va = nvgpu_gmmu_map(vm,
 				mem,
-				size,
+				mem->aligned_size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none,
 				false,

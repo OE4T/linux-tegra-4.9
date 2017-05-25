@@ -32,6 +32,8 @@ struct nvgpu_mem_priv {
 };
 
 u64 nvgpu_mem_get_addr_sgl(struct gk20a *g, struct scatterlist *sgl);
+struct nvgpu_mem_sgl *nvgpu_mem_sgl_create(struct gk20a *g,
+					   struct sg_table *sgt);
 
 /**
  * __nvgpu_mem_create_from_pages - Create an nvgpu_mem from physical pages.

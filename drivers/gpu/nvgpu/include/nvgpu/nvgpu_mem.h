@@ -33,6 +33,8 @@ struct gk20a;
 struct nvgpu_allocator;
 struct nvgpu_gmmu_attrs;
 
+#define NVGPU_MEM_DMA_ERROR		(~0ULL)
+
 /*
  * Real location of a buffer - nvgpu_aperture_mask() will deduce what will be
  * told to the gpu about the aperture, but this flag designates where the
@@ -42,6 +44,28 @@ enum nvgpu_aperture {
 	APERTURE_INVALID = 0, /* unallocated or N/A */
 	APERTURE_SYSMEM,
 	APERTURE_VIDMEM
+};
+
+/*
+ * This struct holds the necessary information for describing a struct
+ * nvgpu_mem's scatter gather list.
+ *
+ * These are created in a platform dependent way. As a result the function
+ * definition for allocating these lives in the <nvgpu/_OS_/nvgpu_mem.h> file.
+ */
+struct nvgpu_mem_sgl {
+	/*
+	 * Internally this is implemented as a singly linked list.
+	 */
+	struct nvgpu_mem_sgl	*next;
+
+	/*
+	 * There is both a phys address and a DMA address since some systems,
+	 * for example ones with an IOMMU, may see these as different addresses.
+	 */
+	u64			 phys;
+	u64			 dma;
+	u64			 length;
 };
 
 struct nvgpu_mem {
@@ -175,6 +199,27 @@ static inline bool nvgpu_mem_is_valid(struct nvgpu_mem *mem)
 int nvgpu_mem_create_from_mem(struct gk20a *g,
 			      struct nvgpu_mem *dest, struct nvgpu_mem *src,
 			      int start_page, int nr_pages);
+
+/**
+ * nvgpu_mem_sgl_create_from_mem - Create a scatter list from an nvgpu_mem.
+ *
+ * @g   - The GPU.
+ * @mem - The source memory allocation to use.
+ *
+ * Create a scatter gather list from the passed @mem struct. This list lets the
+ * calling code iterate across each chunk of a DMA allocation for when that DMA
+ * allocation is not completely contiguous.
+ */
+struct nvgpu_mem_sgl *nvgpu_mem_sgl_create_from_mem(struct gk20a *g,
+						    struct nvgpu_mem *mem);
+void nvgpu_mem_sgl_free(struct gk20a *g, struct nvgpu_mem_sgl *sgl);
+
+struct nvgpu_mem_sgl *nvgpu_mem_sgl_next(struct nvgpu_mem_sgl *sgl);
+u64 nvgpu_mem_sgl_phys(struct nvgpu_mem_sgl *sgl);
+u64 nvgpu_mem_sgl_dma(struct nvgpu_mem_sgl *sgl);
+u64 nvgpu_mem_sgl_length(struct nvgpu_mem_sgl *sgl);
+u64 nvgpu_mem_sgl_gpu_addr(struct gk20a *g, struct nvgpu_mem_sgl *sgl,
+			   struct nvgpu_gmmu_attrs *attrs);
 
 /*
  * Buffer accessors - wrap between begin() and end() if there is no permanent

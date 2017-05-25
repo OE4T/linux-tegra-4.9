@@ -1151,7 +1151,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 	struct gk20a_fence *gk20a_fence_out = NULL;
 	struct gk20a_fence *gk20a_last_fence = NULL;
 	struct nvgpu_page_alloc *alloc = NULL;
-	struct page_alloc_chunk *chunk = NULL;
+	struct nvgpu_mem_sgl *sgl = NULL;
 	int err = 0;
 
 	if (g->mm.vidmem.ce_ctx_id == (u32)~0)
@@ -1159,16 +1159,16 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 
 	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
 
-	nvgpu_list_for_each_entry(chunk, &alloc->alloc_chunks,
-				  page_alloc_chunk, list_entry) {
+	sgl = alloc->sgl;
+	while (sgl) {
 		if (gk20a_last_fence)
 			gk20a_fence_put(gk20a_last_fence);
 
 		err = gk20a_ce_execute_ops(g,
 			g->mm.vidmem.ce_ctx_id,
 			0,
-			chunk->base,
-			chunk->length,
+			nvgpu_mem_sgl_phys(sgl),
+			nvgpu_mem_sgl_length(sgl),
 			0x00000000,
 			NVGPU_CE_DST_LOCATION_LOCAL_FB,
 			NVGPU_CE_MEMSET,
@@ -1183,6 +1183,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 		}
 
 		gk20a_last_fence = gk20a_fence_out;
+		sgl = nvgpu_mem_sgl_next(sgl);
 	}
 
 	if (gk20a_last_fence) {
@@ -1262,10 +1263,10 @@ dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 	return addr;
 }
 
-u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova)
+u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, u64 iova)
 {
 	/* ensure it is not vidmem allocation */
-	WARN_ON(is_vidmem_page_alloc((u64)iova));
+	WARN_ON(is_vidmem_page_alloc(iova));
 
 	if (device_is_iommuable(dev_from_gk20a(g)) &&
 			g->ops.mm.get_physical_addr_bits)
@@ -2165,11 +2166,6 @@ int gk20a_mm_suspend(struct gk20a *g)
 u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g)
 {
 	return 34;
-}
-
-u64 gk20a_mm_gpu_phys_addr(struct gk20a *g, u64 phys, u32 flags)
-{
-	return phys;
 }
 
 const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,

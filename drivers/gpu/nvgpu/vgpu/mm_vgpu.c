@@ -78,7 +78,7 @@ int vgpu_init_mm_support(struct gk20a *g)
 
 static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 				u64 map_offset,
-				struct sg_table *sgt,
+				struct nvgpu_mem_sgl *sgl,
 				u64 buffer_offset,
 				u64 size,
 				int pgsz_idx,
@@ -98,7 +98,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 	struct dma_iommu_mapping *mapping = to_dma_iommu_mapping(d);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_map_params *p = &msg.params.as_map;
-	u64 addr = nvgpu_mem_get_addr_sgl(g, sgt->sgl);
+	u64 addr = nvgpu_mem_sgl_gpu_addr(g, sgl, NULL);
 	u8 prot;
 
 	gk20a_dbg_fn("");

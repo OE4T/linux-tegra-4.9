@@ -84,37 +84,40 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 offset, u32 size, pramin_access_batch_fn loop, u32 **arg)
 {
 	struct nvgpu_page_alloc *alloc = NULL;
-	struct page_alloc_chunk *chunk = NULL;
+	struct nvgpu_mem_sgl *sgl;
 	u32 byteoff, start_reg, until_end, n;
 
 	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
-	nvgpu_list_for_each_entry(chunk, &alloc->alloc_chunks,
-			page_alloc_chunk, list_entry) {
-		if (offset >= chunk->length)
-			offset -= chunk->length;
-		else
+	sgl = alloc->sgl;
+	while (sgl) {
+		if (offset >= nvgpu_mem_sgl_length(sgl)) {
+			offset -= nvgpu_mem_sgl_length(sgl);
+			sgl = sgl->next;
+		} else {
 			break;
+		}
 	}
 
 	while (size) {
-		byteoff = g->ops.pramin.enter(g, mem, chunk,
+		u32 sgl_len = (u32)nvgpu_mem_sgl_length(sgl);
+
+		byteoff = g->ops.pramin.enter(g, mem, sgl,
 					      offset / sizeof(u32));
 		start_reg = g->ops.pramin.data032_r(byteoff / sizeof(u32));
 		until_end = SZ_1M - (byteoff & (SZ_1M - 1));
 
-		n = min3(size, until_end, (u32)(chunk->length - offset));
+		n = min3(size, until_end, (u32)(sgl_len - offset));
 
 		loop(g, start_reg, n / sizeof(u32), arg);
 
 		/* read back to synchronize accesses */
 		gk20a_readl(g, start_reg);
-		g->ops.pramin.exit(g, mem, chunk);
+		g->ops.pramin.exit(g, mem, sgl);
 
 		size -= n;
 
-		if (n == (chunk->length - offset)) {
-			chunk = nvgpu_list_next_entry(chunk, page_alloc_chunk,
-					list_entry);
+		if (n == (sgl_len - offset)) {
+			sgl = nvgpu_mem_sgl_next(sgl);
 			offset = 0;
 		} else {
 			offset += n;

@@ -336,7 +336,6 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 
 int gk20a_mm_suspend(struct gk20a *g);
 
-u64 gk20a_mm_gpu_phys_addr(struct gk20a *g, u64 phys, u32 flags);
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova);
 
 void gk20a_mm_ltc_isr(struct gk20a *g);
@@ -361,29 +360,29 @@ static inline phys_addr_t gk20a_mem_phys(struct nvgpu_mem *mem)
 }
 
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
-			u64 map_offset,
-			struct sg_table *sgt,
-			u64 buffer_offset,
-			u64 size,
-			int pgsz_idx,
-			u8 kind_v,
-			u32 ctag_offset,
-			u32 flags,
-			int rw_flag,
-			bool clear_ctags,
-			bool sparse,
-			bool priv,
-			struct vm_gk20a_mapping_batch *batch,
-			enum nvgpu_aperture aperture);
+			  u64 map_offset,
+			  struct nvgpu_mem_sgl *sgl,
+			  u64 buffer_offset,
+			  u64 size,
+			  int pgsz_idx,
+			  u8 kind_v,
+			  u32 ctag_offset,
+			  u32 flags,
+			  int rw_flag,
+			  bool clear_ctags,
+			  bool sparse,
+			  bool priv,
+			  struct vm_gk20a_mapping_batch *batch,
+			  enum nvgpu_aperture aperture);
 
 void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
-			u64 vaddr,
-			u64 size,
-			int pgsz_idx,
-			bool va_allocated,
-			int rw_flag,
-			bool sparse,
-			struct vm_gk20a_mapping_batch *batch);
+			     u64 vaddr,
+			     u64 size,
+			     int pgsz_idx,
+			     bool va_allocated,
+			     int rw_flag,
+			     bool sparse,
+			     struct vm_gk20a_mapping_batch *batch);
 
 struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf);
 void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,

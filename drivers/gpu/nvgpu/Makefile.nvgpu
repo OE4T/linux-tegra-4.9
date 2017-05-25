@@ -55,6 +55,7 @@ nvgpu-y := \
 	common/mm/pd_cache.o \
 	common/mm/vm.o \
 	common/mm/vm_area.o \
+	common/mm/nvgpu_mem.o \
 	common/bus.o \
 	common/enabled.o \
 	common/pramin.o \

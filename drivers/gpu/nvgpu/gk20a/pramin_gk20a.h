@@ -19,10 +19,10 @@
 
 struct gk20a;
 struct nvgpu_mem;
-struct page_alloc_chunk;
+struct nvgpu_mem_sgl;
 
 u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
-			      struct page_alloc_chunk *chunk, u32 w);
+		       struct nvgpu_mem_sgl *sgl, u32 w);
 void gk20a_pramin_exit(struct gk20a *g, struct nvgpu_mem *mem,
-			      struct page_alloc_chunk *chunk);
+		       struct nvgpu_mem_sgl *sgl);
 #endif

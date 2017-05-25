@@ -18,6 +18,7 @@
 #define PAGE_ALLOCATOR_PRIV_H
 
 #include <nvgpu/allocator.h>
+#include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
@@ -83,27 +84,17 @@ page_alloc_slab_page_from_list_entry(struct nvgpu_list_node *node)
 	((uintptr_t)node - offsetof(struct page_alloc_slab_page, list_entry));
 };
 
-struct page_alloc_chunk {
-	struct nvgpu_list_node list_entry;
-
-	u64 base;
-	u64 length;
-};
-
-static inline struct page_alloc_chunk *
-page_alloc_chunk_from_list_entry(struct nvgpu_list_node *node)
-{
-	return (struct page_alloc_chunk *)
-	((uintptr_t)node - offsetof(struct page_alloc_chunk, list_entry));
-};
-
 /*
  * Struct to handle internal management of page allocation. It holds a list
  * of the chunks of pages that make up the overall allocation - much like a
  * scatter gather table.
  */
 struct nvgpu_page_alloc {
-	struct nvgpu_list_node alloc_chunks;
+	/*
+	 * nvgpu_mem_sgl for describing the actual allocation. Convenient for
+	 * GMMU mapping.
+	 */
+	struct nvgpu_mem_sgl *sgl;
 
 	int nr_chunks;
 	u64 length;
@@ -156,7 +147,6 @@ struct nvgpu_page_allocator {
 	int nr_slabs;
 
 	struct nvgpu_kmem_cache *alloc_cache;
-	struct nvgpu_kmem_cache *chunk_cache;
 	struct nvgpu_kmem_cache *slab_page_cache;
 
 	u64 flags;

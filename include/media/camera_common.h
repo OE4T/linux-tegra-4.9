@@ -169,7 +169,6 @@ struct camera_common_sensor_ops {
 struct camera_common_data {
 	struct camera_common_sensor_ops		*ops;
 	struct v4l2_ctrl_handler		*ctrl_handler;
-	struct i2c_client			*i2c_client;
 	struct device				*dev;
 	const struct camera_common_frmfmt	*frmfmt;
 	const struct camera_common_colorfmt	*colorfmt;
@@ -211,7 +210,7 @@ struct camera_common_focuser_data {
 	struct v4l2_ctrl_handler		*ctrl_handler;
 	struct v4l2_subdev			subdev;
 	struct v4l2_ctrl			**ctrls;
-	struct i2c_client			*i2c_client;
+	struct device				*dev;
 
 	struct nv_focuser_config		config;
 	void					*priv;
@@ -225,27 +224,27 @@ static inline void msleep_range(unsigned int delay_base)
 }
 
 static inline struct camera_common_data *to_camera_common_data(
-	const struct i2c_client *client)
+	const struct device *dev)
 {
-	return container_of(i2c_get_clientdata(client),
+	return container_of(dev_get_drvdata(dev),
 			    struct camera_common_data, subdev);
 }
 
 static inline struct camera_common_focuser_data *to_camera_common_focuser_data(
-	const struct i2c_client *client)
+	const struct device *dev)
 {
-	return container_of(i2c_get_clientdata(client),
+	return container_of(dev_get_drvdata(dev),
 			    struct camera_common_focuser_data, subdev);
 }
 
 int camera_common_g_ctrl(struct camera_common_data *s_data,
 			 struct v4l2_control *control);
 
-int camera_common_regulator_get(struct i2c_client *client,
+int camera_common_regulator_get(struct device *dev,
 		       struct regulator **vreg, const char *vreg_name);
-int camera_common_parse_clocks(struct i2c_client *client,
+int camera_common_parse_clocks(struct device *dev,
 			struct camera_common_pdata *pdata);
-int camera_common_parse_ports(struct i2c_client *client,
+int camera_common_parse_ports(struct device *dev,
 			      struct camera_common_data *s_data);
 
 int camera_common_debugfs_show(struct seq_file *s, void *unused);

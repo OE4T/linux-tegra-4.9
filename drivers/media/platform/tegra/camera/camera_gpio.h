@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,13 +17,13 @@
 #ifndef __CAMERA_GPIO_H__
 #define __CAMERA_GPIO_H__
 
-int cam_gpio_register(struct i2c_client *client,
+int cam_gpio_register(struct device *dev,
 			unsigned pin_num);
 
-void cam_gpio_deregister(struct i2c_client *client,
+void cam_gpio_deregister(struct device *dev,
 			unsigned pin_num);
 
-int cam_gpio_ctrl(struct i2c_client *client,
+int cam_gpio_ctrl(struct device *dev,
 			unsigned pin_num, int ref_inc, bool active_high);
 
 #endif

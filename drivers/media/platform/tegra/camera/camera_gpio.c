@@ -1,7 +1,7 @@
 /*
  * virtual.c - Camera GPIO driver
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,8 +18,8 @@
 
 #include <linux/list.h>
 #include <linux/debugfs.h>
-#include <linux/i2c.h>
 #include <linux/slab.h>
+#include <linux/device.h>
 #include <linux/gpio.h>
 
 #include "camera_gpio.h"
@@ -35,7 +35,7 @@ struct camera_gpio {
 static DEFINE_MUTEX(g_mutex);
 static LIST_HEAD(cam_gpio_list);
 
-int cam_gpio_register(struct i2c_client *client,
+int cam_gpio_register(struct device *dev,
 			unsigned pin_num) {
 	struct camera_gpio *new_gpio;
 	struct camera_gpio *next_gpio;
@@ -45,7 +45,7 @@ int cam_gpio_register(struct i2c_client *client,
 
 	list_for_each_entry(next_gpio, &cam_gpio_list, list) {
 		if (next_gpio->gpio_num == pin_num) {
-			dev_dbg(&client->dev,
+			dev_dbg(dev,
 				 "%s: gpio pin %u already registered.\n",
 				 __func__, pin_num);
 
@@ -59,12 +59,12 @@ int cam_gpio_register(struct i2c_client *client,
 	/* gpio is not present in the cam_gpio_list, add it */
 	new_gpio = kzalloc(sizeof(*new_gpio), GFP_KERNEL);
 	if (!new_gpio) {
-		dev_err(&client->dev, "%s: memory low!\n", __func__);
+		dev_err(dev, "%s: memory low!\n", __func__);
 		mutex_unlock(&g_mutex);
 		return -EFAULT;
 	}
 
-	dev_dbg(&client->dev, "%s: adding cam gpio %u\n",
+	dev_dbg(dev, "%s: adding cam gpio %u\n",
 		 __func__, pin_num);
 
 	new_gpio->gpio_num = pin_num;
@@ -78,7 +78,7 @@ int cam_gpio_register(struct i2c_client *client,
 }
 EXPORT_SYMBOL(cam_gpio_register);
 
-void cam_gpio_deregister(struct i2c_client *client,
+void cam_gpio_deregister(struct device *dev,
 			unsigned pin_num) {
 	struct camera_gpio *next_gpio;
 
@@ -93,7 +93,7 @@ void cam_gpio_deregister(struct i2c_client *client,
 				list_del(&next_gpio->list);
 				kfree(next_gpio);
 
-				dev_dbg(&client->dev,
+				dev_dbg(dev,
 					 "%s: removing cam gpio %u\n",
 					 __func__, pin_num);
 			}
@@ -107,7 +107,7 @@ void cam_gpio_deregister(struct i2c_client *client,
 }
 EXPORT_SYMBOL(cam_gpio_deregister);
 
-int cam_gpio_ctrl(struct i2c_client *client,
+int cam_gpio_ctrl(struct device *dev,
 			unsigned pin_num, int val,
 			bool active_high) /* val: 0=deassert, 1=assert */
 {
@@ -123,7 +123,7 @@ int cam_gpio_ctrl(struct i2c_client *client,
 
 			if (!atomic_read(&next_gpio->state_cnt) &&
 					!val) {
-				dev_err(&client->dev,
+				dev_err(dev,
 					 "%s: state cnt can't be < 0\n",
 					 __func__);
 				mutex_unlock(&next_gpio->mutex);
@@ -143,7 +143,7 @@ int cam_gpio_ctrl(struct i2c_client *client,
 			 * used to indicate that gpio can be written to*/
 			if (atomic_read(&next_gpio->state_cnt) - val == 0) {
 				gpio_set_value_cansleep(pin_num, pin_val);
-				dev_dbg(&client->dev, "%s %u %d\n",
+				dev_dbg(dev, "%s %u %d\n",
 					 __func__, pin_num, pin_val);
 			}
 		}
@@ -151,7 +151,7 @@ int cam_gpio_ctrl(struct i2c_client *client,
 	}
 
 	if (!found)
-		dev_dbg(&client->dev,
+		dev_dbg(dev,
 			 "WARNING %s: gpio %u not in list\n",
 			 __func__, pin_num);
 

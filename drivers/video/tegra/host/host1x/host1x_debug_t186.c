@@ -90,7 +90,18 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 
 	for (i = 0; i < job->num_gathers; i++) {
 		struct nvhost_job_gather *g = &job->gathers[i];
-		u32 *mapped = dma_buf_vmap(g->buf);
+		u32 *mapped;
+
+		/* Skip special gathers used to release mlocks (identified by
+		 * g->buf being NULL
+		 */
+		if (!g->buf) {
+			nvhost_debug_output(o,
+				"Ignoring special mlock-release gather\n");
+			continue;
+		}
+
+		mapped = dma_buf_vmap(g->buf);
 		if (!mapped) {
 			nvhost_debug_output(o, "[could not mmap]\n");
 			continue;

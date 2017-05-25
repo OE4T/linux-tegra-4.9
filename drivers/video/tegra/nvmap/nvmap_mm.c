@@ -152,11 +152,16 @@ static int nvmap_prot_handles(struct nvmap_handle **handles, u64 *offsets,
 		       u64 *sizes, u32 nr, int op)
 {
 	int i, err = 0;
+	u32 *offs_32 = (u32 *)offsets, *sizes_32 = (u32 *)sizes;
+	bool is_32 = (op & NVMAP_ELEM_SIZE_U64) ? false : true;
+
+	op &= ~NVMAP_ELEM_SIZE_U64;
 
 	down_write(&current->mm->mmap_sem);
 	for (i = 0; i < nr; i++) {
-		err = nvmap_prot_handle(handles[i], offsets[i],
-				sizes[i], op);
+		err = nvmap_prot_handle(handles[i],
+				is_32 ? offs_32[i] : offsets[i],
+				is_32 ? sizes_32[i] : sizes[i], op);
 		if (err)
 			goto finish;
 	}
@@ -169,10 +174,17 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u64 *offsets, u64 *sizes,
 			u32 nr, u32 op)
 {
 	int i, err;
+	bool is_32 = (op & NVMAP_ELEM_SIZE_U64) ? false : true;
+
+	op &= ~NVMAP_ELEM_SIZE_U64;
 
 	for (i = 0; i < nr; i++) {
-		u64 size = sizes[i] ? sizes[i] : handles[i]->size;
-		u64 offset = sizes[i] ? offsets[i] : 0;
+		u32 *offs_32 = (u32 *)offsets, *sizes_32 = (u32 *)sizes;
+		u64 size = is_32 ? sizes_32[i] : sizes[i];
+		u64 offset = is_32 ? offs_32[i] : offsets[i];
+
+		size = size ?: handles[i]->size;
+		offset = offset ?: 0;
 
 		if ((offset != 0) || (size != handles[i]->size))
 			return -EINVAL;

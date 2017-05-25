@@ -611,50 +611,60 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 
 	elem_size  = (op.op & NVMAP_ELEM_SIZE_U64) ?
 			sizeof(u64) : sizeof(u32);
-	if (!access_ok(VERIFY_READ, op.offsets, op.nr * elem_size))
-		return -EFAULT;
 
-	if (!access_ok(VERIFY_READ, op.sizes, op.nr * elem_size))
-		return -EFAULT;
-
-	if (!op.offsets || !op.sizes)
-		return -EINVAL;
-
-	if (!(op.op & NVMAP_ELEM_SIZE_U64))
-		bytes += 2 * op.nr * sizeof(u64); /* to prepare u64 array */
-
+	bytes += 2 * op.nr * elem_size;
+	bytes += op.nr * sizeof(u32);
 	refs = nvmap_altalloc(bytes);
-	if (!refs)
+	if (!refs) {
+		pr_err("memory allocation failed\n");
 		return -ENOMEM;
+	}
 
-	handle_ptr = (u32 *)(uintptr_t)op.handles;
-	if (op.op & NVMAP_ELEM_SIZE_U64) {
-		offset_ptr = (u64 *)(uintptr_t)op.offsets;
-		size_ptr = (u64 *)(uintptr_t)op.sizes;
-		op.op &= ~NVMAP_ELEM_SIZE_U64;
-	} else {
-		offset_ptr = (u64 *)(refs + op.nr);
-		size_ptr = offset_ptr + op.nr;
-		for (i = 0; i < op.nr; i++) {
-			offset_ptr[i] = *(((u32 *)op.offsets) + i);
-			size_ptr[i] = *(((u32 *)op.sizes) + i);
-		}
+	offset_ptr = (u64 *)(refs + op.nr);
+	size_ptr = (u64 *)(((uintptr_t)offset_ptr) + op.nr * elem_size);
+	handle_ptr = (u32 *)(((uintptr_t)size_ptr) + op.nr * elem_size);
+
+	if (!op.handles || !op.offsets || !op.sizes) {
+		pr_err("pointers are invalid\n");
+		return -EINVAL;
+	}
+
+	if (!IS_ALIGNED((ulong)offset_ptr, elem_size) ||
+	    !IS_ALIGNED((ulong)size_ptr, elem_size) ||
+	    !IS_ALIGNED((ulong)handle_ptr, sizeof(u32))) {
+		pr_err("pointers are not properly aligned!!\n");
+		return -EINVAL;
+	}
+
+	if (copy_from_user(handle_ptr, (void *)op.handles,
+		op.nr * sizeof(u32))) {
+		pr_err("Can't copy from user pointer op.handles\n");
+		return -EFAULT;
+	}
+
+	if (copy_from_user(offset_ptr, (void *)op.offsets,
+		op.nr * elem_size)) {
+		pr_err("Can't copy from user pointer op.offsets\n");
+		return -EFAULT;
+	}
+
+	if (copy_from_user(size_ptr, (void *)op.sizes,
+		op.nr * elem_size)) {
+		pr_err("Can't copy from user pointer op.sizes\n");
+		return -EFAULT;
 	}
 
 	for (i = 0; i < op.nr; i++) {
-		u32 handle;
-
-		if (copy_from_user(&handle, &handle_ptr[i], sizeof(handle))) {
-			err = -EFAULT;
-			goto free_mem;
-		}
-
-		refs[i] = nvmap_handle_get_from_fd(handle);
+		refs[i] = nvmap_handle_get_from_fd(handle_ptr[i]);
 		if (!refs[i]) {
+			pr_err("invalid handle_ptr[%d] = %u\n",
+				i, handle_ptr[i]);
 			err = -EINVAL;
 			goto free_mem;
 		}
 		if (!(refs[i]->heap_type & nvmap_dev->cpu_access_mask)) {
+			pr_err("heap %x can't be accessed from cpu\n",
+				refs[i]->heap_type);
 			err = -EPERM;
 			goto free_mem;
 		}
@@ -671,6 +681,7 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 			count++;
 
 	if (count % op.nr) {
+		pr_err("incorrect CACHE_SYNC_AT_RESERVE mix of handles\n");
 		err = -EINVAL;
 		goto free_mem;
 	}
@@ -686,6 +697,7 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 				count++;
 
 		if (count % op.nr) {
+			pr_err("all or none of the handles should be from heap\n");
 			err = -EINVAL;
 			goto free_mem;
 		}

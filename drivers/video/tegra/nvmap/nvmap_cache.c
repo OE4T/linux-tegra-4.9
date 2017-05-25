@@ -528,6 +528,9 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u64 *offsets,
 	int i;
 	u64 total = 0;
 	u64 thresh = ~0;
+	bool is_32 = (op & NVMAP_ELEM_SIZE_U64) ? false : true;
+
+	op &= ~NVMAP_ELEM_SIZE_U64;
 
 	WARN(!IS_ENABLED(CONFIG_ARM64),
 		"cache list operation may not function properly");
@@ -537,6 +540,8 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u64 *offsets,
 
 	for (i = 0; i < nr; i++) {
 		bool inner, outer;
+		u32 *sizes_32 = (u32 *)sizes;
+		u64 size = is_32 ? sizes_32[i] : sizes[i];
 
 		nvmap_handle_get_cacheability(handles[i], &inner, &outer);
 
@@ -546,7 +551,7 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u64 *offsets,
 		if ((op == NVMAP_CACHE_OP_WB) && nvmap_handle_track_dirty(handles[i]))
 			total += atomic_read(&handles[i]->pgalloc.ndirty);
 		else
-			total += sizes[i] ? sizes[i] : handles[i]->size;
+			total += size ? size : handles[i]->size;
 	}
 
 	if (!total)
@@ -580,14 +585,21 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u64 *offsets,
 					nvmap_stats_read(NS_CFLUSH_DONE));
 	} else {
 		for (i = 0; i < nr; i++) {
-			u64 size = sizes[i] ? sizes[i] : handles[i]->size;
-			u64 offset = sizes[i] ? offsets[i] : 0;
-			int err = __nvmap_do_cache_maint(handles[i]->owner,
-							 handles[i], offset,
-							 offset + size,
-							 op, false);
-			if (err)
+			u32 *offs_32 = (u32 *)offsets, *sizes_32 = (u32 *)sizes;
+			u64 size = is_32 ? sizes_32[i] : sizes[i];
+			u64 offset = is_32 ? offs_32[i] : offsets[i];
+			int err;
+
+			size = size ?: handles[i]->size;
+			offset = offset ?: 0;
+			err = __nvmap_do_cache_maint(handles[i]->owner,
+						     handles[i], offset,
+						     offset + size,
+						     op, false);
+			if (err) {
+				pr_err("cache maint per handle failed\n");
 				return err;
+			}
 		}
 	}
 

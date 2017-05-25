@@ -115,7 +115,6 @@
 		#size-cells = <0>;
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
-		nvidia,dma-request-selector = <&gpcdma 5>;
 		dmas = <&gpcdma 5>, <&gpcdma 5>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p";

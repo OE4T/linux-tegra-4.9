@@ -1,7 +1,7 @@
 subdir-ccflags-y += -Werror
 EXTRA_CFLAGS += -I$(srctree)/sound/soc/tegra-alt
 EXTRA_CFLAGS += -I$(srctree)
-EXTRA_CFLAGS += -I$(srctree)/../t18x
+EXTRA_CFLAGS += -I$(srctree)/../nvidia
 
 snd-soc-tegra186-alt-asrc-objs := tegra186_asrc_alt.o
 snd-soc-tegra186-alt-arad-objs := tegra186_arad_alt.o

@@ -1,7 +1,7 @@
 KBUILD_CFLAGS += -I$(srctree)/arch/arm/mach-tegra \
 		 -I$(srctree)/arch/arm/mach-tegra/include/ \
 		 -I$(srctree)/drivers/platform/tegra/ \
-		 -I$(srctree)/../t18x/drivers/platform/tegra/rtcpu \
+		 -I$(srctree)/../nvidia/drivers/platform/tegra/rtcpu \
 		 -I$(srctree)/../display/drivers/video/tegra/dc/ \
 		 -I$(srctree)/../display/drivers/video/tegra/dc/panel/
 

@@ -1,5 +1,5 @@
 ccflags-y += -Idrivers/gpu/drm/tegra
-ccflags-y += -I../t18x/drivers/gpu/drm/tegra
+ccflags-y += -I../nvidia/drivers/gpu/drm/tegra
 
 tegra-drm-t186-y = \
 	vic_t186.o \

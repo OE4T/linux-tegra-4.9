@@ -2,8 +2,8 @@ GCOV_PROFILE := y
 subdir-ccflags-y := -Werror
 ccflags-y += -I$(srctree)/../nvhost/drivers/video/tegra/host
 ifeq ($(CONFIG_TEGRA_NVDISPLAY),y)
-ccflags-y += -I$(srctree)/../t18x/drivers/video/tegra/dc
-ccflags-y += -I$(srctree)/../t18x/drivers/platform/tegra
+ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/dc
+ccflags-y += -I$(srctree)/../nvidia/drivers/platform/tegra
 endif
 ccflags-y += -I$(srctree)/arch/arm/mach-tegra
 obj-y += dc_common.o dc.o mode.o clock.o window.o dc_client.o

@@ -3592,7 +3592,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 #endif
 	mode = tegra_dc_get_override_mode(dc);
 
-	if (mode) {
+	if (mode && tegra_is_bl_display_initialized(dc->ndev->id)) {
 		tegra_dc_set_mode(dc, mode);
 
 		/*

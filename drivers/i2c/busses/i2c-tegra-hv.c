@@ -326,7 +326,7 @@ static struct platform_device_id tegra_hv_i2c_devtype[] = {
 		.name = "tegra12-hv-i2c",
 		.driver_data = 0,
 	},
-
+	{}
 };
 
 static struct platform_driver tegra_hv_i2c_driver = {

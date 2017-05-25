@@ -590,7 +590,7 @@ static int enable_pp_set(const char *arg, const struct kernel_param *kp)
 
 static int enable_pp_get(char *buff, const struct kernel_param *kp)
 {
-	return param_get_int(buff, kp);
+	return param_get_bool(buff, kp);
 }
 
 static struct kernel_param_ops enable_pp_ops = {

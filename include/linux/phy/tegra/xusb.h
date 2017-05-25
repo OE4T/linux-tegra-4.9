@@ -80,4 +80,8 @@ int tegra_xusb_padctl_utmi_pad_primary_charger_detect(struct tegra_xusb_padctl
 					*padctl, struct phy *phy);
 int tegra_xusb_padctl_utmi_pad_secondary_charger_detect(struct tegra_xusb_padctl
 					*padctl, struct phy *phy);
+int tegra_xusb_padctl_enable_host_cdp(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
+int tegra_xusb_padctl_disable_host_cdp(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
 #endif /* PHY_TEGRA_XUSB_H */

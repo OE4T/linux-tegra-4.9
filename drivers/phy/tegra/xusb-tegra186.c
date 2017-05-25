@@ -428,9 +428,12 @@ static void tegra186_utmi_bias_pad_power_off(struct tegra_xusb_padctl *padctl)
 		return;
 	}
 
-	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
-	reg |= BIAS_PAD_PD;
-	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+	if (!padctl->cdp_used) {
+		/* only turn BIAS pad off when host CDP isn't enabled */
+		reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+		reg |= BIAS_PAD_PD;
+		padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+	}
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 	reg |= USB2_PD_TRK;
@@ -2144,6 +2147,67 @@ static int tegra186_xusb_padctl_utmi_pad_secondary_charger_detect(
 	return ret;
 }
 
+static int tegra186_usb2_set_host_cdp(struct tegra_xusb_padctl *padctl,
+					struct phy *phy, bool enable)
+{
+	struct tegra_xusb_lane *lane;
+	u32 reg;
+	unsigned int index;
+
+	if (!phy)
+		return -EINVAL;
+
+	lane = phy_get_drvdata(phy);
+	index = lane->index;
+
+	dev_dbg(padctl->dev, "%sable USB2 port %d Tegra CDP\n",
+		 enable ? "en" : "dis", index);
+	if (enable) {
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(index));
+		reg &= ~PD_CHG;
+		padctl_writel(padctl, reg,
+			      USB2_BATTERY_CHRG_OTGPADX_CTL0(index));
+
+		reg = padctl_readl(padctl,
+				   XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+		reg |= (USB2_OTG_PD2 | USB2_OTG_PD2_OVRD_EN);
+		padctl_writel(padctl, reg,
+			      XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(index));
+		reg |= ON_SRC_EN;
+		padctl_writel(padctl, reg,
+			      USB2_BATTERY_CHRG_OTGPADX_CTL0(index));
+
+		/* Dont let BIAS pad power down */
+		padctl->cdp_used = true;
+	} else {
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(index));
+		reg |= PD_CHG;
+		padctl_writel(padctl, reg,
+			      USB2_BATTERY_CHRG_OTGPADX_CTL0(index));
+
+		reg = padctl_readl(padctl,
+				   XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+		reg &= ~USB2_OTG_PD2_OVRD_EN;
+		padctl_writel(padctl, reg,
+			      XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(index));
+		reg &= ~ON_SRC_EN;
+		padctl_writel(padctl, reg,
+			      USB2_BATTERY_CHRG_OTGPADX_CTL0(index));
+
+		padctl->cdp_used = false;
+	}
+
+	return 0;
+}
+
 static const struct tegra_xusb_padctl_ops tegra186_xusb_padctl_ops = {
 	.probe = tegra186_xusb_padctl_probe,
 	.remove = tegra186_xusb_padctl_remove,
@@ -2171,6 +2235,7 @@ static const struct tegra_xusb_padctl_ops tegra186_xusb_padctl_ops = {
 			tegra186_xusb_padctl_utmi_pad_primary_charger_detect,
 	.utmi_pad_secondary_charger_detect =
 			tegra186_xusb_padctl_utmi_pad_secondary_charger_detect,
+	.set_host_cdp = tegra186_usb2_set_host_cdp,
 };
 
 const struct tegra_xusb_padctl_soc tegra186_xusb_padctl_soc = {

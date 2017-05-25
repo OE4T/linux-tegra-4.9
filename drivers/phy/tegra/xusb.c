@@ -1355,6 +1355,27 @@ int tegra_xusb_padctl_utmi_pad_secondary_charger_detect(struct tegra_xusb_padctl
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_utmi_pad_secondary_charger_detect);
 
+
+int tegra_xusb_padctl_enable_host_cdp(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->set_host_cdp)
+		return padctl->soc->ops->set_host_cdp(padctl, phy, true);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_enable_host_cdp);
+
+int tegra_xusb_padctl_disable_host_cdp(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->set_host_cdp)
+		return padctl->soc->ops->set_host_cdp(padctl, phy, false);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_disable_host_cdp);
+
 MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
 MODULE_DESCRIPTION("Tegra XUSB Pad Controller driver");
 MODULE_LICENSE("GPL v2");

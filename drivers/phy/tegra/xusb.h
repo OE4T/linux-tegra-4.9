@@ -423,6 +423,8 @@ struct tegra_xusb_padctl_ops {
 				struct phy *phy);
 	int (*utmi_pad_secondary_charger_detect)(struct tegra_xusb_padctl
 				*padctl, struct phy *phy);
+	int (*set_host_cdp)(struct tegra_xusb_padctl *padctl, struct phy *phy,
+				bool enable);
 };
 
 struct tegra_xusb_padctl_soc {
@@ -467,6 +469,8 @@ struct tegra_xusb_padctl {
 	struct work_struct otg_vbus_work;
 	bool otg_vbus_on;
 	bool otg_vbus_alwayson;
+
+	bool cdp_used;
 };
 
 static inline void padctl_writel(struct tegra_xusb_padctl *padctl, u32 value,

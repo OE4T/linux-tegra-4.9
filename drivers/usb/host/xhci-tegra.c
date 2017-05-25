@@ -389,6 +389,7 @@ struct tegra_xusb {
 
 	struct phy **phys;
 	struct phy **typed_phys[MAX_PHY_TYPES];
+	struct phy **cdp_ext_phys; /* external cdp phys */
 
 	unsigned int num_phys;
 
@@ -413,6 +414,7 @@ struct tegra_xusb {
 	struct tegra_xhci_fpci_context fpci_ctx;
 	struct tegra_xhci_ipfs_context ipfs_ctx;
 
+
 	int usb2_otg_port_base_1; /* one based usb2 port number */
 	int usb3_otg_port_base_1; /* one based usb3 port number */
 	struct extcon_dev *id_extcon;
@@ -421,6 +423,10 @@ struct tegra_xusb {
 
 	bool host_mode;
 	bool otg_role_initialized;
+
+	u8 *connected_usb2_ports; /* keep track of connected UTMI ports */
+	bool cdp_enabled;
+	bool cdp_internal;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -1367,6 +1373,19 @@ static irqreturn_t tegra_xusb_padctl_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static void tegra_xusb_parse_dt(struct platform_device *pdev,
+				struct tegra_xusb *tegra)
+{
+	struct device_node *node = pdev->dev.of_node;
+
+	tegra->cdp_internal = of_property_read_bool(node,
+		"nvidia,enable-internal-cdp");
+	if (tegra->cdp_internal) {
+		dev_info(tegra->dev, "Enable CDP with internal USB2 phy\n");
+		tegra->cdp_enabled = true;
+	}
+}
+
 static int tegra_xusb_clk_enable(struct tegra_xusb *tegra)
 {
 	int err;
@@ -1432,6 +1451,19 @@ static int tegra_xusb_phy_enable(struct tegra_xusb *tegra)
 {
 	int i, j, err;
 
+	/* enable CDP on non-OTG port */
+	for (j = 0; j < tegra->soc->num_typed_phys[USB2_PHY]; j++) {
+		if (j == tegra->usb2_otg_port_base_1 - 1)
+			continue;
+		err = phy_init(tegra->cdp_ext_phys[j]);
+		if (err)
+			continue;
+		err = phy_power_on(tegra->cdp_ext_phys[j]);
+		if (err) {
+			err = phy_exit(tegra->cdp_ext_phys[j]);
+		}
+	}
+
 	for (i = 0; i < MAX_PHY_TYPES; i++) {
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
 			err = phy_init(tegra->typed_phys[i][j]);
@@ -1472,6 +1504,14 @@ static void tegra_xusb_phy_disable(struct tegra_xusb *tegra)
 	for (i = 0; i < tegra->num_phys; i++) {
 		phy_power_off(tegra->phys[i]);
 		phy_exit(tegra->phys[i]);
+	}
+
+	/* disable CDP on non-OTG ports */
+	for (i = 0; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
+		if (i == tegra->usb2_otg_port_base_1 - 1)
+			continue;
+		phy_power_off(tegra->cdp_ext_phys[i]);
+		phy_exit(tegra->cdp_ext_phys[i]);
 	}
 }
 
@@ -2069,6 +2109,34 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 		}
 	}
 
+	/* allocate optional cdp_ext_phys */
+	tegra->cdp_ext_phys = devm_kcalloc(&pdev->dev,
+					tegra->soc->num_typed_phys[USB2_PHY],
+					sizeof(struct phy *), GFP_KERNEL);
+	if (!tegra->cdp_ext_phys)
+		return -ENOMEM;
+
+	for (i = 0; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
+		char prop[8];
+
+		/* get optional CDP phy */
+		snprintf(prop, sizeof(prop),
+			 "cdp-%d", i);
+		phy = devm_phy_optional_get(
+			  &pdev->dev, prop);
+		if (!IS_ERR_OR_NULL(phy)) {
+			dev_info(&pdev->dev,
+				"External CDP phy %d registered\n",
+				j);
+			tegra->cdp_ext_phys[i] = phy;
+			tegra->cdp_enabled = true;
+		}
+	}
+
+	tegra->connected_usb2_ports = devm_kcalloc(&pdev->dev,
+					tegra->soc->num_typed_phys[USB2_PHY],
+					sizeof(u8), GFP_KERNEL);
+
 	if (tegra->usb2_otg_port_base_1) {
 		dev_info(&pdev->dev, "USB2 port %d has OTG_CAP\n",
 			tegra->usb2_otg_port_base_1 - 1);
@@ -2101,6 +2169,8 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	mutex_init(&tegra->lock);
 	tegra->dev = &pdev->dev;
 	platform_set_drvdata(pdev, tegra);
+
+	tegra_xusb_parse_dt(pdev, tegra);
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	tegra->regs = devm_ioremap_resource(&pdev->dev, regs);
@@ -2682,11 +2752,38 @@ out:
 }
 #endif /* IS_ENABLED(CONFIG_PM_SLEEP) || IS_ENABLED(CONFIG_PM) */
 
+
+static inline int set_cdp_enable(struct tegra_xusb *tegra,
+					int port_idx, bool enable)
+{
+	dev_info(tegra->dev, "%sable %sternal cdp %d\n",
+		enable ? "en" : "dis",
+		tegra->cdp_internal ? "in" : "ex",
+		port_idx);
+	if (enable) {
+		if (tegra->cdp_internal)
+			tegra_xusb_padctl_enable_host_cdp(tegra->padctl,
+				tegra->typed_phys[USB2_PHY][port_idx]);
+		else
+			phy_power_on(tegra->cdp_ext_phys[port_idx]);
+
+	} else {
+		if (tegra->cdp_internal)
+			tegra_xusb_padctl_disable_host_cdp(tegra->padctl,
+				tegra->typed_phys[USB2_PHY][port_idx]);
+		else
+			phy_power_off(tegra->cdp_ext_phys[port_idx]);
+	}
+	return 0;
+}
+
+
 #if IS_ENABLED(CONFIG_PM_SLEEP)
 static int tegra_xusb_suspend(struct device *dev)
 {
 	struct tegra_xusb *tegra = dev_get_drvdata(dev);
 	int ret;
+	unsigned int j;
 
 	if (!tegra->fw_loaded)
 		return 0;
@@ -2702,6 +2799,23 @@ static int tegra_xusb_suspend(struct device *dev)
 	ret = tegra_xhci_enter_elpg(tegra, false);
 	if (ret < 0)
 		goto out;
+
+	/* disable CDP for all ports */
+	if (tegra->cdp_enabled) {
+		for (j = 0; j < tegra->soc->num_typed_phys[USB2_PHY]; j++) {
+			set_cdp_enable(tegra, j, false);
+
+			/*
+			 * turn off VBUS for CDP enabled case.
+			 * skip vbus off for OTG port when it isn't host role
+			 */
+			if (j != tegra->usb2_otg_port_base_1 - 1 ||
+					tegra->host_mode)
+				tegra_xusb_padctl_vbus_power_off(
+					tegra->padctl, j);
+
+		}
+	}
 
 out:
 	if (!ret) {
@@ -2723,11 +2837,25 @@ static int tegra_xhci_resume_common(struct device *dev)
 {
 	struct tegra_xusb *tegra = dev_get_drvdata(dev);
 	int ret;
+	unsigned int j;
 
 	mutex_lock(&tegra->lock);
 	if (!tegra->suspended) {
 		mutex_unlock(&tegra->lock);
 		return 0;
+	}
+
+	/* enable CDP for all ports */
+	if (tegra->cdp_enabled) {
+		for (j = 0; j < tegra->soc->num_typed_phys[USB2_PHY]; j++) {
+			set_cdp_enable(tegra, j, true);
+
+			/* skip vbus on for OTG port when it isn't host role */
+			if (j != tegra->usb2_otg_port_base_1 - 1 ||
+					tegra->host_mode)
+				tegra_xusb_padctl_vbus_power_on(
+					tegra->padctl, j);
+		}
 	}
 
 	ret = tegra_xhci_exit_elpg(tegra, false);
@@ -2753,6 +2881,16 @@ static int tegra_xhci_resume_noirq(struct device *dev)
 	struct tegra_xusb *tegra = dev_get_drvdata(dev);
 
 	if (!tegra->fw_loaded)
+		return 0;
+
+	/*
+	 * when CDP is enabled, VBUS will be off in SC7 and re-enabled in SC7
+	 * resume. We don't have to resume earlier in noirq callback here
+	 * because device will disconnect and re-connected in resume. Also,
+	 * turning VBUS on in resume_noirq callback is not working if the
+	 * gpio is in GPIO expander controlled through I2C bus.
+	 */
+	if (tegra->cdp_enabled)
 		return 0;
 
 	return tegra_xhci_resume_common(dev);
@@ -2996,10 +3134,78 @@ static int tegra_xhci_update_device(struct usb_hcd *hcd,
 	return xhci_update_device(hcd, udev);
 }
 
+static inline struct tegra_xusb *hcd_to_tegra_xusb(struct usb_hcd *hcd)
+{
+	return (struct tegra_xusb *) dev_get_drvdata(hcd->self.controller);
+}
+
+static inline bool port_connected(struct tegra_xusb *tegra, unsigned int port)
+{
+	u32 portsc = read_portsc(tegra, port);
+
+	return !!(portsc & PORT_CONNECT);
+}
+
+static int tegra_xhci_alloc_dev(struct usb_hcd *hcd, struct usb_device *udev)
+{
+	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
+	int i;
+
+	/* disable CDP for newly connected USB2.0 root hub port */
+	if (tegra->cdp_enabled && usb_hcd_is_primary_hcd(hcd)) {
+		for (i = 0; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
+			int port_offset =
+				tegra->soc->ports.usb2.offset;
+
+			/* find newly connected ports only */
+			if (!tegra->connected_usb2_ports[i] &&
+			    port_connected(tegra, port_offset + i)) {
+
+				set_cdp_enable(tegra, i, false);
+				tegra->connected_usb2_ports[i] = 1;
+
+				/*
+				 * set pad protection circuit to >= 2A
+				 * CDP current range: 1.5A~5A see [BC1.2] p36
+				 */
+				tegra_xusb_padctl_utmi_pad_set_protection_level(
+					tegra->padctl,
+					tegra->typed_phys[USB2_PHY][i],
+					3,
+					TEGRA_VBUS_SOURCE);
+			}
+		}
+	}
+
+	return xhci_alloc_dev(hcd, udev);
+}
+
+static void tegra_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
+{
+	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
+	u8 port = udev->portnum - 1;
+	bool is_roothub_port = udev->parent == udev->bus->root_hub;
+
+	xhci_free_dev(hcd, udev);
+
+	/* make sure CDP is enabled for for USB2.0 root hub ports */
+	if (is_roothub_port && tegra->connected_usb2_ports[port] &&
+			tegra->cdp_enabled && usb_hcd_is_primary_hcd(hcd)) {
+		/* we have to make sure CDP is turned on before VBUS on */
+		set_cdp_enable(tegra, port, true);
+		tegra->connected_usb2_ports[port] = 0;
+		tegra_xusb_padctl_utmi_pad_set_protection_level(
+			tegra->padctl, tegra->typed_phys[USB2_PHY][port], -1,
+			TEGRA_VBUS_SOURCE);
+	}
+}
+
 static int __init tegra_xusb_init(void)
 {
 	xhci_init_driver(&tegra_xhci_hc_driver, &tegra_xhci_overrides);
 	tegra_xhci_hc_driver.update_device = tegra_xhci_update_device;
+	tegra_xhci_hc_driver.alloc_dev = tegra_xhci_alloc_dev;
+	tegra_xhci_hc_driver.free_dev = tegra_xhci_free_dev;
 
 	return platform_driver_register(&tegra_xusb_driver);
 }

@@ -241,6 +241,10 @@ EXPORT_SYMBOL_GPL(tegra_xbar_volatile_reg);
 
 int tegra_xbar_runtime_suspend(struct device *dev)
 {
+
+#ifdef CONFIG_TEGRA186_AHC
+	tegra186_free_ahc_interrupts();
+#endif
 	regcache_cache_only(xbar->regmap, true);
 	regcache_mark_dirty(xbar->regmap);
 
@@ -249,7 +253,6 @@ int tegra_xbar_runtime_suspend(struct device *dev)
 		clk_disable_unprepare(xbar->clk_ape);
 		clk_disable_unprepare(xbar->clk_apb2ape);
 	}
-
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_runtime_suspend);
@@ -277,7 +280,9 @@ int tegra_xbar_runtime_resume(struct device *dev)
 			return ret;
 		}
 	}
-
+#ifdef CONFIG_TEGRA186_AHC
+	tegra186_setup_ahc_interrupts();
+#endif
 	regcache_cache_only(xbar->regmap, false);
 
 	if (!xbar->is_shutdown)

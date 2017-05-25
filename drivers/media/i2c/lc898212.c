@@ -183,7 +183,7 @@ static int lc898212_sync(struct v4l2_subdev *sd, unsigned int sync_events)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_focuser_data *s_data =
-				to_camera_common_focuser_data(client);
+				to_camera_common_focuser_data(&client->dev);
 	struct lc898212 *priv = (struct lc898212 *)s_data->priv;
 	int ret = 0;
 	s16 new_pos = 0;
@@ -217,7 +217,7 @@ static int lc898212_set_position(struct lc898212 *priv, u32 position)
 	struct camera_common_focuser_data *s_data = priv->s_data;
 	struct nv_focuser_config *cfg = &s_data->config;
 
-	dev_dbg(&s_data->i2c_client->dev, "%s++\n", __func__);
+	dev_dbg(s_data->dev, "%s++\n", __func__);
 	if (position < cfg->pos_actual_low ||
 		position > cfg->pos_actual_high) {
 		dev_dbg(&priv->i2c_client->dev,
@@ -244,7 +244,7 @@ static int lc898212_set_position(struct lc898212 *priv, u32 position)
 	if (!priv->sync_external)
 		lc898212_sync(priv->subdev, V4L2_SYNC_EVENT_FOCUS_POS);
 
-	dev_dbg(&s_data->i2c_client->dev, "%s--\n", __func__);
+	dev_dbg(s_data->dev, "%s--\n", __func__);
 	return ret;
 }
 
@@ -258,7 +258,7 @@ static int lc898212_s_ctrl(struct v4l2_ctrl *ctrl)
 		container_of(ctrl->handler, struct lc898212, ctrl_handler);
 	int err = 0;
 
-	dev_dbg(&priv->s_data->i2c_client->dev, "%s++\n", __func__);
+	dev_dbg(priv->s_data->dev, "%s++\n", __func__);
 	/* check for power state */
 	if (priv->s_data->pwr_dev == LC898212_PWR_DEV_OFF)
 		return -ENODEV;
@@ -432,7 +432,7 @@ static int lc898212_power_off(struct camera_common_focuser_data *s_data)
 {
 	struct lc898212 *priv = (struct lc898212 *)s_data->priv;
 
-	dev_dbg(&s_data->i2c_client->dev, "%s++\n", __func__);
+	dev_dbg(s_data->dev, "%s++\n", __func__);
 	if (priv->regulator)
 		regulator_disable(priv->regulator);
 	s_data->pwr_dev = LC898212_PWR_DEV_OFF;
@@ -445,11 +445,11 @@ static int lc898212_power_on(struct camera_common_focuser_data *s_data)
 	int err = 0;
 	struct lc898212 *priv = (struct lc898212 *)s_data->priv;
 
-	dev_dbg(&s_data->i2c_client->dev, "%s++\n", __func__);
+	dev_dbg(s_data->dev, "%s++\n", __func__);
 	if (priv->regulator) {
 		err = regulator_enable(priv->regulator);
 		if (err) {
-			dev_err(&s_data->i2c_client->dev,
+			dev_err(s_data->dev,
 				"%s:regulator enabled failed\n", __func__);
 			return err;
 		}
@@ -586,7 +586,7 @@ static int lc898212_probe(struct i2c_client *client,
 
 	common_data->ops = &lc898212_ops;
 	common_data->ctrl_handler = &priv->ctrl_handler;
-	common_data->i2c_client = client;
+	common_data->dev = &client->dev;
 	common_data->ctrls = priv->ctrls;
 	common_data->priv = (void *)priv;
 	priv->numctrls = NUM_FOCUS_CTRLS;
@@ -634,7 +634,7 @@ ERROR_RET:
 static int lc898212_remove(struct i2c_client *client)
 {
 	struct camera_common_focuser_data *s_data =
-			to_camera_common_focuser_data(client);
+			to_camera_common_focuser_data(&client->dev);
 	struct lc898212 *priv = (struct lc898212 *)s_data->priv;
 
 	v4l2_async_unregister_subdev(priv->subdev);

@@ -459,13 +459,13 @@ static int ov23850_power_get(struct ov23850 *priv)
 		clk_set_parent(pw->mclk, parent);
 
 	/* ananlog 2.7v */
-	err |= camera_common_regulator_get(priv->i2c_client,
+	err |= camera_common_regulator_get(&priv->i2c_client->dev,
 			&pw->avdd, pdata->regulators.avdd);
 	/* digital 1.2v */
-	err |= camera_common_regulator_get(priv->i2c_client,
+	err |= camera_common_regulator_get(&priv->i2c_client->dev,
 			&pw->dvdd, pdata->regulators.dvdd);
 	/* IO 1.8v */
-	err |= camera_common_regulator_get(priv->i2c_client,
+	err |= camera_common_regulator_get(&priv->i2c_client->dev,
 			&pw->iovdd, pdata->regulators.iovdd);
 
 	if (!err) {
@@ -485,7 +485,7 @@ static int ov23850_set_coarse_time_short(struct ov23850 *priv, s32 val);
 static int ov23850_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct ov23850 *priv = (struct ov23850 *)s_data->priv;
 	struct v4l2_control control;
 	int err;
@@ -565,7 +565,7 @@ exit:
 static int ov23850_g_input_status(struct v4l2_subdev *sd, u32 *status)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct ov23850 *priv = (struct ov23850 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
@@ -1332,7 +1332,7 @@ static int ov23850_probe(struct i2c_client *client,
 
 	common_data->ops		= &ov23850_common_ops;
 	common_data->ctrl_handler	= &priv->ctrl_handler;
-	common_data->i2c_client		= client;
+	common_data->dev		= &client->dev;
 	common_data->frmfmt		= &ov23850_frmfmt[0];
 	common_data->colorfmt		= camera_common_find_datafmt(
 					  OV23850_DEFAULT_DATAFMT);
@@ -1359,7 +1359,7 @@ static int ov23850_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	err = camera_common_parse_ports(client, common_data);
+	err = camera_common_parse_ports(&client->dev, common_data);
 	if (err) {
 		dev_err(&client->dev, "Failed to find port info\n");
 		return err;
@@ -1410,7 +1410,7 @@ static int ov23850_probe(struct i2c_client *client,
 static int
 ov23850_remove(struct i2c_client *client)
 {
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct ov23850 *priv = (struct ov23850 *)s_data->priv;
 
 	v4l2_async_unregister_subdev(priv->subdev);

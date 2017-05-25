@@ -2185,13 +2185,13 @@ static int tc358840_pwr_init(struct tc358840_platform_data *pdata,
 	struct regulator *dvdd;
 	struct regulator *iovdd;
 
-	err = camera_common_regulator_get(client, &iovdd, "vif");
+	err = camera_common_regulator_get(&client->dev, &iovdd, "vif");
 	if (err < 0) {
 		dev_err(&client->dev, "cannot get regulator vif %d\n", err);
 		return -EINVAL;
 	}
 
-	err = camera_common_regulator_get(client, &dvdd, "vdig");
+	err = camera_common_regulator_get(&client->dev, &dvdd, "vdig");
 	if (err < 0) {
 		dev_err(&client->dev, "cannot get regulator vdig %d\n", err);
 		return -EINVAL;

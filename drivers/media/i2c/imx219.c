@@ -1,7 +1,7 @@
 /*
  * imx219.c - imx219 sensor driver
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -323,13 +323,13 @@ static int imx219_power_get(struct imx219 *priv)
 	}
 
 	/* ananlog 2.7v */
-	err |= camera_common_regulator_get(priv->i2c_client,
+	err |= camera_common_regulator_get(&priv->i2c_client->dev,
 			&pw->avdd, pdata->regulators.avdd);
 	/* digital 1.2v */
-	err |= camera_common_regulator_get(priv->i2c_client,
+	err |= camera_common_regulator_get(&priv->i2c_client->dev,
 			&pw->dvdd, pdata->regulators.dvdd);
 	/* IO 1.8v */
-	err |= camera_common_regulator_get(priv->i2c_client,
+	err |= camera_common_regulator_get(&priv->i2c_client->dev,
 			&pw->iovdd, pdata->regulators.iovdd);
 
 	if (!err)
@@ -346,7 +346,7 @@ static int imx219_set_coarse_time(struct imx219 *priv, s32 val);
 static int imx219_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx219 *priv = (struct imx219 *)s_data->priv;
 	int err;
 
@@ -368,7 +368,7 @@ exit:
 static int imx219_g_input_status(struct v4l2_subdev *sd, u32 *status)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx219 *priv = (struct imx219 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
@@ -768,7 +768,7 @@ static int imx219_probe(struct i2c_client *client,
 
 	common_data->ops		= &imx219_common_ops;
 	common_data->ctrl_handler	= &priv->ctrl_handler;
-	common_data->i2c_client		= client;
+	common_data->dev		= &client->dev;
 	common_data->frmfmt		= &imx219_frmfmt[0];
 	common_data->colorfmt		= camera_common_find_datafmt(
 					  IMX219_DEFAULT_DATAFMT);
@@ -834,7 +834,7 @@ static int imx219_probe(struct i2c_client *client,
 static int
 imx219_remove(struct i2c_client *client)
 {
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx219 *priv = (struct imx219 *)s_data->priv;
 
 	v4l2_async_unregister_subdev(priv->subdev);

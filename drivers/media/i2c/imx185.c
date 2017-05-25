@@ -357,7 +357,7 @@ static int imx185_set_exposure(struct imx185 *priv, s64 val);
 static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx185 *priv = (struct imx185 *)s_data->priv;
 	struct v4l2_ext_controls ctrls;
 	struct v4l2_ext_control control[3];
@@ -450,7 +450,7 @@ exit:
 static int imx185_g_input_status(struct v4l2_subdev *sd, u32 *status)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx185 *priv = (struct imx185 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
@@ -769,7 +769,7 @@ static int imx185_fuse_id_setup(struct imx185 *priv)
 	int err;
 	int i;
 	struct i2c_client *client = v4l2_get_subdevdata(priv->subdev);
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 
 	struct v4l2_ctrl *ctrl;
 	u8 fuse_id[IMX185_FUSE_ID_SIZE];
@@ -1034,7 +1034,7 @@ static int imx185_probe(struct i2c_client *client,
 
 	common_data->ops = &imx185_common_ops;
 	common_data->ctrl_handler = &priv->ctrl_handler;
-	common_data->i2c_client = client;
+	common_data->dev = &client->dev;
 	common_data->frmfmt = &imx185_frmfmt[0];
 	common_data->colorfmt = camera_common_find_datafmt(
 					  IMX185_DEFAULT_DATAFMT);
@@ -1061,7 +1061,7 @@ static int imx185_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	err = camera_common_parse_ports(client, common_data);
+	err = camera_common_parse_ports(&client->dev, common_data);
 	if (err) {
 		dev_err(&client->dev, "Failed to find port info\n");
 		return err;
@@ -1104,7 +1104,7 @@ static int imx185_probe(struct i2c_client *client,
 static int
 imx185_remove(struct i2c_client *client)
 {
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx185 *priv = (struct imx185 *)s_data->priv;
 
 	v4l2_async_unregister_subdev(priv->subdev);

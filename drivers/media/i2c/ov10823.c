@@ -406,7 +406,7 @@ static int ov10823_set_coarse_time(struct ov10823 *priv, s32 val);
 static int ov10823_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
 	struct v4l2_control control;
 	int err;
@@ -503,7 +503,7 @@ exit:
 static int ov10823_g_input_status(struct v4l2_subdev *sd, u32 *status)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
@@ -1111,7 +1111,7 @@ static int ov10823_probe(struct i2c_client *client,
 
 	common_data->ops		= &ov10823_common_ops;
 	common_data->ctrl_handler	= &priv->ctrl_handler;
-	common_data->i2c_client		= client;
+	common_data->dev		= &client->dev;
 	common_data->frmfmt		= ov10823_frmfmt;
 	common_data->colorfmt		= camera_common_find_datafmt(
 					  OV10823_DEFAULT_DATAFMT);
@@ -1150,7 +1150,7 @@ static int ov10823_probe(struct i2c_client *client,
 		gpio_set_value(priv->mcu_reset_gpio, 1);
 	}
 
-	err = camera_common_parse_ports(client, common_data);
+	err = camera_common_parse_ports(&client->dev, common_data);
 	if (err) {
 		dev_err(&client->dev, "Failed to find port info\n");
 		return err;
@@ -1215,7 +1215,7 @@ static int ov10823_probe(struct i2c_client *client,
 static int
 ov10823_remove(struct i2c_client *client)
 {
-	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
 
 	v4l2_async_unregister_subdev(priv->subdev);

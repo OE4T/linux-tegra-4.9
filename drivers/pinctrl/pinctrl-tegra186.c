@@ -271,207 +271,6 @@ static const unsigned sdmmc4_dat1_pins[] = {};
 
 static const unsigned sdmmc4_dat0_pins[] = {};
 
-/* Tables for drive pins */
-#define T186_DRIVE_PINS(fname)				\
-	fname(TOUCH_CLK_PEE2, touch_clk)		\
-	fname(UART3_TX_PW2, uart3_tx)			\
-	fname(UART3_RX_PW3, uart3_rx)			\
-	fname(UART3_RTS_PW4, uart3_rts)			\
-	fname(UART3_CTS_PW5, uart3_cts)			\
-	fname(GEN8_I2C_SCL_PW0, gen8_i2c_scl)		\
-	fname(GEN8_I2C_SDA_PW1, gen8_i2c_sda)		\
-	fname(UART7_TX_PW6, uart7_tx)			\
-	fname(UART7_RX_PW7, uart7_rx)			\
-	fname(GPIO_SEN0_PV0, gpio_sen0)			\
-	fname(GPIO_SEN1_PV1, gpio_sen1)			\
-	fname(GPIO_SEN2_PV2, gpio_sen2)			\
-	fname(GPIO_SEN3_PV3, gpio_sen3)			\
-	fname(GPIO_SEN4_PV4, gpio_sen4)			\
-	fname(GPIO_SEN5_PV5, gpio_sen5)			\
-	fname(GPIO_SEN6_PV6, gpio_sen6)			\
-	fname(GPIO_SEN7_PV7, gpio_sen7)			\
-	fname(GPIO_SEN8_PEE0, gpio_sen8)		\
-	fname(GPIO_SEN9_PEE1, gpio_sen9)		\
-	fname(CAN1_DOUT_PZ0, can1_dout)			\
-	fname(CAN1_DIN_PZ1, can1_din)			\
-	fname(CAN0_DOUT_PZ2, can0_dout)			\
-	fname(CAN0_DIN_PZ3, can0_din)			\
-	fname(CAN_GPIO0_PAA0, can_gpio0)		\
-	fname(CAN_GPIO1_PAA1, can_gpio1)		\
-	fname(CAN_GPIO2_PAA2, can_gpio2)		\
-	fname(CAN_GPIO3_PAA3, can_gpio3)		\
-	fname(CAN_GPIO4_PAA4, can_gpio4)		\
-	fname(CAN_GPIO5_PAA5, can_gpio5)		\
-	fname(CAN_GPIO6_PAA6, can_gpio6)		\
-	fname(CAN_GPIO7_PAA7, can_gpio7)		\
-	fname(GPIO_AUD0_PJ5, gpio_aud0)			\
-	fname(GPIO_AUD1_PJ6, gpio_aud1)			\
-	fname(GPIO_AUD2_PJ7, gpio_aud2)			\
-	fname(GPIO_AUD3_PK0, gpio_aud3)			\
-	fname(AUD_MCLK_PJ4, aud_mclk)			\
-	fname(DAP1_SCLK_PJ0, dap1_sclk)			\
-	fname(DAP1_DOUT_PJ1, dap1_dout)			\
-	fname(DAP1_DIN_PJ2, dap1_din)			\
-	fname(DAP1_FS_PJ3, dap1_fs)			\
-	fname(DMIC1_DAT_PM0, dmic1_dat)			\
-	fname(DMIC1_CLK_PM1, dmic1_clk)			\
-	fname(DMIC2_DAT_PM2, dmic2_dat)			\
-	fname(DMIC2_CLK_PM3, dmic2_clk)			\
-	fname(DMIC4_DAT_PM4, dmic4_dat)			\
-	fname(DMIC4_CLK_PM5, dmic4_clk)			\
-	fname(DAP4_SCLK_PCC0, dap4_sclk)		\
-	fname(DAP4_DOUT_PCC1, dap4_dout)		\
-	fname(DAP4_DIN_PCC2, dap4_din)			\
-	fname(DAP4_FS_PCC3, dap4_fs)			\
-	fname(EXTPERIPH1_CLK_PO0, extperiph1_clk)	\
-	fname(EXTPERIPH2_CLK_PO1, extperiph2_clk)	\
-	fname(CAM_I2C_SCL_PO2, cam_i2c_scl)		\
-	fname(CAM_I2C_SDA_PO3, cam_i2c_sda)		\
-	fname(GPIO_CAM1_PN0, gpio_cam1)			\
-	fname(GPIO_CAM2_PN1, gpio_cam2)			\
-	fname(GPIO_CAM3_PN2, gpio_cam3)			\
-	fname(GPIO_CAM4_PN3, gpio_cam4)			\
-	fname(GPIO_CAM5_PN4, gpio_cam5)			\
-	fname(GPIO_CAM6_PN5, gpio_cam6)			\
-	fname(GPIO_CAM7_PN6, gpio_cam7)			\
-	fname(DAP2_SCLK_PC1, dap2_sclk)			\
-	fname(DAP2_DOUT_PC2, dap2_dout)			\
-	fname(DAP2_DIN_PC3, dap2_din)			\
-	fname(DAP2_FS_PC4, dap2_fs)			\
-	fname(UART4_TX_PB0, uart4_tx)			\
-	fname(UART4_RX_PB1, uart4_rx)			\
-	fname(UART4_RTS_PB2, uart4_rts)			\
-	fname(UART4_CTS_PB3, uart4_cts)			\
-	fname(GPIO_WAN1_PB4, gpio_wan1)			\
-	fname(GPIO_WAN2_PB5, gpio_wan2)			\
-	fname(GPIO_WAN3_PB6, gpio_wan3)			\
-	fname(GPIO_WAN4_PC0, gpio_wan4)			\
-	fname(GEN1_I2C_SCL_PC5, gen1_i2c_scl)		\
-	fname(GEN1_I2C_SDA_PC6, gen1_i2c_sda)		\
-	fname(UART1_TX_PT0, uart1_tx)			\
-	fname(UART1_RX_PT1, uart1_rx)			\
-	fname(UART1_RTS_PT2, uart1_rts)			\
-	fname(UART1_CTS_PT3, uart1_cts)			\
-	fname(DIRECTDC1_CLK_PQ0, directdc1_clk)		\
-	fname(DIRECTDC1_IN_PQ1, directdc1_in)		\
-	fname(DIRECTDC1_OUT0_PQ2, directdc1_out0)	\
-	fname(DIRECTDC1_OUT1_PQ3, directdc1_out1)	\
-	fname(DIRECTDC1_OUT2_PQ4, directdc1_out2)	\
-	fname(DIRECTDC1_OUT3_PQ5, directdc1_out3)	\
-	fname(GPIO_PQ0_PI0, gpio_pq0)			\
-	fname(GPIO_PQ1_PI1, gpio_pq1)			\
-	fname(GPIO_PQ2_PI2, gpio_pq2)			\
-	fname(GPIO_PQ3_PI3, gpio_pq3)			\
-	fname(GPIO_PQ4_PI4, gpio_pq4)			\
-	fname(GPIO_PQ5_PI5, gpio_pq5)			\
-	fname(GPIO_PQ6_PI6, gpio_pq6)			\
-	fname(GPIO_PQ7_PI7, gpio_pq7)			\
-	fname(GPIO_EDP0_PP3, gpio_edp0)			\
-	fname(GPIO_EDP1_PP4, gpio_edp1)			\
-	fname(GPIO_EDP2_PP5, gpio_edp2)			\
-	fname(GPIO_EDP3_PP6, gpio_edp3)			\
-	fname(DP_AUX_CH0_HPD_PP0, dp_aux_ch0_hpd)	\
-	fname(DP_AUX_CH1_HPD_PP1, dp_aux_ch1_hpd)	\
-	fname(HDMI_CEC_PP2, hdmi_cec)			\
-	fname(PEX_L2_CLKREQ_N_PA6, pex_l2_clkreq_n)	\
-	fname(PEX_WAKE_N_PA2, pex_wake_n)		\
-	fname(PEX_L1_CLKREQ_N_PA4, pex_l1_clkreq_n)	\
-	fname(PEX_L1_RST_N_PA3, pex_l1_rst_n)		\
-	fname(PEX_L0_CLKREQ_N_PA1, pex_l0_clkreq_n)	\
-	fname(PEX_L0_RST_N_PA0, pex_l0_rst_n)		\
-	fname(PEX_L2_RST_N_PA5, pex_l2_rst_n)		\
-	fname(SDMMC1_CLK_PD0, sdmmc1_clk)		\
-	fname(SDMMC1_CMD_PD1, sdmmc1_cmd)		\
-	fname(SDMMC1_DAT3_PD5, sdmmc1_dat3)		\
-	fname(SDMMC1_DAT2_PD4, sdmmc1_dat2)		\
-	fname(SDMMC1_DAT1_PD3, sdmmc1_dat1)		\
-	fname(SDMMC1_DAT0_PD2, sdmmc1_dat0)		\
-	fname(EQOS_TD3_PE4, eqos_td3)			\
-	fname(EQOS_TD2_PE3, eqos_td2)			\
-	fname(EQOS_TD1_PE2, eqos_td1)			\
-	fname(EQOS_TD0_PE1, eqos_td0)			\
-	fname(EQOS_RD3_PF1, eqos_rd3)			\
-	fname(EQOS_RD2_PF0, eqos_rd2)			\
-	fname(EQOS_RD1_PE7, eqos_rd1)			\
-	fname(EQOS_MDIO_PF4, eqos_mdio)			\
-	fname(EQOS_RD0_PE6, eqos_rd0)			\
-	fname(EQOS_MDC_PF5, eqos_mdc)			\
-	fname(EQOS_TXC_PE0, eqos_txc)			\
-	fname(EQOS_RXC_PF3, eqos_rxc)			\
-	fname(EQOS_TX_CTL_PE5, eqos_tx_ctl)		\
-	fname(EQOS_RX_CTL_PF2, eqos_rx_ctl)		\
-	fname(SDMMC3_DAT3_PG5, sdmmc3_dat3)		\
-	fname(SDMMC3_DAT2_PG4, sdmmc3_dat2)		\
-	fname(SDMMC3_DAT1_PG3, sdmmc3_dat1)		\
-	fname(SDMMC3_DAT0_PG2, sdmmc3_dat0)		\
-	fname(SDMMC3_CMD_PG1, sdmmc3_cmd)		\
-	fname(SDMMC3_CLK_PG0, sdmmc3_clk)		\
-	fname(QSPI_IO3_PR4, qspi_io3)			\
-	fname(QSPI_IO2_PR3, qspi_io2)			\
-	fname(QSPI_IO1_PR2, qspi_io1)			\
-	fname(QSPI_IO0_PR1, qspi_io0)			\
-	fname(QSPI_SCK_PR0, qspi_sck)			\
-	fname(QSPI_CS_N_PR5, qspi_cs_n)			\
-	fname(GPIO_SW1_PFF1, gpio_sw1)			\
-	fname(GPIO_SW2_PFF2, gpio_sw2)			\
-	fname(GPIO_SW3_PFF3, gpio_sw3)			\
-	fname(GPIO_SW4_PFF4, gpio_sw4)			\
-	fname(SHUTDOWN, shutdown)			\
-	fname(PMU_INT, pmu_int)				\
-	fname(SAFE_STATE_PS3, safe_state)		\
-	fname(VCOMP_ALERT_PS4, vcomp_alert)		\
-	fname(SOC_PWR_REQ, soc_pwr_req)			\
-	fname(BATT_OC_PS2, batt_oc)			\
-	fname(CLK_32K_IN, clk_32k_in)			\
-	fname(POWER_ON_PFF0, power_on)			\
-	fname(PWR_I2C_SCL_PS0, pwr_i2c_scl)		\
-	fname(PWR_I2C_SDA_PS1, pwr_i2c_sda)		\
-	fname(GPIO_DIS0_PU0, gpio_dis0)			\
-	fname(GPIO_DIS1_PU1, gpio_dis1)			\
-	fname(GPIO_DIS2_PU2, gpio_dis2)			\
-	fname(GPIO_DIS3_PU3, gpio_dis3)			\
-	fname(GPIO_DIS4_PU4, gpio_dis4)			\
-	fname(GPIO_DIS5_PU5, gpio_dis5)			\
-	fname(GPIO_WAN8_PH3, gpio_wan8)			\
-	fname(GPIO_WAN7_PH2, gpio_wan7)			\
-	fname(GPIO_WAN6_PH1, gpio_wan6)			\
-	fname(GPIO_WAN5_PH0, gpio_wan5)			\
-	fname(UART2_TX_PX0, uart2_tx)			\
-	fname(UART2_RX_PX1, uart2_rx)			\
-	fname(UART2_RTS_PX2, uart2_rts)			\
-	fname(UART2_CTS_PX3, uart2_cts)			\
-	fname(UART5_RX_PX5, uart5_rx)			\
-	fname(UART5_TX_PX4, uart5_tx)			\
-	fname(UART5_RTS_PX6, uart5_rts)			\
-	fname(UART5_CTS_PX7, uart5_cts)			\
-	fname(GPIO_MDM1_PY0, gpio_mdm1)			\
-	fname(GPIO_MDM2_PY1, gpio_mdm2)			\
-	fname(GPIO_MDM3_PY2, gpio_mdm3)			\
-	fname(GPIO_MDM4_PY3, gpio_mdm4)			\
-	fname(GPIO_MDM5_PY4, gpio_mdm5)			\
-	fname(GPIO_MDM6_PY5, gpio_mdm6)			\
-	fname(GPIO_MDM7_PY6, gpio_mdm7)			\
-	fname(BCPU_PWR_REQ_PH4, bcpu_pwr_req)		\
-	fname(MCPU_PWR_REQ_PH5, mcpu_pwr_req)		\
-	fname(GPU_PWR_REQ_PH6, gpu_pwr_req)		\
-	fname(GEN7_I2C_SCL_PL0, gen7_i2c_scl)		\
-	fname(GEN7_I2C_SDA_PL1, gen7_i2c_sda)		\
-	fname(GEN9_I2C_SCL_PL2, gen9_i2c_scl)		\
-	fname(GEN9_I2C_SDA_PL3, gen9_i2c_sda)		\
-	fname(USB_VBUS_EN0_PL4, usb_vbus_en0)		\
-	fname(USB_VBUS_EN1_PL5, usb_vbus_en1)		\
-	fname(GP_PWM7_PL7, gp_pwm7)			\
-	fname(GP_PWM6_PL6, gp_pwm6)			\
-	fname(UFS0_RST_PBB1, ufs0_rst)			\
-	fname(UFS0_REF_CLK_PBB0, ufs0_ref_clk)
-
-#define T186_DRIVE_PINS_STRUCT(_id, _name)			\
-	static const unsigned drive_##_name##_pins[] = {	\
-		TEGRA_PIN_##_id,				\
-	};
-
-T186_DRIVE_PINS(T186_DRIVE_PINS_STRUCT)
-
 #define T186_FUNCTION_TABLE(fname)		\
 	fname(RSVD0, rsvd0)			\
 	fname(RSVD1, rsvd1)			\
@@ -652,6 +451,215 @@ static struct tegra_function tegra186_functions[] = {
 		.preemp_bit = -1,				\
 		.rfu_in_bit = -1
 
+#define drive_touch_clk_pee2            DRV_PINGROUP_ENTRY_Y(0x2004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_uart3_cts_pw5             DRV_PINGROUP_ENTRY_Y(0x200c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_uart3_rts_pw4             DRV_PINGROUP_ENTRY_Y(0x2014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_uart3_rx_pw3              DRV_PINGROUP_ENTRY_Y(0x201c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_uart3_tx_pw2              DRV_PINGROUP_ENTRY_Y(0x2024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gen8_i2c_sda_pw1          DRV_PINGROUP_ENTRY_Y(0x202c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gen8_i2c_scl_pw0          DRV_PINGROUP_ENTRY_Y(0x2034,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_uart7_rx_pw7              DRV_PINGROUP_ENTRY_Y(0x203c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_uart7_tx_pw6              DRV_PINGROUP_ENTRY_Y(0x2044,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen0_pv0             DRV_PINGROUP_ENTRY_Y(0x204c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen1_pv1             DRV_PINGROUP_ENTRY_Y(0x2054,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen2_pv2             DRV_PINGROUP_ENTRY_Y(0x205c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen3_pv3             DRV_PINGROUP_ENTRY_Y(0x2064,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen4_pv4             DRV_PINGROUP_ENTRY_Y(0x206c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen5_pv5             DRV_PINGROUP_ENTRY_Y(0x2074,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen6_pv6             DRV_PINGROUP_ENTRY_Y(0x207c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen7_pv7             DRV_PINGROUP_ENTRY_Y(0x2084,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen8_pee0            DRV_PINGROUP_ENTRY_Y(0x208c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sen9_pee1            DRV_PINGROUP_ENTRY_Y(0x2094,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_can_gpio7_paa7            DRV_PINGROUP_ENTRY_Y(0x3004,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can1_dout_pz0             DRV_PINGROUP_ENTRY_Y(0x300C,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can1_din_pz1              DRV_PINGROUP_ENTRY_Y(0x3014,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can0_dout_pz2             DRV_PINGROUP_ENTRY_Y(0x301c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can0_din_pz3              DRV_PINGROUP_ENTRY_Y(0x3024,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can_gpio0_paa0            DRV_PINGROUP_ENTRY_Y(0x302c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can_gpio1_paa1            DRV_PINGROUP_ENTRY_Y(0x3034,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can_gpio2_paa2            DRV_PINGROUP_ENTRY_Y(0x303c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can_gpio3_paa3            DRV_PINGROUP_ENTRY_Y(0x3044,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can_gpio4_paa4            DRV_PINGROUP_ENTRY_Y(0x304c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can_gpio5_paa5            DRV_PINGROUP_ENTRY_Y(0x3054,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_can_gpio6_paa6            DRV_PINGROUP_ENTRY_Y(0x305c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	1)
+#define drive_gpio_aud3_pk0             DRV_PINGROUP_ENTRY_Y(0x1004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_aud2_pj7             DRV_PINGROUP_ENTRY_Y(0x100c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_aud1_pj6             DRV_PINGROUP_ENTRY_Y(0x1014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_aud0_pj5             DRV_PINGROUP_ENTRY_Y(0x101c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_aud_mclk_pj4              DRV_PINGROUP_ENTRY_Y(0x1024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dap1_fs_pj3               DRV_PINGROUP_ENTRY_Y(0x102c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dap1_din_pj2              DRV_PINGROUP_ENTRY_Y(0x1034,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dap1_dout_pj1             DRV_PINGROUP_ENTRY_Y(0x103c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dap1_sclk_pj0             DRV_PINGROUP_ENTRY_Y(0x1044,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dmic1_clk_pm1             DRV_PINGROUP_ENTRY_Y(0x2004,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_dmic1_dat_pm0             DRV_PINGROUP_ENTRY_Y(0x200c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_dmic2_dat_pm2             DRV_PINGROUP_ENTRY_Y(0x2014,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_dmic2_clk_pm3             DRV_PINGROUP_ENTRY_Y(0x201c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_dmic4_dat_pm4             DRV_PINGROUP_ENTRY_Y(0x2024,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_dmic4_clk_pm5             DRV_PINGROUP_ENTRY_Y(0x202c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_dap4_fs_pcc3              DRV_PINGROUP_ENTRY_Y(0x2034,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_dap4_din_pcc2             DRV_PINGROUP_ENTRY_Y(0x203c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_dap4_dout_pcc1            DRV_PINGROUP_ENTRY_Y(0x2044,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_dap4_sclk_pcc0            DRV_PINGROUP_ENTRY_Y(0x204c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_extperiph2_clk_po1        DRV_PINGROUP_ENTRY_Y(0x0004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_extperiph1_clk_po0        DRV_PINGROUP_ENTRY_Y(0x000c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_cam_i2c_sda_po3           DRV_PINGROUP_ENTRY_Y(0x0014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_cam_i2c_scl_po2           DRV_PINGROUP_ENTRY_Y(0x001c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_cam1_pn0             DRV_PINGROUP_ENTRY_Y(0x0024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_cam2_pn1             DRV_PINGROUP_ENTRY_Y(0x002c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_cam3_pn2             DRV_PINGROUP_ENTRY_Y(0x0034,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_cam4_pn3             DRV_PINGROUP_ENTRY_Y(0x003c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_cam5_pn4             DRV_PINGROUP_ENTRY_Y(0x0044,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_cam6_pn5             DRV_PINGROUP_ENTRY_Y(0x004c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_cam7_pn6             DRV_PINGROUP_ENTRY_Y(0x0054,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dap2_din_pc3              DRV_PINGROUP_ENTRY_Y(0x4004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dap2_dout_pc2             DRV_PINGROUP_ENTRY_Y(0x400c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dap2_fs_pc4               DRV_PINGROUP_ENTRY_Y(0x4014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dap2_sclk_pc1             DRV_PINGROUP_ENTRY_Y(0x401c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart4_cts_pb3             DRV_PINGROUP_ENTRY_Y(0x4024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart4_rts_pb2             DRV_PINGROUP_ENTRY_Y(0x402c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart4_rx_pb1              DRV_PINGROUP_ENTRY_Y(0x4034,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart4_tx_pb0              DRV_PINGROUP_ENTRY_Y(0x403c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_wan4_pc0             DRV_PINGROUP_ENTRY_Y(0x4044,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_wan3_pb6             DRV_PINGROUP_ENTRY_Y(0x404c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_wan2_pb5             DRV_PINGROUP_ENTRY_Y(0x4054,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_wan1_pb4             DRV_PINGROUP_ENTRY_Y(0x405c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gen1_i2c_scl_pc5          DRV_PINGROUP_ENTRY_Y(0x4064,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gen1_i2c_sda_pc6          DRV_PINGROUP_ENTRY_Y(0x406c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart1_cts_pt3             DRV_PINGROUP_ENTRY_Y(0x5004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart1_rts_pt2             DRV_PINGROUP_ENTRY_Y(0x500c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart1_rx_pt1              DRV_PINGROUP_ENTRY_Y(0x5014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart1_tx_pt0              DRV_PINGROUP_ENTRY_Y(0x501c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_directdc1_out3_pq5        DRV_PINGROUP_ENTRY_Y(0x502c,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+#define drive_directdc1_out2_pq4        DRV_PINGROUP_ENTRY_Y(0x5034,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+#define drive_directdc1_out1_pq3        DRV_PINGROUP_ENTRY_Y(0x503c,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+#define drive_directdc1_out0_pq2        DRV_PINGROUP_ENTRY_Y(0x5044,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+#define drive_directdc1_in_pq1          DRV_PINGROUP_ENTRY_Y(0x504c,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+#define drive_directdc1_clk_pq0         DRV_PINGROUP_ENTRY_Y(0x5054,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_pq0_pi0              DRV_PINGROUP_ENTRY_Y(0x3004,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_gpio_pq1_pi1              DRV_PINGROUP_ENTRY_Y(0x300c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_gpio_pq2_pi2              DRV_PINGROUP_ENTRY_Y(0x3014,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_gpio_pq3_pi3              DRV_PINGROUP_ENTRY_Y(0x301c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_gpio_pq4_pi4              DRV_PINGROUP_ENTRY_Y(0x3024,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_gpio_pq5_pi5              DRV_PINGROUP_ENTRY_Y(0x302c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_gpio_pq6_pi6              DRV_PINGROUP_ENTRY_Y(0x3034,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_gpio_pq7_pi7              DRV_PINGROUP_ENTRY_Y(0x303c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_gpio_edp2_pp5             DRV_PINGROUP_ENTRY_Y(0x10004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_edp3_pp6             DRV_PINGROUP_ENTRY_Y(0x1000c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_edp0_pp3             DRV_PINGROUP_ENTRY_Y(0x10014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_edp1_pp4             DRV_PINGROUP_ENTRY_Y(0x1001c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dp_aux_ch0_hpd_pp0        DRV_PINGROUP_ENTRY_Y(0x10024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_dp_aux_ch1_hpd_pp1        DRV_PINGROUP_ENTRY_Y(0x1002c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_hdmi_cec_pp2              DRV_PINGROUP_ENTRY_Y(0x10034,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_pex_l2_clkreq_n_pa6       DRV_PINGROUP_ENTRY_Y(0x7004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_pex_wake_n_pa2            DRV_PINGROUP_ENTRY_Y(0x700c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_pex_l1_clkreq_n_pa4       DRV_PINGROUP_ENTRY_Y(0x7014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_pex_l1_rst_n_pa3          DRV_PINGROUP_ENTRY_Y(0x701c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_pex_l0_clkreq_n_pa1       DRV_PINGROUP_ENTRY_Y(0x7024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_pex_l0_rst_n_pa0          DRV_PINGROUP_ENTRY_Y(0x702c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_pex_l2_rst_n_pa5          DRV_PINGROUP_ENTRY_Y(0x7034,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_sdmmc1_clk_pd0            DRV_PINGROUP_ENTRY_Y(0x8004,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc1_cmd_pd1            DRV_PINGROUP_ENTRY_Y(0x800c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc1_dat3_pd5           DRV_PINGROUP_ENTRY_Y(0x8018,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc1_dat2_pd4           DRV_PINGROUP_ENTRY_Y(0x8020,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc1_dat1_pd3           DRV_PINGROUP_ENTRY_Y(0x8028,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc1_dat0_pd2           DRV_PINGROUP_ENTRY_Y(0x8030,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_td3_pe4              DRV_PINGROUP_ENTRY_Y(0x9004,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_td2_pe3              DRV_PINGROUP_ENTRY_Y(0x900c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_td1_pe2              DRV_PINGROUP_ENTRY_Y(0x9014,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_td0_pe1              DRV_PINGROUP_ENTRY_Y(0x901c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_rd3_pf1              DRV_PINGROUP_ENTRY_Y(0x9024,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_rd2_pf0              DRV_PINGROUP_ENTRY_Y(0x902c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_rd1_pe7              DRV_PINGROUP_ENTRY_Y(0x9034,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_mdio_pf4             DRV_PINGROUP_ENTRY_Y(0x903c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_rd0_pe6              DRV_PINGROUP_ENTRY_Y(0x9044,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_mdc_pf5              DRV_PINGROUP_ENTRY_Y(0x904c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_txc_pe0              DRV_PINGROUP_ENTRY_Y(0x9058,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_rxc_pf3              DRV_PINGROUP_ENTRY_Y(0x9060,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_tx_ctl_pe5           DRV_PINGROUP_ENTRY_Y(0x9068,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_eqos_rx_ctl_pf2           DRV_PINGROUP_ENTRY_Y(0x9070,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc3_dat3_pg5           DRV_PINGROUP_ENTRY_Y(0xa004,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc3_dat2_pg4           DRV_PINGROUP_ENTRY_Y(0xa00c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc3_dat1_pg3           DRV_PINGROUP_ENTRY_Y(0xa014,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc3_dat0_pg2           DRV_PINGROUP_ENTRY_Y(0xa01c,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc3_cmd_pg1            DRV_PINGROUP_ENTRY_Y(0xa028,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_sdmmc3_clk_pg0            DRV_PINGROUP_ENTRY_Y(0xa030,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_qspi_io3_pr4              DRV_PINGROUP_ENTRY_Y(0xB004,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_qspi_io2_pr3              DRV_PINGROUP_ENTRY_Y(0xB00C,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_qspi_io1_pr2              DRV_PINGROUP_ENTRY_Y(0xB014,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_qspi_io0_pr1              DRV_PINGROUP_ENTRY_Y(0xB01C,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_qspi_sck_pr0              DRV_PINGROUP_ENTRY_Y(0xB024,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_qspi_cs_n_pr5             DRV_PINGROUP_ENTRY_Y(0xB02C,	-1,	-1,	-1,	-1,	28,	2,	30,	2,	0)
+#define drive_gpio_sw1_pff1             DRV_PINGROUP_ENTRY_Y(0x1004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sw2_pff2             DRV_PINGROUP_ENTRY_Y(0x100c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sw3_pff3             DRV_PINGROUP_ENTRY_Y(0x1014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_sw4_pff4             DRV_PINGROUP_ENTRY_Y(0x101c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_shutdown                  DRV_PINGROUP_ENTRY_Y(0x1024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_pmu_int                   DRV_PINGROUP_ENTRY_Y(0x102C,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_safe_state_ps3            DRV_PINGROUP_ENTRY_Y(0x1034,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_vcomp_alert_ps4           DRV_PINGROUP_ENTRY_Y(0x103c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_soc_pwr_req               DRV_PINGROUP_ENTRY_Y(0x1044,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_batt_oc_ps2               DRV_PINGROUP_ENTRY_Y(0x104c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_clk_32k_in                DRV_PINGROUP_ENTRY_Y(0x1054,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_power_on_pff0             DRV_PINGROUP_ENTRY_Y(0x105c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_pwr_i2c_scl_ps0           DRV_PINGROUP_ENTRY_Y(0x1064,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_pwr_i2c_sda_ps1           DRV_PINGROUP_ENTRY_Y(0x106c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_dis0_pu0             DRV_PINGROUP_ENTRY_Y(0x1084,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_dis1_pu1             DRV_PINGROUP_ENTRY_Y(0x108c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_dis2_pu2             DRV_PINGROUP_ENTRY_Y(0x1094,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_dis3_pu3             DRV_PINGROUP_ENTRY_Y(0x109c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_dis4_pu4             DRV_PINGROUP_ENTRY_Y(0x10a4,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_dis5_pu5             DRV_PINGROUP_ENTRY_Y(0x10ac,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
+#define drive_gpio_wan8_ph3             DRV_PINGROUP_ENTRY_Y(0xd004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_wan7_ph2             DRV_PINGROUP_ENTRY_Y(0xd00c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_wan6_ph1             DRV_PINGROUP_ENTRY_Y(0xd014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_wan5_ph0             DRV_PINGROUP_ENTRY_Y(0xd01c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart2_tx_px0              DRV_PINGROUP_ENTRY_Y(0xd024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart2_rx_px1              DRV_PINGROUP_ENTRY_Y(0xd02c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart2_rts_px2             DRV_PINGROUP_ENTRY_Y(0xd034,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart2_cts_px3             DRV_PINGROUP_ENTRY_Y(0xd03c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart5_rx_px5              DRV_PINGROUP_ENTRY_Y(0xd044,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart5_tx_px4              DRV_PINGROUP_ENTRY_Y(0xd04c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart5_rts_px6             DRV_PINGROUP_ENTRY_Y(0xd054,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_uart5_cts_px7             DRV_PINGROUP_ENTRY_Y(0xd05c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_mdm1_py0             DRV_PINGROUP_ENTRY_Y(0xd064,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_mdm2_py1             DRV_PINGROUP_ENTRY_Y(0xd06c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_mdm3_py2             DRV_PINGROUP_ENTRY_Y(0xd074,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_mdm4_py3             DRV_PINGROUP_ENTRY_Y(0xd07c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_mdm5_py4             DRV_PINGROUP_ENTRY_Y(0xd084,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_mdm6_py5             DRV_PINGROUP_ENTRY_Y(0xd08c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpio_mdm7_py6             DRV_PINGROUP_ENTRY_Y(0xd094,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_bcpu_pwr_req_ph4          DRV_PINGROUP_ENTRY_Y(0xd09c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_mcpu_pwr_req_ph5          DRV_PINGROUP_ENTRY_Y(0xd0a4,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gpu_pwr_req_ph6           DRV_PINGROUP_ENTRY_Y(0xd0ac,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gen7_i2c_scl_pl0          DRV_PINGROUP_ENTRY_Y(0xd0b4,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gen7_i2c_sda_pl1          DRV_PINGROUP_ENTRY_Y(0xd0bc,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gen9_i2c_sda_pl3          DRV_PINGROUP_ENTRY_Y(0xd0c4,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gen9_i2c_scl_pl2          DRV_PINGROUP_ENTRY_Y(0xd0cc,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_usb_vbus_en0_pl4          DRV_PINGROUP_ENTRY_Y(0xd0d4,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_usb_vbus_en1_pl5          DRV_PINGROUP_ENTRY_Y(0xd0dc,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gp_pwm7_pl7               DRV_PINGROUP_ENTRY_Y(0xd0e4,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_gp_pwm6_pl6               DRV_PINGROUP_ENTRY_Y(0xd0ec,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_ufs0_rst_pbb1             DRV_PINGROUP_ENTRY_Y(0x11004,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+#define drive_ufs0_ref_clk_pbb0         DRV_PINGROUP_ENTRY_Y(0x1100c,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+
+#define drive_directdc_comp		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc1_comp		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_eqos_comp			DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc3_comp		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_clk		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_cmd		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_dqs		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_dat7		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_dat6		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_dat5		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_dat4		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_dat3		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_dat2		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_dat1		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_sdmmc4_dat0		DRV_PINGROUP_ENTRY_N(no_entry)
+#define drive_qspi_comp			DRV_PINGROUP_ENTRY_N(no_entry)
+
 #define DRV_PINGROUP(pg_name, r, drvdn_b, drvdn_w, drvup_b, drvup_w,	\
 		     slwr_b, slwr_w, slwf_b, slwf_w, bank)		\
 	{								\
@@ -681,7 +689,7 @@ static struct tegra_function tegra186_functions[] = {
 				     e_lpdr, e_pbias_buf, gpio_sfio_sel, \
 				     e_od, schmitt_b, drvtype, epreemp,	\
 				     io_reset, rfu_in),			\
-		DRV_PINGROUP_ENTRY_N(pg_name),				\
+		drive_##pg_name,					\
 	}
 
 static const struct tegra_pingroup tegra186_groups[] = {
@@ -893,198 +901,6 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(gp_pwm6_pl6,		GP,		RSVD1,		RSVD2,		RSVD3,		0xd0e8,		0,	Y,	-1,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N),
 	PINGROUP(ufs0_rst_pbb1,		UFS0,		RSVD1,		RSVD2,		RSVD3,		0x11000,	0,	Y,	-1,	6,	-1,	9,	10,	-1,	12,	Y,	15,	17,	Y),
 	PINGROUP(ufs0_ref_clk_pbb0,	UFS0,		RSVD1,		RSVD2,		RSVD3,		0x11008,	0,	Y,	-1,	6,	-1,	9,	10,	-1,	12,	Y,	15,	17,	Y),
-
-	DRV_PINGROUP(touch_clk,		0x2004,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(uart3_cts,		0x200c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(uart3_rts,		0x2014,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(uart3_rx,		0x201c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(uart3_tx,		0x2024,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gen8_i2c_sda,	0x202c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gen8_i2c_scl,	0x2034,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(uart7_rx,		0x203c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(uart7_tx,		0x2044,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen0,		0x204c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen1,		0x2054,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen2,		0x205c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen3,		0x2064,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen4,		0x206c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen5,		0x2074,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen6,		0x207c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen7,		0x2084,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen8,		0x208c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sen9,		0x2094,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(can_gpio7,		0x3004,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can1_dout,		0x300C,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can1_din,		0x3014,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can0_dout,		0x301c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can0_din,		0x3024,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can_gpio0,		0x302c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can_gpio1,		0x3034,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can_gpio2,		0x303c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can_gpio3,		0x3044,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can_gpio4,		0x304c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can_gpio5,		0x3054,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(can_gpio6,		0x305c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	1),
-	DRV_PINGROUP(gpio_aud3,		0x1004,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_aud2,		0x100c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_aud1,		0x1014,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_aud0,		0x101c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(aud_mclk,		0x1024,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dap1_fs,		0x102c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dap1_din,		0x1034,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dap1_dout,		0x103c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dap1_sclk,		0x1044,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dmic1_clk,		0x2004,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(dmic1_dat,		0x200c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(dmic2_dat,		0x2014,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(dmic2_clk,		0x201c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(dmic4_dat,		0x2024,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(dmic4_clk,		0x202c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(dap4_fs,		0x2034,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(dap4_din,		0x203c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(dap4_dout,		0x2044,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(dap4_sclk,		0x204c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(extperiph2_clk,	0x0004,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(extperiph1_clk,	0x000c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(cam_i2c_sda,	0x0014,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(cam_i2c_scl,	0x001c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_cam1,		0x0024,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_cam2,		0x002c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_cam3,		0x0034,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_cam4,		0x003c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_cam5,		0x0044,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_cam6,		0x004c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_cam7,		0x0054,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dap2_din,		0x4004,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dap2_dout,		0x400c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dap2_fs,		0x4014,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dap2_sclk,		0x401c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart4_cts,		0x4024,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart4_rts,		0x402c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart4_rx,		0x4034,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart4_tx,		0x403c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_wan4,		0x4044,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_wan3,		0x404c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_wan2,		0x4054,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_wan1,		0x405c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gen1_i2c_scl,	0x4064,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gen1_i2c_sda,	0x406c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart1_cts,		0x5004,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart1_rts,		0x500c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart1_rx,		0x5014,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart1_tx,		0x501c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(directdc1_out3,	0x502c,		12,	9,	24,	8,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(directdc1_out2,	0x5034,		12,	9,	24,	8,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(directdc1_out1,	0x503c,		12,	9,	24,	8,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(directdc1_out0,	0x5044,		12,	9,	24,	8,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(directdc1_in,	0x504c,		12,	9,	24,	8,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(directdc1_clk,	0x5054,		12,	9,	24,	8,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_pq0,		0x3004,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(gpio_pq1,		0x300c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(gpio_pq2,		0x3014,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(gpio_pq3,		0x301c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(gpio_pq4,		0x3024,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(gpio_pq5,		0x302c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(gpio_pq6,		0x3034,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(gpio_pq7,		0x303c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(gpio_edp2,		0x10004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_edp3,		0x1000c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_edp0,		0x10014,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_edp1,		0x1001c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dp_aux_ch0_hpd,	0x10024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(dp_aux_ch1_hpd,	0x1002c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(hdmi_cec,		0x10034,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(pex_l2_clkreq_n,	0x7004,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(pex_wake_n,	0x700c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(pex_l1_clkreq_n,	0x7014,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(pex_l1_rst_n,	0x701c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(pex_l0_clkreq_n,	0x7024,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(pex_l0_rst_n,	0x702c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(pex_l2_rst_n,	0x7034,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(sdmmc1_clk,	0x8004,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc1_cmd,	0x800c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc1_dat3,	0x8018,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc1_dat2,	0x8020,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc1_dat1,	0x8028,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc1_dat0,	0x8030,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_td3,		0x9004,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_td2,		0x900c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_td1,		0x9014,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_td0,		0x901c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_rd3,		0x9024,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_rd2,		0x902c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_rd1,		0x9034,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_mdio,		0x903c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_rd0,		0x9044,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_mdc,		0x904c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_txc,		0x9058,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_rxc,		0x9060,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_tx_ctl,	0x9068,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(eqos_rx_ctl,	0x9070,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc3_dat3,	0xa004,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc3_dat2,	0xa00c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc3_dat1,	0xa014,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc3_dat0,	0xa01c,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc3_cmd,	0xa028,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(sdmmc3_clk,	0xa030,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(qspi_io3,		0xB004,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(qspi_io2,		0xB00C,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(qspi_io1,		0xB014,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(qspi_io0,		0xB01C,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(qspi_sck,		0xB024,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(qspi_cs_n,		0xB02C,		-1,	-1,	-1,	-1,	28,	2,	30,	2,	0),
-	DRV_PINGROUP(gpio_sw1,		0x1004,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sw2,		0x100c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sw3,		0x1014,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_sw4,		0x101c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(shutdown,		0x1024,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(pmu_int,		0x102C,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(safe_state,	0x1034,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(vcomp_alert,	0x103c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(soc_pwr_req,	0x1044,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(batt_oc,		0x104c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(clk_32k_in,	0x1054,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(power_on,		0x105c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(pwr_i2c_scl,	0x1064,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(pwr_i2c_sda,	0x106c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_dis0,		0x1084,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_dis1,		0x108c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_dis2,		0x1094,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_dis3,		0x109c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_dis4,		0x10a4,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_dis5,		0x10ac,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	1),
-	DRV_PINGROUP(gpio_wan8,		0xd004,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_wan7,		0xd00c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_wan6,		0xd014,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_wan5,		0xd01c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart2_tx,		0xd024,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart2_rx,		0xd02c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart2_rts,		0xd034,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart2_cts,		0xd03c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart5_rx,		0xd044,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart5_tx,		0xd04c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart5_rts,		0xd054,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(uart5_cts,		0xd05c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_mdm1,		0xd064,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_mdm2,		0xd06c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_mdm3,		0xd074,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_mdm4,		0xd07c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_mdm5,		0xd084,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_mdm6,		0xd08c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpio_mdm7,		0xd094,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(bcpu_pwr_req,	0xd09c,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(mcpu_pwr_req,	0xd0a4,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gpu_pwr_req,	0xd0ac,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gen7_i2c_scl,	0xd0b4,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gen7_i2c_sda,	0xd0bc,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gen9_i2c_sda,	0xd0c4,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gen9_i2c_scl,	0xd0cc,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(usb_vbus_en0,	0xd0d4,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(usb_vbus_en1,	0xd0dc,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gp_pwm7,		0xd0e4,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(gp_pwm6,		0xd0ec,		12,	5,	20,	5,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(ufs0_rst,		0x11004,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0),
-	DRV_PINGROUP(ufs0_ref_clk,	0x1100c,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0),
 };
 
 static const struct tegra_pinctrl_soc_data tegra186_pinctrl = {

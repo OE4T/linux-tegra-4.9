@@ -1247,10 +1247,14 @@ static int tegra_ahci_quirks(struct ahci_host_priv *hpriv)
 	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_CFG2NVOOB_2);
 
 	if (tegra && tegra->prod_list) {
+		tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_CH1, T_SATA0_INDEX);
 		ret = tegra_prod_set_by_name(tegra->base_list, "prod",
 							tegra->prod_list);
 		if (ret)
 			dev_err(dev, "Prod setting from DT failed\n");
+
+		tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_NONE_SELECTED,
+								T_SATA0_INDEX);
 	}
 
 	return ret;

@@ -7,3 +7,31 @@ config I2C_TEGRA_VI
         help
           If you say yes to this option, support will be included for the
           I2C controller embedded in NVIDIA Tegra SOCs
+
+config I2C_BPMP_TEGRA
+        tristate "NVIDIA Tegra internal BPMP I2C controller"
+        depends on TEGRA_BPMP
+        default y
+        select I2C_ALGO_BUSCLEAR
+        select I2C_ALGOBIT
+        help
+          If you say yes to this option, support will be included for the
+          I2C controller embedded in NVIDIA Tegra SOCs accessed via BPMP.
+          This I2C driver is a 'virtual' I2C driver. The real driver is
+          embedded in the BPMP firmware, and this driver merely communicates
+          with that real driver.
+config TEGRA_I2CSLV_T186
+        bool "Tegra i2c slave controller driver"
+        default y
+        help
+          Enable on-chip i2c slave controller.
+config I2C_TEGRA_CAMRTC
+        bool "Tegra I2C Camera RTCPU driver"
+        depends on TEGRA_CAMERA_RTCPU
+        help
+          If you say yes to this option, support will be included for the
+          I2C controller embedded in NVIDIA Tegra SOCs accessed via Camera
+          RTCPU processor. This I2C driver is a 'virtual' I2C driver
+          compatible with I2C bus driver. The real driver is embedded in the
+          Camera RTCPU firmware, and this driver merely communicates with
+          that real driver.

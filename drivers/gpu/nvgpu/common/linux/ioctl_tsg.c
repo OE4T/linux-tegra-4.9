@@ -18,7 +18,6 @@
 #include <linux/file.h>
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
-#include <linux/nvhost.h>
 #include <uapi/linux/nvgpu.h>
 #include <linux/anon_inodes.h>
 

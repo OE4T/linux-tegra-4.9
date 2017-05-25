@@ -43,7 +43,7 @@ struct gk20a_fence {
 	struct nvgpu_cond *semaphore_wq;
 
 	/* Valid for fences created from syncpoints: */
-	struct platform_device *host1x_pdev;
+	struct nvgpu_nvhost_dev *nvhost_dev;
 	u32 syncpt_id;
 	u32 syncpt_value;
 
@@ -62,7 +62,7 @@ int gk20a_fence_from_semaphore(
 
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
-		struct platform_device *host1x_pdev,
+		struct nvgpu_nvhost_dev *nvhost_dev,
 		u32 id, u32 value, bool wfi,
 		bool need_sync_fence);
 

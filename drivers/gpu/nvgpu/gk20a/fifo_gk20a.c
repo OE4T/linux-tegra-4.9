@@ -18,9 +18,6 @@
  */
 
 #include <trace/events/gk20a.h>
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-#include <linux/nvhost.h>
-#endif
 
 #include <nvgpu/dma.h>
 #include <nvgpu/timers.h>
@@ -32,6 +29,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/nvhost.h>
 
 #include "gk20a.h"
 #include "ctxsw_trace_gk20a.h"
@@ -3537,7 +3535,7 @@ void gk20a_dump_channel_status_ramfc(struct gk20a *g,
 		gk20a_debug_output(o, "%s on syncpt %u (%s) val %u\n",
 			(status == 3 || status == 8) ? "Waiting" : "Waited",
 			pbdma_syncpointb_syncpt_index_v(syncpointb),
-			nvhost_syncpt_get_name(g->host1x_dev,
+			nvgpu_nvhost_syncpt_get_name(g->nvhost_dev,
 				pbdma_syncpointb_syncpt_index_v(syncpointb)),
 			pbdma_syncpointa_payload_v(syncpointa));
 #endif

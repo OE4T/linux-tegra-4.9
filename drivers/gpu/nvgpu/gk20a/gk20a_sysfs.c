@@ -28,6 +28,7 @@
 #endif
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/nvhost.h>
 
 #include "gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -889,8 +890,6 @@ static DEVICE_ATTR(max_timeslice_us, ROOTRW, max_timeslice_us_read,
 
 void gk20a_remove_sysfs(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(dev);
-
 	device_remove_file(dev, &dev_attr_elcg_enable);
 	device_remove_file(dev, &dev_attr_blcg_enable);
 	device_remove_file(dev, &dev_attr_slcg_enable);
@@ -917,9 +916,9 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_min_timeslice_us);
 	device_remove_file(dev, &dev_attr_max_timeslice_us);
 
-	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev)) {
-		sysfs_remove_link(&g->host1x_dev->dev.kobj, dev_name(dev));
-	}
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	nvgpu_nvhost_remove_symlink(get_gk20a(dev));
+#endif
 
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;
@@ -931,7 +930,6 @@ void gk20a_remove_sysfs(struct device *dev)
 
 void gk20a_create_sysfs(struct device *dev)
 {
-	struct gk20a *g = gk20a_from_dev(dev);
 	int error = 0;
 
 	error |= device_create_file(dev, &dev_attr_elcg_enable);
@@ -960,11 +958,9 @@ void gk20a_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_min_timeslice_us);
 	error |= device_create_file(dev, &dev_attr_max_timeslice_us);
 
-	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev)) {
-		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,
-					   &dev->kobj,
-					   dev_name(dev));
-	}
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	error |= nvgpu_nvhost_create_symlink(get_gk20a(dev));
+#endif
 
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;

@@ -14,7 +14,6 @@
  */
 
 #include <linux/of_platform.h>
-#include <linux/nvhost.h>
 #include <linux/debugfs.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
@@ -30,6 +29,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/hashtable.h>
+#include <nvgpu/nvhost.h>
 
 #include "clk.h"
 
@@ -130,26 +130,14 @@ static void gp10b_tegra_scale_exit(struct device *dev)
 static int gp10b_tegra_probe(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct gk20a *g = platform->g;
-	struct device_node *np = dev->of_node;
-	struct device_node *host1x_node;
-	struct platform_device *host1x_pdev;
-	const __be32 *host1x_ptr;
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	int ret;
 
-	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
-	if (!host1x_ptr) {
-		nvgpu_err(g, "host1x device not available");
-		return -ENOSYS;
-	}
+	ret = nvgpu_get_nvhost_dev(platform->g);
+	if (ret)
+		return ret;
+#endif
 
-	host1x_node = of_find_node_by_phandle(be32_to_cpup(host1x_ptr));
-	host1x_pdev = of_find_device_by_node(host1x_node);
-	if (!host1x_pdev) {
-		nvgpu_err(g, "host1x device not available");
-		return -ENOSYS;
-	}
-
-	platform->g->host1x_dev = host1x_pdev;
 	platform->bypass_smmu = !device_is_iommuable(dev);
 	platform->disable_bigpage = platform->bypass_smmu;
 
@@ -190,8 +178,11 @@ int gp10b_tegra_remove(struct device *dev)
 	/* deinitialise tegra specific scaling quirks */
 	gp10b_tegra_scale_exit(dev);
 
-	return 0;
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	nvgpu_free_nvhost_dev(get_gk20a(dev));
+#endif
 
+	return 0;
 }
 
 static bool gp10b_tegra_is_railgated(struct device *dev)

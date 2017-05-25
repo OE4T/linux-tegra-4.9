@@ -20,7 +20,6 @@
 #include <linux/file.h>
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
-#include <linux/nvhost.h>
 #include <linux/dma-buf.h>
 #include <uapi/linux/nvgpu.h>
 

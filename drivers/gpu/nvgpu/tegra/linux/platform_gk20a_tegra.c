@@ -15,9 +15,6 @@
 
 #include <linux/version.h>
 #include <linux/of_platform.h>
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-#include <linux/nvhost.h>
-#endif
 #include <linux/debugfs.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/delay.h>
@@ -48,6 +45,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/nvhost.h>
 
 #include <nvgpu/linux/dma.h>
 
@@ -721,8 +719,8 @@ void gk20a_tegra_debug_dump(struct device *dev)
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 
-	if (g->host1x_dev)
-		nvhost_debug_dump_device(g->host1x_dev);
+	if (g->nvhost_dev)
+		nvgpu_nvhost_debug_dump_device(g->nvhost_dev);
 #endif
 }
 
@@ -732,8 +730,8 @@ int gk20a_tegra_busy(struct device *dev)
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 
-	if (g->host1x_dev)
-		return nvhost_module_busy_ext(g->host1x_dev);
+	if (g->nvhost_dev)
+		return nvgpu_nvhost_module_busy_ext(g->nvhost_dev);
 #endif
 	return 0;
 }
@@ -744,8 +742,8 @@ void gk20a_tegra_idle(struct device *dev)
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 
-	if (g->host1x_dev)
-		nvhost_module_idle_ext(g->host1x_dev);
+	if (g->nvhost_dev)
+		nvgpu_nvhost_module_idle_ext(g->nvhost_dev);
 #endif
 }
 
@@ -864,8 +862,6 @@ static int gk20a_tegra_probe(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct device_node *np = dev->of_node;
-	const __be32 *host1x_ptr;
-	struct platform_device *host1x_pdev = NULL;
 	bool joint_xpu_rail = false;
 	int ret;
 
@@ -887,23 +883,11 @@ static int gk20a_tegra_probe(struct device *dev)
 	}
 #endif
 
-	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
-	if (host1x_ptr) {
-		struct device_node *host1x_node =
-			of_find_node_by_phandle(be32_to_cpup(host1x_ptr));
-
-		host1x_pdev = of_find_device_by_node(host1x_node);
-		if (!host1x_pdev) {
-			dev_warn(dev, "host1x device not available");
-			return -EPROBE_DEFER;
-		}
-
-	} else {
-		host1x_pdev = to_platform_device(dev->parent);
-		dev_warn(dev, "host1x reference not found. assuming host1x to be parent");
-	}
-
-	platform->g->host1x_dev = host1x_pdev;
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	ret = nvgpu_get_nvhost_dev(platform->g);
+	if (ret)
+		return ret;
+#endif
 
 #ifdef CONFIG_OF
 	joint_xpu_rail = of_property_read_bool(of_chosen,
@@ -966,6 +950,10 @@ static int gk20a_tegra_remove(struct device *dev)
 {
 	/* deinitialise tegra specific scaling quirks */
 	gk20a_tegra_scale_exit(dev);
+
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	nvgpu_free_nvhost_dev(get_gk20a(dev));
+#endif
 
 	return 0;
 }

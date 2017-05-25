@@ -23,6 +23,7 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/list.h>
+#include <nvgpu/nvhost.h>
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"
@@ -35,12 +36,11 @@
 #endif
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
-#include <linux/nvhost.h>
 
 struct gk20a_channel_syncpt {
 	struct gk20a_channel_sync ops;
 	struct channel_gk20a *c;
-	struct platform_device *host1x_pdev;
+	struct nvgpu_nvhost_dev *nvhost_dev;
 	u32 id;
 	struct nvgpu_mem syncpt_buf;
 };
@@ -54,12 +54,12 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 	struct channel_gk20a *c = sp->c;
 	int err = 0;
 
-	if (!nvhost_syncpt_is_valid_pt_ext(sp->host1x_pdev, id)) {
+	if (!nvgpu_nvhost_syncpt_is_valid_pt_ext(sp->nvhost_dev, id)) {
 		nvgpu_warn(c->g, "invalid wait id in gpfifo submit, elided");
 		return 0;
 	}
 
-	if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev, id, thresh))
+	if (nvgpu_nvhost_syncpt_is_expired_ext(sp->nvhost_dev, id, thresh))
 		return 0;
 
 	err = gk20a_channel_alloc_priv_cmdbuf(c,
@@ -94,7 +94,7 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	int err = 0;
 	u32 wait_cmd_size = 0;
 
-	sync_fence = nvhost_sync_fdget(fd);
+	sync_fence = nvgpu_nvhost_sync_fdget(fd);
 	if (!sync_fence)
 		return -EINVAL;
 
@@ -105,9 +105,9 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	for (i = 0; i < sync_fence->num_fences; i++) {
 		pt = sync_pt_from_fence(sync_fence->cbs[i].sync_pt);
 #endif
-		wait_id = nvhost_sync_pt_id(pt);
-		if (!wait_id || !nvhost_syncpt_is_valid_pt_ext(sp->host1x_pdev,
-					wait_id)) {
+		wait_id = nvgpu_nvhost_sync_pt_id(pt);
+		if (!wait_id || !nvgpu_nvhost_syncpt_is_valid_pt_ext(
+					sp->nvhost_dev, wait_id)) {
 			sync_fence_put(sync_fence);
 			return -EINVAL;
 		}
@@ -117,7 +117,7 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	}
 #endif
 
-	num_wait_cmds = nvhost_sync_num_pts(sync_fence);
+	num_wait_cmds = nvgpu_nvhost_sync_num_pts(sync_fence);
 	if (num_wait_cmds == 0) {
 		sync_fence_put(sync_fence);
 		return 0;
@@ -141,10 +141,10 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		struct fence *f = sync_fence->cbs[i].sync_pt;
 		struct sync_pt *pt = sync_pt_from_fence(f);
 #endif
-		u32 wait_id = nvhost_sync_pt_id(pt);
-		u32 wait_value = nvhost_sync_pt_thresh(pt);
+		u32 wait_id = nvgpu_nvhost_sync_pt_id(pt);
+		u32 wait_value = nvgpu_nvhost_sync_pt_thresh(pt);
 
-		if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev,
+		if (nvgpu_nvhost_syncpt_is_expired_ext(sp->nvhost_dev,
 				wait_id, wait_value)) {
 			nvgpu_memset(c->g, wait_cmd->mem,
 			(wait_cmd->off + i * wait_cmd_size) * sizeof(u32),
@@ -206,7 +206,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	c->g->ops.fifo.add_syncpt_incr_cmd(c->g, wfi_cmd,
 			incr_cmd, sp->id, sp->syncpt_buf.gpu_va);
 
-	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 2);
+	thresh = nvgpu_nvhost_syncpt_incr_max_ext(sp->nvhost_dev, sp->id, 2);
 
 	if (register_irq) {
 		struct channel_gk20a *referenced = gk20a_channel_get(c);
@@ -217,8 +217,8 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 			/* note: channel_put() is in
 			 * gk20a_channel_syncpt_update() */
 
-			err = nvhost_intr_register_notifier(
-				sp->host1x_pdev,
+			err = nvgpu_nvhost_intr_register_notifier(
+				sp->nvhost_dev,
 				sp->id, thresh,
 				gk20a_channel_syncpt_update, c);
 			if (err)
@@ -234,7 +234,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		}
 	}
 
-	err = gk20a_fence_from_syncpt(fence, sp->host1x_pdev, sp->id, thresh,
+	err = gk20a_fence_from_syncpt(fence, sp->nvhost_dev, sp->id, thresh,
 					 wfi_cmd, need_sync_fence);
 	if (err)
 		goto clean_up_priv_cmd;
@@ -290,7 +290,7 @@ static void gk20a_channel_syncpt_set_min_eq_max(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
-	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
+	nvgpu_nvhost_syncpt_set_min_eq_max_ext(sp->nvhost_dev, sp->id);
 }
 
 static void gk20a_channel_syncpt_signal_timeline(
@@ -314,8 +314,8 @@ static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 
 	sp->c->g->ops.fifo.free_syncpt_buf(sp->c, &sp->syncpt_buf);
 
-	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
-	nvhost_syncpt_put_ref_ext(sp->host1x_pdev, sp->id);
+	nvgpu_nvhost_syncpt_set_min_eq_max_ext(sp->nvhost_dev, sp->id);
+	nvgpu_nvhost_syncpt_put_ref_ext(sp->nvhost_dev, sp->id);
 	nvgpu_kfree(sp->c->g, sp);
 }
 
@@ -330,12 +330,12 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 		return NULL;
 
 	sp->c = c;
-	sp->host1x_pdev = c->g->host1x_dev;
+	sp->nvhost_dev = c->g->nvhost_dev;
 
 	snprintf(syncpt_name, sizeof(syncpt_name),
 		"%s_%d", c->g->name, c->hw_chid);
 
-	sp->id = nvhost_get_syncpt_host_managed(sp->host1x_pdev,
+	sp->id = nvgpu_nvhost_get_syncpt_host_managed(sp->nvhost_dev,
 						c->hw_chid, syncpt_name);
 	if (!sp->id) {
 		nvgpu_kfree(c->g, sp);
@@ -346,7 +346,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->c->g->ops.fifo.alloc_syncpt_buf(sp->c, sp->id,
 				&sp->syncpt_buf);
 
-	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
+	nvgpu_nvhost_syncpt_set_min_eq_max_ext(sp->nvhost_dev, sp->id);
 
 	atomic_set(&sp->ops.refcount, 0);
 	sp->ops.wait_syncpt		= gk20a_channel_syncpt_wait_syncpt;

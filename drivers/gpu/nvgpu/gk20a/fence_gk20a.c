@@ -21,6 +21,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/nvhost.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
@@ -28,11 +29,6 @@
 
 #ifdef CONFIG_SYNC
 #include "../drivers/staging/android/sync.h"
-#endif
-
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-#include <linux/nvhost.h>
-#include <linux/nvhost_ioctl.h>
 #endif
 
 struct gk20a_fence_ops {
@@ -268,8 +264,8 @@ int gk20a_fence_from_semaphore(
 
 static int gk20a_syncpt_fence_wait(struct gk20a_fence *f, long timeout)
 {
-	return nvhost_syncpt_wait_timeout_ext(
-			f->host1x_pdev, f->syncpt_id, f->syncpt_value,
+	return nvgpu_nvhost_syncpt_wait_timeout_ext(
+			f->nvhost_dev, f->syncpt_id, f->syncpt_value,
 			(u32)timeout, NULL, NULL);
 }
 
@@ -281,13 +277,14 @@ static bool gk20a_syncpt_fence_is_expired(struct gk20a_fence *f)
 	 * syncpt value to be updated. For this case, we force a read
 	 * of the value from HW, and then check for expiration.
 	 */
-	if (!nvhost_syncpt_is_expired_ext(f->host1x_pdev, f->syncpt_id,
+	if (!nvgpu_nvhost_syncpt_is_expired_ext(f->nvhost_dev, f->syncpt_id,
 				f->syncpt_value)) {
 		u32 val;
 
-		if (!nvhost_syncpt_read_ext_check(f->host1x_pdev,
+		if (!nvgpu_nvhost_syncpt_read_ext_check(f->nvhost_dev,
 				f->syncpt_id, &val)) {
-			return nvhost_syncpt_is_expired_ext(f->host1x_pdev,
+			return nvgpu_nvhost_syncpt_is_expired_ext(
+					f->nvhost_dev,
 					f->syncpt_id, f->syncpt_value);
 		}
 	}
@@ -302,7 +299,7 @@ static const struct gk20a_fence_ops gk20a_syncpt_fence_ops = {
 
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
-		struct platform_device *host1x_pdev,
+		struct nvgpu_nvhost_dev *nvhost_dev,
 		u32 id, u32 value, bool wfi,
 		bool need_sync_fence)
 {
@@ -310,14 +307,9 @@ int gk20a_fence_from_syncpt(
 	struct sync_fence *sync_fence = NULL;
 
 #ifdef CONFIG_SYNC
-	struct nvhost_ctrl_sync_fence_info pt = {
-		.id = id,
-		.thresh = value
-	};
-
 	if (need_sync_fence) {
-		sync_fence = nvhost_sync_create_fence(host1x_pdev, &pt, 1,
-						      "fence");
+		sync_fence = nvgpu_nvhost_sync_create_fence(nvhost_dev,
+					id, value, 1, "fence");
 		if (IS_ERR(sync_fence))
 			return -1;
 	}
@@ -331,7 +323,7 @@ int gk20a_fence_from_syncpt(
 #endif
 		return -EINVAL;
 	}
-	f->host1x_pdev = host1x_pdev;
+	f->nvhost_dev = nvhost_dev;
 	f->syncpt_id = id;
 	f->syncpt_value = value;
 
@@ -344,7 +336,7 @@ int gk20a_fence_from_syncpt(
 #else
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
-		struct platform_device *host1x_pdev,
+		struct nvgpu_nvhost_dev *nvhost_dev,
 		u32 id, u32 value, bool wfi,
 		bool need_sync_fence)
 {

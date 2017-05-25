@@ -13,38 +13,20 @@
  * more details.
  */
 
-#include <linux/of_platform.h>
-
 #include "gk20a.h"
 #include "hal_gk20a.h"
 #include "platform_gk20a.h"
 
+#include <nvgpu/nvhost.h>
+
 static int gk20a_tegra_probe(struct device *dev)
 {
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct device_node *np = dev->of_node;
-	const __be32 *host1x_ptr;
-	struct platform_device *host1x_pdev = NULL;
-
-	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
-	if (host1x_ptr) {
-		struct device_node *host1x_node =
-			of_find_node_by_phandle(be32_to_cpup(host1x_ptr));
-
-		host1x_pdev = of_find_device_by_node(host1x_node);
-		if (!host1x_pdev) {
-			dev_warn(dev, "host1x device not available");
-			return -EPROBE_DEFER;
-		}
-
-	} else {
-		host1x_pdev = to_platform_device(dev->parent);
-		dev_warn(dev, "host1x reference not found. assuming host1x to be parent");
-	}
-
-	platform->g->host1x_dev = host1x_pdev;
-
+	return nvgpu_get_nvhost_dev(platform->g);
+#else
 	return 0;
+#endif
 }
 
 struct gk20a_platform vgpu_tegra_platform = {

@@ -490,4 +490,13 @@ config PHY_NS2_PCIE
 	help
 	  Enable this to support the Broadcom Northstar2 PCIe PHY.
 	  If unsure, say N.
+
+config PHY_MAX16984_CDP
+	tristate "MAX16984 External CDP support for Tegra USB UTMI ports"
+	depends on ARCH_TEGRA_18x_SOC
+	select GENERIC_PHY
+	help
+	  Enable this to support Tegra external CDP for USB2.0 host port
+	  using Max16984 chip.
+
 endmenu

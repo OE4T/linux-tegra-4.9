@@ -32,13 +32,16 @@
 		};
 
 		sor {
+			status = "okay";
 			bootloader-status = "okay";
 			dp-display {
+				status = "okay";
 				bootloader-status = "okay";
 			};
 		};
 
 		dpaux@155c0000 {
+			status = "okay";
 			bootloader-status = "okay";
 		};
 	};

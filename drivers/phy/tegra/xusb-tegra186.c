@@ -857,12 +857,6 @@ static int tegra186_utmi_phy_init(struct phy *phy)
 		}
 	}
 
-	if (port->port_cap == USB_OTG_CAP) {
-		if (padctl->usb2_otg_port_base_1)
-			dev_warn(padctl->dev, "enabling OTG on multiple USB2 ports\n");
-		padctl->usb2_otg_port_base_1 = index + 1;
-	}
-
 	mutex_unlock(&padctl->lock);
 
 	return rc;
@@ -910,28 +904,6 @@ static const struct phy_ops utmi_phy_ops = {
 static inline bool is_utmi_phy(struct phy *phy)
 {
 	return phy->ops == &utmi_phy_ops;
-}
-
-static bool is_utmi_phy_has_otg_cap(struct tegra_xusb_padctl *padctl,
-					struct phy *phy)
-{
-        struct tegra_xusb_lane *lane;
-        unsigned int index;
-        struct tegra_xusb_usb2_port *port;
-
-        if (!phy)
-                return false;
-
-        lane = phy_get_drvdata(phy);
-        index = lane->index;
-
-        port = tegra_xusb_find_usb2_port(padctl, index);
-        if (!port) {
-		dev_err(padctl->dev, "no port found for USB2 lane %u\n", index);
-                return -ENODEV;
-        }
-
-        return port->port_cap == USB_OTG_CAP;
 }
 
 static struct tegra_xusb_pad *
@@ -1326,12 +1298,6 @@ static int tegra186_usb3_phy_init(struct phy *phy)
 		}
 	}
 
-	if (port->port_cap == USB_OTG_CAP) {
-		if (padctl->usb3_otg_port_base_1)
-			dev_warn(dev, "enabling OTG on multiple USB3 ports\n");
-		padctl->usb3_otg_port_base_1 = index + 1;
-	}
-
 	mutex_unlock(&padctl->lock);
 
 	return rc;
@@ -1380,28 +1346,6 @@ static const struct phy_ops usb3_phy_ops = {
 static inline bool is_usb3_phy(struct phy *phy)
 {
 	return phy->ops == &usb3_phy_ops;
-}
-
-static bool is_usb3_phy_has_otg_cap(struct tegra_xusb_padctl *padctl,
-					struct phy *phy)
-{
-	struct tegra_xusb_lane *lane;
-	unsigned int index;
-	struct tegra_xusb_usb3_port *port;
-
-	if (!phy)
-		return false;
-
-	lane = phy_get_drvdata(phy);
-	index = lane->index;
-
-	port = tegra_xusb_find_usb3_port(padctl, index);
-	if (!port) {
-		dev_err(padctl->dev, "no port found for USB3 lane %u\n", index);
-		return false;
-	}
-
-	return port->port_cap == USB_OTG_CAP;
 }
 
 static struct tegra_xusb_pad *
@@ -1567,154 +1511,10 @@ static int tegra186_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
 		reg &= ~VBUS_OVERRIDE;
 	padctl_writel(padctl, reg, USB2_VBUS_ID);
 
+#if 0 /* TODO OTG support */
 	schedule_work(&padctl->otg_vbus_work);
+#endif
 	return 0;
-}
-
-static int tegra186_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
-					 bool set)
-{
-	u32 reg;
-
-	reg = padctl_readl(padctl, USB2_VBUS_ID);
-	if (set) {
-		if (reg & VBUS_OVERRIDE) {
-			reg &= ~VBUS_OVERRIDE;
-			padctl_writel(padctl, reg, USB2_VBUS_ID);
-			usleep_range(1000, 2000);
-
-			reg = padctl_readl(padctl, USB2_VBUS_ID);
-		}
-
-		reg &= ~ID_OVERRIDE(~0);
-		reg |= ID_OVERRIDE_GROUNDED;
-	} else {
-		reg &= ~ID_OVERRIDE(~0);
-		reg |= ID_OVERRIDE_FLOATING;
-	}
-	padctl_writel(padctl, reg, USB2_VBUS_ID);
-
-	schedule_work(&padctl->otg_vbus_work);
-
-	return 0;
-}
-
-static bool tegra186_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,
-					struct phy *phy)
-{
-	if (is_utmi_phy(phy))
-		return is_utmi_phy_has_otg_cap(padctl, phy);
-	else if (is_usb3_phy(phy))
-		return is_usb3_phy_has_otg_cap(padctl, phy);
-
-	return false;
-}
-
-static int tegra186_xusb_padctl_vbus_power_on(struct tegra_xusb_padctl *padctl,
-					unsigned int index)
-{
-	int rc = 0;
-	int status;
-	struct tegra_xusb_usb2_port *port;
-
-	port = tegra_xusb_find_usb2_port(padctl, index);
-	if (!port) {
-		dev_err(padctl->dev, "no port found for USB2 lane %u\n", index);
-		return -ENODEV;
-	}
-
-	if (!port->supply) {
-		dev_err(padctl->dev, "no vbus-supply found for USB2-%u\n", index);
-		return -ENODEV;
-	}
-
-	mutex_lock(&padctl->lock);
-
-	status = regulator_is_enabled(port->supply);
-	if (!status) {
-		rc = regulator_enable(port->supply);
-		if (rc)
-			dev_err(padctl->dev, "enable usb2-%d vbus failed %d\n",
-				index, rc);
-	}
-
-	dev_dbg(padctl->dev, "%s: usb2-%d vbus status: %d->%d\n",
-		__func__, index, status,
-		regulator_is_enabled(port->supply));
-
-	mutex_unlock(&padctl->lock);
-	return rc;
-}
-
-static int tegra186_xusb_padctl_vbus_power_off(struct tegra_xusb_padctl *padctl,
-					unsigned int index)
-{
-	int rc = 0;
-	int status;
-	struct tegra_xusb_usb2_port *port;
-
-	port = tegra_xusb_find_usb2_port(padctl, index);
-	if (!port) {
-		dev_err(padctl->dev, "no port found for USB2 lane %u\n", index);
-		return -ENODEV;
-	}
-
-	if (padctl->otg_vbus_alwayson) {
-		dev_dbg(padctl->dev, "%s: usb2-%d vbus cannot off due to alwayson\n",
-			__func__, index);
-		return -EINVAL;
-	}
-
-	if (!port->supply) {
-		dev_err(padctl->dev, "no vbus-supply found for USB2-%u\n", index);
-		return -ENODEV;
-	}
-
-	mutex_lock(&padctl->lock);
-
-	status = regulator_is_enabled(port->supply);
-	if (status) {
-		rc = regulator_disable(port->supply);
-		if (rc)
-			dev_err(padctl->dev, "disable usb2-%d vbus failed %d\n",
-				index, rc);
-	}
-
-	dev_dbg(padctl->dev, "%s: usb2-%d vbus status: %d->%d\n",
-		__func__, index, status,
-		regulator_is_enabled(port->supply));
-
-	mutex_unlock(&padctl->lock);
-	return rc;
-}
-
-static void tegra186_xusb_padctl_otg_vbus_handle(struct tegra_xusb_padctl *padctl,
-					unsigned int index)
-{
-	u32 reg;
-	int err;
-
-	reg = padctl_readl(padctl, USB2_VBUS_ID);
-	dev_dbg(padctl->dev, "USB2_VBUS_ID 0x%x otg_vbus_on was %d\n", reg,
-		padctl->otg_vbus_on);
-
-	if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_GROUNDED) {
-		/* entering host mode role */
-		if (!padctl->otg_vbus_on) {
-			err = tegra186_xusb_padctl_vbus_power_on(padctl, index);
-			if (!err)
-				padctl->otg_vbus_on = true;
-		}
-	} else if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_FLOATING) {
-		/* leaving host mode role */
-		if (padctl->otg_vbus_on) {
-			err = tegra186_xusb_padctl_vbus_power_off(padctl, index);
-			if (!err)
-				padctl->otg_vbus_on = false;
-		}
-	}
-
-	return;
 }
 
 static int tegra186_xusb_padctl_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
@@ -2093,11 +1893,6 @@ static const struct tegra_xusb_padctl_ops tegra186_xusb_padctl_ops = {
 	.probe = tegra186_xusb_padctl_probe,
 	.remove = tegra186_xusb_padctl_remove,
 	.vbus_override = tegra186_xusb_padctl_vbus_override,
-	.id_override = tegra186_xusb_padctl_id_override,
-	.has_otg_cap = tegra186_xusb_padctl_has_otg_cap,
-	.vbus_power_on = tegra186_xusb_padctl_vbus_power_on,
-	.vbus_power_off = tegra186_xusb_padctl_vbus_power_off,
-	.otg_vbus_handle = tegra186_xusb_padctl_otg_vbus_handle,
 	.phy_sleepwalk = tegra186_xusb_padctl_phy_sleepwalk,
 	.phy_wake = tegra186_xusb_padctl_phy_wake,
 	.set_debounce_time = tegra186_xusb_padctl_set_debounce_time,

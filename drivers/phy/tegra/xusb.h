@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  * Copyright (c) 2015, Google Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -388,11 +388,6 @@ struct tegra_xusb_padctl_ops {
 	int (*usb3_set_lfps_detect)(struct tegra_xusb_padctl *padctl,
 				    unsigned int index, bool enable);
 	int (*vbus_override)(struct tegra_xusb_padctl *padctl, bool set);
-	int (*id_override)(struct tegra_xusb_padctl *padctl, bool set);
-	bool (*has_otg_cap)(struct tegra_xusb_padctl *padctl, struct phy *phy);
-	int (*vbus_power_on)(struct tegra_xusb_padctl *padctl, unsigned int index);
-	int (*vbus_power_off)(struct tegra_xusb_padctl *padctl, unsigned int index);
-	void (*otg_vbus_handle)(struct tegra_xusb_padctl *padctl, unsigned int index);
 	int (*phy_sleepwalk)(struct tegra_xusb_padctl *padctl, struct phy *phy,
 			     bool enable, enum usb_device_speed speed);
 	int (*phy_wake)(struct tegra_xusb_padctl *padctl, struct phy *phy,
@@ -455,13 +450,6 @@ struct tegra_xusb_padctl {
 	unsigned int enable;
 
 	struct clk *clk;
-
-	/* vbus/id based OTG */
-	int usb2_otg_port_base_1; /* one based usb2 port number */
-	int usb3_otg_port_base_1; /* one based usb3 port number */
-	struct work_struct otg_vbus_work;
-	bool otg_vbus_on;
-	bool otg_vbus_alwayson;
 };
 
 static inline void padctl_writel(struct tegra_xusb_padctl *padctl, u32 value,

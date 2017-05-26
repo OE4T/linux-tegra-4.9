@@ -274,6 +274,10 @@ source "drivers/pinctrl/vt8500/Kconfig"
 source "drivers/pinctrl/mediatek/Kconfig"
 
 trysource "../t18x/drivers/pinctrl/Kconfig.t18x"
+trysource "drivers/pinctrl/Kconfig.t18x"
+
+trysource "../t19x/drivers/pinctrl/Kconfig.t19x"
+trysource "drivers/pinctrl/Kconfig.t19x"
 
 config PINCTRL_XWAY
 	bool

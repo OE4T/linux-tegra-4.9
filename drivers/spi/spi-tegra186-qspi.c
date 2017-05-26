@@ -41,23 +41,11 @@
 #define QSPI_SDR_DDR_SEL			BIT(9)
 #define QSPI_TX_EN				BIT(11)
 #define QSPI_RX_EN				BIT(12)
-#define QSPI_LSBYTE_FE				BIT(15)
-#define QSPI_LSBIT_FE				BIT(16)
-/* BIDIR can be enabled in x1 mode */
-#define QSPI_BIDIR				BIT(17)
-#define QSPI_IDLE_SDA_DRIVE_LOW			(0 << 18)
-#define QSPI_IDLE_SDA_DRIVE_HIGH		BIT(18)
-#define QSPI_IDLE_SDA_MASK			(3 << 18)
 #define QSPI_CS_SW_VAL				BIT(20)
 #define QSPI_CS_SW_HW				BIT(21)
-/* QSPI_CS_POL_INACTIVE bits are default high */
-#define QSPI_CS_SEL_0				(0 << 26)
-#define QSPI_CS_SEL_MASK			(3 << 26)
-#define QSPI_CS_SEL(x)				(((x) & 0x3) << 26)
 #define QSPI_CONTROL_MODE_0			(0 << 28)
 #define QSPI_CONTROL_MODE_3			(3 << 28)
 #define QSPI_CONTROL_MODE_MASK			(3 << 28)
-#define QSPI_MODE_SEL(x)			(((x) & 0x3) << 28)
 #define QSPI_M_S				BIT(30)
 #define QSPI_PIO				BIT(31)
 
@@ -66,7 +54,6 @@
 #define QSPI_TX_TAP_DELAY(x)			(((x) & 0x1F) << 10)
 #define QSPI_RX_EXT_TAP_DELAY(x)		(((x) & 0xFF) << 24)
 
-#define QSPI_CS_TIMING1				0x008
 #define QSPI_SETUP_HOLD(setup, hold)		\
 		(((setup) << 4) | ((hold) & 0x0F))
 #define QSPI_CS_SETUP_HOLD(reg, cs, val)			\

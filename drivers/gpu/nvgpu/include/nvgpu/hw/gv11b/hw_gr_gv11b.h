@@ -3426,6 +3426,10 @@ static inline u32 gr_gpcs_gpccs_gpc_exception_en_gpccs_f(u32 v)
 {
 	return (v & 0x1) << 14;
 }
+static inline u32 gr_gpcs_gpccs_gpc_exception_en_gpcmmu_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
 static inline u32 gr_gpc0_gpccs_gpc_exception_r(void)
 {
 	return 0x00502c90;
@@ -3441,6 +3445,30 @@ static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_v(u32 r)
 static inline u32 gr_gpc0_gpccs_gpc_exception_tpc_0_pending_v(void)
 {
 	return 0x00000001;
+}
+static inline u32 gr_gpc0_gpccs_gpc_exception_gpccs_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 gr_gpc0_gpccs_gpc_exception_gpccs_m(void)
+{
+	return 0x1 << 14;
+}
+static inline u32 gr_gpc0_gpccs_gpc_exception_gpccs_pending_f(void)
+{
+	return 0x4000;
+}
+static inline u32 gr_gpc0_gpccs_gpc_exception_gpcmmu_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
+static inline u32 gr_gpc0_gpccs_gpc_exception_gpcmmu_m(void)
+{
+	return 0x1 << 15;
+}
+static inline u32 gr_gpc0_gpccs_gpc_exception_gpcmmu_pending_f(void)
+{
+	return 0x8000;
 }
 static inline u32 gr_pri_gpc0_gcc_l15_ecc_status_r(void)
 {
@@ -3497,18 +3525,6 @@ static inline u32 gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_total_s(void)
 static inline u32 gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_total_v(u32 r)
 {
 	return (r >> 0) & 0xffff;
-}
-static inline u32 gr_gpc0_gpccs_gpc_exception_gpccs_f(u32 v)
-{
-	return (v & 0x1) << 14;
-}
-static inline u32 gr_gpc0_gpccs_gpc_exception_gpccs_m(void)
-{
-	return 0x1 << 14;
-}
-static inline u32 gr_gpc0_gpccs_gpc_exception_gpccs_pending_f(void)
-{
-	return 0x4000;
 }
 static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_r(void)
 {
@@ -4013,6 +4029,182 @@ static inline u32 gr_gpcs_tc_debug0_limit_coalesce_buffer_size_f(u32 v)
 static inline u32 gr_gpcs_tc_debug0_limit_coalesce_buffer_size_m(void)
 {
 	return 0x1ff << 0;
+}
+static inline u32 gr_gpc0_mmu_gpcmmu_global_esr_r(void)
+{
+	return 0x00500324;
+}
+static inline u32 gr_gpc0_mmu_gpcmmu_global_esr_ecc_corrected_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 gr_gpc0_mmu_gpcmmu_global_esr_ecc_corrected_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 gr_gpc0_mmu_gpcmmu_global_esr_ecc_uncorrected_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 gr_gpc0_mmu_gpcmmu_global_esr_ecc_uncorrected_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_r(void)
+{
+	return 0x00500314;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_corrected_err_l1tlb_sa_data_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_corrected_err_l1tlb_sa_data_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_corrected_err_l1tlb_fa_data_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_corrected_err_l1tlb_fa_data_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_uncorrected_err_l1tlb_sa_data_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_uncorrected_err_l1tlb_sa_data_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_uncorrected_err_l1tlb_fa_data_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_uncorrected_err_l1tlb_fa_data_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_uncorrected_err_total_counter_overflow_f(u32 v)
+{
+	return (v & 0x1) << 18;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_uncorrected_err_total_counter_overflow_m(void)
+{
+	return 0x1 << 18;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_corrected_err_total_counter_overflow_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_corrected_err_total_counter_overflow_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_uncorrected_err_unique_counter_overflow_f(u32 v)
+{
+	return (v & 0x1) << 19;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_uncorrected_err_unique_counter_overflow_m(void)
+{
+	return 0x1 << 19;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_corrected_err_unique_counter_overflow_f(u32 v)
+{
+	return (v & 0x1) << 17;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_corrected_err_unique_counter_overflow_m(void)
+{
+	return 0x1 << 17;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_reset_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_status_reset_task_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_address_r(void)
+{
+	return 0x00500320;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_address_index_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_corrected_err_count_r(void)
+{
+	return 0x00500318;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_corrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_corrected_err_count_total_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_corrected_err_count_total_m(void)
+{
+	return 0xffff << 0;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_corrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_corrected_err_count_unique_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_corrected_err_count_unique_total_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_corrected_err_count_unique_total_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_corrected_err_count_unique_total_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_uncorrected_err_count_r(void)
+{
+	return 0x0050031c;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_uncorrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_uncorrected_err_count_total_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_uncorrected_err_count_total_m(void)
+{
+	return 0xffff << 0;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_uncorrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_uncorrected_err_count_unique_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_uncorrected_err_count_unique_total_f(u32 v)
+{
+	return (v & 0xffff) << 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_uncorrected_err_count_unique_total_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 gr_gpc0_mmu_l1tlb_ecc_uncorrected_err_count_unique_total_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
 }
 static inline u32 gr_gpc0_gpccs_hww_esr_r(void)
 {

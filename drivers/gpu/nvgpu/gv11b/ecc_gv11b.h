@@ -31,6 +31,8 @@ struct ecc_gr_t19x {
 	struct gk20a_ecc_stat fecs_uncorrected_err_count;
 	struct gk20a_ecc_stat gpccs_corrected_err_count;
 	struct gk20a_ecc_stat gpccs_uncorrected_err_count;
+	struct gk20a_ecc_stat mmu_l1tlb_corrected_err_count;
+	struct gk20a_ecc_stat mmu_l1tlb_uncorrected_err_count;
 };
 
 struct ecc_ltc_t19x {

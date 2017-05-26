@@ -45,6 +45,7 @@
 #define MAX77812_REG_GPI_DEB2		0x11
 #define MAX77812_REG_GPI_PD_CTRL	0x12
 #define MAX77812_REG_PROT_CFG		0x13
+#define MAX77812_REG_VERSION		0x14
 #define MAX77812_REG_I2C_CFG		0x15
 #define MAX77812_REG_BUCK_INT		0x20
 #define MAX77812_REG_BUCK_INT_M		0x21
@@ -89,6 +90,9 @@
 #define MAX77812_FORCED_PWM_MASK			BIT(1)
 #define MAX77812_SLEW_RATE_CNTRL_MASK			BIT(0)
 #define MAX77812_START_SHD_DELAY_MASK			0x1F
+#define MAX77812_VERSION_MASK		0x07
+#define MAX77812_ES2_VERSION		0x04
+#define MAX77812_QS_VERSION		0x05
 
 #define MAX77812_VOUT_MASK		0xFF
 #define MAX77812_VOUT_N_VOLTAGE		0xFF
@@ -138,7 +142,6 @@ struct max77812_regulator {
 	u32 ramp_down_slew_rate;
 	u32 shutdown_slew_rate;
 	u32 softstart_slew_rate;
-	bool skip_protect_reg_access;
 };
 
 static u8 max77802_slew_rate_to_reg(const unsigned int sr_limits[],
@@ -217,7 +220,16 @@ static int max77812_reg_init(struct max77812_regulator *max77812)
 		}
 	}
 
-	if (!max77812->skip_protect_reg_access) {
+	ret = regmap_read(max77812->rmap, MAX77812_REG_VERSION, &val);
+	if (ret < 0) {
+		dev_err(max77812->dev, "version reg read failed:%d\n", ret);
+		return ret;
+	}
+
+	/* Bit[2:0] = 100b -> ES2 Bit[2:0] = 101b -> QS version */
+	dev_info(max77812->dev, "MAX77812 Version OTP:0x%02X\n", val);
+
+	if ((val & MAX77812_VERSION_MASK) == MAX77812_ES2_VERSION) {
 		ret = regmap_write(max77812->rmap,
 				   MAX77812_REG_PROT_ACCESS, 0x5A);
 		if (ret < 0)
@@ -437,9 +449,6 @@ static int max77812_reg_parse_dt(struct device *dev,
 		 max77812_regs->shutdown_slew_rate =
 					max77812_regs->softstart_slew_rate;
 
-	max77812_regs->skip_protect_reg_access = of_property_read_bool(np,
-				"maxim,skip-protect-reg-access");
-
 	return 0;
 }
 
@@ -544,7 +553,7 @@ static int max77812_probe(struct i2c_client *client,
 					max77812->softstart_slew_rate;
 
 		 if (!max77812->rdev[id]->constraints->ramp_delay)
-				max77812->rdev[id]->constraints->ramp_delay =
+			max77812->rdev[id]->constraints->ramp_delay =
 					max77812->ramp_up_slew_rate;
 	}
 

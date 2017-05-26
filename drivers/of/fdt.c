@@ -1038,7 +1038,7 @@ int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 
 	endp = reg + (l / sizeof(__be32));
 
-	pr_debug("memory scan node %s, reg size %d,\n", uname, l);
+	pr_info("memory scan node %s, reg size %d,\n", uname, l);
 
 	while ((endp - reg) >= (dt_root_addr_cells + dt_root_size_cells)) {
 		u64 base, size;
@@ -1048,7 +1048,7 @@ int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 
 		if (size == 0)
 			continue;
-		pr_debug(" - %llx ,  %llx\n", (unsigned long long)base,
+		pr_info(" - %llx ,  %llx\n", (unsigned long long)base,
 		    (unsigned long long)size);
 
 		early_init_dt_add_memory_arch(base, size);

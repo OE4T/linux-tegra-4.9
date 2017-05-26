@@ -182,6 +182,13 @@ static struct device_attribute *dev_attr_gpccs_ecc_uncorrected_err_count_array;
 static struct device_attribute *dev_attr_l2_cache_ecc_corrected_err_count_array;
 static struct device_attribute *dev_attr_l2_cache_ecc_uncorrected_err_count_array;
 
+static struct device_attribute *dev_attr_mmu_l2tlb_ecc_corrected_err_count_array;
+static struct device_attribute *dev_attr_mmu_l2tlb_ecc_uncorrected_err_count_array;
+static struct device_attribute *dev_attr_mmu_hubtlb_ecc_corrected_err_count_array;
+static struct device_attribute *dev_attr_mmu_hubtlb_ecc_uncorrected_err_count_array;
+static struct device_attribute *dev_attr_mmu_fillunit_ecc_corrected_err_count_array;
+static struct device_attribute *dev_attr_mmu_fillunit_ecc_uncorrected_err_count_array;
+
 void gr_gv11b_create_sysfs(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -310,6 +317,49 @@ void gr_gv11b_create_sysfs(struct device *dev)
 				"mmu_l1tlb_ecc_corrected_err_count",
 				&g->ecc.gr.t19x.mmu_l1tlb_corrected_err_count,
 				dev_attr_mmu_l1tlb_ecc_corrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"eng",
+				"mmu_l2tlb_ecc_uncorrected_err_count",
+				&g->ecc.eng.t19x.mmu_l2tlb_uncorrected_err_count,
+				dev_attr_mmu_l2tlb_ecc_uncorrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"eng",
+				"mmu_l2tlb_ecc_corrected_err_count",
+				&g->ecc.eng.t19x.mmu_l2tlb_corrected_err_count,
+				dev_attr_mmu_l2tlb_ecc_corrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"eng",
+				"mmu_hubtlb_ecc_uncorrected_err_count",
+				&g->ecc.eng.t19x.mmu_hubtlb_uncorrected_err_count,
+				dev_attr_mmu_hubtlb_ecc_uncorrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"eng",
+				"mmu_hubtlb_ecc_corrected_err_count",
+				&g->ecc.eng.t19x.mmu_hubtlb_corrected_err_count,
+				dev_attr_mmu_hubtlb_ecc_corrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"eng",
+				"mmu_fillunit_ecc_uncorrected_err_count",
+				&g->ecc.eng.t19x.mmu_fillunit_uncorrected_err_count,
+				dev_attr_mmu_fillunit_ecc_uncorrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"eng",
+				"mmu_fillunit_ecc_corrected_err_count",
+				&g->ecc.eng.t19x.mmu_fillunit_corrected_err_count,
+				dev_attr_mmu_fillunit_ecc_corrected_err_count_array);
+
 	if (error)
 		dev_err(dev, "Failed to create gv11b sysfs attributes!\n");
 }
@@ -407,4 +457,34 @@ static void gr_gv11b_remove_sysfs(struct device *dev)
 			g->gr.gpc_count,
 			&g->ecc.gr.t19x.mmu_l1tlb_corrected_err_count,
 			dev_attr_mmu_l1tlb_ecc_corrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.eng.t19x.mmu_l2tlb_uncorrected_err_count,
+			dev_attr_mmu_l2tlb_ecc_uncorrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.eng.t19x.mmu_l2tlb_corrected_err_count,
+			dev_attr_mmu_l2tlb_ecc_corrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.eng.t19x.mmu_hubtlb_uncorrected_err_count,
+			dev_attr_mmu_hubtlb_ecc_uncorrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.eng.t19x.mmu_hubtlb_corrected_err_count,
+			dev_attr_mmu_hubtlb_ecc_corrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.eng.t19x.mmu_fillunit_uncorrected_err_count,
+			dev_attr_mmu_fillunit_ecc_uncorrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.eng.t19x.mmu_fillunit_corrected_err_count,
+			dev_attr_mmu_fillunit_ecc_corrected_err_count_array);
 }

@@ -40,4 +40,16 @@ struct ecc_ltc_t19x {
 	struct gk20a_ecc_stat l2_cache_uncorrected_err_count;
 };
 
+/* TODO: PMU and FB ECC features are still under embargo */
+struct ecc_eng_t19x {
+	/* FB */
+	struct gk20a_ecc_stat mmu_l2tlb_corrected_err_count;
+	struct gk20a_ecc_stat mmu_l2tlb_uncorrected_err_count;
+	struct gk20a_ecc_stat mmu_hubtlb_corrected_err_count;
+	struct gk20a_ecc_stat mmu_hubtlb_uncorrected_err_count;
+	struct gk20a_ecc_stat mmu_fillunit_corrected_err_count;
+	struct gk20a_ecc_stat mmu_fillunit_uncorrected_err_count;
+	/* PMU */
+};
+
 #endif

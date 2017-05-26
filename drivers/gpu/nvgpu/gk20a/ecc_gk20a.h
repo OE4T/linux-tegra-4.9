@@ -50,6 +50,12 @@ struct ecc_gk20a {
 #endif
 	} ltc;
 
+	struct {
+#ifdef CONFIG_TEGRA_19x_GPU
+		struct ecc_eng_t19x t19x;
+#endif
+	} eng;
+
 };
 
 #endif /*__ECC_GK20A_H__*/

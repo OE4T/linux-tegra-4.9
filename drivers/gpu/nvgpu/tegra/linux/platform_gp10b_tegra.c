@@ -494,6 +494,8 @@ static ssize_t ecc_stat_show(struct device *dev,
 		ecc_stat_base_name = &(ecc_stat_full_name[strlen("gpc0_tpc0_")]);
 	} else if (sscanf(ecc_stat_full_name, "gpc%u", &hw_unit) == 1) {
 		ecc_stat_base_name = &(ecc_stat_full_name[strlen("gpc0_")]);
+	} else if (sscanf(ecc_stat_full_name, "eng%u", &hw_unit) == 1) {
+		ecc_stat_base_name = &(ecc_stat_full_name[strlen("eng0_")]);
 	} else {
 		return snprintf(buf,
 				PAGE_SIZE,

@@ -1332,6 +1332,20 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 				__func__, index, w, h, win->out_w, win->out_h);
 			return -EINVAL;
 		}
+
+		/*
+		 * Window output geometry including width/height + offset
+		 * should not exceed hActive/vActive of current mode
+		 */
+		if ((win->out_w + win->out_x) > dc->mode.h_active ||
+			(win->out_h + win->out_y) > dc->mode.v_active) {
+
+			dev_err(&dc->ndev->dev,
+			"Invalid out_w + out_x (%u) > hActive (%u)\n OR/AND out_h + out_y (%u) > vActive (%u)\n for WIN %d\n",
+				win->out_w + win->out_x, dc->mode.h_active,
+				win->out_h + win->out_y, dc->mode.v_active, i);
+			return -EINVAL;
+		}
 	}
 
 	if (!used_windows)

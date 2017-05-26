@@ -973,8 +973,13 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 
 	for (gpio = 0; gpio < tgi->gc.ngpio; gpio++) {
-		int irq = irq_create_mapping(tgi->irq_domain, gpio);
 		int cont_id = tgi->soc->port[GPIO_PORT(gpio)].cont_id;
+		int irq;
+
+		if (cont_id < 0)
+			continue;
+
+		irq = irq_create_mapping(tgi->irq_domain, gpio);
 
 		if (gpio_is_accessible(tgi, gpio))
 			/* mask interrupts for this GPIO */

@@ -777,9 +777,9 @@
 				nvidia,count-threshold = <15>;
 				nvidia,alarm-filter = <5100000>;
 				nvidia,alarm-period = <0>;
-				nvidia,cpu-throt-percent = <75>;
+				nvidia,cpu-throt-percent = <0>;
 				nvidia,gpu-throt-level =
-					<TEGRA_SOCTHERM_THROT_LEVEL_MED>;
+					<TEGRA_SOCTHERM_THROT_LEVEL_NONE>;
 			};
 		};
 	};

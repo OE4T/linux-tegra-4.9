@@ -16,6 +16,8 @@
 
 #define GK20A_CTXSW_TRACE_NUM_DEVS			1
 
+struct file;
+struct inode;
 struct gk20a;
 struct gpu_ops;
 struct nvgpu_ctxsw_trace_entry;

@@ -34,10 +34,11 @@ struct tegra_t186ref_m3420 {
 	struct snd_soc_dai *i2s_master;
 	unsigned int num_codec_links;
 	unsigned int clk_ena_count;
+	unsigned int srate;
 };
 
 static int tegra_t186ref_m3420_clocks_init(struct snd_soc_pcm_runtime *rtd,
-					   int srate)
+					   unsigned int srate)
 {
 	struct snd_soc_card *card = rtd->card;
 	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
@@ -49,8 +50,18 @@ static int tegra_t186ref_m3420_clocks_init(struct snd_soc_pcm_runtime *rtd,
 	 * and so if they are enabled, then they have been configured and
 	 * we are done.
 	 */
-	if (machine->clk_ena_count)
-		goto out;
+	if (machine->clk_ena_count) {
+		if (machine->srate == srate)
+			goto out;
+
+		/*
+		 * For multi-channel playback, the sample rates MUST be the
+		 * same because the I2S master channel drives the bit-clock
+		 * and frame-sync for all channels.
+		 */
+		dev_err(card->dev, "Multi-channel sample-rate conflict!\n");
+		return -EINVAL;
+	}
 
 	switch (srate) {
 	case 32000:
@@ -64,6 +75,8 @@ static int tegra_t186ref_m3420_clocks_init(struct snd_soc_pcm_runtime *rtd,
 	default:
 		return -EINVAL;
 	}
+
+	machine->srate = srate;
 
 	clk_out_rate = srate * machine->audio_clock.mclk_scale;
 	mclk = clk_out_rate * 2;

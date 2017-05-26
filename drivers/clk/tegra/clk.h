@@ -702,19 +702,24 @@ struct clk *tegra_clk_register_super_clk(const char *name,
 		const char * const *parent_names, u8 num_parents,
 		unsigned long flags, void __iomem *reg, u8 clk_super_flags,
 		spinlock_t *lock);
+
 /**
  * struct clk_init_table - clock initialization table
  * @clk_id:	clock id as mentioned in device tree bindings
  * @parent_id:	parent clock id as mentioned in device tree bindings
  * @rate:	rate to set
  * @state:	enable/disable
+ * @flags	clock initialization flags
  */
 struct tegra_clk_init_table {
 	unsigned int	clk_id;
 	unsigned int	parent_id;
 	unsigned long	rate;
 	int		state;
+	u32		flags;
 };
+
+#define TEGRA_TABLE_RATE_CHANGE_OVERCLOCK	BIT(0)
 
 /**
  * struct clk_duplicate - duplicate clocks

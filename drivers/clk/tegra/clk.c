@@ -275,13 +275,27 @@ void __init tegra_init_from_table(struct tegra_clk_init_table *tbl,
 			}
 		}
 
-		if (tbl->rate)
-			if (clk_set_rate(clk, tbl->rate)) {
+		if (tbl->rate) {
+			bool can_set_rate = true;
+
+			if ((tbl->flags & TEGRA_TABLE_RATE_CHANGE_OVERCLOCK) &&
+			    __clk_is_enabled(clk)) {
+				if (tbl->rate != clk_get_rate(clk)) {
+					pr_err("%s: Can't set rate %lu of %s\n",
+					       __func__, tbl->rate,
+					       __clk_get_name(clk));
+					WARN_ON(1);
+				}
+				can_set_rate = false;
+			}
+
+			if (can_set_rate && clk_set_rate(clk, tbl->rate)) {
 				pr_err("%s: Failed to set rate %lu of %s\n",
 				       __func__, tbl->rate,
 				       __clk_get_name(clk));
 				WARN_ON(1);
 			}
+		}
 
 		if (tbl->state)
 			if (clk_prepare_enable(clk)) {

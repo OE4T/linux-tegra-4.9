@@ -199,7 +199,7 @@ int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *control, int output)
 }
 
 int tegra_dc_ext_queue_vblank(struct tegra_dc_ext_control *control, int output,
-				ktime_t timestamp)
+				u64 timestamp)
 {
 	struct {
 		struct tegra_dc_ext_event event;
@@ -211,7 +211,7 @@ int tegra_dc_ext_queue_vblank(struct tegra_dc_ext_control *control, int output,
 
 	pack.vblank.handle = output;
 	pack.vblank.reserved = 0;
-	pack.vblank.timestamp_ns = ktime_to_ns(timestamp);
+	pack.vblank.timestamp_ns = timestamp;
 
 	tegra_dc_ext_queue_event(control, &pack.event);
 

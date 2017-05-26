@@ -156,6 +156,8 @@ static struct tegra_dc_win	tegra_dc_windows[DC_N_WINDOWS];
 #endif
 
 
+static u64 tegra_dc_get_scanline_timestamp(struct tegra_dc *dc,
+						const u32 scanline);
 static DEFINE_MUTEX(tegra_dc_lock);
 
 static struct device_dma_parameters tegra_dc_dma_parameters = {
@@ -4337,7 +4339,7 @@ static void tegra_dc_vpulse2(struct work_struct *work)
 #endif
 }
 
-static void tegra_dc_process_vblank(struct tegra_dc *dc, ktime_t timestamp)
+static void tegra_dc_process_vblank(struct tegra_dc *dc)
 {
 	/* pending user vblank, so wakeup */
 	if (dc->out->user_needs_vblank) {
@@ -4345,6 +4347,11 @@ static void tegra_dc_process_vblank(struct tegra_dc *dc, ktime_t timestamp)
 		complete(&dc->out->user_vblank_comp);
 	}
 	if (test_bit(V_BLANK_USER, &dc->vblank_ref_count)) {
+		u64 timestamp = tegra_dc_get_scanline_timestamp(dc,
+					dc->mode_metadata.vblank_lines);
+		if (unlikely(!timestamp))
+			dev_err(&dc->ndev->dev, "Invalid Timestamp Value\n");
+
 		tegra_dc_ext_process_vblank(dc->ndev->id, timestamp);
 	}
 }
@@ -4360,11 +4367,10 @@ int tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable)
 	return ret;
 }
 
-static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status,
-		ktime_t timestamp)
+static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 {
 	if (status & MSF_INT)
-		tegra_dc_process_vblank(dc, timestamp);
+		tegra_dc_process_vblank(dc);
 
 	if (status & V_BLANK_INT) {
 		/* Sync up windows. */
@@ -4396,8 +4402,7 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status,
 		queue_work(system_freezable_wq, &dc->vpulse2_work);
 }
 
-static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
-		ktime_t timestamp)
+static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 {
 	/* Schedule any additional bottom-half vblank actvities. */
 	if (status & V_BLANK_INT) {
@@ -4414,7 +4419,7 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 			dc->out->user_needs_vblank = false;
 			complete(&dc->out->user_vblank_comp);
 		}
-		tegra_dc_process_vblank(dc, timestamp);
+		tegra_dc_process_vblank(dc);
 	}
 
 	if (status & FRAME_END_INT) {
@@ -4561,7 +4566,6 @@ static inline void tegra_dc_scanline_trace(struct tegra_dc *dc)
 
 static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 {
-	ktime_t timestamp = ktime_get();
 	struct tegra_dc *dc = ptr;
 	unsigned long status;
 	unsigned long underflow_mask;
@@ -4612,9 +4616,9 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE ||
 		dc->out->flags & TEGRA_DC_OUT_NVSR_MODE)
-		tegra_dc_one_shot_irq(dc, status, timestamp);
+		tegra_dc_one_shot_irq(dc, status);
 	else
-		tegra_dc_continuous_irq(dc, status, timestamp);
+		tegra_dc_continuous_irq(dc, status);
 
 	if (dc->nvsr)
 		tegra_dc_nvsr_irq(dc->nvsr, status);
@@ -6879,6 +6883,46 @@ uint64_t tegra_dc_get_vsync_timestamp(struct tegra_dc *dc)
 	pr_warn("%s: Couldn't find the right chip version\n", __func__);
 
 	return 0;
+}
+
+/*
+ * tegra_dc_line2ns() - gets the time required to scan a given number of lines.
+ * @dc : points to struct tegra_dc for the current head.
+ *
+ * Return : time in nanosecs
+ */
+static inline u64 tegra_dc_line2ns(struct tegra_dc *dc, int nr_lines)
+{
+	return nr_lines * dc->mode_metadata.line_in_nsec;
+}
+
+/*
+ * tegra_dc_get_scanline_timestamp() - gets the timestamp of a scanline
+ * @dc : pointer to struct tegra_dc of the cuurent head.
+ * @scanline : the scanline for which timestamp is needed.
+ *
+ * This helper function gives the timestamp of the @scanline when it occurred
+ * last.
+ *
+ * Return : the timestamp value.
+ */
+static u64 tegra_dc_get_scanline_timestamp(struct tegra_dc *dc,
+						const u32 scanline)
+{
+	ktime_t ts;
+	u64 timestamp;
+	int curr_scanline;
+
+	curr_scanline = tegra_dc_get_v_count(dc);
+	ts = ktime_get();
+
+	timestamp = ktime_to_ns(ts);
+	if (scanline < curr_scanline)
+		timestamp -= tegra_dc_line2ns(dc, curr_scanline - scanline);
+	else
+		timestamp -= tegra_dc_line2ns(dc, curr_scanline +
+				(dc->mode_metadata.vtotal_lines - scanline));
+	return timestamp;
 }
 
 int tegra_dc_get_numof_dispsors(void)

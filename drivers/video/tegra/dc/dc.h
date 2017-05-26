@@ -954,7 +954,7 @@ int tegra_dc_ext_disable(struct tegra_dc_ext *dc_ext);
 int tegra_dc_ext_restore(struct tegra_dc_ext *dc_ext);
 
 int tegra_dc_ext_process_hotplug(int output);
-int tegra_dc_ext_process_vblank(int output, ktime_t timestamp);
+int tegra_dc_ext_process_vblank(int output, u64 timestamp);
 int tegra_dc_ext_process_modechange(int output);
 int tegra_dc_ext_process_bandwidth_renegotiate(int output,
 					struct tegra_dc_bw_data *bw);

@@ -53,7 +53,7 @@ bool tegra_dc_ext_is_userspace_active(void)
 	return !list_empty(&g_control.users);
 }
 
-int tegra_dc_ext_process_vblank(int output, ktime_t timestamp)
+int tegra_dc_ext_process_vblank(int output, u64 timestamp)
 {
 	return tegra_dc_ext_queue_vblank(&g_control, output, timestamp);
 }

@@ -34,6 +34,7 @@
 #include <linux/thermal.h>
 #include <linux/regulator/consumer.h>
 #include <linux/version.h>
+#include <soc/tegra/fuse.h>
 
 /* Register Addresses used in this module. */
 #define LOC_TEMP_RD                  0x00
@@ -71,8 +72,35 @@
 #define LOC_THERM_LIMIT              0x20
 #define THERM_HYSTERESIS             0x21
 #define COSECUTIVE_ALERT             0x22
+#define NFACTOR_CORRECTION           0x23
 #define MANUFACTURER_ID              0xFE
 #define MAX6649_LOC_TEMP_LO_RD       0x11
+
+/* Tdiode Offset fuse is stored in usigned Q5.2 Fixed Point format */
+#define CP_INT		(5)
+#define CP_FRAC		(2)
+#define MASK_CP1	(0x7F)
+#define SHIFT_CP1	(0)
+#define SHIFT_CP2	(7)
+#define MASK_CP2	(0x7F << 7)
+#define FIXED_TO_INT(val, cp) \
+	(((((val) & MASK_##cp) >> SHIFT_##cp) * 100) / (1 << CP_FRAC))
+
+#define OFFSET_FRAC_BITS	(4)
+#define OFFSET_FRAC_MULT	(1 << OFFSET_FRAC_BITS)
+#define OFFSET_FRAC_MASK	(0xf)
+
+/* Temperatures at which offsets are captured in K*/
+#define T1 (273150 + 25000)
+#define T2 (273150 + 105000)
+/*
+ * optimized nfactor for an ideal TMP451 sensor specified in datasheet is
+ * 1.008, but since it changes in increments of 1/2088 steps we need 5 fraction
+ * bits to maintain precision and hence is multipled by 10^5.
+ */
+#define TMP451_NFACTOR (100800)
+/* step size in which nfactor can increment is 1/2088 specified in datasheet */
+#define TMP451_NFACTOR_STEP (2088)
 
 /* Set of register types that are sensor dependant. */
 enum nct1008_sensor_reg_types {
@@ -1308,6 +1336,79 @@ static void nct1008_setup_shutdown_warning(struct nct1008_data *data)
 			warn_temp / 1000, (warn_temp % 1000) / 10);
 }
 
+/*
+ * CP2 = Tchuck - Tdiode at 105C in Q5.2 format
+ * CP1 = Tchuck - Tdiode at 25C in Q5.2 format
+ * use alpha beta to account for part to part variation
+ * Terr @ T2 = TE2 = alpha * CP2 + beta
+ * Terr @ T1 = TE1 = alpha * CP1 + beta
+ * slope = (TE2 - TE1)/(TK2 - TK1) ...(1)
+ *
+ * per TMP451 datasheet:
+ * Terr = (nf - 1.008)/1.008 * T ...(2)
+ * So, Terr slope = (nf - 1.008)/1.008 ...(3)
+ *
+ * solving for nf from (1) & (3):
+ * nf = (1.008 * (TE2 - TE1)/(TK2 - TK1)) + 1.008 ...(4)
+ * alpha has 4 fraction digits; CP1\2 Q5.2 is scaled by 10^2; T2/T1 are in mK
+ * nf is hence divided by 10^3
+ *
+ * quantize and map nf to an signed int using the nfactor step size
+ * nadj = (1.008 * 2088 / nFactor) - 2088
+ *
+ * Emperically TMP451 reports higher temperature when nFactor is reduced. This
+ * means the Terr in (2) is negative when the sensor overestimates the
+ * temperature. Calculating offset for overestimating sensor:
+ * -TE1 = -Terr * TK1 + offset
+ * Offset = -(TE1 - (Terr slope * TK1))
+ * solve for offset using (3) & (4) and substituting for TE1 and TE2
+ * Offset = -((alpha * (CP1 * T2 - CP2 * T1)/(T2 - T1)) + beta)
+ * beta is in same units as alpha, scaled by 10^4, as this supports 0.0625C
+ * resolution. Multiply by 100 to account for scaling on CP1\2.
+*/
+static int nct1008_offsets_program(struct i2c_client *client)
+{
+	int off, r = 0, val;
+	struct nct1008_platform_data *p = client->dev.platform_data;
+	/* TMP451 offset precision is 0.0625C, i.e. 4 bits, NCT has 0.25C. */
+	int lo_b = (p->offset % 4) << OFFSET_FRAC_BITS;
+	int hi_b = p->offset / 4;
+	s64 nf = 0, nadj = 0, cp2, cp1;
+
+	if (p->fuse_offset) {
+		r = tegra_fuse_readl(FUSE_TDIODE_CALIB, &val);
+		if (r)
+			return r;
+
+		cp2 = FIXED_TO_INT(val, CP2);
+		cp1 = FIXED_TO_INT(val, CP1);
+		nf = ((TMP451_NFACTOR * p->alpha * (cp2 - cp1) / (T2 - T1)) /
+				1000) + TMP451_NFACTOR;
+		nadj = (TMP451_NFACTOR * TMP451_NFACTOR_STEP / nf) -
+				TMP451_NFACTOR_STEP;
+		off = -((p->alpha * ((T2 * cp1) - (T1 * cp2)) / (T2 - T1)) +
+				p->beta * 100);
+
+		/* TMP451 adds low byte of the offset to the high byte,
+		 * for -ve offsets, roundup high byte & take carry from low byte
+		 */
+
+		hi_b = off * OFFSET_FRAC_MULT / 1000000;
+		lo_b = (hi_b & OFFSET_FRAC_MASK) << OFFSET_FRAC_BITS;
+		hi_b = hi_b >> OFFSET_FRAC_BITS;
+		dev_info(&client->dev,
+			"nf:%lld, nadj:%lld, off:%d, hi_b:%d, lo_b:%d\n",
+			 nf, nadj, off, hi_b, lo_b);
+
+		r = nct1008_write_reg(client, NFACTOR_CORRECTION, nadj);
+	}
+
+	r = r ? r : nct1008_write_reg(client, OFFSET_WR, hi_b);
+	r = r ? r : nct1008_write_reg(client, OFFSET_QUARTER_WR, lo_b);
+
+	return r;
+}
+
 static int nct1008_configure_sensor(struct nct1008_data *data)
 {
 	struct i2c_client *client = data->client;
@@ -1425,18 +1526,8 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	else
 		dev_dbg(&client->dev, "\n initial ext temp = %d.0 deg", temp);
 
-	if(data->chip != MAX6649) {
-		/* Remote channel offset */
-		ret = nct1008_write_reg(client, OFFSET_WR, pdata->offset / 4);
-		if (ret < 0)
-			goto error;
-
-		/* Remote channel offset fraction (quarters) */
-		ret = nct1008_write_reg(client, OFFSET_QUARTER_WR,
-					(pdata->offset % 4) << 6);
-		if (ret < 0)
-			goto error;
-	}
+	if (data->chip != MAX6649)
+		nct1008_offsets_program(client);
 
 	/* Reset current hi/lo limit values with register values */
 	ret = nct1008_read_reg(data->client, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
@@ -1528,6 +1619,14 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 	if (client->irq == 0)
 		client->irq = -1;
 
+	pdata->alpha = 10000;
+	pdata->beta = 0;
+	if (!of_property_read_u32(np, "alpha", &proc))
+		pdata->alpha = proc;
+
+	if (!of_property_read_u32(np, "beta", &proc))
+		pdata->beta = proc;
+
 	if (of_property_read_u32(np, "conv-rate", &proc))
 		goto err_parse_dt;
 	pdata->conv_rate = proc;
@@ -1540,9 +1639,14 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 		goto err_parse_dt;
 	pdata->extended_range = (bool) proc;
 
-	if (of_property_read_u32(np, "offset", &proc))
-		goto err_parse_dt;
-	pdata->offset =  proc;
+	if (of_property_read_u32(np, "offset", &proc)) {
+		if (!of_property_read_bool(np, "support-fuse-offset"))
+			goto err_parse_dt;
+		pdata->fuse_offset = true;
+	} else {
+		pdata->offset = proc;
+		pdata->fuse_offset = false;
+	}
 
 	if (of_property_read_bool(np, "temp-alert-gpio")) {
 		nct72_gpio = of_get_named_gpio(

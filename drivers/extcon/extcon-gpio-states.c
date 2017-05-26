@@ -77,7 +77,6 @@ struct gpio_extcon_info {
 	struct wake_lock wake_lock;
 	int cable_detect_jiffies;
 	bool wakeup_source;
-	int last_cstate;
 };
 
 static void gpio_extcon_scan_work(struct work_struct *work)
@@ -91,7 +90,6 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 
 	for (i = 0; i < gpex->pdata->n_gpio; ++i) {
 		state = gpio_get_value_cansleep(gpex->pdata->gpios[i].gpio);
-
 		if (state)
 			gstate |= BIT(i);
 	}
@@ -108,35 +106,6 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 	if (cstate == -1) {
 		dev_info(gpex->dev, "Cable state not found 0x%02x\n", gstate);
 		cstate = 0;
-	}
-
-	/*
-	 * Do default/general cable state overwrite
-	 *
-	 * The rule is:
-	 * When last cable state is either EXTCON_USB_HOST or EXTCON_USB,
-	 * any change of cable state should only be "disconnect" state
-	 * (EXTCON_NONE).
-	 *
-	 * We override the state change only when the last state is host cable
-	 * (EXTCON_USB_HOST). Because when ID becomes floating, VBUS is still
-	 * supplied by host mode driver so VBUS detection GPIO will indicate
-	 * we switch to device mode (EXTCON_USB), which is not possible
-	 * physically and logically. We should move to disconnect state instead.
-	 *
-	 * Possible state transition:
-	 *
-	 * (host mode) <-> (disconnect/no cable) <-> (device mode)
-	 *
-	 * In cstate value:
-	 * 0x2 <-> 0x0 <-> 0x1
-	 */
-	if (gpex->last_cstate != cstate) {
-		if (gpex->last_cstate == EXTCON_USB_HOST) {
-			cstate = EXTCON_NONE;
-			gpex->pdata->cable_id = gpex->last_cstate;
-		}
-		gpex->last_cstate = cstate;
 	}
 
 	dev_info(gpex->dev, "Cable state:%d, cable id:%d\n",

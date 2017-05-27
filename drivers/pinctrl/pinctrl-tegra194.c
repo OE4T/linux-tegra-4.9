@@ -33,7 +33,7 @@
 	fname(DAP4_SCLK_PA4, dap4_sclk_pa4, _GPIO, 4)		\
 	fname(DAP4_DOUT_PA5, dap4_dout_pa5, _GPIO, 5)		\
 	fname(DAP4_DIN_PA6, dap4_din_pa6, _GPIO, 6)		\
-	fname(DAP4_FS_PA7, dap4_fs_pa7, _GPIO,7)		\
+	fname(DAP4_FS_PA7, dap4_fs_pa7, _GPIO, 7)		\
 	fname(CPU_PWR_REQ_0_PB0, cpu_pwr_req_0_pb0, _GPIO, 8)	\
 	fname(CPU_PWR_REQ_1_PB1, cpu_pwr_req_1_pb1, _GPIO, 9)	\
 	fname(QSPI0_SCK_PC0, qspi0_sck_pc0, _GPIO, 16)		\
@@ -359,9 +359,9 @@ T194_PIN_TABLE(TEGRA_PINCTRL_PINS_STRUCT)
 
 /* Define unique ID for each function */
 #define TEGRA_PIN_FUNCTION_MUX_ENUM(id, lid)	\
-        TEGRA_MUX_##id,
+	TEGRA_MUX_##id,
 enum tegra_mux_dt {
-        T194_FUNCTION_TABLE(TEGRA_PIN_FUNCTION_MUX_ENUM)
+	T194_FUNCTION_TABLE(TEGRA_PIN_FUNCTION_MUX_ENUM)
 };
 
 /* Make list of each function name */
@@ -421,7 +421,7 @@ static struct tegra_function tegra194_functions[] = {
 			     e_lpdr, e_pbias_buf, gpio_sfio_sel, \
 			     e_od, schmitt_b, drvtype, epreemp,	\
 			     io_reset, rfu_in, io_rail)		\
-		.mux_reg = PINGROUP_REG_Y(r), 			\
+		.mux_reg = PINGROUP_REG_Y(r),			\
 		.lpmd_bit = -1,					\
 		.lock_bit = -1,					\
 		.hsm_bit = -1,					\

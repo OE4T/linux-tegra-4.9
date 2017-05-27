@@ -1521,8 +1521,7 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 		tegra_nvdisp_bandwidth_attach(dc);
 #endif
 
-	if ((tegra_bpmp_running() && tegra_platform_is_silicon())
-		|| tegra_platform_is_vdk()) {
+	if (tegra_bpmp_running()) {
 		snprintf(rst_name, sizeof(rst_name), "head%u", dc->ctrl_num);
 		dc->rst = devm_reset_control_get(&dc->ndev->dev, rst_name);
 		if (IS_ERR(dc->rst)) {

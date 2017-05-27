@@ -1747,7 +1747,6 @@ static bool __gk20a_channel_worker_pending(struct gk20a *g, int get)
  */
 static void gk20a_channel_worker_process(struct gk20a *g, int *get)
 {
-	gk20a_dbg_fn("");
 
 	while (__gk20a_channel_worker_pending(g, *get)) {
 		struct channel_gk20a *ch = NULL;

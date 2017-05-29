@@ -69,5 +69,13 @@
 		compatible = "nvidia,tegra210b01-pmc", "nvidia,tegra210-pmc";
 	};
 
+	pinctrl@7009f000 {
+		clocks = <&tegra_car TEGRA210_CLK_HSIC_TRK>,
+			 <&tegra_car TEGRA210_CLK_USB2_TRK>,
+			 <&tegra_car TEGRA210_CLK_PLL_E>,
+			 <&tegra_car TEGRA210_CLK_PLL_P_UPHY_OUT>;
+		clock-names = "hsic_trk", "usb2_trk", "pll_e", "mgmt_clk";
+	};
+
 	/delete-node/ dtv@7000c300;
 };

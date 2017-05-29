@@ -277,24 +277,6 @@
 			status = "disabled";
 		};
 	};
-
-        mttcan@c310000 {
-                status = "okay";
-                gpio_can_stb = <&tegra_aon_gpio TEGRA_AON_GPIO(AA, 0) GPIO_ACTIVE_HIGH>;
-                gpio_can_en = <&tegra_aon_gpio TEGRA_AON_GPIO(AA, 1) GPIO_ACTIVE_HIGH>;
-                mram-params = <0 16 16 8 8 8 16 16 16>;
-                tx-config = <8 8 0 64>;
-                rx-config = <64 64 64>;
-        };
-
-        mttcan@c320000 {
-                status = "okay";
-                gpio_can_stb = <&tegra_aon_gpio TEGRA_AON_GPIO(AA, 6) GPIO_ACTIVE_HIGH>;
-                gpio_can_en = <&tegra_aon_gpio TEGRA_AON_GPIO(AA, 7) GPIO_ACTIVE_HIGH>;
-                mram-params = <0 16 16 8 8 8 16 16 16>;
-                tx-config = <8 8 0 64>;
-                rx-config = <64 64 64>;
-        };
 };
 
 #if defined(LINUX_VERSION) && LINUX_VERSION >= 409

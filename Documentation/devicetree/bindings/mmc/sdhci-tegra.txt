@@ -71,6 +71,7 @@ in HS400 mode.
 - nvidia,en-periodic-cflush: Enables periodic cache flush for sdmmc device to improve performance. This check is not required for
  SD and SDIO devices since they do not have volatile cache memory. So, set it only for eMMC device when required.
 - nvidia,periodic-cflush-to: Sets the periodic cache flush timeout value.
+- force-non-removable-rescan: Enable to force rescan/reinit for non-removable devices.
 
 Example:
 
@@ -134,4 +135,5 @@ Example:
 		nvidia,clk-name = "sdmmc2";
 		nvidia,adma3-enable;
 		nvidia,sd-device;
+		force-non-removable-rescan;
 	};

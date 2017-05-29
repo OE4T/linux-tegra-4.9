@@ -208,33 +208,4 @@ static struct platform_driver t194_nvcsi_driver = {
 	},
 };
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-static struct of_device_id tegra194_nvcsi_domain_match[] = {
-	{
-		.compatible = "nvidia,tegra194-ve-pd",
-		.data = (struct nvhost_device_data *)&t19_nvcsi_info},
-	{},
-};
-#endif
-
-static int __init t194_nvcsi_init(void)
-{
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	int ret;
-
-	ret = nvhost_domain_init(tegra194_nvcsi_domain_match);
-	if (ret)
-		return ret;
-#endif
-
-	return platform_driver_register(&t194_nvcsi_driver);
-}
-
-late_initcall(t194_nvcsi_init);
-
-static void __exit t194_nvcsi_exit(void)
-{
-	platform_driver_unregister(&t194_nvcsi_driver);
-}
-
-module_exit(t194_nvcsi_exit);
+module_platform_driver(t194_nvcsi_driver);

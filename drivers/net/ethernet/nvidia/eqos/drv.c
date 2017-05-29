@@ -3934,6 +3934,10 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		/* initialize system time */
 		getnstimeofday(&now);
 		hw_if->init_systime(now.tv_sec, now.tv_nsec);
+
+		DBGPR_PTP("-->eqos registering get_ptp function\n");
+		/* Register broadcasting MAC timestamp to clients */
+		tegra_register_hwtime_source(hw_if->get_systime);
 	}
 
 	DBGPR_PTP("config.flags = %#x, tx_type = %#x, rx_filter = %#x\n",

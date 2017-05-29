@@ -120,10 +120,6 @@ F:	drivers/platform/tegra/devices.c
 F:	drivers/platform/tegra/board-touch-raydium_spi.c
 F:	drivers/platform/tegra/mipi_cal.c
 F:	drivers/tty/serial/*
-F:	drivers/video/backlight/backlight.c
-F:	drivers/video/backlight/max8831_bl.c
-F:	drivers/video/backlight/pwm_bl.c
-F:	drivers/video/backlight/tegra_pwm_bl.c
 
 CAMERA
 M:	Jihoon Bang <jbang@nvidia.com>
@@ -190,6 +186,7 @@ M:	Mitch Luban <mluban@nvidia.com>
 M:	Venu Byravarasu <vbyravarasu@nvidia.com>
 M:	Jon Mayo <jmayo@nvidia.com>
 M:	Ujwal Patel <ujwalp@nvidia.com>
+M:	Emma Yan <eyan@nvidia.com>
 L:	tegra-display-core@exchange.nvidia.com
 S:	Supported
 F:	arch/arm/mach-tegra/panel-*.c
@@ -197,6 +194,11 @@ F:	arch/arm64/mach-tegra/panel-*.c
 F:	drivers/misc/tegra-cec/*
 F:	drivers/platform/tegra/board-panel.c
 F:	drivers/platform/tegra/panel-cy8c.c
+F:	drivers/video/backlight/backlight.c
+F:	drivers/video/backlight/max8831_bl.c
+F:	drivers/video/backlight/pwm_bl.c
+F:	drivers/video/backlight/tegra_pwm_bl.c
+F:	drivers/video/backlight/ds1050_bl.c
 F:	drivers/video/tegra/dc/
 F:	drivers/video/tegra/fb.c
 F:	drivers/video/tegra/tegra_adf*.c

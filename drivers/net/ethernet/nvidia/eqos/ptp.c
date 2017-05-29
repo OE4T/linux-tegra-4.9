@@ -137,9 +137,6 @@ static int eqos_adjust_time(struct ptp_clock_info *ptp, s64 delta)
 
 	raw_spin_unlock(&pdata->ptp_lock);
 
-	/* Register broadcasting MAC timestamp to clients */
-	tegra_register_hwtime_source(hw_if->get_systime);
-
 	DBGPR_PTP("<--eqos_adjust_time\n");
 
 	return 0;

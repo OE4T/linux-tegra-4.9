@@ -28,6 +28,9 @@ extern struct nvhost_device_data t19_host1xb_info;
 #if defined(CONFIG_VIDEO_TEGRA_VI)
 extern struct nvhost_device_data t19_vi_thi_info;
 #endif
+#if defined(CONFIG_TEGRA_GRHOST_NVCSI)
+extern struct nvhost_device_data t19_nvcsi_info;
+#endif
 #if defined(CONFIG_TEGRA_GRHOST_ISP)
 extern struct nvhost_device_data t19_isp_thi_info;
 #endif

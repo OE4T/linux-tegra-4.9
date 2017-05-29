@@ -37,6 +37,9 @@
 #include "tsec/tsec.h"
 #endif
 #include "flcn/flcn.h"
+#if defined(CONFIG_TEGRA_GRHOST_NVCSI)
+#include "nvcsi/nvcsi-t194.h"
+#endif
 #if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 #include "nvdec/nvdec.h"
 #endif
@@ -233,6 +236,28 @@ struct nvhost_device_data t19_vi_thi_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(0, 0),
 	.firmware_name		= "nvhost_vi10.fw",
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+};
+#endif
+
+#if defined(CONFIG_TEGRA_GRHOST_NVCSI)
+struct nvhost_device_data t19_nvcsi_info = {
+	.num_channels		= 1,
+	.clocks			= {
+		{"nvcsi", 204000000},
+		{"nvcsilp", 204000000},
+	},
+	.devfs_name		= "nvcsi",
+	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVCSI},
+	.class			= NV_VIDEO_STREAMING_NVCSI_CLASS_ID,
+	.ctrl_ops		= &tegra194_nvcsi_ctrl_ops,
+	.can_powergate          = true,
+	.autosuspend_delay      = 500,
+	.finalize_poweron	= tegra194_nvcsi_finalize_poweron,
+	.prepare_poweroff	= tegra194_nvcsi_prepare_poweroff,
+	.poweron_reset		= true,
+	.keepalive		= true,
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 #endif
 

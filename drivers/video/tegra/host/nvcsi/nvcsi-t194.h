@@ -1,7 +1,9 @@
 /*
- * Tegra Host Module Class IDs for T194
+ * drivers/video/tegra/host/nvcsi/nvcsi-t194.h
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Tegra T194 Graphics Host NVCSI 2
+ *
+ * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,22 +18,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVHOST_CLASS_IDS_T194_H
-#define __NVHOST_CLASS_IDS_T194_H
+#ifndef __NVHOST_NVCSI_T194_H__
+#define __NVHOST_NVCSI_T194_H__
 
-enum {
-	NV_VIDEO_ENCODE_NVENC1_CLASS_ID = 0x22,
-	NV_VIDEO_STREAMING_NVCSI_CLASS_ID = 0x38,
+struct file_operations;
+struct platform_device;
 
-	NV_PVA0_CLASS_ID	= 0xF1,
-	NV_PVA1_CLASS_ID	= 0xF2,
+extern const struct file_operations tegra194_nvcsi_ctrl_ops;
 
-	NV_DLA0_CLASS_ID	= 0xF3,
-	NV_DLA1_CLASS_ID	= 0xF4,
+int tegra194_nvcsi_finalize_poweron(struct platform_device *pdev);
+int tegra194_nvcsi_prepare_poweroff(struct platform_device *pdev);
 
-	NV_NVDEC1_CLASS_ID	= 0xF5,
-
-	NV_SLVSEC_CLASS_ID	= 0x3F,
-};
-
-#endif /*__NVHOST_CLASS_IDS_T194_H */
+#endif

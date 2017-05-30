@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
 #include <linux/kernel.h>
 #include <linux/cpu.h>
 #include <linux/cpu_pm.h>
@@ -342,6 +342,25 @@ static void suspend_all_device_irqs(void)
 	}
 }
 
+static void resume_all_device_irqs(void)
+{
+        struct irq_desc *desc;
+        int irq;
+
+        for_each_irq_desc(irq, desc) {
+                unsigned long flags;
+
+		/* No need to re-enable the 'wakeup' interrupt */
+		if (is_timer_irq(desc))
+			continue;
+
+                raw_spin_lock_irqsave(&desc->lock, flags);
+		desc->istate &= ~IRQS_SUSPENDED;
+                __enable_irq(desc);
+                raw_spin_unlock_irqrestore(&desc->lock, flags);
+        }
+
+}
 static int idle_write(void *data, u64 val)
 {
 	struct cpuidle_driver *drv;
@@ -381,7 +400,7 @@ static int idle_write(void *data, u64 val)
 	local_fiq_enable();
 	start_critical_timings();
 	tick_nohz_idle_exit();
-	resume_device_irqs();
+	resume_all_device_irqs();
 	preempt_enable_no_resched();
 
 	return 0;

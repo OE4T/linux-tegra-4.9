@@ -69,7 +69,6 @@ struct tegra_aon {
 	void *ipcbuf;
 	dma_addr_t ipcbuf_dma;
 	size_t ipcbuf_size;
-	u64 ivc_chans_notified_id;
 };
 
 struct tegra_aon_ivc_chan {
@@ -80,16 +79,12 @@ struct tegra_aon_ivc_chan {
 	bool last_tx_done;
 };
 
-static DEFINE_SPINLOCK(ivc_lock);
-
 static void tegra_aon_notify_remote(struct ivc *ivc)
 {
 	struct tegra_aon_ivc_chan *ivc_chan;
 
 	ivc_chan = container_of(ivc, struct tegra_aon_ivc_chan, ivc);
-	tegra_hsp_sm_pair_write(ivc_chan->aon->hsp_sm_pair,
-				(ivc_chan->chan_id << SMBOX_IVC_CHAN_SHIFT) |
-				SMBOX_IVC_NOTIFY);
+	tegra_hsp_sm_pair_write(ivc_chan->aon->hsp_sm_pair, SMBOX_IVC_NOTIFY);
 }
 
 static void tegra_aon_rx_worker(struct work_struct *work)
@@ -97,17 +92,11 @@ static void tegra_aon_rx_worker(struct work_struct *work)
 	struct mbox_chan *mbox_chan;
 	struct ivc *ivc;
 	struct tegra_aon_mbox_msg msg;
-	int ivc_chans, i;
-	unsigned long flags;
+	int i;
 	struct tegra_aon *aon = container_of(work,
 					struct tegra_aon, ch_rx_work);
 
-	spin_lock_irqsave(&ivc_lock, flags);
-	ivc_chans = aon->ivc_chans_notified_id;
-	aon->ivc_chans_notified_id = 0;
-	spin_unlock_irqrestore(&ivc_lock, flags);
-	while (ivc_chans) {
-		i = __builtin_ctz(ivc_chans);
+	for (i = 0; i < aon->mbox.num_chans; i++) {
 		mbox_chan = &aon->mbox.chans[i];
 		ivc = (struct ivc *)mbox_chan->con_priv;
 		while (tegra_ivc_can_read(ivc)) {
@@ -116,26 +105,15 @@ static void tegra_aon_rx_worker(struct work_struct *work)
 			mbox_chan_received_data(mbox_chan, &msg);
 			tegra_ivc_read_advance(ivc);
 		}
-		ivc_chans &= ~BIT(i);
 	}
 }
 
 static u32 tegra_aon_hsp_sm_full_notify(void *data, u32 value)
 {
 	struct tegra_aon *aon = data;
-	int chan_id;
-	unsigned long flags;
 
-	if ((value & SMBOX_IVC_NOTIFY_MASK) == SMBOX_IVC_NOTIFY) {
-		chan_id = value >> SMBOX_IVC_CHAN_SHIFT;
-		if (chan_id < 0 || chan_id >= aon->mbox.num_chans)
-			return 1;
-		spin_lock_irqsave(&ivc_lock, flags);
-		aon->ivc_chans_notified_id |=
-					BIT((value >> SMBOX_IVC_CHAN_SHIFT));
-		spin_unlock_irqrestore(&ivc_lock, flags);
+	if (value == SMBOX_IVC_NOTIFY)
 		schedule_work(&aon->ch_rx_work);
-	}
 
 	return 0;
 }
@@ -507,7 +485,6 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	writel((u32)aon->ipcbuf_size, aon->shrdsem_base + SHRD_SEM_OFFSET
 					+ SHRD_SEM_SET);
 	tegra_hsp_sm_pair_write(aon->hsp_sm_pair, SMBOX_IVC_READY_MSG);
-	aon->ivc_chans_notified_id = 0;
 
 	dev_dbg(&pdev->dev, "tegra aon driver probe OK\n");
 	return ret;

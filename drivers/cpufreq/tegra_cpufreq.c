@@ -38,6 +38,7 @@
 #include <linux/version.h>
 #include <linux/pm_qos.h>
 #include <linux/tegra-cpufreq.h>
+#include <soc/tegra/chip-id.h>
 
 #define MAX_NDIV		512 /* No of NDIV */
 #define MAX_VINDEX		80 /* No of voltage index */
@@ -380,6 +381,11 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 	uint32_t tgt_freq;
 	int cl;
 	int cpu, ret = 0;
+
+	if (is_tegra_hypervisor_mode() && hv_is_set_speed_supported() == false) {
+		pr_warn("cpufreq : Setting speed functionality not present\n");
+		return -EINVAL;
+	}
 
 	if (!policy || (!cpu_online(policy->cpu)))
 		return -EINVAL;

@@ -47,6 +47,12 @@ struct tegra_cpufreq_ivc_data {
 };
 
 static struct tegra_cpufreq_ivc_data ivc;
+static bool set_speed = true;
+
+bool hv_is_set_speed_supported(void)
+{
+	return set_speed;
+}
 
 static irqreturn_t hv_tegra_cpufreq_ivc_isr(int irq, void *dev_id)
 {
@@ -65,6 +71,12 @@ int parse_hv_dt_data(struct device_node *dn)
 	uint32_t ivc_queue;
 	struct device_node *hv_dn;
 	struct tegra_cpufreq_ivc_data *ivck = &ivc;
+
+	if (of_find_property(dn, "ivc_queue", NULL) == NULL) {
+		pr_err("IVC queue not found. Disabling set speed functionality\n");
+		set_speed = false;
+		return err;
+	}
 
 	hv_dn = of_parse_phandle(dn, "ivc_queue", 0);
 	if (hv_dn == NULL) {
@@ -129,6 +141,11 @@ int tegra_cpufreq_tx_ivc_msg(uint32_t id, uint32_t len, void *msg_buf)
 	struct tegra_cpufreq_ivc_msg *ivc_msg = NULL;
 	uint32_t size = sizeof(struct tegra_cpufreq_ivc_msg);
 	int ret = 0;
+
+	if (set_speed == false) {
+		pr_warn("cpufreq-hv : Setting speed functionality not present\n");
+		return -EINVAL;
+	}
 
 	if ((len > TEGRA_CPUFREQ_IVC_MSG_LEN) || (id > MAX_IVC_MSG_ID))
 		return -EINVAL;

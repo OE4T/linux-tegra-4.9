@@ -25,6 +25,7 @@ enum tegra_cpufreq_msg_ids {
 
 int tegra_cpufreq_tx_ivc_msg(uint32_t id, uint32_t len, void *msg_buf);
 int parse_hv_dt_data(struct device_node *dn);
+bool hv_is_set_speed_supported(void);
 void tegra_update_cpu_speed_hv(uint32_t rate, uint8_t cpu);
 
 #endif

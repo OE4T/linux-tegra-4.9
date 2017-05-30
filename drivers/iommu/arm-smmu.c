@@ -2716,7 +2716,10 @@ static ssize_t smmu_context_filter_write(struct file *file,
 	if (!pbuf)
 		return -ENOMEM;
 
-	strncpy(pbuf, user_buf, count);
+	if (copy_from_user(pbuf, user_buf, count)) {
+		ret = -EFAULT;
+		goto end;
+	}
 
 	if (pbuf[count - 1] == '\n')
 		pbuf[count - 1] = '\0';

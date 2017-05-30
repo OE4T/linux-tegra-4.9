@@ -774,107 +774,6 @@ wls_parse_batching_cmd(struct net_device *dev, char *command, int total_len)
 exit:
 	return err;
 }
-#ifndef WL_SCHED_SCAN
-static int wl_android_set_pno_setup(struct net_device *dev, char *command, int total_len)
-{
-	wlc_ssid_t ssids_local[MAX_PFN_LIST_COUNT];
-	int res = -1;
-	int nssid = 0;
-	cmd_tlv_t *cmd_tlv_temp;
-	char *str_ptr;
-	int tlv_size_left;
-	int pno_time = 0;
-	int pno_repeat = 0;
-	int pno_freq_expo_max = 0;
-
-#ifdef PNO_SET_DEBUG
-	int i;
-	char pno_in_example[] = {
-		'P', 'N', 'O', 'S', 'E', 'T', 'U', 'P', ' ',
-		'S', '1', '2', '0',
-		'S',
-		0x05,
-		'd', 'l', 'i', 'n', 'k',
-		'S',
-		0x04,
-		'G', 'O', 'O', 'G',
-		'T',
-		'0', 'B',
-		'R',
-		'2',
-		'M',
-		'2',
-		0x00
-		};
-#endif /* PNO_SET_DEBUG */
-	DHD_PNO(("%s: command=%s, len=%d\n", __FUNCTION__, command, total_len));
-
-	if (total_len < (strlen(CMD_PNOSETUP_SET) + sizeof(cmd_tlv_t))) {
-		DHD_ERROR(("%s argument=%d less min size\n", __FUNCTION__, total_len));
-		goto exit_proc;
-	}
-#ifdef PNO_SET_DEBUG
-	memcpy(command, pno_in_example, sizeof(pno_in_example));
-	total_len = sizeof(pno_in_example);
-#endif
-	str_ptr = command + strlen(CMD_PNOSETUP_SET);
-	tlv_size_left = total_len - strlen(CMD_PNOSETUP_SET);
-
-	cmd_tlv_temp = (cmd_tlv_t *)str_ptr;
-	memset(ssids_local, 0, sizeof(ssids_local));
-
-	if ((cmd_tlv_temp->prefix == PNO_TLV_PREFIX) &&
-		(cmd_tlv_temp->version == PNO_TLV_VERSION) &&
-		(cmd_tlv_temp->subtype == PNO_TLV_SUBTYPE_LEGACY_PNO)) {
-
-		str_ptr += sizeof(cmd_tlv_t);
-		tlv_size_left -= sizeof(cmd_tlv_t);
-
-		if ((nssid = wl_iw_parse_ssid_list_tlv(&str_ptr, ssids_local,
-			MAX_PFN_LIST_COUNT, &tlv_size_left)) <= 0) {
-			DHD_ERROR(("SSID is not presented or corrupted ret=%d\n", nssid));
-			goto exit_proc;
-		} else {
-			if ((str_ptr[0] != PNO_TLV_TYPE_TIME) || (tlv_size_left <= 1)) {
-				DHD_ERROR(("%s scan duration corrupted field size %d\n",
-					__FUNCTION__, tlv_size_left));
-				goto exit_proc;
-			}
-			str_ptr++;
-			pno_time = simple_strtoul(str_ptr, &str_ptr, 16);
-			DHD_PNO(("%s: pno_time=%d\n", __FUNCTION__, pno_time));
-
-			if (str_ptr[0] != 0) {
-				if ((str_ptr[0] != PNO_TLV_FREQ_REPEAT)) {
-					DHD_ERROR(("%s pno repeat : corrupted field\n",
-						__FUNCTION__));
-					goto exit_proc;
-				}
-				str_ptr++;
-				pno_repeat = simple_strtoul(str_ptr, &str_ptr, 16);
-				DHD_PNO(("%s :got pno_repeat=%d\n", __FUNCTION__, pno_repeat));
-				if (str_ptr[0] != PNO_TLV_FREQ_EXPO_MAX) {
-					DHD_ERROR(("%s FREQ_EXPO_MAX corrupted field size\n",
-						__FUNCTION__));
-					goto exit_proc;
-				}
-				str_ptr++;
-				pno_freq_expo_max = simple_strtoul(str_ptr, &str_ptr, 16);
-				DHD_PNO(("%s: pno_freq_expo_max=%d\n",
-					__FUNCTION__, pno_freq_expo_max));
-			}
-		}
-	} else {
-		DHD_ERROR(("%s get wrong TLV command\n", __FUNCTION__));
-		goto exit_proc;
-	}
-
-	res = dhd_dev_pno_set_for_ssid(dev, ssids_local, nssid, pno_time, pno_repeat,
-		pno_freq_expo_max, NULL, 0);
-exit_proc:
-	return res;
-}
-#endif /* !WL_SCHED_SCAN */
 #endif /* PNO_SUPPORT  */
 
 static int wl_android_get_p2p_dev_addr(struct net_device *ndev, char *command, int total_len)
@@ -2621,11 +2520,6 @@ wl_handle_private_cmd(struct net_device *net, char *command, u32 buf_size)
 	else if (brcm_strnicmp(command, CMD_PNOSSIDCLR_SET, strlen(CMD_PNOSSIDCLR_SET)) == 0) {
 		bytes_written = dhd_dev_pno_stop_for_ssid(net);
 	}
-#ifndef WL_SCHED_SCAN
-	else if (brcm_strnicmp(command, CMD_PNOSETUP_SET, strlen(CMD_PNOSETUP_SET)) == 0) {
-		bytes_written = wl_android_set_pno_setup(net, command, priv_cmd.total_len);
-	}
-#endif /* !WL_SCHED_SCAN */
 	else if (brcm_strnicmp(command, CMD_PNOENABLE_SET, strlen(CMD_PNOENABLE_SET)) == 0) {
 		int enable = *(command + strlen(CMD_PNOENABLE_SET) + 1) - '0';
 		bytes_written = (enable)? 0 : dhd_dev_pno_stop_for_ssid(net);

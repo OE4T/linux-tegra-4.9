@@ -1310,6 +1310,7 @@ static struct nvs_fn_dev bmp_fn_dev = {
 	.nvs_read			= bmp_nvs_read,
 };
 
+#ifdef CONFIG_PM_SLEEP
 static int bmp_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -1343,7 +1344,7 @@ static int bmp_resume(struct device *dev)
 		dev_info(&client->dev, "%s\n", __func__);
 	return ret;
 }
-
+#endif /* CONFIG_PM_SLEEP */
 static SIMPLE_DEV_PM_OPS(bmp_pm_ops, bmp_suspend, bmp_resume);
 
 static void bmp_shutdown(struct i2c_client *client)

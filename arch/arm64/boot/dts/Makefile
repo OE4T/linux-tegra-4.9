@@ -25,6 +25,7 @@ subdir-y	:= $(dts-dirs)
 dtstree		:= $(srctree)/$(src)
 
 dtb-$(CONFIG_OF_ALL_DTBS) := $(patsubst $(dtstree)/%.dts,%.dtb, $(foreach d,$(dts-dirs), $(wildcard $(dtstree)/$(d)/*.dts)))
+dtbo-$(CONFIG_OF_ALL_DTBS) := $(patsubst $(dtstree)/%.dts,%.dtbo, $(foreach d,$(dts-dirs), $(wildcard $(dtstree)/$(d)/*.dts)))
 
 always		:= $(dtb-y)
 
@@ -69,6 +70,7 @@ endif
 
 # dtb-list will contain all dtb-y
 DTB_LIST := $(dtb-y)
+DTBO_LIST := $(dtbo-y)
 dtb-y :=
 dts_makefile=$(foreach d,$(wildcard $1*), $(call dts_makefile,$(d)/,$(2)) $(if $(findstring Makefile,$(d)),$(d)))
 dts_mfiles = $(call dts_makefile, $(tegra-dtstree)/platform/, Makefile)
@@ -76,6 +78,7 @@ ifneq ($(dts_mfiles),)
 dts-include :=
 include $(dts_mfiles)
 dtb-y := $(addprefix $(tegra-rel-dtstree)/hardware/nvidia/,$(dtb-y))
+dtbo-y := $(addprefix $(tegra-rel-dtstree)/hardware/nvidia/,$(dtbo-y))
 ifneq ($(dts-include),)
 DTC_FLAGS += $(addprefix -i $(tegra-dtstree)/,$(dts-include))
 DTCCPP_FLAGS += $(addprefix -I$(tegra-dtstree)/,$(dts-include))
@@ -83,12 +86,15 @@ endif
 endif
 DTB_LIST += $(dtb-y)
 DTB_NEW_RULE_LIST := $(dtb-y)
+DTBO_LIST += $(dtbo-y)
+DTBO_NEW_RULE_LIST := $(dtbo-y)
 
 # Now save DTB_LIST to dtb-y
 dtb-y := $(DTB_LIST)
+dtbo-y := $(DTBO_LIST)
 
 DTB_OBJS := $(addprefix $(obj)/,$(DTB_LIST))
-
+DTBO_OBJS := $(addprefix $(obj)/,$(DTBO_LIST))
 targets += $(DTB_LIST)
 
 define _define_dtb_rule
@@ -104,8 +110,21 @@ DTB_NEW_RULE_LIST := $(call replace_ddot,$(DTB_NEW_RULE_LIST))
 $(DTB_NEW_RULE_LIST):
 	$(call if_changed_dep,dtc)
 
-dtbs: $(DTB_OBJS) FORCE
-	cp -u $(DTB_OBJS) arch/arm64/boot/dts/
+define _define_dtbo_rule
+$(obj)/$(call replace_ddot,$(1)): $(src)/$(patsubst %.dtbo,%.dts,$(1)) FORCE
+endef
 
-clean-files := dts/*.dtb *.dtb
+$(foreach _dtbo, $(DTBO_NEW_RULE_LIST), $(eval $(call _define_dtbo_rule,$(_dtbo))))
+
+DTBO_OBJS := $(call replace_ddot,$(DTBO_OBJS))
+DTBO_NEW_RULE_LIST := $(addprefix $(obj)/,$(DTBO_NEW_RULE_LIST))
+DTBO_NEW_RULE_LIST := $(call replace_ddot,$(DTBO_NEW_RULE_LIST))
+
+$(DTBO_NEW_RULE_LIST):
+	$(call if_changed_dep,dtc)
+
+dtbs: $(DTB_OBJS) $(DTBO_OBJS) FORCE
+	cp -u $(DTB_OBJS) $(DTBO_OBJS) arch/arm64/boot/dts/
+
+clean-files := dts/*.dtb *.dtb *.dtbo
 clean-dirs := dts/_ddot_

@@ -92,13 +92,6 @@ static const int tegra_t210ref_srate_values[] = {
 
 static struct snd_soc_jack tegra_t210ref_hp_jack;
 
-static struct snd_soc_jack_gpio tegra_t210ref_hp_jack_gpio = {
-	.name = "headphone detect",
-	.report = SND_JACK_HEADPHONE,
-	.debounce_time = 150,
-	.invert = 1,
-};
-
 #ifdef CONFIG_SWITCH
 static struct switch_dev tegra_t210ref_headset_switch = {
 	.name = "h2w",
@@ -386,7 +379,6 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
-	struct tegra_asoc_platform_data *pdata = machine->pdata;
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	unsigned int srate;
@@ -404,10 +396,6 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 		dev_err(card->dev, "Failed to set extern clk parent\n");
 		return err;
 	}
-
-	tegra_t210ref_hp_jack_gpio.gpio = pdata->gpio_hp_det;
-	tegra_t210ref_hp_jack_gpio.invert =
-		!pdata->gpio_hp_det_active_high;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	snd_soc_jack_new(codec, "Headphone Jack", SND_JACK_HEADPHONE,
@@ -430,11 +418,6 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_jack_notifier_register(&tegra_t210ref_hp_jack,
 				&tegra_t210ref_jack_detect_nb);
 #endif
-	if (gpio_is_valid(pdata->gpio_hp_det)) {
-		dev_dbg(card->dev, "associate the gpio to jack\n");
-		snd_soc_jack_add_gpios(&tegra_t210ref_hp_jack,
-					1, &tegra_t210ref_hp_jack_gpio);
-	}
 
 	snd_jack_set_key(tegra_t210ref_hp_jack.jack,
 		SND_JACK_BTN_1, KEY_MEDIA);
@@ -576,7 +559,6 @@ static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 
 static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)
 {
-	struct snd_soc_jack_gpio *gpio = &tegra_t210ref_hp_jack_gpio;
 	unsigned int idx;
 
 	/* DAPM dai link stream work for non pcm links */
@@ -584,9 +566,6 @@ static int tegra_t210ref_suspend_pre(struct snd_soc_card *card)
 		if (card->rtd[idx].dai_link->params)
 			INIT_DELAYED_WORK(&card->rtd[idx].delayed_work, NULL);
 	}
-
-	if (gpio_is_valid(gpio->gpio))
-		disable_irq(gpio_to_irq(gpio->gpio));
 
 	return 0;
 }
@@ -609,19 +588,10 @@ static int tegra_t210ref_suspend_post(struct snd_soc_card *card)
 static int tegra_t210ref_resume_pre(struct snd_soc_card *card)
 {
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
-	struct snd_soc_jack_gpio *gpio = &tegra_t210ref_hp_jack_gpio;
-	int ret, val;
+	int ret;
 
 	if (machine->digital_reg)
 		ret = regulator_enable(machine->digital_reg);
-
-	if (gpio_is_valid(gpio->gpio)) {
-		val = gpio_get_value(gpio->gpio);
-		val = gpio->invert ? !val : val;
-		if (gpio->jack)
-			snd_soc_jack_report(gpio->jack, val, gpio->report);
-		enable_irq(gpio_to_irq(gpio->gpio));
-	}
 
 	if (!machine->clock_enabled) {
 		machine->clock_enabled = 1;
@@ -878,13 +848,6 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Can't allocate tegra_asoc_platform_data struct\n");
 		return -ENOMEM;
-	}
-
-	pdata->gpio_hp_det = of_get_named_gpio(np,
-					"nvidia,hp-det-gpios", 0);
-	if (pdata->gpio_hp_det < 0) {
-		/* interrupt handled by codec */
-		dev_info(&pdev->dev, "Failed to get HP Det GPIO, should be handled by codec\n");
 	}
 
 	pdata->gpio_codec1 = pdata->gpio_codec2 = pdata->gpio_codec3 =

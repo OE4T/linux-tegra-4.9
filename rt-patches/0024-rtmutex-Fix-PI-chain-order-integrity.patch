@@ -1,7 +1,7 @@
-From 666c5dd6d85f4b3bb27ecb28e5b35130f6abdc96 Mon Sep 17 00:00:00 2001
+From c15d0f004d5ace4bef623bd554e67392dc73fcf3 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:13 +0100
-Subject: [PATCH 024/325] rtmutex: Fix PI chain order integrity
+Subject: [PATCH 024/327] rtmutex: Fix PI chain order integrity
 
 Upstream commit e0aad5b44ff5d28ac1d6ae70cdf84ca228e889dc
 
@@ -125,5 +125,5 @@ index d1c0712..722e3cf 100644
  
  /*
 -- 
-2.1.4
+2.7.4
 

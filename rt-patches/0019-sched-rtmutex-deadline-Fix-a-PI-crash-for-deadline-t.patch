@@ -1,7 +1,7 @@
-From 841f503e00fb8b55189a336c79f7650b39fa61cf Mon Sep 17 00:00:00 2001
+From d7f7204417e7dfe5c6f3ebb3d1e1f6117e66ad75 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
-Subject: [PATCH 019/325] sched/rtmutex/deadline: Fix a PI crash for deadline
+Subject: [PATCH 019/327] sched/rtmutex/deadline: Fix a PI crash for deadline
  tasks
 
 Upstream commit e96a7705e7d3fef96aec9b590c63b2f6f7d2ba22
@@ -98,7 +98,7 @@ index a30b172..60d0c47 100644
  extern void rt_mutex_adjust_pi(struct task_struct *p);
  static inline bool tsk_is_pi_blocked(struct task_struct *tsk)
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 05f6855..9a06040 100644
+index 53c9a6a..88408c8 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -1418,6 +1418,7 @@ static void rt_mutex_init_task(struct task_struct *p)
@@ -181,5 +181,5 @@ index 8530071..ff1185c 100644
  	oldprio = p->prio;
  
 -- 
-2.1.4
+2.7.4
 

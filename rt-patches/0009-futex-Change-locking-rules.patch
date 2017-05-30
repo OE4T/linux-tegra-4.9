@@ -1,7 +1,7 @@
-From b1622d3f9c3999179fc95f0aa8ecd884a7d4e254 Mon Sep 17 00:00:00 2001
+From f38486ca09ef1398afd1aa698bc781fcc7842549 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:52 +0100
-Subject: [PATCH 009/325] futex: Change locking rules
+Subject: [PATCH 009/327] futex: Change locking rules
 
 Upstream commit 734009e96d1983ad739e5b656e03430b3660c913
 
@@ -372,5 +372,5 @@ index c11837c..88ba9b9 100644
  
  static long futex_wait_restart(struct restart_block *restart);
 -- 
-2.1.4
+2.7.4
 

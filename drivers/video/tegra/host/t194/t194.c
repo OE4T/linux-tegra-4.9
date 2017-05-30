@@ -685,6 +685,21 @@ static void t194_init_regs(struct platform_device *pdev, bool prod)
 
 	init_syncpt_thresh_reg(nvhost_get_host(pdev));
 
+	/*
+	 * Use old mapping registers on older simulator CLs
+	 */
+	if (tegra_platform_is_sim()) {
+		u64 cl;
+		int ret;
+
+		ret = of_property_read_u64(pdev->dev.of_node,
+					   "nvidia,changelist",
+					   &cl);
+		if (ret == 0 && cl <= 38424879)
+			map_regs = t19x_host1x_streamid_mapping_vdk_r6;
+	}
+
+	/* Write the map registers */
 	while (map_regs->host1x_offset) {
 		host1x_hypervisor_writel(pdev,
 					 map_regs->host1x_offset,

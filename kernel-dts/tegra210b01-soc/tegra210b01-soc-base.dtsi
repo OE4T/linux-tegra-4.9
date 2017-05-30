@@ -78,4 +78,25 @@
 	};
 
 	/delete-node/ dtv@7000c300;
+
+};
+
+/* Display */
+
+&head0 {
+	compatible = "nvidia,tegra210b01-dc", "nvidia,tegra210-dc";
+};
+
+&head1 {
+	compatible = "nvidia,tegra210b01-dc", "nvidia,tegra210-dc";
+};
+
+/delete-node/ &sor0;
+
+&sor1 {
+	compatible = "nvidia,tegra210b01-sor", "nvidia,tegra210-sor";
+};
+
+&dsi {
+	compatible = "nvidia,tegra210b01-dsi", "nvidia,tegra210-dsi";
 };

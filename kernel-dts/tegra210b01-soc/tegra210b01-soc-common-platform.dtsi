@@ -257,10 +257,6 @@
 			status = "okay";
 		};
 
-		sor {
-			status = "disabled";
-		};
-
 		sor1 {
 			status = "disabled";
 			hdmi-display {

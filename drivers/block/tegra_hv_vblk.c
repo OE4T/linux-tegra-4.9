@@ -173,6 +173,7 @@ struct vblk_dev {
 	struct completion ioctl_complete;
 	struct vsc_request reqs[MAX_VSC_REQS];
 	DECLARE_BITMAP(pending_reqs, MAX_VSC_REQS);
+	uint32_t inflight_reqs;
 	uint32_t max_requests;
 	struct mutex req_lock;
 	struct mutex ivc_lock;
@@ -218,6 +219,7 @@ static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
 		init_timer(&req->ivc_timer);
 		req->ivc_timer.data = (unsigned long) req;
 		req->ivc_timer.function = ivc_timeout_func;
+		vblkdev->inflight_reqs++;
 	}
 	mutex_unlock(&vblkdev->req_lock);
 
@@ -280,9 +282,9 @@ static void vblk_put_req(struct vsc_request *req)
 			req->id);
 	} else {
 		clear_bit(req->id, vblkdev->pending_reqs);
+		memset(req, 0, sizeof(struct vsc_request));
+		vblkdev->inflight_reqs--;
 	}
-	memset(req, 0, sizeof(struct vsc_request));
-
 exit:
 	mutex_unlock(&vblkdev->req_lock);
 }
@@ -458,11 +460,8 @@ static void ioctl_handler(struct vblk_dev *vblkdev)
 
 	if (vblkdev->ioctl_status == IOCTL_WAIT_BUS) {
 		frame_ptr = tegra_hv_ivc_write_get_next_frame(vblkdev->ivck);
+
 		if (IS_ERR_OR_NULL(frame_ptr)) {
-			vblkdev->ioctl_status = IOCTL_FAILURE;
-			complete(&vblkdev->ioctl_complete);
-			dev_err(vblkdev->device,
-				"no empty frame to send ioctl request\n");
 			return;
 		}
 
@@ -495,6 +494,7 @@ static void ioctl_handler(struct vblk_dev *vblkdev)
 out:
 			tegra_hv_ivc_read_advance(vblkdev->ivck);
 			complete(&vblkdev->ioctl_complete);
+			queue_work_on(WORK_CPU_UNBOUND, vblkdev->wq, &vblkdev->work);
 		}
 	}
 }
@@ -791,18 +791,23 @@ static void vblk_request_work(struct work_struct *ws)
 	if (tegra_hv_ivc_channel_notified(vblkdev->ivck) != 0)
 		return;
 
-	if (vblkdev->ioctl_status != IOCTL_IDLE) {
-		ioctl_handler(vblkdev);
-		if (vblkdev->ioctl_status == IOCTL_PROGRESS)
-			return;
-	}
-
 	req_submitted = true;
 	req_completed = true;
 	while (req_submitted || req_completed) {
-		req_completed = complete_bio_req(vblkdev);
+		if (vblkdev->ioctl_status != IOCTL_PROGRESS) {
+			req_completed = complete_bio_req(vblkdev);
+		} else
+			req_completed = false;
 
-		req_submitted = submit_bio_req(vblkdev);
+		if (vblkdev->ioctl_status == IOCTL_IDLE) {
+			req_submitted = submit_bio_req(vblkdev);
+		} else
+			req_submitted = false;
+	}
+
+	if (vblkdev->ioctl_status != IOCTL_IDLE &&
+			vblkdev->inflight_reqs == 0) {
+		ioctl_handler(vblkdev);
 	}
 }
 

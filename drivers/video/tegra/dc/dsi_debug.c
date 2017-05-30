@@ -341,19 +341,33 @@ static ssize_t host_cmd_v_blank_dcs_get_cmd(struct file *file,
 	struct seq_file *s = file->private_data;
 	struct tegra_dc_dsi_data *dsi = s->private;
 	struct tegra_dc *dc = dsi->dc;
+	char *pbuf;
 
 	if (!dsi->enabled) {
 		dev_info(&dc->ndev->dev, "DSI controller suspended\n");
 		return count;
 	}
 
-	if (sscanf(buf, "%x %x %x", &data_id, &command_value, &command_value1)
-			!= 3)
+	pbuf = vmalloc(count);
+	if (!pbuf)
+		return -ENOMEM;
+
+	if (copy_from_user(pbuf, buf, count)) {
+		vfree(pbuf);
+		return -EFAULT;
+	}
+
+	if (sscanf(pbuf, "%x %x %x", &data_id, &command_value, &command_value1)
+			!= 3) {
+		vfree(pbuf);
 		return -EINVAL;
+	}
 	dev_info(&dc->ndev->dev, "data id taken :0x%x\n", data_id);
 	dev_info(&dc->ndev->dev, "command value taken :0x%x\n", command_value);
 	dev_info(&dc->ndev->dev, "second command value taken :0x%x\n",
 							 command_value1);
+
+	vfree(pbuf);
 	return count;
 }
 

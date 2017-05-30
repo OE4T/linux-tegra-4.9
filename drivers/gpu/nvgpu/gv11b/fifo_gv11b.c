@@ -916,7 +916,7 @@ static void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 
 	if (rc_type == RC_TYPE_MMU_FAULT)
-		gk20a_debug_dump(g->dev);
+		gk20a_debug_dump(g);
 
 	/* get the channel/TSG */
 	if (rc_type == RC_TYPE_MMU_FAULT && mmfault && mmfault->refch) {

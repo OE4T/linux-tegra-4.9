@@ -55,7 +55,7 @@ void populate_desc_header(u8 *lun_desc_buf)
 
 int validate_refclk_value(struct ufs_hba *hba, u32 refclk_value)
 {
-	if (refclk_value < 0 || refclk_value > 3) {
+	if (refclk_value > 3) {
 		dev_err(hba->dev, "%s: Bad bRefClkFreq value\n"
 				"Input Value: 0x%02x\n"
 				"Valid Values are:\n"
@@ -90,7 +90,7 @@ int validate_desc_header(struct ufs_hba *hba, u8 *lun_desc_buf)
 		}
 
 		desc_param = GET_PARAM_VAL(i, BOOTLUN_ID_OFFSET);
-		if (desc_param < 0 || desc_param > 2) {
+		if (desc_param > 2) {
 			dev_err(hba->dev,
 				"%s: Bad bBootLunID for LUN%d:\n"
 				"Input value: 0x%02x\n"
@@ -100,7 +100,7 @@ int validate_desc_header(struct ufs_hba *hba, u8 *lun_desc_buf)
 		}
 
 		desc_param = GET_PARAM_VAL(i, LU_WRITE_PROTECT_OFFSET);
-		if (desc_param < 0 || desc_param > 3) {
+		if (desc_param > 3) {
 			dev_err(hba->dev,
 				"%s: Bad bLUWriteProtect for LUN%d:\n"
 				"Input value: 0x%02x\n"
@@ -110,7 +110,7 @@ int validate_desc_header(struct ufs_hba *hba, u8 *lun_desc_buf)
 		}
 
 		desc_param = GET_PARAM_VAL(i, MEMORY_TYPE_OFFSET);
-		if (desc_param < 0 || desc_param > 6) {
+		if (desc_param > 6) {
 			dev_err(hba->dev, "%s: Bad bMemoryType for LUN%d:\n"
 				"Input value: 0x%02x\n"
 				"Valid values are: 0x0 to 0x6\n"

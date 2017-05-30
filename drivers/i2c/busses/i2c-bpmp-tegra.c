@@ -417,8 +417,6 @@ static int tegra_bpmp_i2c_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	pm_runtime_enable(&pdev->dev);
-
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
 	i2c_dev->adapter.owner = THIS_MODULE;
 	i2c_dev->adapter.class = I2C_CLASS_HWMON;
@@ -437,7 +435,7 @@ static int tegra_bpmp_i2c_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	pm_runtime_enable(&i2c_dev->adapter.dev);
+	pm_runtime_enable(&pdev->dev);
 
 	return 0;
 

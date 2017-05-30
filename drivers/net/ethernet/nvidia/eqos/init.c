@@ -1410,7 +1410,7 @@ static INT eqos_resume(struct platform_device *pdev)
 	if (netif_running(dev)) {
 		if (pdata->phydev->drv->low_power_mode) {
 			/* reset the PHY Broadcom PHY needs minimum of 2us delay */
-			pr_err("%s(): exit from iddq-lp mode\n", __func__);
+			pr_info("%s(): exit from iddq-lp mode\n", __func__);
 			gpio_set_value(pdata->phy_reset_gpio, 0);
 			usleep_range(10, 11);
 			gpio_set_value(pdata->phy_reset_gpio, 1);

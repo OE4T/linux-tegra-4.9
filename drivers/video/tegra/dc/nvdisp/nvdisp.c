@@ -3618,7 +3618,10 @@ void tegra_dc_reset_imp_state(void)
 		return;
 	}
 
-	tegra_dc_reserve_common_channel(reserve_dc);
+	if (tegra_dc_reserve_common_channel(reserve_dc)) {
+		kfree(default_dc_settings);
+		return;
+	}
 
 	/*
 	 * This function should only be called when all DC handles have been

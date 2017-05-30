@@ -172,4 +172,22 @@
 		gps-wakeup-gpio = <&gpio TEGRA_GPIO(H, 7) 0>;
 		status = "disabled";
 	};
+
+	gpio@6000d000 {
+		e2614_audio: e2614-rt5658-audio {
+			gpio-hog;
+			function;
+			gpios = <
+				TEGRA_GPIO(B, 0) 0
+				TEGRA_GPIO(B, 1) 0
+				TEGRA_GPIO(B, 2) 0
+				TEGRA_GPIO(B, 3) 0
+				TEGRA_GPIO(BB, 0) 0
+				TEGRA_GPIO(BB, 3) 0
+				>;
+			label = "I2S0_LRCLK", "I2S0_SDIN", "I2S0_SDOUT",
+				"I2S0_CLK", "AUDIO_MCLK", "AUD_RST";
+			status = "disabled";
+		};
+	};
 };

@@ -109,6 +109,13 @@
 					};
 				};
 			};
+
+			override@2 {
+				target = <&e2614_audio>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
 		};
 
 		fragement@3 {
@@ -126,6 +133,13 @@
 					nvidia,dai-link-1 {
 						codec-dai = <&rt5658_b00>;
 					};
+				};
+			};
+
+			override@2 {
+				target = <&e2614_audio>;
+				_overlay_ {
+					status = "okay";
 				};
 			};
 		};

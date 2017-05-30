@@ -1141,10 +1141,11 @@ static int qspi_probe(struct spi_device *spi)
 	flash->erase_opcode = OPCODE_SE;
 	flash->mtd.erasesize = info->sector_size;
 
-	ppdata.of_node = spi->dev.of_node;
 	flash->mtd.dev.parent = &spi->dev;
 	flash->page_size = info->page_size;
 	flash->mtd.writebufsize = flash->page_size;
+
+	mtd_set_of_node(&flash->mtd, spi->dev.of_node);
 
 	flash->addr_width = ADDRESS_WIDTH;
 	cdata = flash->spi->controller_data;

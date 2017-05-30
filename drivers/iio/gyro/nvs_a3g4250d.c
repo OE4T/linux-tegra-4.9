@@ -603,7 +603,7 @@ static struct nvs_fn_dev stm_fn_dev = {
 	.regs				= stm_regs,
 };
 
-
+#ifdef CONFIG_PM_SLEEP
 static int stm_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -631,7 +631,7 @@ static int stm_resume(struct device *dev)
 		dev_info(&client->dev, "%s\n", __func__);
 	return ret;
 }
-
+#endif /* CONFIG_PM_SLEEP */
 static SIMPLE_DEV_PM_OPS(stm_pm_ops, stm_suspend, stm_resume);
 
 static void stm_shutdown(struct i2c_client *client)

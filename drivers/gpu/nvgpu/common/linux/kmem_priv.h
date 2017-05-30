@@ -18,6 +18,7 @@
 #define __KMEM_PRIV_H__
 
 #include <nvgpu/rbtree.h>
+#include <nvgpu/lock.h>
 
 #define __pstat(s, fmt, msg...)				\
 	do {						\
@@ -78,7 +79,7 @@ struct nvgpu_mem_alloc_tracker {
 	const char *name;
 	struct nvgpu_kmem_cache *allocs_cache;
 	struct nvgpu_rbtree_node *allocs;
-	struct mutex lock;
+	struct nvgpu_mutex lock;
 
 	u64 bytes_alloced;
 	u64 bytes_freed;

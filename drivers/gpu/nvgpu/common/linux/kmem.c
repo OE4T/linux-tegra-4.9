@@ -15,14 +15,13 @@
  */
 
 #include <linux/mm.h>
-#include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/debugfs.h>
-#include <linux/spinlock.h>
 #include <linux/seq_file.h>
 #include <linux/vmalloc.h>
 #include <linux/stacktrace.h>
 
+#include <nvgpu/lock.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
@@ -137,12 +136,12 @@ void __nvgpu_vfree(struct gk20a *g, void *addr)
 
 static void lock_tracker(struct nvgpu_mem_alloc_tracker *tracker)
 {
-	mutex_lock(&tracker->lock);
+	nvgpu_mutex_acquire(&tracker->lock);
 }
 
 static void unlock_tracker(struct nvgpu_mem_alloc_tracker *tracker)
 {
-	mutex_unlock(&tracker->lock);
+	nvgpu_mutex_release(&tracker->lock);
 }
 
 static void kmem_print_mem_alloc(struct gk20a *g,
@@ -843,8 +842,8 @@ int nvgpu_kmem_init(struct gk20a *g)
 	g->vmallocs->allocs = NULL;
 	g->kmallocs->allocs = NULL;
 
-	mutex_init(&g->vmallocs->lock);
-	mutex_init(&g->kmallocs->lock);
+	nvgpu_mutex_init(&g->vmallocs->lock);
+	nvgpu_mutex_init(&g->kmallocs->lock);
 
 	g->vmallocs->min_alloc = PAGE_SIZE;
 	g->kmallocs->min_alloc = KMALLOC_MIN_SIZE;

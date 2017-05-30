@@ -17,7 +17,14 @@
 #ifndef _LINUX_TEGRA_MCE_H
 #define _LINUX_TEGRA_MCE_H
 
-#define NVG_STAT_MAX_ENTRIES	5
+#define NVG_STAT_MAX_ENTRIES	10
+#define MCE_STAT_ID_SHIFT	16UL
+
+struct cstats_info {
+	char	*name; /* name of the cstats */
+	int	id;   /* NVG id */
+	int	units;/* No of cores/clusters/cluster groups */
+};
 
 int t19x_mce_enter_cstate(u32 state, u32 wake_time);
 int t19x_mce_update_cstate_info(u32 cluster, u32 ccplex,

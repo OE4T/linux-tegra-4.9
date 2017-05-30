@@ -166,6 +166,7 @@ int t19x_mce_read_cstate_stats(u32 state, u32 *stats)
 	struct mce_regs regs;
 
 	regs.args[0] = state;
+	send_smc(MCE_SMC_WRITE_CSTATE_STATS, &regs);
 	send_smc(MCE_SMC_READ_CSTATE_STATS, &regs);
 	*stats = (u32)regs.args[2];
 	return 0;
@@ -244,14 +245,19 @@ EXPORT_SYMBOL(t19x_mce_enum_features);
 
 #ifdef CONFIG_DEBUG_FS
 
-#define CSTAT_ENTRY(stat) [NVG_STAT_QUERY_##stat] = #stat
+#define CSTAT_ENTRY(stat) NVG_STAT_QUERY_##stat
 
-static const char * const cstats_table[] = {
-	CSTAT_ENTRY(SC7_ENTRIES),
-	CSTAT_ENTRY(CC6_ENTRIES),
-	CSTAT_ENTRY(CG7_ENTRIES),
-	CSTAT_ENTRY(C6_ENTRIES),
-	CSTAT_ENTRY(C7_ENTRIES),
+static struct cstats_info cstats_table[] = {
+	{ "SC7_ENTRIES", CSTAT_ENTRY(SC7_ENTRIES), 1},
+	{ "SC7_RESIDENCY_SUM", CSTAT_ENTRY(SC7_RESIDENCY_SUM), 1},
+	{ "CG7_ENTRIES", CSTAT_ENTRY(CG7_ENTRIES), 2},
+	{ "CG7_RESIDENCY_SUM", CSTAT_ENTRY(CG7_RESIDENCY_SUM), 2},
+	{ "CC6_ENTRIES", CSTAT_ENTRY(CC6_ENTRIES), 4},
+	{ "CC6_RESIDENCY_SUM", CSTAT_ENTRY(CC6_RESIDENCY_SUM), 4},
+	{ "C7_ENTRIES", CSTAT_ENTRY(C7_ENTRIES), 8},
+	{ "C7_RESIDENCY_SUM", CSTAT_ENTRY(C7_RESIDENCY_SUM), 8},
+	{ "C6_ENTRIES", CSTAT_ENTRY(C6_ENTRIES), 8},
+	{ "C6_RESIDENCY_SUM", CSTAT_ENTRY(C6_RESIDENCY_SUM), 8},
 };
 
 static int mce_versions_get(void *data, u64 *val)
@@ -271,18 +277,22 @@ static int mce_features_get(void *data, u64 *val)
 
 static int mce_dbg_cstats_show(struct seq_file *s, void *data)
 {
-	int st;
-	u32 val;
+	int st, unit;
+	u32 val, mce_index;
 
-	seq_printf(s, "%-30s%-10s\n", "name", "count");
-	seq_printf(s, "----------------------------------------\n");
-	for (st = 1; st < NVG_STAT_MAX_ENTRIES; st++) {
-		if (!cstats_table[st])
-			continue;
-		if (t19x_mce_read_cstate_stats(st, &val))
-			pr_err("mce: failed to read cstat: %d\n", st);
-		else
-			seq_printf(s, "%-30s%-10d\n", cstats_table[st], val);
+	seq_printf(s, "%-25s%-15s%-10s\n", "name", "unit-id", "count/time");
+	seq_printf(s, "---------------------------------------------------\n");
+	for (st = 0; st < NVG_STAT_MAX_ENTRIES; st++) {
+		for (unit = 0; unit < cstats_table[st].units; unit++) {
+			mce_index = ((u32)cstats_table[st].id <<
+					MCE_STAT_ID_SHIFT) + (u32)unit;
+			if (t19x_mce_read_cstate_stats(mce_index, &val))
+				pr_err("mce: failed to read cstat: %s, %x\n",
+					cstats_table[st].name, mce_index);
+			else
+				seq_printf(s, "%-25s%-15d%-10d\n",
+					cstats_table[st].name, unit, val);
+		}
 	}
 	return 0;
 }

@@ -255,6 +255,7 @@ F:	drivers/base/core.c
 F:	drivers/base/devres.c
 F:	drivers/base/firmware_class.c
 F:	drivers/base/regmap/regcache.c
+F:	drivers/devfreq/
 F:	include/linux/blk-cgroup.h
 F:	include/linux/fixp-arith.h
 F:	include/linux/genhd.h
@@ -298,10 +299,16 @@ M:	Yifei Wan <ywan@nvidia.com>
 S:	Supported
 F:	drivers/platform/tegra/nvdumper/*
 
+NVPMODEL
+M:	Terry Wang <terwang@nvidia.com>
+M:	Wen Yi <wyi@nvidia.com>
+S:	Supported
+F:	drivers/nvpmodel/
+
 PCI
 M:	Vidya Sagar <vidyas@nvidia.com>
 F:	drivers/nvme/host/pci.c
-F:	drivers/pci/pci.c
+F:	drivers/pci/*
 
 PLATFORM
 M:	Mallikarjun Kasoju <mkasoju@nvidia.com>

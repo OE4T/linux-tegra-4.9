@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,6 @@
 
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
-#include <linux/gk20a.h>
 #include <linux/ote_protocol.h>
 #include <linux/delay.h>
 
@@ -44,25 +43,63 @@ static int tegra_vpr_resize_arg(char *options)
 }
 early_param("vpr_resize", tegra_vpr_resize_arg);
 
+#define NUM_MODULES_IDLE_VPR_RESIZE 3
+static struct vpr_user_module_info {
+	int (*do_idle)(void *);
+	int (*do_unidle)(void *);
+	void *data;
+} vpr_user_module[NUM_MODULES_IDLE_VPR_RESIZE];
+static int _tegra_set_vpr_params(void *vpr_base, size_t vpr_size);
+
 static int tegra_update_resize_cfg(phys_addr_t base , size_t size)
 {
-	int err = -EPERM;
+	int i = 0, err = 0;
 #define MAX_RETRIES 6
 	int retries = MAX_RETRIES;
+	mutex_lock(&vpr_lock);
 retry:
-	err = gk20a_do_idle();
-	if (!err) {
-		/* Config VPR_BOM/_SIZE in MC */
-		err = tegra_set_vpr_params((void *)(uintptr_t)base, size);
-		gk20a_do_unidle();
-	} else {
-		if (retries--) {
-			pr_err("%s:%d: fail retry=%d",
-				__func__, __LINE__, MAX_RETRIES - retries);
-			msleep(1);
-			goto retry;
+	for (; i < NUM_MODULES_IDLE_VPR_RESIZE; i++) {
+		if (vpr_user_module[i].do_idle) {
+			err = vpr_user_module[i].do_idle(
+					vpr_user_module[i].data);
+			if (err) {
+				pr_err("%s:%d: %pF failed err:%d\n",
+					 __func__, __LINE__,
+					vpr_user_module[i].do_idle, err);
+				break;
+			}
 		}
 	}
+	if (!err) {
+		/* Config VPR_BOM/_SIZE in MC */
+		err = _tegra_set_vpr_params((void *)(uintptr_t)base, size);
+		if (err)
+			pr_err("vpr resize to (%p, %zu) failed. err=%d\n",
+				(void *)(uintptr_t)base, size, err);
+		else
+			retries = 0; /* finish */
+	}
+	if (retries--) {
+		pr_err("%s:%d: fail retry=%d",
+			__func__, __LINE__, MAX_RETRIES - retries);
+		msleep(1);
+		goto retry;
+	}
+	while (--i >= 0) {
+		if (!vpr_user_module[i].do_unidle)
+			continue;
+
+		err = vpr_user_module[i].do_unidle(
+				vpr_user_module[i].data);
+		if (!err)
+			continue;
+		pr_err("%s:%d: %pF failed err:%d. Could be fatal!!\n",
+			 __func__, __LINE__,
+			vpr_user_module[i].do_unidle, err);
+		/* vpr resize is success, so return 0 on unidle failure */
+		err = 0;
+	}
+	mutex_unlock(&vpr_lock);
 	return err;
 }
 
@@ -76,14 +113,12 @@ EXPORT_SYMBOL(vpr_dev_ops);
 
 uint32_t invoke_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2);
 
-int tegra_set_vpr_params(void *vpr_base, size_t vpr_size)
+static int _tegra_set_vpr_params(void *vpr_base, size_t vpr_size)
 {
 	int retval = -EINVAL;
 
-	mutex_lock(&vpr_lock);
 	retval = invoke_smc(TE_SMC_PROGRAM_VPR,
 				(uintptr_t)vpr_base, vpr_size);
-	mutex_unlock(&vpr_lock);
 
 	if (retval != 0) {
 		pr_err("%s: smc failed, base 0x%p size %zx, err (0x%x)\n",
@@ -92,4 +127,62 @@ int tegra_set_vpr_params(void *vpr_base, size_t vpr_size)
 	}
 	return 0;
 }
+
+int tegra_set_vpr_params(void *vpr_base, size_t vpr_size)
+{
+	int ret;
+
+	mutex_lock(&vpr_lock);
+	ret = _tegra_set_vpr_params(vpr_base, vpr_size);
+	mutex_unlock(&vpr_lock);
+	return ret;
+}
 EXPORT_SYMBOL(tegra_set_vpr_params);
+
+void tegra_register_idle_unidle(int (*do_idle)(void *),
+				int (*do_unidle)(void *),
+				void *data)
+{
+	int i;
+
+	mutex_lock(&vpr_lock);
+	for (i = 0; i < NUM_MODULES_IDLE_VPR_RESIZE; i++) {
+		if (vpr_user_module[i].do_idle == do_idle)
+			goto unlock;
+	}
+
+	for (i = 0; i < NUM_MODULES_IDLE_VPR_RESIZE; i++) {
+		if (!vpr_user_module[i].do_idle) {
+			vpr_user_module[i].do_idle = do_idle;
+			vpr_user_module[i].do_unidle = do_unidle;
+			vpr_user_module[i].data = data;
+			break;
+		}
+	}
+unlock:
+	mutex_unlock(&vpr_lock);
+
+	if (i != NUM_MODULES_IDLE_VPR_RESIZE)
+		return;
+
+	pr_err("%pF,%pF failed to register to be called before vpr resize!!\n",
+		do_idle, do_unidle);
+}
+EXPORT_SYMBOL(tegra_register_idle_unidle);
+
+void tegra_unregister_idle_unidle(int (*do_idle)(void *))
+{
+	int i;
+
+	mutex_lock(&vpr_lock);
+	for (i = 0; i < NUM_MODULES_IDLE_VPR_RESIZE; i++) {
+		if (vpr_user_module[i].do_idle == do_idle) {
+			vpr_user_module[i].do_idle = NULL;
+			vpr_user_module[i].do_unidle = NULL;
+			vpr_user_module[i].data = NULL;
+			break;
+		}
+	}
+	mutex_unlock(&vpr_lock);
+}
+EXPORT_SYMBOL(tegra_unregister_idle_unidle);

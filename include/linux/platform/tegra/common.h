@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -48,9 +48,10 @@ u32 tegra_get_fuse_opt_subrevision(void);
 enum tegra_revision tegra_chip_get_revision(void);
 void __init display_tegra_dt_info(void);
 
-void tegra_register_idle_unidle(int (*gk20a_do_idle)(void),
-				int (*gk20a_do_unidle)(void));
-void tegra_unregister_idle_unidle(void);
+void tegra_register_idle_unidle(int (*do_idle)(void *),
+				int (*do_unidle)(void *),
+				void *data);
+void tegra_unregister_idle_unidle(int (*do_idle)(void *));
 
 static inline int tegra_cpu_is_secure(void)
 {

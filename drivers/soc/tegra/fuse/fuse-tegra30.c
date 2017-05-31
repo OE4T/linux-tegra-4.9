@@ -166,6 +166,7 @@ const struct tegra_fuse_soc tegra30_fuse_soc = {
 	.init = tegra30_fuse_init,
 	.speedo_init = tegra30_init_speedo_data,
 	.info = &tegra30_fuse_info,
+	.is_clkon_always = true,
 };
 
 static const struct tegra_fuse_info tegra114_fuse_info = {
@@ -178,6 +179,7 @@ const struct tegra_fuse_soc tegra114_fuse_soc = {
 	.init = tegra30_fuse_init,
 	.speedo_init = tegra114_init_speedo_data,
 	.info = &tegra114_fuse_info,
+	.is_clkon_always = true,
 };
 
 static const struct tegra_fuse_info tegra124_fuse_info = {
@@ -190,6 +192,7 @@ const struct tegra_fuse_soc tegra124_fuse_soc = {
 	.init = tegra30_fuse_init,
 	.speedo_init = tegra124_init_speedo_data,
 	.info = &tegra124_fuse_info,
+	.is_clkon_always = true,
 };
 
 static const struct tegra_fuse_info tegra210_fuse_info = {
@@ -203,6 +206,7 @@ const struct tegra_fuse_soc tegra210_fuse_soc = {
 	.init = tegra30_fuse_init,
 	.speedo_init = tegra210_init_speedo_data,
 	.info = &tegra210_fuse_info,
+	.is_clkon_always = true,
 };
 
 static const struct tegra_fuse_info tegra186_fuse_info = {
@@ -215,4 +219,5 @@ static const struct tegra_fuse_info tegra186_fuse_info = {
 const struct tegra_fuse_soc tegra186_fuse_soc = {
 	.init = tegra30_fuse_init,
 	.info = &tegra186_fuse_info,
+	.is_clkon_always = true,
 };

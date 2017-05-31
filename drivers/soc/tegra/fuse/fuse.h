@@ -35,6 +35,7 @@ struct tegra_fuse_soc {
 	void (*init)(struct tegra_fuse *fuse);
 	void (*speedo_init)(struct tegra_sku_info *info);
 	int (*probe)(struct tegra_fuse *fuse);
+	bool is_clkon_always;
 
 	const struct tegra_fuse_info *info;
 };

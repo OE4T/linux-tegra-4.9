@@ -14,9 +14,11 @@
  * more details.
  */
 #include <linux/errno.h>
+#include <linux/kernel.h>
 #include <linux/atomic.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>
+#include <linux/string.h>
 
 #include "dc.h"
 #include "dc_priv_defs.h"
@@ -26,6 +28,129 @@
 
 #define TEGRA_DC_FLIP_BUF_CAPACITY 1024 /* in units of number of elements */
 #define TEGRA_DC_CRC_BUF_CAPACITY 1024 /* in units of number of elements */
+
+const char *flip_state_literals[] = {
+	"queued", "dequeued", "flipped", "skipped"
+};
+
+/* type = 0 => flips, 1=> CRC */
+__maybe_unused
+static void _tegra_dc_ring_buf_print(struct tegra_dc_ring_buf *buf, u16 i)
+{
+	struct tegra_dc_flip_buf_ele *flip;
+	struct tegra_dc_crc_buf_ele *crc;
+	int iter;
+
+	switch (buf->type) {
+	case TEGRA_DC_RING_BUF_FLIP:
+		flip = (struct tegra_dc_flip_buf_ele *)
+			(buf->data + i * sizeof(*flip));
+		pr_info("%5d-%s ", flip->id, flip_state_literals[flip->state]);
+		break;
+	case TEGRA_DC_RING_BUF_CRC:
+		crc = (struct tegra_dc_crc_buf_ele *)
+			(buf->data + i * sizeof(*crc));
+
+		for (iter = 0; iter < DC_N_WINDOWS; iter++)
+			pr_info("%4d-%1d ", crc->matching_flips[iter].id,
+				crc->matching_flips[iter].valid);
+		pr_info("%4d-%1d ", crc->rg.crc, crc->rg.valid);
+		pr_info("%4d-%1d ", crc->comp.crc, crc->comp.valid);
+		pr_info("%4d-%1d ", crc->sor.crc, crc->sor.valid);
+
+		for (iter = 0; iter < TEGRA_DC_MAX_CRC_REGIONS; iter++)
+			pr_info("%4d-%1d ", crc->regional[iter].crc,
+					    crc->regional[iter].valid);
+		break;
+	}
+}
+
+__maybe_unused
+void tegra_dc_ring_buf_print(struct tegra_dc_ring_buf *buf)
+{
+	u16 i;
+
+	pr_info("==================================================\n");
+	pr_info("head=%d, tail=%d, size=%d\n", buf->head, buf->tail, buf->size);
+
+	if (buf->size) {
+		if (buf->head > buf->tail) {
+			for (i = buf->tail; i < buf->head; i++)
+				_tegra_dc_ring_buf_print(buf, i);
+		} else { /* Head has rolled over */
+			for (i = buf->tail; i < buf->capacity; i++)
+				_tegra_dc_ring_buf_print(buf, i);
+			for (i = 0; i < buf->head; i++)
+				_tegra_dc_ring_buf_print(buf, i);
+		}
+	}
+	pr_info("==================================================\n");
+}
+
+static inline size_t _get_bytes_per_ele(struct tegra_dc_ring_buf *buf)
+{
+	switch (buf->type) {
+	case TEGRA_DC_RING_BUF_FLIP:
+		return sizeof(struct tegra_dc_flip_buf_ele);
+	case TEGRA_DC_RING_BUF_CRC:
+		return sizeof(struct tegra_dc_crc_buf_ele);
+	default:
+		return 0;
+	}
+}
+
+/* Retrieve an in buffer pointer for element at index @idx
+ * @in_buf_ptr is the output parameter to be filled by the API
+ */
+static int tegra_dc_ring_buf_peek(struct tegra_dc_ring_buf *buf, u16 idx,
+				  char **in_buf_ptr)
+{
+	size_t bytes = _get_bytes_per_ele(buf);
+
+	if (buf->size == 0)
+		return -EINVAL;
+
+	*in_buf_ptr = (buf->data + idx * bytes);
+
+	return 0;
+}
+
+/* Remove the least recently buffered element */
+static int tegra_dc_ring_buf_remove(struct tegra_dc_ring_buf *buf)
+{
+	if (buf->size == 0)
+		return -EINVAL;
+
+	buf->tail = (buf->tail + 1) % buf->capacity;
+	buf->size--;
+
+	return 0;
+}
+
+/* Add a buffer element at the head of the buffer
+ * @src is the memory pointer from where data for the buffer element is copied
+ * if @in_buf_ptr is not NULL, the caller receives in buffer pointer to the
+ * element
+ */
+int tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf, void *src,
+			  char **in_buf_ptr)
+{
+	size_t bytes = _get_bytes_per_ele(buf);
+	void *dst = buf->data + buf->head * bytes;
+
+	/* If the buffer is full, drop the least recently used item */
+	if (buf->size == buf->capacity)
+		tegra_dc_ring_buf_remove(buf);
+
+	memcpy(dst, src, bytes);
+	if (in_buf_ptr)
+		*in_buf_ptr = dst;
+
+	buf->head = (buf->head + 1) % buf->capacity;
+	buf->size++;
+
+	return 0;
+}
 
 /* Called when enabling the DC head.
  * Avoid calling it when disabling the DC head so as to avoid any issues caused

@@ -164,6 +164,38 @@
 					    TEGRA_SID(TSEC)
 					    TEGRA_SID(TSECB)>;
 			};
+			host1x0_domain {
+				address-space = <&host1x_client_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX0>;
+			};
+			host1x1_domain {
+				address-space = <&host1x_client_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX1>;
+			};
+			host1x2_domain {
+				address-space = <&host1x_client_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX2>;
+			};
+			host1x3_domain {
+				address-space = <&host1x_client_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX3>;
+			};
+			host1x4_domain {
+				address-space = <&host1x_client_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX4>;
+			};
+			host1x5_domain {
+				address-space = <&host1x_client_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX5>;
+			};
+			host1x6_domain {
+				address-space = <&host1x_client_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX6>;
+			};
+			host1x7_domain {
+				address-space = <&host1x_client_as>;
+				sid-list = <TEGRA_SID_HOST1X_CTX7>;
+			};
 			rce_domain {
 				address-space = <&camera_as>;
 				sid-list = <TEGRA_SID(RCE)>;
@@ -373,6 +405,62 @@
 		#size-cells = <2>;
 
 		ranges;
+
+		host1x_ctx0: ctx0 {
+			compatible = "nvidia,tegra186-iommu-context";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX0>;
+			status = "okay";
+		};
+
+		host1x_ctx1: ctx1 {
+			compatible = "nvidia,tegra186-iommu-context";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX1>;
+			status = "okay";
+		};
+
+		host1x_ctx2: ctx2 {
+			compatible = "nvidia,tegra186-iommu-context";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX2>;
+			status = "okay";
+		};
+
+		host1x_ctx3: ctx3 {
+			compatible = "nvidia,tegra186-iommu-context";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX3>;
+			status = "okay";
+		};
+
+		host1x_ctx4: ctx4 {
+			compatible = "nvidia,tegra186-iommu-context";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX4>;
+			status = "okay";
+		};
+
+		host1x_ctx5: ctx5 {
+			compatible = "nvidia,tegra186-iommu-context";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX5>;
+			status = "okay";
+		};
+
+		host1x_ctx6: ctx6 {
+			compatible = "nvidia,tegra186-iommu-context";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX6>;
+			status = "okay";
+		};
+
+		host1x_ctx7: ctx7 {
+			compatible = "nvidia,tegra186-iommu-context";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX7>;
+			status = "okay";
+		};
 
 		vic@15340000 {
 			compatible = "nvidia,tegra194-vic";

@@ -802,6 +802,14 @@ config BLUEDROID_PM
 	  Say Y here to compile support for bluedroid_pm support into the kernel
 	  or say M to compile it as module (bluedroid_pm).
 
+config CPULOAD_MONITOR
+	bool "Publish cpu load measures in sysfs"
+	depends on CPU_FREQ
+	default y
+	---help---
+	  Publish cpu load measured in sysfs, to be used by user space cpu
+	  frequency controllers.
+
 config EQOS_APE_HWDEP
 	tristate "EQOS APE HWDEO Driver"
 	default n

@@ -1659,7 +1659,7 @@ static void set_best_clk_source(struct tegra_qspi_data *tqspi)
 	unsigned int fin_err = rate;
 	int ret;
 	struct clk *pclk, *fpclk = NULL;
-	const char *pclk_name, *fpclk_name;
+	const char *pclk_name, *fpclk_name = NULL;
 	struct device_node *node = tqspi->dev->of_node;
 	struct property *prop;
 

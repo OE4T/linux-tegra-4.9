@@ -7,6 +7,10 @@ Required Properties:
               GPIO will remain high for a time interval = the value written
               to the on_ms sysfs entry.
 
+Optional Properties:
+ - enable-gpio: GPIO which is required to be enabled in order for the
+                attached LED to toggle as expected.
+
 Example:
 
 nvs-led-test {

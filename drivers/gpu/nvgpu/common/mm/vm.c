@@ -279,7 +279,6 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 
 	vm->va_start  = low_hole;
 	vm->va_limit  = aperture_size;
-	vm->big_pages = big_pages;
 
 	vm->big_page_size     = vm->gmmu_page_sizes[gmmu_page_size_big];
 	vm->userspace_managed = userspace_managed;
@@ -292,7 +291,13 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 
 	/* Setup vma limits. */
 	if (kernel_reserved + low_hole < aperture_size) {
-		if (nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES)) {
+		/*
+		 * If big_pages are disabled for this VM then it only makes
+		 * sense to make one VM, same as if the unified address flag
+		 * is set.
+		 */
+		if (!big_pages ||
+		    nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES)) {
 			user_vma_start = low_hole;
 			user_vma_limit = vm->va_limit - kernel_reserved;
 			user_lp_vma_start = user_vma_limit;
@@ -346,11 +351,13 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 	 * space is used then check the user_lp vma instead of the user vma.
 	 */
 	if (nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES))
-		vm->big_pages = nvgpu_big_pages_possible(vm, user_vma_start,
-					 user_vma_limit - user_vma_start);
+		vm->big_pages = big_pages &&
+			nvgpu_big_pages_possible(vm, user_vma_start,
+					user_vma_limit - user_vma_start);
 	else
-		vm->big_pages = nvgpu_big_pages_possible(vm, user_lp_vma_start,
-					 user_lp_vma_limit - user_lp_vma_start);
+		vm->big_pages = big_pages &&
+			nvgpu_big_pages_possible(vm, user_lp_vma_start,
+					user_lp_vma_limit - user_lp_vma_start);
 
 	/*
 	 * User VMA.

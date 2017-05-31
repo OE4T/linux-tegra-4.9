@@ -3793,12 +3793,14 @@ static int rt5659_suspend(struct snd_soc_codec *codec)
 {
 	struct rt5659_priv *rt5659 = snd_soc_codec_get_drvdata(codec);
 
-	regcache_cache_only(rt5659->regmap, true);
-	regcache_mark_dirty(rt5659->regmap);
 	if (rt5659->i2c->irq) {
 		/* disable jack interrupts during system suspend */
 		disable_irq(rt5659->i2c->irq);
 	}
+	cancel_delayed_work_sync(&rt5659->jack_detect_work);
+
+	regcache_cache_only(rt5659->regmap, true);
+	regcache_mark_dirty(rt5659->regmap);
 
 	return 0;
 }

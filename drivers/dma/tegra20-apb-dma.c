@@ -1,7 +1,7 @@
 /*
  * DMA driver for Nvidia's Tegra20 APB DMA controller.
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1467,6 +1467,7 @@ err_irq:
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_dma_runtime_suspend(&pdev->dev);
+
 	return ret;
 }
 
@@ -1494,35 +1495,7 @@ static int tegra_dma_remove(struct platform_device *pdev)
 static int tegra_dma_runtime_suspend(struct device *dev)
 {
 	struct tegra_dma *tdma = dev_get_drvdata(dev);
-
-	clk_disable_unprepare(tdma->dma_clk);
-	return 0;
-}
-
-static int tegra_dma_runtime_resume(struct device *dev)
-{
-	struct tegra_dma *tdma = dev_get_drvdata(dev);
-	int ret;
-
-	ret = clk_prepare_enable(tdma->dma_clk);
-	if (ret < 0) {
-		dev_err(dev, "clk_enable failed: %d\n", ret);
-		return ret;
-	}
-	return 0;
-}
-
-#ifdef CONFIG_PM_SLEEP
-static int tegra_dma_pm_suspend(struct device *dev)
-{
-	struct tegra_dma *tdma = dev_get_drvdata(dev);
 	int i;
-	int ret;
-
-	/* Enable clock before accessing register */
-	ret = pm_runtime_get_sync(dev);
-	if (ret < 0)
-		return ret;
 
 	tdma->reg_gen = tdma_read(tdma, TEGRA_APBDMA_GENERAL);
 	for (i = 0; i < tdma->chip_data->nr_channels; i++) {
@@ -1543,21 +1516,21 @@ static int tegra_dma_pm_suspend(struct device *dev)
 						  TEGRA_APBDMA_CHAN_WCOUNT);
 	}
 
-	/* Disable clock */
-	pm_runtime_put(dev);
+	clk_disable_unprepare(tdma->dma_clk);
+
 	return 0;
 }
 
-static int tegra_dma_pm_resume(struct device *dev)
+static int tegra_dma_runtime_resume(struct device *dev)
 {
 	struct tegra_dma *tdma = dev_get_drvdata(dev);
-	int i;
 	int ret;
 
-	/* Enable clock before accessing register */
-	ret = pm_runtime_get_sync(dev);
-	if (ret < 0)
+	ret = clk_prepare_enable(tdma->dma_clk);
+	if (ret < 0) {
+		dev_err(dev, "clk_enable failed: %d\n", ret);
 		return ret;
+	}
 
 	tdma_write(tdma, TEGRA_APBDMA_GENERAL, tdma->reg_gen);
 	tdma_write(tdma, TEGRA_APBDMA_CONTROL, 0);
@@ -1582,9 +1555,18 @@ static int tegra_dma_pm_resume(struct device *dev)
 			(ch_reg->csr & ~TEGRA_APBDMA_CSR_ENB));
 	}
 
-	/* Disable clock */
-	pm_runtime_put(dev);
 	return 0;
+}
+
+#ifdef CONFIG_PM_SLEEP
+static int tegra_dma_pm_suspend(struct device *dev)
+{
+	return pm_runtime_force_suspend(dev);
+}
+
+static int tegra_dma_pm_resume(struct device *dev)
+{
+	return pm_runtime_force_resume(dev);
 }
 #endif
 

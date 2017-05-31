@@ -45,6 +45,23 @@
 			compatible = "android,firmware";
 			hardware = "quill";
 		};
+		fstab {
+			compatible = "android,fstab";
+			vendor {
+				compatible = "android,vendor";
+				dev = "/dev/block/platform/sdhci-tegra.3/by-name/vendor";
+				type = "ext4";
+				mnt_flags = "ro";
+				fsmgr_flags = "wait,slotselect,verify=/dev/block/platform/3460000.sdhci/by-name/MDA";
+			};
+			odm {
+				compatible = "android,odm";
+				dev = "/dev/block/platform/sdhci-tegra.3/by-name/odm";
+				type = "ext4";
+				mnt_flags = "ro";
+				fsmgr_flags = "wait,slotselect";
+			};
+                };
 	};
 
 	memory@80000000 {

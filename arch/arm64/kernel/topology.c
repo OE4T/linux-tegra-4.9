@@ -99,7 +99,7 @@ static void normalize_cpu_capacity(void)
 	for_each_possible_cpu(cpu) {
 		pr_debug("cpu_capacity: cpu=%d raw_capacity=%u\n",
 			 cpu, raw_capacity[cpu]);
-		capacity = (raw_capacity[cpu] << SCHED_CAPACITY_SHIFT)
+		capacity = ((u64)raw_capacity[cpu] << SCHED_CAPACITY_SHIFT)
 			/ capacity_scale;
 		set_capacity_scale(cpu, capacity);
 		pr_debug("cpu_capacity: CPU%d cpu_capacity=%lu\n",

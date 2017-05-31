@@ -169,6 +169,8 @@
 					    TEGRA_SID(NVDLA1)
 					    TEGRA_SID(NVDISPLAY)
 					    TEGRA_SID(NVENC1)
+					    TEGRA_SID(PVA0)
+					    TEGRA_SID(PVA1)
 					    TEGRA_SID(NVDEC1)
 					    TEGRA_SID(SE)
 					    TEGRA_SID(SE1)
@@ -1062,6 +1064,9 @@
 				 <&bpmp_clks TEGRA194_CLK_PVA0_VPS0>,
 				 <&bpmp_clks TEGRA194_CLK_PVA0_VPS1>;
 			clock-names = "axi", "vps0", "vps1";
+
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_PVA0>;
 		};
 
 		pva1: pva1 {
@@ -1074,6 +1079,9 @@
 				 <&bpmp_clks TEGRA194_CLK_PVA1_VPS0>,
 				 <&bpmp_clks TEGRA194_CLK_PVA1_VPS1>;
 			clock-names = "axi", "vps0", "vps1";
+
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_PVA1>;
 		};
 
 		se@15810000 {

@@ -932,6 +932,7 @@ static struct camera_common_pdata *imx185_parse_dt(struct i2c_client *client,
 	struct camera_common_pdata *board_priv_pdata;
 	const struct of_device_id *match;
 	int err;
+	int gpio;
 	const char *str;
 
 	if (!np)
@@ -958,14 +959,15 @@ static struct camera_common_pdata *imx185_parse_dt(struct i2c_client *client,
 	if (err)
 		dev_err(&client->dev, "mclk not in DT\n");
 
-	board_priv_pdata->reset_gpio = of_get_named_gpio(np, "reset-gpios", 0);
-	if (err) {
-		dev_err(&client->dev, "reset-gpios not found %d\n", err);
-		board_priv_pdata->reset_gpio = 0;
+	gpio = of_get_named_gpio(np, "reset-gpios", 0);
+	if (gpio < 0) {
+		dev_err(&client->dev, "reset-gpios not found %d\n", gpio);
+		gpio = 0;
 	}
+	board_priv_pdata->reset_gpio = (unsigned int)gpio;
 
 	if (s_data->sensor_props.num_modes == 0)
-		dev_err(&client->dev, "Failed to load mode info %d\n", err);
+		dev_err(&client->dev, "Failed to load mode info\n");
 
 	return board_priv_pdata;
 }

@@ -46,6 +46,8 @@
 #include "gv11b_gating_reglist.h"
 #include "regops_gv11b.h"
 
+#include <nvgpu/debug.h>
+
 #include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
 
 static struct gpu_ops gv11b_ops;

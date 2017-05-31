@@ -26,6 +26,7 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/gmmu.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/debug.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"

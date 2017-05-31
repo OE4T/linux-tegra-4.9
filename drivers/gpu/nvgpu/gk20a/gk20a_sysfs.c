@@ -581,7 +581,8 @@ static ssize_t aelpg_param_store(struct device *dev,
 	 */
 	if (g->aelpg_enabled && g->pmu.pmu_ready) {
 		/* Disable AELPG */
-		ap_cmd.init.cmd_id = PMU_AP_CMD_ID_DISABLE_CTRL;
+		ap_cmd.disable_ctrl.cmd_id = PMU_AP_CMD_ID_DISABLE_CTRL;
+		ap_cmd.disable_ctrl.ctrl_id = PMU_AP_CTRL_ID_GRAPHICS;
 		status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
 
 		/* Enable AELPG */
@@ -626,12 +627,14 @@ static ssize_t aelpg_enable_store(struct device *dev,
 		if (val && !g->aelpg_enabled) {
 			g->aelpg_enabled = true;
 			/* Enable AELPG */
-			ap_cmd.init.cmd_id = PMU_AP_CMD_ID_ENABLE_CTRL;
+			ap_cmd.enable_ctrl.cmd_id = PMU_AP_CMD_ID_ENABLE_CTRL;
+			ap_cmd.enable_ctrl.ctrl_id = PMU_AP_CTRL_ID_GRAPHICS;
 			status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
 		} else if (!val && g->aelpg_enabled) {
 			g->aelpg_enabled = false;
 			/* Disable AELPG */
-			ap_cmd.init.cmd_id = PMU_AP_CMD_ID_DISABLE_CTRL;
+			ap_cmd.disable_ctrl.cmd_id = PMU_AP_CMD_ID_DISABLE_CTRL;
+			ap_cmd.disable_ctrl.ctrl_id = PMU_AP_CTRL_ID_GRAPHICS;
 			status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
 		}
 	} else {

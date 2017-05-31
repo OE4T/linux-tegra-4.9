@@ -668,7 +668,10 @@ int vgpu_probe(struct platform_device *pdev)
 	/* Initialize the platform interface. */
 	err = platform->probe(dev);
 	if (err) {
-		dev_err(dev, "platform probe failed");
+		if (err == -EPROBE_DEFER)
+			dev_info(dev, "platform probe failed");
+		else
+			dev_err(dev, "platform probe failed");
 		return err;
 	}
 

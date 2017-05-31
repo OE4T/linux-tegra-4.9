@@ -1012,6 +1012,15 @@ fb_set_var(struct fb_info *info, struct fb_var_screeninfo *var)
 
 			old_var = info->var;
 			info->var = *var;
+#if defined(CONFIG_FRAMEBUFFER_CONSOLE)
+			/*
+			 * If bpp is not specified, use the one from earlier
+			 * mode
+			 */
+			if (!info->var.bits_per_pixel)
+				info->var.bits_per_pixel =
+						old_var.bits_per_pixel;
+#endif
 
 			if (info->fbops->fb_set_par) {
 				ret = info->fbops->fb_set_par(info);

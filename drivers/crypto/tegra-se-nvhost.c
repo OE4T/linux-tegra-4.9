@@ -475,8 +475,7 @@ static int tegra_se_alloc_ll_buf(struct tegra_se_dev *se_dev, u32 num_src_sgs,
 	}
 
 	if (num_src_sgs) {
-		se_dev->src_ll_size = (sizeof(struct tegra_se_ll) *
-					num_src_sgs) + sizeof(u32);
+		se_dev->src_ll_size = sizeof(struct tegra_se_ll) * num_src_sgs;
 		se_dev->src_ll_buf = dma_alloc_coherent(
 					se_dev->dev, se_dev->src_ll_size,
 					&se_dev->src_ll_buf_adr, GFP_KERNEL);
@@ -487,8 +486,7 @@ static int tegra_se_alloc_ll_buf(struct tegra_se_dev *se_dev, u32 num_src_sgs,
 		}
 	}
 	if (num_dst_sgs) {
-		se_dev->dst_ll_size = (sizeof(struct tegra_se_ll) *
-					num_dst_sgs) + sizeof(u32);
+		se_dev->dst_ll_size = sizeof(struct tegra_se_ll) * num_dst_sgs;
 		se_dev->dst_ll_buf = dma_alloc_coherent(
 					se_dev->dev, se_dev->dst_ll_size,
 					&se_dev->dst_ll_buf_adr, GFP_KERNEL);
@@ -1940,10 +1938,8 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm, const u8 *src,
 	mutex_lock(&se_dev->mtx);
 	req_ctx->op_mode = SE_AES_OP_MODE_RNG_DRBG;
 
-	*se_dev->src_ll_buf = 0;
-	*se_dev->dst_ll_buf = 0;
-	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
-	se_dev->dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf);
+	se_dev->dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf);
 
 	req_ctx->config = tegra_se_get_config(se_dev, req_ctx->op_mode, true,
 					      TEGRA_SE_KEY_128_SIZE);
@@ -2055,14 +2051,8 @@ static int tegra_se_sha_process_buf(struct ahash_request *req, bool is_last,
 
 	if (is_last) {
 		/* Prepare buf for residual and current data */
-		/* Fill number of sgs */
-		num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
-		if (sha_ctx->residual_bytes)
-			num_sgs++;
-		*se_dev->src_ll_buf = num_sgs - 1;
-
 		/* Fill sgs entries */
-		se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+		se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf);
 		src_ll = se_dev->src_ll;
 		if (sha_ctx->residual_bytes) {
 			src_ll->addr = sha_ctx->sha_buf_addr[0];
@@ -2107,12 +2097,6 @@ static int tegra_se_sha_process_buf(struct ahash_request *req, bool is_last,
 					sha_ctx->residual_bytes;
 		sha_ctx->total_count += bytes_process_in_req;
 
-		/* Fill number of sgs */
-		num_sgs = tegra_se_count_sgs(req->src, bytes_process_in_req);
-		if (sha_ctx->residual_bytes)
-			num_sgs++;
-		*se_dev->src_ll_buf = num_sgs - 1;
-
 		/* Fill sgs entries */
 		/* If residual bytes are present copy it to second buffer */
 		if (sha_ctx->residual_bytes)
@@ -2120,7 +2104,7 @@ static int tegra_se_sha_process_buf(struct ahash_request *req, bool is_last,
 			       sha_ctx->residual_bytes);
 		sha_ctx->total_count += sha_ctx->residual_bytes;
 
-		se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+		se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf);
 		src_ll = se_dev->src_ll;
 		if (sha_ctx->residual_bytes) {
 			src_ll->addr = sha_ctx->sha_buf_addr[1];
@@ -2505,8 +2489,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 			ret = -EDOM;
 			goto out;
 		}
-		*se_dev->src_ll_buf = num_sgs - 1;
-		se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+		se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf);
 
 		src_sg = req->src;
 		total = blocks_to_process * TEGRA_SE_AES_BLOCK_SIZE;
@@ -2600,8 +2583,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 			cmac_ctx->buffer[i] ^= cmac_ctx->K1[i];
 	}
 
-	*se_dev->src_ll_buf = 0;
-	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf);
 
 	se_dev->src_ll->addr = cmac_ctx->dma_addr;
 	se_dev->src_ll->data_len = TEGRA_SE_AES_BLOCK_SIZE;
@@ -2717,10 +2699,8 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	}
 	memset(pbuf, 0, TEGRA_SE_AES_BLOCK_SIZE);
 
-	*se_dev->src_ll_buf = 0;
-	*se_dev->dst_ll_buf = 0;
-	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
-	se_dev->dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf);
+	se_dev->dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf);
 
 	se_dev->src_ll->addr = pbuf_adr;
 	se_dev->src_ll->data_len = TEGRA_SE_AES_BLOCK_SIZE;
@@ -3122,8 +3102,7 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 		return -EDOM;
 	}
 
-	*se_dev->src_ll_buf = num_src_sgs - 1;
-	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf);
 
 	if (req->src == req->dst) {
 		se_dev->dst_ll = se_dev->src_ll;
@@ -3132,8 +3111,7 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 		if (!ret1)
 			return -EINVAL;
 	} else {
-		*se_dev->dst_ll_buf = num_dst_sgs - 1;
-		se_dev->dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+		se_dev->dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf);
 		ret1 = tegra_map_sg(se_dev->dev, req->src, 1, DMA_TO_DEVICE,
 				    se_dev->src_ll, req->src_len);
 		ret2 = tegra_map_sg(se_dev->dev, req->dst, 1, DMA_FROM_DEVICE,
@@ -3429,10 +3407,8 @@ static int tegra_se_dh_compute_value(struct kpp_request *req)
 
 	tegra_se_fix_endianness(se_dev, src_sg, num_src_sgs, total, true);
 
-	*se_dev->src_ll_buf = num_src_sgs - 1;
-	*se_dev->dst_ll_buf = num_dst_sgs - 1;
-	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
-	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf);
+	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf);
 
 	err = tegra_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE,
 			   se_dev->src_ll, total);

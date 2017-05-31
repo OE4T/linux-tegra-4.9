@@ -36,6 +36,8 @@ struct nvs_led_test_context {
 	unsigned int enabled;
 	int in_irq;
 	int out_gpio;
+	int enable_gpio;
+	enum of_gpio_flags enable_gpio_flags;
 	struct delayed_work work;
 };
 
@@ -50,13 +52,11 @@ static void nvs_led_test_generate_event(struct nvs_led_test_context *ctx,
 	 * to the out-gpio (presumably, to turn on an LED), and schedule
 	 * work to turn it back off.
 	 */
-	if (on_ms > 0)
-		if (gpio_is_valid(ctx->out_gpio)) {
-
-			dev_info(ctx->dev, "Setting out-gpio to 1\n");
-			schedule_delayed_work(&ctx->work, (on_ms * HZ) / 1000);
-			gpio_set_value_cansleep(ctx->out_gpio, 1);
-		}
+	if (on_ms > 0) {
+		dev_info(ctx->dev, "Setting out-gpio to 1\n");
+		schedule_delayed_work(&ctx->work, (on_ms * HZ) / 1000);
+		gpio_set_value_cansleep(ctx->out_gpio, 1);
+	}
 
 	/*
 	 * Regardless, generate the test sensor event.  For some reason,
@@ -147,6 +147,8 @@ static int nvs_led_test_parse_dt(struct nvs_led_test_context *ctx,
 {
 	ctx->in_irq = irq_of_parse_and_map(np, 0);
 	ctx->out_gpio = of_get_named_gpio(np, "out-gpios", 0);
+	ctx->enable_gpio = of_get_named_gpio_flags(np, "enable-gpio", 0,
+						   &ctx->enable_gpio_flags);
 
 	return 0;
 }
@@ -189,25 +191,49 @@ static int nvs_led_test_probe(struct platform_device *pdev)
 	}
 
 	/*
+	 * If there is a required enable-gpio set, then enable that first.
+	 */
+	if (gpio_is_valid(ctx->enable_gpio)) {
+		err = devm_gpio_request(&pdev->dev, ctx->enable_gpio,
+					"NVS LED enable GPIO");
+		if (err) {
+			dev_err(&pdev->dev, "Failed to request Enable GPIO");
+			return err;
+		}
+
+		if (ctx->enable_gpio_flags & OF_GPIO_ACTIVE_LOW)
+			err = gpio_direction_output(ctx->enable_gpio, 0);
+		else
+			err = gpio_direction_output(ctx->enable_gpio, 1);
+
+		if (err) {
+			dev_err(&pdev->dev, "Failed setting output of gpio");
+			return err;
+		}
+	}
+
+	/*
 	 * If we are given an output GPIO (like, an LED wired to a GPIO),
 	 * set that output GPIO up.
 	 */
-	if (gpio_is_valid(ctx->out_gpio)) {
-		err = devm_gpio_request(&pdev->dev, ctx->out_gpio,
-					"NVS LED test Sensor out");
-		if (err) {
-			dev_err(&pdev->dev, "Failed requesting out-gpio");
-			return err;
-		}
-
-		err = gpio_direction_output(ctx->out_gpio, 0);
-		if (err) {
-			dev_err(&pdev->dev, "Failed setting output out-gpio");
-			return err;
-		}
-
-		dev_info(&pdev->dev, "Set up output gpio\n");
+	if (!gpio_is_valid(ctx->out_gpio)) {
+		dev_err(&pdev->dev, "Invalid GPIO set");
+		return -EINVAL;
 	}
+	err = devm_gpio_request(&pdev->dev, ctx->out_gpio,
+				"NVS LED test Sensor out");
+	if (err) {
+		dev_err(&pdev->dev, "Failed requesting gpio");
+		return err;
+	}
+
+	err = gpio_direction_output(ctx->out_gpio, 0);
+	if (err) {
+		dev_err(&pdev->dev, "Failed setting output gpio");
+		return err;
+	}
+
+	dev_info(&pdev->dev, "Set up output gpio\n");
 
 	/* Register with NVS */
 	err = nvs_of_dt(pdev->dev.of_node, &ctx->cfg, NULL);

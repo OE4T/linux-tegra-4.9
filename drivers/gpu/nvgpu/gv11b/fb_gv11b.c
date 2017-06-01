@@ -31,7 +31,6 @@
 
 static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 {
-	void __iomem *soc0 = ioremap(0x01f00010, 4096); //MSS_NVLINK_0_BASE
 	void __iomem *soc1 = ioremap(0x01f20010, 4096); //MSS_NVLINK_1_BASE
 	void __iomem *soc2 = ioremap(0x01f40010, 4096); //MSS_NVLINK_2_BASE
 	void __iomem *soc3 = ioremap(0x01f60010, 4096); //MSS_NVLINK_3_BASE
@@ -40,11 +39,6 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 
 	/* TODO : replace this code with proper nvlink API */
 	nvgpu_info(g, "init nvlink soc credits");
-
-	val = readl_relaxed(soc0);
-	writel_relaxed(val, soc0);
-	val = readl_relaxed(soc0 + 4);
-	writel_relaxed(val, soc0 + 4);
 
 	val = readl_relaxed(soc1);
 	writel_relaxed(val, soc1);

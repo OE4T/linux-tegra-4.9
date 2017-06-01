@@ -127,9 +127,6 @@
 
 		#iommu-cells = <1>;
 
-		mmu-masters = <&{/host1x/vi-thi@15f00000}	TEGRA_SID_VI>,
-			      <&{/host1x/isp-thi@14b00000}	TEGRA_SID_ISP>;
-
 		domains {
 			bpmp_domain {
 				address-space = <&common_as>;
@@ -921,6 +918,7 @@
 			clock-names = "vi", "nvcsi", "nvcsilp";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_VI>;
 			iso-smmu;
 		};
 
@@ -934,6 +932,7 @@
 			clock-names = "isp";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_ISP>;
 			iso-smmu;
 		};
 

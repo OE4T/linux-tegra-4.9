@@ -1141,19 +1141,17 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 		&hdcp_context->msg.rxcaps_capmask);
 	if (err)
 		goto exit;
-	if (tegra_dc_is_t18x()) {
-		ta_ctx = NULL;
-		/* Open a trusted sesion with HDCP TA */
-		err = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
-		if (err) {
-			nvhdcp_err("Error opening trusted session\n");
-			goto exit;
-		}
-		err = get_srm_signature(hdcp_context, nonce, pkt, ta_ctx);
-		if (err) {
-			nvhdcp_err("Error getting srm signature!\n");
-			goto exit;
-		}
+	ta_ctx = NULL;
+	/* Open a trusted sesion with HDCP TA */
+	err = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+	if (err) {
+		nvhdcp_err("Error opening trusted session\n");
+		goto exit;
+	}
+	err = get_srm_signature(hdcp_context, nonce, pkt, ta_ctx);
+	if (err) {
+		nvhdcp_err("Error getting srm signature!\n");
+		goto exit;
 	}
 	err =  tsec_hdcp_revocation_check(hdcp_context,
 		(unsigned char *)(pkt + HDCP_CMAC_OFFSET),
@@ -1247,13 +1245,11 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 			g_fallback = 1;
 			goto exit;
 		}
-		if (tegra_dc_is_t18x()) {
-			err = get_srm_signature(hdcp_context, nonce,
+		err = get_srm_signature(hdcp_context, nonce,
 				pkt, ta_ctx);
-			if (err) {
-				nvhdcp_err("Error getting srm signature!\n");
-				goto exit;
-			}
+		if (err) {
+			nvhdcp_err("Error getting srm signature!\n");
+			goto exit;
 		}
 		err =  tsec_hdcp_verify_vprime(hdcp_context,
 		(char *)(pkt + HDCP_CMAC_OFFSET),
@@ -1321,11 +1317,9 @@ exit:
 	if (err)
 		nvhdcp_err("HDCP authentication failed with err %d\n", err);
 	kfree(pkt);
-	 if (tegra_dc_is_t18x()) {
-		if (ta_ctx) {
-			te_close_trusted_session(ta_ctx);
-			ta_ctx = NULL;
-		}
+	if (ta_ctx) {
+		te_close_trusted_session(ta_ctx);
+		ta_ctx = NULL;
 	}
 	return err;
 }
@@ -1784,20 +1778,18 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 							msecs_to_jiffies(10));
 			goto exit;
 		}
-		 if (tegra_dc_is_t18x()) {
-			ta_ctx = NULL;
-			/* Open a trusted sesion with HDCP TA */
-			err = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
-			if (err) {
-				nvhdcp_err("Error opening trusted session\n");
-				goto exit;
-			}
-			err = get_srm_signature(hdcp_context, nonce,
-						pkt, ta_ctx);
-			if (err) {
-				nvhdcp_err("Error getting srm signature!\n");
-				goto exit;
-			}
+		ta_ctx = NULL;
+		/* Open a trusted sesion with HDCP TA */
+		err = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+		if (err) {
+			nvhdcp_err("Error opening trusted session\n");
+			goto exit;
+		}
+		err = get_srm_signature(hdcp_context, nonce,
+				pkt, ta_ctx);
+		if (err) {
+			nvhdcp_err("Error getting srm signature!\n");
+			goto exit;
 		}
 		err =  tsec_hdcp_verify_vprime(hdcp_context,
 			(char *)(pkt + HDCP_CMAC_OFFSET),
@@ -1814,11 +1806,9 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 		err = (rx_status & HDCP_RX_STATUS_MSG_REAUTH_REQ);
 exit:
 		kfree(pkt);
-		if (tegra_dc_is_t18x()) {
-			if (ta_ctx) {
-				te_close_trusted_session(ta_ctx);
-				ta_ctx = NULL;
-			}
+		if (ta_ctx) {
+			te_close_trusted_session(ta_ctx);
+			ta_ctx = NULL;
 		}
 		return err;
 }

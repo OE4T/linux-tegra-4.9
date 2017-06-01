@@ -19,21 +19,13 @@
 
 #include "mods_internal.h"
 #include <linux/clk.h>
-#include <linux/platform/tegra/clock.h>
-#if defined(CONFIG_TEGRA_CLK_FRAMEWORK)
-	#include <linux/clk/tegra.h>
-#elif defined(CONFIG_COMMON_CLK) && defined(CONFIG_OF_RESOLVE) && \
-defined(CONFIG_OF_DYNAMIC)
-	#define MODS_COMMON_CLK 1
-#endif
-#if defined(MODS_COMMON_CLK)
-	#include <linux/clk-provider.h>
-	#include <linux/of_device.h>
-	#include <linux/of.h>
-	#include <linux/of_fdt.h>
-	#include <linux/reset.h>
-	#define ARBITRARY_MAX_CLK_FREQ  3500000000
-#endif
+#include <linux/clk-provider.h>
+#include <linux/of_device.h>
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+#include <linux/reset.h>
+
+#define ARBITRARY_MAX_CLK_FREQ  3500000000
 
 static struct list_head mods_clock_handles;
 static spinlock_t mods_clock_lock;
@@ -45,7 +37,6 @@ struct clock_entry {
 	struct list_head list;
 };
 
-#if defined(MODS_COMMON_CLK)
 static struct device_node *find_clocks_node(const char *name)
 {
 	const char *node_name = "mods-simple-bus";
@@ -61,11 +52,9 @@ static struct device_node *find_clocks_node(const char *name)
 	np = of_get_child_by_name(pp, name);
 	return np;
 }
-#endif
 
 void mods_init_clock_api(void)
 {
-#if defined(MODS_COMMON_CLK)
 	const char *okay_value = "okay";
 	struct device_node *mods_np = 0;
 	struct property *pp = 0;
@@ -94,7 +83,6 @@ void mods_init_clock_api(void)
 
 err:
 	of_node_put(mods_np);
-#endif
 
 	spin_lock_init(&mods_clock_lock);
 	INIT_LIST_HEAD(&mods_clock_handles);
@@ -181,21 +169,6 @@ int esc_mods_get_clock_handle(struct file *pfile,
 	struct clk *pclk = 0;
 	int ret = -EINVAL;
 
-#if defined(CONFIG_TEGRA_CLK_FRAMEWORK)
-	LOG_ENT();
-
-	p->device_name[sizeof(p->device_name)-1] = 0;
-	p->controller_name[sizeof(p->controller_name)-1] = 0;
-	pclk = clk_get_sys(p->device_name, p->controller_name);
-
-	if (IS_ERR(pclk)) {
-		mods_error_printk("invalid clock specified: dev=%s, ctx=%s\n",
-				  p->device_name, p->controller_name);
-	} else {
-		p->clock_handle = mods_get_clock_handle(pclk);
-		ret = OK;
-	}
-#elif defined(MODS_COMMON_CLK)
 	struct device_node *mods_np = 0;
 	struct property *pp = 0;
 
@@ -224,7 +197,6 @@ int esc_mods_get_clock_handle(struct file *pfile,
 	}
 err:
 	of_node_put(mods_np);
-#endif
 	LOG_EXT();
 	return ret;
 }
@@ -292,23 +264,11 @@ int esc_mods_get_clock_max_rate(struct file *pfile, struct MODS_CLOCK_RATE *p)
 	if (!pclk) {
 		mods_error_printk("unrecognized clock handle: 0x%x\n",
 				  p->clock_handle);
-#if defined(CONFIG_TEGRA_CLK_FRAMEWORK)
-	} else if (!pclk->ops || !pclk->ops->round_rate) {
-		mods_error_printk(
-			"unable to detect max rate for clock handle 0x%x\n",
-			p->clock_handle);
-	} else {
-		long rate = pclk->ops->round_rate(pclk, pclk->max_rate);
-
-		p->clock_rate_hz = rate < 0 ? pclk->max_rate
-					    : (unsigned long)rate;
-#elif defined(MODS_COMMON_CLK)
 	} else {
 		long rate = clk_round_rate(pclk, ARBITRARY_MAX_CLK_FREQ);
 
 		p->clock_rate_hz = rate < 0 ? ARBITRARY_MAX_CLK_FREQ
 			: (unsigned long)rate;
-#endif
 		mods_debug_printk(DEBUG_CLOCK,
 				  "clock 0x%x has max rate %lluHz\n",
 				  p->clock_handle, p->clock_rate_hz);
@@ -428,14 +388,12 @@ int esc_mods_enable_clock(struct file *pfile, struct MODS_CLOCK_HANDLE *p)
 		mods_error_printk("unrecognized clock handle: 0x%x\n",
 				  p->clock_handle);
 	} else {
-#if defined(MODS_COMMON_CLK)
 		ret = clk_prepare(pclk);
 		if (ret) {
 			mods_error_printk(
 			    "unable to prepare clock 0x%x before enabling\n",
 					  p->clock_handle);
 		}
-#endif
 		ret = clk_enable(pclk);
 		if (ret) {
 			mods_error_printk("failed to enable clock 0x%x\n",
@@ -464,9 +422,7 @@ int esc_mods_disable_clock(struct file *pfile, struct MODS_CLOCK_HANDLE *p)
 				  p->clock_handle);
 	} else {
 		clk_disable(pclk);
-#if defined(MODS_COMMON_CLK)
 		clk_unprepare(pclk);
-#endif
 		mods_debug_printk(DEBUG_CLOCK, "clock 0x%x disabled\n",
 				  p->clock_handle);
 		ret = OK;
@@ -489,11 +445,7 @@ int esc_mods_is_clock_enabled(struct file *pfile, struct MODS_CLOCK_ENABLED *p)
 		mods_error_printk("unrecognized clock handle: 0x%x\n",
 				  p->clock_handle);
 	} else {
-#if defined(CONFIG_TEGRA_CLK_FRAMEWORK)
-		p->enable_count = pclk->refcnt;
-#elif defined(MODS_COMMON_CLK)
 		p->enable_count = (u32)__clk_is_enabled(pclk);
-#endif
 		mods_debug_printk(DEBUG_CLOCK, "clock 0x%x enable count is %u\n",
 				  p->clock_handle, p->enable_count);
 		ret = OK;
@@ -517,7 +469,6 @@ int esc_mods_clock_reset_assert(struct file *pfile,
 		mods_error_printk("unrecognized clock handle: 0x%x\n",
 				  p->clock_handle);
 	} else {
-#if defined(MODS_COMMON_CLK)
 		const char *clk_name = 0;
 		struct reset_control *prst = 0;
 		struct device_node *mods_np = 0;
@@ -555,7 +506,6 @@ int esc_mods_clock_reset_assert(struct file *pfile,
 
 err:
 		of_node_put(mods_np);
-#endif
 	}
 	LOG_EXT();
 	return ret;
@@ -575,7 +525,6 @@ int esc_mods_clock_reset_deassert(struct file *pfile,
 		mods_error_printk("unrecognized clock handle: 0x%x\n",
 				  p->clock_handle);
 	} else {
-#if defined(MODS_COMMON_CLK)
 		const char *clk_name = 0;
 		struct reset_control *prst = 0;
 		struct device_node *mods_np = 0;
@@ -613,7 +562,6 @@ int esc_mods_clock_reset_deassert(struct file *pfile,
 
 err:
 		of_node_put(mods_np);
-#endif
 	}
 
 	LOG_EXT();

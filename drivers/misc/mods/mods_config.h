@@ -43,9 +43,8 @@
 #if defined(CONFIG_ARCH_TEGRA)
 #define MODS_TEGRA 1
 #endif
-#if defined(CONFIG_TEGRA_CLK_FRAMEWORK) ||	\
-	(defined(CONFIG_COMMON_CLK) && defined(CONFIG_OF_RESOLVE) && \
-	 defined(CONFIG_OF_DYNAMIC))
+#if defined(CONFIG_COMMON_CLK) && defined(CONFIG_OF_RESOLVE) && \
+	defined(CONFIG_OF_DYNAMIC)
 #define MODS_HAS_CLOCK 1
 #endif
 #ifdef CONFIG_NET

@@ -31,6 +31,7 @@ struct nvgpu_mem_alloc_tracker;
 struct dbg_profiler_object_data;
 struct ecc_gk20a;
 struct gk20a_debug_output;
+struct nvgpu_clk_pll_debug_data;
 
 #include <linux/sched.h>
 #include <nvgpu/lock.h>
@@ -777,6 +778,7 @@ struct gpu_ops {
 		void (*set_irqmask)(struct gk20a *g);
 	} pmu;
 	struct {
+		int (*init_debugfs)(struct gk20a *g);
 		void (*disable_slowboot)(struct gk20a *g);
 		int (*init_clk_support)(struct gk20a *g);
 		int (*suspend_clk_support)(struct gk20a *g);
@@ -791,6 +793,11 @@ struct gpu_ops {
 		unsigned long (*get_maxrate)(struct clk_gk20a *clk);
 		int (*prepare_enable)(struct clk_gk20a *clk);
 		void (*disable_unprepare)(struct clk_gk20a *clk);
+		int (*get_voltage)(struct clk_gk20a *clk, u64 *val);
+		int (*get_gpcclk_clock_counter)(struct clk_gk20a *clk, u64 *val);
+		int (*pll_reg_write)(struct gk20a *g, u32 reg, u32 val);
+		int (*get_pll_debug_data)(struct gk20a *g,
+				struct nvgpu_clk_pll_debug_data *d);
 	} clk;
 	struct {
 		u32 (*get_arbiter_clk_domains)(struct gk20a *g);

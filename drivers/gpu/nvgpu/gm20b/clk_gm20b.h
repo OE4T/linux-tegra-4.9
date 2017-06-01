@@ -21,6 +21,35 @@
 
 #include <nvgpu/lock.h>
 
+struct nvgpu_clk_pll_debug_data {
+	u32 trim_sys_sel_vco_reg;
+	u32 trim_sys_sel_vco_val;
+
+	u32 trim_sys_gpc2clk_out_reg;
+	u32 trim_sys_gpc2clk_out_val;
+
+	u32 trim_sys_bypassctrl_reg;
+	u32 trim_sys_bypassctrl_val;
+
+	u32 trim_sys_gpcpll_cfg_reg;
+	u32 trim_sys_gpcpll_dvfs2_reg;
+
+	u32 trim_sys_gpcpll_cfg_val;
+	bool trim_sys_gpcpll_cfg_enabled;
+	bool trim_sys_gpcpll_cfg_locked;
+	bool trim_sys_gpcpll_cfg_sync_on;
+
+	u32 trim_sys_gpcpll_coeff_val;
+	u32 trim_sys_gpcpll_coeff_mdiv;
+	u32 trim_sys_gpcpll_coeff_ndiv;
+	u32 trim_sys_gpcpll_coeff_pldiv;
+
+	u32 trim_sys_gpcpll_dvfs0_val;
+	u32 trim_sys_gpcpll_dvfs0_dfs_coeff;
+	u32 trim_sys_gpcpll_dvfs0_dfs_det_max;
+	u32 trim_sys_gpcpll_dvfs0_dfs_dc_offset;
+};
+
 void gm20b_init_clk_ops(struct gpu_ops *gops);
 
 int gm20b_init_clk_setup_sw(struct gk20a *g);
@@ -33,5 +62,20 @@ int gm20b_gpcclk_set_rate(struct clk_gk20a *clk, unsigned long rate,
 		unsigned long parent_rate);
 long gm20b_round_rate(struct clk_gk20a *clk, unsigned long rate,
 		unsigned long *parent_rate);
+struct pll_parms *gm20b_get_gpc_pll_parms(void);
+#ifdef CONFIG_DEBUG_FS
+int gm20b_clk_init_debugfs(struct gk20a *g);
+#endif
+
+/* 1:1 match between post divider settings and divisor value */
+static inline u32 nvgpu_pl_to_div(u32 pl)
+{
+	return pl;
+}
+
+static inline u32 nvgpu_div_to_pl(u32 div)
+{
+	return div;
+}
 
 #endif /* _NVHOST_CLK_GM20B_H_ */

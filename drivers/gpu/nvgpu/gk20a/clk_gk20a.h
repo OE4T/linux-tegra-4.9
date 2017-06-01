@@ -97,6 +97,7 @@ struct clk_gk20a {
 	bool clk_hw_on;
 	bool debugfs_set;
 	int pll_poweron_uv;
+	unsigned long dvfs_safe_max_freq;
 };
 
 #if defined(CONFIG_COMMON_CLK)

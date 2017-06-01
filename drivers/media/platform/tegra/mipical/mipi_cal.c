@@ -41,6 +41,9 @@
 #include "mipi_cal.h"
 #include "vmipi/vmipi.h"
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/mipical.h>
+
 #define DRV_NAME "tegra_mipi_cal"
 #define MIPI_CAL_TIMEOUT_MSEC 500
 
@@ -235,8 +238,10 @@ static int tegra_mipi_wait(struct tegra_mipi *mipi, int lanes)
 	timeout = jiffies + msecs_to_jiffies(MIPI_CAL_TIMEOUT_MSEC);
 	while (time_before(jiffies, timeout)) {
 		regmap_read(mipi->regmap, ADDR(CIL_MIPI_CAL_STATUS), &val);
-		if (((val & lanes) == lanes) && ((val & CAL_ACTIVE) == 0))
+		if (((val & lanes) == lanes) && ((val & CAL_ACTIVE) == 0)) {
+			trace_mipical_result("CIL_MIPI_CAL_STATUS", val);
 			return 0;
+		}
 		usleep_range(10, 50);
 	}
 	/* Sometimes there is false timeout. Sleep past the timeout and did
@@ -377,14 +382,19 @@ static int _t21x_tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
 
 int tegra_mipi_bias_pad_enable(void)
 {
+	int ret = 0;
+
 	if (!mipi)
 		return -EPROBE_DEFER;
 	dev_dbg(mipi->dev, "%s", __func__);
 
 	if (mipi->soc->pad_enable)
-		return mipi->soc->pad_enable(mipi);
+		ret = mipi->soc->pad_enable(mipi);
 	else
-		return 0;
+		ret = -EINVAL;
+
+	trace_pad_enable("ref", atomic_read(&mipi->refcount));
+	return ret;
 }
 EXPORT_SYMBOL(tegra_mipi_bias_pad_enable);
 
@@ -404,14 +414,19 @@ static int _t21x_tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
 
 int tegra_mipi_bias_pad_disable(void)
 {
+	int ret = 0;
+
 	if (!mipi)
 		return -ENODEV;
 	dev_dbg(mipi->dev, "%s", __func__);
 
 	if (mipi->soc->pad_disable)
-		return mipi->soc->pad_disable(mipi);
+		ret = mipi->soc->pad_disable(mipi);
 	else
-		return 0;
+		ret = -EINVAL;
+
+	trace_pad_disable("ref", atomic_read(&mipi->refcount));
+	return ret;
 }
 EXPORT_SYMBOL(tegra_mipi_bias_pad_disable);
 
@@ -642,7 +657,7 @@ int tegra_mipi_calibration(int lanes)
 {
 	if (!mipi)
 		return -ENODEV;
-	dev_dbg(mipi->dev, "%s", __func__);
+	trace_mipical("lanes", lanes);
 	if (mipi->soc->calibrate)
 		return mipi->soc->calibrate(mipi, lanes);
 	else

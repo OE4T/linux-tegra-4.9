@@ -68,8 +68,10 @@
 
 struct slvsec {
 	struct platform_device *pdev;
+	struct platform_device *vi_thi;
 	struct regulator *regulator;
 	int irq;
+	int vi_irq;
 
 	/* Debugfs */
 	struct slvsec_debug {
@@ -77,6 +79,9 @@ struct slvsec {
 		struct debugfs_regset32 core_stream0;
 		struct debugfs_regset32 core_stream1;
 		struct debugfs_regset32 cil;
+		struct debugfs_regset32 vi_syncgen0;
+		struct debugfs_regset32 vi_syncgen1;
+		struct debugfs_regset32 vi_syncgen2;
 	} debug;
 };
 
@@ -143,10 +148,59 @@ static irqreturn_t slvsec_isr(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
+static irqreturn_t slvsec_vi_isr(int irq, void *arg)
+{
+	struct platform_device *pdev = arg;
+
+	dev_info(&pdev->dev, "%s()\n", __func__);
+
+	return IRQ_HANDLED;
+}
+
+static int slvsec_get_irq(struct platform_device *pdev,
+			char const *name,
+			int *irqslot,
+			irq_handler_t thread_fn)
+{
+	struct device *dev = &pdev->dev;
+	int ret = of_irq_get_byname(dev->of_node, name);
+	const char *devname;
+
+	if (ret == 0)
+		ret = -ENXIO;
+
+	if (ret < 0) {
+		dev_err(dev, "No %s irq available\n", name);
+		*irqslot = -ENXIO;
+		return ret;
+	}
+
+	*irqslot = ret;
+
+	devname = devm_kasprintf(dev, GFP_KERNEL, "%s:%s",
+				dev_name(dev), name);
+
+	ret = devm_request_threaded_irq(dev, *irqslot,
+					NULL, thread_fn, IRQF_ONESHOT,
+					devname, pdev);
+	if (ret < 0) {
+		dev_err(dev, "Cannot setup %s irq\n", name);
+		*irqslot = -ENXIO;
+	}
+
+	return ret;
+}
+
 int slvsec_finalize_poweron(struct platform_device *pdev)
 {
 	struct slvsec *slvsec = nvhost_get_private_data(pdev);
 	int ret;
+
+	if (slvsec->vi_thi) {
+		ret = nvhost_module_busy(slvsec->vi_thi);
+		if (ret != 0)
+			return ret;
+	}
 
 	if (!slvsec->regulator)
 		return 0;
@@ -165,12 +219,15 @@ int slvsec_prepare_poweroff(struct platform_device *pdev)
 	struct slvsec *slvsec = nvhost_get_private_data(pdev);
 	int ret;
 
-	if (!slvsec->regulator)
-		return 0;
+	if (slvsec->regulator) {
+		ret = regulator_disable(slvsec->regulator);
+		if (ret)
+			dev_err(&pdev->dev, "failed to disable slvs-ec regulator.");
+	}
 
-	ret = regulator_disable(slvsec->regulator);
-	if (ret)
-		dev_err(&pdev->dev, "failed to disable slvs-ec regulator.");
+	if (slvsec->vi_thi) {
+		nvhost_module_idle(slvsec->vi_thi);
+	}
 
 	return 0;
 }
@@ -201,12 +258,14 @@ static int slvsec_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
+	struct device_node *vi_np;
+	struct platform_device *vi_thi = NULL;
 	struct slvsec *slvsec;
 	int err = 0;
 
-	info = (void *)of_device_get_match_data(&pdev->dev);
+	info = (void *)of_device_get_match_data(dev);
 	if (unlikely(info == NULL)) {
-		dev_WARN(&pdev->dev, "no platform data\n");
+		dev_WARN(dev, "no platform data\n");
 		return -ENODATA;
 	}
 
@@ -214,6 +273,24 @@ static int slvsec_probe(struct platform_device *pdev)
 	if (!slvsec)
 		return -ENOMEM;
 
+	vi_np = of_parse_phandle(dev->of_node, "nvidia,vi-device", 0);
+	if (vi_np == NULL) {
+		dev_WARN(dev, "missing %s handle\n", "nvidia,vi-device");
+		return -ENODEV;
+	}
+
+	vi_thi = of_find_device_by_node(vi_np);
+	of_node_put(vi_np);
+
+	if (vi_thi == NULL)
+		return -EPROBE_DEFER;
+
+	if (&vi_thi->dev.driver == NULL) {
+		platform_device_put(vi_thi);
+		return -EPROBE_DEFER;
+	}
+
+	slvsec->vi_thi = vi_thi;
 	slvsec->pdev = pdev;
 	info->pdev = pdev;
 	mutex_init(&info->lock);
@@ -224,27 +301,16 @@ static int slvsec_probe(struct platform_device *pdev)
 	if (err)
 		dev_info(dev, "failed to get regulator (%d)\n", err);
 
-	slvsec->irq = of_irq_get_byname(dev->of_node, "slvs-ec");
-	if (slvsec->irq <= 0) {
-		dev_err(dev, "No IRQ available\n");
-		slvsec->irq = -ENXIO;
-	} else {
-		err = devm_request_threaded_irq(dev, slvsec->irq,
-						NULL, slvsec_isr, IRQF_ONESHOT,
-						dev_name(dev), pdev);
-		if (err) {
-			dev_err(dev, "Cannot setup irq\n");
-			slvsec->irq = -ENXIO;
-		}
-	}
+	slvsec_get_irq(pdev, "slvs-ec", &slvsec->irq, slvsec_isr);
+	slvsec_get_irq(pdev, "syncgen", &slvsec->vi_irq, slvsec_vi_isr);
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
-		return err;
+		goto put_vi;
 
 	err = nvhost_module_init(pdev);
 	if (err)
-		return err;
+		goto put_vi;
 
 	err = nvhost_client_device_init(pdev);
 	if (err)
@@ -260,8 +326,10 @@ static int slvsec_probe(struct platform_device *pdev)
 	return 0;
 
 deinit:
-	dev_err(dev, "probe failed: %d\n", err);
 	nvhost_module_deinit(pdev);
+put_vi:
+	platform_device_put(vi_thi);
+	dev_err(dev, "probe failed: %d\n", err);
 	return err;
 }
 
@@ -270,6 +338,7 @@ static int __exit slvsec_remove(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct slvsec *slvsec = (struct slvsec *)pdata->private_data;
 
+	platform_device_put(slvsec->vi_thi);
 	slvsec_remove_debugfs(slvsec);
 
 	return 0;
@@ -297,6 +366,10 @@ static struct platform_driver slvsec_driver = {
 #endif
 	},
 };
+
+module_platform_driver(slvsec_driver);
+
+/* === Debugfs ========================================================== */
 
 static const struct debugfs_reg32 slvsec_core_regs[] = {
 	{ .name = "slvsec_id", 0x80 },
@@ -343,6 +416,22 @@ static const struct debugfs_reg32 slvsec_cil_regs[] = {
 	{ .name = "uphy_ctrl2", 0x10 },
 	{ .name = "timeout_ctrl", 0x14 },
 	{ .name = "padctrl_rst_ctrl", 0x18 },
+};
+
+static const struct debugfs_reg32 slvsec_vi_syncgen_regs[] = {
+	{ .name = "hclk_div", 0x0 },
+	{ .name = "hclk_div_fmt", 0x4 },
+	{ .name = "xhs", 0x8 },
+	{ .name = "xvs", 0xC },
+	{ .name = "xvs_to_xhs_delay", 0x10 },
+	{ .name = "int_status", 0x14 },
+	{ .name = "int_mask", 0x18 },
+	{ .name = "xhs_timer", 0x1c },
+	{ .name = "control", 0x20 },
+	{ .name = "command", 0x24 },
+	{ .name = "status", 0x28 },
+	{ .name = "scan_status", 0x2c },
+	{ .name = "force_xvs", 0x30 },
 };
 
 static int slvsec_sw_debug_intr_show(void *data, u64 *val)
@@ -401,38 +490,24 @@ static int slvsec_init_debugfs(struct slvsec *slvsec)
 	debug->cil.nregs = ARRAY_SIZE(slvsec_cil_regs);
 	debugfs_create_regset32("cil", S_IRUGO, dir, &debug->cil);
 
+	debug->vi_syncgen0.base = pdata->aperture[1] + 0x4800;
+	debug->vi_syncgen0.regs = slvsec_vi_syncgen_regs;
+	debug->vi_syncgen0.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
+	debugfs_create_regset32("syncgen0", S_IRUGO, dir, &debug->vi_syncgen0);
+
+	debug->vi_syncgen1.base = pdata->aperture[1] + 0x4c00;
+	debug->vi_syncgen1.regs = slvsec_vi_syncgen_regs;
+	debug->vi_syncgen1.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
+	debugfs_create_regset32("syncgen1", S_IRUGO, dir, &debug->vi_syncgen1);
+
+	debug->vi_syncgen2.base = pdata->aperture[1] + 0x5000;
+	debug->vi_syncgen2.regs = slvsec_vi_syncgen_regs;
+	debug->vi_syncgen2.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
+	debugfs_create_regset32("syncgen2", S_IRUGO, dir, &debug->vi_syncgen2);
+
 	return 0;
 }
 
 static void slvsec_remove_debugfs(struct slvsec *slvsec)
 {
 }
-
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-static struct of_device_id tegra_slvsec_domain_match[] = {
-	{.compatible = "nvidia,tegra186-ve-pd",
-	.data = &t19_slvsec_info},
-	{},
-};
-#endif
-
-static int __init slvsec_init(void)
-{
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	int ret;
-
-	ret = nvhost_domain_init(tegra_slvsec_domain_match);
-	if (ret)
-		return ret;
-#endif
-
-	return platform_driver_register(&slvsec_driver);
-}
-
-static void __exit slvsec_exit(void)
-{
-	platform_driver_unregister(&slvsec_driver);
-}
-
-late_initcall(slvsec_init);
-module_exit(slvsec_exit);

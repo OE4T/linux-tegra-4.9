@@ -3675,7 +3675,6 @@ int tegra_dsi_read_data(struct tegra_dc *dc,
 	init_status = tegra_dsi_prepare_host_transmission(
 				dc, dsi, DSI_LP_OP_WRITE);
 	if (IS_ERR_OR_NULL(init_status)) {
-		err = PTR_ERR(init_status);
 		dev_err(&dc->ndev->dev, "DSI host config failed\n");
 		goto fail;
 	}
@@ -3780,7 +3779,6 @@ int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
 	init_status = tegra_dsi_prepare_host_transmission(
 				dc, dsi, DSI_LP_OP_WRITE);
 	if (IS_ERR_OR_NULL(init_status)) {
-		err = PTR_ERR(init_status);
 		dev_err(&dc->ndev->dev, "DSI host config failed\n");
 		goto fail;
 	}
@@ -3849,7 +3847,6 @@ int tegra_dsi_panel_sanity_check(struct tegra_dc *dc,
 		}
 		dev_warn(&dc->ndev->dev,
 			"Ack no error trigger message not received\n");
-		err = -EAGAIN;
 	}
 
 fail:

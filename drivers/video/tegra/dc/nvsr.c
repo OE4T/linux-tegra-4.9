@@ -987,8 +987,6 @@ static const char *tegra_dc_nvsr_state_to_string(u32 val)
 		return "SR-exit triggered";
 	case NVSR_STATUS_SR_STATE_SR_EXIT_RESYNC:
 		return "SR-exit resynching";
-	default:
-		return "Unknown";
 	}
 
 	/* Should never get here */

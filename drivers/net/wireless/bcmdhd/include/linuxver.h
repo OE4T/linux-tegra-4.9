@@ -597,18 +597,20 @@ static inline bool binary_sema_up(tsk_ctl_t *tsk)
 #endif
 
 #define PROC_START(thread_func, owner, tsk_ctl, flags, name) \
-{ \
+do { \
 	sema_init(&((tsk_ctl)->sema), 0); \
 	init_completion(&((tsk_ctl)->completed)); \
 	(tsk_ctl)->parent = owner; \
 	(tsk_ctl)->proc_name = name;  \
 	(tsk_ctl)->terminated = FALSE; \
 	(tsk_ctl)->p_task  = kthread_run(thread_func, tsk_ctl, (char*)name); \
+	if (unlikely(IS_ERR((tsk_ctl)->p_task))) \
+		break; \
 	(tsk_ctl)->thr_pid = (tsk_ctl)->p_task->pid; \
 	spin_lock_init(&((tsk_ctl)->spinlock)); \
 	DBG_THR(("%s(): thread:%s:%lx started\n", __FUNCTION__, \
 		(tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
-}
+} while(0)
 
 #define PROC_STOP(tsk_ctl) \
 { \

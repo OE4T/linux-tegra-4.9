@@ -81,25 +81,6 @@ static struct pm_qos_request gpu_cap;
 #define THROT_TBL_IDX(row, col)		(((row) * num_cap_clks) + (col))
 #define THROT_VAL(tbl, row, col)	(tbl)[(THROT_TBL_IDX(row, col))]
 
-bool tegra_is_throttling(int *count)
-{
-	struct balanced_throttle *bthrot;
-	bool is_throttling = false;
-	int lcount = 0;
-
-	mutex_lock(&bthrot_list_lock);
-	list_for_each_entry(bthrot, &bthrot_list, node) {
-		if (bthrot->cur_state)
-			is_throttling = true;
-		lcount += bthrot->throttle_count;
-	}
-	mutex_unlock(&bthrot_list_lock);
-
-	if (count)
-		*count = lcount;
-	return is_throttling;
-}
-
 static int
 tegra_throttle_get_max_state(struct thermal_cooling_device *cdev,
 				unsigned long *max_state)

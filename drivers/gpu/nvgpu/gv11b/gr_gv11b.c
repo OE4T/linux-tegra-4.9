@@ -2421,4 +2421,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.load_tpc_mask = gr_gv11b_load_tpc_mask;
 	gops->gr.handle_gpc_gpccs_exception =
 			gr_gv11b_handle_gpc_gpccs_exception;
+	gops->gr.set_czf_bypass = NULL;
 }

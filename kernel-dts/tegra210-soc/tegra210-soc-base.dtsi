@@ -794,6 +794,9 @@
 			interrupts = <0 71 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_ISP>;
 			status = "disabled";
+			clocks = <&tegra_car TEGRA210_CLK_ISPA_ISP_CBUS>;
+			clock-names = "ispa";
+			resets = <&tegra_car TEGRA210_CLK_ISPA>;
 		};
 
 		isp@54680000 {
@@ -803,6 +806,9 @@
 			interrupts = <0 70 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_ISP2B>;
 			status = "disabled";
+			clocks = <&tegra_car TEGRA210_CLK_ISPB_ISP_CBUS>;
+			clock-names = "ispb";
+			resets = <&tegra_car TEGRA210_CLK_ISPB>;
 		};
 
 		head0: dc@54200000 {

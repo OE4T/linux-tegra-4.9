@@ -128,10 +128,7 @@
 		#iommu-cells = <1>;
 
 		mmu-masters = <&{/host1x/vi-thi@15f00000}	TEGRA_SID_VI>,
-			      <&{/host1x/isp-thi@14b00000}	TEGRA_SID_ISP>,
-			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@3230000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@c260000}		TEGRA_SID_GPCDMA_0>;
+			      <&{/host1x/isp-thi@14b00000}	TEGRA_SID_ISP>;
 
 		domains {
 			bpmp_domain {

@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1518,22 +1518,35 @@ static struct device *nvhost_client_device_create(
 }
 
 #define NVHOST_NUM_CDEV 4
+
 int nvhost_client_user_init(struct platform_device *dev)
 {
-	dev_t devno;
 	int err;
+	dev_t devno;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
 
 	if (pdata->kernel_only)
 		return 0;
 
-	/* reserve 3 minor #s for <dev>, and ctrl-<dev> */
+	BUG_ON(!nvhost_master->major);
 
-	err = alloc_chrdev_region(&devno, 0, NVHOST_NUM_CDEV, IFACE_NAME);
+	mutex_lock(&nvhost_master->chrdev_mutex);
+
+	devno = MKDEV(nvhost_master->major, nvhost_master->next_minor);
+	/* reserve 3 minor #s for <dev>, and ctrl-<dev> */
+	err = register_chrdev_region(devno, NVHOST_NUM_CDEV,
+				     IFACE_NAME);
 	if (err < 0) {
-		dev_err(&dev->dev, "failed to allocate devno\n");
+		dev_err(&dev->dev, "failed to allocate devno %d %d\n",
+			nvhost_master->major, nvhost_master->next_minor);
+		mutex_unlock(&nvhost_master->chrdev_mutex);
 		return err;
 	}
+
+	nvhost_master->next_minor += NVHOST_NUM_CDEV;
+	mutex_unlock(&nvhost_master->chrdev_mutex);
+
 	pdata->cdev_region = devno;
 
 	pdata->node = nvhost_client_device_create(dev, &pdata->cdev,

@@ -107,6 +107,9 @@ struct nvhost_master {
 	struct nvhost_characteristics nvhost_char;
 	struct kobject *caps_kobj;
 	struct nvhost_capability_node *caps_nodes;
+	int major;
+	int next_minor;
+	struct mutex chrdev_mutex;
 	struct mutex timeout_mutex;
 
 	struct nvhost_channel **chlist;	/* channel list */

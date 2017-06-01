@@ -691,6 +691,10 @@ static int nvhost_user_init(struct nvhost_master *host)
 		goto fail;
 	}
 
+	host->major = MAJOR(devno);
+	host->next_minor += 1;
+	mutex_init(&host->chrdev_mutex);
+
 	cdev_init(&host->cdev, &nvhost_ctrlops);
 	host->cdev.owner = THIS_MODULE;
 	err = cdev_add(&host->cdev, devno, 1);

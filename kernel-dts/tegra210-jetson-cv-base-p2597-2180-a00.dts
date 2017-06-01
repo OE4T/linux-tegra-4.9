@@ -598,18 +598,6 @@
 		tach_gpio =  <&gpio TEGRA_GPIO(K, 7) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PK7 */
 	};
 
-	i2c@7000c000 {
-		rt5659: rt5659.0-001b@1b {
-                        compatible = "realtek,rt5659";
-                        reg = <0x1b>;
-			gpios = <&gpio TEGRA_GPIO(E , 6) GPIO_ACTIVE_HIGH>;
-
-			/* refer include/sound/rt5659.h for the values to be used */
-			realtek,jd-src = <1>; /* RT5659_JD3 */
-			realtek,dmic1-data-pin = <2>; /* RT5659_DMIC1_DATA_GPIO5 */
-                };
-	};
-
 	i2c@7000c400 {
 		nvidia,clock-always-on;
 

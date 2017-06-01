@@ -1409,6 +1409,19 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		dbg_dc_out_info[out_type].edid = dc->edid;
 
 	}
+	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
+		switch (out_type) {
+		case TEGRA_DC_OUT_DP: {
+				struct tegra_dc_dp_data	*dp = dc->out_data;
+
+				dp->dc->out_ops->detect(dc);
+			}
+			break;
+
+		case TEGRA_DC_OUT_FAKE_DP:
+			tegra_fb_update_monspecs(dc->fb, NULL, NULL);
+			break;
+		}
 
 by_pass:
 	/*enable the dc and output controllers */

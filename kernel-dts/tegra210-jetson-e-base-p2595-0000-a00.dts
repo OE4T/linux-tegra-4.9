@@ -406,7 +406,7 @@
 			"x Int Spk", 	"x SPORN",
 			"x Int Spk", 	"x SPOLP",
 			"x Int Spk", 	"x SPOLN",
-			"x micbias1",	"x Mic Jack",
+			"x Mic Jack",   "x MICBIAS1",
 			"x IN2P",		"x Mic Jack",
 			"x IN2P",		"x Mic Jack",
 			"x DMIC L1",	"x Int Mic",

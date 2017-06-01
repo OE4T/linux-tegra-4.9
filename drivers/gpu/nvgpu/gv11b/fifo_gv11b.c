@@ -1479,7 +1479,7 @@ static void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 	/* semaphore_c */
 	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
 	/* payload */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x0);
+	nvgpu_mem_wr32(g, cmd->mem, off++, thresh);
 	/* semaphore_d */
 	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
 	/* operation: acq_geq, switch_en */

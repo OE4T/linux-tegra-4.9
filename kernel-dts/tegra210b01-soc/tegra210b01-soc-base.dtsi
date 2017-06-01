@@ -77,6 +77,20 @@
 		clock-names = "hsic_trk", "usb2_trk", "pll_e", "mgmt_clk";
 	};
 
+	cpus {
+		idle-states {
+			C7: c7 {
+				status = "disabled";
+			};
+			CC6: cc6 {
+				status = "disabled";
+			};
+			CC7: cc7 {
+				status = "disabled";
+			};
+		};
+	};
+
 	/delete-node/ dtv@7000c300;
 
 };

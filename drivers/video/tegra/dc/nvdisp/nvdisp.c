@@ -3852,7 +3852,7 @@ void tegra_nvdisp_update_per_flip_csc2(struct tegra_dc *dc)
 		nvdisp_csc2_control_r());
 }
 
-void tegra_nvdisp_enable_update_and_act(struct tegra_dc *dc)
+void tegra_nvdisp_update_enable_general_ack_req(struct tegra_dc *dc)
 {
 	/* Send general ack update and request enable */
 	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_update_enable_f(),

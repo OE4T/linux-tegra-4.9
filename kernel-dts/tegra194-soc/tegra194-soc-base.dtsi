@@ -129,10 +129,6 @@
 
 		mmu-masters = <&{/host1x/vi-thi@15f00000}	TEGRA_SID_VI>,
 			      <&{/host1x/isp-thi@14b00000}	TEGRA_SID_ISP>,
-			      <&{/host1x/nvdisplay@15200000}	TEGRA_SID_NVDISPLAY>,
-			      <&{/host1x/nvdisplay@15210000}	TEGRA_SID_NVDISPLAY>,
-			      <&{/host1x/nvdisplay@15220000}	TEGRA_SID_NVDISPLAY>,
-			      <&{/host1x/nvdisplay@15230000}	TEGRA_SID_NVDISPLAY>,
 			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3230000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@c260000}		TEGRA_SID_GPCDMA_0>;
@@ -498,6 +494,7 @@
 			interrupts = <0 153 4>;
 
 			#stream-id-cells = <0x1>;
+			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			iso-smmu;
 
 			nvidia,dc-ctrlnum = <0>;
@@ -546,6 +543,7 @@
 			interrupts = <0 154 4>;
 
 			#stream-id-cells = <0x1>;
+			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			iso-smmu;
 
 			nvidia,dc-ctrlnum = <1>;
@@ -594,6 +592,7 @@
 			interrupts = <0 155 4>;
 
 			#stream-id-cells = <0x1>;
+			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			iso-smmu;
 
 			nvidia,dc-ctrlnum = <2>;
@@ -642,6 +641,7 @@
 			interrupts = <0 242 4>;
 
 			#stream-id-cells = <0x1>;
+			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			iso-smmu;
 
 			nvidia,dc-ctrlnum = <3>;

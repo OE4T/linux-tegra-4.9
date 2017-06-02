@@ -1073,7 +1073,11 @@
 
 		slvs-ec@15ac0000 {
 			compatible = "nvidia,tegra-slvs-ec";
-			reg = <0x0 0x15ac0000 0x0 0x00040000>;
+			reg = <0x0 0x15ac0000 0x0 0x00040000>,
+				/* Aperture for VI CFG page */
+				<0x0 0x15c00000 0x0 0x00010000>,
+				/* Aperture for VI channel #35 */
+				<0x0 0x15e40000 0x0 0x00010000>;
 #if defined(TEGRA194_RESET_SLVSEC)
 			resets = <&bpmp_resets TEGRA194_RESET_SLVSEC>;
 			reset-names = "slvs-ec";
@@ -1085,8 +1089,11 @@
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
 			clock-names = "slvs-ec", "slvs-ec-lp", "slvs-ec-parent";
 #endif
-			interrupts = <0 74 0x04>;
-			interrupt-names = "slvs-ec";
+			interrupts = <0 74 0x04>,
+				/* syncgen uses VI VM8 interrupt (255) */
+				<0 255 0x04>;
+			nvidia,vi-device = <&vi_thi>;
+			interrupt-names = "slvs-ec", "syncgen";
 			status = "disabled";
 		};
 

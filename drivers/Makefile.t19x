@@ -14,6 +14,7 @@ subdir-ccflags-y += -Werror
 KBUILD_CFLAGS += -I$(srctree)/../t19x/include
 
 obj-y += iommu/
+obj-y += media/
 obj-y += platform/
 obj-y += video/
 obj-y += pinctrl/

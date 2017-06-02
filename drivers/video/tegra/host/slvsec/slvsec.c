@@ -17,8 +17,10 @@
  */
 
 #include "slvsec.h"
+#include <media/slvs.h>
 
 #include <asm/ioctls.h>
+#include <linux/debugfs.h>
 #include <linux/device.h>
 #include <linux/export.h>
 #include <linux/fs.h>
@@ -33,9 +35,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
-
-#include <media/mc_common.h>
-#include <media/csi.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -63,13 +62,18 @@
 #define SLVSEC_CORE_STRM1_INTR_STATUS_CH1	U32_C(0x2004c)
 #define SLVSEC_CORE_STRM1_INTR_STATUS		U32_C(0x20050)
 
-#define SLVSEC_CIL_STRM0_INTR_STATUS		U32_C(0x30828)
-#define SLVSEC_CIL_STRM1_INTR_STATUS		U32_C(0x31028)
+#define SLVSEC_CIL_STRM0_INTR_STATUS		U32_C(0x30818)
+#define SLVSEC_CIL_STRM1_INTR_STATUS		U32_C(0x31018)
+#define SLVSEC_CIL_STRM0_INTR_MASK		U32_C(0x3081c)
+#define SLVSEC_CIL_STRM1_INTR_MASK		U32_C(0x3181c)
+
+#define SLVSEC_CIL_STRM_INTR_STATUS_CAL_DONE	BIT(3)
 
 struct slvsec {
 	struct platform_device *pdev;
 	struct platform_device *vi_thi;
 	struct regulator *regulator;
+	struct tegra_mc_slvs *mc_slvs;
 	int irq;
 	int vi_irq;
 
@@ -91,7 +95,10 @@ static void slvsec_remove_debugfs(struct slvsec *slvsec);
 static irqreturn_t slvsec_isr(int irq, void *arg)
 {
 	struct platform_device *pdev = arg;
+	struct slvsec *slvsec = nvhost_get_private_data(pdev);
 	u32 status, val;
+	u32 strm0_cil_status = 0;
+	u32 strm1_cil_status = 0;
 
 	status = host1x_readl(pdev, SLVSEC_CORE_INTR_STATUS);
 	dev_info(&pdev->dev, "INTR: %08x\n", status);
@@ -112,15 +119,19 @@ static irqreturn_t slvsec_isr(int irq, void *arg)
 		val = host1x_readl(pdev, SLVSEC_CIL_STRM0_INTR_STATUS);
 		host1x_writel(pdev, SLVSEC_CIL_STRM0_INTR_STATUS, val);
 		dev_info(&pdev->dev, "CIL_STRM0_INTR: %08x\n", val);
+		strm0_cil_status = val;
+
 		val = host1x_readl(pdev, SLVSEC_CIL_STRM1_INTR_STATUS);
 		host1x_writel(pdev, SLVSEC_CIL_STRM1_INTR_STATUS, val);
 		dev_info(&pdev->dev, "CIL_STRM1_INTR: %08x\n", val);
+		strm1_cil_status = val;
 	}
 
 	if (status & SLVSEC_CORE_INTR_STATUS_STRM_1) {
 		val = host1x_readl(pdev, SLVSEC_CORE_STRM1_INTR_STATUS);
 		host1x_writel(pdev, SLVSEC_CORE_STRM1_INTR_STATUS, val);
 		dev_info(&pdev->dev, "CORE_STRM1_INTR: %08x\n", val);
+
 
 		val = host1x_readl(pdev, SLVSEC_CORE_STRM1_INTR_STATUS_CH0);
 		host1x_writel(pdev, SLVSEC_CORE_STRM1_INTR_STATUS_CH0, val);
@@ -144,6 +155,14 @@ static irqreturn_t slvsec_isr(int irq, void *arg)
 		host1x_writel(pdev, SLVSEC_CORE_STRM0_INTR_STATUS_CH1, val);
 		dev_info(&pdev->dev, "CORE_STRM0_CH1_INTR: %08x\n", val);
 	}
+
+	if (strm0_cil_status)
+		tegra_slvs_media_controller_cil_notify(slvsec->mc_slvs,
+						0, strm0_cil_status);
+
+	if (strm1_cil_status)
+		tegra_slvs_media_controller_cil_notify(slvsec->mc_slvs,
+						1, strm1_cil_status);
 
 	return IRQ_HANDLED;
 }
@@ -320,6 +339,12 @@ static int slvsec_probe(struct platform_device *pdev)
 
 	dev_info(dev, "clearing pending interrupts\n");
 	slvsec_isr(slvsec->irq, pdev);
+
+	slvsec->mc_slvs	= tegra_slvs_media_controller_init(pdev);
+	if (IS_ERR(slvsec->mc_slvs)) {
+		dev_info(dev, "failed to init SLVS media controller (%d)",
+			(int)PTR_ERR(slvsec->mc_slvs));
+	}
 
 	dev_info(dev, "probed\n");
 

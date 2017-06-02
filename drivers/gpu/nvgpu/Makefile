@@ -20,3 +20,4 @@ nvgpu-y += \
 	$(nvgpu-t19x)/gv11b/regops_gv11b.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += $(nvgpu-t19x)/gv11b/platform_gv11b_tegra.o
+nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += $(nvgpu-t19x)/common/linux/nvhost_t19x.o

@@ -40,9 +40,19 @@ struct gpu_ops;
 					 HUB_INTR_TYPE_ECC_UNCORRECTED | \
 					 HUB_INTR_TYPE_ACCESS_COUNTER)
 
+#define	FAULT_TYPE_OTHER_AND_NONREPLAY		0
+#define	FAULT_TYPE_REPLAY			1
+
+void gv11b_init_fb(struct gpu_ops *gops);
+u32 gv11b_fb_is_fault_buf_enabled(struct gk20a *g,
+				 unsigned int index);
+void gv11b_fb_fault_buf_set_state_hw(struct gk20a *g,
+		 unsigned int index, unsigned int state);
+void gv11b_fb_nonreplay_fault_buf_configure_hw(struct gk20a *g);
 void gv11b_fb_enable_hub_intr(struct gk20a *g,
 	 unsigned int index, unsigned int intr_type);
 void gv11b_fb_disable_hub_intr(struct gk20a *g,
 	 unsigned int index, unsigned int intr_type);
-void gv11b_init_fb(struct gpu_ops *gops);
+void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, unsigned int index);
+bool gv11b_fb_mmu_fault_pending(struct gk20a *g);
 #endif

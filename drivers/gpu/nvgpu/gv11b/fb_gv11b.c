@@ -15,6 +15,9 @@
 
 #include <linux/types.h>
 
+#include <nvgpu/dma.h>
+#include <nvgpu/log.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/kind_gk20a.h"
 
@@ -26,6 +29,7 @@
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
@@ -205,6 +209,90 @@ static void gv11b_init_kind_attr(void)
 	}
 }
 
+u32 gv11b_fb_is_fault_buf_enabled(struct gk20a *g,
+				 unsigned int index)
+{
+	u32 reg_val;
+
+	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_size_r(index));
+	return fb_mmu_fault_buffer_size_enable_v(reg_val);
+}
+
+void gv11b_fb_fault_buf_set_state_hw(struct gk20a *g,
+		 unsigned int index, unsigned int state)
+{
+	u32 fault_status;
+	u32 reg_val;
+
+	nvgpu_log_fn(g, " ");
+
+	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_size_r(index));
+	if (state) {
+		if (gv11b_fb_is_fault_buf_enabled(g, index)) {
+			nvgpu_log_info(g, "fault buffer is already enabled");
+		} else {
+			reg_val |= fb_mmu_fault_buffer_size_enable_true_f();
+			gk20a_writel(g, fb_mmu_fault_buffer_size_r(index),
+					 reg_val);
+		}
+
+	} else {
+		struct nvgpu_timeout timeout;
+		u32 delay = GR_IDLE_CHECK_DEFAULT;
+
+		nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+			   NVGPU_TIMER_CPU_TIMER);
+
+		reg_val &= (~(fb_mmu_fault_buffer_size_enable_m()));
+		gk20a_writel(g, fb_mmu_fault_buffer_size_r(index), reg_val);
+
+		fault_status = gk20a_readl(g, fb_mmu_fault_status_r());
+
+		do {
+			if (!(fault_status & fb_mmu_fault_status_busy_true_f()))
+				break;
+			/*
+			 * Make sure fault buffer is disabled.
+			 * This is to avoid accessing fault buffer by hw
+			 * during the window BAR2 is being unmapped by s/w
+			 */
+			nvgpu_log_info(g, "fault status busy set, check again");
+			fault_status = gk20a_readl(g, fb_mmu_fault_status_r());
+
+			nvgpu_usleep_range(delay, delay * 2);
+			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+		} while (!nvgpu_timeout_expired_msg(&timeout,
+				"fault status busy set"));
+	}
+}
+
+void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, unsigned int index)
+{
+	u32 addr_lo;
+	u32 addr_hi;
+
+	nvgpu_log_fn(g, " ");
+
+	gv11b_fb_fault_buf_set_state_hw(g, index,
+					 FAULT_BUF_DISABLED);
+
+	addr_lo = u64_lo32(g->mm.hw_fault_buf[index].gpu_va >>
+					ram_in_base_shift_v());
+	addr_hi = u64_hi32(g->mm.hw_fault_buf[index].gpu_va);
+
+	gk20a_writel(g, fb_mmu_fault_buffer_lo_r(index),
+			fb_mmu_fault_buffer_lo_addr_f(addr_lo));
+
+	gk20a_writel(g, fb_mmu_fault_buffer_hi_r(index),
+			fb_mmu_fault_buffer_hi_addr_f(addr_hi));
+
+	gk20a_writel(g, fb_mmu_fault_buffer_size_r(index),
+		fb_mmu_fault_buffer_size_val_f(g->ops.fifo.get_num_fifos(g)) |
+		fb_mmu_fault_buffer_size_overflow_intr_enable_f());
+
+	gv11b_fb_fault_buf_set_state_hw(g, index, FAULT_BUF_ENABLED);
+}
+
 static void gv11b_fb_intr_en_set(struct gk20a *g,
 			 unsigned int index, u32 mask)
 {
@@ -230,15 +318,32 @@ static u32 gv11b_fb_get_hub_intr_clr_mask(struct gk20a *g,
 {
 	u32 mask = 0;
 
-	if (intr_type == HUB_INTR_TYPE_ALL) {
+	if (intr_type & HUB_INTR_TYPE_OTHER) {
 		mask |=
-		 fb_niso_intr_en_clr_mmu_ecc_uncorrected_error_notify_set_f();
-		return mask;
+		 fb_niso_intr_en_clr_mmu_other_fault_notify_m();
+	}
+
+	if (intr_type & HUB_INTR_TYPE_NONREPLAY) {
+		mask |=
+		fb_niso_intr_en_clr_mmu_nonreplayable_fault_notify_m() |
+		fb_niso_intr_en_clr_mmu_nonreplayable_fault_overflow_m();
+	}
+
+	if (intr_type & HUB_INTR_TYPE_REPLAY) {
+		mask |=
+		 fb_niso_intr_en_clr_mmu_replayable_fault_notify_m() |
+		 fb_niso_intr_en_clr_mmu_replayable_fault_overflow_m();
 	}
 
 	if (intr_type & HUB_INTR_TYPE_ECC_UNCORRECTED) {
 		mask |=
-		 fb_niso_intr_en_clr_mmu_ecc_uncorrected_error_notify_set_f();
+		 fb_niso_intr_en_clr_mmu_ecc_uncorrected_error_notify_m();
+	}
+
+	if (intr_type & HUB_INTR_TYPE_ACCESS_COUNTER) {
+		mask |=
+		 fb_niso_intr_en_clr_hub_access_counter_notify_m() |
+		 fb_niso_intr_en_clr_hub_access_counter_error_m();
 	}
 
 	return mask;
@@ -249,15 +354,32 @@ static u32 gv11b_fb_get_hub_intr_en_mask(struct gk20a *g,
 {
 	u32 mask = 0;
 
-	if (intr_type == HUB_INTR_TYPE_ALL) {
+	if (intr_type & HUB_INTR_TYPE_OTHER) {
 		mask |=
-		 fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_set_f();
-		return mask;
+		 fb_niso_intr_en_set_mmu_other_fault_notify_m();
+	}
+
+	if (intr_type & HUB_INTR_TYPE_NONREPLAY) {
+		mask |=
+		fb_niso_intr_en_set_mmu_nonreplayable_fault_notify_m() |
+		fb_niso_intr_en_set_mmu_nonreplayable_fault_overflow_m();
+	}
+
+	if (intr_type & HUB_INTR_TYPE_REPLAY) {
+		mask |=
+		fb_niso_intr_en_set_mmu_replayable_fault_notify_m() |
+		fb_niso_intr_en_set_mmu_replayable_fault_overflow_m();
 	}
 
 	if (intr_type & HUB_INTR_TYPE_ECC_UNCORRECTED) {
 		mask |=
-		 fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_set_f();
+		 fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_m();
+	}
+
+	if (intr_type & HUB_INTR_TYPE_ACCESS_COUNTER) {
+		mask |=
+		 fb_niso_intr_en_set_hub_access_counter_notify_m() |
+		 fb_niso_intr_en_set_hub_access_counter_error_m();
 	}
 
 	return mask;
@@ -469,14 +591,17 @@ static void gv11b_fb_hub_isr(struct gk20a *g)
 	u32 status;
 	u32 niso_intr = gk20a_readl(g, fb_niso_intr_r());
 
-	nvgpu_info(g, "enter hub isr, niso_intr = 0x%x", niso_intr);
+	nvgpu_info(g, "enter hub isr, niso_intr = 0x%08x", niso_intr);
+
+	nvgpu_mutex_acquire(&g->mm.hub_isr_mutex);
 
 	if (niso_intr &
 		 (fb_niso_intr_hub_access_counter_notify_pending_f() |
 		  fb_niso_intr_hub_access_counter_error_pending_f())) {
 
 		nvgpu_info(g, "hub access counter notify/error");
-	} else if (niso_intr &
+	}
+	if (niso_intr &
 		fb_niso_intr_mmu_ecc_uncorrected_error_notify_pending_f()) {
 
 		nvgpu_info(g, "ecc uncorrected error notify");
@@ -501,9 +626,33 @@ static void gv11b_fb_hub_isr(struct gk20a *g)
 		gv11b_fb_enable_hub_intr(g, STALL_REG_INDEX,
 						HUB_INTR_TYPE_ECC_UNCORRECTED);
 
-	} else {
-		nvgpu_info(g, "mmu fault : TODO");
 	}
+	if (niso_intr &
+		(fb_niso_intr_mmu_other_fault_notify_m() |
+		fb_niso_intr_mmu_replayable_fault_notify_m() |
+		fb_niso_intr_mmu_replayable_fault_overflow_m() |
+		fb_niso_intr_mmu_nonreplayable_fault_notify_m() |
+		fb_niso_intr_mmu_nonreplayable_fault_overflow_m())) {
+
+		nvgpu_info(g, "mmu fault : No handling in place");
+
+	}
+
+	nvgpu_mutex_release(&g->mm.hub_isr_mutex);
+}
+
+bool gv11b_fb_mmu_fault_pending(struct gk20a *g)
+{
+	if (gk20a_readl(g, fb_niso_intr_r()) &
+		(fb_niso_intr_mmu_other_fault_notify_m() |
+		 fb_niso_intr_mmu_ecc_uncorrected_error_notify_m() |
+		 fb_niso_intr_mmu_replayable_fault_notify_m() |
+		 fb_niso_intr_mmu_replayable_fault_overflow_m() |
+		 fb_niso_intr_mmu_nonreplayable_fault_notify_m() |
+		 fb_niso_intr_mmu_nonreplayable_fault_overflow_m()))
+		return true;
+
+	return false;
 }
 
 void gv11b_init_fb(struct gpu_ops *gops)

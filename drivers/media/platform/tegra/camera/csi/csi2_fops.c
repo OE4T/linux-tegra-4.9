@@ -317,8 +317,9 @@ static int csi2_start_streaming(struct tegra_csi_channel *chan,
 		csi_write(chan,
 			TEGRA_CSI_CIL_OFFSET + TEGRA_CSI_CIL_PAD_CONFIG0, 0x0,
 			csi_port >> 1);
-		val |= ((csi_port & 0x1) == PORT_A) ? CSI_A_PHY_CIL_ENABLE :
-			CSI_B_PHY_CIL_ENABLE;
+		val = ((csi_port & 0x1) == PORT_A) ?
+			CSI_A_PHY_CIL_ENABLE | CSI_B_PHY_CIL_NOP
+			: CSI_B_PHY_CIL_ENABLE | CSI_A_PHY_CIL_NOP;
 		csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND, val,
 				csi_port >> 1);
 	}
@@ -360,6 +361,7 @@ static void csi2_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_port *port = &chan->ports[port_num];
+	unsigned int val, csi_port;
 
 
 	if (chan->pg_mode) {
@@ -373,6 +375,19 @@ static void csi2_stop_streaming(struct tegra_csi_channel *chan,
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
 			(0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 			CSI_PP_DISABLE);
+	if (!chan->pg_mode) {
+		csi_port = port->num;
+		if (chan->numlanes <= 2) {
+			val = ((csi_port & 0x1) == PORT_A) ?
+				CSI_A_PHY_CIL_DISABLE | CSI_B_PHY_CIL_NOP
+				: CSI_B_PHY_CIL_DISABLE | CSI_A_PHY_CIL_NOP;
+			csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND, val,
+				csi_port >> 1);
+		} else
+			csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND,
+				CSI_A_PHY_CIL_DISABLE | CSI_B_PHY_CIL_DISABLE,
+				csi_port >> 1);
+	}
 }
 
 static int csi2_hw_init(struct tegra_csi_device *csi)
@@ -406,21 +421,16 @@ static int csi2_mipi_cal(struct tegra_csi_channel *chan)
 	lanes = 0;
 	num_ports = 0;
 
-	nvhost_module_enable_clk(csi->dev);
 	while (num_ports < chan->numports) {
 		port = &chan->ports[num_ports];
 		csi_port = port->num;
 		dev_dbg(csi->dev, "Calibrate csi port %d\n", port->num);
 
-		if (chan->numlanes == 2) {
+		if (chan->numlanes <= 2) {
 			lanes |= CSIA << csi_port;
-			val = csi_read(chan, TEGRA_CSI_PHY_CIL_COMMAND,
-					csi_port >> 1);
-			csi_write(chan,
-				TEGRA_CSI_CIL_OFFSET +
-				TEGRA_CSI_CIL_PAD_CONFIG0, 0x0, csi_port >> 1);
-			val |= ((csi_port & 0x1) == PORT_A) ?
-				CSI_A_PHY_CIL_ENABLE : CSI_B_PHY_CIL_ENABLE;
+			val = ((csi_port & 0x1) == PORT_A) ?
+				CSI_A_PHY_CIL_ENABLE | CSI_B_PHY_CIL_NOP
+				: CSI_B_PHY_CIL_ENABLE | CSI_A_PHY_CIL_NOP;
 			csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND, val,
 				csi_port >> 1);
 		} else {
@@ -436,7 +446,6 @@ static int csi2_mipi_cal(struct tegra_csi_channel *chan)
 			"Selected no CSI lane, cannot do calibration");
 		return -EINVAL;
 	}
-	nvhost_module_disable_clk(csi->dev);
 	return tegra_mipi_calibration(lanes);
 }
 

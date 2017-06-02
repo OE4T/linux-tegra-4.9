@@ -491,7 +491,7 @@ static int csi4_mipi_cal(struct tegra_csi_channel *chan)
 		port = chan->ports[num_ports].num;
 		dev_dbg(csi->dev, "csi port:%d\n", port);
 
-		if (chan->numlanes == 2) {
+		if (chan->numlanes <= 2) {
 			lanes |= CSIA << port;
 			cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
 				(0x01 << E_INPUT_LP_IO1_SHIFT) |

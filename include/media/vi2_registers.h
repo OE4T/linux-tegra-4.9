@@ -136,8 +136,14 @@
 /* CSI PHY registers */
 /* CSI_PHY_CIL_COMMAND_0 offset 0x0d0 from TEGRA_CSI_PIXEL_PARSER_0_BASE */
 #define TEGRA_CSI_PHY_CIL_COMMAND                       0x0d0
+#define CSI_A_PHY_CIL_NOP				0x0
 #define CSI_A_PHY_CIL_ENABLE				0x1
+#define CSI_A_PHY_CIL_DISABLE				0x2
+#define CSI_A_PHY_CIL_ENABLE_MASK			0x3
+#define CSI_B_PHY_CIL_NOP				(0x0 << 8)
 #define CSI_B_PHY_CIL_ENABLE				(0x1 << 8)
+#define CSI_B_PHY_CIL_DISABLE				(0x2 << 8)
+#define CSI_B_PHY_CIL_ENABLE_MASK			(0x3 << 8)
 
 /* CSI CIL registers: Starts from 0x92c, offset 0xF4 */
 #define TEGRA_CSI_CIL_OFFSET				0x0f4

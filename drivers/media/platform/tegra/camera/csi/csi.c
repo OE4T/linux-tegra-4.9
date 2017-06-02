@@ -171,9 +171,11 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	ret = update_video_source(csi, enable, chan->pg_mode);
 	if (ret)
 		return ret;
-	if (!chan->pg_mode)
-		if (enable)
-			csi->fops->mipical(chan);
+	if (!chan->pg_mode && enable) {
+		ret = csi->fops->mipical(chan);
+		if (ret)
+			goto mipical_fail;
+	}
 
 	if (tegra_chan->bypass) {
 		atomic_set(&chan->is_streaming, enable);
@@ -191,9 +193,13 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	atomic_set(&chan->is_streaming, enable);
 	return ret;
 start_fail:
-	update_video_source(csi, 0, chan->pg_mode);
-	for (i = 0; i < tegra_chan->valid_ports; i++)
+	/* Reverse sequence to stop streaming on all valid_ports
+	 * i is the current failing port, need to stop ports 0 ~ (i-1)
+	 */
+	for (i = i - 1; i >= 0; i--)
 		tegra_csi_stop_streaming(chan, i);
+mipical_fail:
+	update_video_source(csi, 0, chan->pg_mode);
 	return ret;
 }
 

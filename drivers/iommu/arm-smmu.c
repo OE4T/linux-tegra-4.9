@@ -3020,7 +3020,7 @@ static int debug_smmu_id_debugfs_set(void *data, u64 val)
 {
 	struct arm_smmu_device *smmu = (struct arm_smmu_device *)data;
 
-	if (val < 0 || val >= smmu->num_smmus)
+	if (val >= smmu->num_smmus)
 		return -EINVAL;
 
 	debug_smmu_id = (s8)val;

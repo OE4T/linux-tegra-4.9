@@ -19,9 +19,8 @@
 #include <linux/nvmap.h>
 #include <linux/reset.h>
 #include <linux/hashtable.h>
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-#include <linux/nvhost_t194.h>
-#endif
+#include <nvgpu/nvhost.h>
+#include <nvgpu/nvhost_t19x.h>
 
 #include <uapi/linux/nvgpu.h>
 
@@ -40,38 +39,26 @@ static void gr_gv11b_remove_sysfs(struct device *dev);
 
 static int gv11b_tegra_probe(struct device *dev)
 {
-	int err = 0;
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct gk20a *g = platform->g;
-	struct device_node *np = dev->of_node;
-	struct device_node *host1x_node;
-	struct platform_device *host1x_pdev;
-	const __be32 *host1x_ptr;
-
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
-	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
-	if (!host1x_ptr) {
+	struct gk20a *g = platform->g;
+	int err = 0;
+
+	err = nvgpu_get_nvhost_dev(g);
+	if (err) {
 		dev_err(dev, "host1x device not available");
-		return -ENOSYS;
+		return err;
 	}
 
-	host1x_node = of_find_node_by_phandle(be32_to_cpup(host1x_ptr));
-	host1x_pdev = of_find_device_by_node(host1x_node);
-	if (!host1x_pdev) {
-		dev_err(dev, "host1x device not available");
-		return -ENOSYS;
-	}
-
-	platform->g->host1x_dev = host1x_pdev;
-	err = nvhost_syncpt_unit_interface_get_aperture(
-				g->host1x_dev,
+	err = nvgpu_nvhost_syncpt_unit_interface_get_aperture(
+				g->nvhost_dev,
 				&g->syncpt_unit_base,
 				&g->syncpt_unit_size);
 	if (err) {
 		dev_err(dev, "Failed to get syncpt interface");
 		return -ENOSYS;
 	}
-	g->syncpt_size = nvhost_syncpt_unit_interface_get_byte_offset(1);
+	g->syncpt_size = nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(1);
 	gk20a_dbg_info("syncpt_unit_base %llx syncpt_unit_size %zx size %x\n",
 			g->syncpt_unit_base, g->syncpt_unit_size,
 			g->syncpt_size);

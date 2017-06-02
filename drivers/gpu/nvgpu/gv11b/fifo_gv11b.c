@@ -14,10 +14,6 @@
  */
 #include <linux/delay.h>
 #include <linux/types.h>
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-#include <linux/nvhost.h>
-#include <linux/nvhost_t194.h>
-#endif
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
@@ -27,6 +23,7 @@
 #include <nvgpu/gmmu.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/nvhost_t19x.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -1461,7 +1458,7 @@ static void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 		u32 id, u32 thresh, u64 gpu_va_base)
 {
 	u64 gpu_va = gpu_va_base +
-		nvhost_syncpt_unit_interface_get_byte_offset(id);
+		nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(id);
 
 	gk20a_dbg_fn("");
 
@@ -1497,7 +1494,7 @@ static void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 {
 	u32 off = cmd->off;
 	u64 gpu_va = gpu_va_base +
-		nvhost_syncpt_unit_interface_get_byte_offset(id);
+		nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(id);
 
 	gk20a_dbg_fn("");
 

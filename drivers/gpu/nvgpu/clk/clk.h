@@ -1,7 +1,7 @@
 /*
  * general clock structures & definitions
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,11 +22,12 @@
 #include "clk_vf_point.h"
 #include "clk_mclk.h"
 #include "clk_freq_controller.h"
-#include "gk20a/gk20a.h"
 
 #define NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_SKIP 0x10
 #define NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_MASK 0x1F
 #define NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_SHIFT 0
+
+struct gk20a;
 
 /* clock related defines for GPUs supporting clock control from pmu*/
 struct clk_pmupstate {

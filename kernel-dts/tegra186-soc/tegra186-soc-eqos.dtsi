@@ -82,7 +82,6 @@
 		clock-names = "eqos_axi", "eqos_rx", "eqos_ptp_ref", "eqos_tx", "axi_cbb";
 		resets = <&tegra_car TEGRA186_RESET_EQOS>;
 		reset-names = "eqos_rst";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_EQOS>;
 		phy-mode = "rgmii";
 		status = "disabled";

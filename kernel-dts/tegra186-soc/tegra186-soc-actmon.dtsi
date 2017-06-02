@@ -24,7 +24,6 @@
 		interrupts = <0 TEGRA186_IRQ_ACTMON IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&tegra_car TEGRA186_CLK_ACTMON>;
 		clock-names = "actmon";
-		#stream-id-cells = <1>;
 		resets = <&tegra_car TEGRA186_RESET_ACTMON>;
 		reset-names = "actmon_rst";
 		nvidia,sample_period = /bits/ 8 <20>;

@@ -34,7 +34,6 @@
 	gen1_i2c: i2c@3160000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3160000 0x0 0x100>;
@@ -56,7 +55,6 @@
 	gen2_i2c: i2c@c240000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0xc240000 0x0 0x100>;
@@ -78,7 +76,6 @@
 	cam_i2c: i2c@3180000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3180000 0x0 0x100>;
@@ -100,7 +97,6 @@
 	dp_aux_ch1_i2c: i2c@3190000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3190000 0x0 0x100>;
@@ -128,7 +124,6 @@
 	dp_aux_ch0_i2c: i2c@31b0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31b0000 0x0 0x100>;
@@ -148,7 +143,6 @@
 	gen7_i2c: i2c@31c0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31c0000 0x0 0x100>;
@@ -170,7 +164,6 @@
 	gen8_i2c: i2c@c250000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0xc250000 0x0 0x100>;
@@ -192,7 +185,6 @@
 	gen9_i2c: i2c@31e0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31e0000 0x0 0x100>;

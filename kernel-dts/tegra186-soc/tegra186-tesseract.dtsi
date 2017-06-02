@@ -34,7 +34,6 @@
 		reg-names = "sce-evp", "sce-pm", "sce-cfg",
 				"ast-cpu", "ast-dma";
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_RCE>;
 
 		clocks =

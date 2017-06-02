@@ -60,7 +60,6 @@
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 		       <&tegra_car TEGRA186_CLK_PLLC4_OUT0>;
 		clock-names = "sdmmc", "pll_p", "pll_c4_out0";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC4A>;
 		status = "disabled";
 	};
@@ -95,7 +94,6 @@
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC3>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc", "pll_p";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC3A>;
 		nvidia,en-periodic-calib;
 		force-non-removable-rescan;
@@ -135,7 +133,6 @@
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC2>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc", "pll_p";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC2A>;
 		status = "disabled";
 	};
@@ -169,7 +166,6 @@
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC1>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc", "pll_p";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC1A>;
 		nvidia,en-periodic-calib;
 		status = "disabled";

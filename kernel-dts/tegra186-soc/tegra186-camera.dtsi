@@ -35,7 +35,6 @@
 		reg-names = "sce-evp", "sce-pm", "sce-cfg",
 				"ast-cpu", "ast-dma";
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_RCE>;
 
 		clocks =
@@ -165,7 +164,6 @@
 			<0 0x02994000 0 0x2000>; /* ACAST */
 		reg-names = "ape-evp", "ape-amisc", "ast-cpu";
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_APE_CAM>;
 
 		clocks =

@@ -26,7 +26,6 @@
 
 	uarta: serial@3100000 {
 		compatible = "nvidia,tegra20-uart";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		reg = <0x0 0x03100000 0x0 0x10000>;
 		reg-shift = <2>;
@@ -44,7 +43,6 @@
 
 	uartb: serial@3110000 {
 		compatible = "nvidia,tegra186-hsuart";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		reg = <0x0 0x03110000 0x0 0x10000>;
 		reg-shift = <2>;
@@ -62,7 +60,6 @@
 
 	uartc: serial@c280000 {
 		compatible = "nvidia,tegra186-hsuart";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		reg = <0x0 0xc280000 0x0 0x10000>;
 		reg-shift = <2>;
@@ -80,7 +77,6 @@
 
 	uartd: serial@3130000 {
 		compatible = "nvidia,tegra186-hsuart";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		reg = <0x0 0x03130000 0x0 0x10000>;
 		reg-shift = <2>;
@@ -98,7 +94,6 @@
 
 	uarte: serial@3140000 {
 		compatible = "nvidia,tegra186-hsuart";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		reg = <0x0 0x03140000 0x0 0x10000>;
 		reg-shift = <2>;
@@ -116,7 +111,6 @@
 
 	uartf: serial@3150000 {
 		compatible = "nvidia,tegra186-hsuart";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		reg = <0x0 0x03150000 0x0 0x10000>;
 		reg-shift = <2>;
@@ -134,7 +128,6 @@
 
 	uartg: serial@c290000 {
 		compatible = "nvidia,tegra186-hsuart";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		reg = <0x0 0xc290000 0x0 0x10000>;
 		reg-shift = <2>;

@@ -19,7 +19,6 @@
 		compatible = "tegra,ufs_variant";
 		reg = <0x0 0x02450000 0x0 0x4000>;
 		interrupts = < 0 44 0x04 >;
-		#stream-id-cells = <1>;
 		clocks = <&bpmp_clks TEGRA194_CLK_MPHY_CORE_PLL_FIXED>,
 				<&bpmp_clks TEGRA194_CLK_MPHY_L0_TX_SYMB>,
 				<&bpmp_clks TEGRA194_CLK_MPHY_TX_1MHZ_REF> ,

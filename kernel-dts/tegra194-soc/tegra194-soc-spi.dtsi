@@ -29,7 +29,6 @@
 		interrupts = <0 36 0x04>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		dmas = <&gpcdma 15>, <&gpcdma 15>;
 		dma-names = "rx", "tx";
@@ -49,7 +48,6 @@
 		interrupts = <0 37 0x04>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		dmas = <&gpcdma 16>, <&gpcdma 16>;
 		dma-names = "rx", "tx";
@@ -70,7 +68,6 @@
 		interrupts = <0 38 0x04>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		dmas = <&gpcdma 17>, <&gpcdma 17>;
 		dma-names = "rx", "tx";

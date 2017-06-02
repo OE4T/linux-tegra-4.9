@@ -357,7 +357,6 @@
 
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp";
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_BPMP>;
 		reg = <0x0 0x0d000000 0x0 0x00800000>,
 		      <0x0 0x4004e000 0x0 0x00001000>,
@@ -390,7 +389,6 @@
 		clock-names = "host1x", "actmon";
 		nvidia,vmid = <1>;
 
-		#stream-id-cells = <9>;
 		iommus = <&smmu TEGRA_SID_HC>,
 			 <&smmu TEGRA_SID_HC_VM0>,
 			 <&smmu TEGRA_SID_HC_VM1>,
@@ -469,7 +467,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_VIC>;
 			clock-names = "vic";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_VIC>;
 		};
 
@@ -480,7 +477,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_NVJPG>;
 			clock-names = "nvjpg";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVJPG>;
 		};
 
@@ -491,7 +487,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_TSEC>;
 			clock-names = "tsec";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_TSEC>;
 		};
 
@@ -502,7 +497,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_TSECB>;
 			clock-names = "tsecb";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_TSECB>;
 		};
 
@@ -514,7 +508,6 @@
 				 <&bpmp_clks TEGRA194_CLK_KFUSE>;
 			clock-names = "nvdec", "kfuse";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVDEC>;
 		};
 
@@ -526,7 +519,6 @@
 				 <&bpmp_clks TEGRA194_CLK_KFUSE>;
 			clock-names = "nvdec", "kfuse";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVDEC1>;
 		};
 
@@ -537,7 +529,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_NVENC>;
 			clock-names = "nvenc";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVENC>;
 		};
 
@@ -548,7 +539,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_NVENC1>;
 			clock-names = "nvenc";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVENC1>;
 		};
 
@@ -562,7 +552,6 @@
 				 <&bpmp_clks TEGRA194_CLK_DLA0_FALCON>;
 			clock-names = "nvdla0", "nvdla0_flcn";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVDLA0>;
 		};
 
@@ -576,7 +565,6 @@
 				 <&bpmp_clks TEGRA194_CLK_DLA1_FALCON>;
 			clock-names = "nvdla1", "nvdla1_flcn";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVDLA1>;
 		};
 
@@ -586,7 +574,6 @@
 			reg = <0x0 0x15200000 0x0 0x10000>;
 			interrupts = <0 153 4>;
 
-			#stream-id-cells = <0x1>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			iso-smmu;
 
@@ -634,7 +621,6 @@
 			reg = <0x0 0x15210000 0x0 0x10000>;
 			interrupts = <0 154 4>;
 
-			#stream-id-cells = <0x1>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			iso-smmu;
 
@@ -682,7 +668,6 @@
 			reg = <0x0 0x15220000 0x0 0x10000>;
 			interrupts = <0 155 4>;
 
-			#stream-id-cells = <0x1>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			iso-smmu;
 
@@ -730,7 +715,6 @@
 			reg = <0x0 0x15230000 0x0 0x10000>;
 			interrupts = <0 242 4>;
 
-			#stream-id-cells = <0x1>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			iso-smmu;
 
@@ -1004,7 +988,6 @@
 				 <&bpmp_clks TEGRA194_CLK_NVCSILP>;
 			clock-names = "vi", "nvcsi", "nvcsilp";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_VI>;
 			iso-smmu;
 		};
@@ -1018,7 +1001,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_ISP>;
 			clock-names = "isp";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_ISP>;
 			iso-smmu;
 		};
@@ -1088,7 +1070,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 			clock-names = "se";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_SE>;
 
 			status = "okay";
@@ -1103,7 +1084,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 			clock-names = "se";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_SE1>;
 
 			status = "okay";
@@ -1118,7 +1098,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 			clock-names = "se";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_SE2>;
 
 			status = "okay";
@@ -1133,7 +1112,6 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 			clock-names = "se";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_SE3>;
 
 			status = "okay";
@@ -1180,7 +1158,6 @@
 			0 107 0x04>;
 		#dma-cells = <1>;
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 
 		status = "disabled";
@@ -1243,7 +1220,6 @@
 	tegra_tachometer: tachometer@39c0000 {
 		compatible = "nvidia,tegra194-tachometer";
 		reg = <0x0 0x039c0000 0x0 0x10>;
-		#stream-id-cells = <1>;
 		clocks = <&bpmp_clks TEGRA194_CLK_TACH>;
 		clock-names = "tach";
 		resets = <&bpmp_resets TEGRA194_RESET_TACH>;

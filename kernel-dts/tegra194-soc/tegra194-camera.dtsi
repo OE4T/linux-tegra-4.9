@@ -38,7 +38,6 @@
 		reg-names = "sce-evp", "sce-pm", "sce-fw",
 				"ast-cpu", "ast-dma";
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_RCE>;
 
 		nvidia,trace = <&{/tegra-rtcpu-trace} 4 0x70100000 0x100000>;

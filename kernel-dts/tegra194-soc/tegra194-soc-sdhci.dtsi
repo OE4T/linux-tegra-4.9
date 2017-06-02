@@ -56,7 +56,6 @@
 		clocks = <&bpmp_clks TEGRA194_CLK_SDMMC4>,
 			<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc", "pll_p";
-		#stream-id-cells = <1>;
 		status = "disabled";
 	};
 };

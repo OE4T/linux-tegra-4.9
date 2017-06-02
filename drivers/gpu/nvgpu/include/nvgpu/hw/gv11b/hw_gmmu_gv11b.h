@@ -1274,6 +1274,10 @@ static inline u32 gmmu_fault_mmu_eng_id_physical_v(void)
 {
 	return 0x0000001f;
 }
+static inline u32 gmmu_fault_mmu_eng_id_ce0_v(void)
+{
+	return 0x0000000f;
+}
 static inline u32 gmmu_fault_buf_size_v(void)
 {
 	return 0x00000020;
@@ -1457,6 +1461,10 @@ static inline u32 gmmu_fault_buf_entry_replayable_fault_en_true_v(void)
 static inline u32 gmmu_fault_buf_entry_replayable_fault_en_true_f(void)
 {
 	return 0x40000000;
+}
+static inline u32 gmmu_fault_buf_entry_valid_m(void)
+{
+	return 0x1 << 31;
 }
 static inline u32 gmmu_fault_buf_entry_valid_v(u32 r)
 {

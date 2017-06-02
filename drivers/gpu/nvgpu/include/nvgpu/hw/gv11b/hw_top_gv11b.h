@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -93,6 +93,14 @@ static inline u32 top_slices_per_ltc_value_v(u32 r)
 static inline u32 top_num_ltcs_r(void)
 {
 	return 0x00022454;
+}
+static inline u32 top_num_ces_r(void)
+{
+	return 0x00022444;
+}
+static inline u32 top_num_ces_value_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
 }
 static inline u32 top_device_info_r(u32 i)
 {

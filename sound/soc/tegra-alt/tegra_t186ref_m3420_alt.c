@@ -122,7 +122,7 @@ static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_pcm_stream *stream;
 	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx;
+	unsigned int idx, dai_fmt;
 	int err = 0;
 
 	mutex_lock(&machine->lock);
@@ -135,6 +135,26 @@ static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
 
 	stream = (struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	stream->rate_min = params_rate(params);
+
+	/*
+	 * For the M3420 platform one of the Tegra I2S channels, I2S1,
+	 * is the bit-clock and frame-sync master and it drives all the
+	 * bit-clocks and frame-syncs for all other I2S channels. Thus,
+	 * for all I2S channels, apart from I2S1, both the Tegra I2S
+	 * interface and the codecs are I2S slaves. By default, either
+	 * the Tegra I2S interface or the codec should be a master but
+	 * not both. To ensure there is no signal contention on the
+	 * bit-clock and frame-sync signals force the codecs that don't
+	 * interface with I2S1 to be bit-clock and frame-sync slaves.
+	 */
+	if (machine->i2s_master != card->rtd[idx].cpu_dai) {
+		dai_fmt = card->rtd[idx].dai_link->dai_fmt;
+		dai_fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
+		dai_fmt |= SND_SOC_DAIFMT_CBS_CFS;
+		err = snd_soc_dai_set_fmt(card->rtd[idx].codec_dai, dai_fmt);
+		if (err)
+			return err;
+	}
 
 	return snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai, 0,
 				      machine->audio_clock.clk_out_rate,

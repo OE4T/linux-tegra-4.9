@@ -1563,7 +1563,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 		nvgpu_err(g, "%s mmu fault on engine %d, "
 			   "engine subid %d (%s), client %d (%s), "
 			   "addr 0x%llx, type %d (%s), access_type 0x%08x,"
-			   "inst_ptr 0x%llx\n",
+			   "inst_ptr 0x%llx",
 			   fake_fault ? "fake" : "",
 			   engine_id,
 			   mmfault_info.client_type,

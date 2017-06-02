@@ -94,17 +94,23 @@
 #define TEGRA_DC_EXT_FMT_T_Y12___U12V12_N422		(100)
 #define TEGRA_DC_EXT_FMT_T_Y12___U12V12_N422R		(102)
 #define TEGRA_DC_EXT_FMT_T_Y12___U12V12_N444		(104)
-#define TEGRA_WIN_FMT_T_Y10___U10V10_N420			(127)
-#define TEGRA_WIN_FMT_T_Y12___U12V12_N420			(126)
-/* #define TEGRA_DC_EXT_FMT_T_RF16_GF16_BF16_AF16	(TBD) */
-
-/* Note: These values are not intended to be programmed directly into the
- * DC_WIN_COLOR_DEPTH register. They only signal formats possible through
- * additional parameters (mainly through the UV swap control).
- *
- * The values are chosen to prevent collisions with valid register values,
- * while fitting into the features 4 32b words bitmap (max value: 127).
+/* Additional Formats: These values are not intended to be
+ * programmed directly into the DC_WIN_COLOR_DEPTH register.
+ * They only signal formats possible through additional
+ * parameters (mainly through the UV swap control).
  */
+#define TEGRA_DC_EXT_FMT_T_Y10___U10V10_N420		(255)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N422		(256)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N422R		(257)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N444		(258)
+#define TEGRA_DC_EXT_FMT_T_Y12___U12V12_N420		(259)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N422		(260)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N422R		(261)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N444		(262)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10___U10_N420		(263)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10___U10_N444		(264)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12___U12_N420		(265)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12___U12_N444		(266)
 
 /* color format type field is 8-bits */
 #define TEGRA_DC_EXT_FMT_SHIFT		0

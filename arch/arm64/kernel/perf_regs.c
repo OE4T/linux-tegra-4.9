@@ -9,9 +9,6 @@
 
 u64 perf_reg_value(struct pt_regs *regs, int idx)
 {
-	if (WARN_ON_ONCE((u32)idx >= PERF_REG_ARM64_MAX))
-		return 0;
-
 	/*
 	 * Compat (i.e. 32 bit) mode:
 	 * - PC has been set in the pt_regs struct in kernel_entry,
@@ -29,6 +26,9 @@ u64 perf_reg_value(struct pt_regs *regs, int idx)
 
 	if ((u32)idx == PERF_REG_ARM64_PC)
 		return regs->pc;
+
+	if (WARN_ON_ONCE((u32)idx > PERF_REG_ARM64_LR))
+		return 0;
 
 	return regs->regs[idx];
 }

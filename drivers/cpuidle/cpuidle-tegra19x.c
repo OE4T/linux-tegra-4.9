@@ -48,15 +48,16 @@
 #define T19x_CPUIDLE_C7_STATE		2
 #define T19x_CPUIDLE_C6_STATE		1
 
-static struct cpumask cpumask1;
-static void cluster_state_init(void *data);
-static u32 deepest_cluster_state;
+static u32 read_cluster_info(struct device_node *of_states);
+static u32 deepest_cc_state;
+static u32 deepest_cg_state;
 static u64 forced_idle_state;
 static u64 forced_cluster_idle_state;
 static u32 testmode;
 static struct cpuidle_driver t19x_cpu_idle_driver;
 static int crossover_init(void);
-static void program_cluster_state(void *data);
+static void program_cc_state(void *data);
+static void program_cg_state(void *data);
 static u32 tsc_per_sec, nsec_per_tsc_tick;
 static u32 tsc_per_usec;
 
@@ -102,13 +103,13 @@ static int t19x_cpu_enter_state(
 	u32 wake_time;
 	struct timespec t;
 
-	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
-
-	if (tegra_cpu_is_asim()) {
+	if (tegra_platform_is_vdk()) {
 		asm volatile("wfi\n");
 		return index;
 	}
+
+	t = ktime_to_timespec(tick_nohz_get_sleep_length());
+	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	if (testmode) {
 		t19x_mce_update_cstate_info(forced_cluster_idle_state,
@@ -295,7 +296,7 @@ static int setup_crossover(int index, int value)
 	xover_data.index = index;
 	xover_data.value = value;
 
-	on_each_cpu_mask(&cpumask1, program_single_crossover,
+	on_each_cpu_mask(cpu_online_mask, program_single_crossover,
 			&xover_data, 1);
 	return 0;
 }
@@ -327,8 +328,11 @@ static int set_testmode(void *data, u64 val)
 		setup_crossover(TEGRA_NVG_CHANNEL_CROSSOVER_CG7_LOWER_BOUND, 0);
 	} else {
 		/* Restore the cluster state */
-		smp_call_function_any(&cpumask1,
-			program_cluster_state, &deepest_cluster_state, 1);
+		on_each_cpu_mask(cpu_online_mask,
+			program_cc_state, &deepest_cc_state, 1);
+		/* Restore the cluster group state */
+		on_each_cpu_mask(cpu_online_mask,
+			program_cg_state, &deepest_cg_state, 1);
 		/* Restore the crossover values */
 		crossover_init();
 	}
@@ -337,15 +341,29 @@ static int set_testmode(void *data, u64 val)
 
 static int cc_state_set(void *data, u64 val)
 {
-	deepest_cluster_state = (u32)val;
-	smp_call_function_any(&cpumask1, program_cluster_state,
-			&deepest_cluster_state, 1);
+	deepest_cc_state = (u32)val;
+	on_each_cpu_mask(cpu_online_mask, program_cc_state,
+			&deepest_cc_state, 1);
 	return 0;
 }
 
 static int cc_state_get(void *data, u64 *val)
 {
-	*val = (u64) deepest_cluster_state;
+	*val = (u64) deepest_cc_state;
+	return 0;
+}
+
+static int cg_state_set(void *data, u64 val)
+{
+	deepest_cg_state = (u32)val;
+	on_each_cpu_mask(cpu_online_mask, program_cg_state,
+			&deepest_cg_state, 1);
+	return 0;
+}
+
+static int cg_state_get(void *data, u64 *val)
+{
+	*val = (u64) deepest_cg_state;
 	return 0;
 }
 
@@ -357,6 +375,8 @@ DEFINE_SIMPLE_ATTRIBUTE(xover_cg7_fops, NULL,
 						cg7_xover_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(cc_state_fops, cc_state_get,
 						cc_state_set, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(cg_state_fops, cg_state_get,
+						cg_state_set, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(testmode_fops, NULL, set_testmode, "%llu\n");
 
 static int cpuidle_debugfs_init(void)
@@ -410,6 +430,11 @@ static int cpuidle_debugfs_init(void)
 	if (!dfs_file)
 		goto err_out;
 
+	dfs_file = debugfs_create_file("deepest_cg_state", 0644,
+		cpuidle_debugfs_node, NULL, &cg_state_fops);
+	if (!dfs_file)
+		goto err_out;
+
 	return 0;
 
 err_out:
@@ -424,11 +449,10 @@ static const struct of_device_id t19x_idle_of_match[] = {
 	{ },
 };
 
-static void cluster_state_init(void *data)
+static u32 read_cluster_info(struct device_node *of_states)
 {
 	u32 power = UINT_MAX;
 	u32 value, pmstate, deepest_pmstate = 0;
-	struct device_node *of_states = (struct device_node *)data;
 	struct device_node *child;
 	int err;
 
@@ -453,9 +477,7 @@ static void cluster_state_init(void *data)
 		power = value;
 		deepest_pmstate = pmstate;
 	}
-	t19x_mce_update_cstate_info(deepest_pmstate, 0, 0, 0, 0, 0);
-
-	deepest_cluster_state = deepest_pmstate;
+	return deepest_pmstate;
 }
 
 struct xover_table {
@@ -491,12 +513,6 @@ static int crossover_init(void)
 {
 	struct device_node *cpu_xover;
 
-	if (!check_mce_version()) {
-		pr_err("WARNING: cpuidle: skipping crossover programming. ");
-		pr_err("Incompatible MCE version.\n");
-		return -ENODEV;
-	}
-
 	cpu_xover = of_find_node_by_name(NULL,
 			"cpu_crossover_thresholds");
 
@@ -506,17 +522,24 @@ static int crossover_init(void)
 		pr_err("WARNING: cpuidle: %s: DT entry ", __func__);
 		pr_err("missing for Crossover thresholds\n");
 	} else
-		on_each_cpu_mask(&cpumask1, send_crossover,
+		on_each_cpu_mask(cpu_online_mask, send_crossover,
 			cpu_xover, 1);
 
 	return 0;
 }
 
-static void program_cluster_state(void *data)
+static void program_cc_state(void *data)
 {
-	u32 *cluster_state = (u32 *)data;
+	u32 *cc_state = (u32 *)data;
 
-	t19x_mce_update_cstate_info(*cluster_state, 0, 0, 0, 0, 0);
+	t19x_mce_update_cstate_info(*cc_state, 0, 0, 0, 0, 0);
+}
+
+static void program_cg_state(void *data)
+{
+	u32 *cg_state = (u32 *)data;
+
+	t19x_mce_update_cstate_info(0, *cg_state, 0, 0, 0, 0);
 }
 
 static int tegra_suspend_notify_callback(struct notifier_block *nb,
@@ -524,10 +547,14 @@ static int tegra_suspend_notify_callback(struct notifier_block *nb,
 {
 	switch (action) {
 	case PM_POST_SUSPEND:
-	/* Re-program deepest allowed cluster power state after system */
-	/* resumes from SC7 */
-		smp_call_function_any(&cpumask1, program_cluster_state,
-			&deepest_cluster_state, 1);
+	/*
+	 * Re-program deepest allowed cluster and cluster group power state
+	 * after system resumes from SC7
+	 */
+		on_each_cpu_mask(cpu_online_mask, program_cc_state,
+			&deepest_cc_state, 1);
+		on_each_cpu_mask(cpu_online_mask, program_cg_state,
+			&deepest_cg_state, 1);
 		break;
 	}
 	return NOTIFY_OK;
@@ -536,12 +563,18 @@ static int tegra_suspend_notify_callback(struct notifier_block *nb,
 static int tegra_cpu_notify_callback(struct notifier_block *nb,
 	unsigned long action, void *pcpu)
 {
+	int cpu = (long) pcpu;
+
 	switch (action) {
 	case CPU_ONLINE:
-	/* Re-program deepest allowed cluster power state after core */
-	/* in that cluster is onlined. */
-		smp_call_function_any(&cpumask1,
-			program_cluster_state, &deepest_cluster_state, 1);
+	/*
+	 * Re-program deepest allowed cluster and cluster group power state
+	 * after a core in that cluster is onlined.
+	 */
+		smp_call_function_single(cpu, program_cc_state,
+			&deepest_cc_state, 1);
+		smp_call_function_single(cpu, program_cg_state,
+			&deepest_cg_state, 1);
 		break;
 	}
 	return NOTIFY_OK;
@@ -558,12 +591,12 @@ static struct notifier_block suspend_notifier = {
 static int __init tegra19x_cpuidle_probe(struct platform_device *pdev)
 {
 	int cpu_number;
-	struct device_node *cpu_cluster_states;
+	struct device_node *cpu_cc_states, *cpu_cg_states;
 	int err;
+	struct cpumask *cpumask;
 
 	if (!check_mce_version()) {
-		pr_err("cpuidle: failed to register. ");
-		pr_err("Incompatible MCE version.\n");
+		pr_err("cpuidle: Incompatible MCE version. Not registering\n");
 		return -ENODEV;
 	}
 
@@ -571,49 +604,70 @@ static int __init tegra19x_cpuidle_probe(struct platform_device *pdev)
 	nsec_per_tsc_tick = 1000000000/tsc_per_sec;
 	tsc_per_usec = tsc_per_sec / 1000000;
 
-	cpumask_clear(&cpumask1);
+	cpumask = kmalloc(sizeof(struct cpumask), GFP_KERNEL);
+	cpumask_clear(cpumask);
 
 	for_each_online_cpu(cpu_number) {
-		cpumask_set_cpu(cpu_number, &cpumask1);
-
+		cpumask_set_cpu(cpu_number, cpumask);
 		err = arm_cpuidle_init(cpu_number);
 		if (err) {
-			pr_err("cpuidle: failed to register cpuidle driver\n");
-			return err;
+			pr_err("cpuidle: failed to init ops for cpu %d \n",
+				cpu_number);
+			goto probe_exit;
 		}
 	}
 
 	crossover_init();
 
-	cpu_cluster_states =
+	cpu_cc_states =
 		of_find_node_by_name(NULL, "cpu_cluster_power_states");
+	cpu_cg_states =
+		of_find_node_by_name(NULL, "cpu_cluster_group_power_states");
 
-	if (!cpumask_empty(&cpumask1)) {
-		pr_info("cpuidle: Initializing cpuidle driver\n");
-		extended_ops.make_power_state = t19x_make_power_state;
+	pr_info("cpuidle: Initializing cpuidle driver\n");
+	extended_ops.make_power_state = t19x_make_power_state;
 
-		smp_call_function_any(&cpumask1, cluster_state_init,
-			cpu_cluster_states, 1);
+	/* read cluster state info from DT */
+	deepest_cc_state = read_cluster_info(cpu_cc_states);
+	on_each_cpu_mask(cpu_online_mask, program_cc_state,
+			&deepest_cc_state, 1);
+	/* read cluster group info from DT */
+	deepest_cg_state = read_cluster_info(cpu_cg_states);
+	on_each_cpu_mask(cpu_online_mask, program_cg_state,
+			&deepest_cg_state, 1);
 
-		t19x_cpu_idle_driver.cpumask = &cpumask1;
-		err = dt_init_idle_driver(&t19x_cpu_idle_driver,
-			t19x_idle_of_match, 1);
-		if (err <= 0) {
-			pr_err("cpuidle: failed to init idle states\n");
-			return err ? : -ENODEV;
-		}
-		err = cpuidle_register(&t19x_cpu_idle_driver, NULL);
+	t19x_cpu_idle_driver.cpumask = cpumask;
+	err = dt_init_idle_driver(&t19x_cpu_idle_driver,
+		t19x_idle_of_match, 1);
+	if (err <= 0) {
+		pr_err("cpuidle: failed to init idle driver states \n");
+		err = -ENODEV;
+		goto probe_exit;
+	}
+	err = cpuidle_register(&t19x_cpu_idle_driver, NULL);
 
-		if (err) {
-			pr_err("%s: failed to init ", __func__);
-			pr_err("cpuidle power states.\n");
-			return err;
-		}
+	if (err) {
+		pr_err("cpuidle: failed to register cpuidle driver \n");
+		goto probe_exit;
 	}
 
 	cpuidle_debugfs_init();
 	register_cpu_notifier(&cpu_on_notifier);
 	register_pm_notifier(&suspend_notifier);
+	return 0;
+
+probe_exit:
+	kfree(cpumask);
+	pr_err("cpuidle: failed to register cpuidle driver\n");
+	return err;
+}
+
+static int tegra19x_cpuidle_remove(struct platform_device *pdev)
+{
+	cpuidle_unregister(&t19x_cpu_idle_driver);
+	kfree(t19x_cpu_idle_driver.cpumask);
+	unregister_cpu_notifier(&cpu_on_notifier);
+	unregister_pm_notifier(&suspend_notifier);
 	return 0;
 }
 
@@ -623,7 +677,8 @@ static const struct of_device_id tegra19x_cpuidle_of[] = {
 };
 
 static struct platform_driver tegra19x_cpuidle_driver __refdata = {
-	.probe = tegra19x_cpuidle_probe,
+	.probe	= tegra19x_cpuidle_probe,
+	.remove	= tegra19x_cpuidle_remove,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "cpuidle-tegra19x",

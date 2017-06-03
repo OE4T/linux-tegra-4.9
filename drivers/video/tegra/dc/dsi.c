@@ -300,9 +300,6 @@ static const u32 common_init_reg_vs1_ext[] = {
 	DSI_PAD_CONTROL_CD_VS1,
 	DSI_PAD_CD_STATUS_VS1,
 	DSI_PAD_CONTROL_1_VS1,
-	DSI_GANGED_MODE_CONTROL,
-	DSI_GANGED_MODE_START,
-	DSI_GANGED_MODE_SIZE,
 	DSI_PADCTL_GLOBAL_CNTRLS,
 };
 
@@ -335,11 +332,11 @@ static const struct dsi_regs chip_t210b01 = {
 
 static const struct of_device_id dsi_of_match[] = {
 	{
-		.compatible = "tegra210-dsi",
+		.compatible = "nvidia,tegra210-dsi",
 		.data = &chip_t210,
 	},
 	{
-		.compatible = "tegra210b01-dsi",
+		.compatible = "nvidia,tegra210b01-dsi",
 		.data = &chip_t210b01,
 	},
 	{ },
@@ -2537,7 +2534,7 @@ static void tegra_dsi_panelB_enable(void)
 static int tegra_dsi_init_hw(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi)
 {
-	u32 i;
+	u32 i, *p;
 	int err = 0;
 
 	if (dsi->avdd_dsi_csi)
@@ -2582,6 +2579,12 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	if (dsi->info.controller_vs == DSI_VS_1) {
 		for (i = 0; i < ARRAY_SIZE(common_init_reg_vs1_ext); i++)
 			tegra_dsi_writel(dsi, 0, common_init_reg_vs1_ext[i]);
+	}
+
+	for (p = (u32 *) dsi->regs, i = 0; i <
+			sizeof(struct dsi_regs)/sizeof(uint32_t); p++, i++) {
+		if (*p)
+			tegra_dsi_writel(dsi, 0, *p);
 	}
 
 #if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
@@ -4486,7 +4489,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	dsi->regs = &chip_t210; /* FIXME: quirk for non t210 chips */
 	of_dev = of_match_node(dsi_of_match, np_dsi);
-	if (of_dev)
+	if (!IS_ERR_OR_NULL(of_dev))
 		dsi->regs = of_dev->data;
 
 	dsi->max_instances = is_simple_dsi(dc->out->dsi) ? 1 : MAX_DSI_INSTANCE;

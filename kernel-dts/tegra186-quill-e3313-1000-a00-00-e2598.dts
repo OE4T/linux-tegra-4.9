@@ -15,13 +15,11 @@
 
 #include "tegra186-quill-p3310-1000-c03-00-base.dts"
 / {
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 		xhci@3530000 {
-			phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
-					<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
-					<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(0)>,
-					<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(2)>;
-					phy-names = "usb2-0", "usb2-1", "usb3-0", "usb3-2";
+			phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+					<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-2}>;
+					phy-names = "usb2-1", "usb3-2";
 		};
 #else
 		xhci@3530000 {
@@ -33,7 +31,7 @@
 		};
 #endif
 
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 		xusb_padctl@3520000 {
 			ports {
 				usb2-0 {
@@ -42,11 +40,19 @@
 				usb2-1 {
 					status = "okay";
 				};
+				usb2-2 {
+					status = "disabled";
+				};
 				usb3-0 {
 					status = "okay";
+					nvidia,usb2-companion = <0>;
+				};
+				usb3-1 {
+					status = "disabled";
 				};
 				usb3-2 {
 					status = "okay";
+					nvidia,usb2-companion = <1>;
 				};
 			};
 		};
@@ -67,7 +73,7 @@
 		};
 #endif
 
-#ifdef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 		xudc@3550000 {
 			phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
 					<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>;
@@ -81,7 +87,7 @@
 		};
 #endif
 
-#ifndef KERNEL_VERSION_4_9
+#if defined(LINUX_VERSION) && LINUX_VERSION < 409
 		xotg {
 			phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
 						<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(0)>;

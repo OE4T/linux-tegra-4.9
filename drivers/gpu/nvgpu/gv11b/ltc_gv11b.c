@@ -22,6 +22,7 @@
 #include <nvgpu/hw/gv11b/hw_ltc_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_top_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_pri_ringmaster_gv11b.h>
 
 /*
@@ -48,6 +49,13 @@ static void gv11b_ltc_init_fs_state(struct gk20a *g)
 	u32 reg;
 
 	gk20a_dbg_info("initialize gv11b l2");
+
+	g->ops.mc.reset(g, mc_enable_pfb_enabled_f() |
+				mc_enable_l2_enabled_f());
+
+	reg = gk20a_readl(g, mc_elpg_enable_r());
+	reg |= mc_elpg_enable_l2_enabled_f();
+	gk20a_writel(g, mc_elpg_enable_r(), reg);
 
 	g->max_ltc_count = gk20a_readl(g, top_num_ltcs_r());
 	g->ltc_count = gk20a_readl(g, pri_ringmaster_enum_ltc_r());

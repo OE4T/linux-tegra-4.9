@@ -135,14 +135,12 @@ static void gv11b_fb_reset(struct gk20a *g)
 	nvgpu_info(g, "reset gv11b fb");
 
 	g->ops.mc.reset(g, mc_enable_pfb_enabled_f() |
-				mc_enable_l2_enabled_f() |
 				mc_enable_xbar_enabled_f() |
 				mc_enable_hub_enabled_f());
 
 	val = gk20a_readl(g, mc_elpg_enable_r());
 	val |= mc_elpg_enable_xbar_enabled_f() |
 		mc_elpg_enable_pfb_enabled_f() |
-		mc_elpg_enable_l2_enabled_f() |
 		mc_elpg_enable_hub_enabled_f();
 	gk20a_writel(g, mc_elpg_enable_r(), val);
 

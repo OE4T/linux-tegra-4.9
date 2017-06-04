@@ -951,12 +951,6 @@ static int __init tegra194_pinctrl_init(void)
 }
 postcore_initcall_sync(tegra194_pinctrl_init);
 
-static void __exit tegra194_pinctrl_exit(void)
-{
-	platform_driver_unregister(&tegra194_pinctrl_driver);
-}
-module_exit(tegra194_pinctrl_exit);
-
 MODULE_AUTHOR("Suresh Mangipudi <smangipudi@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra194 pinctrl driver");
 MODULE_LICENSE("GPL v2");

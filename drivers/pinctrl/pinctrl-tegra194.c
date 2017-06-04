@@ -101,8 +101,6 @@
 	fname(PEX_L4_RST_N_PL1, pex_l4_rst_n_pl1, _GPIO, 89)	\
 	fname(PEX_WAKE_N_PL2, pex_wake_n_pl2, _GPIO, 90)	\
 	fname(SATA_DEV_SLP_PL3, sata_dev_slp_pl3, _GPIO, 91)	\
-	fname(UFS0_REF_CLK_PL4, ufs0_ref_clk_pl4, _GPIO, 92)	\
-	fname(UFS0_RST_PL5, ufs0_rst_pl5, _GPIO, 93)		\
 	fname(DP_AUX_CH0_HPD_PM0, dp_aux_ch0_hpd_pm0, _GPIO, 96)\
 	fname(DP_AUX_CH1_HPD_PM1, dp_aux_ch1_hpd_pm1, _GPIO, 97)\
 	fname(DP_AUX_CH2_HPD_PM2, dp_aux_ch2_hpd_pm2, _GPIO, 98)\
@@ -223,34 +221,36 @@
 	fname(POWER_ON_PEE4, power_on_pee4, _GPIO, 244)		\
 	fname(PWR_I2C_SCL_PEE5, pwr_i2c_scl_pee5, _GPIO, 245)	\
 	fname(PWR_I2C_SDA_PEE6, pwr_i2c_sda_pee6, _GPIO, 246)	\
+	fname(UFS0_REF_CLK_PFF0, ufs0_ref_clk_pff0, _GPIO, 248)	\
+	fname(UFS0_RST_PFF1, ufs0_rst_pff1, _GPIO, 249)		\
+	fname(PEX_L5_CLKREQ_N_PGG0, pex_l5_clkreq_n_pgg0, _GPIO, 256)	\
+	fname(PEX_L5_RST_N_PGG1, pex_l5_rst_n_pgg1, _GPIO, 257)	\
 	fname(DIRECTDC_COMP, directdc_comp, _PIN, 0)		\
-	fname(EQOS_COMP, eqos_comp, _PIN, 1)			\
-	fname(PEX_L5_CLKREQ_N, pex_l5_clkreq_n, _PIN, 2)	\
-	fname(PEX_L5_RST_N, pex_l5_rst_n, _PIN, 3)		\
-	fname(QSPI_COMP, qspi_comp, _PIN, 4)			\
-	fname(SDMMC1_COMP, sdmmc1_comp, _PIN, 5)		\
-	fname(SDMMC1_HV_TRIM, sdmmc1_hv_trim, _PIN, 6)		\
-	fname(SDMMC3_COMP, sdmmc3_comp, _PIN, 7)		\
-	fname(SDMMC3_HV_TRIM, sdmmc3_hv_trim, _PIN, 8)		\
-	fname(SYS_RESET_N, sys_reset_n, _PIN, 9)		\
-	fname(SHUTDOWN_N, shutdown_n, _PIN, 10)			\
-	fname(PMU_INT_N, pmu_int_n, _PIN, 11)			\
-	fname(SOC_PWR_REQ, soc_pwr_req, _PIN, 12)		\
-	fname(CLK_32K_IN, clk_32k_in, _PIN, 13)			\
-	fname(SDMMC4_CLK, sdmmc4_clk, _PIN, 14)			\
-	fname(SDMMC4_CMD, sdmmc4_cmd, _PIN, 15)			\
-	fname(SDMMC4_DQS, sdmmc4_dqs, _PIN, 16)			\
-	fname(SDMMC4_DAT7, sdmmc4_dat7, _PIN, 17)		\
-	fname(SDMMC4_DAT6, sdmmc4_dat6, _PIN, 18)		\
-	fname(SDMMC4_DAT5, sdmmc4_dat5, _PIN, 19)		\
-	fname(SDMMC4_DAT4, sdmmc4_dat4, _PIN, 20)		\
-	fname(SDMMC4_DAT3, sdmmc4_dat3, _PIN, 21)		\
-	fname(SDMMC4_DAT2, sdmmc4_dat2, _PIN, 22)		\
-	fname(SDMMC4_DAT1, sdmmc4_dat1, _PIN, 23)		\
-	fname(SDMMC4_DAT0, sdmmc4_dat0, _PIN, 24)		\
+	fname(SDMMC4_CLK, sdmmc4_clk, _PIN, 1)			\
+	fname(SDMMC4_CMD, sdmmc4_cmd, _PIN, 2)			\
+	fname(SDMMC4_DQS, sdmmc4_dqs, _PIN, 3)			\
+	fname(SDMMC4_DAT7, sdmmc4_dat7, _PIN, 4)		\
+	fname(SDMMC4_DAT6, sdmmc4_dat6, _PIN, 5)		\
+	fname(SDMMC4_DAT5, sdmmc4_dat5, _PIN, 6)		\
+	fname(SDMMC4_DAT4, sdmmc4_dat4, _PIN, 7)		\
+	fname(SDMMC4_DAT3, sdmmc4_dat3, _PIN, 8)		\
+	fname(SDMMC4_DAT2, sdmmc4_dat2, _PIN, 9)		\
+	fname(SDMMC4_DAT1, sdmmc4_dat1, _PIN, 10)		\
+	fname(SDMMC4_DAT0, sdmmc4_dat0, _PIN, 11)		\
+	fname(SDMMC1_COMP, sdmmc1_comp, _PIN, 12)		\
+	fname(SDMMC1_HV_TRIM, sdmmc1_hv_trim, _PIN, 13)		\
+	fname(SDMMC3_COMP, sdmmc3_comp, _PIN, 14)		\
+	fname(SDMMC3_HV_TRIM, sdmmc3_hv_trim, _PIN, 15)		\
+	fname(EQOS_COMP, eqos_comp, _PIN, 16)			\
+	fname(QSPI_COMP, qspi_comp, _PIN, 17)			\
+	fname(SYS_RESET_N, sys_reset_n, _PIN, 18)		\
+	fname(SHUTDOWN_N, shutdown_n, _PIN, 19)			\
+	fname(PMU_INT_N, pmu_int_n, _PIN, 20)			\
+	fname(SOC_PWR_REQ, soc_pwr_req, _PIN, 21)		\
+	fname(CLK_32K_IN, clk_32k_in, _PIN, 22)			\
 
 #define _GPIO(offset)			(offset)
-#define NUM_GPIOS			(TEGRA_PIN_PWR_I2C_SDA_PEE6 + 1)
+#define NUM_GPIOS			(TEGRA_PIN_PEX_L5_RST_N_PGG1 + 1)
 #define _PIN(offset)			(NUM_GPIOS + (offset))
 
 /* Define unique ID for each pins */
@@ -560,8 +560,8 @@ static struct tegra_function tegra194_functions[] = {
 #define drive_pex_l4_clkreq_n_pl0       DRV_PINGROUP_ENTRY_Y(0x704c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
 #define drive_pex_l4_rst_n_pl1          DRV_PINGROUP_ENTRY_Y(0x7054,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
 #define drive_sata_dev_slp_pl3          DRV_PINGROUP_ENTRY_Y(0x705c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
-#define drive_pex_l5_clkreq_n           DRV_PINGROUP_ENTRY_Y(0x14004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
-#define drive_pex_l5_rst_n              DRV_PINGROUP_ENTRY_Y(0x1400c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_pex_l5_clkreq_n_pgg0      DRV_PINGROUP_ENTRY_Y(0x14004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
+#define drive_pex_l5_rst_n_pgg1         DRV_PINGROUP_ENTRY_Y(0x1400c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
 #define drive_cpu_pwr_req_1_pb1         DRV_PINGROUP_ENTRY_Y(0x16004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
 #define drive_cpu_pwr_req_0_pb0         DRV_PINGROUP_ENTRY_Y(0x1600c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
 #define drive_qspi0_sck_pc0             DRV_PINGROUP_ENTRY_Y(0xB024,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
@@ -613,8 +613,8 @@ static struct tegra_function tegra194_functions[] = {
 #define drive_uart5_cts_pz0             DRV_PINGROUP_ENTRY_Y(0xD0ac,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
 #define drive_usb_vbus_en0_pz1          DRV_PINGROUP_ENTRY_Y(0xD0b4,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
 #define drive_usb_vbus_en1_pz2          DRV_PINGROUP_ENTRY_Y(0xD0bc,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	0)
-#define drive_ufs0_rst_pl5              DRV_PINGROUP_ENTRY_Y(0x11004,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
-#define drive_ufs0_ref_clk_pl4          DRV_PINGROUP_ENTRY_Y(0x1100c,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+#define drive_ufs0_rst_pff1             DRV_PINGROUP_ENTRY_Y(0x11004,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
+#define drive_ufs0_ref_clk_pff0         DRV_PINGROUP_ENTRY_Y(0x1100c,	12,	9,	24,	8,	-1,	-1,	-1,	-1,	0)
 
 #define drive_directdc_comp             DRV_PINGROUP_ENTRY_N(no_entry)
 #define drive_sdmmc1_comp               DRV_PINGROUP_ENTRY_N(no_entry)
@@ -830,8 +830,8 @@ static const struct tegra_pingroup tegra194_groups[] = {
 	PINGROUP(pex_l4_clkreq_n_pl0,	PE4,		RSVD1,		RSVD2,		RSVD3,		0x7048,		0,	Y,	5,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_pex_ctl"),
 	PINGROUP(pex_l4_rst_n_pl1,	PE4,		RSVD1,		RSVD2,		RSVD3,		0x7050,		0,	Y,	5,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_pex_ctl"),
 	PINGROUP(sata_dev_slp_pl3,	SATA,		RSVD1,		RSVD2,		RSVD3,		0x7058,		0,	Y,	5,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_pex_ctl"),
-	PINGROUP(pex_l5_clkreq_n,	PE5,		RSVD1,		RSVD2,		RSVD3,		0x14000,	0,	Y,	5,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_pex_ctl_2"),
-	PINGROUP(pex_l5_rst_n,		PE5,		RSVD1,		RSVD2,		RSVD3,		0x14008,	0,	Y,	5,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_pex_ctl_2"),
+	PINGROUP(pex_l5_clkreq_n_pgg0,	PE5,		RSVD1,		RSVD2,		RSVD3,		0x14000,	0,	Y,	5,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_pex_ctl_2"),
+	PINGROUP(pex_l5_rst_n_pgg1,	PE5,		RSVD1,		RSVD2,		RSVD3,		0x14008,	0,	Y,	5,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_pex_ctl_2"),
 	PINGROUP(cpu_pwr_req_1_pb1,	RSVD0,		RSVD1,		RSVD2,		RSVD3,		0x16000,	0,	Y,	-1,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_pwr_ctl"),
 	PINGROUP(cpu_pwr_req_0_pb0,	RSVD0,		RSVD1,		RSVD2,		RSVD3,		0x16008,	0,	Y,	-1,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_pwr_ctl"),
 	PINGROUP(qspi0_io3_pc5,		QSPI0,		RSVD1,		RSVD2,		RSVD3,		0xB000,		0,	Y,	-1,	6,	-1,	9,	10,	-1,	12,	Y,	15,	17,	Y,	"vddio_qspi"),
@@ -907,8 +907,8 @@ static const struct tegra_pingroup tegra194_groups[] = {
 	PINGROUP(uart5_cts_pz0,		UARTE,		RSVD1,		RSVD2,		RSVD3,		0xD0a8,		0,	Y,	-1,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_uart"),
 	PINGROUP(usb_vbus_en0_pz1,	USB,		RSVD1,		RSVD2,		RSVD3,		0xD0b0,		0,	Y,	5,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_uart"),
 	PINGROUP(usb_vbus_en1_pz2,	USB,		RSVD1,		RSVD2,		RSVD3,		0xD0b8,		0,	Y,	5,	6,	8,	-1,	10,	11,	12,	N,	-1,	-1,	N,	"vddio_uart"),
-	PINGROUP(ufs0_rst_pl5,		UFS0,		RSVD1,		RSVD2,		RSVD3,		0x11000,	0,	Y,	5,	6,	-1,	9,	10,	-1,	12,	Y,	15,	17,	Y,	"vddio_ufs"),
-	PINGROUP(ufs0_ref_clk_pl4,	UFS0,		RSVD1,		RSVD2,		RSVD3,		0x11008,	0,	Y,	5,	6,	-1,	9,	10,	-1,	12,	Y,	15,	17,	Y,	"vddio_ufs"),
+	PINGROUP(ufs0_rst_pff1,		UFS0,		RSVD1,		RSVD2,		RSVD3,		0x11000,	0,	Y,	5,	6,	-1,	9,	10,	-1,	12,	Y,	15,	17,	Y,	"vddio_ufs"),
+	PINGROUP(ufs0_ref_clk_pff0,	UFS0,		RSVD1,		RSVD2,		RSVD3,		0x11008,	0,	Y,	5,	6,	-1,	9,	10,	-1,	12,	Y,	15,	17,	Y,	"vddio_ufs"),
 };
 
 static const struct tegra_pinctrl_soc_data tegra194_pinctrl = {

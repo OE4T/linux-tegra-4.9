@@ -407,8 +407,10 @@
 		};
 	};
 
-    ahub {
-
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@2a41000 {
+#endif
+	ahub {
 		dmic@2904200 {
 			prod-settings {
 				#prod-cells = <4>;
@@ -420,7 +422,6 @@
 				};
 			};
 		};
-
 
 		dspk@2905100 {
 			prod-settings {
@@ -434,7 +435,9 @@
 			};
 		};
 	};
-
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#endif
 	host1x {
 		sor1 {
 			prod-settings {

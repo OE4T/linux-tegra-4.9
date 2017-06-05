@@ -144,6 +144,7 @@ static unsigned int sdmmc_emc_clinet_id[] = {
 #define MMC_UHS_MASK_SDR104	0x10
 #define MMC_MASK_HS200		0x20
 #define MMC_MASK_HS400		0x40
+#define MMC_MASK_SD_HS		0x80
 
 static char prod_device_states[MMC_TIMING_COUNTER][20] = {
 	"prod_c_ds", /* MMC_TIMING_LEGACY */
@@ -512,6 +513,8 @@ static void tegra_sdhci_mask_host_caps(struct sdhci_host *host, u8 uhs_mask)
 		host->mmc->caps2 &= ~MMC_CAP2_HS400;
 		host->mmc->caps2 &= ~MMC_CAP2_HS400_ES;
 	}
+	if (uhs_mask & MMC_MASK_SD_HS)
+		host->mmc->caps &= ~MMC_CAP_SD_HIGHSPEED;
 }
 
 static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)

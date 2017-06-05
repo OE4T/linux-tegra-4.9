@@ -229,6 +229,22 @@ static const struct cis_tpl cis_tpl_list[] = {
 	{	0x21,	2,	/* cistpl_funcid */	},
 	{	0x22,	0,	cistpl_funce		},
 	{	0x91,	2,	/* cistpl_sdio_std */	},
+	{	0x80,	0,	/* vendor unique tuple */	},
+	{	0x81,	0,	/* vendor unique tuple */	},
+	{	0x82,	0,	/* vendor unique tuple */	},
+	{	0x83,	0,	/* vendor unique tuple */	},
+	{	0x84,	0,	/* vendor unique tuple */	},
+	{	0x85,	0,	/* vendor unique tuple */	},
+	{	0x86,	0,	/* vendor unique tuple */	},
+	{	0x87,	0,	/* vendor unique tuple */	},
+	{	0x88,	0,	/* vendor unique tuple */	},
+	{	0x89,	0,	/* vendor unique tuple */	},
+	{	0x8a,	0,	/* vendor unique tuple */	},
+	{	0x8b,	0,	/* vendor unique tuple */	},
+	{	0x8c,	0,	/* vendor unique tuple */	},
+	{	0x8d,	0,	/* vendor unique tuple */	},
+	{	0x8e,	0,	/* vendor unique tuple */	},
+	{	0x8f,	0,	/* vendor unique tuple */	},
 };
 
 static int sdio_read_cis(struct mmc_card *card, struct sdio_func *func)

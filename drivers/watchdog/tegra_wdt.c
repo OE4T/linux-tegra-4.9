@@ -24,15 +24,6 @@
 #define MAX_WDT_TIMEOUT			255
 
 /*
- * Base of the WDT registers, from the timer base address.  There are
- * actually 5 watchdogs that can be configured (by pairing with an available
- * timer), at bases 0x100 + (WDT ID) * 0x20, where WDT ID is 0 through 4.
- * This driver only configures the first watchdog (WDT ID 0).
- */
-#define WDT_BASE			0x100
-#define WDT_ID				0
-
-/*
  * Register base of the timer that's selected for pairing with the watchdog.
  * This driver arbitrarily uses timer 5, which is currently unused by
  * other drivers (in particular, the Tegra clocksource driver).  If this
@@ -191,15 +182,22 @@ static int tegra_wdt_probe(struct platform_device *pdev)
 {
 	struct watchdog_device *wdd;
 	struct tegra_wdt *wdt;
-	struct resource *res;
-	void __iomem *regs;
-	int ret;
+	struct resource *wdt_res, *tmr_res;
+	struct device_node *np = pdev->dev.of_node;
+	u32 pval = 0;
+	int ret = 0;
 
-	/* This is the timer base. */
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	regs = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(regs))
-		return PTR_ERR(regs);
+	wdt_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	tmr_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+
+	if (!wdt_res || !tmr_res) {
+		dev_err(&pdev->dev, "incorrect wdt resources\n");
+		return -ENOENT;
+	}
+
+	ret = of_property_read_u32(np, "nvidia,heartbeat-init", &pval);
+	if (!ret)
+		heartbeat = pval;
 
 	/*
 	 * Allocate our watchdog driver data, which has the
@@ -209,9 +207,17 @@ static int tegra_wdt_probe(struct platform_device *pdev)
 	if (!wdt)
 		return -ENOMEM;
 
-	/* Initialize struct tegra_wdt. */
-	wdt->wdt_regs = regs + WDT_BASE;
-	wdt->tmr_regs = regs + WDT_TIMER_BASE;
+	wdt->wdt_regs = devm_ioremap_resource(&pdev->dev, wdt_res);
+	if (IS_ERR(wdt->wdt_regs)) {
+		dev_err(&pdev->dev, "failed ioremap wdt resource\n");
+		return PTR_ERR(wdt->wdt_regs);
+	}
+
+	wdt->tmr_regs = devm_ioremap_resource(&pdev->dev, tmr_res);
+	if (IS_ERR(wdt->tmr_regs)) {
+		dev_err(&pdev->dev, "failed ioremap tmr resource\n");
+		return PTR_ERR(wdt->tmr_regs);
+	}
 
 	/* Initialize struct watchdog_device. */
 	wdd = &wdt->wdd;
@@ -278,8 +284,7 @@ static int tegra_wdt_runtime_resume(struct device *dev)
 #endif
 
 static const struct of_device_id tegra_wdt_of_match[] = {
-	{ .compatible = "nvidia,tegra30-timer-wdt", },
-	{ .compatible = "nvidia,tegra210-timer-wdt", },
+	{ .compatible = "nvidia,tegra-wdt", },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_wdt_of_match);

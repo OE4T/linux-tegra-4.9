@@ -373,6 +373,7 @@ static struct tegra_gpio_port_soc_info tegra_aon_gpio_cinfo[] = {
 
 static struct tegra_gpio_port_soc_info tegra194_gpio_cinfo[] = {
 	TEGRA194_MAIN_GPIO_PORT_INFO(A, 1, 2, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(B, 4, 7, 2),
 	TEGRA194_MAIN_GPIO_PORT_INFO(C, 4, 3, 8),
 	TEGRA194_MAIN_GPIO_PORT_INFO(D, 4, 4, 4),
 	TEGRA194_MAIN_GPIO_PORT_INFO(E, 4, 5, 8),
@@ -402,7 +403,6 @@ static struct tegra_gpio_port_soc_info tegra194_gpio_cinfo[] = {
 };
 
 static struct tegra_gpio_port_soc_info tegra194_aon_gpio_cinfo[] = {
-	TEGRA194_AON_GPIO_PORT_INFO(B, 0, 5, 2),
 	TEGRA194_AON_GPIO_PORT_INFO(AA, 0, 3, 8),
 	TEGRA194_AON_GPIO_PORT_INFO(BB, 0, 4, 4),
 	TEGRA194_AON_GPIO_PORT_INFO(CC, 0, 1, 8),

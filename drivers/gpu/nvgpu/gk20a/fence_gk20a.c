@@ -13,7 +13,6 @@
 
 #include "fence_gk20a.h"
 
-#include <linux/gk20a.h>
 #include <linux/file.h>
 #include <linux/version.h>
 #include <linux/fs.h>

@@ -13,8 +13,6 @@
  * more details.
  */
 
-#include <linux/gk20a.h>
-
 #include <linux/version.h>
 
 #include <nvgpu/semaphore.h>

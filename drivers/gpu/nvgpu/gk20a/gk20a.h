@@ -1485,10 +1485,8 @@ void gk20a_busy_noresume(struct device *dev);
 void gk20a_idle_nosuspend(struct device *dev);
 int __must_check gk20a_busy(struct gk20a *g);
 void gk20a_idle(struct gk20a *g);
-int gk20a_do_idle(void);
-int gk20a_do_unidle(void);
-int __gk20a_do_idle(struct device *dev, bool force_reset);
-int __gk20a_do_unidle(struct device *dev);
+int __gk20a_do_idle(struct gk20a *g, bool force_reset);
+int __gk20a_do_unidle(struct gk20a *g);
 
 int gk20a_can_busy(struct gk20a *g);
 void gk20a_driver_start_unload(struct gk20a *g);

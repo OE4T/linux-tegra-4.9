@@ -288,9 +288,9 @@ static struct of_device_id tegra_gk20a_of_match[] = {
  * In success, we hold these locks and return
  * In failure, we release these locks and return
  */
-int __gk20a_do_idle(struct device *dev, bool force_reset)
+int __gk20a_do_idle(struct gk20a *g, bool force_reset)
 {
-	struct gk20a *g = get_gk20a(dev);
+	struct device *dev = g->dev;
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct nvgpu_timeout timeout;
 	int ref_cnt;
@@ -419,25 +419,19 @@ fail_timeout:
  *
  * In success, this call MUST be balanced by caller with gk20a_do_unidle()
  */
-int gk20a_do_idle(void)
+static int gk20a_do_idle(void *_g)
 {
-	struct device_node *node =
-			of_find_matching_node(NULL, tegra_gk20a_of_match);
-	struct platform_device *pdev = of_find_device_by_node(node);
+	struct gk20a *g = (struct gk20a *)_g;
 
-	int ret =  __gk20a_do_idle(&pdev->dev, true);
-
-	of_node_put(node);
-
-	return ret;
+	return __gk20a_do_idle(g, true);
 }
 
 /**
  * __gk20a_do_unidle() - unblock all the tasks blocked by __gk20a_do_idle()
  */
-int __gk20a_do_unidle(struct device *dev)
+int __gk20a_do_unidle(struct gk20a *g)
 {
-	struct gk20a *g = get_gk20a(dev);
+	struct device *dev = g->dev;
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int err;
 
@@ -471,17 +465,11 @@ int __gk20a_do_unidle(struct device *dev)
 /**
  * gk20a_do_unidle() - wrap up for __gk20a_do_unidle()
  */
-int gk20a_do_unidle(void)
+static int gk20a_do_unidle(void *_g)
 {
-	struct device_node *node =
-			of_find_matching_node(NULL, tegra_gk20a_of_match);
-	struct platform_device *pdev = of_find_device_by_node(node);
+	struct gk20a *g = (struct gk20a *)_g;
 
-	int ret = __gk20a_do_unidle(&pdev->dev);
-
-	of_node_put(node);
-
-	return ret;
+	return __gk20a_do_unidle(g);
 }
 #endif
 
@@ -520,6 +508,8 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 
 void gk20a_remove_support(struct gk20a *g)
 {
+	tegra_unregister_idle_unidle(gk20a_do_idle);
+
 	nvgpu_kfree(g, g->dbg_regops_tmp_buf);
 
 	if (g->pmu.remove_support)
@@ -556,6 +546,8 @@ static int gk20a_init_support(struct platform_device *dev)
 {
 	int err = 0;
 	struct gk20a *g = get_gk20a(&dev->dev);
+
+	tegra_register_idle_unidle(gk20a_do_idle, gk20a_do_unidle, g);
 
 	g->regs = gk20a_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
 					 &g->reg_mem);

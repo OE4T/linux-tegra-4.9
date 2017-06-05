@@ -22,7 +22,6 @@
 #include <linux/device.h>
 #include <linux/pm_runtime.h>
 #include <linux/fb.h>
-#include <linux/gk20a.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/tegra-dvfs.h>
 #endif
@@ -742,7 +741,7 @@ static ssize_t force_idle_store(struct device *dev,
 		if (g->forced_idle)
 			return count; /* do nothing */
 		else {
-			err = __gk20a_do_idle(dev, false);
+			err = __gk20a_do_idle(g, false);
 			if (!err) {
 				g->forced_idle = 1;
 				dev_info(dev, "gpu is idle : %d\n",
@@ -753,7 +752,7 @@ static ssize_t force_idle_store(struct device *dev,
 		if (!g->forced_idle)
 			return count; /* do nothing */
 		else {
-			err = __gk20a_do_unidle(dev);
+			err = __gk20a_do_unidle(g);
 			if (!err) {
 				g->forced_idle = 0;
 				dev_info(dev, "gpu is idle : %d\n",

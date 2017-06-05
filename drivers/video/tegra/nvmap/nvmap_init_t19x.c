@@ -281,6 +281,9 @@ struct cv_dev_info *nvmap_fetch_cv_dev_info(struct device *dev)
 {
 	int i;
 
+	if (!dev || !cvdev_info)
+		return NULL;
+
 	for (i = 0; i < count; i++)
 		if (cvdev_info[i].np == dev->of_node)
 			return &cvdev_info[i];

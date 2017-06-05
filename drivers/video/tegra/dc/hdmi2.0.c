@@ -531,6 +531,12 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	if (err && err != -ENODEV)
 		dev_err(&hdmi->dc->ndev->dev, "vrr_setup failed\n");
 
+	/*
+	 * Try to write ELD data to SOR (needed only for boot
+	 * doesn't do anything during hotplug)
+	 */
+	tegra_hdmi_setup_hda_presence(hdmi->sor->ctrl_num);
+
 	tegra_powergate_partition(hdmi->sor->powergate_id);
 
 	tegra_hdmi_edid_config(hdmi);

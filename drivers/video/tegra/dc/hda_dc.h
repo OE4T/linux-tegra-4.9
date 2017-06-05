@@ -43,5 +43,6 @@ struct tegra_dc_hda_data {
 
 void *tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink);
 void tegra_hda_reset_data(void *hda_handle);
+int tegra_hdmi_setup_hda_presence(int sor_num);
 
 #endif

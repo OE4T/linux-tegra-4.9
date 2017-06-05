@@ -3041,8 +3041,6 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct arm_smmu_device *smmu;
 	struct device *dev = &pdev->dev;
-	struct rb_node *node;
-	struct of_phandle_args masterspec;
 	int num_irqs, i, err;
 
 	if (tegra_platform_is_unit_fpga())
@@ -3106,26 +3104,7 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 		return err;
 
 	bitmap_fill(smmu->context_filter, smmu->num_context_banks);
-
-	i = 0;
 	smmu->masters = RB_ROOT;
-	while (!of_parse_phandle_with_args(dev->of_node, "mmu-masters",
-					   "#stream-id-cells", i,
-					   &masterspec)) {
-
-		dev_dbg(dev, "%s() masterspec.np->name=%s\n",
-			__func__, masterspec.np->name);
-		err = register_smmu_master(smmu, dev, &masterspec);
-		if (err) {
-			dev_err(dev, "failed to add master %s\n",
-				masterspec.np->name);
-			goto out_put_masters;
-		}
-
-		i++;
-	}
-	dev_notice(dev, "registered %d master devices\n", i);
-
 	parse_driver_options(smmu);
 
 	for (i = 0; i < smmu->num_global_irqs; ++i) {
@@ -3153,13 +3132,6 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 out_free_irqs:
 	while (i--)
 		free_irq(smmu->irqs[i], smmu);
-
-out_put_masters:
-	for (node = rb_first(&smmu->masters); node; node = rb_next(node)) {
-		struct arm_smmu_master *master
-			= container_of(node, struct arm_smmu_master, node);
-		of_node_put(master->of_node);
-	}
 
 	return err;
 }

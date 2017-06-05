@@ -68,6 +68,14 @@ struct tegra_wdt {
  */
 static int expiry_count = 1;
 
+/*
+ * Period value: Trigger Value is the time period and period value determines
+ * number of periods for watchdog expiration i.e. effectively after time:
+ * "period value" * "Trigger Vaue"
+ */
+#define WDT_TRG_PERIOD	1
+static int trigger_period = WDT_TRG_PERIOD;
+
 #define WDT_HEARTBEAT 120
 static int heartbeat = WDT_HEARTBEAT;
 module_param(heartbeat, int, 0);
@@ -87,12 +95,12 @@ static int tegra_wdt_start(struct watchdog_device *wdd)
 	u32 val;
 
 	/*
-	 * This thing has a fixed 1MHz clock.  Normally, we would set the
-	 * period to 1 second by writing 1000000ul, but the watchdog system
-	 * reset actually occurs on the expiry_count'th expiration of this
-	 * counter, so we set the period to 1/expiry_count of this amount.
+	 * The timeout needs to be divided by expiry_count here so as to
+	 * keep the ultimate watchdog reset timeout the same as the program
+	 * timeout requested by application. The program timeout should make
+	 * sure WDT FIQ will never be asserted in a valid use case.
 	 */
-	val = 1000000ul / expiry_count;
+	val = (wdd->timeout * USEC_PER_SEC) / expiry_count;
 	val |= (TIMER_EN | TIMER_PERIODIC);
 	writel(val, wdt->tmr_regs + TIMER_PTV);
 
@@ -104,7 +112,7 @@ static int tegra_wdt_start(struct watchdog_device *wdd)
 	 * WDT to reset the counter before expiration, through ioctls.
 	 */
 	val = WDT_TIMER_ID |
-	      (wdd->timeout << WDT_CFG_PERIOD_SHIFT) |
+	      (trigger_period << WDT_CFG_PERIOD_SHIFT) |
 	      WDT_CFG_PMC2CAR_RST_EN;
 	writel(val, wdt->wdt_regs + WDT_CFG);
 
@@ -126,8 +134,18 @@ static int tegra_wdt_stop(struct watchdog_device *wdd)
 
 static int tegra_wdt_ping(struct watchdog_device *wdd)
 {
+	u32 val;
 	struct tegra_wdt *wdt = watchdog_get_drvdata(wdd);
 
+	/* Disable timer */
+	tegra_wdt_stop(wdd);
+
+	/* Load the timeout value */
+	val = (wdd->timeout * USEC_PER_SEC) / expiry_count;
+	val |= (TIMER_EN | TIMER_PERIODIC);
+	writel(val, wdt->tmr_regs + TIMER_PTV);
+
+	/* Restart */
 	writel(WDT_CMD_START_COUNTER, wdt->wdt_regs + WDT_CMD);
 
 	return 0;
@@ -160,7 +178,6 @@ static unsigned int tegra_wdt_get_timeleft(struct watchdog_device *wdd)
 
 	/* Number of expirations */
 	exp = (val >> WDT_STS_EXP_SHIFT) & WDT_STS_EXP_MASK;
-
 	/*
 	 * The entire thing is divided by expiry_count because we are ticking
 	 * down expiry_count times  faster due to needing to wait for the
@@ -242,6 +259,7 @@ static int tegra_wdt_probe(struct platform_device *pdev)
 
 	watchdog_set_drvdata(wdd, wdt);
 
+	watchdog_init_timeout(wdd, heartbeat, &pdev->dev);
 	watchdog_set_nowayout(wdd, nowayout);
 
 	ret = watchdog_register_device(wdd);
@@ -254,8 +272,8 @@ static int tegra_wdt_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, wdt);
 
 	dev_info(&pdev->dev,
-		 "initialized (heartbeat = %d sec, nowayout = %d)\n",
-		 heartbeat, nowayout);
+		 "initialized (timeout = %d sec, nowayout = %d)\n",
+		 wdt->wdd.timeout, nowayout);
 
 	return 0;
 }

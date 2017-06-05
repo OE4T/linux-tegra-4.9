@@ -215,8 +215,10 @@ struct gk20a_platform {
 	/* soc name for finding firmware files */
 	const char *soc_name;
 
-	/* if vidmem aperture actually points to vidmem*/
-	bool vidmem_is_vidmem;
+	/* false if vidmem aperture actually points to sysmem */
+	bool honors_aperture;
+	/* unified or split memory with separate vidmem? */
+	bool unified_memory;
 
 	/* minimum supported VBIOS version */
 	u32 vbios_min_version;

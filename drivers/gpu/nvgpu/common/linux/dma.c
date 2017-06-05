@@ -21,6 +21,7 @@
 #include <nvgpu/lock.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/gmmu.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/linux/dma.h>
 
@@ -69,7 +70,7 @@ int nvgpu_dma_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 int nvgpu_dma_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		struct nvgpu_mem *mem)
 {
-	if (g->mm.vidmem_is_vidmem) {
+	if (!nvgpu_is_enabled(g, NVGPU_MM_UNIFIED_MEMORY)) {
 		/*
 		 * Force the no-kernel-mapping flag on because we don't support
 		 * the lack of it for vidmem - the user should not care when
@@ -251,7 +252,7 @@ int nvgpu_dma_alloc_map(struct vm_gk20a *vm, size_t size,
 int nvgpu_dma_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem)
 {
-	if (vm->mm->vidmem_is_vidmem) {
+	if (!nvgpu_is_enabled(gk20a_from_vm(vm), NVGPU_MM_UNIFIED_MEMORY)) {
 		/*
 		 * Force the no-kernel-mapping flag on because we don't support
 		 * the lack of it for vidmem - the user should not care when

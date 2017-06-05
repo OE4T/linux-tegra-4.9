@@ -19,6 +19,7 @@
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/linux/dma.h>
 
@@ -30,8 +31,9 @@ u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
 {
 	switch (aperture) {
 	case APERTURE_SYSMEM:
-		/* sysmem for dgpus; some igpus consider system memory vidmem */
-		return g->mm.vidmem_is_vidmem ? sysmem_mask : vidmem_mask;
+		/* some igpus consider system memory vidmem */
+		return nvgpu_is_enabled(g, NVGPU_MM_HONORS_APERTURE)
+			? sysmem_mask : vidmem_mask;
 	case APERTURE_VIDMEM:
 		/* for dgpus only */
 		return vidmem_mask;

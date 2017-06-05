@@ -32,6 +32,10 @@ struct gk20a;
  * MM flags.
  */
 #define NVGPU_MM_UNIFY_ADDRESS_SPACES		16
+/* false if vidmem aperture actually points to sysmem */
+#define NVGPU_MM_HONORS_APERTURE		17
+/* unified or split memory with separate vidmem? */
+#define NVGPU_MM_UNIFIED_MEMORY			18
 
 /*
  * Must be greater than the largest bit offset in the above list.

@@ -256,8 +256,6 @@ struct mm_gk20a {
 	bool disable_bigpage;
 #endif
 	bool has_physical_mode;
-	/* false if vidmem aperture actually points to sysmem */
-	bool vidmem_is_vidmem;
 
 	struct nvgpu_mem sysmem_flush;
 

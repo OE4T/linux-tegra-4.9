@@ -133,8 +133,10 @@ static void nvgpu_init_mm_vars(struct gk20a *g)
 
 	g->mm.bypass_smmu = platform->bypass_smmu;
 	g->mm.disable_bigpage = platform->disable_bigpage;
-	g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
-
+	__nvgpu_set_enabled(g, NVGPU_MM_HONORS_APERTURE,
+			    platform->honors_aperture);
+	__nvgpu_set_enabled(g, NVGPU_MM_UNIFIED_MEMORY,
+			    platform->unified_memory);
 	__nvgpu_set_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES,
 			    platform->unify_address_spaces);
 

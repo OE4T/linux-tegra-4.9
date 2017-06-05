@@ -161,8 +161,6 @@ static int gp10b_tegra_probe(struct device *dev)
 	platform->g->gr.t18x.ctx_vars.force_preemption_gfxp = false;
 	platform->g->gr.t18x.ctx_vars.force_preemption_cilp = false;
 
-	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
-
 	gp10b_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
 	gk20a_tegra_init_secure_alloc(platform->g);
@@ -436,7 +434,7 @@ struct gk20a_platform gp10b_tegra_platform = {
 
 	.soc_name = "tegra18x",
 
-	.vidmem_is_vidmem = false,
+	.unified_memory = true,
 };
 
 

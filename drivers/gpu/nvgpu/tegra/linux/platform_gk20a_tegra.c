@@ -934,8 +934,6 @@ static int gk20a_tegra_probe(struct device *dev)
 	if (tegra_get_chip_id() == TEGRA132)
 		platform->soc_name = "tegra13x";
 
-	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
-
 	gk20a_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
 	gk20a_tegra_init_secure_alloc(platform->g);
@@ -1051,7 +1049,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 
 	.soc_name = "tegra12x",
 
-	.vidmem_is_vidmem = false,
+	.unified_memory = true,
 };
 
 struct gk20a_platform gm20b_tegra_platform = {
@@ -1123,5 +1121,5 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	.soc_name = "tegra21x",
 
-	.vidmem_is_vidmem = false,
+	.unified_memory = true,
 };

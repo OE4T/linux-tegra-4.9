@@ -665,7 +665,8 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	 * this requires fixed allocations in vidmem which must be
 	 * allocated before all other buffers
 	 */
-	if (g->ops.pmu.alloc_blob_space && g->mm.vidmem_is_vidmem) {
+	if (g->ops.pmu.alloc_blob_space
+			&& !nvgpu_is_enabled(g, NVGPU_MM_UNIFIED_MEMORY)) {
 		err = g->ops.pmu.alloc_blob_space(g, 0, &g->acr.ucode_blob);
 		if (err)
 			return err;
@@ -1234,10 +1235,12 @@ enum nvgpu_aperture gk20a_dmabuf_aperture(struct gk20a *g,
 					  struct dma_buf *dmabuf)
 {
 	struct gk20a *buf_owner = gk20a_vidmem_buf_owner(dmabuf);
+	bool unified_memory = nvgpu_is_enabled(g, NVGPU_MM_UNIFIED_MEMORY);
+
 	if (buf_owner == NULL) {
 		/* Not nvgpu-allocated, assume system memory */
 		return APERTURE_SYSMEM;
-	} else if (WARN_ON(buf_owner == g && !g->mm.vidmem_is_vidmem)) {
+	} else if (WARN_ON(buf_owner == g && unified_memory)) {
 		/* Looks like our video memory, but this gpu doesn't support
 		 * it. Warn about a bug and bail out */
 		nvgpu_warn(g,

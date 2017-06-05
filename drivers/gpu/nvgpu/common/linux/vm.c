@@ -188,7 +188,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct gk20a_comptag_allocator *ctag_allocator = &g->gr.comp_tags;
 	struct nvgpu_mapped_buf *mapped_buffer = NULL;
-	bool inserted = false, va_allocated = false;
+	bool va_allocated = false;
 	u64 map_offset = 0;
 	int err = 0;
 	struct buffer_attrs bfr = {NULL};
@@ -372,7 +372,6 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		nvgpu_err(g, "failed to insert into mapped buffer tree");
 		goto clean_up;
 	}
-	inserted = true;
 	if (user_mapped)
 		vm->num_user_mapped_buffers++;
 
@@ -387,11 +386,6 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	return map_offset;
 
 clean_up:
-	if (inserted) {
-		nvgpu_remove_mapped_buf(vm, mapped_buffer);
-		if (user_mapped)
-			vm->num_user_mapped_buffers--;
-	}
 	nvgpu_kfree(g, mapped_buffer);
 	if (va_allocated)
 		__nvgpu_vm_free_va(vm, map_offset, bfr.pgsz_idx);

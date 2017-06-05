@@ -72,6 +72,7 @@ struct nvhost_vm_ops {
 				 size_t size);
 	int (*get_id)(struct nvhost_vm *vm);
 	int (*init_device)(struct platform_device *pdev);
+	int (*init_syncpt_interface)(struct platform_device *pdev);
 };
 
 struct nvhost_pushbuffer_ops {

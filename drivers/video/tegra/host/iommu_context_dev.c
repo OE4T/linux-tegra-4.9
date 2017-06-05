@@ -27,8 +27,11 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/dma-buf.h>
+#include <linux/nvhost.h>
 
 #include <iommu_context_dev.h>
+
+#include "chip_support.h"
 
 static struct of_device_id tegra_iommu_context_dev_of_match[] = {
 	{ .compatible = "nvidia,tegra186-iommu-context" },
@@ -43,6 +46,7 @@ struct iommu_static_mapping {
 };
 
 struct iommu_ctx {
+	struct nvhost_device_data pdata;
 	struct platform_device *pdev;
 	struct list_head list;
 	struct device_dma_parameters dma_parms;
@@ -246,6 +250,9 @@ static int iommu_context_dev_probe(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "initialized (streamid=%d)",
 		 iommu_get_hwid(pdev->dev.archdata.iommu, &pdev->dev, 0));
+
+	if (vm_op().init_syncpt_interface)
+		vm_op().init_syncpt_interface(pdev);
 
 	return 0;
 }

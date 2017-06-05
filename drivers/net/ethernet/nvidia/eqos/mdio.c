@@ -339,7 +339,6 @@ static void eqos_adjust_link(struct net_device *dev)
 
 	DBGPR_MDIO("-->eqos_adjust_link. address %d link %d\n", phydev->addr,
 		   phydev->link);
-
 	spin_lock(&pdata->lock);
 
 	if (phydev->link) {
@@ -434,8 +433,7 @@ static void eqos_adjust_link(struct net_device *dev)
 		/* recalibrate once we disable tristate*/
 		hw_if->pad_calibrate(pdata);
 	}
-
-
+	msleep(3000);
 	DBGPR_MDIO("<--eqos_adjust_link\n");
 }
 

@@ -1524,7 +1524,7 @@ static int tegra_dma_runtime_suspend(struct device *dev)
 static int tegra_dma_runtime_resume(struct device *dev)
 {
 	struct tegra_dma *tdma = dev_get_drvdata(dev);
-	int ret;
+	int i, ret;
 
 	ret = clk_prepare_enable(tdma->dma_clk);
 	if (ret < 0) {

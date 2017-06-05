@@ -61,6 +61,13 @@ struct tegra_wdt {
 	void __iomem		*tmr_regs;
 };
 
+/*
+ * The total expiry count of Tegra WDTs is limited to HW design and depends
+ * on skip configuration if supported. To be safe, we set the default expiry
+ * count to 1. It should be updated later with value specified in device tree.
+ */
+static int expiry_count = 1;
+
 #define WDT_HEARTBEAT 120
 static int heartbeat = WDT_HEARTBEAT;
 module_param(heartbeat, int, 0);
@@ -82,10 +89,10 @@ static int tegra_wdt_start(struct watchdog_device *wdd)
 	/*
 	 * This thing has a fixed 1MHz clock.  Normally, we would set the
 	 * period to 1 second by writing 1000000ul, but the watchdog system
-	 * reset actually occurs on the 4th expiration of this counter,
-	 * so we set the period to 1/4 of this amount.
+	 * reset actually occurs on the expiry_count'th expiration of this
+	 * counter, so we set the period to 1/expiry_count of this amount.
 	 */
-	val = 1000000ul / 4;
+	val = 1000000ul / expiry_count;
 	val |= (TIMER_EN | TIMER_PERIODIC);
 	writel(val, wdt->tmr_regs + TIMER_PTV);
 
@@ -151,14 +158,15 @@ static unsigned int tegra_wdt_get_timeleft(struct watchdog_device *wdd)
 	/* Current countdown (from timeout) */
 	count = (val >> WDT_STS_COUNT_SHIFT) & WDT_STS_COUNT_MASK;
 
-	/* Number of expirations (we are waiting for the 4th expiration) */
+	/* Number of expirations */
 	exp = (val >> WDT_STS_EXP_SHIFT) & WDT_STS_EXP_MASK;
 
 	/*
-	 * The entire thing is divided by 4 because we are ticking down 4 times
-	 * faster due to needing to wait for the 4th expiration.
+	 * The entire thing is divided by expiry_count because we are ticking
+	 * down expiry_count times  faster due to needing to wait for the
+	 * expiry_count'th expiration.
 	 */
-	return (((3 - exp) * wdd->timeout) + count) / 4;
+	return (((3 - exp) * wdd->timeout) + count) / expiry_count;
 }
 
 static const struct watchdog_info tegra_wdt_info = {
@@ -195,6 +203,10 @@ static int tegra_wdt_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
+	ret = of_property_read_u32(np, "nvidia,expiry-count", &pval);
+	if (!ret)
+		expiry_count = pval;
+
 	ret = of_property_read_u32(np, "nvidia,heartbeat-init", &pval);
 	if (!ret)
 		heartbeat = pval;
@@ -224,8 +236,8 @@ static int tegra_wdt_probe(struct platform_device *pdev)
 	wdd->timeout = heartbeat;
 	wdd->info = &tegra_wdt_info;
 	wdd->ops = &tegra_wdt_ops;
-	wdd->min_timeout = MIN_WDT_TIMEOUT;
-	wdd->max_timeout = MAX_WDT_TIMEOUT;
+	wdd->min_timeout = MIN_WDT_TIMEOUT * expiry_count;
+	wdd->max_timeout = MAX_WDT_TIMEOUT * expiry_count;
 	wdd->parent = &pdev->dev;
 
 	watchdog_set_drvdata(wdd, wdt);

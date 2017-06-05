@@ -27,6 +27,7 @@ void gk20a_init_uncompressed_kind_map(void);
 void gk20a_init_kind_attr(void);
 
 extern u16 gk20a_kind_attr[];
+#define NV_KIND_ATTR_SIZE		256
 #define NV_KIND_DEFAULT		     -1
 
 #define GK20A_KIND_ATTR_SUPPORTED    BIT(0)

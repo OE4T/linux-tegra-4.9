@@ -25,6 +25,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
+#include "gk20a/kind_gk20a.h"
 
 #include "vm_priv.h"
 
@@ -237,7 +238,12 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
-	bfr.kind_v = kind;
+	if (kind >= NV_KIND_ATTR_SIZE) {
+		err = -EINVAL;
+		goto clean_up;
+	} else {
+		bfr.kind_v = kind;
+	}
 	bfr.size = dmabuf->size;
 	sgl = bfr.sgt->sgl;
 

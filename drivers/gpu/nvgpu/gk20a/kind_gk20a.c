@@ -408,11 +408,11 @@ void gk20a_init_uncompressed_kind_map(void)
 		gmmu_pte_kind_x8c24_v();
 }
 
-u16 gk20a_kind_attr[256];
+u16 gk20a_kind_attr[NV_KIND_ATTR_SIZE];
 void gk20a_init_kind_attr(void)
 {
 	u16 k;
-	for (k = 0; k < 256; k++) {
+	for (k = 0; k < NV_KIND_ATTR_SIZE; k++) {
 		gk20a_kind_attr[k] = 0;
 		if (gk20a_kind_supported((u8)k))
 			gk20a_kind_attr[k] |= GK20A_KIND_ATTR_SUPPORTED;

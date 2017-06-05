@@ -36,7 +36,6 @@ struct nvgpu_clk_pll_debug_data;
 #include <linux/sched.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>
-#include <linux/irqreturn.h>
 #include <linux/version.h>
 #include <linux/cdev.h>
 #ifdef CONFIG_DEBUG_FS
@@ -841,14 +840,14 @@ struct gpu_ops {
 		void (*intr_unit_config)(struct gk20a *g,
 				bool enable, bool is_stalling, u32 unit);
 		void (*isr_stall)(struct gk20a *g);
-		irqreturn_t (*isr_nonstall)(struct gk20a *g);
-		void (*isr_thread_nonstall)(struct gk20a *g, u32 intr);
-		void (*isr_nonstall_cb)(struct work_struct *work);
 		bool (*is_intr_hub_pending)(struct gk20a *g, u32 mc_intr);
 		u32 intr_mask_restore[4];
 		u32 (*intr_stall)(struct gk20a *g);
 		void (*intr_stall_pause)(struct gk20a *g);
 		void (*intr_stall_resume)(struct gk20a *g);
+		u32 (*intr_nonstall)(struct gk20a *g);
+		void (*intr_nonstall_pause)(struct gk20a *g);
+		void (*intr_nonstall_resume)(struct gk20a *g);
 		void (*enable)(struct gk20a *g, u32 units);
 		void (*disable)(struct gk20a *g, u32 units);
 		void (*reset)(struct gk20a *g, u32 units);

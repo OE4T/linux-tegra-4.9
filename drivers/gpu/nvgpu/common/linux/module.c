@@ -162,6 +162,13 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	nice_value = task_nice(current);
 	set_user_nice(current, -20);
 
+	/* Enable interrupt workqueue */
+	if (!g->nonstall_work_queue) {
+		g->nonstall_work_queue = alloc_workqueue("%s",
+						WQ_HIGHPRI, 1, "mc_nonstall");
+		INIT_WORK(&g->nonstall_fn_work, nvgpu_intr_nonstall_cb);
+	}
+
 	err = gk20a_finalize_poweron(g);
 	set_user_nice(current, nice_value);
 	if (err)
@@ -492,7 +499,7 @@ static irqreturn_t gk20a_intr_isr_nonstall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
 
-	return g->ops.mc.isr_nonstall(g);
+	return nvgpu_intr_nonstall(g);
 }
 
 static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)

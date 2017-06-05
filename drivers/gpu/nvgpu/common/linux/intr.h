@@ -17,4 +17,6 @@ struct gk20a;
 
 irqreturn_t nvgpu_intr_stall(struct gk20a *g);
 irqreturn_t nvgpu_intr_thread_stall(struct gk20a *g);
+irqreturn_t nvgpu_intr_nonstall(struct gk20a *g);
+void nvgpu_intr_nonstall_cb(struct work_struct *work);
 #endif

@@ -25,6 +25,4 @@ void mc_gp10b_intr_enable(struct gk20a *g);
 void mc_gp10b_intr_unit_config(struct gk20a *g, bool enable,
 		bool is_stalling, u32 mask);
 void mc_gp10b_isr_stall(struct gk20a *g);
-irqreturn_t mc_gp10b_isr_nonstall(struct gk20a *g);
-irqreturn_t mc_gp10b_intr_thread_nonstall(struct gk20a *g);
 #endif

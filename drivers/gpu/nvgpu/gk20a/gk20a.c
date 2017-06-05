@@ -187,13 +187,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	if (g->ops.clk.disable_slowboot)
 		g->ops.clk.disable_slowboot(g);
 
-	/* Enable interrupt workqueue */
-	if (!g->nonstall_work_queue) {
-		g->nonstall_work_queue = alloc_workqueue("%s",
-						WQ_HIGHPRI, 1, "mc_nonstall");
-		INIT_WORK(&g->nonstall_fn_work, g->ops.mc.isr_nonstall_cb);
-	}
-
 	gk20a_enable_priv_ring(g);
 
 	/* TBD: move this after graphics init in which blcg/slcg is enabled.

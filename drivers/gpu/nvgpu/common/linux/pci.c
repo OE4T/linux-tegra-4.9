@@ -235,7 +235,7 @@ static irqreturn_t nvgpu_pci_isr(int irq, void *dev_id)
 	irqreturn_t ret_nonstall;
 
 	ret_stall = nvgpu_intr_stall(g);
-	ret_nonstall = g->ops.mc.isr_nonstall(g);
+	ret_nonstall = nvgpu_intr_nonstall(g);
 
 #if defined(CONFIG_PCI_MSI)
 	/* Send MSI EOI */

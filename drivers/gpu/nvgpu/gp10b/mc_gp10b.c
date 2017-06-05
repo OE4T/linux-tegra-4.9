@@ -68,37 +68,6 @@ void mc_gp10b_intr_unit_config(struct gk20a *g, bool enable,
 	gk20a_writel(g, reg, mask);
 }
 
-irqreturn_t mc_gp10b_isr_nonstall(struct gk20a *g)
-{
-	u32 mc_intr_1;
-	u32 hw_irq_count;
-
-	if (!g->power_on)
-		return IRQ_NONE;
-
-	/* not from gpu when sharing irq with others */
-	mc_intr_1 = gk20a_readl(g, mc_intr_r(1));
-	if (unlikely(!mc_intr_1))
-		return IRQ_NONE;
-
-	gk20a_writel(g, mc_intr_en_clear_r(1), 0xffffffff);
-
-	if (g->ops.mc.isr_thread_nonstall)
-		g->ops.mc.isr_thread_nonstall(g, mc_intr_1);
-
-	hw_irq_count = atomic_inc_return(&g->hw_irq_nonstall_count);
-
-	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_NONSTALLING),
-			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_NONSTALLING]);
-
-	/* sync handled irq counter before re-enabling interrupts */
-	atomic_set(&g->sw_irq_nonstall_last_handled, hw_irq_count);
-
-	wake_up_all(&g->sw_irq_nonstall_last_handled_wq);
-
-	return IRQ_HANDLED;
-}
-
 void mc_gp10b_isr_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
@@ -170,6 +139,23 @@ void mc_gp10b_intr_stall_resume(struct gk20a *g)
 			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING]);
 }
 
+u32 mc_gp10b_intr_nonstall(struct gk20a *g)
+{
+	return gk20a_readl(g, mc_intr_r(NVGPU_MC_INTR_NONSTALLING));
+}
+
+void mc_gp10b_intr_nonstall_pause(struct gk20a *g)
+{
+	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_NONSTALLING),
+		     0xffffffff);
+}
+
+void mc_gp10b_intr_nonstall_resume(struct gk20a *g)
+{
+	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_NONSTALLING),
+			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_NONSTALLING]);
+}
+
 static bool mc_gp10b_is_intr1_pending(struct gk20a *g,
 				      enum nvgpu_unit unit, u32 mc_intr_1)
 {
@@ -202,9 +188,9 @@ void gp10b_init_mc(struct gpu_ops *gops)
 	gops->mc.intr_stall = mc_gp10b_intr_stall;
 	gops->mc.intr_stall_pause = mc_gp10b_intr_stall_pause;
 	gops->mc.intr_stall_resume = mc_gp10b_intr_stall_resume;
-	gops->mc.isr_nonstall = mc_gp10b_isr_nonstall;
-	gops->mc.isr_thread_nonstall = mc_gk20a_intr_thread_nonstall;
-	gops->mc.isr_nonstall_cb = mc_gk20a_nonstall_cb;
+	gops->mc.intr_nonstall = mc_gp10b_intr_nonstall;
+	gops->mc.intr_nonstall_pause = mc_gp10b_intr_nonstall_pause;
+	gops->mc.intr_nonstall_resume = mc_gp10b_intr_nonstall_resume;
 	gops->mc.enable = gk20a_mc_enable;
 	gops->mc.disable = gk20a_mc_disable;
 	gops->mc.reset = gk20a_mc_reset;

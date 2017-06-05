@@ -51,8 +51,10 @@
 		compad-vref-1v8 = <0x7>;
 		uhs-mask = <0x60>;
 		nvidia,is-emmc;
+		nvidia,set-parent-clk;
 		calib-3v3-offsets = <0x0505>;
 		calib-1v8-offsets = <0x0505>;
+		nvidia,parent_clk_list ="pll_p", "pll_p", "pll_p", "pll_p", "pll_p", "pll_c4_out0", "pll_c4_out0", "pll_c4_out0", "pll_c4_out0", "pll_c4_out0", "pll_c4_out0";
 		pll_source = "pll_p", "pll_c4_out0";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC4>;
 		reset-names = "sdmmc";

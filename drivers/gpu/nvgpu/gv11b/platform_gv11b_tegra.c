@@ -88,9 +88,6 @@ static int gv11b_tegra_probe(struct device *dev)
 	platform->g->gr.t18x.ctx_vars.force_preemption_gfxp = false;
 	platform->g->gr.t18x.ctx_vars.force_preemption_cilp = false;
 
-	/* soc memory accessed as system memory aperture */
-	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
-
 	gp10b_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
 
@@ -155,7 +152,8 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 
 	.soc_name = "tegra19x",
 
-	.vidmem_is_vidmem = true,
+	.honors_aperture = true,
+	.unified_memory = true,
 
 	.reset_assert = gp10b_tegra_reset_assert,
 	.reset_deassert = gp10b_tegra_reset_deassert,

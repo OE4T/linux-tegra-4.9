@@ -23,16 +23,6 @@
 #define MIN_WDT_TIMEOUT			1
 #define MAX_WDT_TIMEOUT			255
 
-/*
- * Register base of the timer that's selected for pairing with the watchdog.
- * This driver arbitrarily uses timer 5, which is currently unused by
- * other drivers (in particular, the Tegra clocksource driver).  If this
- * needs to change, take care that the new timer is not used by the
- * clocksource driver.
- */
-#define WDT_TIMER_BASE			0x60
-#define WDT_TIMER_ID			5
-
 /* WDT registers */
 #define WDT_CFG				0x0
 #define WDT_CFG_PERIOD_SHIFT		4
@@ -59,6 +49,7 @@ struct tegra_wdt {
 	struct watchdog_device	wdd;
 	void __iomem		*wdt_regs;
 	void __iomem		*tmr_regs;
+	u8			timer_id;
 };
 
 /*
@@ -89,6 +80,49 @@ MODULE_PARM_DESC(nowayout,
 	"Watchdog cannot be stopped once started (default="
 	__MODULE_STRING(WATCHDOG_NOWAYOUT) ")");
 
+/*
+ * Timer ID is required to be programmed to WDT_CFG register
+ * As timer address and timer ID mapping is non-linear,
+ * hence these function are defined to do the conversion.
+ */
+static resource_size_t tegra_tmr_addr(int timer_id, struct resource *tmr_res)
+{
+	int i;
+	resource_size_t tmr_addr;
+
+	if (timer_id == 0)
+		i = 10;
+	else if (timer_id < 3)
+		i = timer_id - 8;
+	else if (timer_id > 9)
+		i = timer_id + 1;
+	else
+		i = timer_id;
+
+	tmr_addr = tmr_res->start - (10 - i) * resource_size(tmr_res);
+
+	return tmr_addr;
+}
+
+static int tegra_tmr_index(struct resource *tmr_res)
+{
+	int timer_id;
+
+	/* Select Timer ID using Timer base address provided in DT:
+	 *   [Base Addr:Timer#]
+	 *   [0x00 :  1], [0x08 :  2], [0x50 :  3], [0x58 : 4], [0x60 : 5],
+	 *   [0x68 :  6], [0x70 :  7], [0x78 :  8], [0x80 : 9], [0x88 : 0],
+	 *   [0x90 : 10], [0x98 : 11], [0xA0 : 12], [0xA8 : 13]
+	 */
+	timer_id = ((3 + ((tmr_res->start & 0xff) - 0x50) / 8)) % 10;
+	if ((tmr_res->start & 0xff) < 0x50)
+		timer_id -= 4;
+	if ((tmr_res->start & 0xff) > 0x88)
+		timer_id += 9;
+
+	return timer_id;
+}
+
 static int tegra_wdt_start(struct watchdog_device *wdd)
 {
 	struct tegra_wdt *wdt = watchdog_get_drvdata(wdd);
@@ -111,7 +145,7 @@ static int tegra_wdt_start(struct watchdog_device *wdd)
 	 * WDT accesses, since the caller is responsible to ping the
 	 * WDT to reset the counter before expiration, through ioctls.
 	 */
-	val = WDT_TIMER_ID |
+	val = (wdt->timer_id) |
 	      (trigger_period << WDT_CFG_PERIOD_SHIFT) |
 	      WDT_CFG_PMC2CAR_RST_EN;
 	writel(val, wdt->wdt_regs + WDT_CFG);
@@ -209,6 +243,7 @@ static int tegra_wdt_probe(struct platform_device *pdev)
 	struct tegra_wdt *wdt;
 	struct resource *wdt_res, *tmr_res;
 	struct device_node *np = pdev->dev.of_node;
+	resource_size_t tmr_addr;
 	u32 pval = 0;
 	int ret = 0;
 
@@ -235,6 +270,40 @@ static int tegra_wdt_probe(struct platform_device *pdev)
 	wdt = devm_kzalloc(&pdev->dev, sizeof(*wdt), GFP_KERNEL);
 	if (!wdt)
 		return -ENOMEM;
+
+	/*
+	 * Get Timer index from (in decending priority):
+	 *      from "nvidia,timer-index" DT property
+	 *      from Timer Source Address in DT
+	 */
+	wdt->timer_id = tegra_tmr_index(tmr_res);
+
+	ret = of_property_read_u32(np, "nvidia,timer-index", &pval);
+	if (!ret) {
+		/*
+		 * If timer-index is provided then either corresponding
+		 * timer source address or timer base address address
+		 * should be provided.
+		 */
+		if (wdt->timer_id && (wdt->timer_id != pval)) {
+			dev_err(&pdev->dev, "Invalid Timer base address\n");
+			return -EINVAL;
+		}
+
+		/* Skip adjust resource if timer source address is provided */
+		if (!wdt->timer_id) {
+			/* Timer timer address corresponding to timer ID */
+			tmr_addr = tegra_tmr_addr(pval, tmr_res);
+			ret = adjust_resource(tmr_res, tmr_addr,
+					resource_size(tmr_res));
+			if (ret < 0) {
+				dev_err(&pdev->dev,
+					"Failed to adjust resource:%d\n", ret);
+				return ret;
+			}
+		}
+		wdt->timer_id = pval;
+	}
 
 	wdt->wdt_regs = devm_ioremap_resource(&pdev->dev, wdt_res);
 	if (IS_ERR(wdt->wdt_regs)) {

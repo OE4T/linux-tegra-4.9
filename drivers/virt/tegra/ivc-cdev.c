@@ -1,7 +1,7 @@
 /*
  * IVC character device driver
  *
- * Copyright (C) 2014-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -98,12 +98,12 @@ static int ivc_dev_open(struct inode *inode, struct file *filp)
 	mutex_unlock(&ivc->file_lock);
 
 	/* request our irq */
-	ret = devm_request_threaded_irq(ivc->device, ivc->qd->irq,
+	ret = devm_request_threaded_irq(ivc->device, ivck->irq,
 			ivc_threaded_irq_handler, ivc_dev_handler, 0,
 			dev_name(ivc->device), ivc);
 	if (ret < 0) {
 		dev_err(ivc->device, "Failed to request irq %d\n",
-				ivc->qd->irq);
+				ivck->irq);
 		ivc->ivck = NULL;
 		tegra_hv_ivc_unreserve(ivck);
 		return ret;
@@ -124,10 +124,11 @@ static int ivc_dev_release(struct inode *inode, struct file *filp)
 
 	BUG_ON(!ivc);
 
-	free_irq(ivc->qd->irq, ivc);
-
 	ivck = ivc->ivck;
 	ivc->ivck = NULL;
+
+	free_irq(ivck->irq, ivc);
+
 	/*
 	 * Unreserve after clearing ivck; we no longer have exclusive
 	 * access at this point.

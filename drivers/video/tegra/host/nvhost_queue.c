@@ -26,6 +26,8 @@
 
 #include <linux/nvhost.h>
 
+#include "nvhost_vm.h"
+#include "nvhost_channel.h"
 #include "nvhost_job.h"
 #include "nvhost_queue.h"
 #include "dev.h"
@@ -106,7 +108,7 @@ static void nvhost_queue_task_free_pool(struct platform_device *pdev,
 	struct nvhost_queue_task_pool *task_pool =
 		(struct nvhost_queue_task_pool *)queue->task_pool;
 
-	dma_free_attrs(&pdev->dev,
+	dma_free_attrs(&queue->vm_pdev->dev,
 			queue->task_dma_size * task_pool->max_task_cnt,
 			task_pool->va, task_pool->dma_addr,
 			__DMA_ATTR(task_dma_attrs));
@@ -308,12 +310,6 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
 		goto err_alloc_syncpt;
 	}
 
-	if (queue->task_dma_size) {
-		err = nvhost_queue_task_pool_alloc(pdev, queue, num_tasks);
-		if (err < 0)
-			goto err_alloc_task_pool;
-	}
-
 	/* initialize queue ref count and sequence*/
 	kref_init(&queue->kref);
 	queue->use_channel = use_channel;
@@ -332,13 +328,26 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
 			goto err_alloc_channel;
 
 		queue->channel->syncpts[0] = queue->syncpt_id;
+		queue->vm_pdev = queue->channel->vm->pdev;
+	} else {
+		queue->vm_pdev = pdev;
+	}
+
+	if (queue->task_dma_size) {
+		err = nvhost_queue_task_pool_alloc(queue->vm_pdev,
+						   queue,
+						   num_tasks);
+		if (err < 0)
+			goto err_alloc_task_pool;
 	}
 
 	return queue;
 
+err_alloc_task_pool:
+	if (use_channel)
+		nvhost_putchannel(queue->channel, 1);
 err_alloc_channel:
 	mutex_lock(&pool->queue_lock);
-err_alloc_task_pool:
 	nvhost_syncpt_put_ref_ext(pdev, queue->syncpt_id);
 err_alloc_syncpt:
 	clear_bit(queue->id, &pool->alloc_table);

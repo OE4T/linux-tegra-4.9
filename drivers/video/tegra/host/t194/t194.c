@@ -883,6 +883,7 @@ int nvhost_init_t194_support(struct nvhost_master *host,
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
 	op->vm = host1x_vm_ops;
+	op->vm.init_syncpt_interface = nvhost_syncpt_unit_interface_init;
 	op->actmon = host1x_actmon_ops;
 	op->nvhost_dev.load_gating_regs = t194_init_regs;
 	op->nvhost_dev.module_reset_clamp = t194_module_reset_clamp;

@@ -64,6 +64,7 @@ struct nvhost_queue {
 
 	/* Host1x resources */
 	struct nvhost_channel *channel;
+	struct platform_device *vm_pdev;
 	bool use_channel;
 	u32 syncpt_id;
 

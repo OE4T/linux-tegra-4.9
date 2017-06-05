@@ -19,6 +19,10 @@
 #include <linux/platform/tegra/isomgr.h>
 #include <linux/debugfs.h>
 
+#define DEFAULT_ISO_EFFICIENCY 10
+#define DEFAULT_EFFICIENCY 70
+#define DEFAULT_EMC_TO_DRAM_FACTOR 2
+
 u8 bwmgr_dram_efficiency;
 u32 *bwmgr_dram_iso_eff_table;
 int bwmgr_iso_bw_percentage;
@@ -338,10 +342,17 @@ EXPORT_SYMBOL_GPL(tegra_bwmgr_notifier_unregister);
 /* Should be overrided always */
 void __weak bwmgr_eff_init(void)
 {
-	BUG();
+	pr_warn("bwmgr: No support for this SoC. Using default efficiency\n");
+	bwmgr_dram_efficiency = DEFAULT_EFFICIENCY;
+	bwmgr_iso_bw_percentage = DEFAULT_ISO_EFFICIENCY;
+	emc_to_dram_freq_factor = DEFAULT_EMC_TO_DRAM_FACTOR;
+	bwmgr_dram_type = DRAM_TYPE_LPDDR4_4CH;
 }
 
-int get_iso_bw_table_idx(unsigned long iso_bw);
+int __weak get_iso_bw_table_idx(unsigned long iso_bw)
+{
+	return 0;
+}
 
 unsigned long tegra_bwmgr_get_emc_rate(void)
 {
@@ -364,7 +375,10 @@ static unsigned long bwmgr_apply_efficiency(
 				(total_bw * 100) : max_rate;
 	}
 
-	efficiency = bwmgr_dram_iso_eff_table[get_iso_bw_table_idx(iso_bw)];
+	if (bwmgr_dram_iso_eff_table)
+		efficiency = bwmgr_dram_iso_eff_table[get_iso_bw_table_idx(iso_bw)];
+	else
+		efficiency = DEFAULT_ISO_EFFICIENCY;
 	WARN_ON(efficiency == 1);
 	if (iso_bw && efficiency && (efficiency < 100)) {
 		iso_bw /= efficiency;

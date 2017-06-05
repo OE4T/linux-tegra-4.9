@@ -518,7 +518,7 @@ int gr_gp10b_ecc_stat_create(struct device *dev,
 				int is_l2,
 				char *ecc_stat_name,
 				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute *dev_attr_array)
+				struct device_attribute **dev_attr_array)
 {
 	struct gk20a *g = get_gk20a(dev);
 	char *ltc_unit_name = "ltc";
@@ -543,12 +543,13 @@ int gp10b_ecc_stat_create(struct device *dev,
 				char *ecc_unit_name,
 				char *ecc_stat_name,
 				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute *dev_attr_array)
+				struct device_attribute **__dev_attr_array)
 {
 	int error = 0;
 	struct gk20a *g = get_gk20a(dev);
 	int hw_unit = 0;
 	u32 hash_key = 0;
+	struct device_attribute *dev_attr_array;
 
 	/* Allocate arrays */
 	dev_attr_array = nvgpu_kzalloc(g, sizeof(struct device_attribute) *
@@ -584,6 +585,8 @@ int gp10b_ecc_stat_create(struct device *dev,
 	hash_add(ecc_hash_table,
 		&ecc_stat->hash_node,
 		hash_key);
+
+	*__dev_attr_array = dev_attr_array;
 
 	return error;
 }
@@ -645,80 +648,80 @@ void gr_gp10b_create_sysfs(struct device *dev)
 				0,
 				"sm_lrf_ecc_single_err_count",
 				&g->ecc.gr.t18x.sm_lrf_single_err_count,
-				dev_attr_sm_lrf_ecc_single_err_count_array);
+				&dev_attr_sm_lrf_ecc_single_err_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_lrf_ecc_double_err_count",
 				&g->ecc.gr.t18x.sm_lrf_double_err_count,
-				dev_attr_sm_lrf_ecc_double_err_count_array);
+				&dev_attr_sm_lrf_ecc_double_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_shm_ecc_sec_count",
 				&g->ecc.gr.t18x.sm_shm_sec_count,
-				dev_attr_sm_shm_ecc_sec_count_array);
+				&dev_attr_sm_shm_ecc_sec_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_shm_ecc_sed_count",
 				&g->ecc.gr.t18x.sm_shm_sed_count,
-				dev_attr_sm_shm_ecc_sed_count_array);
+				&dev_attr_sm_shm_ecc_sed_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_shm_ecc_ded_count",
 				&g->ecc.gr.t18x.sm_shm_ded_count,
-				dev_attr_sm_shm_ecc_ded_count_array);
+				&dev_attr_sm_shm_ecc_ded_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_sec_pipe0_count",
 				&g->ecc.gr.t18x.tex_total_sec_pipe0_count,
-				dev_attr_tex_ecc_total_sec_pipe0_count_array);
+				&dev_attr_tex_ecc_total_sec_pipe0_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_ded_pipe0_count",
 				&g->ecc.gr.t18x.tex_total_ded_pipe0_count,
-				dev_attr_tex_ecc_total_ded_pipe0_count_array);
+				&dev_attr_tex_ecc_total_ded_pipe0_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_sec_pipe0_count",
 				&g->ecc.gr.t18x.tex_unique_sec_pipe0_count,
-				dev_attr_tex_ecc_unique_sec_pipe0_count_array);
+				&dev_attr_tex_ecc_unique_sec_pipe0_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_ded_pipe0_count",
 				&g->ecc.gr.t18x.tex_unique_ded_pipe0_count,
-				dev_attr_tex_ecc_unique_ded_pipe0_count_array);
+				&dev_attr_tex_ecc_unique_ded_pipe0_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_sec_pipe1_count",
 				&g->ecc.gr.t18x.tex_total_sec_pipe1_count,
-				dev_attr_tex_ecc_total_sec_pipe1_count_array);
+				&dev_attr_tex_ecc_total_sec_pipe1_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_ded_pipe1_count",
 				&g->ecc.gr.t18x.tex_total_ded_pipe1_count,
-				dev_attr_tex_ecc_total_ded_pipe1_count_array);
+				&dev_attr_tex_ecc_total_ded_pipe1_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_sec_pipe1_count",
 				&g->ecc.gr.t18x.tex_unique_sec_pipe1_count,
-				dev_attr_tex_ecc_unique_sec_pipe1_count_array);
+				&dev_attr_tex_ecc_unique_sec_pipe1_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_ded_pipe1_count",
 				&g->ecc.gr.t18x.tex_unique_ded_pipe1_count,
-				dev_attr_tex_ecc_unique_ded_pipe1_count_array);
+				&dev_attr_tex_ecc_unique_ded_pipe1_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				1,
 				"lts0_ecc_sec_count",
 				&g->ecc.gr.t18x.l2_sec_count,
-				dev_attr_l2_ecc_sec_count_array);
+				&dev_attr_l2_ecc_sec_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				1,
 				"lts0_ecc_ded_count",
 				&g->ecc.gr.t18x.l2_ded_count,
-				dev_attr_l2_ecc_ded_count_array);
+				&dev_attr_l2_ecc_ded_count_array);
 
 	if (error)
 		dev_err(dev, "Failed to create sysfs attributes!\n");

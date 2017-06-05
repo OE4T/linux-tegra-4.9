@@ -68,7 +68,7 @@ static irqreturn_t gpio_irq_handler(int irq, void *dev_id)
 	struct gpio_extcon_data *data = dev_id;
 
 	queue_delayed_work(system_power_efficient_wq, &data->work,
-			      data->debounce_jiffies);
+			   data->debounce_jiffies);
 	return IRQ_HANDLED;
 }
 
@@ -78,7 +78,7 @@ static int gpio_extcon_init(struct device *dev, struct gpio_extcon_data *data)
 	int ret;
 
 	ret = devm_gpio_request_one(dev, pdata->gpio, GPIOF_DIR_IN,
-				dev_name(dev));
+				    dev_name(dev));
 	if (ret < 0)
 		return ret;
 
@@ -88,7 +88,7 @@ static int gpio_extcon_init(struct device *dev, struct gpio_extcon_data *data)
 
 	if (pdata->debounce) {
 		ret = gpiod_set_debounce(data->id_gpiod,
-					pdata->debounce * 1000);
+					 pdata->debounce * 1000);
 		if (ret < 0)
 			data->debounce_jiffies =
 				msecs_to_jiffies(pdata->debounce);
@@ -118,8 +118,8 @@ static struct gpio_extcon_pdata *of_get_platform_data(
 	if (ret < 0)
 		pdata->name = np->name;
 
-	ret = of_property_read_u32_array(np,
-		"extcon-gpio,supported-cable", pdata->supported_cable, 2);
+	ret = of_property_read_u32_array(np, "extcon-gpio,supported-cable",
+					 pdata->supported_cable, 2);
 	if (ret)
 		return ERR_PTR(-EINVAL);
 
@@ -171,7 +171,7 @@ static int gpio_extcon_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	data = devm_kzalloc(&pdev->dev, sizeof(struct gpio_extcon_data),
-				   GFP_KERNEL);
+			    GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 	data->dev = &pdev->dev;
@@ -206,8 +206,8 @@ static int gpio_extcon_probe(struct platform_device *pdev)
 	 * is attached or detached.
 	 */
 	ret = devm_request_any_context_irq(&pdev->dev, data->irq,
-					gpio_irq_handler, pdata->irq_flags,
-					pdev->name, data);
+					   gpio_irq_handler, pdata->irq_flags,
+					   pdev->name, data);
 	if (ret < 0)
 		return ret;
 
@@ -236,7 +236,7 @@ static int gpio_extcon_resume(struct device *dev)
 	data = dev_get_drvdata(dev);
 	if (data->pdata->check_on_resume)
 		queue_delayed_work(system_power_efficient_wq,
-			&data->work, data->debounce_jiffies);
+				   &data->work, data->debounce_jiffies);
 
 	return 0;
 }
@@ -244,7 +244,7 @@ static int gpio_extcon_resume(struct device *dev)
 
 static SIMPLE_DEV_PM_OPS(gpio_extcon_pm_ops, NULL, gpio_extcon_resume);
 
-static struct of_device_id of_extcon_gpio_tbl[] = {
+static const struct of_device_id of_extcon_gpio_tbl[] = {
 	{ .compatible = "extcon-gpio", },
 	{ /* end */ }
 };

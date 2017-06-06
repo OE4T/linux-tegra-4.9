@@ -43,7 +43,7 @@ extern char __start_rodata[], __end_rodata[];
 /* Start and end of .ctors section - used for constructor calls. */
 extern char __ctors_start[], __ctors_end[];
 
-extern __visible const void __nosave_begin, __nosave_end;
+extern const void __nosave_begin, __nosave_end;
 
 /* function descriptor handling (if any).  Override
  * in asm/sections.h */

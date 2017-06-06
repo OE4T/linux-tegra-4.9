@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -21,6 +21,7 @@
 #include <linux/platform/tegra/mc-regs-t21x.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/clock.h>
+#include <soc/tegra/chip-id.h>
 
 #include "la_priv.h"
 
@@ -198,6 +199,19 @@ static u32 get_mem_bw_mbps(u32 dram_freq)
 	return dram_freq * 16;
 }
 
+static bool is_t210b01_soc(void)
+{
+	u32 chipid, major;
+
+	chipid = tegra_hidrev_get_chipid(tegra_read_chipid());
+	major = tegra_hidrev_get_majorrev(tegra_read_chipid());
+
+	if (chipid == TEGRA210B01 && major >= 2)
+		return true;
+
+	return false;
+}
+
 /*
  * EMC frequency is actually DRAM frequency. Normally they are one in the same;
  * however, with LPDDR4 DRAM, the DRAM clock goes to 1600MHz which the EMC clock
@@ -242,11 +256,13 @@ static void t21x_init_ptsa(void)
 				       MC_PTSA_RATE_DEFAULT_MASK);
 	p->ptsa_grant_dec = (gd_int << 12) | gd_frac_fp;
 
-
 	/* initialize PTSA reg values */
 	MC_SET_INIT_PTSA(p, ve,      -5, 31);
-	MC_SET_INIT_PTSA(p, isp,     -5, 31);
-	MC_SET_INIT_PTSA(p, ve2,     -5, 31);
+	MC_SET_INIT_PTSA(p, isp,     -5, 31); /* Same for T210 and T210b01 */
+	if (is_t210b01_soc())
+		MC_SET_INIT_PTSA(p, ve2,     -2, 0);
+	else
+		MC_SET_INIT_PTSA(p, ve2,     -5, 31);
 	MC_SET_INIT_PTSA(p, a9avppc, -5, 16);
 	MC_SET_INIT_PTSA(p, ring2,   -2, 0);
 	MC_SET_INIT_PTSA(p, dis,     -5, 31);
@@ -402,21 +418,27 @@ static void t21x_calc_disp_and_camera_ptsa(void)
 					MC_PTSA_MIN_DEFAULT_MASK;
 	p->ve2_ptsa_max = cs->agg_camera_array[AGG_CAMERA_ID(VE2)].ptsa_max &
 					MC_PTSA_MAX_DEFAULT_MASK;
-	p->ve2_ptsa_rate = fraction2dda_fp(
+	if (is_t210b01_soc())
+		p->ve2_ptsa_rate = 1;
+	else
+		p->ve2_ptsa_rate = fraction2dda_fp(
 			cs->agg_camera_array[AGG_CAMERA_ID(VE2)].frac_fp,
 			4,
 			MC_PTSA_RATE_DEFAULT_MASK) &
-		MC_PTSA_RATE_DEFAULT_MASK;
+			MC_PTSA_RATE_DEFAULT_MASK;
 
 	p->isp_ptsa_min = cs->agg_camera_array[AGG_CAMERA_ID(ISP)].ptsa_min &
 					MC_PTSA_MIN_DEFAULT_MASK;
 	p->isp_ptsa_max = cs->agg_camera_array[AGG_CAMERA_ID(ISP)].ptsa_max &
 					MC_PTSA_MAX_DEFAULT_MASK;
-	p->isp_ptsa_rate = fraction2dda_fp(
+	if (is_t210b01_soc())
+		p->isp_ptsa_rate = 50;
+	else
+		p->isp_ptsa_rate = fraction2dda_fp(
 			cs->agg_camera_array[AGG_CAMERA_ID(ISP)].frac_fp,
 			4,
 			MC_PTSA_RATE_DEFAULT_MASK) &
-		MC_PTSA_RATE_DEFAULT_MASK;
+			MC_PTSA_RATE_DEFAULT_MASK;
 
 	MC_SET_INIT_PTSA(p, ring1, -5, max_max);
 
@@ -775,6 +797,16 @@ void program_scaled_la_t21x(struct la_client_info *ci, int la)
 void tegra_la_get_t21x_specific(struct la_chip_specific *cs_la)
 {
 	int i = 0;
+
+	if (is_t210b01_soc()) {
+		/* Fixup t21x_la_info_array for t210b01 */
+		for (i = 0; i < ARRAY_SIZE(t21x_la_info_array); i++) {
+			if (t21x_la_info_array[i].id == ID(ISP_RA))
+				t21x_la_info_array[i].la_ref_clk_mhz = 600;
+			else if (t21x_la_info_array[i].id == ID(ISP_RAB))
+				t21x_la_info_array[i].la_ref_clk_mhz = 248;
+		}
+	}
 
 	cs_la->ns_per_tick = 30;
 	cs_la->atom_size = 64;

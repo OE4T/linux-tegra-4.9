@@ -16,10 +16,10 @@ obj-y					+= mcerr-t21.o
 
 # Latency allowance
 obj-y                                   += latency_allowance.o
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += tegra21x_la.o
+obj-$(CONFIG_ARCH_TEGRA_210_SOC)        += tegra21x_la.o
 
 ifeq ($(CONFIG_PM_SLEEP),y)
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += mc-timing-t21x.o
+obj-$(CONFIG_ARCH_TEGRA_210_SOC)        += mc-timing-t21x.o
 endif
 obj-${CONFIG_TEGRA_ISOMGR}              += isomgr.o
 obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr.o pmqos_bwmgr_client.o

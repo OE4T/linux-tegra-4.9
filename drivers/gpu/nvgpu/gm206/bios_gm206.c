@@ -23,6 +23,7 @@
 #include "gk20a/platform_gk20a.h"
 #include "gm20b/fifo_gm20b.h"
 #include "bios_gm206.h"
+#include "gp106/pmu_mclk_gp106.h"
 
 #include <nvgpu/hw/gm206/hw_pwr_gm206.h>
 #include <nvgpu/hw/gm206/hw_mc_gm206.h>
@@ -314,11 +315,16 @@ int gm206_bios_init(struct gk20a *g)
 		return -EINVAL;
 	}
 
-	/* WAR for missing INA3221 on HW2.5 RevA */
-	g->power_sensor_missing =
-		(g->pci_vendor_id == PCI_VENDOR_ID_NVIDIA) &&
+	/* WAR for HW2.5 RevA (identified by VBIOS version)
+	 * - INA3221 is missing
+	 * - use PG418 MCLK switching sequences
+	 */
+	if ((g->pci_vendor_id == PCI_VENDOR_ID_NVIDIA) &&
 		(g->pci_device_id == 0x1c75) &&
-		(g->gpu_characteristics.vbios_version == 0x86065300);
+		(g->gpu_characteristics.vbios_version == 0x86065300)) {
+		g->power_sensor_missing = true;
+		g->mem_config_idx = GP106_MEM_CONFIG_GDDR5_PG418;
+	}
 
 #ifdef CONFIG_DEBUG_FS
 	g->bios_blob.data = g->bios.data;

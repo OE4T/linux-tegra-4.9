@@ -197,7 +197,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
-	.vbios_min_version = 0x86065600,
+	.vbios_min_version = 0x86065300,
 	.hardcode_sw_threshold = false,
 	.ina3221_dcb_index = 1,
 	.ina3221_i2c_address = 0x80,

@@ -34,9 +34,9 @@ int tegra_hwtime_notifier_call_chain(unsigned int val, void *v);
 /*
  * Get HW time counter.
  * Clients may call the API every anytime PTP time is needed.
- * If HW time source is not registered, returns ktime_get_real instead
+ * If HW time source is not registered, returns -EINVAL
  */
-u64 get_ptp_hwtime(void);
+int get_ptp_hwtime(u64 *ns);
 
 #else /* CONFIG_TEGRA_PTP_NOTIFIER */
 
@@ -70,11 +70,11 @@ static inline int tegra_hwtime_notifier_call_chain(unsigned int val, void *v)
 /*
  * Get HW time counter.
  * Clients may call the API every anytime PTP time is needed.
- * If HW time source is not registered, returns ktime_get_real instead
+ * If HW time source is not registered, returns -EINVAL
  */
-static inline u64 get_ptp_hwtime(void)
+static inline int get_ptp_hwtime(u64 *ns)
 {
-	return ktime_to_ns(ktime_get_raw());
+	return -EINVAL;
 }
 
 #endif /* CONFIG_TEGRA_PTP_NOTIFIER */

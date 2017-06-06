@@ -951,10 +951,16 @@ static void mttcan_timer_cb(unsigned long data)
 {
 	unsigned long flags;
 	u64 tref;
+	int ret = 0;
 	struct mttcan_priv *priv = (struct mttcan_priv *)data;
 
 	raw_spin_lock_irqsave(&priv->tc_lock, flags);
-	tref = get_ptp_hwtime();
+	ret = get_ptp_hwtime(&tref);
+	if (ret != 0) {
+		dev_err(priv->device, "mttcan timer: HW PTP not running\n");
+		raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
+		return;
+	}
 	timecounter_init(&priv->tc, &priv->cc, tref);
 	raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 	mod_timer(&priv->timer,
@@ -1270,6 +1276,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 	unsigned long flags;
 	u64 tref;
 	bool rx_config_chg = false;
+	int ret = 0;
 
 	if (copy_from_user(&config, ifr->ifr_data,
 			   sizeof(struct hwtstamp_config)))
@@ -1322,7 +1329,14 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 			priv->cc.shift = 0;
 
 			raw_spin_lock_irqsave(&priv->tc_lock, flags);
-			tref = get_ptp_hwtime();
+			ret = get_ptp_hwtime(&tref);
+			if (ret != 0) {
+				dev_err(priv->device, "HW PTP not running\n");
+				priv->hwts_rx_en = false;
+				raw_spin_unlock_irqrestore(&priv->tc_lock,
+							   flags);
+				goto error;
+			}
 			timecounter_init(&priv->tc, &priv->cc, tref);
 			raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 			mod_timer(&priv->timer, jiffies +
@@ -1331,6 +1345,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 			tegra_unregister_hwtime_notifier(&priv->ttcan_nb);
 	}
 
+error:
 	return (copy_to_user(ifr->ifr_data, &config,
 			sizeof(struct hwtstamp_config))) ? -EFAULT : 0;
 }
@@ -1480,13 +1495,17 @@ static int mttcan_notifier(struct notifier_block *nb,
 {
 	unsigned long flags;
 	u64 tref;
+	int ret = 0;
 	struct mttcan_priv *priv =
 		container_of(nb, struct mttcan_priv, ttcan_nb);
 
 	/* disable context switch between EAVB and CAN counter reads */
 	raw_spin_lock_irqsave(&priv->tc_lock, flags);
-	tref = get_ptp_hwtime();
-	timecounter_init(&priv->tc, &priv->cc, tref);
+	ret = get_ptp_hwtime(&tref);
+	if (ret != 0)
+		dev_err(priv->device, "mttcan notifier: HW PTP not running\n");
+	else
+		timecounter_init(&priv->tc, &priv->cc, tref);
 	raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 
 	return NOTIFY_OK;

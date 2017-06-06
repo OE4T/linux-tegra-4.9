@@ -73,18 +73,18 @@ void tegra_unregister_hwtime_source(void)
 }
 EXPORT_SYMBOL(tegra_unregister_hwtime_source);
 
-u64 get_ptp_hwtime(void)
+int get_ptp_hwtime(u64 *ns)
 {
 	unsigned long flags;
-	u64 ns;
+	int ret = 0;
 
 	raw_spin_lock_irqsave(&ptp_notifier_lock, flags);
 	if (get_systime)
-		ns = get_systime(param);
+		*ns = get_systime(param);
 	else
-		ns = ktime_to_ns(ktime_get_raw());
+		ret = -EINVAL;
 	raw_spin_unlock_irqrestore(&ptp_notifier_lock, flags);
 
-	return ns;
+	return ret;
 }
 EXPORT_SYMBOL(get_ptp_hwtime);

@@ -49,9 +49,6 @@ endif
 obj-$(CONFIG_TEGRA_CLUSTER_CONTROL) += sysfs-cluster.o
 obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL) += sysfs-cluster.o
 
-ifneq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-obj-y += ahb.o
-endif
 obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += central_actmon/
 obj-$(CONFIG_TEGRA_CPU_VOLT_CAP)	+= tegra_volt_cap.o
 

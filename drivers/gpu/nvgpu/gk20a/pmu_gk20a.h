@@ -63,15 +63,6 @@ struct pmu_surface {
 	struct flcn_mem_desc_v0 params;
 };
 
-/*PG defines used by nvpgu-pmu*/
-struct pmu_pg_stats_data {
-	u32 gating_cnt;
-	u32 ingating_time;
-	u32 ungating_time;
-	u32 avg_entry_latency_us;
-	u32 avg_exit_latency_us;
-};
-
 #define PMU_PG_IDLE_THRESHOLD_SIM		1000
 #define PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM	4000000
 /* TBD: QT or else ? */
@@ -105,10 +96,6 @@ struct pmu_pg_stats_data {
 #define APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US                 (10000)
 #define APCTRL_POWER_BREAKEVEN_DEFAULT_US                       (2000)
 #define APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT                    (200)
-/*PG defines used by nvpgu-pmu*/
-
-int gk20a_init_pmu_support(struct gk20a *g);
-int gk20a_init_pmu_bind_fecs(struct gk20a *g);
 
 bool gk20a_pmu_is_interrupted(struct nvgpu_pmu *pmu);
 void gk20a_pmu_isr(struct gk20a *g);
@@ -131,8 +118,8 @@ int gk20a_pmu_queue_head(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
 			u32 *head, bool set);
 int gk20a_pmu_queue_tail(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
 			u32 *tail, bool set);
+void gk20a_pmu_msgq_tail(struct nvgpu_pmu *pmu, u32 *tail, bool set);
 
-int gk20a_pmu_destroy(struct gk20a *g);
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load);
 int gk20a_pmu_load_update(struct gk20a *g);
 void gk20a_pmu_reset_load_counters(struct gk20a *g);
@@ -174,8 +161,6 @@ int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size);
 int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size);
-int gk20a_pmu_get_pg_stats(struct gk20a *g,
-		u32 pg_engine_id, struct pmu_pg_stats_data *pg_stat_data);
 bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos);
 
 int nvgpu_pmu_perfmon_start_sampling(struct nvgpu_pmu *pmu);

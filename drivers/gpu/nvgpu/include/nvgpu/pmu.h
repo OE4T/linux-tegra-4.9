@@ -335,6 +335,15 @@ struct nvgpu_pmu {
 	struct nvgpu_firmware *fw;
 };
 
+/*PG defines used by nvpgu-pmu*/
+struct pmu_pg_stats_data {
+	u32 gating_cnt;
+	u32 ingating_time;
+	u32 ungating_time;
+	u32 avg_entry_latency_us;
+	u32 avg_exit_latency_us;
+};
+
 /* PMU IPC Methods */
 void nvgpu_pmu_seq_init(struct nvgpu_pmu *pmu);
 
@@ -361,7 +370,20 @@ int nvgpu_pmu_handle_therm_event(struct nvgpu_pmu *pmu,
 			struct nv_pmu_therm_msg *msg);
 
 /* PMU init */
+int nvgpu_init_pmu_support(struct gk20a *g);
+int nvgpu_pmu_destroy(struct gk20a *g);
 int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
-		struct pmu_msg *msg);
+	struct pmu_msg *msg);
+
+void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
+	bool post_change_event);
+
+/* PG */
+int nvgpu_pmu_init_powergating(struct gk20a *g);
+int nvgpu_pmu_init_bind_fecs(struct gk20a *g);
+void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g);
+
+int nvgpu_pmu_get_pg_stats(struct gk20a *g, u32 pg_engine_id,
+	struct pmu_pg_stats_data *pg_stat_data);
 
 #endif /* __NVGPU_PMU_H__ */

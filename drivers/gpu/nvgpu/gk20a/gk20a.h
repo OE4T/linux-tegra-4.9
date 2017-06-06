@@ -741,6 +741,9 @@ struct gpu_ops {
 			struct pmu_queue *queue, u32 *head, bool set);
 		int (*pmu_queue_tail)(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue, u32 *tail, bool set);
+		void (*pmu_msgq_tail)(struct nvgpu_pmu *pmu,
+			u32 *tail, bool set);
+		u32 (*pmu_mutex_size)(void);
 		int (*pmu_mutex_acquire)(struct nvgpu_pmu *pmu,
 			u32 id, u32 *token);
 		int (*pmu_mutex_release)(struct nvgpu_pmu *pmu,

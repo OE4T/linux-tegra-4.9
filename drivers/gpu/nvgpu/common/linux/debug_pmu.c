@@ -75,7 +75,7 @@ static int mscg_stat_show(struct seq_file *s, void *data)
 		if (err)
 			return err;
 
-		gk20a_pmu_get_pg_stats(g,
+		nvgpu_pmu_get_pg_stats(g,
 			PMU_PG_ELPG_ENGINE_ID_MS, &pg_stat_data);
 		gk20a_idle(g);
 	}
@@ -133,7 +133,7 @@ static int mscg_transitions_show(struct seq_file *s, void *data)
 		if (err)
 			return err;
 
-		gk20a_pmu_get_pg_stats(g,
+		nvgpu_pmu_get_pg_stats(g,
 			PMU_PG_ELPG_ENGINE_ID_MS, &pg_stat_data);
 		gk20a_idle(g);
 	}
@@ -169,7 +169,7 @@ static int elpg_stat_show(struct seq_file *s, void *data)
 		if (err)
 			return err;
 
-		gk20a_pmu_get_pg_stats(g,
+		nvgpu_pmu_get_pg_stats(g,
 			PMU_PG_ELPG_ENGINE_ID_GRAPHICS, &pg_stat_data);
 		gk20a_idle(g);
 	}
@@ -226,7 +226,7 @@ static int elpg_transitions_show(struct seq_file *s, void *data)
 		if (err)
 			return err;
 
-		gk20a_pmu_get_pg_stats(g,
+		nvgpu_pmu_get_pg_stats(g,
 			PMU_PG_ELPG_ENGINE_ID_GRAPHICS, &pg_stat_data);
 		gk20a_idle(g);
 	}

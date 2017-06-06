@@ -415,6 +415,8 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
 	gops->pmu.pmu_queue_head = gk20a_pmu_queue_head;
 	gops->pmu.pmu_queue_tail = gk20a_pmu_queue_tail;
+	gops->pmu.pmu_msgq_tail = gk20a_pmu_msgq_tail;
+	gops->pmu.pmu_mutex_size = pwr_pmu_mutex__size_1_v;
 	gops->pmu.pmu_mutex_acquire = gk20a_pmu_mutex_acquire;
 	gops->pmu.pmu_mutex_release = gk20a_pmu_mutex_release;
 	gops->pmu.lspmuwprinitdone = false;

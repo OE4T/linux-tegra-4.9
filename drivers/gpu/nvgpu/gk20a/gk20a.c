@@ -24,6 +24,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/pmu.h>
 
 #include <trace/events/gk20a.h>
 
@@ -130,7 +131,7 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 
 	/* disable elpg before gr or fifo suspend */
 	if (g->ops.pmu.is_pmu_supported(g))
-		ret |= gk20a_pmu_destroy(g);
+		ret |= nvgpu_pmu_destroy(g);
 
 	ret |= gk20a_gr_suspend(g);
 	ret |= gk20a_mm_suspend(g);
@@ -259,7 +260,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 #endif
 
 	if (g->ops.pmu.is_pmu_supported(g)) {
-		err = gk20a_init_pmu_support(g);
+		err = nvgpu_init_pmu_support(g);
 		if (err) {
 			nvgpu_err(g, "failed to init gk20a pmu");
 			goto done;

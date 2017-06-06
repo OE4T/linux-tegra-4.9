@@ -1332,6 +1332,12 @@ static void get_adsp_state(void)
 	case ADSP_WFI_EXIT:
 		msg = "WFI: Exiting WFI, Failed to Enter";
 		break;
+	case ADSP_DFS_MBOX_RECV:
+		msg = "DFS: mbox received";
+		break;
+	case ADSP_DFS_MBOX_SENT:
+		msg = "DFS: mbox sent";
+		break;
 	default:
 		msg = "Unrecognized ADSP state!!";
 		break;

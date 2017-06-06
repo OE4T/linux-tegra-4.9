@@ -1177,7 +1177,7 @@
 		#stream-id-cells = <1>;
 		clocks = <&bpmp_clks TEGRA194_CLK_TACH>;
 		clock-names = "tach";
-		resets = <&bpmp_clks TEGRA194_RESET_TACH>;
+		resets = <&bpmp_resets TEGRA194_RESET_TACH>;
 		reset-names = "tach";
 		pulse-per-rev = <2>;
 		sampling-window = <2>;

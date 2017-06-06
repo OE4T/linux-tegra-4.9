@@ -1682,7 +1682,7 @@ bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	return true;
 }
 
-int tegra_dc_init_default_panel_link_cfg(struct tegra_dc_dp_link_config *cfg)
+static int tegra_dc_init_default_panel_link_cfg(struct tegra_dc_dp_link_config *cfg)
 {
 	/*
 	 * Default HBR2 settings

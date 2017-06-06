@@ -216,8 +216,19 @@ struct gpu_ops {
 				u32 mode);
 		int (*get_zcull_info)(struct gk20a *g, struct gr_gk20a *gr,
 				struct gr_zcull_info *zcull_params);
+		int (*decode_egpc_addr)(struct gk20a *g,
+			u32 addr, int *addr_type,
+			u32 *gpc_num, u32 *tpc_num, u32 *broadcast_flags);
+		void (*egpc_etpc_priv_addr_table)(struct gk20a *g, u32 addr,
+			u32 gpc, u32 broadcast_flags, u32 *priv_addr_table,
+			u32 *priv_addr_table_index);
 		bool (*is_tpc_addr)(struct gk20a *g, u32 addr);
+		bool (*is_egpc_addr)(struct gk20a *g, u32 addr);
+		bool (*is_etpc_addr)(struct gk20a *g, u32 addr);
+		void (*get_egpc_etpc_num)(struct gk20a *g, u32 addr,
+				u32 *gpc_num, u32 *tpc_num);
 		u32 (*get_tpc_num)(struct gk20a *g, u32 addr);
+		u32 (*get_egpc_base)(struct gk20a *g);
 		bool (*is_ltcs_ltss_addr)(struct gk20a *g, u32 addr);
 		bool (*is_ltcn_ltss_addr)(struct gk20a *g, u32 addr);
 		bool (*get_lts_in_ltc_shared_base)(void);

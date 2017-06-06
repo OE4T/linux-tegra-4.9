@@ -6236,6 +6236,10 @@ static int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 			return 0;
 		}
 		return 0;
+	} else if (g->ops.gr.is_egpc_addr && g->ops.gr.is_egpc_addr(g, addr)) {
+			return g->ops.gr.decode_egpc_addr(g,
+					addr, addr_type, gpc_num,
+					tpc_num, broadcast_flags);
 	} else {
 		*addr_type = CTXSW_ADDR_TYPE_SYS;
 		return 0;
@@ -6331,9 +6335,13 @@ static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 					pri_gpc_addr(g, pri_gpccs_addr_mask(addr),
 						     gpc_num);
 		}
-	}
-
-	if (broadcast_flags & PRI_BROADCAST_FLAGS_LTSS) {
+	} else if (((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
+			(addr_type == CTXSW_ADDR_TYPE_ETPC)) &&
+				g->ops.gr.egpc_etpc_priv_addr_table) {
+		gk20a_dbg(gpu_dbg_gpu_dbg, "addr_type : EGPC/ETPC");
+		g->ops.gr.egpc_etpc_priv_addr_table(g, addr, gpc_num,
+				broadcast_flags, priv_addr_table, &t);
+	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTSS) {
 		g->ops.gr.split_lts_broadcast_addr(g, addr,
 							priv_addr_table, &t);
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTCS) {
@@ -6354,8 +6362,8 @@ static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 					pri_tpc_addr(g, pri_tpccs_addr_mask(addr),
 						     gpc_num, tpc_num);
 		else if (broadcast_flags & PRI_BROADCAST_FLAGS_PPC)
-			err = gr_gk20a_split_ppc_broadcast_addr(g, addr, gpc_num,
-						       priv_addr_table, &t);
+			err = gr_gk20a_split_ppc_broadcast_addr(g,
+					addr, gpc_num, priv_addr_table, &t);
 		else
 			priv_addr_table[t++] = addr;
 	}
@@ -6382,8 +6390,10 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
 	/* implementation is crossed-up if either of these happen */
-	if (max_offsets > potential_offsets)
+	if (max_offsets > potential_offsets) {
+		gk20a_dbg_fn("max_offsets > potential_offsets");
 		return -EINVAL;
+	}
 
 	if (!g->gr.ctx_vars.golden_image_initialized)
 		return -ENODEV;
@@ -6401,6 +6411,8 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 	gr_gk20a_create_priv_addr_table(g, addr, &priv_registers[0], &num_registers);
 
 	if ((max_offsets > 1) && (num_registers > max_offsets)) {
+		gk20a_dbg_fn("max_offsets = %d, num_registers = %d",
+				max_offsets, num_registers);
 		err = -EINVAL;
 		goto cleanup;
 	}
@@ -6691,8 +6703,11 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 
 		gk20a_dbg_info(" gpc = %d tpc = %d",
 				gpc_num, tpc_num);
-	} else
+	} else {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				"extended region has tpc reg only");
 		return -EINVAL;
+	}
 
 	buffer_segments_size = ctxsw_prog_extended_buffer_segments_size_in_bytes_v();
 	/* note below is in words/num_registers */
@@ -6937,7 +6952,41 @@ gr_gk20a_process_context_buffer_priv_segment(struct gk20a *g,
 				}
 			}
 		}
+	} else if ((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
+		(addr_type == CTXSW_ADDR_TYPE_ETPC)) {
+		if (!(g->ops.gr.get_egpc_base))
+			return -EINVAL;
+
+		for (tpc_num = 0; tpc_num < num_tpcs; tpc_num++) {
+			for (i = 0; i < g->gr.ctx_vars.ctxsw_regs.etpc.count; i++) {
+				reg = &g->gr.ctx_vars.ctxsw_regs.etpc.l[i];
+				address = reg->addr;
+				tpc_addr = pri_tpccs_addr_mask(address);
+				base_address = g->ops.gr.get_egpc_base(g) +
+					(gpc_num * gpc_stride) +
+					tpc_in_gpc_base +
+					(tpc_num * tpc_in_gpc_stride);
+				address = base_address + tpc_addr;
+				/*
+				 * The data for the TPCs is interleaved in the context buffer.
+				 * Example with num_tpcs = 2
+				 * 0    1    2    3    4    5    6    7    8    9    10   11 ...
+				 * 0-0  1-0  0-1  1-1  0-2  1-2  0-3  1-3  0-4  1-4  0-5  1-5 ...
+				 */
+				tpc_offset = (reg->index * num_tpcs) + (tpc_num * 4);
+
+				if (pri_addr == address) {
+					*priv_offset = tpc_offset;
+					nvgpu_log(g,
+						gpu_dbg_fn | gpu_dbg_gpu_dbg,
+						"egpc/etpc priv_offset=0x%#08x",
+						*priv_offset);
+					return 0;
+				}
+			}
+		}
 	}
+
 
 	/* Process the PPC segment. */
 	if (addr_type == CTXSW_ADDR_TYPE_PPC) {
@@ -6986,7 +7035,6 @@ gr_gk20a_process_context_buffer_priv_segment(struct gk20a *g,
 			}
 		}
 	}
-
 	return -EINVAL;
 }
 
@@ -7046,6 +7094,9 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	err = gr_gk20a_decode_priv_addr(g, addr, &addr_type,
 					&gpc_num, &tpc_num, &ppc_num, &be_num,
 					&broadcast_flags);
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"addr_type = %d, broadcast_flags: %08x",
+			addr_type, broadcast_flags);
 	if (err)
 		return err;
 
@@ -7066,6 +7117,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	}
 	data32 = *(u32 *)(context + ctxsw_prog_local_priv_register_ctl_o());
 	sys_priv_offset = ctxsw_prog_local_priv_register_ctl_offset_v(data32);
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "sys_priv_offset=0x%x", sys_priv_offset);
 
 	/* If found in Ext buffer, ok.
 	 * If it failed and we expected to find it there (quad offset)
@@ -7074,8 +7126,12 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	err = gr_gk20a_find_priv_offset_in_ext_buffer(g,
 				      addr, is_quad, quad, context_buffer,
 				      context_buffer_size, priv_offset);
-	if (!err || (err && is_quad))
+	if (!err || (err && is_quad)) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				"err = %d, is_quad = %s",
+				err, is_quad ? "true" : false);
 		return err;
+	}
 
 	if ((addr_type == CTXSW_ADDR_TYPE_SYS) ||
 	    (addr_type == CTXSW_ADDR_TYPE_BE)) {
@@ -7116,8 +7172,11 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 		err = gr_gk20a_determine_ppc_configuration(g, context,
 							   &num_ppcs, &ppc_mask,
 							   &reg_list_ppc_count);
-		if (err)
+		if (err) {
+			nvgpu_err(g, "determine ppc configuration failed");
 			return err;
+		}
+
 
 		num_tpcs = *(u32 *)(context + ctxsw_prog_local_image_num_tpcs_o());
 
@@ -7130,16 +7189,28 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 
 		/* Find the offset in the GPCCS segment.*/
 		if (i == gpc_num) {
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+					"gpc_priv_offset 0x%#08x",
+					gpc_priv_offset);
 			offset_to_segment = gpc_priv_offset *
 				ctxsw_prog_ucode_header_size_in_bytes();
 
 			if (addr_type == CTXSW_ADDR_TYPE_TPC) {
 				/*reg = gr->ctx_vars.ctxsw_regs.tpc.l;*/
+			} else if ((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
+					(addr_type == CTXSW_ADDR_TYPE_ETPC)) {
+				nvgpu_log(g, gpu_dbg_info | gpu_dbg_gpu_dbg,
+					"egpc etpc offset_to_segment 0x%#08x",
+					offset_to_segment);
+				offset_to_segment +=
+					((gr->ctx_vars.ctxsw_regs.tpc.count *
+					  num_tpcs) << 2);
 			} else if (addr_type == CTXSW_ADDR_TYPE_PPC) {
 				/* The ucode stores TPC data before PPC data.
 				 * Advance offset past TPC data to PPC data. */
 				offset_to_segment +=
-					((gr->ctx_vars.ctxsw_regs.tpc.count *
+					(((gr->ctx_vars.ctxsw_regs.tpc.count +
+						gr->ctx_vars.ctxsw_regs.etpc.count) *
 					  num_tpcs) << 2);
 			} else if (addr_type == CTXSW_ADDR_TYPE_GPC) {
 				/* The ucode stores TPC/PPC data before GPC data.
@@ -7149,13 +7220,15 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 						GPU_LIT_NUM_PES_PER_GPC);
 				if (num_pes_per_gpc > 1) {
 					offset_to_segment +=
-						(((gr->ctx_vars.ctxsw_regs.tpc.count *
-						   num_tpcs) << 2) +
-						 ((reg_list_ppc_count * num_ppcs) << 2));
+						((((gr->ctx_vars.ctxsw_regs.tpc.count +
+							gr->ctx_vars.ctxsw_regs.etpc.count) *
+							num_tpcs) << 2) +
+							((reg_list_ppc_count * num_ppcs) << 2));
 				} else {
 					offset_to_segment +=
-						((gr->ctx_vars.ctxsw_regs.tpc.count *
-						  num_tpcs) << 2);
+						(((gr->ctx_vars.ctxsw_regs.tpc.count +
+							gr->ctx_vars.ctxsw_regs.etpc.count) *
+							num_tpcs) << 2);
 				}
 			} else {
 				gk20a_dbg_fn("Unknown address type.");

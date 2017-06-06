@@ -76,6 +76,8 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 			    &g->gr.ctx_vars.ctxsw_regs.ppc.count);
 	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_ETPC_COUNT", 0,
 			    &g->gr.ctx_vars.ctxsw_regs.etpc.count);
+	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_PPC_COUNT", 0,
+			    &g->gr.ctx_vars.ctxsw_regs.ppc.count);
 
 	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.inst);
 	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.data);

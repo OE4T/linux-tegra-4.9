@@ -30,6 +30,7 @@
 #include <linux/uaccess.h>
 #include <linux/kthread.h>
 #include <linux/circ_buf.h>
+#include <linux/extcon.h>
 
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-powergate.h>
@@ -395,6 +396,15 @@ struct tegra_xusb {
 	bool suspended;
 	struct tegra_xhci_fpci_context fpci_ctx;
 	struct tegra_xhci_ipfs_context ipfs_ctx;
+
+	int usb2_otg_port_base_1; /* one based usb2 port number */
+	int usb3_otg_port_base_1; /* one based usb3 port number */
+	struct extcon_dev *id_extcon;
+	struct notifier_block id_extcon_nb;
+	struct work_struct id_extcon_work;
+
+	bool host_mode;
+	bool otg_role_initialized;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -1631,6 +1641,191 @@ static void tegra_firmware_retry_work(struct work_struct *work)
 	}
 }
 
+static bool is_host_mode_phy(struct tegra_xusb *tegra,
+				enum tegra_xhci_phy_type type, int index)
+{
+	if (!tegra->typed_phys[type][index])
+		return false;
+
+	if (type == HSIC_PHY)
+		return true;
+
+	if (tegra->host_mode)
+		return true;
+
+	if ((type == USB2_PHY) && (index != (tegra->usb2_otg_port_base_1 - 1)))
+		return true;
+
+	if ((type == USB3_PHY) && (index != (tegra->usb3_otg_port_base_1 - 1)))
+		return true;
+
+	return false;
+}
+
+static void tegra_xhci_set_host_mode(struct tegra_xusb *tegra, bool on)
+{
+	struct xhci_hcd *xhci;
+	int port = tegra->usb2_otg_port_base_1 - 1;
+	struct phy *otg_phy;
+	u32 status;
+	int wait, ret;
+
+	if (!tegra->usb2_otg_port_base_1)
+		return;
+
+	if (!tegra->fw_loaded)
+		return;
+
+	mutex_lock(&tegra->lock);
+
+	if (tegra->suspended) {
+		mutex_unlock(&tegra->lock);
+		return;
+	}
+
+	otg_phy = tegra->typed_phys[USB2_PHY][port];
+	if (on)
+		ret = tegra_xusb_padctl_set_id_override(tegra->padctl);
+	else
+		ret = tegra_xusb_padctl_clear_id_override(tegra->padctl);
+	if (ret) {
+		dev_dbg(tegra->dev, "%s ID override failed\n",
+			on ? "set" : "clear");
+	}
+
+	if (!tegra->otg_role_initialized) {
+		tegra->otg_role_initialized = true;
+		goto role_update;
+	}
+
+	if ((tegra->host_mode && on) || (!tegra->host_mode && !on)) {
+		mutex_unlock(&tegra->lock);
+		return;
+	}
+
+role_update:
+	tegra->host_mode = on;
+	dev_dbg(tegra->dev, "host mode %s\n", on ? "on" : "off");
+
+	mutex_unlock(&tegra->lock);
+
+	xhci = hcd_to_xhci(tegra->hcd);
+	pm_runtime_get_sync(tegra->dev);
+	if (on) {
+		/* switch to host mode */
+		if (tegra->usb3_otg_port_base_1) {
+			xhci_hub_control(xhci->shared_hcd, SetPortFeature,
+				USB_PORT_FEAT_POWER, tegra->usb3_otg_port_base_1
+				, NULL, 0);
+
+			wait = 10;
+			do {
+				xhci_hub_control(xhci->shared_hcd, GetPortStatus
+					, 0, tegra->usb3_otg_port_base_1
+					, (char *) &status, sizeof(status));
+				if (status & USB_SS_PORT_STAT_POWER)
+					break;
+				usleep_range(10, 20);
+			} while (--wait > 0);
+
+			if (!(status & USB_SS_PORT_STAT_POWER))
+				dev_info(tegra->dev, "failed to set SS PP\n");
+		}
+
+		xhci_hub_control(xhci->main_hcd, SetPortFeature,
+			USB_PORT_FEAT_POWER, tegra->usb2_otg_port_base_1,
+			NULL, 0);
+
+		wait = 10;
+		do {
+			xhci_hub_control(xhci->main_hcd, GetPortStatus
+				, 0, tegra->usb2_otg_port_base_1
+				, (char *) &status, sizeof(status));
+			if (status & USB_PORT_STAT_POWER)
+				break;
+			usleep_range(10, 20);
+		} while (--wait > 0);
+
+		if (!(status & USB_PORT_STAT_POWER))
+			dev_info(tegra->dev, "failed to set HS PP\n");
+
+		pm_runtime_mark_last_busy(tegra->dev);
+	} else {
+		if (tegra->usb3_otg_port_base_1) {
+			xhci_hub_control(xhci->shared_hcd, ClearPortFeature,
+				USB_PORT_FEAT_POWER, tegra->usb3_otg_port_base_1
+				, NULL, 0);
+
+			wait = 10;
+			do {
+				xhci_hub_control(xhci->shared_hcd, GetPortStatus
+					, 0, tegra->usb3_otg_port_base_1
+					, (char *) &status, sizeof(status));
+				if (!(status & USB_SS_PORT_STAT_POWER))
+					break;
+				usleep_range(10, 20);
+			} while (--wait > 0);
+
+			if (status & USB_SS_PORT_STAT_POWER)
+				dev_info(tegra->dev, "failed to clear SS PP\n");
+		}
+
+		xhci_hub_control(xhci->main_hcd, ClearPortFeature,
+			USB_PORT_FEAT_POWER, tegra->usb2_otg_port_base_1,
+			NULL, 0);
+
+		wait = 10;
+		do {
+			xhci_hub_control(xhci->main_hcd, GetPortStatus
+				, 0, tegra->usb2_otg_port_base_1
+				, (char *) &status, sizeof(status));
+			if (!(status & USB_PORT_STAT_POWER))
+				break;
+			usleep_range(10, 20);
+		} while (--wait > 0);
+
+		if (status & USB_PORT_STAT_POWER)
+			dev_info(tegra->dev, "failed to clear HS PP\n");
+
+	}
+	pm_runtime_put_autosuspend(tegra->dev);
+
+}
+
+static void tegra_xhci_update_otg_role(struct tegra_xusb *tegra)
+{
+	if (IS_ERR(tegra->id_extcon))
+		return;
+
+	if (extcon_get_cable_state_(tegra->id_extcon, EXTCON_USB_HOST))
+		tegra_xhci_set_host_mode(tegra, true);
+	else
+		tegra_xhci_set_host_mode(tegra, false);
+}
+
+static void tegra_xhci_id_extcon_work(struct work_struct *work)
+{
+	struct tegra_xusb *tegra = container_of(work, struct tegra_xusb,
+						    id_extcon_work);
+
+	tegra_xhci_update_otg_role(tegra);
+}
+
+static int tegra_xhci_id_notifier(struct notifier_block *nb,
+					 unsigned long action, void *data)
+{
+	struct tegra_xusb *tegra = container_of(nb, struct tegra_xusb,
+						    id_extcon_nb);
+
+	/* nothing to do if there is no USB2 otg_cap port */
+	if (tegra->usb2_otg_port_base_1 == 0)
+		return NOTIFY_OK;
+
+	schedule_work(&tegra->id_extcon_work);
+
+	return NOTIFY_OK;
+}
+
 static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 {
 	struct tegra_xusb *tegra = context;
@@ -1757,6 +1952,8 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 
 	tegra->fw_loaded = true;
 
+	tegra_xhci_update_otg_role(tegra);
+
 	pm_runtime_use_autosuspend(dev);
 	pm_runtime_set_autosuspend_delay(dev, 2000);
 	pm_runtime_mark_last_busy(tegra->dev);
@@ -1815,11 +2012,37 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 						 prop, ret);
 				}
 				return ret;
+			} else {
+				if (phy && strstr(prop, "usb3")) {
+					if (tegra_xusb_padctl_has_otg_cap(
+							tegra->padctl, phy))
+						tegra->usb3_otg_port_base_1 =
+									j + 1;
+				}
+
+				if (phy && strstr(prop, "usb2")) {
+					if (tegra_xusb_padctl_has_otg_cap(
+							tegra->padctl, phy))
+						tegra->usb2_otg_port_base_1 =
+									j + 1;
+				}
 			}
 
 			tegra->typed_phys[i][j] = phy;
 		}
 	}
+
+	if (tegra->usb2_otg_port_base_1) {
+		dev_info(&pdev->dev, "USB2 port %d has OTG_CAP\n",
+			tegra->usb2_otg_port_base_1 - 1);
+	} else
+		dev_info(&pdev->dev, "No USB2 port has OTG_CAP\n");
+
+	if (tegra->usb3_otg_port_base_1) {
+		dev_info(&pdev->dev, "USB3 port %d has OTG_CAP\n",
+			tegra->usb3_otg_port_base_1 - 1);
+	} else
+		dev_info(&pdev->dev, "No USB3 port has OTG_CAP\n");
 
 	return 0;
 }
@@ -2007,6 +2230,18 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 
 	tegra_xusb_debugfs_init(tegra);
 
+	INIT_WORK(&tegra->id_extcon_work, tegra_xhci_id_extcon_work);
+	tegra->id_extcon = extcon_get_extcon_dev_by_cable(&pdev->dev, "id");
+	if (!IS_ERR(tegra->id_extcon)) {
+		tegra->id_extcon_nb.notifier_call = tegra_xhci_id_notifier;
+		extcon_register_notifier(tegra->id_extcon, EXTCON_USB_HOST,
+					&tegra->id_extcon_nb);
+	} else if (PTR_ERR(tegra->id_extcon) == -EPROBE_DEFER) {
+		err = -EPROBE_DEFER;
+		goto powergate_partitions;
+	} else
+		dev_info(&pdev->dev, "no USB ID extcon found\n");
+
 	INIT_DELAYED_WORK(&tegra->firmware_retry_work,
 					tegra_firmware_retry_work);
 
@@ -2016,7 +2251,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 				      tegra_xusb_probe_finish);
 	if (err < 0) {
 		dev_err(&pdev->dev, "can't request firmware(%d)\n", err);
-		goto powergate_partitions;
+		goto unregister_extcon;
 	}
 
 	/* TODO: look up dtb */
@@ -2024,6 +2259,12 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 
 	return 0;
 
+unregister_extcon:
+	cancel_work_sync(&tegra->id_extcon_work);
+	if (!IS_ERR(tegra->id_extcon)) {
+		extcon_unregister_notifier(tegra->id_extcon, EXTCON_USB_HOST,
+					&tegra->id_extcon_nb);
+	}
 powergate_partitions:
 	tegra_xhci_powergate_partitions(tegra);
 disable_phy:
@@ -2204,6 +2445,9 @@ static void tegra_xhci_enable_phy_sleepwalk_wake(struct tegra_xusb *tegra)
 			if (!phy)
 				continue;
 
+			if (!is_host_mode_phy(tegra, i, j))
+				continue;
+
 			speed = port_speed(tegra, offset + j);
 			tegra_xusb_padctl_enable_phy_sleepwalk(padctl, phy,
 							       speed);
@@ -2262,6 +2506,8 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 		struct phy *phy = tegra->typed_phys[USB2_PHY][i];
 
 		if (!phy)
+			continue;
+		if (!is_host_mode_phy(tegra, USB2_PHY, i))
 			continue;
 		tegra_phy_xusb_utmi_pad_power_down(phy);
 	}
@@ -2418,6 +2664,8 @@ static int tegra_xhci_resume_common(struct device *dev)
 
 	tegra->suspended = false;
 	mutex_unlock(&tegra->lock);
+
+	tegra_xhci_update_otg_role(tegra);
 
 	pm_runtime_mark_last_busy(tegra->dev);
 	pm_runtime_set_active(dev);

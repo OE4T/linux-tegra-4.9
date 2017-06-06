@@ -1,7 +1,7 @@
 /*
  * ADSP mailbox manager
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -105,6 +105,30 @@ static status_t mboxq_dequeue(struct nvadsp_mbox_queue *queue,
 	return ret;
 }
 
+static void mboxq_dump(struct nvadsp_mbox_queue *queue)
+{
+	unsigned long flags;
+	uint16_t head, count;
+	uint32_t data;
+
+	spin_lock_irqsave(&queue->lock, flags);
+
+	count = queue->count;
+	pr_info("nvadsp: queue %p count:%d\n", queue, count);
+
+	pr_info("nvadsp: queue data: ");
+	head = queue->head;
+	while (count) {
+		data = queue->array[head];
+		head = (head + 1) & NVADSP_MBOX_QUEUE_SIZE_MASK;
+		count--;
+		pr_info("0x%x ", data);
+	}
+	pr_info(" dumped\n");
+
+	spin_unlock_irqrestore(&queue->lock, flags);
+}
+
 static uint16_t nvadsp_mbox_alloc_mboxid(void)
 {
 	unsigned long start = NVADSP_MAILBOX_START;
@@ -157,13 +181,13 @@ status_t nvadsp_mbox_open(struct nvadsp_mbox *mbox, uint16_t *mid,
 		if (*mid >= NVADSP_MAILBOX_MAX) {
 			pr_debug("%s: Invalid mailbox %d.\n",
 				 __func__, *mid);
-			ret = -EINVAL;
+			ret = -ERANGE;
 			goto out;
 		}
 		if (nvadsp_drv_data->mboxes[*mid]) {
 			pr_debug("%s: mailbox %d already opened.\n",
 				 __func__, *mid);
-			ret = -EINVAL;
+			ret = -EADDRINUSE;
 			goto out;
 		}
 		mbox->id = *mid;
@@ -288,7 +312,8 @@ status_t nvadsp_mbox_close(struct nvadsp_mbox *mbox)
 	}
 
 	if (!is_mboxq_empty(&mbox->recv_queue)) {
-		ret = -EINVAL;
+		ret = -ENOTEMPTY;
+		mboxq_dump(&mbox->recv_queue);
 		goto out;
 	}
 

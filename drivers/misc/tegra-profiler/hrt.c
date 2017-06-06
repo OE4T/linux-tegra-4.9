@@ -276,7 +276,6 @@ static int get_sample_data(struct quadd_sample_data *sample,
 	else
 		sample->ip = instruction_pointer(regs);
 
-	sample->time = quadd_get_time();
 	sample->reserved = 0;
 	sample->pid = task->pid;
 	sample->tgid = task->tgid;
@@ -350,7 +349,8 @@ get_stack_offset(struct task_struct *task,
 static void
 read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 {
-	u32 state, extra_data = 0, urcs = 0;
+	u32 state, extra_data = 0, urcs = 0, ts_delta;
+	u64 ts_start, ts_end;
 	int i, vec_idx = 0, bt_size = 0;
 	int nr_events = 0, nr_positive_events = 0;
 	struct pt_regs *user_regs;
@@ -371,6 +371,8 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 
 	if (task->flags & PF_EXITING)
 		return;
+
+	s->time = ts_start = quadd_get_time();
 
 	if (ctx->pmu && ctx->get_pmu_info()->active)
 		nr_events += read_source(ctx->pmu, regs,
@@ -479,6 +481,13 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 	} else {
 		s->state = 0;
 	}
+
+	ts_end = quadd_get_time();
+	ts_delta = (u32)(ts_end - ts_start);
+
+	vec[vec_idx].base = &ts_delta;
+	vec[vec_idx].len = sizeof(ts_delta);
+	vec_idx++;
 
 	quadd_put_sample_this_cpu(&record_data, vec, vec_idx);
 }

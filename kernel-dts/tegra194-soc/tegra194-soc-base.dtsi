@@ -421,13 +421,15 @@
 		};
 	};
 
-	bpmp {
+	bpmp: bpmp {
 		compatible = "nvidia,tegra186-bpmp";
 		iommus = <&smmu TEGRA_SID_BPMP>;
 		reg = <0x0 0x0d000000 0x0 0x00800000>,
 		      <0x0 0x4004e000 0x0 0x00001000>,
 		      <0x0 0x4004f000 0x0 0x00001000>;
 		status = "okay";
+
+		#power-domain-cells = <1>;
 	};
 
 	se: se_elp@3ad0000 {
@@ -530,6 +532,7 @@
 
 		vic@15340000 {
 			compatible = "nvidia,tegra194-vic";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VIC>;
 			reg = <0x0 0x15340000 0x0 0x00040000>;
 			resets = <&bpmp_resets TEGRA194_RESET_VIC>;
 			clocks = <&bpmp_clks TEGRA194_CLK_VIC>;
@@ -540,6 +543,7 @@
 
 		nvjpg@15380000 {
 			compatible = "nvidia,tegra194-nvjpg";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_NVJPG>;
 			reg = <0x0 0x15380000 0x0 0x00040000>;
 			resets = <&bpmp_resets TEGRA194_RESET_NVJPG>;
 			clocks = <&bpmp_clks TEGRA194_CLK_NVJPG>;
@@ -592,6 +596,7 @@
 
 		nvenc@154c0000 {
 			compatible = "nvidia,tegra194-nvenc";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_NVENCA>;
 			reg = <0x0 0x154c0000 0x0 0x00040000>;
 			resets = <&bpmp_resets TEGRA194_RESET_NVENC>;
 			clocks = <&bpmp_clks TEGRA194_CLK_NVENC>;
@@ -602,6 +607,7 @@
 
 		nvenc1@15a80000 {
 			compatible = "nvidia,tegra194-nvenc";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_NVENCB>;
 			reg = <0x0 0x15a80000 0x0 0x00040000>;
 			resets = <&bpmp_resets TEGRA194_RESET_NVENC1>;
 			clocks = <&bpmp_clks TEGRA194_CLK_NVENC1>;
@@ -612,6 +618,7 @@
 
 		nvdla0: nvdla0@15880000 {
 			compatible = "nvidia,tegra194-nvdla";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_DLAA>;
 			reg = <0x0 0x15880000 0x0 0x00040000>;
 			interrupts = <0 236 0x04>;
 
@@ -625,6 +632,7 @@
 
 		nvdla1: nvdla1@158c0000 {
 			compatible = "nvidia,tegra194-nvdla";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_DLAB>;
 			reg = <0x0 0x158c0000 0x0 0x00040000>;
 			interrupts = <0 237 0x04>;
 
@@ -1142,6 +1150,7 @@
 
 		pva0: pva0 {
 			compatible = "nvidia,tegra194-pva";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PVAA>;
 			reg = <0x0 0x16000000 0x0 0x800000>;
 			interrupts = <0 234 0x04>;
 
@@ -1157,6 +1166,7 @@
 
 		pva1: pva1 {
 			compatible = "nvidia,tegra194-pva";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PVAB>;
 			reg = <0x0 0x16800000 0x0 0x800000>;
 			interrupts = <0 235 0x04>;
 

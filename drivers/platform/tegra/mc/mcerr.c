@@ -234,9 +234,11 @@ int tegra_mcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 	}
 
 	/* This need to be fixed to work for all SOC's. */
-	prop = of_get_property(pdev->dev.of_node,"compatible", NULL);
-	if (prop && strcmp(prop, "nvidia,tegra-t18x-mc") == 0)
-		tegra_emcerr_init(mc_parent, pdev);
+	if (IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
+		prop = of_get_property(pdev->dev.of_node,"compatible", NULL);
+		if (prop && strcmp(prop, "nvidia,tegra-t18x-mc") == 0)
+			tegra_emcerr_init(mc_parent, pdev);
+	}
 
 	if (!mc_parent)
 		goto done;

@@ -16,6 +16,9 @@
 #ifndef _NVGPU_GR_GV11B_H_
 #define _NVGPU_GR_GV11B_H_
 
+#define EGPC_PRI_BASE        0x580000
+#define EGPC_PRI_SHARED_BASE 0x480000
+
 #define GV11B_ZBC_TYPE_STENCIL            T19X_ZBC
 #define ZBC_STENCIL_CLEAR_FMT_INVAILD     0
 #define ZBC_STENCIL_CLEAR_FMT_U8          1

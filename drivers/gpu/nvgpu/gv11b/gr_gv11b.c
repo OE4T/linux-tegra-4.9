@@ -3378,6 +3378,196 @@ static void gv11b_gr_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
 	gk20a_writel(g, gr_gpcs_tpcs_sm_debug_sfe_control_r(), reg_val);
 }
 
+static bool pri_is_egpc_addr_shared(struct gk20a *g, u32 addr)
+{
+	u32 egpc_shared_base = EGPC_PRI_SHARED_BASE;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+
+	return (addr >= egpc_shared_base) &&
+		(addr < egpc_shared_base + gpc_stride);
+}
+
+static bool gv11b_gr_pri_is_egpc_addr(struct gk20a *g, u32 addr)
+{
+	u32 egpc_base = g->ops.gr.get_egpc_base(g);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
+
+	return	((addr >= egpc_base) &&
+		 (addr < egpc_base + num_gpcs * gpc_stride)) ||
+		pri_is_egpc_addr_shared(g, addr);
+}
+
+static bool gv11b_gr_pri_is_etpc_addr(struct gk20a *g, u32 addr)
+{
+	u32 egpc_addr = 0;
+
+	if (g->ops.gr.is_egpc_addr(g, addr)) {
+		egpc_addr = pri_gpccs_addr_mask(addr);
+		if (g->ops.gr.is_tpc_addr(g, egpc_addr))
+			return true;
+	}
+
+	return false;
+}
+
+static u32 pri_get_egpc_num(struct gk20a *g, u32 addr)
+{
+	u32 i, start;
+	u32 egpc_base = g->ops.gr.get_egpc_base(g);
+	u32 num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+
+	for (i = 0; i < num_gpcs; i++) {
+		start = egpc_base + (i * gpc_stride);
+		if ((addr >= start) && (addr < (start + gpc_stride)))
+			return i;
+	}
+	return 0;
+}
+
+static u32 pri_egpc_addr(struct gk20a *g, u32 addr, u32 gpc)
+{
+	u32 egpc_base = g->ops.gr.get_egpc_base(g);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+
+	return egpc_base + (gpc * gpc_stride) + addr;
+}
+
+static u32 pri_etpc_addr(struct gk20a *g, u32 addr, u32 gpc, u32 tpc)
+{
+	u32 egpc_base = g->ops.gr.get_egpc_base(g);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_base = nvgpu_get_litter_value(g,
+					GPU_LIT_TPC_IN_GPC_BASE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g,
+					GPU_LIT_TPC_IN_GPC_STRIDE);
+
+	return egpc_base + (gpc * gpc_stride) +
+		tpc_in_gpc_base + (tpc * tpc_in_gpc_stride) +
+		addr;
+}
+
+static void gv11b_gr_get_egpc_etpc_num(struct gk20a *g, u32 addr,
+			u32 *egpc_num, u32 *etpc_num)
+{
+	u32 egpc_addr = 0;
+
+	*egpc_num = pri_get_egpc_num(g, addr);
+	egpc_addr = pri_gpccs_addr_mask(addr);
+	*etpc_num = g->ops.gr.get_tpc_num(g, egpc_addr);
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"egpc_num = %d etpc_num = %d", *egpc_num, *etpc_num);
+}
+
+static int gv11b_gr_decode_egpc_addr(struct gk20a *g, u32 addr, int *addr_type,
+	u32 *gpc_num, u32 *tpc_num, u32 *broadcast_flags)
+{
+	u32 gpc_addr;
+
+	if (g->ops.gr.is_egpc_addr(g, addr)) {
+		nvgpu_log_info(g, "addr=0x%x is egpc", addr);
+
+		*addr_type = CTXSW_ADDR_TYPE_EGPC;
+		gpc_addr = pri_gpccs_addr_mask(addr);
+		if (pri_is_egpc_addr_shared(g, addr)) {
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_EGPC;
+			*gpc_num = 0;
+			nvgpu_log_info(g, "shared egpc");
+		} else {
+			*gpc_num = pri_get_egpc_num(g, addr);
+			nvgpu_log_info(g, "gpc=0x%x", *gpc_num);
+		}
+		if (g->ops.gr.is_tpc_addr(g, gpc_addr)) {
+			nvgpu_log_info(g, "addr=0x%x is etpc", addr);
+			*addr_type = CTXSW_ADDR_TYPE_ETPC;
+			if (pri_is_tpc_addr_shared(g, gpc_addr)) {
+				*broadcast_flags |= PRI_BROADCAST_FLAGS_ETPC;
+				*tpc_num = 0;
+				nvgpu_log_info(g, "shared etpc");
+			} else {
+				*tpc_num = g->ops.gr.get_tpc_num(g, gpc_addr);
+				nvgpu_log_info(g, "tpc=0x%x", *tpc_num);
+			}
+		}
+
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"addr_type = %d, broadcast_flags = %#08x",
+			*addr_type, *broadcast_flags);
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
+		 u32 gpc, u32 broadcast_flags, u32 *priv_addr_table, u32 *t)
+{
+	u32 gpc_num, tpc_num;
+
+	nvgpu_log_info(g, "addr=0x%x", addr);
+
+	/* The GPC/TPC unicast registers are included in the compressed PRI
+	 * tables. Convert a GPC/TPC broadcast address to unicast addresses so
+	 * that we can look up the offsets.
+	 */
+	if (broadcast_flags & PRI_BROADCAST_FLAGS_EGPC) {
+		nvgpu_log_info(g, "broadcast flags egpc");
+		for (gpc_num = 0; gpc_num < g->gr.gpc_count; gpc_num++) {
+
+			if (broadcast_flags & PRI_BROADCAST_FLAGS_ETPC) {
+				nvgpu_log_info(g, "broadcast flags etpc");
+				for (tpc_num = 0;
+				     tpc_num < g->gr.gpc_tpc_count[gpc_num];
+				     tpc_num++) {
+					priv_addr_table[*t] =
+						pri_etpc_addr(g,
+						pri_tpccs_addr_mask(addr),
+						     gpc_num, tpc_num);
+					nvgpu_log_info(g,
+					"priv_addr_table[%d]:%#08x",
+					*t, priv_addr_table[*t]);
+					(*t)++;
+				}
+			} else {
+				priv_addr_table[*t] =
+					pri_egpc_addr(g,
+					pri_gpccs_addr_mask(addr),
+					     gpc_num);
+				nvgpu_log_info(g, "priv_addr_table[%d]:%#08x",
+					*t, priv_addr_table[*t]);
+				(*t)++;
+			}
+		}
+	} else if (!(broadcast_flags & PRI_BROADCAST_FLAGS_EGPC)) {
+		if (broadcast_flags & PRI_BROADCAST_FLAGS_ETPC) {
+			nvgpu_log_info(g, "broadcast flags etpc but not egpc");
+			for (tpc_num = 0;
+			     tpc_num < g->gr.gpc_tpc_count[gpc];
+			     tpc_num++) {
+				priv_addr_table[*t] =
+					pri_etpc_addr(g,
+					pri_tpccs_addr_mask(addr),
+					     gpc, tpc_num);
+					nvgpu_log_info(g,
+					"priv_addr_table[%d]:%#08x",
+					*t, priv_addr_table[*t]);
+					(*t)++;
+			}
+		} else {
+			priv_addr_table[*t] = addr;
+			nvgpu_log_info(g, "priv_addr_table[%d]:%#08x",
+					*t, priv_addr_table[*t]);
+			(*t)++;
+		}
+	}
+}
+
+static u32 gv11b_gr_get_egpc_base(struct gk20a *g)
+{
+	return EGPC_PRI_BASE;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3468,4 +3658,10 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_sm_dsm_perf_ctrl_regs = gv11b_gr_get_sm_dsm_perf_ctrl_regs;
 	gops->gr.get_ovr_perf_regs = gv11b_gr_get_ovr_perf_regs;
 	gops->gr.access_smpc_reg = gv11b_gr_access_smpc_reg;
+	gops->gr.decode_egpc_addr = gv11b_gr_decode_egpc_addr;
+	gops->gr.egpc_etpc_priv_addr_table = gv11b_gr_egpc_etpc_priv_addr_table;
+	gops->gr.get_egpc_etpc_num = gv11b_gr_get_egpc_etpc_num;
+	gops->gr.get_egpc_base = gv11b_gr_get_egpc_base;
+	gops->gr.is_egpc_addr = gv11b_gr_pri_is_egpc_addr;
+	gops->gr.is_etpc_addr = gv11b_gr_pri_is_etpc_addr;
 }

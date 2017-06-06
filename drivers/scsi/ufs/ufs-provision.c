@@ -197,6 +197,15 @@ static ssize_t program_lun_debugfs_write(struct file *file,
 
 	if (ufs_tegra->program_lun == START_PROVISIONING) {
 
+		err = pm_runtime_get_sync(hba->dev);
+		if (err < 0) {
+			dev_err(hba->dev,
+				"pm_runtime_get_sync failed with error = %d\n"
+				"Abort UFS Provisioning\n", err);
+			ret = err;
+			goto out;
+		}
+
 		/* Read bConfigDescLock */
 		if (ufshcd_get_config_desc_lock(hba, &desc_lock)) {
 			dev_err(hba->dev,
@@ -244,6 +253,12 @@ static ssize_t program_lun_debugfs_write(struct file *file,
 		dev_info(hba->dev, "%s:Skip programming LUNs\n", __func__);
 	}
 out:
+	err = pm_runtime_put_sync(hba->dev);
+	if (err) {
+		dev_err(hba->dev,
+			"pm_runtime_put_sync failed with error = %d\n", err);
+	}
+
 	devm_kfree(hba->dev, kbuf);
 	return ret;
 }
@@ -293,6 +308,15 @@ static ssize_t program_refclk_debugfs_write(struct file *file,
 			goto out;
 		}
 
+		err = pm_runtime_get_sync(hba->dev);
+		if (err < 0) {
+			dev_err(hba->dev,
+				"pm_runtime_get_sync failed with error = %d\n"
+				"Abort UFS Provisioning\n", err);
+			ret = err;
+			goto out;
+		}
+
 		/* Write brefclkFreq value */
 		if (ufshcd_set_refclk_value(hba, &(ufs_tegra->refclk_value))) {
 			dev_err(hba->dev,
@@ -310,6 +334,12 @@ static ssize_t program_refclk_debugfs_write(struct file *file,
 		dev_info(hba->dev, "%s:Skip progamming refclkfreq\n", __func__);
 	}
 out:
+	err = pm_runtime_put_sync(hba->dev);
+	if (err) {
+		dev_err(hba->dev,
+			"pm_runtime_put_sync failed with error = %d\n", err);
+	}
+
 	devm_kfree(hba->dev, kbuf);
 	return ret;
 }

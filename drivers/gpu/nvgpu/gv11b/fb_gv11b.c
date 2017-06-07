@@ -67,11 +67,8 @@ static void gv11b_fb_init_fs_state(struct gk20a *g)
 {
 	nvgpu_log(g, gpu_dbg_fn, "initialize gv11b fb");
 
-	nvgpu_log(g, gpu_dbg_info, "fbhub active ltcs %u",
+	nvgpu_log(g, gpu_dbg_info, "fbhub active ltcs %x",
 			gk20a_readl(g, fb_fbhub_num_active_ltcs_r()));
-
-	gk20a_writel(g, fb_mmu_num_active_ltcs_r(),
-			fb_mmu_num_active_ltcs_count_f(g->ltc_count));
 
 	nvgpu_log(g, gpu_dbg_info, "mmu active ltcs %u",
 			fb_mmu_num_active_ltcs_count_v(

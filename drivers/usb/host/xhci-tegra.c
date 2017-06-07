@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra xHCI host controller driver
  *
- * Copyright (C) 2014-2017 NVIDIA Corporation
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION. All rights reserved.
  * Copyright (C) 2014 Google, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1959,6 +1959,7 @@ static const struct tegra_xusb_soc tegra186_soc = {
 	.scale_ss_clock = false,
 	.has_ipfs = false,
 };
+MODULE_FIRMWARE("tegra18x_xusb_firmware");
 
 static const struct of_device_id tegra_xusb_of_match[] = {
 	{ .compatible = "nvidia,tegra124-xusb", .data = &tegra124_soc },

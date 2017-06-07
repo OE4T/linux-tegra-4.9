@@ -20,6 +20,7 @@
 #ifdef CONFIG_DEBUG_FS
 #include "gk20a/platform_gk20a.h"
 #endif
+#include "gp106/pmu_mclk_gp106.h"
 
 #include <nvgpu/hw/gk20a/hw_pwr_gk20a.h>
 #include <nvgpu/hw/gp106/hw_fb_gp106.h>
@@ -2689,7 +2690,7 @@ done:
 	return status;
 }
 
-void clk_mclkseq_deinit_mclk_gddr5(struct gk20a *g)
+void gp106_mclk_deinit(struct gk20a *g)
 {
 	struct clk_mclk_state *mclk = &g->clk_pmu.clk_mclk;
 
@@ -2697,7 +2698,7 @@ void clk_mclkseq_deinit_mclk_gddr5(struct gk20a *g)
 	nvgpu_mutex_destroy(&mclk->mclk_lock);
 }
 
-int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
+int gp106_mclk_init(struct gk20a *g)
 {
 	struct clk_mclk_state *mclk;
 	int status;
@@ -2768,7 +2769,7 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 			mclk->debugfs_set = true;
 	}
 #endif
-	g->ops.pmu.mclk_change = clk_mclkseq_change_mclk_gddr5;
+	g->ops.pmu.mclk_change = gp106_mclk_change;
 
 	mclk->init = true;
 
@@ -2781,7 +2782,7 @@ fail_mclk_mutex:
 	return err;
 }
 
-int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
+int gp106_mclk_change(struct gk20a *g, u16 val)
 {
 	struct clk_mclk_state *mclk;
 	struct pmu_payload payload;

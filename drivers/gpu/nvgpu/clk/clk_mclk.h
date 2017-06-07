@@ -21,9 +21,6 @@
 #define GP106_MCLK_HIGH_SPEED	2
 #define GP106_MCLK_NUM_SPEED	3
 
-#define GP106_MEM_CONFIG_GDDR5_PG418	0
-#define GP106_MEM_CONFIG_GDDR5_PG419	1
-
 enum gk20a_mclk_speed {
 	gk20a_mclk_low_speed,
 	gk20a_mclk_mid_speed,
@@ -50,9 +47,5 @@ struct clk_mclk_state {
 	bool debugfs_set;
 #endif
 };
-
-int clk_mclkseq_init_mclk_gddr5(struct gk20a *g);
-void clk_mclkseq_deinit_mclk_gddr5(struct gk20a *g);
-int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val);
 
 #endif

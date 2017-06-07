@@ -1593,12 +1593,15 @@ static int gr_gv11b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: restarted runlist");
 
-	if (gk20a_is_channel_marked_as_tsg(fault_ch))
+	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
 		gk20a_fifo_issue_preempt(g, fault_ch->tsgid, true);
-	else
-		gk20a_fifo_issue_preempt(g, fault_ch->hw_chid, false);
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: preempted the channel/tsg");
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+			"CILP: preempted the channel/tsg");
+	} else {
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+			"CILP: tsgid is invalid, cannot preempt");
+		WARN_ON(1); /* only TSG can be preempted */
+	}
 
 	return ret;
 }

@@ -706,28 +706,13 @@ static int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 static int gv11b_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	u32 ret = 0;
-	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
-	u32 mutex_ret = 0;
-	u32 runlist_id;
+	u32 tsgid;
 
-	gk20a_dbg_fn("%d", hw_chid);
+	tsgid = f->channel[hw_chid].tsgid;
+	nvgpu_log_info(g, "chid:%d tsgid:%d", hw_chid, tsgid);
 
-	runlist_id = f->channel[hw_chid].runlist_id;
-	gk20a_dbg_fn("runlist_id %d", runlist_id);
-
-	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].mutex);
-
-	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
-
-	ret = __locked_fifo_preempt(g, hw_chid, false);
-
-	if (!mutex_ret)
-		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
-
-	nvgpu_mutex_release(&f->runlist_info[runlist_id].mutex);
-
-	return ret;
+	/* Preempt tsg. Channel preempt is NOOP */
+	return g->ops.fifo.preempt_tsg(g, tsgid);
 }
 
 static int __locked_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
@@ -818,9 +803,15 @@ static int __locked_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 			 unsigned int id_type, unsigned int timeout_rc_type)
 {
 	int ret;
+	struct fifo_gk20a *f = &g->fifo;
 
-	/* issue preempt */
-	gk20a_fifo_issue_preempt(g, id, id_type);
+	nvgpu_log_fn(g, "id:%d id_type:%d", id, id_type);
+
+	/* Issue tsg preempt. Channel preempt is noop */
+	if (id_type == ID_TYPE_CHANNEL)
+		gk20a_fifo_issue_preempt(g, f->channel[id].tsgid, true);
+	else
+		gk20a_fifo_issue_preempt(g, id, true);
 
 	/* wait for preempt */
 	ret = g->ops.fifo.is_preempt_pending(g, id, id_type,

@@ -96,7 +96,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ina3221_dcb_index = 0,
 	.ina3221_i2c_address = 0x84,
 	.ina3221_i2c_port = 0x2,
-	.mem_config_idx = GP106_MEM_CONFIG_GDDR5_PG418,
 	},
 	{ /* DEVICE=0x1c36 */
 	/* ptimer src frequency in hz */
@@ -132,7 +131,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ina3221_dcb_index = 0,
 	.ina3221_i2c_address = 0x84,
 	.ina3221_i2c_port = 0x2,
-	.mem_config_idx = GP106_MEM_CONFIG_GDDR5_PG418,
 	},
 	{ /* DEVICE=0x1c37 */
 	/* ptimer src frequency in hz */
@@ -168,7 +166,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ina3221_dcb_index = 0,
 	.ina3221_i2c_address = 0x84,
 	.ina3221_i2c_port = 0x2,
-	.mem_config_idx = GP106_MEM_CONFIG_GDDR5_PG418,
 	},
 	{ /* DEVICE=0x1c75 */
 	/* ptimer src frequency in hz */
@@ -204,7 +201,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ina3221_dcb_index = 1,
 	.ina3221_i2c_address = 0x80,
 	.ina3221_i2c_port = 0x1,
-	.mem_config_idx = GP106_MEM_CONFIG_GDDR5_PG419,
 	}
 };
 
@@ -402,8 +398,6 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	} else
 		g->msi_enabled = true;
 #endif
-
-	g->mem_config_idx = platform->mem_config_idx;
 
 	g->irq_stall = pdev->irq;
 	g->irq_nonstall = pdev->irq;

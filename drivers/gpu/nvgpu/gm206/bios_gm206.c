@@ -315,15 +315,11 @@ int gm206_bios_init(struct gk20a *g)
 		return -EINVAL;
 	}
 
-	/* WAR for HW2.5 RevA (identified by VBIOS version)
-	 * - INA3221 is missing
-	 * - use PG418 MCLK switching sequences
-	 */
+	/* WAR for HW2.5 RevA (INA3221 is missing) */
 	if ((g->pci_vendor_id == PCI_VENDOR_ID_NVIDIA) &&
 		(g->pci_device_id == 0x1c75) &&
 		(g->gpu_characteristics.vbios_version == 0x86065300)) {
-		g->power_sensor_missing = true;
-		g->mem_config_idx = GP106_MEM_CONFIG_GDDR5_PG418;
+			g->power_sensor_missing = true;
 	}
 
 #ifdef CONFIG_DEBUG_FS

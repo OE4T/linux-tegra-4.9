@@ -497,15 +497,14 @@
 
 			nvidia,dc-ctrlnum = <0>;
 
-			clock-names = "clk32k_in", "nvdisplay_disp",
+			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
 				      "nvdisplay_p3", "pllp_display",
 				      "pll_d", "plld2",
 				      "plld3", "plld4",
 				      "emc";
-			clocks = <&clk32k_in>,
-				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
+			clocks = <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
@@ -546,15 +545,14 @@
 
 			nvidia,dc-ctrlnum = <1>;
 
-			clock-names = "clk32k_in", "nvdisplay_disp",
+			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
 				      "nvdisplay_p3", "pllp_display",
 				      "pll_d", "plld2",
 				      "plld3", "plld4",
 				      "disp2_emc";
-			clocks = <&clk32k_in>,
-				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
+			clocks = <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
@@ -595,15 +593,14 @@
 
 			nvidia,dc-ctrlnum = <2>;
 
-			clock-names = "clk32k_in", "nvdisplay_disp",
+			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
 				      "nvdisplay_p3", "pllp_display",
 				      "pll_d", "plld2",
 				      "plld3", "plld4",
 				      "disp3_emc";
-			clocks = <&clk32k_in>,
-				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
+			clocks = <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
@@ -644,15 +641,14 @@
 
 			nvidia,dc-ctrlnum = <3>;
 
-			clock-names = "clk32k_in", "nvdisplay_disp",
+			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
 				      "nvdisplay_p3", "pllp_display",
 				      "pll_d", "plld2",
 				      "plld3", "plld4",
 				      "disp4_emc";
-			clocks = <&clk32k_in>,
-				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
+			clocks = <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
@@ -690,8 +686,7 @@
 			nvidia,dpaux = <&dpaux0>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
-			clocks = <&clk32k_in>,
-				 <&bpmp_clks TEGRA194_CLK_SOR0>,
+			clocks = <&bpmp_clks TEGRA194_CLK_SOR0>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
 				 <&bpmp_clks TEGRA194_CLK_SOR0_PAD_CLKOUT>,
 				 <&bpmp_clks TEGRA194_CLK_SOR0_OUT>,
@@ -700,7 +695,7 @@
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "clk32k_in", "sor0", "sor_safe",
+			clock-names = "sor0", "sor_safe",
 				      "sor0_pad_clkout", "sor0_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -728,8 +723,7 @@
 			nvidia,dpaux = <&dpaux1>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
-			clocks = <&clk32k_in>,
-				 <&bpmp_clks TEGRA194_CLK_SOR1>,
+			clocks = <&bpmp_clks TEGRA194_CLK_SOR1>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_OUT>,
@@ -738,7 +732,7 @@
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "clk32k_in", "sor1", "sor_safe",
+			clock-names = "sor1", "sor_safe",
 				      "sor1_pad_clkout", "sor1_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -766,11 +760,10 @@
 			nvidia,dpaux = <&dpaux2>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
-			clocks = <&clk32k_in>,
-				/*
-				 * todo: TEGRA194_CLK_SOR2* not defined yet
-				 *       so use TEGRA194_CLK_SOR1*
-				 */
+			clocks = /*
+				  * todo: TEGRA194_CLK_SOR2* not defined yet
+				  *       so use TEGRA194_CLK_SOR1*
+				  */
 				 <&bpmp_clks TEGRA194_CLK_SOR1>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
@@ -780,7 +773,7 @@
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "clk32k_in", "sor2", "sor_safe",
+			clock-names = "sor2", "sor_safe",
 				      "sor2_pad_clkout", "sor2_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -808,11 +801,10 @@
 			nvidia,dpaux = <&dpaux3>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
-			clocks = <&clk32k_in>,
-				/*
-				 * todo: TEGRA194_CLK_SOR3* not defined yet
-				 *       so use TEGRA194_CLK_SOR1*
-				 */
+			clocks = /*
+				  * todo: TEGRA194_CLK_SOR3* not defined yet
+				  *       so use TEGRA194_CLK_SOR1*
+				  */
 				 <&bpmp_clks TEGRA194_CLK_SOR1>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
@@ -822,7 +814,7 @@
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "clk32k_in", "sor3", "sor_safe",
+			clock-names = "sor3", "sor_safe",
 				      "sor3_pad_clkout", "sor3_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -848,10 +840,9 @@
 			interrupts = <0 159 4>;
 			nvidia,dpaux-ctrlnum = <0>;
 
-			clocks = <&clk32k_in>,
-				 <&bpmp_clks TEGRA194_CLK_DPAUX>,
+			clocks = <&bpmp_clks TEGRA194_CLK_DPAUX>,
 				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
-			clock-names = "clk32k_in", "dpaux", "plldp";
+			clock-names = "dpaux", "plldp";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX>;
 			reset-names = "dpaux";
 		}; //dpaux0
@@ -863,10 +854,9 @@
 			interrupts = <0 160 4>;
 			nvidia,dpaux-ctrlnum = <1>;
 
-			clocks = <&clk32k_in>,
-				 <&bpmp_clks TEGRA194_CLK_DPAUX1>,
+			clocks = <&bpmp_clks TEGRA194_CLK_DPAUX1>,
 				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
-			clock-names = "clk32k_in", "dpaux1", "plldp";
+			clock-names = "dpaux1", "plldp";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX1>;
 			reset-names = "dpaux1";
 		}; //dpaux1
@@ -878,14 +868,13 @@
 			interrupts = <0 245 4>;
 			nvidia,dpaux-ctrlnum = <2>;
 
-			clocks = <&clk32k_in>,
-				/*
-				 * todo: TEGRA194_CLK_DPAUX2* not defined yet
-				 *       so use TEGRA194_CLK_DPAUX1*
-				 */
+			clocks = /*
+				  * todo: TEGRA194_CLK_DPAUX2* not defined yet
+				  *       so use TEGRA194_CLK_DPAUX1*
+				  */
 				 <&bpmp_clks TEGRA194_CLK_DPAUX1>,
 				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
-			clock-names = "clk32k_in", "dpaux2", "plldp";
+			clock-names = "dpaux2", "plldp";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX2>;
 			reset-names = "dpaux2";
 		}; //dpaux2
@@ -897,14 +886,13 @@
 			interrupts = <0 246 4>;
 			nvidia,dpaux-ctrlnum = <3>;
 
-			clocks = <&clk32k_in>,
-				/*
-				 * todo: TEGRA194_CLK_DPAUX3* not defined yet
-				 *       so use TEGRA194_CLK_DPAUX1*
-				 */
+			clocks = /*
+				  * todo: TEGRA194_CLK_DPAUX3* not defined yet
+				  *       so use TEGRA194_CLK_DPAUX1*
+				  */
 				 <&bpmp_clks TEGRA194_CLK_DPAUX1>,
 				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
-			clock-names = "clk32k_in", "dpaux3", "plldp";
+			clock-names = "dpaux3", "plldp";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX3>;
 			reset-names = "dpaux3";
 		}; //dpaux3

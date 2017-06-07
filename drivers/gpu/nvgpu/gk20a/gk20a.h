@@ -142,6 +142,8 @@ enum gk20a_cbc_op {
 
 #define nvgpu_get_litter_value(g, v) (g)->ops.get_litter_value((g), v)
 
+enum nvgpu_unit;
+
 struct gpu_ops {
 	struct {
 		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
@@ -851,6 +853,7 @@ struct gpu_ops {
 		void (*disable)(struct gk20a *g, u32 units);
 		void (*reset)(struct gk20a *g, u32 units);
 		u32 (*boot_0)(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
+		bool (*is_intr1_pending)(struct gk20a *g, enum nvgpu_unit unit, u32 mc_intr_1);
 	} mc;
 	struct {
 		void (*show_dump)(struct gk20a *g,

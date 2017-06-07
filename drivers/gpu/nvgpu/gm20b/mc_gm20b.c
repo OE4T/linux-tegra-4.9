@@ -32,4 +32,5 @@ void gm20b_init_mc(struct gpu_ops *gops)
 	gops->mc.disable = gk20a_mc_disable;
 	gops->mc.reset = gk20a_mc_reset;
 	gops->mc.boot_0 = gk20a_mc_boot_0;
+	gops->mc.is_intr1_pending = mc_gk20a_is_intr1_pending;
 }

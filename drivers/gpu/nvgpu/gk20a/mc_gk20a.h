@@ -31,4 +31,6 @@ void gk20a_mc_enable(struct gk20a *g, u32 units);
 void gk20a_mc_disable(struct gk20a *g, u32 units);
 void gk20a_mc_reset(struct gk20a *g, u32 units);
 u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
+bool mc_gk20a_is_intr1_pending(struct gk20a *g,
+		enum nvgpu_unit unit, u32 mc_intr_1);
 #endif

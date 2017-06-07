@@ -19,6 +19,7 @@
 #include "mc_gp10b.h"
 
 #include <nvgpu/atomic.h>
+#include <nvgpu/unit.h>
 
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 
@@ -169,6 +170,30 @@ void mc_gp10b_intr_stall_resume(struct gk20a *g)
 			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING]);
 }
 
+static bool mc_gp10b_is_intr1_pending(struct gk20a *g,
+				      enum nvgpu_unit unit, u32 mc_intr_1)
+{
+	u32 mask = 0;
+	bool is_pending;
+
+	switch (unit) {
+	case NVGPU_UNIT_FIFO:
+		mask = mc_intr_pfifo_pending_f();
+		break;
+	default:
+		break;
+	}
+
+	if (mask == 0) {
+		nvgpu_err(g, "unknown unit %d", unit);
+		is_pending = false;
+	} else {
+		is_pending = (mc_intr_1 & mask) ? true : false;
+	}
+
+	return is_pending;
+}
+
 void gp10b_init_mc(struct gpu_ops *gops)
 {
 	gops->mc.intr_enable = mc_gp10b_intr_enable;
@@ -184,4 +209,5 @@ void gp10b_init_mc(struct gpu_ops *gops)
 	gops->mc.disable = gk20a_mc_disable;
 	gops->mc.reset = gk20a_mc_reset;
 	gops->mc.boot_0 = gk20a_mc_boot_0;
+	gops->mc.is_intr1_pending = mc_gp10b_is_intr1_pending;
 }

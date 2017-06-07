@@ -20,6 +20,7 @@
 
 #include <nvgpu/timers.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/unit.h>
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
@@ -134,7 +135,7 @@ void mc_gk20a_intr_thread_nonstall(struct gk20a *g, u32 mc_intr_1)
 	u32 engine_enum = ENGINE_INVAL_GK20A;
 	int ops_old, ops_new, ops = 0;
 
-	if (mc_intr_1 & mc_intr_0_pfifo_pending_f())
+	if (g->ops.mc.is_intr1_pending(g, NVGPU_UNIT_FIFO, mc_intr_1))
 		ops |= gk20a_fifo_nonstall_isr(g);
 
 	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines;
@@ -287,6 +288,30 @@ u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev)
 	return val;
 }
 
+bool mc_gk20a_is_intr1_pending(struct gk20a *g,
+			       enum nvgpu_unit unit, u32 mc_intr_1)
+{
+	u32 mask = 0;
+	bool is_pending;
+
+	switch (unit) {
+	case NVGPU_UNIT_FIFO:
+		mask = mc_intr_0_pfifo_pending_f();
+		break;
+	default:
+		break;
+	}
+
+	if (mask == 0) {
+		nvgpu_err(g, "unknown unit %d", unit);
+		is_pending = false;
+	} else {
+		is_pending = (mc_intr_1 & mask) ? true : false;
+	}
+
+	return is_pending;
+}
+
 void gk20a_init_mc(struct gpu_ops *gops)
 {
 	gops->mc.intr_enable = mc_gk20a_intr_enable;
@@ -302,4 +327,5 @@ void gk20a_init_mc(struct gpu_ops *gops)
 	gops->mc.disable = gk20a_mc_disable;
 	gops->mc.reset = gk20a_mc_reset;
 	gops->mc.boot_0 = gk20a_mc_boot_0;
+	gops->mc.is_intr1_pending = mc_gk20a_is_intr1_pending;
 }

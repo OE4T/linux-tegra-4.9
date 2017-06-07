@@ -545,7 +545,7 @@ int pwm_apply_state(struct pwm_device *pwm, struct pwm_state *state)
 				return -ENOTSUPP;
 
 			err = pwm->chip->ops->set_ramp_time(
-					pwm->chip, pwm, state->double_period);
+					pwm->chip, pwm, state->ramp_time);
 			if (err)
 				return err;
 

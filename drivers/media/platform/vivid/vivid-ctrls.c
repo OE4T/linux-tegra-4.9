@@ -107,17 +107,16 @@
 #define VIVID_CID_FRAME_LENGTH		(VIVID_CID_VIVID_BASE + 122)
 #define VIVID_CID_GROUP_HOLD		(VIVID_CID_VIVID_BASE + 123)
 #define VIVID_CID_HDR_EN		(VIVID_CID_VIVID_BASE + 124)
-#define VIVID_CID_EMBEDDED_DATA_HEIGHT	(VIVID_CID_VIVID_BASE + 125)
-#define VIVID_CID_SENSOR_SIGNAL_PROPERTIES (VIVID_CID_VIVID_BASE + 126)
-#define VIVID_CID_SENSOR_IMAGE_PROPERTIES (VIVID_CID_VIVID_BASE + 127)
-#define VIVID_CID_SENSOR_CONTROL_PROPERTIES (VIVID_CID_VIVID_BASE + 128)
-#define VIVID_CID_SENSOR_DV_TIMINGS (VIVID_CID_VIVID_BASE + 129)
+#define VIVID_CID_SENSOR_SIGNAL_PROPERTIES (VIVID_CID_VIVID_BASE + 125)
+#define VIVID_CID_SENSOR_IMAGE_PROPERTIES (VIVID_CID_VIVID_BASE + 126)
+#define VIVID_CID_SENSOR_CONTROL_PROPERTIES (VIVID_CID_VIVID_BASE + 127)
+#define VIVID_CID_SENSOR_DV_TIMINGS (VIVID_CID_VIVID_BASE + 128)
 /**
  * This is temporary with the current v4l2 infrastructure
  * currently discussing with upstream maintainers our proposals and
  * better approaches to resolve this
  */
-#define VIVID_CID_SENSOR_MODES		(VIVID_CID_VIVID_BASE + 130)
+#define VIVID_CID_SENSOR_MODES		(VIVID_CID_VIVID_BASE + 129)
 
 /* General User Controls */
 
@@ -494,9 +493,6 @@ static int vivid_vid_cap_s_ctrl(struct v4l2_ctrl *ctrl)
 	case VIVID_CID_FRAME_LENGTH:
 		vivid_update_timeperframe(dev, ctrl->val);
 		break;
-	case VIVID_CID_EMBEDDED_DATA_HEIGHT:
-		dev->embedded_data_height = ctrl->val;
-		break;
 	}
 	return 0;
 }
@@ -603,18 +599,6 @@ static const struct v4l2_ctrl_config vivid_ctrl_hdrenable = {
 	.min = 0,
 	.max = 1,
 	.def = 0,
-	.step = 1,
-};
-
-static const struct v4l2_ctrl_config vivid_ctrl_embeddeddata = {
-	.ops = &vivid_vid_cap_ctrl_ops,
-	.id = VIVID_CID_EMBEDDED_DATA_HEIGHT,
-	.name = "Embedded Data Height",
-	.type = V4L2_CTRL_TYPE_INTEGER,
-	.flags = V4L2_CTRL_FLAG_SLIDER,
-	.min = 0,
-	.max = 16,
-	.def = 1,
 	.step = 1,
 };
 
@@ -1662,9 +1646,6 @@ int vivid_create_controls(struct vivid_dev *dev, bool show_ccs_cap,
 			&vivid_ctrl_coarsetime_short, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_grouphold, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_hdrenable, NULL);
-		v4l2_ctrl_new_custom(hdl_vid_cap,
-			&vivid_ctrl_embeddeddata, NULL);
-		dev->embedded_data_height = vivid_ctrl_embeddeddata.def;
 		dev->ctrl_signalprops = v4l2_ctrl_new_custom(hdl_vid_cap,
 			&vivid_ctrl_signalprops, NULL);
 		dev->ctrl_imageprops = v4l2_ctrl_new_custom(hdl_vid_cap,

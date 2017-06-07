@@ -391,31 +391,35 @@ struct vivid_fmt vivid_formats[] = {
 	},
 	{
 		.fourcc   = V4L2_PIX_FMT_SBGGR10, /* Bayer BG/GR */
-		.vdownsampling = { 1 },
-		.bit_depth = { 16 },
-		.planes   = 1,
-		.buffers = 1,
+		.is_metadata = { 0, 1},
+		.vdownsampling = { 1, 1 },
+		.bit_depth = { 16, 16 },
+		.planes   = 2,
+		.buffers = 2,
 	},
 	{
 		.fourcc   = V4L2_PIX_FMT_SGBRG10, /* Bayer GB/RG */
-		.vdownsampling = { 1 },
-		.bit_depth = { 16 },
-		.planes   = 1,
-		.buffers = 1,
+		.is_metadata = { 0, 1},
+		.vdownsampling = { 1, 1 },
+		.bit_depth = { 16, 16 },
+		.planes   = 2,
+		.buffers = 2,
 	},
 	{
 		.fourcc   = V4L2_PIX_FMT_SGRBG10, /* Bayer GR/BG */
-		.vdownsampling = { 1 },
-		.bit_depth = { 16 },
-		.planes   = 1,
-		.buffers = 1,
+		.is_metadata = { 0, 1},
+		.vdownsampling = { 1, 1 },
+		.bit_depth = { 16, 16 },
+		.planes   = 2,
+		.buffers = 2,
 	},
 	{
 		.fourcc   = V4L2_PIX_FMT_SRGGB10, /* Bayer RG/GB */
-		.vdownsampling = { 1 },
-		.bit_depth = { 16 },
-		.planes   = 1,
-		.buffers = 1,
+		.is_metadata = { 0, 1},
+		.vdownsampling = { 1, 1 },
+		.bit_depth = { 16, 16 },
+		.planes   = 2,
+		.buffers = 2,
 	},
 	{
 		.fourcc   = V4L2_PIX_FMT_SBGGR12, /* Bayer BG/GR */
@@ -478,35 +482,39 @@ struct vivid_fmt vivid_formats[] = {
 	},
 	{
 		.fourcc = V4L2_PIX_FMT_XBGGR10P, /* Packed Bayer BG/GR */
-		.vdownsampling = { 1 },
+		.is_metadata = { 0, 1},
+		.vdownsampling = { 1, 1 },
 		.packedpixels = 3,
-		.bit_depth = { 32 },
-		.planes = 1,
-		.buffers = 1,
+		.bit_depth = { 32, 32},
+		.planes = 2,
+		.buffers = 2,
 	},
 	{
 		.fourcc = V4L2_PIX_FMT_XGBRG10P, /* Packed Bayer GB/RG */
-		.vdownsampling = { 1 },
+		.is_metadata = { 0, 1},
+		.vdownsampling = { 1, 1 },
 		.packedpixels = 3,
-		.bit_depth = { 32 },
-		.planes = 1,
-		.buffers = 1,
+		.bit_depth = { 32, 32 },
+		.planes = 2,
+		.buffers = 2,
 	},
 	{
 		.fourcc = V4L2_PIX_FMT_XGRBG10P, /* Packed Bayer GR/BG */
-		.vdownsampling = { 1 },
+		.is_metadata = { 0, 1},
+		.vdownsampling = { 1, 1 },
 		.packedpixels = 3,
-		.bit_depth = { 32 },
-		.planes = 1,
-		.buffers = 1,
+		.bit_depth = { 32, 32 },
+		.planes = 2,
+		.buffers = 2,
 	},
 	{
 		.fourcc = V4L2_PIX_FMT_XRGGB10P, /* Packed Bayer RG/GB */
-		.vdownsampling = { 1 },
+		.is_metadata = { 0, 1},
+		.vdownsampling = { 1, 1 },
 		.packedpixels = 3,
-		.bit_depth = { 32 },
-		.planes = 1,
-		.buffers = 1,
+		.bit_depth = { 32, 32 },
+		.planes = 2,
+		.buffers = 2,
 	},
 	{
 		.fourcc   = V4L2_PIX_FMT_NV16M,

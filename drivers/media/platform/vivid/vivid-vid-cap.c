@@ -109,7 +109,6 @@ static int vid_cap_queue_setup(struct vb2_queue *vq,
 {
 	struct vivid_dev *dev = vb2_get_drv_priv(vq);
 	unsigned buffers = tpg_g_buffers(&dev->tpg);
-	unsigned h = dev->fmt_cap_rect.height;
 	unsigned p;
 
 	if (dev->field_cap == V4L2_FIELD_ALTERNATE) {
@@ -136,15 +135,19 @@ static int vid_cap_queue_setup(struct vb2_queue *vq,
 		 */
 		if (*nplanes != buffers)
 			return -EINVAL;
+
 		for (p = 0; p < buffers; p++) {
-			if (sizes[p] < tpg_g_line_width(&dev->tpg, p) * h +
-						dev->fmt_cap->data_offset[p])
+			if (sizes[p] < tpg_g_line_width(&dev->tpg, p) *
+					tpg_g_buf_height(&dev->tpg, p) +
+							dev->fmt_cap->data_offset[p])
 				return -EINVAL;
 		}
 	} else {
-		for (p = 0; p < buffers; p++)
-			sizes[p] = tpg_g_line_width(&dev->tpg, p) * h +
+		for (p = 0; p < buffers; p++) {
+			sizes[p] = tpg_g_line_width(&dev->tpg, p) *
+					tpg_g_buf_height(&dev->tpg, p) +
 					dev->fmt_cap->data_offset[p];
+		}
 	}
 
 	if (vq->num_buffers + *nbuffers < 2)
@@ -180,7 +183,8 @@ static int vid_cap_buf_prepare(struct vb2_buffer *vb)
 		return -EINVAL;
 	}
 	for (p = 0; p < buffers; p++) {
-		size = tpg_g_line_width(&dev->tpg, p) * dev->fmt_cap_rect.height +
+		size = tpg_g_line_width(&dev->tpg, p) *
+			tpg_g_buf_height(&dev->tpg, p) +
 			dev->fmt_cap->data_offset[p];
 
 		if (vb2_plane_size(vb, p) < size) {
@@ -564,11 +568,13 @@ int vivid_g_fmt_vid_cap(struct file *file, void *priv,
 	mp->ycbcr_enc    = vivid_ycbcr_enc_cap(dev);
 	mp->quantization = vivid_quantization_cap(dev);
 	mp->num_planes = dev->fmt_cap->buffers;
+	mp->metadata_height = dev->embedded_data_height;
 	for (p = 0; p < mp->num_planes; p++) {
 		mp->plane_fmt[p].bytesperline =
 			tpg_g_bytesperline(&dev->tpg, p);
 		mp->plane_fmt[p].sizeimage =
-			mp->plane_fmt[p].bytesperline * mp->height +
+			mp->plane_fmt[p].bytesperline *
+			tpg_g_buf_height(&dev->tpg, p) +
 			dev->fmt_cap->data_offset[p];
 	}
 	return 0;
@@ -636,6 +642,10 @@ int vivid_try_fmt_vid_cap(struct file *file, void *priv,
 		mp->height = r.height / factor;
 	}
 
+	/* clip metadata height maximum value */
+	if (mp->metadata_height > MAX_METADATA_HEIGHT)
+		mp->metadata_height = MAX_METADATA_HEIGHT;
+
 	/* This driver supports custom bytesperline values */
 
 	mp->num_planes = fmt->buffers;
@@ -650,8 +660,10 @@ int vivid_try_fmt_vid_cap(struct file *file, void *priv,
 			pfmt[p].bytesperline = max_bpl;
 		if (pfmt[p].bytesperline < bytesperline)
 			pfmt[p].bytesperline = bytesperline;
-		pfmt[p].sizeimage = tpg_calc_line_width(&dev->tpg, p, pfmt[p].bytesperline) *
-			mp->height + fmt->data_offset[p];
+		pfmt[p].sizeimage =
+			tpg_calc_line_width(&dev->tpg, p, pfmt[p].bytesperline) *
+			(fmt->is_metadata[p] ? mp->metadata_height : mp->height) +
+			fmt->data_offset[p];
 		memset(pfmt[p].reserved, 0, sizeof(pfmt[p].reserved));
 	}
 	mp->colorspace = vivid_colorspace_cap(dev);
@@ -774,12 +786,15 @@ int vivid_s_fmt_vid_cap(struct file *file, void *priv,
 
 	dev->fmt_cap_rect.width = mp->width;
 	dev->fmt_cap_rect.height = mp->height;
-	tpg_s_buf_height(&dev->tpg, mp->height);
-	tpg_s_fourcc(&dev->tpg, dev->fmt_cap->fourcc);
+	tpg_s_fourcc(&dev->tpg, dev->fmt_cap->fourcc, mp->metadata_height);
+	for (p = 0; p < tpg_g_buffers(&dev->tpg); p++) {
+		unsigned height = dev->fmt_cap->is_metadata[p] ?
+			mp->metadata_height : mp->height;
+		tpg_s_buf_height(&dev->tpg, p, height);
+	}
+	dev->embedded_data_height = mp->metadata_height;
 	for (p = 0; p < tpg_g_buffers(&dev->tpg); p++)
 		tpg_s_bytesperline(&dev->tpg, p, mp->plane_fmt[p].bytesperline);
-	dev->fmt_cap->data_offset[0] =
-		mp->plane_fmt[0].bytesperline * dev->embedded_data_height;
 	dev->field_cap = mp->field;
 	if (dev->field_cap == V4L2_FIELD_ALTERNATE)
 		tpg_s_field(&dev->tpg, V4L2_FIELD_TOP, true);
@@ -952,7 +967,7 @@ int vivid_vid_cap_s_selection(struct file *file, void *fh, struct v4l2_selection
 				v4l2_rect_set_max_size(compose, &max_rect);
 			}
 			dev->fmt_cap_rect = fmt;
-			tpg_s_buf_height(&dev->tpg, fmt.height);
+			tpg_s_buf_height(&dev->tpg, 0, fmt.height);
 		} else if (dev->has_compose_cap) {
 			struct v4l2_rect fmt = dev->fmt_cap_rect;
 
@@ -961,7 +976,7 @@ int vivid_vid_cap_s_selection(struct file *file, void *fh, struct v4l2_selection
 			    vb2_is_busy(&dev->vb_vid_cap_q))
 				return -EBUSY;
 			dev->fmt_cap_rect = fmt;
-			tpg_s_buf_height(&dev->tpg, fmt.height);
+			tpg_s_buf_height(&dev->tpg, 0, fmt.height);
 			v4l2_rect_set_size_to(compose, &s->r);
 			v4l2_rect_map_inside(compose, &dev->fmt_cap_rect);
 		} else {
@@ -971,7 +986,7 @@ int vivid_vid_cap_s_selection(struct file *file, void *fh, struct v4l2_selection
 			v4l2_rect_set_size_to(&dev->fmt_cap_rect, &s->r);
 			v4l2_rect_set_size_to(compose, &s->r);
 			v4l2_rect_map_inside(compose, &dev->fmt_cap_rect);
-			tpg_s_buf_height(&dev->tpg, dev->fmt_cap_rect.height);
+			tpg_s_buf_height(&dev->tpg, 0, dev->fmt_cap_rect.height);
 		}
 		s->r.top *= factor;
 		s->r.height *= factor;

@@ -61,6 +61,9 @@
 /* The minimum image width/height */
 #define MIN_WIDTH  16
 #define MIN_HEIGHT 16
+/* Metadata height max/default */
+#define MAX_METADATA_HEIGHT 16
+#define DEF_METADATA_HEIGHT 1
 /* The data_offset of plane 0 for the multiplanar formats */
 #define PLANE0_DATA_OFFSET 128
 
@@ -83,6 +86,7 @@ struct vivid_fmt {
 	u32	fourcc;          /* v4l2 format id */
 	bool	is_yuv;
 	bool	can_do_overlay;
+	bool	is_metadata[TPG_MAX_PLANES];
 	u8	vdownsampling[TPG_MAX_PLANES];
 	u8	packedpixels;
 	u32	alpha_mask;
@@ -359,6 +363,7 @@ struct vivid_dev {
 	u32				xfer_func_out;
 	u32				service_set_out;
 	unsigned			bytesperline_out[TPG_MAX_PLANES];
+	unsigned			height_out[TPG_MAX_PLANES];
 	unsigned			tv_field_out;
 	unsigned			tv_audio_output;
 	bool				vbi_out_have_wss;
@@ -414,6 +419,7 @@ struct vivid_dev {
 	bool				vbi_cap_streaming;
 	bool				stream_sliced_vbi_cap;
 	u32				embedded_data_height;
+	u32				fmt_out_metadata_height;
 
 	/* added for NV sensor emulation */
 	struct sensor_properties	sensor_props;

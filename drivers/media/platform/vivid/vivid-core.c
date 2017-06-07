@@ -102,7 +102,8 @@ MODULE_PARM_DESC(ccs_out_mode, " output crop/compose/scale mode:\n"
 			   "\t\t    bit 0=crop, 1=compose, 2=scale,\n"
 			   "\t\t    -1=user-controlled (default)");
 
-static unsigned multiplanar[VIVID_MAX_DEVS] = { [0 ... (VIVID_MAX_DEVS - 1)] = 1 };
+static unsigned
+multiplanar[VIVID_MAX_DEVS] = { [0 ... (VIVID_MAX_DEVS - 1)] = 2 };
 module_param_array(multiplanar, uint, NULL, 0444);
 MODULE_PARM_DESC(multiplanar, " 1 (default) creates a single planar device, 2 creates a multiplanar device.");
 
@@ -989,9 +990,11 @@ static int vivid_create_instance(struct platform_device *pdev, int inst)
 	dev->fmt_out = &vivid_formats[0];
 	if (!dev->multiplanar)
 		vivid_formats[0].data_offset[0] = 0;
+	dev->embedded_data_height = DEF_METADATA_HEIGHT;
+	dev->fmt_out_metadata_height = DEF_METADATA_HEIGHT;
 	dev->webcam_size_idx = 1;
 	dev->webcam_ival_idx = 3;
-	tpg_s_fourcc(&dev->tpg, dev->fmt_cap->fourcc);
+	tpg_s_fourcc(&dev->tpg, dev->fmt_cap->fourcc, DEF_METADATA_HEIGHT);
 	dev->std_cap = V4L2_STD_PAL;
 	dev->std_out = V4L2_STD_PAL;
 	if (dev->input_type[0] == TV || dev->input_type[0] == SVID)

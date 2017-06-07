@@ -297,11 +297,15 @@ static int vivid_copy_buffer(struct vivid_dev *dev, unsigned p, u8 *vcapbuf,
 	voutbuf = plane_vaddr(tpg, vid_out_buf, p,
 			      dev->bytesperline_out, dev->fmt_out_rect.height);
 	/* copy embedded meta data */
-	if (!p && dev->fmt_cap->data_offset[0] &&
-		dev->fmt_out->data_offset[0]) {
-		memcpy(vcapbuf, voutbuf, dev->fmt_cap->data_offset[0]);
-		vcapbuf += dev->fmt_cap->data_offset[0];
-		voutbuf += dev->fmt_out->data_offset[0];
+	if (dev->fmt_cap->is_metadata[p] &&
+		dev->fmt_out->is_metadata[p]) {
+		unsigned size_out = vid_out_buf->vb.vb2_buf.planes[p].length;
+		unsigned size_cap = vid_cap_buf->vb.vb2_buf.planes[p].length;
+
+		size_out = size_out < size_cap ? size_out : size_cap;
+		/* copy minimum of out and capture sessions */
+		memcpy(vcapbuf, voutbuf, size_out);
+		return 0;
 	}
 
 	if (p < dev->fmt_out->buffers)
@@ -484,7 +488,7 @@ static void vivid_fillbuff(struct vivid_dev *dev, struct vivid_buffer *buf)
 
 	for (p = 0; p < tpg_g_planes(tpg); p++) {
 		void *vbuf = plane_vaddr(tpg, buf, p,
-					 tpg->bytesperline, tpg->buf_height);
+					 tpg->bytesperline, tpg->buf_height[p]);
 
 		/*
 		 * The first plane of a multiplanar format has a non-zero
@@ -502,11 +506,17 @@ static void vivid_fillbuff(struct vivid_dev *dev, struct vivid_buffer *buf)
 		 */
 
 		tpg_calc_text_basep(tpg, basep, p, vbuf);
-		if (!is_loop || vivid_copy_buffer(dev, p, vbuf, buf))
-			tpg_fill_plane_buffer(tpg, vivid_get_std_cap(dev),
+		if (!is_loop || vivid_copy_buffer(dev, p, vbuf, buf)) {
+			if (!dev->fmt_cap->is_metadata[p])
+				tpg_fill_plane_buffer(tpg, vivid_get_std_cap(dev),
 					p, vbuf);
+		}
 	}
 	dev->must_blank[buf->vb.vb2_buf.index] = false;
+
+	/* Write text to plane 0 instead of the last plane */
+	tpg_calc_text_basep(tpg, basep, 0,
+		plane_vaddr(tpg, buf, 0, tpg->bytesperline, tpg->buf_height[0]));
 
 	/* Updates stream time, only update at the start of a new frame. */
 	if (dev->field_cap != V4L2_FIELD_ALTERNATE ||

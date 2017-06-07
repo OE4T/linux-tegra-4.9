@@ -38,10 +38,9 @@ static int vid_out_queue_setup(struct vb2_queue *vq,
 {
 	struct vivid_dev *dev = vb2_get_drv_priv(vq);
 	const struct vivid_fmt *vfmt = dev->fmt_out;
-	unsigned planes = vfmt->buffers;
+	unsigned planes = dev->fmt_out_metadata_height ? vfmt->buffers : (vfmt->buffers - 1);
 	unsigned h = dev->fmt_out_rect.height;
-	unsigned size =
-		dev->bytesperline_out[0] * (h + dev->embedded_data_height);
+	unsigned size = dev->bytesperline_out[0] * (h + dev->fmt_out_metadata_height);
 	unsigned p;
 
 	for (p = vfmt->buffers; p < vfmt->planes; p++)
@@ -108,6 +107,7 @@ static int vid_out_buf_prepare(struct vb2_buffer *vb)
 		return -EINVAL;
 
 	planes = dev->fmt_out->planes;
+	planes -= dev->fmt_out_metadata_height ? 0 : 1;
 
 	if (dev->buf_prepare_error) {
 		/*
@@ -325,16 +325,13 @@ int vivid_g_fmt_vid_out(struct file *file, void *priv,
 	mp->xfer_func    = dev->xfer_func_out;
 	mp->ycbcr_enc    = dev->ycbcr_enc_out;
 	mp->quantization = dev->quantization_out;
-	mp->num_planes = fmt->buffers;
+	mp->num_planes = dev->fmt_out_metadata_height ? fmt->buffers : (fmt->buffers - 1);
+	mp->metadata_height = dev->fmt_out_metadata_height;
 	for (p = 0; p < mp->num_planes; p++) {
 		mp->plane_fmt[p].bytesperline = dev->bytesperline_out[p];
 		mp->plane_fmt[p].sizeimage =
-			mp->plane_fmt[p].bytesperline * mp->height;
+			mp->plane_fmt[p].bytesperline * dev->height_out[p];
 	}
-	/* Add offset to fill embedded meta data */
-	dev->fmt_out->data_offset[0] =
-		dev->bytesperline_out[0] * dev->embedded_data_height;
-	mp->plane_fmt[0].sizeimage += dev->fmt_out->data_offset[0];
 	for (p = fmt->buffers; p < fmt->planes; p++) {
 		unsigned stride = dev->bytesperline_out[p];
 
@@ -400,19 +397,24 @@ int vivid_try_fmt_vid_out(struct file *file, void *priv,
 		mp->height = r.height / factor;
 	}
 
+	/* clip metadata height maximum value */
+	if (mp->metadata_height > MAX_METADATA_HEIGHT)
+		mp->metadata_height = MAX_METADATA_HEIGHT;
+
 	/* This driver supports custom bytesperline values */
 
 	/* Calculate the minimum supported bytesperline value */
 	bytesperline = ((mp->width * fmt->bit_depth[0]) >> 3) / packedpixels;
 	/* Calculate the maximum supported bytesperline value */
 	max_bpl = (MAX_ZOOM * MAX_WIDTH * fmt->bit_depth[0]) >> 3;
-	mp->num_planes = fmt->buffers;
+	mp->num_planes = dev->fmt_out_metadata_height ? fmt->buffers : (fmt->buffers - 1);
 	for (p = 0; p < mp->num_planes; p++) {
 		if (pfmt[p].bytesperline > max_bpl)
 			pfmt[p].bytesperline = max_bpl;
 		if (pfmt[p].bytesperline < bytesperline)
 			pfmt[p].bytesperline = bytesperline;
-		pfmt[p].sizeimage = pfmt[p].bytesperline * mp->height;
+		pfmt[p].sizeimage = pfmt[p].bytesperline *
+			(fmt->is_metadata[p] ? mp->metadata_height : mp->height);
 		memset(pfmt[p].reserved, 0, sizeof(pfmt[p].reserved));
 	}
 	for (p = fmt->buffers; p < fmt->planes; p++)
@@ -546,10 +548,12 @@ int vivid_s_fmt_vid_out(struct file *file, void *priv,
 
 	dev->fmt_out_rect.width = mp->width;
 	dev->fmt_out_rect.height = mp->height;
-	for (p = 0; p < mp->num_planes; p++)
+	for (p = 0; p < mp->num_planes; p++) {
 		dev->bytesperline_out[p] = mp->plane_fmt[p].bytesperline;
-	dev->fmt_out->data_offset[0] =
-		dev->bytesperline_out[0] * dev->embedded_data_height;
+		dev->height_out[p] = dev->fmt_out->is_metadata[p] ?
+			mp->metadata_height : mp->height;
+	}
+	dev->fmt_out_metadata_height = mp->metadata_height;
 	for (p = dev->fmt_out->buffers; p < dev->fmt_out->planes; p++)
 		dev->bytesperline_out[p] =
 			(dev->bytesperline_out[0] * dev->fmt_out->bit_depth[p]) /

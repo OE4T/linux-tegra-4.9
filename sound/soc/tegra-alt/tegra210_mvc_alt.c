@@ -141,26 +141,25 @@ static int tegra210_mvc_get_vol(struct snd_kcontrol *kcontrol,
 	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
 	unsigned int reg = mc->reg;
 
-	pm_runtime_get_sync(codec->dev);
 	if (reg == TEGRA210_MVC_TARGET_VOL) {
-		s32 val;
+		s32 val = mvc->volume;
 
-		regmap_read(mvc->regmap, reg, &val);
 		if (mvc->curve_type == CURVE_POLY)
-			val >>= 24;
+			val = ((val >> 16) * 100) >> 8;
 		else {
-			val >>= 8;
-			val += 120;
+			val = (val * 100) >> 8;
+			val += 12000;
 		}
 		ucontrol->value.integer.value[0] = val;
 	} else {
 		u32 val;
 
+		pm_runtime_get_sync(codec->dev);
 		regmap_read(mvc->regmap, reg, &val);
+		pm_runtime_put(codec->dev);
 		ucontrol->value.integer.value[0] =
 			((val & TEGRA210_MVC_MUTE_MASK) != 0);
 	}
-	pm_runtime_put(codec->dev);
 	return 0;
 }
 
@@ -189,15 +188,18 @@ static int tegra210_mvc_put_vol(struct snd_kcontrol *kcontrol,
 	} while (value & TEGRA210_MVC_VOLUME_SWITCH_MASK);
 
 	if (reg == TEGRA210_MVC_TARGET_VOL) {
+		/* Volume control read from mixer ctl is with  */
+		/* 100x scaling; for CURVE_POLY the reg range  */
+		/* is 0-100 (linear, Q24) and for CURVE_LINEAR */
+		/* it is -120dB to +40dB (Q8)                  */
 		if (mvc->curve_type == CURVE_POLY) {
 			val = ucontrol->value.integer.value[0];
-			if (val > 100)
-				val = 100;
-			mvc->volume = val * (1<<24);
+			if (val > 10000)
+				val = 10000;
+			mvc->volume = ((val * (1<<8)) / 100) << 16;
 		} else {
-			val = ucontrol->value.integer.value[0] - 120;
-			val <<= 8;
-			mvc->volume = val;
+			val = ucontrol->value.integer.value[0] - 12000;
+			mvc->volume = (val * (1<<8)) / 100;
 		}
 		ret = regmap_write(mvc->regmap, reg, mvc->volume);
 	} else {
@@ -221,15 +223,8 @@ static int tegra210_mvc_get_curve_type(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
-	unsigned int reg = TEGRA210_MVC_CTRL;
-	u32 val;
 
-	pm_runtime_get_sync(codec->dev);
-	regmap_read(mvc->regmap, reg, &val);
-	ucontrol->value.integer.value[0] =
-		(val & TEGRA210_MVC_CURVE_TYPE_MASK) >>
-		TEGRA210_MVC_CURVE_TYPE_SHIFT;
-	pm_runtime_put(codec->dev);
+	ucontrol->value.integer.value[0] = mvc->curve_type;
 
 	return 0;
 }
@@ -276,6 +271,11 @@ static int tegra210_mvc_put_curve_type(struct snd_kcontrol *kcontrol,
 	else
 		mvc->volume = TEGRA210_MVC_INIT_VOL_DEFAULT_LINEAR;
 
+	regmap_write(mvc->regmap, TEGRA210_MVC_TARGET_VOL, mvc->volume);
+	ret |= regmap_update_bits(mvc->regmap, TEGRA210_MVC_SWITCH,
+			TEGRA210_MVC_VOLUME_SWITCH_MASK,
+			TEGRA210_MVC_VOLUME_SWITCH_TRIGGER);
+
 end:
 	pm_runtime_put(codec->dev);
 
@@ -288,7 +288,10 @@ static int tegra210_mvc_get_audio_bits(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
 
-	ucontrol->value.integer.value[0] = (mvc->audio_bits + 1) * 4;
+	if (mvc->audio_bits > 0)
+		ucontrol->value.integer.value[0] = (mvc->audio_bits + 1) * 4;
+	else
+		ucontrol->value.integer.value[0] = 0;
 
 	return 0;
 }
@@ -308,33 +311,42 @@ static int tegra210_mvc_put_audio_bits(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
-
-static int tegra210_mvc_get_channels(struct snd_kcontrol *kcontrol,
+static int tegra210_mvc_get_format(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
 
-	ucontrol->value.integer.value[0] = mvc->cif_channels;
+	/* get the format control flag */
+	if (strstr(kcontrol->id.name, "input bit format"))
+		ucontrol->value.integer.value[0] = mvc->format_in;
+	else if (strstr(kcontrol->id.name, "Channels"))
+		ucontrol->value.integer.value[0] = mvc->cif_channels;
 
 	return 0;
 }
 
-static int tegra210_mvc_put_channels(struct snd_kcontrol *kcontrol,
+static int tegra210_mvc_put_format(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
-	unsigned int val;
+	unsigned int value = ucontrol->value.integer.value[0];
 
-	val = ucontrol->value.integer.value[0];
-	if ((val > 0) && (val <= 8))
-		mvc->cif_channels = val;
-	else
-		return -EINVAL;
+	/* set the format control flag */
+	if (strstr(kcontrol->id.name, "input bit format"))
+		mvc->format_in = value;
+	else if (strstr(kcontrol->id.name, "Channels"))
+		mvc->cif_channels = value;
 
 	return 0;
 }
+
+static const int tegra210_mvc_fmt_values[] = {
+	0,
+	TEGRA210_AUDIOCIF_BITS_16,
+	TEGRA210_AUDIOCIF_BITS_32,
+};
 
 static int tegra210_mvc_set_audio_cif(struct tegra210_mvc *mvc,
 				struct snd_pcm_hw_params *params,
@@ -370,6 +382,10 @@ static int tegra210_mvc_set_audio_cif(struct tegra210_mvc *mvc,
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
+
+	/* Override input format to MVC, if set */
+	if (mvc->format_in && (reg == TEGRA210_MVC_AXBAR_RX_CIF_CTRL))
+		cif_conf.audio_bits = tegra210_mvc_fmt_values[mvc->format_in];
 
 	mvc->soc_data->set_audio_cif(mvc->regmap, reg, &cif_conf);
 
@@ -458,8 +474,19 @@ static const char * const tegra210_mvc_curve_type_text[] = {
 static const struct soc_enum tegra210_mvc_curve_type_ctrl =
 	SOC_ENUM_SINGLE_EXT(2, tegra210_mvc_curve_type_text);
 
+static const char * const tegra210_mvc_format_text[] = {
+	"None",
+	"16",
+	"32",
+};
+
+static const struct soc_enum tegra210_mvc_format_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_mvc_format_text),
+		tegra210_mvc_format_text);
+
 static const struct snd_kcontrol_new tegra210_mvc_vol_ctrl[] = {
-	SOC_SINGLE_EXT("Vol", TEGRA210_MVC_TARGET_VOL, 0, 160, 0,
+	SOC_SINGLE_EXT("Vol", TEGRA210_MVC_TARGET_VOL, 0, 16000, 0,
 		tegra210_mvc_get_vol, tegra210_mvc_put_vol),
 	SOC_SINGLE_EXT("Mute", TEGRA210_MVC_CTRL, 0, 1, 0,
 		tegra210_mvc_get_vol, tegra210_mvc_put_vol),
@@ -467,8 +494,10 @@ static const struct snd_kcontrol_new tegra210_mvc_vol_ctrl[] = {
 		tegra210_mvc_get_curve_type, tegra210_mvc_put_curve_type),
 	SOC_SINGLE_EXT("Bits", 0, 0, 32, 0,
 		tegra210_mvc_get_audio_bits, tegra210_mvc_put_audio_bits),
-	SOC_SINGLE_EXT("Channels", 0, 0, 16, 0,
-		tegra210_mvc_get_channels, tegra210_mvc_put_channels),
+	SOC_SINGLE_EXT("Channels", 0, 0, 8, 0,
+		tegra210_mvc_get_format, tegra210_mvc_put_format),
+	SOC_ENUM_EXT("input bit format", tegra210_mvc_format_enum,
+		tegra210_mvc_get_format, tegra210_mvc_put_format),
 };
 
 static struct snd_soc_dai_driver tegra210_mvc_dais[] = {
@@ -658,7 +687,7 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 	mvc->poly_coeff[7] = 5527252;
 	mvc->poly_coeff[8] = -785042;
 	mvc->curve_type = CURVE_LINEAR;
-	mvc->volume = TEGRA210_MVC_INIT_VOL_DEFAULT_POLY;
+	mvc->volume = TEGRA210_MVC_INIT_VOL_DEFAULT_LINEAR;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {

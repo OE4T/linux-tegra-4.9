@@ -3998,6 +3998,158 @@ static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_st_m(void)
 {
 	return 0x1 << 10;
 }
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter_control_sel0_r(void)
+{
+	return 0x00584200;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter_control_sel1_r(void)
+{
+	return 0x00584204;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter_control0_r(void)
+{
+	return 0x00584208;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter_control1_r(void)
+{
+	return 0x00584210;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter_control2_r(void)
+{
+	return 0x00584214;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter_control3_r(void)
+{
+	return 0x00584218;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter_control4_r(void)
+{
+	return 0x0058421c;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter_control5_r(void)
+{
+	return 0x0058420c;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter0_control_r(void)
+{
+	return 0x00584220;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter1_control_r(void)
+{
+	return 0x00584224;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter2_control_r(void)
+{
+	return 0x00584228;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter3_control_r(void)
+{
+	return 0x0058422c;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter4_control_r(void)
+{
+	return 0x00584230;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter5_control_r(void)
+{
+	return 0x00584234;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter6_control_r(void)
+{
+	return 0x00584238;
+}
+static inline u32 gr_egpc0_etpc0_sm_dsm_perf_counter7_control_r(void)
+{
+	return 0x0058423c;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter_status_s0_r(void)
+{
+	return 0x00584600;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter_status_s1_r(void)
+{
+	return 0x00584604;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter0_s0_r(void)
+{
+	return 0x00584624;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter1_s0_r(void)
+{
+	return 0x00584628;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter2_s0_r(void)
+{
+	return 0x0058462c;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter3_s0_r(void)
+{
+	return 0x00584630;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter0_s1_r(void)
+{
+	return 0x00584634;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter1_s1_r(void)
+{
+	return 0x00584638;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter2_s1_r(void)
+{
+	return 0x0058463c;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter3_s1_r(void)
+{
+	return 0x00584640;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter0_s2_r(void)
+{
+	return 0x00584644;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter1_s2_r(void)
+{
+	return 0x00584648;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter2_s2_r(void)
+{
+	return 0x0058464c;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter3_s2_r(void)
+{
+	return 0x00584650;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter0_s3_r(void)
+{
+	return 0x00584654;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter1_s3_r(void)
+{
+	return 0x00584658;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter2_s3_r(void)
+{
+	return 0x0058465c;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter3_s3_r(void)
+{
+	return 0x00584660;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter4_r(void)
+{
+	return 0x00584614;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter5_r(void)
+{
+	return 0x00584618;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter6_r(void)
+{
+	return 0x0058461c;
+}
+static inline u32 gr_egpc0_etpc0_sm0_dsm_perf_counter7_r(void)
+{
+	return 0x00584620;
+}
 static inline u32 gr_fe_pwr_mode_r(void)
 {
 	return 0x00404170;

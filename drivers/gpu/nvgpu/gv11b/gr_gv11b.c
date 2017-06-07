@@ -3253,6 +3253,87 @@ static int gr_gv11b_handle_tpc_mpc_exception(struct gk20a *g,
 	return 0;
 }
 
+static const u32 _num_ovr_perf_regs = 20;
+static u32 _ovr_perf_regs[20] = { 0, };
+
+static void gv11b_gr_init_ovr_sm_dsm_perf(void)
+{
+	if (_ovr_perf_regs[0] != 0)
+		return;
+
+	_ovr_perf_regs[0]  = gr_egpc0_etpc0_sm_dsm_perf_counter_control_sel0_r();
+	_ovr_perf_regs[1]  = gr_egpc0_etpc0_sm_dsm_perf_counter_control_sel1_r();
+	_ovr_perf_regs[2]  = gr_egpc0_etpc0_sm_dsm_perf_counter_control0_r();
+	_ovr_perf_regs[3]  = gr_egpc0_etpc0_sm_dsm_perf_counter_control1_r();
+	_ovr_perf_regs[4]  = gr_egpc0_etpc0_sm_dsm_perf_counter_control2_r();
+	_ovr_perf_regs[5]  = gr_egpc0_etpc0_sm_dsm_perf_counter_control3_r();
+	_ovr_perf_regs[6]  = gr_egpc0_etpc0_sm_dsm_perf_counter_control4_r();
+	_ovr_perf_regs[7]  = gr_egpc0_etpc0_sm_dsm_perf_counter_control5_r();
+	_ovr_perf_regs[8]  = gr_egpc0_etpc0_sm_dsm_perf_counter0_control_r();
+	_ovr_perf_regs[9]  = gr_egpc0_etpc0_sm_dsm_perf_counter1_control_r();
+	_ovr_perf_regs[10] = gr_egpc0_etpc0_sm_dsm_perf_counter2_control_r();
+	_ovr_perf_regs[11] = gr_egpc0_etpc0_sm_dsm_perf_counter3_control_r();
+	_ovr_perf_regs[12] = gr_egpc0_etpc0_sm_dsm_perf_counter4_control_r();
+	_ovr_perf_regs[13] = gr_egpc0_etpc0_sm_dsm_perf_counter5_control_r();
+	_ovr_perf_regs[14] = gr_egpc0_etpc0_sm_dsm_perf_counter6_control_r();
+	_ovr_perf_regs[15] = gr_egpc0_etpc0_sm_dsm_perf_counter7_control_r();
+
+	_ovr_perf_regs[16] = gr_egpc0_etpc0_sm0_dsm_perf_counter4_r();
+	_ovr_perf_regs[17] = gr_egpc0_etpc0_sm0_dsm_perf_counter5_r();
+	_ovr_perf_regs[18] = gr_egpc0_etpc0_sm0_dsm_perf_counter6_r();
+	_ovr_perf_regs[19] = gr_egpc0_etpc0_sm0_dsm_perf_counter7_r();
+}
+
+/* Following are the blocks of registers that the ucode
+ * stores in the extended region.
+ */
+/* ==  ctxsw_extended_sm_dsm_perf_counter_register_stride_v() ? */
+static const u32 _num_sm_dsm_perf_regs;
+/* ==  ctxsw_extended_sm_dsm_perf_counter_control_register_stride_v() ?*/
+static const u32 _num_sm_dsm_perf_ctrl_regs = 2;
+static u32 *_sm_dsm_perf_regs;
+static u32 _sm_dsm_perf_ctrl_regs[2];
+
+static void gv11b_gr_init_sm_dsm_reg_info(void)
+{
+	if (_sm_dsm_perf_ctrl_regs[0] != 0)
+		return;
+
+	_sm_dsm_perf_ctrl_regs[0] =
+			      gr_egpc0_etpc0_sm_dsm_perf_counter_control0_r();
+	_sm_dsm_perf_ctrl_regs[1] =
+			      gr_egpc0_etpc0_sm_dsm_perf_counter_control5_r();
+}
+
+static void gv11b_gr_get_sm_dsm_perf_regs(struct gk20a *g,
+					  u32 *num_sm_dsm_perf_regs,
+					  u32 **sm_dsm_perf_regs,
+					  u32 *perf_register_stride)
+{
+	*num_sm_dsm_perf_regs = _num_sm_dsm_perf_regs;
+	*sm_dsm_perf_regs = _sm_dsm_perf_regs;
+	*perf_register_stride =
+		ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v();
+}
+
+static void gv11b_gr_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
+					       u32 *num_sm_dsm_perf_ctrl_regs,
+					       u32 **sm_dsm_perf_ctrl_regs,
+					       u32 *ctrl_register_stride)
+{
+	*num_sm_dsm_perf_ctrl_regs = _num_sm_dsm_perf_ctrl_regs;
+	*sm_dsm_perf_ctrl_regs = _sm_dsm_perf_ctrl_regs;
+	*ctrl_register_stride =
+		ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
+}
+
+static void gv11b_gr_get_ovr_perf_regs(struct gk20a *g, u32 *num_ovr_perf_regs,
+					       u32 **ovr_perf_regs)
+{
+	*num_ovr_perf_regs = _num_ovr_perf_regs;
+	*ovr_perf_regs = _ovr_perf_regs;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3337,4 +3418,9 @@ void gv11b_init_gr(struct gpu_ops *gops)
 			gr_gv11b_handle_tpc_sm_ecc_exception;
 	gops->gr.handle_tpc_mpc_exception =
 			gr_gv11b_handle_tpc_mpc_exception;
+	gops->gr.init_ovr_sm_dsm_perf =  gv11b_gr_init_ovr_sm_dsm_perf;
+	gops->gr.init_sm_dsm_reg_info = gv11b_gr_init_sm_dsm_reg_info;
+	gops->gr.get_sm_dsm_perf_regs = gv11b_gr_get_sm_dsm_perf_regs;
+	gops->gr.get_sm_dsm_perf_ctrl_regs = gv11b_gr_get_sm_dsm_perf_ctrl_regs;
+	gops->gr.get_ovr_perf_regs = gv11b_gr_get_ovr_perf_regs;
 }

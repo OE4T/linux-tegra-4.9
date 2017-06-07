@@ -1308,7 +1308,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 				return err;
 
 			/*do elpg disable before clock gating */
-			gk20a_pmu_pg_global_enable(g, false);
+			nvgpu_pmu_pg_global_enable(g, false);
 
 			if (g->ops.clock_gating.slcg_gr_load_gating_prod)
 				g->ops.clock_gating.slcg_gr_load_gating_prod(g,
@@ -1355,7 +1355,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 				g->ops.clock_gating.slcg_gr_load_gating_prod(g,
 						g->slcg_enabled);
 
-			gk20a_pmu_pg_global_enable(g, true);
+			nvgpu_pmu_pg_global_enable(g, true);
 
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "module idle");
 			gk20a_idle(g);

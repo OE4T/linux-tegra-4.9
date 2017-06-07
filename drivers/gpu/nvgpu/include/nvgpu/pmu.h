@@ -112,6 +112,28 @@ enum {
 	PMU_SEQ_STATE_CANCELLED
 };
 
+/*PG defines used by nvpgu-pmu*/
+#define PMU_PG_IDLE_THRESHOLD_SIM		1000
+#define PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM	4000000
+/* TBD: QT or else ? */
+#define PMU_PG_IDLE_THRESHOLD			15000
+#define PMU_PG_POST_POWERUP_IDLE_THRESHOLD	1000000
+
+#define PMU_PG_LPWR_FEATURE_RPPG 0x0
+#define PMU_PG_LPWR_FEATURE_MSCG 0x1
+
+#define PMU_MSCG_DISABLED 0
+#define PMU_MSCG_ENABLED 1
+
+/* Default Sampling Period of AELPG */
+#define APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US                    (1000000)
+
+/* Default values of APCTRL parameters */
+#define APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US                   (100)
+#define APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US                 (10000)
+#define APCTRL_POWER_BREAKEVEN_DEFAULT_US                       (2000)
+#define APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT                    (200)
+
 typedef void (*pmu_callback)(struct gk20a *, struct pmu_msg *, void *, u32,
 	u32);
 
@@ -384,14 +406,6 @@ int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
 void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
 	bool post_change_event);
 
-/* PG */
-int nvgpu_pmu_init_powergating(struct gk20a *g);
-int nvgpu_pmu_init_bind_fecs(struct gk20a *g);
-void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g);
-
-int nvgpu_pmu_get_pg_stats(struct gk20a *g, u32 pg_engine_id,
-	struct pmu_pg_stats_data *pg_stat_data);
-
 /* NVGPU-PMU MEM alloc */
 void nvgpu_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem);
 void nvgpu_pmu_surface_describe(struct gk20a *g, struct nvgpu_mem *mem,
@@ -404,5 +418,24 @@ int nvgpu_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 /* PMU F/W support */
 int nvgpu_init_pmu_fw_support(struct nvgpu_pmu *pmu);
 int nvgpu_pmu_prepare_ns_ucode_blob(struct gk20a *g);
+
+/* PG init*/
+int nvgpu_pmu_init_powergating(struct gk20a *g);
+int nvgpu_pmu_init_bind_fecs(struct gk20a *g);
+void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g);
+
+/* PG enable/disable */
+int nvgpu_pmu_enable_elpg(struct gk20a *g);
+int nvgpu_pmu_disable_elpg(struct gk20a *g);
+int nvgpu_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg);
+
+int nvgpu_pmu_get_pg_stats(struct gk20a *g, u32 pg_engine_id,
+	struct pmu_pg_stats_data *pg_stat_data);
+
+/* AELPG */
+int nvgpu_aelpg_init(struct gk20a *g);
+int nvgpu_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
+int nvgpu_pmu_ap_send_command(struct gk20a *g,
+		union pmu_ap_cmd *p_ap_cmd, bool b_block);
 
 #endif /* __NVGPU_PMU_H__ */

@@ -35,50 +35,8 @@ struct nvgpu_firmware;
 #define FUSE_GCPLEX_CONFIG_FUSE_0           0x2C8
 #endif
 
-#define PMU_PGENG_GR_BUFFER_IDX_INIT	(0)
-#define PMU_PGENG_GR_BUFFER_IDX_ZBC	(1)
-#define PMU_PGENG_GR_BUFFER_IDX_FECS	(2)
-
-#define PMU_PG_IDLE_THRESHOLD_SIM		1000
-#define PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM	4000000
-/* TBD: QT or else ? */
-#define PMU_PG_IDLE_THRESHOLD			15000
-#define PMU_PG_POST_POWERUP_IDLE_THRESHOLD	1000000
-
-#define PMU_PG_LPWR_FEATURE_RPPG 0x0
-#define PMU_PG_LPWR_FEATURE_MSCG 0x1
-
-/* state transition :
-    OFF => [OFF_ON_PENDING optional] => ON_PENDING => ON => OFF
-    ON => OFF is always synchronized */
-#define PMU_ELPG_STAT_OFF		0   /* elpg is off */
-#define PMU_ELPG_STAT_ON		1   /* elpg is on */
-#define PMU_ELPG_STAT_ON_PENDING	2   /* elpg is off, ALLOW cmd has been sent, wait for ack */
-#define PMU_ELPG_STAT_OFF_PENDING	3   /* elpg is on, DISALLOW cmd has been sent, wait for ack */
-#define PMU_ELPG_STAT_OFF_ON_PENDING	4   /* elpg is off, caller has requested on, but ALLOW
-					       cmd hasn't been sent due to ENABLE_ALLOW delay */
-
-#define PG_REQUEST_TYPE_GLOBAL 0x0
-#define PG_REQUEST_TYPE_PSTATE 0x1
-
-#define PMU_MSCG_DISABLED 0
-#define PMU_MSCG_ENABLED 1
-
-/* Default Sampling Period of AELPG */
-#define APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US                    (1000000)
-
-/* Default values of APCTRL parameters */
-#define APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US                   (100)
-#define APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US                 (10000)
-#define APCTRL_POWER_BREAKEVEN_DEFAULT_US                       (2000)
-#define APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT                    (200)
-
 bool gk20a_pmu_is_interrupted(struct nvgpu_pmu *pmu);
 void gk20a_pmu_isr(struct gk20a *g);
-
-int gk20a_pmu_enable_elpg(struct gk20a *g);
-int gk20a_pmu_disable_elpg(struct gk20a *g);
-int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg);
 
 u32 gk20a_pmu_pg_engines_list(struct gk20a *g);
 u32 gk20a_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id);
@@ -86,6 +44,8 @@ u32 gk20a_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id);
 void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries);
 
 int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable);
+
+void gk20a_pmu_pg_idle_counter_config(struct gk20a *g, u32 pg_engine_id);
 
 int gk20a_pmu_mutex_acquire(struct nvgpu_pmu *pmu, u32 id, u32 *token);
 int gk20a_pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token);
@@ -109,12 +69,10 @@ void pmu_copy_from_dmem(struct nvgpu_pmu *pmu,
 		u32 src, u8 *dst, u32 size, u8 port);
 int pmu_reset(struct nvgpu_pmu *pmu);
 int pmu_bootstrap(struct nvgpu_pmu *pmu);
+
+void pmu_dump_elpg_stats(struct nvgpu_pmu *pmu);
 void pmu_dump_falcon_stats(struct nvgpu_pmu *pmu);
 
-int gk20a_pmu_ap_send_command(struct gk20a *g,
-		union pmu_ap_cmd *p_ap_cmd, bool b_block);
-int gk20a_aelpg_init(struct gk20a *g);
-int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable);
 int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
 				 u32 *var, u32 val);

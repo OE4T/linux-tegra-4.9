@@ -547,14 +547,14 @@ void gk20a_gr_clear_sm_hww(struct gk20a *g,
 	({ \
 		int err = 0; \
 		if (g->support_pmu && g->elpg_enabled) {\
-			err = gk20a_pmu_disable_elpg(g); \
+			err = nvgpu_pmu_disable_elpg(g); \
 			if (err) \
-				gk20a_pmu_enable_elpg(g); \
+				nvgpu_pmu_enable_elpg(g); \
 		} \
 		if (!err) { \
 			err = func; \
 			if (g->support_pmu && g->elpg_enabled) \
-				gk20a_pmu_enable_elpg(g); \
+				nvgpu_pmu_enable_elpg(g); \
 		} \
 		err; \
 	})

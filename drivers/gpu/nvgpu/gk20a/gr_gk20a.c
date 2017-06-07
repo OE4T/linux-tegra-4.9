@@ -3235,7 +3235,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		u32 lockboost;
 
 		if (g->support_pmu) {
-			err = gk20a_pmu_disable_elpg(g);
+			err = nvgpu_pmu_disable_elpg(g);
 			if (err) {
 				nvgpu_err(g,
 						"failed to set disable elpg");
@@ -3285,7 +3285,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		args->flags |= NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO;
 
 		if (g->support_pmu && g->can_elpg)
-			gk20a_pmu_enable_elpg(g);
+			nvgpu_pmu_enable_elpg(g);
 	}
 
 	/* init golden image, ELPG enabled after this is done */

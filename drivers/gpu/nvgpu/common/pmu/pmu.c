@@ -276,15 +276,15 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 		/* Init reg with prod values*/
 		if (g->ops.pmu.pmu_setup_elpg)
 			g->ops.pmu.pmu_setup_elpg(g);
-		gk20a_pmu_enable_elpg(g);
+		nvgpu_pmu_enable_elpg(g);
 	}
 
 	nvgpu_udelay(50);
 
 	/* Enable AELPG */
 	if (g->aelpg_enabled) {
-		gk20a_aelpg_init(g);
-		gk20a_aelpg_init_and_enable(g, PMU_AP_CTRL_ID_GRAPHICS);
+		nvgpu_aelpg_init(g);
+		nvgpu_aelpg_init_and_enable(g, PMU_AP_CTRL_ID_GRAPHICS);
 	}
 }
 
@@ -398,7 +398,7 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 	nvgpu_pmu_get_pg_stats(g,
 		PMU_PG_ELPG_ENGINE_ID_GRAPHICS,	&pg_stat_data);
 
-	gk20a_pmu_disable_elpg(g);
+	nvgpu_pmu_disable_elpg(g);
 	pmu->initialized = false;
 
 	/* update the s/w ELPG residency counters */

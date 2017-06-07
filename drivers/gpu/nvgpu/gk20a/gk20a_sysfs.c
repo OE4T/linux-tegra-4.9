@@ -456,18 +456,18 @@ static ssize_t elpg_enable_store(struct device *dev,
 		 */
 		if (val && !g->elpg_enabled) {
 			g->elpg_enabled = true;
-			gk20a_pmu_pg_global_enable(g, true);
+			nvgpu_pmu_pg_global_enable(g, true);
 
 		} else if (!val && g->elpg_enabled) {
 			if (g->ops.pmu.pmu_pg_engines_feature_list &&
 				g->ops.pmu.pmu_pg_engines_feature_list(g,
 				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
 				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
-				gk20a_pmu_pg_global_enable(g, false);
+				nvgpu_pmu_pg_global_enable(g, false);
 				g->elpg_enabled = false;
 			} else {
 				g->elpg_enabled = false;
-				gk20a_pmu_pg_global_enable(g, false);
+				nvgpu_pmu_pg_global_enable(g, false);
 			}
 		}
 		gk20a_idle(g);
@@ -524,13 +524,13 @@ static ssize_t mscg_enable_store(struct device *dev,
 		} else if (!val && g->mscg_enabled) {
 			if (g->ops.pmu.pmu_is_lpwr_feature_supported(g,
 					PMU_PG_LPWR_FEATURE_MSCG)) {
-				gk20a_pmu_pg_global_enable(g, false);
+				nvgpu_pmu_pg_global_enable(g, false);
 				WRITE_ONCE(pmu->mscg_stat, PMU_MSCG_DISABLED);
 				/* make status visible */
 				smp_mb();
 				g->mscg_enabled = false;
 				if (g->elpg_enabled)
-					gk20a_pmu_pg_global_enable(g, true);
+					nvgpu_pmu_pg_global_enable(g, true);
 			}
 			g->mscg_enabled = false;
 		}
@@ -584,11 +584,11 @@ static ssize_t aelpg_param_store(struct device *dev,
 		/* Disable AELPG */
 		ap_cmd.disable_ctrl.cmd_id = PMU_AP_CMD_ID_DISABLE_CTRL;
 		ap_cmd.disable_ctrl.ctrl_id = PMU_AP_CTRL_ID_GRAPHICS;
-		status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
+		status = nvgpu_pmu_ap_send_command(g, &ap_cmd, false);
 
 		/* Enable AELPG */
-		gk20a_aelpg_init(g);
-		gk20a_aelpg_init_and_enable(g, PMU_AP_CTRL_ID_GRAPHICS);
+		nvgpu_aelpg_init(g);
+		nvgpu_aelpg_init_and_enable(g, PMU_AP_CTRL_ID_GRAPHICS);
 	}
 
 	return count;
@@ -630,13 +630,13 @@ static ssize_t aelpg_enable_store(struct device *dev,
 			/* Enable AELPG */
 			ap_cmd.enable_ctrl.cmd_id = PMU_AP_CMD_ID_ENABLE_CTRL;
 			ap_cmd.enable_ctrl.ctrl_id = PMU_AP_CTRL_ID_GRAPHICS;
-			status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
+			status = nvgpu_pmu_ap_send_command(g, &ap_cmd, false);
 		} else if (!val && g->aelpg_enabled) {
 			g->aelpg_enabled = false;
 			/* Disable AELPG */
 			ap_cmd.disable_ctrl.cmd_id = PMU_AP_CMD_ID_DISABLE_CTRL;
 			ap_cmd.disable_ctrl.ctrl_id = PMU_AP_CTRL_ID_GRAPHICS;
-			status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
+			status = nvgpu_pmu_ap_send_command(g, &ap_cmd, false);
 		}
 	} else {
 		dev_info(dev, "PMU is not ready, AELPG request failed\n");

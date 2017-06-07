@@ -396,7 +396,7 @@ config MTK_THERMAL
 	  controller present in Mediatek SoCs
 
 config PWM_FAN
-	bool "PWM Fan driver"
+	tristate "PWM Fan driver"
 	depends on THERMAL
 	help
 	  Enables the fan driver that is controlled by pwm

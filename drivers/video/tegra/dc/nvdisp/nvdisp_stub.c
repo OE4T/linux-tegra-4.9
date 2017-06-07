@@ -36,7 +36,7 @@
 #include <linux/platform_data/lp855x.h>
 #include <soc/tegra/common.h>
 
-const struct disp_client *tegra_la_disp_clients_info;
+__weak const struct disp_client *tegra_la_disp_clients_info;
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
 

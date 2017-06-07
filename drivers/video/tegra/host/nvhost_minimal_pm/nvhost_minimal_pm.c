@@ -40,7 +40,7 @@ struct register_info {
 #define RST_DEV_CV_HOST1X_CLR_0		(CLK_RST_CONTROLLER + 0x01190014)
 #define COMMON_CV_CLUSTER_CLAMP_0	(HOST1X_THOST + 0xc000)
 #define COMMON_MOD_CLAMP_E_CLR_0	(HOST1X_THOST + 0xc00c)
-struct register_info host1x_cv_reg[] = {
+static struct register_info host1x_cv_reg[] = {
 		{CLK_OUT_ENB_HOST1X_SET_0, 1},
 		{RST_DEV_HOST1X_CLR_0, 1},
 		{RST_DEV_CV_HOST1X_CLR_0, 1},
@@ -81,7 +81,7 @@ struct register_info host1x_cv_reg[] = {
 #define RST_DEV_PVA0_GTE_CLR_0		(CLK_RST_CONTROLLER + 0x0115015c)
 #define RST_DEV_PVA1_GTE_CLR_0		(CLK_RST_CONTROLLER + 0x0116015c)
 
-struct register_info pva_reg_reset[] = {
+static struct register_info pva_reg_reset[] = {
 		/* pva resets */
 		{RST_DEV_PVA0_CLR_0, 0x7},
 		{RST_DEV_PVA1_CLR_0, 0x7},
@@ -134,7 +134,7 @@ struct register_info pva_reg_reset[] = {
 #define CLK_OUT_ENB_PVA0_DMA1_SET_0	(CLK_RST_CONTROLLER + 0x01150024)
 #define CLK_OUT_ENB_PVA1_DMA1_SET_0	(CLK_RST_CONTROLLER + 0x01160024)
 
-struct register_info pva_reg_clock[] = {
+static struct register_info pva_reg_clock[] = {
 		/* pva clocks */
 		{CLK_OUT_ENB_PVA0_CPU_AXI_SET_0, 0x1},
 		{CLK_OUT_ENB_PVA1_CPU_AXI_SET_0, 0x1},

@@ -5785,10 +5785,6 @@ exit:
 struct clk *tegra_disp_of_clk_get_by_name(struct device_node *np,
 						const char *name)
 {
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (!tegra_bpmp_running())
-		return of_clk_get_by_name(np, "clk32k_in");
-#endif
 	return of_clk_get_by_name(np, name);
 }
 
@@ -5797,14 +5793,10 @@ struct clk *tegra_disp_clk_get(struct device *dev, const char *id)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	struct clk *disp_clk;
 
-	if (!tegra_bpmp_running()) {
-		return of_clk_get_by_name(dev->of_node, "clk32k_in");
-	} else {
-		disp_clk = devm_clk_get(dev, id);
-		if (IS_ERR_OR_NULL(disp_clk))
-			pr_err("Failed to get %s clk\n", id);
-		return disp_clk;
-	}
+	disp_clk = devm_clk_get(dev, id);
+	if (IS_ERR_OR_NULL(disp_clk))
+		pr_err("Failed to get %s clk\n", id);
+	return disp_clk;
 
 #elif defined(CONFIG_ARCH_TEGRA_210_SOC)
 	return devm_clk_get(dev, id);

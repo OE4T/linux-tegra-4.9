@@ -271,10 +271,10 @@ armv8_pmu_pmovsclr_read(void)
 }
 
 static inline void
-armv8_pmu_pmovsclr_write(int idx)
+armv8_pmu_pmovsclr_write(u32 val)
 {
 	/* Write Performance Monitors Overflow Flag Status Register */
-	asm volatile("msr pmovsclr_el0, %0" : : "r" (BIT(idx)));
+	asm volatile("msr pmovsclr_el0, %0" : : "r" (val));
 }
 
 static inline u32

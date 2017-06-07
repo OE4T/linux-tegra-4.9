@@ -2725,6 +2725,14 @@ int gp106_mclk_init(struct gk20a *g)
 
 	mclk->speed = GP106_MCLK_LOW_SPEED; /* Value from Devinit */
 
+	/* Find out which memory configuration to use */
+	g->mem_config_idx = GP106_MEM_CONFIG_GDDR5_PG418;
+	if ((g->pci_vendor_id == PCI_VENDOR_ID_NVIDIA) &&
+		(g->pci_device_id == 0x1c75) &&
+		(g->gpu_characteristics.vbios_version == 0x86065800)) {
+		g->mem_config_idx = GP106_MEM_CONFIG_GDDR5_PG419;
+	}
+
 	/* Parse VBIOS */
 	status = mclk_get_memclk_table(g);
 	if (status < 0) {
@@ -2791,6 +2799,7 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 	u32 seqdesc;
 	int status = 0;
 	struct memory_config *m = &mem_config[g->mem_config_idx];
+
 	u32 seq_completion_status = ~0x0;
 	u8 *seq_script_ptr = NULL;
 	size_t seq_script_size = 0;

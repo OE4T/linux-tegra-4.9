@@ -332,6 +332,7 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_param_post_init = nvgpu_lpwr_post_init;
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.mclk_init = gp106_mclk_init;
+	gops->pmu.mclk_change = gp106_mclk_change;
 	gops->pmu.mclk_deinit = gp106_mclk_deinit;
 	gops->pmu.is_pmu_supported = gp106_is_pmu_supported;
 	gops->pmu.reset_engine = gp106_pmu_engine_reset;

@@ -195,6 +195,9 @@ struct gpu_ops {
 						  u32 *num_sm_dsm_perf_regs,
 						  u32 **sm_dsm_perf_regs,
 						  u32 *perf_register_stride);
+		void (*get_ovr_perf_regs)(struct gk20a *g,
+						  u32 *num_ovr_perf_regs,
+						  u32 **ovr_perf_regsr);
 		void (*set_hww_esr_report_mask)(struct gk20a *g);
 		int (*setup_alpha_beta_tables)(struct gk20a *g,
 					      struct gr_gk20a *gr);
@@ -273,6 +276,7 @@ struct gpu_ops {
 		u32 (*get_max_lts_per_ltc)(struct gk20a *g);
 		u32* (*get_rop_l2_en_mask)(struct gk20a *g);
 		void (*init_sm_dsm_reg_info)(void);
+		void (*init_ovr_sm_dsm_perf)(void);
 		int (*wait_empty)(struct gk20a *g, unsigned long duration_ms,
 				  u32 expect_delay);
 		void (*init_cyclestats)(struct gk20a *g);

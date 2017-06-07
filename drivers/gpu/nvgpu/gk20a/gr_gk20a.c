@@ -6488,7 +6488,7 @@ static u32 _ovr_perf_regs[17] = { 0, };
 /* Following are the blocks of registers that the ucode
  stores in the extended region.*/
 
-static void init_ovr_perf_reg_info(void)
+void gk20a_gr_init_ovr_sm_dsm_perf(void)
 {
 	if (_ovr_perf_regs[0] != 0)
 		return;
@@ -6510,6 +6510,7 @@ static void init_ovr_perf_reg_info(void)
 	_ovr_perf_regs[14] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter5_r();
 	_ovr_perf_regs[15] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter6_r();
 	_ovr_perf_regs[16] = gr_pri_gpc0_tpc0_sm_dsm_perf_counter7_r();
+
 }
 
 /* TBD: would like to handle this elsewhere, at a higher level.
@@ -6529,21 +6530,24 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 	u32 vaddr_lo;
 	u32 vaddr_hi;
 	u32 tmp;
+	u32 num_ovr_perf_regs = 0;
+	u32 *ovr_perf_regs = NULL;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
-	init_ovr_perf_reg_info();
+	g->ops.gr.init_ovr_sm_dsm_perf();
 	g->ops.gr.init_sm_dsm_reg_info();
+	g->ops.gr.get_ovr_perf_regs(g, &num_ovr_perf_regs, &ovr_perf_regs);
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
-	for (reg = 0; reg < _num_ovr_perf_regs; reg++) {
+	for (reg = 0; reg < num_ovr_perf_regs; reg++) {
 		for (gpc = 0; gpc < num_gpc; gpc++)  {
 			num_tpc = g->gr.gpc_tpc_count[gpc];
 			for (tpc = 0; tpc < num_tpc; tpc++) {
 				chk_addr = ((gpc_stride * gpc) +
 					    (tpc_in_gpc_stride * tpc) +
-					    _ovr_perf_regs[reg]);
+					    ovr_perf_regs[reg]);
 				if (chk_addr != addr)
 					continue;
 				/* reset the patch count from previous
@@ -6601,6 +6605,13 @@ static inline bool check_local_header_magic(u8 *context)
 static inline int ctxsw_prog_ucode_header_size_in_bytes(void)
 {
 	return 256;
+}
+
+void gk20a_gr_get_ovr_perf_regs(struct gk20a *g, u32 *num_ovr_perf_regs,
+					       u32 **ovr_perf_regs)
+{
+	*num_ovr_perf_regs = _num_ovr_perf_regs;
+	*ovr_perf_regs = _ovr_perf_regs;
 }
 
 static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,

@@ -1653,4 +1653,6 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.lock_down_sm = gk20a_gr_lock_down_sm;
 	gops->gr.wait_for_sm_lock_down = gk20a_gr_wait_for_sm_lock_down;
 	gops->gr.clear_sm_hww = gm20b_gr_clear_sm_hww;
+	gops->gr.init_ovr_sm_dsm_perf =  gk20a_gr_init_ovr_sm_dsm_perf;
+	gops->gr.get_ovr_perf_regs = gk20a_gr_get_ovr_perf_regs;
 }

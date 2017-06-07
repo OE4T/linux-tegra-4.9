@@ -733,6 +733,9 @@ u32 gk20a_gr_gpc_offset(struct gk20a *g, u32 gpc);
 u32 gk20a_gr_tpc_offset(struct gk20a *g, u32 tpc);
 void gk20a_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
 				u32 *esr_sm_sel);
+void gk20a_gr_init_ovr_sm_dsm_perf(void);
+void gk20a_gr_get_ovr_perf_regs(struct gk20a *g, u32 *num_ovr_perf_regs,
+					       u32 **ovr_perf_regs);
 
 static inline const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
 {

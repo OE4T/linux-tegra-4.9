@@ -159,6 +159,20 @@
 						* embedded_metadata_height = "";
 						* Sensor embedded metadata height in units of rows.
 						* If sensor does not support embedded metadata value should be 0.
+						*
+						* num_of_exposure = "";
+						* Digital overlap(Dol) frames
+						*
+						* num_of_ignored_lines = "";
+						* Used for cropping, eg. OB lines
+						*
+						* num_of_lines_offset_0 = "";
+						* Used for cropping, vertical blanking in front of short exposure data
+						* If more Dol frames are used, it can be extended, eg. num_of_lines_offset1
+						*
+						* num_of_ignored_pixels = "";
+						* Used for cropping, The length of line info(pixels)
+						*
 						*/
 						mode0 { // IMX274_MODE_3840X2160
 							mclk_khz = "24000";
@@ -185,6 +199,74 @@
 							max_framerate = "60";
 							min_exp_time = "16.165";
 							max_exp_time = "165770";
+						};
+						mode1 { // IMX274_MODE_3840X2160_DOL_30FPS
+							mclk_khz = "24000";
+							num_lanes = "4";
+							tegra_sinterface = "serial_a";
+							discontinuous_clk = "yes";
+							dpcm_enable = "false";
+							cil_settletime = "0";
+							dynamic_pixel_bit_depth = "10";
+							csi_pixel_bit_depth = "10";
+							mode_type = "bayer_wdr_dol";
+							pixel_phase = "rggb";
+
+							active_w = "3844";
+							active_h = "4448";
+							readout_orientation = "0";
+							line_length = "4208";
+							inherent_gain = "1";
+							mclk_multiplier = "24";
+							pix_clk_hz = "576000000";
+
+							min_gain_val = "1.0";
+							max_gain_val = "22.2";
+							min_hdr_ratio = "1";
+							max_hdr_ratio = "256";
+							min_framerate = "1.5";
+							max_framerate = "30";
+							min_exp_time = "57";
+							max_exp_time = "665800";
+
+							num_of_exposure = "2";
+							num_of_ignored_lines = "8";
+							num_of_lines_offset_0 = "50";
+							num_of_ignored_pixels = "4";
+						};
+						mode2 { // IMX274_MODE_1920X1080_DOL_60FPS
+							mclk_khz = "24000";
+							num_lanes = "4";
+							tegra_sinterface = "serial_a";
+							discontinuous_clk = "yes";
+							dpcm_enable = "false";
+							cil_settletime = "0";
+							dynamic_pixel_bit_depth = "10";
+							csi_pixel_bit_depth = "10";
+							mode_type = "bayer_wdr_dol";
+							pixel_phase = "rggb";
+
+							active_w = "1924";
+							active_h = "2280";
+							readout_orientation = "0";
+							line_length = "4160";
+							inherent_gain = "1";
+							mclk_multiplier = "24";
+							pix_clk_hz = "576000000";
+
+							min_gain_val = "1.0";
+							max_gain_val = "22.2";
+							min_hdr_ratio = "1";
+							max_hdr_ratio = "256";
+							min_framerate = "1.5";
+							max_framerate = "60";
+							min_exp_time = "56";
+							max_exp_time = "666479";
+
+							num_of_exposure = "2";
+							num_of_ignored_lines = "8";
+							num_of_lines_offset_0 = "38";
+							num_of_ignored_pixels = "4";
 						};
 						ports {
 							#address-cells = <1>;

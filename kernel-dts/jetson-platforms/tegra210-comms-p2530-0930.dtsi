@@ -43,6 +43,7 @@
 		nvidia,pmc-wakeup = <&tegra_pmc
 				PMC_WAKE_TYPE_EVENT 8 PMC_TRIGGER_TYPE_HIGH>;
 		wlan-pwr-gpio = <&gpio TEGRA_GPIO(H, 0) 0>;
+		sdhci-host = <&sdhci1>;
 		status = "okay";
 	};
 };

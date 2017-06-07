@@ -46,6 +46,7 @@
 
 #include <linux/gpio.h>
 #include <linux/time.h>
+#include <linux/platform/tegra/ptp-notifier.h>
 #include "yheader.h"
 #include "yapphdr.h"
 #include "drv.h"
@@ -86,6 +87,22 @@ static char irq_names[8][32];
 module_param_array(q_op_mode, int, NULL, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(q_op_mode,
 		 "MTL queue operation mode [0-DISABLED, 1-AVB, 2-DCB, 3-GENERIC]");
+
+u64 eqos_get_ptptime(void *data)
+{
+	struct eqos_prv_data *pdata = data;
+	struct hw_if_struct *hw_if = &pdata->hw_if;
+	unsigned long flags;
+	u64 ns;
+
+	raw_spin_lock_irqsave(&pdata->ptp_lock, flags);
+
+	ns = hw_if->get_systime();
+
+	raw_spin_unlock_irqrestore(&pdata->ptp_lock, flags);
+
+	return ns;
+}
 
 void eqos_stop_all_ch_tx_dma(struct eqos_prv_data *pdata)
 {
@@ -3311,11 +3328,10 @@ static int eqos_config_pfc(struct net_device *dev, unsigned int flags)
 static int eqos_handle_prv_ts_ioctl(struct eqos_prv_data *pdata,
 				    struct ifreq *ifr)
 {
-	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct ifr_data_timestamp_struct req;
 	unsigned long flags;
 	u64 ns;
-	u32 remainder;
+	u32 reminder;
 	int ret = 0;
 
 	pr_debug("-->eqos_handle_prv_ts_ioctl\n");
@@ -3336,19 +3352,20 @@ static int eqos_handle_prv_ts_ioctl(struct eqos_prv_data *pdata,
 
 	default:
 		ret = -EINVAL;
-		pr_err("Unsupported clockid\n");
+		pr_err("eqos ioctl: Unsupported clockid\n");
 	}
 
-	raw_spin_lock(&pdata->ptp_lock);
-
-	ns = hw_if->get_systime();
-
-	raw_spin_unlock(&pdata->ptp_lock);
+	ret = get_ptp_hwtime(&ns);
 
 	raw_spin_unlock_irqrestore(&eqos_ts_lock, flags);
 
-	req.hw_ptp_ts.tv_sec = div_u64_rem(ns, 1000000000ULL, &remainder);
-	req.hw_ptp_ts.tv_nsec = remainder;
+	if (ret != 0) {
+		pr_err("eqos ioctl: HW PTP not running\n");
+		return ret;
+	}
+
+	req.hw_ptp_ts.tv_sec = div_u64_rem(ns, 1000000000ULL, &reminder);
+	req.hw_ptp_ts.tv_nsec = reminder;
 
 	pr_debug("<--eqos_ptp_get_time: tv_sec = %ld, tv_nsec = %ld\n",
 		 req.hw_ptp_ts.tv_sec, req.hw_ptp_ts.tv_nsec);
@@ -3951,7 +3968,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 
 		DBGPR_PTP("-->eqos registering get_ptp function\n");
 		/* Register broadcasting MAC timestamp to clients */
-		tegra_register_hwtime_source(hw_if->get_systime);
+		tegra_register_hwtime_source(eqos_get_ptptime, pdata);
 	}
 
 	DBGPR_PTP("config.flags = %#x, tx_type = %#x, rx_filter = %#x\n",

@@ -13,9 +13,13 @@
 #ifndef __NVGPU_FUSE_H__
 #define __NVGPU_FUSE_H__
 
-int nvgpu_tegra_fuse_read(unsigned long offset, u32 *value);
-void nvgpu_tegra_fuse_write(u32 value, unsigned long offset);
-
 int nvgpu_tegra_get_gpu_speedo_id(void);
+
+void nvgpu_tegra_fuse_write_bypass(u32 val);
+void nvgpu_tegra_fuse_write_access_sw(u32 val);
+void nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(u32 val);
+void nvgpu_tegra_fuse_write_opt_gpu_tpc1_disable(u32 val);
+int nvgpu_tegra_fuse_read_gcplex_config_fuse(u32 *val);
+int nvgpu_tegra_fuse_read_reserved_calib(u32 *val);
 
 #endif

@@ -15,17 +15,41 @@
 
 #include <nvgpu/fuse.h>
 
-int nvgpu_tegra_fuse_read(unsigned long offset, u32 *value)
-{
-	return tegra_fuse_readl(offset, value);
-}
-
-void nvgpu_tegra_fuse_write(u32 value, unsigned long offset)
-{
-	tegra_fuse_control_write(value, offset);
-}
-
 int nvgpu_tegra_get_gpu_speedo_id(void)
 {
 	return tegra_sku_info.gpu_speedo_id;
+}
+
+/*
+ * Use tegra_fuse_control_read/write() APIs for fuse offsets upto 0x100
+ * Use tegra_fuse_readl/writel() APIs for fuse offsets above 0x100
+ */
+void nvgpu_tegra_fuse_write_bypass(u32 val)
+{
+	tegra_fuse_control_write(val, FUSE_FUSEBYPASS_0);
+}
+
+void nvgpu_tegra_fuse_write_access_sw(u32 val)
+{
+	tegra_fuse_control_write(val, FUSE_WRITE_ACCESS_SW_0);
+}
+
+void nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(u32 val)
+{
+	tegra_fuse_writel(val, FUSE_OPT_GPU_TPC0_DISABLE_0);
+}
+
+void nvgpu_tegra_fuse_write_opt_gpu_tpc1_disable(u32 val)
+{
+	tegra_fuse_writel(val, FUSE_OPT_GPU_TPC1_DISABLE_0);
+}
+
+int nvgpu_tegra_fuse_read_gcplex_config_fuse(u32 *val)
+{
+	return tegra_fuse_readl(FUSE_GCPLEX_CONFIG_FUSE_0, val);
+}
+
+int nvgpu_tegra_fuse_read_reserved_calib(u32 *val)
+{
+	return tegra_fuse_readl(FUSE_RESERVED_CALIB0_0, val);
 }

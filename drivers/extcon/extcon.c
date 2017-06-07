@@ -1456,7 +1456,7 @@ out:
 	of_node_put(npspec.np);
 	if (!edev) {
 		if (cable_name && index >= 0)
-			pr_err("ERROR: could not get extcon-dev %s:%s(%i)\n",
+			pr_warn("Could not get extcon-dev %s:%s(%i)\n",
 					np->full_name,
 					cable_name ? cable_name : "", index);
 		return ERR_PTR(-EPROBE_DEFER);

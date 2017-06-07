@@ -144,6 +144,7 @@ struct tegra210_mvc {
 	unsigned int curve_type;
 	unsigned int cif_channels;
 	unsigned int audio_bits;
+	unsigned int format_in;
 	const struct tegra210_mvc_soc_data *soc_data;
 	bool is_shutdown;
 };

@@ -733,8 +733,7 @@
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			nvidia,dc-ctrlnum = <0>;
-			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
+			clocks = <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P1>,
@@ -746,7 +745,7 @@
 				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 				 <&tegra_car TEGRA186_CLK_PLLD_OUT1>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "clk32k_in", "nvdisplay_disp",
+			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2", "nvdisp_dsc",
 				      "pll_d", "plld2", "plld3",
@@ -772,8 +771,7 @@
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			nvidia,dc-ctrlnum = <1>;
-			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
+			clocks = <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P1>,
@@ -785,7 +783,7 @@
 				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 				 <&tegra_car TEGRA186_CLK_PLLD_OUT1>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "clk32k_in", "nvdisplay_disp",
+			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2", "nvdisp_dsc",
 				      "pll_d", "plld2", "plld3",
@@ -811,8 +809,7 @@
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			nvidia,dc-ctrlnum = <2>;
-			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
+			clocks = <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P1>,
@@ -822,7 +819,7 @@
 				 <&tegra_car TEGRA186_CLK_PLLD3>,
 				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "clk32k_in", "nvdisplay_disp",
+			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2", "nvdisp_dsc",
 				      "plld2", "plld3",
@@ -847,8 +844,7 @@
 			      <0x0 0x15900000 0x0 0x00040000>, /* DSIC */
 			      <0x0 0x15940000 0x0 0x00040000>, /* DSID */
 			      <0x0 0x15880000 0x0 0x00010000>; /* PADCTL REG */
-			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_DSI>,
+			clocks = <&tegra_car TEGRA186_CLK_DSI>,
 				 <&tegra_car TEGRA186_CLK_DSIA_LP>,
 				 <&tegra_car TEGRA186_CLK_DSIB>,
 				 <&tegra_car TEGRA186_CLK_DSIB_LP>,
@@ -856,7 +852,7 @@
 				 <&tegra_car TEGRA186_CLK_DSIC_LP>,
 				 <&tegra_car TEGRA186_CLK_DSID>,
 				 <&tegra_car TEGRA186_CLK_DSID_LP>;
-			clock-names = "clk32k_in", "dsi", "dsia_lp",
+			clock-names = "dsi", "dsia_lp",
 					"dsib", "dsib_lp", "dsic", "dsic_lp",
 					"dsid", "dsid_lp";
 			resets = <&tegra_car TEGRA186_RESET_DSI>,
@@ -952,8 +948,7 @@
 			nvidia,sor-ctrlnum = <0>;
 			nvidia,dpaux = <&dpaux0>;
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
-			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_SOR0>,
+			clocks = <&tegra_car TEGRA186_CLK_SOR0>,
 				 <&tegra_car TEGRA186_CLK_SOR_SAFE>,
 				 <&tegra_car TEGRA186_CLK_SOR0_PAD_CLKOUT>,
 				 <&tegra_car TEGRA186_CLK_SOR0_OUT>,
@@ -962,7 +957,7 @@
 				 <&tegra_car TEGRA186_CLK_HDA>,
 				 <&tegra_car TEGRA186_CLK_HDA2CODEC_2X>,
 				 <&tegra_car TEGRA186_CLK_HDA2HDMICODEC>;
-			clock-names = "clk32k_in", "sor0", "sor_safe",
+			clock-names = "sor0", "sor_safe",
 				      "sor0_pad_clkout", "sor0_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -990,8 +985,7 @@
 			nvidia,sor-ctrlnum = <1>;
 			nvidia,dpaux = <&dpaux1>;
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
-			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_SOR1>,
+			clocks = <&tegra_car TEGRA186_CLK_SOR1>,
 				 <&tegra_car TEGRA186_CLK_SOR_SAFE>,
 				 <&tegra_car TEGRA186_CLK_SOR1_PAD_CLKOUT>,
 				 <&tegra_car TEGRA186_CLK_SOR1_OUT>,
@@ -1000,7 +994,7 @@
 				 <&tegra_car TEGRA186_CLK_HDA>,
 				 <&tegra_car TEGRA186_CLK_HDA2CODEC_2X>,
 				 <&tegra_car TEGRA186_CLK_HDA2HDMICODEC>;
-			clock-names = "clk32k_in", "sor1", "sor_safe",
+			clock-names = "sor1", "sor_safe",
 				      "sor1_pad_clkout", "sor1_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -1026,10 +1020,9 @@
 			reg = <0x0 0x155c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
 			nvidia,dpaux-ctrlnum = <0>;
-			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_DPAUX>,
+			clocks = <&tegra_car TEGRA186_CLK_DPAUX>,
 				 <&tegra_car TEGRA186_CLK_PLLDP>;
-			clock-names = "clk32k_in", "dpaux", "plldp";
+			clock-names = "dpaux", "plldp";
 			resets = <&tegra_car TEGRA186_RESET_DPAUX>;
 			reset-names = "dpaux";
 			power-domains = <&disa_pd>;
@@ -1041,10 +1034,9 @@
 			reg = <0x0 0x15040000 0x0 0x00040000>;
 			interrupts = <0 160 0x4>; /* INT_DPAUX_1 */
 			nvidia,dpaux-ctrlnum = <1>;
-			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_DPAUX1>,
+			clocks = <&tegra_car TEGRA186_CLK_DPAUX1>,
 				 <&tegra_car TEGRA186_CLK_PLLDP>;
-			clock-names = "clk32k_in", "dpaux1", "plldp";
+			clock-names = "dpaux1", "plldp";
 			resets = <&tegra_car TEGRA186_RESET_DPAUX1>;
 			reset-names = "dpaux1";
 			power-domains = <&disa_pd>;

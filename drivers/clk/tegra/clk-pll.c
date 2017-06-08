@@ -307,7 +307,7 @@ static void clk_pll_enable_lock(struct tegra_clk_pll *pll)
 static int clk_pll_wait_for_lock(struct tegra_clk_pll *pll)
 {
 	int i;
-	u32 val, lock_mask;
+	u32 val = 0, lock_mask;
 	void __iomem *lock_addr;
 
 	if (!(pll->params->flags & TEGRA_PLL_USE_LOCK)) {
@@ -333,9 +333,11 @@ static int clk_pll_wait_for_lock(struct tegra_clk_pll *pll)
 	}
 
 	pr_err("%s: Timed out waiting for pll %s lock\n", __func__,
-	       clk_hw_get_name(&pll->hw));
+		clk_hw_get_name(&pll->hw));
+	pr_debug("%s: mask %08x, address: %p, val: %08x\n", __func__,
+		lock_mask, lock_addr, val);
 
-	return -1;
+	return 0;
 }
 
 int tegra_pll_wait_for_lock(struct tegra_clk_pll *pll)

@@ -3157,8 +3157,9 @@ static int tegra_pcie_get_xbar_config(struct tegra_pcie *pcie, u32 lanes,
 {
 	struct device_node *np = pcie->dev->of_node;
 
-	if (of_device_is_compatible(np, "nvidia,tegra124-pcie") |
-		of_device_is_compatible(np, "nvidia,tegra210-pcie")) {
+	if (of_device_is_compatible(np, "nvidia,tegra124-pcie") ||
+		of_device_is_compatible(np, "nvidia,tegra210-pcie") ||
+		of_device_is_compatible(np, "nvidia,tegra210b01-pcie")) {
 		switch (lanes) {
 		case 0x0104:
 			dev_info(pcie->dev, "4x1, 1x1 configuration\n");
@@ -3262,10 +3263,7 @@ static const struct tegra_pcie_soc_data tegra210b01_pcie_data = {
 	.program_uphy = true,
 	.program_clkreq_as_bi_dir = true,
 	.enable_wrap = true,
-	.mbist_war = true,
-	.perf_war = true,
 	.updateFC_timer_expire_war = true,
-	.l1ss_rp_wakeup_war = true,
 	.link_speed_war = true,
 	.dvfs_mselect = true,
 	.dvfs_tbl = {

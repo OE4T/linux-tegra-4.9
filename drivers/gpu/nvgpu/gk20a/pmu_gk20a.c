@@ -205,6 +205,11 @@ static u32 pmu_cmdline_size_v5(struct nvgpu_pmu *pmu)
 	return sizeof(struct pmu_cmdline_args_v5);
 }
 
+static u32 pmu_cmdline_size_v6(struct nvgpu_pmu *pmu)
+{
+	return sizeof(struct pmu_cmdline_args_v6);
+}
+
 static void set_pmu_cmdline_args_cpufreq_v5(struct nvgpu_pmu *pmu, u32 freq)
 {
 	pmu->args_v5.cpu_freq_hz = 204000000;
@@ -1586,7 +1591,7 @@ int gk20a_init_pmu(struct nvgpu_pmu *pmu)
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
 		g->ops.pmu_ver.is_pmu_zbc_save_supported = false;
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
-			pmu_cmdline_size_v5;
+			pmu_cmdline_size_v6;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
 			set_pmu_cmdline_args_cpufreq_v5;
 		g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode =

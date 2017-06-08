@@ -77,6 +77,17 @@ struct pmu_cmdline_args_v5 {
 	u32 dummy;
 };
 
+struct pmu_cmdline_args_v6 {
+	u32 cpu_freq_hz;
+	struct flcn_mem_desc_v0 trace_buf;
+	u8 secure_mode;
+	u8 raise_priv_sec;
+	struct flcn_mem_desc_v0 gc6_ctx;
+	struct flcn_mem_desc_v0 gc6_bsod_ctx;
+	struct flcn_mem_desc_v0 init_data_dma_info;
+	u32 dummy;
+};
+
 /* GPU ID */
 #define PMU_SHA1_GID_SIGNATURE		0xA7C66AD2
 #define PMU_SHA1_GID_SIGNATURE_SIZE	4

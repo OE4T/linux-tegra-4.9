@@ -314,6 +314,7 @@ struct nvgpu_pmu {
 		struct pmu_cmdline_args_v3 args_v3;
 		struct pmu_cmdline_args_v4 args_v4;
 		struct pmu_cmdline_args_v5 args_v5;
+		struct pmu_cmdline_args_v6 args_v6;
 	};
 	unsigned long perfmon_events_cnt;
 	bool perfmon_sampling_enabled;

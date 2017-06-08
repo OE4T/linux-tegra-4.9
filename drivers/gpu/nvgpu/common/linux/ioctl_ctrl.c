@@ -1247,7 +1247,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	struct zbc_query_params *zbc_tbl;
 	int i, err = 0;
 
-	gk20a_dbg_fn("");
+	gk20a_dbg_fn("start %d", _IOC_NR(cmd));
 
 	if ((_IOC_TYPE(cmd) != NVGPU_GPU_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||

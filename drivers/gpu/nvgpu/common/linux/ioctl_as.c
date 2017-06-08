@@ -291,6 +291,8 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	u8 buf[NVGPU_AS_IOCTL_MAX_ARG_SIZE];
 
+	gk20a_dbg_fn("start %d", _IOC_NR(cmd));
+
 	if ((_IOC_TYPE(cmd) != NVGPU_AS_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
 		(_IOC_NR(cmd) > NVGPU_AS_IOCTL_LAST) ||

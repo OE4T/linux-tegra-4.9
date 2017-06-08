@@ -355,7 +355,7 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 	u8 __maybe_unused buf[NVGPU_TSG_IOCTL_MAX_ARG_SIZE];
 	int err = 0;
 
-	gk20a_dbg(gpu_dbg_fn, "");
+	gk20a_dbg_fn("start %d", _IOC_NR(cmd));
 
 	if ((_IOC_TYPE(cmd) != NVGPU_TSG_IOCTL_MAGIC) ||
 	    (_IOC_NR(cmd) == 0) ||

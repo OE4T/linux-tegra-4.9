@@ -1,0 +1,2 @@
+trysource "../nvidia/drivers/net/can/mttcan/native/Kconfig.nvidia"
+trysource "../nvidia/drivers/net/can/mttcan/ivc/Kconfig.nvidia"

@@ -66,7 +66,7 @@
 	};
 
 	tegra-carveouts {
-		compatible = "nvidia,carveouts";
+		compatible = "nvidia,carveouts-t19x";
 		memory-region = <&generic_reserved &gos_reserved>;
 	};
 

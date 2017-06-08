@@ -584,6 +584,24 @@ static struct tegra_fuse_hw_feature tegra210b01_fuse_chip_data = {
 	},
 };
 
+static struct tegra_fuse_hw_feature tegra194_fuse_chip_data = {
+	.power_down_mode = true,
+	.mirroring_support = true,
+	.pgm_time = 5,
+	.burn_data = {
+		FUSE_BURN_DATA(odm_reserved, 0x2, 2, 256, 0xc8, true),
+		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true),
+		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true),
+		FUSE_BURN_DATA(odm_production_mode, 0, 11, 1, 0xa0, true),
+		FUSE_BURN_DATA(secure_boot_key, 0x61, 1, 128, 0xa4, true),
+		FUSE_BURN_DATA(public_key, 0x59, 1, 256, 0x64, true),
+		FUSE_BURN_DATA(boot_security_info, 0x66, 21, 16, 0x168, true),
+		FUSE_BURN_DATA(debug_authentication, 0, 20, 5, 0x1e4, true),
+		FUSE_BURN_DATA(odm_info, 0x67, 5, 16, 0x19c, false),
+		{},
+	},
+};
+
 static const struct of_device_id tegra_fuse_burn_match[] = {
 	{
 		.compatible = "nvidia,tegra210-efuse-burn",
@@ -594,6 +612,9 @@ static const struct of_device_id tegra_fuse_burn_match[] = {
 	}, {
 		.compatible = "nvidia,tegra210b01-efuse-burn",
 		.data = &tegra210b01_fuse_chip_data,
+	}, {
+		.compatible = "nvidia,tegra194-efuse-burn",
+		.data = &tegra194_fuse_chip_data,
 	}, {},
 };
 

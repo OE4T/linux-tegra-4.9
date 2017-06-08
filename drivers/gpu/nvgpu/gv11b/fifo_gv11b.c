@@ -889,7 +889,7 @@ static void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 
 	/* Disable power management */
 	if (g->support_pmu && g->elpg_enabled) {
-		if (gk20a_pmu_disable_elpg(g))
+		if (nvgpu_pmu_disable_elpg(g))
 			nvgpu_err(g, "failed to set disable elpg");
 	}
 	if (g->ops.clock_gating.slcg_gr_load_gating_prod)
@@ -1018,7 +1018,7 @@ static void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 
 	/* It is safe to enable ELPG again. */
 	if (g->support_pmu && g->elpg_enabled)
-		gk20a_pmu_enable_elpg(g);
+		nvgpu_pmu_enable_elpg(g);
 }
 
 static void gv11b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)

@@ -2332,7 +2332,7 @@ static int fbcon_blank(struct vc_data *vc, int blank, int mode_switch)
 	struct fbcon_ops *ops = info->fbcon_par;
 
 	if (mode_switch) {
-		struct fb_var_screeninfo var = info->var;
+		struct fb_var_screeninfo var = ops->var;
 
 		ops->graphics = 1;
 

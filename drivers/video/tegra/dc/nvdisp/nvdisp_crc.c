@@ -270,6 +270,134 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 	return 0;
 }
 
+static inline bool is_region_enabled(u32 ctl, int id)
+{
+	return ctl & masks[id].enable;
+}
+
+static inline bool is_region_crc_ready(u32 status, int id)
+{
+	return status & masks[id].pending;
+}
+
+static int tegra_nvdisp_crc_rg_regional_get(struct tegra_dc *dc,
+					    struct tegra_dc_crc_buf_ele *e)
+{
+	int id, ret = 0;
+	u32 ctl, status;
+	u32 crc_readback_location_mask =
+	nvdisp_rg_region_crc_control_readback_location_readback_golden_f();
+
+	status = tegra_dc_readl(dc, nvdisp_rg_region_crc_r());
+
+	ctl = tegra_dc_readl(dc, nvdisp_rg_region_crc_control_r());
+	if (ctl & crc_readback_location_mask) {
+		dev_err(&dc->ndev->dev,
+			"Golden CRCs are already programmed. Ignore reading\n");
+		return -EPERM;
+	}
+
+	for (id = 0; id < TEGRA_DC_MAX_CRC_REGIONS; id++) {
+		if (!is_region_enabled(ctl, id))
+			continue;
+
+		if (!is_region_crc_ready(status, id))
+			continue;
+
+		if (status & masks[id].error) {
+			dev_err(&dc->ndev->dev,
+				"Error reading CRC for region %d\n", id);
+			status |= masks[id].error;
+			continue;
+		}
+
+		e->regional[id].crc = tegra_dc_readl(dc, regs[id].golden_crc);
+		e->regional[id].valid = true;
+		status |= masks[id].pending;
+	}
+
+	tegra_dc_writel(dc, status, nvdisp_rg_region_crc_r());
+
+	return ret;
+}
+
+static int tegra_nvdisp_crc_rg_get(struct tegra_dc *dc,
+				   struct tegra_dc_crc_buf_ele *e)
+{
+	u32 status;
+
+	status = tegra_dc_readl(dc, nvdisp_rg_crca_r());
+
+	if (status & nvdisp_rg_crca_error_true_f()) {
+		dev_err(&dc->ndev->dev, "Error reading RG CRC\n");
+		status |= nvdisp_rg_crca_error_true_f();
+		goto done;
+	}
+
+	if (status & nvdisp_rg_crca_valid_true_f()) {
+		e->rg.crc = tegra_dc_readl(dc, nvdisp_rg_crcb_r());
+		e->rg.valid = true;
+	}
+
+done:
+	tegra_dc_writel(dc, status, nvdisp_rg_crca_r());
+
+	return 0;
+}
+
+static int tegra_nvdisp_crc_comp_get(struct tegra_dc *dc,
+				     struct tegra_dc_crc_buf_ele *e)
+{
+	u32 status;
+
+	status = tegra_dc_readl(dc, nvdisp_comp_crca_r());
+
+	if (status & nvdisp_comp_crca_error_true_f()) {
+		dev_err(&dc->ndev->dev, "Error reading COMP CRC\n");
+		status |= nvdisp_comp_crca_error_true_f();
+		goto done;
+	}
+
+	if (status & nvdisp_comp_crca_valid_true_f()) {
+		e->comp.crc = tegra_dc_readl(dc, nvdisp_comp_crcb_r());
+		e->comp.valid = true;
+	}
+
+done:
+	tegra_dc_writel(dc, status, nvdisp_comp_crca_r());
+
+	return 0;
+}
+
+static int tegra_nvdisp_crc_sor_get(struct tegra_dc *dc,
+				    struct tegra_dc_crc_buf_ele *e)
+{
+	return 0;
+}
+
+int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
+			     struct tegra_dc_crc_buf_ele *e)
+{
+	int ret = 0, iter;
+	bool valids = false; /* Logical OR of valid fields of individual CRCs */
+
+	if (atomic_read(&dc->crc_ref_cnt.rg_comp_sor)) {
+		tegra_nvdisp_crc_rg_get(dc, e);
+		tegra_nvdisp_crc_comp_get(dc, e);
+		tegra_nvdisp_crc_sor_get(dc, e);
+	}
+
+	if (atomic_read(&dc->crc_ref_cnt.regional))
+		ret = tegra_nvdisp_crc_rg_regional_get(dc, e);
+
+	valids = e->rg.valid || e->comp.valid || e->sor.valid;
+
+	for (iter = 0; iter < TEGRA_DC_EXT_MAX_REGIONS && !valids; iter++)
+		valids = e->regional[iter].valid;
+
+	return valids ? ret : -EINVAL;
+}
+
 void tegra_nvdisp_crc_reset(struct tegra_dc *dc)
 {
 	tegra_dc_writel(dc, 0x0, nvdisp_rg_region_crc_control_r());

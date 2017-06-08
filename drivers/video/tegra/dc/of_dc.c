@@ -2204,7 +2204,7 @@ static int parse_dp_settings(struct platform_device *ndev,
 		goto parse_dp_settings_fail;
 
 	np_lt_data = of_get_child_by_name(np_dp_panel, "lt-data");
-	if (!np_lt_data || of_get_child_count(np_lt_data)) {
+	if (!np_lt_data || !of_get_child_count(np_lt_data)) {
 		dev_info(&ndev->dev, "No lt-data, using default setting\n");
 		set_lt_data(dpout);
 	} else {

@@ -19,7 +19,7 @@
 
 #include <nvgpu/nvhost_t19x.h>
 
-#include "nvhost_priv_t19x.h"
+#include "common/linux/nvhost_priv.h"
 
 int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
 		struct nvgpu_nvhost_dev *nvhost_dev,

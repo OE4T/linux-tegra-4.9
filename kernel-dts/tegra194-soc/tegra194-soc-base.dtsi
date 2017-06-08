@@ -314,7 +314,13 @@
 		clocks = <&bpmp_clks TEGRA194_CLK_FUSE>,
 		         <&bpmp_clks TEGRA194_CLK_CLK_M>;
 		clock-names = "fuse", "clk_m";
-		status = "okay";
+		status = "disabled";
+		efuse-burn {
+			compatible = "nvidia,tegra194-efuse-burn";
+			clocks = <&bpmp_clks TEGRA194_CLK_CLK_M>;
+			clock-names = "clk_m";
+			status = "disabled";
+		};
 	};
 
 	bpmp {

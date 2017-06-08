@@ -29,7 +29,7 @@ endif
 
 ifeq ($(CONFIG_TEGRA_MC),y)
 
-ifneq ($(CONFIG_ARCH_TEGRA_21x_SOC),y)
+ifneq ($(CONFIG_ARCH_TEGRA_210_SOC),y)
 obj-y += tegra_emc.o
 obj-y 					+= tegra_emc_timers.o
 endif

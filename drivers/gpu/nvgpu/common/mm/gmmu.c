@@ -201,7 +201,7 @@ u64 nvgpu_pde_phys_addr(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 	if (g->mm.has_physical_mode)
 		page_addr = sg_phys(pd->mem->priv.sgt->sgl);
 	else
-		page_addr = nvgpu_mem_get_base_addr(g, pd->mem, 0);
+		page_addr = nvgpu_mem_get_addr(g, pd->mem);
 
 	return page_addr + pd->mem_offs;
 }
@@ -559,7 +559,7 @@ static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
 	sgl = sgt->sgl;
 
 	if (!g->mm.bypass_smmu) {
-		u64 io_addr = g->ops.mm.get_iova_addr(g, sgl, 0);
+		u64 io_addr = nvgpu_mem_get_addr_sgl(g, sgl);
 
 		io_addr += space_to_skip;
 
@@ -670,7 +670,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 
 			phys_addr = alloc->base;
 		} else
-			phys_addr = g->ops.mm.get_iova_addr(g, sgt->sgl, 0);
+			phys_addr = nvgpu_mem_get_addr_sgl(g, sgt->sgl);
 	}
 
 	__gmmu_dbg(g, attrs,

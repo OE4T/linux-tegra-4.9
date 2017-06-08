@@ -4443,7 +4443,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	/* init mmu debug buffer */
-	addr = g->ops.mm.get_iova_addr(g, gr->mmu_wr_mem.priv.sgt->sgl, 0);
+	addr = nvgpu_mem_get_addr(g, &gr->mmu_wr_mem);
 	addr >>= fb_mmu_debug_wr_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_wr_r(),
@@ -4453,7 +4453,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_f(addr));
 
-	addr = g->ops.mm.get_iova_addr(g, gr->mmu_rd_mem.priv.sgt->sgl, 0);
+	addr = nvgpu_mem_get_addr(g, &gr->mmu_rd_mem);
 	addr >>= fb_mmu_debug_rd_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_rd_r(),

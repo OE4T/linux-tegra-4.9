@@ -401,8 +401,8 @@ void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		compbit_store_iova = gk20a_mem_phys(&gr->compbit_store.mem);
 	else
-		compbit_store_iova = g->ops.mm.get_iova_addr(g,
-				gr->compbit_store.mem.priv.sgt->sgl, 0);
+		compbit_store_iova = nvgpu_mem_get_addr(g,
+							&gr->compbit_store.mem);
 
 	compbit_base_post_divide64 = compbit_store_iova >>
 		ltc_ltcs_ltss_cbc_base_alignment_shift_v();

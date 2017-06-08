@@ -27,6 +27,7 @@ struct sg_table;
 
 struct gk20a;
 struct nvgpu_allocator;
+struct nvgpu_gmmu_attrs;
 
 /*
  * Real location of a buffer - nvgpu_aperture_mask() will deduce what will be
@@ -179,6 +180,8 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 /* size and offset in bytes (32b-aligned), filled with the constant byte c */
 void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		u32 c, u32 size);
+
+u64 nvgpu_mem_get_addr(struct gk20a *g, struct nvgpu_mem *mem);
 
 u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
 		u32 sysmem_mask, u32 vidmem_mask);

@@ -345,11 +345,8 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 
 int gk20a_mm_suspend(struct gk20a *g);
 
-u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
-		u32 flags);
+u64 gk20a_mm_gpu_phys_addr(struct gk20a *g, u64 phys, u32 flags);
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova);
-u64 nvgpu_mem_get_base_addr(struct gk20a *g, struct nvgpu_mem *mem,
-			    u32 flags);
 
 void gk20a_mm_ltc_isr(struct gk20a *g);
 

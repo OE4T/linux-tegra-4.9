@@ -80,7 +80,6 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.get_big_page_sizes = gm20b_mm_get_big_page_sizes;
 	gops->mm.get_default_big_page_size = gm20b_mm_get_default_big_page_size;
 	gops->mm.gpu_phys_addr = gm20b_gpu_phys_addr;
-	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
 	gops->mm.init_pdb = gk20a_mm_init_pdb;

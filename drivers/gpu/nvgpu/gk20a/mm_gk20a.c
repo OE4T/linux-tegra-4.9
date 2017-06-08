@@ -1383,7 +1383,7 @@ int nvgpu_vm_map_compbits(struct vm_gk20a *vm,
 		return -EINVAL;
 	}
 
-	*mapping_iova = gk20a_mm_iova_addr(g, mapped_buffer->sgt->sgl, 0);
+	*mapping_iova = nvgpu_mem_get_addr_sgl(g, mapped_buffer->sgt->sgl);
 	*compbits_win_gva = mapped_buffer->ctag_map_win_addr;
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
@@ -1454,30 +1454,6 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 }
 #endif
 
-/*
- * If mem is in VIDMEM, return base address in vidmem
- * else return IOVA address for SYSMEM
- */
-u64 nvgpu_mem_get_base_addr(struct gk20a *g, struct nvgpu_mem *mem,
-			    u32 flags)
-{
-	struct nvgpu_page_alloc *alloc;
-	u64 addr;
-
-	if (mem->aperture == APERTURE_VIDMEM) {
-		alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
-
-		/* This API should not be used with > 1 chunks */
-		WARN_ON(alloc->nr_chunks != 1);
-
-		addr = alloc->base;
-	} else {
-		addr = g->ops.mm.get_iova_addr(g, mem->priv.sgt->sgl, flags);
-	}
-
-	return addr;
-}
-
 #if defined(CONFIG_GK20A_VIDMEM)
 static struct nvgpu_mem *get_pending_mem_desc(struct mm_gk20a *mm)
 {
@@ -1526,8 +1502,7 @@ dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	buffer = __nvgpu_vm_find_mapped_buf(vm, gpu_vaddr);
 	if (buffer)
-		addr = g->ops.mm.get_iova_addr(g, buffer->sgt->sgl,
-				buffer->flags);
+		addr = nvgpu_mem_get_addr_sgl(g, buffer->sgt->sgl);
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	return addr;
@@ -1543,21 +1518,6 @@ u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova)
 		return iova | 1ULL << g->ops.mm.get_physical_addr_bits(g);
 
 	return iova;
-}
-
-u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
-		u32 flags)
-{
-	if (!device_is_iommuable(dev_from_gk20a(g)))
-		return sg_phys(sgl);
-
-	if (sg_dma_address(sgl) == 0)
-		return sg_phys(sgl);
-
-	if (sg_dma_address(sgl) == DMA_ERROR_CODE)
-		return 0;
-
-	return gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(sgl));
 }
 
 /* for gk20a the "video memory" apertures here are misnomers. */
@@ -2071,7 +2031,7 @@ u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct nvgpu_mem *inst_block)
 	if (g->mm.has_physical_mode)
 		addr = gk20a_mem_phys(inst_block);
 	else
-		addr = nvgpu_mem_get_base_addr(g, inst_block, 0);
+		addr = nvgpu_mem_get_addr(g, inst_block);
 
 	return addr;
 }
@@ -2194,7 +2154,7 @@ static int gk20a_init_ce_vm(struct mm_gk20a *mm)
 void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm)
 {
-	u64 pdb_addr = nvgpu_mem_get_base_addr(g, vm->pdb.mem, 0);
+	u64 pdb_addr = nvgpu_mem_get_addr(g, vm->pdb.mem);
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
@@ -2463,6 +2423,11 @@ int gk20a_mm_suspend(struct gk20a *g)
 u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g)
 {
 	return 34;
+}
+
+u64 gk20a_mm_gpu_phys_addr(struct gk20a *g, u64 phys, u32 flags)
+{
+	return phys;
 }
 
 const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,

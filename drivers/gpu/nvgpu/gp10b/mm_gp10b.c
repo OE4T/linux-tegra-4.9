@@ -48,8 +48,7 @@ static int gp10b_init_mm_setup_hw(struct gk20a *g)
 	g->ops.fb.set_mmu_page_size(g);
 
 	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(),
-		     (g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.priv.sgt->sgl, 0)
-		     >> 8ULL));
+		     nvgpu_mem_get_addr(g, &g->mm.sysmem_flush) >> 8ULL);
 
 	g->ops.bus.bar1_bind(g, inst_block);
 
@@ -343,7 +342,7 @@ static const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
 static void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm)
 {
-	u64 pdb_addr = nvgpu_mem_get_base_addr(g, vm->pdb.mem, 0);
+	u64 pdb_addr = nvgpu_mem_get_addr(g, vm->pdb.mem);
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 

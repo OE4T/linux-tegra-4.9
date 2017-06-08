@@ -1081,7 +1081,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	u32 *acr_ucode_header_t210_load;
 	u32 *acr_ucode_data_t210_load;
 
-	start = g->ops.mm.get_iova_addr(g, acr->ucode_blob.priv.sgt->sgl, 0);
+	start = nvgpu_mem_get_addr(g, &acr->ucode_blob);
 	size = acr->ucode_blob.size;
 
 	gm20b_dbg_pmu("");

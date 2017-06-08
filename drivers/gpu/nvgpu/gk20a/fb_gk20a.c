@@ -44,8 +44,7 @@ void fb_gk20a_reset(struct gk20a *g)
 
 void gk20a_fb_init_hw(struct gk20a *g)
 {
-	u32 addr = g->ops.mm.get_iova_addr(g,
-			g->mm.sysmem_flush.priv.sgt->sgl, 0) >> 8;
+	u32 addr = nvgpu_mem_get_addr(g, &g->mm.sysmem_flush) >> 8;
 
 	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(), addr);
 }
@@ -67,7 +66,7 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 	if (!g->power_on)
 		return;
 
-	addr_lo = u64_lo32(nvgpu_mem_get_base_addr(g, pdb, 0) >> 12);
+	addr_lo = u64_lo32(nvgpu_mem_get_addr(g, pdb) >> 12);
 
 	nvgpu_mutex_acquire(&g->mm.tlb_lock);
 

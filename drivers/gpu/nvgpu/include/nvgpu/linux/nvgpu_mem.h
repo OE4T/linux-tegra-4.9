@@ -19,15 +19,19 @@
 
 struct page;
 struct sg_table;
+struct scatterlist;
 
 struct gk20a;
 struct nvgpu_mem;
+struct nvgpu_gmmu_attrs;
 
 struct nvgpu_mem_priv {
 	struct page **pages;
 	struct sg_table *sgt;
 	unsigned long flags;
 };
+
+u64 nvgpu_mem_get_addr_sgl(struct gk20a *g, struct scatterlist *sgl);
 
 /**
  * __nvgpu_mem_create_from_pages - Create an nvgpu_mem from physical pages.

@@ -15,6 +15,7 @@
  */
 
 #include <nvgpu/dma.h>
+#include <nvgpu/gmmu.h>
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/log.h>
@@ -22,6 +23,8 @@
 #include <nvgpu/enabled.h>
 
 #include <nvgpu/linux/dma.h>
+
+#include "os_linux.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -244,6 +247,61 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 	} else {
 		WARN_ON("Accessing unallocated nvgpu_mem");
 	}
+}
+
+/*
+ * Obtain a SYSMEM address from a Linux SGL. This should eventually go away
+ * and/or become private to this file once all bad usages of Linux SGLs are
+ * cleaned up in the driver.
+ */
+u64 nvgpu_mem_get_addr_sgl(struct gk20a *g, struct scatterlist *sgl)
+{
+	struct nvgpu_os_linux *l = container_of(g, struct nvgpu_os_linux, g);
+
+	if (!device_is_iommuable(l->dev))
+		return g->ops.mm.gpu_phys_addr(g, NULL, sg_phys(sgl));
+
+	if (sg_dma_address(sgl) == 0)
+		return g->ops.mm.gpu_phys_addr(g, NULL, sg_phys(sgl));
+
+	if (sg_dma_address(sgl) == DMA_ERROR_CODE)
+		return 0;
+
+	return gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(sgl));
+}
+
+/*
+ * Obtain the address the GPU should use from the %mem assuming this is a SYSMEM
+ * allocation.
+ */
+static u64 nvgpu_mem_get_addr_sysmem(struct gk20a *g, struct nvgpu_mem *mem)
+{
+	return nvgpu_mem_get_addr_sgl(g, mem->priv.sgt->sgl);
+}
+
+/*
+ * Return the base address of %mem. Handles whether this is a VIDMEM or SYSMEM
+ * allocation.
+ *
+ * %attrs can be NULL. If it is not NULL then it may be inspected to determine
+ * if the address needs to be modified before writing into a PTE.
+ */
+u64 nvgpu_mem_get_addr(struct gk20a *g, struct nvgpu_mem *mem)
+{
+	struct nvgpu_page_alloc *alloc;
+
+	if (mem->aperture == APERTURE_SYSMEM)
+		return nvgpu_mem_get_addr_sysmem(g, mem);
+
+	/*
+	 * Otherwise get the vidmem address.
+	 */
+	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
+
+	/* This API should not be used with > 1 chunks */
+	WARN_ON(alloc->nr_chunks != 1);
+
+	return alloc->base;
 }
 
 /*

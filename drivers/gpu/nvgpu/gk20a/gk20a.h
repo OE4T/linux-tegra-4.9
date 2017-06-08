@@ -730,8 +730,6 @@ struct gpu_ops {
 				struct vm_gk20a *vm);
 		u64 (*gpu_phys_addr)(struct gk20a *g,
 				     struct nvgpu_gmmu_attrs *attrs, u64 phys);
-		u64 (*get_iova_addr)(struct gk20a *g, struct scatterlist *sgl,
-					 u32 flags);
 		size_t (*get_vidmem_size)(struct gk20a *g);
 		void (*init_inst_block)(struct nvgpu_mem *inst_block,
 				struct vm_gk20a *vm, u32 big_page_size);

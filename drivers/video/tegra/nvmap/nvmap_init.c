@@ -57,8 +57,9 @@ struct device __weak tegra_generic_cma_dev;
 struct device __weak tegra_vpr_cma_dev;
 struct dma_resize_notifier_ops __weak vpr_dev_ops;
 
-static const struct of_device_id nvmap_of_ids[] = {
+__weak const struct of_device_id nvmap_of_ids[] = {
 	{ .compatible = "nvidia,carveouts" },
+	{ .compatible = "nvidia,carveouts-t18x" },
 	{ }
 };
 

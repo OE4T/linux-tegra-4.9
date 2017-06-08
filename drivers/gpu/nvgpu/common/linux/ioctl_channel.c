@@ -180,6 +180,19 @@ static int gk20a_channel_set_wdt_status(struct channel_gk20a *ch,
 	return 0;
 }
 
+static void gk20a_channel_free_error_notifiers(struct channel_gk20a *ch)
+{
+	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
+	if (ch->error_notifier_ref) {
+		dma_buf_vunmap(ch->error_notifier_ref, ch->error_notifier_va);
+		dma_buf_put(ch->error_notifier_ref);
+		ch->error_notifier_ref = NULL;
+		ch->error_notifier = NULL;
+		ch->error_notifier_va = NULL;
+	}
+	nvgpu_mutex_release(&ch->error_notifier_mutex);
+}
+
 static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 		struct nvgpu_set_error_notifier *args)
 {
@@ -262,6 +275,8 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	trace_gk20a_channel_release(dev_name(g->dev));
 
 	gk20a_channel_close(ch);
+	gk20a_channel_free_error_notifiers(ch);
+
 	gk20a_idle(g);
 
 channel_release:

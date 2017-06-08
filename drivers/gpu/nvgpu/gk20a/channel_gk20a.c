@@ -17,7 +17,10 @@
  */
 
 #include <trace/events/gk20a.h>
+
+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_GK20A_CYCLE_STATS)
 #include <linux/dma-buf.h>
+#endif
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
@@ -389,19 +392,6 @@ void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
 	nvgpu_mutex_release(&ch->error_notifier_mutex);
 }
 
-void gk20a_channel_free_error_notifiers(struct channel_gk20a *ch)
-{
-	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
-	if (ch->error_notifier_ref) {
-		dma_buf_vunmap(ch->error_notifier_ref, ch->error_notifier_va);
-		dma_buf_put(ch->error_notifier_ref);
-		ch->error_notifier_ref = NULL;
-		ch->error_notifier = NULL;
-		ch->error_notifier_va = NULL;
-	}
-	nvgpu_mutex_release(&ch->error_notifier_mutex);
-}
-
 static void gk20a_wait_until_counter_is_N(
 	struct channel_gk20a *ch, atomic_t *counter, int wait_value,
 	struct nvgpu_cond *c, const char *caller, const char *counter_name)
@@ -527,8 +517,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 	gk20a_dbg_info("freeing bound channel context, timeout=%ld",
 			timeout);
-
-	gk20a_channel_free_error_notifiers(ch);
 
 	if (g->ops.fecs_trace.unbind_channel && !ch->vpr)
 		g->ops.fecs_trace.unbind_channel(g, ch);

@@ -48,3 +48,24 @@ void nvmap_handle_get_cacheability(struct nvmap_handle *h,
 	*outer = h->flags == NVMAP_HANDLE_CACHEABLE;
 }
 
+static void nvmap_t19x_flush_cache(void)
+{
+	void *unused = NULL;
+
+	__flush_dcache_all(unused);
+}
+
+static void nvmap_t19x_clean_cache(void)
+{
+	void *unused = NULL;
+
+	__clean_dcache_all(unused);
+}
+
+void nvmap_setup_t19x_cache_ops(struct nvmap_chip_cache_op *op)
+{
+	op->inner_flush_cache_all = nvmap_t19x_flush_cache;
+	op->inner_clean_cache_all = nvmap_t19x_clean_cache;
+	op->name = kstrdup("scf", GFP_KERNEL);
+}
+NVMAP_CACHE_OF_DECLARE("nvidia,carveouts-t19x", nvmap_setup_t19x_cache_ops);

@@ -26,6 +26,13 @@
 bool nvmap_version_t19x;
 extern struct static_key nvmap_updated_cache_config;
 
+const struct of_device_id nvmap_of_ids[] = {
+	{ .compatible = "nvidia,carveouts" },
+	{ .compatible = "nvidia,carveouts-t18x" },
+	{ .compatible = "nvidia,carveouts-t19x" },
+	{ }
+};
+
 int nvmap_register_cvsram_carveout(struct device *dma_dev,
 		phys_addr_t base, size_t size)
 {

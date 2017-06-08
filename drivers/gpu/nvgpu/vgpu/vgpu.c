@@ -568,6 +568,7 @@ static void vgpu_pm_qos_remove(struct device *dev)
 static int vgpu_pm_init(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	unsigned long *freqs;
 	int num_freqs;
 	int err = 0;
@@ -579,7 +580,7 @@ static int vgpu_pm_init(struct device *dev)
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_init(dev);
 
-	if (g->devfreq) {
+	if (l->devfreq) {
 		/* set min/max frequency based on frequency table */
 		err = vgpu_clk_get_freqs(dev, &freqs, &num_freqs);
 		if (err)
@@ -588,8 +589,8 @@ static int vgpu_pm_init(struct device *dev)
 		if (num_freqs < 1)
 			return -EINVAL;
 
-		g->devfreq->min_freq = freqs[0];
-		g->devfreq->max_freq = freqs[num_freqs - 1];
+		l->devfreq->min_freq = freqs[0];
+		l->devfreq->max_freq = freqs[num_freqs - 1];
 	}
 
 	err = vgpu_pm_qos_init(dev);

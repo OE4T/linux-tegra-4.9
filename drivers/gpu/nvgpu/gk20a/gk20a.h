@@ -1186,8 +1186,6 @@ struct gk20a {
 		struct nvgpu_spinlock items_lock;
 	} channel_worker;
 
-	struct devfreq *devfreq;
-
 	struct gk20a_scale_profile *scale_profile;
 	unsigned long last_freq;
 

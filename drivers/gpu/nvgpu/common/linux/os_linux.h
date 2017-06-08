@@ -65,6 +65,8 @@ struct nvgpu_os_linux {
 
 	dev_t cdev_region;
 
+	struct devfreq *devfreq;
+
 	struct device_dma_parameters dma_parms;
 };
 

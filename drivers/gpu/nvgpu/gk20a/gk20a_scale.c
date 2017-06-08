@@ -28,8 +28,8 @@
 
 #include "gk20a.h"
 #include "platform_gk20a.h"
-#include "clk_gk20a.h"
 #include "gk20a_scale.h"
+#include "common/linux/os_linux.h"
 
 /*
  * gk20a_scale_qos_notify()
@@ -46,7 +46,8 @@ int gk20a_scale_qos_notify(struct notifier_block *nb,
 			container_of(nb, struct gk20a_scale_profile,
 			qos_notify_block);
 	struct gk20a *g = get_gk20a(profile->dev);
-	struct devfreq *devfreq = g->devfreq;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct devfreq *devfreq = l->devfreq;
 
 	if (!devfreq)
 		return NOTIFY_OK;
@@ -79,6 +80,7 @@ int gk20a_scale_qos_notify(struct notifier_block *nb,
 			     qos_notify_block);
 	struct gk20a_platform *platform = dev_get_drvdata(profile->dev);
 	struct gk20a *g = get_gk20a(profile->dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	unsigned long freq;
 
 	if (!platform->postscale)
@@ -88,8 +90,8 @@ int gk20a_scale_qos_notify(struct notifier_block *nb,
 	 * has higher demand than qos */
 	freq = platform->clk_round_rate(profile->dev,
 			(u32)pm_qos_read_min_bound(PM_QOS_GPU_FREQ_BOUNDS));
-	if (g->devfreq)
-		freq = max(g->devfreq->previous_freq, freq);
+	if (l->devfreq)
+		freq = max(l->devfreq->previous_freq, freq);
 
 	/* Update gpu load because we may scale the emc target
 	 * if the gpu load changed. */
@@ -138,8 +140,9 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = platform->g;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_scale_profile *profile = g->scale_profile;
-	struct devfreq *devfreq = g->devfreq;
+	struct devfreq *devfreq = l->devfreq;
 	unsigned long local_freq = *freq;
 	unsigned long rounded_rate;
 	unsigned long min_freq = 0, max_freq = 0;
@@ -236,7 +239,8 @@ static void update_load_estimate_gpmu(struct device *dev)
 void gk20a_scale_suspend(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
-	struct devfreq *devfreq = g->devfreq;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct devfreq *devfreq = l->devfreq;
 
 	if (!devfreq)
 		return;
@@ -253,7 +257,8 @@ void gk20a_scale_suspend(struct device *dev)
 void gk20a_scale_resume(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
-	struct devfreq *devfreq = g->devfreq;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct devfreq *devfreq = l->devfreq;
 
 	if (!devfreq)
 		return;
@@ -272,8 +277,9 @@ void gk20a_scale_resume(struct device *dev)
 static void gk20a_scale_notify(struct device *dev, bool busy)
 {
 	struct gk20a *g = get_gk20a(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_scale_profile *profile = g->scale_profile;
-	struct devfreq *devfreq = g->devfreq;
+	struct devfreq *devfreq = l->devfreq;
 
 	/* Is the device profile initialised? */
 	if (!(profile && devfreq))
@@ -355,6 +361,7 @@ void gk20a_scale_init(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = platform->g;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_scale_profile *profile;
 	int err;
 
@@ -398,7 +405,7 @@ void gk20a_scale_init(struct device *dev)
 		if (IS_ERR(devfreq))
 			devfreq = NULL;
 
-		g->devfreq = devfreq;
+		l->devfreq = devfreq;
 	}
 
 	/* Should we register QoS callback for this device? */
@@ -422,6 +429,7 @@ void gk20a_scale_exit(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = platform->g;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int err;
 
 	if (platform->qos_notify) {
@@ -432,8 +440,8 @@ void gk20a_scale_exit(struct device *dev)
 	}
 
 	if (platform->devfreq_governor) {
-		err = devfreq_remove_device(g->devfreq);
-		g->devfreq = NULL;
+		err = devfreq_remove_device(l->devfreq);
+		l->devfreq = NULL;
 	}
 
 	nvgpu_kfree(g, g->scale_profile);

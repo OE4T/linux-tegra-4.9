@@ -25,8 +25,6 @@
 #include <linux/dma-buf.h>
 #include <linux/platform_device.h>
 
-#include <linux/tegra_smmu.h>
-
 #include "mods_internal.h"
 
 static struct device_dma_parameters dma_parms = {
@@ -123,8 +121,6 @@ int mods_init_dmabuf(void)
 		return ret;
 	}
 
-	tegra_smmu_map_misc_device(&dummy_device.dev);
-
 	dummy_device_registered = true;
 
 	return 0;
@@ -133,7 +129,6 @@ int mods_init_dmabuf(void)
 void mods_exit_dmabuf(void)
 {
 	if (dummy_device_registered) {
-		tegra_smmu_unmap_misc_device(&dummy_device.dev);
 		platform_device_unregister(&dummy_device);
 		dummy_device_registered = false;
 	}

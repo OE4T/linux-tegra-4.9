@@ -55,15 +55,6 @@ static void nvmap_roc_clean_cache(void)
 	}
 }
 
-void nvmap_override_cache_ops(void)
-{
-	inner_flush_cache_all = nvmap_roc_flush_cache;
-	inner_clean_cache_all = nvmap_roc_clean_cache;
-	pr_info("set roc flush ops to replace cache ops by set/ways\n");
-	inner_flush_cache_all();
-	inner_clean_cache_all();
-}
-
 void nvmap_setup_t18x_cache_ops(struct nvmap_chip_cache_op *op)
 {
 	op->inner_flush_cache_all = nvmap_roc_flush_cache;

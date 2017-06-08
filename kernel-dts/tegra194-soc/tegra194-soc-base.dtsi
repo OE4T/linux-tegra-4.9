@@ -1046,20 +1046,6 @@
 		};
 	}; // host1x
 
-	clocks {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		clk32k_in: clk32k_in@0 {
-			compatible = "fixed-clock";
-			reg = <0>;
-			#clock-cells = <0>;
-			clock-frequency = <32768>;
-			status = "okay";
-		};
-	};
-
 	gpcdma: dma@2600000 {
 		compatible = "nvidia,tegra186-gpcdma";
 		reg = <0x0 0x2600000 0x0 0x210000>;

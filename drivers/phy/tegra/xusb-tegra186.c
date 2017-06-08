@@ -290,6 +290,13 @@ struct tegra_xusb_fuse_calibration {
 	u32 rpd_ctrl;
 };
 
+struct tegra186_xusb_padctl_context {
+	u32 vbus_id;
+	u32 usb2_pad_mux;
+	u32 usb2_port_cap;
+	u32 ss_port_cap;
+};
+
 struct tegra186_xusb_padctl {
 	struct tegra_xusb_padctl base;
 
@@ -302,6 +309,9 @@ struct tegra186_xusb_padctl {
 	/* utmi bias and tracking */
 	struct clk *usb2_trk_clk;
 	unsigned int bias_pad_enable;
+
+	/* padctl context */
+	struct tegra186_xusb_padctl_context context;
 };
 
 static inline void ao_writel(struct tegra186_xusb_padctl *priv, u32 value,
@@ -1497,6 +1507,46 @@ static void tegra186_xusb_padctl_remove(struct tegra_xusb_padctl *padctl)
 {
 }
 
+static void tegra186_xusb_padctl_save(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra186_xusb_padctl *priv = to_tegra186_xusb_padctl(padctl);
+
+	priv->context.vbus_id = padctl_readl(padctl, USB2_VBUS_ID);
+	priv->context.usb2_pad_mux =
+				padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
+	priv->context.usb2_port_cap =
+				padctl_readl(padctl, XUSB_PADCTL_USB2_PORT_CAP);
+	priv->context.ss_port_cap =
+				padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CAP);
+}
+
+static void tegra186_xusb_padctl_restore(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra186_xusb_padctl *priv = to_tegra186_xusb_padctl(padctl);
+
+	padctl_writel(padctl, priv->context.usb2_pad_mux,
+			XUSB_PADCTL_USB2_PAD_MUX);
+	padctl_writel(padctl, priv->context.usb2_port_cap,
+			XUSB_PADCTL_USB2_PORT_CAP);
+	padctl_writel(padctl, priv->context.ss_port_cap,
+			XUSB_PADCTL_SS_PORT_CAP);
+	padctl_writel(padctl, priv->context.vbus_id, USB2_VBUS_ID);
+}
+
+static int tegra186_xusb_padctl_suspend_noirq(struct tegra_xusb_padctl *padctl)
+{
+	tegra186_xusb_padctl_save(padctl);
+
+	return 0;
+}
+
+static int tegra186_xusb_padctl_resume_noirq(struct tegra_xusb_padctl *padctl)
+{
+	tegra186_xusb_padctl_restore(padctl);
+
+	return 0;
+}
+
 static int tegra186_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
 					      bool set)
 {
@@ -1892,6 +1942,8 @@ static int tegra186_xusb_padctl_utmi_pad_secondary_charger_detect(
 static const struct tegra_xusb_padctl_ops tegra186_xusb_padctl_ops = {
 	.probe = tegra186_xusb_padctl_probe,
 	.remove = tegra186_xusb_padctl_remove,
+	.suspend_noirq = tegra186_xusb_padctl_suspend_noirq,
+	.resume_noirq = tegra186_xusb_padctl_resume_noirq,
 	.vbus_override = tegra186_xusb_padctl_vbus_override,
 	.phy_sleepwalk = tegra186_xusb_padctl_phy_sleepwalk,
 	.phy_wake = tegra186_xusb_padctl_phy_wake,

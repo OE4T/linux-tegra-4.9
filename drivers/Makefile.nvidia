@@ -9,9 +9,28 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 
+subdir-ccflags-y += -Werror
+
 KBUILD_CFLAGS += -I$(srctree)/../nvidia/include
 
 obj-y += i2c/
 obj-y += media/
 obj-y += misc/
 obj-y += video/
+obj-y += platform/
+obj-$(CONFIG_CLK_SRC_TEGRA18_TIMER) += clocksource/
+obj-$(CONFIG_CRYPTO) += crypto/
+obj-y += dma/
+obj-y += spi/
+obj-$(CONFIG_CPU_FREQ)   += cpufreq/
+obj-y += pinctrl/
+obj-y += gpio/
+obj-y += watchdog/
+obj-y += reset/
+obj-$(CONFIG_THERMAL) += thermal/
+obj-y += net/
+obj-y += i2c/
+obj-$(CONFIG_CPU_IDLE) += cpuidle/
+obj-y += tachometer/
+obj-$(CONFIG_TEGRA186_AHC) += misc/tegra186-ahc/
+obj-y += tty/

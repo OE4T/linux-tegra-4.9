@@ -18,6 +18,7 @@
 #include <linux/highmem.h>
 #include <linux/io.h>
 #include <linux/debugfs.h>
+#include <linux/of.h>
 
 #include <trace/events/nvmap.h>
 
@@ -115,6 +116,48 @@ static void nvmap_inner_clean_cache_all(void)
 }
 void (*inner_clean_cache_all)(void) = nvmap_inner_clean_cache_all;
 
+static void nvmap_cache_of_setup(struct nvmap_chip_cache_op *op)
+{
+	op->inner_clean_cache_all = nvmap_inner_clean_cache_all;
+	op->inner_flush_cache_all = nvmap_inner_flush_cache_all;
+	op->name = kstrdup("set/ways", GFP_KERNEL);
+	BUG_ON(!op->name);
+}
+NVMAP_CACHE_OF_DECLARE("nvidia,carveouts", nvmap_cache_of_setup);
+
+void nvmap_select_cache_ops(struct device *dev)
+{
+	struct nvmap_chip_cache_op op;
+	struct device_node *np;
+	const struct of_device_id *match = NULL;
+	const struct of_device_id *matches = &__nvmapcache_of_table;
+
+	memset(&op, 0, sizeof(op));
+
+	for_each_matching_node_and_match(np, matches, &match) {
+		const nvmap_setup_chip_cache_fn init_fn = match->data;
+
+		init_fn(&op);
+	}
+
+	inner_flush_cache_all = op.inner_flush_cache_all;
+	inner_clean_cache_all = op.inner_clean_cache_all;
+	pr_info("nvmap cache ops set to %s\n", op.name);
+	kfree(op.name);
+
+	if (inner_clean_cache_all && (op.flags & CALL_CLEAN_CACHE_ON_INIT)) {
+		pr_info("calling cache operation %pF\n",
+					inner_clean_cache_all);
+		inner_clean_cache_all();
+	}
+
+	if (inner_flush_cache_all && (op.flags & CALL_FLUSH_CACHE_ON_INIT)) {
+		pr_info("calling cache operation %pF\n",
+					inner_flush_cache_all);
+		inner_flush_cache_all();
+	}
+}
+
 /*
  * FIXME:
  *
@@ -148,6 +191,7 @@ void nvmap_clean_cache(struct page **pages, int numpages)
 
 __weak void nvmap_override_cache_ops(void)
 {
+	nvmap_select_cache_ops(nvmap_dev->dev_user.parent);
 }
 
 void inner_cache_maint(unsigned int op, void *vaddr, size_t size)

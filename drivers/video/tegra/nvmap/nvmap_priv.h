@@ -39,6 +39,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/dma-direction.h>
 #include <linux/platform_device.h>
+#include <linux/of.h>
 #include <linux/of_reserved_mem.h>
 
 #include <asm/cacheflush.h>
@@ -732,5 +733,25 @@ static inline int nvmap_get_user_pages(ulong vaddr,
 #define device_node_from_iter(iter) \
 	iter.out_args.np
 #endif
+
+#define CALL_CLEAN_CACHE_ON_INIT 1
+#define CALL_FLUSH_CACHE_ON_INIT 2
+
+struct nvmap_chip_cache_op {
+	void (*inner_clean_cache_all)(void);
+	void (*inner_flush_cache_all)(void);
+	const char *name;
+	int flags;
+};
+
+void nvmap_select_cache_ops(struct device *dev);
+
+typedef void (*nvmap_setup_chip_cache_fn)(struct nvmap_chip_cache_op *);
+
+extern struct of_device_id __nvmapcache_of_table;
+
+#define NVMAP_CACHE_OF_DECLARE(compat, fn) \
+	_OF_DECLARE(nvmapcache, nvmapcache_of, compat, fn, \
+			nvmap_setup_chip_cache_fn)
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

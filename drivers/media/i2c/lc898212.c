@@ -281,11 +281,10 @@ static int lc898212_write_table(struct lc898212 *priv,
 		val = next->val;
 
 		if (next->addr == LC898212_WAIT_REPEAT) {
-			u8 data = 0;
+			u32 data = 0;
 			u8 count = 0;
 
-			err = regmap_read(priv->regmap8, val,
-				(unsigned int *) &data);
+			err = regmap_read(priv->regmap8, val, &data);
 			if (err) {
 				pr_err("%s: regmap_read: %d\n", __func__, err);
 				return err;
@@ -297,8 +296,7 @@ static int lc898212_write_table(struct lc898212 *priv,
 				}
 
 				usleep_range(10, 20);
-				err = regmap_read(priv->regmap8, val,
-					(unsigned int *) &data);
+				err = regmap_read(priv->regmap8, val, &data);
 				if (err) {
 					pr_err("%s: regmap_read: %d\n",
 						__func__, err);

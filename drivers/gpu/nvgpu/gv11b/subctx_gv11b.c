@@ -143,13 +143,14 @@ void gv11b_subctx_commit_pdb(struct channel_gk20a *c,
 				struct nvgpu_mem *inst_block)
 {
 	struct gk20a *g = c->g;
+	struct vm_gk20a *vm = c->vm;
 	u32 lo, hi;
 	u32 subctx_id = 0;
 	u32 format_word;
 	u32 pdb_addr_lo, pdb_addr_hi;
 	u64 pdb_addr;
 
-	pdb_addr = g->ops.mm.get_iova_addr(g, c->vm->pdb.mem->priv.sgt->sgl, 0);
+	pdb_addr = nvgpu_mem_get_addr(g, vm->pdb.mem);
 	pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	pdb_addr_hi = u64_hi32(pdb_addr);
 	format_word = ram_in_sc_page_dir_base_target_f(

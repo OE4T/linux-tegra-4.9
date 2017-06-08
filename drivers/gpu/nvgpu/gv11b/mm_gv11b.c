@@ -260,10 +260,10 @@ void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate)
  * checking bit 36 of the phsyical address. So if a mapping should allocte lines
  * in the L3 this bit must be set.
  */
-u64 gv11b_gpu_phys_addr(struct gk20a *g,
-			struct nvgpu_gmmu_attrs *attrs, u64 phys)
+static u64 gv11b_gpu_phys_addr(struct gk20a *g,
+			       struct nvgpu_gmmu_attrs *attrs, u64 phys)
 {
-	if (attrs->t19x_attrs.l3_alloc)
+	if (attrs && attrs->t19x_attrs.l3_alloc)
 		return phys | NVGPU_L3_ALLOC_BIT;
 
 	return phys;
@@ -322,6 +322,7 @@ static int gv11b_init_bar2_mm_hw_setup(struct gk20a *g)
 void gv11b_init_mm(struct gpu_ops *gops)
 {
 	gp10b_init_mm(gops);
+	gops->mm.gpu_phys_addr = gv11b_gpu_phys_addr;
 	gops->mm.is_bar1_supported = gv11b_mm_is_bar1_supported;
 	gops->mm.init_inst_block = gv11b_init_inst_block;
 	gops->mm.mmu_fault_pending = gv11b_mm_mmu_fault_pending;

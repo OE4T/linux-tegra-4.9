@@ -516,14 +516,22 @@ static struct sid_to_oids sid_to_oids[] = {
 	},
 	{
 		.sid	= TEGRA_SID_VI,
-		.noids	= 3,
+		.noids	= 1,
 		.oid	= {
 			VIW,
+		},
+		.ord = NO_OVERRIDE,
+		.name = "VI",
+	},
+	{
+		.sid	= TEGRA_SID_VIFALC,
+		.noids	= 2,
+		.oid	= {
 			VIFALR,
 			VIFALW,
 		},
 		.ord = OVERRIDE,
-		.name = "VI",
+		.name = "VIFALC",
 	},
 	{
 		.sid	= TEGRA_SID_ISP,

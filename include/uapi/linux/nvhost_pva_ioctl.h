@@ -175,8 +175,8 @@ struct pva_fence {
 #define PVA_MAX_POSTFENCES	8
 #define PVA_MAX_INPUT_STATUS	8
 #define PVA_MAX_OUTPUT_STATUS	8
-#define PVA_MAX_INPUT_SURFACES	4
-#define PVA_MAX_OUTPUT_SURFACES	4
+#define PVA_MAX_INPUT_SURFACES	8
+#define PVA_MAX_OUTPUT_SURFACES	8
 
 /**
  * struct pva_ioctl_submit_task - Describe a task for PVA

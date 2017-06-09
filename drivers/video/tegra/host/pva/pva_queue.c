@@ -839,6 +839,8 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 		       PVA_PARAM_2DPOINTS_LIST, num_output_parameters);
 #undef COPY_PARAMETER
 
+	hw_task->gen_task.length = offset;
+
 	/* Write input surfaces */
 	pva_task_write_input_surfaces(task, hw_input_parameters,
 			&num_input_parameters, &offset);
@@ -850,7 +852,6 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	hw_task->gen_task.versionid = TASK_VERSION_ID;
 	hw_task->gen_task.engineid = PVA_ENGINE_ID;
 	hw_task->gen_task.sequence = 0;
-	hw_task->gen_task.length = offset;
 	hw_task->gen_task.n_preaction_lists = 1;
 	hw_task->gen_task.n_postaction_lists = 1;
 	hw_task->runlist_version = PVA_TASK_VERSION_ID;

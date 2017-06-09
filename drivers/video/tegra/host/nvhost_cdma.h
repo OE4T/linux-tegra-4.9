@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -122,7 +122,6 @@ void	nvhost_cdma_push_gather(struct nvhost_cdma *cdma,
 void	nvhost_cdma_end(struct nvhost_cdma *cdma,
 		struct nvhost_job *job);
 void	nvhost_cdma_update(struct nvhost_cdma *cdma);
-int	nvhost_cdma_flush(struct nvhost_cdma *cdma, int timeout);
 void	nvhost_cdma_peek(struct nvhost_cdma *cdma,
 		u32 dmaget, int slot, u32 *out);
 unsigned int nvhost_cdma_wait_locked(struct nvhost_cdma *cdma,

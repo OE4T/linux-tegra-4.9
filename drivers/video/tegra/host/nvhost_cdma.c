@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -597,50 +597,4 @@ void nvhost_cdma_update(struct nvhost_cdma *cdma)
 	mutex_lock(&cdma->lock);
 	update_cdma_locked(cdma);
 	mutex_unlock(&cdma->lock);
-}
-
-/**
- * Wait for push buffer to be empty.
- * @cdma pointer to channel cdma
- * @timeout timeout in ms
- * Returns -ETIME if timeout was reached, zero if push buffer is empty.
- */
-int nvhost_cdma_flush(struct nvhost_cdma *cdma, int timeout)
-{
-	unsigned int space, err = 0;
-	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
-
-	trace_nvhost_cdma_flush(cdma_to_channel(cdma)->dev->name, timeout);
-
-	/*
-	 * Wait for at most timeout ms. Recalculate timeout at each iteration
-	 * to better keep within given timeout.
-	 */
-	while(!err && time_before(jiffies, end_jiffies)) {
-		int timeout_jiffies = end_jiffies - jiffies;
-
-		mutex_lock(&cdma->lock);
-		space = cdma_status_locked(cdma,
-				CDMA_EVENT_SYNC_QUEUE_EMPTY);
-		if (space) {
-			mutex_unlock(&cdma->lock);
-			return 0;
-		}
-
-		/*
-		 * Wait for sync queue to become empty. If there is already
-		 * an event pending, we need to poll.
-		 */
-		if (cdma->event != CDMA_EVENT_NONE) {
-			mutex_unlock(&cdma->lock);
-			schedule();
-		} else {
-			cdma->event = CDMA_EVENT_SYNC_QUEUE_EMPTY;
-
-			mutex_unlock(&cdma->lock);
-			err = down_timeout(&cdma->sem,
-					jiffies_to_msecs(timeout_jiffies));
-		}
-	}
-	return err;
 }

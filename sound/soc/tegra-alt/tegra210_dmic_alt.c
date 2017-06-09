@@ -143,6 +143,12 @@ static int tegra210_dmic_set_dai_bclk_ratio(struct snd_soc_dai *dai,
 	return 0;
 }
 
+static const int tegra210_dmic_fmt_values[] = {
+	0,
+	TEGRA210_AUDIOCIF_BITS_16,
+	TEGRA210_AUDIOCIF_BITS_32,
+};
+
 static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -265,6 +271,9 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
+	if (dmic->format_out)
+		cif_conf.audio_bits = tegra210_dmic_fmt_values[dmic->format_out];
+
 	cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_24;
 
 	dmic->soc_data->set_audio_cif(dmic->regmap, TEGRA210_DMIC_TX_CIF_CTRL,
@@ -286,6 +295,8 @@ static int tegra210_dmic_get_control(struct snd_kcontrol *kcontrol,
 	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
 		ucontrol->value.integer.value[0] =
 					dmic->tx_mono_to_stereo;
+	else if (strstr(kcontrol->id.name, "output bit format"))
+		ucontrol->value.integer.value[0] = dmic->format_out;
 
 	return 0;
 }
@@ -303,6 +314,8 @@ static int tegra210_dmic_put_control(struct snd_kcontrol *kcontrol,
 		dmic->ch_select = ucontrol->value.integer.value[0];
 	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
 		dmic->tx_mono_to_stereo = value;
+	else if (strstr(kcontrol->id.name, "output bit format"))
+		dmic->format_out = value;
 
 	return 0;
 }
@@ -379,12 +392,25 @@ static const struct soc_enum tegra210_dmic_mono_conv_enum =
 		ARRAY_SIZE(tegra210_dmic_mono_conv_text),
 		tegra210_dmic_mono_conv_text);
 
+static const char * const tegra210_dmic_format_text[] = {
+	"None",
+	"16",
+	"32",
+};
+
+static const struct soc_enum tegra210_dmic_format_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_dmic_format_text),
+		tegra210_dmic_format_text);
+
 static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	SOC_SINGLE_EXT("Boost Gain", 0, 0, 25600, 0,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	SOC_ENUM_EXT("Mono Channel Select", tegra210_dmic_ch_enum,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	SOC_ENUM_EXT("TX mono to stereo conv", tegra210_dmic_mono_conv_enum,
+		tegra210_dmic_get_control, tegra210_dmic_put_control),
+	SOC_ENUM_EXT("output bit format", tegra210_dmic_format_enum,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	};
 

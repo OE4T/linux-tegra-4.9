@@ -775,6 +775,11 @@ void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);
 #endif
 void tegra_nvdisp_vrr_work(struct work_struct *work);
 
+int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
+			    struct tegra_dc_ext_crc_conf *conf);
+int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
+			     struct tegra_dc_ext_crc_conf *conf);
+void tegra_nvdisp_crc_reset(struct tegra_dc *dc);
 #endif
 
 void __attribute__((weak)) tegra_dc_populate_t21x_hw_data(

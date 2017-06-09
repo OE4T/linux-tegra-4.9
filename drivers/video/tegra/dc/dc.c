@@ -5284,6 +5284,10 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 		return false;
 	}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	tegra_dc_crc_reset(dc);
+#endif
+
 	tegra_dc_client_handle_event(dc, NOTIFY_DC_ENABLED_EVENT);
 
 	return true;
@@ -5533,6 +5537,8 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 	 * causes CMU to be restored in tegra_dc_init(). */
 	dc->cmu_dirty = true;
 #endif
+	tegra_dc_crc_deinit(dc);
+
 	tegra_dc_get(dc);
 	_tegra_dc_controller_disable(dc);
 	tegra_dc_put(dc);
@@ -6389,6 +6395,9 @@ static int tegra_dc_remove(struct platform_device *ndev)
 		tegra_dc_ext_disable(dc->ext);
 		tegra_dc_ext_unregister(dc->ext);
 	}
+
+	kfree(dc->flip_buf.data);
+	kfree(dc->crc_buf.data);
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
 		mutex_lock(&dc->one_shot_lock);

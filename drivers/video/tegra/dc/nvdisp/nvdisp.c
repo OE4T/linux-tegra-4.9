@@ -1223,6 +1223,7 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 #endif
 
 	_tegra_nvdisp_init_default_imp_settings();
+	tegra_nvdisp_crc_region_init();
 
 	dc->valid_windows = 0;
 	goto INIT_EXIT;
@@ -2143,6 +2144,9 @@ void tegra_nvdisp_enable_crc(struct tegra_dc *dc)
 		nvdisp_crc_control_r());
 
 	tegra_dc_enable_general_act(dc);
+
+	dc->crc_ref_cnt.legacy = true;
+
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 
@@ -2159,6 +2163,8 @@ void tegra_nvdisp_disable_crc(struct tegra_dc *dc)
 	tegra_dc_get(dc);
 	tegra_dc_writel(dc, 0x0, nvdisp_crc_control_r());
 	tegra_dc_enable_general_act(dc);
+
+	dc->crc_ref_cnt.legacy = false;
 
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);

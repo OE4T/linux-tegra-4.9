@@ -54,6 +54,7 @@
 		nvidia,enable-rx-calib;
 		nvidia,enable-hs-mode;
 		nvidia,mask-fast-auto-mode;
+		nvidia,enable-hibern8-war;
 		nvidia,max-hs-gear = <3>;
 		nvidia,max-pwm-gear = <4>;
 		vcc-max-microamp = <0>;

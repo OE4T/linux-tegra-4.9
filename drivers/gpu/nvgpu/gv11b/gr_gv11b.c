@@ -1625,7 +1625,7 @@ static void gr_gv11b_get_access_map(struct gk20a *g,
 		0x419864, /* gr_pri_gpcs_tpcs_pe_l2_evict_policy */
 		0x419a04, /* gr_pri_gpcs_tpcs_tex_lod_dbg      */
 		0x419a08, /* gr_pri_gpcs_tpcs_tex_samp_dbg     */
-		0x419e10, /* gr_pri_gpcs_tpcs_sm_dbgr_control0 */
+		0x419e84, /* gr_pri_gpcs_tpcs_sms_dbgr_control0 */
 		0x419f78, /* gr_pri_gpcs_tpcs_sm_disp_ctrl     */
 	};
 

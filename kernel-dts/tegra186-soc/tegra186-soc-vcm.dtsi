@@ -328,14 +328,6 @@
 		};
 	};
 
-	clocks {
-		status = "okay";
-
-		clk32k_in@0 {
-			status = "okay";
-		};
-	};
-
 	pmc@c360000 {
 		status = "okay";
 	};

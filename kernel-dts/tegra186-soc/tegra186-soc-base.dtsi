@@ -1070,10 +1070,9 @@
 	mipical {
 		compatible = "nvidia, tegra186-mipical";
 		reg = <0x0 0x03990000 0x0 0x00010000>;
-		clocks = <&clk32k_in>,
-			<&tegra_car TEGRA186_CLK_MIPI_CAL>,
+		clocks = <&tegra_car TEGRA186_CLK_MIPI_CAL>,
 			<&tegra_car TEGRA186_CLK_UART_FST_MIPI_CAL>;
-		clock-names = "clk32k_in", "mipi_cal", "uart_fs_mipi_cal";
+		clock-names = "mipi_cal", "uart_fs_mipi_cal";
 		resets = <&tegra_car TEGRA186_RESET_MIPI_CAL>;
 		reset-names = "mipi_cal";
 		status = "disabled";
@@ -2172,20 +2171,6 @@
 		compatible = "nvidia,tegra186-roc-flush";
 		reg = <0x0 0x0e080000 0x0 0x10000>;
 		status = "disabled";
-	};
-
-	clocks {
-	     compatible = "simple-bus";
-	     #address-cells = <1>;
-	     #size-cells = <0>;
-
-	     clk32k_in: clk32k_in@0 {
-		compatible = "fixed-clock";
-		reg = <0>;
-		#clock-cells = <0>;
-		clock-frequency = <32768>;
-		status = "disabled";
-	     };
 	};
 
 	mttcan0-ivc {

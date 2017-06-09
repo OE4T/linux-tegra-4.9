@@ -199,6 +199,7 @@ void put_zone_device_page(struct page *page)
 	 */
 	if (count == 1) {
 		page->mapping = NULL;
+		mem_cgroup_uncharge(page);
 
 		page->pgmap->page_free(page, page->pgmap->data);
 	} else if (!count)

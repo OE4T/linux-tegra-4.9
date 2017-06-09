@@ -133,6 +133,7 @@ struct tegra210_dmic {
 	int ch_select;
 	int tx_mono_to_stereo;
 	bool is_shutdown;
+	int format_out;
 };
 
 #endif

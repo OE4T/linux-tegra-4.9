@@ -183,8 +183,11 @@ static int gic_pm_runtime_get_sync(struct gic_chip_data *gic)
 	dev = gic->chip.parent_device;
 	if (dev) {
 		ret = pm_runtime_get_sync(dev);
-		if (ret < 0)
-			dev_err(dev, "%s failed\n", __func__);
+		WARN_ON(ret < 0);
+
+		/* clear ret */
+		if (ret > 0)
+			ret = 0;
 	}
 
 	return ret;
@@ -198,8 +201,7 @@ static int gic_pm_runtime_put_sync(struct gic_chip_data *gic)
 	dev = gic->chip.parent_device;
 	if (dev) {
 		ret = pm_runtime_put_sync(dev);
-		if (ret < 0)
-			dev_err(dev, "%s failed\n", __func__);
+		WARN_ON(ret < 0);
 	}
 
 	return ret;
@@ -217,9 +219,8 @@ bool gic_irq_is_pending(struct gic_chip_data *chip, int irq)
 		goto err;
 	value = readl_relaxed(dist_base + pending);
 
-	ret = gic_pm_runtime_put_sync(chip);
-	if (ret < 0)
-		goto err;
+	gic_pm_runtime_put_sync(chip);
+
 	/* checks the irq bit is set */
 	return value & (1 << (irq % 32));
  err:
@@ -272,9 +273,9 @@ bool gic_irq_is_active(struct gic_chip_data *gic, int irq)
 	if (ret < 0)
 		goto err;
 	value = readl_relaxed(dist_base + active);
-	ret = gic_pm_runtime_put_sync(gic);
-	if (ret < 0)
-		goto err;
+
+	gic_pm_runtime_put_sync(gic);
+
 	/* checks the irq bit is set */
 	return value & (1 << (irq % 32));
  err:
@@ -360,7 +361,7 @@ int gic_route_interrupt(struct gic_chip_data *gic, int irq, u32 cpu)
 	writel_relaxed(irq_aff, dist_base + irq_target);
  unlock:
 	gic_unlock_irqrestore(flags);
-	ret = gic_pm_runtime_put_sync(gic);
+	gic_pm_runtime_put_sync(gic);
  end:
 	return ret;
 }

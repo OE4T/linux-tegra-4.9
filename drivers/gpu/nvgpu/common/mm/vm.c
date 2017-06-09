@@ -43,7 +43,8 @@ static void nvgpu_vm_free_entries(struct vm_gk20a *vm,
 
 	if (parent->entries)
 		for (i = 0; i < parent->num_entries; i++)
-			nvgpu_vm_free_entries(vm, &parent->entries[i], level+1);
+			nvgpu_vm_free_entries(vm, &parent->entries[i],
+					      level + 1);
 
 	if (parent->mem.size)
 		nvgpu_free_gmmu_pages(vm, parent);

@@ -4634,4 +4634,24 @@ static inline u32 gr_fecs_falcon_ecc_uncorrected_err_count_unique_total_v(u32 r)
 {
 	return (r >> 16) & 0xffff;
 }
+static inline u32 gr_sked_hww_esr_en_r(void)
+{
+	return 0x00407024;
+}
+static inline u32 gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_m(void)
+{
+	return 0x1 << 25;
+}
+static inline u32 gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_enabled_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 gr_exception_sked_m(void)
+{
+	return 0x1 << 8;
+}
 #endif

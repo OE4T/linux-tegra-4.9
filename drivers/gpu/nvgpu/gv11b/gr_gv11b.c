@@ -285,6 +285,27 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 }
 
+static void gr_gv11b_enable_hww_exceptions(struct gk20a *g)
+{
+	u32 val;
+
+	/* enable exceptions */
+	gk20a_writel(g, gr_fe_hww_esr_r(),
+		     gr_fe_hww_esr_en_enable_f() |
+		     gr_fe_hww_esr_reset_active_f());
+	gk20a_writel(g, gr_memfmt_hww_esr_r(),
+		     gr_memfmt_hww_esr_en_enable_f() |
+		     gr_memfmt_hww_esr_reset_active_f());
+	/* WAR for 200315442 */
+	val = gk20a_readl(g, gr_sked_hww_esr_en_r());
+	val = set_field(val,
+		gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_m(),
+		gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_disabled_f()
+		);
+	nvgpu_log_info(g, "sked_hww_esr_en = 0x%x", val);
+	gk20a_writel(g, gr_sked_hww_esr_en_r(), val);
+}
+
 static void gr_gv11b_enable_exceptions(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -2518,6 +2539,7 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.handle_tex_exception = gr_gv11b_handle_tex_exception;
 	gops->gr.enable_gpc_exceptions = gr_gv11b_enable_gpc_exceptions;
 	gops->gr.enable_exceptions = gr_gv11b_enable_exceptions;
+	gops->gr.enable_hww_exceptions = gr_gv11b_enable_hww_exceptions;
 	gops->gr.mask_hww_warp_esr = gv11b_mask_hww_warp_esr;
 	gops->gr.pre_process_sm_exception =
 		gr_gv11b_pre_process_sm_exception;

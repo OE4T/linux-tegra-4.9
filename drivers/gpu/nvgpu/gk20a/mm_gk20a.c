@@ -478,6 +478,7 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 
 	gk20a_semaphore_sea_destroy(g);
 	gk20a_vidmem_destroy(g);
+	nvgpu_pd_cache_fini(g);
 }
 
 static int gk20a_alloc_sysmem_flush(struct gk20a *g)
@@ -1560,7 +1561,7 @@ static inline u32 big_valid_pde0_bits(struct gk20a *g,
 				      struct nvgpu_gmmu_pd *pd, u64 addr)
 {
 	u32 pde0_bits =
-		nvgpu_aperture_mask(g, &pd->mem,
+		nvgpu_aperture_mask(g, pd->mem,
 		  gmmu_pde_aperture_big_sys_mem_ncoh_f(),
 		  gmmu_pde_aperture_big_video_memory_f()) |
 		gmmu_pde_address_big_sys_f(
@@ -1573,7 +1574,7 @@ static inline u32 small_valid_pde1_bits(struct gk20a *g,
 					struct nvgpu_gmmu_pd *pd, u64 addr)
 {
 	u32 pde1_bits =
-		nvgpu_aperture_mask(g, &pd->mem,
+		nvgpu_aperture_mask(g, pd->mem,
 		  gmmu_pde_aperture_small_sys_mem_ncoh_f(),
 		  gmmu_pde_aperture_small_video_memory_f()) |
 		gmmu_pde_vol_small_true_f() | /* tbd: why? */
@@ -2173,14 +2174,14 @@ static int gk20a_init_ce_vm(struct mm_gk20a *mm)
 void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm)
 {
-	u64 pdb_addr = nvgpu_mem_get_base_addr(g, &vm->pdb.mem, 0);
+	u64 pdb_addr = nvgpu_mem_get_base_addr(g, vm->pdb.mem, 0);
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
 	gk20a_dbg_info("pde pa=0x%llx", pdb_addr);
 
 	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
-		nvgpu_aperture_mask(g, &vm->pdb.mem,
+		nvgpu_aperture_mask(g, vm->pdb.mem,
 		  ram_in_page_dir_base_target_sys_mem_ncoh_f(),
 		  ram_in_page_dir_base_target_vid_mem_f()) |
 		ram_in_page_dir_base_vol_true_f() |

@@ -25,6 +25,7 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/pmu.h>
+#include <nvgpu/gmmu.h>
 
 #include <trace/events/gk20a.h>
 
@@ -173,6 +174,14 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		g->ops.xve.reset_gpu(g);
 		g->gpu_reset_done = true;
 	}
+
+	/*
+	 * Do this early so any early VMs that get made are capable of mapping
+	 * buffers.
+	 */
+	err = nvgpu_pd_cache_init(g);
+	if (err)
+		return err;
 
 	/* init interface layer support for PMU falcon */
 	nvgpu_flcn_sw_init(g, FALCON_ID_PMU);

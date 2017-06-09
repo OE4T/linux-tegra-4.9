@@ -45,7 +45,8 @@ static int pd_allocate(struct vm_gk20a *vm,
 		       struct nvgpu_gmmu_pd *pd,
 		       const struct gk20a_mmu_level *l,
 		       struct nvgpu_gmmu_attrs *attrs);
-
+static u32 pd_size(const struct gk20a_mmu_level *l,
+		   struct nvgpu_gmmu_attrs *attrs);
 /*
  * Core GMMU map function for the kernel to use. If @addr is 0 then the GPU
  * VA will be allocated for you. If addr is non-zero then the buffer will be
@@ -138,6 +139,9 @@ void nvgpu_gmmu_unmap(struct vm_gk20a *vm, struct nvgpu_mem *mem, u64 gpu_va)
 
 int nvgpu_gmmu_init_page_table(struct vm_gk20a *vm)
 {
+	u32 pdb_size;
+	int err;
+
 	/*
 	 * Need this just for page size. Everything else can be ignored. Also
 	 * note that we can just use pgsz 0 (i.e small pages) since the number
@@ -148,56 +152,43 @@ int nvgpu_gmmu_init_page_table(struct vm_gk20a *vm)
 		.pgsz = 0,
 	};
 
-	return pd_allocate(vm, &vm->pdb, &vm->mmu_levels[0], &attrs);
-}
+	/*
+	 * PDB size here must be one page so that its address is page size
+	 * aligned. Although lower PDE tables can be aligned at 256B boundaries
+	 * the main PDB must be page aligned.
+	 */
+	pdb_size = ALIGN(pd_size(&vm->mmu_levels[0], &attrs), PAGE_SIZE);
 
+	err = __nvgpu_pd_cache_alloc_direct(vm->mm->g, &vm->pdb, pdb_size);
+	if (WARN_ON(err))
+		return err;
+
+	/*
+	 * One mb() is done after all mapping operations. Don't need individual
+	 * barriers for each PD write.
+	 */
+	vm->pdb.mem->skip_wmb = true;
+
+	return 0;
+}
 
 /*
  * Ensure that there's a CPU mapping for the page directory memory. This won't
  * always be the case for 32 bit systems since we may need to save kernel
  * virtual memory.
  */
-static int map_gmmu_pages(struct gk20a *g, struct nvgpu_gmmu_pd *entry)
+static int map_gmmu_pages(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 {
-	return nvgpu_mem_begin(g, &entry->mem);
+	return nvgpu_mem_begin(g, pd->mem);
 }
 
 /*
  * Handle any necessary CPU unmap semantics for a page directories DMA memory.
  * For 64 bit platforms this is a noop.
  */
-static void unmap_gmmu_pages(struct gk20a *g, struct nvgpu_gmmu_pd *entry)
+static void unmap_gmmu_pages(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 {
-	nvgpu_mem_end(g, &entry->mem);
-}
-
-static int nvgpu_alloc_gmmu_pages(struct vm_gk20a *vm, u32 bytes,
-				  struct nvgpu_gmmu_pd *pd)
-{
-	struct gk20a *g = gk20a_from_vm(vm);
-	unsigned long flags = NVGPU_DMA_FORCE_CONTIGUOUS;
-	int err;
-
-	/*
-	 * On arm32 vmalloc space is a precious commodity so we do not map pages
-	 * by default.
-	 */
-	if (!IS_ENABLED(CONFIG_ARM64))
-		flags |= NVGPU_DMA_NO_KERNEL_MAPPING;
-
-	err = nvgpu_dma_alloc_flags(g, flags, bytes, &pd->mem);
-	if (err)
-		return -ENOMEM;
-
-	return 0;
-}
-
-void nvgpu_free_gmmu_pages(struct vm_gk20a *vm,
-			   struct nvgpu_gmmu_pd *pd)
-{
-	struct gk20a *g = gk20a_from_vm(vm);
-
-	nvgpu_dma_free(g, &pd->mem);
+	nvgpu_mem_end(g, pd->mem);
 }
 
 /*
@@ -205,10 +196,14 @@ void nvgpu_free_gmmu_pages(struct vm_gk20a *vm,
  */
 u64 nvgpu_pde_phys_addr(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 {
+	u64 page_addr;
+
 	if (g->mm.has_physical_mode)
-		return sg_phys(pd->mem.priv.sgt->sgl);
+		page_addr = sg_phys(pd->mem->priv.sgt->sgl);
 	else
-		return nvgpu_mem_get_base_addr(g, &pd->mem, 0);
+		page_addr = nvgpu_mem_get_base_addr(g, pd->mem, 0);
+
+	return page_addr + pd->mem_offs;
 }
 
 /*
@@ -254,10 +249,10 @@ static int pd_allocate(struct vm_gk20a *vm,
 {
 	int err;
 
-	if (pd->mem.size)
+	if (pd->mem)
 		return 0;
 
-	err = nvgpu_alloc_gmmu_pages(vm, pd_size(l, attrs), pd);
+	err = __nvgpu_pd_alloc(vm, pd, pd_size(l, attrs));
 	if (err) {
 		nvgpu_info(vm->mm->g, "error allocating page directory!");
 		return err;
@@ -267,7 +262,7 @@ static int pd_allocate(struct vm_gk20a *vm,
 	 * One mb() is done after all mapping operations. Don't need individual
 	 * barriers for each PD write.
 	 */
-	pd->mem.skip_wmb = true;
+	pd->mem->skip_wmb = true;
 
 	return 0;
 }
@@ -778,7 +773,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	}
 
 	if (!batch)
-		g->ops.fb.tlb_invalidate(g, &vm->pdb.mem);
+		g->ops.fb.tlb_invalidate(g, vm->pdb.mem);
 	else
 		batch->need_tlb_invalidate = true;
 
@@ -830,7 +825,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 
 	if (!batch) {
 		gk20a_mm_l2_flush(g, true);
-		g->ops.fb.tlb_invalidate(g, &vm->pdb.mem);
+		g->ops.fb.tlb_invalidate(g, vm->pdb.mem);
 	} else {
 		if (!batch->gpu_l2_flushed) {
 			gk20a_mm_l2_flush(g, true);

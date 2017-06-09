@@ -19,6 +19,9 @@
 
 #include <nvgpu/types.h>
 #include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/list.h>
+#include <nvgpu/rbtree.h>
+#include <nvgpu/lock.h>
 
 struct scatterlist;
 
@@ -45,14 +48,85 @@ enum gk20a_mem_rw_flag {
 };
 
 /*
+ * Minimum size of a cache. The number of different caches in the nvgpu_pd_cache
+ * structure is of course depending on this. The MIN_SHIFT define is the right
+ * number of bits to shift to determine which list to use in the array of lists.
+ */
+#define NVGPU_PD_CACHE_MIN		256
+#define NVGPU_PD_CACHE_MIN_SHIFT	9
+#define NVGPU_PD_CACHE_COUNT		4
+
+struct nvgpu_pd_mem_entry {
+	struct nvgpu_mem		mem;
+
+	/*
+	 * Size of the page directories (not the mem). bmap is a bitmap showing
+	 * which PDs have been allocated. The size of mem will always be one
+	 * page. pd_size will always be a power of 2.
+	 */
+	u32				pd_size;
+	unsigned long			alloc_map;
+
+	struct nvgpu_list_node		list_entry;
+	struct nvgpu_rbtree_node	tree_entry;
+};
+
+static inline struct nvgpu_pd_mem_entry *
+nvgpu_pd_mem_entry_from_list_entry(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_pd_mem_entry *)
+		((uintptr_t)node -
+		 offsetof(struct nvgpu_pd_mem_entry, list_entry));
+};
+
+static inline struct nvgpu_pd_mem_entry *
+nvgpu_pd_mem_entry_from_tree_entry(struct nvgpu_rbtree_node *node)
+{
+	return (struct nvgpu_pd_mem_entry *)
+		((uintptr_t)node -
+		 offsetof(struct nvgpu_pd_mem_entry, tree_entry));
+};
+
+/*
+ * A cache for allocating PD memory from. This enables smaller PDs to be packed
+ * into single pages.
+ *
+ * This is fairly complex so see the documentation in pd_cache.c for a full
+ * description of how this is organized.
+ */
+struct nvgpu_pd_cache {
+	/*
+	 * Array of lists of full nvgpu_pd_mem_entries and partially full (or
+	 * empty) nvgpu_pd_mem_entries.
+	 */
+	struct nvgpu_list_node		 full[NVGPU_PD_CACHE_COUNT];
+	struct nvgpu_list_node		 partial[NVGPU_PD_CACHE_COUNT];
+
+	/*
+	 * Tree of all allocated struct nvgpu_mem's for fast look up.
+	 */
+	struct nvgpu_rbtree_node	*mem_tree;
+
+	/*
+	 * All access to the cache much be locked. This protects the lists and
+	 * the rb tree.
+	 */
+	struct nvgpu_mutex		 lock;
+};
+
+/*
  * GMMU page directory. This is the kernel's tracking of a list of PDEs or PTEs
  * in the GMMU.
  */
 struct nvgpu_gmmu_pd {
 	/*
-	 * DMA memory describing the PTEs or PTEs.
+	 * DMA memory describing the PTEs or PDEs. @mem_offs describes the
+	 * offset of the PDE table in @mem. @cached specifies if this PD is
+	 * using pd_cache memory.
 	 */
-	struct nvgpu_mem	 mem;
+	struct nvgpu_mem	*mem;
+	u32			 mem_offs;
+	bool			 cached;
 
 	/*
 	 * List of pointers to the next level of page tables. Does not
@@ -66,7 +140,7 @@ struct nvgpu_gmmu_pd {
  * Reduce the number of arguments getting passed through the various levels of
  * GMMU mapping functions.
  *
- * The following fields are set statically and do not change throughout
+ * The following fields are set statically and do not change throughout the
  * mapping call:
  *
  *   pgsz:        Index into the page size table.
@@ -166,8 +240,13 @@ void nvgpu_gmmu_unmap(struct vm_gk20a *vm,
 		      struct nvgpu_mem *mem,
 		      u64 gpu_va);
 
-void nvgpu_free_gmmu_pages(struct vm_gk20a *vm,
-		     struct nvgpu_gmmu_pd *entry);
+int __nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes);
+void __nvgpu_pd_free(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd);
+int __nvgpu_pd_cache_alloc_direct(struct gk20a *g,
+				  struct nvgpu_gmmu_pd *pd, u32 bytes);
+void __nvgpu_pd_cache_free_direct(struct gk20a *g, struct nvgpu_gmmu_pd *pd);
+int nvgpu_pd_cache_init(struct gk20a *g);
+void nvgpu_pd_cache_fini(struct gk20a *g);
 
 /*
  * Some useful routines that are shared across chips.
@@ -181,7 +260,7 @@ static inline u32 pd_offset_from_index(const struct gk20a_mmu_level *l,
 static inline void pd_write(struct gk20a *g, struct nvgpu_gmmu_pd *pd,
 			    size_t w, size_t data)
 {
-	nvgpu_mem_wr32(g, &pd->mem, w, data);
+	nvgpu_mem_wr32(g, pd->mem, (pd->mem_offs / sizeof(u32)) + w, data);
 }
 
 

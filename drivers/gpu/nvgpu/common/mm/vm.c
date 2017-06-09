@@ -35,21 +35,42 @@ int vm_aspace_id(struct vm_gk20a *vm)
 	return vm->as_share ? vm->as_share->id : -1;
 }
 
-static void nvgpu_vm_free_entries(struct vm_gk20a *vm,
-				  struct nvgpu_gmmu_pd *parent,
-				  int level)
+static void __nvgpu_vm_free_entries(struct vm_gk20a *vm,
+				    struct nvgpu_gmmu_pd *pd,
+				    int level)
 {
 	int i;
 
-	if (parent->entries)
-		for (i = 0; i < parent->num_entries; i++)
-			nvgpu_vm_free_entries(vm, &parent->entries[i],
-					      level + 1);
+	if (pd->mem) {
+		__nvgpu_pd_free(vm, pd);
+		pd->mem = NULL;
+	}
 
-	if (parent->mem.size)
-		nvgpu_free_gmmu_pages(vm, parent);
-	nvgpu_vfree(vm->mm->g, parent->entries);
-	parent->entries = NULL;
+	if (pd->entries) {
+		for (i = 0; i < pd->num_entries; i++)
+			__nvgpu_vm_free_entries(vm, &pd->entries[i],
+					      level + 1);
+		nvgpu_vfree(vm->mm->g, pd->entries);
+		pd->entries = NULL;
+	}
+}
+
+static void nvgpu_vm_free_entries(struct vm_gk20a *vm,
+				  struct nvgpu_gmmu_pd *pdb)
+{
+	struct gk20a *g = vm->mm->g;
+	int i;
+
+	__nvgpu_pd_cache_free_direct(g, pdb);
+
+	if (!pdb->entries)
+		return;
+
+	for (i = 0; i < pdb->num_entries; i++)
+		__nvgpu_vm_free_entries(vm, &pdb->entries[i], 1);
+
+	nvgpu_vfree(g, pdb->entries);
+	pdb->entries = NULL;
 }
 
 u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
@@ -110,7 +131,7 @@ void nvgpu_vm_mapping_batch_finish_locked(
 
 	if (mapping_batch->need_tlb_invalidate) {
 		struct gk20a *g = gk20a_from_vm(vm);
-		g->ops.fb.tlb_invalidate(g, &vm->pdb.mem);
+		g->ops.fb.tlb_invalidate(g, vm->pdb.mem);
 	}
 }
 
@@ -407,9 +428,8 @@ clean_up_allocators:
 	if (nvgpu_alloc_initialized(&vm->user_lp))
 		nvgpu_alloc_destroy(&vm->user_lp);
 clean_up_page_tables:
-	/* Cleans up nvgpu_vm_init_page_tables() */
-	nvgpu_vfree(g, vm->pdb.entries);
-	nvgpu_free_gmmu_pages(vm, &vm->pdb);
+	/* Cleans up nvgpu_gmmu_init_page_table() */
+	__nvgpu_pd_cache_free_direct(g, &vm->pdb);
 clean_up_vgpu_vm:
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	if (g->is_virtual)
@@ -525,7 +545,7 @@ static void __nvgpu_vm_remove(struct vm_gk20a *vm)
 	if (nvgpu_alloc_initialized(&vm->user_lp))
 		nvgpu_alloc_destroy(&vm->user_lp);
 
-	nvgpu_vm_free_entries(vm, &vm->pdb, 0);
+	nvgpu_vm_free_entries(vm, &vm->pdb);
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	if (g->is_virtual)

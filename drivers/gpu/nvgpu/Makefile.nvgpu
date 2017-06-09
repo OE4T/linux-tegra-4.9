@@ -50,6 +50,7 @@ nvgpu-y := \
 	common/mm/page_allocator.o \
 	common/mm/lockless_allocator.o \
 	common/mm/gmmu.o \
+	common/mm/pd_cache.o \
 	common/mm/vm.o \
 	common/mm/vm_area.o \
 	common/bus.o \

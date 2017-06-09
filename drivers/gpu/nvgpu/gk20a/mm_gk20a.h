@@ -31,6 +31,8 @@
 #include <nvgpu/rbtree.h>
 #include <nvgpu/kref.h>
 
+struct nvgpu_pd_cache;
+
 #ifdef CONFIG_ARM64
 #define outer_flush_range(a, b)
 #define __cpuc_flush_dcache_area __flush_dcache_area
@@ -216,6 +218,8 @@ struct mm_gk20a {
 	struct {
 		struct vm_gk20a *vm;
 	} ce;
+
+	struct nvgpu_pd_cache *pd_cache;
 
 	struct nvgpu_mutex l2_op_lock;
 	struct nvgpu_mutex tlb_lock;

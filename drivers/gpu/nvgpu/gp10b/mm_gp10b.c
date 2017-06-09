@@ -164,7 +164,7 @@ static void update_gmmu_pde3_locked(struct vm_gk20a *vm,
 
 	phys_addr >>= gmmu_new_pde_address_shift_v();
 
-	pde_v[0] |= nvgpu_aperture_mask(g, &pd->mem,
+	pde_v[0] |= nvgpu_aperture_mask(g, pd->mem,
 			gmmu_new_pde_aperture_sys_mem_ncoh_f(),
 			gmmu_new_pde_aperture_video_memory_f());
 	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(phys_addr));
@@ -209,7 +209,7 @@ static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	if (small_valid) {
 		pde_v[2] |=
 			gmmu_new_dual_pde_address_small_sys_f(small_addr);
-		pde_v[2] |= nvgpu_aperture_mask(g, &pd->mem,
+		pde_v[2] |= nvgpu_aperture_mask(g, pd->mem,
 			gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f(),
 			gmmu_new_dual_pde_aperture_small_video_memory_f());
 		pde_v[2] |= gmmu_new_dual_pde_vol_small_true_f();
@@ -219,7 +219,7 @@ static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	if (big_valid) {
 		pde_v[0] |= gmmu_new_dual_pde_address_big_sys_f(big_addr);
 		pde_v[0] |= gmmu_new_dual_pde_vol_big_true_f();
-		pde_v[0] |= nvgpu_aperture_mask(g, &pd->mem,
+		pde_v[0] |= nvgpu_aperture_mask(g, pd->mem,
 			gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f(),
 			gmmu_new_dual_pde_aperture_big_video_memory_f());
 		pde_v[1] |= big_addr >> 28;
@@ -365,14 +365,14 @@ static const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
 static void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm)
 {
-	u64 pdb_addr = nvgpu_mem_get_base_addr(g, &vm->pdb.mem, 0);
+	u64 pdb_addr = nvgpu_mem_get_base_addr(g, vm->pdb.mem, 0);
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
 	gk20a_dbg_info("pde pa=0x%llx", pdb_addr);
 
 	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
-		nvgpu_aperture_mask(g, &vm->pdb.mem,
+		nvgpu_aperture_mask(g, vm->pdb.mem,
 		  ram_in_page_dir_base_target_sys_mem_ncoh_f(),
 		  ram_in_page_dir_base_target_vid_mem_f()) |
 		ram_in_page_dir_base_vol_true_f() |

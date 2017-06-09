@@ -69,4 +69,4 @@ obj-$(CONFIG_TEGRA_NVDISPLAY) += dsi_padctrl.o
 obj-$(CONFIG_TEGRA_HDMIVRR) += hdmivrr.o
 obj-y += panel/
 obj-$(CONFIG_TEGRA_CEC_SUPPORT) += ../../../misc/tegra-cec/
-obj-y += crc.o
+obj-$(CONFIG_TEGRA_NVDISPLAY) += crc.o

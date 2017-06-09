@@ -256,6 +256,109 @@ struct tegra_dc_cached_settings {
 	u32 csc2_control;
 };
 
+/* Data structures related to CRC IOCTLs */
+
+#define TEGRA_DC_MAX_CRC_REGIONS 9
+
+enum tegra_dc_flip_state {
+	TEGRA_DC_FLIP_STATE_QUEUED,
+	TEGRA_DC_FLIP_STATE_DEQUEUED,
+	TEGRA_DC_FLIP_STATE_FLIPPED,
+	TEGRA_DC_FLIP_STATE_SKIPPED,
+	TEGRA_DC_FLIP_STATE_MAX,
+};
+
+/*
+ * tegra_dc_flip_buf_ele - Single element of the circular buffer holding flips
+ * @flip_id  - The unique ID of the flip, assigned by FLIP4 IOCTL
+ * @state    - The stage the flip is in, during its lifecycle
+ *             TEGRA_DC_FLIP_STATE_QUEUED - The FLIP4 IOCTL has queued the
+ *                                          flip, but is yet to be worked upon
+ *                                          by the flip worker
+ *             TEGRA_DC_FLIP_STATE_DEQUEUED - The flip worker has started
+ *                                            working on this flip
+ *             TEGRA_DC_FLIP_STATE_FLIPPED - The flip worker is done waiting
+ *                                           for the frame end interrupt
+ *                                           servicing this flip
+ *             TEGRA_DC_FLIP_STATE_SKIPPED - The flip will not be processed
+ */
+struct tegra_dc_flip_buf_ele {
+	u16 id;
+	enum tegra_dc_flip_state state;
+};
+
+/*
+ * tegra_dc_crc_buf_ele - Single element of the circular buffer holding CRCs
+ * @flip      - The flip ID of the flip corresponding to the frame for
+ *              which CRC was generated. "id" member stores the ID whereas
+ *              "valid" member denotes whether the match between the CRC
+ *              and FLIP queue data structures has happened yet
+ *              The array size equals total number of DC Windows, since that
+ *              is the maximum concurrent active flip workers for a given
+ *              frame. Please note that the array index is not meant to be used
+ *              as a per window index
+ * @rg/sor/comp/regional - HW generated CRC queued by FRAME_END_INT interrupt.
+ *             "crc" member holds the value, while "valid" member says whether
+ *             the crc field is valid
+ */
+struct tegra_dc_crc_buf_ele {
+	struct {
+		u16 id;
+		bool valid;
+	} matching_flips[DC_N_WINDOWS];
+	struct {
+		u32 crc;
+		bool valid;
+	} rg, sor, comp, regional[TEGRA_DC_MAX_CRC_REGIONS];
+};
+
+enum tegra_dc_ring_buf_type {
+	TEGRA_DC_RING_BUF_FLIP,
+	TEGRA_DC_RING_BUF_CRC
+};
+
+/*
+ * tegra_dc_ring_buf - Circular buffer for storing flips and CRCs
+ * @head     - Array index where next item will be buffered
+ * @tail     - Array index pointing to least recently buffered item
+ * @size     - The number of valid items in the buffer
+ * @capacity - The maximum number of valid items in the buffer. Set this value
+ *             during initialization
+ * @data     - The actual memory for the buffer
+ * @lock     - Mutex to serialize accesses across various contexts, namely the
+ *             flip IOCTL, flip worker thread and frame end interrupt service
+ *             routine
+ */
+struct tegra_dc_ring_buf {
+	enum tegra_dc_ring_buf_type type;
+	u16 head;
+	u16 tail;
+	u16 size;
+	u16 capacity;
+	char *data;
+	struct mutex lock;
+};
+
+/*
+ * tegra_dc_crc_ref_count - Reference counts for various CRC features
+ *                ### Note ###
+ *                o Legacy mechanism for collecting CRC via sysfs interface
+ *                  can not be simultaneously activated along with the IOCTL
+ *                  interface
+ *                o If required expand the ref counts per block (RG/SOR/COMP)
+ *                  or per region
+ * @global      - Track CRC as a client of the Frame End Interrupt
+ * @rg_comp_sor - Track if CRCs for one or more of RG, SOR and COMP are enabled
+ * @regional    - Track if regional CRCs are enabled
+ * @legacy      - Keep account of whether legacy sysfs API is activated
+ */
+struct tegra_dc_crc_ref_cnt {
+	atomic_t global;
+	atomic_t rg_comp_sor;
+	atomic_t regional;
+	bool legacy;
+};
+
 struct tegra_dc {
 	struct platform_device		*ndev;
 	struct tegra_dc_platform_data	*pdata;
@@ -466,5 +569,15 @@ struct tegra_dc {
 	struct frame_lock_info frm_lck_info;
 	unsigned long act_req_mask;
 	struct tegra_dc_clients_info clients_info;
+
+	/* A monotonically increasing counter to uniquely ID every flip
+	 * The value denotes the ID next flip will be assigned
+	 */
+	u16 flip_id;
+
+	struct tegra_dc_ring_buf flip_buf; /* Buffer to save flip requests */
+	struct tegra_dc_ring_buf crc_buf; /* Buffer to save HW generated CRCs */
+	struct tegra_dc_crc_ref_cnt crc_ref_cnt;
+	bool crc_initialized;
 };
 #endif

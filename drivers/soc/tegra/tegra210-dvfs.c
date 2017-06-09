@@ -203,7 +203,7 @@ static struct dvfs_rail tegra210b01_dvfs_rail_vdd_gpu = {
 	.stats = {
 		.bin_uv = 5000, /* 10mV */
 	},
-	.vts_floors_table = { {-25, 950 }, }, /* applied if no vts cdev */
+	.vts_floors_table = { {-25, 800 }, }, /* applied if no vts cdev */
 	.in_band_pm = true,
 	.nvver = "p4v1",
 };

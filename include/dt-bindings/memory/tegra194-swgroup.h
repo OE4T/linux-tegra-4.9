@@ -1,6 +1,24 @@
 /*
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
  * This is the t19x specific component of the new SID dt-binding.
  */
+#define TEGRA_SID_RCE		0x2a	/* 42 */
+#define TEGRA_SID_RCE_1X	0x2b	/* 43 */
 
 #define TEGRA_SID_MIU		0x50	/* 80 */
 
@@ -20,3 +38,7 @@
 #define TEGRA_SID_PCIE5		0x5B	/* 91 */
 
 #define TEGRA_SID_NVDEC1	0x5C	/* 92 */
+
+#define TEGRA_SID_RCE_RM	0x5D	/* 93 */
+#define TEGRA_SID_VIFALC	0x5E	/* 94 */
+#define TEGRA_SID_ISPFALC	0x5F	/* 95 */

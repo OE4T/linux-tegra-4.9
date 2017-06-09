@@ -1126,6 +1126,9 @@ static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 	ufs_tegra->enable_mphy_rx_calib =
 		of_property_read_bool(np, "nvidia,enable-rx-calib");
 
+	if (of_property_read_bool(np, "nvidia,enable-hibern8-war"))
+		ufs_tegra->nvquirks |= NVQUIRK_BROKEN_HIBERN8_ENTRY;
+
 	ufs_tegra->x2config =
 		of_property_read_bool(np, "nvidia,enable-x2-config");
 
@@ -1171,7 +1174,6 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	hba->priv = (void *)ufs_tegra;
 
 	ufs_tegra_config_soc_data(ufs_tegra);
-	ufs_tegra->nvquirks |= NVQUIRK_BROKEN_HIBERN8_ENTRY;
 	hba->spm_lvl = UFS_PM_LVL_3;
 	hba->rpm_lvl = UFS_PM_LVL_1;
 	hba->caps |= UFSHCD_CAP_INTR_AGGR;

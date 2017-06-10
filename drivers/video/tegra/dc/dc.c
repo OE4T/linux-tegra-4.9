@@ -1411,14 +1411,16 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 	}
 	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
 		switch (out_type) {
-		case TEGRA_DC_OUT_DP: {
-				struct tegra_dc_dp_data	*dp = dc->out_data;
-
-				dp->dc->out_ops->detect(dc);
-			}
+		case TEGRA_DC_OUT_DSI:
+		case TEGRA_DC_OUT_DP:
+			if (dc->out_ops->detect)
+				dc->out_ops->detect(dc);
 			break;
 
 		case TEGRA_DC_OUT_FAKE_DP:
+		case TEGRA_DC_OUT_FAKE_DSIA:
+		case TEGRA_DC_OUT_FAKE_DSIB:
+		case TEGRA_DC_OUT_FAKE_DSI_GANGED:
 			tegra_fb_update_monspecs(dc->fb, NULL, NULL);
 			break;
 		}

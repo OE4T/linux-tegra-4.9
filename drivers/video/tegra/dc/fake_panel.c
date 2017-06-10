@@ -229,6 +229,10 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 #endif
 	/* Need to always reinitialize clocks to ensure proper functionality */
 	tegra_dsi_init_clock_param(dc);
+#ifdef CONFIG_DEBUG_FS
+	tegra_dsi_csi_test_init(dsi);
+#endif
+
 	return 0;
 
 err_release_regs:

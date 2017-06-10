@@ -37,8 +37,8 @@
 		compatible = "nvidia,tegra210b01-se";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x70412000 0x0 0x1FFF>; /* SE base */
-		iommus = <&smmu TEGRA_SWGROUP_SE>,
-					<&smmu TEGRA_SWGROUP_SE1>;
+		iommus = <&smmu TEGRA_SWGROUP_ISP2B>,
+					<&smmu TEGRA_SWGROUP_ISP2B1>;
 		interrupts = <0 190 0x04>;
 		clocks = <&tegra_car TEGRA210_CLK_SE_CBUS>,
 					<&tegra_car TEGRA210_CLK_ENTROPY>;

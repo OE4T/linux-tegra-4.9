@@ -2583,7 +2583,11 @@ static void tegra_se_pka1_rsa_exit(struct crypto_akcipher *tfm)
 	devm_kfree(se_dev->dev, ctx->exponent);
 	devm_kfree(se_dev->dev, ctx->modulus);
 
+	clk_prepare_enable(se_dev->c);
+
 	tegra_se_release_pka1_mutex(se_dev);
+
+	clk_disable_unprepare(se_dev->c);
 
 	if (!ctx->slot)
 		return;

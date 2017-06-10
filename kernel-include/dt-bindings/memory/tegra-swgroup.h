@@ -74,6 +74,7 @@
 #define TEGRA_SWGROUP_BPMP	50	/* 0xaf8 */
 #define TEGRA_SWGROUP_AON	51	/* 0xafc */
 #define TEGRA_SWGROUP_SMMU_TEST	52
+#define TEGRA_SWGROUP_ISP2B1	53	/* 0x808, SE2 on t214 */
 /*	Reserved		50 */
 
 #define TWO_U32_OF_U64(x)	((x) & 0xffffffff) ((x) >> 32)

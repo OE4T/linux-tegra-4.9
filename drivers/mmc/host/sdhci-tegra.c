@@ -410,7 +410,6 @@ static bool tegra_sdhci_skip_retuning(struct sdhci_host *host)
 				tegra_host->tuned_tap_delay);
 		tegra_sdhci_set_tap(host, tegra_host->tuned_tap_delay,
 			SET_REQ_TAP);
-		pr_err("%s: %s: returning true\n", mmc_hostname(host->mmc), __func__);
 		return true;
 	}
 

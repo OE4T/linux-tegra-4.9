@@ -97,6 +97,8 @@ struct tegra_csi_device {
 	struct mutex source_update;
 	int tpg_active;
 	int sensor_active;
+	/* num_tpg_channels is a fixed number per soc*/
+	int num_tpg_channels;
 };
 
 /*

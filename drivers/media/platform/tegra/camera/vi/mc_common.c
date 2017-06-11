@@ -203,7 +203,7 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 	}
 
 	mc_vi->tpg_start = NULL;
-	for (i = 0; i < TPG_CHANNELS; i++) {
+	for (i = 0; i < mc_vi->csi->num_tpg_channels; i++) {
 		item = devm_kzalloc(mc_vi->dev, sizeof(*item), GFP_KERNEL);
 		if (!item)
 			continue;

@@ -1661,7 +1661,7 @@ static int tegra_channel_csi_init(struct tegra_channel *chan)
 		 * channels from chan->id.
 		 */
 		chan->port[0] = chan->id - vi->num_channels;
-		WARN_ON(chan->port[0] > TPG_CHANNELS);
+		WARN_ON(chan->port[0] > vi->csi->num_tpg_channels);
 		chan->numlanes = 2;
 	} else {
 		ret = tegra_vi_get_port_info(chan, vi->dev->of_node, chan->id);

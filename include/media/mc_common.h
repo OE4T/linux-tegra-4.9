@@ -40,7 +40,6 @@
 #define	ENABLE		1
 #define	DISABLE		0
 #define MAX_SYNCPT_PER_CHANNEL 3
-#define TPG_CHANNELS 6
 
 #define TEGRA_MEM_FORMAT 0
 #define TEGRA_ISP_FORMAT 1

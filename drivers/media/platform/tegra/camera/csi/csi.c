@@ -31,6 +31,7 @@
 #include "mipical/mipi_cal.h"
 #include "linux/nvhost.h"
 #include <linux/version.h>
+#define DEFAULT_NUM_TPG_CHANNELS 6
 
 static int set_csi_properties(struct tegra_csi_device *csi,
 			struct platform_device *pdev)
@@ -633,7 +634,7 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 		 * channels from chan->id.
 		 */
 		chan->port[0] = chan->id - csi->num_channels;
-		WARN_ON(chan->port[0] > TPG_CHANNELS);
+		WARN_ON(chan->port[0] > csi->num_tpg_channels);
 		chan->ports[0].num = chan->id - csi->num_channels;
 		chan->ports->lanes = 2;
 		chan->pads = devm_kzalloc(csi->dev, sizeof(*chan->pads),
@@ -697,7 +698,7 @@ static int csi_parse_dt(struct tegra_csi_device *csi,
 			struct platform_device *pdev)
 {
 	int err = 0, i;
-	int num_channels = 0;
+	int num_channels = 0, num_tpg_channels = 0;
 	struct device_node *node = pdev->dev.of_node;
 	struct tegra_csi_channel *item;
 
@@ -712,7 +713,15 @@ static int csi_parse_dt(struct tegra_csi_device *csi,
 		dev_dbg(csi->dev, " Failed to find num of channels, set to 0\n");
 		num_channels = 0;
 	}
-
+	err = of_property_read_u32(node, "num-tpg-channels", &num_tpg_channels);
+	/* Backward compatibility for T210 and T186. They both can generate
+	 * 6 tpg streams, so use 6 as default if DT entry is missing.
+	 * For future chips, add this DT entry to
+	 * create correct number of tpg video nodes
+	 */
+	if (err)
+		num_tpg_channels = DEFAULT_NUM_TPG_CHANNELS;
+	csi->num_tpg_channels = num_tpg_channels;
 	csi->num_channels = num_channels;
 	for (i = 0; i < num_channels; i++) {
 		item = devm_kzalloc(csi->dev, sizeof(*item), GFP_KERNEL);
@@ -736,7 +745,7 @@ int tpg_csi_media_controller_init(struct tegra_csi_device *csi, int pg_mode)
 
 	if (!csi)
 		return -EINVAL;
-	for (i = 0; i < TPG_CHANNELS; i++) {
+	for (i = 0; i < csi->num_tpg_channels; i++) {
 		item = devm_kzalloc(csi->dev, sizeof(*item), GFP_KERNEL);
 		if (!item) {
 			err = -ENOMEM;
@@ -755,7 +764,7 @@ int tpg_csi_media_controller_init(struct tegra_csi_device *csi, int pg_mode)
 			goto channel_init_error;
 	}
 	csi->fops->hw_init(csi);
-	csi->num_channels += TPG_CHANNELS;
+	csi->num_channels += csi->num_tpg_channels;
 
 	return err;
 
@@ -787,7 +796,7 @@ void tpg_csi_media_controller_cleanup(struct tegra_csi_device *csi)
 		list_del(&item->list);
 		devm_kfree(csi->dev, item);
 	}
-	csi->num_channels -= TPG_CHANNELS;
+	csi->num_channels -= csi->num_tpg_channels;
 	csi->tpg_start = NULL;
 }
 EXPORT_SYMBOL(tpg_csi_media_controller_cleanup);

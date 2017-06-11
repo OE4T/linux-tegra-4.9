@@ -2364,12 +2364,6 @@ static int arm_smmu_add_device(struct device *dev)
 				       &cfg->streamids[0]);
 	}
 
-	if (tegra_platform_is_sim() &&
-		(swgids == BIT(TEGRA_SWGROUP_BPMP))) {
-		dev_info(dev, "No support BPMP(SMMU) in linsim\n");
-		return 0;
-	}
-
 	iommu_group_set_iommudata(group, cfg, NULL);
 	ret = iommu_group_add_device(group, dev);
 	iommu_group_put(group);

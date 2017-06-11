@@ -62,6 +62,8 @@ static int tegra_xhci_hcd_reinit(struct usb_hcd *hcd);
 #define XUSB_CFG_16				0x040
 #define XUSB_CFG_24				0x060
 #define XUSB_CFG_AXI_CFG			0x0f8
+#define XUSB_CFG_ARU_C11PAGESEL			0x404
+#define  XUSB_HSP0				BIT(12)
 #define XUSB_CFG_ARU_C11_CSBRANGE		0x41c
 #define XUSB_CFG_ARU_CONTEXT			0x43c
 #define XUSB_CFG_ARU_CONTEXT_HS_PLS		0x478
@@ -69,6 +71,8 @@ static int tegra_xhci_hcd_reinit(struct usb_hcd *hcd);
 #define XUSB_CFG_ARU_CONTEXT_HSFS_SPEED		0x480
 #define XUSB_CFG_ARU_CONTEXT_HSFS_PP		0x484
 #define XUSB_CFG_ARU_FW_SCRATCH                 0x00000440
+#define XUSB_CFG_HSPX_CORE_CTRL			0x600
+#define  XUSB_HSIC_PLLCLK_VLD			BIT(24)
 #define XUSB_CFG_CSB_BASE_ADDR			0x800
 
 /* FPCI mailbox registers */
@@ -345,6 +349,7 @@ struct tegra_xusb_soc {
 	bool lpm_support;
 
 	bool handle_oc;
+	bool disable_hsic_wake;
 };
 
 struct tegra_xhci_ipfs_context {
@@ -1074,6 +1079,23 @@ static void tegra_xusb_debugfs_deinit(struct tegra_xusb *tegra)
 
 	debugfs_remove(tegra->debugfs_dir);
 	tegra->debugfs_dir = NULL;
+}
+
+static void tegra_xusb_disable_hsic_wake(struct tegra_xusb *tegra)
+{
+	u32 reg;
+
+	reg = fpci_readl(tegra, XUSB_CFG_ARU_C11PAGESEL);
+	reg |= XUSB_HSP0;
+	fpci_writel(tegra, reg, XUSB_CFG_ARU_C11PAGESEL);
+
+	reg = fpci_readl(tegra, XUSB_CFG_HSPX_CORE_CTRL);
+	reg &= ~XUSB_HSIC_PLLCLK_VLD;
+	fpci_writel(tegra, reg, XUSB_CFG_HSPX_CORE_CTRL);
+
+	reg = fpci_readl(tegra, XUSB_CFG_ARU_C11PAGESEL);
+	reg &= ~XUSB_HSP0;
+	fpci_writel(tegra, reg, XUSB_CFG_ARU_C11PAGESEL);
 }
 
 static int tegra_xusb_set_ss_clk(struct tegra_xusb *tegra,
@@ -2847,6 +2869,9 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	tegra_xusb_debugfs_init(tegra);
 	tegra_sysfs_register(pdev);
 
+	if (tegra->soc->disable_hsic_wake)
+		tegra_xusb_disable_hsic_wake(tegra);
+
 	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
 		INIT_WORK(&tegra->id_extcon_work, tegra_xhci_id_extcon_work);
 		tegra->id_extcon = extcon_get_extcon_dev_by_cable(&pdev->dev,
@@ -3453,6 +3478,9 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 	if (!tegra->soc->is_xhci_vf) {
 		tegra_xusb_config(tegra);
 
+		if (tegra->soc->disable_hsic_wake)
+			tegra_xusb_disable_hsic_wake(tegra);
+
 		tegra_xhci_restore_context(tegra);
 
 		ret = tegra_xhci_load_firmware(tegra);
@@ -3744,6 +3772,7 @@ static const struct tegra_xusb_soc tegra124_soc = {
 	.has_ipfs = true,
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
+	.disable_hsic_wake = false,
 };
 MODULE_FIRMWARE("nvidia/tegra124/xusb.bin");
 
@@ -3783,6 +3812,7 @@ static const struct tegra_xusb_soc tegra210_soc = {
 	.has_ipfs = true,
 	.ss_lfps_detector_war = true,
 	.handle_oc = false,
+	.disable_hsic_wake = false,
 };
 MODULE_FIRMWARE("tegra21x_xusb_firmware");
 
@@ -3821,6 +3851,7 @@ static const struct tegra_xusb_soc tegra210b01_soc = {
 	.has_ipfs = true,
 	.ss_lfps_detector_war = true,
 	.handle_oc = false,
+	.disable_hsic_wake = true,
 };
 MODULE_FIRMWARE("tegra210b01_xusb_firmware");
 
@@ -3853,6 +3884,7 @@ static const struct tegra_xusb_soc tegra186_soc = {
 	.has_ipfs = false,
 	.ss_lfps_detector_war = false,
 	.handle_oc = true,
+	.disable_hsic_wake = false,
 };
 MODULE_FIRMWARE("tegra18x_xusb_firmware");
 
@@ -3884,6 +3916,7 @@ static const struct tegra_xusb_soc tegra194_soc = {
 	.has_ipfs = false,
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
+	.disable_hsic_wake = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
@@ -3914,6 +3947,7 @@ static const struct tegra_xusb_soc tegra194_vf1_soc = {
 	.has_ipfs = false,
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
+	.disable_hsic_wake = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
@@ -3944,6 +3978,7 @@ static const struct tegra_xusb_soc tegra194_vf2_soc = {
 	.has_ipfs = false,
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
+	.disable_hsic_wake = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 

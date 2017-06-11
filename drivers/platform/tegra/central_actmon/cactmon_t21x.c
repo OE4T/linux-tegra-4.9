@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2016-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -23,15 +23,17 @@
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
 #include <linux/module.h>
+#include <linux/of_device.h>
 #include <linux/delay.h>
 #include <mach/irqs.h>
 #include <linux/platform/tegra/cpu-tegra.h>
 #include <linux/platform/tegra/clock.h>
 #include <linux/tegra_pm_domains.h>
-#include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/platform/tegra/actmon_common.h>
 #include "iomap.h"
+
+static struct actmon_drv_data *actmon;
 
 #define aclk(x)	((struct clk *) x)
 
@@ -221,7 +223,7 @@ static unsigned long actmon_dev_get_rate(struct actmon_dev *adev)
 	return clk_get_rate(aclk(adev->clnt));
 }
 
-int actmon_dev_platform_register(struct actmon_dev *adev,
+int actmon_dev_platform_init_t21x(struct actmon_dev *adev,
 		struct platform_device *pdev)
 {
 	struct clk *prnt;
@@ -258,7 +260,6 @@ int actmon_dev_platform_register(struct actmon_dev *adev,
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(actmon_dev_platform_register);
 
 /******** actmon register operations start **********/
 static void set_prd_t21x(u32 val, void __iomem *base)
@@ -283,7 +284,7 @@ static void actmon_reg_ops_init(struct platform_device *pdev)
 	d->ops.get_glb_intr_st = get_glb_intr_st;
 }
 
-static void cactmon_free_resource(
+static void cactmon_free_resource_t21x(
 	struct actmon_dev *adev, struct platform_device *pdev)
 {
 	struct clk *prnt;
@@ -350,16 +351,55 @@ static int cactmon_clk_enable_t21x(struct platform_device *pdev)
 	return ret;
 }
 
-int __init actmon_platform_register(struct platform_device *pdev)
+static int __init actmon_platform_init_t21x(struct platform_device *pdev)
 {
-	struct actmon_drv_data *d = platform_get_drvdata(pdev);
-
-	d->clock_init = cactmon_clk_enable_t21x;
-	d->clock_deinit = cactmon_clk_disable_t21x;
-	d->reset_init = cactmon_reset_init_t21x;
-	d->reset_deinit = cactmon_reset_deinit_t21x;
-	d->dev_free_resource = cactmon_free_resource;
+	actmon->clock_init = cactmon_clk_enable_t21x;
+	actmon->clock_deinit = cactmon_clk_disable_t21x;
+	actmon->reset_init = cactmon_reset_init_t21x;
+	actmon->reset_deinit = cactmon_reset_deinit_t21x;
+	actmon->dev_free_resource = cactmon_free_resource_t21x;
+	actmon->actmon_dev_platform_init = actmon_dev_platform_init_t21x;
 	actmon_reg_ops_init(pdev);
 	return 0;
 }
-EXPORT_SYMBOL_GPL(actmon_platform_register);
+
+static int __init tegra21x_actmon_probe(struct platform_device *pdev)
+{
+	int ret = 0;
+
+	actmon = devm_kzalloc(&pdev->dev, sizeof(*actmon),
+				GFP_KERNEL);
+	if (!actmon) {
+		ret = -ENOMEM;
+		goto err_out;
+	}
+	platform_set_drvdata(pdev, actmon);
+	actmon_platform_init_t21x(pdev);
+	actmon->pdev = pdev;
+	ret = tegra_actmon_register(actmon);
+err_out:
+	return ret;
+}
+
+static int tegra21x_actmon_remove(struct platform_device *pdev)
+{
+	tegra_actmon_remove(pdev);
+	return 0;
+}
+
+static const struct of_device_id tegra21x_actmon_of[] __initconst = {
+	{ .compatible = "nvidia,tegra210-cactmon", .data = NULL, },
+	{},
+};
+
+static struct platform_driver tegra21x_actmon_driver __refdata = {
+	.driver	= {
+		.name	= "tegra21x_actmon",
+		.owner	= THIS_MODULE,
+		.of_match_table = of_match_ptr(tegra21x_actmon_of),
+	},
+	.probe		= tegra21x_actmon_probe,
+	.remove		= tegra21x_actmon_remove,
+};
+
+module_platform_driver(tegra21x_actmon_driver);

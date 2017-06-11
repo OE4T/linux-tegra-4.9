@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2016-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -851,7 +851,7 @@ err_out:
 
 }
 
-static int __init actmon_dev_init(struct actmon_dev *dev,
+static int actmon_dev_init(struct actmon_dev *dev,
 		struct platform_device *pdev)
 {
 	unsigned long freq;
@@ -871,11 +871,11 @@ static int __init actmon_dev_init(struct actmon_dev *dev,
 	/* By default register rate change notifier */
 	dev->rate_change_nb.notifier_call = actmon_rate_notify_cb;
 
-	ret = actmon_dev_platform_register(dev, pdev);
+	ret = actmon->actmon_dev_platform_init(dev, pdev);
 	if (ret) {
 		dev_err(mon_dev, "actmon device %s platform initialization failed\n",
 			dev->dn->name);
-			ret = -EINVAL;
+		ret = -EINVAL;
 		goto err_out;
 	}
 
@@ -1020,28 +1020,19 @@ static void actmon_free_resource(struct platform_device *pdev)
 	devm_kfree(mon_dev, actmon);
 }
 
-static int __init actmon_probe(struct platform_device *pdev)
+int tegra_actmon_register(struct actmon_drv_data *actmon_data)
 {
 	struct device_node *dn = NULL;
+	struct platform_device *pdev;
 	int ret = 0;
 	u32 i;
 
+	actmon = actmon_data;
+	pdev = actmon->pdev;
 	mon_dev = &pdev->dev;
-	dev_info(mon_dev, "in probe()...\n");
-
-	actmon = devm_kzalloc(mon_dev, sizeof(*actmon),
-				GFP_KERNEL);
-	if (!actmon)
-		return -ENOMEM;
-
-	platform_set_drvdata(pdev, actmon);
-	actmon->pdev = pdev;
+	dev_info(mon_dev, "in actmon_register()...\n");
 
 	ret = actmon_map_resource(pdev);
-	if (ret)
-		goto err_out;
-
-	ret = actmon_platform_register(pdev);
 	if (ret)
 		goto err_out;
 
@@ -1091,7 +1082,6 @@ static int __init actmon_probe(struct platform_device *pdev)
 				__func__);
 		}
 	}
-
 #ifdef CONFIG_DEBUG_FS
 	ret = actmon_debugfs_init();
 	if (ret)
@@ -1102,33 +1092,12 @@ err_out:
 	actmon_free_resource(pdev);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(tegra_actmon_register);
 
-static int actmon_remove(struct platform_device *pdev)
+int tegra_actmon_remove(struct platform_device *pdev)
 {
 	actmon_free_resource(pdev);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(tegra_actmon_remove);
 
-#ifdef CONFIG_OF
-static const struct of_device_id actmon_of_match[] = {
-	{ .compatible = "nvidia,tegra186-cactmon", .data = NULL, },
-	{ .compatible = "nvidia,tegra210-cactmon", .data = NULL, },
-	{},
-};
-#endif
-
-static struct platform_driver actmon_driver __refdata = {
-	.driver	= {
-		.name	= "tegra_central_actmon",
-		.owner	= THIS_MODULE,
-		.of_match_table = of_match_ptr(actmon_of_match),
-	},
-	.probe		= actmon_probe,
-	.remove		= actmon_remove,
-};
-
-module_platform_driver(actmon_driver);
-
-MODULE_AUTHOR("Nvidia");
-MODULE_DESCRIPTION("central actmon driver for Nvidia Tegra soc");
-MODULE_LICENSE("GPL");

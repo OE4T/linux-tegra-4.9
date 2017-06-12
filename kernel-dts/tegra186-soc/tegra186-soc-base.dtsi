@@ -455,17 +455,6 @@
 		interrupts = <0 163 0x4>, <0 167 0x4>;
 		mboxes = <&xusb_mbox>;
 		mbox-names = "xusb";
-		clocks = <&tegra_car TEGRA186_CLK_XUSB_HOST>,
-			<&tegra_car TEGRA186_CLK_XUSB_FALCON>,
-			<&tegra_car TEGRA186_CLK_XUSB_SS>,
-			<&tegra_car TEGRA186_CLK_XUSB_CORE_SS>,
-			<&tegra_car TEGRA186_CLK_CLK_MAX>, /* FIXME: HS souce */
-			<&tegra_car TEGRA186_CLK_XUSB_FS>,
-			<&tegra_car TEGRA186_CLK_PLLU>,
-			<&tegra_car TEGRA186_CLK_CLK_M>,
-			<&tegra_car TEGRA186_CLK_PLLE>;
-		clock-names = "host", "falcon_src", "ss", "ss_src", "hs_src",
-			"fs_src", "pll_u_480M", "clk_m", "pll_e";
 #endif
 	};
 
@@ -473,17 +462,17 @@
 		compatible = "nvidia,tegra186-xudc";
 		reg = <0x0 0x03550000 0x0 0x8000>,
 			<0x0 0x03558000 0x0 0x1000>;
-		clocks = <&tegra_car TEGRA186_CLK_PLLU>,
-			<&tegra_car TEGRA186_CLK_XUSB_DEV>,
-			<&tegra_car TEGRA186_CLK_XUSB_SS>,
-			<&tegra_car TEGRA186_CLK_PLLE>;
-		clock-names = "pll_u_480M", "dev", "ss", "pll_e";
 		interrupts = <0 166 0x4>;
 		iommus = <&smmu TEGRA_SID_XUSB_DEV>;
 		status = "disabled";
 		charger-detector = <&tegra_usb_cd>;
 		otg-controller = <&tegra_xotg>;
 #if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+		clocks = <&tegra_car TEGRA186_CLK_PLLU>,
+			<&tegra_car TEGRA186_CLK_XUSB_DEV>,
+			<&tegra_car TEGRA186_CLK_XUSB_SS>,
+			<&tegra_car TEGRA186_CLK_PLLE>;
+		clock-names = "pll_u_480M", "dev", "ss", "pll_e";
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 	};

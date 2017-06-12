@@ -265,10 +265,12 @@ static int cmdq_enable(struct mmc_host *mmc)
 	u32 cqcfg;
 	bool dcmd_enable;
 	struct cmdq_host *cq_host = mmc_cmdq_private(mmc);
+	unsigned long flags;
 
 	if (cq_host->ops->runtime_pm_get)
 		cq_host->ops->runtime_pm_get(mmc);
 
+	spin_lock_irqsave(&cq_host->cmdq_lock, flags);
 	if (!cq_host || !mmc->card || !mmc_card_mmc(mmc->card)) {
 		err = -EINVAL;
 		goto out;
@@ -345,6 +347,7 @@ static int cmdq_enable(struct mmc_host *mmc)
 		    CQCFG);
 	cq_host->enabled = true;
 out:
+	spin_unlock_irqrestore(&cq_host->cmdq_lock, flags);
 	if (cq_host->ops->runtime_pm_put)
 		cq_host->ops->runtime_pm_put(mmc);
 	return err;
@@ -368,9 +371,11 @@ EXPORT_SYMBOL(cmdq_reenable);
 static void cmdq_disable(struct mmc_host *mmc, bool soft)
 {
 	struct cmdq_host *cq_host = (struct cmdq_host *)mmc_cmdq_private(mmc);
+	unsigned long flags;
 
 	if (cq_host->ops->runtime_pm_get)
 		cq_host->ops->runtime_pm_get(mmc);
+	spin_lock_irqsave(&cq_host->cmdq_lock, flags);
 	if (soft) {
 		cmdq_writel(cq_host, cmdq_readl(
 				    cq_host, CQCFG) & ~(CQ_ENABLE),
@@ -386,6 +391,8 @@ static void cmdq_disable(struct mmc_host *mmc, bool soft)
 				cq_host->trans_desc_dma_base);
 	}
 	cq_host->enabled = false;
+	mmc_card_clr_cmdq(mmc->card);
+	spin_unlock_irqrestore(&cq_host->cmdq_lock, flags);
 	if (cq_host->ops->runtime_pm_put)
 		cq_host->ops->runtime_pm_put(mmc);
 }

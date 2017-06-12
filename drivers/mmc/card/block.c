@@ -1122,6 +1122,13 @@ static inline int mmc_blk_part_switch(struct mmc_card *card,
 		if (md->part_type == EXT_CSD_PART_CONFIG_ACC_RPMB)
 			mmc_retune_pause(card->host);
 
+		if (md->part_type) {
+			/* disable CQ mode for non-user data partitions.*/
+			ret = mmc_blk_hw_cmdq_switch(card, md, false);
+			if (ret)
+				return ret;
+		}
+
 		part_config &= ~EXT_CSD_PART_CONFIG_ACC_MASK;
 		part_config |= md->part_type;
 

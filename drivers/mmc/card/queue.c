@@ -320,7 +320,7 @@ int mmc_init_queue(struct mmc_queue *mq, struct mmc_card *card,
 	mq->card = card;
 	if ((card->host->caps2 & MMC_CAP2_HW_CQ) &&
 		card->ext_csd.cmdq_support &&
-		(area_type != MMC_BLK_DATA_AREA_RPMB)) {
+		(area_type == MMC_BLK_DATA_AREA_MAIN)) {
 		mq->queue = blk_init_queue(mmc_cmdq_dispatch_req, lock);
 		if (!mq->queue)
 			return -ENOMEM;

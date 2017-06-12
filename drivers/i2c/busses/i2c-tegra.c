@@ -2388,13 +2388,6 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	if (i2c_dev->is_multimaster_mode || i2c_dev->hw->has_slcg_support)
 		i2c_dev->is_clkon_always = true;
 
-	/* TBD: call pm_runtime_get_sync() to increase ref count for pm node */
-	ret = pm_runtime_get_sync(i2c_dev->dev);
-	if (ret < 0) {
-		dev_err(i2c_dev->dev, "runtime get failed %d\n", ret);
-		goto disable_rpm;
-	}
-
 	if (i2c_dev->is_clkon_always) {
 		ret = clk_enable(i2c_dev->div_clk);
 		if (ret < 0) {

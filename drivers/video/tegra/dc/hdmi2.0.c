@@ -77,6 +77,9 @@ static struct tmds_prod_pair tmds_config_modes[] = {
 	{ /* HDMI 2.0 */
 	.clk = 600000000,
 	.name = "prod_c_600M"
+	},
+	{ /* end mark */
+	.clk = 0,
 	}
 };
 
@@ -864,6 +867,11 @@ fail:
 }
 
 
+#define  MAX_TMDS_FREQ   600000000
+#define  NAME_PROD_LIST_SOC  "prod_list_hdmi_soc"
+#define  NAME_PROD_LIST_PKG  "prod_list_hdmi_package"
+#define  NAME_PROD_LIST_BOARD  "prod_list_hdmi_board"
+
 struct tmds_range_info  {
 	struct list_head  list;
 	int  lowerHz;
@@ -878,18 +886,19 @@ struct tmds_range_info  {
  *  - hdmi: pointer to hdmi info
  *  - np_prod: pointer to prod-settings node
  *  - pch_prod_list: name of the DT property of prod-setting list
+ *  - optional: boolean to indicate optional list or not
  *  - hd_range: pointer to linked list head for range info read
  * o Outputs:
- *  - return: pointer to a memory block allocated
+ *  - return: pointer to a temporary memory block allocated
  *            caller should free this memory block after use of the linked
  *            list *hd_range
  *            NULL to indicate failure
  *  - *hd_range: linked list of struct tmds_range_info read
  *               the list is sorted with lower boundary value
  */
-static void  *tegra_hdmi_tmds_range_read(struct tegra_hdmi *hdmi,
+static void  *tegra_tmds_range_read(struct tegra_hdmi *hdmi,
 		struct device_node *np_prod, char *pch_prod_list,
-		struct list_head *hd_range)
+		bool optional, struct list_head *hd_range)
 {
 	int  err = 0;
 	int  num_str;
@@ -904,13 +913,19 @@ static void  *tegra_hdmi_tmds_range_read(struct tegra_hdmi *hdmi,
 #define  LEN_NAME  128
 	char  buf_name[LEN_NAME];
 
-	/* allocate single space for info array */
+	/* sanity check */
+	if (!np_prod)
+		goto fail_sanity;
 	num_str = of_property_count_strings(np_prod, pch_prod_list);
 	if (num_str <= 0) {
-		dev_warn(&hdmi->dc->ndev->dev,
-			"hdmi: invalid prod list %s\n", pch_prod_list);
-		goto fail_count;
+		if (!optional)
+			dev_info(&hdmi->dc->ndev->dev,
+				"hdmi: invalid prod list %s\n",
+				pch_prod_list);
+		goto fail_sanity;
 	}
+
+	/* allocate single space for info array */
 	ranges = kcalloc(num_str, sizeof(*ranges), GFP_KERNEL);
 	if (!ranges)
 		goto fail_alloc;
@@ -932,8 +947,8 @@ static void  *tegra_hdmi_tmds_range_read(struct tegra_hdmi *hdmi,
 			of_node_put(np);
 		} else {
 			dev_warn(&hdmi->dc->ndev->dev,
-				"hdmi: prod-setting %s is not found\n",
-				pch_prod);
+				"hdmi: %s: prod-setting %s is not found\n",
+				pch_prod_list, pch_prod);
 			continue;
 		}
 		ranges[j].pch_prod = pch_prod;
@@ -948,14 +963,14 @@ static void  *tegra_hdmi_tmds_range_read(struct tegra_hdmi *hdmi,
 				&lower, &upper, &n)) {
 			if (!(lower < upper) || strlen(pch_prod) != n) {
 				dev_warn(&hdmi->dc->ndev->dev,
-					"hdmi: %s has invalid range\n",
-					pch_prod);
+					"hdmi: %s: invalid range in %s\n",
+					pch_prod_list, pch_prod);
 				continue;
 			}
 		} else {
 			dev_warn(&hdmi->dc->ndev->dev,
-				"hdmi: %s has missing boundary\n",
-				pch_prod);
+				"hdmi: %s: missing boundary in %s\n",
+				pch_prod_list, pch_prod);
 			continue;
 		}
 		ranges[j].lowerHz = lower * 1000000;
@@ -977,196 +992,376 @@ static void  *tegra_hdmi_tmds_range_read(struct tegra_hdmi *hdmi,
 		list_replace(&head_sorted, hd_range);
 
 fail_alloc:
-fail_count:
+fail_sanity:
 	return ranges;
 #undef  LEN_NAME
 }
 
 
 /*
- * Construct the HDMI TMDS range from HDMI prod-setting list in DT
- * HDMI has 2 prod-setting lists. The DT property prod_list_hdmi_soc has prod
- * list for CHIP_QUAL, and prod_list_hdmi_board has list for BOARD_QUAL.
- * Each range upper and lower boundary frequencies will be decoded from the
- * prod-setting node name in the list.
+ * Construct the HDMI TMDS range prod-setting table, hdmi->tmds_range, from
+ * the range list read from DeviceTree.
+ *
  * o inputs:
  *  - hdmi: HDMI info
- *  - np_prod: DT node for prod-setting
+ *  - phead: head of the range list
  * o outputs:
- *  - return: error code
- *  - hdmi->tmds_range: pointer to TMDS prod-setting range table
+ *  - return: 0: no error
+ *            !0: error return
+ *  - hdmi->tmds_range: HDMI TMDS prod-setting range table
  */
-static int  tegra_hdmi_tmds_range_init(struct tegra_hdmi *hdmi,
-		struct device_node *np_prod)
+static int  tegra_tmds_range_construct(struct tegra_hdmi *hdmi,
+		struct list_head *phead)
 {
-	int  err = 0;
-	int  i, l;
-	int  num_list_soc = 0;
-	int  num_list_bd = 0;
-	LIST_HEAD(head_range_soc);
-	LIST_HEAD(head_range_board);
-	void  *pmem_soc = NULL,  *pmem_board = NULL;
-	struct tmds_range_info  *pos_soc,  *tmp_soc;
-	struct tmds_range_info  *pos_board,  *tmp_board;
-	struct tmds_range_info  *spares = NULL;
-	int  idx;
+	int  i,  l;
+	struct tmds_range_info  *pos;
 	struct tmds_prod_pair  *tmds_ranges = NULL;
 	char  *pch_name;
-#define  NAME_PROD_LIST_SOC  "prod_list_hdmi_soc"
-#define  NAME_PROD_LIST_BOARD  "prod_list_hdmi_board"
 
-	if (np_prod) {
-		num_list_soc = of_property_count_strings(np_prod,
-				NAME_PROD_LIST_SOC);
-		if (num_list_soc < 0)
-			num_list_soc = 0;
-		num_list_bd = of_property_count_strings(np_prod,
-				NAME_PROD_LIST_BOARD);
-		if (num_list_bd < 0)
-			num_list_bd = 0;
-	}
-	/* if prod-setting lists are not available
-	 * then fall-back to default range */
-	if (!np_prod || !num_list_soc || !num_list_bd)
-		goto fall_back;
-
-	/* make Chip Qual ranges */
-	pmem_soc = tegra_hdmi_tmds_range_read(hdmi, np_prod,
-			NAME_PROD_LIST_SOC, &head_range_soc);
-	if (!pmem_soc) {
-		dev_err(&hdmi->dc->ndev->dev,
-			"hdmi: tegra_hdmi_tmds_range_read() for soc failed\n");
-		err = EINVAL;
-		goto fail_range_read_soc;
-	}
-	/* todo: check Chip Qual covering full spectrum
-	 *       get the maximum TMDS frequency from DT */
-
-	/* make Board Qual ranges */
-	pmem_board = tegra_hdmi_tmds_range_read(hdmi, np_prod,
-			NAME_PROD_LIST_BOARD, &head_range_board);
-	if (!pmem_board) {
-		dev_err(&hdmi->dc->ndev->dev,
-			"hdmi: tegra_hdmi_tmds_range_read() for bd failed\n");
-		err = EINVAL;
-		goto fail_range_read_board;
-	}
-	/* Allocate spare range info for combining ranges */
-	i = 0;
-	list_for_each_entry(pos_board, &head_range_board, list)
-		i++;
-	spares = kcalloc(i, sizeof(*spares), GFP_KERNEL);
-	if (!spares) {
-		dev_err(&hdmi->dc->ndev->dev,
-			"hdmi: kcalloc() for spares failed\n");
-		err = ENOMEM;
-		goto fall_alloc_spares;
-	}
-	/* Combine ranges of both Chip Qual and Board Qual
-	 * Ranges for Board Qual will be inserted to Chip Qual linked list
-	 * in sorted order and overlapped Chip Qual range will be removed */
-	idx = 0;
-	pos_soc = list_first_entry(&head_range_soc, typeof(*pos_soc), list);
-	list_for_each_entry_safe(pos_board, tmp_board,
-			&head_range_board, list) {
-		bool  insert = false;
-
-		list_for_each_entry_safe_from(pos_soc, tmp_soc,
-				&head_range_soc, list) {
-			if (pos_board->lowerHz < pos_soc->lowerHz &&
-				pos_board->upperHz <= pos_soc->lowerHz) {
-				insert = true;
-				break;
-			} else if (pos_board->lowerHz <= pos_soc->lowerHz &&
-				pos_board->upperHz < pos_soc->upperHz) {
-				insert = true;
-				pos_soc->lowerHz = pos_board->upperHz;
-				break;
-			} else if (pos_board->lowerHz <= pos_soc->lowerHz &&
-				pos_soc->upperHz <= pos_board->upperHz) {
-				insert = true;
-				list_del(&pos_soc->list);
-			} else if (pos_soc->lowerHz < pos_board->lowerHz &&
-				pos_board->upperHz < pos_soc->upperHz) {
-				insert = true;
-				spares[idx].lowerHz = pos_soc->lowerHz;
-				spares[idx].upperHz = pos_board->lowerHz;
-				spares[idx].pch_prod = pos_soc->pch_prod;
-				list_add_tail(&spares[idx].list,
-						&pos_soc->list);
-				idx++;
-				pos_soc->lowerHz = pos_board->upperHz;
-				break;
-			} else if (pos_soc->lowerHz < pos_board->lowerHz &&
-				pos_board->lowerHz < pos_soc->upperHz &&
-				pos_soc->upperHz <= pos_board->upperHz) {
-				pos_soc->upperHz = pos_board->lowerHz;
-			}
-		}
-		if (insert)
-			list_move_tail(&pos_board->list, &pos_soc->list);
-	}
-
-	/* construct range info */
+	/* allocate space for the table & names */
 	i = l = 0;
-	list_for_each_entry(pos_soc, &head_range_soc, list) {
-		l += strlen(pos_soc->pch_prod) + 1;
+	list_for_each_entry(pos, phead, list) {
+		l += strlen(pos->pch_prod) + 1;
 		i++;
 	}
 	l += sizeof(*tmds_ranges) * (i + 1);
 	tmds_ranges = kzalloc(l, GFP_KERNEL);
-	if (!tmds_ranges) {
-		dev_err(&hdmi->dc->ndev->dev,
-			"hdmi: kzalloc() for tmds_ranges failed\n");
-		err = ENOMEM;
-		goto fall_alloc_tmds_ranges;
-	}
+	if (!tmds_ranges)
+		return -ENOMEM;
+
+	/* construct the TMDS range table from the list */
 	pch_name = (char *)&tmds_ranges[i + 1];
 	i = 0;
-	list_for_each_entry(pos_soc, &head_range_soc, list) {
-		tmds_ranges[i].clk = pos_soc->upperHz;
-		strcpy(pch_name, pos_soc->pch_prod);
+	list_for_each_entry(pos, phead, list) {
+		tmds_ranges[i].clk = pos->upperHz;
+		strcpy(pch_name, pos->pch_prod);
 		tmds_ranges[i].name = pch_name;
-		pch_name += strlen(pos_soc->pch_prod) + 1;
+		pch_name += strlen(pos->pch_prod) + 1;
+		dev_dbg(&hdmi->dc->ndev->dev,
+			"hdmi: range %dM-%dM:%s\n",
+			pos->lowerHz / 1000000,
+			pos->upperHz / 1000000,
+			pos->pch_prod);
 		i++;
 	}
+	tmds_ranges[i].clk = 0;  /* end mark */
+
 	hdmi->tmds_range = tmds_ranges;
+	return 0;
+}
 
-	err = 0;
-	goto nofail;
 
-	/* fall-back to the default range */
-fall_back:
-	dev_info(&hdmi->dc->ndev->dev,
-		"hdmi: no %s, use default range\n",
-		!np_prod ? "prod-settings" :
-			!num_list_soc ? NAME_PROD_LIST_SOC :
-				NAME_PROD_LIST_BOARD);
-	hdmi->tmds_range = kcalloc(ARRAY_SIZE(tmds_config_modes) + 1,
-			sizeof(tmds_config_modes[0]), GFP_KERNEL);
-	if (!hdmi->tmds_range) {
-		dev_err(&hdmi->dc->ndev->dev,
-			"hdmi: kzalloc() for range fallback failed\n");
-		err = ENOMEM;
-		goto fall_alloc_fallback;
+/*
+ * Combine two HDMI range lists into the first list, and the second list has
+ * the priority over the first for an overlapped range. This function returns
+ * a temporary memory block allocated for combining. This must be freed by
+ * the caller.
+ *
+ * o inputs:
+ *  - hd_f: head of the first range list sorted in range freq.
+ *  - hd_s: head of the second range list sorted in range freq.
+ * o outputs:
+ *  - return: !0:temporary memory block to be freed with successful return
+ *            0:error return
+ *  - *hd_f: combined result list
+ *  - *hd_s: empty list
+ */
+static void  *tegra_tmds_range_combine(struct tegra_hdmi *hdmi,
+		struct list_head *hd_f, struct list_head *hd_s)
+{
+	int  idx;
+	struct tmds_range_info  *pos_f,  *tmp_f;
+	struct tmds_range_info  *pos_s,  *tmp_s;
+	struct tmds_range_info  *spares;
+	int  num_spare;
+
+	if (!hd_f || !hd_s)
+		return NULL;
+
+	/* allocate some spares for split ranges */
+	num_spare = 0;
+	list_for_each_entry(pos_s, hd_s, list)
+		num_spare++;
+	spares = kcalloc(num_spare, sizeof(*spares), GFP_KERNEL);
+	if (!spares)
+		return NULL;
+
+	/* combine ranges */
+	idx = 0;
+	pos_f = list_first_entry(hd_f, typeof(*pos_f), list);
+	list_for_each_entry_safe(pos_s, tmp_s, hd_s, list) {
+		list_for_each_entry_safe_from(pos_f, tmp_f, hd_f, list) {
+			if (pos_s->upperHz <= pos_f->lowerHz) {
+				break;
+			} else if (pos_s->lowerHz <= pos_f->lowerHz &&
+					pos_f->lowerHz < pos_s->upperHz &&
+					pos_s->upperHz < pos_f->upperHz) {
+				pos_f->lowerHz = pos_s->upperHz;
+				break;
+			} else if (pos_s->lowerHz <= pos_f->lowerHz &&
+					pos_f->upperHz <= pos_s->upperHz) {
+				list_del(&pos_f->list);
+			} else if (pos_f->lowerHz < pos_s->lowerHz &&
+					pos_s->upperHz < pos_f->upperHz) {
+				if (idx < num_spare) {
+					spares[idx].lowerHz = pos_f->lowerHz;
+					spares[idx].upperHz = pos_s->lowerHz;
+					spares[idx].pch_prod = pos_f->pch_prod;
+					list_add_tail(&spares[idx].list,
+							&pos_f->list);
+					idx++;
+					pos_f->lowerHz = pos_s->upperHz;
+				} else {
+					dev_err(&hdmi->dc->ndev->dev,
+						"hdmi: %s: out of spare!\n",
+						__func__);
+				}
+				break;
+			} else if (pos_f->lowerHz < pos_s->lowerHz &&
+					pos_s->lowerHz < pos_f->upperHz &&
+					pos_f->upperHz <= pos_s->upperHz) {
+				pos_f->upperHz = pos_s->lowerHz;
+			}
+		}
+		list_move_tail(&pos_s->list, &pos_f->list);
 	}
-	memcpy(hdmi->tmds_range, tmds_config_modes, sizeof(tmds_config_modes));
+	return spares;
+}
+
+
+/*
+ * Check the prod-setting list covers the full TMDS spectrum or not
+ *
+ * o inputs:
+ *  - phead: head of the prod-setting list
+ *  - max_freq: maximum frequency of the TMDS spectrum in Hz
+ * o outputs:
+ *  - return: true: covers the full spectrum
+ *            false: does not cover the full spectrum
+ */
+static bool  tegra_tmds_range_check_full_spectrum(
+			struct list_head *phead, int max_freq)
+{
+	int  i;
+	bool  has_gap;
+	struct tmds_range_info  *pos;
+
+	/* check the level covers the full range or not */
+	has_gap = false;
+	i = 0;
+	list_for_each_entry(pos, phead, list) {
+		if (i < pos->lowerHz) {
+			has_gap = true;
+			break;
+		}
+		i = pos->upperHz;
+	}
+	if (!has_gap && i < max_freq)
+		has_gap = true;
+
+	return has_gap ? false : true;
+}
+
+
+/*
+ * Read the HDMI TMDS range list in all levels from the DeviceTree
+ * and construct the HDMI TMDS range table, hdmi->tmds_range.
+ *
+ * o inputs:
+ *  - hdmi: HDMI info
+ *  - np_prod: valid DT node of this HDMI interface prod-setting
+ *  - phead_board: head of the board level list read
+ * o outputs:
+ *  - return:
+ *   . 0: succeeded
+ *   . !0: failed
+ *  - hdmi->tmds_range: constructed TMDS prod-setting range table
+ */
+static int  tegra_tmds_range_read_all(struct tegra_hdmi *hdmi,
+			struct device_node *np_prod,
+			struct list_head *phead_board)
+{
+	int  err = 0;
+	LIST_HEAD(head_range_soc);
+	LIST_HEAD(head_range_pkg);
+	struct list_head  *phead_range_board;
+	void  *pmem_soc = NULL,  *pmem_pkg = NULL;
+	void  *pmem_pkg2 = NULL,  *pmem_board2 = NULL;
+
+	/* bring the board level list read */
+	phead_range_board = phead_board;
+
+	/* read the SoC level list */
+	pmem_soc = tegra_tmds_range_read(hdmi, np_prod,
+			NAME_PROD_LIST_SOC, false, &head_range_soc);
+	if (!pmem_soc) {
+		dev_warn(&hdmi->dc->ndev->dev,
+			"hdmi: tegra_hdmi_tmds_range_read(soc) failed\n");
+		err = -EINVAL;
+		goto fail_range_read_soc;
+	}
+	/* check the SoC level covers the full spectrum */
+	if (!tegra_tmds_range_check_full_spectrum(&head_range_soc,
+			MAX_TMDS_FREQ))
+		dev_warn(&hdmi->dc->ndev->dev,
+			"hdmi: SoC prod-setting covers partial!\n");
+
+	/* read the optional SoC-Package level */
+	pmem_pkg = tegra_tmds_range_read(hdmi, np_prod,
+			NAME_PROD_LIST_PKG, true, &head_range_pkg);
+
+	/* combine the SoC and the SoC-Package level list */
+	if (pmem_pkg) {
+		pmem_pkg2 = tegra_tmds_range_combine(hdmi,
+				&head_range_soc, &head_range_pkg);
+		if (!pmem_pkg2) {
+			dev_warn(&hdmi->dc->ndev->dev,
+				"hdmi: combining SoC & Pkg level failed\n");
+			err = -ENOMEM;
+			goto fall_combine_pkg;
+		}
+	}
+	/* combine the board level as well */
+	pmem_board2 = tegra_tmds_range_combine(hdmi,
+			&head_range_soc, phead_range_board);
+	if (!pmem_board2) {
+		dev_warn(&hdmi->dc->ndev->dev,
+			"hdmi: combining SoC & Board level failed\n");
+		err = -ENOMEM;
+		goto fall_combine_board;
+	}
+
+	/* construct TMDS ranges from the combined list */
+	err = tegra_tmds_range_construct(hdmi, &head_range_soc);
+	if (err) {
+		dev_warn(&hdmi->dc->ndev->dev,
+			"hdmi: tegra_hdmi_tmds_range_construct() failed\n");
+		goto fail_construct;
+	}
 	err = 0;
 
-nofail:
-
-fall_alloc_tmds_ranges:
-	kfree(spares);
-fall_alloc_spares:
-	kfree(pmem_board);
-fail_range_read_board:
+fail_construct:
+	kfree(pmem_board2);
+fall_combine_board:
+	kfree(pmem_pkg2);
+fall_combine_pkg:
+	kfree(pmem_pkg);
 	kfree(pmem_soc);
 fail_range_read_soc:
-fall_alloc_fallback:
 	return err;
-#undef  NAME_PROD_LIST_SOC
-#undef  NAME_PROD_LIST_BOARD
 }
+
+
+/*
+ * Read the HDMI TMDS range list in the board level from the DeviceTree
+ * property, prod_list_hdmi_board, and construct the HDMI TMDS range table,
+ * hdmi->tmds_range. If the board level range list does not cover the full
+ * spectrum, then return with error to combine with lower levels. And, the
+ * read info from DT will be saved for a reuse.
+ *
+ * o inputs:
+ *  - hdmi: HDMI info
+ *  - np_prod: valid DT node of this HDMI interface prod-setting
+ *  - phead_board: empty list head for board level list
+ *  - ppmem_board: double pointer to save the temporary memory allocation
+ * o outputs:
+ *  - return:
+ *   . 0: succeeded
+ *   . !0: failed
+ *  - hdmi->tmds_range: constructed TMDS prod-setting range table
+ *  - *phead_board: head of the board level list read
+ *  - *ppmem_board: temporary memory block to be freed
+ */
+static int  tegra_tmds_range_read_board(struct tegra_hdmi *hdmi,
+			struct device_node *np_prod,
+			struct list_head *phead_board,
+			void **ppmem_board)
+{
+	int  err = 0;
+	void  *ptmp = NULL;
+
+	/* read the board level list */
+	ptmp = tegra_tmds_range_read(hdmi, np_prod,
+			NAME_PROD_LIST_BOARD, false, phead_board);
+	if (!ptmp) {
+		dev_info(&hdmi->dc->ndev->dev,
+			"hdmi: tegra_hdmi_tmds_range_read(bd) failed\n");
+		err = -EINVAL;
+		return err;
+	}
+	*ppmem_board = ptmp;
+
+	/* check the board level covers the full spectrum or not */
+	if (!tegra_tmds_range_check_full_spectrum(phead_board,
+			MAX_TMDS_FREQ)) {
+		/* partial only */
+		dev_info(&hdmi->dc->ndev->dev,
+			"hdmi: board prod-setting covers partial!\n");
+		return -ENODATA;
+	}
+
+	/* construct TMDS ranges from the list read */
+	err = tegra_tmds_range_construct(hdmi, phead_board);
+	if (err) {
+		dev_warn(&hdmi->dc->ndev->dev,
+			"hdmi: tegra_hdmi_tmds_range_construct(bd) failed\n");
+		return err;
+	}
+
+	return 0;
+}
+
+
+/*
+ * Initialize the HDMI TMDS range from the DeviceTree prod-settings.
+ * HDMI has 3 levels of prod-setting list in SoC, SoC-package and board level,
+ * while the board level has the highest priority and the SoC-Package level is
+ * optional, DeviceTree properties prod_list_hdmi_soc, prod_list_hdmi_package
+ * and prod_list_hdmi_board represent each level of prod-setting list. These
+ * lists hold DeviceTree node names of prod-setting data for each range. Each
+ * range's upper and lower boundary frequencies will be decoded from the
+ * prod-setting data node name, prod_c_hdmi_LLm_UUm, in the list.
+ * If the board level list covers the whole spectrum then there is no need to
+ * combine ranges with lower levels. If the board level covers partial only
+ * then the board level info read will be saved for a reuse.
+ *
+ * o inputs:
+ *  - hdmi: HDMI info
+ *  - np_prod: DT node of prod-setting for this HDMI interface
+ * o outputs:
+ *  - return: error code
+ *  - hdmi->tmds_range: pointer to TMDS range table constructed
+ *                      NULL then the default fall-back table will be used
+ */
+static int  tegra_hdmi_tmds_range_init(struct tegra_hdmi *hdmi,
+			struct device_node *np_prod)
+{
+	int  err = 0;
+	LIST_HEAD(head_board);
+	void  *pmem_board = NULL;
+
+	/* sanity check */
+	if (!np_prod)
+		return -EINVAL;
+
+	/* build ranges from the board level list first
+	 * if it fails then build ranges by combining all 3 levels */
+	hdmi->tmds_range = NULL;
+	err = tegra_tmds_range_read_board(hdmi, np_prod,
+			&head_board, &pmem_board);
+	if (err)
+		err = tegra_tmds_range_read_all(hdmi, np_prod, &head_board);
+
+	/* clean-up */
+	kfree(pmem_board);
+	return err;
+}
+
+#undef  MAX_TMDS_FREQ
+#undef  NAME_PROD_LIST_SOC
+#undef  NAME_PROD_LIST_PKG
+#undef  NAME_PROD_LIST_BOARD
+
 
 static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
 {
@@ -1220,24 +1415,30 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 {
 	int i;
 	int err = 0;
+	struct tmds_prod_pair  *ranges;
 
 	if (tegra_platform_is_sim())
 		return 0;
 
-	/* Select mode with smallest clk freq > pclk */
-	for (i = 0; hdmi->tmds_range[i].clk; i++) {
-		if (hdmi->tmds_range[i].clk < hdmi->dc->mode.pclk)
+	/* Apply the range where pclk belongs to */
+	ranges = hdmi->tmds_range ? : tmds_config_modes;
+	for (i = 0; ranges[i].clk; i++) {
+		if (ranges[i].clk < hdmi->dc->mode.pclk)
 			continue;
 
 		dev_info(&hdmi->dc->ndev->dev,
-			"hdmi: pclk:%dK, set prod-setting:%s\n",
-			hdmi->dc->mode.pclk / 1000, hdmi->tmds_range[i].name);
+			"hdmi: pclk:%dK prod-setting:%s\n",
+			hdmi->dc->mode.pclk / 1000, ranges[i].name);
 		err = tegra_prod_set_by_name(&hdmi->sor->base,
-			hdmi->tmds_range[i].name, hdmi->prod_list);
-		/* Return if matching mode found */
+			ranges[i].name, hdmi->prod_list);
+		/* Return if matching range found */
 		if (!err)
 			return 0;
 	}
+	/* apply highest range if no covered range found */
+	if (i)
+		tegra_prod_set_by_name(&hdmi->sor->base,
+			ranges[i - 1].name, hdmi->prod_list);
 
 	dev_warn(&hdmi->dc->ndev->dev,
 		"hdmi: tmds prod set for pclk:%d failed\n",

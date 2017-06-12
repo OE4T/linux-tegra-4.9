@@ -6558,14 +6558,16 @@ int gk20a_gr_isr(struct gk20a *g)
 		if (exception & gr_exception_fe_m()) {
 			u32 fe = gk20a_readl(g, gr_fe_hww_esr_r());
 			nvgpu_err(g, "fe warning %08x", fe);
-			gk20a_writel(g, gr_fe_hww_esr_r(), fe);
+			gk20a_writel(g, gr_fe_hww_esr_r(),
+				gr_fe_hww_esr_reset_active_f());
 			need_reset |= -EFAULT;
 		}
 
 		if (exception & gr_exception_memfmt_m()) {
 			u32 memfmt = gk20a_readl(g, gr_memfmt_hww_esr_r());
 			nvgpu_err(g, "memfmt exception %08x", memfmt);
-			gk20a_writel(g, gr_memfmt_hww_esr_r(), memfmt);
+			gk20a_writel(g, gr_memfmt_hww_esr_r(),
+					gr_memfmt_hww_esr_reset_active_f());
 			need_reset |= -EFAULT;
 		}
 
@@ -6594,7 +6596,8 @@ int gk20a_gr_isr(struct gk20a *g)
 		if (exception & gr_exception_ds_m()) {
 			u32 ds = gk20a_readl(g, gr_ds_hww_esr_r());
 			nvgpu_err(g, "ds exception %08x", ds);
-			gk20a_writel(g, gr_ds_hww_esr_r(), ds);
+			gk20a_writel(g, gr_ds_hww_esr_r(),
+					 gr_ds_hww_esr_reset_task_f());
 			need_reset |= -EFAULT;
 		}
 

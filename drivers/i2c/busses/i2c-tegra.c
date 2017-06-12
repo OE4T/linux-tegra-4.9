@@ -971,10 +971,18 @@ static int tegra_i2c_init(struct tegra_i2c_dev *i2c_dev, bool is_init)
 	int err;
 	u32 clk_divisor;
 
-	err = pm_runtime_get_sync(i2c_dev->dev);
-	if (err < 0) {
-		dev_err(i2c_dev->dev, "runtime resume failed %d\n", err);
-		return err;
+	if (!pm_runtime_enabled(i2c_dev->dev)) {
+		err = tegra_i2c_runtime_resume(i2c_dev->dev);
+		if (err < 0) {
+			dev_err(i2c_dev->dev, "runtime resume fail =%d\n", err);
+			return err;
+		}
+	} else {
+		err = pm_runtime_get_sync(i2c_dev->dev);
+		if (err < 0) {
+			dev_err(i2c_dev->dev, "runtime resume fail :%d\n", err);
+			return err;
+		}
 	}
 	if (i2c_dev->hw->has_sw_reset_reg) {
 		if (i2c_dev->is_periph_reset_done) {
@@ -1063,7 +1071,10 @@ skip_periph_reset:
 		enable_irq(i2c_dev->irq);
 	}
 exit:
-	pm_runtime_put(i2c_dev->dev);
+	if (!pm_runtime_enabled(i2c_dev->dev))
+		tegra_i2c_runtime_suspend(i2c_dev->dev);
+	else
+		pm_runtime_put(i2c_dev->dev);
 	return err;
 }
 

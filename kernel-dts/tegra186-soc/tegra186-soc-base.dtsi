@@ -1439,7 +1439,11 @@
 
 	tegra_pcie: pcie-controller@10003000 {
 		compatible = "nvidia,tegra186-pcie";
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+		power-domains = <&bpmp TEGRA186_POWER_DOMAIN_PCX>;
+#else
 		power-domains = <&pcie_pd>;
+#endif
 		device_type = "pci";
 		reg = <0x0 0x10003000 0x0 0x00000800   /* PADS registers */
 		       0x0 0x10003800 0x0 0x00000800   /* AFI registers */

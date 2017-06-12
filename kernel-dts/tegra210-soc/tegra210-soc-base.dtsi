@@ -724,9 +724,13 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		#address-cells = <1>;
 		#size-cells = <0>;
+		dmas = <&apbdma 5>, <&apbdma 5>;
+		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA210_CLK_QSPI>,
 			<&tegra_car TEGRA210_CLK_QSPI_OUT>;
 		clock-names = "qspi","qspi_out";
+		resets = <&tegra_car TEGRA210_CLK_QSPI>;
+		reset-names = "qspi";
 		status = "disabled";
 	      };
 

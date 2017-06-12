@@ -63,14 +63,18 @@
  * CLK_RST_CONTROLLER_SUPER_ACLK_DIVIDER
  */
 #define TEGRA194_CLK_ACLK			21
-#define TEGRA194_CLK_RSVD_22			22
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_MSS_ENCRYPT switch divider output */
+#define TEGRA194_CLK_MSS_ENCRYPT		22
 /** @brief clock recovered from EAVB input */
 #define TEGRA194_CLK_EQOS_RX_INPUT		23
 /** @brief clock recovered from SPDIFIN input */
 #define TEGRA194_CLK_SPDIFIN_SYNC_INPUT		24
-#define TEGRA194_CLK_RSVD_25			25
-#define TEGRA194_CLK_RSVD_26			26
-#define TEGRA194_CLK_RSVD_27			27
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_AON_APB switch divider output */
+#define TEGRA194_CLK_AON_APB			25
+/** @brief CLK_RST_CONTROLLER_AON_NIC_RATE divider output */
+#define TEGRA194_CLK_AON_NIC			26
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_AON_CPU_NIC switch divider output */
+#define TEGRA194_CLK_AON_CPU_NIC		27
 /** @brief PLL controlled by CLK_RST_CONTROLLER_PLLA1_BASE for use by audio clocks */
 #define TEGRA194_CLK_PLLA1			28
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DSPK1 */
@@ -239,9 +243,8 @@
 #define TEGRA194_CLK_NVJPG			90
 /** @brief input from Tegra's XTAL_IN */
 #define TEGRA194_CLK_OSC			91
-
-#define TEGRA194_CLK_RSVD_92			92
-
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_AON_TOUCH switch divider output */
+#define TEGRA194_CLK_AON_TOUCH			92
 /** PLL controlled by CLK_RST_CONTROLLER_PLLA_BASE for use by audio clocks */
 #define TEGRA194_CLK_PLLA			93
 /**
@@ -261,9 +264,9 @@
 #define TEGRA194_CLK_PLLD4			99
 /** Fixed 100MHz PLL for PCIe, SATA and superspeed USB */
 #define TEGRA194_CLK_PLLE			100
-/** @brief output of the divider PLLP_DIVP in CLK_RST_CONTROLLER_PLLP_BASE */
+/** @brief PLLP */
 #define TEGRA194_CLK_PLLP			101
-/** @brief output of the divider PLLP_DIVP in CLK_RST_CONTROLLER_PLLP_BASE */
+/** @brief PLLP VCO output */
 #define TEGRA194_CLK_PLLP_OUT0			102
 /** Fixed frequency 960MHz PLL for USB and EAVB */
 #define TEGRA194_CLK_UTMIPLL			103
@@ -285,16 +288,16 @@
 #define TEGRA194_CLK_PWM7			111
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_PWM8 */
 #define TEGRA194_CLK_PWM8			112
-
-#define TEGRA194_CLK_RSVD_113			113
-#define TEGRA194_CLK_RSVD_114			114
-
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_RCE_CPU_NIC output */
+#define TEGRA194_CLK_RCE_CPU_NIC		113
+/** @brief CLK_RST_CONTROLLER_RCE_NIC_RATE divider output */
+#define TEGRA194_CLK_RCE_NIC			114
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SATA */
 #define TEGRA194_CLK_SATA			115
 /** @brief output of gate CLK_ENB_SATA_OOB */
 #define TEGRA194_CLK_SATA_OOB			116
-
-#define TEGRA194_CLK_RSVD_117			117
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_AON_I2C_SLOW switch divider output */
+#define TEGRA194_CLK_AON_I2C_SLOW		117
 
 /**
  * @brief output of mux controlled by
@@ -541,5 +544,41 @@
 #define TEGRA194_CLK_NAFLL_NVDEC1		217
 /** @brief NAFLL clock source for GPU */
 #define TEGRA194_CLK_NAFLL_GPU			218
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC_LEGACY_TM switch divider output */
+#define TEGRA194_CLK_SDMMC_LEGACY_TM		219
+/** @brief output of gate CLK_ENB_PEX0_CORE_0 */
+#define TEGRA194_CLK_PEX0_CORE_0		220
+/** @brief output of gate CLK_ENB_PEX0_CORE_1 */
+#define TEGRA194_CLK_PEX0_CORE_1		221
+/** @brief output of gate CLK_ENB_PEX0_CORE_2 */
+#define TEGRA194_CLK_PEX0_CORE_2		222
+/** @brief output of gate CLK_ENB_PEX0_CORE_3 */
+#define TEGRA194_CLK_PEX0_CORE_3		223
+/** @brief output of gate CLK_ENB_PEX0_CORE_4 */
+#define TEGRA194_CLK_PEX0_CORE_4		224
+/** @brief output of gate CLK_ENB_PEX1_CORE_5 */
+#define TEGRA194_CLK_PEX1_CORE_5		225
+/** @brief PCIE endpoint mode, HSIO UPHY PLL1 */
+#define TEGRA194_CLK_PEX_REF1			226
+/** @brief PCIE endpoint mode, HSIO UPHY PLL2 */
+#define TEGRA194_CLK_PEX_REF2			227
+/** @brief NVHS UPHY reference clock input */
+#define TEGRA194_CLK_NVHS_REF			228
+/** @brief MIPI CSI controller input clock A */
+#define TEGRA194_CLK_CSI_A			229
+/** @brief MIPI CSI controller input clock B */
+#define TEGRA194_CLK_CSI_B			230
+/** @brief MIPI CSI controller input clock C */
+#define TEGRA194_CLK_CSI_C			231
+/** @brief MIPI CSI controller input clock D */
+#define TEGRA194_CLK_CSI_D			232
+/** @brief MIPI CSI controller input clock E */
+#define TEGRA194_CLK_CSI_E			233
+/** @brief MIPI CSI controller input clock F */
+#define TEGRA194_CLK_CSI_F			234
+/** @brief MIPI CSI controller input clock G */
+#define TEGRA194_CLK_CSI_G			235
+/** @brief MIPI CSI controller input clock H */
+#define TEGRA194_CLK_CSI_H			236
 
 #endif

@@ -15,6 +15,7 @@
  */
 #include <linux/errno.h>
 #include <linux/kernel.h>
+#include <linux/jiffies.h>
 #include <linux/atomic.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>
@@ -28,6 +29,13 @@
 
 #define TEGRA_DC_FLIP_BUF_CAPACITY 1024 /* in units of number of elements */
 #define TEGRA_DC_CRC_BUF_CAPACITY 1024 /* in units of number of elements */
+#define CRC_COMPLETE_TIMEOUT msecs_to_jiffies(1000)
+
+/* Flip values are 16 bit unsigned integer values. To avoid ugly type casts for
+ * complicated checks involved in situations when flip IDs are recycled, define
+ * a limit on how far into the future can the user query the CRCs
+ */
+#define TEGRA_DC_CRC_GET_MAX_FLIP_LOOKAHEAD 128
 
 const char *flip_state_literals[] = {
 	"queued", "dequeued", "flipped", "skipped"
@@ -284,9 +292,198 @@ long tegra_dc_crc_disable(struct tegra_dc *dc,
 	return 0;
 }
 
+/* Get the Least Recently Matched (lrm) flip ID.
+ * Our best estimate is to find this flip ID at the tail of the buffer.
+ */
+static int _find_lrm(struct tegra_dc *dc, u16 *flip_id)
+{
+	u16 lrm = 0x00; /* Default value when no flips are matched */
+	int ret = 0;
+	struct tegra_dc_crc_buf_ele *crc_ele;
+
+	ret = tegra_dc_ring_buf_peek(&dc->crc_buf, dc->crc_buf.tail,
+				     (char **)&crc_ele);
+	if (ret)
+		goto done;
+
+	if (crc_ele->matching_flips[0].valid)
+		lrm = crc_ele->matching_flips[0].id;
+
+done:
+	*flip_id = lrm;
+	return ret;
+}
+
+/* Get the Most Recently Matched (mrm) flip ID.
+ * Our best estimate is to find this flip ID at the head of the buffer.
+ */
+static int _find_mrm(struct tegra_dc *dc, u16 *flip_id)
+{
+	u16 mrm = 0xFFFF; /* Default value when no flips are matched */
+	u16 peek_idx = dc->crc_buf.head;
+	int ret = 0, iter;
+	struct tegra_dc_crc_buf_ele *crc_ele;
+
+	peek_idx = peek_idx ? peek_idx - 1 : dc->crc_buf.capacity - 1;
+
+	ret = tegra_dc_ring_buf_peek(&dc->crc_buf, peek_idx, (char **)&crc_ele);
+	if (ret)
+		goto done;
+
+	for (iter = 0;
+	     iter < DC_N_WINDOWS && crc_ele->matching_flips[iter].valid;
+	     iter++)
+		mrm = crc_ele->matching_flips[iter].id;
+
+done:
+	*flip_id = mrm;
+	return ret;
+}
+
+static bool _is_flip_out_of_bounds(struct tegra_dc *dc, u16 flip_id)
+{
+	u16 lrm, mrm; /* Least and most recently matched flips */
+
+	_find_lrm(dc, &lrm);
+	_find_mrm(dc, &mrm);
+
+	if (mrm < lrm) {
+		dev_err(&dc->ndev->dev, "flip IDs have overflowed "
+					"lrm = %d, mrm = %d\n", lrm, mrm);
+		return true;
+	}
+
+	if (flip_id < lrm ||
+	    flip_id > mrm + TEGRA_DC_CRC_GET_MAX_FLIP_LOOKAHEAD) {
+		dev_err(&dc->ndev->dev, "flip_id %d out of bounds\n", flip_id);
+		return true;
+	}
+
+	return false;
+}
+
+static int _scan_buf_till_tail(struct tegra_dc *dc, u16 peek_idx, u16 flip_id,
+			       struct tegra_dc_crc_buf_ele *crc_ele)
+{
+	u16 nr_checked = 0;
+	struct tegra_dc_ring_buf *buf = &dc->crc_buf;
+	struct tegra_dc_crc_buf_ele *crc_iter = NULL;
+	int iter;
+
+	while (nr_checked < buf->size) {
+		tegra_dc_ring_buf_peek(buf, peek_idx, (char **)&crc_iter);
+
+		for (iter = 0; iter < DC_N_WINDOWS; iter++) {
+			if (!crc_iter->matching_flips[iter].valid)
+				break;
+
+			if (crc_iter->matching_flips[iter].id == flip_id) {
+				memcpy(crc_ele, crc_iter, sizeof(*crc_iter));
+				return 0;
+			}
+		}
+
+		peek_idx = peek_idx ? peek_idx - 1 : buf->capacity - 1;
+		nr_checked++;
+	}
+
+	return -EAGAIN;
+}
+
+static int _find_crc_in_buf(struct tegra_dc *dc, u16 flip_id,
+			    struct tegra_dc_crc_buf_ele *crc_ele)
+{
+	int ret = -EAGAIN;
+	u16 peek_idx;
+
+	mutex_lock(&dc->crc_buf.lock);
+
+	if (_is_flip_out_of_bounds(dc, flip_id)) {
+		ret = -ENODATA;
+		goto done;
+	}
+
+	/* At this point, we are committed to return a CRC value to the user,
+	 * even if one is yet to be generated in the imminent future
+	 */
+	while (ret == -EAGAIN) {
+		peek_idx = dc->crc_buf.head;
+		peek_idx = peek_idx ? peek_idx - 1 : dc->crc_buf.capacity - 1;
+
+		ret = _scan_buf_till_tail(dc, peek_idx, flip_id, crc_ele);
+		if (!ret || ret != -EAGAIN)
+			goto done;
+
+		/* Control reaching here implies the flip being requested is yet
+		 * to be matched at a certain frame end interrupt, hence wait on
+		 * the event
+		 */
+		mutex_unlock(&dc->crc_buf.lock);
+		reinit_completion(&dc->crc_complete);
+		if (!wait_for_completion_timeout(&dc->crc_complete,
+						 CRC_COMPLETE_TIMEOUT)) {
+			dev_err(&dc->ndev->dev, "CRC read timed out\n");
+			ret = -ETIME;
+			goto done;
+		}
+		mutex_lock(&dc->crc_buf.lock);
+	}
+
+done:
+	mutex_unlock(&dc->crc_buf.lock);
+	return ret;
+}
+
 long tegra_dc_crc_get(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
 {
-	return -ENOTSUPP;
+	int ret;
+	struct tegra_dc_ext_crc_conf *conf =
+				(struct tegra_dc_ext_crc_conf *)arg->conf;
+	struct tegra_dc_crc_buf_ele crc_ele;
+	u8 id, iter;
+
+	if (!(tegra_dc_is_t18x() || tegra_dc_is_t19x()))
+		return -ENOTSUPP;
+
+	if (!dc->enabled)
+		return -ENODEV;
+
+	if (!dc->crc_initialized)
+		return -EPERM;
+
+	if (dc->crc_ref_cnt.legacy)
+		return -EBUSY;
+
+	ret = _find_crc_in_buf(dc, arg->flip_id, &crc_ele);
+	if (ret)
+		return ret;
+
+	for (iter = 0; iter < arg->num_conf; iter++) {
+		switch (conf[iter].type) {
+		case TEGRA_DC_EXT_CRC_TYPE_RG:
+			conf[iter].crc.valid = crc_ele.rg.valid;
+			conf[iter].crc.val = crc_ele.rg.crc;
+			break;
+		case TEGRA_DC_EXT_CRC_TYPE_COMP:
+			conf[iter].crc.valid = crc_ele.comp.valid;
+			conf[iter].crc.val = crc_ele.comp.crc;
+			break;
+		case TEGRA_DC_EXT_CRC_TYPE_OR:
+			conf[iter].crc.valid = 0;
+			conf[iter].crc.val = 0;
+			return -ENOTSUPP; /* TODO: Implement this */
+			/* break; */
+		case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
+			id = conf[iter].region.id;
+			conf[iter].crc.valid = crc_ele.regional[id].valid;
+			conf[iter].crc.val = crc_ele.regional[id].crc;
+			break;
+		default:
+			return -EINVAL;
+		}
+	}
+
+	return 0;
 }
 
 int tegra_dc_crc_process(struct tegra_dc *dc)

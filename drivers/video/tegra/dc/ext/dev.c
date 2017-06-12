@@ -3593,6 +3593,8 @@ free_and_ret:
 		if (ret)
 			return ret;
 
+		user_conf = (struct tegra_dc_ext_crc_conf *)args.conf;
+
 		ret = tegra_dc_copy_crc_confs_from_user(&args);
 		if (ret)
 			return ret;
@@ -3603,8 +3605,6 @@ free_and_ret:
 			return ret;
 		}
 
-		user_conf = (struct tegra_dc_ext_crc_conf *)
-				((struct tegra_dc_ext_crc_arg *)user_arg)->conf;
 		sz = args.num_conf * sizeof(struct tegra_dc_ext_crc_conf);
 
 		if (copy_to_user(user_conf, (void *)args.conf, sz))

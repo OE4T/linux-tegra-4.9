@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -152,6 +152,7 @@ struct mrq_response {
 #define MRQ_TRACE_ITER		64
 #define MRQ_RINGBUF_CONSOLE	65
 #define MRQ_PG			66
+#define MRQ_CPU_NDIV_LIMITS	67
 
 /** @} */
 
@@ -160,7 +161,7 @@ struct mrq_response {
  * @brief Maximum MRQ code to be sent by CPU software to
  * BPMP. Subject to change in future
  */
-#define MAX_CPU_MRQ_ID		66
+#define MAX_CPU_MRQ_ID		67
 
 /**
  * @addtogroup MRQ_Payloads Message Payloads
@@ -180,6 +181,7 @@ struct mrq_response {
  *   @defgroup Vhint CPU Voltage hint
  *   @defgroup MRQ_Deprecated Deprecated MRQ messages
  *   @defgroup EMC
+ *   @defgroup CPU Ndiv limits
  *   @defgroup RingbufConsole
  * @}
  */
@@ -1715,6 +1717,46 @@ struct mrq_emc_dvfs_latency_response {
 	uint32_t num_pairs;
 	/** @brief EMC <frequency, latency> information */
 	struct emc_dvfs_latency pairs[EMC_DVFS_LATENCY_MAX_SIZE];
+} __ABI_PACKED;
+
+/** @} */
+
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_CPU_NDIV_LIMITS
+ * @brief CPU freq. limits in ndiv
+ *
+ * * Platforms: T194 onwards
+ * * Initiators: CCPLEX
+ * * Targets: BPMP
+ * * Request Payload: @ref mrq_cpu_ndiv_limits_request
+ * * Response Payload: @ref mrq_cpu_ndiv_limits_response
+ * @addtogroup CPU Ndiv limits
+ * @{
+ */
+
+/**
+ * @brief request for ndiv limits of a cluster
+ */
+struct mrq_cpu_ndiv_limits_request {
+	/** @brief enum cluster_id */
+	uint32_t cluster_id;
+} __ABI_PACKED;
+
+/**
+ * @brief response to #MRQ_CPU_NDIV_LIMITS
+ */
+struct mrq_cpu_ndiv_limits_response {
+	/** @brief reference frequency in Hz */
+	uint32_t ref_clk_hz;
+	/** @brief post divider value */
+	uint16_t pdiv;
+	/** @brief input divider value */
+	uint16_t mdiv;
+	/** @brief fMAX expressed with max NDIV value */
+	uint16_t ndiv_max;
+	/** @brief minimum allowed NDIV value */
+	uint16_t ndiv_min;
 } __ABI_PACKED;
 
 /** @} */

@@ -1334,6 +1334,87 @@ fail_free:
 	return err;
 }
 
+static void gr_gv11b_dump_gr_per_sm_regs(struct gk20a *g,
+			struct gk20a_debug_output *o,
+			u32 gpc, u32 tpc, u32 sm, u32 offset)
+{
+
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPC%d_TPC%d_SM%d_HWW_WARP_ESR: 0x%x\n",
+		gpc, tpc, sm, gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_hww_warp_esr_r() + offset));
+
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPC%d_TPC%d_SM%d_HWW_WARP_ESR_REPORT_MASK: 0x%x\n",
+		gpc, tpc, sm, gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_r() + offset));
+
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPC%d_TPC%d_SM%d_HWW_GLOBAL_ESR: 0x%x\n",
+		gpc, tpc, sm, gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset));
+
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPC%d_TPC%d_SM%d_HWW_GLOBAL_ESR_REPORT_MASK: 0x%x\n",
+		gpc, tpc, sm, gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_hww_global_esr_report_mask_r() + offset));
+
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPC%d_TPC%d_SM%d_DBGR_CONTROL0: 0x%x\n",
+		gpc, tpc, sm, gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset));
+
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPC%d_TPC%d_SM%d_DBGR_STATUS0: 0x%x\n",
+		gpc, tpc, sm, gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_dbgr_status0_r() + offset));
+}
+
+static int gr_gv11b_dump_gr_sm_regs(struct gk20a *g,
+			   struct gk20a_debug_output *o)
+{
+	u32 gpc, tpc, sm, sm_per_tpc;
+	u32 gpc_offset, tpc_offset, offset;
+
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_HWW_GLOBAL_ESR_REPORT_MASK: 0x%x\n",
+		gk20a_readl(g,
+		gr_gpcs_tpcs_sms_hww_global_esr_report_mask_r()));
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_HWW_WARP_ESR_REPORT_MASK: 0x%x\n",
+		gk20a_readl(g, gr_gpcs_tpcs_sms_hww_warp_esr_report_mask_r()));
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_HWW_GLOBAL_ESR: 0x%x\n",
+		gk20a_readl(g, gr_gpcs_tpcs_sms_hww_global_esr_r()));
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_DBGR_CONTROL0: 0x%x\n",
+		gk20a_readl(g, gr_gpcs_tpcs_sms_dbgr_control0_r()));
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_DBGR_STATUS0: 0x%x\n",
+		gk20a_readl(g, gr_gpcs_tpcs_sms_dbgr_status0_r()));
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_DBGR_BPT_PAUSE_MASK: 0x%x\n",
+		gk20a_readl(g, gr_gpcs_tpcs_sms_dbgr_bpt_pause_mask_r()));
+
+	sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
+	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
+		gpc_offset = gk20a_gr_gpc_offset(g, gpc);
+
+		for (tpc = 0; tpc < g->gr.tpc_count; tpc++) {
+			tpc_offset = gk20a_gr_tpc_offset(g, tpc);
+
+			for (sm = 0; sm < sm_per_tpc; sm++) {
+				offset = gpc_offset + tpc_offset +
+					gv11b_gr_sm_offset(g, sm);
+
+				gr_gv11b_dump_gr_per_sm_regs(g, o,
+					gpc, tpc, sm, offset);
+			}
+		}
+	}
+
+	return 0;
+}
 
 static int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o)
@@ -1441,6 +1522,10 @@ static int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
 		gk20a_readl(g, gr_fecs_current_ctx_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_FECS_NEW_CTX : 0x%x\n",
 		gk20a_readl(g, gr_fecs_new_ctx_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FECS_HOST_INT_ENABLE : 0x%x\n",
+		gk20a_readl(g, gr_fecs_host_int_enable_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FECS_HOST_INT_STATUS : 0x%x\n",
+		gk20a_readl(g, gr_fecs_host_int_status_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_BE0_CROP_STATUS1 : 0x%x\n",
 		gk20a_readl(g, gr_pri_be0_crop_status1_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_BES_CROP_STATUS1 : 0x%x\n",
@@ -1465,6 +1550,9 @@ static int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
 		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_exception_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_GPC0_TPC0_TPCCS_TPC_EXCEPTION_EN: 0x%x\n",
 		gk20a_readl(g, gr_pri_gpc0_tpc0_tpccs_tpc_exception_en_r()));
+
+	gr_gv11b_dump_gr_sm_regs(g, o);
+
 	return 0;
 }
 

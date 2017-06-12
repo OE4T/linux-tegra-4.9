@@ -1821,10 +1821,18 @@ static int generic_hdmi_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 #if IS_ENABLED(CONFIG_SND_HDA_TEGRA)
 	if ((is_tegra21x(codec) || is_tegra_18x_sor0(codec)
 		|| is_tegra_18x_sor1(codec))) {
-		int sor_num;
+		int sor_num, stripe;
 		int err = 0;
 
 		sor_num = get_sor_num(codec);
+
+		/* For multi SOR, program SDO lines to support required bw */
+		stripe = snd_hdac_get_stream_stripe_ctl(&codec->bus->core,
+							substream);
+
+		snd_hda_codec_write(codec, cvt_nid, 0,
+				    AC_VERB_SET_STRIPE_CONTROL,
+				    stripe);
 
 		if ((substream->runtime->channels == 2) &&
 			is_pcm_format(format))

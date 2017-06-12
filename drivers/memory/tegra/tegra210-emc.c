@@ -2427,6 +2427,28 @@ static int tegra210_emc_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static int tegra210b01_emc_probe(struct platform_device *pdev)
+{
+	emc_override_clk = devm_clk_get(&pdev->dev, "emc_override");
+	if (IS_ERR(emc_override_clk)) {
+		dev_err(&pdev->dev, "Cannot find T210B01 EMC override clock\n");
+		return -ENODATA;
+	}
+
+	dev_info(&pdev->dev, "T210B01 EMC pm ops are registered\n");
+	return 0;
+}
+
+static int tegra210x_emc_probe(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+
+	if (of_device_is_compatible(np, "nvidia,tegra210b01-emc"))
+		return tegra210b01_emc_probe(pdev);
+
+	return tegra210_emc_probe(pdev);
+}
+
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_emc_suspend(struct device *dev)
 {
@@ -2434,6 +2456,9 @@ static int tegra210_emc_suspend(struct device *dev)
 		emc_override_rate = clk_get_rate(emc_override_clk);
 		clk_set_rate(emc_override_clk, 204000000);
 		clk_prepare_enable(emc_override_clk);
+
+		pr_debug("%s at rate %lu\n",
+			 __func__, clk_get_rate(emc_override_clk));
 	}
 
 	return 0;
@@ -2444,6 +2469,9 @@ static int tegra210_emc_resume(struct device *dev)
 	if (!IS_ERR(emc_override_clk)) {
 		clk_set_rate(emc_override_clk, emc_override_rate);
 		clk_disable_unprepare(emc_override_clk);
+
+		pr_debug("%s at rate %lu\n",
+			 __func__, clk_get_rate(emc_override_clk));
 	}
 	return 0;
 }
@@ -2455,6 +2483,7 @@ static const struct dev_pm_ops tegra210_emc_pm_ops = {
 
 static struct of_device_id tegra210_emc_of_match[] = {
 	{ .compatible = "nvidia,tegra210-emc", },
+	{ .compatible = "nvidia,tegra210b01-emc", },
 	{ },
 };
 
@@ -2464,7 +2493,7 @@ static struct platform_driver tegra210_emc_driver = {
 		.of_match_table = tegra210_emc_of_match,
 		.pm	= &tegra210_emc_pm_ops,
 	},
-	.probe          = tegra210_emc_probe,
+	.probe          = tegra210x_emc_probe,
 };
 
 static int __init tegra210_emc_init(void)

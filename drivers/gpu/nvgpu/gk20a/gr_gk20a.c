@@ -6598,6 +6598,14 @@ int gk20a_gr_isr(struct gk20a *g)
 			need_reset |= -EFAULT;
 		}
 
+		if (exception & gr_exception_sked_m()) {
+			u32 sked = gk20a_readl(g, gr_sked_hww_esr_r());
+
+			nvgpu_err(g, "sked exception %08x", sked);
+			gk20a_writel(g, gr_sked_hww_esr_r(),
+				gr_sked_hww_esr_reset_active_f());
+		}
+
 		gk20a_writel(g, gr_intr_r(), gr_intr_exception_reset_f());
 		gr_intr &= ~gr_intr_exception_pending_f();
 

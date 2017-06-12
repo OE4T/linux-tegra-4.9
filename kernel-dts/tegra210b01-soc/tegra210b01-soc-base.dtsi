@@ -92,6 +92,12 @@
 		compatible = "nvidia,tegra210b01-dfll", "nvidia,tegra210-dfll";
 	};
 
+	external-memory-controller {
+		compatible = "nvidia,tegra210b01-emc";
+		clocks = <&tegra_car TEGRA210_CLK_OVERRIDE_EMC>;
+		clock-names = "emc_override";
+	};
+
 	pmc@7000e400 {
 		compatible = "nvidia,tegra210b01-pmc", "nvidia,tegra210-pmc";
 	};

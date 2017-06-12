@@ -91,26 +91,28 @@ static DEFINE_MUTEX(gpu_device_lock);
 
 int cfb_add_device(struct device *dev)
 {
-	mutex_lock(&gpu_device_lock);
+	int ret;
+
 	if (gpu_device)
 		return -EBUSY;
 
+	mutex_lock(&gpu_device_lock);
 	gpu_device = dev;
-	dev_pm_qos_add_request(dev, &gpu_wakeup_req,
+	ret = dev_pm_qos_add_request(dev, &gpu_wakeup_req,
 			DEV_PM_QOS_FLAGS, 0);
 
 	mutex_unlock(&gpu_device_lock);
 
-	return 0;
+	return ret;
 }
 EXPORT_SYMBOL(cfb_add_device);
 
 void cfb_remove_device(struct device *dev)
 {
-	mutex_lock(&gpu_device_lock);
 	if (gpu_device != dev)
 		return;
 
+	mutex_lock(&gpu_device_lock);
 	dev_pm_qos_remove_request(&gpu_wakeup_req);
 	gpu_device = NULL;
 

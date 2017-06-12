@@ -30,7 +30,7 @@
 #include <media/ov5693.h>
 #include "../platform/tegra/camera/camera_gpio.h"
 #include "ov5693_mode_tbls.h"
-
+#include <soc/tegra/chip-id.h>
 #define CREATE_TRACE_POINTS
 #include <trace/events/ov5693.h>
 
@@ -62,6 +62,13 @@
 #define OV5693_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define OV5693_DEFAULT_CLK_FREQ	24000000
 
+struct ov5693;
+
+struct ov5693_soc {
+	char is_silicon;
+	struct regmap_config *regmap_cfg;
+};
+
 struct ov5693 {
 	struct camera_common_power_rail	power;
 	int				numctrls;
@@ -80,12 +87,20 @@ struct ov5693 {
 	struct regmap			*regmap;
 	struct camera_common_data	*s_data;
 	struct camera_common_pdata	*pdata;
+	const struct ov5693_soc		*soc;
 	struct v4l2_ctrl		*ctrls[];
 };
 
 static struct regmap_config ov5693_regmap_config = {
 	.reg_bits = 16,
 	.val_bits = 8,
+};
+
+static struct regmap_config ov5693_regmap_config_single = {
+	.reg_bits = 16,
+	.val_bits = 8,
+	.use_single_rw = true,
+	.cache_type = REGCACHE_NONE,
 };
 
 static int ov5693_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
@@ -309,7 +324,8 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 	}
 
 	/* sleeps calls in the sequence below are for internal device
-	 * signal propagation as specified by sensor vendor */
+	 * signal propagation as specified by sensor vendor
+	 */
 
 	if (pw->avdd)
 		err = regulator_enable(pw->avdd);
@@ -322,7 +338,7 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 		goto ov5693_iovdd_fail;
 
 	usleep_range(1, 2);
-	if (pw->pwdn_gpio)
+	if (gpio_is_valid(pw->pwdn_gpio))
 		ov5693_gpio_set(priv, pw->pwdn_gpio, 1);
 
 	/*
@@ -331,16 +347,16 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 	 */
 	usleep_range(2000, 2010);
 
-	if (pw->reset_gpio)
+	if (gpio_is_valid(pw->reset_gpio))
 		ov5693_gpio_set(priv, pw->reset_gpio, 1);
 
 	/* datasheet fig 2-9: t3 */
 	usleep_range(2000, 2010);
 
 	pw->state = SWITCH_ON;
-
 	ov5693_write_reg(s_data, 0x0100, 0x1);
 	ov5693_write_reg(s_data, 0x0100, 0x0);
+
 	return 0;
 
 ov5693_iovdd_fail:
@@ -370,13 +386,14 @@ static int ov5693_power_off(struct camera_common_data *s_data)
 	}
 
 	/* sleeps calls in the sequence below are for internal device
-	 * signal propagation as specified by sensor vendor */
+	 * signal propagation as specified by sensor vendor
+	 */
 
 	usleep_range(21, 25);
-	if (pw->pwdn_gpio)
+	if (gpio_is_valid(pw->pwdn_gpio))
 		ov5693_gpio_set(priv, pw->pwdn_gpio, 0);
 	usleep_range(1, 2);
-	if (pw->reset_gpio)
+	if (gpio_is_valid(pw->reset_gpio))
 		ov5693_gpio_set(priv, pw->reset_gpio, 0);
 
 	/* datasheet 2.9: reset requires ~2ms settling time*/
@@ -402,8 +419,10 @@ static int ov5693_power_put(struct ov5693 *priv)
 	if (priv->pdata && priv->pdata->use_cam_gpio)
 		cam_gpio_deregister(&priv->i2c_client->dev, pw->pwdn_gpio);
 	else {
-		gpio_free(pw->pwdn_gpio);
-		gpio_free(pw->reset_gpio);
+		if (gpio_is_valid(pw->pwdn_gpio))
+			gpio_free(pw->pwdn_gpio);
+		if (gpio_is_valid(pw->reset_gpio))
+			gpio_free(pw->reset_gpio);
 	}
 
 	return 0;
@@ -423,6 +442,11 @@ static int ov5693_power_get(struct ov5693 *priv)
 		return -EFAULT;
 	}
 
+	if (!priv->soc->is_silicon) {
+		dev_info(&priv->i2c_client->dev,
+			 "Skip getting mclk,regulator\n");
+		goto skip_clkvdd;
+	}
 	mclk_name = pdata->mclk_name ?
 		    pdata->mclk_name : "cam_mclk1";
 	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
@@ -451,11 +475,11 @@ static int ov5693_power_get(struct ov5693 *priv)
 	err |= camera_common_regulator_get(&priv->i2c_client->dev,
 			&pw->iovdd, pdata->regulators.iovdd);
 
+skip_clkvdd:
 	if (!err) {
 		pw->reset_gpio = pdata->reset_gpio;
 		pw->pwdn_gpio = pdata->pwdn_gpio;
 	}
-
 	if (pdata->use_cam_gpio) {
 		err = cam_gpio_register(&priv->i2c_client->dev, pw->pwdn_gpio);
 		if (err)
@@ -463,18 +487,23 @@ static int ov5693_power_get(struct ov5693 *priv)
 				"%s ERR can't register cam gpio %u!\n",
 				 __func__, pw->pwdn_gpio);
 	} else {
-		ret = gpio_request(pw->pwdn_gpio, "cam_pwdn_gpio");
-		if (ret < 0)
-			dev_dbg(&priv->i2c_client->dev,
-				"%s can't request pwdn_gpio %d\n",
-				__func__, ret);
-		ret = gpio_request(pw->reset_gpio, "cam_reset_gpio");
-		if (ret < 0)
-			dev_dbg(&priv->i2c_client->dev,
-				"%s can't request reset_gpio %d\n",
-				__func__, ret);
+		if (gpio_is_valid(pw->pwdn_gpio)) {
+			ret = gpio_request(pw->pwdn_gpio, "cam_pwdn_gpio");
+			if (ret < 0) {
+				dev_dbg(&priv->i2c_client->dev,
+					"%s can't request pwdn_gpio %d\n",
+					__func__, ret);
+			}
+		}
+		if (gpio_is_valid(pw->reset_gpio)) {
+			ret = gpio_request(pw->reset_gpio, "cam_reset_gpio");
+			if (ret < 0) {
+				dev_dbg(&priv->i2c_client->dev,
+					"%s can't request reset_gpio %d\n",
+					__func__, ret);
+			}
+		}
 	}
-
 
 	pw->state = SWITCH_OFF;
 	return err;
@@ -633,8 +662,25 @@ static struct v4l2_subdev_ops ov5693_subdev_ops = {
 	.pad	= &ov5693_subdev_pad_ops,
 };
 
-static struct of_device_id ov5693_of_match[] = {
-	{ .compatible = "nvidia,ov5693", },
+static const struct ov5693_soc ov5693_silicon = {
+	.is_silicon = true,
+	.regmap_cfg = &ov5693_regmap_config,
+};
+
+static const struct ov5693_soc ov5693_t19x_sim = {
+	.is_silicon = false,
+	.regmap_cfg = &ov5693_regmap_config_single,
+};
+
+static const struct of_device_id ov5693_of_match[] = {
+	{
+		.compatible = "nvidia,ov5693",
+		.data = &ov5693_silicon,
+	},
+	{
+		.compatible = "nvidia,ov5693-sim",
+		.data = &ov5693_t19x_sim,
+	},
 	{ },
 };
 
@@ -993,7 +1039,8 @@ static int ov5693_read_otp_bank(struct ov5693 *priv,
 	int err;
 
 	/* sleeps calls in the sequence below are for internal device
-	 * signal propagation as specified by sensor vendor */
+	 * signal propagation as specified by sensor vendor
+	 */
 
 	usleep_range(10000, 11000);
 	err = ov5693_write_table(priv, mode_table[OV5693_MODE_START_STREAM]);
@@ -1249,7 +1296,6 @@ static int ov5693_ctrls_init(struct ov5693 *priv, bool eeprom_ctrl)
 			"Error %d reading fuse id data\n", err);
 		goto error;
 	}
-
 	return 0;
 
 error:
@@ -1267,6 +1313,7 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 	int gpio;
 	int err;
 	struct camera_common_pdata *ret = NULL;
+	const struct ov5693_soc *soc;
 
 	if (!node)
 		return NULL;
@@ -1276,16 +1323,19 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 		dev_err(&client->dev, "Failed to find matching dt id\n");
 		return NULL;
 	}
-
+	soc = match->data;
 	board_priv_pdata = devm_kzalloc(&client->dev,
 			   sizeof(*board_priv_pdata), GFP_KERNEL);
 	if (!board_priv_pdata)
 		return NULL;
 
-	err = camera_common_parse_clocks(&client->dev, board_priv_pdata);
-	if (err) {
-		dev_err(&client->dev, "Failed to find clocks\n");
-		goto error;
+	if (soc->is_silicon) {
+		err = camera_common_parse_clocks(&client->dev,
+						 board_priv_pdata);
+		if (err) {
+			dev_err(&client->dev, "Failed to find clocks\n");
+			goto error;
+		}
 	}
 
 	gpio = of_get_named_gpio(node, "pwdn-gpios", 0);
@@ -1294,8 +1344,11 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 			ret = ERR_PTR(-EPROBE_DEFER);
 			goto error;
 		}
-		dev_err(&client->dev, "pwdn gpios not in DT\n");
-		goto error;
+		gpio = 0;
+		if (soc->is_silicon) {
+			dev_err(&client->dev, "pwdn gpios not in DT\n");
+			goto error;
+		}
 	}
 	board_priv_pdata->pwdn_gpio = (unsigned int)gpio;
 
@@ -1314,6 +1367,10 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 	board_priv_pdata->use_cam_gpio =
 		of_property_read_bool(node, "cam,use-cam-gpio");
 
+	if (!soc->is_silicon) {
+		dev_info(&client->dev, "Skip query for regulator\n");
+		goto skip_vdd;
+	}
 	err = of_property_read_string(node, "avdd-reg",
 			&board_priv_pdata->regulators.avdd);
 	if (err) {
@@ -1327,6 +1384,7 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 		goto error;
 	}
 
+skip_vdd:
 	board_priv_pdata->has_eeprom =
 		of_property_read_bool(node, "has-eeprom");
 
@@ -1361,8 +1419,17 @@ static int ov5693_probe(struct i2c_client *client,
 	struct ov5693 *priv;
 	char debugfs_name[10];
 	int err;
+	const struct ov5693_soc *soc_data;
+	const struct of_device_id *match;
 
 	pr_info("[OV5693]: probing v4l2 sensor.\n");
+
+	match = of_match_device(ov5693_of_match, &client->dev);
+	if (!match) {
+		dev_err(&client->dev, "No device match found\n");
+		return -ENODEV;
+	}
+	soc_data = match->data;
 
 	if (!IS_ENABLED(CONFIG_OF) || !node)
 		return -EINVAL;
@@ -1378,8 +1445,9 @@ static int ov5693_probe(struct i2c_client *client,
 			    GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+	priv->soc = soc_data;
+	priv->regmap = devm_regmap_init_i2c(client, soc_data->regmap_cfg);
 
-	priv->regmap = devm_regmap_init_i2c(client, &ov5693_regmap_config);
 	if (IS_ERR(priv->regmap)) {
 		dev_err(&client->dev,
 			"regmap init failed: %ld\n", PTR_ERR(priv->regmap));
@@ -1463,7 +1531,6 @@ static int ov5693_probe(struct i2c_client *client,
 		return err;
 
 	dev_dbg(&client->dev, "Detected OV5693 sensor\n");
-
 
 	return 0;
 }

@@ -23,6 +23,7 @@
 #include <linux/string.h>
 #include <soc/tegra/pmc.h>
 #include <trace/events/camera_common.h>
+#include <soc/tegra/chip-id.h>
 
 #define has_s_op(master, op) \
 	(master->ops && master->ops->op)
@@ -738,23 +739,28 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 
 	trace_camera_common_s_power("status", on);
 	if (on) {
-		err = camera_common_mclk_enable(s_data);
-		if (err)
-			return err;
+		if (tegra_platform_is_silicon()) {
+			err = camera_common_mclk_enable(s_data);
+			if (err)
+				return err;
 
-		camera_common_dpd_disable(s_data);
-
+			camera_common_dpd_disable(s_data);
+		}
 		err = call_s_op(s_data, power_on);
 		if (err) {
 			dev_err(s_data->dev,
 				"%s: error power on\n", __func__);
-			camera_common_dpd_enable(s_data);
-			camera_common_mclk_disable(s_data);
+			if (tegra_platform_is_silicon()) {
+				camera_common_dpd_enable(s_data);
+				camera_common_mclk_disable(s_data);
+			}
 		}
 	} else {
 		call_s_op(s_data, power_off);
-		camera_common_dpd_enable(s_data);
-		camera_common_mclk_disable(s_data);
+		if (tegra_platform_is_silicon()) {
+			camera_common_dpd_enable(s_data);
+			camera_common_mclk_disable(s_data);
+		}
 	}
 
 	return err;

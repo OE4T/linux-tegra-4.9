@@ -514,6 +514,7 @@ struct tegra_pmc_soc {
 	bool skip_power_gate_debug_fs_init;
 	bool skip_restart_register;
 	bool skip_arm_pm_restart;
+	bool has_misc_base_address;
 };
 
 struct tegra_io_pad_regulator {
@@ -548,6 +549,7 @@ struct tegra_pmc {
 	struct device *dev;
 	void __iomem *base;
 	void __iomem *reboot_base;
+	void __iomem *misc_base;
 	struct clk *clk;
 
 	const struct tegra_pmc_soc *soc;
@@ -613,6 +615,17 @@ static u32 _tegra_pmc_readl(unsigned long offset)
 static void _tegra_pmc_writel(u32 value, unsigned long offset)
 {
 	writel(value, pmc->base + offset);
+}
+
+/* PMC misc register read/write with pmc register enums */
+static u32 tegra_pmc_misc_readl(enum pmc_regs reg)
+{
+	return readl(pmc->misc_base + pmc->soc->rmap[reg]);
+}
+
+static void tegra_pmc_misc_writel(u32 value, enum pmc_regs reg)
+{
+	writel(value, pmc->misc_base + pmc->soc->rmap[reg]);
 }
 
 /* PMC register read/write/update with pmc register enums */
@@ -1414,12 +1427,21 @@ void tegra_pmc_fuse_control_ps18_latch_set(void)
 	if (!pmc->soc->has_ps18)
 		return;
 
-	val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
-	val &= ~(PMC_FUSE_CTRL_PS18_LATCH_CLEAR);
-	tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
-	mdelay(1);
-	val |= PMC_FUSE_CTRL_PS18_LATCH_SET;
-	tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	if (pmc->soc->has_misc_base_address) {
+		val = tegra_pmc_misc_readl(TEGRA_PMC_FUSE_CTRL);
+		val &= ~(PMC_FUSE_CTRL_PS18_LATCH_CLEAR);
+		tegra_pmc_misc_writel(val, TEGRA_PMC_FUSE_CTRL);
+		mdelay(1);
+		val |= PMC_FUSE_CTRL_PS18_LATCH_SET;
+		tegra_pmc_misc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	} else {
+		val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
+		val &= ~(PMC_FUSE_CTRL_PS18_LATCH_CLEAR);
+		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+		mdelay(1);
+		val |= PMC_FUSE_CTRL_PS18_LATCH_SET;
+		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	}
 	mdelay(1);
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_control_ps18_latch_set);
@@ -1431,12 +1453,21 @@ void tegra_pmc_fuse_control_ps18_latch_clear(void)
 	if (!pmc->soc->has_ps18)
 		return;
 
-	val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
-	val &= ~(PMC_FUSE_CTRL_PS18_LATCH_SET);
-	tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
-	mdelay(1);
-	val |= PMC_FUSE_CTRL_PS18_LATCH_CLEAR;
-	tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	if (pmc->soc->has_misc_base_address) {
+		val = tegra_pmc_misc_readl(TEGRA_PMC_FUSE_CTRL);
+		val &= ~(PMC_FUSE_CTRL_PS18_LATCH_SET);
+		tegra_pmc_misc_writel(val, TEGRA_PMC_FUSE_CTRL);
+		mdelay(1);
+		val |= PMC_FUSE_CTRL_PS18_LATCH_CLEAR;
+		tegra_pmc_misc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	} else {
+		val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
+		val &= ~(PMC_FUSE_CTRL_PS18_LATCH_SET);
+		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+		mdelay(1);
+		val |= PMC_FUSE_CTRL_PS18_LATCH_CLEAR;
+		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	}
 	mdelay(1);
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_control_ps18_latch_clear);
@@ -1445,10 +1476,18 @@ void tegra_pmc_fuse_disable_mirroring(void)
 {
 	u32 val;
 
-	val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
-	if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION) {
-		val &= ~PMC_FUSE_CTRL_ENABLE_REDIRECTION;
-		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	if (pmc->soc->has_misc_base_address) {
+		val = tegra_pmc_misc_readl(TEGRA_PMC_FUSE_CTRL);
+		if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION) {
+			val &= ~PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+			tegra_pmc_misc_writel(val, TEGRA_PMC_FUSE_CTRL);
+		}
+	} else {
+		val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
+		if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION) {
+			val &= ~PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+			tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+		}
 	}
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_disable_mirroring);
@@ -1457,10 +1496,18 @@ void tegra_pmc_fuse_enable_mirroring(void)
 {
 	u32 val;
 
-	val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
-	if (!(val & PMC_FUSE_CTRL_ENABLE_REDIRECTION)) {
-		val |= PMC_FUSE_CTRL_ENABLE_REDIRECTION;
-		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	if (pmc->soc->has_misc_base_address) {
+		val = tegra_pmc_misc_readl(TEGRA_PMC_FUSE_CTRL);
+		if (!(val & PMC_FUSE_CTRL_ENABLE_REDIRECTION)) {
+			val |= PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+			tegra_pmc_misc_writel(val, TEGRA_PMC_FUSE_CTRL);
+		}
+	} else {
+		val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
+		if (!(val & PMC_FUSE_CTRL_ENABLE_REDIRECTION)) {
+			val |= PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+			tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+		}
 	}
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_enable_mirroring);
@@ -3765,6 +3812,7 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 	.num_descs = ARRAY_SIZE(tegra210_io_pads_pinctrl_desc),
 	.descs = tegra210_io_pads_pinctrl_desc,
 	.rmap = tegra210_register_map,
+	.has_misc_base_address = false,
 };
 
 /* Tegra 186 register map */
@@ -3904,9 +3952,48 @@ static const struct tegra_pmc_soc tegra186_pmc_soc = {
 	.descs = tegra186_io_pads_pinctrl_desc,
 	.rmap = tegra186_register_map,
 	.has_ps18 = true,
+	.has_misc_base_address = false,
+};
+
+/* Tegra 194 register map */
+static const unsigned long tegra194_register_map[TEGRA_PMC_MAX_REG] = {
+	[TEGRA_PMC_FUSE_CTRL]			= 0x10,
+	[TEGRA_PMC_IMPL_RAMDUMP_CTL_STATUS]	= 0x10C,
+	[TEGRA_PMC_E_18V_PWR]			= 0x3C,
+	[TEGRA_PMC_E_33V_PWR]			= 0x40,
+	[TEGRA_PMC_PWR_NO_IOPOWER]		= 0x44,
+	[TEGRA_PMC_RST_STATUS]			= 0x70,
+	[TEGRA_PMC_SATA_PWRGT_0]		= 0x8,
+	[TEGRA_PMC_UFSHC_PWR_CNTRL_0]		= 0xF4,
+	[TEGRA_PMC_IO_DPD_REQ]			= 0x74,
+	[TEGRA_PMC_IO_DPD_STATUS]		= 0x78,
+	[TEGRA_PMC_IO_DPD2_REQ]			= 0x7C,
+	[TEGRA_PMC_IO_DPD2_STATUS]		= 0x80,
+	[TEGRA_PMC_SCRATCH0]			= 0x2000,
+};
+
+static const struct tegra_pmc_soc tegra194_pmc_soc = {
+	.has_tsense_reset = false,
+	.has_pclk_clock = false,
+	.has_interrupt_polarity_support = false,
+	.show_reset_status = true,
+	.has_reboot_base_address = true,
+	.skip_lp0_vector_setup = true,
+	.skip_legacy_pmc_init = true,
+	.skip_power_gate_debug_fs_init = true,
+	.skip_restart_register = true,
+	.skip_arm_pm_restart = true,
+	.num_io_pads = ARRAY_SIZE(tegra186_io_pads),
+	.io_pads = tegra186_io_pads,
+	.num_descs = ARRAY_SIZE(tegra186_io_pads_pinctrl_desc),
+	.descs = tegra186_io_pads_pinctrl_desc,
+	.rmap = tegra194_register_map,
+	.has_ps18 = true,
+	.has_misc_base_address = true,
 };
 
 static const struct of_device_id tegra_pmc_match[] = {
+	{ .compatible = "nvidia,tegra194-pmc", .data = &tegra194_pmc_soc },
 	{ .compatible = "nvidia,tegra186-pmc", .data = &tegra186_pmc_soc },
 	{ .compatible = "nvidia,tegra210-pmc", .data = &tegra210_pmc_soc },
 	{ .compatible = "nvidia,tegra132-pmc", .data = &tegra124_pmc_soc },
@@ -4020,6 +4107,16 @@ static int __init tegra_pmc_early_init(void)
 		}
 	} else {
 		pmc->reboot_base = pmc->base;
+	}
+
+	if (pmc->soc && pmc->soc->has_misc_base_address) {
+		pmc->misc_base = of_iomap(np, 2);
+		if (!pmc->misc_base) {
+			pr_err("Failed to map misc PMC registers\n");
+			return -ENXIO;
+		}
+	} else {
+		pmc->misc_base = pmc->base;
 	}
 
 	mutex_init(&pmc->powergates_lock);

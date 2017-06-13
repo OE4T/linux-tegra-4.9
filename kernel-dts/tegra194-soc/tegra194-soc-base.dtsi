@@ -637,6 +637,8 @@
 			compatible = "nvidia,tegra194-vic";
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VIC>;
 			reg = <0x0 0x15340000 0x0 0x00040000>;
+			interrupts = <0 206 0x04>;
+
 			resets = <&bpmp_resets TEGRA194_RESET_VIC>;
 			clocks = <&bpmp_clks TEGRA194_CLK_VIC>;
 			clock-names = "vic";

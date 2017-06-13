@@ -2016,7 +2016,8 @@ struct v4l2_pix_format_mplane {
 	__u8				ycbcr_enc;
 	__u8				quantization;
 	__u8				xfer_func;
-	__u8				reserved[7];
+	__u8				metadata_height;
+	__u8				reserved[6];
 } __attribute__ ((packed));
 
 /**

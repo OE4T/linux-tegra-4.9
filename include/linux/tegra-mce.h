@@ -116,5 +116,8 @@ int tegra_roc_clean_cache(void);
 int tegra_mce_enable_latic(void);
 int tegra_mce_read_uncore_perfmon(u32 req, u32 *data);
 int tegra_mce_write_uncore_perfmon(u32 req, u32 data);
+extern void (*tegra_flush_cache_all)(void);
+extern void (*tegra_flush_dcache_all)(void);
+extern void (*tegra_clean_dcache_all)(void);
 
 #endif

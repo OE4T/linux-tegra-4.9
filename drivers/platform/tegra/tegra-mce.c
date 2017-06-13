@@ -313,18 +313,37 @@ __always_inline int tegra_roc_clean_cache(void)
 }
 EXPORT_SYMBOL(tegra_roc_clean_cache);
 
+void (*tegra_flush_cache_all)(void);
+void (*tegra_flush_dcache_all)(void);
+void (*tegra_clean_dcache_all)(void);
+
 void flush_cache_all(void)
 {
+	if (tegra_flush_cache_all) {
+		tegra_flush_cache_all();
+		return;
+	}
+
 	tegra_roc_flush_cache();
 }
 
 void __flush_dcache_all(void *__maybe_unused unused)
 {
+	if (tegra_flush_dcache_all) {
+		tegra_flush_dcache_all();
+		return;
+	}
+
 	tegra_roc_flush_cache_only();
 }
 
 void __clean_dcache_all(void *__maybe_unused unused)
 {
+	if (tegra_clean_dcache_all) {
+		tegra_clean_dcache_all();
+		return;
+	}
+
 	tegra_roc_clean_cache();
 }
 

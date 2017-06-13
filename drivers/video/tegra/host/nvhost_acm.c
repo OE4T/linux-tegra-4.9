@@ -946,7 +946,16 @@ static int nvhost_module_runtime_resume(struct device *dev)
 
 static int nvhost_module_prepare_suspend(struct device *dev)
 {
-	if (atomic_read(&dev->power.usage_count) > 1)
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+	u32 max_num_references;
+
+	/*
+	 * If powergating is disabled, we take a single pm runtime
+	 * reference during boot-up
+	 */
+	max_num_references = pdata->can_powergate ? 1 : 2;
+
+	if (atomic_read(&dev->power.usage_count) > max_num_references)
 		return -EBUSY;
 
 	return 0;

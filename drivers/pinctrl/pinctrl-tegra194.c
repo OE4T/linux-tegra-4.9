@@ -444,6 +444,8 @@ static struct tegra_function tegra194_functions[] = {
 		.pbias_buf_bit = e_pbias_buf,			\
 		.preemp_bit = epreemp,				\
 		.rfu_in_bit = 20,				\
+		.drv_reg = -1,					\
+		.lpbk_bit = -1,					\
 		.pwr_domain = #io_rail
 
 #define drive_touch_clk_pcc4            DRV_PINGROUP_ENTRY_Y(0x2004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)

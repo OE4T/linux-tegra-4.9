@@ -347,8 +347,8 @@ static int nvgpu_pg_init_task(void *arg)
 			pmu_setup_hw_enable_elpg(g);
 			break;
 		case PMU_STATE_STARTED:
-			nvgpu_pmu_dbg(g, "PMU booted");
-			break;
+			nvgpu_pmu_dbg(g, "PMU booted, thread exiting");
+			return 0;
 		default:
 			nvgpu_pmu_dbg(g, "invalid state");
 			break;

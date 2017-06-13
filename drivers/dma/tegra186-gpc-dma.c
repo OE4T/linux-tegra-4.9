@@ -2025,7 +2025,17 @@ static struct platform_driver tegra_dmac_driver = {
 	.id_table	= tegra_dma_devtype,
 };
 
-module_platform_driver(tegra_dmac_driver);
+static int __init tegra_dmac_drvinit(void)
+{
+        return platform_driver_register(&tegra_dmac_driver);
+}
+fs_initcall(tegra_dmac_drvinit);
+
+static void __exit tegra_dmac_drvexit(void)
+{
+        platform_driver_unregister(&tegra_dmac_driver);
+}
+module_exit(tegra_dmac_drvexit);
 
 MODULE_ALIAS("platform:tegra186-gpcdma");
 MODULE_DESCRIPTION("NVIDIA Tegra GPC DMA Controller driver");

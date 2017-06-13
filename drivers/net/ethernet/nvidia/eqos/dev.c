@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -796,15 +796,29 @@ static INT config_sub_second_increment(ULONG ptp_clock)
 
 static ULONG_LONG get_systime(void)
 {
-	ULONG_LONG ns;
+	ULONG_LONG ns1, ns2, ns;
 	ULONG varmac_stnsr;
 	ULONG varmac_stsr;
 
 	MAC_STNSR_RD(varmac_stnsr);
-	ns = GET_VALUE(varmac_stnsr, MAC_STNSR_TSSS_LPOS, MAC_STNSR_TSSS_HPOS);
-	/* convert sec/high time value to nanosecond */
+	ns1 = GET_VALUE(varmac_stnsr, MAC_STNSR_TSSS_LPOS, MAC_STNSR_TSSS_HPOS);
+
 	MAC_STSR_RD(varmac_stsr);
-	ns = ns + (varmac_stsr * 1000000000ull);
+
+	MAC_STNSR_RD(varmac_stnsr);
+	ns2 = GET_VALUE(varmac_stnsr, MAC_STNSR_TSSS_LPOS, MAC_STNSR_TSSS_HPOS);
+
+	/* if ns1 is greater than ns2, it means nsec counter rollover
+	 * happened. In that case read the updated sec counter again
+	 */
+	if (ns1 >= ns2) {
+		MAC_STSR_RD(varmac_stsr);
+		/* convert sec/high time value to nanosecond */
+		ns = ns2 + (varmac_stsr * 1000000000ull);
+	} else {
+		/* convert sec/high time value to nanosecond */
+		ns = ns1 + (varmac_stsr * 1000000000ull);
+	}
 
 	return ns;
 }

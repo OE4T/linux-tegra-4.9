@@ -477,7 +477,8 @@ struct arm_smmu_cfg {
 	u8				irptndx;
 	u32				cbar;
 	pgd_t				*pgd;
-	bool				iso_client;
+	u32				iso_client_count;
+	u32				non_iso_client_count;
 };
 #define INVALID_IRPTNDX			0xff
 
@@ -540,6 +541,18 @@ static inline void writel_relaxed_iso(u32 val,
 	}
 }
 
+static inline void writel_relaxed_cfg_iso(u64 val,
+			volatile void __iomem *virt_addr,
+			struct arm_smmu_cfg *cfg)
+{
+	if (cfg->iso_client_count)
+		writel_relaxed_iso(val, virt_addr, 1);
+
+	if (cfg->non_iso_client_count)
+		writel_relaxed_iso(val, virt_addr, 0);
+
+}
+
 static inline void writeq_relaxed_iso(u64 val,
 			volatile void __iomem *virt_addr, bool iso_smmu)
 {
@@ -549,15 +562,27 @@ static inline void writeq_relaxed_iso(u64 val,
 	if (iso_smmu) {
 		if (smmu_handle->iso_smmu_id < 0)
 			return;
-		writel_relaxed(val,
+		writeq_relaxed(val,
 			smmu_handle->base[smmu_handle->iso_smmu_id] + offset);
 	} else {
 		for (smmu_id = 0; smmu_id < smmu_handle->num_smmus; smmu_id++) {
 			if (smmu_id != smmu_handle->iso_smmu_id)
-				writel_relaxed(val,
+				writeq_relaxed(val,
 					smmu_handle->base[smmu_id] + offset);
 		}
 	}
+}
+
+static inline void writeq_relaxed_cfg_iso(u64 val,
+			volatile void __iomem *virt_addr,
+			struct arm_smmu_cfg *cfg)
+{
+	if (cfg->iso_client_count)
+		writeq_relaxed_iso(val, virt_addr, 1);
+
+	if (cfg->non_iso_client_count)
+		writeq_relaxed_iso(val, virt_addr, 0);
+
 }
 
 #define WRITEL_FN(fn, call, type) \
@@ -917,17 +942,21 @@ static void arm_smmu_tlb_inv_context(struct arm_smmu_domain *smmu_domain)
 
 	if (stage1) {
 		base = ARM_SMMU_CB_BASE(smmu) + ARM_SMMU_CB(smmu, cfg->cbndx);
-		writel_relaxed_iso(ARM_SMMU_CB_ASID(cfg),
+		writel_relaxed_cfg_iso(ARM_SMMU_CB_ASID(cfg),
 			       base + ARM_SMMU_CB_S1_TLBIASID,
-			       cfg->iso_client);
+			       cfg);
 	} else {
 		base = ARM_SMMU_GR0(smmu);
-		writel_relaxed_iso(ARM_SMMU_CB_VMID(cfg),
+		writel_relaxed_cfg_iso(ARM_SMMU_CB_VMID(cfg),
 			       base + ARM_SMMU_GR0_TLBIVMID,
-			       cfg->iso_client);
+			       cfg);
 	}
 
-	arm_smmu_tlb_sync(smmu, cfg->iso_client);
+	if (cfg->iso_client_count)
+		arm_smmu_tlb_sync(smmu, 1);
+
+	if (cfg->non_iso_client_count)
+		arm_smmu_tlb_sync(smmu, 0);
 
 	if (time_before)
 		trace_arm_smmu_tlb_inv_context(time_before, cfg->cbndx);
@@ -946,15 +975,15 @@ static void __arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 		reg += ARM_SMMU_CB_S1_TLBIVA;
 		iova >>= 12;
 		iova |= (u64)ARM_SMMU_CB_ASID(cfg) << 48;
-		writeq_relaxed_iso(iova, reg, cfg->iso_client);
+		writeq_relaxed_cfg_iso(iova, reg, cfg);
 	} else if (smmu->version == ARM_SMMU_V2) {
 		reg = ARM_SMMU_CB_BASE(smmu) + ARM_SMMU_CB(smmu, cfg->cbndx);
 		reg += ARM_SMMU_CB_S2_TLBIIPAS2;
-		writeq_relaxed_iso(iova >> 12, reg, cfg->iso_client);
+		writeq_relaxed_cfg_iso(iova >> 12, reg, cfg);
 	} else {
 		reg = ARM_SMMU_GR0(smmu) + ARM_SMMU_GR0_TLBIVMID;
-		writel_relaxed_iso(ARM_SMMU_CB_VMID(cfg), reg,
-					cfg->iso_client);
+		writel_relaxed_cfg_iso(ARM_SMMU_CB_VMID(cfg), reg,
+					cfg);
 	}
 }
 
@@ -977,7 +1006,12 @@ static void arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 		__arm_smmu_tlb_inv_range(smmu_domain, iova);
 		iova += PAGE_SIZE;
 	}
-	arm_smmu_tlb_sync(smmu, cfg->iso_client);
+
+	if (cfg->iso_client_count)
+		arm_smmu_tlb_sync(smmu, 1);
+
+	if (cfg->non_iso_client_count)
+		arm_smmu_tlb_sync(smmu, 0);
 
 	if (time_before)
 		trace_arm_smmu_tlb_inv_range(time_before, cfg->cbndx,
@@ -1382,6 +1416,9 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 	} else {
 		cfg->irptndx = 0;
 	}
+
+	cfg->iso_client_count = 0;
+	cfg->non_iso_client_count = 0;
 
 	ACCESS_ONCE(smmu_domain->smmu) = smmu;
 	arm_smmu_init_context_bank(smmu_domain);
@@ -2000,8 +2037,17 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		platform_override_streamid(cfg->streamids[i]);
 
 	dev_node = dev_get_dev_node(dev);
-	if (of_property_read_bool(dev_node, "iso-smmu"))
-		arm_smmu_cfg->iso_client = true;
+	if (of_property_read_bool(dev_node, "iso-smmu")) {
+		pr_info("Adding %s to ISO SMMU client\n", dev_name(dev));
+		arm_smmu_cfg->iso_client_count++;
+	} else {
+		arm_smmu_cfg->non_iso_client_count++;
+	}
+
+	if (arm_smmu_cfg->iso_client_count &&
+			arm_smmu_cfg->non_iso_client_count)
+		pr_warn("%s: Shared context between ISO and non-ISO clients\n",
+				dev_name(dev));
 
 	return ret;
 }
@@ -3267,17 +3313,20 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 
 	smmu->num_smmus = i;
 
-	dev_info(dev, "found %d SMMUs\n", smmu->num_smmus);
-
 	if (of_property_read_u32(dev->of_node, "#global-interrupts",
 				 &smmu->num_global_irqs)) {
 		dev_err(dev, "missing #global-interrupts property\n");
 		return -ENODEV;
 	}
 
-	if (of_property_read_u8(dev->of_node, "iso-smmu-id",
-				 &smmu->iso_smmu_id))
+	if (of_property_read_u32(dev->of_node, "iso-smmu-id",
+				 (u32 *)&smmu->iso_smmu_id)) {
 		smmu->iso_smmu_id = -1;
+		dev_info(dev, "found %d SMMUs\n", smmu->num_smmus);
+	} else {
+		dev_info(dev, "found %d SMMUs and ISO SMMU id is %d\n",
+				smmu->num_smmus, smmu->iso_smmu_id);
+	}
 
 	num_irqs = 0;
 	while ((res = platform_get_resource(pdev, IORESOURCE_IRQ, num_irqs))) {

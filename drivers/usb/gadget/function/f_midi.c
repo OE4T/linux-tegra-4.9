@@ -1175,6 +1175,10 @@ static ssize_t alsa_show(struct device *dev,
 	struct usb_function_instance *fi_midi = dev_get_drvdata(dev);
 	struct f_midi *midi;
 
+	if (!fi_midi) {
+		dev_err(dev, "f_midi: invalid usb function instance");
+		return -EINVAL;
+	}
 	if (!fi_midi->f)
 		dev_warn(dev, "f_midi: function not set\n");
 

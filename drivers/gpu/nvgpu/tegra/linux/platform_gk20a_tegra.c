@@ -299,7 +299,7 @@ static void gk20a_tegra_prescale(struct device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	u32 avg = 0;
 
-	gk20a_pmu_load_norm(g, &avg);
+	nvgpu_pmu_load_norm(g, &avg);
 	tegra_edp_notify_gpu_load(avg, clk_get_rate(g->clk.tegra_clk));
 }
 

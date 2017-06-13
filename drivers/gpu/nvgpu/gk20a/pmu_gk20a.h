@@ -38,7 +38,7 @@ u32 gk20a_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id);
 
 void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries);
 
-int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable);
+void gk20a_pmu_init_perfmon_counter(struct gk20a *g);
 
 void gk20a_pmu_pg_idle_counter_config(struct gk20a *g, u32 pg_engine_id);
 
@@ -51,11 +51,9 @@ int gk20a_pmu_queue_tail(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
 			u32 *tail, bool set);
 void gk20a_pmu_msgq_tail(struct nvgpu_pmu *pmu, u32 *tail, bool set);
 
-int gk20a_pmu_load_norm(struct gk20a *g, u32 *load);
-int gk20a_pmu_load_update(struct gk20a *g);
-void gk20a_pmu_reset_load_counters(struct gk20a *g);
-void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
-		u32 *total_cycles);
+u32 gk20a_pmu_read_idle_counter(struct gk20a *g, u32 counter_id);
+void gk20a_pmu_reset_idle_counter(struct gk20a *g, u32 counter_id);
+
 void gk20a_init_pmu_ops(struct gpu_ops *gops);
 
 void pmu_copy_to_dmem(struct nvgpu_pmu *pmu,
@@ -80,8 +78,5 @@ int pmu_idle(struct nvgpu_pmu *pmu);
 int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable);
 
 bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos);
-
-int nvgpu_pmu_perfmon_start_sampling(struct nvgpu_pmu *pmu);
-int nvgpu_pmu_perfmon_stop_sampling(struct nvgpu_pmu *pmu);
 
 #endif /*__PMU_GK20A_H__*/

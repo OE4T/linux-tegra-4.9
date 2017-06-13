@@ -93,7 +93,7 @@ int gk20a_scale_qos_notify(struct notifier_block *nb,
 
 	/* Update gpu load because we may scale the emc target
 	 * if the gpu load changed. */
-	gk20a_pmu_load_update(g);
+	nvgpu_pmu_load_update(g);
 	platform->postscale(profile->dev, freq);
 
 	return NOTIFY_OK;
@@ -223,7 +223,7 @@ static void update_load_estimate_gpmu(struct device *dev)
 
 	profile->dev_stat.total_time = dt;
 	profile->last_event_time = t;
-	gk20a_pmu_load_norm(g, &busy_time);
+	nvgpu_pmu_load_norm(g, &busy_time);
 	profile->dev_stat.busy_time = (busy_time * dt) / 1000;
 }
 
@@ -310,7 +310,7 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	/* update the software shadow */
-	gk20a_pmu_load_update(g);
+	nvgpu_pmu_load_update(g);
 
 	/* inform edp about new constraint */
 	if (platform->prescale)

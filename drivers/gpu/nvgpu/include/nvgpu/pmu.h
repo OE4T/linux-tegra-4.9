@@ -392,8 +392,16 @@ int nvgpu_pmu_process_message(struct nvgpu_pmu *pmu);
 
 /* perfmon */
 int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu);
+int nvgpu_pmu_perfmon_start_sampling(struct nvgpu_pmu *pmu);
+int nvgpu_pmu_perfmon_stop_sampling(struct nvgpu_pmu *pmu);
 int nvgpu_pmu_handle_perfmon_event(struct nvgpu_pmu *pmu,
-			struct pmu_perfmon_msg *msg);
+	struct pmu_perfmon_msg *msg);
+int nvgpu_pmu_load_norm(struct gk20a *g, u32 *load);
+int nvgpu_pmu_load_update(struct gk20a *g);
+void nvgpu_pmu_reset_load_counters(struct gk20a *g);
+void nvgpu_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
+		u32 *total_cycles);
+
 int nvgpu_pmu_handle_therm_event(struct nvgpu_pmu *pmu,
 			struct nv_pmu_therm_msg *msg);
 

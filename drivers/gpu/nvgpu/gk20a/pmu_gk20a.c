@@ -802,135 +802,6 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.reset = gk20a_pmu_reset;
 }
 
-static u8 get_perfmon_id(struct nvgpu_pmu *pmu)
-{
-	struct gk20a *g = gk20a_from_pmu(pmu);
-	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
-	u8 unit_id;
-
-	switch (ver) {
-	case GK20A_GPUID_GK20A:
-	case GK20A_GPUID_GM20B:
-		unit_id = PMU_UNIT_PERFMON;
-		break;
-	case NVGPU_GPUID_GP10B:
-	case NVGPU_GPUID_GP104:
-	case NVGPU_GPUID_GP106:
-		unit_id = PMU_UNIT_PERFMON_T18X;
-		break;
-#if defined(CONFIG_TEGRA_19x_GPU)
-	case TEGRA_19x_GPUID:
-		unit_id = PMU_UNIT_PERFMON_T18X;
-		break;
-#endif
-	default:
-		nvgpu_err(g, "no support for %x", ver);
-		BUG();
-	}
-
-	return unit_id;
-}
-
-int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu)
-{
-	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct pmu_v *pv = &g->ops.pmu_ver;
-	struct pmu_cmd cmd;
-	struct pmu_payload payload;
-	u32 seq;
-	u32 data;
-
-	gk20a_dbg_fn("");
-
-	pmu->perfmon_ready = 0;
-
-	/* use counter #3 for GR && CE2 busy cycles */
-	gk20a_writel(g, pwr_pmu_idle_mask_r(3),
-		pwr_pmu_idle_mask_gr_enabled_f() |
-		pwr_pmu_idle_mask_ce_2_enabled_f());
-
-	/* disable idle filtering for counters 3 and 6 */
-	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(3));
-	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
-			pwr_pmu_idle_ctrl_filter_m(),
-			pwr_pmu_idle_ctrl_value_busy_f() |
-			pwr_pmu_idle_ctrl_filter_disabled_f());
-	gk20a_writel(g, pwr_pmu_idle_ctrl_r(3), data);
-
-	/* use counter #6 for total cycles */
-	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(6));
-	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
-			pwr_pmu_idle_ctrl_filter_m(),
-			pwr_pmu_idle_ctrl_value_always_f() |
-			pwr_pmu_idle_ctrl_filter_disabled_f());
-	gk20a_writel(g, pwr_pmu_idle_ctrl_r(6), data);
-
-	/*
-	 * We don't want to disturb counters #3 and #6, which are used by
-	 * perfmon, so we add wiring also to counters #1 and #2 for
-	 * exposing raw counter readings.
-	 */
-	gk20a_writel(g, pwr_pmu_idle_mask_r(1),
-		pwr_pmu_idle_mask_gr_enabled_f() |
-		pwr_pmu_idle_mask_ce_2_enabled_f());
-
-	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(1));
-	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
-			pwr_pmu_idle_ctrl_filter_m(),
-			pwr_pmu_idle_ctrl_value_busy_f() |
-			pwr_pmu_idle_ctrl_filter_disabled_f());
-	gk20a_writel(g, pwr_pmu_idle_ctrl_r(1), data);
-
-	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(2));
-	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
-			pwr_pmu_idle_ctrl_filter_m(),
-			pwr_pmu_idle_ctrl_value_always_f() |
-			pwr_pmu_idle_ctrl_filter_disabled_f());
-	gk20a_writel(g, pwr_pmu_idle_ctrl_r(2), data);
-
-	if (!pmu->sample_buffer)
-		pmu->sample_buffer = nvgpu_alloc(&pmu->dmem,
-						  2 * sizeof(u16));
-	if (!pmu->sample_buffer) {
-		nvgpu_err(g, "failed to allocate perfmon sample buffer");
-		return -ENOMEM;
-	}
-
-	/* init PERFMON */
-	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = get_perfmon_id(pmu);
-	cmd.hdr.size = PMU_CMD_HDR_SIZE + pv->get_pmu_perfmon_cmd_init_size();
-	cmd.cmd.perfmon.cmd_type = PMU_PERFMON_CMD_ID_INIT;
-	/* buffer to save counter values for pmu perfmon */
-	pv->perfmon_cmd_init_set_sample_buffer(&cmd.cmd.perfmon,
-	(u16)pmu->sample_buffer);
-	/* number of sample periods below lower threshold
-	   before pmu triggers perfmon decrease event
-	   TBD: = 15 */
-	pv->perfmon_cmd_init_set_dec_cnt(&cmd.cmd.perfmon, 15);
-	/* index of base counter, aka. always ticking counter */
-	pv->perfmon_cmd_init_set_base_cnt_id(&cmd.cmd.perfmon, 6);
-	/* microseconds interval between pmu polls perf counters */
-	pv->perfmon_cmd_init_set_samp_period_us(&cmd.cmd.perfmon, 16700);
-	/* number of perfmon counters
-	   counter #3 (GR and CE2) for gk20a */
-	pv->perfmon_cmd_init_set_num_cnt(&cmd.cmd.perfmon, 1);
-	/* moving average window for sample periods
-	   TBD: = 3000000 / sample_period_us = 17 */
-	pv->perfmon_cmd_init_set_mov_avg(&cmd.cmd.perfmon, 17);
-
-	memset(&payload, 0, sizeof(struct pmu_payload));
-	payload.in.buf = pv->get_perfmon_cntr_ptr(pmu);
-	payload.in.size = pv->get_perfmon_cntr_sz(pmu);
-	payload.in.offset = pv->get_perfmon_cmd_init_offsetofvar(COUNTER_ALLOC);
-
-	gk20a_dbg_pmu("cmd post PMU_PERFMON_CMD_ID_INIT");
-	gk20a_pmu_cmd_post(g, &cmd, NULL, &payload, PMU_COMMAND_QUEUE_LPQ,
-			NULL, NULL, &seq, ~0);
-
-	return 0;
-}
-
 static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
@@ -963,100 +834,6 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 			      &pmu->zbc_save_done, 1);
 	if (!pmu->zbc_save_done)
 		nvgpu_err(g, "ZBC save timeout");
-}
-
-int nvgpu_pmu_perfmon_start_sampling(struct nvgpu_pmu *pmu)
-{
-	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct pmu_v *pv = &g->ops.pmu_ver;
-	struct pmu_cmd cmd;
-	struct pmu_payload payload;
-	u32 seq;
-
-	/* PERFMON Start */
-	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = get_perfmon_id(pmu);
-	cmd.hdr.size = PMU_CMD_HDR_SIZE + pv->get_pmu_perfmon_cmd_start_size();
-	pv->perfmon_start_set_cmd_type(&cmd.cmd.perfmon,
-		PMU_PERFMON_CMD_ID_START);
-	pv->perfmon_start_set_group_id(&cmd.cmd.perfmon,
-		PMU_DOMAIN_GROUP_PSTATE);
-	pv->perfmon_start_set_state_id(&cmd.cmd.perfmon,
-		pmu->perfmon_state_id[PMU_DOMAIN_GROUP_PSTATE]);
-
-	pv->perfmon_start_set_flags(&cmd.cmd.perfmon,
-		PMU_PERFMON_FLAG_ENABLE_INCREASE |
-		PMU_PERFMON_FLAG_ENABLE_DECREASE |
-		PMU_PERFMON_FLAG_CLEAR_PREV);
-
-	memset(&payload, 0, sizeof(struct pmu_payload));
-
-	/* TBD: PMU_PERFMON_PCT_TO_INC * 100 */
-	pv->set_perfmon_cntr_ut(pmu, 3000); /* 30% */
-	/* TBD: PMU_PERFMON_PCT_TO_DEC * 100 */
-	pv->set_perfmon_cntr_lt(pmu, 1000); /* 10% */
-	pv->set_perfmon_cntr_valid(pmu, true);
-
-	payload.in.buf = pv->get_perfmon_cntr_ptr(pmu);
-	payload.in.size = pv->get_perfmon_cntr_sz(pmu);
-	payload.in.offset =
-		pv->get_perfmon_cmd_start_offsetofvar(COUNTER_ALLOC);
-
-	gk20a_dbg_pmu("cmd post PMU_PERFMON_CMD_ID_START");
-	gk20a_pmu_cmd_post(g, &cmd, NULL, &payload, PMU_COMMAND_QUEUE_LPQ,
-			NULL, NULL, &seq, ~0);
-
-	return 0;
-}
-
-int nvgpu_pmu_perfmon_stop_sampling(struct nvgpu_pmu *pmu)
-{
-	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct pmu_cmd cmd;
-	u32 seq;
-
-	/* PERFMON Stop */
-	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = get_perfmon_id(pmu);
-	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_perfmon_cmd_stop);
-	cmd.cmd.perfmon.stop.cmd_type = PMU_PERFMON_CMD_ID_STOP;
-
-	gk20a_dbg_pmu("cmd post PMU_PERFMON_CMD_ID_STOP");
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
-			NULL, NULL, &seq, ~0);
-	return 0;
-}
-
-int nvgpu_pmu_handle_perfmon_event(struct nvgpu_pmu *pmu,
-			struct pmu_perfmon_msg *msg)
-{
-	gk20a_dbg_fn("");
-
-	switch (msg->msg_type) {
-	case PMU_PERFMON_MSG_ID_INCREASE_EVENT:
-		gk20a_dbg_pmu("perfmon increase event: "
-			"state_id %d, ground_id %d, pct %d",
-			msg->gen.state_id, msg->gen.group_id, msg->gen.data);
-		(pmu->perfmon_events_cnt)++;
-		break;
-	case PMU_PERFMON_MSG_ID_DECREASE_EVENT:
-		gk20a_dbg_pmu("perfmon decrease event: "
-			"state_id %d, ground_id %d, pct %d",
-			msg->gen.state_id, msg->gen.group_id, msg->gen.data);
-		(pmu->perfmon_events_cnt)++;
-		break;
-	case PMU_PERFMON_MSG_ID_INIT_EVENT:
-		pmu->perfmon_ready = 1;
-		gk20a_dbg_pmu("perfmon init event");
-		break;
-	default:
-		break;
-	}
-
-	/* restart sampling */
-	if (pmu->perfmon_sampling_enabled)
-		return nvgpu_pmu_perfmon_start_sampling(pmu);
-	return 0;
 }
 
 int nvgpu_pmu_handle_therm_event(struct nvgpu_pmu *pmu,
@@ -1359,72 +1136,65 @@ void gk20a_pmu_isr(struct gk20a *g)
 	nvgpu_mutex_release(&pmu->isr_mutex);
 }
 
-int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable)
+void gk20a_pmu_init_perfmon_counter(struct gk20a *g)
 {
-	struct nvgpu_pmu *pmu = &g->pmu;
-	int err;
+	u32 data;
 
-	gk20a_dbg_fn("");
+	/* use counter #3 for GR && CE2 busy cycles */
+	gk20a_writel(g, pwr_pmu_idle_mask_r(3),
+		pwr_pmu_idle_mask_gr_enabled_f() |
+		pwr_pmu_idle_mask_ce_2_enabled_f());
 
-	if (enable)
-		err = nvgpu_pmu_perfmon_start_sampling(pmu);
-	else
-		err = nvgpu_pmu_perfmon_stop_sampling(pmu);
+	/* disable idle filtering for counters 3 and 6 */
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(3));
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
+			pwr_pmu_idle_ctrl_filter_m(),
+			pwr_pmu_idle_ctrl_value_busy_f() |
+			pwr_pmu_idle_ctrl_filter_disabled_f());
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(3), data);
 
-	return err;
+	/* use counter #6 for total cycles */
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(6));
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
+			pwr_pmu_idle_ctrl_filter_m(),
+			pwr_pmu_idle_ctrl_value_always_f() |
+			pwr_pmu_idle_ctrl_filter_disabled_f());
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(6), data);
+
+	/*
+	 * We don't want to disturb counters #3 and #6, which are used by
+	 * perfmon, so we add wiring also to counters #1 and #2 for
+	 * exposing raw counter readings.
+	 */
+	gk20a_writel(g, pwr_pmu_idle_mask_r(1),
+		pwr_pmu_idle_mask_gr_enabled_f() |
+		pwr_pmu_idle_mask_ce_2_enabled_f());
+
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(1));
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
+			pwr_pmu_idle_ctrl_filter_m(),
+			pwr_pmu_idle_ctrl_value_busy_f() |
+			pwr_pmu_idle_ctrl_filter_disabled_f());
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(1), data);
+
+	data = gk20a_readl(g, pwr_pmu_idle_ctrl_r(2));
+	data = set_field(data, pwr_pmu_idle_ctrl_value_m() |
+			pwr_pmu_idle_ctrl_filter_m(),
+			pwr_pmu_idle_ctrl_value_always_f() |
+			pwr_pmu_idle_ctrl_filter_disabled_f());
+	gk20a_writel(g, pwr_pmu_idle_ctrl_r(2), data);
 }
 
-int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
+u32 gk20a_pmu_read_idle_counter(struct gk20a *g, u32 counter_id)
 {
-	*load = g->pmu.load_shadow;
-	return 0;
+	return pwr_pmu_idle_count_value_v(
+		gk20a_readl(g, pwr_pmu_idle_count_r(counter_id)));
 }
 
-int gk20a_pmu_load_update(struct gk20a *g)
+void gk20a_pmu_reset_idle_counter(struct gk20a *g, u32 counter_id)
 {
-	struct nvgpu_pmu *pmu = &g->pmu;
-	u16 _load = 0;
-
-	if (!pmu->perfmon_ready) {
-		pmu->load_shadow = 0;
-		return 0;
-	}
-
-	pmu_copy_from_dmem(pmu, pmu->sample_buffer, (u8 *)&_load, 2, 0);
-	pmu->load_shadow = _load / 10;
-	pmu->load_avg = (((9*pmu->load_avg) + pmu->load_shadow) / 10);
-
-	return 0;
-}
-
-void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
-				 u32 *total_cycles)
-{
-	if (!g->power_on || gk20a_busy(g)) {
-		*busy_cycles = 0;
-		*total_cycles = 0;
-		return;
-	}
-
-	*busy_cycles = pwr_pmu_idle_count_value_v(
-		gk20a_readl(g, pwr_pmu_idle_count_r(1)));
-	rmb();
-	*total_cycles = pwr_pmu_idle_count_value_v(
-		gk20a_readl(g, pwr_pmu_idle_count_r(2)));
-	gk20a_idle(g);
-}
-
-void gk20a_pmu_reset_load_counters(struct gk20a *g)
-{
-	u32 reg_val = pwr_pmu_idle_count_reset_f(1);
-
-	if (!g->power_on || gk20a_busy(g))
-		return;
-
-	gk20a_writel(g, pwr_pmu_idle_count_r(2), reg_val);
-	wmb();
-	gk20a_writel(g, pwr_pmu_idle_count_r(1), reg_val);
-	gk20a_idle(g);
+	gk20a_writel(g, pwr_pmu_idle_count_r(counter_id),
+		pwr_pmu_idle_count_reset_f(1));
 }
 
 void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,

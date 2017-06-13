@@ -386,7 +386,7 @@ static ssize_t counters_show(struct device *dev,
 	u32 busy_cycles, total_cycles;
 	ssize_t res;
 
-	gk20a_pmu_get_load_counters(g, &busy_cycles, &total_cycles);
+	nvgpu_pmu_get_load_counters(g, &busy_cycles, &total_cycles);
 
 	res = snprintf(buf, PAGE_SIZE, "%u %u\n", busy_cycles, total_cycles);
 
@@ -400,7 +400,7 @@ static ssize_t counters_show_reset(struct device *dev,
 	ssize_t res = counters_show(dev, attr, buf);
 	struct gk20a *g = get_gk20a(dev);
 
-	gk20a_pmu_reset_load_counters(g);
+	nvgpu_pmu_reset_load_counters(g);
 
 	return res;
 }
@@ -422,8 +422,8 @@ static ssize_t gk20a_load_show(struct device *dev,
 		if (err)
 			return err;
 
-		gk20a_pmu_load_update(g);
-		gk20a_pmu_load_norm(g, &busy_time);
+		nvgpu_pmu_load_update(g);
+		nvgpu_pmu_load_norm(g, &busy_time);
 		gk20a_idle(g);
 	}
 

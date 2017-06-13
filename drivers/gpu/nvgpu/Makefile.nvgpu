@@ -62,6 +62,7 @@ nvgpu-y := \
 	common/pmu/pmu_ipc.o \
 	common/pmu/pmu_fw.o \
 	common/pmu/pmu_pg.o \
+	common/pmu/pmu_perfmon.o \
 	gk20a/gk20a.o \
 	gk20a/bus_gk20a.o \
 	gk20a/pramin_gk20a.o \

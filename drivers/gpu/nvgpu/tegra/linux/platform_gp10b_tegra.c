@@ -280,7 +280,7 @@ static void gp10b_tegra_prescale(struct device *dev)
 
 	gk20a_dbg_fn("");
 
-	gk20a_pmu_load_norm(g, &avg);
+	nvgpu_pmu_load_norm(g, &avg);
 
 	gk20a_dbg_fn("done");
 }

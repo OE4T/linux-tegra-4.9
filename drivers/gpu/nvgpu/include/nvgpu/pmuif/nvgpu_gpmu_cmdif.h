@@ -78,6 +78,7 @@ struct pmu_msg {
 #define PMU_UNIT_VOLT	(0x0E)
 
 #define PMU_UNIT_END		(0x23)
+#define PMU_UNIT_INVALID	(0xFF)
 
 #define PMU_UNIT_TEST_START	(0xFE)
 #define PMU_UNIT_END_SIM	(0xFF)

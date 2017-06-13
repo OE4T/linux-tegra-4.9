@@ -419,7 +419,7 @@ int tegra_nvdisp_get_degamma_config(struct tegra_dc *dc,
 {
 	int ret = 0;
 
-	if (!dc->cmu_enabled || win->flags & TEGRA_WIN_FLAG_DEGAMMA_NONE)
+	if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_NONE)
 		return win_win_set_params_degamma_range_none_f();
 
 	if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_MASK) {
@@ -834,8 +834,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 				return -EINVAL;
 			}
 
-			/* skip updating csc if cmu is disabled */
-			if (dc->cmu_enabled && dc_win->csc_dirty) {
+			if (dc_win->csc_dirty) {
 				tegra_nvdisp_set_win_csc(win,
 						&dc_win->nvdisp_win_csc);
 				dc_win->csc_dirty = false;

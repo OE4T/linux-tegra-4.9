@@ -2579,8 +2579,6 @@ static void _tegra_nvdisp_update_cmu(struct tegra_dc *dc,
 int tegra_nvdisp_update_cmu(struct tegra_dc *dc,
 			struct tegra_dc_nvdisp_lut *cmu)
 {
-	int i;
-	u32 reg_val, mask;
 	u32 act_req_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
 
 	mutex_lock(&dc->lock);
@@ -2593,45 +2591,6 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc,
 
 	_tegra_nvdisp_update_cmu(dc, cmu);
 	tegra_nvdisp_set_color_control(dc);
-
-	for_each_set_bit(i, &dc->valid_windows,
-			tegra_dc_get_numof_dispwindows()) {
-		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
-
-		BUG_ON(!win);
-
-		if (!WIN_IS_ENABLED(win))
-			continue;
-		mask = win_win_set_params_degamma_range_mask_f();
-		reg_val = nvdisp_win_read(win, win_win_set_params_r());
-		reg_val &= ~mask;
-
-		if (dc->cmu_enabled) {
-			/* enable degamma */
-			reg_val |= tegra_nvdisp_get_degamma_config(dc, win);
-			nvdisp_win_write(win, reg_val, win_win_set_params_r());
-
-			/* enable csc if csc_enable is true */
-			if (win->nvdisp_win_csc.csc_enable)
-				tegra_nvdisp_set_win_csc(win,
-							&win->nvdisp_win_csc);
-		} else {
-			/* disable degamma */
-			nvdisp_win_write(win, reg_val, win_win_set_params_r());
-
-			/* disable csc */
-			if (win->nvdisp_win_csc.csc_enable) {
-				reg_val =
-					win_window_set_control_csc_disable_f();
-				nvdisp_win_write(win, reg_val,
-					win_window_set_control_r());
-			}
-		}
-
-		act_req_mask |=
-			nvdisp_cmd_state_ctrl_a_act_req_enable_f()
-			<< win->idx;
-	}
 
 	tegra_dc_writel(dc, act_req_mask, nvdisp_cmd_state_ctrl_r());
 	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r());
@@ -4256,10 +4215,6 @@ void tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 	struct tegra_dc_nvdisp_lut *nvdisp_lut;
 	u32 reg_val = 0;
 
-	/* TODO: Currently dc->cmu_enabled controls lut1, csc and output lut
-	 * We need to decouple cmu_enabled and make it exclusive for
-	 * output lut only
-	 * */
 	dc->cmu_enabled = user_nvdisp_cmu->cmu_enable ? true : false;
 	reg_val = tegra_dc_readl(dc, nvdisp_color_ctl_r());
 

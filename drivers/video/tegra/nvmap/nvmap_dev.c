@@ -1776,6 +1776,10 @@ int __init nvmap_probe(struct platform_device *pdev)
 	dev->dev_user.parent = &pdev->dev;
 	dev->handles = RB_ROOT;
 
+	if (of_property_read_bool(pdev->dev.of_node,
+				"no-cache-maint-by-set-ways"))
+		nvmap_cache_maint_by_set_ways = 0;
+
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	e = nvmap_page_pool_init(dev);
 	if (e)

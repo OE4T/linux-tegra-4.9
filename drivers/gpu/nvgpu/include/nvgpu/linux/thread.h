@@ -21,6 +21,9 @@ struct task_struct;
 
 struct nvgpu_thread {
 	struct task_struct *task;
+	bool running;
+	int (*fn)(void *);
+	void *data;
 };
 
 #endif /* __NVGPU_THREAD_LINUX_H__ */

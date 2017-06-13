@@ -18,15 +18,28 @@
 
 #include <nvgpu/thread.h>
 
+int nvgpu_thread_proxy(void *threaddata)
+{
+	struct nvgpu_thread *thread = threaddata;
+	int ret = thread->fn(thread->data);
+
+	thread->running = false;
+	return ret;
+}
+
 int nvgpu_thread_create(struct nvgpu_thread *thread,
 		void *data,
 		int (*threadfn)(void *data), const char *name)
 {
-	struct task_struct *task = kthread_create(threadfn, data, name);
+	struct task_struct *task = kthread_create(nvgpu_thread_proxy,
+			thread, name);
 	if (IS_ERR(task))
 		return PTR_ERR(task);
 
 	thread->task = task;
+	thread->fn = threadfn;
+	thread->data = data;
+	thread->running = true;
 	wake_up_process(task);
 	return 0;
 };
@@ -44,5 +57,5 @@ bool nvgpu_thread_should_stop(struct nvgpu_thread *thread)
 
 bool nvgpu_thread_is_running(struct nvgpu_thread *thread)
 {
-	return thread->task != NULL;
+	return ACCESS_ONCE(thread->running);
 };

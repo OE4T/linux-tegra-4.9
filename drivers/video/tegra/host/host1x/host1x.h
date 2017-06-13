@@ -80,6 +80,8 @@ struct host1x_device_info {
 	size_t		firmware_area_size;
 	/* true if host1x access direct but engines are not owned */
 	bool		vmserver_owns_engines;
+	/* true if hw supports remote syncpoint interrupts */
+	bool		use_cross_vm_interrupts;
 };
 
 struct nvhost_vm_firmware_area {

@@ -241,7 +241,8 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	 * does not allow to set up threshold interrupt locally and polling
 	 * is required.
 	 */
-	if (!nvhost_dev_is_virtual(host->dev))
+	if (!nvhost_dev_is_virtual(host->dev) &&
+	    !host->info.use_cross_vm_interrupts)
 		syncpt_poll = !nvhost_syncpt_is_valid_pt(sp, id);
 
 	if (value)

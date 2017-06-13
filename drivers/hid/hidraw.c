@@ -115,7 +115,7 @@ static ssize_t hidraw_send_report(struct file *file, const char __user *buffer, 
 	unsigned int minor = iminor(file_inode(file));
 	struct hid_device *dev;
 	__u8 *buf;
-	int ret = 0;
+	long ret = 0;
 
 	if (!hidraw_table[minor] || !hidraw_table[minor]->exist) {
 		ret = -ENODEV;

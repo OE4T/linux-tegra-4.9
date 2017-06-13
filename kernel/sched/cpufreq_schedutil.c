@@ -60,6 +60,7 @@ struct sugov_cpu {
 	unsigned long util;
 	unsigned long max;
 	unsigned int flags;
+	unsigned int cpu;
 };
 
 static DEFINE_PER_CPU(struct sugov_cpu, sugov_cpu);
@@ -151,12 +152,12 @@ static unsigned int get_next_freq(struct sugov_cpu *sg_cpu, unsigned long util,
 	return cpufreq_driver_resolve_freq(policy, freq);
 }
 
-static void sugov_get_util(unsigned long *util, unsigned long *max)
+static void sugov_get_util(unsigned long *util, unsigned long *max, int cpu)
 {
-	struct rq *rq = this_rq();
+	struct rq *rq = cpu_rq(cpu);
 	unsigned long cfs_max, util_max;
 
-	cfs_max = arch_scale_cpu_capacity(NULL, smp_processor_id());
+	cfs_max = arch_scale_cpu_capacity(NULL, cpu);
 
 #ifdef CONFIG_TASK_WEIGHT
 	util_max = max(rq->cfs.avg.scaling_avg, rq->cfs.avg.scaling_fast_avg);
@@ -217,7 +218,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 	if (flags & SCHED_CPUFREQ_RT_DL) {
 		next_f = policy->cpuinfo.max_freq;
 	} else {
-		sugov_get_util(&util, &max);
+		sugov_get_util(&util, &max, sg_cpu->cpu);
 		sugov_iowait_boost(sg_cpu, &util, &max);
 		next_f = get_next_freq(sg_cpu, util, max);
 	}
@@ -278,7 +279,11 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 	unsigned long util, max;
 	unsigned int next_f;
 
-	sugov_get_util(&util, &max);
+	/* Allow remote util updates only on shared clk domains */
+	if (!cpumask_test_cpu(smp_processor_id(), sg_policy->policy->cpus))
+		return;
+
+	sugov_get_util(&util, &max, sg_cpu->cpu);
 
 	raw_spin_lock(&sg_policy->update_lock);
 
@@ -608,6 +613,7 @@ static int sugov_start(struct cpufreq_policy *policy)
 		struct sugov_cpu *sg_cpu = &per_cpu(sugov_cpu, cpu);
 
 		sg_cpu->sg_policy = sg_policy;
+		sg_cpu->cpu = cpu;
 		if (policy_is_shared(policy)) {
 			sg_cpu->util = 0;
 			sg_cpu->max = 0;

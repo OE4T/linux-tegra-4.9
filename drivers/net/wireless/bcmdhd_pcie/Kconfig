@@ -12,11 +12,11 @@ config BCMDHD_PCIE
 	depends on BCMDHD && PCI
 
 config BCM4356
-	tristate "BCM4356 support"
+	bool "BCM4356 support"
 	depends on BCMDHD
 
 config BCM4359
-	tristate "BCM4359 support"
+	bool "BCM4359 support"
 	depends on BCMDHD
 
 config BCMDHD_FW_PATH

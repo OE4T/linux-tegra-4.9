@@ -1114,7 +1114,7 @@ static const struct tegra_adma_chip_data tegra186_chip_data = {
 };
 static const struct of_device_id tegra_adma_of_match[] = {
 	{ .compatible = "nvidia,tegra210-adma", .data = &tegra210_chip_data},
-	{ .compatible = "nvidia,tegra186-adma-hv", .data = &tegra186_chip_data},
+	{ .compatible = "nvidia,tegra210-adma-hv", .data = &tegra186_chip_data},
 	{ .compatible = "nvidia,tegra186-adma", .data = &tegra186_chip_data},
 	{ },
 };
@@ -1163,7 +1163,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	}
 
 	if (of_device_is_compatible(pdev->dev.of_node,
-				    "nvidia,tegra186-adma-hv"))
+				    "nvidia,tegra210-adma-hv"))
 		tdma->is_virt = true;
 	else
 		tdma->is_virt = false;

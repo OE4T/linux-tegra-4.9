@@ -311,12 +311,12 @@ static inline int bar1_aperture_size_mb_gk20a(void)
 #define NV_MM_DEFAULT_KERNEL_SIZE (1ULL << 32)
 
 /*
- * When not using unified address spaces the bottom 16GB of the space are used
- * for small pages and the remaining high memory is used for large pages.
+ * When not using unified address spaces, the bottom 56GB of the space are used
+ * for small pages, and the remaining high memory is used for large pages.
  */
 static inline u64 __nv_gmmu_va_small_page_limit(void)
 {
-	return ((u64)SZ_1G * 16);
+	return ((u64)SZ_1G * 56);
 }
 
 enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,

@@ -1584,7 +1584,10 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev, u8 *buffer,
 					&i2c_dev->tx_dma_complete,
 					TEGRA_I2C_TIMEOUT);
 			if (time_left == 0) {
-				dev_err(i2c_dev->dev, "tx dma timeout\n");
+				dev_err(i2c_dev->dev,
+					"tx dma timeout txlen:%d rxlen:%d\n",
+					tx_len, rx_len);
+				tegra_i2c_reg_dump(i2c_dev);
 				dmaengine_terminate_all(i2c_dev->tx_dma_chan);
 				if (i2c_dev->curr_direction & DATA_DMA_DIR_RX)
 					dmaengine_terminate_all(
@@ -1597,7 +1600,10 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev, u8 *buffer,
 					&i2c_dev->rx_dma_complete,
 					TEGRA_I2C_TIMEOUT);
 			if (time_left == 0) {
-				dev_err(i2c_dev->dev, "rx dma timeout\n");
+				dev_err(i2c_dev->dev,
+					"rx dma timeout txlen:%d rxlen:%d\n",
+					tx_len, rx_len);
+				tegra_i2c_reg_dump(i2c_dev);
 				dmaengine_terminate_all(i2c_dev->rx_dma_chan);
 				goto end_xfer;
 			}
@@ -1620,8 +1626,8 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev, u8 *buffer,
 	time_left = wait_for_completion_timeout(&i2c_dev->msg_complete,
 						TEGRA_I2C_TIMEOUT);
 	if (time_left == 0) {
-		dev_err(i2c_dev->dev, "pio xfer timed out addr: 0x%x\n",
-			i2c_dev->msg_add);
+		dev_err(i2c_dev->dev, "pio timed out addr: 0x%x tlen:%d rlen:%d\n",
+			i2c_dev->msg_add, tx_len, rx_len);
 		tegra_i2c_reg_dump(i2c_dev);
 		if (i2c_dev->is_curr_dma_xfer) {
 			if (i2c_dev->curr_direction & DATA_DMA_DIR_TX)

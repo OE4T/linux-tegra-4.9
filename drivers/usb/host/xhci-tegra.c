@@ -25,6 +25,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
+#include <linux/workqueue.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/kthread.h>
@@ -132,6 +133,9 @@
 #define  APMAP_BOOTPATH				BIT(31)
 
 #define IMEM_BLOCK_SIZE				256
+
+/* firmware retry limit */
+#define FW_RETRY_COUNT			(5)
 
 /* device quirks */
 #define QUIRK_FOR_SS_DEVICE				BIT(0)
@@ -372,6 +376,8 @@ struct tegra_xusb {
 	unsigned int num_phys;
 
 	/* Firmware loading related */
+	struct delayed_work firmware_retry_work;
+	int fw_retry_count;
 	bool fw_loaded;
 	struct {
 		size_t size;
@@ -1581,6 +1587,50 @@ static int tegra_xhci_load_firmware(struct tegra_xusb *tegra)
 	return 0;
 }
 
+static void tegra_xusb_probe_finish(const struct firmware *fw, void *context);
+static void tegra_firmware_retry_work(struct work_struct *work)
+{
+	struct tegra_xusb *tegra;
+	struct device *dev;
+	int ret;
+	bool uevent = true;
+
+	tegra = container_of(to_delayed_work(work),
+			struct tegra_xusb, firmware_retry_work);
+	dev = tegra->dev;
+
+	if (++tegra->fw_retry_count >= FW_RETRY_COUNT) {
+		/*
+		 * Last retry.  If CONFIG_FW_LOADER_USER_HELPER_FALLBACK=y and
+		 * uevent=true, in udev based systems, userspace will not get
+		 * any chance to provide firmware file.  This happens due to
+		 * udev stubs aborting firmware requests made by kernel.
+		 *
+		 * Hence try now with uevent=false so that udev does not abort
+		 * syfs based firmware loading interface.  User can load the
+		 * firmware later at any point.
+		 *
+		 * NOTE: If !CONFIG_FW_LOADER_USER_HELPER &&
+		 * !CONFIG_FW_LOADER_USER_HELPER_FALLBACK, last retry will
+		 * be a direct try from rootfs like the previous retries.
+		 */
+		uevent = false;
+		dev_err(dev, "Leaving it upto user to load firmware!\n");
+	}
+
+	ret = request_firmware_nowait(THIS_MODULE, uevent,
+				tegra->soc->firmware,
+				tegra->dev, GFP_KERNEL, tegra,
+				tegra_xusb_probe_finish);
+	if (ret) {
+		dev_err(dev,
+			"Could not submit async request for firmware load %d\n"
+			, ret);
+		usb_put_hcd(tegra->hcd);
+		tegra->hcd = NULL;
+	}
+}
+
 static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 {
 	struct tegra_xusb *tegra = context;
@@ -1593,7 +1643,14 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 	int ret;
 
 	if (!fw) {
-		dev_err(dev, "cannot find firmware\n");
+		if (tegra->fw_retry_count >= FW_RETRY_COUNT) {
+			dev_err(dev, "Giving up on firmware\n");
+			goto put_usb2;
+		}
+
+		dev_err(dev, "cannot find firmware....retry after 1 second\n");
+		schedule_delayed_work(&tegra->firmware_retry_work,
+					msecs_to_jiffies(1000));
 		return;
 	}
 
@@ -1950,6 +2007,9 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 
 	tegra_xusb_debugfs_init(tegra);
 
+	INIT_DELAYED_WORK(&tegra->firmware_retry_work,
+					tegra_firmware_retry_work);
+
 	err = request_firmware_nowait(THIS_MODULE, true,
 				      tegra->soc->firmware,
 				      tegra->dev, GFP_KERNEL, tegra,
@@ -1981,6 +2041,8 @@ put_padctl:
 static int tegra_xusb_remove(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+
+	cancel_delayed_work_sync(&tegra->firmware_retry_work);
 
 	if (tegra->fw_loaded) {
 		struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);

@@ -349,6 +349,7 @@ struct tegra_i2c_dev {
 	bool use_multi_xfer_complete;
 	bool disable_multi_pkt_mode;
 	bool restrict_clk_rate_change_runtime;
+	bool transfer_in_progress;
 };
 
 static void dvc_writel(struct tegra_i2c_dev *i2c_dev, u32 val, unsigned long reg)
@@ -1122,12 +1123,17 @@ static irqreturn_t tegra_i2c_isr(int irq, void *dev_id)
 	u32 mask;
 	bool is_curr_dma_xfer;
 
+	raw_spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
+	if (!i2c_dev->transfer_in_progress) {
+		dev_err(i2c_dev->dev, "ISR called even though no transfer\n");
+		goto done;
+	}
+
 	/* Ignore status bits that we are not expecting */
 	status_raw = i2c_readl(i2c_dev, I2C_INT_STATUS);
 	mask = i2c_readl(i2c_dev, I2C_INT_MASK);
 	status = status_raw & mask;
 
-	raw_spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
 	is_curr_dma_xfer = i2c_dev->is_curr_dma_xfer;
 
 	if (status == 0) {
@@ -2028,6 +2034,7 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 		dev_err(i2c_dev->dev, "runtime resume failed %d\n", ret);
 		return ret;
 	}
+	i2c_dev->transfer_in_progress = true;
 	tegra_i2c_flush_fifos(i2c_dev);
 
 	if (adap->bus_clk_rate != i2c_dev->bus_clk_rate) {
@@ -2066,6 +2073,8 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 		ret = tegra_i2c_single_pkt_xfer(i2c_dev, msgs, num);
 
 	pm_runtime_put(i2c_dev->dev);
+	i2c_dev->transfer_in_progress = false;
+
 	return ret;
 }
 

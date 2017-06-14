@@ -1959,6 +1959,11 @@ static int tegra_i2c_change_clock_rate(struct tegra_i2c_dev *i2c_dev)
 			I2C_CLK_DIVISOR_HS_MODE_MASK;
 	}
 
+	if (i2c_dev->hw->clk_divisor_fast_plus_mode &&
+		(i2c_dev->bus_clk_rate == I2C_FAST_MODE_PLUS))
+		i2c_dev->clk_divisor_non_hs_mode =
+			i2c_dev->hw->clk_divisor_fast_plus_mode;
+
 	clk_divisor = i2c_dev->clk_divisor_hs_mode;
 	clk_divisor |= i2c_dev->clk_divisor_non_hs_mode <<
 					I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT;

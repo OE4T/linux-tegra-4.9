@@ -427,8 +427,6 @@ struct nvgpu_gpu_get_buffer_info_args {
 
 #define NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_MAX_COUNT		16
 #define NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC		1
-#define NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_JIFFIES		2
-#define NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TIMEOFDAY	3
 
 struct nvgpu_gpu_get_cpu_time_correlation_sample {
 	/* gpu timestamp value */

@@ -128,44 +128,15 @@ int gk20a_read_ptimer(struct gk20a *g, u64 *value)
 	return -EBUSY;
 }
 
-static inline u64 get_cpu_timestamp_tsc(void)
-{
-	return ((u64) get_cycles());
-}
-
-static inline u64 get_cpu_timestamp_jiffies(void)
-{
-	return (get_jiffies_64() - INITIAL_JIFFIES);
-}
-
-static inline u64 get_cpu_timestamp_timeofday(void)
-{
-	struct timeval tv;
-
-	do_gettimeofday(&tv);
-	return timeval_to_jiffies(&tv);
-}
-
 int gk20a_get_timestamps_zipper(struct gk20a *g,
 		u32 source_id, u32 count,
 		struct nvgpu_cpu_time_correlation_sample *samples)
 {
 	int err = 0;
 	unsigned int i = 0;
-	u64 (*get_cpu_timestamp)(void) = NULL;
 
-	switch (source_id) {
-	case NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC:
-		get_cpu_timestamp = get_cpu_timestamp_tsc;
-		break;
-	case NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_JIFFIES:
-		get_cpu_timestamp = get_cpu_timestamp_jiffies;
-		break;
-	case NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TIMEOFDAY:
-		get_cpu_timestamp = get_cpu_timestamp_timeofday;
-		break;
-	default:
-		nvgpu_err(g, "invalid cpu clock source id\n");
+	if (source_id != NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC) {
+		nvgpu_err(g, "source_id %u not supported", source_id);
 		return -EINVAL;
 	}
 
@@ -180,7 +151,7 @@ int gk20a_get_timestamps_zipper(struct gk20a *g,
 		if (err)
 			return err;
 
-		samples[i].cpu_timestamp = get_cpu_timestamp();
+		samples[i].cpu_timestamp = (u64)get_cycles();
 	}
 
 end:

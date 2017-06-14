@@ -46,12 +46,12 @@ struct nvmap_handle_ref;
 #define TEGRA_WIN_FLAG_CS_REC601	(1 << 14)
 #define TEGRA_WIN_FLAG_CS_REC709	(2 << 14)
 #define TEGRA_WIN_FLAG_CS_REC2020	(4 << 14)
-#define TEGRA_WIN_FLAG_DEGAMMA_MASK	(15 << 16)
-#define TEGRA_WIN_FLAG_DEGAMMA_DEFAULT	(0 << 16) /* driver selects */
-#define TEGRA_WIN_FLAG_DEGAMMA_NONE	(1 << 16)
-#define TEGRA_WIN_FLAG_DEGAMMA_SRGB	(2 << 16)
-#define TEGRA_WIN_FLAG_DEGAMMA_YUV_8_10	(4 << 16)
-#define TEGRA_WIN_FLAG_DEGAMMA_YUV_12	(8 << 16)
+#define TEGRA_WIN_FLAG_DEGAMMA_MASK	(15 << 17)
+#define TEGRA_WIN_FLAG_DEGAMMA_DEFAULT	(0 << 17) /* driver selects */
+#define TEGRA_WIN_FLAG_DEGAMMA_NONE	(1 << 17)
+#define TEGRA_WIN_FLAG_DEGAMMA_SRGB	(2 << 17)
+#define TEGRA_WIN_FLAG_DEGAMMA_YUV_8_10	(4 << 17)
+#define TEGRA_WIN_FLAG_DEGAMMA_YUV_12	(8 << 17)
 #define TEGRA_WIN_FLAG_INVALID		(1 << 31) /* window does not exist. */
 
 #define TEGRA_WIN_BLEND_FLAGS_MASK \

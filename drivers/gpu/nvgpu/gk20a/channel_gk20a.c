@@ -1823,28 +1823,29 @@ static int gk20a_channel_poll_worker(void *arg)
 {
 	struct gk20a *g = (struct gk20a *)arg;
 	struct gk20a_channel_worker *worker = &g->channel_worker;
-	unsigned long start_wait;
-	/* event timeout for also polling the watchdog */
-	unsigned long timeout = msecs_to_jiffies(100);
+	unsigned long watchdog_interval = 100; /* milliseconds */
+	struct nvgpu_timeout timeout;
 	int get = 0;
 
 	gk20a_dbg_fn("");
 
-	start_wait = jiffies;
+	nvgpu_timeout_init(g, &timeout, watchdog_interval,
+			NVGPU_TIMER_CPU_TIMER);
 	while (!nvgpu_thread_should_stop(&worker->poll_task)) {
 		int ret;
 
 		ret = NVGPU_COND_WAIT(
 				&worker->wq,
 				__gk20a_channel_worker_pending(g, get),
-				jiffies_to_msecs(timeout)) > 0;
+				watchdog_interval) > 0;
 
 		if (ret == 0)
 			gk20a_channel_worker_process(g, &get);
 
-		if (jiffies - start_wait >= timeout) {
+		if (nvgpu_timeout_peek_expired(&timeout)) {
 			gk20a_channel_poll_timeouts(g);
-			start_wait = jiffies;
+			nvgpu_timeout_init(g, &timeout, watchdog_interval,
+					NVGPU_TIMER_CPU_TIMER);
 		}
 	}
 	return 0;

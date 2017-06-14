@@ -227,6 +227,16 @@ void nvhost_queue_deinit(struct nvhost_queue_pool *pool)
 	pool = NULL;
 }
 
+void nvhost_queue_abort_all(struct nvhost_queue_pool *pool)
+{
+	u32 id;
+
+	mutex_lock(&pool->queue_lock);
+	for_each_set_bit(id, &pool->alloc_table, pool->max_queue_cnt)
+		nvhost_queue_abort(&pool->queues[id]);
+	mutex_unlock(&pool->queue_lock);
+}
+
 static void nvhost_queue_release(struct kref *ref)
 {
 	struct nvhost_queue *queue = container_of(ref, struct nvhost_queue,

@@ -1,7 +1,7 @@
 /*
  * PVA mailbox header
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -51,6 +51,7 @@ enum pva_mailbox_status {
 	PVA_MBOX_STATUS_INVALID	= 0,
 	PVA_MBOX_STATUS_WFI	= 1,
 	PVA_MBOX_STATUS_DONE	= 2,
+	PVA_MBOX_STATUS_ABORTED	= 3,
 };
 
 /**
@@ -97,5 +98,16 @@ int pva_mailbox_send_cmd_sync(struct pva *pva,
  * the status set in mailbox7 by the PVA uCode.
  */
 void pva_mailbox_isr(struct pva *pva);
+
+/**
+ * pva_mailbox_wait_event() - mailbox wait event
+ *
+ * @pva:»       Pointer to PVA structure
+ * @wait_time»       WaitTime Interval for the event
+ *
+ * This function do the wait until the mailbox isr get invoked based on
+ * the mailbox register set by the ucode.
+ */
+int pva_mailbox_wait_event(struct pva *pva, int wait_time);
 
 #endif /*__PVA_MAINBOX_H__*/

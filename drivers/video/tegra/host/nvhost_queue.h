@@ -185,6 +185,13 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
 					bool use_channel);
 
 /**
+ * @brief		Abort all active queues
+ *
+ * @param pool		Pointer to a queue pool table
+ */
+void nvhost_queue_abort_all(struct nvhost_queue_pool *pool);
+
+/**
  * @brief	Abort tasks within a client queue
  *
  * This function aborts all tasks from the given clinet queue. If there is no

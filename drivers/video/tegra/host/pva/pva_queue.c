@@ -23,6 +23,8 @@
 #include <linux/slab.h>
 #include <linux/errno.h>
 
+#include <linux/nvhost.h>
+
 #include <uapi/linux/nvhost_pva_ioctl.h>
 
 #include "nvhost_syncpt_unit_interface.h"
@@ -939,7 +941,8 @@ static void pva_task_update(void *priv, int nr_completed)
 	/* Unpin job memory. PVA shouldn't be using it anymore */
 	pva_task_unpin_mem(task);
 
-	pva_completed_task_status(task->pva);
+	if (!task->invalid)
+		pva_completed_task_status(task->pva);
 
 	/* Drop PM runtime reference of PVA */
 	nvhost_module_idle(task->pva->pdev);
@@ -1135,6 +1138,8 @@ static int pva_task_submit(struct pva_submit_task *task)
 	if (err < 0)
 		goto err_submit;
 
+	task->syncpt_thresh = thresh;
+
 	err = nvhost_intr_register_notifier(host1x_pdev,
 					    queue->syncpt_id, thresh,
 					    pva_task_update, task);
@@ -1253,12 +1258,96 @@ static int pva_queue_set_attribute(struct nvhost_queue *queue, void *args)
 	return err;
 }
 
+static void pva_queue_cleanup_fence(struct pva_fence *fence,
+				    struct pva_parameter_ext *fence_ext)
+{
+	struct dma_buf *dmabuf;
+	u8 *dmabuf_cpuva;
+	u32 *fence_cpuva;
+
+	if (fence->type != PVA_FENCE_TYPE_SEMAPHORE)
+		return;
+
+	dmabuf = fence_ext->dmabuf;
+	dmabuf_cpuva = dma_buf_vmap(dmabuf);
+
+	if (!dmabuf_cpuva)
+		return;
+
+	if (!(fence->semaphore_offset % 4))
+		return;
+
+	fence_cpuva = (void *)&dmabuf_cpuva[fence->semaphore_offset];
+	*fence_cpuva = fence->semaphore_value;
+
+	dma_buf_vunmap(dmabuf, dmabuf_cpuva);
+}
+
+static void pva_queue_cleanup_status(struct pva_status_handle *status_h,
+				     struct pva_parameter_ext *status_h_ext)
+{
+	struct dma_buf *dmabuf = status_h_ext->dmabuf;
+	u8 *dmabuf_cpuva = dma_buf_vmap(dmabuf);
+	struct nvhost_notification *status_ptr;
+
+	if (!dmabuf_cpuva)
+		return;
+
+	status_ptr = (void *)&dmabuf_cpuva[status_h->offset];
+	status_ptr->status = 0x8888;
+
+	dma_buf_vunmap(dmabuf, dmabuf_cpuva);
+}
+
+static void pva_queue_cleanup(struct nvhost_queue *queue,
+			      struct pva_submit_task *task)
+{
+	struct platform_device *pdev = queue->pool->pdev;
+	struct nvhost_master *host = nvhost_get_host(pdev);
+	bool expired = nvhost_syncpt_is_expired(&host->syncpt,
+						queue->syncpt_id,
+						task->syncpt_thresh);
+	unsigned int i;
+
+	/*
+	 * Ensure that there won't be communication with PVA for
+	 * checking the task status
+	 */
+	task->invalid = true;
+
+	/* Ignore expired fences */
+	if (expired)
+		return;
+
+	/* Write task status first */
+	for (i = 0; i < task->num_output_task_status; i++)
+		pva_queue_cleanup_status(task->output_task_status,
+					 task->output_task_status_ext);
+
+	/* Finish up non-syncpoint fences */
+	for (i = 0; i < task->num_postfences; i++)
+		pva_queue_cleanup_fence(task->postfences + i,
+					task->postfences_sema_ext + i);
+
+	/* Finish syncpoint increments to release waiters */
+	nvhost_syncpt_cpu_incr_ext(pdev, queue->syncpt_id);
+}
+
 static int pva_queue_abort(struct nvhost_queue *queue)
 {
-	/* TBD: Abort pending tasks from the queue */
+	struct pva_submit_task *task;
+
+	mutex_lock(&queue->list_lock);
+
+	list_for_each_entry(task, &queue->tasklist, node)
+		pva_queue_cleanup(queue, task);
+
+	mutex_unlock(&queue->list_lock);
 
 	return 0;
 }
+
+
 
 struct nvhost_queue_ops pva_queue_ops = {
 	.abort = pva_queue_abort,

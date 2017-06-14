@@ -86,7 +86,6 @@ static int pva_init_fw(struct platform_device *pdev)
 	struct pva_dma_alloc_info *priv2_buffer;
 	u32 *ucode_ptr;
 	int err = 0, w;
-	int timeout;
 	u64 ucode_useg_addr;
 
 	nvhost_dbg_fn("");
@@ -172,16 +171,7 @@ static int pva_init_fw(struct platform_device *pdev)
 	nvhost_dbg_fn("Waiting for PVA to be READY");
 
 	/* Wait PVA to report itself as ready */
-	if (tegra_platform_is_silicon()) {
-		timeout = wait_event_timeout(pva->mailbox_waitqueue,
-			pva->mailbox_status == PVA_MBOX_STATUS_DONE,
-			msecs_to_jiffies(60000));
-		if (timeout <= 0)
-			err = -ETIMEDOUT;
-
-	} else
-		wait_event(pva->mailbox_waitqueue,
-			pva->mailbox_status == PVA_MBOX_STATUS_DONE);
+	err = pva_mailbox_wait_event(pva, 60000);
 
 	pva->mailbox_status = PVA_MBOX_STATUS_INVALID;
 
@@ -422,6 +412,8 @@ int pva_finalize_poweron(struct platform_device *pdev)
 		}
 	}
 
+	pva->booted = true;
+
 	return err;
 
 err_poweron:
@@ -433,6 +425,8 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
+
+	pva->booted = false;
 
 	disable_irq(pva->irq);
 
@@ -477,6 +471,7 @@ static int pva_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, pdata);
 	init_waitqueue_head(&pva->mailbox_waitqueue);
 	mutex_init(&pva->mailbox_mutex);
+	mutex_init(&pva->ccq_mutex);
 	pva->submit_mode = PVA_SUBMIT_MODE_MAILBOX;
 
 	/* Map MMIO range to kernel space */
@@ -507,6 +502,8 @@ static int pva_probe(struct platform_device *pdev)
 	err = pva_register_isr(pdev);
 	if (err < 0)
 		goto err_isr_init;
+
+	pva_abort_init(pva);
 
 	err = nvhost_syncpt_unit_interface_init(pdev);
 	if (err)

@@ -1,7 +1,7 @@
 /*
  * PVA ISR code for T194
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,6 +32,7 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 	u32 status7 = host1x_readl(pdev, hsp_sm7_r());
 	u32 status6 = host1x_readl(pdev, hsp_sm6_r());
 	u32 status5 = host1x_readl(pdev, hsp_sm5_r());
+	bool recover = false;
 
 	if (status5 & PVA_AISR_INT_PENDING) {
 		nvhost_dbg_info("PVA AISR (%x)", status7);
@@ -48,6 +49,10 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_PRINTF_OVERFLOW");
 		if (status5 & PVA_AISR_CRASH_LOG)
 			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_CRASH_LOG");
+		if (status5 & PVA_AISR_ABORT) {
+			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_ABORT");
+			recover = true;
+		}
 
 		host1x_writel(pdev, hsp_sm5_r(), 0x0);
 	}
@@ -71,6 +76,9 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 
 	/* Copy trace points to ftrace buffer */
 	pva_trace_copy_to_ftrace(pva);
+
+	if (recover)
+		pva_abort(pva);
 
 	return IRQ_HANDLED;
 }

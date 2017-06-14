@@ -55,15 +55,25 @@ static int pva_ccq_wait(struct pva *pva, int timeout)
 
 int pva_ccq_send(struct pva *pva, u64 cmd)
 {
-	int err;
+	int err = 0;
+
+	mutex_lock(&pva->ccq_mutex);
 
 	err = pva_ccq_wait(pva, 100);
 	if (err < 0)
-		return err;
+		goto err_wait_ccq;
 
 	/* Make the writes to CCQ */
 	host1x_writel(pva->pdev, cfg_ccq_r(), (u32)(cmd >> 32));
 	host1x_writel(pva->pdev, cfg_ccq_r(), (u32)(cmd & 0xffffffff));
 
-	return 0;
+	mutex_unlock(&pva->ccq_mutex);
+
+	return err;
+
+err_wait_ccq:
+	mutex_unlock(&pva->ccq_mutex);
+	pva_abort(pva);
+
+	return err;
 }

@@ -154,6 +154,8 @@ struct pva {
 	enum pva_mailbox_status mailbox_status;
 	struct mutex mailbox_mutex;
 
+	struct mutex ccq_mutex;
+
 	struct pva_crashdump_debugfs_entry debugfs_entry_r5;
 	struct pva_crashdump_debugfs_entry debugfs_entry_vpu0;
 	struct pva_crashdump_debugfs_entry debugfs_entry_vpu1;
@@ -163,6 +165,9 @@ struct pva {
 
 	struct pva_trace_log pva_trace;
 	u32 submit_mode;
+
+	struct work_struct pva_abort_handler_work;
+	bool booted;
 };
 
 /**
@@ -215,6 +220,7 @@ int pva_prepare_poweroff(struct platform_device *pdev);
  *
  */
 int pva_register_isr(struct platform_device *dev);
+
 /**
  * @brief	Initiallze pva debug utils
  *
@@ -223,4 +229,23 @@ int pva_register_isr(struct platform_device *dev);
  *
  */
 void pva_debugfs_init(struct platform_device *pdev);
+
+/**
+ * @brief	Initiallze PVA abort handler
+ *
+ * @param pva	Pointer to PVA structure
+ * @return	none
+ *
+ */
+void pva_abort_init(struct pva *pva);
+
+/**
+ * @brief	Recover PVA back into working state
+ *
+ * @param pva	Pointer to PVA structure
+ * @return	none
+ *
+ */
+void pva_abort(struct pva *pva);
+
 #endif

@@ -83,7 +83,6 @@ struct pva_submit_task {
 	dma_addr_t dma_addr;
 	void *va;
 	int pool_index;
-	u32 *postfence_va;
 
 	u8 num_prefences;
 	u8 num_postfences;
@@ -93,6 +92,8 @@ struct pva_submit_task {
 	u8 num_output_task_status;
 	u32 operation;
 	u64 timeout;
+	bool invalid;
+	u32 syncpt_thresh;
 
 	/* Data provided by userspace "as is" */
 	struct pva_fence prefences[PVA_MAX_PREFENCES];

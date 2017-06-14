@@ -69,6 +69,33 @@ static int pva_mailbox_send_cmd(struct pva *pva, struct pva_cmd *cmd,
 	return 0;
 }
 
+int pva_mailbox_wait_event(struct pva *pva, int wait_time)
+{
+	int timeout = 1;
+	int err;
+
+	/* Wait for the event being triggered in ISR */
+	if (tegra_platform_is_silicon())
+		timeout = wait_event_timeout(pva->mailbox_waitqueue,
+			pva->mailbox_status == PVA_MBOX_STATUS_DONE ||
+			pva->mailbox_status == PVA_MBOX_STATUS_ABORTED,
+			msecs_to_jiffies(wait_time));
+	else
+		wait_event(pva->mailbox_waitqueue,
+			pva->mailbox_status == PVA_MBOX_STATUS_DONE ||
+			pva->mailbox_status == PVA_MBOX_STATUS_ABORTED);
+
+	if (timeout <= 0) {
+		err = -ETIMEDOUT;
+		pva_abort(pva);
+	} else if  (pva->mailbox_status == PVA_MBOX_STATUS_ABORTED)
+		err = -EIO;
+	else
+		err = 0;
+
+	return err;
+}
+
 void pva_mailbox_isr(struct pva *pva)
 {
 	struct platform_device *pdev = pva->pdev;
@@ -118,7 +145,6 @@ int pva_mailbox_send_cmd_sync(struct pva *pva,
 			struct pva_cmd *cmd, u32 nregs,
 			struct pva_mailbox_status_regs *mailbox_status_regs)
 {
-	int timeout;
 	int err = 0;
 
 	if (mailbox_status_regs == NULL) {
@@ -143,19 +169,9 @@ int pva_mailbox_send_cmd_sync(struct pva *pva,
 	if (err < 0)
 		goto err_send_command;
 
-	/* Wait for the event being triggered in ISR */
-	if (tegra_platform_is_silicon()) {
-		timeout = wait_event_timeout(pva->mailbox_waitqueue,
-			pva->mailbox_status == PVA_MBOX_STATUS_DONE,
-			msecs_to_jiffies(100));
-		if (timeout <= 0) {
-			err = -EBUSY;
-			goto err_wait_response;
-		}
-	} else {
-		wait_event(pva->mailbox_waitqueue,
-			pva->mailbox_status == PVA_MBOX_STATUS_DONE);
-	}
+	err = pva_mailbox_wait_event(pva, 100);
+	if (err < 0)
+		goto err_wait_response;
 
 	/* Return interrupt status back to caller */
 	memcpy(mailbox_status_regs, &pva->mailbox_status_regs,

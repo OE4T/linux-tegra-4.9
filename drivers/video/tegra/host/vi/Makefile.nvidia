@@ -1,0 +1,8 @@
+ccflags-y += -I$(srctree)/../nvhost/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/../nvidia/drivers/media/platform/tegra
+ccflags-y += -I$(srctree)/../nvidia/include
+
+obj-y += host_vi_notify.o
+obj-y += vi4.o
+obj-y += vi_notify.o

@@ -34,29 +34,6 @@
 
 #define NV_PCFG 0x88000
 
-/**
- * Init a timer and place the timeout data in @timeout.
- */
-static void init_timeout(u32 timeout_ms, u32 *timeout)
-{
-	*timeout = jiffies + msecs_to_jiffies(timeout_ms);
-}
-
-/**
- * Returns 1 if the current time is after @timeout i.e: the timer timed
- * out. Returns 0 if the timer still has time left.
- */
-static int check_timeout(u32 *timeout)
-{
-	unsigned long now = jiffies;
-	unsigned long timeout_l = (unsigned long)*timeout;
-
-	if (time_after(now, timeout_l))
-		return 1;
-
-	return 0;
-}
-
 static void xve_xve_writel_gp106(struct gk20a *g, u32 reg, u32 val)
 {
 	gk20a_writel(g, NV_PCFG + reg, val);
@@ -231,7 +208,7 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 	u32 dl_mgr, saved_dl_mgr;
 	u32 pl_link_config;
 	u32 link_control_status, link_speed_setting, link_width;
-	u32 timeout;
+	struct nvgpu_timeout timeout;
 	int attempts = 10, err_status = 0;
 
 	g->ops.xve.get_speed(g, &current_link_speed);
@@ -258,26 +235,23 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 	gk20a_writel(g, xp_dl_mgr_r(0), dl_mgr);
 	xv_sc_dbg(DL_SAFE_MODE, "  Done!");
 
-	init_timeout(GPU_XVE_TIMEOUT_MS, &timeout);
+	nvgpu_timeout_init(g, &timeout, GPU_XVE_TIMEOUT_MS,
+			NVGPU_TIMER_CPU_TIMER);
 
 	xv_sc_dbg(CHECK_LINK, "Checking for link idle...");
-	while (1) {
+	do {
 		pl_link_config = gk20a_readl(g, xp_pl_link_config_r(0));
 		if ((xp_pl_link_config_ltssm_status_f(pl_link_config) ==
 		     xp_pl_link_config_ltssm_status_idle_v()) &&
 		    (xp_pl_link_config_ltssm_directive_f(pl_link_config) ==
 		     xp_pl_link_config_ltssm_directive_normal_operations_v()))
 			break;
+	} while (!nvgpu_timeout_expired(&timeout));
 
-		if (check_timeout(&timeout)) {
-			err_status = -ETIMEDOUT;
-			break;
-		}
-	}
-
-	if (err_status == -ETIMEDOUT)
-		/* TODO: debug message. */
+	if (nvgpu_timeout_peek_expired(&timeout)) {
+		err_status = -ETIMEDOUT;
 		goto done;
+	}
 
 	xv_sc_dbg(CHECK_LINK, "  Done");
 
@@ -336,21 +310,19 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 
 	xv_sc_dbg(EXEC_CHANGE, "Running link speed change...");
 
-	init_timeout(GPU_XVE_TIMEOUT_MS, &timeout);
-	while (1) {
+	nvgpu_timeout_init(g, &timeout, GPU_XVE_TIMEOUT_MS,
+			NVGPU_TIMER_CPU_TIMER);
+	do {
 		gk20a_writel(g, xp_pl_link_config_r(0), pl_link_config);
 		if (pl_link_config ==
 		    gk20a_readl(g, xp_pl_link_config_r(0)))
 			break;
+	} while (!nvgpu_timeout_expired(&timeout));
 
-		if (check_timeout(&timeout)) {
-			err_status = -ETIMEDOUT;
-			break;
-		}
-	}
-
-	if (err_status == -ETIMEDOUT)
+	if (nvgpu_timeout_peek_expired(&timeout)) {
+		err_status = -ETIMEDOUT;
 		goto done;
+	}
 
 	xv_sc_dbg(EXEC_CHANGE, "  Wrote PL_LINK_CONFIG.");
 
@@ -370,8 +342,9 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 		 * Read NV_XP_PL_LINK_CONFIG until the link has swapped to
 		 * the target speed.
 		 */
-		init_timeout(GPU_XVE_TIMEOUT_MS, &timeout);
-		while (1) {
+		nvgpu_timeout_init(g, &timeout, GPU_XVE_TIMEOUT_MS,
+				NVGPU_TIMER_CPU_TIMER);
+		do {
 			pl_link_config = gk20a_readl(g, xp_pl_link_config_r(0));
 			if (pl_link_config != 0xfffffff &&
 			    (xp_pl_link_config_ltssm_status_f(pl_link_config) ==
@@ -379,13 +352,13 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 			    (xp_pl_link_config_ltssm_directive_f(pl_link_config) ==
 			     xp_pl_link_config_ltssm_directive_normal_operations_v()))
 				break;
+		} while (!nvgpu_timeout_expired(&timeout));
 
-			if (check_timeout(&timeout)) {
-				err_status = -ETIMEDOUT;
-				xv_sc_dbg(EXEC_CHANGE, "  timeout; pl_link_config = 0x%x",
-					pl_link_config);
-				break;
-			}
+		if (nvgpu_timeout_peek_expired(&timeout)) {
+			err_status = -ETIMEDOUT;
+			xv_sc_dbg(EXEC_CHANGE, "  timeout; pl_link_config = 0x%x",
+				pl_link_config);
+			break;
 		}
 
 		xv_sc_dbg(EXEC_CHANGE, "  Change done... Checking status");

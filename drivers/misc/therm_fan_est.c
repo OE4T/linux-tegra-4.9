@@ -513,8 +513,8 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 		}
 
 		of_err |= of_property_read_u32_array(child, "coeffs",
-			subdevs[j].coeffs, est_data->trip_length);
-		for (i = 0; i < est_data->trip_length; i++)
+			subdevs[j].coeffs, HIST_LEN);
+		for (i = 0; i < HIST_LEN; i++)
 			pr_debug("THERMAL EST index %d coeffs %d\n",
 				i, subdevs[j].coeffs[i]);
 		j++;

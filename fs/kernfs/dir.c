@@ -123,6 +123,11 @@ static int kernfs_path_from_node_locked(struct kernfs_node *kn_to,
 	size_t depth_from, depth_to, len = 0;
 	int i, j;
 
+	if (!buf) {
+		pr_err("Invalid buffer address\n");
+		return -EINVAL;
+	}
+
 	if (!kn_from)
 		kn_from = kernfs_root(kn_to)->kn;
 
@@ -136,8 +141,7 @@ static int kernfs_path_from_node_locked(struct kernfs_node *kn_to,
 	depth_to = kernfs_depth(common, kn_to);
 	depth_from = kernfs_depth(common, kn_from);
 
-	if (buf)
-		buf[0] = '\0';
+	buf[0] = '\0';
 
 	for (i = 0; i < depth_from; i++)
 		len += strlcpy(buf + len, parent_str,

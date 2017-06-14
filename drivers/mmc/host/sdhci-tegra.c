@@ -921,7 +921,7 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 	bool card_clk_enabled = false;
 	int err;
 
-	if ((tap < 0)  || (tap > MAX_TAP_VALUE)) {
+	if (tap > MAX_TAP_VALUE) {
 		dev_err(mmc_dev(host->mmc), "Invalid tap value %d\n", tap);
 		return;
 	}

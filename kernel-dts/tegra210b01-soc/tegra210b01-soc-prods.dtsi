@@ -12,6 +12,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
+#include "tegra210b01-prods-legacy.dtsi"
+
 / {
         pinmux@700008d4 {
                 prod-settings {

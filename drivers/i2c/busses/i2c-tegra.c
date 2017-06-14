@@ -1586,6 +1586,9 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev, u8 *buffer,
 			if (time_left == 0) {
 				dev_err(i2c_dev->dev, "tx dma timeout\n");
 				dmaengine_terminate_all(i2c_dev->tx_dma_chan);
+				if (i2c_dev->curr_direction & DATA_DMA_DIR_RX)
+					dmaengine_terminate_all(
+							i2c_dev->rx_dma_chan);
 				goto end_xfer;
 			}
 		}

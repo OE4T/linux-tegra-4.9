@@ -232,7 +232,7 @@ static int input_handle_abs_event(struct input_dev *dev,
 
 	if (!is_mt_event) {
 		pold = &dev->absinfo[code].value;
-	} else if (mt) {
+	} else if (mt && (code <= ABS_MT_LAST) && (code >= ABS_MT_FIRST)) {
 		pold = &mt->slots[mt->slot].abs[code - ABS_MT_FIRST];
 	} else {
 		/*

@@ -252,3 +252,10 @@ L:	sw-mobile-system@exchange.nvidia.com
 S:	Supported
 F:	drivers/platform/tegra/tegra186-system-config.c
 F:	drivers/watchdog/*
+
+MEMORY
+M:      Krishna Reddy <vdumpa@nvidia.com>
+M:      Sri Krishna Chowdary <schowdary@nvidia.com>
+L:      sw-mobile-memory@exchange.nvidia.com
+S:      Supported
+F:      drivers/*

@@ -52,6 +52,15 @@ static bool gv11b_mm_mmu_fault_pending(struct gk20a *g)
 	return false;
 }
 
+void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate)
+{
+	nvgpu_log(g, gpu_dbg_fn, "gv11b_mm_l2_flush");
+
+	g->ops.mm.fb_flush(g);
+	gk20a_mm_l2_flush(g, invalidate);
+	g->ops.mm.fb_flush(g);
+}
+
 void gv11b_init_mm(struct gpu_ops *gops)
 {
 	gp10b_init_mm(gops);
@@ -59,4 +68,5 @@ void gv11b_init_mm(struct gpu_ops *gops)
 	gops->mm.init_inst_block = gv11b_init_inst_block;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
 	gops->mm.mmu_fault_pending = gv11b_mm_mmu_fault_pending;
+	gops->mm.l2_flush = gv11b_mm_l2_flush;
 }

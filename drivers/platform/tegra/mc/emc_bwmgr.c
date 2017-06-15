@@ -144,8 +144,6 @@ static int bwmgr_update_clk(void)
 	debug_info.calc_freq = bw;
 	bw = clk_round_rate(bwmgr.emc_clk, bw);
 	debug_info.req_freq = bw;
-	if (bw == tegra_bwmgr_get_emc_rate())
-		return ret;
 
 	ret = clk_set_rate(bwmgr.emc_clk, bw);
 	if (ret)

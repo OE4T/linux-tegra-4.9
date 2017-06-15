@@ -229,3 +229,15 @@ void nvgpu_msleep(unsigned int msecs)
 {
 	msleep(msecs);
 }
+
+/**
+ * nvgpu_current_time_ms - Time in milliseconds from a monotonic clock.
+ *
+ * Return a clock in millisecond units. The start time of the clock is
+ * unspecified; the time returned can be compared with older ones to measure
+ * durations. The source clock does not jump when the system clock is adjusted.
+ */
+s64 nvgpu_current_time_ms(void)
+{
+	return ktime_to_ms(ktime_get());
+}

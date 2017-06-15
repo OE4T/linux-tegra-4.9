@@ -17,6 +17,8 @@
 #ifndef __NVGPU_TIMERS_H__
 #define __NVGPU_TIMERS_H__
 
+#include <nvgpu/types.h>
+
 struct gk20a;
 
 /*
@@ -96,5 +98,10 @@ int __nvgpu_timeout_expired_msg(struct nvgpu_timeout *timeout,
 void nvgpu_msleep(unsigned int msecs);
 void nvgpu_usleep_range(unsigned int min_us, unsigned int max_us);
 void nvgpu_udelay(unsigned int usecs);
+
+/*
+ * Timekeeping.
+ */
+s64 nvgpu_current_time_ms(void);
 
 #endif

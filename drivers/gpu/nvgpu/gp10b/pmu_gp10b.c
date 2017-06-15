@@ -307,7 +307,7 @@ static int gp10b_init_pmu_setup_hw1(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	g->ops.pmu.reset(g);
+	nvgpu_flcn_reset(pmu->flcn);
 	pmu->isr_enabled = true;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 
@@ -430,6 +430,6 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_lpwr_disable_pg = NULL;
 	gops->pmu.pmu_pg_param_post_init = NULL;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
-	gops->pmu.reset = gk20a_pmu_reset;
+	gops->pmu.reset = NULL;
 	gops->pmu.dump_secure_fuses = pmu_dump_security_fuses_gp10b;
 }

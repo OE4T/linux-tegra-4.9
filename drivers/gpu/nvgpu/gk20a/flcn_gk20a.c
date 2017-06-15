@@ -107,6 +107,25 @@ static bool gk20a_is_falcon_scrubbing_done(struct nvgpu_falcon *flcn)
 	return status;
 }
 
+static void gk20a_falcon_engine_dependency_ops(struct nvgpu_falcon *flcn)
+{
+	struct nvgpu_falcon_engine_dependency_ops *flcn_eng_dep_ops =
+			&flcn->flcn_engine_dep_ops;
+
+	switch (flcn->flcn_id) {
+	case FALCON_ID_PMU:
+		flcn_eng_dep_ops->reset_eng = gk20a_pmu_reset;
+		break;
+	default:
+		/* NULL assignment make sure
+		 * CPU hard reset in gk20a_flcn_reset() gets execute
+		 * if falcon doesn't need specific reset implementation
+		 */
+		flcn_eng_dep_ops->reset_eng = NULL;
+		break;
+	}
+}
+
 static void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 {
 	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
@@ -116,6 +135,8 @@ static void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_ops->is_falcon_cpu_halted =  gk20a_is_falcon_cpu_halted;
 	flcn_ops->is_falcon_idle =  gk20a_is_falcon_idle;
 	flcn_ops->is_falcon_scrubbing_done =  gk20a_is_falcon_scrubbing_done;
+
+	gk20a_falcon_engine_dependency_ops(flcn);
 }
 
 static void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)

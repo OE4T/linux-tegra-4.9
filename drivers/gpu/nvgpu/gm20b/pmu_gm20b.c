@@ -310,5 +310,5 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_param_post_init = NULL;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = pmu_dump_security_fuses_gm20b;
-	gops->pmu.reset = gk20a_pmu_reset;
+	gops->pmu.reset = NULL;
 }

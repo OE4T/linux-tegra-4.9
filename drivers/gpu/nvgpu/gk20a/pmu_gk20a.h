@@ -60,7 +60,6 @@ void pmu_copy_to_dmem(struct nvgpu_pmu *pmu,
 		u32 dst, u8 *src, u32 size, u8 port);
 void pmu_copy_from_dmem(struct nvgpu_pmu *pmu,
 		u32 src, u8 *dst, u32 size, u8 port);
-int pmu_reset(struct nvgpu_pmu *pmu);
 int pmu_bootstrap(struct nvgpu_pmu *pmu);
 
 void pmu_dump_elpg_stats(struct nvgpu_pmu *pmu);

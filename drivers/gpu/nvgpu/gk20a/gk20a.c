@@ -178,6 +178,9 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		g->gpu_reset_done = true;
 	}
 
+	/* init interface layer support for PMU falcon */
+	nvgpu_flcn_sw_init(g, FALCON_ID_PMU);
+
 	if (g->ops.bios_init)
 		err = g->ops.bios_init(g);
 	if (err)
@@ -236,9 +239,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		nvgpu_err(g, "failed to enable gr");
 		goto done;
 	}
-
-	/* init interface layer support for PMU falcon */
-	nvgpu_flcn_sw_init(g, FALCON_ID_PMU);
 
 	if (g->ops.pmu.is_pmu_supported(g)) {
 		if (g->ops.pmu.prepare_ucode)

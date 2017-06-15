@@ -64,11 +64,7 @@ static int gp106_pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
 
 		/* wait for Scrubbing to complete */
 		do {
-			u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
-				(pwr_falcon_dmactl_dmem_scrubbing_m() |
-				 pwr_falcon_dmactl_imem_scrubbing_m());
-
-			if (!w) {
+			if (nvgpu_flcn_get_mem_scrubbing_status(pmu->flcn)) {
 				gk20a_dbg_fn("done");
 				return 0;
 			}
@@ -112,7 +108,7 @@ static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
 		/* TBD: post reset */
 
 		/*idle the PMU and enable interrupts on the Falcon*/
-		err = pmu_idle(pmu);
+		err = nvgpu_flcn_wait_idle(pmu->flcn);
 		if (err)
 			return err;
 		nvgpu_udelay(5);
@@ -130,7 +126,7 @@ int gp106_pmu_reset(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	err = pmu_idle(pmu);
+	err = nvgpu_flcn_wait_idle(pmu->flcn);
 	if (err)
 		return err;
 

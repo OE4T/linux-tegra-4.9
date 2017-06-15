@@ -1291,7 +1291,7 @@ int gm20b_init_nspmu_setup_hw1(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	g->ops.pmu.reset(g);
+	nvgpu_flcn_reset(pmu->flcn);
 	pmu->isr_enabled = true;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 
@@ -1326,7 +1326,7 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	g->ops.pmu.reset(g);
+	nvgpu_flcn_reset(pmu->flcn);
 	pmu->isr_enabled = true;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 

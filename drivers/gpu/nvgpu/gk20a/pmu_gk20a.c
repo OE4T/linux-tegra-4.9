@@ -200,38 +200,11 @@ void pmu_copy_to_dmem(struct nvgpu_pmu *pmu,
 	return;
 }
 
-int pmu_idle(struct nvgpu_pmu *pmu)
-{
-	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct nvgpu_timeout timeout;
-	u32 idle_stat;
-
-	nvgpu_timeout_init(g, &timeout, 2000, NVGPU_TIMER_RETRY_TIMER);
-
-	/* wait for pmu idle */
-	do {
-		idle_stat = gk20a_readl(g, pwr_falcon_idlestate_r());
-
-		if (pwr_falcon_idlestate_falcon_busy_v(idle_stat) == 0 &&
-		    pwr_falcon_idlestate_ext_busy_v(idle_stat) == 0) {
-			break;
-		}
-
-		if (nvgpu_timeout_expired_msg(&timeout,
-					    "waiting for pmu idle: 0x%08x",
-					    idle_stat))
-			return -EBUSY;
-
-		nvgpu_usleep_range(100, 200);
-	} while (1);
-
-	gk20a_dbg_fn("done");
-	return 0;
-}
-
 void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
+	u32 intr_mask;
+	u32 intr_dest;
 
 	gk20a_dbg_fn("");
 
@@ -240,21 +213,11 @@ void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 	g->ops.mc.intr_unit_config(g, MC_INTR_UNIT_DISABLE, false,
 			mc_intr_mask_1_pmu_enabled_f());
 
-	gk20a_writel(g, pwr_falcon_irqmclr_r(),
-		pwr_falcon_irqmclr_gptmr_f(1)  |
-		pwr_falcon_irqmclr_wdtmr_f(1)  |
-		pwr_falcon_irqmclr_mthd_f(1)   |
-		pwr_falcon_irqmclr_ctxsw_f(1)  |
-		pwr_falcon_irqmclr_halt_f(1)   |
-		pwr_falcon_irqmclr_exterr_f(1) |
-		pwr_falcon_irqmclr_swgen0_f(1) |
-		pwr_falcon_irqmclr_swgen1_f(1) |
-		pwr_falcon_irqmclr_ext_f(0xff));
+	nvgpu_flcn_set_irq(pmu->flcn, false, 0x0, 0x0);
 
 	if (enable) {
 		/* dest 0=falcon, 1=host; level 0=irq0, 1=irq1 */
-		gk20a_writel(g, pwr_falcon_irqdest_r(),
-			pwr_falcon_irqdest_host_gptmr_f(0)    |
+		intr_dest = pwr_falcon_irqdest_host_gptmr_f(0)    |
 			pwr_falcon_irqdest_host_wdtmr_f(1)    |
 			pwr_falcon_irqdest_host_mthd_f(0)     |
 			pwr_falcon_irqdest_host_ctxsw_f(0)    |
@@ -271,18 +234,19 @@ void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 			pwr_falcon_irqdest_target_exterr_f(0) |
 			pwr_falcon_irqdest_target_swgen0_f(0) |
 			pwr_falcon_irqdest_target_swgen1_f(0) |
-			pwr_falcon_irqdest_target_ext_f(0xff));
+			pwr_falcon_irqdest_target_ext_f(0xff);
 
 		/* 0=disable, 1=enable */
-		gk20a_writel(g, pwr_falcon_irqmset_r(),
-			pwr_falcon_irqmset_gptmr_f(1)  |
+		intr_mask = pwr_falcon_irqmset_gptmr_f(1)  |
 			pwr_falcon_irqmset_wdtmr_f(1)  |
 			pwr_falcon_irqmset_mthd_f(0)   |
 			pwr_falcon_irqmset_ctxsw_f(0)  |
 			pwr_falcon_irqmset_halt_f(1)   |
 			pwr_falcon_irqmset_exterr_f(1) |
 			pwr_falcon_irqmset_swgen0_f(1) |
-			pwr_falcon_irqmset_swgen1_f(1));
+			pwr_falcon_irqmset_swgen1_f(1);
+
+		nvgpu_flcn_set_irq(pmu->flcn, true, intr_mask, intr_dest);
 
 		g->ops.mc.intr_unit_config(g, MC_INTR_UNIT_ENABLE, true,
 				mc_intr_mask_0_pmu_enabled_f());
@@ -295,6 +259,7 @@ int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct nvgpu_timeout timeout;
+	int err = 0;
 
 	gk20a_dbg_fn("");
 
@@ -313,13 +278,9 @@ int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
 					PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT,
 				   NVGPU_TIMER_RETRY_TIMER);
 		do {
-			u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
-				(pwr_falcon_dmactl_dmem_scrubbing_m() |
-				 pwr_falcon_dmactl_imem_scrubbing_m());
-
-			if (!w) {
+			if (nvgpu_flcn_get_mem_scrubbing_status(pmu->flcn)) {
 				gk20a_dbg_fn("done");
-				return 0;
+				goto exit;
 			}
 			nvgpu_udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
 		} while (!nvgpu_timeout_expired(&timeout));
@@ -327,11 +288,12 @@ int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
 		g->ops.mc.disable(g, mc_enable_pwr_enabled_f());
 		nvgpu_err(g, "Falcon mem scrubbing timeout");
 
-		return -ETIMEDOUT;
-	} else {
+		err = -ETIMEDOUT;
+	} else
 		g->ops.mc.disable(g, mc_enable_pwr_enabled_f());
-		return 0;
-	}
+
+exit:
+	return err;
 }
 
 static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
@@ -357,7 +319,7 @@ static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
 
 		/* TBD: post reset */
 
-		err = pmu_idle(pmu);
+		err = nvgpu_flcn_wait_idle(pmu->flcn);
 		if (err)
 			return err;
 
@@ -365,31 +327,6 @@ static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
 	}
 
 	gk20a_dbg_fn("done");
-	return 0;
-}
-
-int pmu_reset(struct nvgpu_pmu *pmu)
-{
-	int err;
-
-	err = pmu_idle(pmu);
-	if (err)
-		return err;
-
-	/* TBD: release pmu hw mutex */
-
-	err = pmu_enable(pmu, false);
-	if (err)
-		return err;
-
-	/* TBD: cancel all sequences */
-	/* TBD: init all sequences and state tables */
-	/* TBD: restore pre-init message handler */
-
-	err = pmu_enable(pmu, true);
-	if (err)
-		return err;
-
 	return 0;
 }
 
@@ -704,7 +641,7 @@ static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	g->ops.pmu.reset(g);
+	nvgpu_flcn_reset(pmu->flcn);
 	pmu->isr_enabled = true;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 
@@ -737,11 +674,22 @@ static void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr)
 
 int gk20a_pmu_reset(struct gk20a *g)
 {
-	int err;
 	struct nvgpu_pmu *pmu = &g->pmu;
+	int err;
 
-	err = pmu_reset(pmu);
+	err = nvgpu_flcn_wait_idle(pmu->flcn);
+	if (err)
+		goto exit;
 
+	err = pmu_enable(pmu, false);
+	if (err)
+		goto exit;
+
+	err = pmu_enable(pmu, true);
+	if (err)
+		goto exit;
+
+exit:
 	return err;
 }
 
@@ -799,7 +747,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.alloc_blob_space = NULL;
 	gops->pmu.pmu_populate_loader_cfg = NULL;
 	gops->pmu.flcn_populate_bl_dmem_desc = NULL;
-	gops->pmu.reset = gk20a_pmu_reset;
+	gops->pmu.reset = NULL;
 }
 
 static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,

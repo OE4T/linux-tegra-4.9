@@ -71,6 +71,7 @@ static struct pll_parms gpc_pll_params_c1 = {
 	500,			/* Locking and ramping timeout */
 	40,			/* Lock delay in NA mode */
 	5,			/* IDDQ mode exit delay */
+	0x3 << 10,		/* DFS control settings */
 };
 
 static struct pll_parms gpc_pll_params;
@@ -411,7 +412,7 @@ static void __maybe_unused clk_set_dfs_det_max(struct gk20a *g, u32 dfs_det_max)
 
 static void clk_set_dfs_ext_cal(struct gk20a *g, u32 dfs_det_cal)
 {
-	u32 data;
+	u32 data, ctrl;
 
 	data = gk20a_readl(g, trim_gpc_bcast_gpcpll_dvfs2_r());
 	data &= ~(BIT(DFS_DET_RANGE + 1) - 1);
@@ -420,10 +421,11 @@ static void clk_set_dfs_ext_cal(struct gk20a *g, u32 dfs_det_cal)
 
 	data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());
 	nvgpu_udelay(1);
-	if (~trim_sys_gpcpll_dvfs1_dfs_ctrl_v(data) & DFS_EXT_CAL_EN) {
+	ctrl = trim_sys_gpcpll_dvfs1_dfs_ctrl_v(data);
+	if (~ctrl & DFS_EXT_CAL_EN) {
 		data = set_field(data, trim_sys_gpcpll_dvfs1_dfs_ctrl_m(),
-				 trim_sys_gpcpll_dvfs1_dfs_ctrl_f(
-					 DFS_EXT_CAL_EN | DFS_TESTOUT_DET));
+			trim_sys_gpcpll_dvfs1_dfs_ctrl_f(
+				ctrl | DFS_EXT_CAL_EN | DFS_TESTOUT_DET));
 		gk20a_writel(g, trim_sys_gpcpll_dvfs1_r(), data);
 	}
 }
@@ -470,6 +472,14 @@ static int clk_enbale_pll_dvfs(struct gk20a *g)
 		data = set_field(data, trim_sys_gpcpll_cfg3_vco_ctrl_m(),
 				 trim_sys_gpcpll_cfg3_vco_ctrl_f(p->vco_ctrl));
 		gk20a_writel(g, trim_sys_gpcpll_cfg3_r(), data);
+	}
+
+	/* Set NA mode DFS control */
+	if (p->dfs_ctrl) {
+		data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());
+		data = set_field(data, trim_sys_gpcpll_dvfs1_dfs_ctrl_m(),
+			trim_sys_gpcpll_dvfs1_dfs_ctrl_f(p->dfs_ctrl));
+		gk20a_writel(g, trim_sys_gpcpll_dvfs1_r(), data);
 	}
 
 	/*

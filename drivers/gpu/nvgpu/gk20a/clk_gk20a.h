@@ -77,6 +77,8 @@ struct pll_parms {
 	u32 lock_timeout;
 	u32 na_lock_delay;
 	u32 iddq_exit_delay;
+	/* NA mode DFS control */
+	u32 dfs_ctrl;
 };
 
 struct namemap_cfg;

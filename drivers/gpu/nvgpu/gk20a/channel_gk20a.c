@@ -627,8 +627,8 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 {
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
 	size_t i, get;
-	unsigned long now = jiffies;
-	unsigned long prev_jiffies = 0;
+	s64 now = nvgpu_current_time_ms();
+	s64 prev = 0;
 	struct device *dev = dev_from_gk20a(ch->g);
 
 	nvgpu_spinlock_acquire(&ch->ref_actions_lock);
@@ -651,11 +651,11 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 				act->type == channel_gk20a_ref_action_get
 					? "GET" : "PUT",
 				GK20A_CHANNEL_REFCOUNT_TRACKING - 1 - i,
-				jiffies_to_msecs(now - act->jiffies),
-				jiffies_to_msecs(act->jiffies - prev_jiffies));
+				now - act->timestamp_ms,
+				act->timestamp_ms - prev);
 
 			print_stack_trace(&act->trace, 0);
-			prev_jiffies = act->jiffies;
+			prev = act->timestamp_ms;
 		}
 
 		get = (get + 1) % GK20A_CHANNEL_REFCOUNT_TRACKING;
@@ -680,7 +680,7 @@ static void gk20a_channel_save_ref_source(struct channel_gk20a *ch,
 	act->trace.skip = 3; /* onwards from the caller of this */
 	act->trace.entries = act->trace_entries;
 	save_stack_trace(&act->trace);
-	act->jiffies = jiffies;
+	act->timestamp_ms = nvgpu_current_time_ms();
 	ch->ref_actions_put = (ch->ref_actions_put + 1) %
 		GK20A_CHANNEL_REFCOUNT_TRACKING;
 

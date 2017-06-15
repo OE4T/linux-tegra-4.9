@@ -152,7 +152,7 @@ enum channel_gk20a_ref_action_type {
 
 struct channel_gk20a_ref_action {
 	enum channel_gk20a_ref_action_type type;
-	unsigned long jiffies;
+	s64 timestamp_ms;
 	/*
 	 * Many of these traces will be similar. Simpler to just capture
 	 * duplicates than to have a separate database for the entries.

@@ -60,19 +60,19 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 	case PMU_PG_ELPG_MSG_ALLOW_ACK:
 		nvgpu_pmu_dbg(g, "ALLOW is ack from PMU, eng - %d",
 			elpg_msg->engine_id);
-		if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
-			pmu->elpg_stat = PMU_ELPG_STAT_ON;
-		else if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+		if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
 			pmu->mscg_transition_state = PMU_ELPG_STAT_ON;
+		else
+			pmu->elpg_stat = PMU_ELPG_STAT_ON;
 		break;
 	case PMU_PG_ELPG_MSG_DISALLOW_ACK:
 		nvgpu_pmu_dbg(g, "DISALLOW is ack from PMU, eng - %d",
 			elpg_msg->engine_id);
 
-		if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
-			pmu->elpg_stat = PMU_ELPG_STAT_OFF;
-		else if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+		if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
 			pmu->mscg_transition_state = PMU_ELPG_STAT_OFF;
+		else
+			pmu->elpg_stat = PMU_ELPG_STAT_OFF;
 
 		if (pmu->pmu_state == PMU_STATE_ELPG_BOOTING) {
 			if (g->ops.pmu.pmu_pg_engines_feature_list &&
@@ -411,6 +411,9 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_ELPG_CMD_DISALLOW");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 		pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
+
+	if (g->ops.pmu.pmu_pg_set_sub_feature_mask)
+		g->ops.pmu.pmu_pg_set_sub_feature_mask(g, pg_engine_id);
 
 	return 0;
 }

@@ -755,6 +755,8 @@ struct gpu_ops {
 		void (*pmu_elpg_statistics)(struct gk20a *g, u32 pg_engine_id,
 			struct pmu_pg_stats_data *pg_stat_data);
 		int (*pmu_pg_init_param)(struct gk20a *g, u32 pg_engine_id);
+		int (*pmu_pg_set_sub_feature_mask)(struct gk20a *g,
+			u32 pg_engine_id);
 		u32 (*pmu_pg_supported_engines_list)(struct gk20a *g);
 		u32 (*pmu_pg_engines_feature_list)(struct gk20a *g,
 			u32 pg_engine_id);

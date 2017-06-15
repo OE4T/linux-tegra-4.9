@@ -117,6 +117,7 @@ enum {
 #define PMU_PG_PARAM_CMD_MS_INIT_PARAM  0x01
 #define PMU_PG_PARAM_CMD_MCLK_CHANGE  0x04
 #define PMU_PG_PARAM_CMD_POST_INIT  0x06
+#define PMU_PG_PARAM_CMD_SUB_FEATURE_MASK_UPDATE  0x07
 
 #define PMU_PG_FEATURE_GR_SDIV_SLOWDOWN_ENABLED	(1 << 0)
 #define PMU_PG_FEATURE_GR_POWER_GATING_ENABLED	(1 << 2)
@@ -185,6 +186,19 @@ struct pmu_pg_cmd_gr_init_param {
 	u8 featuremask;
 };
 
+struct pmu_pg_cmd_gr_init_param_v1 {
+	u8 cmd_type;
+	u16 sub_cmd_id;
+	u32 featuremask;
+};
+
+struct pmu_pg_cmd_sub_feature_mask_update {
+	u8 cmd_type;
+	u16 sub_cmd_id;
+	u8 ctrl_id;
+	u32 enabled_mask;
+};
+
 struct pmu_pg_cmd_ms_init_param {
 	u8 cmd_type;
 	u16 cmd_id;
@@ -236,12 +250,14 @@ struct pmu_pg_cmd {
 		struct pmu_pg_cmd_eng_buf_load_v2 eng_buf_load_v2;
 		struct pmu_pg_cmd_stat stat;
 		struct pmu_pg_cmd_gr_init_param gr_init_param;
+		struct pmu_pg_cmd_gr_init_param_v1 gr_init_param_v1;
 		struct pmu_pg_cmd_ms_init_param ms_init_param;
 		struct pmu_pg_cmd_mclk_change mclk_change;
 		struct pmu_pg_cmd_post_init_param post_init;
 		/* TBD: other pg commands */
 		union pmu_ap_cmd ap_cmd;
 		struct nv_pmu_rppg_cmd rppg_cmd;
+		struct pmu_pg_cmd_sub_feature_mask_update sf_mask_update;
 	};
 };
 

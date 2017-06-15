@@ -182,6 +182,7 @@ CONFIG_BCMDHD_SDIO=y
 CONFIG_BCM4354=y
 CONFIG_BCMDHD_FW_PATH="/lib/firmware/brcm/fw_bcmdhd.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/lib/firmware/brcm/nvram.txt"
+CONFIG_BCMDHD_ES4_NVRAM_PATH="/lib/firmware/brcm/nvram_murata_4359_b1_es4.txt"
 CONFIG_BCMDHD_HW_OOB=y
 CONFIG_DHD_USE_SCHED_SCAN=y
 CONFIG_BCMDHD_DISABLE_MCC=y

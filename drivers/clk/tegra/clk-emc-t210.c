@@ -51,16 +51,15 @@ static long clk_emc_round_rate(struct clk_hw *hw, unsigned long rate,
 				  unsigned long *prate)
 {
 	struct tegra_clk_emc *emc = to_clk_emc(hw);
-	struct clk *parent_clk = clk_get_parent(hw->clk);
-	unsigned long parent_rate = clk_get_rate(parent_clk);
+	unsigned long current_rate = clk_get_rate(hw->clk);
 	unsigned long ret;
 
 	if (!emc->emc_ops)
-		return parent_rate;
+		return current_rate;
 
 	ret = emc->emc_ops->emc_round_rate(rate);
 	if (!ret)
-		return parent_rate;
+		return current_rate;
 
 	return ret;
 }

@@ -481,8 +481,13 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 		val = VI_CFG_VI_INCR_SYNCPT_COND(mw_ack_done) |
 				chan->syncpt[index][0];
 		tegra_channel_write(chan, TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
-		csi_write(chan, index,
-			TEGRA_VI_CSI_SINGLE_SHOT, SINGLE_SHOT_CAPTURE);
+		if (!csi_read(chan, index, TEGRA_VI_CSI_SINGLE_SHOT)) {
+			csi_write(chan, index,
+				TEGRA_VI_CSI_SINGLE_SHOT, SINGLE_SHOT_CAPTURE);
+		} else {
+			dev_dbg(&chan->video.dev,
+				"Syncpoint already enabled at capture done!%d\n", index);
+		}
 	}
 
 	for (index = 0; index < chan->valid_ports; index++) {

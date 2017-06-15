@@ -43,7 +43,7 @@
 
 #include <asm/unaligned.h>
 
-#define TEGRA_I2C_TIMEOUT (msecs_to_jiffies(2000))
+#define TEGRA_I2C_TIMEOUT (msecs_to_jiffies(10000))
 #define BYTES_PER_FIFO_WORD 4
 
 #define I2C_CNFG				0x000

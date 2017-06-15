@@ -89,6 +89,9 @@ static int periph_banks;
 static struct clk **clks;
 static int clk_num;
 static struct clk_onecell_data clk_data;
+static uint32_t *skipped_clkids;
+static int skipped_len;
+
 #ifdef CONFIG_PM_SLEEP
 static u32 *periph_ctx;
 #endif
@@ -349,12 +352,85 @@ void __init tegra_init_dup_clks(struct tegra_clk_duplicate *dup_list,
 	}
 }
 
+static void tegra_handle_skipped_clks(struct device_node *np)
+{
+	struct property *prop;
+	int err, i;
+
+	prop = of_find_property(np, "nvidia,tegra-ignore-clks", &skipped_len);
+	if (!prop)
+		return;
+
+	if (skipped_len % sizeof(*skipped_clkids)) {
+		pr_err("clk: invalid nvidia,tegra-ignore-clks property len: %d\n",
+			skipped_len);
+		skipped_len = 0;
+		return;
+	}
+
+	skipped_len /= sizeof(*skipped_clkids);
+	skipped_clkids = kmalloc_array(skipped_len, sizeof(*skipped_clkids),
+				 GFP_KERNEL);
+	err = of_property_read_u32_array(np, "nvidia,tegra-ignore-clks",
+					 skipped_clkids, skipped_len);
+	if (err < 0) {
+		pr_err("clk: error %d reading nvidia,tegra-ignore-clks property",
+			err);
+		kfree(skipped_clkids);
+		skipped_len = 0;
+		skipped_clkids = NULL;
+		return;
+	}
+
+	for (i = 0; i < skipped_len; i++) {
+		uint32_t skipid = skipped_clkids[i];
+		struct clk *skipclk;
+
+		if (skipid < clk_num)
+			skipclk = clks[skipid];
+		else {
+			pr_err("clk: ignoring invalid ignored clk id: %d\n",
+				skipid);
+			continue;
+		}
+
+		if (!IS_ERR_OR_NULL(skipclk)) {
+			clk_unregister(skipclk);
+			clks[skipid] = NULL;
+		} else {
+			 pr_err("clk: ignoring unregistered ignored clk id: %d\n",
+				skipid);
+		}
+	}
+}
+
+static bool clk_is_skipped(uint32_t clk_id)
+{
+	int i;
+
+	if (!skipped_clkids)
+		return false;
+
+	for (i = 0; i < skipped_len; i++) {
+		if (skipped_clkids[i] == clk_id)
+			return true;
+	}
+
+	return false;
+}
+
 void __init tegra_init_from_table(struct tegra_clk_init_table *tbl,
 				  struct clk *clks[], int clk_max)
 {
 	struct clk *clk;
 
 	for (; tbl->clk_id < clk_max; tbl++) {
+		if (clk_is_skipped(tbl->clk_id)) {
+			pr_info("clk: clk %d removed. Skipping init entry\n",
+				tbl->clk_id);
+			continue;
+		}
+
 		clk = clks[tbl->clk_id];
 		if (IS_ERR_OR_NULL(clk)) {
 			pr_err("%s: invalid entry %ld in clks array for id %d\n",
@@ -561,6 +637,8 @@ void tegra_clk_debugfs_add(struct clk *clk)
 void __init tegra_add_of_provider(struct device_node *np)
 {
 	int i;
+
+	tegra_handle_skipped_clks(np);
 
 	for (i = 0; i < clk_num; i++) {
 		if (IS_ERR(clks[i])) {

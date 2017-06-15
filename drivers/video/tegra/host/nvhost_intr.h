@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -110,6 +110,7 @@ struct nvhost_intr {
 	u32 intstatus;
 	void (*host_isr[32])(u32, void*);
 	void *host_isr_priv[32];
+	struct workqueue_struct *low_prio_wq;
 };
 #define intr_to_dev(x) container_of(x, struct nvhost_master, intr)
 #define intr_syncpt_to_intr(is) (is->intr)

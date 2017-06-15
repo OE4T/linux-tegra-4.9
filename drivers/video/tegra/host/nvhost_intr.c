@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -316,7 +316,7 @@ static int process_wait_list(struct nvhost_intr *intr,
 
 	/* schedule a separate task to handle low priority handlers */
 	if (run_low_prio_work)
-		schedule_work(&syncpt->low_prio_work);
+		queue_work(intr->low_prio_wq, &syncpt->low_prio_work);
 
 	return empty;
 }
@@ -571,6 +571,10 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 	intr->syncpt_irq = irq_sync;
 	intr->general_irq = irq_gen;
 
+	intr->low_prio_wq = create_singlethread_workqueue("host_low_prio_wq");
+	if (!intr->low_prio_wq)
+		return -EINVAL;
+
 	for (id = 0, syncpt = intr->syncpt;
 	     id < nb_pts;
 	     ++id, ++syncpt) {
@@ -593,6 +597,7 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 void nvhost_intr_deinit(struct nvhost_intr *intr)
 {
 	nvhost_intr_stop(intr);
+	destroy_workqueue(intr->low_prio_wq);
 }
 
 void nvhost_intr_start(struct nvhost_intr *intr, u32 hz)

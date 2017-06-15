@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Host cdma for HOST1X
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -127,12 +127,12 @@ static void vhost_cdma_stop(struct nvhost_cdma *cdma)
 		return;
 	}
 
-	mutex_lock(&cdma->lock);
+	down_read(&cdma->lock);
 	if (cdma->running) {
 		nvhost_cdma_wait_locked(cdma, CDMA_EVENT_SYNC_QUEUE_EMPTY);
 		cdma->running = false;
 	}
-	mutex_unlock(&cdma->lock);
+	up_read(&cdma->lock);
 }
 
 /**
@@ -144,7 +144,9 @@ static void vhost_cdma_kick(struct nvhost_cdma *cdma)
 	u32 put;
 	int err;
 
+	mutex_lock(&cdma->sync_queue_lock);
 	job = list_entry(cdma->sync_queue.prev, struct nvhost_job, list);
+	mutex_unlock(&cdma->sync_queue_lock);
 
 	put = nvhost_push_buffer_putptr(&cdma->push_buffer);
 
@@ -158,11 +160,11 @@ static void vhost_cdma_kick(struct nvhost_cdma *cdma)
 		/* Don't hold the lock while we're waiting
 		 * for this to complete
 		 */
-		mutex_unlock(&cdma->lock);
+		up_read(&cdma->lock);
 		err = vhost_channel_submit(virt_ctx->handle, job,
 					cdma->push_buffer.mapped,
 					start, end, cdma->last_put);
-		mutex_lock(&cdma->lock);
+		down_read(&cdma->lock);
 		if (err)
 			pr_err("%s: error return from host1x_cdma_kick\n",
 				__func__);
@@ -234,9 +236,10 @@ void vhost_cdma_timeout(struct nvhost_master *dev,
 	}
 
 	cdma = &chan->cdma;
-	mutex_lock(&cdma->lock);
+	down_write(&cdma->lock);
 
 	/* whether all timeout jobs have been unpinned */
+	mutex_lock(&cdma->sync_queue_lock);
 	list_for_each_entry(job, &cdma->sync_queue, list) {
 		if (job->first_get == info->job_id_start)
 			start_job = job;
@@ -245,11 +248,14 @@ void vhost_cdma_timeout(struct nvhost_master *dev,
 			break;
 		}
 	}
+	mutex_unlock(&cdma->sync_queue_lock);
 
 	if (!end_job)
 		goto out;
 
 	job = start_job;
+
+	mutex_lock(&cdma->sync_queue_lock);
 	list_for_each_entry_from(job, &cdma->sync_queue, list) {
 		int i;
 
@@ -265,7 +271,8 @@ void vhost_cdma_timeout(struct nvhost_master *dev,
 		if (job == end_job)
 			break;
 	}
+	mutex_unlock(&cdma->sync_queue_lock);
 
 out:
-	mutex_unlock(&cdma->lock);
+	up_write(&cdma->lock);
 }

@@ -108,7 +108,7 @@ static int show_channels(struct platform_device *pdev, void *data,
 			continue;
 
 		/* ensure that we get a lock */
-		locked = mutex_trylock(&ch->cdma.lock);
+		locked = down_write_trylock(&ch->cdma.lock);
 		if (!(locked || ch->chid == locked_id)) {
 			nvhost_debug_output(o, "failed to lock channel %d cdma\n",
 					    ch->chid);
@@ -125,7 +125,7 @@ static int show_channels(struct platform_device *pdev, void *data,
 			m, ch, o, ch->chid);
 
 		if (ch->chid != locked_id)
-			mutex_unlock(&ch->cdma.lock);
+			up_write(&ch->cdma.lock);
 	}
 
 	mutex_unlock(&m->chlist_mutex);

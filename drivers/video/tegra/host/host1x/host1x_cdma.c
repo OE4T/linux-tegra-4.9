@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -281,14 +281,14 @@ static void cdma_stop(struct nvhost_cdma *cdma)
 	}
 	chan_regs = ch->aperture;
 
-	mutex_lock(&cdma->lock);
+	down_read(&cdma->lock);
 	if (cdma->running) {
 		nvhost_cdma_wait_locked(cdma, CDMA_EVENT_SYNC_QUEUE_EMPTY);
 		host1x_channel_writel(ch, host1x_channel_dmactrl_r(),
 				host1x_channel_dmactrl(true, false, false));
 		cdma->running = false;
 	}
-	mutex_unlock(&cdma->lock);
+	up_read(&cdma->lock);
 }
 
 static void cdma_timeout_release_mlocks(struct nvhost_cdma *cdma)
@@ -423,9 +423,9 @@ static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 	mutex_lock(&dev->timeout_mutex);
 
 	if (skip_reset) { /* channel_abort() path */
-		mutex_lock(&cdma->lock);
+		down_write(&cdma->lock);
 	} else {
-		ret = mutex_trylock(&cdma->lock);
+		ret = down_write_trylock(&cdma->lock);
 		if (!ret) {
 			schedule_delayed_work(&cdma->timeout.wq,
 					      msecs_to_jiffies(10));
@@ -441,7 +441,7 @@ static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 		cdma->timeout.allow_dependency = false;
 		schedule_delayed_work(&cdma->timeout.wq,
 				      msecs_to_jiffies(cdma->timeout.timeout));
-		mutex_unlock(&cdma->lock);
+		up_write(&cdma->lock);
 		mutex_unlock(&dev->timeout_mutex);
 		return;
 	}
@@ -449,7 +449,7 @@ static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 	if (!cdma->timeout.clientid) {
 		dev_dbg(&dev->dev->dev,
 			 "cdma_timeout: expired, but has no clientid\n");
-		mutex_unlock(&cdma->lock);
+		up_write(&cdma->lock);
 		mutex_unlock(&dev->timeout_mutex);
 		return;
 	}
@@ -479,7 +479,7 @@ static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 		cmdproc_stop = prev_cmdproc & ~(BIT(ch->chid));
 		host1x_sync_writel(dev,
 			host1x_sync_cmdproc_stop_r(), cmdproc_stop);
-		mutex_unlock(&cdma->lock);
+		up_write(&cdma->lock);
 		mutex_unlock(&dev->timeout_mutex);
 		return;
 	}
@@ -504,7 +504,7 @@ static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 	cdma_op().timeout_teardown_begin(cdma, skip_reset);
 
 	nvhost_cdma_update_sync_queue(cdma, sp, ch->dev);
-	mutex_unlock(&cdma->lock);
+	up_write(&cdma->lock);
 	mutex_unlock(&dev->timeout_mutex);
 }
 

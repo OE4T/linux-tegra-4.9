@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -71,12 +71,15 @@ static void show_channel_gathers(struct output *o, struct nvhost_cdma *cdma)
 	struct nvhost_job *job;
 	int i;
 
+	mutex_lock(&cdma->sync_queue_lock);
 	if (list_empty(&cdma->sync_queue)) {
+		mutex_unlock(&cdma->sync_queue_lock);
 		nvhost_debug_output(o, "The CDMA sync queue is empty.\n");
 		return;
 	}
 
 	job = list_first_entry(&cdma->sync_queue, struct nvhost_job, list);
+	mutex_unlock(&cdma->sync_queue_lock);
 
 	nvhost_debug_output(o, "\n%p: JOB, syncpt_id=%d, syncpt_val=%d, first_get=%08x, timeout=%d, num_slots=%d, num_handles=%d\n",
 			job,

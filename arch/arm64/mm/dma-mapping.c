@@ -1453,13 +1453,27 @@ void __init dma_contiguous_remap(void)
 		unsigned long addr;
 		phys_addr_t start = dma_mmu_remap[i].base;
 		phys_addr_t end = start + dma_mmu_remap[i].size;
+		phys_addr_t pud_start, pud_end;
 
 		if (start >= end)
 			continue;
 
+		/* create_mapping_noalloc is not splitting the PUD's right.
+		 * Ensure that all the PMD's in PUD has mapping setup */
+		pud_start = round_down(start, PUD_SIZE);
+		pud_end = round_up(end, PUD_SIZE);
+
+		if (start > pud_start)
+			create_mapping_noalloc(pud_start, __phys_to_virt(pud_start),
+				       start - pud_start, PAGE_KERNEL_EXEC);
+
 		for (addr = start; addr < end; addr += PAGE_SIZE)
 			create_mapping_noalloc(addr, __phys_to_virt(addr),
 				       PAGE_SIZE, PAGE_KERNEL_EXEC);
+
+		if (pud_end > end)
+			create_mapping_noalloc(end, __phys_to_virt(end),
+				       pud_end - end, PAGE_KERNEL_EXEC);
 	}
 }
 

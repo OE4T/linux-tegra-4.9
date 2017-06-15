@@ -15,7 +15,6 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/clk.h>
 #include <linux/moduleparam.h>
 #include <linux/export.h>
 #include <linux/debugfs.h>
@@ -31,12 +30,6 @@
 #include <asm/uaccess.h>
 
 #ifdef CONFIG_DEBUG_FS
-
-#define PLLDP_EN_SSC_ENABLE			(1 << 30)
-#define CLK_RST_CONTROLLER_PLLDP_SS_CFG_0	(0x598)
-
-__maybe_unused
-static void __iomem *clk_base = IO_ADDRESS(TEGRA_CLK_RESET_BASE);
 
 struct tegra_dp_test_settings default_dp_test_settings = {
 	DRIVE_CURRENT_L0,
@@ -183,7 +176,7 @@ static int parse_test_settings(const char __user *user_buf, size_t count,
 						|| u8_val == 4))
 			test_settings->lanes = u8_val;
 		else if (!strcmp(name, "ssc"))
-			test_settings->disable_ssc = !u8_val;
+			pr_info("dp_debug: SSC is fixed, ignoring request\n");
 		else if (!strcmp(name, "tx_pu_disable"))
 			test_settings->disable_tx_pu = u8_val;
 		else
@@ -229,7 +222,6 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
 	struct tegra_dp_test_settings *test_settings = &dp->test_settings;
 	int dc_out_type = dc->out->type;
-	u32 ssc_reg __maybe_unused;
 	u32 vs_reg, pe_reg;
 	u32 max_tx_pu;
 
@@ -251,19 +243,6 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	/* detach SOR and precharge lanes */
 	tegra_dc_sor_detach(sor);
 	tegra_sor_precharge_lanes(sor);
-
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	/* configure SSC */
-	ssc_reg = readl(clk_base + CLK_RST_CONTROLLER_PLLDP_SS_CFG_0);
-	if (test_settings->disable_ssc)
-		ssc_reg &= ~PLLDP_EN_SSC_ENABLE;
-	else
-		ssc_reg |= PLLDP_EN_SSC_ENABLE;
-	writel(ssc_reg, clk_base + CLK_RST_CONTROLLER_PLLDP_SS_CFG_0);
-#else
-	test_settings->disable_ssc = false;
-	dev_info(&dc->ndev->dev, "t18x DP SS is fixed clk prod setting\n");
-#endif
 
 	tegra_dc_io_start(dc);
 

@@ -17,6 +17,7 @@
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/log.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/bus.h>
 
 #include "gk20a.h"
 #include "bus_gk20a.h"
@@ -128,37 +129,6 @@ int gk20a_read_ptimer(struct gk20a *g, u64 *value)
 	return -EBUSY;
 }
 
-int gk20a_get_timestamps_zipper(struct gk20a *g,
-		u32 source_id, u32 count,
-		struct nvgpu_cpu_time_correlation_sample *samples)
-{
-	int err = 0;
-	unsigned int i = 0;
-
-	if (source_id != NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC) {
-		nvgpu_err(g, "source_id %u not supported", source_id);
-		return -EINVAL;
-	}
-
-	if (gk20a_busy(g)) {
-		nvgpu_err(g, "GPU not powered on\n");
-		err = -EINVAL;
-		goto end;
-	}
-
-	for (i = 0; i < count; i++) {
-		err = g->ops.bus.read_ptimer(g, &samples[i].gpu_timestamp);
-		if (err)
-			return err;
-
-		samples[i].cpu_timestamp = (u64)get_cycles();
-	}
-
-end:
-	gk20a_idle(g);
-	return err;
-}
-
 static int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 {
 	u64 iova = gk20a_mm_inst_block_addr(g, bar1_inst);
@@ -181,6 +151,6 @@ void gk20a_init_bus(struct gpu_ops *gops)
 	gops->bus.init_hw = gk20a_bus_init_hw;
 	gops->bus.isr = gk20a_bus_isr;
 	gops->bus.read_ptimer = gk20a_read_ptimer;
-	gops->bus.get_timestamps_zipper = gk20a_get_timestamps_zipper;
+	gops->bus.get_timestamps_zipper = nvgpu_get_timestamps_zipper;
 	gops->bus.bar1_bind = gk20a_bus_bar1_bind;
 }

@@ -23,6 +23,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/bus.h>
 
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"

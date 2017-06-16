@@ -51,6 +51,7 @@ nvgpu-y := \
 	common/mm/gmmu.o \
 	common/mm/vm.o \
 	common/mm/vm_area.o \
+	common/bus.o \
 	common/enabled.o \
 	common/pramin.o \
 	common/semaphore.o \

@@ -14,6 +14,7 @@
  */
 
 #include <nvgpu/timers.h>
+#include <nvgpu/bus.h>
 
 #include "bus_gm20b.h"
 #include "gk20a/gk20a.h"
@@ -58,6 +59,6 @@ void gm20b_init_bus(struct gpu_ops *gops)
 	gops->bus.init_hw = gk20a_bus_init_hw;
 	gops->bus.isr = gk20a_bus_isr;
 	gops->bus.read_ptimer = gk20a_read_ptimer;
-	gops->bus.get_timestamps_zipper = gk20a_get_timestamps_zipper;
+	gops->bus.get_timestamps_zipper = nvgpu_get_timestamps_zipper;
 	gops->bus.bar1_bind = gm20b_bus_bar1_bind;
 }

@@ -33,6 +33,7 @@ struct ecc_gk20a;
 struct gk20a_debug_output;
 struct nvgpu_clk_pll_debug_data;
 struct nvgpu_nvhost_dev;
+struct nvgpu_cpu_time_correlation_sample;
 
 #include <linux/sched.h>
 #include <nvgpu/lock.h>

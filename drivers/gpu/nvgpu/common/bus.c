@@ -13,18 +13,38 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef BUS_GK20A_H
-#define BUS_GK20A_H
 
-#include <nvgpu/types.h>
+#include <nvgpu/bus.h>
 
-struct gk20a;
-struct gpu_ops;
+#include "gk20a/gk20a.h"
 
-void gk20a_init_bus(struct gpu_ops *gops);
+int nvgpu_get_timestamps_zipper(struct gk20a *g,
+		u32 source_id, u32 count,
+		struct nvgpu_cpu_time_correlation_sample *samples)
+{
+	int err = 0;
+	unsigned int i = 0;
 
-void gk20a_bus_isr(struct gk20a *g);
-int gk20a_read_ptimer(struct gk20a *g, u64 *value);
-void gk20a_bus_init_hw(struct gk20a *g);
+	if (source_id != NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC) {
+		nvgpu_err(g, "source_id %u not supported", source_id);
+		return -EINVAL;
+	}
 
-#endif /* GK20A_H */
+	if (gk20a_busy(g)) {
+		nvgpu_err(g, "GPU not powered on\n");
+		err = -EINVAL;
+		goto end;
+	}
+
+	for (i = 0; i < count; i++) {
+		err = g->ops.bus.read_ptimer(g, &samples[i].gpu_timestamp);
+		if (err)
+			return err;
+
+		samples[i].cpu_timestamp = (u64)get_cycles();
+	}
+
+end:
+	gk20a_idle(g);
+	return err;
+}

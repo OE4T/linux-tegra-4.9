@@ -68,6 +68,3 @@ S:      Supported
 F:      drivers/iommu/
 F:      drivers/platform/tegra/mc/
 F:      include/dt-bindings/memory/
-
-
-

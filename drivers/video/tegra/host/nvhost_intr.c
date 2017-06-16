@@ -608,7 +608,7 @@ void nvhost_intr_start(struct nvhost_intr *intr, u32 hz)
 	mutex_unlock(&intr->mutex);
 }
 
-void nvhost_intr_stop(struct nvhost_intr *intr)
+int nvhost_intr_stop(struct nvhost_intr *intr)
 {
 	unsigned int id;
 	struct nvhost_intr_syncpt *syncpt;
@@ -616,12 +616,13 @@ void nvhost_intr_stop(struct nvhost_intr *intr)
 
 	mutex_lock(&intr->mutex);
 
-	intr_op().disable_all_syncpt_intrs(intr);
-
 	for (id = 0, syncpt = intr->syncpt;
 	     id < nb_pts;
 	     ++id, ++syncpt) {
 		struct nvhost_waitlist *waiter, *next;
+
+		intr_op().disable_syncpt_intr(intr, id);
+
 		list_for_each_entry_safe(waiter, next, &syncpt->wait_head, list) {
 			if (atomic_cmpxchg(&waiter->state, WLS_CANCELLED, WLS_HANDLED)
 				== WLS_CANCELLED) {
@@ -631,10 +632,9 @@ void nvhost_intr_stop(struct nvhost_intr *intr)
 		}
 
 		if (!list_empty(&syncpt->wait_head)) {  /* output diagnostics */
+			intr_op().enable_syncpt_intr(intr, id);
 			mutex_unlock(&intr->mutex);
-			pr_warn("%s cannot stop syncpt intr id=%d\n",
-					__func__, id);
-			return;
+			return -EBUSY;
 		}
 	}
 
@@ -642,6 +642,8 @@ void nvhost_intr_stop(struct nvhost_intr *intr)
 	intr_op().free_syncpt_irq(intr);
 
 	mutex_unlock(&intr->mutex);
+
+	return 0;
 }
 
 void nvhost_intr_enable_host_irq(struct nvhost_intr *intr, int irq,

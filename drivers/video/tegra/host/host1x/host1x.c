@@ -601,8 +601,7 @@ static void enable_irq_host(struct platform_device *dev)
 static int disable_irq_host(struct platform_device *dev)
 {
 	struct nvhost_master *host = nvhost_get_private_data(dev);
-	nvhost_intr_stop(&host->intr);
-	return 0;
+	return nvhost_intr_stop(&host->intr);
 }
 #endif
 

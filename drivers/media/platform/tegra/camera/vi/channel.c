@@ -980,7 +980,7 @@ static const struct v4l2_ctrl_config common_custom_ctrls[] = {
 		.id = TEGRA_CAMERA_CID_VI_SIZE_ALIGN,
 		.name = "Size Align",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
-		.def = 0,
+		.def = TEGRA_SIZE_ALIGNMENT,
 		.min = 0,
 		.max = ARRAY_SIZE(size_align_ctrl_qmenu) - 1,
 		.menu_skip_mask = 0,
@@ -1695,6 +1695,8 @@ int tegra_channel_init(struct tegra_channel *chan)
 
 	chan->width_align = TEGRA_WIDTH_ALIGNMENT;
 	chan->stride_align = TEGRA_STRIDE_ALIGNMENT;
+	chan->height_align = TEGRA_HEIGHT_ALIGNMENT;
+	chan->size_align = TEGRA_SIZE_ALIGNMENT;
 	chan->num_subdevs = 0;
 	mutex_init(&chan->video_lock);
 	INIT_LIST_HEAD(&chan->capture);

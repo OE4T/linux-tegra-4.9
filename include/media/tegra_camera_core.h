@@ -22,8 +22,12 @@
 #define TEGRA_MAX_HEIGHT	32768U
 /* Width alignment */
 #define TEGRA_WIDTH_ALIGNMENT	1
-/* Stride alignment is 256, for VIC worse case */
-#define TEGRA_STRIDE_ALIGNMENT	256
+/* Stride alignment */
+#define TEGRA_STRIDE_ALIGNMENT	1
+/* Height alignment */
+#define TEGRA_HEIGHT_ALIGNMENT	1
+/* Size alignment */
+#define TEGRA_SIZE_ALIGNMENT	1
 
 /* 1080p resolution as default resolution for test pattern generator */
 #define TEGRA_DEF_WIDTH		1920

@@ -116,10 +116,10 @@ struct tegra_vi_graph_entity {
  * @queued_lock: protects the buf_queued list
  *
  * @csi: CSI register bases
- * @stride_align: channel buffer stride alignment, default is 64
- * @width_align: image width alignment, default is 4
+ * @stride_align: channel buffer stride alignment, default is 1
+ * @width_align: image width alignment, default is 1
  * @height_align: channel buffer height alignment, default is 1
- * @size_align: channel buffer size alignment, default is 128K bytes
+ * @size_align: channel buffer size alignment, default is 1
  * @port: CSI port of this video channel
  * @io_id: Tegra IO rail ID of this video channel
  *

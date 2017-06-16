@@ -651,9 +651,7 @@ static void gtco_urb_callback(struct urb *urbinfo)
 		 */
 		switch (device->buffer[0]) {
 		case 5:
-			/* Pressure is 9 bits */
-			val = ((u16)(device->buffer[8]) << 1);
-			val |= (u16)(device->buffer[7] >> 7);
+			/* Pressure */
 			input_report_abs(inputdev, ABS_PRESSURE,
 					 device->buffer[8]);
 

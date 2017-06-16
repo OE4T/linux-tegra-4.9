@@ -207,7 +207,7 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi)
 	}
 	tegra_dc_set_edid(dc, hdmi->edid);
 
-	if (tegra_platform_is_sim() || tegra_platform_is_fpga())
+	if (tegra_platform_is_sim())
 		return 0;
 
 	i2c_adap = i2c_get_adapter(dc->out->ddc_bus);

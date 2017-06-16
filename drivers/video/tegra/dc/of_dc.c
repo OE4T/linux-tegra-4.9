@@ -577,7 +577,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		OF_DC_LOG("out_rotation %d\n", temp);
 	}
 
-	if ((!tegra_platform_is_sim() && !tegra_platform_is_fpga()) &&
+	if (!tegra_platform_is_sim() &&
 	    pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
 		int id;
 		struct device_node *ddc_np =

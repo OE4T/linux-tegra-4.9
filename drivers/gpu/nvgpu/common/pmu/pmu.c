@@ -357,7 +357,7 @@ static int nvgpu_pg_init_task(void *arg)
 	}
 
 	while (!nvgpu_thread_should_stop(&pg_init->state_task))
-		nvgpu_msleep(5);
+		nvgpu_usleep_range(5000, 5100);
 
 	nvgpu_log_fn(g, "thread exit");
 

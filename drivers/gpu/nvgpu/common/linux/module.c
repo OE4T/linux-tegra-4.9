@@ -337,12 +337,12 @@ int __gk20a_do_idle(struct gk20a *g, bool force_reset)
 
 	/* check and wait until GPU is idle (with a timeout) */
 	do {
-		nvgpu_msleep(1);
+		nvgpu_usleep_range(1000, 1100);
 		ref_cnt = atomic_read(&dev->power.usage_count);
 	} while (ref_cnt != target_ref_cnt && !nvgpu_timeout_expired(&timeout));
 
 	if (ref_cnt != target_ref_cnt) {
-		nvgpu_err(g, "failed to idle - refcount %d != 1",
+		nvgpu_err(g, "failed to idle - refcount %d != target_ref_cnt",
 			ref_cnt);
 		goto fail_drop_usage_count;
 	}
@@ -367,7 +367,7 @@ int __gk20a_do_idle(struct gk20a *g, bool force_reset)
 
 		/* check in loop if GPU is railgated or not */
 		do {
-			nvgpu_msleep(1);
+			nvgpu_usleep_range(1000, 1100);
 			is_railgated = platform->is_railgated(dev);
 		} while (!is_railgated && !nvgpu_timeout_expired(&timeout));
 

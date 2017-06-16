@@ -185,8 +185,8 @@
 							dpcm_enable = "false";
 							cil_settletime = "0";
 
-							active_w = "3864";
-							active_h = "2174";
+							active_w = "3840";
+							active_h = "2160";
 							pixel_t = "bayer_rggb";
 							readout_orientation = "90";
 							line_length = "4200";
@@ -200,7 +200,7 @@
 							min_hdr_ratio = "1";
 							max_hdr_ratio = "64";
 							min_framerate = "1.462526";
-							max_framerate = "60";
+							max_framerate = "30";
 							min_exp_time = "16.165";
 							max_exp_time = "165770";
 							exp_time_1h = "6";

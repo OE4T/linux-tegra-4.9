@@ -18,6 +18,6 @@ define tegra_include
 endef
 
 $(foreach suffix, \
-	nvgpu nvgpu-t18x nvhost nvhost-t18x nvmap nvmap-t18x display \
+	nvgpu nvgpu-t18x nvhost nvhost-t18x display \
 	nvidia t19x, \
 	$(eval $(call tegra_include,$(suffix))))

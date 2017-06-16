@@ -738,13 +738,12 @@ KBUILD_CFLAGS	+= $(call cc-option, -gdwarf-4,)
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-KBUILD_CFLAGS += -I$(srctree)/../nvidia/include
 KBUILD_CFLAGS += -I$(srctree)/../nvhost-t18x/include
 KBUILD_CFLAGS += -I$(srctree)/../nvgpu-t18x/include
 endif
 KBUILD_CFLAGS += -I$(srctree)/../nvhost/include
 KBUILD_CFLAGS += -I$(srctree)/../display/include
-KBUILD_CFLAGS += -I$(srctree)/../nvmap/include
+KBUILD_CFLAGS += -I$(srctree)/../nvidia/include
 KBUILD_CFLAGS += -I$(srctree)/../nvgpu/include
 
 ifdef CONFIG_DEBUG_INFO_REDUCED

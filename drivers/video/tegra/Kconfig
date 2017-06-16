@@ -1,6 +1,6 @@
-trysource "../nvmap/drivers/video/tegra/nvmap/Kconfig"
-trysource "../nvmap/drivers/video/tegra/nvmap/Kconfig.nvmap"
-trysource "drivers/video/tegra/nvmap/Kconfig.nvmap"
+trysource "../nvidia/drivers/video/tegra/nvmap/Kconfig"
+trysource "../nvidia/drivers/video/tegra/nvmap/Kconfig.nvidia"
+trysource "drivers/video/tegra/nvmap/Kconfig.nvidia"
 
 trysource "../nvhost/drivers/video/tegra/Kconfig.nvhost"
 trysource "drivers/video/tegra/Kconfig.nvhost"

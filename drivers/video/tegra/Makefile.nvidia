@@ -1,3 +1,4 @@
 obj-$(CONFIG_TEGRA_CAMERA_PLATFORM) += camera/
 obj-y += dc/
 obj-y += host/
+obj-$(CONFIG_TEGRA_NVMAP) += nvmap/

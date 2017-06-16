@@ -2,6 +2,8 @@
 # Makefile for kernel SPI drivers.
 #
 
+subdir-ccflags-y += -Wno-error
+
 ccflags-$(CONFIG_SPI_DEBUG) := -DDEBUG
 
 # small core, mostly translating board-specific

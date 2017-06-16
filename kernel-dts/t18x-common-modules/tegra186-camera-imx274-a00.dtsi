@@ -193,8 +193,8 @@
 					dpcm_enable = "false";
 					cil_settletime = "0";
 
-					active_w = "3864";
-					active_h = "2174";
+					active_w = "3840";
+					active_h = "2160";
 					pixel_t = "bayer_rggb";
 					readout_orientation = "90";
 					line_length = "4200";

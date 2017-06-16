@@ -853,6 +853,9 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 		/* Disable the card and internal clocks first */
 		sdhci_set_clock(host, clock);
 
+		if (host->mmc->skip_host_clkgate)
+			return;
+
 		/* Disable SDMMC host CAR clock */
 		if (tegra_host->is_clk_enabled) {
 			/* power down / idle state */

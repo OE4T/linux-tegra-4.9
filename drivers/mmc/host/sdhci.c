@@ -1915,8 +1915,7 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	if (!ios->clock && !host->mmc->skip_host_clkgate &&
-		(ios->clock != host->clock)) {
+	if (!ios->clock && (ios->clock != host->clock)) {
 		host->ops->set_clock(host, ios->clock);
 		host->clock = ios->clock;
 	}

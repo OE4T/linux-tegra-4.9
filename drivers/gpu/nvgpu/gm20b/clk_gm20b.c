@@ -416,7 +416,7 @@ static void clk_set_dfs_ext_cal(struct gk20a *g, u32 dfs_det_cal)
 
 	data = gk20a_readl(g, trim_gpc_bcast_gpcpll_dvfs2_r());
 	data &= ~(BIT(DFS_DET_RANGE + 1) - 1);
-	data |= dfs_det_cal;
+	data |= dfs_det_cal & (BIT(DFS_DET_RANGE + 1) - 1);
 	gk20a_writel(g, trim_gpc_bcast_gpcpll_dvfs2_r(), data);
 
 	data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());

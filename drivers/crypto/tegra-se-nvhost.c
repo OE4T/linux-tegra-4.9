@@ -89,13 +89,13 @@ enum tegra_se_key_table_type {
 	SE_KEY_TABLE_TYPE_KEY,	/* Key */
 	SE_KEY_TABLE_TYPE_ORGIV,	/* Original IV */
 	SE_KEY_TABLE_TYPE_UPDTDIV,	/* Updated IV */
+	SE_KEY_TABLE_TYPE_XTS_KEY1,	/* XTS Key1 */
 	SE_KEY_TABLE_TYPE_XTS_KEY2	/* XTS Key2 */
 };
 
 struct tegra_se_chipdata {
 	unsigned long aes_freq;
 	unsigned int cpu_freq_mhz;
-	bool is_xts_supported;
 };
 
 /* Security Engine Linked List */
@@ -650,17 +650,17 @@ static u32 tegra_se_get_config(struct tegra_se_dev *se_dev,
 	case SE_AES_OP_MODE_XTS:
 		if (encrypt) {
 			val = SE_CONFIG_ENC_ALG(ALG_AES_ENC);
-			if (key_len == TEGRA_SE_KEY_256_SIZE)
-				val |= SE_CONFIG_ENC_MODE(MODE_KEY256);
+			if ((key_len / 2) == TEGRA_SE_KEY_256_SIZE)
+				val |= SE_CONFIG_ENC_MODE(MODE_XTS_KEY256);
 			else
-				val |= SE_CONFIG_ENC_MODE(MODE_KEY128);
+				val |= SE_CONFIG_ENC_MODE(MODE_XTS_KEY128);
 			val |= SE_CONFIG_DEC_ALG(ALG_NOP);
 		} else {
 			val = SE_CONFIG_DEC_ALG(ALG_AES_DEC);
-			if (key_len == TEGRA_SE_KEY_256_SIZE)
-				val |= SE_CONFIG_DEC_MODE(MODE_KEY256);
+			if (key_len / 2 == TEGRA_SE_KEY_256_SIZE)
+				val |= SE_CONFIG_DEC_MODE(MODE_XTS_KEY256);
 			else
-				val |= SE_CONFIG_DEC_MODE(MODE_KEY128);
+				val |= SE_CONFIG_DEC_MODE(MODE_XTS_KEY128);
 			val |= SE_CONFIG_ENC_ALG(ALG_NOP);
 		}
 			val |= SE_CONFIG_DST(DST_MEMORY);
@@ -939,11 +939,13 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata,
 		return -EINVAL;
 	}
 
-	if (type == SE_KEY_TABLE_TYPE_ORGIV)
+	if ((type == SE_KEY_TABLE_TYPE_ORGIV) ||
+	    (type == SE_KEY_TABLE_TYPE_XTS_KEY2))
 		quad = QUAD_ORG_IV;
 	else if (type == SE_KEY_TABLE_TYPE_UPDTDIV)
 		quad = QUAD_UPDTD_IV;
-	else
+	else if ((type == SE_KEY_TABLE_TYPE_KEY) ||
+		 (type == SE_KEY_TABLE_TYPE_XTS_KEY1))
 		quad = QUAD_KEYS_128;
 
 	i = se_dev->cmdbuf_cnt;
@@ -960,6 +962,8 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata,
 	do {
 		if (type == SE_KEY_TABLE_TYPE_XTS_KEY2)
 			pkt = SE_CRYPTO_KEYIV_PKT_SUBKEY_SEL(SUBKEY_SEL_KEY2);
+		else if (type == SE_KEY_TABLE_TYPE_XTS_KEY1)
+			pkt = SE_CRYPTO_KEYIV_PKT_SUBKEY_SEL(SUBKEY_SEL_KEY1);
 
 		pkt |= (SE_KEYTABLE_SLOT(slot_num) | SE_KEYTABLE_QUAD(quad));
 
@@ -977,10 +981,16 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata,
 			cpuvaddr[i++] = *pdata_buf++;
 		}
 		data_size = data_len;
-		quad = QUAD_KEYS_256;
+		if ((type == SE_KEY_TABLE_TYPE_KEY) ||
+		    (type == SE_KEY_TABLE_TYPE_XTS_KEY1))
+			quad = QUAD_KEYS_256;
+		else if (type == SE_KEY_TABLE_TYPE_XTS_KEY2)
+			quad = QUAD_UPDTD_IV;
+
 	} while (data_len);
 
-	if (type == SE_KEY_TABLE_TYPE_KEY) {
+	if ((type != SE_KEY_TABLE_TYPE_ORGIV) &&
+	    (type != SE_KEY_TABLE_TYPE_UPDTDIV)) {
 		cpuvaddr[i++] = __nvhost_opcode_nonincr(
 				opcode_addr + SE_AES_OPERATION_OFFSET, 1);
 		cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
@@ -990,7 +1000,8 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata,
 	cmdbuf_num_words = i;
 	se_dev->cmdbuf_cnt = i;
 
-	if (type == SE_KEY_TABLE_TYPE_KEY)
+	if ((type != SE_KEY_TABLE_TYPE_ORGIV) &&
+	    (type != SE_KEY_TABLE_TYPE_UPDTDIV))
 		err = tegra_se_channel_submit_gather(
 			se_dev, cpuvaddr, iova, 0, cmdbuf_num_words, callback);
 
@@ -1779,7 +1790,8 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 
 	if (((keylen & SE_KEY_LEN_MASK) != TEGRA_SE_KEY_128_SIZE) &&
 	    ((keylen & SE_KEY_LEN_MASK) != TEGRA_SE_KEY_192_SIZE) &&
-	    ((keylen & SE_KEY_LEN_MASK) != TEGRA_SE_KEY_256_SIZE)) {
+	    ((keylen & SE_KEY_LEN_MASK) != TEGRA_SE_KEY_256_SIZE) &&
+	    ((keylen & SE_KEY_LEN_MASK) != TEGRA_SE_KEY_512_SIZE)) {
 		dev_err(se_dev->dev, "invalid key size");
 		return -EINVAL;
 	}
@@ -1827,20 +1839,27 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 	se_dev->cmdbuf_list_entry = index;
 
 	/* load the key */
-	if (ctx->op_mode == SE_AES_OP_MODE_XTS)
-		keylen = keylen / 2;
-	ret = tegra_se_send_key_data(se_dev, pdata, keylen, ctx->slot->slot_num,
-				     SE_KEY_TABLE_TYPE_KEY, se_dev->opcode_addr,
-				     cpuvaddr, iova, true);
-	if (ret)
-		goto keyslt_free;
 
-	if (ctx->op_mode == SE_AES_OP_MODE_XTS)
+	if (strcmp(crypto_tfm_alg_name(&tfm->base), "xts(aes)")) {
+		ret = tegra_se_send_key_data(
+			se_dev, pdata, keylen, ctx->slot->slot_num,
+			SE_KEY_TABLE_TYPE_KEY, se_dev->opcode_addr, cpuvaddr,
+			iova, true);
+	} else {
+		keylen = keylen / 2;
+		ret = tegra_se_send_key_data(
+			se_dev, pdata, keylen, ctx->slot->slot_num,
+			SE_KEY_TABLE_TYPE_XTS_KEY1, se_dev->opcode_addr,
+			cpuvaddr, iova, true);
+		if (ret)
+			goto keyslt_free;
+
 		ret = tegra_se_send_key_data(se_dev, pdata + keylen, keylen,
 					     ctx->slot->slot_num,
 					     SE_KEY_TABLE_TYPE_XTS_KEY2,
 					     se_dev->opcode_addr, cpuvaddr,
 					     iova, true);
+	}
 keyslt_free:
 	if (ret)
 		tegra_se_free_key_slot(ctx->slot);
@@ -3845,13 +3864,6 @@ static int tegra_se_nvhost_prepare_poweroff(struct platform_device *pdev)
 static struct tegra_se_chipdata tegra18_se_chipdata = {
 	.aes_freq = 600000000,
 	.cpu_freq_mhz = 2400,
-	.is_xts_supported = false,
-};
-
-static struct tegra_se_chipdata tegra19_se_chipdata = {
-	.aes_freq = 600000000,
-	.cpu_freq_mhz = 2400,
-	.is_xts_supported = true,
 };
 
 static struct nvhost_device_data nvhost_se1_info = {
@@ -3922,23 +3934,6 @@ static struct nvhost_device_data nvhost_se4_info = {
 	.prepare_poweroff = tegra_se_nvhost_prepare_poweroff,
 };
 
-static struct nvhost_device_data t19x_nvhost_se2_info = {
-	.clocks = {{"se", 600000000},
-				{"emc", UINT_MAX,
-				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
-				0, TEGRA_BWMGR_SET_EMC_FLOOR}, {} },
-	.can_powergate          = true,
-	.autosuspend_delay      = 500,
-	.class = NV_SE2_CLASS_ID,
-	.private_data = &tegra19_se_chipdata,
-	.serialize = 1,
-	.push_work_done = 1,
-	.vm_regs                = {{SE_STREAMID_REG_OFFSET, true} },
-	.kernel_only = true,
-	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE2,
-	.prepare_poweroff = tegra_se_nvhost_prepare_poweroff,
-};
-
 static const struct of_device_id tegra_se_of_match[] = {
 	{
 		.compatible = "nvidia,tegra186-se1-nvhost",
@@ -3952,9 +3947,6 @@ static const struct of_device_id tegra_se_of_match[] = {
 	}, {
 		.compatible = "nvidia,tegra186-se4-nvhost",
 		.data = &nvhost_se4_info,
-	}, {
-		.compatible = "nvidia,tegra19x-se2-nvhost",
-		.data = &t19x_nvhost_se2_info,
 	}, {}
 };
 MODULE_DEVICE_TABLE(of, tegra_se_of_match);
@@ -4112,16 +4104,16 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (is_algo_supported(node, "aes")) {
-		if (se_dev->chipdata->is_xts_supported) {
-			INIT_LIST_HEAD(&aes_algs[0].cra_list);
-			err = crypto_register_alg(&aes_algs[0]);
-			if (err) {
-				dev_err(se_dev->dev,
-					"crypto_register_alg xts failed\n");
-				goto reg_fail;
-			}
+	if (is_algo_supported(node, "xts")) {
+		INIT_LIST_HEAD(&aes_algs[0].cra_list);
+		err = crypto_register_alg(&aes_algs[0]);
+		if (err) {
+			dev_err(se_dev->dev,
+				"crypto_register_alg xts failed\n");
+			goto reg_fail;
 		}
+	}
+	if (is_algo_supported(node, "aes")) {
 
 		for (i = 1; i < ARRAY_SIZE(aes_algs); i++) {
 			INIT_LIST_HEAD(&aes_algs[i].cra_list);
@@ -4243,6 +4235,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	tegra_se_boost_cpu_init(se_dev);
+
 	dev_info(se_dev->dev, "%s: complete", __func__);
 
 	return 0;
@@ -4287,10 +4280,10 @@ static int tegra_se_remove(struct platform_device *pdev)
 	if (is_algo_supported(node, "drbg"))
 		crypto_unregister_rng(&rng_algs[0]);
 
-	if (is_algo_supported(node, "aes")) {
-		if (se_dev->chipdata->is_xts_supported)
-			crypto_unregister_alg(&aes_algs[0]);
+	if (is_algo_supported(node, "xts"))
+		crypto_unregister_alg(&aes_algs[0]);
 
+	if (is_algo_supported(node, "aes")) {
 		crypto_unregister_alg(&aes_algs[1]);
 		for (i = 2; i < ARRAY_SIZE(aes_algs); i++)
 			crypto_unregister_alg(&aes_algs[i]);

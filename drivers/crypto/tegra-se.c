@@ -2335,6 +2335,7 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 		return -EDOM;
 	}
 
+	mutex_lock(&se_hw_lock);
 	*se_dev->src_ll_buf = num_src_sgs - 1;
 	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
 
@@ -2342,8 +2343,10 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 		dst_ll = src_ll;
 		ret1 = tegra_map_sg(se_dev->dev, req->src, 1, DMA_BIDIRECTIONAL,
 				    src_ll, req->src_len);
-		if (!ret1)
+		if (!ret1) {
+			mutex_unlock(&se_hw_lock);
 			return -EINVAL;
+		}
 	} else {
 		*se_dev->dst_ll_buf = num_dst_sgs - 1;
 		dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
@@ -2351,14 +2354,13 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 				    src_ll, req->src_len);
 		ret2 = tegra_map_sg(se_dev->dev, req->dst, 1, DMA_FROM_DEVICE,
 				    dst_ll, req->dst_len);
-		if (!ret1 || !ret2)
+		if (!ret1 || !ret2) {
+			mutex_unlock(&se_hw_lock);
 			return -EINVAL;
+		}
 	}
 
-	/* take access to the hw */
-	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
-
 	/* Write key length */
 	se_writel(se_dev, ((rsa_ctx->mod_len / 64) - 1),
 		  SE_RSA_KEY_SIZE_REG_OFFSET);

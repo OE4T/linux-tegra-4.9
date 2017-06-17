@@ -18,8 +18,9 @@
 
 #include <linux/notifier.h>
 
-static u64 (*get_systime)(void);
-static DEFINE_SPINLOCK(ptp_notifier_lock);
+static u64 (*get_systime)(void *);
+static void *param;
+static DEFINE_RAW_SPINLOCK(ptp_notifier_lock);
 static ATOMIC_NOTIFIER_HEAD(tegra_hwtime_chain_head);
 
 /* Clients register for notification of hwtime change events */
@@ -44,13 +45,14 @@ int tegra_hwtime_notifier_call_chain(unsigned int val, void *v)
 	return notifier_to_errno(ret);
 }
 
-void tegra_register_hwtime_source(u64 (*func)(void))
+void tegra_register_hwtime_source(u64 (*func)(void *), void *data)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&ptp_notifier_lock, flags);
+	raw_spin_lock_irqsave(&ptp_notifier_lock, flags);
 	get_systime = func;
-	spin_unlock_irqrestore(&ptp_notifier_lock, flags);
+	param = data;
+	raw_spin_unlock_irqrestore(&ptp_notifier_lock, flags);
 
 	/* Notify HW time stamp update to registered clients.
 	 * NULL callback parameter. We use a separate timestamp
@@ -64,9 +66,10 @@ void tegra_unregister_hwtime_source(void)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&ptp_notifier_lock, flags);
+	raw_spin_lock_irqsave(&ptp_notifier_lock, flags);
 	get_systime = NULL;
-	spin_unlock_irqrestore(&ptp_notifier_lock, flags);
+	param = NULL;
+	raw_spin_unlock_irqrestore(&ptp_notifier_lock, flags);
 }
 EXPORT_SYMBOL(tegra_unregister_hwtime_source);
 
@@ -75,12 +78,12 @@ u64 get_ptp_hwtime(void)
 	unsigned long flags;
 	u64 ns;
 
-	spin_lock_irqsave(&ptp_notifier_lock, flags);
+	raw_spin_lock_irqsave(&ptp_notifier_lock, flags);
 	if (get_systime)
-		ns = get_systime();
+		ns = get_systime(param);
 	else
 		ns = ktime_to_ns(ktime_get_raw());
-	spin_unlock_irqrestore(&ptp_notifier_lock, flags);
+	raw_spin_unlock_irqrestore(&ptp_notifier_lock, flags);
 
 	return ns;
 }

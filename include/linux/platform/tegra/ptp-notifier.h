@@ -21,7 +21,7 @@
 
 #if IS_ENABLED(CONFIG_TEGRA_PTP_NOTIFIER)
 /* register / unregister HW time source */
-void tegra_register_hwtime_source(u64 (*func)(void));
+void tegra_register_hwtime_source(u64 (*func)(void *), void *data);
 void tegra_unregister_hwtime_source(void);
 
 /* clients registering / unregistering for time update events */
@@ -41,7 +41,8 @@ u64 get_ptp_hwtime(void);
 #else /* CONFIG_TEGRA_PTP_NOTIFIER */
 
 /* register / unregister HW time source */
-static inline void tegra_register_hwtime_source(u64 (*func)(void))
+static inline void tegra_register_hwtime_source(u64 (*func)(void *),
+						void *data)
 {
 }
 

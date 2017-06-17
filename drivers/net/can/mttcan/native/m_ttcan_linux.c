@@ -104,6 +104,8 @@ static __init int mttcan_hw_init(struct mttcan_priv *priv)
 
 	ttcan_print_version(ttcan);
 
+	raw_spin_lock_init(&priv->tc_lock);
+
 	return err;
 }
 

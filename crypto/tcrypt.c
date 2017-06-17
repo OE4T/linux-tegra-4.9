@@ -1488,7 +1488,6 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 	case 35:
 		ret += tcrypt_test("gcm(aes)");
 		ret += tcrypt_test("lrw(aes)");
-		ret += tcrypt_test("xts(aes)");
 		ret += tcrypt_test("rfc3686(ctr(aes))");
 		break;
 
@@ -1558,6 +1557,10 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 
 	case 52:
 		ret += tcrypt_test("ecdh");
+		break;
+
+	case 53:
+		ret += tcrypt_test("xts(aes)");
 		break;
 
 	case 100:

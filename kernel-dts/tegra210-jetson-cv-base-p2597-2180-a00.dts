@@ -27,6 +27,7 @@
 #include "jetson-platforms/tegra210-jetson-cv-camera-modules.dtsi"
 #include "jetson-platforms/tegra210-pwm-fan-p2530-0930.dtsi"
 #include <panels/panel-a-wuxga-8-0.dtsi>
+#include <panels/panel-a-edp-1080p-14-0.dtsi>
 #include <panels/panel-s-edp-uhdtv-15-6.dtsi>
 #include <t210-common-platforms/tegra210-ers-hdmi-e2190-1100-a00.dtsi>
 #include <tegra210-soc/tegra210-sdhci.dtsi>
@@ -194,6 +195,9 @@
 			status = "okay";
 			pwms = <&tegra_pwm 0 40161>;
 		};
+		panel-a-edp-1080p-14-0-bl {
+			pwms = <&tegra_pwm 0 1000000>;
+		};
 		panel-s-edp-uhdtv-15-6-bl {
 			status = "okay";
 			pwms = <&tegra_pwm 0 1000000>;
@@ -310,6 +314,9 @@
 				smartdimmer {
 					status = "okay";
 				};
+			};
+			panel-a-edp-1080p-14-0 {
+				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 			};
 			prod-settings {
 				status = "okay";

@@ -454,7 +454,7 @@ static void clk_setup_dvfs_detection(struct gk20a *g, struct pll *gpll)
 /* Enable NA/DVFS mode */
 static int clk_enbale_pll_dvfs(struct gk20a *g)
 {
-	u32 data;
+	u32 data, cfg;
 	int delay = gpc_pll_params.iddq_exit_delay; /* iddq & calib delay */
 	struct pll_parms *p = &gpc_pll_params;
 	bool calibrated = p->uvdet_slope && p->uvdet_offs;
@@ -509,6 +509,14 @@ static int clk_enbale_pll_dvfs(struct gk20a *g)
 	data |= trim_sys_gpcpll_dvfs1_en_dfs_cal_m();
 	gk20a_writel(g, trim_sys_gpcpll_dvfs1_r(), data);
 
+	/* C1 PLL must be enabled to read internal calibration results */
+	if (g->clk.gpc_pll.id == GM20B_GPC_PLL_C1) {
+		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+		cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
+				trim_sys_gpcpll_cfg_enable_yes_f());
+		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+	}
+
 	/* Wait for internal calibration done (spec < 2us). */
 	do {
 		data = gk20a_readl(g, trim_sys_gpcpll_dvfs1_r());
@@ -518,13 +526,22 @@ static int clk_enbale_pll_dvfs(struct gk20a *g)
 		delay--;
 	} while (delay > 0);
 
+	/* Read calibration results */
+	data = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
+	data = trim_sys_gpcpll_cfg3_dfs_testout_v(data);
+
+	if (g->clk.gpc_pll.id == GM20B_GPC_PLL_C1) {
+		cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
+				trim_sys_gpcpll_cfg_enable_no_f());
+		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
+		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	}
+
 	if (delay <= 0) {
 		nvgpu_err(g, "GPCPLL calibration timeout");
 		return -ETIMEDOUT;
 	}
 
-	data = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
-	data = trim_sys_gpcpll_cfg3_dfs_testout_v(data);
 	p->uvdet_offs = g->clk.pll_poweron_uv - data * ADC_SLOPE_UV;
 	p->uvdet_slope = ADC_SLOPE_UV;
 	return 0;

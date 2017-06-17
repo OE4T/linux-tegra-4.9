@@ -1097,7 +1097,7 @@
 		se@15820000 {
 			compatible = "nvidia,tegra186-se2-nvhost";
 			reg = <0x0 0x15820000 0x0 0x10000>;
-			supported-algos = "aes", "cmac";
+			supported-algos = "xts", "aes", "cmac";
 			opcode_addr = <0x404>;
 			resets = <&bpmp_resets TEGRA194_RESET_SE>;
 			clocks = <&bpmp_clks TEGRA194_CLK_SE>;

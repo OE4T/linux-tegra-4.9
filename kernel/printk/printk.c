@@ -2191,8 +2191,8 @@ static int console_cpu_notify(struct notifier_block *self,
 	case CPU_DEAD:
 	case CPU_DOWN_FAILED:
 	case CPU_UP_CANCELED:
-		console_lock();
-		console_unlock();
+		if (console_trylock())
+			console_unlock();
 	}
 	return NOTIFY_OK;
 }

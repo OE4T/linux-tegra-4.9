@@ -51,9 +51,9 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
 
-void gk20a_busy_noresume(struct device *dev)
+void gk20a_busy_noresume(struct gk20a *g)
 {
-	pm_runtime_get_noresume(dev);
+	pm_runtime_get_noresume(dev_from_gk20a(g));
 }
 
 int gk20a_busy(struct gk20a *g)
@@ -103,9 +103,9 @@ fail:
 	return ret < 0 ? ret : 0;
 }
 
-void gk20a_idle_nosuspend(struct device *dev)
+void gk20a_idle_nosuspend(struct gk20a *g)
 {
-	pm_runtime_put_noidle(dev);
+	pm_runtime_put_noidle(dev_from_gk20a(g));
 }
 
 void gk20a_idle(struct gk20a *g)
@@ -760,7 +760,7 @@ static int gk20a_pm_suspend(struct device *dev)
 	int ret = 0;
 
 	if (g->user_railgate_disabled)
-		gk20a_idle_nosuspend(dev);
+		gk20a_idle_nosuspend(g);
 
 	if (atomic_read(&dev->power.usage_count) > 1) {
 		ret = -EBUSY;
@@ -783,7 +783,7 @@ static int gk20a_pm_suspend(struct device *dev)
 
 fail:
 	if (g->user_railgate_disabled)
-		gk20a_busy_noresume(dev);
+		gk20a_busy_noresume(g);
 
 	return ret;
 }
@@ -794,7 +794,7 @@ static int gk20a_pm_resume(struct device *dev)
 	int ret = 0;
 
 	if (g->user_railgate_disabled)
-		gk20a_busy_noresume(dev);
+		gk20a_busy_noresume(g);
 
 	if (!g->suspended)
 		return 0;

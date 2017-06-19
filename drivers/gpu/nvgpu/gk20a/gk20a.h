@@ -1475,8 +1475,8 @@ void gk20a_remove_sysfs(struct device *dev);
 #define GK20A_BAR1_IORESOURCE_MEM 1
 #define GK20A_SIM_IORESOURCE_MEM 2
 
-void gk20a_busy_noresume(struct device *dev);
-void gk20a_idle_nosuspend(struct device *dev);
+void gk20a_busy_noresume(struct gk20a *g);
+void gk20a_idle_nosuspend(struct gk20a *g);
 int __must_check gk20a_busy(struct gk20a *g);
 void gk20a_idle(struct gk20a *g);
 int __gk20a_do_idle(struct gk20a *g, bool force_reset);

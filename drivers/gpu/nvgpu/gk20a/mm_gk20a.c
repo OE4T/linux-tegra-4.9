@@ -2283,9 +2283,9 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	gk20a_busy_noresume(g->dev);
+	gk20a_busy_noresume(g);
 	if (!g->power_on) {
-		gk20a_idle_nosuspend(g->dev);
+		gk20a_idle_nosuspend(g);
 		return 0;
 	}
 
@@ -2325,7 +2325,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	nvgpu_mutex_release(&mm->l2_op_lock);
 
-	gk20a_idle_nosuspend(g->dev);
+	gk20a_idle_nosuspend(g);
 
 	return ret;
 }
@@ -2367,13 +2367,13 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 void gk20a_mm_l2_invalidate(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	gk20a_busy_noresume(g->dev);
+	gk20a_busy_noresume(g);
 	if (g->power_on) {
 		nvgpu_mutex_acquire(&mm->l2_op_lock);
 		gk20a_mm_l2_invalidate_locked(g);
 		nvgpu_mutex_release(&mm->l2_op_lock);
 	}
-	gk20a_idle_nosuspend(g->dev);
+	gk20a_idle_nosuspend(g);
 }
 
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
@@ -2384,7 +2384,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 	gk20a_dbg_fn("");
 
-	gk20a_busy_noresume(g->dev);
+	gk20a_busy_noresume(g);
 	if (!g->power_on)
 		goto hw_was_off;
 
@@ -2421,7 +2421,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	nvgpu_mutex_release(&mm->l2_op_lock);
 
 hw_was_off:
-	gk20a_idle_nosuspend(g->dev);
+	gk20a_idle_nosuspend(g);
 }
 
 void gk20a_mm_cbc_clean(struct gk20a *g)
@@ -2432,7 +2432,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	gk20a_busy_noresume(g->dev);
+	gk20a_busy_noresume(g);
 	if (!g->power_on)
 		goto hw_was_off;
 
@@ -2461,7 +2461,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 	nvgpu_mutex_release(&mm->l2_op_lock);
 
 hw_was_off:
-	gk20a_idle_nosuspend(g->dev);
+	gk20a_idle_nosuspend(g);
 }
 
 int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,

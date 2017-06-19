@@ -352,4 +352,4 @@ config TEGRA_DC_FAKE_PANEL_SUPPORT
 trysource "../nvidia/drivers/video/tegra/Kconfig"
 trysource "../nvidia/drivers/video/tegra/Kconfig.nvidia"
 trysource "drivers/video/tegra/Kconfig.nvidia"
-trysource "../display/drivers/misc/tegra-cec/Kconfig"
+trysource "../nvidia/drivers/misc/tegra-cec/Kconfig"

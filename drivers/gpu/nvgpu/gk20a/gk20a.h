@@ -87,13 +87,6 @@ struct page_alloc_chunk;
     32 ns is the resolution of ptimer. */
 #define PTIMER_REF_FREQ_HZ                      31250000
 
-struct cooling_device_gk20a {
-	struct thermal_cooling_device *gk20a_cooling_dev;
-	unsigned int gk20a_freq_state;
-	unsigned int gk20a_freq_table_size;
-	struct gk20a *g;
-};
-
 #ifdef CONFIG_DEBUG_FS
 struct railgate_stats {
 	unsigned long last_rail_gate_start;
@@ -1051,7 +1044,6 @@ struct gk20a {
 	struct nvgpu_pmu pmu;
 	struct acr_desc acr;
 	struct ecc_gk20a ecc;
-	struct cooling_device_gk20a gk20a_cdev;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct clk_pmupstate clk_pmu;
 	struct perf_pmupstate perf_pmu;

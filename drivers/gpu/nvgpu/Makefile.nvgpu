@@ -134,7 +134,7 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 	common/linux/debug_kmem.o \
 	common/linux/debug_clk.o
 
-nvgpu-$(CONFIG_TEGRA_GK20A) += tegra/linux/platform_gk20a_tegra.o
+nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o
 nvgpu-$(CONFIG_GK20A_PCI) += common/linux/pci.o
 nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += common/linux/nvhost.o
@@ -160,7 +160,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/sysfs_vgpu.o
 
 nvgpu-$(CONFIG_COMMON_CLK) += \
-	tegra/linux/clk.o
+	common/linux/clk.o
 
 nvgpu-$(CONFIG_GK20A_DEVFREQ) += \
 	gk20a/gk20a_scale.o
@@ -235,7 +235,7 @@ nvgpu-y += \
 	lpwr/rppg.o \
 	lpwr/lpwr.o
 
-nvgpu-$(CONFIG_TEGRA_GK20A) += tegra/linux/platform_gp10b_tegra.o
+nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gp10b_tegra.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/gp10b/vgpu_hal_gp10b.o  \

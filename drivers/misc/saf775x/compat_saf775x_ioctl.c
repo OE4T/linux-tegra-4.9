@@ -181,6 +181,8 @@ long compat_saf775x_hwdep_ioctl(struct file *file,
 			ret = file->f_op->unlocked_ioctl(file,
 				SAF775X_CONTROL_KEYCODE,
 				(unsigned long)saf775x_cmd);
+		else
+			ret = -EFAULT;
 		err = compat_put_saf775x_cmd(saf775x_cmd32, saf775x_cmd);
 		return ret ? ret : err;
 

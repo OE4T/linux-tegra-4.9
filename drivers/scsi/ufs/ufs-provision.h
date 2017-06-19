@@ -19,6 +19,7 @@
 #define _UFS_PROVISION_H
 
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include "ufshcd.h"
 
 #ifdef CONFIG_DEBUG_FS

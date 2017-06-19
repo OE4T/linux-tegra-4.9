@@ -1,6 +1,6 @@
 GCOV_PROFILE := y
 subdir-ccflags-y := -Werror
-ccflags-y += -I$(srctree)/../display/drivers/video/tegra/dc
+ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/dc
 ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/dc/nvdisp
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)

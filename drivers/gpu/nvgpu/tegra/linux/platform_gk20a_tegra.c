@@ -95,7 +95,7 @@ static inline void __maybe_unused pmc_write(u32 val, unsigned long reg)
 #define MHZ_TO_HZ(x) ((x) * 1000000)
 #define HZ_TO_MHZ(x) ((x) / 1000000)
 
-static void gk20a_tegra_secure_page_destroy(struct device *dev,
+static void gk20a_tegra_secure_page_destroy(struct gk20a *g,
 				       struct secure_page_buffer *secure_buffer)
 {
 	DEFINE_DMA_ATTRS(attrs);
@@ -148,10 +148,11 @@ static void gk20a_tegra_secure_destroy(struct gk20a *g,
 	}
 }
 
-static int gk20a_tegra_secure_alloc(struct device *dev,
+static int gk20a_tegra_secure_alloc(struct gk20a *g,
 			     struct gr_ctx_buffer_desc *desc,
 			     size_t size)
 {
+	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	DEFINE_DMA_ATTRS(attrs);
 	dma_addr_t iova;
@@ -187,7 +188,7 @@ static int gk20a_tegra_secure_alloc(struct device *dev,
 	desc->mem.aperture = APERTURE_SYSMEM;
 
 	if (platform->secure_buffer.destroy)
-		platform->secure_buffer.destroy(dev, &platform->secure_buffer);
+		platform->secure_buffer.destroy(g, &platform->secure_buffer);
 
 	return err;
 

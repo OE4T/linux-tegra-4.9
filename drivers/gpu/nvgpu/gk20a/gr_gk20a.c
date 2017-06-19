@@ -2728,7 +2728,6 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	int attr_buffer_size, err;
-	struct device *dev = g->dev;
 
 	u32 cb_buffer_size = gr->bundle_cb_default_size *
 		gr_scc_bundle_cb_size_div_256b_byte_granularity_v();
@@ -2748,7 +2747,7 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		goto clean_up;
 
 	if (g->ops.mm.secure_alloc)
-		g->ops.mm.secure_alloc(dev,
+		g->ops.mm.secure_alloc(g,
 				       &gr->global_ctx_buffer[CIRCULAR_VPR],
 				       cb_buffer_size);
 
@@ -2760,7 +2759,7 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		goto clean_up;
 
 	if (g->ops.mm.secure_alloc)
-		g->ops.mm.secure_alloc(dev,
+		g->ops.mm.secure_alloc(g,
 				       &gr->global_ctx_buffer[PAGEPOOL_VPR],
 				       pagepool_buffer_size);
 
@@ -2772,7 +2771,7 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		goto clean_up;
 
 	if (g->ops.mm.secure_alloc)
-		g->ops.mm.secure_alloc(dev,
+		g->ops.mm.secure_alloc(g,
 				       &gr->global_ctx_buffer[ATTRIBUTE_VPR],
 				       attr_buffer_size);
 

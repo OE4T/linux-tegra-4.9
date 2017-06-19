@@ -31,7 +31,7 @@ struct gr_ctx_buffer_desc;
 struct gk20a_scale_profile;
 
 struct secure_page_buffer {
-	void (*destroy)(struct device *, struct secure_page_buffer *);
+	void (*destroy)(struct gk20a *, struct secure_page_buffer *);
 	size_t size;
 	u64 iova;
 };

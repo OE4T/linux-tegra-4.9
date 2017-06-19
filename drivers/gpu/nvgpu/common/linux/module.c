@@ -984,7 +984,7 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 	gk20a_remove_sysfs(dev);
 
 	if (platform->secure_buffer.destroy)
-		platform->secure_buffer.destroy(dev,
+		platform->secure_buffer.destroy(g,
 				&platform->secure_buffer);
 
 	if (pm_runtime_enabled(dev))

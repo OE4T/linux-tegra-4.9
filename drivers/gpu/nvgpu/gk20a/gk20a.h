@@ -695,7 +695,7 @@ struct gpu_ops {
 		 * context buffer descriptor (especially fields destroy, sgt,
 		 * size).
 		 */
-		int (*secure_alloc)(struct device *dev,
+		int (*secure_alloc)(struct gk20a *g,
 				    struct gr_ctx_buffer_desc *desc,
 				    size_t size);
 	} mm;

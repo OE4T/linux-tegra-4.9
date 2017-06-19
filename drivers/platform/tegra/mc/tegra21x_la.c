@@ -593,6 +593,10 @@ static int t21x_set_la(enum tegra_la_id id,
 
 		emc_freq_mhz = clk_get_rate(emc_clk) /
 				(unsigned long)LA_HZ_TO_MHZ_FACTOR;
+		if (!emc_freq_mhz) {
+			pr_err("emc_freq_mhz is zero!!\n");
+			return 0;
+		}
 
 		if (ci->la_ref_clk_mhz <= emc_freq_mhz) {
 			la_to_set = min(ci->init_la,

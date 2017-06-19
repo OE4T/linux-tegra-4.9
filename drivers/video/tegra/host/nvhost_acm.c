@@ -60,6 +60,7 @@ static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data);
 
 static int nvhost_module_prepare_suspend(struct device *dev);
+static void nvhost_module_complete_resume(struct device *dev);
 static int nvhost_module_runtime_suspend(struct device *dev);
 static int nvhost_module_runtime_resume(struct device *dev);
 static int nvhost_module_prepare_poweroff(struct device *dev);
@@ -822,6 +823,7 @@ const struct dev_pm_ops nvhost_module_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
 				pm_runtime_force_resume)
 	.prepare = nvhost_module_prepare_suspend,
+	.complete = nvhost_module_complete_resume,
 };
 EXPORT_SYMBOL(nvhost_module_pm_ops);
 
@@ -958,7 +960,25 @@ static int nvhost_module_prepare_suspend(struct device *dev)
 	if (atomic_read(&dev->power.usage_count) > max_num_references)
 		return -EBUSY;
 
+	if (!pdata->can_powergate) {
+		/* If we took an extra reference, drop it now to prevent
+		 * the device from automatically resuming upon system
+		 * resume.
+		 */
+		pm_runtime_put_sync(dev);
+	}
+
 	return 0;
+}
+
+static void nvhost_module_complete_resume(struct device *dev)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+
+	if (!pdata->can_powergate) {
+		/* Retake reference dropped above */
+		pm_runtime_get_noresume(dev);
+	}
 }
 
 static int nvhost_module_prepare_poweroff(struct device *dev)

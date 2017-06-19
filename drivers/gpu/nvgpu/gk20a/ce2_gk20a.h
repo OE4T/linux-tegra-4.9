@@ -99,7 +99,6 @@ struct gk20a_ce_app {
 /* ce context db */
 struct gk20a_gpu_ctx {
 	struct gk20a *g;
-	struct device *dev;
 	u32 ctx_id;
 	struct nvgpu_mutex gpu_ctx_mutex;
 	int gpu_ctx_state;

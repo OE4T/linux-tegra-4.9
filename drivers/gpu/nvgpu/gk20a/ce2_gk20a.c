@@ -441,7 +441,6 @@ u32 gk20a_ce_create_context_with_cb(struct gk20a *g,
 	}
 
 	ce_ctx->g = g;
-	ce_ctx->dev = g->dev;
 	ce_ctx->user_event_callback = user_event_callback;
 
 	ce_ctx->cmd_buf_read_queue_offset = 0;

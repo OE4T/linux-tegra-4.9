@@ -94,8 +94,8 @@ static int suspend_debug_flags_set(void *data, u64 val)
 {
 	int ret;
 
-	if (val == FAKE_SYSTEM_SUSPEND_MODE) {
-		suspend_debug_flags = val;
+	if (val == FAKE_SYSTEM_SUSPEND_USER_ARG) {
+		suspend_debug_flags = FAKE_SYSTEM_SUSPEND_MODE;
 		ret = tegra_set_suspend_debug_flags(suspend_debug_flags);
 	} else {
 		pr_err("Invalid suspend debug flags\n");

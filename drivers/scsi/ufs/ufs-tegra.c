@@ -1012,8 +1012,8 @@ out:
 static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 		enum ufs_notify_change_status status)
 {
-	const struct ufs_tegra_host *ufs_tegra = hba->priv;
-	const struct device *dev = ufs_tegra->hba->dev;
+	struct ufs_tegra_host *ufs_tegra = hba->priv;
+	struct device *dev = ufs_tegra->hba->dev;
 	int err = 0;
 
 	switch (status) {

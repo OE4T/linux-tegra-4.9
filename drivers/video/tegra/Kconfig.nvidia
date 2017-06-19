@@ -1,4 +1,3 @@
-
 config TEGRA_CAMERA_PLATFORM
         bool "Enable tegra camera platform driver"
         depends on ARCH_TEGRA

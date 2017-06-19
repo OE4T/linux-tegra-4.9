@@ -1,7 +1,7 @@
 /*
  * SPI driver for NVIDIA's Tegra114 SPI Controller.
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -841,7 +841,7 @@ static void set_best_clk_source(struct tegra_spi_data *tspi,
 	unsigned int cdiv, fin_err = rate;
 	int ret;
 	struct clk *pclk, *fpclk = NULL;
-	const char *pclk_name, *fpclk_name;
+	const char *pclk_name, *fpclk_name = NULL;
 	struct device_node *node;
 	struct property *prop;
 

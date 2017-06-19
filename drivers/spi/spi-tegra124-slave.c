@@ -1172,7 +1172,7 @@ static void set_best_clk_source(struct spi_device *spi,
 	unsigned int cdiv, fin_err = rate;
 	int ret;
 	struct clk *pclk, *fpclk = NULL;
-	const char *pclk_name, *fpclk_name;
+	const char *pclk_name, *fpclk_name = NULL;
 	struct device_node *node;
 	struct property *prop;
 	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);

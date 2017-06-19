@@ -26,12 +26,12 @@
 
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
-#include "tegra/linux/clk.h"
+#include "common/linux/clk.h"
 
 #include "gp10b/platform_gp10b.h"
-#include "tegra/linux/platform_gp10b_tegra.h"
+#include "common/linux/platform_gp10b_tegra.h"
 
-#include "tegra/linux/platform_gk20a_tegra.h"
+#include "common/linux/platform_gk20a_tegra.h"
 #include "gr_gv11b.h"
 #include "nvgpu_gpuid_t19x.h"
 

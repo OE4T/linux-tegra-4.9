@@ -942,6 +942,7 @@ u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 	id = nvhost_get_syncpt(pdev, false, syncpt_name);
 	if (!id) {
 		nvhost_err(&pdev->dev, "failed to get syncpt\n");
+		kfree(syncpt_name);
 		return 0;
 	}
 
@@ -965,6 +966,7 @@ u32 nvhost_get_syncpt_client_managed(struct platform_device *pdev,
 	id = nvhost_get_syncpt(pdev, true, syncpt_name);
 	if (!id) {
 		nvhost_err(&pdev->dev, "failed to get syncpt\n");
+		kfree(syncpt_name);
 		return 0;
 	}
 

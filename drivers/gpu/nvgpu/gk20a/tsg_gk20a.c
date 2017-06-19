@@ -323,6 +323,19 @@ void gk20a_tsg_release(struct kref *ref)
 	gk20a_put(g);
 }
 
+struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch)
+{
+	struct tsg_gk20a *tsg = NULL;
+
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		struct gk20a *g = ch->g;
+		struct fifo_gk20a *f = &g->fifo;
+		tsg = &f->tsg[ch->tsgid];
+	}
+
+	return tsg;
+}
+
 void gk20a_init_tsg_ops(struct gpu_ops *gops)
 {
 	gops->fifo.tsg_bind_channel = gk20a_tsg_bind_channel;

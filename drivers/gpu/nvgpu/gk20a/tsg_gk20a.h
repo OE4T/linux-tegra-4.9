@@ -30,6 +30,7 @@ void gk20a_tsg_release(struct kref *ref);
 
 int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid);
 void gk20a_init_tsg_ops(struct gpu_ops *gops);
+struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch);
 
 struct tsg_gk20a {
 	struct gk20a *g;

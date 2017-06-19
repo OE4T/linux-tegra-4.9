@@ -34,6 +34,24 @@
 #include "gk20a/fence_gk20a.h"
 #include "ioctl_channel.h"
 
+static void gk20a_channel_trace_sched_param(
+	void (*trace)(int chid, int tsgid, pid_t pid, u32 timeslice,
+		u32 timeout, const char *interleave,
+		const char *graphics_preempt_mode,
+		const char *compute_preempt_mode),
+	struct channel_gk20a *ch)
+{
+	(trace)(ch->hw_chid, ch->tsgid, ch->pid,
+		gk20a_is_channel_marked_as_tsg(ch) ?
+			tsg_gk20a_from_ch(ch)->timeslice_us : ch->timeslice_us,
+		ch->timeout_ms_max,
+		gk20a_fifo_interleave_level_name(ch->interleave_level),
+		gr_gk20a_graphics_preempt_mode_name(ch->ch_ctx.gr_ctx ?
+			ch->ch_ctx.gr_ctx->graphics_preempt_mode : 0),
+		gr_gk20a_compute_preempt_mode_name(ch->ch_ctx.gr_ctx ?
+			ch->ch_ctx.gr_ctx->compute_preempt_mode : 0));
+}
+
 /*
  * Although channels do have pointers back to the gk20a struct that they were
  * created under in cases where the driver is killed that pointer can be bad.

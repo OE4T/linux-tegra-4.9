@@ -1541,24 +1541,6 @@ extern struct class nvgpu_class;
 int gk20a_prepare_poweroff(struct gk20a *g);
 int gk20a_finalize_poweron(struct gk20a *g);
 
-static inline void gk20a_channel_trace_sched_param(
-	void (*trace)(int chid, int tsgid, pid_t pid, u32 timeslice,
-		u32 timeout, const char *interleave,
-		const char *graphics_preempt_mode,
-		const char *compute_preempt_mode),
-	struct channel_gk20a *ch)
-{
-	(trace)(ch->hw_chid, ch->tsgid, ch->pid,
-		gk20a_is_channel_marked_as_tsg(ch) ?
-			tsg_gk20a_from_ch(ch)->timeslice_us : ch->timeslice_us,
-		ch->timeout_ms_max,
-		gk20a_fifo_interleave_level_name(ch->interleave_level),
-		gr_gk20a_graphics_preempt_mode_name(ch->ch_ctx.gr_ctx ?
-			ch->ch_ctx.gr_ctx->graphics_preempt_mode : 0),
-		gr_gk20a_compute_preempt_mode_name(ch->ch_ctx.gr_ctx ?
-			ch->ch_ctx.gr_ctx->compute_preempt_mode : 0));
-}
-
 void nvgpu_wait_for_deferred_interrupts(struct gk20a *g);
 
 struct gk20a * __must_check gk20a_get(struct gk20a *g);

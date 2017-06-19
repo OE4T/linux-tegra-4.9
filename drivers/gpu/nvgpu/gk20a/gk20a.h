@@ -76,11 +76,6 @@ struct nvgpu_cpu_time_correlation_sample;
 #endif
 #include "ecc_gk20a.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
-#define WRITE_ONCE(x, val) \
-			x = val
-#endif
-
 struct page_alloc_chunk;
 
 /* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.

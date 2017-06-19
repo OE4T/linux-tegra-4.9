@@ -37,7 +37,6 @@
 #include <linux/reset.h>
 #include <linux/delay.h>
 #include <linux/export.h>
-#include <linux/clk/tegra.h>
 #include <linux/msi.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
@@ -45,18 +44,15 @@
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
 #include <linux/clk.h>
-#include <linux/clk/tegra.h>
 #include <linux/async.h>
 #include <linux/vmalloc.h>
 #include <linux/pm_runtime.h>
-#include <linux/tegra-powergate.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <linux/of_gpio.h>
 #include <linux/of_pci.h>
 #include <linux/tegra_prod.h>
-#include <linux/tegra_pm_domains.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
@@ -473,11 +469,6 @@ struct tegra_pcie {
 	struct dentry *debugfs;
 	struct delayed_work detect_delay;
 	struct tegra_prod	*prod_list;
-};
-
-struct tegra_pcie_domain {
-	struct tegra_pcie *tegra_pcie;
-	struct tegra_pm_domain tpd;
 };
 
 static int tegra_pcie_enable_msi(struct tegra_pcie *pcie, bool no_init);
@@ -1719,28 +1710,17 @@ static void tegra_pcie_pme_turnoff(struct tegra_pcie *pcie)
 	afi_writel(pcie, data, AFI_PLLE_CONTROL);
 }
 
-static int tegra_pcie_module_power_ungate(struct generic_pm_domain *genpd)
+static int tegra_pcie_module_power_on(struct tegra_pcie *pcie)
 {
 	int ret;
 	struct device *dev;
-	struct tegra_pcie *pcie;
-	struct tegra_pcie_domain *tegra_pcie_domain;
-	struct tegra_pm_domain *tpd = to_tegra_pd(genpd);
 
 	PR_FUNC_LINE;
-
-	if (!tpd || (tpd->partition_id < 0))
-		return -EINVAL;
-
-	tegra_pcie_domain = container_of(tpd, struct tegra_pcie_domain, tpd);
-	pcie = tegra_pcie_domain->tegra_pcie;
-	if (!pcie)
-		return -EINVAL;
 
 	dev = pcie->dev;
 
 	if (pcie->pcie_power_enabled) {
-		dev_info(pcie->dev, "PCIE: Already powered on");
+		dev_info(dev, "PCIE: Already powered on");
 		return 0;
 	}
 	pcie->pcie_power_enabled = 1;
@@ -1757,14 +1737,15 @@ static int tegra_pcie_module_power_ungate(struct generic_pm_domain *genpd)
 	} else {
 		ret = tegra_pcie_enable_regulators(pcie);
 		if (ret) {
-			dev_err(pcie->dev, "PCIE: Failed to enable regulators\n");
+			dev_err(dev, "PCIE: Failed to enable regulators\n");
 			return ret;
 		}
 	}
-	if (!tegra_powergate_is_powered(tpd->partition_id))
-		ret = tegra_unpowergate_partition(tpd->partition_id);
+
 	return ret;
 }
+
+static int tegra_pcie_module_power_off(struct tegra_pcie *pcie);
 
 static int tegra_pcie_restore_device(struct device *dev)
 {
@@ -1772,26 +1753,32 @@ static int tegra_pcie_restore_device(struct device *dev)
 	struct tegra_pcie *pcie = dev_get_drvdata(dev);
 
 	PR_FUNC_LINE;
+	if (!pcie)
+		return 0;
+
+	pm_clk_resume(dev);
+	err = tegra_pcie_module_power_on(pcie);
+	if (err < 0)
+		dev_err(dev, "power on failed: %d\n", err);
 
 	if (pcie->soc_data->config_pex_io_dpd) {
 		err = pinctrl_select_state(pcie->pex_pin,
 					   pcie->pex_io_dpd_dis_state);
 		if (err < 0) {
-			dev_err(pcie->dev, "disabling pex-io-dpd failed: %d\n",
-				err);
+			dev_err(dev, "disabling pex-io-dpd failed: %d\n", err);
 			goto err_exit;
 		}
 	}
 
 	err = tegra_pcie_map_resources(pcie);
 	if (err) {
-		dev_err(pcie->dev, "PCIE: Failed to map resources\n");
+		dev_err(dev, "PCIE: Failed to map resources\n");
 		goto err_map_resource;
 	}
 	if (tegra_platform_is_fpga()) {
 		err = tegra_pcie_fpga_phy_init(pcie);
 		if (err)
-			dev_err(pcie->dev, "PCIE: Failed to initialize FPGA Phy\n");
+			dev_err(dev, "PCIE: Failed to initialize FPGA Phy\n");
 	}
 
 	tegra_pcie_enable_pads(pcie, true);
@@ -1803,15 +1790,18 @@ static int tegra_pcie_restore_device(struct device *dev)
 	reset_control_deassert(pcie->pcie_rst);
 	tegra_pcie_check_ports(pcie);
 	return 0;
+
 err_map_resource:
 	if (pcie->soc_data->config_pex_io_dpd) {
 		err = pinctrl_select_state(pcie->pex_pin,
 					   pcie->pex_io_dpd_en_state);
 		if (err < 0)
-			dev_err(pcie->dev,
-				"enabling pex-io-dpd failed: %d\n", err);
+			dev_err(dev, "enabling pex-io-dpd failed: %d\n", err);
 	}
 err_exit:
+	tegra_pcie_module_power_off(pcie);
+	pm_clk_suspend(dev);
+
 	return err;
 }
 
@@ -1835,9 +1825,11 @@ static int tegra_pcie_save_device(struct device *dev)
 	int err = 0;
 
 	PR_FUNC_LINE;
+	if (!pcie)
+		return 0;
 
 	if (pcie->pcie_power_enabled == 0) {
-		dev_info(pcie->dev, "PCIE: Already powered off");
+		dev_info(dev, "PCIE: Already powered off");
 		return 0;
 	}
 	list_for_each_entry(port, &pcie->ports, list) {
@@ -1850,31 +1842,25 @@ static int tegra_pcie_save_device(struct device *dev)
 		err = pinctrl_select_state(pcie->pex_pin,
 					   pcie->pex_io_dpd_en_state);
 		if (err < 0)
-			dev_err(pcie->dev,
-				"enabling pex-io-dpd failed: %d\n", err);
+			dev_err(dev, "enabling pex-io-dpd failed: %d\n", err);
 	}
+
+	err = tegra_pcie_module_power_off(pcie);
+	if (err < 0)
+		dev_err(dev, "power off failed: %d\n", err);
+
+	pm_clk_suspend(dev);
+
 	return err;
 }
 
-static int tegra_pcie_module_power_gate(struct generic_pm_domain *genpd)
+static int tegra_pcie_module_power_off(struct tegra_pcie *pcie)
 {
 	int ret;
 	struct device *dev;
-	struct tegra_pcie *pcie;
-	struct tegra_pcie_domain *tegra_pcie_domain;
-	struct tegra_pm_domain *tpd = to_tegra_pd(genpd);
 
 	PR_FUNC_LINE;
 
-	if (!tpd || (tpd->partition_id < 0))
-		return -EINVAL;
-
-	ret = tegra_powergate_partition(tpd->partition_id);
-	if (ret)
-		return ret;
-
-	tegra_pcie_domain = container_of(tpd, struct tegra_pcie_domain, tpd);
-	pcie = tegra_pcie_domain->tegra_pcie;
 	dev = pcie->dev;
 	/* configure PE_WAKE signal as wake sources */
 	if (gpio_is_valid(pcie->plat_data->gpio_wake) &&
@@ -4594,8 +4580,6 @@ static void pcie_delayed_detect(struct work_struct *work)
 	ret = tegra_pcie_probe_complete(pcie);
 	if (ret || !pcie->num_ports) {
 		pm_runtime_put_sync(pcie->dev);
-		pm_runtime_disable(pcie->dev);
-		tegra_pd_remove_device(pcie->dev);
 		goto release_regulators;
 	}
 	return;
@@ -4607,13 +4591,6 @@ release_regulators:
 	platform_set_drvdata(pdev, NULL);
 	return;
 }
-
-static struct tegra_pcie_domain pcie_domain = {
-	.tpd.gpd.power_on = tegra_pcie_module_power_ungate,
-	.tpd.gpd.power_off = tegra_pcie_module_power_gate,
-	.tpd.gpd.flags = GENPD_FLAG_PM_CLK,
-	.tpd.is_off = false,
-};
 
 #ifdef CONFIG_THERMAL
 #define TEGRA_PCIE_THERM_MAX_STATE     2
@@ -4694,7 +4671,6 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pcie);
 	pcie->dev = &pdev->dev;
-	pcie_domain.tegra_pcie = pcie;
 
 	/* use DT way to init platform data */
 	pcie->plat_data = devm_kzalloc(pcie->dev,
@@ -4851,7 +4827,6 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 		tegra_pcie_phy_exit(pcie);
 	tegra_pcie_release_resources(pcie);
 	pm_runtime_disable(pcie->dev);
-	tegra_pd_remove_device(pcie->dev);
 
 	return 0;
 }
@@ -5018,6 +4993,8 @@ static int tegra_pcie_resume(struct device *dev)
 {
 	struct tegra_pcie *pcie = dev_get_drvdata(dev);
 	PR_FUNC_LINE;
+	if (!pcie)
+		return 0;
 	tegra_pcie_enable_features(pcie);
 	return 0;
 }
@@ -5035,6 +5012,8 @@ static int tegra_pcie_suspend_late(struct device *dev)
 	u32 val = 0;
 
 	PR_FUNC_LINE;
+	if (!pcie)
+		return 0;
 	val = afi_readl(pcie, AFI_INTR_MASK);
 	val &= ~AFI_INTR_MASK_INT_MASK;
 	val &= ~AFI_INTR_MASK_MSI_MASK;
@@ -5048,6 +5027,8 @@ static int tegra_pcie_resume_early(struct device *dev)
 	u32 val = 0;
 
 	PR_FUNC_LINE;
+	if (!pcie)
+		return 0;
 	val = afi_readl(pcie, AFI_INTR_MASK);
 	val |= AFI_INTR_MASK_INT_MASK;
 	val |= AFI_INTR_MASK_MSI_MASK;
@@ -5061,7 +5042,9 @@ static const struct dev_pm_ops tegra_pcie_pm_ops = {
 	.resume_early = tegra_pcie_resume_early,
 	.runtime_suspend = tegra_pcie_save_device,
 	.runtime_resume = tegra_pcie_restore_device,
-	};
+	.suspend_noirq = tegra_pcie_save_device,
+	.resume_noirq = tegra_pcie_restore_device,
+};
 #endif /* CONFIG_PM */
 
 /* driver data is accessed after init, so use __refdata instead of __initdata */
@@ -5079,34 +5062,14 @@ static struct platform_driver __refdata tegra_pcie_driver = {
 	},
 };
 
-#ifdef CONFIG_TEGRA_MC_DOMAINS
-static struct of_device_id tegra_pcie_domain_match[] = {
-	{.compatible = "nvidia,tegra132-pcie-pd"},
-	{.compatible = "nvidia,tegra210-pcie-pd"},
-	{.compatible = "nvidia,tegra186-pcie-pd"},
-	{},
-};
-#endif
-
 static int __init tegra_pcie_init_driver(void)
 {
-
-#ifdef CONFIG_TEGRA_MC_DOMAINS
-	int ret;
-	ret = tegra_pd_add_domain(tegra_pcie_domain_match, &pcie_domain.tpd.gpd);
-	if (ret)
-		return ret;
-#endif
-
 	return platform_driver_register(&tegra_pcie_driver);
 }
 
 static void __exit tegra_pcie_exit_driver(void)
 {
 	platform_driver_unregister(&tegra_pcie_driver);
-#ifdef CONFIG_TEGRA_MC_DOMAINS
-	pm_genpd_remove(&pcie_domain.tpd.gpd);
-#endif
 }
 
 module_init(tegra_pcie_init_driver);

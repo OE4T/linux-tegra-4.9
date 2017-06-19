@@ -1296,8 +1296,10 @@ static void ufs_tegra_exit(struct ufs_hba *hba)
 
 	if (tegra_platform_is_silicon())
 		ufs_tegra_disable_mphylane_clks(ufs_tegra);
+#ifdef CONFIG_DEBUG_FS
 	if (ufs_tegra->enable_ufs_provisioning)
 		debugfs_provision_exit(hba);
+#endif
 }
 
 /**

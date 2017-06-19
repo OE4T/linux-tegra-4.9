@@ -15,9 +15,9 @@
  *
  */
 
+#include "ufs-provision.h"
 #ifdef CONFIG_DEBUG_FS
 
-#include "ufs-provision.h"
 #include "ufs-tegra.h"
 
 #define START_PROVISIONING 1

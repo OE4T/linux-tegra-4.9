@@ -330,7 +330,7 @@ static int pcan_usb_get_serial(struct peak_usb_device *dev, u32 *serial_number)
  */
 static int pcan_usb_get_device_id(struct peak_usb_device *dev, u32 *device_id)
 {
-	u8 args[PCAN_USB_CMD_ARGS_LEN];
+	u8 args[PCAN_USB_CMD_ARGS_LEN] = {0};
 	int err;
 
 	err = pcan_usb_wait_rsp(dev, 4, 1, args);

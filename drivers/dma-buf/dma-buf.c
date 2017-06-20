@@ -370,7 +370,6 @@ static long dma_buf_ioctl(struct file *file,
 	struct dma_buf *dmabuf;
 	struct dma_buf_sync sync;
 	enum dma_data_direction direction;
-	int ret;
 
 	dmabuf = file->private_data;
 
@@ -397,11 +396,12 @@ static long dma_buf_ioctl(struct file *file,
 		}
 
 		if (sync.flags & DMA_BUF_SYNC_END)
-			ret = dma_buf_end_cpu_access(dmabuf, direction);
+			dma_buf_end_cpu_access(dmabuf, 0,
+					dmabuf->size, direction);
 		else
-			ret = dma_buf_begin_cpu_access(dmabuf, direction);
-
-		return ret;
+			dma_buf_begin_cpu_access(dmabuf, 0,
+					dmabuf->size, direction);
+		return 0;
 	default:
 		return -ENOTTY;
 	}
@@ -800,11 +800,13 @@ static int __dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
  * preparations. Coherency is only guaranteed in the specified range for the
  * specified access direction.
  * @dmabuf:	[in]	buffer to prepare cpu access for.
+ * @start:	[in]	start of range for cpu access.
+ * @len:	[in]	length of range for cpu access.
  * @direction:	[in]	length of range for cpu access.
  *
  * Can return negative error values, returns 0 on success.
  */
-int dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
+int dma_buf_begin_cpu_access(struct dma_buf *dmabuf, size_t start, size_t len,
 			     enum dma_data_direction direction)
 {
 	int ret = 0;
@@ -813,7 +815,8 @@ int dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
 		return -EINVAL;
 
 	if (dmabuf->ops->begin_cpu_access)
-		ret = dmabuf->ops->begin_cpu_access(dmabuf, direction);
+		ret = dmabuf->ops->begin_cpu_access(dmabuf, start,
+							len, direction);
 
 	/* Ensure that all fences are waited upon - but we first allow
 	 * the native handler the chance to do so more efficiently if it
@@ -832,21 +835,19 @@ EXPORT_SYMBOL_GPL(dma_buf_begin_cpu_access);
  * actions. Coherency is only guaranteed in the specified range for the
  * specified access direction.
  * @dmabuf:	[in]	buffer to complete cpu access for.
+ * @start:	[in]	start of range for cpu access.
+ * @len:	[in]	length of range for cpu access.
  * @direction:	[in]	length of range for cpu access.
  *
  * Can return negative error values, returns 0 on success.
  */
-int dma_buf_end_cpu_access(struct dma_buf *dmabuf,
-			   enum dma_data_direction direction)
+void dma_buf_end_cpu_access(struct dma_buf *dmabuf, size_t start, size_t len,
+			    enum dma_data_direction direction)
 {
-	int ret = 0;
-
 	WARN_ON(!dmabuf);
 
 	if (dmabuf->ops->end_cpu_access)
-		ret = dmabuf->ops->end_cpu_access(dmabuf, direction);
-
-	return ret;
+		dmabuf->ops->end_cpu_access(dmabuf, start, len, direction);
 }
 EXPORT_SYMBOL_GPL(dma_buf_end_cpu_access);
 

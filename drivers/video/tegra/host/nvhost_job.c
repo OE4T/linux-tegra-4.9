@@ -219,6 +219,7 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	int i;
+	int err;
 
 	/* compare syncpt vs wait threshold */
 	for (i = 0; i < job->num_waitchk; i++) {
@@ -262,12 +263,26 @@ static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
 			patch_addr = dma_buf_kmap(buf,
 					wait->offset >> PAGE_SHIFT);
 			if (patch_addr) {
+				err = dma_buf_begin_cpu_access(buf,
+						wait->offset & PAGE_MASK,
+						PAGE_SIZE, DMA_TO_DEVICE);
+				if (err) {
+					nvhost_err(&pdata->pdev->dev,
+						"begin_cpu_access() failed for patching wait %d",
+						err);
+					return err;
+				}
+
 				nvhost_syncpt_patch_wait(sp,
 					(patch_addr +
 					 (wait->offset & ~PAGE_MASK)));
+
 				dma_buf_kunmap(buf,
 						wait->offset >> PAGE_SHIFT,
 						patch_addr);
+				dma_buf_end_cpu_access(buf,
+						wait->offset & PAGE_MASK,
+						PAGE_SIZE, DMA_TO_DEVICE);
 			} else {
 				pr_err("Couldn't map cmdbuf for wait check\n");
 			}
@@ -422,8 +437,10 @@ static int do_relocs(struct nvhost_job *job,
 	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	int i = 0;
 	int last_page = -1;
+	size_t last_offset;
 	void *cmdbuf_page_addr = NULL;
 	dma_addr_t phys_addr;
+	int err;
 
 	/* pin & patch the relocs for one gather */
 	while (i < job->num_relocs) {
@@ -438,17 +455,30 @@ static int do_relocs(struct nvhost_job *job,
 		}
 
 		if (last_page != reloc->cmdbuf_offset >> PAGE_SHIFT) {
-			if (cmdbuf_page_addr)
+			if (cmdbuf_page_addr) {
 				dma_buf_kunmap(buf, last_page,
 						cmdbuf_page_addr);
+				dma_buf_end_cpu_access(buf, last_offset,
+					PAGE_SIZE, DMA_TO_DEVICE);
+			}
 
 			cmdbuf_page_addr = dma_buf_kmap(buf,
 					reloc->cmdbuf_offset >> PAGE_SHIFT);
 			last_page = reloc->cmdbuf_offset >> PAGE_SHIFT;
+			last_offset = reloc->cmdbuf_offset & PAGE_MASK;
 
 			if (unlikely(!cmdbuf_page_addr)) {
 				pr_err("Couldn't map cmdbuf for relocation\n");
 				return -ENOMEM;
+			}
+
+			err = dma_buf_begin_cpu_access(buf, last_offset,
+					PAGE_SIZE, DMA_TO_DEVICE);
+			if (err) {
+				nvhost_err(&pdata->pdev->dev,
+					"begin_cpu_access() failed for patching reloc %d",
+					err);
+				return err;
 			}
 		}
 
@@ -487,8 +517,11 @@ static int do_relocs(struct nvhost_job *job,
 		}
 	}
 
-	if (cmdbuf_page_addr)
+	if (cmdbuf_page_addr) {
 		dma_buf_kunmap(buf, last_page, cmdbuf_page_addr);
+		dma_buf_end_cpu_access(buf, last_offset,
+				PAGE_SIZE, DMA_TO_DEVICE);
+	}
 
 	return 0;
 }

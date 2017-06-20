@@ -41,16 +41,16 @@ static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks,
 	u64 num_unpins = (u64)num_cmdbufs + (u64)num_relocs;
 	u64 total;
 
-	total = sizeof(struct nvhost_job)
-			+ (u64)num_relocs * sizeof(struct nvhost_reloc)
-			+ (u64)num_relocs * sizeof(struct nvhost_reloc_shift)
-			+ (u64)num_relocs * sizeof(struct nvhost_reloc_type)
-			+ num_unpins * sizeof(struct nvhost_job_unpin)
-			+ (u64)num_waitchks * sizeof(struct nvhost_waitchk)
-			+ (u64)num_cmdbufs * sizeof(struct nvhost_job_gather)
-			+ num_unpins * sizeof(dma_addr_t)
-			+ num_unpins * sizeof(struct nvhost_pinid)
-			+ (u64)num_syncpts * sizeof(struct nvhost_job_syncpt);
+	total = ALIGN(sizeof(struct nvhost_job), 8)
+		+ (u64)num_relocs * ALIGN(sizeof(struct nvhost_reloc), 8)
+		+ (u64)num_relocs * ALIGN(sizeof(struct nvhost_reloc_shift), 8)
+		+ (u64)num_relocs * ALIGN(sizeof(struct nvhost_reloc_type), 8)
+		+ num_unpins * ALIGN(sizeof(struct nvhost_job_unpin), 8)
+		+ (u64)num_waitchks * ALIGN(sizeof(struct nvhost_waitchk), 8)
+		+ (u64)num_cmdbufs * ALIGN(sizeof(struct nvhost_job_gather), 8)
+		+ num_unpins * ALIGN(sizeof(dma_addr_t), 8)
+		+ num_unpins * ALIGN(sizeof(struct nvhost_pinid), 8)
+		+ (u64)num_syncpts * ALIGN(sizeof(struct nvhost_job_syncpt), 8);
 
 	if (total > UINT_MAX)
 		return 0;
@@ -73,23 +73,23 @@ static void init_fields(struct nvhost_job *job,
 	 * Overflows and negative conditions have
 	 * already been checked in job_alloc().
 	 */
-	mem += sizeof(struct nvhost_job);
+	mem += ALIGN(sizeof(struct nvhost_job), 8);
 	job->relocarray = num_relocs ? mem : NULL;
-	mem += num_relocs * sizeof(struct nvhost_reloc);
+	mem += num_relocs * ALIGN(sizeof(struct nvhost_reloc), 8);
 	job->relocshiftarray = num_relocs ? mem : NULL;
-	mem += num_relocs * sizeof(struct nvhost_reloc_shift);
+	mem += num_relocs * ALIGN(sizeof(struct nvhost_reloc_shift), 8);
 	job->reloctypearray = num_relocs ? mem : NULL;
-	mem += num_relocs * sizeof(struct nvhost_reloc_type);
+	mem += num_relocs * ALIGN(sizeof(struct nvhost_reloc_type), 8);
 	job->unpins = num_unpins ? mem : NULL;
-	mem += num_unpins * sizeof(struct nvhost_job_unpin);
+	mem += num_unpins * ALIGN(sizeof(struct nvhost_job_unpin), 8);
 	job->waitchk = num_waitchks ? mem : NULL;
-	mem += num_waitchks * sizeof(struct nvhost_waitchk);
+	mem += num_waitchks * ALIGN(sizeof(struct nvhost_waitchk), 8);
 	job->gathers = num_cmdbufs ? mem : NULL;
-	mem += num_cmdbufs * sizeof(struct nvhost_job_gather);
+	mem += num_cmdbufs * ALIGN(sizeof(struct nvhost_job_gather), 8);
 	job->addr_phys = num_unpins ? mem : NULL;
-	mem += num_unpins * sizeof(dma_addr_t);
+	mem += num_unpins * ALIGN(sizeof(dma_addr_t), 8);
 	job->pin_ids = num_unpins ? mem : NULL;
-	mem += num_unpins * sizeof(struct nvhost_pinid);
+	mem += num_unpins * ALIGN(sizeof(struct nvhost_pinid), 8);
 	job->sp = num_syncpts ? mem : NULL;
 
 	job->reloc_addr_phys = job->addr_phys;

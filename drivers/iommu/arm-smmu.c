@@ -2302,7 +2302,7 @@ static int arm_smmu_add_device(struct device *dev)
 	u64 swgids = 0;
 	struct device_node *np = dev_get_dev_node(dev);
 	struct of_phandle_args args;
-	struct of_phandle_args master_spec;
+	struct of_phandle_args master_spec = {0};
 	int iommus_idx = 0;
 	bool register_master = false;
 

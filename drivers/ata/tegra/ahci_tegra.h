@@ -419,5 +419,5 @@ static inline void tegra_ahci_aux_update(struct ahci_host_priv *hpriv, u32 val,
 	rval = readl(tegra->base_list[TEGRA_SATA_AUX] + offset);
 }
 
-u64 ata_tf_read_block(struct ata_taskfile *tf, struct ata_device *dev);
+u64 tegra_ata_tf_read_block(struct ata_taskfile *tf, struct ata_device *dev);
 #endif

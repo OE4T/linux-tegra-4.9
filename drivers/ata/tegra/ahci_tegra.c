@@ -387,6 +387,56 @@ static char *tegra_ahci_get_disk_name(struct scsi_cmnd *scsicmd)
 		return NULL;
 }
 
+/**
+ *	tegra_ata_tf_read_block - Read block address from ATA taskfile
+ *	@tf: ATA taskfile of interest
+ *	@dev: ATA device @tf belongs to
+ *
+ *	LOCKING:
+ *	None.
+ *
+ *	Read block address from @tf.  This function can handle all
+ *	three address formats - LBA, LBA48 and CHS.  tf->protocol and
+ *	flags select the address format to use.
+ *
+ *	RETURNS:
+ *	Block address read from @tf.
+ */
+u64 tegra_ata_tf_read_block(struct ata_taskfile *tf, struct ata_device *dev)
+{
+	u64 block = 0;
+
+	if (tf->flags & ATA_TFLAG_LBA) {
+		if (tf->flags & ATA_TFLAG_LBA48) {
+			block |= (u64)tf->hob_lbah << 40;
+			block |= (u64)tf->hob_lbam << 32;
+			block |= (u64)tf->hob_lbal << 24;
+		} else
+			block |= (tf->device & 0xf) << 24;
+
+		block |= tf->lbah << 16;
+		block |= tf->lbam << 8;
+		block |= tf->lbal;
+	} else {
+		u32 cyl, head, sect;
+
+		cyl = tf->lbam | (tf->lbah << 8);
+		head = tf->device & 0xf;
+		sect = tf->lbal;
+
+		if (!sect) {
+			ata_dev_warn(dev,
+				     "device reported invalid CHS sector 0\n");
+			sect = 1; /* oh well */
+		}
+
+		block = ((u64)cyl * dev->heads + head) *
+			dev->sectors + sect - 1;
+	}
+
+	return block;
+}
+
 static void tegra_ahci_schedule_badblk_work(struct ata_queued_cmd *qc,
 		struct ata_device *dev)
 {
@@ -401,7 +451,7 @@ static void tegra_ahci_schedule_badblk_work(struct ata_queued_cmd *qc,
 	struct platform_device *pdev = tegra->pdev;
 
 	disk_name = tegra_ahci_get_disk_name(qc->scsicmd);
-	sector = ata_tf_read_block(&qc->tf, dev);
+	sector = tegra_ata_tf_read_block(&qc->tf, dev);
 	block = (sector * 512) / 4096;
 	if (spin_trylock(&tegra->badblk.badblk_lock)) {
 		temp = devm_kzalloc(&pdev->dev,

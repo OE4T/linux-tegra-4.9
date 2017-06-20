@@ -35,16 +35,12 @@ struct nvgpu_clk_pll_debug_data;
 struct nvgpu_nvhost_dev;
 struct nvgpu_cpu_time_correlation_sample;
 
-#include <linux/sched.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>
-#include <linux/version.h>
 #include <linux/cdev.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
-
-#include "../../../arch/arm/mach-tegra/iomap.h"
 
 #include <nvgpu/as.h>
 #include <nvgpu/log.h>
@@ -63,8 +59,6 @@ struct nvgpu_cpu_time_correlation_sample;
 #include "pmu_gk20a.h"
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
-#include "gm20b/acr_gm20b.h"
-#include "gk20a/bus_gk20a.h"
 #include "cde_gk20a.h"
 #include "sched_gk20a.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC

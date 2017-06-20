@@ -54,6 +54,8 @@
 
 #include "clk.h"
 
+#include "../../../arch/arm/mach-tegra/iomap.h"
+
 #define TEGRA_GK20A_BW_PER_FREQ 32
 #define TEGRA_GM20B_BW_PER_FREQ 64
 #define TEGRA_DDR3_BW_PER_FREQ 16

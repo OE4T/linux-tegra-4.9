@@ -16,6 +16,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
+#include "gm20b/acr_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp106/pmu_gp106.h"

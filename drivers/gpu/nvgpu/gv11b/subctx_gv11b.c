@@ -66,7 +66,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 		ctx->mem.gpu_va = nvgpu_gmmu_map(c->vm,
 					&ctx->mem,
 					ctx->mem.size,
-					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_FALSE,
 					gk20a_mem_flag_none, true,
 					ctx->mem.aperture);
 		if (!ctx->mem.gpu_va) {

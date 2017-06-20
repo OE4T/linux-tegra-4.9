@@ -160,7 +160,7 @@ void tegra_net_perf_init(void)
 	/* initialize static variable(s) */
 	wifi_sclk = clk_get_sys("tegra-wifi", "sclk");
 	if (IS_ERR(wifi_sclk)) {
-		pr_err("%s: cannot get wifi sclk\n", __func__);
+		pr_info("%s: cannot get wifi sclk\n", __func__);
 		wifi_sclk = NULL;
 	}
 

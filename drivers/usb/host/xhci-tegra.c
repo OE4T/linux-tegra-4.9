@@ -1963,7 +1963,7 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 				goto put_usb2;
 			}
 
-			dev_err(dev, "cannot find firmware....retry after 1 second\n");
+			dev_info(dev, "cannot find firmware....retry after 1 second\n");
 			schedule_delayed_work(&tegra->firmware_retry_work,
 						msecs_to_jiffies(1000));
 			return;

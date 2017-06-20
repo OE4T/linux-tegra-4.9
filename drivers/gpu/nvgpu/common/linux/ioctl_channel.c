@@ -401,7 +401,7 @@ int nvgpu_channel_ioctl_alloc_gpfifo(struct channel_gk20a *c,
 
 static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 					ulong id, u32 offset,
-					u32 payload, long timeout)
+					u32 payload, u32 timeout)
 {
 	struct dma_buf *dmabuf;
 	void *data;
@@ -448,7 +448,6 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 	u64 jiffies;
 	ulong id;
 	u32 offset;
-	unsigned long timeout;
 	int remain, ret = 0;
 	u64 end;
 
@@ -456,11 +455,6 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
-
-	if (args->timeout == NVGPU_NO_TIMEOUT)
-		timeout = MAX_SCHEDULE_TIMEOUT;
-	else
-		timeout = (u32)msecs_to_jiffies(args->timeout);
 
 	switch (args->type) {
 	case NVGPU_WAIT_TYPE_NOTIFIER:
@@ -494,7 +488,7 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 		remain = NVGPU_COND_WAIT_INTERRUPTIBLE(
 				&ch->notifier_wq,
 				notif->status == 0 || ch->has_timedout,
-				timeout);
+				args->timeout);
 
 		if (remain == 0 && notif->status != 0) {
 			ret = -ETIMEDOUT;
@@ -521,7 +515,7 @@ notif_clean_up:
 				args->condition.semaphore.dmabuf_fd,
 				args->condition.semaphore.offset,
 				args->condition.semaphore.payload,
-				timeout);
+				args->timeout);
 
 		break;
 

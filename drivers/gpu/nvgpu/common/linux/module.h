@@ -19,4 +19,6 @@ struct device;
 int gk20a_pm_finalize_poweron(struct device *dev);
 void gk20a_remove_support(struct gk20a *g);
 
+extern struct class nvgpu_class;
+
 #endif

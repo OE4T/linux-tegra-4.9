@@ -37,7 +37,6 @@ struct nvgpu_cpu_time_correlation_sample;
 
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>
-#include <linux/cdev.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
@@ -1157,52 +1156,10 @@ struct gk20a {
 
 	struct nvgpu_gpu_characteristics gpu_characteristics;
 
-	struct {
-		struct cdev cdev;
-		struct device *node;
-	} channel;
-
 	struct gk20a_as as;
-
-	struct {
-		struct cdev cdev;
-		struct device *node;
-	} ctrl;
-
-	struct {
-		struct cdev cdev;
-		struct device *node;
-	} as_dev;
-
-	struct {
-		struct cdev cdev;
-		struct device *node;
-	} dbg;
-
-	struct {
-		struct cdev cdev;
-		struct device *node;
-	} prof;
-
-	struct {
-		struct cdev cdev;
-		struct device *node;
-	} tsg;
-
-	struct {
-		struct cdev cdev;
-		struct device *node;
-	} ctxsw;
-
-	struct {
-		struct cdev cdev;
-		struct device *node;
-	} sched;
 
 	struct nvgpu_mutex client_lock;
 	int client_refcount; /* open channels and ctrl nodes */
-
-	dev_t cdev_region;
 
 	struct gpu_ops ops;
 
@@ -1517,10 +1474,6 @@ static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
 	else
 		return (timeout * 10) / scale10x;
 }
-
-extern struct class nvgpu_class;
-
-#define INTERFACE_NAME "nvhost%s-gpu"
 
 int gk20a_prepare_poweroff(struct gk20a *g);
 int gk20a_finalize_poweron(struct gk20a *g);

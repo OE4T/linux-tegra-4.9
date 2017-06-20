@@ -29,6 +29,7 @@
 #include "gk20a/tsg_gk20a.h"
 #include "ioctl_tsg.h"
 #include "ioctl_channel.h"
+#include "os_linux.h"
 
 struct tsg_private {
 	struct gk20a *g;
@@ -240,13 +241,13 @@ free_ref:
 
 int nvgpu_ioctl_tsg_dev_open(struct inode *inode, struct file *filp)
 {
-	struct gk20a *g;
+	struct nvgpu_os_linux *l;
 	int ret;
 
-	g = container_of(inode->i_cdev,
-			 struct gk20a, tsg.cdev);
+	l = container_of(inode->i_cdev,
+			 struct nvgpu_os_linux, tsg.cdev);
 	gk20a_dbg_fn("");
-	ret = nvgpu_ioctl_tsg_open(g, filp);
+	ret = nvgpu_ioctl_tsg_open(&l->g, filp);
 	gk20a_dbg_fn("done");
 	return ret;
 }

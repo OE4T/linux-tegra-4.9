@@ -32,6 +32,7 @@
 #include "gr_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "regops_gk20a.h"
+#include "common/linux/os_linux.h"
 
 #include <nvgpu/hw/gk20a/hw_therm_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
@@ -115,6 +116,7 @@ static int alloc_profiler(struct gk20a *g,
 static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 		struct file *filp, bool is_profiler)
 {
+	struct nvgpu_os_linux *l;
 	struct dbg_session_gk20a *dbg_session;
 	struct gk20a *g;
 
@@ -123,12 +125,12 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	int err;
 
 	if (!is_profiler)
-		g = container_of(inode->i_cdev,
-				 struct gk20a, dbg.cdev);
+		l = container_of(inode->i_cdev,
+				 struct nvgpu_os_linux, dbg.cdev);
 	else
-		g = container_of(inode->i_cdev,
-				 struct gk20a, prof.cdev);
-	g = gk20a_get(g);
+		l = container_of(inode->i_cdev,
+				 struct nvgpu_os_linux, prof.cdev);
+	g = gk20a_get(&l->g);
 	if (!g)
 		return -ENODEV;
 

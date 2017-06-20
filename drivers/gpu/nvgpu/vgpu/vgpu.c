@@ -35,6 +35,9 @@
 #include "gk20a/channel_gk20a.h"
 #include "gm20b/hal_gm20b.h"
 
+#include "common/linux/module.h"
+#include "common/linux/os_linux.h"
+
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
 static inline int vgpu_comm_init(struct platform_device *pdev)
@@ -628,6 +631,7 @@ static int vgpu_get_constants(struct gk20a *g)
 
 int vgpu_probe(struct platform_device *pdev)
 {
+	struct nvgpu_os_linux *l;
 	struct gk20a *gk20a;
 	int err;
 	struct device *dev = &pdev->dev;
@@ -641,11 +645,12 @@ int vgpu_probe(struct platform_device *pdev)
 
 	gk20a_dbg_fn("");
 
-	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
-	if (!gk20a) {
+	l = kzalloc(sizeof(*l), GFP_KERNEL);
+	if (!l) {
 		dev_err(dev, "couldn't allocate gk20a support");
 		return -ENOMEM;
 	}
+	gk20a = &l->g;
 
 	nvgpu_kmem_init(gk20a);
 

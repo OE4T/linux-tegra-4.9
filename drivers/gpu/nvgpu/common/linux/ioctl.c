@@ -28,6 +28,8 @@
 #include "ioctl_ctrl.h"
 #include "ioctl_as.h"
 #include "ioctl_tsg.h"
+#include "module.h"
+#include "os_linux.h"
 
 #define GK20A_NUM_CDEVS 7
 
@@ -162,49 +164,50 @@ static int gk20a_create_device(
 void gk20a_user_deinit(struct device *dev, struct class *class)
 {
 	struct gk20a *g = gk20a_from_dev(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	if (g->channel.node) {
-		device_destroy(class, g->channel.cdev.dev);
-		cdev_del(&g->channel.cdev);
+	if (l->channel.node) {
+		device_destroy(class, l->channel.cdev.dev);
+		cdev_del(&l->channel.cdev);
 	}
 
-	if (g->as_dev.node) {
-		device_destroy(class, g->as_dev.cdev.dev);
-		cdev_del(&g->as_dev.cdev);
+	if (l->as_dev.node) {
+		device_destroy(class, l->as_dev.cdev.dev);
+		cdev_del(&l->as_dev.cdev);
 	}
 
-	if (g->ctrl.node) {
-		device_destroy(class, g->ctrl.cdev.dev);
-		cdev_del(&g->ctrl.cdev);
+	if (l->ctrl.node) {
+		device_destroy(class, l->ctrl.cdev.dev);
+		cdev_del(&l->ctrl.cdev);
 	}
 
-	if (g->dbg.node) {
-		device_destroy(class, g->dbg.cdev.dev);
-		cdev_del(&g->dbg.cdev);
+	if (l->dbg.node) {
+		device_destroy(class, l->dbg.cdev.dev);
+		cdev_del(&l->dbg.cdev);
 	}
 
-	if (g->prof.node) {
-		device_destroy(class, g->prof.cdev.dev);
-		cdev_del(&g->prof.cdev);
+	if (l->prof.node) {
+		device_destroy(class, l->prof.cdev.dev);
+		cdev_del(&l->prof.cdev);
 	}
 
-	if (g->tsg.node) {
-		device_destroy(class, g->tsg.cdev.dev);
-		cdev_del(&g->tsg.cdev);
+	if (l->tsg.node) {
+		device_destroy(class, l->tsg.cdev.dev);
+		cdev_del(&l->tsg.cdev);
 	}
 
-	if (g->ctxsw.node) {
-		device_destroy(class, g->ctxsw.cdev.dev);
-		cdev_del(&g->ctxsw.cdev);
+	if (l->ctxsw.node) {
+		device_destroy(class, l->ctxsw.cdev.dev);
+		cdev_del(&l->ctxsw.cdev);
 	}
 
-	if (g->sched.node) {
-		device_destroy(class, g->sched.cdev.dev);
-		cdev_del(&g->sched.cdev);
+	if (l->sched.node) {
+		device_destroy(class, l->sched.cdev.dev);
+		cdev_del(&l->sched.cdev);
 	}
 
-	if (g->cdev_region)
-		unregister_chrdev_region(g->cdev_region, GK20A_NUM_CDEVS);
+	if (l->cdev_region)
+		unregister_chrdev_region(l->cdev_region, GK20A_NUM_CDEVS);
 }
 
 int gk20a_user_init(struct device *dev, const char *interface_name,
@@ -213,51 +216,52 @@ int gk20a_user_init(struct device *dev, const char *interface_name,
 	int err;
 	dev_t devno;
 	struct gk20a *g = gk20a_from_dev(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
 	err = alloc_chrdev_region(&devno, 0, GK20A_NUM_CDEVS, dev_name(dev));
 	if (err) {
 		dev_err(dev, "failed to allocate devno\n");
 		goto fail;
 	}
-	g->cdev_region = devno;
+	l->cdev_region = devno;
 
 	err = gk20a_create_device(dev, devno++, interface_name, "",
-				  &g->channel.cdev, &g->channel.node,
+				  &l->channel.cdev, &l->channel.node,
 				  &gk20a_channel_ops,
 				  class);
 	if (err)
 		goto fail;
 
 	err = gk20a_create_device(dev, devno++, interface_name, "-as",
-				  &g->as_dev.cdev, &g->as_dev.node,
+				  &l->as_dev.cdev, &l->as_dev.node,
 				  &gk20a_as_ops,
 				  class);
 	if (err)
 		goto fail;
 
 	err = gk20a_create_device(dev, devno++, interface_name, "-ctrl",
-				  &g->ctrl.cdev, &g->ctrl.node,
+				  &l->ctrl.cdev, &l->ctrl.node,
 				  &gk20a_ctrl_ops,
 				  class);
 	if (err)
 		goto fail;
 
 	err = gk20a_create_device(dev, devno++, interface_name, "-dbg",
-				  &g->dbg.cdev, &g->dbg.node,
+				  &l->dbg.cdev, &l->dbg.node,
 				  &gk20a_dbg_ops,
 				  class);
 	if (err)
 		goto fail;
 
 	err = gk20a_create_device(dev, devno++, interface_name, "-prof",
-				  &g->prof.cdev, &g->prof.node,
+				  &l->prof.cdev, &l->prof.node,
 				  &gk20a_prof_ops,
 				  class);
 	if (err)
 		goto fail;
 
 	err = gk20a_create_device(dev, devno++, interface_name, "-tsg",
-				  &g->tsg.cdev, &g->tsg.node,
+				  &l->tsg.cdev, &l->tsg.node,
 				  &gk20a_tsg_ops,
 				  class);
 	if (err)
@@ -265,7 +269,7 @@ int gk20a_user_init(struct device *dev, const char *interface_name,
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 	err = gk20a_create_device(dev, devno++, interface_name, "-ctxsw",
-				  &g->ctxsw.cdev, &g->ctxsw.node,
+				  &l->ctxsw.cdev, &l->ctxsw.node,
 				  &gk20a_ctxsw_ops,
 				  class);
 	if (err)
@@ -273,7 +277,7 @@ int gk20a_user_init(struct device *dev, const char *interface_name,
 #endif
 
 	err = gk20a_create_device(dev, devno++, interface_name, "-sched",
-				  &g->sched.cdev, &g->sched.node,
+				  &l->sched.cdev, &l->sched.node,
 				  &gk20a_sched_ops,
 				  class);
 	if (err)

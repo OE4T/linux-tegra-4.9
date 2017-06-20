@@ -25,6 +25,7 @@
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "sched_gk20a.h"
+#include "common/linux/os_linux.h"
 
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
@@ -370,12 +371,13 @@ static int gk20a_sched_dev_ioctl_put_tsg(struct gk20a_sched_ctrl *sched,
 
 int gk20a_sched_dev_open(struct inode *inode, struct file *filp)
 {
-	struct gk20a *g = container_of(inode->i_cdev,
-				struct gk20a, sched.cdev);
+	struct nvgpu_os_linux *l = container_of(inode->i_cdev,
+				struct nvgpu_os_linux, sched.cdev);
+	struct gk20a *g;
 	struct gk20a_sched_ctrl *sched;
 	int err = 0;
 
-	g = gk20a_get(g);
+	g = gk20a_get(&l->g);
 	if (!g)
 		return -ENODEV;
 	sched = &g->sched_ctrl;

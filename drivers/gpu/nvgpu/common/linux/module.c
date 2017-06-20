@@ -42,6 +42,7 @@
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #endif
+#include "os_linux.h"
 
 #define CLASS_NAME "nvidia-gpu"
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
@@ -849,6 +850,7 @@ static inline void set_gk20a(struct platform_device *pdev, struct gk20a *gk20a)
 
 static int gk20a_probe(struct platform_device *dev)
 {
+	struct nvgpu_os_linux *l;
 	struct gk20a *gk20a;
 	int err;
 	struct gk20a_platform *platform = NULL;
@@ -874,12 +876,13 @@ static int gk20a_probe(struct platform_device *dev)
 	if (gk20a_gpu_is_virtual(&dev->dev))
 		return vgpu_probe(dev);
 
-	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
-	if (!gk20a) {
+	l = kzalloc(sizeof(*l), GFP_KERNEL);
+	if (!l) {
 		dev_err(&dev->dev, "couldn't allocate gk20a support");
 		return -ENOMEM;
 	}
 
+	gk20a = &l->g;
 	set_gk20a(dev, gk20a);
 	gk20a->dev = &dev->dev;
 	gk20a->log_mask = NVGPU_DEFAULT_DBG_MASK;

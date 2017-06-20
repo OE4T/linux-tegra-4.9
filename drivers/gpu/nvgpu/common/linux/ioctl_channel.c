@@ -33,6 +33,7 @@
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"
 #include "ioctl_channel.h"
+#include "os_linux.h"
 
 static void gk20a_channel_trace_sched_param(
 	void (*trace)(int chid, int tsgid, pid_t pid, u32 timeslice,
@@ -359,8 +360,9 @@ free_ref:
 
 int gk20a_channel_open(struct inode *inode, struct file *filp)
 {
-	struct gk20a *g = container_of(inode->i_cdev,
-			struct gk20a, channel.cdev);
+	struct nvgpu_os_linux *l = container_of(inode->i_cdev,
+			struct nvgpu_os_linux, channel.cdev);
+	struct gk20a *g = &l->g;
 	int ret;
 
 	gk20a_dbg_fn("start");
@@ -378,6 +380,7 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 	struct file *file;
 	char name[64];
 	s32 runlist_id = args->in.runlist_id;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
 	err = get_unused_fd_flags(O_RDWR);
 	if (err < 0)
@@ -387,7 +390,7 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 	snprintf(name, sizeof(name), "nvhost-%s-fd%d",
 		 dev_name(g->dev), fd);
 
-	file = anon_inode_getfile(name, g->channel.cdev.ops, NULL, O_RDWR);
+	file = anon_inode_getfile(name, l->channel.cdev.ops, NULL, O_RDWR);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto clean_up;

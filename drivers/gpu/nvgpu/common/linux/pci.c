@@ -32,6 +32,8 @@
 
 #include "pci.h"
 
+#include "os_linux.h"
+
 #define PCI_INTERFACE_NAME "card-%s%%s"
 
 static int nvgpu_pci_tegra_probe(struct device *dev)
@@ -346,6 +348,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 			   const struct pci_device_id *pent)
 {
 	struct gk20a_platform *platform = NULL;
+	struct nvgpu_os_linux *l;
 	struct gk20a *g;
 	int err;
 	char nodefmt[64];
@@ -359,11 +362,13 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	platform = &nvgpu_pci_device[pent->driver_data];
 	pci_set_drvdata(pdev, platform);
 
-	g = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
-	if (!g) {
-		nvgpu_err(g, "couldn't allocate gk20a support");
+	l = kzalloc(sizeof(*l), GFP_KERNEL);
+	if (!l) {
+		dev_err(&pdev->dev, "couldn't allocate gk20a support");
 		return -ENOMEM;
 	}
+
+	g = &l->g;
 
 	nvgpu_kmem_init(g);
 

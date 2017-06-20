@@ -30,6 +30,7 @@
 #include "gk20a/platform_gk20a.h"
 #include "ioctl_as.h"
 #include "vm_priv.h"
+#include "os_linux.h"
 
 static int gk20a_as_ioctl_bind_channel(
 		struct gk20a_as_share *as_share,
@@ -253,13 +254,15 @@ static int gk20a_as_ioctl_map_buffer_compbits(
 
 int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 {
+	struct nvgpu_os_linux *l;
 	struct gk20a_as_share *as_share;
 	struct gk20a *g;
 	int err;
 
 	gk20a_dbg_fn("");
 
-	g = container_of(inode->i_cdev, struct gk20a, as_dev.cdev);
+	l = container_of(inode->i_cdev, struct nvgpu_os_linux, as_dev.cdev);
+	g = &l->g;
 
 	err = gk20a_as_alloc_share(g, 0, 0, &as_share);
 	if (err) {

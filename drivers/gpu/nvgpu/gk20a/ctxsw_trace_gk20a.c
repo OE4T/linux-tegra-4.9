@@ -25,6 +25,7 @@
 #include "gk20a.h"
 #include "platform_gk20a.h"
 #include "gr_gk20a.h"
+#include "common/linux/os_linux.h"
 
 #include <nvgpu/log.h>
 #include <nvgpu/atomic.h>
@@ -266,6 +267,7 @@ static int gk20a_ctxsw_dev_ioctl_poll(struct gk20a_ctxsw_dev *dev)
 
 int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 {
+	struct nvgpu_os_linux *l;
 	struct gk20a *g;
 	struct gk20a_ctxsw_trace *trace;
 	struct gk20a_ctxsw_dev *dev;
@@ -276,8 +278,8 @@ int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 	/* only one VM for now */
 	const int vmid = 0;
 
-	g = container_of(inode->i_cdev, struct gk20a, ctxsw.cdev);
-	g = gk20a_get(g);
+	l = container_of(inode->i_cdev, struct nvgpu_os_linux, ctxsw.cdev);
+	g = gk20a_get(&l->g);
 	if (!g)
 		return -ENODEV;
 

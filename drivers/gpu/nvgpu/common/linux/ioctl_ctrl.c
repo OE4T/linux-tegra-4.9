@@ -31,6 +31,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/fence_gk20a.h"
+#include "os_linux.h"
 
 #include <nvgpu/log.h>
 
@@ -48,15 +49,16 @@ struct gk20a_ctrl_priv {
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 {
+	struct nvgpu_os_linux *l;
 	struct gk20a *g;
 	struct gk20a_ctrl_priv *priv;
 	int err = 0;
 
 	gk20a_dbg_fn("");
 
-	g = container_of(inode->i_cdev,
-			 struct gk20a, ctrl.cdev);
-	g = gk20a_get(g);
+	l = container_of(inode->i_cdev,
+			 struct nvgpu_os_linux, ctrl.cdev);
+	g = gk20a_get(&l->g);
 	if (!g)
 		return -ENODEV;
 
@@ -199,6 +201,7 @@ static int gk20a_ctrl_alloc_as(
 		struct gk20a *g,
 		struct nvgpu_alloc_as_args *args)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_as_share *as_share;
 	int err;
 	int fd;
@@ -212,7 +215,7 @@ static int gk20a_ctrl_alloc_as(
 
 	snprintf(name, sizeof(name), "nvhost-%s-fd%d", g->name, fd);
 
-	file = anon_inode_getfile(name, g->as_dev.cdev.ops, NULL, O_RDWR);
+	file = anon_inode_getfile(name, l->as_dev.cdev.ops, NULL, O_RDWR);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto clean_up;
@@ -239,6 +242,7 @@ clean_up:
 static int gk20a_ctrl_open_tsg(struct gk20a *g,
 			       struct nvgpu_gpu_open_tsg_args *args)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int err;
 	int fd;
 	struct file *file;
@@ -251,7 +255,7 @@ static int gk20a_ctrl_open_tsg(struct gk20a *g,
 
 	snprintf(name, sizeof(name), "nvgpu-%s-tsg%d", g->name, fd);
 
-	file = anon_inode_getfile(name, g->tsg.cdev.ops, NULL, O_RDWR);
+	file = anon_inode_getfile(name, l->tsg.cdev.ops, NULL, O_RDWR);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto clean_up;

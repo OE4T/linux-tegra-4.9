@@ -170,7 +170,7 @@
 	USB_DEVICE(vid, pid), \
 	.driver_info = QUIRK_FOR_LS_DEVICE,
 
-static const struct usb_device_id disable_usb_persist_quirk_list[] = {
+static struct usb_device_id disable_usb_persist_quirk_list[] = {
 	/* Sandisk Extreme USB 3.0 pen drive, SuperSpeed */
 	{ USB_DEVICE_SS(0x0781, 0x5580) },
 	{ }  /* terminating entry must be last */

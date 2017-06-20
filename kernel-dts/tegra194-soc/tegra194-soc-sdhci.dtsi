@@ -21,6 +21,7 @@
 
 	aliases {
 		sdhci3 = &sdmmc4;
+		sdhci2 = &sdmmc3;
 	};
 
 	sdmmc4: sdhci@3460000 { /* Used for eMMC */
@@ -59,4 +60,25 @@
 		clock-names = "sdmmc", "pll_p";
 		status = "disabled";
 	};
+
+	sdmmc3: sdhci@3440000 {
+		compatible = "nvidia,tegra194-sdhci";
+		reg = <0x0 0x3440000 0x0 0x00020000>;
+		interrupts = < 0 64 0x04>;
+		max-clk-limit = <64000000>;
+		tap-delay = <11>;
+		trim-delay = <5>;
+		mmc-ocr-mask = <3>;
+		bus-width = <4>;
+		cap-mmc-highspeed;
+		cap-sd-highspeed;
+		uhs-mask = <0x1C>;
+		pll_source = "pll_p";
+		resets = <&bpmp_resets TEGRA194_RESET_SDMMC3>;
+		reset-names = "sdmmc";
+		clocks = <&bpmp_clks TEGRA194_CLK_SDMMC3>,
+		       <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
+		clock-names = "sdmmc", "pll_p";
+		status = "disabled";
+	 };
 };

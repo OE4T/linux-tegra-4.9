@@ -2112,9 +2112,10 @@
 	tegra_watchdog: watchdog@60005100 {
 		compatible = "nvidia,tegra-wdt";
 		reg = <0x0 0x60005100 0x0 0x20              /* WDT0 registers */
-		0x0 0x60005070 0x0 0x8>;              /* TMR7 registers */
+		0x0 0x60005088 0x0 0x8>;              /* TMR0 registers */
 		interrupts = <0 123 0x04>;
 		nvidia,expiry-count = <4>;
+		nvidia,timer-index = <7>;
 		status = "disabled";
 	};
 

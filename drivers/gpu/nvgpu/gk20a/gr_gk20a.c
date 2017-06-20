@@ -102,18 +102,27 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 		u32 *ctx_id)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
+	struct ctx_header_desc *ctx_header = &ch_ctx->ctx_header;
+	struct nvgpu_mem *ctx_header_mem = &ctx_header->mem;
+	struct nvgpu_mem *mem;
 
 	/* Channel gr_ctx buffer is gpu cacheable.
 	   Flush and invalidate before cpu update. */
 	g->ops.mm.l2_flush(g, true);
 
-	if (nvgpu_mem_begin(g, &ch_ctx->gr_ctx->mem))
+	if (ctx_header_mem->gpu_va)
+		mem = ctx_header_mem;
+	else
+		mem = &ch_ctx->gr_ctx->mem;
+
+	if (nvgpu_mem_begin(g, mem))
 		return -ENOMEM;
 
-	*ctx_id = nvgpu_mem_rd(g, &ch_ctx->gr_ctx->mem,
+	*ctx_id = nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_context_id_o());
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr, "ctx_id: 0x%x", *ctx_id);
 
-	nvgpu_mem_end(g, &ch_ctx->gr_ctx->mem);
+	nvgpu_mem_end(g, mem);
 
 	return 0;
 }

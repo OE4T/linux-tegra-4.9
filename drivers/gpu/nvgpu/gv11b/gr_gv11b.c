@@ -32,6 +32,8 @@
 
 #include "gm20b/gr_gm20b.h"
 
+#include "gp10b/gr_gp10b.h"
+
 #include "gv11b/gr_gv11b.h"
 #include "gv11b/mm_gv11b.h"
 #include "gv11b/subctx_gv11b.h"
@@ -1622,145 +1624,6 @@ static void gr_gv11b_get_access_map(struct gk20a *g,
 	*num_entries = ARRAY_SIZE(wl_addr_gv11b);
 }
 
-static int gr_gv11b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a *fault_ch)
-{
-	int ret = 0;
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
-
-	ret = gk20a_disable_channel_tsg(g, fault_ch);
-	if (ret) {
-		nvgpu_err(g, "CILP: failed to disable channel/TSG!");
-		return ret;
-	}
-
-	ret = g->ops.fifo.update_runlist(g, fault_ch->runlist_id, ~0, true, false);
-	if (ret) {
-		nvgpu_err(g, "CILP: failed to restart runlist 0!");
-		return ret;
-	}
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: restarted runlist");
-
-	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
-		gk20a_fifo_issue_preempt(g, fault_ch->tsgid, true);
-		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-			"CILP: preempted the channel/tsg");
-	} else {
-		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-			"CILP: tsgid is invalid, cannot preempt");
-		WARN_ON(1); /* only TSG can be preempted */
-	}
-
-	return ret;
-}
-
-static int gr_gv11b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk20a *fault_ch)
-{
-	int ret;
-	struct gr_ctx_desc *gr_ctx = fault_ch->ch_ctx.gr_ctx;
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
-
-	if (!gr_ctx)
-		return -EINVAL;
-
-	if (gr_ctx->t18x.cilp_preempt_pending) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-				"CILP is already pending for chid %d",
-				fault_ch->hw_chid);
-		return 0;
-	}
-
-	/* get ctx_id from the ucode image */
-	if (!gr_ctx->t18x.ctx_id_valid) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-				"CILP: looking up ctx id");
-		ret = gr_gk20a_get_ctx_id(g, fault_ch, &gr_ctx->t18x.ctx_id);
-		if (ret) {
-			nvgpu_err(g, "CILP: error looking up ctx id!");
-			return ret;
-		}
-		gr_ctx->t18x.ctx_id_valid = true;
-	}
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-			"CILP: ctx id is 0x%x", gr_ctx->t18x.ctx_id);
-
-	/* send ucode method to set ctxsw interrupt */
-	ret = gr_gk20a_submit_fecs_sideband_method_op(g,
-			(struct fecs_method_op_gk20a) {
-			.method.data = gr_ctx->t18x.ctx_id,
-			.method.addr =
-			gr_fecs_method_push_adr_configure_interrupt_completion_option_v(),
-			.mailbox = {
-			.id = 1 /* sideband */, .data = 0,
-			.clr = ~0, .ret = NULL,
-			.ok = gr_fecs_ctxsw_mailbox_value_pass_v(),
-			.fail = 0},
-			.cond.ok = GR_IS_UCODE_OP_EQUAL,
-			.cond.fail = GR_IS_UCODE_OP_SKIP});
-
-	if (ret) {
-		nvgpu_err(g, "CILP: failed to enable ctxsw interrupt!");
-		return ret;
-	}
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-				"CILP: enabled ctxsw completion interrupt");
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-			"CILP: disabling channel %d",
-			fault_ch->hw_chid);
-
-	ret = gr_gv11b_disable_channel_or_tsg(g, fault_ch);
-	if (ret) {
-		nvgpu_err(g, "CILP: failed to disable channel!!");
-		return ret;
-	}
-
-	/* set cilp_preempt_pending = true and record the channel */
-	gr_ctx->t18x.cilp_preempt_pending = true;
-	g->gr.t18x.cilp_preempt_pending_chid = fault_ch->hw_chid;
-
-	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
-		struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
-
-		gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_STARTED);
-	} else {
-		gk20a_channel_event_id_post_event(fault_ch,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_STARTED);
-	}
-
-	return 0;
-}
-
-static int gr_gv11b_clear_cilp_preempt_pending(struct gk20a *g,
-					       struct channel_gk20a *fault_ch)
-{
-	struct gr_ctx_desc *gr_ctx = fault_ch->ch_ctx.gr_ctx;
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
-
-	if (!gr_ctx)
-		return -EINVAL;
-
-	/* The ucode is self-clearing, so all we need to do here is
-	   to clear cilp_preempt_pending. */
-	if (!gr_ctx->t18x.cilp_preempt_pending) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-				"CILP is already cleared for chid %d\n",
-				fault_ch->hw_chid);
-		return 0;
-	}
-
-	gr_ctx->t18x.cilp_preempt_pending = false;
-	g->gr.t18x.cilp_preempt_pending_chid = -1;
-
-	return 0;
-}
-
 /* @brief pre-process work on the SM exceptions to determine if we clear them or not.
  *
  * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
@@ -1827,7 +1690,7 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 					gpc, tpc);
 
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
-			ret = gr_gv11b_set_cilp_preempt_pending(g, fault_ch);
+			ret = gr_gp10b_set_cilp_preempt_pending(g, fault_ch);
 			if (ret) {
 				nvgpu_err(g, "CILP: error while setting CILP preempt pending!");
 				return ret;
@@ -1856,31 +1719,6 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 		*early_exit = true;
 	}
 	return 0;
-}
-
-static int gr_gv11b_get_cilp_preempt_pending_chid(struct gk20a *g, int *__chid)
-{
-	struct gr_ctx_desc *gr_ctx;
-	struct channel_gk20a *ch;
-	int chid;
-	int ret = -EINVAL;
-
-	chid = g->gr.t18x.cilp_preempt_pending_chid;
-
-	ch = gk20a_channel_get(gk20a_fifo_channel_from_hw_chid(g, chid));
-	if (!ch)
-		return ret;
-
-	gr_ctx = ch->ch_ctx.gr_ctx;
-
-	if (gr_ctx->t18x.cilp_preempt_pending) {
-		*__chid = chid;
-		ret = 0;
-	}
-
-	gk20a_channel_put(ch);
-
-	return ret;
 }
 
 static void gr_gv11b_handle_fecs_ecc_error(struct gk20a *g, u32 intr)
@@ -1971,65 +1809,16 @@ static int gr_gv11b_handle_fecs_error(struct gk20a *g,
 				struct gr_gk20a_isr_data *isr_data)
 {
 	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
-	struct channel_gk20a *ch;
-	int chid = -1;
-	int ret = 0;
+	int ret;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
 
-	/*
-	 * INTR1 (bit 1 of the HOST_INT_STATUS_CTXSW_INTR)
-	 * indicates that a CILP ctxsw save has finished
-	 */
-	if (gr_fecs_intr & gr_fecs_host_int_status_ctxsw_intr_f(2)) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-				"CILP: ctxsw save completed!\n");
-
-		/* now clear the interrupt */
-		gk20a_writel(g, gr_fecs_host_int_clear_r(),
-				gr_fecs_host_int_clear_ctxsw_intr1_clear_f());
-
-		ret = gr_gv11b_get_cilp_preempt_pending_chid(g, &chid);
-		if (ret)
-			goto clean_up;
-
-		ch = gk20a_channel_get(
-				gk20a_fifo_channel_from_hw_chid(g, chid));
-		if (!ch)
-			goto clean_up;
-
-
-		/* set preempt_pending to false */
-		ret = gr_gv11b_clear_cilp_preempt_pending(g, ch);
-		if (ret) {
-			nvgpu_err(g, "CILP: error while unsetting CILP preempt pending!");
-			gk20a_channel_put(ch);
-			goto clean_up;
-		}
-
-		if (gk20a_gr_sm_debugger_attached(g)) {
-			gk20a_dbg_gpu_post_events(ch);
-
-			if (gk20a_is_channel_marked_as_tsg(ch)) {
-				struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
-
-				gk20a_tsg_event_id_post_event(tsg,
-					NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
-			} else {
-				gk20a_channel_event_id_post_event(ch,
-					NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
-			}
-		}
-
-		gk20a_channel_put(ch);
-	}
+	ret = gr_gp10b_handle_fecs_error(g, __ch, isr_data);
 
 	/* Handle ECC errors */
 	gr_gv11b_handle_fecs_ecc_error(g, gr_fecs_intr);
 
-clean_up:
-	/* handle any remaining interrupts */
-	return gk20a_gr_handle_fecs_error(g, __ch, isr_data);
+	return ret;
 }
 
 static u32 gv11b_mask_hww_warp_esr(u32 hww_warp_esr)

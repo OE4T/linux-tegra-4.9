@@ -116,7 +116,7 @@
 				status = "okay";
 			};
 			CC6: cc6 {
-				status = "disabled";
+				status = "okay";
 			};
 			CC7: cc7 {
 				status = "disabled";

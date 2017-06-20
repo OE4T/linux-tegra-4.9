@@ -30,6 +30,7 @@ static u8 get_perfmon_id(struct nvgpu_pmu *pmu)
 	switch (ver) {
 	case GK20A_GPUID_GK20A:
 	case GK20A_GPUID_GM20B:
+	case GK20A_GPUID_GM20B_B:
 		unit_id = PMU_UNIT_PERFMON;
 		break;
 	case NVGPU_GPUID_GP10B:

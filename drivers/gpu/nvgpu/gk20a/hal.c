@@ -35,6 +35,7 @@ int gpu_init_hal(struct gk20a *g)
 		gk20a_init_hal(g);
 		break;
 	case GK20A_GPUID_GM20B:
+	case GK20A_GPUID_GM20B_B:
 		gk20a_dbg_info("gm20b detected");
 		if (gm20b_init_hal(g))
 			return -ENODEV;

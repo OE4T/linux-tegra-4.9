@@ -480,9 +480,9 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	kfree(info);
 }
 
-static int __nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
-					   size_t start, size_t len,
-					   enum dma_data_direction dir)
+static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
+					  size_t start, size_t len,
+					  enum dma_data_direction dir)
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
 
@@ -491,48 +491,17 @@ static int __nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
 				      NVMAP_CACHE_OP_WB_INV, false);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
-					  size_t start, size_t len,
-					  enum dma_data_direction dir)
-{
-	return __nvmap_dmabuf_begin_cpu_access(dmabuf, start, len, dir);
-}
-#else
-static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
-					 enum dma_data_direction dir)
-{
-	return __nvmap_dmabuf_begin_cpu_access(dmabuf, 0, 0, dir);
-}
-#endif
-
-static int __nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
-				         size_t start, size_t len,
-				         enum dma_data_direction dir)
-{
-	struct nvmap_handle_info *info = dmabuf->priv;
-
-	trace_nvmap_dmabuf_end_cpu_access(dmabuf, start, len);
-	return __nvmap_do_cache_maint(NULL, info->handle,
-				   start, start + len,
-				   NVMAP_CACHE_OP_WB, false);
-
-}
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 static void nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
 				       size_t start, size_t len,
 				       enum dma_data_direction dir)
 {
-	(void)__nvmap_dmabuf_end_cpu_access(dmabuf, start, len, dir);
+	struct nvmap_handle_info *info = dmabuf->priv;
+
+	trace_nvmap_dmabuf_end_cpu_access(dmabuf, start, len);
+	__nvmap_do_cache_maint(NULL, info->handle,
+				   start, start + len,
+				   NVMAP_CACHE_OP_WB, false);
 }
-#else
-static int nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
-				       enum dma_data_direction dir)
-{
-	return __nvmap_dmabuf_end_cpu_access(dmabuf, 0, 0, dir);
-}
-#endif
 
 static void *nvmap_dmabuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
 {

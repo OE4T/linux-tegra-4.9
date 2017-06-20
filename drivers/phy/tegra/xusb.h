@@ -135,6 +135,8 @@ struct tegra_xusb_lane_ops {
 	void (*remove)(struct tegra_xusb_lane *lane);
 };
 
+bool tegra_xusb_lane_check(struct tegra_xusb_lane *lane,
+				  const char *function);
 /*
  * pads
  */

@@ -24,6 +24,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
+#include <linux/tegra_prod.h>
 
 #include <soc/tegra/fuse.h>
 
@@ -237,8 +238,8 @@ struct tegra210_xusb_fuse_calibration {
 
 struct tegra210_xusb_padctl {
 	struct tegra_xusb_padctl base;
-
 	struct tegra210_xusb_fuse_calibration fuse;
+	struct tegra_prod *prod_list;
 };
 
 static inline struct tegra210_xusb_padctl *
@@ -950,6 +951,24 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 
 	priv = to_tegra210_xusb_padctl(padctl);
 
+	if (priv->prod_list) {
+		char prod_name[] = "prod_c_utmiX";
+
+		sprintf(prod_name, "prod_c_utmi%d", port->base.index);
+		err = tegra_prod_set_by_name(&padctl->regs, prod_name,
+							priv->prod_list);
+		if (err)
+			dev_dbg(&phy->dev,
+				"failed to apply prod for utmi pad%d\n",
+							port->base.index);
+
+		err = tegra_prod_set_by_name(&padctl->regs, "prod_c_bias",
+							priv->prod_list);
+		if (err)
+			dev_dbg(&phy->dev,
+				"failed to apply prod for bias pad\n");
+	}
+
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
 	value &= ~((XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_SQUELCH_LEVEL_MASK <<
 		    XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_SQUELCH_LEVEL_SHIFT) |
@@ -1242,6 +1261,17 @@ static int tegra210_hsic_phy_power_on(struct phy *phy)
 
 	priv = to_tegra210_xusb_padctl(padctl);
 
+	if (priv->prod_list) {
+		char prod_name[] = "prod_c_hsicX";
+
+		sprintf(prod_name, "prod_c_hsic%d", 0);
+		err = tegra_prod_set_by_name(&padctl->regs, prod_name,
+							priv->prod_list);
+		if (err)
+			dev_dbg(&phy->dev,
+			"failed to apply prod for hsic pad%d\n", 0);
+	}
+
 	err = regulator_enable(pad->supply);
 	if (err)
 		return err;
@@ -1486,10 +1516,31 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
 	u32 value;
 	int err;
+	struct tegra_xusb_usb3_port *port;
 
 	mutex_lock(&padctl->lock);
+
+	if (tegra_xusb_lane_check(lane, "usb3-ss") && priv->prod_list) {
+		char prod_name[] = "prod_c_ssX";
+
+		port = tegra_xusb_find_usb3_port(padctl, lane->index);
+		if (!port) {
+			dev_err(&phy->dev, "no port found for USB3 lane %u\n",
+								lane->index);
+			return -ENODEV;
+		}
+
+		sprintf(prod_name, "prod_c_ss%d", port->base.index);
+		err = tegra_prod_set_by_name(&padctl->regs, prod_name,
+							priv->prod_list);
+		if (err)
+			dev_dbg(&phy->dev,
+				"failed to apply prod for ss pad%d\n",
+							port->base.index);
+	}
 
 	err = tegra210_pex_uphy_enable(padctl);
 	if (err < 0)
@@ -2032,6 +2083,17 @@ tegra210_xusb_padctl_probe(struct device *dev,
 	err = tegra210_xusb_read_fuse_calibration(&padctl->fuse);
 	if (err < 0)
 		return ERR_PTR(err);
+
+	/* init regulators */
+	err = tegra210_xusb_padctl_regulators_init(&padctl->base);
+	if (err < 0)
+		return ERR_PTR(err);
+
+	padctl->prod_list = devm_tegra_prod_get(dev);
+	if (IS_ERR(padctl->prod_list)) {
+		dev_warn(dev, "Prod-settings is not available\n");
+		padctl->prod_list = NULL;
+	}
 
 	return &padctl->base;
 }

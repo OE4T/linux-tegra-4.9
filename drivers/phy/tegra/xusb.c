@@ -398,7 +398,7 @@ static int tegra_xusb_setup_pads(struct tegra_xusb_padctl *padctl)
 	return 0;
 }
 
-static bool tegra_xusb_lane_check(struct tegra_xusb_lane *lane,
+bool tegra_xusb_lane_check(struct tegra_xusb_lane *lane,
 				  const char *function)
 {
 	const char *func = lane->soc->funcs[lane->function];

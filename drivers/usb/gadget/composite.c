@@ -441,11 +441,11 @@ static u8 encode_bMaxPower(enum usb_device_speed speed,
 	switch (speed) {
 	case USB_SPEED_SUPER:
 		/* USB 3.0 max power <= 900 mA: 0x70 * 8 mA = 896 mA */
-		bMaxPower = min(DIV_ROUND_UP(val, 8), 0x70);
+		bMaxPower = min(DIV_ROUND_UP(val, 8), (u32)0x70);
 		break;
 	default:
 		/* USB 2.0 max power <= 500 mA: 0xfa * 2 mA = 500 mA */
-		bMaxPower = min(DIV_ROUND_UP(val, 2), 0xfa);
+		bMaxPower = min(DIV_ROUND_UP(val, 2), (u32)0xfa);
 	}
 
 	return bMaxPower;

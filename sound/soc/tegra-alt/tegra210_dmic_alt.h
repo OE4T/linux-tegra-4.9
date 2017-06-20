@@ -132,6 +132,7 @@ struct tegra210_dmic {
 	int boost_gain; /* with 100x factor */
 	int ch_select;
 	int tx_mono_to_stereo;
+	int sample_rate_via_control;
 	bool is_shutdown;
 	int format_out;
 };

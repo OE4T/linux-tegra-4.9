@@ -163,6 +163,9 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
 	srate = params_rate(params);
+	if (dmic->sample_rate_via_control)
+		srate = dmic->sample_rate_via_control;
+
 	dmic_clk = (1 << (6+osr)) * srate;
 
 	if (dmic->ch_select == DMIC_CH_SELECT_NONE) {
@@ -297,6 +300,9 @@ static int tegra210_dmic_get_control(struct snd_kcontrol *kcontrol,
 					dmic->tx_mono_to_stereo;
 	else if (strstr(kcontrol->id.name, "output bit format"))
 		ucontrol->value.integer.value[0] = dmic->format_out;
+	else if (strstr(kcontrol->id.name, "Sample Rate"))
+		ucontrol->value.integer.value[0] =
+					dmic->sample_rate_via_control;
 
 	return 0;
 }
@@ -316,6 +322,8 @@ static int tegra210_dmic_put_control(struct snd_kcontrol *kcontrol,
 		dmic->tx_mono_to_stereo = value;
 	else if (strstr(kcontrol->id.name, "output bit format"))
 		dmic->format_out = value;
+	else if (strstr(kcontrol->id.name, "Sample Rate"))
+		dmic->sample_rate_via_control = value;
 
 	return 0;
 }
@@ -411,6 +419,8 @@ static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	SOC_ENUM_EXT("TX mono to stereo conv", tegra210_dmic_mono_conv_enum,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	SOC_ENUM_EXT("output bit format", tegra210_dmic_format_enum,
+		tegra210_dmic_get_control, tegra210_dmic_put_control),
+	SOC_SINGLE_EXT("Sample Rate", 0, 0, 48000, 0,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	};
 

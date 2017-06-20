@@ -371,6 +371,204 @@ static struct tegra_gpio_port_soc_info tegra_aon_gpio_cinfo[] = {
 		.reg_offset = cind * 0x200,			\
 }
 
+static const int tegra194_gpio_wakes[] = {
+	TEGRA194_MAIN_GPIO(K, 4),		/* wake0 */
+	TEGRA194_MAIN_GPIO(L, 2),		/* wake1 */
+	-EINVAL,				/* wake2 */
+	TEGRA194_MAIN_GPIO(J, 3),		/* wake3 */
+	TEGRA194_MAIN_GPIO(N, 1),		/* wake4 */
+	TEGRA194_MAIN_GPIO(O, 3),		/* wake5 */
+	-EINVAL,				/* wake6 */
+	TEGRA194_MAIN_GPIO(H, 6),		/* wake7 */
+	TEGRA194_MAIN_GPIO(G, 7),		/* wake8 */
+	TEGRA194_MAIN_GPIO(H, 1),		/* wake9 */
+	-EINVAL,				/* wake10 */
+	TEGRA194_MAIN_GPIO(C, 5),		/* wake11 */
+	TEGRA194_MAIN_GPIO(S, 5),		/* wake12 */
+	TEGRA194_MAIN_GPIO(S, 6),		/* wake13 */
+	-EINVAL,				/* wake14 */
+	TEGRA194_MAIN_GPIO(T, 0),		/* wake15 */
+	TEGRA194_MAIN_GPIO(V, 1),		/* wake16 */
+	TEGRA194_MAIN_GPIO(F, 4),		/* wake17 */
+	TEGRA194_MAIN_GPIO(C, 7),		/* wake18 */
+	TEGRA194_MAIN_GPIO(D, 3),		/* wake19 */
+	TEGRA194_MAIN_GPIO(G, 4),		/* wake20 */
+	-EINVAL,				/* wake21 */
+	TEGRA194_MAIN_GPIO(P, 3),		/* wake22 */
+	TEGRA194_MAIN_GPIO(C, 1),		/* wake23 */
+	-EINVAL,				/* wake24 */
+	-EINVAL,				/* wake25 */
+	-EINVAL,				/* wake26 */
+	-EINVAL,				/* wake27 */
+	TEGRA194_MAIN_GPIO(F, 2),		/* wake28 */
+	-EINVAL,				/* wake29 */
+	TEGRA194_MAIN_GPIO(G, 3),		/* wake30 */
+	TEGRA194_MAIN_GPIO(I, 4),		/* wake31 */
+	-EINVAL,				/* wake32 */
+	TEGRA194_MAIN_GPIO(R, 5),		/* wake33 */
+	TEGRA194_MAIN_GPIO(P, 4),		/* wake34 */
+	TEGRA194_MAIN_GPIO(Q, 0),		/* wake35 */
+	TEGRA194_MAIN_GPIO(P, 5),		/* wake36 */
+	TEGRA194_MAIN_GPIO(P, 6),		/* wake37 */
+	TEGRA194_MAIN_GPIO(Q, 3),		/* wake38 */
+	-EINVAL,				/* wake39 */
+	TEGRA194_MAIN_GPIO(Q, 1),		/* wake40 */
+	-EINVAL,				/* wake41 */
+	-EINVAL,				/* wake42 */
+	-EINVAL,				/* wake43 */
+	TEGRA194_MAIN_GPIO(Y, 0),		/* wake44 */
+	TEGRA194_MAIN_GPIO(Z, 6),		/* wake45 */
+	-EINVAL,				/* wake46 */
+	-EINVAL,				/* wake47 */
+	-EINVAL,				/* wake48 */
+	-EINVAL,				/* wake49 */
+	TEGRA194_MAIN_GPIO(Z, 7),		/* wake50 */
+	TEGRA194_MAIN_GPIO(Q, 2),		/* wake51 */
+	TEGRA194_MAIN_GPIO(X, 7),		/* wake52 */
+	TEGRA194_MAIN_GPIO(Z, 0),		/* wake53 */
+	TEGRA194_MAIN_GPIO(K, 2),		/* wake54 */
+	TEGRA194_MAIN_GPIO(L, 0),		/* wake55 */
+	TEGRA194_MAIN_GPIO(Y, 3),		/* wake56 */
+	TEGRA194_MAIN_GPIO(L, 3),		/* wake57 */
+	TEGRA194_MAIN_GPIO(Y, 4),		/* wake58 */
+	TEGRA194_MAIN_GPIO(M, 7),		/* wake59 */
+	TEGRA194_MAIN_GPIO(M, 0),		/* wake60 */
+	TEGRA194_MAIN_GPIO(Z, 1),		/* wake61 */
+	TEGRA194_MAIN_GPIO(Z, 2),		/* wake62 */
+	TEGRA194_MAIN_GPIO(M, 1),		/* wake63 */
+	TEGRA194_MAIN_GPIO(N, 2),		/* wake64 */
+	TEGRA194_MAIN_GPIO(K, 6),		/* wake65 */
+	TEGRA194_MAIN_GPIO(M, 3),		/* wake66 */
+	TEGRA194_MAIN_GPIO(G, 0),		/* wake67 */
+	TEGRA194_MAIN_GPIO(G, 1),		/* wake68 */
+	TEGRA194_MAIN_GPIO(G, 2),		/* wake69 */
+	TEGRA194_MAIN_GPIO(M, 4),		/* wake70 */
+	TEGRA194_MAIN_GPIO(M, 2),		/* wake71 */
+	-EINVAL,				/* wake72 */
+	-EINVAL,				/* wake73 */
+	-EINVAL,				/* wake74 */
+	-EINVAL,				/* wake75 */
+	-EINVAL,				/* wake76 */
+	-EINVAL,				/* wake77 */
+	-EINVAL,				/* wake78 */
+	-EINVAL,				/* wake79 */
+	-EINVAL,				/* wake80 */
+	-EINVAL,				/* wake81 */
+	-EINVAL,				/* wake82 */
+	-EINVAL,				/* wake83 */
+	-EINVAL,				/* wake84 */
+	-EINVAL,				/* wake85 */
+	-EINVAL,				/* wake86 */
+	-EINVAL,				/* wake87 */
+	-EINVAL,				/* wake88 */
+	-EINVAL,				/* wake89 */
+	-EINVAL,				/* wake90 */
+	-EINVAL,				/* wake91 */
+	-EINVAL,				/* wake92 */
+	-EINVAL,				/* wake93 */
+	-EINVAL,				/* wake94 */
+	-EINVAL,				/* wake95 */
+};
+
+static const int tegra194_aon_gpio_wakes[] = {
+	-EINVAL,			/* wake0 */
+	-EINVAL,			/* wake1 */
+	TEGRA194_AON_GPIO(EE, 2),	/* wake2 */
+	-EINVAL,			/* wake3 */
+	-EINVAL,			/* wake4 */
+	-EINVAL,			/* wake5 */
+	-EINVAL,			/* wake6 */
+	-EINVAL,			/* wake7 */
+	-EINVAL,			/* wake8 */
+	-EINVAL,			/* wake9 */
+	TEGRA194_AON_GPIO(EE, 3),	/* wake10 */
+	-EINVAL,			/* wake11 */
+	-EINVAL,			/* wake12 */
+	-EINVAL,			/* wake13 */
+	-EINVAL,			/* wake14 */
+	-EINVAL,			/* wake15 */
+	-EINVAL,			/* wake16 */
+	-EINVAL,			/* wake17 */
+	-EINVAL,			/* wake18 */
+	-EINVAL,			/* wake19 */
+	-EINVAL,			/* wake20 */
+	TEGRA194_AON_GPIO(DD, 2),	/* wake21 */
+	-EINVAL,			/* wake22 */
+	-EINVAL,			/* wake23 */
+	-EINVAL,			/* wake24 */
+	TEGRA194_AON_GPIO(EE, 0),	/* wake25 */
+	TEGRA194_AON_GPIO(EE, 1),	/* wake26 */
+	TEGRA194_AON_GPIO(EE, 6),	/* wake27 */
+	-EINVAL,			/* wake28 */
+	TEGRA194_AON_GPIO(EE, 4),	/* wake29 */
+	-EINVAL,			/* wake30 */
+	-EINVAL,			/* wake31 */
+	-EINVAL,			/* wake32 */
+	-EINVAL,			/* wake33 */
+	-EINVAL,			/* wake34 */
+	-EINVAL,			/* wake35 */
+	-EINVAL,			/* wake36 */
+	-EINVAL,			/* wake37 */
+	-EINVAL,			/* wake38 */
+	TEGRA194_AON_GPIO(CC, 3),	/* wake39 */
+	-EINVAL,			/* wake40 */
+	TEGRA194_AON_GPIO(DD, 0),	/* wake41 */
+	TEGRA194_AON_GPIO(AA, 1),	/* wake42 */
+	TEGRA194_AON_GPIO(AA, 3),	/* wake43 */
+	-EINVAL,			/* wake44 */
+	-EINVAL,			/* wake45 */
+	TEGRA194_AON_GPIO(AA, 6),	/* wake46 */
+	TEGRA194_AON_GPIO(BB, 3),	/* wake47 */
+	TEGRA194_AON_GPIO(BB, 2),	/* wake48 */
+	TEGRA194_AON_GPIO(AA, 7),	/* wake49 */
+	-EINVAL,			/* wake50 */
+	-EINVAL,			/* wake51 */
+	-EINVAL,			/* wake52 */
+	-EINVAL,			/* wake53 */
+	-EINVAL,			/* wake54 */
+	-EINVAL,			/* wake55 */
+	-EINVAL,			/* wake56 */
+	-EINVAL,			/* wake57 */
+	-EINVAL,			/* wake58 */
+	-EINVAL,			/* wake59 */
+	-EINVAL,			/* wake60 */
+	-EINVAL,			/* wake61 */
+	-EINVAL,			/* wake62 */
+	-EINVAL,			/* wake63 */
+	-EINVAL,			/* wake64 */
+	-EINVAL,			/* wake65 */
+	-EINVAL,			/* wake66 */
+	-EINVAL,			/* wake67 */
+	-EINVAL,			/* wake68 */
+	-EINVAL,			/* wake69 */
+	-EINVAL,			/* wake70 */
+	-EINVAL,			/* wake71 */
+	-EINVAL,			/* wake72 */
+	-EINVAL,			/* wake73 */
+	-EINVAL,			/* wake74 */
+	-EINVAL,			/* wake75 */
+	-EINVAL,			/* wake76 */
+	-EINVAL,			/* wake77 */
+	-EINVAL,			/* wake78 */
+	-EINVAL,			/* wake79 */
+	-EINVAL,			/* wake80 */
+	-EINVAL,			/* wake81 */
+	-EINVAL,			/* wake82 */
+	-EINVAL,			/* wake83 */
+	-EINVAL,			/* wake84 */
+	-EINVAL,			/* wake85 */
+	-EINVAL,			/* wake86 */
+	-EINVAL,			/* wake87 */
+	-EINVAL,			/* wake88 */
+	-EINVAL,			/* wake89 */
+	-EINVAL,			/* wake90 */
+	-EINVAL,			/* wake91 */
+	-EINVAL,			/* wake92 */
+	-EINVAL,			/* wake93 */
+	-EINVAL,			/* wake94 */
+	-EINVAL,			/* wake95 */
+};
+
 static struct tegra_gpio_port_soc_info tegra194_gpio_cinfo[] = {
 	TEGRA194_MAIN_GPIO_PORT_INFO(A, 1, 2, 8),
 	TEGRA194_MAIN_GPIO_PORT_INFO(B, 4, 7, 2),
@@ -1068,6 +1266,8 @@ static const struct tegra_gpio_soc_info t194_gpio_soc = {
 	.debug_fs_name = "tegra_gpio",
 	.port = tegra194_gpio_cinfo,
 	.nports = ARRAY_SIZE(tegra194_gpio_cinfo),
+	.wake_table = tegra194_gpio_wakes,
+	.nwakes = ARRAY_SIZE(tegra194_gpio_wakes),
 };
 
 static const struct tegra_gpio_soc_info t194_aon_gpio_soc = {
@@ -1075,6 +1275,8 @@ static const struct tegra_gpio_soc_info t194_aon_gpio_soc = {
 	.debug_fs_name = "tegra-gpio-aon",
 	.port = tegra194_aon_gpio_cinfo,
 	.nports = ARRAY_SIZE(tegra194_aon_gpio_cinfo),
+	.wake_table = tegra194_aon_gpio_wakes,
+	.nwakes = ARRAY_SIZE(tegra194_aon_gpio_wakes),
 };
 
 static struct of_device_id tegra_gpio_of_match[] = {

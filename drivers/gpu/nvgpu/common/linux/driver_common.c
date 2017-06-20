@@ -27,11 +27,13 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "module.h"
+#include "os_linux.h"
 
 #define EMC3D_DEFAULT_RATIO 750
 
 static void nvgpu_init_vars(struct gk20a *g)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	init_waitqueue_head(&g->sw_irq_stall_last_handled_wq);
@@ -54,7 +56,7 @@ static void nvgpu_init_vars(struct gk20a *g)
 	g->emc3d_ratio = EMC3D_DEFAULT_RATIO;
 
 	/* Set DMA parameters to allow larger sgt lists */
-	g->dev->dma_parms = &g->dma_parms;
+	g->dev->dma_parms = &l->dma_parms;
 	dma_set_max_seg_size(g->dev, UINT_MAX);
 
 	nvgpu_init_list_node(&g->pending_sema_waits);

@@ -64,6 +64,8 @@ struct nvgpu_os_linux {
 	} sched;
 
 	dev_t cdev_region;
+
+	struct device_dma_parameters dma_parms;
 };
 
 static inline struct nvgpu_os_linux *nvgpu_os_linux_from_gk20a(struct gk20a *g)

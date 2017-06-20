@@ -740,7 +740,7 @@ int vgpu_probe(struct platform_device *pdev)
 	gk20a_debug_init(gk20a, "gpu.0");
 
 	/* Set DMA parameters to allow larger sgt lists */
-	dev->dma_parms = &gk20a->dma_parms;
+	dev->dma_parms = &l->dma_parms;
 	dma_set_max_seg_size(dev, UINT_MAX);
 
 	gk20a->gr_idle_timeout_default =

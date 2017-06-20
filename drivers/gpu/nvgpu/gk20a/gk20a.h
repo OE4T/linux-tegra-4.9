@@ -1196,8 +1196,6 @@ struct gk20a {
 
 	struct gk20a_sched_ctrl sched_ctrl;
 
-	struct device_dma_parameters dma_parms;
-
 	struct gk20a_cde_app cde_app;
 	bool mmu_debug_ctrl;
 

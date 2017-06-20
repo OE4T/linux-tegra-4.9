@@ -1658,8 +1658,8 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			gk20a_writel(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset,
 					gr_gpc0_tpc0_sm0_hww_global_esr_single_step_complete_pending_f());
 
-		global_mask = gr_gpcs_tpcs_sm0_hww_global_esr_multiple_warp_errors_pending_f() |
-			gr_gpcs_tpcs_sm0_hww_global_esr_bpt_pause_pending_f();
+		global_mask = gr_gpc0_tpc0_sm0_hww_global_esr_multiple_warp_errors_pending_f() |
+			gr_gpc0_tpc0_sm0_hww_global_esr_bpt_pause_pending_f();
 
 		if (warp_esr != 0 || (global_esr & global_mask) != 0) {
 			*ignore_debugger = true;
@@ -1697,13 +1697,13 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			}
 
 			dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
-			if (dbgr_control0 & gr_gpcs_tpcs_sm0_dbgr_control0_single_step_mode_enable_f()) {
+			if (dbgr_control0 & gr_gpc0_tpc0_sm0_dbgr_control0_single_step_mode_enable_f()) {
 				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 						"CILP: clearing SINGLE_STEP_MODE before resume for gpc %d tpc %d\n",
 						gpc, tpc);
 				dbgr_control0 = set_field(dbgr_control0,
-						gr_gpcs_tpcs_sm0_dbgr_control0_single_step_mode_m(),
-						gr_gpcs_tpcs_sm0_dbgr_control0_single_step_mode_disable_f());
+						gr_gpc0_tpc0_sm0_dbgr_control0_single_step_mode_m(),
+						gr_gpc0_tpc0_sm0_dbgr_control0_single_step_mode_disable_f());
 				gk20a_writel(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset, dbgr_control0);
 			}
 

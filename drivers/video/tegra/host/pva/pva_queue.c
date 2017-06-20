@@ -630,7 +630,7 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 		ptr += pva_task_write_ptr_16b_op(
 					&hw_postactions[ptr],
 					TASK_ACT_WRITE_STATUS,
-					output_status_addr, 0);
+					output_status_addr, 1);
 	}
 
 	/* Add postactions list for semaphore */

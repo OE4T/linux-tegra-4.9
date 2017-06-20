@@ -1645,17 +1645,24 @@ static int gr_gp10b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: restarted runlist");
 
-	if (gk20a_is_channel_marked_as_tsg(fault_ch))
-		gk20a_fifo_issue_preempt(g, fault_ch->tsgid, true);
-	else
-		gk20a_fifo_issue_preempt(g, fault_ch->hw_chid, false);
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+			"CILP: tsgid: 0x%x", fault_ch->tsgid);
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: preempted the channel/tsg");
+	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
+		gk20a_fifo_issue_preempt(g, fault_ch->tsgid, true);
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+			"CILP: preempted tsg");
+	} else {
+		gk20a_fifo_issue_preempt(g, fault_ch->hw_chid, false);
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+			"CILP: preempted channel");
+	}
 
 	return ret;
 }
 
-static int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk20a *fault_ch)
+int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
+			struct channel_gk20a *fault_ch)
 {
 	int ret;
 	struct gr_ctx_desc *gr_ctx = fault_ch->ch_ctx.gr_ctx;
@@ -1888,7 +1895,7 @@ static int gr_gp10b_get_cilp_preempt_pending_chid(struct gk20a *g, int *__chid)
 	return ret;
 }
 
-static int gr_gp10b_handle_fecs_error(struct gk20a *g,
+int gr_gp10b_handle_fecs_error(struct gk20a *g,
 				struct channel_gk20a *__ch,
 				struct gr_gk20a_isr_data *isr_data)
 {

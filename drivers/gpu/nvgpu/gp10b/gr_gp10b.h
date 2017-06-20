@@ -21,6 +21,7 @@
 #include "gk20a/mm_gk20a.h"
 
 struct gpu_ops;
+struct gr_gk20a_isr_data;
 
 enum {
 	PASCAL_CHANNEL_GPFIFO_A  = 0xC06F,
@@ -44,6 +45,11 @@ int gr_gp10b_init_fs_state(struct gk20a *g);
 int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 			struct nvgpu_mem *mem);
 void gr_gp10b_create_sysfs(struct device *dev);
+int gr_gp10b_handle_fecs_error(struct gk20a *g,
+			struct channel_gk20a *__ch,
+			struct gr_gk20a_isr_data *isr_data);
+int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
+		struct channel_gk20a *fault_ch);
 
 struct gr_t18x {
 	struct {

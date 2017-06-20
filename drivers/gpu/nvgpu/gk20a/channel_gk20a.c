@@ -294,7 +294,7 @@ void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 
 	ch->g->ops.fifo.disable_channel(ch);
 
-	if (channel_preempt)
+	if (channel_preempt && ch->ch_ctx.gr_ctx)
 		ch->g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
 
 	gk20a_channel_abort_clean_up(ch);

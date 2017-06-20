@@ -5906,11 +5906,10 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 	struct channel_gk20a *ret = NULL;
 
 	/* when contexts are unloaded from GR, the valid bit is reset
-	 * but the instance pointer information remains intact. So the
-	 * valid bit must be checked to be absolutely certain that a
-	 * valid context is currently resident. */
-	if (!gr_fecs_current_ctx_valid_v(curr_ctx))
-		return NULL;
+	 * but the instance pointer information remains intact.
+	 * This might be called from gr_isr where contexts might be
+	 * unloaded. No need to check ctx_valid bit
+	 */
 
 	nvgpu_spinlock_acquire(&gr->ch_tlb_lock);
 
@@ -6475,10 +6474,12 @@ int gk20a_gr_isr(struct gk20a *g)
 	isr_data.class_num = gr_fe_object_table_nvclass_v(obj_table);
 
 	ch = gk20a_gr_get_channel_from_ctx(g, isr_data.curr_ctx, &tsgid);
-	if (ch)
+	if (ch) {
 		isr_data.chid = ch->hw_chid;
-	else
+	} else {
 		isr_data.chid = FIFO_INVAL_CHANNEL_ID;
+		nvgpu_err(g, "ch id is INVALID 0xffffffff");
+	}
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		"channel %d: addr 0x%08x, "
@@ -8283,6 +8284,15 @@ bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 	bool ret = false;
 
 	curr_gr_ctx  = gk20a_readl(g, gr_fecs_current_ctx_r());
+
+	/* when contexts are unloaded from GR, the valid bit is reset
+	 * but the instance pointer information remains intact. So the
+	 * valid bit must be checked to be absolutely certain that a
+	 * valid context is currently resident.
+	 */
+	if (!gr_fecs_current_ctx_valid_v(curr_gr_ctx))
+		return NULL;
+
 	curr_ch = gk20a_gr_get_channel_from_ctx(g, curr_gr_ctx,
 					      &curr_gr_tsgid);
 

@@ -18,8 +18,8 @@ config TEGRA_GR_VIRTUALIZATION
 
 endif
 
-trysource "../display/drivers/video/tegra/Kconfig.display"
-trysource "drivers/video/tegra/Kconfig.display"
+trysource "../nvidia/drivers/video/tegra/Kconfig.nvidia"
+trysource "drivers/video/tegra/Kconfig.nvidia"
 
 config TEGRA_DC
 	tristate "Tegra Display Contoller"

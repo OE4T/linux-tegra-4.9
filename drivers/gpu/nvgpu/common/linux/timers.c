@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/jiffies.h>
+#include <linux/ktime.h>
 #include <linux/delay.h>
 
 #include <nvgpu/timers.h>
@@ -54,6 +54,9 @@ static int nvgpu_timeout_is_pre_silicon(struct nvgpu_timeout *timeout)
  *
  * If neither %NVGPU_TIMER_CPU_TIMER or %NVGPU_TIMER_RETRY_TIMER is passed then
  * a CPU timer is used by default.
+ *
+ * A negative duration is interpreted as the maximum possible, which for our
+ * purposes means infinite wait.
  */
 int nvgpu_timeout_init(struct gk20a *g, struct nvgpu_timeout *timeout,
 		       int duration, unsigned long flags)
@@ -66,10 +69,14 @@ int nvgpu_timeout_init(struct gk20a *g, struct nvgpu_timeout *timeout,
 	timeout->g = g;
 	timeout->flags = flags;
 
+	if (duration < 0)
+		duration = INT_MAX;
+
 	if (flags & NVGPU_TIMER_RETRY_TIMER)
 		timeout->retries.max = duration;
 	else
-		timeout->time = jiffies + msecs_to_jiffies(duration);
+		timeout->time = ktime_to_ns(ktime_add_ns(ktime_get(),
+					(s64)NSEC_PER_MSEC * duration));
 
 	return 0;
 }
@@ -79,12 +86,12 @@ static int __nvgpu_timeout_expired_msg_cpu(struct nvgpu_timeout *timeout,
 					 const char *fmt, va_list args)
 {
 	struct gk20a *g = timeout->g;
-	unsigned long now = jiffies;
+	ktime_t now = ktime_get();
 
 	if (nvgpu_timeout_is_pre_silicon(timeout))
 		return 0;
 
-	if (time_after(now, (unsigned long)timeout->time)) {
+	if (ktime_after(now, ns_to_ktime(timeout->time))) {
 		if (!(timeout->flags & NVGPU_TIMER_SILENT_TIMEOUT)) {
 			char buf[128];
 
@@ -176,7 +183,7 @@ int nvgpu_timeout_peek_expired(struct nvgpu_timeout *timeout)
 	if (timeout->flags & NVGPU_TIMER_RETRY_TIMER)
 		return timeout->retries.attempted >= timeout->retries.max;
 	else
-		return time_after(jiffies, (unsigned long)timeout->time);
+		return ktime_after(ktime_get(), ns_to_ktime(timeout->time));
 }
 
 /**

@@ -50,7 +50,7 @@ struct nvgpu_timeout {
 	unsigned int		 flags;
 
 	union {
-		unsigned long	 time;
+		s64		 time;
 		struct {
 			int	 max;
 			int	 attempted;

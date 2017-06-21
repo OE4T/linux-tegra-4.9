@@ -524,6 +524,9 @@ static const struct i2c_device_id fan53555_id[] = {
 		.name = "fan53555",
 		.driver_data = FAN53555_VENDOR_FAIRCHILD
 	}, {
+		.name = "fan53528",
+		.driver_data = FAN53555_VENDOR_FAIRCHILD
+	}, {
 		.name = "syr82x",
 		.driver_data = FAN53555_VENDOR_SILERGY
 	},

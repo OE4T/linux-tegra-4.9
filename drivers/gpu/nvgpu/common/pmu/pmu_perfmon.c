@@ -204,7 +204,8 @@ int nvgpu_pmu_load_update(struct gk20a *g)
 		return 0;
 	}
 
-	pmu_copy_from_dmem(pmu, pmu->sample_buffer, (u8 *)&load, 2, 0);
+	nvgpu_flcn_copy_from_dmem(pmu->flcn, pmu->sample_buffer,
+		(u8 *)&load, 2, 0);
 	pmu->load_shadow = load / 10;
 	pmu->load_avg = (((9*pmu->load_avg) + pmu->load_shadow) / 10);
 

@@ -129,7 +129,7 @@ static int pmu_queue_tail(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
 static inline void pmu_queue_read(struct nvgpu_pmu *pmu,
 			u32 offset, u8 *dst, u32 size)
 {
-	pmu_copy_from_dmem(pmu, offset, dst, size, 0);
+	nvgpu_flcn_copy_from_dmem(pmu->flcn, offset, dst, size, 0);
 }
 
 static inline void pmu_queue_write(struct nvgpu_pmu *pmu,
@@ -673,7 +673,7 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 		}
 		if (pv->pmu_allocation_get_dmem_size(pmu,
 		pv->get_pmu_seq_out_a_ptr(seq)) != 0) {
-			pmu_copy_from_dmem(pmu,
+			nvgpu_flcn_copy_from_dmem(pmu->flcn,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)),
 			seq->out_payload,

@@ -265,7 +265,7 @@ void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_pg_stats_v2 stats;
 
-	pmu_copy_from_dmem(pmu,
+	nvgpu_flcn_copy_from_dmem(pmu->flcn,
 		pmu->stat_dmem_offset[pg_engine_id],
 		(u8 *)&stats, sizeof(struct pmu_pg_stats_v2), 0);
 

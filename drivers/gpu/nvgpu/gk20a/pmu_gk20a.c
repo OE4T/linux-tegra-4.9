@@ -104,51 +104,6 @@ static void printtrace(struct nvgpu_pmu *pmu)
 	nvgpu_kfree(g, tracebuffer);
 }
 
-
-void pmu_copy_from_dmem(struct nvgpu_pmu *pmu,
-		u32 src, u8 *dst, u32 size, u8 port)
-{
-	struct gk20a *g = gk20a_from_pmu(pmu);
-	u32 i, words, bytes;
-	u32 data, addr_mask;
-	u32 *dst_u32 = (u32*)dst;
-
-	if (size == 0) {
-		nvgpu_err(g, "size is zero");
-		return;
-	}
-
-	if (src & 0x3) {
-		nvgpu_err(g, "src (0x%08x) not 4-byte aligned", src);
-		return;
-	}
-
-	nvgpu_mutex_acquire(&pmu->pmu_copy_lock);
-
-	words = size >> 2;
-	bytes = size & 0x3;
-
-	addr_mask = pwr_falcon_dmemc_offs_m() |
-		    pwr_falcon_dmemc_blk_m();
-
-	src &= addr_mask;
-
-	gk20a_writel(g, pwr_falcon_dmemc_r(port),
-		src | pwr_falcon_dmemc_aincr_f(1));
-
-	for (i = 0; i < words; i++)
-		dst_u32[i] = gk20a_readl(g, pwr_falcon_dmemd_r(port));
-
-	if (bytes > 0) {
-		data = gk20a_readl(g, pwr_falcon_dmemd_r(port));
-		for (i = 0; i < bytes; i++) {
-			dst[(words << 2) + i] = ((u8 *)&data)[i];
-		}
-	}
-	nvgpu_mutex_release(&pmu->pmu_copy_lock);
-	return;
-}
-
 void pmu_copy_to_dmem(struct nvgpu_pmu *pmu,
 		u32 dst, u8 *src, u32 size, u8 port)
 {
@@ -812,7 +767,7 @@ void pmu_dump_elpg_stats(struct nvgpu_pmu *pmu)
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_pg_stats stats;
 
-	pmu_copy_from_dmem(pmu,
+	nvgpu_flcn_copy_from_dmem(pmu->flcn,
 		pmu->stat_dmem_offset[PMU_PG_ELPG_ENGINE_ID_GRAPHICS],
 		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
 
@@ -845,7 +800,7 @@ void pmu_dump_elpg_stats(struct nvgpu_pmu *pmu)
 	   Turn on PG_DEBUG in ucode and locate symbol "ElpgLog" offset
 	   in .nm file, e.g. 0x1000066c. use 0x66c.
 	u32 i, val[20];
-	pmu_copy_from_dmem(pmu, 0x66c,
+	nvgpu_flcn_copy_from_dmem(pmu->flcn, 0x66c,
 		(u8 *)val, sizeof(val), 0);
 	gk20a_dbg_pmu("elpg log begin");
 	for (i = 0; i < 20; i++)
@@ -1150,7 +1105,7 @@ void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_pg_stats stats;
 
-	pmu_copy_from_dmem(pmu,
+	nvgpu_flcn_copy_from_dmem(pmu->flcn,
 		pmu->stat_dmem_offset[pg_engine_id],
 		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
 

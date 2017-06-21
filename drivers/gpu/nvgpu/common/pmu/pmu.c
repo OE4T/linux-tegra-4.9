@@ -193,14 +193,14 @@ int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
 
 	g->ops.pmu.pmu_msgq_tail(pmu, &tail, QUEUE_GET);
 
-	pmu_copy_from_dmem(pmu, tail,
+	nvgpu_flcn_copy_from_dmem(pmu->flcn, tail,
 		(u8 *)&msg->hdr, PMU_MSG_HDR_SIZE, 0);
 	if (msg->hdr.unit_id != PMU_UNIT_INIT) {
 		nvgpu_err(g, "expecting init msg");
 		return -EINVAL;
 	}
 
-	pmu_copy_from_dmem(pmu, tail + PMU_MSG_HDR_SIZE,
+	nvgpu_flcn_copy_from_dmem(pmu->flcn, tail + PMU_MSG_HDR_SIZE,
 		(u8 *)&msg->msg, msg->hdr.size - PMU_MSG_HDR_SIZE, 0);
 
 	if (msg->msg.init.msg_type != PMU_INIT_MSG_TYPE_PMU_INIT) {
@@ -214,7 +214,7 @@ int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
 	init = pv->get_pmu_msg_pmu_init_msg_ptr(&(msg->msg.init));
 	if (!pmu->gid_info.valid) {
 
-		pmu_copy_from_dmem(pmu,
+		nvgpu_flcn_copy_from_dmem(pmu->flcn,
 			pv->get_pmu_init_msg_pmu_sw_mg_off(init),
 			(u8 *)&gid_data,
 			sizeof(struct pmu_sha1_gid_data), 0);

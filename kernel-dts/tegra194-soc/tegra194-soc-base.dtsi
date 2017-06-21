@@ -378,11 +378,13 @@
 	};
 
 	se: se_elp@3ad0000 {
-		compatible = "nvidia,tegra186-se-elp";
+		compatible = "nvidia,tegra194-se-elp";
 		reg = <0x0 0x03ad0000 0x0 0x10000>,
 		      <0x0 0x03ae0000 0x0 0x10000>;
+		interrupts = <0 283 0x04>;
 		clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 		clock-names = "se";
+		pka1-rsa-priority = <300>;
 		status = "okay";
 	};
 

@@ -508,9 +508,6 @@ struct gpu_ops {
 #endif
 	} fifo;
 	struct pmu_v {
-		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
-		u32 cmd_id_zbc_table_update;
-		bool is_pmu_zbc_save_supported;
 		u32 (*get_pmu_cmdline_args_size)(struct nvgpu_pmu *pmu);
 		void (*set_pmu_cmdline_args_cpu_freq)(struct nvgpu_pmu *pmu,
 			u32 freq);
@@ -606,6 +603,9 @@ struct gpu_ops {
 				u8 value);
 		void (*pg_cmd_eng_buf_load_set_dma_idx)(struct pmu_pg_cmd *pg,
 				u8 value);
+		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
+		u32 cmd_id_zbc_table_update;
+		bool is_pmu_zbc_save_supported;
 	} pmu_ver;
 	struct {
 		int (*get_netlist_name)(struct gk20a *g, int index, char *name);
@@ -769,11 +769,11 @@ struct gpu_ops {
 		int (*mclk_init)(struct gk20a *g);
 		void (*mclk_deinit)(struct gk20a *g);
 		int (*mclk_change)(struct gk20a *g, u16 val);
+		void (*handle_ext_irq)(struct gk20a *g, u32 intr);
+		void (*set_irqmask)(struct gk20a *g);
 		u32  lspmuwprinitdone;
 		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;
-		void (*handle_ext_irq)(struct gk20a *g, u32 intr);
-		void (*set_irqmask)(struct gk20a *g);
 	} pmu;
 	struct {
 		int (*init_debugfs)(struct gk20a *g);
@@ -811,9 +811,6 @@ struct gpu_ops {
 	struct {
 		int (*handle_pmu_perf_event)(struct gk20a *g, void *pmu_msg);
 	} perf;
-	bool privsecurity;
-	bool securegpccs;
-	bool pmupstate;
 	struct {
 		const struct regop_offset_range* (
 				*get_global_whitelist_ranges)(void);
@@ -839,7 +836,6 @@ struct gpu_ops {
 				bool enable, bool is_stalling, u32 unit);
 		void (*isr_stall)(struct gk20a *g);
 		bool (*is_intr_hub_pending)(struct gk20a *g, u32 mc_intr);
-		u32 intr_mask_restore[4];
 		u32 (*intr_stall)(struct gk20a *g);
 		void (*intr_stall_pause)(struct gk20a *g);
 		void (*intr_stall_resume)(struct gk20a *g);
@@ -851,6 +847,7 @@ struct gpu_ops {
 		void (*reset)(struct gk20a *g, u32 units);
 		u32 (*boot_0)(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
 		bool (*is_intr1_pending)(struct gk20a *g, enum nvgpu_unit unit, u32 mc_intr_1);
+		u32 intr_mask_restore[4];
 	} mc;
 	struct {
 		void (*show_dump)(struct gk20a *g,
@@ -938,6 +935,9 @@ struct gpu_ops {
 	struct {
 		void (*isr)(struct gk20a *g);
 	} priv_ring;
+	bool privsecurity;
+	bool securegpccs;
+	bool pmupstate;
 };
 
 struct nvgpu_bios_ucode {

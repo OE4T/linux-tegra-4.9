@@ -2116,6 +2116,7 @@
 		interrupts = <0 123 0x04>;
 		nvidia,expiry-count = <4>;
 		nvidia,timer-index = <7>;
+		nvidia,enable-on-init;
 		status = "disabled";
 	};
 

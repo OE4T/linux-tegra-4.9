@@ -147,6 +147,12 @@ static int fan53555_set_suspend_disable(struct regulator_dev *rdev)
 				  VSEL_BUCK_EN, 0);
 }
 
+static unsigned int fan53555_map_mode(unsigned int mode)
+{
+	/* Mapping is 1:1*/
+	return mode;
+}
+
 static int fan53555_set_mode(struct regulator_dev *rdev, unsigned int mode)
 {
 	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
@@ -375,6 +381,7 @@ static int fan53555_regulator_register(struct fan53555_device_info *di,
 	rdesc->vsel_reg = di->vol_reg;
 	rdesc->vsel_mask = VSEL_NSEL_MASK;
 	rdesc->owner = THIS_MODULE;
+	rdesc->of_map_mode = fan53555_map_mode;
 
 	if (di->vendor == FAN53528_VENDOR_FAICHILD) {
 		rdesc->name = "fan53528-reg";

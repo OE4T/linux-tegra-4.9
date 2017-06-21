@@ -32,7 +32,11 @@
 		       <&tegra_car TEGRA210_CLK_SATA_COLD>;
 		reset-names = "sata", "sata-oob", "sata-cold";
 		iommus = <&smmu TEGRA_SWGROUP_SATA2>;
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+		phys = <&{/xusb_padctl@7009f000/pads/sata/lanes/sata-0}>;
+#else
 		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_SATA_P(0)>;
+#endif
 		phy-names = "sata-phy";
 		nvidia,disable-features = "devslp", "dipm";
 		nvidia,link-flags = "max_power";

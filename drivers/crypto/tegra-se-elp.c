@@ -102,6 +102,8 @@ static char *rng1_cmd[] = {
 struct tegra_se_elp_chipdata {
 	bool use_key_slot;
 	bool rng1_supported;
+	u16 amap_shift;
+	bool weierstrass;
 };
 
 struct tegra_se_elp_dev {
@@ -340,12 +342,16 @@ static inline u32 num_words(int mode)
 static inline void se_elp_writel(struct tegra_se_elp_dev *se_dev, int elp_type,
 				 unsigned int val, unsigned int reg_offset)
 {
+	if (elp_type == PKA1)
+		reg_offset -= se_dev->chipdata->amap_shift;
 	writel(val, se_dev->io_reg[elp_type] + reg_offset);
 }
 
 static inline unsigned int se_elp_readl(struct tegra_se_elp_dev *se_dev,
 					int elp_type, unsigned int reg_offset)
 {
+	if (elp_type == PKA1)
+		reg_offset -= se_dev->chipdata->amap_shift;
 	return readl(se_dev->io_reg[elp_type] + reg_offset);
 }
 
@@ -784,45 +790,68 @@ static void tegra_se_program_pka1_rsa(struct tegra_se_pka1_rsa_context *ctx)
 	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_CTRL_PKA_CONTROL_OFFSET);
 }
 
+static u32 tegra_se_get_ecc_prg_entry(u32 type, u32 mode, bool weierstrass)
+{
+	switch (type) {
+	case ECC_POINT_MUL:
+		if ((mode == SE_ELP_OP_MODE_ECC521) && weierstrass)
+			return ECC_WEIERSTRASS_POINT_MUL_PRG_ENTRY_VAL;
+		else
+			return ECC_POINT_MUL_PRG_ENTRY_VAL;
+		break;
+	case ECC_POINT_ADD:
+		if ((mode == SE_ELP_OP_MODE_ECC521) && weierstrass)
+			return ECC_WEIERSTRASS_POINT_ADD_PRG_ENTRY_VAL;
+		else
+			return ECC_POINT_ADD_PRG_ENTRY_VAL;
+		break;
+	case ECC_POINT_DOUBLE:
+		if ((mode == SE_ELP_OP_MODE_ECC521) && weierstrass)
+			return ECC_WEIERSTRASS_POINT_DOUBLE_PRG_ENTRY_VAL;
+		else
+			return ECC_POINT_DOUBLE_PRG_ENTRY_VAL;
+		break;
+	case ECC_POINT_VER:
+		if ((mode == SE_ELP_OP_MODE_ECC521) && weierstrass)
+			return ECC_WEIERSTRASS_ECPV_PRG_ENTRY_VAL;
+		else
+			return ECC_ECPV_PRG_ENTRY_VAL;
+		break;
+	case ECC_SHAMIR_TRICK:
+		if ((mode == SE_ELP_OP_MODE_ECC521) && weierstrass)
+			return ECC_WEIERSTRASS_SHAMIR_TRICK_PRG_ENTRY_VAL;
+		else
+			return ECC_SHAMIR_TRICK_PRG_ENTRY_VAL;
+		break;
+	default:
+		return -EINVAL;
+	}
+}
+
 static void tegra_se_program_pka1_ecc(struct tegra_se_pka1_ecc_request *req)
 {
 	u32 val;
+	u32 prg_entry;
 	struct tegra_se_elp_dev *se_dev = req->se_dev;
 	u32 partial_radix = 0;
 
 	tegra_se_set_pka1_op_ready(se_dev);
 
-	if (req->type == ECC_POINT_MUL) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ECC_POINT_MUL_PRG_ENTRY_VAL,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
+	prg_entry = tegra_se_get_ecc_prg_entry(req->type, req->op_mode,
+					       se_dev->chipdata->weierstrass);
+
+	se_elp_writel(se_dev, PKA1, prg_entry, TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
+
+	if (req->type == ECC_POINT_MUL)
 		/*clear F0 for binding val*/
 		se_elp_writel(se_dev, PKA1,
 			      TEGRA_SE_PKA1_FLAGS_FLAG_F0(ELP_DISABLE),
 			      TEGRA_SE_PKA1_FLAGS_OFFSET);
-	} else if (req->type == ECC_POINT_ADD) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ECC_POINT_ADD_PRG_ENTRY_VAL,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	} else if (req->type == ECC_POINT_DOUBLE) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ECC_POINT_DOUBLE_PRG_ENTRY_VAL,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	} else if (req->type == ECC_POINT_VER) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ECC_ECPV_PRG_ENTRY_VAL,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	} else {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ECC_SHAMIR_TRICK_PRG_ENTRY_VAL,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	}
 
-	if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
+	if (req->op_mode == SE_ELP_OP_MODE_ECC521)
 		se_elp_writel(se_dev, PKA1,
 			      TEGRA_SE_PKA1_FLAGS_FLAG_F1(ELP_ENABLE),
 			      TEGRA_SE_PKA1_FLAGS_OFFSET);
-	}
 
 	if (req->op_mode != SE_ELP_OP_MODE_ECC256 &&
 		req->op_mode != SE_ELP_OP_MODE_ECC512)
@@ -2268,11 +2297,22 @@ static struct rng_alg trng_alg = {
 static struct tegra_se_elp_chipdata tegra18_se_chipdata = {
 	.use_key_slot = true,
 	.rng1_supported = true,
+	.amap_shift = 0x0,
+	.weierstrass = false,
+};
+
+static struct tegra_se_elp_chipdata tegra19_se_chipdata = {
+	.use_key_slot = true,
+	.rng1_supported = true,
+	.amap_shift = 0x8000,
+	.weierstrass = true,
 };
 
 static struct tegra_se_elp_chipdata tegra21_se_chipdata = {
 	.use_key_slot = true,
 	.rng1_supported = false,
+	.amap_shift = 0x0,
+	.weierstrass = false,
 };
 
 static int tegra_se_elp_probe(struct platform_device *pdev)
@@ -2455,6 +2495,9 @@ static const struct of_device_id tegra_se_elp_of_match[] = {
 	{
 		.compatible = "nvidia,tegra186-se-elp",
 		.data = &tegra18_se_chipdata,
+	}, {
+		.compatible = "nvidia,tegra194-se-elp",
+		.data = &tegra19_se_chipdata,
 	}, {
 		.compatible = "nvidia,tegra210b01-se-elp",
 		.data = &tegra21_se_chipdata,

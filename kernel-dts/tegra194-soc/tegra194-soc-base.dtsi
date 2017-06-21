@@ -225,6 +225,14 @@
 				address-space = <&camera_vm1_as>;
 				sid-list = <TEGRA_SID(RCE)>;
 			};
+			xusb_host_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_HOST>;
+			};
+			xusb_dev_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_DEV>;
+			};
 		};
 
 		address-space-prop {
@@ -1289,6 +1297,117 @@
 		#padcontroller-cells = <1>;
 		status = "disabled";
 	};
+
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+
+	xusb_padctl: xusb_padctl@3520000 {
+		compatible = "nvidia,tegra19x-xusb-padctl";
+		reg = <0x0 0x03520000 0x0 0x1000>,
+			<0x0 0x03540000 0x0 0x1000>;
+		reg-names = "padctl", "ao";
+		interrupts = <0 167 0x4>;
+		status = "disabled";
+
+		pads {
+			usb2 {
+				lanes {
+					usb2-0 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb2-1 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb2-2 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb2-3 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+				};
+			};
+			usb3 {
+				lanes {
+					usb3-0 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb3-1 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb3-2 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb3-3 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+				};
+			};
+		};
+
+		ports {
+			usb2-0 {
+				status = "disabled";
+			};
+			usb2-1 {
+				status = "disabled";
+			};
+			usb2-2 {
+				status = "disabled";
+			};
+			usb2-3 {
+				status = "disabled";
+			};
+			usb3-0 {
+				status = "disabled";
+			};
+			usb3-1 {
+				status = "disabled";
+			};
+			usb3-2 {
+				status = "disabled";
+			};
+			usb3-3 {
+				status = "disabled";
+			};
+		};
+	};
+
+	tegra_xudc: xudc@3550000 {
+		compatible = "nvidia,tegra194-xudc";
+		reg = <0x0 0x03550000 0x0 0x8000>,
+			<0x0 0x03558000 0x0 0x1000>;
+		interrupts = <0 166 0x4>;
+
+		nvidia,xusb-padctl = <&xusb_padctl>;
+
+		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_XUSB_DEV>;
+
+		status = "disabled";
+	};
+
+	tegra_xhci: xhci@3610000 {
+		compatible = "nvidia,tegra194-xhci";
+		reg = <0x0 0x03610000 0x0 0x40000>,
+			<0x0 0x03600000 0x0 0x10000>;
+		interrupts = <0 163 0x4>, <0 164 0x4>, <0 167 0x4>;
+
+		nvidia,xusb-padctl = <&xusb_padctl>;
+
+		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_XUSB_HOST>;
+
+		status = "disabled";
+	};
+
+#endif
 
 	gv11b {
 		compatible = "nvidia,gv11b";

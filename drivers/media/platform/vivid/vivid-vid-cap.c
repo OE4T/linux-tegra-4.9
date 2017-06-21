@@ -165,9 +165,11 @@ static int vid_cap_queue_setup(struct vb2_queue *vq,
 static int vid_cap_buf_prepare(struct vb2_buffer *vb)
 {
 	struct vivid_dev *dev = vb2_get_drv_priv(vb->vb2_queue);
+	struct vb2_queue *q = vb->vb2_queue;
 	unsigned long size;
 	unsigned buffers = tpg_g_buffers(&dev->tpg);
 	unsigned p;
+	int err = 0;
 
 	dprintk(dev, 1, "%s\n", __func__);
 
@@ -195,6 +197,20 @@ static int vid_cap_buf_prepare(struct vb2_buffer *vb)
 
 		vb2_set_plane_payload(vb, p, size);
 		vb->planes[p].data_offset = dev->fmt_cap->data_offset[p];
+
+		if (q->memory == V4L2_MEMORY_DMABUF) {
+			struct dma_buf *dbuf = dma_buf_get(vb->planes[p].m.fd);
+			enum dma_data_direction dma_dir =
+				q->is_output ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+			err = dma_buf_begin_cpu_access(dbuf, 0,
+					vb->planes[p].length, dma_dir);
+			if (err) {
+				dprintk(dev, 1, "%s dma buf cpu access for plane %d failed\n",
+					__func__, p);
+				return err;
+			}
+		}
 	}
 
 	return 0;
@@ -207,6 +223,20 @@ static void vid_cap_buf_finish(struct vb2_buffer *vb)
 	struct v4l2_timecode *tc = &vbuf->timecode;
 	unsigned fps = 25;
 	unsigned seq = vbuf->sequence;
+	unsigned p;
+
+	for (p = 0; p < tpg_g_buffers(&dev->tpg); p++) {
+		struct vb2_queue *q = vb->vb2_queue;
+
+		if (q->memory == V4L2_MEMORY_DMABUF) {
+			struct dma_buf *dbuf = dma_buf_get(vb->planes[p].m.fd);
+			enum dma_data_direction dma_dir =
+				q->is_output ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
+
+			dma_buf_end_cpu_access(dbuf, 0,
+				vb->planes[p].length, dma_dir);
+		}
+	}
 
 	if (!vivid_is_sdtv_cap(dev))
 		return;
@@ -567,7 +597,7 @@ int vivid_g_fmt_vid_cap(struct file *file, void *priv,
 	mp->xfer_func    = vivid_xfer_func_cap(dev);
 	mp->ycbcr_enc    = vivid_ycbcr_enc_cap(dev);
 	mp->quantization = vivid_quantization_cap(dev);
-	mp->num_planes = dev->fmt_cap->buffers;
+	mp->num_planes = tpg_g_planes(&dev->tpg);
 	mp->metadata_height = dev->embedded_data_height;
 	for (p = 0; p < mp->num_planes; p++) {
 		mp->plane_fmt[p].bytesperline =

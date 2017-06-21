@@ -303,6 +303,15 @@ static int tegra_aon_parse_channels(struct device *dev)
 	return tegra_aon_validate_channels(dev);
 }
 
+static int tegra_aon_mbox_get_max_txsize(struct mbox_chan *mbox_chan)
+{
+	struct tegra_aon_ivc_chan *ivc_chan;
+
+	ivc_chan = (struct tegra_aon_ivc_chan *)mbox_chan->con_priv;
+
+	return ivc_chan->ivc.frame_size;
+}
+
 static int tegra_aon_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
 {
 	struct tegra_aon_ivc_chan *ivc_chan;
@@ -342,6 +351,7 @@ static bool tegra_aon_mbox_last_tx_done(struct mbox_chan *mbox_chan)
 }
 
 static struct mbox_chan_ops tegra_aon_mbox_chan_ops = {
+	.get_max_txsize = tegra_aon_mbox_get_max_txsize,
 	.send_data = tegra_aon_mbox_send_data,
 	.startup = tegra_aon_mbox_startup,
 	.shutdown = tegra_aon_mbox_shutdown,

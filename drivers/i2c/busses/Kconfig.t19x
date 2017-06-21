@@ -1,0 +1,8 @@
+config I2C_TEGRA194_SLAVE
+	tristate "NVIDIA Tegra194 internal I2C slave controller"
+	select I2C_SLAVE
+	help
+	If you say yes to this option, support will be included for the
+	I2C slave controller embedded in NVIDIA Tegra194 SOC.
+
+	This driver supports FIFO mode for read/write transfers.

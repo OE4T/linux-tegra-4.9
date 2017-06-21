@@ -18,3 +18,4 @@ obj-y += platform/
 obj-y += video/
 obj-y += pinctrl/
 obj-y += cpuidle/
+obj-y += i2c/

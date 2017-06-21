@@ -1928,16 +1928,6 @@ static int gr_gv11b_handle_fecs_error(struct gk20a *g,
 	return ret;
 }
 
-static u32 gv11b_mask_hww_warp_esr(u32 hww_warp_esr)
-{
-	if (!(hww_warp_esr & gr_gpc0_tpc0_sm0_hww_warp_esr_wrap_id_m()))
-		hww_warp_esr = set_field(hww_warp_esr,
-			gr_gpc0_tpc0_sm0_hww_warp_esr_addr_error_type_m(),
-			gr_gpc0_tpc0_sm0_hww_warp_esr_addr_error_type_none_f());
-
-	return hww_warp_esr;
-}
-
 static int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 map;
@@ -2993,6 +2983,18 @@ static int gv11b_gr_resume_from_pause(struct gk20a *g)
 	return err;
 }
 
+static u32 gv11b_gr_get_sm_hww_warp_esr(struct gk20a *g,
+			u32 gpc, u32 tpc, u32 sm)
+{
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
+			 gk20a_gr_tpc_offset(g, tpc) +
+			 gv11b_gr_sm_offset(g, sm);
+
+	u32 hww_warp_esr = gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_hww_warp_esr_r() + offset);
+	return hww_warp_esr;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3030,7 +3032,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.enable_gpc_exceptions = gr_gv11b_enable_gpc_exceptions;
 	gops->gr.enable_exceptions = gr_gv11b_enable_exceptions;
 	gops->gr.enable_hww_exceptions = gr_gv11b_enable_hww_exceptions;
-	gops->gr.mask_hww_warp_esr = gv11b_mask_hww_warp_esr;
 	gops->gr.pre_process_sm_exception =
 		gr_gv11b_pre_process_sm_exception;
 	gops->gr.handle_fecs_error = gr_gv11b_handle_fecs_error;
@@ -3067,4 +3068,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.resume_single_sm = gv11b_gr_resume_single_sm;
 	gops->gr.resume_all_sms = gv11b_gr_resume_all_sms;
 	gops->gr.resume_from_pause = gv11b_gr_resume_from_pause;
+	gops->gr.get_sm_hww_warp_esr = gv11b_gr_get_sm_hww_warp_esr;
 }

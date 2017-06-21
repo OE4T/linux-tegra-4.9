@@ -141,9 +141,6 @@ static int camrtc_ivc_dbg_xact(
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
 	int ret;
 
-	if (WARN_ON(!ch->is_ready))
-		return -EIO;
-
 	if (timeout == 0)
 		timeout = crd->parameters.completion_timeout;
 
@@ -156,6 +153,11 @@ static int camrtc_ivc_dbg_xact(
 	ret = tegra_ivc_channel_runtime_get(ch);
 	if (ret < 0)
 		goto unlock;
+
+	if (WARN_ON(!ch->is_ready)) {
+		ret = -EIO;
+		goto out;
+	}
 
 	while (tegra_ivc_can_read(&ch->ivc)) {
 		tegra_ivc_read_advance(&ch->ivc);

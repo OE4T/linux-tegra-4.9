@@ -2466,6 +2466,74 @@ static int gv11b_gr_sm_trigger_suspend(struct gk20a *g)
 	return 0;
 }
 
+static void gv11b_gr_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
+{
+	/* Check if we have at least one valid warp
+	 * get paused state on maxwell
+	 */
+	struct gr_gk20a *gr = &g->gr;
+	u32 gpc, tpc, sm, sm_id;
+	u32 offset;
+	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
+
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+		sm = g->gr.sm_to_cluster[sm_id].sm_index;
+
+		offset = gk20a_gr_gpc_offset(g, gpc) +
+			 gk20a_gr_tpc_offset(g, tpc) +
+			 gv11b_gr_sm_offset(g, sm);
+
+		/* 64 bit read */
+		warps_valid = (u64)gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_warp_valid_mask_r() +
+				offset + 4) << 32;
+		warps_valid |= gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_warp_valid_mask_r() +
+				offset);
+
+		/* 64 bit read */
+		warps_paused = (u64)gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_r() +
+				offset + 4) << 32;
+		warps_paused |= gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_r() +
+				offset);
+
+		/* 64 bit read */
+		warps_trapped = (u64)gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_r() +
+				offset + 4) << 32;
+		warps_trapped |= gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_r() +
+				offset);
+
+		w_state[sm_id].valid_warps[0] = warps_valid;
+		w_state[sm_id].trapped_warps[0] = warps_trapped;
+		w_state[sm_id].paused_warps[0] = warps_paused;
+	}
+
+
+	/* Only for debug purpose */
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+		gk20a_dbg_fn("w_state[%d].valid_warps[0]: %llx\n",
+					sm_id, w_state[sm_id].valid_warps[0]);
+		gk20a_dbg_fn("w_state[%d].valid_warps[1]: %llx\n",
+					sm_id, w_state[sm_id].valid_warps[1]);
+
+		gk20a_dbg_fn("w_state[%d].trapped_warps[0]: %llx\n",
+					sm_id, w_state[sm_id].trapped_warps[0]);
+		gk20a_dbg_fn("w_state[%d].trapped_warps[1]: %llx\n",
+					sm_id, w_state[sm_id].trapped_warps[1]);
+
+		gk20a_dbg_fn("w_state[%d].paused_warps[0]: %llx\n",
+					sm_id, w_state[sm_id].paused_warps[0]);
+		gk20a_dbg_fn("w_state[%d].paused_warps[1]: %llx\n",
+					sm_id, w_state[sm_id].paused_warps[1]);
+	}
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2529,4 +2597,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 			gr_gv11b_handle_gpc_gpcmmu_exception;
 	gops->gr.get_esr_sm_sel = gv11b_gr_get_esr_sm_sel;
 	gops->gr.trigger_suspend = gv11b_gr_sm_trigger_suspend;
+	gops->gr.bpt_reg_info = gv11b_gr_bpt_reg_info;
 }

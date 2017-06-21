@@ -111,6 +111,15 @@ static bool gr_gv11b_is_valid_compute_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
+static u32 gv11b_gr_sm_offset(struct gk20a *g, u32 sm)
+{
+
+	u32 sm_pri_stride = nvgpu_get_litter_value(g, GPU_LIT_SM_PRI_STRIDE);
+	u32 sm_offset = sm_pri_stride * sm;
+
+	return sm_offset;
+}
+
 static int gr_gv11b_handle_l1_tag_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr)
@@ -580,7 +589,7 @@ static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
 }
 
 static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
-			bool *post_event, struct channel_gk20a *fault_ch,
+		u32 sm, bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr)
 {
 	int ret = 0;
@@ -1629,15 +1638,16 @@ static void gr_gv11b_get_access_map(struct gk20a *g,
  * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
  */
 static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
-		u32 gpc, u32 tpc, u32 global_esr, u32 warp_esr,
+		u32 gpc, u32 tpc, u32 sm, u32 global_esr, u32 warp_esr,
 		bool sm_debugger_attached, struct channel_gk20a *fault_ch,
 		bool *early_exit, bool *ignore_debugger)
 {
 	int ret;
 	bool cilp_enabled = false;
 	u32 global_mask = 0, dbgr_control0, global_esr_copy;
-	u32 offset = proj_gpc_stride_v() * gpc +
-		     proj_tpc_in_gpc_stride_v() * tpc;
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
+			gk20a_gr_tpc_offset(g, tpc) +
+			gv11b_gr_sm_offset(g, sm);
 
 	*early_exit = false;
 	*ignore_debugger = false;
@@ -1646,8 +1656,9 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 		cilp_enabled = (fault_ch->ch_ctx.gr_ctx->compute_preempt_mode ==
 			NVGPU_COMPUTE_PREEMPTION_MODE_CILP);
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "SM Exception received on gpc %d tpc %d = %u\n",
-			gpc, tpc, global_esr);
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"SM Exception received on gpc %d tpc %d sm %d = 0x%08x",
+			gpc, tpc, sm, global_esr);
 
 	if (cilp_enabled && sm_debugger_attached) {
 		if (global_esr & gr_gpc0_tpc0_sm0_hww_global_esr_bpt_int_pending_f())
@@ -1665,20 +1676,23 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			*ignore_debugger = true;
 
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
-					"CILP: starting wait for LOCKED_DOWN on gpc %d tpc %d\n",
-					gpc, tpc);
+				"CILP: starting wait for LOCKED_DOWN on "
+				"gpc %d tpc %d sm %d",
+				gpc, tpc, sm);
 
 			if (gk20a_dbg_gpu_broadcast_stop_trigger(fault_ch)) {
 				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
-						"CILP: Broadcasting STOP_TRIGGER from gpc %d tpc %d\n",
-						gpc, tpc);
+					"CILP: Broadcasting STOP_TRIGGER from "
+					"gpc %d tpc %d sm %d",
+					gpc, tpc, sm);
 				gk20a_suspend_all_sms(g, global_mask, false);
 
 				gk20a_dbg_gpu_clear_broadcast_stop_trigger(fault_ch);
 			} else {
 				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
-						"CILP: STOP_TRIGGER from gpc %d tpc %d\n",
-						gpc, tpc);
+					"CILP: STOP_TRIGGER from "
+					"gpc %d tpc %d sm %d",
+					gpc, tpc, sm);
 				gk20a_suspend_single_sm(g, gpc, tpc, global_mask, true);
 			}
 
@@ -1686,8 +1700,9 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			global_esr_copy = gk20a_readl(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset);
 			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr_copy);
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
-					"CILP: HWWs cleared for gpc %d tpc %d\n",
-					gpc, tpc);
+					"CILP: HWWs cleared for "
+					"gpc %d tpc %d sm %d",
+					gpc, tpc, sm);
 
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
 			ret = gr_gp10b_set_cilp_preempt_pending(g, fault_ch);
@@ -1699,8 +1714,9 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
 			if (dbgr_control0 & gr_gpc0_tpc0_sm0_dbgr_control0_single_step_mode_enable_f()) {
 				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
-						"CILP: clearing SINGLE_STEP_MODE before resume for gpc %d tpc %d\n",
-						gpc, tpc);
+					"CILP: clearing SINGLE_STEP_MODE "
+					"before resume for gpc %d tpc %d sm %d",
+						gpc, tpc, sm);
 				dbgr_control0 = set_field(dbgr_control0,
 						gr_gpc0_tpc0_sm0_dbgr_control0_single_step_mode_m(),
 						gr_gpc0_tpc0_sm0_dbgr_control0_single_step_mode_disable_f());
@@ -1708,12 +1724,14 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			}
 
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
-					"CILP: resume for gpc %d tpc %d\n",
-					gpc, tpc);
+				"CILP: resume for gpc %d tpc %d sm %d",
+					gpc, tpc, sm);
 			gk20a_resume_single_sm(g, gpc, tpc);
 
 			*ignore_debugger = true;
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: All done on gpc %d, tpc %d\n", gpc, tpc);
+			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				"CILP: All done on gpc %d, tpc %d sm %d",
+				gpc, tpc, sm);
 		}
 
 		*early_exit = true;
@@ -2320,6 +2338,24 @@ static int gr_gv11b_init_fs_state(struct gk20a *g)
 	return gr_gm20b_init_fs_state(g);
 }
 
+static void gv11b_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
+				u32 *esr_sm_sel)
+{
+	u32 reg_val;
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
+
+	reg_val = gk20a_readl(g, gr_gpc0_tpc0_sm_tpc_esr_sm_sel_r() + offset);
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"sm tpc esr sm sel reg val: 0x%x", reg_val);
+	*esr_sm_sel = 0;
+	if (gr_gpc0_tpc0_sm_tpc_esr_sm_sel_sm0_error_v(reg_val))
+		*esr_sm_sel = 1;
+	if (gr_gpc0_tpc0_sm_tpc_esr_sm_sel_sm1_error_v(reg_val))
+		*esr_sm_sel |= 1 << 1;
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"esr_sm_sel bitmask: 0x%x", *esr_sm_sel);
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2381,4 +2417,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.set_czf_bypass = NULL;
 	gops->gr.handle_gpc_gpcmmu_exception =
 			gr_gv11b_handle_gpc_gpcmmu_exception;
+	gops->gr.get_esr_sm_sel = gv11b_gr_get_esr_sm_sel;
 }

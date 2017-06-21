@@ -47,6 +47,11 @@ int tegra_xusb_padctl_clear_id_override(struct tegra_xusb_padctl *padctl);
 bool tegra_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,
 				struct phy *phy);
 
+int tegra_xusb_padctl_vbus_power_on(struct tegra_xusb_padctl *padctl,
+					unsigned int port);
+int tegra_xusb_padctl_vbus_power_off(struct tegra_xusb_padctl *padctl,
+					unsigned int port);
+
 int tegra_xusb_padctl_enable_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
 					   struct phy *phy,
 					   enum usb_device_speed speed);

@@ -1209,6 +1209,26 @@ bool tegra_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_has_otg_cap);
 
+int tegra_xusb_padctl_vbus_power_on(struct tegra_xusb_padctl *padctl,
+				unsigned int port)
+{
+	if (padctl->soc->ops->vbus_power_on)
+		return padctl->soc->ops->vbus_power_on(padctl, port);
+
+	return false;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_vbus_power_on);
+
+int tegra_xusb_padctl_vbus_power_off(struct tegra_xusb_padctl *padctl,
+				unsigned int port)
+{
+	if (padctl->soc->ops->vbus_power_off)
+		return padctl->soc->ops->vbus_power_off(padctl, port);
+
+	return false;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_vbus_power_off);
+
 int tegra_xusb_padctl_enable_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
 					   struct phy *phy,
 					   enum usb_device_speed speed)

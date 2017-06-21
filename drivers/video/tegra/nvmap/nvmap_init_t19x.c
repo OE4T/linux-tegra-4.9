@@ -206,7 +206,7 @@ static int nvmap_gosmem_notifier(struct notifier_block *nb,
 	if ((event == BUS_NOTIFY_BOUND_DRIVER) &&
 		nvmap_dev && (dev == nvmap_dev->dev_user.parent)) {
 		struct of_device_id nvmap_t19x_of_ids[] = {
-			{.compatible = "nvidia,tegra194-carveouts"},
+			{.compatible = "nvidia,carveouts-t19x"},
 			{ }
 		};
 

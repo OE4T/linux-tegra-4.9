@@ -118,7 +118,8 @@ static void gr_gp10b_sm_lrf_ecc_overcount_war(int single_err,
 		*count_to_adjust = 0;
 }
 
-static int gr_gp10b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
+static int gr_gp10b_handle_sm_exception(struct gk20a *g,
+			u32 gpc, u32 tpc, u32 sm,
 			bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr)
 {
@@ -130,7 +131,8 @@ static int gr_gp10b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	u32 lrf_single_count_delta, lrf_double_count_delta;
 	u32 shm_ecc_status;
 
-	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
+	gr_gk20a_handle_sm_exception(g,
+		gpc, tpc, sm, post_event, fault_ch, hww_global_esr);
 
 	/* Check for LRF ECC errors. */
         lrf_ecc_status = gk20a_readl(g,
@@ -1764,7 +1766,7 @@ static int gr_gp10b_clear_cilp_preempt_pending(struct gk20a *g,
  * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
  */
 static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
-		u32 gpc, u32 tpc, u32 global_esr, u32 warp_esr,
+		u32 gpc, u32 tpc, u32 sm, u32 global_esr, u32 warp_esr,
 		bool sm_debugger_attached, struct channel_gk20a *fault_ch,
 		bool *early_exit, bool *ignore_debugger)
 {

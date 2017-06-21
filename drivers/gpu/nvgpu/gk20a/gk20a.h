@@ -285,12 +285,15 @@ struct gpu_ops {
 				struct channel_gk20a *ch,
 				struct gr_gk20a_isr_data *isr_data);
 		int (*pre_process_sm_exception)(struct gk20a *g,
-				u32 gpc, u32 tpc, u32 global_esr, u32 warp_esr,
-				bool sm_debugger_attached,
-				struct channel_gk20a *fault_ch,
-				bool *early_exit, bool *ignore_debugger);
+			u32 gpc, u32 tpc, u32 sm, u32 global_esr, u32 warp_esr,
+			bool sm_debugger_attached,
+			struct channel_gk20a *fault_ch,
+			bool *early_exit, bool *ignore_debugger);
 		u32 (*mask_hww_warp_esr)(u32 hww_warp_esr);
-		int (*handle_sm_exception)(struct gk20a *g, u32 gpc, u32 tpc,
+		void (*get_esr_sm_sel)(struct gk20a *g, u32 gpc, u32 tpc,
+					 u32 *esr_sm_sel);
+		int (*handle_sm_exception)(struct gk20a *g,
+			u32 gpc, u32 tpc, u32 sm,
 			bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr);
 		int (*handle_gcc_exception)(struct gk20a *g, u32 gpc, u32 tpc,

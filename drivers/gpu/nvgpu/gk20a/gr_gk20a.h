@@ -636,7 +636,7 @@ int _gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 void gr_gk20a_pmu_save_zbc(struct gk20a *g, u32 entries);
 int gr_gk20a_wait_idle(struct gk20a *g, unsigned long duration_ms,
 		       u32 expect_delay);
-int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
+int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 		bool *post_event, struct channel_gk20a *fault_ch,
 		u32 *hww_global_esr);
 int gr_gk20a_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
@@ -730,6 +730,10 @@ void gr_gk20a_write_zcull_ptr(struct gk20a *g,
 void gr_gk20a_write_pm_ptr(struct gk20a *g,
 				struct nvgpu_mem *mem, u64 gpu_va);
 
+u32 gk20a_gr_gpc_offset(struct gk20a *g, u32 gpc);
+u32 gk20a_gr_tpc_offset(struct gk20a *g, u32 tpc);
+void gk20a_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
+				u32 *esr_sm_sel);
 
 static inline const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
 {

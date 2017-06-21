@@ -820,6 +820,23 @@ clean_up_mem:
 	return ret;
 }
 
+u32 gk20a_gr_gpc_offset(struct gk20a *g, u32 gpc)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 gpc_offset = gpc_stride * gpc;
+
+	return gpc_offset;
+}
+
+u32 gk20a_gr_tpc_offset(struct gk20a *g, u32 tpc)
+{
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g,
+					GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 tpc_offset = tpc_in_gpc_stride * tpc;
+
+	return tpc_offset;
+}
+
 static int gr_gk20a_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, bool patch)
 {
@@ -6163,7 +6180,7 @@ fail:
 	return err;
 }
 
-int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
+int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 		bool *post_event, struct channel_gk20a *fault_ch,
 		u32 *hww_global_esr)
 {
@@ -6206,7 +6223,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	*hww_global_esr = global_esr;
 
 	if (g->ops.gr.pre_process_sm_exception) {
-		ret = g->ops.gr.pre_process_sm_exception(g, gpc, tpc,
+		ret = g->ops.gr.pre_process_sm_exception(g, gpc, tpc, sm,
 				global_esr, warp_esr,
 				sm_debugger_attached,
 				fault_ch,
@@ -6290,6 +6307,12 @@ int gr_gk20a_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	return ret;
 }
 
+void gk20a_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
+				u32 *esr_sm_sel)
+{
+	*esr_sm_sel = 1;
+}
+
 static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event, struct channel_gk20a *fault_ch,
 		u32 *hww_global_esr)
@@ -6300,17 +6323,33 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 	u32 tpc_exception = gk20a_readl(g, gr_gpc0_tpc0_tpccs_tpc_exception_r()
 			+ offset);
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "");
 
 	/* check if an sm exeption is pending */
 	if (gr_gpc0_tpc0_tpccs_tpc_exception_sm_v(tpc_exception) ==
 			gr_gpc0_tpc0_tpccs_tpc_exception_sm_pending_v()) {
+		u32 esr_sm_sel, sm;
+
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 				"GPC%d TPC%d: SM exception pending", gpc, tpc);
-		ret = g->ops.gr.handle_sm_exception(g, gpc, tpc,
-							post_event, fault_ch,
-							hww_global_esr);
+		g->ops.gr.get_esr_sm_sel(g, gpc, tpc, &esr_sm_sel);
+
+		for (sm = 0; sm < sm_per_tpc; sm++) {
+
+			if (!(esr_sm_sel & (1 << sm)))
+				continue;
+
+			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+				"GPC%d TPC%d: SM%d exception pending",
+				 gpc, tpc, sm);
+
+			ret = g->ops.gr.handle_sm_exception(g,
+				 gpc, tpc, sm, post_event, fault_ch,
+				hww_global_esr);
+		}
+
 	}
 
 	/* check if a tex exeption is pending */
@@ -9621,4 +9660,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.resume_from_pause = gr_gk20a_resume_from_pause;
 	gops->gr.clear_sm_errors = gr_gk20a_clear_sm_errors;
 	gops->gr.tpc_enabled_exceptions = gr_gk20a_tpc_enabled_exceptions;
+	gops->gr.get_esr_sm_sel = gk20a_gr_get_esr_sm_sel;
 }

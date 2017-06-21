@@ -21,6 +21,7 @@
 #include "debug_kmem.h"
 #include "debug_pmu.h"
 #include "debug_sched.h"
+#include "debug_hal.h"
 #include "os_linux.h"
 
 #include "gk20a/gk20a.h"
@@ -386,6 +387,7 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 	gk20a_cde_debugfs_init(g);
 	gk20a_ce_debugfs_init(g);
 	nvgpu_alloc_debugfs_init(g);
+	nvgpu_hal_debugfs_init(g);
 	gk20a_mm_debugfs_init(g);
 	gk20a_fifo_debugfs_init(g);
 	gk20a_sched_debugfs_init(g);

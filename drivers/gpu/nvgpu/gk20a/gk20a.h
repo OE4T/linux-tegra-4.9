@@ -130,6 +130,11 @@ enum gk20a_cbc_op {
 
 enum nvgpu_unit;
 
+/*
+ * gpu_ops should only contain function pointers! Non-function pointer members
+ * should go in struct gk20a or be implemented with the boolean flag API defined
+ * in nvgpu/enabled.h
+ */
 struct gpu_ops {
 	struct {
 		int (*determine_L2_size_bytes)(struct gk20a *gk20a);

@@ -4053,7 +4053,7 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 
 	default:
 		ret = -EOPNOTSUPP;
-		pr_err("Unsupported IOCTL call\n");
+		pr_err("Unsupported IOCTL %d is called\n", cmd);
 	}
 	spin_unlock(&pdata->lock);
 

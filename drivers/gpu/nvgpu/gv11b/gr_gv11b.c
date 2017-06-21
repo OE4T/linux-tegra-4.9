@@ -2444,6 +2444,28 @@ static void gv11b_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
 			"esr_sm_sel bitmask: 0x%x", *esr_sm_sel);
 }
 
+static int gv11b_gr_sm_trigger_suspend(struct gk20a *g)
+{
+	u32 dbgr_control0;
+
+	/* assert stop trigger. uniformity assumption: all SMs will have
+	 * the same state in dbg_control0.
+	 */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpcs_tpcs_sms_dbgr_control0_r());
+	dbgr_control0 |= gr_gpc0_tpc0_sm0_dbgr_control0_stop_trigger_enable_f();
+
+	/* broadcast write */
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sms_dbgr_control0_r(), dbgr_control0);
+
+	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+			"stop trigger enable: broadcast dbgr_control0: 0x%x ",
+			dbgr_control0);
+
+	return 0;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2506,4 +2528,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.handle_gpc_gpcmmu_exception =
 			gr_gv11b_handle_gpc_gpcmmu_exception;
 	gops->gr.get_esr_sm_sel = gv11b_gr_get_esr_sm_sel;
+	gops->gr.trigger_suspend = gv11b_gr_sm_trigger_suspend;
 }

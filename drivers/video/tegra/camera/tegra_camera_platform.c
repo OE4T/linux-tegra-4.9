@@ -436,6 +436,15 @@ static long tegra_camera_ioctl(struct file *file,
 				__func__);
 			return -EFAULT;
 		}
+#if defined(CONFIG_TEGRA_ISOMGR)
+		if (kcopy.bw > info->max_bw && kcopy.is_iso) {
+			dev_info(info->dev,
+				"ISO BW req %llu > %lld (max) capping to max",
+				kcopy.bw,
+				info->max_bw);
+			kcopy.bw = info->max_bw;
+		}
+#endif
 		/* Use Khz to prevent overflow */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		/*

@@ -30,6 +30,8 @@
 #include "clk_gp106.h"
 #include "clk/clk_arb.h"
 
+#include "gp106/pmu_mclk_gp106.h"
+
 #include <nvgpu/hw/gp106/hw_trim_gp106.h>
 
 #define gk20a_dbg_clk(fmt, arg...) \
@@ -281,4 +283,7 @@ void gp106_init_clk_ops(struct gpu_ops *gops) {
 	gops->clk.get_crystal_clk_hz = gp106_crystal_clk_hz;
 	gops->clk.measure_freq = gp106_clk_measure_freq;
 	gops->clk.suspend_clk_support = gp106_suspend_clk_support;
+	gops->clk.mclk_init = gp106_mclk_init;
+	gops->clk.mclk_change = gp106_mclk_change;
+	gops->clk.mclk_deinit = gp106_mclk_deinit;
 }

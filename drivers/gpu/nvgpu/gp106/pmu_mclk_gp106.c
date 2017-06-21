@@ -3276,7 +3276,6 @@ int gp106_mclk_init(struct gk20a *g)
 			mclk->debugfs_set = true;
 	}
 #endif
-	g->ops.pmu.mclk_change = gp106_mclk_change;
 
 	mclk->init = true;
 
@@ -3437,8 +3436,8 @@ static int mclk_debug_speed_set(void *data, u64 val)
 	/* This is problematic because it can interrupt the arbiter
 	 * and send it to sleep. we need to consider removing this
 	 */
-	if (g->ops.pmu.mclk_change)
-		return g->ops.pmu.mclk_change(g, (u16) val);
+	if (g->ops.clk.mclk_change)
+		return g->ops.clk.mclk_change(g, (u16) val);
 	return 0;
 
 }

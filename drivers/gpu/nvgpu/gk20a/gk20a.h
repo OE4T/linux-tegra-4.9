@@ -772,9 +772,6 @@ struct gpu_ops {
 			void *lsfm,	u32 *p_bl_gen_desc_size);
 		int (*flcn_populate_bl_dmem_desc)(struct gk20a *g,
 			void *lsfm,	u32 *p_bl_gen_desc_size, u32 falconid);
-		int (*mclk_init)(struct gk20a *g);
-		void (*mclk_deinit)(struct gk20a *g);
-		int (*mclk_change)(struct gk20a *g, u16 val);
 		void (*handle_ext_irq)(struct gk20a *g, u32 intr);
 		void (*set_irqmask)(struct gk20a *g);
 		u32  lspmuwprinitdone;
@@ -802,6 +799,9 @@ struct gpu_ops {
 		int (*pll_reg_write)(struct gk20a *g, u32 reg, u32 val);
 		int (*get_pll_debug_data)(struct gk20a *g,
 				struct nvgpu_clk_pll_debug_data *d);
+		int (*mclk_init)(struct gk20a *g);
+		void (*mclk_deinit)(struct gk20a *g);
+		int (*mclk_change)(struct gk20a *g, u16 val);
 	} clk;
 	struct {
 		u32 (*get_arbiter_clk_domains)(struct gk20a *g);

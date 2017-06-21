@@ -1992,7 +1992,7 @@ int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct gk20a *g,
 	int err = 0;
 	struct gk20a_dmabuf_priv *priv;
 	struct gk20a_buffer_state *s;
-	struct device *dev = g->dev;
+	struct device *dev = dev_from_gk20a(g);
 
 	if (WARN_ON(offset >= (u64)dmabuf->size))
 		return -EINVAL;

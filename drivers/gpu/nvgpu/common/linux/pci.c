@@ -469,7 +469,7 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	nvgpu_clk_arb_cleanup_arbiter(g);
 #endif
 
-	gk20a_user_deinit(g->dev, &nvgpu_pci_class);
+	gk20a_user_deinit(dev_from_gk20a(g), &nvgpu_pci_class);
 	gk20a_dbg(gpu_dbg_shutdown, "User de-init done.\b");
 
 #ifdef CONFIG_DEBUG_FS
@@ -477,10 +477,10 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	debugfs_remove_recursive(platform->debugfs_alias);
 #endif
 
-	nvgpu_remove_sysfs(g->dev);
+	nvgpu_remove_sysfs(dev_from_gk20a(g));
 
 	if (platform->remove)
-		platform->remove(g->dev);
+		platform->remove(dev_from_gk20a(g));
 	gk20a_dbg(gpu_dbg_shutdown, "Platform remove done.\b");
 
 	enable_irq(g->irq_stall);

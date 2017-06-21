@@ -23,6 +23,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 #include "gr_gm20b.h"
 #include "pmu_gm20b.h"
@@ -1422,7 +1423,7 @@ int gm20b_gr_tpc_disable_override(struct gk20a *g, u32 mask)
 
 static int gm20b_gr_fuse_override(struct gk20a *g)
 {
-	struct device_node *np = g->dev->of_node;
+	struct device_node *np = dev_from_gk20a(g)->of_node;
 	u32 *fuses;
 	int count, i;
 

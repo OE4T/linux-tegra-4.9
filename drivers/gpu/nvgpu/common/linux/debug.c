@@ -101,13 +101,13 @@ static int gk20a_gr_debug_show(struct seq_file *s, void *unused)
 
 void gk20a_debug_dump(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_printk
 	};
 
 	if (platform->dump_platform_dependencies)
-		platform->dump_platform_dependencies(g->dev);
+		platform->dump_platform_dependencies(dev_from_gk20a(g));
 
 	/* HAL only initialized after 1st power-on */
 	if (g->ops.debug.show_dump)
@@ -180,12 +180,12 @@ void gk20a_init_debug_ops(struct gpu_ops *gops)
 static int railgate_residency_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 	unsigned long time_since_last_state_transition_ms;
 	unsigned long total_rail_gate_time_ms;
 	unsigned long total_rail_ungate_time_ms;
 
-	if (platform->is_railgated(g->dev)) {
+	if (platform->is_railgated(dev_from_gk20a(g))) {
 		time_since_last_state_transition_ms =
 				jiffies_to_msecs(jiffies -
 				g->pstats.last_rail_gate_complete);
@@ -227,7 +227,7 @@ static const struct file_operations railgate_residency_fops = {
 
 static int gk20a_railgating_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 	struct dentry *d;
 
 	if (!g->can_railgate)
@@ -244,7 +244,7 @@ static int gk20a_railgating_debugfs_init(struct gk20a *g)
 
 void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 {
-	struct device *dev = g->dev;
+	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	platform->debugfs = debugfs_create_dir(dev_name(dev), NULL);
@@ -364,7 +364,7 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 
 void gk20a_debug_deinit(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	if (!platform->debugfs)
 		return;

@@ -112,7 +112,7 @@ DEFINE_SIMPLE_ATTRIBUTE(
 		pmgr_voltage_ctrl_fops, pmgr_pwr_devices_get_voltage_u64, NULL, "%llu\n");
 
 static void pmgr_debugfs_init(struct gk20a *g) {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 	struct dentry *dbgentry;
 
 	dbgentry = debugfs_create_file(

@@ -32,6 +32,7 @@
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "ioctl_channel.h"
 #include "os_linux.h"
 
@@ -291,7 +292,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 		goto channel_release;
 	}
 
-	trace_gk20a_channel_release(dev_name(g->dev));
+	trace_gk20a_channel_release(dev_name(dev_from_gk20a(g)));
 
 	gk20a_channel_close(ch);
 	gk20a_channel_free_error_notifiers(ch);
@@ -319,7 +320,7 @@ static int __gk20a_channel_open(struct gk20a *g,
 	if (!g)
 		return -ENODEV;
 
-	trace_gk20a_channel_open(dev_name(g->dev));
+	trace_gk20a_channel_open(dev_name(dev_from_gk20a(g)));
 
 	priv = nvgpu_kzalloc(g, sizeof(*priv));
 	if (!priv) {
@@ -388,7 +389,7 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 	fd = err;
 
 	snprintf(name, sizeof(name), "nvhost-%s-fd%d",
-		 dev_name(g->dev), fd);
+		 dev_name(dev_from_gk20a(g)), fd);
 
 	file = anon_inode_getfile(name, l->channel.cdev.ops, NULL, O_RDWR);
 	if (IS_ERR(file)) {
@@ -841,7 +842,7 @@ long gk20a_channel_ioctl(struct file *filp,
 {
 	struct channel_priv *priv = filp->private_data;
 	struct channel_gk20a *ch = priv->c;
-	struct device *dev = ch->g->dev;
+	struct device *dev = dev_from_gk20a(ch->g);
 	u8 buf[NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE] = {0};
 	int err = 0;
 

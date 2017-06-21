@@ -78,7 +78,7 @@ int gk20a_busy(struct gk20a *g)
 		goto fail;
 	}
 
-	dev = g->dev;
+	dev = dev_from_gk20a(g);
 
 	if (pm_runtime_enabled(dev)) {
 		ret = pm_runtime_get_sync(dev);
@@ -116,7 +116,7 @@ void gk20a_idle(struct gk20a *g)
 
 	atomic_dec(&g->usage_count);
 
-	dev = g->dev;
+	dev = dev_from_gk20a(g);
 
 	if (!(dev && gk20a_can_busy(g)))
 		return;
@@ -175,7 +175,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		enable_irq(g->irq_nonstall);
 	g->irqs_enabled = 1;
 
-	gk20a_scale_resume(g->dev);
+	gk20a_scale_resume(dev_from_gk20a(g));
 
 	if (platform->has_cde)
 		gk20a_init_cde_support(g);
@@ -269,7 +269,7 @@ static struct of_device_id tegra_gk20a_of_match[] = {
  */
 int __gk20a_do_idle(struct gk20a *g, bool force_reset)
 {
-	struct device *dev = g->dev;
+	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct nvgpu_timeout timeout;
 	int ref_cnt;
@@ -410,7 +410,7 @@ static int gk20a_do_idle(void *_g)
  */
 int __gk20a_do_unidle(struct gk20a *g)
 {
-	struct device *dev = g->dev;
+	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int err;
 

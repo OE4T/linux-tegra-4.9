@@ -37,6 +37,7 @@
 #include "cde_gk20a.h"
 #include "fence_gk20a.h"
 #include "gr_gk20a.h"
+#include "platform_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
@@ -915,7 +916,7 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 		return ERR_PTR(-ENOMEM);
 
 	cde_ctx->g = g;
-	cde_ctx->dev = g->dev;
+	cde_ctx->dev = dev_from_gk20a(g);
 
 	ret = gk20a_cde_load(cde_ctx);
 	if (ret) {
@@ -982,7 +983,8 @@ __releases(&cde_app->mutex)
 	/* First, map the buffer to local va */
 
 	/* ensure that the compbits buffer has drvdata */
-	err = gk20a_dmabuf_alloc_drvdata(compbits_scatter_buf, g->dev);
+	err = gk20a_dmabuf_alloc_drvdata(compbits_scatter_buf,
+			dev_from_gk20a(g));
 	if (err)
 		goto exit_idle;
 
@@ -1048,7 +1050,7 @@ __releases(&cde_app->mutex)
 
 		gk20a_dbg(gpu_dbg_cde, "surface=0x%p scatterBuffer=0x%p",
 			  surface, scatter_buffer);
-		sgt = gk20a_mm_pin(g->dev, compbits_scatter_buf);
+		sgt = gk20a_mm_pin(dev_from_gk20a(g), compbits_scatter_buf);
 		if (IS_ERR(sgt)) {
 			nvgpu_warn(g,
 				   "mm_pin failed");
@@ -1060,7 +1062,7 @@ __releases(&cde_app->mutex)
 					scatterbuffer_size);
 			WARN_ON(err);
 
-			gk20a_mm_unpin(g->dev, compbits_scatter_buf,
+			gk20a_mm_unpin(dev_from_gk20a(g), compbits_scatter_buf,
 				       sgt);
 			if (err)
 				goto exit_unmap_surface;
@@ -1072,7 +1074,7 @@ __releases(&cde_app->mutex)
 	}
 
 	/* store source buffer compression tags */
-	gk20a_get_comptags(g->dev, compbits_scatter_buf, &comptags);
+	gk20a_get_comptags(dev_from_gk20a(g), compbits_scatter_buf, &comptags);
 	cde_ctx->surf_param_offset = comptags.offset;
 	cde_ctx->surf_param_lines = comptags.lines;
 

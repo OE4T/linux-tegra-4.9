@@ -27,7 +27,7 @@
 
 static unsigned long nvgpu_linux_clk_get_rate(struct gk20a *g, u32 api_domain)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
 	unsigned long ret;
 
 	switch (api_domain) {
@@ -52,7 +52,7 @@ static unsigned long nvgpu_linux_clk_get_rate(struct gk20a *g, u32 api_domain)
 static int nvgpu_linux_clk_set_rate(struct gk20a *g,
 				     u32 api_domain, unsigned long rate)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
 	int ret;
 
 	switch (api_domain) {

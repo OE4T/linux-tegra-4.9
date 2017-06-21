@@ -26,6 +26,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/kind_gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 #include "vm_priv.h"
 
@@ -187,6 +188,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		 struct vm_gk20a_mapping_batch *batch)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
+	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_comptag_allocator *ctag_allocator = &g->gr.comp_tags;
 	struct nvgpu_mapped_buf *mapped_buffer = NULL;
 	bool va_allocated = false;
@@ -224,7 +226,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	}
 
 	/* pin buffer to get phys/iovmm addr */
-	bfr.sgt = gk20a_mm_pin(g->dev, dmabuf);
+	bfr.sgt = gk20a_mm_pin(dev, dmabuf);
 	if (IS_ERR(bfr.sgt)) {
 		/* Falling back to physical is actually possible
 		 * here in many cases if we use 4K phys pages in the
@@ -283,7 +285,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	if (!vm->enable_ctag)
 		bfr.ctag_lines = 0;
 
-	gk20a_get_comptags(g->dev, dmabuf, &comptags);
+	gk20a_get_comptags(dev, dmabuf, &comptags);
 
 	/* ensure alignment to compression page size if compression enabled */
 	if (bfr.ctag_offset)
@@ -295,7 +297,8 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 			!!(flags & NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS);
 
 		/* allocate compression resources if needed */
-		err = gk20a_alloc_comptags(g, g->dev, dmabuf, ctag_allocator,
+		err = gk20a_alloc_comptags(g, dev, dmabuf,
+					   ctag_allocator,
 					   bfr.ctag_lines, user_mappable,
 					   &ctag_map_win_size,
 					   &ctag_map_win_ctagline);
@@ -304,7 +307,8 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 			/* TBD: we can partially alloc ctags as well... */
 			bfr.kind_v = bfr.uc_kind_v;
 		} else {
-			gk20a_get_comptags(g->dev, dmabuf, &comptags);
+			gk20a_get_comptags(dev,
+					   dmabuf, &comptags);
 
 			if (g->ops.ltc.cbc_ctrl)
 				g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
@@ -396,7 +400,7 @@ clean_up:
 	if (va_allocated)
 		__nvgpu_vm_free_va(vm, map_offset, bfr.pgsz_idx);
 	if (!IS_ERR(bfr.sgt))
-		gk20a_mm_unpin(g->dev, dmabuf, bfr.sgt);
+		gk20a_mm_unpin(dev, dmabuf, bfr.sgt);
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 	nvgpu_log_info(g, "err=%d", err);

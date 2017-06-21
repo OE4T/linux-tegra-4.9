@@ -760,7 +760,7 @@ static int gm20b_register_gpcclk(struct gk20a *g)
 
 	/* Data in .init is copied by clk_register(), so stack variable OK */
 	clk->hw.init = &init;
-	c = clk_register(g->dev, &clk->hw);
+	c = clk_register(dev_from_gk20a(g), &clk->hw);
 	if (IS_ERR(c)) {
 		nvgpu_err(g, "Failed to register GPCPLL clock");
 		return -EINVAL;

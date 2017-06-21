@@ -41,7 +41,7 @@ struct vgpu_priv_data *vgpu_get_priv_data_from_dev(struct device *dev)
 
 static inline struct vgpu_priv_data *vgpu_get_priv_data(struct gk20a *g)
 {
-	return vgpu_get_priv_data_from_dev(g->dev);
+	return vgpu_get_priv_data_from_dev(dev_from_gk20a(g));
 }
 
 static inline u64 vgpu_get_handle_from_dev(struct device *dev)
@@ -58,7 +58,7 @@ static inline u64 vgpu_get_handle_from_dev(struct device *dev)
 
 static inline u64 vgpu_get_handle(struct gk20a *g)
 {
-	return vgpu_get_handle_from_dev(g->dev);
+	return vgpu_get_handle_from_dev(dev_from_gk20a(g));
 }
 
 int vgpu_pm_prepare_poweroff(struct device *dev);

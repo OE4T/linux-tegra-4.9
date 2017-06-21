@@ -291,7 +291,7 @@ static const struct file_operations gk20a_fifo_profile_stats_debugfs_fops = {
 
 void gk20a_fifo_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	struct dentry *gpu_root = platform->debugfs;
 	struct dentry *fifo_root;

@@ -388,7 +388,7 @@ static ssize_t is_railgated_show(struct device *dev,
 	bool is_railgated = 0;
 
 	if (platform->is_railgated)
-		is_railgated = platform->is_railgated(platform->g->dev);
+		is_railgated = platform->is_railgated(dev);
 
 	return snprintf(buf, PAGE_SIZE, "%s\n", is_railgated ? "yes" : "no");
 }

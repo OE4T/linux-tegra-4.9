@@ -416,7 +416,7 @@ static const struct file_operations security_fops = {
 int gk20a_pmu_debugfs_init(struct gk20a *g)
 {
 	struct dentry *d;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	d = debugfs_create_file(
 		"lpwr_debug", S_IRUGO|S_IWUSR, platform->debugfs, g,

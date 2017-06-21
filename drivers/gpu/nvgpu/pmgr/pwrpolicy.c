@@ -507,7 +507,7 @@ static inline void devinit_unpack_pwr_policy_entry(
 static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 			struct pmgr_pwr_policy *ppwrpolicyobjs)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
 	u32 status = 0;
 	u8 *ptr = NULL;
 	struct boardobj *boardobj;

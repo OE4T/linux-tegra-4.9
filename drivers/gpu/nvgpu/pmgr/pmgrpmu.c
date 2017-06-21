@@ -138,7 +138,7 @@ exit:
 static u32 pmgr_send_i2c_device_topology_to_pmu(struct gk20a *g)
 {
 	struct nv_pmu_pmgr_i2c_device_desc_table i2c_desc_table;
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
 	u32 idx = platform->ina3221_dcb_index;
 	u32 status = 0;
 

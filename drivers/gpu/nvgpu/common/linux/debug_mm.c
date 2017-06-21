@@ -19,7 +19,7 @@
 
 void gk20a_mm_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	debugfs_create_bool("force_pramin", 0664, platform->debugfs,
 			   &g->mm.force_pramin);

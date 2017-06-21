@@ -295,7 +295,7 @@ static const struct file_operations __kmem_traces_fops = {
 
 void nvgpu_kmem_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 	struct dentry *node;
 
 	g->debugfs_kmem = debugfs_create_dir("kmem_tracking", platform->debugfs);

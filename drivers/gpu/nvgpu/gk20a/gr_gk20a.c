@@ -39,6 +39,7 @@
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
+#include "platform_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
@@ -4826,7 +4827,7 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	gr->sw_ready = true;
 
 	if (g->ops.gr.create_gr_sysfs)
-		g->ops.gr.create_gr_sysfs(g->dev);
+		g->ops.gr.create_gr_sysfs(dev_from_gk20a(g));
 
 	gk20a_dbg_fn("done");
 	return 0;

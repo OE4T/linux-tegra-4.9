@@ -28,6 +28,7 @@
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/regops_gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 #include "gm20b/gr_gm20b.h"
 #include "gp10b/gr_gp10b.h"
@@ -2245,7 +2246,7 @@ static int gr_gp10b_get_preemption_mode_flags(struct gk20a *g,
 }
 static int gp10b_gr_fuse_override(struct gk20a *g)
 {
-	struct device_node *np = g->dev->of_node;
+	struct device_node *np = dev_from_gk20a(g)->of_node;
 	u32 *fuses;
 	int count, i;
 

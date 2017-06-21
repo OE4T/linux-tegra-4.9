@@ -20,6 +20,7 @@
 #include <nvgpu/log.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 /*
  * Define a length for log buffers. This is the buffer that the 'fmt, ...' part
@@ -52,7 +53,7 @@ int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask)
 
 static inline const char *nvgpu_log_name(struct gk20a *g)
 {
-	return dev_name(g->dev);
+	return dev_name(dev_from_gk20a(g));
 }
 
 #ifdef CONFIG_GK20A_TRACE_PRINTK

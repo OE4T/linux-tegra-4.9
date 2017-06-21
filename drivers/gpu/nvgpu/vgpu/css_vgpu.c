@@ -29,7 +29,7 @@ static struct tegra_hv_ivm_cookie *css_cookie;
 static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 {
 	struct gk20a *g = gr->g;
-	struct device *dev = g->dev;
+	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_cs_snapshot *data = gr->cs_data;
 	struct device_node *np = dev->of_node;
 	struct of_phandle_args args;

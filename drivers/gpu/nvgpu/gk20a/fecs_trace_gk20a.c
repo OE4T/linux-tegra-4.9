@@ -536,7 +536,7 @@ DEFINE_SIMPLE_ATTRIBUTE(gk20a_fecs_trace_debugfs_write_fops,
 
 static void gk20a_fecs_trace_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *plat = dev_get_drvdata(g->dev);
+	struct gk20a_platform *plat = dev_get_drvdata(dev_from_gk20a(g));
 
 	debugfs_create_file("ctxsw_trace_read", 0600, plat->debugfs, g,
 		&gk20a_fecs_trace_debugfs_read_fops);
@@ -548,7 +548,7 @@ static void gk20a_fecs_trace_debugfs_init(struct gk20a *g)
 
 static void gk20a_fecs_trace_debugfs_cleanup(struct gk20a *g)
 {
-	struct gk20a_platform *plat = dev_get_drvdata(g->dev);
+	struct gk20a_platform *plat = dev_get_drvdata(dev_from_gk20a(g));
 
 	debugfs_remove_recursive(plat->debugfs);
 }

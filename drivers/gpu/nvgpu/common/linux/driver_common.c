@@ -35,7 +35,8 @@
 static void nvgpu_init_vars(struct gk20a *g)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct device *dev = dev_from_gk20a(g);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	init_waitqueue_head(&g->sw_irq_stall_last_handled_wq);
 	init_waitqueue_head(&g->sw_irq_nonstall_last_handled_wq);
@@ -57,8 +58,8 @@ static void nvgpu_init_vars(struct gk20a *g)
 	g->emc3d_ratio = EMC3D_DEFAULT_RATIO;
 
 	/* Set DMA parameters to allow larger sgt lists */
-	g->dev->dma_parms = &l->dma_parms;
-	dma_set_max_seg_size(g->dev, UINT_MAX);
+	dev->dma_parms = &l->dma_parms;
+	dma_set_max_seg_size(dev, UINT_MAX);
 
 	nvgpu_init_list_node(&g->pending_sema_waits);
 	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
@@ -68,7 +69,7 @@ static void nvgpu_init_vars(struct gk20a *g)
 
 static void nvgpu_init_timeout(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	g->gr_idle_timeout_default = CONFIG_GK20A_DEFAULT_TIMEOUT;
 	if (nvgpu_platform_is_silicon(g))
@@ -94,7 +95,7 @@ static void nvgpu_init_timeslice(struct gk20a *g)
 
 static void nvgpu_init_pm_vars(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	/*
 	 * Set up initial power settings. For non-slicon platforms, disable
@@ -119,7 +120,7 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	g->aggressive_sync_destroy_thresh = platform->aggressive_sync_destroy_thresh;
 	g->has_syncpoints = platform->has_syncpoints;
 	g->ptimer_src_freq = platform->ptimer_src_freq;
-	g->support_pmu = support_gk20a_pmu(g->dev);
+	g->support_pmu = support_gk20a_pmu(dev_from_gk20a(g));
 	g->can_railgate = platform->can_railgate_init;
 	g->railgate_delay = platform->railgate_delay_init;
 
@@ -133,7 +134,7 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 
 static void nvgpu_init_mm_vars(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	g->mm.bypass_smmu = platform->bypass_smmu;
 	g->mm.disable_bigpage = platform->disable_bigpage;
@@ -153,7 +154,8 @@ int nvgpu_probe(struct gk20a *g,
 		const char *interface_name,
 		struct class *class)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct device *dev = dev_from_gk20a(g);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int err = 0;
 
 	nvgpu_init_vars(g);
@@ -162,7 +164,7 @@ int nvgpu_probe(struct gk20a *g,
 	nvgpu_init_pm_vars(g);
 
 	/* Initialize the platform interface. */
-	err = platform->probe(g->dev);
+	err = platform->probe(dev);
 	if (err) {
 		if (err == -EPROBE_DEFER)
 			nvgpu_info(g, "platform probe failed");
@@ -172,17 +174,17 @@ int nvgpu_probe(struct gk20a *g,
 	}
 
 	/* platform probe can defer do user init only if probe succeeds */
-	err = gk20a_user_init(g->dev, interface_name, class);
+	err = gk20a_user_init(dev, interface_name, class);
 	if (err)
 		return err;
 
 
 	/* Initialise scaling */
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
-		gk20a_scale_init(g->dev);
+		gk20a_scale_init(dev);
 
 	if (platform->late_probe) {
-		err = platform->late_probe(g->dev);
+		err = platform->late_probe(dev);
 		if (err) {
 			nvgpu_err(g, "late probe failed");
 			return err;
@@ -191,7 +193,7 @@ int nvgpu_probe(struct gk20a *g,
 
 	nvgpu_init_mm_vars(g);
 
-	nvgpu_create_sysfs(g->dev);
+	nvgpu_create_sysfs(dev);
 	gk20a_debug_init(g, debugfs_symlink);
 
 	g->dbg_regops_tmp_buf = nvgpu_kzalloc(g, SZ_4K);

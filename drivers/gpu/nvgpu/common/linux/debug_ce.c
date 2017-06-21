@@ -19,7 +19,7 @@
 
 void gk20a_ce_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	debugfs_create_u32("ce_app_ctx_count", S_IWUSR | S_IRUGO,
 			   platform->debugfs, &g->ce_app.ctx_count);

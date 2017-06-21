@@ -33,7 +33,7 @@ static const struct file_operations gk20a_cde_reload_fops = {
 
 void gk20a_cde_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	if (!platform->has_cde)
 		return;

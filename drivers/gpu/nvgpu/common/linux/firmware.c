@@ -65,7 +65,7 @@ struct nvgpu_firmware *nvgpu_request_firmware(struct gk20a *g,
 					      const char *fw_name,
 					      int flags)
 {
-	struct device *dev = g->dev;
+	struct device *dev = dev_from_gk20a(g);
 	struct nvgpu_firmware *fw;
 	const struct firmware *linux_fw;
 

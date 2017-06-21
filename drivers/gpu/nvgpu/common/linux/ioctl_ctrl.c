@@ -68,7 +68,7 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 		goto free_ref;
 	}
 	filp->private_data = priv;
-	priv->dev = g->dev;
+	priv->dev = dev_from_gk20a(g);
 	/*
 	 * We dont close the arbiter fd's after driver teardown to support
 	 * GPU_LOST events, so we store g here, instead of dereferencing the

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,7 +35,7 @@ struct vgpu_fecs_trace {
 
 static int vgpu_fecs_trace_init(struct gk20a *g)
 {
-	struct device *dev = g->dev;
+	struct device *dev = dev_from_gk20a(g);
 	struct device_node *np = dev->of_node;
 	struct of_phandle_args args;
 	struct device_node *hv_np;

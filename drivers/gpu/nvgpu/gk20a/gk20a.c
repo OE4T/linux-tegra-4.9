@@ -42,7 +42,6 @@
 #include "pstate/pstate.h"
 #endif
 
-
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #endif
@@ -152,7 +151,7 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 
 int gk20a_finalize_poweron(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
 	int err;
 
 	gk20a_dbg_fn("");
@@ -323,7 +322,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		if (platform->disable_aspm && g->ops.xve.disable_aspm)
 			g->ops.xve.disable_aspm(g);
 
-		g->ops.xve.sw_init(g->dev);
+		g->ops.xve.sw_init(dev_from_gk20a(g));
 		g->ops.xve.available_speeds(g, &speed);
 
 		/* Set to max speed */
@@ -367,7 +366,7 @@ void gk20a_driver_start_unload(struct gk20a *g)
 	if (g->is_virtual)
 		return;
 
-	gk20a_wait_for_idle(g->dev);
+	gk20a_wait_for_idle(dev_from_gk20a(g));
 
 	nvgpu_wait_for_deferred_interrupts(g);
 	gk20a_channel_cancel_pending_sema_waits(g);
@@ -407,7 +406,7 @@ int gk20a_wait_for_idle(struct device *dev)
 int gk20a_init_gpu_characteristics(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
@@ -499,7 +498,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->map_buffer_batch_limit = 256;
 
 	if (platform->clk_round_rate)
-		gpu->max_freq = platform->clk_round_rate(g->dev, UINT_MAX);
+		gpu->max_freq = platform->clk_round_rate(dev_from_gk20a(g),
+							 UINT_MAX);
 
 	g->ops.gr.get_preemption_mode_flags(g, &g->gr.preemption_mode_rec);
 	gpu->graphics_preemption_mode_flags =

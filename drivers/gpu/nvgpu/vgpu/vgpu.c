@@ -206,7 +206,8 @@ static int vgpu_intr_thread(void *dev_id)
 
 static void vgpu_remove_support(struct gk20a *g)
 {
-	struct vgpu_priv_data *priv = vgpu_get_priv_data_from_dev(g->dev);
+	struct vgpu_priv_data *priv =
+		vgpu_get_priv_data_from_dev(dev_from_gk20a(g));
 	struct tegra_vgpu_intr_msg msg;
 	int err;
 

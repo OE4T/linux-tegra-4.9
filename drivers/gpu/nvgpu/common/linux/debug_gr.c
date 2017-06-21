@@ -19,7 +19,7 @@
 
 int gr_gk20a_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	g->debugfs_gr_default_attrib_cb_size =
 		debugfs_create_u32("gr_default_attrib_cb_size",

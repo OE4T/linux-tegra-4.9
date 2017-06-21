@@ -257,13 +257,13 @@ out:
 int gm206_bios_init(struct gk20a *g)
 {
 	unsigned int i;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *d;
 #endif
 	struct nvgpu_firmware *bios_fw;
 	int err;
-	struct pci_dev *pdev = to_pci_dev(g->dev);
+	struct pci_dev *pdev = to_pci_dev(dev_from_gk20a(g));
 	char rom_name[sizeof(BIOS_OVERLAY_NAME_FORMATTED)];
 
 	gk20a_dbg_fn("");

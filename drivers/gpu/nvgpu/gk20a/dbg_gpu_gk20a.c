@@ -134,7 +134,7 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	if (!g)
 		return -ENODEV;
 
-	dev = g->dev;
+	dev = dev_from_gk20a(g);
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "dbg session: %s", g->name);
 

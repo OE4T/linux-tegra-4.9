@@ -239,7 +239,7 @@ DEFINE_SIMPLE_ATTRIBUTE(get_rate_fops, gp106_get_rate_show, NULL, "%llu\n");
 
 
 static int clk_gp106_debugfs_init(struct gk20a *g) {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	struct dentry *gpu_root = platform->debugfs;
 	struct dentry *clocks_root;

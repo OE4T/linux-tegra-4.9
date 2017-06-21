@@ -3494,7 +3494,7 @@ static const struct file_operations mclk_switch_stats_fops = {
 
 static int mclk_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	struct dentry *gpu_root = platform->debugfs;
 	struct dentry *d;

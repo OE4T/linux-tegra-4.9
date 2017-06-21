@@ -68,7 +68,7 @@ static int therm_get_internal_sensor_curr_temp(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(therm_ctrl_fops, therm_get_internal_sensor_curr_temp, NULL, "%llu\n");
 
 static void gp106_therm_debugfs_init(struct gk20a *g) {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 	struct dentry *dbgentry;
 
 	dbgentry = debugfs_create_file(

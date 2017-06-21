@@ -23,10 +23,11 @@
 #include "nvhost_priv.h"
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 int nvgpu_get_nvhost_dev(struct gk20a *g)
 {
-	struct device_node *np = g->dev->of_node;
+	struct device_node *np = dev_from_gk20a(g)->of_node;
 	struct platform_device *host1x_pdev = NULL;
 	const __be32 *host1x_ptr;
 
@@ -151,7 +152,7 @@ int nvgpu_nvhost_syncpt_read_ext_check(
 
 int nvgpu_nvhost_create_symlink(struct gk20a *g)
 {
-	struct device *dev = g->dev;
+	struct device *dev = dev_from_gk20a(g);
 	int err = 0;
 
 	if (g->nvhost_dev &&
@@ -166,7 +167,7 @@ int nvgpu_nvhost_create_symlink(struct gk20a *g)
 
 void nvgpu_nvhost_remove_symlink(struct gk20a *g)
 {
-	struct device *dev = g->dev;
+	struct device *dev = dev_from_gk20a(g);
 
 	if (g->nvhost_dev &&
 			(dev->parent != &g->nvhost_dev->host1x_pdev->dev)) {

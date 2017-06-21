@@ -217,7 +217,7 @@ static const struct file_operations pll_param_fops = {
 int gm20b_clk_init_debugfs(struct gk20a *g)
 {
 	struct dentry *d;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	if (!platform->debugfs)
 		return -EINVAL;

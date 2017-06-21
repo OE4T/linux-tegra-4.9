@@ -67,7 +67,7 @@ void nvgpu_fini_alloc_debug(struct nvgpu_allocator *a)
 
 void nvgpu_alloc_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	g->debugfs_allocators = debugfs_create_dir("allocators", platform->debugfs);
 	if (IS_ERR_OR_NULL(g->debugfs_allocators)) {

@@ -195,6 +195,60 @@ static int gk20a_flcn_copy_from_dmem(struct nvgpu_falcon *flcn,
 	return 0;
 }
 
+static int gk20a_flcn_copy_to_dmem(struct nvgpu_falcon *flcn,
+		u32 dst, u8 *src, u32 size, u8 port)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+	u32 i, words, bytes;
+	u32 data, addr_mask;
+	u32 *src_u32 = (u32 *)src;
+
+	nvgpu_log_fn(g, "dest dmem offset - %x, size - %x", dst, size);
+
+	if (flcn_mem_overflow_check(flcn, dst, size, MEM_DMEM)) {
+		nvgpu_err(g, "incorrect parameters");
+		return -EINVAL;
+	}
+
+	nvgpu_mutex_acquire(&flcn->copy_lock);
+
+	words = size >> 2;
+	bytes = size & 0x3;
+
+	addr_mask = falcon_falcon_dmemc_offs_m() |
+		falcon_falcon_dmemc_blk_m();
+
+	dst &= addr_mask;
+
+	gk20a_writel(g, base_addr + falcon_falcon_dmemc_r(port),
+		dst | falcon_falcon_dmemc_aincw_f(1));
+
+	for (i = 0; i < words; i++)
+		gk20a_writel(g,
+			base_addr + falcon_falcon_dmemd_r(port), src_u32[i]);
+
+	if (bytes > 0) {
+		data = 0;
+		for (i = 0; i < bytes; i++)
+			((u8 *)&data)[i] = src[(words << 2) + i];
+		gk20a_writel(g, falcon_falcon_dmemd_r(port), data);
+	}
+
+	size = ALIGN(size, 4);
+	data = gk20a_readl(g,
+		base_addr + falcon_falcon_dmemc_r(port)) & addr_mask;
+	if (data != ((dst + size) & addr_mask)) {
+		nvgpu_warn(g, "copy failed. bytes written %d, expected %d",
+			data - dst, size);
+	}
+
+	nvgpu_mutex_release(&flcn->copy_lock);
+
+	return 0;
+}
+
+
 static void gk20a_falcon_engine_dependency_ops(struct nvgpu_falcon *flcn)
 {
 	struct nvgpu_falcon_engine_dependency_ops *flcn_eng_dep_ops =
@@ -224,6 +278,7 @@ static void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_ops->is_falcon_idle =  gk20a_is_falcon_idle;
 	flcn_ops->is_falcon_scrubbing_done =  gk20a_is_falcon_scrubbing_done;
 	flcn_ops->copy_from_dmem = gk20a_flcn_copy_from_dmem;
+	flcn_ops->copy_to_dmem = gk20a_flcn_copy_to_dmem;
 
 	gk20a_falcon_engine_dependency_ops(flcn);
 }

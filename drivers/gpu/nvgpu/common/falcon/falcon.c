@@ -124,6 +124,14 @@ int nvgpu_flcn_copy_from_dmem(struct nvgpu_falcon *flcn,
 	return flcn_ops->copy_from_dmem(flcn, src, dst, size, port);
 }
 
+int nvgpu_flcn_copy_to_dmem(struct nvgpu_falcon *flcn,
+	u32 dst, u8 *src, u32 size, u8 port)
+{
+	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
+
+	return flcn_ops->copy_to_dmem(flcn, dst, src, size, port);
+}
+
 void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
 {
 	struct nvgpu_falcon *flcn = NULL;

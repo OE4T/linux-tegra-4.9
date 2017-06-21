@@ -1834,6 +1834,51 @@ static int nvgpu_ioctl_profiler_reserve(struct dbg_session_gk20a *dbg_s,
 	return nvgpu_profiler_reserve_release(dbg_s, args->profiler_handle);
 }
 
+static int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
+{
+	struct mm_gk20a *mm = &g->mm;
+	u32 virt_addr_lo;
+	u32 virt_addr_hi;
+	u32 inst_pa_page;
+	int err;
+
+	err = gk20a_busy(g);
+	if (err) {
+		nvgpu_err(g, "failed to poweron");
+		return err;
+	}
+
+	err = gk20a_alloc_inst_block(g, &mm->perfbuf.inst_block);
+	if (err)
+		return err;
+
+	g->ops.mm.init_inst_block(&mm->perfbuf.inst_block, mm->perfbuf.vm, 0);
+
+	virt_addr_lo = u64_lo32(offset);
+	virt_addr_hi = u64_hi32(offset);
+
+	/* address and size are aligned to 32 bytes, the lowest bits read back
+	 * as zeros */
+	gk20a_writel(g, perf_pmasys_outbase_r(), virt_addr_lo);
+	gk20a_writel(g, perf_pmasys_outbaseupper_r(),
+			perf_pmasys_outbaseupper_ptr_f(virt_addr_hi));
+	gk20a_writel(g, perf_pmasys_outsize_r(), size);
+
+	/* this field is aligned to 4K */
+	inst_pa_page = gk20a_mm_inst_block_addr(g,
+						&mm->perfbuf.inst_block) >> 12;
+
+	/* A write to MEM_BLOCK triggers the block bind operation. MEM_BLOCK
+	 * should be written last */
+	gk20a_writel(g, perf_pmasys_mem_block_r(),
+			perf_pmasys_mem_block_base_f(inst_pa_page) |
+			perf_pmasys_mem_block_valid_true_f() |
+			perf_pmasys_mem_block_target_lfb_f());
+
+	gk20a_idle(g);
+	return 0;
+}
+
 static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_perfbuf_map_args *args)
 {
@@ -1841,9 +1886,6 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	struct mm_gk20a *mm = &g->mm;
 	int err;
 	u32 virt_size;
-	u32 virt_addr_lo;
-	u32 virt_addr_hi;
-	u32 inst_pa_page;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
@@ -1863,12 +1905,6 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 		return -ENOMEM;
 	}
 
-	err = gk20a_alloc_inst_block(g, &mm->perfbuf.inst_block);
-	if (err)
-		goto err_remove_vm;
-
-	g->ops.mm.init_inst_block(&mm->perfbuf.inst_block, mm->perfbuf.vm, 0);
-
 	err = nvgpu_vm_map_buffer(mm->perfbuf.vm,
 			args->dmabuf_fd,
 			&args->offset,
@@ -1882,38 +1918,15 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 
 	/* perf output buffer may not cross a 4GB boundary */
 	virt_size = u64_lo32(args->mapping_size);
-	virt_addr_lo = u64_lo32(args->offset);
-	virt_addr_hi = u64_hi32(args->offset);
 	if (u64_hi32(args->offset) != u64_hi32(args->offset + virt_size)) {
 		err = -EINVAL;
 		goto err_unmap;
 	}
 
-	err = gk20a_busy(g);
-	if (err) {
-		nvgpu_err(g, "failed to poweron");
+	err = g->ops.dbg_session_ops.perfbuffer_enable(g,
+						args->offset, virt_size);
+	if (err)
 		goto err_unmap;
-	}
-
-	/* address and size are aligned to 32 bytes, the lowest bits read back
-	 * as zeros */
-	gk20a_writel(g, perf_pmasys_outbase_r(), virt_addr_lo);
-	gk20a_writel(g, perf_pmasys_outbaseupper_r(),
-			perf_pmasys_outbaseupper_ptr_f(virt_addr_hi));
-	gk20a_writel(g, perf_pmasys_outsize_r(), virt_size);
-
-	/* this field is aligned to 4K */
-	inst_pa_page = gk20a_mm_inst_block_addr(g,
-						&mm->perfbuf.inst_block) >> 12;
-
-	/* A write to MEM_BLOCK triggers the block bind operation. MEM_BLOCK
-	 * should be written last */
-	gk20a_writel(g, perf_pmasys_mem_block_r(),
-			perf_pmasys_mem_block_base_f(inst_pa_page) |
-			perf_pmasys_mem_block_valid_true_f() |
-			perf_pmasys_mem_block_target_lfb_f());
-
-	gk20a_idle(g);
 
 	g->perfbuf.owner = dbg_s;
 	g->perfbuf.offset = args->offset;
@@ -1924,7 +1937,6 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 err_unmap:
 	nvgpu_vm_unmap_buffer(mm->perfbuf.vm, args->offset, NULL);
 err_remove_vm:
-	gk20a_free_inst_block(g, &mm->perfbuf.inst_block);
 	nvgpu_vm_put(mm->perfbuf.vm);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
@@ -1960,7 +1972,7 @@ static int gk20a_perfbuf_release_locked(struct gk20a *g, u64 offset)
 	struct vm_gk20a *vm = mm->perfbuf.vm;
 	int err;
 
-	err = gk20a_perfbuf_disable_locked(g);
+	err = g->ops.dbg_session_ops.perfbuffer_disable(g);
 
 	nvgpu_vm_unmap_buffer(vm, offset, NULL);
 	gk20a_free_inst_block(g, &mm->perfbuf.inst_block);
@@ -2001,4 +2013,6 @@ void gk20a_init_dbg_session_ops(struct gpu_ops *gops)
 					nvgpu_check_and_set_context_reservation;
 	gops->dbg_session_ops.release_profiler_reservation =
 					nvgpu_release_profiler_reservation;
+	gops->dbg_session_ops.perfbuffer_enable = gk20a_perfbuf_enable_locked;
+	gops->dbg_session_ops.perfbuffer_disable = gk20a_perfbuf_disable_locked;
 };

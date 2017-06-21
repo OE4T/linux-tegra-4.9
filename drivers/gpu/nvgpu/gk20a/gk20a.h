@@ -869,6 +869,8 @@ struct gpu_ops {
 		void (*release_profiler_reservation)(
 				struct dbg_session_gk20a *dbg_s,
 				struct dbg_profiler_object_data *prof_obj);
+		int (*perfbuffer_enable)(struct gk20a *g, u64 offset, u32 size);
+		int (*perfbuffer_disable)(struct gk20a *g);
 	} dbg_session_ops;
 	struct {
 		void (*get_program_numbers)(struct gk20a *g,

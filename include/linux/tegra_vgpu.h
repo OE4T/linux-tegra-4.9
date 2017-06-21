@@ -104,6 +104,7 @@ enum {
 	TEGRA_VGPU_CMD_GET_GPU_FREQ_TABLE = 70,
 	TEGRA_VGPU_CMD_CAP_GPU_CLK_RATE = 71,
 	TEGRA_VGPU_CMD_PROF_MGT = 72,
+	TEGRA_VGPU_CMD_PERFBUF_MGT = 73,
 	TEGRA_VGPU_CMD_GET_TIMESTAMPS_ZIPPER = 74,
 };
 
@@ -488,6 +489,12 @@ struct tegra_vgpu_prof_mgt_params {
 	u32 mode;
 };
 
+struct tegra_vgpu_perfbuf_mgt_params {
+	u64 vm_handle;
+	u64 offset;
+	u32 size;
+};
+
 #define TEGRA_VGPU_GPU_FREQ_TABLE_SIZE		25
 
 struct tegra_vgpu_get_gpu_freq_table_params {
@@ -545,6 +552,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_suspend_resume_contexts resume_contexts;
 		struct tegra_vgpu_clear_sm_error_state clear_sm_error_state;
 		struct tegra_vgpu_prof_mgt_params prof_management;
+		struct tegra_vgpu_perfbuf_mgt_params perfbuf_management;
 		struct tegra_vgpu_get_timestamps_zipper_params get_timestamps_zipper;
 		struct tegra_vgpu_get_gpu_freq_table_params get_gpu_freq_table;
 		char padding[192];

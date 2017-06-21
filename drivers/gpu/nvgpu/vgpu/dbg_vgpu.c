@@ -178,6 +178,37 @@ static void vgpu_release_profiler_reservation(
 		vgpu_sendrecv_prof_cmd(dbg_s, TEGRA_VGPU_PROF_RELEASE);
 }
 
+static int vgpu_sendrecv_perfbuf_cmd(struct gk20a *g, u64 offset, u32 size)
+{
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = mm->perfbuf.vm;
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_perfbuf_mgt_params *p =
+						&msg.params.perfbuf_management;
+	int err;
+
+	msg.cmd = TEGRA_VGPU_CMD_PERFBUF_MGT;
+	msg.handle = vgpu_get_handle(g);
+
+	p->vm_handle = vm->handle;
+	p->offset = offset;
+	p->size = size;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	return err;
+}
+
+static int vgpu_perfbuffer_enable(struct gk20a *g, u64 offset, u32 size)
+{
+	return vgpu_sendrecv_perfbuf_cmd(g, offset, size);
+}
+
+static int vgpu_perfbuffer_disable(struct gk20a *g)
+{
+	return vgpu_sendrecv_perfbuf_cmd(g, 0, 0);
+}
+
 void vgpu_init_dbg_session_ops(struct gpu_ops *gops)
 {
 	gops->dbg_session_ops.exec_reg_ops = vgpu_exec_regops;
@@ -188,4 +219,6 @@ void vgpu_init_dbg_session_ops(struct gpu_ops *gops)
 					vgpu_check_and_set_context_reservation;
 	gops->dbg_session_ops.release_profiler_reservation =
 					vgpu_release_profiler_reservation;
+	gops->dbg_session_ops.perfbuffer_enable = vgpu_perfbuffer_enable;
+	gops->dbg_session_ops.perfbuffer_disable = vgpu_perfbuffer_disable;
 }

@@ -69,6 +69,29 @@ extern int yydebug;
     DT_INCBIN = 279
   };
 #endif
+/* Tokens.  */
+#define DT_V1 258
+#define DT_PLUGIN 259
+#define DT_MEMRESERVE 260
+#define DT_LSHIFT 261
+#define DT_RSHIFT 262
+#define DT_LE 263
+#define DT_GE 264
+#define DT_EQ 265
+#define DT_NE 266
+#define DT_AND 267
+#define DT_OR 268
+#define DT_BITS 269
+#define DT_DEL_PROP 270
+#define DT_DEL_NODE 271
+#define DT_PROPNODENAME 272
+#define DT_LITERAL 273
+#define DT_CHAR_LITERAL 274
+#define DT_BYTE 275
+#define DT_STRING 276
+#define DT_LABEL 277
+#define DT_REF 278
+#define DT_INCBIN 279
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
@@ -95,7 +118,7 @@ union YYSTYPE
 	uint64_t integer;
 	unsigned int flags;
 
-#line 99 "dtc-parser.tab.h" /* yacc.c:1909  */
+#line 122 "dtc-parser.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

@@ -29,6 +29,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
+#include "gk20a/regops_gk20a.h"
 
 #include "gm20b/gr_gm20b.h"
 
@@ -2613,6 +2614,65 @@ fail:
 	return err;
 }
 
+static int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
+	struct channel_gk20a *ch, u64 sms, bool enable)
+{
+	struct nvgpu_dbg_gpu_reg_op *ops;
+	unsigned int i = 0, sm_id;
+	int err;
+
+	ops = nvgpu_kcalloc(g, g->gr.no_of_sm, sizeof(*ops));
+	if (!ops)
+		return -ENOMEM;
+	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
+		u32 gpc, tpc, sm;
+		u32 reg_offset, reg_mask, reg_val;
+
+		if (!(sms & (1 << sm_id)))
+			continue;
+
+		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+		sm = g->gr.sm_to_cluster[sm_id].sm_index;
+
+		reg_offset = gk20a_gr_gpc_offset(g, gpc) +
+				gk20a_gr_tpc_offset(g, tpc) +
+				gv11b_gr_sm_offset(g, sm);
+
+		ops[i].op = REGOP(WRITE_32);
+		ops[i].type = REGOP(TYPE_GR_CTX);
+		ops[i].offset = gr_gpc0_tpc0_sm0_dbgr_control0_r() + reg_offset;
+
+		reg_mask = 0;
+		reg_val = 0;
+		if (enable) {
+			nvgpu_log(g, gpu_dbg_gpu_dbg,
+				"SM:%d debuggger mode ON", sm);
+			reg_mask |=
+			 gr_gpc0_tpc0_sm0_dbgr_control0_debugger_mode_m();
+			reg_val |=
+			 gr_gpc0_tpc0_sm0_dbgr_control0_debugger_mode_on_f();
+		} else {
+			nvgpu_log(g, gpu_dbg_gpu_dbg,
+				"SM:%d debuggger mode Off", sm);
+			reg_mask |=
+			 gr_gpc0_tpc0_sm0_dbgr_control0_debugger_mode_m();
+			reg_val |=
+			 gr_gpc0_tpc0_sm0_dbgr_control0_debugger_mode_off_f();
+		}
+
+		ops[i].and_n_mask_lo = reg_mask;
+		ops[i].value_lo = reg_val;
+		i++;
+	}
+
+	err = gr_gk20a_exec_ctx_ops(ch, ops, i, i, 0);
+	if (err)
+		nvgpu_err(g, "Failed to access register\n");
+	nvgpu_kfree(g, ops);
+	return err;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2678,4 +2738,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.trigger_suspend = gv11b_gr_sm_trigger_suspend;
 	gops->gr.bpt_reg_info = gv11b_gr_bpt_reg_info;
 	gops->gr.update_sm_error_state = gv11b_gr_update_sm_error_state;
+	gops->gr.set_sm_debug_mode = gv11b_gr_set_sm_debug_mode;
 }

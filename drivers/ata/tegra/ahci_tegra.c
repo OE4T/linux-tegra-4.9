@@ -1277,6 +1277,11 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 	hpriv->plat_data = tegra;
 
 	tegra->devslp_pin = devm_pinctrl_get(dev);
+	if (IS_ERR(tegra->devslp_pin)) {
+		ret = PTR_ERR(tegra->devslp_pin);
+		dev_err(dev, "failed to get pinctrl: %d\n", ret);
+		goto err_out;
+	}
 
 	tegra->devslp_active = pinctrl_lookup_state(tegra->devslp_pin,
 			"devslp_active");

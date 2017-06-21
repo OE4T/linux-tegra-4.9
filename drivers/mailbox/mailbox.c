@@ -1,5 +1,6 @@
 /*
  * Mailbox: Common code for Mailbox controllers and users
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Copyright (C) 2013-2014 Linaro Ltd.
  * Author: Jassi Brar <jassisinghbrar@gmail.com>
@@ -221,6 +222,29 @@ bool mbox_client_peek_data(struct mbox_chan *chan)
 	return false;
 }
 EXPORT_SYMBOL_GPL(mbox_client_peek_data);
+
+/**
+ * mbox_get_max_txsize - For client to query the maximum tx message
+ *			 size to send to the remote.
+ * @chan: Mailbox channel assigned to this client.
+ *
+ * Queries the controller driver for the maximum tx message size that
+ * can be transmitted.
+ *
+ * Return: max tx size on success
+ *	   Negative value on failure.
+ */
+int mbox_get_max_txsize(struct mbox_chan *chan)
+{
+	if (!chan || !chan->cl)
+		return -EINVAL;
+
+	if (!chan->mbox->ops->get_max_txsize)
+		return INT_MAX;
+
+	return chan->mbox->ops->get_max_txsize(chan);
+}
+EXPORT_SYMBOL_GPL(mbox_get_max_txsize);
 
 /**
  * mbox_send_message -	For client to submit a message to be

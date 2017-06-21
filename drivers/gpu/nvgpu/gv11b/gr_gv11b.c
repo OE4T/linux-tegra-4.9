@@ -1106,23 +1106,18 @@ static void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data)
 	gk20a_writel(g, gr_gpcs_tpcs_sm_l1tag_ctrl_r(), val);
 }
 
-
 static void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 {
-	u32 val;
-
 	gk20a_dbg_fn("");
 
-	if (data == NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE)
-		val = 0;
-	else
-		val = 0xffffffff;
-
-	/* setup sm warp esr report masks */
-	gk20a_writel(g, gr_gpcs_tpcs_sms_hww_warp_esr_report_mask_r(), val);
-
-	/* setup sm global esr report mask */
-	gk20a_writel(g, gr_gpcs_tpcs_sms_hww_global_esr_report_mask_r(), val);
+	if (data == NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE) {
+		gk20a_writel(g, gr_gpcs_tpcs_sms_hww_warp_esr_report_mask_r(),
+				 0);
+		gk20a_writel(g, gr_gpcs_tpcs_sms_hww_global_esr_report_mask_r(),
+				 0);
+	} else {
+		g->ops.gr.set_hww_esr_report_mask(g);
+	}
 }
 
 static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
@@ -2712,6 +2707,37 @@ static int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 
 	return 0;
 }
+
+static void gv11b_gr_set_hww_esr_report_mask(struct gk20a *g)
+{
+
+	/* clear hww */
+	gk20a_writel(g, gr_gpcs_tpcs_sms_hww_global_esr_r(), 0xffffffff);
+	gk20a_writel(g, gr_gpcs_tpcs_sms_hww_global_esr_r(), 0xffffffff);
+
+	/* setup sm warp esr report masks */
+	gk20a_writel(g, gr_gpcs_tpcs_sms_hww_warp_esr_report_mask_r(),
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_stack_error_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_api_stack_error_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_pc_wrap_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_misaligned_pc_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_pc_overflow_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_misaligned_reg_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_illegal_instr_encoding_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_illegal_instr_param_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_oor_reg_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_oor_addr_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_misaligned_addr_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_invalid_addr_space_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_invalid_const_addr_ldc_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_stack_overflow_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_mmu_fault_report_f());
+
+	/* setup sm global esr report mask. vat_alarm_report is not enabled */
+	gk20a_writel(g, gr_gpcs_tpcs_sms_hww_global_esr_report_mask_r(),
+		gr_gpc0_tpc0_sm0_hww_global_esr_report_mask_multiple_warp_errors_report_f());
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2779,4 +2805,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.update_sm_error_state = gv11b_gr_update_sm_error_state;
 	gops->gr.set_sm_debug_mode = gv11b_gr_set_sm_debug_mode;
 	gops->gr.record_sm_error_state = gv11b_gr_record_sm_error_state;
+	gops->gr.set_hww_esr_report_mask = gv11b_gr_set_hww_esr_report_mask;
 }

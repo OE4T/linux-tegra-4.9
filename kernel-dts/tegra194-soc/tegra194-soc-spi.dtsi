@@ -90,7 +90,6 @@
 		interrupts = < 0 35 0x04 >;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		dma-coherent;
 		dmas = <&gpcdma 5>, <&gpcdma 5>;
@@ -112,7 +111,6 @@
 		interrupts = < 0 39 0x04 >;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		dma-coherent;
 		dmas = <&gpcdma 6>, <&gpcdma 6>;

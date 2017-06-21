@@ -549,7 +549,6 @@
 
 		host1x_ctx0: ctx0 {
 			compatible = "nvidia,tegra186-iommu-context";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX0>;
 			dma-coherent;
 			status = "okay";
@@ -557,7 +556,6 @@
 
 		host1x_ctx1: ctx1 {
 			compatible = "nvidia,tegra186-iommu-context";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX1>;
 			dma-coherent;
 			status = "okay";
@@ -565,7 +563,6 @@
 
 		host1x_ctx2: ctx2 {
 			compatible = "nvidia,tegra186-iommu-context";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX2>;
 			dma-coherent;
 			status = "okay";
@@ -573,7 +570,6 @@
 
 		host1x_ctx3: ctx3 {
 			compatible = "nvidia,tegra186-iommu-context";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX3>;
 			dma-coherent;
 			status = "okay";
@@ -581,7 +577,6 @@
 
 		host1x_ctx4: ctx4 {
 			compatible = "nvidia,tegra186-iommu-context";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX4>;
 			dma-coherent;
 			status = "okay";
@@ -589,7 +584,6 @@
 
 		host1x_ctx5: ctx5 {
 			compatible = "nvidia,tegra186-iommu-context";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX5>;
 			dma-coherent;
 			status = "okay";
@@ -597,7 +591,6 @@
 
 		host1x_ctx6: ctx6 {
 			compatible = "nvidia,tegra186-iommu-context";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX6>;
 			dma-coherent;
 			status = "okay";
@@ -605,7 +598,6 @@
 
 		host1x_ctx7: ctx7 {
 			compatible = "nvidia,tegra186-iommu-context";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX7>;
 			dma-coherent;
 			status = "okay";

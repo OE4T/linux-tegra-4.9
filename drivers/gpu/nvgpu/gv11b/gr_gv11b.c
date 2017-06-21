@@ -2673,6 +2673,45 @@ static int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 	return err;
 }
 
+static int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
+{
+	int sm_id;
+	struct gr_gk20a *gr = &g->gr;
+	u32 offset, sm, sm_per_tpc;
+	u32 gpc_tpc_offset;
+
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+
+	sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
+	gpc_tpc_offset = gk20a_gr_gpc_offset(g, gpc) +
+				 gk20a_gr_tpc_offset(g, tpc);
+
+	sm_id = gr_gpc0_tpc0_sm_cfg_tpc_id_v(gk20a_readl(g,
+			gr_gpc0_tpc0_sm_cfg_r() + gpc_tpc_offset));
+
+	sm = sm_id % sm_per_tpc;
+
+	offset = gpc_tpc_offset + gv11b_gr_sm_offset(g, sm);
+
+	gr->sm_error_states[sm_id].hww_global_esr = gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset);
+
+	gr->sm_error_states[sm_id].hww_warp_esr = gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_hww_warp_esr_r() + offset);
+
+	gr->sm_error_states[sm_id].hww_warp_esr_pc = gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_hww_warp_esr_pc_r() + offset);
+
+	gr->sm_error_states[sm_id].hww_global_esr_report_mask = gk20a_readl(g,
+	       gr_gpc0_tpc0_sm0_hww_global_esr_report_mask_r() + offset);
+
+	gr->sm_error_states[sm_id].hww_warp_esr_report_mask = gk20a_readl(g,
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_r() + offset);
+
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
+	return 0;
+}
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2739,4 +2778,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.bpt_reg_info = gv11b_gr_bpt_reg_info;
 	gops->gr.update_sm_error_state = gv11b_gr_update_sm_error_state;
 	gops->gr.set_sm_debug_mode = gv11b_gr_set_sm_debug_mode;
+	gops->gr.record_sm_error_state = gv11b_gr_record_sm_error_state;
 }

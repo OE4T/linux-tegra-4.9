@@ -50,7 +50,9 @@
 #define CTL_SLEW_SHIFT		4
 #define CTL_RESET			(1 << 2)
 
-#define FAN53528_CTL_MODE	BIT(0)
+#define FAN53528_CTL_MODE_MASK		0x3
+#define FAN53528_CTL_MODE_FPWM		(BIT(1) | BIT(0))
+#define FAN53528_CTL_MODE_AUTFPWM	0x0
 #define FAN53528_VOLTAGE_MASK	0x7F
 #define FAN53555_NVOLTAGES	64	/* Numbers of voltages */
 #define FAN53528_NVOLTAGES	128
@@ -154,8 +156,8 @@ static int fan53555_set_mode(struct regulator_dev *rdev, unsigned int mode)
 	case REGULATOR_MODE_FAST:
 		if (di->vendor == FAN53528_VENDOR_FAICHILD)
 			ret = regmap_update_bits(di->regmap, FAN53555_CONTROL,
-						 FAN53528_CTL_MODE,
-						 FAN53528_CTL_MODE);
+						 FAN53528_CTL_MODE_MASK,
+						 FAN53528_CTL_MODE_FPWM);
 		else
 			ret = regmap_update_bits(di->regmap, di->vol_reg,
 						 VSEL_MODE, VSEL_MODE);
@@ -165,7 +167,8 @@ static int fan53555_set_mode(struct regulator_dev *rdev, unsigned int mode)
 	case REGULATOR_MODE_NORMAL:
 		if (di->vendor == FAN53528_VENDOR_FAICHILD)
 			ret = regmap_update_bits(di->regmap, FAN53555_CONTROL,
-						 FAN53528_CTL_MODE, 0);
+						 FAN53528_CTL_MODE_MASK,
+						 FAN53528_CTL_MODE_AUTFPWM);
 		else
 			ret = regmap_update_bits(di->regmap, di->vol_reg,
 						 VSEL_MODE, 0);
@@ -188,7 +191,7 @@ static unsigned int fan53555_get_mode(struct regulator_dev *rdev)
 		ret = regmap_read(di->regmap, FAN53555_CONTROL, &val);
 		if (ret < 0)
 			return ret;
-		if (val & FAN53528_CTL_MODE)
+		if ((val & FAN53528_CTL_MODE_MASK) == FAN53528_CTL_MODE_FPWM)
 			return REGULATOR_MODE_FAST;
 		else
 			return REGULATOR_MODE_NORMAL;

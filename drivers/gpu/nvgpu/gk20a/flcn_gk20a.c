@@ -107,6 +107,94 @@ static bool gk20a_is_falcon_scrubbing_done(struct nvgpu_falcon *flcn)
 	return status;
 }
 
+static u32 gk20a_falcon_get_mem_size(struct nvgpu_falcon *flcn, u32 mem_type)
+{
+	struct gk20a *g = flcn->g;
+	u32 mem_size = 0;
+	u32 hw_cfg_reg = gk20a_readl(g,
+		flcn->flcn_base + falcon_falcon_hwcfg_r());
+
+	if (mem_type == MEM_DMEM)
+		mem_size = falcon_falcon_hwcfg_dmem_size_v(hw_cfg_reg)
+			<< GK20A_PMU_DMEM_BLKSIZE2;
+	else
+		mem_size = falcon_falcon_hwcfg_imem_size_v(hw_cfg_reg)
+			<< GK20A_PMU_DMEM_BLKSIZE2;
+
+	return mem_size;
+}
+
+static int flcn_mem_overflow_check(struct nvgpu_falcon *flcn,
+		u32 offset, u32 size, u32 mem_type)
+{
+	struct gk20a *g = flcn->g;
+	u32 mem_size = 0;
+
+	if (size == 0) {
+		nvgpu_err(g, "size is zero");
+		return -EINVAL;
+	}
+
+	if (offset & 0x3) {
+		nvgpu_err(g, "offset (0x%08x) not 4-byte aligned", offset);
+		return -EINVAL;
+	}
+
+	mem_size = gk20a_falcon_get_mem_size(flcn, mem_type);
+	if (!(offset <= mem_size && (offset + size) <= mem_size)) {
+		nvgpu_err(g, "flcn-id 0x%x, copy overflow ",
+			flcn->flcn_id);
+		nvgpu_err(g, "total size 0x%x, offset 0x%x, copy size 0x%x",
+			mem_size, offset, size);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int gk20a_flcn_copy_from_dmem(struct nvgpu_falcon *flcn,
+		u32 src, u8 *dst, u32 size, u8 port)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+	u32 i, words, bytes;
+	u32 data, addr_mask;
+	u32 *dst_u32 = (u32 *)dst;
+
+	nvgpu_log_fn(g, " src dmem offset - %x, size - %x", src, size);
+
+	if (flcn_mem_overflow_check(flcn, src, size, MEM_DMEM)) {
+		nvgpu_err(g, "incorrect parameters");
+		return -EINVAL;
+	}
+
+	nvgpu_mutex_acquire(&flcn->copy_lock);
+
+	words = size >> 2;
+	bytes = size & 0x3;
+
+	addr_mask = falcon_falcon_dmemc_offs_m() |
+			    falcon_falcon_dmemc_blk_m();
+
+	src &= addr_mask;
+
+	gk20a_writel(g, base_addr + falcon_falcon_dmemc_r(port),
+		src | falcon_falcon_dmemc_aincr_f(1));
+
+	for (i = 0; i < words; i++)
+		dst_u32[i] = gk20a_readl(g,
+			base_addr + falcon_falcon_dmemd_r(port));
+
+	if (bytes > 0) {
+		data = gk20a_readl(g, base_addr + falcon_falcon_dmemd_r(port));
+		for (i = 0; i < bytes; i++)
+			dst[(words << 2) + i] = ((u8 *)&data)[i];
+	}
+
+	nvgpu_mutex_release(&flcn->copy_lock);
+	return 0;
+}
+
 static void gk20a_falcon_engine_dependency_ops(struct nvgpu_falcon *flcn)
 {
 	struct nvgpu_falcon_engine_dependency_ops *flcn_eng_dep_ops =
@@ -135,6 +223,7 @@ static void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_ops->is_falcon_cpu_halted =  gk20a_is_falcon_cpu_halted;
 	flcn_ops->is_falcon_idle =  gk20a_is_falcon_idle;
 	flcn_ops->is_falcon_scrubbing_done =  gk20a_is_falcon_scrubbing_done;
+	flcn_ops->copy_from_dmem = gk20a_flcn_copy_from_dmem;
 
 	gk20a_falcon_engine_dependency_ops(flcn);
 }
@@ -166,6 +255,7 @@ static void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 	}
 
 	if (flcn->is_falcon_supported) {
+		nvgpu_mutex_init(&flcn->copy_lock);
 		gk20a_falcon_ops(flcn);
 	} else
 		nvgpu_info(g, "flcn-Id 0x%x not supported on current chip",

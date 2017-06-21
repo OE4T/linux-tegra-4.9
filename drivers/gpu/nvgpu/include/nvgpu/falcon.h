@@ -172,8 +172,8 @@ void nvgpu_flcn_set_irq(struct nvgpu_falcon *flcn, bool enable,
 bool nvgpu_flcn_get_mem_scrubbing_status(struct nvgpu_falcon *flcn);
 bool nvgpu_flcn_get_cpu_halted_status(struct nvgpu_falcon *flcn);
 bool nvgpu_flcn_get_idle_status(struct nvgpu_falcon *flcn);
-int nvgpu_flcn_copy_from_mem(struct nvgpu_falcon *flcn,
-	enum flcn_mem_type mem_type, u32 src, u8 *dst, u32 size, u8 port);
+int nvgpu_flcn_copy_from_dmem(struct nvgpu_falcon *flcn,
+	u32 src, u8 *dst, u32 size, u8 port);
 int nvgpu_flcn_copy_to_mem(struct nvgpu_falcon *flcn,
 	enum flcn_mem_type mem_type, u32 dst, u8 *src, u32 size, u8 port);
 int nvgpu_flcn_dma_copy(struct nvgpu_falcon *flcn,

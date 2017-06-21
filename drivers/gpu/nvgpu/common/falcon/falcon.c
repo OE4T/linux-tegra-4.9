@@ -116,6 +116,14 @@ bool nvgpu_flcn_get_idle_status(struct nvgpu_falcon *flcn)
 	return status;
 }
 
+int nvgpu_flcn_copy_from_dmem(struct nvgpu_falcon *flcn,
+	u32 src, u8 *dst, u32 size, u8 port)
+{
+	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
+
+	return flcn_ops->copy_from_dmem(flcn, src, dst, size, port);
+}
+
 void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
 {
 	struct nvgpu_falcon *flcn = NULL;

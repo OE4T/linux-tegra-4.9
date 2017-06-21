@@ -2977,6 +2977,22 @@ static void gv11b_gr_resume_all_sms(struct gk20a *g)
 			dbgr_control0, dbgr_status0);
 }
 
+static int gv11b_gr_resume_from_pause(struct gk20a *g)
+{
+	int err = 0;
+
+	/* Clear the pause mask to tell the GPU we want to resume everyone */
+	gk20a_writel(g, gr_gpcs_tpcs_sms_dbgr_bpt_pause_mask_0_r(), 0);
+
+	/* explicitly re-enable forwarding of SM interrupts upon any resume */
+	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(),
+		gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f());
+
+	g->ops.gr.resume_all_sms(g);
+
+	return err;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3050,4 +3066,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.suspend_all_sms = gv11b_gr_suspend_all_sms;
 	gops->gr.resume_single_sm = gv11b_gr_resume_single_sm;
 	gops->gr.resume_all_sms = gv11b_gr_resume_all_sms;
+	gops->gr.resume_from_pause = gv11b_gr_resume_from_pause;
 }

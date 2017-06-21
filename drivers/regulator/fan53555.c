@@ -386,6 +386,7 @@ static int fan53555_regulator_register(struct fan53555_device_info *di,
 static const struct regmap_config fan53555_regmap_config = {
 	.reg_bits = 8,
 	.val_bits = 8,
+	.max_register = FAN53555_MONITOR,
 };
 
 static struct fan53555_platform_data *fan53555_parse_dt(struct device *dev,

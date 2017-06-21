@@ -572,7 +572,7 @@
 		clocks = <&tegra_car TEGRA210_CLK_UARTB>,
 			<&tegra_car TEGRA210_CLK_PLL_P>;
 		clock-names = "serial", "parent";
-		resets = <&tegra_car TEGRA210_CLK_UARTB>;
+		resets = <&tegra_car TEGRA210_RST_UARTB>;
 		reset-names = "serial";
 		nvidia,adjust-baud-rates = <115200 115200 100>;
 		status = "disabled";

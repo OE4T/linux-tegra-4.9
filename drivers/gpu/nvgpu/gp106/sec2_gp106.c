@@ -324,7 +324,7 @@ void init_pmu_setup_hw1(struct gk20a *g)
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
 		pmu, GK20A_PMU_DMAIDX_VIRT);
 
-	pmu_copy_to_dmem(pmu, g->acr.pmu_args,
+	nvgpu_flcn_copy_to_dmem(pmu->flcn, g->acr.pmu_args,
 			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
 			g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
 

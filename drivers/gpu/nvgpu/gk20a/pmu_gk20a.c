@@ -104,57 +104,6 @@ static void printtrace(struct nvgpu_pmu *pmu)
 	nvgpu_kfree(g, tracebuffer);
 }
 
-void pmu_copy_to_dmem(struct nvgpu_pmu *pmu,
-		u32 dst, u8 *src, u32 size, u8 port)
-{
-	struct gk20a *g = gk20a_from_pmu(pmu);
-	u32 i, words, bytes;
-	u32 data, addr_mask;
-	u32 *src_u32 = (u32*)src;
-
-	if (size == 0) {
-		nvgpu_err(g, "size is zero");
-		return;
-	}
-
-	if (dst & 0x3) {
-		nvgpu_err(g, "dst (0x%08x) not 4-byte aligned", dst);
-		return;
-	}
-
-	nvgpu_mutex_acquire(&pmu->pmu_copy_lock);
-
-	words = size >> 2;
-	bytes = size & 0x3;
-
-	addr_mask = pwr_falcon_dmemc_offs_m() |
-		    pwr_falcon_dmemc_blk_m();
-
-	dst &= addr_mask;
-
-	gk20a_writel(g, pwr_falcon_dmemc_r(port),
-		dst | pwr_falcon_dmemc_aincw_f(1));
-
-	for (i = 0; i < words; i++)
-		gk20a_writel(g, pwr_falcon_dmemd_r(port), src_u32[i]);
-
-	if (bytes > 0) {
-		data = 0;
-		for (i = 0; i < bytes; i++)
-			((u8 *)&data)[i] = src[(words << 2) + i];
-		gk20a_writel(g, pwr_falcon_dmemd_r(port), data);
-	}
-
-	data = gk20a_readl(g, pwr_falcon_dmemc_r(port)) & addr_mask;
-	size = ALIGN(size, 4);
-	if (data != ((dst + size) & addr_mask)) {
-		nvgpu_err(g, "copy failed. bytes written %d, expected %d",
-			data - dst, size);
-	}
-	nvgpu_mutex_release(&pmu->pmu_copy_lock);
-	return;
-}
-
 void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -319,7 +268,7 @@ int pmu_bootstrap(struct nvgpu_pmu *pmu)
 			<< GK20A_PMU_DMEM_BLKSIZE2) -
 		g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu);
 
-	pmu_copy_to_dmem(pmu, addr_args,
+	nvgpu_flcn_copy_to_dmem(pmu->flcn, addr_args,
 			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
 			g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
 

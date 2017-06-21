@@ -1244,7 +1244,7 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 			pwr_falcon_dmemc_offs_f(0) |
 			pwr_falcon_dmemc_blk_f(0)  |
 			pwr_falcon_dmemc_aincw_f(1));
-	pmu_copy_to_dmem(pmu, 0, (u8 *)pbl_desc,
+	nvgpu_flcn_copy_to_dmem(pmu->flcn, 0, (u8 *)pbl_desc,
 		sizeof(struct flcn_bl_dmem_desc), 0);
 	/*TODO This had to be copied to bl_desc_dmem_load_off, but since
 	 * this is 0, so ok for now*/
@@ -1356,7 +1356,7 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base(pmu);
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
 		pmu, GK20A_PMU_DMAIDX_VIRT);
-	pmu_copy_to_dmem(pmu, g->acr.pmu_args,
+	nvgpu_flcn_copy_to_dmem(pmu->flcn, g->acr.pmu_args,
 			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
 			g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
 	/*disable irqs for hs falcon booting as we will poll for halt*/

@@ -232,7 +232,7 @@ static int gk20a_flcn_copy_to_dmem(struct nvgpu_falcon *flcn,
 		data = 0;
 		for (i = 0; i < bytes; i++)
 			((u8 *)&data)[i] = src[(words << 2) + i];
-		gk20a_writel(g, falcon_falcon_dmemd_r(port), data);
+		gk20a_writel(g, base_addr + falcon_falcon_dmemd_r(port), data);
 	}
 
 	size = ALIGN(size, 4);

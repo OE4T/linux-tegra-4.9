@@ -135,7 +135,7 @@ static inline void pmu_queue_read(struct nvgpu_pmu *pmu,
 static inline void pmu_queue_write(struct nvgpu_pmu *pmu,
 			u32 offset, u8 *src, u32 size)
 {
-	pmu_copy_to_dmem(pmu, offset, src, size, 0);
+	nvgpu_flcn_copy_to_dmem(pmu->flcn, offset, src, size, 0);
 }
 
 
@@ -562,7 +562,7 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 				payload->in.buf, payload->in.fb_size);
 
 		} else {
-			pmu_copy_to_dmem(pmu,
+			nvgpu_flcn_copy_to_dmem(pmu->flcn,
 				(pv->pmu_allocation_get_dmem_offset(pmu, in)),
 				payload->in.buf, payload->in.size, 0);
 		}

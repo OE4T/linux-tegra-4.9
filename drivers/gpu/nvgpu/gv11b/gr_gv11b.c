@@ -1069,6 +1069,31 @@ static void gr_gv11b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
 	gk20a_dbg_fn("done");
 }
 
+static void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data)
+{
+	u32 val;
+	bool flag;
+
+	gk20a_dbg_fn("");
+
+	val = gk20a_readl(g, gr_gpcs_tpcs_tex_in_dbg_r());
+	flag = (data & NVC397_SET_TEX_IN_DBG_TSL1_RVCH_INVALIDATE) ? 1 : 0;
+	val = set_field(val, gr_gpcs_tpcs_tex_in_dbg_tsl1_rvch_invalidate_m(),
+			gr_gpcs_tpcs_tex_in_dbg_tsl1_rvch_invalidate_f(flag));
+	gk20a_writel(g, gr_gpcs_tpcs_tex_in_dbg_r(), val);
+
+	val = gk20a_readl(g, gr_gpcs_tpcs_sm_l1tag_ctrl_r());
+	flag = (data &
+		NVC397_SET_TEX_IN_DBG_SM_L1TAG_CTRL_CACHE_SURFACE_LD) ? 1 : 0;
+	val = set_field(val, gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_ld_m(),
+			gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_ld_f(flag));
+	flag = (data &
+		NVC397_SET_TEX_IN_DBG_SM_L1TAG_CTRL_CACHE_SURFACE_ST) ? 1 : 0;
+	val = set_field(val, gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_st_m(),
+			gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_st_f(flag));
+	gk20a_writel(g, gr_gpcs_tpcs_sm_l1tag_ctrl_r(), val);
+}
+
 
 static void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 {
@@ -1119,6 +1144,9 @@ static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 			break;
 		case NVC097_SET_COALESCE_BUFFER_SIZE:
 			gr_gv11b_set_coalesce_buffer_size(g, data);
+			break;
+		case NVC397_SET_TEX_IN_DBG:
+			gr_gv11b_set_tex_in_dbg(g, data);
 			break;
 		default:
 			goto fail;

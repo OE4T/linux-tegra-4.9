@@ -3830,6 +3830,38 @@ static inline u32 gr_zcull_subregion_qty_v(void)
 {
 	return 0x00000010;
 }
+static inline u32 gr_gpcs_tpcs_tex_in_dbg_r(void)
+{
+	return 0x00419a00;
+}
+static inline u32 gr_gpcs_tpcs_tex_in_dbg_tsl1_rvch_invalidate_f(u32 v)
+{
+	return (v & 0x1) << 19;
+}
+static inline u32 gr_gpcs_tpcs_tex_in_dbg_tsl1_rvch_invalidate_m(void)
+{
+	return 0x1 << 19;
+}
+static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_r(void)
+{
+	return 0x00419bf0;
+}
+static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_ld_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_ld_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_st_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_st_m(void)
+{
+	return 0x1 << 10;
+}
 static inline u32 gr_fe_pwr_mode_r(void)
 {
 	return 0x00404170;

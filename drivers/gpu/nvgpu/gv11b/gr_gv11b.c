@@ -1788,7 +1788,8 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			/* reset the HWW errors after locking down */
 			global_esr_copy = g->ops.gr.get_sm_hww_global_esr(g,
 							gpc, tpc, sm);
-			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr_copy);
+			g->ops.gr.clear_sm_hww(g,
+					gpc, tpc, sm, global_esr_copy);
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: HWWs cleared for "
 					"gpc %d tpc %d sm %d",
@@ -3176,6 +3177,26 @@ static int gv11b_gr_lock_down_sm(struct gk20a *g,
 			check_errors);
 }
 
+static void gv11b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
+				u32 global_esr)
+{
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc) +
+			gv11b_gr_sm_offset(g, sm);
+
+	gk20a_writel(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset,
+			global_esr);
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"Cleared HWW global esr, current reg val: 0x%x",
+			gk20a_readl(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() +
+						offset));
+
+	gk20a_writel(g, gr_gpc0_tpc0_sm0_hww_warp_esr_r() + offset, 0);
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"Cleared HWW warp esr, current reg val: 0x%x",
+			gk20a_readl(g, gr_gpc0_tpc0_sm0_hww_warp_esr_r() +
+						offset));
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3255,4 +3276,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 			 gv11b_gr_get_sm_no_lock_down_hww_global_esr_mask;
 	gops->gr.lock_down_sm = gv11b_gr_lock_down_sm;
 	gops->gr.wait_for_sm_lock_down = gv11b_gr_wait_for_sm_lock_down;
+	gops->gr.clear_sm_hww = gv11b_gr_clear_sm_hww;
 }

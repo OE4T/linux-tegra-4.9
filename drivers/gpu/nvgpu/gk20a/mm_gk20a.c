@@ -2545,27 +2545,3 @@ clean_up:
 	dma_buf_put(dmabuf);
 	return err;
 }
-
-static bool gk20a_mm_is_bar1_supported(struct gk20a *g)
-{
-	return true;
-}
-
-void gk20a_init_mm(struct gpu_ops *gops)
-{
-	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
-	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
-	gops->mm.vm_bind_channel = gk20a_vm_bind_channel;
-	gops->mm.fb_flush = gk20a_mm_fb_flush;
-	gops->mm.l2_invalidate = gk20a_mm_l2_invalidate;
-	gops->mm.l2_flush = gk20a_mm_l2_flush;
-	gops->mm.cbc_clean = gk20a_mm_cbc_clean;
-	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
-	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
-	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
-	gops->mm.init_pdb = gk20a_mm_init_pdb;
-	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
-	gops->mm.init_inst_block = gk20a_init_inst_block;
-	gops->mm.is_bar1_supported = gk20a_mm_is_bar1_supported;
-	gops->mm.mmu_fault_pending = gk20a_fifo_mmu_fault_pending;
-}

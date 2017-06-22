@@ -268,7 +268,6 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 				u32 err_code, bool verbose);
 void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id);
 int gk20a_init_fifo_reset_enable_hw(struct gk20a *g);
-void gk20a_init_fifo(struct gpu_ops *gops);
 
 void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 		unsigned long fault_id);

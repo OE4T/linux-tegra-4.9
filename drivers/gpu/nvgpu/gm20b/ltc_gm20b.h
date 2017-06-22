@@ -35,4 +35,8 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 void gm20b_ltc_isr(struct gk20a *g);
 u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base);
 void gm20b_flush_ltc(struct gk20a *g);
+int gm20b_ltc_alloc_phys_cbc(struct gk20a *g,
+			     size_t compbit_backing_size);
+int gm20b_ltc_alloc_virt_cbc(struct gk20a *g,
+			     size_t compbit_backing_size);
 #endif

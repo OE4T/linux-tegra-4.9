@@ -235,21 +235,3 @@ bool mc_gk20a_is_intr1_pending(struct gk20a *g,
 
 	return is_pending;
 }
-
-void gk20a_init_mc(struct gpu_ops *gops)
-{
-	gops->mc.intr_enable = mc_gk20a_intr_enable;
-	gops->mc.intr_unit_config = mc_gk20a_intr_unit_config;
-	gops->mc.isr_stall = mc_gk20a_isr_stall;
-	gops->mc.intr_stall = mc_gk20a_intr_stall;
-	gops->mc.intr_stall_pause = mc_gk20a_intr_stall_pause;
-	gops->mc.intr_stall_resume = mc_gk20a_intr_stall_resume;
-	gops->mc.intr_nonstall = mc_gk20a_intr_nonstall;
-	gops->mc.intr_nonstall_pause = mc_gk20a_intr_nonstall_pause;
-	gops->mc.intr_nonstall_resume = mc_gk20a_intr_nonstall_resume;
-	gops->mc.enable = gk20a_mc_enable;
-	gops->mc.disable = gk20a_mc_disable;
-	gops->mc.reset = gk20a_mc_reset;
-	gops->mc.boot_0 = gk20a_mc_boot_0;
-	gops->mc.is_intr1_pending = mc_gk20a_is_intr1_pending;
-}

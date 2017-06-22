@@ -66,50 +66,6 @@ static int gr_gk20a_alloc_load_netlist_aiv(struct gk20a *g, u32 *src, u32 len,
 	return 0;
 }
 
-static int gr_gk20a_get_netlist_name(struct gk20a *g, int index, char *name)
-{
-	switch (index) {
-#ifdef GK20A_NETLIST_IMAGE_FW_NAME
-	case NETLIST_FINAL:
-		sprintf(name, GK20A_NETLIST_IMAGE_FW_NAME);
-		return 0;
-#endif
-#ifdef GK20A_NETLIST_IMAGE_A
-	case NETLIST_SLOT_A:
-		sprintf(name, GK20A_NETLIST_IMAGE_A);
-		return 0;
-#endif
-#ifdef GK20A_NETLIST_IMAGE_B
-	case NETLIST_SLOT_B:
-		sprintf(name, GK20A_NETLIST_IMAGE_B);
-		return 0;
-#endif
-#ifdef GK20A_NETLIST_IMAGE_C
-	case NETLIST_SLOT_C:
-		sprintf(name, GK20A_NETLIST_IMAGE_C);
-		return 0;
-#endif
-#ifdef GK20A_NETLIST_IMAGE_D
-	case NETLIST_SLOT_D:
-		sprintf(name, GK20A_NETLIST_IMAGE_D);
-		return 0;
-#endif
-	default:
-		return -1;
-	}
-
-	return -1;
-}
-
-static bool gr_gk20a_is_firmware_defined(void)
-{
-#ifdef GK20A_NETLIST_IMAGE_FW_NAME
-	return true;
-#else
-	return false;
-#endif
-}
-
 static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct nvgpu_firmware *netlist_fw;
@@ -447,11 +403,4 @@ int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr)
 		return gr_gk20a_init_ctx_vars_sim(g, gr);
 	else
 		return gr_gk20a_init_ctx_vars_fw(g, gr);
-}
-
-void gk20a_init_gr_ctx(struct gpu_ops *gops)
-{
-	gops->gr_ctx.get_netlist_name = gr_gk20a_get_netlist_name;
-	gops->gr_ctx.is_fw_defined = gr_gk20a_is_firmware_defined;
-	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
 }

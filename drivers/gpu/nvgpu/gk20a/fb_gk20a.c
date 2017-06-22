@@ -50,53 +50,6 @@ void gk20a_fb_init_hw(struct gk20a *g)
 	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(), addr);
 }
 
-static void gk20a_fb_set_mmu_page_size(struct gk20a *g)
-{
-	/* set large page size in fb */
-	u32 fb_mmu_ctrl = gk20a_readl(g, fb_mmu_ctrl_r());
-
-	fb_mmu_ctrl = (fb_mmu_ctrl &
-		       ~fb_mmu_ctrl_vm_pg_size_f(~0x0)) |
-		fb_mmu_ctrl_vm_pg_size_128kb_f();
-
-	gk20a_writel(g, fb_mmu_ctrl_r(), fb_mmu_ctrl);
-}
-
-static unsigned int gk20a_fb_compression_page_size(struct gk20a *g)
-{
-	return SZ_128K;
-}
-
-static unsigned int gk20a_fb_compressible_page_size(struct gk20a *g)
-{
-	return SZ_64K;
-}
-
-static bool gk20a_fb_debug_mode_enabled(struct gk20a *g)
-{
-	u32 debug_ctrl = gk20a_readl(g, fb_mmu_debug_ctrl_r());
-	return fb_mmu_debug_ctrl_debug_v(debug_ctrl) ==
-		fb_mmu_debug_ctrl_debug_enabled_v();
-}
-
-static void gk20a_fb_set_debug_mode(struct gk20a *g, bool enable)
-{
-	u32 reg_val, debug_ctrl;
-
-	reg_val = gk20a_readl(g, fb_mmu_debug_ctrl_r());
-	if (enable) {
-		debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_f();
-		g->mmu_debug_ctrl = true;
-	} else {
-		debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_f();
-		g->mmu_debug_ctrl = false;
-	}
-
-	reg_val = set_field(reg_val,
-				fb_mmu_debug_ctrl_debug_m(), debug_ctrl);
-	gk20a_writel(g, fb_mmu_debug_ctrl_r(), reg_val);
-}
-
 void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 {
 	struct nvgpu_timeout timeout;
@@ -158,18 +111,4 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 
 out:
 	nvgpu_mutex_release(&g->mm.tlb_lock);
-}
-
-void gk20a_init_fb(struct gpu_ops *gops)
-{
-	gops->fb.init_hw = gk20a_fb_init_hw;
-	gops->fb.reset = fb_gk20a_reset;
-	gops->fb.set_mmu_page_size = gk20a_fb_set_mmu_page_size;
-	gops->fb.compression_page_size = gk20a_fb_compression_page_size;
-	gops->fb.compressible_page_size = gk20a_fb_compressible_page_size;
-	gops->fb.is_debug_mode_enabled = gk20a_fb_debug_mode_enabled;
-	gops->fb.set_debug_mode = gk20a_fb_set_debug_mode;
-	gops->fb.tlb_invalidate = gk20a_fb_tlb_invalidate;
-	gk20a_init_uncompressed_kind_map();
-	gk20a_init_kind_attr();
 }

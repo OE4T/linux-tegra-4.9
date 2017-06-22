@@ -439,8 +439,6 @@ void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 int gk20a_mm_pde_coverage_bit_count(struct vm_gk20a *vm);
 u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g);
 
-struct gpu_ops;
-void gk20a_init_mm(struct gpu_ops *gops);
 const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 						      u32 big_page_size);
 void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *mem,

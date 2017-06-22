@@ -234,8 +234,6 @@ done:
 
 static struct of_device_id tegra_gk20a_of_match[] = {
 #ifdef CONFIG_TEGRA_GK20A
-	{ .compatible = "nvidia,tegra124-gk20a",
-		.data = &gk20a_tegra_platform },
 	{ .compatible = "nvidia,tegra210-gm20b",
 		.data = &gm20b_tegra_platform },
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
@@ -254,25 +252,8 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 	{ .compatible = "nvidia,tegra124-gk20a-vgpu",
 		.data = &vgpu_tegra_platform },
 #endif
-#else
-	{ .compatible = "nvidia,tegra124-gk20a",
-		.data = &gk20a_generic_platform },
-	{ .compatible = "nvidia,tegra210-gm20b",
-		.data = &gk20a_generic_platform },
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	{ .compatible = TEGRA_18x_GPU_COMPAT_TEGRA,
-		.data = &gk20a_generic_platform },
 #endif
 
-#endif
-	{ .compatible = "nvidia,generic-gk20a",
-		.data = &gk20a_generic_platform },
-	{ .compatible = "nvidia,generic-gm20b",
-		.data = &gk20a_generic_platform },
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	{ .compatible = "nvidia,generic-gp10b",
-		.data = &gk20a_generic_platform },
-#endif
 	{ },
 };
 

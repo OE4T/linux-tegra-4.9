@@ -47,7 +47,6 @@
 #include <nvgpu/linux/dma.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/hal_gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a_scale.h"
 #include "gm20b/clk_gm20b.h"
@@ -229,66 +228,6 @@ static unsigned long gk20a_tegra_get_emc_rate(struct gk20a *g,
 		(HZ_TO_MHZ(gpu_freq) * emc_params->bw_ratio * emc_scale) / 1000;
 
 	return MHZ_TO_HZ(emc_rate);
-}
-
-/*
- * gk20a_tegra_postscale(profile, freq)
- *
- * This function sets emc frequency based on current gpu frequency
- */
-
-static void gk20a_tegra_postscale(struct device *dev,
-				  unsigned long freq)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct gk20a_scale_profile *profile = platform->g->scale_profile;
-	struct gk20a_emc_params *emc_params = profile->private_data;
-	struct gk20a *g = get_gk20a(dev);
-	struct clk *emc_clk = platform->clk[2];
-	enum tegra_chipid chip_id = tegra_get_chip_id();
-	unsigned long emc_target;
-	unsigned long emc_freq_lower, emc_freq_upper, emc_freq_rounded;
-
-	emc_target = gk20a_tegra_get_emc_rate(g, emc_params);
-
-	switch (chip_id) {
-	case TEGRA124:
-	case TEGRA132:
-		/* T124 and T132 don't apply any rounding. The resulting
-		 * emc frequency gets implicitly rounded up after issuing
-		 * the clock_set_request.
-		 * So explicitly round up the emc target here to achieve
-		 * the same outcome. */
-		emc_freq_rounded =
-			tegra_emc_round_rate_updown(emc_target, true);
-		break;
-
-	case TEGRA210:
-		emc_freq_lower = (unsigned long)
-			tegra_emc_round_rate_updown(emc_target, false);
-		emc_freq_upper = (unsigned long)
-			tegra_emc_round_rate_updown(emc_target, true);
-
-		/* round to the nearest frequency step */
-		if (emc_target < (emc_freq_lower + emc_freq_upper) / 2)
-			emc_freq_rounded = emc_freq_lower;
-		else
-			emc_freq_rounded = emc_freq_upper;
-		break;
-
-	default:
-		/* a proper rounding function needs to be implemented
-		 * for emc in t18x */
-		emc_freq_rounded = clk_round_rate(emc_clk, emc_target);
-		break;
-	}
-
-	/* only change the emc clock if new rounded frequency is different
-	 * from previously set emc rate */
-	if (emc_freq_rounded != emc_params->freq_last_set) {
-		clk_set_rate(emc_clk, emc_freq_rounded);
-		emc_params->freq_last_set = emc_freq_rounded;
-	}
 }
 
 /*
@@ -617,30 +556,6 @@ err_get_clock:
 	while (i--)
 		clk_put(platform->clk[i]);
 	return ret;
-}
-
-static int gk20a_tegra_reset_assert(struct device *dev)
-{
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-
-	if (!platform->clk_reset)
-		platform->clk_reset = platform->clk[0];
-
-	tegra_periph_reset_assert(platform->clk_reset);
-
-	return 0;
-}
-
-static int gk20a_tegra_reset_deassert(struct device *dev)
-{
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-
-	if (!platform->clk_reset)
-		return -EINVAL;
-
-	tegra_periph_reset_deassert(platform->clk_reset);
-
-	return 0;
 }
 
 #if defined(CONFIG_RESET_CONTROLLER) && defined(CONFIG_COMMON_CLK)
@@ -992,54 +907,6 @@ static int gk20a_clk_get_freqs(struct device *dev,
 }
 #endif
 
-
-struct gk20a_platform gk20a_tegra_platform = {
-	.has_syncpoints = true,
-	.aggressive_sync_destroy_thresh = 64,
-
-	/* power management configuration */
-	.railgate_delay_init	= 500,
-	.can_railgate_init	= true,
-	.can_elpg_init          = true,
-	.enable_slcg            = true,
-	.enable_blcg            = true,
-	.enable_elcg            = true,
-	.enable_elpg            = true,
-	.enable_aelpg           = true,
-	.ptimer_src_freq	= 12000000,
-
-	.force_reset_in_do_idle = false,
-
-	.default_big_page_size	= SZ_128K,
-
-	.ch_wdt_timeout_ms = 7000,
-
-	.probe = gk20a_tegra_probe,
-	.late_probe = gk20a_tegra_late_probe,
-	.remove = gk20a_tegra_remove,
-
-	/* power management callbacks */
-	.suspend = gk20a_tegra_suspend,
-
-	.busy = gk20a_tegra_busy,
-	.idle = gk20a_tegra_idle,
-
-	.reset_assert = gk20a_tegra_reset_assert,
-	.reset_deassert = gk20a_tegra_reset_deassert,
-
-	/* frequency scaling configuration */
-	.prescale = gk20a_tegra_prescale,
-	.postscale = gk20a_tegra_postscale,
-	.devfreq_governor = "nvhost_podgov",
-	.qos_notify = gk20a_scale_qos_notify,
-
-	.dump_platform_dependencies = gk20a_tegra_debug_dump,
-
-	.soc_name = "tegra12x",
-
-	.unified_memory = true,
-};
-
 struct gk20a_platform gm20b_tegra_platform = {
 	.has_syncpoints = true,
 	.aggressive_sync_destroy_thresh = 64,
@@ -1097,8 +964,6 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.prescale = gk20a_tegra_prescale,
 #ifdef CONFIG_TEGRA_BWMGR
 	.postscale = gm20b_tegra_postscale,
-#else
-	.postscale = gk20a_tegra_postscale,
 #endif
 	.devfreq_governor = "nvhost_podgov",
 	.qos_notify = gk20a_scale_qos_notify,

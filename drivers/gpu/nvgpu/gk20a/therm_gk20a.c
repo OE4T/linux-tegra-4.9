@@ -33,58 +33,6 @@ static int gk20a_init_therm_setup_sw(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_init_therm_setup_hw(struct gk20a *g)
-{
-	u32 v;
-
-	/* program NV_THERM registers */
-	gk20a_writel(g, therm_use_a_r(), therm_use_a_ext_therm_0_enable_f() |
-			therm_use_a_ext_therm_1_enable_f()  |
-			therm_use_a_ext_therm_2_enable_f());
-	/* priority for EXT_THERM_0 event set to highest */
-	gk20a_writel(g, therm_evt_ext_therm_0_r(),
-		therm_evt_ext_therm_0_slow_factor_f(0x2) |
-		therm_evt_ext_therm_0_priority_f(3));
-	gk20a_writel(g, therm_evt_ext_therm_1_r(),
-		therm_evt_ext_therm_1_slow_factor_f(0x6) |
-		therm_evt_ext_therm_1_priority_f(2));
-	gk20a_writel(g, therm_evt_ext_therm_2_r(),
-		therm_evt_ext_therm_2_slow_factor_f(0xe) |
-		therm_evt_ext_therm_2_priority_f(1));
-
-
-	gk20a_writel(g, therm_grad_stepping_table_r(0),
-		therm_grad_stepping_table_slowdown_factor0_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by1p5_f()) |
-		therm_grad_stepping_table_slowdown_factor1_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by2_f()) |
-		therm_grad_stepping_table_slowdown_factor2_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by4_f()) |
-		therm_grad_stepping_table_slowdown_factor3_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by8_f()) |
-		therm_grad_stepping_table_slowdown_factor4_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by8_f()));
-	gk20a_writel(g, therm_grad_stepping_table_r(1),
-		therm_grad_stepping_table_slowdown_factor0_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by8_f()) |
-		therm_grad_stepping_table_slowdown_factor1_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by8_f()) |
-		therm_grad_stepping_table_slowdown_factor2_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by8_f()) |
-		therm_grad_stepping_table_slowdown_factor3_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by8_f()) |
-		therm_grad_stepping_table_slowdown_factor4_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by8_f()));
-
-	v = gk20a_readl(g, therm_clk_timing_r(0));
-	v |= therm_clk_timing_grad_slowdown_enabled_f();
-	gk20a_writel(g, therm_clk_timing_r(0), v);
-
-	v = gk20a_readl(g, therm_config2_r());
-	v |= therm_config2_grad_enable_f(1);
-	v |= therm_config2_slowdown_factor_extended_f(1);
-	gk20a_writel(g, therm_config2_r(), v);
-
-	gk20a_writel(g, therm_grad_stepping1_r(),
-			therm_grad_stepping1_pdiv_duration_f(32));
-
-	v = gk20a_readl(g, therm_grad_stepping0_r());
-	v |= therm_grad_stepping0_feature_enable_f();
-	gk20a_writel(g, therm_grad_stepping0_r(), v);
-
-	return 0;
-}
-
 int gk20a_init_therm_support(struct gk20a *g)
 {
 	u32 err;
@@ -152,10 +100,4 @@ int gk20a_elcg_init_idle_filters(struct gk20a *g)
 
 	gk20a_dbg_fn("done");
 	return 0;
-}
-
-void gk20a_init_therm_ops(struct gpu_ops *gops)
-{
-	gops->therm.init_therm_setup_hw = gk20a_init_therm_setup_hw;
-	gops->therm.elcg_init_idle_filters = gk20a_elcg_init_idle_filters;
 }

@@ -29,7 +29,6 @@
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
 #include "vgpu/clk_vgpu.h"
-#include "gk20a/hal_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
 #include "gk20a/gk20a_scale.h"
@@ -451,10 +450,6 @@ static int vgpu_init_hal(struct gk20a *g)
 	int err;
 
 	switch (ver) {
-	case GK20A_GPUID_GK20A:
-		gk20a_dbg_info("gk20a detected");
-		err = vgpu_gk20a_init_hal(g);
-		break;
 	case GK20A_GPUID_GM20B:
 	case GK20A_GPUID_GM20B_B:
 		gk20a_dbg_info("gm20b detected");

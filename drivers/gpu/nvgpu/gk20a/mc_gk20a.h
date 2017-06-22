@@ -15,7 +15,6 @@
 #define MC_GK20A_H
 struct gk20a;
 
-void gk20a_init_mc(struct gpu_ops *gops);
 void mc_gk20a_intr_enable(struct gk20a *g);
 void mc_gk20a_intr_unit_config(struct gk20a *g, bool enable,
 		bool is_stalling, u32 mask);

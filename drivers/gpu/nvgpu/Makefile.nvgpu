@@ -89,9 +89,7 @@ nvgpu-y := \
 	gk20a/ltc_gk20a.o \
 	gk20a/fb_gk20a.o \
 	gk20a/hal.o \
-	gk20a/hal_gk20a.o \
 	gk20a/cde_gk20a.o \
-	gk20a/platform_gk20a_generic.o \
 	gk20a/tsg_gk20a.o \
 	gk20a/ctxsw_trace_gk20a.o \
 	gk20a/fecs_trace_gk20a.o \
@@ -153,8 +151,6 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/tsg_vgpu.o \
 	vgpu/clk_vgpu.o \
 	vgpu/css_vgpu.o \
-	vgpu/gk20a/vgpu_hal_gk20a.o \
-	vgpu/gk20a/vgpu_gr_gk20a.o \
 	vgpu/gm20b/vgpu_hal_gm20b.o \
 	vgpu/gm20b/vgpu_gr_gm20b.o \
 	vgpu/sysfs_vgpu.o

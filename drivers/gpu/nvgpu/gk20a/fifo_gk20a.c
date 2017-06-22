@@ -822,51 +822,6 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static void gk20a_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
-{
-	/*
-	 * These are all errors which indicate something really wrong
-	 * going on in the device
-	 */
-	f->intr.pbdma.device_fatal_0 =
-		pbdma_intr_0_memreq_pending_f() |
-		pbdma_intr_0_memack_timeout_pending_f() |
-		pbdma_intr_0_memack_extra_pending_f() |
-		pbdma_intr_0_memdat_timeout_pending_f() |
-		pbdma_intr_0_memdat_extra_pending_f() |
-		pbdma_intr_0_memflush_pending_f() |
-		pbdma_intr_0_memop_pending_f() |
-		pbdma_intr_0_lbconnect_pending_f() |
-		pbdma_intr_0_lback_timeout_pending_f() |
-		pbdma_intr_0_lback_extra_pending_f() |
-		pbdma_intr_0_lbdat_timeout_pending_f() |
-		pbdma_intr_0_lbdat_extra_pending_f() |
-		pbdma_intr_0_xbarconnect_pending_f() |
-		pbdma_intr_0_pri_pending_f();
-
-	/*
-	 * These are data parsing, framing errors or others which can be
-	 * recovered from with intervention... or just resetting the
-	 * channel
-	 */
-	f->intr.pbdma.channel_fatal_0 =
-		pbdma_intr_0_gpfifo_pending_f() |
-		pbdma_intr_0_gpptr_pending_f() |
-		pbdma_intr_0_gpentry_pending_f() |
-		pbdma_intr_0_gpcrc_pending_f() |
-		pbdma_intr_0_pbptr_pending_f() |
-		pbdma_intr_0_pbentry_pending_f() |
-		pbdma_intr_0_pbcrc_pending_f() |
-		pbdma_intr_0_method_pending_f() |
-		pbdma_intr_0_methodcrc_pending_f() |
-		pbdma_intr_0_pbseg_pending_f() |
-		pbdma_intr_0_signature_pending_f();
-
-	/* Can be used for sw-methods, or represents a recoverable timeout. */
-	f->intr.pbdma.restartable_0 =
-		pbdma_intr_0_device_pending_f();
-}
-
 static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -1720,46 +1675,6 @@ static void gk20a_fifo_get_faulty_id_type(struct gk20a *g, int engine_id,
 		fifo_engine_status_ctx_status_ctxsw_load_v()) ?
 		fifo_engine_status_next_id_type_v(status) :
 		fifo_engine_status_id_type_v(status);
-}
-
-static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
-		unsigned long engine_ids)
-{
-	struct nvgpu_timeout timeout;
-	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
-	unsigned long engine_id;
-
-	/* trigger faults for all bad engines */
-	for_each_set_bit(engine_id, &engine_ids, 32) {
-		u32 mmu_id;
-
-		if (!gk20a_fifo_is_valid_engine_id(g, engine_id)) {
-			WARN_ON(true);
-			break;
-		}
-
-		mmu_id = gk20a_engine_id_to_mmu_id(g, engine_id);
-		if (mmu_id != FIFO_INVAL_ENGINE_ID)
-			gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id),
-				     fifo_trigger_mmu_fault_id_f(mmu_id) |
-				     fifo_trigger_mmu_fault_enable_f(1));
-	}
-
-	/* Wait for MMU fault to trigger */
-	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
-			   NVGPU_TIMER_CPU_TIMER);
-	do {
-		if (gk20a_readl(g, fifo_intr_0_r()) &
-				fifo_intr_0_mmu_fault_pending_f())
-			break;
-
-		nvgpu_usleep_range(delay, delay * 2);
-		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired_msg(&timeout, "mmu fault timeout"));
-
-	/* release mmu fault trigger */
-	for_each_set_bit(engine_id, &engine_ids, 32)
-		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
 }
 
 static u32 gk20a_fifo_engines_on_id(struct gk20a *g, u32 id, bool is_tsg)
@@ -3406,22 +3321,6 @@ int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 	return ret;
 }
 
-static void gk20a_fifo_apply_pb_timeout(struct gk20a *g)
-{
-	u32 timeout;
-
-	if (nvgpu_platform_is_silicon(g)) {
-		timeout = gk20a_readl(g, fifo_pb_timeout_r());
-		timeout &= ~fifo_pb_timeout_detection_enabled_f();
-		gk20a_writel(g, fifo_pb_timeout_r(), timeout);
-	}
-}
-
-static u32 gk20a_fifo_get_num_fifos(struct gk20a *g)
-{
-	return ccsr_channel__size_1_v();
-}
-
 u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g)
 {
 	return pbdma_signature_hw_valid_f() | pbdma_signature_sw_zero_f();
@@ -3684,38 +3583,6 @@ void gk20a_fifo_disable_channel(struct channel_gk20a *ch)
 		gk20a_readl(ch->g,
 			ccsr_channel_r(ch->chid)) |
 			ccsr_channel_enable_clr_true_f());
-}
-
-static void gk20a_fifo_channel_bind(struct channel_gk20a *c)
-{
-	struct gk20a *g = c->g;
-	u32 inst_ptr = gk20a_mm_inst_block_addr(g, &c->inst_block) >>
-		ram_in_base_shift_v();
-
-	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
-		c->chid, inst_ptr);
-
-
-	gk20a_writel(g, ccsr_channel_r(c->chid),
-		(gk20a_readl(g, ccsr_channel_r(c->chid)) &
-		 ~ccsr_channel_runlist_f(~0)) |
-		 ccsr_channel_runlist_f(c->runlist_id));
-
-	gk20a_writel(g, ccsr_channel_inst_r(c->chid),
-		ccsr_channel_inst_ptr_f(inst_ptr) |
-		nvgpu_aperture_mask(g, &c->inst_block,
-		 ccsr_channel_inst_target_sys_mem_ncoh_f(),
-		 ccsr_channel_inst_target_vid_mem_f()) |
-		ccsr_channel_inst_bind_true_f());
-
-	gk20a_writel(g, ccsr_channel_r(c->chid),
-		(gk20a_readl(g, ccsr_channel_r(c->chid)) &
-		 ~ccsr_channel_enable_set_f(~0)) |
-		 ccsr_channel_enable_set_true_f());
-
-	wmb();
-	atomic_set(&c->bound, true);
-
 }
 
 void gk20a_fifo_channel_unbind(struct channel_gk20a *ch_gk20a)
@@ -4080,65 +3947,3 @@ int gk20a_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 	return 0;
 }
 #endif
-
-
-void gk20a_init_fifo(struct gpu_ops *gops)
-{
-	gops->fifo.disable_channel = gk20a_fifo_disable_channel;
-	gops->fifo.enable_channel = gk20a_fifo_enable_channel;
-	gops->fifo.bind_channel = gk20a_fifo_channel_bind;
-	gops->fifo.unbind_channel = gk20a_fifo_channel_unbind;
-	gops->fifo.init_fifo_setup_hw = gk20a_init_fifo_setup_hw;
-	gops->fifo.preempt_channel = gk20a_fifo_preempt_channel;
-	gops->fifo.preempt_tsg = gk20a_fifo_preempt_tsg;
-	gops->fifo.update_runlist = gk20a_fifo_update_runlist;
-	gops->fifo.trigger_mmu_fault = gk20a_fifo_trigger_mmu_fault;
-	gops->fifo.get_mmu_fault_info = gk20a_fifo_get_mmu_fault_info;
-	gops->fifo.apply_pb_timeout = gk20a_fifo_apply_pb_timeout;
-	gops->fifo.wait_engine_idle = gk20a_fifo_wait_engine_idle;
-	gops->fifo.get_num_fifos = gk20a_fifo_get_num_fifos;
-	gops->fifo.get_pbdma_signature = gk20a_fifo_get_pbdma_signature;
-	gops->fifo.set_runlist_interleave = gk20a_fifo_set_runlist_interleave;
-	gops->fifo.tsg_set_timeslice = gk20a_fifo_tsg_set_timeslice;
-	gops->fifo.force_reset_ch = gk20a_fifo_force_reset_ch;
-	gops->fifo.engine_enum_from_type = gk20a_fifo_engine_enum_from_type;
-	/* gk20a doesn't support device_info_data packet parsing */
-	gops->fifo.device_info_data_parse = NULL;
-	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
-	gops->fifo.init_engine_info = gk20a_fifo_init_engine_info;
-	gops->fifo.runlist_entry_size = ram_rl_entry_size_v;
-	gops->fifo.get_tsg_runlist_entry = gk20a_get_tsg_runlist_entry;
-	gops->fifo.get_ch_runlist_entry = gk20a_get_ch_runlist_entry;
-	gops->fifo.is_fault_engine_subid_gpc = gk20a_is_fault_engine_subid_gpc;
-	gops->fifo.dump_pbdma_status = gk20a_dump_pbdma_status;
-	gops->fifo.dump_eng_status = gk20a_dump_eng_status;
-	gops->fifo.dump_channel_status_ramfc = gk20a_dump_channel_status_ramfc;
-	gops->fifo.intr_0_error_mask = gk20a_fifo_intr_0_error_mask;
-	gops->fifo.is_preempt_pending = gk20a_fifo_is_preempt_pending;
-	gops->fifo.init_pbdma_intr_descs = gk20a_fifo_init_pbdma_intr_descs;
-	gops->fifo.reset_enable_hw = gk20a_init_fifo_reset_enable_hw;
-	gops->fifo.setup_ramfc = gk20a_fifo_setup_ramfc;
-	gops->fifo.channel_set_priority = gk20a_fifo_set_priority;
-	gops->fifo.channel_set_timeslice = gk20a_fifo_set_timeslice;
-	gops->fifo.alloc_inst = gk20a_fifo_alloc_inst;
-	gops->fifo.free_inst = gk20a_fifo_free_inst;
-	gops->fifo.setup_userd = gk20a_fifo_setup_userd;
-	gops->fifo.userd_gp_get = gk20a_fifo_userd_gp_get;
-	gops->fifo.userd_gp_put = gk20a_fifo_userd_gp_put;
-	gops->fifo.userd_pb_get = gk20a_fifo_userd_pb_get;
-	gops->fifo.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val;
-	gops->fifo.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg;
-	gops->fifo.handle_sched_error = gk20a_fifo_handle_sched_error;
-	gops->fifo.handle_pbdma_intr_0 = gk20a_fifo_handle_pbdma_intr_0;
-	gops->fifo.handle_pbdma_intr_1 = gk20a_fifo_handle_pbdma_intr_1;
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-	gops->fifo.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf;
-	gops->fifo.free_syncpt_buf = gk20a_fifo_free_syncpt_buf;
-	gops->fifo.add_syncpt_wait_cmd = gk20a_fifo_add_syncpt_wait_cmd;
-	gops->fifo.get_syncpt_wait_cmd_size =
-				gk20a_fifo_get_syncpt_wait_cmd_size;
-	gops->fifo.add_syncpt_incr_cmd = gk20a_fifo_add_syncpt_incr_cmd;
-	gops->fifo.get_syncpt_incr_cmd_size =
-				gk20a_fifo_get_syncpt_incr_cmd_size;
-#endif
-}

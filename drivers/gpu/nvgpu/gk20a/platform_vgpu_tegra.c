@@ -14,7 +14,6 @@
  */
 
 #include "gk20a.h"
-#include "hal_gk20a.h"
 #include "platform_gk20a.h"
 #include "vgpu/clk_vgpu.h"
 

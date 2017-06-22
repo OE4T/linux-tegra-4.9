@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 - 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,6 @@
 struct gpu_ops;
 struct gk20a;
 
-void gk20a_init_therm_ops(struct gpu_ops *gops);
 int gk20a_elcg_init_idle_filters(struct gk20a *g);
 
 int gk20a_init_therm_support(struct gk20a *g);

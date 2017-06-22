@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,7 +17,6 @@
 struct gk20a;
 struct nvgpu_mem;
 
-void gk20a_init_fb(struct gpu_ops *gops);
 void fb_gk20a_reset(struct gk20a *g);
 void gk20a_fb_init_hw(struct gk20a *g);
 void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb);

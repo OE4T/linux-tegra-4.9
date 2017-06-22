@@ -845,6 +845,9 @@ static struct of_device_id tegra_host1x_of_match[] = {
 	{ .name = "host1x",
 		.compatible = "nvidia,tegra194-host1x",
 		.data = (struct nvhost_device_data *)&t19_host1x_info },
+	{ .name = "host1x",
+		.compatible = "nvidia,tegra194-host1x-hv",
+		.data = (struct nvhost_device_data *)&t19_host1x_hv_info },
 #endif
 	{ },
 };

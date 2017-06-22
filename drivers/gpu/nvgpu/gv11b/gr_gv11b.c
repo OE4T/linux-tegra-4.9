@@ -2781,7 +2781,7 @@ static void gv11b_gr_suspend_single_sm(struct gk20a *g,
 	gk20a_writel(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset,
 			dbgr_control0);
 
-	err = gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc,
+	err = g->ops.gr.wait_for_sm_lock_down(g, gpc, tpc, sm,
 			global_esr_mask, check_errors);
 	if (err) {
 		nvgpu_err(g,
@@ -2822,8 +2822,8 @@ static void gv11b_gr_suspend_all_sms(struct gk20a *g,
 	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
 		for (tpc = 0; tpc < gr_gk20a_get_tpc_count(gr, gpc); tpc++) {
 			for (sm = 0; sm < sm_per_tpc; sm++) {
-				err = gk20a_gr_wait_for_sm_lock_down(g,
-					gpc, tpc,
+				err = g->ops.gr.wait_for_sm_lock_down(g,
+					gpc, tpc, sm,
 					global_esr_mask, check_errors);
 				if (err) {
 					nvgpu_err(g,
@@ -3026,6 +3026,156 @@ static u32 gv11b_gr_get_sm_no_lock_down_hww_global_esr_mask(struct gk20a *g)
 	return global_esr_mask;
 }
 
+static void gv11b_gr_sm_dump_warp_bpt_pause_trap_mask_regs(struct gk20a *g,
+					u32 offset, bool timeout)
+{
+	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
+	u32 dbgr_control0 = gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
+	u32 dbgr_status0 = gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_dbgr_status0_r() + offset);
+	/* 64 bit read */
+	warps_valid =
+		(u64)gk20a_readl(g, gr_gpc0_tpc0_sm0_warp_valid_mask_1_r() +
+					offset) << 32;
+	warps_valid |= gk20a_readl(g,
+			gr_gpc0_tpc0_sm0_warp_valid_mask_0_r() + offset);
+
+	/* 64 bit read */
+	warps_paused =
+		(u64)gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_1_r() +
+					offset) << 32;
+	warps_paused |= gk20a_readl(g,
+			gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_0_r() + offset);
+
+	/* 64 bit read */
+	warps_trapped =
+		(u64)gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_1_r() +
+					offset) << 32;
+	warps_trapped |= gk20a_readl(g,
+			gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_0_r() + offset);
+	if (timeout)
+		nvgpu_err(g,
+		"STATUS0=0x%x CONTROL0=0x%x VALID_MASK=0x%llx "
+		"PAUSE_MASK=0x%llx TRAP_MASK=0x%llx\n",
+		dbgr_status0, dbgr_control0, warps_valid,
+		warps_paused, warps_trapped);
+	else
+		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+		"STATUS0=0x%x CONTROL0=0x%x VALID_MASK=0x%llx "
+		"PAUSE_MASK=0x%llx TRAP_MASK=0x%llx\n",
+		dbgr_status0, dbgr_control0, warps_valid,
+		warps_paused, warps_trapped);
+}
+
+static int gv11b_gr_wait_for_sm_lock_down(struct gk20a *g,
+		u32 gpc, u32 tpc, u32 sm,
+		u32 global_esr_mask, bool check_errors)
+{
+	bool locked_down;
+	bool no_error_pending;
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
+	bool mmu_debug_mode_enabled = g->ops.fb.is_debug_mode_enabled(g);
+	u32 dbgr_status0 = 0;
+	u32 warp_esr, global_esr;
+	struct nvgpu_timeout timeout;
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
+			gk20a_gr_tpc_offset(g, tpc);
+			gv11b_gr_sm_offset(g, sm);
+
+	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+		"GPC%d TPC%d: locking down SM%d", gpc, tpc, sm);
+
+	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+			   NVGPU_TIMER_CPU_TIMER);
+
+	/* wait for the sm to lock down */
+	do {
+		global_esr = g->ops.gr.get_sm_hww_global_esr(g, gpc, tpc, sm);
+		dbgr_status0 = gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_dbgr_status0_r() + offset);
+
+		warp_esr = g->ops.gr.get_sm_hww_warp_esr(g, gpc, tpc, sm);
+
+		locked_down =
+		    (gr_gpc0_tpc0_sm0_dbgr_status0_locked_down_v(dbgr_status0) ==
+		     gr_gpc0_tpc0_sm0_dbgr_status0_locked_down_true_v());
+		no_error_pending =
+			check_errors &&
+			(gr_gpc0_tpc0_sm0_hww_warp_esr_error_v(warp_esr) ==
+			 gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_v()) &&
+			((global_esr & ~global_esr_mask) == 0);
+
+		if (locked_down) {
+		/*
+		 * if SM reports locked down, it means that SM is idle and
+		 * trapped and also that one of the these conditions are true
+		 * 1) sm is nonempty and all valid warps are paused
+		 * 2) sm is empty and held in trapped state due to stop trigger
+		 * 3) sm is nonempty and some warps are not paused, but are
+		 *    instead held at RTT due to an "active" stop trigger
+		 * Check for Paused warp mask != Valid
+		 * warp mask after SM reports it is locked down in order to
+		 * distinguish case 1 from case 3.  When case 3 is detected,
+		 * it implies a misprogrammed trap handler code, as all warps
+		 * in the handler must promise to BPT.PAUSE instead of RTT
+		 * whenever SR64 read in trap mode indicates stop trigger
+		 * is asserted.
+		 */
+			gv11b_gr_sm_dump_warp_bpt_pause_trap_mask_regs(g,
+						offset, false);
+		}
+
+		if (locked_down || no_error_pending) {
+			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+				"GPC%d TPC%d: locked down SM%d", gpc, tpc, sm);
+			return 0;
+		}
+
+		/* if an mmu fault is pending and mmu debug mode is not
+		 * enabled, the sm will never lock down.
+		 */
+		if (!mmu_debug_mode_enabled &&
+		     (g->ops.mm.mmu_fault_pending(g))) {
+			nvgpu_err(g,
+				"GPC%d TPC%d: mmu fault pending,"
+				" SM%d will never lock down!", gpc, tpc, sm);
+			return -EFAULT;
+		}
+
+		nvgpu_usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	nvgpu_err(g, "GPC%d TPC%d: timed out while trying to "
+			"lock down SM%d", gpc, tpc, sm);
+	gv11b_gr_sm_dump_warp_bpt_pause_trap_mask_regs(g, offset, true);
+
+	return -ETIMEDOUT;
+}
+
+static int gv11b_gr_lock_down_sm(struct gk20a *g,
+			 u32 gpc, u32 tpc, u32 sm, u32 global_esr_mask,
+			 bool check_errors)
+{
+	u32 dbgr_control0;
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc) +
+			gv11b_gr_sm_offset(g, sm);
+
+	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+			"GPC%d TPC%d SM%d: assert stop trigger", gpc, tpc, sm);
+
+	/* assert stop trigger */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
+	dbgr_control0 |= gr_gpc0_tpc0_sm0_dbgr_control0_stop_trigger_enable_f();
+	gk20a_writel(g,
+		gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset, dbgr_control0);
+
+	return g->ops.gr.wait_for_sm_lock_down(g, gpc, tpc, sm, global_esr_mask,
+			check_errors);
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3103,4 +3253,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_sm_hww_global_esr = gv11b_gr_get_sm_hww_global_esr;
 	gops->gr.get_sm_no_lock_down_hww_global_esr_mask =
 			 gv11b_gr_get_sm_no_lock_down_hww_global_esr_mask;
+	gops->gr.lock_down_sm = gv11b_gr_lock_down_sm;
+	gops->gr.wait_for_sm_lock_down = gv11b_gr_wait_for_sm_lock_down;
 }

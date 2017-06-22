@@ -3009,6 +3009,23 @@ static u32 gv11b_gr_get_sm_hww_global_esr(struct gk20a *g,
 	return hww_global_esr;
 }
 
+static u32 gv11b_gr_get_sm_no_lock_down_hww_global_esr_mask(struct gk20a *g)
+{
+	/*
+	 * These three interrupts don't require locking down the SM. They can
+	 * be handled by usermode clients as they aren't fatal. Additionally,
+	 * usermode clients may wish to allow some warps to execute while others
+	 * are at breakpoints, as opposed to fatal errors where all warps should
+	 * halt.
+	 */
+	u32 global_esr_mask =
+		gr_gpc0_tpc0_sm0_hww_global_esr_bpt_int_pending_f()   |
+		gr_gpc0_tpc0_sm0_hww_global_esr_bpt_pause_pending_f() |
+		gr_gpc0_tpc0_sm0_hww_global_esr_single_step_complete_pending_f();
+
+	return global_esr_mask;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3084,4 +3101,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.resume_from_pause = gv11b_gr_resume_from_pause;
 	gops->gr.get_sm_hww_warp_esr = gv11b_gr_get_sm_hww_warp_esr;
 	gops->gr.get_sm_hww_global_esr = gv11b_gr_get_sm_hww_global_esr;
+	gops->gr.get_sm_no_lock_down_hww_global_esr_mask =
+			 gv11b_gr_get_sm_no_lock_down_hww_global_esr_mask;
 }

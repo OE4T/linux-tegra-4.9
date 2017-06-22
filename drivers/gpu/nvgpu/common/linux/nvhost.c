@@ -42,8 +42,11 @@ int nvgpu_get_nvhost_dev(struct gk20a *g)
 		}
 
 	} else {
-		host1x_pdev = to_platform_device(g->dev->parent);
-		dev_warn(g->dev, "host1x reference not found. assuming host1x to be parent");
+		if (g->has_syncpoints) {
+			dev_warn(g->dev, "host1x reference not found. assuming no syncpoints support\n");
+			g->has_syncpoints = false;
+		}
+		return 0;
 	}
 
 	g->nvhost_dev = nvgpu_kzalloc(g, sizeof(struct nvgpu_nvhost_dev));

@@ -199,6 +199,18 @@ struct nvhost_device_data t19_host1x_info = {
 	.isolate_contexts	= true,
 };
 
+struct nvhost_device_data t19_host1x_hv_info = {
+	.clocks			= {
+		{"host1x", UINT_MAX},
+		{"actmon", UINT_MAX}
+	},
+	.can_powergate          = false,
+	.autosuspend_delay      = 2000,
+	.private_data		= &host1x04_info,
+	.finalize_poweron = nvhost_host1x_finalize_poweron,
+	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
+};
+
 static struct host1x_device_info host1xb04_info = {
 	.nb_channels	= T194_NVHOST_NUMCHANNELS,
 	.ch_base	= 0,

@@ -137,10 +137,6 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 			card->dai_link[i].codec_of_node =
 			of_parse_phandle(pdev->dev.of_node, "codec", 0);
 		}
-		if (i < soc_data->num_ch) {
-			strcpy((char *)card->dai_link[i].cpu_name,
-					pdev->name);
-		}
 	}
 
 	if (tegra210_virt_admaif_register_component(pdev, soc_data)) {

@@ -741,7 +741,7 @@ I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S6 Loopback", 0x06),
 };
 
 static const struct snd_soc_component_driver tegra210_admaif_dai_driver = {
-	.name		= DRV_NAME,
+	.name		= "tegra210-virt-pcm",
 	.controls = tegra_virt_t186ref_controls,
 	.num_controls = ARRAY_SIZE(tegra_virt_t186ref_controls),
 };

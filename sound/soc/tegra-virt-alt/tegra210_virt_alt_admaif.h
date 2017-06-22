@@ -19,7 +19,7 @@
 #ifndef __TEGRA210_VIRT_ALT_ADMAIF_H__
 #define __TEGRA210_VIRT_ALT_ADMAIF_H__
 
-#define DRV_NAME					"tegra210-virt-pcm"
+#define DRV_NAME					"virt-alt-pcm"
 
 #define TEGRA210_ADMAIF_BASE				0x702d0000
 #define TEGRA210_ADMAIF_XBAR_RX_FIFO_READ		0x2c

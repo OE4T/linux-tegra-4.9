@@ -265,21 +265,22 @@ skip_unmapping:
 }
 
 static int declare_coherent_heap(struct device *dev, phys_addr_t base,
-					size_t size)
+					size_t size, int map)
 {
 	int err;
+	int flags = map ? DMA_MEMORY_MAP : DMA_MEMORY_NOMAP;
 
 	BUG_ON(dev->dma_mem);
 	dma_set_coherent_mask(dev,  DMA_BIT_MASK(64));
 	err = dma_declare_coherent_memory(dev, 0,
-			base, size, DMA_MEMORY_NOMAP);
-	if (err & DMA_MEMORY_NOMAP) {
-		dev_dbg(dev, "dma coherent mem base (%pa) size (0x%zx)\n",
-			&base, size);
+			base, size, flags);
+	if (err & flags) {
+		dev_dbg(dev, "dma coherent mem base (%pa) size (0x%zx) %x\n",
+			&base, size, flags);
 		return 0;
 	}
-	dev_err(dev, "declare dma coherent_mem fail %pa 0x%zx\n",
-		&base, size);
+	dev_err(dev, "declare dma coherent_mem fail %pa 0x%zx %x\n",
+		&base, size, flags);
 	return -ENOMEM;
 }
 
@@ -345,7 +346,9 @@ int dma_declare_coherent_resizable_cma_memory(struct device *dev,
 	dma_debugfs_init(dev, heap_info);
 
 	if (declare_coherent_heap(&heap_info->dev,
-				  heap_info->cma_base, heap_info->cma_len))
+				  heap_info->cma_base, heap_info->cma_len,
+				  (dma_info->notifier.ops &&
+					dma_info->notifier.ops->resize) ? 0 : 1))
 		goto declare_fail;
 	heap_info->dev.dma_mem->size = 0;
 	heap_info->shrink_interval = HZ * RESIZE_DEFAULT_SHRINK_AGE;

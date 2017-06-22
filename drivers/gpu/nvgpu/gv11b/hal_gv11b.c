@@ -25,8 +25,10 @@
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 
+#include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
 
+#include "gp10b/ltc_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
 
 #include "hal_gv11b.h"
@@ -50,9 +52,23 @@
 
 #include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
 
-static struct gpu_ops gv11b_ops;
-
-static struct gpu_ops gv11b_ops = {
+static const struct gpu_ops gv11b_ops = {
+	.ltc = {
+		.determine_L2_size_bytes = gp10b_determine_L2_size_bytes,
+		.set_zbc_s_entry = gv11b_ltc_set_zbc_stencil_entry,
+		.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry,
+		.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry,
+		.init_cbc = NULL,
+		.init_fs_state = gv11b_ltc_init_fs_state,
+		.init_comptags = gp10b_ltc_init_comptags,
+		.cbc_ctrl = gm20b_ltc_cbc_ctrl,
+		.isr = gv11b_ltc_isr,
+		.cbc_fix_config = gv11b_ltc_cbc_fix_config,
+		.flush = gm20b_flush_ltc,
+#ifdef CONFIG_DEBUG_FS
+		.sync_debugfs = gp10b_ltc_sync_debugfs,
+#endif
+	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
 			gv11b_slcg_bus_load_gating_prod,
@@ -187,6 +203,7 @@ int gv11b_init_hal(struct gk20a *g)
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
+	gops->ltc = gv11b_ops.ltc;
 	gops->clock_gating = gv11b_ops.clock_gating;
 
 	/* boot in non-secure modes for time beeing */
@@ -196,7 +213,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_bus(gops);
 	gv11b_init_mc(gops);
 	gp10b_init_priv_ring(gops);
-	gv11b_init_ltc(gops);
 	gv11b_init_gr(gops);
 	gv11b_init_fecs_trace_ops(gops);
 	gv11b_init_fb(gops);

@@ -14,7 +14,6 @@
  */
 
 #include "gk20a/gk20a.h"
-
 #include "gp10b/ltc_gp10b.h"
 
 #include "ltc_gv11b.h"
@@ -28,7 +27,7 @@
 /*
  * Sets the ZBC stencil for the passed index.
  */
-static void gv11b_ltc_set_zbc_stencil_entry(struct gk20a *g,
+void gv11b_ltc_set_zbc_stencil_entry(struct gk20a *g,
 					  struct zbc_entry *stencil_val,
 					  u32 index)
 {
@@ -43,7 +42,7 @@ static void gv11b_ltc_set_zbc_stencil_entry(struct gk20a *g,
 	gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r());
 }
 
-static void gv11b_ltc_init_fs_state(struct gk20a *g)
+void gv11b_ltc_init_fs_state(struct gk20a *g)
 {
 	u32 ltc_intr;
 	u32 reg;
@@ -79,7 +78,7 @@ static void gv11b_ltc_init_fs_state(struct gk20a *g)
 				ltc_intr);
 }
 
-static void gv11b_ltc_isr(struct gk20a *g)
+void gv11b_ltc_isr(struct gk20a *g)
 {
 	u32 mc_intr, ltc_intr3;
 	unsigned int ltc, slice;
@@ -184,7 +183,7 @@ static void gv11b_ltc_isr(struct gk20a *g)
 	gp10b_ltc_isr(g);
 }
 
-static u32 gv11b_ltc_cbc_fix_config(struct gk20a *g, int base)
+u32 gv11b_ltc_cbc_fix_config(struct gk20a *g, int base)
 {
 	u32 val = gk20a_readl(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r());
 
@@ -194,15 +193,4 @@ static u32 gv11b_ltc_cbc_fix_config(struct gk20a *g, int base)
 		nvgpu_err(g, "Invalid number of active ltcs: %08x", val);
 	}
 	return base;
-}
-
-
-void gv11b_init_ltc(struct gpu_ops *gops)
-{
-	gp10b_init_ltc(gops);
-	gops->ltc.set_zbc_s_entry = gv11b_ltc_set_zbc_stencil_entry;
-	gops->ltc.init_fs_state = gv11b_ltc_init_fs_state;
-	gops->ltc.cbc_fix_config = gv11b_ltc_cbc_fix_config;
-	gops->ltc.isr = gv11b_ltc_isr;
-	gops->ltc.init_cbc = NULL;
 }

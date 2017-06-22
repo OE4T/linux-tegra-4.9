@@ -13,11 +13,17 @@
 
 #include <linux/bitops.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/tegra-mce.h>
 
 #define MASK GENMASK(15, 12)
 
-void t19x_flush_cache_all(void)
+#define CCPLEX_CACHE_CONTROL		49
+#define CCPLEX_CC_GPU_ONLY_BITS_SHIFT	8
+
+#define MAX_L3_WAYS			16
+
+static void t19x_flush_cache_all(void)
 {
 	u64 id_afr0;
 	u64 ret;
@@ -38,7 +44,7 @@ void t19x_flush_cache_all(void)
 	}
 }
 
-void t19x_flush_dcache_all(void)
+static void t19x_flush_dcache_all(void)
 {
 	u64 id_afr0;
 	u64 ret;
@@ -59,7 +65,7 @@ void t19x_flush_dcache_all(void)
 	}
 }
 
-void t19x_clean_dcache_all(void)
+static void t19x_clean_dcache_all(void)
 {
 	u64 id_afr0;
 	u64 ret;
@@ -80,12 +86,72 @@ void t19x_clean_dcache_all(void)
 	}
 }
 
+static int t19x_set_l3_cache_ways(u64 gpu_only_ways, u64 gpu_ways)
+{
+	u64 nvg_index = CCPLEX_CACHE_CONTROL;
+	u64 nvg_data;
+	u64 ret;
+
+	if ((gpu_only_ways > MAX_L3_WAYS) || (gpu_ways > MAX_L3_WAYS)) {
+		pr_err("gpu_ways:%llu or gpu_only_ways:%llu exceeds 16!!\n",
+			gpu_ways, gpu_only_ways);
+		return -EINVAL;
+	}
+
+	if (gpu_ways < gpu_only_ways) {
+		pr_err("gpu_ways:%llu is smaller than gpu_only_ways:%llu\n",
+			gpu_ways, gpu_only_ways);
+		return -EINVAL;
+	}
+
+	gpu_only_ways <<= CCPLEX_CC_GPU_ONLY_BITS_SHIFT;
+	nvg_data = gpu_ways | gpu_only_ways;
+
+	asm volatile("msr s3_0_c15_c1_3, %0" : : "r" (nvg_data));
+	asm volatile("msr s3_0_c15_c1_2, %0" : : "r" (nvg_index));
+	asm volatile ("mrs %0, s3_0_c15_c1_3" : "=r" (ret));
+
+	if (ret != nvg_data) {
+		pr_err("CCPLEX_CACHE_CONTROL contents are not updated!!\n");
+		return -ENODEV;
+	}
+	return 0;
+}
+
 static int __init tegra19x_cache_op_init(void)
 {
+	struct device_node *np;
+	u64 gpu_ways, gpu_only_ways;
+	int ret = 0;
+
 	tegra_flush_cache_all = t19x_flush_cache_all;
 	tegra_flush_dcache_all = t19x_flush_dcache_all;
 	tegra_clean_dcache_all = t19x_clean_dcache_all;
-	return 0;
+
+	for_each_compatible_node(np, NULL, "nvidia,cache-t19x") {
+		ret = of_property_read_u64_array(np, "l3-gpu-ways",
+					&gpu_ways, 1);
+		if (ret <= 0) {
+			pr_err("Did not find l3-gpu-ways property\n");
+			return ret;
+		}
+
+		ret = of_property_read_u64_array(np, "l3-gpu-only-ways",
+					&gpu_only_ways, 1);
+		if (ret <= 0) {
+			pr_err("Did not find l3-gpu-only-ways property\n");
+			return ret;
+		}
+
+		ret = t19x_set_l3_cache_ways(gpu_only_ways, gpu_ways);
+		if (ret)
+			pr_err("Could not set gpu_ways in L3\n");
+		else
+			pr_info("set L3 gpu-ways:%llu and gpu-only-ways:%llu\n",
+				gpu_ways, gpu_only_ways);
+	}
+
+	return ret;
 }
 arch_initcall(tegra19x_cache_op_init);
 

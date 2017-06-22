@@ -254,6 +254,14 @@ static struct iommu_linear_map_mapping t186_linear_map[] = {
 		.name = "15200000.nvdisplay",
 		.map = tegra_fb_linear_map,
 	},
+	{
+		.name = "15210000.nvdisplay",
+		.map = tegra_fb_linear_map,
+	},
+	{
+		.name = "15220000.nvdisplay",
+		.map = tegra_fb_linear_map,
+	},
 	{},
 };
 

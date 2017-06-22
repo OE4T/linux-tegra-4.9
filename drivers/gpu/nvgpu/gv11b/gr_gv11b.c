@@ -1786,7 +1786,8 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			}
 
 			/* reset the HWW errors after locking down */
-			global_esr_copy = gk20a_readl(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset);
+			global_esr_copy = g->ops.gr.get_sm_hww_global_esr(g,
+							gpc, tpc, sm);
 			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr_copy);
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: HWWs cleared for "
@@ -2995,6 +2996,19 @@ static u32 gv11b_gr_get_sm_hww_warp_esr(struct gk20a *g,
 	return hww_warp_esr;
 }
 
+static u32 gv11b_gr_get_sm_hww_global_esr(struct gk20a *g,
+			u32 gpc, u32 tpc, u32 sm)
+{
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
+			 gk20a_gr_tpc_offset(g, tpc) +
+			 gv11b_gr_sm_offset(g, sm);
+
+	u32 hww_global_esr = gk20a_readl(g,
+				 gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset);
+
+	return hww_global_esr;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3069,4 +3083,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.resume_all_sms = gv11b_gr_resume_all_sms;
 	gops->gr.resume_from_pause = gv11b_gr_resume_from_pause;
 	gops->gr.get_sm_hww_warp_esr = gv11b_gr_get_sm_hww_warp_esr;
+	gops->gr.get_sm_hww_global_esr = gv11b_gr_get_sm_hww_global_esr;
 }

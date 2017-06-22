@@ -5518,11 +5518,6 @@ void gk20a_gr_clear_sm_hww(struct gk20a *g,
 			gr_gpc0_tpc0_sm_hww_warp_esr_error_none_f());
 }
 
-u32 gk20a_mask_hww_warp_esr(u32 hww_warp_esr)
-{
-	return hww_warp_esr;
-}
-
 int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 		bool *post_event, struct channel_gk20a *fault_ch,
 		u32 *hww_global_esr)
@@ -5549,8 +5544,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 
 	global_esr = gk20a_readl(g,
 				 gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
-	warp_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
-	warp_esr = g->ops.gr.mask_hww_warp_esr(warp_esr);
+	warp_esr = g->ops.gr.get_sm_hww_warp_esr(g, gpc, tpc, sm);
 
 	if (!sm_debugger_attached) {
 		nvgpu_err(g, "sm hww global %08x warp %08x",
@@ -7941,6 +7935,8 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 	u32 dbgr_status0 = 0, dbgr_control0 = 0;
 	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
 	struct nvgpu_timeout timeout;
+	u32 warp_esr;
+	u32 sm = 0;
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		"GPC%d TPC%d: locking down SM", gpc, tpc);
@@ -7952,12 +7948,10 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 	do {
 		u32 global_esr = gk20a_readl(g,
 				gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
-		u32 warp_esr = gk20a_readl(g,
-				gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
 		dbgr_status0 = gk20a_readl(g,
 				gr_gpc0_tpc0_sm_dbgr_status0_r() + offset);
 
-		warp_esr = g->ops.gr.mask_hww_warp_esr(warp_esr);
+		warp_esr = g->ops.gr.get_sm_hww_warp_esr(g, gpc, tpc, sm);
 
 		locked_down =
 		    (gr_gpc0_tpc0_sm_dbgr_status0_locked_down_v(dbgr_status0) ==
@@ -8495,4 +8489,12 @@ u32 gr_gk20a_tpc_enabled_exceptions(struct gk20a *g)
 	}
 
 	return tpc_exception_en;
+}
+
+u32 gk20a_gr_get_sm_hww_warp_esr(struct gk20a *g, u32 gpc, u32 tpc, u32 sm)
+{
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
+	u32 hww_warp_esr = gk20a_readl(g,
+			 gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
+	return hww_warp_esr;
 }

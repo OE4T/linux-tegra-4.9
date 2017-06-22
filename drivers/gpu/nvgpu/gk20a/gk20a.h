@@ -291,7 +291,8 @@ struct gpu_ops {
 			bool sm_debugger_attached,
 			struct channel_gk20a *fault_ch,
 			bool *early_exit, bool *ignore_debugger);
-		u32 (*mask_hww_warp_esr)(u32 hww_warp_esr);
+		u32 (*get_sm_hww_warp_esr)(struct gk20a *g,
+						u32 gpc, u32 tpc, u32 sm);
 		void (*get_esr_sm_sel)(struct gk20a *g, u32 gpc, u32 tpc,
 					 u32 *esr_sm_sel);
 		int (*handle_sm_exception)(struct gk20a *g,

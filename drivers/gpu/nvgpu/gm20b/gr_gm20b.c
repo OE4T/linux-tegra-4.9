@@ -1593,7 +1593,6 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.bpt_reg_info = gr_gm20b_bpt_reg_info;
 	gops->gr.get_access_map = gr_gm20b_get_access_map;
 	gops->gr.handle_fecs_error = gk20a_gr_handle_fecs_error;
-	gops->gr.mask_hww_warp_esr = gk20a_mask_hww_warp_esr;
 	gops->gr.handle_sm_exception = gr_gk20a_handle_sm_exception;
 	gops->gr.handle_tex_exception = gr_gk20a_handle_tex_exception;
 	gops->gr.enable_gpc_exceptions = gk20a_gr_enable_gpc_exceptions;
@@ -1635,4 +1634,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.suspend_all_sms = gk20a_gr_suspend_all_sms;
 	gops->gr.resume_single_sm = gk20a_gr_resume_single_sm;
 	gops->gr.resume_all_sms = gk20a_gr_resume_all_sms;
+	gops->gr.get_sm_hww_warp_esr = gk20a_gr_get_sm_hww_warp_esr;
 }

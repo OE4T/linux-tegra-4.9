@@ -1958,8 +1958,13 @@ clean_up:
 	return gk20a_gr_handle_fecs_error(g, __ch, isr_data);
 }
 
-static u32 gp10b_mask_hww_warp_esr(u32 hww_warp_esr)
+static u32 gp10b_gr_get_sm_hww_warp_esr(struct gk20a *g,
+			u32 gpc, u32 tpc, u32 sm)
 {
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
+	u32 hww_warp_esr = gk20a_readl(g,
+			 gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
+
 	if (!(hww_warp_esr & gr_gpc0_tpc0_sm_hww_warp_esr_addr_valid_m()))
 		hww_warp_esr = set_field(hww_warp_esr,
 			gr_gpc0_tpc0_sm_hww_warp_esr_addr_error_type_m(),
@@ -2369,7 +2374,6 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_access_map = gr_gp10b_get_access_map;
 	gops->gr.handle_sm_exception = gr_gp10b_handle_sm_exception;
 	gops->gr.handle_tex_exception = gr_gp10b_handle_tex_exception;
-	gops->gr.mask_hww_warp_esr = gp10b_mask_hww_warp_esr;
 	gops->gr.pre_process_sm_exception =
 		gr_gp10b_pre_process_sm_exception;
 	gops->gr.handle_fecs_error = gr_gp10b_handle_fecs_error;
@@ -2384,4 +2388,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.set_boosted_ctx = gr_gp10b_set_boosted_ctx;
 	gops->gr.update_boosted_ctx = gr_gp10b_update_boosted_ctx;
 	gops->gr.set_czf_bypass = gr_gp10b_set_czf_bypass;
+	gops->gr.get_sm_hww_warp_esr = gp10b_gr_get_sm_hww_warp_esr;
 }

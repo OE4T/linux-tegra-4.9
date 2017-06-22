@@ -325,9 +325,11 @@ int gk20a_finalize_poweron(struct gk20a *g)
 
 #if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
 	if (gk20a_platform_has_syncpoints(g) && g->syncpt_unit_size) {
-		nr_pages = DIV_ROUND_UP(g->syncpt_unit_size, PAGE_SIZE);
-		__nvgpu_mem_create_from_phys(g, &g->syncpt_mem,
-				g->syncpt_unit_base, nr_pages);
+		if (!nvgpu_mem_is_valid(&g->syncpt_mem)) {
+			nr_pages = DIV_ROUND_UP(g->syncpt_unit_size, PAGE_SIZE);
+			__nvgpu_mem_create_from_phys(g, &g->syncpt_mem,
+					g->syncpt_unit_base, nr_pages);
+		}
 	}
 #endif
 

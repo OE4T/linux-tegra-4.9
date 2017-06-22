@@ -296,6 +296,10 @@ struct gpu_ops {
 		u32 (*get_sm_hww_global_esr)(struct gk20a *g,
 						u32 gpc, u32 tpc, u32 sm);
 		u32 (*get_sm_no_lock_down_hww_global_esr_mask)(struct gk20a *g);
+		int  (*lock_down_sm)(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
+				u32 global_esr_mask, bool check_errors);
+		int  (*wait_for_sm_lock_down)(struct gk20a *g, u32 gpc, u32 tpc,
+				u32 sm, u32 global_esr_mask, bool check_errors);
 		void (*get_esr_sm_sel)(struct gk20a *g, u32 gpc, u32 tpc,
 					 u32 *esr_sm_sel);
 		int (*handle_sm_exception)(struct gk20a *g,

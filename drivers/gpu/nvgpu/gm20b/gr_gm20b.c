@@ -1638,4 +1638,6 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_sm_hww_global_esr = gk20a_gr_get_sm_hww_global_esr;
 	gops->gr.get_sm_no_lock_down_hww_global_esr_mask =
 			 gk20a_gr_get_sm_no_lock_down_hww_global_esr_mask;
+	gops->gr.lock_down_sm = gk20a_gr_lock_down_sm;
+	gops->gr.wait_for_sm_lock_down = gk20a_gr_wait_for_sm_lock_down;
 }

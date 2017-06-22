@@ -5467,16 +5467,14 @@ unlock:
 }
 
 int gk20a_gr_lock_down_sm(struct gk20a *g,
-				 u32 gpc, u32 tpc, u32 global_esr_mask,
-				 bool check_errors)
+			 u32 gpc, u32 tpc, u32 sm, u32 global_esr_mask,
+			 bool check_errors)
 {
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
-	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
 	u32 dbgr_control0;
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
-			"GPC%d TPC%d: locking down SM", gpc, tpc);
+			"GPC%d TPC%d SM%d: assert stop trigger", gpc, tpc, sm);
 
 	/* assert stop trigger */
 	dbgr_control0 =
@@ -5485,7 +5483,7 @@ int gk20a_gr_lock_down_sm(struct gk20a *g,
 	gk20a_writel(g,
 		gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
 
-	return gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc, global_esr_mask,
+	return g->ops.gr.wait_for_sm_lock_down(g, gpc, tpc, sm, global_esr_mask,
 			check_errors);
 }
 
@@ -5598,7 +5596,8 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 	}
 
 	if (do_warp_sync) {
-		ret = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask, true);
+		ret = g->ops.gr.lock_down_sm(g, gpc, tpc, sm,
+				 global_mask, true);
 		if (ret) {
 			nvgpu_err(g, "sm did not lock down!");
 			return ret;
@@ -7906,25 +7905,21 @@ void gk20a_init_gr(struct gk20a *g)
 	nvgpu_cond_init(&g->gr.init_wq);
 }
 
-int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
+int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 		u32 global_esr_mask, bool check_errors)
 {
 	bool locked_down;
 	bool no_error_pending;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	bool mmu_debug_mode_enabled = g->ops.fb.is_debug_mode_enabled(g);
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
-	u32 offset =
-		gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
 	u32 dbgr_status0 = 0, dbgr_control0 = 0;
 	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
 	struct nvgpu_timeout timeout;
 	u32 warp_esr;
-	u32 sm = 0;
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
-		"GPC%d TPC%d: locking down SM", gpc, tpc);
+		"GPC%d TPC%d SM%d: locking down SM", gpc, tpc, sm);
 
 	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
@@ -7949,7 +7944,8 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 
 		if (locked_down || no_error_pending) {
 			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
-				  "GPC%d TPC%d: locked down SM", gpc, tpc);
+				  "GPC%d TPC%d SM%d: locked down SM",
+					gpc, tpc, sm);
 			return 0;
 		}
 
@@ -7959,7 +7955,7 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 		     (g->ops.mm.mmu_fault_pending(g))) {
 			nvgpu_err(g,
 				"GPC%d TPC%d: mmu fault pending,"
-				" sm will never lock down!", gpc, tpc);
+				" SM%d will never lock down!", gpc, tpc, sm);
 			return -EFAULT;
 		}
 
@@ -8017,7 +8013,7 @@ void gk20a_gr_suspend_single_sm(struct gk20a *g,
 	gk20a_writel(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset,
 			dbgr_control0);
 
-	err = gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc,
+	err = g->ops.gr.wait_for_sm_lock_down(g, gpc, tpc, sm,
 			global_esr_mask, check_errors);
 	if (err) {
 		nvgpu_err(g,
@@ -8030,9 +8026,10 @@ void gk20a_gr_suspend_all_sms(struct gk20a *g,
 		u32 global_esr_mask, bool check_errors)
 {
 	struct gr_gk20a *gr = &g->gr;
-	u32 gpc, tpc;
+	u32 gpc, tpc, sm;
 	int err;
 	u32 dbgr_control0;
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
 
 	/* if an SM debugger isn't attached, skip suspend */
 	if (!g->ops.gr.sm_debugger_attached(g)) {
@@ -8055,13 +8052,14 @@ void gk20a_gr_suspend_all_sms(struct gk20a *g,
 
 	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
 		for (tpc = 0; tpc < gr_gk20a_get_tpc_count(gr, gpc); tpc++) {
-			err =
-			 gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc,
+			for (sm = 0; sm < sm_per_tpc; sm++) {
+				err = g->ops.gr.wait_for_sm_lock_down(g,
+					gpc, tpc, sm,
 					global_esr_mask, check_errors);
-			if (err) {
-				nvgpu_err(g,
-					"SuspendAllSms failed");
-				return;
+				if (err) {
+					nvgpu_err(g, "SuspendAllSms failed");
+					return;
+				}
 			}
 		}
 	}
@@ -8371,7 +8369,7 @@ int gr_gk20a_wait_for_pause(struct gk20a *g, struct warpstate *w_state)
 {
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
-	u32 gpc, tpc, sm_id;
+	u32 gpc, tpc, sm, sm_id;
 	u32 global_mask;
 
 	/* Wait for the SMs to reach full stop. This condition is:
@@ -8386,9 +8384,10 @@ int gr_gk20a_wait_for_pause(struct gk20a *g, struct warpstate *w_state)
 
 		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
 		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+		sm = g->gr.sm_to_cluster[sm_id].sm_index;
 
-		err = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask, false);
-
+		err = g->ops.gr.lock_down_sm(g, gpc, tpc, sm,
+				global_mask, false);
 		if (err) {
 			nvgpu_err(g, "sm did not lock down!");
 			return err;

@@ -622,9 +622,6 @@ void gk20a_gr_suspend_single_sm(struct gk20a *g,
 void gk20a_gr_suspend_all_sms(struct gk20a *g,
 		u32 global_esr_mask, bool check_errors);
 u32 gr_gk20a_get_tpc_count(struct gr_gk20a *gr, u32 gpc_index);
-int gk20a_gr_lock_down_sm(struct gk20a *g,
-				 u32 gpc, u32 tpc, u32 global_esr_mask,
-				 bool check_errors);
 int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable);
 bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch);
@@ -681,7 +678,10 @@ static inline void gr_gk20a_free_cyclestats_snapshot_data(struct gk20a *g)
 
 int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 		struct gr_gk20a_isr_data *isr_data);
-int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
+int gk20a_gr_lock_down_sm(struct gk20a *g,
+			 u32 gpc, u32 tpc, u32 sm, u32 global_esr_mask,
+			 bool check_errors);
+int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 		u32 global_esr_mask, bool check_errors);
 void gk20a_gr_clear_sm_hww(struct gk20a *g,
 		u32 gpc, u32 tpc, u32 global_esr);

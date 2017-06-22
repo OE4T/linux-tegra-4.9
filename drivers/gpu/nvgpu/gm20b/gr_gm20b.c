@@ -1635,4 +1635,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.resume_single_sm = gk20a_gr_resume_single_sm;
 	gops->gr.resume_all_sms = gk20a_gr_resume_all_sms;
 	gops->gr.get_sm_hww_warp_esr = gk20a_gr_get_sm_hww_warp_esr;
+	gops->gr.get_sm_hww_global_esr = gk20a_gr_get_sm_hww_global_esr;
 }

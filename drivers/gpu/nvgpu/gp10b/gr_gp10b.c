@@ -1833,7 +1833,8 @@ static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 			}
 
 			/* reset the HWW errors after locking down */
-			global_esr_copy = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
+			global_esr_copy = g->ops.gr.get_sm_hww_global_esr(g,
+							gpc, tpc, sm);
 			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr_copy);
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: HWWs cleared for gpc %d tpc %d\n",

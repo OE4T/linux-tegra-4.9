@@ -694,6 +694,7 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 		u32 *ctx_id);
 
 u32 gk20a_gr_get_sm_hww_warp_esr(struct gk20a *g, u32 gpc, u32 tpc, u32 sm);
+u32 gk20a_gr_get_sm_hww_global_esr(struct gk20a *g, u32 gpc, u32 tpc, u32 sm);
 
 int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long duration_ms,
 			  u32 expect_delay);

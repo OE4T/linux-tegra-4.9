@@ -293,6 +293,8 @@ struct gpu_ops {
 			bool *early_exit, bool *ignore_debugger);
 		u32 (*get_sm_hww_warp_esr)(struct gk20a *g,
 						u32 gpc, u32 tpc, u32 sm);
+		u32 (*get_sm_hww_global_esr)(struct gk20a *g,
+						u32 gpc, u32 tpc, u32 sm);
 		void (*get_esr_sm_sel)(struct gk20a *g, u32 gpc, u32 tpc,
 					 u32 *esr_sm_sel);
 		int (*handle_sm_exception)(struct gk20a *g,

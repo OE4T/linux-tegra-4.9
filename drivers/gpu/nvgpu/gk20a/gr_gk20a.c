@@ -5527,16 +5527,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 	bool disable_sm_exceptions = true;
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
 	bool sm_debugger_attached;
-	u32 global_esr, warp_esr;
-
-	/* these three interrupts don't require locking down the SM. They can
-	 * be handled by usermode clients as they aren't fatal. Additionally,
-	 * usermode clients may wish to allow some warps to execute while others
-	 * are at breakpoints, as opposed to fatal errors where all warps should
-	 * halt. */
-	u32 global_mask = gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()   |
-			  gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
-			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
+	u32 global_esr, warp_esr, global_mask;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
@@ -5545,6 +5536,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 	global_esr = g->ops.gr.get_sm_hww_global_esr(g, gpc, tpc, sm);
 	*hww_global_esr = global_esr;
 	warp_esr = g->ops.gr.get_sm_hww_warp_esr(g, gpc, tpc, sm);
+	global_mask = g->ops.gr.get_sm_no_lock_down_hww_global_esr_mask(g);
 
 	if (!sm_debugger_attached) {
 		nvgpu_err(g, "sm hww global 0x%08x warp 0x%08x",
@@ -8387,9 +8379,7 @@ int gr_gk20a_wait_for_pause(struct gk20a *g, struct warpstate *w_state)
 	 * 2) All SMs in the trap handler must have equivalent VALID and PAUSED warp
 	 *    masks.
 	*/
-	global_mask = gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()   |
-			  gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
-			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
+	global_mask = g->ops.gr.get_sm_no_lock_down_hww_global_esr_mask(g);
 
 	/* Lock down all SMs */
 	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
@@ -8499,3 +8489,19 @@ u32 gk20a_gr_get_sm_hww_global_esr(struct gk20a *g, u32 gpc, u32 tpc, u32 sm)
 	return hww_global_esr;
 }
 
+u32 gk20a_gr_get_sm_no_lock_down_hww_global_esr_mask(struct gk20a *g)
+{
+	/*
+	 * These three interrupts don't require locking down the SM. They can
+	 * be handled by usermode clients as they aren't fatal. Additionally,
+	 * usermode clients may wish to allow some warps to execute while others
+	 * are at breakpoints, as opposed to fatal errors where all warps should
+	 * halt.
+	 */
+	u32 global_esr_mask =
+		gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f() |
+		gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
+		gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
+
+	return global_esr_mask;
+}

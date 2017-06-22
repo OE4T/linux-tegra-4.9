@@ -26,7 +26,7 @@
 #include <nvgpu/hw/gm20b/hw_top_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_pri_ringmaster_gm20b.h>
 
-#include "gk20a/ltc_common.c"
+#include "gk20a/ltc_gk20a.h"
 #include "ltc_gm20b.h"
 
 static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
@@ -349,13 +349,124 @@ static int gm20b_determine_L2_size_bytes(struct gk20a *g)
 	return cache_size;
 }
 
+/*
+ * Sets the ZBC color for the passed index.
+ */
+void gm20b_ltc_set_zbc_color_entry(struct gk20a *g,
+					  struct zbc_entry *color_val,
+					  u32 index)
+{
+	u32 i;
+	u32 real_index = index + GK20A_STARTOF_ZBC_TABLE;
+
+	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
+		     ltc_ltcs_ltss_dstg_zbc_index_address_f(real_index));
+
+	for (i = 0;
+	     i < ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(); i++) {
+		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(i),
+			     color_val->color_l2[i]);
+	}
+	gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r());
+}
+
+/*
+ * Sets the ZBC depth for the passed index.
+ */
+void gm20b_ltc_set_zbc_depth_entry(struct gk20a *g,
+					  struct zbc_entry *depth_val,
+					  u32 index)
+{
+	u32 real_index = index + GK20A_STARTOF_ZBC_TABLE;
+
+	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
+		     ltc_ltcs_ltss_dstg_zbc_index_address_f(real_index));
+
+	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(),
+		     depth_val->depth);
+
+	gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r());
+}
+
+void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
+{
+	u32 max_size = gr->max_comptag_mem;
+	u32 max_comptag_lines = max_size << 3;
+
+	u32 compbit_base_post_divide;
+	u64 compbit_base_post_multiply64;
+	u64 compbit_store_iova;
+	u64 compbit_base_post_divide64;
+
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
+		compbit_store_iova = gk20a_mem_phys(&gr->compbit_store.mem);
+	else
+		compbit_store_iova = g->ops.mm.get_iova_addr(g,
+				gr->compbit_store.mem.priv.sgt->sgl, 0);
+
+	compbit_base_post_divide64 = compbit_store_iova >>
+		ltc_ltcs_ltss_cbc_base_alignment_shift_v();
+
+	do_div(compbit_base_post_divide64, g->ltc_count);
+	compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
+
+	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
+		g->ltc_count) << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
+
+	if (compbit_base_post_multiply64 < compbit_store_iova)
+		compbit_base_post_divide++;
+
+	/* Bug 1477079 indicates sw adjustment on the posted divided base. */
+	if (g->ops.ltc.cbc_fix_config)
+		compbit_base_post_divide =
+			g->ops.ltc.cbc_fix_config(g, compbit_base_post_divide);
+
+	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
+		compbit_base_post_divide);
+
+	gk20a_dbg(gpu_dbg_info | gpu_dbg_map_v | gpu_dbg_pte,
+		   "compbit base.pa: 0x%x,%08x cbc_base:0x%08x\n",
+		   (u32)(compbit_store_iova >> 32),
+		   (u32)(compbit_store_iova & 0xffffffff),
+		   compbit_base_post_divide);
+
+	gr->compbit_store.base_hw = compbit_base_post_divide;
+
+	g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_invalidate,
+			    0, max_comptag_lines - 1);
+
+}
+
+#ifdef CONFIG_DEBUG_FS
+static void gm20b_ltc_sync_debugfs(struct gk20a *g)
+{
+	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
+
+	nvgpu_spinlock_acquire(&g->debugfs_lock);
+	if (g->mm.ltc_enabled != g->mm.ltc_enabled_debug) {
+		u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
+
+		if (g->mm.ltc_enabled_debug)
+			/* bypass disabled (normal caching ops)*/
+			reg &= ~reg_f;
+		else
+			/* bypass enabled (no caching) */
+			reg |= reg_f;
+
+		gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
+		g->mm.ltc_enabled = g->mm.ltc_enabled_debug;
+	}
+	nvgpu_spinlock_release(&g->debugfs_lock);
+}
+#endif
+
 void gm20b_init_ltc(struct gpu_ops *gops)
 {
 	/* Gk20a reused ops. */
 	gops->ltc.determine_L2_size_bytes = gm20b_determine_L2_size_bytes;
-	gops->ltc.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry;
-	gops->ltc.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry;
-	gops->ltc.init_cbc = gk20a_ltc_init_cbc;
+	gops->ltc.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry;
+	gops->ltc.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry;
+	gops->ltc.init_cbc = gm20b_ltc_init_cbc;
 
 	/* GM20b specific ops. */
 	gops->ltc.init_fs_state = gm20b_ltc_init_fs_state;
@@ -365,6 +476,6 @@ void gm20b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.cbc_fix_config = gm20b_ltc_cbc_fix_config;
 	gops->ltc.flush = gm20b_flush_ltc;
 #ifdef CONFIG_DEBUG_FS
-	gops->ltc.sync_debugfs = gk20a_ltc_sync_debugfs;
+	gops->ltc.sync_debugfs = gm20b_ltc_sync_debugfs;
 #endif
 }

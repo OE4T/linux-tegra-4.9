@@ -1,7 +1,7 @@
 /*
  * GP10B L2
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,7 @@
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>
 
-#include "gk20a/ltc_common.c"
+#include "gk20a/ltc_gk20a.h"
 #include "ltc_gp10b.h"
 
 static int gp10b_determine_L2_size_bytes(struct gk20a *g)
@@ -205,12 +205,35 @@ static void gp10b_ltc_init_fs_state(struct gk20a *g)
 			ltc_intr);
 }
 
+#ifdef CONFIG_DEBUG_FS
+static void gp10b_ltc_sync_debugfs(struct gk20a *g)
+{
+	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
+
+	nvgpu_spinlock_acquire(&g->debugfs_lock);
+	if (g->mm.ltc_enabled != g->mm.ltc_enabled_debug) {
+		u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
+
+		if (g->mm.ltc_enabled_debug)
+			/* bypass disabled (normal caching ops)*/
+			reg &= ~reg_f;
+		else
+			/* bypass enabled (no caching) */
+			reg |= reg_f;
+
+		gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
+		g->mm.ltc_enabled = g->mm.ltc_enabled_debug;
+	}
+	nvgpu_spinlock_release(&g->debugfs_lock);
+}
+#endif
+
 void gp10b_init_ltc(struct gpu_ops *gops)
 {
 	gops->ltc.determine_L2_size_bytes = gp10b_determine_L2_size_bytes;
-	gops->ltc.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry;
-	gops->ltc.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry;
-	gops->ltc.init_cbc = gk20a_ltc_init_cbc;
+	gops->ltc.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry;
+	gops->ltc.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry;
+	gops->ltc.init_cbc = gm20b_ltc_init_cbc;
 
 	/* GM20b specific ops. */
 	gops->ltc.init_fs_state = gp10b_ltc_init_fs_state;
@@ -220,6 +243,6 @@ void gp10b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.cbc_fix_config = gm20b_ltc_cbc_fix_config;
 	gops->ltc.flush = gm20b_flush_ltc;
 #ifdef CONFIG_DEBUG_FS
-	gops->ltc.sync_debugfs = gk20a_ltc_sync_debugfs;
+	gops->ltc.sync_debugfs = gp10b_ltc_sync_debugfs;
 #endif
 }

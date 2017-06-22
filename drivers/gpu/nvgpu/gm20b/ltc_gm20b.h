@@ -1,7 +1,7 @@
 /*
  * GM20B L2
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,6 +16,14 @@
 #ifndef _NVHOST_GM20B_LTC
 #define _NVHOST_GM20B_LTC
 struct gpu_ops;
+
+void gm20b_ltc_set_zbc_color_entry(struct gk20a *g,
+					  struct zbc_entry *color_val,
+					  u32 index);
+void gm20b_ltc_set_zbc_depth_entry(struct gk20a *g,
+					  struct zbc_entry *depth_val,
+					  u32 index);
+void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr);
 
 void gm20b_init_ltc(struct gpu_ops *gops);
 void gm20b_ltc_init_fs_state(struct gk20a *g);

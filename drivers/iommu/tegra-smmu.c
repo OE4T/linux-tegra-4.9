@@ -1181,7 +1181,8 @@ static size_t __smmu_iommu_iova_to_phys(struct smmu_as *as, dma_addr_t iova,
 		bytes = PAGE_SIZE;
 		*npte = *count;
 	} else if (pdir[pdn]) {
-		*pa =  (phys_addr_t)pdir[pdn] << SMMU_PDE_SHIFT;
+		*pa =  ((phys_addr_t)(pdir[pdn] & SMMU_PFN_MASK)) <<
+				     SMMU_PDE_SHIFT;
 		*pa += iova & (SZ_4M - 1);
 		bytes = SZ_4M;
 	}

@@ -502,6 +502,14 @@ static inline u32 pbdma_intr_1_r(u32 i)
 {
 	return 0x00040148 + i*8192;
 }
+static inline u32 pbdma_intr_1_ctxnotvalid_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 pbdma_intr_1_ctxnotvalid_pending_f(void)
+{
+	return 0x80000000;
+}
 static inline u32 pbdma_intr_en_0_r(u32 i)
 {
 	return 0x0004010c + i*8192;

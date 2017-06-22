@@ -1401,6 +1401,63 @@ static unsigned int gv11b_fifo_handle_pbdma_intr_0(struct gk20a *g,
 	return rc_type;
 }
 
+/*
+ * Pbdma which encountered the ctxnotvalid interrupt will stall and
+ * prevent the channel which was loaded at the time the interrupt fired
+ * from being swapped out until the interrupt is cleared.
+ * CTXNOTVALID pbdma interrupt indicates error conditions related
+ * to the *_CTX_VALID fields for a channel.  The following
+ * conditions trigger the interrupt:
+ * * CTX_VALID bit for the targeted engine is FALSE
+ * * At channel start/resume, all preemptible eng have CTX_VALID FALSE but:
+ *       - CTX_RELOAD is set in CCSR_CHANNEL_STATUS,
+ *       - PBDMA_TARGET_SHOULD_SEND_HOST_TSG_EVENT is TRUE, or
+ *       - PBDMA_TARGET_NEEDS_HOST_TSG_EVENT is TRUE
+ * The field is left NOT_PENDING and the interrupt is not raised if the PBDMA is
+ * currently halted.  This allows SW to unblock the PBDMA and recover.
+ * SW may read METHOD0, CHANNEL_STATUS and TARGET to determine whether the
+ * interrupt was due to an engine method, CTX_RELOAD, SHOULD_SEND_HOST_TSG_EVENT
+ * or NEEDS_HOST_TSG_EVENT.  If METHOD0 VALID is TRUE, lazy context creation
+ * can be used or the TSG may be destroyed.
+ * If METHOD0 VALID is FALSE, the error is likely a bug in SW, and the TSG
+ * will have to be destroyed.
+ */
+
+static unsigned int gv11b_fifo_handle_pbdma_intr_1(struct gk20a *g,
+			u32 pbdma_id, u32 pbdma_intr_1,
+			u32 *handled, u32 *error_notifier)
+{
+	unsigned int rc_type = RC_TYPE_PBDMA_FAULT;
+	u32 pbdma_intr_1_current = gk20a_readl(g, pbdma_intr_1_r(pbdma_id));
+
+	/* minimize race with the gpu clearing the pending interrupt */
+	if (!(pbdma_intr_1_current &
+			pbdma_intr_1_ctxnotvalid_pending_f()))
+		pbdma_intr_1 &= ~pbdma_intr_1_ctxnotvalid_pending_f();
+
+	if (pbdma_intr_1 == 0)
+		return RC_TYPE_NO_RC;
+
+	if (pbdma_intr_1 & pbdma_intr_1_ctxnotvalid_pending_f()) {
+		gk20a_dbg(gpu_dbg_intr, "ctxnotvalid intr on pbdma id %d",
+				 pbdma_id);
+		nvgpu_err(g, "pbdma_intr_1(%d)= 0x%08x ",
+				pbdma_id, pbdma_intr_1);
+		*handled |= pbdma_intr_1_ctxnotvalid_pending_f();
+	} else{
+		/*
+		 * rest of the interrupts in _intr_1 are "host copy engine"
+		 * related, which is not supported. For now just make them
+		 * channel fatal.
+		 */
+		nvgpu_err(g, "hce err: pbdma_intr_1(%d):0x%08x",
+			pbdma_id, pbdma_intr_1);
+		*handled |= pbdma_intr_1;
+	}
+
+	return rc_type;
+}
+
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 static int gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 			u32 syncpt_id, struct nvgpu_mem *syncpt_buf)
@@ -1554,6 +1611,8 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout;
 	gops->fifo.handle_pbdma_intr_0 =
 			 gv11b_fifo_handle_pbdma_intr_0;
+	gops->fifo.handle_pbdma_intr_1 =
+			 gv11b_fifo_handle_pbdma_intr_1;
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	gops->fifo.alloc_syncpt_buf = gv11b_fifo_alloc_syncpt_buf;
 	gops->fifo.free_syncpt_buf = gv11b_fifo_free_syncpt_buf;

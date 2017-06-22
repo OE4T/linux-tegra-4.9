@@ -62,6 +62,7 @@ struct gpio_extcon_platform_data {
 	int init_state;
 	bool wakeup_source;
 	int cable_id;
+	bool has_extcon_none_state;
 };
 
 struct gpio_extcon_info {
@@ -99,8 +100,7 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 	for (i = 0; i < gpex->pdata->n_cable_states; ++i) {
 		if (gpex->pdata->cable_states[i].gstate == gstate) {
 			cstate = gpex->pdata->cable_states[i].cstate;
-			if (cstate)
-				gpex->pdata->cable_id = cstate;
+			gpex->pdata->cable_id = cstate;
 			break;
 		}
 	}
@@ -132,10 +132,15 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 	 * 0x2 <-> 0x0 <-> 0x1
 	 */
 	if (gpex->last_cstate != cstate) {
-		if (gpex->last_cstate == EXTCON_USB_HOST) {
+		if (gpex->pdata->has_extcon_none_state &&
+		    gpex->last_cstate == EXTCON_USB_HOST) {
 			cstate = EXTCON_NONE;
-			gpex->pdata->cable_id = gpex->last_cstate;
+			gpex->pdata->cable_id = cstate;
 		}
+
+		if (gpex->last_cstate)
+			extcon_set_state_sync(gpex->edev, gpex->last_cstate, 0);
+
 		gpex->last_cstate = cstate;
 	}
 
@@ -257,8 +262,11 @@ static struct gpio_extcon_platform_data *of_get_platform_data(
 
 		ret = of_property_read_u32_index(np, "extcon-gpio,cable-states",
 				count * 2 + 1, &pval);
-		if (!ret)
+		if (!ret) {
 			pdata->cable_states[count].cstate = pval;
+			if (pval == EXTCON_NONE)
+				pdata->has_extcon_none_state = true;
+		}
 	}
 
 parse_cable_names:

@@ -589,9 +589,10 @@ static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 }
 
-static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
-		u32 sm, bool *post_event, struct channel_gk20a *fault_ch,
-			u32 *hww_global_esr)
+static int gr_gv11b_handle_tpc_sm_ecc_exception(struct gk20a *g,
+		u32 gpc, u32 tpc,
+		bool *post_event, struct channel_gk20a *fault_ch,
+		u32 *hww_global_esr)
 {
 	int ret = 0;
 
@@ -3228,7 +3229,7 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_cyclestats = gr_gv11b_init_cyclestats;
 	gops->gr.set_gpc_tpc_mask = gr_gv11b_set_gpc_tpc_mask;
 	gops->gr.get_access_map = gr_gv11b_get_access_map;
-	gops->gr.handle_sm_exception = gr_gv11b_handle_sm_exception;
+	gops->gr.handle_sm_exception = gr_gk20a_handle_sm_exception;
 	gops->gr.handle_gcc_exception = gr_gv11b_handle_gcc_exception;
 	gops->gr.handle_tex_exception = gr_gv11b_handle_tex_exception;
 	gops->gr.enable_gpc_exceptions = gr_gv11b_enable_gpc_exceptions;
@@ -3277,4 +3278,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.lock_down_sm = gv11b_gr_lock_down_sm;
 	gops->gr.wait_for_sm_lock_down = gv11b_gr_wait_for_sm_lock_down;
 	gops->gr.clear_sm_hww = gv11b_gr_clear_sm_hww;
+	gops->gr.handle_tpc_sm_ecc_exception =
+			gr_gv11b_handle_tpc_sm_ecc_exception;
 }

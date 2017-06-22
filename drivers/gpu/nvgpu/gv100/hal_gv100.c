@@ -76,6 +76,7 @@
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 
+#include "gv11b/css_gr_gv11b.h"
 #include "gv11b/dbg_gpu_gv11b.h"
 #include "gv11b/hal_gv11b.h"
 #include "gv100/gr_gv100.h"
@@ -639,9 +640,9 @@ static const struct gpu_ops gv100_ops = {
 	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {
-		.enable_snapshot = css_hw_enable_snapshot,
-		.disable_snapshot = css_hw_disable_snapshot,
-		.check_data_available = css_hw_check_data_available,
+		.enable_snapshot = gv11b_css_hw_enable_snapshot,
+		.disable_snapshot = gv11b_css_hw_disable_snapshot,
+		.check_data_available = gv11b_css_hw_check_data_available,
 		.set_handled_snapshots = css_hw_set_handled_snapshots,
 		.allocate_perfmon_ids = css_gr_allocate_perfmon_ids,
 		.release_perfmon_ids = css_gr_release_perfmon_ids,

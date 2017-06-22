@@ -144,9 +144,22 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 	{
 		(void)dma_alloc_attrs(dev, len, &pa,
 				DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
-		if (!dma_mapping_error(dev, pa))
+		if (!dma_mapping_error(dev, pa)) {
+			int ret;
+
 			dev_dbg(dev, "Allocated addr (%pa) len(%zu)\n",
 					&pa, len);
+			if (!dma_is_coherent_dev(dev) && h->cma_dev) {
+				ret = nvmap_cache_maint_phys_range(
+					NVMAP_CACHE_OP_WB, pa, pa + len,
+					true, true);
+				if (!ret)
+					return pa;
+
+				dev_err(dev, "cache WB on (%pa, %zu) failed\n",
+					&pa, len);
+			}
+		}
 	}
 
 	return pa;

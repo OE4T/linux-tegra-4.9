@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,7 +46,7 @@ static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 	err = of_parse_phandle_with_fixed_args(np,
 			"mempool-css", 1, 0, &args);
 	if (err) {
-		dev_info(dev_from_gk20a(g), "dt missing mempool-css\n");
+		nvgpu_info(g, "dt missing mempool-css");
 		goto fail;
 	}
 
@@ -54,15 +54,15 @@ static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 	mempool = args.args[0];
 	css_cookie = tegra_hv_mempool_reserve(hv_np, mempool);
 	if (IS_ERR(css_cookie)) {
-		dev_info(dev_from_gk20a(g),
-			"mempool  %u reserve failed\n", mempool);
+		nvgpu_info(g,
+			"mempool  %u reserve failed", mempool);
 		err = -EINVAL;
 		goto fail;
 	}
 
 	/* Make sure buffer size is large enough */
 	if (css_cookie->size < CSS_MIN_HW_SNAPSHOT_SIZE) {
-		dev_info(dev_from_gk20a(g), "mempool size %lld too small\n",
+		nvgpu_info(g, "mempool size %lld too small",
 			css_cookie->size);
 		err = -ENOMEM;
 		goto fail;
@@ -74,7 +74,7 @@ static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 	buf = ioremap_cache(css_cookie->ipa, css_cookie->size);
 #endif
 	if (!buf) {
-		dev_info(dev_from_gk20a(g), "ioremap_cache failed\n");
+		nvgpu_info(g, "ioremap_cache failed");
 		err = -EINVAL;
 		goto fail;
 	}

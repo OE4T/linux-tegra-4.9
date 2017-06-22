@@ -97,8 +97,7 @@ static int __nvgpu_timeout_expired_msg_cpu(struct nvgpu_timeout *timeout,
 
 			vsnprintf(buf, sizeof(buf), fmt, args);
 
-			dev_err(dev_from_gk20a(g),
-				"Timeout detected @ %pF %s\n", caller, buf);
+			nvgpu_err(g, "Timeout detected @ %pF %s", caller, buf);
 		}
 
 		return -ETIMEDOUT;
@@ -122,8 +121,7 @@ static int __nvgpu_timeout_expired_msg_retry(struct nvgpu_timeout *timeout,
 
 			vsnprintf(buf, sizeof(buf), fmt, args);
 
-			dev_err(dev_from_gk20a(g),
-				"No more retries @ %pF %s\n", caller, buf);
+			nvgpu_err(g, "No more retries @ %pF %s", caller, buf);
 		}
 
 		return -ETIMEDOUT;

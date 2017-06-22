@@ -2050,7 +2050,7 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	/* get ref to the mem handle (released on unmap_locked) */
 	dmabuf = dma_buf_get(dmabuf_fd);
 	if (IS_ERR(dmabuf)) {
-		dev_warn(dev_from_vm(vm), "%s: fd %d is not a dmabuf",
+		nvgpu_warn(gk20a_from_vm(vm), "%s: fd %d is not a dmabuf",
 			 __func__, dmabuf_fd);
 		return PTR_ERR(dmabuf);
 	}

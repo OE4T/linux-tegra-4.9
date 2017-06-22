@@ -377,7 +377,6 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				(struct nvgpu_as_map_buffer_batch_args *)buf);
 		break;
 	default:
-		dev_dbg(dev_from_gk20a(g), "unrecognized as ioctl: 0x%x", cmd);
 		err = -ENOTTY;
 		break;
 	}

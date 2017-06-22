@@ -37,13 +37,13 @@ int nvgpu_get_nvhost_dev(struct gk20a *g)
 
 		host1x_pdev = of_find_device_by_node(host1x_node);
 		if (!host1x_pdev) {
-			dev_warn(g->dev, "host1x device not available");
+			nvgpu_warn(g, "host1x device not available");
 			return -EPROBE_DEFER;
 		}
 
 	} else {
 		if (g->has_syncpoints) {
-			dev_warn(g->dev, "host1x reference not found. assuming no syncpoints support\n");
+			nvgpu_warn(g, "host1x reference not found. assuming no syncpoints support");
 			g->has_syncpoints = false;
 		}
 		return 0;

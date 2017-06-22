@@ -165,9 +165,9 @@ int nvgpu_probe(struct gk20a *g,
 	err = platform->probe(g->dev);
 	if (err) {
 		if (err == -EPROBE_DEFER)
-			dev_info(g->dev, "platform probe failed");
+			nvgpu_info(g, "platform probe failed");
 		else
-			dev_err(g->dev, "platform probe failed");
+			nvgpu_err(g, "platform probe failed");
 		return err;
 	}
 
@@ -184,7 +184,7 @@ int nvgpu_probe(struct gk20a *g,
 	if (platform->late_probe) {
 		err = platform->late_probe(g->dev);
 		if (err) {
-			dev_err(g->dev, "late probe failed");
+			nvgpu_err(g, "late probe failed");
 			return err;
 		}
 	}
@@ -196,7 +196,7 @@ int nvgpu_probe(struct gk20a *g,
 
 	g->dbg_regops_tmp_buf = nvgpu_kzalloc(g, SZ_4K);
 	if (!g->dbg_regops_tmp_buf) {
-		dev_err(g->dev, "couldn't allocate regops tmp buf");
+		nvgpu_err(g, "couldn't allocate regops tmp buf");
 		return -ENOMEM;
 	}
 	g->dbg_regops_tmp_buf_ops =

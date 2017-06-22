@@ -268,7 +268,7 @@ static int vgpu_init_support(struct platform_device *pdev)
 	int err = 0;
 
 	if (!r) {
-		dev_err(dev_from_gk20a(g), "faield to get gk20a bar1\n");
+		nvgpu_err(g, "failed to get gk20a bar1");
 		err = -ENXIO;
 		goto fail;
 	}
@@ -276,8 +276,7 @@ static int vgpu_init_support(struct platform_device *pdev)
 	if (r->name && !strcmp(r->name, "/vgpu")) {
 		regs = devm_ioremap_resource(&pdev->dev, r);
 		if (IS_ERR(regs)) {
-			dev_err(dev_from_gk20a(g),
-				"failed to remap gk20a regs\n");
+			nvgpu_err(g, "failed to remap gk20a bar1");
 			err = PTR_ERR(regs);
 			goto fail;
 		}
@@ -292,7 +291,7 @@ static int vgpu_init_support(struct platform_device *pdev)
 
 	g->dbg_regops_tmp_buf = nvgpu_kzalloc(g, SZ_4K);
 	if (!g->dbg_regops_tmp_buf) {
-		dev_err(g->dev, "couldn't allocate regops tmp buf");
+		nvgpu_err(g, "couldn't allocate regops tmp buf");
 		return -ENOMEM;
 	}
 	g->dbg_regops_tmp_buf_ops =

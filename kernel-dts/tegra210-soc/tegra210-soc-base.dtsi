@@ -176,6 +176,14 @@
 		#size-cells = <2>;
 		ranges;
 
+		generic_reserved: generic_carveout {
+			compatible = "nvidia,generic_carveout";
+			size = <0 0x30000000>;
+			alignment = <0 0x100000>;
+			alloc-ranges = <0 0 0x1 0>;
+			no-map;
+		};
+
 		iram: iram-carveout {
 			compatible = "nvidia,iram-carveout";
 			reg = <0x0 0x40001000 0x0 0x3F000>;

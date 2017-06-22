@@ -111,9 +111,6 @@ struct gk20a_platform {
 	 */
 	bool force_reset_in_do_idle;
 
-	/* Default big page size 64K or 128K */
-	u32 default_big_page_size;
-
 	/* default pri timeout, on PCIe it should be lower than timeout
 	 * detection
 	 */

@@ -398,8 +398,6 @@ struct gk20a_platform gp10b_tegra_platform = {
 
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
-	.default_big_page_size	= SZ_64K,
-
 	.has_cde = true,
 
 	.clk_round_rate = gp10b_round_clk_rate,

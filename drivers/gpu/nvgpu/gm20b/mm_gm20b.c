@@ -45,6 +45,11 @@ static u32 gm20b_mm_get_big_page_sizes(void)
 	return SZ_64K | SZ_128K;
 }
 
+static u32 gm20b_mm_get_default_big_page_size(void)
+{
+	return SZ_128K;
+}
+
 static bool gm20b_mm_support_sparse(struct gk20a *g)
 {
 	return true;
@@ -67,6 +72,7 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.cbc_clean = gk20a_mm_cbc_clean;
 	gops->mm.set_big_page_size = gm20b_mm_set_big_page_size;
 	gops->mm.get_big_page_sizes = gm20b_mm_get_big_page_sizes;
+	gops->mm.get_default_big_page_size = gm20b_mm_get_default_big_page_size;
 	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;

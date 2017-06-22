@@ -2124,7 +2124,7 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	int err;
 	struct gk20a *g = gk20a_from_mm(mm);
 	struct nvgpu_mem *inst_block = &mm->bar1.inst_block;
-	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
+	u32 big_page_size = g->ops.mm.get_default_big_page_size();
 
 	mm->bar1.aperture_size = bar1_aperture_size_mb_gk20a() << 20;
 	gk20a_dbg_info("bar1 vm size = 0x%x", mm->bar1.aperture_size);
@@ -2156,7 +2156,7 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	int err;
 	struct gk20a *g = gk20a_from_mm(mm);
 	struct nvgpu_mem *inst_block = &mm->pmu.inst_block;
-	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
+	u32 big_page_size = g->ops.mm.get_default_big_page_size();
 	u32 low_hole, aperture_size;
 
 	/*
@@ -2207,7 +2207,7 @@ static int gk20a_init_hwpm(struct mm_gk20a *mm)
 static int gk20a_init_cde_vm(struct mm_gk20a *mm)
 {
 	struct gk20a *g = gk20a_from_mm(mm);
-	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
+	u32 big_page_size = g->ops.mm.get_default_big_page_size();
 
 	mm->cde.vm = nvgpu_vm_init(g, big_page_size,
 				   big_page_size << 10,
@@ -2222,7 +2222,7 @@ static int gk20a_init_cde_vm(struct mm_gk20a *mm)
 static int gk20a_init_ce_vm(struct mm_gk20a *mm)
 {
 	struct gk20a *g = gk20a_from_mm(mm);
-	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
+	u32 big_page_size = g->ops.mm.get_default_big_page_size();
 
 	mm->ce.vm = nvgpu_vm_init(g, big_page_size,
 				  big_page_size << 10,

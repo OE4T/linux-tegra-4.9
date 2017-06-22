@@ -52,7 +52,6 @@ struct gk20a_platform vgpu_tegra_platform = {
 	.ch_wdt_timeout_ms = 5000,
 
 	.probe = gk20a_tegra_probe,
-	.default_big_page_size	= SZ_128K,
 
 	.clk_round_rate = vgpu_clk_round_rate,
 	.get_clk_freqs = vgpu_clk_get_freqs,

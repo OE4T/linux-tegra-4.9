@@ -49,8 +49,7 @@ static int gk20a_vm_alloc_share(struct gk20a_as_share *as_share,
 	gk20a_dbg_fn("");
 
 	if (big_page_size == 0) {
-		big_page_size =
-			gk20a_get_platform(g->dev)->default_big_page_size;
+		big_page_size = g->ops.mm.get_default_big_page_size();
 	} else {
 		if (!is_power_of_2(big_page_size))
 			return -EINVAL;

@@ -26,6 +26,11 @@
 #include <nvgpu/hw/gp10b/hw_bus_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_gmmu_gp10b.h>
 
+static u32 gp10b_mm_get_default_big_page_size(void)
+{
+	return SZ_64K;
+}
+
 static u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
 {
 	return 36;
@@ -68,7 +73,7 @@ static int gb10b_init_bar2_vm(struct gk20a *g)
 	int err;
 	struct mm_gk20a *mm = &g->mm;
 	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
-	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
+	u32 big_page_size = g->ops.mm.get_default_big_page_size();
 
 	/* BAR2 aperture size is 32MB */
 	mm->bar2.aperture_size = 32 << 20;
@@ -410,6 +415,7 @@ static void gp10b_remove_bar2_vm(struct gk20a *g)
 void gp10b_init_mm(struct gpu_ops *gops)
 {
 	gm20b_init_mm(gops);
+	gops->mm.get_default_big_page_size = gp10b_mm_get_default_big_page_size;
 	gops->mm.get_physical_addr_bits = gp10b_mm_get_physical_addr_bits;
 	gops->mm.init_mm_setup_hw = gp10b_init_mm_setup_hw;
 	gops->mm.init_bar2_vm = gb10b_init_bar2_vm;

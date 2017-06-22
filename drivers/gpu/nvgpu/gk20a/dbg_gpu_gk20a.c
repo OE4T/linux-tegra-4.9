@@ -1886,7 +1886,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	struct mm_gk20a *mm = &g->mm;
 	int err;
 	u32 virt_size;
-	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
+	u32 big_page_size = g->ops.mm.get_default_big_page_size();
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 

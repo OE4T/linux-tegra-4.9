@@ -5501,21 +5501,6 @@ bool gk20a_gr_sm_debugger_attached(struct gk20a *g)
 	return false;
 }
 
-void gk20a_gr_clear_sm_hww(struct gk20a *g,
-		u32 gpc, u32 tpc, u32 global_esr)
-{
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
-	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
-
-	gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
-			global_esr);
-
-	/* clear the warp hww */
-	gk20a_writel(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset,
-			gr_gpc0_tpc0_sm_hww_warp_esr_error_none_f());
-}
-
 int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 		bool *post_event, struct channel_gk20a *fault_ch,
 		u32 *hww_global_esr)
@@ -5678,7 +5663,8 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			/* clear the hwws, also causes tpc and gpc
 			 * exceptions to be cleared
 			 */
-			gk20a_gr_clear_sm_hww(g, gpc, tpc, *hww_global_esr);
+			g->ops.gr.clear_sm_hww(g,
+				gpc, tpc, sm, *hww_global_esr);
 
 		}
 
@@ -8439,7 +8425,8 @@ int gr_gk20a_clear_sm_errors(struct gk20a *g)
 				/* clearing hwws, also causes tpc and gpc
 				 * exceptions to be cleared
 				 */
-				gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr);
+				g->ops.gr.clear_sm_hww(g,
+					gpc, tpc, sm, global_esr);
 			}
 		}
 	}

@@ -539,8 +539,6 @@ void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config);
 
 /* sm */
 bool gk20a_gr_sm_debugger_attached(struct gk20a *g);
-void gk20a_gr_clear_sm_hww(struct gk20a *g,
-				  u32 gpc, u32 tpc, u32 global_esr);
 u32 gk20a_gr_get_sm_no_lock_down_hww_global_esr_mask(struct gk20a *g);
 
 #define gr_gk20a_elpg_protected_call(g, func) \
@@ -683,8 +681,6 @@ int gk20a_gr_lock_down_sm(struct gk20a *g,
 			 bool check_errors);
 int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 		u32 global_esr_mask, bool check_errors);
-void gk20a_gr_clear_sm_hww(struct gk20a *g,
-		u32 gpc, u32 tpc, u32 global_esr);
 int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 			    u32 *mailbox_ret, u32 opc_success,
 			    u32 mailbox_ok, u32 opc_fail,

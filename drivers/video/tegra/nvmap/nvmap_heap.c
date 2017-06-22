@@ -143,7 +143,7 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 #endif
 	{
 		(void)dma_alloc_attrs(dev, len, &pa,
-				DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
+				GFP_KERNEL, __DMA_ATTR(attrs));
 		if (!dma_mapping_error(dev, pa)) {
 			int ret;
 

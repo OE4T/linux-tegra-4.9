@@ -206,7 +206,7 @@ static int nvmap_heap_pgalloc(struct nvmap_client *client,
 #endif
 
 	pages = dma_alloc_attrs(dma_dev, size, &pa,
-			DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
+			GFP_KERNEL, __DMA_ATTR(attrs));
 	if (dma_mapping_error(dma_dev, pa))
 		return -ENOMEM;
 

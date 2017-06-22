@@ -197,7 +197,6 @@ nvgpu-y += \
 	gp106/acr_gp106.o \
 	gp106/sec2_gp106.o \
 	gp106/fifo_gp106.o \
-	gp106/ltc_gp106.o \
 	gp106/fb_gp106.o \
 	gp106/regops_gp106.o \
 	pstate/pstate.o \

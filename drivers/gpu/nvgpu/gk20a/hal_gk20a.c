@@ -43,7 +43,20 @@
 
 #include <nvgpu/hw/gk20a/hw_proj_gk20a.h>
 
-static struct gpu_ops gk20a_ops = {
+static const struct gpu_ops gk20a_ops = {
+	.ltc = {
+		.determine_L2_size_bytes = gk20a_determine_L2_size_bytes,
+		.init_comptags = gk20a_ltc_init_comptags,
+		.cbc_ctrl = gk20a_ltc_cbc_ctrl,
+		.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry,
+		.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry,
+		.init_cbc = gk20a_ltc_init_cbc,
+#ifdef CONFIG_DEBUG_FS
+		.sync_debugfs = gk20a_ltc_sync_debugfs,
+#endif
+		.init_fs_state = gk20a_ltc_init_fs_state,
+		.isr = gk20a_ltc_isr,
+	},
 	.clock_gating = {
 		.slcg_gr_load_gating_prod =
 			gr_gk20a_slcg_gr_load_gating_prod,
@@ -151,6 +164,7 @@ int gk20a_init_hal(struct gk20a *g)
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
+	gops->ltc = gk20a_ops.ltc;
 	gops->clock_gating = gk20a_ops.clock_gating;
 	gops->privsecurity = 0;
 	gops->securegpccs = 0;
@@ -158,7 +172,6 @@ int gk20a_init_hal(struct gk20a *g)
 	gk20a_init_bus(gops);
 	gk20a_init_mc(gops);
 	gk20a_init_priv_ring(gops);
-	gk20a_init_ltc(gops);
 	gk20a_init_gr_ops(gops);
 	gk20a_init_fecs_trace_ops(gops);
 	gk20a_init_fb(gops);

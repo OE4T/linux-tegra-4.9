@@ -36,6 +36,7 @@
 #include "gp10b/therm_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
 
+#include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
@@ -51,7 +52,22 @@
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
-static struct gpu_ops gp10b_ops = {
+static const struct gpu_ops gp10b_ops = {
+	.ltc = {
+		.determine_L2_size_bytes = gp10b_determine_L2_size_bytes,
+		.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry,
+		.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry,
+		.init_cbc = gm20b_ltc_init_cbc,
+		.init_fs_state = gp10b_ltc_init_fs_state,
+		.init_comptags = gp10b_ltc_init_comptags,
+		.cbc_ctrl = gm20b_ltc_cbc_ctrl,
+		.isr = gp10b_ltc_isr,
+		.cbc_fix_config = gm20b_ltc_cbc_fix_config,
+		.flush = gm20b_flush_ltc,
+#ifdef CONFIG_DEBUG_FS
+		.sync_debugfs = gp10b_ltc_sync_debugfs,
+#endif
+	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
 			gp10b_slcg_bus_load_gating_prod,
@@ -196,6 +212,7 @@ int gp10b_init_hal(struct gk20a *g)
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 	u32 val;
 
+	gops->ltc = gp10b_ops.ltc;
 	gops->clock_gating = gp10b_ops.clock_gating;
 	gops->pmupstate = false;
 #ifdef CONFIG_TEGRA_ACR
@@ -240,7 +257,6 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_priv_ring(gops);
 	gp10b_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);
-	gp10b_init_ltc(gops);
 	gp10b_init_fb(gops);
 	gp10b_init_fifo(gops);
 	gp10b_init_ce(gops);

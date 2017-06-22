@@ -20,6 +20,7 @@
 #include "gk20a/pramin_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 
+#include "gp10b/ltc_gp10b.h"
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/mc_gp10b.h"
@@ -32,6 +33,7 @@
 #include "gp106/fifo_gp106.h"
 #include "gp106/regops_gp106.h"
 
+#include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
@@ -42,7 +44,6 @@
 #include "gp106/therm_gp106.h"
 #include "gp106/xve_gp106.h"
 #include "gp106/fifo_gp106.h"
-#include "gp106/ltc_gp106.h"
 #include "gp106/clk_gp106.h"
 #include "gp106/mm_gp106.h"
 #include "gp106/pmu_gp106.h"
@@ -58,7 +59,22 @@
 
 #include <nvgpu/hw/gp106/hw_proj_gp106.h>
 
-static struct gpu_ops gp106_ops = {
+static const struct gpu_ops gp106_ops = {
+	.ltc = {
+		.determine_L2_size_bytes = gp10b_determine_L2_size_bytes,
+		.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry,
+		.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry,
+		.init_cbc = NULL,
+		.init_fs_state = gm20b_ltc_init_fs_state,
+		.init_comptags = gp10b_ltc_init_comptags,
+		.cbc_ctrl = gm20b_ltc_cbc_ctrl,
+		.isr = gp10b_ltc_isr,
+		.cbc_fix_config = NULL,
+		.flush = gm20b_flush_ltc,
+#ifdef CONFIG_DEBUG_FS
+		.sync_debugfs = gp10b_ltc_sync_debugfs,
+#endif
+	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
 			gp106_slcg_bus_load_gating_prod,
@@ -229,6 +245,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+	gops->ltc = gp106_ops.ltc;
 	gops->clock_gating = gp106_ops.clock_gating;
 
 	gops->privsecurity = 1;
@@ -239,7 +256,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp10b_init_priv_ring(gops);
 	gp106_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);
-	gp106_init_ltc(gops);
 	gp106_init_fb(gops);
 	gp106_init_fifo(gops);
 	gp10b_init_ce(gops);

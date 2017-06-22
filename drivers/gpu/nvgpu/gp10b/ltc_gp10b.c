@@ -27,7 +27,7 @@
 #include "gk20a/ltc_gk20a.h"
 #include "ltc_gp10b.h"
 
-static int gp10b_determine_L2_size_bytes(struct gk20a *g)
+int gp10b_determine_L2_size_bytes(struct gk20a *g)
 {
 	u32 tmp;
 	int ret;
@@ -47,7 +47,7 @@ static int gp10b_determine_L2_size_bytes(struct gk20a *g)
 	return ret;
 }
 
-static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
+int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 {
 	/* max memory size (MB) to cover */
 	u32 max_size = gr->max_comptag_mem;
@@ -188,7 +188,7 @@ void gp10b_ltc_isr(struct gk20a *g)
 	}
 }
 
-static void gp10b_ltc_init_fs_state(struct gk20a *g)
+void gp10b_ltc_init_fs_state(struct gk20a *g)
 {
 	u32 ltc_intr;
 
@@ -206,7 +206,7 @@ static void gp10b_ltc_init_fs_state(struct gk20a *g)
 }
 
 #ifdef CONFIG_DEBUG_FS
-static void gp10b_ltc_sync_debugfs(struct gk20a *g)
+void gp10b_ltc_sync_debugfs(struct gk20a *g)
 {
 	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
 
@@ -227,22 +227,3 @@ static void gp10b_ltc_sync_debugfs(struct gk20a *g)
 	nvgpu_spinlock_release(&g->debugfs_lock);
 }
 #endif
-
-void gp10b_init_ltc(struct gpu_ops *gops)
-{
-	gops->ltc.determine_L2_size_bytes = gp10b_determine_L2_size_bytes;
-	gops->ltc.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry;
-	gops->ltc.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry;
-	gops->ltc.init_cbc = gm20b_ltc_init_cbc;
-
-	/* GM20b specific ops. */
-	gops->ltc.init_fs_state = gp10b_ltc_init_fs_state;
-	gops->ltc.init_comptags = gp10b_ltc_init_comptags;
-	gops->ltc.cbc_ctrl = gm20b_ltc_cbc_ctrl;
-	gops->ltc.isr = gp10b_ltc_isr;
-	gops->ltc.cbc_fix_config = gm20b_ltc_cbc_fix_config;
-	gops->ltc.flush = gm20b_flush_ltc;
-#ifdef CONFIG_DEBUG_FS
-	gops->ltc.sync_debugfs = gp10b_ltc_sync_debugfs;
-#endif
-}

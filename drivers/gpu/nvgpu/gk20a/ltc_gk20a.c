@@ -51,7 +51,7 @@ int gk20a_ltc_alloc_virt_cbc(struct gk20a *g, size_t compbit_backing_size)
 }
 
 /* HW reg dependent stuff: */
-static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
+int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 {
 	/* max memory size (MB) to cover */
 	u32 max_size = gr->max_comptag_mem;
@@ -125,7 +125,7 @@ static int gk20a_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
+int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 			      u32 min, u32 max)
 {
 	int err = 0;
@@ -196,14 +196,14 @@ out:
 }
 
 
-static void gk20a_ltc_init_fs_state(struct gk20a *g)
+void gk20a_ltc_init_fs_state(struct gk20a *g)
 {
 	gk20a_dbg_info("initialize gk20a L2");
 
 	g->max_ltc_count = g->ltc_count = 1;
 }
 
-static void gk20a_ltc_isr(struct gk20a *g)
+void gk20a_ltc_isr(struct gk20a *g)
 {
 	u32 intr;
 
@@ -212,7 +212,7 @@ static void gk20a_ltc_isr(struct gk20a *g)
 	gk20a_writel(g, ltc_ltc0_ltss_intr_r(), intr);
 }
 
-static int gk20a_determine_L2_size_bytes(struct gk20a *g)
+int gk20a_determine_L2_size_bytes(struct gk20a *g)
 {
 	u32 lts_per_ltc;
 	u32 ways;
@@ -256,7 +256,7 @@ static int gk20a_determine_L2_size_bytes(struct gk20a *g)
 /*
  * Sets the ZBC color for the passed index.
  */
-static void gk20a_ltc_set_zbc_color_entry(struct gk20a *g,
+void gk20a_ltc_set_zbc_color_entry(struct gk20a *g,
 					  struct zbc_entry *color_val,
 					  u32 index)
 {
@@ -277,7 +277,7 @@ static void gk20a_ltc_set_zbc_color_entry(struct gk20a *g,
 /*
  * Sets the ZBC depth for the passed index.
  */
-static void gk20a_ltc_set_zbc_depth_entry(struct gk20a *g,
+void gk20a_ltc_set_zbc_depth_entry(struct gk20a *g,
 					  struct zbc_entry *depth_val,
 					  u32 index)
 {
@@ -292,7 +292,7 @@ static void gk20a_ltc_set_zbc_depth_entry(struct gk20a *g,
 	gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r());
 }
 
-static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
+void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 max_size = gr->max_comptag_mem;
 	u32 max_comptag_lines = max_size << 3;
@@ -342,7 +342,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 }
 
 #ifdef CONFIG_DEBUG_FS
-static void gk20a_ltc_sync_debugfs(struct gk20a *g)
+void gk20a_ltc_sync_debugfs(struct gk20a *g)
 {
 	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
 
@@ -363,18 +363,3 @@ static void gk20a_ltc_sync_debugfs(struct gk20a *g)
 	nvgpu_spinlock_release(&g->debugfs_lock);
 }
 #endif
-
-void gk20a_init_ltc(struct gpu_ops *gops)
-{
-	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
-	gops->ltc.init_comptags = gk20a_ltc_init_comptags;
-	gops->ltc.cbc_ctrl = gk20a_ltc_cbc_ctrl;
-	gops->ltc.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry;
-	gops->ltc.set_zbc_depth_entry = gk20a_ltc_set_zbc_depth_entry;
-	gops->ltc.init_cbc = gk20a_ltc_init_cbc;
-#ifdef CONFIG_DEBUG_FS
-	gops->ltc.sync_debugfs = gk20a_ltc_sync_debugfs;
-#endif
-	gops->ltc.init_fs_state = gk20a_ltc_init_fs_state;
-	gops->ltc.isr = gk20a_ltc_isr;
-}

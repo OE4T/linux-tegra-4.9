@@ -46,7 +46,22 @@
 
 #define PRIV_SECURITY_DISABLE 0x01
 
-static struct gpu_ops gm20b_ops = {
+static const struct gpu_ops gm20b_ops = {
+	.ltc = {
+		.determine_L2_size_bytes = gm20b_determine_L2_size_bytes,
+		.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry,
+		.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry,
+		.init_cbc = gm20b_ltc_init_cbc,
+		.init_fs_state = gm20b_ltc_init_fs_state,
+		.init_comptags = gm20b_ltc_init_comptags,
+		.cbc_ctrl = gm20b_ltc_cbc_ctrl,
+		.isr = gm20b_ltc_isr,
+		.cbc_fix_config = gm20b_ltc_cbc_fix_config,
+		.flush = gm20b_flush_ltc,
+#ifdef CONFIG_DEBUG_FS
+		.sync_debugfs = gm20b_ltc_sync_debugfs,
+#endif
+	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
 			gm20b_slcg_bus_load_gating_prod,
@@ -189,6 +204,7 @@ int gm20b_init_hal(struct gk20a *g)
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 	u32 val;
 
+	gops->ltc = gm20b_ops.ltc;
 	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->securegpccs = false;
 	gops->pmupstate = false;
@@ -222,9 +238,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gk20a_init_bus(gops);
 	gm20b_init_mc(gops);
 	gk20a_init_priv_ring(gops);
-	gm20b_init_ltc(gops);
 	gm20b_init_gr(gops);
-	gm20b_init_ltc(gops);
 	gm20b_init_fb(gops);
 	gm20b_init_fifo(gops);
 	gm20b_init_ce2(gops);

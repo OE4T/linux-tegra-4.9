@@ -17,6 +17,8 @@
 #define _NVHOST_GM20B_LTC
 struct gpu_ops;
 
+int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr);
+int gm20b_determine_L2_size_bytes(struct gk20a *g);
 void gm20b_ltc_set_zbc_color_entry(struct gk20a *g,
 					  struct zbc_entry *color_val,
 					  u32 index);
@@ -24,8 +26,9 @@ void gm20b_ltc_set_zbc_depth_entry(struct gk20a *g,
 					  struct zbc_entry *depth_val,
 					  u32 index);
 void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr);
-
-void gm20b_init_ltc(struct gpu_ops *gops);
+#ifdef CONFIG_DEBUG_FS
+void gm20b_ltc_sync_debugfs(struct gk20a *g);
+#endif
 void gm20b_ltc_init_fs_state(struct gk20a *g);
 int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		       u32 min, u32 max);

@@ -28,6 +28,8 @@
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/tegra_emc.h>
 
+#include <dt-bindings/thermal/tegra210b01-trips.h>
+
 #define KHZ		1000
 #define MHZ		1000000
 #define VDD_SAFE_STEP	100
@@ -94,19 +96,19 @@ tegra210_core_therm_caps_ucm2[MAX_THERMAL_LIMITS] = {
 
 static struct dvfs_therm_limits
 tegra210b01_core_therm_floors[MAX_THERMAL_LIMITS] = {
-	{15, 850},
+	{TEGRA210B01_SOC_THERMAL_FLOOR_0 / 1000, 850},
 	{0, 0},
 };
 
 static struct dvfs_therm_limits
 tegra210b01_core_therm_caps[MAX_THERMAL_LIMITS] = {
-	{86, 1120},
+	{TEGRA210B01_SOC_THERMAL_CAP_0 / 1000, 1120},
 	{0, 0},
 };
 
 static struct dvfs_therm_limits
 tegra210b01_core_therm_caps_ucm2[MAX_THERMAL_LIMITS] = {
-	{86, 1120},
+	{TEGRA210B01_SOC_THERMAL_CAP_0 / 1000, 1120},
 	{0, 0},
 };
 
@@ -203,7 +205,8 @@ static struct dvfs_rail tegra210b01_dvfs_rail_vdd_gpu = {
 	.stats = {
 		.bin_uv = 5000, /* 10mV */
 	},
-	.vts_floors_table = { {-25, 800 }, }, /* applied if no vts cdev */
+	.vts_floors_table =		/* applied if no vts cdev */
+		{ {TEGRA210B01_GPU_DVFS_THERMAL_MIN / 1000, 800 }, },
 	.in_band_pm = true,
 	.nvver = "p4v1",
 };

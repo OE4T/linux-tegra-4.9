@@ -93,6 +93,7 @@ obj-$(CONFIG_SPI_TEGRA114)		+= spi-tegra114.o
 obj-$(CONFIG_SPI_TEGRA124_SLAVE)	+= spi-tegra124-slave.o
 obj-$(CONFIG_SPI_TEGRA20_SFLASH)	+= spi-tegra20-sflash.o
 obj-$(CONFIG_SPI_TEGRA20_SLINK)		+= spi-tegra20-slink.o
+obj-$(CONFIG_QSPI_TEGRA210)		+= spi-tegra210-qspi.o
 obj-$(CONFIG_SPI_TLE62X0)		+= spi-tle62x0.o
 spi-thunderx-objs			:= spi-cavium.o spi-cavium-thunderx.o
 obj-$(CONFIG_SPI_THUNDERX)		+= spi-thunderx.o

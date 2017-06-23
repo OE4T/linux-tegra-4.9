@@ -655,6 +655,18 @@ config SPI_TEGRA20_SLINK
 	help
 	  SPI driver for Nvidia Tegra20/Tegra30 SLINK Controller interface.
 
+config QSPI_TEGRA210
+	tristate "Nvidia Tegra210 QSPI Controller"
+	depends on ARCH_TEGRA
+	select QSPI_TEGRA
+	help
+	  QSPI driver for Nvidia Tegra210 QSPI Controller interface. This
+	  controller is different from the spi controller and first time
+	  introduces on Tegra210 soc.
+
+config QSPI_TEGRA
+	bool "Nvidia Tegra QSPI Controller"
+
 config SPI_THUNDERX
 	tristate "Cavium ThunderX SPI controller"
 	depends on PCI && 64BIT && (ARM64 || COMPILE_TEST)

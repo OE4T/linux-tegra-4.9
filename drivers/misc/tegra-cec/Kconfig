@@ -1,0 +1,6 @@
+config TEGRA_CEC_SUPPORT
+	bool "Tegra CEC support"
+	depends on TEGRA_DC
+	---help---
+	 Enables HDMI-CEC driver for Tegra SoC.
+

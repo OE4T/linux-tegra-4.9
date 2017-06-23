@@ -750,8 +750,6 @@ struct gpu_ops {
 		int (*pmu_lpwr_enable_pg)(struct gk20a *g, bool pstate_lock);
 		int (*pmu_lpwr_disable_pg)(struct gk20a *g, bool pstate_lock);
 		u32 (*pmu_pg_param_post_init)(struct gk20a *g);
-		int (*send_lrf_tex_ltc_dram_overide_en_dis_cmd)
-			(struct gk20a *g, u32 mask);
 		void (*dump_secure_fuses)(struct gk20a *g);
 		int (*reset)(struct gk20a *g);
 		int (*falcon_wait_for_halt)(struct gk20a *g,

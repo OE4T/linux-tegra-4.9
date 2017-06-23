@@ -739,7 +739,6 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_lpwr_enable_pg = NULL;
 	gops->pmu.pmu_lpwr_disable_pg = NULL;
 	gops->pmu.pmu_pg_param_post_init = NULL;
-	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.is_lazy_bootstrap = NULL;
 	gops->pmu.is_priv_load = NULL;

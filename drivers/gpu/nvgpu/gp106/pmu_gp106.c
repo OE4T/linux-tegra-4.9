@@ -438,7 +438,6 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_lpwr_enable_pg = nvgpu_lpwr_enable_pg;
 	gops->pmu.pmu_lpwr_disable_pg = nvgpu_lpwr_disable_pg;
 	gops->pmu.pmu_pg_param_post_init = nvgpu_lpwr_post_init;
-	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.reset = gp106_falcon_reset;
 	gops->pmu.mclk_init = gp106_mclk_init;

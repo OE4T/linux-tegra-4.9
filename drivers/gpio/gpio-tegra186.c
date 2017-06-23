@@ -311,7 +311,7 @@ struct tegra_gpio_port_soc_info {
 		.reg_offset = cind * 0x200,			\
 }
 
-static struct tegra_gpio_port_soc_info tegra_gpio_cinfo[] = {
+static struct tegra_gpio_port_soc_info tegra186_gpio_cinfo[] = {
 	TEGRA_MAIN_GPIO_PORT_INFO(A, 2, 0, 7),
 	TEGRA_MAIN_GPIO_PORT_INFO(B, 3, 0, 7),
 	TEGRA_MAIN_GPIO_PORT_INFO(C, 3, 1, 7),
@@ -338,7 +338,7 @@ static struct tegra_gpio_port_soc_info tegra_gpio_cinfo[] = {
 	TEGRA_MAIN_GPIO_PORT_INFO(DD, -1, -1, 0),
 };
 
-static struct tegra_gpio_port_soc_info tegra_aon_gpio_cinfo[] = {
+static struct tegra_gpio_port_soc_info tegra186_aon_gpio_cinfo[] = {
 	TEGRA_AON_GPIO_PORT_INFO(S, 0, 1, 5),
 	TEGRA_AON_GPIO_PORT_INFO(U, 0, 2, 6),
 	TEGRA_AON_GPIO_PORT_INFO(V, 0, 4, 8),
@@ -1246,8 +1246,8 @@ static const struct dev_pm_ops tegra_gpio_pm = {
 static const struct tegra_gpio_soc_info t186_gpio_soc = {
 	.name = "tegra-gpio",
 	.debug_fs_name = "tegra_gpio",
-	.port = tegra_gpio_cinfo,
-	.nports = ARRAY_SIZE(tegra_gpio_cinfo),
+	.port = tegra186_gpio_cinfo,
+	.nports = ARRAY_SIZE(tegra186_gpio_cinfo),
 	.wake_table = tegra186_gpio_wakes,
 	.nwakes = ARRAY_SIZE(tegra186_gpio_wakes),
 };
@@ -1255,8 +1255,8 @@ static const struct tegra_gpio_soc_info t186_gpio_soc = {
 static const struct tegra_gpio_soc_info t186_aon_gpio_soc = {
 	.name = "tegra-gpio-aon",
 	.debug_fs_name = "tegra-gpio-on",
-	.port = tegra_aon_gpio_cinfo,
-	.nports = ARRAY_SIZE(tegra_aon_gpio_cinfo),
+	.port = tegra186_aon_gpio_cinfo,
+	.nports = ARRAY_SIZE(tegra186_aon_gpio_cinfo),
 	.wake_table = tegra186_aon_gpio_wakes,
 	.nwakes = ARRAY_SIZE(tegra186_aon_gpio_wakes),
 };

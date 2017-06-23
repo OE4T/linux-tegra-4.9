@@ -145,13 +145,14 @@ int tegra_dfll_pwm_output_enable(void)
 {
 	int ret;
 
+	dfll_pwm_init();
+	dfll_pwm_enable(true);
+
 	ret = pinctrl_select_state(tdpc->pwm_pin, tdpc->pwm_enable_state);
 	if (ret < 0) {
 		dev_err(tdpc->dev, "setting enable state failed\n");
 		return -EINVAL;
 	}
-	dfll_pwm_init();
-	dfll_pwm_enable(true);
 
 	return 0;
 }

@@ -1125,6 +1125,10 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 	int i;
 	int ret = 0;
 
+    /* Clear and reinit control handler - Bug 1956853 */
+	v4l2_ctrl_handler_free(&chan->ctrl_handler);
+	v4l2_ctrl_handler_init(&chan->ctrl_handler, 0);
+
 	/* Initialize the subdev and controls here at first open */
 	sd = chan->subdev[num_sd];
 	while ((sd = chan->subdev[num_sd++]) &&

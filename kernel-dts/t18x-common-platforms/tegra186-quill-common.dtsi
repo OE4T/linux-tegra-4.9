@@ -618,6 +618,9 @@
 		status = "okay";
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@2a41000 {
+#endif
 	adsp_audio {
 		compr-ops = <1>;
 		num-plugin = <5>;
@@ -647,6 +650,9 @@
 			widget-name = "AEC";
 		};
 	};
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#endif
 
 	pinmux@2430000 {
 		/* Dynamic pinmux config for DMIC1 */
@@ -724,6 +730,9 @@
 		};
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@2a41000 {
+#endif
 	ahub {
 		dmic@2904000 {
 			nvidia,is-pinctrl = <1>;
@@ -775,7 +784,9 @@
 						<32768>, <32768>, <32768>, <32768>;
 		};
 	};
-
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#endif
 	hda@3510000 {
 		max-sdo-lines = <2>;
 		status = "okay";

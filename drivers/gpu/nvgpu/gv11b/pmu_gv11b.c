@@ -240,7 +240,8 @@ void gv11b_init_pmu_ops(struct gpu_ops *gops)
 	gp10b_init_pmu_ops(gops);
 	gops->pmu.pmu_nsbootstrap = gv11b_pmu_bootstrap;
 	gops->pmu.is_pmu_supported = gv11b_is_pmu_supported;
-	gops->pmu.reset = gp106_pmu_reset;
+	gops->pmu.reset_engine = gp106_pmu_engine_reset;
+	gops->pmu.is_engine_in_reset = gp106_pmu_is_engine_in_reset;
 	gops->pmu.pmu_get_queue_head = pwr_pmu_queue_head_r;
 	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
 	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;

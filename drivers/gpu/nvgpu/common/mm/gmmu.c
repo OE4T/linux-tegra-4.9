@@ -30,108 +30,14 @@
 #define gmmu_dbg_v(g, fmt, args...)			\
 	nvgpu_log(g, gpu_dbg_map_v, fmt, ##args)
 
-static int map_gmmu_phys_pages(struct gk20a_mm_entry *entry)
-{
-	FLUSH_CPU_DCACHE(entry->mem.cpu_va,
-			 sg_phys(entry->mem.priv.sgt->sgl),
-			 entry->mem.priv.sgt->sgl->length);
-	return 0;
-}
-
-static void unmap_gmmu_phys_pages(struct gk20a_mm_entry *entry)
-{
-	FLUSH_CPU_DCACHE(entry->mem.cpu_va,
-			 sg_phys(entry->mem.priv.sgt->sgl),
-			 entry->mem.priv.sgt->sgl->length);
-}
-
 static int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
-	gk20a_dbg_fn("");
-
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
-		return map_gmmu_phys_pages(entry);
-
-	if (IS_ENABLED(CONFIG_ARM64)) {
-		if (entry->mem.aperture == APERTURE_VIDMEM)
-			return 0;
-
-		FLUSH_CPU_DCACHE(entry->mem.cpu_va,
-				 sg_phys(entry->mem.priv.sgt->sgl),
-				 entry->mem.size);
-	} else {
-		int err = nvgpu_mem_begin(g, &entry->mem);
-
-		if (err)
-			return err;
-	}
-
-	return 0;
+	return nvgpu_mem_begin(g, &entry->mem);
 }
 
 static void unmap_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
-	gk20a_dbg_fn("");
-
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
-		unmap_gmmu_phys_pages(entry);
-		return;
-	}
-
-	if (IS_ENABLED(CONFIG_ARM64)) {
-		if (entry->mem.aperture == APERTURE_VIDMEM)
-			return;
-
-		FLUSH_CPU_DCACHE(entry->mem.cpu_va,
-				 sg_phys(entry->mem.priv.sgt->sgl),
-				 entry->mem.size);
-	} else {
-		nvgpu_mem_end(g, &entry->mem);
-	}
-}
-
-static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
-				 struct gk20a_mm_entry *entry)
-{
-	u32 num_pages = 1 << order;
-	u32 len = num_pages * PAGE_SIZE;
-	int err;
-	struct page *pages;
-	struct gk20a *g = vm->mm->g;
-
-	/* note: mem_desc slightly abused (wrt. alloc_gmmu_pages) */
-
-	pages = alloc_pages(GFP_KERNEL, order);
-	if (!pages) {
-		nvgpu_log(g, gpu_dbg_pte, "alloc_pages failed");
-		goto err_out;
-	}
-	entry->mem.priv.sgt = nvgpu_kzalloc(g, sizeof(*entry->mem.priv.sgt));
-	if (!entry->mem.priv.sgt) {
-		nvgpu_log(g, gpu_dbg_pte, "cannot allocate sg table");
-		goto err_alloced;
-	}
-	err = sg_alloc_table(entry->mem.priv.sgt, 1, GFP_KERNEL);
-	if (err) {
-		nvgpu_log(g, gpu_dbg_pte, "sg_alloc_table failed");
-		goto err_sg_table;
-	}
-	sg_set_page(entry->mem.priv.sgt->sgl, pages, len, 0);
-	entry->mem.cpu_va = page_address(pages);
-	memset(entry->mem.cpu_va, 0, len);
-	entry->mem.size = len;
-	entry->mem.aperture = APERTURE_SYSMEM;
-	FLUSH_CPU_DCACHE(entry->mem.cpu_va,
-			 sg_phys(entry->mem.priv.sgt->sgl), len);
-
-	return 0;
-
-err_sg_table:
-	nvgpu_kfree(vm->mm->g, entry->mem.priv.sgt);
-err_alloced:
-	__free_pages(pages, order);
-err_out:
-	return -ENOMEM;
+	nvgpu_mem_end(g, &entry->mem);
 }
 
 static int nvgpu_alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
@@ -142,19 +48,7 @@ static int nvgpu_alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	u32 len = num_pages * PAGE_SIZE;
 	int err;
 
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
-		return alloc_gmmu_phys_pages(vm, order, entry);
-
-	/*
-	 * On arm32 we're limited by vmalloc space, so we do not map pages by
-	 * default.
-	 */
-	if (IS_ENABLED(CONFIG_ARM64))
-		err = nvgpu_dma_alloc(g, len, &entry->mem);
-	else
-		err = nvgpu_dma_alloc_flags(g, NVGPU_DMA_NO_KERNEL_MAPPING,
-				len, &entry->mem);
-
+	err = nvgpu_dma_alloc(g, len, &entry->mem);
 
 	if (err) {
 		nvgpu_err(g, "memory allocation failed");
@@ -164,40 +58,16 @@ static int nvgpu_alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	return 0;
 }
 
-static void free_gmmu_phys_pages(struct vm_gk20a *vm,
-			    struct gk20a_mm_entry *entry)
-{
-	gk20a_dbg_fn("");
-
-	/* note: mem_desc slightly abused (wrt. nvgpu_free_gmmu_pages) */
-
-	free_pages((unsigned long)entry->mem.cpu_va, get_order(entry->mem.size));
-	entry->mem.cpu_va = NULL;
-
-	sg_free_table(entry->mem.priv.sgt);
-	nvgpu_kfree(vm->mm->g, entry->mem.priv.sgt);
-	entry->mem.priv.sgt = NULL;
-	entry->mem.size = 0;
-	entry->mem.aperture = APERTURE_INVALID;
-}
-
 void nvgpu_free_gmmu_pages(struct vm_gk20a *vm,
 			   struct gk20a_mm_entry *entry)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-
-	gk20a_dbg_fn("");
 
 	if (!entry->mem.size)
 		return;
 
 	if (entry->woffset) /* fake shadow mem */
 		return;
-
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
-		free_gmmu_phys_pages(vm, entry);
-		return;
-	}
 
 	nvgpu_dma_free(g, &entry->mem);
 }

@@ -12,7 +12,6 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "gk20a/hal_gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "vgpu/clk_vgpu.h"
 
@@ -68,7 +67,6 @@ struct gk20a_platform gv11b_vgpu_tegra_platform = {
 	.ch_wdt_timeout_ms = 5000,
 
 	.probe = gv11b_vgpu_probe,
-	.default_big_page_size	= SZ_64K,
 
 	.clk_round_rate = vgpu_clk_round_rate,
 	.get_clk_freqs = vgpu_clk_get_freqs,

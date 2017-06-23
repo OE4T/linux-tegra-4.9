@@ -135,8 +135,6 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
-	.default_big_page_size	= SZ_64K,
-
 	.soc_name = "tegra19x",
 
 	.honors_aperture = true,

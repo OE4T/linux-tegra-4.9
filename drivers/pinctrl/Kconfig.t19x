@@ -4,14 +4,6 @@ config PINCTRL_TEGRA194
 	help
 	Support for the NVIDIA Tegra194 PINCTRL controller driver.
 
-config PINCTRL_TEGRA194_PADCTL
-	bool "NVIDIA Tegra194 XUSB PADCTL Driver"
-	depends on ARCH_TEGRA_19x_SOC
-	depends on MAILBOX
-	select GENERIC_PHY
-	select PINCONF
-	select PINMUX
-
 config PINCTRL_TEGRA194_PEXCLK_PADCTL
 	bool "NVIDIA Tegra194 PCIE PEXCLK PADCTL Driver"
 	depends on ARCH_TEGRA_19x_SOC

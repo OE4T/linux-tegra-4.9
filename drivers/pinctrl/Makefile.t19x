@@ -10,5 +10,4 @@ ccflags-y += -I$(srctree)/../nvidia/include
 ifdef CONFIG_ARCH_TEGRA_19x_SOC
 obj-y  += pinctrl-tegra194.o
 endif
-obj-$(CONFIG_PINCTRL_TEGRA194_PADCTL) += pinctrl-tegra194-padctl.o
 obj-$(CONFIG_PINCTRL_TEGRA194_PEXCLK_PADCTL) += pinctrl-tegra194-pexclk-padctrl.o

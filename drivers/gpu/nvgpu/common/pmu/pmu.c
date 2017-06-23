@@ -18,7 +18,108 @@
 
 #include "gk20a/gk20a.h"
 
+#define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
+#define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
+
 static int nvgpu_pg_init_task(void *arg);
+
+static int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
+{
+	struct gk20a *g = pmu->g;
+	struct nvgpu_timeout timeout;
+	int err = 0;
+
+	nvgpu_log_fn(g, " %s ", g->name);
+
+	if (enable) {
+		/* bring PMU falcon/engine out of reset */
+		g->ops.pmu.reset_engine(g, true);
+
+		if (g->ops.clock_gating.slcg_pmu_load_gating_prod)
+			g->ops.clock_gating.slcg_pmu_load_gating_prod(g,
+				g->slcg_enabled);
+
+		if (g->ops.clock_gating.blcg_pmu_load_gating_prod)
+			g->ops.clock_gating.blcg_pmu_load_gating_prod(g,
+				g->blcg_enabled);
+
+		/* check for PMU IMEM/DMEM scrubbing complete status */
+		nvgpu_timeout_init(g, &timeout,
+			PMU_MEM_SCRUBBING_TIMEOUT_MAX /
+			PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT,
+			NVGPU_TIMER_RETRY_TIMER);
+		do {
+			if (nvgpu_flcn_get_mem_scrubbing_status(pmu->flcn))
+				goto exit;
+
+			nvgpu_udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
+		} while (!nvgpu_timeout_expired(&timeout));
+
+		/* keep PMU falcon/engine in reset
+		*  if IMEM/DMEM scrubbing fails
+		*/
+		g->ops.pmu.reset_engine(g, false);
+		nvgpu_err(g, "Falcon mem scrubbing timeout");
+		err = -ETIMEDOUT;
+	} else
+		/* keep PMU falcon/engine in reset */
+		g->ops.pmu.reset_engine(g, false);
+
+exit:
+	nvgpu_log_fn(g, "%s Done, status - %d ", g->name, err);
+	return err;
+}
+
+static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
+{
+	struct gk20a *g = pmu->g;
+	int err = 0;
+
+	nvgpu_log_fn(g, " ");
+
+	if (!enable) {
+		if (!g->ops.pmu.is_engine_in_reset(g)) {
+			pmu_enable_irq(pmu, false);
+			pmu_enable_hw(pmu, false);
+		}
+	} else {
+		err = pmu_enable_hw(pmu, true);
+		if (err)
+			goto exit;
+
+		err = nvgpu_flcn_wait_idle(pmu->flcn);
+		if (err)
+			goto exit;
+
+		pmu_enable_irq(pmu, true);
+	}
+
+exit:
+	nvgpu_log_fn(g, "Done, status - %d ", err);
+	return err;
+}
+
+int nvgpu_pmu_reset(struct gk20a *g)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
+	int err = 0;
+
+	nvgpu_log_fn(g, " %s ", g->name);
+
+	err = nvgpu_flcn_wait_idle(pmu->flcn);
+	if (err)
+		goto exit;
+
+	err = pmu_enable(pmu, false);
+	if (err)
+		goto exit;
+
+	err = pmu_enable(pmu, true);
+
+exit:
+	nvgpu_log_fn(g, " %s Done, status - %d ", g->name, err);
+	return err;
+}
 
 static int nvgpu_init_task_pg_init(struct gk20a *g)
 {
@@ -139,17 +240,6 @@ skip_init:
 	return err;
 }
 
-static int nvgpu_init_pmu_reset_enable_hw(struct gk20a *g)
-{
-	struct nvgpu_pmu *pmu = &g->pmu;
-
-	nvgpu_log_fn(g, " ");
-
-	pmu_enable_hw(pmu, true);
-
-	return 0;
-}
-
 int nvgpu_init_pmu_support(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
@@ -160,7 +250,7 @@ int nvgpu_init_pmu_support(struct gk20a *g)
 	if (pmu->initialized)
 		return 0;
 
-	err = nvgpu_init_pmu_reset_enable_hw(g);
+	err = pmu_enable_hw(pmu, true);
 	if (err)
 		return err;
 

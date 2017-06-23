@@ -755,7 +755,8 @@ struct gpu_ops {
 		int (*pmu_lpwr_disable_pg)(struct gk20a *g, bool pstate_lock);
 		u32 (*pmu_pg_param_post_init)(struct gk20a *g);
 		void (*dump_secure_fuses)(struct gk20a *g);
-		int (*reset)(struct gk20a *g);
+		int (*reset_engine)(struct gk20a *g, bool do_reset);
+		bool (*is_engine_in_reset)(struct gk20a *g);
 		int (*falcon_wait_for_halt)(struct gk20a *g,
 			unsigned int timeout);
 		int (*falcon_clear_halt_interrupt_status)(struct gk20a *g,

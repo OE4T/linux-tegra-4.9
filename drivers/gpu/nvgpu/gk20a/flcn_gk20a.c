@@ -11,6 +11,7 @@
  * more details.
  */
 #include <nvgpu/falcon.h>
+#include <nvgpu/pmu.h>
 
 #include "gk20a/gk20a.h"
 
@@ -256,7 +257,7 @@ static void gk20a_falcon_engine_dependency_ops(struct nvgpu_falcon *flcn)
 
 	switch (flcn->flcn_id) {
 	case FALCON_ID_PMU:
-		flcn_eng_dep_ops->reset_eng = gk20a_pmu_reset;
+		flcn_eng_dep_ops->reset_eng = nvgpu_pmu_reset;
 		break;
 	default:
 		/* NULL assignment make sure

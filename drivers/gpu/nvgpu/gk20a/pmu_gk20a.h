@@ -70,9 +70,10 @@ void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 				void *param, u32 handle, u32 status);
 void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data);
-int gk20a_pmu_reset(struct gk20a *g);
+bool gk20a_pmu_is_engine_in_reset(struct gk20a *g);
+int gk20a_pmu_engine_reset(struct gk20a *g, bool do_reset);
+
 int pmu_idle(struct nvgpu_pmu *pmu);
-int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable);
 
 bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos);
 

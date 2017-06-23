@@ -330,6 +330,20 @@ void init_pmu_setup_hw1(struct gk20a *g)
 
 }
 
+static int gp106_sec2_reset(struct gk20a *g)
+{
+	nvgpu_log_fn(g, " ");
+
+	gk20a_writel(g, psec_falcon_engine_r(),
+			pwr_falcon_engine_reset_true_f());
+	nvgpu_udelay(10);
+	gk20a_writel(g, psec_falcon_engine_r(),
+			pwr_falcon_engine_reset_false_f());
+
+	nvgpu_log_fn(g, "done");
+	return 0;
+}
+
 int init_sec2_setup_hw1(struct gk20a *g,
 		void *desc, u32 bl_sz)
 {
@@ -339,10 +353,7 @@ int init_sec2_setup_hw1(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	g->ops.pmu.reset(g);
-	pmu->isr_enabled = true;
-	nvgpu_mutex_release(&pmu->isr_mutex);
+	gp106_sec2_reset(g);
 
 	data = gk20a_readl(g, psec_fbif_ctl_r());
 	data |= psec_fbif_ctl_allow_phys_no_ctx_allow_f();
@@ -370,11 +381,7 @@ int init_sec2_setup_hw1(struct gk20a *g,
 			psec_fbif_transcfg_target_noncoherent_sysmem_f());
 
 	/*disable irqs for hs falcon booting as we will poll for halt*/
-	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	pmu_enable_irq(pmu, false);
 	sec_enable_irq(pmu, false);
-	pmu->isr_enabled = false;
-	nvgpu_mutex_release(&pmu->isr_mutex);
 	err = bl_bootstrap_sec2(pmu, desc, bl_sz);
 	if (err)
 		return err;

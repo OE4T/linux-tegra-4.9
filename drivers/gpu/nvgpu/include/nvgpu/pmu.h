@@ -432,6 +432,9 @@ int nvgpu_pmu_init_powergating(struct gk20a *g);
 int nvgpu_pmu_init_bind_fecs(struct gk20a *g);
 void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g);
 
+/* PMU reset */
+int nvgpu_pmu_reset(struct gk20a *g);
+
 /* PG enable/disable */
 int nvgpu_pmu_enable_elpg(struct gk20a *g);
 int nvgpu_pmu_disable_elpg(struct gk20a *g);

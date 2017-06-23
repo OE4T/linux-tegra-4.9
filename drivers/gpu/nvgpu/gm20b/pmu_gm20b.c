@@ -309,5 +309,6 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_lpwr_disable_pg = NULL;
 	gops->pmu.pmu_pg_param_post_init = NULL;
 	gops->pmu.dump_secure_fuses = pmu_dump_security_fuses_gm20b;
-	gops->pmu.reset = NULL;
+	gops->pmu.reset_engine = gk20a_pmu_engine_reset;
+	gops->pmu.is_engine_in_reset = gk20a_pmu_is_engine_in_reset;
 }

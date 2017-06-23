@@ -32,149 +32,41 @@
 #include <nvgpu/hw/gp106/hw_mc_gp106.h>
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 
-#define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
-#define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
-
-static int gp106_pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
-{
-	struct gk20a *g = gk20a_from_pmu(pmu);
-
-	gk20a_dbg_fn("");
-
-	/*
-	* From GP10X onwards, we are using PPWR_FALCON_ENGINE for reset. And as
-	* it may come into same behaviour, reading NV_PPWR_FALCON_ENGINE again
-	* after Reset.
-	*/
-
-	if (enable) {
-		int retries = PMU_MEM_SCRUBBING_TIMEOUT_MAX /
-				PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT;
-		gk20a_writel(g, pwr_falcon_engine_r(),
-			pwr_falcon_engine_reset_false_f());
-		gk20a_readl(g, pwr_falcon_engine_r());
-
-		/* make sure ELPG is in a good state */
-		if (g->ops.clock_gating.slcg_pmu_load_gating_prod)
-			g->ops.clock_gating.slcg_pmu_load_gating_prod(g,
-					g->slcg_enabled);
-		if (g->ops.clock_gating.blcg_pmu_load_gating_prod)
-			g->ops.clock_gating.blcg_pmu_load_gating_prod(g,
-					g->blcg_enabled);
-
-		/* wait for Scrubbing to complete */
-		do {
-			if (nvgpu_flcn_get_mem_scrubbing_status(pmu->flcn)) {
-				gk20a_dbg_fn("done");
-				return 0;
-			}
-			nvgpu_udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
-		} while (--retries);
-
-		/* If scrubbing timeout, keep PMU in reset state */
-		gk20a_writel(g, pwr_falcon_engine_r(),
-			pwr_falcon_engine_reset_true_f());
-		gk20a_readl(g, pwr_falcon_engine_r());
-		nvgpu_err(g, "Falcon mem scrubbing timeout");
-		return -ETIMEDOUT;
-	} else {
-		/* DISBALE */
-		gk20a_writel(g, pwr_falcon_engine_r(),
-			pwr_falcon_engine_reset_true_f());
-		gk20a_readl(g, pwr_falcon_engine_r());
-		return 0;
-	}
-}
-
-static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
-{
-	struct gk20a *g = gk20a_from_pmu(pmu);
-	u32 reg_reset;
-	int err;
-
-	gk20a_dbg_fn("");
-
-	if (!enable) {
-		reg_reset = gk20a_readl(g, pwr_falcon_engine_r());
-		if (reg_reset !=
-			pwr_falcon_engine_reset_true_f()) {
-
-			pmu_enable_irq(pmu, false);
-			gp106_pmu_enable_hw(pmu, false);
-			nvgpu_udelay(10);
-		}
-	} else {
-		gp106_pmu_enable_hw(pmu, true);
-		/* TBD: post reset */
-
-		/*idle the PMU and enable interrupts on the Falcon*/
-		err = nvgpu_flcn_wait_idle(pmu->flcn);
-		if (err)
-			return err;
-		nvgpu_udelay(5);
-		pmu_enable_irq(pmu, true);
-	}
-
-	gk20a_dbg_fn("done");
-	return 0;
-}
-
-int gp106_pmu_reset(struct gk20a *g)
-{
-	struct nvgpu_pmu *pmu = &g->pmu;
-	int err = 0;
-
-	gk20a_dbg_fn("");
-
-	err = nvgpu_flcn_wait_idle(pmu->flcn);
-	if (err)
-		return err;
-
-	/* TBD: release pmu hw mutex */
-
-	err = pmu_enable(pmu, false);
-	if (err)
-		return err;
-
-	/* TBD: cancel all sequences */
-	/* TBD: init all sequences and state tables */
-	/* TBD: restore pre-init message handler */
-
-	err = pmu_enable(pmu, true);
-	if (err)
-		return err;
-
-	return err;
-}
-
-static int gp106_sec2_reset(struct gk20a *g)
-{
-	gk20a_dbg_fn("");
-	//sec2 reset
-	gk20a_writel(g, psec_falcon_engine_r(),
-			pwr_falcon_engine_reset_true_f());
-	nvgpu_udelay(10);
-	gk20a_writel(g, psec_falcon_engine_r(),
-			pwr_falcon_engine_reset_false_f());
-
-	gk20a_dbg_fn("done");
-	return 0;
-}
-
-static int gp106_falcon_reset(struct gk20a *g)
-{
-	gk20a_dbg_fn("");
-
-	gp106_pmu_reset(g);
-	gp106_sec2_reset(g);
-
-	gk20a_dbg_fn("done");
-	return 0;
-}
-
 static bool gp106_is_pmu_supported(struct gk20a *g)
 {
 	return true;
+}
+
+bool gp106_pmu_is_engine_in_reset(struct gk20a *g)
+{
+	u32 reg_reset;
+	bool status = false;
+
+	reg_reset = gk20a_readl(g, pwr_falcon_engine_r());
+	if (reg_reset == pwr_falcon_engine_reset_true_f())
+		status = true;
+
+	return status;
+}
+
+int gp106_pmu_engine_reset(struct gk20a *g, bool do_reset)
+{
+	/*
+	* From GP10X onwards, we are using PPWR_FALCON_ENGINE for reset. And as
+	* it may come into same behavior, reading NV_PPWR_FALCON_ENGINE again
+	* after Reset.
+	*/
+	if (do_reset) {
+		gk20a_writel(g, pwr_falcon_engine_r(),
+			pwr_falcon_engine_reset_false_f());
+		gk20a_readl(g, pwr_falcon_engine_r());
+	} else {
+		gk20a_writel(g, pwr_falcon_engine_r(),
+			pwr_falcon_engine_reset_true_f());
+		gk20a_readl(g, pwr_falcon_engine_r());
+	}
+
+	return 0;
 }
 
 static u32 gp106_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
@@ -439,10 +331,11 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_lpwr_disable_pg = nvgpu_lpwr_disable_pg;
 	gops->pmu.pmu_pg_param_post_init = nvgpu_lpwr_post_init;
 	gops->pmu.dump_secure_fuses = NULL;
-	gops->pmu.reset = gp106_falcon_reset;
 	gops->pmu.mclk_init = gp106_mclk_init;
 	gops->pmu.mclk_deinit = gp106_mclk_deinit;
 	gops->pmu.is_pmu_supported = gp106_is_pmu_supported;
+	gops->pmu.reset_engine = gp106_pmu_engine_reset;
+	gops->pmu.is_engine_in_reset = gp106_pmu_is_engine_in_reset;
 
 	gk20a_dbg_fn("done");
 }

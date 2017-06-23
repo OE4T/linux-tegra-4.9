@@ -105,7 +105,7 @@ static int gm206_bios_devinit(struct gk20a *g)
 	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
-	g->ops.pmu.reset(g);
+	nvgpu_flcn_reset(g->pmu.flcn);
 
 	nvgpu_timeout_init(g, &timeout,
 			   PMU_BOOT_TIMEOUT_MAX /
@@ -187,7 +187,7 @@ static int gm206_bios_preos(struct gk20a *g)
 	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
-	g->ops.pmu.reset(g);
+	nvgpu_flcn_reset(g->pmu.flcn);
 
 	nvgpu_timeout_init(g, &timeout,
 			   PMU_BOOT_TIMEOUT_MAX /

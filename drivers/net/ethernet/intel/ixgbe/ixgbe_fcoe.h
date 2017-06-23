@@ -1,7 +1,7 @@
 /*******************************************************************************
 
-  Intel 10 Gigabit PCI Express Linux driver
-  Copyright(c) 1999 - 2013 Intel Corporation.
+  Intel(R) 10GbE PCI Express Linux Network Driver
+  Copyright(c) 1999 - 2017 Intel Corporation.
 
   This program is free software; you can redistribute it and/or modify it
   under the terms and conditions of the GNU General Public License,
@@ -11,10 +11,6 @@
   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
   FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
   more details.
-
-  You should have received a copy of the GNU General Public License along with
-  this program; if not, write to the Free Software Foundation, Inc.,
-  51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
 
   The full GNU General Public License is included in this distribution in
   the file called "COPYING".
@@ -26,8 +22,10 @@
 
 *******************************************************************************/
 
-#ifndef _IXGBE_FCOE_H
-#define _IXGBE_FCOE_H
+#ifndef _IXGBE_FCOE_H_
+#define _IXGBE_FCOE_H_
+
+#if IS_ENABLED(CONFIG_FCOE)
 
 #include <scsi/fc/fc_fs.h>
 #include <scsi/fc/fc_fcoe.h>
@@ -38,7 +36,7 @@
 /* ddp user buffer */
 #define IXGBE_BUFFCNT_MAX	256	/* 8 bits bufcnt */
 #define IXGBE_FCPTR_ALIGN	16
-#define IXGBE_FCPTR_MAX	(IXGBE_BUFFCNT_MAX * sizeof(dma_addr_t))
+#define IXGBE_FCPTR_MAX		(IXGBE_BUFFCNT_MAX * sizeof(dma_addr_t))
 #define IXGBE_FCBUFF_4KB	0x0
 #define IXGBE_FCBUFF_8KB	0x1
 #define IXGBE_FCBUFF_16KB	0x2
@@ -48,11 +46,16 @@
 #define IXGBE_FCOE_DDP_MAX	512	/* 9 bits xid */
 #define IXGBE_FCOE_DDP_MAX_X550	2048	/* 11 bits xid */
 
-/* Default traffic class to use for FCoE */
-#define IXGBE_FCOE_DEFTC	3
+/* Default user priority to use for FCoE */
+#define IXGBE_FCOE_DEFUP	3
 
 /* fcerr */
-#define IXGBE_FCERR_BADCRC       0x00100000
+#define IXGBE_FCERR_BADCRC	0x00100000
+#define IXGBE_FCERR_EOFSOF	0x00200000
+#define IXGBE_FCERR_NOFIRST	0x00300000
+#define IXGBE_FCERR_OOOSEQ	0x00400000
+#define IXGBE_FCERR_NODMA	0x00500000
+#define IXGBE_FCERR_PKTLOST	0x00600000
 
 /* FCoE DDP for target mode */
 #define __IXGBE_FCOE_TARGET	1
@@ -83,6 +86,8 @@ struct ixgbe_fcoe {
 	dma_addr_t extra_ddp_buffer_dma;
 	unsigned long mode;
 	u8 up;
+	u8 up_set;
 };
+#endif /* CONFIG_FCOE */
 
 #endif /* _IXGBE_FCOE_H */

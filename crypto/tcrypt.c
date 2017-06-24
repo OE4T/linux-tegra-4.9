@@ -1563,6 +1563,10 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 		ret += tcrypt_test("xts(aes)");
 		break;
 
+	case 54:
+		ret += tcrypt_test("dh");
+		break;
+
 	case 100:
 		ret += tcrypt_test("hmac(md5)");
 		break;

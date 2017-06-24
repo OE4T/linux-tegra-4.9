@@ -165,6 +165,7 @@ struct dfsh_state {
 	int gpio_rst;			/* GPIO reset */
 	int gpio_boot0;			/* GPIO boot0 */
 	int gpio_rst_asrt_pol;		/* GPIO reset assert polarity */
+	bool no_sensors;
 
 	int pkt_byte_idx;
 	int pyld_len;
@@ -725,6 +726,7 @@ static int dfsh_of_dt(struct dfsh_state *st, struct device_node *dn)
 						 "dfsh,reset-gpio", 0);
 		st->gpio_boot0 = of_get_named_gpio(dn,
 						 "dfsh,boot0-gpio", 0);
+		st->no_sensors = of_property_read_bool(dn, "no_sensors");
 	}
 
 	/* initialize GPIO */
@@ -764,25 +766,27 @@ static int dfsh_open(struct tty_struct *tty)
 
 	dfsh_fn_dev.sts = &st->sts;
 	dfsh_fn_dev.errs = &st->errs;
-	st->nvs = nvs_iio();
-	if (st->nvs == NULL) {
-		ret = -ENODEV;
-		goto dfsh_open_err;
-	}
-
-	n = 0;
-	for (i = 0; i < DEV_N; i++) {
-		ret = st->nvs->probe(&st->nvs_st[i], st, tty->dev,
-				     &dfsh_fn_dev, &st->cfg[i]);
-		if (!ret) {
-			st->cfg[i].snsr_id = i;
-			n++;
+	if (!st->no_sensors) {
+		st->nvs = nvs_iio();
+		if (st->nvs == NULL) {
+			ret = -ENODEV;
+			goto dfsh_open_err;
 		}
-	}
-	if (!n) {
-		dev_err(tty->dev, "%s nvs_probe ERR\n", __func__);
-		ret = -ENODEV;
-		goto dfsh_open_err;
+
+		n = 0;
+		for (i = 0; i < DEV_N; i++) {
+			ret = st->nvs->probe(&st->nvs_st[i], st, tty->dev,
+					     &dfsh_fn_dev, &st->cfg[i]);
+			if (!ret) {
+				st->cfg[i].snsr_id = i;
+				n++;
+			}
+		}
+		if (!n) {
+			dev_err(tty->dev, "%s nvs_probe ERR\n", __func__);
+			ret = -ENODEV;
+			goto dfsh_open_err;
+		}
 	}
 
 	tty->disc_data = st;

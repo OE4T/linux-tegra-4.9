@@ -389,8 +389,6 @@ static void dfsh_enable_mcu_sensor(struct dfsh_state *st, bool enable)
 		if (!st->enabled_msk) {
 			cmd = CMD_START_TS;
 			dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
-			cmd = CMD_CAM_PWR_ON;
-			dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
 			cmd = CMD_CAM_FSIN_START;
 			dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
 			pr_info("Enable mcu sensor data.");
@@ -661,6 +659,14 @@ static int dfsh_ioctl(struct tty_struct *tty, struct file *file,
 	return ret;
 }
 
+static void dfsh_power_camera(bool on)
+{
+	uint32_t cmd;
+
+	cmd = on ? CMD_CAM_PWR_ON : CMD_CAM_PWR_OFF;
+	dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
+}
+
 static void dfsh_shutdown(struct tty_struct *tty)
 {
 	struct dfsh_state *st = tty->disc_data;
@@ -681,6 +687,8 @@ static void dfsh_close(struct tty_struct *tty)
 {
 	struct dfsh_state *st = tty->disc_data;
 	unsigned int i;
+
+	dfsh_power_camera(false);
 
 	if (st != NULL) {
 		st->tty_close = true;
@@ -785,6 +793,8 @@ static int dfsh_open(struct tty_struct *tty)
 
 	/* Get MCU firmware version */
 	dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
+
+	dfsh_power_camera(true);
 
 	dev_info(tty->dev, "%s done\n", __func__);
 	return 0;

@@ -432,7 +432,8 @@ static struct tegra_function tegra186_functions[] = {
 		.lpdr_bit = e_lpdr,				\
 		.pbias_buf_bit = e_io_hv,			\
 		.preemp_bit = e_io_hv,				\
-		.rfu_in_bit = 20
+		.rfu_in_bit = 20,				\
+		.lpbk_bit = -1					\
 
 #define PIN_PINGROUP_ENTRY_N(pg_name)				\
 		.mux_reg = -1,					\
@@ -449,7 +450,8 @@ static struct tegra_function tegra186_functions[] = {
 		.lpdr_bit = -1,					\
 		.pbias_buf_bit = -1,				\
 		.preemp_bit = -1,				\
-		.rfu_in_bit = -1
+		.rfu_in_bit = -1,				\
+		.lpbk_bit = -1,					\
 
 #define drive_touch_clk_pee2            DRV_PINGROUP_ENTRY_Y(0x2004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)
 #define drive_uart3_cts_pw5             DRV_PINGROUP_ENTRY_Y(0x200c,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)

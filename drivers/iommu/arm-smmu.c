@@ -3324,8 +3324,23 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 		smmu->iso_smmu_id = -1;
 		dev_info(dev, "found %d SMMUs\n", smmu->num_smmus);
 	} else {
-		dev_info(dev, "found %d SMMUs and ISO SMMU id is %d\n",
+		if (!tegra_platform_is_fpga()) {
+			dev_info(dev, "found %d SMMUs and ISO SMMU id is %d\n",
 				smmu->num_smmus, smmu->iso_smmu_id);
+		} else {
+			u32 reg = readl_relaxed(smmu->base[smmu->iso_smmu_id] +
+				ARM_SMMU_GR0_sCR0);
+			if (reg) {
+				dev_info(dev,
+				     "found %d SMMUs and ISO SMMU id is %d\n",
+				     smmu->num_smmus, smmu->iso_smmu_id);
+			} else {
+				smmu->iso_smmu_id = -1;
+				smmu->num_smmus--;
+				dev_info(dev, "found %d SMMUs\n",
+					smmu->num_smmus);
+			}
+		}
 	}
 
 	num_irqs = 0;

@@ -191,7 +191,7 @@ nvgpu-y += \
 	gp106/hal_gp106.o \
 	gp106/mm_gp106.o \
 	gp106/pmu_gp106.o \
-	gp106/pmu_mclk_gp106.o \
+	gp106/mclk_gp106.o \
 	gp106/gr_gp106.o \
 	gp106/gr_ctx_gp106.o \
 	gp106/acr_gp106.o \

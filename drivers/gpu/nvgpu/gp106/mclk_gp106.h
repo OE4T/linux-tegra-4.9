@@ -11,8 +11,8 @@
 * more details.
 */
 
-#ifndef _PMU_MCLK_GP106_H_
-#define _PMU_MCLK_GP106_H_
+#ifndef _MCLK_GP106_H_
+#define _MCLK_GP106_H_
 
 extern int gp106_mclk_init(struct gk20a *g);
 extern void gp106_mclk_deinit(struct gk20a *g);

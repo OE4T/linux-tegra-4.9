@@ -23,7 +23,7 @@
 #include "gk20a/platform_gk20a.h"
 #include "gm20b/fifo_gm20b.h"
 #include "bios_gm206.h"
-#include "gp106/pmu_mclk_gp106.h"
+#include "gp106/mclk_gp106.h"
 
 #include <nvgpu/hw/gm206/hw_pwr_gm206.h>
 #include <nvgpu/hw/gm206/hw_mc_gm206.h>

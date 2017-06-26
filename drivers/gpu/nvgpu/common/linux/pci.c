@@ -28,8 +28,8 @@
 #include "clk/clk_mclk.h"
 #include "module.h"
 #include "intr.h"
-#include "gp106/pmu_mclk_gp106.h"
 #include "sysfs.h"
+
 #include "pci.h"
 
 #include "os_linux.h"

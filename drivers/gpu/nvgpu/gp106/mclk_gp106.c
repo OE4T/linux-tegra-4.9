@@ -20,7 +20,7 @@
 #ifdef CONFIG_DEBUG_FS
 #include "gk20a/platform_gk20a.h"
 #endif
-#include "gp106/pmu_mclk_gp106.h"
+#include "gp106/mclk_gp106.h"
 
 #include <nvgpu/hw/gk20a/hw_pwr_gk20a.h>
 #include <nvgpu/hw/gp106/hw_fb_gp106.h>

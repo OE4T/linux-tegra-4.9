@@ -137,9 +137,6 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 	ret |= gk20a_mm_suspend(g);
 	ret |= gk20a_fifo_suspend(g);
 
-	if (g->ops.clk.mclk_deinit)
-		g->ops.clk.mclk_deinit(g);
-
 	/* Disable GPCPLL */
 	if (g->ops.clk.suspend_clk_support)
 		ret |= g->ops.clk.suspend_clk_support(g);
@@ -271,14 +268,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	if (err) {
 		nvgpu_err(g, "failed to init gk20a gr");
 		goto done;
-	}
-
-	if (g->ops.clk.mclk_init) {
-		err = g->ops.clk.mclk_init(g);
-		if (err) {
-			nvgpu_err(g, "failed to set mclk");
-			/* Indicate error dont goto done */
-		}
 	}
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC

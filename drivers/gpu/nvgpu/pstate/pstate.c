@@ -26,6 +26,9 @@ static int pstate_sw_setup(struct gk20a *g);
 
 void gk20a_deinit_pstate_support(struct gk20a *g)
 {
+	if (g->ops.clk.mclk_deinit)
+		g->ops.clk.mclk_deinit(g);
+
 	nvgpu_mutex_destroy(&g->perf_pmu.pstatesobjs.pstate_mutex);
 }
 
@@ -103,6 +106,14 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	u32 err;
 
 	gk20a_dbg_fn("");
+
+	if (g->ops.clk.mclk_init) {
+		err = g->ops.clk.mclk_init(g);
+		if (err) {
+			nvgpu_err(g, "failed to set mclk");
+			/* Indicate error and continue */
+		}
+	}
 
 	err = volt_rail_pmu_setup(g);
 	if (err)

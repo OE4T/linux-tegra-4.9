@@ -179,7 +179,7 @@
 			* Used for cropping, vertical blanking in front of short exposure data
 			* If more Dol frames are used, it can be extended, eg. num_of_lines_offset_1
 			*
-			* num_of_igorned_pixels = "";
+			* num_of_ignored_pixels = "";
 			* Used for cropping, The length of line info(pixels)
 			*
 			*/
@@ -238,11 +238,12 @@
 					max_framerate = "30";
 					min_exp_time = "57";
 					max_exp_time = "665800";
+					embedded_metadata_height = "1";
 
 					num_of_exposure = "2";
 					num_of_ignored_lines = "8";
 					num_of_lines_offset_0 = "50";
-					num_of_igorned_pixels = "4";
+					num_of_ignored_pixels = "4";
 				};
 				mode2 { // IMX274_MODE_1920X1080_DOL_60FPS
 					mclk_khz = "24000";
@@ -272,12 +273,13 @@
 					max_framerate = "60";
 					min_exp_time = "56";
 					max_exp_time = "666479";
+					embedded_metadata_height = "1";
 
 					/* WDR related settings */
 					num_of_exposure = "2";
 					num_of_ignored_lines = "8";
 					num_of_lines_offset_0 = "38";
-					num_of_igorned_pixels = "4";
+					num_of_ignored_pixels = "4";
 				};
 
 				ports {

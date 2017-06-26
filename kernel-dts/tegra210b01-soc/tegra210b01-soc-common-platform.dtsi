@@ -60,6 +60,12 @@
 		};
 	};
 
+	power-domain {
+		ve2_pd: ve2-pd {
+			status = "disabled";
+		};
+	};
+
 	psci {
 		status = "okay";
 	};

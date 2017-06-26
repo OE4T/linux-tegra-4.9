@@ -31,6 +31,11 @@
 
 #define SLVSEC_NUM_LANES 8
 
+#define SYCNGEN_CLOCK  U64_C(408000)
+#define XSYNC_WIDTH 4
+#define VI_NUM_VGP 6
+#define VI_NUM_SYNCGEN 3
+
 struct slvsec_stream_params {
 	u8 rate;
 	u8 lanes[8];
@@ -52,6 +57,12 @@ struct slvsec_stream_params {
 		u8 aux_idle_mode;
 		bool aux_idle_detect;
 	} uphy;
+
+	struct slvsec_syncgen {
+		u32 number;	/* 0..2 */
+		u32 xvs_vgp;
+		u32 xhs_vgp;
+	} syncgen;
 };
 
 struct slvsec_lane_params {
@@ -81,11 +92,20 @@ struct slvsec_params {
 	struct slvec_uphy_params uphy;
 };
 
+struct slvsec_syncgen_config {
+	u32 hclk_div;
+	u8 hclk_div_fmt;
+	u8 xhs_width;
+	u8 xvs_width;
+	u8 xvs_to_xhs_delay;
+	u16 xvs_interval;
+};
+
 struct tegra_mc_slvs {
 	struct platform_device *pdev;
 	struct device *dev;
 	void __iomem *slvs_base;
-	void __iomem *syncgen_base;
+	void __iomem *vi_base;
 
 	atomic_t power_ref;
 	atomic_t sensor_active;
@@ -107,6 +127,8 @@ struct tegra_slvs_stream {
 	struct slvsec_stream_params params;
 	atomic_t is_streaming;
 	wait_queue_head_t cil_waitq;
+
+	struct camera_common_framesync framesync;
 };
 
 #define to_slvs(_sd) \
@@ -240,6 +262,8 @@ static inline u32 slvs_cil_lane_read(struct tegra_mc_slvs *slvs,
 		offset);
 }
 
+/* SLVS parameters */
+
 static int slvs_stream_config(const struct tegra_channel *chan)
 {
 	u32 data_type = chan->fmtinfo->img_dt;
@@ -287,6 +311,141 @@ static int slvs_cil_stream_uphy_mode(const struct tegra_slvs_stream *stream)
 		(uphy->aux_idle_detect << 0);
 }
 
+/* ---------------------------------------------------------------------- */
+/* SYNCGEN */
+/* VI registers and accessors */
+
+#define VI_FW_CFG_IO_VGP       		0x4400
+
+#define VI_FW_CFG_ENABLE_XVS(num)	(BIT(26) | ((2 + 2 * (num)) << 17))
+#define VI_FW_CFG_ENABLE_XHS(num)	(BIT(26) | ((3 + 2 * (num)) << 17))
+
+#define VI_FW_SYNCGEN_OFFSET		0x4800
+#define VI_FW_SYNCGEN_SIZE		0x0400
+
+#define VI_FW_SYNCGEN_HCLK_DIV		0x00
+#define VI_FW_SYNCGEN_HCLK_DIV_FMT	0x04
+#define VI_FW_SYNCGEN_XHS		0x08
+#define VI_FW_SYNCGEN_XVS		0x0c
+#define VI_FW_SYNCGEN_XVS_DELAY		0x10
+#define VI_FW_SYNCGEN_INT_STATUS	0x14
+#define VI_FW_SYNCGEN_INT_MASK		0x18
+#define VI_FW_SYNCGEN_XHS_TIMER		0x1c
+#define VI_FW_SYNCGEN_CONTROL		0x20
+#define VI_FW_SYNCGEN_COMMAND		0x24
+#define VI_FW_SYNCGEN_STATUS		0x28
+#define VI_FW_SYNCGEN_SCAN		0x2C
+#define VI_FW_SYNCGEN_FORCE_XVS		0x30
+
+static inline void slvs_vi_vgp_config(struct tegra_mc_slvs *slvs,
+				u32 vgp_offset, u32 val)
+{
+	if (vgp_offset > 0)
+		writel(val, slvs->vi_base + VI_FW_CFG_IO_VGP +
+			(vgp_offset - 1) * 4);
+}
+
+static inline void slvs_syncgen_write(struct tegra_mc_slvs *slvs,
+				u32 syncgen, u32 offset, u32 val)
+{
+	writel(val, slvs->vi_base +
+		VI_FW_SYNCGEN_OFFSET +
+		syncgen * VI_FW_SYNCGEN_SIZE +
+		offset);
+}
+
+static inline void slvs_vi_syncgen_start(struct tegra_mc_slvs *slvs,
+		u32 syncgen, const struct slvsec_syncgen_config *cfg)
+{
+	slvs_syncgen_write(slvs, syncgen,
+			VI_FW_SYNCGEN_HCLK_DIV, cfg->hclk_div);
+	slvs_syncgen_write(slvs, syncgen,
+			VI_FW_SYNCGEN_HCLK_DIV_FMT, cfg->hclk_div_fmt);
+	slvs_syncgen_write(slvs, syncgen,
+			VI_FW_SYNCGEN_XHS, cfg->xhs_width);
+	slvs_syncgen_write(slvs, syncgen,
+			VI_FW_SYNCGEN_XVS,
+			cfg->xvs_width | (cfg->xvs_interval << 8));
+	slvs_syncgen_write(slvs, syncgen,
+			VI_FW_SYNCGEN_XVS_DELAY, cfg->xvs_to_xhs_delay);
+	slvs_syncgen_write(slvs, syncgen,
+			VI_FW_SYNCGEN_INT_MASK, 0);
+	slvs_syncgen_write(slvs, syncgen,
+			VI_FW_SYNCGEN_COMMAND, BIT(0));
+	slvs_syncgen_write(slvs, syncgen,
+			VI_FW_SYNCGEN_CONTROL, BIT(0));
+}
+
+static inline void slvs_vi_syncgen_stop(struct tegra_mc_slvs *slvs,
+		u32 syncgen)
+{
+	slvs_syncgen_write(slvs, syncgen, VI_FW_SYNCGEN_CONTROL, 0);
+	slvs_syncgen_write(slvs, syncgen, VI_FW_SYNCGEN_COMMAND, BIT(1));
+}
+
+static int slvs_get_syncgen_config(
+	const struct camera_common_framesync *fs,
+	struct slvsec_syncgen_config *cfg)
+{
+	/* HS per 1000 second. */
+	u64 hs_per_1000sec = (u64)fs->xvs * fs->fps;
+	u64 xhs;
+	u32 frac;
+	u32 width;
+
+	if (hs_per_1000sec == 0)
+		return -EINVAL;
+
+	xhs = ((10 * 1000 * SYCNGEN_CLOCK) << 32) / hs_per_1000sec * 100;
+
+	for (frac = 0; (xhs >> (frac + 32)) != 0; frac++)
+		;
+
+	cfg->hclk_div = xhs >> frac;
+	cfg->hclk_div_fmt = 31 - frac;
+
+	/* At least XSYNC_WIDTH iclk cycles */
+	width = (XSYNC_WIDTH * SYCNGEN_CLOCK + fs->inck - 1) / fs->inck;
+
+	cfg->xhs_width = width;
+	cfg->xvs_width = width;
+	cfg->xvs_to_xhs_delay = 1;
+	cfg->xvs_interval = fs->xvs;
+
+	return 0;
+}
+
+static int tegra_slvs_syncgen_start(struct tegra_slvs_stream *stream)
+{
+	struct tegra_mc_slvs *slvs = stream->slvs;
+	u32 syncgen = stream->params.syncgen.number;
+	u32 xvs_vgp = stream->params.syncgen.xvs_vgp;
+	u32 xhs_vgp = stream->params.syncgen.xhs_vgp;
+	struct slvsec_syncgen_config config;
+	int err;
+
+	err = slvs_get_syncgen_config(&stream->framesync, &config);
+	if (err)
+		return err;
+
+	slvs_vi_vgp_config(slvs, xvs_vgp, VI_FW_CFG_ENABLE_XVS(syncgen));
+	slvs_vi_vgp_config(slvs, xhs_vgp, VI_FW_CFG_ENABLE_XHS(syncgen));
+	slvs_vi_syncgen_start(slvs, syncgen, &config);
+
+	return 0;
+}
+
+static int tegra_slvs_syncgen_stop(struct tegra_slvs_stream *stream)
+{
+	struct tegra_mc_slvs *slvs = stream->slvs;
+
+	slvs_vi_syncgen_stop(slvs, stream->params.syncgen.number);
+	slvs_vi_vgp_config(slvs, stream->params.syncgen.xvs_vgp, 0);
+	slvs_vi_vgp_config(slvs, stream->params.syncgen.xhs_vgp, 0);
+
+	return 0;
+}
+
 /*
  * -----------------------------------------------------------------------------
  * SLVS Subdevice Video Operations
@@ -306,7 +465,7 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 	struct tegra_channel *tegra_chan;
 	long timeout = msecs_to_jiffies(5000);
 	u32 id = stream->id;
-	int i, cfg;
+	int i, cfg, err;
 	u32 val;
 
 	if (WARN_ON(id != 0))
@@ -316,6 +475,15 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 	cfg = slvs_stream_config(tegra_chan);
 	if (cfg < 0)
 		return cfg;
+
+	err = camera_common_get_framesync(tegra_chan->subdev_on_csi,
+				&stream->framesync);
+	if (err < 0)
+		return err;
+
+	err = tegra_slvs_syncgen_start(stream);
+	if (err < 0)
+		return err;
 
 	/* XXX - where we should dig embedded data type ? */
 
@@ -382,8 +550,6 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 	if (timeout == 0)
 		return -ETIMEDOUT;
 
-	/* Enable syncgen */
-
 	return 0;
 }
 
@@ -409,6 +575,8 @@ static int tegra_slvs_stop_streaming(struct tegra_slvs_stream *stream)
 	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, 0);
 	for (i = 0; i < stream->params.num_lanes; i++)
 		slvs_cil_lane_write(slvs, i, SLVS_LANE_CTRL, 0);
+
+	tegra_slvs_syncgen_stop(stream);
 
 	return 0;
 }
@@ -570,6 +738,15 @@ static struct device_node *tegra_slvs_get_stream_node(struct device_node *np,
 	return stream_node;
 }
 
+static const struct camera_common_framesync slvs_default_framesync =
+{
+	/* Default mode 0 from VI IAS */
+	.inck = 74000,
+	.xhs = 600,
+	.xvs = 4004,
+	.fps = 29970
+};
+
 static int tegra_slvs_parse_stream_dt(struct tegra_slvs_stream *stream,
 				struct device_node *np)
 {
@@ -642,6 +819,21 @@ static int tegra_slvs_parse_stream_dt(struct tegra_slvs_stream *stream,
 	err = of_property_read_u32(np, "nvidia,uphy-aux-idle-mode", &numparam);
 	if (err == 0)
 		params->uphy.aux_idle_mode = numparam & 0x03;
+
+	of_property_read_u32(np, "nvidia,syncgen", &params->syncgen.number);
+	if (params->syncgen.number > VI_NUM_SYNCGEN)
+		return -EINVAL;
+
+	/* VGP pads used for syncgen */
+	of_property_read_u32(np, "nvidia,syncgen-xhs-vgp", &params->syncgen.xhs_vgp);
+	if (params->syncgen.xhs_vgp > VI_NUM_VGP)
+		return -EINVAL;
+
+	of_property_read_u32(np, "nvidia,syncgen-xvs-vgp", &params->syncgen.xvs_vgp);
+	if (params->syncgen.xvs_vgp > VI_NUM_VGP)
+		return -EINVAL;
+
+	stream->framesync = slvs_default_framesync;
 
 	return 0;
 }
@@ -719,6 +911,7 @@ struct tegra_mc_slvs *tegra_slvs_media_controller_init(
 	slvs->dev = &pdev->dev;
 	slvs->pdev = pdev;
 	slvs->slvs_base = pdata->aperture[0];
+	slvs->vi_base = pdata->aperture[1];
 
 	atomic_set(&slvs->power_ref, 0);
 

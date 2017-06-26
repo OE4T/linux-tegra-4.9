@@ -1606,6 +1606,8 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 	struct nvgpu_mem *mem;
 	u32 data;
 	int ret;
+	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
+	struct nvgpu_mem *ctxheader = &ctx->mem;
 
 	gk20a_dbg_fn("");
 
@@ -1637,18 +1639,35 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 		goto out;
 	}
 
-	data = nvgpu_mem_rd(g, mem,
+	if (nvgpu_mem_begin(g, ctxheader)) {
+		ret = -ENOMEM;
+		goto clean_up_mem;
+	}
+	if (ctxheader->gpu_va)
+		data = nvgpu_mem_rd(g, ctxheader,
 			ctxsw_prog_main_image_pm_o());
+	else
+		data = nvgpu_mem_rd(g, mem,
+			ctxsw_prog_main_image_pm_o());
+
 	data = data & ~ctxsw_prog_main_image_pm_smpc_mode_m();
 	data |= enable_smpc_ctxsw ?
 		ctxsw_prog_main_image_pm_smpc_mode_ctxsw_f() :
 		ctxsw_prog_main_image_pm_smpc_mode_no_ctxsw_f();
-	nvgpu_mem_wr(g, mem,
+
+	if (ctxheader->gpu_va)
+		nvgpu_mem_wr(g, ctxheader,
+			ctxsw_prog_main_image_pm_o(),
+			data);
+	else
+		nvgpu_mem_wr(g, mem,
 			ctxsw_prog_main_image_pm_o(),
 			data);
 
-	nvgpu_mem_end(g, mem);
+	nvgpu_mem_end(g, ctxheader);
 
+clean_up_mem:
+	nvgpu_mem_end(g, mem);
 out:
 	gk20a_enable_channel_tsg(g, c);
 	return ret;

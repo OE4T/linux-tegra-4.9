@@ -48,6 +48,15 @@
 #define CHANNEL_INFO_VEID0  0
 #define PBDMA_SUBDEVICE_ID  1
 
+static inline void gv11b_usermode_writel(struct gk20a *g, u32 r, u32 v)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	void __iomem *reg = f->t19x.usermode_regs + (r - usermode_cfg0_r());
+
+	writel_relaxed(v, reg);
+	gk20a_dbg(gpu_dbg_reg, "usermode r=0x%x v=0x%x", r, v);
+}
+
 static void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 {
 
@@ -192,10 +201,13 @@ static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 
 static void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
 {
+	struct fifo_gk20a *f = &c->g->fifo;
+	u32 hw_chid = f->channel_base + c->chid;
+
 	gk20a_dbg_info("channel ring door bell %d\n", c->chid);
 
-	gk20a_writel(c->g, usermode_notify_channel_pending_r(),
-		usermode_notify_channel_pending_id_f(c->chid));
+	gv11b_usermode_writel(c->g, usermode_notify_channel_pending_r(),
+		usermode_notify_channel_pending_id_f(hw_chid));
 }
 
 static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
@@ -1575,11 +1587,19 @@ static u32 gv11b_fifo_get_syncpt_incr_cmd_size(bool wfi_cmd)
 }
 #endif /* CONFIG_TEGRA_GK20A_NVHOST */
 
+static int gv11b_init_fifo_setup_hw(struct gk20a *g)
+{
+	struct fifo_gk20a *f = &g->fifo;
+
+	f->t19x.usermode_regs = g->regs + usermode_cfg0_r();
+	return 0;
+}
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);
 	/* for gv11b no need to do any thing special for fifo hw setup */
-	gops->fifo.init_fifo_setup_hw = NULL;
+	gops->fifo.init_fifo_setup_hw = gv11b_init_fifo_setup_hw;
 	gops->fifo.runlist_entry_size = ram_rl_entry_size_v;
 	gops->fifo.get_tsg_runlist_entry = gv11b_get_tsg_runlist_entry;
 	gops->fifo.get_ch_runlist_entry = gv11b_get_ch_runlist_entry;

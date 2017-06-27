@@ -18,9 +18,11 @@
 
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/gpio.h>
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 #include <linux/pwm.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
@@ -52,6 +54,7 @@
  * @mmio_base: mmio base for access DFLL registers
  * @ref_clk: referenced source clock
  * @pwm_rate: PWM rate for DFLL PWM output config register
+ * @pwm_enable_gpio: PWM output buffer enable GPIO.
  */
 struct tegra_dfll_pwm_chip {
 	struct pwm_chip		chip;
@@ -66,6 +69,7 @@ struct tegra_dfll_pwm_chip {
 
 	unsigned long		ref_rate;
 	unsigned long		pwm_rate;
+	int			pwm_enable_gpio;
 };
 
 static struct tegra_dfll_pwm_chip *tdpc;
@@ -244,6 +248,23 @@ static int tegra_dfll_pwm_probe(struct platform_device *pdev)
 	tdpc->chip.base = -1;
 	tdpc->chip.npwm = 1;
 
+	tdpc->pwm_enable_gpio = of_get_named_gpio(pdev->dev.of_node,
+						  "pwm-enable-gpio", 0);
+	if (tdpc->pwm_enable_gpio == -EPROBE_DEFER)
+		return -EPROBE_DEFER;
+
+	if (gpio_is_valid(tdpc->pwm_enable_gpio)) {
+		ret = devm_gpio_request_one(&pdev->dev, tdpc->pwm_enable_gpio,
+					    GPIOF_OUT_INIT_LOW | GPIOF_EXPORT,
+					    "pwm-dfll-enable-gpio");
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"Failed to get PWM Enable GPIO %d: %d\n",
+				tdpc->pwm_enable_gpio, ret);
+			return ret;
+		}
+	}
+
 	ret = pwmchip_add(&tdpc->chip);
 	if (ret < 0) {
 		dev_err(tdpc->dev, "pwmchip_add() failed: %d\n", ret);
@@ -309,6 +330,17 @@ static struct platform_driver tegra_dfll_pwm_driver = {
 };
 
 module_platform_driver(tegra_dfll_pwm_driver);
+
+
+static int __init tegra_dfll_pwm_buffer_init(void)
+{
+	/* Open external buffer via GPIO control (e.g., set GPIO high) */
+	if (tdpc && gpio_is_valid(tdpc->pwm_enable_gpio))
+		gpio_set_value_cansleep(tdpc->pwm_enable_gpio, 1);
+
+	return 0;
+}
+late_initcall_sync(tegra_dfll_pwm_buffer_init);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("NVIDIA Corporation");

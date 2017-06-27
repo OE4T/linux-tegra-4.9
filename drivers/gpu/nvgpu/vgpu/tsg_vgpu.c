@@ -69,7 +69,7 @@ static int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 	if (err) {
 		nvgpu_err(tsg->g,
 			"vgpu_tsg_bind_channel failed, ch %d tsgid %d",
-			ch->hw_chid, tsg->tsgid);
+			ch->chid, tsg->tsgid);
 		gk20a_tsg_unbind_channel(ch);
 	}
 

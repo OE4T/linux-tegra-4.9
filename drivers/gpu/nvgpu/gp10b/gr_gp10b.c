@@ -1653,7 +1653,7 @@ static int gr_gp10b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP: preempted tsg");
 	} else {
-		gk20a_fifo_issue_preempt(g, fault_ch->hw_chid, false);
+		gk20a_fifo_issue_preempt(g, fault_ch->chid, false);
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP: preempted channel");
 	}
@@ -1675,7 +1675,7 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 	if (gr_ctx->t18x.cilp_preempt_pending) {
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP is already pending for chid %d",
-				fault_ch->hw_chid);
+				fault_ch->chid);
 		return 0;
 	}
 
@@ -1718,7 +1718,7 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP: disabling channel %d",
-			fault_ch->hw_chid);
+			fault_ch->chid);
 
 	ret = gr_gp10b_disable_channel_or_tsg(g, fault_ch);
 	if (ret) {
@@ -1728,7 +1728,7 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 
 	/* set cilp_preempt_pending = true and record the channel */
 	gr_ctx->t18x.cilp_preempt_pending = true;
-	g->gr.t18x.cilp_preempt_pending_chid = fault_ch->hw_chid;
+	g->gr.t18x.cilp_preempt_pending_chid = fault_ch->chid;
 
 	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
 		struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
@@ -1758,7 +1758,7 @@ static int gr_gp10b_clear_cilp_preempt_pending(struct gk20a *g,
 	if (!gr_ctx->t18x.cilp_preempt_pending) {
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP is already cleared for chid %d\n",
-				fault_ch->hw_chid);
+				fault_ch->chid);
 		return 0;
 	}
 
@@ -1879,7 +1879,7 @@ static int gr_gp10b_get_cilp_preempt_pending_chid(struct gk20a *g, int *__chid)
 
 	chid = g->gr.t18x.cilp_preempt_pending_chid;
 
-	ch = gk20a_channel_get(gk20a_fifo_channel_from_hw_chid(g, chid));
+	ch = gk20a_channel_get(gk20a_fifo_channel_from_chid(g, chid));
 	if (!ch)
 		return ret;
 
@@ -1923,7 +1923,7 @@ int gr_gp10b_handle_fecs_error(struct gk20a *g,
 			goto clean_up;
 
 		ch = gk20a_channel_get(
-				gk20a_fifo_channel_from_hw_chid(g, chid));
+				gk20a_fifo_channel_from_chid(g, chid));
 		if (!ch)
 			goto clean_up;
 
@@ -2171,7 +2171,7 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 
 		gk20a_dbg(gpu_dbg_sched, "chid=%d tsgid=%d pid=%d "
 				"graphics_preempt=%d compute_preempt=%d",
-				ch->hw_chid,
+				ch->chid,
 				ch->tsgid,
 				ch->tgid,
 				graphics_preempt_mode,

@@ -725,7 +725,7 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 	u32 ret;
 
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
-		   c->hw_chid, inst_base_ptr);
+		   c->chid, inst_base_ptr);
 
 	ret = gr_gk20a_submit_fecs_method_op(g,
 		     (struct fecs_method_op_gk20a) {
@@ -5933,7 +5933,7 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 	/* check cache first */
 	for (i = 0; i < GR_CHANNEL_MAP_TLB_SIZE; i++) {
 		if (gr->chid_tlb[i].curr_ctx == curr_ctx) {
-			chid = gr->chid_tlb[i].hw_chid;
+			chid = gr->chid_tlb[i].chid;
 			tsgid = gr->chid_tlb[i].tsgid;
 			ret = gk20a_channel_get(&f->channel[chid]);
 			goto unlock;
@@ -5964,7 +5964,7 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 	for (i = 0; i < GR_CHANNEL_MAP_TLB_SIZE; i++) {
 		if (gr->chid_tlb[i].curr_ctx == 0) {
 			gr->chid_tlb[i].curr_ctx = curr_ctx;
-			gr->chid_tlb[i].hw_chid = chid;
+			gr->chid_tlb[i].chid = chid;
 			gr->chid_tlb[i].tsgid = tsgid;
 			goto unlock;
 		}
@@ -5972,7 +5972,7 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 
 	/* no free entry, flush one */
 	gr->chid_tlb[gr->channel_tlb_flush_index].curr_ctx = curr_ctx;
-	gr->chid_tlb[gr->channel_tlb_flush_index].hw_chid = chid;
+	gr->chid_tlb[gr->channel_tlb_flush_index].chid = chid;
 	gr->chid_tlb[gr->channel_tlb_flush_index].tsgid = tsgid;
 
 	gr->channel_tlb_flush_index =
@@ -6514,7 +6514,7 @@ int gk20a_gr_isr(struct gk20a *g)
 
 	ch = gk20a_gr_get_channel_from_ctx(g, isr_data.curr_ctx, &tsgid);
 	if (ch) {
-		isr_data.chid = ch->hw_chid;
+		isr_data.chid = ch->chid;
 	} else {
 		isr_data.chid = FIFO_INVAL_CHANNEL_ID;
 		nvgpu_err(g, "ch id is INVALID 0xffffffff");
@@ -6626,7 +6626,7 @@ int gk20a_gr_isr(struct gk20a *g)
 			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 					 "GPC exception pending");
 
-			fault_ch = gk20a_fifo_channel_from_hw_chid(g,
+			fault_ch = gk20a_fifo_channel_from_chid(g,
 							isr_data.chid);
 
 			/*isr_data.chid can be ~0 and fault_ch can be NULL */
@@ -6673,7 +6673,7 @@ int gk20a_gr_isr(struct gk20a *g)
 					   tsgid, true, true, true);
 		else if (ch)
 			gk20a_fifo_recover(g, gr_engine_id,
-					   ch->hw_chid, false, true, true);
+					   ch->chid, false, true, true);
 		else
 			gk20a_fifo_recover(g, gr_engine_id,
 					   0, false, false, true);
@@ -8337,16 +8337,16 @@ bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 		  "curr_gr_chid=%d curr_tsgid=%d, ch->tsgid=%d"
-		  " ch->hw_chid=%d",
-		  curr_ch ? curr_ch->hw_chid : -1,
+		  " ch->chid=%d",
+		  curr_ch ? curr_ch->chid : -1,
 		  curr_gr_tsgid,
 		  ch->tsgid,
-		  ch->hw_chid);
+		  ch->chid);
 
 	if (!curr_ch)
 		return false;
 
-	if (ch->hw_chid == curr_ch->hw_chid)
+	if (ch->chid == curr_ch->chid)
 		ret = true;
 
 	if (gk20a_is_channel_marked_as_tsg(ch) && (ch->tsgid == curr_gr_tsgid))

@@ -112,7 +112,7 @@ enum {
 
 struct gr_channel_map_tlb_entry {
 	u32 curr_ctx;
-	u32 hw_chid;
+	u32 chid;
 	u32 tsgid;
 };
 

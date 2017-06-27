@@ -433,7 +433,7 @@ struct nvgpu_semaphore *nvgpu_semaphore_alloc(struct channel_gk20a *ch)
 	 */
 	nvgpu_semaphore_pool_get(s->hw_sema->p);
 
-	gpu_sema_dbg(ch->g, "Allocated semaphore (c=%d)", ch->hw_chid);
+	gpu_sema_dbg(ch->g, "Allocated semaphore (c=%d)", ch->chid);
 
 	return s;
 }

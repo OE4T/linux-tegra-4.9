@@ -445,7 +445,7 @@ int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	nvgpu_list_for_each_entry_safe(prof_obj, tmp_obj, &g->profiler_objects,
 				dbg_profiler_object_data, prof_obj_entry) {
 		if ((prof_obj->session_id == dbg_s->id) &&
-			(prof_obj->ch->hw_chid == chid)) {
+			(prof_obj->ch->chid == chid)) {
 			if (prof_obj->has_reservation) {
 				g->ops.dbg_session_ops.
 				  release_profiler_reservation(dbg_s, prof_obj);
@@ -504,7 +504,7 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 	nvgpu_list_for_each_entry(ch_data, &dbg_s->ch_list,
 				dbg_session_channel_data, ch_entry) {
-		if (ch->hw_chid == ch_data->chid) {
+		if (ch->chid == ch_data->chid) {
 			channel_found = true;
 			break;
 		}
@@ -601,7 +601,7 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 		return -EINVAL;
 	}
 
-	gk20a_dbg_fn("%s hwchid=%d", g->name, ch->hw_chid);
+	gk20a_dbg_fn("%s hwchid=%d", g->name, ch->chid);
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	nvgpu_mutex_acquire(&ch->dbg_s_lock);
@@ -613,7 +613,7 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	}
 	ch_data->ch_f = f;
 	ch_data->channel_fd = args->channel_fd;
-	ch_data->chid = ch->hw_chid;
+	ch_data->chid = ch->chid;
 	nvgpu_init_list_node(&ch_data->ch_entry);
 
 	session_data = nvgpu_kzalloc(g, sizeof(*session_data));

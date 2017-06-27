@@ -77,7 +77,7 @@ static int gk20a_fifo_sched_debugfs_seq_show(
 		ret = 0;
 	}
 
-	if (!test_bit(ch->hw_chid, runlist->active_channels))
+	if (!test_bit(ch->chid, runlist->active_channels))
 		return ret;
 
 	if (gk20a_channel_get(ch)) {
@@ -85,7 +85,7 @@ static int gk20a_fifo_sched_debugfs_seq_show(
 			tsg = &f->tsg[ch->tsgid];
 
 		seq_printf(s, "%-8d %-8d %-8d %-9d %-8d %-10d %-8d %-8d\n",
-				ch->hw_chid,
+				ch->chid,
 				ch->tsgid,
 				ch->tgid,
 				tsg ? tsg->timeslice_us : ch->timeslice_us,

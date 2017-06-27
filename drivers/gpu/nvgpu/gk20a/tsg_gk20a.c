@@ -61,7 +61,7 @@ static bool gk20a_is_channel_active(struct gk20a *g, struct channel_gk20a *ch)
 
 	for (i = 0; i < f->max_runlists; ++i) {
 		runlist = &f->runlist_info[i];
-		if (test_bit(ch->hw_chid, runlist->active_channels))
+		if (test_bit(ch->chid, runlist->active_channels))
 			return true;
 	}
 
@@ -107,7 +107,7 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 	kref_get(&tsg->refcount);
 
 	gk20a_dbg(gpu_dbg_fn, "BIND tsg:%d channel:%d\n",
-					tsg->tsgid, ch->hw_chid);
+					tsg->tsgid, ch->chid);
 
 	gk20a_dbg_fn("done");
 	return 0;

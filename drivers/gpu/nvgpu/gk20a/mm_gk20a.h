@@ -171,7 +171,7 @@ struct mmu_fault_info {
 	u32	faulted_pbdma;
 	u32	faulted_engine;
 	u32	faulted_subid;
-	u32	hw_chid;
+	u32	chid;
 	struct channel_gk20a *refch;
 	const char *client_type_desc;
 	const char *fault_type_desc;

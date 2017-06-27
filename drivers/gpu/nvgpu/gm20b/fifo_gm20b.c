@@ -36,18 +36,18 @@ static void channel_gm20b_bind(struct channel_gk20a *c)
 		>> ram_in_base_shift_v();
 
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
-		c->hw_chid, inst_ptr);
+		c->chid, inst_ptr);
 
 
-	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
+	gk20a_writel(g, ccsr_channel_inst_r(c->chid),
 		ccsr_channel_inst_ptr_f(inst_ptr) |
 		nvgpu_aperture_mask(g, &c->inst_block,
 		 ccsr_channel_inst_target_sys_mem_ncoh_f(),
 		 ccsr_channel_inst_target_vid_mem_f()) |
 		ccsr_channel_inst_bind_true_f());
 
-	gk20a_writel(g, ccsr_channel_r(c->hw_chid),
-		(gk20a_readl(g, ccsr_channel_r(c->hw_chid)) &
+	gk20a_writel(g, ccsr_channel_r(c->chid),
+		(gk20a_readl(g, ccsr_channel_r(c->chid)) &
 		 ~ccsr_channel_enable_set_f(~0)) |
 		 ccsr_channel_enable_set_true_f());
 	wmb();

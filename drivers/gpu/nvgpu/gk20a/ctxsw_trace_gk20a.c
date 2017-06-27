@@ -693,7 +693,7 @@ void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch)
 	gk20a_ctxsw_trace_write(g, &entry);
 	gk20a_ctxsw_trace_wake_up(g, 0);
 #endif
-	trace_gk20a_channel_reset(ch->hw_chid, ch->tsgid);
+	trace_gk20a_channel_reset(ch->chid, ch->tsgid);
 }
 
 void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)

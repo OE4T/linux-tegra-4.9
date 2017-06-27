@@ -227,7 +227,7 @@ int gk20a_init_fifo_setup_hw(struct gk20a *g);
 void gk20a_fifo_isr(struct gk20a *g);
 int gk20a_fifo_nonstall_isr(struct gk20a *g);
 
-int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid);
+int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid);
 int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid);
 int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch);
 
@@ -239,9 +239,9 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 			bool wait_for_idle);
 int gk20a_fifo_disable_all_engine_activity(struct gk20a *g,
 				bool wait_for_idle);
-u32 gk20a_fifo_engines_on_ch(struct gk20a *g, u32 hw_chid);
+u32 gk20a_fifo_engines_on_ch(struct gk20a *g, u32 chid);
 
-int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 hw_chid,
+int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 chid,
 			      bool add, bool wait_for_finish);
 
 int gk20a_fifo_suspend(struct gk20a *g);
@@ -253,7 +253,7 @@ void gk20a_fifo_recover(struct gk20a *g,
 			u32 hw_id, /* if ~0, will be queried from HW */
 			bool hw_id_is_tsg, /* ignored if hw_id == ~0 */
 			bool id_is_known, bool verbose);
-void gk20a_fifo_recover_ch(struct gk20a *g, u32 hw_chid, bool verbose);
+void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose);
 void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose);
 int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 				u32 err_code, bool verbose);
@@ -277,8 +277,8 @@ void gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 bool gk20a_fifo_error_tsg(struct gk20a *g, struct tsg_gk20a *tsg);
 bool gk20a_fifo_error_ch(struct gk20a *g, struct channel_gk20a *refch);
 
-struct channel_gk20a *gk20a_fifo_channel_from_hw_chid(struct gk20a *g,
-		u32 hw_chid);
+struct channel_gk20a *gk20a_fifo_channel_from_chid(struct gk20a *g,
+		u32 chid);
 
 void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg);
 int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
@@ -316,7 +316,7 @@ u32 gk20a_fifo_get_gr_runlist_id(struct gk20a *g);
 
 bool gk20a_fifo_is_valid_runlist_id(struct gk20a *g, u32 runlist_id);
 
-int gk20a_fifo_update_runlist_ids(struct gk20a *g, u32 runlist_ids, u32 hw_chid,
+int gk20a_fifo_update_runlist_ids(struct gk20a *g, u32 runlist_ids, u32 chid,
 		bool add, bool wait_for_finish);
 
 int gk20a_fifo_init_engine_info(struct fifo_gk20a *f);
@@ -339,7 +339,7 @@ void gk20a_fifo_profile_release(struct gk20a *g,
 
 void gk20a_dump_channel_status_ramfc(struct gk20a *g,
 				     struct gk20a_debug_output *o,
-				     u32 hw_chid,
+				     u32 chid,
 				     struct ch_state *ch_state);
 void gk20a_debug_dump_all_channel_status_ramfc(struct gk20a *g,
 		 struct gk20a_debug_output *o);

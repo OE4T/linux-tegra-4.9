@@ -331,10 +331,10 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->nvhost_dev = c->g->nvhost_dev;
 
 	snprintf(syncpt_name, sizeof(syncpt_name),
-		"%s_%d", c->g->name, c->hw_chid);
+		"%s_%d", c->g->name, c->chid);
 
 	sp->id = nvgpu_nvhost_get_syncpt_host_managed(sp->nvhost_dev,
-						c->hw_chid, syncpt_name);
+						c->chid, syncpt_name);
 	if (!sp->id) {
 		nvgpu_kfree(c->g, sp);
 		nvgpu_err(c->g, "failed to get free syncpt");
@@ -497,7 +497,7 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 			 struct nvgpu_semaphore *s, struct priv_cmd_entry *cmd,
 			 int cmd_size, bool acquire, bool wfi)
 {
-	int ch = c->hw_chid;
+	int ch = c->chid;
 	u32 ob, off = cmd->off;
 	u64 va;
 
@@ -557,7 +557,7 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 		gpu_sema_verbose_dbg(g, "(A) c=%d ACQ_GE %-4u owner=%-3d"
 				     "va=0x%llx cmd_mem=0x%llx b=0x%llx off=%u",
 				     ch, nvgpu_semaphore_get_value(s),
-				     s->hw_sema->ch->hw_chid, va, cmd->gva,
+				     s->hw_sema->ch->chid, va, cmd->gva,
 				     cmd->mem->gpu_va, ob);
 	else
 		gpu_sema_verbose_dbg(g, "(R) c=%d INCR %u (%u) va=0x%llx "
@@ -911,12 +911,12 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	if (c->vm->as_share)
 		asid = c->vm->as_share->id;
 
-	sprintf(pool_name, "semaphore_pool-%d", c->hw_chid);
+	sprintf(pool_name, "semaphore_pool-%d", c->chid);
 	sema->pool = c->vm->sema_pool;
 
 #ifdef CONFIG_SYNC
 	sema->timeline = gk20a_sync_timeline_create(
-			"gk20a_ch%d_as%d", c->hw_chid, asid);
+			"gk20a_ch%d_as%d", c->chid, asid);
 	if (!sema->timeline) {
 		gk20a_channel_semaphore_destroy(&sema->ops);
 		return NULL;

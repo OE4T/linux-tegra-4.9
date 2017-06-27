@@ -426,10 +426,10 @@ struct gpu_ops {
 				unsigned long acquire_timeout,
 				u32 flags);
 		int (*resetup_ramfc)(struct channel_gk20a *c);
-		int (*preempt_channel)(struct gk20a *g, u32 hw_chid);
+		int (*preempt_channel)(struct gk20a *g, u32 chid);
 		int (*preempt_tsg)(struct gk20a *g, u32 tsgid);
 		int (*update_runlist)(struct gk20a *g, u32 runlist_id,
-				u32 hw_chid, bool add,
+				u32 chid, bool add,
 				bool wait_for_finish);
 		void (*trigger_mmu_fault)(struct gk20a *g,
 				unsigned long engine_ids);
@@ -477,7 +477,7 @@ struct gpu_ops {
 		void (*dump_eng_status)(struct gk20a *g,
 				struct gk20a_debug_output *o);
 		void (*dump_channel_status_ramfc)(struct gk20a *g,
-				struct gk20a_debug_output *o, u32 hw_chid,
+				struct gk20a_debug_output *o, u32 chid,
 				struct ch_state *ch_state);
 		u32 (*intr_0_error_mask)(struct gk20a *g);
 		int (*is_preempt_pending)(struct gk20a *g, u32 id,

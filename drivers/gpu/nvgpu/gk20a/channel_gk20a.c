@@ -118,7 +118,7 @@ static void free_channel(struct fifo_gk20a *f,
 {
 	struct gk20a *g = f->g;
 
-	trace_gk20a_release_used_channel(ch->hw_chid);
+	trace_gk20a_release_used_channel(ch->chid);
 	/* refcount is zero here and channel is in a freed/dead state */
 	nvgpu_mutex_acquire(&f->free_chs_mutex);
 	/* add to head to increase visibility of timing-related bugs */
@@ -189,7 +189,7 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 
 static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 {
-	return c->g->ops.fifo.update_runlist(c->g, c->runlist_id, c->hw_chid, add, true);
+	return c->g->ops.fifo.update_runlist(c->g, c->runlist_id, c->chid, add, true);
 }
 
 int gk20a_enable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
@@ -295,7 +295,7 @@ void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 	ch->g->ops.fifo.disable_channel(ch);
 
 	if (channel_preempt && ch->ch_ctx.gr_ctx)
-		ch->g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
+		ch->g->ops.fifo.preempt_channel(ch->g, ch->chid);
 
 	gk20a_channel_abort_clean_up(ch);
 }
@@ -320,7 +320,7 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 
 	if (!channel_idle) {
 		nvgpu_err(ch->g, "jobs not freed for channel %d",
-				ch->hw_chid);
+				ch->chid);
 		return -EBUSY;
 	}
 
@@ -348,7 +348,7 @@ int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
 	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
 	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
-		ret = g->ops.fifo.set_runlist_interleave(g, ch->hw_chid,
+		ret = g->ops.fifo.set_runlist_interleave(g, ch->chid,
 							false, 0, level);
 		break;
 	default:
@@ -356,7 +356,7 @@ int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 		break;
 	}
 
-	gk20a_dbg(gpu_dbg_sched, "chid=%u interleave=%u", ch->hw_chid, level);
+	gk20a_dbg(gpu_dbg_sched, "chid=%u interleave=%u", ch->chid, level);
 
 	return ret ? ret : g->ops.fifo.update_runlist(g, ch->runlist_id, ~0, true, true);
 }
@@ -381,7 +381,7 @@ void gk20a_set_error_notifier_locked(struct channel_gk20a *ch, __u32 error)
 		ch->error_notifier->status = 0xffff;
 
 		nvgpu_err(ch->g,
-		    "error notifier set to %d for ch %d", error, ch->hw_chid);
+		    "error notifier set to %d for ch %d", error, ch->chid);
 	}
 }
 
@@ -405,7 +405,7 @@ static void gk20a_wait_until_counter_is_N(
 
 		nvgpu_warn(ch->g,
 			   "%s: channel %d, still waiting, %s left: %d, waiting for: %d",
-			   caller, ch->hw_chid, counter_name,
+			   caller, ch->chid, counter_name,
 			   atomic_read(counter), wait_value);
 
 		gk20a_channel_dump_ref_actions(ch);
@@ -462,7 +462,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 	WARN_ON(ch->g == NULL);
 
-	trace_gk20a_free_channel(ch->hw_chid);
+	trace_gk20a_free_channel(ch->chid);
 
 	/* abort channel and remove from runlist */
 	gk20a_disable_channel(ch);
@@ -483,7 +483,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 		nvgpu_spinlock_release(&ch->ref_obtain_lock);
 		nvgpu_err(ch->g,
 			  "Extra %s() called to channel %u",
-			  __func__, ch->hw_chid);
+			  __func__, ch->chid);
 		return;
 	}
 	ch->referenceable = false;
@@ -597,7 +597,7 @@ unbind:
 		nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 		list_for_each_entry_safe(ch_data, tmp,
 					&dbg_s->ch_list, ch_entry) {
-			if (ch_data->chid == ch->hw_chid)
+			if (ch_data->chid == ch->chid)
 				dbg_unbind_single_channel_gk20a(dbg_s, ch_data);
 		}
 		nvgpu_mutex_release(&dbg_s->ch_list_lock);
@@ -634,7 +634,7 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 	nvgpu_spinlock_acquire(&ch->ref_actions_lock);
 
 	dev_info(dev, "ch %d: refs %d. Actions, most recent last:\n",
-			ch->hw_chid, atomic_read(&ch->ref_count));
+			ch->chid, atomic_read(&ch->ref_count));
 
 	/* start at the oldest possible entry. put is next insertion point */
 	get = ch->ref_actions_put;
@@ -695,7 +695,7 @@ static void gk20a_channel_save_ref_source(struct channel_gk20a *ch,
  * reference must be held to it - either by you or the caller, which should be
  * documented well or otherwise clearly seen. This usually boils down to the
  * file from ioctls directly, or an explicit get in exception handlers when the
- * channel is found by a hw_chid.
+ * channel is found by a chid.
  *
  * Most global functions in this file require a reference to be held by the
  * caller.
@@ -716,7 +716,7 @@ struct channel_gk20a *_gk20a_channel_get(struct channel_gk20a *ch,
 	nvgpu_spinlock_release(&ch->ref_obtain_lock);
 
 	if (ret)
-		trace_gk20a_channel_get(ch->hw_chid, caller);
+		trace_gk20a_channel_get(ch->chid, caller);
 
 	return ret;
 }
@@ -724,7 +724,7 @@ struct channel_gk20a *_gk20a_channel_get(struct channel_gk20a *ch,
 void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller)
 {
 	gk20a_channel_save_ref_source(ch, channel_gk20a_ref_action_put);
-	trace_gk20a_channel_put(ch->hw_chid, caller);
+	trace_gk20a_channel_put(ch->chid, caller);
 	atomic_dec(&ch->ref_count);
 	nvgpu_cond_broadcast(&ch->ref_count_dec_wq);
 
@@ -809,7 +809,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 		return NULL;
 	}
 
-	trace_gk20a_open_new_channel(ch->hw_chid);
+	trace_gk20a_open_new_channel(ch->chid);
 
 	BUG_ON(ch->g);
 	ch->g = g;
@@ -951,7 +951,7 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	if (!e) {
 		nvgpu_err(c->g,
 			"ch %d: priv cmd entry is null",
-			c->hw_chid);
+			c->chid);
 		return -EINVAL;
 	}
 
@@ -961,7 +961,7 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 		size = orig_size + (q->size - q->put);
 
 	gk20a_dbg_info("ch %d: priv cmd queue get:put %d:%d",
-			c->hw_chid, q->get, q->put);
+			c->chid, q->get, q->put);
 
 	free_count = (q->size - (q->put - q->get) - 1) % q->size;
 
@@ -1268,7 +1268,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	if (c->gpfifo.mem.size) {
 		nvgpu_err(g, "channel %d :"
-			   "gpfifo already allocated", c->hw_chid);
+			   "gpfifo already allocated", c->chid);
 		err = -EEXIST;
 		goto clean_up_idle;
 	}
@@ -1294,7 +1294,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	c->gpfifo.get = c->gpfifo.put = 0;
 
 	gk20a_dbg_info("channel %d : gpfifo_base 0x%016llx, size %d",
-		c->hw_chid, c->gpfifo.mem.gpu_va, c->gpfifo.entry_num);
+		c->chid, c->gpfifo.mem.gpu_va, c->gpfifo.entry_num);
 
 	g->ops.fifo.setup_userd(c);
 
@@ -1653,7 +1653,7 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 	}
 
 	nvgpu_err(g, "Job on channel %d timed out",
-		  ch->hw_chid);
+		  ch->chid);
 
 	gk20a_debug_dump(g);
 	gk20a_gr_debug_dump(g);
@@ -1934,7 +1934,7 @@ int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 		rmb();
 		if ((q->get != e->off) && e->off != 0)
 			nvgpu_err(g, "requests out-of-order, ch=%d",
-				  c->hw_chid);
+				  c->chid);
 		q->get = e->off + e->size;
 	}
 
@@ -2161,7 +2161,7 @@ void gk20a_channel_update(struct channel_gk20a *c)
 		return;
 	}
 
-	trace_gk20a_channel_update(c->hw_chid);
+	trace_gk20a_channel_update(c->chid);
 	/* A queued channel is always checked for job cleanup. */
 	gk20a_channel_worker_enqueue(c);
 }
@@ -2492,7 +2492,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		g->ops.ltc.sync_debugfs(g);
 #endif
 
-	gk20a_dbg_info("channel %d", c->hw_chid);
+	gk20a_dbg_info("channel %d", c->chid);
 
 	/*
 	 * Job tracking is necessary for any of the following conditions:
@@ -2585,7 +2585,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		down_read(&g->deterministic_busy);
 
 	trace_gk20a_channel_submit_gpfifo(g->name,
-					  c->hw_chid,
+					  c->chid,
 					  num_entries,
 					  flags,
 					  fence ? fence->id : 0,
@@ -2661,7 +2661,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		up_read(&g->deterministic_busy);
 
 	trace_gk20a_channel_submitted_gpfifo(g->name,
-				c->hw_chid,
+				c->chid,
 				num_entries,
 				flags,
 				post_fence ? post_fence->syncpt_id : 0,
@@ -2771,7 +2771,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	int err;
 
 	c->g = NULL;
-	c->hw_chid = chid;
+	c->chid = chid;
 	atomic_set(&c->bound, false);
 	nvgpu_spinlock_init(&c->ref_obtain_lock);
 	atomic_set(&c->ref_count, 0);

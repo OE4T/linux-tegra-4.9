@@ -299,7 +299,7 @@ static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
 	nvgpu_mem_wr(hw_sema->ch->g, &hw_sema->p->rw_mem, hw_sema->offset, val);
 
 	gpu_sema_verbose_dbg(hw_sema->p->sema_sea->gk20a,
-			     "(c=%d) WRITE %u", hw_sema->ch->hw_chid, val);
+			     "(c=%d) WRITE %u", hw_sema->ch->chid, val);
 }
 
 static inline void nvgpu_semaphore_release(struct nvgpu_semaphore *s)
@@ -325,7 +325,7 @@ static inline void nvgpu_semaphore_incr(struct nvgpu_semaphore *s)
 
 	gpu_sema_verbose_dbg(s->hw_sema->p->sema_sea->gk20a,
 			     "INCR sema for c=%d (%u)",
-			     s->hw_sema->ch->hw_chid,
+			     s->hw_sema->ch->chid,
 			     nvgpu_semaphore_next_value(s));
 }
 #endif

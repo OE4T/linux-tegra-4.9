@@ -185,7 +185,7 @@ struct channel_gk20a {
 
 	struct nvgpu_semaphore_int *hw_sema;
 
-	int hw_chid;
+	int chid;
 	bool wdt_enabled;
 	atomic_t bound;
 	bool first_init;

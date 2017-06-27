@@ -42,7 +42,7 @@ static void gk20a_channel_trace_sched_param(
 		const char *compute_preempt_mode),
 	struct channel_gk20a *ch)
 {
-	(trace)(ch->hw_chid, ch->tsgid, ch->pid,
+	(trace)(ch->chid, ch->tsgid, ch->pid,
 		gk20a_is_channel_marked_as_tsg(ch) ?
 			tsg_gk20a_from_ch(ch)->timeslice_us : ch->timeslice_us,
 		ch->timeout_ms_max,
@@ -525,7 +525,7 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 		notif->timestamp.nanoseconds[0] = tv.tv_nsec;
 		notif->timestamp.nanoseconds[1] = tv.tv_sec;
 		notif->info32 = 0xDEADBEEF; /* should be object name */
-		notif->info16 = ch->hw_chid; /* should be method offset */
+		notif->info16 = ch->chid; /* should be method offset */
 
 notif_clean_up:
 		dma_buf_vunmap(dmabuf, notif);
@@ -578,7 +578,7 @@ static unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 		if (event_id_data->event_posted) {
 			gk20a_dbg_info(
 				"found pending event_id=%d on chid=%d\n",
-				event_id, ch->hw_chid);
+				event_id, ch->chid);
 			mask = (POLLPRI | POLLIN);
 			event_id_data->event_posted = false;
 		}
@@ -662,7 +662,7 @@ void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
 
 	gk20a_dbg_info(
 		"posting event for event_id=%d on ch=%d\n",
-		event_id, ch->hw_chid);
+		event_id, ch->chid);
 	event_id_data->event_posted = true;
 
 	wake_up_interruptible_all(&event_id_data->event_id_wq);
@@ -713,7 +713,7 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 		goto clean_up_file;
 	}
 	event_id_data->g = g;
-	event_id_data->id = ch->hw_chid;
+	event_id_data->id = ch->chid;
 	event_id_data->is_tsg = false;
 	event_id_data->event_id = event_id;
 
@@ -1006,7 +1006,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		u32 timeout =
 			(u32)((struct nvgpu_set_timeout_args *)buf)->timeout;
 		gk20a_dbg(gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
-			   timeout, ch->hw_chid);
+			   timeout, ch->chid);
 		ch->timeout_ms_max = timeout;
 		gk20a_channel_trace_sched_param(
 			trace_gk20a_channel_set_timeout, ch);
@@ -1020,7 +1020,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			((struct nvgpu_set_timeout_ex_args *)buf)->flags &
 			(1 << NVGPU_TIMEOUT_FLAG_DISABLE_DUMP));
 		gk20a_dbg(gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
-			   timeout, ch->hw_chid);
+			   timeout, ch->chid);
 		ch->timeout_ms_max = timeout;
 		ch->timeout_debug_dump = timeout_debug_dump;
 		gk20a_channel_trace_sched_param(

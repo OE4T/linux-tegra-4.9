@@ -64,7 +64,7 @@ int channel_gp10b_commit_userd(struct channel_gk20a *c)
 	addr_hi = u64_hi32(c->userd_iova);
 
 	gk20a_dbg_info("channel %d : set ramfc userd 0x%16llx",
-		c->hw_chid, (u64)c->userd_iova);
+		c->chid, (u64)c->userd_iova);
 
 	nvgpu_mem_wr32(g, &c->inst_block,
 		       ram_in_ramfc_w() + ram_fc_userd_w(),
@@ -134,7 +134,7 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 		gp10b_set_pdb_fault_replay_flags(c->g, mem);
 
 
-	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
+	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->chid));
 
 	if (c->is_privileged_channel) {
 		/* Set privilege level for channel */
@@ -176,7 +176,7 @@ static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 		v = pbdma_allowed_syncpoints_0_valid_f(1);
 
 		gk20a_dbg_info("Channel %d, syncpt id %d\n",
-				c->hw_chid, new_syncpt);
+				c->chid, new_syncpt);
 
 		v |= pbdma_allowed_syncpoints_0_index_f(new_syncpt);
 

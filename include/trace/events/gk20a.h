@@ -284,14 +284,14 @@ TRACE_EVENT(gk20a_push_cmdbuf,
 );
 
 TRACE_EVENT(gk20a_channel_submit_gpfifo,
-		TP_PROTO(const char *name, u32 hw_chid, u32 num_entries,
+		TP_PROTO(const char *name, u32 chid, u32 num_entries,
 		u32 flags, u32 wait_id, u32 wait_value),
 
-		TP_ARGS(name, hw_chid, num_entries, flags, wait_id, wait_value),
+		TP_ARGS(name, chid, num_entries, flags, wait_id, wait_value),
 
 	TP_STRUCT__entry(
 		__field(const char *, name)
-		__field(u32, hw_chid)
+		__field(u32, chid)
 		__field(u32, num_entries)
 		__field(u32, flags)
 		__field(u32, wait_id)
@@ -300,29 +300,29 @@ TRACE_EVENT(gk20a_channel_submit_gpfifo,
 
 	TP_fast_assign(
 		__entry->name = name;
-		__entry->hw_chid = hw_chid;
+		__entry->chid = chid;
 		__entry->num_entries = num_entries;
 		__entry->flags = flags;
 		__entry->wait_id = wait_id;
 		__entry->wait_value = wait_value;
 	),
 
-	TP_printk("name=%s, hw_chid=%d, num_entries=%u, flags=%u, wait_id=%d,"
+	TP_printk("name=%s, chid=%d, num_entries=%u, flags=%u, wait_id=%d,"
 		" wait_value=%u",
-		__entry->name, __entry->hw_chid, __entry->num_entries,
+		__entry->name, __entry->chid, __entry->num_entries,
 		__entry->flags, __entry->wait_id, __entry->wait_value)
 );
 
 TRACE_EVENT(gk20a_channel_submitted_gpfifo,
-		TP_PROTO(const char *name, u32 hw_chid, u32 num_entries,
+		TP_PROTO(const char *name, u32 chid, u32 num_entries,
 		u32 flags, u32 incr_id, u32 incr_value),
 
-		TP_ARGS(name, hw_chid, num_entries, flags,
+		TP_ARGS(name, chid, num_entries, flags,
 			incr_id, incr_value),
 
 	TP_STRUCT__entry(
 		__field(const char *, name)
-		__field(u32, hw_chid)
+		__field(u32, chid)
 		__field(u32, num_entries)
 		__field(u32, flags)
 		__field(u32, incr_id)
@@ -331,36 +331,36 @@ TRACE_EVENT(gk20a_channel_submitted_gpfifo,
 
 	TP_fast_assign(
 		__entry->name = name;
-		__entry->hw_chid = hw_chid;
+		__entry->chid = chid;
 		__entry->num_entries = num_entries;
 		__entry->flags = flags;
 		__entry->incr_id = incr_id;
 		__entry->incr_value = incr_value;
 	),
 
-	TP_printk("name=%s, hw_chid=%d, num_entries=%u, flags=%u,"
+	TP_printk("name=%s, chid=%d, num_entries=%u, flags=%u,"
 		" incr_id=%u, incr_value=%u",
-		__entry->name, __entry->hw_chid, __entry->num_entries,
+		__entry->name, __entry->chid, __entry->num_entries,
 		__entry->flags, __entry->incr_id, __entry->incr_value)
 );
 
 TRACE_EVENT(gk20a_channel_reset,
-		TP_PROTO(u32 hw_chid, u32 tsgid),
+		TP_PROTO(u32 chid, u32 tsgid),
 
-		TP_ARGS(hw_chid, tsgid),
+		TP_ARGS(chid, tsgid),
 
 	TP_STRUCT__entry(
-		__field(u32, hw_chid)
+		__field(u32, chid)
 		__field(u32, tsgid)
 	),
 
 	TP_fast_assign(
-		__entry->hw_chid = hw_chid;
+		__entry->chid = chid;
 		__entry->tsgid = tsgid;
 	),
 
-	TP_printk("hw_chid=%d, tsgid=%d",
-		__entry->hw_chid, __entry->tsgid)
+	TP_printk("chid=%d, tsgid=%d",
+		__entry->chid, __entry->tsgid)
 );
 
 

@@ -34,7 +34,7 @@ static void vgpu_channel_bind(struct channel_gk20a *ch)
 			&msg.params.channel_config;
 	int err;
 
-	gk20a_dbg_info("bind channel %d", ch->hw_chid);
+	gk20a_dbg_info("bind channel %d", ch->chid);
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_BIND;
 	msg.handle = vgpu_get_handle(ch->g);
@@ -76,7 +76,7 @@ static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ALLOC_HWCTX;
 	msg.handle = vgpu_get_handle(g);
-	p->id = ch->hw_chid;
+	p->id = ch->chid;
 	p->pid = (u64)current->tgid;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret) {
@@ -407,10 +407,10 @@ int vgpu_init_fifo_support(struct gk20a *g)
 	return err;
 }
 
-static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
+static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[hw_chid];
+	struct channel_gk20a *ch = &f->channel[chid];
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
@@ -428,7 +428,7 @@ static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 
 	if (err || msg.ret) {
 		nvgpu_err(g,
-			"preempt channel %d failed", hw_chid);
+			"preempt channel %d failed", chid);
 		err = -ENOMEM;
 	}
 
@@ -497,7 +497,7 @@ done:
 }
 
 static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
-					u32 hw_chid, bool add,
+					u32 chid, bool add,
 					bool wait_for_finish)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -511,19 +511,19 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 
 	/* valid channel, add/remove it from active list.
 	   Otherwise, keep active list untouched for suspend/resume. */
-	if (hw_chid != (u32)~0) {
+	if (chid != (u32)~0) {
 		if (add) {
-			if (test_and_set_bit(hw_chid,
+			if (test_and_set_bit(chid,
 				runlist->active_channels) == 1)
 				return 0;
 		} else {
-			if (test_and_clear_bit(hw_chid,
+			if (test_and_clear_bit(chid,
 				runlist->active_channels) == 0)
 				return 0;
 		}
 	}
 
-	if (hw_chid != (u32)~0 || /* add/remove a valid channel */
+	if (chid != (u32)~0 || /* add/remove a valid channel */
 	    add /* resume to add all channels back */) {
 		u32 chid;
 
@@ -544,10 +544,10 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 
 /* add/remove a channel from runlist
    special cases below: runlist->active_channels will NOT be changed.
-   (hw_chid == ~0 && !add) means remove all active channels from runlist.
-   (hw_chid == ~0 &&  add) means restore all active channels on runlist. */
+   (chid == ~0 && !add) means remove all active channels from runlist.
+   (chid == ~0 &&  add) means restore all active channels on runlist. */
 static int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
-				u32 hw_chid, bool add, bool wait_for_finish)
+				u32 chid, bool add, bool wait_for_finish)
 {
 	struct fifo_runlist_info_gk20a *runlist = NULL;
 	struct fifo_gk20a *f = &g->fifo;
@@ -559,7 +559,7 @@ static int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 
 	nvgpu_mutex_acquire(&runlist->mutex);
 
-	ret = vgpu_fifo_update_runlist_locked(g, runlist_id, hw_chid, add,
+	ret = vgpu_fifo_update_runlist_locked(g, runlist_id, chid, add,
 					wait_for_finish);
 
 	nvgpu_mutex_release(&runlist->mutex);
@@ -580,7 +580,7 @@ static int vgpu_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 			&msg.params.channel_priority;
 	int err;
 
-	gk20a_dbg_info("channel %d set priority %u", ch->hw_chid, priority);
+	gk20a_dbg_info("channel %d set priority %u", ch->chid, priority);
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY;
 	msg.handle = vgpu_get_handle(ch->g);
@@ -739,7 +739,7 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 	nvgpu_err(g, "fifo intr (%d) on ch %u",
 		info->type, info->chid);
 
-	trace_gk20a_channel_reset(ch->hw_chid, ch->tsgid);
+	trace_gk20a_channel_reset(ch->chid, ch->tsgid);
 
 	switch (info->type) {
 	case TEGRA_VGPU_FIFO_INTR_PBDMA:

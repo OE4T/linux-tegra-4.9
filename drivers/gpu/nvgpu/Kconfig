@@ -1,6 +1,6 @@
 config TEGRA_19x_GPU
 	bool "Tegra 19x family GPU"
-	depends on ARCH_TEGRA_19x_SOC
+	depends on GK20A && ARCH_TEGRA_19x_SOC
 	default y
 	help
 	  Support for NVIDIA Tegra 19x family of GPU

@@ -146,6 +146,13 @@ struct camera_common_colorfmt {
 	enum v4l2_quantization		quantization;
 };
 
+struct camera_common_framesync {
+	u32 inck;		/* kHz */
+	u32 xhs;		/* in inck */
+	u32 xvs;		/* in xhs */
+	u32 fps;		/* frames in 1000 second */
+};
+
 struct camera_common_data;
 
 struct camera_common_sensor_ops {
@@ -155,6 +162,8 @@ struct camera_common_sensor_ops {
 	  u16 addr, u8 val);
 	int (*read_reg)(struct camera_common_data *s_data,
 	  u16 addr, u8 *val);
+	int (*get_framesync)(struct camera_common_data *s_data,
+		struct camera_common_framesync *vshs);
 };
 
 struct camera_common_data {
@@ -273,6 +282,9 @@ void camera_common_dpd_disable(struct camera_common_data *s_data);
 void camera_common_dpd_enable(struct camera_common_data *s_data);
 int camera_common_g_mbus_config(struct v4l2_subdev *sd,
 			      struct v4l2_mbus_config *cfg);
+int camera_common_get_framesync(struct v4l2_subdev *sd,
+		struct camera_common_framesync *vshs);
+
 /* Focuser */
 int camera_common_focuser_init(struct camera_common_focuser_data *s_data);
 int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on);

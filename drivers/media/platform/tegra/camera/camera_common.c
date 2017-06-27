@@ -774,6 +774,20 @@ int camera_common_g_mbus_config(struct v4l2_subdev *sd,
 
 EXPORT_SYMBOL_GPL(camera_common_g_mbus_config);
 
+int camera_common_get_framesync(struct v4l2_subdev *sd,
+			struct camera_common_framesync *fs)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+	int err = -ENOTSUPP;
+
+	if (has_s_op(s_data, get_framesync))
+		err = call_s_ops(s_data, get_framesync, fs);
+
+	return err;
+}
+EXPORT_SYMBOL_GPL(camera_common_get_framesync);
+
 int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on)
 {
 	int err = 0;

@@ -331,4 +331,8 @@ static inline u32 host1x_sync_syncpt_ram_init_0_ram_init_done_v(u32 r)
 {
 	return (r >> 1) & 0x1;
 }
+static inline u32 host1x_sync_scr_prot_common_mod_clamp_en_0_r(void)
+{
+	return 0xc004;
+}
 #endif

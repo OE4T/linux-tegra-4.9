@@ -236,6 +236,7 @@ struct nvhost_device_data t19_vi_thi_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(0, 0),
 	.firmware_name		= "nvhost_vi10.fw",
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.reset_clamp_mask	= BIT(5),
 };
 #endif
 
@@ -258,6 +259,7 @@ struct nvhost_device_data t19_nvcsi_info = {
 	.keepalive		= true,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.reset_clamp_mask	= BIT(7),
 };
 #endif
 
@@ -280,6 +282,7 @@ struct nvhost_device_data t19_isp_thi_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.firmware_name		= "nvhost_isp050.fw",
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.reset_clamp_mask	= BIT(9),
 };
 #endif
 
@@ -307,6 +310,7 @@ struct nvhost_device_data t19_msenc_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.reset_clamp_mask	= BIT(18),
 };
 
 struct nvhost_device_data t19_nvenc1_info = {
@@ -331,6 +335,7 @@ struct nvhost_device_data t19_nvenc1_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.reset_clamp_mask	= BIT(29),
 };
 #endif
 
@@ -360,6 +365,7 @@ struct nvhost_device_data t19_nvdec_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.reset_clamp_mask	= BIT(19),
 };
 
 struct nvhost_device_data t19_nvdec1_info = {
@@ -386,6 +392,7 @@ struct nvhost_device_data t19_nvdec1_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.reset_clamp_mask	= BIT(31),
 };
 #endif
 
@@ -412,6 +419,7 @@ struct nvhost_device_data t19_nvjpg_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVJPG,
+	.reset_clamp_mask	= BIT(20),
 };
 #endif
 
@@ -439,6 +447,7 @@ struct nvhost_device_data t19_tsec_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSEC,
+	.reset_clamp_mask	= BIT(21),
 };
 
 struct nvhost_device_data t19_tsecb_info = {
@@ -463,6 +472,7 @@ struct nvhost_device_data t19_tsecb_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSECB,
+	.reset_clamp_mask	= BIT(22),
 };
 #endif
 
@@ -490,6 +500,7 @@ struct nvhost_device_data t19_vic_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VIC,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.reset_clamp_mask	= BIT(17),
 };
 #endif
 
@@ -517,6 +528,7 @@ struct nvhost_device_data t19_pva1_info = {
 	.serialize		= true,
 	.push_work_done		= true,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.reset_clamp_mask	= BIT(11),
 };
 
 struct nvhost_device_data t19_pva0_info = {
@@ -542,6 +554,7 @@ struct nvhost_device_data t19_pva0_info = {
 	.serialize		= true,
 	.push_work_done		= true,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.reset_clamp_mask	= BIT(10),
 };
 #endif
 
@@ -570,6 +583,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.module_irq		= 1,
+	.reset_clamp_mask	= BIT(23),
 };
 
 struct nvhost_device_data t19_nvdla1_info = {
@@ -596,6 +610,7 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.module_irq		= 1,
+	.reset_clamp_mask	= BIT(24),
 };
 #endif
 
@@ -616,6 +631,7 @@ struct nvhost_device_data t19_slvsec_info = {
 	.keepalive		= true,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.reset_clamp_mask	= BIT(30),
 };
 #endif
 
@@ -731,6 +747,24 @@ static void t194_init_regs(struct platform_device *pdev, bool prod)
 	}
 }
 
+static void t194_module_reset_clamp(struct platform_device *pdev, bool enable)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_master *master = nvhost_get_host(pdev);
+	u32 val;
+
+	if (!pdata->reset_clamp_mask)
+		return;
+
+	/* we need to write 1 to module bit to both clamp and unclamp */
+	val = host1x_hypervisor_readl(master->dev,
+			host1x_sync_scr_prot_common_mod_clamp_en_0_r());
+	val |= pdata->reset_clamp_mask;
+	host1x_hypervisor_writel(pdev,
+				 host1x_sync_scr_prot_common_mod_clamp_en_0_r(),
+				 val);
+}
+
 #include "host1x/host1x_cdma_t186.c"
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_syncpt_prot_t186.c"
@@ -761,6 +795,7 @@ int nvhost_init_t194_support(struct nvhost_master *host,
 	op->vm = host1x_vm_ops;
 	op->actmon = host1x_actmon_ops;
 	op->nvhost_dev.load_gating_regs = t194_init_regs;
+	op->nvhost_dev.module_reset_clamp = t194_module_reset_clamp;
 
 	op->syncpt.alloc = nvhost_syncpt_alloc_gos_backing;
 	op->syncpt.release = nvhost_syncpt_release_gos_backing;

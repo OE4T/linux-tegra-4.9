@@ -268,6 +268,9 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 	tsg->runlist_id = ~0;
 	tsg->tgid = current->tgid;
 
+	if (g->ops.fifo.init_eng_method_buffers)
+		g->ops.fifo.init_eng_method_buffers(g, tsg);
+
 	if (g->ops.fifo.tsg_open) {
 		err = g->ops.fifo.tsg_open(tsg);
 		if (err) {
@@ -298,6 +301,10 @@ void gk20a_tsg_release(struct kref *ref)
 		gr_gk20a_free_tsg_gr_ctx(tsg);
 		tsg->tsg_gr_ctx = NULL;
 	}
+
+	if (g->ops.fifo.deinit_eng_method_buffers)
+		g->ops.fifo.deinit_eng_method_buffers(g, tsg);
+
 	if (tsg->vm) {
 		nvgpu_vm_put(tsg->vm);
 		tsg->vm = NULL;

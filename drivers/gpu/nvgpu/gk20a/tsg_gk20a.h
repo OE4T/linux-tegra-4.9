@@ -59,6 +59,7 @@ struct tsg_gk20a {
 
 	u32 runlist_id;
 	pid_t tgid;
+	struct nvgpu_mem *eng_method_buffers;
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);

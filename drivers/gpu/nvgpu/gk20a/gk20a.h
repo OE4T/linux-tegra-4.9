@@ -155,6 +155,7 @@ struct gpu_ops {
 	struct {
 		void (*isr_stall)(struct gk20a *g, u32 inst_id, u32 pri_base);
 		int (*isr_nonstall)(struct gk20a *g, u32 inst_id, u32 pri_base);
+		u32 (*get_num_pce)(struct gk20a *g);
 	} ce2;
 	struct {
 		int (*init_fs_state)(struct gk20a *g);
@@ -499,6 +500,10 @@ struct gpu_ops {
 		unsigned int (*handle_pbdma_intr_1)(struct gk20a *g,
 					u32 pbdma_id, u32 pbdma_intr_1,
 					u32 *handled, u32 *error_notifier);
+		void (*init_eng_method_buffers)(struct gk20a *g,
+						struct tsg_gk20a *tsg);
+		void (*deinit_eng_method_buffers)(struct gk20a *g,
+						struct tsg_gk20a *tsg);
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		int (*alloc_syncpt_buf)(struct channel_gk20a *c,
 				u32 syncpt_id, struct nvgpu_mem *syncpt_buf);

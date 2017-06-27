@@ -6275,6 +6275,14 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			dc->pdata->fb->yres = mode->v_active;
 		}
 
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
+		/* if current mode is not set, add 640x480 to current mode
+		 * because fb_register always adds the current mode to the
+		 * modelist.
+		 */
+		if (!dc->mode.pclk || !dc->mode.h_active || !dc->mode.v_active)
+			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
+#endif
 		tegra_dc_get(dc);
 		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem,
 			NULL);

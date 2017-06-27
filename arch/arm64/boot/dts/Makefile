@@ -59,9 +59,11 @@ ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
 DTC_FLAGS += -i $(tegra-dtstree)/soc/t19x/kernel-include
 DTC_FLAGS += -i $(tegra-dtstree)/soc/t18x/kernel-include
 DTC_FLAGS += -i $(tegra-dtstree)/soc/t19x/kernel-dts
+DTC_FLAGS += -i $(tegra-dtstree)/platform/t19x/common/kernel-dts
 DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/t19x/kernel-include
 DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/t18x/kernel-include
 DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/t19x/kernel-dts
+DTCCPP_FLAGS += -I$(tegra-dtstree)/platform/t19x/common/kernel-dts
 endif
 
 ifeq ($(CONFIG_ANDROID),y)

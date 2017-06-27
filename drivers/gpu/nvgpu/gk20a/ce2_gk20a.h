@@ -24,7 +24,6 @@
 #include "channel_gk20a.h"
 #include "tsg_gk20a.h"
 
-void gk20a_init_ce2(struct gpu_ops *gops);
 void gk20a_ce2_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 

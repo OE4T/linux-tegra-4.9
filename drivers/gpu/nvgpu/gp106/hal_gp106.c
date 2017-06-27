@@ -203,6 +203,10 @@ static const struct gpu_ops gp106_ops = {
 		.sync_debugfs = gp10b_ltc_sync_debugfs,
 #endif
 	},
+	.ce2 = {
+		.isr_stall = gp10b_ce_isr,
+		.isr_nonstall = gp10b_ce_nonstall_isr,
+	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
 			gp106_slcg_bus_load_gating_prod,
@@ -396,6 +400,7 @@ int gp106_init_hal(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	gops->ltc = gp106_ops.ltc;
+	gops->ce2 = gp106_ops.ce2;
 	gops->clock_gating = gp106_ops.clock_gating;
 	gops->fifo = gp106_ops.fifo;
 	gops->mc = gp106_ops.mc;
@@ -424,7 +429,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_gr(g);
 	gp10b_init_fecs_trace_ops(gops);
 	gp106_init_fb(gops);
-	gp10b_init_ce(gops);
 	gp106_init_gr_ctx(gops);
 	gp106_init_mm(gops);
 	gp106_init_pmu_ops(g);

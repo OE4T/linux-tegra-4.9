@@ -99,7 +99,6 @@ nvgpu-y := \
 	gm20b/hal_gm20b.o \
 	gm20b/bus_gm20b.o \
 	gm20b/ltc_gm20b.o \
-	gm20b/ce2_gm20b.o \
 	gm20b/gr_gm20b.o \
 	gm20b/clk_gm20b.o \
 	gm20b/fb_gm20b.o \

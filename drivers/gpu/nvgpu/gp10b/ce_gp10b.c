@@ -54,7 +54,7 @@ void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	return;
 }
 
-static int gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
+int gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
 	int ops = 0;
 	u32 ce_intr = gk20a_readl(g, ce_intr_status_r(inst_id));
@@ -69,9 +69,4 @@ static int gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	}
 
 	return ops;
-}
-void gp10b_init_ce(struct gpu_ops *gops)
-{
-	gops->ce2.isr_stall = gp10b_ce_isr;
-	gops->ce2.isr_nonstall = gp10b_ce_nonstall_isr;
 }

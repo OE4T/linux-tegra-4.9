@@ -82,11 +82,6 @@ int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	}
 	return ops;
 }
-void gk20a_init_ce2(struct gpu_ops *gops)
-{
-	gops->ce2.isr_stall = gk20a_ce2_isr;
-	gops->ce2.isr_nonstall = gk20a_ce2_nonstall_isr;
-}
 
 /* static CE app api */
 static void gk20a_ce_notify_all_user(struct gk20a *g, u32 event)

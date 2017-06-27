@@ -14,6 +14,7 @@
  */
 
 #include "gk20a/gk20a.h"
+#include "gk20a/ce2_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
@@ -24,7 +25,6 @@
 #include "gk20a/regops_gk20a.h"
 
 #include "ltc_gm20b.h"
-#include "ce2_gm20b.h"
 #include "gr_gm20b.h"
 #include "ltc_gm20b.h"
 #include "fb_gm20b.h"
@@ -157,6 +157,10 @@ static const struct gpu_ops gm20b_ops = {
 #ifdef CONFIG_DEBUG_FS
 		.sync_debugfs = gm20b_ltc_sync_debugfs,
 #endif
+	},
+	.ce2 = {
+		.isr_stall = gk20a_ce2_isr,
+		.isr_nonstall = gk20a_ce2_nonstall_isr,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
@@ -332,6 +336,7 @@ int gm20b_init_hal(struct gk20a *g)
 	u32 val;
 
 	gops->ltc = gm20b_ops.ltc;
+	gops->ce2 = gm20b_ops.ce2;
 	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->fifo = gm20b_ops.fifo;
 	gops->mc = gm20b_ops.mc;
@@ -384,7 +389,6 @@ int gm20b_init_hal(struct gk20a *g)
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 	gm20b_init_gr(g);
 	gm20b_init_fb(gops);
-	gm20b_init_ce2(gops);
 	gm20b_init_gr_ctx(gops);
 	gm20b_init_mm(gops);
 	gm20b_init_pmu_ops(g);

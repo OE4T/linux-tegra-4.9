@@ -364,7 +364,8 @@ int gp10b_init_hal(struct gk20a *g)
 		gp10b_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = gp10b_ops.get_litter_value;
 
-	gops->pmupstate = false;
+	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
+
 #ifdef CONFIG_TEGRA_ACR
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gops->privsecurity = 0;

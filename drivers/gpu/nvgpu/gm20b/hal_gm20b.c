@@ -352,7 +352,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->get_litter_value = gm20b_ops.get_litter_value;
 
 	gops->securegpccs = false;
-	gops->pmupstate = false;
+	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 #ifdef CONFIG_TEGRA_ACR
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gops->privsecurity = 1;

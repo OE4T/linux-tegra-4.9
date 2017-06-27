@@ -62,6 +62,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/bus.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/hw/gp106/hw_proj_gp106.h>
 #include <nvgpu/hw/gp106/hw_fifo_gp106.h>
@@ -417,8 +418,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gops->privsecurity = 1;
 	gops->securegpccs = 1;
-	gops->pmupstate = true;
-
+	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, true);
 
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 	gp106_init_gr(gops);

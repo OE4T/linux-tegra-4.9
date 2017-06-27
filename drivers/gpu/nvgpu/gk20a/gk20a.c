@@ -138,7 +138,7 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 		ret |= g->ops.clk.suspend_clk_support(g);
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	if (g->ops.pmupstate)
+	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE))
 		gk20a_deinit_pstate_support(g);
 #endif
 	g->power_on = false;
@@ -252,7 +252,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	}
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	if (g->ops.pmupstate) {
+	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE)) {
 		err = gk20a_init_pstate_support(g);
 		if (err) {
 			nvgpu_err(g, "failed to init pstates");
@@ -276,7 +276,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	}
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	if (g->ops.pmupstate) {
+	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE)) {
 		err = gk20a_init_pstate_pmu_support(g);
 		if (err) {
 			nvgpu_err(g, "failed to init pstates");

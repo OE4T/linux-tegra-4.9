@@ -994,7 +994,6 @@ struct gpu_ops {
 	} priv_ring;
 	bool privsecurity;
 	bool securegpccs;
-	bool pmupstate;
 };
 
 struct nvgpu_bios_ucode {

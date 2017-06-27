@@ -60,7 +60,9 @@ static void __nvgpu_trace_printk_log(u32 trace, const char *gpu_name,
 				     const char *func_name, int line,
 				     enum nvgpu_log_type type, const char *log)
 {
-	trace_printk(LOG_FMT, gpu_name, func_name, line, type, log);
+	const char *log_type = log_types[type];
+
+	trace_printk(LOG_FMT, gpu_name, func_name, line, log_type, log);
 }
 #endif
 

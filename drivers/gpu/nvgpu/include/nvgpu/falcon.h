@@ -79,6 +79,15 @@
 #define FALCON_REG_RSVD2	(31)
 #define FALCON_REG_SIZE		(32)
 
+#define FALCON_MAILBOX_COUNT 0x02
+#define FALCON_BLOCK_SIZE 0x100
+
+#define GET_IMEM_TAG(IMEM_ADDR) (IMEM_ADDR >> 8)
+
+#define GET_NEXT_BLOCK(ADDR) \
+	((((ADDR + (FALCON_BLOCK_SIZE - 1)) & ~(FALCON_BLOCK_SIZE-1)) \
+		/ FALCON_BLOCK_SIZE) << 8)
+
 /*
  * Falcon HWCFG request read types defines
  */
@@ -112,6 +121,33 @@ enum flcn_mem_type {
 	MEM_DMEM = 0,
 	MEM_IMEM
 };
+
+/* Falcon ucode header format
+ * OS Code Offset
+ * OS Code Size
+ * OS Data Offset
+ * OS Data Size
+ * NumApps (N)
+ * App   0 Code Offset
+ * App   0 Code Size
+ * .  .  .  .
+ * App   N - 1 Code Offset
+ * App   N - 1 Code Size
+ * App   0 Data Offset
+ * App   0 Data Size
+ * .  .  .  .
+ * App   N - 1 Data Offset
+ * App   N - 1 Data Size
+ * OS Ovl Offset
+ * OS Ovl Size
+*/
+#define OS_CODE_OFFSET 0x0
+#define OS_CODE_SIZE   0x1
+#define OS_DATA_OFFSET 0x2
+#define OS_DATA_SIZE   0x3
+#define NUM_APPS       0x4
+#define APP_0_CODE_OFFSET 0x5
+#define APP_0_CODE_SIZE   0x6
 
 struct nvgpu_falcon_dma_info {
 	u32 fb_base;

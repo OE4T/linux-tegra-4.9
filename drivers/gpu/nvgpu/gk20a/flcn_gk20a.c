@@ -402,6 +402,36 @@ static int gk20a_falcon_bootstrap(struct nvgpu_falcon *flcn,
 	return 0;
 }
 
+static u32 gk20a_falcon_mailbox_read(struct nvgpu_falcon *flcn,
+		u32 mailbox_index)
+{
+	struct gk20a *g = flcn->g;
+	u32 data = 0;
+
+	if (mailbox_index < FALCON_MAILBOX_COUNT)
+		data =  gk20a_readl(g, flcn->flcn_base + (mailbox_index ?
+			falcon_falcon_mailbox1_r() :
+			falcon_falcon_mailbox0_r()));
+	else
+		nvgpu_err(g, "incorrect mailbox id %d", mailbox_index);
+
+	return data;
+}
+
+static void gk20a_falcon_mailbox_write(struct nvgpu_falcon *flcn,
+		u32 mailbox_index, u32 data)
+{
+	struct gk20a *g = flcn->g;
+
+	if (mailbox_index < FALCON_MAILBOX_COUNT)
+		gk20a_writel(g, flcn->flcn_base + (mailbox_index ?
+			falcon_falcon_mailbox1_r() :
+			falcon_falcon_mailbox0_r()),
+			data);
+	else
+		nvgpu_err(g, "incorrect mailbox id %d", mailbox_index);
+}
+
 static void gk20a_falcon_dump_imblk(struct nvgpu_falcon *flcn)
 {
 	struct gk20a *g = flcn->g;
@@ -612,6 +642,8 @@ void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_ops->copy_from_imem = gk20a_flcn_copy_from_imem;
 	flcn_ops->bootstrap = gk20a_falcon_bootstrap;
 	flcn_ops->dump_falcon_stats = gk20a_falcon_dump_stats;
+	flcn_ops->mailbox_read = gk20a_falcon_mailbox_read;
+	flcn_ops->mailbox_write = gk20a_falcon_mailbox_write;
 
 	gk20a_falcon_engine_dependency_ops(flcn);
 }

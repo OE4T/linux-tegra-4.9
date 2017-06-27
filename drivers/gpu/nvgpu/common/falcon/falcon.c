@@ -286,6 +286,32 @@ int nvgpu_flcn_bootstrap(struct nvgpu_falcon *flcn, u32 boot_vector)
 	return status;
 }
 
+u32 nvgpu_flcn_mailbox_read(struct nvgpu_falcon *flcn, u32 mailbox_index)
+{
+	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
+	u32 data = 0;
+
+	if (flcn_ops->mailbox_read)
+		data = flcn_ops->mailbox_read(flcn, mailbox_index);
+	else
+		nvgpu_warn(flcn->g, "Invalid op on falcon 0x%x ",
+			flcn->flcn_id);
+
+	return data;
+}
+
+void nvgpu_flcn_mailbox_write(struct nvgpu_falcon *flcn, u32 mailbox_index,
+		u32 data)
+{
+	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
+
+	if (flcn_ops->mailbox_write)
+		flcn_ops->mailbox_write(flcn, mailbox_index, data);
+	else
+		nvgpu_warn(flcn->g, "Invalid op on falcon 0x%x ",
+			flcn->flcn_id);
+}
+
 void nvgpu_flcn_dump_stats(struct nvgpu_falcon *flcn)
 {
 	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;

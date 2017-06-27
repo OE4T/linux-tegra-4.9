@@ -110,7 +110,6 @@ nvgpu-y := \
 	gm20b/pmu_gm20b.o \
 	gm20b/mm_gm20b.o \
 	gm20b/regops_gm20b.o \
-	gm20b/mc_gm20b.o \
 	gm20b/cde_gm20b.o \
 	gm20b/therm_gm20b.o \
 	gm206/bios_gm206.o \

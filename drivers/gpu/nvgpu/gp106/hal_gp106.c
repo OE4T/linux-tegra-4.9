@@ -18,6 +18,8 @@
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/pramin_gk20a.h"
+#include "gk20a/flcn_gk20a.h"
+#include "gk20a/mc_gk20a.h"
 
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/gr_gp10b.h"
@@ -239,6 +241,22 @@ static const struct gpu_ops gp106_ops = {
 		.pg_gr_load_gating_prod =
 			gr_gp106_pg_gr_load_gating_prod,
 	},
+	.mc = {
+		.intr_enable = mc_gp10b_intr_enable,
+		.intr_unit_config = mc_gp10b_intr_unit_config,
+		.isr_stall = mc_gp10b_isr_stall,
+		.intr_stall = mc_gp10b_intr_stall,
+		.intr_stall_pause = mc_gp10b_intr_stall_pause,
+		.intr_stall_resume = mc_gp10b_intr_stall_resume,
+		.intr_nonstall = mc_gp10b_intr_nonstall,
+		.intr_nonstall_pause = mc_gp10b_intr_nonstall_pause,
+		.intr_nonstall_resume = mc_gp10b_intr_nonstall_resume,
+		.enable = gk20a_mc_enable,
+		.disable = gk20a_mc_disable,
+		.reset = gk20a_mc_reset,
+		.boot_0 = gk20a_mc_boot_0,
+		.is_intr1_pending = mc_gp10b_is_intr1_pending,
+	},
 	.cde = {
 		.get_program_numbers = gp10b_cde_get_program_numbers,
 		.need_scatter_buffer = gp10b_need_scatter_buffer,
@@ -276,6 +294,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gops->ltc = gp106_ops.ltc;
 	gops->clock_gating = gp106_ops.clock_gating;
+	gops->mc = gp106_ops.mc;
 	gops->cde = gp106_ops.cde;
 	gops->xve = gp106_ops.xve;
 	gops->falcon = gp106_ops.falcon;
@@ -290,7 +309,6 @@ int gp106_init_hal(struct gk20a *g)
 	gops->securegpccs = 1;
 	gops->pmupstate = true;
 	gk20a_init_bus(gops);
-	gp10b_init_mc(gops);
 	gp10b_init_priv_ring(gops);
 	gp106_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);

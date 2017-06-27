@@ -16,6 +16,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
+#include "gk20a/mc_gk20a.h"
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/priv_ring_gk20a.h"
@@ -31,7 +32,6 @@
 #include "mm_gm20b.h"
 #include "pmu_gm20b.h"
 #include "clk_gm20b.h"
-#include "mc_gm20b.h"
 #include "regops_gm20b.h"
 #include "cde_gm20b.h"
 #include "therm_gm20b.h"
@@ -199,6 +199,22 @@ static const struct gpu_ops gm20b_ops = {
 		.pg_gr_load_gating_prod =
 			gr_gm20b_pg_gr_load_gating_prod,
 	},
+	.mc = {
+		.intr_enable = mc_gk20a_intr_enable,
+		.intr_unit_config = mc_gk20a_intr_unit_config,
+		.isr_stall = mc_gk20a_isr_stall,
+		.intr_stall = mc_gk20a_intr_stall,
+		.intr_stall_pause = mc_gk20a_intr_stall_pause,
+		.intr_stall_resume = mc_gk20a_intr_stall_resume,
+		.intr_nonstall = mc_gk20a_intr_nonstall,
+		.intr_nonstall_pause = mc_gk20a_intr_nonstall_pause,
+		.intr_nonstall_resume = mc_gk20a_intr_nonstall_resume,
+		.enable = gk20a_mc_enable,
+		.disable = gk20a_mc_disable,
+		.reset = gk20a_mc_reset,
+		.boot_0 = gk20a_mc_boot_0,
+		.is_intr1_pending = mc_gk20a_is_intr1_pending,
+	},
 	.cde = {
 		.get_program_numbers = gm20b_cde_get_program_numbers,
 	},
@@ -217,6 +233,7 @@ int gm20b_init_hal(struct gk20a *g)
 
 	gops->ltc = gm20b_ops.ltc;
 	gops->clock_gating = gm20b_ops.clock_gating;
+	gops->mc = gm20b_ops.mc;
 	gops->cde = gm20b_ops.cde;
 	gops->falcon = gm20b_ops.falcon;
 
@@ -255,7 +272,6 @@ int gm20b_init_hal(struct gk20a *g)
 	}
 #endif
 	gk20a_init_bus(gops);
-	gm20b_init_mc(gops);
 	gk20a_init_priv_ring(gops);
 	gm20b_init_gr(gops);
 	gm20b_init_fb(gops);

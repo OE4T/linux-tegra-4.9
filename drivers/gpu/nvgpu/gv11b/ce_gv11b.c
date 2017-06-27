@@ -28,7 +28,7 @@
 #include <nvgpu/hw/gv11b/hw_ce_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_top_gv11b.h>
 
-static u32 gv11b_ce_get_num_pce(struct gk20a *g)
+u32 gv11b_ce_get_num_pce(struct gk20a *g)
 {
 	/* register contains a bitmask indicating which physical copy
 	 * engines are present (and not floorswept).
@@ -41,7 +41,7 @@ static u32 gv11b_ce_get_num_pce(struct gk20a *g)
 	return num_pce;
 }
 
-static void gv11b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
+void gv11b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
 	u32 ce_intr = gk20a_readl(g, ce_intr_status_r(inst_id));
 	u32 clear_intr = 0;
@@ -101,11 +101,4 @@ void gv11b_ce_mthd_buffer_fault_in_bar2_fault(struct gk20a *g)
 			gk20a_writel(g, ce_intr_status_r(lce), clear_intr);
 		}
 	}
-}
-
-void gv11b_init_ce(struct gpu_ops *gops)
-{
-	gp10b_init_ce(gops);
-	gops->ce2.isr_stall = gv11b_ce_isr;
-	gops->ce2.get_num_pce = gv11b_ce_get_num_pce;
 }

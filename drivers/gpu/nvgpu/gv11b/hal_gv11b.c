@@ -34,6 +34,7 @@
 
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/mc_gp10b.h"
+#include "gp10b/ce_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
 
@@ -159,6 +160,11 @@ static const struct gpu_ops gv11b_ops = {
 #ifdef CONFIG_DEBUG_FS
 		.sync_debugfs = gp10b_ltc_sync_debugfs,
 #endif
+	},
+	.ce2 = {
+		.isr_stall = gv11b_ce_isr,
+		.isr_nonstall = gp10b_ce_nonstall_isr,
+		.get_num_pce = gv11b_ce_get_num_pce,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
@@ -340,6 +346,7 @@ int gv11b_init_hal(struct gk20a *g)
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
 	gops->ltc = gv11b_ops.ltc;
+	gops->ce2 = gv11b_ops.ce2;
 	gops->clock_gating = gv11b_ops.clock_gating;
 	gops->fifo = gv11b_ops.fifo;
 	gops->mc = gv11b_ops.mc;
@@ -364,7 +371,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_gr(g);
 	gv11b_init_fecs_trace_ops(gops);
 	gv11b_init_fb(gops);
-	gv11b_init_ce(gops);
 	gv11b_init_gr_ctx(gops);
 	gv11b_init_mm(gops);
 	gv11b_init_pmu_ops(g);

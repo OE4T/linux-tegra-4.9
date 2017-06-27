@@ -21,6 +21,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
+#include "gk20a/mc_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
@@ -29,6 +30,7 @@
 #include "gm20b/gr_gm20b.h"
 
 #include "gp10b/ltc_gp10b.h"
+#include "gp10b/mc_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
 
 #include "hal_gv11b.h"
@@ -200,7 +202,23 @@ static const struct gpu_ops gv11b_ops = {
 		.pg_gr_load_gating_prod =
 			gr_gv11b_pg_gr_load_gating_prod,
 	},
-
+	.mc = {
+		.intr_enable = mc_gv11b_intr_enable,
+		.intr_unit_config = mc_gp10b_intr_unit_config,
+		.isr_stall = mc_gp10b_isr_stall,
+		.intr_stall = mc_gp10b_intr_stall,
+		.intr_stall_pause = mc_gp10b_intr_stall_pause,
+		.intr_stall_resume = mc_gp10b_intr_stall_resume,
+		.intr_nonstall = mc_gp10b_intr_nonstall,
+		.intr_nonstall_pause = mc_gp10b_intr_nonstall_pause,
+		.intr_nonstall_resume = mc_gp10b_intr_nonstall_resume,
+		.enable = gk20a_mc_enable,
+		.disable = gk20a_mc_disable,
+		.reset = gk20a_mc_reset,
+		.boot_0 = gk20a_mc_boot_0,
+		.is_intr1_pending = mc_gp10b_is_intr1_pending,
+		.is_intr_hub_pending = gv11b_mc_is_intr_hub_pending,
+	},
 	.falcon = {
 		.falcon_hal_sw_init = gk20a_falcon_hal_sw_init,
 	},
@@ -215,6 +233,7 @@ int gv11b_init_hal(struct gk20a *g)
 
 	gops->ltc = gv11b_ops.ltc;
 	gops->clock_gating = gv11b_ops.clock_gating;
+	gops->mc = gv11b_ops.mc;
 	gops->falcon = gv11b_ops.falcon;
 
 	/* Lone functions */
@@ -227,7 +246,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->securegpccs = 0;
 
 	gv11b_init_bus(gops);
-	gv11b_init_mc(gops);
 	gp10b_init_priv_ring(gops);
 	gv11b_init_gr(gops);
 	gv11b_init_fecs_trace_ops(gops);

@@ -24,7 +24,7 @@
 
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 
-static void mc_gv11b_intr_enable(struct gk20a *g)
+void mc_gv11b_intr_enable(struct gk20a *g)
 {
 	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
 
@@ -57,14 +57,7 @@ static void mc_gv11b_intr_enable(struct gk20a *g)
 
 }
 
-static bool gv11b_mc_is_intr_hub_pending(struct gk20a *g, u32 mc_intr_0)
+bool gv11b_mc_is_intr_hub_pending(struct gk20a *g, u32 mc_intr_0)
 {
 	return ((mc_intr_0 & mc_intr_hub_pending_f()) ? true : false);
-}
-
-void gv11b_init_mc(struct gpu_ops *gops)
-{
-	gp10b_init_mc(gops);
-	gops->mc.intr_enable = mc_gv11b_intr_enable;
-	gops->mc.is_intr_hub_pending = gv11b_mc_is_intr_hub_pending;
 }

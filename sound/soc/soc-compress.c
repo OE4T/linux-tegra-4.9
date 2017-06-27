@@ -121,7 +121,7 @@ static int soc_compr_open_fe(struct snd_compr_stream *cstream)
 
 		dpcm_be_disconnect(fe, stream);
 		fe->dpcm[stream].runtime = NULL;
-		goto path_err;
+		goto fe_err;
 	}
 
 	dpcm_clear_pending_state(fe, stream);
@@ -136,8 +136,6 @@ static int soc_compr_open_fe(struct snd_compr_stream *cstream)
 
 	return 0;
 
-path_err:
-	dpcm_path_put(&list);
 fe_err:
 	if (list)
 		dpcm_path_put(&list);

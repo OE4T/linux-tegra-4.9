@@ -113,7 +113,7 @@ static int tegra_hda_eld_config(struct tegra_dc_hda_data *hda)
 	tegra_hda_get_eld_vendor(eld_mem, hda);
 
 	for (cnt = 0; cnt < HDMI_ELD_BUF; cnt++)
-		tegra_sor_writel(hda->sor, NV_SOR_AUDIO_HDA_ELD_BUFWR,
+		tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_HDA_ELD_BUFWR,
 				NV_SOR_AUDIO_HDA_ELD_BUFWR_INDEX(cnt) |
 				NV_SOR_AUDIO_HDA_ELD_BUFWR_DATA(eld_mem[cnt]));
 
@@ -147,10 +147,10 @@ int tegra_hdmi_setup_hda_presence(int sor_num)
 		tegra_dc_io_start(hda->dc);
 
 		/* remove hda presence while setting up eld */
-		tegra_sor_writel(hda->sor, NV_SOR_AUDIO_HDA_PRESENCE, 0);
+		tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_HDA_PRESENCE, 0);
 
 		tegra_hda_eld_config(hda);
-		tegra_sor_writel(hda->sor, NV_SOR_AUDIO_HDA_PRESENCE,
+		tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_HDA_PRESENCE,
 				NV_SOR_AUDIO_HDA_PRESENCE_ELDV(1) |
 				NV_SOR_AUDIO_HDA_PRESENCE_PD(1));
 
@@ -172,7 +172,7 @@ static void tegra_hdmi_audio_infoframe(struct tegra_dc_hda_data *hda)
 		return;
 
 	/* disable audio infoframe before configuring */
-	tegra_sor_writel(hda->sor, NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL, 0);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL, 0);
 
 	if (hda->sink == SINK_HDMI) {
 		to_hdmi(hda->client_data)->audio.channel_cnt =
@@ -188,7 +188,7 @@ static void tegra_hdmi_audio_infoframe(struct tegra_dc_hda_data *hda)
 	}
 
 	/* Send infoframe every frame, checksum hw generated */
-	tegra_sor_writel(hda->sor, NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL,
+	tegra_sor_writel_ext(hda->sor, NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL,
 		NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL_ENABLE_YES |
 		NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL_OTHER_DISABLE |
 		NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL_SINGLE_DISABLE |
@@ -201,47 +201,47 @@ static void tegra_hdmi_audio_acr(u32 audio_freq, struct tegra_dc_hda_data *hda)
 #define GET_AVAL(n, fs_hz) ((24000 * n) / (128 * fs_hz / 1000))
 	u32 val;
 
-	tegra_sor_writel(hda->sor, NV_SOR_HDMI_ACR_CTRL, 0x0);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_HDMI_ACR_CTRL, 0x0);
 
 	val = NV_SOR_HDMI_SPARE_HW_CTS_ENABLE |
 		NV_SOR_HDMI_SPARE_CTS_RESET_VAL(1) |
 		NV_SOR_HDMI_SPARE_ACR_PRIORITY_HIGH;
-	tegra_sor_writel(hda->sor, NV_SOR_HDMI_SPARE, val);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_HDMI_SPARE, val);
 
-	tegra_sor_writel(hda->sor, NV_SOR_HDMI_ACR_0441_SUBPACK_LOW,
+	tegra_sor_writel_ext(hda->sor, NV_SOR_HDMI_ACR_0441_SUBPACK_LOW,
 			NV_SOR_HDMI_ACR_SUBPACK_USE_HW_CTS);
-	tegra_sor_writel(hda->sor, NV_SOR_HDMI_ACR_0441_SUBPACK_HIGH,
+	tegra_sor_writel_ext(hda->sor, NV_SOR_HDMI_ACR_0441_SUBPACK_HIGH,
 			NV_SOR_HDMI_ACR_SUBPACK_ENABLE);
 
 	val = NV_SOR_HDMI_AUDIO_N_RESET_ASSERT |
 		NV_SOR_HDMI_AUDIO_N_LOOKUP_ENABLE;
-	tegra_sor_writel(hda->sor, NV_SOR_HDMI_AUDIO_N, val);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_HDMI_AUDIO_N, val);
 
 	/* N from table 7.1, 7.2, 7.3 hdmi spec v1.4 */
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0320, 4096);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0320,
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_NVAL_0320, 4096);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_AVAL_0320,
 			GET_AVAL(4096, audio_freq));
 	/*For Multiple of 44.1khz source some receiver cannot handle CTS value
 	  which is a little far away with golden value,So for the
 	  TMDS_clk=148.5Mhz case, we should keep AVAL as default value(20000),
 	  and set N= 4704*2 and 4704*4 for the 88.2 and 176.4khz audio case */
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0441, 4704);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0441, 20000);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0882, 9408);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0882, 20000);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_1764, 18816);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_1764, 20000);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0480, 6144);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0480,
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_NVAL_0441, 4704);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_AVAL_0441, 20000);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_NVAL_0882, 9408);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_AVAL_0882, 20000);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_NVAL_1764, 18816);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_AVAL_1764, 20000);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_NVAL_0480, 6144);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_AVAL_0480,
 			GET_AVAL(6144, audio_freq));
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0960, 12288);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0960,
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_NVAL_0960, 12288);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_AVAL_0960,
 			GET_AVAL(12288, audio_freq));
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_1920, 24576);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_1920,
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_NVAL_1920, 24576);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_AVAL_1920,
 			GET_AVAL(24576, audio_freq));
 
-	tegra_sor_write_field(hda->sor, NV_SOR_HDMI_AUDIO_N,
+	tegra_sor_write_field_ext(hda->sor, NV_SOR_HDMI_AUDIO_N,
 				NV_SOR_HDMI_AUDIO_N_RESET_ASSERT,
 				NV_SOR_HDMI_AUDIO_N_RESET_DEASSERT);
 #undef GET_AVAL
@@ -264,19 +264,21 @@ static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src,
 		NV_SOR_AUDIO_CTRL_SRC_HDA;
 	if (hda->null_sample_inject)
 		val |= NV_SOR_AUDIO_CTRL_NULL_SAMPLE_EN;
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_CTRL, val);
+	tegra_sor_writel_ext(hda->sor, NV_SOR_AUDIO_CTRL, val);
 
 	/* override to advertise HBR capability */
-	tegra_sor_writel(hda->sor, NV_PDISP_SOR_AUDIO_SPARE0_0,
+	tegra_sor_writel_ext(hda->sor, NV_PDISP_SOR_AUDIO_SPARE0_0,
 		(1 << HDMI_AUDIO_HBR_ENABLE_SHIFT) |
-		tegra_sor_readl(hda->sor, NV_PDISP_SOR_AUDIO_SPARE0_0));
+		tegra_sor_readl_ext(hda->sor, NV_PDISP_SOR_AUDIO_SPARE0_0));
 
 	if (hda->sink == SINK_DP) {
 		/* program h/vblank sym */
-		tegra_sor_write_field(hda->sor, NV_SOR_DP_AUDIO_HBLANK_SYMBOLS,
+		tegra_sor_write_field_ext(hda->sor,
+			NV_SOR_DP_AUDIO_HBLANK_SYMBOLS,
 			NV_SOR_DP_AUDIO_HBLANK_SYMBOLS_MASK, cfg->hblank_sym);
 
-		tegra_sor_write_field(hda->sor, NV_SOR_DP_AUDIO_VBLANK_SYMBOLS,
+		tegra_sor_write_field_ext(hda->sor,
+			NV_SOR_DP_AUDIO_VBLANK_SYMBOLS,
 			NV_SOR_DP_AUDIO_VBLANK_SYMBOLS_MASK, cfg->vblank_sym);
 
 		val = NV_SOR_DP_AUDIO_CTRL_ENABLE |
@@ -286,10 +288,10 @@ static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src,
 			NV_SOR_DP_AUDIO_CTRL_SF_SELECT_HW |
 			NV_SOR_DP_AUDIO_CTRL_CC_SELECT_HW |
 			NV_SOR_DP_AUDIO_CTRL_CT_SELECT_HW;
-		tegra_sor_writel(hda->sor, NV_SOR_DP_AUDIO_CTRL, val);
+		tegra_sor_writel_ext(hda->sor, NV_SOR_DP_AUDIO_CTRL, val);
 
 		/* make sure to disable overriding channel data */
-		tegra_sor_write_field(hda->sor,
+		tegra_sor_write_field_ext(hda->sor,
 			NV_SOR_DP_OUTPUT_CHANNEL_STATUS2,
 			NV_SOR_DP_OUTPUT_CHANNEL_STATUS2_OVERRIDE_EN,
 			NV_SOR_DP_OUTPUT_CHANNEL_STATUS2_OVERRIDE_DIS);
@@ -365,12 +367,12 @@ int tegra_hdmi_audio_null_sample_inject(bool on,
 		return -ENODEV;
 
 	if (on && !hda->null_sample_inject)
-		tegra_sor_write_field(hda->sor,
+		tegra_sor_write_field_ext(hda->sor,
 					NV_SOR_AUDIO_CTRL,
 					NV_SOR_AUDIO_CTRL_NULL_SAMPLE_EN,
 					NV_SOR_AUDIO_CTRL_NULL_SAMPLE_EN);
 	else if (!on && hda->null_sample_inject)
-		tegra_sor_write_field(hda->sor,
+		tegra_sor_write_field_ext(hda->sor,
 					NV_SOR_AUDIO_CTRL,
 					NV_SOR_AUDIO_CTRL_NULL_SAMPLE_EN,
 					NV_SOR_AUDIO_CTRL_NULL_SAMPLE_DIS);

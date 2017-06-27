@@ -23,6 +23,8 @@
 #include <linux/clk/tegra.h>
 #include <linux/reset.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include <linux/rwsem.h>
+#include <linux/delay.h>
 #include "dc_priv.h"
 #include "sor_regs.h"
 
@@ -123,6 +125,7 @@ struct tegra_dc_sor_data {
 	bool audio_support;
 	struct padctrl *io_padctrl;
 	int powergate_id;
+	struct rw_semaphore reset_lock;
 };
 
 #define TEGRA_SOR_TIMEOUT_MS		1000
@@ -458,5 +461,60 @@ static inline int tegra_get_sor_reset_ctrl(struct tegra_dc_sor_data *sor,
 	}
 	reset_control_deassert(sor->rst);
 	return 0;
+}
+
+static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
+{
+	if (tegra_platform_is_sim())
+		return;
+
+	down_write(&sor->reset_lock);
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
+	if (sor->rst) {
+		reset_control_assert(sor->rst);
+		mdelay(2);
+		reset_control_deassert(sor->rst);
+		mdelay(1);
+	}
+#else
+	tegra_periph_reset_assert(sor->sor_clk);
+	mdelay(2);
+	tegra_periph_reset_deassert(sor->sor_clk);
+	mdelay(1);
+#endif
+	up_write(&sor->reset_lock);
+}
+
+static inline u32 tegra_sor_readl_ext(struct tegra_dc_sor_data *sor, u32 reg)
+{
+	u32 val;
+
+	down_read(&sor->reset_lock);
+	val = readl(sor->base + reg * 4);
+	up_read(&sor->reset_lock);
+	trace_display_readl(sor->dc, val, (char *)sor->base + reg * 4);
+	return val;
+}
+
+static inline void tegra_sor_writel_ext(struct tegra_dc_sor_data *sor,
+	u32 reg, u32 val)
+{
+	down_read(&sor->reset_lock);
+	writel(val, sor->base + reg * 4);
+	up_read(&sor->reset_lock);
+	trace_display_writel(sor->dc, val, (char *)sor->base + reg * 4);
+}
+
+static inline void tegra_sor_write_field_ext(struct tegra_dc_sor_data *sor,
+	u32 reg, u32 mask, u32 val)
+{
+	u32 reg_val;
+
+	down_read(&sor->reset_lock);
+	reg_val = tegra_sor_readl(sor, reg);
+	reg_val &= ~mask;
+	reg_val |= val;
+	tegra_sor_writel(sor, reg, reg_val);
+	up_read(&sor->reset_lock);
 }
 #endif

@@ -313,7 +313,7 @@ static int wait_key_ctrl(struct tegra_dc_sor_data *sor, u32 mask, u32 value)
 
 	do {
 		usleep_range(1, 2);
-		ctrl = tegra_sor_readl(sor, NV_SOR_KEY_CTRL);
+		ctrl = tegra_sor_readl_ext(sor, NV_SOR_KEY_CTRL);
 		if (((ctrl ^ value) & mask) == 0)
 			break;
 	} while (--retries);
@@ -335,13 +335,13 @@ static void hdcp_ctrl_run(struct tegra_dc_sor_data *sor, bool v)
 	}
 
 	if (v) {
-		ctrl = tegra_sor_readl(sor, NV_SOR_DP_HDCP_CTRL);
+		ctrl = tegra_sor_readl_ext(sor, NV_SOR_DP_HDCP_CTRL);
 		ctrl |= HDCP_RUN_YES;
 	} else {
 		ctrl = 0;
 	}
 
-	tegra_sor_writel(sor, NV_SOR_DP_HDCP_CTRL, ctrl);
+	tegra_sor_writel_ext(sor, NV_SOR_DP_HDCP_CTRL, ctrl);
 }
 
 /*
@@ -359,7 +359,7 @@ static int wait_hdcp_ctrl(struct tegra_dc_sor_data *sor, u32 mask, u32 *v)
 	}
 
 	do {
-		ctrl = tegra_sor_readl(sor, NV_SOR_DP_HDCP_CTRL);
+		ctrl = tegra_sor_readl_ext(sor, NV_SOR_DP_HDCP_CTRL);
 		if ((ctrl & mask)) {
 			if (v)
 				*v = ctrl;
@@ -399,8 +399,8 @@ static inline u64 get_an(struct tegra_dc_sor_data *sor)
 		return -EINVAL;
 	}
 
-	r = (u64)tegra_sor_readl(sor, NV_SOR_DP_HDCP_AN_MSB) << 32;
-	r |= tegra_sor_readl(sor, NV_SOR_DP_HDCP_AN_LSB);
+	r = (u64)tegra_sor_readl_ext(sor, NV_SOR_DP_HDCP_AN_MSB) << 32;
+	r |= tegra_sor_readl_ext(sor, NV_SOR_DP_HDCP_AN_LSB);
 	return r;
 }
 
@@ -414,8 +414,8 @@ static inline u64 get_aksv(struct tegra_dc_sor_data *sor)
 		return -EINVAL;
 	}
 
-	r = (u64)tegra_sor_readl(sor, NV_SOR_DP_HDCP_AKSV_MSB) << 32;
-	r |= tegra_sor_readl(sor, NV_SOR_DP_HDCP_AKSV_LSB);
+	r = (u64)tegra_sor_readl_ext(sor, NV_SOR_DP_HDCP_AKSV_MSB) << 32;
+	r |= tegra_sor_readl_ext(sor, NV_SOR_DP_HDCP_AKSV_LSB);
 	return r;
 }
 
@@ -426,8 +426,8 @@ static inline void set_bksv(struct tegra_dc_sor_data *sor, u64 b_ksv,
 	if (sor) {
 		if (repeater)
 			b_ksv |= (u64)REPEATER << 32;
-		tegra_sor_writel(sor, NV_SOR_DP_HDCP_BKSV_LSB, (u32)b_ksv);
-		tegra_sor_writel(sor, NV_SOR_DP_HDCP_BKSV_MSB, b_ksv >> 32);
+		tegra_sor_writel_ext(sor, NV_SOR_DP_HDCP_BKSV_LSB, (u32)b_ksv);
+		tegra_sor_writel_ext(sor, NV_SOR_DP_HDCP_BKSV_MSB, b_ksv >> 32);
 	}
 }
 
@@ -517,11 +517,11 @@ static int load_kfuse(struct tegra_dc_dp_data *dp)
 	}
 
 	/* write the kfuse to the DP SRAM */
-	tegra_sor_writel(sor, NV_SOR_KEY_CTRL, 1);
+	tegra_sor_writel_ext(sor, NV_SOR_KEY_CTRL, 1);
 
 	/* issue a reload */
-	ctrl = tegra_sor_readl(sor, NV_SOR_KEY_CTRL);
-	tegra_sor_writel(sor, NV_SOR_KEY_CTRL, ctrl | PKEY_RELOAD_TRIGGER
+	ctrl = tegra_sor_readl_ext(sor, NV_SOR_KEY_CTRL);
+	tegra_sor_writel_ext(sor, NV_SOR_KEY_CTRL, ctrl | PKEY_RELOAD_TRIGGER
 					| LOCAL_KEYS);
 	e = wait_key_ctrl(sor, PKEY_LOADED, PKEY_LOADED);
 	if (e) {
@@ -529,12 +529,12 @@ static int load_kfuse(struct tegra_dc_dp_data *dp)
 		return e;
 	}
 
-	tegra_sor_writel(sor, NV_SOR_KEY_SKEY_INDEX, 0);
+	tegra_sor_writel_ext(sor, NV_SOR_KEY_SKEY_INDEX, 0);
 
 	/* wait for SRAM to be cleared */
 	retries = SRAM_CLR_RETRIES;
 	do {
-		tmp = tegra_sor_readl(sor, NV_SOR_KEY_DEBUG0);
+		tmp = tegra_sor_readl_ext(sor, NV_SOR_KEY_DEBUG0);
 		if ((tmp & 1) == 0)
 			break;
 		if (retries > 1)
@@ -548,17 +548,18 @@ static int load_kfuse(struct tegra_dc_dp_data *dp)
 	for (i = 0; i < KFUSE_DATA_SZ / 4; i += 4) {
 
 		/* load 128-bits*/
-		tegra_sor_writel(sor, NV_SOR_KEY_HDCP_KEY_0, buf[i]);
-		tegra_sor_writel(sor, NV_SOR_KEY_HDCP_KEY_1, buf[i+1]);
-		tegra_sor_writel(sor, NV_SOR_KEY_HDCP_KEY_2, buf[i+2]);
-		tegra_sor_writel(sor, NV_SOR_KEY_HDCP_KEY_3, buf[i+3]);
+		tegra_sor_writel_ext(sor, NV_SOR_KEY_HDCP_KEY_0, buf[i]);
+		tegra_sor_writel_ext(sor, NV_SOR_KEY_HDCP_KEY_1, buf[i+1]);
+		tegra_sor_writel_ext(sor, NV_SOR_KEY_HDCP_KEY_2, buf[i+2]);
+		tegra_sor_writel_ext(sor, NV_SOR_KEY_HDCP_KEY_3, buf[i+3]);
 
 		/* trigger LOAD_HDCP_KEY */
-		tegra_sor_writel(sor, NV_SOR_KEY_HDCP_KEY_TRIG, HDCP_KEY_LOAD);
+		tegra_sor_writel_ext(sor,
+			NV_SOR_KEY_HDCP_KEY_TRIG, HDCP_KEY_LOAD);
 		tmp = LOCAL_KEYS | WRITE16;
 		if (i)
 			tmp |= AUTOINC;
-		tegra_sor_writel(sor, NV_SOR_KEY_CTRL, tmp);
+		tegra_sor_writel_ext(sor, NV_SOR_KEY_CTRL, tmp);
 
 		/* wait for WRITE16 to complete */
 		e = wait_key_ctrl(sor, KFUSE_MASK, 0); /* WRITE16 */
@@ -581,7 +582,7 @@ static inline u64 get_transmitter_ro_prime(struct tegra_dc_dp_data *dp)
 	}
 
 	sor = dp->sor;
-	return tegra_sor_readl(sor, NV_SOR_DP_HDCP_RI);
+	return tegra_sor_readl_ext(sor, NV_SOR_DP_HDCP_RI);
 }
 
 /* R0' prime value generated from the receiver */
@@ -1300,9 +1301,9 @@ repeater_auth:
 		}
 		enc = true;
 	} else {
-		tmp = tegra_sor_readl(sor, NV_SOR_DP_HDCP_CTRL);
+		tmp = tegra_sor_readl_ext(sor, NV_SOR_DP_HDCP_CTRL);
 		tmp |= CRYPT_ENABLED;
-		tegra_sor_writel(sor, NV_SOR_DP_HDCP_CTRL, tmp);
+		tegra_sor_writel_ext(sor, NV_SOR_DP_HDCP_CTRL, tmp);
 	}
 		dphdcp_vdbg("CRYPT enabled\n");
 	}
@@ -1356,9 +1357,9 @@ repeater_auth:
 			goto failure;
 		}
 	} else {
-		tmp = tegra_sor_readl(sor, NV_SOR_DP_HDCP_CTRL);
+		tmp = tegra_sor_readl_ext(sor, NV_SOR_DP_HDCP_CTRL);
 		tmp |= CRYPT_ENABLED;
-		tegra_sor_writel(sor, NV_SOR_DP_HDCP_CTRL, tmp);
+		tegra_sor_writel_ext(sor, NV_SOR_DP_HDCP_CTRL, tmp);
 	}
 	goto repeater_auth;
 	}

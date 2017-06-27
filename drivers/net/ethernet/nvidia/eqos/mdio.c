@@ -332,7 +332,10 @@ static void eqos_adjust_link(struct net_device *dev)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct phy_device *phydev = pdata->phydev;
-	int new_state = 0, speed_changed = 0, tx_tristate_disable = 0, ret = 0;
+	int new_state = 0, speed_changed = 0, tx_tristate_disable = 0;
+#ifndef DISABLE_TRISTATE
+	int ret = 0;
+#endif
 
 	if (phydev == NULL)
 		return;

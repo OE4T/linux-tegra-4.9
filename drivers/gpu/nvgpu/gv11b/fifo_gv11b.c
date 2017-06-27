@@ -99,7 +99,7 @@ static void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 	addr_hi = u64_hi32(gk20a_mm_inst_block_addr(g, &c->inst_block));
 
 	runlist[2] = ram_rl_entry_chan_inst_ptr_lo_f(addr_lo) |
-				ram_rl_entry_chid_f(c->hw_chid);
+				ram_rl_entry_chid_f(c->chid);
 	runlist[3] = ram_rl_entry_chan_inst_ptr_hi_f(addr_hi);
 
 	gk20a_dbg_info("gv11b channel runlist [0] %x [1]  %x [2] %x [3] %x\n",
@@ -164,7 +164,7 @@ static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 		pbdma_runlist_timeslice_enable_true_f());
 
 
-	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
+	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->chid));
 
 	/* Until full subcontext is supported, always use VEID0 */
 	nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
@@ -192,16 +192,16 @@ static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 
 static void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
 {
-	gk20a_dbg_info("channel ring door bell %d\n", c->hw_chid);
+	gk20a_dbg_info("channel ring door bell %d\n", c->chid);
 
 	gk20a_writel(c->g, usermode_notify_channel_pending_r(),
-		usermode_notify_channel_pending_id_f(c->hw_chid));
+		usermode_notify_channel_pending_id_f(c->chid));
 }
 
 static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct nvgpu_mem *userd_mem = &g->fifo.userd;
-	u32 offset = c->hw_chid * (g->fifo.userd_entry_size / sizeof(u32));
+	u32 offset = c->chid * (g->fifo.userd_entry_size / sizeof(u32));
 
 	return nvgpu_mem_rd32(g, userd_mem,
 			offset + ram_userd_gp_get_w());
@@ -210,7 +210,7 @@ static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
 static u64 gv11b_userd_pb_get(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct nvgpu_mem *userd_mem = &g->fifo.userd;
-	u32 offset = c->hw_chid * (g->fifo.userd_entry_size / sizeof(u32));
+	u32 offset = c->chid * (g->fifo.userd_entry_size / sizeof(u32));
 	u32 lo = nvgpu_mem_rd32(g, userd_mem, offset + ram_userd_get_w());
 	u32 hi = nvgpu_mem_rd32(g, userd_mem, offset + ram_userd_get_hi_w());
 
@@ -220,7 +220,7 @@ static u64 gv11b_userd_pb_get(struct gk20a *g, struct channel_gk20a *c)
 static void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct nvgpu_mem *userd_mem = &g->fifo.userd;
-	u32 offset = c->hw_chid * (g->fifo.userd_entry_size / sizeof(u32));
+	u32 offset = c->chid * (g->fifo.userd_entry_size / sizeof(u32));
 
 	nvgpu_mem_wr32(g, userd_mem, offset + ram_userd_gp_put_w(),
 							c->gpfifo.put);
@@ -249,13 +249,13 @@ static bool gv11b_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid)
 
 static void gv11b_dump_channel_status_ramfc(struct gk20a *g,
 				     struct gk20a_debug_output *o,
-				     u32 hw_chid,
+				     u32 chid,
 				     struct ch_state *ch_state)
 {
-	u32 channel = gk20a_readl(g, ccsr_channel_r(hw_chid));
+	u32 channel = gk20a_readl(g, ccsr_channel_r(chid));
 	u32 status = ccsr_channel_status_v(channel);
 	u32 *inst_mem;
-	struct channel_gk20a *c = g->fifo.channel + hw_chid;
+	struct channel_gk20a *c = g->fifo.channel + chid;
 	struct nvgpu_semaphore_int *hw_sema = NULL;
 
 	if (c->hw_sema)
@@ -266,7 +266,7 @@ static void gv11b_dump_channel_status_ramfc(struct gk20a *g,
 
 	inst_mem = &ch_state->inst_block[0];
 
-	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", hw_chid,
+	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", chid,
 			dev_name(g->dev),
 			ch_state->pid,
 			ch_state->refs);
@@ -505,13 +505,13 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 	return ret;
 }
 
-static void gv11b_reset_eng_faulted_ch(struct gk20a *g, u32 hw_chid)
+static void gv11b_reset_eng_faulted_ch(struct gk20a *g, u32 chid)
 {
 	u32 reg_val;
 
-	reg_val = gk20a_readl(g, ccsr_channel_r(hw_chid));
+	reg_val = gk20a_readl(g, ccsr_channel_r(chid));
 	reg_val |= ccsr_channel_eng_faulted_reset_f();
-	gk20a_writel(g, ccsr_channel_r(hw_chid), reg_val);
+	gk20a_writel(g, ccsr_channel_r(chid), reg_val);
 }
 
 static void gv11b_reset_eng_faulted_tsg(struct tsg_gk20a *tsg)
@@ -521,18 +521,18 @@ static void gv11b_reset_eng_faulted_tsg(struct tsg_gk20a *tsg)
 
 	down_read(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
-		gv11b_reset_eng_faulted_ch(g, ch->hw_chid);
+		gv11b_reset_eng_faulted_ch(g, ch->chid);
 	}
 	up_read(&tsg->ch_list_lock);
 }
 
-static void gv11b_reset_pbdma_faulted_ch(struct gk20a *g, u32 hw_chid)
+static void gv11b_reset_pbdma_faulted_ch(struct gk20a *g, u32 chid)
 {
 	u32 reg_val;
 
-	reg_val = gk20a_readl(g, ccsr_channel_r(hw_chid));
+	reg_val = gk20a_readl(g, ccsr_channel_r(chid));
 	reg_val |= ccsr_channel_pbdma_faulted_reset_f();
-	gk20a_writel(g, ccsr_channel_r(hw_chid), reg_val);
+	gk20a_writel(g, ccsr_channel_r(chid), reg_val);
 }
 
 static void gv11b_reset_pbdma_faulted_tsg(struct tsg_gk20a *tsg)
@@ -542,7 +542,7 @@ static void gv11b_reset_pbdma_faulted_tsg(struct tsg_gk20a *tsg)
 
 	down_read(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
-		gv11b_reset_pbdma_faulted_ch(g, ch->hw_chid);
+		gv11b_reset_pbdma_faulted_ch(g, ch->chid);
 	}
 	up_read(&tsg->ch_list_lock);
 }
@@ -703,13 +703,13 @@ static int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	return ret;
 }
 
-static int gv11b_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
+static int gv11b_fifo_preempt_channel(struct gk20a *g, u32 chid)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 tsgid;
 
-	tsgid = f->channel[hw_chid].tsgid;
-	nvgpu_log_info(g, "chid:%d tsgid:%d", hw_chid, tsgid);
+	tsgid = f->channel[chid].tsgid;
+	nvgpu_log_info(g, "chid:%d tsgid:%d", chid, tsgid);
 
 	/* Preempt tsg. Channel preempt is NOOP */
 	return g->ops.fifo.preempt_tsg(g, tsgid);
@@ -919,9 +919,9 @@ static void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 				gv11b_reset_eng_faulted_tsg(tsg);
 		} else {
 			if (mmfault->faulted_pbdma != FIFO_INVAL_PBDMA_ID)
-				gv11b_reset_pbdma_faulted_ch(g, refch->hw_chid);
+				gv11b_reset_pbdma_faulted_ch(g, refch->chid);
 			if (mmfault->faulted_engine != FIFO_INVAL_ENGINE_ID)
-				gv11b_reset_eng_faulted_ch(g, refch->hw_chid);
+				gv11b_reset_eng_faulted_ch(g, refch->chid);
 		}
 	} else {
 		if (id_type == ID_TYPE_TSG)

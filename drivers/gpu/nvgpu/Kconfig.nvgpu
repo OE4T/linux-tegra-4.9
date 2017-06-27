@@ -104,6 +104,7 @@ config TEGRA_ACR
 
 config TEGRA_USE_NA_GPCPLL
 	bool "Enable noise aware mode of GM20B GPCPLL on Tegra"
+	depends on GK20A
 	depends on COMMON_CLK
 	default n
 	help
@@ -121,7 +122,7 @@ config GK20A_PCI
 
 config GK20A_TRACE_PRINTK
 	bool "Support trace_printk debugging"
-	depends on CONFIG_FTRACE_PRINTK
+	depends on GK20A && FTRACE_PRINTK
 	default n
 	help
 	  Enable nvgpu debug facility to redirect debug spew to ftrace. This

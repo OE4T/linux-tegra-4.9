@@ -48,6 +48,9 @@
 #define CHANNEL_INFO_VEID0  0
 #define PBDMA_SUBDEVICE_ID  1
 
+static void gv11b_fifo_init_ramfc_eng_method_buffer(struct gk20a *g,
+			struct channel_gk20a *ch, struct nvgpu_mem *mem);
+
 static inline void gv11b_usermode_writel(struct gk20a *g, u32 r, u32 v)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -179,6 +182,8 @@ static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 	nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
 		pbdma_set_channel_info_scg_type_graphics_compute0_f() |
 		pbdma_set_channel_info_veid_f(CHANNEL_INFO_VEID0));
+
+	gv11b_fifo_init_ramfc_eng_method_buffer(g, c, mem);
 
 	if (c->is_privileged_channel) {
 		/* Set privilege level for channel */
@@ -1470,6 +1475,106 @@ static unsigned int gv11b_fifo_handle_pbdma_intr_1(struct gk20a *g,
 	return rc_type;
 }
 
+static void gv11b_fifo_init_ramfc_eng_method_buffer(struct gk20a *g,
+			struct channel_gk20a *ch, struct nvgpu_mem *mem)
+{
+	struct tsg_gk20a *tsg;
+	struct nvgpu_mem *method_buffer_per_runque;
+
+	tsg = tsg_gk20a_from_ch(ch);
+	if (tsg == NULL) {
+		nvgpu_err(g, "channel is not part of tsg");
+		return;
+	}
+	if (tsg->eng_method_buffers == NULL) {
+		nvgpu_log_info(g, "eng method buffer NULL");
+		return;
+	}
+	if (tsg->runlist_id == gk20a_fifo_get_fast_ce_runlist_id(g))
+		method_buffer_per_runque =
+			&tsg->eng_method_buffers[ASYNC_CE_RUNQUE];
+	else
+		method_buffer_per_runque =
+			&tsg->eng_method_buffers[GR_RUNQUE];
+
+	nvgpu_mem_wr32(g, mem, ram_in_eng_method_buffer_addr_lo_w(),
+			u64_lo32(method_buffer_per_runque->gpu_va));
+	nvgpu_mem_wr32(g, mem, ram_in_eng_method_buffer_addr_hi_w(),
+			u64_hi32(method_buffer_per_runque->gpu_va));
+
+	nvgpu_log_info(g, "init ramfc with method buffer");
+}
+
+unsigned int gv11b_fifo_get_eng_method_buffer_size(struct gk20a *g)
+{
+	unsigned int buffer_size;
+
+	buffer_size =  ((9 + 1 + 3) * g->ops.ce2.get_num_pce(g)) + 2;
+	buffer_size = (27 * 5 * buffer_size);
+	buffer_size = roundup(buffer_size, PAGE_SIZE);
+	nvgpu_log_info(g, "method buffer size in bytes %d", buffer_size);
+
+	return buffer_size;
+}
+
+static void gv11b_fifo_init_eng_method_buffers(struct gk20a *g,
+					struct tsg_gk20a *tsg)
+{
+	struct vm_gk20a *vm = g->mm.bar2.vm;
+	int err = 0;
+	unsigned int i, runque, method_buffer_size;
+	unsigned int num_pbdma = g->fifo.num_pbdma;
+
+	if (tsg->eng_method_buffers != NULL)
+		return;
+
+	method_buffer_size = gv11b_fifo_get_eng_method_buffer_size(g);
+	if (method_buffer_size == 0) {
+		nvgpu_info(g, "ce will hit MTHD_BUFFER_FAULT");
+		return;
+	}
+
+	tsg->eng_method_buffers = nvgpu_kzalloc(g,
+					num_pbdma * sizeof(struct nvgpu_mem));
+
+	for (runque = 0; runque < num_pbdma; runque++) {
+		err = nvgpu_dma_alloc_map_sys(vm, method_buffer_size,
+					&tsg->eng_method_buffers[runque]);
+		if (err)
+			break;
+	}
+	if (err) {
+		for (i = runque; i < runque; i--)
+			nvgpu_dma_unmap_free(vm,
+				 &tsg->eng_method_buffers[runque]);
+
+		nvgpu_kfree(g, tsg->eng_method_buffers);
+		tsg->eng_method_buffers = NULL;
+		nvgpu_err(g, "could not alloc eng method buffers");
+		return;
+	}
+	nvgpu_log_info(g, "eng method buffers allocated");
+
+}
+
+static void gv11b_fifo_deinit_eng_method_buffers(struct gk20a *g,
+					struct tsg_gk20a *tsg)
+{
+	struct vm_gk20a *vm = g->mm.bar2.vm;
+	unsigned int runque;
+
+	if (tsg->eng_method_buffers == NULL)
+		return;
+
+	for (runque = 0; runque < g->fifo.num_pbdma; runque++)
+		nvgpu_dma_unmap_free(vm, &tsg->eng_method_buffers[runque]);
+
+	nvgpu_kfree(g, tsg->eng_method_buffers);
+	tsg->eng_method_buffers = NULL;
+
+	nvgpu_log_info(g, "eng method buffers de-allocated");
+}
+
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 static int gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 			u32 syncpt_id, struct nvgpu_mem *syncpt_buf)
@@ -1633,6 +1738,10 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 			 gv11b_fifo_handle_pbdma_intr_0;
 	gops->fifo.handle_pbdma_intr_1 =
 			 gv11b_fifo_handle_pbdma_intr_1;
+	gops->fifo.init_eng_method_buffers =
+			gv11b_fifo_init_eng_method_buffers;
+	gops->fifo.deinit_eng_method_buffers =
+			gv11b_fifo_deinit_eng_method_buffers;
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	gops->fifo.alloc_syncpt_buf = gv11b_fifo_alloc_syncpt_buf;
 	gops->fifo.free_syncpt_buf = gv11b_fifo_free_syncpt_buf;

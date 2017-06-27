@@ -31,6 +31,10 @@
 */
 #define SCHED_ERROR_CODE_BAD_TSG           0x00000020
 
+/* can be removed after runque support is added */
+
+#define GR_RUNQUE			0	/* pbdma 0 */
+#define ASYNC_CE_RUNQUE			2	/* pbdma 2 */
 
 struct gpu_ops;
 void gv11b_init_fifo(struct gpu_ops *gops);

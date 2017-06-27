@@ -887,7 +887,6 @@ struct gpu_ops {
 		void (*reset)(struct gk20a *g, u32 units);
 		u32 (*boot_0)(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
 		bool (*is_intr1_pending)(struct gk20a *g, enum nvgpu_unit unit, u32 mc_intr_1);
-		u32 intr_mask_restore[4];
 	} mc;
 	struct {
 		void (*show_dump)(struct gk20a *g,
@@ -1204,6 +1203,7 @@ struct gk20a {
 	int client_refcount; /* open channels and ctrl nodes */
 
 	struct gpu_ops ops;
+	u32 mc_intr_mask_restore[4];
 
 	int irqs_enabled;
 	int irq_stall; /* can be same as irq_nonstall in case of PCI */

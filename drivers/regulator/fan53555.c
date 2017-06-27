@@ -455,8 +455,10 @@ static int fan53555_regulator_probe(struct i2c_client *client,
 		return -ENOMEM;
 
 	pdata = dev_get_platdata(&client->dev);
-	if (!pdata)
+	if (!pdata) {
+		di->desc.of_map_mode = fan53555_map_mode;
 		pdata = fan53555_parse_dt(&client->dev, np, &di->desc);
+	}
 
 	if (!pdata || !pdata->regulator) {
 		dev_err(&client->dev, "Platform data not found!\n");

@@ -47,7 +47,7 @@ static void nvadsp_clocks_disable(struct platform_device *pdev)
 
 	if (drv_data->adsp_neon_clk) {
 		clk_disable_unprepare(drv_data->adsp_neon_clk);
-		dev_info(dev, "adsp_neon clocks disabled\n");
+		dev_dbg(dev, "adsp_neon clocks disabled\n");
 		drv_data->adsp_neon_clk = NULL;
 	}
 
@@ -59,7 +59,7 @@ static void nvadsp_clocks_disable(struct platform_device *pdev)
 
 	if (drv_data->apb2ape_clk) {
 		clk_disable_unprepare(drv_data->apb2ape_clk);
-		dev_info(dev, "apb2ape clock disabled\n");
+		dev_dbg(dev, "apb2ape clock disabled\n");
 		drv_data->apb2ape_clk = NULL;
 	}
 

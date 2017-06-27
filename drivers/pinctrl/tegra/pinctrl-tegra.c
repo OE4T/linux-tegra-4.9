@@ -466,9 +466,15 @@ static int tegra_pinconf_reg(struct tegra_pmx *pmx,
 		*width = 1;
 		break;
 	case TEGRA_PINCONF_PARAM_E_IO_HV:
-		*bank = g->mux_bank;
-		*reg = g->mux_reg;
-		*bit = g->e_io_hv_bit;
+		if (g->lpbk_bit == -1) {
+			*bank = g->mux_bank;
+			*reg = g->mux_reg;
+			*bit = g->e_io_hv_bit;
+		} else {
+			*bank = g->drv_bank;
+			*reg = g->drv_reg;
+			*bit = g->lpbk_bit;
+		}
 		*width = 1;
 		break;
 	case TEGRA_PINCONF_PARAM_HIGH_SPEED_MODE:

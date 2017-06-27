@@ -134,6 +134,7 @@ struct tegra_function {
  * @pad_bank:		Register bank for the PAD control.
  * @pad_reg:		Register address for PAD control.
  * @pad_bit:		PAD control bit.
+ * @lpbk_bit:		Loopback register bit
  *
  * -1 in a *_reg field means that feature is unsupported for this group.
  * *_bank and *_reg values are irrelevant when *_reg is -1.
@@ -186,6 +187,7 @@ struct tegra_pingroup {
 	s32 preemp_bit:6;
 	s32 drvtype_bit:6;
 	s32 rfu_in_bit:6;
+	s32 lpbk_bit:6;
 	s32 drvdn_width:6;
 	s32 drvup_width:6;
 	s32 slwr_width:6;

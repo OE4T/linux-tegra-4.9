@@ -24,6 +24,10 @@
 #include "channel_gk20a.h"
 #include "tsg_gk20a.h"
 
+#ifdef CONFIG_TEGRA_19x_GPU
+#include "fifo_t19x.h"
+#endif
+
 #include <nvgpu/kref.h>
 
 struct gk20a_debug_output;
@@ -194,6 +198,11 @@ struct fifo_gk20a {
 	unsigned long deferred_fault_engines;
 	bool deferred_reset_pending;
 	struct nvgpu_mutex deferred_reset_mutex;
+
+#ifdef CONFIG_TEGRA_19x_GPU
+	struct fifo_t19x t19x;
+#endif
+	u32 channel_base;
 };
 
 static inline const char *gk20a_fifo_interleave_level_name(u32 interleave_level)

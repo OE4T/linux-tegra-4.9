@@ -283,6 +283,10 @@ void gv11b_slcg_bus_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_bus) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_bus[i].addr,
@@ -298,6 +302,10 @@ void gv11b_slcg_ce2_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_ce2) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_ce2[i].addr,
@@ -313,6 +321,10 @@ void gv11b_slcg_chiplet_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_chiplet) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_chiplet[i].addr,
@@ -333,6 +345,10 @@ void gv11b_slcg_fb_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_fb) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_fb[i].addr,
@@ -348,6 +364,10 @@ void gv11b_slcg_fifo_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_fifo) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_fifo[i].addr,
@@ -363,6 +383,10 @@ void gr_gv11b_slcg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_gr) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_gr[i].addr,
@@ -378,6 +402,10 @@ void ltc_gv11b_slcg_ltc_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_ltc) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_ltc[i].addr,
@@ -393,6 +421,10 @@ void gv11b_slcg_perf_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_perf) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_perf[i].addr,
@@ -408,6 +440,10 @@ void gv11b_slcg_priring_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_priring) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_priring[i].addr,
@@ -423,6 +459,10 @@ void gv11b_slcg_pwr_csb_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_pwr_csb) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_pwr_csb[i].addr,
@@ -438,6 +478,10 @@ void gv11b_slcg_pmu_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_pmu) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_pmu[i].addr,
@@ -453,6 +497,10 @@ void gv11b_slcg_therm_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_therm) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_therm[i].addr,
@@ -468,6 +516,10 @@ void gv11b_slcg_xbar_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_xbar) / sizeof(struct gating_desc);
+
+	if (!g->slcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_slcg_xbar[i].addr,
@@ -483,6 +535,10 @@ void gv11b_blcg_bus_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_bus) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_bus[i].addr,
@@ -498,6 +554,10 @@ void gv11b_blcg_ce_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_ce) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_ce[i].addr,
@@ -513,6 +573,10 @@ void gv11b_blcg_ctxsw_firmware_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_ctxsw_prog) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_ctxsw_prog[i].addr,
@@ -528,6 +592,10 @@ void gv11b_blcg_fb_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_fb) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_fb[i].addr,
@@ -543,6 +611,10 @@ void gv11b_blcg_fifo_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_fifo) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_fifo[i].addr,
@@ -558,6 +630,10 @@ void gv11b_blcg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_gr) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_gr[i].addr,
@@ -573,6 +649,10 @@ void gv11b_blcg_ltc_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_ltc) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_ltc[i].addr,
@@ -588,6 +668,10 @@ void gv11b_blcg_pwr_csb_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_pwr_csb) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_pwr_csb[i].addr,
@@ -603,6 +687,10 @@ void gv11b_blcg_pmu_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_pmu) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_pmu[i].addr,
@@ -618,6 +706,10 @@ void gv11b_blcg_xbar_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_xbar) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_blcg_xbar[i].addr,
@@ -633,6 +725,10 @@ void gr_gv11b_pg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gv11b_pg_gr) / sizeof(struct gating_desc);
+
+	if (!g->blcg_enabled)
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gv11b_pg_gr[i].addr,

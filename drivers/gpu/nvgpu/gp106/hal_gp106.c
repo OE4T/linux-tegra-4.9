@@ -134,6 +134,9 @@ static int gp106_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_NUM_PES_PER_GPC:
 		ret = proj_scal_litter_num_pes_per_gpc_v();
 		break;
+	case GPU_LIT_NUM_SM_PER_TPC:
+		ret = proj_scal_litter_num_sm_per_tpc_v();
+		break;
 	case GPU_LIT_NUM_ZCULL_BANKS:
 		ret = proj_scal_litter_num_zcull_banks_v();
 		break;

@@ -136,6 +136,9 @@ static int gp10b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_NUM_TPC_PER_GPC:
 		ret = proj_scal_litter_num_tpc_per_gpc_v();
 		break;
+	case GPU_LIT_NUM_SM_PER_TPC:
+		ret = proj_scal_litter_num_sm_per_tpc_v();
+		break;
 	case GPU_LIT_NUM_FBPS:
 		ret = proj_scal_litter_num_fbps_v();
 		break;

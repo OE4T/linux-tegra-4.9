@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -121,6 +121,10 @@ static inline u32 proj_host_num_pbdma_v(void)
 static inline u32 proj_scal_litter_num_tpc_per_gpc_v(void)
 {
 	return 0x00000002;
+}
+static inline u32 proj_scal_litter_num_sm_per_tpc_v(void)
+{
+	return 0x00000001;
 }
 static inline u32 proj_scal_litter_num_fbps_v(void)
 {

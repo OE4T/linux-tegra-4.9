@@ -78,4 +78,24 @@ static inline u32 ce_intr_status_launcherr_reset_f(void)
 {
 	return 0x4;
 }
+static inline u32 ce_intr_status_invalid_config_pending_f(void)
+{
+	return 0x8;
+}
+static inline u32 ce_intr_status_invalid_config_reset_f(void)
+{
+	return 0x8;
+}
+static inline u32 ce_intr_status_mthd_buffer_fault_pending_f(void)
+{
+	return 0x10;
+}
+static inline u32 ce_intr_status_mthd_buffer_fault_reset_f(void)
+{
+	return 0x10;
+}
+static inline u32 ce_pce_map_r(void)
+{
+	return 0x00104028;
+}
 #endif

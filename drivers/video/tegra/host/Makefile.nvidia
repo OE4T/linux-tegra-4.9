@@ -1,5 +1,5 @@
 GCOV_PROFILE := y
-ccflags-y += -I$(srctree)/../nvhost/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/host
 ccflags-y += -I$(srctree)/../nvidia/include
 ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Idrivers/devfreq
@@ -40,7 +40,7 @@ obj-$(CONFIG_TEGRA_GRHOST_NVCSI) += nvcsi/
 endif
 
 ifeq ($(CONFIG_TEGRA_T19X_GRHOST),y)
-obj-$(CONFIG_TEGRA_GRHOST) += $(call tegra-path,nvhost-t19x/,drivers/video/tegra/host/)
+obj-$(CONFIG_TEGRA_GRHOST) += $(call tegra-path,t19x/,drivers/video/tegra/host/)
 endif
 
 obj-$(CONFIG_TEGRA_GRHOST_SYNC) += nvhost_sync.o

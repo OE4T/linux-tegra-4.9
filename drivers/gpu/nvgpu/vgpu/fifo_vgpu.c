@@ -270,16 +270,20 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	}
 
 	/* bar1 va */
-	f->userd.gpu_va = vgpu_bar1_map(g, &f->userd.priv.sgt, f->userd.size);
-	if (!f->userd.gpu_va) {
-		dev_err(d, "gmmu mapping failed\n");
-		goto clean_up;
+	if (g->ops.mm.is_bar1_supported(g)) {
+		f->userd.gpu_va = vgpu_bar1_map(g, &f->userd.priv.sgt,
+						f->userd.size);
+		if (!f->userd.gpu_va) {
+			dev_err(d, "gmmu mapping failed\n");
+			goto clean_up;
+		}
+		/* if reduced BAR1 range is specified, use offset of 0
+		 * (server returns offset assuming full BAR1 range)
+		 */
+		if (resource_size(g->bar1_mem) ==
+				(resource_size_t)f->userd.size)
+			f->userd.gpu_va = 0;
 	}
-
-       /* if reduced BAR1 range is specified, use offset of 0
-          (server returns offset assuming full BAR1 range) */
-       if (resource_size(g->bar1_mem) == (resource_size_t)f->userd.size)
-		f->userd.gpu_va = 0;
 
 	gk20a_dbg(gpu_dbg_map_v, "userd bar1 va = 0x%llx", f->userd.gpu_va);
 
@@ -403,7 +407,8 @@ int vgpu_init_fifo_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = vgpu_init_fifo_setup_hw(g);
+	if (g->ops.fifo.init_fifo_setup_hw)
+		err = g->ops.fifo.init_fifo_setup_hw(g);
 	return err;
 }
 
@@ -788,6 +793,7 @@ u32 vgpu_fifo_default_timeslice_us(struct gk20a *g)
 
 void vgpu_init_fifo_ops(struct gpu_ops *gops)
 {
+	gops->fifo.init_fifo_setup_hw = vgpu_init_fifo_setup_hw;
 	gops->fifo.bind_channel = vgpu_channel_bind;
 	gops->fifo.unbind_channel = vgpu_channel_unbind;
 	gops->fifo.enable_channel = vgpu_channel_enable;

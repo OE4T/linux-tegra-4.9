@@ -259,6 +259,7 @@ static int vgpu_init_support(struct platform_device *pdev)
 {
 	struct resource *r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	struct gk20a *g = get_gk20a(&pdev->dev);
+	void __iomem *regs;
 	int err = 0;
 
 	if (!r) {
@@ -267,13 +268,17 @@ static int vgpu_init_support(struct platform_device *pdev)
 		goto fail;
 	}
 
-	g->bar1 = devm_ioremap_resource(&pdev->dev, r);
-	if (IS_ERR(g->bar1)) {
-		dev_err(dev_from_gk20a(g), "failed to remap gk20a bar1\n");
+	regs = devm_ioremap_resource(&pdev->dev, r);
+	if (IS_ERR(regs)) {
+		dev_err(dev_from_gk20a(g), "failed to remap gk20a regs\n");
 		err = PTR_ERR(g->bar1);
 		goto fail;
 	}
-	g->bar1_mem = r;
+
+	if (r->name && !strcmp(r->name, "/vgpu")) {
+		g->bar1 = regs;
+		g->bar1_mem = r;
+	}
 
 	nvgpu_mutex_init(&g->dbg_sessions_lock);
 	nvgpu_mutex_init(&g->client_lock);

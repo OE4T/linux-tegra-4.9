@@ -22,5 +22,6 @@
 #include "gk20a/tsg_gk20a.h"
 
 void gp10b_init_ce(struct gpu_ops *gops);
+void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 
 #endif /*__CE2_GP10B_H__*/

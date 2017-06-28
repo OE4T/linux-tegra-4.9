@@ -36,7 +36,7 @@ static u32 ce_launcherr_isr(struct gk20a *g, u32 fifo_intr)
 	return ce_intr_status_launcherr_pending_f();
 }
 
-static void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
+void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
 	u32 ce_intr = gk20a_readl(g, ce_intr_status_r(inst_id));
 	u32 clear_intr = 0;

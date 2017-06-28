@@ -1,8 +1,8 @@
 GCOV_PROFILE := y
 
-ccflags-y += -I$(srctree)/../nvhost/drivers/video/tegra/host
-ccflags-y += -I$(srctree)/../nvhost-t19x/drivers/video/tegra/host
-ccflags-y += -I$(srctree)/../nvhost-t19x/include
+ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/../t19x/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/../t19x/include
 ccflags-y += -I$(srctree)/../nvidia/drivers/media/platform/tegra
 ccflags-y += -I$(srctree)/../nvidia/include
 ccflags-y += -Werror

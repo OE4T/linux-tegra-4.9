@@ -80,7 +80,7 @@ TRACE_EVENT(nvhost_pva_write,
 /* This part must be outside protection */
 #undef TRACE_INCLUDE_PATH
 #undef TRACE_INCLUDE_FILE
-#define TRACE_INCLUDE_PATH ../../../nvhost-t19x/include/trace/events/
+#define TRACE_INCLUDE_PATH ../../../t19x/include/trace/events/
 
 #define TRACE_INCLUDE_FILE nvhost_pva
 /* This part must be outside protection */

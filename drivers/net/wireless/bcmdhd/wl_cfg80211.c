@@ -14720,34 +14720,35 @@ struct chan_info *chaninfo,
 struct wiphy *wiphy)
 {
 	uint16 freq = 0;
-	int chan_type;
-	int channel = 0;
+	int chan_type = 0;
+	int channel = 0, prim_channel = 0;
+	int vht_channel = 0;
+	uint16 sb;
+	struct ieee80211_channel *chan;
 
 	if (!chandef) {
 		return -1;
 	}
 	channel = CHSPEC_CHANNEL(chanspec);
+	prim_channel = CHSPEC_CHANNEL(chanspec);
 
 	switch (CHSPEC_BW(chanspec)) {
 		case WL_CHANSPEC_BW_20:
 			chan_type = NL80211_CHAN_HT20;
 			break;
 		case WL_CHANSPEC_BW_40:
-		{
 			if (CHSPEC_SB_UPPER(chanspec)) {
 				channel += CH_10MHZ_APART;
 			} else {
 				channel -= CH_10MHZ_APART;
 			}
-		}
 			chan_type = NL80211_CHAN_HT40PLUS;
 			break;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0))
 		case WL_CHANSPEC_BW_80:
 		case WL_CHANSPEC_BW_8080:
-		{
-			uint16 sb = CHSPEC_CTL_SB(chanspec);
+			sb = CHSPEC_CTL_SB(chanspec);
 
 			if (sb == WL_CHANSPEC_CTL_SB_LL) {
 				channel -= (CH_10MHZ_APART + CH_20MHZ_APART);
@@ -14759,9 +14760,7 @@ struct wiphy *wiphy)
 				/* WL_CHANSPEC_CTL_SB_UU */
 				channel += (CH_10MHZ_APART + CH_20MHZ_APART);
 			}
-		}
-
-			chan_type = NL80211_CHAN_WIDTH_80P80;
+			vht_channel = 1;
 			break;
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0)) */
 		default:
@@ -14775,8 +14774,20 @@ struct wiphy *wiphy)
 	else
 		freq = ieee80211_channel_to_frequency(channel, NL80211_BAND_2GHZ);
 
+	chan = ieee80211_get_channel(wiphy, freq);
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 8, 0))
-	cfg80211_chandef_create(chandef, ieee80211_get_channel(wiphy, freq), chan_type);
+	if (vht_channel) {
+		chandef->chan = chan;
+		chandef->center_freq2 = 0;
+		chandef->width = NL80211_CHAN_WIDTH_80;
+		chandef->center_freq1 =
+			ieee80211_channel_to_frequency(
+				prim_channel,
+				NL80211_BAND_5GHZ);
+	} else {
+		cfg80211_chandef_create(chandef, chan, chan_type);
+	}
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION (3, 5, 0) && (LINUX_VERSION_CODE <= (3, 7, \
 	\
 	0)))

@@ -1238,7 +1238,7 @@ static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
 	u32 clk_t_phy_ps = 0;
 	u32 t_phy_ps;
 	u32 h_blank_ps;
-	struct tegra_dc_mode *modes;
+	struct tegra_dc_mode *mode;
 	u32 t_pix_ps;
 	int err = 0;
 
@@ -1251,7 +1251,7 @@ static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
 		TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END)
 		goto fail;
 
-	modes = dsi->dc->out->modes;
+	mode = &dsi->dc->mode;
 	t_pix_ps = clk_ps * BITS_PER_BYTE *
 		dsi->pixel_scaler_mul / dsi->pixel_scaler_div;
 
@@ -1291,8 +1291,8 @@ static int tegra_dsi_hs_phy_len(struct tegra_dc_dsi_data *dsi,
 			phy_timing->t_tlpx, clk_ps, T_TLPX_HW_INC);
 	}
 
-	h_blank_ps = t_pix_ps * (modes->h_sync_width + modes->h_back_porch +
-						modes->h_front_porch);
+	h_blank_ps = t_pix_ps * (mode->h_sync_width + mode->h_back_porch +
+						mode->h_front_porch);
 
 	/* Extra tlpx and byte cycle required by dsi HW */
 	t_phy_ps = dsi->info.n_data_lanes * (hs_t_phy_ps + clk_t_phy_ps +
@@ -2673,7 +2673,7 @@ static void tegra_dsi_ganged(struct tegra_dc *dc,
 {
 	u32 low_width = 0;
 	u32 high_width = 0;
-	u32 h_active = dc->out->modes->h_active;
+	u32 h_active = dc->mode.h_active;
 	u32 val = 0;
 	int dsi_instances[2];
 	u16 ganged_pointer = DIV_ROUND_UP(h_active, 2);
@@ -2744,7 +2744,7 @@ static void tegra_dsi_split_link(struct tegra_dc *dc,
 {
 	u32 low_width = 0;
 	u32 high_width = 0;
-	u32 h_active = dc->out->modes->h_active;
+	u32 h_active = dc->mode.h_active;
 	u32 val = 0, i;
 	u16 ganged_pointer = 0;
 	u16 frame_width;

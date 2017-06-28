@@ -717,6 +717,10 @@ static int tegra_pinconf_group_get(struct pinctrl_dev *pctldev,
 	mask = (1 << width) - 1;
 	arg = (val >> bit) & mask;
 
+	/* Inverted bit value for Pad power */
+	if (param == TEGRA_PINCONF_PARAM_PAD_POWER)
+		arg = !arg;
+
 	*config = TEGRA_PINCONF_PACK(param, arg);
 
 	return 0;
@@ -740,6 +744,10 @@ static int tegra_pinconf_group_set(struct pinctrl_dev *pctldev,
 	for (i = 0; i < num_configs; i++) {
 		param = TEGRA_PINCONF_UNPACK_PARAM(configs[i]);
 		arg = TEGRA_PINCONF_UNPACK_ARG(configs[i]);
+
+		/* Inverted bit value for Pad power */
+		if (param == TEGRA_PINCONF_PARAM_PAD_POWER)
+			arg = !arg;
 
 		ret = tegra_pinconf_reg(pmx, g, param, true, &bank, &reg, &bit,
 					&width);

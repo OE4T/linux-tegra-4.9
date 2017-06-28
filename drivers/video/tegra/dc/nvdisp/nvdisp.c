@@ -1398,6 +1398,9 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	if (!dc->mode.pclk)
 		return 0;
 
+	if (dc->out_ops && dc->out_ops->modeset_notifier)
+		dc->out_ops->modeset_notifier(dc);
+
 	v_back_porch = mode->v_back_porch;
 	v_front_porch = mode->v_front_porch;
 	v_sync_width = mode->v_sync_width;
@@ -1475,9 +1478,6 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	switch_set_state(&dc->modeset_switch,
 			 (mode->h_active << 16) | mode->v_active);
 #endif
-
-	if (dc->out_ops && dc->out_ops->modeset_notifier)
-		dc->out_ops->modeset_notifier(dc);
 
 	if (dc->mode_dirty)
 		memcpy(&dc->cached_mode, &dc->mode, sizeof(dc->mode));

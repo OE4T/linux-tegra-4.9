@@ -417,7 +417,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->bios_init = gp106_ops.bios_init;
 
 	gops->privsecurity = 1;
-	gops->securegpccs = 1;
+	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, true);
 
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;

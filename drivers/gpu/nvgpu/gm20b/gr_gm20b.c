@@ -758,7 +758,7 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 	g->ops.pmu.lsfloadedfalconid = 0;
 	if (g->ops.pmu.fecsbootstrapdone) {
 		/* this must be recovery so bootstrap fecs and gpccs */
-		if (!g->ops.securegpccs) {
+		if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS)) {
 			gr_gm20b_load_gpccs_with_bootloader(g);
 			err = g->ops.pmu.load_lsfalcon_ucode(g,
 					(1 << LSF_FALCON_ID_FECS));
@@ -777,7 +777,7 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 	} else {
 		/* cold boot or rg exit */
 		g->ops.pmu.fecsbootstrapdone = true;
-		if (!g->ops.securegpccs) {
+		if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS)) {
 			gr_gm20b_load_gpccs_with_bootloader(g);
 		} else {
 			/* bind WPR VA inst block */
@@ -797,7 +797,7 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 	}
 
 	/*start gpccs */
-	if (g->ops.securegpccs) {
+	if (nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS)) {
 		gk20a_writel(g, reg_offset +
 			gr_fecs_cpuctl_alias_r(),
 			gr_gpccs_cpuctl_startcpu_f(1));

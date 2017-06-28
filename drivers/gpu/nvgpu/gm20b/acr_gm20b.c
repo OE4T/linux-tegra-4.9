@@ -28,6 +28,7 @@
 #include <nvgpu/firmware.h>
 #include <nvgpu/pmu.h>
 #include <nvgpu/falcon.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/linux/dma.h>
 
@@ -267,7 +268,7 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	struct nvgpu_firmware *gpccs_sig;
 	int err;
 
-	if (g->ops.securegpccs == false)
+	if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS))
 		return -ENOENT;
 
 	gpccs_sig = nvgpu_request_firmware(g, T18x_GPCCS_UCODE_SIG, 0);

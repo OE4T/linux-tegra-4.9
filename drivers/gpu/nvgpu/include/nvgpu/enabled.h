@@ -38,6 +38,12 @@ struct gk20a;
 #define NVGPU_MM_UNIFIED_MEMORY			18
 
 /*
+ * Security flags
+ */
+
+#define NVGPU_SEC_SECUREGPCCS			32
+
+/*
  * PMU flags.
  */
 /* perfmon enabled or disabled for PMU */

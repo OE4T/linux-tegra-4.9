@@ -993,7 +993,6 @@ struct gpu_ops {
 		void (*isr)(struct gk20a *g);
 	} priv_ring;
 	bool privsecurity;
-	bool securegpccs;
 };
 
 struct nvgpu_bios_ucode {

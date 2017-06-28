@@ -21,6 +21,7 @@
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/firmware.h>
 #include <nvgpu/pmu.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -286,7 +287,7 @@ int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	struct nvgpu_firmware *gpccs_sig = NULL;
 	int err;
 
-	if (g->ops.securegpccs == false)
+	if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS))
 		return -ENOENT;
 
 	switch (ver) {

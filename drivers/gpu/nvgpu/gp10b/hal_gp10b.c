@@ -369,36 +369,36 @@ int gp10b_init_hal(struct gk20a *g)
 #ifdef CONFIG_TEGRA_ACR
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gops->privsecurity = 0;
-		gops->securegpccs = 0;
+		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 	} else if (g->is_virtual) {
 		gops->privsecurity = 1;
-		gops->securegpccs = 1;
+		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 	} else {
 		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
 		if (val) {
 			gops->privsecurity = 1;
-			gops->securegpccs =1;
+			__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 		} else {
 			gk20a_dbg_info("priv security is disabled in HW");
 			gops->privsecurity = 0;
-			gops->securegpccs = 0;
+			__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 		}
 	}
 #else
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gk20a_dbg_info("running simulator with PRIV security disabled");
 		gops->privsecurity = 0;
-		gops->securegpccs = 0;
+		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 	} else {
 		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
 		if (val) {
 			gk20a_dbg_info("priv security is not supported but enabled");
 			gops->privsecurity = 1;
-			gops->securegpccs =1;
+			__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 			return -EPERM;
 		} else {
 			gops->privsecurity = 0;
-			gops->securegpccs = 0;
+			__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 		}
 	}
 #endif

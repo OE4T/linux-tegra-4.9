@@ -2400,7 +2400,8 @@ static int gr_gk20a_wait_ctxsw_ready(struct gk20a *g)
 		return ret;
 	}
 
-	if (g->ops.gr_ctx.use_dma_for_fw_bootstrap || g->ops.securegpccs)
+	if (g->ops.gr_ctx.use_dma_for_fw_bootstrap ||
+		nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS))
 		gk20a_writel(g, gr_fecs_current_ctx_r(),
 			gr_fecs_current_ctx_valid_false_f());
 

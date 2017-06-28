@@ -118,17 +118,14 @@ static void tegra_aon_shub_mbox_rcv_msg(struct mbox_client *cl, void *rx_msg)
 				"Invalid payload count\n");
 			return;
 		}
+		if (shub->adjust_ts_counter == READJUST_TS_SAMPLES) {
+			shub->ts_adjustment =
+				get_ts_adjustment(shub->ts_res_ns);
+			shub->adjust_ts_counter = 0;
+		}
+		shub->adjust_ts_counter++;
 		while (i--) {
 			snsr_id = shub_resp->data.payload.data[i].snsr_id;
-
-			if (shub->adjust_ts_counter == READJUST_TS_SAMPLES) {
-				shub->ts_adjustment =
-					get_ts_adjustment(shub->ts_res_ns);
-				shub->adjust_ts_counter = 0;
-			} else {
-				shub->adjust_ts_counter++;
-			}
-
 			ts = (s64)shub_resp->data.payload.data[i].ts;
 			ts += shub->ts_adjustment;
 			shub_resp->data.payload.data[i].ts = (u64)ts;
@@ -670,10 +667,10 @@ static int tegra_aon_shub_probe(struct platform_device *pdev)
 		goto exit_free_mbox;
 
 	shub->adjust_ts_counter = 0;
-	shub->ts_adjustment = 0;
 	#define _PICO_SECS (1000000000000ULL)
 	shub->ts_res_ns = (_PICO_SECS / (u64)arch_timer_get_cntfrq())/1000;
 	#undef _PICO_SECS
+	shub->ts_adjustment = get_ts_adjustment(shub->ts_res_ns);
 
 	dev_info(&pdev->dev, "tegra_aon_shub_driver_probe() OK\n");
 

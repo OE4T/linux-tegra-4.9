@@ -17,6 +17,7 @@
 #include "tegra210-soc/tegra210-bthrot-cdev.dtsi"
 #include <tegra210-soc/tegra210-sdhci.dtsi>
 #include "tegra210b01-soc-prods.dtsi"
+#include <dt-bindings/soc/tegra-pmc.h>
 
 / {
 	aliases {
@@ -520,6 +521,9 @@
 	sdhci@700b0000 {
 		tap-delay = <11>;
 		trim-delay = <14>;
+		nvidia,cd-wakeup-capable;
+		nvidia,pmc-wakeup = <&tegra_pmc
+			PMC_WAKE_TYPE_EVENT 35 (PMC_TRIGGER_TYPE_RISING | PMC_TRIGGER_TYPE_FALLING)>;
 		status = "disabled";
 	};
 

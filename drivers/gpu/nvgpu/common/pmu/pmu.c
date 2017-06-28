@@ -354,7 +354,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	pmu->initialized = true;
-	nvgpu_pmu_state_change(g, PMU_STATE_STARTED, false);
+	nvgpu_pmu_state_change(g, PMU_STATE_STARTED, true);
 
 	if (g->ops.pmu_ver.is_pmu_zbc_save_supported) {
 		/* Save zbc table after PMU is initialized. */

@@ -294,6 +294,11 @@ static int copy_ctl_value_to_user(void __user *userdata,
 		}
 	} else {
 		size = get_elem_size(type, count);
+                if (size < 0) {
+                        pr_err("snd_ioctl32_ctl_elem_value: unknown type %d\n", type);
+                        return -EINVAL;
+                }
+
 		if (copy_to_user(valuep, data->value.bytes.data, size))
 			return -EFAULT;
 	}

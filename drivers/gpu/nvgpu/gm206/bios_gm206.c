@@ -105,25 +105,8 @@ static int gm206_bios_devinit(struct gk20a *g)
 	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
-	nvgpu_flcn_reset(g->pmu.flcn);
 
-	nvgpu_timeout_init(g, &timeout,
-			   PMU_BOOT_TIMEOUT_MAX /
-				PMU_BOOT_TIMEOUT_DEFAULT,
-			   NVGPU_TIMER_RETRY_TIMER);
-	do {
-		u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
-			(pwr_falcon_dmactl_dmem_scrubbing_m() |
-			 pwr_falcon_dmactl_imem_scrubbing_m());
-
-		if (!w) {
-			gk20a_dbg_fn("done");
-			break;
-		}
-		nvgpu_udelay(PMU_BOOT_TIMEOUT_DEFAULT);
-	} while (!nvgpu_timeout_expired(&timeout));
-
-	if (nvgpu_timeout_peek_expired(&timeout)) {
+	if (nvgpu_flcn_reset(g->pmu.flcn)) {
 		err = -ETIMEDOUT;
 		goto out;
 	}
@@ -187,25 +170,8 @@ static int gm206_bios_preos(struct gk20a *g)
 	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
-	nvgpu_flcn_reset(g->pmu.flcn);
 
-	nvgpu_timeout_init(g, &timeout,
-			   PMU_BOOT_TIMEOUT_MAX /
-				PMU_BOOT_TIMEOUT_DEFAULT,
-			   NVGPU_TIMER_RETRY_TIMER);
-	do {
-		u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
-			(pwr_falcon_dmactl_dmem_scrubbing_m() |
-			 pwr_falcon_dmactl_imem_scrubbing_m());
-
-		if (!w) {
-			gk20a_dbg_fn("done");
-			break;
-		}
-		nvgpu_udelay(PMU_BOOT_TIMEOUT_DEFAULT);
-	} while (!nvgpu_timeout_expired(&timeout));
-
-	if (nvgpu_timeout_peek_expired(&timeout)) {
+	if (nvgpu_flcn_reset(g->pmu.flcn)) {
 		err = -ETIMEDOUT;
 		goto out;
 	}

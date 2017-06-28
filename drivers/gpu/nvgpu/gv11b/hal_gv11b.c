@@ -55,6 +55,7 @@
 #include "subctx_gv11b.h"
 
 #include <nvgpu/debug.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
@@ -358,7 +359,7 @@ int gv11b_init_hal(struct gk20a *g)
 
 	/* boot in non-secure modes for time beeing */
 	gops->privsecurity = 0;
-	gops->securegpccs = 0;
+	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 
 	gv11b_init_gr(gops);
 	gv11b_init_fecs_trace_ops(gops);

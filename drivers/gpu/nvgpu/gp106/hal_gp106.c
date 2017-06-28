@@ -18,7 +18,6 @@
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/pramin_gk20a.h"
-#include "gk20a/flcn_gk20a.h"
 
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/gr_gp10b.h"
@@ -51,6 +50,7 @@
 #include "gp106/gr_gp106.h"
 #include "gp106/fb_gp106.h"
 #include "gp106/gp106_gating_reglist.h"
+#include "gp106/flcn_gp106.h"
 
 #include "hal_gp106.h"
 
@@ -264,7 +264,7 @@ int gp106_init_hal(struct gk20a *g)
 	gp10b_init_ce(gops);
 	gp106_init_gr_ctx(gops);
 	gp106_init_mm(gops);
-	gk20a_falcon_init_hal(gops);
+	gp106_falcon_init_hal(gops);
 	gp106_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
 	gk20a_init_dbg_session_ops(gops);

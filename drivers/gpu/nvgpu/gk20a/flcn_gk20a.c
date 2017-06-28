@@ -269,7 +269,7 @@ static void gk20a_falcon_engine_dependency_ops(struct nvgpu_falcon *flcn)
 	}
 }
 
-static void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
+void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 {
 	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
 
@@ -294,6 +294,11 @@ static void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 		flcn->is_falcon_supported = true;
 		flcn->is_interrupt_enabled = true;
 		break;
+	case FALCON_ID_SEC2:
+		flcn->flcn_base = FALCON_SEC_BASE;
+		flcn->is_falcon_supported = false;
+		flcn->is_interrupt_enabled = false;
+		break;
 	case FALCON_ID_FECS:
 		flcn->flcn_base = FALCON_FECS_BASE;
 		flcn->is_falcon_supported = true;
@@ -314,8 +319,8 @@ static void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 		nvgpu_mutex_init(&flcn->copy_lock);
 		gk20a_falcon_ops(flcn);
 	} else
-		nvgpu_info(g, "flcn-Id 0x%x not supported on current chip",
-			flcn->flcn_id);
+		nvgpu_info(g, "falcon 0x%x not supported on %s",
+			flcn->flcn_id, g->name);
 }
 
 void gk20a_falcon_init_hal(struct gpu_ops *gops)

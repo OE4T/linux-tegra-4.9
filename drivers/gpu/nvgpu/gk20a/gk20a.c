@@ -176,6 +176,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 
 	/* init interface layer support for PMU falcon */
 	nvgpu_flcn_sw_init(g, FALCON_ID_PMU);
+	nvgpu_flcn_sw_init(g, FALCON_ID_SEC2);
 
 	if (g->ops.bios_init)
 		err = g->ops.bios_init(g);

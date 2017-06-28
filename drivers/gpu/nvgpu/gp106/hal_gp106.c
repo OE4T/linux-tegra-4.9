@@ -59,70 +59,6 @@
 
 #include <nvgpu/hw/gp106/hw_proj_gp106.h>
 
-static const struct gpu_ops gp106_ops = {
-	.ltc = {
-		.determine_L2_size_bytes = gp10b_determine_L2_size_bytes,
-		.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry,
-		.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry,
-		.init_cbc = NULL,
-		.init_fs_state = gm20b_ltc_init_fs_state,
-		.init_comptags = gp10b_ltc_init_comptags,
-		.cbc_ctrl = gm20b_ltc_cbc_ctrl,
-		.isr = gp10b_ltc_isr,
-		.cbc_fix_config = NULL,
-		.flush = gm20b_flush_ltc,
-#ifdef CONFIG_DEBUG_FS
-		.sync_debugfs = gp10b_ltc_sync_debugfs,
-#endif
-	},
-	.clock_gating = {
-		.slcg_bus_load_gating_prod =
-			gp106_slcg_bus_load_gating_prod,
-		.slcg_ce2_load_gating_prod =
-			gp106_slcg_ce2_load_gating_prod,
-		.slcg_chiplet_load_gating_prod =
-			gp106_slcg_chiplet_load_gating_prod,
-		.slcg_ctxsw_firmware_load_gating_prod =
-			gp106_slcg_ctxsw_firmware_load_gating_prod,
-		.slcg_fb_load_gating_prod =
-			gp106_slcg_fb_load_gating_prod,
-		.slcg_fifo_load_gating_prod =
-			gp106_slcg_fifo_load_gating_prod,
-		.slcg_gr_load_gating_prod =
-			gr_gp106_slcg_gr_load_gating_prod,
-		.slcg_ltc_load_gating_prod =
-			ltc_gp106_slcg_ltc_load_gating_prod,
-		.slcg_perf_load_gating_prod =
-			gp106_slcg_perf_load_gating_prod,
-		.slcg_priring_load_gating_prod =
-			gp106_slcg_priring_load_gating_prod,
-		.slcg_pmu_load_gating_prod =
-			gp106_slcg_pmu_load_gating_prod,
-		.slcg_therm_load_gating_prod =
-			gp106_slcg_therm_load_gating_prod,
-		.slcg_xbar_load_gating_prod =
-			gp106_slcg_xbar_load_gating_prod,
-		.blcg_bus_load_gating_prod =
-			gp106_blcg_bus_load_gating_prod,
-		.blcg_ce_load_gating_prod =
-			gp106_blcg_ce_load_gating_prod,
-		.blcg_fb_load_gating_prod =
-			gp106_blcg_fb_load_gating_prod,
-		.blcg_fifo_load_gating_prod =
-			gp106_blcg_fifo_load_gating_prod,
-		.blcg_gr_load_gating_prod =
-			gp106_blcg_gr_load_gating_prod,
-		.blcg_ltc_load_gating_prod =
-			gp106_blcg_ltc_load_gating_prod,
-		.blcg_pmu_load_gating_prod =
-			gp106_blcg_pmu_load_gating_prod,
-		.blcg_xbar_load_gating_prod =
-			gp106_blcg_xbar_load_gating_prod,
-		.pg_gr_load_gating_prod =
-			gr_gp106_pg_gr_load_gating_prod,
-		}
-};
-
 static int gp106_get_litter_value(struct gk20a *g, int value)
 {
 	int ret = -EINVAL;
@@ -241,6 +177,73 @@ static int gp106_init_gpu_characteristics(struct gk20a *g)
 	return 0;
 }
 
+static const struct gpu_ops gp106_ops = {
+	.ltc = {
+		.determine_L2_size_bytes = gp10b_determine_L2_size_bytes,
+		.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry,
+		.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry,
+		.init_cbc = NULL,
+		.init_fs_state = gm20b_ltc_init_fs_state,
+		.init_comptags = gp10b_ltc_init_comptags,
+		.cbc_ctrl = gm20b_ltc_cbc_ctrl,
+		.isr = gp10b_ltc_isr,
+		.cbc_fix_config = NULL,
+		.flush = gm20b_flush_ltc,
+#ifdef CONFIG_DEBUG_FS
+		.sync_debugfs = gp10b_ltc_sync_debugfs,
+#endif
+	},
+	.clock_gating = {
+		.slcg_bus_load_gating_prod =
+			gp106_slcg_bus_load_gating_prod,
+		.slcg_ce2_load_gating_prod =
+			gp106_slcg_ce2_load_gating_prod,
+		.slcg_chiplet_load_gating_prod =
+			gp106_slcg_chiplet_load_gating_prod,
+		.slcg_ctxsw_firmware_load_gating_prod =
+			gp106_slcg_ctxsw_firmware_load_gating_prod,
+		.slcg_fb_load_gating_prod =
+			gp106_slcg_fb_load_gating_prod,
+		.slcg_fifo_load_gating_prod =
+			gp106_slcg_fifo_load_gating_prod,
+		.slcg_gr_load_gating_prod =
+			gr_gp106_slcg_gr_load_gating_prod,
+		.slcg_ltc_load_gating_prod =
+			ltc_gp106_slcg_ltc_load_gating_prod,
+		.slcg_perf_load_gating_prod =
+			gp106_slcg_perf_load_gating_prod,
+		.slcg_priring_load_gating_prod =
+			gp106_slcg_priring_load_gating_prod,
+		.slcg_pmu_load_gating_prod =
+			gp106_slcg_pmu_load_gating_prod,
+		.slcg_therm_load_gating_prod =
+			gp106_slcg_therm_load_gating_prod,
+		.slcg_xbar_load_gating_prod =
+			gp106_slcg_xbar_load_gating_prod,
+		.blcg_bus_load_gating_prod =
+			gp106_blcg_bus_load_gating_prod,
+		.blcg_ce_load_gating_prod =
+			gp106_blcg_ce_load_gating_prod,
+		.blcg_fb_load_gating_prod =
+			gp106_blcg_fb_load_gating_prod,
+		.blcg_fifo_load_gating_prod =
+			gp106_blcg_fifo_load_gating_prod,
+		.blcg_gr_load_gating_prod =
+			gp106_blcg_gr_load_gating_prod,
+		.blcg_ltc_load_gating_prod =
+			gp106_blcg_ltc_load_gating_prod,
+		.blcg_pmu_load_gating_prod =
+			gp106_blcg_pmu_load_gating_prod,
+		.blcg_xbar_load_gating_prod =
+			gp106_blcg_xbar_load_gating_prod,
+		.pg_gr_load_gating_prod =
+			gr_gp106_pg_gr_load_gating_prod,
+	},
+	.get_litter_value = gp106_get_litter_value,
+	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,
+	.bios_init = gm206_bios_init,
+};
+
 int gp106_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
@@ -250,6 +253,12 @@ int gp106_init_hal(struct gk20a *g)
 
 	gops->ltc = gp106_ops.ltc;
 	gops->clock_gating = gp106_ops.clock_gating;
+
+	/* Lone functions */
+	gops->get_litter_value = gp106_ops.get_litter_value;
+	gops->chip_init_gpu_characteristics =
+		gp106_ops.chip_init_gpu_characteristics;
+	gops->bios_init = gp106_ops.bios_init;
 
 	gops->privsecurity = 1;
 	gops->securegpccs = 1;
@@ -277,13 +286,10 @@ int gp106_init_hal(struct gk20a *g)
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gk20a_init_css_ops(gops);
 #endif
-	gm206_init_bios_ops(gops);
 	gp106_init_therm_ops(gops);
 	gp106_init_xve_ops(gops);
 
 	g->name = "gp10x";
-	gops->get_litter_value = gp106_get_litter_value;
-	gops->chip_init_gpu_characteristics = gp106_init_gpu_characteristics;
 	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
 
 	c->twod_class = FERMI_TWOD_A;

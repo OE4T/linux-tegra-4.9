@@ -46,72 +46,6 @@
 
 #define PRIV_SECURITY_DISABLE 0x01
 
-static const struct gpu_ops gm20b_ops = {
-	.ltc = {
-		.determine_L2_size_bytes = gm20b_determine_L2_size_bytes,
-		.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry,
-		.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry,
-		.init_cbc = gm20b_ltc_init_cbc,
-		.init_fs_state = gm20b_ltc_init_fs_state,
-		.init_comptags = gm20b_ltc_init_comptags,
-		.cbc_ctrl = gm20b_ltc_cbc_ctrl,
-		.isr = gm20b_ltc_isr,
-		.cbc_fix_config = gm20b_ltc_cbc_fix_config,
-		.flush = gm20b_flush_ltc,
-#ifdef CONFIG_DEBUG_FS
-		.sync_debugfs = gm20b_ltc_sync_debugfs,
-#endif
-	},
-	.clock_gating = {
-		.slcg_bus_load_gating_prod =
-			gm20b_slcg_bus_load_gating_prod,
-		.slcg_ce2_load_gating_prod =
-			gm20b_slcg_ce2_load_gating_prod,
-		.slcg_chiplet_load_gating_prod =
-			gm20b_slcg_chiplet_load_gating_prod,
-		.slcg_ctxsw_firmware_load_gating_prod =
-			gm20b_slcg_ctxsw_firmware_load_gating_prod,
-		.slcg_fb_load_gating_prod =
-			gm20b_slcg_fb_load_gating_prod,
-		.slcg_fifo_load_gating_prod =
-			gm20b_slcg_fifo_load_gating_prod,
-		.slcg_gr_load_gating_prod =
-			gr_gm20b_slcg_gr_load_gating_prod,
-		.slcg_ltc_load_gating_prod =
-			ltc_gm20b_slcg_ltc_load_gating_prod,
-		.slcg_perf_load_gating_prod =
-			gm20b_slcg_perf_load_gating_prod,
-		.slcg_priring_load_gating_prod =
-			gm20b_slcg_priring_load_gating_prod,
-		.slcg_pmu_load_gating_prod =
-			gm20b_slcg_pmu_load_gating_prod,
-		.slcg_therm_load_gating_prod =
-			gm20b_slcg_therm_load_gating_prod,
-		.slcg_xbar_load_gating_prod =
-			gm20b_slcg_xbar_load_gating_prod,
-		.blcg_bus_load_gating_prod =
-			gm20b_blcg_bus_load_gating_prod,
-		.blcg_ctxsw_firmware_load_gating_prod =
-			gm20b_blcg_ctxsw_firmware_load_gating_prod,
-		.blcg_fb_load_gating_prod =
-			gm20b_blcg_fb_load_gating_prod,
-		.blcg_fifo_load_gating_prod =
-			gm20b_blcg_fifo_load_gating_prod,
-		.blcg_gr_load_gating_prod =
-			gm20b_blcg_gr_load_gating_prod,
-		.blcg_ltc_load_gating_prod =
-			gm20b_blcg_ltc_load_gating_prod,
-		.blcg_pwr_csb_load_gating_prod =
-			gm20b_blcg_pwr_csb_load_gating_prod,
-		.blcg_xbar_load_gating_prod =
-			gm20b_blcg_xbar_load_gating_prod,
-		.blcg_pmu_load_gating_prod =
-			gm20b_blcg_pmu_load_gating_prod,
-		.pg_gr_load_gating_prod =
-			gr_gm20b_pg_gr_load_gating_prod,
-	},
-};
-
 static int gm20b_get_litter_value(struct gk20a *g, int value)
 {
 	int ret = EINVAL;
@@ -201,6 +135,74 @@ static int gm20b_get_litter_value(struct gk20a *g, int value)
 	return ret;
 }
 
+static const struct gpu_ops gm20b_ops = {
+	.ltc = {
+		.determine_L2_size_bytes = gm20b_determine_L2_size_bytes,
+		.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry,
+		.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry,
+		.init_cbc = gm20b_ltc_init_cbc,
+		.init_fs_state = gm20b_ltc_init_fs_state,
+		.init_comptags = gm20b_ltc_init_comptags,
+		.cbc_ctrl = gm20b_ltc_cbc_ctrl,
+		.isr = gm20b_ltc_isr,
+		.cbc_fix_config = gm20b_ltc_cbc_fix_config,
+		.flush = gm20b_flush_ltc,
+#ifdef CONFIG_DEBUG_FS
+		.sync_debugfs = gm20b_ltc_sync_debugfs,
+#endif
+	},
+	.clock_gating = {
+		.slcg_bus_load_gating_prod =
+			gm20b_slcg_bus_load_gating_prod,
+		.slcg_ce2_load_gating_prod =
+			gm20b_slcg_ce2_load_gating_prod,
+		.slcg_chiplet_load_gating_prod =
+			gm20b_slcg_chiplet_load_gating_prod,
+		.slcg_ctxsw_firmware_load_gating_prod =
+			gm20b_slcg_ctxsw_firmware_load_gating_prod,
+		.slcg_fb_load_gating_prod =
+			gm20b_slcg_fb_load_gating_prod,
+		.slcg_fifo_load_gating_prod =
+			gm20b_slcg_fifo_load_gating_prod,
+		.slcg_gr_load_gating_prod =
+			gr_gm20b_slcg_gr_load_gating_prod,
+		.slcg_ltc_load_gating_prod =
+			ltc_gm20b_slcg_ltc_load_gating_prod,
+		.slcg_perf_load_gating_prod =
+			gm20b_slcg_perf_load_gating_prod,
+		.slcg_priring_load_gating_prod =
+			gm20b_slcg_priring_load_gating_prod,
+		.slcg_pmu_load_gating_prod =
+			gm20b_slcg_pmu_load_gating_prod,
+		.slcg_therm_load_gating_prod =
+			gm20b_slcg_therm_load_gating_prod,
+		.slcg_xbar_load_gating_prod =
+			gm20b_slcg_xbar_load_gating_prod,
+		.blcg_bus_load_gating_prod =
+			gm20b_blcg_bus_load_gating_prod,
+		.blcg_ctxsw_firmware_load_gating_prod =
+			gm20b_blcg_ctxsw_firmware_load_gating_prod,
+		.blcg_fb_load_gating_prod =
+			gm20b_blcg_fb_load_gating_prod,
+		.blcg_fifo_load_gating_prod =
+			gm20b_blcg_fifo_load_gating_prod,
+		.blcg_gr_load_gating_prod =
+			gm20b_blcg_gr_load_gating_prod,
+		.blcg_ltc_load_gating_prod =
+			gm20b_blcg_ltc_load_gating_prod,
+		.blcg_pwr_csb_load_gating_prod =
+			gm20b_blcg_pwr_csb_load_gating_prod,
+		.blcg_xbar_load_gating_prod =
+			gm20b_blcg_xbar_load_gating_prod,
+		.blcg_pmu_load_gating_prod =
+			gm20b_blcg_pmu_load_gating_prod,
+		.pg_gr_load_gating_prod =
+			gr_gm20b_pg_gr_load_gating_prod,
+	},
+	.chip_init_gpu_characteristics = gk20a_init_gpu_characteristics,
+	.get_litter_value = gm20b_get_litter_value,
+};
+
 int gm20b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
@@ -209,6 +211,12 @@ int gm20b_init_hal(struct gk20a *g)
 
 	gops->ltc = gm20b_ops.ltc;
 	gops->clock_gating = gm20b_ops.clock_gating;
+
+	/* Lone functions */
+	gops->chip_init_gpu_characteristics =
+		gm20b_ops.chip_init_gpu_characteristics;
+	gops->get_litter_value = gm20b_ops.get_litter_value;
+
 	gops->securegpccs = false;
 	gops->pmupstate = false;
 #ifdef CONFIG_TEGRA_ACR
@@ -260,8 +268,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gk20a_init_css_ops(gops);
 #endif
 	g->name = "gm20b";
-	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
-	gops->get_litter_value = gm20b_get_litter_value;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = MAXWELL_B;

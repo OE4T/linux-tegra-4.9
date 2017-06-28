@@ -266,8 +266,3 @@ free_firmware:
 	nvgpu_release_firmware(g, bios_fw);
 	return err;
 }
-
-void gm206_init_bios_ops(struct gpu_ops *gops)
-{
-       gops->bios_init = gm206_bios_init;
-}

@@ -20,6 +20,10 @@
 #define TEGRA_SID_RCE		0x2a	/* 42 */
 #define TEGRA_SID_RCE_1X	0x2b	/* 43 */
 
+#define TEGRA_SID_RCE_RM	0x2F	/* 47 */
+#define TEGRA_SID_VIFALC	0x30	/* 48 */
+#define TEGRA_SID_ISPFALC	0x31	/* 49 */
+
 #define TEGRA_SID_MIU		0x50	/* 80 */
 
 #define TEGRA_SID_NVDLA0	0x51	/* 81 */
@@ -39,6 +43,3 @@
 
 #define TEGRA_SID_NVDEC1	0x5C	/* 92 */
 
-#define TEGRA_SID_RCE_RM	0x5D	/* 93 */
-#define TEGRA_SID_VIFALC	0x5E	/* 94 */
-#define TEGRA_SID_ISPFALC	0x5F	/* 95 */

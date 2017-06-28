@@ -564,6 +564,29 @@ static void gv11b_reset_pbdma_faulted_tsg(struct tsg_gk20a *tsg)
 	up_read(&tsg->ch_list_lock);
 }
 
+void gv11b_fifo_reset_pbdma_and_eng_faulted(struct gk20a *g,
+			struct channel_gk20a *refch,
+			u32 faulted_pbdma, u32 faulted_engine)
+{
+	struct tsg_gk20a *tsg;
+
+	nvgpu_log(g, gpu_dbg_intr, "reset faulted pbdma:0x%x eng:0x%x",
+				faulted_pbdma, faulted_engine);
+
+	if (gk20a_is_channel_marked_as_tsg(refch)) {
+		tsg = &g->fifo.tsg[refch->tsgid];
+		if (faulted_pbdma != FIFO_INVAL_PBDMA_ID)
+			gv11b_reset_pbdma_faulted_tsg(tsg);
+		if (faulted_engine != FIFO_INVAL_ENGINE_ID)
+			gv11b_reset_eng_faulted_tsg(tsg);
+	} else {
+		if (faulted_pbdma != FIFO_INVAL_PBDMA_ID)
+			gv11b_reset_pbdma_faulted_ch(g, refch->chid);
+		if (faulted_engine != FIFO_INVAL_ENGINE_ID)
+			gv11b_reset_eng_faulted_ch(g, refch->chid);
+	}
+}
+
 static u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
 			u32 id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault)
@@ -928,18 +951,11 @@ static void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	if (rc_type == RC_TYPE_MMU_FAULT && mmfault && mmfault->refch) {
 		refch = mmfault->refch;
 		client_type = mmfault->client_type;
-		if (gk20a_is_channel_marked_as_tsg(refch)) {
+		if (gk20a_is_channel_marked_as_tsg(refch))
 			tsg = &g->fifo.tsg[refch->tsgid];
-			if (mmfault->faulted_pbdma != FIFO_INVAL_PBDMA_ID)
-				gv11b_reset_pbdma_faulted_tsg(tsg);
-			if (mmfault->faulted_engine != FIFO_INVAL_ENGINE_ID)
-				gv11b_reset_eng_faulted_tsg(tsg);
-		} else {
-			if (mmfault->faulted_pbdma != FIFO_INVAL_PBDMA_ID)
-				gv11b_reset_pbdma_faulted_ch(g, refch->chid);
-			if (mmfault->faulted_engine != FIFO_INVAL_ENGINE_ID)
-				gv11b_reset_eng_faulted_ch(g, refch->chid);
-		}
+			gv11b_fifo_reset_pbdma_and_eng_faulted(g, refch,
+				mmfault->faulted_pbdma,
+				mmfault->faulted_engine);
 	} else {
 		if (id_type == ID_TYPE_TSG)
 			tsg = &g->fifo.tsg[id];

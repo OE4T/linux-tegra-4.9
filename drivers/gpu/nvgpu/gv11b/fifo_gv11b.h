@@ -38,4 +38,7 @@
 
 struct gpu_ops;
 void gv11b_init_fifo(struct gpu_ops *gops);
+void gv11b_fifo_reset_pbdma_and_eng_faulted(struct gk20a *g,
+			struct channel_gk20a *refch,
+			u32 faulted_pbdma, u32 faulted_engine);
 #endif

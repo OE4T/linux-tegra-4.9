@@ -57,20 +57,9 @@ int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
 int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
-	int completion = -EBUSY;
-	struct nvgpu_timeout to;
+	int completion = 0;
 
-	nvgpu_timeout_init(g, &to, timeout, NVGPU_TIMER_CPU_TIMER);
-	do {
-		data = gk20a_readl(g, psec_falcon_cpuctl_r());
-		if (data & psec_falcon_cpuctl_halt_intr_m()) {
-			/*CPU is halted break*/
-			completion = 0;
-			break;
-		}
-		nvgpu_udelay(1);
-	} while (!nvgpu_timeout_expired(&to));
-
+	completion = nvgpu_flcn_wait_for_halt(&g->sec2_flcn, timeout);
 	if (completion) {
 		nvgpu_err(g, "ACR boot timed out");
 		return completion;

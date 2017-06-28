@@ -102,6 +102,26 @@ bool nvgpu_flcn_get_cpu_halted_status(struct nvgpu_falcon *flcn)
 	return status;
 }
 
+int nvgpu_flcn_wait_for_halt(struct nvgpu_falcon *flcn, unsigned int timeout)
+{
+	struct gk20a *g = flcn->g;
+	struct nvgpu_timeout to;
+	int status = 0;
+
+	nvgpu_timeout_init(g, &to, timeout, NVGPU_TIMER_CPU_TIMER);
+	do {
+		if (nvgpu_flcn_get_cpu_halted_status(flcn))
+			break;
+
+		nvgpu_udelay(10);
+	} while (!nvgpu_timeout_expired(&to));
+
+	if (nvgpu_timeout_peek_expired(&to))
+		status = -EBUSY;
+
+	return status;
+}
+
 bool nvgpu_flcn_get_idle_status(struct nvgpu_falcon *flcn)
 {
 	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;

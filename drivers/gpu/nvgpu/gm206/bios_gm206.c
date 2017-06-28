@@ -166,8 +166,6 @@ out:
 static int gm206_bios_preos(struct gk20a *g)
 {
 	int err = 0;
-	int val;
-	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
 
@@ -196,17 +194,8 @@ static int gm206_bios_preos(struct gk20a *g)
 	gk20a_writel(g, pwr_falcon_cpuctl_r(),
 		pwr_falcon_cpuctl_startcpu_f(1));
 
-	nvgpu_timeout_init(g, &timeout,
-			   PMU_BOOT_TIMEOUT_MAX /
-				PMU_BOOT_TIMEOUT_DEFAULT,
-			   NVGPU_TIMER_CPU_TIMER);
-	do {
-		val = pwr_falcon_cpuctl_halt_intr_v(
-				gk20a_readl(g, pwr_falcon_cpuctl_r()));
-		nvgpu_udelay(PMU_BOOT_TIMEOUT_DEFAULT);
-	} while (!val && !nvgpu_timeout_expired(&timeout));
-
-	if (nvgpu_timeout_peek_expired(&timeout)) {
+	if (nvgpu_flcn_wait_for_halt(g->pmu.flcn,
+		PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT)) {
 		err = -ETIMEDOUT;
 		goto out;
 	}

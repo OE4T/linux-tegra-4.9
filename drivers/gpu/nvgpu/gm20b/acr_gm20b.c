@@ -1488,22 +1488,11 @@ err_done:
 */
 static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 {
+	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 data = 0;
 	int ret = -EBUSY;
-	struct nvgpu_timeout timeout;
 
-	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
-
-	do {
-		data = gk20a_readl(g, pwr_falcon_cpuctl_r());
-		if (data & pwr_falcon_cpuctl_halt_intr_m()) {
-			/* CPU is halted break */
-			ret = 0;
-			break;
-		}
-		nvgpu_udelay(1);
-	} while (!nvgpu_timeout_expired(&timeout));
-
+	ret = nvgpu_flcn_wait_for_halt(pmu->flcn, timeout_ms);
 	if (ret) {
 		nvgpu_err(g, "ACR boot timed out");
 		return ret;

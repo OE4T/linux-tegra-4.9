@@ -166,6 +166,7 @@ struct nvgpu_falcon {
 };
 
 int nvgpu_flcn_wait_idle(struct nvgpu_falcon *flcn);
+int nvgpu_flcn_wait_for_halt(struct nvgpu_falcon *flcn, unsigned int timeout);
 int nvgpu_flcn_reset(struct nvgpu_falcon *flcn);
 void nvgpu_flcn_set_irq(struct nvgpu_falcon *flcn, bool enable,
 	u32 intr_mask, u32 intr_dest);

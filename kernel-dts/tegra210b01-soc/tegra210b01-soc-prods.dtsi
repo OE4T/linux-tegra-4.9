@@ -371,4 +371,22 @@
 			};
 		};
 	};
+
+	pcie-controller@1003000 {
+		prod-settings {
+			#prod-cells = <3>;
+			mask-one-style;
+			prod_c_pad {
+				prod = <
+					0x000000C8 0xFFFFFFFF 0xb0b880b8	// PADS_REFCLK_CFG0	31:0			0xb0b880b8
+				>;
+			};
+			prod_c_rp {
+				prod = <
+					0x00000E80 0x0000003F 0x00000027        // RP_ECTL_1_R1_x	5:0=TX_DRV_AMP_1C	0x27
+					0x00000EA0 0x0000003F 0x00000027        // RP_ECTL_1_R2_x	5:0=TX_DRV_AMP_1C	0x27
+				>;
+			};
+		};
+	};
 };

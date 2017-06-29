@@ -253,6 +253,9 @@ static const struct gpu_ops gv11b_ops = {
 	.falcon = {
 		.falcon_hal_sw_init = gk20a_falcon_hal_sw_init,
 	},
+	.priv_ring = {
+		.isr = gp10b_priv_ring_isr,
+	},
 	.chip_init_gpu_characteristics = gv11b_init_gpu_characteristics,
 	.get_litter_value = gv11b_get_litter_value,
 };
@@ -272,6 +275,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->css = gv11b_ops.css;
 #endif
 	gops->falcon = gv11b_ops.falcon;
+	gops->priv_ring = gv11b_ops.priv_ring;
 
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =
@@ -282,7 +286,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->privsecurity = 0;
 	gops->securegpccs = 0;
 
-	gp10b_init_priv_ring(gops);
 	gv11b_init_gr(gops);
 	gv11b_init_fecs_trace_ops(gops);
 	gv11b_init_fb(gops);

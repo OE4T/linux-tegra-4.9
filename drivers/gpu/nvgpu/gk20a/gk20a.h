@@ -356,7 +356,7 @@ struct gpu_ops {
 					struct nvgpu_mem *mem, u64 gpu_va);
 		void (*write_pm_ptr)(struct gk20a *g,
 					struct nvgpu_mem *mem, u64 gpu_va);
-		void (*write_preemption_ptr)(struct gk20a *g,
+		void (*set_preemption_buffer_va)(struct gk20a *g,
 					struct nvgpu_mem *mem, u64 gpu_va);
 		void (*init_elcg_mode)(struct gk20a *g, u32 mode, u32 engine);
 		void (*load_tpc_mask)(struct gk20a *g);

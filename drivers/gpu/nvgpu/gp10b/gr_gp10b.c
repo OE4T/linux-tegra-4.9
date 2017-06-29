@@ -1163,8 +1163,8 @@ static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		u32 size;
 		u32 cbes_reserve;
 
-		if (g->ops.gr.write_preemption_ptr)
-			g->ops.gr.write_preemption_ptr(g, mem,
+		if (g->ops.gr.set_preemption_buffer_va)
+			g->ops.gr.set_preemption_buffer_va(g, mem,
 				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va);
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
@@ -2305,7 +2305,7 @@ static int gr_gp10b_init_preemption_state(struct gk20a *g)
 	return 0;
 }
 
-static void gr_gp10b_write_preemption_ptr(struct gk20a *g,
+static void gr_gp10b_set_preemption_buffer_va(struct gk20a *g,
 			struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 va = u64_lo32(gpu_va >> 8);
@@ -2342,7 +2342,7 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.is_valid_compute_class = gr_gp10b_is_valid_compute_class;
 	gops->gr.commit_global_cb_manager = gr_gp10b_commit_global_cb_manager;
 	gops->gr.commit_global_pagepool = gr_gp10b_commit_global_pagepool;
-	gops->gr.write_preemption_ptr = gr_gp10b_write_preemption_ptr;
+	gops->gr.set_preemption_buffer_va = gr_gp10b_set_preemption_buffer_va;
 	gops->gr.add_zbc_color = gr_gp10b_add_zbc_color;
 	gops->gr.add_zbc_depth = gr_gp10b_add_zbc_depth;
 	gops->gr.pagepool_default_size = gr_gp10b_pagepool_default_size;

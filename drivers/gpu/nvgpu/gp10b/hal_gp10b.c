@@ -19,6 +19,7 @@
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/pramin_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
+#include "gk20a/regops_gk20a.h"
 #include "gk20a/mc_gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
@@ -224,6 +225,21 @@ static const struct gpu_ops gp10b_ops = {
 		.boot_0 = gk20a_mc_boot_0,
 		.is_intr1_pending = mc_gp10b_is_intr1_pending,
 	},
+	.debug = {
+		.show_dump = gk20a_debug_show_dump,
+	},
+	.dbg_session_ops = {
+		.exec_reg_ops = exec_regops_gk20a,
+		.dbg_set_powergate = dbg_set_powergate,
+		.check_and_set_global_reservation =
+			nvgpu_check_and_set_global_reservation,
+		.check_and_set_context_reservation =
+			nvgpu_check_and_set_context_reservation,
+		.release_profiler_reservation =
+			nvgpu_release_profiler_reservation,
+		.perfbuffer_enable = gk20a_perfbuf_enable_locked,
+		.perfbuffer_disable = gk20a_perfbuf_disable_locked,
+	},
 	.cde = {
 		.get_program_numbers = gp10b_cde_get_program_numbers,
 		.need_scatter_buffer = gp10b_need_scatter_buffer,
@@ -245,6 +261,8 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->ltc = gp10b_ops.ltc;
 	gops->clock_gating = gp10b_ops.clock_gating;
 	gops->mc = gp10b_ops.mc;
+	gops->debug = gp10b_ops.debug;
+	gops->dbg_session_ops = gp10b_ops.dbg_session_ops;
 	gops->cde = gp10b_ops.cde;
 	gops->falcon = gp10b_ops.falcon;
 
@@ -301,8 +319,6 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_gr_ctx(gops);
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(gops);
-	gk20a_init_debug_ops(gops);
-	gk20a_init_dbg_session_ops(gops);
 	gp10b_init_regops(gops);
 	gp10b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);

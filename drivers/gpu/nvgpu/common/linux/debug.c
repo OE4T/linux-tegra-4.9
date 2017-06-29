@@ -173,11 +173,6 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 	gk20a_debug_dump_all_channel_status_ramfc(g, o);
 }
 
-void gk20a_init_debug_ops(struct gpu_ops *gops)
-{
-	gops->debug.show_dump = gk20a_debug_show_dump;
-}
-
 static int railgate_residency_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;

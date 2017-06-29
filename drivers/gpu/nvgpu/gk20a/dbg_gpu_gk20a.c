@@ -1277,7 +1277,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	return err;
 }
 
-static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
+int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 {
 	int err = 0;
 	struct gk20a *g = dbg_s->g;
@@ -1646,7 +1646,7 @@ static struct dbg_profiler_object_data *find_matching_prof_obj(
 	return NULL;
 }
 
-static bool nvgpu_check_and_set_global_reservation(
+bool nvgpu_check_and_set_global_reservation(
 				struct dbg_session_gk20a *dbg_s,
 				struct dbg_profiler_object_data *prof_obj)
 {
@@ -1662,7 +1662,7 @@ static bool nvgpu_check_and_set_global_reservation(
 	return false;
 }
 
-static bool nvgpu_check_and_set_context_reservation(
+bool nvgpu_check_and_set_context_reservation(
 				struct dbg_session_gk20a *dbg_s,
 				struct dbg_profiler_object_data *prof_obj)
 {
@@ -1677,7 +1677,7 @@ static bool nvgpu_check_and_set_context_reservation(
 	return true;
 }
 
-static void nvgpu_release_profiler_reservation(struct dbg_session_gk20a *dbg_s,
+void nvgpu_release_profiler_reservation(struct dbg_session_gk20a *dbg_s,
 				struct dbg_profiler_object_data *prof_obj)
 {
 	struct gk20a *g = dbg_s->g;
@@ -1834,7 +1834,7 @@ static int nvgpu_ioctl_profiler_reserve(struct dbg_session_gk20a *dbg_s,
 	return nvgpu_profiler_reserve_release(dbg_s, args->profiler_handle);
 }
 
-static int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
+int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
 {
 	struct mm_gk20a *mm = &g->mm;
 	u32 virt_addr_lo;
@@ -1943,7 +1943,7 @@ err_remove_vm:
 }
 
 /* must be called with dbg_sessions_lock held */
-static int gk20a_perfbuf_disable_locked(struct gk20a *g)
+int gk20a_perfbuf_disable_locked(struct gk20a *g)
 {
 	int err = gk20a_busy(g);
 	if (err) {
@@ -2002,17 +2002,3 @@ static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
 
 	return err;
 }
-
-void gk20a_init_dbg_session_ops(struct gpu_ops *gops)
-{
-	gops->dbg_session_ops.exec_reg_ops = exec_regops_gk20a;
-	gops->dbg_session_ops.dbg_set_powergate = dbg_set_powergate;
-	gops->dbg_session_ops.check_and_set_global_reservation =
-					nvgpu_check_and_set_global_reservation;
-	gops->dbg_session_ops.check_and_set_context_reservation =
-					nvgpu_check_and_set_context_reservation;
-	gops->dbg_session_ops.release_profiler_reservation =
-					nvgpu_release_profiler_reservation;
-	gops->dbg_session_ops.perfbuffer_enable = gk20a_perfbuf_enable_locked;
-	gops->dbg_session_ops.perfbuffer_disable = gk20a_perfbuf_disable_locked;
-};

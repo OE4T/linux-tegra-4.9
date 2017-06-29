@@ -46,8 +46,6 @@ static inline void gk20a_debug_output(struct gk20a_debug_output *o,
 static inline void gk20a_debug_dump(struct gk20a *g) {}
 static inline void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o) {}
 static inline int gk20a_gr_debug_dump(struct gk20a *g) { return 0;}
-static inline void gk20a_init_debug_ops(struct gpu_ops *gops) {}
-
 static inline void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink) {}
 static inline void gk20a_debug_deinit(struct gk20a *g) {}
 #endif

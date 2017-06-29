@@ -127,6 +127,17 @@ int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 
 bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch);
 int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch);
-void gk20a_init_dbg_session_ops(struct gpu_ops *gops);
+
+int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode);
+bool nvgpu_check_and_set_global_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj);
+bool nvgpu_check_and_set_context_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj);
+void nvgpu_release_profiler_reservation(struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj);
+int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size);
+int gk20a_perfbuf_disable_locked(struct gk20a *g);
 
 #endif /* DBG_GPU_GK20A_H */

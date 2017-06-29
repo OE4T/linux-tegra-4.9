@@ -20,6 +20,7 @@
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/priv_ring_gk20a.h"
+#include "gk20a/regops_gk20a.h"
 
 #include "ltc_gm20b.h"
 #include "ce2_gm20b.h"
@@ -215,6 +216,21 @@ static const struct gpu_ops gm20b_ops = {
 		.boot_0 = gk20a_mc_boot_0,
 		.is_intr1_pending = mc_gk20a_is_intr1_pending,
 	},
+	.debug = {
+		.show_dump = gk20a_debug_show_dump,
+	},
+	.dbg_session_ops = {
+		.exec_reg_ops = exec_regops_gk20a,
+		.dbg_set_powergate = dbg_set_powergate,
+		.check_and_set_global_reservation =
+			nvgpu_check_and_set_global_reservation,
+		.check_and_set_context_reservation =
+			nvgpu_check_and_set_context_reservation,
+		.release_profiler_reservation =
+			nvgpu_release_profiler_reservation,
+		.perfbuffer_enable = gk20a_perfbuf_enable_locked,
+		.perfbuffer_disable = gk20a_perfbuf_disable_locked,
+	},
 	.cde = {
 		.get_program_numbers = gm20b_cde_get_program_numbers,
 	},
@@ -234,6 +250,8 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->ltc = gm20b_ops.ltc;
 	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->mc = gm20b_ops.mc;
+	gops->dbg_session_ops = gm20b_ops.dbg_session_ops;
+	gops->debug = gm20b_ops.debug;
 	gops->cde = gm20b_ops.cde;
 	gops->falcon = gm20b_ops.falcon;
 
@@ -282,8 +300,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
-	gk20a_init_debug_ops(gops);
-	gk20a_init_dbg_session_ops(gops);
 	gm20b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
 #if defined(CONFIG_GK20A_CYCLE_STATS)

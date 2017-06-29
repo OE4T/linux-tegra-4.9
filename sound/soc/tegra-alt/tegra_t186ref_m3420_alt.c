@@ -154,13 +154,6 @@ static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
 		err = snd_soc_dai_set_fmt(card->rtd[idx].codec_dai, dai_fmt);
 		if (err)
 			return err;
-	} else {
-		dai_fmt = card->rtd[idx].dai_link->dai_fmt;
-		dai_fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
-		dai_fmt |= SND_SOC_DAIFMT_CBM_CFM;
-		err = snd_soc_dai_set_fmt(card->rtd[idx].cpu_dai, dai_fmt);
-		if (err)
-			return err;
 	}
 
 	return snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai, 0,
@@ -254,7 +247,7 @@ static int tegra_t186ref_m3420_disable_i2s_master(struct snd_soc_dapm_widget *w,
 static int tegra_t186ref_m3420_i2s_config(struct snd_soc_card *card,
 					  struct tegra_t186ref_m3420 *machine)
 {
-	unsigned int idx;
+	unsigned int idx, dai_fmt;
 	const char *name;
 
 	switch (machine->i2s_master_id) {
@@ -278,7 +271,11 @@ static int tegra_t186ref_m3420_i2s_config(struct snd_soc_card *card,
 	idx = tegra_machine_get_codec_dai_link_idx_t18x(name);
 	machine->i2s_master = card->rtd[idx].cpu_dai;
 
-	return 0;
+	dai_fmt = card->rtd[idx].dai_link->dai_fmt;
+	dai_fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
+	dai_fmt |= SND_SOC_DAIFMT_CBM_CFM;
+
+	return snd_soc_dai_set_fmt(card->rtd[idx].cpu_dai, dai_fmt);
 }
 
 static int tegra_t186ref_m3420_i2s_master_get(struct snd_kcontrol *kcontrol,

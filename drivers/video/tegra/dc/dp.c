@@ -154,7 +154,8 @@ static inline int tegra_dpaux_wait_transaction(struct tegra_dc_dp_data *dp)
 	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
 	int err = 0;
 
-	if (likely(tegra_platform_is_silicon())) {
+	if (likely(tegra_platform_is_silicon()) ||
+		unlikely(tegra_platform_is_fpga())) {
 		reinit_completion(&dp->aux_tx);
 		tegra_dpaux_int_toggle(dpaux, DPAUX_INTR_EN_AUX_TX_DONE, true);
 		if (tegra_dpaux_readl(dpaux, DPAUX_DP_AUXCTL) &
@@ -436,10 +437,6 @@ int tegra_dc_dpaux_read_chunk_locked(struct tegra_dc_dp_data *dp,
 				"dp: aux read transaction timeout\n");
 
 		*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
-
-		/* Ignore I2C errors on fpga */
-		if (!tegra_platform_is_silicon())
-			*aux_stat &= ~DPAUX_DP_AUXSTAT_REPLYTYPE_I2CNACK;
 
 		if ((*aux_stat & DPAUX_DP_AUXSTAT_TIMEOUT_ERROR_PENDING) ||
 			(*aux_stat & DPAUX_DP_AUXSTAT_RX_ERROR_PENDING) ||

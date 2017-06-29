@@ -1220,6 +1220,8 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	if (desc->irq_data.chip->flags & IRQCHIP_ONESHOT_SAFE)
 		new->flags &= ~IRQF_ONESHOT;
 
+	mutex_lock(&desc->request_mutex);
+
 	chip_bus_lock(desc);
 
 	/*
@@ -1396,6 +1398,7 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
 	chip_bus_sync_unlock(desc);
+	mutex_unlock(&desc->request_mutex);
 
 	/*
 	 * Strictly no need to wake it up, but hung_task complains
@@ -1428,6 +1431,8 @@ out_mask:
 
 	chip_bus_sync_unlock(desc);
 	free_cpumask_var(mask);
+
+	mutex_unlock(&desc->request_mutex);
 
 out_thread:
 	if (new->thread) {
@@ -1492,6 +1497,7 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 	if (!desc)
 		return NULL;
 
+	mutex_lock(&desc->request_mutex);
 	chip_bus_lock(desc);
 	raw_spin_lock_irqsave(&desc->lock, flags);
 
@@ -1565,6 +1571,8 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 			put_task_struct(action->secondary->thread);
 		}
 	}
+
+	mutex_unlock(&desc->request_mutex);
 
 	irq_chip_pm_put(&desc->irq_data);
 	module_put(desc->owner);

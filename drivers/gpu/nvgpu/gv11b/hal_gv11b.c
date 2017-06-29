@@ -200,6 +200,10 @@ static const struct gpu_ops gv11b_ops = {
 		.pg_gr_load_gating_prod =
 			gr_gv11b_pg_gr_load_gating_prod,
 	},
+
+	.falcon = {
+		.falcon_hal_sw_init = gk20a_falcon_hal_sw_init,
+	},
 	.chip_init_gpu_characteristics = gv11b_init_gpu_characteristics,
 	.get_litter_value = gv11b_get_litter_value,
 };
@@ -211,6 +215,7 @@ int gv11b_init_hal(struct gk20a *g)
 
 	gops->ltc = gv11b_ops.ltc;
 	gops->clock_gating = gv11b_ops.clock_gating;
+	gops->falcon = gv11b_ops.falcon;
 
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =
@@ -231,7 +236,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_ce(gops);
 	gv11b_init_gr_ctx(gops);
 	gv11b_init_mm(gops);
-	gk20a_falcon_init_hal(gops);
 	gv11b_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
 	gk20a_init_dbg_session_ops(gops);

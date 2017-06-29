@@ -1181,8 +1181,10 @@ int tegra_camrtc_reboot(struct device *dev)
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 	int ret;
 
-	if (pm_runtime_suspended(dev))
+	if (pm_runtime_suspended(dev)) {
+		dev_info(dev, "cannot reboot while suspended\n");
 		return -EIO;
+	}
 
 	if (!rtcpu->powered)
 		return -EIO;

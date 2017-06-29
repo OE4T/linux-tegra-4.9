@@ -970,11 +970,18 @@ struct nvgpu_gpu_set_event_filter_args {
 #define NVGPU_IOCTL_TSG_GET_TIMESLICE \
 	_IOR(NVGPU_TSG_IOCTL_MAGIC, 10, struct nvgpu_timeslice_args)
 
+
+#ifdef CONFIG_TEGRA_19x_GPU
+#define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
+		NVGPU_TSG_IOCTL_MAX_ARG
+#define NVGPU_TSG_IOCTL_LAST		\
+	_IOC_NR(NVGPU_TSG_IOCTL_MAX)
+#else
 #define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_event_id_ctrl_args)
 #define NVGPU_TSG_IOCTL_LAST		\
 	_IOC_NR(NVGPU_IOCTL_TSG_GET_TIMESLICE)
-
+#endif
 
 /*
  * /dev/nvhost-dbg-gpu device

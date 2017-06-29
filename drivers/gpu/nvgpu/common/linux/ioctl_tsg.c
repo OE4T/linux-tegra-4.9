@@ -30,6 +30,9 @@
 #include "ioctl_tsg.h"
 #include "ioctl_channel.h"
 #include "os_linux.h"
+#ifdef CONFIG_TEGRA_19x_GPU
+#include "tsg_t19x.h"
+#endif
 
 struct tsg_private {
 	struct gk20a *g;
@@ -469,9 +472,13 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		}
 
 	default:
+#ifdef CONFIG_TEGRA_19x_GPU
+		err = t19x_tsg_ioctl_handler(g, tsg, cmd, buf);
+#else
 		nvgpu_err(g, "unrecognized tsg gpu ioctl cmd: 0x%x",
 			   cmd);
 		err = -ENOTTY;
+#endif
 		break;
 	}
 

@@ -36,6 +36,9 @@ struct fifo_profile_gk20a;
 #include "mm_gk20a.h"
 #include "gr_gk20a.h"
 #include "fence_gk20a.h"
+#ifdef CONFIG_TEGRA_19x_GPU
+#include "channel_t19x.h"
+#endif
 
 struct notification {
 	struct {
@@ -276,6 +279,9 @@ struct channel_gk20a {
 	u32 runlist_id;
 
 	bool is_privileged_channel;
+#ifdef CONFIG_TEGRA_19x_GPU
+	struct channel_t19x t19x;
+#endif
 };
 
 static inline struct channel_gk20a *

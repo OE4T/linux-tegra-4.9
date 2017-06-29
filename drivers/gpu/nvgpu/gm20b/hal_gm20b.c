@@ -200,7 +200,10 @@ static const struct gpu_ops gm20b_ops = {
 			gr_gm20b_pg_gr_load_gating_prod,
 	},
 	.cde = {
-		.get_program_numbers = gm20b_cde_get_program_numbers
+		.get_program_numbers = gm20b_cde_get_program_numbers,
+	},
+	.falcon = {
+		.falcon_hal_sw_init = gk20a_falcon_hal_sw_init,
 	},
 	.chip_init_gpu_characteristics = gk20a_init_gpu_characteristics,
 	.get_litter_value = gm20b_get_litter_value,
@@ -215,6 +218,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->ltc = gm20b_ops.ltc;
 	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->cde = gm20b_ops.cde;
+	gops->falcon = gm20b_ops.falcon;
 
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =
@@ -259,7 +263,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_ce2(gops);
 	gm20b_init_gr_ctx(gops);
 	gm20b_init_mm(gops);
-	gk20a_falcon_init_hal(gops);
 	gm20b_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);

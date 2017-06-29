@@ -212,6 +212,9 @@ static const struct gpu_ops gp10b_ops = {
 		.need_scatter_buffer = gp10b_need_scatter_buffer,
 		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
 	},
+	.falcon = {
+		.falcon_hal_sw_init = gk20a_falcon_hal_sw_init,
+	},
 	.chip_init_gpu_characteristics = gp10b_init_gpu_characteristics,
 	.get_litter_value = gp10b_get_litter_value,
 };
@@ -225,6 +228,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->ltc = gp10b_ops.ltc;
 	gops->clock_gating = gp10b_ops.clock_gating;
 	gops->cde = gp10b_ops.cde;
+	gops->falcon = gp10b_ops.falcon;
 
 	/* Lone Functions */
 	gops->chip_init_gpu_characteristics =
@@ -279,7 +283,6 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_ce(gops);
 	gp10b_init_gr_ctx(gops);
 	gp10b_init_mm(gops);
-	gk20a_falcon_init_hal(gops);
 	gp10b_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
 	gk20a_init_dbg_session_ops(gops);

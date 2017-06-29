@@ -40,7 +40,7 @@ static void gp106_falcon_ops(struct nvgpu_falcon *flcn)
 	gp106_falcon_engine_dependency_ops(flcn);
 }
 
-static void gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
+void gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 {
 	struct gk20a *g = flcn->g;
 
@@ -77,9 +77,4 @@ static void gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 	} else
 		nvgpu_info(g, "falcon 0x%x not supported on %s",
 			flcn->flcn_id, g->name);
-}
-
-void gp106_falcon_init_hal(struct gpu_ops *gops)
-{
-	gops->falcon.falcon_hal_sw_init = gp106_falcon_hal_sw_init;
 }

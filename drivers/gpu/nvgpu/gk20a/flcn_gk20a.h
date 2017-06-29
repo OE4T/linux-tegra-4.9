@@ -14,6 +14,6 @@
 #define __FLCN_GK20A_H__
 
 void gk20a_falcon_ops(struct nvgpu_falcon *flcn);
-void gk20a_falcon_init_hal(struct gpu_ops *gops);
+void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn);
 
 #endif /* __FLCN_GK20A_H__ */

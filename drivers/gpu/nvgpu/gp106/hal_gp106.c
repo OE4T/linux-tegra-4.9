@@ -259,6 +259,9 @@ static const struct gpu_ops gp106_ops = {
 		.enable_shadow_rom = xve_enable_shadow_rom_gp106,
 		.disable_shadow_rom = xve_disable_shadow_rom_gp106,
 	},
+	.falcon = {
+		.falcon_hal_sw_init = gp106_falcon_hal_sw_init,
+	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,
 	.bios_init = gm206_bios_init,
@@ -275,6 +278,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->clock_gating = gp106_ops.clock_gating;
 	gops->cde = gp106_ops.cde;
 	gops->xve = gp106_ops.xve;
+	gops->falcon = gp106_ops.falcon;
 
 	/* Lone functions */
 	gops->get_litter_value = gp106_ops.get_litter_value;
@@ -295,7 +299,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp10b_init_ce(gops);
 	gp106_init_gr_ctx(gops);
 	gp106_init_mm(gops);
-	gp106_falcon_init_hal(gops);
 	gp106_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
 	gk20a_init_dbg_session_ops(gops);

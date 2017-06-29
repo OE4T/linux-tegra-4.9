@@ -10,9 +10,9 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-#ifndef __FLCN_GK20A_H__
-#define __FLCN_GK20A_H__
+#ifndef __FLCN_GP106_H__
+#define __FLCN_GP106_H__
 
-void gp106_falcon_init_hal(struct gpu_ops *gops);
+void gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn);
 
-#endif /* __FLCN_GK20A_H__ */
+#endif /* __FLCN_GP106_H__ */

@@ -382,7 +382,7 @@ void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	gk20a_falcon_engine_dependency_ops(flcn);
 }
 
-static void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
+void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 {
 	struct gk20a *g = flcn->g;
 
@@ -419,9 +419,4 @@ static void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 	} else
 		nvgpu_log_info(g, "falcon 0x%x not supported on %s",
 			flcn->flcn_id, g->name);
-}
-
-void gk20a_falcon_init_hal(struct gpu_ops *gops)
-{
-	gops->falcon.falcon_hal_sw_init = gk20a_falcon_hal_sw_init;
 }

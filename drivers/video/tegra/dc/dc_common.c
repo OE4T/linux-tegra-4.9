@@ -126,6 +126,16 @@ static int head_offset;
 static struct tegra_dc_common *dc_common;
 
 /**
+ * tegra_dc_common_get_imp_table - Returns a pointer
+ * to global imp table if provided in device tree.
+ */
+struct nvdisp_imp_table *tegra_dc_common_get_imp_table(void)
+{
+	if (!dc_common)
+		return NULL;
+	return dc_common->imp_table;
+}
+/**
  * dc_common_channel_submit_gather - prepares/submits the hsot1x job and
  *					waits for completion too.
  * @dsp_cmd_reg: Word offset of DC_CMD_STATE_CONTROL from @HEAD_WORD_OFFSET.
@@ -1119,6 +1129,8 @@ static int tegra_dc_common_probe(struct platform_device *pdev)
 	init_waitqueue_head(&dc_common->prgrm_reg_reqs_wq);
 
 	dc_common->valid_heads = dt_pdata->valid_heads;
+	dc_common->imp_table = dt_pdata->imp_table;
+
 
 	dc_common->upd_val = devm_kzalloc(&pdev->dev,
 		sizeof(*dc_common->upd_val) * max_heads, GFP_KERNEL);

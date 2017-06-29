@@ -968,6 +968,7 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 	struct tegra_dc_win *win = tegra_dc_get_window(dc, idx);
 	/* Pulls configuration in from TEGRA_DC_FEATURE_INVERT_TYPE field */
 	bool enable_blx4 = tegra_dc_feature_has_scan_column(dc, idx);
+	struct nvdisp_imp_table *imp_table = tegra_dc_common_get_imp_table();
 
 	if (win == NULL)
 		return -EINVAL;
@@ -1015,11 +1016,26 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 				win_ihub_linebuf_config_mode_two_lines_f(),
 				win_ihub_linebuf_config_r());
 
-	/* assign a default thread group to the window.
-	 * WinA=group 0, WinB=group 1, ... */
-	nvdisp_win_write(win, win_ihub_thread_group_num_f(idx) |
+	if (imp_table && imp_table->valid) {
+		u32 result = 0;
+		s32 group = imp_table->settings[imp_table->chosen_index].
+			imp_results[dc->ctrl_num].thread_group_win[idx];
+		if (group < 0)
+			result = win_ihub_thread_group_enable_no_f();
+		else
+			result = win_ihub_thread_group_num_f(group) |
+					win_ihub_thread_group_enable_yes_f(),
+
+		nvdisp_win_write(win, result, win_ihub_thread_group_r());
+	} else {
+		/*
+		 * assign a default thread group to the window.
+		 * WinA=group 0, WinB=group 1, ...
+		 */
+		nvdisp_win_write(win, win_ihub_thread_group_num_f(idx) |
 			win_ihub_thread_group_enable_yes_f(),
 			win_ihub_thread_group_r());
+	}
 
 	/* set the windows scaler coeff value */
 	if (!win->is_scaler_coeff_set) {

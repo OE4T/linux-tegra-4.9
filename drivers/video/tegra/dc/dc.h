@@ -1246,6 +1246,14 @@ struct nvdisp_isoclient_bw_info {
 };
 #endif
 
+struct nvdisp_imp_table {
+	struct tegra_dc_ext_imp_settings *settings;
+	int entries; /* entries in @settings */
+	bool valid;  /* @settings are valid or not */
+	int  chosen_index;  /* Registered @entries index */
+};
+
+
 /* Timestamp in nsec in TSC timebase */
 u64 tegra_dc_get_tsc_time(void);
 

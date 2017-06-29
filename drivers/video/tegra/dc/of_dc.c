@@ -2499,6 +2499,238 @@ static bool is_dc_default_flag(u32 flag)
 		return false;
 }
 
+int parse_imp_windows_values(struct device_node *child_np,
+			struct platform_device *pdev,
+			struct tegra_dc_ext_imp_settings *settings)
+{
+	u32 win_cnt = tegra_dc_get_numof_dispwindows();
+	u32 head_cnt = tegra_dc_get_numof_dispheads();
+	int j = 0;
+	struct tegra_dc_ext_imp_head_results *imp_results;
+
+
+	for (j = 0;  j < head_cnt; j++) {
+		imp_results = &settings->imp_results[j];
+
+		if (of_property_read_u32_array(child_np,
+			"nvidia,imp_win_mapping",
+			imp_results->win_ids,
+			win_cnt)) {
+			dev_err(&pdev->dev,
+			"nvidia,imp_win_mapping not found\n");
+			goto fail_parse;
+		}
+
+		if (of_property_read_u32_array(child_np,
+			"nvidia,win_fetch_meter_slots",
+			imp_results->metering_slots_value_win,
+			win_cnt)) {
+			dev_err(&pdev->dev,
+			"nvidia,win_fetch_meter_slots not found\n");
+			goto fail_parse;
+		}
+
+		if (of_property_read_u32_array(child_np,
+			"nvidia,win_dvfs_watermark_values",
+			imp_results->thresh_lwm_dvfs_win,
+			win_cnt)) {
+			dev_err(&pdev->dev,
+			"nvidia,win_dvfs_watermark_values not found\n");
+			goto fail_parse;
+		}
+
+		if (of_property_read_u32_array(child_np,
+			"nvidia,win_pipe_meter_values",
+			imp_results->pipe_meter_value_win,
+			win_cnt)) {
+			dev_err(&pdev->dev,
+			"nvidia,win_pipe_meter_values not found\n");
+			goto fail_parse;
+		}
+
+		if (of_property_read_u32_array(child_np,
+			"nvidia,win_mempool_buffer_entries",
+			imp_results->pool_config_entries_win,
+			win_cnt)) {
+			dev_err(&pdev->dev,
+			"nvidia,win_mempool_buffer_entries not found\n");
+			goto fail_parse;
+		}
+		if (of_property_read_u32_array(child_np,
+			"nvidia,win_thread_groups",
+			imp_results->thread_group_win, win_cnt)) {
+			dev_err(&pdev->dev,
+			"nvidia,win_thread_groups not found\n");
+			goto fail_parse;
+		}
+	}
+
+	return 0;
+fail_parse:
+	return -EINVAL;
+}
+
+int parse_imp_cursor_values(struct device_node *child_np,
+			struct platform_device *pdev,
+			struct tegra_dc_ext_imp_settings *settings)
+{
+	u32 head_cnt = tegra_dc_get_numof_dispheads();
+	u32 head_mapping[head_cnt];
+	u32 head_values[head_cnt];
+	int j = 0;
+	struct tegra_dc_ext_imp_head_results
+		*imp_results = settings->imp_results;
+
+	if (of_property_read_u32_array(child_np,
+		"nvidia,imp_head_mapping",
+		head_mapping, head_cnt)) {
+		dev_err(&pdev->dev, "head mapping not found\n");
+		goto fail_parse;
+	}
+
+	if (of_property_read_u32_array(child_np,
+		"nvidia,cursor_fetch_meter_slots",
+		head_values, head_cnt)) {
+		dev_err(&pdev->dev,
+		"cursor fetch meter slots not found\n");
+		goto fail_parse;
+	}
+	for (j = 0; j < head_cnt; j++) {
+		imp_results[head_mapping[j]].
+		metering_slots_value_cursor =
+				head_values[j];
+	}
+
+	if (of_property_read_u32_array(child_np,
+		"nvidia,cursor_dvfs_watermark_values",
+		head_values, head_cnt)) {
+		dev_err(&pdev->dev,
+		"cursor dvfs watermark values not found\n");
+		goto fail_parse;
+	}
+	for (j = 0; j < head_cnt; j++) {
+		imp_results[head_mapping[j]].
+		thresh_lwm_dvfs_cursor =
+				head_values[j];
+	}
+
+	if (of_property_read_u32_array(child_np,
+		"nvidia,cursor_pipe_meter_values",
+		head_values, head_cnt)) {
+		dev_err(&pdev->dev,
+		"cursor pipe meter values not found\n");
+		goto fail_parse;
+	}
+	for (j = 0; j < head_cnt; j++) {
+		imp_results[head_mapping[j]].
+		pipe_meter_value_cursor =
+				head_values[j];
+	}
+
+	if (of_property_read_u32_array(child_np,
+		"nvidia,cursor_mempool_buffer_entries",
+		head_values, head_cnt)) {
+		dev_err(&pdev->dev,
+		"cursor mempool buffer entries not found\n");
+		goto fail_parse;
+	}
+	for (j = 0; j < head_cnt; j++) {
+		imp_results[head_mapping[j]].
+		pool_config_entries_cursor =
+				head_values[j];
+	}
+
+	return 0;
+fail_parse:
+	return -EINVAL;
+}
+
+int tegra_dc_parse_imp_data(struct device_node *imp_np,
+				struct platform_device *pdev,
+				struct nvdisp_imp_table *imp_table)
+{
+	struct device_node *child_np = NULL;
+	int i = 0, ret = 0;
+
+	imp_table->entries = of_get_child_count(imp_np);
+
+	if (!imp_table->entries) {
+		dev_err(&pdev->dev, "imp settings not found\n");
+		return -EINVAL;
+	}
+
+	imp_table->settings = devm_kzalloc(&pdev->dev,
+		sizeof(struct tegra_dc_ext_imp_settings) * imp_table->entries,
+								GFP_KERNEL);
+
+	if (!imp_table->settings)
+		return -ENOMEM;
+
+	for_each_child_of_node(imp_np, child_np) {
+		struct tegra_dc_ext_imp_settings *settings = NULL;
+
+		settings = &imp_table->settings[i];
+
+		ret = of_property_read_u64(child_np,
+			"nvidia,total_disp_bw_with_catchup",
+			&settings->total_display_iso_bw_kbps);
+		if (ret) {
+			dev_err(&pdev->dev, "Total iso bw not found\n");
+			goto fail_parse;
+		}
+
+		if (of_property_read_u64(child_np,
+			"nvidia,total_disp_bw_without_catchup",
+			&settings->required_total_bw_kbps)) {
+			dev_err(&pdev->dev, "Total Req bw not found\n");
+			goto fail_parse;
+		}
+
+		if (of_property_read_u64(child_np,
+			"nvidia,disp_emc_floor",
+			&settings->proposed_emc_hz)) {
+			dev_err(&pdev->dev, "EMC Floor not found\n");
+			goto fail_parse;
+		}
+
+		if (of_property_read_u64(child_np,
+			"nvidia,disp_min_hubclk",
+			&settings->hubclk)) {
+			dev_err(&pdev->dev, "hub clk not found\n");
+			goto fail_parse;
+		}
+
+		if (of_property_read_u32(child_np,
+			"nvidia,total_win_fetch_slots",
+			&settings->window_slots_value)) {
+			dev_err(&pdev->dev, "win slot values not found\n");
+			goto fail_parse;
+		}
+
+		if (of_property_read_u32(child_np,
+			"nvidia,total_cursor_fetch_slots",
+			&settings->cursor_slots_value)) {
+			dev_err(&pdev->dev, "cursor slot values not found\n");
+			goto fail_parse;
+		}
+
+		/* Parse and Assign win parameters */
+		parse_imp_windows_values(child_np, pdev, settings);
+
+		/* Parse and Assign cursor parameters */
+		parse_imp_cursor_values(child_np, pdev, settings);
+
+		of_node_put(child_np);
+		i++;
+	} /*for each child*/
+	return 0;
+
+fail_parse:
+	of_node_put(child_np);
+	kfree(imp_table->settings);
+	return -EINVAL;
+}
+
 struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	struct platform_device *ndev)
 {
@@ -3029,8 +3261,10 @@ struct tegra_dc_common_platform_data
 {
 	struct tegra_dc_common_platform_data *pdata;
 	struct device_node *np = pdev->dev.of_node;
+	struct device_node *imp_np = NULL;
 
 	u32 temp;
+	int status = 0;
 	pdata = devm_kzalloc(&pdev->dev,
 		sizeof(struct tegra_dc_common_platform_data), GFP_KERNEL);
 	if (!pdata) {
@@ -3045,6 +3279,24 @@ struct tegra_dc_common_platform_data
 		goto fail_parse;
 	}
 
+
+	imp_np = of_parse_phandle(np, "nvidia,disp_imp_table", 0);
+
+	if (imp_np)
+		status = of_device_is_available(imp_np);
+
+	if (status) {
+		pdata->imp_table = devm_kzalloc(&pdev->dev,
+				sizeof(struct nvdisp_imp_table), GFP_KERNEL);
+
+		if (!pdata->imp_table)
+			goto fail_parse;
+
+		if (tegra_dc_parse_imp_data(imp_np, pdev, pdata->imp_table)) {
+			kfree(pdata->imp_table);
+			pdata->imp_table = NULL;
+		}
+	}
 	return pdata;
 
 fail_parse:

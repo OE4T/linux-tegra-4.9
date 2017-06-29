@@ -172,6 +172,12 @@ struct tegra_dc_common {
 	 * to program DC_CMD_STATE_CONTROL register.
 	 */
 	wait_queue_head_t	prgrm_reg_reqs_wq;
+	/**
+	 * @imp_table: Holds platform data of IHUB settings for all
+	 * windows and heads.
+	 */
+	struct nvdisp_imp_table *imp_table;
+
 #ifdef CONFIG_DEBUG_FS
 	struct dentry	*debugdir;
 #endif
@@ -179,13 +185,14 @@ struct tegra_dc_common {
 
 /**
  * struct tegra_dc_common_platform_data- This is used to store dc_common
- * specific data from the device tree. Currently we just have one member.
- * Might expand in future.
- * @valid_heads: Same usage as valid_heads in tegra_dc_common. Please see
- * above for details.
+ * specific data from the device tree.
+ * @valid_heads: Same usage as valid_heads in tegra_dc_common.
+ * @imp_table: IMP platform data.
+ * Please see above for details.
  */
 struct tegra_dc_common_platform_data {
 	u8 valid_heads;
+	struct nvdisp_imp_table *imp_table;
 };
 
 /*
@@ -207,4 +214,7 @@ int tegra_dc_common_get_frm_lock_params(
 
 int tegra_dc_common_set_frm_lock_params(
 		struct tegra_dc_ext_control_frm_lck_params *params);
+
+struct nvdisp_imp_table
+	*tegra_dc_common_get_imp_table(void);
 #endif

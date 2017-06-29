@@ -39,6 +39,7 @@
 #include "dp.h"
 #include "hw_nvdisp_nvdisp.h"
 #include "hw_win_nvdisp.h"
+#include "dc_common.h"
 
 DEFINE_MUTEX(tegra_nvdisp_lock);
 
@@ -1054,6 +1055,7 @@ static void _tegra_nvdisp_init_imp_wqs(void)
 static void _tegra_nvdisp_init_default_imp_settings(void)
 {
 	int i, j;
+	struct nvdisp_imp_table *imp_table;
 
 	_tegra_nvdisp_init_imp_wqs();
 
@@ -1061,28 +1063,50 @@ static void _tegra_nvdisp_init_default_imp_settings(void)
 	if (tegra_platform_is_vdk())
 		return;
 
-	/*
-	 * For now, hardcode the reset values as the defaults. Any fields that
-	 * aren't explicitly filled in here are either deferred or already being
-	 * tracked somewhere else.
-	 */
-	nvdisp_default_imp_settings.window_slots_value = 0x1;
-	nvdisp_default_imp_settings.cursor_slots_value = 0x1;
+	imp_table = tegra_dc_common_get_imp_table();
 
-	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
-		struct tegra_dc_ext_imp_head_results *head_results = NULL;
+	/* If IMP settings are specified in DT, use them. */
 
-		head_results = &nvdisp_default_imp_settings.imp_results[i];
-		head_results->metering_slots_value_cursor = 0x1;
-		head_results->thresh_lwm_dvfs_cursor = 0x0;
-		head_results->pipe_meter_value_cursor = 0x0;
-		head_results->pool_config_entries_cursor = 0x10;
+	if (imp_table && imp_table->valid) {
+		struct tegra_dc_ext_imp_settings *settings =
+			&imp_table->settings[imp_table->chosen_index];
 
-		for (j = 0; j < tegra_dc_get_numof_dispwindows(); j++) {
-			head_results->metering_slots_value_win[j] = 0x1;
-			head_results->thresh_lwm_dvfs_win[j] = 0x0;
-			head_results->pipe_meter_value_win[j] = 0x0;
-			head_results->pool_config_entries_win[j] = 0x331;
+		nvdisp_default_imp_settings.window_slots_value =
+					settings->window_slots_value;
+		nvdisp_default_imp_settings.cursor_slots_value =
+					settings->cursor_slots_value;
+
+		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++)
+			nvdisp_default_imp_settings.imp_results[i] =
+						settings->imp_results[i];
+	} else {
+
+		/*
+		 * For now, hardcode the reset values as the defaults.
+		 * Any fields that aren't explicitly filled in here are
+		 * either deferred or already being tracked somewhere else.
+		 */
+		nvdisp_default_imp_settings.window_slots_value = 0x1;
+		nvdisp_default_imp_settings.cursor_slots_value = 0x1;
+
+		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+			struct tegra_dc_ext_imp_head_results
+						*head_results = NULL;
+
+			head_results =
+				&nvdisp_default_imp_settings.imp_results[i];
+			head_results->metering_slots_value_cursor = 0x1;
+			head_results->thresh_lwm_dvfs_cursor = 0x0;
+			head_results->pipe_meter_value_cursor = 0x0;
+			head_results->pool_config_entries_cursor = 0x10;
+
+			for (j = 0; j < tegra_dc_get_numof_dispwindows(); j++) {
+				head_results->metering_slots_value_win[j] = 0x1;
+				head_results->thresh_lwm_dvfs_win[j] = 0x0;
+				head_results->pipe_meter_value_win[j] = 0x0;
+				head_results->pool_config_entries_win[j] =
+									0x331;
+			}
 		}
 	}
 }
@@ -1746,20 +1770,58 @@ static int tegra_nvdisp_cursor_init(struct tegra_dc *dc)
 	return 0;
 }
 
+/*
+ * In init_default_imp_settings function we
+ * assigned ihub values of all windows to each head.
+ * Now assign only ihub values of windows which are
+ * owned by head.
+ */
+static void tegra_nvdisp_assign_win_ihub_values(int win_num,
+		struct tegra_dc_ext_imp_head_results *head_results,
+		struct tegra_dc_ext_imp_head_results *pd_hd_rslts)
+{
+	int j = 0, num_wins = tegra_dc_get_numof_dispwindows();
+	int k = head_results->num_windows;
+
+	for (j = 0; j < num_wins; j++) {
+		if (win_num == pd_hd_rslts->win_ids[j]) {
+			head_results->metering_slots_value_win[k] =
+				pd_hd_rslts->metering_slots_value_win[j];
+			head_results->thresh_lwm_dvfs_win[k] =
+					pd_hd_rslts->thresh_lwm_dvfs_win[j];
+			head_results->pipe_meter_value_win[k] =
+					pd_hd_rslts->pipe_meter_value_win[j];
+			head_results->pool_config_entries_win[k] =
+					pd_hd_rslts->pool_config_entries_win[j];
+			break;
+		}
+	}
+}
+
 static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 {
 	u32 update_mask = nvdisp_cmd_state_ctrl_common_act_update_enable_f();
 	u32 act_req_mask = nvdisp_cmd_state_ctrl_common_act_req_enable_f();
 	struct tegra_dc_ext_imp_head_results *head_results = NULL;
+	struct tegra_dc_ext_imp_head_results *pd_hd_rslts = NULL;
 	int num_wins = tegra_dc_get_numof_dispwindows();
 	int idx = 0, ret = 0;
 	int i = -1;
+	struct nvdisp_imp_table *imp_table = NULL;
 
 	/* Skip IMP init on VDK. */
 	if (!tegra_platform_is_vdk()) {
 		head_results =
 			&nvdisp_default_imp_settings.imp_results[dc->ctrl_num];
 		head_results->num_windows = 0;
+
+		imp_table = tegra_dc_common_get_imp_table();
+		if (imp_table && imp_table->valid) {
+			int index = imp_table->chosen_index;
+
+			pd_hd_rslts = &imp_table->settings[index].
+					imp_results[dc->ctrl_num];
+		}
 	}
 
 	mutex_lock(&tegra_nvdisp_lock);
@@ -1787,6 +1849,11 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 				continue;
 
 			head_results->win_ids[head_results->num_windows] = idx;
+
+			 /* If platform values present, use them. */
+			if (pd_hd_rslts)
+				tegra_nvdisp_assign_win_ihub_values(idx,
+						head_results, pd_hd_rslts);
 			head_results->num_windows += 1;
 		}
 	}
@@ -3498,7 +3565,6 @@ static void tegra_nvdisp_setup_default_imp_win_state(
 
 		head_res = &ext_settings->imp_results[dc->ctrl_num];
 		head_res->head_active = true;
-		head_res->num_windows = 0;
 		winmask = dc->pdata->win_mask;
 		for_each_set_bit(win_idx, &winmask, num_wins) {
 			struct tegra_dc_win *win = NULL;
@@ -3507,7 +3573,6 @@ static void tegra_nvdisp_setup_default_imp_win_state(
 			if (!win || !win->dc)
 				continue;
 
-			head_res->win_ids[head_res->num_windows++] = win_idx;
 			nvdisp_win_write(win, dc->ctrl_num,
 							win_set_control_r());
 		}

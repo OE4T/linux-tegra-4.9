@@ -23,6 +23,7 @@
 #include "dc.h"
 #include "dc_priv.h"
 #include "nvdisp.h"
+#include "dc_common.h"
 
 /* Elements for sysfs access */
 #define BW_ATTR(__name, __show, __store) \
@@ -97,33 +98,12 @@ static struct kobject *common_bw_kobj;
  *	- Fullscreen
  */
 static struct nvdisp_bandwidth_config max_bw_configs[] = {
-	/* 1 window */
+	/* 6 windows */
 	{
-		.iso_bw = 3136300,		/* 3136.3   MB/s */
-		.total_bw = 2851200,		/* 2851.2   MB/s */
-		.emc_la_floor = 102000000,	/* 102      MHz  */
-		.hubclk = 169820000,		/* 169.82   MHz  */
-	},
-	/* 2 windows */
-	{
-		.iso_bw = 5924200,		/* 5924.2   MB/s */
-		.total_bw = 5385600,		/* 5385.6   MB/s */
-		.emc_la_floor = 204000000,	/* 204      MHz  */
-		.hubclk = 207380000,		/* 207.38   MHz  */
-	},
-	/* 3 windows */
-	{
-		.iso_bw = 8363500,		/* 8363.5   MB/s */
-		.total_bw = 7603200,		/* 7603.2   MB/s */
-		.emc_la_floor = 332800000,	/* 332.8    MHz  */
-		.hubclk = 244940000,		/* 244.94   MHz  */
-	},
-	/* 4 windows */
-	{
-		.iso_bw = 11151400,		/* 11151.14 MB/s */
-		.total_bw = 10137600,		/* 10137.6  MB/s */
-		.emc_la_floor = 332800000,	/* 332.8    MHz  */
-		.hubclk = 282500000,		/* 282.5    MHz  */
+		.iso_bw = 16727000,		/* 16727    MB/s */
+		.total_bw = 15206400,		/* 15206.4  MB/s */
+		.emc_la_floor = 665600000,	/* 665.6    MHz  */
+		.hubclk = 357620000,		/* 357.62   MHz  */
 	},
 	/* 5 windows */
 	{
@@ -132,12 +112,33 @@ static struct nvdisp_bandwidth_config max_bw_configs[] = {
 		.emc_la_floor = 531200000,	/* 531.2    MHz  */
 		.hubclk = 320060000,		/* 320.06   MHz  */
 	},
-	/* 6 windows */
+	/* 4 windows */
 	{
-		.iso_bw = 16727000,		/* 16727    MB/s */
-		.total_bw = 15206400,		/* 15206.4  MB/s */
-		.emc_la_floor = 665600000,	/* 665.6    MHz  */
-		.hubclk = 357620000,		/* 357.62   MHz  */
+		.iso_bw = 11151400,		/* 11151.14 MB/s */
+		.total_bw = 10137600,		/* 10137.6  MB/s */
+		.emc_la_floor = 332800000,	/* 332.8    MHz  */
+		.hubclk = 282500000,		/* 282.5    MHz  */
+	},
+	/* 3 windows */
+	{
+		.iso_bw = 8363500,		/* 8363.5   MB/s */
+		.total_bw = 7603200,		/* 7603.2   MB/s */
+		.emc_la_floor = 332800000,	/* 332.8    MHz  */
+		.hubclk = 244940000,		/* 244.94   MHz  */
+	},
+	/* 2 windows */
+	{
+		.iso_bw = 5924200,		/* 5924.2   MB/s */
+		.total_bw = 5385600,		/* 5385.6   MB/s */
+		.emc_la_floor = 204000000,	/* 204      MHz  */
+		.hubclk = 207380000,		/* 207.38   MHz  */
+	},
+	/* 1 window */
+	{
+		.iso_bw = 3136300,		/* 3136.3   MB/s */
+		.total_bw = 2851200,		/* 2851.2   MB/s */
+		.emc_la_floor = 102000000,	/* 102      MHz  */
+		.hubclk = 169820000,		/* 169.82   MHz  */
 	},
 };
 
@@ -555,6 +556,11 @@ void tegra_nvdisp_get_max_bw_cfg(struct nvdisp_bandwidth_config *max_cfg)
 	*max_cfg = ihub_bw_info.max_config;
 }
 
+/*
+ * Registers the max possible bandwidth configuration
+ * from platform data or max_bw_configs[].
+ * return 0 on success and -E2BIG/ENOENT/ENOMEM on failure
+ */
 static int tegra_nvdisp_bandwidth_register_max_config(
 					enum tegra_iso_client iso_client)
 {
@@ -563,6 +569,10 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 	u32 total_iso_bw;
 	bool found_max_cfg = false;
 	int ret = 0, i;
+	u8 bw_cfg_entries = ARRAY_SIZE(max_bw_configs);
+	struct nvdisp_bandwidth_config *bw_cfg_table = max_bw_configs;
+	struct nvdisp_imp_table *imp_table = NULL;
+	struct nvdisp_bandwidth_config *pdata_cfg = NULL;
 
 	/* DRAM frequency (Hz) */
 	max_emc_rate = tegra_bwmgr_get_max_emc_rate();
@@ -579,13 +589,41 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 	if (max_emc_rate == 0 || total_iso_bw == 0)
 		return 0;
 
+	imp_table = tegra_dc_common_get_imp_table();
+
+
+	/* If platform settings present, register them */
+	if (imp_table) {
+		imp_table->valid = true;
+		pdata_cfg = kcalloc(imp_table->entries,
+				sizeof(*pdata_cfg), GFP_KERNEL);
+
+		if (!pdata_cfg)
+			return -ENOMEM;
+
+		for (i = 0; i < imp_table->entries; i++) {
+			struct nvdisp_bandwidth_config
+					*cfg = &pdata_cfg[i];
+			struct tegra_dc_ext_imp_settings
+					*settings = &imp_table->settings[i];
+
+			cfg->iso_bw = settings->total_display_iso_bw_kbps;
+			cfg->total_bw = settings->required_total_bw_kbps;
+			cfg->hubclk = settings->hubclk;
+			cfg->emc_la_floor = settings->proposed_emc_hz;
+		}
+		bw_cfg_table = pdata_cfg;
+		bw_cfg_entries = imp_table->entries;
+	}
+
 	/*
-	 * Start with the highest-bw config and continue to fallback until we
-	 * find one that works.
+	 * Start with the highest-bw config and continue
+	 * to fallback until we find one that works.
 	 */
-	for (i = ARRAY_SIZE(max_bw_configs) - 1; i >= 0; i--) {
-		struct nvdisp_bandwidth_config *cfg = &max_bw_configs[i];
+
+	for (i = 0; i <= bw_cfg_entries - 1; i++) {
 		u32 cfg_dram_freq = 0;
+		struct nvdisp_bandwidth_config *cfg = &bw_cfg_table[i];
 
 		/*
 		 * Check that our dedicated request doesn't exceed the total ISO
@@ -598,9 +636,9 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 
 		/* Make sure isomgr registration succeeds. */
 		isomgr_handle = tegra_isomgr_register(iso_client,
-					cfg->iso_bw,
-					tegra_nvdisp_bandwidth_renegotiate,
-					&ihub_bw_info);
+				cfg->iso_bw,
+				tegra_nvdisp_bandwidth_renegotiate,
+				&ihub_bw_info);
 		if (IS_ERR_OR_NULL(isomgr_handle)) {
 			ret = -ENOENT;
 			continue;
@@ -608,7 +646,7 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 
 		/*
 		 * Check that the required EMC floor doesn't exceed the max EMC
-		 * rate allowed.
+		 * exceed the max EMC rate allowed.
 		 */
 		cfg_dram_freq = cfg->emc_la_floor * emc_to_dram_factor;
 		if (tegra_bwmgr_round_rate(cfg_dram_freq) > max_emc_rate) {
@@ -628,6 +666,13 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 		pr_info("%s: max config hubclk = %u Hz\n",
 			__func__, cfg->hubclk);
 
+		/*
+		 * DT has config parameters and registered from one
+		 * of available set, save here registered set.
+		 */
+		if (imp_table && imp_table->valid)
+			imp_table->chosen_index = i;
+
 		break;
 	}
 
@@ -636,6 +681,7 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 	else
 		pr_err("%s: couldn't find valid max config!\n", __func__);
 
+	kfree(pdata_cfg);
 	return ret;
 }
 

@@ -26,6 +26,7 @@
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/string.h>
@@ -108,15 +109,22 @@ static int camrtc_show_reboot(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
 	struct device *rce_dev = camrtc_get_device(ch);
-	int ret;
+	int ret = 0;
+
+	/* Make rtcpu online */
+	ret = tegra_ivc_channel_runtime_get(ch);
+	if (ret < 0)
+		goto error;
 
 	ret = tegra_camrtc_reboot(rce_dev);
 	if (ret)
-		return ret;
+		goto error;
 
 	seq_puts(file, "0\n");
 
-	return 0;
+error:
+	tegra_ivc_channel_runtime_put(ch);
+	return ret;
 }
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_reboot, camrtc_show_reboot);
@@ -132,15 +140,22 @@ static int camrtc_show_forced_reset_restore(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
 	struct device *rce_dev = camrtc_get_device(ch);
-	int ret;
+	int ret = 0;
+
+	/* Make rtcpu online */
+	ret = tegra_ivc_channel_runtime_get(ch);
+	if (ret < 0)
+		goto error;
 
 	ret = tegra_camrtc_restore(rce_dev);
 	if (ret)
-		return ret;
+		goto error;
 
 	seq_puts(file, "0\n");
 
-	return 0;
+error:
+	tegra_ivc_channel_runtime_put(ch);
+	return ret;
 }
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_forced_reset_restore,

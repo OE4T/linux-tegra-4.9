@@ -124,6 +124,10 @@
 		};
 	};
 
+        cpuidle {
+		cc4-no-retention;
+        };
+
 	soctherm: soctherm@0x700E2000 {
 		status = "disabled";
 	};

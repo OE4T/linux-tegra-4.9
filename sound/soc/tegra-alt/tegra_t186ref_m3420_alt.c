@@ -122,7 +122,7 @@ static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_pcm_stream *stream;
 	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx, dai_fmt;
+	unsigned int idx, dai_fmt, bclk_ratio;
 	int err;
 
 	mutex_lock(&machine->lock);
@@ -135,6 +135,18 @@ static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
 
 	stream = (struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	stream->rate_min = params_rate(params);
+
+	bclk_ratio = tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]);
+	if (bclk_ratio >= 0) {
+		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+						 bclk_ratio);
+
+		if (err < 0) {
+			dev_err(card->dev, "Failed to set bclk ratio for %s\n",
+				card->rtd[idx].dai_link->name);
+			return err;
+		}
+	}
 
 	/*
 	 * For the M3420 platform one of the Tegra I2S channels, I2S1,

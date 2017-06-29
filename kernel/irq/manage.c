@@ -1221,6 +1221,14 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 		new->flags &= ~IRQF_ONESHOT;
 
 	mutex_lock(&desc->request_mutex);
+	if (!desc->action) {
+		ret = irq_request_resources(desc);
+		if (ret) {
+			pr_err("Failed to request resources for %s (irq %d) on irqchip %s\n",
+			       new->name, irq, desc->irq_data.chip->name);
+			goto out_cpumask;
+		}
+	}
 
 	chip_bus_lock(desc);
 
@@ -1322,13 +1330,6 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	}
 
 	if (!shared) {
-		ret = irq_request_resources(desc);
-		if (ret) {
-			pr_err("Failed to request resources for %s (irq %d) on irqchip %s\n",
-			       new->name, irq, desc->irq_data.chip->name);
-			goto out_mask;
-		}
-
 		init_waitqueue_head(&desc->wait_for_threads);
 
 		/* Setup the type (level, edge polarity) if configured: */
@@ -1430,6 +1431,11 @@ out_mask:
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
 
 	chip_bus_sync_unlock(desc);
+
+	if (!desc->action)
+		irq_release_resources(desc);
+
+out_cpumask:
 	free_cpumask_var(mask);
 
 	mutex_unlock(&desc->request_mutex);
@@ -1530,7 +1536,6 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 	if (!desc->action) {
 		irq_settings_clr_disable_unlazy(desc);
 		irq_shutdown(desc);
-		irq_release_resources(desc);
 	}
 
 #ifdef CONFIG_SMP
@@ -1571,6 +1576,9 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 			put_task_struct(action->secondary->thread);
 		}
 	}
+
+	if (!desc->action)
+		irq_release_resources(desc);
 
 	mutex_unlock(&desc->request_mutex);
 

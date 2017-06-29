@@ -49,6 +49,7 @@ enum tegra210_idle_index {
 
 struct tegra210_pm_data {
 	bool cc4_no_retention;
+	bool cc3_no_hvc;
 	/* Idle state index array */
 	int idle_state_idx[IDLE_STATE_MAX];
 };
@@ -119,8 +120,18 @@ static int tegra_bpmp_tolerate_idle(int cpu, int ccxtl, int scxtl)
 
 static int proc_idle_state_enter(int cpu, int idle_state)
 {
-	flowctrl_write_cc4_ctrl(cpu,
-		t210_pm_data.cc4_no_retention ? 0xfffffffd : 0xffffffff);
+	u32 ctrl;
+
+	ctrl = 0xffffffff;
+
+	if (t210_pm_data.cc4_no_retention)
+		ctrl &= ~BIT(1);
+
+	/* We don't allow retention without HVC */
+	if (t210_pm_data.cc3_no_hvc)
+		ctrl &= ~(BIT(1) | BIT(0));
+
+	flowctrl_write_cc4_ctrl(cpu, ctrl);
 
 	return 0;
 }
@@ -227,6 +238,9 @@ static int tegra210_cpuidle_cc4_probe(struct platform_device *pdev)
 	/* T210 BPMP supports CC4 retention only with max77621 or ovr2. */
 	t210_pm_data.cc4_no_retention = of_property_read_bool(dev->of_node,
 							"cc4-no-retention");
+
+	t210_pm_data.cc3_no_hvc = of_property_read_bool(dev->of_node,
+							"cc3-no-hvc");
 
 	/* If cc4-microvolt is not found, assume not max77621 */
 	if (of_property_read_u32(dev->of_node, "cc4-microvolt", &uv))

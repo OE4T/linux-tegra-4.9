@@ -843,3 +843,136 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 		batch->need_tlb_invalidate = true;
 	}
 }
+
+u32 __nvgpu_pte_words(struct gk20a *g)
+{
+	const struct gk20a_mmu_level *l = g->ops.mm.get_mmu_levels(g, SZ_64K);
+	const struct gk20a_mmu_level *next_l;
+
+	/*
+	 * Iterate to the bottom GMMU level - the PTE level. The levels array
+	 * is always NULL terminated (by the update_entry function).
+	 */
+	do {
+		next_l = l + 1;
+		if (!next_l->update_entry)
+			break;
+
+		l++;
+	} while (true);
+
+	return (u32)(l->entry_size / sizeof(u32));
+}
+
+/*
+ * Recursively walk the pages tables to find the PTE.
+ */
+static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
+			      struct nvgpu_gmmu_pd *pd,
+			      u64 vaddr, int lvl,
+			      struct nvgpu_gmmu_attrs *attrs,
+			      u32 *data,
+			      struct nvgpu_gmmu_pd **pd_out, u32 *pd_idx_out,
+			      u32 *pd_offs_out)
+{
+	const struct gk20a_mmu_level *l      = &vm->mmu_levels[lvl];
+	const struct gk20a_mmu_level *next_l = &vm->mmu_levels[lvl + 1];
+	u32 pd_idx = pd_index(l, vaddr, attrs);
+	u32 pte_base;
+	u32 pte_size;
+	u32 i;
+
+	/*
+	 * If this isn't the final level (i.e there's a valid next level)
+	 * then find the next level PD and recurse.
+	 */
+	if (next_l->update_entry) {
+		struct nvgpu_gmmu_pd *pd_next = pd->entries + pd_idx;
+
+		/* Invalid entry! */
+		if (!pd_next->mem)
+			return -EINVAL;
+
+		return __nvgpu_locate_pte(g, vm, pd_next,
+					  vaddr, lvl + 1, attrs,
+					  data, pd_out, pd_idx_out,
+					  pd_offs_out);
+	}
+
+	if (!pd->mem)
+		return -EINVAL;
+
+	/*
+	 * Take into account the real offset into the nvgpu_mem since the PD
+	 * may be located at an offset other than 0 (due to PD packing).
+	 */
+	pte_base = (pd->mem_offs / sizeof(u32)) +
+		pd_offset_from_index(l, pd_idx);
+	pte_size = (u32)(l->entry_size / sizeof(u32));
+
+	if (data) {
+		map_gmmu_pages(g, pd);
+		for (i = 0; i < pte_size; i++)
+			data[i] = nvgpu_mem_rd32(g, pd->mem, pte_base + i);
+		unmap_gmmu_pages(g, pd);
+	}
+
+	if (pd_out)
+		*pd_out = pd;
+
+	if (pd_idx_out)
+		*pd_idx_out = pd_idx;
+
+	if (pd_offs_out)
+		*pd_offs_out = pd_offset_from_index(l, pd_idx);
+
+	return 0;
+}
+
+int __nvgpu_get_pte(struct gk20a *g, struct vm_gk20a *vm, u64 vaddr, u32 *pte)
+{
+	struct nvgpu_gmmu_attrs attrs = {
+		.pgsz = 0,
+	};
+
+	return __nvgpu_locate_pte(g, vm, &vm->pdb,
+				  vaddr, 0, &attrs,
+				  pte, NULL, NULL, NULL);
+}
+
+int __nvgpu_set_pte(struct gk20a *g, struct vm_gk20a *vm, u64 vaddr, u32 *pte)
+{
+	struct nvgpu_gmmu_pd *pd;
+	u32 pd_idx, pd_offs, pte_size, i;
+	int err;
+	struct nvgpu_gmmu_attrs attrs = {
+		.pgsz = 0,
+	};
+	struct nvgpu_gmmu_attrs *attrs_ptr = &attrs;
+
+	err = __nvgpu_locate_pte(g, vm, &vm->pdb,
+				 vaddr, 0, &attrs,
+				 NULL, &pd, &pd_idx, &pd_offs);
+	if (err)
+		return err;
+
+	pte_size = __nvgpu_pte_words(g);
+
+	map_gmmu_pages(g, pd);
+	for (i = 0; i < pte_size; i++) {
+		pd_write(g, pd, pd_offs + i, pte[i]);
+		pte_dbg(g, attrs_ptr,
+			"PTE: idx=%-4u (%d) 0x%08x", pd_idx, i, pte[i]);
+	}
+	unmap_gmmu_pages(g, pd);
+
+	/*
+	 * Ensures the pd_write()s are done. The pd_write() does not do this
+	 * since generally there's lots of pd_write()s called one after another.
+	 * There probably also needs to be a TLB invalidate as well but we leave
+	 * that to the caller of this function.
+	 */
+	wmb();
+
+	return 0;
+}

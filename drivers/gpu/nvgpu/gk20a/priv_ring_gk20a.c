@@ -95,8 +95,3 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	if (retry <= 0)
 		nvgpu_warn(g, "priv ringmaster cmd ack too many retries");
 }
-
-void gk20a_init_priv_ring(struct gpu_ops *gops)
-{
-	gops->priv_ring.isr = gk20a_priv_ring_isr;
-}

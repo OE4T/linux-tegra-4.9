@@ -314,6 +314,9 @@ static const struct gpu_ops gp106_ops = {
 	.falcon = {
 		.falcon_hal_sw_init = gp106_falcon_hal_sw_init,
 	},
+	.priv_ring = {
+		.isr = gp10b_priv_ring_isr,
+	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,
 	.bios_init = gm206_bios_init,
@@ -338,6 +341,7 @@ int gp106_init_hal(struct gk20a *g)
 #endif
 	gops->xve = gp106_ops.xve;
 	gops->falcon = gp106_ops.falcon;
+	gops->priv_ring = gp106_ops.priv_ring;
 
 	/* Lone functions */
 	gops->get_litter_value = gp106_ops.get_litter_value;
@@ -349,8 +353,8 @@ int gp106_init_hal(struct gk20a *g)
 	gops->securegpccs = 1;
 	gops->pmupstate = true;
 
+
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
-	gp10b_init_priv_ring(gops);
 	gp106_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);
 	gp106_init_fb(gops);

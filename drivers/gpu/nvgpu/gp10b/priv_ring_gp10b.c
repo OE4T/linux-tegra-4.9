@@ -27,7 +27,7 @@
 #include <nvgpu/hw/gp10b/hw_pri_ringstation_sys_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_pri_ringstation_gpc_gp10b.h>
 
-static void gp10b_priv_ring_isr(struct gk20a *g)
+void gp10b_priv_ring_isr(struct gk20a *g)
 {
 	u32 status0, status1;
 	u32 cmd;
@@ -75,9 +75,4 @@ static void gp10b_priv_ring_isr(struct gk20a *g)
 
 	if (retry <= 0)
 		nvgpu_warn(g, "priv ringmaster cmd ack too many retries");
-}
-
-void gp10b_init_priv_ring(struct gpu_ops *gops)
-{
-	gops->priv_ring.isr = gp10b_priv_ring_isr;
 }

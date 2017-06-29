@@ -15,8 +15,8 @@
 #ifndef __PRIV_RING_GP10B_H__
 #define __PRIV_RING_GP10B_H__
 
-struct gpu_ops;
+struct gk20a;
 
-void gp10b_init_priv_ring(struct gpu_ops *gops);
+void gp10b_priv_ring_isr(struct gk20a *g);
 
 #endif /*__PRIV_RING_GP10B_H__*/

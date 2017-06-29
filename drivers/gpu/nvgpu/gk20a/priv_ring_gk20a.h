@@ -19,6 +19,5 @@ struct gpu_ops;
 
 void gk20a_priv_ring_isr(struct gk20a *g);
 void gk20a_enable_priv_ring(struct gk20a *g);
-void gk20a_init_priv_ring(struct gpu_ops *gops);
 
 #endif /*__PRIV_RING_GK20A_H__*/

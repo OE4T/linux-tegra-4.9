@@ -256,6 +256,9 @@ static const struct gpu_ops gm20b_ops = {
 	.falcon = {
 		.falcon_hal_sw_init = gk20a_falcon_hal_sw_init,
 	},
+	.priv_ring = {
+		.isr = gk20a_priv_ring_isr,
+	},
 	.chip_init_gpu_characteristics = gk20a_init_gpu_characteristics,
 	.get_litter_value = gm20b_get_litter_value,
 };
@@ -277,6 +280,8 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->css = gm20b_ops.css;
 #endif
 	gops->falcon = gm20b_ops.falcon;
+
+	gops->priv_ring = gm20b_ops.priv_ring;
 
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =
@@ -312,9 +317,7 @@ int gm20b_init_hal(struct gk20a *g)
 		}
 	}
 #endif
-
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
-	gk20a_init_priv_ring(gops);
 	gm20b_init_gr(gops);
 	gm20b_init_fb(gops);
 	gm20b_init_fifo(gops);

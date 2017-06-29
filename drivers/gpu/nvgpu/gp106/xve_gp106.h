@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -97,5 +97,18 @@ enum xv_speed_change_steps {
 #define xv_sc_dbg(step, fmt, args...)					\
 	xv_dbg("[%d] %15s | " fmt, step, __stringify(step), ##args)
 
+void xve_xve_writel_gp106(struct gk20a *g, u32 reg, u32 val);
+u32 xve_xve_readl_gp106(struct gk20a *g, u32 reg);
+void xve_reset_gpu_gp106(struct gk20a *g);
+int xve_get_speed_gp106(struct gk20a *g, u32 *xve_link_speed);
+void xve_disable_aspm_gp106(struct gk20a *g);
+int xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed);
+void xve_available_speeds_gp106(struct gk20a *g, u32 *speed_mask);
+int xve_sw_init_gp106(struct device *dev);
+#if defined(CONFIG_PCI_MSI)
+void xve_rearm_msi_gp106(struct gk20a *g);
+#endif
+void xve_enable_shadow_rom_gp106(struct gk20a *g);
+void xve_disable_shadow_rom_gp106(struct gk20a *g);
 
 #endif

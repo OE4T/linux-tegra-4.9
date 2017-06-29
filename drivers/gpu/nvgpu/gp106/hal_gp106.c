@@ -239,6 +239,21 @@ static const struct gpu_ops gp106_ops = {
 		.pg_gr_load_gating_prod =
 			gr_gp106_pg_gr_load_gating_prod,
 	},
+	.xve = {
+		.sw_init          = xve_sw_init_gp106,
+		.get_speed        = xve_get_speed_gp106,
+		.set_speed        = xve_set_speed_gp106,
+		.available_speeds = xve_available_speeds_gp106,
+		.xve_readl        = xve_xve_readl_gp106,
+		.xve_writel       = xve_xve_writel_gp106,
+		.disable_aspm     = xve_disable_aspm_gp106,
+		.reset_gpu        = xve_reset_gpu_gp106,
+#if defined(CONFIG_PCI_MSI)
+		.rearm_msi        = xve_rearm_msi_gp106,
+#endif
+		.enable_shadow_rom = xve_enable_shadow_rom_gp106,
+		.disable_shadow_rom = xve_disable_shadow_rom_gp106,
+	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,
 	.bios_init = gm206_bios_init,
@@ -253,6 +268,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gops->ltc = gp106_ops.ltc;
 	gops->clock_gating = gp106_ops.clock_gating;
+	gops->xve = gp106_ops.xve;
 
 	/* Lone functions */
 	gops->get_litter_value = gp106_ops.get_litter_value;
@@ -287,7 +303,6 @@ int gp106_init_hal(struct gk20a *g)
 	gk20a_init_css_ops(gops);
 #endif
 	gp106_init_therm_ops(gops);
-	gp106_init_xve_ops(gops);
 
 	g->name = "gp10x";
 	gops->gr_ctx.use_dma_for_fw_bootstrap = true;

@@ -34,12 +34,12 @@
 
 #define NV_PCFG 0x88000
 
-static void xve_xve_writel_gp106(struct gk20a *g, u32 reg, u32 val)
+void xve_xve_writel_gp106(struct gk20a *g, u32 reg, u32 val)
 {
 	gk20a_writel(g, NV_PCFG + reg, val);
 }
 
-static u32 xve_xve_readl_gp106(struct gk20a *g, u32 reg)
+u32 xve_xve_readl_gp106(struct gk20a *g, u32 reg)
 {
 	return gk20a_readl(g, NV_PCFG + reg);
 }
@@ -47,7 +47,7 @@ static u32 xve_xve_readl_gp106(struct gk20a *g, u32 reg)
 /**
  * Resets the GPU (except the XVE/XP).
  */
-static void xve_reset_gpu_gp106(struct gk20a *g)
+void xve_reset_gpu_gp106(struct gk20a *g)
 {
 	u32 reset;
 
@@ -89,7 +89,7 @@ static void xve_reset_gpu_gp106(struct gk20a *g)
  * bus speed is detected then *@xve_link_speed is not touched and -ENODEV is
  * returned.
  */
-static int xve_get_speed_gp106(struct gk20a *g, u32 *xve_link_speed)
+int xve_get_speed_gp106(struct gk20a *g, u32 *xve_link_speed)
 {
 	u32 status;
 	u32 link_speed, real_link_speed = 0;
@@ -161,7 +161,7 @@ static void set_xve_l1_mask(struct gk20a *g, int status)
 /**
  * Disable ASPM permanently.
  */
-static void xve_disable_aspm_gp106(struct gk20a *g)
+void xve_disable_aspm_gp106(struct gk20a *g)
 {
 	u32 xve_priv;
 
@@ -450,7 +450,7 @@ done:
  *
  * If an error is encountered an appropriate error will be returned.
  */
-static int xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
+int xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 {
 	u32 current_link_speed;
 	int err;
@@ -472,7 +472,7 @@ static int xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 /**
  * Places a bitmask of available speeds for gp106 in @speed_mask.
  */
-static void xve_available_speeds_gp106(struct gk20a *g, u32 *speed_mask)
+void xve_available_speeds_gp106(struct gk20a *g, u32 *speed_mask)
 {
 	*speed_mask = GPU_XVE_SPEED_2P5 | GPU_XVE_SPEED_5P0;
 }
@@ -603,7 +603,7 @@ static const struct file_operations xve_link_control_status_fops = {
 };
 #endif
 
-static int xve_sw_init_gp106(struct device *dev)
+int xve_sw_init_gp106(struct device *dev)
 {
 	int err = -ENODEV;
 #ifdef CONFIG_DEBUG_FS
@@ -638,44 +638,21 @@ fail:
 }
 
 #if defined(CONFIG_PCI_MSI)
-static void xve_rearm_msi_gp106(struct gk20a *g)
+void xve_rearm_msi_gp106(struct gk20a *g)
 {
 	/* We just need to write a dummy val in the CYA_2 offset */
 	g->ops.xve.xve_writel(g, xve_cya_2_r(), 0);
 }
 #endif
 
-static void xve_enable_shadow_rom_gp106(struct gk20a *g)
+void xve_enable_shadow_rom_gp106(struct gk20a *g)
 {
 	g->ops.xve.xve_writel(g, xve_rom_ctrl_r(),
 			xve_rom_ctrl_rom_shadow_enabled_f());
 }
 
-static void xve_disable_shadow_rom_gp106(struct gk20a *g)
+void xve_disable_shadow_rom_gp106(struct gk20a *g)
 {
 	g->ops.xve.xve_writel(g, xve_rom_ctrl_r(),
 			xve_rom_ctrl_rom_shadow_disabled_f());
-}
-
-/*
- * Init the HAL functions and what not. xve_sw_init_gp106() is for initializing
- * all the other stuff like debugfs nodes, etc.
- */
-int gp106_init_xve_ops(struct gpu_ops *gops)
-{
-	gops->xve.sw_init          = xve_sw_init_gp106;
-	gops->xve.get_speed        = xve_get_speed_gp106;
-	gops->xve.set_speed        = xve_set_speed_gp106;
-	gops->xve.available_speeds = xve_available_speeds_gp106;
-	gops->xve.xve_readl        = xve_xve_readl_gp106;
-	gops->xve.xve_writel       = xve_xve_writel_gp106;
-	gops->xve.disable_aspm     = xve_disable_aspm_gp106;
-	gops->xve.reset_gpu        = xve_reset_gpu_gp106;
-#if defined(CONFIG_PCI_MSI)
-	gops->xve.rearm_msi        = xve_rearm_msi_gp106;
-#endif
-	gops->xve.enable_shadow_rom = xve_enable_shadow_rom_gp106;
-	gops->xve.disable_shadow_rom = xve_disable_shadow_rom_gp106;
-
-	return 0;
 }

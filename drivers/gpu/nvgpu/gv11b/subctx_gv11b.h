@@ -25,5 +25,5 @@ void gv11b_free_subctx_header(struct channel_gk20a *c);
 
 int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va);
 
-int gv11b_get_max_subctx_count(struct gk20a *g);
+u32 gv11b_get_max_subctx_count(struct gk20a *g);
 #endif /* __SUBCONTEXT_GV11B_H__ */

@@ -1,6 +1,7 @@
 nvgpu-t19x := ../../../../nvgpu-t19x/drivers/gpu/nvgpu
 
 nvgpu-y += \
+	$(nvgpu-t19x)/common/linux/ioctl_tsg_t19x.o \
 	$(nvgpu-t19x)/gv11b/gv11b.o  \
 	$(nvgpu-t19x)/gv11b/bus_gv11b.o  \
 	$(nvgpu-t19x)/gv11b/mc_gv11b.o  \

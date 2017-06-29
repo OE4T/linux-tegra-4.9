@@ -1,7 +1,7 @@
 /*
  * NVGPU Public Interface Header
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,5 +26,25 @@
 
 #define NVGPU_GPU_ARCH_GV110 0x00000150
 #define NVGPU_GPU_IMPL_GV11B 0x0000000B
+
+/*  subcontexts are available */
+#define NVGPU_GPU_FLAGS_SUPPORT_TSG_SUBCONTEXTS         (1ULL << 22)
+
+struct nvgpu_tsg_bind_channel_ex_args {
+	/* in: channel fd */
+	__s32 channel_fd;
+
+	/* in: VEID in Volta */
+	__u32 subcontext_id;
+
+	__u64 reserved[2];
+};
+
+#define NVGPU_TSG_IOCTL_BIND_CHANNEL_EX \
+	_IOWR(NVGPU_TSG_IOCTL_MAGIC, 11, struct nvgpu_tsg_bind_channel_ex_args)
+
+#define NVGPU_TSG_IOCTL_MAX NVGPU_TSG_IOCTL_BIND_CHANNEL_EX
+
+#define NVGPU_TSG_IOCTL_MAX_ARG	sizeof(struct nvgpu_tsg_bind_channel_ex_args)
 
 #endif /* _UAPI__LINUX_NVGPU_T19X_IOCTL_H_ */

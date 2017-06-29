@@ -1,7 +1,7 @@
 /*
- * GV11B Graphics
+ * NVIDIA T19x Channel info
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,19 +11,14 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "gk20a/gk20a.h"
+#ifndef _NVGPU_CHANNEL_T19X_H_
+#define _NVGPU_CHANNEL_T19X_H_
 
-#include "gv11b/gv11b.h"
+struct channel_t19x {
+	u32 subctx_id;
+	u32 runqueue_sel;
+};
 
-int gv11b_init_gpu_characteristics(struct gk20a *g)
-{
-	gk20a_init_gpu_characteristics(g);
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_TSG_SUBCONTEXTS;
-	return 0;
-}
+#endif

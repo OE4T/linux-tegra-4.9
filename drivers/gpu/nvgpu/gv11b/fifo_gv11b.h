@@ -1,7 +1,7 @@
 /*
  * GV11B Fifo
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,8 @@
 
 #define GR_RUNQUE			0	/* pbdma 0 */
 #define ASYNC_CE_RUNQUE			2	/* pbdma 2 */
+
+#define CHANNEL_INFO_VEID0		0
 
 struct gpu_ops;
 void gv11b_init_fifo(struct gpu_ops *gops);

@@ -45,7 +45,6 @@
 #include "subctx_gv11b.h"
 #include "gr_gv11b.h"
 
-#define CHANNEL_INFO_VEID0  0
 #define PBDMA_SUBDEVICE_ID  1
 
 static void gv11b_fifo_init_ramfc_eng_method_buffer(struct gk20a *g,
@@ -94,7 +93,8 @@ static void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 
 	/* Time being use 0 pbdma sequencer */
 	runlist_entry = ram_rl_entry_type_channel_v() |
-			ram_rl_entry_chan_runqueue_selector_f(0) |
+			ram_rl_entry_chan_runqueue_selector_f(
+						c->t19x.runqueue_sel) |
 			ram_rl_entry_chan_userd_target_f(
 			ram_rl_entry_chan_userd_target_sys_mem_ncoh_v()) |
 			ram_rl_entry_chan_inst_target_f(
@@ -178,10 +178,14 @@ static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 
 	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->chid));
 
-	/* Until full subcontext is supported, always use VEID0 */
-	nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
-		pbdma_set_channel_info_scg_type_graphics_compute0_f() |
-		pbdma_set_channel_info_veid_f(CHANNEL_INFO_VEID0));
+	if (c->t19x.subctx_id == CHANNEL_INFO_VEID0)
+		nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
+			pbdma_set_channel_info_scg_type_graphics_compute0_f() |
+			pbdma_set_channel_info_veid_f(c->t19x.subctx_id));
+	else
+		nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
+			pbdma_set_channel_info_scg_type_compute1_f() |
+			pbdma_set_channel_info_veid_f(c->t19x.subctx_id));
 
 	gv11b_fifo_init_ramfc_eng_method_buffer(g, c, mem);
 

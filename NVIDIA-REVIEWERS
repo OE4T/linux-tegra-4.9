@@ -68,3 +68,19 @@ S:      Supported
 F:      drivers/iommu/
 F:      drivers/platform/tegra/mc/
 F:      include/dt-bindings/memory/
+
+PVA
+M:	Arto Merilainen <amerilainen@nvidia.com>
+M:	Vinod Gopalakrishnakurup <vinodg@nvidia.com>
+L:	SW-Mobile-PVA-Dev@exchange.nvidia.com
+S:	Supported
+F:	drivers/video/tegra/host/pva/
+F:	include/uapi/linux/nvhost_pva_ioctl.h
+F:	drivers/video/tegra/host/nvhost_minimal_pm/
+
+DLA
+M:	Shridhar Rasal <srasal@nvidia.com>
+M:	Prashant Gaikwad <pgaikwad@nvidia.com>
+L:	SW-Mobile-DLA-Dev <SW-Mobile-DLA-Dev@exchange.nvidia.com>
+S:	Supported
+F:	drivers/video/tegra/host/nvdla/

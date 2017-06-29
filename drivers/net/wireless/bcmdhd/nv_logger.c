@@ -21,12 +21,11 @@
 atomic_t list1_val = ATOMIC_INIT(1);
 atomic_t list2_val = ATOMIC_INIT(1);
 char logbuf[MAX_LOGLIMIT + 128];
+char nv_error_buffer[MAX_ERROR_SIZE];
 bool enable_file_logging;
 struct list_head list1;
 struct list_head list2;
-static int reset_log_size;
-struct mutex sysfs_dump_mtx;
-struct mutex suspend_lock;
+bool select_list;
 
 struct workqueue_struct *logger_wqueue;
 struct log_buffer {
@@ -34,6 +33,7 @@ struct log_buffer {
 	char *buf;
 	char *info;
 	int event;
+	int size;
 };
 
 struct log_node {
@@ -59,12 +59,9 @@ void write_log_init()
 	if (dhd_log_netlink_init())
 		goto init_fail;
 
-	mutex_init(&sysfs_dump_mtx);
-	mutex_init(&suspend_lock);
-
 	dhd_log_netlink_send_msg(0, 0, 0, NULL, 0);
 	enable_file_logging = true;
-
+	select_list = true;
 	return;
 
 init_fail:
@@ -87,29 +84,16 @@ int write_log(int event, const char *buf, const char *info)
 	int buf_len = 0;
 	int info_len = 0;
 	int time_len = 0;
-	static int list1_size;
-	static int list2_size;
 	struct timeval now;
 	struct tm date_time;
+	static int count = 0;
 
-	mutex_lock(&suspend_lock);
-	if (!enable_file_logging || logger_wqueue == NULL) {
-		mutex_unlock(&suspend_lock);
+	if (!enable_file_logging) {
 		return -1;
 	}
-	mutex_unlock(&suspend_lock);
 
 	if (buf == NULL)
 		return -1;
-
-	if (mutex_trylock(&sysfs_dump_mtx)) {
-		if (1 == reset_log_size) {
-			reset_log_size = 0;
-			list1_size = 0;
-			list2_size = 0;
-		}
-		mutex_unlock(&sysfs_dump_mtx);
-	}
 
 	switch (event) {
 
@@ -160,30 +144,31 @@ int write_log(int event, const char *buf, const char *info)
 			temp->log->info = NULL;
 		}
 		temp->log->event = event;
-
-	/* whichever list is not busy, dump data in that list */
-		if (1 == atomic_read(&list1_val)) {
+		temp->log->size = time_len + buf_len + info_len;
+		/* whichever list is not busy, dump data in that list.
+		   Make sure we fill the last active list with MAX_LOG_NUM
+		   before switching the lists
+		*/
+		if (select_list && (1 == atomic_read(&list1_val))) {
+			count++;
 			list_add_tail(&(temp->list), &(list1));
-			list1_size += time_len + buf_len + info_len;
-		} else if (1 == atomic_read(&list2_val)) {
+		} else if (!select_list && (1 == atomic_read(&list2_val))) {
+			count++;
 			list_add_tail(&(temp->list), &(list2));
-			list2_size += time_len + buf_len + info_len;
 		} else {
 		/* send data directly over netlink because both lists are busy*/
 			pr_err("Message dropped due to busy queues");
 		}
 
-		if (list1_size > MAX_LOGLIMIT) {
-			atomic_set(&list1_val, 0);
+		if (count == MAX_LOG_NUM) {
+			count = 0;
+			if (select_list)
+				atomic_set(&list1_val, 0);
+			else
+				atomic_set(&list2_val, 0);
 			queue_work(logger_wqueue, &enqueue_work);
-			list1_size = 0;
-		} else if (list2_size > MAX_LOGLIMIT) {
-			atomic_set(&list2_val, 0);
-			queue_work(logger_wqueue, &enqueue_work);
-			list2_size = 0;
+			select_list = (select_list == false);
 		}
-
-		break;
 	}
 	return buf_len + info_len;
 }
@@ -192,29 +177,42 @@ void write_queue_work(struct work_struct *work)
 {
 	struct log_node *temp = NULL;
 	struct list_head *pos = NULL, *n = NULL;
+	int list1_size = 0;
+	int list2_size = 0;
+
+	/* iterate over the listi until list_for_each_safe empties the list.
+	   The list is empty is deduced if pos == head, where for eg &(list1)
+	   is the head for list1.
+	*/
 
 	/* queuing in list1 is blocked, so can dequeue list1*/
 	if (atomic_read(&list1_val) == 0) {
+		while (pos != &list1) {
+			list_for_each_safe(pos, n, &(list1)) {
+				if (list1_size > MAX_LOGLIMIT)
+					break;
+				temp = list_entry(pos, struct log_node, list);
+				/* for the correct string of the event */
+				strcat(logbuf, temp->log->tmstmp);
 
-		list_for_each_safe(pos, n, &(list1)) {
-			temp = list_entry(pos, struct log_node, list);
-		/* for the correct string of the event */
-			strcat(logbuf, temp->log->tmstmp);
+				if (temp->log->buf != NULL)
+					strcat(logbuf, temp->log->buf);
+				strcat(logbuf, " ");
+				if (temp->log->info != NULL)
+					strcat(logbuf, temp->log->info);
+				strcat(logbuf, "\n");
+				list1_size += temp->log->size;
 
-			if (temp->log->buf != NULL)
-				strcat(logbuf, temp->log->buf);
-			strcat(logbuf, " ");
-			if (temp->log->info != NULL)
-				strcat(logbuf, temp->log->info);
-			strcat(logbuf, "\n");
-			list_del(pos);
-			kfree(temp->log->info);
-			kfree(temp->log->buf);
-			kfree(temp->log);
-			kfree(temp);
+				list_del(pos);
+				kfree(temp->log->info);
+				kfree(temp->log->buf);
+				kfree(temp->log);
+				kfree(temp);
+			}
+			write_log_file(logbuf);
+			memset(logbuf, '\0', sizeof(logbuf));
+			list1_size = 0;
 		}
-		write_log_file(logbuf);
-		memset(logbuf, '\0', sizeof(logbuf));
 		/* make this list available for writing now */
 		atomic_set(&list1_val, 1);
 
@@ -222,27 +220,32 @@ void write_queue_work(struct work_struct *work)
 
 	/* queuing in list1 is blocked, so can dequeue list1*/
 	if (atomic_read(&list2_val) == 0) {
+		while (pos != &list2) {
+			list_for_each_safe(pos, n, &(list2)) {
+				if (list1_size > MAX_LOGLIMIT)
+					break;
+				temp = list_entry(pos, struct log_node, list);
+			/* for the correct string of the event */
+				strcat(logbuf, temp->log->tmstmp);
 
-		list_for_each_safe(pos, n, &(list2)) {
-			temp = list_entry(pos, struct log_node, list);
-		/* for the correct string of the event */
-			strcat(logbuf, temp->log->tmstmp);
+				if (temp->log->buf != NULL)
+					strcat(logbuf, temp->log->buf);
+				strcat(logbuf, " ");
+				if (temp->log->info != NULL)
+					strcat(logbuf, temp->log->info);
+				strcat(logbuf, "\n");
+				list2_size += temp->log->size;
 
-			if (temp->log->buf != NULL)
-				strcat(logbuf, temp->log->buf);
-			strcat(logbuf, " ");
-			if (temp->log->info != NULL)
-				strcat(logbuf, temp->log->info);
-			strcat(logbuf, "\n");
-
-			list_del(pos);
-			kfree(temp->log->info);
-			kfree(temp->log->buf);
-			kfree(temp->log);
-			kfree(temp);
+				list_del(pos);
+				kfree(temp->log->info);
+				kfree(temp->log->buf);
+				kfree(temp->log);
+				kfree(temp);
+			}
+			write_log_file(logbuf);
+			memset(logbuf, '\0', sizeof(logbuf));
+			list2_size = 0;
 		}
-		write_log_file(logbuf);
-		memset(logbuf, '\0', sizeof(logbuf));
 		/* make this list available for writing now */
 		atomic_set(&list2_val, 1);
 	}
@@ -259,9 +262,7 @@ void write_log_file(const char *log)
 
 void nvlogger_suspend_work()
 {
-	mutex_lock(&suspend_lock);
 	enable_file_logging = false;
-	mutex_unlock(&suspend_lock);
 	pr_info("nvlogger_suspend_work\n");
 	cancel_work_sync(&enqueue_work);
 }
@@ -269,9 +270,7 @@ void nvlogger_suspend_work()
 void nvlogger_resume_work()
 {
 	pr_info("nvlogger_resume_work\n");
-	mutex_lock(&suspend_lock);
 	enable_file_logging = true;
-	mutex_unlock(&suspend_lock);
 }
 
 #define NETLINK_CARBON     29
@@ -364,9 +363,6 @@ void dumplogs(void)
 	atomic_set(&list1_val, 0);
 	atomic_set(&list2_val, 0);
 	queue_work(logger_wqueue, &enqueue_work);
-	mutex_lock(&sysfs_dump_mtx);
-	reset_log_size = 1;
-	mutex_unlock(&sysfs_dump_mtx);
 }
 
 static ssize_t dhdlog_sysfs_enablelog_store(struct device *dev,
@@ -376,16 +372,12 @@ static ssize_t dhdlog_sysfs_enablelog_store(struct device *dev,
 	pr_info("dhdlog_sysfs_enablelog_store = %s", buf);
 	if (strncmp(buf, "0", 1) == 0 || strncmp(buf, "false", 5) == 0
 		|| strncmp(buf, "no", 2) == 0) {
-		mutex_lock(&suspend_lock);
 		enable_file_logging = false;
-		mutex_unlock(&suspend_lock);
 	} else if (strncmp(buf, "dump", 4) == 0) {
 		dumplogs();
 	} else if (strncmp(buf, "1", 1) == 0 || strncmp(buf, "true", 4) == 0
 		|| strncmp(buf, "yes", 3) == 0) {
-		mutex_lock(&suspend_lock);
 		enable_file_logging = true;
-		mutex_unlock(&suspend_lock);
 	}
 
 	return count;

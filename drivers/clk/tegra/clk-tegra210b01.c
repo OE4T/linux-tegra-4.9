@@ -280,7 +280,7 @@ static DEFINE_SPINLOCK(pll_p_uphy_lock);
 #define PLLA_MISC2_EN_SDM		(1 << 26)
 #define PLLA_MISC2_EN_DYNRAMP		(1 << 25)
 
-#define PLLA_MISC0_DEFAULT_VALUE	0x12000020
+#define PLLA_MISC0_DEFAULT_VALUE	0x10000000
 #define PLLA_MISC0_WRITE_MASK		0x7fffffff
 #define PLLA_MISC2_DEFAULT_VALUE	0x0
 #define PLLA_MISC2_WRITE_MASK		0x06ffffff
@@ -297,7 +297,7 @@ static DEFINE_SPINLOCK(pll_p_uphy_lock);
 
 #define PLLD_MISC0_DEFAULT_VALUE	0x00140000
 #define PLLD_MISC0_WRITE_MASK		0x3ff7ffff
-#define PLLD_MISC1_DEFAULT_VALUE	0x00000020
+#define PLLD_MISC1_DEFAULT_VALUE	0x00000000
 #define PLLD_MISC1_WRITE_MASK		0xf0ffffff
 
 /* PLLD2 and PLLDP  and PLLC4 */
@@ -312,16 +312,16 @@ static DEFINE_SPINLOCK(pll_p_uphy_lock);
 #define PLLDSS_MISC1_CFG_EN_SDM		(1 << 31)
 #define PLLDSS_MISC1_CFG_EN_SSC		(1 << 30)
 
-#define PLLD2_MISC0_DEFAULT_VALUE	0x40000020
+#define PLLD2_MISC0_DEFAULT_VALUE	0x40000000
 #define PLLD2_MISC1_CFG_DEFAULT_VALUE	0x10000000
 #define PLLD2_MISC2_CTRL1_DEFAULT_VALUE	0x00000000
 #define PLLD2_MISC3_CTRL2_DEFAULT_VALUE	0x00000000
 #define PLLD2_MISC4_VREG_DEFAULT_VALUE	0x00000000
 
-#define PLLDP_MISC0_DEFAULT_VALUE	0x40000020
+#define PLLDP_MISC0_DEFAULT_VALUE	0x40000000
 #define PLLDP_MISC1_CFG_DEFAULT_VALUE	0xc0000000
-#define PLLDP_MISC2_CTRL1_DEFAULT_VALUE	0xf400f0da
-#define PLLDP_MISC3_CTRL2_DEFAULT_VALUE	0x2004f400
+#define PLLDP_MISC2_CTRL1_DEFAULT_VALUE	0xf600f200
+#define PLLDP_MISC3_CTRL2_DEFAULT_VALUE	0x2005f600
 #define PLLDP_MISC4_VREG_DEFAULT_VALUE	0x00000000
 
 #define PLLDSS_MISC0_WRITE_MASK		0x47ffffff
@@ -372,7 +372,7 @@ static DEFINE_SPINLOCK(pll_p_uphy_lock);
 
 #define PLLX_MISC0_DEFAULT_VALUE	PLLX_MISC0_LOCK_ENABLE
 #define PLLX_MISC0_WRITE_MASK		0x10c40000
-#define PLLX_MISC1_DEFAULT_VALUE	0x00000020
+#define PLLX_MISC1_DEFAULT_VALUE	0x00000000
 #define PLLX_MISC1_WRITE_MASK		0xf0ffffff
 #define PLLX_MISC2_DEFAULT_VALUE	0x00000000
 #define PLLX_MISC2_WRITE_MASK		0xffffff11
@@ -468,9 +468,9 @@ EXPORT_SYMBOL_GPL(tegra210b01_csi_source_from_plld);
 
 /* PLLE */
 #define PLLE_SS_ENABLE	1
-#define PLLE_SS_MAX_VAL 0x21
+#define PLLE_SS_MAX_VAL 0x25
 #define PLLE_SS_INC_VAL (0x1 << 16)
-#define PLLE_SS_INCINTRV_VAL (0x23 << 24)
+#define PLLE_SS_INCINTRV_VAL (0x20 << 24)
 #define PLLE_SS_COEFFICIENTS_VAL \
 	(PLLE_SS_MAX_VAL | PLLE_SS_INC_VAL | PLLE_SS_INCINTRV_VAL)
 
@@ -949,6 +949,10 @@ static void tegra210b01_pllre_set_defaults(struct tegra_clk_pll *pllre)
 	fence_udelay(1, clk_base);
 }
 
+/*
+ * PLLX
+ * Dynamic ramp support
+ */
 static void pllx_get_dyn_steps(struct clk_hw *hw, u32 *step_a, u32 *step_b)
 {
 	unsigned long input_rate;
@@ -1623,7 +1627,7 @@ static struct tegra_clk_pll_params pll_c4_vco_params = {
 	.cf_min = 12000000,
 	.cf_max = 38400000,
 	.vco_min = 500000000,
-	.vco_max = 1080000000,
+	.vco_max = 1000000000,
 	.base_reg = PLLC4_BASE,
 	.misc_reg = PLLC4_MISC0,
 	.lock_mask = PLL_BASE_LOCK,
@@ -1683,7 +1687,7 @@ static struct tegra_clk_pll_params pll_e_params = {
 };
 
 static struct tegra_clk_pll_freq_table pll_re_vco_freq_table[] = {
-	{ 38400000, 672000000,  35,  2, 1, 0 },
+	{ 38400000, 672000000,  70,  4, 1, 0 },
 	{ 38400000, 624000000,  65,  4, 1, 0 },
 	{ 60000000, 625000000, 125, 12, 1, 0 },
 	{        0,         0,   0,  0, 0, 0 },
@@ -1927,7 +1931,7 @@ static struct tegra_clk_pll_params pll_d2_params = {
 };
 
 static struct tegra_clk_pll_freq_table pll_dp_freq_table[] = {
-	{ 38400000, 270000000, 28, 1, 4, 0, 0xf400 },
+	{ 38400000, 270000000, 42, 1, 6, 0, 0xf600 },
 	{        0,         0,  0, 0, 0, 0,      0 },
 };
 

@@ -1647,6 +1647,16 @@ static int tegra_spi_handle_message(struct tegra_spi_data *tspi,
 					DIV_ROUND_UP(tspi->words_to_transfer ,
 						tspi->words_per_32bit);
 
+				if (word_tfr_status < pending_rx_word_count) {
+					dmaengine_terminate_all(
+							tspi->rx_dma_chan);
+					dump_regs(err_ratelimited, tspi,
+					  "available bytes less than expected");
+					tspi->reset_ctrl_status = true;
+					ret = -EIO;
+					return ret;
+				}
+
 				actual_words_xferrd =
 					word_tfr_status - pending_rx_word_count;
 

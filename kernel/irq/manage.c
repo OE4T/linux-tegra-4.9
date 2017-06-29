@@ -1220,6 +1220,8 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	if (desc->irq_data.chip->flags & IRQCHIP_ONESHOT_SAFE)
 		new->flags &= ~IRQF_ONESHOT;
 
+	chip_bus_lock(desc);
+
 	/*
 	 * The following block of code has to be executed atomically
 	 */
@@ -1393,6 +1395,7 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	}
 
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
+	chip_bus_sync_unlock(desc);
 
 	/*
 	 * Strictly no need to wake it up, but hung_task complains
@@ -1422,6 +1425,8 @@ mismatch:
 
 out_mask:
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
+
+	chip_bus_sync_unlock(desc);
 	free_cpumask_var(mask);
 
 out_thread:
@@ -1463,9 +1468,7 @@ int setup_irq(unsigned int irq, struct irqaction *act)
 	if (retval < 0)
 		return retval;
 
-	chip_bus_lock(desc);
 	retval = __setup_irq(irq, desc, act);
-	chip_bus_sync_unlock(desc);
 
 	if (retval)
 		irq_chip_pm_put(&desc->irq_data);
@@ -1712,9 +1715,7 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
 		return retval;
 	}
 
-	chip_bus_lock(desc);
 	retval = __setup_irq(irq, desc, action);
-	chip_bus_sync_unlock(desc);
 
 	if (retval) {
 		irq_chip_pm_put(&desc->irq_data);
@@ -1962,9 +1963,7 @@ int setup_percpu_irq(unsigned int irq, struct irqaction *act)
 	if (retval < 0)
 		return retval;
 
-	chip_bus_lock(desc);
 	retval = __setup_irq(irq, desc, act);
-	chip_bus_sync_unlock(desc);
 
 	if (retval)
 		irq_chip_pm_put(&desc->irq_data);
@@ -2018,9 +2017,7 @@ int request_percpu_irq(unsigned int irq, irq_handler_t handler,
 		return retval;
 	}
 
-	chip_bus_lock(desc);
 	retval = __setup_irq(irq, desc, action);
-	chip_bus_sync_unlock(desc);
 
 	if (retval) {
 		irq_chip_pm_put(&desc->irq_data);

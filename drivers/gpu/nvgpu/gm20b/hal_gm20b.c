@@ -277,6 +277,17 @@ static const struct gpu_ops gm20b_ops = {
 		.init_therm_setup_hw = gm20b_init_therm_setup_hw,
 		.elcg_init_idle_filters = gk20a_elcg_init_idle_filters,
 	},
+	.clk = {
+		.init_clk_support = gm20b_init_clk_support,
+		.suspend_clk_support = gm20b_suspend_clk_support,
+#ifdef CONFIG_DEBUG_FS
+		.init_debugfs = gm20b_clk_init_debugfs,
+#endif
+		.get_voltage = gm20b_clk_get_voltage,
+		.get_gpcclk_clock_counter = gm20b_clk_get_gpcclk_clock_counter,
+		.pll_reg_write = gm20b_clk_pll_reg_write,
+		.get_pll_debug_data = gm20b_clk_get_pll_debug_data,
+	},
 	.regops = {
 		.get_global_whitelist_ranges =
 			gm20b_get_global_whitelist_ranges,
@@ -373,6 +384,18 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->fifo = gm20b_ops.fifo;
 	gops->gr_ctx = gm20b_ops.gr_ctx;
 	gops->therm = gm20b_ops.therm;
+	/*
+	 * clk must be assigned member by member
+	 * since some clk ops are assigned during probe prior to HAL init
+	 */
+	gops->clk.init_clk_support = gm20b_ops.clk.init_clk_support;
+	gops->clk.suspend_clk_support = gm20b_ops.clk.suspend_clk_support;
+	gops->clk.get_voltage = gm20b_ops.clk.get_voltage;
+	gops->clk.get_gpcclk_clock_counter =
+		gm20b_ops.clk.get_gpcclk_clock_counter;
+	gops->clk.pll_reg_write = gm20b_ops.clk.pll_reg_write;
+	gops->clk.get_pll_debug_data = gm20b_ops.clk.get_pll_debug_data;
+
 	gops->regops = gm20b_ops.regops;
 	gops->mc = gm20b_ops.mc;
 	gops->dbg_session_ops = gm20b_ops.dbg_session_ops;
@@ -427,7 +450,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_fb(gops);
 	gm20b_init_mm(gops);
 	gm20b_init_pmu_ops(g);
-	gm20b_init_clk_ops(gops);
 
 	g->name = "gm20b";
 

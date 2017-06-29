@@ -46,6 +46,7 @@
 
 #include "gp106/clk_gp106.h"
 #include "gp106/clk_arb_gp106.h"
+#include "gp106/mclk_gp106.h"
 #include "gm206/bios_gm206.h"
 #include "gp106/therm_gp106.h"
 #include "gp106/xve_gp106.h"
@@ -71,6 +72,7 @@
 #include <nvgpu/hw/gp106/hw_ram_gp106.h>
 #include <nvgpu/hw/gp106/hw_top_gp106.h>
 #include <nvgpu/hw/gp106/hw_pram_gp106.h>
+
 
 static int gp106_get_litter_value(struct gk20a *g, int value)
 {
@@ -353,6 +355,21 @@ static const struct gpu_ops gp106_ops = {
 		.get_internal_sensor_limits = gp106_get_internal_sensor_limits,
 		.configure_therm_alert = gp106_configure_therm_alert,
 	},
+	.clk = {
+		.init_clk_support = gp106_init_clk_support,
+		.get_crystal_clk_hz = gp106_crystal_clk_hz,
+		.measure_freq = gp106_clk_measure_freq,
+		.suspend_clk_support = gp106_suspend_clk_support,
+		.mclk_init = gp106_mclk_init,
+		.mclk_change = gp106_mclk_change,
+		.mclk_deinit = gp106_mclk_deinit,
+	},
+	.clk_arb = {
+		.get_arbiter_clk_domains = gp106_get_arbiter_clk_domains,
+		.get_arbiter_clk_range = gp106_get_arbiter_clk_range,
+		.get_arbiter_clk_default = gp106_get_arbiter_clk_default,
+		.get_current_pstate = nvgpu_clk_arb_get_current_pstate,
+	},
 	.regops = {
 		.get_global_whitelist_ranges =
 			gp106_get_global_whitelist_ranges,
@@ -470,6 +487,19 @@ int gp106_init_hal(struct gk20a *g)
 	gops->fecs_trace = gp106_ops.fecs_trace;
 	gops->pramin = gp106_ops.pramin;
 	gops->therm = gp106_ops.therm;
+	/*
+	 * clk must be assigned member by member
+	 * since some clk ops are assigned during probe prior to HAL init
+	 */
+	gops->clk.init_clk_support = gp106_ops.clk.init_clk_support;
+	gops->clk.get_crystal_clk_hz = gp106_ops.clk.get_crystal_clk_hz;
+	gops->clk.measure_freq = gp106_ops.clk.measure_freq;
+	gops->clk.suspend_clk_support = gp106_ops.clk.suspend_clk_support;
+	gops->clk.mclk_init = gp106_ops.clk.mclk_init;
+	gops->clk.mclk_change = gp106_ops.clk.mclk_change;
+	gops->clk.mclk_deinit = gp106_ops.clk.mclk_deinit;
+
+	gops->clk_arb = gp106_ops.clk_arb;
 	gops->regops = gp106_ops.regops;
 	gops->mc = gp106_ops.mc;
 	gops->debug = gp106_ops.debug;
@@ -499,8 +529,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_fb(gops);
 	gp106_init_mm(gops);
 	gp106_init_pmu_ops(g);
-	gp106_init_clk_ops(gops);
-	gp106_init_clk_arb_ops(gops);
 
 	g->name = "gp10x";
 

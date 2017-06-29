@@ -1389,7 +1389,7 @@ static int set_pll_freq(struct gk20a *g, int allow_slide)
 	return err;
 }
 
-static int gm20b_init_clk_support(struct gk20a *g)
+int gm20b_init_clk_support(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	u32 err;
@@ -1427,7 +1427,7 @@ static int gm20b_init_clk_support(struct gk20a *g)
 	return err;
 }
 
-static int gm20b_suspend_clk_support(struct gk20a *g)
+int gm20b_suspend_clk_support(struct gk20a *g)
 {
 	int ret = 0;
 
@@ -1445,7 +1445,7 @@ static int gm20b_suspend_clk_support(struct gk20a *g)
 	return ret;
 }
 
-static int gm20b_clk_get_voltage(struct clk_gk20a *clk, u64 *val)
+int gm20b_clk_get_voltage(struct clk_gk20a *clk, u64 *val)
 {
 	struct gk20a *g = clk->g;
 	struct pll_parms *gpc_pll_params = gm20b_get_gpc_pll_parms();
@@ -1472,7 +1472,7 @@ static int gm20b_clk_get_voltage(struct clk_gk20a *clk, u64 *val)
 	return 0;
 }
 
-static int gm20b_clk_get_gpcclk_clock_counter(struct clk_gk20a *clk, u64 *val)
+int gm20b_clk_get_gpcclk_clock_counter(struct clk_gk20a *clk, u64 *val)
 {
 	struct gk20a *g = clk->g;
 	u32 clk_slowdown, clk_slowdown_save;
@@ -1592,17 +1592,4 @@ int gm20b_clk_get_pll_debug_data(struct gk20a *g,
 
 	nvgpu_mutex_release(&g->clk.clk_mutex);
 	return 0;
-}
-
-void gm20b_init_clk_ops(struct gpu_ops *gops)
-{
-	gops->clk.init_clk_support = gm20b_init_clk_support;
-	gops->clk.suspend_clk_support = gm20b_suspend_clk_support;
-#ifdef CONFIG_DEBUG_FS
-	gops->clk.init_debugfs = gm20b_clk_init_debugfs;
-#endif
-	gops->clk.get_voltage = gm20b_clk_get_voltage;
-	gops->clk.get_gpcclk_clock_counter = gm20b_clk_get_gpcclk_clock_counter;
-	gops->clk.pll_reg_write = gm20b_clk_pll_reg_write;
-	gops->clk.get_pll_debug_data = gm20b_clk_get_pll_debug_data;
 }

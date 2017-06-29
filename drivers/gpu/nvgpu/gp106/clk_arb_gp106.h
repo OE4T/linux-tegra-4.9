@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,6 +16,10 @@
 #ifndef CLK_ARB_GP106_H
 #define CLK_ARB_GP106_H
 
-void gp106_init_clk_arb_ops(struct gpu_ops *gops);
+u32 gp106_get_arbiter_clk_domains(struct gk20a *g);
+int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
+		u16 *min_mhz, u16 *max_mhz);
+int gp106_get_arbiter_clk_default(struct gk20a *g, u32 api_domain,
+		u16 *default_mhz);
 
 #endif /* CLK_ARB_GP106_H */

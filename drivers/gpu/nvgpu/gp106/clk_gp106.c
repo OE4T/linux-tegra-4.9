@@ -47,12 +47,12 @@ static int clk_gp106_debugfs_init(struct gk20a *g);
 
 
 static u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *);
-static u32 gp106_crystal_clk_hz(struct gk20a *g)
+u32 gp106_crystal_clk_hz(struct gk20a *g)
 {
 	return (XTAL4X_KHZ * 1000);
 }
 
-static unsigned long gp106_clk_measure_freq(struct gk20a *g, u32 api_domain)
+unsigned long gp106_clk_measure_freq(struct gk20a *g, u32 api_domain)
 {
 	struct clk_gk20a *clk = &g->clk;
 	u32 freq_khz;
@@ -76,7 +76,8 @@ static unsigned long gp106_clk_measure_freq(struct gk20a *g, u32 api_domain)
 	return freq_khz * 1000UL;
 }
 
-static int gp106_init_clk_support(struct gk20a *g) {
+int gp106_init_clk_support(struct gk20a *g)
+{
 	struct clk_gk20a *clk = &g->clk;
 	u32 err = 0;
 
@@ -273,18 +274,8 @@ err_out:
 }
 #endif /* CONFIG_DEBUG_FS */
 
-static int gp106_suspend_clk_support(struct gk20a *g)
+int gp106_suspend_clk_support(struct gk20a *g)
 {
 	nvgpu_mutex_destroy(&g->clk.clk_mutex);
 	return 0;
-}
-
-void gp106_init_clk_ops(struct gpu_ops *gops) {
-	gops->clk.init_clk_support = gp106_init_clk_support;
-	gops->clk.get_crystal_clk_hz = gp106_crystal_clk_hz;
-	gops->clk.measure_freq = gp106_clk_measure_freq;
-	gops->clk.suspend_clk_support = gp106_suspend_clk_support;
-	gops->clk.mclk_init = gp106_mclk_init;
-	gops->clk.mclk_change = gp106_mclk_change;
-	gops->clk.mclk_deinit = gp106_mclk_deinit;
 }

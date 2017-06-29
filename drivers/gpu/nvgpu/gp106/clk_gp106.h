@@ -51,6 +51,9 @@ struct namemap_cfg {
 	char name[24];
 };
 
-void gp106_init_clk_ops(struct gpu_ops *gops);
+int gp106_init_clk_support(struct gk20a *g);
+u32 gp106_crystal_clk_hz(struct gk20a *g);
+unsigned long gp106_clk_measure_freq(struct gk20a *g, u32 api_domain);
+int gp106_suspend_clk_support(struct gk20a *g);
 
 #endif /* CLK_GP106_H */

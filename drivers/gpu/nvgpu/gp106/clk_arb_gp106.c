@@ -16,13 +16,13 @@
 #include "clk/clk_arb.h"
 #include "clk_arb_gp106.h"
 
-static u32 gp106_get_arbiter_clk_domains(struct gk20a *g)
+u32 gp106_get_arbiter_clk_domains(struct gk20a *g)
 {
 	(void)g;
 	return (CTRL_CLK_DOMAIN_MCLK|CTRL_CLK_DOMAIN_GPC2CLK);
 }
 
-static int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
+int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 		u16 *min_mhz, u16 *max_mhz)
 {
 	enum nv_pmu_clk_clkwhich clkwhich;
@@ -68,7 +68,7 @@ static int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 	return 0;
 }
 
-static int gp106_get_arbiter_clk_default(struct gk20a *g, u32 api_domain,
+int gp106_get_arbiter_clk_default(struct gk20a *g, u32 api_domain,
 		u16 *default_mhz)
 {
 	enum nv_pmu_clk_clkwhich clkwhich;
@@ -95,12 +95,4 @@ static int gp106_get_arbiter_clk_default(struct gk20a *g, u32 api_domain,
 	*default_mhz = p0_info->max_mhz;
 
 	return 0;
-}
-
-void gp106_init_clk_arb_ops(struct gpu_ops *gops)
-{
-	gops->clk_arb.get_arbiter_clk_domains = gp106_get_arbiter_clk_domains;
-	gops->clk_arb.get_arbiter_clk_range = gp106_get_arbiter_clk_range;
-	gops->clk_arb.get_arbiter_clk_default = gp106_get_arbiter_clk_default;
-	gops->clk_arb.get_current_pstate = nvgpu_clk_arb_get_current_pstate;
 }

@@ -2292,7 +2292,7 @@ static void gr_gv11b_load_tpc_mask(struct gk20a *g)
 
 }
 
-static void gr_gv11b_write_preemption_ptr(struct gk20a *g,
+static void gr_gv11b_set_preemption_buffer_va(struct gk20a *g,
 			struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 addr_lo, addr_hi;
@@ -2365,7 +2365,7 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.is_valid_class = gr_gv11b_is_valid_class;
 	gops->gr.is_valid_gfx_class = gr_gv11b_is_valid_gfx_class;
 	gops->gr.is_valid_compute_class = gr_gv11b_is_valid_compute_class;
-	gops->gr.write_preemption_ptr = gr_gv11b_write_preemption_ptr;
+	gops->gr.set_preemption_buffer_va = gr_gv11b_set_preemption_buffer_va;
 	gops->gr.add_zbc_s = gr_gv11b_add_zbc_stencil;
 	gops->gr.load_zbc_s_default_tbl = gr_gv11b_load_stencil_default_tbl;
 	gops->gr.load_zbc_s_tbl = gr_gv11b_load_stencil_tbl;

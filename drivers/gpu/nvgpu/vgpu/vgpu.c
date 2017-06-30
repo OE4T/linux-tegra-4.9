@@ -243,6 +243,7 @@ static void vgpu_remove_support(struct gk20a *g)
 
 static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 {
+	nvgpu_mutex_init(&g->poweron_lock);
 	nvgpu_mutex_init(&g->poweroff_lock);
 	g->regs_saved = g->regs;
 	g->bar1_saved = g->bar1;

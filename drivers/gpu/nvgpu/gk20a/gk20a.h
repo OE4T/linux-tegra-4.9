@@ -1075,6 +1075,7 @@ struct gk20a {
 #endif
 	unsigned int ch_wdt_timeout_ms;
 
+	struct nvgpu_mutex poweron_lock;
 	struct nvgpu_mutex poweroff_lock;
 
 	/* Channel priorities */

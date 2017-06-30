@@ -88,15 +88,18 @@ int gk20a_busy(struct gk20a *g)
 			goto fail;
 		}
 	} else {
+		nvgpu_mutex_acquire(&g->poweron_lock);
 		if (!g->power_on) {
 			ret = gk20a_gpu_is_virtual(dev) ?
 				vgpu_pm_finalize_poweron(dev)
 				: gk20a_pm_finalize_poweron(dev);
 			if (ret) {
 				atomic_dec(&g->usage_count);
+				nvgpu_mutex_release(&g->poweron_lock);
 				goto fail;
 			}
 		}
+		nvgpu_mutex_release(&g->poweron_lock);
 	}
 
 fail:

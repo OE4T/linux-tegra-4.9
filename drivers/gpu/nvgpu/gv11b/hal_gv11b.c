@@ -20,6 +20,7 @@
 #include <linux/tegra_gpu_t19x.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/fifo_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/mc_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -29,10 +30,12 @@
 
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
+#include "gm20b/fifo_gm20b.h"
 
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/mc_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
+#include "gp10b/fifo_gp10b.h"
 
 #include "hal_gv11b.h"
 #include "gr_gv11b.h"
@@ -49,10 +52,14 @@
 #include "fifo_gv11b.h"
 #include "gv11b_gating_reglist.h"
 #include "regops_gv11b.h"
+#include "subctx_gv11b.h"
 
 #include <nvgpu/debug.h>
 
 #include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_top_gv11b.h>
 
 static int gv11b_get_litter_value(struct gk20a *g, int value)
 {
@@ -202,6 +209,72 @@ static const struct gpu_ops gv11b_ops = {
 		.pg_gr_load_gating_prod =
 			gr_gv11b_pg_gr_load_gating_prod,
 	},
+	.fifo = {
+		.init_fifo_setup_hw = gv11b_init_fifo_setup_hw,
+		.bind_channel = channel_gm20b_bind,
+		.unbind_channel = channel_gv11b_unbind,
+		.disable_channel = gk20a_fifo_disable_channel,
+		.enable_channel = gk20a_fifo_enable_channel,
+		.alloc_inst = gk20a_fifo_alloc_inst,
+		.free_inst = gk20a_fifo_free_inst,
+		.setup_ramfc = channel_gv11b_setup_ramfc,
+		.channel_set_priority = gk20a_fifo_set_priority,
+		.channel_set_timeslice = gk20a_fifo_set_timeslice,
+		.default_timeslice_us = gk20a_fifo_default_timeslice_us,
+		.setup_userd = gk20a_fifo_setup_userd,
+		.userd_gp_get = gv11b_userd_gp_get,
+		.userd_gp_put = gv11b_userd_gp_put,
+		.userd_pb_get = gv11b_userd_pb_get,
+		.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val,
+		.preempt_channel = gv11b_fifo_preempt_channel,
+		.preempt_tsg = gv11b_fifo_preempt_tsg,
+		.update_runlist = gk20a_fifo_update_runlist,
+		.trigger_mmu_fault = NULL,
+		.get_mmu_fault_info = NULL,
+		.wait_engine_idle = gk20a_fifo_wait_engine_idle,
+		.get_num_fifos = gv11b_fifo_get_num_fifos,
+		.get_pbdma_signature = gp10b_fifo_get_pbdma_signature,
+		.set_runlist_interleave = gk20a_fifo_set_runlist_interleave,
+		.tsg_set_timeslice = gk20a_fifo_tsg_set_timeslice,
+		.force_reset_ch = gk20a_fifo_force_reset_ch,
+		.engine_enum_from_type = gp10b_fifo_engine_enum_from_type,
+		.device_info_data_parse = gp10b_device_info_data_parse,
+		.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v,
+		.init_engine_info = gk20a_fifo_init_engine_info,
+		.runlist_entry_size = ram_rl_entry_size_v,
+		.get_tsg_runlist_entry = gv11b_get_tsg_runlist_entry,
+		.get_ch_runlist_entry = gv11b_get_ch_runlist_entry,
+		.is_fault_engine_subid_gpc = gv11b_is_fault_engine_subid_gpc,
+		.dump_pbdma_status = gk20a_dump_pbdma_status,
+		.dump_eng_status = gv11b_dump_eng_status,
+		.dump_channel_status_ramfc = gv11b_dump_channel_status_ramfc,
+		.intr_0_error_mask = gv11b_fifo_intr_0_error_mask,
+		.is_preempt_pending = gv11b_fifo_is_preempt_pending,
+		.init_pbdma_intr_descs = gv11b_fifo_init_pbdma_intr_descs,
+		.reset_enable_hw = gv11b_init_fifo_reset_enable_hw,
+		.teardown_ch_tsg = gv11b_fifo_teardown_ch_tsg,
+		.handle_sched_error = gv11b_fifo_handle_sched_error,
+		.handle_pbdma_intr_0 = gv11b_fifo_handle_pbdma_intr_0,
+		.handle_pbdma_intr_1 = gv11b_fifo_handle_pbdma_intr_1,
+		.init_eng_method_buffers = gv11b_fifo_init_eng_method_buffers,
+		.deinit_eng_method_buffers =
+			gv11b_fifo_deinit_eng_method_buffers,
+		.tsg_bind_channel = gk20a_tsg_bind_channel,
+		.tsg_unbind_channel = gk20a_tsg_unbind_channel,
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+		.alloc_syncpt_buf = gv11b_fifo_alloc_syncpt_buf,
+		.free_syncpt_buf = gv11b_fifo_free_syncpt_buf,
+		.add_syncpt_wait_cmd = gv11b_fifo_add_syncpt_wait_cmd,
+		.get_syncpt_wait_cmd_size = gv11b_fifo_get_syncpt_wait_cmd_size,
+		.add_syncpt_incr_cmd = gv11b_fifo_add_syncpt_incr_cmd,
+		.get_syncpt_incr_cmd_size = gv11b_fifo_get_syncpt_incr_cmd_size,
+#endif
+		.resetup_ramfc = NULL,
+		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
+		.free_channel_ctx_header = gv11b_free_subctx_header,
+		.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg,
+		.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout,
+	},
 	.mc = {
 		.intr_enable = mc_gv11b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -267,6 +340,7 @@ int gv11b_init_hal(struct gk20a *g)
 
 	gops->ltc = gv11b_ops.ltc;
 	gops->clock_gating = gv11b_ops.clock_gating;
+	gops->fifo = gv11b_ops.fifo;
 	gops->mc = gv11b_ops.mc;
 	gops->debug = gv11b_ops.debug;
 	gops->dbg_session_ops = gv11b_ops.dbg_session_ops;
@@ -289,14 +363,12 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_gr(gops);
 	gv11b_init_fecs_trace_ops(gops);
 	gv11b_init_fb(gops);
-	gv11b_init_fifo(gops);
 	gv11b_init_ce(gops);
 	gv11b_init_gr_ctx(gops);
 	gv11b_init_mm(gops);
 	gv11b_init_pmu_ops(gops);
 	gv11b_init_regops(gops);
 	gv11b_init_therm_ops(gops);
-	gk20a_init_tsg_ops(gops);
 
 	g->name = "gv11b";
 

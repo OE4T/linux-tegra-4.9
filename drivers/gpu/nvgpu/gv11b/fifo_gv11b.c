@@ -59,7 +59,7 @@ static inline void gv11b_usermode_writel(struct gk20a *g, u32 r, u32 v)
 	gk20a_dbg(gpu_dbg_reg, "usermode r=0x%x v=0x%x", r, v);
 }
 
-static void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
+void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 {
 
 	u32 runlist_entry_0 = ram_rl_entry_type_tsg_v();
@@ -85,7 +85,7 @@ static void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 
 }
 
-static void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
+void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 {
 	struct gk20a *g = c->g;
 	u32 addr_lo, addr_hi;
@@ -126,7 +126,7 @@ static void gv11b_userd_writeback_config(struct gk20a *g)
 
 }
 
-static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
+int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 		u64 gpfifo_base, u32 gpfifo_entries,
 		unsigned long acquire_timeout, u32 flags)
 {
@@ -219,7 +219,7 @@ static void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
 		usermode_notify_channel_pending_id_f(hw_chid));
 }
 
-static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
+u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct nvgpu_mem *userd_mem = &g->fifo.userd;
 	u32 offset = c->chid * (g->fifo.userd_entry_size / sizeof(u32));
@@ -228,7 +228,7 @@ static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
 			offset + ram_userd_gp_get_w());
 }
 
-static u64 gv11b_userd_pb_get(struct gk20a *g, struct channel_gk20a *c)
+u64 gv11b_userd_pb_get(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct nvgpu_mem *userd_mem = &g->fifo.userd;
 	u32 offset = c->chid * (g->fifo.userd_entry_size / sizeof(u32));
@@ -238,7 +238,7 @@ static u64 gv11b_userd_pb_get(struct gk20a *g, struct channel_gk20a *c)
 	return ((u64)hi << 32) | lo;
 }
 
-static void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
+void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct nvgpu_mem *userd_mem = &g->fifo.userd;
 	u32 offset = c->chid * (g->fifo.userd_entry_size / sizeof(u32));
@@ -251,24 +251,24 @@ static void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 	gv11b_ring_channel_doorbell(c);
 }
 
-static void channel_gv11b_unbind(struct channel_gk20a *ch)
+void channel_gv11b_unbind(struct channel_gk20a *ch)
 {
 	gk20a_dbg_fn("");
 
 	gk20a_fifo_channel_unbind(ch);
 }
 
-static u32 gv11b_fifo_get_num_fifos(struct gk20a *g)
+u32 gv11b_fifo_get_num_fifos(struct gk20a *g)
 {
 	return ccsr_channel__size_1_v();
 }
 
-static bool gv11b_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid)
+bool gv11b_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid)
 {
 	return (engine_subid == gmmu_fault_client_type_gpc_v());
 }
 
-static void gv11b_dump_channel_status_ramfc(struct gk20a *g,
+void gv11b_dump_channel_status_ramfc(struct gk20a *g,
 				     struct gk20a_debug_output *o,
 				     u32 chid,
 				     struct ch_state *ch_state)
@@ -322,7 +322,7 @@ static void gv11b_dump_channel_status_ramfc(struct gk20a *g,
 	gk20a_debug_output(o, "\n");
 }
 
-static void gv11b_dump_eng_status(struct gk20a *g,
+void gv11b_dump_eng_status(struct gk20a *g,
 				 struct gk20a_debug_output *o)
 {
 	u32 i, host_num_engines;
@@ -355,7 +355,7 @@ static void gv11b_dump_eng_status(struct gk20a *g,
 	gk20a_debug_output(o, "\n");
 }
 
-static u32 gv11b_fifo_intr_0_error_mask(struct gk20a *g)
+u32 gv11b_fifo_intr_0_error_mask(struct gk20a *g)
 {
 	u32 intr_0_error_mask =
 		fifo_intr_0_bind_error_pending_f() |
@@ -698,7 +698,7 @@ static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
 	return ret;
 }
 
-static int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
+int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 		 unsigned int id_type, unsigned int timeout_rc_type)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -747,7 +747,7 @@ static int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	return ret;
 }
 
-static int gv11b_fifo_preempt_channel(struct gk20a *g, u32 chid)
+int gv11b_fifo_preempt_channel(struct gk20a *g, u32 chid)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 tsgid;
@@ -784,7 +784,7 @@ static int __locked_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 	return ret;
 }
 
-static int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
+int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 ret = 0;
@@ -868,7 +868,7 @@ static int __locked_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 }
 
 
-static int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
+int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 			 unsigned int id_type, unsigned int timeout_rc_type)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -906,7 +906,7 @@ static int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 
 }
 
-static void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
+void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 			u32 id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault)
 {
@@ -1058,7 +1058,7 @@ static void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 		nvgpu_pmu_enable_elpg(g);
 }
 
-static void gv11b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
+void gv11b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
 {
 	/*
 	 * These are all errors which indicate something really wrong
@@ -1118,7 +1118,7 @@ static u32 gv11b_fifo_intr_0_en_mask(struct gk20a *g)
 	return intr_0_en_mask;
 }
 
-static int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
+int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 {
 	u32 intr_stall;
 	u32 mask;
@@ -1232,7 +1232,7 @@ static const char *const gv11b_sched_error_str[] = {
 	"bad_tsg",
 };
 
-static bool gv11b_fifo_handle_sched_error(struct gk20a *g)
+bool gv11b_fifo_handle_sched_error(struct gk20a *g)
 {
 	u32 sched_error;
 
@@ -1348,7 +1348,7 @@ static u32 gv11b_fifo_ctxsw_timeout_info(struct gk20a *g, u32 active_eng_id)
 	return tsgid;
 }
 
-static bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
+bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
 {
 	bool ret = false;
 	u32 tsgid = FIFO_INVAL_TSG_ID;
@@ -1411,7 +1411,7 @@ static bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
 	return ret;
 }
 
-static unsigned int gv11b_fifo_handle_pbdma_intr_0(struct gk20a *g,
+unsigned int gv11b_fifo_handle_pbdma_intr_0(struct gk20a *g,
 			u32 pbdma_id, u32 pbdma_intr_0,
 			u32 *handled, u32 *error_notifier)
 {
@@ -1460,7 +1460,7 @@ static unsigned int gv11b_fifo_handle_pbdma_intr_0(struct gk20a *g,
  * will have to be destroyed.
  */
 
-static unsigned int gv11b_fifo_handle_pbdma_intr_1(struct gk20a *g,
+unsigned int gv11b_fifo_handle_pbdma_intr_1(struct gk20a *g,
 			u32 pbdma_id, u32 pbdma_intr_1,
 			u32 *handled, u32 *error_notifier)
 {
@@ -1537,7 +1537,7 @@ unsigned int gv11b_fifo_get_eng_method_buffer_size(struct gk20a *g)
 	return buffer_size;
 }
 
-static void gv11b_fifo_init_eng_method_buffers(struct gk20a *g,
+void gv11b_fifo_init_eng_method_buffers(struct gk20a *g,
 					struct tsg_gk20a *tsg)
 {
 	struct vm_gk20a *vm = g->mm.bar2.vm;
@@ -1577,7 +1577,7 @@ static void gv11b_fifo_init_eng_method_buffers(struct gk20a *g,
 
 }
 
-static void gv11b_fifo_deinit_eng_method_buffers(struct gk20a *g,
+void gv11b_fifo_deinit_eng_method_buffers(struct gk20a *g,
 					struct tsg_gk20a *tsg)
 {
 	struct vm_gk20a *vm = g->mm.bar2.vm;
@@ -1596,7 +1596,7 @@ static void gv11b_fifo_deinit_eng_method_buffers(struct gk20a *g,
 }
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
-static int gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
+int gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 			u32 syncpt_id, struct nvgpu_mem *syncpt_buf)
 {
 	struct page **pages;
@@ -1631,14 +1631,14 @@ static int gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 	return err;
 }
 
-static void gv11b_fifo_free_syncpt_buf(struct channel_gk20a *c,
+void gv11b_fifo_free_syncpt_buf(struct channel_gk20a *c,
 					struct nvgpu_mem *syncpt_buf)
 {
 	nvgpu_gmmu_unmap(c->vm, syncpt_buf, syncpt_buf->gpu_va);
 	nvgpu_dma_free(c->g, syncpt_buf);
 }
 
-static void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,
+void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 		struct priv_cmd_entry *cmd, u32 off,
 		u32 id, u32 thresh, u64 gpu_va_base)
 {
@@ -1668,12 +1668,12 @@ static void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 	nvgpu_mem_wr32(g, cmd->mem, off++, 0x4 | (0x1 << 12));
 }
 
-static u32 gv11b_fifo_get_syncpt_wait_cmd_size(void)
+u32 gv11b_fifo_get_syncpt_wait_cmd_size(void)
 {
 	return 8;
 }
 
-static void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
+void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 		bool wfi_cmd, struct priv_cmd_entry *cmd,
 		u32 id, u64 gpu_va_base)
 {
@@ -1706,13 +1706,13 @@ static void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 	nvgpu_mem_wr32(g, cmd->mem, off++, 0);
 }
 
-static u32 gv11b_fifo_get_syncpt_incr_cmd_size(bool wfi_cmd)
+u32 gv11b_fifo_get_syncpt_incr_cmd_size(bool wfi_cmd)
 {
 	return 9;
 }
 #endif /* CONFIG_TEGRA_GK20A_NVHOST */
 
-static int gv11b_init_fifo_setup_hw(struct gk20a *g)
+int gv11b_init_fifo_setup_hw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 
@@ -1789,59 +1789,4 @@ void gv11b_mmu_fault_id_to_eng_pbdma_id_and_veid(struct gk20a *g,
 		*pbdma_id = gv11b_mmu_fault_id_to_pbdma_id(g, mmu_fault_id);
 	else
 		*pbdma_id = FIFO_INVAL_PBDMA_ID;
-}
-
-void gv11b_init_fifo(struct gpu_ops *gops)
-{
-	gp10b_init_fifo(gops);
-	/* for gv11b no need to do any thing special for fifo hw setup */
-	gops->fifo.init_fifo_setup_hw = gv11b_init_fifo_setup_hw;
-	gops->fifo.runlist_entry_size = ram_rl_entry_size_v;
-	gops->fifo.get_tsg_runlist_entry = gv11b_get_tsg_runlist_entry;
-	gops->fifo.get_ch_runlist_entry = gv11b_get_ch_runlist_entry;
-	gops->fifo.get_num_fifos = gv11b_fifo_get_num_fifos;
-	gops->fifo.userd_gp_get = gv11b_userd_gp_get;
-	gops->fifo.userd_gp_put = gv11b_userd_gp_put;
-	gops->fifo.userd_pb_get = gv11b_userd_pb_get;
-	gops->fifo.setup_ramfc = channel_gv11b_setup_ramfc;
-	gops->fifo.resetup_ramfc = NULL;
-	gops->fifo.unbind_channel = channel_gv11b_unbind;
-	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
-	gops->fifo.free_channel_ctx_header = gv11b_free_subctx_header;
-	gops->fifo.device_info_fault_id = top_device_info_data_fault_id_enum_v;
-	gops->fifo.is_fault_engine_subid_gpc = gv11b_is_fault_engine_subid_gpc;
-	gops->fifo.trigger_mmu_fault = NULL;
-	gops->fifo.get_mmu_fault_info = NULL;
-	gops->fifo.dump_pbdma_status = gk20a_dump_pbdma_status;
-	gops->fifo.dump_eng_status = gv11b_dump_eng_status;
-	gops->fifo.dump_channel_status_ramfc = gv11b_dump_channel_status_ramfc;
-	gops->fifo.intr_0_error_mask = gv11b_fifo_intr_0_error_mask;
-	gops->fifo.preempt_channel = gv11b_fifo_preempt_channel;
-	gops->fifo.preempt_tsg = gv11b_fifo_preempt_tsg;
-	gops->fifo.is_preempt_pending = gv11b_fifo_is_preempt_pending;
-	gops->fifo.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg;
-	gops->fifo.init_pbdma_intr_descs = gv11b_fifo_init_pbdma_intr_descs;
-	gops->fifo.reset_enable_hw = gv11b_init_fifo_reset_enable_hw;
-	gops->fifo.teardown_ch_tsg = gv11b_fifo_teardown_ch_tsg;
-	gops->fifo.handle_sched_error = gv11b_fifo_handle_sched_error;
-	gops->fifo.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout;
-	gops->fifo.handle_pbdma_intr_0 =
-			 gv11b_fifo_handle_pbdma_intr_0;
-	gops->fifo.handle_pbdma_intr_1 =
-			 gv11b_fifo_handle_pbdma_intr_1;
-	gops->fifo.init_eng_method_buffers =
-			gv11b_fifo_init_eng_method_buffers;
-	gops->fifo.deinit_eng_method_buffers =
-			gv11b_fifo_deinit_eng_method_buffers;
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-	gops->fifo.alloc_syncpt_buf = gv11b_fifo_alloc_syncpt_buf;
-	gops->fifo.free_syncpt_buf = gv11b_fifo_free_syncpt_buf;
-	gops->fifo.add_syncpt_wait_cmd = gv11b_fifo_add_syncpt_wait_cmd;
-	gops->fifo.get_syncpt_wait_cmd_size =
-				gv11b_fifo_get_syncpt_wait_cmd_size;
-	gops->fifo.add_syncpt_incr_cmd = gv11b_fifo_add_syncpt_incr_cmd;
-	gops->fifo.get_syncpt_incr_cmd_size =
-				gv11b_fifo_get_syncpt_incr_cmd_size;
-#endif
-
 }

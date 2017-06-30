@@ -252,3 +252,10 @@ L:	sw-mobile-system@exchange.nvidia.com
 S:	Supported
 F:	drivers/platform/tegra/tegra186-system-config.c
 F:	drivers/watchdog/*
+
+HOST
+M:      Arto Merilainen <amerilainen@nvidia.com>
+L:      sw-mobile-host1x@exchange.nvidia.com
+S:      Supported
+F:      drivers/*
+F:      include/*

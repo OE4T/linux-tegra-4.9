@@ -64,17 +64,6 @@
 		stdout-path = &uarta;
 	};
 
-	reserved-memory {
-		generic_reserved: generic_carveout {
-			compatible = "nvidia,generic_carveout";
-			size = <0x0 0x20000000>;	/* size set as 512MB here. Update it as desired. */
-			alignment = <0 0x100000>;	/* carveout start is aligned to 1MB here*/
-			alloc-ranges = <0 0 0x1 0>;	/* phys memory reserved is between 0x0 and 4GB-1 address range. */
-			no-map;
-			status = "disabled";
-		};
-	};
-
 	pmc@7000e400 {
 		nvidia,invert-interrupt;
 

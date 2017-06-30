@@ -2448,7 +2448,7 @@ static int gv11b_gr_sm_trigger_suspend(struct gk20a *g)
 	 * the same state in dbg_control0.
 	 */
 	dbgr_control0 =
-		gk20a_readl(g, gr_gpcs_tpcs_sms_dbgr_control0_r());
+		gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r());
 	dbgr_control0 |= gr_gpc0_tpc0_sm0_dbgr_control0_stop_trigger_enable_f();
 
 	/* broadcast write */

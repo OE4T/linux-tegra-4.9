@@ -254,10 +254,14 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 	}
 
 	if (!h->heap_pgalloc) {
+		phys_addr_t paddr = handle_phys(h);
+		struct page *page = phys_to_page(paddr);
+
 		err = sg_alloc_table(sgt, 1, GFP_KERNEL);
 		if (err)
 			goto err;
-		sg_set_buf(sgt->sgl, phys_to_virt(handle_phys(h)), h->size);
+
+		sg_set_page(sgt->sgl, page, h->size, offset_in_page(paddr));
 	} else {
 		pages = nvmap_pages(h->pgalloc.pages, npages);
 		if (!pages) {

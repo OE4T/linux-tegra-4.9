@@ -184,7 +184,8 @@ struct tegra210_adsp {
 	} pcm_path[ADSP_FE_COUNT+1][2];
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	struct nvaudio_ivc_ctxt *hivc_client;
-	uint32_t fe_to_admaif_map[ADSP_FE_END - ADSP_FE_START + 1][2];
+	int32_t fe_to_admaif_map[ADSP_FE_END - ADSP_FE_START + 1][2];
+	int32_t apm_to_admaif_map[APM_IN_END - APM_IN_START + 1][2];
 	struct tegra210_adsp_switch switches[MAX_ADSP_SWITCHES];
 	bool is_fe_set[ADSP_FE_COUNT];
 	spinlock_t switch_lock;
@@ -1763,7 +1764,7 @@ static int tegra_ivc_start_playback(
 	msg.cmd = NVAUDIO_START_PLAYBACK;
 	msg.params.dmaif_info.id = ivc_msg_admaif_id;
 	msg.ack_required = ack_required;
-	err = nvaudio_ivc_send(adsp->hivc_client,
+	err = nvaudio_ivc_send_retry(adsp->hivc_client,
 				&msg,
 				sizeof(struct nvaudio_ivc_msg));
 	if (ack_required && err >= 0) {
@@ -1786,7 +1787,7 @@ static int tegra_ivc_start_capture(
 	msg.cmd = NVAUDIO_START_CAPTURE;
 	msg.ack_required = ack_required;
 	msg.params.dmaif_info.id = ivc_msg_admaif_id;
-	err = nvaudio_ivc_send(adsp->hivc_client,
+	err = nvaudio_ivc_send_retry(adsp->hivc_client,
 				&msg,
 				sizeof(struct nvaudio_ivc_msg));
 	if (ack_required && err >= 0) {
@@ -1809,7 +1810,7 @@ static int tegra_ivc_stop_playback(
 	msg.cmd = NVAUDIO_STOP_PLAYBACK;
 	msg.params.dmaif_info.id = ivc_msg_admaif_id;
 	msg.ack_required = ack_required;
-	err = nvaudio_ivc_send(adsp->hivc_client,
+	err = nvaudio_ivc_send_retry(adsp->hivc_client,
 				&msg,
 				sizeof(struct nvaudio_ivc_msg));
 	if (ack_required && err >= 0) {
@@ -1832,7 +1833,7 @@ static int tegra_ivc_stop_capture(
 	msg.cmd = NVAUDIO_STOP_CAPTURE;
 	msg.params.dmaif_info.id = ivc_msg_admaif_id;
 	msg.ack_required = ack_required;
-	err = nvaudio_ivc_send(adsp->hivc_client,
+	err = nvaudio_ivc_send_retry(adsp->hivc_client,
 				&msg,
 				sizeof(struct nvaudio_ivc_msg));
 	if (ack_required && err >= 0) {
@@ -1841,6 +1842,112 @@ static int tegra_ivc_stop_capture(
 				sizeof(struct nvaudio_ivc_msg));
 	}
 	return err;
+}
+
+/**
+ * Function that checks for IO to IO path during widget event
+ * Used to toggle playback/capture through IVC to Audio Server
+ */
+
+static int tegra210_adsp_send_hv_state_msg(
+					struct tegra210_adsp *adsp,
+					struct tegra210_adsp_app *app,
+					int32_t state)
+{
+	uint32_t src, i;
+	int32_t ret = 0;
+	uint32_t be_to_be_flag = 0;
+	int32_t apm_in_id = -1, apm_out_id = -1;
+	int32_t playback_admaif_id = -1, capture_admaif_id = -1;
+
+	struct device *dev = adsp->dev;
+	struct device_node *node = dev->of_node;
+
+	/* Only applicable for HV configurations */
+	if (!of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv"))
+		return 0;
+
+	apm_in_id = app->reg - APM_IN_START;
+
+	/*
+	 * For IO to IO path, APM-IN input should be ADSP-ADMAIF
+	 * and APM-OUT output should be connected to ADSP-ADMAIF
+	 */
+
+	if (state == nvfx_state_active) {
+
+		/* Check source of APM-IN. If not ADSP-ADMAIF, return */
+		src = tegra210_adsp_get_source(adsp, app->reg);
+		if (!IS_ADSP_ADMAIF(src)) {
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_PLAYBACK] = -1;
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_CAPTURE] = -1;
+			return 0;
+		}
+		capture_admaif_id = src - ADSP_ADMAIF_START;
+
+		/* Check if any ADSP-ADMAIF is connected to same APM output */
+		for (i = ADSP_ADMAIF_START; i <= ADSP_ADMAIF_END; i++) {
+			app = &adsp->apps[i];
+			src = tegra210_adsp_get_source(adsp, app->reg);
+
+			if (!IS_APM_OUT(src))
+				continue;
+
+			apm_out_id = src - APM_OUT_START;
+			if (apm_out_id == apm_in_id) {
+				be_to_be_flag = 1;
+				playback_admaif_id = app->reg - ADSP_ADMAIF_START;
+				break;
+			}
+		}
+
+		if (be_to_be_flag) {
+			/* if IO to IO path exists, map APM to ADMAIFs */
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_PLAYBACK] =
+				playback_admaif_id;
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_CAPTURE] =
+				capture_admaif_id;
+
+			ret = tegra_ivc_start_capture(adsp, capture_admaif_id, false);
+			if (ret < 0)
+				dev_err(adsp->dev, "%s: start capture failed\n", __func__);
+
+			ret = tegra_ivc_start_playback(adsp, playback_admaif_id, false);
+			if (ret < 0) {
+				dev_err(adsp->dev, "%s: start playback failed\n", __func__);
+
+				ret = tegra_ivc_stop_capture(adsp, capture_admaif_id, false);
+				if (ret < 0)
+					dev_err(adsp->dev, "%s: stop capture failed\n", __func__);
+			}
+		} else {
+			/* No IO to IO path identified. No hv state msg to be sent */
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_PLAYBACK] = -1;
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_CAPTURE] = -1;
+		}
+
+	} else if (state == nvfx_state_inactive) {
+
+		playback_admaif_id =
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_PLAYBACK];
+		capture_admaif_id =
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_CAPTURE];
+
+		if ((playback_admaif_id != -1) && (capture_admaif_id != -1)) {
+			ret = tegra_ivc_stop_playback(adsp, playback_admaif_id, false);
+			if (ret < 0)
+				dev_err(adsp->dev, "%s: stop playback failed\n", __func__);
+
+			ret = tegra_ivc_stop_capture(adsp, capture_admaif_id, false);
+			if (ret < 0)
+				dev_err(adsp->dev, "%s: stop capture failed\n", __func__);
+		}
+
+		adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_PLAYBACK] = -1;
+		adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_CAPTURE] = -1;
+	}
+
+	return ret;
 }
 
 static uint32_t tegra210_adsp_hv_pcm_trigger(
@@ -1877,7 +1984,7 @@ static uint32_t tegra210_adsp_hv_pcm_trigger(
 		}
 
 		if (ret < 0) {
-			pr_err("error on ivc_send\n");
+			pr_err("%s: error during start_trigger\n", __func__);
 			return ret;
 		}
 		break;
@@ -1893,7 +2000,7 @@ static uint32_t tegra210_adsp_hv_pcm_trigger(
 		}
 
 		if (ret < 0) {
-			pr_err("error on ivc_send\n");
+			pr_err("%s: error during stop_trigger\n", __func__);
 			return ret;
 		}
 		break;
@@ -1926,7 +2033,7 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 					substream->stream,
 					cmd);
 		if (ret < 0) {
-			pr_err("error on ivc_send\n");
+			pr_err("%s: error during hv_pcm_trigger\n", __func__);
 			return ret;
 		}
 	}
@@ -2087,21 +2194,53 @@ static void tegra_adsp_set_admaif_id(
 				uint32_t be_reg,
 				int s_stream)
 {
-	int i, stream;
+	int i, j, stream;
 	uint32_t src;
 	struct tegra210_adsp_app *app = NULL;
 
+	/* ADSP Playback (ADSP-ADMAIF Codec Capture) */
 	if (s_stream == SNDRV_PCM_STREAM_CAPTURE) {
+
 		app = &adsp->apps[be_reg];
 		src = app->reg;
-		while (!IS_ADSP_FE(src))
+
+		while (src != TEGRA210_ADSP_NONE) {
+
+			/* Backtrace path till data source is found */
 			src = tegra210_adsp_get_source(adsp, src);
-		i = adsp->apps[src].reg;
-		stream = SNDRV_PCM_STREAM_PLAYBACK;
-		adsp->fe_to_admaif_map[i-1][stream] = admaif_id;
-		dev_vdbg(adsp->dev, "%s : capture fe %d admaif %d\n",
-				__func__, i, admaif_id);
-	} else {
+
+			/* Check if data source in path is ADSP-FE (Mem to IO) */
+			if (IS_ADSP_FE(src)) {
+				i = adsp->apps[src].reg;
+				stream = SNDRV_PCM_STREAM_PLAYBACK;
+				adsp->fe_to_admaif_map[i-1][stream] = admaif_id;
+				dev_vdbg(adsp->dev, "%s : capture fe %d admaif %d\n",
+						__func__, i, admaif_id);
+				return;
+			}
+
+			/* Check if data source in path is ADSP-ADMAIF (IO to IO) */
+			if (IS_ADSP_ADMAIF(src)) {
+				dev_vdbg(adsp->dev, "%s : start playback on adsp admaif %d\n",
+						__func__, admaif_id);
+
+				/* Clear older FE to ADMAIF mappings for given ADMAIF */
+				stream = SNDRV_PCM_STREAM_PLAYBACK;
+				for (j = ADSP_FE_START; j <= ADSP_FE_END; j++) {
+					if (adsp->fe_to_admaif_map[j-1][stream] == admaif_id)
+						adsp->fe_to_admaif_map[j-1][stream] = -1;
+				}
+
+				return;
+			}
+		}
+
+		dev_err(adsp->dev, "%s: no data source for ADSP-ADMAIF %d\n",
+			__func__, admaif_id);
+
+	} else { /* ADSP Capture (ADSP-ADMAIF Codec Playback) */
+
+		/* Check if ADSP-FE is sink for given ADSP ADMAIF (IO to Mem) */
 		for (i = ADSP_FE_START; i <= ADSP_FE_END; i++) {
 			app = &adsp->apps[i];
 			src = app->reg;
@@ -2111,12 +2250,43 @@ static void tegra_adsp_set_admaif_id(
 			}
 			if (src != be_reg)
 				continue;
+
 			stream = SNDRV_PCM_STREAM_CAPTURE;
 			adsp->fe_to_admaif_map[i-1][stream] = admaif_id;
 			dev_vdbg(adsp->dev, "%s : capture fe %d admaif %d\n",
 					__func__, i, admaif_id);
+			return;
 		}
+
+		/* Check if ADSP-ADMAIF is sink for given ADSP ADMAIF (IO to IO) */
+		for (i = ADSP_ADMAIF_START; i <= ADSP_ADMAIF_END; i++) {
+			app = &adsp->apps[i];
+			src = app->reg;
+			while (!IS_ADSP_ADMAIF(src) && src != 0) {
+				src = tegra210_adsp_get_source(
+							 adsp, src);
+			}
+			if (src != be_reg)
+				continue;
+
+
+			/* Clear older FE to ADMAIF mappings for given ADMAIF */
+			stream = SNDRV_PCM_STREAM_CAPTURE;
+			for (j = ADSP_FE_START; j <= ADSP_FE_END; j++) {
+				if (adsp->fe_to_admaif_map[j-1][stream] == admaif_id)
+					adsp->fe_to_admaif_map[j-1][stream] = -1;
+			}
+
+			dev_vdbg(adsp->dev, "%s : start capture on adsp admaif %d\n",
+						__func__, admaif_id);
+			return;
+		}
+
+		dev_err(adsp->dev, "%s: no data sink for ADSP-ADMAIF %d\n",
+			__func__, admaif_id);
+
 	}
+	return;
 }
 
 static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
@@ -2266,12 +2436,11 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 	else
 		msg.cmd = NVAUDIO_DMAIF_SET_RXCIF;
 
-	ret = nvaudio_ivc_send(adsp->hivc_client,
+	ret = nvaudio_ivc_send_retry(adsp->hivc_client,
 				&msg,
 				sizeof(struct nvaudio_ivc_msg));
-
 	if (ret < 0)
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error during ivc_send\n", __func__);
 	return ret;
 }
 
@@ -2292,7 +2461,7 @@ static int tegra210_adsp_admaif_hv_hw_params(
 				adma_params,
 				stream);
 	if (ret < 0) {
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error during adsp_admaif_set_cif\n", __func__);
 		return ret;
 	}
 	tegra_adsp_set_admaif_id(adsp,
@@ -2567,7 +2736,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 				&adma_params,
 				substream->stream);
 		if (ret < 0) {
-			pr_err("error on ivc_send\n");
+			pr_err("%s: error during adsp_admaif_hv_hw_params\n", __func__);
 			return ret;
 		}
 		/*End of sending IVC command for admaif cif setting*/
@@ -2954,6 +3123,13 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 				TEGRA210_ADSP_MSG_FLAG_SEND);
 			if (ret < 0)
 				dev_err(adsp->dev, "Failed to set state active.");
+
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
+			ret = tegra210_adsp_send_hv_state_msg(adsp,
+				app, nvfx_state_active);
+			if (ret < 0)
+				dev_err(adsp->dev, "Failed to send hv state active msg.");
+#endif
 			pm_runtime_put(adsp->dev);
 		}
 	} else {
@@ -2968,6 +3144,14 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 				TEGRA210_ADSP_MSG_FLAG_SEND);
 			if (ret < 0)
 				dev_err(adsp->dev, "Failed to set state inactive.");
+
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
+			ret = tegra210_adsp_send_hv_state_msg(adsp,
+				app, nvfx_state_inactive);
+			if (ret < 0)
+				dev_err(adsp->dev, "Failed to send hv state inactive msg.");
+#endif
+
 			ret = tegra210_adsp_send_reset_msg(app,
 				(TEGRA210_ADSP_MSG_FLAG_SEND |
 				TEGRA210_ADSP_MSG_FLAG_NEED_ACK));
@@ -4101,7 +4285,7 @@ static int tegra210_adsp_set_switch(struct snd_kcontrol *kcontrol,
 			&adma_params,
 			SNDRV_PCM_STREAM_CAPTURE);
 		if (ret < 0) {
-			pr_err("error on ivc_send\n");
+			pr_err("%s: error during adsp_admaif_hv_hw_params\n", __func__);
 			return -EPERM;
 		}
 	}

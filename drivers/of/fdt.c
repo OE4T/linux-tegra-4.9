@@ -397,8 +397,8 @@ static int unflatten_dt_nodes(const void *blob,
 	struct device_node *root;
 	int offset = 0, depth = 0, initial_depth = 0;
 #define FDT_MAX_DEPTH	64
-	unsigned int fpsizes[FDT_MAX_DEPTH];
-	struct device_node *nps[FDT_MAX_DEPTH];
+	unsigned int fpsizes[FDT_MAX_DEPTH + 1];
+	struct device_node *nps[FDT_MAX_DEPTH + 1];
 	void *base = mem;
 	bool dryrun = !base;
 

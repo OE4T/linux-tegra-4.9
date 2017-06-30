@@ -17,6 +17,7 @@
  */
 
 #include "nvgpu/log.h"
+#include "nvgpu/bitops.h"
 
 #include "gk20a/gk20a.h"
 
@@ -25,6 +26,19 @@
 #include "ce_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_ce_gv11b.h>
+
+static u32 gv11b_ce_get_num_pce(struct gk20a *g)
+{
+	/* register contains a bitmask indicating which physical copy
+	 * engines are present (and not floorswept).
+	 */
+	u32 num_pce;
+	u32 ce_pce_map = gk20a_readl(g, ce_pce_map_r());
+
+	num_pce = get_count_order(ce_pce_map) + 1;
+	nvgpu_log_info(g, "num PCE: %d", num_pce);
+	return num_pce;
+}
 
 static void gv11b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
@@ -64,4 +78,5 @@ void gv11b_init_ce(struct gpu_ops *gops)
 {
 	gp10b_init_ce(gops);
 	gops->ce2.isr_stall = gv11b_ce_isr;
+	gops->ce2.get_num_pce = gv11b_ce_get_num_pce;
 }

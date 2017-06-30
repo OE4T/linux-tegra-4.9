@@ -157,15 +157,18 @@ static int nvhost_buffer_map(struct platform_device *pdev,
 	phys_addr = sg_phys(sgt->sgl);
 	dma_addr = sg_dma_address(sgt->sgl);
 
-	/* If dma address is not available, we should use the phys address */
-	if (!dma_addr)
-		dma_addr = phys_addr;
-
-	/* Check whether the buffer resides in cvnas using the phys address */
+	/* Determine the heap */
 	if (phys_addr >= cvnas_begin && phys_addr < cvnas_end)
 		vm->heap = NVHOST_BUFFERS_HEAP_CVNAS;
 	else
 		vm->heap = NVHOST_BUFFERS_HEAP_DRAM;
+
+	/*
+	 * If dma address is not available or heap is in CVNAS, use the
+	 * physical address.
+	 */
+	if (!dma_addr || vm->heap == NVHOST_BUFFERS_HEAP_CVNAS)
+		dma_addr = phys_addr;
 
 	vm->sgt = sgt;
 	vm->attach = attach;

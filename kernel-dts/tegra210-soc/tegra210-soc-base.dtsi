@@ -226,7 +226,7 @@
 		#num-translation-enable = <5>;
 		#num-asid-security = <8>;
 
-		domains = <&ppcs_as TEGRA_SWGROUP_CELLS9(PPCS, PPCS1, PPCS2, SE, SE1, ISP2B, ISP2B1, ISP2B, ISP2B1)
+		domains = <&ppcs_as TEGRA_SWGROUP_CELLS5(PPCS, PPCS1, PPCS2, SE, SE1)
 			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)
 			   &ape_as TEGRA_SWGROUP_CELLS(APE)
 			   &dc_as TEGRA_SWGROUP_CELLS2(DC, DC12)

@@ -137,9 +137,7 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 
 #define HDCP_PORT_NAME	"com.nvidia.tos.13f616f9-8572-4a6f-a1f104aa9b05f9ff"
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 static void *ta_ctx;
-#endif
 static bool repeater_flag;
 static bool vprime_check_done;
 
@@ -353,7 +351,7 @@ static int wait_hdcp_ctrl(struct tegra_dc_sor_data *sor, u32 mask, u32 *v)
 	int retries = HDCP_CTRL_RETRIES;
 	u32 ctrl;
 
-	if (!sor || !v) {
+	if (!sor) {
 		dphdcp_err("Null params sent\n");
 		return -EINVAL;
 	}
@@ -742,10 +740,9 @@ static int srm_revocation_check(struct tegra_dphdcp *dphdcp)
 	struct hdcp_context_t *hdcp_context =
 		kmalloc(sizeof(struct hdcp_context_t), GFP_KERNEL);
 	int e = 0;
-	uint64_t *pkt = NULL;
 	unsigned char nonce[HDCP_NONCE_SIZE];
 
-	pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
+	uint64_t *pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
 
 	if (!pkt || !hdcp_context)
 		goto exit;
@@ -755,13 +752,10 @@ static int srm_revocation_check(struct tegra_dphdcp *dphdcp)
 		dphdcp_err("hdcp context create/init failed\n");
 		goto exit;
 	}
-
-	if (tegra_dc_is_t18x()) {
-		e = get_srm_signature(hdcp_context, nonce, pkt, ta_ctx);
-		if (e) {
-			dphdcp_err("Error getting srm signature!\n");
-			goto exit;
-		}
+	e = get_srm_signature(hdcp_context, nonce, pkt, ta_ctx);
+	if (e) {
+		dphdcp_err("Error getting srm signature!\n");
+		goto exit;
 	}
 	e = tsec_hdcp_revocation_check(hdcp_context,
 			(unsigned char *)(pkt + HDCP_CMAC_OFFSET),
@@ -1017,7 +1011,6 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 	struct tegra_dc_dp_data *dp = dphdcp->dp;
 	struct tegra_dc *dc = dp->dc;
 	struct tegra_dc_sor_data *sor = dp->sor;
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	int hdcp_ta_ret; /* track returns from TA */
 	uint32_t ta_cmd = HDCP_AUTH_CMD;
 	bool enc = false;
@@ -1030,7 +1023,6 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		e = -ENOMEM;
 		goto failure;
 	}
-#endif
 	dphdcp_vdbg("%s():started thread %s\n", __func__, dphdcp->name);
 	tegra_dc_io_start(dc);
 	mutex_lock(&dphdcp->lock);
@@ -1069,13 +1061,14 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		goto failure;
 	}
 repeater_auth:
+	/* TZ sessions are needed in all platforms */
+	ta_ctx = NULL;
+	e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+	if (e) {
+		dphdcp_err("open session failed\n");
+		goto failure;
+	}
 	if (tegra_dc_is_t18x()) {
-		ta_ctx = NULL;
-		e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
-		if (e) {
-			dphdcp_err("Invalid session id");
-			goto failure;
-		}
 		/* if session successfully opened, launch operations */
 		/* repeater flag in Bskv must be configured before
 		 * loading fuses
@@ -1282,7 +1275,6 @@ repeater_auth:
 			mutex_lock(&dphdcp->lock);
 			goto failure;
 		}
-
 	if (tegra_dc_is_t18x()) {
 		*pkt = HDCP_TA_CMD_ENC;
 		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
@@ -1425,29 +1417,25 @@ lost_dp:
 		}
 		}
 	} else {
-	hdcp_ctrl_run(sor, 0);
+		hdcp_ctrl_run(sor, 0);
 	}
 
 err:
 	mutex_unlock(&dphdcp->lock);
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	kfree(pkt);
 	if (ta_ctx) {
 		te_close_trusted_session(ta_ctx);
 		ta_ctx = NULL;
 	}
-#endif
 	tegra_dc_io_end(dc);
 	return;
 disable:
 	dphdcp->state = STATE_OFF;
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	kfree(pkt);
 	if (ta_ctx) {
 		te_close_trusted_session(ta_ctx);
 		ta_ctx = NULL;
 	}
-#endif
 	dphdcp_set_plugged(dphdcp, false);
 	mutex_unlock(&dphdcp->lock);
 	tegra_dc_io_end(dc);

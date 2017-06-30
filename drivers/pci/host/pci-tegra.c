@@ -4839,11 +4839,6 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static void tegra_pcie_shutdown(struct platform_device *pdev)
-{
-	tegra_pcie_remove(pdev);
-}
-
 static inline u32 get_pme_port_offset(struct tegra_pcie_port *port)
 {
 	u32 ret = 0;
@@ -5059,7 +5054,6 @@ static const struct dev_pm_ops tegra_pcie_pm_ops = {
 static struct platform_driver __refdata tegra_pcie_driver = {
 	.probe   = tegra_pcie_probe,
 	.remove  = tegra_pcie_remove,
-	.shutdown  = tegra_pcie_shutdown,
 	.driver  = {
 		.name  = "tegra-pcie",
 		.owner = THIS_MODULE,

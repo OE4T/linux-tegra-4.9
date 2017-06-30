@@ -405,6 +405,7 @@ static inline bool hibernation_available(void) { return false; }
 #define PM_POST_SUSPEND		0x0004 /* Suspend finished */
 #define PM_RESTORE_PREPARE	0x0005 /* Going to restore a saved image */
 #define PM_POST_RESTORE		0x0006 /* Restore failed */
+#define PM_USERSPACE_FROZEN	0x0007 /* Userspace frozen */
 
 extern struct mutex pm_mutex;
 

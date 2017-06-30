@@ -18,6 +18,22 @@
 / {
 	compatible = "nvidia,tegra210b01", "nvidia,tegra210";
 
+	smmu: iommu {
+		domains = <&ppcs_as TEGRA_SWGROUP_CELLS9(PPCS, PPCS1, PPCS2, SE, SE1, ISP2B, ISP2B1, ISP2B, ISP2B1)
+			   &gpu_as TEGRA_SWGROUP_CELLS(GPUB)
+			   &ape_as TEGRA_SWGROUP_CELLS(APE)
+			   &dc_as TEGRA_SWGROUP_CELLS2(DC, DC12)
+			   &dc_as TEGRA_SWGROUP_CELLS(DCB)
+			   &common_as TEGRA_SWGROUP_CELLS(AFI)
+			   &common_as TEGRA_SWGROUP_CELLS(SDMMC1A)
+			   &common_as TEGRA_SWGROUP_CELLS(SDMMC2A)
+			   &common_as TEGRA_SWGROUP_CELLS(SDMMC3A)
+			   &common_as TEGRA_SWGROUP_CELLS(SDMMC4A)
+			   &common_as TEGRA_SWGROUP_CELLS(AVPC)
+			   &common_as TEGRA_SWGROUP_CELLS(SMMU_TEST)
+			   &common_as 0xFFFFFFFF 0xFFFFFFFF>;
+	};
+
 	se_elp: se_elp@70420000 {
 		compatible = "nvidia,tegra210b01-se-elp";
 		reg = <0x0 0x70420000 0x0 0x10000>;

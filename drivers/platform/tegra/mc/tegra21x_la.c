@@ -677,11 +677,15 @@ static int t21x_handle_disp_la(enum tegra_la_id id,
 	la_to_set = min((long long)(la_nsec/cs->ns_per_tick),
 			(long long)MC_LA_MAX_VALUE);
 
-	if ((la_to_set < t21x_min_la(&disp_params)) || (la_to_set > 255))
+	if (la_to_set <  t21x_min_la(&disp_params))
+		la_to_set = t21x_min_la(&disp_params);
+
+	if (la_to_set > 255)
 		return -1;
 
 	if (write_la)
 		program_la(ci, la_to_set);
+
 	return 0;
 }
 

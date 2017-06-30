@@ -3674,7 +3674,7 @@ static inline u32 gr_gpc0_tpc0_sm0_dbgr_control0_run_trigger_task_f(void)
 {
 	return 0x40000000;
 }
-static inline u32 gr_gpc0_tpc0_sm0_warp_valid_mask_r(void)
+static inline u32 gr_gpc0_tpc0_sm0_warp_valid_mask_0_r(void)
 {
 	return 0x00504708;
 }
@@ -3682,7 +3682,7 @@ static inline u32 gr_gpc0_tpc0_sm0_warp_valid_mask_1_r(void)
 {
 	return 0x0050470c;
 }
-static inline u32 gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_r(void)
+static inline u32 gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_0_r(void)
 {
 	return 0x00504710;
 }
@@ -3690,7 +3690,7 @@ static inline u32 gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_1_r(void)
 {
 	return 0x00504714;
 }
-static inline u32 gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_r(void)
+static inline u32 gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_0_r(void)
 {
 	return 0x00504718;
 }
@@ -3698,7 +3698,7 @@ static inline u32 gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_1_r(void)
 {
 	return 0x0050471c;
 }
-static inline u32 gr_gpcs_tpcs_sms_dbgr_bpt_pause_mask_r(void)
+static inline u32 gr_gpcs_tpcs_sms_dbgr_bpt_pause_mask_0_r(void)
 {
 	return 0x00419e90;
 }

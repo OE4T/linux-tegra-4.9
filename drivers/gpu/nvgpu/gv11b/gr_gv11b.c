@@ -1389,8 +1389,11 @@ static int gr_gv11b_dump_gr_sm_regs(struct gk20a *g,
 		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_DBGR_STATUS0: 0x%x\n",
 		gk20a_readl(g, gr_gpcs_tpcs_sms_dbgr_status0_r()));
 	gk20a_debug_output(o,
-		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_DBGR_BPT_PAUSE_MASK: 0x%x\n",
-		gk20a_readl(g, gr_gpcs_tpcs_sms_dbgr_bpt_pause_mask_r()));
+		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_DBGR_BPT_PAUSE_MASK_0: 0x%x\n",
+		gk20a_readl(g, gr_gpcs_tpcs_sms_dbgr_bpt_pause_mask_0_r()));
+	gk20a_debug_output(o,
+		"NV_PGRAPH_PRI_GPCS_TPCS_SMS_DBGR_BPT_PAUSE_MASK_1: 0x%x\n",
+		gk20a_readl(g, gr_gpcs_tpcs_sms_dbgr_bpt_pause_mask_1_r()));
 
 	sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
 	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
@@ -2483,26 +2486,26 @@ static void gv11b_gr_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 
 		/* 64 bit read */
 		warps_valid = (u64)gk20a_readl(g,
-				gr_gpc0_tpc0_sm0_warp_valid_mask_r() +
-				offset + 4) << 32;
+				gr_gpc0_tpc0_sm0_warp_valid_mask_1_r() +
+				offset) << 32;
 		warps_valid |= gk20a_readl(g,
-				gr_gpc0_tpc0_sm0_warp_valid_mask_r() +
+				gr_gpc0_tpc0_sm0_warp_valid_mask_0_r() +
 				offset);
 
 		/* 64 bit read */
 		warps_paused = (u64)gk20a_readl(g,
-				gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_r() +
-				offset + 4) << 32;
+				gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_1_r() +
+				offset) << 32;
 		warps_paused |= gk20a_readl(g,
-				gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_r() +
+				gr_gpc0_tpc0_sm0_dbgr_bpt_pause_mask_0_r() +
 				offset);
 
 		/* 64 bit read */
 		warps_trapped = (u64)gk20a_readl(g,
-				gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_r() +
-				offset + 4) << 32;
+				gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_1_r() +
+				offset) << 32;
 		warps_trapped |= gk20a_readl(g,
-				gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_r() +
+				gr_gpc0_tpc0_sm0_dbgr_bpt_trap_mask_0_r() +
 				offset);
 
 		w_state[sm_id].valid_warps[0] = warps_valid;

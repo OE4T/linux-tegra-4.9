@@ -1,7 +1,7 @@
 /*
  * GK20A Cycle stats snapshots support (subsystem for gr_gk20a).
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -121,6 +121,16 @@ struct gk20a_cs_snapshot {
 	struct gk20a_cs_snapshot_fifo_entry	*hw_get;
 };
 
-void gk20a_init_css_ops(struct gpu_ops *gops);
+inline void css_hw_set_handled_snapshots(struct gk20a *g, u32 done);
+int css_hw_enable_snapshot(struct channel_gk20a *ch,
+				struct gk20a_cs_snapshot_client *cs_client);
+void css_hw_disable_snapshot(struct gr_gk20a *gr);
+u32 css_gr_allocate_perfmon_ids(struct gk20a_cs_snapshot *data,
+				       u32 count);
+u32 css_gr_release_perfmon_ids(struct gk20a_cs_snapshot *data,
+				      u32 start,
+				      u32 count);
+int css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,
+					bool *hw_overflow);
 
 #endif /* CSS_GR_GK20A_H */

@@ -245,6 +245,16 @@ static const struct gpu_ops gp10b_ops = {
 		.need_scatter_buffer = gp10b_need_scatter_buffer,
 		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
 	},
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	.css = {
+		.enable_snapshot = css_hw_enable_snapshot,
+		.disable_snapshot = css_hw_disable_snapshot,
+		.check_data_available = css_hw_check_data_available,
+		.set_handled_snapshots = css_hw_set_handled_snapshots,
+		.allocate_perfmon_ids = css_gr_allocate_perfmon_ids,
+		.release_perfmon_ids = css_gr_release_perfmon_ids,
+	},
+#endif
 	.falcon = {
 		.falcon_hal_sw_init = gk20a_falcon_hal_sw_init,
 	},
@@ -264,6 +274,9 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->debug = gp10b_ops.debug;
 	gops->dbg_session_ops = gp10b_ops.dbg_session_ops;
 	gops->cde = gp10b_ops.cde;
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	gops->css = gp10b_ops.css;
+#endif
 	gops->falcon = gp10b_ops.falcon;
 
 	/* Lone Functions */
@@ -323,9 +336,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
 	gk20a_init_pramin_ops(gops);
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	gk20a_init_css_ops(gops);
-#endif
+
 	g->name = "gp10b";
 
 	c->twod_class = FERMI_TWOD_A;

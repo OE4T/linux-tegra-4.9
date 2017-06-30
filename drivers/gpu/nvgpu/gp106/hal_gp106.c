@@ -278,6 +278,16 @@ static const struct gpu_ops gp106_ops = {
 		.need_scatter_buffer = gp10b_need_scatter_buffer,
 		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
 	},
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	.css = {
+		.enable_snapshot = css_hw_enable_snapshot,
+		.disable_snapshot = css_hw_disable_snapshot,
+		.check_data_available = css_hw_check_data_available,
+		.set_handled_snapshots = css_hw_set_handled_snapshots,
+		.allocate_perfmon_ids = css_gr_allocate_perfmon_ids,
+		.release_perfmon_ids = css_gr_release_perfmon_ids,
+	},
+#endif
 	.xve = {
 		.sw_init          = xve_sw_init_gp106,
 		.get_speed        = xve_get_speed_gp106,
@@ -314,6 +324,9 @@ int gp106_init_hal(struct gk20a *g)
 	gops->debug = gp106_ops.debug;
 	gops->dbg_session_ops = gp106_ops.dbg_session_ops;
 	gops->cde = gp106_ops.cde;
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	gops->css = gp106_ops.css;
+#endif
 	gops->xve = gp106_ops.xve;
 	gops->falcon = gp106_ops.falcon;
 
@@ -342,9 +355,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_regops(gops);
 	gk20a_init_tsg_ops(gops);
 	gk20a_init_pramin_ops(gops);
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	gk20a_init_css_ops(gops);
-#endif
 	gp106_init_therm_ops(gops);
 
 	g->name = "gp10x";

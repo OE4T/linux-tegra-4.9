@@ -234,6 +234,16 @@ static const struct gpu_ops gm20b_ops = {
 	.cde = {
 		.get_program_numbers = gm20b_cde_get_program_numbers,
 	},
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	.css = {
+		.enable_snapshot = css_hw_enable_snapshot,
+		.disable_snapshot = css_hw_disable_snapshot,
+		.check_data_available = css_hw_check_data_available,
+		.set_handled_snapshots = css_hw_set_handled_snapshots,
+		.allocate_perfmon_ids = css_gr_allocate_perfmon_ids,
+		.release_perfmon_ids = css_gr_release_perfmon_ids,
+	},
+#endif
 	.falcon = {
 		.falcon_hal_sw_init = gk20a_falcon_hal_sw_init,
 	},
@@ -253,6 +263,9 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->dbg_session_ops = gm20b_ops.dbg_session_ops;
 	gops->debug = gm20b_ops.debug;
 	gops->cde = gm20b_ops.cde;
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	gops->css = gm20b_ops.css;
+#endif
 	gops->falcon = gm20b_ops.falcon;
 
 	/* Lone functions */
@@ -303,9 +316,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_regops(gops);
 	gm20b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	gk20a_init_css_ops(gops);
-#endif
 	g->name = "gm20b";
 
 	c->twod_class = FERMI_TWOD_A;

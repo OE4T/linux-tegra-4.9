@@ -72,7 +72,7 @@ static inline u32 css_hw_get_pending_snapshots(struct gk20a *g)
 }
 
 /* informs hw how many snapshots have been processed (frees up fifo space) */
-static inline void css_hw_set_handled_snapshots(struct gk20a *g, u32 done)
+inline void css_hw_set_handled_snapshots(struct gk20a *g, u32 done)
 {
 	if (done > 0) {
 		gk20a_writel(g, perf_pmasys_mem_bump_r(),
@@ -127,7 +127,7 @@ static int css_gr_create_shared_data(struct gr_gk20a *gr)
 	return 0;
 }
 
-static int css_hw_enable_snapshot(struct channel_gk20a *ch,
+int css_hw_enable_snapshot(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *cs_client)
 {
 	struct gk20a *g = ch->g;
@@ -203,7 +203,7 @@ failed_allocation:
 	return ret;
 }
 
-static void css_hw_disable_snapshot(struct gr_gk20a *gr)
+void css_hw_disable_snapshot(struct gr_gk20a *gr)
 {
 	struct gk20a *g = gr->g;
 	struct gk20a_cs_snapshot *data = gr->cs_data;
@@ -399,7 +399,7 @@ next_hw_fifo_entry:
 	return 0;
 }
 
-static u32 css_gr_allocate_perfmon_ids(struct gk20a_cs_snapshot *data,
+u32 css_gr_allocate_perfmon_ids(struct gk20a_cs_snapshot *data,
 				       u32 count)
 {
 	unsigned long *pids = data->perfmon_ids;
@@ -415,7 +415,7 @@ static u32 css_gr_allocate_perfmon_ids(struct gk20a_cs_snapshot *data,
 	return f;
 }
 
-static u32 css_gr_release_perfmon_ids(struct gk20a_cs_snapshot *data,
+u32 css_gr_release_perfmon_ids(struct gk20a_cs_snapshot *data,
 				      u32 start,
 				      u32 count)
 {
@@ -653,7 +653,7 @@ void gr_gk20a_free_cyclestats_snapshot_data(struct gk20a *g)
 	nvgpu_mutex_destroy(&gr->cs_lock);
 }
 
-static int css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,
+int css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,
 					bool *hw_overflow)
 {
 	struct gk20a *g = ch->g;
@@ -669,14 +669,4 @@ static int css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,
 
 	*hw_overflow = css_hw_get_overflow_status(g);
 	return 0;
-}
-
-void gk20a_init_css_ops(struct gpu_ops *gops)
-{
-	gops->css.enable_snapshot = css_hw_enable_snapshot;
-	gops->css.disable_snapshot = css_hw_disable_snapshot;
-	gops->css.check_data_available = css_hw_check_data_available;
-	gops->css.set_handled_snapshots = css_hw_set_handled_snapshots;
-	gops->css.allocate_perfmon_ids = css_gr_allocate_perfmon_ids;
-	gops->css.release_perfmon_ids = css_gr_release_perfmon_ids;
 }

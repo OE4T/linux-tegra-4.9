@@ -207,6 +207,11 @@ static const struct gpu_ops gp10b_ops = {
 		.pg_gr_load_gating_prod =
 			gr_gp10b_pg_gr_load_gating_prod,
 	},
+	.cde = {
+		.get_program_numbers = gp10b_cde_get_program_numbers,
+		.need_scatter_buffer = gp10b_need_scatter_buffer,
+		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
+	},
 	.chip_init_gpu_characteristics = gp10b_init_gpu_characteristics,
 	.get_litter_value = gp10b_get_litter_value,
 };
@@ -219,6 +224,7 @@ int gp10b_init_hal(struct gk20a *g)
 
 	gops->ltc = gp10b_ops.ltc;
 	gops->clock_gating = gp10b_ops.clock_gating;
+	gops->cde = gp10b_ops.cde;
 
 	/* Lone Functions */
 	gops->chip_init_gpu_characteristics =
@@ -278,7 +284,6 @@ int gp10b_init_hal(struct gk20a *g)
 	gk20a_init_debug_ops(gops);
 	gk20a_init_dbg_session_ops(gops);
 	gp10b_init_regops(gops);
-	gp10b_init_cde_ops(gops);
 	gp10b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
 	gk20a_init_pramin_ops(gops);

@@ -239,6 +239,11 @@ static const struct gpu_ops gp106_ops = {
 		.pg_gr_load_gating_prod =
 			gr_gp106_pg_gr_load_gating_prod,
 	},
+	.cde = {
+		.get_program_numbers = gp10b_cde_get_program_numbers,
+		.need_scatter_buffer = gp10b_need_scatter_buffer,
+		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
+	},
 	.xve = {
 		.sw_init          = xve_sw_init_gp106,
 		.get_speed        = xve_get_speed_gp106,
@@ -268,6 +273,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gops->ltc = gp106_ops.ltc;
 	gops->clock_gating = gp106_ops.clock_gating;
+	gops->cde = gp106_ops.cde;
 	gops->xve = gp106_ops.xve;
 
 	/* Lone functions */
@@ -296,7 +302,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_clk_ops(gops);
 	gp106_init_clk_arb_ops(gops);
 	gp106_init_regops(gops);
-	gp10b_init_cde_ops(gops);
 	gk20a_init_tsg_ops(gops);
 	gk20a_init_pramin_ops(gops);
 #if defined(CONFIG_GK20A_CYCLE_STATS)

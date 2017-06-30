@@ -1,7 +1,7 @@
 /*
  * GP10B CDE
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,8 +16,17 @@
 #ifndef _NVHOST_GP10B_CDE
 #define _NVHOST_GP10B_CDE
 
-struct gpu_ops;
+struct gk20a;
+struct sg_table;
 
-void gp10b_init_cde_ops(struct gpu_ops *gops);
+void gp10b_cde_get_program_numbers(struct gk20a *g,
+					  u32 block_height_log2,
+					  int *hprog_out, int *vprog_out);
+bool gp10b_need_scatter_buffer(struct gk20a *g);
+int gp10b_populate_scatter_buffer(struct gk20a *g,
+					 struct sg_table *sgt,
+					 size_t surface_size,
+					 void *scatter_buffer_ptr,
+					 size_t scatter_buffer_size);
 
 #endif

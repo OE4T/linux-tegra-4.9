@@ -1,7 +1,7 @@
 /*
  * GM20B CDE
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,7 +26,7 @@ enum programs {
 	PROG_PASSTHROUGH        = 6,
 };
 
-static void gm20b_cde_get_program_numbers(struct gk20a *g,
+void gm20b_cde_get_program_numbers(struct gk20a *g,
 					  u32 block_height_log2,
 					  int *hprog_out, int *vprog_out)
 {
@@ -45,9 +45,4 @@ static void gm20b_cde_get_program_numbers(struct gk20a *g,
 
 	*hprog_out = hprog;
 	*vprog_out = vprog;
-}
-
-void gm20b_init_cde_ops(struct gpu_ops *gops)
-{
-	gops->cde.get_program_numbers = gm20b_cde_get_program_numbers;
 }

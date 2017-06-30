@@ -1,7 +1,7 @@
 /*
  * GP10B CDE
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,7 +30,7 @@ enum gp10b_programs {
 	GP10B_PROG_PASSTHROUGH        = 8,
 };
 
-static void gp10b_cde_get_program_numbers(struct gk20a *g,
+void gp10b_cde_get_program_numbers(struct gk20a *g,
 					  u32 block_height_log2,
 					  int *hprog_out, int *vprog_out)
 {
@@ -60,7 +60,7 @@ static void gp10b_cde_get_program_numbers(struct gk20a *g,
 	*vprog_out = vprog;
 }
 
-static bool gp10b_need_scatter_buffer(struct gk20a *g)
+bool gp10b_need_scatter_buffer(struct gk20a *g)
 {
 	return g->mm.bypass_smmu;
 }
@@ -74,7 +74,7 @@ static u8 parity(u32 a)
 	return (0x6996u >> a) & 1u;
 }
 
-static int gp10b_populate_scatter_buffer(struct gk20a *g,
+int gp10b_populate_scatter_buffer(struct gk20a *g,
 					 struct sg_table *sgt,
 					 size_t surface_size,
 					 void *scatter_buffer_ptr,
@@ -139,11 +139,4 @@ static int gp10b_populate_scatter_buffer(struct gk20a *g,
 	}
 
 	return 0;
-}
-
-void gp10b_init_cde_ops(struct gpu_ops *gops)
-{
-	gops->cde.get_program_numbers = gp10b_cde_get_program_numbers;
-	gops->cde.need_scatter_buffer = gp10b_need_scatter_buffer;
-	gops->cde.populate_scatter_buffer = gp10b_populate_scatter_buffer;
 }

@@ -454,7 +454,7 @@ static void clk_setup_dvfs_detection(struct gk20a *g, struct pll *gpll)
 /* Enable NA/DVFS mode */
 static int clk_enbale_pll_dvfs(struct gk20a *g)
 {
-	u32 data, cfg;
+	u32 data, cfg = 0;
 	int delay = gpc_pll_params.iddq_exit_delay; /* iddq & calib delay */
 	struct pll_parms *p = &gpc_pll_params;
 	bool calibrated = p->uvdet_slope && p->uvdet_offs;

@@ -146,6 +146,13 @@
 
 	/delete-node/ dtv@7000c300;
 
+	tegra-pmc-led-soft-blink-pwm {
+		compatible = "nvidia,tegra210b01-pwm-led-soft-blink";
+		pwm,led-breathing-ramp-time-ns = <960000000>;
+		pwm,led-breathing-short-period-ns = <480000000>;
+		#pwm-cells = <2>;
+		status = "disabled";
+	};
 };
 
 /* Display */

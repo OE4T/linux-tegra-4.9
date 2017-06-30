@@ -593,4 +593,8 @@
 			status = "okay";
 		};
 	};
+
+	tegra-pmc-led-soft-blink-pwm {
+                status = "okay";
+	};
 };

@@ -185,10 +185,10 @@ static struct gpio_extcon_platform_data *of_get_platform_data(
 	if (!pdata)
 		return ERR_PTR(-ENOMEM);
 
-	of_property_read_string(np, "label", &pdata->name);
-	if (!pdata->name)
-		of_property_read_string(np, "extcon-gpio,name", &pdata->name);
-	if (!pdata->name)
+	ret = of_property_read_string(np, "label", &pdata->name);
+	if ((ret < 0) || !pdata->name)
+		ret = of_property_read_string(np, "extcon-gpio,name", &pdata->name);
+	if ((ret < 0) || !pdata->name)
 		pdata->name = np->name;
 
 	n_gpio = of_gpio_named_count(np, "gpios");

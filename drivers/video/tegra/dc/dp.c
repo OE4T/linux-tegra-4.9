@@ -2816,6 +2816,9 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 
+	if (tegra_platform_is_fpga())
+		tegra_sor_program_fpga_clk_mux(sor);
+
 	/* Change for seamless */
 	if (!dc->initialized) {
 		ret = tegra_dp_panel_power_state(dp,

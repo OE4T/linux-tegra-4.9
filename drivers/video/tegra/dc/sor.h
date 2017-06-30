@@ -196,21 +196,25 @@ unsigned long tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 					u32 poll_interval_us,
 					u32 timeout_ms);
 
-u32 __attribute((weak)) nv_sor_head_state0_t19x(u32 i);
-u32 __attribute((weak)) nv_sor_head_state1_t19x(u32 i);
-u32 __attribute((weak)) nv_sor_head_state2_t19x(u32 i);
-u32 __attribute((weak)) nv_sor_head_state3_t19x(u32 i);
-u32 __attribute((weak)) nv_sor_head_state4_t19x(u32 i);
-u32 __attribute((weak)) nv_sor_head_state5_t19x(u32 i);
-u32 __attribute((weak)) nv_sor_pll0_t19x(void);
-u32 __attribute((weak)) nv_sor_pll1_t19x(void);
-u32 __attribute((weak)) nv_sor_pll2_t19x(void);
-u32 __attribute((weak)) nv_sor_pll3_t19x(void);
-u32 __attribute((weak)) nv_sor_pll4_t19x(void);
-u32 __attribute((weak)) nv_sor_dp_padctl_t19x(u32 i);
-u32 __attribute((weak)) nv_sor_dp_misc1_override_t19x(void);
-u32 __attribute((weak)) nv_sor_dp_misc1_bit6_t19x(void);
-u32 __attribute((weak)) nv_sor_dp_int_enable_t19x(void);
+u32 __attribute__((weak)) nv_sor_head_state0_t19x(u32 i);
+u32 __attribute__((weak)) nv_sor_head_state1_t19x(u32 i);
+u32 __attribute__((weak)) nv_sor_head_state2_t19x(u32 i);
+u32 __attribute__((weak)) nv_sor_head_state3_t19x(u32 i);
+u32 __attribute__((weak)) nv_sor_head_state4_t19x(u32 i);
+u32 __attribute__((weak)) nv_sor_head_state5_t19x(u32 i);
+u32 __attribute__((weak)) nv_sor_pll0_t19x(void);
+u32 __attribute__((weak)) nv_sor_pll1_t19x(void);
+u32 __attribute__((weak)) nv_sor_pll2_t19x(void);
+u32 __attribute__((weak)) nv_sor_pll3_t19x(void);
+u32 __attribute__((weak)) nv_sor_pll4_t19x(void);
+u32 __attribute__((weak)) nv_sor_dp_padctl_t19x(u32 i);
+u32 __attribute__((weak)) nv_sor_dp_misc1_override_t19x(void);
+u32 __attribute__((weak)) nv_sor_dp_misc1_bit6_t19x(void);
+u32 __attribute__((weak)) nv_sor_dp_int_enable_t19x(void);
+void __attribute__((weak)) tegra_sor_clk_switch_setup_t19x(
+				struct tegra_dc_sor_data *sor, bool unblock);
+void __attribute__((weak)) tegra_sor_program_fpga_clk_mux_t19x(
+				struct tegra_dc_sor_data *sor);
 
 static inline u32 nv_sor_head_state0(u32 i)
 {
@@ -332,9 +336,6 @@ static inline u32 nv_sor_dp_int_enable(void)
 		return NV_SOR_DP_INT_ENABLE;
 }
 
-void __attribute((weak)) tegra_sor_clk_switch_setup_t19x(
-					struct tegra_dc_sor_data *, bool);
-
 static inline void tegra_sor_clk_switch_setup(struct tegra_dc_sor_data *sor,
 					bool flag)
 {
@@ -343,6 +344,16 @@ static inline void tegra_sor_clk_switch_setup(struct tegra_dc_sor_data *sor,
 
 	if (tegra_dc_is_t19x())
 		tegra_sor_clk_switch_setup_t19x(sor, flag);
+}
+
+static inline void tegra_sor_program_fpga_clk_mux(
+					struct tegra_dc_sor_data *sor)
+{
+	if (!sor || !sor->dc)
+		return;
+
+	if (tegra_dc_is_t19x())
+		tegra_sor_program_fpga_clk_mux_t19x(sor);
 }
 
 static inline int tegra_sor_get_ctrl_num(struct tegra_dc_sor_data *sor)

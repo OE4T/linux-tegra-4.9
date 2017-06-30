@@ -2529,6 +2529,9 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_hdmi_get(dc);
 #endif
 
+	if (tegra_platform_is_fpga())
+		tegra_sor_program_fpga_clk_mux(sor);
+
 	tegra_sor_hdmi_pad_power_up(sor);
 
 	tegra_sor_power_lanes(sor, 4, true);

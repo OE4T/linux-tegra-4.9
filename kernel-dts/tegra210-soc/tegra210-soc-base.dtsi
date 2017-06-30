@@ -176,13 +176,15 @@
 		#size-cells = <2>;
 		ranges;
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 		generic_reserved: generic_carveout {
 			compatible = "nvidia,generic_carveout";
-			size = <0 0x30000000>;
+			size = <0 0x10000000>; /* set size to 256MB */
 			alignment = <0 0x100000>;
 			alloc-ranges = <0 0 0x1 0>;
 			no-map;
 		};
+#endif
 
 		iram: iram-carveout {
 			compatible = "nvidia,iram-carveout";

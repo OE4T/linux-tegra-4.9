@@ -1532,7 +1532,12 @@ bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	unsigned long rate;
 
 	cfg->is_valid = false;
-	rate = tegra_dc_clk_get_rate(dp->dc);
+
+	/* The pclk rate is fixed at 27 MHz on FPGA. */
+	if (tegra_dc_is_t19x() && tegra_platform_is_fpga())
+		rate = 27000000;
+	else
+		rate = tegra_dc_clk_get_rate(dp->dc);
 
 	if (!link_rate || !cfg->lane_count || !rate ||
 		!cfg->bits_per_pixel)

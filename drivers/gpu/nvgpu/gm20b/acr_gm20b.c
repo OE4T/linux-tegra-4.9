@@ -1517,23 +1517,11 @@ static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 */
 static int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout_ms)
 {
-	u32 data = 0;
-	struct nvgpu_timeout timeout;
+	struct nvgpu_pmu *pmu = &g->pmu;
+	int status = 0;
 
-	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
+	if (nvgpu_flcn_clear_halt_intr_status(pmu->flcn, timeout_ms))
+		status = -EBUSY;
 
-	do {
-		gk20a_writel(g, pwr_falcon_irqsclr_r(),
-			     gk20a_readl(g, pwr_falcon_irqsclr_r()) | (0x10));
-		data = gk20a_readl(g, (pwr_falcon_irqstat_r()));
-
-		if ((data & pwr_falcon_irqstat_halt_true_f()) !=
-			pwr_falcon_irqstat_halt_true_f())
-			/*halt irq is clear*/
-			return 0;
-
-		nvgpu_udelay(1);
-	} while (!nvgpu_timeout_expired(&timeout));
-
-	return -ETIMEDOUT;
+	return status;
 }

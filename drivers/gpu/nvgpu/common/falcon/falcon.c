@@ -122,6 +122,34 @@ int nvgpu_flcn_wait_for_halt(struct nvgpu_falcon *flcn, unsigned int timeout)
 	return status;
 }
 
+int nvgpu_flcn_clear_halt_intr_status(struct nvgpu_falcon *flcn,
+	unsigned int timeout)
+{
+	struct gk20a *g = flcn->g;
+	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
+	struct nvgpu_timeout to;
+	int status = 0;
+
+	if (!flcn_ops->clear_halt_interrupt_status) {
+		nvgpu_warn(flcn->g, "Invalid op on falcon 0x%x ",
+			flcn->flcn_id);
+		return -EINVAL;
+	}
+
+	nvgpu_timeout_init(g, &to, timeout, NVGPU_TIMER_CPU_TIMER);
+	do {
+		if (flcn_ops->clear_halt_interrupt_status(flcn))
+			break;
+
+		nvgpu_udelay(1);
+	} while (!nvgpu_timeout_expired(&to));
+
+	if (nvgpu_timeout_peek_expired(&to))
+		status = -EBUSY;
+
+	return status;
+}
+
 bool nvgpu_flcn_get_idle_status(struct nvgpu_falcon *flcn)
 {
 	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;

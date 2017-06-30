@@ -38,6 +38,26 @@ static int gk20a_flcn_reset(struct nvgpu_falcon *flcn)
 	return status;
 }
 
+static bool gk20a_flcn_clear_halt_interrupt_status(struct nvgpu_falcon *flcn)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+	u32 data = 0;
+	bool status = false;
+
+	gk20a_writel(g, base_addr + falcon_falcon_irqsclr_r(),
+		gk20a_readl(g, base_addr + falcon_falcon_irqsclr_r()) |
+		(0x10));
+	data = gk20a_readl(g, (base_addr + falcon_falcon_irqstat_r()));
+
+	if ((data & falcon_falcon_irqstat_halt_true_f()) !=
+		falcon_falcon_irqstat_halt_true_f())
+		/*halt irq is clear*/
+		status = true;
+
+	return status;
+}
+
 static void gk20a_flcn_set_irq(struct nvgpu_falcon *flcn, bool enable)
 {
 	struct gk20a *g = flcn->g;
@@ -275,6 +295,8 @@ void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 
 	flcn_ops->reset = gk20a_flcn_reset;
 	flcn_ops->set_irq = gk20a_flcn_set_irq;
+	flcn_ops->clear_halt_interrupt_status =
+		gk20a_flcn_clear_halt_interrupt_status;
 	flcn_ops->is_falcon_cpu_halted =  gk20a_is_falcon_cpu_halted;
 	flcn_ops->is_falcon_idle =  gk20a_is_falcon_idle;
 	flcn_ops->is_falcon_scrubbing_done =  gk20a_is_falcon_scrubbing_done;

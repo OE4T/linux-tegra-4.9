@@ -34,24 +34,12 @@
 
 int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
 {
-	u32 data = 0;
-	struct nvgpu_timeout to;
+	int status = 0;
 
-	nvgpu_timeout_init(g, &to, timeout, NVGPU_TIMER_CPU_TIMER);
-	do {
-		gk20a_writel(g, psec_falcon_irqsclr_r(),
-			     gk20a_readl(g, psec_falcon_irqsclr_r()) | (0x10));
-		data = gk20a_readl(g, psec_falcon_irqstat_r());
-		if ((data & psec_falcon_irqstat_halt_true_f()) !=
-			psec_falcon_irqstat_halt_true_f())
-			/*halt irq is clear*/
-			break;
-		nvgpu_udelay(1);
-	} while (!nvgpu_timeout_expired(&to));
+	if (nvgpu_flcn_clear_halt_intr_status(&g->sec2_flcn, timeout))
+		status = -EBUSY;
 
-	if (nvgpu_timeout_peek_expired(&to))
-		return -EBUSY;
-	return 0;
+	return status;
 }
 
 int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)

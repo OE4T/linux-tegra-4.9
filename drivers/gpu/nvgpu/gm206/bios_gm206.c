@@ -154,9 +154,8 @@ static int gm206_bios_devinit(struct gk20a *g)
 	if (nvgpu_timeout_peek_expired(&timeout))
 		err = -ETIMEDOUT;
 
-	gk20a_writel(g, pwr_falcon_irqsclr_r(),
-	     pwr_falcon_irqstat_halt_true_f());
-	gk20a_readl(g, pwr_falcon_irqsclr_r());
+	nvgpu_flcn_clear_halt_intr_status(g->pmu.flcn,
+		gk20a_get_gr_idle_timeout(g));
 
 out:
 	gk20a_dbg_fn("done");
@@ -200,9 +199,8 @@ static int gm206_bios_preos(struct gk20a *g)
 		goto out;
 	}
 
-	gk20a_writel(g, pwr_falcon_irqsclr_r(),
-	     pwr_falcon_irqstat_halt_true_f());
-	gk20a_readl(g, pwr_falcon_irqsclr_r());
+	nvgpu_flcn_clear_halt_intr_status(g->pmu.flcn,
+			gk20a_get_gr_idle_timeout(g));
 
 out:
 	gk20a_dbg_fn("done");

@@ -41,6 +41,10 @@ phys_addr_t tegra_bootloader_fb3_start;
 phys_addr_t tegra_bootloader_fb3_size;
 phys_addr_t tegra_bootloader_lut_start;
 phys_addr_t tegra_bootloader_lut_size;
+phys_addr_t tegra_bootloader_lut2_start;
+phys_addr_t tegra_bootloader_lut2_size;
+phys_addr_t tegra_bootloader_lut3_start;
+phys_addr_t tegra_bootloader_lut3_size;
 phys_addr_t tegra_fb_start;
 phys_addr_t tegra_fb_size;
 phys_addr_t tegra_fb2_start;
@@ -49,6 +53,10 @@ phys_addr_t tegra_fb3_start;
 phys_addr_t tegra_fb3_size;
 phys_addr_t tegra_lut_start;
 phys_addr_t tegra_lut_size;
+phys_addr_t tegra_lut2_start;
+phys_addr_t tegra_lut2_size;
+phys_addr_t tegra_lut3_start;
+phys_addr_t tegra_lut3_size;
 
 static int usb_port_owner_info;
 static int panel_id;
@@ -192,6 +200,64 @@ static int __init tegra_bootloader_lut_arg(char *options)
 	return 0;
 }
 early_param("lut_mem", tegra_bootloader_lut_arg);
+
+static int __init tegra_bootloader_lut2_arg(char *options)
+{
+	char *p = options;
+
+	tegra_bootloader_lut2_size = memparse(p, &p);
+	if (*p == '@')
+		tegra_bootloader_lut2_start = memparse(p+1, &p);
+
+	pr_info("Found lut_mem2: %08llx@%08llx\n",
+		(u64)tegra_bootloader_lut2_size,
+		(u64)tegra_bootloader_lut2_start);
+
+	if (tegra_bootloader_lut2_size) {
+		tegra_bootloader_lut2_size =
+				PAGE_ALIGN(tegra_bootloader_lut2_size);
+		if (memblock_reserve(tegra_bootloader_lut2_start,
+				tegra_bootloader_lut2_size)) {
+			pr_err("Failed to reserve bootloader lut_mem2 %08llx@%08llx\n",
+				(u64)tegra_bootloader_lut2_size,
+				(u64)tegra_bootloader_lut2_start);
+			tegra_bootloader_lut2_start = 0;
+			tegra_bootloader_lut2_size = 0;
+		}
+	}
+
+	return 0;
+}
+early_param("lut_mem2", tegra_bootloader_lut2_arg);
+
+static int __init tegra_bootloader_lut3_arg(char *options)
+{
+	char *p = options;
+
+	tegra_bootloader_lut3_size = memparse(p, &p);
+	if (*p == '@')
+		tegra_bootloader_lut3_start = memparse(p+1, &p);
+
+	pr_info("Found lut_mem3: %08llx@%08llx\n",
+		(u64)tegra_bootloader_lut3_size,
+		(u64)tegra_bootloader_lut3_start);
+
+	if (tegra_bootloader_lut3_size) {
+		tegra_bootloader_lut3_size =
+				PAGE_ALIGN(tegra_bootloader_lut3_size);
+		if (memblock_reserve(tegra_bootloader_lut3_start,
+				tegra_bootloader_lut3_size)) {
+			pr_err("Failed to reserve bootloader lut_mem3 %08llx@%08llx\n",
+				(u64)tegra_bootloader_lut3_size,
+				(u64)tegra_bootloader_lut3_start);
+			tegra_bootloader_lut3_start = 0;
+			tegra_bootloader_lut3_size = 0;
+		}
+	}
+
+	return 0;
+}
+early_param("lut_mem3", tegra_bootloader_lut3_arg);
 
 /* returns true if bl initialized the display */
 bool tegra_is_bl_display_initialized(int instance)

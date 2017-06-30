@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 NVIDIA Corporation
+ * Copyright (C) 2014-2017 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -27,6 +27,10 @@ extern phys_addr_t tegra_bootloader_fb3_start;
 extern phys_addr_t tegra_bootloader_fb3_size;
 extern phys_addr_t tegra_bootloader_lut_start;
 extern phys_addr_t tegra_bootloader_lut_size;
+extern phys_addr_t tegra_bootloader_lut2_start;
+extern phys_addr_t tegra_bootloader_lut2_size;
+extern phys_addr_t tegra_bootloader_lut3_start;
+extern phys_addr_t tegra_bootloader_lut3_size;
 extern phys_addr_t tegra_fb_start;
 extern phys_addr_t tegra_fb_size;
 extern phys_addr_t tegra_fb2_start;
@@ -35,6 +39,10 @@ extern phys_addr_t tegra_fb3_start;
 extern phys_addr_t tegra_fb3_size;
 extern phys_addr_t tegra_lut_start;
 extern phys_addr_t tegra_lut_size;
+extern phys_addr_t tegra_lut2_start;
+extern phys_addr_t tegra_lut2_size;
+extern phys_addr_t tegra_lut3_start;
+extern phys_addr_t tegra_lut3_size;
 
 #ifdef CONFIG_ARCH_TEGRA
 bool soc_is_tegra210_n_before(void);

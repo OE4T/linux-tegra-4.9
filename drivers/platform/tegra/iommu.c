@@ -88,9 +88,13 @@ void tegra_fb_linear_set(struct iommu_linear_map *map)
 
 	LINEAR_MAP_ADD(tegra_fb);
 	LINEAR_MAP_ADD(tegra_fb2);
+	LINEAR_MAP_ADD(tegra_fb3);
 	LINEAR_MAP_ADD(tegra_bootloader_fb);
 	LINEAR_MAP_ADD(tegra_bootloader_fb2);
+	LINEAR_MAP_ADD(tegra_bootloader_fb3);
 	LINEAR_MAP_ADD(tegra_bootloader_lut);
+	LINEAR_MAP_ADD(tegra_bootloader_lut2);
+	LINEAR_MAP_ADD(tegra_bootloader_lut3);
 #ifdef CONFIG_TEGRA_NVMAP
 	if (!tegra_vpr_resize) {
 		LINEAR_MAP_ADD(tegra_vpr);

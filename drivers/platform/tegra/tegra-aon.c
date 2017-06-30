@@ -33,17 +33,17 @@ static inline int ivc_min_frame_size(void)
 	return cache_line_size();
 }
 
-#define SMBOX1_OFFSET			0x8000
-
-#define SHRD_SEM_OFFSET	0x10000
-#define SHRD_SEM_SET	0x4
-
 #define TEGRA_AON_HSP_DATA_ARRAY_SIZE	3
 
 #define IPCBUF_SIZE 2097152
 
-#define SMBOX_IVC_CHAN_SHIFT	16
 #define SMBOX_IVC_NOTIFY_MASK	0xFFFF
+
+#define SHRD_SEM_OFFSET	0x10000
+#define SHRD_SEM_SET	0x4u
+#define SHRD_SEM_CLR	0x8u
+#define AON_SS_MAX	8
+
 
 enum smbox_msgs {
 	SMBOX_IVC_READY_MSG = 0xAAAA5555,
@@ -65,10 +65,15 @@ struct tegra_aon {
 	struct mbox_controller mbox;
 	struct tegra_hsp_sm_pair *hsp_sm_pair;
 	struct work_struct ch_rx_work;
-	void __iomem *shrdsem_base;
+	void __iomem *ss_base;
 	void *ipcbuf;
 	dma_addr_t ipcbuf_dma;
 	size_t ipcbuf_size;
+	u32 ivc_carveout_base_ss;
+	u32 ivc_carveout_size_ss;
+	u32 ivc_dbg_enable_ss;
+	u32 ivc_notify_ss;
+	u32 ivc_chans_notified;
 };
 
 struct tegra_aon_ivc_chan {
@@ -79,11 +84,50 @@ struct tegra_aon_ivc_chan {
 	bool last_tx_done;
 };
 
+static DEFINE_SPINLOCK(ivc_lock);
+
+static void __iomem *tegra_aon_hsp_ss_reg(const struct tegra_aon *aon, u32 ss)
+{
+	return aon->ss_base + (SHRD_SEM_OFFSET * ss);
+}
+
+static u32 tegra_aon_hsp_ss_status(const struct tegra_aon *aon, u32 ss)
+{
+	void __iomem *reg;
+
+	WARN_ON(ss >= AON_SS_MAX);
+	reg = tegra_aon_hsp_ss_reg(aon, ss);
+
+	return readl(reg);
+}
+
+static void tegra_aon_hsp_ss_set(const struct tegra_aon *aon, u32 ss, u32 bits)
+{
+	void __iomem *reg;
+
+	WARN_ON(ss >= AON_SS_MAX);
+	reg = tegra_aon_hsp_ss_reg(aon, ss);
+
+	writel(bits, reg + SHRD_SEM_SET);
+}
+
+static void tegra_aon_hsp_ss_clr(const struct tegra_aon *aon, u32 ss, u32 bits)
+{
+	void __iomem *reg;
+
+	WARN_ON(ss >= AON_SS_MAX);
+	reg = tegra_aon_hsp_ss_reg(aon, ss);
+
+	writel(bits, reg + SHRD_SEM_CLR);
+}
+
 static void tegra_aon_notify_remote(struct ivc *ivc)
 {
 	struct tegra_aon_ivc_chan *ivc_chan;
 
 	ivc_chan = container_of(ivc, struct tegra_aon_ivc_chan, ivc);
+	tegra_aon_hsp_ss_set(ivc_chan->aon, ivc_chan->aon->ivc_notify_ss,
+				BIT(ivc_chan->chan_id));
 	tegra_hsp_sm_pair_write(ivc_chan->aon->hsp_sm_pair, SMBOX_IVC_NOTIFY);
 }
 
@@ -92,11 +136,20 @@ static void tegra_aon_rx_worker(struct work_struct *work)
 	struct mbox_chan *mbox_chan;
 	struct ivc *ivc;
 	struct tegra_aon_mbox_msg msg;
+	uint32_t ivc_chans;
 	int i;
+	unsigned long flags;
 	struct tegra_aon *aon = container_of(work,
 					struct tegra_aon, ch_rx_work);
 
-	for (i = 0; i < aon->mbox.num_chans; i++) {
+	spin_lock_irqsave(&ivc_lock, flags);
+	ivc_chans = aon->ivc_chans_notified;
+	aon->ivc_chans_notified = 0;
+	spin_unlock_irqrestore(&ivc_lock, flags);
+	ivc_chans &= BIT(aon->mbox.num_chans) - 1;
+	while (ivc_chans) {
+		i = __builtin_ctz(ivc_chans);
+		ivc_chans &= ~BIT(i);
 		mbox_chan = &aon->mbox.chans[i];
 		ivc = (struct ivc *)mbox_chan->con_priv;
 		while (tegra_ivc_can_read(ivc)) {
@@ -111,9 +164,20 @@ static void tegra_aon_rx_worker(struct work_struct *work)
 static u32 tegra_aon_hsp_sm_full_notify(void *data, u32 value)
 {
 	struct tegra_aon *aon = data;
+	unsigned long flags;
+	u32 ss_val;
 
-	if (value == SMBOX_IVC_NOTIFY)
-		schedule_work(&aon->ch_rx_work);
+	if (value != SMBOX_IVC_NOTIFY) {
+		dev_err(aon->mbox.dev, "Invalid IVC notification\n");
+		return 0;
+	}
+
+	spin_lock_irqsave(&ivc_lock, flags);
+	ss_val = tegra_aon_hsp_ss_status(aon, aon->ivc_notify_ss);
+	aon->ivc_chans_notified |= ss_val;
+	tegra_aon_hsp_ss_clr(aon, aon->ivc_notify_ss, ss_val);
+	spin_unlock_irqrestore(&ivc_lock, flags);
+	schedule_work(&aon->ch_rx_work);
 
 	return 0;
 }
@@ -395,7 +459,7 @@ static ssize_t store_ivc_dbg(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 
 	shrdsem_msg = channel | enable;
-	writel(shrdsem_msg, aon->shrdsem_base + SHRD_SEM_SET);
+	tegra_aon_hsp_ss_set(aon, aon->ivc_dbg_enable_ss, shrdsem_msg);
 	tegra_hsp_sm_pair_write(aon->hsp_sm_pair, SMBOX_IVC_DBG_ENABLE);
 
 	return count;
@@ -427,10 +491,41 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	aon->shrdsem_base = of_iomap(dn, 0);
-	if (!aon->shrdsem_base) {
-		dev_err(dev, "failed to map shrdsem IO space.\n");
+	aon->ss_base = of_iomap(dn, 0);
+	if (!aon->ss_base) {
+		dev_err(dev, "failed to map shared semaphore IO space\n");
 		return -EINVAL;
+	}
+
+	ret = of_property_read_u32(dn, NV("ivc-carveout-base-ss"),
+					&aon->ivc_carveout_base_ss);
+	if (ret) {
+		dev_err(dev, "missing <%s> property\n",
+			NV("ivc-carveout-base-ss"));
+		return ret;
+	}
+
+	ret = of_property_read_u32(dn, NV("ivc-carveout-size-ss"),
+					&aon->ivc_carveout_size_ss);
+	if (ret) {
+		dev_err(dev, "missing <%s> property\n",
+			NV("ivc-carveout-size-ss"));
+		return ret;
+	}
+
+	ret = of_property_read_u32(dn, NV("ivc-dbg-enable-ss"),
+					&aon->ivc_dbg_enable_ss);
+	if (ret) {
+		dev_err(dev, "missing <%s> property\n",
+			NV("ivc-dbg-enable-ss"));
+		return ret;
+	}
+
+	ret = of_property_read_u32(dn, NV("ivc-notify-ss"),
+					&aon->ivc_notify_ss);
+	if (ret) {
+		dev_err(dev, "missing <%s> property\n", NV("ivc-notify-ss"));
+		return ret;
 	}
 
 	num_chans = tegra_aon_count_ivc_channels(dn);
@@ -491,16 +586,17 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	writel((u32)aon->ipcbuf_dma, aon->shrdsem_base + SHRD_SEM_SET);
-	writel((u32)aon->ipcbuf_size, aon->shrdsem_base + SHRD_SEM_OFFSET
-					+ SHRD_SEM_SET);
+	tegra_aon_hsp_ss_set(aon, aon->ivc_carveout_base_ss,
+					(u32)aon->ipcbuf_dma);
+	tegra_aon_hsp_ss_set(aon, aon->ivc_carveout_size_ss,
+					(u32)aon->ipcbuf_size);
 	tegra_hsp_sm_pair_write(aon->hsp_sm_pair, SMBOX_IVC_READY_MSG);
 
 	dev_dbg(&pdev->dev, "tegra aon driver probe OK\n");
 	return ret;
 
 exit:
-	iounmap(aon->shrdsem_base);
+	iounmap(aon->ss_base);
 	return ret;
 }
 
@@ -508,7 +604,7 @@ static int tegra_aon_remove(struct platform_device *pdev)
 {
 	struct tegra_aon *aon = platform_get_drvdata(pdev);
 
-	iounmap(aon->shrdsem_base);
+	iounmap(aon->ss_base);
 	mbox_controller_unregister(&aon->mbox);
 	tegra_hsp_sm_pair_free(aon->hsp_sm_pair);
 

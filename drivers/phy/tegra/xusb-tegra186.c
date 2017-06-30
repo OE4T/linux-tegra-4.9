@@ -1820,6 +1820,56 @@ static int tegra186_xusb_padctl_phy_wake(struct tegra_xusb_padctl *padctl,
 	return 0;
 }
 
+static int tegra186_usb3_phy_remote_wake_detected(
+			struct tegra_xusb_padctl *padctl, int port)
+{
+	u32 reg;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	if ((reg & SS_PORT_WAKE_INTERRUPT_ENABLE(port)) &&
+			(reg & SS_PORT_WAKEUP_EVENT(port)))
+		return true;
+	else
+		return false;
+}
+
+static int tegra186_utmi_phy_remote_wake_detected(
+			struct tegra_xusb_padctl *padctl, int port)
+{
+	u32 reg;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	if ((reg & USB2_PORT_WAKE_INTERRUPT_ENABLE(port)) &&
+			(reg & USB2_PORT_WAKEUP_EVENT(port)))
+		return true;
+	else
+		return false;
+}
+
+int tegra186_xusb_padctl_remote_wake_detected(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_padctl *padctl;
+	unsigned int index;
+
+	if (!phy)
+		return 0;
+
+	lane = phy_get_drvdata(phy);
+	padctl = lane->pad->padctl;
+	index = lane->index;
+
+	if (index < 0)
+		return -EINVAL;
+
+	if (is_utmi_phy(phy))
+		return tegra186_utmi_phy_remote_wake_detected(padctl, index);
+	else if (is_usb3_phy(phy))
+		return tegra186_usb3_phy_remote_wake_detected(padctl, index);
+
+	return -EINVAL;
+}
+
 static int tegra186_xusb_padctl_set_debounce_time(struct tegra_xusb_padctl
 					*padctl, struct phy *phy, u32 val)
 {
@@ -2221,6 +2271,7 @@ static const struct tegra_xusb_padctl_ops tegra186_xusb_padctl_ops = {
 	.otg_vbus_handle = tegra186_xusb_padctl_otg_vbus_handle,
 	.phy_sleepwalk = tegra186_xusb_padctl_phy_sleepwalk,
 	.phy_wake = tegra186_xusb_padctl_phy_wake,
+	.remote_wake_detected = tegra186_xusb_padctl_remote_wake_detected,
 	.set_debounce_time = tegra186_xusb_padctl_set_debounce_time,
 	.utmi_pad_charger_detect_on =
 			tegra186_xusb_padctl_utmi_pad_charger_detect_on,

@@ -402,6 +402,7 @@ struct tegra_xusb_padctl_ops {
 			     bool enable, enum usb_device_speed speed);
 	int (*phy_wake)(struct tegra_xusb_padctl *padctl, struct phy *phy,
 			bool enable);
+	int (*remote_wake_detected)(struct phy *phy);
 	int (*set_debounce_time)(struct tegra_xusb_padctl *padctl,
 				struct phy *phy, u32 val);
 	int (*utmi_pad_charger_detect_on)(struct tegra_xusb_padctl *padctl,

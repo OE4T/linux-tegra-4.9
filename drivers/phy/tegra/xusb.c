@@ -1271,6 +1271,16 @@ int tegra_xusb_padctl_disable_phy_wake(struct tegra_xusb_padctl *padctl,
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_disable_phy_wake);
 
+int tegra_xusb_padctl_remote_wake_detected(struct tegra_xusb_padctl *padctl,
+					   struct phy *phy)
+{
+	if (padctl->soc->ops->remote_wake_detected)
+		return padctl->soc->ops->remote_wake_detected(phy);
+
+	return -ENOTSUPP;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_remote_wake_detected);
+
 int tegra_xusb_padctl_set_dcd_debounce_time(struct tegra_xusb_padctl *padctl,
 					struct phy *phy, u32 val)
 {

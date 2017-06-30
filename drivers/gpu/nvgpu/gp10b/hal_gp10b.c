@@ -14,6 +14,7 @@
  */
 
 #include "gk20a/gk20a.h"
+#include "gk20a/fifo_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/bus_gk20a.h"
@@ -43,6 +44,7 @@
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
+#include "gm20b/fifo_gm20b.h"
 
 #include "gp10b.h"
 #include "hal_gp10b.h"
@@ -54,6 +56,9 @@
 
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_ram_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_top_gp10b.h>
 
 static int gp10b_get_litter_value(struct gk20a *g, int value)
 {
@@ -210,6 +215,66 @@ static const struct gpu_ops gp10b_ops = {
 		.pg_gr_load_gating_prod =
 			gr_gp10b_pg_gr_load_gating_prod,
 	},
+	.fifo = {
+		.init_fifo_setup_hw = gk20a_init_fifo_setup_hw,
+		.bind_channel = channel_gm20b_bind,
+		.unbind_channel = gk20a_fifo_channel_unbind,
+		.disable_channel = gk20a_fifo_disable_channel,
+		.enable_channel = gk20a_fifo_enable_channel,
+		.alloc_inst = gk20a_fifo_alloc_inst,
+		.free_inst = gk20a_fifo_free_inst,
+		.setup_ramfc = channel_gp10b_setup_ramfc,
+		.channel_set_priority = gk20a_fifo_set_priority,
+		.channel_set_timeslice = gk20a_fifo_set_timeslice,
+		.default_timeslice_us = gk20a_fifo_default_timeslice_us,
+		.setup_userd = gk20a_fifo_setup_userd,
+		.userd_gp_get = gk20a_fifo_userd_gp_get,
+		.userd_gp_put = gk20a_fifo_userd_gp_put,
+		.userd_pb_get = gk20a_fifo_userd_pb_get,
+		.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val,
+		.preempt_channel = gk20a_fifo_preempt_channel,
+		.preempt_tsg = gk20a_fifo_preempt_tsg,
+		.update_runlist = gk20a_fifo_update_runlist,
+		.trigger_mmu_fault = gm20b_fifo_trigger_mmu_fault,
+		.get_mmu_fault_info = gp10b_fifo_get_mmu_fault_info,
+		.wait_engine_idle = gk20a_fifo_wait_engine_idle,
+		.get_num_fifos = gm20b_fifo_get_num_fifos,
+		.get_pbdma_signature = gp10b_fifo_get_pbdma_signature,
+		.set_runlist_interleave = gk20a_fifo_set_runlist_interleave,
+		.tsg_set_timeslice = gk20a_fifo_tsg_set_timeslice,
+		.force_reset_ch = gk20a_fifo_force_reset_ch,
+		.engine_enum_from_type = gp10b_fifo_engine_enum_from_type,
+		.device_info_data_parse = gp10b_device_info_data_parse,
+		.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v,
+		.init_engine_info = gk20a_fifo_init_engine_info,
+		.runlist_entry_size = ram_rl_entry_size_v,
+		.get_tsg_runlist_entry = gk20a_get_tsg_runlist_entry,
+		.get_ch_runlist_entry = gk20a_get_ch_runlist_entry,
+		.is_fault_engine_subid_gpc = gk20a_is_fault_engine_subid_gpc,
+		.dump_pbdma_status = gk20a_dump_pbdma_status,
+		.dump_eng_status = gk20a_dump_eng_status,
+		.dump_channel_status_ramfc = gk20a_dump_channel_status_ramfc,
+		.intr_0_error_mask = gk20a_fifo_intr_0_error_mask,
+		.is_preempt_pending = gk20a_fifo_is_preempt_pending,
+		.init_pbdma_intr_descs = gp10b_fifo_init_pbdma_intr_descs,
+		.reset_enable_hw = gk20a_init_fifo_reset_enable_hw,
+		.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg,
+		.handle_sched_error = gk20a_fifo_handle_sched_error,
+		.handle_pbdma_intr_0 = gk20a_fifo_handle_pbdma_intr_0,
+		.handle_pbdma_intr_1 = gk20a_fifo_handle_pbdma_intr_1,
+		.tsg_bind_channel = gk20a_tsg_bind_channel,
+		.tsg_unbind_channel = gk20a_tsg_unbind_channel,
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+		.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf,
+		.free_syncpt_buf = gk20a_fifo_free_syncpt_buf,
+		.add_syncpt_wait_cmd = gk20a_fifo_add_syncpt_wait_cmd,
+		.get_syncpt_wait_cmd_size = gk20a_fifo_get_syncpt_wait_cmd_size,
+		.add_syncpt_incr_cmd = gk20a_fifo_add_syncpt_incr_cmd,
+		.get_syncpt_incr_cmd_size = gk20a_fifo_get_syncpt_incr_cmd_size,
+#endif
+		.resetup_ramfc = gp10b_fifo_resetup_ramfc,
+		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
+	},
 	.mc = {
 		.intr_enable = mc_gp10b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -281,6 +346,7 @@ int gp10b_init_hal(struct gk20a *g)
 
 	gops->ltc = gp10b_ops.ltc;
 	gops->clock_gating = gp10b_ops.clock_gating;
+	gops->fifo = gp10b_ops.fifo;
 	gops->mc = gp10b_ops.mc;
 	gops->debug = gp10b_ops.debug;
 	gops->dbg_session_ops = gp10b_ops.dbg_session_ops;
@@ -340,14 +406,12 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);
 	gp10b_init_fb(gops);
-	gp10b_init_fifo(gops);
 	gp10b_init_ce(gops);
 	gp10b_init_gr_ctx(gops);
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(gops);
 	gp10b_init_regops(gops);
 	gp10b_init_therm_ops(gops);
-	gk20a_init_tsg_ops(gops);
 	gk20a_init_pramin_ops(gops);
 
 	g->name = "gp10b";

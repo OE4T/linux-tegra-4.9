@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,6 +13,6 @@
 
 #ifndef NVGPU_FIFO_GP106_H
 #define NVGPU_FIFO_GP106_H
-struct gpu_ops;
-void gp106_init_fifo(struct gpu_ops *gops);
+struct gk20a;
+u32 gp106_fifo_get_num_fifos(struct gk20a *g);
 #endif

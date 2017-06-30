@@ -80,7 +80,7 @@ int channel_gp10b_commit_userd(struct channel_gk20a *c)
 	return 0;
 }
 
-static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
+int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries,
 			unsigned long acquire_timeout, u32 flags)
 {
@@ -147,13 +147,13 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 	return channel_gp10b_commit_userd(c);
 }
 
-static u32 gp10b_fifo_get_pbdma_signature(struct gk20a *g)
+u32 gp10b_fifo_get_pbdma_signature(struct gk20a *g)
 {
 	return g->gpu_characteristics.gpfifo_class
 		| pbdma_signature_sw_zero_f();
 }
 
-static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
+int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 {
 	u32 new_syncpt = 0, old_syncpt;
 	u32 v;
@@ -192,7 +192,7 @@ static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 	return 0;
 }
 
-static int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
+int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 					u32 *inst_id)
 {
 	int ret = ENGINE_INVAL_GK20A;
@@ -208,7 +208,7 @@ static int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 	return ret;
 }
 
-static void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
+void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
 				u32 *inst_id, u32 *pri_base, u32 *fault_id)
 {
 	if (top_device_info_data_type_v(table_entry) ==
@@ -232,7 +232,7 @@ static void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
 			top_device_info_data_type_v(table_entry));
 }
 
-static void gp10b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
+void gp10b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
 {
 	/*
 	 * These are all errors which indicate something really wrong
@@ -277,7 +277,7 @@ static void gp10b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
 		pbdma_intr_0_device_pending_f();
 }
 
-static void gp10b_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
+void gp10b_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 	struct mmu_fault_info *mmfault)
 {
 	u32 fault_info;
@@ -306,18 +306,4 @@ static void gp10b_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 		 gk20a_readl(g, fifo_intr_mmu_fault_inst_r(mmu_fault_id)));
 	/* note: inst_ptr is a 40b phys addr.  */
 	mmfault->inst_ptr <<= fifo_intr_mmu_fault_inst_ptr_align_shift_v();
-}
-
-void gp10b_init_fifo(struct gpu_ops *gops)
-{
-	gm20b_init_fifo(gops);
-	gops->fifo.get_mmu_fault_info = gp10b_fifo_get_mmu_fault_info;
-	gops->fifo.setup_ramfc = channel_gp10b_setup_ramfc;
-	gops->fifo.get_pbdma_signature = gp10b_fifo_get_pbdma_signature;
-	gops->fifo.resetup_ramfc = gp10b_fifo_resetup_ramfc;
-	gops->fifo.engine_enum_from_type = gp10b_fifo_engine_enum_from_type;
-	gops->fifo.device_info_data_parse = gp10b_device_info_data_parse;
-	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
-	gops->fifo.device_info_fault_id = top_device_info_data_fault_id_enum_v;
-	gops->fifo.init_pbdma_intr_descs = gp10b_fifo_init_pbdma_intr_descs;
 }

@@ -1,7 +1,7 @@
 /*
  * GM20B Fifo
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,5 +17,13 @@
 #define _NVHOST_GM20B_FIFO
 struct gk20a;
 
-void gm20b_init_fifo(struct gpu_ops *gops);
+void channel_gm20b_bind(struct channel_gk20a *c);
+void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
+		unsigned long engine_ids);
+u32 gm20b_fifo_get_num_fifos(struct gk20a *g);
+void gm20b_device_info_data_parse(struct gk20a *g,
+						u32 table_entry, u32 *inst_id,
+						u32 *pri_base, u32 *fault_id);
+void gm20b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f);
+
 #endif

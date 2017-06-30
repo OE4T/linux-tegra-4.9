@@ -342,9 +342,3 @@ struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch)
 
 	return tsg;
 }
-
-void gk20a_init_tsg_ops(struct gpu_ops *gops)
-{
-	gops->fifo.tsg_bind_channel = gk20a_tsg_bind_channel;
-	gops->fifo.tsg_unbind_channel = gk20a_tsg_unbind_channel;
-}

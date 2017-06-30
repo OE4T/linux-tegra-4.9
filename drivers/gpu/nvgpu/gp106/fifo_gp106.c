@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,14 +19,7 @@
 #include <nvgpu/hw/gp106/hw_ccsr_gp106.h>
 #include <nvgpu/hw/gp106/hw_fifo_gp106.h>
 
-static u32 gp106_fifo_get_num_fifos(struct gk20a *g)
+u32 gp106_fifo_get_num_fifos(struct gk20a *g)
 {
 	return ccsr_channel__size_1_v();
-}
-
-void gp106_init_fifo(struct gpu_ops *gops)
-{
-	gp10b_init_fifo(gops);
-	gops->fifo.get_num_fifos = gp106_fifo_get_num_fifos;
-	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 }

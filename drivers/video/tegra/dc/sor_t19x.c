@@ -105,3 +105,26 @@ inline void tegra_sor_clk_switch_setup_t19x(struct tegra_dc_sor_data *sor,
 			NV_SOR_DP_LINKCTL_ASYNC_FIFO_BLOCK_YES));
 }
 
+inline void tegra_sor_program_fpga_clk_mux_t19x(
+					struct tegra_dc_sor_data *sor)
+{
+	struct tegra_dc *dc = sor->dc;
+	u32 reg_val = 0;
+
+	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+		int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
+
+		reg_val |= NV_SOR_FPGA_CLK_SEL_FPGA_PCLK_MUX_SEL_HDMI;
+		if ((yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y24)) ||
+			(yuv_flag & (FB_VMODE_Y420_ONLY | FB_VMODE_Y24)))
+			reg_val |= NV_SOR_FPGA_CLK_SEL_FPGA_HDMI420_SEL_ENABLE;
+	} else if (dc->out->type == TEGRA_DC_OUT_DP ||
+			dc->out->type == TEGRA_DC_OUT_FAKE_DP) {
+		reg_val |= NV_SOR_FPGA_CLK_SEL_FPGA_PCLK_MUX_SEL_DP;
+	} else {
+		return;
+	}
+
+	tegra_sor_writel(sor, NV_SOR_FPGA_CLK_SEL, reg_val);
+}
+

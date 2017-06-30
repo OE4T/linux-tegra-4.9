@@ -23,8 +23,11 @@
 #include <linux/nvs.h>
 #include <linux/crc32.h>
 #include <linux/time.h>
-
 #include "nvs_dfsh.h"
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/atrace.h>
+#define TRACE_SENSOR_ID			(100)
 
 #define DFSH_DRIVER_VERSION		(1)
 #define DFSH_NAME				"dfsh"
@@ -498,6 +501,13 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 	static s64 prev_ktime;
 	static s64 prev_mcutime;
 	struct sensor_sync_pkt_t sensor_sync_pkt;
+	int cookie;
+
+	ktime_get_ts64(&k_ts);
+	k_ts_ns = timespec_to_ns(&k_ts);
+	cookie = (int) k_ts_ns;
+	trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+
 	/* sanity check index */
 	if (st->pkt_byte_idx >= sizeof(st->pkt_buf))
 		/* Reset if byte index longer than longest packet */
@@ -543,8 +553,6 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 					       sizeof(ts));
 					/*convert timestamp from usec to nsec*/
 					ts = ts * 1000;
-					ktime_get_ts64(&k_ts);
-					k_ts_ns = timespec_to_ns(&k_ts);
 					if (prev_mcutime == ts)
 						k_ts_ns = prev_ktime;
 					if (st->pkt.header.type == MSG_CAMERA) {
@@ -600,6 +608,7 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 		}
 		break;
 	}
+	trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
 }
 
 static void dfsh_receive_buf(struct tty_struct *tty, const unsigned char *cp,

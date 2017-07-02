@@ -859,6 +859,10 @@ static int nvadsp_t210_set_clks_and_prescalar(struct nvadsp_drv_data *drv_data)
 		goto end;
 
 	drv_data->adsp_freq = adsp_freq / 1000; /* adsp_freq in KHz*/
+	drv_data->adsp_freq_hz = adsp_freq;
+
+	/* adspos uses os_args->adsp_freq_hz for EDF */
+	os_args->adsp_freq_hz = adsp_freq;
 
 end:
 	dev_dbg(dev, "adsp cpu freq %luKHz\n",
@@ -897,6 +901,8 @@ static int nvadsp_set_adsp_clks(struct nvadsp_drv_data *drv_data)
 
 	drv_data->adsp_freq = adsp_freq / 1000; /* adsp_freq in KHz*/
 	drv_data->adsp_freq_hz = adsp_freq;
+
+	/* adspos uses os_args->adsp_freq_hz for EDF */
 	os_args->adsp_freq_hz = adsp_freq;
 end:
 	dev_dbg(dev, "adsp cpu freq %luKHz\n",

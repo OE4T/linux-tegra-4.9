@@ -1,0 +1,285 @@
+/*
+ * Tegra PVA Driver ioctls
+ *
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program;  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef __LINUX_NVHOST_PVA_IOCTL_H
+#define __LINUX_NVHOST_PVA_IOCTL_H
+
+#include <linux/ioctl.h>
+#include <linux/types.h>
+
+#if !defined(__KERNEL__)
+#define __user
+#endif
+
+#define NVHOST_PVA_IOCTL_MAGIC 'P'
+
+/**
+ * struct pva_characteristics_req - Request filling of characteristics struct
+ *
+ * @characteristics: pointer to be filled with characteristics
+ * @characteristics_size: size in bytes
+ * @characteristics_filled: reserved(set to zero)
+ *
+ */
+struct pva_characteristics_req {
+	__u64 characteristics;
+	__u64 characteristics_size;
+	__u64 characteristics_filled;
+};
+
+/**
+ * struct pva_characteristics - the information of the pva cluster
+ *
+ * @num_vpu: number of vpu per pva
+ * @vpu_generation: vpu hardware generation
+ * @num_queues: number of queues per pva
+ * @reserved: reserved for future use
+ * @r5_ucode_version: R5 firmware version
+ * @r5_ucode_earliest: 1st version compatible with current running fw
+ * @r5_vpu_runtime_earliest: First supported vpu runtime version
+ *
+ */
+struct pva_characteristics {
+	__u8 num_vpu;
+	__u8 vpu_generation;
+	__u8 num_queues;
+	__u8 reserved[1];
+	__u32 r5_ucode_version;
+	__u32 r5_ucode_earliest;
+	__u32 r5_vpu_runtime_earliest;
+};
+
+/**
+ * struct pva_pin_unpin_args - buffer handles to pin or unpin
+ *
+ * @buffers: Pointer to the table of u32
+ * @num_buffers: elements in the buffer table
+ * @reserved: reserved
+ *
+ * Used to deliver information about the buffer handles that should be
+ * be pinned into (or unpinned from) the PVA address space.
+ *
+ */
+struct pva_pin_unpin_args {
+	__u64 buffers;
+	__u32 num_buffers;
+	__u32 reserved;
+};
+
+#define PVA_MAX_PIN_BUFFERS	64
+
+/**
+ * struct pva_ioctl_status_handle - A handle to a status structure
+ *
+ * @handle: Handle to a dmabuf that holds the status buffer
+ * @offset: An offset within the buffer to the status structure.
+ */
+struct pva_status_handle {
+	__u32 handle;
+	__u32 offset;
+};
+
+/**
+ * struct pva_ioctl_surface - The surface descriptor
+ *
+ * @format: Surface pixel format
+ * @surface_handle: Memory handle that holds the surface
+ * @surface_offset: Offset within the surface memory buffer to the surface
+ * @roi_handle: Memory handle that holds the ROI
+ * @roi_offset: Offset within the ROI memory buffer to the ROI
+ * @surface_stride: Offset between planes in bytes
+ * @line_stride: Offset between two consequent lines in bytes.
+ * @depth: Number of planes in the surface
+ * @width: Width of the surface
+ * @height: Height of the surface
+ * @layout: Surface layout (pitch linear, block linear)
+ * @block_height_log2: Block height
+ *
+ * This structure defines a list of surfaces to be delivered for
+ * PVA.
+ */
+struct pva_surface {
+	__u64 format;
+	__u32 surface_handle;
+	__u32 surface_offset;
+	__u32 roi_handle;
+	__u32 roi_offset;
+	__u32 surface_stride;
+	__u32 line_stride;
+	__u32 depth;
+	__u32 width;
+	__u32 height;
+	__u16 layout;
+	__u16 block_height_log2;
+};
+
+/**
+ * struct pva_ioct_task_parameter - Parameter structure for a task
+ *
+ * @handle: Memory handle including the parameter array. This field shall be
+ *	    used in cases where the UMD prepares the data in advance to a
+ *	    shared buffer or the input data is prepared by the upstream engine.
+ * @offset: Offset within the memory handle to the parameter array
+ *
+ * The parameter descriptor defines a single parameter array that is
+ * received. The handle and offset is translated into IOVA by the kernel
+ * driver and delivered to PVA.
+ */
+struct pva_task_parameter {
+	__u32 handle;
+	__u32 offset;
+};
+
+/**
+ * struct pva_ioctl_fence structure for passing fence information
+ *
+ * @type: Type of the fence (syncpoint, sync fd or semaphore)
+ * @syncpoint_index: Syncpoint id
+ * @syncpoint_value: Value of syncpoint id
+ * @sync_fd: Linux sync FD handle
+ * @semaphore_handle: File handle to the semaphore memory buffer
+ * @semaphore_offset: Offset to the semaphore within the buffer
+ * @semaphore_value: Value of the semaphore
+ */
+struct pva_fence {
+	__u32 type;
+#define PVA_FENCE_TYPE_SYNCPT		0
+#define PVA_FENCE_TYPE_SYNC_FD		1
+#define PVA_FENCE_TYPE_SEMAPHORE	2
+#define PVA_FENCE_TYPE_SEMAPHORE_TS	3
+	__u32 syncpoint_index;
+	__u32 syncpoint_value;
+	__u32 sync_fd;
+	__u32 semaphore_handle;
+	__u32 semaphore_offset;
+	__u32 semaphore_value;
+};
+
+#define PVA_MAX_TASKS		1
+#define PVA_MAX_PREFENCES	8
+#define PVA_MAX_POSTFENCES	8
+#define PVA_MAX_INPUT_STATUS	8
+#define PVA_MAX_OUTPUT_STATUS	8
+#define PVA_MAX_INPUT_SURFACES	8
+#define PVA_MAX_OUTPUT_SURFACES	8
+
+/**
+ * struct pva_ioctl_submit_task - Describe a task for PVA
+ *
+ * @num_prefences: Number of pre-fences in this task
+ * @num_postfences: Number of post-fences in this task
+ * @num_input_surfaces: Number of input surfaces
+ * @num_output_surfaces: Number of output surfaces
+ * @num_input_task_status: Number of input task status structures
+ * @num_output_task_status: Number of output task status structures
+ * @reserved: Reserved for future usage.
+ * @timeout: Latest Unix time when the task must complete. 0 if disabled.
+ * @prefences: Pointer to pre-fence structures
+ * @postfences: Pointer to post-fence structures
+ * @input_surfaces: Pointer to input surfaces
+ * @input_scalars: Information for input scalars
+ * @input_2dpoint: Information for input 2d points
+ * @input_rois: Pointer to input ROIs
+ * @output_surfaces: Pointer to output surfaces
+ * @output_scalars: Information for output scalars
+ * @output_2dpoint: Information for output 2d points
+ * @output_rois: Pointer to output ROIs
+ * @input_task_status: Pointer to input status structure
+ * @output_task_status: Pointer to output status structure
+ *
+ * This structure is used for delivering information that is required to
+ * finish a single task on PVA.
+ *
+ */
+struct pva_ioctl_submit_task {
+	__u8 num_prefences;
+	__u8 num_postfences;
+	__u8 num_input_surfaces;
+	__u8 num_output_surfaces;
+	__u8 num_input_task_status;
+	__u8 num_output_task_status;
+	__u8 reserved[14];
+	__u32 operation;
+	__u64 timeout;
+	__u64 prefences;
+	__u64 postfences;
+	__u64 input_surfaces;
+	struct pva_task_parameter input_scalars;
+	struct pva_task_parameter input_2dpoint;
+	struct pva_task_parameter input_rois;
+	__u64 output_surfaces;
+	struct pva_task_parameter output_scalars;
+	struct pva_task_parameter output_2dpoint;
+	struct pva_task_parameter output_rois;
+	__u64 input_task_status;
+	__u64 output_task_status;
+};
+
+/**
+ * struct pva_submit_args - submit tasks to PVA
+ *
+ * @tasks: Pointer to a list of tasks structures
+ * @flags: Flags for the given tasks
+ * @num_tasks: Number of tasks in the list
+ * @version: Version of the task structure.
+ *
+ * This ioctl is used for submitting tasks to PVA. The given structures
+ * are modified to include information about post-fences.
+ *
+ */
+struct pva_ioctl_submit_args {
+	__u64 tasks;
+	__u16 flags;
+	__u16 num_tasks;
+	__u32 version;
+};
+
+/**
+ * struct pva_ioctl_queue_attr - set queue attributes
+ *
+ * @attr_id: Attribute id which defines the attribute to be set
+ * @reserved: reserved
+ * @attr_val: The value to be set for the attribute
+ *
+ * This ioctl is used for setting attributes for a queue with id queue_id
+ * on the R5.
+ *
+ */
+struct pva_ioctl_queue_attr {
+	__u16 id;
+	__u16 reserved;
+	__u32 val;
+};
+
+#define PVA_IOCTL_CHARACTERISTICS	\
+	_IOWR(NVHOST_PVA_IOCTL_MAGIC, 1, struct pva_characteristics_req)
+#define PVA_IOCTL_PIN	\
+	_IOW(NVHOST_PVA_IOCTL_MAGIC, 2, struct pva_pin_unpin_args)
+#define PVA_IOCTL_UNPIN	\
+	_IOW(NVHOST_PVA_IOCTL_MAGIC, 3, struct pva_pin_unpin_args)
+#define PVA_IOCTL_SUBMIT	\
+	_IOW(NVHOST_PVA_IOCTL_MAGIC, 4, struct pva_ioctl_submit_args)
+#define PVA_IOCTL_SET_QUEUE_ATTRIBUTES	\
+	_IOW(NVHOST_PVA_IOCTL_MAGIC, 5, struct pva_ioctl_queue_attr)
+
+
+#define NVHOST_PVA_IOCTL_LAST _IOC_NR(PVA_IOCTL_SET_QUEUE_ATTRIBUTES)
+#define NVHOST_PVA_IOCTL_MAX_ARG_SIZE sizeof(struct pva_characteristics_req)
+
+#endif /* __LINUX_NVHOST_PVA_IOCTL_H */
+

@@ -288,7 +288,7 @@ static void gv11b_dump_channel_status_ramfc(struct gk20a *g,
 	inst_mem = &ch_state->inst_block[0];
 
 	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", chid,
-			dev_name(g->dev),
+			g->name,
 			ch_state->pid,
 			ch_state->refs);
 	gk20a_debug_output(o, "channel status: %s in use %s %s\n",
@@ -333,7 +333,7 @@ static void gv11b_dump_eng_status(struct gk20a *g,
 		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
 		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
 
-		gk20a_debug_output(o, "%s eng %d: ", dev_name(g->dev), i);
+		gk20a_debug_output(o, "%s eng %d: ", g->name, i);
 		gk20a_debug_output(o,
 			"id: %d (%s), next_id: %d (%s), ctx status: %s ",
 			fifo_engine_status_id_v(status),

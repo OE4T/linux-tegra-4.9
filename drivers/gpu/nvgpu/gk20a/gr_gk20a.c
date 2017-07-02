@@ -8013,16 +8013,13 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 	return -ETIMEDOUT;
 }
 
-void gk20a_suspend_single_sm(struct gk20a *g,
-		u32 gpc, u32 tpc,
+void gk20a_gr_suspend_single_sm(struct gk20a *g,
+		u32 gpc, u32 tpc, u32 sm,
 		u32 global_esr_mask, bool check_errors)
 {
-	u32 offset;
 	int err;
 	u32 dbgr_control0;
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
-	offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
 
 	/* if an SM debugger isn't attached, skip suspend */
 	if (!g->ops.gr.sm_debugger_attached(g)) {
@@ -8030,6 +8027,9 @@ void gk20a_suspend_single_sm(struct gk20a *g,
 			"SM debugger not attached, skipping suspend!");
 		return;
 	}
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+		"suspending gpc:%d, tpc:%d, sm%d", gpc, tpc, sm);
 
 	/* assert stop trigger. */
 	dbgr_control0 = gk20a_readl(g,

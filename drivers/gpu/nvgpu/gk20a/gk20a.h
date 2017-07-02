@@ -370,6 +370,9 @@ struct gpu_ops {
 		int (*set_czf_bypass)(struct gk20a *g,
 				      struct channel_gk20a *ch);
 		bool (*sm_debugger_attached)(struct gk20a *g);
+		void (*suspend_single_sm)(struct gk20a *g,
+				u32 gpc, u32 tpc, u32 sm,
+				u32 global_esr_mask, bool check_errors);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

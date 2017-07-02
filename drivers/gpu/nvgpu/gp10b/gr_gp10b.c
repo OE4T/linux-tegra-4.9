@@ -1829,7 +1829,7 @@ static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 						"CILP: STOP_TRIGGER from gpc %d tpc %d\n",
 						gpc, tpc);
-				gk20a_suspend_single_sm(g, gpc, tpc, global_mask, true);
+				g->ops.gr.suspend_single_sm(g, gpc, tpc, sm, global_mask, true);
 			}
 
 			/* reset the HWW errors after locking down */

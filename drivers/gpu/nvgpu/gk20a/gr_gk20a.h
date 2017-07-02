@@ -615,8 +615,8 @@ int gr_gk20a_enable_ctxsw(struct gk20a *g);
 void gk20a_resume_single_sm(struct gk20a *g,
 		u32 gpc, u32 tpc);
 void gk20a_resume_all_sms(struct gk20a *g);
-void gk20a_suspend_single_sm(struct gk20a *g,
-		u32 gpc, u32 tpc,
+void gk20a_gr_suspend_single_sm(struct gk20a *g,
+		u32 gpc, u32 tpc, u32 sm,
 		u32 global_esr_mask, bool check_errors);
 void gk20a_suspend_all_sms(struct gk20a *g,
 		u32 global_esr_mask, bool check_errors);

@@ -369,6 +369,7 @@ struct gpu_ops {
 		u32 (*tpc_enabled_exceptions)(struct gk20a *g);
 		int (*set_czf_bypass)(struct gk20a *g,
 				      struct channel_gk20a *ch);
+		bool (*sm_debugger_attached)(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

@@ -1268,7 +1268,7 @@ bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 
 	/* channel recovery is only deferred if an sm debugger
 	   is attached and has MMU debug mode is enabled */
-	if (!gk20a_gr_sm_debugger_attached(g) ||
+	if (!g->ops.gr.sm_debugger_attached(g) ||
 	    !g->ops.fb.is_debug_mode_enabled(g))
 		return false;
 

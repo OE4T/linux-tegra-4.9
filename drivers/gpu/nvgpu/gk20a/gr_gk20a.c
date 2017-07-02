@@ -5543,7 +5543,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 			  gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
 			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
 	u32 global_esr, warp_esr;
-	bool sm_debugger_attached = gk20a_gr_sm_debugger_attached(g);
+	bool sm_debugger_attached = g->ops.gr.sm_debugger_attached(g);
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
@@ -5978,7 +5978,7 @@ int gk20a_gr_isr(struct gk20a *g)
 					&post_event, fault_ch, &global_esr);
 
 			/* signal clients waiting on an event */
-			if (gk20a_gr_sm_debugger_attached(g) &&
+			if (g->ops.gr.sm_debugger_attached(g) &&
 					 post_event && fault_ch) {
 				gk20a_dbg_gpu_post_events(fault_ch);
 			}
@@ -8025,7 +8025,7 @@ void gk20a_suspend_single_sm(struct gk20a *g,
 	offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 
 	/* if an SM debugger isn't attached, skip suspend */
-	if (!gk20a_gr_sm_debugger_attached(g)) {
+	if (!g->ops.gr.sm_debugger_attached(g)) {
 		nvgpu_err(g,
 			"SM debugger not attached, skipping suspend!");
 		return;
@@ -8056,7 +8056,7 @@ void gk20a_suspend_all_sms(struct gk20a *g,
 	u32 dbgr_control0;
 
 	/* if an SM debugger isn't attached, skip suspend */
-	if (!gk20a_gr_sm_debugger_attached(g)) {
+	if (!g->ops.gr.sm_debugger_attached(g)) {
 		nvgpu_err(g,
 			"SM debugger not attached, skipping suspend!");
 		return;

@@ -1815,7 +1815,7 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 				"CILP: resume for gpc %d tpc %d sm %d",
 					gpc, tpc, sm);
-			gk20a_resume_single_sm(g, gpc, tpc);
+			g->ops.gr.resume_single_sm(g, gpc, tpc, sm);
 
 			*ignore_debugger = true;
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
@@ -2844,6 +2844,74 @@ static void gv11b_gr_suspend_all_sms(struct gk20a *g,
 	}
 }
 
+static void gv11b_gr_resume_single_sm(struct gk20a *g,
+		u32 gpc, u32 tpc, u32 sm)
+{
+	u32 dbgr_control0, dbgr_status0;
+	u32 offset;
+	/*
+	 * The following requires some clarification. Despite the fact that both
+	 * RUN_TRIGGER and STOP_TRIGGER have the word "TRIGGER" in their
+	 *  names, only one is actually a trigger, and that is the STOP_TRIGGER.
+	 * Merely writing a 1(_TASK) to the RUN_TRIGGER is not sufficient to
+	 * resume the gpu - the _STOP_TRIGGER must explicitly be set to 0
+	 * (_DISABLE) as well.
+
+	* Advice from the arch group:  Disable the stop trigger first, as a
+	* separate operation, in order to ensure that the trigger has taken
+	* effect, before enabling the run trigger.
+	*/
+
+	offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc) +
+			gv11b_gr_sm_offset(g, sm);
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"resuming gpc:%d, tpc:%d, sm%d", gpc, tpc, sm);
+	dbgr_control0 = gk20a_readl(g,
+			gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
+	dbgr_status0 = gk20a_readl(g,
+			gr_gpc0_tpc0_sm0_dbgr_status0_r() + offset);
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"before stop trigger disable: "
+			"dbgr_control0 = 0x%x dbgr_status0: 0x%x",
+			dbgr_control0, dbgr_status0);
+
+	/*De-assert stop trigger */
+	dbgr_control0 = set_field(dbgr_control0,
+			gr_gpc0_tpc0_sm0_dbgr_control0_stop_trigger_m(),
+			gr_gpc0_tpc0_sm0_dbgr_control0_stop_trigger_disable_f());
+	gk20a_writel(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() +
+				offset, dbgr_control0);
+
+	dbgr_control0 = gk20a_readl(g,
+			gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
+	dbgr_status0 = gk20a_readl(g,
+			gr_gpc0_tpc0_sm0_dbgr_status0_r() + offset);
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"before run trigger: "
+			"dbgr_control0 = 0x%x dbgr_status0: 0x%x",
+			dbgr_control0, dbgr_status0);
+	/* Run trigger */
+	dbgr_control0 |=
+		gr_gpc0_tpc0_sm0_dbgr_control0_run_trigger_task_f();
+	gk20a_writel(g,
+		gr_gpc0_tpc0_sm0_dbgr_control0_r() +
+		offset, dbgr_control0);
+
+	dbgr_control0 = gk20a_readl(g,
+			gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
+	dbgr_status0 = gk20a_readl(g,
+			gr_gpc0_tpc0_sm0_dbgr_status0_r() + offset);
+	/* run trigger is not sticky bit. SM clears it immediately */
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"after run trigger: "
+			"dbgr_control0 = 0x%x dbgr_status0: 0x%x",
+			dbgr_control0, dbgr_status0);
+
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2915,4 +2983,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.sm_debugger_attached = gv11b_gr_sm_debugger_attached;
 	gops->gr.suspend_single_sm = gv11b_gr_suspend_single_sm;
 	gops->gr.suspend_all_sms = gv11b_gr_suspend_all_sms;
+	gops->gr.resume_single_sm = gv11b_gr_resume_single_sm;
 }

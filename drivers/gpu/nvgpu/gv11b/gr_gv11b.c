@@ -1780,7 +1780,8 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 					"CILP: STOP_TRIGGER from "
 					"gpc %d tpc %d sm %d",
 					gpc, tpc, sm);
-				gk20a_suspend_single_sm(g, gpc, tpc, global_mask, true);
+				g->ops.gr.suspend_single_sm(g,
+					gpc, tpc, sm, global_mask, true);
 			}
 
 			/* reset the HWW errors after locking down */
@@ -2761,6 +2762,42 @@ static bool gv11b_gr_sm_debugger_attached(struct gk20a *g)
 	return false;
 }
 
+static void gv11b_gr_suspend_single_sm(struct gk20a *g,
+		u32 gpc, u32 tpc, u32 sm,
+		u32 global_esr_mask, bool check_errors)
+{
+	int err;
+	u32 dbgr_control0;
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
+			gk20a_gr_tpc_offset(g, tpc) +
+			gv11b_gr_sm_offset(g, sm);
+
+	/* if an SM debugger isn't attached, skip suspend */
+	if (!g->ops.gr.sm_debugger_attached(g)) {
+		nvgpu_err(g,
+			"SM debugger not attached, skipping suspend!");
+		return;
+	}
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+		"suspending gpc:%d, tpc:%d, sm%d", gpc, tpc, sm);
+
+	/* assert stop trigger. */
+	dbgr_control0 = gk20a_readl(g,
+				gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
+	dbgr_control0 |= gr_gpc0_tpc0_sm0_dbgr_control0_stop_trigger_enable_f();
+	gk20a_writel(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset,
+			dbgr_control0);
+
+	err = gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc,
+			global_esr_mask, check_errors);
+	if (err) {
+		nvgpu_err(g,
+			"SuspendSm failed");
+		return;
+	}
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2830,4 +2867,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.record_sm_error_state = gv11b_gr_record_sm_error_state;
 	gops->gr.set_hww_esr_report_mask = gv11b_gr_set_hww_esr_report_mask;
 	gops->gr.sm_debugger_attached = gv11b_gr_sm_debugger_attached;
+	gops->gr.suspend_single_sm = gv11b_gr_suspend_single_sm;
 }

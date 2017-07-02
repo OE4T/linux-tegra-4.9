@@ -38,6 +38,12 @@ struct gk20a;
 #define NVGPU_MM_UNIFIED_MEMORY			18
 
 /*
+ * PMU flags.
+ */
+/* perfmon enabled or disabled for PMU */
+#define NVGPU_PMU_PERFMON			48
+
+/*
  * Must be greater than the largest bit offset in the above list.
  */
 #define NVGPU_MAX_ENABLED_BITS			64

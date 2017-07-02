@@ -11,6 +11,7 @@
  * more details.
  */
 
+#include <nvgpu/enabled.h>
 #include <nvgpu/pmu.h>
 #include <nvgpu/log.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
@@ -844,7 +845,8 @@ int nvgpu_pmu_process_message(struct nvgpu_pmu *pmu)
 		nvgpu_pmu_process_init_msg(pmu, &msg);
 		if (g->ops.pmu.init_wpr_region != NULL)
 			g->ops.pmu.init_wpr_region(g);
-		nvgpu_pmu_init_perfmon(pmu);
+		if (nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+			nvgpu_pmu_init_perfmon(pmu);
 
 		return 0;
 	}

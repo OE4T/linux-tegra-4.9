@@ -11,6 +11,7 @@
  * more details.
  */
 
+#include <nvgpu/enabled.h>
 #include <nvgpu/pmu.h>
 #include <nvgpu/log.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
@@ -59,6 +60,9 @@ int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu)
 	struct pmu_cmd cmd;
 	struct pmu_payload payload;
 	u32 seq;
+
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+		return 0;
 
 	nvgpu_log_fn(g, " ");
 
@@ -126,6 +130,9 @@ int nvgpu_pmu_perfmon_start_sampling(struct nvgpu_pmu *pmu)
 	struct pmu_payload payload;
 	u32 seq;
 
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+		return 0;
+
 	/* PERFMON Start */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = get_perfmon_id(pmu);
@@ -171,6 +178,9 @@ int nvgpu_pmu_perfmon_stop_sampling(struct nvgpu_pmu *pmu)
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_cmd cmd;
 	u32 seq;
+
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+		return 0;
 
 	/* PERFMON Stop */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));

@@ -377,6 +377,7 @@ struct gk20a_platform gp10b_tegra_platform = {
 	.enable_slcg		= true,
 	.enable_elcg		= true,
 	.enable_aelpg       = true,
+	.enable_perfmon         = true,
 
 	/* ptimer src frequency in hz*/
 	.ptimer_src_freq	= 31250000,

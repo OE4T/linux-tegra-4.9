@@ -12,6 +12,7 @@
  *
  */
 
+#include <nvgpu/enabled.h>
 #include "debug_pmu.h"
 #include "gk20a/platform_gk20a.h"
 
@@ -348,10 +349,12 @@ static ssize_t perfmon_events_enable_write(struct file *file,
 		if (err)
 			return err;
 
-		if (val && !g->pmu.perfmon_sampling_enabled) {
+		if (val && !g->pmu.perfmon_sampling_enabled &&
+				nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 			g->pmu.perfmon_sampling_enabled = true;
 			nvgpu_pmu_perfmon_start_sampling(&(g->pmu));
-		} else if (!val && g->pmu.perfmon_sampling_enabled) {
+		} else if (!val && g->pmu.perfmon_sampling_enabled &&
+				nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 			g->pmu.perfmon_sampling_enabled = false;
 			nvgpu_pmu_perfmon_stop_sampling(&(g->pmu));
 		}

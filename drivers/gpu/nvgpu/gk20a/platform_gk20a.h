@@ -93,6 +93,9 @@ struct gk20a_platform {
 	/* Adaptative ELPG: true = enable flase = disable */
 	bool enable_aelpg;
 
+	/* PMU Perfmon: true = enable false = disable */
+	bool enable_perfmon;
+
 	/* Memory System Clock Gating: true = enable flase = disable*/
 	bool enable_mscg;
 

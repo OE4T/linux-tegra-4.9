@@ -618,8 +618,9 @@ void gk20a_resume_all_sms(struct gk20a *g);
 void gk20a_gr_suspend_single_sm(struct gk20a *g,
 		u32 gpc, u32 tpc, u32 sm,
 		u32 global_esr_mask, bool check_errors);
-void gk20a_suspend_all_sms(struct gk20a *g,
+void gk20a_gr_suspend_all_sms(struct gk20a *g,
 		u32 global_esr_mask, bool check_errors);
+u32 gr_gk20a_get_tpc_count(struct gr_gk20a *gr, u32 gpc_index);
 int gk20a_gr_lock_down_sm(struct gk20a *g,
 				 u32 gpc, u32 tpc, u32 global_esr_mask,
 				 bool check_errors);

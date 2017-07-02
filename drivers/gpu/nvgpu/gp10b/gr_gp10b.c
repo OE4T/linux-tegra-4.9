@@ -1822,7 +1822,7 @@ static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 						"CILP: Broadcasting STOP_TRIGGER from gpc %d tpc %d\n",
 						gpc, tpc);
-				gk20a_suspend_all_sms(g, global_mask, false);
+				g->ops.gr.suspend_all_sms(g, global_mask, false);
 
 				gk20a_dbg_gpu_clear_broadcast_stop_trigger(fault_ch);
 			} else {
@@ -1991,7 +1991,7 @@ static bool gr_gp10b_suspend_context(struct channel_gk20a *ch,
 	*cilp_preempt_pending = false;
 
 	if (gk20a_is_channel_ctx_resident(ch)) {
-		gk20a_suspend_all_sms(g, 0, false);
+		g->ops.gr.suspend_all_sms(g, 0, false);
 
 		if (gr_ctx->compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP) {
 			err = gr_gp10b_set_cilp_preempt_pending(g, ch);

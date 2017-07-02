@@ -1147,7 +1147,7 @@ void gr_gk20a_init_sm_id_table(struct gk20a *g)
  * Return number of TPCs in a GPC
  * Return 0 if GPC index is invalid i.e. GPC is disabled
  */
-static u32 gr_gk20a_get_tpc_count(struct gr_gk20a *gr, u32 gpc_index)
+u32 gr_gk20a_get_tpc_count(struct gr_gk20a *gr, u32 gpc_index)
 {
 	if (gpc_index >= gr->gpc_count)
 		return 0;
@@ -8047,7 +8047,7 @@ void gk20a_gr_suspend_single_sm(struct gk20a *g,
 	}
 }
 
-void gk20a_suspend_all_sms(struct gk20a *g,
+void gk20a_gr_suspend_all_sms(struct gk20a *g,
 		u32 global_esr_mask, bool check_errors)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -8062,8 +8062,10 @@ void gk20a_suspend_all_sms(struct gk20a *g,
 		return;
 	}
 
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "suspending all sms");
 	/* assert stop trigger. uniformity assumption: all SMs will have
-	 * the same state in dbg_control0. */
+	 * the same state in dbg_control0.
+	 */
 	dbgr_control0 =
 		gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r());
 	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f();
@@ -8221,7 +8223,7 @@ bool gr_gk20a_suspend_context(struct channel_gk20a *ch)
 	bool ctx_resident = false;
 
 	if (gk20a_is_channel_ctx_resident(ch)) {
-		gk20a_suspend_all_sms(g, 0, false);
+		g->ops.gr.suspend_all_sms(g, 0, false);
 		ctx_resident = true;
 	} else {
 		gk20a_disable_channel_tsg(g, ch);

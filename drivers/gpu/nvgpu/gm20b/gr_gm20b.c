@@ -1632,4 +1632,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_esr_sm_sel = gk20a_gr_get_esr_sm_sel;
 	gops->gr.sm_debugger_attached = gk20a_gr_sm_debugger_attached;
 	gops->gr.suspend_single_sm = gk20a_gr_suspend_single_sm;
+	gops->gr.suspend_all_sms = gk20a_gr_suspend_all_sms;
 }

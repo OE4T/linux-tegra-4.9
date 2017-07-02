@@ -1772,7 +1772,8 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 					"CILP: Broadcasting STOP_TRIGGER from "
 					"gpc %d tpc %d sm %d",
 					gpc, tpc, sm);
-				gk20a_suspend_all_sms(g, global_mask, false);
+				g->ops.gr.suspend_all_sms(g,
+						global_mask, false);
 
 				gk20a_dbg_gpu_clear_broadcast_stop_trigger(fault_ch);
 			} else {
@@ -2798,6 +2799,51 @@ static void gv11b_gr_suspend_single_sm(struct gk20a *g,
 	}
 }
 
+static void gv11b_gr_suspend_all_sms(struct gk20a *g,
+		u32 global_esr_mask, bool check_errors)
+{
+	struct gr_gk20a *gr = &g->gr;
+	u32 gpc, tpc, sm;
+	int err;
+	u32 dbgr_control0;
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
+
+	/* if an SM debugger isn't attached, skip suspend */
+	if (!g->ops.gr.sm_debugger_attached(g)) {
+		nvgpu_err(g,
+			"SM debugger not attached, skipping suspend!");
+		return;
+	}
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "suspending all sms");
+
+	/* assert stop trigger. uniformity assumption: all SMs will have
+	 * the same state in dbg_control0.
+	 */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r());
+	dbgr_control0 |= gr_gpc0_tpc0_sm0_dbgr_control0_stop_trigger_enable_f();
+
+	/* broadcast write */
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sms_dbgr_control0_r(), dbgr_control0);
+
+	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
+		for (tpc = 0; tpc < gr_gk20a_get_tpc_count(gr, gpc); tpc++) {
+			for (sm = 0; sm < sm_per_tpc; sm++) {
+				err = gk20a_gr_wait_for_sm_lock_down(g,
+					gpc, tpc,
+					global_esr_mask, check_errors);
+				if (err) {
+					nvgpu_err(g,
+						"SuspendAllSms failed");
+					return;
+				}
+			}
+		}
+	}
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2868,4 +2914,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.set_hww_esr_report_mask = gv11b_gr_set_hww_esr_report_mask;
 	gops->gr.sm_debugger_attached = gv11b_gr_sm_debugger_attached;
 	gops->gr.suspend_single_sm = gv11b_gr_suspend_single_sm;
+	gops->gr.suspend_all_sms = gv11b_gr_suspend_all_sms;
 }

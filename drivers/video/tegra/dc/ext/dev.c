@@ -1133,6 +1133,9 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 					TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE);
 
 		if (data->imp_dirty) {
+			trace_display_imp_flip_started(dc->ctrl_num,
+							data->imp_session_id);
+
 			dc->imp_dirty = true;
 			tegra_dc_adjust_imp(dc, true);
 		}
@@ -1195,8 +1198,12 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 		if (!tegra_dc_has_multiple_dc())
 			tegra_dc_call_flip_callback();
 
-		if (data->imp_dirty)
+		if (data->imp_dirty) {
 			tegra_dc_adjust_imp(dc, false);
+
+			trace_display_imp_flip_completed(dc->ctrl_num,
+							data->imp_session_id);
+		}
 	}
 
 	if (data->imp_dirty)
@@ -1843,6 +1850,9 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 				"Couldn't find corresponding PROPOSE\n");
 			goto fail_pin;
 		}
+
+		trace_display_imp_flip_queued(ext->dc->ctrl_num,
+							data->imp_session_id);
 	}
 
 	ret = lock_windows_for_flip(user, win, win_num);

@@ -2599,6 +2599,8 @@ static inline void tegra_nvdisp_program_common_fetch_meter(struct tegra_dc *dc,
 		nvdisp_ihub_common_fetch_meter_cursor_slots_f(curs_slots) |
 		nvdisp_ihub_common_fetch_meter_wgrp_slots_f(win_slots),
 		nvdisp_ihub_common_fetch_meter_r());
+
+	trace_display_imp_program_global(dc->ctrl_num, curs_slots, win_slots);
 }
 
 static u32 tegra_nvdisp_get_active_curs_pool(struct tegra_dc *dc)
@@ -2908,6 +2910,9 @@ static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
 		tegra_dc_writel(dc,
 			nvdisp_ihub_cursor_pool_config_entries_f(entries),
 			nvdisp_ihub_cursor_pool_config_r());
+
+		trace_display_imp_cursor_mempool_programmed(dc->ctrl_num,
+								entries);
 	}
 
 	/* program wgrp mempool */
@@ -2922,6 +2927,9 @@ static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
 		nvdisp_win_write(win,
 			win_ihub_pool_config_entries_f(entries),
 			win_ihub_pool_config_r());
+
+		trace_display_imp_win_mempool_programmed(dc->ctrl_num, win->idx,
+								entries);
 	}
 
 	tegra_nvdisp_activate_common_channel(dc);
@@ -3332,6 +3340,9 @@ int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
 	dc->imp_session_id_cntr++;
 	list_add_tail(&imp_settings->imp_node, &nvdisp_imp_settings_queue);
 
+	trace_display_imp_propose_queued(dc->ctrl_num,
+						imp_settings->session_id);
+
 	mutex_unlock(&tegra_nvdisp_lock);
 	return ret;
 
@@ -3385,6 +3396,12 @@ static void tegra_nvdisp_program_imp_curs_results(struct tegra_dc *dc,
 				nvdisp_ihub_cursor_pool_config_entries_f(val),
 				nvdisp_ihub_cursor_pool_config_r());
 	}
+
+	trace_display_imp_program_cursor(dc->ctrl_num,
+				imp_head_results->metering_slots_value_cursor,
+				imp_head_results->pipe_meter_value_cursor,
+				imp_head_results->pool_config_entries_cursor,
+				imp_head_results->thresh_lwm_dvfs_cursor);
 }
 
 static void tegra_nvdisp_program_imp_win_results(struct tegra_dc *dc,
@@ -3440,6 +3457,13 @@ static void tegra_nvdisp_program_imp_win_results(struct tegra_dc *dc,
 				win_ihub_pool_config_entries_f(val),
 				win_ihub_pool_config_r());
 		}
+
+		trace_display_imp_program_win(dc->ctrl_num, win->idx,
+				imp_head_results->metering_slots_value_win[i],
+				imp_head_results->pipe_meter_value_win[i],
+				imp_head_results->pool_config_entries_win[i],
+				imp_head_results->thresh_lwm_dvfs_win[i],
+				imp_head_results->thread_group_win[i]);
 	}
 }
 

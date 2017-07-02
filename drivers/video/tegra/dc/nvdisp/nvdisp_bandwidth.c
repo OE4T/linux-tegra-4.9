@@ -297,6 +297,7 @@ int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 	u32 final_total_bw = 0;
 	u32 final_emc = 0;
 	u32 final_hubclk = 0;
+	int ret = 0;
 
 	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
 				IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle))
@@ -358,12 +359,18 @@ int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 		}
 	}
 
-	return tegra_nvdisp_program_final_bw_settings(cur_config,
+	ret = tegra_nvdisp_program_final_bw_settings(cur_config,
 						final_iso_bw,
 						final_total_bw,
 						final_emc,
 						final_hubclk,
 						before_win_update);
+
+	trace_display_imp_bw_programmed(dc->ctrl_num, final_iso_bw,
+					final_total_bw, final_emc,
+					final_hubclk);
+
+	return ret;
 }
 
 void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
@@ -483,6 +490,10 @@ int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc,
 		ihub_bw_info.emc_at_res_bw = new_emc;
 		ihub_bw_info.hubclk_at_res_bw = new_hubclk;
 		ihub_bw_info.cur_config.total_bw = new_total_bw;
+
+		trace_display_imp_bw_reserved(dc->ctrl_num, new_iso_bw,
+						new_total_bw, new_emc,
+						new_hubclk);
 	}
 
 exit:

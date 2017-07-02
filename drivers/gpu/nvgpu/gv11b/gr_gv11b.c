@@ -2741,6 +2741,26 @@ static void gv11b_gr_set_hww_esr_report_mask(struct gk20a *g)
 		gr_gpc0_tpc0_sm0_hww_global_esr_report_mask_multiple_warp_errors_report_f());
 }
 
+static bool gv11b_gr_sm_debugger_attached(struct gk20a *g)
+{
+	u32 debugger_mode;
+	u32 dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r());
+
+	/* check if sm debugger is attached.
+	 * assumption: all SMs will have debug mode enabled/disabled
+	 * uniformly.
+	 */
+	debugger_mode =
+		gr_gpc0_tpc0_sm0_dbgr_control0_debugger_mode_v(dbgr_control0);
+	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+			"SM Debugger Mode: %d", debugger_mode);
+	if (debugger_mode ==
+			gr_gpc0_tpc0_sm0_dbgr_control0_debugger_mode_on_v())
+		return true;
+
+	return false;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2809,4 +2829,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.set_sm_debug_mode = gv11b_gr_set_sm_debug_mode;
 	gops->gr.record_sm_error_state = gv11b_gr_record_sm_error_state;
 	gops->gr.set_hww_esr_report_mask = gv11b_gr_set_hww_esr_report_mask;
+	gops->gr.sm_debugger_attached = gv11b_gr_sm_debugger_attached;
 }

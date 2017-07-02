@@ -1860,7 +1860,7 @@ static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: resume for gpc %d tpc %d\n",
 					gpc, tpc);
-			gk20a_resume_single_sm(g, gpc, tpc);
+			g->ops.gr.resume_single_sm(g, gpc, tpc, sm);
 
 			*ignore_debugger = true;
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: All done on gpc %d, tpc %d\n", gpc, tpc);

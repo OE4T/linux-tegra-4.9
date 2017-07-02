@@ -375,6 +375,8 @@ struct gpu_ops {
 				u32 global_esr_mask, bool check_errors);
 		void (*suspend_all_sms)(struct gk20a *g,
 				u32 global_esr_mask, bool check_errors);
+		void (*resume_single_sm)(struct gk20a *g,
+				u32 gpc, u32 tpc, u32 sm);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

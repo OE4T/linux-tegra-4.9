@@ -8088,13 +8088,11 @@ void gk20a_gr_suspend_all_sms(struct gk20a *g,
 	}
 }
 
-void gk20a_resume_single_sm(struct gk20a *g,
-		u32 gpc, u32 tpc)
+void gk20a_gr_resume_single_sm(struct gk20a *g,
+		u32 gpc, u32 tpc, u32 sm)
 {
 	u32 dbgr_control0;
 	u32 offset;
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 	/*
 	 * The following requires some clarification. Despite the fact that both
 	 * RUN_TRIGGER and STOP_TRIGGER have the word "TRIGGER" in their
@@ -8108,7 +8106,7 @@ void gk20a_resume_single_sm(struct gk20a *g,
 	* effect, before enabling the run trigger.
 	*/
 
-	offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
 
 	/*De-assert stop trigger */
 	dbgr_control0 =

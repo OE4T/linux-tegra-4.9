@@ -506,6 +506,236 @@ DEFINE_EVENT(display_dc_common_events_notifier, host1x_job_executed,
 	TP_ARGS(dc_cmmn, data, head_no)
 );
 
+DECLARE_EVENT_CLASS(display_imp_request_id,
+	TP_PROTO(int ctrl_num, u64 session_id),
+	TP_ARGS(ctrl_num, session_id),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(u64, session_id)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->session_id = session_id;
+	),
+	TP_printk("DC ctrl_num=%d IMP session id=%llu",
+		__entry->ctrl_num, __entry->session_id
+	)
+);
+
+DEFINE_EVENT(display_imp_request_id, display_imp_propose_queued,
+	TP_PROTO(int ctrl_num, u64 session_id),
+	TP_ARGS(ctrl_num, session_id)
+);
+
+DEFINE_EVENT(display_imp_request_id, display_imp_flip_queued,
+	TP_PROTO(int ctrl_num, u64 session_id),
+	TP_ARGS(ctrl_num, session_id)
+);
+
+DEFINE_EVENT(display_imp_request_id, display_imp_flip_started,
+	TP_PROTO(int ctrl_num, u64 session_id),
+	TP_ARGS(ctrl_num, session_id)
+);
+
+DEFINE_EVENT(display_imp_request_id, display_imp_flip_completed,
+	TP_PROTO(int ctrl_num, u64 session_id),
+	TP_ARGS(ctrl_num, session_id)
+);
+
+DECLARE_EVENT_CLASS(display_imp_bw_settings,
+	TP_PROTO(int ctrl_num, u64 total_disp_bw,
+		u64 total_disp_bw_no_catchup, u64 emc_floor,
+		u64 minimum_hubclk),
+	TP_ARGS(ctrl_num, total_disp_bw,
+		total_disp_bw_no_catchup, emc_floor,
+		minimum_hubclk),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(u64, total_disp_bw)
+		__field(u64, total_disp_bw_no_catchup)
+		__field(u64, emc_floor)
+		__field(u64, minimum_hubclk)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->total_disp_bw = total_disp_bw;
+		__entry->total_disp_bw_no_catchup = total_disp_bw_no_catchup;
+		__entry->emc_floor = emc_floor;
+		__entry->minimum_hubclk = minimum_hubclk
+	),
+	TP_printk("DC ctrl_num=%d IMP bw settings="
+		"[total disp ISO bw=%llu KBps, %llu KBps (no catchup) "
+		"emc floor=%llu Hz minimum hubclk=%llu Hz]",
+		__entry->ctrl_num, __entry->total_disp_bw,
+		__entry->total_disp_bw_no_catchup, __entry->emc_floor,
+		__entry->minimum_hubclk
+	)
+);
+
+DEFINE_EVENT(display_imp_bw_settings, display_imp_bw_reserved,
+	TP_PROTO(int ctrl_num, u64 total_disp_bw,
+		u64 total_disp_bw_no_catchup, u64 emc_floor,
+		u64 minimum_hubclk),
+	TP_ARGS(ctrl_num, total_disp_bw,
+		total_disp_bw_no_catchup, emc_floor,
+		minimum_hubclk)
+);
+
+DEFINE_EVENT(display_imp_bw_settings, display_imp_bw_programmed,
+	TP_PROTO(int ctrl_num, u64 total_disp_bw,
+		u64 total_disp_bw_no_catchup, u64 emc_floor,
+		u64 minimum_hubclk),
+	TP_ARGS(ctrl_num, total_disp_bw,
+		total_disp_bw_no_catchup, emc_floor,
+		minimum_hubclk)
+);
+
+DECLARE_EVENT_CLASS(display_imp_global_settings,
+	TP_PROTO(int ctrl_num, u32 total_cursor_fetch_meter,
+		u32 total_win_fetch_meter),
+	TP_ARGS(ctrl_num, total_cursor_fetch_meter,
+		total_win_fetch_meter),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(u32, total_cursor_fetch_meter)
+		__field(u32, total_win_fetch_meter)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->total_cursor_fetch_meter = total_cursor_fetch_meter;
+		__entry->total_win_fetch_meter = total_win_fetch_meter;
+	),
+	TP_printk("DC ctrl_num=%d Total cursor fetch meter=0x%x "
+		"Total win fetch meter=0x%x",
+		__entry->ctrl_num, __entry->total_cursor_fetch_meter,
+		__entry->total_win_fetch_meter
+	)
+);
+
+DEFINE_EVENT(display_imp_global_settings, display_imp_program_global,
+	TP_PROTO(int ctrl_num, u32 total_cursor_fetch_meter,
+		u32 total_win_fetch_meter),
+	TP_ARGS(ctrl_num, total_cursor_fetch_meter,
+		total_win_fetch_meter)
+);
+
+DECLARE_EVENT_CLASS(display_imp_cursor_settings,
+	TP_PROTO(int ctrl_num, u32 fetch_meter, u32 pipe_meter,
+		u32 mempool_entries, u32 dvfs_watermark),
+	TP_ARGS(ctrl_num, fetch_meter, pipe_meter,
+		mempool_entries, dvfs_watermark),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(u32, fetch_meter)
+		__field(u32, pipe_meter)
+		__field(u32, mempool_entries)
+		__field(u32, dvfs_watermark)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->fetch_meter = fetch_meter;
+		__entry->pipe_meter = pipe_meter;
+		__entry->mempool_entries = mempool_entries;
+		__entry->dvfs_watermark = dvfs_watermark;
+	),
+	TP_printk("DC ctrl_num=%d cursor IMP settings="
+		"[fetch meter=0x%x pipe_meter=0x%x mempool_entries=0x%x "
+		"dvfs_watermark=0x%x]",
+		__entry->ctrl_num, __entry->fetch_meter, __entry->pipe_meter,
+		__entry->mempool_entries, __entry->dvfs_watermark
+	)
+);
+
+DEFINE_EVENT(display_imp_cursor_settings, display_imp_program_cursor,
+	TP_PROTO(int ctrl_num, u32 fetch_meter, u32 pipe_meter,
+		u32 mempool_entries, u32 dvfs_watermark),
+	TP_ARGS(ctrl_num, fetch_meter, pipe_meter,
+		mempool_entries, dvfs_watermark)
+);
+
+DECLARE_EVENT_CLASS(display_imp_win_settings,
+	TP_PROTO(int ctrl_num, int win_num, u32 fetch_meter, u32 pipe_meter,
+		u32 mempool_entries, u32 dvfs_watermark, int thread_group),
+	TP_ARGS(ctrl_num, win_num, fetch_meter, pipe_meter,
+		mempool_entries, dvfs_watermark, thread_group),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(int, win_num)
+		__field(u32, fetch_meter)
+		__field(u32, pipe_meter)
+		__field(u32, mempool_entries)
+		__field(u32, dvfs_watermark)
+		__field(int, thread_group)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->win_num = win_num;
+		__entry->fetch_meter = fetch_meter;
+		__entry->pipe_meter = pipe_meter;
+		__entry->mempool_entries = mempool_entries;
+		__entry->dvfs_watermark = dvfs_watermark;
+		__entry->thread_group = thread_group
+	),
+	TP_printk("DC ctrl_num=%d win_num=%d win IMP settings="
+		"[fetch meter=0x%x pipe_meter=0x%x mempool_entries=0x%x "
+		"dvfs_watermark=0x%x thread_group=%d]",
+		__entry->ctrl_num, __entry->win_num, __entry->fetch_meter,
+		__entry->pipe_meter, __entry->mempool_entries,
+		__entry->dvfs_watermark, __entry->thread_group
+	)
+);
+
+DEFINE_EVENT(display_imp_win_settings, display_imp_program_win,
+	TP_PROTO(int ctrl_num, int win_num, u32 fetch_meter, u32 pipe_meter,
+		u32 mempool_entries, u32 dvfs_watermark, int thread_group),
+	TP_ARGS(ctrl_num, win_num, fetch_meter, pipe_meter,
+		mempool_entries, dvfs_watermark, thread_group)
+);
+
+DECLARE_EVENT_CLASS(display_imp_cursor_mempool,
+	TP_PROTO(int ctrl_num, u32 mempool_entries),
+	TP_ARGS(ctrl_num, mempool_entries),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(u32, mempool_entries)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->mempool_entries = mempool_entries;
+	),
+	TP_printk("DC ctrl_num=%d Cursor mempool=0x%x",
+		__entry->ctrl_num, __entry->mempool_entries
+	)
+);
+
+DEFINE_EVENT(display_imp_cursor_mempool, display_imp_cursor_mempool_programmed,
+	TP_PROTO(int ctrl_num, u32 mempool_entries),
+	TP_ARGS(ctrl_num, mempool_entries)
+);
+
+DECLARE_EVENT_CLASS(display_imp_win_mempool,
+	TP_PROTO(int ctrl_num, int win_num, u32 mempool_entries),
+	TP_ARGS(ctrl_num, win_num, mempool_entries),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(int, win_num)
+		__field(u32, mempool_entries)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->win_num = win_num;
+		__entry->mempool_entries = mempool_entries
+	),
+	TP_printk("DC ctrl_num=%d win_num=%d mempool=0x%x",
+		__entry->ctrl_num, __entry->win_num, __entry->mempool_entries
+	)
+);
+
+DEFINE_EVENT(display_imp_win_mempool, display_imp_win_mempool_programmed,
+	TP_PROTO(int ctrl_num, int win_num, u32 mempool_entries),
+	TP_ARGS(ctrl_num, win_num, mempool_entries)
+);
+
 #endif /* _TRACE_DISPLAY_H */
 
 /* This part must be outside protection */

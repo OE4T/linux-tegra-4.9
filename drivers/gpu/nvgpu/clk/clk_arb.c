@@ -33,6 +33,7 @@
 
 #ifdef CONFIG_DEBUG_FS
 #include "gk20a/platform_gk20a.h"
+#include "common/linux/os_linux.h"
 #endif
 
 #define MAX_F_POINTS 256

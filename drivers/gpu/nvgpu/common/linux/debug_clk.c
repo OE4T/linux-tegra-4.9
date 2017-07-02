@@ -18,6 +18,7 @@
 
 #include "gk20a/platform_gk20a.h"
 #include "gm20b/clk_gm20b.h"
+#include "os_linux.h"
 
 static int rate_get(void *data, u64 *val)
 {

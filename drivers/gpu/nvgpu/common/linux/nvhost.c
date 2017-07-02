@@ -23,7 +23,7 @@
 #include "nvhost_priv.h"
 
 #include "gk20a/gk20a.h"
-#include "gk20a/platform_gk20a.h"
+#include "os_linux.h"
 
 int nvgpu_get_nvhost_dev(struct gk20a *g)
 {

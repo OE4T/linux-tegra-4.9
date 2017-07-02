@@ -19,6 +19,7 @@
 #include "gk20a/gk20a.h"
 #ifdef CONFIG_DEBUG_FS
 #include "gk20a/platform_gk20a.h"
+#include "common/linux/os_linux.h"
 #endif
 #include "gp106/mclk_gp106.h"
 

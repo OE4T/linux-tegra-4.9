@@ -14,6 +14,7 @@
 
 #include "debug_fifo.h"
 #include "gk20a/platform_gk20a.h"
+#include "os_linux.h"
 
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>

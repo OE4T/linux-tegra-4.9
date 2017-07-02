@@ -677,7 +677,7 @@ int vgpu_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	gk20a->dev = dev;
+	l->dev = dev;
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		__nvgpu_set_enabled(gk20a, NVGPU_IS_FMODEL, true);
 

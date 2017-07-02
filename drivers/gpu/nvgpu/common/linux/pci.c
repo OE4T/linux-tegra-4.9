@@ -29,6 +29,7 @@
 #include "module.h"
 #include "intr.h"
 #include "sysfs.h"
+#include "os_linux.h"
 
 #include "pci.h"
 
@@ -367,7 +368,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	}
 
 	platform->g = g;
-	g->dev = &pdev->dev;
+	l->dev = &pdev->dev;
 
 	err = pci_enable_device(pdev);
 	if (err)

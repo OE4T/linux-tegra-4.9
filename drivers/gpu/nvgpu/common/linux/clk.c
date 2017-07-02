@@ -22,6 +22,8 @@
 #include <soc/tegra/tegra-dvfs.h>
 
 #include "clk.h"
+#include "os_linux.h"
+
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 

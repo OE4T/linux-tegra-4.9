@@ -37,7 +37,7 @@
 #include "cde_gk20a.h"
 #include "fence_gk20a.h"
 #include "gr_gk20a.h"
-#include "platform_gk20a.h"
+#include "common/linux/os_linux.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

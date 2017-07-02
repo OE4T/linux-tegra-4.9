@@ -21,6 +21,7 @@
 #include "debug_kmem.h"
 #include "debug_pmu.h"
 #include "debug_sched.h"
+#include "os_linux.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"

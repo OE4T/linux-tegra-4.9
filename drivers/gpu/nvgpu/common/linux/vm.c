@@ -29,6 +29,7 @@
 #include "gk20a/platform_gk20a.h"
 
 #include "vm_priv.h"
+#include "os_linux.h"
 
 static struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_reverse(
 	struct vm_gk20a *vm, struct dma_buf *dmabuf, u32 kind)

@@ -865,7 +865,7 @@ static int gk20a_probe(struct platform_device *dev)
 
 	gk20a = &l->g;
 	set_gk20a(dev, gk20a);
-	gk20a->dev = &dev->dev;
+	l->dev = &dev->dev;
 	gk20a->log_mask = NVGPU_DEFAULT_DBG_MASK;
 
 	nvgpu_kmem_init(gk20a);

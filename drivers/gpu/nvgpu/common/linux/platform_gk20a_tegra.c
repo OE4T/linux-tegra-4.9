@@ -52,6 +52,7 @@
 #include "gm20b/clk_gm20b.h"
 
 #include "clk.h"
+#include "os_linux.h"
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 

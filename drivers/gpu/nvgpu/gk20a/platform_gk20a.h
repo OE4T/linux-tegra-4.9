@@ -259,10 +259,6 @@ static inline struct gk20a *get_gk20a(struct device *dev)
 {
 	return gk20a_get_platform(dev)->g;
 }
-static inline struct device *dev_from_gk20a(struct gk20a *g)
-{
-	return g->dev;
-}
 static inline struct gk20a *gk20a_from_dev(struct device *dev)
 {
 	if (!dev)

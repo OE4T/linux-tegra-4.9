@@ -1019,7 +1019,6 @@ struct nvgpu_bios {
 };
 
 struct gk20a {
-	struct device *dev;
 	struct nvgpu_nvhost_dev *nvhost_dev;
 
 	/*

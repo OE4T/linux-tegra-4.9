@@ -22,6 +22,7 @@
 
 struct nvgpu_os_linux {
 	struct gk20a g;
+	struct device *dev;
 
 	struct {
 		struct cdev cdev;
@@ -73,6 +74,11 @@ struct nvgpu_os_linux {
 static inline struct nvgpu_os_linux *nvgpu_os_linux_from_gk20a(struct gk20a *g)
 {
 	return container_of(g, struct nvgpu_os_linux, g);
+}
+
+static inline struct device *dev_from_gk20a(struct gk20a *g)
+{
+	return nvgpu_os_linux_from_gk20a(g)->dev;
 }
 
 #define INTERFACE_NAME "nvhost%s-gpu"

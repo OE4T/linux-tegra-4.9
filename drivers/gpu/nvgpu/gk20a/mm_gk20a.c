@@ -49,6 +49,7 @@
 #include "fence_gk20a.h"
 #include "kind_gk20a.h"
 #include "bus_gk20a.h"
+#include "common/linux/os_linux.h"
 
 #include <nvgpu/hw/gk20a/hw_gmmu_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>

@@ -17,6 +17,7 @@
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include "gk20a/platform_gk20a.h"
+#include "common/linux/os_linux.h"
 #endif
 
 #include <nvgpu/hw/gp106/hw_therm_gp106.h>

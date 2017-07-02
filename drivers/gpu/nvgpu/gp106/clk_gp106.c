@@ -26,6 +26,7 @@
 #ifdef CONFIG_DEBUG_FS
 #include "gk20a/platform_gk20a.h"
 #endif
+#include "common/linux/os_linux.h"
 
 #include "clk_gp106.h"
 #include "clk/clk_arb.h"

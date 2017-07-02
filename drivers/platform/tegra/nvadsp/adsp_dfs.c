@@ -254,61 +254,11 @@ static struct adsp_dfs_policy dfs_policy =  {
 	},
 };
 
-/*
- * update_freq - update adsp freq and ask adsp to change timer as
- * change in adsp freq.
- * freq_khz - target frequency in KHz
- * return - final freq got set.
- *		- 0, incase of error.
- *
- * Note - Policy->cur would be updated via rate
- * change notifier, when freq is changed in hw
- *
- */
-static unsigned long update_freq(unsigned long freq_khz)
+static int adsp_update_freq_handshake(unsigned long tfreq_hz, int index)
 {
-	u32 efreq;
-	int index;
-	int ret;
-	unsigned long tfreq_hz, old_freq_khz;
-	enum adsp_dfs_reply reply;
 	struct nvadsp_mbox *mbx = &policy->mbox;
-	struct nvadsp_drv_data *drv = dev_get_drvdata(device);
-
-	tfreq_hz = adsp_get_target_freq(freq_khz * 1000, &index);
-	if (!tfreq_hz) {
-		dev_info(device, "unable get the target freq\n");
-		return 0;
-	}
-
-	old_freq_khz = policy->cur;
-
-	if ((tfreq_hz / 1000) == old_freq_khz) {
-		dev_dbg(device, "old and new target_freq is same\n");
-		return 0;
-	}
-
-	ret = adsp_clk_set_rate(policy, tfreq_hz);
-	if (ret) {
-		dev_err(device, "failed to set adsp freq:%luhz err:%d\n",
-			tfreq_hz, ret);
-		policy->update_freq_flag = false;
-		return 0;
-	}
-
-	efreq = adsp_to_emc_freq(tfreq_hz / 1000);
-
-	if (IS_ENABLED(CONFIG_COMMON_CLK)) {
-		tegra_bwmgr_set_emc(drv->bwmgr, efreq * 1000,
-				    TEGRA_BWMGR_SET_EMC_FLOOR);
-	} else {
-		ret = clk_set_rate(ape_emc_clk, efreq * 1000);
-		if (ret) {
-			dev_err(device, "failed to set ape.emc clk:%d\n", ret);
-			policy->update_freq_flag = false;
-			goto err_out;
-		}
-	}
+	enum adsp_dfs_reply reply;
+	int ret;
 
 	dev_dbg(device, "sending change in freq(hz):%lu\n", tfreq_hz);
 	/*
@@ -351,6 +301,84 @@ static unsigned long update_freq(unsigned long freq_khz)
 		__func__,
 		policy->update_freq_flag == true ? "ACK" : "NACK",
 		tfreq_hz);
+err_out:
+	return ret;
+}
+
+/*
+ * update_freq - update adsp freq and ask adsp to change timer as
+ * change in adsp freq.
+ * freq_khz - target frequency in KHz
+ * return - final freq got set.
+ *		- 0, incase of error.
+ *
+ * Note - Policy->cur would be updated via rate
+ * change notifier, when freq is changed in hw
+ *
+ */
+static unsigned long update_freq(unsigned long freq_khz)
+{
+	struct nvadsp_drv_data *drv = dev_get_drvdata(device);
+	unsigned long tfreq_hz, old_freq_khz;
+	u32 efreq;
+	int index;
+	int ret;
+
+	tfreq_hz = adsp_get_target_freq(freq_khz * 1000, &index);
+	if (!tfreq_hz) {
+		dev_info(device, "unable get the target freq\n");
+		return 0;
+	}
+
+	old_freq_khz = policy->cur;
+
+	if ((tfreq_hz / 1000) == old_freq_khz) {
+		dev_dbg(device, "old and new target_freq is same\n");
+		return 0;
+	}
+
+	ret = adsp_clk_set_rate(policy, tfreq_hz);
+	if (ret) {
+		dev_err(device, "failed to set adsp freq:%luhz err:%d\n",
+			tfreq_hz, ret);
+		policy->update_freq_flag = false;
+		return 0;
+	}
+
+	efreq = adsp_to_emc_freq(tfreq_hz / 1000);
+
+	if (IS_ENABLED(CONFIG_COMMON_CLK)) {
+		tegra_bwmgr_set_emc(drv->bwmgr, efreq * 1000,
+				    TEGRA_BWMGR_SET_EMC_FLOOR);
+	} else {
+		ret = clk_set_rate(ape_emc_clk, efreq * 1000);
+		if (ret) {
+			dev_err(device, "failed to set ape.emc clk:%d\n", ret);
+			policy->update_freq_flag = false;
+			goto err_out;
+		}
+	}
+
+	/*
+	 * On tegra > t210, as os_args->adsp_freq_hz is used to know adsp cpu
+	 * clk rate and there is no need to set up timer prescalar. So skip
+	 * communicating adsp cpu clk rate update to adspos using mbox
+	 */
+	if (!of_device_is_compatible(device->of_node, "nvidia,tegra210-adsp"))
+		policy->update_freq_flag = true;
+	else
+		adsp_update_freq_handshake(tfreq_hz, index);
+
+	/*
+	 * Use os_args->adsp_freq_hz to update adsp cpu clk rate
+	 * for adspos firmware, which uses this shared variable
+	 * to get the clk rate for EDF, etc.
+	 */
+	if (policy->update_freq_flag) {
+		struct nvadsp_shared_mem *sm = drv->shared_adsp_os_data;
+
+		sm->os_args.adsp_freq_hz = tfreq_hz;
+	}
 
 err_out:
 	if (!policy->update_freq_flag) {

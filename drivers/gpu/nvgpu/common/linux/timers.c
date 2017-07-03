@@ -54,12 +54,9 @@ static int nvgpu_timeout_is_pre_silicon(struct nvgpu_timeout *timeout)
  *
  * If neither %NVGPU_TIMER_CPU_TIMER or %NVGPU_TIMER_RETRY_TIMER is passed then
  * a CPU timer is used by default.
- *
- * A negative duration is interpreted as the maximum possible, which for our
- * purposes means infinite wait.
  */
 int nvgpu_timeout_init(struct gk20a *g, struct nvgpu_timeout *timeout,
-		       int duration, unsigned long flags)
+		       u32 duration, unsigned long flags)
 {
 	if (flags & ~NVGPU_TIMER_FLAG_MASK)
 		return -EINVAL;
@@ -68,9 +65,6 @@ int nvgpu_timeout_init(struct gk20a *g, struct nvgpu_timeout *timeout,
 
 	timeout->g = g;
 	timeout->flags = flags;
-
-	if (duration < 0)
-		duration = INT_MAX;
 
 	if (flags & NVGPU_TIMER_RETRY_TIMER)
 		timeout->retries.max = duration;

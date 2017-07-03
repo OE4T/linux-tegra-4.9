@@ -184,7 +184,7 @@ static int pmu_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout_ms,
 	gk20a_dbg_fn("");
 	reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
 
-	nvgpu_timeout_init(g, &timeout, (int)timeout_ms, NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));

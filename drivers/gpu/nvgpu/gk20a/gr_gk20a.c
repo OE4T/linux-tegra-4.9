@@ -344,8 +344,7 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long duration_ms,
 
 	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 
-	nvgpu_timeout_init(g, &timeout, (int)duration_ms,
-			   NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout, duration_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		/* fmodel: host gets fifo_engine_status(gr) from gr
@@ -398,8 +397,7 @@ int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long duration_ms,
 
 	gk20a_dbg_fn("");
 
-	nvgpu_timeout_init(g, &timeout, (int)duration_ms,
-			   NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout, duration_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		val = gk20a_readl(g, gr_status_r());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,8 +52,8 @@ struct nvgpu_timeout {
 	union {
 		s64		 time;
 		struct {
-			int	 max;
-			int	 attempted;
+			u32	 max;
+			u32	 attempted;
 		} retries;
 	};
 };
@@ -75,7 +75,7 @@ struct nvgpu_timeout {
 					 NVGPU_TIMER_SILENT_TIMEOUT)
 
 int nvgpu_timeout_init(struct gk20a *g, struct nvgpu_timeout *timeout,
-		       int duration, unsigned long flags);
+		       u32 duration, unsigned long flags);
 int nvgpu_timeout_peek_expired(struct nvgpu_timeout *timeout);
 
 #define nvgpu_timeout_expired(__timeout)				\

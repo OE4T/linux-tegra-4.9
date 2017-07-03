@@ -1287,7 +1287,7 @@ struct gk20a {
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
 {
 	return g->timeouts_enabled ?
-		g->gr_idle_timeout_default : MAX_SCHEDULE_TIMEOUT;
+		g->gr_idle_timeout_default : ULONG_MAX;
 }
 
 enum BAR0_DEBUG_OPERATION {

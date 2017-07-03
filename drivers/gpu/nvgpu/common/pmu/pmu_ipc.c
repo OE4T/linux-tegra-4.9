@@ -453,7 +453,7 @@ static int pmu_write_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 	nvgpu_log_fn(g, " ");
 
 	queue = &pmu->queue[queue_id];
-	nvgpu_timeout_init(g, &timeout, (int)timeout_ms, NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		err = pmu_queue_open_write(pmu, queue, cmd->hdr.size);
@@ -878,7 +878,7 @@ int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
 	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 
-	nvgpu_timeout_init(g, &timeout, (int)timeout_ms, NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		if (*var == val)

@@ -572,6 +572,8 @@ static int t21x_set_la(enum tegra_la_id id,
 
 		emc_freq_mhz = clk_get_rate(emc_clk) /
 				LA_HZ_TO_MHZ_FACTOR;
+		if (!emc_freq_mhz)
+			return 0;
 
 		if (210 > emc_freq_mhz)
 			val_1 = val_1 * 210 / emc_freq_mhz;

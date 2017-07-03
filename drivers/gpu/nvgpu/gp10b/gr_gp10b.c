@@ -2000,7 +2000,7 @@ static bool gr_gp10b_suspend_context(struct channel_gk20a *ch,
 			else
 				*cilp_preempt_pending = true;
 
-			gk20a_resume_all_sms(g);
+			g->ops.gr.resume_all_sms(g);
 		}
 
 		ctx_resident = true;

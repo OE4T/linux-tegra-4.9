@@ -8123,7 +8123,7 @@ void gk20a_gr_resume_single_sm(struct gk20a *g,
 		gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
 }
 
-void gk20a_resume_all_sms(struct gk20a *g)
+void gk20a_gr_resume_all_sms(struct gk20a *g)
 {
 	u32 dbgr_control0;
 	/*
@@ -8236,7 +8236,7 @@ bool gr_gk20a_resume_context(struct channel_gk20a *ch)
 	bool ctx_resident = false;
 
 	if (gk20a_is_channel_ctx_resident(ch)) {
-		gk20a_resume_all_sms(g);
+		g->ops.gr.resume_all_sms(g);
 		ctx_resident = true;
 	} else {
 		gk20a_enable_channel_tsg(g, ch);
@@ -8438,7 +8438,7 @@ int gr_gk20a_resume_from_pause(struct gk20a *g)
 
 	/* Now resume all sms, write a 0 to the stop trigger
 	 * then a 1 to the run trigger */
-	gk20a_resume_all_sms(g);
+	g->ops.gr.resume_all_sms(g);
 
 	return err;
 }

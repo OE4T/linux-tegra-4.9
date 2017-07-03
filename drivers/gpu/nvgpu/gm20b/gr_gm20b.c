@@ -1634,4 +1634,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.suspend_single_sm = gk20a_gr_suspend_single_sm;
 	gops->gr.suspend_all_sms = gk20a_gr_suspend_all_sms;
 	gops->gr.resume_single_sm = gk20a_gr_resume_single_sm;
+	gops->gr.resume_all_sms = gk20a_gr_resume_all_sms;
 }

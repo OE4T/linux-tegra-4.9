@@ -209,6 +209,7 @@ struct sdhci_tegra {
 	bool en_periodic_cflush; /* Enable periodic cache flush for eMMC */
 	u8 uhs_mask;
 	unsigned int instance;
+	int volt_switch_gpio;
 };
 
 /* Module params */
@@ -1143,6 +1144,21 @@ static void tegra_sdhci_signal_voltage_switch_pre(struct sdhci_host *host,
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 
+	/* Toggle power gpio for switching voltage on FPGA */
+	if (gpio_is_valid(tegra_host->volt_switch_gpio)) {
+		if (signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
+			gpio_set_value(tegra_host->volt_switch_gpio, 1);
+			dev_info(mmc_dev(host->mmc),
+				 "3.3V set by voltage switch gpio\n");
+		} else {
+			gpio_set_value(tegra_host->volt_switch_gpio, 0);
+			dev_info(mmc_dev(host->mmc),
+				 "1.8V set by voltage switch gpio\n");
+			mdelay(1000);
+		}
+		return;
+	}
+
 	if (IS_ERR_OR_NULL(host->mmc->supply.vqmmc)) {
 		dev_err(mmc_dev(host->mmc), "vqmmc supply missing\n");
 		return;
@@ -1159,6 +1175,7 @@ static void tegra_sdhci_signal_voltage_switch_pre(struct sdhci_host *host,
 			tegra_sdhci_set_padctrl(host, 3300000);
 		}
 	}
+
 	tegra_host->config_pad_ctrl = true;
 }
 
@@ -1519,6 +1536,8 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	}
 	tegra_host->rate_change_needs_clk = of_property_read_bool(np,
 		"nvidia,rate-change-needs-clock-enabled");
+	tegra_host->volt_switch_gpio = of_get_named_gpio(np,
+			"nvidia,voltage-switch-gpio", 0);
 
 	tegra_host->en_periodic_cflush = of_property_read_bool(np,
 			"nvidia,en-periodic-cflush");
@@ -1629,6 +1648,18 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		reset_control_reset(tegra_host->rst);
 
 	pltfm_host->clk = clk;
+
+	if (gpio_is_valid(tegra_host->volt_switch_gpio)) {
+		rc = gpio_request(tegra_host->volt_switch_gpio, "sdhci_power");
+		if (rc)
+			dev_err(mmc_dev(host->mmc),
+				"failed to allocate gpio for voltage switch, "
+				"err: %d\n", rc);
+		gpio_direction_output(tegra_host->volt_switch_gpio, 1);
+		gpio_set_value(tegra_host->volt_switch_gpio, 1);
+		dev_info(mmc_dev(host->mmc),
+				"3.3V set initially by voltage switch gpio\n");
+	}
 
 	if (gpio_is_valid(tegra_host->cd_gpio) &&
 			tegra_host->cd_wakeup_capable) {

@@ -14,8 +14,6 @@
 #ifndef MM_GP10B_H
 #define MM_GP10B_H
 
-#define NVGPU_MM_GET_IO_COHERENCE_BIT	35
-
 struct gpu_ops;
 
 void gp10b_init_mm(struct gpu_ops *gops);

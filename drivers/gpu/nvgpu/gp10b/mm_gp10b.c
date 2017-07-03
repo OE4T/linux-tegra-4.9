@@ -124,32 +124,6 @@ static int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
 	return 0;
 }
 
-static u64 gp10b_mm_phys_addr_translate(struct gk20a *g, u64 phys_addr,
-		u32 flags)
-{
-	if (!device_is_iommuable(dev_from_gk20a(g)))
-		if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT)
-			return phys_addr |
-				1ULL << NVGPU_MM_GET_IO_COHERENCE_BIT;
-
-	return phys_addr;
-}
-
-static u64 gp10b_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
-		u32 flags)
-{
-	if (!device_is_iommuable(dev_from_gk20a(g)))
-		return gp10b_mm_phys_addr_translate(g, sg_phys(sgl), flags);
-
-	if (sg_dma_address(sgl) == 0)
-		return gp10b_mm_phys_addr_translate(g, sg_phys(sgl), flags);
-
-	if (sg_dma_address(sgl) == DMA_ERROR_CODE)
-		return 0;
-
-	return gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(sgl));
-}
-
 static void update_gmmu_pde3_locked(struct vm_gk20a *vm,
 				    const struct gk20a_mmu_level *l,
 				    struct nvgpu_gmmu_pd *pd,
@@ -401,7 +375,6 @@ void gp10b_init_mm(struct gpu_ops *gops)
 	gops->mm.init_mm_setup_hw = gp10b_init_mm_setup_hw;
 	gops->mm.init_bar2_vm = gb10b_init_bar2_vm;
 	gops->mm.init_bar2_mm_hw_setup = gb10b_init_bar2_mm_hw_setup;
-	gops->mm.get_iova_addr = gp10b_mm_iova_addr;
 	gops->mm.get_mmu_levels = gp10b_mm_get_mmu_levels;
 	gops->mm.init_pdb = gp10b_mm_init_pdb;
 	gops->mm.remove_bar2_vm = gp10b_remove_bar2_vm;

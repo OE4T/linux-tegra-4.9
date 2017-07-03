@@ -23,6 +23,8 @@
 
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 
+#define NVGPU_L3_ALLOC_BIT	36
+
 static bool gv11b_mm_is_bar1_supported(struct gk20a *g)
 {
 	return false;
@@ -61,6 +63,20 @@ void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate)
 	g->ops.mm.fb_flush(g);
 }
 
+/*
+ * On Volta the GPU determines whether to do L3 allocation for a mapping by
+ * checking bit 36 of the phsyical address. So if a mapping should allocte lines
+ * in the L3 this bit must be set.
+ */
+u64 gv11b_gpu_phys_addr(struct gk20a *g,
+			struct nvgpu_gmmu_attrs *attrs, u64 phys)
+{
+	if (attrs->t19x_attrs.l3_alloc)
+		return phys | NVGPU_L3_ALLOC_BIT;
+
+	return phys;
+}
+
 void gv11b_init_mm(struct gpu_ops *gops)
 {
 	gp10b_init_mm(gops);
@@ -69,4 +85,5 @@ void gv11b_init_mm(struct gpu_ops *gops)
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
 	gops->mm.mmu_fault_pending = gv11b_mm_mmu_fault_pending;
 	gops->mm.l2_flush = gv11b_mm_l2_flush;
+	gops->mm.gpu_phys_addr = gv11b_gpu_phys_addr;
 }

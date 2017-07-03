@@ -27,6 +27,12 @@
 #define NVGPU_GPU_ARCH_GV110 0x00000150
 #define NVGPU_GPU_IMPL_GV11B 0x0000000B
 
+/*
+ * this flag is used in struct nvgpu_as_map_buffer_ex_args
+ * to provide L3 cache allocation hint
+ */
+#define NVGPU_AS_MAP_BUFFER_FLAGS_L3_ALLOC	(1 << 7)
+
 /*  subcontexts are available */
 #define NVGPU_GPU_FLAGS_SUPPORT_TSG_SUBCONTEXTS         (1ULL << 22)
 

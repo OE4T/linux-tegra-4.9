@@ -649,15 +649,17 @@ static int tegra_dc_ext_should_show_background(
 		if (flip_win->handle[TEGRA_DC_Y] == NULL)
 			continue;
 
-		/* Bypass expects only a single window, thus it is enough to
-		 * inspect the first enabled window.
-		 *
-		 * Full screen input surface for YUV420 10-bit 4k has 2400x2160
-		 * active area. dc->mode is already adjusted to this dimension.
+		/* Bypass for YUV420 10-bit 4k mode expects only one or two
+		 * windows, depending on packing scheme. The scheme with two
+		 * windows always spans whole acive display area of 2400x2160.
+		 * dc->mode is already adjusted to this dimension. The scheme
+		 * with single window may span smaller region in 2 pixel
+		 * increments vertically and 5 pixel increments horizontally.
+		 * active area.
 		 */
-		if (flip_win->attr.out_x > 0 ||
+		if (flip_win->attr.out_x > 1 ||
 		    flip_win->attr.out_y > 0 ||
-		    flip_win->attr.out_w != dc->mode.h_active ||
+		    flip_win->attr.out_w < dc->mode.h_active-1 ||
 		    flip_win->attr.out_h != dc->mode.v_active)
 			return true;
 	}
@@ -1139,7 +1141,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 		}
 	}
 
-	/* YUV packing consumes only one window, thus there must have been
+	/* YUV packing consumes at most two windows, thus there must have been
 	 * free window which can host background pattern.
 	 */
 	BUG_ON(show_background);

@@ -175,77 +175,63 @@
 	sdhci@3420000 {
 		prod-settings {
 			#prod-cells = <3>;
-			comp-vref-default {
-				prod = <0x00001E0 0x0000000F 0x7>;
+			prod_c_ds {
+				prod = <0x00000100 0x00FF0000 0x00090000
+					0x000001E0 0x0000000F 0x00000007
+					0x000001E4 0x20007F7F 0x20000000>;
 			};
-			comp-vref-1v8 {
-				prod = <0x00001E0 0x0000000F 0x7>;
+			prod_c_hs {
+				prod = <0x00000100 0x00FF0000 0x00090000
+					0x000001E0 0x0000000F 0x00000007
+					0x000001E4 0x20007F7F 0x20000000>;
 			};
-			comp-vref-3v3 {
-				prod = <0x00001E0 0x0000000F 0x7>;
+			prod_c_ddr52 {
+				prod = <0x00000100 0x1FFF0000 0x05090000
+					0x000001E0 0x0000000F 0x00000007
+					0x000001E4 0x20007F7F 0x20000000>;
 			};
-			tap-delay-ddr {
-				prod = <0x0000100 0x00FF0000 0x90000>;
+			prod_c_hs200 {
+				prod = <0x00000100 0x00FF0000 0x00090000
+					0x000001C0 0x0000E000 0x00004000
+					0x000001E0 0x0000000F 0x00000007
+					0x000001E4 0x20007F7F 0x20000000>;
 			};
-			trim-delay-ddr {
-				prod = <0x0000100 0x1F000000 0x5000000>;
+			prod_c_hs400 {
+				prod = <0x00000100 0x00FF0000 0x00090000
+					0x000001C0 0x0000E000 0x00004000
+					0x000001E0 0x0000000F 0x00000007
+					0x000001E4 0x20007F7F 0x20000000>;
 			};
-			tap-delay-default {
-				prod = <0x0000100 0x00FF0000 0x90000>;
+			prod_c_sdr50 {
+				prod = <0x00000100 0x00FF0000 0x000B0000
+					0x000001C0 0x0000E000 0x00008000
+					0x000001E0 0x0000000F 0x00000002
+					0x000001E4 0x20007F7F 0x20000000>;
 			};
-			tun-iterations-hs200 {
-				prod = <0x00001C0 0x000E000 0x0004000>;
+			prod_c_sdr104 {
+				prod = <0x00000100 0x00FF0000 0x000B0000
+					0x000001C0 0x0000E000 0x00004000
+					0x000001E0 0x0000000F 0x00000002
+					0x000001E4 0x20007F7F 0x20000000>;
 			};
-			tun-iterations-hs400 {
-				prod = <0x00001C0 0x000E000 0x0004000>;
-			};
-			tun-iterations-sdr104 {
-				prod = <0x00001C0 0x000E000 0x0004000>;
-			};
-			tun-iterations-sdr50 {
-				prod = <0x00001C0 0x000E000 0x0008000>;
-			};
-			tun-iterations-hs533 {
-				prod = <0x00001C0 0x000E000 0x0002000>;
-			};
-			prod-reset {
+			prod {
 				prod = <
-					0x0000100 0x1FFF002E 0x5090028	// SDMMC_VENDOR_CLOCK_CNTRL_0	28:24=TRIM_VAL	0x5
-									//				23:16=TAP_VAL	0x9
-									//				05:05=SDR50_TUNING_OVERRIDE	0x1
-									//				03:03=PADPIPE_CLKEN_OVERRIDE	0x1
-									// 				02:02=SPI_MODE_CLKEN_OVERRIDE	0x0
-									// 				01:01=INPUT_IO_CLK	0x0
-					0x00001C0 0x08001FC0 0x8000040	// SDMMC_VENDOR_TUNING_CNTRL0_0	12:06=MUL_M	0x1
-									//				27:27=RETUNING_REQ_EN_ON_CRC_ERR_DETECTION	0x1
-					0x00001C4 0x00000077 0x0	// SDMMC_VENDOR_TUNING_CNTRL1_0 02:00=STEP_SIZE_SDR50	0x0
-									// 				06:04=STEP_SIZE_SDR104_HS200	0x0
-					0x0000120 0x00020001 0x00001	// SDMMC_VENDOR_MISC_CNTRL_0	0:0=ERASE_TIMEOUT_LIMIT	0x1
-									// 				17:17=SDMMC_SPARE1[1]	0x0
-					0x0000128 0x43000000 0x00000000	// SDMMC_VENDOR_MISC_CNTRL2_0	30:30=SDMMC_CLK_OVR_ON 0x0
-									//				25:25=ADMA3_CLKEN_OVERRIDE	0x0
-									//				24:24=CQE_CLKEN_OVERRIDE	0x0
+					0x00000100 0x1FFF002E 0x050B0028 // SDMMC_VENDOR_CLOCK_CNTRL_0	28:24=TRIM_VAL	0x5
+									 //				23:16=TAP_VAL	0xB
+									 //				05:05=SDR50_TUNING_OVERRIDE	0x1
+									 //				03:03=PADPIPE_CLKEN_OVERRIDE	0x1
+									 // 				02:02=SPI_MODE_CLKEN_OVERRIDE	0x0
+									 // 				01:01=INPUT_IO_CLK	0x0
+					0x000001C0 0x08001FC0 0x08000040 // SDMMC_VENDOR_TUNING_CNTRL0_0	12:06=MUL_M	0x1
+									 //				27:27=RETUNING_REQ_EN_ON_CRC_ERR_DETECTION	0x1
+					0x000001C4 0x00000077 0x00000000 // SDMMC_VENDOR_TUNING_CNTRL1_0 02:00=STEP_SIZE_SDR50	0x0
+									 // 				06:04=STEP_SIZE_SDR104_HS200	0x0
+					0x00000120 0x00020001 0x00000001 // SDMMC_VENDOR_MISC_CNTRL_0	0:0=ERASE_TIMEOUT_LIMIT	0x1
+									 // 				17:17=SDMMC_SPARE1[1]	0x0
+					0x00000128 0x43000000 0x00000000 // SDMMC_VENDOR_MISC_CNTRL2_0	30:30=SDMMC_CLK_OVR_ON 0x0
+									 //				25:25=ADMA3_CLKEN_OVERRIDE	0x0
+									 //				24:24=CQE_CLKEN_OVERRIDE	0x0
 				>;
-			};
-			autocal-en {
-				prod = <
-					0x00001E4 0x20000000 0x20000000	// SDMMC_AUTO_CAL_CONFIG_0	29:29=AUTO_CAL_ENABLE	0x1
-				>;
-			};
-			autocal-pu-pd-offset-hs533-1v8 {
-				prod = <0x00001E4 0x00007F7F 0x0505>;
-			};
-			autocal-pu-pd-offset-hs400-1v8 {
-				prod = <0x00001E4 0x00007F7F 0x0505>;
-			};
-			autocal-pu-pd-offset-hs200-1v8 {
-				prod = <0x00001E4 0x00007F7F 0x0505>;
-			};
-			autocal-pu-pd-offset-default-1v8 {
-				prod = <0x00001E4 0x00007F7F 0x0000>;
-			};
-			autocal-pu-pd-offset-default-3v3 {
-				prod = <0x00001E4 0x00007F7F 0x0000>;
 			};
 		};
 	};

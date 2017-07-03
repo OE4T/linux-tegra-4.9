@@ -404,8 +404,9 @@ static int __set_pd_level(struct vm_gk20a *vm,
 		 * to be the table of PDEs. When the next level is PTEs the
 		 * target addr is the real physical address we are aiming for.
 		 */
-		target_addr = next_pd ? nvgpu_pde_phys_addr(g, next_pd) :
-			                phys_addr;
+		target_addr = next_pd ?
+			nvgpu_pde_phys_addr(g, next_pd) :
+			g->ops.mm.gpu_phys_addr(g, attrs, phys_addr);
 
 		l->update_entry(vm, l,
 				pd, pd_idx,

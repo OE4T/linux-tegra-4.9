@@ -60,6 +60,12 @@ static bool gm20b_mm_is_bar1_supported(struct gk20a *g)
 	return true;
 }
 
+u64 gm20b_gpu_phys_addr(struct gk20a *g,
+			struct nvgpu_gmmu_attrs *attrs, u64 phys)
+{
+	return phys;
+}
+
 void gm20b_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.support_sparse = gm20b_mm_support_sparse;
@@ -73,6 +79,7 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.set_big_page_size = gm20b_mm_set_big_page_size;
 	gops->mm.get_big_page_sizes = gm20b_mm_get_big_page_sizes;
 	gops->mm.get_default_big_page_size = gm20b_mm_get_default_big_page_size;
+	gops->mm.gpu_phys_addr = gm20b_gpu_phys_addr;
 	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;

@@ -825,11 +825,83 @@ void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 {
 	u32 h_width_pixels;
 	u32 v_width_lines;
+	u32 refresh;
 	u32 pixel_clk_hz;
 	u32 byte_clk_hz;
 	u32 plld_clk_mhz;
-	u8 n_data_lanes;
 
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+	const struct tegra_dc_mode *mode;
+
+	tegra_dsi_pix_correction(dc, dsi);
+
+	/* Below we are going to calculate dsi and dc clock rate.
+	 * Calcuate the horizontal and vertical width.
+	 */
+	h_width_pixels = dc->mode.h_back_porch + dc->mode.h_front_porch +
+			dc->mode.h_sync_width + dc->mode.h_active;
+
+	v_width_lines = dc->mode.v_back_porch + dc->mode.v_front_porch +
+			dc->mode.v_sync_width + dc->mode.v_active;
+	mode = &dc->mode;
+	refresh = tegra_dc_calc_refresh(mode);
+
+	if (!dsi->info.refresh_rate)
+		dsi->info.refresh_rate = DIV_ROUND_CLOSEST(refresh, 1000);
+
+	/* Calculate minimum required pixel rate. */
+	/*
+	 * Some one shot mode panel configurations need the clock to be set
+	 * for a faster than required refresh rate to transfer framedata
+	 * before the next TE signal. For such configurations, adjust the
+	 * refresh rate.
+	 */
+	if (dsi->info.refresh_rate_adj)
+		pixel_clk_hz = h_width_pixels * v_width_lines *
+			(dsi->info.refresh_rate + dsi->info.refresh_rate_adj);
+	else
+		pixel_clk_hz = h_width_pixels * v_width_lines *
+			dsi->info.refresh_rate;
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
+		if (dsi->info.rated_refresh_rate >= dsi->info.refresh_rate)
+			dev_info(&dc->ndev->dev, "DSI: measured refresh rate "
+				"should be larger than rated refresh rate.\n");
+		dc->mode.rated_pclk = h_width_pixels * v_width_lines *
+						dsi->info.rated_refresh_rate;
+	}
+
+	/* Calculate minimum byte rate on DSI interface. */
+	byte_clk_hz = (pixel_clk_hz * dsi->pixel_scaler_mul) /
+			(dsi->pixel_scaler_div * dsi->info.n_data_lanes);
+
+	/* Round up to multiple of mega hz. */
+	plld_clk_mhz = DIV_ROUND_UP((byte_clk_hz * NUMOF_BIT_PER_BYTE),
+								1000000);
+
+	/* Calculate default DSI hs clock. DSI interface is double data rate.
+	 * Data is transferred on both rising and falling edge of clk, div by 2
+	 * to get the actual clock rate.
+	 */
+	dsi->default_hs_clk_khz = plld_clk_mhz * 1000 / 2;
+
+	dsi->default_pixel_clk_khz = (plld_clk_mhz * 1000 *
+					dsi->default_shift_clk_div.div) /
+					(2 * dsi->default_shift_clk_div.mul);
+
+	/* Get the actual shift_clk_div and clock rates. */
+	dsi->shift_clk_div = tegra_dsi_get_shift_clk_div(dsi);
+	dsi->target_lp_clk_khz =
+			tegra_dsi_get_lp_clk_rate(dsi, DSI_LP_OP_WRITE);
+	dsi->target_hs_clk_khz = tegra_dsi_get_hs_clk_rate(dsi);
+
+	dev_info(&dc->ndev->dev, "DSI: HS clock rate is %d\n",
+					dsi->target_hs_clk_khz);
+
+}
+
+void tegra_dsi_init_config_param(struct tegra_dc *dc)
+{
+	u8 n_data_lanes;
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
 	switch (dsi->info.pixel_format) {
@@ -875,78 +947,12 @@ void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 			DSI_CONTROL_VID_SOURCE(dc->ctrl_num);
 
 	/*
-	 * When link compression is enabled, use COMPRESS_RATE in DSI_DSC_CONTROL
-	 * register instead of DATA_FORMAT.
-	*/
+	 * When link compression is enabled, use COMPRESS_RATE in
+	 * DSI_DSC_CONTROL register instead of DATA_FORMAT.
+	 */
 	if (!dc->out->dsc_en)
-		dsi->dsi_control_val |= DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
-
-	if (dsi->info.ganged_type || dsi->info.split_link_type)
-		tegra_dsi_pix_correction(dc, dsi);
-
-	/* Below we are going to calculate dsi and dc clock rate.
-	 * Calcuate the horizontal and vertical width.
-	 */
-	h_width_pixels = dc->mode.h_back_porch + dc->mode.h_front_porch +
-			dc->mode.h_sync_width + dc->mode.h_active;
-
-	v_width_lines = dc->mode.v_back_porch + dc->mode.v_front_porch +
-			dc->mode.v_sync_width + dc->mode.v_active;
-
-	/* Calculate minimum required pixel rate. */
-	/*
-	 * Some one shot mode panel configurations need the clock to be set
-	 * for a faster than required refresh rate to transfer framedata
-	 * before the next TE signal. For such configurations, adjust the
-	 * refresh rate.
-	 */
-	if (dsi->info.refresh_rate_adj)
-		pixel_clk_hz = h_width_pixels * v_width_lines *
-			(dsi->info.refresh_rate + dsi->info.refresh_rate_adj);
-	else
-		pixel_clk_hz = h_width_pixels * v_width_lines *
-			dsi->info.refresh_rate;
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
-		if (dsi->info.rated_refresh_rate >= dsi->info.refresh_rate)
-			dev_info(&dc->ndev->dev, "DSI: measured refresh rate "
-				"should be larger than rated refresh rate.\n");
-		dc->mode.rated_pclk = h_width_pixels * v_width_lines *
-						dsi->info.rated_refresh_rate;
-	}
-
-	/* Calculate minimum byte rate on DSI interface. */
-	byte_clk_hz = (pixel_clk_hz * dsi->pixel_scaler_mul) /
-			(dsi->pixel_scaler_div * dsi->info.n_data_lanes);
-
-	/* Round up to multiple of mega hz. */
-	plld_clk_mhz = DIV_ROUND_UP((byte_clk_hz * NUMOF_BIT_PER_BYTE),
-								1000000);
-
-	/* Calculate default real shift_clk_div. */
-	dsi->default_shift_clk_div.mul = NUMOF_BIT_PER_BYTE *
-					dsi->pixel_scaler_mul;
-	dsi->default_shift_clk_div.div = 2 * dsi->pixel_scaler_div *
-					dsi->info.n_data_lanes;
-
-
-	/* Calculate default DSI hs clock. DSI interface is double data rate.
-	 * Data is transferred on both rising and falling edge of clk, div by 2
-	 * to get the actual clock rate.
-	 */
-	dsi->default_hs_clk_khz = plld_clk_mhz * 1000 / 2;
-
-	dsi->default_pixel_clk_khz = (plld_clk_mhz * 1000 *
-					dsi->default_shift_clk_div.div) /
-					(2 * dsi->default_shift_clk_div.mul);
-
-	/* Get the actual shift_clk_div and clock rates. */
-	dsi->shift_clk_div = tegra_dsi_get_shift_clk_div(dsi);
-	dsi->target_lp_clk_khz =
-			tegra_dsi_get_lp_clk_rate(dsi, DSI_LP_OP_WRITE);
-	dsi->target_hs_clk_khz = tegra_dsi_get_hs_clk_rate(dsi);
-
-	dev_info(&dc->ndev->dev, "DSI: HS clock rate is %d\n",
-					dsi->target_hs_clk_khz);
+		dsi->dsi_control_val |=
+				DSI_CONTROL_DATA_FORMAT(dsi->info.pixel_format);
 
 	/*
 	 * Force video clock to be continuous mode if
@@ -960,6 +966,12 @@ void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 
 		dsi->info.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_CONTINUOUS;
 	}
+
+	/* Calculate default real shift_clk_div. */
+	dsi->default_shift_clk_div.mul = NUMOF_BIT_PER_BYTE *
+					dsi->pixel_scaler_mul;
+	dsi->default_shift_clk_div.div = 2 * dsi->pixel_scaler_div *
+					dsi->info.n_data_lanes;
 }
 
 static void tegra_dsi_init_sw(struct tegra_dc *dc,
@@ -973,7 +985,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dsi->syncpt_id = nvhost_get_syncpt_client_managed(dc->ndev, "dsi");
 #endif
 
-	tegra_dsi_init_clock_param(dc);
+	tegra_dsi_init_config_param(dc);
 
 	atomic_set(&dsi->host_ref, 0);
 	dsi->host_suspended = false;
@@ -2622,9 +2634,10 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	if (WARN(err, "unable to enable regulator"))
 		return err;
 
+	tegra_dsi_init_clock_param(dc);
+	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
 	/* Enable DSI clocks */
 	tegra_dsi_clk_enable(dsi);
-	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
 
 	err = dsi_pinctrl_state_active(dsi);
 	if (err < 0)

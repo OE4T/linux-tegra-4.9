@@ -142,6 +142,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING (1ULL << 18)
 /* Deterministic submits are supported even with job tracking */
 #define NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL (1ULL << 19)
+/* IO coherence support is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_IO_COHERENCE		(1ULL << 20)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;

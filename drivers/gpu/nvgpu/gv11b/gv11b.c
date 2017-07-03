@@ -24,6 +24,7 @@ int gv11b_init_gpu_characteristics(struct gk20a *g)
 {
 	gk20a_init_gpu_characteristics(g);
 	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_TSG_SUBCONTEXTS;
+		NVGPU_GPU_FLAGS_SUPPORT_TSG_SUBCONTEXTS |
+		NVGPU_GPU_FLAGS_SUPPORT_IO_COHERENCE;
 	return 0;
 }

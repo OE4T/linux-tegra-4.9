@@ -2912,6 +2912,71 @@ static void gv11b_gr_resume_single_sm(struct gk20a *g,
 
 }
 
+static void gv11b_gr_resume_all_sms(struct gk20a *g)
+{
+	u32 dbgr_control0, dbgr_status0;
+	/*
+	 * The following requires some clarification. Despite the fact that both
+	 * RUN_TRIGGER and STOP_TRIGGER have the word "TRIGGER" in their
+	 *  names, only one is actually a trigger, and that is the STOP_TRIGGER.
+	 * Merely writing a 1(_TASK) to the RUN_TRIGGER is not sufficient to
+	 * resume the gpu - the _STOP_TRIGGER must explicitly be set to 0
+	 * (_DISABLE) as well.
+
+	* Advice from the arch group:  Disable the stop trigger first, as a
+	* separate operation, in order to ensure that the trigger has taken
+	* effect, before enabling the run trigger.
+	*/
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "resuming all sms");
+
+	/* Read from unicast registers */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r());
+	dbgr_status0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_status0_r());
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"before stop trigger disable: "
+			"dbgr_control0 = 0x%x dbgr_status0: 0x%x",
+			dbgr_control0, dbgr_status0);
+
+	dbgr_control0 = set_field(dbgr_control0,
+			gr_gpc0_tpc0_sm0_dbgr_control0_stop_trigger_m(),
+			gr_gpc0_tpc0_sm0_dbgr_control0_stop_trigger_disable_f());
+	/* Write to broadcast registers */
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sms_dbgr_control0_r(), dbgr_control0);
+
+	/* Read from unicast registers */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r());
+	dbgr_status0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_status0_r());
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"before run trigger: "
+			"dbgr_control0 = 0x%x dbgr_status0: 0x%x",
+			dbgr_control0, dbgr_status0);
+	/* Run trigger */
+	dbgr_control0 |=
+		gr_gpc0_tpc0_sm0_dbgr_control0_run_trigger_task_f();
+	/* Write to broadcast registers */
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sms_dbgr_control0_r(), dbgr_control0);
+
+	/* Read from unicast registers */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r());
+	dbgr_status0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_status0_r());
+	/* run trigger is not sticky bit. SM clears it immediately */
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"after run trigger: "
+			"dbgr_control0 = 0x%x dbgr_status0: 0x%x",
+			dbgr_control0, dbgr_status0);
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2984,4 +3049,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.suspend_single_sm = gv11b_gr_suspend_single_sm;
 	gops->gr.suspend_all_sms = gv11b_gr_suspend_all_sms;
 	gops->gr.resume_single_sm = gv11b_gr_resume_single_sm;
+	gops->gr.resume_all_sms = gv11b_gr_resume_all_sms;
 }

@@ -543,7 +543,7 @@ static struct sk_buff *osl_alloc_skb(osl_t *osh, unsigned int len)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)
 	gfp_t flags = (in_atomic() || irqs_disabled()) ? GFP_ATOMIC : GFP_KERNEL;
 #if defined(CONFIG_SPARSEMEM) && defined(CONFIG_ZONE_DMA)
-	flags |= GFP_ATOMIC;
+	flags |= GFP_DMA;
 #endif
 	skb = __dev_alloc_skb(len, flags);
 #else

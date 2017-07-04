@@ -221,8 +221,9 @@ static bool pmu_queue_has_room(struct nvgpu_pmu *pmu,
 static int pmu_queue_push(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue, void *data, u32 size)
 {
+	struct gk20a *g = pmu->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!queue->opened && queue->oflag == OFLAG_WRITE) {
 		nvgpu_err(gk20a_from_pmu(pmu), "queue not opened for write");
@@ -276,7 +277,7 @@ static void pmu_queue_rewind(struct nvgpu_pmu *pmu,
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_cmd cmd;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!queue->opened) {
 		nvgpu_err(gk20a_from_pmu(pmu), "queue not opened");
@@ -448,7 +449,7 @@ static int pmu_write_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 	struct nvgpu_timeout timeout;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	queue = &pmu->queue[queue_id];
 	nvgpu_timeout_init(g, &timeout, (int)timeout_ms, NVGPU_TIMER_CPU_TIMER);
@@ -473,7 +474,7 @@ clean_up:
 	if (err)
 		nvgpu_err(g, "fail to write cmd to queue %d", queue_id);
 	else
-		gk20a_dbg_fn("done");
+		nvgpu_log_fn(g, "done");
 
 	return err;
 }
@@ -489,7 +490,7 @@ int nvgpu_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 	void *in = NULL, *out = NULL;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if ((!cmd) || (!seq_desc) || (!pmu->pmu_ready)) {
 		if (!cmd)
@@ -625,12 +626,12 @@ int nvgpu_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 	if (err)
 		seq->state = PMU_SEQ_STATE_PENDING;
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 
 clean_up:
-	gk20a_dbg_fn("fail");
+	nvgpu_log_fn(g, "fail");
 	if (in)
 		nvgpu_free(&pmu->dmem,
 			pv->pmu_allocation_get_dmem_offset(pmu, in));
@@ -650,7 +651,7 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 	struct pmu_v *pv = &g->ops.pmu_ver;
 	int ret = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	seq = &pmu->seq[msg->hdr.seq_id];
 	if (seq->state != PMU_SEQ_STATE_USED &&
@@ -724,7 +725,7 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 
 	/* TBD: notify client waiting for available dmem */
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -734,7 +735,7 @@ static int pmu_handle_event(struct nvgpu_pmu *pmu, struct pmu_msg *msg)
 	int err = 0;
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	switch (msg->hdr.unit_id) {
 	case PMU_UNIT_PERFMON:
 	case PMU_UNIT_PERFMON_T18X:

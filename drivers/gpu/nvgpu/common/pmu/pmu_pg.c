@@ -229,7 +229,7 @@ int nvgpu_pmu_disable_elpg(struct gk20a *g)
 	u32 pg_engine_id_list = 0;
 	u32 *ptr = NULL;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->ops.pmu.pmu_pg_supported_engines_list)
 		pg_engine_id_list = g->ops.pmu.pmu_pg_supported_engines_list(g);
@@ -483,7 +483,7 @@ int nvgpu_pmu_init_bind_fecs(struct gk20a *g)
 	int err = 0;
 	u32 gr_engine_id;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 

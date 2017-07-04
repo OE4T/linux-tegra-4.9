@@ -21,9 +21,10 @@
 /* ECC_CURVE_NIST_P192 and ECC_CURVE_NIST_P256 are
  * defined in include/crypto/ecdh.h
  */
-#define ECC_CURVE_NIST_P224	0x0000
-#define ECC_CURVE_NIST_P384	0x0003
-#define ECC_CURVE_NIST_P521	0x0004
+#define ECC_CURVE_NIST_P224		0x0000
+#define ECC_CURVE_NIST_P384		0x0003
+#define ECC_CURVE_NIST_P521		0x0004
+#define ECC_CURVE_BRAINPOOL_P256	0x0006
 
 /* Security Engine operation modes */
 enum tegra_se_elp_op_mode {
@@ -229,6 +230,40 @@ static struct tegra_se_ecc_curve curve_p521 = {
 	.a = nist_p521_a,
 	.nbytes = 68,
 	.mode = SE_ELP_OP_MODE_ECC521,
+};
+
+/* BrainPool P-256 */
+static u32 bp_p256_x[] = { 0x9ACE3262ull, 0x3A4453BDull, 0xE3BD23C2ull,
+				0xB9DE27E1ull, 0xFC81B7AFull, 0x2C4B482Full,
+				0xCB7E57CBull, 0x8BD2AEB9ull };
+
+static u32 bp_p256_y[] = { 0x2F046997ull, 0x5C1D54C7ull, 0x2DED8E54ull,
+				0xC2774513ull, 0x14611DC9ull, 0x97F8461Aull,
+				0xC3DAC4FDull, 0x547EF835ull };
+
+static u32 bp_p256_p[] = { 0x1F6E5377ull, 0x2013481Dull, 0xD5262028ull,
+				0x6E3BF623ull, 0x9D838D72ull, 0x3E660A90ull,
+				0xA1EEA9BCull, 0xA9FB57DBull };
+
+static u32 bp_p256_n[] = { 0x974856A7ull, 0x901E0E82ull, 0xB561A6F7ull,
+				0x8C397AA3ull, 0x9D838D71ull, 0x3E660A90ull,
+				0xA1EEA9BCull, 0xA9FB57DBull };
+
+static u32 bp_p256_a[] = { 0xF330B5D9ull, 0xE94A4B44ull, 0x26DC5C6Cull,
+				0xFB8055C1ull, 0x417AFFE7ull, 0xEEF67530ull,
+				0xFC2C3057ull, 0x7D5A0975ull };
+
+static struct tegra_se_ecc_curve bpcurve_p256 = {
+	.name = "BRAINPOOL_P-256",
+	.g = {
+		.x = bp_p256_x,
+		.y = bp_p256_y,
+	},
+	.p = bp_p256_p,
+	.n = bp_p256_n,
+	.a = bp_p256_a,
+	.nbytes = 32,
+	.mode = SE_ELP_OP_MODE_ECC256,
 };
 
 #define TEGRA_SE_PKA1_KEYSLOT_COUNT	4

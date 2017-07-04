@@ -260,6 +260,8 @@ static const struct tegra_se_ecc_curve *tegra_se_ecc_get_curve(
 		return &curve_p384;
 	case ECC_CURVE_NIST_P521:
 		return &curve_p521;
+	case ECC_CURVE_BRAINPOOL_P256:
+		return &bpcurve_p256;
 	default:
 		return NULL;
 	}
@@ -2743,6 +2745,7 @@ static unsigned int tegra_se_ecdsa_supported_curve(unsigned int curve_id)
 	switch (curve_id) {
 	case ECC_CURVE_NIST_P192: return 3;
 	case ECC_CURVE_NIST_P256: return 4;
+	case ECC_CURVE_BRAINPOOL_P256: return 4;
 	default: return 0;
 	}
 }

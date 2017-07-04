@@ -355,7 +355,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 	int i, vec_idx = 0, bt_size = 0;
 	int nr_events = 0, nr_positive_events = 0;
 	struct pt_regs *user_regs;
-	struct quadd_iovec vec[6];
+	struct quadd_iovec vec[7];
 	struct hrt_event_value events[QUADD_MAX_COUNTERS];
 	u32 events_extra[QUADD_MAX_COUNTERS];
 	struct quadd_event_context event_ctx;

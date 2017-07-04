@@ -20,6 +20,9 @@
 
 #define pr_fmt(fmt) "cvnas: %s,%d" fmt, __func__, __LINE__
 
+#include <linux/compiler.h>
+#include <linux/reset.h>
+#include <linux/clk.h>
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/module.h>
@@ -105,12 +108,12 @@ struct cvnas_device {
 	int slice_size;
 	phys_addr_t cvsram_base;
 	size_t cvsram_size;
-};
 
-static u32 nvcvnas_car_readl(struct cvnas_device *dev, u32 reg)
-{
-	return readl(dev->car_iobase + reg);
-}
+	struct clk *clk;
+
+	struct reset_control *rst;
+	struct reset_control *rst_fcm;
+};
 
 static void nvcvnas_car_writel(struct cvnas_device *dev, u32 val, u32 reg)
 {
@@ -349,32 +352,24 @@ static int nvcvsram_ecc_setup(struct cvnas_device *dev)
 
 static int nvcvnas_power_on(struct cvnas_device *cvnas_dev)
 {
-	int val, i,j;
 	u32 fcm_upg_seq[] =
 		{0xFE, 0xFC, 0xF8, 0xF0, 0xE0, 0xC0, 0x80, 0x00};
+
+	int i, j;
+	int err;
 
 	if (!tegra_platform_is_qt())
 		return 0;
 
 	pr_info("initializing cvnas hardware\n");
 
-	nvcvnas_car_writel(cvnas_dev, DEV_CVNAS_CLR_RST, RST_DEV_CVNAS_CLR);
+	err = clk_prepare_enable(cvnas_dev->clk);
+	if (err < 0)
+		goto err_enable_clk;
 
-	/* skip changing clock source and divider */
-
-	nvcvnas_car_writel(cvnas_dev, SET_CLK_ENB_CVNAS, CLK_OUT_ENB_CVNAS);
-	val = nvcvnas_car_readl(cvnas_dev, CLK_OUT_ENB_CVNAS);
-	if (val == 0) {
-		pr_err("cvnas clock enable failed\n");
-		return -ENODEV;
-	}
-
-	nvcvnas_car_writel(cvnas_dev, DEASSERT_CVNAS_RST, RST_DEV_CVNAS_CLR);
-	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS_CLR);
-	if (val != 0) {
-		pr_err("cvnas deassert reset failed\n");
-		return -ENODEV;
-	}
+	err = reset_control_deassert(cvnas_dev->rst);
+	if (err < 0)
+		goto err_deassert_reset;
 
 	/* Clear CVNAS_FCM reset */
 	nvcvnas_car_writel(cvnas_dev, 0x1, RST_DEV_CVNAS_FCM_CLR);
@@ -397,18 +392,26 @@ static int nvcvnas_power_on(struct cvnas_device *cvnas_dev)
 		}
 	}
 
-	/* Clearing FCM Reset */
-	nvcvnas_car_writel(cvnas_dev, DEASSERT_CVNAS_FCM_RST, RST_DEV_CVNAS_FCM_CLR);
-	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS_FCM);
-	if (val != 0) {
-		pr_err("cvnas fcm deassert reset failed\n");
-		return -ENODEV;
+	err = reset_control_deassert(cvnas_dev->rst_fcm);
+	if (err < 0)
+		goto err_deassert_fcm_reset;
+
+	err = nvcvsram_ecc_setup(cvnas_dev);
+	if (err < 0) {
+		pr_err("ECC init failed\n");
+		goto err_init_ecc;
 	}
 
-	val = nvcvsram_ecc_setup(cvnas_dev);
-	if (val)
-		pr_err("ECC init failed\n");
-	return val;
+	return 0;
+
+err_init_ecc:
+	reset_control_assert(cvnas_dev->rst_fcm);
+err_deassert_fcm_reset:
+	reset_control_assert(cvnas_dev->rst);
+err_deassert_reset:
+	clk_disable_unprepare(cvnas_dev->clk);
+err_enable_clk:
+	return err;
 }
 
 static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
@@ -420,12 +423,7 @@ static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 	if (!tegra_platform_is_qt())
 		return 0;
 
-	nvcvnas_car_writel(cvnas_dev, ASSERT_CVNAS_FCM_RST, RST_DEV_CVNAS_FCM_SET);
-	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS_FCM);
-	if (val != ASSERT_CVNAS_FCM_RST) {
-		pr_err("cvnas fcm assert reset failed\n");
-		return -ENODEV;
-	}
+	reset_control_assert(cvnas_dev->rst_fcm);
 
 	/* FCM low power mode */
 	for (i = 0; i < ARRAY_SIZE(fcm_pg_seq); i++) {
@@ -441,19 +439,9 @@ static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 		}
 	}
 
-	nvcvnas_car_writel(cvnas_dev, ASSERT_CVNAS_RST, RST_DEV_CVNAS_SET);
-	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS);
-	if (val != ASSERT_CVNAS_RST) {
-		pr_err("cvnas assert reset failed\n");
-		return -ENODEV;
-	}
+	reset_control_assert(cvnas_dev->rst);
+	clk_disable_unprepare(cvnas_dev->clk);
 
-	nvcvnas_car_writel(cvnas_dev, CLR_CLK_ENB_CVNAS, CLK_OUT_ENB_CVNAS_CLR);
-	val = nvcvnas_car_readl(cvnas_dev, CLK_OUT_ENB_CVNAS);
-	if (val != 0) {
-		pr_err("cvnas clock disable failed\n");
-		return -ENODEV;
-	}
 	return 0;
 }
 
@@ -523,6 +511,24 @@ static int nvcvnas_probe(struct platform_device *pdev)
 	cvnas_dev->cvsram_size = ((u64)cvsram_reg_data[2]) << 32;
 	cvnas_dev->cvsram_size |= cvsram_reg_data[3];
 
+	cvnas_dev->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(cvnas_dev->clk)) {
+		ret = PTR_ERR(cvnas_dev->clk);
+		goto err_get_clk;
+	}
+
+	cvnas_dev->rst = devm_reset_control_get(&pdev->dev, "rst");
+	if (IS_ERR(cvnas_dev->rst)) {
+		ret = PTR_ERR(cvnas_dev->rst);
+		goto err_get_reset;
+	}
+
+	cvnas_dev->rst_fcm = devm_reset_control_get(&pdev->dev, "rst_fcm");
+	if (IS_ERR(cvnas_dev->rst_fcm)) {
+		ret = PTR_ERR(cvnas_dev->rst_fcm);
+		goto err_get_reset_fcm;
+	}
+
 	ret = nvcvnas_power_on(cvnas_dev);
 	if (ret) {
 		dev_err(&pdev->dev, "ECC init failed. ret=%d\n", ret);
@@ -551,6 +557,9 @@ static int nvcvnas_probe(struct platform_device *pdev)
 err_cvsram_nvmap_heap_register:
 	debugfs_remove(cvnas_dev->debugfs_root);
 err_cvnas_debugfs_init:
+err_get_reset_fcm:
+err_get_reset:
+err_get_clk:
 err_cvsram_ecc_setup:
 err_cvsram_get_reg_data:
 err_cvsram_get_slice_data:

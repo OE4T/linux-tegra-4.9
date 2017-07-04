@@ -617,4 +617,7 @@
 #define TEGRA194_CLK_UTMIPLL_CLKOUT48		291
 #define TEGRA194_CLK_UTMIPLL_CLKOUT480		292
 
+/** @brief cvnas_clk is the core clock to CVNAS */
+#define TEGRA194_CLK_CVNAS                      367
+
 #endif

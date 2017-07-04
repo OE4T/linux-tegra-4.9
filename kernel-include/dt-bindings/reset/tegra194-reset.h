@@ -148,4 +148,7 @@
 #define TEGRA194_RESET_PEX1_CORE_5		129
 #define TEGRA194_RESET_PEX1_CORE_5_APB		130
 
+#define TEGRA194_RESET_CVNAS                    227
+#define TEGRA194_RESET_CVNAS_FCM                229
+
 #endif

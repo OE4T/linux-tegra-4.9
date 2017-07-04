@@ -98,9 +98,14 @@
 
 	tegra-cvnas {
 		compatible = "nvidia,tegra-cvnas";
+		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_CV>;
 		reg = <0x0 0x14000000 0x0 0x10000>, /* CV0_REG0_BASE */
 		      <0x0 0x14020000 0x0 0x10000>, /* CV0_SRAM_BASE */
 		      <0x0 0x21170000 0x0 0x10000>; /* CVSRAM_CAR_BASE */
+		clocks = <&bpmp_clks TEGRA194_CLK_CVNAS>;
+		resets = <&bpmp_resets TEGRA194_RESET_CVNAS>,
+			 <&bpmp_resets TEGRA194_RESET_CVNAS_FCM>;
+		reset-names = "rst", "rst_fcm";
 		interrupts = <0 238 4>,
 			     <0 239 4>;
 		cvsramslice = <4 0x1000>;

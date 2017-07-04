@@ -657,7 +657,7 @@ static int tegra186_gpio_to_wake(struct tegra_gpio_info *tgi, int gpio)
 			pr_info("gpio %s wake%d for gpio=%d(%s:%d)\n",
 				tgi->soc->name, i, gpio,
 				tgi->soc->port[GPIO_PORT(gpio)].port_name,
-				gpio % 8);
+				GPIO_PIN(gpio));
 			return i;
 		}
 	}
@@ -718,12 +718,12 @@ static inline bool gpio_is_accessible(struct tegra_gpio_info *tgi, u32 offset)
 
 static void tegra_gpio_enable(struct tegra_gpio_info *tgi, int gpio)
 {
-	tegra_gpio_update(tgi, gpio, GPIO_ENB_CONFIG_REG, 0x1, 0x1);
+	tegra_gpio_update(tgi, gpio, GPIO_ENB_CONFIG_REG, GPIO_ENB_BIT, 0x1);
 }
 
 static void tegra_gpio_disable(struct tegra_gpio_info *tgi, int gpio)
 {
-	tegra_gpio_update(tgi, gpio, GPIO_ENB_CONFIG_REG, 0x1, 0x0);
+	tegra_gpio_update(tgi, gpio, GPIO_ENB_CONFIG_REG, GPIO_ENB_BIT, 0x0);
 }
 
 static int tegra_gpio_request(struct gpio_chip *chip, unsigned offset)
@@ -840,8 +840,9 @@ static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
 	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
 	unsigned dbc_ms = DIV_ROUND_UP(debounce, 1000);
 
-	tegra_gpio_update(tgi, offset, GPIO_ENB_CONFIG_REG, 0x1, 0x1);
-	tegra_gpio_update(tgi, offset, GPIO_DEB_FUNC_BIT, 0x5, 0x1);
+	tegra_gpio_update(tgi, offset, GPIO_ENB_CONFIG_REG, GPIO_ENB_BIT, 0x1);
+	tegra_gpio_update(tgi, offset, GPIO_DEB_FUNC_BIT,
+		GPIO_DEB_FUNC_BIT, 0x1);
 
 	/* Update debounce threshold */
 	tegra_gpio_writel(tgi, dbc_ms, offset, GPIO_DBC_THRES_REG);

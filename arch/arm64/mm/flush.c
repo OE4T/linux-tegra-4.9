@@ -103,3 +103,4 @@ EXPORT_SYMBOL(__flush_dcache_all);
 EXPORT_SYMBOL(__clean_dcache_all);
 EXPORT_SYMBOL(__clean_dcache_louis);
 EXPORT_SYMBOL(__clean_dcache_page);
+EXPORT_SYMBOL(__clean_dcache_area_poc);

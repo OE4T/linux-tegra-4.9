@@ -151,17 +151,20 @@ static u32 tegra_fuse_calculate_parity(u32 val)
 static bool tegra_fuse_is_fuse_burn_allowed(struct fuse_burn_data *data)
 {
 	u32 reg = 0;
+	int ret;
 
 	/* If odm_production_mode(security mode) fuse is burnt, then
 	 * only allow odm reserved/lock to burn
 	 */
-	tegra_fuse_readl(TEGRA_FUSE_ODM_PRODUCTION_MODE, &reg);
-	if (reg) {
-		if (!strcmp(data->name, "odm_reserved"))
-			return true;
-		if (!strcmp(data->name, "odm_lock"))
-			return true;
-		return false;
+	ret = tegra_fuse_readl(TEGRA_FUSE_ODM_PRODUCTION_MODE, &reg);
+	if (!ret) {
+		if (reg) {
+			if (!strcmp(data->name, "odm_reserved"))
+				return true;
+			if (!strcmp(data->name, "odm_lock"))
+				return true;
+			return false;
+		}
 	}
 
 	return true;

@@ -114,10 +114,12 @@ module_param_cb(tegra_chip_rev, &tegra_revision_ops, &tegra_id.revision, 0444);
 static int get_prod_mode(char *val, const struct kernel_param *kp)
 {
 	u32 reg = 0;
+	int ret;
 
 	if (tegra_get_platform() == TEGRA_PLATFORM_SILICON) {
-		tegra_fuse_readl(TEGRA_FUSE_PRODUCTION_MODE, &reg);
-		prod_mode = reg;
+		ret = tegra_fuse_readl(TEGRA_FUSE_PRODUCTION_MODE, &reg);
+		if (!ret)
+			prod_mode = reg;
 	}
 	return param_get_uint(val, kp);
 }

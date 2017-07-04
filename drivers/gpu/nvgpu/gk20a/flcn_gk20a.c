@@ -269,6 +269,60 @@ static int gk20a_flcn_copy_to_dmem(struct nvgpu_falcon *flcn,
 	return 0;
 }
 
+static int gk20a_flcn_copy_to_imem(struct nvgpu_falcon *flcn, u32 dst,
+		u8 *src, u32 size, u8 port, bool sec, u32 tag)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+	u32 *src_u32 = (u32 *)src;
+	u32 words = 0;
+	u32 blk = 0;
+	u32 i = 0;
+
+	nvgpu_log_info(g, "upload %d bytes to 0x%x", size, dst);
+
+	if (flcn_mem_overflow_check(flcn, dst, size, MEM_IMEM)) {
+		nvgpu_err(g, "incorrect parameters");
+		return -EINVAL;
+	}
+
+	nvgpu_mutex_acquire(&flcn->copy_lock);
+
+	words = size >> 2;
+	blk = dst >> 8;
+
+	nvgpu_log_info(g, "upload %d words to 0x%x block %d, tag 0x%x",
+			words, dst, blk, tag);
+
+	gk20a_writel(g, base_addr + falcon_falcon_imemc_r(port),
+		falcon_falcon_imemc_offs_f(dst >> 2) |
+		falcon_falcon_imemc_blk_f(blk) |
+		/* Set Auto-Increment on write */
+		falcon_falcon_imemc_aincw_f(1) |
+		sec << 28);
+
+	for (i = 0; i < words; i++) {
+		if (i % 64 == 0) {
+			/* tag is always 256B aligned */
+			gk20a_writel(g, base_addr + falcon_falcon_imemt_r(0),
+				tag);
+			tag++;
+		}
+
+		gk20a_writel(g, base_addr + falcon_falcon_imemd_r(port),
+			src_u32[i]);
+	}
+
+	/* WARNING : setting remaining bytes in block to 0x0 */
+	while (i % 64) {
+		gk20a_writel(g, base_addr + falcon_falcon_imemd_r(port), 0);
+		i++;
+	}
+
+	nvgpu_mutex_release(&flcn->copy_lock);
+
+	return 0;
+}
 
 static void gk20a_falcon_engine_dependency_ops(struct nvgpu_falcon *flcn)
 {
@@ -302,6 +356,7 @@ void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_ops->is_falcon_scrubbing_done =  gk20a_is_falcon_scrubbing_done;
 	flcn_ops->copy_from_dmem = gk20a_flcn_copy_from_dmem;
 	flcn_ops->copy_to_dmem = gk20a_flcn_copy_to_dmem;
+	flcn_ops->copy_to_imem = gk20a_flcn_copy_to_imem;
 
 	gk20a_falcon_engine_dependency_ops(flcn);
 }

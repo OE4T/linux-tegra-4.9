@@ -12,19 +12,11 @@
  */
 
 #include <nvgpu/pmu.h>
+#include <nvgpu/falcon.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/pmu_gk20a.h"
-
-#include "gm20b/pmu_gm20b.h"
-
-#include "gp10b/pmu_gp10b.h"
-
-#include "gp106/pmu_gp106.h"
-
 #include "sec2_gp106.h"
 
-#include <nvgpu/hw/gp106/hw_mc_gp106.h>
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 #include <nvgpu/hw/gp106/hw_psec_gp106.h>
 
@@ -73,13 +65,10 @@ int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct acr_desc *acr = &g->acr;
 	struct mm_gk20a *mm = &g->mm;
-	u32 imem_dst_blk = 0;
 	u32 virt_addr = 0;
-	u32 tag = 0;
-	u32 index = 0;
 	struct hsflcn_bl_desc *pmu_bl_gm10x_desc = g->acr.pmu_hsbl_desc;
-	u32 *bl_ucode;
 	u32 data = 0;
+	u32 dst;
 
 	gk20a_dbg_fn("");
 
@@ -104,44 +93,23 @@ int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 	data |= (1 << 3);
 	gk20a_writel(g, psec_falcon_engctl_r(), data);
 
-	/* TBD: load all other surfaces */
 	/*copy bootloader interface structure to dmem*/
-	gk20a_writel(g, psec_falcon_dmemc_r(0),
-			psec_falcon_dmemc_offs_f(0) |
-			psec_falcon_dmemc_blk_f(0)  |
-			psec_falcon_dmemc_aincw_f(1));
 	nvgpu_flcn_copy_to_dmem(&g->sec2_flcn, 0, (u8 *)desc,
 		sizeof(struct flcn_bl_dmem_desc), 0);
-	/*TODO This had to be copied to bl_desc_dmem_load_off, but since
-	 * this is 0, so ok for now*/
 
-	/* Now copy bootloader to TOP of IMEM */
-	imem_dst_blk = (psec_falcon_hwcfg_imem_size_v(
-			gk20a_readl(g, psec_falcon_hwcfg_r()))) - bl_sz/256;
+	/* copy bootloader to TOP of IMEM */
+	dst = (psec_falcon_hwcfg_imem_size_v(
+			gk20a_readl(g, psec_falcon_hwcfg_r())) << 8) - bl_sz;
 
-	/* Set Auto-Increment on write */
-	gk20a_writel(g, psec_falcon_imemc_r(0),
-			psec_falcon_imemc_offs_f(0) |
-			psec_falcon_imemc_blk_f(imem_dst_blk)  |
-			psec_falcon_imemc_aincw_f(1));
-	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
-	tag = virt_addr >> 8; /* tag is always 256B aligned */
-	bl_ucode = (u32 *)(acr->hsbl_ucode.cpu_va);
-	for (index = 0; index < bl_sz/4; index++) {
-		if ((index % 64) == 0) {
-			gk20a_writel(g, psec_falcon_imemt_r(0),
-				(tag & 0xffff) << 0);
-			tag++;
-		}
-		gk20a_writel(g, psec_falcon_imemd_r(0),
-				bl_ucode[index] & 0xffffffff);
-	}
-	gk20a_writel(g, psec_falcon_imemt_r(0), (0 & 0xffff) << 0);
+	nvgpu_flcn_copy_to_imem(&g->sec2_flcn, dst,
+		(u8 *)(acr->hsbl_ucode.cpu_va), bl_sz, 0, 0,
+		pmu_bl_gm10x_desc->bl_start_tag);
 
 	gm20b_dbg_pmu("Before starting falcon with BL\n");
 
 	gk20a_writel(g, psec_falcon_mailbox0_r(), 0xDEADA5A5);
 
+	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
 	gk20a_writel(g, psec_falcon_bootvec_r(),
 			psec_falcon_bootvec_vec_f(virt_addr));
 

@@ -18,6 +18,7 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/firmware.h>
+#include <nvgpu/falcon.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -39,40 +40,8 @@
 static void upload_code(struct gk20a *g, u32 dst,
 			u8 *src, u32 size, u8 port, bool sec)
 {
-	u32 i, words;
-	u32 *src_u32 = (u32 *)src;
-	u32 blk;
-	u32 tag = 0;
-
-	gk20a_dbg_info("upload %d bytes to %x", size, dst);
-
-	words = size >> 2;
-
-	blk = dst >> 8;
-	tag = blk;
-
-	gk20a_dbg_info("upload %d words to %x block %d",
-			words, dst, blk);
-
-	gk20a_writel(g, pwr_falcon_imemc_r(port),
-		pwr_falcon_imemc_offs_f(dst >> 2) |
-		pwr_falcon_imemc_blk_f(blk) |
-		pwr_falcon_imemc_aincw_f(1) |
-		sec << 28);
-
-	for (i = 0; i < words; i++) {
-		if (i % 64 == 0) {
-			gk20a_writel(g, 0x10a188, tag);
-			tag++;
-		}
-
-		gk20a_writel(g, pwr_falcon_imemd_r(port), src_u32[i]);
-	}
-
-	while (i % 64) {
-		gk20a_writel(g, pwr_falcon_imemd_r(port), 0);
-		i++;
-	}
+	nvgpu_flcn_copy_to_imem(g->pmu.flcn, dst, src, size, port, sec,
+		dst >> 8);
 }
 
 static void upload_data(struct gk20a *g, u32 dst, u8 *src, u32 size, u8 port)

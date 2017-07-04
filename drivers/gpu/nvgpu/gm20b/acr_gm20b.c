@@ -27,6 +27,7 @@
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/firmware.h>
 #include <nvgpu/pmu.h>
+#include <nvgpu/falcon.h>
 
 #include <nvgpu/linux/dma.h>
 
@@ -1221,12 +1222,9 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct acr_desc *acr = &g->acr;
 	struct mm_gk20a *mm = &g->mm;
-	u32 imem_dst_blk = 0;
 	u32 virt_addr = 0;
-	u32 tag = 0;
-	u32 index = 0;
 	struct hsflcn_bl_desc *pmu_bl_gm10x_desc = g->acr.pmu_hsbl_desc;
-	u32 *bl_ucode;
+	u32 dst;
 
 	gk20a_dbg_fn("");
 	gk20a_writel(g, pwr_falcon_itfen_r(),
@@ -1238,42 +1236,21 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 			pwr_pmu_new_instblk_valid_f(1) |
 			pwr_pmu_new_instblk_target_sys_coh_f());
 
-	/* TBD: load all other surfaces */
 	/*copy bootloader interface structure to dmem*/
-	gk20a_writel(g, pwr_falcon_dmemc_r(0),
-			pwr_falcon_dmemc_offs_f(0) |
-			pwr_falcon_dmemc_blk_f(0)  |
-			pwr_falcon_dmemc_aincw_f(1));
 	nvgpu_flcn_copy_to_dmem(pmu->flcn, 0, (u8 *)pbl_desc,
 		sizeof(struct flcn_bl_dmem_desc), 0);
-	/*TODO This had to be copied to bl_desc_dmem_load_off, but since
-	 * this is 0, so ok for now*/
 
-	/* Now copy bootloader to TOP of IMEM */
-	imem_dst_blk = (pwr_falcon_hwcfg_imem_size_v(
-			gk20a_readl(g, pwr_falcon_hwcfg_r()))) - bl_sz/256;
+	/* copy bootloader to TOP of IMEM */
+	dst = (pwr_falcon_hwcfg_imem_size_v(
+			gk20a_readl(g, pwr_falcon_hwcfg_r())) << 8) - bl_sz;
 
-	/* Set Auto-Increment on write */
-	gk20a_writel(g, pwr_falcon_imemc_r(0),
-			pwr_falcon_imemc_offs_f(0) |
-			pwr_falcon_imemc_blk_f(imem_dst_blk)  |
-			pwr_falcon_imemc_aincw_f(1));
-	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
-	tag = virt_addr >> 8; /* tag is always 256B aligned */
-	bl_ucode = (u32 *)(acr->hsbl_ucode.cpu_va);
-	for (index = 0; index < bl_sz/4; index++) {
-		if ((index % 64) == 0) {
-			gk20a_writel(g, pwr_falcon_imemt_r(0),
-				(tag & 0xffff) << 0);
-			tag++;
-		}
-		gk20a_writel(g, pwr_falcon_imemd_r(0),
-				bl_ucode[index] & 0xffffffff);
-	}
+	nvgpu_flcn_copy_to_imem(pmu->flcn, dst,
+		(u8 *)(acr->hsbl_ucode.cpu_va), bl_sz, 0, 0,
+		pmu_bl_gm10x_desc->bl_start_tag);
 
-	gk20a_writel(g, pwr_falcon_imemt_r(0), (0 & 0xffff) << 0);
 	gm20b_dbg_pmu("Before starting falcon with BL\n");
 
+	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
 	gk20a_writel(g, pwr_falcon_bootvec_r(),
 			pwr_falcon_bootvec_vec_f(virt_addr));
 

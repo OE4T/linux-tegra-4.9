@@ -180,6 +180,22 @@ int nvgpu_flcn_copy_to_dmem(struct nvgpu_falcon *flcn,
 	return flcn_ops->copy_to_dmem(flcn, dst, src, size, port);
 }
 
+int nvgpu_flcn_copy_to_imem(struct nvgpu_falcon *flcn,
+	u32 dst, u8 *src, u32 size, u8 port, bool sec, u32 tag)
+{
+	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
+	int status = -EINVAL;
+
+	if (flcn_ops->copy_to_imem)
+		status = flcn_ops->copy_to_imem(flcn, dst, src, size, port,
+					sec, tag);
+	else
+		nvgpu_warn(flcn->g, "Invalid op on falcon 0x%x ",
+			flcn->flcn_id);
+
+	return status;
+}
+
 void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
 {
 	struct nvgpu_falcon *flcn = NULL;

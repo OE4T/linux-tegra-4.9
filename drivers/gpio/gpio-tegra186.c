@@ -854,11 +854,11 @@ static int tegra_gpio_is_enabled(struct gpio_chip *chip, unsigned offset)
 	u32 val;
 
 	if (!gpio_is_accessible(tgi, offset))
-		return 0;
+		return -EPERM;
 
 	val = tegra_gpio_readl(tgi, offset, GPIO_ENB_CONFIG_REG);
 
-	return !!(val & 0x1);
+	return !!(val & GPIO_ENB_BIT);
 }
 
 static int tegra_gpio_get_direction(struct gpio_chip *chip, unsigned offset)
@@ -867,11 +867,12 @@ static int tegra_gpio_get_direction(struct gpio_chip *chip, unsigned offset)
 	u32 val;
 
 	if (!gpio_is_accessible(tgi, offset))
-		return 0;
+		return -EPERM;
 
-	val = tegra_gpio_readl(tgi, offset, GPIO_OUT_CTRL_REG);
+	val = tegra_gpio_readl(tgi, offset, GPIO_ENB_CONFIG_REG);
+	val &= GPIO_INOUT_BIT;
 
-	return (val & 0x1);
+	return !val;
 }
 
 static int tegra_gpio_to_irq(struct gpio_chip *chip, unsigned offset)

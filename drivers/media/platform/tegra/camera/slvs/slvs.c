@@ -129,6 +129,8 @@ struct tegra_slvs_stream {
 	wait_queue_head_t cil_waitq;
 
 	struct camera_common_framesync framesync;
+	struct dentry *debugfs;
+	bool syncgen_active;
 };
 
 #define to_slvs(_sd) \
@@ -444,6 +446,167 @@ static int tegra_slvs_syncgen_stop(struct tegra_slvs_stream *stream)
 	slvs_vi_vgp_config(slvs, stream->params.syncgen.xhs_vgp, 0);
 
 	return 0;
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * Debugfs
+ * -----------------------------------------------------------------------------
+ */
+
+static void fractional_binary(char buffer[35], u32 value, u32 fraction)
+{
+	int i, point;
+
+	for (i = 0, point = 0; i < 32; i++) {
+		if (i == 32 - fraction) {
+			if (i == 0)
+				buffer[i + point++] = '0';
+			buffer[i + point++] = '.';
+		}
+
+		buffer[i + point] = (value & BIT(31 - i)) ? '1' : '0';
+	}
+
+	buffer[i + point] = '\0';
+}
+
+static int slvs_debugfs_syncgen_config_read(struct seq_file *s, void *data)
+{
+	struct tegra_slvs_stream *stream = s->private;
+	int err;
+	struct slvsec_syncgen_config config;
+	char buffer[35];
+	u64 framerate;
+
+	err = slvs_get_syncgen_config(&stream->framesync, &config);
+	if (err < 0)
+		return err;
+
+	if (config.hclk_div == 0 || config.xvs_interval == 0)
+		return -EINVAL;
+
+	fractional_binary(buffer, config.hclk_div, config.hclk_div_fmt);
+
+	framerate = (1000 * SYCNGEN_CLOCK) << 32;
+	framerate /= config.hclk_div;
+	framerate /= config.xvs_interval;
+	/* Multiply framerate by 2000 followed by right shift by 32 */
+	framerate *= 2000 >> 3;
+	if (config.hclk_div_fmt > (32 - 3))
+		framerate <<= config.hclk_div_fmt - (32 - 3);
+	else
+		framerate >>= (32 - 3) - config.hclk_div_fmt;
+
+	seq_printf(s, "clk = %llu\n", 1000ULL * SYCNGEN_CLOCK);
+	seq_printf(s, "hclk_div = %u >> %u (%s)\n",
+		config.hclk_div, config.hclk_div_fmt, buffer);
+	seq_printf(s, "xvs = %u\n", config.xvs_interval);
+	seq_printf(s, "fps = %u\n", (unsigned)framerate);
+	seq_printf(s, "xhs_width = %u\n", config.xhs_width);
+	seq_printf(s, "xvs_width = %u\n", config.xvs_width);
+	seq_printf(s, "xvs_to_xhs_delay = %u\n", config.xvs_to_xhs_delay);
+
+	return 0;
+}
+
+static int slvs_debugfs_syncgen_config_open(struct inode *inode, struct file *f)
+{
+	struct tegra_slvs_stream *stream = inode->i_private;
+
+	return single_open(f, slvs_debugfs_syncgen_config_read, stream);
+}
+
+static const struct file_operations slvs_debugfs_syncgen_config_ops = {
+	.owner = THIS_MODULE,
+	.open = slvs_debugfs_syncgen_config_open,
+	.release = single_release,
+	.read = seq_read,
+	.llseek = seq_lseek,
+};
+
+static int slvs_debugfs_show_syncgen_active(void *data, u64 *val)
+{
+	struct tegra_slvs_stream *stream = data;
+
+	*val = (u64)stream->syncgen_active;
+
+	return 0;
+}
+
+static int slvs_debugfs_store_syncgen_active(void *data, u64 val)
+{
+	struct tegra_slvs_stream *stream = data;
+	int err;
+
+	if (val > 1U)
+		return -EINVAL;
+
+	if ((bool)val == stream->syncgen_active)
+		return 0;
+
+	if (val)
+		err = tegra_slvs_syncgen_start(stream);
+	else
+		err = tegra_slvs_syncgen_stop(stream);
+
+	if (err)
+		return err;
+
+	stream->syncgen_active = (bool)val;
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(slvs_debugfs_fops_syncgen_active,
+			slvs_debugfs_show_syncgen_active,
+			slvs_debugfs_store_syncgen_active,
+			"%lld\n");
+
+static void tegra_slvs_debugfs_init_stream(struct tegra_slvs_stream *stream)
+{
+	struct dentry *dir, *paramdir;
+
+	debugfs_create_atomic_t("is_streaming", S_IRUGO, stream->debugfs,
+				&stream->is_streaming);
+
+	dir = debugfs_create_dir("syncgen", stream->debugfs);
+	debugfs_create_u32("number", S_IRUGO | S_IWUSR, dir,
+			&stream->params.syncgen.number);
+	debugfs_create_u32("xvs_vgp", S_IRUGO | S_IWUSR, dir,
+			&stream->params.syncgen.xvs_vgp);
+	debugfs_create_u32("xhs_vgp", S_IRUGO | S_IWUSR, dir,
+			&stream->params.syncgen.xhs_vgp);
+	debugfs_create_file("config", S_IRUGO, dir, stream,
+			&slvs_debugfs_syncgen_config_ops);
+	debugfs_create_file("active", S_IRUGO, dir, stream,
+			&slvs_debugfs_fops_syncgen_active);
+
+	paramdir = debugfs_create_dir("params", dir);
+	debugfs_create_u32("inck", S_IRUGO | S_IWUSR, paramdir,
+			&stream->framesync.inck);
+	debugfs_create_u32("xhs", S_IRUGO | S_IWUSR, paramdir,
+			&stream->framesync.xhs);
+	debugfs_create_u32("xvs", S_IRUGO | S_IWUSR, paramdir,
+			&stream->framesync.xvs);
+	debugfs_create_u32("fps", S_IRUGO | S_IWUSR, paramdir,
+			&stream->framesync.fps);
+
+}
+
+static void tegra_slvs_init_debugfs(struct tegra_mc_slvs *slvs)
+{
+	struct nvhost_device_data *info = platform_get_drvdata(slvs->pdev);
+	int i;
+	char name[32];
+	struct dentry *dir;
+
+	for (i = 0; i < slvs->num_streams; i++) {
+		snprintf(name, sizeof(name), "mc@%d", i);
+		dir = debugfs_create_dir(name, info->debugfs);
+		slvs->streams[i].debugfs = dir;
+		tegra_slvs_debugfs_init_stream(&slvs->streams[i]);
+	}
 }
 
 /*
@@ -930,6 +1093,8 @@ struct tegra_mc_slvs *tegra_slvs_media_controller_init(
 		else
 			dev_info(&pdev->dev, "Initialized slvs streams for V4L2\n");
 	}
+
+	tegra_slvs_init_debugfs(slvs);
 
 	return slvs;
 }

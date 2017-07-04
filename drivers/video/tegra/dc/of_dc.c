@@ -3118,9 +3118,27 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		goto fail_parse;
 	}
 
+	if (pdata->default_out->type == TEGRA_DC_OUT_DSI) {
+		if (!of_property_read_u32(np_target_disp,
+			"nvidia,dsi-hdmi-bridge", &temp)) {
+			pdata->default_out->is_ext_panel = (int)temp;
+			OF_DC_LOG("is_ext_dp_panel %d\n", temp);
+		}
+	}
+
+	if ((pdata->default_out->type == TEGRA_DC_OUT_DP) ||
+		(pdata->default_out->type == TEGRA_DC_OUT_FAKE_DP)) {
+		if (!of_property_read_u32(np_target_disp,
+			"nvidia,is_ext_dp_panel", &temp)) {
+			pdata->default_out->is_ext_panel = (int)temp;
+			OF_DC_LOG("is_ext_dp_panel %d\n", temp);
+		}
+	}
+
 	timings_np = of_get_child_by_name(np_target_disp, "display-timings");
 	if (!timings_np) {
-		if (def_out->type == TEGRA_DC_OUT_DSI) {
+		if (def_out->type == TEGRA_DC_OUT_DSI &&
+			!pdata->default_out->is_ext_panel) {
 			pr_err("%s: could not find display-timings node\n",
 				__func__);
 			goto fail_parse;
@@ -3330,15 +3348,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		OF_DC_LOG("cmu enable %d\n", pdata->cmu_enable);
 	} else {
 		pdata->cmu_enable = false;
-	}
-
-	if ((def_out->type == TEGRA_DC_OUT_DP) ||
-	    (def_out->type == TEGRA_DC_OUT_FAKE_DP)) {
-		if (!of_property_read_u32(np_target_disp,
-			"nvidia,is_ext_dp_panel", &temp)) {
-			def_out->is_ext_dp_panel = (int)temp;
-			OF_DC_LOG("is_ext_dp_panel %d\n", temp);
-		}
 	}
 
 	dev_info(&ndev->dev, "DT parsed successfully\n");

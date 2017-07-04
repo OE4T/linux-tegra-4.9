@@ -678,7 +678,7 @@ struct tegra_dc_out {
 	int			user_needs_vblank;
 	struct completion	user_vblank_comp;
 
-	bool				is_ext_dp_panel;
+	bool				is_ext_panel;
 	/* Default mode for fbconsole */
 	struct fb_videomode	*fbcon_default_mode;
 
@@ -1069,7 +1069,7 @@ void tegra_get_fb_resource(struct resource *fb_res, int instance);
 
 unsigned tegra_dc_out_flags_from_dev(struct device *dev);
 bool tegra_dc_initialized(struct device *dev);
-bool tegra_dc_is_ext_dp_panel(const struct tegra_dc *dc);
+bool tegra_dc_is_ext_panel(const struct tegra_dc *dc);
 
 struct spd_infoframe {
 	u8 vendor_name[8];

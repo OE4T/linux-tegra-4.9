@@ -725,8 +725,9 @@ bool tegra_dc_hotplug_supported(struct tegra_dc *dc)
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		return true;
 	else if (dc->out->type == TEGRA_DC_OUT_DP ||
-			dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		return tegra_dc_is_ext_dp_panel(dc);
+			dc->out->type == TEGRA_DC_OUT_FAKE_DP ||
+			dc->out->type == TEGRA_DC_OUT_DSI)
+		return tegra_dc_is_ext_panel(dc);
 	else
 		return (dc->out->hotplug_gpio > 0 ? true : false);
 }
@@ -4207,10 +4208,10 @@ int tegra_dc_get_source_physical_address(u8 *phy_address)
 
 }
 
-bool tegra_dc_is_ext_dp_panel(const struct tegra_dc *dc)
+bool tegra_dc_is_ext_panel(const struct tegra_dc *dc)
 {
 	if (dc && dc->out)
-		return dc->out->is_ext_dp_panel;
+		return dc->out->is_ext_panel;
 	return false;
 }
 
@@ -5736,7 +5737,8 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 	dc->shutdown = false;
 
 	if ((dc->out->type == TEGRA_DC_OUT_HDMI ||
-		dc->out->type == TEGRA_DC_OUT_DP) &&
+		dc->out->type == TEGRA_DC_OUT_DP ||
+		dc->out->type == TEGRA_DC_OUT_DSI) &&
 		!tegra_dc_hpd(dc))
 		return false;
 

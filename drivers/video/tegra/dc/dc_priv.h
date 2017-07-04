@@ -58,6 +58,11 @@
 				FB_VMODE_Y422 | FB_VMODE_Y444)
 #define IS_RGB(yuv_flag) (!(yuv_flag & YUV_MASK))
 
+#define is_hotplug_supported(x) \
+({ \
+	tegra_dc_is_ext_panel(x->dc); \
+})
+
 #define TEGRA_DC_POLL_TIMEOUT_MS       50
 
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;

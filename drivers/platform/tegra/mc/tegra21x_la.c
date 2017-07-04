@@ -237,7 +237,7 @@ static void t21x_init_ptsa(void)
 	la_debug("emc clk_rate = %u MHz", emc_freq_mhz);
 
 	/* get mc frequency */
-	same_freq = mc_readl(MC_EMEM_ARB_MISC0) &&
+	same_freq = mc_readl(MC_EMEM_ARB_MISC0) &
 		MC_EMEM_ARB_MISC0_MC_EMC_SAME_FREQ_BIT;
 	mc_freq_mhz = same_freq ? emc_freq_mhz : emc_freq_mhz / 2;
 	la_debug("mc clk_rate = %u MHz", mc_freq_mhz);

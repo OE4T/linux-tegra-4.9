@@ -135,7 +135,7 @@ static void l2x0_clear_values(void)
 {
 	int cpu_id;
 
-	for (cpu_id = 0; cpu_id < nr_cpu_ids; cpu_id++)
+	for_each_possible_cpu(cpu_id)
 		per_cpu(pl310_prev_val, cpu_id) = 0;
 }
 

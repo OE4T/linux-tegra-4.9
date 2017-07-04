@@ -670,7 +670,7 @@ static void reset_cpu_ctx(void)
 	struct quadd_cpu_context *cpu_ctx;
 	struct quadd_thread_data *t_data;
 
-	for (cpu_id = 0; cpu_id < nr_cpu_ids; cpu_id++) {
+	for_each_possible_cpu(cpu_id) {
 		cpu_ctx = per_cpu_ptr(hrt.cpu_ctx, cpu_id);
 		t_data = &cpu_ctx->active_thread;
 

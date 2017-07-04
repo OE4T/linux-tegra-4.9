@@ -77,6 +77,29 @@ static struct ecc_curve nist_p256 = {
 	.n = nist_p256_n
 };
 
+/* BrainPool P-256 */
+static u64 bp_p256_g_x[] = { 0x3A4453BD9ACE3262ull, 0xB9DE27E1E3BD23C2ull,
+				0x2C4B482FFC81B7AFull, 0x8BD2AEB9CB7E57CBull };
+
+static u64 bp_p256_g_y[] = { 0x5C1D54C72F046997ull, 0xC27745132DED8E54ull,
+				0x97F8461A14611DC9ull, 0x547EF835C3DAC4FDull };
+
+static u64 bp_p256_p[] = { 0x2013481D1F6E5377ull, 0x6E3BF623D5262028ull,
+				0x3E660A909D838D72ull, 0xA9FB57DBA1EEA9BCull };
+
+static u64 bp_p256_n[] = { 0x901E0E82974856A7ull, 0x8C397AA3B561A6F7ull,
+				0x3E660A909D838D71ull, 0xA9FB57DBA1EEA9BCull };
+
+static struct ecc_curve bpcurve_p256 = {
+	.name = "brainpool_256",
+	.g = {
+		.x = bp_p256_g_x,
+		.y = bp_p256_g_y,
+	},
+	.p = bp_p256_p,
+	.n = bp_p256_n,
+};
+
 const struct ecc_curve *ecc_get_curve(unsigned int curve_id)
 {
 	switch (curve_id) {
@@ -85,6 +108,8 @@ const struct ecc_curve *ecc_get_curve(unsigned int curve_id)
 		return fips_enabled ? NULL : &nist_p192;
 	case ECC_CURVE_NIST_P256:
 		return &nist_p256;
+	case ECC_CURVE_BRAINPOOL_P256:
+		return &bpcurve_p256;
 	default:
 		return NULL;
 	}

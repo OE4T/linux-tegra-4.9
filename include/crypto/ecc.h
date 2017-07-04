@@ -14,6 +14,7 @@
 /* Curves IDs */
 #define ECC_CURVE_NIST_P192	0x0001
 #define ECC_CURVE_NIST_P256	0x0002
+#define ECC_CURVE_BRAINPOOL_P256	0x0006
 
 #define ECC_MAX_DIGITS	4 /* 256 */
 

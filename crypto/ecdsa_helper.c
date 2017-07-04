@@ -28,6 +28,7 @@ unsigned int ecdsa_supported_curve(unsigned int curve_id)
 	switch (curve_id) {
 	case ECC_CURVE_NIST_P192: return 3;
 	case ECC_CURVE_NIST_P256: return 4;
+	case ECC_CURVE_BRAINPOOL_P256: return 4;
 	default: return 0;
 	}
 }

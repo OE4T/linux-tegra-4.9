@@ -33,18 +33,22 @@ struct eeprom_data {
 };
 
 static int i2c_slave_eeprom_slave_cb(struct i2c_client *client,
-				     enum i2c_slave_event event, u8 *val)
+				     enum i2c_slave_event event, void *data)
 {
 	struct eeprom_data *eeprom = i2c_get_clientdata(client);
+	struct i2c_slave_data *sdata = (struct i2c_slave_data *)data;
+	u8 *buf = sdata->buf;
+	u32 size = sdata->size;
+	u32 i;
 
 	switch (event) {
 	case I2C_SLAVE_WRITE_RECEIVED:
 		if (eeprom->first_write) {
-			eeprom->buffer_idx = *val;
+			eeprom->buffer_idx = *buf;
 			eeprom->first_write = false;
 		} else {
 			spin_lock(&eeprom->buffer_lock);
-			eeprom->buffer[eeprom->buffer_idx++] = *val;
+			eeprom->buffer[eeprom->buffer_idx++] = *buf;
 			spin_unlock(&eeprom->buffer_lock);
 		}
 		break;
@@ -55,7 +59,7 @@ static int i2c_slave_eeprom_slave_cb(struct i2c_client *client,
 		/* fallthrough */
 	case I2C_SLAVE_READ_REQUESTED:
 		spin_lock(&eeprom->buffer_lock);
-		*val = eeprom->buffer[eeprom->buffer_idx++];
+		*buf = eeprom->buffer[eeprom->buffer_idx++];
 		spin_unlock(&eeprom->buffer_lock);
 		/*
 		 * Do not increment buffer_idx here, because we don't know if
@@ -67,6 +71,33 @@ static int i2c_slave_eeprom_slave_cb(struct i2c_client *client,
 	case I2C_SLAVE_STOP:
 	case I2C_SLAVE_WRITE_REQUESTED:
 		eeprom->first_write = true;
+		break;
+
+	case I2C_SLAVE_WRITE_BUFFER_RECEIVED:
+		if (!eeprom->first_write) {
+			spin_lock(&eeprom->buffer_lock);
+			for (i = 0; i < size; i++)
+				eeprom->buffer[eeprom->buffer_idx + i] = buf[i];
+			eeprom->buffer_idx += size;
+			spin_unlock(&eeprom->buffer_lock);
+		}
+		break;
+
+	case I2C_SLAVE_READ_BUFFER_REQUESTED:
+		spin_lock(&eeprom->buffer_lock);
+		sdata->buf = eeprom->buffer + eeprom->buffer_idx;
+		sdata->size = EEPROM_SIZE - eeprom->buffer_idx;
+		spin_unlock(&eeprom->buffer_lock);
+		break;
+	case I2C_SLAVE_READ_BUFFER_COUNT:
+		eeprom->buffer_idx = eeprom->buffer_idx + sdata->size;
+		break;
+
+	case I2C_SLAVE_WRITE_BUFFER_REQUESTED:
+		if (eeprom->first_write) {
+			eeprom->buffer_idx = buf[0];
+			eeprom->first_write = false;
+		}
 		break;
 
 	default:
@@ -129,6 +160,7 @@ static int i2c_slave_eeprom_probe(struct i2c_client *client, const struct i2c_de
 	eeprom->bin.read = i2c_slave_eeprom_bin_read;
 	eeprom->bin.write = i2c_slave_eeprom_bin_write;
 	eeprom->bin.size = size;
+	client->buffer_size = EEPROM_SIZE;
 
 	ret = sysfs_create_bin_file(&client->dev.kobj, &eeprom->bin);
 	if (ret)

@@ -73,7 +73,7 @@ static u32 rppg_send_cmd(struct gk20a *g, struct nv_pmu_rppg_cmd *prppg_cmd)
 		return -1;
 	}
 
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_rppg_init_msg, &success, &seq, ~0);
 	if (status) {
 		nvgpu_err(g, "Unable to submit parameter command %d",

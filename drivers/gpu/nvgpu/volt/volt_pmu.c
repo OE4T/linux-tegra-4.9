@@ -83,7 +83,7 @@ static u32 volt_pmu_rpc_execute(struct gk20a *g,
 	handler.prpc_call = prpc_call;
 	handler.success = 0;
 
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, &payload,
 			PMU_COMMAND_QUEUE_LPQ,
 			volt_rpc_pmucmdhandler, (void *)&handler,
 			&seqdesc, ~0);

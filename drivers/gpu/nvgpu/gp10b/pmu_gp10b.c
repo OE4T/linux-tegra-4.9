@@ -166,7 +166,7 @@ static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 				u64_hi32(g->pmu.wpr_buf.gpu_va);
 		gp10b_dbg_pmu("PMU_ACR_CMD_ID_BOOTSTRAP_MULTIPLE_FALCONS:%x\n",
 				falconidmask);
-		gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_fecs_boot_acr_msg, pmu, &seq, ~0);
 	}
 
@@ -242,7 +242,7 @@ int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED;
 
 		gp10b_dbg_pmu("cmd post PMU_PG_CMD_ID_PG_PARAM ");
-		gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_gr_param_msg, pmu, &seq, ~0);
 
 	} else

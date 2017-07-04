@@ -97,7 +97,7 @@ int clk_pmu_freq_controller_load(struct gk20a *g, bool bload)
 
 	handler.prpccall = &rpccall;
 	handler.success = 0;
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, &payload,
 			PMU_COMMAND_QUEUE_LPQ,
 			clkrpc_pmucmdhandler, (void *)&handler,
 			&seqdesc, ~0);
@@ -160,7 +160,7 @@ u32 clk_pmu_vin_load(struct gk20a *g)
 
 	handler.prpccall = &rpccall;
 	handler.success = 0;
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, &payload,
 			PMU_COMMAND_QUEUE_LPQ,
 			clkrpc_pmucmdhandler, (void *)&handler,
 			&seqdesc, ~0);
@@ -262,7 +262,7 @@ static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
 	handler.prpccall = &rpccall;
 	handler.success = 0;
 
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, &payload,
 			PMU_COMMAND_QUEUE_LPQ,
 			clkrpc_pmucmdhandler, (void *)&handler,
 			&seqdesc, ~0);

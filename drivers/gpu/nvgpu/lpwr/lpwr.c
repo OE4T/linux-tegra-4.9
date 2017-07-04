@@ -243,7 +243,7 @@ int nvgpu_lwpr_mclk_change(struct gk20a *g, u32 pstate)
 		cmd.cmd.pg.mclk_change.data = payload;
 
 		nvgpu_pmu_dbg(g, "cmd post MS PMU_PG_PARAM_CMD_MCLK_CHANGE");
-		status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
+		status = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL,
 			PMU_COMMAND_QUEUE_HPQ,
 			nvgpu_pmu_handle_param_lpwr_msg, &ack_status, &seq, ~0);
 
@@ -276,7 +276,7 @@ u32 nvgpu_lpwr_post_init(struct gk20a *g)
 		PMU_PG_PARAM_CMD_POST_INIT;
 
 	nvgpu_pmu_dbg(g, "cmd post post-init PMU_PG_PARAM_CMD_POST_INIT");
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL,
 		PMU_COMMAND_QUEUE_LPQ,
 		nvgpu_pmu_handle_param_lpwr_msg, &ack_status, &seq, ~0);
 

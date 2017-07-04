@@ -478,7 +478,7 @@ clean_up:
 	return err;
 }
 
-int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
+int nvgpu_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 		struct pmu_msg *msg, struct pmu_payload *payload,
 		u32 queue_id, pmu_callback callback, void *cb_param,
 		u32 *seq_desc, unsigned long timeout)

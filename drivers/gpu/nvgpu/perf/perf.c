@@ -96,7 +96,7 @@ u32 perf_pmu_vfe_load(struct gk20a *g)
 	handler.prpccall = &rpccall;
 	handler.success = 0;
 
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, &payload,
 			PMU_COMMAND_QUEUE_LPQ,
 			perfrpc_pmucmdhandler, (void *)&handler,
 			&seqdesc, ~0);

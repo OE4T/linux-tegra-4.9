@@ -81,7 +81,7 @@ static u32 therm_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 	u32 status;
 	struct therm_pmucmdhandler_params *handlerparams = NULL;
 
-	status = gk20a_pmu_cmd_post(g, cmd, msg, payload,
+	status = nvgpu_pmu_cmd_post(g, cmd, msg, payload,
 				queue_id,
 				callback,
 				cb_param,

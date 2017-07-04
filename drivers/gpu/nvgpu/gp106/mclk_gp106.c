@@ -3371,7 +3371,7 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 			reg_alloc);
 
 	/* Send command to PMU to execute sequencer script */
-	status = gk20a_pmu_cmd_post(g, (struct pmu_cmd *)&cmd, NULL, &payload,
+	status = nvgpu_pmu_cmd_post(g, (struct pmu_cmd *)&cmd, NULL, &payload,
 			PMU_COMMAND_QUEUE_LPQ,
 			mclk_seq_pmucmdhandler,
 			&seq_completion_status, &seqdesc, ~0);

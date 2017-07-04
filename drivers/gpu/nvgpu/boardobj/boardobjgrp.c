@@ -744,7 +744,7 @@ static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
 	handlerparams.pcmd = pcmd;
 	handlerparams.success = 0;
 
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, &payload,
 				PMU_COMMAND_QUEUE_LPQ,
 				boardobjgrp_pmucmdhandler,
 				(void *)&handlerparams,

@@ -151,7 +151,7 @@ static int pmu_enable_elpg_locked(struct gk20a *g, u32 pg_engine_id)
 		pmu->mscg_transition_state = PMU_ELPG_STAT_ON_PENDING;
 
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_ELPG_CMD_ALLOW");
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL,
 		PMU_COMMAND_QUEUE_HPQ, pmu_handle_pg_elpg_msg,
 		pmu, &seq, ~0);
 	WARN_ON(status != 0);
@@ -305,7 +305,7 @@ int nvgpu_pmu_disable_elpg(struct gk20a *g)
 				ptr = &pmu->mscg_transition_state;
 
 			nvgpu_pmu_dbg(g, "cmd post PMU_PG_ELPG_CMD_DISALLOW");
-			gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
+			nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL,
 				PMU_COMMAND_QUEUE_HPQ, pmu_handle_pg_elpg_msg,
 				pmu, &seq, ~0);
 
@@ -376,7 +376,7 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_INIT;
 
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_ELPG_CMD_INIT");
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
 	/* alloc dmem for powergating state log */
@@ -390,7 +390,7 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 	cmd.cmd.pg.stat.data = 0;
 
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_STAT_CMD_ALLOC_DMEM");
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
+	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_stat_msg, pmu, &seq, ~0);
 
 	/* disallow ELPG initially
@@ -409,7 +409,7 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
 
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_ELPG_CMD_DISALLOW");
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 		pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
 	if (g->ops.pmu.pmu_pg_set_sub_feature_mask)
@@ -508,7 +508,7 @@ int nvgpu_pmu_init_bind_fecs(struct gk20a *g)
 
 	pmu->buf_loaded = false;
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_FECS");
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
+	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 	nvgpu_pmu_state_change(g, PMU_STATE_LOADING_PG_BUF, false);
 	return err;
@@ -544,7 +544,7 @@ void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g)
 
 	pmu->buf_loaded = false;
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_ZBC");
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
+	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 	nvgpu_pmu_state_change(g, PMU_STATE_LOADING_ZBC, false);
 }
@@ -662,7 +662,7 @@ int nvgpu_pmu_ap_send_command(struct gk20a *g,
 		return 0x2f;
 	}
 
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			p_callback, pmu, &seq, ~0);
 
 	if (status) {

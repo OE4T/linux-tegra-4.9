@@ -109,7 +109,7 @@ static u32 pmgr_pmu_set_object(struct gk20a *g,
 	/* Setup the handler params to communicate back results.*/
 	handlerparams.success = 0;
 
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, &payload,
 				PMU_COMMAND_QUEUE_LPQ,
 				pmgr_pmucmdhandler,
 				(void *)&handlerparams,
@@ -392,7 +392,7 @@ u32 pmgr_pmu_pwr_devices_query_blocking(
 	/* Setup the handler params to communicate back results.*/
 	handlerparams.success = 0;
 
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, &payload,
 				PMU_COMMAND_QUEUE_LPQ,
 				pmgr_pmucmdhandler,
 				(void *)&handlerparams,
@@ -436,7 +436,7 @@ static u32 pmgr_pmu_load_blocking(struct gk20a *g)
 	/* Setup the handler params to communicate back results.*/
 	handlerparams.success = 0;
 
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
+	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL,
 				PMU_COMMAND_QUEUE_LPQ,
 				pmgr_pmucmdhandler,
 				(void *)&handlerparams,

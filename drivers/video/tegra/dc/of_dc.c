@@ -192,6 +192,8 @@ struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np)
 		p_ops = &dsi_b_1440_1600_3_5_ops;
 	else if (of_device_is_compatible(panel_np, "p-edp,3000-2000-13-5"))
 		p_ops = &edp_p_3000_2000_13_5_ops;
+	else if (of_device_is_compatible(panel_np, "null,dsi-hotplug"))
+		p_ops = &dsi_null_panel_ops;
 	else
 		pr_err("%s: unknown panel: %s\n", __func__,
 			of_node_full_name(panel_np));

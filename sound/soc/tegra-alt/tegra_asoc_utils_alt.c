@@ -135,7 +135,8 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 	}
 
 	clk_change = ((new_baseclock != data->set_baseclock) ||
-			(mclk != data->set_mclk));
+			(mclk != data->set_mclk) ||
+			(clk_out_rate != data->set_clk_out_rate));
 	if (!clk_change)
 		return 0;
 
@@ -145,6 +146,7 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 
 	data->set_baseclock = 0;
 	data->set_mclk = 0;
+	data->set_clk_out_rate = 0;
 
 	err = clk_set_rate(data->clk_pll_a, new_baseclock);
 	if (err) {
@@ -175,6 +177,7 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 
 	data->set_baseclock = new_baseclock;
 	data->set_mclk = mclk;
+	data->set_clk_out_rate = clk_out_rate;
 
 	return 0;
 }

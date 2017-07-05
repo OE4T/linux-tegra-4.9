@@ -3296,16 +3296,17 @@ static int rt5659_hw_params(struct snd_pcm_substream *substream,
 	dev_dbg(dai->dev, "lrck is %dHz and pre_div is %d for iis %d\n",
 				rt5659->lrck[dai->id], pre_div, dai->id);
 
-	switch (params_width(params)) {
-	case 16:
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S16_LE:
 		break;
-	case 20:
+	case SNDRV_PCM_FORMAT_S20_3LE:
 		val_len |= RT5659_I2S_DL_20;
 		break;
-	case 24:
+	case SNDRV_PCM_FORMAT_S24_LE:
+	case SNDRV_PCM_FORMAT_S32_LE:
 		val_len |= RT5659_I2S_DL_24;
 		break;
-	case 8:
+	case SNDRV_PCM_FORMAT_S8:
 		val_len |= RT5659_I2S_DL_8;
 		break;
 	default:
@@ -3822,7 +3823,8 @@ static int rt5659_resume(struct snd_soc_codec *codec)
 
 #define RT5659_STEREO_RATES SNDRV_PCM_RATE_8000_192000
 #define RT5659_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE | \
-		SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S8)
+		SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE | \
+		SNDRV_PCM_FMTBIT_S8)
 
 static const struct snd_soc_dai_ops rt5659_aif_dai_ops = {
 	.hw_params = rt5659_hw_params,

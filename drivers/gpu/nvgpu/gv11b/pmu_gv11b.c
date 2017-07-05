@@ -18,6 +18,9 @@
 
 #include <soc/tegra/fuse.h>
 
+#include <nvgpu/pmu.h>
+#include <nvgpu/falcon.h>
+
 #include "gk20a/gk20a.h"
 
 #include "gp10b/pmu_gp10b.h"
@@ -139,11 +142,7 @@ static int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu)
 			pwr_falcon_dmatrfcmd_ctxdma_f(GK20A_PMU_DMAIDX_UCODE));
 	}
 
-	gk20a_writel(g, pwr_falcon_bootvec_r(),
-		pwr_falcon_bootvec_vec_f(desc->bootloader_entry_point));
-
-	gk20a_writel(g, pwr_falcon_cpuctl_r(),
-		pwr_falcon_cpuctl_startcpu_f(1));
+	nvgpu_flcn_bootstrap(pmu->flcn, desc->bootloader_entry_point);
 
 	gk20a_writel(g, pwr_falcon_os_r(), desc->app_version);
 

@@ -1269,7 +1269,7 @@ static int tegra_spi_start_transfer_one(struct spi_device *spi,
 	} else {
 		/* To maintain min 1.5x and max 4x ratio between
 		 * slave core clk and interface clk */
-		core_speed = speed * 4;
+		core_speed = speed * 3;
 	}
 	if (core_speed > tspi->spi_max_frequency)
 		core_speed = tspi->spi_max_frequency;

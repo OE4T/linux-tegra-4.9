@@ -312,8 +312,9 @@ static int cmdq_enable(struct mmc_host *mmc)
 
 	/* Enable Interrupt Coalescing feature */
 	if (cq_host->quirks & CMDQ_QUIRK_CQIC_SUPPORT)
-		cmdq_writel(cq_host, (CQIC_ENABLE | CQIC_ICTOVALWEN |
-				CQIC_DEFAULT_ICTOVAL), CQIC);
+		cmdq_writel(cq_host, (CQIC_ENABLE |
+			    CQIC_ICTOVALWEN | CQIC_MAX_ICTOVAL |
+			    CQIC_ICCTHWEN | CQIC_DEFAULT_ICCTH), CQIC);
 
 	/* leave send queue status timer configs to reset values */
 

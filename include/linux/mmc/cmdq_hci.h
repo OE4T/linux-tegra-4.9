@@ -1,5 +1,5 @@
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
- * Copyright (C) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -75,6 +75,7 @@
 #define CQ_INT_ALL	0xF
 #define CQIC_DEFAULT_ICCTH 31
 #define CQIC_DEFAULT_ICTOVAL 1
+#define CQIC_MAX_ICTOVAL 0x7F
 
 /* attribute fields */
 #define VALID(x)	((x & 1) << 0)

@@ -3144,7 +3144,7 @@ static struct snd_soc_dai_driver tegra210_adsp_codec_dai[] = {
 
 /* This array is linked with tegra210_adsp_virt_regs enum defines. Any thing
    changed in enum define should be also reflected here and vice-versa */
-static const char * const tegra210_adsp_mux_texts[] = {
+static const char *tegra210_adsp_mux_texts[] = {
 	"None",
 	"ADSP-FE1",
 	"ADSP-FE2",
@@ -3416,7 +3416,7 @@ static ADSP_MUX_ENUM_CTRL_DECL(plugin10, TEGRA210_ADSP_PLUGIN10);
 	.event = tegra210_adsp_null_sink_hw_params,			\
 	.event_flags = SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD }
 
-static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
+static struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_EP_WIDGETS("ADSP-FE1", adsp_fe1),
 	ADSP_EP_WIDGETS("ADSP-FE2", adsp_fe2),
 	ADSP_EP_WIDGETS("ADSP-FE3", adsp_fe3),
@@ -3710,7 +3710,7 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_APM_IN_ROUTES(name),				\
 	ADSP_PLUGIN_ROUTES(name)
 
-static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
+static struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_EP_MUX_ROUTES("ADSP-FE1"),
 	ADSP_EP_MUX_ROUTES("ADSP-FE2"),
 	ADSP_EP_MUX_ROUTES("ADSP-FE3"),
@@ -3839,27 +3839,35 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_PLUGIN_MUX_ROUTES("PLUGIN10-PLACE-HOLDER"),
 };
 
-static void tegra210_adsp_wt_replace(char *dest, const char *src)
+static void tegra210_adsp_wt_replace(struct device *dev, char **dest1,
+					const char *src)
 {
-	if (!dest || !src)
+	char *dest = NULL;
+
+	if (!*dest1 || !src)
 		return;
 
-	if (strstr(dest, " TX")) {
+	dest = (char *)devm_kzalloc(dev, strlen(src) + 5, GFP_KERNEL);
+	if (strstr(*dest1, " TX")) {
 		strcpy(dest, src);
 		strcat(dest, " TX");
-	} else if (strstr(dest, " RX")) {
+		*dest1 = dest;
+	} else if (strstr(*dest1, " RX")) {
 		strcpy(dest, src);
 		strcat(dest, " RX");
-	} else if (strstr(dest, " MUX")) {
+		*dest1 = dest;
+	} else if (strstr(*dest1, " MUX")) {
 		strcpy(dest, src);
 		strcat(dest, " MUX");
+		*dest1 = dest;
 	} else {
 		strcpy(dest, src);
+		*dest1 = dest;
 	}
 }
 
-static void tegra210_adsp_route_modify(const char *wt_default,
-				const char *wt_from_dt)
+static void tegra210_adsp_route_modify(struct device *dev,
+			const char *wt_default, const char *wt_from_dt)
 {
 	int i;
 
@@ -3872,20 +3880,20 @@ static void tegra210_adsp_route_modify(const char *wt_default,
 		/* replace sink name */
 		if (tegra210_adsp_routes[i].sink)
 			if (strstr(tegra210_adsp_routes[i].sink, wt_default))
-				tegra210_adsp_wt_replace(
-					(char *)tegra210_adsp_routes[i].sink,
+				tegra210_adsp_wt_replace(dev,
+					(char **)&tegra210_adsp_routes[i].sink,
 					wt_from_dt);
 		/* replace control name */
 		if (tegra210_adsp_routes[i].control)
 			if (strstr(tegra210_adsp_routes[i].control, wt_default))
-				tegra210_adsp_wt_replace(
-					(char *)tegra210_adsp_routes[i].control,
+				tegra210_adsp_wt_replace(dev,
+				(char **)&tegra210_adsp_routes[i].control,
 					wt_from_dt);
 		/* replace source name */
 		if (tegra210_adsp_routes[i].source)
 			if (strstr(tegra210_adsp_routes[i].source, wt_default))
-				tegra210_adsp_wt_replace(
-					(char *)tegra210_adsp_routes[i].source,
+				tegra210_adsp_wt_replace(dev,
+				(char **)&tegra210_adsp_routes[i].source,
 					wt_from_dt);
 	}
 }
@@ -4534,7 +4542,7 @@ static const struct soc_enum tegra210_adsp_switch3 =
 /* Any new addition of control should be added after PLUGIN controls otherwise
 * the index of PLUGIN needs to be changed with define PLUGIN_SET_PARAMS_IDX and
 * PLUGIN_SEND_BYTES_IDX */
-static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
+static struct snd_kcontrol_new tegra210_adsp_controls[] = {
 	SOC_SINGLE_BOOL_EXT("ADSP init", 0,
 		tegra210_adsp_init_get, tegra210_adsp_init_put),
 	SND_SOC_PARAM_EXT("PLUGIN1-PLACE-HOLDER set params",
@@ -4714,26 +4722,37 @@ static const struct of_device_id tegra210_adsp_audio_of_match[] = {
 	{},
 };
 
-static void adsp_control_name_override(int wt_idx, int i, int mux_idx)
+static void adsp_control_name_override(struct device *dev, int wt_idx, int i,
+							int mux_idx)
 {
-	strcpy((char *)tegra210_adsp_widgets[wt_idx].name,
-		adsp_app_desc[i].wt_name);
-	strcpy((char *)tegra210_adsp_widgets[wt_idx+PLUGIN_SET_PARAMS_IDX].name,
-		adsp_app_desc[i].wt_name);
-	strcpy((char *)tegra210_adsp_controls[i+PLUGIN_SET_PARAMS_IDX].name,
-		adsp_app_desc[i].wt_name);
-	strcpy((char *)tegra210_adsp_controls[i+PLUGIN_SEND_BYTES_IDX].name,
-		adsp_app_desc[i].wt_name);
-	strcat((char *)tegra210_adsp_widgets[wt_idx].name,
-		" TX");
-	strcat((char *)tegra210_adsp_widgets[wt_idx+PLUGIN_SET_PARAMS_IDX].name,
-		" MUX");
-	strcat((char *)tegra210_adsp_controls[i+PLUGIN_SET_PARAMS_IDX].name,
-		" set params");
-	strcat((char *)tegra210_adsp_controls[i+PLUGIN_SEND_BYTES_IDX].name,
-		" send bytes");
-	strcpy((char *)tegra210_adsp_mux_texts[mux_idx],
-		adsp_app_desc[i].wt_name);
+	char *name = devm_kzalloc(dev, strlen(adsp_app_desc[i].wt_name) + 3,
+					GFP_KERNEL);
+	strcpy((char *)name, adsp_app_desc[i].wt_name);
+	strcat((char *)name, " TX");
+	tegra210_adsp_widgets[wt_idx].name = name;
+
+	name = devm_kzalloc(dev, strlen(adsp_app_desc[i].wt_name) + 4,
+					GFP_KERNEL);
+	strcpy((char *)name, adsp_app_desc[i].wt_name);
+	strcat((char *)name, " MUX");
+	tegra210_adsp_widgets[wt_idx+PLUGIN_SET_PARAMS_IDX].name = name;
+
+	name = devm_kzalloc(dev, strlen(adsp_app_desc[i].wt_name) + 12,
+					GFP_KERNEL);
+	strcpy((char *)name, adsp_app_desc[i].wt_name);
+	strcat((char *)name, " set params");
+	tegra210_adsp_controls[i+PLUGIN_SET_PARAMS_IDX].name = name;
+
+	name = devm_kzalloc(dev, strlen(adsp_app_desc[i].wt_name) + 12,
+					GFP_KERNEL);
+	strcpy((char *)name, adsp_app_desc[i].wt_name);
+	strcat((char *)name, " send bytes");
+	tegra210_adsp_controls[i+PLUGIN_SEND_BYTES_IDX].name = name;
+
+	name = devm_kzalloc(dev, strlen(adsp_app_desc[i].wt_name) + 1,
+					GFP_KERNEL);
+	strcpy((char *)name, adsp_app_desc[i].wt_name);
+	tegra210_adsp_mux_texts[mux_idx] = name;
 }
 
 static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
@@ -4874,12 +4893,12 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 							strlen(tegra210_adsp_mux_texts[mux_idx]));
 						continue;
 					}
-					tegra210_adsp_route_modify(
+					tegra210_adsp_route_modify(&pdev->dev,
 						tegra210_adsp_mux_texts[mux_idx],
 						adsp_app_desc[i].wt_name);
 
-					adsp_control_name_override(wt_idx, i,
-								mux_idx);
+					adsp_control_name_override(&pdev->dev,
+							wt_idx, i, mux_idx);
 
 				}
 			}

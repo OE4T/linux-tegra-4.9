@@ -814,25 +814,21 @@ static void tegra_spi_deinit_dma_param(struct tegra_spi_data *tspi,
 	dma_release_channel(dma_chan);
 }
 
-static void tegra_spi_set_prod(struct spi_device *spi)
+static void tegra_spi_set_prod(struct tegra_spi_data *tspi, int cs)
 {
-	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
 	int ret;
 	char prod_name[15];
 
 	/* Avoid write to register for transfers to last used device */
-	if (tspi->last_used_cs == spi->chip_select)
+	if (tspi->last_used_cs == cs)
 		return;
 
-	if (tspi->prod_list) {
-		sprintf(prod_name, "prod_c_cs%d", spi->chip_select);
-		ret = tegra_prod_set_by_name(&tspi->base, prod_name,
-					     tspi->prod_list);
-		ret = tegra_prod_set_by_name(&tspi->base, "prod",
-					     tspi->prod_list);
-	}
-
-	tspi->last_used_cs = spi->chip_select;
+	ret = tegra_prod_set_by_name(&tspi->base, "prod", tspi->prod_list);
+	sprintf(prod_name, "prod_c_cs%d", cs);
+	ret = tegra_prod_set_by_name(&tspi->base, prod_name, tspi->prod_list);
+	if (ret)
+		dev_dbg(tspi->dev, "prod settings failed with error %d", ret);
+	tspi->last_used_cs = cs;
 }
 
 static void tegra_spi_set_cmd2(struct spi_device *spi, u32 speed)
@@ -842,6 +838,10 @@ static void tegra_spi_set_cmd2(struct spi_device *spi, u32 speed)
 	u32 command2_reg = 0;
 	u32 tx_tap = 0;
 	u32 rx_tap = 0;
+
+	/* Avoid write to register for transfers to last used device */
+	if (tspi->last_used_cs == spi->chip_select)
+		return;
 
 	if (!cdata || tspi->prod_list)
 		return;
@@ -860,11 +860,10 @@ static void tegra_spi_set_cmd2(struct spi_device *spi, u32 speed)
 		       SPI_RX_TAP_DELAY(rx_tap);
 
 	if (tspi->chip_data->set_rx_tap_delay)
-		if (command2_reg != tspi->command2_reg) {
-			tspi->command2_reg = command2_reg;
+		if (command2_reg != tspi->command2_reg)
 			tegra_spi_writel(tspi, command2_reg,
 					 SPI_COMMAND2);
-		}
+	tspi->last_used_cs = spi->chip_select;
 }
 
 static void tegra_spi_set_timing1(struct spi_device *spi)
@@ -1121,8 +1120,11 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 				gval = 1;
 			gpio_set_value(spi->cs_gpio, gval);
 		}
-		tegra_spi_set_prod(spi);
-		tegra_spi_set_cmd2(spi, speed);
+
+		if (!tspi->prod_list)
+			tegra_spi_set_cmd2(spi, speed);
+		else
+			tegra_spi_set_prod(tspi, spi->chip_select);
 	} else {
 		command1 = tspi->command1_reg;
 		command1 &= ~SPI_BIT_LENGTH(~0);
@@ -1983,7 +1985,10 @@ static int tegra_spi_probe(struct platform_device *pdev)
 
 	reset_control_reset(tspi->rst);
 
-	tspi->def_command1_reg  = SPI_M_S | SPI_LSBYTE_FE;
+	tspi->last_used_cs = master->num_chipselect + 1;
+	tegra_spi_set_prod(tspi, tspi->def_chip_select);
+	tspi->def_command1_reg  = tegra_spi_readl(tspi, SPI_COMMAND1);
+	tspi->def_command1_reg |= SPI_M_S | SPI_LSBYTE_FE;
 	tspi->def_command1_reg |= SPI_CS_SEL(tspi->def_chip_select);
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
 	tspi->command2_reg = tegra_spi_readl(tspi, SPI_COMMAND2);
@@ -2005,7 +2010,6 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can not register to master err %d\n", ret);
 		goto exit_free_irq;
 	}
-	tspi->last_used_cs = master->num_chipselect + 1;
 	tegra_spi_debugfs_init(tspi);
 
 	return ret;

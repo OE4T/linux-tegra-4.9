@@ -220,6 +220,13 @@ static int tegra_i2cslv_init(struct tegra_i2cslv_dev *i2cslv_dev)
 	return tegra_i2cslv_load_config(i2cslv_dev);
 }
 
+static void tegra_i2cslv_deinit(struct tegra_i2cslv_dev *i2cslv_dev)
+{
+	tegra_i2cslv_writel(i2cslv_dev, 0, I2C_INTERRUPT_MASK_REGISTER);
+	tegra_i2cslv_writel(i2cslv_dev, 0, I2C_SL_INT_MASK);
+	clk_disable(i2cslv_dev->div_clk);
+}
+
 static irqreturn_t tegra_i2cslv_isr(int irq, void *dev_id)
 {
 	struct tegra_i2cslv_dev *i2cslv_dev = dev_id;
@@ -304,7 +311,7 @@ static int tegra_reg_slave(struct i2c_client *slave)
 		return -EAFNOSUPPORT;
 	i2cslv_dev->slave = slave;
 
-	ret = clk_prepare_enable(i2cslv_dev->div_clk);
+	ret = clk_enable(i2cslv_dev->div_clk);
 	if (ret < 0) {
 		dev_err(i2cslv_dev->dev, "Enable div-clk failed: %d\n", ret);
 		return ret;
@@ -319,10 +326,7 @@ static int tegra_unreg_slave(struct i2c_client *slave)
 		i2c_get_adapdata(slave->adapter);
 
 	WARN_ON(!i2cslv_dev->slave);
-
-	tegra_i2cslv_writel(i2cslv_dev, 0, I2C_INTERRUPT_MASK_REGISTER);
-	tegra_i2cslv_writel(i2cslv_dev, 0, I2C_SL_INT_MASK);
-	clk_disable_unprepare(i2cslv_dev->div_clk);
+	tegra_i2cslv_deinit(i2cslv_dev);
 
 	return 0;
 }
@@ -395,7 +399,14 @@ static int tegra_i2cslv_probe(struct platform_device *pdev)
 	adap->dev.parent = &pdev->dev;
 	adap->dev.of_node = pdev->dev.of_node;
 	i2c_set_adapdata(adap, i2cslv_dev);
+	platform_set_drvdata(pdev, i2cslv_dev);
 	strlcpy(adap->name, pdev->name, sizeof(adap->name));
+
+	ret = clk_prepare(i2cslv_dev->div_clk);
+	if (ret < 0) {
+		dev_err(i2cslv_dev->dev, "clock prepare failed %d\n", ret);
+		return ret;
+	}
 
 	ret = devm_request_irq(&pdev->dev, irq, tegra_i2cslv_isr,
 			       0, dev_name(&pdev->dev), i2cslv_dev);
@@ -421,6 +432,46 @@ static int tegra_i2cslv_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int tegra_i2cslv_suspend(struct device *dev)
+{
+	struct tegra_i2cslv_dev *i2cslv_dev = dev_get_drvdata(dev);
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&i2cslv_dev->xfer_lock, flags);
+
+	tegra_i2cslv_deinit(i2cslv_dev);
+
+	raw_spin_unlock_irqrestore(&i2cslv_dev->xfer_lock, flags);
+
+	return 0;
+}
+
+static int tegra_i2cslv_resume(struct device *dev)
+{
+	struct tegra_i2cslv_dev *i2cslv_dev = dev_get_drvdata(dev);
+	unsigned long flags;
+	int ret;
+
+	raw_spin_lock_irqsave(&i2cslv_dev->xfer_lock, flags);
+
+	ret = clk_enable(i2cslv_dev->div_clk);
+	if (ret < 0) {
+		dev_err(i2cslv_dev->dev, "Enable div-clk failed: %d\n", ret);
+		return ret;
+	}
+	ret = tegra_i2cslv_init(i2cslv_dev);
+	if (ret)
+		return ret;
+
+	raw_spin_unlock_irqrestore(&i2cslv_dev->xfer_lock, flags);
+
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_i2cslv_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(tegra_i2cslv_suspend, tegra_i2cslv_resume)
+};
+
 static const struct of_device_id tegra_i2cslv_of_match[] = {
 	{.compatible = "nvidia,tegra210-i2c-slave",},
 	{}
@@ -435,6 +486,7 @@ static struct platform_driver tegra_i2cslv_driver = {
 		   .name = "tegra-i2cslv",
 		   .owner = THIS_MODULE,
 		   .of_match_table = of_match_ptr(tegra_i2cslv_of_match),
+		   .pm = &tegra_i2cslv_pm_ops,
 		   },
 };
 

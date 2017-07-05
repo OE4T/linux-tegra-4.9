@@ -230,9 +230,12 @@ static void __update_pte(struct vm_gk20a *vm,
 	u32 pte_addr = attrs->aperture == APERTURE_SYSMEM ?
 		gmmu_new_pte_address_sys_f(phys_shifted) :
 		gmmu_new_pte_address_vid_f(phys_shifted);
-	u32 pte_tgt = __nvgpu_aperture_mask(g, attrs->aperture,
-		gmmu_new_pte_aperture_sys_mem_ncoh_f(),
-		gmmu_new_pte_aperture_video_memory_f());
+	u32 pte_tgt = __nvgpu_aperture_mask(g,
+			attrs->aperture,
+			attrs->coherent ?
+				gmmu_new_pte_aperture_sys_mem_coh_f() :
+				gmmu_new_pte_aperture_sys_mem_ncoh_f(),
+			gmmu_new_pte_aperture_video_memory_f());
 
 	pte_w[0] = pte_valid | pte_addr | pte_tgt;
 

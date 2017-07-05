@@ -149,6 +149,7 @@ struct nvgpu_gmmu_pd {
  *   rw_flag:     Flag from enum gk20a_mem_rw_flag
  *   sparse:      Set if the mapping should be sparse.
  *   priv:        Privilidged mapping.
+ *   coherent:    Set if the mapping should be IO coherent.
  *   valid:       Set if the PTE should be marked valid.
  *   aperture:    VIDMEM or SYSMEM.
  *   debug:       When set print debugging info.
@@ -166,6 +167,7 @@ struct nvgpu_gmmu_attrs {
 	int			 rw_flag;
 	bool			 sparse;
 	bool			 priv;
+	bool			 coherent;
 	bool			 valid;
 	enum nvgpu_aperture	 aperture;
 	bool			 debug;

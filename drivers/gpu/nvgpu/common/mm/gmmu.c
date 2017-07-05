@@ -747,6 +747,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		.rw_flag   = rw_flag,
 		.sparse    = sparse,
 		.priv      = priv,
+		.coherent  = flags & NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT,
 		.valid     = !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE),
 		.aperture  = aperture
 	};
@@ -805,6 +806,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 		.rw_flag   = rw_flag,
 		.sparse    = sparse,
 		.priv      = 0,
+		.coherent  = 0,
 		.valid     = 0,
 		.aperture  = APERTURE_INVALID,
 	};

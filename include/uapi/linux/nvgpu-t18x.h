@@ -25,12 +25,6 @@
 #define _UAPI__LINUX_NVGPU_T18X_IOCTL_H_
 
 /*
- * this flag is used in struct nvgpu_as_map_buffer_ex_args
- * to specify IO coherence
- */
-#define NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT	    (1 << 4)
-
-/*
  * this flag is used in struct nvgpu_alloc_gpfifo_args
  * to enable re-playable faults for that channel
  */

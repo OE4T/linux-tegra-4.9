@@ -142,11 +142,14 @@
 						*
 						* min_gain_val = ""; (floor to 6 decimal places)
 						* max_gain_val = ""; (floor to 6 decimal places)
+						* gain_step_pitch = ""; (floor to 6 decimal places, unit is db)
 						* Gain limits for mode
 						*
 						* min_exp_time = ""; (ceil to integer)
 						* max_exp_time = ""; (ceil to integer)
+						* exp_time_1h = ""; (ceil to integer)
 						* Exposure Time limits for mode (us)
+						*
 						*
 						* min_hdr_ratio = "";
 						* max_hdr_ratio = "";
@@ -193,12 +196,14 @@
 
 							min_gain_val = "1.0";
 							max_gain_val = "22.2";
+							gain_step_pitch = "0.1";
 							min_hdr_ratio = "1";
 							max_hdr_ratio = "64";
 							min_framerate = "1.462526";
 							max_framerate = "60";
 							min_exp_time = "16.165";
 							max_exp_time = "165770";
+							exp_time_1h = "6";
 						};
 						mode1 { // IMX274_MODE_3840X2160_DOL_30FPS
 							mclk_khz = "24000";
@@ -222,12 +227,14 @@
 
 							min_gain_val = "1.0";
 							max_gain_val = "22.2";
+							gain_step_pitch = "0.1";
 							min_hdr_ratio = "1";
 							max_hdr_ratio = "256";
 							min_framerate = "1.5";
 							max_framerate = "30";
 							min_exp_time = "57";
 							max_exp_time = "665800";
+							exp_time_1h = "8";
 
 							num_of_exposure = "2";
 							num_of_ignored_lines = "8";
@@ -256,12 +263,14 @@
 
 							min_gain_val = "1.0";
 							max_gain_val = "22.2";
+							gain_step_pitch = "0.1";
 							min_hdr_ratio = "1";
 							max_hdr_ratio = "256";
 							min_framerate = "1.5";
 							max_framerate = "60";
 							min_exp_time = "56";
 							max_exp_time = "666479";
+							exp_time_1h = "8";
 
 							num_of_exposure = "2";
 							num_of_ignored_lines = "8";

@@ -154,12 +154,15 @@
 					*
 					* min_gain_val = ""; (floor to 6 decimal places)
 					* max_gain_val = ""; (floor to 6 decimal places)
+					* gain_step_pitch = ""; (floor to 6 decimal places, unit is db)
 					* Gain limits for mode
 					* if use_decibel_gain = "true", please set the gain as decibel
 					*
 					* min_exp_time = ""; (ceil to integer)
 					* max_exp_time = ""; (ceil to integer)
+					* exp_time_1h = ""; (ceil to integer)
 					* Exposure Time limits for mode (us)
+					*
 					*
 					* min_hdr_ratio = "";
 					* max_hdr_ratio = "";
@@ -195,12 +198,14 @@
 
 						min_gain_val = "0"; /* dB */
 						max_gain_val = "48"; /* dB */
+						gain_step_pitch = "0.3";
 						min_hdr_ratio = "1";
 						max_hdr_ratio = "1";
 						min_framerate = "1.5";
 						max_framerate = "30";
 						min_exp_time = "30";
 						max_exp_time = "660000";
+						exp_time_1h = "30";
 						embedded_metadata_height = "0";
 					};
 					mode1 {/*mode IMX185_MODE_1920X1080_CROP_10BIT_30FPS*/
@@ -225,12 +230,14 @@
 
 						min_gain_val = "0";
 						max_gain_val = "48";
+						gain_step_pitch = "0.3";
 						min_hdr_ratio = "1";
 						max_hdr_ratio = "1";
 						min_framerate = "1.5";
 						max_framerate = "30";
 						min_exp_time = "30";
 						max_exp_time = "660000";
+						exp_time_1h = "30";
 						embedded_metadata_height = "0";
 					};
 					mode2 {/*mode IMX185_MODE_1920X1080_CROP_60FPS*/
@@ -255,12 +262,14 @@
 
 						min_gain_val = "0";
 						max_gain_val = "48";
+						gain_step_pitch = "0.3";
 						min_hdr_ratio = "1";
 						max_hdr_ratio = "1";
 						min_framerate = "1.5";
 						max_framerate = "60";
 						min_exp_time = "30";
 						max_exp_time = "660000";
+						exp_time_1h = "15";
 						embedded_metadata_height = "0";
 					};
 					mode3 {/*mode IMX185_MODE_1920X1080_CROP_10BIT_60FPS*/
@@ -285,12 +294,14 @@
 
 						min_gain_val = "0";
 						max_gain_val = "48";
+						gain_step_pitch = "0.3";
 						min_hdr_ratio = "1";
 						max_hdr_ratio = "1";
 						min_framerate = "1.5";
 						max_framerate = "60";
 						min_exp_time = "30";
 						max_exp_time = "660000";
+						exp_time_1h = "15";
 						embedded_metadata_height = "0";
 					};
 					mode4 {/*mode IMX185_MODE_1920X1080_CROP_HDR_30FPS*/
@@ -315,12 +326,14 @@
 
 						min_gain_val = "0";
 						max_gain_val = "12";
+						gain_step_pitch = "0.3";
 						min_hdr_ratio = "16";
 						max_hdr_ratio = "16";
 						min_framerate = "1.5";
 						max_framerate = "30";
 						min_exp_time = "30";
 						max_exp_time = "660000";
+						exp_time_1h = "30";
 						embedded_metadata_height = "0";
 
 						/* WDR related settings */

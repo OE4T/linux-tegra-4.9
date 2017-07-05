@@ -173,11 +173,18 @@ static int pva_init_fw(struct platform_device *pdev)
 
 	/* Wait PVA to report itself as ready */
 	err = pva_mailbox_wait_event(pva, 60000);
+	if (err)
+		goto wait_timeout;
 
 	pva->mailbox_status = PVA_MBOX_STATUS_INVALID;
 
 	nvhost_dbg_fn("PVA boot returned: %d", err);
 
+	/* Check the ucode is with testmode enabled */
+	if ((host1x_readl(pdev, hsp_ss0_state_r()) & PVA_TEST_MODE))
+		err = pva_run_ucode_selftest(pdev);
+
+wait_timeout:
 	return err;
 }
 

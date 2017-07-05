@@ -79,6 +79,16 @@ skip_recovery:
 
 void pva_abort(struct pva *pva)
 {
+	struct platform_device *pdev = pva->pdev;
+
+	/* For selftest mode to finish the test */
+	if (host1x_readl(pdev, hsp_ss0_state_r())
+		& PVA_TEST_MODE) {
+		pva->mailbox_status = PVA_MBOX_STATUS_DONE;
+		wake_up(&pva->mailbox_waitqueue);
+		return;
+	}
+
 	WARN(true, "Attempting to recover the engine");
 	schedule_work(&pva->pva_abort_handler_work);
 }

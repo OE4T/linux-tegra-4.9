@@ -35,7 +35,7 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 	bool recover = false;
 
 	if (status5 & PVA_AISR_INT_PENDING) {
-		nvhost_dbg_info("PVA AISR (%x)", status7);
+		nvhost_dbg_info("PVA AISR (%x)", status5);
 
 		/* For now, just log the errors */
 

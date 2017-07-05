@@ -140,6 +140,10 @@ struct pva_trace_log {
  * debugfs_entry_r5	debugfs segment information for r5
  * debugfs_entry_vpu0	debugfs segment information for vpu0
  * debugfs_entry_vpu1	debugfs segment information for vpu1
+ * priv1_dma		struct pva_dma_alloc_info for priv1_dma
+ * priv2_dma		struct pva_dma_alloc_info for priv2_dma
+ * pva_trace		struct for pva_trace_log
+ * submit_mode		Select the task submit mode
  *
  */
 struct pva {
@@ -249,4 +253,16 @@ void pva_abort_init(struct pva *pva);
  */
 void pva_abort(struct pva *pva);
 
+/**
+ * @brief	Run the ucode selftests
+ *
+ * This function is invoked if the ucode is in selftest mode.
+ * The function will do the static memory allocation for the
+ * ucode self test to run.
+ *
+ * @param pdev	Pointer to PVA device
+ * @return	0 on Success or negative error code
+ *
+ */
+int pva_run_ucode_selftest(struct platform_device *pdev);
 #endif

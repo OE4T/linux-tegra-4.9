@@ -31,10 +31,15 @@
  */
 #define PVA_BOOT_INT		PVA_BIT(31)	/* OS wants an interrupt */
 #define PVA_OS_PRINT		PVA_BIT(30)	/* OS will process print */
+#define PVA_TEST_WAIT		PVA_BIT(29)	/* R5 wait to start tests */
+#define PVA_TEST_RUN		PVA_BIT(28)	/* Start tests */
 
 /*
  * Bits set by the R5 and examined by the OS
  */
+#define PVA_TESTS_STARTED	PVA_BIT(10)	/* PVA Tests started */
+#define PVA_TESTS_PASSED	PVA_BIT(9)	/* PVA Tests passed */
+#define PVA_TESTS_FAILED	PVA_BIT(8)	/* PVA Tests failed */
 #define PVA_HALTED		PVA_BIT(2)	/* PVA uCode halted */
 #define PVA_BOOT_DONE		PVA_BIT(1)	/* PVA is "ready" */
 #define PVA_TEST_MODE		PVA_BIT(0)	/* PVA is in "test mode" */

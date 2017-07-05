@@ -39,7 +39,7 @@
 #define CPU_DAI_NAME(i)		"ADMAIF" #i
 #define CODEC_DAI_NAME		"dit-hifi"
 #define PLATFORM_NAME		LINK_CPU_NAME
-#define ADSP_CPU_NAME 		"aconnect@2a41000:adsp_audio"
+#define ADSP_CPU_NAME		"aconnect@2a41000:adsp_audio"
 
 static unsigned int num_dai_links;
 static const struct snd_soc_pcm_stream default_params = {
@@ -58,7 +58,7 @@ static const struct snd_soc_pcm_stream adsp_default_params = {
 };
 
 
-struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
+static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 	{
 		/* 0 */
 		.name = DAI_NAME(1),
@@ -563,9 +563,153 @@ struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
+	{
+		.name = "ADSP PCM3",
+		.stream_name = "ADSP PCM3",
+		.cpu_dai_name = "ADSP PCM3",
+		.codec_dai_name = "ADSP-FE3",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM4",
+		.stream_name = "ADSP PCM4",
+		.cpu_dai_name = "ADSP PCM4",
+		.codec_dai_name = "ADSP-FE4",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM5",
+		.stream_name = "ADSP PCM5",
+		.cpu_dai_name = "ADSP PCM5",
+		.codec_dai_name = "ADSP-FE5",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM6",
+		.stream_name = "ADSP PCM6",
+		.cpu_dai_name = "ADSP PCM6",
+		.codec_dai_name = "ADSP-FE6",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM7",
+		.stream_name = "ADSP PCM7",
+		.cpu_dai_name = "ADSP PCM7",
+		.codec_dai_name = "ADSP-FE7",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM8",
+		.stream_name = "ADSP PCM8",
+		.cpu_dai_name = "ADSP PCM8",
+		.codec_dai_name = "ADSP-FE8",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM9",
+		.stream_name = "ADSP PCM9",
+		.cpu_dai_name = "ADSP PCM9",
+		.codec_dai_name = "ADSP-FE9",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM10",
+		.stream_name = "ADSP PCM10",
+		.cpu_dai_name = "ADSP PCM10",
+		.codec_dai_name = "ADSP-FE10",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM11",
+		.stream_name = "ADSP PCM11",
+		.cpu_dai_name = "ADSP PCM11",
+		.codec_dai_name = "ADSP-FE11",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM12",
+		.stream_name = "ADSP PCM12",
+		.cpu_dai_name = "ADSP PCM12",
+		.codec_dai_name = "ADSP-FE12",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM13",
+		.stream_name = "ADSP PCM13",
+		.cpu_dai_name = "ADSP PCM13",
+		.codec_dai_name = "ADSP-FE13",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM14",
+		.stream_name = "ADSP PCM14",
+		.cpu_dai_name = "ADSP PCM14",
+		.codec_dai_name = "ADSP-FE14",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	{
+		.name = "ADSP PCM15",
+		.stream_name = "ADSP PCM15",
+		.cpu_dai_name = "ADSP PCM15",
+		.codec_dai_name = "ADSP-FE15",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
+		.platform_name = ADSP_CPU_NAME,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+
 };
 
-struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
+static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 	{
 		/* 0 */
 		.name = DAI_NAME(1),

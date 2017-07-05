@@ -2,7 +2,7 @@
  * tegra_nvfx_plugin.h - Shared NVFX interface for different plugins between
  *                       Tegra ADSP ALSA driver and ADSP side user space code.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,6 +40,8 @@ enum {
 	/* NVFX ADMA params */
 	nvfx_adma_method_init = nvfx_method_external_start,
 	nvfx_adma_method_get_position,
+	nvfx_adma_set_custom_params,
+	nvfx_adma_set_null_sink_mode,
 };
 
 typedef struct {
@@ -51,6 +53,8 @@ typedef struct {
 	int32_t periods;
 	uint32_t adma_ch_page;
 	variant_t event;
+	uint32_t burst_size;
+	uint32_t intr_dur;
 } nvfx_adma_init_params_t;
 
 typedef struct {

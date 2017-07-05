@@ -24,6 +24,7 @@
 #define MIXER_CONFIG_SHIFT_VALUE 16
 #define TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK		0x1F
 #define TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK		0xFFFFFFFF
+#define TEGRA186_ASRC_STREAM_RATIO_MASK				0x1FFFFFFFFF
 #define NUM_ARAD_SOURCES	11
 #define NUM_ARAD_LANES		6
 #define NUM_ASRC_MODE		2
@@ -72,6 +73,12 @@
 	.private_value = (unsigned long)&(struct soc_mreg_control) \
 		{.regbase = xregbase, .regcount = 1, .nbits = 32, \
 		.invert = 0, .min = 0, .max = xmax} }
+
+#define ASRC_RATIO_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT_FRAC(ename, reg,	\
+	TEGRA186_ASRC_STREAM_RATIO_MASK,	\
+	tegra186_virt_asrc_get_ratio,	\
+	tegra186_virt_asrc_set_ratio)
 
 #define ASRC_RATIO_FRAC_CTRL_DECL(ename, reg) \
 	SOC_SINGLE_EXT_FRAC(ename, reg,	\
@@ -188,6 +195,12 @@ int tegra_virt_t210sfc_set_in_freq(struct snd_kcontrol *kcontrol,
 int tegra_virt_t210sfc_get_out_freq(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int tegra_virt_t210sfc_set_out_freq(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
+int tegra186_virt_asrc_get_ratio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
+int tegra186_virt_asrc_set_ratio(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 
 int tegra186_virt_asrc_get_int_ratio(struct snd_kcontrol *kcontrol,

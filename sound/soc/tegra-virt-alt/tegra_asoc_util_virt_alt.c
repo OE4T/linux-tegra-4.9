@@ -361,6 +361,86 @@ int tegra_virt_t210sfc_set_out_freq(struct snd_kcontrol *kcontrol,
 }
 EXPORT_SYMBOL(tegra_virt_t210sfc_set_out_freq);
 
+int tegra186_virt_asrc_get_ratio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mreg_control *mc =
+		(struct soc_mreg_control *)kcontrol->private_value;
+	unsigned int reg = mc->regbase;
+	int err;
+	uint64_t val;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_GET_RATIO;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: error on ivc_receive\n", __func__);
+		return err;
+	}
+
+	val = (uint64_t) msg.params.asrc_info.int_ratio << 32;
+	val &= 0xffffffff00000000ULL;
+	val |= msg.params.asrc_info.frac_ratio;
+	ucontrol->value.integer64.value[0] = val;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra186_virt_asrc_get_ratio);
+
+int tegra186_virt_asrc_set_ratio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mreg_control *mc =
+		(struct soc_mreg_control *)kcontrol->private_value;
+	unsigned int reg = mc->regbase;
+	int err;
+	uint64_t val;
+	struct nvaudio_ivc_msg msg;
+
+	val = ucontrol->value.integer64.value[0];
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_SET_RATIO;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+	msg.params.asrc_info.int_ratio =
+		(val >> 32) & 0xffffffffULL;
+	msg.params.asrc_info.frac_ratio =
+		(val & 0xffffffffULL);
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra186_virt_asrc_set_ratio);
+
 int tegra186_virt_asrc_get_int_ratio(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {

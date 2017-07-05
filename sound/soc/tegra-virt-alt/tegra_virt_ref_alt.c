@@ -19,6 +19,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <sound/pcm.h>
 #include <sound/soc.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
@@ -92,6 +93,7 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 	unsigned int admaif_ch_list[MAX_ADMAIF_IDS];
 	const struct of_device_id *match;
 	struct tegra_virt_admaif_soc_data *soc_data;
+	struct snd_soc_pcm_runtime *rtd;
 
 	match = tegra_virt_machine_of_match;
 	if (of_device_is_compatible(pdev->dev.of_node,
@@ -176,6 +178,27 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
 			ret);
 		return -EINVAL;
+	}
+
+	list_for_each_entry(rtd, &card->rtd_list, list) {
+		struct snd_soc_dai *codec_dai = rtd->codec_dai;
+		struct snd_soc_dai_driver *codec_drv = codec_dai->driver;
+		struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+		struct snd_soc_dai_driver *cpu_drv = cpu_dai->driver;
+
+		cpu_drv->playback.rates = SNDRV_PCM_RATE_KNOT;
+		cpu_drv->playback.rate_min = 8000;
+		cpu_drv->playback.rate_max = 192000;
+		cpu_drv->capture.rates = SNDRV_PCM_RATE_KNOT;
+		cpu_drv->capture.rate_min = 8000;
+		cpu_drv->capture.rate_max = 192000;
+
+		codec_drv->playback.rates = SNDRV_PCM_RATE_KNOT;
+		codec_drv->playback.rate_min = 8000;
+		codec_drv->playback.rate_max = 192000;
+		codec_drv->capture.rates = SNDRV_PCM_RATE_KNOT;
+		codec_drv->capture.rate_min = 8000;
+		codec_drv->capture.rate_max = 192000;
 	}
 
 	tegra_pd_add_device(&pdev->dev);

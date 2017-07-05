@@ -30,6 +30,17 @@
 
 
 
+static const unsigned int tegra210_rates[] = {
+	8000, 11025, 12000, 16000, 22050,
+	24000, 32000, 44100, 48000, 64000,
+	88200, 96000, 176400, 192000
+};
+
+static const struct snd_pcm_hw_constraint_list tegra210_rate_constraints = {
+	.count = ARRAY_SIZE(tegra210_rates),
+	.list = tegra210_rates,
+};
+
 static struct tegra210_admaif *admaif;
 static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
@@ -209,9 +220,17 @@ static int tegra210_admaif_trigger(struct snd_pcm_substream *substream, int cmd,
 	return 0;
 }
 
+static int tegra210_admaif_startup(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *cpu_dai)
+{
+	return snd_pcm_hw_constraint_list(substream->runtime, 0,
+			SNDRV_PCM_HW_PARAM_RATE, &tegra210_rate_constraints);
+}
+
 static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 	.hw_params	= tegra210_admaif_hw_params,
 	.trigger	= tegra210_admaif_trigger,
+	.startup	= tegra210_admaif_startup,
 };
 
 static int tegra210_admaif_dai_probe(struct snd_soc_dai *dai)
@@ -412,15 +431,15 @@ MIXER_ADDER_CTRL_DECL("Adder5 RX10", 0x04, 0x0a),
 
 MIXER_ENABLE_CTRL_DECL("Mixer Enable", 0x00),
 
-SFC_IN_FREQ_CTRL_DECL("SFC1 in freq", 0x00),
-SFC_IN_FREQ_CTRL_DECL("SFC2 in freq", 0x01),
-SFC_IN_FREQ_CTRL_DECL("SFC3 in freq", 0x02),
-SFC_IN_FREQ_CTRL_DECL("SFC4 in freq", 0x03),
+SFC_IN_FREQ_CTRL_DECL("SFC1 input rate", 0x00),
+SFC_IN_FREQ_CTRL_DECL("SFC2 input rate", 0x01),
+SFC_IN_FREQ_CTRL_DECL("SFC3 input rate", 0x02),
+SFC_IN_FREQ_CTRL_DECL("SFC4 input rate", 0x03),
 
-SFC_OUT_FREQ_CTRL_DECL("SFC1 out freq", 0x00),
-SFC_OUT_FREQ_CTRL_DECL("SFC2 out freq", 0x01),
-SFC_OUT_FREQ_CTRL_DECL("SFC3 out freq", 0x02),
-SFC_OUT_FREQ_CTRL_DECL("SFC4 out freq", 0x03),
+SFC_OUT_FREQ_CTRL_DECL("SFC1 output rate", 0x00),
+SFC_OUT_FREQ_CTRL_DECL("SFC2 output rate", 0x01),
+SFC_OUT_FREQ_CTRL_DECL("SFC3 output rate", 0x02),
+SFC_OUT_FREQ_CTRL_DECL("SFC4 output rate", 0x03),
 
 AMX_ENABLE_CTRL_DECL("AMX1-1 Enable", 0x01, 0x01),
 AMX_ENABLE_CTRL_DECL("AMX1-2 Enable", 0x01, 0x02),
@@ -594,15 +613,15 @@ MIXER_ADDER_CTRL_DECL("Adder5 RX10", 0x04, 0x0a),
 
 MIXER_ENABLE_CTRL_DECL("Mixer Enable", 0x00),
 
-SFC_IN_FREQ_CTRL_DECL("SFC1 in freq", 0x00),
-SFC_IN_FREQ_CTRL_DECL("SFC2 in freq", 0x01),
-SFC_IN_FREQ_CTRL_DECL("SFC3 in freq", 0x02),
-SFC_IN_FREQ_CTRL_DECL("SFC4 in freq", 0x03),
+SFC_IN_FREQ_CTRL_DECL("SFC1 input rate", 0x00),
+SFC_IN_FREQ_CTRL_DECL("SFC2 input rate", 0x01),
+SFC_IN_FREQ_CTRL_DECL("SFC3 input rate", 0x02),
+SFC_IN_FREQ_CTRL_DECL("SFC4 input rate", 0x03),
 
-SFC_OUT_FREQ_CTRL_DECL("SFC1 out freq", 0x00),
-SFC_OUT_FREQ_CTRL_DECL("SFC2 out freq", 0x01),
-SFC_OUT_FREQ_CTRL_DECL("SFC3 out freq", 0x02),
-SFC_OUT_FREQ_CTRL_DECL("SFC4 out freq", 0x03),
+SFC_OUT_FREQ_CTRL_DECL("SFC1 output rate", 0x00),
+SFC_OUT_FREQ_CTRL_DECL("SFC2 output rate", 0x01),
+SFC_OUT_FREQ_CTRL_DECL("SFC3 output rate", 0x02),
+SFC_OUT_FREQ_CTRL_DECL("SFC4 output rate", 0x03),
 
 ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio1 Int", 0x01),
 ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio2 Int", 0x02),
@@ -617,6 +636,13 @@ ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio3 Frac", 0x03),
 ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio4 Frac", 0x04),
 ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio5 Frac", 0x05),
 ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio6 Frac", 0x06),
+
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio1", 0x01),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio2", 0x02),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio3", 0x03),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio4", 0x04),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio5", 0x05),
+ASRC_RATIO_CTRL_DECL("ASRC1 Ratio6", 0x06),
 
 ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio1 SRC", 0x01,
 			&tegra_virt_t186_asrc_source),

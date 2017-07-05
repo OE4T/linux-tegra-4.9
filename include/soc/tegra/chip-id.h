@@ -296,7 +296,8 @@ static inline bool tegra_platform_is_fpga(void)
 }
 static inline bool tegra_platform_is_unit_fpga(void)
 {
-	return tegra_get_platform() == TEGRA_PLATFORM_UNIT_FPGA;
+	/* Deprecated API, return false */
+	return false;
 }
 static inline bool tegra_platform_is_vdk(void)
 {

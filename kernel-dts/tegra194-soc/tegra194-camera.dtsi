@@ -80,6 +80,22 @@
 			nvidia,frame-count = <1>;
 			nvidia,frame-size = <384>;
 		};
+		ivccontrol@3 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";
+			nvidia,service = "capture-control";
+			nvidia,version = <0>;
+			nvidia,group = <1>;
+			nvidia,frame-count = <16>;
+			nvidia,frame-size = <320>;
+		};
+		ivccapture@4 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-capture";
+			nvidia,service = "capture";
+			nvidia,version = <0>;
+			nvidia,group = <1>;
+			nvidia,frame-count = <16>;
+			nvidia,frame-size = <64>;
+		};
 	};
 
 	tegra-rtcpu-trace {

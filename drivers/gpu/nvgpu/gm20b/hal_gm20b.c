@@ -289,6 +289,7 @@ int gm20b_init_hal(struct gk20a *g)
 		}
 	}
 #endif
+	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 	gk20a_init_bus(gops);
 	gk20a_init_priv_ring(gops);
 	gm20b_init_gr(gops);

@@ -35,6 +35,10 @@
 #include <nvgpu/hw/gp106/hw_psec_gp106.h>
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 
+#ifdef CONFIG_TEGRA_19x_GPU
+#include "nvgpu_gpuid_t19x.h"
+#endif
+
 /*Defines*/
 #define gp106_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
@@ -51,30 +55,8 @@ typedef int (*get_ucode_details)(struct gk20a *g,
 /*Externs*/
 
 /*Forwards*/
-static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img);
-static int fecs_ucode_details(struct gk20a *g,
-		struct flcn_ucode_img_v1 *p_img);
-static int gpccs_ucode_details(struct gk20a *g,
-		struct flcn_ucode_img_v1 *p_img);
 static int gp106_bootstrap_hs_flcn(struct gk20a *g);
 
-static int lsfm_discover_ucode_images(struct gk20a *g,
-	struct ls_flcn_mgr_v1 *plsfm);
-static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm,
-	struct flcn_ucode_img_v1 *ucode_image, u32 falcon_id);
-static void lsfm_free_ucode_img_res(struct gk20a *g,
-				    struct flcn_ucode_img_v1 *p_img);
-static void lsfm_free_nonpmu_ucode_img_res(struct gk20a *g,
-					   struct flcn_ucode_img_v1 *p_img);
-static int lsf_gen_wpr_requirements(struct gk20a *g,
-		struct ls_flcn_mgr_v1 *plsfm);
-static void lsfm_init_wpr_contents(struct gk20a *g,
-		struct ls_flcn_mgr_v1 *plsfm, struct nvgpu_mem *nonwpr);
-static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm);
-static int gp106_pmu_populate_loader_cfg(struct gk20a *g,
-	void *lsfm, u32 *p_bl_gen_desc_size);
-static int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
-	void *lsfm, u32 *p_bl_gen_desc_size, u32 falconid);
 static int gp106_prepare_ucode_blob(struct gk20a *g);
 
 /*Globals*/
@@ -138,7 +120,7 @@ void gp106_init_secure_pmu(struct gpu_ops *gops)
 }
 /* TODO - check if any free blob res needed*/
 
-static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
+int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
 	struct nvgpu_firmware *pmu_fw, *pmu_desc, *pmu_sig;
 	struct nvgpu_pmu *pmu = &g->pmu;
@@ -208,7 +190,7 @@ release_img_fw:
 	return err;
 }
 
-static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
+int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 	struct lsf_ucode_desc_v1 *lsf_desc;
@@ -226,6 +208,12 @@ static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 					GP106_FECS_UCODE_SIG,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
+#if defined(CONFIG_TEGRA_19x_GPU)
+		case TEGRA_19x_GPUID:
+			fecs_sig = nvgpu_request_firmware(g,
+					GM20B_FECS_UCODE_SIG, 0);
+			break;
+#endif
 		default:
 			nvgpu_err(g, "no support for GPUID %x", ver);
 	}
@@ -291,7 +279,7 @@ rel_sig:
 	return err;
 }
 
-static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
+int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 	struct lsf_ucode_desc_v1 *lsf_desc;
@@ -312,6 +300,12 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 					GP106_GPCCS_UCODE_SIG,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
+#if defined(CONFIG_TEGRA_19x_GPU)
+		case TEGRA_19x_GPUID:
+			gpccs_sig = nvgpu_request_firmware(g,
+					T18x_GPCCS_UCODE_SIG, 0);
+			break;
+#endif
 		default:
 			nvgpu_err(g, "no support for GPUID %x", ver);
 	}
@@ -443,7 +437,7 @@ static u8 lsfm_falcon_disabled(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm,
 }
 
 /* Discover all managed falcon ucode images */
-static int lsfm_discover_ucode_images(struct gk20a *g,
+int lsfm_discover_ucode_images(struct gk20a *g,
 	struct ls_flcn_mgr_v1 *plsfm)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
@@ -528,7 +522,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 	return 0;
 }
 
-static int gp106_pmu_populate_loader_cfg(struct gk20a *g,
+int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size)
 {
 	struct wpr_carveout_info wpr_inf;
@@ -601,7 +595,7 @@ static int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 	return 0;
 }
 
-static int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
+int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size, u32 falconid)
 {
 	struct wpr_carveout_info wpr_inf;
@@ -629,7 +623,10 @@ static int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	*/
 	addr_base = p_lsfm->lsb_header.ucode_off;
 	g->ops.pmu.get_wpr(g, &wpr_inf);
-	addr_base += (wpr_inf.wpr_base);
+	if (falconid == LSF_FALCON_ID_GPCCS)
+		addr_base += g->pmu.wpr_buf.gpu_va;
+	else
+		addr_base += wpr_inf.wpr_base;
 
 	gp106_dbg_pmu("gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
 			p_lsfm->wpr_header.falcon_id);
@@ -658,7 +655,7 @@ static int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 }
 
 /* Populate falcon boot loader generic desc.*/
-static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
+int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 		struct lsfm_managed_ucode_img_v2 *pnode)
 {
 
@@ -683,7 +680,7 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 }
 
 /* Initialize WPR contents */
-static void lsfm_init_wpr_contents(struct gk20a *g,
+void lsfm_init_wpr_contents(struct gk20a *g,
 		struct ls_flcn_mgr_v1 *plsfm, struct nvgpu_mem *ucode)
 {
 	struct lsfm_managed_ucode_img_v2 *pnode = plsfm->ucode_img_list;
@@ -765,9 +762,9 @@ static void lsfm_init_wpr_contents(struct gk20a *g,
 
 	/* Tag the terminator WPR header with an invalid falcon ID. */
 	nvgpu_mem_wr32(g, ucode,
-			plsfm->managed_flcn_cnt * sizeof(struct lsf_wpr_header) +
-			offsetof(struct lsf_wpr_header, falcon_id),
-			LSF_FALCON_ID_INVALID);
+		plsfm->managed_flcn_cnt * sizeof(struct lsf_wpr_header_v1) +
+		offsetof(struct lsf_wpr_header_v1, falcon_id),
+		LSF_FALCON_ID_INVALID);
 }
 
 /*!
@@ -815,7 +812,7 @@ static int lsfm_parse_no_loader_ucode(u32 *p_ucodehdr,
  * @brief lsfm_fill_static_lsb_hdr_info
  * Populate static LSB header infomation using the provided ucode image
  */
-static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
+void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 	u32 falcon_id, struct lsfm_managed_ucode_img_v2 *pnode)
 {
 
@@ -886,7 +883,7 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 }
 
 /* Adds a ucode image to the list of managed ucode images managed. */
-static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm,
+int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm,
 	struct flcn_ucode_img_v1 *ucode_image, u32 falcon_id)
 {
 	struct lsfm_managed_ucode_img_v2 *pnode;
@@ -900,7 +897,7 @@ static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm,
 
 	/* Fill in static WPR header info*/
 	pnode->wpr_header.falcon_id = falcon_id;
-	pnode->wpr_header.bootstrap_owner = 0x07; //LSF_BOOTSTRAP_OWNER_DEFAULT;
+	pnode->wpr_header.bootstrap_owner = g->bootstrap_owner;
 	pnode->wpr_header.status = LSF_IMAGE_STATUS_COPY;
 
 	pnode->wpr_header.lazy_bootstrap =
@@ -917,7 +914,7 @@ static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm,
 }
 
 /* Free any ucode image structure resources. */
-static void lsfm_free_ucode_img_res(struct gk20a *g,
+void lsfm_free_ucode_img_res(struct gk20a *g,
 				    struct flcn_ucode_img_v1 *p_img)
 {
 	if (p_img->lsf_desc != NULL) {
@@ -927,7 +924,7 @@ static void lsfm_free_ucode_img_res(struct gk20a *g,
 }
 
 /* Free any ucode image structure resources. */
-static void lsfm_free_nonpmu_ucode_img_res(struct gk20a *g,
+void lsfm_free_nonpmu_ucode_img_res(struct gk20a *g,
 					   struct flcn_ucode_img_v1 *p_img)
 {
 	if (p_img->lsf_desc != NULL) {
@@ -940,7 +937,7 @@ static void lsfm_free_nonpmu_ucode_img_res(struct gk20a *g,
 	}
 }
 
-static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm)
+void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm)
 {
 	u32 cnt = plsfm->managed_flcn_cnt;
 	struct lsfm_managed_ucode_img_v2 *mg_ucode_img;
@@ -960,7 +957,7 @@ static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm)
 }
 
 /* Generate WPR requirements for ACR allocation request */
-static int lsf_gen_wpr_requirements(struct gk20a *g,
+int lsf_gen_wpr_requirements(struct gk20a *g,
 		struct ls_flcn_mgr_v1 *plsfm)
 {
 	struct lsfm_managed_ucode_img_v2 *pnode = plsfm->ucode_img_list;

@@ -1134,6 +1134,7 @@ struct gk20a {
 	u32 disable_syncpoints;
 
 	bool support_pmu;
+	u32 bootstrap_owner;
 
 	bool is_virtual;
 

@@ -326,6 +326,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->privsecurity = 1;
 	gops->securegpccs = 1;
 	gops->pmupstate = true;
+	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 	gk20a_init_bus(gops);
 	gp10b_init_priv_ring(gops);
 	gp106_init_gr(gops);

@@ -101,12 +101,7 @@ static int gm206_bios_devinit(struct gk20a *g)
 			g->bios.bootscripts_size,
 			0);
 
-	gk20a_writel(g, pwr_falcon_bootvec_r(),
-		pwr_falcon_bootvec_vec_f(g->bios.devinit.code_entry_point));
-	gk20a_writel(g, pwr_falcon_dmactl_r(),
-			pwr_falcon_dmactl_require_ctx_f(0));
-	gk20a_writel(g, pwr_falcon_cpuctl_r(),
-		pwr_falcon_cpuctl_startcpu_f(1));
+	nvgpu_flcn_bootstrap(g->pmu.flcn, g->bios.devinit.code_entry_point);
 
 	nvgpu_timeout_init(g, &timeout,
 			   PMU_BOOT_TIMEOUT_MAX /
@@ -155,12 +150,7 @@ static int gm206_bios_preos(struct gk20a *g)
 			g->bios.preos.dmem_size,
 			0);
 
-	gk20a_writel(g, pwr_falcon_bootvec_r(),
-		pwr_falcon_bootvec_vec_f(g->bios.preos.code_entry_point));
-	gk20a_writel(g, pwr_falcon_dmactl_r(),
-			pwr_falcon_dmactl_require_ctx_f(0));
-	gk20a_writel(g, pwr_falcon_cpuctl_r(),
-		pwr_falcon_cpuctl_startcpu_f(1));
+	nvgpu_flcn_bootstrap(g->pmu.flcn, g->bios.preos.code_entry_point);
 
 	if (nvgpu_flcn_wait_for_halt(g->pmu.flcn,
 		PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT)) {

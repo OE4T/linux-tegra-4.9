@@ -146,6 +146,7 @@ struct nvgpu_falcon_ops {
 	u32 (*mailbox_read)(struct nvgpu_falcon *flcn, u32 mailbox_index);
 	void (*mailbox_write)(struct nvgpu_falcon *flcn, u32 mailbox_index,
 		u32 data);
+	int (*bootstrap)(struct nvgpu_falcon *flcn, u32 boot_vector);
 	void (*dump_falcon_stats)(struct nvgpu_falcon *flcn);
 };
 
@@ -187,6 +188,7 @@ int nvgpu_flcn_dma_copy(struct nvgpu_falcon *flcn,
 u32 nvgpu_flcn_mailbox_read(struct nvgpu_falcon *flcn, u32 mailbox_index);
 void nvgpu_flcn_mailbox_write(struct nvgpu_falcon *flcn, u32 mailbox_index,
 	u32 data);
+int nvgpu_flcn_bootstrap(struct nvgpu_falcon *flcn, u32 boot_vector);
 void nvgpu_flcn_dump_stats(struct nvgpu_falcon *flcn);
 
 void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id);

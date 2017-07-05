@@ -324,6 +324,26 @@ static int gk20a_flcn_copy_to_imem(struct nvgpu_falcon *flcn, u32 dst,
 	return 0;
 }
 
+static int gk20a_falcon_bootstrap(struct nvgpu_falcon *flcn,
+	u32 boot_vector)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+
+	nvgpu_log_info(g, "boot vec 0x%x", boot_vector);
+
+	gk20a_writel(g, base_addr + falcon_falcon_dmactl_r(),
+		falcon_falcon_dmactl_require_ctx_f(0));
+
+	gk20a_writel(g, base_addr + falcon_falcon_bootvec_r(),
+		falcon_falcon_bootvec_vec_f(boot_vector));
+
+	gk20a_writel(g, base_addr + falcon_falcon_cpuctl_r(),
+		falcon_falcon_cpuctl_startcpu_f(1));
+
+	return 0;
+}
+
 static void gk20a_falcon_engine_dependency_ops(struct nvgpu_falcon *flcn)
 {
 	struct nvgpu_falcon_engine_dependency_ops *flcn_eng_dep_ops =
@@ -357,6 +377,7 @@ void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_ops->copy_from_dmem = gk20a_flcn_copy_from_dmem;
 	flcn_ops->copy_to_dmem = gk20a_flcn_copy_to_dmem;
 	flcn_ops->copy_to_imem = gk20a_flcn_copy_to_imem;
+	flcn_ops->bootstrap = gk20a_falcon_bootstrap;
 
 	gk20a_falcon_engine_dependency_ops(flcn);
 }
@@ -396,7 +417,7 @@ static void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 		nvgpu_mutex_init(&flcn->copy_lock);
 		gk20a_falcon_ops(flcn);
 	} else
-		nvgpu_info(g, "falcon 0x%x not supported on %s",
+		nvgpu_log_info(g, "falcon 0x%x not supported on %s",
 			flcn->flcn_id, g->name);
 }
 

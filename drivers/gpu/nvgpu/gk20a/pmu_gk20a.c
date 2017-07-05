@@ -23,6 +23,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/firmware.h>
+#include <nvgpu/falcon.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -239,11 +240,7 @@ int pmu_bootstrap(struct nvgpu_pmu *pmu)
 			pwr_falcon_dmatrfcmd_ctxdma_f(GK20A_PMU_DMAIDX_UCODE));
 	}
 
-	gk20a_writel(g, pwr_falcon_bootvec_r(),
-		pwr_falcon_bootvec_vec_f(desc->bootloader_entry_point));
-
-	gk20a_writel(g, pwr_falcon_cpuctl_r(),
-		pwr_falcon_cpuctl_startcpu_f(1));
+	nvgpu_flcn_bootstrap(g->pmu.flcn, desc->bootloader_entry_point);
 
 	gk20a_writel(g, pwr_falcon_os_r(), desc->app_version);
 

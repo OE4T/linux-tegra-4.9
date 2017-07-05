@@ -1251,11 +1251,8 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 	gm20b_dbg_pmu("Before starting falcon with BL\n");
 
 	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
-	gk20a_writel(g, pwr_falcon_bootvec_r(),
-			pwr_falcon_bootvec_vec_f(virt_addr));
 
-	gk20a_writel(g, pwr_falcon_cpuctl_r(),
-			pwr_falcon_cpuctl_startcpu_f(1));
+	nvgpu_flcn_bootstrap(pmu->flcn, virt_addr);
 
 	return 0;
 }

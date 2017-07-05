@@ -110,11 +110,8 @@ int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 	gk20a_writel(g, psec_falcon_mailbox0_r(), 0xDEADA5A5);
 
 	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
-	gk20a_writel(g, psec_falcon_bootvec_r(),
-			psec_falcon_bootvec_vec_f(virt_addr));
 
-	gk20a_writel(g, psec_falcon_cpuctl_r(),
-			psec_falcon_cpuctl_startcpu_f(1));
+	nvgpu_flcn_bootstrap(&g->sec2_flcn, virt_addr);
 
 	return 0;
 }
@@ -197,10 +194,6 @@ int init_sec2_setup_hw1(struct gk20a *g,
 	data = gk20a_readl(g, psec_fbif_ctl_r());
 	data |= psec_fbif_ctl_allow_phys_no_ctx_allow_f();
 	gk20a_writel(g, psec_fbif_ctl_r(), data);
-
-	data = gk20a_readl(g, psec_falcon_dmactl_r());
-	data &= ~(psec_falcon_dmactl_require_ctx_f(1));
-	gk20a_writel(g, psec_falcon_dmactl_r(), data);
 
 	/* setup apertures - virtual */
 	gk20a_writel(g, psec_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),

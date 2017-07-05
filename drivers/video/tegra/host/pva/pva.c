@@ -30,6 +30,7 @@
 #include <linux/slab.h>
 #include <linux/firmware.h>
 #include <linux/iommu.h>
+#include <linux/reset.h>
 
 #include <soc/tegra/chip-id.h>
 
@@ -372,13 +373,35 @@ load_fw_err:
 	return err;
 }
 
+static void pva_restore_state_handler(struct work_struct *work)
+{
+	struct pva *pva = container_of(work, struct pva,
+				       pva_restore_state_work);
+	struct nvhost_queue_pool *pool = pva->pool;
+	struct pva_queue_attribute *attr;
+	unsigned int i = 0;
+	int err;
+
+	for_each_set_bit_from(i, &pool->alloc_table, pool->max_queue_cnt) {
+		u32 id;
+
+		for (id = 1; id < QUEUE_ATTR_MAX; id++) {
+			attr = pool->queues[i].attr;
+			err = nvhost_queue_set_attr(&pool->queues[i],
+					&attr[id]);
+			if (err) {
+				dev_err(&pva->pdev->dev,
+					"unable to set attribute %u to queue %u\n",
+					id, i);
+			}
+		}
+	}
+}
+
 int pva_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
-	struct pva_queue_attribute *attr;
-	struct nvhost_queue_pool *pool;
-	unsigned long i = 0;
 	int err = 0;
 
 	/* Enable LIC_INTERRUPT line for HSP1 */
@@ -395,22 +418,7 @@ int pva_finalize_poweron(struct platform_device *pdev)
 	if (err < 0)
 		goto err_poweron;
 
-	pool = pva->pool;
-
-	for_each_set_bit_from(i, &pool->alloc_table, pool->max_queue_cnt) {
-		uint32_t id;
-
-		for (id = 1; id < QUEUE_ATTR_MAX; id++) {
-			attr = pool->queues[i].attr;
-			err = nvhost_queue_set_attr(&pool->queues[i],
-					&attr[id]);
-			if (err) {
-				dev_err(&pdev->dev,
-					"unable to set attribute %u to queue %lu\n",
-					id, i);
-			}
-		}
-	}
+	schedule_work(&pva->pva_restore_state_work);
 
 	pva->booted = true;
 
@@ -426,6 +434,8 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
 
+	/* Put PVA to reset to ensure that the firmware doesn't get accessed */
+	reset_control_assert(pdata->reset_control);
 	pva->booted = false;
 
 	disable_irq(pva->irq);
@@ -473,6 +483,7 @@ static int pva_probe(struct platform_device *pdev)
 	mutex_init(&pva->mailbox_mutex);
 	mutex_init(&pva->ccq_mutex);
 	pva->submit_mode = PVA_SUBMIT_MODE_MAILBOX;
+	INIT_WORK(&pva->pva_restore_state_work, pva_restore_state_handler);
 
 	/* Map MMIO range to kernel space */
 	err = nvhost_client_device_get_resources(pdev);

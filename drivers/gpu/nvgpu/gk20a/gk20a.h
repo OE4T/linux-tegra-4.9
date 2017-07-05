@@ -304,6 +304,10 @@ struct gpu_ops {
 					 u32 global_esr);
 		void (*get_esr_sm_sel)(struct gk20a *g, u32 gpc, u32 tpc,
 					 u32 *esr_sm_sel);
+		int (*handle_tpc_sm_ecc_exception)(struct gk20a *g,
+			u32 gpc, u32 tpc,
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr);
 		int (*handle_sm_exception)(struct gk20a *g,
 			u32 gpc, u32 tpc, u32 sm,
 			bool *post_event, struct channel_gk20a *fault_ch,

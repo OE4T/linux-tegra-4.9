@@ -5646,6 +5646,11 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 				"GPC%d TPC%d: SM exception pending", gpc, tpc);
+
+		if (g->ops.gr.handle_tpc_sm_ecc_exception)
+			g->ops.gr.handle_tpc_sm_ecc_exception(g, gpc, tpc,
+				post_event, fault_ch, hww_global_esr);
+
 		g->ops.gr.get_esr_sm_sel(g, gpc, tpc, &esr_sm_sel);
 
 		for (sm = 0; sm < sm_per_tpc; sm++) {
@@ -5661,7 +5666,8 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 				 gpc, tpc, sm, post_event, fault_ch,
 				hww_global_esr);
 			/* clear the hwws, also causes tpc and gpc
-			 * exceptions to be cleared
+			 * exceptions to be cleared. Should be cleared
+			 * only if SM is locked down or empty.
 			 */
 			g->ops.gr.clear_sm_hww(g,
 				gpc, tpc, sm, *hww_global_esr);

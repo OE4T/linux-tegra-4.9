@@ -86,6 +86,9 @@ struct slvsec {
 		struct debugfs_regset32 vi_syncgen0;
 		struct debugfs_regset32 vi_syncgen1;
 		struct debugfs_regset32 vi_syncgen2;
+		struct debugfs_regset32 hw_syncgen0;
+		struct debugfs_regset32 hw_syncgen1;
+		struct debugfs_regset32 hw_syncgen2;
 	} debug;
 };
 
@@ -518,17 +521,42 @@ static int slvsec_init_debugfs(struct slvsec *slvsec)
 	debug->vi_syncgen0.base = pdata->aperture[1] + 0x4800;
 	debug->vi_syncgen0.regs = slvsec_vi_syncgen_regs;
 	debug->vi_syncgen0.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
-	debugfs_create_regset32("syncgen0", S_IRUGO, dir, &debug->vi_syncgen0);
+	debugfs_create_regset32("fw-syncgen0", S_IRUGO, dir,
+				&debug->vi_syncgen0);
 
 	debug->vi_syncgen1.base = pdata->aperture[1] + 0x4c00;
 	debug->vi_syncgen1.regs = slvsec_vi_syncgen_regs;
 	debug->vi_syncgen1.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
-	debugfs_create_regset32("syncgen1", S_IRUGO, dir, &debug->vi_syncgen1);
+	debugfs_create_regset32("fw-syncgen1", S_IRUGO, dir,
+				&debug->vi_syncgen1);
 
 	debug->vi_syncgen2.base = pdata->aperture[1] + 0x5000;
 	debug->vi_syncgen2.regs = slvsec_vi_syncgen_regs;
 	debug->vi_syncgen2.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
-	debugfs_create_regset32("syncgen2", S_IRUGO, dir, &debug->vi_syncgen2);
+	debugfs_create_regset32("fw-syncgen2", S_IRUGO, dir,
+				&debug->vi_syncgen2);
+
+	if (slvsec->vi_thi) {
+		pdata = platform_get_drvdata(slvsec->vi_thi);
+
+		debug->hw_syncgen0.base = pdata->aperture[0] + 0xd800;
+		debug->hw_syncgen0.regs = slvsec_vi_syncgen_regs;
+		debug->hw_syncgen0.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
+		debugfs_create_regset32("hw-syncgen0", S_IRUGO, dir,
+					&debug->hw_syncgen0);
+
+		debug->hw_syncgen1.base = pdata->aperture[0] + 0xdc00;
+		debug->hw_syncgen1.regs = slvsec_vi_syncgen_regs;
+		debug->hw_syncgen1.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
+		debugfs_create_regset32("hw-syncgen1", S_IRUGO, dir,
+					&debug->hw_syncgen1);
+
+		debug->hw_syncgen2.base = pdata->aperture[0] + 0xe000;
+		debug->hw_syncgen2.regs = slvsec_vi_syncgen_regs;
+		debug->hw_syncgen2.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
+		debugfs_create_regset32("hw-syncgen2", S_IRUGO, dir,
+					&debug->hw_syncgen2);
+	}
 
 	return 0;
 }

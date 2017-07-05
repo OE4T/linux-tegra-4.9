@@ -564,21 +564,77 @@
 #define TEGRA194_CLK_PEX_REF2			227
 /** @brief NVHS UPHY reference clock input */
 #define TEGRA194_CLK_NVHS_REF			228
-/** @brief MIPI CSI controller input clock A */
+/** @brief NVCSI_CIL clock for partition A */
 #define TEGRA194_CLK_CSI_A			229
-/** @brief MIPI CSI controller input clock B */
+/** @brief NVCSI_CIL clock for partition B */
 #define TEGRA194_CLK_CSI_B			230
-/** @brief MIPI CSI controller input clock C */
+/** @brief NVCSI_CIL clock for partition C */
 #define TEGRA194_CLK_CSI_C			231
-/** @brief MIPI CSI controller input clock D */
+/** @brief NVCSI_CIL clock for partition D */
 #define TEGRA194_CLK_CSI_D			232
-/** @brief MIPI CSI controller input clock E */
+/** @brief NVCSI_CIL clock for partition E */
 #define TEGRA194_CLK_CSI_E			233
-/** @brief MIPI CSI controller input clock F */
+/** @brief NVCSI_CIL clock for partition F */
 #define TEGRA194_CLK_CSI_F			234
-/** @brief MIPI CSI controller input clock G */
+/** @brief NVCSI_CIL clock for partition G */
 #define TEGRA194_CLK_CSI_G			235
-/** @brief MIPI CSI controller input clock H */
+/** @brief NVCSI_CIL clock for partition H */
 #define TEGRA194_CLK_CSI_H			236
+/** @brief PLL controlled by CLK_RST_CONTROLLER_PLLC4_BASE */
+#define TEGRA194_CLK_PLLC4			237
+/** @brief output of gate CLK_ENB_PLLC4_OUT */
+#define TEGRA194_CLK_PLLC4_OUT			238
+/** @brief PLLC4 VCO followed by DIV3 path */
+#define TEGRA194_CLK_PLLC4_OUT1			239
+/** @brief PLLC4 VCO followed by DIV5 path */
+#define TEGRA194_CLK_PLLC4_OUT2			240
+/** @brief output of the mux controlled by PLLC4_CLK_SEL */
+#define TEGRA194_CLK_PLLC4_MUXED		241
+/** @brief PLLC4 VCO followed by DIV2 path */
+#define TEGRA194_CLK_PLLC4_VCO_DIV2		242
+/** @brief PLL controlled by CLK_RST_CONTROLLER_PLLNVHS_BASE */
+#define TEGRA194_CLK_PLLNVHS			243
+/** @brief CSI pad brick input from partition A */
+#define TEGRA194_CLK_CSI_A_PAD			244
+/** @brief CSI pad brick input from partition B */
+#define TEGRA194_CLK_CSI_B_PAD			245
+/** @brief CSI pad brick input from partition C */
+#define TEGRA194_CLK_CSI_C_PAD			246
+/** @brief CSI pad brick input from partition D */
+#define TEGRA194_CLK_CSI_D_PAD			247
+/** @brief CSI pad brick input from partition E */
+#define TEGRA194_CLK_CSI_E_PAD			248
+/** @brief CSI pad brick input from partition F */
+#define TEGRA194_CLK_CSI_F_PAD			249
+/** @brief CSI pad brick input from partition G */
+#define TEGRA194_CLK_CSI_G_PAD			250
+/** @brief CSI pad brick input from partition H */
+#define TEGRA194_CLK_CSI_H_PAD			251
+/** @brief output of the gate CLK_ENB_SLVSEC */
+#define TEGRA194_CLK_SLVSEC			252
+/** @brief output of the gate CLK_ENB_SLVSEC_PADCTRL */
+#define TEGRA194_CLK_SLVSEC_PADCTRL		253
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_SATA_USB_RX_BYP switch divider output */
+#define TEGRA194_CLK_PEX_SATA_USB_RX_BYP	254
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_USB_PAD_PLL0_MGMT switch divider output */
+#define TEGRA19_CLK_PEX_USB_PAD_PLL0_MGMT	255
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_USB_PAD_PLL1_MGMT switch divider output */
+#define TEGRA19_CLK_PEX_USB_PAD_PLL1_MGMT	256
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_USB_PAD_PLL2_MGMT switch divider output */
+#define TEGRA19_CLK_PEX_USB_PAD_PLL2_MGMT	257
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_USB_PAD_PLL3_MGMT switch divider output */
+#define TEGRA19_CLK_PEX_USB_PAD_PLL3_MGMT	258
+/** @brief CLK_RST_CONTROLLER_CLOCK_SOURCE_NVLINK_SYSCLK switch divider output */
+#define TEGRA194_CLK_NVLINK_SYS			259
+/** @brief output ofthe gate CLK_ENB_RX_NVLINK */
+#define TEGRA194_CLK_NVLINK_RX			260
+/** @brief output of the gate CLK_ENB_TX_NVLINK */
+#define TEGRA194_CLK_NVLINK_TX			261
+/** @brief output of the fixed (DIV2) divider CLK_RST_CONTROLLER_NVLINK_TX_DIV_CLK_DIVISOR */
+#define TEGRA194_CLK_NVLINK_TX_DIV		262
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_NVHS_RX_BYP switch divider output */
+#define TEGRA194_CLK_NVHS_RX_BYP_REF		263
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_NVHS_PLL0_MGMT switch divider output */
+#define TEGRA194_NVHS_PLL0_MGMT			264
 
 #endif

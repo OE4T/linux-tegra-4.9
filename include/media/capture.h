@@ -95,6 +95,7 @@ int vi_capture_request(struct tegra_channel *chan,
 		struct vi_capture_req *req);
 int vi_capture_status(struct tegra_channel *chan,
 		int32_t timeout_ms);
-
+long vi_capture_ioctl(struct file *file, void *fh,
+		bool use_prio, unsigned int cmd, void *arg);
 #endif
 

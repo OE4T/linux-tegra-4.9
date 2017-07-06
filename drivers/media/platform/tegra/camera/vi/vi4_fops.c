@@ -78,101 +78,6 @@ static void vi4_init_video_formats(struct tegra_channel *chan)
 		chan->video_formats[i] = &vi4_video_formats[i];
 }
 
-static long vi4_default_ioctl(struct file *file, void *fh,
-			bool use_prio, unsigned int cmd, void *arg)
-{
-	struct v4l2_fh *vfh = file->private_data;
-	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
-	long err = 0;
-
-	switch (_IOC_NR(cmd)) {
-#if defined(CONFIG_TEGRA_CAMERA_RTCPU)
-	case _IOC_NR(VIDIOC_CAPTURE_SETUP):
-		if (chan->bypass)
-			err = vi_capture_setup(chan,
-					(struct vi_capture_setup *)arg);
-		else {
-			dev_err(&chan->video.dev, "not in bypass mode\n");
-			err = -ENODEV;
-		}
-		if (err)
-			dev_err(&chan->video.dev, "capture setup failed\n");
-		break;
-	case _IOC_NR(VIDIOC_CAPTURE_RESET):
-		if (chan->bypass)
-			err = vi_capture_reset(chan, *(uint32_t *)arg);
-		else {
-			dev_err(&chan->video.dev, "not in bypass mode\n");
-			err = -ENODEV;
-		}
-		if (err)
-			dev_err(&chan->video.dev, "capture reset failed\n");
-		break;
-	case _IOC_NR(VIDIOC_CAPTURE_RELEASE):
-		if (chan->bypass)
-			err = vi_capture_release(chan, *(uint32_t *)arg);
-		else {
-			dev_err(&chan->video.dev, "not in bypass mode\n");
-			err = -ENODEV;
-		}
-		if (err)
-			dev_err(&chan->video.dev, "capture release failed\n");
-		break;
-	case _IOC_NR(VIDIOC_CAPTURE_GET_INFO):
-		if (chan->bypass)
-			err = vi_capture_get_info(chan,
-					(struct vi_capture_info *)arg);
-		else {
-			dev_err(&chan->video.dev, "not in bypass mode\n");
-			err = -ENODEV;
-		}
-		if (err)
-			dev_err(&chan->video.dev, "capture get info failed\n");
-		break;
-	case _IOC_NR(VIDIOC_CAPTURE_SET_CONFIG):
-		if (chan->bypass)
-			err = vi_capture_control_message(chan,
-					(struct vi_capture_control_msg *)arg);
-		else {
-			dev_err(&chan->video.dev, "not in bypass mode\n");
-			err = -ENODEV;
-		}
-		if (err)
-			dev_err(&chan->video.dev, "capture config failed\n");
-		break;
-	case _IOC_NR(VIDIOC_CAPTURE_REQUEST):
-		if (chan->bypass)
-			err = vi_capture_request(chan,
-					(struct vi_capture_req *)arg);
-		else {
-			dev_err(&chan->video.dev, "not in bypass mode\n");
-			err = -ENODEV;
-		}
-		if (err)
-			dev_err(&chan->video.dev,
-				"capture request submit failed\n");
-		break;
-	case _IOC_NR(VIDIOC_CAPTURE_STATUS):
-		if (chan->bypass)
-			err = vi_capture_status(chan, *(uint32_t *)arg);
-		else {
-			dev_err(&chan->video.dev, "not in bypass mode\n");
-			err = -ENODEV;
-		}
-		if (err)
-			dev_err(&chan->video.dev,
-				"capture get status failed\n");
-		break;
-#endif
-	default:
-		dev_err(&chan->video.dev, "%s:Unknown ioctl\n", __func__);
-		return -ENOIOCTLCMD;
-	}
-
-	return err;
-}
-
-
 static int tegra_vi4_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct tegra_channel *chan = container_of(ctrl->handler,
@@ -1167,6 +1072,6 @@ struct tegra_vi_fops vi4_fops = {
 	.vi_stop_streaming = vi4_channel_stop_streaming,
 	.vi_add_ctrls = vi4_add_ctrls,
 	.vi_init_video_formats = vi4_init_video_formats,
-	.vi_default_ioctl = vi4_default_ioctl,
+	.vi_default_ioctl = vi_capture_ioctl,
 	.vi_mfi_work = vi4_mfi_work,
 };

@@ -954,9 +954,9 @@ static struct akcipher_testvec ecdsa_tv_template[] = {
 };
 
 #ifdef CONFIG_CRYPTO_FIPS
-#define ECDH_TEST_VECTORS 1
-#else
 #define ECDH_TEST_VECTORS 2
+#else
+#define ECDH_TEST_VECTORS 3
 #endif
 struct kpp_testvec ecdh_tv_template[] = {
 	{
@@ -1043,7 +1043,45 @@ struct kpp_testvec ecdh_tv_template[] = {
 	.b_public_size = 64,
 	.expected_a_public_size = 64,
 	.expected_ss_size = 32
-	}
+	},
+	/* C25519 Curve */
+	{
+	.secret =
+#ifdef __LITTLE_ENDIAN
+	"\x02\x00" /* type */
+	"\x28\x00" /* len */
+	"\x05\x00" /* curve_id */
+	"\x20\x00" /* key_size */
+#else
+	"\x00\x02" /* type */
+	"\x00\x28" /* len */
+	"\x00\x05" /* curve_id */
+	"\x00\x20" /* key_size */
+#endif
+	"\x2a\x2c\xb9\x1d\xa5\xfb\x77\xb1"
+	"\x2a\x99\xc0\xeb\x87\x2f\x4c\xdf"
+	"\x45\x66\xb2\x51\x72\xc1\x16\x3c"
+	"\x7d\xa5\x18\x73\x0a\x6d\x07\x77",
+	.b_public =
+	"\x4f\x2b\x88\x6f\x14\x7e\xfc\xad"
+	"\x4d\x67\x78\x5b\xc8\x43\x83\x3f"
+	"\x37\x35\xe4\xec\xc2\x61\x5b\xd3"
+	"\xb4\xc1\x7d\x7b\x7d\xdb\x9e\xde",
+	.expected_a_public =
+	"\x6a\x4e\x9b\xaa\x8e\xa9\xa4\xeb"
+	"\xf4\x1a\x38\x26\x0d\x3a\xbf\x0d"
+	"\x5a\xf7\x3e\xb4\xdc\x7d\x8b\x74"
+	"\x54\xa7\x30\x89\x09\xf0\x20\x85",
+	.expected_ss =
+	"\x42\x17\x16\x1e\x3c\x9b\xf0\x76"
+	"\x33\x9e\xd1\x47\xc9\x21\x7e\xe0"
+	"\x25\x0f\x35\x80\xf4\x3b\x8e\x72"
+	"\xe1\x2d\xce\xa4\x5b\x9d\x5d\x4a",
+	.secret_size = 40,
+	.b_public_size = 32,
+	.expected_a_public_size = 32,
+	.expected_ss_size = 32
+	},
 };
 
 /*

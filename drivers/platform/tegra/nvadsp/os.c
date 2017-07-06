@@ -38,6 +38,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/tegra-firmwares.h>
 #include <linux/reset.h>
+#include <linux/poll.h>
 
 #include <asm/uaccess.h>
 
@@ -1781,6 +1782,10 @@ static irqreturn_t adsp_wdt_handler(int irq, void *arg)
 	struct device *dev = &data->pdev->dev;
 
 	drv_data = platform_get_drvdata(data->pdev);
+
+	drv_data->adsp_crashed = true;
+	wake_up_interruptible(&drv_data->adsp_health_waitq);
+
 	if (!drv_data->adsp_unit_fpga) {
 		dev_crit(dev, "ADSP OS Hanged or Crashed! Restarting...\n");
 		schedule_work(&data->restart_os_work);
@@ -1850,6 +1855,37 @@ static int adsp_create_os_version(struct dentry *adsp_debugfs_root)
 	}
 	return 0;
 }
+
+static unsigned int adsp_health_poll(struct file *file,
+			poll_table *wait)
+{
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);
+
+	poll_wait(file, &drv_data->adsp_health_waitq, wait);
+
+	if (drv_data->adsp_crashed)
+		return POLLIN | POLLRDNORM;
+
+	return 0;
+}
+
+static const struct file_operations adsp_health_fops = {
+	.poll = adsp_health_poll,
+};
+
+static int adsp_create_adsp_health(struct dentry *adsp_debugfs_root)
+{
+	struct device *dev = &priv.pdev->dev;
+	struct dentry *d;
+
+	d = debugfs_create_file("adsp_health", RO_MODE, adsp_debugfs_root,
+				NULL, &adsp_health_fops);
+	if (!d) {
+		dev_err(dev, "failed to create adsp_health\n");
+		return -EINVAL;
+	}
+	return 0;
+}
 #endif
 
 static ssize_t tegrafw_read_adsp(struct device *dev,
@@ -1911,6 +1947,12 @@ int __init nvadsp_os_probe(struct platform_device *pdev)
 
 	if (adsp_create_os_version(drv_data->adsp_debugfs_root))
 		dev_err(dev, "unable to create adsp_version file\n");
+
+	if (adsp_create_adsp_health(drv_data->adsp_debugfs_root))
+		dev_err(dev, "unable to create adsp_health file\n");
+
+	drv_data->adsp_crashed = false;
+	init_waitqueue_head(&drv_data->adsp_health_waitq);
 
 #endif /* CONFIG_DEBUG_FS */
 

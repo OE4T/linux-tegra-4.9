@@ -201,6 +201,9 @@ struct nvadsp_drv_data {
 	bool adspff_init;
 #endif
 
+	wait_queue_head_t adsp_health_waitq;
+	bool adsp_crashed;
+
 	u32 adsp_mem[ADSP_MEM_END];
 	bool adsp_unit_fpga;
 	u32 unit_fpga_reset[ADSP_UNIT_FPGA_RESET_END];

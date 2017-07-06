@@ -3860,7 +3860,11 @@ static void tegra210_adsp_wt_replace(struct device *dev, char **dest1,
 		strcpy(dest, src);
 		strcat(dest, " MUX");
 		*dest1 = dest;
-	} else {
+	} else if (strstr(*dest1, " Transmit"))
+		;/* do nothing */
+	else if (strstr(*dest1, " Receive"))
+		;/* do nothing */
+	else {
 		strcpy(dest, src);
 		*dest1 = dest;
 	}
@@ -3869,32 +3873,82 @@ static void tegra210_adsp_wt_replace(struct device *dev, char **dest1,
 static void tegra210_adsp_route_modify(struct device *dev,
 			const char *wt_default, const char *wt_from_dt)
 {
-	int i;
+	int i, len, ret;
 
 	if (!wt_default || !wt_from_dt)
 		return;
 
+	ret = device_property_read_string_array(dev, "fe-info",
+				NULL, 0);
+	len = strlen(wt_default);
 	/* Modify dapm routing table */
-	for (i = TEGRA210_ADSP_ROUTE_BASE;
+	for (i = ((ret > 0) ? 0 : TEGRA210_ADSP_ROUTE_BASE);
 		i < ARRAY_SIZE(tegra210_adsp_routes); i++) {
 		/* replace sink name */
 		if (tegra210_adsp_routes[i].sink)
-			if (strstr(tegra210_adsp_routes[i].sink, wt_default))
+			if (strstr(tegra210_adsp_routes[i].sink, wt_default) &&
+				(tegra210_adsp_routes[i].sink[len] == ' ' ||
+				tegra210_adsp_routes[i].sink[len] == 0))
 				tegra210_adsp_wt_replace(dev,
 					(char **)&tegra210_adsp_routes[i].sink,
 					wt_from_dt);
 		/* replace control name */
 		if (tegra210_adsp_routes[i].control)
-			if (strstr(tegra210_adsp_routes[i].control, wt_default))
+			if (strstr(tegra210_adsp_routes[i].control, wt_default)
+				&& (tegra210_adsp_routes[i].control[len] == ' '
+				|| tegra210_adsp_routes[i].control[len] == 0))
 				tegra210_adsp_wt_replace(dev,
 				(char **)&tegra210_adsp_routes[i].control,
 					wt_from_dt);
 		/* replace source name */
 		if (tegra210_adsp_routes[i].source)
-			if (strstr(tegra210_adsp_routes[i].source, wt_default))
+			if (strstr(tegra210_adsp_routes[i].source, wt_default)
+				&& (tegra210_adsp_routes[i].source[len] == ' '
+				|| tegra210_adsp_routes[i].source[len] == 0))
 				tegra210_adsp_wt_replace(dev,
 				(char **)&tegra210_adsp_routes[i].source,
 					wt_from_dt);
+	}
+}
+
+static void adsp_fe_name_override(struct device *dev, int count)
+{
+	int ret = 0, i;
+	const char **fe_names;
+	char *name;
+
+	fe_names = devm_kcalloc(dev, count, sizeof(*fe_names),
+				GFP_KERNEL);
+	if (!fe_names)
+		return;
+
+	ret = device_property_read_string_array(dev, "fe-info",
+			fe_names, count);
+	ret = ret > ADSP_FE_END ? ADSP_FE_END : ret;
+
+	for (i = 0 ; i < ret; i++) {
+		tegra210_adsp_route_modify(dev,
+			tegra210_adsp_mux_texts[1+i],
+			fe_names[i]);
+
+		name = devm_kzalloc(dev, strlen(fe_names[i]) + 3,
+				GFP_KERNEL);
+		strcpy((char *)name, fe_names[i]);
+		strcat((char *)name, " TX");
+		tegra210_adsp_widgets[(3*i)+1].name = name;
+
+		name = devm_kzalloc(dev, strlen(fe_names[i]) + 4,
+				GFP_KERNEL);
+		strcpy((char *)name, fe_names[i]);
+		strcat((char *)name, " MUX");
+		tegra210_adsp_widgets[(3*i)+2].name = name;
+
+		name = devm_kzalloc(dev, strlen(fe_names[i]) + 3,
+				GFP_KERNEL);
+		strcpy((char *)name, fe_names[i]);
+		strcat((char *)name, " RX");
+		tegra210_adsp_widgets[(3*i)].name = name;
+		tegra210_adsp_mux_texts[1+i] = fe_names[i];
 	}
 }
 
@@ -4767,7 +4821,6 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	uint32_t adma_ch_start = TEGRA210_ADSP_ADMA_CHANNEL_START_HV;
 	uint32_t adma_ch_cnt = TEGRA210_ADSP_ADMA_CHANNEL_COUNT;
 	char plugin_info[20];
-	const char **fe_names;
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	char switch_info[20];
 	uint32_t adsp_switch_count;
@@ -4835,6 +4888,11 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		adsp->apps[i].min_adsp_clock = 0;
 		adsp->apps[i].input_mode = NVFX_APM_INPUT_MODE_PUSH;
 	}
+
+	ret = device_property_read_string_array(&pdev->dev, "fe-info",
+				NULL, 0);
+	if (ret > 0)
+		adsp_fe_name_override(&pdev->dev, ret);
 
 	/* get the plugin count */
 	if (of_property_read_u32(pdev->dev.of_node,
@@ -4926,6 +4984,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		}
 	}
 
+
 	/* copy basic apps needed */
 	memcpy(&adsp_app_desc[adsp_app_count],
 			&adsp_app_minimal[0], sizeof(adsp_app_minimal));
@@ -4998,21 +5057,6 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		goto err_unregister_platform;
 	}
 
-	ret = device_property_read_string_array(&pdev->dev, "fe-info",
-				NULL, 0);
-	if (ret > 0) {
-		fe_names = kcalloc(ret, sizeof(*fe_names), GFP_KERNEL);
-		if (!fe_names)
-			goto exit;
-		ret = device_property_read_string_array(&pdev->dev, "fe-info",
-				fe_names, ret);
-		ret = ret > ADSP_FE_END ? ADSP_FE_END : ret;
-		for (i = 0 ; i < ret; i++)
-			strcpy((char *)tegra210_adsp_mux_texts[1+i],
-			fe_names[i]);
-		kfree(fe_names);
-	}
-exit:
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	spin_lock_init(&adsp->switch_lock);
 	/* get switch count */

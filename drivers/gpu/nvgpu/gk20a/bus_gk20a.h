@@ -20,11 +20,11 @@
 
 struct gk20a;
 struct gpu_ops;
-
-void gk20a_init_bus(struct gpu_ops *gops);
+struct nvgpu_mem;
 
 void gk20a_bus_isr(struct gk20a *g);
 int gk20a_read_ptimer(struct gk20a *g, u64 *value);
 void gk20a_bus_init_hw(struct gk20a *g);
+int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst);
 
 #endif /* GK20A_H */

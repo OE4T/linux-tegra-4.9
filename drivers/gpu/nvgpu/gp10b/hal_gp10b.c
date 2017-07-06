@@ -50,6 +50,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/bus.h>
 
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
@@ -245,6 +246,13 @@ static const struct gpu_ops gp10b_ops = {
 		.need_scatter_buffer = gp10b_need_scatter_buffer,
 		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
 	},
+	.bus = {
+		.init_hw = gk20a_bus_init_hw,
+		.isr = gk20a_bus_isr,
+		.read_ptimer = gk20a_read_ptimer,
+		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
+		.bar1_bind = gk20a_bus_bar1_bind,
+	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {
 		.enable_snapshot = css_hw_enable_snapshot,
@@ -274,6 +282,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->debug = gp10b_ops.debug;
 	gops->dbg_session_ops = gp10b_ops.dbg_session_ops;
 	gops->cde = gp10b_ops.cde;
+	gops->bus = gp10b_ops.bus;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gops->css = gp10b_ops.css;
 #endif
@@ -321,8 +330,8 @@ int gp10b_init_hal(struct gk20a *g)
 		}
 	}
 #endif
+
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
-	gk20a_init_bus(gops);
 	gp10b_init_priv_ring(gops);
 	gp10b_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);

@@ -129,7 +129,7 @@ int gk20a_read_ptimer(struct gk20a *g, u64 *value)
 	return -EBUSY;
 }
 
-static int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
+int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 {
 	u64 iova = gk20a_mm_inst_block_addr(g, bar1_inst);
 	u32 ptr_v = (u32)(iova >> bar1_instance_block_shift_gk20a());

@@ -36,11 +36,13 @@
 #include "regops_gm20b.h"
 #include "cde_gm20b.h"
 #include "therm_gm20b.h"
+#include "bus_gm20b.h"
 #include "hal_gm20b.h"
 
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/bus.h>
 
 #include <nvgpu/hw/gm20b/hw_proj_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
@@ -234,6 +236,13 @@ static const struct gpu_ops gm20b_ops = {
 	.cde = {
 		.get_program_numbers = gm20b_cde_get_program_numbers,
 	},
+	.bus = {
+		.init_hw = gk20a_bus_init_hw,
+		.isr = gk20a_bus_isr,
+		.read_ptimer = gk20a_read_ptimer,
+		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
+		.bar1_bind = gm20b_bus_bar1_bind,
+	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {
 		.enable_snapshot = css_hw_enable_snapshot,
@@ -263,6 +272,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->dbg_session_ops = gm20b_ops.dbg_session_ops;
 	gops->debug = gm20b_ops.debug;
 	gops->cde = gm20b_ops.cde;
+	gops->bus = gm20b_ops.bus;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gops->css = gm20b_ops.css;
 #endif
@@ -302,8 +312,8 @@ int gm20b_init_hal(struct gk20a *g)
 		}
 	}
 #endif
+
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
-	gk20a_init_bus(gops);
 	gk20a_init_priv_ring(gops);
 	gm20b_init_gr(gops);
 	gm20b_init_fb(gops);

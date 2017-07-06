@@ -59,6 +59,7 @@
 
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/bus.h>
 
 #include <nvgpu/hw/gp106/hw_proj_gp106.h>
 
@@ -278,6 +279,13 @@ static const struct gpu_ops gp106_ops = {
 		.need_scatter_buffer = gp10b_need_scatter_buffer,
 		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
 	},
+	.bus = {
+		.init_hw = gk20a_bus_init_hw,
+		.isr = gk20a_bus_isr,
+		.read_ptimer = gk20a_read_ptimer,
+		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
+		.bar1_bind = gk20a_bus_bar1_bind,
+	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {
 		.enable_snapshot = css_hw_enable_snapshot,
@@ -324,6 +332,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->debug = gp106_ops.debug;
 	gops->dbg_session_ops = gp106_ops.dbg_session_ops;
 	gops->cde = gp106_ops.cde;
+	gops->bus = gp106_ops.bus;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gops->css = gp106_ops.css;
 #endif
@@ -339,8 +348,8 @@ int gp106_init_hal(struct gk20a *g)
 	gops->privsecurity = 1;
 	gops->securegpccs = 1;
 	gops->pmupstate = true;
+
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
-	gk20a_init_bus(gops);
 	gp10b_init_priv_ring(gops);
 	gp106_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);

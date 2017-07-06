@@ -16,8 +16,9 @@
 #ifndef _NVGPU_GM20B_BUS
 #define _NVGPU_GM20B_BUS
 
-struct gpu_ops;
+struct gk20a;
+struct nvgpu_mem;
 
-void gm20b_init_bus(struct gpu_ops *gops);
+int gm20b_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst);
 
 #endif

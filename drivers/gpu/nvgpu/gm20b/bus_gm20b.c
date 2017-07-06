@@ -22,7 +22,7 @@
 
 #include <nvgpu/hw/gm20b/hw_bus_gm20b.h>
 
-static int gm20b_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
+int gm20b_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 {
 	struct nvgpu_timeout timeout;
 	int err = 0;
@@ -52,13 +52,4 @@ static int gm20b_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 		err = -EINVAL;
 
 	return err;
-}
-
-void gm20b_init_bus(struct gpu_ops *gops)
-{
-	gops->bus.init_hw = gk20a_bus_init_hw;
-	gops->bus.isr = gk20a_bus_isr;
-	gops->bus.read_ptimer = gk20a_read_ptimer;
-	gops->bus.get_timestamps_zipper = nvgpu_get_timestamps_zipper;
-	gops->bus.bar1_bind = gm20b_bus_bar1_bind;
 }

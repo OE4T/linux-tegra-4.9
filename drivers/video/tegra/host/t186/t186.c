@@ -427,6 +427,8 @@ struct nvhost_device_data t18_vic_info = {
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_VIC},
 	.class			= NV_GRAPHICS_VIC_CLASS_ID,
 	.finalize_poweron	= nvhost_flcn_t186_finalize_poweron,
+	.prepare_poweroff	= nvhost_flcn_prepare_poweroff,
+	.flcn_isr		= nvhost_flcn_common_isr,
 	.init_class_context	= nvhost_vic_init_context,
 	.firmware_name		= "vic04_ucode.bin",
 	.serialize		= 1,
@@ -447,6 +449,7 @@ struct nvhost_device_data t18_vic_info = {
 					400000000, 500000000, 600000000},
 	.isolate_contexts	= true,
 	.mlock_timeout_factor	= 3,
+	.module_irq		= 1,
 };
 #endif
 

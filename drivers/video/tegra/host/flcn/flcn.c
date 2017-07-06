@@ -423,20 +423,20 @@ int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 	}
 
 	/* setup falcon interrupts and enable interface */
-	if (!pdata->flcn_isr) {
+	if (!pdata->self_config_flcn_isr) {
 		host1x_writel(pdev, flcn_irqmset_r(),
-			     (flcn_irqmset_ext_f(0xff)    |
-					   flcn_irqmset_swgen1_set_f() |
-					   flcn_irqmset_swgen0_set_f() |
-					   flcn_irqmset_exterr_set_f() |
-					   flcn_irqmset_halt_set_f()   |
-					   flcn_irqmset_wdtmr_set_f()));
+			      (flcn_irqmset_ext_f(0xff)    |
+			       flcn_irqmset_swgen1_set_f() |
+			       flcn_irqmset_swgen0_set_f() |
+			       flcn_irqmset_exterr_set_f() |
+			       flcn_irqmset_halt_set_f()   |
+			       flcn_irqmset_wdtmr_set_f()));
 		host1x_writel(pdev, flcn_irqdest_r(),
-			     (flcn_irqdest_host_ext_f(0xff) |
-					   flcn_irqdest_host_swgen1_host_f() |
-					   flcn_irqdest_host_swgen0_host_f() |
-					   flcn_irqdest_host_exterr_host_f() |
-					   flcn_irqdest_host_halt_host_f()));
+			      (flcn_irqdest_host_ext_f(0xff)     |
+			       flcn_irqdest_host_swgen1_host_f() |
+			       flcn_irqdest_host_swgen0_host_f() |
+			       flcn_irqdest_host_exterr_host_f() |
+			       flcn_irqdest_host_halt_host_f()));
 	}
 
 	host1x_writel(pdev, flcn_itfen_r(),
@@ -458,6 +458,25 @@ int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 		dev_err(&pdev->dev, "boot failed due to timeout");
 		return err;
 	}
+
+	return 0;
+}
+
+int nvhost_flcn_common_isr(struct platform_device *pdev)
+{
+	u32 irqstat, mailbox0, mailbox1;
+
+	irqstat = host1x_readl(pdev, flcn_irqstat_r());
+	mailbox0 = host1x_readl(pdev, flcn_mailbox0_r());
+	mailbox1 = host1x_readl(pdev, flcn_mailbox1_r());
+
+	dev_err(&pdev->dev, "irqstat: %08x, mailbox0: %08x, mailbox1: %08x",
+		irqstat, mailbox0, mailbox1);
+
+	/* logic to clear the interrupt */
+	host1x_writel(pdev, flcn_thi_int_stat_r(), flcn_thi_int_stat_clr_f());
+	host1x_readl(pdev, flcn_thi_int_stat_r());
+	host1x_writel(pdev, flcn_irqsclr_r(), flcn_irqsclr_swgen0_set_f());
 
 	return 0;
 }

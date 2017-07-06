@@ -1,7 +1,7 @@
 /*
  * Tegra flcn common Module Support
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -102,6 +102,7 @@ int nvhost_flcn_finalize_poweron(struct platform_device *);
 int nvhost_vic_finalize_poweron(struct platform_device *);
 int nvhost_vic_init_context(struct platform_device *, struct nvhost_cdma *);
 int nvhost_flcn_prepare_poweroff(struct platform_device *);
+int nvhost_flcn_common_isr(struct platform_device *);
 
 int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 				     int clk_index,

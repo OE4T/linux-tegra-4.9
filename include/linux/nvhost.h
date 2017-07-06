@@ -164,6 +164,7 @@ struct nvhost_device_data {
 	int irq;
 	int module_irq;	/* IRQ bit from general intr reg for module intr */
 	spinlock_t mirq_lock;	/* spin lock for module irq */
+	bool self_config_flcn_isr; /* skip setting up falcon interrupts */
 
 	/* Should we toggle the engine SLCG when we turn on the domain? */
 	bool		poweron_toggle_slcg;

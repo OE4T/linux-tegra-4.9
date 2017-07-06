@@ -94,6 +94,10 @@ static inline u32 flcn_irqsclr_swgen1_set_f(void)
 {
 	return 0x80;
 }
+static inline u32 flcn_irqstat_r(void)
+{
+	return 0x00001008;
+}
 static inline u32 flcn_irqmset_r(void)
 {
 	return 0x00001010;

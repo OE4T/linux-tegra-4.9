@@ -34,8 +34,8 @@
 		interrupts = <TEGRA_GPIO(H, 2) 0x14>;
 		wlan-pwr-gpio = <&gpio TEGRA_GPIO(H, 0) 0>;
 		wlan-rst-gpio = <&gpio TEGRA_GPIO(H, 1) 0>;
-		fw_path = "/system/vendor/firmware/bcm4354/fw_bcmdhd.bin";
-		nv_path = "/system/etc/nvram_4354.txt";
+		fw_path = "/vendor/firmware/bcm4354/fw_bcmdhd.bin";
+		nv_path = "/vendor/firmware/nvram_4354.txt";
 		status = "okay";
 	};
 };

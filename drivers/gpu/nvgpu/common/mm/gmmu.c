@@ -753,6 +753,10 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		.aperture  = aperture
 	};
 
+#ifdef CONFIG_TEGRA_19x_GPU
+	nvgpu_gmmu_add_t19x_attrs(&attrs, flags);
+#endif
+
 	/*
 	 * Only allocate a new GPU VA range if we haven't already been passed a
 	 * GPU VA range. This facilitates fixed mappings.

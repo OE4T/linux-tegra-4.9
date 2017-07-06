@@ -23,6 +23,10 @@
 #include <nvgpu/rbtree.h>
 #include <nvgpu/lock.h>
 
+#ifdef CONFIG_TEGRA_19x_GPU
+#include <nvgpu/gmmu_t19x.h>
+#endif
+
 struct scatterlist;
 
 /*
@@ -171,6 +175,10 @@ struct nvgpu_gmmu_attrs {
 	bool			 valid;
 	enum nvgpu_aperture	 aperture;
 	bool			 debug;
+
+#ifdef CONFIG_TEGRA_19x_GPU
+	struct nvgpu_gmmu_attrs_t19x t19x_attrs;
+#endif
 };
 
 struct gk20a_mmu_level {

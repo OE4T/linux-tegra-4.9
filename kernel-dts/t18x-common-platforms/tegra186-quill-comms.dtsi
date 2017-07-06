@@ -59,8 +59,8 @@
 		interrupt-parent = <&tegra_aon_gpio>;
 		interrupts = <TEGRA_AON_GPIO(FF, 3) 0x14>;
 		wlan-pwr-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(N, 0) 0>;
-		fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";
-		nv_path = "/system/etc/nvram_4359_b1.txt";
+		fw_path = "/vendor/firmware/fw_bcmdhd.bin";
+		nv_path = "/vendor/firmware/nvram_4359_b1.txt";
 		status = "disabled";
 	};
 
@@ -69,8 +69,8 @@
 		interrupt-parent = <&tegra_aon_gpio>;
 		interrupts = <TEGRA_AON_GPIO(FF, 3) 0x14>;
 		wlan-pwr-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(N, 0) 0>;
-		fw_path = "/system/vendor/firmware/fw_bcmdhd_4354.bin";
-		nv_path = "/system/etc/nvram_quill_4354.txt";
+		fw_path = "/vendor/firmware/fw_bcmdhd_4354.bin";
+		nv_path = "/vendor/firmware/nvram_quill_4354.txt";
 		sdhci-host = <&sdmmc3>;
 		pwr-retry-cnt = <5>;
 		status = "okay";

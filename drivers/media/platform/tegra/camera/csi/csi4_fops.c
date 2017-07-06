@@ -493,16 +493,10 @@ static int csi4_mipi_cal(struct tegra_csi_channel *chan)
 
 		if (chan->numlanes <= 2) {
 			lanes |= CSIA << port;
-			cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
-				(0x01 << E_INPUT_LP_IO1_SHIFT) |
-				(0x01 << E_INPUT_LP_CLK_SHIFT) |
-				(0x00 << PD_CLK_SHIFT) |
-				(0x00 << PD_IO0_SHIFT) |
-				(0x00 << PD_IO1_SHIFT);
 			addr = (port % 2 == 0 ?
-				NVCSI_CIL_A_BASE : NVCSI_CIL_B_BASE)
-				+ PAD_CONFIG_0;
-			csi4_phy_write(chan, port >> 1, addr, cila);
+				NVCSI_CIL_A_SW_RESET : NVCSI_CIL_B_SW_RESET);
+			csi4_phy_write(chan, port >> 1, addr,
+				SW_RESET1_EN | SW_RESET0_EN);
 		} else {
 			lanes |= (CSIA | CSIB) << port;
 			cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
@@ -520,6 +514,10 @@ static int csi4_mipi_cal(struct tegra_csi_channel *chan)
 				NVCSI_CIL_A_BASE + PAD_CONFIG_0, cila);
 			csi4_phy_write(chan, port >> 1,
 				NVCSI_CIL_B_BASE + PAD_CONFIG_0, cilb);
+			csi4_phy_write(chan, port >> 1, NVCSI_CIL_A_SW_RESET,
+				SW_RESET1_EN | SW_RESET0_EN);
+			csi4_phy_write(chan, port >> 1, NVCSI_CIL_B_SW_RESET,
+				SW_RESET1_EN | SW_RESET0_EN);
 		}
 		num_ports++;
 	}

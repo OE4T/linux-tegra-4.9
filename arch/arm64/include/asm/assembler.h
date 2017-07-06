@@ -370,6 +370,35 @@ alternative_endif
 	.endm
 
 /*
+ * Macro to perform a data cache maintenance for the interval
+ * [kaddr, kaddr + size) without dsb
+ *
+ * 	op:		operation passed to dc instruction
+ * 	kaddr:		starting virtual address of the region
+ * 	size:		size of the region
+ * 	Corrupts:	kaddr, size, tmp1, tmp2
+ */
+	.macro dcache_by_line_op_no_dsb op, kaddr, size, tmp1, tmp2
+	dcache_line_size \tmp1, \tmp2
+	add	\size, \kaddr, \size
+	sub	\tmp2, \tmp1, #1
+	bic	\kaddr, \kaddr, \tmp2
+9998:
+	.if	(\op == cvau || \op == cvac)
+alternative_if_not ARM64_WORKAROUND_CLEAN_CACHE
+	dc	\op, \kaddr
+alternative_else
+	dc	civac, \kaddr
+alternative_endif
+	.else
+	dc	\op, \kaddr
+	.endif
+	add	\kaddr, \kaddr, \tmp1
+	cmp	\kaddr, \size
+	b.lo	9998b
+	.endm
+
+/*
  * reset_pmuserenr_el0 - reset PMUSERENR_EL0 if PMUv3 present
  */
 	.macro	reset_pmuserenr_el0, tmpreg

@@ -333,6 +333,40 @@ ENDPIPROC(__inval_cache_range)
 ENDPROC(__dma_inv_area)
 
 /*
+ *      __dma_inv_area_no_dsb(start, size)
+ *      - start   - virtual start address of region
+ *      - size    - size in question
+ */
+__dma_inv_area_no_dsb:
+        add     x1, x1, x0
+        /* FALLTHROUGH */
+
+/*
+ *      __inval_cache_range(start, end)
+ *      - start   - start address of region
+ *      - end     - end address of region
+ */
+ENTRY(__inval_cache_range_no_dsb)
+        dcache_line_size x2, x3
+        sub     x3, x2, #1
+        tst     x1, x3                          // end cache line aligned?
+        bic     x1, x1, x3
+        b.eq    1f
+        dc      civac, x1                       // clean & invalidate D / U line
+1:      tst     x0, x3                          // start cache line aligned?
+        bic     x0, x0, x3
+        b.eq    2f
+        dc      civac, x0                       // clean & invalidate D / U line
+        b       3f
+2:      dc      ivac, x0                        // invalidate D / U line
+3:      add     x0, x0, x2
+        cmp     x0, x1
+        b.lo    2b
+        ret
+ENDPIPROC(__inval_cache_range_no_dsb)
+ENDPROC(__dma_inv_area_no_dsb)
+
+/*
  *	__clean_dcache_area_poc(kaddr, size)
  *
  * 	Ensure that any D-cache lines for the interval [kaddr, kaddr+size)
@@ -356,6 +390,30 @@ ENDPIPROC(__clean_dcache_area_poc)
 ENDPROC(__dma_clean_area)
 
 /*
+ *      __clean_dcache_area_poc_no_dsb(kaddr, size)
+ *
+ *      Ensure that any D-cache lines for the interval [kaddr, kaddr+size)
+ *      are cleaned to the PoC.
+ *
+ *      - kaddr   - kernel address
+ *      - size    - size in question
+ */
+ENTRY(__clean_dcache_area_poc_no_dsb)
+        /* FALLTHROUGH */
+
+/*
+ *      __dma_clean_area_no_dsb(start, size)
+ *      - start   - virtual start address of region
+ *      - size    - size in question
+ */
+__dma_clean_area_no_dsb:
+        dcache_by_line_op_no_dsb cvac, x0, x1, x2, x3
+        ret
+ENDPIPROC(__clean_dcache_area_poc_no_dsb)
+ENDPROC(__dma_clean_area_no_dsb)
+
+
+/*
  *	__dma_flush_area(start, size)
  *
  *	clean & invalidate D / U line
@@ -369,6 +427,18 @@ ENTRY(__dma_flush_area)
 ENDPIPROC(__dma_flush_area)
 
 /*
+ *	__dma_map_area_no_dsb(start, size, dir)
+ *	- start	- kernel virtual start address
+ *	- size	- size of region
+ *	- dir	- DMA direction
+ */
+ENTRY(__dma_map_area_no_dsb)
+	cmp	w2, #DMA_FROM_DEVICE
+	b.eq	__dma_inv_area_no_dsb
+	b	__dma_clean_area_no_dsb
+ENDPIPROC(__dma_map_area_no_dsb)
+
+/*
  *	__dma_map_area(start, size, dir)
  *	- start	- kernel virtual start address
  *	- size	- size of region
@@ -379,6 +449,18 @@ ENTRY(__dma_map_area)
 	b.eq	__dma_inv_area
 	b	__dma_clean_area
 ENDPIPROC(__dma_map_area)
+
+/*
+ *	__dma_unmap_area_no_dsb(start, size, dir)
+ *	- start	- kernel virtual start address
+ *	- size	- size of region
+ *	- dir	- DMA direction
+ */
+ENTRY(__dma_unmap_area_no_dsb)
+	cmp	w2, #DMA_TO_DEVICE
+	b.ne	__dma_inv_area_no_dsb
+	ret
+ENDPIPROC(__dma_unmap_area_no_dsb)
 
 /*
  *	__dma_unmap_area(start, size, dir)

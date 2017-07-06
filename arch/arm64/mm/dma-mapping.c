@@ -432,8 +432,9 @@ static int __swiotlb_map_sg_attrs(struct device *dev, struct scatterlist *sgl,
 
 	ret = swiotlb_map_sg_attrs(dev, sgl, nelems, dir, attrs);
 	for_each_sg(sgl, sg, ret, i)
-		__dma_map_area(phys_to_virt(dma_to_phys(dev, sg->dma_address)),
+		__dma_map_area_no_dsb(phys_to_virt(dma_to_phys(dev, sg->dma_address)),
 			       sg->length, dir);
+	dsb(sy);
 
 	return ret;
 }
@@ -447,9 +448,10 @@ static void __swiotlb_unmap_sg_attrs(struct device *dev,
 	int i;
 
 	for_each_sg(sgl, sg, nelems, i)
-		__dma_unmap_area(
+		__dma_unmap_area_no_dsb(
 				phys_to_virt(dma_to_phys(dev, sg->dma_address)),
 				sg->length, dir);
+	dsb(sy);
 	swiotlb_unmap_sg_attrs(dev, sgl, nelems, dir, attrs);
 }
 
@@ -477,9 +479,10 @@ static void __swiotlb_sync_sg_for_cpu(struct device *dev,
 	int i;
 
 	for_each_sg(sgl, sg, nelems, i)
-		__dma_unmap_area(
+		__dma_unmap_area_no_dsb(
 				phys_to_virt(dma_to_phys(dev, sg->dma_address)),
 				sg->length, dir);
+	dsb(sy);
 	swiotlb_sync_sg_for_cpu(dev, sgl, nelems, dir);
 }
 
@@ -492,8 +495,9 @@ static void __swiotlb_sync_sg_for_device(struct device *dev,
 
 	swiotlb_sync_sg_for_device(dev, sgl, nelems, dir);
 	for_each_sg(sgl, sg, nelems, i)
-		__dma_map_area(phys_to_virt(dma_to_phys(dev, sg->dma_address)),
+		__dma_map_area_no_dsb(phys_to_virt(dma_to_phys(dev, sg->dma_address)),
 			       sg->length, dir);
+	dsb(sy);
 }
 
 /* vma->vm_page_prot must be set appropriately before calling this function */
@@ -1012,7 +1016,8 @@ static void __iommu_sync_sg_for_cpu(struct device *dev,
 		return;
 
 	for_each_sg(sgl, sg, nelems, i)
-		__dma_unmap_area(sg_virt(sg), sg->length, dir);
+		__dma_unmap_area_no_dsb(sg_virt(sg), sg->length, dir);
+	dsb(sy);
 }
 
 static void __iommu_sync_sg_for_device(struct device *dev,
@@ -1026,7 +1031,8 @@ static void __iommu_sync_sg_for_device(struct device *dev,
 		return;
 
 	for_each_sg(sgl, sg, nelems, i)
-		__dma_map_area(sg_virt(sg), sg->length, dir);
+		__dma_map_area_no_dsb(sg_virt(sg), sg->length, dir);
+	dsb(sy);
 }
 
 static int __iommu_map_sg_attrs(struct device *dev, struct scatterlist *sgl,
@@ -1317,6 +1323,10 @@ void arch_teardown_dma_ops(struct device *dev)
 static void __dma_page_cpu_to_dev(struct page *, unsigned long,
 		size_t, enum dma_data_direction);
 static void __dma_page_dev_to_cpu(struct page *, unsigned long,
+		size_t, enum dma_data_direction);
+static void __dma_page_cpu_to_dev_no_dsb(struct page *, unsigned long,
+		size_t, enum dma_data_direction);
+static void __dma_page_dev_to_cpu_no_dsb(struct page *, unsigned long,
 		size_t, enum dma_data_direction);
 
 __weak void dma_qualify_ioprot(enum dma_data_direction dir,
@@ -1965,10 +1975,28 @@ static void __dma_page_cpu_to_dev(struct page *page, unsigned long off,
 	dma_cache_maint_page(page, off, size, dir, __dma_map_area);
 }
 
+static void __dma_page_cpu_to_dev_no_dsb(struct page *page, unsigned long off,
+	size_t size, enum dma_data_direction dir)
+{
+	dma_cache_maint_page(page, off, size, dir, __dma_map_area_no_dsb);
+}
+
 static void __dma_page_dev_to_cpu(struct page *page, unsigned long off,
 	size_t size, enum dma_data_direction dir)
 {
 	dma_cache_maint_page(page, off, size, dir, __dma_unmap_area);
+
+	/*
+	 * Mark the D-cache clean for this page to avoid extra flushing.
+	 */
+	if (dir != DMA_TO_DEVICE && off == 0 && size >= PAGE_SIZE)
+		set_bit(PG_dcache_clean, &page->flags);
+}
+
+static void __dma_page_dev_to_cpu_no_dsb(struct page *page, unsigned long off,
+	size_t size, enum dma_data_direction dir)
+{
+	dma_cache_maint_page(page, off, size, dir, __dma_unmap_area_no_dsb);
 
 	/*
 	 * Mark the D-cache clean for this page to avoid extra flushing.

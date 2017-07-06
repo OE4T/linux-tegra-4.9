@@ -97,7 +97,9 @@ static inline void flush_cache_range(struct vm_area_struct *vma,
  * Cache maintenance functions used by the DMA API. No to be used directly.
  */
 extern void __dma_map_area(const void *, size_t, int);
+extern void __dma_map_area_no_dsb(const void *, size_t, int);
 extern void __dma_unmap_area(const void *, size_t, int);
+extern void __dma_unmap_area_no_dsb(const void *, size_t, int);
 extern void __dma_flush_area(const void *, size_t);
 
 /*

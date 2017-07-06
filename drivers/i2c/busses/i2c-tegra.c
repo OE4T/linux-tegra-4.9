@@ -1992,15 +1992,19 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	if (i2c_dev->is_suspended)
 		return -EBUSY;
 
+	if ((i2c_dev->is_shutdown || adap->atomic_xfer_only)
+			&& i2c_dev->bit_banging_xfer_after_shutdown)
+		return tegra_i2c_gpio_xfer(adap, msgs, num);
+
+	if (adap->atomic_xfer_only)
+		return -EBUSY;
+
 	ret = pm_runtime_get_sync(i2c_dev->dev);
 	if (ret < 0) {
 		dev_err(i2c_dev->dev, "runtime resume failed %d\n", ret);
 		return ret;
 	}
 	tegra_i2c_flush_fifos(i2c_dev);
-
-	if (i2c_dev->is_shutdown && i2c_dev->bit_banging_xfer_after_shutdown)
-		return tegra_i2c_gpio_xfer(adap, msgs, num);
 
 	if (adap->bus_clk_rate != i2c_dev->bus_clk_rate) {
 		i2c_dev->bus_clk_rate = adap->bus_clk_rate;

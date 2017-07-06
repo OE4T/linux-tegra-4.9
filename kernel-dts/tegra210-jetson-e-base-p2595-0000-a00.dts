@@ -908,8 +908,8 @@
 	};
 
 	bcmdhd_wlan {
-		fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";
-		nv_path = "/system/etc/nvram_jetsonE_cv_4354.txt";
+		fw_path = "/vendor/firmware/fw_bcmdhd.bin";
+		nv_path = "/vendor/firmware/nvram_jetsonE_cv_4354.txt";
 		country_code_map {
 			CC1 {
 				iso_abbrev = "XR";

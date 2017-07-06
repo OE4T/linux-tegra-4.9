@@ -269,6 +269,54 @@ static int gk20a_flcn_copy_to_dmem(struct nvgpu_falcon *flcn,
 	return 0;
 }
 
+static int gk20a_flcn_copy_from_imem(struct nvgpu_falcon *flcn, u32 src,
+	u8 *dst, u32 size, u8 port)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+	u32 *dst_u32 = (u32 *)dst;
+	u32 words = 0;
+	u32 bytes = 0;
+	u32 data = 0;
+	u32 blk = 0;
+	u32 i = 0;
+
+	nvgpu_log_info(g, "download %d bytes from 0x%x", size, src);
+
+	if (flcn_mem_overflow_check(flcn, src, size, MEM_IMEM)) {
+		nvgpu_err(g, "incorrect parameters");
+		return -EINVAL;
+	}
+
+	nvgpu_mutex_acquire(&flcn->copy_lock);
+
+	words = size >> 2;
+	bytes = size & 0x3;
+	blk = src >> 8;
+
+	nvgpu_log_info(g, "download %d words from 0x%x block %d",
+			words, src, blk);
+
+	gk20a_writel(g, base_addr + falcon_falcon_imemc_r(port),
+		falcon_falcon_imemc_offs_f(src >> 2) |
+		falcon_falcon_imemc_blk_f(blk) |
+		falcon_falcon_dmemc_aincr_f(1));
+
+	for (i = 0; i < words; i++)
+		dst_u32[i] = gk20a_readl(g,
+			base_addr + falcon_falcon_imemd_r(port));
+
+	if (bytes > 0) {
+		data = gk20a_readl(g, base_addr + falcon_falcon_imemd_r(port));
+		for (i = 0; i < bytes; i++)
+			dst[(words << 2) + i] = ((u8 *)&data)[i];
+	}
+
+	nvgpu_mutex_release(&flcn->copy_lock);
+
+	return 0;
+}
+
 static int gk20a_flcn_copy_to_imem(struct nvgpu_falcon *flcn, u32 dst,
 		u8 *src, u32 size, u8 port, bool sec, u32 tag)
 {
@@ -551,6 +599,7 @@ void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_ops->copy_from_dmem = gk20a_flcn_copy_from_dmem;
 	flcn_ops->copy_to_dmem = gk20a_flcn_copy_to_dmem;
 	flcn_ops->copy_to_imem = gk20a_flcn_copy_to_imem;
+	flcn_ops->copy_from_imem = gk20a_flcn_copy_from_imem;
 	flcn_ops->bootstrap = gk20a_falcon_bootstrap;
 	flcn_ops->dump_falcon_stats = gk20a_falcon_dump_stats;
 

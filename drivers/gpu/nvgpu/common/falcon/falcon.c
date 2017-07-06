@@ -180,6 +180,21 @@ int nvgpu_flcn_copy_to_dmem(struct nvgpu_falcon *flcn,
 	return flcn_ops->copy_to_dmem(flcn, dst, src, size, port);
 }
 
+int nvgpu_flcn_copy_from_imem(struct nvgpu_falcon *flcn,
+	u32 src, u8 *dst, u32 size, u8 port)
+{
+	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
+	int status = -EINVAL;
+
+	if (flcn_ops->copy_from_imem)
+		status = flcn_ops->copy_from_imem(flcn, src, dst, size, port);
+	else
+		nvgpu_warn(flcn->g, "Invalid op on falcon 0x%x ",
+			flcn->flcn_id);
+
+	return status;
+}
+
 int nvgpu_flcn_copy_to_imem(struct nvgpu_falcon *flcn,
 	u32 dst, u8 *src, u32 size, u8 port, bool sec, u32 tag)
 {
@@ -194,6 +209,58 @@ int nvgpu_flcn_copy_to_imem(struct nvgpu_falcon *flcn,
 			flcn->flcn_id);
 
 	return status;
+}
+
+static void nvgpu_flcn_print_mem(struct nvgpu_falcon *flcn, u32 src,
+	u32 size, u32 mem_type)
+{
+	u32 buff[64] = {0};
+	u32 total_block_read = 0;
+	u32 byte_read_count = 0;
+	u32 i = 0;
+	u32 status = 0;
+
+	nvgpu_info(flcn->g, " offset 0x%x  size %d bytes", src, size);
+
+	total_block_read = size >> 8;
+	do {
+		byte_read_count = total_block_read ? sizeof(buff) : size;
+
+		if (!byte_read_count)
+			break;
+
+		if (mem_type == MEM_DMEM)
+			status = nvgpu_flcn_copy_from_dmem(flcn, src,
+				(u8 *)buff, byte_read_count, 0);
+		else
+			status = nvgpu_flcn_copy_from_imem(flcn, src,
+				(u8 *)buff, byte_read_count, 0);
+
+		if (status) {
+			nvgpu_err(flcn->g, "MEM print failed");
+			break;
+		}
+
+		for (i = 0; i < (byte_read_count >> 2); i += 4)
+			nvgpu_info(flcn->g, "%#06x: %#010x %#010x %#010x %#010x",
+			src + (i << 2), buff[i], buff[i+1],
+			buff[i+2], buff[i+3]);
+
+		src += byte_read_count;
+		size -= byte_read_count;
+	} while (total_block_read--);
+}
+
+void nvgpu_flcn_print_dmem(struct nvgpu_falcon *flcn, u32 src, u32 size)
+{
+	nvgpu_info(flcn->g, " PRINT DMEM ");
+	nvgpu_flcn_print_mem(flcn, src, size, MEM_DMEM);
+}
+
+void nvgpu_flcn_print_imem(struct nvgpu_falcon *flcn, u32 src, u32 size)
+{
+	nvgpu_info(flcn->g, " PRINT IMEM ");
+	nvgpu_flcn_print_mem(flcn, src, size, MEM_IMEM);
 }
 
 int nvgpu_flcn_bootstrap(struct nvgpu_falcon *flcn, u32 boot_vector)

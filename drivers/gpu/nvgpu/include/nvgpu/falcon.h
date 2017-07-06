@@ -189,6 +189,8 @@ u32 nvgpu_flcn_mailbox_read(struct nvgpu_falcon *flcn, u32 mailbox_index);
 void nvgpu_flcn_mailbox_write(struct nvgpu_falcon *flcn, u32 mailbox_index,
 	u32 data);
 int nvgpu_flcn_bootstrap(struct nvgpu_falcon *flcn, u32 boot_vector);
+void nvgpu_flcn_print_dmem(struct nvgpu_falcon *flcn, u32 src, u32 size);
+void nvgpu_flcn_print_imem(struct nvgpu_falcon *flcn, u32 src, u32 size);
 void nvgpu_flcn_dump_stats(struct nvgpu_falcon *flcn);
 
 void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id);

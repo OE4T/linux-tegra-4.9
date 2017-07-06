@@ -1664,33 +1664,41 @@ void gv11b_fifo_deinit_eng_method_buffers(struct gk20a *g,
 int gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 			u32 syncpt_id, struct nvgpu_mem *syncpt_buf)
 {
-	struct page **pages;
 	u32 nr_pages;
-	u32 i;
 	int err = 0;
 	struct gk20a *g = c->g;
+	struct vm_gk20a *vm = c->vm;
 
 	/*
-	 * Add rw mapping for entire syncpt shim for current channel vm
-	 * TODO : This needs to replaced with a new mecahnism where
-	 * only current syncpoint range will be rw and other sync
-	 * points range is read only for current channel vm. Also share
-	 * these mapping accross channels if they share same vm
-	*/
-	nr_pages = DIV_ROUND_UP(g->syncpt_unit_size, PAGE_SIZE);
-	pages = nvgpu_kzalloc(g,  sizeof(struct page *) * nr_pages);
-	for (i = 0; i < nr_pages; i++)
-		pages[i] = phys_to_page(g->syncpt_unit_base +
-				PAGE_SIZE * i);
-	__nvgpu_mem_create_from_pages(g, syncpt_buf, pages, nr_pages);
-	nvgpu_kfree(g, pages);
+	 * Add ro map for complete sync point shim range in vm
+	 * All channels sharing same vm will share same ro mapping.
+	 * Create rw map for current channel sync point
+	 */
+	if (!vm->syncpt_ro_map_gpu_va) {
+		vm->syncpt_ro_map_gpu_va = nvgpu_gmmu_map(c->vm,
+				&g->syncpt_mem, g->syncpt_unit_size,
+				0, gk20a_mem_flag_read_only,
+				false, APERTURE_SYSMEM);
+
+		if (!vm->syncpt_ro_map_gpu_va) {
+			nvgpu_err(g, "failed to ro map syncpt buffer");
+			nvgpu_dma_free(g, &g->syncpt_mem);
+			err = -ENOMEM;
+		}
+	}
+
+	nr_pages = DIV_ROUND_UP(g->syncpt_size, PAGE_SIZE);
+	__nvgpu_mem_create_from_phys(g, syncpt_buf,
+		(g->syncpt_unit_base +
+		nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(syncpt_id)),
+		nr_pages);
 	syncpt_buf->gpu_va = nvgpu_gmmu_map(c->vm, syncpt_buf,
-			g->syncpt_unit_size, 0, gk20a_mem_flag_none,
+			g->syncpt_size, 0, gk20a_mem_flag_none,
 			false, APERTURE_SYSMEM);
 
 	if (!syncpt_buf->gpu_va) {
-		nvgpu_err(c->g, "failed to map syncpt buffer");
-		nvgpu_dma_free(c->g, syncpt_buf);
+		nvgpu_err(g, "failed to map syncpt buffer");
+		nvgpu_dma_free(g, syncpt_buf);
 		err = -ENOMEM;
 	}
 	return err;
@@ -1740,11 +1748,9 @@ u32 gv11b_fifo_get_syncpt_wait_cmd_size(void)
 
 void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 		bool wfi_cmd, struct priv_cmd_entry *cmd,
-		u32 id, u64 gpu_va_base)
+		u32 id, u64 gpu_va)
 {
 	u32 off = cmd->off;
-	u64 gpu_va = gpu_va_base +
-		nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(id);
 
 	gk20a_dbg_fn("");
 

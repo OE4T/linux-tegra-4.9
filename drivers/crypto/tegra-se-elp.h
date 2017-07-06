@@ -24,6 +24,7 @@
 #define ECC_CURVE_NIST_P224		0x0000
 #define ECC_CURVE_NIST_P384		0x0003
 #define ECC_CURVE_NIST_P521		0x0004
+#define C25519_CURVE_C256		0x0005
 #define ECC_CURVE_BRAINPOOL_P256	0x0006
 
 /* Security Engine operation modes */
@@ -262,6 +263,34 @@ static struct tegra_se_ecc_curve bpcurve_p256 = {
 	.p = bp_p256_p,
 	.n = bp_p256_n,
 	.a = bp_p256_a,
+	.nbytes = 32,
+	.mode = SE_ELP_OP_MODE_ECC256,
+};
+
+static u32 c256_x[] = { 0x00000009ull, 0x00000000ull, 0x00000000ull,
+			0x00000000ull, 0x00000000ull, 0x00000000ull,
+			0x00000000ull, 0x00000000ull };
+
+static u32 c256_p[] = { 0xFFFFFFEDull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+			0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+			0xFFFFFFFFull, 0x7FFFFFFFull };
+
+static u32 c256_k[] = { 0x0001DB42ull, 0x00000000ull, 0x00000000ull,
+			0x00000000ull, 0x00000000ull, 0x00000000ull,
+			0x00000000ull, 0x00000000ull };
+
+static u32 c256_n[] = { 0x5CF5D3EDull, 0x5812631Aull, 0xA2F79CD6ull,
+			0x14DEF9DEull, 0x00000000ull, 0x00000000ull,
+			0x00000000ull, 0x10000000ull };
+
+static struct tegra_se_ecc_curve curve_c256 = {
+	.name = "C25519",
+	.g = {
+		.x = c256_x,
+	},
+	.p = c256_p,
+	.n = c256_n,
+	.a = c256_k,
 	.nbytes = 32,
 	.mode = SE_ELP_OP_MODE_ECC256,
 };
@@ -549,6 +578,7 @@ static struct tegra_se_ecc_curve bpcurve_p256 = {
 #define ECC_POINT_MUL_PRG_ENTRY_VAL		0x19
 #define ECC_POINT_DOUBLE_PRG_ENTRY_VAL		0x1A
 #define ECC_SHAMIR_TRICK_PRG_ENTRY_VAL		0x23
+#define TEGRA_SE_PKA1_C25519_PMUL_PRG_ENTRY_VAL		0x2E
 
 #define ECC_WEIERSTRASS_ECPV_PRG_ENTRY_VAL               0x27
 #define ECC_WEIERSTRASS_POINT_ADD_PRG_ENTRY_VAL          0x26
@@ -600,6 +630,13 @@ static struct tegra_se_ecc_curve bpcurve_p256 = {
 #define TEGRA_SE_PKA1_ECC_YQ_ID		3
 #define TEGRA_SE_PKA1_ECC_K_BANK	BANK_D
 #define TEGRA_SE_PKA1_ECC_K_ID		7
+#define TEGRA_SE_PKA1_C25519_K_BANK	BANK_D
+#define TEGRA_SE_PKA1_C25519_K_ID	2
+
+#define PKA1_C25519_FORMAT_KEY_MASK0_2	0xfffffff8
+#define PKA1_C25519_FORMAT_KEY_MASK254	0x40000000
+#define PKA1_C25519_FORMAT_KEY_MASK255	0x7fffffff
+
 
 #define TEGRA_SE_PKA1_ENTRY_MODMULT	0xa
 #define TEGRA_SE_PKA1_ENTRY_MODADD	0xb

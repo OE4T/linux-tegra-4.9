@@ -256,13 +256,12 @@ static int tegra_t186ref_m3420_disable_i2s_master(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-static int tegra_t186ref_m3420_i2s_config(struct snd_soc_card *card,
-					  struct tegra_t186ref_m3420 *machine)
+static int tegra_t186ref_m3420_i2s_index(struct snd_soc_card *card,
+					 unsigned int id)
 {
-	unsigned int idx, dai_fmt;
 	const char *name;
 
-	switch (machine->i2s_master_id) {
+	switch (id) {
 	case 0:
 		name = "i2s-playback-1";
 		break;
@@ -280,14 +279,55 @@ static int tegra_t186ref_m3420_i2s_config(struct snd_soc_card *card,
 		return -EINVAL;
 	}
 
-	idx = tegra_machine_get_codec_dai_link_idx_t18x(name);
-	machine->i2s_master = card->rtd[idx].cpu_dai;
+	return tegra_machine_get_codec_dai_link_idx_t18x(name);
+}
+
+static int tegra_t186ref_m3420_i2s_fmt(struct snd_soc_card *card,
+				       unsigned int idx, bool is_master)
+{
+	unsigned int dai_fmt;
 
 	dai_fmt = card->rtd[idx].dai_link->dai_fmt;
 	dai_fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
-	dai_fmt |= SND_SOC_DAIFMT_CBM_CFM;
+	dai_fmt |= is_master ? SND_SOC_DAIFMT_CBM_CFM : SND_SOC_DAIFMT_CBS_CFS;
 
 	return snd_soc_dai_set_fmt(card->rtd[idx].cpu_dai, dai_fmt);
+}
+
+static int tegra_t186ref_m3420_i2s_config(struct snd_soc_card *card,
+					  struct tegra_t186ref_m3420 *machine,
+					  unsigned i2s_master_id)
+{
+	int err, old_master, new_master;
+
+	if (machine->i2s_master && machine->i2s_master_id == i2s_master_id)
+		return 0;
+
+	if (machine->i2s_master) {
+		old_master = tegra_t186ref_m3420_i2s_index(card,
+						machine->i2s_master_id);
+		if (old_master < 0)
+			return old_master;
+
+		err = tegra_t186ref_m3420_i2s_fmt(card, old_master, false);
+		if (err)
+			return err;
+	}
+
+	new_master = tegra_t186ref_m3420_i2s_index(card, i2s_master_id);
+	if (new_master < 0)
+		return new_master;
+
+	err = tegra_t186ref_m3420_i2s_fmt(card, new_master, true);
+	if (err) {
+		tegra_t186ref_m3420_i2s_fmt(card, old_master, true);
+		return err;
+	}
+
+	machine->i2s_master_id = i2s_master_id;
+	machine->i2s_master = card->rtd[new_master].cpu_dai;
+
+	return 0;
 }
 
 static int tegra_t186ref_m3420_i2s_master_get(struct snd_kcontrol *kcontrol,
@@ -306,10 +346,11 @@ static int tegra_t186ref_m3420_i2s_master_put(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
+	unsigned int i2s_master_id;
 
-	machine->i2s_master_id = ucontrol->value.integer.value[0];
+	i2s_master_id = ucontrol->value.integer.value[0];
 
-	return tegra_t186ref_m3420_i2s_config(card, machine);
+	return tegra_t186ref_m3420_i2s_config(card, machine, i2s_master_id);
 }
 
 static struct snd_soc_ops tegra_t186ref_m3420_i2s1_ops = {
@@ -569,7 +610,8 @@ static int tegra_t186ref_m3420_driver_probe(struct platform_device *pdev)
 		goto err_remove_dai_link;
 	}
 
-	return tegra_t186ref_m3420_i2s_config(card, machine);
+	return tegra_t186ref_m3420_i2s_config(card, machine,
+					      machine->i2s_master_id);
 
 err_remove_dai_link:
 	tegra_machine_remove_dai_link();

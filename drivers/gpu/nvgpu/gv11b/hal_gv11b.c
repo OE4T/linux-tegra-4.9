@@ -35,7 +35,6 @@
 #include "gp10b/priv_ring_gp10b.h"
 
 #include "hal_gv11b.h"
-#include "bus_gv11b.h"
 #include "gr_gv11b.h"
 #include "mc_gv11b.h"
 #include "ltc_gv11b.h"
@@ -235,6 +234,12 @@ static const struct gpu_ops gv11b_ops = {
 		.perfbuffer_enable = gk20a_perfbuf_enable_locked,
 		.perfbuffer_disable = gk20a_perfbuf_disable_locked,
 	},
+	.bus = {
+		.init_hw = gk20a_bus_init_hw,
+		.isr = gk20a_bus_isr,
+		.read_ptimer = gk20a_read_ptimer,
+		.bar1_bind = NULL,
+	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {
 		.enable_snapshot = css_hw_enable_snapshot,
@@ -262,6 +267,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->mc = gv11b_ops.mc;
 	gops->debug = gv11b_ops.debug;
 	gops->dbg_session_ops = gv11b_ops.dbg_session_ops;
+	gops->bus = gv11b_ops.bus;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gops->css = gv11b_ops.css;
 #endif
@@ -276,7 +282,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->privsecurity = 0;
 	gops->securegpccs = 0;
 
-	gv11b_init_bus(gops);
 	gp10b_init_priv_ring(gops);
 	gv11b_init_gr(gops);
 	gv11b_init_fecs_trace_ops(gops);

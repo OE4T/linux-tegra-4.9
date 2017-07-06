@@ -153,7 +153,7 @@ static int gm206_bios_preos(struct gk20a *g)
 	nvgpu_flcn_bootstrap(g->pmu.flcn, g->bios.preos.code_entry_point);
 
 	if (nvgpu_flcn_wait_for_halt(g->pmu.flcn,
-		PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT)) {
+		PMU_BOOT_TIMEOUT_MAX / 1000)) {
 		err = -ETIMEDOUT;
 		goto out;
 	}

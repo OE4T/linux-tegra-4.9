@@ -80,6 +80,7 @@ enum tegra_se_pka1_ecc_type {
 	ECC_POINT_DOUBLE,
 	ECC_POINT_VER,
 	ECC_SHAMIR_TRICK,
+	C25519_POINT_MUL,
 	ECC_INVALID,
 };
 
@@ -262,6 +263,8 @@ static const struct tegra_se_ecc_curve *tegra_se_ecc_get_curve(
 		return &curve_p521;
 	case ECC_CURVE_BRAINPOOL_P256:
 		return &bpcurve_p256;
+	case C25519_CURVE_C256:
+		return &curve_c256;
 	default:
 		return NULL;
 	}
@@ -317,7 +320,8 @@ static bool tegra_se_ecdh_params_is_valid(struct ecdh *params)
 		return false;
 
 	/* Make sure the private key is in the range [1, n-1]. */
-	if (!tegra_se_ecc_vec_cmp((u8 *)order, (u8 *)private_key, nbytes))
+	if ((params->curve_id != C25519_CURVE_C256) &&
+	    (!tegra_se_ecc_vec_cmp((u8 *)order, (u8 *)private_key, nbytes)))
 		return false;
 
 	return true;
@@ -551,18 +555,23 @@ static void tegra_se_pka1_ecc_fill_input(struct tegra_se_pka1_ecc_request *req)
 	struct tegra_se_elp_dev *se_dev = req->se_dev;
 	u32 i;
 	int len = 0;
+	int a_bank = TEGRA_SE_PKA1_ECC_A_BANK;
+	int a_id = TEGRA_SE_PKA1_ECC_A_ID;
 	int nwords = req->size / 4;
 	int nwords_521 = pka1_op_size[SE_ELP_OP_MODE_ECC521] / 32;
 	u32 *MOD, *A, *B, *PX, *PY, *K, *QX, *QY;
 
-	if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
+	if ((req->op_mode == SE_ELP_OP_MODE_ECC521) ||
+	    (req->type == C25519_POINT_MUL)) {
 		MOD = req->modulus;
 		for (i = 0; i < nwords; i++)
 			se_elp_writel(se_dev, PKA1, *MOD++, reg_bank_offset(
 				      TEGRA_SE_PKA1_MOD_BANK,
 				      TEGRA_SE_PKA1_MOD_ID,
 				      req->op_mode) + (i * 4));
+	}
 
+	if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
 		for (i = nwords; i < nwords_521; i++)
 			se_elp_writel(se_dev, PKA1, 0x0, reg_bank_offset(
 				      TEGRA_SE_PKA1_MOD_BANK,
@@ -571,48 +580,56 @@ static void tegra_se_pka1_ecc_fill_input(struct tegra_se_pka1_ecc_request *req)
 	}
 
 	A = req->curve_param_a;
+	if (req->type == C25519_POINT_MUL) {
+		a_bank = TEGRA_SE_PKA1_C25519_K_BANK;
+		a_id = TEGRA_SE_PKA1_C25519_K_ID;
+	}
 
 	for (i = 0; i < nwords; i++)
 		se_elp_writel(se_dev, PKA1, *A++, reg_bank_offset(
-			      TEGRA_SE_PKA1_ECC_A_BANK,
-			      TEGRA_SE_PKA1_ECC_A_ID,
+			      a_bank, a_id,
 			      req->op_mode) + (i * 4));
 
 	if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
 		for (i = nwords; i < nwords_521; i++)
 			se_elp_writel(se_dev, PKA1, 0x0, reg_bank_offset(
-				      TEGRA_SE_PKA1_ECC_A_BANK,
-				      TEGRA_SE_PKA1_ECC_A_ID,
+				      a_bank, a_id,
 				      req->op_mode) + (i * 4));
 	}
 
 	if (req->type != ECC_POINT_DOUBLE) {
 		PX = req->base_pt_x;
-		PY = req->base_pt_y;
-		for (i = 0; i < nwords; i++) {
+		for (i = 0; i < nwords; i++)
 			se_elp_writel(se_dev, PKA1, *PX++, reg_bank_offset(
 				      TEGRA_SE_PKA1_ECC_XP_BANK,
 				      TEGRA_SE_PKA1_ECC_XP_ID,
 				      req->op_mode) + (i * 4));
 
-			se_elp_writel(se_dev, PKA1, *PY++, reg_bank_offset(
-				      TEGRA_SE_PKA1_ECC_YP_BANK,
-				      TEGRA_SE_PKA1_ECC_YP_ID,
-				      req->op_mode) + (i * 4));
-		}
 		if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
-			for (i = nwords; i < nwords_521; i++) {
+			for (i = nwords; i < nwords_521; i++)
 				se_elp_writel(se_dev, PKA1, 0x0,
 					      reg_bank_offset(
 					      TEGRA_SE_PKA1_ECC_XP_BANK,
 					      TEGRA_SE_PKA1_ECC_XP_ID,
 					      req->op_mode) + (i * 4));
+		}
+	}
+
+	if (req->type != ECC_POINT_DOUBLE && req->type != C25519_POINT_MUL) {
+		PY = req->base_pt_y;
+		for (i = 0; i < nwords; i++)
+			se_elp_writel(se_dev, PKA1, *PY++, reg_bank_offset(
+				      TEGRA_SE_PKA1_ECC_YP_BANK,
+				      TEGRA_SE_PKA1_ECC_YP_ID,
+				      req->op_mode) + (i * 4));
+
+		if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
+			for (i = nwords; i < nwords_521; i++)
 				se_elp_writel(se_dev, PKA1, 0x0,
 					      reg_bank_offset(
 					      TEGRA_SE_PKA1_ECC_YP_BANK,
 					      TEGRA_SE_PKA1_ECC_YP_ID,
 					      req->op_mode) + (i * 4));
-			}
 		}
 	}
 
@@ -676,17 +693,27 @@ static void tegra_se_pka1_ecc_fill_input(struct tegra_se_pka1_ecc_request *req)
 	}
 
 	if ((req->type == ECC_POINT_MUL && !se_dev->chipdata->use_key_slot) ||
+	    (req->type == C25519_POINT_MUL &&
+	     !se_dev->chipdata->use_key_slot) ||
 	    req->type == ECC_SHAMIR_TRICK) {
 		/* For shamir trick, key is parameter l
 		 * and k for ECC_POINT_MUL and l for ECC_SHAMIR_TRICK
 		 * should be of size CTRL_BASE_RADIX
 		 */
 		K = req->key;
-		for (i = 0; i < nwords; i++)
+		for (i = 0; i < nwords; i++) {
+			if (i == 0 && (req->type == C25519_POINT_MUL))
+				*K = *K & PKA1_C25519_FORMAT_KEY_MASK0_2;
+			if ((i == (nwords - 1)) &&
+			    (req->type == C25519_POINT_MUL))
+				*K = (*K & PKA1_C25519_FORMAT_KEY_MASK255) |
+					PKA1_C25519_FORMAT_KEY_MASK254;
+
 			se_elp_writel(se_dev, PKA1, *K++, reg_bank_offset(
 				      TEGRA_SE_PKA1_ECC_K_BANK,
 				      TEGRA_SE_PKA1_ECC_K_ID,
 				      req->op_mode) + (i * 4));
+		}
 
 		for (i = nwords; i < num_words(req->op_mode); i++)
 			se_elp_writel(se_dev, PKA1, 0x0, reg_bank_offset(
@@ -857,6 +884,8 @@ static u32 tegra_se_get_ecc_prg_entry(u32 type, u32 mode, bool weierstrass)
 		else
 			return ECC_ECPV_PRG_ENTRY_VAL;
 		break;
+	case C25519_POINT_MUL:
+		return TEGRA_SE_PKA1_C25519_PMUL_PRG_ENTRY_VAL;
 	case ECC_SHAMIR_TRICK:
 		if ((mode == SE_ELP_OP_MODE_ECC521) && weierstrass)
 			return ECC_WEIERSTRASS_SHAMIR_TRICK_PRG_ENTRY_VAL;
@@ -882,7 +911,8 @@ static void tegra_se_program_pka1_ecc(struct tegra_se_pka1_ecc_request *req)
 
 	se_elp_writel(se_dev, PKA1, prg_entry, TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
 
-	if (req->type == ECC_POINT_MUL)
+	if (req->type == ECC_POINT_MUL ||
+		req->type == C25519_POINT_MUL)
 		/*clear F0 for binding val*/
 		se_elp_writel(se_dev, PKA1,
 			      TEGRA_SE_PKA1_FLAGS_FLAG_F0(ELP_DISABLE),
@@ -951,7 +981,8 @@ static void tegra_se_read_pka1_ecc_result(struct tegra_se_pka1_ecc_request *req)
 			req->pv_ok = true;
 		else
 			req->pv_ok = false;
-	} else if (req->type == ECC_POINT_DOUBLE) {
+	} else if (req->type == ECC_POINT_DOUBLE ||
+		   req->type == C25519_POINT_MUL) {
 		for (i = 0; i < req->size / 4; i++) {
 			*QX = se_elp_readl(se_dev, PKA1, reg_bank_offset(
 					   TEGRA_SE_PKA1_ECC_XP_BANK,
@@ -959,12 +990,16 @@ static void tegra_se_read_pka1_ecc_result(struct tegra_se_pka1_ecc_request *req)
 					   req->op_mode) + (i * 4));
 			QX++;
 		}
-		for (i = 0; i < req->size / 4; i++) {
-			*QY = se_elp_readl(se_dev, PKA1, reg_bank_offset(
-					   TEGRA_SE_PKA1_ECC_YP_BANK,
-					   TEGRA_SE_PKA1_ECC_YP_ID,
-					   req->op_mode) + (i * 4));
-			QY++;
+
+		if (req->type != C25519_POINT_MUL) {
+			for (i = 0; i < req->size / 4; i++) {
+				*QY = se_elp_readl(
+					se_dev, PKA1, reg_bank_offset(
+					TEGRA_SE_PKA1_ECC_YP_BANK,
+					TEGRA_SE_PKA1_ECC_YP_ID,
+					req->op_mode) + (i * 4));
+				QY++;
+			}
 		}
 	} else {
 		for (i = 0; i < req->size / 4; i++) {
@@ -1012,6 +1047,12 @@ static void tegra_se_pka1_set_key_param(u32 *param, u32 key_words, u32 slot_num,
 	int nwords_521 = pka1_op_size[SE_ELP_OP_MODE_ECC521] / 32;
 
 	for (i = 0; i < key_words; i++) {
+		if (op == KEY && type == C25519_POINT_MUL && i == 0)
+			*param = *param & PKA1_C25519_FORMAT_KEY_MASK0_2;
+		if (op == KEY && type == C25519_POINT_MUL &&
+		    (i == (key_words - 1)))
+			*param = (*param & PKA1_C25519_FORMAT_KEY_MASK255) |
+					PKA1_C25519_FORMAT_KEY_MASK254;
 		se_elp_writel(se_dev, PKA1,
 			      TEGRA_SE_PKA1_KEYSLOT_ADDR_FIELD(op) |
 			      TEGRA_SE_PKA1_KEYSLOT_ADDR_WORD(i),
@@ -1083,19 +1124,21 @@ static void tegra_se_set_pka1_ecc_key(struct tegra_se_pka1_ecc_request *req)
 		tegra_se_pka1_set_key_param(B, key_words, slot_num, PARAM_B,
 					    req->op_mode, req->type);
 
-	if (req->type != ECC_POINT_DOUBLE) {
+	if (req->type != ECC_POINT_DOUBLE)
 		tegra_se_pka1_set_key_param(PX, key_words, slot_num, XP,
 					    req->op_mode, req->type);
+
+	if (req->type != ECC_POINT_DOUBLE && req->type != C25519_POINT_MUL)
 		tegra_se_pka1_set_key_param(PY, key_words, slot_num, YP,
 					    req->op_mode, req->type);
-	}
 
-	if (req->type == ECC_POINT_MUL ||
-	    req->type == ECC_SHAMIR_TRICK)
+	if (req->type == ECC_POINT_MUL || req->type == ECC_SHAMIR_TRICK ||
+	    req->type == C25519_POINT_MUL)
 		tegra_se_pka1_set_key_param(K, key_words, slot_num, KEY,
 					    req->op_mode, req->type);
 
-	if (req->op_mode != SE_ELP_OP_MODE_ECC521) {
+	if (req->op_mode != SE_ELP_OP_MODE_ECC521 &&
+	    req->type != C25519_POINT_MUL) {
 		tegra_se_pka1_set_key_param(M, key_words, slot_num, M_ECC,
 					    req->op_mode, req->type);
 		tegra_se_pka1_set_key_param(R2, key_words, slot_num, R2_ECC,
@@ -1117,7 +1160,7 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 				 struct tegra_se_pka1_mod_request *mod_req,
 				 u32 op)
 {
-	int ret, i, op_mode;
+	int ret, i, op_mode, type = 0;
 	u16 nwords;
 	u32 *MOD, *M, *R2;
 	struct tegra_se_elp_dev *se_dev;
@@ -1135,6 +1178,7 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 		R2 = ecc_req->r2;
 		nwords = ecc_req->size / WORD_SIZE_BYTES;
 		op_mode = ecc_req->op_mode;
+		type = ecc_req->type;
 		se_dev = ecc_req->se_dev;
 	} else {
 		MOD = mod_req->modulus;
@@ -1142,10 +1186,11 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 		R2 = mod_req->r2;
 		nwords = mod_req->size / WORD_SIZE_BYTES;
 		op_mode = mod_req->op_mode;
+		type = mod_req->type;
 		se_dev = mod_req->se_dev;
 	}
 
-	if (op_mode == SE_ELP_OP_MODE_ECC521)
+	if ((op_mode == SE_ELP_OP_MODE_ECC521) || (type == C25519_POINT_MUL))
 		return 0;
 
 	tegra_se_set_pka1_op_ready(se_dev);
@@ -1971,6 +2016,29 @@ static int tegra_se_mod_reduce(int op_mode, u32 *result, u32 *input,
 	return ret;
 }
 
+static int tegra_se_c25519_point_mult(struct tegra_se_ecc_point *result,
+				      const struct tegra_se_ecc_point *point,
+				      const u32 *private,
+				      const struct tegra_se_ecc_curve *curve,
+				      int nbytes){
+	struct tegra_se_pka1_ecc_request ecc_req;
+	int ret;
+
+	ecc_req.op_mode = curve->mode;
+	ecc_req.size = nbytes;
+	ecc_req.type = C25519_POINT_MUL;
+	/* Param_A is used as scalar K for c25519 */
+	ecc_req.curve_param_a = curve->a;
+	ecc_req.modulus = curve->p;
+	ecc_req.base_pt_x = point->x;
+	ecc_req.res_pt_x = result->x;
+	ecc_req.key = (u32 *)private;
+
+	ret = tegra_se_pka1_ecc_op(&ecc_req);
+
+	return ret;
+}
+
 static int tegra_se_ecc_point_mult(struct tegra_se_ecc_point *result,
 				   const struct tegra_se_ecc_point *point,
 				   const u32 *private,
@@ -2078,14 +2146,17 @@ static int tegra_se_ecdh_compute_shared_secret(struct tegra_se_elp_dev *se_dev,
 	tegra_se_ecc_swap(&public_key[nwords], pk->y, nwords);
 	tegra_se_ecc_swap(private_key, priv, nwords);
 
-	ret = tegra_se_ecc_point_mult(product, pk, priv, curve, nbytes);
+	if (cid == C25519_CURVE_C256)
+		ret = tegra_se_c25519_point_mult(product, pk,
+						 priv, curve, nbytes);
+	else
+		ret = tegra_se_ecc_point_mult(product, pk, priv, curve, nbytes);
 	if (ret)
 		goto err_pt_mult;
 
 	tegra_se_ecc_swap(product->x, secret, nwords);
 
-	if (tegra_se_ecc_vec_is_zero(product->x, nbytes) ||
-	    tegra_se_ecc_vec_is_zero(product->y, nbytes))
+	if (tegra_se_ecc_vec_is_zero(product->x, nbytes))
 		ret = -ENODATA;
 err_pt_mult:
 	tegra_se_ecc_free_point(se_dev, product);
@@ -2115,16 +2186,24 @@ static int tegra_se_ecdh_gen_pub_key(struct tegra_se_elp_dev *se_dev,
 	if (!G)
 		return -ENOMEM;
 
-	ret = tegra_se_ecc_point_mult(G, &curve->g, priv, curve, nbytes);
+	if (cid == C25519_CURVE_C256)
+		ret = tegra_se_c25519_point_mult(G, &curve->g,
+						 priv, curve, nbytes);
+	else
+		ret = tegra_se_ecc_point_mult(G, &curve->g, priv,
+					      curve, nbytes);
 	if (ret)
 		goto err_pt_mult;
 
 	if (tegra_se_ecc_vec_is_zero(G->x, nbytes) ||
-	    tegra_se_ecc_vec_is_zero(G->y, nbytes))
+	    ((cid != C25519_CURVE_C256) &&
+	     (tegra_se_ecc_vec_is_zero(G->y, nbytes))))
 		ret = -ENODATA;
 
 	tegra_se_ecc_swap(G->x, public_key, nwords);
-	tegra_se_ecc_swap(G->y, &public_key[nwords], nwords);
+
+	if (cid != C25519_CURVE_C256)
+		tegra_se_ecc_swap(G->y, &public_key[nwords], nwords);
 
 err_pt_mult:
 	tegra_se_ecc_free_point(se_dev, G);
@@ -2135,9 +2214,10 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 {
 	struct crypto_kpp *tfm;
 	struct tegra_se_ecdh_context *ctx;
-	int nbytes, ret, cnt;
+	int sec_nbytes, pub_nbytes, ret, cnt;
 	void *buffer;
 	const struct tegra_se_ecc_curve *curve;
+	int nwords = 0;
 
 	if (!req)
 		return -EINVAL;
@@ -2156,12 +2236,18 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 	if (!curve)
 		return -ENOTSUPP;
 
-	nbytes = curve->nbytes;
+	sec_nbytes = curve->nbytes;
+	nwords = sec_nbytes / WORD_SIZE_BYTES;
+
+	if (ctx->curve_id == C25519_CURVE_C256)
+		pub_nbytes = sec_nbytes;
+	else
+		pub_nbytes = 2 * sec_nbytes;
 
 	if (req->src) {
 		cnt = sg_copy_to_buffer(req->src, 1, ctx->public_key,
-					2 * nbytes);
-		if (cnt != 2 * nbytes)
+					pub_nbytes);
+		if (cnt != pub_nbytes)
 			return -ENODATA;
 
 		ret = tegra_se_ecdh_compute_shared_secret(ctx->se_dev,
@@ -2174,8 +2260,8 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 
 		buffer = ctx->shared_secret;
 
-		cnt = sg_copy_from_buffer(req->dst, 1, buffer, nbytes);
-		if (cnt != nbytes)
+		cnt = sg_copy_from_buffer(req->dst, 1, buffer, sec_nbytes);
+		if (cnt != sec_nbytes)
 			return -ENODATA;
 	} else {
 		ret = tegra_se_ecdh_gen_pub_key(ctx->se_dev, ctx->curve_id,
@@ -2186,8 +2272,8 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 
 		buffer = ctx->public_key;
 
-		cnt = sg_copy_from_buffer(req->dst, 1, buffer, 2 * nbytes);
-		if (cnt != 2 * nbytes)
+		cnt = sg_copy_from_buffer(req->dst, 1, buffer, pub_nbytes);
+		if (cnt != pub_nbytes)
 			return -ENODATA;
 	}
 

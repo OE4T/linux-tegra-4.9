@@ -1262,7 +1262,10 @@ EXPORT_SYMBOL_GPL(i2c_shutdown_adapter);
 
 void i2c_shutdown_clear_adapter(struct i2c_adapter *adapter)
 {
+	i2c_lock_adapter(adapter);
 	adapter->cancel_xfer_on_shutdown = false;
+	adapter->atomic_xfer_only = true;
+	i2c_unlock_adapter(adapter);
 }
 EXPORT_SYMBOL_GPL(i2c_shutdown_clear_adapter);
 

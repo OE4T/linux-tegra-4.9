@@ -303,7 +303,7 @@ static void gm20b_tegra_postscale(struct device *dev, unsigned long freq)
 	struct gk20a_emc_params *emc_params;
 	unsigned long emc_rate;
 
-	if (!profile)
+	if (!profile || !profile->private_data)
 		return;
 
 	emc_params = profile->private_data;

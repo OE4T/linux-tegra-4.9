@@ -154,6 +154,9 @@ int gk20a_finalize_poweron(struct gk20a *g)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
 	int err;
+#if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
+	u32 nr_pages;
+#endif
 
 	gk20a_dbg_fn("");
 
@@ -345,6 +348,14 @@ int gk20a_finalize_poweron(struct gk20a *g)
 			goto done;
 		}
 	}
+
+#if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
+	if (gk20a_platform_has_syncpoints(g) && g->syncpt_unit_size) {
+		nr_pages = DIV_ROUND_UP(g->syncpt_unit_size, PAGE_SIZE);
+		__nvgpu_mem_create_from_phys(g, &g->syncpt_mem,
+				g->syncpt_unit_base, nr_pages);
+	}
+#endif
 
 done:
 	if (err)

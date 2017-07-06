@@ -25,6 +25,7 @@
 #include <linux/reset.h>
 #include <linux/platform/tegra/common.h>
 
+#include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/soc.h>
@@ -1026,8 +1027,15 @@ int nvgpu_remove(struct device *dev, struct class *class)
 	struct gk20a *g = get_gk20a(dev);
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	int err;
 
 	gk20a_dbg_fn("");
+
+	err = nvgpu_quiesce(g);
+	WARN(err, "gpu failed to idle during driver removal");
+
+	if (nvgpu_mem_is_valid(&g->syncpt_mem))
+		nvgpu_dma_free(g, &g->syncpt_mem);
 
 	if (platform->has_cde)
 		gk20a_cde_destroy(l);
@@ -1061,7 +1069,7 @@ int nvgpu_remove(struct device *dev, struct class *class)
 
 	gk20a_dbg_fn("removed");
 
-	return 0;
+	return err;
 }
 
 static int __exit gk20a_remove(struct platform_device *pdev)

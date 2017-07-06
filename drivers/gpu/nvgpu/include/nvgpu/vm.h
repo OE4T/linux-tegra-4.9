@@ -175,6 +175,12 @@ struct vm_gk20a {
 	 * Each address space needs to have a semaphore pool.
 	 */
 	struct nvgpu_semaphore_pool *sema_pool;
+
+	/*
+	 * Create sync point read only map for sync point range.
+	 * Channels sharing same vm will also share same sync point ro map
+	 */
+	u64 syncpt_ro_map_gpu_va;
 };
 
 void nvgpu_vm_get(struct vm_gk20a *vm);

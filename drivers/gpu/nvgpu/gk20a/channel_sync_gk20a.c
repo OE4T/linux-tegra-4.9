@@ -76,9 +76,9 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 	}
 
 	nvgpu_log(c->g, gpu_dbg_info, "sp->id %d gpu va %llx",
-					id, sp->syncpt_buf.gpu_va);
+					id, sp->c->vm->syncpt_ro_map_gpu_va);
 	c->g->ops.fifo.add_syncpt_wait_cmd(c->g, wait_cmd, 0, id,
-						thresh, sp->syncpt_buf.gpu_va);
+					thresh, c->vm->syncpt_ro_map_gpu_va);
 
 	return 0;
 }
@@ -147,7 +147,7 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 					wait_id, sp->syncpt_buf.gpu_va);
 			c->g->ops.fifo.add_syncpt_wait_cmd(c->g, wait_cmd,
 				i * wait_cmd_size, wait_id, wait_value,
-				sp->syncpt_buf.gpu_va);
+				c->vm->syncpt_ro_map_gpu_va);
 		}
 	}
 

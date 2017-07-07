@@ -106,6 +106,10 @@
 #define XUSB_HOST_CLKGATE_HYSTERESIS_0		0x1bc
 #define XUSB_HOST_MCCIF_FIFOCTRL_0		0x1dc
 
+#define ARU_CONTEXT_HS_PLS_SUSPEND	3
+#define ARU_CONTEXT_HS_PLS_FS_MODE	6
+#define FPCI_CTX_HS_PLS(hs_pls, pad)	((hs_pls >> (4 * pad)) & 0xf)
+
 #define CSB_PAGE_SELECT_MASK			0x7fffff
 #define CSB_PAGE_SELECT_SHIFT			9
 #define CSB_PAGE_OFFSET_MASK			0x1ff
@@ -1475,10 +1479,6 @@ static int tegra_xusb_phy_enable(struct tegra_xusb *tegra)
 				phy_exit(tegra->typed_phys[i][j]);
 				goto disable_phy;
 			}
-
-			if (i == USB2_PHY)
-				tegra_phy_xusb_utmi_pad_power_on(tegra->
-							typed_phys[i][j]);
 		}
 	}
 
@@ -2600,14 +2600,48 @@ static void tegra_xhci_enable_phy_sleepwalk_wake(struct tegra_xusb *tegra)
 static void tegra_xhci_disable_phy_sleepwalk_wake(struct tegra_xusb *tegra)
 {
 	struct tegra_xusb_padctl *padctl = tegra->padctl;
+	struct phy *phy;
+	int i, j;
+
+	for (i = 0; i < MAX_PHY_TYPES; i++) {
+		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
+			phy = tegra->typed_phys[i][j];
+
+			if (!phy)
+				continue;
+
+			if (tegra_xusb_padctl_remote_wake_detected(
+							padctl, phy)) {
+				dev_dbg(tegra->dev, "%s port %d remote wake detected\n"
+					, tegra_xhci_phy_names[i], j);
+				if (i == USB2_PHY)
+					tegra_phy_xusb_utmi_pad_power_on(phy);
+			}
+			tegra_xusb_padctl_disable_phy_wake(padctl, phy);
+			tegra_xusb_padctl_disable_phy_sleepwalk(padctl, phy);
+		}
+	}
+}
+
+static void tegra_xhci_program_utmi_power_lp0_exit(
+	struct tegra_xusb *tegra)
+{
+	u8 hs_pls;
 	int i;
 
-	for (i = 0; i < tegra->num_phys; i++) {
-		if (!tegra->phys[i])
+	for (i = 0; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
+		if (!is_host_mode_phy(tegra, USB2_PHY, i))
 			continue;
 
-		tegra_xusb_padctl_disable_phy_wake(padctl, tegra->phys[i]);
-		tegra_xusb_padctl_disable_phy_sleepwalk(padctl, tegra->phys[i]);
+		hs_pls = FPCI_CTX_HS_PLS(tegra->fpci_ctx.hs_pls, i);
+
+		if (hs_pls == ARU_CONTEXT_HS_PLS_SUSPEND ||
+			hs_pls == ARU_CONTEXT_HS_PLS_FS_MODE)
+			tegra_phy_xusb_utmi_pad_power_on(
+					tegra->typed_phys[USB2_PHY][i]);
+		else
+			tegra_phy_xusb_utmi_pad_power_down(
+					tegra->typed_phys[USB2_PHY][i]);
 	}
 }
 
@@ -2717,11 +2751,11 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 			if (!do_wakeup)
 				phy_init(tegra->typed_phys[i][j]);
 			phy_power_on(tegra->typed_phys[i][j]);
-			if (i == USB2_PHY)
-				tegra_phy_xusb_utmi_pad_power_on(tegra->
-							typed_phys[i][j]);
 		}
 	}
+
+	if (tegra->suspended)
+		tegra_xhci_program_utmi_power_lp0_exit(tegra);
 
 	tegra_xusb_config(tegra);
 
@@ -3200,12 +3234,96 @@ static void tegra_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	}
 }
 
+static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req,
+		u16 value, u16 index, char *buf, u16 length)
+
+{
+	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
+	int port = (index & 0xff) - 1;
+	int ret;
+
+	if (hcd->speed == HCD_USB2) {
+		if ((type_req == ClearPortFeature) &&
+			(value == USB_PORT_FEAT_SUSPEND))
+			tegra_phy_xusb_utmi_pad_power_on(
+					tegra->typed_phys[USB2_PHY][port]);
+	}
+
+	ret = xhci_hub_control(hcd, type_req, value, index, buf, length);
+
+	if ((hcd->speed == HCD_USB2) && (ret == 0)) {
+		if ((type_req == SetPortFeature) &&
+			(value == USB_PORT_FEAT_SUSPEND))
+			/* We dont suspend the PAD while HNP role swap happens
+			 * on the OTG port
+			 */
+			if (!((hcd->self.otg_port == (port + 1)) &&
+				hcd->self.b_hnp_enable))
+				tegra_phy_xusb_utmi_pad_power_down(
+					  tegra->typed_phys[USB2_PHY][port]);
+
+		if ((type_req == ClearPortFeature) &&
+			(value == USB_PORT_FEAT_C_CONNECTION)) {
+			struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+			u32 portsc = readl(xhci->usb2_ports[port]);
+
+			if (portsc & PORT_CONNECT)
+				tegra_phy_xusb_utmi_pad_power_on(
+					  tegra->typed_phys[USB2_PHY][port]);
+			else {
+				/* We dont suspend the PAD while HNP
+				 * role swap happens on the OTG port
+				 */
+				if (!((hcd->self.otg_port == (port + 1))
+					&& hcd->self.b_hnp_enable))
+					tegra_phy_xusb_utmi_pad_power_down(
+					  tegra->typed_phys[USB2_PHY][port]);
+			}
+		}
+	}
+
+	return ret;
+}
+
+static int tegra_xhci_hub_status_data(struct usb_hcd *hcd, char *buf)
+{
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
+	struct xhci_bus_state *bus_state = &xhci->bus_state[hcd_index(hcd)];
+
+	if (bus_state->resuming_ports && hcd->speed == HCD_USB2) {
+		__le32 __iomem **port_array;
+		int max_ports;
+		u32 portsc;
+		int i;
+
+		max_ports = xhci->num_usb2_ports;
+		port_array = xhci->usb2_ports;
+
+		for (i = 0; i < max_ports; i++) {
+			if (!test_bit(i, &bus_state->resuming_ports))
+				continue;
+
+			portsc = readl(port_array[i]);
+
+			if ((i < tegra->soc->num_typed_phys[USB2_PHY])
+				&& ((portsc & PORT_PLS_MASK) == XDEV_RESUME))
+				tegra_phy_xusb_utmi_pad_power_on(
+						tegra->typed_phys[USB2_PHY][i]);
+		}
+	}
+
+	return xhci_hub_status_data(hcd, buf);
+}
+
 static int __init tegra_xusb_init(void)
 {
 	xhci_init_driver(&tegra_xhci_hc_driver, &tegra_xhci_overrides);
 	tegra_xhci_hc_driver.update_device = tegra_xhci_update_device;
 	tegra_xhci_hc_driver.alloc_dev = tegra_xhci_alloc_dev;
 	tegra_xhci_hc_driver.free_dev = tegra_xhci_free_dev;
+	tegra_xhci_hc_driver.hub_control = tegra_xhci_hub_control;
+	tegra_xhci_hc_driver.hub_status_data = tegra_xhci_hub_status_data;
 
 	return platform_driver_register(&tegra_xusb_driver);
 }

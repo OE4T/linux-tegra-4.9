@@ -56,6 +56,7 @@
 	sdhci@700b0400 {
 		tap-delay = <1>;
 		trim-delay = <3>;
+		mmc-ocr-mask = <0>;
 		max-clk-limit = <204000000>;
 		ddr-clk-limit = <48000000>;
 		bus-width = <4>;

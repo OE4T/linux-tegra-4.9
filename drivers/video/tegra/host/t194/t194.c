@@ -736,7 +736,14 @@ static void t194_init_regs(struct platform_device *pdev, bool prod)
 
 	/* Ensure that HW has finished initializing syncpt RAM prior to use */
 	for (;;) {
-		ram_init = host1x_readl(pdev,
+		/* XXX: This retry loop takes too long to timeout on VDK */
+		if (tegra_platform_is_sim()) {
+			pr_info("%s: Skipping ram_init done check on sim.\n",
+				__func__);
+			break;
+		}
+
+		ram_init = host1x_hypervisor_readl(pdev,
 					host1x_sync_syncpt_ram_init_0_r());
 		if (!host1x_sync_syncpt_ram_init_0_ram_init_v(ram_init)) {
 			pr_info("%s: Host1x HW syncpt ram init disabled\n",

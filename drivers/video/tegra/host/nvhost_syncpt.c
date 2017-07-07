@@ -1090,6 +1090,12 @@ void nvhost_syncpt_put_ref(struct nvhost_syncpt *sp, u32 id)
 		nvhost_free_syncpt(sp, id);
 }
 
+void nvhost_syncpt_get_ref_ext(struct platform_device *pdev, u32 id)
+{
+	nvhost_syncpt_get_ref(&nvhost_get_host(pdev)->syncpt, id);
+}
+EXPORT_SYMBOL_GPL(nvhost_syncpt_get_ref_ext);
+
 void nvhost_syncpt_put_ref_ext(struct platform_device *pdev, u32 id)
 {
 	nvhost_syncpt_put_ref(&nvhost_get_host(pdev)->syncpt, id);

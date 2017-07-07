@@ -451,6 +451,5 @@ config TEGRA_DC_FAKE_PANEL_SUPPORT
 	  automated testing. should not be enabled
 	  for production.
 
-trysource "drivers/video/tegra/Kconfig.nvidia"
-trysource "../nvidia/drivers/misc/tegra-cec/Kconfig"
+trysource "../nvidia/drivers/misc/tegra-cec/Kconfig.nvidia"
 trysource "../t19x/drivers/video/tegra/host/Kconfig.t19x"

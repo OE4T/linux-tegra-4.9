@@ -36,6 +36,7 @@ struct tegra_t186ref_m3420 {
 	unsigned int clk_ena_count;
 	unsigned int srate;
 	unsigned int i2s_master_id;
+	unsigned int i2s_master_idx;
 };
 
 static int tegra_t186ref_m3420_clocks_init(struct snd_soc_card *card,
@@ -273,38 +274,52 @@ static int tegra_t186ref_m3420_i2s_fmt(struct snd_soc_card *card,
 
 static int tegra_t186ref_m3420_i2s_config(struct snd_soc_card *card,
 					  struct tegra_t186ref_m3420 *machine,
-					  unsigned i2s_master_id)
+					  unsigned new_master_id)
 {
-	int err, old_master, new_master;
+	int new_master_idx, ret = 0;
 
-	if (machine->i2s_master && machine->i2s_master_id == i2s_master_id)
-		return 0;
+	mutex_lock(&machine->lock);
 
+	if (machine->i2s_master && machine->i2s_master_id == new_master_id)
+		goto out;
+
+	if (machine->clk_ena_count > 0) {
+		dev_warn(card->dev,
+			 "Unable to set I2S master while audio is active\n");
+		ret = -EBUSY;
+		goto out;
+	}
+
+	ret = tegra_t186ref_m3420_i2s_index(card, new_master_id);
+	if (ret < 0)
+		goto out;
+
+	new_master_idx = ret;
+
+	/* Configure the current I2S master as an I2S slave */
 	if (machine->i2s_master) {
-		old_master = tegra_t186ref_m3420_i2s_index(card,
-						machine->i2s_master_id);
-		if (old_master < 0)
-			return old_master;
-
-		err = tegra_t186ref_m3420_i2s_fmt(card, old_master, false);
-		if (err)
-			return err;
+		ret = tegra_t186ref_m3420_i2s_fmt(card, machine->i2s_master_idx,
+						  false);
+		if (ret)
+			goto out;
 	}
 
-	new_master = tegra_t186ref_m3420_i2s_index(card, i2s_master_id);
-	if (new_master < 0)
-		return new_master;
-
-	err = tegra_t186ref_m3420_i2s_fmt(card, new_master, true);
-	if (err) {
-		tegra_t186ref_m3420_i2s_fmt(card, old_master, true);
-		return err;
+	/* Configure the new I2S master */
+	ret = tegra_t186ref_m3420_i2s_fmt(card, new_master_idx, true);
+	if (ret) {
+		tegra_t186ref_m3420_i2s_fmt(card, machine->i2s_master_idx,
+					    true);
+		goto out;
 	}
 
-	machine->i2s_master_id = i2s_master_id;
-	machine->i2s_master = card->rtd[new_master].cpu_dai;
+	machine->i2s_master_id = new_master_id;
+	machine->i2s_master_idx = new_master_idx;
+	machine->i2s_master = card->rtd[new_master_idx].cpu_dai;
 
-	return 0;
+out:
+	mutex_unlock(&machine->lock);
+
+	return ret;
 }
 
 static int tegra_t186ref_m3420_i2s_master_get(struct snd_kcontrol *kcontrol,

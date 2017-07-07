@@ -666,7 +666,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   "vm=%s "
 		   "%-5s GPU virt %#-12llx +%#-9llx    phys %#-12llx "
 		   "phys offset: %#-4llx;  pgsz: %3dkb perm=%-2s | "
-		   "kind=%#02x APT=%-6s %c%c%c",
+		   "kind=%#02x APT=%-6s %c%c%c%c%c",
 		   vm->name,
 		   sgt ? "MAP" : "UNMAP",
 		   virt_addr,
@@ -677,9 +677,11 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   nvgpu_gmmu_perm_str(attrs->rw_flag),
 		   attrs->kind_v,
 		   nvgpu_aperture_str(attrs->aperture),
-		   attrs->cacheable ? 'C' : 'V', /* C = cached, V = volatile. */
+		   attrs->cacheable ? 'C' : 'c', /* C = cached, V = volatile. */
 		   attrs->sparse    ? 'S' : '-',
-		   attrs->priv      ? 'P' : '-');
+		   attrs->priv      ? 'P' : '-',
+		   attrs->coherent  ? 'c' : '-',
+		   attrs->valid     ? 'V' : '-');
 
 	/*
 	 * Handle VIDMEM progamming. Currently uses a different scatter list

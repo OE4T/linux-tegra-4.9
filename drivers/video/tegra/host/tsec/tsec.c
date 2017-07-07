@@ -300,21 +300,14 @@ exit:
 }
 
 static void tsec_execute_method(dma_addr_t dma_handle,
+	struct nvhost_channel *channel,
 	u32 *cpuvaddr,
 	u32 opcode_len,
 	u32 syncpt_id,
 	u32 syncpt_incrs)
 {
-	struct nvhost_channel *channel = NULL;
 	struct nvhost_job *job = NULL;
 	int err = 0;
-	struct nvhost_device_data *pdata = platform_get_drvdata(tsec);
-
-	err = nvhost_channel_map(pdata, &channel, pdata);
-	if (err) {
-		nvhost_err(&tsec->dev, "Channel map failed\n");
-		return;
-	}
 
 	job = nvhost_job_alloc(channel, 1, 0, 0, 1);
 	if (!job) {
@@ -322,7 +315,6 @@ static void tsec_execute_method(dma_addr_t dma_handle,
 		return;
 	}
 
-	channel->syncpts[0] = syncpt_id;
 	job->sp->id = syncpt_id;
 	job->sp->incrs = syncpt_incrs;
 	job->num_syncpts = 1;
@@ -339,10 +331,6 @@ static void tsec_execute_method(dma_addr_t dma_handle,
 		nvhost_err(&tsec->dev, "submit failed\n");
 		goto exit;
 	}
-
-	/* submit takes a reference on the job structure; we can drop the
-	 * local reference now */
-	nvhost_putchannel(channel, 1);
 
 	nvhost_syncpt_wait_timeout_ext(tsec, job->sp->id,
 			job->sp->fence,
@@ -385,11 +373,28 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 	dma_addr_t dma_handle = 0;
 	DEFINE_DMA_ATTRS(attrs);
 	u32 increment_opcode;
+	struct nvhost_device_data *pdata = platform_get_drvdata(tsec);
+	struct nvhost_channel *channel = NULL;
+	int err;
 
-	id = nvhost_get_syncpt_host_managed(tsec, 0, "tsec_hdcp");
-	if (!id) {
-		nvhost_err(&tsec->dev, "failed to get sync point\n");
+	err = nvhost_channel_map(pdata, &channel, pdata);
+	if (err) {
+		nvhost_err(&tsec->dev, "Channel map failed\n");
 		return;
+	}
+
+	/* check if syncpt is already mapped to channel */
+	id = channel->syncpts[0];
+	if (!id) {
+		id = nvhost_get_syncpt_host_managed(tsec, 0, "tsec_hdcp");
+		if (!id) {
+			nvhost_err(&tsec->dev, "failed to get sync point\n");
+			nvhost_putchannel(channel, 1);
+			return;
+		}
+		channel->syncpts[0] = id;
+	} else {
+		nvhost_syncpt_get_ref_ext(tsec, id);
 	}
 
 	cpuvaddr = dma_alloc_attrs(tsec->dev.parent, HDCP_MTHD_BUF_SIZE,
@@ -397,6 +402,8 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 			__DMA_ATTR(attrs));
 	if (!cpuvaddr) {
 		nvhost_err(&tsec->dev, "Failed to allocate memory\n");
+		nvhost_syncpt_put_ref_ext(tsec, id);
+		nvhost_putchannel(channel, 1);
 		return;
 	}
 	memset(cpuvaddr, 0x0, HDCP_MTHD_BUF_SIZE);
@@ -462,7 +469,9 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 		   nvhost_opcode_nonincr(host1x_uclass_incr_syncpt_r(), 1),
 		   increment_opcode, &opcode_len);
 
-	tsec_execute_method(dma_handle, cpuvaddr, opcode_len, id, 1);
+	tsec_execute_method(dma_handle, channel, cpuvaddr, opcode_len, id, 1);
+
+	nvhost_putchannel(channel, 1);
 
 	nvhost_syncpt_put_ref_ext(tsec, id);
 

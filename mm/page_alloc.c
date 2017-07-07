@@ -4976,7 +4976,7 @@ build_all_zonelists_init(void)
 
 /*
  * Called with zonelists_mutex held always
- * unless system_state == SYSTEM_BOOTING.
+ * unless system_state <= SYSTEM_BOOTING.
  *
  * __ref due to (1) call of __meminit annotated setup_zone_pageset
  * [we're only called with non-NULL zone through __meminit paths] and
@@ -4987,7 +4987,7 @@ void __ref build_all_zonelists(pg_data_t *pgdat, struct zone *zone)
 {
 	set_zonelist_order();
 
-	if (system_state == SYSTEM_BOOTING) {
+	if (system_state <= SYSTEM_BOOTING) {
 		build_all_zonelists_init();
 	} else {
 #ifdef CONFIG_MEMORY_HOTPLUG

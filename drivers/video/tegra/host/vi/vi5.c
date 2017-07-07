@@ -39,9 +39,14 @@
 #include "nvhost_acm.h"
 #include "t194/t194.h"
 
+#include <media/vi.h>
+#include <media/mc_common.h>
+#include "camera/vi/vi5_fops.h"
+
 struct host_vi5 {
 	struct platform_device *pdev;
 	struct platform_device *vi_thi;
+	struct vi vi_common;
 
 	/* Debugfs */
 	struct vi5_debug {
@@ -146,6 +151,14 @@ static int vi5_probe(struct platform_device *pdev)
 
 	vi5_init_debugfs(vi5);
 
+	vi5->vi_common.mc_vi.vi = &vi5->vi_common;
+	vi5->vi_common.mc_vi.fops = &vi5_fops;
+	err = tegra_vi_media_controller_init(&vi5->vi_common.mc_vi, pdev);
+	if (err) {
+		dev_err(dev, "media controller init failed\n");
+		err = 0;
+	}
+
 	dev_info(dev, "probed\n");
 
 	return 0;
@@ -163,6 +176,7 @@ static int __exit vi5_remove(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct host_vi5 *vi5 = (struct host_vi5 *)pdata->private_data;
 
+	tegra_vi_media_controller_cleanup(&vi5->vi_common.mc_vi);
 	vi5_remove_debugfs(vi5);
 	platform_device_put(vi5->vi_thi);
 

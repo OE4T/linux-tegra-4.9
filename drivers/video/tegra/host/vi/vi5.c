@@ -32,6 +32,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <media/capture_vi_channel.h>
 
 #include "vi5.h"
 #include "dev.h"
@@ -159,10 +160,16 @@ static int vi5_probe(struct platform_device *pdev)
 		err = 0;
 	}
 
+	err = vi_channel_drv_register(pdev);
+	if (err)
+		goto device_release;
+
 	dev_info(dev, "probed\n");
 
 	return 0;
 
+device_release:
+	nvhost_client_device_release(pdev);
 deinit:
 	nvhost_module_deinit(pdev);
 put_vi:
@@ -176,6 +183,7 @@ static int __exit vi5_remove(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct host_vi5 *vi5 = (struct host_vi5 *)pdata->private_data;
 
+	vi_channel_drv_unregister(&pdev->dev);
 	tegra_vi_media_controller_cleanup(&vi5->vi_common.mc_vi);
 	vi5_remove_debugfs(vi5);
 	platform_device_put(vi5->vi_thi);

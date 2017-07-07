@@ -54,6 +54,9 @@
 #if defined(CONFIG_TEGRA_GRHOST_SLVSEC)
 #include "slvsec/slvsec.h"
 #endif
+#if defined(CONFIG_VIDEO_TEGRA_VI)
+#include "vi/vi5.h"
+#endif
 
 #include "chip_support.h"
 
@@ -237,6 +240,17 @@ struct nvhost_device_data t19_vi_thi_info = {
 	.firmware_name		= "nvhost_vi10.fw",
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.reset_clamp_mask	= BIT(5),
+};
+
+struct nvhost_device_data t19_vi5_info = {
+	.devfs_name		= "vi5",
+	.can_powergate          = true,
+	.keepalive		= true,
+	.autosuspend_delay      = 500,
+	.moduleid		= NVHOST_MODULE_VI,
+	.finalize_poweron	= vi5_finalize_poweron,
+	.prepare_poweroff	= vi5_prepare_poweroff,
+	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 };
 #endif
 

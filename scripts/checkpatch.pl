@@ -764,7 +764,7 @@ sub seed_camelcase_file {
 sub is_maintained_obsolete {
 	my ($filename) = @_;
 
-	return 0 if (!(-e "$root/scripts/get_maintainer.pl"));
+	return 0 if (!$root || !(-e "$root/scripts/get_maintainer.pl"));
 
 	my $status = `perl $root/scripts/get_maintainer.pl --status --nom --nol --nogit --nogit-fallback -f $filename 2>&1`;
 
@@ -2403,9 +2403,13 @@ sub process {
 			$in_commit_log = 0;
 		}
 
-# Check if MAINTAINERS is being updated.  If so, there's probably no need to
-# emit the "does MAINTAINERS need updating?" message on file add/move/delete
+# Check if MAINTAINERS and/or NVIDIA-REVIEWERS is being updated.  If so, there's probably no need to
+# emit the "does MAINTAINERS/NVIDIA-REVIEWERS need updating?" message on file add/move/delete
 		if ($line =~ /^\s*MAINTAINERS\s*\|/) {
+			$reported_maintainer_file = 1;
+		}
+
+		if ($line =~ /^\s*NVIDIA-REVIEWERS\s*\|/) {
 			$reported_maintainer_file = 1;
 		}
 
@@ -2532,6 +2536,7 @@ sub process {
 # Check for git id commit length and improperly formed commit descriptions
 		if ($in_commit_log && !$commit_log_possible_stack_dump &&
 		    $line !~ /^\s*(?:Link|Patchwork|http|https|BugLink):/i &&
+		    $line !~ /^This reverts commit [0-9a-f]{7,40}/ &&
 		    ($line =~ /\bcommit\s+[0-9a-f]{5,}\b/i ||
 		     ($line =~ /(?:\s|^)[0-9a-f]{12,40}(?:[\s"'\(\[]|$)/i &&
 		      $line !~ /[\<\[][0-9a-f]{12,40}[\>\]]/i &&
@@ -2594,7 +2599,7 @@ sub process {
 		      (defined($1) || defined($2))))) {
 			$reported_maintainer_file = 1;
 			WARN("FILE_PATH_CHANGES",
-			     "added, moved or deleted file(s), does MAINTAINERS need updating?\n" . $herecurr);
+			     "added, moved or deleted file(s), does MAINTAINERS and/or NVIDIA-REVIEWERS need updating?\n" . $herecurr);
 		}
 
 # Check for wrappage within a valid hunk of the file

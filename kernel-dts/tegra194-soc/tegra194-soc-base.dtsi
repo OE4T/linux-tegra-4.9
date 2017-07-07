@@ -1018,9 +1018,11 @@
 			reset-names = "dpaux3";
 		}; //dpaux3
 
-		vi: vi@0x15c00000 {
+		vi: vi@15c10000 {
 			compatible = "nvidia,tegra194-vi";
-			reg = <0x0 0x15c00000 0x0 0x00250000>;
+			/* cfg page is used by slvsec as well as ch35 */
+			reg = <0x0 0x15c10000 0x0 0x00230000>;
+			nvidia,vi-falcon-device = <&vi_thi>;
 			iommus = <&smmu TEGRA_SID_VI>;
 			iso-smmu;
 		};
@@ -1040,13 +1042,14 @@
 			iommus = <&smmu TEGRA_SID_VIFALC>;
 		};
 
-		isp: isp@0x14800000 {
+		isp: isp@14800000 {
 			compatible = "nvidia,tegra194-isp";
 			reg = <0x0 0x14800000 0x0 0x00010000>;
+			nvidia,isp-falcon-device = <&isp_thi>;
 			iommus = <&smmu TEGRA_SID_ISP>;
 		};
 
-		isp-thi@14b00000 {
+		isp_thi: isp-thi@14b00000 {
 			compatible = "nvidia,tegra194-isp-thi";
                         reg = <0x0 0x14b00000 0x0 0x00100000>;
 

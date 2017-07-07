@@ -420,6 +420,42 @@ static inline u32 falcon_falcon_dmatrfmoffs_r(void)
 {
 	return 0x00000114;
 }
+static inline u32 falcon_falcon_imctl_debug_r(void)
+{
+	return 0x0000015c;
+}
+static inline u32 falcon_falcon_imctl_debug_addr_blk_f(u32 v)
+{
+	return (v & 0xffffff) << 0;
+}
+static inline u32 falcon_falcon_imctl_debug_cmd_f(u32 v)
+{
+	return (v & 0x7) << 24;
+}
+static inline u32 falcon_falcon_imstat_r(void)
+{
+	return 0x00000144;
+}
+static inline u32 falcon_falcon_traceidx_r(void)
+{
+	return 0x00000148;
+}
+static inline u32 falcon_falcon_traceidx_maxidx_v(u32 r)
+{
+	return (r >> 16) & 0xff;
+}
+static inline u32 falcon_falcon_traceidx_idx_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 falcon_falcon_tracepc_r(void)
+{
+	return 0x0000014c;
+}
+static inline u32 falcon_falcon_tracepc_pc_v(u32 r)
+{
+	return (r >> 0) & 0xffffff;
+}
 static inline u32 falcon_falcon_dmatrfcmd_r(void)
 {
 	return 0x00000118;

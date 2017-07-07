@@ -15,7 +15,7 @@
 
 #include "gk20a/gk20a.h"
 
-#include <nvgpu/hw/gk20a/hw_falcon_gk20a.h>
+#include <nvgpu/hw/gm20b/hw_falcon_gm20b.h>
 
 static int gk20a_flcn_reset(struct nvgpu_falcon *flcn)
 {
@@ -344,6 +344,180 @@ static int gk20a_falcon_bootstrap(struct nvgpu_falcon *flcn,
 	return 0;
 }
 
+static void gk20a_falcon_dump_imblk(struct nvgpu_falcon *flcn)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+	u32 i = 0, j = 0;
+	u32 data[8] = {0};
+	u32 block_count = 0;
+
+	block_count = falcon_falcon_hwcfg_imem_size_v(gk20a_readl(g,
+		flcn->flcn_base + falcon_falcon_hwcfg_r()));
+
+	/* block_count must be multiple of 8 */
+	block_count &= ~0x7;
+	nvgpu_err(g, "FALCON IMEM BLK MAPPING (PA->VA) (%d TOTAL):",
+		block_count);
+
+	for (i = 0; i < block_count; i += 8) {
+		for (j = 0; j < 8; j++) {
+			gk20a_writel(g, flcn->flcn_base +
+			falcon_falcon_imctl_debug_r(),
+			falcon_falcon_imctl_debug_cmd_f(0x2) |
+			falcon_falcon_imctl_debug_addr_blk_f(i + j));
+
+			data[j] = gk20a_readl(g, base_addr +
+				falcon_falcon_imstat_r());
+		}
+
+		nvgpu_err(g, " %#04x: %#010x %#010x %#010x %#010x",
+				i, data[0], data[1], data[2], data[3]);
+		nvgpu_err(g, " %#04x: %#010x %#010x %#010x %#010x",
+				i + 4, data[4], data[5], data[6], data[7]);
+	}
+}
+
+static void gk20a_falcon_dump_pc_trace(struct nvgpu_falcon *flcn)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+	u32 trace_pc_count = 0;
+	u32 pc = 0;
+	u32 i = 0;
+
+	if (gk20a_readl(g, base_addr + falcon_falcon_sctl_r()) & 0x02) {
+		nvgpu_err(g, " falcon is in HS mode, PC TRACE dump not supported");
+		return;
+	}
+
+	trace_pc_count = falcon_falcon_traceidx_maxidx_v(gk20a_readl(g,
+		base_addr + falcon_falcon_traceidx_r()));
+	nvgpu_err(g,
+		"PC TRACE (TOTAL %d ENTRIES. entry 0 is the most recent branch):",
+		trace_pc_count);
+
+	for (i = 0; i < trace_pc_count; i++) {
+		gk20a_writel(g, base_addr + falcon_falcon_traceidx_r(),
+			falcon_falcon_traceidx_idx_f(i));
+
+		pc = falcon_falcon_tracepc_pc_v(gk20a_readl(g,
+			base_addr + falcon_falcon_tracepc_r()));
+		nvgpu_err(g, "FALCON_TRACEPC(%d)  :  %#010x", i, pc);
+	}
+}
+
+void gk20a_falcon_dump_stats(struct nvgpu_falcon *flcn)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+	unsigned int i;
+
+	nvgpu_err(g, "<<< FALCON id-%d DEBUG INFORMATION - START >>>",
+			flcn->flcn_id);
+
+	/* imblk dump */
+	gk20a_falcon_dump_imblk(flcn);
+	/* PC trace dump */
+	gk20a_falcon_dump_pc_trace(flcn);
+
+	nvgpu_err(g, "FALCON ICD REGISTERS DUMP");
+
+	for (i = 0; i < 4; i++) {
+		gk20a_writel(g, base_addr + falcon_falcon_icd_cmd_r(),
+			falcon_falcon_icd_cmd_opc_rreg_f() |
+			falcon_falcon_icd_cmd_idx_f(FALCON_REG_PC));
+		nvgpu_err(g, "FALCON_REG_PC : 0x%x",
+			gk20a_readl(g, base_addr +
+			falcon_falcon_icd_rdata_r()));
+
+		gk20a_writel(g, base_addr + falcon_falcon_icd_cmd_r(),
+			falcon_falcon_icd_cmd_opc_rreg_f() |
+			falcon_falcon_icd_cmd_idx_f(FALCON_REG_SP));
+		nvgpu_err(g, "FALCON_REG_SP : 0x%x",
+			gk20a_readl(g, base_addr +
+			falcon_falcon_icd_rdata_r()));
+	}
+
+	gk20a_writel(g, base_addr + falcon_falcon_icd_cmd_r(),
+		falcon_falcon_icd_cmd_opc_rreg_f() |
+		falcon_falcon_icd_cmd_idx_f(FALCON_REG_IMB));
+	nvgpu_err(g, "FALCON_REG_IMB : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_icd_rdata_r()));
+
+	gk20a_writel(g, base_addr + falcon_falcon_icd_cmd_r(),
+		falcon_falcon_icd_cmd_opc_rreg_f() |
+		falcon_falcon_icd_cmd_idx_f(FALCON_REG_DMB));
+	nvgpu_err(g, "FALCON_REG_DMB : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_icd_rdata_r()));
+
+	gk20a_writel(g, base_addr + falcon_falcon_icd_cmd_r(),
+		falcon_falcon_icd_cmd_opc_rreg_f() |
+		falcon_falcon_icd_cmd_idx_f(FALCON_REG_CSW));
+	nvgpu_err(g, "FALCON_REG_CSW : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_icd_rdata_r()));
+
+	gk20a_writel(g, base_addr + falcon_falcon_icd_cmd_r(),
+		falcon_falcon_icd_cmd_opc_rreg_f() |
+		falcon_falcon_icd_cmd_idx_f(FALCON_REG_CTX));
+	nvgpu_err(g, "FALCON_REG_CTX : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_icd_rdata_r()));
+
+	gk20a_writel(g, base_addr + falcon_falcon_icd_cmd_r(),
+		falcon_falcon_icd_cmd_opc_rreg_f() |
+		falcon_falcon_icd_cmd_idx_f(FALCON_REG_EXCI));
+	nvgpu_err(g, "FALCON_REG_EXCI : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_icd_rdata_r()));
+
+	for (i = 0; i < 6; i++) {
+		gk20a_writel(g, base_addr + falcon_falcon_icd_cmd_r(),
+			falcon_falcon_icd_cmd_opc_rreg_f() |
+			falcon_falcon_icd_cmd_idx_f(
+			falcon_falcon_icd_cmd_opc_rstat_f()));
+		nvgpu_err(g, "FALCON_REG_RSTAT[%d] : 0x%x", i,
+			gk20a_readl(g, base_addr +
+				falcon_falcon_icd_rdata_r()));
+	}
+
+	nvgpu_err(g, " FALCON REGISTERS DUMP");
+	nvgpu_err(g, "falcon_falcon_os_r : %d",
+		gk20a_readl(g, base_addr + falcon_falcon_os_r()));
+	nvgpu_err(g, "falcon_falcon_cpuctl_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_cpuctl_r()));
+	nvgpu_err(g, "falcon_falcon_idlestate_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_idlestate_r()));
+	nvgpu_err(g, "falcon_falcon_mailbox0_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_mailbox0_r()));
+	nvgpu_err(g, "falcon_falcon_mailbox1_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_mailbox1_r()));
+	nvgpu_err(g, "falcon_falcon_irqstat_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_irqstat_r()));
+	nvgpu_err(g, "falcon_falcon_irqmode_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_irqmode_r()));
+	nvgpu_err(g, "falcon_falcon_irqmask_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_irqmask_r()));
+	nvgpu_err(g, "falcon_falcon_irqdest_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_irqdest_r()));
+	nvgpu_err(g, "falcon_falcon_debug1_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_debug1_r()));
+	nvgpu_err(g, "falcon_falcon_debuginfo_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_debuginfo_r()));
+	nvgpu_err(g, "falcon_falcon_bootvec_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_bootvec_r()));
+	nvgpu_err(g, "falcon_falcon_hwcfg_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_hwcfg_r()));
+	nvgpu_err(g, "falcon_falcon_engctl_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_engctl_r()));
+	nvgpu_err(g, "falcon_falcon_curctx_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_curctx_r()));
+	nvgpu_err(g, "falcon_falcon_nxtctx_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_nxtctx_r()));
+	nvgpu_err(g, "falcon_falcon_exterrstat_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_exterrstat_r()));
+	nvgpu_err(g, "falcon_falcon_exterraddr_r : 0x%x",
+		gk20a_readl(g, base_addr + falcon_falcon_exterraddr_r()));
+}
+
 static void gk20a_falcon_engine_dependency_ops(struct nvgpu_falcon *flcn)
 {
 	struct nvgpu_falcon_engine_dependency_ops *flcn_eng_dep_ops =
@@ -378,6 +552,7 @@ void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_ops->copy_to_dmem = gk20a_flcn_copy_to_dmem;
 	flcn_ops->copy_to_imem = gk20a_flcn_copy_to_imem;
 	flcn_ops->bootstrap = gk20a_falcon_bootstrap;
+	flcn_ops->dump_falcon_stats = gk20a_falcon_dump_stats;
 
 	gk20a_falcon_engine_dependency_ops(flcn);
 }

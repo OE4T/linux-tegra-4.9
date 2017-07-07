@@ -412,6 +412,30 @@ static inline u32 falcon_falcon_dmatrffboffs_r(void)
 {
 	return 0x0000011c;
 }
+static inline u32 falcon_falcon_imstat_r(void)
+{
+	return 0x00000144;
+}
+static inline u32 falcon_falcon_traceidx_r(void)
+{
+	return 0x00000148;
+}
+static inline u32 falcon_falcon_traceidx_maxidx_v(u32 r)
+{
+	return (r >> 16) & 0xff;
+}
+static inline u32 falcon_falcon_traceidx_idx_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
+static inline u32 falcon_falcon_tracepc_r(void)
+{
+	return 0x0000014c;
+}
+static inline u32 falcon_falcon_tracepc_pc_v(u32 r)
+{
+	return (r >> 0) & 0xffffff;
+}
 static inline u32 falcon_falcon_exterraddr_r(void)
 {
 	return 0x00000168;

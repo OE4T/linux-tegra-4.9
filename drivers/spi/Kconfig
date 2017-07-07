@@ -783,7 +783,6 @@ config SPI_TLE62X0
 #
 
 trysource "../nvidia/drivers/spi/Kconfig.nvidia"
-trysource "drivers/spi/Kconfig.nvidia"
 endif # SPI_MASTER
 
 # (slave support would go here)

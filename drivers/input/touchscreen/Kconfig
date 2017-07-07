@@ -1239,6 +1239,5 @@ config TOUCHSCREEN_RM31080A
 	  To compile this driver as a module, choose M here: the
 	  module will be called RAYDIUM_31080A.
 
-trysource "../nvidia/drivers/input/touchscreen/Kconfig"
 trysource "../nvidia/drivers/input/touchscreen/Kconfig.nvidia"
 endif

@@ -211,13 +211,10 @@ source "drivers/hwtracing/intel_th/Kconfig"
 source "drivers/fpga/Kconfig"
 
 trysource "../nvidia/drivers/staging/mttcan/Kconfig.nvidia"
-trysource "drivers/staging/mttcan/Kconfig.nvidia"
 
 trysource "../nvidia/drivers/tachometer/Kconfig.nvidia"
-trysource "drivers/tachometer/Kconfig.nvidia"
 
 trysource "../nvgpu/drivers/gpu/nvgpu/Kconfig.nvgpu"
-trysource "drivers/gpu/nvgpu/Kconfig.nvgpu"
 
 
 endmenu

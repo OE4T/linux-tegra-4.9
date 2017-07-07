@@ -233,4 +233,3 @@ config POWERGATE_TEGRA_BPMP
 	def_bool TEGRA_BPMP
 
 trysource "../nvidia/drivers/platform/tegra/Kconfig.nvidia"
-trysource "drivers/platform/tegra/Kconfig.nvidia"

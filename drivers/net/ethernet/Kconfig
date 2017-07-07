@@ -182,6 +182,5 @@ source "drivers/net/ethernet/xilinx/Kconfig"
 source "drivers/net/ethernet/xircom/Kconfig"
 
 trysource "../nvidia/drivers/net/ethernet/nvidia/eqos/Kconfig.nvidia"
-trysource "drivers/net/ethernet/nvidia/eqos/Kconfig.nvidia"
 
 endif # ETHERNET

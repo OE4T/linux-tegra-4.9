@@ -1914,5 +1914,4 @@ config WATCHDOG_PRETIMEOUT_GOV_PANIC
 endif # WATCHDOG_PRETIMEOUT_GOV
 
 trysource "../nvidia/drivers/watchdog/Kconfig.nvidia"
-trysource "drivers/watchdog/Kconfig.nvidia"
 endif # WATCHDOG

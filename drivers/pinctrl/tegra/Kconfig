@@ -30,4 +30,3 @@ config PINCTRL_TEGRA_XUSB
 	select PINMUX
 
 trysource "../nvidia/drivers/pinctrl/Kconfig.nvidia"
-trysource "drivers/pinctrl/Kconfig.nvidia"

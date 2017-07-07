@@ -299,6 +299,12 @@
 	};
 
 	se@70012000 {
+		supported-algos = "aes", "drbg", "rsa";
+		status = "okay";
+	};
+
+	se@70412000 {
+		supported-algos = "sha";
 		status = "okay";
 	};
 

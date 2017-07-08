@@ -266,10 +266,6 @@ static inline u32 fifo_intr_sched_error_code_f(u32 v)
 {
 	return (v & 0xff) << 0;
 }
-static inline u32 fifo_intr_sched_error_code_ctxsw_timeout_v(void)
-{
-	return 0x0000000a;
-}
 static inline u32 fifo_intr_chsw_error_r(void)
 {
 	return 0x0000256c;
@@ -308,7 +304,7 @@ static inline u32 fifo_intr_ctxsw_timeout_info__size_1_v(void)
 }
 static inline u32 fifo_intr_ctxsw_timeout_info_ctxsw_state_v(u32 r)
 {
-	return (r >> 0) & 0x3;
+	return (r >> 14) & 0x3;
 }
 static inline u32 fifo_intr_ctxsw_timeout_info_ctxsw_state_load_v(void)
 {
@@ -324,15 +320,15 @@ static inline u32 fifo_intr_ctxsw_timeout_info_ctxsw_state_switch_v(void)
 }
 static inline u32 fifo_intr_ctxsw_timeout_info_prev_tsgid_v(u32 r)
 {
-	return (r >> 4) & 0xfff;
+	return (r >> 0) & 0x3fff;
 }
 static inline u32 fifo_intr_ctxsw_timeout_info_next_tsgid_v(u32 r)
 {
-	return (r >> 16) & 0xfff;
+	return (r >> 16) & 0x3fff;
 }
 static inline u32 fifo_intr_ctxsw_timeout_info_status_v(u32 r)
 {
-	return (r >> 28) & 0x3;
+	return (r >> 30) & 0x3;
 }
 static inline u32 fifo_intr_ctxsw_timeout_info_status_awaiting_ack_v(void)
 {

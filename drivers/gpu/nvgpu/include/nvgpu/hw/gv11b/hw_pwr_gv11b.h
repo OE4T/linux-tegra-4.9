@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -78,6 +78,10 @@ static inline u32 pwr_falcon_irqstat_swgen0_true_f(void)
 {
 	return 0x40;
 }
+static inline u32 pwr_falcon_irqstat_ext_second_true_f(void)
+{
+	return 0x800;
+}
 static inline u32 pwr_falcon_irqmode_r(void)
 {
 	return 0x0010a00c;
@@ -118,6 +122,38 @@ static inline u32 pwr_falcon_irqmset_swgen1_f(u32 v)
 {
 	return (v & 0x1) << 7;
 }
+static inline u32 pwr_falcon_irqmset_ext_f(u32 v)
+{
+	return (v & 0xff) << 8;
+}
+static inline u32 pwr_falcon_irqmset_ext_ctxe_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 pwr_falcon_irqmset_ext_limitv_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 pwr_falcon_irqmset_ext_second_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 pwr_falcon_irqmset_ext_therm_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 pwr_falcon_irqmset_ext_miscio_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 pwr_falcon_irqmset_ext_rttimer_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 pwr_falcon_irqmset_ext_rsvd8_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
 static inline u32 pwr_falcon_irqmclr_r(void)
 {
 	return 0x0010a014;
@@ -157,6 +193,34 @@ static inline u32 pwr_falcon_irqmclr_swgen1_f(u32 v)
 static inline u32 pwr_falcon_irqmclr_ext_f(u32 v)
 {
 	return (v & 0xff) << 8;
+}
+static inline u32 pwr_falcon_irqmclr_ext_ctxe_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 pwr_falcon_irqmclr_ext_limitv_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 pwr_falcon_irqmclr_ext_second_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 pwr_falcon_irqmclr_ext_therm_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 pwr_falcon_irqmclr_ext_miscio_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 pwr_falcon_irqmclr_ext_rttimer_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 pwr_falcon_irqmclr_ext_rsvd8_f(u32 v)
+{
+	return (v & 0x1) << 15;
 }
 static inline u32 pwr_falcon_irqmask_r(void)
 {
@@ -202,6 +266,34 @@ static inline u32 pwr_falcon_irqdest_host_ext_f(u32 v)
 {
 	return (v & 0xff) << 8;
 }
+static inline u32 pwr_falcon_irqdest_host_ext_ctxe_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 pwr_falcon_irqdest_host_ext_limitv_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 pwr_falcon_irqdest_host_ext_second_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 pwr_falcon_irqdest_host_ext_therm_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 pwr_falcon_irqdest_host_ext_miscio_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 pwr_falcon_irqdest_host_ext_rttimer_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 pwr_falcon_irqdest_host_ext_rsvd8_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
 static inline u32 pwr_falcon_irqdest_target_gptmr_f(u32 v)
 {
 	return (v & 0x1) << 16;
@@ -237,6 +329,34 @@ static inline u32 pwr_falcon_irqdest_target_swgen1_f(u32 v)
 static inline u32 pwr_falcon_irqdest_target_ext_f(u32 v)
 {
 	return (v & 0xff) << 24;
+}
+static inline u32 pwr_falcon_irqdest_target_ext_ctxe_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 pwr_falcon_irqdest_target_ext_limitv_f(u32 v)
+{
+	return (v & 0x1) << 25;
+}
+static inline u32 pwr_falcon_irqdest_target_ext_second_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 pwr_falcon_irqdest_target_ext_therm_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 pwr_falcon_irqdest_target_ext_miscio_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 pwr_falcon_irqdest_target_ext_rttimer_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 pwr_falcon_irqdest_target_ext_rsvd8_f(u32 v)
+{
+	return (v & 0x1) << 31;
 }
 static inline u32 pwr_falcon_curctx_r(void)
 {

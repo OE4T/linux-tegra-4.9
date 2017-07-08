@@ -3314,7 +3314,7 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 	struct of_pci_range_parser parser;
 	struct of_pci_range range;
 	u32 lanes = 0;
-	struct resource res;
+	struct resource res = {0};
 	int err;
 
 	PR_FUNC_LINE;

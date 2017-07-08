@@ -33,6 +33,9 @@
 #include "nvhost_syncpt_unit_interface.h"
 #include "t194.h"
 #include "host1x/host1x.h"
+#if defined(CONFIG_TEGRA_GRHOST_ISP)
+#include "isp/isp5.h"
+#endif
 #if defined(CONFIG_TEGRA_GRHOST_TSEC)
 #include "tsec/tsec.h"
 #endif
@@ -297,6 +300,17 @@ struct nvhost_device_data t19_isp_thi_info = {
 	.firmware_name		= "nvhost_isp050.fw",
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.reset_clamp_mask	= BIT(9),
+};
+
+struct nvhost_device_data t19_isp5_info = {
+	.devfs_name		= "isp5",
+	.can_powergate          = true,
+	.keepalive		= true,
+	.autosuspend_delay      = 500,
+	.moduleid		= NVHOST_MODULE_ISP,
+	.finalize_poweron	= isp5_finalize_poweron,
+	.prepare_poweroff	= isp5_prepare_poweroff,
+	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 };
 #endif
 

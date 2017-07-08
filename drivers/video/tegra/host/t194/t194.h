@@ -34,6 +34,7 @@ extern struct nvhost_device_data t19_nvcsi_info;
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_ISP)
 extern struct nvhost_device_data t19_isp_thi_info;
+extern struct nvhost_device_data t19_isp5_info;
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_VIC)
 extern struct nvhost_device_data t19_vic_info;

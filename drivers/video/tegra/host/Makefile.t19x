@@ -11,6 +11,7 @@ obj-y  += nvhost_queue.o \
 	  nvhost_syncpt_unit_interface.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += t194/
+obj-$(CONFIG_TEGRA_GRHOST_ISP) += isp/
 obj-$(CONFIG_TEGRA_GRHOST_PVA) += pva/
 obj-$(CONFIG_TEGRA_GRHOST_NVCSI) += nvcsi/
 obj-$(CONFIG_TEGRA_GRHOST_NVDLA) += nvdla/

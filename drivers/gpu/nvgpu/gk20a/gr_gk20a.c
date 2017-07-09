@@ -5634,8 +5634,9 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			+ offset);
 	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
 
-	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "");
-
+	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+			"GPC%d TPC%d: pending exception 0x%x",
+			gpc, tpc, tpc_exception);
 
 	/* check if an sm exeption is pending */
 	if (gr_gpc0_tpc0_tpccs_tpc_exception_sm_v(tpc_exception) ==
@@ -5681,6 +5682,10 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 				"GPC%d TPC%d: TEX exception pending", gpc, tpc);
 		ret = g->ops.gr.handle_tex_exception(g, gpc, tpc, post_event);
 	}
+
+	if (g->ops.gr.handle_tpc_mpc_exception)
+		ret = g->ops.gr.handle_tpc_mpc_exception(g,
+					gpc, tpc, post_event);
 
 	return ret;
 }

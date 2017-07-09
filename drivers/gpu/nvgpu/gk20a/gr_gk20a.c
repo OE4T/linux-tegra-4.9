@@ -8398,14 +8398,16 @@ int gr_gk20a_wait_for_pause(struct gk20a *g, struct warpstate *w_state)
 int gr_gk20a_resume_from_pause(struct gk20a *g)
 {
 	int err = 0;
+	u32 reg_val;
 
 	/* Clear the pause mask to tell the GPU we want to resume everyone */
 	gk20a_writel(g,
 		gr_gpcs_tpcs_sm_dbgr_bpt_pause_mask_r(), 0);
 
 	/* explicitly re-enable forwarding of SM interrupts upon any resume */
-	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(),
-		gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f());
+	reg_val = gk20a_readl(g, gr_gpc0_tpc0_tpccs_tpc_exception_en_r());
+	reg_val |= gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_enabled_f();
+	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(), reg_val);
 
 	/* Now resume all sms, write a 0 to the stop trigger
 	 * then a 1 to the run trigger */

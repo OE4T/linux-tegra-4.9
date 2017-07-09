@@ -902,6 +902,22 @@ static inline u32 gr_pri_gpc0_tpc0_tex_m_routing_sel_pipe1_f(void)
 {
 	return 0x2;
 }
+static inline u32 gr_gpc0_tpc0_mpc_hww_esr_r(void)
+{
+	return 0x00504430;
+}
+static inline u32 gr_gpc0_tpc0_mpc_hww_esr_reset_trigger_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 gr_gpc0_tpc0_mpc_hww_esr_info_r(void)
+{
+	return 0x00504434;
+}
+static inline u32 gr_gpc0_tpc0_mpc_hww_esr_info_veid_v(u32 r)
+{
+	return (r >> 0) & 0x3f;
+}
 static inline u32 gr_pri_be0_crop_status1_r(void)
 {
 	return 0x00410134;
@@ -3470,6 +3486,10 @@ static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_en_tex_enabled_f(void)
 {
 	return 0x1;
 }
+static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_en_mpc_enabled_f(void)
+{
+	return 0x10;
+}
 static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_r(void)
 {
 	return 0x0050450c;
@@ -3481,6 +3501,10 @@ static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_v(u32 r)
 static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_enabled_f(void)
 {
 	return 0x2;
+}
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_en_mpc_enabled_f(void)
+{
+	return 0x10;
 }
 static inline u32 gr_gpcs_gpccs_gpc_exception_en_r(void)
 {
@@ -3617,6 +3641,14 @@ static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_sm_v(u32 r)
 static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_sm_pending_v(void)
 {
 	return 0x00000001;
+}
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_mpc_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 gr_gpc0_tpc0_tpccs_tpc_exception_mpc_pending_f(void)
+{
+	return 0x10;
 }
 static inline u32 gr_gpc0_tpc0_sm0_dbgr_control0_r(void)
 {

@@ -885,7 +885,8 @@ static void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
 	u32 tpc_mask;
 
 	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(),
-			gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f());
+			gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f() |
+			gr_gpcs_tpcs_tpccs_tpc_exception_en_mpc_enabled_f());
 
 	tpc_mask =
 		gr_gpcs_gpccs_gpc_exception_en_tpc_f((1 << gr->tpc_count) - 1);
@@ -2973,13 +2974,16 @@ static void gv11b_gr_resume_all_sms(struct gk20a *g)
 static int gv11b_gr_resume_from_pause(struct gk20a *g)
 {
 	int err = 0;
+	u32 reg_val;
 
 	/* Clear the pause mask to tell the GPU we want to resume everyone */
 	gk20a_writel(g, gr_gpcs_tpcs_sms_dbgr_bpt_pause_mask_0_r(), 0);
 
 	/* explicitly re-enable forwarding of SM interrupts upon any resume */
-	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(),
-		gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f());
+	reg_val = gk20a_readl(g, gr_gpc0_tpc0_tpccs_tpc_exception_en_r());
+	reg_val |= gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_enabled_f();
+
+	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(), reg_val);
 
 	g->ops.gr.resume_all_sms(g);
 
@@ -3198,6 +3202,34 @@ static void gv11b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 						offset));
 }
 
+static int gr_gv11b_handle_tpc_mpc_exception(struct gk20a *g,
+		u32 gpc, u32 tpc, bool *post_event)
+{
+	u32 esr;
+	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
+	u32 tpc_exception = gk20a_readl(g, gr_gpc0_tpc0_tpccs_tpc_exception_r()
+			+ offset);
+
+	if (!(tpc_exception & gr_gpc0_tpc0_tpccs_tpc_exception_mpc_m()))
+		return 0;
+
+	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
+			"GPC%d TPC%d MPC exception", gpc, tpc);
+
+	esr = gk20a_readl(g, gr_gpc0_tpc0_mpc_hww_esr_r() + offset);
+	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg, "mpc hww esr 0x%08x", esr);
+
+	esr = gk20a_readl(g, gr_gpc0_tpc0_mpc_hww_esr_info_r() + offset);
+	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
+			"mpc hww esr info: veid 0x%08x",
+			gr_gpc0_tpc0_mpc_hww_esr_info_veid_v(esr));
+
+	gk20a_writel(g, gr_gpc0_tpc0_mpc_hww_esr_r() + offset,
+		     gr_gpc0_tpc0_mpc_hww_esr_reset_trigger_f());
+
+	return 0;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3280,4 +3312,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.clear_sm_hww = gv11b_gr_clear_sm_hww;
 	gops->gr.handle_tpc_sm_ecc_exception =
 			gr_gv11b_handle_tpc_sm_ecc_exception;
+	gops->gr.handle_tpc_mpc_exception =
+			gr_gv11b_handle_tpc_mpc_exception;
 }

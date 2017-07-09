@@ -299,8 +299,6 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 static void gr_gv11b_enable_hww_exceptions(struct gk20a *g)
 {
-	u32 val;
-
 	/* enable exceptions */
 	gk20a_writel(g, gr_fe_hww_esr_r(),
 		     gr_fe_hww_esr_en_enable_f() |
@@ -308,14 +306,6 @@ static void gr_gv11b_enable_hww_exceptions(struct gk20a *g)
 	gk20a_writel(g, gr_memfmt_hww_esr_r(),
 		     gr_memfmt_hww_esr_en_enable_f() |
 		     gr_memfmt_hww_esr_reset_active_f());
-	/* WAR for 200315442 */
-	val = gk20a_readl(g, gr_sked_hww_esr_en_r());
-	val = set_field(val,
-		gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_m(),
-		gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_disabled_f()
-		);
-	nvgpu_log_info(g, "sked_hww_esr_en = 0x%x", val);
-	gk20a_writel(g, gr_sked_hww_esr_en_r(), val);
 }
 
 static void gr_gv11b_enable_exceptions(struct gk20a *g)
@@ -1108,6 +1098,30 @@ static void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data)
 	gk20a_writel(g, gr_gpcs_tpcs_sm_l1tag_ctrl_r(), val);
 }
 
+static void gr_gv11b_set_skedcheck(struct gk20a *g, u32 data)
+{
+	u32 reg_val;
+
+	reg_val = gk20a_readl(g, gr_sked_hww_esr_en_r());
+
+	if ((data & NVC397_SET_SKEDCHECK_18_MASK) ==
+			NVC397_SET_SKEDCHECK_18_DISABLE) {
+		reg_val = set_field(reg_val,
+			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_m(),
+			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_disabled_f()
+			);
+	} else if ((data & NVC397_SET_SKEDCHECK_18_MASK) ==
+			NVC397_SET_SKEDCHECK_18_ENABLE) {
+		reg_val = set_field(reg_val,
+			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_m(),
+			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_enabled_f()
+			);
+	}
+	nvgpu_log_info(g, "sked_hww_esr_en = 0x%x", reg_val);
+	gk20a_writel(g, gr_sked_hww_esr_en_r(), reg_val);
+
+}
+
 static void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 {
 	gk20a_dbg_fn("");
@@ -1131,6 +1145,9 @@ static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 		switch (offset << 2) {
 		case NVC0C0_SET_SHADER_EXCEPTIONS:
 			gv11b_gr_set_shader_exceptions(g, data);
+			break;
+		case NVC3C0_SET_SKEDCHECK:
+			gr_gv11b_set_skedcheck(g, data);
 			break;
 		default:
 			goto fail;
@@ -1156,6 +1173,9 @@ static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 			break;
 		case NVC397_SET_TEX_IN_DBG:
 			gr_gv11b_set_tex_in_dbg(g, data);
+			break;
+		case NVC397_SET_SKEDCHECK:
+			gr_gv11b_set_skedcheck(g, data);
 			break;
 		default:
 			goto fail;

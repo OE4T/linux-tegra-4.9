@@ -3203,6 +3203,7 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	u32 gpc_new_skip_mask;
 	u32 tmp;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
 
 	tmp = gk20a_readl(g, pri_ringmaster_enum_fbp_r());
 	gr->num_fbps = pri_ringmaster_enum_fbp_count_v(tmp);
@@ -3338,7 +3339,7 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	}
 
 	gr->sm_to_cluster = nvgpu_kzalloc(g, gr->gpc_count * gr->tpc_count *
-					  sizeof(struct sm_info));
+				sm_per_tpc * sizeof(struct sm_info));
 	gr->no_of_sm = 0;
 
 	gk20a_dbg_info("fbps: %d", gr->num_fbps);

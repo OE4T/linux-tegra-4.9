@@ -30,6 +30,7 @@
 
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_bus_gv11b.h>
 
 #define NVGPU_L3_ALLOC_BIT	36
 
@@ -268,6 +269,56 @@ u64 gv11b_gpu_phys_addr(struct gk20a *g,
 	return phys;
 }
 
+static int gv11b_init_bar2_mm_hw_setup(struct gk20a *g)
+{
+	struct mm_gk20a *mm = &g->mm;
+	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
+	u64 inst_pa = gk20a_mm_inst_block_addr(g, inst_block);
+	u32 reg_val;
+	struct nvgpu_timeout timeout;
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
+
+	nvgpu_log_fn(g, " ");
+
+	g->ops.fb.set_mmu_page_size(g);
+
+	inst_pa = (u32)(inst_pa >> bus_bar2_block_ptr_shift_v());
+	nvgpu_log_info(g, "bar2 inst block ptr: 0x%08x",  (u32)inst_pa);
+
+	gk20a_writel(g, bus_bar2_block_r(),
+		     nvgpu_aperture_mask(g, inst_block,
+				bus_bar2_block_target_sys_mem_ncoh_f(),
+				bus_bar2_block_target_vid_mem_f()) |
+		     bus_bar2_block_mode_virtual_f() |
+		     bus_bar2_block_ptr_f(inst_pa));
+
+	/* This is needed as BAR1 support is removed and there is no way
+	 * to know if gpu successfully accessed memory.
+	 * To avoid deadlocks and non-deterministic virtual address translation
+	 * behavior, after writing BAR2_BLOCK to bind BAR2 to a virtual address
+	 * space, SW must ensure that the bind has completed prior to issuing
+	 * any further BAR2 requests by polling for both
+	 * BUS_BIND_STATUS_BAR2_PENDING to return to EMPTY and
+	 * BUS_BIND_STATUS_BAR2_OUTSTANDING to return to FALSE
+	 */
+	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+			   NVGPU_TIMER_CPU_TIMER);
+	nvgpu_log_info(g, "check bar2 bind status");
+	do {
+		reg_val = gk20a_readl(g, bus_bind_status_r());
+
+		if (!((reg_val & bus_bind_status_bar2_pending_busy_f()) ||
+			(reg_val & bus_bind_status_bar2_outstanding_true_f())))
+			return 0;
+
+		nvgpu_usleep_range(delay, delay * 2);
+		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+	} while (!nvgpu_timeout_expired_msg(&timeout, "bar2 bind timedout"));
+
+	nvgpu_err(g, "bar2 bind failed. gpu unable to access memory");
+	return -EBUSY;
+}
+
 void gv11b_init_mm(struct gpu_ops *gops)
 {
 	gp10b_init_mm(gops);
@@ -280,4 +331,5 @@ void gv11b_init_mm(struct gpu_ops *gops)
 	gops->mm.fault_info_mem_destroy =
 		 gv11b_mm_fault_info_mem_destroy;
 	gops->mm.remove_bar2_vm = gv11b_mm_remove_bar2_vm;
+	gops->mm.init_bar2_mm_hw_setup = gv11b_init_bar2_mm_hw_setup;
 }

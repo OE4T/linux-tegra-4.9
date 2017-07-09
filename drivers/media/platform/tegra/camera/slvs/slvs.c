@@ -25,13 +25,15 @@
 #include <media/mc_common.h>
 #include <media/slvs.h>
 
+#include <soc/tegra/chip-id.h>
+
 #include "dev.h"
 #include "linux/nvhost.h"
 #include <linux/version.h>
 
 #define SLVSEC_NUM_LANES 8
 
-#define SYCNGEN_CLOCK  U64_C(408000)
+#define SYNCGEN_CLOCK  U32_C(408000)
 #define XSYNC_WIDTH 4
 #define VI_NUM_VGP 6
 #define VI_NUM_SYNCGEN 3
@@ -106,6 +108,8 @@ struct tegra_mc_slvs {
 	struct device *dev;
 	void __iomem *slvs_base;
 	void __iomem *vi_base;
+
+	u32 syncgen_clock;
 
 	atomic_t power_ref;
 	atomic_t sensor_active;
@@ -386,9 +390,11 @@ static inline void slvs_vi_syncgen_stop(struct tegra_mc_slvs *slvs,
 }
 
 static int slvs_get_syncgen_config(
+	struct tegra_mc_slvs *slvs,
 	const struct camera_common_framesync *fs,
 	struct slvsec_syncgen_config *cfg)
 {
+	u64 syncgen_clock = slvs->syncgen_clock;
 	/* HS per 1000 second. */
 	u64 hs_per_1000sec = (u64)fs->xvs * fs->fps;
 	u64 xhs;
@@ -398,7 +404,7 @@ static int slvs_get_syncgen_config(
 	if (hs_per_1000sec == 0)
 		return -EINVAL;
 
-	xhs = ((10 * 1000 * SYCNGEN_CLOCK) << 32) / hs_per_1000sec * 100;
+	xhs = ((10 * 1000 * syncgen_clock) << 32) / hs_per_1000sec * 100;
 
 	for (frac = 0; (xhs >> (frac + 32)) != 0; frac++)
 		;
@@ -407,7 +413,9 @@ static int slvs_get_syncgen_config(
 	cfg->hclk_div_fmt = 31 - frac;
 
 	/* At least XSYNC_WIDTH iclk cycles */
-	width = (XSYNC_WIDTH * SYCNGEN_CLOCK + fs->inck - 1) / fs->inck;
+	width = (XSYNC_WIDTH * syncgen_clock + fs->inck - 1) / fs->inck;
+	if (width < XSYNC_WIDTH)
+		width = XSYNC_WIDTH;
 
 	cfg->xhs_width = width;
 	cfg->xvs_width = width;
@@ -426,7 +434,8 @@ static int tegra_slvs_syncgen_start(struct tegra_slvs_stream *stream)
 	struct slvsec_syncgen_config config;
 	int err;
 
-	err = slvs_get_syncgen_config(&stream->framesync, &config);
+	err = slvs_get_syncgen_config(slvs,
+		&stream->framesync, &config);
 	if (err)
 		return err;
 
@@ -474,12 +483,14 @@ static void fractional_binary(char buffer[35], u32 value, u32 fraction)
 static int slvs_debugfs_syncgen_config_read(struct seq_file *s, void *data)
 {
 	struct tegra_slvs_stream *stream = s->private;
+	struct tegra_mc_slvs *slvs = stream->slvs;
+	u64 syncgen_clock = slvs->syncgen_clock;
 	int err;
 	struct slvsec_syncgen_config config;
 	char buffer[35];
 	u64 framerate;
 
-	err = slvs_get_syncgen_config(&stream->framesync, &config);
+	err = slvs_get_syncgen_config(slvs, &stream->framesync, &config);
 	if (err < 0)
 		return err;
 
@@ -488,7 +499,7 @@ static int slvs_debugfs_syncgen_config_read(struct seq_file *s, void *data)
 
 	fractional_binary(buffer, config.hclk_div, config.hclk_div_fmt);
 
-	framerate = (1000 * SYCNGEN_CLOCK) << 32;
+	framerate = (1000 * syncgen_clock) << 32;
 	framerate /= config.hclk_div;
 	framerate /= config.xvs_interval;
 	/* Multiply framerate by 2000 followed by right shift by 32 */
@@ -498,7 +509,7 @@ static int slvs_debugfs_syncgen_config_read(struct seq_file *s, void *data)
 	else
 		framerate >>= (32 - 3) - config.hclk_div_fmt;
 
-	seq_printf(s, "clk = %llu\n", 1000ULL * SYCNGEN_CLOCK);
+	seq_printf(s, "clk = %llu\n", 1000ULL * syncgen_clock);
 	seq_printf(s, "hclk_div = %u >> %u (%s)\n",
 		config.hclk_div, config.hclk_div_fmt, buffer);
 	seq_printf(s, "xvs = %u\n", config.xvs_interval);
@@ -600,6 +611,9 @@ static void tegra_slvs_init_debugfs(struct tegra_mc_slvs *slvs)
 	int i;
 	char name[32];
 	struct dentry *dir;
+
+	debugfs_create_u32("syncgen-clock", S_IRUGO | S_IWUSR, info->debugfs,
+			&slvs->syncgen_clock);
 
 	for (i = 0; i < slvs->num_streams; i++) {
 		snprintf(name, sizeof(name), "mc@%d", i);
@@ -1009,6 +1023,9 @@ static int tegra_slvs_parse_dt(struct tegra_mc_slvs *slvs)
 	struct tegra_slvs_stream *stream;
 	int i;
 
+	(void)of_property_read_u32(node, "nvidia,syncgen-clock",
+				&slvs->syncgen_clock);
+
 	if (num_streams <= 0) {
 		dev_info(slvs->dev, "no streams defined");
 		return -ENODEV;
@@ -1075,6 +1092,12 @@ struct tegra_mc_slvs *tegra_slvs_media_controller_init(
 	slvs->pdev = pdev;
 	slvs->slvs_base = pdata->aperture[0];
 	slvs->vi_base = pdata->aperture[1];
+
+	slvs->syncgen_clock = SYNCGEN_CLOCK;
+
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk()) {
+		slvs->syncgen_clock = 72000; /* 72 MHz */
+	}
 
 	atomic_set(&slvs->power_ref, 0);
 

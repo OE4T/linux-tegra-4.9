@@ -6594,7 +6594,7 @@ static int __init parse_disp_params(char *options, struct tegra_dc_mode *mode)
 	int i, params[11];
 	char *p;
 
-	memset(params, 0, ARRAY_SIZE(params));
+	memset(params, 0, ARRAY_SIZE(params) * sizeof(int));
 	for (i = 0; i < ARRAY_SIZE(params); i++) {
 		if ((p = strsep(&options, ",")) != NULL) {
 			if (*p)

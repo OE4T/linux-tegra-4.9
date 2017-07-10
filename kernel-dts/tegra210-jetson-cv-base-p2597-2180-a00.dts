@@ -53,9 +53,6 @@
 	compatible = "nvidia,jetson-cv", "nvidia,tegra210";
 	nvidia,dtsfilename = __FILE__;
 
-	nvidia,boardids = "2597:2180:A0";
-	nvidia,proc-boardid = "2597:2180:A0";
-	nvidia,pmu-boardid = "2597:2180:A0";
 	#address-cells = <2>;
 	#size-cells = <2>;
 

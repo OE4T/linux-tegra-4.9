@@ -360,7 +360,11 @@ static void nvhost_vi_notify_reset(struct device *dev, u8 ch)
 	int i;
 	u32 mask = hvnd->classify_mask;
 
-	BUG_ON(ch >= ARRAY_SIZE(hvnd->incr));
+	if (ch >= ARRAY_SIZE(hvnd->incr)) {
+		dev_err(dev, "Invalid channel=%u! Exceeds size=%lu\n",
+			ch, ARRAY_SIZE(hvnd->incr));
+		return;
+	}
 	incrs = &hvnd->incr[ch];
 
 	for (i = 0; i < ARRAY_SIZE(incrs->syncpt_ids); i++)

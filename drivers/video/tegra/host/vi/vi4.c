@@ -319,11 +319,18 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	int err;
 
 	match = of_match_device(tegra_vi4_of_match, &pdev->dev);
-	BUG_ON(match == NULL);
+	if (!match) {
+		dev_err(&pdev->dev, "No match found on probe...\n");
+		return -EINVAL;
+	}
+
 	data = (struct tegra_vi_data *) match->data;
 
 	pdata = (struct nvhost_device_data *)data->info;
-	BUG_ON(pdata == NULL);
+	if (!pdata) {
+		dev_err(&pdev->dev, "No device data!\n");
+		return -EINVAL;
+	}
 
 	pdata->pdev = pdev;
 	mutex_init(&pdata->lock);

@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Unit clock scaling
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -754,7 +754,9 @@ static const struct file_operations actmon_k_fops = {
 void nvhost_actmon_debug_init(struct host1x_actmon *actmon,
 				     struct dentry *de)
 {
-	BUG_ON(!actmon);
+	if (!actmon)
+		return;
+
 	debugfs_create_file("actmon_k", S_IRUGO, de,
 			actmon, &actmon_k_fops);
 	debugfs_create_file("actmon_sample_period", S_IRUGO, de,

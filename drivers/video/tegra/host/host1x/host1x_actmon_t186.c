@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Actmon support for T186
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -524,7 +524,9 @@ static const struct file_operations actmon_cumulative_fops = {
 static void t18x_actmon_debug_init(struct host1x_actmon *actmon,
 				     struct dentry *de)
 {
-	BUG_ON(!actmon);
+	if (!actmon)
+		return;
+
 	debugfs_create_file("actmon_cumulative", S_IRUGO, de,
 			actmon, &actmon_cumulative_fops);
 }

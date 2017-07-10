@@ -163,7 +163,7 @@ static inline void *nvhost_get_falcon_data(struct platform_device *_dev)
 {
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)platform_get_drvdata(_dev);
-	BUG_ON(!pdata);
+	WARN_ON(!pdata);
 	return pdata ? pdata->falcon_data : NULL;
 }
 
@@ -181,7 +181,7 @@ static inline void *nvhost_get_private_data(struct platform_device *_dev)
 {
 	struct nvhost_device_data *pdata =
 		(struct nvhost_device_data *)platform_get_drvdata(_dev);
-	BUG_ON(!pdata);
+	WARN_ON(!pdata);
 	return pdata ? pdata->private_data : NULL;
 }
 

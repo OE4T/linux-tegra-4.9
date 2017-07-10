@@ -1487,7 +1487,10 @@ static struct device *nvhost_client_device_create(
 
 	nvhost_dbg_fn("");
 
-	BUG_ON(!host);
+	if (!host) {
+		dev_err(&pdev->dev, "No nvhost_master!\n");
+		return ERR_PTR(-EINVAL);
+	}
 
 	cdev_init(cdev, ops);
 	cdev->owner = THIS_MODULE;
@@ -1529,7 +1532,10 @@ int nvhost_client_user_init(struct platform_device *dev)
 	if (pdata->kernel_only)
 		return 0;
 
-	BUG_ON(!nvhost_master->major);
+	if (!nvhost_master->major) {
+		dev_err(&dev->dev, "Major chrdev number not allocated!\n");
+		return -EINVAL;
+	}
 
 	mutex_lock(&nvhost_master->chrdev_mutex);
 
@@ -1727,7 +1733,7 @@ nvhost_client_request_firmware(struct platform_device *dev, const char *fw_name)
 	/* This field is NULL when calling from SYS_EXIT.
 	   Add a check here to prevent crash in request_firmware */
 	if (!current->fs) {
-		BUG();
+		WARN_ON(1);
 		return NULL;
 	}
 

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoint Integration to linux/sync Framework
  *
- * Copyright (c) 2013-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -69,7 +69,9 @@ static void nvhost_sync_pt_free_shared(struct kref *ref)
 		container_of(ref, struct nvhost_sync_pt, refcount);
 
 	/* Host should have been idled in nvhost_sync_pt_signal. */
-	BUG_ON(pt->has_intr);
+	if (pt->has_intr)
+		pr_err("%s: BUG! Host not idle, free'ing syncpt! id=%u thresh=%u\n",
+			__func__, pt->obj->id, pt->thresh);
 	kfree(pt);
 }
 
@@ -92,6 +94,7 @@ static int nvhost_sync_pt_set_intr(struct nvhost_sync_pt *pt)
 	pt->has_intr = true;
 	err = nvhost_module_busy(syncpt_to_dev(pt->obj->sp)->dev);
 	if (err) {
+		pt->has_intr = false;
 		kref_put(&pt->refcount, nvhost_sync_pt_free_shared);
 		return err;
 	}
@@ -191,7 +194,13 @@ static int nvhost_sync_pt_compare(struct sync_pt *a, struct sync_pt *b)
 	struct nvhost_sync_pt *pt_a = to_nvhost_sync_pt(a);
 	struct nvhost_sync_pt *pt_b = to_nvhost_sync_pt(b);
 	struct nvhost_sync_timeline *obj = pt_a->obj;
-	BUG_ON(pt_a->obj != pt_b->obj);
+
+	if (pt_a->obj != pt_b->obj) {
+		pr_err("%s: Sync timeline missmatch! ida=%u idb=%u\n",
+			__func__, pt_a->obj->id, pt_b->obj->id);
+		WARN_ON(1);
+		return 0;
+	}
 
 	if (obj->id != NVSYNCPT_INVALID)
 		/* No need to update min */

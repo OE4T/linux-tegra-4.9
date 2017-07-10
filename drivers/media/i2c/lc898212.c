@@ -256,7 +256,7 @@ static int lc898212_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct lc898212 *priv =
 		container_of(ctrl->handler, struct lc898212, ctrl_handler);
-	int err;
+	int err = 0;
 
 	dev_dbg(&priv->s_data->i2c_client->dev, "%s++\n", __func__);
 	/* check for power state */

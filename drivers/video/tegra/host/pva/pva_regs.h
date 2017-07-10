@@ -36,4 +36,7 @@
 #define SEC_LIC_INTR_HSP4	0x8
 #define SEC_LIC_INTR_HSP_ALL	0xF
 
+/* Watchdog support */
+#define SEC_LIC_INTR_WDT	0x1
+
 #endif

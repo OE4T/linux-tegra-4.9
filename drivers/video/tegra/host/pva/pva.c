@@ -411,9 +411,10 @@ int pva_finalize_poweron(struct platform_device *pdev)
 	struct pva *pva = pdata->private_data;
 	int err = 0;
 
-	/* Enable LIC_INTERRUPT line for HSP1 */
+	/* Enable LIC_INTERRUPT line for HSP1 and WDT*/
 	host1x_writel(pva->pdev, sec_lic_intr_enable_r(),
-		sec_lic_intr_enable_hsp_f(SEC_LIC_INTR_HSP1));
+		sec_lic_intr_enable_hsp_f(SEC_LIC_INTR_HSP1) |
+		sec_lic_intr_enable_wdt_f(SEC_LIC_INTR_WDT));
 
 	enable_irq(pva->irq);
 

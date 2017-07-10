@@ -32,6 +32,7 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 	u32 status7 = host1x_readl(pdev, hsp_sm7_r());
 	u32 status6 = host1x_readl(pdev, hsp_sm6_r());
 	u32 status5 = host1x_readl(pdev, hsp_sm5_r());
+	u32 lic_int_status = host1x_readl(pdev, sec_lic_intr_status_r());
 	bool recover = false;
 
 	if (status5 & PVA_AISR_INT_PENDING) {
@@ -72,6 +73,12 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 		 */
 		status7 = status7 & PVA_READY;
 		host1x_writel(pdev, hsp_sm7_r(), status7);
+	}
+
+	/* Check for watchdog timer interrupt */
+	if (lic_int_status & sec_lic_intr_enable_wdt_f(SEC_LIC_INTR_WDT)) {
+		nvhost_warn(&pdev->dev, "WatchDog Timer");
+		recover = true;
 	}
 
 	/* Copy trace points to ftrace buffer */

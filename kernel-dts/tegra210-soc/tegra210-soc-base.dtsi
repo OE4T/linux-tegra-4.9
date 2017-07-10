@@ -52,7 +52,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7 &CC6 &CC7>;
+			cpu-idle-states = <&C7 &CC6>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -64,7 +64,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7 &CC6 &CC7>;
+			cpu-idle-states = <&C7 &CC6>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -76,7 +76,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7 &CC6 &CC7>;
+			cpu-idle-states = <&C7 &CC6>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -88,7 +88,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7 &CC6 &CC7>;
+			cpu-idle-states = <&C7 &CC6>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -113,15 +113,6 @@
 				wakeup-latency-us = <230>;
 				min-residency-us = <10000>;
 				idle-state-name = "cc6-cluster-powergated";
-				status = "okay";
-			};
-
-			CC7: cc7 {
-				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x40000011>;
-				wakeup-latency-us = <500>;
-				min-residency-us = <1000>;
-				idle-state-name = "cc7-cluster-railgated";
 				status = "okay";
 			};
 		};

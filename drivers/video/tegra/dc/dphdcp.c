@@ -777,7 +777,7 @@ exit:
 }
 
 /* vprime verification for repeater */
-int tsec_hdcp_dp_verify_vprime(struct tegra_dphdcp *dphdcp)
+static int tsec_hdcp_dp_verify_vprime(struct tegra_dphdcp *dphdcp)
 {
 	int i;
 	u8 *p;

@@ -1177,6 +1177,9 @@ static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 		case NVC397_SET_SKEDCHECK:
 			gr_gv11b_set_skedcheck(g, data);
 			break;
+		case NVC397_SET_BES_CROP_DEBUG3:
+			g->ops.gr.set_bes_crop_debug3(g, data);
+			break;
 		default:
 			goto fail;
 		}

@@ -3918,6 +3918,30 @@ static inline u32 gr_bes_crop_debug3_comp_vdc_4to2_disable_m(void)
 {
 	return 0x1 << 31;
 }
+static inline u32 gr_bes_crop_debug3_blendopt_read_suppress_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_bes_crop_debug3_blendopt_read_suppress_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_bes_crop_debug3_blendopt_read_suppress_enabled_f(void)
+{
+	return 0x2;
+}
+static inline u32 gr_bes_crop_debug3_blendopt_fill_override_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 gr_bes_crop_debug3_blendopt_fill_override_disabled_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_bes_crop_debug3_blendopt_fill_override_enabled_f(void)
+{
+	return 0x4;
+}
 static inline u32 gr_bes_crop_settings_r(void)
 {
 	return 0x00408958;

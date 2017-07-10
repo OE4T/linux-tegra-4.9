@@ -126,6 +126,15 @@
 
 #define SDHOST_LOW_VOLT_MIN	1800000
 
+/* uhs mask can be used to mask any of the UHS modes support */
+#define MMC_UHS_MASK_SDR12	0x1
+#define MMC_UHS_MASK_SDR25	0x2
+#define MMC_UHS_MASK_SDR50	0x4
+#define MMC_UHS_MASK_DDR50	0x8
+#define MMC_UHS_MASK_SDR104	0x10
+#define MMC_MASK_HS200		0x20
+#define MMC_MASK_HS400		0x40
+
 static char prod_device_states[MMC_TIMING_COUNTER][20] = {
 	"prod_c_ds", /* MMC_TIMING_LEGACY */
 	"prod_c_hs", /* MMC_TIMING_MMC_HS */
@@ -186,6 +195,7 @@ struct sdhci_tegra {
 	struct pinctrl_state *e_33v_enable;
 	struct pinctrl_state *e_33v_disable;
 	bool en_periodic_cflush; /* Enable periodic cache flush for eMMC */
+	u8 uhs_mask;
 };
 
 /* Module params */
@@ -447,6 +457,38 @@ static void tegra_sdhci_vendor_trim_clear_sel_vreg(struct sdhci_host *host,
 	}
 }
 
+static void tegra_sdhci_mask_host_caps(struct sdhci_host *host, u8 uhs_mask)
+{
+	/* Mask any bus speed modes if set in platform data */
+	if (uhs_mask & MMC_UHS_MASK_SDR12)
+		host->mmc->caps &= ~MMC_CAP_UHS_SDR12;
+
+	if (uhs_mask & MMC_UHS_MASK_SDR25)
+		host->mmc->caps &= ~MMC_CAP_UHS_SDR25;
+
+	if (uhs_mask & MMC_UHS_MASK_SDR50)
+		host->mmc->caps &= ~MMC_CAP_UHS_SDR50;
+
+	if (uhs_mask & MMC_UHS_MASK_SDR104)
+		host->mmc->caps &= ~MMC_CAP_UHS_SDR104;
+
+	if (uhs_mask & MMC_UHS_MASK_DDR50) {
+		host->mmc->caps &= ~MMC_CAP_UHS_DDR50;
+		host->mmc->caps &= ~MMC_CAP_1_8V_DDR;
+	}
+
+	if (uhs_mask & MMC_MASK_HS200) {
+		host->mmc->caps2 &= ~MMC_CAP2_HS200;
+		host->mmc->caps2 &= ~MMC_CAP2_HS400;
+		host->mmc->caps2 &= ~MMC_CAP2_HS400_ES;
+	}
+
+	if (uhs_mask & MMC_MASK_HS400) {
+		host->mmc->caps2 &= ~MMC_CAP2_HS400;
+		host->mmc->caps2 &= ~MMC_CAP2_HS400_ES;
+	}
+}
+
 static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
@@ -508,6 +550,7 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 		tegra_host->pad_calib_required = true;
 
 	tegra_host->ddr_signaling = false;
+	tegra_sdhci_mask_host_caps(host, tegra_host->uhs_mask);
 }
 
 static void tegra_sdhci_set_bus_width(struct sdhci_host *host, int bus_width)
@@ -1441,6 +1484,7 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 				 "since flush timeout value is zero.\n");
 		}
 	}
+	of_property_read_u32(np, "uhs-mask", (u32 *)&tegra_host->uhs_mask);
 
 	return 0;
 }

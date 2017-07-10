@@ -283,34 +283,6 @@ static int bpmp_valid_txfer(void *ob_data, int ob_sz, void *ib_data, int ib_sz)
 			(!ib_sz || ib_data);
 }
 
-int tegra_bpmp_send(int mrq, void *data, int sz)
-{
-	unsigned long flags;
-	int ch;
-	int r;
-
-	if (!bpmp_valid_txfer(data, sz, NULL, 0))
-		return -EINVAL;
-
-	if (!mail_ops)
-		return -ENODEV;
-
-	raw_local_irq_save(flags);
-
-	ch = bpmp_ob_channel();
-	if (ch < 0)
-		return ch;
-
-	r = bpmp_write_ch(ch, mrq, 0, data, sz);
-
-	if (!r && mail_ops->ring_doorbell)
-		mail_ops->ring_doorbell(ch);
-
-	raw_local_irq_restore(flags);
-	return r;
-}
-EXPORT_SYMBOL(tegra_bpmp_send);
-
 static void bpmp_show_req(int mrq, uint8_t *ob_data, size_t ob_sz)
 {
 	int i;

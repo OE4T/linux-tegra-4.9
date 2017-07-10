@@ -23,7 +23,6 @@ typedef void (*bpmp_mrq_handler)(int mrq, void *data, int ch);
 
 #ifdef CONFIG_TEGRA_BPMP
 int tegra_bpmp_running(void);
-int tegra_bpmp_send(int mrq, void *data, int sz);
 int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 		void *ib_data, int ib_sz);
 int tegra_bpmp_send_receive(int mrq, void *ob_data, int ob_sz,
@@ -43,8 +42,6 @@ void tegra_bpmp_free_coherent(size_t size, void *vaddr,
 		dma_addr_t phys);
 #else
 static inline int tegra_bpmp_running(void) { return 0; }
-static inline int tegra_bpmp_send(int mrq, void *data, int sz)
-{ return -ENODEV; }
 static inline int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data,
 		int ob_sz, void *ib_data, int ib_sz) { return -ENODEV; }
 static inline int tegra_bpmp_send_receive(int mrq, void *ob_data, int ob_sz,

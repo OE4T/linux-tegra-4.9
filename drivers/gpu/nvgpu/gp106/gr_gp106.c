@@ -98,6 +98,9 @@ static int gr_gp106_handle_sw_method(struct gk20a *g, u32 addr,
 		case NVC097_SET_RD_COALESCE:
 			gr_gm20b_set_rd_coalesce(g, data);
 			break;
+		case NVC097_SET_BES_CROP_DEBUG3:
+			g->ops.gr.set_bes_crop_debug3(g, data);
+			break;
 		default:
 			goto fail;
 		}

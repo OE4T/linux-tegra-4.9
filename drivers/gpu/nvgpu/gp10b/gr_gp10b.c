@@ -642,6 +642,31 @@ static void gr_gp10b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
 	gk20a_dbg_fn("done");
 }
 
+static void gr_gp10b_set_bes_crop_debug3(struct gk20a *g, u32 data)
+{
+	u32 val;
+
+	gk20a_dbg_fn("");
+
+	val = gk20a_readl(g, gr_bes_crop_debug3_r());
+	if ((data & 1)) {
+		val = set_field(val,
+				gr_bes_crop_debug3_blendopt_read_suppress_m(),
+				gr_bes_crop_debug3_blendopt_read_suppress_enabled_f());
+		val = set_field(val,
+				gr_bes_crop_debug3_blendopt_fill_override_m(),
+				gr_bes_crop_debug3_blendopt_fill_override_enabled_f());
+	} else {
+		val = set_field(val,
+				gr_bes_crop_debug3_blendopt_read_suppress_m(),
+				gr_bes_crop_debug3_blendopt_read_suppress_disabled_f());
+		val = set_field(val,
+				gr_bes_crop_debug3_blendopt_fill_override_m(),
+				gr_bes_crop_debug3_blendopt_fill_override_disabled_f());
+	}
+	gk20a_writel(g, gr_bes_crop_debug3_r(), val);
+}
+
 static int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
@@ -679,6 +704,9 @@ static int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 			break;
 		case NVC097_SET_RD_COALESCE:
 			gr_gm20b_set_rd_coalesce(g, data);
+			break;
+		case NVC097_SET_BES_CROP_DEBUG3:
+			g->ops.gr.set_bes_crop_debug3(g, data);
 			break;
 		default:
 			goto fail;
@@ -2364,6 +2392,7 @@ void gp10b_init_gr(struct gpu_ops *gops)
 		gr_gp10b_set_alpha_circular_buffer_size;
 	gops->gr.set_circular_buffer_size =
 		gr_gp10b_set_circular_buffer_size;
+	gops->gr.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3;
 	gops->gr.init_ctx_state = gr_gp10b_init_ctx_state;
 	gops->gr.alloc_gr_ctx = gr_gp10b_alloc_gr_ctx;
 	gops->gr.free_gr_ctx = gr_gp10b_free_gr_ctx;

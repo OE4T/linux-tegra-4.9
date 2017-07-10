@@ -182,6 +182,7 @@ struct gpu_ops {
 		void (*set_alpha_circular_buffer_size)(struct gk20a *g,
 					               u32 data);
 		void (*set_circular_buffer_size)(struct gk20a *g, u32 data);
+		void (*set_bes_crop_debug3)(struct gk20a *g, u32 data);
 		void (*enable_hww_exceptions)(struct gk20a *g);
 		bool (*is_valid_class)(struct gk20a *g, u32 class_num);
 		bool (*is_valid_gfx_class)(struct gk20a *g, u32 class_num);

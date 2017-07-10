@@ -730,8 +730,10 @@ int quadd_hrt_start(void)
 	hrt.get_stack_offset =
 		(extra & QUADD_PARAM_EXTRA_STACK_OFFSET) ? 1 : 0;
 
-	for_each_possible_cpu(cpuid)
-		put_header(cpuid);
+	for_each_possible_cpu(cpuid) {
+		if (ctx->pmu->get_arch(cpuid))
+			put_header(cpuid);
+	}
 
 	if (extra & QUADD_PARAM_EXTRA_GET_MMAP) {
 		err = quadd_get_current_mmap(param->pids[0]);

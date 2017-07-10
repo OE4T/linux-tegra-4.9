@@ -108,6 +108,13 @@ static int tegra_t186ref_m3420_clocks_init(struct snd_soc_card *card,
 		return err;
 	}
 
+	err = pm_runtime_get_sync(machine->i2s_master->dev);
+	if (err < 0) {
+		dev_err(card->dev, "Failed to enable I2S master\n");
+		tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
+		return err;
+	}
+
 out:
 	machine->clk_ena_count++;
 
@@ -217,43 +224,13 @@ static void tegra_t186ref_m3420_shutdown(struct snd_pcm_substream *substream)
 	if (machine->clk_ena_count > 0) {
 		machine->clk_ena_count--;
 
-		if (!machine->clk_ena_count)
+		if (!machine->clk_ena_count) {
+			pm_runtime_put_sync(machine->i2s_master->dev);
 			tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
-	}
-
-	mutex_unlock(&machine->lock);
-}
-
-static int tegra_t186ref_m3420_enable_i2s_master(struct snd_soc_dapm_widget *w,
-						 struct snd_kcontrol *kcontrol,
-						 int event)
-{
-	struct snd_soc_card *card = w->dapm->card;
-	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
-	int err;
-
-	if (SND_SOC_DAPM_EVENT_ON(event)) {
-		err = pm_runtime_get_sync(machine->i2s_master->dev);
-		if (err < 0) {
-			dev_err(card->dev, "Failed to enable I2S master\n");
-			return err;
 		}
 	}
 
-	return 0;
-}
-
-static int tegra_t186ref_m3420_disable_i2s_master(struct snd_soc_dapm_widget *w,
-						 struct snd_kcontrol *kcontrol,
-						 int event)
-{
-	struct snd_soc_card *card = w->dapm->card;
-	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
-
-	if (SND_SOC_DAPM_EVENT_OFF(event))
-		pm_runtime_put(machine->i2s_master->dev);
-
-	return 0;
+	mutex_unlock(&machine->lock);
 }
 
 static int tegra_t186ref_m3420_i2s_index(struct snd_soc_card *card,
@@ -396,10 +373,6 @@ static const struct snd_soc_dapm_widget tegra_m3420_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic-2", NULL),
 	SND_SOC_DAPM_MIC("Mic-3", NULL),
 	SND_SOC_DAPM_MIC("Mic-4", NULL),
-	SND_SOC_DAPM_PRE("I2S Master Start",
-			 tegra_t186ref_m3420_enable_i2s_master),
-	SND_SOC_DAPM_POST("I2S Master Stop",
-			  tegra_t186ref_m3420_disable_i2s_master),
 };
 
 static int tegra_t186ref_m3420_suspend_pre(struct snd_soc_card *card)

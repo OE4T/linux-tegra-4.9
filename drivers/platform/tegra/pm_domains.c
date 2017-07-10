@@ -60,7 +60,8 @@ static int tegra_mc_clk_power_off(struct generic_pm_domain *genpd)
 	if (!pd)
 		return -EINVAL;
 
-	tegra_bpmp_send(MRQ_SCX_ENABLE, &val, sizeof(val));
+	tegra_bpmp_send_receive_atomic(MRQ_SCX_ENABLE,
+			&val, sizeof(val), NULL, 0);
 
 	return 0;
 }
@@ -73,7 +74,8 @@ static int tegra_mc_clk_power_on(struct generic_pm_domain *genpd)
 	if (!pd)
 		return -EINVAL;
 
-	tegra_bpmp_send(MRQ_SCX_ENABLE, &val, sizeof(val));
+	tegra_bpmp_send_receive_atomic(MRQ_SCX_ENABLE,
+			&val, sizeof(val), NULL, 0);
 
 	return 0;
 }

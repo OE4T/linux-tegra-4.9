@@ -49,8 +49,9 @@
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>,
 		       <&tegra_car TEGRA210_CLK_PLL_P>,
-		       <&tegra_car TEGRA210_CLK_PLL_C4_OUT0>;
-		clock-names = "sdmmc", "pll_p", "pll_c4_out0";
+		       <&tegra_car TEGRA210_CLK_PLL_C4_OUT0>,
+		       <&tegra_car TEGRA210_CLK_SDMMC_LEGACY>;
+		clock-names = "sdmmc", "pll_p", "pll_c4_out0", "sdmmc_legacy_tm";
 	};
 
 	sdhci@700b0400 {
@@ -69,8 +70,9 @@
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC3>,
 		       <&tegra_car TEGRA210_CLK_PLL_P>,
-		       <&tegra_car TEGRA210_CLK_PLL_C4_OUT2>;
-		clock-names = "sdmmc", "pll_p", "pll_c4_out2";
+		       <&tegra_car TEGRA210_CLK_PLL_C4_OUT2>,
+		       <&tegra_car TEGRA210_CLK_SDMMC_LEGACY>;
+		clock-names = "sdmmc", "pll_p", "pll_c4_out2", "sdmmc_legacy_tm";
 		keep-power-in-suspend;
 		ignore-pm-notify;
 		non-removable;
@@ -108,8 +110,9 @@
 		resets = <&tegra_car TEGRA210_CLK_SDMMC2>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC2>,
-		       <&tegra_car TEGRA210_CLK_PLL_P>;
-		clock-names = "sdmmc", "pll_p";
+		       <&tegra_car TEGRA210_CLK_PLL_P>,
+		       <&tegra_car TEGRA210_CLK_SDMMC_LEGACY>;
+		clock-names = "sdmmc", "pll_p", "sdmmc_legacy_tm";
 		non-removable;
 		cap-mmc-highspeed;
 		cap-sd-highspeed;
@@ -142,8 +145,9 @@
 		resets = <&tegra_car TEGRA210_CLK_SDMMC1>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC1>,
-		       <&tegra_car TEGRA210_CLK_PLL_P>;
-		clock-names = "sdmmc", "pll_p";
+		       <&tegra_car TEGRA210_CLK_PLL_P>,
+		       <&tegra_car TEGRA210_CLK_SDMMC_LEGACY>;
+		clock-names = "sdmmc", "pll_p", "sdmmc_legacy_tm";
 		pwrdet-support;
 		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable", "sdmmc_drv_code", "sdmmc_default_drv_code", "sdmmc_e_33v_enable", "sdmmc_e_33v_disable";
 		pinctrl-0 = <&sdmmc1_schmitt_enable_state>;

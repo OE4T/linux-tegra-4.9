@@ -490,8 +490,9 @@
 		pll_source = "pll_p", "pll_c4_out2";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>,
 		       <&tegra_car TEGRA210_CLK_PLL_P>,
-		       <&tegra_car TEGRA210_CLK_PLL_C4_OUT2>;
-		clock-names = "sdmmc", "pll_p", "pll_c4_out2";
+		       <&tegra_car TEGRA210_CLK_PLL_C4_OUT2>,
+			<&tegra_car TEGRA210_CLK_SDMMC_LEGACY>;
+		clock-names = "sdmmc", "pll_p", "pll_c4_out2", "sdmmc_legacy_tm";
 		status = "disabled";
 	};
 

@@ -60,8 +60,9 @@
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC4>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
-		       <&tegra_car TEGRA186_CLK_PLLC4_OUT0>;
-		clock-names = "sdmmc", "pll_p", "pll_c4_out0";
+		       <&tegra_car TEGRA186_CLK_PLLC4_OUT0>,
+		       <&tegra_car TEGRA186_CLK_SDMMC_LEGACY_TM>;
+		clock-names = "sdmmc", "pll_p", "pll_c4_out0", "sdmmc_legacy_tm";
 		iommus = <&smmu TEGRA_SID_SDMMC4A>;
 		status = "disabled";
 	};
@@ -94,8 +95,9 @@
 		resets = <&tegra_car TEGRA186_RESET_SDMMC3>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC3>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "sdmmc", "pll_p";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+		       <&tegra_car TEGRA186_CLK_SDMMC_LEGACY_TM>;
+		clock-names = "sdmmc", "pll_p", "sdmmc_legacy_tm";
 		iommus = <&smmu TEGRA_SID_SDMMC3A>;
 		nvidia,en-periodic-calib;
 		force-non-removable-rescan;
@@ -133,8 +135,9 @@
 		resets = <&tegra_car TEGRA186_RESET_SDMMC2>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC2>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "sdmmc", "pll_p";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+		       <&tegra_car TEGRA186_CLK_SDMMC_LEGACY_TM>;
+		clock-names = "sdmmc", "pll_p", "sdmmc_legacy_tm";
 		iommus = <&smmu TEGRA_SID_SDMMC2A>;
 		status = "disabled";
 	};
@@ -166,8 +169,9 @@
 		resets = <&tegra_car TEGRA186_RESET_SDMMC1>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC1>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "sdmmc", "pll_p";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+		       <&tegra_car TEGRA186_CLK_SDMMC_LEGACY_TM>;
+		clock-names = "sdmmc", "pll_p", "sdmmc_legacy_tm";
 		iommus = <&smmu TEGRA_SID_SDMMC1A>;
 		nvidia,en-periodic-calib;
 		status = "disabled";

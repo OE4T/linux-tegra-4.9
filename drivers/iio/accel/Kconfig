@@ -296,11 +296,7 @@ config STK8BA50
 
 	  Choosing M will build the driver as a module. If so, the module
 	  will be called stk8ba50.
-config NVS_AIS328DQ
-	tristate "STMicroelectronics accelerometer AIS328DQ"
-	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO
-	help
-	  Say yes here to build support for STMicroelectronics AIS328DQ
-	  accelerometer using NVS (NVidia Sensor framework).
+
+trysource "../nvidia/drivers/iio/accel/Kconfig.nvidia"
 
 endmenu

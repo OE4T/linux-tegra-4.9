@@ -1137,6 +1137,16 @@ setup_irq_thread(struct irqaction *new, unsigned int irq, bool secondary)
 /*
  * Internal function to register an irqaction - typically used to
  * allocate special interrupts that are part of the architecture.
+ *
+ * Locking rules:
+ *
+ * desc->request_mutex	Provides serialization against a concurrent free_irq()
+ *   chip_bus_lock	Provides serialization for slow bus operations
+ *     desc->lock	Provides serialization against hard interrupts
+ *
+ * chip_bus_lock and desc->lock are sufficient for all other management and
+ * interrupt related functions. desc->request_mutex solely serializes
+ * request/free_irq().
  */
 static int
 __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
@@ -1220,7 +1230,21 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	if (desc->irq_data.chip->flags & IRQCHIP_ONESHOT_SAFE)
 		new->flags &= ~IRQF_ONESHOT;
 
+	/*
+	 * Protects against a concurrent __free_irq() call which might wait
+	 * for synchronize_irq() to complete without holding the optional
+	 * chip bus lock and desc->lock.
+	 */
 	mutex_lock(&desc->request_mutex);
+
+	/*
+	 * Acquire bus lock as the irq_request_resources() callback below
+	 * might rely on the serialization or the magic power management
+	 * functions which are abusing the irq_bus_lock() callback,
+	 */
+	chip_bus_lock(desc);
+
+	/* First installed action requests resources. */
 	if (!desc->action) {
 		ret = irq_request_resources(desc);
 		if (ret) {
@@ -1230,10 +1254,11 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 		}
 	}
 
-	chip_bus_lock(desc);
-
 	/*
 	 * The following block of code has to be executed atomically
+	 * protected against a concurrent interrupt and any of the other
+	 * management calls which are not serialized via
+	 * desc->request_mutex or the optional bus lock.
 	 */
 	raw_spin_lock_irqsave(&desc->lock, flags);
 	old_ptr = &desc->action;
@@ -1337,10 +1362,8 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 			ret = __irq_set_trigger(desc,
 						new->flags & IRQF_TRIGGER_MASK);
 
-			if (ret) {
-				irq_release_resources(desc);
+			if (ret)
 				goto out_mask;
-			}
 		}
 
 		desc->istate &= ~(IRQS_AUTODETECT | IRQS_SPURIOUS_DISABLED | \
@@ -1430,14 +1453,13 @@ mismatch:
 out_mask:
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
 
-	chip_bus_sync_unlock(desc);
-
 	if (!desc->action)
 		irq_release_resources(desc);
 
 out_cpumask:
 	free_cpumask_var(mask);
 
+	chip_bus_sync_unlock(desc);
 	mutex_unlock(&desc->request_mutex);
 
 out_thread:
@@ -1519,6 +1541,7 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 			WARN(1, "Trying to free already-free IRQ %d\n", irq);
 			raw_spin_unlock_irqrestore(&desc->lock, flags);
 			chip_bus_sync_unlock(desc);
+			mutex_unlock(&desc->request_mutex);
 			return NULL;
 		}
 
@@ -1545,6 +1568,20 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 #endif
 
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
+	/*
+	 * Drop bus_lock here so the changes which were done in the chip
+	 * callbacks above are synced out to the irq chips which hang
+	 * behind a slow bus (I2C, SPI) before calling synchronize_irq().
+	 *
+	 * Aside of that the bus_lock can also be taken from the threaded
+	 * handler in irq_finalize_oneshot() which results in a deadlock
+	 * because synchronize_irq() would wait forever for the thread to
+	 * complete, which is blocked on the bus lock.
+	 *
+	 * The still held desc->request_mutex() protects against a
+	 * concurrent request_irq() of this irq so the release of resources
+	 * and timing data is properly serialized.
+	 */
 	chip_bus_sync_unlock(desc);
 
 	unregister_handler_proc(irq, action);
@@ -1577,8 +1614,16 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 		}
 	}
 
-	if (!desc->action)
+	/* Last action releases resources */
+	if (!desc->action) {
+		/*
+		 * Reaquire bus lock as irq_release_resources() might
+		 * require it to deallocate resources over the slow bus.
+		 */
+		chip_bus_lock(desc);
 		irq_release_resources(desc);
+		chip_bus_sync_unlock(desc);
+	}
 
 	mutex_unlock(&desc->request_mutex);
 

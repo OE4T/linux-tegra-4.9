@@ -87,8 +87,8 @@ void tegra_adma_dump_ch_reg(void)
 #define ENABLE_MBOX2_FULL_INT	0xFFFFFFFF
 
 #define LOGGER_TIMEOUT		20 /* in ms */
-#define ADSP_WFE_TIMEOUT	5000 /* in ms */
-#define LOGGER_COMPLETE_TIMEOUT	5000 /* in ms */
+#define ADSP_WFI_TIMEOUT	800 /* in ms */
+#define LOGGER_COMPLETE_TIMEOUT	500 /* in ms */
 
 #define DUMP_BUFF 128
 
@@ -1547,11 +1547,11 @@ static int __nvadsp_os_suspend(void)
 	}
 
 	dev_dbg(dev, "Waiting for ADSP OS suspend...\n");
-	ret = wait_for_completion_interruptible_timeout(&entered_wfi,
-		msecs_to_jiffies(ADSP_WFE_TIMEOUT));
+	ret = wait_for_completion_timeout(&entered_wfi,
+		msecs_to_jiffies(ADSP_WFI_TIMEOUT));
 	if (WARN_ON(ret <= 0)) {
-		dev_err(dev, "Unable to suspend ADSP OS\n");
-		ret = -EINVAL;
+		dev_err(dev, "Unable to suspend ADSP OS err = %d\n", ret);
+		ret = (ret < 0) ? ret : -ETIMEDOUT;
 		goto out;
 	}
 	ret = 0;
@@ -1595,8 +1595,8 @@ static void __nvadsp_os_stop(bool reload)
 
 	writel(ENABLE_MBOX2_FULL_INT,
 	       priv.hwmailbox_base + drv_data->chip_data->hwmb.hwmbox2_reg);
-	err = wait_for_completion_interruptible_timeout(&entered_wfi,
-		msecs_to_jiffies(ADSP_WFE_TIMEOUT));
+	err = wait_for_completion_timeout(&entered_wfi,
+		msecs_to_jiffies(ADSP_WFI_TIMEOUT));
 	writel(DISABLE_MBOX2_FULL_INT,
 	       priv.hwmailbox_base + drv_data->chip_data->hwmb.hwmbox2_reg);
 
@@ -1611,7 +1611,8 @@ static void __nvadsp_os_stop(bool reload)
 
 	/* Don't reload ADSPOS if ADSP state is not WFI/WFE */
 	if (WARN_ON(err <= 0)) {
-		dev_err(dev, "ADSP is unable to enter wfi state\n");
+		dev_err(dev, "%s: unable to enter wfi state err = %d\n",
+			__func__, err);
 		goto end;
 	}
 
@@ -1621,7 +1622,7 @@ static void __nvadsp_os_stop(bool reload)
 #ifdef CONFIG_DEBUG_FS
 		wake_up(&logger->wait_queue);
 		/* wait for LOGGER_TIMEOUT to complete filling the buffer */
-		wait_for_completion_interruptible_timeout(&logger->complete,
+		wait_for_completion_timeout(&logger->complete,
 			msecs_to_jiffies(LOGGER_COMPLETE_TIMEOUT));
 #endif
 		/*

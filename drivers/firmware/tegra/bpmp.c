@@ -354,11 +354,11 @@ static const struct channel_cfg t210_chcfg = {
 };
 
 static const struct channel_cfg t186_chcfg = {
-	.channel_mask = 0x3fff,
-	.per_cpu_ch_0 = 0,
-	.per_cpu_ch_cnt = 6,
-	.thread_ch_0 = 6,
-	.thread_ch_cnt = 7,
+	.channel_mask = 0x200f,
+	.per_cpu_ch_0 = 3,
+	.per_cpu_ch_cnt = 1,
+	.thread_ch_0 = 0,
+	.thread_ch_cnt = 3,
 	.ib_ch_0 = 13,
 	.ib_ch_cnt = 1
 };

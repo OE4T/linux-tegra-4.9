@@ -30,6 +30,7 @@ static unsigned int timeout_mul = 1;
 struct channel_data channel_area[NR_MAX_CHANNELS];
 static struct completion *completion;
 static DEFINE_SPINLOCK(lock);
+static DEFINE_SPINLOCK(ach_lock);
 static const struct channel_cfg *channel_cfg;
 static const struct mail_ops *mail_ops;
 
@@ -42,7 +43,13 @@ EXPORT_SYMBOL(tegra_bpmp_mail_readl);
 
 int tegra_bpmp_read_data(unsigned int ch, void *data, size_t sz)
 {
-	if (!data || sz > MSG_DATA_MIN_SZ || ch >= channel_cfg->nr_channels)
+	unsigned int m;
+
+	if (!data || sz > MSG_DATA_MIN_SZ)
+		return -EINVAL;
+
+	m = (1u << ch) & channel_cfg->channel_mask;
+	if (!m)
 		return -EINVAL;
 
 	memcpy_fromio(data, channel_area[ch].ib->data, sz);
@@ -79,18 +86,6 @@ static int bpmp_thread_ch_index(unsigned int ch)
 static int bpmp_thread_ch(int idx)
 {
 	return channel_cfg->thread_ch_0 + idx;
-}
-
-static int bpmp_ob_channel(void)
-{
-	unsigned int cpu;
-
-	cpu = smp_processor_id();
-
-	if (cpu >= channel_cfg->per_cpu_ch_cnt)
-		return -EINVAL;
-
-	return channel_cfg->per_cpu_ch_0 + cpu;
 }
 
 static struct completion *bpmp_completion_obj(int ch)
@@ -295,25 +290,10 @@ static void bpmp_show_req(int mrq, uint8_t *ob_data, size_t ob_sz)
 	printk("]\n");
 }
 
-/* should be called with local irqs disabled */
-int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
+static int bpmp_send_receive_atomic(int ch, int mrq, void *ob_data, int ob_sz,
 		void *ib_data, int ib_sz)
 {
-	int ch;
 	int r;
-
-	if (WARN_ON(!irqs_disabled()))
-		return -EPERM;
-
-	if (!bpmp_valid_txfer(ob_data, ob_sz, ib_data, ib_sz))
-		return -EINVAL;
-
-	if (!mail_ops)
-		return -ENODEV;
-
-	ch = bpmp_ob_channel();
-	if (ch < 0)
-		return ch;
 
 	r = bpmp_write_ch(ch, mrq, DO_ACK, ob_data, ob_sz);
 	if (r)
@@ -331,6 +311,42 @@ int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 	}
 
 	return __bpmp_read_ch(ch, ib_data, ib_sz);
+}
+
+/* should be called with local irqs disabled */
+int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
+		void *ib_data, int ib_sz)
+{
+	unsigned long flags = 0;
+	unsigned int cpu;
+	int ch;
+	int r;
+
+	if (WARN_ON(!irqs_disabled()))
+		return -EPERM;
+
+	if (!bpmp_valid_txfer(ob_data, ob_sz, ib_data, ib_sz))
+		return -EINVAL;
+
+	if (!mail_ops)
+		return -ENODEV;
+
+	if (channel_cfg->per_cpu_ch_cnt == 1) {
+		spin_lock_irqsave(&ach_lock, flags);
+		ch = channel_cfg->per_cpu_ch_0;
+	} else {
+		cpu = smp_processor_id();
+		if (cpu >= channel_cfg->per_cpu_ch_cnt)
+			return -ENODEV;
+		ch = channel_cfg->per_cpu_ch_0 + cpu;
+	}
+
+	r = bpmp_send_receive_atomic(ch, mrq, ob_data, ob_sz, ib_data, ib_sz);
+
+	if (channel_cfg->per_cpu_ch_cnt == 1)
+		spin_unlock_irqrestore(&ach_lock, flags);
+
+	return r;
 }
 EXPORT_SYMBOL(tegra_bpmp_send_receive_atomic);
 

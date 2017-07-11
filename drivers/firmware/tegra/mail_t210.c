@@ -161,6 +161,7 @@ static u32 bpmp_channel_area(void __iomem *atomics, int ch)
 static int bpmp_connect(const struct channel_cfg *cfg,
 		const struct mail_ops *ops, struct device_node *of_node)
 {
+	unsigned int chmask;
 	void __iomem *atomics;
 	uint32_t area;
 	void *p;
@@ -178,7 +179,12 @@ static int bpmp_connect(const struct channel_cfg *cfg,
 	if (!readl(arb_sema + STA_OFFSET))
 		return -ENODEV;
 
-	for (i = 0; i < cfg->nr_channels; i++) {
+	chmask = cfg->channel_mask;
+
+	while (chmask) {
+		i = __ffs(chmask);
+		chmask &= ~(1 << i);
+
 		area = bpmp_channel_area(atomics, i);
 		if (!area)
 			return -EFAULT;

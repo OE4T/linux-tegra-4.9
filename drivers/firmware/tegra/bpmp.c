@@ -344,7 +344,7 @@ err_out:
 }
 
 static const struct channel_cfg t210_chcfg = {
-	.nr_channels = 12,
+	.channel_mask = 0xfff,
 	.per_cpu_ch_0 = 0,
 	.per_cpu_ch_cnt = 4,
 	.thread_ch_0 = 4,
@@ -354,7 +354,7 @@ static const struct channel_cfg t210_chcfg = {
 };
 
 static const struct channel_cfg t186_chcfg = {
-	.nr_channels = 14,
+	.channel_mask = 0x3fff,
 	.per_cpu_ch_0 = 0,
 	.per_cpu_ch_cnt = 6,
 	.thread_ch_0 = 6,

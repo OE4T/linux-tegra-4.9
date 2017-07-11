@@ -331,13 +331,16 @@ static int native_single_init(int ch,
 	return 0;
 }
 
-static int native_channel_init(unsigned int nr_channels,
+static int native_channel_init(unsigned int chmask,
 		void __iomem *ma_page, void __iomem *sl_page)
 {
 	unsigned int i;
 	int r;
 
-	for (i = 0; i < nr_channels; i++) {
+	while (chmask) {
+		i = __ffs(chmask);
+		chmask &= ~(1 << i);
+
 		r = native_single_init(i, ma_page, sl_page);
 		if (r)
 			return r;
@@ -377,7 +380,7 @@ static int native_connect(const struct channel_cfg *cfg,
 	if (r)
 		return r;
 
-	return native_channel_init(cfg->nr_channels, ma_page, sl_page);
+	return native_channel_init(cfg->channel_mask, ma_page, sl_page);
 }
 
 static bool ivc_rx_ready(const struct mail_ops *ops, int ch)

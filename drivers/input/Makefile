@@ -30,5 +30,3 @@ obj-$(CONFIG_INPUT_KEYRESET)	+= keyreset.o
 obj-$(CONFIG_INPUT_KEYCOMBO)	+= keycombo.o
 
 obj-$(CONFIG_RMI4_CORE)		+= rmi4/
-
-obj-$(CONFIG_INPUT_CFBOOST)	+= input-cfboost.o

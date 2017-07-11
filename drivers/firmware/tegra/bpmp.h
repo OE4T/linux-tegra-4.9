@@ -29,7 +29,7 @@
 #define RING_DOORBELL		(1 << 1)
 
 struct channel_cfg {
-	unsigned int nr_channels;
+	unsigned int channel_mask;
 	unsigned int per_cpu_ch_0;
 	unsigned int per_cpu_ch_cnt;
 	unsigned int thread_ch_0;

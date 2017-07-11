@@ -127,25 +127,6 @@ config TEGRA_NVDUMPER
 	help
 	  This is debug feature to dump whole memory when system crashes.
 
-config DENVER_CPU
-	bool "Denver CPU"
-	help
-	  Support for NVIDIA Denver CPU
-
-config DENVER_DEBUG
-	bool "Denver Hardware Debug Tools"
-	depends on DENVER_CPU
-	help
-	  This enables drivers that allow debugging the Denver CPU internals.
-
-config DENVER_MCA
-	tristate "Denver Machine Check Handler"
-	depends on DENVER_CPU
-	select SERROR_HANDLER
-	help
-	  The Denver Machine Check handler. It collects and reports errors from
-	  the Denver CPUs.
-
 config TEGRA_BWMGR
 	bool "Enable EMC Bandwidth Manager"
 	depends on COMMON_CLK

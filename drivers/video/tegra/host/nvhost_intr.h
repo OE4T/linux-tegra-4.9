@@ -149,7 +149,7 @@ void nvhost_intr_put_ref(struct nvhost_intr *intr, u32 id, void *ref);
 
 int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync);
 void nvhost_intr_deinit(struct nvhost_intr *intr);
-void nvhost_intr_start(struct nvhost_intr *intr, u32 hz);
+int nvhost_intr_start(struct nvhost_intr *intr, u32 hz);
 int nvhost_intr_stop(struct nvhost_intr *intr);
 int nvhost_intr_release_time(void *ref, struct timespec *ts);
 void nvhost_intr_enable_host_irq(struct nvhost_intr *intr, int irq,

@@ -88,7 +88,7 @@ out:
 	return IRQ_HANDLED;
 }
 
-static void t20_intr_init_host_sync(struct nvhost_intr *intr)
+static int t20_intr_init_host_sync(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	int err;
@@ -99,7 +99,7 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 				syncpt_thresh_cascade_isr,
 				IRQF_ONESHOT, "host_syncpt", dev);
 	if (err)
-		BUG();
+		return err;
 
 	/* increase the auto-ack timout to the maximum value. 2d will hang
 	 * otherwise on ap20.
@@ -112,6 +112,7 @@ static void t20_intr_init_host_sync(struct nvhost_intr *intr)
 			1);
 	t20_intr_enable_syncpt_intr(intr,
 			nvhost_syncpt_graphics_host_sp(&dev->syncpt));
+	return 0;
 }
 
 static void t20_intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)

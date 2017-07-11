@@ -122,7 +122,7 @@ static void vhost_syncpt_enable_intr(u64 handle, u32 id, u32 thresh)
 	WARN_ON(err || msg.ret);
 }
 
-static void vhost_intr_init_host_sync(struct nvhost_intr *intr)
+static int vhost_intr_init_host_sync(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(dev->dev);
@@ -132,10 +132,11 @@ static void vhost_intr_init_host_sync(struct nvhost_intr *intr)
 	ctx->syncpt_handler =
 		kthread_run(vhost_intr_handler, dev, "vhost_intr");
 	if (IS_ERR(ctx->syncpt_handler))
-		BUG();
+		return PTR_ERR(ctx->syncpt_handler);
 
 	vhost_syncpt_enable_intr(ctx->handle,
 			nvhost_syncpt_graphics_host_sp(&dev->syncpt), 1);
+	return 0;
 }
 
 static void vhost_intr_set_host_clocks_per_usec(struct nvhost_intr *intr,

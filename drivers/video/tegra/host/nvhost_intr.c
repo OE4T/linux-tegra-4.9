@@ -600,17 +600,24 @@ void nvhost_intr_deinit(struct nvhost_intr *intr)
 	destroy_workqueue(intr->low_prio_wq);
 }
 
-void nvhost_intr_start(struct nvhost_intr *intr, u32 hz)
+int nvhost_intr_start(struct nvhost_intr *intr, u32 hz)
 {
+	int err = 0;
+
 	mutex_lock(&intr->mutex);
 
-	intr_op().init_host_sync(intr);
+	err = intr_op().init_host_sync(intr);
+	if (err)
+		goto unlock;
+
 	intr_op().set_host_clocks_per_usec(intr,
 					       (hz + 1000000 - 1)/1000000);
 
 	intr_op().request_host_general_irq(intr);
 
+unlock:
 	mutex_unlock(&intr->mutex);
+	return err;
 }
 
 int nvhost_intr_stop(struct nvhost_intr *intr)

@@ -591,11 +591,11 @@ static int power_off_host(struct platform_device *dev)
 }
 
 #ifdef CONFIG_PM
-static void enable_irq_host(struct platform_device *dev)
+static int enable_irq_host(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct nvhost_master *host = nvhost_get_private_data(dev);
-	nvhost_intr_start(&host->intr, clk_get_rate(pdata->clk[0]));
+	return nvhost_intr_start(&host->intr, clk_get_rate(pdata->clk[0]));
 }
 
 static int disable_irq_host(struct platform_device *dev)
@@ -1095,9 +1095,16 @@ static int nvhost_probe(struct platform_device *dev)
 
 	if (tegra_cpu_is_asim() || pdata->virtual_dev)
 		/* for simulation & virtualization, use a fake clock rate */
-		nvhost_intr_start(&host->intr, 12000000);
+		err = nvhost_intr_start(&host->intr, 12000000);
 	else
-		nvhost_intr_start(&host->intr, clk_get_rate(pdata->clk[0]));
+		err = nvhost_intr_start(&host->intr,
+					clk_get_rate(pdata->clk[0]));
+
+	if (err) {
+		nvhost_module_idle(dev);
+		dev_err(&dev->dev, "Failed to start intr=%d\n", err);
+		goto fail;
+	}
 
 	nvhost_device_list_init();
 
@@ -1194,11 +1201,15 @@ static int nvhost_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_master *host = nvhost_get_host(pdev);
-	int index;
+	int index, err = 0;
 
 	nvhost_module_enable_clk(dev);
 	power_on_host(pdev);
-	enable_irq_host(pdev);
+	err = enable_irq_host(pdev);
+	if (err) {
+		dev_err(dev, "Failed to enable host irq=%d\n", err);
+		return err;
+	}
 
 	for (index = 0; index < nvhost_channel_nb_channels(host); index++) {
 		/* reinitialise gather filter for each channel */

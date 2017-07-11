@@ -449,4 +449,9 @@ int nvgpu_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 int nvgpu_pmu_ap_send_command(struct gk20a *g,
 		union pmu_ap_cmd *p_ap_cmd, bool b_block);
 
+/* PMU debug */
+void nvgpu_pmu_dump_falcon_stats(struct nvgpu_pmu *pmu);
+void nvgpu_pmu_dump_elpg_stats(struct nvgpu_pmu *pmu);
+bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos);
+
 #endif /* __NVGPU_PMU_H__ */

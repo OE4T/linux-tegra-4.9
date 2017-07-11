@@ -57,12 +57,10 @@ int gk20a_init_pmu_setup_hw1(struct gk20a *g);
 void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr);
 bool gk20a_is_pmu_supported(struct gk20a *g);
 
-void pmu_copy_to_dmem(struct nvgpu_pmu *pmu,
-		u32 dst, u8 *src, u32 size, u8 port);
 int pmu_bootstrap(struct nvgpu_pmu *pmu);
 
-void pmu_dump_elpg_stats(struct nvgpu_pmu *pmu);
-void pmu_dump_falcon_stats(struct nvgpu_pmu *pmu);
+void gk20a_pmu_dump_elpg_stats(struct nvgpu_pmu *pmu);
+void gk20a_pmu_dump_falcon_stats(struct nvgpu_pmu *pmu);
 
 void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable);
 int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
@@ -73,9 +71,5 @@ void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data);
 bool gk20a_pmu_is_engine_in_reset(struct gk20a *g);
 int gk20a_pmu_engine_reset(struct gk20a *g, bool do_reset);
-
-int pmu_idle(struct nvgpu_pmu *pmu);
-
-bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos);
 
 #endif /*__PMU_GK20A_H__*/

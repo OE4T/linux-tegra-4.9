@@ -265,8 +265,8 @@ int nvgpu_pmu_disable_elpg(struct gk20a *g)
 		if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
 			nvgpu_err(g, "ELPG_ALLOW_ACK failed, elpg_stat=%d",
 				pmu->elpg_stat);
-			pmu_dump_elpg_stats(pmu);
-			pmu_dump_falcon_stats(pmu);
+			nvgpu_pmu_dump_elpg_stats(pmu);
+			nvgpu_pmu_dump_falcon_stats(pmu);
 			ret = -EBUSY;
 			goto exit_unlock;
 		}
@@ -315,8 +315,8 @@ int nvgpu_pmu_disable_elpg(struct gk20a *g)
 				ptr, PMU_ELPG_STAT_OFF);
 			if (*ptr != PMU_ELPG_STAT_OFF) {
 				nvgpu_err(g, "ELPG_DISALLOW_ACK failed");
-					pmu_dump_elpg_stats(pmu);
-					pmu_dump_falcon_stats(pmu);
+					nvgpu_pmu_dump_elpg_stats(pmu);
+					nvgpu_pmu_dump_falcon_stats(pmu);
 				ret = -EBUSY;
 				goto exit_unlock;
 			}

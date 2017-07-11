@@ -56,8 +56,9 @@
 		reset-names = "sdmmc";
 		pll_source = "pll_p";
 		clocks = <&bpmp_clks TEGRA194_CLK_SDMMC4>,
-			<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
-		clock-names = "sdmmc", "pll_p";
+			<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+			<&bpmp_clks TEGRA194_CLK_SDMMC_LEGACY_TM>;
+		clock-names = "sdmmc", "pll_p", "sdmmc_legacy_tm";
 		status = "disabled";
 	};
 

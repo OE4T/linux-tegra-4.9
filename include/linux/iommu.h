@@ -49,6 +49,7 @@ typedef int (*iommu_fault_handler_t)(struct iommu_domain *,
 struct iommu_linear_map {
 	dma_addr_t start;
 	size_t size;
+	bool is_mapped;
 };
 
 int iommu_get_linear_map(struct device *dev,

@@ -814,7 +814,7 @@ static int tegra_dc_hdmi_hpd_init(struct tegra_dc *dc)
 	int hotplug_irq;
 	int err;
 
-	if (tegra_platform_is_sim() || tegra_platform_is_fpga())
+	if (tegra_platform_is_sim())
 		goto skip_gpio_irq_settings;
 
 	if (!gpio_is_valid(hotplug_gpio)) {

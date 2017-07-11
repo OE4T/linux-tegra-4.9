@@ -35,6 +35,7 @@
 #include <linux/uaccess.h>
 
 #include <media/mc_common.h>
+#include "camera/nvcsi/csi5_fops.h"
 
 #include "dev.h"
 #include "bus_client.h"
@@ -43,6 +44,7 @@
 
 struct t194_nvcsi {
 	struct platform_device *pdev;
+	struct tegra_csi_device csi;
 };
 
 static const struct of_device_id tegra194_nvcsi_of_match[] = {
@@ -176,8 +178,15 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 	if (err)
 		goto err_client_device_init;
 
+	nvcsi->pdev = pdev;
+	nvcsi->csi.fops = &csi5_fops;
+	err = tegra_csi_media_controller_init(&nvcsi->csi, pdev);
+	if (err < 0)
+		goto err_mediacontroller_init;
+
 	return 0;
 
+err_mediacontroller_init:
 err_client_device_init:
 	nvhost_module_deinit(pdev);
 	return err;

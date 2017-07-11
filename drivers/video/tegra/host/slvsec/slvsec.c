@@ -51,6 +51,17 @@
 #define SLVSEC_CORE_HOST1X_INTR_STATUS		U32_C(0xb0)
 #define SLVSEC_CORE_HOST1X_INTR_MASK		U32_C(0xb4)
 
+#define SLVSEC_CORE_DBG_CNT_CTRL		U32_C(0x8c)
+#define SLVSEC_CORE_DBG_CNT_CTRL_EVENT_MASK	U32_C(0x3f)
+#define SLVSEC_CORE_DBG_CNT_CTRL_EVENT_SHIFT	U32_C(8)
+#define SLVSEC_CORE_DBG_CNT_CTRL_STRM_SEL_MASK	U32_C(0x1)
+#define SLVSEC_CORE_DBG_CNT_CTRL_STRM_SEL_SHIFT	U32_C(0)
+
+#define SLVSEC_CORE_DBG_CNT_VALUE		U32_C(0x90)
+#define SLVSEC_CORE_DBG_CNT_SIZE		U32_C(0x08)
+
+#define SLVSEC_CORE_NUM_DEBUG_COUNTERS		4U
+
 #define SLVSEC_CORE_SW_DEBUG_INTR_STATUS	U32_C(0xb8)
 #define SLVSEC_CORE_SW_DEBUG_INTR_TRIG		U32_C(0xbc)
 
@@ -89,6 +100,12 @@ struct slvsec {
 		struct debugfs_regset32 hw_syncgen0;
 		struct debugfs_regset32 hw_syncgen1;
 		struct debugfs_regset32 hw_syncgen2;
+		struct slvsec_debug_counter {
+			struct dentry *dir;
+			uint8_t number;
+			uint8_t event;
+			uint8_t stream;
+		} counters[SLVSEC_CORE_NUM_DEBUG_COUNTERS];
 	} debug;
 };
 
@@ -217,6 +234,7 @@ int slvsec_finalize_poweron(struct platform_device *pdev)
 {
 	struct slvsec *slvsec = nvhost_get_private_data(pdev);
 	int ret;
+	int i;
 
 	if (slvsec->vi_thi) {
 		ret = nvhost_module_busy(slvsec->vi_thi);
@@ -224,13 +242,27 @@ int slvsec_finalize_poweron(struct platform_device *pdev)
 			return ret;
 	}
 
-	if (!slvsec->regulator)
-		return 0;
+	if (slvsec->regulator) {
+		ret = regulator_enable(slvsec->regulator);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to enable "
+				"slvs-ec regulator.");
+			return ret;
+		}
+	}
 
-	ret = regulator_enable(slvsec->regulator);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to enable slvs-ec regulator.");
-		return ret;
+	for (i = 0; i < ARRAY_SIZE(slvsec->debug.counters); i++) {
+		struct slvsec_debug_counter *counter;
+		u32 reg, val;
+
+		counter = &slvsec->debug.counters[i];
+		reg = SLVSEC_CORE_DBG_CNT_CTRL + SLVSEC_CORE_DBG_CNT_SIZE * i;
+		val = (counter->event << SLVSEC_CORE_DBG_CNT_CTRL_EVENT_SHIFT)
+			| counter->stream;
+		host1x_writel(pdev, reg, val);
+
+		reg = SLVSEC_CORE_DBG_CNT_VALUE + SLVSEC_CORE_DBG_CNT_SIZE * i;
+		host1x_writel(pdev, reg, 0);
 	}
 
 	return 0;
@@ -244,7 +276,8 @@ int slvsec_prepare_poweroff(struct platform_device *pdev)
 	if (slvsec->regulator) {
 		ret = regulator_disable(slvsec->regulator);
 		if (ret)
-			dev_err(&pdev->dev, "failed to disable slvs-ec regulator.");
+			dev_err(&pdev->dev, "failed to disable "
+				"slvs-ec regulator.");
 	}
 
 	if (slvsec->vi_thi) {
@@ -488,15 +521,176 @@ DEFINE_SIMPLE_ATTRIBUTE(slvsec_sw_debug_intr_fops,
 			slvsec_sw_debug_intr_store,
 			"%llu\n");
 
+static int slvsec_core_debug_cnt_event_show(void *data, u64 *event)
+{
+	struct slvsec_debug_counter *counter = data;
+	struct slvsec *slvsec = container_of(data, struct slvsec,
+					debug.counters[counter->number]);
+	struct platform_device *pdev = slvsec->pdev;
+	u32 reg = SLVSEC_CORE_DBG_CNT_CTRL +
+		SLVSEC_CORE_DBG_CNT_SIZE * counter->number;
+	u32 val = host1x_readl(pdev, reg);
+
+	val >>= SLVSEC_CORE_DBG_CNT_CTRL_EVENT_SHIFT;
+	val &= SLVSEC_CORE_DBG_CNT_CTRL_EVENT_MASK;
+
+	*event = val;
+
+	return 0;
+}
+
+static int slvsec_core_debug_cnt_event_store(void *data, u64 event)
+{
+	struct slvsec_debug_counter *counter = data;
+	struct slvsec *slvsec = container_of(data, struct slvsec,
+					debug.counters[counter->number]);
+	struct platform_device *pdev = slvsec->pdev;
+	u32 control_reg = SLVSEC_CORE_DBG_CNT_CTRL +
+		SLVSEC_CORE_DBG_CNT_SIZE * counter->number;
+	u32 counter_reg = SLVSEC_CORE_DBG_CNT_VALUE +
+		SLVSEC_CORE_DBG_CNT_SIZE * counter->number;
+	u32 val = host1x_readl(pdev, control_reg);
+
+	if (event > SLVSEC_CORE_DBG_CNT_CTRL_EVENT_MASK)
+		return -EINVAL;
+
+	counter->event = event;
+	val &= ~SLVSEC_CORE_DBG_CNT_CTRL_EVENT_MASK;
+	val |= event << SLVSEC_CORE_DBG_CNT_CTRL_EVENT_SHIFT;
+
+	host1x_writel(pdev, control_reg, val);
+	/* Clear counter */
+	host1x_writel(pdev, counter_reg, 0);
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(slvsec_core_debug_cnt_event_fops,
+			slvsec_core_debug_cnt_event_show,
+			slvsec_core_debug_cnt_event_store,
+			"%llu\n");
+
+static int slvsec_core_debug_cnt_strm_sel_show(void *data, u64 *strm_sel)
+{
+	struct slvsec_debug_counter *counter = data;
+	struct slvsec *slvsec = container_of(data, struct slvsec,
+					debug.counters[counter->number]);
+	struct platform_device *pdev = slvsec->pdev;
+	u32 reg = SLVSEC_CORE_DBG_CNT_CTRL +
+		SLVSEC_CORE_DBG_CNT_SIZE * counter->number;
+	u32 val = host1x_readl(pdev, reg);
+
+	val >>= SLVSEC_CORE_DBG_CNT_CTRL_STRM_SEL_SHIFT;
+	val &= SLVSEC_CORE_DBG_CNT_CTRL_STRM_SEL_MASK;
+
+	*strm_sel = val;
+
+	return 0;
+}
+
+static int slvsec_core_debug_cnt_strm_sel_store(void *data, u64 strm_sel)
+{
+	struct slvsec_debug_counter *counter = data;
+	struct slvsec *slvsec = container_of(data, struct slvsec,
+					debug.counters[counter->number]);
+	struct platform_device *pdev = slvsec->pdev;
+	u32 control_reg = SLVSEC_CORE_DBG_CNT_CTRL +
+		SLVSEC_CORE_DBG_CNT_SIZE * counter->number;
+	u32 counter_reg = SLVSEC_CORE_DBG_CNT_VALUE +
+		SLVSEC_CORE_DBG_CNT_SIZE * counter->number;
+	u32 val = host1x_readl(pdev, control_reg);
+
+	if (strm_sel > SLVSEC_CORE_DBG_CNT_CTRL_STRM_SEL_MASK)
+		return -EINVAL;
+
+	counter->stream = strm_sel;
+	val &= ~SLVSEC_CORE_DBG_CNT_CTRL_STRM_SEL_MASK;
+	val |= strm_sel << SLVSEC_CORE_DBG_CNT_CTRL_STRM_SEL_SHIFT;
+
+	host1x_writel(pdev, control_reg, val);
+	/* Clear counter */
+	host1x_writel(pdev, counter_reg, 0);
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(slvsec_core_debug_cnt_strm_sel_fops,
+			slvsec_core_debug_cnt_strm_sel_show,
+			slvsec_core_debug_cnt_strm_sel_store,
+			"%llu\n");
+
+static int slvsec_core_debug_cnt_value_show(void *data, u64 *value)
+{
+	struct slvsec_debug_counter *counter = data;
+	struct slvsec *slvsec = container_of(data, struct slvsec,
+					debug.counters[counter->number]);
+	struct platform_device *pdev = slvsec->pdev;
+	u32 reg = SLVSEC_CORE_DBG_CNT_VALUE +
+		SLVSEC_CORE_DBG_CNT_SIZE * counter->number;
+
+	*value = host1x_readl(pdev, reg);
+
+	return 0;
+}
+
+static int slvsec_core_debug_cnt_value_store(void *data, u64 value)
+{
+	struct slvsec_debug_counter *counter = data;
+	struct slvsec *slvsec = container_of(data, struct slvsec,
+					debug.counters[counter->number]);
+	struct platform_device *pdev = slvsec->pdev;
+	u32 counter_reg = SLVSEC_CORE_DBG_CNT_VALUE +
+		SLVSEC_CORE_DBG_CNT_SIZE * counter->number;
+
+	if (value > ~U32_C(0))
+		return -EINVAL;
+
+	host1x_writel(pdev, counter_reg, (u32)value);
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(slvsec_core_debug_cnt_value_fops,
+			slvsec_core_debug_cnt_value_show,
+			slvsec_core_debug_cnt_value_store,
+			"%llu\n");
+
 static int slvsec_init_debugfs(struct slvsec *slvsec)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(slvsec->pdev);
 	struct dentry *dir = pdata->debugfs;
 	struct slvsec_debug *debug = &slvsec->debug;
+	int i;
 
 	/* Trigger or clear SW interrupts */
 	debugfs_create_file("sw-intr", S_IRUGO | S_IWUSR, dir, slvsec->pdev,
 			&slvsec_sw_debug_intr_fops);
+
+	for (i = 0; i < ARRAY_SIZE(debug->counters); i++) {
+		struct slvsec_debug_counter *counter = &debug->counters[i];
+		char name[16];
+
+		snprintf(name, sizeof(name), "counter%u", i);
+		counter->number = i;
+		counter->dir = debugfs_create_dir(name, pdata->debugfs);
+		debugfs_create_file("event",
+				S_IRUGO | S_IWUSR,
+				counter->dir, counter,
+				&slvsec_core_debug_cnt_event_fops);
+		debugfs_create_file("stream",
+				S_IRUGO | S_IWUSR,
+				counter->dir, counter,
+				&slvsec_core_debug_cnt_strm_sel_fops);
+		debugfs_create_file("value",
+				S_IRUGO | S_IWUSR,
+				counter->dir, counter,
+				&slvsec_core_debug_cnt_value_fops);
+	}
+
+	debug->counters[0].event = 0; /* pakcet num */
+	debug->counters[1].event = 4; /* sof */
+	debug->counters[2].event = 5; /* eof */
+	debug->counters[3].event = 6; /* valid lines */
 
 	debug->core.base = pdata->aperture[0];
 	debug->core.regs = slvsec_core_regs;

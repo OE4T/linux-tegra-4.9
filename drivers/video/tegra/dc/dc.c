@@ -4254,6 +4254,22 @@ unsigned tegra_dc_get_out_max_pixclock(const struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_get_out_max_pixclock);
 
+/*
+ * Check if mode's pixel clock requirement can be satisfied. Note that
+ * the pixclock value is in pico seconds.
+ */
+bool tegra_dc_valid_pixclock(const struct tegra_dc *dc,
+					const struct fb_videomode *mode)
+{
+	unsigned max_pixclock = tegra_dc_get_out_max_pixclock(dc);
+
+	if (max_pixclock)
+		return mode->pixclock >= max_pixclock;
+	else
+		return true;
+}
+EXPORT_SYMBOL(tegra_dc_valid_pixclock);
+
 void tegra_dc_sysfs_enable_crc(struct tegra_dc *dc)
 {
 	u32 val;

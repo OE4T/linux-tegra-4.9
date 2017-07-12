@@ -1000,6 +1000,8 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc, const struct fb_videomode *fbmode,
 unsigned tegra_dc_get_out_height(const struct tegra_dc *dc);
 unsigned tegra_dc_get_out_width(const struct tegra_dc *dc);
 unsigned tegra_dc_get_out_max_pixclock(const struct tegra_dc *dc);
+bool tegra_dc_valid_pixclock(const struct tegra_dc *dc,
+					const struct fb_videomode *mode);
 
 #if defined(CONFIG_TEGRA_HDMIVRR) && (defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY))
 void tegra_hdmivrr_te_vrr_sec(struct tegra_vrr *vrr);

@@ -375,12 +375,8 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 		!tegra_edid_is_scdc_present(hdmi->edid)))
 		return false;
 
-	/*
-	 * Check if mode's pixel clock requirement can be satisfied. Note that
-	 * the pixclock value is in pico seconds.
-	 */
-	if (mode->pixclock && tegra_dc_get_out_max_pixclock(dc) &&
-		mode->pixclock < tegra_dc_get_out_max_pixclock(dc))
+	/* Check if the mode's pixel clock is more than the max rate*/
+	if (!tegra_dc_valid_pixclock(dc, mode))
 		return false;
 
 	/*

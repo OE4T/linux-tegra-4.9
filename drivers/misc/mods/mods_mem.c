@@ -36,6 +36,9 @@ static int mods_post_alloc(struct MODS_PHYS_CHUNK *pt,
 static void mods_pre_free(struct MODS_PHYS_CHUNK *pt,
 			  struct MODS_MEM_INFO	 *p_mem_info);
 
+static u64 mods_compress_nvlink_addr(struct pci_dev *dev, u64 addr);
+static u64 mods_expand_nvlink_addr(struct pci_dev *dev, u64 addr47);
+
 /****************************
  * DMA MAP HELPER FUNCTIONS *
  ****************************/
@@ -46,6 +49,8 @@ static void mods_dma_unmap_page(struct MODS_DMA_MAP *p_dma_map,
 {
 	if (!pm->pt)
 		return;
+
+	pm->map_addr = mods_expand_nvlink_addr(p_dma_map->dev, pm->map_addr);
 
 	pci_unmap_page(p_dma_map->dev,
 		       pm->map_addr,
@@ -154,6 +159,9 @@ static void mods_dma_map_pages(struct MODS_MEM_INFO *p_mem_info,
 			0,
 			(1U << pt->order) * PAGE_SIZE,
 			DMA_BIDIRECTIONAL);
+
+		pm->map_addr = mods_compress_nvlink_addr(p_dma_map->dev,
+							 pm->map_addr);
 
 		mods_debug_printk(DEBUG_MEM_DETAILED,
 			"%s : Mapped map_addr=0x%llx, dma_addr=0x%llx on dev %x:%x:%x.%x\n",
@@ -743,6 +751,11 @@ int esc_mods_device_alloc_pages_2(struct file	*fp,
 #if defined(MODS_HAS_DEV_TO_NUMA_NODE)
 		p_mem_info->numa_node = dev_to_node(&dev->dev);
 #endif
+#if defined(MODS_HAS_PNV_PCI_GET_NPU_DEV)
+		if (!mods_is_nvlink_sysmem_trained(fp, dev) &&
+		    pnv_pci_get_npu_dev(dev, 0))
+			p_mem_info->numa_node = 0;
+#endif
 		mods_debug_printk(DEBUG_MEM_DETAILED,
 			"affinity %x:%x.%x node %d\n",
 			p->pci_device.bus,
@@ -1178,349 +1191,6 @@ int esc_mods_memory_barrier(struct file *fp)
 #endif
 }
 
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
-static struct PPC_TCE_BYPASS *mods_find_ppc_tce_bypass(struct file *fp,
-						       struct pci_dev *dev)
-{
-	MODS_PRIV              private_data = fp->private_data;
-	struct list_head      *plist_head;
-	struct list_head      *plist_iter;
-	struct PPC_TCE_BYPASS *p_ppc_tce_bypass;
-
-	plist_head = private_data->mods_ppc_tce_bypass_list;
-
-	list_for_each(plist_iter, plist_head) {
-		p_ppc_tce_bypass = list_entry(plist_iter,
-					  struct PPC_TCE_BYPASS,
-					  list);
-		if (dev == p_ppc_tce_bypass->dev)
-			return p_ppc_tce_bypass;
-	}
-
-	/* The device has never had its dma mask changed */
-	return NULL;
-}
-
-static int mods_register_ppc_tce_bypass(struct file    *fp,
-				    struct pci_dev *dev,
-				    u64 original_mask)
-{
-	MODS_PRIV              private_data = fp->private_data;
-	struct PPC_TCE_BYPASS *p_ppc_tce_bypass;
-
-	/* only register the first time in order to restore the true actual dma
-	 * mask
-	 */
-	if (mods_find_ppc_tce_bypass(fp, dev) != NULL) {
-		mods_debug_printk(DEBUG_MEM,
-		    "TCE bypass already registered on dev %x:%x:%x.%x\n",
-		    pci_domain_nr(dev->bus),
-		    dev->bus->number,
-		    PCI_SLOT(dev->devfn),
-		    PCI_FUNC(dev->devfn));
-		return OK;
-	}
-
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx)))
-		return -EINTR;
-
-	p_ppc_tce_bypass = kmalloc(sizeof(struct PPC_TCE_BYPASS),
-				   GFP_KERNEL | __GFP_NORETRY);
-	if (unlikely(!p_ppc_tce_bypass)) {
-		mods_error_printk("failed to allocate TCE bypass struct\n");
-		LOG_EXT();
-		return -ENOMEM;
-	}
-
-	p_ppc_tce_bypass->dev = dev;
-	p_ppc_tce_bypass->dma_mask = original_mask;
-
-	list_add(&p_ppc_tce_bypass->list,
-		 private_data->mods_ppc_tce_bypass_list);
-
-	mods_debug_printk(DEBUG_MEM,
-			"Registered TCE bypass on dev %x:%x:%x.%x\n",
-			pci_domain_nr(dev->bus),
-			dev->bus->number,
-			PCI_SLOT(dev->devfn),
-			PCI_FUNC(dev->devfn));
-	mutex_unlock(&private_data->mtx);
-	return OK;
-}
-
-static int mods_unregister_ppc_tce_bypass(struct file *fp, struct pci_dev *dev)
-{
-	struct PPC_TCE_BYPASS *p_ppc_tce_bypass;
-	MODS_PRIV              private_data = fp->private_data;
-	struct list_head      *head = private_data->mods_ppc_tce_bypass_list;
-	struct list_head      *iter;
-
-	LOG_ENT();
-
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx)))
-		return -EINTR;
-
-	list_for_each(iter, head) {
-		p_ppc_tce_bypass =
-			list_entry(iter, struct PPC_TCE_BYPASS, list);
-
-		if (p_ppc_tce_bypass->dev == dev) {
-			int ret = 0;
-
-			list_del(iter);
-
-			mutex_unlock(&private_data->mtx);
-
-			ret = pci_set_dma_mask(p_ppc_tce_bypass->dev,
-					       p_ppc_tce_bypass->dma_mask);
-			dma_set_coherent_mask(&p_ppc_tce_bypass->dev->dev,
-					      dev->dma_mask);
-			mods_debug_printk(DEBUG_MEM,
-			    "Restored dma_mask on dev %x:%x:%x.%x to %llx\n",
-			    pci_domain_nr(p_ppc_tce_bypass->dev->bus),
-			    p_ppc_tce_bypass->dev->bus->number,
-			    PCI_SLOT(p_ppc_tce_bypass->dev->devfn),
-			    PCI_FUNC(p_ppc_tce_bypass->dev->devfn),
-			    p_ppc_tce_bypass->dma_mask);
-
-			kfree(p_ppc_tce_bypass);
-
-			LOG_EXT();
-			return ret;
-		}
-	}
-
-	mutex_unlock(&private_data->mtx);
-
-	mods_error_printk(
-		"Failed to unregister TCE bypass on dev %x:%x:%x.%x\n",
-		pci_domain_nr(dev->bus),
-		dev->bus->number,
-		PCI_SLOT(dev->devfn),
-		PCI_FUNC(dev->devfn));
-	LOG_EXT();
-
-	return -EINVAL;
-
-}
-
-int mods_unregister_all_ppc_tce_bypass(struct file *fp)
-{
-	MODS_PRIV         private_data = fp->private_data;
-	struct list_head *head         = private_data->mods_ppc_tce_bypass_list;
-	struct list_head *iter;
-	struct list_head *tmp;
-
-	list_for_each_safe(iter, tmp, head) {
-		struct PPC_TCE_BYPASS *p_ppc_tce_bypass;
-		int ret;
-
-		p_ppc_tce_bypass =
-			list_entry(iter, struct PPC_TCE_BYPASS, list);
-		ret = mods_unregister_ppc_tce_bypass(fp, p_ppc_tce_bypass->dev);
-		if (ret)
-			return ret;
-	}
-
-	return OK;
-}
-
-int esc_mods_set_ppc_tce_bypass(struct file *fp,
-			    struct MODS_SET_PPC_TCE_BYPASS *p)
-{
-	int ret = OK;
-	dma_addr_t dma_addr;
-	unsigned int devfn = PCI_DEVFN(p->pci_device.device,
-				       p->pci_device.function);
-	struct pci_dev *dev = MODS_PCI_GET_SLOT(p->pci_device.domain,
-						p->pci_device.bus,
-						devfn);
-	u64 original_dma_mask;
-	u32 bypass_mode = p->mode;
-	u32 cur_bypass_mode = MODS_PPC_TCE_BYPASS_OFF;
-	u64 dma_mask = DMA_BIT_MASK(64);
-
-	LOG_ENT();
-
-	if (!dev) {
-		mods_error_printk(
-		 "PCI device not found %x:%x:%x.%x\n",
-		 p->pci_device.domain,
-		 p->pci_device.bus,
-		 p->pci_device.device,
-		 p->pci_device.function);
-		LOG_EXT();
-		return -EINVAL;
-	}
-
-	original_dma_mask = dev->dma_mask;
-
-	if (bypass_mode == MODS_PPC_TCE_BYPASS_DEFAULT)
-		bypass_mode = mods_get_ppc_tce_bypass();
-
-	if (original_dma_mask == DMA_BIT_MASK(64))
-		cur_bypass_mode = MODS_PPC_TCE_BYPASS_ON;
-
-
-	/*
-	 * Linux on IBM POWER8 offers 2 different DMA set-ups, sometimes
-	 * referred to as "windows".
-	 *
-	 * The "default window" provides a 2GB region of PCI address space
-	 * located below the 32-bit line. The IOMMU is used to provide a
-	 * "rich" mapping--any page in system memory can be mapped at an
-	 * arbitrary address within this window. The mappings are dynamic
-	 * and pass in and out of being as pci_map*()/pci_unmap*() calls
-	 * are made.
-	 *
-	 * Dynamic DMA Windows (sometimes "Huge DDW", also PPC TCE Bypass "ON")
-	 * provides a linear
-	 * mapping of the system's entire physical address space at some
-	 * fixed offset above the 59-bit line. IOMMU is still used, and
-	 * pci_map*()/pci_unmap*() are still required, but mappings are
-	 * static. They're effectively set up in advance, and any given
-	 * system page will always map to the same PCI bus address. I.e.
-	 *   physical 0x00000000xxxxxxxx => PCI 0x08000000xxxxxxxx
-	 *
-	 * Linux on POWER8 will only provide the DDW-style full linear
-	 * mapping when the driver claims support for 64-bit DMA addressing
-	 * (a pre-requisite because the PCI addresses used in this case will
-	 * be near the top of the 64-bit range). The linear mapping
-	 * is not available in all system configurations.
-	 *
-	 * Detect whether the linear mapping is present by claiming
-	 * 64-bit support and then mapping physical page 0. For historical
-	 * reasons, Linux on POWER8 will never map a page to PCI address 0x0.
-	 * In the "default window" case page 0 will be mapped to some
-	 * non-zero address below the 32-bit line.  In the
-	 * DDW/linear-mapping case, it will be mapped to address 0 plus
-	 * some high-order offset.
-	 *
-	 * If the linear mapping is present and sane then return the offset
-	 * as the starting address for all DMA mappings.
-	 */
-	if ((bypass_mode != MODS_PPC_TCE_BYPASS_DEFAULT) &&
-	    (cur_bypass_mode != bypass_mode)) {
-		/* Set DMA mask appropriately here */
-		if (bypass_mode == MODS_PPC_TCE_BYPASS_OFF)
-			dma_mask = p->device_dma_mask;
-
-		if (pci_set_dma_mask(dev, dma_mask) != 0) {
-			mods_error_printk(
-			  "pci_set_dma_mask failed on dev %x:%x:%x.%x\n",
-			  p->pci_device.domain,
-			  p->pci_device.bus,
-			  p->pci_device.device,
-			  p->pci_device.function);
-			LOG_EXT();
-			return -EINVAL;
-		}
-	}
-
-	dma_addr = pci_map_single(dev, NULL, 1, DMA_BIDIRECTIONAL);
-	if (pci_dma_mapping_error(dev, dma_addr)) {
-		pci_set_dma_mask(dev, original_dma_mask);
-		mods_error_printk(
-			"pci_map_single failed on dev %x:%x:%x.%x\n",
-			p->pci_device.domain,
-			p->pci_device.bus,
-			p->pci_device.device,
-			p->pci_device.function);
-		LOG_EXT();
-		return -EINVAL;
-	}
-	pci_unmap_single(dev, dma_addr, 1, DMA_BIDIRECTIONAL);
-
-	if (bypass_mode == MODS_PPC_TCE_BYPASS_ON) {
-		bool bBypassFailed = false;
-
-		/*
-		 * From IBM: "For IODA2, native DMA bypass or KVM TCE-based
-		 * implementation of full 64-bit DMA support will establish a
-		 * window in address-space with the high 14 bits being constant
-		 * and the bottom up-to-50 bits varying with the mapping."
-		 *
-		 * Unfortunately, we don't have any good interfaces or
-		 * definitions from the kernel to get information about the DMA
-		 * offset assigned by OS. However, we have been told that the
-		 * offset will be defined by the top 14 bits of the address,
-		 * and bits 40-49 will not vary for any DMA mappings until 1TB
-		 * of system memory is surpassed; this limitation is essential
-		 * for us to function properly since our current GPUs only
-		 * support 40 physical address bits. We are in a fragile place
-		 * where we need to tell the OS that we're capable of 64-bit
-		 * addressing, while relying on the assumption that the top 24
-		 * bits will not vary in this case.
-		 *
-		 * The way we try to compute the window, then, is mask the trial
-		 * mapping against the DMA capabilities of the device. That way,
-		 * devices with greater addressing capabilities will only take
-		 * the bits it needs to define the window.
-		 */
-		if ((dma_addr & DMA_BIT_MASK(32)) != 0) {
-			/*
-			 * Huge DDW not available - page 0 mapped to non-zero
-			 * address below the 32-bit line.
-			 */
-			mods_warning_printk(
-			    "Enabling PPC TCE bypass mode failed due to platform on device %x:%x:%x.%x\n",
-			    p->pci_device.domain,
-			    p->pci_device.bus,
-			    p->pci_device.device,
-			    p->pci_device.function);
-			bBypassFailed = true;
-		} else if ((dma_addr & original_dma_mask) != 0) {
-			/*
-			 * The physical window straddles our addressing limit
-			 * boundary, e.g., for an adapter that can address up to
-			 * 1TB, the window crosses the 40-bit limit so that the
-			 * lower end of the range has different bits 63:40 than
-			 * the higher end of the range. We can only handle a
-			 * single, static value for bits 63:40, so we must fall
-			 * back here.
-			 */
-			mods_warning_printk(
-			    "Enabling PPC TCE bypass mode failed due to memory size on device %x:%x:%x.%x\n",
-			    p->pci_device.domain,
-			    p->pci_device.bus,
-			    p->pci_device.device,
-			    p->pci_device.function);
-			bBypassFailed = true;
-		}
-		if (bBypassFailed)
-			pci_set_dma_mask(dev, original_dma_mask);
-	}
-
-	mods_debug_printk(DEBUG_MEM,
-	    "%s ppc tce bypass on device %x:%x:%x.%x with dma mask 0x%llx\n",
-	    (dev->dma_mask == DMA_BIT_MASK(64)) ? "Enabled" : "Disabled",
-	    p->pci_device.domain,
-	    p->pci_device.bus,
-	    p->pci_device.device,
-	    p->pci_device.function,
-	    dev->dma_mask);
-
-	p->dma_base_address = dma_addr & ~(p->device_dma_mask);
-
-	mods_debug_printk(DEBUG_MEM,
-		"dma base address 0x%0llx on device %x:%x:%x.%x\n",
-		p->dma_base_address,
-		p->pci_device.domain,
-		p->pci_device.bus,
-		p->pci_device.device,
-		p->pci_device.function);
-
-	/* Update the coherent mask to match */
-	dma_set_coherent_mask(&dev->dev, dev->dma_mask);
-
-	if (original_dma_mask != dev->dma_mask)
-		ret = mods_register_ppc_tce_bypass(fp, dev, original_dma_mask);
-
-	LOG_EXT();
-	return ret;
-}
-#endif
-
 int esc_mods_dma_map_memory(struct file *fp,
 			    struct MODS_DMA_MAP_MEMORY *p)
 {
@@ -1805,4 +1475,57 @@ static void mods_pre_free(struct MODS_PHYS_CHUNK *pt,
 #endif
 			kunmap(pt->p_page + i);
 	}
+}
+
+/*
+ * Starting on Power9 systems, DMA addresses for NVLink are no longer
+ * the same as used over PCIE.
+ *
+ * Power9 supports a 56-bit Real Address. This address range is compressed
+ * when accessed over NvLink to allow the GPU to access all of memory using
+ * its 47-bit Physical address.
+ *
+ * If there is an NPU device present on the system, it implies that NvLink
+ * sysmem links are present and we need to apply the required address
+ * conversion for NvLink within the driver. This is intended to be temporary
+ * to ease the transition to kernel APIs to handle NvLink DMA mappings
+ * via the NPU device.
+ *
+ * Note, a deviation from the documented compression scheme is that the
+ * upper address bits (i.e. bit 56-63) instead of being set to zero are
+ * preserved during NvLink address compression so the orignal PCIE DMA
+ * address can be reconstructed on expansion. These bits can be safely
+ * ignored on NvLink since they are truncated by the GPU.
+ */
+static u64 mods_compress_nvlink_addr(struct pci_dev *dev, u64 addr)
+{
+	u64 addr47 = addr;
+	/* Note, one key difference from the documented compression scheme
+	 * is that BIT59 used for TCE bypass mode on PCIe is preserved during
+	 * NVLink address compression to allow for the resulting DMA address to
+	 * be used transparently on PCIe.
+	 */
+#if defined(MODS_HAS_PNV_PCI_GET_NPU_DEV)
+	if (pnv_pci_get_npu_dev(dev, 0)) {
+		addr47 = addr & (1LLU << 59);
+		addr47 |= ((addr >> 45) & 0x3) << 43;
+		addr47 |= ((addr >> 49) & 0x3) << 45;
+		addr47 |= addr & ((1LLU << 43) - 1);
+	}
+#endif
+	return addr47;
+}
+
+static u64 mods_expand_nvlink_addr(struct pci_dev *dev, u64 addr47)
+{
+	u64 addr = addr47;
+#if defined(MODS_HAS_PNV_PCI_GET_NPU_DEV)
+	if (pnv_pci_get_npu_dev(dev, 0)) {
+		addr = addr47 & ((1LLU << 43) - 1);
+		addr |= (addr47 & (3ULL << 43)) << 2;
+		addr |= (addr47 & (3ULL << 45)) << 4;
+		addr |= addr47 & ~((1ULL << 56) - 1);
+	}
+#endif
+	return addr;
 }

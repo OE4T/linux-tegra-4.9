@@ -30,6 +30,10 @@
 #include "mods_config.h"
 #include "mods.h"
 
+#ifdef MODS_HAS_SET_MEMORY_HEADER
+#include <asm/set_memory.h>
+#endif
+
 #ifndef true
 #define true	1
 #define false	0
@@ -63,8 +67,9 @@ struct mods_file_private_data {
 	struct list_head    *mods_alloc_list;
 	struct list_head    *mods_mapping_list;
 	struct list_head    *mods_pci_res_map_list;
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 	struct list_head    *mods_ppc_tce_bypass_list;
+	struct list_head    *mods_nvlink_sysmem_trained_list;
 #endif
 	wait_queue_head_t    interrupt_event;
 	struct en_dev_entry *enabled_devices;
@@ -154,7 +159,7 @@ int mods_check_debug_level(int mask);
 int mods_get_multi_instance(void);
 void mods_set_multi_instance(int mi);
 
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 void mods_set_ppc_tce_bypass(int bypass);
 int mods_get_ppc_tce_bypass(void);
 
@@ -163,6 +168,16 @@ struct PPC_TCE_BYPASS {
 	struct pci_dev *dev;
 	u64 dma_mask;
 	struct list_head   list;
+};
+
+int mods_is_nvlink_sysmem_trained(struct file *fp,
+			   struct pci_dev *dev);
+
+/* NvLink Trained tracking */
+struct NVL_TRAINED {
+	struct pci_dev *dev;
+	u8 trained;
+	struct list_head list;
 };
 #endif
 
@@ -359,11 +374,16 @@ const char *mods_get_prot_str(u32 mem_type);
 int mods_unregister_all_alloc(struct file *fp);
 struct MODS_MEM_INFO *mods_find_alloc(struct file *fp, u64 phys_addr);
 
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
+/* ppc64 */
 int mods_unregister_all_ppc_tce_bypass(struct file *fp);
+
+int mods_unregister_all_nvlink_sysmem_trained(struct file *fp);
 #endif
 
 #ifdef CONFIG_PCI
+int mods_enable_device(struct mods_file_private_data *priv,
+		       struct pci_dev *pdev);
 int mods_unregister_all_pci_res_mappings(struct file *fp);
 #define MODS_UNREGISTER_PCI_MAP(fp) mods_unregister_all_pci_res_mappings(fp)
 #else
@@ -397,17 +417,20 @@ int esc_mods_virtual_to_phys(struct file *fp,
 int esc_mods_phys_to_virtual(struct file *fp,
 			     struct MODS_PHYSICAL_TO_VIRTUAL *p);
 int esc_mods_memory_barrier(struct file *fp);
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
-int esc_mods_set_ppc_tce_bypass(struct file *fp,
-				struct MODS_SET_PPC_TCE_BYPASS *p);
-int esc_mods_get_ats_address_range(struct file *fp,
-				   struct MODS_GET_ATS_ADDRESS_RANGE *p);
-#endif
-
 int esc_mods_dma_map_memory(struct file *fp,
 			    struct MODS_DMA_MAP_MEMORY *p);
 int esc_mods_dma_unmap_memory(struct file *fp,
 			      struct MODS_DMA_MAP_MEMORY *p);
+
+#if defined(CONFIG_PPC64)
+/* ppc64 */
+int esc_mods_set_ppc_tce_bypass(struct file *fp,
+				struct MODS_SET_PPC_TCE_BYPASS *p);
+int esc_mods_get_ats_address_range(struct file *fp,
+				   struct MODS_GET_ATS_ADDRESS_RANGE *p);
+int esc_mods_set_nvlink_sysmem_trained(struct file *fp,
+				struct MODS_SET_NVLINK_SYSMEM_TRAINED *p);
+#endif
 
 /* acpi */
 #ifdef CONFIG_ACPI

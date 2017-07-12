@@ -24,7 +24,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 3
-#define MODS_DRIVER_VERSION_MINOR 73
+#define MODS_DRIVER_VERSION_MINOR 75
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR/10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR%10))
@@ -957,6 +957,13 @@ struct MODS_GET_ATS_ADDRESS_RANGE {
 	__s32		      numa_memory_node;
 };
 
+/* MODS_ESC_SET_NVLINK_SYSMEM_TRAINED */
+struct MODS_SET_NVLINK_SYSMEM_TRAINED {
+	/* IN */
+	struct mods_pci_dev_2 pci_device;
+	__u8		      trained;
+};
+
 #pragma pack(pop)
 
 /* ************************************************************************* */
@@ -1184,5 +1191,8 @@ struct MODS_GET_ATS_ADDRESS_RANGE {
 #define MODS_ESC_GET_ATS_ADDRESS_RANGE        \
 		   _IOWR(MODS_IOC_MAGIC, 101, \
 		   struct MODS_GET_ATS_ADDRESS_RANGE)
+#define MODS_ESC_SET_NVLINK_SYSMEM_TRAINED			\
+		   _IOW(MODS_IOC_MAGIC, 102,		\
+		   struct MODS_SET_NVLINK_SYSMEM_TRAINED)
 
 #endif /* _MODS_H_  */

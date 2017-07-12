@@ -111,7 +111,7 @@ struct pci_driver mods_pci_driver = {
 static int debug = -0x80000000;
 static int multi_instance = MODS_MULTI_INSTANCE_DEFAULT_VALUE;
 
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 static int ppc_tce_bypass = MODS_PPC_TCE_BYPASS_DEFAULT;
 
 void mods_set_ppc_tce_bypass(int bypass)
@@ -246,7 +246,7 @@ module_param(multi_instance, int, 0644);
 MODULE_PARM_DESC(multi_instance,
 	"allows more than one client to simultaneously open the driver");
 
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 module_param(ppc_tce_bypass, int, 0644);
 MODULE_PARM_DESC(ppc_tce_bypass,
 	"PPC TCE bypass (0=sys default, 1=force bypass, 2=force non bypass)");
@@ -524,8 +524,9 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 	struct list_head *mods_alloc_list;
 	struct list_head *mods_mapping_list;
 	struct list_head *mods_pci_res_map_list;
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 	struct list_head *mods_ppc_tce_bypass_list;
+	struct list_head *mods_nvlink_sysmem_trained_list;
 #endif
 	struct mods_file_private_data *private_data;
 	int id = 0;
@@ -556,13 +557,24 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 		return -ENOMEM;
 	}
 
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 	mods_ppc_tce_bypass_list =
 		kmalloc(sizeof(struct list_head), GFP_KERNEL | __GFP_NORETRY);
 	if (unlikely(!mods_ppc_tce_bypass_list)) {
 		kfree(mods_alloc_list);
 		kfree(mods_mapping_list);
 		kfree(mods_pci_res_map_list);
+		LOG_EXT();
+		return -ENOMEM;
+	}
+
+	mods_nvlink_sysmem_trained_list =
+		kmalloc(sizeof(struct list_head), GFP_KERNEL | __GFP_NORETRY);
+	if (unlikely(!mods_nvlink_sysmem_trained_list)) {
+		kfree(mods_alloc_list);
+		kfree(mods_mapping_list);
+		kfree(mods_pci_res_map_list);
+		kfree(mods_ppc_tce_bypass_list);
 		LOG_EXT();
 		return -ENOMEM;
 	}
@@ -574,8 +586,9 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 		kfree(mods_alloc_list);
 		kfree(mods_mapping_list);
 		kfree(mods_pci_res_map_list);
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 		kfree(mods_ppc_tce_bypass_list);
+		kfree(mods_nvlink_sysmem_trained_list);
 #endif
 		LOG_EXT();
 		return -ENOMEM;
@@ -587,8 +600,9 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 		kfree(mods_alloc_list);
 		kfree(mods_mapping_list);
 		kfree(mods_pci_res_map_list);
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 		kfree(mods_ppc_tce_bypass_list);
+		kfree(mods_nvlink_sysmem_trained_list);
 #endif
 		kfree(private_data);
 		LOG_EXT();
@@ -604,9 +618,12 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 	private_data->mods_alloc_list = mods_alloc_list;
 	private_data->mods_mapping_list = mods_mapping_list;
 	private_data->mods_pci_res_map_list = mods_pci_res_map_list;
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 	INIT_LIST_HEAD(mods_ppc_tce_bypass_list);
+	INIT_LIST_HEAD(mods_nvlink_sysmem_trained_list);
 	private_data->mods_ppc_tce_bypass_list = mods_ppc_tce_bypass_list;
+	private_data->mods_nvlink_sysmem_trained_list
+		= mods_nvlink_sysmem_trained_list;
 #endif
 	private_data->enabled_devices = 0;
 	private_data->mem_type.dma_addr = 0;
@@ -649,10 +666,14 @@ static int mods_krnl_close(struct inode *ip, struct file *fp)
 	if (ret)
 		mods_error_printk("failed to free pci mappings\n");
 
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 	ret = mods_unregister_all_ppc_tce_bypass(fp);
 	if (ret)
 		mods_error_printk("failed to restore dma bypass\n");
+
+	ret = mods_unregister_all_nvlink_sysmem_trained(fp);
+	if (ret)
+		mods_error_printk("failed to free nvlink trained\n");
 #endif
 
 	mods_disable_all_devices(private_data);
@@ -660,8 +681,9 @@ static int mods_krnl_close(struct inode *ip, struct file *fp)
 	kfree(private_data->mods_alloc_list);
 	kfree(private_data->mods_mapping_list);
 	kfree(private_data->mods_pci_res_map_list);
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 	kfree(private_data->mods_ppc_tce_bypass_list);
+	kfree(private_data->mods_nvlink_sysmem_trained_list);
 #endif
 	kfree(private_data);
 
@@ -1187,7 +1209,7 @@ static long mods_krnl_ioctl(struct file  *fp,
 			   esc_mods_phys_to_virtual, MODS_PHYSICAL_TO_VIRTUAL);
 		break;
 
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
+#if defined(CONFIG_PPC64)
 	case MODS_ESC_SET_PPC_TCE_BYPASS:
 		MODS_IOCTL(MODS_ESC_SET_PPC_TCE_BYPASS,
 			   esc_mods_set_ppc_tce_bypass,
@@ -1198,6 +1220,11 @@ static long mods_krnl_ioctl(struct file  *fp,
 		MODS_IOCTL(MODS_ESC_GET_ATS_ADDRESS_RANGE,
 			   esc_mods_get_ats_address_range,
 			   MODS_GET_ATS_ADDRESS_RANGE);
+		break;
+	case MODS_ESC_SET_NVLINK_SYSMEM_TRAINED:
+		MODS_IOCTL(MODS_ESC_SET_NVLINK_SYSMEM_TRAINED,
+			   esc_mods_set_nvlink_sysmem_trained,
+			   MODS_SET_NVLINK_SYSMEM_TRAINED);
 		break;
 #endif
 

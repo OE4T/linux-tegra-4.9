@@ -67,7 +67,7 @@ static struct nv_device *get_dev(void)
 }
 
 #ifdef CONFIG_PCI
-static int mods_enable_device(struct mods_file_private_data *priv,
+int mods_enable_device(struct mods_file_private_data *priv,
 				  struct pci_dev *pdev)
 {
 	int                  ret   = -1;

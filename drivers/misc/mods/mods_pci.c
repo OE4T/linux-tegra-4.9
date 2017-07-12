@@ -107,6 +107,7 @@ int mods_unregister_all_pci_res_mappings(struct file *fp)
 int esc_mods_find_pci_dev_2(struct file *pfile,
 			    struct MODS_FIND_PCI_DEVICE_2 *p)
 {
+	MODS_PRIV private_data = pfile->private_data;
 	struct pci_dev *dev;
 	int index = 0;
 
@@ -124,6 +125,16 @@ int esc_mods_find_pci_dev_2(struct file *pfile,
 			p->pci_device.bus	= dev->bus->number;
 			p->pci_device.device	= PCI_SLOT(dev->devfn);
 			p->pci_device.function	= PCI_FUNC(dev->devfn);
+			/* Enable device on the PCI bus */
+			if (mods_enable_device(private_data, dev)) {
+				mods_error_printk(
+				    "unable to enable dev %04x:%02x:%02x.%x\n",
+				    (unsigned int)p->pci_device.domain,
+				    (unsigned int)p->pci_device.bus,
+				    (unsigned int)p->pci_device.device,
+				    (unsigned int)p->pci_device.function);
+				return -EINVAL;
+			}
 			return OK;
 		}
 		dev = pci_get_device(p->vendor_id, p->device_id, dev);
@@ -136,6 +147,7 @@ int esc_mods_find_pci_dev_2(struct file *pfile,
 int esc_mods_find_pci_dev(struct file *pfile,
 			  struct MODS_FIND_PCI_DEVICE *p)
 {
+	MODS_PRIV private_data = pfile->private_data;
 	struct pci_dev *dev;
 	int index = 0;
 
@@ -152,6 +164,15 @@ int esc_mods_find_pci_dev(struct file *pfile,
 			p->bus_number		= dev->bus->number;
 			p->device_number	= PCI_SLOT(dev->devfn);
 			p->function_number	= PCI_FUNC(dev->devfn);
+			/* Enable device on the PCI bus */
+			if (mods_enable_device(private_data, dev)) {
+				mods_error_printk(
+				    "unable to enable dev %02x:%02x.%x\n",
+				    (unsigned int)p->bus_number,
+				    (unsigned int)p->device_number,
+				    (unsigned int)p->function_number);
+				return -EINVAL;
+			}
 			return OK;
 		}
 		/* Only return devices in the first domain, but don't assume
@@ -168,6 +189,7 @@ int esc_mods_find_pci_dev(struct file *pfile,
 int esc_mods_find_pci_class_code_2(struct file *pfile,
 				   struct MODS_FIND_PCI_CLASS_CODE_2 *p)
 {
+	MODS_PRIV private_data = pfile->private_data;
 	struct pci_dev *dev;
 	int index = 0;
 
@@ -182,6 +204,16 @@ int esc_mods_find_pci_class_code_2(struct file *pfile,
 			p->pci_device.bus	= dev->bus->number;
 			p->pci_device.device	= PCI_SLOT(dev->devfn);
 			p->pci_device.function	= PCI_FUNC(dev->devfn);
+			/* Enable device on the PCI bus */
+			if (mods_enable_device(private_data, dev)) {
+				mods_error_printk(
+				    "unable to enable dev %04x:%02x:%02x.%x\n",
+				    (unsigned int)p->pci_device.domain,
+				    (unsigned int)p->pci_device.bus,
+				    (unsigned int)p->pci_device.device,
+				    (unsigned int)p->pci_device.function);
+				return -EINVAL;
+			}
 			return OK;
 		}
 		dev = pci_get_class(p->class_code, dev);
@@ -194,6 +226,7 @@ int esc_mods_find_pci_class_code_2(struct file *pfile,
 int esc_mods_find_pci_class_code(struct file *pfile,
 				 struct MODS_FIND_PCI_CLASS_CODE *p)
 {
+	MODS_PRIV private_data = pfile->private_data;
 	struct pci_dev *dev;
 	int index = 0;
 
@@ -207,6 +240,15 @@ int esc_mods_find_pci_class_code(struct file *pfile,
 			p->bus_number		= dev->bus->number;
 			p->device_number	= PCI_SLOT(dev->devfn);
 			p->function_number	= PCI_FUNC(dev->devfn);
+			/* Enable device on the PCI bus */
+			if (mods_enable_device(private_data, dev)) {
+				mods_error_printk(
+				    "unable to enable dev %02x:%02x.%x\n",
+				    (unsigned int)p->bus_number,
+				    (unsigned int)p->device_number,
+				    (unsigned int)p->function_number);
+				return -EINVAL;
+			}
 			return OK;
 		}
 		/* Only return devices in the first domain, but don't assume
@@ -817,109 +859,3 @@ int esc_mods_pci_unmap_resource(struct file *fp,
 	return OK;
 #endif
 }
-
-#if defined(MODS_HAS_SET_PPC_TCE_BYPASS)
-int esc_mods_get_ats_address_range(struct file *fp,
-				   struct MODS_GET_ATS_ADDRESS_RANGE *p)
-{
-	unsigned int	    devfn;
-	struct pci_dev	   *dev;
-	struct pci_dev	   *npu_dev;
-	struct device_node *mem_node = NULL;
-	const __u32	   *val32;
-	const __u64	   *val64;
-	int		    len;
-	int		    ret = -EINVAL;
-
-	LOG_ENT();
-
-	mods_debug_printk(DEBUG_PCICFG,
-			  "get ats addr, dev %04x:%x:%02x:%x, npu index %d\n",
-			  (int)p->pci_device.domain,
-			  (int)p->pci_device.bus,
-			  (int)p->pci_device.device,
-			  (int)p->pci_device.function,
-			  (int)p->npu_index);
-
-	devfn = PCI_DEVFN(p->pci_device.device, p->pci_device.function);
-	dev = MODS_PCI_GET_SLOT(p->pci_device.domain, p->pci_device.bus, devfn);
-	if (dev == NULL)  {
-		mods_error_printk("PCI device %04x:%x:%02x.%x not found\n",
-				  p->pci_device.domain,
-				  p->pci_device.bus,
-				  p->pci_device.device,
-				  p->pci_device.function);
-		goto exit;
-	}
-
-	npu_dev = pnv_pci_get_npu_dev(dev, p->npu_index);
-	if (npu_dev == NULL) {
-		mods_error_printk("NPU device for %04x:%x:%02x.%x not found\n",
-				  p->pci_device.domain,
-				  p->pci_device.bus,
-				  p->pci_device.device,
-				  p->pci_device.function);
-		goto exit;
-	}
-
-	p->npu_device.domain   = pci_domain_nr(npu_dev->bus);
-	p->npu_device.bus      = npu_dev->bus->number;
-	p->npu_device.device   = PCI_SLOT(npu_dev->devfn);
-	p->npu_device.function = PCI_FUNC(npu_dev->devfn);
-
-	mods_debug_printk(DEBUG_PCICFG,
-			  "Found NPU device %04x:%x:%02x.%x\n",
-			  p->npu_device.domain,
-			  p->npu_device.bus,
-			  p->npu_device.device,
-			  p->npu_device.function);
-
-	val32 = (const __u32 *)of_get_property(npu_dev->dev.of_node,
-					       "memory-region",
-					       &len);
-	if (!val32 || len < 4) {
-		mods_error_printk("Property memory-region for NPU not found\n");
-		goto exit;
-	}
-
-	mem_node = of_find_node_by_phandle(be32_to_cpu(*val32));
-	if (!mem_node) {
-		mods_error_printk("Node memory-region for NPU not found\n");
-		goto exit;
-	}
-
-	p->numa_memory_node = of_node_to_nid(mem_node);
-	if (p->numa_memory_node == NUMA_NO_NODE) {
-		mods_error_printk("NUMA node for NPU not found\n");
-		goto exit;
-	}
-
-	val64 = (const __u64 *)of_get_property(npu_dev->dev.of_node,
-					       "ibm,device-tgt-addr",
-					       &len);
-	if (!val64 || len < 8) {
-		mods_error_printk(
-			"Property ibm,device-tgt-addr for NPU not found\n");
-		goto exit;
-	}
-
-	p->phys_addr = be64_to_cpu(*val64);
-
-	val64 = (const __u64 *)of_get_property(mem_node, "reg", &len);
-	if (!val64 || len < 16) {
-		mods_error_printk("Property reg for memory region not found\n");
-		goto exit;
-	}
-
-	p->guest_addr    = be64_to_cpu(val64[0]);
-	p->aperture_size = be64_to_cpu(val64[1]);
-
-	ret = OK;
-
-exit:
-	if (mem_node)
-		of_node_put(mem_node);
-	LOG_EXT();
-	return ret;
-}
-#endif

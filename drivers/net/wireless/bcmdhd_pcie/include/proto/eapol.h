@@ -5,7 +5,7 @@
  * IEEE Std 802.1X-2001
  * IEEE 802.1X RADIUS Usage Guidelines
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,11 +24,11 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * 
+ *
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: eapol.h 518342 2014-12-01 23:21:41Z $
+ * $Id: eapol.h 596466 2015-11-02 00:41:50Z $
  */
 
 #ifndef _eapol_h_

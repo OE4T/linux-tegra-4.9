@@ -1,7 +1,7 @@
 /*
  * pcicfg.h: PCI configuration constants and structures.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -171,11 +171,7 @@ typedef struct _pcie_enhanced_caphdr {
 #define	PCI_GPIO_IN		0xb0	/* pci config space gpio input (>=rev3) */
 #define	PCI_GPIO_OUT		0xb4	/* pci config space gpio output (>=rev3) */
 #define	PCI_GPIO_OUTEN		0xb8	/* pci config space gpio output enable (>=rev3) */
-#undef PCI_L1SS_CTRL2			/* avoid incompatible user-mode
-					 * definition from
-					 * uapi/linux/pci_regs.h
-					 */
-#define	PCI_L1SS_CTRL2		0x24c	/* The L1 PM Substates Control 2 register */
+#define	PCI_L1SS_CTRL2		0x24c	/* The L1 PM Substates Control register */
 
 /* Private Registers */
 #define	PCI_STAT_CTRL		0xa80

@@ -1,7 +1,7 @@
 /*
  * IP Packet Parser Module.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_ip.c 569132 2015-07-07 09:09:33Z $
+ * $Id: dhd_ip.c 612549 2016-01-14 07:39:32Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -1182,7 +1182,7 @@ dhd_tcpack_hold(dhd_pub_t *dhdp, void *pkt, int ifidx)
 	for (i = 0; i < TCPACK_INFO_MAXNUM; i++) {
 		void *oldpkt;	/* TCPACK packet that is already in txq or DelayQ */
 		uint8 *old_ether_hdr, *old_ip_hdr, *old_tcp_hdr;
-		uint32 old_ip_hdr_len, old_tcp_hdr_len;
+		uint32 old_ip_hdr_len;
 		uint32 old_tcpack_num;	/* TCP ACK number of old TCPACK packet in Q */
 
 		if ((oldpkt = tcpack_info_tbl[i].pkt_in_q) == NULL) {
@@ -1204,7 +1204,6 @@ dhd_tcpack_hold(dhd_pub_t *dhdp, void *pkt, int ifidx)
 		old_ip_hdr = old_ether_hdr + ETHER_HDR_LEN;
 		old_ip_hdr_len = IPV4_HLEN(old_ip_hdr);
 		old_tcp_hdr = old_ip_hdr + old_ip_hdr_len;
-		old_tcp_hdr_len = 4 * TCP_HDRLEN(old_tcp_hdr[TCP_HLEN_OFFSET]);
 
 		DHD_TRACE(("%s %d: oldpkt %p[%d], IP addr "IPV4_ADDR_STR" "IPV4_ADDR_STR
 			" TCP port %d %d\n", __FUNCTION__, __LINE__, oldpkt, i,

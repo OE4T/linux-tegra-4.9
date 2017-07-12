@@ -2,7 +2,7 @@
  * Misc utility routines for accessing the SOC Interconnects
  * of Broadcom HNBU chips.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -25,7 +25,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: siutils.h 530150 2015-01-29 08:43:40Z $
+ * $Id: siutils.h 663718 2017-01-30 12:10:57Z $
  */
 
 #ifndef	_siutils_h_
@@ -276,6 +276,11 @@ extern void *si_gci_gpioint_handler_register(si_t *sih, uint8 gpio, uint8 sts,
 	gci_gpio_handler_t cb, void *arg);
 extern void si_gci_gpioint_handler_unregister(si_t *sih, void* gci_i);
 extern uint8 si_gci_gpio_status(si_t *sih, uint8 gci_gpio, uint8 mask, uint8 value);
+
+/* Get core base addr from core-id */
+#ifdef CUSTOMER_HW2
+extern uint32 si_corebase(si_t *sih, uint cid);
+#endif /* CUSTOMER_HW2 */
 
 /* Wake-on-wireless-LAN (WOWL) */
 extern bool si_pci_pmecap(si_t *sih);

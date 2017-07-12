@@ -1,7 +1,7 @@
 /*
  * BCMSDH Function Driver for the native SDIO/MMC driver in the Linux Kernel
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Proprietary,Open:>>
  *
- * $Id: bcmsdh_sdmmc_linux.c 591173 2015-10-07 06:24:22Z $
+ * $Id: bcmsdh_sdmmc_linux.c 662764 2016-11-10 09:38:01Z $
  */
 
 #include <typedefs.h>
@@ -47,10 +47,6 @@
 #if !defined(SDIO_VENDOR_ID_BROADCOM)
 #define SDIO_VENDOR_ID_BROADCOM		0x02d0
 #endif /* !defined(SDIO_VENDOR_ID_BROADCOM) */
-
-#ifdef	CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
-#include "dhd_custom_sysfs_tegra.h"
-#endif
 
 #define SDIO_DEVICE_ID_BROADCOM_DEFAULT	0x0000
 
@@ -223,6 +219,20 @@ static const struct sdio_device_id bcmsdh_sdmmc_ids[] = {
 
 MODULE_DEVICE_TABLE(sdio, bcmsdh_sdmmc_ids);
 
+#ifdef OOB_PARAM
+uint
+sdioh_get_oob_disable(sdioh_info_t *sd)
+{
+	int host_idx = sd->func[0]->card->host->index;
+	uint32 rca = sd->func[0]->card->rca;
+	wifi_adapter_info_t *adapter;
+
+	adapter = dhd_wifi_platform_get_adapter(SDIO_BUS, host_idx, rca);
+
+	return adapter->oob_disable;
+}
+#endif /* OOB_PARAM */
+
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)) && defined(CONFIG_PM)
 static int bcmsdh_sdmmc_suspend(struct device *pdev)
 {
@@ -250,10 +260,6 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 		return  -EINVAL;
 	}
 
-#ifdef	CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
-	tegra_sysfs_suspend();
-#endif
-
 	/* keep power while host suspended */
 	err = sdio_set_host_pm_flags(func, MMC_PM_KEEP_POWER);
 	if (err) {
@@ -261,6 +267,11 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 		dhd_mmc_suspend = FALSE;
 		return err;
 	}
+#if defined(OOB_INTR_ONLY)
+	OOB_PARAM_IF(!(sdioh_get_oob_disable(sdioh))) {
+		bcmsdh_oob_intr_set(sdioh->bcmsdh, FALSE);
+	}
+#endif 
 	smp_mb();
 
 	return 0;
@@ -268,37 +279,25 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 
 static int bcmsdh_sdmmc_resume(struct device *pdev)
 {
-	sdioh_info_t *sdioh;
 	struct sdio_func *func = dev_to_sdio_func(pdev);
+	sdioh_info_t *sdioh;
+
 
 	sd_err(("%s Enter\n", __FUNCTION__));
 	if (func->num != 2)
 		return 0;
 
-	sdioh = sdio_get_drvdata(func);
 	dhd_mmc_suspend = FALSE;
+	sdioh = sdio_get_drvdata(func);
+	bcmsdh_resume(sdioh->bcmsdh);
 
-#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
-	tegra_sysfs_resume();
-#endif
 	smp_mb();
 	return 0;
 }
 
-#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
-static int bcmsdh_sdmmc_resume_noirq(struct device *pdev)
-{
-	tegra_sysfs_resume_capture();
-	return 0;
-}
-#endif
-
 static const struct dev_pm_ops bcmsdh_sdmmc_pm_ops = {
 	.suspend	= bcmsdh_sdmmc_suspend,
 	.resume		= bcmsdh_sdmmc_resume,
-#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
-	.resume_noirq   = bcmsdh_sdmmc_resume_noirq,
-#endif
 };
 #endif  /* (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)) && defined(CONFIG_PM) */
 

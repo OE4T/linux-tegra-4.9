@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver - Android related functions
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: wl_android.h 556083 2015-05-12 14:03:00Z $
+ * $Id: wl_android.h 608194 2015-12-24 04:34:35Z $
  */
 
 #include <linux/module.h>
@@ -56,7 +56,6 @@ void wl_android_post_init(void);
 int wl_android_wifi_on(struct net_device *dev);
 int wl_android_wifi_off(struct net_device *dev, bool on_failure);
 int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd);
-int wl_handle_private_cmd(struct net_device *net, char *command, u32 cmd_len);
 
 s32 wl_netlink_send_msg(int pid, int type, int seq, void *data, size_t size);
 
@@ -78,3 +77,4 @@ s32 wl_netlink_send_msg(int pid, int type, int seq, void *data, size_t size);
 #define MAX_NUM_MAC_FILT        10
 
 int wl_android_set_ap_mac_list(struct net_device *dev, int macmode, struct maclist *maclist);
+int wl_android_set_roam_offload_bssid_list(struct net_device *dev, const char *cmd);

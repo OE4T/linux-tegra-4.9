@@ -1,7 +1,7 @@
 /*
  * Broadcom Ethernettype  protocol definitions
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: bcmeth.h 518342 2014-12-01 23:21:41Z $
+ * $Id: bcmeth.h 565501 2015-06-22 14:29:02Z $
  */
 
 /*
@@ -93,6 +93,7 @@
  */
 /* #define BCMILCP_BCM_SUBTYPE_EAPOL		3 */
 #define BCMILCP_BCM_SUBTYPE_DPT                 4
+#define BCMILCP_BCM_SUBTYPE_DNGLEVENT       5
 
 #define BCMILCP_BCM_SUBTYPEHDR_MINLENGTH	8
 #define BCMILCP_BCM_SUBTYPEHDR_VERSION		0

@@ -1,7 +1,7 @@
 /*
  * EVENT_LOG system definitions
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: event_log.h 241182 2011-02-17 21:50:03Z $
+ * $Id: event_log_set.h 585396 2015-09-10 09:04:56Z $
  */
 
 #ifndef _EVENT_LOG_SET_H_
@@ -41,5 +41,6 @@
 #define EVENT_LOG_SET_PSM	2
 #define EVENT_LOG_SET_ERROR	3
 #define EVENT_LOG_SET_MEM_API	4
+#define EVENT_LOG_SET_ECOUNTERS 5	/* Host to instantiate this for ecounters. */
 
 #endif /* _EVENT_LOG_SET_H_ */

@@ -1,7 +1,7 @@
 /*
  * Broadcom BCMSDH to gSPI Protocol Conversion Layer
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: bcmspibrcm.c 591086 2015-10-07 02:51:01Z $
+ * $Id: bcmspibrcm.c 662542 2016-10-28 03:26:10Z $
  */
 
 #define HSMODE
@@ -202,11 +202,13 @@ extern SDIOH_API_RC
 sdioh_interrupt_register(sdioh_info_t *sd, sdioh_cb_fn_t fn, void *argh)
 {
 	sd_trace(("%s: Entering\n", __FUNCTION__));
-#if !defined(OOB_INTR_ONLY)
-	sd->intr_handler = fn;
-	sd->intr_handler_arg = argh;
-	sd->intr_handler_valid = TRUE;
-#endif /* !defined(OOB_INTR_ONLY) */
+#if !defined(OOB_INTR_ONLY) || defined(OOB_PARAM)
+	OOB_PARAM_IF(dhd_get_oob_disable(argh)) {
+		sd->intr_handler = fn;
+		sd->intr_handler_arg = argh;
+		sd->intr_handler_valid = TRUE;
+	}
+#endif /* !defined(OOB_INTR_ONLY) || defined(OOB_PARAM) */
 	return SDIOH_API_RC_SUCCESS;
 }
 
@@ -214,11 +216,13 @@ extern SDIOH_API_RC
 sdioh_interrupt_deregister(sdioh_info_t *sd)
 {
 	sd_trace(("%s: Entering\n", __FUNCTION__));
-#if !defined(OOB_INTR_ONLY)
-	sd->intr_handler_valid = FALSE;
-	sd->intr_handler = NULL;
-	sd->intr_handler_arg = NULL;
-#endif /* !defined(OOB_INTR_ONLY) */
+#if !defined(OOB_INTR_ONLY) || defined(OOB_PARAM)
+	OOB_PARAM_IF(sd->intr_handler_valid) {
+		sd->intr_handler_valid = FALSE;
+		sd->intr_handler = NULL;
+		sd->intr_handler_arg = NULL;
+	}
+#endif /* !defined(OOB_INTR_ONLY) || defined(OOB_PARAM) */
 	return SDIOH_API_RC_SUCCESS;
 }
 

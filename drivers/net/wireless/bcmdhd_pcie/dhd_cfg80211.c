@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver - Dongle Host Driver (DHD) related
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_cfg80211.c 591285 2015-10-07 11:56:29Z $
+ * $Id: dhd_cfg80211.c 642340 2016-06-08 09:44:13Z $
  */
 
 #include <linux/vmalloc.h>
@@ -39,8 +39,6 @@
 #include <dngl_stats.h>
 #include <dhd.h>
 #endif
-
-extern struct bcm_cfg80211 *g_bcm_cfg;
 
 #ifdef PKT_FILTER_SUPPORT
 extern uint dhd_pkt_filter_enable;

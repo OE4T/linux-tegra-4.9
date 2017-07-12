@@ -1,7 +1,7 @@
 /*
  * Driver O/S-independent utility routines
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -2052,7 +2052,11 @@ static const char *crypto_algo_names[] = {
 	"UNDEF",
 	"UNDEF",
 	"UNDEF",
+#ifdef BCMWAPI_WAI
+	"WAPI",
+#else
 	"UNDEF"
+#endif
 	"PMK",
 	"BIP",
 	"AES_GCM",
@@ -2292,7 +2296,7 @@ bcm_bprintf(struct bcmstrbuf *b, const char *fmt, ...)
 
 	r = vsnprintf(b->buf, b->size, fmt, ap);
 	if (bcm_bprintf_bypass == TRUE) {
-		printf("%s\n", b->buf);
+		printf(b->buf);
 		goto exit;
 	}
 
@@ -2359,18 +2363,17 @@ bcm_print_bytes(const char *name, const uchar *data, int len)
 {
 	int i;
 	int per_line = 0;
-	uchar buf[50];
 
 	printf("%s: %d \n", name ? name : "", len);
 	for (i = 0; i < len; i++) {
-		snprintf(buf + 3 * per_line, 4, "%02x ", *data++);
+		printf("%02x ", *data++);
 		per_line++;
 		if (per_line == 16) {
 			per_line = 0;
-			printf("%s\n", buf);
+			printf("\n");
 		}
 	}
-	printf("%s\n", buf);
+	printf("\n");
 }
 
 /* Look for vendor-specific IE with specified OUI and optional type */

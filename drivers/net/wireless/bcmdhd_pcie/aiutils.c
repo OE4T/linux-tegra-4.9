@@ -2,7 +2,7 @@
  * Misc utility routines for accessing chip-specific features
  * of the SiliconBackplane-based Broadcom chips.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -25,7 +25,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: aiutils.c 526024 2015-01-13 03:59:33Z $
+ * $Id: aiutils.c 607900 2015-12-22 13:38:53Z $
  */
 #include <bcm_cfg.h>
 #include <typedefs.h>
@@ -942,15 +942,24 @@ _ai_core_reset(si_t *sih, uint32 bits, uint32 resetbits)
 	aidmp_t *ai;
 	volatile uint32 dummy;
 	uint loop_counter = 10;
+#ifdef CUSTOMER_HW4_DEBUG
+	printf("%s: bits: 0x%x, resetbits: 0x%x\n", __FUNCTION__, bits, resetbits);
+#endif
 
 	ASSERT(GOODREGS(sii->curwrap));
 	ai = sii->curwrap;
 
 	/* ensure there are no pending backplane operations */
 	SPINWAIT(((dummy = R_REG(sii->osh, &ai->resetstatus)) != 0), 300);
+#ifdef CUSTOMER_HW4_DEBUG
+	printf("%s: resetstatus: %p dummy: %x\n", __FUNCTION__, &ai->resetstatus, dummy);
+#endif
 
 
 	/* put core into reset state */
+#ifdef CUSTOMER_HW4_DEBUG
+	printf("%s: resetctrl: %p\n", __FUNCTION__, &ai->resetctrl);
+#endif
 	W_REG(sii->osh, &ai->resetctrl, AIRC_RESET);
 	OSL_DELAY(10);
 
@@ -959,6 +968,9 @@ _ai_core_reset(si_t *sih, uint32 bits, uint32 resetbits)
 
 	W_REG(sii->osh, &ai->ioctrl, (bits | resetbits | SICF_FGC | SICF_CLOCK_EN));
 	dummy = R_REG(sii->osh, &ai->ioctrl);
+#ifdef CUSTOMER_HW4_DEBUG
+	printf("%s: ioctrl: %p dummy: 0x%x\n", __FUNCTION__, &ai->ioctrl, dummy);
+#endif
 	BCM_REFERENCE(dummy);
 
 	/* ensure there are no pending backplane operations */
@@ -972,6 +984,10 @@ _ai_core_reset(si_t *sih, uint32 bits, uint32 resetbits)
 
 		/* take core out of reset */
 		W_REG(sii->osh, &ai->resetctrl, 0);
+#ifdef CUSTOMER_HW4_DEBUG
+		printf("%s: loop_counter: %d resetstatus: %p resetctrl: %p\n",
+			__FUNCTION__, loop_counter, &ai->resetstatus, &ai->resetctrl);
+#endif
 
 		/* ensure there are no pending backplane operations */
 		SPINWAIT((R_REG(sii->osh, &ai->resetstatus) != 0), 300);
@@ -980,6 +996,9 @@ _ai_core_reset(si_t *sih, uint32 bits, uint32 resetbits)
 
 	W_REG(sii->osh, &ai->ioctrl, (bits | SICF_CLOCK_EN));
 	dummy = R_REG(sii->osh, &ai->ioctrl);
+#ifdef CUSTOMER_HW4_DEBUG
+	printf("%s: ioctl: %p dummy: 0x%x\n", __FUNCTION__, &ai->ioctrl, dummy);
+#endif
 	BCM_REFERENCE(dummy);
 	OSL_DELAY(1);
 }

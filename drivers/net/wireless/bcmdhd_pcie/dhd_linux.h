@@ -1,7 +1,7 @@
 /*
  * DHD Linux header file (dhd_linux exports for cfg80211 and other components)
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_linux.h 591285 2015-10-07 11:56:29Z $
+ * $Id: dhd_linux.h 662542 2016-10-28 03:26:10Z $
  */
 
 /* wifi platform functions for power, interrupt and pre-alloc, either
@@ -43,6 +43,10 @@
 #ifdef DHD_WMF
 #include <dhd_wmf_linux.h>
 #endif
+/* Linux wireless extension support */
+#if defined(WL_WIRELESS_EXT)
+#include <wl_iw.h>
+#endif /* defined(WL_WIRELESS_EXT) */
 #if defined(CONFIG_HAS_EARLYSUSPEND) && defined(DHD_USE_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
 #endif /* defined(CONFIG_HAS_EARLYSUSPEND) && defined(DHD_USE_EARLYSUSPEND) */
@@ -70,7 +74,7 @@ struct wifi_platform_data {
 
 typedef struct wifi_adapter_info {
 	const char	*name;
-	int		irq_num;
+	uint		irq_num;
 	uint		intr_flags;
 	const char	*fw_path;
 	const char	*nv_path;
@@ -78,7 +82,9 @@ typedef struct wifi_adapter_info {
 	uint		bus_type;
 	uint		bus_num;
 	uint		slot_num;
-	uint            wlan_pwr;
+#ifdef OOB_PARAM
+	uint		oob_disable;
+#endif /* OOB_PARAM */
 } wifi_adapter_info_t;
 
 typedef struct bcmdhd_wifi_platdata {

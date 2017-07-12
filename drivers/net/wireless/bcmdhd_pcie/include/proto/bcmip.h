@@ -1,7 +1,7 @@
 /*
  * Fundamental constants relating to IP Protocol
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: bcmip.h 518342 2014-12-01 23:21:41Z $
+ * $Id: bcmip.h 594480 2015-10-22 03:14:33Z $
  */
 
 #ifndef _bcmip_h_
@@ -52,7 +52,8 @@
 #define IP_PROT_IGMP		0x2	/* IGMP protocol */
 #define IP_PROT_TCP		0x6	/* TCP protocol */
 #define IP_PROT_UDP		0x11	/* UDP protocol type */
-#define IP_PROT_ICMP6		0x3a	/* ICMPv6 protocol type */
+#define IP_PROT_GRE		0x2f	/* GRE protocol type */
+#define IP_PROT_ICMP6           0x3a    /* ICMPv6 protocol type */
 
 /* IPV4 field offsets */
 #define IPV4_VER_HL_OFFSET      0       /* version and ihl byte offset */

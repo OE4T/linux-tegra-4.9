@@ -15,6 +15,15 @@ section present the new migration helper that allow to leverage the device DMA
 engine.
 
 
+1) Problems of using device specific memory allocator:
+2) System bus, device memory characteristics
+3) Share address space and migration
+4) Address space mirroring implementation and API
+5) Represent and manage device memory from core kernel point of view
+6) Migrate to and from device memory
+7) Memory cgroup (memcg) and rss accounting
+
+
 -------------------------------------------------------------------------------
 
 1) Problems of using device specific memory allocator:
@@ -342,3 +351,34 @@ that happens then the finalize_and_map() can catch any pages that was not
 migrated. Note those page were still copied to new page and thus we wasted
 bandwidth but this is considered as a rare event and a price that we are
 willing to pay to keep all the code simpler.
+
+
+-------------------------------------------------------------------------------
+
+7) Memory cgroup (memcg) and rss accounting
+
+For now device memory is accounted as any regular page in rss counters (either
+anonymous if device page is use for anonymous, file if device page is use for
+file back page or shmem if device page is use for share memory). This is a
+deliberate choice to keep existing application that might start using device
+memory without knowing about it to keep runing unimpacted.
+
+Drawbacks is that OOM killer might kill an application using a lot of device
+memory and not a lot of regular system memory and thus not freeing much system
+memory. We want to gather more real world experience on how application and
+system react under memory pressure in the presence of device memory before
+deciding to account device memory differently.
+
+
+Same decision was made for memory cgroup. Device memory page are accounted
+against same memory cgroup a regular page would be accounted to. This does
+simplify migration to and from device memory. This also means that migration
+back from device memory to regular memory can not fail because it would
+go above memory cgroup limit. We might revisit this choice latter on once we
+get more experience in how device memory is use and its impact on memory
+resource control.
+
+
+Note that device memory can never be pin nor by device driver nor through GUP
+and thus such memory is always free upon process exit. Or when last reference
+is drop in case of share memory or file back memory.

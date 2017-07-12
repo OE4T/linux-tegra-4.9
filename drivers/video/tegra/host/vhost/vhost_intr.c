@@ -122,23 +122,6 @@ static void vhost_syncpt_enable_intr(u64 handle, u32 id, u32 thresh)
 	WARN_ON(err || msg.ret);
 }
 
-static int vhost_intr_init_host_sync(struct nvhost_intr *intr)
-{
-	struct nvhost_master *dev = intr_to_dev(intr);
-	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(dev->dev);
-
-	intr_op().disable_all_syncpt_intrs(intr);
-
-	ctx->syncpt_handler =
-		kthread_run(vhost_intr_handler, dev, "vhost_intr");
-	if (IS_ERR(ctx->syncpt_handler))
-		return PTR_ERR(ctx->syncpt_handler);
-
-	vhost_syncpt_enable_intr(ctx->handle,
-			nvhost_syncpt_graphics_host_sp(&dev->syncpt), 1);
-	return 0;
-}
-
 static void vhost_intr_set_host_clocks_per_usec(struct nvhost_intr *intr,
 						u32 cpm)
 {
@@ -186,16 +169,30 @@ static void vhost_intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 	WARN_ON(err || msg.ret);
 }
 
-static int vhost_intr_request_host_general_irq(struct nvhost_intr *intr)
+static int vhost_fake_debug_dump(struct nvhost_intr *intr, struct output *o)
 {
 	return 0;
 }
 
-static void vhost_intr_free_host_general_irq(struct nvhost_intr *intr)
+static int vhost_intr_init(struct nvhost_intr *intr)
 {
+	struct nvhost_master *dev = intr_to_dev(intr);
+	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(dev->dev);
+
+	intr_op().disable_all_syncpt_intrs(intr);
+
+	ctx->syncpt_handler =
+		kthread_run(vhost_intr_handler, dev, "vhost_intr");
+	if (IS_ERR(ctx->syncpt_handler))
+		return PTR_ERR(ctx->syncpt_handler);
+
+	vhost_syncpt_enable_intr(ctx->handle,
+			nvhost_syncpt_graphics_host_sp(&dev->syncpt), 1);
+
+	return 0;
 }
 
-static int vhost_free_syncpt_irq(struct nvhost_intr *intr)
+static void vhost_intr_deinit(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(dev->dev);
@@ -212,24 +209,16 @@ static int vhost_free_syncpt_irq(struct nvhost_intr *intr)
 				&msg, sizeof(msg));
 	WARN_ON(err);
 	kthread_stop(ctx->syncpt_handler);
-	return 0;
-}
-
-static int vhost_fake_debug_dump(struct nvhost_intr *intr, struct output *o)
-{
-	return 0;
 }
 
 void vhost_init_host1x_intr_ops(struct nvhost_intr_ops *ops)
 {
-	ops->init_host_sync = vhost_intr_init_host_sync;
+	ops->init = vhost_intr_init;
+	ops->deinit = vhost_intr_deinit;
 	ops->set_host_clocks_per_usec = vhost_intr_set_host_clocks_per_usec;
 	ops->set_syncpt_threshold = vhost_intr_set_syncpt_threshold;
 	ops->enable_syncpt_intr = vhost_intr_enable_syncpt_intr;
 	ops->disable_syncpt_intr = vhost_intr_disable_syncpt_intr;
 	ops->disable_all_syncpt_intrs = vhost_intr_disable_all_syncpt_intrs;
-	ops->request_host_general_irq = vhost_intr_request_host_general_irq;
-	ops->free_host_general_irq = vhost_intr_free_host_general_irq;
-	ops->free_syncpt_irq = vhost_free_syncpt_irq;
 	ops->debug_dump = vhost_fake_debug_dump;
 }

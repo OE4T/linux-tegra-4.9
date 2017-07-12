@@ -562,7 +562,7 @@ void nvhost_intr_put_ref(struct nvhost_intr *intr, u32 id, void *ref)
 
 int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 {
-	unsigned int id, i;
+	unsigned int id, i, err;
 	struct nvhost_intr_syncpt *syncpt;
 	struct nvhost_master *host = intr_to_dev(intr);
 	u32 nb_pts = nvhost_syncpt_nb_hw_pts(&host->syncpt);
@@ -591,12 +591,19 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 			  nvhost_syncpt_low_prio_work);
 	}
 
+	err = intr_op().init(intr);
+	if (err) {
+		destroy_workqueue(intr->low_prio_wq);
+		return err;
+	}
+
 	return 0;
 }
 
 void nvhost_intr_deinit(struct nvhost_intr *intr)
 {
 	nvhost_intr_stop(intr);
+	intr_op().deinit(intr);
 	destroy_workqueue(intr->low_prio_wq);
 }
 
@@ -606,16 +613,9 @@ int nvhost_intr_start(struct nvhost_intr *intr, u32 hz)
 
 	mutex_lock(&intr->mutex);
 
-	err = intr_op().init_host_sync(intr);
-	if (err)
-		goto unlock;
+	intr_op().resume(intr);
+	intr_op().set_host_clocks_per_usec(intr, (hz + 1000000 - 1)/1000000);
 
-	intr_op().set_host_clocks_per_usec(intr,
-					       (hz + 1000000 - 1)/1000000);
-
-	intr_op().request_host_general_irq(intr);
-
-unlock:
 	mutex_unlock(&intr->mutex);
 	return err;
 }
@@ -650,8 +650,7 @@ int nvhost_intr_stop(struct nvhost_intr *intr)
 		}
 	}
 
-	intr_op().free_host_general_irq(intr);
-	intr_op().free_syncpt_irq(intr);
+	intr_op().suspend(intr);
 
 	mutex_unlock(&intr->mutex);
 

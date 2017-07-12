@@ -88,33 +88,6 @@ out:
 	return IRQ_HANDLED;
 }
 
-static int t20_intr_init_host_sync(struct nvhost_intr *intr)
-{
-	struct nvhost_master *dev = intr_to_dev(intr);
-	int err;
-
-	intr_op().disable_all_syncpt_intrs(intr);
-
-	err = request_threaded_irq(intr->syncpt_irq, NULL,
-				syncpt_thresh_cascade_isr,
-				IRQF_ONESHOT, "host_syncpt", dev);
-	if (err)
-		return err;
-
-	/* increase the auto-ack timout to the maximum value. 2d will hang
-	 * otherwise on ap20.
-	 */
-	host1x_sync_writel(dev, host1x_sync_ctxsw_timeout_cfg_r(), 0xff);
-
-	/* enable graphics host syncpoint interrupt */
-	t20_intr_set_syncpt_threshold(intr,
-			nvhost_syncpt_graphics_host_sp(&dev->syncpt),
-			1);
-	t20_intr_enable_syncpt_intr(intr,
-			nvhost_syncpt_graphics_host_sp(&dev->syncpt));
-	return 0;
-}
-
 static void t20_intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
@@ -243,67 +216,6 @@ static irqreturn_t t20_intr_host1x_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
-{
-	struct nvhost_master *dev = intr_to_dev(intr);
-	int err;
-	u32 val;
-
-	/* master disable for general (not syncpt) host interrupts */
-	host1x_sync_writel(dev, host1x_sync_intmask_r(), 0);
-
-	/* clear status & extstatus */
-	host1x_sync_writel(dev, host1x_sync_hintstatus_ext_r(),
-			0xfffffffful);
-	host1x_sync_writel(dev, host1x_sync_hintstatus_r(),
-			0xfffffffful);
-
-	err = request_threaded_irq(intr->general_irq, NULL,
-				t20_intr_host1x_isr,
-				IRQF_ONESHOT, "host_status", intr);
-	if (err)
-		return err;
-
-	/* enable extra interrupt sources IP_READ_INT and IP_WRITE_INT */
-	host1x_sync_writel(dev, host1x_sync_hintmask_ext_r(),
-			BIT(30) | BIT(31));
-
-	/* enable extra interrupt sources */
-	val = host1x_sync_readl(dev, host1x_sync_hintmask_r());
-	val |= BIT(31);
-	host1x_sync_writel(dev, host1x_sync_hintmask_r(), val);
-
-	/* enable host module interrupt to CPU0 */
-	host1x_sync_writel(dev, host1x_sync_intc0mask_r(), BIT(0));
-
-	/* master enable for general (not syncpt) host interrupts */
-	host1x_sync_writel(dev, host1x_sync_intmask_r(), BIT(0));
-
-	return err;
-}
-
-static void t20_intr_free_host_general_irq(struct nvhost_intr *intr)
-{
-	struct nvhost_master *dev = intr_to_dev(intr);
-
-	/* master disable for general (not syncpt) host interrupts */
-	host1x_sync_writel(dev, host1x_sync_intmask_r(), 0);
-
-	free_irq(intr->general_irq, intr);
-}
-
-static int t20_free_syncpt_irq(struct nvhost_intr *intr)
-{
-	struct nvhost_master *dev = intr_to_dev(intr);
-
-	/* disable graphics host syncpoint interrupt */
-	t20_intr_disable_syncpt_intr(intr,
-			nvhost_syncpt_graphics_host_sp(&dev->syncpt));
-
-	free_irq(intr->syncpt_irq, dev);
-	return 0;
-}
-
 static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
@@ -392,17 +304,102 @@ static void intr_disable_module_intr(struct nvhost_intr *intr, int irq)
 	host1x_sync_writel(dev, host1x_sync_intc0mask_r(), val);
 }
 
+static void t20_intr_resume(struct nvhost_intr *intr)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	u32 val;
+
+	/* increase the auto-ack timout to the maximum value. 2d will hang
+	 * otherwise on ap20.
+	 */
+	host1x_sync_writel(dev, host1x_sync_ctxsw_timeout_cfg_r(), 0xff);
+
+	/* enable graphics host syncpoint interrupt */
+	t20_intr_set_syncpt_threshold(intr,
+			nvhost_syncpt_graphics_host_sp(&dev->syncpt),
+			1);
+	t20_intr_enable_syncpt_intr(intr,
+			nvhost_syncpt_graphics_host_sp(&dev->syncpt));
+
+	/* enable extra interrupt sources IP_READ_INT and IP_WRITE_INT */
+	host1x_sync_writel(dev, host1x_sync_hintmask_ext_r(),
+			BIT(30) | BIT(31));
+
+	/* enable extra interrupt sources */
+	val = host1x_sync_readl(dev, host1x_sync_hintmask_r());
+	val |= BIT(31);
+	host1x_sync_writel(dev, host1x_sync_hintmask_r(), val);
+
+	/* enable host module interrupt to CPU0 */
+	host1x_sync_writel(dev, host1x_sync_intc0mask_r(), BIT(0));
+
+	/* master enable for general (not syncpt) host interrupts */
+	host1x_sync_writel(dev, host1x_sync_intmask_r(), BIT(0));
+}
+
+static void t20_intr_suspend(struct nvhost_intr *intr)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+
+	/* master disable for general (not syncpt) host interrupts */
+	host1x_sync_writel(dev, host1x_sync_intmask_r(), 0);
+
+	/* disable graphics host syncpoint interrupt */
+	t20_intr_disable_syncpt_intr(intr,
+			nvhost_syncpt_graphics_host_sp(&dev->syncpt));
+}
+
+static int t20_intr_init(struct nvhost_intr *intr)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	int err;
+
+	intr_op().disable_all_syncpt_intrs(intr);
+
+	err = request_threaded_irq(intr->syncpt_irq, NULL,
+				syncpt_thresh_cascade_isr,
+				IRQF_ONESHOT, "host_syncpt", dev);
+	if (err)
+		return err;
+
+	/* master disable for general (not syncpt) host interrupts */
+	host1x_sync_writel(dev, host1x_sync_intmask_r(), 0);
+
+	/* clear status & extstatus */
+	host1x_sync_writel(dev, host1x_sync_hintstatus_ext_r(),
+			0xfffffffful);
+	host1x_sync_writel(dev, host1x_sync_hintstatus_r(),
+			0xfffffffful);
+
+	err = request_threaded_irq(intr->general_irq, NULL,
+				t20_intr_host1x_isr,
+				IRQF_ONESHOT, "host_status", intr);
+	if (err) {
+		free_irq(intr->syncpt_irq, dev);
+		return err;
+	}
+
+	return 0;
+}
+
+static void t20_intr_deinit(struct nvhost_intr *intr)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+
+	free_irq(intr->general_irq, intr);
+	free_irq(intr->syncpt_irq, dev);
+}
 
 static const struct nvhost_intr_ops host1x_intr_ops = {
-	.init_host_sync = t20_intr_init_host_sync,
+	.init = t20_intr_init,
+	.deinit = t20_intr_deinit,
+	.resume = t20_intr_resume,
+	.suspend = t20_intr_suspend,
 	.set_host_clocks_per_usec = t20_intr_set_host_clocks_per_usec,
 	.set_syncpt_threshold = t20_intr_set_syncpt_threshold,
 	.enable_syncpt_intr = t20_intr_enable_syncpt_intr,
 	.disable_syncpt_intr = t20_intr_disable_syncpt_intr,
 	.disable_all_syncpt_intrs = t20_intr_disable_all_syncpt_intrs,
-	.request_host_general_irq = t20_intr_request_host_general_irq,
-	.free_host_general_irq = t20_intr_free_host_general_irq,
-	.free_syncpt_irq = t20_free_syncpt_irq,
 	.debug_dump = intr_debug_dump,
 	.enable_host_irq = intr_enable_host_irq,
 	.disable_host_irq = intr_disable_host_irq,

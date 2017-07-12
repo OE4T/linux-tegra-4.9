@@ -1064,10 +1064,6 @@ static int nvhost_probe(struct platform_device *dev)
 	if (err)
 		goto fail;
 
-	err = nvhost_intr_init(&host->intr, generic_irq, syncpt_irq);
-	if (err)
-		goto fail;
-
 	err = nvhost_user_init(host);
 	if (err)
 		goto fail;
@@ -1089,6 +1085,10 @@ static int nvhost_probe(struct platform_device *dev)
 		nvhost_module_idle(dev);
 		goto fail;
 	}
+
+	err = nvhost_intr_init(&host->intr, generic_irq, syncpt_irq);
+	if (err)
+		goto fail;
 
 	err = nvhost_alloc_channels(host);
 	if (err) {

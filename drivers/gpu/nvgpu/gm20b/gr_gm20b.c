@@ -1542,6 +1542,24 @@ static void gm20b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 	gk20a_writel(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset, 0);
 }
 
+/*
+ * Disable both surface and LG coalesce.
+ */
+void gm20a_gr_disable_rd_coalesce(struct gk20a *g)
+{
+	u32 dbg2_reg;
+
+	dbg2_reg = gk20a_readl(g, gr_gpcs_tpcs_tex_m_dbg2_r());
+	dbg2_reg = set_field(dbg2_reg,
+			     gr_gpcs_tpcs_tex_m_dbg2_lg_rd_coalesce_en_m(),
+			     gr_gpcs_tpcs_tex_m_dbg2_lg_rd_coalesce_en_f(0));
+	dbg2_reg = set_field(dbg2_reg,
+			     gr_gpcs_tpcs_tex_m_dbg2_su_rd_coalesce_en_m(),
+			     gr_gpcs_tpcs_tex_m_dbg2_su_rd_coalesce_en_f(0));
+
+	gk20a_writel(g, gr_gpcs_tpcs_tex_m_dbg2_r(), dbg2_reg);
+}
+
 void gm20b_init_gr(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
@@ -1657,4 +1675,5 @@ void gm20b_init_gr(struct gk20a *g)
 	gops->gr.clear_sm_hww = gm20b_gr_clear_sm_hww;
 	gops->gr.init_ovr_sm_dsm_perf =  gk20a_gr_init_ovr_sm_dsm_perf;
 	gops->gr.get_ovr_perf_regs = gk20a_gr_get_ovr_perf_regs;
+	gops->gr.disable_rd_coalesce = gm20a_gr_disable_rd_coalesce;
 }

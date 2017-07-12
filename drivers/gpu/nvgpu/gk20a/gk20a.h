@@ -408,6 +408,7 @@ struct gpu_ops {
 		void (*resume_single_sm)(struct gk20a *g,
 				u32 gpc, u32 tpc, u32 sm);
 		void (*resume_all_sms)(struct gk20a *g);
+		void (*disable_rd_coalesce)(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

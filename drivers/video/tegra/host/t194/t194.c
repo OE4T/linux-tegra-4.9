@@ -364,6 +364,7 @@ struct nvhost_device_data t19_nvenc1_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.reset_clamp_mask	= BIT(29),
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVENC1,
 };
 #endif
 
@@ -421,6 +422,7 @@ struct nvhost_device_data t19_nvdec1_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.reset_clamp_mask	= BIT(31),
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC1,
 };
 #endif
 

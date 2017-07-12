@@ -101,6 +101,7 @@
 	};
 
 	timer@60005000 {
+		compatible = "nvidia,tegra210-timer", "nvidia,tegra30-timer";
 		status = "okay";
 	};
 

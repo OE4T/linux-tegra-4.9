@@ -95,6 +95,15 @@ int ttcan_set_init(struct ttcan_controller *ttcan)
 	return 0;
 }
 
+void ttcan_bus_off_seq(struct ttcan_controller *ttcan)
+{
+	/* We need to wait for 129 bus idle sequence (129*11 bits)
+	 * according to CAN SPEC. Considering minimal bitrate (125 kbps),
+	 * we need to wait for maximum of 12 msec
+	 */
+	mdelay(12);
+}
+
 int ttcan_reset_init(struct ttcan_controller *ttcan)
 {
 	u32 cccr_reg;

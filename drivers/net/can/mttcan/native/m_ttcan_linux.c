@@ -22,6 +22,8 @@
 #include "m_ttcan.h"
 #include <linux/platform_device.h>
 
+static void mttcan_start(struct net_device *dev);
+
 static __init int mttcan_hw_init(struct mttcan_priv *priv)
 {
 	int err = 0;
@@ -109,6 +111,7 @@ static __init int mttcan_hw_init(struct mttcan_priv *priv)
 	ttcan_print_version(ttcan);
 
 	raw_spin_lock_init(&priv->tc_lock);
+	spin_lock_init(&priv->tslock);
 
 	return err;
 }
@@ -426,7 +429,13 @@ static int mttcan_state_change(struct net_device *dev,
 		 */
 		ttcan_set_intrpts(priv->ttcan, 0);
 		priv->can.can_stats.bus_off++;
-		can_bus_off(dev);
+
+		netif_carrier_off(dev);
+
+		if (priv->can.restart_ms)
+			schedule_delayed_work(&priv->drv_restart_work,
+					msecs_to_jiffies(priv->can.restart_ms));
+
 		break;
 	default:
 		break;
@@ -866,7 +875,9 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 end:
 	if (work_done < quota) {
 		napi_complete(napi);
-		ttcan_set_intrpts(priv->ttcan, 1);
+
+		if (priv->can.state != CAN_STATE_BUS_OFF)
+			ttcan_set_intrpts(priv->ttcan, 1);
 	}
 
 	return work_done;
@@ -975,33 +986,53 @@ static void mttcan_timer_cb(unsigned long data)
 			jiffies + (msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
 }
 
+static void mttcan_bus_off_restart(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct mttcan_priv *priv = container_of(dwork, struct mttcan_priv,
+			drv_restart_work);
+	struct net_device *dev = priv->dev;
+	struct net_device_stats *stats = &dev->stats;
+	struct sk_buff *skb;
+	struct can_frame *cf;
+
+	/* send restart message upstream */
+	skb = alloc_can_err_skb(dev, &cf);
+	if (!skb) {
+		netdev_err(dev, "error skb allocation failed\n");
+		goto restart;
+	}
+	cf->can_id |= CAN_ERR_RESTARTED;
+
+	netif_rx(skb);
+
+	stats->rx_packets++;
+	stats->rx_bytes += cf->can_dlc;
+
+restart:
+	netdev_dbg(dev, "restarted\n");
+	priv->can.can_stats.restarts++;
+
+	mttcan_start(dev);
+	netif_carrier_on(dev);
+}
+
 static void mttcan_start(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
 	struct ttcan_controller *ttcan = priv->ttcan;
-	u32 psr;
+	u32 psr = 0;
 
-	mttcan_controller_config(dev);
-
-	ttcan_clear_intr(ttcan);
-	ttcan_clear_tt_intr(ttcan);
-
-	ttcan_set_intrpts(priv->ttcan, 1);
-
-	/* Set current state of CAN controller *
-	 * It is assumed the controller is reset durning probing time
-	 * It should be in sane state at first start but not guaranteed
-	 */
-	if (ttcan->proto_state)
+	if (ttcan->proto_state) {
 		psr = ttcan->proto_state;
-	else
+		ttcan->proto_state = 0;
+	} else {
 		psr = ttcan_read_psr(ttcan);
+	}
 
 	if (psr & MTT_PSR_BO_MASK) {
-		/* Bus off */
-		priv->can.state = CAN_STATE_BUS_OFF;
-		ttcan_set_intrpts(ttcan, 0);
-		can_bus_off(dev);
+		/* Set state as Error Active after restart from BUS OFF */
+		priv->can.state = CAN_STATE_ERROR_ACTIVE;
 	} else if (psr & MTT_PSR_EP_MASK) {
 		/* Error Passive */
 		priv->can.state = CAN_STATE_ERROR_PASSIVE;
@@ -1009,17 +1040,30 @@ static void mttcan_start(struct net_device *dev)
 		/* Error Warning */
 		priv->can.state = CAN_STATE_ERROR_WARNING;
 	} else {
+		mttcan_controller_config(dev);
+
+		ttcan_clear_intr(ttcan);
+		ttcan_clear_tt_intr(ttcan);
+
 		/* Error Active */
 		priv->can.state = CAN_STATE_ERROR_ACTIVE;
 	}
 
 	/* start Tx/Rx and enable protected mode */
-	if (!priv->tt_param[0])
+	if (!priv->tt_param[0]) {
 		ttcan_reset_init(ttcan);
+
+		if (psr & MTT_PSR_BO_MASK) {
+			netdev_info(dev, "wait for bus off seq\n");
+			ttcan_bus_off_seq(ttcan);
+		}
+	}
+
+	ttcan_set_intrpts(priv->ttcan, 1);
 
 	if (priv->poll)
 		schedule_delayed_work(&priv->can_work,
-			msecs_to_jiffies(MTTCAN_POLL_TIME));
+				      msecs_to_jiffies(MTTCAN_POLL_TIME));
 }
 
 static void mttcan_stop(struct mttcan_priv *priv)
@@ -1027,6 +1071,7 @@ static void mttcan_stop(struct mttcan_priv *priv)
 	ttcan_set_intrpts(priv->ttcan, 0);
 
 	priv->can.state = CAN_STATE_STOPPED;
+	priv->ttcan->proto_state = 0;
 
 	ttcan_set_config_change_enable(priv->ttcan);
 }
@@ -1251,7 +1296,6 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 		dev->stats.tx_dropped++;
 		return NETDEV_TX_OK;
 	}
-
 	can_put_echo_skb(skb, dev, msg_no);
 
 	/* Set go bit for non-TTCAN messages */
@@ -1712,6 +1756,7 @@ static int mttcan_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "Polling Mode enabled\n");
 		INIT_DELAYED_WORK(&priv->can_work, mttcan_work);
 	}
+	INIT_DELAYED_WORK(&priv->drv_restart_work, mttcan_bus_off_restart);
 
 	ret = mttcan_prepare_clock(priv);
 	if (ret)

@@ -89,6 +89,7 @@ struct mttcan_priv {
 	struct ttcan_controller *ttcan;
 	const struct tegra_mttcan_soc_info *sinfo;
 	struct delayed_work can_work;
+	struct delayed_work drv_restart_work;
 	struct napi_struct napi;
 	struct net_device *dev;
 	struct device *device;

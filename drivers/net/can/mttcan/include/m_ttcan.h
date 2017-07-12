@@ -414,6 +414,7 @@ int ttcan_write32_check(struct ttcan_controller *ttcan,
 void ttcan_set_ok(struct ttcan_controller *ttcan);
 int ttcan_set_init(struct ttcan_controller *ttcan);
 int ttcan_reset_init(struct ttcan_controller *ttcan);
+void ttcan_bus_off_seq(struct ttcan_controller *ttcan);
 int ttcan_set_power(struct ttcan_controller *ttcan, int value);
 int ttcan_set_config_change_enable(struct ttcan_controller *ttcan);
 void ttcan_reset_config_change_enable(struct ttcan_controller *ttcan);

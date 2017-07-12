@@ -166,6 +166,7 @@ static int mttcan_state_change(struct net_device *dev,
 		break;
 	case CAN_STATE_BUS_OFF:
 		/* bus-off state */
+		priv->can.can_stats.bus_off++;
 		priv->can.state = CAN_STATE_BUS_OFF;
 		cf->can_id |= CAN_ERR_BUSOFF;
 		can_bus_off(dev);

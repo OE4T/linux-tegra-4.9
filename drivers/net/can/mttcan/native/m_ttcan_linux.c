@@ -416,6 +416,7 @@ static int mttcan_state_change(struct net_device *dev,
 		 * the CPU is not hogged down
 		 */
 		ttcan_set_intrpts(priv->ttcan, 0);
+		priv->can.can_stats.bus_off++;
 		can_bus_off(dev);
 		break;
 	default:

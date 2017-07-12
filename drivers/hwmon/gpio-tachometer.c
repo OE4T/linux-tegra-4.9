@@ -252,7 +252,6 @@ static int gpio_tachometer_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct gpio_tachometer_device *gpio_tachd = NULL;
 	struct device *tach_dev;
-	const void *prop;
 	int ret = 0, err;
 
 	gpio_tachd = devm_kzalloc(&pdev->dev, sizeof(*gpio_tachd), GFP_KERNEL);

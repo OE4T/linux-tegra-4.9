@@ -99,36 +99,35 @@
  * They only signal formats possible through additional
  * parameters (mainly through the UV swap control).
  */
-#define TEGRA_DC_EXT_FMT_T_Y10___U10V10_N420		(255)
-#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N422		(256)
-#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N422R		(257)
-#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N444		(258)
-#define TEGRA_DC_EXT_FMT_T_Y12___U12V12_N420		(259)
-#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N422		(260)
-#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N422R		(261)
-#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N444		(262)
-#define TEGRA_DC_EXT_FMT_T_Y10___V10___U10_N420		(263)
-#define TEGRA_DC_EXT_FMT_T_Y10___V10___U10_N444		(264)
-#define TEGRA_DC_EXT_FMT_T_Y12___V12___U12_N420		(265)
-#define TEGRA_DC_EXT_FMT_T_Y12___V12___U12_N444		(266)
+#define TEGRA_DC_EXT_FMT_T_Y10___U10V10_N420		(256)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N422		(257)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N422R		(258)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N444		(259)
+#define TEGRA_DC_EXT_FMT_T_Y12___U12V12_N420		(260)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N422		(261)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N422R		(262)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N444		(263)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10___U10_N420		(264)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10___U10_N444		(265)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12___U12_N420		(266)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12___U12_N444		(267)
 
 /* color format type field is 8-bits */
 #define TEGRA_DC_EXT_FMT_SHIFT		0
-#define TEGRA_DC_EXT_FMT_MASK		(0xff << TEGRA_DC_EXT_FMT_SHIFT)
+#define TEGRA_DC_EXT_FMT_MASK		(0xfff << TEGRA_DC_EXT_FMT_SHIFT)
 
 /* pixformat - byte order options ( w x y z ) */
-#define TEGRA_DC_EXT_FMT_BYTEORDER_NOSWAP	(0 << 8) /* ( 3 2 1 0 ) */
-#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP2	(1 << 8) /* ( 2 3 0 1 ) */
-#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP4	(2 << 8) /* ( 0 1 2 3 ) */
-#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP4HW	(3 << 8) /* ( 1 0 3 2 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_NOSWAP	(0 << 16) /* ( 3 2 1 0 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP2	(1 << 16) /* ( 2 3 0 1 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP4	(2 << 16) /* ( 0 1 2 3 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP4HW	(3 << 16) /* ( 1 0 3 2 ) */
 /* the next two are not available on T30 or earlier */
-#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP02	(4 << 8) /* ( 3 0 1 2 ) */
-#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAPLEFT	(5 << 8) /* ( 2 1 0 3 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAP02	(4 << 16) /* ( 3 0 1 2 ) */
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SWAPLEFT	(5 << 16) /* ( 2 1 0 3 ) */
 /* byte order field is 4-bits */
-#define TEGRA_DC_EXT_FMT_BYTEORDER_SHIFT	8
+#define TEGRA_DC_EXT_FMT_BYTEORDER_SHIFT	16
 #define TEGRA_DC_EXT_FMT_BYTEORDER_MASK		\
 		(0x0f << TEGRA_DC_EXT_FMT_BYTEORDER_SHIFT)
-#define TEGRA_DC_EXT_FMT_FLAG_SWAP_UV		(1u << 16)
 
 #define TEGRA_DC_EXT_BLEND_NONE		0
 #define TEGRA_DC_EXT_BLEND_PREMULT	1

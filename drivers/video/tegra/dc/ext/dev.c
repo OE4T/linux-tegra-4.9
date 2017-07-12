@@ -155,11 +155,20 @@ static inline s64 tegra_timespec_to_ns(const struct tegra_timespec *ts)
 	return ((s64) ts->tv_sec * NSEC_PER_SEC) + ts->tv_nsec;
 }
 
-static inline int test_bit_u32(int bitnum, const u32 *data, int entries)
+static inline int test_bit_win_colorfmt(int bitnum,
+	const u32 *data, int entries)
 {
 	int i;
 
-	for (i = 0; i < entries; i++) {
+	/* Checking for SW defined formats */
+	if (bitnum >= TEGRA_WIN_SW_FORMAT_MIN) {
+		if (1UL & (data[entries - 1] >>
+			((bitnum - TEGRA_WIN_SW_FORMAT_MIN))))
+			return 1;
+		return 0;
+	}
+
+	for (i = 0; i < entries - 1; i++) {
 		if (bitnum < 32) {
 			if (1UL & (data[bitnum / 32] >> (bitnum & 31)))
 				return 1;
@@ -354,7 +363,8 @@ static int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 		goto fail;
 	}
 	/* Check the window format */
-	if (!test_bit_u32(win->fmt, p_data, ENTRY_SIZE)) {
+	if (!test_bit_win_colorfmt(win->fmt, p_data,
+			WIN_FEATURE_ENTRY_SIZE)) {
 		dev_err(&dc->ndev->dev,
 			"Color format of window %d is invalid.\n", win->idx);
 		goto fail;

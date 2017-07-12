@@ -55,7 +55,7 @@ static int mods_dc_color_formats_show(struct seq_file *s, void *unused)
 		if (!fmt_masks)
 			continue;
 		seq_printf(s, "window_%u:", i);
-		for (j = 0; j < ENTRY_SIZE; j++)
+		for (j = 0; j < WIN_FEATURE_ENTRY_SIZE; j++)
 			seq_printf(s, " 0x%08x", fmt_masks[j]);
 		seq_puts(s, "\n");
 	}

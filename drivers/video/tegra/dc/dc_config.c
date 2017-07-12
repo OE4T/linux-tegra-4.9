@@ -235,7 +235,7 @@ int tegra_dc_feature_has_scaling(struct tegra_dc *dc, int win_idx)
 	if (WARN_ONCE(!addr, "window does not exist"))
 		return 0;
 
-	for (i = 0; i < ENTRY_SIZE; i++)
+	for (i = 0; i < WIN_FEATURE_ENTRY_SIZE; i++)
 		if (addr[i] != 1)
 			return 1;
 	return 0;

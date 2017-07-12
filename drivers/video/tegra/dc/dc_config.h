@@ -26,13 +26,19 @@
 #include "dc.h"
 #include "dc_priv.h"
 
-#define ENTRY_SIZE	4	/* Size of feature entry args */
+#define WIN_FEATURE_ENTRY_SIZE	5	/* Size of feature entry args */
+#define TEGRA_WIN_SW_FORMAT_MIN		256
+#define TEGRA_WIN_SW_FORMAT_MAX		267
 
 /* adjust >32 bit shift for an individual 32-bit word */
 #define BIT_FOR_WORD(word, x) ( \
 		(x) >= (word) * 32 && \
 		(x) < 32 + (word) * 32 \
 		? BIT((x) - (word) * 32) : 0)
+#define BITWORD_SW_FORMAT(x) ( \
+		(x) >= TEGRA_WIN_SW_FORMAT_MIN && \
+		(x) <= TEGRA_WIN_SW_FORMAT_MAX \
+		? BIT(x - TEGRA_WIN_SW_FORMAT_MIN) : 0)
 #define BITWORD3(x) BIT_FOR_WORD(3, x)
 #define BITWORD2(x) BIT_FOR_WORD(2, x)
 #define BITWORD1(x) BIT_FOR_WORD(1, x)
@@ -195,7 +201,7 @@ enum tegra_dc_feature_option {
 struct tegra_dc_feature_entry {
 	u32 window_index;
 	u32 option;
-	u32 arg[ENTRY_SIZE];
+	u32 arg[WIN_FEATURE_ENTRY_SIZE];
 };
 
 struct tegra_dc_feature {

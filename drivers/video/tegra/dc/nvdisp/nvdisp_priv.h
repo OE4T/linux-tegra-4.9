@@ -137,6 +137,12 @@ static inline bool tegra_dc_is_yuv_12bpc(int fmt)
 	case TEGRA_DC_EXT_FMT_T_Y12___U12V12_N422:
 	case TEGRA_DC_EXT_FMT_T_Y12___U12V12_N422R:
 	case TEGRA_DC_EXT_FMT_T_Y12___U12V12_N444:
+	case TEGRA_DC_EXT_FMT_T_Y12___U12V12_N420:
+	case TEGRA_DC_EXT_FMT_T_Y12___V12U12_N422:
+	case TEGRA_DC_EXT_FMT_T_Y12___V12U12_N422R:
+	case TEGRA_DC_EXT_FMT_T_Y12___V12U12_N444:
+	case TEGRA_DC_EXT_FMT_T_Y12___V12___U12_N420:
+	case TEGRA_DC_EXT_FMT_T_Y12___V12___U12_N444:
 		return true;
 	default:
 		return false;

@@ -37,6 +37,7 @@
 
 #include "t194/t194.h"
 #include "nvhost_queue.h"
+#include "nvhost_cv_pm.h"
 
 #include "nvdla/nvdla.h"
 #include "nvdla/nvdla_debug.h"
@@ -531,9 +532,14 @@ int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)
 	nvdla_dbg_fn(pdev, "");
 
 	ret = nvhost_flcn_prepare_poweroff(pdev);
-	if (ret)
+	if (ret) {
 		nvdla_dbg_err(pdev, "failed to poweroff\n");
+		goto out;
+	}
 
+	cv_cluster_clamp(pdev);
+
+out:
 	return ret;
 }
 

@@ -40,6 +40,7 @@
 #include "nvhost_acm.h"
 #include "t194/t194.h"
 #include "nvhost_queue.h"
+#include "nvhost_cv_pm.h"
 #include "pva_queue.h"
 #include "pva.h"
 #include "pva_regs.h"
@@ -449,6 +450,8 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 	disable_irq(pva->irq);
 
 	pva_free_fw(pdev, pva);
+
+	cv_cluster_clamp(pdev);
 
 	return 0;
 }

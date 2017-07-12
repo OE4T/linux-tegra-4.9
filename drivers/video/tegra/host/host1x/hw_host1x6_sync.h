@@ -335,4 +335,8 @@ static inline u32 host1x_sync_scr_prot_common_mod_clamp_en_0_r(void)
 {
 	return 0xc004;
 }
+static inline u32 host1x_sync_scr_prot_common_cv_cluster_clamp_0_r(void)
+{
+	return 0xc000;
+}
 #endif

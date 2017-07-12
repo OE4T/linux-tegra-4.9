@@ -64,6 +64,7 @@
 #include "chip_support.h"
 
 #include "streamid_regs.c"
+#include "nvhost_cv_pm.h"
 
 #define HOST_EMC_FLOOR 204000000
 #define HOST_NVDEC_EMC_FLOOR 102000000
@@ -560,6 +561,7 @@ struct nvhost_device_data t19_pva1_info = {
 	.devfs_name		= "pva1",
 	.class			= NV_PVA1_CLASS_ID,
 	.autosuspend_delay      = 500,
+	.pre_poweron		= cv_cluster_unclamp,
 	.finalize_poweron	= pva_finalize_poweron,
 	.prepare_poweroff	= pva_prepare_poweroff,
 	.firmware_name		= "nvhost_pva10.fw",
@@ -586,6 +588,7 @@ struct nvhost_device_data t19_pva0_info = {
 	.devfs_name		= "pva0",
 	.class			= NV_PVA0_CLASS_ID,
 	.autosuspend_delay      = 500,
+	.pre_poweron		= cv_cluster_unclamp,
 	.finalize_poweron	= pva_finalize_poweron,
 	.prepare_poweroff	= pva_prepare_poweroff,
 	.firmware_name		= "nvhost_pva10.fw",
@@ -614,6 +617,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.pre_poweron		= cv_cluster_unclamp,
 	.finalize_poweron	= nvhost_nvdla_finalize_poweron,
 	.prepare_poweroff	= nvhost_nvdla_prepare_poweroff,
 	.flcn_isr               = nvhost_nvdla_flcn_isr,
@@ -641,6 +645,7 @@ struct nvhost_device_data t19_nvdla1_info = {
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.pre_poweron		= cv_cluster_unclamp,
 	.finalize_poweron	= nvhost_nvdla_finalize_poweron,
 	.prepare_poweroff	= nvhost_nvdla_prepare_poweroff,
 	.flcn_isr               = nvhost_nvdla_flcn_isr,

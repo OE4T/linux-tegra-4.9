@@ -8,7 +8,8 @@ ccflags-y += -Wno-multichar
 subdir-ccflags-y := -Werror
 obj-y  += nvhost_queue.o \
 	  nvhost_buffer.o \
-	  nvhost_syncpt_unit_interface.o
+	  nvhost_syncpt_unit_interface.o \
+	  nvhost_cv_pm.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += t194/
 obj-$(CONFIG_TEGRA_GRHOST_ISP) += isp/

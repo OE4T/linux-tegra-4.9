@@ -1201,6 +1201,8 @@ static void set_best_clk_source(struct spi_device *spi,
 	pclk = clk_get_parent(tspi->clk);
 	crate = clk_get_rate(tspi->clk);
 	prate = clk_get_rate(pclk);
+	if (!crate)
+		return;
 	cdiv = DIV_ROUND_UP(prate, crate);
 	if (cdiv < tspi->min_div) {
 		crate = DIV_ROUND_UP(prate, tspi->min_div);

@@ -331,6 +331,8 @@
 	pinctrl@3520000 {
 		prod-settings {
 			#prod-cells = <4>;
+			mask-one-style;
+
 			prod_c_bias {
 				prod = <0 0x284 0x00000038 0x38>;
 			};

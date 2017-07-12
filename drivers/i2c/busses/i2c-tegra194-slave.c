@@ -52,8 +52,12 @@
 
 #define I2C_SL_ADDR1				0x2c
 #define I2C_SL_ADDR2				0x30
+#define I2C_SL_ADDR2_TEN_BIT_ADDR_MODE		BIT(0)
+#define I2C_SL_ADDR2_HI_ADDR_SHIFT		1
 #define I2C_SL_ADDR2_MASK			0x1FFFF
-#define I2C_7BIT_ADDR_MASK			0x7F
+#define I2C_7BIT_ADDR_MASK			0xFF
+#define I2C_10BIT_ADDR_MASK			0x3FF
+#define I2C_10BIT_HI_ADDR_SHIFT			8
 
 #define I2C_TLOW_SEXT				0x34
 #define I2C_SL_DELAY_COUNT			0x3c
@@ -430,6 +434,7 @@ static void tegra_i2cslv_handle_stop(struct tegra_i2cslv_dev *i2cslv_dev,
 static int tegra_i2cslv_init(struct tegra_i2cslv_dev *i2cslv_dev)
 {
 	u32 reg;
+	u32 hi_addr;
 
 	i2cslv_dev->buffer_size = i2cslv_dev->slave->buffer_size;
 	i2cslv_dev->rx_count = 0;
@@ -437,14 +442,23 @@ static int tegra_i2cslv_init(struct tegra_i2cslv_dev *i2cslv_dev)
 	/* Reset the controller */
 	reset_control_reset(i2cslv_dev->rstc);
 
-	/* Program the 7-bit slave address */
-	tegra_i2cslv_writel(i2cslv_dev, i2cslv_dev->slave->addr &
-			    I2C_7BIT_ADDR_MASK, I2C_SL_ADDR1);
-
-	/* Specify its 7-bit address mode */
-	reg = tegra_i2cslv_readl(i2cslv_dev, I2C_SL_ADDR2);
-	reg &= ~(I2C_SL_ADDR2_MASK);
-	tegra_i2cslv_writel(i2cslv_dev, reg, I2C_SL_ADDR2);
+	if (i2cslv_dev->slave->flags & I2C_CLIENT_TEN) {
+		/* Program the 10-bit slave address */
+		tegra_i2cslv_writel(i2cslv_dev, i2cslv_dev->slave->addr &
+				I2C_7BIT_ADDR_MASK, I2C_SL_ADDR1);
+		hi_addr = ((i2cslv_dev->slave->addr & I2C_10BIT_ADDR_MASK) >>
+			I2C_10BIT_HI_ADDR_SHIFT);
+		reg = I2C_SL_ADDR2_TEN_BIT_ADDR_MODE |
+			(hi_addr << I2C_SL_ADDR2_HI_ADDR_SHIFT);
+		tegra_i2cslv_writel(i2cslv_dev, reg, I2C_SL_ADDR2);
+	} else {
+		/* Program the 7-bit slave address */
+		tegra_i2cslv_writel(i2cslv_dev, i2cslv_dev->slave->addr &
+				I2C_7BIT_ADDR_MASK, I2C_SL_ADDR1);
+		reg = tegra_i2cslv_readl(i2cslv_dev, I2C_SL_ADDR2);
+		reg &= ~(I2C_SL_ADDR2_MASK);
+		tegra_i2cslv_writel(i2cslv_dev, reg, I2C_SL_ADDR2);
+	}
 
 	/* Configure FIFO controls */
 	reg = I2C_SLV_FIFO_RX_FIFO_TRIG_1 | I2C_SLV_FIFO_TX_FIFO_TRIG_4;
@@ -535,8 +549,6 @@ static int tegra_reg_slave(struct i2c_client *slave)
 	if (i2cslv_dev->slave)
 		return -EBUSY;
 
-	if (slave->flags & I2C_CLIENT_TEN)
-		return -EAFNOSUPPORT;
 	i2cslv_dev->slave = slave;
 
 	i2cslv_dev->rx_buffer = devm_kzalloc(i2cslv_dev->dev, 0xFF, GFP_KERNEL);

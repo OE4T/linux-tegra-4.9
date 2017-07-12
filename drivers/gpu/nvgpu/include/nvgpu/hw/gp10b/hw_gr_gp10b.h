@@ -2546,6 +2546,14 @@ static inline u32 gr_gpcs_tpcs_tex_m_dbg2_lg_rd_coalesce_en_m(void)
 {
 	return 0x1 << 2;
 }
+static inline u32 gr_gpcs_tpcs_tex_m_dbg2_su_rd_coalesce_en_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 gr_gpcs_tpcs_tex_m_dbg2_su_rd_coalesce_en_m(void)
+{
+	return 0x1 << 4;
+}
 static inline u32 gr_gpccs_falcon_addr_r(void)
 {
 	return 0x0041a0ac;

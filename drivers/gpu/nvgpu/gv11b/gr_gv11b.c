@@ -45,10 +45,10 @@
 #include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_pbdma_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 
 static bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 {
@@ -3568,6 +3568,39 @@ static u32 gv11b_gr_get_egpc_base(struct gk20a *g)
 	return EGPC_PRI_BASE;
 }
 
+static void gr_gv11b_init_gpc_mmu(struct gk20a *g)
+{
+	u32 temp;
+
+	nvgpu_log_info(g, "initialize gpc mmu");
+
+	if (!g->ops.privsecurity) {
+		/* Bypass MMU check for non-secure boot. For
+		 * secure-boot,this register write has no-effect */
+		gk20a_writel(g, fb_priv_mmu_phy_secure_r(), 0xffffffff);
+	}
+	temp = gk20a_readl(g, fb_mmu_ctrl_r());
+	temp &= gr_gpcs_pri_mmu_ctrl_vm_pg_size_m() |
+		gr_gpcs_pri_mmu_ctrl_use_pdb_big_page_size_m() |
+		gr_gpcs_pri_mmu_ctrl_vol_fault_m() |
+		gr_gpcs_pri_mmu_ctrl_comp_fault_m() |
+		gr_gpcs_pri_mmu_ctrl_miss_gran_m() |
+		gr_gpcs_pri_mmu_ctrl_cache_mode_m() |
+		gr_gpcs_pri_mmu_ctrl_mmu_aperture_m() |
+		gr_gpcs_pri_mmu_ctrl_mmu_vol_m() |
+		gr_gpcs_pri_mmu_ctrl_mmu_disable_m();
+	gk20a_writel(g, gr_gpcs_pri_mmu_ctrl_r(), temp);
+	gk20a_writel(g, gr_gpcs_pri_mmu_pm_unit_mask_r(), 0);
+	gk20a_writel(g, gr_gpcs_pri_mmu_pm_req_mask_r(), 0);
+
+	gk20a_writel(g, gr_gpcs_pri_mmu_debug_ctrl_r(),
+			gk20a_readl(g, fb_mmu_debug_ctrl_r()));
+	gk20a_writel(g, gr_gpcs_pri_mmu_debug_wr_r(),
+			gk20a_readl(g, fb_mmu_debug_wr_r()));
+	gk20a_writel(g, gr_gpcs_pri_mmu_debug_rd_r(),
+			gk20a_readl(g, fb_mmu_debug_rd_r()));
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3664,4 +3697,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_egpc_base = gv11b_gr_get_egpc_base;
 	gops->gr.is_egpc_addr = gv11b_gr_pri_is_egpc_addr;
 	gops->gr.is_etpc_addr = gv11b_gr_pri_is_etpc_addr;
+	gops->gr.init_gpc_mmu = gr_gv11b_init_gpc_mmu;
 }

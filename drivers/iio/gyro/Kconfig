@@ -121,11 +121,6 @@ config ITG3200
 	  Say yes here to add support for the InvenSense ITG3200 digital
 	  3-axis gyroscope sensor.
 
-config NVS_A3G4250D
-	tristate "STMicroelectronics gyroscope A3G4250D"
-	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO
-	help
-	  Say yes here to build support for STMicroelectronics A3G4250D
-	  gyroscope using NVS (NVidia Sensor framework).
+trysource "../nvidia/drivers/iio/gyro/Kconfig.nvidia"
 
 endmenu

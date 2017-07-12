@@ -27,5 +27,6 @@ st_gyro-$(CONFIG_IIO_BUFFER) += st_gyro_buffer.o
 obj-$(CONFIG_IIO_ST_GYRO_I2C_3AXIS) += st_gyro_i2c.o
 obj-$(CONFIG_IIO_ST_GYRO_SPI_3AXIS) += st_gyro_spi.o
 
-obj-$(CONFIG_NVS_A3G4250D) += nvs_a3g4250d.o
-
+ifneq ($(wildcard $(srctree)/../nvidia/drivers/iio/gyro/Makefile.*),)
+obj-y += ../../../../nvidia/drivers/iio/gyro/
+endif

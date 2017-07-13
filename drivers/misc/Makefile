@@ -56,7 +56,6 @@ obj-$(CONFIG_VEXPRESS_SYSCFG)	+= vexpress-syscfg.o
 obj-$(CONFIG_CXL_BASE)		+= cxl/
 obj-$(CONFIG_PANEL)             += panel.o
 obj-$(CONFIG_EQOS_APE_HWDEP)    += eqos_ape/
-obj-$(CONFIG_TEGRA_PROFILER)	+= tegra-profiler/
 obj-$(CONFIG_SAF775x_HWDEP)    += saf775x/
 obj-$(CONFIG_SAF36XX_HWDEP)    += saf775x/
 
@@ -88,4 +87,7 @@ obj-y				+= inter-tegra/
 
 ifneq ($(wildcard $(srctree)/../nvidia/drivers/misc/nvs/Makefile.*),)
 obj-y += ../../../nvidia/drivers/misc/nvs/
+endif
+ifneq ($(wildcard $(srctree)/../nvidia/drivers/misc/tegra-profiler/Makefile*),)
+obj-$(CONFIG_TEGRA_PROFILER) += ../../../nvidia/drivers/misc/tegra-profiler/
 endif

@@ -23,6 +23,7 @@
 #include <linux/ptrace.h>
 #include <linux/interrupt.h>
 #include <linux/err.h>
+#include <linux/version.h>
 #include <clocksource/arm_arch_timer.h>
 
 #include <asm/cputype.h>
@@ -788,13 +789,19 @@ void quadd_hrt_get_state(struct quadd_module_state *state)
 
 static void init_arch_timer(void)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
 	struct arch_timer_kvm_info *info;
+#endif
 
 	u32 cntkctl = arch_timer_get_cntkctl();
 
 	if (cntkctl & ARCH_TIMER_USR_VCT_ACCESS_EN) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
 		info = arch_timer_get_kvm_info();
 		hrt.tc = &info->timecounter;
+#else
+		hrt.tc = arch_timer_get_timecounter();
+#endif
 	} else {
 		hrt.tc = NULL;
 	}

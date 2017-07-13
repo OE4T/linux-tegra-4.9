@@ -41,9 +41,6 @@
 #include "gp10b/platform_gp10b.h"
 #include "platform_gp10b_tegra.h"
 
-#include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
-#include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>
-
 /* Select every GP10B_FREQ_SELECT_STEP'th frequency from h/w table */
 #define GP10B_FREQ_SELECT_STEP	8
 /* Max number of freq supported in h/w */

@@ -47,10 +47,6 @@
 #include "nvgpu_gpuid_t19x.h"
 #endif
 
-#include <nvgpu/hw/gk20a/hw_top_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
-
 void __nvgpu_check_gpu_state(struct gk20a *g)
 {
 	u32 boot_0 = g->ops.mc.boot_0(g, NULL, NULL, NULL);

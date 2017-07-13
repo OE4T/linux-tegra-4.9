@@ -89,13 +89,13 @@ static bool sugov_should_update_freq(struct sugov_policy *sg_policy, u64 time)
 }
 
 static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
-				unsigned int next_freq)
+				unsigned int next_freq, unsigned int cpu)
 {
 	struct cpufreq_policy *policy = sg_policy->policy;
 
 	if (policy->fast_switch_enabled) {
 		if (sg_policy->next_freq == next_freq) {
-			trace_cpu_frequency(policy->cur, smp_processor_id());
+			trace_cpu_frequency(policy->cur, cpu);
 			return;
 		}
 		sg_policy->next_freq = next_freq;
@@ -104,7 +104,7 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
 			return;
 
 		policy->cur = next_freq;
-		trace_cpu_frequency(next_freq, smp_processor_id());
+		trace_cpu_frequency(next_freq, cpu);
 		sg_policy->last_freq_update_time = time;
 	} else if (sg_policy->next_freq != next_freq) {
 		sg_policy->next_freq = next_freq;
@@ -222,7 +222,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 		sugov_iowait_boost(sg_cpu, &util, &max);
 		next_f = get_next_freq(sg_cpu, util, max);
 	}
-	sugov_update_commit(sg_policy, time, next_f);
+	sugov_update_commit(sg_policy, time, next_f, sg_cpu->cpu);
 }
 
 static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu,
@@ -241,7 +241,7 @@ static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu,
 		unsigned long j_util, j_max;
 		s64 delta_ns;
 
-		if (j == smp_processor_id())
+		if (j == sg_cpu->cpu)
 			continue;
 
 		j_sg_cpu = &per_cpu(sugov_cpu, j);
@@ -296,7 +296,7 @@ static void sugov_update_shared(struct update_util_data *hook, u64 time,
 
 	if (sugov_should_update_freq(sg_policy, time)) {
 		next_f = sugov_next_freq_shared(sg_cpu, util, max, flags);
-		sugov_update_commit(sg_policy, time, next_f);
+		sugov_update_commit(sg_policy, time, next_f, sg_cpu->cpu);
 	}
 
 	raw_spin_unlock(&sg_policy->update_lock);

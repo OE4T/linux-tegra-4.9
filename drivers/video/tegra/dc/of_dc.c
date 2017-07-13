@@ -2581,8 +2581,17 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 				of_node_full_name(pdata->conn_np), dc_or_node);
 	}
 
-	dev_info(&ndev->dev, "head%d connected to %s\n", ndev->id,
-			of_node_full_name(pdata->conn_np));
+	if (!of_property_read_u32(np, "nvidia,dc-ctrlnum", &temp)) {
+		pdata->ctrl_num = (unsigned long)temp;
+		OF_DC_LOG("dc controller index %lu\n", pdata->ctrl_num);
+	} else {
+		dev_err(&ndev->dev, "mandatory property %s not found\n",
+				"nvidia,dc-ctrlnum");
+		goto fail_parse;
+	}
+
+	dev_info(&ndev->dev, "disp%d connected to head%d->%s\n", ndev->id,
+		(int)pdata->ctrl_num, of_node_full_name(pdata->conn_np));
 
 	err = tegra_dc_parse_panel_ops(ndev, pdata);
 	if (err) {
@@ -2956,15 +2965,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		pdata->flags |= (unsigned long)temp;
 	}
 	OF_DC_LOG("dc flag %lu\n", pdata->flags);
-
-	if (!of_property_read_u32(np, "nvidia,dc-ctrlnum", &temp)) {
-		pdata->ctrl_num = (unsigned long)temp;
-		OF_DC_LOG("dc controller index %lu\n", pdata->ctrl_num);
-	} else {
-		dev_err(&ndev->dev, "mandatory property %s not found\n",
-				"nvidia,dc-ctrlnum");
-		goto fail_parse;
-	}
 
 	if (!of_property_read_u32(np, "nvidia,fb-win", &temp)) {
 		pdata->fb->win = (int)temp;

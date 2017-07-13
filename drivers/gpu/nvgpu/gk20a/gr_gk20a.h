@@ -270,6 +270,7 @@ struct gr_gk20a {
 			struct aiv_list_gk20a perf_pma;
 			struct aiv_list_gk20a pm_rop;
 			struct aiv_list_gk20a pm_ucgpc;
+			struct aiv_list_gk20a etpc;
 		} ctxsw_regs;
 		int regs_base_index;
 		bool valid;

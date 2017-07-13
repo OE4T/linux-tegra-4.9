@@ -3,7 +3,7 @@
  *
  * GK20A Graphics Context for Simulation
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -72,6 +72,8 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 			    &g->gr.ctx_vars.ctxsw_regs.pm_gpc.count);
 	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_PM_TPC_COUNT", 0,
 			    &g->gr.ctx_vars.ctxsw_regs.pm_tpc.count);
+	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_ETPC_COUNT", 0,
+			    &g->gr.ctx_vars.ctxsw_regs.etpc.count);
 
 	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.inst);
 	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.data);
@@ -90,6 +92,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.pm_sys);
 	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.pm_gpc);
 	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.pm_tpc);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.etpc);
 
 	if (err)
 		goto fail;
@@ -231,6 +234,20 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 				    i, &l[i].index);
 		gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_PM_TPC:VALUE",
 				    i, &l[i].value);
+	}
+
+	gk20a_dbg(gpu_dbg_info | gpu_dbg_fn, "query GRCTX_REG_LIST_ETPC");
+	for (i = 0; i < g->gr.ctx_vars.ctxsw_regs.etpc.count; i++) {
+		struct aiv_gk20a *l = g->gr.ctx_vars.ctxsw_regs.etpc.l;
+		gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_ETPC:ADDR",
+				    i, &l[i].addr);
+		gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_ETPC:INDEX",
+				    i, &l[i].index);
+		gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_ETPC:VALUE",
+				    i, &l[i].value);
+		gk20a_dbg(gpu_dbg_info | gpu_dbg_fn,
+				"addr:0x%#08x index:0x%08x value:0x%08x",
+				l[i].addr, l[i].index, l[i].value);
 	}
 
 	g->gr.ctx_vars.valid = true;

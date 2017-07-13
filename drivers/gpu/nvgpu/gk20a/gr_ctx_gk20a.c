@@ -333,6 +333,14 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 				if (err)
 					goto clean_up;
 				break;
+			case NETLIST_REGIONID_CTXREG_ETPC:
+				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_ETPC");
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
+					src, size, &g->gr.ctx_vars.ctxsw_regs.etpc);
+				if (err)
+					goto clean_up;
+				break;
+
 			default:
 				gk20a_dbg_info("unrecognized region %d skipped", i);
 				break;
@@ -383,6 +391,7 @@ clean_up:
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.perf_pma.l);
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_rop.l);
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_ucgpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.etpc.l);
 		nvgpu_release_firmware(g, netlist_fw);
 		err = -ENOENT;
 	}

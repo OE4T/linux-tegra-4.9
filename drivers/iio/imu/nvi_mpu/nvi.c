@@ -27,6 +27,7 @@
 #include <linux/crc32.h>
 #include <linux/mpu_iio.h>
 #include <linux/device.h>
+#include <linux/version.h>
 
 #include "nvi.h"
 
@@ -4291,7 +4292,11 @@ static void nvi_dmp_fw_load_worker(struct work_struct *work)
 		nvi_remove(st->i2c);
 	}
 	dev_info(&st->i2c->dev, "%s done\n", __func__);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	device_resource_registered();
+#else
+	device_unblock_probing();
+#endif
 }
 
 static int nvi_probe(struct i2c_client *client,

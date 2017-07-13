@@ -446,7 +446,29 @@ static ssize_t state_show(struct device *dev, struct device_attribute *attr,
 
 	return count;
 }
-static DEVICE_ATTR_RO(state);
+
+static ssize_t state_store(struct device *dev, struct device_attribute *attr,
+			   const char *buf, size_t count)
+{
+	u32 state;
+	ssize_t ret = 0;
+	struct extcon_dev *edev = dev_get_drvdata(dev);
+	int i;
+
+	ret = sscanf(buf, "0x%4x", &state);
+	if (ret == 0)
+		return -EINVAL;
+
+	for (i = 0; i < edev->max_supported; i++) {
+		ret = extcon_set_state_sync(edev, edev->supported_cable[i],
+					    !!(state & BIT(i)));
+		if (ret < 0)
+			return ret;
+	}
+
+	return count;
+}
+static DEVICE_ATTR_RW(state);
 
 static ssize_t name_show(struct device *dev, struct device_attribute *attr,
 		char *buf)

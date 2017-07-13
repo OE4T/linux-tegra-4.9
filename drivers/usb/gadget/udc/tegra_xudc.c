@@ -716,6 +716,8 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc)
 
 	pm_runtime_get_sync(xudc->dev);
 
+	phy_power_on(xudc->utmi_phy);
+	phy_power_on(xudc->usb3_phy);
 	spin_lock_irqsave(&xudc->lock, flags);
 	dev_info(xudc->dev, "device mode on\n");
 	tegra_xusb_padctl_set_vbus_override(xudc->padctl);
@@ -777,6 +779,8 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 
 	/* Make sure interrupt handler has completed before powergating. */
 	synchronize_irq(xudc->irq);
+	phy_power_off(xudc->utmi_phy);
+	phy_power_off(xudc->usb3_phy);
 
 	if (xudc->ucd)
 		tegra_ucd_set_charger_type(xudc->ucd, EXTCON_NONE);
@@ -3398,7 +3402,7 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 	xudc_writel(xudc, val, CFG_DEV_SSPI_XFER);
 }
 
-static int tegra_xudc_phy_power_on(struct tegra_xudc *xudc)
+static int tegra_xudc_phy_init(struct tegra_xudc *xudc)
 {
 	int err;
 
@@ -3408,28 +3412,15 @@ static int tegra_xudc_phy_power_on(struct tegra_xudc *xudc)
 	err = phy_init(xudc->usb3_phy);
 	if (err < 0)
 		goto exit_utmi_phy;
-	err = phy_power_on(xudc->utmi_phy);
-	if (err < 0)
-		goto exit_usb3_phy;
-	err = phy_power_on(xudc->usb3_phy);
-	if (err < 0)
-		goto disable_utmi_phy;
-
 	return 0;
 
-disable_utmi_phy:
-	phy_power_off(xudc->utmi_phy);
-exit_usb3_phy:
-	phy_exit(xudc->usb3_phy);
 exit_utmi_phy:
 	phy_exit(xudc->utmi_phy);
 	return err;
 }
 
-static void tegra_xudc_phy_power_off(struct tegra_xudc *xudc)
+static void tegra_xudc_phy_exit(struct tegra_xudc *xudc)
 {
-	phy_power_off(xudc->usb3_phy);
-	phy_power_off(xudc->utmi_phy);
 	phy_exit(xudc->usb3_phy);
 	phy_exit(xudc->utmi_phy);
 }
@@ -3702,7 +3693,7 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		}
 	}
 
-	err = tegra_xudc_phy_power_on(xudc);
+	err = tegra_xudc_phy_init(xudc);
 	if (err)
 		goto powergate_xusbb;
 
@@ -3783,7 +3774,7 @@ free_eps:
 free_event_ring:
 	tegra_xudc_free_event_ring(xudc);
 disable_phy:
-	tegra_xudc_phy_power_off(xudc);
+	tegra_xudc_phy_exit(xudc);
 powergate_xusbb:
 	if (tegra_platform_is_silicon())
 		tegra_powergate_partition_with_clk_off(partition_id_xusbb);
@@ -3822,8 +3813,6 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 	usb_del_gadget_udc(&xudc->gadget);
 	tegra_xudc_free_eps(xudc);
 	tegra_xudc_free_event_ring(xudc);
-	tegra_xudc_phy_power_off(xudc);
-
 	if (tegra_platform_is_silicon()) {
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		partition_id_xusbb = tegra_pd_get_powergate_id(tegra_xusbb_pd);
@@ -3844,6 +3833,9 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 		regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
 	}
 
+	phy_power_off(xudc->utmi_phy);
+	phy_power_off(xudc->usb3_phy);
+	tegra_xudc_phy_exit(xudc);
 	pm_runtime_disable(xudc->dev);
 	pm_runtime_put(xudc->dev);
 
@@ -3866,9 +3858,6 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 	xudc_writel(xudc, 0, CTRL);
 	spin_unlock_irqrestore(&xudc->lock, flags);
 
-	phy_power_off(xudc->usb3_phy);
-	phy_power_off(xudc->utmi_phy);
-
 	if (tegra_platform_is_silicon()) {
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		partition_id = tegra_pd_get_powergate_id(tegra_xusba_pd);
@@ -3886,13 +3875,8 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 		if (partition_id < 0)
 			return -EINVAL;
 		tegra_powergate_partition_with_clk_off(partition_id);
-	}
-
-	phy_exit(xudc->usb3_phy);
-	phy_exit(xudc->utmi_phy);
-
-	if (tegra_platform_is_silicon())
 		regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
+	}
 
 	dev_info(xudc->dev, "entering ELPG done\n");
 	return 0;
@@ -3909,13 +3893,6 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 	if (err < 0)
 		return err;
 
-	err = phy_init(xudc->usb3_phy);
-	if (err < 0)
-		return err;
-	err = phy_init(xudc->utmi_phy);
-	if (err < 0)
-		return err;
-
 	if (tegra_platform_is_silicon()) {
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		partition_id = tegra_pd_get_powergate_id(tegra_xusbb_pd);
@@ -3938,13 +3915,6 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 		if (err < 0)
 			return err;
 	}
-
-	err = phy_power_on(xudc->utmi_phy);
-	if (err < 0)
-		return err;
-	err = phy_power_on(xudc->usb3_phy);
-	if (err < 0)
-		return err;
 
 	tegra_xudc_fpci_ipfs_init(xudc);
 	tegra_xudc_device_params_init(xudc);

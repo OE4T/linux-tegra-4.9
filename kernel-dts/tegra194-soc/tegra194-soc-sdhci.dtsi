@@ -44,6 +44,7 @@
 		mmc-ddr-1_8v;
 		mmc-hs200-1_8v;
 		mmc-hs400-1_8v;
+		mmc-hs400-enhanced-strobe;
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
 		uhs-mask = <0x60>;

@@ -1,5 +1,5 @@
 /*
- * tegra_t186ref_m3420_alt.c - Tegra t186ref m3402 Machine driver
+ * tegra186_m3420_alt.c - Tegra t186ref m3402 Machine driver
  *
  * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
  *
@@ -27,9 +27,9 @@
 #include "tegra_asoc_machine_alt_t18x.h"
 #include "tegra210_xbar_alt.h"
 
-#define DRV_NAME "tegra-snd-t186ref-m3420"
+#define DRV_NAME "tegra-snd-t186-m3420"
 
-struct tegra_t186ref_m3420 {
+struct tegra186_m3420 {
 	struct tegra_asoc_audio_clock_info audio_clock;
 	struct mutex lock;
 	struct snd_soc_dai *i2s_master;
@@ -40,10 +40,10 @@ struct tegra_t186ref_m3420 {
 	unsigned int i2s_master_idx;
 };
 
-static int tegra_t186ref_m3420_clocks_init(struct snd_soc_card *card,
+static int tegra186_m3420_clocks_init(struct snd_soc_card *card,
 					   unsigned int srate)
 {
-	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra186_m3420 *machine = snd_soc_card_get_drvdata(card);
 	unsigned int mclk, clk_out_rate;
 	int err = 0;
 
@@ -117,14 +117,14 @@ out:
 	return 0;
 }
 
-static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
-					 struct snd_pcm_hw_params *params,
-					 const char *name)
+static int tegra186_m3420_hw_params(struct snd_pcm_substream *substream,
+				    struct snd_pcm_hw_params *params,
+				    const char *name)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_pcm_stream *stream;
-	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra186_m3420 *machine = snd_soc_card_get_drvdata(card);
 	unsigned int idx, dai_fmt, bclk_ratio;
 	int err;
 
@@ -134,7 +134,7 @@ static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	mutex_lock(&machine->lock);
-	err = tegra_t186ref_m3420_clocks_init(card, params_rate(params));
+	err = tegra186_m3420_clocks_init(card, params_rate(params));
 	mutex_unlock(&machine->lock);
 	if (err)
 		return err;
@@ -181,42 +181,34 @@ static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
 				      SND_SOC_CLOCK_IN);
 }
 
-static int tegra_t186ref_m3420_i2s1_hw_params(
-					struct snd_pcm_substream *substream,
-					struct snd_pcm_hw_params *params)
+static int tegra186_m3420_i2s1_hw_params(struct snd_pcm_substream *substream,
+					 struct snd_pcm_hw_params *params)
 {
-	return tegra_t186ref_m3420_hw_params(substream, params,
-					     "i2s-playback-1");
+	return tegra186_m3420_hw_params(substream, params, "i2s-playback-1");
 }
 
-static int tegra_t186ref_m3420_i2s2_hw_params(
-					struct snd_pcm_substream *substream,
-					struct snd_pcm_hw_params *params)
+static int tegra186_m3420_i2s2_hw_params(struct snd_pcm_substream *substream,
+					 struct snd_pcm_hw_params *params)
 {
-	return tegra_t186ref_m3420_hw_params(substream, params,
-					     "i2s-playback-2");
+	return tegra186_m3420_hw_params(substream, params, "i2s-playback-2");
 }
 
-static int tegra_t186ref_m3420_i2s3_hw_params(
-					struct snd_pcm_substream *substream,
-					struct snd_pcm_hw_params *params)
+static int tegra186_m3420_i2s3_hw_params(struct snd_pcm_substream *substream,
+					 struct snd_pcm_hw_params *params)
 {
-	return tegra_t186ref_m3420_hw_params(substream, params,
-					     "i2s-playback-3");
+	return tegra186_m3420_hw_params(substream, params, "i2s-playback-3");
 }
 
-static int tegra_t186ref_m3420_i2s4_hw_params(
-					struct snd_pcm_substream *substream,
-					struct snd_pcm_hw_params *params)
+static int tegra186_m3420_i2s4_hw_params(struct snd_pcm_substream *substream,
+					 struct snd_pcm_hw_params *params)
 {
-	return tegra_t186ref_m3420_hw_params(substream, params,
-					     "i2s-playback-4");
+	return tegra186_m3420_hw_params(substream, params, "i2s-playback-4");
 }
 
-static void tegra_t186ref_m3420_shutdown(struct snd_pcm_substream *substream)
+static void tegra186_m3420_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct tegra_t186ref_m3420 *machine;
+	struct tegra186_m3420 *machine;
 
 	machine = snd_soc_card_get_drvdata(rtd->card);
 
@@ -234,8 +226,7 @@ static void tegra_t186ref_m3420_shutdown(struct snd_pcm_substream *substream)
 	mutex_unlock(&machine->lock);
 }
 
-static int tegra_t186ref_m3420_i2s_index(struct snd_soc_card *card,
-					 unsigned int id)
+static int tegra186_m3420_i2s_index(struct snd_soc_card *card, unsigned int id)
 {
 	const char *name;
 
@@ -260,8 +251,8 @@ static int tegra_t186ref_m3420_i2s_index(struct snd_soc_card *card,
 	return tegra_machine_get_codec_dai_link_idx_t18x(name);
 }
 
-static int tegra_t186ref_m3420_i2s_fmt(struct snd_soc_card *card,
-				       unsigned int idx, bool is_master)
+static int tegra186_m3420_i2s_fmt(struct snd_soc_card *card, unsigned int idx,
+				  bool is_master)
 {
 	unsigned int dai_fmt;
 
@@ -272,9 +263,9 @@ static int tegra_t186ref_m3420_i2s_fmt(struct snd_soc_card *card,
 	return snd_soc_dai_set_fmt(card->rtd[idx].cpu_dai, dai_fmt);
 }
 
-static int tegra_t186ref_m3420_i2s_config(struct snd_soc_card *card,
-					  struct tegra_t186ref_m3420 *machine,
-					  unsigned new_master_id)
+static int tegra186_m3420_i2s_config(struct snd_soc_card *card,
+				     struct tegra186_m3420 *machine,
+				     unsigned new_master_id)
 {
 	int new_master_idx, ret = 0;
 
@@ -290,7 +281,7 @@ static int tegra_t186ref_m3420_i2s_config(struct snd_soc_card *card,
 		goto out;
 	}
 
-	ret = tegra_t186ref_m3420_i2s_index(card, new_master_id);
+	ret = tegra186_m3420_i2s_index(card, new_master_id);
 	if (ret < 0)
 		goto out;
 
@@ -298,16 +289,16 @@ static int tegra_t186ref_m3420_i2s_config(struct snd_soc_card *card,
 
 	/* Configure the current I2S master as an I2S slave */
 	if (machine->i2s_master) {
-		ret = tegra_t186ref_m3420_i2s_fmt(card, machine->i2s_master_idx,
+		ret = tegra186_m3420_i2s_fmt(card, machine->i2s_master_idx,
 						  false);
 		if (ret)
 			goto out;
 	}
 
 	/* Configure the new I2S master */
-	ret = tegra_t186ref_m3420_i2s_fmt(card, new_master_idx, true);
+	ret = tegra186_m3420_i2s_fmt(card, new_master_idx, true);
 	if (ret) {
-		tegra_t186ref_m3420_i2s_fmt(card, machine->i2s_master_idx,
+		tegra186_m3420_i2s_fmt(card, machine->i2s_master_idx,
 					    true);
 		goto out;
 	}
@@ -322,61 +313,61 @@ out:
 	return ret;
 }
 
-static int tegra_t186ref_m3420_i2s_master_get(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
+static int tegra186_m3420_i2s_master_get(struct snd_kcontrol *kcontrol,
+					 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra186_m3420 *machine = snd_soc_card_get_drvdata(card);
 
 	ucontrol->value.integer.value[0] = machine->i2s_master_id;
 
 	return 0;
 }
 
-static int tegra_t186ref_m3420_i2s_master_put(struct snd_kcontrol *kcontrol,
-					struct snd_ctl_elem_value *ucontrol)
+static int tegra186_m3420_i2s_master_put(struct snd_kcontrol *kcontrol,
+					 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra186_m3420 *machine = snd_soc_card_get_drvdata(card);
 	unsigned int i2s_master_id;
 
 	i2s_master_id = ucontrol->value.integer.value[0];
 
-	return tegra_t186ref_m3420_i2s_config(card, machine, i2s_master_id);
+	return tegra186_m3420_i2s_config(card, machine, i2s_master_id);
 }
 
-static struct snd_soc_ops tegra_t186ref_m3420_i2s1_ops = {
-	.hw_params = tegra_t186ref_m3420_i2s1_hw_params,
-	.shutdown = tegra_t186ref_m3420_shutdown,
+static struct snd_soc_ops tegra186_m3420_i2s1_ops = {
+	.hw_params = tegra186_m3420_i2s1_hw_params,
+	.shutdown = tegra186_m3420_shutdown,
 };
 
-static struct snd_soc_ops tegra_t186ref_m3420_i2s2_ops = {
-	.hw_params = tegra_t186ref_m3420_i2s2_hw_params,
-	.shutdown = tegra_t186ref_m3420_shutdown,
+static struct snd_soc_ops tegra186_m3420_i2s2_ops = {
+	.hw_params = tegra186_m3420_i2s2_hw_params,
+	.shutdown = tegra186_m3420_shutdown,
 };
 
-static struct snd_soc_ops tegra_t186ref_m3420_i2s3_ops = {
-	.hw_params = tegra_t186ref_m3420_i2s3_hw_params,
-	.shutdown = tegra_t186ref_m3420_shutdown,
+static struct snd_soc_ops tegra186_m3420_i2s3_ops = {
+	.hw_params = tegra186_m3420_i2s3_hw_params,
+	.shutdown = tegra186_m3420_shutdown,
 };
 
-static struct snd_soc_ops tegra_t186ref_m3420_i2s4_ops = {
-	.hw_params = tegra_t186ref_m3420_i2s4_hw_params,
-	.shutdown = tegra_t186ref_m3420_shutdown,
+static struct snd_soc_ops tegra186_m3420_i2s4_ops = {
+	.hw_params = tegra186_m3420_i2s4_hw_params,
+	.shutdown = tegra186_m3420_shutdown,
 };
 
-static const char * const tegra_t186ref_i2s_control_text[] = {
+static const char * const tegra186_i2s_control_text[] = {
 	"I2S1", "I2S2", "I2S3", "I2S4",
 };
 
-static const struct soc_enum tegra_t186ref_i2s_control =
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t186ref_i2s_control_text),
-		tegra_t186ref_i2s_control_text);
+static const struct soc_enum tegra186_i2s_control =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra186_i2s_control_text),
+		tegra186_i2s_control_text);
 
 static const struct snd_kcontrol_new tegra_m3420_controls[] = {
-	SOC_ENUM_EXT("I2S MASTER", tegra_t186ref_i2s_control,
-		       tegra_t186ref_m3420_i2s_master_get,
-		       tegra_t186ref_m3420_i2s_master_put),
+	SOC_ENUM_EXT("I2S MASTER", tegra186_i2s_control,
+		       tegra186_m3420_i2s_master_get,
+		       tegra186_m3420_i2s_master_put),
 };
 
 static const struct snd_soc_dapm_widget tegra_m3420_dapm_widgets[] = {
@@ -390,7 +381,7 @@ static const struct snd_soc_dapm_widget tegra_m3420_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic-4", NULL),
 };
 
-static int tegra_t186ref_m3420_suspend_pre(struct snd_soc_card *card)
+static int tegra186_m3420_suspend_pre(struct snd_soc_card *card)
 {
 	unsigned int idx;
 
@@ -403,10 +394,10 @@ static int tegra_t186ref_m3420_suspend_pre(struct snd_soc_card *card)
 	return 0;
 }
 
-static struct snd_soc_card snd_soc_tegra_t186ref_m3420 = {
-	.name = "tegra-t186ref-m3420",
+static struct snd_soc_card snd_soc_tegra186_m3420 = {
+	.name = "tegra186-m3420",
 	.owner = THIS_MODULE,
-	.suspend_pre = tegra_t186ref_m3420_suspend_pre,
+	.suspend_pre = tegra186_m3420_suspend_pre,
 	.dapm_widgets = tegra_m3420_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra_m3420_dapm_widgets),
 	.controls = tegra_m3420_controls,
@@ -438,9 +429,9 @@ static void dai_set_ops(struct snd_soc_ops *ops, unsigned int idx_start,
 static int dai_link_setup(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
-	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra186_m3420 *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_codec_conf *tegra_machine_codec_conf = NULL;
-	struct snd_soc_codec_conf *tegra_t186ref_codec_conf = NULL;
+	struct snd_soc_codec_conf *tegra186_codec_conf = NULL;
 	struct snd_soc_dai_link *dai_links = NULL;
 	struct snd_soc_dai_link *codec_links = NULL;
 	unsigned int i2s_master_count = 0;
@@ -452,10 +443,10 @@ static int dai_link_setup(struct platform_device *pdev)
 	if (!codec_links)
 		return err;
 
-	tegra_t186ref_codec_conf = tegra_machine_new_codec_conf(pdev,
-		tegra_t186ref_codec_conf,
+	tegra186_codec_conf = tegra_machine_new_codec_conf(pdev,
+		tegra186_codec_conf,
 		&machine->num_codec_links);
-	if (!tegra_t186ref_codec_conf)
+	if (!tegra186_codec_conf)
 		goto err_alloc_dai_link;
 
 	/* get the xbar dai link/codec conf structure */
@@ -468,7 +459,7 @@ static int dai_link_setup(struct platform_device *pdev)
 		goto err_alloc_codec_conf;
 
 	/* set ADMAIF dai_ops */
-	dai_set_ops(&tegra_t186ref_m3420_i2s1_ops, TEGRA186_DAI_LINK_ADMAIF1,
+	dai_set_ops(&tegra186_m3420_i2s1_ops, TEGRA186_DAI_LINK_ADMAIF1,
 		    TEGRA186_DAI_LINK_ADMAIF20);
 
 	for (i = 0; i < machine->num_codec_links; i++) {
@@ -476,7 +467,7 @@ static int dai_link_setup(struct platform_device *pdev)
 			continue;
 
 		if (strstr(codec_links[i].name, "i2s-playback-1")) {
-			dai_set_ops(&tegra_t186ref_m3420_i2s1_ops,
+			dai_set_ops(&tegra186_m3420_i2s1_ops,
 				    TEGRA186_DAI_LINK_ADMAIF1,
 				    TEGRA186_DAI_LINK_ADMAIF2);
 			if (codec_i2s_is_master(codec_links[i].dai_fmt)) {
@@ -484,7 +475,7 @@ static int dai_link_setup(struct platform_device *pdev)
 				i2s_master_count++;
 			}
 		} else if (strstr(codec_links[i].name, "i2s-playback-2")) {
-			dai_set_ops(&tegra_t186ref_m3420_i2s2_ops,
+			dai_set_ops(&tegra186_m3420_i2s2_ops,
 				    TEGRA186_DAI_LINK_ADMAIF3,
 				    TEGRA186_DAI_LINK_ADMAIF4);
 			if (codec_i2s_is_master(codec_links[i].dai_fmt)) {
@@ -492,7 +483,7 @@ static int dai_link_setup(struct platform_device *pdev)
 				i2s_master_count++;
 			}
 		} else if (strstr(codec_links[i].name, "i2s-playback-3")) {
-			dai_set_ops(&tegra_t186ref_m3420_i2s3_ops,
+			dai_set_ops(&tegra186_m3420_i2s3_ops,
 				    TEGRA186_DAI_LINK_ADMAIF5,
 				    TEGRA186_DAI_LINK_ADMAIF6);
 			if (codec_i2s_is_master(codec_links[i].dai_fmt)) {
@@ -500,7 +491,7 @@ static int dai_link_setup(struct platform_device *pdev)
 				i2s_master_count++;
 			}
 		} else if (strstr(codec_links[i].name, "i2s-playback-4")) {
-			dai_set_ops(&tegra_t186ref_m3420_i2s4_ops,
+			dai_set_ops(&tegra186_m3420_i2s4_ops,
 				    TEGRA186_DAI_LINK_ADMAIF7,
 				    TEGRA186_DAI_LINK_ADMAIF8);
 			if (codec_i2s_is_master(codec_links[i].dai_fmt)) {
@@ -523,7 +514,7 @@ static int dai_link_setup(struct platform_device *pdev)
 
 	/* append t186ref specific codec_conf */
 	card->num_configs =
-		tegra_machine_append_codec_conf_t18x(tegra_t186ref_codec_conf,
+		tegra_machine_append_codec_conf_t18x(tegra186_codec_conf,
 			machine->num_codec_links);
 	tegra_machine_codec_conf = tegra_machine_get_codec_conf_t18x();
 	card->codec_conf = tegra_machine_codec_conf;
@@ -538,11 +529,11 @@ err_alloc_dai_link:
 	return err;
 }
 
-static int tegra_t186ref_m3420_driver_probe(struct platform_device *pdev)
+static int tegra186_m3420_driver_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
-	struct snd_soc_card *card = &snd_soc_tegra_t186ref_m3420;
-	struct tegra_t186ref_m3420 *machine;
+	struct snd_soc_card *card = &snd_soc_tegra186_m3420;
+	struct tegra186_m3420 *machine;
 	struct tegra_asoc_audio_clock_info *clocks;
 	int err = 0;
 
@@ -551,7 +542,7 @@ static int tegra_t186ref_m3420_driver_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_t186ref_m3420),
+	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra186_m3420),
 			       GFP_KERNEL);
 	if (!machine)
 		return -ENOMEM;
@@ -600,8 +591,7 @@ static int tegra_t186ref_m3420_driver_probe(struct platform_device *pdev)
 		goto err_remove_dai_link;
 	}
 
-	return tegra_t186ref_m3420_i2s_config(card, machine,
-					      machine->i2s_master_id);
+	return tegra186_m3420_i2s_config(card, machine, machine->i2s_master_id);
 
 err_remove_dai_link:
 	tegra_machine_remove_dai_link();
@@ -610,7 +600,7 @@ err_remove_dai_link:
 	return err;
 }
 
-static int tegra_t186ref_m3420_driver_remove(struct platform_device *pdev)
+static int tegra186_m3420_driver_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 
@@ -621,25 +611,25 @@ static int tegra_t186ref_m3420_driver_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id tegra_t186ref_m3420_of_match[] = {
+static const struct of_device_id tegra186_m3420_of_match[] = {
 	{ .compatible = "nvidia,tegra-audio-t186ref-m3420", },
 	{ },
 };
 
-static struct platform_driver tegra_t186ref_m3420_driver = {
+static struct platform_driver tegra186_m3420_driver = {
 	.driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,
 		.pm = &snd_soc_pm_ops,
-		.of_match_table = tegra_t186ref_m3420_of_match,
+		.of_match_table = tegra186_m3420_of_match,
 	},
-	.probe = tegra_t186ref_m3420_driver_probe,
-	.remove = tegra_t186ref_m3420_driver_remove,
+	.probe = tegra186_m3420_driver_probe,
+	.remove = tegra186_m3420_driver_remove,
 };
-module_platform_driver(tegra_t186ref_m3420_driver);
+module_platform_driver(tegra186_m3420_driver);
 
 MODULE_AUTHOR("Jon Hunter <jonathanh@nvidia.com>");
-MODULE_DESCRIPTION("Tegra+t186ref_m3420 machine ASoC driver");
+MODULE_DESCRIPTION("Tegra186 M3420 machine ASoC driver");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:" DRV_NAME);
-MODULE_DEVICE_TABLE(of, tegra_t186ref_m3420_of_match);
+MODULE_DEVICE_TABLE(of, tegra186_m3420_of_match);

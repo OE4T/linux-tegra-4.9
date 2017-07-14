@@ -112,7 +112,7 @@ config SND_SOC_TEGRA_T186REF_AUTO_ALT
 	  Say Y or M here.
 
 config SND_SOC_TEGRA_T186REF_M3420_ALT
-	tristate "SoC Audio support for T186Ref M3420"
+	tristate "SoC Audio support for T186 M3420"
 	depends on SND_SOC_TEGRA_T186REF_ALT
 	select SND_SOC_AD193X_I2C
 	help

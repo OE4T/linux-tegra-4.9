@@ -410,17 +410,20 @@ static void gic_poke_irq(struct irq_data *d, u32 offset)
 {
 	struct gic_chip_data *gic = irq_data_get_irq_chip_data(d);
 	u32 mask = 1 << (gic_irq(d) % 32);
-	u8 curr_cpu = gic_get_cpumask(gic);
 	u32 irq_target = GIC_DIST_TARGET + gic_irq(d);
+	u8 curr_cpu;
 	u8 val8;
 
 	/*
 	 * if it is not per-cpu then we should make sure the irq has
 	 * been routed to CPU.
 	 */
-	val8 = readb_relaxed(gic_dist_base(d) + irq_target);
-	if ((gic != &gic_data[0]) && !(val8 & curr_cpu))
-		goto end;
+	if (gic != &gic_data[0]) {
+		curr_cpu = gic_get_cpumask(gic);
+		val8 = readb_relaxed(gic_dist_base(d) + irq_target);
+		if (!(val8 & curr_cpu))
+			goto end;
+	}
 
 	writel_relaxed(mask, gic_dist_base(d) + offset + (gic_irq(d) / 32) * 4);
 

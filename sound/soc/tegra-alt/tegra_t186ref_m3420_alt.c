@@ -19,6 +19,7 @@
 #include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
+#include <sound/pcm_params.h>
 #include <sound/soc.h>
 
 #include "tegra_asoc_utils_alt.h"
@@ -132,6 +133,11 @@ static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
 	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
 	unsigned int idx, dai_fmt, bclk_ratio;
 	int err;
+
+	if (params_format(params) != SNDRV_PCM_FORMAT_S16_LE) {
+		dev_err(card->dev, "Invalid data format!\n");
+		return -EINVAL;
+	}
 
 	mutex_lock(&machine->lock);
 	err = tegra_t186ref_m3420_clocks_init(card, params_rate(params));

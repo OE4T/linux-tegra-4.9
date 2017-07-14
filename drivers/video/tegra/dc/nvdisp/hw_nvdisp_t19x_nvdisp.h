@@ -198,4 +198,12 @@ static inline u32 nvdisp_t19x_rg_vsync_ptimer1_r(void)
 {
 	return 0x0000035d;
 }
+static inline u32 nvdisp_t19x_rg_status_r(void)
+{
+	return 0x00000362;
+}
+static inline u32 nvdisp_t19x_rg_status_unstall_force_even_set_enable_f(void)
+{
+	return 0x80000;
+}
 #endif

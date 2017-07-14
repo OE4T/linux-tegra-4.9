@@ -446,7 +446,6 @@ struct sdhci_host {
 /* Broken Clock divider zero in controller */
 #define SDHCI_QUIRK2_CLOCK_DIV_ZERO_BROKEN		(1<<15)
 #define SDHCI_QUIRK2_USE_64BIT_ADDR		(1<<16)
-#define SDHCI_QUIRK2_DDR_FIXED_DIVISOR			(1<<17)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */

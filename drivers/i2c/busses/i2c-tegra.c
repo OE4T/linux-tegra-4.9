@@ -1975,12 +1975,6 @@ static int tegra_i2c_change_clock_rate(struct tegra_i2c_dev *i2c_dev)
 		val |= (0x2 << I2C_CNFG_DEBOUNCE_CNT_SHIFT);
 	i2c_writel(i2c_dev, val, I2C_CNFG);
 
-	if (i2c_dev->hw->has_config_load_reg) {
-		ret = tegra_i2c_wait_for_config_load(i2c_dev);
-		if (ret)
-			return ret;
-	}
-
 	if (i2c_dev->bus_clk_rate == I2C_HS_MODE) {
 		i2c_dev->clk_divisor_hs_mode = i2c_dev->hw->clk_divisor_hs_mode;
 	} else {
@@ -2004,6 +1998,12 @@ static int tegra_i2c_change_clock_rate(struct tegra_i2c_dev *i2c_dev)
 
 	tegra_i2c_get_clk_parameters(i2c_dev);
 	ret = tegra_i2c_set_clk_rate(i2c_dev);
+
+	if (i2c_dev->hw->has_config_load_reg) {
+		ret = tegra_i2c_wait_for_config_load(i2c_dev);
+		if (ret)
+			return ret;
+	}
 
 	return ret;
 }

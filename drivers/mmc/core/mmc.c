@@ -961,7 +961,8 @@ static int mmc_select_powerclass(struct mmc_card *card)
 	if (bus_width == MMC_BUS_WIDTH_1)
 		return 0;
 
-	ddr = card->mmc_avail_type & EXT_CSD_CARD_TYPE_DDR_52;
+	ddr = card->mmc_avail_type & (EXT_CSD_CARD_TYPE_DDR_52 |
+			EXT_CSD_CARD_TYPE_HS400);
 	if (ddr)
 		ext_csd_bits = (bus_width == MMC_BUS_WIDTH_8) ?
 			EXT_CSD_DDR_BUS_WIDTH_8 : EXT_CSD_DDR_BUS_WIDTH_4;

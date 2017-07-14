@@ -1396,6 +1396,12 @@ int mmc_execute_tuning(struct mmc_card *card)
 	if (!host->ops->execute_tuning)
 		return 0;
 
+	if ((host->caps2 & MMC_CAP2_HS400_ES) && card->ext_csd.strobe_support) {
+		pr_info("%s: Skipping tuning since strobe enabled\n",
+				mmc_hostname(host));
+		return 0;
+	}
+
 	if (mmc_card_mmc(card))
 		opcode = MMC_SEND_TUNING_BLOCK_HS200;
 	else

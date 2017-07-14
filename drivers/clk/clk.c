@@ -1921,6 +1921,8 @@ EXPORT_SYMBOL_GPL(clk_set_rate);
 int clk_set_rate_range(struct clk *clk, unsigned long min, unsigned long max)
 {
 	int ret = 0;
+	struct clk_rate_request req;
+	long rate;
 
 	if (!clk)
 		return 0;
@@ -1934,12 +1936,31 @@ int clk_set_rate_range(struct clk *clk, unsigned long min, unsigned long max)
 
 	clk_prepare_lock();
 
+	req.min_rate = 0;
+	req.max_rate = S64_MAX;
+	req.rate = max;
+	rate = __clk_determine_rate(clk->core->hw, &req);
+	if (rate < 0) {
+		ret = (int)rate;
+		goto out;
+	}
+	max = req.rate;
+
+	req.rate = min;
+	rate = __clk_determine_rate(clk->core->hw, &req);
+	if (rate < 0) {
+		ret = (int)rate;
+		goto out;
+	}
+	min = req.rate;
+
 	if (min != clk->min_rate || max != clk->max_rate) {
 		clk->min_rate = min;
 		clk->max_rate = max;
 		ret = clk_core_set_rate_nolock(clk->core, clk->core->req_rate);
 	}
 
+out:
 	clk_prepare_unlock();
 
 	return ret;

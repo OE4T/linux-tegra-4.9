@@ -1031,6 +1031,9 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	if (!pdata)
 		return -EINVAL;
 
+	if (pdata->pre_poweron)
+		pdata->pre_poweron(pdev);
+
 	host = nvhost_get_host(pdata->pdev);
 	/* WAR to bug 1588951: Retry booting 3 times */
 

@@ -266,6 +266,9 @@ struct nvhost_device_data {
 	struct rw_semaphore busy_lock;
 	bool forced_idle;
 
+	/* Used to run any device specific code before module poweron */
+	void (*pre_poweron)(struct platform_device *dev);
+
 	/* Finalize power on. Can be used for context restore. */
 	int (*finalize_poweron)(struct platform_device *dev);
 

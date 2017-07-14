@@ -133,6 +133,7 @@ int tegra194_nvcsi_finalize_poweron(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(tegra194_nvcsi_finalize_poweron);
 
 int tegra194_nvcsi_prepare_poweroff(struct platform_device *pdev)
 {
@@ -141,6 +142,7 @@ int tegra194_nvcsi_prepare_poweroff(struct platform_device *pdev)
 	(void)nvcsi;
 	return 0;
 }
+EXPORT_SYMBOL_GPL(tegra194_nvcsi_prepare_poweroff);
 
 static int t194_nvcsi_probe(struct platform_device *pdev)
 {

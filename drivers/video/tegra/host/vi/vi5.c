@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 
+#include "vi5.h"
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
@@ -64,6 +65,7 @@ int vi5_finalize_poweron(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(vi5_finalize_poweron);
 
 int vi5_prepare_poweroff(struct platform_device *pdev)
 {
@@ -75,6 +77,7 @@ int vi5_prepare_poweroff(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(vi5_prepare_poweroff);
 
 static int vi5_probe(struct platform_device *pdev)
 {

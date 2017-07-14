@@ -168,8 +168,8 @@ int hdmi_spd_infoframe_init(struct hdmi_spd_infoframe *frame,
 	frame->version = 1;
 	frame->length = HDMI_SPD_INFOFRAME_SIZE;
 
-	strncpy(frame->vendor, vendor, sizeof(frame->vendor));
-	strncpy(frame->product, product, sizeof(frame->product));
+	strlcpy(frame->vendor, vendor, sizeof(frame->vendor));
+	strlcpy(frame->product, product, sizeof(frame->product));
 
 	return 0;
 }

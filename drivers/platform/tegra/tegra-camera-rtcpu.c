@@ -226,6 +226,7 @@ struct tegra_cam_rtcpu {
 		wait_queue_head_t response_waitq;
 		wait_queue_head_t empty_waitq;
 		atomic_t response;
+		atomic_t emptied;
 		u32 timeout;
 	} cmd;
 	u32 fw_version;
@@ -639,6 +640,7 @@ static void tegra_camrtc_empty_notify(void *data, u32 empty_value)
 {
 	struct tegra_cam_rtcpu *rtcpu = data;
 
+	atomic_set(&rtcpu->cmd.emptied, 1);
 	wake_up(&rtcpu->cmd.empty_waitq);
 }
 
@@ -652,8 +654,13 @@ static long tegra_camrtc_wait_for_empty(struct device *dev,
 
 	timeout = wait_event_interruptible_timeout(
 		rtcpu->cmd.empty_waitq,
+		/* Make sure IRQ has been handled */
+		atomic_read(&rtcpu->cmd.emptied) != 0 &&
 		tegra_hsp_sm_pair_is_empty(rtcpu->sm_pair),
 		timeout);
+
+	if (timeout > 0)
+		atomic_set(&rtcpu->cmd.emptied, 0);
 
 	return timeout;
 }

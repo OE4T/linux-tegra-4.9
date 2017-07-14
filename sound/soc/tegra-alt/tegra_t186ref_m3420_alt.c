@@ -78,24 +78,18 @@ static int tegra_t186ref_m3420_clocks_init(struct snd_soc_card *card,
 		return -EINVAL;
 	}
 
-	machine->srate = srate;
+	if (machine->srate != srate) {
+		machine->srate = srate;
 
-	clk_out_rate = srate * machine->audio_clock.mclk_scale;
-	mclk = clk_out_rate * 2;
+		clk_out_rate = srate * machine->audio_clock.mclk_scale;
+		mclk = clk_out_rate * 2;
 
-	tegra_alt_asoc_utils_set_parent(&machine->audio_clock, true);
-
-	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-					    srate, mclk, clk_out_rate);
-	if (err < 0) {
-		dev_err(card->dev, "Can't configure clocks\n");
-		return err;
-	}
-
-	err = tegra210_xbar_set_clock(mclk);
-	if (err < 0) {
-		dev_err(card->dev, "Can't configure xbar clocks\n");
-		return err;
+		err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
+						    srate, mclk, clk_out_rate);
+		if (err < 0) {
+			dev_err(card->dev, "Can't configure clocks\n");
+			return err;
+		}
 	}
 
 	/*
@@ -597,6 +591,8 @@ static int tegra_t186ref_m3420_driver_probe(struct platform_device *pdev)
 	err = tegra_alt_asoc_utils_init(clocks, &pdev->dev, card);
 	if (err)
 		goto err_remove_dai_link;
+
+	tegra_alt_asoc_utils_set_parent(&machine->audio_clock, true);
 
 	err = snd_soc_register_card(card);
 	if (err) {

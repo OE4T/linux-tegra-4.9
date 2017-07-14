@@ -1787,24 +1787,33 @@ static void tegra_hdmi_get_cea_fb_videomode(struct fb_videomode *m,
 	struct tegra_dc *dc = hdmi->dc;
 	struct tegra_dc_mode dc_mode;
 	int yuv_flag;
+	bool yuv_bypass_vmode = false;
 
 	memcpy(&dc_mode, &dc->mode, sizeof(dc->mode));
 
 	/* get CEA video timings */
 	yuv_flag = dc_mode.vmode & FB_VMODE_YUV_MASK;
-	if (yuv_flag == (FB_VMODE_Y420      | FB_VMODE_Y24) ||
-	    yuv_flag == (FB_VMODE_Y420_ONLY | FB_VMODE_Y24)) {
-		dc_mode.h_back_porch *= 2;
-		dc_mode.h_front_porch *= 2;
-		dc_mode.h_sync_width *= 2;
-		dc_mode.h_active *= 2;
-		dc_mode.pclk *= 2;
-	} else if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) {
-		dc_mode.h_back_porch = (dc_mode.h_back_porch * 8) / 5;
-		dc_mode.h_front_porch = (dc_mode.h_front_porch * 8) / 5;
-		dc_mode.h_sync_width = (dc_mode.h_sync_width * 8) / 5;
-		dc_mode.h_active = (dc_mode.h_active * 8) / 5;
-		dc_mode.pclk = (dc_mode.pclk / 5) * 8;
+	yuv_bypass_vmode = (dc_mode.vmode & FB_VMODE_YUV_MASK) &&
+				(dc_mode.vmode & FB_VMODE_BYPASS);
+
+	/*
+	 * On T21x, the bypass flag is exclusively sent as part of the flip, and
+	 * not as part of the modeset.
+	 */
+	if (yuv_bypass_vmode || tegra_dc_is_t21x()) {
+		if (tegra_dc_is_yuv420_8bpc(yuv_flag)) {
+			dc_mode.h_back_porch *= 2;
+			dc_mode.h_front_porch *= 2;
+			dc_mode.h_sync_width *= 2;
+			dc_mode.h_active *= 2;
+			dc_mode.pclk *= 2;
+		} else if (yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y30)) {
+			dc_mode.h_back_porch = (dc_mode.h_back_porch * 8) / 5;
+			dc_mode.h_front_porch = (dc_mode.h_front_porch * 8) / 5;
+			dc_mode.h_sync_width = (dc_mode.h_sync_width * 8) / 5;
+			dc_mode.h_active = (dc_mode.h_active * 8) / 5;
+			dc_mode.pclk = (dc_mode.pclk / 5) * 8;
+		}
 	}
 
 	tegra_dc_to_fb_videomode(m, &dc_mode);

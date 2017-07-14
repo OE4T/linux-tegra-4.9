@@ -594,20 +594,30 @@ int _tegra_dc_set_mode(struct tegra_dc *dc,
 {
 	struct tegra_dc_mode new_mode = *mode;
 	int yuv_flag = new_mode.vmode & FB_VMODE_YUV_MASK;
+	bool yuv_bypass_vmode = false;
 
-	if (yuv_flag == (FB_VMODE_Y420      | FB_VMODE_Y24) ||
-	    yuv_flag == (FB_VMODE_Y420_ONLY | FB_VMODE_Y24)) {
-		new_mode.h_back_porch /= 2;
-		new_mode.h_front_porch /= 2;
-		new_mode.h_sync_width /= 2;
-		new_mode.h_active /= 2;
-		new_mode.pclk /= 2;
-	} else if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) {
-		new_mode.h_back_porch = (new_mode.h_back_porch * 5) / 8;
-		new_mode.h_front_porch = (new_mode.h_front_porch * 5) / 8;
-		new_mode.h_sync_width = (new_mode.h_sync_width * 5) / 8;
-		new_mode.h_active = (new_mode.h_active * 5) / 8;
-		new_mode.pclk = (new_mode.pclk / 8) * 5;
+	yuv_bypass_vmode = (new_mode.vmode & FB_VMODE_YUV_MASK) &&
+				(new_mode.vmode & FB_VMODE_BYPASS);
+
+	/*
+	 * On T21x, the bypass flag is exclusively sent as part of the flip, and
+	 * not as part of the modeset.
+	 */
+	if (yuv_bypass_vmode || tegra_dc_is_t21x()) {
+		if (tegra_dc_is_yuv420_8bpc(yuv_flag)) {
+			new_mode.h_back_porch /= 2;
+			new_mode.h_front_porch /= 2;
+			new_mode.h_sync_width /= 2;
+			new_mode.h_active /= 2;
+			new_mode.pclk /= 2;
+		} else if (yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y30)) {
+			new_mode.h_back_porch = (new_mode.h_back_porch * 5) / 8;
+			new_mode.h_front_porch =
+					(new_mode.h_front_porch * 5) / 8;
+			new_mode.h_sync_width = (new_mode.h_sync_width * 5) / 8;
+			new_mode.h_active = (new_mode.h_active * 5) / 8;
+			new_mode.pclk = (new_mode.pclk / 8) * 5;
+		}
 	}
 
 	if (memcmp(&dc->mode, &new_mode, sizeof(dc->mode)) == 0) {

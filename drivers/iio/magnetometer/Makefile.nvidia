@@ -3,3 +3,9 @@
 #
 
 # When adding new entries keep the list in alphabetical order
+
+obj-$(CONFIG_NVI_AK89XX) += nvi-ak89xx.o
+ifdef CONFIG_NVI_MPU
+	CFLAGS_nvi_ak89xx.o += -DAKM_NVI_MPU_SUPPORT=1
+endif
+nvi-ak89xx-objs += nvi_ak89xx.o

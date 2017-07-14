@@ -828,7 +828,7 @@ static int nvadsp_t210_set_clks_and_prescalar(struct nvadsp_drv_data *drv_data)
 
 	adsp_freq = drv_data->adsp_freq * 1000; /* in Hz*/
 
-	max_adsp_freq = clk_round_rate(drv_data->adsp_cpu_clk,
+	max_adsp_freq = clk_round_rate(drv_data->adsp_cpu_abus_clk,
 				ULONG_MAX);
 	max_index = max_adsp_freq / MIN_ADSP_FREQ;
 	cur_index = adsp_freq / MIN_ADSP_FREQ;
@@ -856,7 +856,7 @@ static int nvadsp_t210_set_clks_and_prescalar(struct nvadsp_drv_data *drv_data)
 
 	adsp_freq = cur_index * MIN_ADSP_FREQ;
 
-	ret = clk_set_rate(drv_data->adsp_cpu_clk, adsp_freq);
+	ret = clk_set_rate(drv_data->adsp_cpu_abus_clk, adsp_freq);
 	if (ret)
 		goto end;
 
@@ -868,7 +868,7 @@ static int nvadsp_t210_set_clks_and_prescalar(struct nvadsp_drv_data *drv_data)
 
 end:
 	dev_dbg(dev, "adsp cpu freq %luKHz\n",
-		clk_get_rate(drv_data->adsp_cpu_clk) / 1000);
+		clk_get_rate(drv_data->adsp_cpu_abus_clk) / 1000);
 	dev_dbg(dev, "timer prescalar %x\n", os_args->timer_prescalar);
 
 	return ret;
@@ -983,7 +983,7 @@ static int nvadsp_set_boot_freqs(struct nvadsp_drv_data *drv_data)
 		return 0;
 
 	if (of_device_is_compatible(node, "nvidia,tegra210-adsp")) {
-		if (drv_data->adsp_cpu_clk) {
+		if (drv_data->adsp_cpu_abus_clk) {
 			ret = nvadsp_t210_set_clks_and_prescalar(drv_data);
 			if (ret)
 				goto end;

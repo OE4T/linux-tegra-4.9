@@ -99,6 +99,7 @@ struct adsp_dfs_policy {
 
 	struct clk *adsp_clk;
 	struct clk *aclk_clk;
+	struct clk *adsp_cpu_abus_clk;
 	struct notifier_block rate_change_nb;
 	struct nvadsp_mbox mbox;
 
@@ -153,11 +154,7 @@ static int adsp_clk_get(struct adsp_dfs_policy *policy)
 	struct device_node *node = device->of_node;
 	int ret = 0;
 
-	if (IS_ENABLED(CONFIG_COMMON_CLK))
-		policy->adsp_clk = devm_clk_get(device, "adsp");
-	else
-		policy->adsp_clk = clk_get_sys(NULL, policy->clk_name);
-
+	policy->adsp_clk = devm_clk_get(device, "adsp");
 	if (IS_ERR_OR_NULL(policy->adsp_clk)) {
 		dev_err(device, "unable to find adsp clock\n");
 		ret = PTR_ERR(policy->adsp_clk);
@@ -170,6 +167,14 @@ static int adsp_clk_get(struct adsp_dfs_policy *policy)
 			dev_err(device, "unable to find aclk clock\n");
 			ret = PTR_ERR(policy->aclk_clk);
 		}
+	} else {
+		policy->adsp_cpu_abus_clk =
+				devm_clk_get(device, "adsp_cpu_abus");
+
+		if (IS_ERR_OR_NULL(policy->adsp_cpu_abus_clk)) {
+			dev_err(device, "unable to find adsp cpu abus clock\n");
+			ret = PTR_ERR(policy->adsp_cpu_abus_clk);
+		}
 	}
 
 	return ret;
@@ -177,12 +182,11 @@ static int adsp_clk_get(struct adsp_dfs_policy *policy)
 
 static void adsp_clk_put(struct adsp_dfs_policy *policy)
 {
-	if (policy->adsp_clk) {
-		if (IS_ENABLED(CONFIG_COMMON_CLK))
-			devm_clk_put(device, policy->adsp_clk);
-		else
-			clk_put(policy->adsp_clk);
-	}
+	if (policy->adsp_cpu_abus_clk)
+		devm_clk_put(device, policy->adsp_cpu_abus_clk);
+
+	if (policy->adsp_clk)
+		devm_clk_put(device, policy->adsp_clk);
 
 	if (policy->aclk_clk)
 		devm_clk_put(device, policy->aclk_clk);
@@ -195,7 +199,7 @@ static int adsp_clk_set_rate(struct adsp_dfs_policy *policy,
 	int ret;
 
 	if (of_device_is_compatible(node, "nvidia,tegra210-adsp"))
-		ret = clk_set_rate(policy->adsp_clk, freq_hz);
+		ret = clk_set_rate(policy->adsp_cpu_abus_clk, freq_hz);
 	else
 		ret = clk_set_rate(policy->aclk_clk, freq_hz);
 

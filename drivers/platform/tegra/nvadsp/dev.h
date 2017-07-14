@@ -161,7 +161,7 @@ struct nvadsp_drv_data {
 	struct clk *apb2ape_clk;
 	struct clk *adsp_clk;
 	struct clk *aclk_clk;
-	struct clk *adsp_cpu_clk;
+	struct clk *adsp_cpu_abus_clk;
 	struct clk *adsp_neon_clk;
 	struct clk *ape_emc_clk;
 	struct clk *uartape_clk;

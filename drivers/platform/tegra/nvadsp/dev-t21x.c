@@ -37,7 +37,12 @@ static void nvadsp_clocks_disable(struct platform_device *pdev)
 		clk_disable_unprepare(drv_data->adsp_clk);
 		dev_dbg(dev, "adsp clocks disabled\n");
 		drv_data->adsp_clk = NULL;
-		drv_data->adsp_cpu_clk = NULL;
+	}
+
+	if (drv_data->adsp_cpu_abus_clk) {
+		clk_disable_unprepare(drv_data->adsp_cpu_abus_clk);
+		dev_dbg(dev, "adsp cpu abus clock disabled\n");
+		drv_data->adsp_cpu_abus_clk = NULL;
 	}
 
 	if (drv_data->adsp_neon_clk) {
@@ -95,7 +100,18 @@ static int nvadsp_clocks_enable(struct platform_device *pdev)
 		dev_err(dev, "unable to enable adsp clock\n");
 		goto end;
 	}
-	drv_data->adsp_cpu_clk = drv_data->adsp_clk;
+
+	drv_data->adsp_cpu_abus_clk = devm_clk_get(dev, "adsp_cpu_abus");
+	if (IS_ERR_OR_NULL(drv_data->adsp_cpu_abus_clk)) {
+		dev_err(dev, "unable to find adsp cpu abus clock\n");
+		ret = PTR_ERR(drv_data->adsp_cpu_abus_clk);
+		goto end;
+	}
+	ret = clk_prepare_enable(drv_data->adsp_cpu_abus_clk);
+	if (ret) {
+		dev_err(dev, "unable to enable adsp cpu abus clock\n");
+		goto end;
+	}
 
 	drv_data->adsp_neon_clk = devm_clk_get(dev, "adspneon");
 	if (IS_ERR_OR_NULL(drv_data->adsp_neon_clk)) {

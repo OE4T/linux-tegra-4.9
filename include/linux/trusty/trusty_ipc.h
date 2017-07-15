@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Google, Inc.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -13,6 +14,13 @@
  */
 #ifndef __LINUX_TRUSTY_TRUSTY_IPC_H
 #define __LINUX_TRUSTY_TRUSTY_IPC_H
+
+/*
+ * Errnos below must be in sync with the corresponding errnos
+ * defined in 3rdparty/trusty/external/lk/include/err.h
+ */
+#define NO_ERROR                (0)
+#define ERR_NOT_FOUND           (-2)
 
 struct tipc_chan;
 
@@ -29,6 +37,7 @@ enum tipc_chan_event {
 	TIPC_CHANNEL_CONNECTED = 1,
 	TIPC_CHANNEL_DISCONNECTED,
 	TIPC_CHANNEL_SHUTDOWN,
+	TIPC_CHANNEL_NOT_FOUND,
 };
 
 struct tipc_chan_ops {

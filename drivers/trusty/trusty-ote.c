@@ -133,6 +133,12 @@ static void _handle_event(void *data, int event)
 		complete(&chan_ctx->reply_comp);
 		break;
 
+	case TIPC_CHANNEL_NOT_FOUND:
+		chan_ctx->state = TIPC_CHANNEL_NOT_FOUND;
+		/* wake up the pending client */
+		complete(&chan_ctx->reply_comp);
+		break;
+
 	case TIPC_CHANNEL_CONNECTED:
 		handle_connect_event(chan_ctx);
 		break;
@@ -367,6 +373,11 @@ int te_open_trusted_session(char *name, void **ctx)
 	if (ret < 0) {
 		pr_err("%s:ERROR(%d) in receving response from service\n",
 								__func__, ret);
+		goto err_conn;
+	}
+
+	if (chan_ctx->state == TIPC_CHANNEL_NOT_FOUND) {
+		ret = -EOPNOTSUPP;
 		goto err_conn;
 	}
 

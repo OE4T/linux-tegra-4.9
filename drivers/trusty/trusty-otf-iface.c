@@ -30,7 +30,11 @@ void te_restore_keyslots(void)
 		return;
 
 	ret = te_open_trusted_session(OTF_PORT_NAME, &opaque_channel_context);
-	if (ret) {
+
+	/* Return if this Trusty port or TA is not supported without pr_err */
+	if (ret == -EOPNOTSUPP)
+		return;
+	else if (ret) {
 		pr_err("%s:ERROR(%d): Failed to open trusted session\n",
 			__func__, ret);
 		return;

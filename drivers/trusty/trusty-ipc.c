@@ -1353,7 +1353,7 @@ static void _handle_conn_rsp(struct tipc_virtio_dev *vds,
 	if (chan) {
 		mutex_lock(&chan->lock);
 		if (chan->state == TIPC_CONNECTING) {
-			if (!rsp->status) {
+			if (rsp->status == NO_ERROR) {
 				chan->state = TIPC_CONNECTED;
 				chan->remote = rsp->remote;
 				chan->max_msg_cnt = rsp->max_msg_cnt;
@@ -1363,8 +1363,13 @@ static void _handle_conn_rsp(struct tipc_virtio_dev *vds,
 			} else {
 				chan->state = TIPC_DISCONNECTED;
 				chan->remote = 0;
-				chan_trigger_event(chan,
+				if (rsp->status == ERR_NOT_FOUND) {
+					chan_trigger_event(chan,
+						   TIPC_CHANNEL_NOT_FOUND);
+				} else {
+					chan_trigger_event(chan,
 						   TIPC_CHANNEL_DISCONNECTED);
+				}
 			}
 		}
 		mutex_unlock(&chan->lock);

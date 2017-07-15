@@ -79,6 +79,9 @@
 				physical_w = "3.674";
 				physical_h = "2.738";
 
+				/* Sensor output flip settings */
+				vertical-flip = "true";
+
 				/* Define any required hw resources needed by driver */
 				/* ie. clocks, io pins, power sources */
 				avdd-reg = "vana";

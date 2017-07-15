@@ -535,6 +535,7 @@ static int ov5693_s_stream(struct v4l2_subdev *sd, int enable)
 	struct v4l2_control control;
 	int err;
 	u32 frame_time;
+	u8 val;
 
 	dev_dbg(&client->dev, "%s++\n", __func__);
 
@@ -607,7 +608,20 @@ static int ov5693_s_stream(struct v4l2_subdev *sd, int enable)
 	err = ov5693_write_table(priv, mode_table[OV5693_MODE_START_STREAM]);
 	if (err)
 		goto exit;
-
+	if (priv->pdata->v_flip) {
+		ov5693_read_reg(priv->s_data, OV5693_TIMING_REG20, &val);
+		ov5693_write_reg(priv->s_data, OV5693_TIMING_REG20,
+				 val | VERTICAL_FLIP);
+	}
+	if (priv->pdata->h_mirror) {
+		ov5693_read_reg(priv->s_data, OV5693_TIMING_REG21, &val);
+		ov5693_write_reg(priv->s_data, OV5693_TIMING_REG21,
+				 val | HORIZONTAL_MIRROR_MASK);
+	} else {
+		ov5693_read_reg(priv->s_data, OV5693_TIMING_REG21, &val);
+		ov5693_write_reg(priv->s_data, OV5693_TIMING_REG21,
+				 val & (~HORIZONTAL_MIRROR_MASK));
+	}
 	if (test_mode)
 		err = ov5693_write_table(priv,
 			mode_table[OV5693_MODE_TEST_PATTERN]);
@@ -1395,7 +1409,9 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 skip_vdd:
 	board_priv_pdata->has_eeprom =
 		of_property_read_bool(node, "has-eeprom");
-
+	board_priv_pdata->v_flip = of_property_read_bool(node, "vertical-flip");
+	board_priv_pdata->h_mirror = of_property_read_bool(node,
+							 "horizontal-mirror");
 	return board_priv_pdata;
 
 error:

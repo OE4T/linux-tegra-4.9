@@ -87,6 +87,8 @@ struct camera_common_pdata {
 	struct camera_common_regulators regulators;
 	bool use_cam_gpio;
 	bool has_eeprom;
+	bool v_flip;
+	bool h_mirror;
 };
 
 struct camera_common_eeprom_data {

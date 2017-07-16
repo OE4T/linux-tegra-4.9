@@ -475,7 +475,7 @@ static int tegra18x_actmon_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id tegra18x_actmon_of[] __initconst = {
+static const struct of_device_id tegra18x_actmon_of[] = {
 	{ .compatible = "nvidia,tegra186-cactmon", .data = NULL, },
 	{},
 };

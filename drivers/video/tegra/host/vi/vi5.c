@@ -38,6 +38,8 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
+
+#include "nvhost_syncpt_unit_interface.h"
 #include "t194/t194.h"
 
 #include <media/vi.h>
@@ -75,7 +77,7 @@ EXPORT_SYMBOL_GPL(vi5_finalize_poweron);
 
 int vi5_prepare_poweroff(struct platform_device *pdev)
 {
-	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
+	struct host_vi5 *vi5 = (struct host_vi5*) nvhost_get_private_data(pdev);
 
 	if (vi5->vi_thi) {
 		nvhost_module_idle(vi5->vi_thi);
@@ -91,6 +93,7 @@ static int vi5_probe(struct platform_device *pdev)
 	struct nvhost_device_data *info;
 	struct device_node *thi_np;
 	struct platform_device *thi = NULL;
+	struct nvhost_device_data *thi_info;
 	struct host_vi5 *vi5;
 	int err = 0;
 
@@ -119,7 +122,7 @@ static int vi5_probe(struct platform_device *pdev)
 		return -EPROBE_DEFER;
 	}
 
-	vi5 = devm_kzalloc(dev, sizeof(*vi5), GFP_KERNEL);
+	vi5 = (struct host_vi5*) devm_kzalloc(dev, sizeof(*vi5), GFP_KERNEL);
 	if (!vi5)
 		return -ENOMEM;
 
@@ -142,13 +145,13 @@ static int vi5_probe(struct platform_device *pdev)
 	if (err)
 		goto deinit;
 
-	{
-		struct nvhost_device_data *thi_info;
+	err = nvhost_syncpt_unit_interface_init(pdev);
+	if (err)
+		goto deinit;
 
-		thi_info = platform_get_drvdata(thi);
-		/* Steal vi-thi HW aperture */
-		info->aperture[1] = thi_info->aperture[0];
-	}
+	/* Steal vi-thi HW aperture */
+	thi_info = platform_get_drvdata(thi);
+	info->aperture[1] = thi_info->aperture[0];
 
 	vi5_init_debugfs(vi5);
 
@@ -218,15 +221,14 @@ module_platform_driver(vi5_driver);
 
 /* === Debugfs ========================================================== */
 
-static const struct debugfs_reg32 vi5_ch_regs[] = {
-	{ .name = "protocol_version", 0x00 },
-	{ .name = "perforce_changelist", 0x4 },
-	{ .name = "build_timestamp", 0x8 },
-	{ .name = "channel_count", 0x80 },
-};
-
 static int vi5_init_debugfs(struct host_vi5 *vi5)
 {
+	static const struct debugfs_reg32 vi5_ch_regs[] = {
+		{ .name = "protocol_version", 0x00 },
+		{ .name = "perforce_changelist", 0x4 },
+		{ .name = "build_timestamp", 0x8 },
+		{ .name = "channel_count", 0x80 },
+	};
 	struct nvhost_device_data *pdata = platform_get_drvdata(vi5->pdev);
 	struct dentry *dir = pdata->debugfs;
 	struct vi5_debug *debug = &vi5->debug;

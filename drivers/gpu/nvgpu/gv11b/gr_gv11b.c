@@ -30,6 +30,7 @@
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/regops_gk20a.h"
+#include "gk20a/gr_pri_gk20a.h"
 
 #include "gm20b/gr_gm20b.h"
 
@@ -3334,6 +3335,49 @@ static void gv11b_gr_get_ovr_perf_regs(struct gk20a *g, u32 *num_ovr_perf_regs,
 	*ovr_perf_regs = _ovr_perf_regs;
 }
 
+static void gv11b_gr_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
+{
+	u32 reg_val;
+	u32 quad_ctrl;
+	u32 half_ctrl;
+	u32 tpc, gpc;
+	u32 gpc_tpc_addr;
+	u32 gpc_tpc_stride;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g,
+					GPU_LIT_TPC_IN_GPC_STRIDE);
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "offset=0x%x", offset);
+
+	gpc = pri_get_gpc_num(g, offset);
+	gpc_tpc_addr = pri_gpccs_addr_mask(offset);
+	tpc = g->ops.gr.get_tpc_num(g, gpc_tpc_addr);
+
+	quad_ctrl = quad & 0x1; /* first bit tells us quad */
+	half_ctrl = (quad >> 1) & 0x1; /* second bit tells us half */
+
+	gpc_tpc_stride = gpc * gpc_stride + tpc * tpc_in_gpc_stride;
+	gpc_tpc_addr = gr_gpc0_tpc0_sm_halfctl_ctrl_r() + gpc_tpc_stride;
+
+	/* read from unicast reg */
+	reg_val = gk20a_readl(g, gpc_tpc_addr);
+	reg_val = set_field(reg_val,
+		gr_gpcs_tpcs_sm_halfctl_ctrl_sctl_read_quad_ctl_m(),
+		gr_gpcs_tpcs_sm_halfctl_ctrl_sctl_read_quad_ctl_f(quad_ctrl));
+
+	/* write to broadcast reg */
+	gk20a_writel(g, gr_gpcs_tpcs_sm_halfctl_ctrl_r(), reg_val);
+
+	gpc_tpc_addr = gr_gpc0_tpc0_sm_debug_sfe_control_r() + gpc_tpc_stride;
+	reg_val = gk20a_readl(g, gpc_tpc_addr);
+	reg_val = set_field(reg_val,
+		gr_gpcs_tpcs_sm_debug_sfe_control_read_half_ctl_m(),
+		gr_gpcs_tpcs_sm_debug_sfe_control_read_half_ctl_f(half_ctrl));
+
+	/* write to broadcast reg */
+	gk20a_writel(g, gr_gpcs_tpcs_sm_debug_sfe_control_r(), reg_val);
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -3423,4 +3467,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_sm_dsm_perf_regs = gv11b_gr_get_sm_dsm_perf_regs;
 	gops->gr.get_sm_dsm_perf_ctrl_regs = gv11b_gr_get_sm_dsm_perf_ctrl_regs;
 	gops->gr.get_ovr_perf_regs = gv11b_gr_get_ovr_perf_regs;
+	gops->gr.access_smpc_reg = gv11b_gr_access_smpc_reg;
 }

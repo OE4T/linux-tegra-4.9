@@ -31,6 +31,7 @@
 #include <linux/switch.h>
 #endif
 #include <linux/of_address.h>
+#include <linux/of_gpio.h>
 #include <soc/tegra/tegra_powergate.h>
 
 #include "dc.h"
@@ -211,19 +212,21 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi)
 		return 0;
 
 	i2c_adap = i2c_get_adapter(dc->out->ddc_bus);
-	if (!i2c_adap) {
+	if (i2c_adap) {
+		hdmi->ddc_i2c_original_rate =
+			i2c_get_adapter_bus_clk_rate(i2c_adap);
+
+		hdmi->ddc_i2c_client = i2c_new_device(i2c_adap, &i2c_dev_info);
+		i2c_put_adapter(i2c_adap);
+		if (!hdmi->ddc_i2c_client) {
+			dev_err(&dc->ndev->dev, "hdmi: can't create new i2c device\n");
+			err = -EBUSY;
+			goto fail_edid_free;
+		}
+	} else if (hdmi->edid_src != EDID_SRC_DT) {
 		dev_err(&dc->ndev->dev,
 			"hdmi: can't get adpater for ddc bus %d\n",
 			dc->out->ddc_bus);
-		err = -EBUSY;
-		goto fail_edid_free;
-	}
-	hdmi->ddc_i2c_original_rate = i2c_get_adapter_bus_clk_rate(i2c_adap);
-
-	hdmi->ddc_i2c_client = i2c_new_device(i2c_adap, &i2c_dev_info);
-	i2c_put_adapter(i2c_adap);
-	if (!hdmi->ddc_i2c_client) {
-		dev_err(&dc->ndev->dev, "hdmi: can't create new i2c device\n");
 		err = -EBUSY;
 		goto fail_edid_free;
 	}
@@ -810,12 +813,34 @@ static irqreturn_t tegra_hdmi_hpd_irq_handler(int irq, void *ptr)
 static int tegra_dc_hdmi_hpd_init(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+	struct device_node *sor_np = NULL;
+	enum of_gpio_flags flags;
 	int hotplug_gpio = dc->out->hotplug_gpio;
+	int hotplug_gpio_np;
+	int hotplug_state;
 	int hotplug_irq;
 	int err;
 
 	if (tegra_platform_is_sim())
 		goto skip_gpio_irq_settings;
+
+	hotplug_state = hdmi->dc->out->hotplug_state;
+
+	sor_np = tegra_dc_get_conn_np(hdmi->dc);
+	if (!sor_np) {
+		dev_err(&dc->ndev->dev, "%s: error getting connector np\n",
+			__func__);
+		return -ENODEV;
+	}
+
+	hotplug_gpio_np = of_get_named_gpio_flags(sor_np,
+					       "nvidia,hpd-gpio", 0, &flags);
+	if (hotplug_gpio_np == -ENOENT &&
+		hotplug_state == TEGRA_HPD_STATE_FORCE_ASSERT) {
+		dev_info(&dc->ndev->dev,
+			"hdmi: No hotplug gpio is assigned\n");
+		goto skip_gpio_irq_settings;
+	}
 
 	if (!gpio_is_valid(hotplug_gpio)) {
 		dev_err(&dc->ndev->dev, "hdmi: invalid hotplug gpio\n");
@@ -1289,10 +1314,22 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->dc = dc;
 	hdmi->edid_src = EDID_SRC_PANEL;
 
+	if (of_property_read_bool(panel_np, "nvidia,edid"))
+		hdmi->edid_src = EDID_SRC_DT;
+
 	hdmi->dpaux = tegra_dpaux_init_data(dc, sor_np);
 	if (IS_ERR_OR_NULL(hdmi->dpaux)) {
-		err = PTR_ERR(hdmi->dpaux);
-		goto fail_audio_switch;
+		if ((hdmi->dpaux == NULL) &&
+			(hdmi->dc->pdata->default_out->ddc_bus < 0) &&
+			(hdmi->edid_src == EDID_SRC_DT)) {
+			/* This is not an error since there is a case using */
+			/* HDMI DDC as generic I2C with these configuration */
+			dev_info(&hdmi->dc->ndev->dev,
+				"hdmi: DDC is not used for HDMI.\n");
+		} else {
+			err = PTR_ERR(hdmi->dpaux);
+			goto fail_audio_switch;
+		}
 	}
 
 	hdmi->sor = tegra_dc_sor_init(dc, NULL);
@@ -1300,9 +1337,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		err = PTR_ERR(hdmi->sor);
 		goto fail_audio_switch;
 	}
-
-	if (of_property_read_bool(panel_np, "nvidia,edid"))
-		hdmi->edid_src = EDID_SRC_DT;
 
 	hdmi->pdata = dc->pdata->default_out->hdmi_out;
 	hdmi->ddc_refcount = 0; /* assumes this is disabled when starting */
@@ -2341,7 +2375,8 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 		tegra_nvhdcp_set_plug(hdmi->nvhdcp, true);
 #endif
 
-	tegra_dpaux_prod_set(hdmi->dpaux);
+	if (hdmi->dpaux)
+		tegra_dpaux_prod_set(hdmi->dpaux);
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_setup_clk(dc, dc->clk);

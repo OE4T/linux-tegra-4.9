@@ -584,23 +584,21 @@ static int parse_disp_default_out(struct platform_device *ndev,
 			of_parse_phandle(conn_np, "nvidia,ddc-i2c-bus", 0);
 
 		if (!ddc_np) {
-			dev_err(&ndev->dev, "error reading %s node\n",
-					"nvidia,ddc-i2c-bus");
-			err = -EINVAL;
-			goto parse_disp_defout_fail;
+			pdata->default_out->dcc_bus = -1;
+			pr_warn("error reading %s node\n",
+				"nvidia,ddc-i2c-bus");
 		} else {
 			id = of_alias_get_id(ddc_np, "i2c");
-		}
+			of_node_put(ddc_np);
 
-		of_node_put(ddc_np);
-
-		if (id >= 0) {
-			pdata->default_out->dcc_bus = id;
-			OF_DC_LOG("out_dcc bus %d\n", id);
-		} else {
-			dev_err(&ndev->dev, "invalid i2c id:%d\n", id);
-			err = -EINVAL;
-			goto parse_disp_defout_fail;
+			if (id >= 0) {
+				pdata->default_out->dcc_bus = id;
+				OF_DC_LOG("out_dcc bus %d\n", id);
+			} else {
+				dev_err(&ndev->dev, "invalid i2c id:%d\n", id);
+				err = -EINVAL;
+				goto parse_disp_defout_fail;
+			}
 		}
 	}
 
@@ -609,7 +607,9 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	if (hotplug_gpio >= 0) {
 		pdata->default_out->hotplug_gpio = hotplug_gpio;
 	} else {
-		if (hotplug_gpio != -ENOENT)
+		if (hotplug_gpio == -ENOENT)
+			dev_info(&ndev->dev, "No hpd-gpio in DT\n");
+		else
 			dev_warn(&ndev->dev, "invalid hpd-gpio %d\n",
 					hotplug_gpio);
 

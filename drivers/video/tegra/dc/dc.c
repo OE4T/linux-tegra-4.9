@@ -5859,6 +5859,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	int partition_id_disa, partition_id_disb;
 #endif
 	struct resource of_fb_res;
+	int hotplug_init_status = -1;
 
 #ifdef CONFIG_ARCH_TEGRA_210_SOC
 	if (tegra_platform_is_linsim()) {
@@ -6264,7 +6265,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 
 	if (dc->out_ops && dc->out_ops->hotplug_init)
-		dc->out_ops->hotplug_init(dc);
+		hotplug_init_status = dc->out_ops->hotplug_init(dc);
 
 	if (dc->out->type == TEGRA_DC_OUT_DP) {
 		ret = tegra_dc_set_fbcon_boot_mode(dc);
@@ -6291,7 +6292,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 
 	if (dc->out_ops) {
-		if (dc->out_ops->detect)
+		if (dc->out_ops->detect && hotplug_init_status >= 0)
 			dc->connected = dc->out_ops->detect(dc);
 		else
 			dc->connected = true;

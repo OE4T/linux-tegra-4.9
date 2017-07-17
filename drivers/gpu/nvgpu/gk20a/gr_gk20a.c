@@ -680,9 +680,20 @@ int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 					struct channel_ctx_gk20a *ch_ctx)
 {
+	struct ctx_header_desc *ctx = &ch_ctx->ctx_header;
+	struct nvgpu_mem *ctxheader = &ctx->mem;
+
 	nvgpu_mem_end(g, &ch_ctx->patch_ctx.mem);
+
 	/* Write context count to context image if it is mapped */
-	if (ch_ctx->gr_ctx->mem.cpu_va) {
+	if (ctxheader->gpu_va) {
+
+		if (ctxheader->cpu_va)
+			nvgpu_mem_wr(g, ctxheader,
+			     ctxsw_prog_main_image_patch_count_o(),
+			     ch_ctx->patch_ctx.data_count);
+
+	} else if (ch_ctx->gr_ctx->mem.cpu_va) {
 		nvgpu_mem_wr(g, &ch_ctx->gr_ctx->mem,
 			     ctxsw_prog_main_image_patch_count_o(),
 			     ch_ctx->patch_ctx.data_count);

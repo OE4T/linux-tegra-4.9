@@ -372,8 +372,18 @@ static const struct ehci_driver_overrides pci_overrides __initconst = {
 
 static int ehci_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
+	int ret;
+
 	if (is_bypassed_id(pdev))
 		return -ENODEV;
+
+	if ((pdev->vendor == PCI_VENDOR_ID_NETMOS) &&
+	    (pdev->device == PCI_DEVICE_ID_NETMOS_9990)) {
+		ret = pci_enable_msi(pdev);
+		if (ret)
+			pr_err("%s: enable msi failed=%d\n", __func__, ret);
+	}
+
 	return usb_hcd_pci_probe(pdev, id);
 }
 

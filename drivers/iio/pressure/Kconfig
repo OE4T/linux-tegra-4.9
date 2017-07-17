@@ -136,16 +136,6 @@ config MS5637
 	  This driver can also be built as a module. If so, the module will
 	  be called ms5637.
 
-config NVI_BMPX80
-	tristate "Bosch Digital pressure sensor"
-	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO
-	help
-	  Say yes here to build support for Bosch pressure sensor
-	  that can be connected via Invensense MPU.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called nvi-bmpX80.
-
 config IIO_ST_PRESS
 	tristate "STMicroelectronics pressure sensor Driver"
 	depends on (I2C || SPI_MASTER) && SYSFS
@@ -216,5 +206,7 @@ config ZPA2326_I2C
 config ZPA2326_SPI
 	tristate
 	select REGMAP_SPI
+
+trysource "../nvidia/drivers/iio/pressure/Kconfig.nvidia"
 
 endmenu

@@ -132,7 +132,7 @@ static int gr_gp10b_handle_sm_exception(struct gk20a *g,
 	u32 lrf_single_count_delta, lrf_double_count_delta;
 	u32 shm_ecc_status;
 
-	gr_gk20a_handle_sm_exception(g,
+	ret = gr_gk20a_handle_sm_exception(g,
 		gpc, tpc, sm, post_event, fault_ch, hww_global_esr);
 
 	/* Check for LRF ECC errors. */

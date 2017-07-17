@@ -10,11 +10,6 @@ obj-$(CONFIG_BMC150_MAGN_I2C) += bmc150_magn_i2c.o
 obj-$(CONFIG_BMC150_MAGN_SPI) += bmc150_magn_spi.o
 
 obj-$(CONFIG_MAG3110)	+= mag3110.o
-obj-$(CONFIG_NVI_AK89XX) += nvi-ak89xx.o
-ifdef CONFIG_NVI_MPU
-	CFLAGS_nvi_ak89xx.o += -DAKM_NVI_MPU_SUPPORT=1
-endif
-nvi-ak89xx-objs += nvi_ak89xx.o
 obj-$(CONFIG_HID_SENSOR_MAGNETOMETER_3D) += hid-sensor-magn-3d.o
 obj-$(CONFIG_MMC35240)	+= mmc35240.o
 
@@ -28,3 +23,7 @@ obj-$(CONFIG_IIO_ST_MAGN_SPI_3AXIS) += st_magn_spi.o
 obj-$(CONFIG_SENSORS_HMC5843)		+= hmc5843_core.o
 obj-$(CONFIG_SENSORS_HMC5843_I2C)	+= hmc5843_i2c.o
 obj-$(CONFIG_SENSORS_HMC5843_SPI)	+= hmc5843_spi.o
+
+ifneq ($(wildcard $(srctree)/../nvidia/drivers/iio/magnetometer/Makefile.*),)
+obj-y += ../../../../nvidia/drivers/iio/magnetometer/
+endif

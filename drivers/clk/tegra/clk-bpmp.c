@@ -198,13 +198,17 @@ static int clk_bpmp_set_rate(struct clk_hw *hw, unsigned long rate,
 	return bpmp_send_clk_message(req, sizeof(req_d), reply, sizeof(reply));
 }
 
-static long clk_bpmp_round_rate(struct clk_hw *hw, unsigned long rate,
-				unsigned long *parent_rate)
+static int clk_bpmp_determine_rate(struct clk_hw *hw,
+				    struct clk_rate_request *rate_req)
 {
 	struct tegra_clk_bpmp *bpmp_clk = to_clk_bpmp(hw);
 	int err;
+	s64 reply_val;
+	unsigned long rate;
 	u8 req_d[16], reply[8];
 	struct bpmp_clk_req *req = (struct bpmp_clk_req *)&req_d[0];
+
+	rate = min(max(rate_req->rate, rate_req->min_rate), rate_req->max_rate);
 
 	req->cmd = BPMP_CLK_CMD(MRQ_CLK_ROUND_RATE, bpmp_clk->clk_num);
 	if (rate > S64_MAX)
@@ -216,7 +220,14 @@ static long clk_bpmp_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (err < 0)
 		return err;
 
-	return ((s64 *)reply)[0];
+	reply_val = ((s64 *)reply)[0];
+
+	if (reply_val < 0)
+		return (int)reply_val;
+
+	rate_req->rate = (unsigned long)reply_val;
+
+	return 0;
 }
 
 static unsigned long clk_bpmp_get_rate_clk_num(int clk_num)
@@ -295,7 +306,7 @@ const struct clk_ops tegra_clk_bpmp_mux_rate_ops = {
 	.get_parent = clk_bpmp_get_parent,
 	.set_parent = clk_bpmp_set_parent,
 	.set_rate = clk_bpmp_set_rate,
-	.round_rate = clk_bpmp_round_rate,
+	.determine_rate = clk_bpmp_determine_rate,
 	.recalc_rate = clk_bpmp_get_rate,
 };
 
@@ -304,7 +315,7 @@ const struct clk_ops tegra_clk_bpmp_rate_ops = {
 	.prepare = clk_bpmp_enable,
 	.unprepare = clk_bpmp_disable,
 	.set_rate = clk_bpmp_set_rate,
-	.round_rate = clk_bpmp_round_rate,
+	.determine_rate = clk_bpmp_determine_rate,
 	.recalc_rate = clk_bpmp_get_rate,
 };
 

@@ -823,18 +823,6 @@ config EQOS_APE_HWDEP
 	calculated frequency offset, the pll_a clock (parent of APE clock)
 	frequency is adjusted.
 
-config SAF775x_HWDEP
-	tristate "SAF775x HWDEP Driver"
-	default n
-	depends on I2C || SPI
-
-config SAF36XX_HWDEP
-	tristate "SAF36XX HWDEP Driver"
-	default n
-	depends on SPI && SPI_MASTER
-	help
-	Provides interfaces for flashing SAF36XX
-
 config THERM_EST
 	bool "Thermal estimator driver"
 	default n

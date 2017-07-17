@@ -8,6 +8,6 @@ obj-$(CONFIG_LIDAR_LITE_V2)	+= pulsedlight-lidar-lite-v2.o
 obj-$(CONFIG_SX9500)		+= sx9500.o
 GCOV_PROFILE := y
 
-ccflags-y += -Werror
-obj-$(CONFIG_NVS_IQS2X3)	+= nvs_iqs2x3.o
-
+ifneq ($(wildcard $(srctree)/../nvidia/drivers/iio/proximity/Makefile.*),)
+obj-y += ../../../../nvidia/drivers/iio/proximity/
+endif

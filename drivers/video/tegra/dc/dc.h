@@ -1256,7 +1256,7 @@ int tegra_dc_crc_process(struct tegra_dc *dc);
 
 /* APIs related to ring buffer */
 struct tegra_dc_ring_buf;
-int tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf, void *src,
+void tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf, void *src,
 			  char **in_buf_ptr);
 
 /* APIs related to CRC IOCTLs */
@@ -1279,10 +1279,9 @@ static inline int tegra_dc_crc_process(struct tegra_dc *dc)
 }
 
 struct tegra_dc_ring_buf;
-static inline int tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf,
+static inline void tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf,
 					void *src, char **in_buf_ptr)
 {
-	return 0;
 }
 
 static inline long tegra_dc_crc_enable(struct tegra_dc *dc,

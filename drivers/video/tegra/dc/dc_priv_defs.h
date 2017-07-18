@@ -270,7 +270,7 @@ enum tegra_dc_flip_state {
 
 /*
  * tegra_dc_flip_buf_ele - Single element of the circular buffer holding flips
- * @flip_id  - The unique ID of the flip, assigned by FLIP4 IOCTL
+ * @id  - The unique ID of the flip, assigned by FLIP4 IOCTL
  * @state    - The stage the flip is in, during its lifecycle
  *             TEGRA_DC_FLIP_STATE_QUEUED - The FLIP4 IOCTL has queued the
  *                                          flip, but is yet to be worked upon
@@ -283,7 +283,7 @@ enum tegra_dc_flip_state {
  *             TEGRA_DC_FLIP_STATE_SKIPPED - The flip will not be processed
  */
 struct tegra_dc_flip_buf_ele {
-	u16 id;
+	u64 id;
 	enum tegra_dc_flip_state state;
 };
 
@@ -303,7 +303,7 @@ struct tegra_dc_flip_buf_ele {
  */
 struct tegra_dc_crc_buf_ele {
 	struct {
-		u16 id;
+		u64 id;
 		bool valid;
 	} matching_flips[DC_N_WINDOWS];
 	struct {
@@ -570,10 +570,7 @@ struct tegra_dc {
 	unsigned long act_req_mask;
 	struct tegra_dc_clients_info clients_info;
 
-	/* A monotonically increasing counter to uniquely ID every flip
-	 * The value denotes the ID next flip will be assigned
-	 */
-	u16 flip_id;
+	u64 flips_queued;
 
 	struct tegra_dc_ring_buf flip_buf; /* Buffer to save flip requests */
 	struct tegra_dc_ring_buf crc_buf; /* Buffer to save HW generated CRCs */

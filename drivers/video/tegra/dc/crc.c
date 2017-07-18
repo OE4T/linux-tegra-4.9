@@ -53,14 +53,14 @@ static void _tegra_dc_ring_buf_print(struct tegra_dc_ring_buf *buf, u16 i)
 	case TEGRA_DC_RING_BUF_FLIP:
 		flip = (struct tegra_dc_flip_buf_ele *)
 			(buf->data + i * sizeof(*flip));
-		pr_info("%5d-%s ", flip->id, flip_state_literals[flip->state]);
+		pr_info("%llu-%s ", flip->id, flip_state_literals[flip->state]);
 		break;
 	case TEGRA_DC_RING_BUF_CRC:
 		crc = (struct tegra_dc_crc_buf_ele *)
 			(buf->data + i * sizeof(*crc));
 
 		for (iter = 0; iter < DC_N_WINDOWS; iter++)
-			pr_info("%4d-%1d ", crc->matching_flips[iter].id,
+			pr_info("%llu-%1d ", crc->matching_flips[iter].id,
 				crc->matching_flips[iter].valid);
 		pr_info("%4d-%1d ", crc->rg.crc, crc->rg.valid);
 		pr_info("%4d-%1d ", crc->comp.crc, crc->comp.valid);
@@ -140,7 +140,7 @@ static int tegra_dc_ring_buf_remove(struct tegra_dc_ring_buf *buf)
  * if @in_buf_ptr is not NULL, the caller receives in buffer pointer to the
  * element
  */
-int tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf, void *src,
+void tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf, void *src,
 			  char **in_buf_ptr)
 {
 	size_t bytes = _get_bytes_per_ele(buf);
@@ -156,8 +156,6 @@ int tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf, void *src,
 
 	buf->head = (buf->head + 1) % buf->capacity;
 	buf->size++;
-
-	return 0;
 }
 
 /* Called when enabling the DC head.
@@ -186,8 +184,6 @@ void tegra_dc_crc_deinit(struct tegra_dc *dc)
 	dc->crc_buf.size = 0;
 	dc->crc_buf.head = 0;
 	dc->crc_buf.tail = 0;
-
-	dc->flip_id = 0;
 
 	atomic_set(&dc->crc_ref_cnt.global, 0);
 	atomic_set(&dc->crc_ref_cnt.rg_comp_sor, 0);
@@ -295,9 +291,9 @@ long tegra_dc_crc_disable(struct tegra_dc *dc,
 /* Get the Least Recently Matched (lrm) flip ID.
  * Our best estimate is to find this flip ID at the tail of the buffer.
  */
-static int _find_lrm(struct tegra_dc *dc, u16 *flip_id)
+static int _find_lrm(struct tegra_dc *dc, u64 *flip_id)
 {
-	u16 lrm = 0x00; /* Default value when no flips are matched */
+	u64 lrm = 0x0; /* Default value when no flips are matched */
 	int ret = 0;
 	struct tegra_dc_crc_buf_ele *crc_ele;
 
@@ -317,9 +313,10 @@ done:
 /* Get the Most Recently Matched (mrm) flip ID.
  * Our best estimate is to find this flip ID at the head of the buffer.
  */
-static int _find_mrm(struct tegra_dc *dc, u16 *flip_id)
+static int _find_mrm(struct tegra_dc *dc, u64 *flip_id)
 {
-	u16 mrm = 0xFFFF; /* Default value when no flips are matched */
+	/* Default value when no flips are matched */
+	u64 mrm = 0xFFFFFFFFFFFFFFFF;
 	u16 peek_idx = dc->crc_buf.head;
 	int ret = 0, iter;
 	struct tegra_dc_crc_buf_ele *crc_ele;
@@ -340,29 +337,30 @@ done:
 	return ret;
 }
 
-static bool _is_flip_out_of_bounds(struct tegra_dc *dc, u16 flip_id)
+static bool _is_flip_out_of_bounds(struct tegra_dc *dc, u64 flip_id)
 {
-	u16 lrm, mrm; /* Least and most recently matched flips */
+	u64 lrm, mrm; /* Least and most recently matched flips */
 
 	_find_lrm(dc, &lrm);
 	_find_mrm(dc, &mrm);
 
 	if (mrm < lrm) {
 		dev_err(&dc->ndev->dev, "flip IDs have overflowed "
-					"lrm = %d, mrm = %d\n", lrm, mrm);
+					"lrm = %llu, mrm = %llu\n", lrm, mrm);
 		return true;
 	}
 
 	if (flip_id < lrm ||
 	    flip_id > mrm + TEGRA_DC_CRC_GET_MAX_FLIP_LOOKAHEAD) {
-		dev_err(&dc->ndev->dev, "flip_id %d out of bounds\n", flip_id);
+		dev_err(&dc->ndev->dev, "flip_id %llu out of bounds\n",
+				flip_id);
 		return true;
 	}
 
 	return false;
 }
 
-static int _scan_buf_till_tail(struct tegra_dc *dc, u16 peek_idx, u16 flip_id,
+static int _scan_buf_till_tail(struct tegra_dc *dc, u16 peek_idx, u64 flip_id,
 			       struct tegra_dc_crc_buf_ele *crc_ele)
 {
 	u16 nr_checked = 0;
@@ -390,7 +388,7 @@ static int _scan_buf_till_tail(struct tegra_dc *dc, u16 peek_idx, u16 flip_id,
 	return -EAGAIN;
 }
 
-static int _find_crc_in_buf(struct tegra_dc *dc, u16 flip_id,
+static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 			    struct tegra_dc_crc_buf_ele *crc_ele)
 {
 	int ret = -EAGAIN;
@@ -528,7 +526,7 @@ int tegra_dc_crc_process(struct tegra_dc *dc)
 	/* Enqueue CRC element in the CRC ring buffer */
 	if (matched) {
 		mutex_lock(&dc->crc_buf.lock);
-		ret = tegra_dc_ring_buf_add(&dc->crc_buf, &crc_ele, NULL);
+		tegra_dc_ring_buf_add(&dc->crc_buf, &crc_ele, NULL);
 		mutex_unlock(&dc->crc_buf.lock);
 	}
 

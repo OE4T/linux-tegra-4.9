@@ -426,6 +426,7 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_CSC_V2,
 	TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2,
 	TEGRA_DC_EXT_FLIP_USER_DATA_OUTPUT_CSC,
+	TEGRA_DC_EXT_FLIP_USER_DATA_GET_FLIP_INFO,
 };
 
 /*
@@ -570,6 +571,17 @@ struct tegra_dc_ext_udata_output_csc {
 	__u8 reserved[21];
 } __attribute__((__packed__));
 
+/*
+ * Variable "flip_id" is a per-head unique value that is returned from kernel to
+ * user-space. User-space can then pass this flip_id to TEGRA_DC_EXT_CRC_GET
+ * ioctl to retrieve CRC for that particular flip.
+ * Variable "reserved" is padding so that the total struct size is 26 bytes.
+ */
+struct tegra_dc_ext_flip_info {
+	__u64 flip_id;
+	__u16 reserved[9]; /* unused - must be 0 */
+} __attribute__((__packed__));
+
 /* size of the this struct is 32 bytes */
 struct tegra_dc_ext_flip_user_data {
 	__u8 data_type;
@@ -586,6 +598,7 @@ struct tegra_dc_ext_flip_user_data {
 		struct tegra_dc_ext_udata_csc_v2 csc_v2;
 		struct tegra_dc_ext_udata_cmu_v2 cmu_v2;
 		struct tegra_dc_ext_udata_output_csc output_csc;
+		struct tegra_dc_ext_flip_info flip_info;
 	};
 } __attribute__((__packed__));
 
@@ -598,7 +611,7 @@ struct tegra_dc_ext_flip_4 {
 	__u64 __user win;
 	__u8 win_num;
 	__u8 flags;
-	__u16 flip_id; /* kernel->user arg, to uniquely identify a flip */
+	__u16 reserved;
 	__s32 post_syncpt_fd;
 	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
 	__u32 nr_elements; /* number of data entities pointed to by data */
@@ -1426,8 +1439,9 @@ struct tegra_dc_ext_crc_conf {
  * @conf      - Pointer to an array of configuration data structures
  *              tegra_dc_ext_crc_conf
  * @flip_id   - ID the flip for which CRC GET request is issued.
- *              Set to 0xFFFF to retrieve the CRC of the most recent frame
- *              The argument is only valid for GET IOCTL, and a don't care for
+ *              Set to 0xFFFFFFFFFFFFFFFF to retrieve the CRC of the most
+ *              recent frame.
+ *              flip_id is only valid for GET IOCTL, and a don't care for
  *              the rest
  * @reserved  - Easier way to extend the data structure
  */
@@ -1436,8 +1450,8 @@ struct tegra_dc_ext_crc_arg {
 	enum tegra_dc_ext_crc_arg_version version;
 	__u8 num_conf;
 	__u64 __user conf;
-	__u16 flip_id;
-	__u8 reserved[32];
+	__u64 flip_id;
+	__u8 reserved[32]; /* unused - must be 0 */
 } __attribute__((__packed__));
 
 #define TEGRA_DC_EXT_CONTROL_GET_NUM_OUTPUTS \

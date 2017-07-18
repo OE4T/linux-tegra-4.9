@@ -468,6 +468,12 @@ static inline bool tegra_dc_is_yuv_semi_planar(int fmt)
 	return false;
 }
 
+static inline bool tegra_dc_is_yuv420_8bpc(int yuv_flag)
+{
+	return ((yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y24)) ||
+		(yuv_flag & (FB_VMODE_Y420_ONLY | FB_VMODE_Y24)));
+}
+
 static inline u32 tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val)
 {
 	u32 val;

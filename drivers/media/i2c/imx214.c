@@ -366,28 +366,6 @@ power_off_done:
 	return 0;
 }
 
-static int imx214_power_put(struct imx214 *priv)
-{
-	struct camera_common_power_rail *pw = &priv->power;
-	if (unlikely(!pw))
-		return -EFAULT;
-
-	if (likely(pw->avdd))
-		regulator_put(pw->avdd);
-
-	if (likely(pw->iovdd))
-		regulator_put(pw->iovdd);
-
-	if (likely(pw->dvdd))
-		regulator_put(pw->dvdd);
-
-	pw->avdd = NULL;
-	pw->iovdd = NULL;
-	pw->dvdd = NULL;
-
-	return 0;
-}
-
 static int imx214_power_get(struct imx214 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
@@ -1264,7 +1242,6 @@ imx214_remove(struct i2c_client *client)
 	media_entity_cleanup(&priv->subdev->entity);
 #endif
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
-	imx214_power_put(priv);
 	camera_common_remove_debugfs(s_data);
 
 	return 0;

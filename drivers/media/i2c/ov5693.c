@@ -399,15 +399,6 @@ static int ov5693_power_put(struct ov5693 *priv)
 	if (unlikely(!pw))
 		return -EFAULT;
 
-	if (likely(pw->avdd))
-		regulator_put(pw->avdd);
-
-	if (likely(pw->iovdd))
-		regulator_put(pw->iovdd);
-
-	pw->avdd = NULL;
-	pw->iovdd = NULL;
-
 	if (priv->pdata && priv->pdata->use_cam_gpio)
 		cam_gpio_deregister(&priv->i2c_client->dev, pw->pwdn_gpio);
 	else {

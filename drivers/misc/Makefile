@@ -69,7 +69,6 @@ lkdtm-$(CONFIG_LKDTM)		+= lkdtm_heap.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_perms.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_rodata_objcopy.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_usercopy.o
-obj-$(CONFIG_NVS_DFSH)		+= nvs-dfsh/
 
 obj-$(CONFIG_GPS_HWGEOFENCING)  += gps_wake.o
 obj-$(CONFIG_BLUEDROID_PM)      += bluedroid_pm.o

@@ -122,6 +122,8 @@ static void actmon_dev_enable(struct actmon_dev *dev)
 		val |= ACTMON_CMN_DEV_CTRL_ENB;
 		actmon_dev_writel(offs(dev->reg_offs), ACTMON_CMN_DEV_CTRL,
 				val);
+		if (actmon->ops.set_glb_intr)
+			actmon->ops.set_glb_intr(0xFF, actmon->base);
 		actmon_wmb();
 
 		if (dev->actmon_dev_clk_enable)

@@ -149,7 +149,5 @@ void nvdisp_clock_init(struct tegra_dc *dc);
 dma_addr_t __attribute__((weak))
 	nvdisp_t19x_get_addr_flag(struct tegra_dc_win *win);
 
-void tegra_nvdisp_crc_region_init(void);
-
 #endif
 

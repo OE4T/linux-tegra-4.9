@@ -34,7 +34,6 @@
 /* XXX ew */
 #include "../dc.h"
 #include "../dc_priv.h"
-#include "../dc_priv_defs.h"
 #include "../dc_config.h"
 #include <video/tegra_dc_ext.h>
 /* XXX ew 3 */
@@ -135,7 +134,6 @@ struct tegra_dc_ext_flip_data {
 	bool output_range_update_needed;
 	u32 output_colorspace;
 	u8 limited_range_enable;
-	struct tegra_dc_flip_buf_ele *flip_buf_ele;
 };
 
 struct tegra_dc_ext_scanline_data {
@@ -950,10 +948,6 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 	bool lock_flip = false;
 	bool show_background =
 		tegra_dc_ext_should_show_background(data, win_num);
-	struct tegra_dc_flip_buf_ele *flip_buf_ele = data->flip_buf_ele;
-
-	if (flip_buf_ele)
-		flip_buf_ele->state = TEGRA_DC_FLIP_STATE_DEQUEUED;
 
 	blank_win = kzalloc(sizeof(*blank_win), GFP_KERNEL);
 	if (!blank_win)
@@ -1181,9 +1175,6 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			wait_for_vblank, lock_flip);
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);
-
-		if (flip_buf_ele)
-			flip_buf_ele->state = TEGRA_DC_FLIP_STATE_FLIPPED;
 
 		if (trace_scanout_syncpt_upd_enabled())
 			tegra_dc_flip_trace(data, trace_scanout_syncpt_upd);
@@ -1762,7 +1753,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 			     __u32 *syncpt_id, __u32 *syncpt_val,
 			     int *syncpt_fd, __u16 *dirty_rect, u8 flip_flags,
 			     struct tegra_dc_ext_flip_user_data *flip_user_data,
-			     int nr_user_data, u16 flip_id)
+			     int nr_user_data)
 {
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc_ext_flip_data *data;
@@ -1770,8 +1761,6 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	__u32 post_sync_val = 0, post_sync_id = NVSYNCPT_INVALID;
 	int i, ret = 0;
 	bool has_timestamp = false;
-	struct tegra_dc_flip_buf_ele flip_buf_ele;
-	struct tegra_dc_flip_buf_ele *in_q_ptr = NULL;
 
 	/* If display has been disconnected return with error. */
 	if (!ext->dc->connected)
@@ -1784,27 +1773,9 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	if (!data)
 		return -ENOMEM;
 
-	/* Insert the flip in the flip queue if CRC is enabled */
-	if (atomic_read(&ext->dc->crc_ref_cnt.global)) {
-		flip_buf_ele.id = flip_id;
-		flip_buf_ele.state = TEGRA_DC_FLIP_STATE_QUEUED;
-
-		mutex_lock(&ext->dc->flip_buf.lock);
-		ret = tegra_dc_ring_buf_add(&ext->dc->flip_buf, &flip_buf_ele,
-					    (char **)&in_q_ptr);
-		mutex_unlock(&ext->dc->flip_buf.lock);
-		if (ret) {
-			kfree(data);
-			return ret;
-		}
-
-		data->flip_buf_ele = in_q_ptr;
-	}
-
 	kthread_init_work(&data->work, &tegra_dc_ext_flip_worker);
 	data->ext = ext;
 	data->act_window_num = win_num;
-
 	if (dirty_rect) {
 		memcpy(data->dirty_rect, dirty_rect, sizeof(data->dirty_rect));
 		data->dirty_rect_valid = true;
@@ -2682,7 +2653,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		ret = tegra_dc_ext_flip(user, win,
 			TEGRA_DC_EXT_FLIP_N_WINDOWS,
 			&args.post_syncpt_id, &args.post_syncpt_val, NULL,
-			NULL, 0, NULL, 0, 0);
+			NULL, 0, NULL, 0);
 
 		for (i = 0; i < win_num; i++)
 			memcpy(&args.win[i], &win[i], usr_win_size);
@@ -2723,7 +2694,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		ret = tegra_dc_ext_flip(user, win, win_num,
 			&args.post_syncpt_id, &args.post_syncpt_val, NULL,
-			args.dirty_rect, 0, NULL, 0, 0);
+			args.dirty_rect, 0, NULL, 0);
 
 		if (dev_cpy_to_usr_compat((void *)(uintptr_t)args.win,
 				usr_win_size, win, win_num)) {
@@ -2767,7 +2738,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		ret = tegra_dc_ext_flip(user, win, win_num,
 			&args.post_syncpt_id, &args.post_syncpt_val, NULL,
-			args.dirty_rect, 0, NULL, 0, 0);
+			args.dirty_rect, 0, NULL, 0);
 
 		if (dev_cpy_to_usr((void *)args.win, usr_win_size,
 					win, win_num)) {
@@ -2824,7 +2795,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		ret = tegra_dc_ext_flip(user, win, win_num,
 			NULL, NULL, &args.post_syncpt_fd, args.dirty_rect,
-			args.flags, NULL, 0, 0);
+			args.flags, NULL, 0);
 
 		if (dev_cpy_to_usr((void *)args.win, usr_win_size,
 					win, win_num)) {
@@ -2914,21 +2885,9 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		if (syncpt_idx == -1)
 			syncpt_fd = &args.post_syncpt_fd;
 
-		if (atomic_read(&user->ext->dc->crc_ref_cnt.global)) {
-			mutex_lock(&user->ext->dc->lock);
-
-			if (user->ext->dc->flip_id == 0xFFFF)
-				user->ext->dc->flip_id = 0;
-			args.flip_id = user->ext->dc->flip_id++;
-
-			mutex_unlock(&user->ext->dc->lock);
-		} else {
-			args.flip_id = 0xFFFF;
-		}
-
 		ret = tegra_dc_ext_flip(user, win, win_num,
 			syncpt_id, syncpt_val, syncpt_fd, args.dirty_rect,
-			args.flags, flip_user_data, nr_user_data, args.flip_id);
+			args.flags, flip_user_data, nr_user_data);
 
 		/*
 		 * If the client requested post syncpt values via user data,
@@ -3593,8 +3552,6 @@ free_and_ret:
 		if (ret)
 			return ret;
 
-		user_conf = (struct tegra_dc_ext_crc_conf *)args.conf;
-
 		ret = tegra_dc_copy_crc_confs_from_user(&args);
 		if (ret)
 			return ret;
@@ -3605,6 +3562,8 @@ free_and_ret:
 			return ret;
 		}
 
+		user_conf = (struct tegra_dc_ext_crc_conf *)
+				((struct tegra_dc_ext_crc_arg *)user_arg)->conf;
 		sz = args.num_conf * sizeof(struct tegra_dc_ext_crc_conf);
 
 		if (copy_to_user(user_conf, (void *)args.conf, sz))

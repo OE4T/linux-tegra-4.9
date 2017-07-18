@@ -21,7 +21,6 @@
 #include <linux/fb.h>
 #include <linux/platform_device.h>
 #include <linux/kernel.h>
-#include <linux/atomic.h>
 
 #include "dc.h"
 #include "dc_reg.h"
@@ -144,9 +143,6 @@ static ssize_t crc_checksum_latched_show(struct device *device,
 
 	u32 crc;
 
-	if (atomic_read(&dc->crc_ref_cnt.global))
-		return -EBUSY;
-
 	if (!dc->enabled) {
 		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
 		return -EFAULT;
@@ -172,9 +168,6 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
 		return -EFAULT;
 	}
-
-	if (atomic_read(&dc->crc_ref_cnt.global))
-		return -EBUSY;
 
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;

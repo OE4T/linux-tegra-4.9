@@ -4400,9 +4400,6 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 	}
 
 	if (status & FRAME_END_INT) {
-		if (atomic_read(&dc->crc_ref_cnt.global))
-			tegra_dc_crc_process(dc);
-
 		/* Mark the frame_end as complete. */
 		dc->crc_pending = false;
 		if (!completion_done(&dc->frame_end_complete))
@@ -4453,9 +4450,6 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 			} else
 				tegra_dc_vrr_extend_vfp(dc);
 		}
-
-		if (atomic_read(&dc->crc_ref_cnt.global))
-			tegra_dc_crc_process(dc);
 
 		/* Mark the frame_end as complete. */
 		if (!completion_done(&dc->frame_end_complete))
@@ -5282,8 +5276,6 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 	pm_runtime_get_sync(&dc->ndev->dev);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	tegra_dc_crc_reset(dc);
-
 	if (tegra_nvdisp_head_enable(dc)) {
 #else
 	if (!_tegra_dc_controller_enable(dc)) {
@@ -5541,8 +5533,6 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 	 * causes CMU to be restored in tegra_dc_init(). */
 	dc->cmu_dirty = true;
 #endif
-	tegra_dc_crc_deinit(dc);
-
 	tegra_dc_get(dc);
 	_tegra_dc_controller_disable(dc);
 	tegra_dc_put(dc);
@@ -6398,9 +6388,6 @@ static int tegra_dc_remove(struct platform_device *ndev)
 		tegra_dc_ext_disable(dc->ext);
 		tegra_dc_ext_unregister(dc->ext);
 	}
-
-	kfree(dc->flip_buf.data);
-	kfree(dc->crc_buf.data);
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
 		mutex_lock(&dc->one_shot_lock);

@@ -33,3 +33,7 @@ obj-y += pressure/
 obj-y += proximity/
 obj-y += temperature/
 obj-y += trigger/
+
+ifneq ($(wildcard $(srctree)/../nvidia/drivers/iio/generic/Makefile.*),)
+obj-y += ../../../nvidia/drivers/iio/generic/
+endif

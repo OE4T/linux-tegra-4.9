@@ -679,6 +679,20 @@
 		nvidia,initial_budget = <40000>;
 	};
 
+	sysedp_reactive_capping@1 {
+		compatible = "nvidia,tegra124-sysedp_reactive_capping";
+		nvidia,max_capping_mw = <15000>;
+		nvidia,step_alarm_mw = <1000>;
+		nvidia,step_relax_mw = <500>;
+		nvidia,relax_ms = <250>;
+		nvidia,threshold_warning = "WARNING - SYSTEM Voltage Droop detected, please refer to the Jetson Power management application note";
+		interrupt-parent = <&soctherm>;
+		interrupts = <1 0x2002>;
+		sysedpc {
+			nvidia,name = "voltmon_oc1";
+		};
+	};
+
 	sysedp_reactive_capping@3 {
 		compatible = "nvidia,tegra124-sysedp_reactive_capping";
 		nvidia,max_capping_mw = <15000>;

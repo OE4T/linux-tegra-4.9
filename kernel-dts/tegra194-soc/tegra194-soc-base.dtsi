@@ -70,6 +70,15 @@
 		memory-region = <&generic_reserved &gos_reserved>;
 	};
 
+	tegra-cache {
+		compatible = "nvidia,t19x-cache";
+		l3-gpu-cpu-ways = <16>;
+		l3-gpu-only-ways = <8>;
+		l3-total-ways = <16>;
+		l3-size = /bits/ 64 <0x0000000000100000>; /* 1MB */
+		status = "disabled";
+	};
+
 	tegra-cvnas {
 		compatible = "nvidia,tegra-cvnas";
 		reg = <0x0 0x14000000 0x0 0x10000>, /* CV0_REG0_BASE */

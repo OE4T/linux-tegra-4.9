@@ -1,7 +1,7 @@
 /*
  * hpd.c: hotplug detection functions.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -211,8 +211,10 @@ static void edid_check_state(struct tegra_hpd_data *data)
 	}
 
 	if (data->ops->edid_read_prepare)
-		data->ops->edid_read_prepare(data->drv_data);
-
+		if (!data->ops->edid_read_prepare(data->drv_data)) {
+			pr_err("hpd: edid read prepare failed");
+			goto end_disabled;
+		}
 	if (tegra_edid_get_monspecs(data->edid, &data->mon_spec)) {
 		/*
 		 * Failed to read EDID. If we still have retry attempts left,

@@ -10,3 +10,5 @@ config MODS
 	to compile it as a module.
 
 	If unsure, say N here.
+
+trysource "../nvidia/drivers/misc/nvs-dfsh/Kconfig.nvidia"

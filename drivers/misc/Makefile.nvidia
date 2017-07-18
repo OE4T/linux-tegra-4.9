@@ -1,1 +1,3 @@
 obj-y += mods/
+
+obj-$(CONFIG_NVS_DFSH) += nvs-dfsh/

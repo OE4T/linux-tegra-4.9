@@ -1075,14 +1075,17 @@ static void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
 	struct nvgpu_mem *mem;
 	struct mmu_fault_info *mmfault;
 	u32 invalidate_replay_val = 0;
-	u64 prev_fault_addr = 0;
-	u64 next_fault_addr = 0;
+	u64 prev_fault_addr =  0ULL;
+	u64 next_fault_addr =  0ULL;
 
 	if (gv11b_fb_is_fault_buffer_empty(g, index, &get_indx)) {
 		nvgpu_log(g, gpu_dbg_intr,
 			"SPURIOUS mmu fault: reg index:%d", index);
 		return;
 	}
+	nvgpu_info(g, "%s MMU FAULT" ,
+			index == REPLAY_REG_INDEX ? "REPLAY" : "NON-REPLAY");
+
 	nvgpu_log(g, gpu_dbg_intr, "get ptr = %d", get_indx);
 
 	mem = &g->mm.hw_fault_buf[index];
@@ -1119,10 +1122,16 @@ static void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
 		rd32_val = nvgpu_mem_rd32(g, mem,
 			 offset + gmmu_fault_buf_entry_valid_w());
 
-		if (index == REPLAY_REG_INDEX) {
+		if (index == REPLAY_REG_INDEX && mmfault->fault_addr != 0ULL) {
+			/* fault_addr "0" is not supposed to be fixed ever.
+			 * For the first time when prev = 0, next = 0 and
+			 * fault addr is also 0 then handle_mmu_fault_common will
+			 * not be called. Fix by checking fault_addr not equal to 0
+			 */
 			prev_fault_addr = next_fault_addr;
 			next_fault_addr = mmfault->fault_addr;
 			if (prev_fault_addr == next_fault_addr) {
+				nvgpu_log(g, gpu_dbg_intr, "pte is fixed");
 				if (mmfault->refch)
 					gk20a_channel_put(mmfault->refch);
 				/* pte already fixed for this addr */

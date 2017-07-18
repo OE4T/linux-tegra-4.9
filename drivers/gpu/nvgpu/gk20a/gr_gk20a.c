@@ -6703,9 +6703,13 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 
 		gk20a_dbg_info(" gpc = %d tpc = %d",
 				gpc_num, tpc_num);
+	} else if ((g->ops.gr.is_etpc_addr) &&
+				g->ops.gr.is_etpc_addr(g, addr)) {
+			g->ops.gr.get_egpc_etpc_num(g, addr, &gpc_num, &tpc_num);
+			gpc_base = g->ops.gr.get_egpc_base(g);
 	} else {
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
-				"extended region has tpc reg only");
+				"does not exist in extended region");
 		return -EINVAL;
 	}
 

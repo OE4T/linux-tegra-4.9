@@ -383,7 +383,7 @@ static void smmu_setup_regs(struct smmu_device *smmu)
 	val = SMMU_PTC_CONFIG_RESET_VAL;
 	val |= SMMU_PTC_REQ_LIMIT;
 
-	if (config_enabled(CONFIG_TEGRA_IOMMU_SMMU_NOPTC))
+	if (IS_ENABLED(CONFIG_TEGRA_IOMMU_SMMU_NOPTC))
 		val &= ~SMMU_PTC_CONFIG_CACHE__ENABLE;
 
 	smmu_write(smmu, val, SMMU_CACHE_CONFIG(_PTC));
@@ -397,7 +397,7 @@ static void smmu_setup_regs(struct smmu_device *smmu)
 	else  /* T210. */
 		val |= (SMMU_TLB_CONFIG_ACTIVE_LINES__VALUE * 3);
 
-	if (config_enabled(CONFIG_TEGRA_IOMMU_SMMU_NOTLB))
+	if (IS_ENABLED(CONFIG_TEGRA_IOMMU_SMMU_NOTLB))
 		val &= ~SMMU_TLB_CONFIG_ACTIVE_LINES__MASK;
 
 	smmu_write(smmu, val, SMMU_CACHE_CONFIG(_TLB));
@@ -986,7 +986,7 @@ static int smmu_iommu_map(struct iommu_domain *domain, unsigned long iova,
 		fn = __smmu_iommu_map_page;
 		break;
 	case SZ_4M:
-		BUG_ON(config_enabled(CONFIG_TEGRA_IOMMU_SMMU_NO4MB));
+		BUG_ON(IS_ENABLED(CONFIG_TEGRA_IOMMU_SMMU_NO4MB));
 		fn = __smmu_iommu_map_largepage;
 		break;
 	default:
@@ -1137,7 +1137,7 @@ static size_t __smmu_iommu_unmap_default(struct smmu_as *as, dma_addr_t iova,
 	} else if (pdir[pdn] & _PDE_NEXT) {
 		return __smmu_iommu_unmap_pages(as, iova, bytes);
 	} else { /* 4MB PDE */
-		BUG_ON(config_enabled(CONFIG_TEGRA_IOMMU_SMMU_NO4MB));
+		BUG_ON(IS_ENABLED(CONFIG_TEGRA_IOMMU_SMMU_NO4MB));
 		BUG_ON(!IS_ALIGNED(iova, SZ_4M));
 
 		if (bytes < SZ_4M) {
@@ -1406,9 +1406,9 @@ static int smmu_iommu_attach_dev(struct iommu_domain *domain,
 		DEFINE_DMA_ATTRS(attrs);
 		size_t size = PAGE_ALIGN(area->size);
 
-		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-		err = dma_map_linear_attrs(dev, area->start, size, 0, &attrs);
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, attrs);
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, attrs);
+		err = dma_map_linear_attrs(dev, area->start, size, 0, attrs);
 		if (err == DMA_ERROR_CODE)
 			dev_err(dev, "Failed IOVA linear map %pad(%zx)\n",
 				&area->start, size);

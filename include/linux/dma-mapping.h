@@ -12,6 +12,12 @@
 #include <linux/bug.h>
 #include <linux/dma-attrs.h>
 
+#ifdef CONFIG_IOMMU_DMA
+#define ENABLE_IOMMU_DMA_OPS 0
+#else
+#define ENABLE_IOMMU_DMA_OPS 0
+#endif
+
 /**
  * List of possible attributes associated with a DMA mapping. The semantics
  * of each attribute should be defined in Documentation/DMA-attributes.txt.

@@ -64,7 +64,6 @@ enum ivc_tasks_dbg_enable {
 struct tegra_aon {
 	struct mbox_controller mbox;
 	struct tegra_hsp_sm_pair *hsp_sm_pair;
-	struct work_struct ch_rx_work;
 	void __iomem *ss_base;
 	void *ipcbuf;
 	dma_addr_t ipcbuf_dma;
@@ -73,7 +72,6 @@ struct tegra_aon {
 	u32 ivc_carveout_size_ss;
 	u32 ivc_dbg_enable_ss;
 	u32 ivc_notify_ss;
-	u32 ivc_chans_notified;
 };
 
 struct tegra_aon_ivc_chan {
@@ -83,8 +81,6 @@ struct tegra_aon_ivc_chan {
 	struct tegra_aon *aon;
 	bool last_tx_done;
 };
-
-static DEFINE_SPINLOCK(ivc_lock);
 
 static void __iomem *tegra_aon_hsp_ss_reg(const struct tegra_aon *aon, u32 ss)
 {
@@ -131,21 +127,13 @@ static void tegra_aon_notify_remote(struct ivc *ivc)
 	tegra_hsp_sm_pair_write(ivc_chan->aon->hsp_sm_pair, SMBOX_IVC_NOTIFY);
 }
 
-static void tegra_aon_rx_worker(struct work_struct *work)
+static void tegra_aon_rx_handler(struct tegra_aon *aon, u32 ivc_chans)
 {
 	struct mbox_chan *mbox_chan;
 	struct ivc *ivc;
 	struct tegra_aon_mbox_msg msg;
-	uint32_t ivc_chans;
 	int i;
-	unsigned long flags;
-	struct tegra_aon *aon = container_of(work,
-					struct tegra_aon, ch_rx_work);
 
-	spin_lock_irqsave(&ivc_lock, flags);
-	ivc_chans = aon->ivc_chans_notified;
-	aon->ivc_chans_notified = 0;
-	spin_unlock_irqrestore(&ivc_lock, flags);
 	ivc_chans &= BIT(aon->mbox.num_chans) - 1;
 	while (ivc_chans) {
 		i = __builtin_ctz(ivc_chans);
@@ -164,7 +152,6 @@ static void tegra_aon_rx_worker(struct work_struct *work)
 static u32 tegra_aon_hsp_sm_full_notify(void *data, u32 value)
 {
 	struct tegra_aon *aon = data;
-	unsigned long flags;
 	u32 ss_val;
 
 	if (value != SMBOX_IVC_NOTIFY) {
@@ -172,12 +159,9 @@ static u32 tegra_aon_hsp_sm_full_notify(void *data, u32 value)
 		return 0;
 	}
 
-	spin_lock_irqsave(&ivc_lock, flags);
 	ss_val = tegra_aon_hsp_ss_status(aon, aon->ivc_notify_ss);
-	aon->ivc_chans_notified |= ss_val;
 	tegra_aon_hsp_ss_clr(aon, aon->ivc_notify_ss, ss_val);
-	spin_unlock_irqrestore(&ivc_lock, flags);
-	schedule_work(&aon->ch_rx_work);
+	tegra_aon_rx_handler(aon, ss_val);
 
 	return 0;
 }
@@ -555,9 +539,6 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		dev_err(dev, "ivc-channels set up failed: %d\n", ret);
 		goto exit;
 	}
-
-	/* Init IVC channels ch_rx_work */
-	INIT_WORK(&aon->ch_rx_work, tegra_aon_rx_worker);
 
 	/* Fetch the shared mailbox pair associated with IVC tx and rx */
 	aon->hsp_sm_pair = of_tegra_hsp_sm_pair_by_name(dn, "ivc-pair",

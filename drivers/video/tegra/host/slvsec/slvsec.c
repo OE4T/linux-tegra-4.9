@@ -35,6 +35,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <soc/tegra/chip-id.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -265,6 +266,13 @@ int slvsec_finalize_poweron(struct platform_device *pdev)
 		host1x_writel(pdev, reg, 0);
 	}
 
+	if (!tegra_platform_is_silicon()) {
+		host1x_writel(pdev, SLVSEC_CORE_HOST1X_INTR_STATUS, 0x1);
+		host1x_writel(pdev, SLVSEC_CORE_STRM0_INTR_STATUS, 0x9);
+		host1x_writel(pdev, SLVSEC_CIL_STRM0_INTR_MASK, 0x1f);
+		host1x_writel(pdev, SLVSEC_CORE_STRM0_INTR_STATUS_CH0, 0xf);
+	}
+
 	return 0;
 }
 
@@ -356,8 +364,10 @@ static int slvsec_probe(struct platform_device *pdev)
 	if (err)
 		dev_info(dev, "failed to get regulator (%d)\n", err);
 
-	slvsec_get_irq(pdev, "slvs-ec", &slvsec->irq, slvsec_isr);
-	slvsec_get_irq(pdev, "syncgen", &slvsec->vi_irq, slvsec_vi_isr);
+	if (tegra_platform_is_silicon()) {
+		slvsec_get_irq(pdev, "slvs-ec", &slvsec->irq, slvsec_isr);
+		slvsec_get_irq(pdev, "syncgen", &slvsec->vi_irq, slvsec_vi_isr);
+	}
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
@@ -374,7 +384,8 @@ static int slvsec_probe(struct platform_device *pdev)
 	slvsec_init_debugfs(slvsec);
 
 	dev_info(dev, "clearing pending interrupts\n");
-	slvsec_isr(slvsec->irq, pdev);
+	if (tegra_platform_is_silicon())
+		slvsec_isr(slvsec->irq, pdev);
 
 	slvsec->mc_slvs	= tegra_slvs_media_controller_init(pdev);
 	if (IS_ERR(slvsec->mc_slvs)) {

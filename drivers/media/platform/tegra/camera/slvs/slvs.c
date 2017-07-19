@@ -17,6 +17,7 @@
 #include <linux/of_graph.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
+#include <soc/tegra/chip-id.h>
 
 #include <media/media-entity.h>
 #include <media/v4l2-async.h>
@@ -145,6 +146,9 @@ static int tegra_slvs_s_power(struct v4l2_subdev *sd, int enable)
 	struct tegra_mc_slvs *slvs = v4l2_get_subdevdata(sd);
 	int err = 0;
 
+	dev_info(&slvs->pdev->dev, "%s(%s)\n", __func__,
+		enable ? "enable" : "disable");
+
 	if (enable) {
 		err = nvhost_module_busy(slvs->pdev);
 		if (err == 0)
@@ -160,10 +164,11 @@ static int tegra_slvs_s_power(struct v4l2_subdev *sd, int enable)
 	return err;
 }
 
-#define SLVS_STREAM0_OFFSET	0x10000
+#define SLVS_STREAM_OFFSET	0x10000
 #define SLVS_STREAM_PAGE_SIZE	0x10000
 #define SLVS_CIL_OFFSET		0x30000
-#define SLVS_CIL_PAGE_SIZE	0x01000
+#define SLVS_CIL_STREAM_OFFSET	0x30800
+#define SLVS_CIL_STREAM_PAGE_SIZE	0x00800
 #define SLVS_CIL_LANE_OFFSET	0x31800
 #define SLVS_CIL_LANE_SIZE	0x00400
 
@@ -179,6 +184,12 @@ static int tegra_slvs_s_power(struct v4l2_subdev *sd, int enable)
 #define SLVS_STRM_INTR_MASK_CH1		0x0040
 #define SLVS_STRM_VI_ERR_MASK_CH0	0x0034
 #define SLVS_STRM_VI_ERR_MASK_CH1	0x0038
+
+#define SLVS_CIL_CTRL			0x00
+#define SLVS_CIL_LANE_SWIZZLE		0x04
+#define SLVS_CIL_UPHY_CTRL0		0x08
+#define SLVS_CIL_UPHY_CTRL1		0x0c
+#define SLVS_CIL_UPHY_CTRL2		0x10
 
 #define SLVS_CIL_STRM_RST_CTRL		0x04
 #define SLVS_CIL_STRM_CTRL		0x08
@@ -218,7 +229,7 @@ static inline void slvs_stream_write(struct tegra_mc_slvs *slvs,
 				u32 id, u32 offset, u32 val)
 {
 	writel(val, slvs->slvs_base +
-		SLVS_STREAM0_OFFSET +
+		SLVS_STREAM_OFFSET +
 		id * SLVS_STREAM_PAGE_SIZE +
 		offset);
 }
@@ -227,17 +238,31 @@ static inline u32 slvs_stream_read(struct tegra_mc_slvs *slvs,
 				u32 id, u32 offset)
 {
 	return readl(slvs->slvs_base +
-		SLVS_STREAM0_OFFSET +
+		SLVS_STREAM_OFFSET +
 		id * SLVS_STREAM_PAGE_SIZE +
 		offset);
+}
+
+static inline void slvs_cil_write(struct tegra_mc_slvs *slvs,
+				u32 offset, u32 val)
+{
+	writel(val, slvs->slvs_base +
+		SLVS_CIL_OFFSET + offset);
+}
+
+static inline u32 slvs_cil_read(struct tegra_mc_slvs *slvs,
+				u32 offset)
+{
+	return readl(slvs->slvs_base +
+		SLVS_CIL_OFFSET + offset);
 }
 
 static inline void slvs_cil_stream_write(struct tegra_mc_slvs *slvs,
 				u32 id, u32 offset, u32 val)
 {
 	writel(val, slvs->slvs_base +
-		SLVS_CIL_OFFSET +
-		id * SLVS_CIL_PAGE_SIZE +
+		SLVS_CIL_STREAM_OFFSET +
+		id * SLVS_CIL_STREAM_PAGE_SIZE +
 		offset);
 }
 
@@ -245,8 +270,8 @@ static inline u32 slvs_cil_stream_read(struct tegra_mc_slvs *slvs,
 				u32 id, u32 offset)
 {
 	return readl(slvs->slvs_base +
-		SLVS_CIL_OFFSET +
-		id * SLVS_CIL_PAGE_SIZE +
+		SLVS_CIL_STREAM_OFFSET +
+		id * SLVS_CIL_STREAM_PAGE_SIZE +
 		offset);
 }
 
@@ -363,19 +388,36 @@ static inline void slvs_syncgen_write(struct tegra_mc_slvs *slvs,
 static inline void slvs_vi_syncgen_start(struct tegra_mc_slvs *slvs,
 		u32 syncgen, const struct slvsec_syncgen_config *cfg)
 {
-	slvs_syncgen_write(slvs, syncgen,
-			VI_FW_SYNCGEN_HCLK_DIV, cfg->hclk_div);
-	slvs_syncgen_write(slvs, syncgen,
-			VI_FW_SYNCGEN_HCLK_DIV_FMT, cfg->hclk_div_fmt);
-	slvs_syncgen_write(slvs, syncgen,
-			VI_FW_SYNCGEN_XHS, cfg->xhs_width);
-	slvs_syncgen_write(slvs, syncgen,
-			VI_FW_SYNCGEN_XVS,
-			cfg->xvs_width | (cfg->xvs_interval << 8));
-	slvs_syncgen_write(slvs, syncgen,
-			VI_FW_SYNCGEN_XVS_DELAY, cfg->xvs_to_xhs_delay);
-	slvs_syncgen_write(slvs, syncgen,
-			VI_FW_SYNCGEN_INT_MASK, 0);
+	if (tegra_platform_is_silicon()) {
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_HCLK_DIV, cfg->hclk_div);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_HCLK_DIV_FMT, cfg->hclk_div_fmt);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_XHS, cfg->xhs_width);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_XVS,
+				cfg->xvs_width | (cfg->xvs_interval << 8));
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_XVS_DELAY, cfg->xvs_to_xhs_delay);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_INT_MASK, 0);
+	} else {
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_HCLK_DIV, 0x2bc);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_HCLK_DIV_FMT, 0);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_XHS, 0xa);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_XVS, 0xfa00a);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_XVS_DELAY, 0x2);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_INT_MASK, 0xffffffff);
+		slvs_syncgen_write(slvs, syncgen,
+				VI_FW_SYNCGEN_INT_STATUS, 0xffffffff);
+	}
 	slvs_syncgen_write(slvs, syncgen,
 			VI_FW_SYNCGEN_COMMAND, BIT(0));
 	slvs_syncgen_write(slvs, syncgen,
@@ -648,6 +690,8 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 	if (WARN_ON(id != 0))
 		return -ENXIO;
 
+	dev_info(&slvs->pdev->dev, "%s()\n", __func__);
+
 	tegra_chan = v4l2_get_subdev_hostdata(&stream->subdev);
 	cfg = slvs_stream_config(tegra_chan);
 	if (cfg < 0)
@@ -658,31 +702,39 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 	if (err < 0)
 		return err;
 
-	err = tegra_slvs_syncgen_start(stream);
-	if (err < 0)
-		return err;
-
 	/* XXX - where we should dig embedded data type ? */
 
 	/* Reset stream */
 	slvs_stream_write(slvs, id, SLVS_STRM_RST_CTRL, 1);
-	/* Reset all lanes */
-	for (i = 0; i < SLVSEC_NUM_LANES; i++)
-		slvs_cil_lane_write(slvs, i, SLVS_LANE_RST_CTRL, 1);
+	slvs_stream_write(slvs, id, SLVS_STRM_RST_CTRL, 0);
 
 	/* Reset CIL */
 	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_RST_CTRL, 1);
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_RST_CTRL, 0);
+
+	/* Reset all lanes */
+	for (i = 0; i < SLVSEC_NUM_LANES; i++) {
+		slvs_cil_lane_write(slvs, i, SLVS_LANE_RST_CTRL, 1);
+		slvs_cil_lane_write(slvs, i, SLVS_LANE_RST_CTRL, 0);
+	}
 
 	/* Program core */
-	slvs_stream_write(slvs, id, SLVS_STRM_RST_CTRL, 0);
 	val = (stream->params.enable_header_crc << 2)
 		| ((stream->params.watchdog_period != 0 << 1))
 		| 1;
 	slvs_stream_write(slvs, id, SLVS_STRM_CTRL, val);
 	val = cfg | (stream->params.enable_payload_crc << 28);
-	slvs_stream_write(slvs, id, SLVS_STRM_CH0_CFG, val);
-	/* XXX - how this should be configured ? */
-	slvs_stream_write(slvs, id, SLVS_STRM_CH1_CFG, 0x1a800000);
+	if (tegra_platform_is_silicon()) {
+		slvs_stream_write(slvs, id, SLVS_STRM_CH0_CFG, val);
+		/* XXX - how this should be configured ? */
+		slvs_stream_write(slvs, id, SLVS_STRM_CH1_CFG, 0x1a800000);
+	} else {
+		val = 0x1b200a68;
+		slvs_stream_write(slvs, id, SLVS_STRM_CH0_CFG, val);
+		slvs_stream_write(slvs, id, SLVS_STRM_CH1_CFG, val);
+		slvs_cil_write(slvs, SLVS_CIL_CTRL, 0x56f1);
+		slvs_cil_write(slvs, SLVS_CIL_LANE_SWIZZLE, 0x76543210);
+	}
 
 	/* Mask errors and interrupts */
 	slvs_stream_write(slvs, id, SLVS_STRM_INTR_MASK, 0xf);
@@ -691,24 +743,13 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 	slvs_stream_write(slvs, id, SLVS_STRM_INTR_MASK_CH0, 0xf);
 	slvs_stream_write(slvs, id, SLVS_STRM_INTR_MASK_CH1, 0xf);
 
-	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_RST_CTRL, 0);
-	for (i = 0; i < SLVSEC_NUM_LANES; i++)
-		slvs_cil_lane_write(slvs, i, SLVS_LANE_RST_CTRL, 0);
-
 	/* Enable cal done interrupt */
-	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CAL_STATUS,
-			SLVS_CIL_STRM_INTR_CAL_DONE);
-	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_INTR_MASK,
-			SLVS_CIL_STRM_INTR_CAL_DONE);
-
-	/* Program CIL */
-	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_SYM_DEFINE,
-			stream->params.symbols);
-	val = (stream->params.num_lanes << 1) | 1;
-	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, val);
-	val = slvs_cil_stream_uphy_mode(stream);
-	val |= SLVS_CIL_STRM_UPHY_CAL_EN;
-	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_UPHY_MODE, val);
+	if (tegra_platform_is_silicon()) {
+		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CAL_STATUS,
+				SLVS_CIL_STRM_INTR_CAL_DONE);
+		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_INTR_MASK,
+				SLVS_CIL_STRM_INTR_CAL_DONE);
+	}
 
 	/* Enable lanes */
 	for (i = 0; i < stream->params.num_lanes; i++) {
@@ -716,13 +757,40 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 		slvs_cil_lane_write(slvs, i, SLVS_LANE_CTRL, 1);
 	}
 
-	/* Wait for CAL_DONE */
-	timeout = wait_event_interruptible_timeout(
-		stream->cil_waitq,
-		tegra_slvs_is_cal_done(stream),
-		timeout);
+	/* Program CIL */
+	if (tegra_platform_is_silicon()) {
+		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_SYM_DEFINE,
+				stream->params.symbols);
+		val = (stream->params.num_lanes << 1) | 1;
+		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, val);
+		val = slvs_cil_stream_uphy_mode(stream);
+		val |= SLVS_CIL_STRM_UPHY_CAL_EN;
+		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_UPHY_MODE, val);
+	} else {
+		val = 0x83f;
+		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_UPHY_MODE, val);
+	}
 
+	/* Wait for CAL_DONE */
+	if (tegra_platform_is_silicon()) {
+		timeout = wait_event_interruptible_timeout(
+			stream->cil_waitq,
+			tegra_slvs_is_cal_done(stream),
+			timeout);
+	}
 	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_INTR_MASK, 0);
+
+	if (!tegra_platform_is_silicon()) {
+		slvs_stream_write(slvs, id, SLVS_STRM_CTRL, 1);
+		val = (stream->params.num_lanes << 1) | 1;
+		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, val);
+	}
+
+	err = tegra_slvs_syncgen_start(stream);
+	if (err < 0)
+		return err;
+
+	dev_info(&slvs->pdev->dev, "%s() (done)\n", __func__);
 
 	if (timeout == 0)
 		return -ETIMEDOUT;
@@ -760,18 +828,18 @@ static int tegra_slvs_stop_streaming(struct tegra_slvs_stream *stream)
 
 static int tegra_slvs_s_stream(struct v4l2_subdev *subdev, int enable)
 {
-	struct tegra_channel *tegra_chan = v4l2_get_subdev_hostdata(subdev);
 	struct tegra_slvs_stream *stream;
 	int ret;
 
 	stream = container_of(subdev, struct tegra_slvs_stream, subdev);
 
+	dev_info(&stream->slvs->pdev->dev, "%s(%s)\n", __func__,
+		enable ? "enable" : "disable");
+
 	if (atomic_read(&stream->is_streaming) == enable)
 		return 0;
 
-	if (tegra_chan->bypass)
-		ret = 0;
-	else if (enable)
+	if (enable)
 		ret = tegra_slvs_start_streaming(stream);
 	else
 		ret = tegra_slvs_stop_streaming(stream);
@@ -944,6 +1012,9 @@ static int tegra_slvs_parse_stream_dt(struct tegra_slvs_stream *stream,
 		return -EINVAL;
 	params->num_lanes = err;
 
+	if (!tegra_platform_is_silicon())
+		params->num_lanes = 2;
+
 	for (i = 0; i < params->num_lanes; i++) {
 		u32 lane;
 		err = of_property_read_u32_index(np, "lanes", i, &lane);
@@ -1003,14 +1074,23 @@ static int tegra_slvs_parse_stream_dt(struct tegra_slvs_stream *stream,
 
 	/* VGP pads used for syncgen */
 	of_property_read_u32(np, "nvidia,syncgen-xhs-vgp", &params->syncgen.xhs_vgp);
+	if (!tegra_platform_is_silicon())
+		params->syncgen.xhs_vgp = 2;
 	if (params->syncgen.xhs_vgp > VI_NUM_VGP)
 		return -EINVAL;
 
 	of_property_read_u32(np, "nvidia,syncgen-xvs-vgp", &params->syncgen.xvs_vgp);
+	if (!tegra_platform_is_silicon())
+		params->syncgen.xvs_vgp = 3;
 	if (params->syncgen.xvs_vgp > VI_NUM_VGP)
 		return -EINVAL;
 
 	stream->framesync = slvs_default_framesync;
+	if (!tegra_platform_is_silicon()) {
+		/* settings from tegra shell */
+		stream->framesync.inck = 72000;
+		stream->framesync.xhs = 300;
+	}
 
 	return 0;
 }

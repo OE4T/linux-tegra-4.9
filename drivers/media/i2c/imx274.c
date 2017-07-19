@@ -38,7 +38,7 @@
 #define IMX274_MIN_GAIN		(1 << IMX274_GAIN_SHIFT)
 #define IMX274_MAX_GAIN		(23 << IMX274_GAIN_SHIFT)
 #define IMX274_MIN_FRAME_LENGTH	(0x8ED)
-#define IMX274_MAX_FRAME_LENGTH	(0xB292)
+#define IMX274_MAX_FRAME_LENGTH	(0xFFFF)
 #define IMX274_MIN_EXPOSURE_COARSE	(0x0001)
 #define IMX274_MAX_EXPOSURE_COARSE	\
 	(IMX274_MAX_FRAME_LENGTH-IMX274_MAX_COARSE_DIFF)
@@ -70,6 +70,9 @@
 #define IMX274_DOL_1080P_MODE_MIN_VMAX	1155
 #define IMX274_DOL_1080P_MODE_DEFAULT_RHS1	38
 #define IMX274_DOL_1080P_MIN_SHR_DOL1	4
+#define IMX274_1080P_MODE_HMAX			260
+#define IMX274_1080P_MODE_MIN_VMAX		4620
+#define IMX274_1080P_MODE_OFFSET		112
 
 struct imx274 {
 	struct camera_common_power_rail	power;
@@ -79,7 +82,7 @@ struct imx274 {
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
 	u32				frame_length;
-	u32				vmax_dol;
+	u32				vmax;
 	s32				last_coarse_long;
 	s32				last_coarse_short;
 	s32				group_hold_prev;
@@ -684,24 +687,30 @@ static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
 
 	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
-		priv->vmax_dol = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
+		priv->vmax = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
 				(frame_rate *
-				IMX274_DOL_4K_MODE_HMAX * (svr + 1)));
-		if (priv->vmax_dol < IMX274_DOL_4K_MODE_MIN_VMAX)
-			priv->vmax_dol = IMX274_DOL_4K_MODE_MIN_VMAX;
+				IMX274_DOL_4K_MODE_HMAX));
+		if (priv->vmax < IMX274_DOL_4K_MODE_MIN_VMAX)
+			priv->vmax = IMX274_DOL_4K_MODE_MIN_VMAX;
 	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
-		priv->vmax_dol = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
+		priv->vmax = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
 				(frame_rate *
-				IMX274_DOL_1080P_MODE_HMAX * (svr + 1)));
-		if (priv->vmax_dol < IMX274_DOL_1080P_MODE_MIN_VMAX)
-			priv->vmax_dol = IMX274_DOL_1080P_MODE_MIN_VMAX;
+				IMX274_DOL_1080P_MODE_HMAX));
+		if (priv->vmax < IMX274_DOL_1080P_MODE_MIN_VMAX)
+			priv->vmax = IMX274_DOL_1080P_MODE_MIN_VMAX;
+	} else if (s_data->mode == IMX274_MODE_1920X1080) {
+		priv->vmax = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
+				(frame_rate *
+				IMX274_1080P_MODE_HMAX));
+		if (priv->vmax < IMX274_1080P_MODE_MIN_VMAX)
+			priv->vmax = IMX274_1080P_MODE_MIN_VMAX;
 	} else {
-		priv->vmax_dol = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
+		priv->vmax = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
 				(u32)(frame_rate *
 				IMX274_HMAX * (svr + 1))) - 12;
 	}
 
-	imx274_get_vmax_regs(reg_list, priv->vmax_dol);
+	imx274_get_vmax_regs(reg_list, priv->vmax);
 
 	imx274_set_group_hold(priv);
 
@@ -718,7 +727,7 @@ static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 			frame_length,
 			mode->image_properties.line_length,
 			frame_rate,
-			priv->vmax_dol);
+			priv->vmax);
 
 	control.id = TEGRA_CAMERA_CID_HDR_EN;
 	err = camera_common_g_ctrl(priv->s_data, &control);
@@ -753,28 +762,49 @@ fail:
 
 static u16 imx274_calculate_coarse_time_shr(struct imx274 *priv, u32 rep)
 {
+	const struct camera_common_data *s_data = priv->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
 	u8 svr;
 	u16 shr;
 	int min;
 	int max;
+	u64 et_long;
 
 	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
 
-	min = IMX274_MODE1_SHR_MIN;
-	max = ((svr + 1) * IMX274_VMAX) - 4;
+	if (s_data->mode == IMX274_MODE_1920X1080) {
+		et_long = mode->image_properties.line_length * rep *
+			FIXED_POINT_SCALING_FACTOR /
+			mode->signal_properties.pixel_clock.val;
 
-	shr = priv->vmax_dol * (svr + 1) -
-			(rep * IMX274_ET_FACTOR - IMX274_MODE1_OFFSET) /
-			IMX274_HMAX;
+		shr = priv->vmax  -
+			(et_long * IMX274_SENSOR_INTERNAL_CLK_FREQ /
+			FIXED_POINT_SCALING_FACTOR  -
+			IMX274_1080P_MODE_OFFSET) /
+			IMX274_1080P_MODE_HMAX;
 
-	if (shr < min)
-		shr = min;
+		if (shr > priv->vmax-4)
+			shr = priv->vmax-4;
+		if (shr < 8)
+			shr = 8;
+	} else {
+		min = IMX274_MODE1_SHR_MIN;
+		max = ((svr + 1) * IMX274_VMAX) - 4;
 
-	if (shr > max)
-		shr = max;
+		shr = priv->vmax * (svr + 1) -
+				(rep * IMX274_ET_FACTOR - IMX274_MODE1_OFFSET) /
+				IMX274_HMAX;
+
+		if (shr < min)
+			shr = min;
+
+		if (shr > max)
+			shr = max;
+	}
 
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: shr: %u vmax: %d\n", __func__, shr, priv->vmax_dol);
+		 "%s: shr: %u vmax: %d\n", __func__, shr, priv->vmax);
 	return shr;
 }
 
@@ -961,7 +991,7 @@ static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
 		FIXED_POINT_SCALING_FACTOR /
 		mode->signal_properties.pixel_clock.val;
 
-	shr_dol2 = priv->vmax_dol  -
+	shr_dol2 = priv->vmax  -
 		(et_long * IMX274_SENSOR_INTERNAL_CLK_FREQ /
 		FIXED_POINT_SCALING_FACTOR  -
 		IMX274_DOL_MODE_CLOCKS_OFFSET) /
@@ -970,8 +1000,8 @@ static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
 	if (shr_dol2 < rhs1 + min_shr)
 		shr_dol2 = rhs1 + min_shr;
 
-	if (shr_dol2 > priv->vmax_dol - 4)
-		shr_dol2 = priv->vmax_dol - 4;
+	if (shr_dol2 > priv->vmax - 4)
+		shr_dol2 = priv->vmax - 4;
 
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: coarse:%d, et:%d, shr_dol2:%d, vmax:%d, Pclk:%lld, LL:%d, HMAX:%d\n",
@@ -979,7 +1009,7 @@ static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
 		val,
 		(int)(et_long * 1000000 / FIXED_POINT_SCALING_FACTOR),
 		shr_dol2,
-		priv->vmax_dol,
+		priv->vmax,
 		mode->signal_properties.pixel_clock.val,
 		mode->image_properties.line_length,
 		hmax);

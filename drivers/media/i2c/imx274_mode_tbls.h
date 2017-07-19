@@ -251,7 +251,7 @@ static const imx274_reg mode_3840X2160_60fps[] = {
 
 /* Mode1(DOL): 3864x2182 10 bits 30fps DOL-HDR
  * H: LI+3840=3844
- * V: (OB+2166+VBP)*2=4448
+ * V: (OB+2160+VBP)*2=4436
  */
 static imx274_reg mode_3840X2160_dol_30fps[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -325,6 +325,11 @@ static imx274_reg mode_3840X2160_dol_30fps[] = {
 	{0x30F9, 0x08},
 	{0x30FA, 0x00},
 	{0x30EE, 0x01},
+	{0x30DD, 0x01},
+	{0x30DE, 0x07},
+	{0x30DF, 0x00},
+	{0x30E0, 0x04},
+	{0x30E1, 0x00},
 	{0x3037, 0x01},
 	{0x3038, 0x0C},
 	{0x3039, 0x00},
@@ -335,9 +340,9 @@ static imx274_reg mode_3840X2160_dol_30fps[] = {
 	{0x30DF, 0x00},
 	{0x30E0, 0x02},
 	{0x30E1, 0x00},
-	{0x3130, 0x7E},
+	{0x3130, 0x78},
 	{0x3131, 0x08},
-	{0x3132, 0xA8},
+	{0x3132, 0xA2},
 	{0x3133, 0x08},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
@@ -365,7 +370,7 @@ static imx274_reg mode_3840X2160_dol_30fps[] = {
 
 /* Mode 3(DOL) : 1920x1080 10 bits 60fps DOL-HDR
  * H: LI+1920=1924
- * V: (OB+1094+VBP)*2=2280
+ * V: (OB+1080+VBP)*2=2252
  */
 static imx274_reg mode_1920X1080_dol_60fps[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -417,7 +422,7 @@ static imx274_reg mode_1920X1080_dol_60fps[] = {
 	{0x3004, 0x07},
 	{0x3005, 0x21},
 	{0x3006, 0x00},
-	{0x3007, 0xB1},
+	{0x3007, 0xA1},
 	{0x300E, 0x00},
 	{0x3019, 0x31},
 	{0x301A, 0x00},
@@ -439,14 +444,19 @@ static imx274_reg mode_1920X1080_dol_60fps[] = {
 	{0x30F9, 0x04},
 	{0x30FA, 0x00},
 	{0x30EE, 0x01},
+	{0x30DD, 0x01},
+	{0x30DE, 0x07},
+	{0x30DF, 0x00},
+	{0x30E0, 0x04},
+	{0x30E1, 0x00},
 	{0x3037, 0x01},
 	{0x3038, 0x0C},
 	{0x3039, 0x00},
 	{0x303A, 0x0C},
 	{0x303B, 0x0F},
-	{0x3130, 0x4E},
+	{0x3130, 0x40},
 	{0x3131, 0x04},
-	{0x3132, 0x6C},
+	{0x3132, 0x5E},
 	{0x3133, 0x04},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
@@ -517,17 +527,30 @@ static imx274_reg mode_1920X1080[] = {
 	{0x30E2, 0x02},
 	{0x30F6, 0x04},
 	{0x30F7, 0x01},
-	{0x30F8, 0x06},
-	{0x30F9, 0x09},
-	{0x3130, 0x4E},
+	{0x30F8, 0x0C},
+	{0x30F9, 0x12},
+	{0x3130, 0x40},
 	{0x3131, 0x04},
-	{0x3132, 0x46},
+	{0x3132, 0x38},
 	{0x3133, 0x04},
+
+	/* crop */
+	{0x30DD, 0x01},
+	{0x30DE, 0x07},
+	{0x30DF, 0x00},
+	{0x30E0, 0x04},
+	{0x30E1, 0x00},
+	{0x3037, 0x01},
+	{0x3038, 0x0C},
+	{0x3039, 0x00},
+	{0x303A, 0x0C},
+	{0x303B, 0x0F},
+
 	/* mode setting */
 	{0x3004, 0x02},
 	{0x3005, 0x21},
 	{0x3006, 0x00},
-	{0x3007, 0x11},
+	{0x3007, 0xA1},
 	{0x3A41, 0x08},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
@@ -548,10 +571,6 @@ static imx274_reg mode_1920X1080[] = {
 	{0x366D, 0x17},
 	{0x33A6, 0x01},
 	{0x306B, 0x05},
-
-	/* d gain setting */
-	{0x3012, 0x01},
-	{0x300E, 0x01},
 
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
 	{IMX274_TABLE_END, 0x0000}
@@ -643,9 +662,9 @@ static imx274_reg mode_1280X720[] = {
 
 enum {
 	IMX274_MODE_3840X2160,
+	IMX274_MODE_1920X1080,
 	IMX274_MODE_3840X2160_DOL_30FPS,
 	IMX274_MODE_1920X1080_DOL_60FPS,
-	IMX274_MODE_1920X1080,
 	IMX274_MODE_1280X720,
 	IMX274_MODE_START_STREAM,
 	IMX274_MODE_STOP_STREAM,
@@ -654,9 +673,9 @@ enum {
 
 static const imx274_reg *mode_table[] = {
 	[IMX274_MODE_3840X2160] = mode_3840X2160_60fps,
+	[IMX274_MODE_1920X1080] = mode_1920X1080,
 	[IMX274_MODE_3840X2160_DOL_30FPS] = mode_3840X2160_dol_30fps,
 	[IMX274_MODE_1920X1080_DOL_60FPS] = mode_1920X1080_dol_60fps,
-	[IMX274_MODE_1920X1080] = mode_1920X1080,
 	[IMX274_MODE_1280X720] = mode_1280X720,
 	[IMX274_MODE_START_STREAM]		= imx274_start,
 	[IMX274_MODE_STOP_STREAM]		= imx274_stop,
@@ -673,9 +692,9 @@ static const int imx274_60_fr[] = {
 
 static const struct camera_common_frmfmt imx274_frmfmt[] = {
 	{{3840, 2160}, imx274_60_fr, 1, 0, IMX274_MODE_3840X2160},
-	{{3844, 4448}, imx274_30_fr, 1, 1, IMX274_MODE_3840X2160_DOL_30FPS},
-	{{1924, 2280}, imx274_60_fr, 1, 1, IMX274_MODE_1920X1080_DOL_60FPS},
 	{{1920, 1080}, imx274_60_fr, 1, 0, IMX274_MODE_1920X1080},
+	{{3844, 4436}, imx274_30_fr, 1, 1, IMX274_MODE_3840X2160_DOL_30FPS},
+	{{1924, 2252}, imx274_60_fr, 1, 1, IMX274_MODE_1920X1080_DOL_60FPS},
 	{{1280, 720},  imx274_60_fr, 1, 0, IMX274_MODE_1280X720},
 };
 #endif  /* __IMX274_I2C_TABLES__ */

@@ -545,9 +545,9 @@ void tegra_dc_stats_enable(struct tegra_dc *dc, bool enable);
 bool tegra_dc_stats_get(struct tegra_dc *dc);
 
 /* defined in dc.c, used by dc_sysfs.c */
-u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc);
-void tegra_dc_enable_crc(struct tegra_dc *dc);
-void tegra_dc_disable_crc(struct tegra_dc *dc);
+u32 tegra_dc_sysfs_read_checksum_latched(struct tegra_dc *dc);
+void tegra_dc_sysfs_enable_crc(struct tegra_dc *dc);
+void tegra_dc_sysfs_disable_crc(struct tegra_dc *dc);
 
 void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 				const struct tegra_dc_out_pin *pins,
@@ -737,9 +737,9 @@ int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx);
 int tegra_nvdisp_head_enable(struct tegra_dc *dc);
 int tegra_nvdisp_head_disable(struct tegra_dc *dc);
 int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win);
-void tegra_nvdisp_enable_crc(struct tegra_dc *dc);
-void tegra_nvdisp_disable_crc(struct tegra_dc *dc);
-u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc);
+void tegra_nvdisp_sysfs_enable_crc(struct tegra_dc *dc);
+void tegra_nvdisp_sysfs_disable_crc(struct tegra_dc *dc);
+u32 tegra_nvdisp_sysfs_read_rg_crc(struct tegra_dc *dc);
 int tegra_nvdisp_program_mode(struct tegra_dc *dc,
 			struct tegra_dc_mode *mode);
 void tegra_nvdisp_underflow_handler(struct tegra_dc *dc);

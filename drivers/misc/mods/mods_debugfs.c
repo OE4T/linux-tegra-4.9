@@ -496,7 +496,7 @@ DEFINE_SIMPLE_ATTRIBUTE(mods_dc_ddc_bus_fops, mods_dc_ddc_bus_get,
 static int mods_dc_crc_latched_show(struct seq_file *s, void *unused)
 {
 	struct tegra_dc *dc = s->private;
-	u32 crc = tegra_dc_read_checksum_latched(dc);
+	u32 crc = tegra_dc_sysfs_read_checksum_latched(dc);
 	u32 field = 0;
 
 #ifdef CONFIG_TEGRA_DC_INTERLACE

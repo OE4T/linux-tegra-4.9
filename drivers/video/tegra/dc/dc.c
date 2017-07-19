@@ -3736,7 +3736,7 @@ unsigned tegra_dc_get_out_max_pixclock(const struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_get_out_max_pixclock);
 
-void tegra_dc_enable_crc(struct tegra_dc *dc)
+void tegra_dc_sysfs_enable_crc(struct tegra_dc *dc)
 {
 	u32 val;
 
@@ -3754,7 +3754,7 @@ void tegra_dc_enable_crc(struct tegra_dc *dc)
 	tegra_dc_config_frame_end_intr(dc, true);
 }
 
-void tegra_dc_disable_crc(struct tegra_dc *dc)
+void tegra_dc_sysfs_disable_crc(struct tegra_dc *dc)
 {
 	/* Unregister a client of frame_end interrupt */
 	tegra_dc_config_frame_end_intr(dc, false);
@@ -3768,7 +3768,7 @@ void tegra_dc_disable_crc(struct tegra_dc *dc)
 	mutex_unlock(&dc->lock);
 }
 
-u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
+u32 tegra_dc_sysfs_read_checksum_latched(struct tegra_dc *dc)
 {
 	int crc = 0;
 
@@ -3796,7 +3796,7 @@ u32 tegra_dc_read_checksum_latched(struct tegra_dc *dc)
 crc_error:
 	return crc;
 }
-EXPORT_SYMBOL(tegra_dc_read_checksum_latched);
+EXPORT_SYMBOL(tegra_dc_sysfs_read_checksum_latched);
 
 bool tegra_dc_windows_are_dirty(struct tegra_dc *dc, u32 win_act_req_mask)
 {

@@ -2134,7 +2134,7 @@ u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_number,
 	return ret_val;
 }
 
-void tegra_nvdisp_enable_crc(struct tegra_dc *dc)
+void tegra_nvdisp_sysfs_enable_crc(struct tegra_dc *dc)
 {
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
@@ -2154,7 +2154,7 @@ void tegra_nvdisp_enable_crc(struct tegra_dc *dc)
 	tegra_dc_config_frame_end_intr(dc, true);
 }
 
-void tegra_nvdisp_disable_crc(struct tegra_dc *dc)
+void tegra_nvdisp_sysfs_disable_crc(struct tegra_dc *dc)
 {
 	/* Unregister a client of frame_end interrupt */
 	tegra_dc_config_frame_end_intr(dc, false);
@@ -2170,7 +2170,7 @@ void tegra_nvdisp_disable_crc(struct tegra_dc *dc)
 	mutex_unlock(&dc->lock);
 }
 
-u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc)
+u32 tegra_nvdisp_sysfs_read_rg_crc(struct tegra_dc *dc)
 {
 	int crc = 0;
 	int val = 0;

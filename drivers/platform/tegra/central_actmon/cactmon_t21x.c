@@ -11,27 +11,12 @@
  * GNU General Public License for more details.
  *
  */
-#include <linux/kernel.h>
-#include <linux/spinlock.h>
-#include <linux/err.h>
-#include <linux/io.h>
-#include <linux/clk.h>
-#include <linux/clk/tegra.h>
-#include <linux/interrupt.h>
-#include <linux/suspend.h>
-#include <linux/debugfs.h>
-#include <linux/seq_file.h>
-#include <linux/uaccess.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
-#include <linux/delay.h>
-#include <mach/irqs.h>
-#include <linux/platform/tegra/cpu-tegra.h>
-#include <linux/platform/tegra/clock.h>
-#include <linux/tegra_pm_domains.h>
 #include <linux/reset.h>
+#include <linux/delay.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/actmon_common.h>
-#include "iomap.h"
 
 static struct actmon_drv_data *actmon;
 
@@ -72,6 +57,19 @@ static struct actmon_drv_data *actmon;
 #define ACTMON_DEV_INTR_AVG_UP_WMARK		(0x1 << 24)
 
 /************ END OF REG DEFINITION **************/
+
+/******** actmon register operations start **********/
+static void set_prd_t21x(u32 val, void __iomem *base)
+{
+	__raw_writel(val, base + ACTMON_GLB_PERIOD_CTRL);
+}
+
+static u32 get_glb_intr_st(void __iomem *base)
+{
+	return __raw_readl(base + ACTMON_GLB_STATUS);
+}
+
+/********* actmon register operations end ***********/
 
 /******** actmon device register operations start **********/
 static void set_init_avg(u32 val, void __iomem *base)
@@ -114,7 +112,6 @@ static u32 get_intr_st(void __iomem *base)
 	return __raw_readl(base + ACTMON_DEV_INTR_STATUS);
 }
 
-
 static void init_dev_cntrl(struct actmon_dev *dev, void __iomem *base)
 {
 	u32 val = 0;
@@ -131,7 +128,6 @@ static void init_dev_cntrl(struct actmon_dev *dev, void __iomem *base)
 
 	__raw_writel(val, base + ACTMON_DEV_CTRL);
 }
-
 
 static void enb_dev_intr_all(void __iomem *base)
 {
@@ -206,71 +202,99 @@ static void actmon_dev_reg_ops_init(struct actmon_dev *adev)
 	adev->ops.disb_dev_dn_wm = disb_dev_dn_wm;
 }
 
-static void actmon_dev_clk_enable
-		(struct actmon_dev *adev)
+static unsigned long actmon_dev_get_rate(struct actmon_dev *adev)
 {
-	tegra_clk_prepare_enable(aclk(adev->clnt));
+	return tegra_bwmgr_get_emc_rate();
+}
+
+static unsigned long actmon_dev_post_change_rate(
+		struct actmon_dev *adev, void *cclk)
+{
+	struct clk_notifier_data *clk_data = cclk;
+
+	return clk_data->new_rate;
 }
 
 static void actmon_dev_set_rate(struct actmon_dev *adev,
 		unsigned long freq)
 {
-	clk_set_rate(aclk(adev->clnt), freq * 1000);
+	struct tegra_bwmgr_client *bwclnt = (struct tegra_bwmgr_client *)
+		adev->clnt;
+
+	tegra_bwmgr_set_emc(bwclnt, freq * 1000,
+			TEGRA_BWMGR_SET_EMC_FLOOR);
 }
 
-static unsigned long actmon_dev_get_rate(struct actmon_dev *adev)
+static int cactmon_bwmgr_register_t21x(
+		struct actmon_dev *adev, struct platform_device *pdev)
 {
-	return clk_get_rate(aclk(adev->clnt));
-}
-
-int actmon_dev_platform_init_t21x(struct actmon_dev *adev,
-		struct platform_device *pdev)
-{
-	struct clk *prnt;
+	struct tegra_bwmgr_client *bwclnt = (struct tegra_bwmgr_client *)
+		adev->clnt;
+	struct device *mon_dev = &pdev->dev;
 	int ret = 0;
 
-	adev->clnt = (struct clk *) clk_get_sys(adev->dev_name, adev->con_id);
-	if (IS_ERR(adev->clnt)) {
-		pr_err("Failed to find %s.%s clock\n", adev->dev_name,
-			adev->con_id);
-		return -ENODEV;
+	bwclnt = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_MON);
+	if (IS_ERR_OR_NULL(bwclnt)) {
+		ret = -ENODEV;
+		dev_err(mon_dev, "emc bw manager registration failed for %s\n",
+				adev->dn->name);
+		return ret;
 	}
 
-	adev->dev_name = adev->dn->name;
-	adev->max_freq = clk_round_rate(aclk(adev->clnt), ULONG_MAX);
-	clk_set_rate(adev->clnt, adev->max_freq);
-	adev->max_freq /= 1000;
-	actmon_dev_reg_ops_init(adev);
-	adev->actmon_dev_set_rate = actmon_dev_set_rate;
-	adev->actmon_dev_get_rate = actmon_dev_get_rate;
-	adev->actmon_dev_clk_enable = actmon_dev_clk_enable;
-
-	prnt = clk_get_parent(aclk(adev->clnt));
-	BUG_ON(!prnt);
-
-	if (adev->rate_change_nb.notifier_call) {
-		ret = tegra_register_clk_rate_notifier(prnt,
-				&adev->rate_change_nb);
-		if (ret) {
-			pr_err("Failed to register %s rate change notifier for %s\n",
-				prnt->name, adev->dev_name);
-			return ret;
-		}
-	}
+	adev->clnt = bwclnt;
 
 	return ret;
 }
 
-/******** actmon register operations start **********/
-static void set_prd_t21x(u32 val, void __iomem *base)
+static void cactmon_bwmgr_unregister_t21x(
+		struct actmon_dev *adev, struct platform_device *pdev)
 {
-	__raw_writel(val, base + ACTMON_GLB_PERIOD_CTRL);
+	struct tegra_bwmgr_client *bwclnt = (struct tegra_bwmgr_client *)
+		adev->clnt;
+	struct device *mon_dev = &pdev->dev;
+
+	if (bwclnt) {
+		dev_dbg(mon_dev, "unregistering BW manager for %s\n",
+				adev->dn->name);
+		tegra_bwmgr_unregister(bwclnt);
+		adev->clnt = NULL;
+	}
 }
 
 
-static u32 get_glb_intr_st(void __iomem *base)
+int actmon_dev_platform_init_t21x(struct actmon_dev *adev,
+		struct platform_device *pdev)
 {
-	return __raw_readl(base + ACTMON_GLB_STATUS);
+	struct tegra_bwmgr_client *bwclnt = (struct tegra_bwmgr_client *)
+		adev->clnt;
+	int ret = 0;
+
+	ret = cactmon_bwmgr_register_t21x(adev, pdev);
+	if (ret)
+		goto end;
+
+	adev->dev_name = adev->dn->name;
+	adev->max_freq = tegra_bwmgr_get_max_emc_rate();
+	tegra_bwmgr_set_emc(bwclnt, adev->max_freq,
+			TEGRA_BWMGR_SET_EMC_FLOOR);
+	adev->max_freq /= 1000;
+	actmon_dev_reg_ops_init(adev);
+	adev->actmon_dev_set_rate = actmon_dev_set_rate;
+	adev->actmon_dev_get_rate = actmon_dev_get_rate;
+
+	if (adev->rate_change_nb.notifier_call) {
+		ret = tegra_bwmgr_notifier_register(&adev->rate_change_nb);
+		if (ret) {
+			pr_err("Tegra BWMGR notifier register failed for %s\n",
+					adev->dev_name);
+			return ret;
+		}
+	}
+
+	adev->actmon_dev_post_change_rate = actmon_dev_post_change_rate;
+
+end:
+	return ret;
 }
 
 /********* actmon register operations end ***********/
@@ -285,32 +309,62 @@ static void actmon_reg_ops_init(struct platform_device *pdev)
 }
 
 static void cactmon_free_resource_t21x(
-	struct actmon_dev *adev, struct platform_device *pdev)
+		struct actmon_dev *adev, struct platform_device *pdev)
 {
-	struct clk *prnt;
+	int ret;
 
-	prnt = clk_get_parent(aclk(adev->clnt));
-	tegra_unregister_clk_rate_notifier(prnt, &adev->rate_change_nb);
+	if (adev->rate_change_nb.notifier_call) {
+		ret = tegra_bwmgr_notifier_unregister(&adev->rate_change_nb);
+		if (ret) {
+			pr_err("Failed to register bw manager rate change \
+				notifier for %s\n", adev->dev_name);
+		}
+	}
+	cactmon_bwmgr_unregister_t21x(adev, pdev);
 }
 
 static int cactmon_reset_deinit_t21x(struct platform_device *pdev)
 {
 	struct actmon_drv_data *actmon = platform_get_drvdata(pdev);
+	struct device *mon_dev = &pdev->dev;
+	int ret = -EINVAL;
 
-	tegra_periph_reset_assert(actmon->actmon_clk);
+	if (actmon->actmon_rst) {
+		ret = reset_control_assert(actmon->actmon_rst);
+		if (ret)
+			dev_err(mon_dev, "failed to assert actmon\n");
+	}
 
-	return 0;
+	return ret;
 }
 
 static int cactmon_reset_init_t21x(struct platform_device *pdev)
 {
 	struct actmon_drv_data *actmon = platform_get_drvdata(pdev);
+	struct device *mon_dev = &pdev->dev;
+	int ret = 0;
 
-	/* Reset ACTMON */
-	tegra_periph_reset_assert(actmon->actmon_clk);
-	udelay(10);
-	tegra_periph_reset_deassert(actmon->actmon_clk);
-	return 0;
+	actmon->actmon_rst = devm_reset_control_get(mon_dev, "actmon");
+ 	if (IS_ERR(actmon->actmon_rst)) {
+ 		ret = PTR_ERR(actmon->actmon_rst);
+		dev_err(mon_dev, "can not get actmon reset%d\n", ret);
+		goto end;
+ 	}
+
+ 	/* Reset ACTMON */
+	ret = reset_control_assert(actmon->actmon_rst);
+	if (ret) {
+		dev_err(mon_dev, "failed to deassert actmon\n");
+		goto end;
+	}
+
+ 	udelay(10);
+	ret = reset_control_deassert(actmon->actmon_rst);
+	if (ret)
+		dev_err(mon_dev, "failed to deassert actmon\n");
+
+end:
+	return ret;
 }
 
 static int cactmon_clk_disable_t21x(struct platform_device *pdev)
@@ -320,7 +374,8 @@ static int cactmon_clk_disable_t21x(struct platform_device *pdev)
 	int ret = 0;
 
 	if (actmon->actmon_clk) {
-		tegra_clk_disable_unprepare(actmon->actmon_clk);
+		clk_disable_unprepare(actmon->actmon_clk);
+		devm_clk_put(mon_dev, actmon->actmon_clk);
 		actmon->actmon_clk = NULL;
 		dev_dbg(mon_dev, "actmon clocks disabled\n");
 	}
@@ -334,20 +389,22 @@ static int cactmon_clk_enable_t21x(struct platform_device *pdev)
 	struct device *mon_dev = &pdev->dev;
 	int ret = 0;
 
-	actmon->actmon_clk = tegra_get_clock_by_name("actmon");
+	actmon->actmon_clk = devm_clk_get(mon_dev, "actmon");
 	if (IS_ERR_OR_NULL(actmon->actmon_clk)) {
 		dev_err(mon_dev, "unable to find actmon clock\n");
 		ret = PTR_ERR(actmon->actmon_clk);
 		return ret;
 	}
 
-	ret = tegra_clk_prepare_enable(actmon->actmon_clk);
+	ret = clk_prepare_enable(actmon->actmon_clk);
 	if (ret) {
-		pr_err("%s: Failed to enable actmon clock\n", __func__);
-		return ret;
+		dev_err(mon_dev, "unable to enable actmon clock\n");
+		goto end;
 	}
 	actmon->freq = clk_get_rate(actmon->actmon_clk) / 1000;
 
+end:
+	devm_clk_put(mon_dev, actmon->actmon_clk);
 	return ret;
 }
 
@@ -387,19 +444,19 @@ static int tegra21x_actmon_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id tegra21x_actmon_of[] __initconst = {
+static const struct of_device_id tegra21x_actmon_of[] = {
 	{ .compatible = "nvidia,tegra210-cactmon", .data = NULL, },
 	{},
 };
 
 static struct platform_driver tegra21x_actmon_driver __refdata = {
+	.probe		= tegra21x_actmon_probe,
+	.remove		= tegra21x_actmon_remove,
 	.driver	= {
 		.name	= "tegra21x_actmon",
 		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(tegra21x_actmon_of),
 	},
-	.probe		= tegra21x_actmon_probe,
-	.remove		= tegra21x_actmon_remove,
 };
 
 module_platform_driver(tegra21x_actmon_driver);

@@ -2,7 +2,10 @@
  * DHD PROP_TXSTATUS Module.
  *
  * Copyright (C) 1999-2015, Broadcom Corporation
- * 
+ *
+ * Portions contributed by Nvidia
+ * Copyright (C) 2015-2017 NVIDIA Corporation. All rights reserved.
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
@@ -111,8 +114,6 @@ _dhd_wlfc_prec_enque(struct pktq *pq, int prec, void* p, bool qHead,
 
 
 	ASSERT(prec >= 0 && prec < pq->num_prec);
-	/* queueing chains not allowed */
-	ASSERT(!((PKTLINK(p) != NULL) && (PKTLINK(p) != p)));
 
 	ASSERT(!pktq_full(pq));
 	ASSERT(!pktq_pfull(pq, prec));

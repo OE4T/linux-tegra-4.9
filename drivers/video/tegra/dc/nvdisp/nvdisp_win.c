@@ -307,7 +307,6 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 
 static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 {
-#if defined(CONFIG_TEGRA_DC_CDE)
 	if (win->cde.cde_addr) {
 		nvdisp_win_write(win, tegra_dc_reg_l32(win->cde.cde_addr),
 			win_cde_base_r());
@@ -323,11 +322,11 @@ static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 			win_cde_ctrl_surface_enable_f(),
 			win_cde_ctrl_r());
 
-	} else
+	} else {
 		nvdisp_win_write(win,
 			0,
 			win_cde_ctrl_r());
-#endif
+	}
 
 	return 0;
 }

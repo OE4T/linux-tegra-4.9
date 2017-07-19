@@ -129,18 +129,6 @@ config TEGRA_NVDISPLAY
 	    Enable the support for NvDisplay Architecture
 	    If unsure, say N
 
-config TEGRA_DC_CDE
-	bool "Tegra Color Decompression Engine"
-	depends on TEGRA_DC && (ARCH_TEGRA_210_SOC || TEGRA_NVDISPLAY)
-	default y
-	help
-	  Say Y here to enable Tegra color decompression engine
-	  Enabled by default to support compressed framebuffer.
-	  It is used to save bandwidth on memory request with surfaces created
-	  by graphics. The amount of memory required for a surface is the same,
-	  but compression bit tags are used to indicate if a block contains
-	  infomation on a larger number of pixels.
-
 config TEGRA_DC_SCAN_COLUMN
 	bool
 	depends on TEGRA_DC

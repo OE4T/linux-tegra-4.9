@@ -442,14 +442,12 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 		win->flags |= TEGRA_WIN_FLAG_INTERLACE;
 #endif
 
-#if defined(CONFIG_TEGRA_DC_CDE)
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED) {
 		win->cde.zbc_color = flip_win->cde.zbc_color;
 		win->cde.offset_x = flip_win->cde.offset_x;
 		win->cde.offset_y = flip_win->cde.offset_y;
 		win->cde.ctb_entry = 0x02;
 	}
-#endif
 
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INPUT_RANGE_LIMITED)
 		win->flags |= TEGRA_WIN_FLAG_INPUT_RANGE_LIMITED;
@@ -564,13 +562,11 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 	}
 #endif
 
-#if defined(CONFIG_TEGRA_DC_CDE)
 	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED)
 		win->cde.cde_addr =
 			flip_win->phys_addr_cde + flip_win->attr.cde.offset;
 	else
 		win->cde.cde_addr = 0;
-#endif
 
 	err = tegra_dc_ext_check_windowattr(ext, win);
 	if (err < 0)
@@ -1473,8 +1469,7 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 			flip_win->phys_addr_v = 0;
 		}
 
-		if ((flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED)) {
-#if defined(CONFIG_TEGRA_DC_CDE)
+		if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED) {
 			/* use buff_id of the main surface when cde is 0 */
 			__u32 cde_buff_id = flip_win->attr.cde.buff_id;
 			if (!cde_buff_id)
@@ -1485,9 +1480,6 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 					      &flip_win->phys_addr_cde);
 			if (ret)
 				return ret;
-#else
-			return -EINVAL; /* not supported */
-#endif
 		} else {
 			flip_win->handle[TEGRA_DC_CDE] = NULL;
 			flip_win->phys_addr_cde = 0;

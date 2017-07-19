@@ -701,7 +701,6 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 		else
 			act_control |= WIN_ACT_CNTR_SEL_HCOUNTER(win->idx);
 
-#if defined(CONFIG_TEGRA_DC_CDE)
 		if (win->cde.cde_addr) {
 			tegra_dc_writel(dc, ENABLESURFACE0,
 				DC_WINBUF_CDE_CONTROL);
@@ -733,7 +732,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 			tegra_dc_writel(dc, 0x00000001,
 				DC_WINBUF_CDE_CG_SW_OVR);
 		}
-#endif
+
 		tegra_dc_writel(dc, tegra_dc_fmt(win->fmt),
 			DC_WIN_COLOR_DEPTH);
 		tegra_dc_writel(dc, tegra_dc_fmt_byteorder(win->fmt),

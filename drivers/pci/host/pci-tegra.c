@@ -1239,11 +1239,13 @@ static irqreturn_t tegra_pcie_isr(int irq, void *arg)
 
 	PR_FUNC_LINE;
 	code = afi_readl(pcie, AFI_INTR_CODE) & AFI_INTR_CODE_MASK;
+
 	signature = afi_readl(pcie, AFI_INTR_SIGNATURE);
 
 	if (code == AFI_INTR_LEGACY)
 		handle_sb_intr(pcie);
 	afi_writel(pcie, 0, AFI_INTR_CODE);
+	afi_readl(pcie, AFI_INTR_CODE); /* read pushes write */
 
 	if (code >= ARRAY_SIZE(err_msg))
 		code = 0;

@@ -115,7 +115,7 @@ static int tegra_dc_ring_buf_peek(struct tegra_dc_ring_buf *buf, u16 idx,
 {
 	size_t bytes = _get_bytes_per_ele(buf);
 
-	if (buf->size == 0)
+	if (buf->size == 0 || idx >= buf->capacity)
 		return -EINVAL;
 
 	*in_buf_ptr = (buf->data + idx * bytes);

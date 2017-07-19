@@ -866,6 +866,6 @@ source "drivers/misc/tegra-profiler/Kconfig"
 trysource "../nvidia/drivers/misc/Kconfig.nvidia"
 trysource "../nvidia/drivers/misc/tegra186-ahc/Kconfig.nvidia"
 source "drivers/misc/nvs-dfsh/Kconfig"
-source "drivers/misc/nvs/Kconfig"
+trysource "../nvidia/drivers/misc/nvs/Kconfig.nvidia"
 source "drivers/misc/inter-tegra/Kconfig"
 endmenu

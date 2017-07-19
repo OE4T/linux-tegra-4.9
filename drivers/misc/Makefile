@@ -57,7 +57,6 @@ obj-$(CONFIG_CXL_BASE)		+= cxl/
 obj-$(CONFIG_PANEL)             += panel.o
 obj-$(CONFIG_EQOS_APE_HWDEP)    += eqos_ape/
 obj-$(CONFIG_TEGRA_PROFILER)	+= tegra-profiler/
-obj-$(CONFIG_NVS)		+= nvs/
 obj-$(CONFIG_SAF775x_HWDEP)    += saf775x/
 obj-$(CONFIG_SAF36XX_HWDEP)    += saf775x/
 
@@ -87,3 +86,7 @@ obj-$(CONFIG_THERM_EST)		+= therm_est.o
 obj-$(CONFIG_FAN_THERM_EST)	+= therm_fan_est.o
 obj-$(CONFIG_CPULOAD_MONITOR)	+= cpuload.o
 obj-y				+= inter-tegra/
+
+ifneq ($(wildcard $(srctree)/../nvidia/drivers/misc/nvs/Makefile.*),)
+obj-y += ../../../nvidia/drivers/misc/nvs/
+endif

@@ -304,12 +304,14 @@ static int tegra_nvdisp_crc_rg_regional_get(struct tegra_dc *dc,
 		if (!is_region_crc_ready(status, id))
 			continue;
 
-		if (status & masks[id].error) {
-			dev_err(&dc->ndev->dev,
-				"Error reading CRC for region %d\n", id);
+		/* Clearing out the error bit is a functional no-op, since the
+		 * error bit simply signifies that the HW calculated CRC value
+		 * is different from the value programmed in the golden
+		 * register, or lack thereof. However, we clear it to avoid
+		 * confusion when reading register dumps
+		 */
+		if (status & masks[id].error)
 			status |= masks[id].error;
-			continue;
-		}
 
 		e->regional[id].crc = tegra_dc_readl(dc, regs[id].golden_crc);
 		e->regional[id].valid = true;

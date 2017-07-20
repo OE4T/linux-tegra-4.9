@@ -207,7 +207,6 @@ static struct dvfs_rail tegra210b01_dvfs_rail_vdd_gpu = {
 	.vts_floors_table =		/* applied if no vts cdev */
 		{ {TEGRA210B01_GPU_DVFS_THERMAL_MIN / 1000, 800 }, },
 	.in_band_pm = true,
-	.nvver = "p4v1",
 };
 
 static struct dvfs_rail *tegra210b01_dvfs_rails[] = {
@@ -795,7 +794,8 @@ static struct cvb_dvfs gpu_cvb_dvfs_table[] = {
 		{ 1228800, { }, {  2468261,   -51939,    -1551,        0,        0,        0 }, }, \
 		{ 0,	   { }, { }, }, \
 	}, \
-	.cvb_vmin = {   0, { }, {   700000,        0,        0 }, }
+	.cvb_vmin = {   0, { }, {   700000,        0,        0 }, }, \
+	.cvb_version = "NAPLL En - p4v1"
 
 static struct cvb_dvfs gpub01_cvb_dvfs_table[] = {
 	{
@@ -2189,6 +2189,8 @@ static int set_gpu_dvfs_data(struct device_node *node, unsigned long max_freq,
 	int speedo = tegra_sku_info.gpu_speedo_value;
 	struct dvfs_rail *rail = &vdd_gpu_rail;
 	struct rail_alignment *align = &rail->alignment;
+
+	rail->nvver = d->cvb_version;
 
 	d->max_mv = tegra_round_voltage(d->max_mv, align, false);
 	min_mv = d->pll_min_millivolts;

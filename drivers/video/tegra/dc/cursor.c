@@ -185,17 +185,20 @@ static int set_cursor_activation_control(struct tegra_dc *dc)
 
 static int set_cursor_enable(struct tegra_dc *dc, bool enable)
 {
+	bool need_general_update = false;
 	u32 val = tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
 
-	if (!!(val & CURSOR_ENABLE) != enable) {
+	if (dc->cursor.enabled != enable) {
 		val &= ~CURSOR_ENABLE;
 		if (enable)
 			val |= CURSOR_ENABLE;
 		tegra_dc_writel(dc, val, DC_DISP_DISP_WIN_OPTIONS);
-		return 1;
+		need_general_update = true;
 	}
+
 	dc->cursor.enabled = enable;
-	return 0;
+
+	return need_general_update;
 }
 
 static int set_cursor_blend(struct tegra_dc *dc, u32 blendfmt)
@@ -257,7 +260,7 @@ static void tegra_dc_cursor_do_update(struct tegra_dc *dc,
 	}
 }
 
-static int tegra_dc_cursor_program(struct tegra_dc *dc)
+static int tegra_dc_cursor_program(struct tegra_dc *dc, bool enable)
 {
 	bool need_general_update = false;
 
@@ -284,7 +287,7 @@ static int tegra_dc_cursor_program(struct tegra_dc *dc)
 
 	need_general_update |= set_cursor_blend(dc, dc->cursor.blendfmt);
 
-	need_general_update |= set_cursor_enable(dc, dc->cursor.enabled);
+	need_general_update |= set_cursor_enable(dc, enable);
 
 	need_general_update |= set_cursor_position(dc,
 		dc->cursor.x, dc->cursor.y);
@@ -332,7 +335,7 @@ int tegra_dc_cursor_image(struct tegra_dc *dc,
 	dc->cursor.alpha = alpha;
 	mutex_unlock(&dc->lock);
 
-	return tegra_dc_cursor_program(dc);
+	return tegra_dc_cursor_program(dc, dc->cursor.enabled);
 }
 
 int tegra_dc_cursor_set(struct tegra_dc *dc, bool enable, int x, int y)
@@ -340,11 +343,10 @@ int tegra_dc_cursor_set(struct tegra_dc *dc, bool enable, int x, int y)
 	mutex_lock(&dc->lock);
 	dc->cursor.x = x;
 	dc->cursor.y = y;
-	dc->cursor.enabled = enable;
 	dc->cursor.dirty = true;
 	mutex_unlock(&dc->lock);
 
-	return tegra_dc_cursor_program(dc);
+	return tegra_dc_cursor_program(dc, enable);
 }
 
 /* clip:
@@ -360,7 +362,7 @@ int tegra_dc_cursor_clip(struct tegra_dc *dc, unsigned clip)
 	dc->cursor.dirty = true;
 	mutex_unlock(&dc->lock);
 
-	return tegra_dc_cursor_program(dc);
+	return tegra_dc_cursor_program(dc, dc->cursor.enabled);
 }
 
 /* disable the cursor on suspend. but leave the state unmodified */
@@ -381,5 +383,5 @@ int tegra_dc_cursor_suspend(struct tegra_dc *dc)
 /* restore the state */
 int tegra_dc_cursor_resume(struct tegra_dc *dc)
 {
-	return tegra_dc_cursor_program(dc);
+	return tegra_dc_cursor_program(dc, dc->cursor.enabled);
 }

@@ -207,6 +207,8 @@ struct cvb_dvfs {
 
 	/* CVB table for various frequencies */
 	struct cvb_dvfs_table cvb_table[MAX_DVFS_FREQS];
+
+	const char *cvb_version;
 };
 
 struct dvb_dvfs_table {

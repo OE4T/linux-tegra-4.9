@@ -97,7 +97,6 @@ static struct tegra_dc_sd_settings dsi_j_1440_810_5_8_sd_settings = {
 	.sd_brightness = &sd_brightness,
 };
 
-#ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu dsi_j_1440_810_5_8_cmu = {
 	/* lut1 maps sRGB to linear space. */
 	{
@@ -264,7 +263,6 @@ static struct tegra_dc_cmu dsi_j_1440_810_5_8_cmu = {
 		254,  254,  254,  254,  255,  255,  255,  255,
 	},
 };
-#endif
 
 static tegra_dc_bl_output dsi_j_1440_810_5_8_bl_response_curve = {
 	0, 1, 2, 3, 4, 5, 6, 8, 9, 10,
@@ -658,12 +656,10 @@ static void dsi_j_1440_810_5_8_sd_settings_init
 	settings->bl_device_name = "pwm-backlight";
 }
 
-#ifdef CONFIG_TEGRA_DC_CMU
 static void dsi_j_1440_810_5_8_cmu_init(struct tegra_dc_platform_data *pdata)
 {
 	pdata->cmu = &dsi_j_1440_810_5_8_cmu;
 }
-#endif
 
 static struct pwm_bl_data_dt_ops dsi_j_1440_810_5_8_pwm_bl_ops = {
 	.notify = dsi_j_1440_810_5_8_bl_notify,
@@ -685,8 +681,6 @@ struct tegra_panel __initdata dsi_j_1440_810_5_8 = {
 	.init_fb_data = dsi_j_1440_810_5_8_fb_data_init,
 	.set_disp_device = dsi_j_1440_810_5_8_set_disp_device,
 	.register_bl_dev = dsi_j_1440_810_5_8_register_bl_dev,
-#ifdef CONFIG_TEGRA_DC_CMU
 	.init_cmu_data = dsi_j_1440_810_5_8_cmu_init,
-#endif
 };
 EXPORT_SYMBOL(dsi_j_1440_810_5_8);

@@ -705,8 +705,9 @@ void tegra_dc_init_lut_defaults(struct tegra_dc_lut *lut);
 void tegra_dc_set_lut(struct tegra_dc *dc, struct tegra_dc_win *win);
 
 /* defined in csc.c, used in dc.c */
-void tegra_dc_init_csc_defaults(struct tegra_dc_csc *csc);
-void tegra_dc_set_csc(struct tegra_dc *dc, struct tegra_dc_csc *csc);
+void tegra_dc_init_win_csc_defaults(struct tegra_dc_win_csc *win_csc);
+void tegra_dc_set_win_csc(struct tegra_dc *dc,
+			struct tegra_dc_win_csc *win_csc);
 
 /* defined in window.c, used in dc.c and nvdisp_win.c */
 void tegra_dc_trigger_windows(struct tegra_dc *dc);
@@ -714,17 +715,11 @@ bool update_is_hsync_safe(struct tegra_dc_win *cur_win,
 	struct tegra_dc_win *new_win);
 
 void tegra_dc_set_color_control(struct tegra_dc *dc);
-#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable);
-#endif
-#ifdef CONFIG_TEGRA_DC_CMU
 void _tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable);
-#endif
 
-#ifdef CONFIG_TEGRA_DC_CMU
 int tegra_dc_update_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *cmu);
 int tegra_dc_update_cmu_aligned(struct tegra_dc *dc, struct tegra_dc_cmu *cmu);
-#endif
 
 int tegra_dc_set_hdr(struct tegra_dc *dc, struct tegra_dc_hdr *hdr,
 					bool cache_dirty);
@@ -825,9 +820,6 @@ u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_num, int ihub_switch);
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
 int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
 int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);
-int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *lut);
-void tegra_dc_cache_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *src_cmu);
-void tegra_nvdisp_get_default_cmu(struct tegra_dc_cmu *default_cmu);
 int tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 				struct tegra_dc_ext_imp_user_info *info);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);
@@ -839,9 +831,6 @@ int tegra_nvdisp_bandwidth_register(enum tegra_iso_client iso_client,
 				enum tegra_bwmgr_client_id bwmgr_client);
 void tegra_nvdisp_bandwidth_unregister(void);
 #endif
-#if defined(CONFIG_TEGRA_CSC_V2)
-void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);
-#endif
 void tegra_nvdisp_vrr_work(struct work_struct *work);
 #endif
 
@@ -850,6 +839,20 @@ bool tegra_dc_is_t21x(void);
 bool tegra_dc_is_t18x(void);
 bool tegra_dc_is_t19x(void);
 bool tegra_dc_is_nvdisplay(void);
+void __attribute__((weak)) tegra_nvdisp_init_win_csc_defaults(
+			struct tegra_dc_nvdisp_win_csc *nvdisp_win_csc);
+void __attribute__((weak)) tegra_dc_cache_nvdisp_cmu(struct tegra_dc *dc,
+			struct tegra_dc_nvdisp_cmu *src_cmu);
+void __attribute__((weak)) tegra_dc_init_nvdisp_lut_defaults(
+				struct tegra_dc_nvdisp_lut *nvdisp_lut);
+void __attribute__((weak)) tegra_dc_set_nvdisp_lut(struct tegra_dc *dc,
+						struct tegra_dc_win *win);
+void __attribute__((weak)) tegra_dc_set_nvdisp_win_csc(struct tegra_dc *dc,
+			struct tegra_dc_nvdisp_win_csc *nvdisp_win_csc);
+int __attribute__((weak)) tegra_nvdisp_update_cmu(struct tegra_dc *dc,
+			struct tegra_dc_nvdisp_lut *nvdisp_lut);
+void __attribute__((weak)) tegra_nvdisp_get_default_cmu(
+			struct tegra_dc_nvdisp_cmu *default_cmu);
 
 void __attribute__((weak)) tegra_dc_populate_t18x_hw_data(
 	struct tegra_dc_hw_data *);
@@ -888,7 +891,7 @@ int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
 void tegra_nvdisp_crc_reset(struct tegra_dc *dc);
 
 void tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
-	struct tegra_dc_ext_cmu_v2 *user_cmu_v2, bool new_cmu_values);
+	struct tegra_dc_ext_nvdisp_cmu *user_nvdisp_cmu, bool new_cmu_values);
 void tegra_nvdisp_set_output_colorspace(struct tegra_dc *dc, u16 colorspace);
 void tegra_nvdisp_set_output_range(struct tegra_dc *dc, u8 lim_range_enable);
 void tegra_nvdisp_set_csc2(struct tegra_dc *dc);
@@ -915,7 +918,7 @@ static inline void tegra_nvdisp_crc_reset(struct tegra_dc *dc)
 {
 }
 static inline void tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
-	struct tegra_dc_ext_cmu_v2 *user_cmu_v2, bool new_cmu_values)
+	struct tegra_dc_ext_nvdisp_cmu *user_nvdisp_cmu, bool new_cmu_values)
 {
 }
 static inline void tegra_nvdisp_set_output_colorspace(struct tegra_dc *dc,

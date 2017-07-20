@@ -3128,11 +3128,11 @@ static void tegra_dc_hdmi_modeset_notifier(struct tegra_dc *dc)
 			tegra_hdmi_v2_x_mon_config(hdmi, false);
 		tegra_hdmi_v2_x_host_config(hdmi, false);
 	}
-#ifdef CONFIG_TEGRA_DC_CMU
-	if (!(dc->mode.vmode & FB_VMODE_SET_YUV_MASK))
-		_tegra_dc_cmu_enable(dc,
-			dc->mode.vmode & FB_VMODE_LIMITED_RANGE);
-#endif
+	if (tegra_dc_is_t21x()) {
+		if (!(dc->mode.vmode & FB_VMODE_SET_YUV_MASK))
+			_tegra_dc_cmu_enable(dc,
+				dc->mode.vmode & FB_VMODE_LIMITED_RANGE);
+	}
 	tegra_dc_io_end(dc);
 	tegra_hdmi_put(dc);
 }

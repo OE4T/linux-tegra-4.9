@@ -445,18 +445,12 @@ struct tegra_dc {
 	bool					imp_dirty;
 	u64					imp_session_id_cntr;
 
-#if defined(CONFIG_TEGRA_DC_CMU)
 	struct tegra_dc_cmu		cmu;
-#elif defined(CONFIG_TEGRA_DC_CMU_V2)
-	struct tegra_dc_lut		cmu;
-#endif
+	struct tegra_dc_nvdisp_lut	nvdisp_postcomp_lut;
 
-#if defined(CONFIG_TEGRA_CSC_V2)
 	/* either unity or panel specific */
-	struct tegra_dc_csc_v2		default_csc;
-#endif
+	struct tegra_dc_nvdisp_win_csc	default_csc;
 
-#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	struct tegra_dc_cmu		cmu_shadow;
 	bool				cmu_dirty;
 	/* Is CMU set by bootloader */
@@ -464,7 +458,9 @@ struct tegra_dc {
 	bool				cmu_shadow_dirty;
 	bool				cmu_shadow_force_update;
 	bool				cmu_enabled;
-#endif
+
+	struct tegra_dc_lut		fb_lut;
+	struct tegra_dc_nvdisp_lut	fb_nvdisp_lut;
 	wait_queue_head_t		wq;
 	wait_queue_head_t		timestamp_wq;
 
@@ -521,7 +517,6 @@ struct tegra_dc {
 	struct dentry			*debug_common_dir;
 #endif
 #endif
-	struct tegra_dc_lut		fb_lut;
 	struct delayed_work		underflow_work;
 	u32				one_shot_delay_ms;
 	struct delayed_work		one_shot_work;

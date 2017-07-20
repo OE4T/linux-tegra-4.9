@@ -536,7 +536,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 	}
 
 	if (win_options & win_options_cp_enable_enable_f())
-		tegra_dc_set_lut(dc, win);
+		tegra_dc_set_nvdisp_lut(dc, win);
 
 	nvdisp_win_write(win, win_options, win_options_r());
 
@@ -778,7 +778,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 				win_scaler_usage_r());
 
 			/* disable csc */
-			tegra_nvdisp_set_csc(win, &win->csc);
+			tegra_nvdisp_set_win_csc(win, &win->nvdisp_win_csc);
 			/*
 			 * mark csc_dirty so that next time when window is
 			 * enabled, CSC can be programmed.
@@ -836,7 +836,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 			/* skip updating csc if cmu is disabled */
 			if (dc->cmu_enabled && dc_win->csc_dirty) {
-				tegra_nvdisp_set_csc(win, &dc_win->csc);
+				tegra_nvdisp_set_win_csc(win,
+						&dc_win->nvdisp_win_csc);
 				dc_win->csc_dirty = false;
 			}
 
@@ -1038,7 +1039,7 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 		win->is_scaler_coeff_set = true;
 	}
 
-	win->csc = dc->default_csc;
+	win->nvdisp_win_csc = dc->default_csc;
 	win->csc_dirty = true;
 
 	return 0;

@@ -88,7 +88,6 @@ static struct regulator *of_dp_hdmi_5v0;
 
 static bool os_l4t;
 
-#ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu default_cmu = {
 	/* lut1 maps sRGB to linear space. */
 	{
@@ -134,7 +133,6 @@ static struct tegra_dc_cmu default_cmu = {
 		0,
 	}
 };
-#endif
 
 struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np)
 {
@@ -1167,7 +1165,6 @@ parse_modes_fail:
 	return -EINVAL;
 }
 
-#if defined(CONFIG_TEGRA_DC_CMU)
 static int parse_cmu_data(struct device_node *np,
 	struct tegra_dc_cmu *cmu)
 {
@@ -1231,17 +1228,17 @@ static int parse_cmu_data(struct device_node *np,
 	return 0;
 }
 
-#elif defined(CONFIG_TEGRA_DC_CMU_V2)
 
-#if defined(CONFIG_TEGRA_CSC_V2)
-static int parse_csc_v2_data(struct device_node *np, struct tegra_dc_cmu *cmu)
+static int parse_nvdisp_win_csc_data(struct device_node *np,
+				struct tegra_dc_nvdisp_cmu *nvdisp_cmu)
 {
 	u32 u;
-	u32 *csc_coeff = &(cmu->panel_csc.r2r);
+	u32 *csc_coeff = &(nvdisp_cmu->panel_csc.r2r);
 	struct property *prop;
 	const __be32 *p;
 	int parsed_coeff_cnt = 0;
-	int req_coeff_cnt = sizeof(cmu->panel_csc) / sizeof(cmu->panel_csc.r2r);
+	int req_coeff_cnt = sizeof(nvdisp_cmu->panel_csc) /
+				sizeof(nvdisp_cmu->panel_csc.r2r);
 
 	req_coeff_cnt -= 1; /* subtract csc_enable */
 	of_property_for_each_u32(np, "nvidia,panel-csc", prop, p, u)
@@ -1257,22 +1254,22 @@ static int parse_csc_v2_data(struct device_node *np, struct tegra_dc_cmu *cmu)
 		OF_DC_LOG("panel csc 0x%x\n", u);
 		*(csc_coeff++) = u;
 	}
-	cmu->panel_csc.csc_enable = true;
+	nvdisp_cmu->panel_csc.csc_enable = true;
 
 	return 0;
 }
-#endif
 
-static int parse_cmu_data(struct device_node *np, struct tegra_dc_cmu *cmu)
+static int parse_nvdisp_cmu_data(struct device_node *np,
+				struct tegra_dc_nvdisp_cmu *nvdisp_cmu)
 {
-	u64 *addr_cmu_lut;
+	u64 *addr_nvdisp_cmu_lut;
 	struct property *prop;
 	const __be32 *p;
 	u32 u, index = 0, lut_count = 0;
 	u64 lutvalue = 0;
 	int err;
 
-	addr_cmu_lut = &(cmu->rgb[0]);
+	addr_nvdisp_cmu_lut = &(nvdisp_cmu->rgb[0]);
 
 	of_property_for_each_u32(np, "nvidia,cmu-lut", prop, p, u)
 		lut_count++;
@@ -1280,9 +1277,8 @@ static int parse_cmu_data(struct device_node *np, struct tegra_dc_cmu *cmu)
 	 * for RED, GREEN and BLUE in DT.
 	 * 1024 LUT indicies will be represented using 3072 entires in DT
 	 */
-	if ((lut_count / 3) >
-		(sizeof(cmu->rgb) / sizeof(cmu->rgb[0]))) {
-		pr_err("cmu lut overflow\n");
+	if ((lut_count / 3) > (ARRAY_SIZE(nvdisp_cmu->rgb))) {
+		pr_err("nvdisp_cmu lut overflow\n");
 		return -EINVAL;
 	} else {
 		/* RED, GREEN, BLUE to read and place in a 64bit variable
@@ -1294,30 +1290,27 @@ static int parse_cmu_data(struct device_node *np, struct tegra_dc_cmu *cmu)
 			lutvalue = (u64) u;
 			switch (index % 3) {
 			case 0: /* red */
-				*(addr_cmu_lut) = lutvalue;
+				*(addr_nvdisp_cmu_lut) = lutvalue;
 				break;
 			case 1: /* green */
-				*(addr_cmu_lut) |= lutvalue << 16;
+				*(addr_nvdisp_cmu_lut) |= lutvalue << 16;
 				break;
 			case 2: /* blue */
-				*(addr_cmu_lut++) |= lutvalue << 32;
+				*(addr_nvdisp_cmu_lut++) |= lutvalue << 32;
 				break;
 			}
 			index += 1;
 		}
 	}
 
-#if defined(CONFIG_TEGRA_CSC_V2)
-	err = parse_csc_v2_data(np, cmu);
+	err = parse_nvdisp_win_csc_data(np, nvdisp_cmu);
 	if (err) {
-		pr_err("parsing csc_v2 failed\n");
+		pr_err("parsing nvdisp_win_csc failed\n");
 		return err;
 	}
-#endif
 
 	return 0;
 }
-#endif
 
 struct tegra_dsi_cmd *dsi_parse_cmd_dt(struct device *dev,
 				const struct device_node *node,
@@ -2750,10 +2743,9 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	struct device_node *entry = NULL;
 	struct property *prop;
 	struct tegra_dc_out *def_out;
-#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	struct device_node *cmu_np = NULL;
 	struct device_node *cmu_adbRGB_np = NULL;
-#endif
+
 	/*
 	 * Memory for pdata, pdata->default_out, pdata->fb
 	 * need to be allocated in default
@@ -3114,43 +3106,58 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		}
 	}
 
-#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
+	if (tegra_dc_is_t21x()) {
+		cmu_np = of_get_child_by_name(np_target_disp, "cmu");
+		if (!cmu_np) {
+			pr_debug("%s: could not find cmu node\n", __func__);
+		} else {
+			pdata->cmu = devm_kzalloc(&ndev->dev,
+				sizeof(struct tegra_dc_cmu), GFP_KERNEL);
+			if (!pdata->cmu)
+				goto fail_parse;
+		}
 
-#if defined(CONFIG_TEGRA_DC_CMU)
-	cmu_np = of_get_child_by_name(np_target_disp,
-		"cmu");
-#else
-	cmu_np = of_get_child_by_name(np_target_disp,
-		"nvdisp-cmu");
-#endif
-	if (!cmu_np) {
-		pr_debug("%s: could not find cmu node\n",
-			__func__);
-	} else {
-		pdata->cmu = devm_kzalloc(&ndev->dev,
-			sizeof(struct tegra_dc_cmu), GFP_KERNEL);
-		if (!pdata->cmu) {
-			dev_err(&ndev->dev, "not enough memory\n");
-			goto fail_parse;
+		cmu_adbRGB_np = of_get_child_by_name(np_target_disp,
+				"cmu_adobe_rgb");
+
+		if (!cmu_adbRGB_np) {
+			pr_debug("%s: could not find cmu node for adobeRGB\n",
+					__func__);
+		} else {
+			pdata->cmu_adbRGB = devm_kzalloc(&ndev->dev,
+				sizeof(struct tegra_dc_cmu), GFP_KERNEL);
+			if (!pdata->cmu_adbRGB)
+				goto fail_parse;
+		}
+		if (pdata->cmu != NULL) {
+			err = parse_cmu_data(cmu_np, pdata->cmu);
+			if (err)
+				goto fail_parse;
+		}
+
+		if (pdata->cmu_adbRGB != NULL) {
+			err = parse_cmu_data(cmu_adbRGB_np, pdata->cmu_adbRGB);
+			if (err)
+				goto fail_parse;
 		}
 	}
+	if (tegra_dc_is_nvdisplay()) {
+		cmu_np = of_get_child_by_name(np_target_disp, "nvdisp-cmu");
+		if (!cmu_np) {
+			pr_debug("%s: could not find cmu node\n", __func__);
+		} else {
+			pdata->nvdisp_cmu = devm_kzalloc(&ndev->dev,
+				sizeof(struct tegra_dc_nvdisp_cmu), GFP_KERNEL);
+			if (!pdata->nvdisp_cmu)
+				goto fail_parse;
+		}
 
-	cmu_adbRGB_np = of_get_child_by_name(np_target_disp,
-		"cmu_adobe_rgb");
-
-	if (!cmu_adbRGB_np) {
-		pr_debug("%s: could not find cmu node for adobeRGB\n",
-			__func__);
-	} else {
-		pdata->cmu_adbRGB = devm_kzalloc(&ndev->dev,
-			sizeof(struct tegra_dc_cmu), GFP_KERNEL);
-		if (!pdata->cmu_adbRGB) {
-			dev_err(&ndev->dev, "not enough memory\n");
-			goto fail_parse;
+		if (pdata->nvdisp_cmu != NULL) {
+			err = parse_nvdisp_cmu_data(cmu_np, pdata->nvdisp_cmu);
+			if (err)
+				goto fail_parse;
 		}
 	}
-#endif
-
 	/*
 	 * parse sd_settings values
 	 */
@@ -3171,23 +3178,9 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		}
 	}
 
-#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
-	if (pdata->cmu != NULL) {
-		err = parse_cmu_data(cmu_np, pdata->cmu);
-		if (err)
-			goto fail_parse;
-	}
-
-	if (pdata->cmu_adbRGB != NULL) {
-		err = parse_cmu_data(cmu_adbRGB_np, pdata->cmu_adbRGB);
-		if (err)
-			goto fail_parse;
-	}
-
 	if (of_property_read_u32(pdata->panel_np, "nvidia,default_color_space",
 					&pdata->default_clr_space))
 		pdata->default_clr_space = 0;
-#endif
 
 	of_property_for_each_u32(np, "nvidia,dc-flags", prop, p, temp) {
 		if (!is_dc_default_flag(temp)) {
@@ -3212,14 +3205,12 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		pdata->win_mask = (u32)temp;
 		OF_DC_LOG("win mask 0x%x\n", temp);
 	}
-#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	if (!of_property_read_u32(np, "nvidia,cmu-enable", &temp)) {
 		pdata->cmu_enable = (bool)temp;
 		OF_DC_LOG("cmu enable %d\n", pdata->cmu_enable);
 	} else {
 		pdata->cmu_enable = false;
 	}
-#endif
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	/* no valid window set for device */
@@ -3239,19 +3230,15 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	dev_info(&ndev->dev, "DT parsed successfully\n");
 	of_node_put(timings_np);
 	of_node_put(sd_np);
-#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	of_node_put(cmu_np);
 	of_node_put(cmu_adbRGB_np);
-#endif
 	of_node_put(np_target_disp);
 	return pdata;
 
 fail_parse:
 	of_node_put(sd_np);
-#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	of_node_put(cmu_np);
 	of_node_put(cmu_adbRGB_np);
-#endif
 	return ERR_PTR(err);
 }
 

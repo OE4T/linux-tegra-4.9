@@ -17,6 +17,6 @@ obj-y += nvdisp_config.o
 obj-y += nvdisp_sd.o
 obj-y += nvdisp_bandwidth.o
 obj-y += nvdisp_crc.o
-obj-$(CONFIG_TEGRA_LUT_V2) += nvdisp_lut.o
-obj-$(CONFIG_TEGRA_CSC_V2) += nvdisp_csc.o
+obj-y += nvdisp_lut.o
+obj-y += nvdisp_csc.o
 

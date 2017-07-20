@@ -10,8 +10,8 @@ obj-y += dc_common.o dc.o mode.o clock.o window.o dc_client.o
 ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 obj-y += bandwidth.o
 endif
-obj-$(CONFIG_TEGRA_CSC) += csc.o
-obj-$(CONFIG_TEGRA_LUT) += lut.o
+obj-y += csc.o
+obj-y += lut.o
 obj-y += cursor.o
 obj-y += of_dc.o
 obj-$(CONFIG_TEGRA_HDMI2FPD_DS90UH949) += hdmi2fpd_ds90uh949.o

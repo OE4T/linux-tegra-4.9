@@ -108,8 +108,8 @@ struct tegra_dc_ext_flip_win {
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	struct sync_fence			*pre_syncpt_fence;
 #endif
-	bool					user_csc_v2;
-	struct tegra_dc_ext_csc_v2		csc_v2;
+	bool					user_nvdisp_win_csc;
+	struct tegra_dc_ext_nvdisp_win_csc		nvdisp_win_csc;
 };
 
 struct tegra_dc_ext_flip_data {
@@ -127,7 +127,7 @@ struct tegra_dc_ext_flip_data {
 	u64 imp_session_id;
 	bool cmu_update_needed; /* this is needed for ENABLE or DISABLE */
 	bool new_cmu_values; /* this is to be used only when ENABLE */
-	struct tegra_dc_ext_cmu_v2 user_cmu_v2;
+	struct tegra_dc_ext_nvdisp_cmu user_nvdisp_cmu;
 	bool output_colorspace_update_needed;
 	bool output_range_update_needed;
 	u32 output_colorspace;
@@ -926,7 +926,7 @@ static void tegra_dc_update_postcomp(struct tegra_dc *dc,
 		tegra_nvdisp_set_chroma_lpf(dc);
 	}
 	if (data->cmu_update_needed)
-		tegra_nvdisp_set_output_lut(dc, &data->user_cmu_v2,
+		tegra_nvdisp_set_output_lut(dc, &data->user_nvdisp_cmu,
 					    data->new_cmu_values);
 
 	if (data->output_colorspace_update_needed)
@@ -1046,59 +1046,83 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			}
 		}
 
-#ifdef CONFIG_TEGRA_CSC
-		if ((data->win[i].attr.flags &
-				TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC)
-				&& !dc->yuv_bypass) {
-			win->csc.yof = data->win[i].attr.csc.yof;
-			win->csc.kyrgb = data->win[i].attr.csc.kyrgb;
-			win->csc.kur = data->win[i].attr.csc.kur;
-			win->csc.kug = data->win[i].attr.csc.kug;
-			win->csc.kub = data->win[i].attr.csc.kub;
-			win->csc.kvr = data->win[i].attr.csc.kvr;
-			win->csc.kvg = data->win[i].attr.csc.kvg;
-			win->csc.kvb = data->win[i].attr.csc.kvb;
-			win->csc_dirty = true;
-		}
-#endif
-
-#ifdef CONFIG_TEGRA_CSC_V2
-		if ((data->win[i].attr.flags &
-				TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC_V2)
+		if (tegra_dc_is_t21x()) {
+			if ((data->win[i].attr.flags &
+					TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC)
+					&& !dc->yuv_bypass) {
+				win->win_csc.yof = data->win[i].attr.csc.yof;
+				win->win_csc.kyrgb =
+						data->win[i].attr.csc.kyrgb;
+				win->win_csc.kur = data->win[i].attr.csc.kur;
+				win->win_csc.kug = data->win[i].attr.csc.kug;
+				win->win_csc.kub = data->win[i].attr.csc.kub;
+				win->win_csc.kvr = data->win[i].attr.csc.kvr;
+				win->win_csc.kvg = data->win[i].attr.csc.kvg;
+				win->win_csc.kvb = data->win[i].attr.csc.kvb;
+				win->csc_dirty = true;
+			}
+		} else if (tegra_dc_is_nvdisplay()) {
+			if ((data->win[i].attr.flags &
+				TEGRA_DC_EXT_FLIP_FLAG_UPDATE_NVDISP_WIN_CSC)
 				&& !ext->dc->yuv_bypass
 				&& !win->force_user_csc) {
-			win->csc.r2r = data->win[i].attr.csc2.r2r;
-			win->csc.g2r = data->win[i].attr.csc2.g2r;
-			win->csc.b2r = data->win[i].attr.csc2.b2r;
-			win->csc.const2r = data->win[i].attr.csc2.const2r;
-			win->csc.r2g = data->win[i].attr.csc2.r2g;
-			win->csc.g2g = data->win[i].attr.csc2.g2g;
-			win->csc.b2g = data->win[i].attr.csc2.b2g;
-			win->csc.const2g = data->win[i].attr.csc2.const2g;
-			win->csc.r2b = data->win[i].attr.csc2.r2b;
-			win->csc.g2b = data->win[i].attr.csc2.g2b;
-			win->csc.b2b = data->win[i].attr.csc2.b2b;
-			win->csc.const2b = data->win[i].attr.csc2.const2b;
-			win->csc_dirty = true;
-		} else if (data->win[i].user_csc_v2 &&
-			   !ext->dc->yuv_bypass &&
-			   !win->force_user_csc) {
-			win->csc.csc_enable = data->win[i].csc_v2.csc_enable;
-			win->csc.r2r = data->win[i].csc_v2.r2r;
-			win->csc.g2r = data->win[i].csc_v2.g2r;
-			win->csc.b2r = data->win[i].csc_v2.b2r;
-			win->csc.const2r = data->win[i].csc_v2.const2r;
-			win->csc.r2g = data->win[i].csc_v2.r2g;
-			win->csc.g2g = data->win[i].csc_v2.g2g;
-			win->csc.b2g = data->win[i].csc_v2.b2g;
-			win->csc.const2g = data->win[i].csc_v2.const2g;
-			win->csc.r2b = data->win[i].csc_v2.r2b;
-			win->csc.g2b = data->win[i].csc_v2.g2b;
-			win->csc.b2b = data->win[i].csc_v2.b2b;
-			win->csc.const2b = data->win[i].csc_v2.const2b;
-			win->csc_dirty = true;
+				win->nvdisp_win_csc.r2r =
+						data->win[i].attr.csc2.r2r;
+				win->nvdisp_win_csc.g2r =
+						data->win[i].attr.csc2.g2r;
+				win->nvdisp_win_csc.b2r =
+						data->win[i].attr.csc2.b2r;
+				win->nvdisp_win_csc.const2r =
+						data->win[i].attr.csc2.const2r;
+				win->nvdisp_win_csc.r2g =
+						data->win[i].attr.csc2.r2g;
+				win->nvdisp_win_csc.g2g =
+						data->win[i].attr.csc2.g2g;
+				win->nvdisp_win_csc.b2g =
+						data->win[i].attr.csc2.b2g;
+				win->nvdisp_win_csc.const2g =
+						data->win[i].attr.csc2.const2g;
+				win->nvdisp_win_csc.r2b =
+						data->win[i].attr.csc2.r2b;
+				win->nvdisp_win_csc.g2b =
+						data->win[i].attr.csc2.g2b;
+				win->nvdisp_win_csc.b2b =
+						data->win[i].attr.csc2.b2b;
+				win->nvdisp_win_csc.const2b =
+						data->win[i].attr.csc2.const2b;
+				win->csc_dirty = true;
+			} else if (data->win[i].user_nvdisp_win_csc &&
+					!ext->dc->yuv_bypass &&
+					!win->force_user_csc) {
+				win->nvdisp_win_csc.csc_enable =
+					data->win[i].nvdisp_win_csc.csc_enable;
+				win->nvdisp_win_csc.r2r =
+					data->win[i].nvdisp_win_csc.r2r;
+				win->nvdisp_win_csc.g2r =
+					data->win[i].nvdisp_win_csc.g2r;
+				win->nvdisp_win_csc.b2r =
+					data->win[i].nvdisp_win_csc.b2r;
+				win->nvdisp_win_csc.const2r =
+					data->win[i].nvdisp_win_csc.const2r;
+				win->nvdisp_win_csc.r2g =
+					data->win[i].nvdisp_win_csc.r2g;
+				win->nvdisp_win_csc.g2g =
+					data->win[i].nvdisp_win_csc.g2g;
+				win->nvdisp_win_csc.b2g =
+					data->win[i].nvdisp_win_csc.b2g;
+				win->nvdisp_win_csc.const2g =
+					data->win[i].nvdisp_win_csc.const2g;
+				win->nvdisp_win_csc.r2b =
+					data->win[i].nvdisp_win_csc.r2b;
+				win->nvdisp_win_csc.g2b =
+					data->win[i].nvdisp_win_csc.g2b;
+				win->nvdisp_win_csc.b2b =
+					data->win[i].nvdisp_win_csc.b2b;
+				win->nvdisp_win_csc.const2b =
+					data->win[i].nvdisp_win_csc.const2b;
+				win->csc_dirty = true;
+			}
 		}
-#endif
 
 		if (!skip_flip)
 			tegra_dc_ext_set_windowattr(ext, win, &data->win[i]);
@@ -1511,39 +1535,44 @@ static void tegra_dc_ext_unpin_window(struct tegra_dc_ext_win *win)
 	tegra_dc_ext_unpin_handles(unpin_handles, nr_unpin);
 }
 
-static int tegra_dc_ext_configure_cmu_v2_user_data(
+static int tegra_dc_ext_configure_nvdisp_cmu_user_data(
 	struct tegra_dc_ext_flip_data *flip_kdata,
 	struct tegra_dc_ext_flip_user_data *flip_udata)
 {
 	int ret = 0;
 	size_t size;
 	struct tegra_dc *dc;
-	struct tegra_dc_ext_cmu_v2 *kcmu_v2;
-	struct tegra_dc_ext_udata_cmu_v2 *udata_cmu_v2;
-	struct tegra_dc_ext_cmu_v2 *ucmu_v2;
+	struct tegra_dc_ext_nvdisp_cmu *knvdisp_cmu;
+	struct tegra_dc_ext_udata_nvdisp_cmu *udata_nvdisp_cmu;
+	struct tegra_dc_ext_nvdisp_cmu *unvdisp_cmu;
 
 	if (!flip_kdata || !flip_udata)
 		return -EINVAL;
 
 	dc = flip_kdata->ext->dc;
 
-	udata_cmu_v2 = &flip_udata->cmu_v2;
-	ucmu_v2 = (struct tegra_dc_ext_cmu_v2 *)udata_cmu_v2->cmu_v2;
+	udata_nvdisp_cmu = &flip_udata->nvdisp_cmu;
+	unvdisp_cmu = (struct tegra_dc_ext_nvdisp_cmu *)
+			udata_nvdisp_cmu->nvdisp_cmu;
 
-	kcmu_v2 = &flip_kdata->user_cmu_v2;
-	size = sizeof(kcmu_v2->cmu_enable);
+	knvdisp_cmu = &flip_kdata->user_nvdisp_cmu;
+	size = sizeof(knvdisp_cmu->cmu_enable);
 	/* copying only cmu_enable now */
-	if (copy_from_user(kcmu_v2,
-		(void __user *) (uintptr_t)ucmu_v2, size)) {
+	if (copy_from_user(knvdisp_cmu,
+		(void __user *) (uintptr_t)unvdisp_cmu, size)) {
 		return -EFAULT;
 	}
 
-	/* copying rest of the cmu_v2 struct after checking for update flag */
-	if (kcmu_v2->cmu_enable) {
-		if (flip_udata->flags & TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CMU_V2) {
-			size = sizeof(kcmu_v2) - size;
-			if (copy_from_user(&kcmu_v2->lut_size,
-				(void __user *) (uintptr_t)&ucmu_v2->lut_size,
+	/* copying rest of the nvdisp_cmu struct after checking for
+	 * update flag
+	 */
+	if (knvdisp_cmu->cmu_enable) {
+		if (flip_udata->flags &
+			TEGRA_DC_EXT_FLIP_FLAG_UPDATE_NVDISP_CMU) {
+			size = sizeof(knvdisp_cmu) - size;
+			if (copy_from_user(&knvdisp_cmu->lut_size,
+				(void __user *)
+				(uintptr_t)&unvdisp_cmu->lut_size,
 				size)) {
 				return -EFAULT;
 			}
@@ -1587,38 +1616,39 @@ static int tegra_dc_ext_configure_output_csc_user_data(
 	return 0;
 }
 
-static int tegra_dc_ext_read_csc_v2_user_data(
+static int tegra_dc_ext_read_nvdisp_win_csc_user_data(
 	struct tegra_dc_ext_flip_data *flip_kdata,
 	struct tegra_dc_ext_flip_user_data *flip_udata)
 {
 	int ret = 0;
 	int i, j;
-	struct tegra_dc_ext_csc_v2 *entry;
-	struct tegra_dc_ext_udata_csc_v2 *ucsc_v2;
+	struct tegra_dc_ext_nvdisp_win_csc *entry;
+	struct tegra_dc_ext_udata_nvdisp_win_csc *unvdisp_win_csc;
 
 	if (!flip_kdata || !flip_udata)
 		return -EINVAL;
 
-	ucsc_v2 = &flip_udata->csc_v2;
+	unvdisp_win_csc = &flip_udata->nvdisp_win_csc;
 
-	if (ucsc_v2->nr_elements <= 0) {
+	if (unvdisp_win_csc->nr_elements <= 0) {
 		dev_err(&flip_kdata->ext->dc->ndev->dev,
-			"Invalid TEGRA_DC_EXT_FLIP_USER_DATA_CSC_V2 config\n");
+		"Invalid TEGRA_DC_EXT_FLIP_USER_DATA_NVDISP_WIN_CSC config\n");
 		return -EINVAL;
 	}
 
-	entry = kcalloc((size_t)ucsc_v2->nr_elements, (size_t)sizeof(*entry),
-			GFP_KERNEL);
+	entry = kcalloc((size_t)unvdisp_win_csc->nr_elements,
+			(size_t)sizeof(*entry), GFP_KERNEL);
 	if (!entry)
 		return -ENOMEM;
 
-	if (copy_from_user(entry, (void __user *) (uintptr_t)ucsc_v2->array,
-			   sizeof(*entry) * ucsc_v2->nr_elements)) {
+	if (copy_from_user(entry,
+			   (void __user *) (uintptr_t)unvdisp_win_csc->array,
+			   sizeof(*entry) * unvdisp_win_csc->nr_elements)) {
 		ret = -EFAULT;
 		goto end;
 	}
 
-	for (i = 0; i < ucsc_v2->nr_elements; i++) {
+	for (i = 0; i < unvdisp_win_csc->nr_elements; i++) {
 		for (j = 0; j < flip_kdata->act_window_num; j++) {
 			if (entry[i].win_index ==
 				flip_kdata->win[j].attr.index) {
@@ -1628,24 +1658,24 @@ static int tegra_dc_ext_read_csc_v2_user_data(
 
 		if (j >= flip_kdata->act_window_num) {
 			dev_err(&flip_kdata->ext->dc->ndev->dev,
-				"win%d for csc_v2 not in flip wins\n",
+				"win%d for nvdisp_win_csc not in flip wins\n",
 					entry[i].win_index);
 			ret = -EINVAL;
 			goto end;
 		}
 
 		if (flip_kdata->win[j].attr.flags &
-					TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC_V2) {
+				TEGRA_DC_EXT_FLIP_FLAG_UPDATE_NVDISP_WIN_CSC) {
 			dev_err(&flip_kdata->ext->dc->ndev->dev,
-				"only one csc_v2/win%d allowed\n",
+				"only one nvdisp_win_csc/win%d allowed\n",
 					entry[i].win_index);
 			ret = -EINVAL;
 			goto end;
 		}
 
 		/* copy into local tegra_dc_ext_flip_win */
-		flip_kdata->win[j].csc_v2 = entry[i];
-		flip_kdata->win[j].user_csc_v2 = true;
+		flip_kdata->win[j].nvdisp_win_csc = entry[i];
+		flip_kdata->win[j].user_nvdisp_win_csc = true;
 	}
 
 end:
@@ -1662,7 +1692,7 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	bool imp_tag_present = false;
 #endif
-	bool csc_v2_present = false;
+	bool nvdisp_win_csc_present = false;
 
 	for (i = 0; i < nr_user_data; i++) {
 		switch (flip_user_data[i].data_type) {
@@ -1714,22 +1744,22 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 		case TEGRA_DC_EXT_FLIP_USER_DATA_GET_FLIP_INFO:
 			break;
 
-		case TEGRA_DC_EXT_FLIP_USER_DATA_CSC_V2:
-			if (csc_v2_present) {
+		case TEGRA_DC_EXT_FLIP_USER_DATA_NVDISP_WIN_CSC:
+			if (nvdisp_win_csc_present) {
 				dev_err(&data->ext->dc->ndev->dev,
-					"only one csc_v2/flip is allowed\n");
+				"only one nvdisp_win_csc/flip is allowed\n");
 				return -EINVAL;
 			}
-			csc_v2_present = true;
+			nvdisp_win_csc_present = true;
 
-			ret = tegra_dc_ext_read_csc_v2_user_data(data,
+			ret = tegra_dc_ext_read_nvdisp_win_csc_user_data(data,
 							&flip_user_data[i]);
 			if (ret)
 				return ret;
 
 			break;
-		case TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2:
-			ret = tegra_dc_ext_configure_cmu_v2_user_data(data,
+		case TEGRA_DC_EXT_FLIP_USER_DATA_NVDISP_CMU:
+			ret = tegra_dc_ext_configure_nvdisp_cmu_user_data(data,
 				&flip_user_data[i]);
 			if (ret)
 				return ret;
@@ -1960,21 +1990,20 @@ fail_pin:
 	return ret;
 }
 
-#if defined(CONFIG_TEGRA_CSC)
-static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
+static int tegra_dc_ext_set_win_csc(struct tegra_dc_ext_user *user,
 				struct tegra_dc_ext_csc *new_csc)
 {
 	unsigned int index = new_csc->win_index;
 	struct tegra_dc *dc = user->ext->dc;
 	struct tegra_dc_ext_win *ext_win;
-	struct tegra_dc_csc *csc;
+	struct tegra_dc_win_csc *win_csc;
 	struct tegra_dc_win *win = tegra_dc_get_window(dc, index);
 
 	if (!win)
 		return -EINVAL;
 
 	ext_win = &user->ext->win[index];
-	csc = &win->csc;
+	win_csc = &win->win_csc;
 
 	mutex_lock(&ext_win->lock);
 
@@ -1983,38 +2012,36 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 		return -EACCES;
 	}
 
-	csc->yof =   new_csc->yof;
-	csc->kyrgb = new_csc->kyrgb;
-	csc->kur =   new_csc->kur;
-	csc->kvr =   new_csc->kvr;
-	csc->kug =   new_csc->kug;
-	csc->kvg =   new_csc->kvg;
-	csc->kub =   new_csc->kub;
-	csc->kvb =   new_csc->kvb;
+	win_csc->yof =   new_csc->yof;
+	win_csc->kyrgb = new_csc->kyrgb;
+	win_csc->kur =   new_csc->kur;
+	win_csc->kvr =   new_csc->kvr;
+	win_csc->kug =   new_csc->kug;
+	win_csc->kvg =   new_csc->kvg;
+	win_csc->kub =   new_csc->kub;
+	win_csc->kvb =   new_csc->kvb;
 
-	tegra_dc_update_csc(dc, index);
+	tegra_dc_update_win_csc(dc, index);
 
 	mutex_unlock(&ext_win->lock);
 
 	return 0;
 }
-#endif
 
-#if defined(CONFIG_TEGRA_CSC_V2)
-static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
-				struct tegra_dc_ext_csc_v2 *new_csc)
+static int tegra_dc_ext_set_nvdisp_win_csc(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_nvdisp_win_csc *new_csc)
 {
 	unsigned int index = new_csc->win_index;
 	struct tegra_dc *dc = user->ext->dc;
 	struct tegra_dc_ext_win *ext_win;
-	struct tegra_dc_csc_v2 *csc;
+	struct tegra_dc_nvdisp_win_csc *nvdisp_win_csc;
 	struct tegra_dc_win *win = tegra_dc_get_window(dc, index);
 
 	if (!win)
 		return -EINVAL;
 
 	ext_win = &user->ext->win[index];
-	csc = &win->csc;
+	nvdisp_win_csc = &win->nvdisp_win_csc;
 
 	mutex_lock(&ext_win->lock);
 
@@ -2024,28 +2051,26 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 	}
 
 	if (!win->force_user_csc) {
-		csc->csc_enable = new_csc->csc_enable;
-		csc->r2r = new_csc->r2r;
-		csc->g2r = new_csc->g2r;
-		csc->b2r = new_csc->b2r;
-		csc->const2r = new_csc->const2r;
-		csc->r2g = new_csc->r2g;
-		csc->g2g = new_csc->g2g;
-		csc->b2g = new_csc->b2g;
-		csc->const2g = new_csc->const2g;
-		csc->r2b = new_csc->r2b;
-		csc->g2b = new_csc->g2b;
-		csc->b2b = new_csc->b2b;
-		csc->const2b = new_csc->const2b;
-		tegra_nvdisp_update_csc(dc, index);
+		nvdisp_win_csc->csc_enable = new_csc->csc_enable;
+		nvdisp_win_csc->r2r = new_csc->r2r;
+		nvdisp_win_csc->g2r = new_csc->g2r;
+		nvdisp_win_csc->b2r = new_csc->b2r;
+		nvdisp_win_csc->const2r = new_csc->const2r;
+		nvdisp_win_csc->r2g = new_csc->r2g;
+		nvdisp_win_csc->g2g = new_csc->g2g;
+		nvdisp_win_csc->b2g = new_csc->b2g;
+		nvdisp_win_csc->const2g = new_csc->const2g;
+		nvdisp_win_csc->r2b = new_csc->r2b;
+		nvdisp_win_csc->g2b = new_csc->g2b;
+		nvdisp_win_csc->b2b = new_csc->b2b;
+		nvdisp_win_csc->const2b = new_csc->const2b;
+		tegra_nvdisp_update_win_csc(dc, index);
 	}
 	mutex_unlock(&ext_win->lock);
 
 	return 0;
 }
-#endif
 
-#if defined(CONFIG_TEGRA_LUT)
 static int set_lut_channel(u16 __user *channel_from_user,
 			   u8 *channel_to,
 			   u32 start,
@@ -2067,8 +2092,8 @@ static int set_lut_channel(u16 __user *channel_from_user,
 
 	return 0;
 }
-#elif defined(CONFIG_TEGRA_LUT_V2)
-static int set_lut_channel(struct tegra_dc_ext_lut *new_lut,
+
+static int set_nvdisp_lut_channel(struct tegra_dc_ext_lut *new_lut,
 			   u64 *channel_to)
 {
 	int i, j;
@@ -2107,12 +2132,11 @@ static int set_lut_channel(struct tegra_dc_ext_lut *new_lut,
 	}
 	return 0;
 }
-#endif
 
 static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 				struct tegra_dc_ext_lut *new_lut)
 {
-	int err;
+	int err = 0;
 	unsigned int index = new_lut->win_index;
 	u32 start = new_lut->start;
 	u32 len = new_lut->len;
@@ -2120,6 +2144,7 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 	struct tegra_dc *dc = user->ext->dc;
 	struct tegra_dc_ext_win *ext_win;
 	struct tegra_dc_lut *lut;
+	struct tegra_dc_nvdisp_lut *nvdisp_lut;
 	struct tegra_dc_win *win = tegra_dc_get_window(dc, index);
 
 	if (!win)
@@ -2129,7 +2154,6 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 		return -EINVAL;
 
 	ext_win = &user->ext->win[index];
-	lut = &win->lut;
 
 	mutex_lock(&ext_win->lock);
 
@@ -2139,24 +2163,27 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 	}
 	tegra_dc_scrncapt_disp_pause_lock(dc);
 
-#if defined(CONFIG_TEGRA_LUT)
+	if (tegra_dc_is_t21x()) {
+		lut = &win->lut;
+		err = set_lut_channel(new_lut->r, lut->r, start, len) |
+			set_lut_channel(new_lut->g, lut->g, start, len) |
+			set_lut_channel(new_lut->b, lut->b, start, len);
+	} else if (tegra_dc_is_nvdisplay()) {
+		nvdisp_lut = &win->nvdisp_lut;
+		memset(nvdisp_lut->rgb, 0, sizeof(u64) * len);
+		err = set_nvdisp_lut_channel(new_lut, nvdisp_lut->rgb);
+	}
 
-	err = set_lut_channel(new_lut->r, lut->r, start, len) |
-	      set_lut_channel(new_lut->g, lut->g, start, len) |
-	      set_lut_channel(new_lut->b, lut->b, start, len);
-
-#elif defined(CONFIG_TEGRA_LUT_V2)
-	memset(lut->rgb, 0, sizeof(u64) * len);
-	err = set_lut_channel(new_lut, lut->rgb);
-
-#endif
 	if (err) {
 		tegra_dc_scrncapt_disp_pause_unlock(dc);
 		mutex_unlock(&ext_win->lock);
 		return -EFAULT;
 	}
-
-	tegra_dc_update_lut(dc, index,
+	if (tegra_dc_is_t21x())
+		tegra_dc_update_lut(dc, index,
+			new_lut->flags & TEGRA_DC_EXT_LUT_FLAGS_FBOVERRIDE);
+	else if (tegra_dc_is_nvdisplay())
+		tegra_dc_update_nvdisp_lut(dc, index,
 			new_lut->flags & TEGRA_DC_EXT_LUT_FLAGS_FBOVERRIDE);
 
 	tegra_dc_scrncapt_disp_pause_unlock(dc);
@@ -2165,61 +2192,59 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 	return 0;
 }
 
-#if defined(CONFIG_TEGRA_DC_CMU_V2)
-static int tegra_dc_ext_get_cmu_v2(struct tegra_dc_ext_user *user,
-			struct tegra_dc_ext_cmu_v2 *args, bool custom_value)
+static int tegra_dc_ext_get_nvdisp_cmu(struct tegra_dc_ext_user *user,
+			struct tegra_dc_ext_nvdisp_cmu *args, bool custom_value)
 {
 	int i;
 	struct tegra_dc *dc = user->ext->dc;
-	struct tegra_dc_cmu *cmu = dc->pdata->cmu;
-	struct tegra_dc_lut *cmu_lut = &dc->cmu;
+	struct tegra_dc_nvdisp_cmu *nvdisp_cmu = dc->pdata->nvdisp_cmu;
+	struct tegra_dc_nvdisp_lut *cmu_nvdisp_lut = &dc->nvdisp_postcomp_lut;
 
-	if (custom_value && dc->pdata->cmu) {
-		cmu = dc->pdata->cmu;
+	if (custom_value && dc->pdata->nvdisp_cmu) {
+		nvdisp_cmu = dc->pdata->nvdisp_cmu;
 		for (i = 0; i < TEGRA_DC_EXT_LUT_SIZE_1025; i++)
-			args->rgb[i] = cmu->rgb[i];
+			args->rgb[i] = nvdisp_cmu->rgb[i];
 	}
 
-	else if (custom_value && !dc->pdata->cmu)
+	else if (custom_value && !dc->pdata->nvdisp_cmu)
 		return -EACCES;
 	else {
-		cmu_lut = &dc->cmu;
+		cmu_nvdisp_lut = &dc->nvdisp_postcomp_lut;
 		for (i = 0; i < TEGRA_DC_EXT_LUT_SIZE_1025; i++)
-			args->rgb[i] = cmu_lut->rgb[i];
+			args->rgb[i] = cmu_nvdisp_lut->rgb[i];
 	}
 
 	args->cmu_enable = dc->pdata->cmu_enable;
 	return 0;
 }
 
-static int tegra_dc_ext_set_cmu_v2(struct tegra_dc_ext_user *user,
-				struct tegra_dc_ext_cmu_v2 *args)
+static int tegra_dc_ext_set_nvdisp_cmu(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_nvdisp_cmu *args)
 {
 	int i, lut_size;
-	struct tegra_dc_lut *cmu;
+	struct tegra_dc_nvdisp_lut *nvdisp_cmu;
 	struct tegra_dc *dc = user->ext->dc;
 
 	/* Directly copying the values to DC
 	 * output lut whose address is already
 	 * programmed to HW register.
 	 */
-	cmu = &dc->cmu;
-	if (!cmu)
+	nvdisp_cmu = &dc->nvdisp_postcomp_lut;
+	if (!nvdisp_cmu)
 		return -ENOMEM;
 
 	tegra_dc_scrncapt_disp_pause_lock(dc);
 	dc->pdata->cmu_enable = args->cmu_enable;
 	lut_size = args->lut_size;
 	for (i = 0; i < lut_size; i++)
-		cmu->rgb[i] = args->rgb[i];
+		nvdisp_cmu->rgb[i] = args->rgb[i];
 
-	tegra_nvdisp_update_cmu(dc, cmu);
+	tegra_nvdisp_update_cmu(dc, nvdisp_cmu);
 	tegra_dc_scrncapt_disp_pause_unlock(dc);
 
 	return 0;
 }
 
-#elif defined(CONFIG_TEGRA_DC_CMU)
 static int tegra_dc_ext_get_cmu(struct tegra_dc_ext_user *user,
 			struct tegra_dc_ext_cmu *args, bool custom_value)
 {
@@ -2352,7 +2377,6 @@ static int tegra_dc_ext_get_cmu_adbRGB(struct tegra_dc_ext_user *user,
 	return 0;
 }
 
-#endif
 
 #ifdef CONFIG_TEGRA_ISOMGR
 static int tegra_dc_ext_negotiate_bw(struct tegra_dc_ext_user *user,
@@ -2977,29 +3001,32 @@ free_and_ret:
 
 		return tegra_dc_ext_set_cursor(user, &args);
 	}
-#ifdef CONFIG_TEGRA_CSC
 	case TEGRA_DC_EXT_SET_CSC:
 	{
-		struct tegra_dc_ext_csc args;
+		if (tegra_dc_is_t21x()) {
+			struct tegra_dc_ext_csc args;
 
-		if (copy_from_user(&args, user_arg, sizeof(args)))
-			return -EFAULT;
+			if (copy_from_user(&args, user_arg, sizeof(args)))
+				return -EFAULT;
 
-		return tegra_dc_ext_set_csc(user, &args);
+			return tegra_dc_ext_set_win_csc(user, &args);
+		} else {
+			return -EACCES;
+		}
 	}
-#endif
-
-#ifdef CONFIG_TEGRA_CSC_V2
-	case TEGRA_DC_EXT_SET_CSC_V2:
+	case TEGRA_DC_EXT_SET_NVDISP_WIN_CSC:
 	{
-		struct tegra_dc_ext_csc_v2 args;
+		if (tegra_dc_is_nvdisplay()) {
+			struct tegra_dc_ext_nvdisp_win_csc args;
 
-		if (copy_from_user(&args, user_arg, sizeof(args)))
-			return -EFAULT;
+			if (copy_from_user(&args, user_arg, sizeof(args)))
+				return -EFAULT;
 
-		return tegra_dc_ext_set_csc(user, &args);
+			return tegra_dc_ext_set_nvdisp_win_csc(user, &args);
+		} else {
+			return -EACCES;
+		}
 	}
-#endif
 	case TEGRA_DC_EXT_GET_VBLANK_SYNCPT:
 	{
 		u32 syncpt = tegra_dc_ext_get_vblank_syncpt(user);
@@ -3065,8 +3092,10 @@ free_and_ret:
 
 	case TEGRA_DC_EXT_GET_CMU:
 	{
-#ifdef CONFIG_TEGRA_DC_CMU
 		struct tegra_dc_ext_cmu *args;
+
+		if (!tegra_dc_is_t21x())
+			return -EACCES;
 
 		args = kzalloc(sizeof(*args), GFP_KERNEL);
 		if (!args)
@@ -3081,15 +3110,14 @@ free_and_ret:
 
 		kfree(args);
 		return 0;
-#else
-		return -EACCES;
-#endif
 	}
 
 	case TEGRA_DC_EXT_GET_CUSTOM_CMU:
 	{
-#ifdef CONFIG_TEGRA_DC_CMU
 		struct tegra_dc_ext_cmu *args;
+
+		if (!tegra_dc_is_t21x())
+			return -EACCES;
 
 		args = kzalloc(sizeof(*args), GFP_KERNEL);
 		if (!args)
@@ -3107,15 +3135,14 @@ free_and_ret:
 
 		kfree(args);
 		return 0;
-#else
-		return -EACCES;
-#endif
 	}
 
 	case TEGRA_DC_EXT_GET_CMU_ADBRGB:
 	{
-#ifdef CONFIG_TEGRA_DC_CMU
 		struct tegra_dc_ext_cmu *args;
+
+		if (!tegra_dc_is_t21x())
+			return -EACCES;
 
 		args = kzalloc(sizeof(*args), GFP_KERNEL);
 		if (!args)
@@ -3133,16 +3160,15 @@ free_and_ret:
 
 		kfree(args);
 		return 0;
-#else
-		return -EACCES;
-#endif
 	}
 
 	case TEGRA_DC_EXT_SET_CMU:
 	{
-#ifdef CONFIG_TEGRA_DC_CMU
 		int ret;
 		struct tegra_dc_ext_cmu *args;
+
+		if (!tegra_dc_is_t21x())
+			return -EACCES;
 
 		args = kzalloc(sizeof(*args), GFP_KERNEL);
 		if (!args)
@@ -3158,26 +3184,26 @@ free_and_ret:
 		kfree(args);
 
 		return ret;
-#else
-		return -EACCES;
-#endif
 	}
 
-	case TEGRA_DC_EXT_GET_CMU_V2:
-	case TEGRA_DC_EXT_GET_CUSTOM_CMU_V2:
+	case TEGRA_DC_EXT_GET_NVDISP_CMU:
+	case TEGRA_DC_EXT_GET_CUSTOM_NVDISP_CMU:
 	{
-#ifdef CONFIG_TEGRA_DC_CMU_V2
-		struct tegra_dc_ext_cmu_v2 *args;
+		struct tegra_dc_ext_nvdisp_cmu *args;
 		bool custom_value = false;
 
-		if (TEGRA_DC_EXT_GET_CUSTOM_CMU_V2 == cmd)
+		if (!tegra_dc_is_nvdisplay())
+			return -EACCES;
+
+		if (cmd == TEGRA_DC_EXT_GET_CUSTOM_NVDISP_CMU)
 			custom_value = true;
 
 		args = kzalloc(sizeof(*args), GFP_KERNEL);
 		if (!args)
 			return -ENOMEM;
 
-		if (tegra_dc_ext_get_cmu_v2(user, args, custom_value)) {
+		if (tegra_dc_ext_get_nvdisp_cmu(user, args,
+					custom_value)) {
 			kfree(args);
 			return -EACCES;
 		}
@@ -3189,16 +3215,15 @@ free_and_ret:
 
 		kfree(args);
 		return 0;
-#else
-		return -EACCES;
-#endif
 	}
 
-	case TEGRA_DC_EXT_SET_CMU_V2:
+	case TEGRA_DC_EXT_SET_NVDISP_CMU:
 	{
-#ifdef CONFIG_TEGRA_DC_CMU_V2
 		int ret;
-		struct tegra_dc_ext_cmu_v2 *args;
+		struct tegra_dc_ext_nvdisp_cmu *args;
+
+		if (!tegra_dc_is_nvdisplay())
+			return -EACCES;
 
 		args = kzalloc(sizeof(*args), GFP_KERNEL);
 		if (!args)
@@ -3209,14 +3234,11 @@ free_and_ret:
 			return -EFAULT;
 		}
 
-		ret = tegra_dc_ext_set_cmu_v2(user, args);
+		ret = tegra_dc_ext_set_nvdisp_cmu(user, args);
 
 		kfree(args);
 
 		return ret;
-#else
-		return -EACCES;
-#endif
 	}
 
 	case TEGRA_DC_EXT_SET_VBLANK:
@@ -3233,9 +3255,11 @@ free_and_ret:
 	 * Align writes to FRAME_END_INT */
 	case TEGRA_DC_EXT_SET_CMU_ALIGNED:
 	{
-#ifdef CONFIG_TEGRA_DC_CMU
 		int ret;
 		struct tegra_dc_ext_cmu *args;
+
+		if (!tegra_dc_is_t21x())
+			return -EACCES;
 
 		args = kzalloc(sizeof(*args), GFP_KERNEL);
 		if (!args)
@@ -3251,9 +3275,6 @@ free_and_ret:
 		kfree(args);
 
 		return ret;
-#else
-		return -EACCES;
-#endif
 	}
 	case TEGRA_DC_EXT_GET_CAP_INFO:
 	{

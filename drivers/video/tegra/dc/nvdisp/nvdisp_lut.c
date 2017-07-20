@@ -24,37 +24,37 @@
 #include "nvdisp_priv.h"
 #include "hw_win_nvdisp.h"
 
-void tegra_dc_init_lut_defaults(struct tegra_dc_lut *lut)
+void tegra_dc_init_nvdisp_lut_defaults(struct tegra_dc_nvdisp_lut *nvdisp_lut)
 {
 	u64 i;
 	for (i = 0; i < 256; i++)
-		lut->rgb[i] = ((i << 40) | (i << 24) | i << 8);
+		nvdisp_lut->rgb[i] = ((i << 40) | (i << 24) | i << 8);
 }
 
 static int tegra_nvdisp_loop_lut(struct tegra_dc *dc,
 				struct tegra_dc_win *win,
 				int(*lambda)(struct tegra_dc_win *win,
-						struct tegra_dc_lut *lut))
+				struct tegra_dc_nvdisp_lut *nvdisp_lut))
 {
-	struct tegra_dc_lut *lut = NULL;
+	struct tegra_dc_nvdisp_lut *nvdisp_lut = NULL;
 
 	if (!(win->ppflags & TEGRA_WIN_PPFLAG_CP_FBOVERRIDE))
-		lut = &dc->fb_lut;
+		nvdisp_lut = &dc->fb_nvdisp_lut;
 	else
-		lut = &win->lut;
+		nvdisp_lut = &win->nvdisp_lut;
 
-	if (!lambda(win, lut))
+	if (!lambda(win, nvdisp_lut))
 		return 0;
 
 	return 1;
 }
 
 static int tegra_nvdisp_lut_isdefaults_lambda(struct tegra_dc_win *win,
-						struct tegra_dc_lut *lut)
+					struct tegra_dc_nvdisp_lut *nvdisp_lut)
 {
 	u64 i;
 	for (i = 0; i < 256; i++) {
-		if (lut->rgb[i] != ((i << 8) | (i << 24) | (i << 40)))
+		if (nvdisp_lut->rgb[i] != ((i << 8) | (i << 24) | (i << 40)))
 			return 0;
 	}
 
@@ -62,21 +62,21 @@ static int tegra_nvdisp_lut_isdefaults_lambda(struct tegra_dc_win *win,
 }
 
 static int tegra_nvdisp_set_lut_setreg_lambda(struct tegra_dc_win *win,
-						struct tegra_dc_lut *lut)
+					struct tegra_dc_nvdisp_lut *nvdisp_lut)
 {
 	/* Set the LUT array address */
 	nvdisp_win_write(win,
-			tegra_dc_reg_l32(lut->phy_addr),
+			tegra_dc_reg_l32(nvdisp_lut->phy_addr),
 			win_input_lut_base_r());
 
 	nvdisp_win_write(win,
-			tegra_dc_reg_h32(lut->phy_addr),
+			tegra_dc_reg_h32(nvdisp_lut->phy_addr),
 			win_input_lut_base_hi_r());
 
 	return 1;
 }
 
-void tegra_dc_set_lut(struct tegra_dc *dc, struct tegra_dc_win *win)
+void tegra_dc_set_nvdisp_lut(struct tegra_dc *dc, struct tegra_dc_win *win)
 {
 	unsigned long val = nvdisp_win_read(win, win_options_r());
 
@@ -92,7 +92,8 @@ void tegra_dc_set_lut(struct tegra_dc *dc, struct tegra_dc_win *win)
 	tegra_dc_enable_general_act(dc);
 }
 
-static int tegra_dc_update_winlut(struct tegra_dc *dc, int win_idx, int fbovr)
+static int tegra_dc_update_win_nvdisp_lut(struct tegra_dc *dc, int win_idx,
+					int fbovr)
 {
 	struct tegra_dc_win *win = tegra_dc_get_window(dc, win_idx);
 
@@ -117,7 +118,7 @@ static int tegra_dc_update_winlut(struct tegra_dc *dc, int win_idx, int fbovr)
 	else
 		win->ppflags &= ~TEGRA_WIN_PPFLAG_CP_ENABLE;
 
-	tegra_dc_set_lut(dc, win);
+	tegra_dc_set_nvdisp_lut(dc, win);
 
 	mutex_unlock(&dc->lock);
 
@@ -128,19 +129,20 @@ static int tegra_dc_update_winlut(struct tegra_dc *dc, int win_idx, int fbovr)
 	return 0;
 }
 
-int tegra_dc_update_lut(struct tegra_dc *dc, int win_idx, int fboveride)
+int tegra_dc_update_nvdisp_lut(struct tegra_dc *dc, int win_idx, int fboveride)
 {
 	if (win_idx > -1)
-		return tegra_dc_update_winlut(dc, win_idx, fboveride);
+		return tegra_dc_update_win_nvdisp_lut(dc, win_idx, fboveride);
 
 	for_each_set_bit(win_idx, &dc->valid_windows,
 			tegra_dc_get_numof_dispwindows()) {
-		int err = tegra_dc_update_winlut(dc, win_idx, fboveride);
+		int err = tegra_dc_update_win_nvdisp_lut(dc, win_idx,
+							fboveride);
 		if (err)
 			return err;
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(tegra_dc_update_lut);
+EXPORT_SYMBOL(tegra_dc_update_nvdisp_lut);
 

@@ -432,7 +432,8 @@ bool  update_is_hsync_safe(struct tegra_dc_win *cur_win,
 		(cur_win->out_h == new_win->out_h) &&
 		(cur_win->z == new_win->z) &&
 		(cur_win->dc == new_win->dc) &&
-		(!memcmp(&cur_win->csc, &new_win->csc, sizeof(cur_win->csc)))
+		(!memcmp(&cur_win->win_csc, &new_win->win_csc,
+			 sizeof(cur_win->win_csc)))
 		);
 }
 
@@ -902,7 +903,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 				win_options |= INTERLACE_ENABLE;
 		}
 		if (dc_win->csc_dirty) {
-			tegra_dc_set_csc(dc, &dc_win->csc);
+			tegra_dc_set_win_csc(dc, &dc_win->win_csc);
 			dc_win->csc_dirty = false;
 		}
 

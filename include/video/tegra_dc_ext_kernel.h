@@ -57,8 +57,8 @@ struct nvmap_handle_ref;
 #define TEGRA_WIN_BLEND_FLAGS_MASK \
 	(TEGRA_WIN_FLAG_BLEND_PREMULT | TEGRA_WIN_FLAG_BLEND_COVERAGE)
 
-#if defined(CONFIG_TEGRA_CSC_V2)
-struct tegra_dc_csc_v2 {
+/* CSC struct for nvdisplay */
+struct tegra_dc_nvdisp_win_csc {
 	u32 r2r;
 	u32 g2r;
 	u32 b2r;
@@ -73,9 +73,9 @@ struct tegra_dc_csc_v2 {
 	u32 const2b;
 	u32 csc_enable;
 };
-#endif
 
-struct tegra_dc_csc {
+/* CSC struct for T210 */
+struct tegra_dc_win_csc {
 	unsigned short yof;
 	unsigned short kyrgb;
 	unsigned short kur;
@@ -86,23 +86,19 @@ struct tegra_dc_csc {
 	unsigned short kvb;
 };
 
-#if defined(CONFIG_TEGRA_LUT)
-/* palette lookup table */
+/* palette lookup table (T210)*/
 struct tegra_dc_lut {
 	u8 r[256];
 	u8 g[256];
 	u8 b[256];
 };
-#endif
 
-#if defined(CONFIG_TEGRA_LUT_V2)
-/* palette lookup table */
-struct tegra_dc_lut {
+/* lut table for nvdisplay */
+struct tegra_dc_nvdisp_lut {
 	u64 *rgb;
 	dma_addr_t phy_addr;
 	size_t size;
 };
-#endif
 
 struct tegra_dc_win_cached_settings {
 	bool clamp_before_blend;
@@ -138,12 +134,9 @@ struct tegra_dc_win {
 
 	struct tegra_dc_win_cached_settings cached_settings;
 
-#if defined(CONFIG_TEGRA_CSC_V2)
-	struct tegra_dc_csc_v2	csc;
+	struct tegra_dc_nvdisp_win_csc	nvdisp_win_csc;
 	bool force_user_csc;
-#else
-	struct tegra_dc_csc	csc;
-#endif
+	struct tegra_dc_win_csc	win_csc;
 	bool			csc_dirty;
 
 	int			dirty;
@@ -154,6 +147,7 @@ struct tegra_dc_win {
 	unsigned		bandwidth;
 	unsigned		new_bandwidth;
 	struct tegra_dc_lut	lut;
+	struct tegra_dc_nvdisp_lut	nvdisp_lut;
 	u8	block_height_log2;
 	struct {
 		dma_addr_t cde_addr;

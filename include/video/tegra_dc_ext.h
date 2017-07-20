@@ -143,7 +143,7 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_INTERLACE	(1 << 7)
 #define TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED	(1 << 8)
 #define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC	(1 << 9)
-#define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC_V2	(1 << 10)
+#define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_NVDISP_WIN_CSC	(1 << 10)
 #define TEGRA_DC_EXT_FLIP_FLAG_INPUT_RANGE_MASK	(3 << 11)
 #define TEGRA_DC_EXT_FLIP_FLAG_INPUT_RANGE_FULL	(0 << 11)
 #define TEGRA_DC_EXT_FLIP_FLAG_INPUT_RANGE_LIMITED	(1 << 11)
@@ -176,15 +176,15 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_HDR_ENABLE	(1 << 0)
 #define TEGRA_DC_EXT_FLIP_FLAG_HDR_DATA_UPDATED (1 << 1)
 /*
- * Following flag is used when TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2 is used.
-* FLAG_CMU_V2_UPDATE: this flag is valid only when
- *                      tegra_dc_ext_cmu_v2.cmu_enable = true.
+ * Following flag is used when TEGRA_DC_EXT_FLIP_USER_DATA_NVDISP_CMU is used.
+ * FLAG_NVDISP_CMU_UPDATE: this flag is valid only when
+ *                      tegra_dc_ext_nvdisp_cmu.cmu_enable = true.
  *                      If flag is present, driver will update LUT
  *                      values provided from userspace.
  *                      If flag is not present then driver will program LUT
  *                      from cached values.
  */
-#define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CMU_V2	(1 << 0)
+#define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_NVDISP_CMU	(1 << 0)
 /* FLAG_UPDATE_OCSC_CS: If flag is present, driver will update
  *                      output colorspace with values provided from userspace
  */
@@ -286,7 +286,7 @@ struct tegra_dc_ext_flip_windowattr {
 /*
  * New struct added for CSC changes, CSC is using
  * 4X3 matrix instead of 3X3 one.
- * Existing struct is modified to add csc_v2 support
+ * Existing struct is modified to add nvdisp_win_csc support
  * This is done to minimize the code change for struct change.
  */
 struct tegra_dc_ext_flip_windowattr_v2 {
@@ -356,7 +356,7 @@ struct tegra_dc_ext_flip_windowattr_v2 {
 			__u16 kvb;	/* s.2.8 */
 			__u32   reserved[8];
 		} csc;
-		struct { /* TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC_V2 */
+		struct { /* TEGRA_DC_EXT_FLIP_FLAG_UPDATE_NVDISP_WIN_CSC */
 			__u32 r2r;	/* s.3.16 */
 			__u32 g2r;	/* s.3.16 */
 			__u32 b2r;	/* s.3.16 */
@@ -397,8 +397,8 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA, /* only valid during PROPOSE */
 	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG, /* only valid during FLIP */
 	TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT,
-	TEGRA_DC_EXT_FLIP_USER_DATA_CSC_V2,
-	TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2,
+	TEGRA_DC_EXT_FLIP_USER_DATA_NVDISP_WIN_CSC,
+	TEGRA_DC_EXT_FLIP_USER_DATA_NVDISP_CMU,
 	TEGRA_DC_EXT_FLIP_USER_DATA_OUTPUT_CSC,
 	TEGRA_DC_EXT_FLIP_USER_DATA_GET_FLIP_INFO,
 	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_PROPOSE, /* placeholder for new IMP */
@@ -570,14 +570,16 @@ struct tegra_dc_ext_syncpt {
 	__u16 reserved[9]; /* unused - must be 0 */
 } __attribute__((__packed__));
 
-struct tegra_dc_ext_udata_csc_v2 {
-	__u64 __user array; /* pointer to an array of "tegra_dc_ext_csc_v2" */
+struct tegra_dc_ext_udata_nvdisp_win_csc {
+	/* pointer to an array of "tegra_dc_ext_nvdisp_win_csc" */
+	__u64 __user array;
 	__u8 nr_elements;
 	__u8 reserved[17];
 } __attribute__((__packed__));
 
-struct tegra_dc_ext_udata_cmu_v2 {
-	__u64 __user cmu_v2; /* pointer to "tegra_dc_ext_cmu_v2" */
+struct tegra_dc_ext_udata_nvdisp_cmu {
+	/* pointer to "tegra_dc_ext_nvdisp_cmu" */
+	__u64 __user nvdisp_cmu;
 	__u8 reserved[18];
 } __attribute__((__packed__));
 
@@ -616,8 +618,8 @@ struct tegra_dc_ext_flip_user_data {
 		struct tegra_dc_ext_imp_ptr imp_ptr;
 		struct tegra_dc_ext_imp_flip_tag imp_tag;
 		struct tegra_dc_ext_syncpt post_syncpt; /* out */
-		struct tegra_dc_ext_udata_csc_v2 csc_v2;
-		struct tegra_dc_ext_udata_cmu_v2 cmu_v2;
+		struct tegra_dc_ext_udata_nvdisp_win_csc nvdisp_win_csc;
+		struct tegra_dc_ext_udata_nvdisp_cmu nvdisp_cmu;
 		struct tegra_dc_ext_udata_output_csc output_csc;
 		struct tegra_dc_ext_flip_info flip_info;
 	};
@@ -874,7 +876,7 @@ struct tegra_dc_ext_csc {
  * For example, the "s.3.16" value should be packed as:
  * (MSB) 12 bits of 0, 1 bit of sign, 3 bits of integer, 16 bits of frac (LSB)
  */
-struct tegra_dc_ext_csc_v2 {
+struct tegra_dc_ext_nvdisp_win_csc {
 	__u32 win_index;
 	__u32 csc_enable;
 	__u32 r2r;		/* s.3.16 */
@@ -924,7 +926,7 @@ struct tegra_dc_ext_cmu {
 #define TEGRA_DC_EXT_OUTLUT_RANGE_XRBAIS	1
 #define TEGRA_DC_EXT_OUTLUT_RANGE_XVYCC		2
 
-struct tegra_dc_ext_cmu_v2 {
+struct tegra_dc_ext_nvdisp_cmu {
 	__u16 cmu_enable;
 	__u16 lut_size;
 	__u16 lut_range; /* ignored in the driver */
@@ -1014,10 +1016,10 @@ struct tegra_dc_ext_status {
 #define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CURSOR (2)
 /* info_type CURSOR_DATA: struct tegra_dc_ext_scrncapt_get_info_cursor_data */
 #define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CURSOR_DATA (3)
-/* info_type CMU_V2: struct tegra_dc_ext_cmu_v2 */
-#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CMU_V2 (4)
-/* info_type CSC_V2: struct tegra_dc_ext_csc_v2 */
-#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CSC_V2 (5)
+/* info_type NVDISP_CMU: struct tegra_dc_ext_nvdisp_cmu */
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_NVDISP_CMU (4)
+/* info_type NVDISP_WIN_CSC: struct tegra_dc_ext_nvdisp_win_csc */
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_NVDISP_WIN_CSC (5)
 #define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_FLAG_WINS(n)  (1u << (n))
 
 struct tegra_dc_ext_scrncapt_get_info_head {
@@ -1174,17 +1176,17 @@ struct tegra_dc_ext_scanline_info {
 #define TEGRA_DC_EXT_SET_CMU_ALIGNED \
 	_IOW('D', 0x16, struct tegra_dc_ext_cmu)
 
-#define TEGRA_DC_EXT_SET_CSC_V2 \
-	_IOW('D', 0x17, struct tegra_dc_ext_csc_v2)
+#define TEGRA_DC_EXT_SET_NVDISP_WIN_CSC \
+	_IOW('D', 0x17, struct tegra_dc_ext_nvdisp_win_csc)
 
-#define TEGRA_DC_EXT_SET_CMU_V2 \
-	_IOW('D', 0x18, struct tegra_dc_ext_cmu_v2)
+#define TEGRA_DC_EXT_SET_NVDISP_CMU \
+	_IOW('D', 0x18, struct tegra_dc_ext_nvdisp_cmu)
 
-#define TEGRA_DC_EXT_GET_CMU_V2 \
-	_IOR('D', 0x19, struct tegra_dc_ext_cmu_v2)
+#define TEGRA_DC_EXT_GET_NVDISP_CMU \
+	_IOR('D', 0x19, struct tegra_dc_ext_nvdisp_cmu)
 
-#define TEGRA_DC_EXT_GET_CUSTOM_CMU_V2 \
-	_IOR('D', 0x1A, struct tegra_dc_ext_cmu_v2)
+#define TEGRA_DC_EXT_GET_CUSTOM_NVDISP_CMU \
+	_IOR('D', 0x1A, struct tegra_dc_ext_nvdisp_cmu)
 
 #define TEGRA_DC_EXT_SET_PROPOSED_BW_3 \
 	_IOWR('D', 0x1B, struct tegra_dc_ext_flip_4)

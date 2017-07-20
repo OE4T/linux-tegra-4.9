@@ -467,8 +467,8 @@ int  tegra_dc_scrncapt_get_info(struct tegra_dc_ext_user *user,
 			break;
 		/* TODO: add CMU & CSC capture.
 		 *       these information are not used at this time. */
-		case TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CMU_V2:
-		case TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CSC_V2:
+		case TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_NVDISP_CMU:
+		case TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_NVDISP_WIN_CSC:
 		default:
 			pr_info("scrncapt: data type %d not implemented yet\n",
 				data.type);

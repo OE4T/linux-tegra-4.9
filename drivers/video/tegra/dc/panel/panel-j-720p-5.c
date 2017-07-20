@@ -95,7 +95,6 @@ static struct tegra_dc_sd_settings dsi_j_720p_5_sd_settings = {
 	.sd_brightness = &sd_brightness,
 };
 
-#ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu dsi_j_720p_5_cmu = {
 	/* lut1 maps sRGB to linear space. */
 	{
@@ -262,7 +261,6 @@ static struct tegra_dc_cmu dsi_j_720p_5_cmu = {
 		250, 250, 251, 252, 253, 254, 254, 255,
 	},
 };
-#endif
 
 static int dsi_j_720p_5_bl_notify(struct device *dev, int brightness)
 {
@@ -622,12 +620,10 @@ static void dsi_j_720p_5_sd_settings_init
 	settings->bl_device_name = "pwm-backlight";
 }
 
-#ifdef CONFIG_TEGRA_DC_CMU
 static void dsi_j_720p_5_cmu_init(struct tegra_dc_platform_data *pdata)
 {
 	pdata->cmu = &dsi_j_720p_5_cmu;
 }
-#endif
 
 static struct pwm_bl_data_dt_ops dsi_j_720p_5_pwm_bl_ops = {
 	.notify = dsi_j_720p_5_bl_notify,
@@ -649,8 +645,6 @@ struct tegra_panel __initdata dsi_j_720p_5 = {
 	.init_fb_data = dsi_j_720p_5_fb_data_init,
 	.set_disp_device = dsi_j_720p_5_set_disp_device,
 	.register_bl_dev = dsi_j_720p_5_register_bl_dev,
-#ifdef CONFIG_TEGRA_DC_CMU
 	.init_cmu_data = dsi_j_720p_5_cmu_init,
-#endif
 };
 EXPORT_SYMBOL(dsi_j_720p_5);

@@ -102,26 +102,6 @@ config TEGRA_CAMERA_PLATFORM
 
 comment "NVIDIA Tegra Display Driver options"
 
-config TEGRA_DC_CMU
-	bool "Tegra Color Management Unit"
-	depends on TEGRA_DC && !TEGRA_NVDISPLAY
-	default y
-	help
-	  Say Y here to enable Tegra color management unit.
-	  Enabled by default to support color correction for panels.
-	  It is used to make the representation of color match
-	  across displays.
-
-config TEGRA_DC_CMU_V2
-	bool "Tegra Color Management Unit(Version 2)"
-	depends on TEGRA_DC && TEGRA_NVDISPLAY
-	default y
-	help
-	  Say Y here to enable Tegra color management unit.
-	  Enabled by default to support color correction for panels.
-	  It is used to make the representation of color match
-	  across displays.
-
 config TEGRA_NVDISPLAY
         bool "Tegra NvDisplay Architecture Support"
 	depends on TEGRA_DC
@@ -138,42 +118,6 @@ config TEGRA_DC_64BIT_SUPPORT
 	  This is needed to support buffers whose physical address does
 	  not fit into 32-bits.
 	  Default is to enable it on 64-bit platforms.
-
-config TEGRA_CSC
-	bool "Tegra Color Space Converter (version 1)"
-	depends on TEGRA_DC && !TEGRA_NVDISPLAY
-	default y
-	help
-	  Color Space converter support for Tegra display controller.
-	  This will only be enabled for chips that support 3X3 CSC matrices.
-
-config TEGRA_CSC_V2
-	bool "Tegra Color Space Converter (version 2)"
-	depends on TEGRA_DC && TEGRA_NVDISPLAY
-	default y
-	help
-	  Color Space converter support for Tegra display controller.
-	  This will only be enabled for chips that support 4X3 CSC matrices.
-
-config TEGRA_LUT
-	bool "Tegra Look Up Table (version 1)"
-	depends on TEGRA_DC && !TEGRA_NVDISPLAY
-	default y
-	help
-	  LUT support for Tegra display controller.
-	  This will only be enabled for chips which support
-	  8bits per color and have separate hardware registers
-	  to write those palette values.
-
-config TEGRA_LUT_V2
-	bool "Tegra Look Up Table (version 2)"
-	depends on TEGRA_DC && TEGRA_NVDISPLAY
-	default y
-	help
-	  LUT support for Tegra display controller.
-	  This will only be enabled for chips which can support
-	  16bits per color. Hardware has only register to
-	  program the base address for entire palette array.
 
 config TEGRA_NVSD
 	bool "Tegra SmartDimmer"

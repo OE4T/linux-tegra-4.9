@@ -842,21 +842,18 @@ struct tegra_dc_cmu_csc {
 	u16 kgb;
 	u16 kbb;
 };
-
-#if defined(CONFIG_TEGRA_DC_CMU_V2)
-struct tegra_dc_cmu {
-	u64			rgb[1025];
-#if defined(CONFIG_TEGRA_CSC_V2)
-	struct tegra_dc_csc_v2	panel_csc;
-#endif
+/* Currently, we are using tegra_dc_nvdisp_cmu  only for parsing/using CMU data
+ * from device-tree
+ */
+struct tegra_dc_nvdisp_cmu {
+	u64				rgb[1025];
+	struct tegra_dc_nvdisp_win_csc	panel_csc;
 };
-#else
 struct tegra_dc_cmu {
 	u16 lut1[256];
 	struct tegra_dc_cmu_csc csc;
 	u8 lut2[960];
 };
-#endif
 
 struct tegra_dc_hdr {
 	bool		enabled;
@@ -896,12 +893,11 @@ struct tegra_dc_platform_data {
 	struct tegra_fb_data	*fb;
 	unsigned long		low_v_win;
 
-#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	bool			cmu_enable;
 	struct tegra_dc_cmu	*cmu;
+	struct tegra_dc_nvdisp_cmu	*nvdisp_cmu;
 	struct tegra_dc_cmu	*cmu_adbRGB;
 	int			default_clr_space;
-#endif
 	unsigned long		ctrl_num;
 	unsigned long		win_mask;
 	struct device_node	*conn_np; /* DSI, SOR0, SOR1, etc. */
@@ -1105,13 +1101,13 @@ void tegra_dc_config_pwm(struct tegra_dc *dc, struct tegra_dc_pwm_params *cfg);
 
 int tegra_dsi_send_panel_short_cmd(struct tegra_dc *dc, u8 *pdata, u8 data_len);
 
-#if defined(CONFIG_TEGRA_CSC_V2)
-int tegra_nvdisp_update_csc(struct tegra_dc *dc, int win_index);
-#else
-int tegra_dc_update_csc(struct tegra_dc *dc, int win_index);
-#endif
+int __attribute__((weak)) tegra_nvdisp_update_win_csc(struct tegra_dc *dc,
+							int win_index);
+int tegra_dc_update_win_csc(struct tegra_dc *dc, int win_index);
 
 int tegra_dc_update_lut(struct tegra_dc *dc, int win_index, int fboveride);
+int __attribute__((weak)) tegra_dc_update_nvdisp_lut(struct tegra_dc *dc,
+						int win_index, int fboveride);
 
 /*
  * In order to get a dc's current EDID, first call tegra_dc_get_edid() from an

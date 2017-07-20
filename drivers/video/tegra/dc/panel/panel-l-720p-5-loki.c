@@ -93,7 +93,6 @@ static struct tegra_dc_sd_settings dsi_l_720p_5_loki_sd_settings = {
 	.sd_brightness = &sd_brightness,
 };
 
-#ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu dsi_l_720p_5_loki_cmu = {
 	/* lut1 maps sRGB to linear space. */
 	{
@@ -260,7 +259,6 @@ static struct tegra_dc_cmu dsi_l_720p_5_loki_cmu = {
 		250, 250, 251, 252, 253, 254, 254, 255,
 	},
 };
-#endif
 
 static u8 panel_dsi_config[] = {0xe0, 0x43, 0x0, 0x80, 0x0, 0x0};
 static u8 panel_disp_ctrl1[] = {0xb5, 0x34, 0x20, 0x40, 0x0, 0x20};
@@ -702,12 +700,10 @@ static void dsi_l_720p_5_loki_sd_settings_init
 	settings->bl_device_name = "pwm-backlight";
 }
 
-#ifdef CONFIG_TEGRA_DC_CMU
 static void dsi_l_720p_5_loki_cmu_init(struct tegra_dc_platform_data *pdata)
 {
 	pdata->cmu = &dsi_l_720p_5_loki_cmu;
 }
-#endif
 
 static struct pwm_bl_data_dt_ops dsi_l_720p_5_loki_pwm_bl_ops = {
 	.notify = dsi_l_720p_5_loki_bl_notify,
@@ -728,8 +724,6 @@ struct tegra_panel __initdata dsi_l_720p_5_loki = {
 	.init_fb_data = dsi_l_720p_5_loki_fb_data_init,
 	.set_disp_device = dsi_l_720p_5_loki_set_disp_device,
 	.register_bl_dev = dsi_l_720p_5_loki_register_bl_dev,
-#ifdef CONFIG_TEGRA_DC_CMU
 	.init_cmu_data = dsi_l_720p_5_loki_cmu_init,
-#endif
 };
 EXPORT_SYMBOL(dsi_l_720p_5_loki);

@@ -732,13 +732,13 @@ static inline bool tegra_nvdisp_is_dc_active(struct tegra_dc *dc)
 }
 
 static int tegra_nvdisp_program_output_lut(struct tegra_dc *dc,
-					struct tegra_dc_lut *lut)
+					struct tegra_dc_nvdisp_lut *nvdisp_lut)
 {
 	tegra_dc_writel(dc,
-			tegra_dc_reg_l32(lut->phy_addr),
+			tegra_dc_reg_l32(nvdisp_lut->phy_addr),
 			nvdisp_output_lut_base_r());
 	tegra_dc_writel(dc,
-			tegra_dc_reg_h32(lut->phy_addr),
+			tegra_dc_reg_h32(nvdisp_lut->phy_addr),
 			nvdisp_output_lut_base_hi_r());
 	tegra_dc_writel(dc, nvdisp_output_lut_ctl_size_1025_f() |
 			    nvdisp_output_lut_ctl_mode_f(0x1), /* interpolate */
@@ -758,7 +758,7 @@ static void nvdisp_copy_output_lut(u64 *dst, unsigned int *src, int size)
 	}
 }
 
-void tegra_nvdisp_get_default_cmu(struct tegra_dc_cmu *default_cmu)
+void tegra_nvdisp_get_default_cmu(struct tegra_dc_nvdisp_cmu *default_cmu)
 {
 	nvdisp_copy_output_lut(default_cmu->rgb, default_srgb_regamma_lut,
 			       NVDISP_OUTPUT_LUT_SIZE);
@@ -766,26 +766,26 @@ void tegra_nvdisp_get_default_cmu(struct tegra_dc_cmu *default_cmu)
 
 static int nvdisp_alloc_output_lut(struct tegra_dc *dc)
 {
-	struct tegra_dc_lut *lut = &dc->cmu;
+	struct tegra_dc_nvdisp_lut *nvdisp_lut = &dc->nvdisp_postcomp_lut;
 
-	if (!lut)
+	if (!nvdisp_lut)
 		return -ENOMEM;
 
 	/* Allocate the memory for LUT */
-	lut->size = NVDISP_OUTPUT_LUT_SIZE * sizeof(u64);
-	lut->rgb = (u64 *)dma_zalloc_coherent(&dc->ndev->dev, lut->size,
-			&lut->phy_addr, GFP_KERNEL);
-	if (!lut->rgb)
+	nvdisp_lut->size = NVDISP_OUTPUT_LUT_SIZE * sizeof(u64);
+	nvdisp_lut->rgb = (u64 *)dma_zalloc_coherent(&dc->ndev->dev,
+			nvdisp_lut->size, &nvdisp_lut->phy_addr, GFP_KERNEL);
+	if (!nvdisp_lut->rgb)
 		return -ENOMEM;
 
 	/* Init LUT with cmu data provided from DT file */
 	if (dc->pdata->cmu && dc->pdata->cmu_enable) {
-		memcpy(lut->rgb, dc->pdata->cmu, lut->size);
+		memcpy(nvdisp_lut->rgb, dc->pdata->cmu, nvdisp_lut->size);
 		return 0;
 	}
 
 	/* Init the LUT table with default sRGB values */
-	nvdisp_copy_output_lut(lut->rgb, default_srgb_regamma_lut,
+	nvdisp_copy_output_lut(nvdisp_lut->rgb, default_srgb_regamma_lut,
 			       NVDISP_OUTPUT_LUT_SIZE);
 
 	return 0;
@@ -795,21 +795,21 @@ static int nvdisp_alloc_input_lut(struct tegra_dc *dc,
 					struct tegra_dc_win *win,
 					bool winlut)
 {
-	struct tegra_dc_lut *lut;
+	struct tegra_dc_nvdisp_lut *nvdisp_lut;
 
 	if (winlut)
-		lut = &win->lut;
+		nvdisp_lut = &win->nvdisp_lut;
 	else
-		lut = &dc->fb_lut;
+		nvdisp_lut = &dc->fb_nvdisp_lut;
 
-	if (!lut)
+	if (!nvdisp_lut)
 		return -ENOMEM;
 
 	/* Allocate the memory for LUT */
-	lut->size = NVDISP_INPUT_LUT_SIZE * sizeof(u64);
-	lut->rgb = (u64 *)dma_zalloc_coherent(&dc->ndev->dev, lut->size,
-			&lut->phy_addr, GFP_KERNEL);
-	if (!lut->rgb)
+	nvdisp_lut->size = NVDISP_INPUT_LUT_SIZE * sizeof(u64);
+	nvdisp_lut->rgb = (u64 *)dma_zalloc_coherent(&dc->ndev->dev,
+			nvdisp_lut->size, &nvdisp_lut->phy_addr, GFP_KERNEL);
+	if (!nvdisp_lut->rgb)
 		return -ENOMEM;
 
 	return 0;
@@ -823,7 +823,6 @@ static int __maybe_unused
 {
 	u8 i;
 	int err;
-
 
 	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 
@@ -845,7 +844,6 @@ static int __maybe_unused tegra_nvdisp_common_reset_assert(struct tegra_dc *dc)
 {
 	u8 i;
 	int err;
-
 
 	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 		if (!nvdisp_common_rst[i]) {
@@ -1261,14 +1259,14 @@ INIT_PD_ERR:
 	_tegra_nvdisp_destroy_pd_table(dc);
 INIT_LUT_ERR:
 	for (i = 0; i < tegra_dc_get_numof_dispwindows(); ++i) {
-		struct tegra_dc_lut *lut;
+		struct tegra_dc_nvdisp_lut *nvdisp_lut;
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
 		/* Free the memory for Input LUT & fb LUT*/
-		lut = &win->lut;
-		if (lut->rgb)
-			dma_free_coherent(&dc->ndev->dev, lut->size,
-				(void *)lut->rgb, lut->phy_addr);
+		nvdisp_lut = &win->nvdisp_lut;
+		if (nvdisp_lut->rgb)
+			dma_free_coherent(&dc->ndev->dev, nvdisp_lut->size,
+				(void *)nvdisp_lut->rgb, nvdisp_lut->phy_addr);
 	}
 INIT_CLK_ERR:
 	if (!IS_ERR_OR_NULL(hubclk))
@@ -1317,19 +1315,19 @@ void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
 static int _tegra_nvdisp_set_ec_output_lut(struct tegra_dc *dc,
 			struct tegra_dc_mode *mode)
 {
-	struct tegra_dc_lut *lut = &dc->cmu;
+	struct tegra_dc_nvdisp_lut *nvdisp_lut = &dc->nvdisp_postcomp_lut;
 
-	if (!lut)
+	if (!nvdisp_lut)
 		return -ENOMEM;
 
 	if (mode->vmode & FB_VMODE_EC_ENABLE) {
 		if (mode->vmode & FB_VMODE_Y24 ||
 		    mode->vmode & FB_VMODE_Y30) {
-			nvdisp_copy_output_lut(lut->rgb,
+			nvdisp_copy_output_lut(nvdisp_lut->rgb,
 				yuv8_10bpc_regamma_lut,
 				NVDISP_OUTPUT_LUT_SIZE);
 		} else if (mode->vmode & FB_VMODE_Y36) {
-			nvdisp_copy_output_lut(lut->rgb,
+			nvdisp_copy_output_lut(nvdisp_lut->rgb,
 				yuv12bpc_regamma_lut,
 				NVDISP_OUTPUT_LUT_SIZE);
 		}
@@ -1496,7 +1494,6 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	return 0;
 }
 
-
 int tegra_nvdisp_init(struct tegra_dc *dc)
 {
 	char rst_name[6];
@@ -1511,13 +1508,13 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	}
 
 	/*Lut alloc is needed per dc */
-	if (!dc->fb_lut.rgb) {
+	if (!dc->fb_nvdisp_lut.rgb) {
 		if (nvdisp_alloc_input_lut(dc, NULL, false))
 			return -ENOMEM;
 	}
 
 	/* Output LUT is needed per dc */
-	if (!(dc->cmu.rgb)) {
+	if (!(dc->nvdisp_postcomp_lut.rgb)) {
 		if (nvdisp_alloc_output_lut(dc))
 			return -ENOMEM;
 	}
@@ -1743,7 +1740,7 @@ static void tegra_nvdisp_postcomp_imp_init(struct tegra_dc *dc)
 
 static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
 {
-	struct tegra_dc_lut *lut = NULL;
+	struct tegra_dc_nvdisp_lut *nvdisp_lut = NULL;
 	u32 update_mask = 0;
 	u32 act_req_mask = 0;
 
@@ -1760,9 +1757,9 @@ static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
 	 * Replace this with the LUT derived from panel characterization through
 	 * DT.
 	 */
-	lut = &dc->cmu;
+	nvdisp_lut = &dc->nvdisp_postcomp_lut;
 	if (dc->cmu_enabled) {
-		tegra_nvdisp_program_output_lut(dc, lut);
+		tegra_nvdisp_program_output_lut(dc, nvdisp_lut);
 		tegra_nvdisp_set_color_control(dc);
 
 		act_req_mask |=
@@ -2509,10 +2506,8 @@ static int tegra_nvdisp_set_color_control(struct tegra_dc *dc)
 		dev_err(&dc->ndev->dev, "Error: Unsupported dithering mode\n");
 	}
 
-#if defined(CONFIG_TEGRA_DC_CMU_V2)
 	if (dc->cmu_enabled)
 		color_control |= nvdisp_color_ctl_cmu_enable_f();
-#endif
 	/* TO DO - dither rotation, dither offset, dither phase */
 
 	tegra_dc_writel(dc, color_control,
@@ -2520,16 +2515,17 @@ static int tegra_nvdisp_set_color_control(struct tegra_dc *dc)
 	return 0;
 }
 
-#if defined(CONFIG_TEGRA_DC_CMU_V2)
-void tegra_dc_cache_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *src_cmu)
+void tegra_dc_cache_nvdisp_cmu(struct tegra_dc *dc,
+				struct tegra_dc_nvdisp_cmu *src_cmu)
 {
 	/* copy the data to DC lut */
-	memcpy(dc->cmu.rgb, src_cmu->rgb, dc->cmu.size);
+	memcpy(dc->nvdisp_postcomp_lut.rgb, src_cmu->rgb,
+		dc->nvdisp_postcomp_lut.size);
 	dc->cmu_dirty = true;
 }
 
 static void _tegra_nvdisp_update_cmu(struct tegra_dc *dc,
-					struct tegra_dc_lut *cmu)
+					struct tegra_dc_nvdisp_lut *cmu)
 {
 	dc->cmu_enabled = dc->pdata->cmu_enable;
 	if (!dc->cmu_enabled)
@@ -2543,7 +2539,8 @@ static void _tegra_nvdisp_update_cmu(struct tegra_dc *dc,
 	dc->cmu_dirty = false;
 }
 
-int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
+int tegra_nvdisp_update_cmu(struct tegra_dc *dc,
+			struct tegra_dc_nvdisp_lut *cmu)
 {
 	int i;
 	u32 reg_val, mask;
@@ -2578,14 +2575,15 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 			nvdisp_win_write(win, reg_val, win_win_set_params_r());
 
 			/* enable csc if csc_enable is true */
-			if (win->csc.csc_enable)
-				tegra_nvdisp_set_csc(win, &win->csc);
+			if (win->nvdisp_win_csc.csc_enable)
+				tegra_nvdisp_set_win_csc(win,
+							&win->nvdisp_win_csc);
 		} else {
 			/* disable degamma */
 			nvdisp_win_write(win, reg_val, win_win_set_params_r());
 
 			/* disable csc */
-			if (win->csc.csc_enable) {
+			if (win->nvdisp_win_csc.csc_enable) {
 				reg_val =
 					win_window_set_control_csc_disable_f();
 				nvdisp_win_write(win, reg_val,
@@ -2617,7 +2615,6 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_nvdisp_update_cmu);
-#endif
 
 static inline void tegra_nvdisp_enable_ihub_latency_events(struct tegra_dc *dc)
 {
@@ -3811,24 +3808,24 @@ void tegra_dc_enable_sor_t18x(struct tegra_dc *dc, int sor_num, bool enable)
 }
 
 void tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
-	struct tegra_dc_ext_cmu_v2 *user_cmu_v2, bool new_cmu_values)
+	struct tegra_dc_ext_nvdisp_cmu *user_nvdisp_cmu, bool new_cmu_values)
 {
-	struct tegra_dc_lut *lut;
+	struct tegra_dc_nvdisp_lut *nvdisp_lut;
 	u32 reg_val = 0;
 
 	/* TODO: Currently dc->cmu_enabled controls lut1, csc and output lut
 	 * We need to decouple cmu_enabled and make it exclusive for
 	 * output lut only
 	 * */
-	dc->cmu_enabled = user_cmu_v2->cmu_enable ? true : false;
+	dc->cmu_enabled = user_nvdisp_cmu->cmu_enable ? true : false;
 	reg_val = tegra_dc_readl(dc, nvdisp_color_ctl_r());
 
-	if (user_cmu_v2->cmu_enable) {
+	if (user_nvdisp_cmu->cmu_enable) {
 		reg_val |= nvdisp_color_ctl_cmu_enable_f();
 		if (new_cmu_values) {
-			lut = &dc->cmu;
-			nvdisp_copy_output_lut(lut->rgb,
-				(unsigned int *)&user_cmu_v2->rgb,
+			nvdisp_lut = &dc->nvdisp_postcomp_lut;
+			nvdisp_copy_output_lut(nvdisp_lut->rgb,
+				(unsigned int *)&user_nvdisp_cmu->rgb,
 				NVDISP_OUTPUT_LUT_SIZE);
 		}
 	} else {

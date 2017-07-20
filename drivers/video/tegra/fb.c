@@ -334,21 +334,23 @@ static int tegra_fb_setcmap(struct fb_cmap *cmap, struct fb_info *info)
 		} else {
 			/* High-color schemes*/
 			for (i = 0; i < cmap->len; i++) {
-#if defined(CONFIG_TEGRA_LUT)
-				dc->fb_lut.r[start+i] = *red++ >> 8;
-				dc->fb_lut.g[start+i] = *green++ >> 8;
-				dc->fb_lut.b[start+i] = *blue++ >> 8;
-#elif defined(CONFIG_TEGRA_LUT_V2)
+				if (tegra_dc_is_t21x()) {
+					dc->fb_lut.r[start+i] = *red++ >> 8;
+					dc->fb_lut.g[start+i] = *green++ >> 8;
+					dc->fb_lut.b[start+i] = *blue++ >> 8;
+				}
 				/*
 				 * TODO: This path is not verified. HW pipeline
 				 * in T210 and earlier chips was of 8 bits,
 				 * which is not the case for T186. This code
 				 * needs to be updated accordingly.
 				 */
-				dc->fb_lut.rgb[start+i] = (((u64)*red++ >> 8) |
+				if (tegra_dc_is_nvdisplay()) {
+					dc->fb_nvdisp_lut.rgb[start+i] =
+						(((u64)*red++ >> 8) |
 						(((u64)*green++ >> 8) << 16) |
 						(((u64)*blue++ >> 8) << 32));
-#endif
+				}
 			}
 			tegra_dc_update_lut(dc, -1, -1);
 		}

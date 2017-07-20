@@ -38,7 +38,8 @@ int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx);
 int tegra_nvdisp_get_degamma_config(struct tegra_dc *dc,
 	struct tegra_dc_win *win);
 
-int tegra_nvdisp_set_csc(struct tegra_dc_win *win, struct tegra_dc_csc_v2 *csc);
+int tegra_nvdisp_set_win_csc(struct tegra_dc_win *win,
+			struct tegra_dc_nvdisp_win_csc *nvdisp_win_csc);
 
 void tegra_nvdisp_set_common_channel_pending(struct tegra_dc *dc);
 void tegra_nvdisp_program_imp_results(struct tegra_dc *dc);

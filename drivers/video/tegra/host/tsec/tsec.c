@@ -768,7 +768,9 @@ static int nvhost_tsec_init_sw(struct platform_device *dev)
 	return 0;
 
 clean_up:
-	dev_err(&dev->dev, "failed");
+	dev_err(&dev->dev, "failed: err=%d", err);
+	set_flcn(dev, NULL);
+	kfree(m);
 	return err;
 }
 

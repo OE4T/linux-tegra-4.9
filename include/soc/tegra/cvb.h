@@ -1,6 +1,8 @@
 /*
  * Utility functions for parsing Tegra CVB voltage tables
  *
+ * Copyright (C) 2012-2017 NVIDIA Corporation.  All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -73,6 +75,7 @@ struct cvb_table {
 	struct cvb_table_freq_entry entries[MAX_DVFS_FREQS];
 	struct cvb_cpu_dfll_data cpu_dfll_data;
 	struct cvb_coefficients vmin_coefficients;
+	const char *cvb_version;
 };
 
 const struct cvb_table *

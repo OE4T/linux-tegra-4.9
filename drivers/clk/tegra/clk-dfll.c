@@ -2458,6 +2458,17 @@ struct rail_alignment *tegra_dfll_get_alignment(void)
 }
 EXPORT_SYMBOL(tegra_dfll_get_alignment);
 
+/**
+ * tegra_dfll_get_cvb_version - return DFLL CVB version
+ */
+const char *tegra_dfll_get_cvb_version(void)
+{
+	if (!tegra_dfll_dev)
+		return ERR_PTR(-EPROBE_DEFER);
+	return tegra_dfll_dev->soc->cvb->cvb_version;
+}
+EXPORT_SYMBOL(tegra_dfll_get_cvb_version);
+
 /*
  * DFLL initialization
  */

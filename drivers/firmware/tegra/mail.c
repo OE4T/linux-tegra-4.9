@@ -317,7 +317,6 @@ static int bpmp_send_receive_atomic(int ch, int mrq, void *ob_data, int ob_sz,
 int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 		void *ib_data, int ib_sz)
 {
-	unsigned long flags = 0;
 	unsigned int cpu;
 	int ch;
 	int r;
@@ -332,7 +331,7 @@ int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 		return -ENODEV;
 
 	if (channel_cfg->per_cpu_ch_cnt == 1) {
-		spin_lock_irqsave(&ach_lock, flags);
+		spin_lock(&ach_lock);
 		ch = channel_cfg->per_cpu_ch_0;
 	} else {
 		cpu = smp_processor_id();
@@ -344,7 +343,7 @@ int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 	r = bpmp_send_receive_atomic(ch, mrq, ob_data, ob_sz, ib_data, ib_sz);
 
 	if (channel_cfg->per_cpu_ch_cnt == 1)
-		spin_unlock_irqrestore(&ach_lock, flags);
+		spin_unlock(&ach_lock);
 
 	return r;
 }

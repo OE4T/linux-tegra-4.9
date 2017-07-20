@@ -158,7 +158,8 @@ static void pva_task_dump(struct pva_submit_task *task)
 
 static void pva_task_get_memsize(size_t *dma_size, size_t *kmem_size)
 {
-	*dma_size = sizeof(struct pva_hw_task);
+	/* Align task addr to 64bytes boundary for DMA use*/
+	*dma_size = ALIGN(sizeof(struct pva_hw_task) + 64, 64);
 	*kmem_size = sizeof(struct pva_submit_task);
 }
 

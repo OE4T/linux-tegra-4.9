@@ -1,7 +1,7 @@
 /*
  * Tegra 12x SoC-specific mcerr code.
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -424,18 +424,18 @@ static void log_mcerr_fault(unsigned int irq)
 	if (intstatus & MC_INT_ARBITRATION_EMEM) {
 		arb_intr();
 		if (intstatus == MC_INT_ARBITRATION_EMEM)
-			return;
+			goto end;
 		intstatus &= ~MC_INT_ARBITRATION_EMEM;
 	}
 
 	fault = mcerr_default_info(intstatus & mc_int_mask);
 	if (WARN(!fault, "Unknown error! intr sig: 0x%08x\n",
 		 intstatus & mc_int_mask))
-		return;
+		goto end;
 
 	if (fault->flags & E_NO_STATUS) {
 		mcerr_pr("MC fault - no status: %s\n", fault->msg);
-		return;
+		goto end;
 	}
 
 	status = __mc_readl(src_chan, fault->stat_reg);
@@ -445,7 +445,7 @@ static void log_mcerr_fault(unsigned int irq)
 		mcerr_pr("MC fault - %s\n", fault->msg);
 		mcerr_pr("status: 0x%08x status2: 0x%08llx\n",
 			status, addr);
-		return;
+		goto end;
 	}
 
 	secure = !!(status & MC_ERR_STATUS_SECURE);
@@ -469,6 +469,8 @@ static void log_mcerr_fault(unsigned int irq)
 
 	mcerr_default_print(fault, client, status, addr, secure, write,
 				  smmu_info);
+end:
+	mc_writel(intstatus, MC_INTSTATUS);
 }
 
 static struct mcerr_ops mcerr_ops = {

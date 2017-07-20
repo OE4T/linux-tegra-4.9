@@ -1916,23 +1916,6 @@ static struct thermal_cooling_device_ops tegra_vts_cooling_ops = {
 };
 
 #ifdef CONFIG_DEBUG_FS
-static int dvfs_tree_sort_cmp(void *p, struct list_head *a, struct list_head *b)
-{
-	struct dvfs *da = list_entry(a, struct dvfs, reg_node);
-	struct dvfs *db = list_entry(b, struct dvfs, reg_node);
-	int ret;
-
-	ret = strcmp(da->dvfs_rail->reg_id, db->dvfs_rail->reg_id);
-	if (ret != 0)
-		return ret;
-
-	if (da->cur_millivolts < db->cur_millivolts)
-		return 1;
-	if (da->cur_millivolts > db->cur_millivolts)
-		return -1;
-
-	return strcmp(da->clk_name, db->clk_name);
-}
 
 /* To emulate and show rail relations with 0 mV on dependent rail-to */
 static struct dvfs_rail show_to;
@@ -1943,6 +1926,8 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 	struct dvfs *d;
 	struct dvfs_rail *rail;
 	struct dvfs_relationship *rel;
+	int cur_max_millivolts = INT_MIN;
+	int num_clks;
 
 	seq_puts(s, "   clock           rate       mV\n");
 	seq_puts(s, "-------------------------------------\n");
@@ -1991,11 +1976,31 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 		}
 		seq_printf(s, "   %-26s %-4d mV\n", "therm_cap", therm_mv);
 
-		list_sort(NULL, &rail->dvfs, dvfs_tree_sort_cmp);
-
+		num_clks = 0;
 		list_for_each_entry(d, &rail->dvfs, reg_node) {
-			seq_printf(s, "   %-15s %-10lu %-4d mV\n", d->clk_name,
-				d->cur_rate, d->cur_millivolts);
+			num_clks++;
+			if (d->cur_millivolts > cur_max_millivolts)
+				cur_max_millivolts = d->cur_millivolts;
+		}
+
+		while (num_clks > 0) {
+			int next_max_millivolts = INT_MIN;
+
+			list_for_each_entry(d, &rail->dvfs, reg_node) {
+				if (d->cur_millivolts > next_max_millivolts &&
+				    d->cur_millivolts < cur_max_millivolts)
+					next_max_millivolts = d->cur_millivolts;
+
+				if (d->cur_millivolts != cur_max_millivolts)
+					continue;
+
+				seq_printf(s, "   %-15s %-10lu %-4d mV\n",
+					d->clk_name, d->cur_rate,
+					d->cur_millivolts);
+				num_clks--;
+				WARN_ON(num_clks < 0);
+			}
+			cur_max_millivolts = next_max_millivolts;
 		}
 	}
 

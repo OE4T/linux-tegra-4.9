@@ -191,7 +191,6 @@ static struct dvfs_rail tegra210b01_dvfs_rail_vdd_cpu = {
 	.stats = {
 		.bin_uv = 5000, /* 5.0mV */
 	},
-	.nvver = "p4v1",
 };
 
 static struct dvfs_rail tegra210b01_dvfs_rail_vdd_gpu = {
@@ -1406,10 +1405,13 @@ static int set_cpu_dvfs_data(struct cpu_dvfs *d,
 	unsigned long *freqs;
 	int *dfll_millivolts;
 	struct rail_alignment *align = tegra_dfll_get_alignment();
+	const char *version = tegra_dfll_get_cvb_version();
 	int speedo = tegra_sku_info.cpu_speedo_value;
 
 	if (align == ERR_PTR(-EPROBE_DEFER))
 		return -EPROBE_DEFER;
+
+	vdd_cpu_rail.nvver = version;
 
 	min_dfll_mv = d->min_mv;
 	if (min_dfll_mv < vdd_cpu_rail.min_millivolts) {

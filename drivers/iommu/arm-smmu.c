@@ -3271,6 +3271,7 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 	struct arm_smmu_device *smmu;
 	struct device *dev = &pdev->dev;
 	int num_irqs, i, err;
+	u32 emu_id = 0;
 
 	if (tegra_platform_is_unit_fpga())
 		return -ENODEV;
@@ -3328,12 +3329,12 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 			dev_info(dev, "found %d SMMUs and ISO SMMU id is %d\n",
 				smmu->num_smmus, smmu->iso_smmu_id);
 		} else {
-			u32 reg = readl_relaxed(smmu->base[smmu->iso_smmu_id] +
-				ARM_SMMU_GR0_sCR0);
-			if (reg) {
+			emu_id = tegra_read_emu_revid();
+			/* high byte encodes FPGA config: GPU(2), MAX(3) have ISO SMMU */
+			if ((emu_id >> 24) > 1) {
 				dev_info(dev,
-				     "found %d SMMUs and ISO SMMU id is %d\n",
-				     smmu->num_smmus, smmu->iso_smmu_id);
+					 "found %d SMMUs and ISO SMMU id is %d\n",
+					 smmu->num_smmus, smmu->iso_smmu_id);
 			} else {
 				smmu->iso_smmu_id = -1;
 				smmu->num_smmus--;

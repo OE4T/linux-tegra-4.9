@@ -41,4 +41,5 @@ u32 tegra_dfll_get_peak_thermal_floor_mv(void);
 u32 tegra_dfll_get_thermal_cap_mv(void);
 u32 tegra_dfll_get_min_millivolts(void);
 struct rail_alignment *tegra_dfll_get_alignment(void);
+const char *tegra_dfll_get_cvb_version(void);
 #endif

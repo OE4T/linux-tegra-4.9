@@ -3,7 +3,7 @@
  *
  * Author: Mike Lavender, mike@steroidmicros.com
  * Copyright (c) 2005, Intec Automation Inc.
- * Copyright (C) 2013-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2013-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,6 +81,8 @@ enum qspi_reg_read_code {
 	RDSR1 = 0x05,
 	RDSR2 = 0x07,
 	RDCR = 0x35,
+	MX_RDCR = 0x15,
+	MX_WRSR = 0x01,
 };
 
 enum boot {
@@ -88,7 +90,7 @@ enum boot {
 	TRUE,
 };
 
-struct qcmdset cmd_info_table[OPERATION_MAX_LIMIT] = {
+struct qcmdset spansion_cmd_info_table[OPERATION_MAX_LIMIT] = {
 	/*  NORMAL_READ */
 	{ {.op_code = 0x13, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
 		{.address = 0, .is_ddr = FALSE, .len = 4,
@@ -199,6 +201,117 @@ struct qcmdset cmd_info_table[OPERATION_MAX_LIMIT] = {
 	},
 };
 
+struct qcmdset macronix_cmd_info_table[OPERATION_MAX_LIMIT] = {
+	/*  NORMAL_READ */
+	{ {.op_code = 0x13, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/*  FAST_READ */
+	{ {.op_code = 0x0c, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X1, .dummy_cycles = 8},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/* DUAL_OUT_READ */
+	{ {.op_code = 0x3c, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X1, .dummy_cycles = 8},
+		{.is_ddr = FALSE, .bus_width = X2}
+	},
+	/* QUAD_OUT_READ */
+	{ {.op_code = 0x6c, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X1, .dummy_cycles = 8},
+		{.is_ddr = FALSE, .bus_width = X4}
+	},
+	/* DUAL_IO_READ */
+	{ {.op_code = 0xBB, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X2, .dummy_cycles = 16},
+		{.is_ddr = FALSE, .bus_width = X2}
+	},
+	/* QUAD_IO_READ */
+	{ {.op_code = 0xEB, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X4, .dummy_cycles = 32},
+		{.is_ddr = FALSE, .bus_width = X4}
+	},
+	/* DDR_FAST_READ */
+	{ {.op_code = 0x0E, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = TRUE, .len = 4,
+			.bus_width = X1, .dummy_cycles = 6},
+		{.is_ddr = TRUE, .bus_width = X1}
+	},
+	/* DDR_DUAL_IO_READ */
+	{ {.op_code = 0xBE, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = TRUE, .len = 4,
+			.bus_width = X2, .dummy_cycles = 24},
+		{.is_ddr = TRUE, .bus_width = X2}
+	},
+	/* DDR_QUAD_IO_READ  Spansion - 56 Micron - 64 Dummy Cycles */
+	{ {.op_code = 0xEE, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = TRUE, .len = 4,
+			.bus_width = X4, .dummy_cycles = 80},
+		{.is_ddr = TRUE, .bus_width = X4}
+	},
+	/* PAGE_PROGRAM */
+	{ {.op_code = 0x12, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/* QUAD_PAGE_PROGRAM */
+	{ {.op_code = 0x34, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X4}
+	},
+	/* QPI_PAGE_PROGRAM */
+	{ {.op_code = 0x12, .is_ddr = FALSE, .bus_width = X4, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X4, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X4}
+	},
+	/* READ ID*/
+	{ {.op_code = 0x90, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/* ERASE SECT */
+	{ {.op_code = 0xdc, .is_ddr = FALSE, .bus_width = X1, .post_txn = 1},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/*  bulk erase*/
+	{ {.op_code = 0x60, .is_ddr = FALSE, .bus_width = X1, .post_txn = 0},
+		{.address = 0, .is_ddr = FALSE, .len = 0,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/* STATUS READ */
+	{ {.op_code = 0x01, .is_ddr = FALSE, .bus_width = X1, .post_txn = 1},
+		{.address = 0, .is_ddr = FALSE, .len = 4,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/* READ_ANY_REG */
+	{ {.op_code = 0x65, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 1},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/* WRITE_ANY_REG */
+	{ {.op_code = 0x71, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+};
+
 /* Flash opcodes. */
 #define	OPCODE_CHIP_ERASE	0xc7	/* Erase whole flash chip */
 #define	OPCODE_SE		0xdc	/* Sector erase (usually 256KiB) */
@@ -211,6 +324,11 @@ struct qcmdset cmd_info_table[OPERATION_MAX_LIMIT] = {
 #define WEL_ENABLE		0x02    /* Enable WEL bit */
 #define WEL_DISABLE		0x00    /* Disable WEL bit */
 #define WIP_ENABLE		0x01    /* Enable WIP bit */
+#define OPCODE_QPI_ENABLE	0x35	/* Enable QPI mode */
+#define OPCODE_QPI_DISABLE	0xf5	/* Disable QPI mode */
+#define OPCODE_4BYTE_ENABLE	0xb7	/* Enable 4-byte mode */
+#define QPI_ENABLE		0x40	/* Enable QPI bit */
+#define MX_QUAD_ENABLE		0x40	/* Enable Quad bit - Macronix */
 
 #define JEDEC_MFR(_jedec_id)	((_jedec_id) >> 16)
 
@@ -244,6 +362,7 @@ struct qspi {
 	u8			curr_cmd_mode;
 	u8			is_quad_set;
 	struct	flash_info	*flash_info;
+	struct qcmdset		*cmd_info_table;
 #ifdef QSPI_BRINGUP_BUILD
 	u8			force_sdr;
 	u8			enable_qpi_mode;
@@ -299,6 +418,9 @@ static const struct spi_device_id qspi_ids[] = {
 	},
 	{	"MT25QL512AB",
 		INFO(0x20BA20, 0, 256 * 1024, 256, 0, 0, 0, 0, 256, 0)
+	},
+	{	"MX25U51279G",
+		INFO(0xC2953A, 0, 64 * 1024, 1024, 0, 0, 0, 0, 256, 0)
 	},
 	{ },
 };

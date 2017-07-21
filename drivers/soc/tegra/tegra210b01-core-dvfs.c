@@ -233,3 +233,5 @@ static struct dvb_dvfs emcb01_dvb_dvfs_table[] = {
 		},
 	},
 };
+
+static const char coreb01_dvfs_table_ver[] = "SOC - p4v1 SOC_IO - p4v1 SOC_EMC- p4v1";

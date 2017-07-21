@@ -65,9 +65,10 @@ struct tegra_dvfs_data {
 	struct dvfs_therm_limits *core_floors;
 	struct dvfs_therm_limits *core_caps;
 	struct dvfs_therm_limits *core_caps_ucm2;
+	const char *core_dvfs_ver;
 };
 
-struct tegra_dvfs_data *dvfs_data;
+static struct tegra_dvfs_data *dvfs_data;
 
 static bool tegra_dvfs_cpu_disabled;
 static bool tegra_dvfs_core_disabled;
@@ -175,7 +176,6 @@ static struct dvfs_rail tegra210b01_dvfs_rail_vdd_core = {
 	.stats = {
 		.bin_uv = 12500, /* 12.5mV */
 	},
-	.nvver = "p4v1",
 };
 
 static struct dvfs_rail tegra210b01_dvfs_rail_vdd_cpu = {
@@ -1939,6 +1939,7 @@ static void init_core_dvfs_table(int soc_speedo_id, int core_process_id)
 		core_millivolts[core_nominal_mv_index];
 	vdd_core_rail.min_millivolts =
 		core_millivolts[core_min_mv_index];
+	vdd_core_rail.nvver = dvfs_data->core_dvfs_ver;
 
 	/*
 	 * Search core dvfs table for speedo/process matching entries and
@@ -2042,6 +2043,7 @@ static struct tegra_dvfs_data tegra210b01_dvfs_data = {
 	.core_floors = tegra210b01_core_therm_floors,
 	.core_caps = tegra210b01_core_therm_caps,
 	.core_caps_ucm2 = tegra210b01_core_therm_caps_ucm2,
+	.core_dvfs_ver = coreb01_dvfs_table_ver,
 };
 
 static void disable_rail_scaling(struct device_node *np)

@@ -2376,8 +2376,8 @@ static int tegra_smmu_remove(struct platform_device *pdev)
 }
 
 static const struct dev_pm_ops tegra_smmu_pm_ops = {
-	.suspend	= tegra_smmu_suspend,
-	.resume		= tegra_smmu_resume,
+	.suspend_noirq	= tegra_smmu_suspend,
+	.resume_noirq	= tegra_smmu_resume,
 };
 
 static struct of_device_id tegra_smmu_of_match[] = {

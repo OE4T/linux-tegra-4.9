@@ -1,0 +1,8 @@
+config STEPPER_CLASS
+	tristate "Stepper Class Support"
+	help
+	  This option enables the stepper motor control sysfs class in /sys/class/stepper.
+	  The sysfs class provides useful interfaces to control stepper motor.
+	  If stepper motor is not used in the platform, select N.
+
+comment "STEPPER drivers"

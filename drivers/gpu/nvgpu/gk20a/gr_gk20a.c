@@ -2581,24 +2581,60 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	return -ENOMEM;
 }
 
+static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
+{
+	struct vm_gk20a *ch_vm = c->vm;
+	struct gr_gk20a *gr = &c->g->gr;
+	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
+	u64 *g_bfr_size = c->ch_ctx.global_ctx_buffer_size;
+	int *g_bfr_index = c->ch_ctx.global_ctx_buffer_index;
+	u32 i;
+
+	gk20a_dbg_fn("");
+
+	for (i = 0; i < NR_GLOBAL_CTX_BUF_VA; i++) {
+		if (g_bfr_index[i]) {
+			struct nvgpu_mem *mem;
+
+			/*
+			 * Translate from VA index to buffer index to determine
+			 * the correct struct nvgpu_mem to use. Handles the VPR
+			 * vs non-VPR difference in context images.
+			 */
+			mem = &gr->global_ctx_buffer[g_bfr_index[i]].mem;
+
+			nvgpu_gmmu_unmap(ch_vm, mem, g_bfr_va[i]);
+		}
+	}
+
+	memset(g_bfr_va, 0, sizeof(c->ch_ctx.global_ctx_buffer_va));
+	memset(g_bfr_size, 0, sizeof(c->ch_ctx.global_ctx_buffer_size));
+	memset(g_bfr_index, 0, sizeof(c->ch_ctx.global_ctx_buffer_index));
+
+	c->ch_ctx.global_ctx_buffer_mapped = false;
+}
+
 static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 					struct channel_gk20a *c)
 {
 	struct vm_gk20a *ch_vm = c->vm;
 	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
 	u64 *g_bfr_size = c->ch_ctx.global_ctx_buffer_size;
+	int *g_bfr_index = c->ch_ctx.global_ctx_buffer_index;
 	struct gr_gk20a *gr = &g->gr;
 	struct nvgpu_mem *mem;
 	u64 gpu_va;
-	u32 i;
+
 	gk20a_dbg_fn("");
 
 	/* Circular Buffer */
 	if (!c->vpr ||
 	    (gr->global_ctx_buffer[CIRCULAR_VPR].mem.priv.sgt == NULL)) {
 		mem = &gr->global_ctx_buffer[CIRCULAR].mem;
+		g_bfr_index[CIRCULAR_VA] = CIRCULAR;
 	} else {
 		mem = &gr->global_ctx_buffer[CIRCULAR_VPR].mem;
+		g_bfr_index[CIRCULAR_VA] = CIRCULAR_VPR;
 	}
 
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
@@ -2613,8 +2649,10 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	if (!c->vpr ||
 	    (gr->global_ctx_buffer[ATTRIBUTE_VPR].mem.priv.sgt == NULL)) {
 		mem = &gr->global_ctx_buffer[ATTRIBUTE].mem;
+		g_bfr_index[ATTRIBUTE_VA] = ATTRIBUTE;
 	} else {
 		mem = &gr->global_ctx_buffer[ATTRIBUTE_VPR].mem;
+		g_bfr_index[ATTRIBUTE_VA] = ATTRIBUTE_VPR;
 	}
 
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
@@ -2629,8 +2667,10 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	if (!c->vpr ||
 	    (gr->global_ctx_buffer[PAGEPOOL_VPR].mem.priv.sgt == NULL)) {
 		mem = &gr->global_ctx_buffer[PAGEPOOL].mem;
+		g_bfr_index[PAGEPOOL_VA] = PAGEPOOL;
 	} else {
 		mem = &gr->global_ctx_buffer[PAGEPOOL_VPR].mem;
+		g_bfr_index[PAGEPOOL_VA] = PAGEPOOL_VPR;
 	}
 
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
@@ -2649,6 +2689,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 		goto clean_up;
 	g_bfr_va[GOLDEN_CTX_VA] = gpu_va;
 	g_bfr_size[GOLDEN_CTX_VA] = mem->size;
+	g_bfr_index[GOLDEN_CTX_VA] = GOLDEN_CTX;
 
 	/* Priv register Access Map */
 	mem = &gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem;
@@ -2658,40 +2699,15 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 		goto clean_up;
 	g_bfr_va[PRIV_ACCESS_MAP_VA] = gpu_va;
 	g_bfr_size[PRIV_ACCESS_MAP_VA] = mem->size;
+	g_bfr_index[PRIV_ACCESS_MAP_VA] = PRIV_ACCESS_MAP;
 
 	c->ch_ctx.global_ctx_buffer_mapped = true;
 	return 0;
 
 clean_up:
-	for (i = 0; i < NR_GLOBAL_CTX_BUF_VA; i++) {
-		if (g_bfr_va[i]) {
-			nvgpu_gmmu_unmap(ch_vm, &gr->global_ctx_buffer[i].mem,
-					 g_bfr_va[i]);
-			g_bfr_va[i] = 0;
-		}
-	}
+	gr_gk20a_unmap_global_ctx_buffers(c);
+
 	return -ENOMEM;
-}
-
-static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
-{
-	struct vm_gk20a *ch_vm = c->vm;
-	struct gr_gk20a *gr = &c->g->gr;
-	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
-	u64 *g_bfr_size = c->ch_ctx.global_ctx_buffer_size;
-	u32 i;
-
-	gk20a_dbg_fn("");
-
-	for (i = 0; i < NR_GLOBAL_CTX_BUF_VA; i++) {
-		if (g_bfr_va[i]) {
-			nvgpu_gmmu_unmap(ch_vm, &gr->global_ctx_buffer[i].mem,
-					 g_bfr_va[i]);
-			g_bfr_va[i] = 0;
-			g_bfr_size[i] = 0;
-		}
-	}
-	c->ch_ctx.global_ctx_buffer_mapped = false;
 }
 
 int gr_gk20a_alloc_gr_ctx(struct gk20a *g,

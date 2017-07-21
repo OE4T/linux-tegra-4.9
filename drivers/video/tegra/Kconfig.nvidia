@@ -151,11 +151,6 @@ config TEGRA_DC_SCAN_COLUMN
 	  using BlockLinear.
 	  Failure to use proper pixel format will result in EINVAL errors.
 
-config TEGRA_DC_BLENDER_GEN2
-	bool
-	depends on TEGRA_DC
-	default y
-
 config TEGRA_DC_BLENDER_DEPTH
 	bool "Program blender depth for overlays"
 	depends on TEGRA_DC

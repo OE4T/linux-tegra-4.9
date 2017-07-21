@@ -912,20 +912,6 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 					win->global_alpha, DC_WIN_GLOBAL_ALPHA);
 				win_options |= CP_ENABLE;
 			}
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-			if (win->flags &
-					TEGRA_WIN_FLAG_BLEND_COVERAGE) {
-				tegra_dc_writel(dc,
-					BLEND(NOKEY, ALPHA, 0xff, 0xff),
-					DC_WIN_BLEND_1WIN);
-			} else {
-				/* global_alpha is 255 if not in use */
-				tegra_dc_writel(dc,
-					BLEND(NOKEY, FIX, win->global_alpha,
-						win->global_alpha),
-					DC_WIN_BLEND_1WIN);
-			}
-#endif
 		}
 
 		if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)

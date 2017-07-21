@@ -297,11 +297,7 @@ DEFINE_SIMPLE_ATTRIBUTE(mods_dsi_inst_fops, mods_dsi_inst_get, NULL, "%llu\n");
 static int mods_dc_border_get(void *data, u64 *val)
 {
 	struct tegra_dc *dc = data;
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-	u32 blender_reg = DC_DISP_BORDER_COLOR;
-#else
 	u32 blender_reg = DC_DISP_BLEND_BACKGROUND_COLOR;
-#endif
 	if (!dc->enabled)
 		*val = 0ULL;
 	else
@@ -311,11 +307,7 @@ static int mods_dc_border_get(void *data, u64 *val)
 static int mods_dc_border_set(void *data, u64 val)
 {
 	struct tegra_dc *dc = data;
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-	u32 blender_reg = DC_DISP_BORDER_COLOR;
-#else
 	u32 blender_reg = DC_DISP_BLEND_BACKGROUND_COLOR;
-#endif
 	if (!dc->enabled)
 		return 0;
 	mutex_lock(&dc->lock);

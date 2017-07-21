@@ -801,9 +801,6 @@ void reg_dump(struct tegra_dc *dc, void *data,
 	DUMP_REG(DC_DISP_DATA_ENABLE_OPTIONS);
 	DUMP_REG(DC_DISP_SERIAL_INTERFACE_OPTIONS);
 	DUMP_REG(DC_DISP_LCD_SPI_OPTIONS);
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-	DUMP_REG(DC_DISP_BORDER_COLOR);
-#endif
 	DUMP_REG(DC_DISP_COLOR_KEY0_LOWER);
 	DUMP_REG(DC_DISP_COLOR_KEY0_UPPER);
 	DUMP_REG(DC_DISP_COLOR_KEY1_LOWER);
@@ -5056,11 +5053,7 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY,
 		DC_CMD_STATE_ACCESS);
 
-#if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
-	tegra_dc_writel(dc, 0x00000000, DC_DISP_BORDER_COLOR);
-#else
 	tegra_dc_writel(dc, 0x00000000, DC_DISP_BLEND_BACKGROUND_COLOR);
-#endif
 
 #ifdef CONFIG_TEGRA_DC_CMU
 	if (dc->is_cmu_set_bl)

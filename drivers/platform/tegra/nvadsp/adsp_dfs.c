@@ -115,8 +115,14 @@ static DEFINE_MUTEX(policy_mutex);
 
 static bool is_os_running(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	struct platform_device *pdev;
+	struct nvadsp_drv_data *drv_data;
+
+	if (!dev)
+		return false;
+
+	pdev = to_platform_device(dev);
+	drv_data = platform_get_drvdata(pdev);
 
 	if (!drv_data->adsp_os_running) {
 		dev_dbg(&pdev->dev, "%s: adsp os is not loaded\n", __func__);
@@ -324,9 +330,14 @@ static unsigned long update_freq(unsigned long freq_khz)
 	int index;
 	int ret;
 
+	if (!is_os_running(device)) {
+		dev_err(device, "adsp os is not running\n");
+		return 0;
+	}
+
 	tfreq_hz = adsp_get_target_freq(freq_khz * 1000, &index);
 	if (!tfreq_hz) {
-		dev_info(device, "unable get the target freq\n");
+		dev_err(device, "unable get the target freq\n");
 		return 0;
 	}
 
@@ -713,6 +724,11 @@ unsigned long adsp_override_freq(unsigned long req_freq_khz)
 {
 	unsigned long ret_freq = 0, freq;
 	int index;
+
+	if (!is_os_running(device)) {
+		pr_err("%s: adsp os is not in running state.\n", __func__);
+		return 0;
+	}
 
 	mutex_lock(&policy_mutex);
 

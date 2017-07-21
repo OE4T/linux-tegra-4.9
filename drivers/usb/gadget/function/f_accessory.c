@@ -369,6 +369,8 @@ static void acc_complete_set_string(struct usb_ep *ep, struct usb_request *req)
 
 		if (length >= ACC_STRING_SIZE)
 			length = ACC_STRING_SIZE - 1;
+		if (length == 0)
+			return;
 
 		spin_lock_irqsave(&dev->lock, flags);
 		memcpy(string_dest, req->buf, length);

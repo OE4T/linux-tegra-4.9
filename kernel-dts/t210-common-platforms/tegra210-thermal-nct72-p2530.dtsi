@@ -18,7 +18,6 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
-#include <dt-bindings/soc/tegra-pmc.h>
 
 /* THERMAL gpio definitions */
 #define TEMP_ALERT		TEGRA_GPIO(X, 4)
@@ -38,8 +37,6 @@
 			interrupts = <TEMP_ALERT IRQ_TYPE_LEVEL_LOW>;
 			vdd-supply = <&max77620_sd3>;
 			temp-alert-gpio = <&gpio TEMP_ALERT 0>;
-			nvidia,pmc-wakeup = <&tegra_pmc
-				PMC_WAKE_TYPE_EVENT 33 PMC_TRIGGER_TYPE_LOW>;
 			loc {
 				shutdown-limit = <120>;
 			};

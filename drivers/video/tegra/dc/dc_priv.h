@@ -838,14 +838,6 @@ void tegra_nvdisp_bandwidth_unregister(void);
 void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);
 #endif
 void tegra_nvdisp_vrr_work(struct work_struct *work);
-
-int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
-			    struct tegra_dc_ext_crc_conf *conf);
-int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
-			     struct tegra_dc_ext_crc_conf *conf);
-int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
-			     struct tegra_dc_crc_buf_ele *crc_ele);
-void tegra_nvdisp_crc_reset(struct tegra_dc *dc);
 #endif
 
 void __attribute__((weak)) tegra_dc_populate_t21x_hw_data(
@@ -896,5 +888,38 @@ uint64_t __attribute__((weak))
 	tegra_dc_get_vsync_timestamp_t19x(struct tegra_dc *dc);
 
 uint64_t tegra_dc_get_vsync_timestamp(struct tegra_dc *dc);
+
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
+			    struct tegra_dc_ext_crc_conf *conf);
+int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
+			     struct tegra_dc_ext_crc_conf *conf);
+int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
+			     struct tegra_dc_crc_buf_ele *crc_ele);
+void tegra_nvdisp_crc_reset(struct tegra_dc *dc);
+#else
+static inline int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
+					  struct tegra_dc_ext_crc_conf *conf)
+{
+	return -ENOTSUPP;
+}
+
+static inline int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
+					   struct tegra_dc_ext_crc_conf *conf)
+{
+	return -ENOTSUPP;
+}
+
+static inline int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
+					   struct tegra_dc_crc_buf_ele *crc_ele)
+{
+	return -ENOTSUPP;
+}
+
+static inline void tegra_nvdisp_crc_reset(struct tegra_dc *dc)
+{
+}
+
+#endif
 
 #endif

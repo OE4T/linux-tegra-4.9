@@ -1249,7 +1249,6 @@ struct nvdisp_isoclient_bw_info {
 /* Timestamp in nsec in TSC timebase */
 u64 tegra_dc_get_tsc_time(void);
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
 void tegra_dc_crc_deinit(struct tegra_dc *dc);
 void tegra_dc_crc_reset(struct tegra_dc *dc);
 int tegra_dc_crc_process(struct tegra_dc *dc);
@@ -1264,43 +1263,5 @@ long tegra_dc_crc_enable(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg);
 long tegra_dc_crc_disable(struct tegra_dc *dc,
 			  struct tegra_dc_ext_crc_arg *arg);
 long tegra_dc_crc_get(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg);
-#else
-static inline void tegra_dc_crc_deinit(struct tegra_dc *dc)
-{
-}
-
-static inline void tegra_dc_crc_reset(struct tegra_dc *dc)
-{
-}
-
-static inline int tegra_dc_crc_process(struct tegra_dc *dc)
-{
-	return 0;
-}
-
-struct tegra_dc_ring_buf;
-static inline void tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf,
-					void *src, char **in_buf_ptr)
-{
-}
-
-static inline long tegra_dc_crc_enable(struct tegra_dc *dc,
-				       struct tegra_dc_ext_crc_arg *arg)
-{
-	return 0;
-}
-
-static inline long tegra_dc_crc_disable(struct tegra_dc *dc,
-					struct tegra_dc_ext_crc_arg *arg)
-{
-	return 0;
-}
-
-static inline long tegra_dc_crc_get(struct tegra_dc *dc,
-				    struct tegra_dc_ext_crc_arg *arg)
-{
-	return 0;
-}
-#endif
 
 #endif

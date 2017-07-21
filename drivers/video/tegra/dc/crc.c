@@ -164,7 +164,10 @@ void tegra_dc_ring_buf_add(struct tegra_dc_ring_buf *buf, void *src,
  */
 void tegra_dc_crc_reset(struct tegra_dc *dc)
 {
-	tegra_nvdisp_crc_reset(dc);
+	if (tegra_dc_is_t21x())
+		tegra_dc_writel(dc, 0x00, DC_COM_CRC_CONTROL);
+	else if (tegra_dc_is_t18x() || tegra_dc_is_t19x())
+		tegra_nvdisp_crc_reset(dc);
 }
 
 /* Called when disabling the DC head
@@ -224,15 +227,103 @@ static long tegra_dc_crc_init(struct tegra_dc *dc)
 	return 0;
 }
 
-long tegra_dc_crc_enable(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
+static int tegra_dc_crc_t21x_rg_en_dis(struct tegra_dc *dc,
+				       struct tegra_dc_ext_crc_conf *conf,
+				       bool enable)
+{
+	int ret = 0x00;
+	u32 reg = 0x00;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+
+	if (enable) {
+		reg = CRC_ALWAYS_ENABLE | CRC_ENABLE_ENABLE;
+		if (conf->input_data == TEGRA_DC_EXT_CRC_INPUT_DATA_ACTIVE_DATA)
+			reg |= CRC_INPUT_DATA_ACTIVE_DATA;
+
+		atomic_inc(&dc->crc_ref_cnt.rg_comp_sor);
+
+		tegra_dc_writel(dc, reg, DC_COM_CRC_CONTROL);
+		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	} else {
+		if (atomic_dec_return(&dc->crc_ref_cnt.rg_comp_sor) == 0) {
+			tegra_dc_writel(dc, 0x00, DC_COM_CRC_CONTROL);
+			tegra_dc_writel(dc, GENERAL_ACT_REQ,
+					DC_CMD_STATE_CONTROL);
+		}
+	}
+
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+
+	if (enable) {
+		if (atomic_inc_return(&dc->crc_ref_cnt.global) == 1) {
+			ret = tegra_dc_config_frame_end_intr(dc, true);
+			if (ret)
+				atomic_dec(&dc->crc_ref_cnt.rg_comp_sor);
+		}
+	} else {
+		if (atomic_dec_return(&dc->crc_ref_cnt.global) == 0) {
+			ret = tegra_dc_config_frame_end_intr(dc, false);
+			if (ret)
+				atomic_inc(&dc->crc_ref_cnt.rg_comp_sor);
+		}
+	}
+
+	return ret;
+}
+
+static int tegra_dc_crc_t21x_en_dis(struct tegra_dc *dc,
+				    struct tegra_dc_ext_crc_arg *arg, bool en)
+{
+	int ret = 0;
+	struct tegra_dc_ext_crc_conf *conf =
+				(struct tegra_dc_ext_crc_conf *)arg->conf;
+	u8 iter;
+
+	for (iter = 0; iter < arg->num_conf; iter++) {
+		switch (conf[iter].type) {
+		case TEGRA_DC_EXT_CRC_TYPE_RG:
+			ret = tegra_dc_crc_t21x_rg_en_dis(dc, &conf[iter], en);
+			if (ret)
+				return ret;
+			break;
+		case TEGRA_DC_EXT_CRC_TYPE_OR:
+			return -ENOTSUPP; /*TODO: Implement this */
+		default:
+			return -ENOTSUPP;
+		}
+	}
+
+	return ret;
+}
+
+static int tegra_dc_crc_nvdisp_en_dis(struct tegra_dc *dc,
+				      struct tegra_dc_ext_crc_arg *arg, bool en)
 {
 	int ret;
 	struct tegra_dc_ext_crc_conf *conf =
 				(struct tegra_dc_ext_crc_conf *)arg->conf;
 	u8 iter;
 
-	if (!(tegra_dc_is_t18x() || tegra_dc_is_t19x()))
-		return -ENOTSUPP;
+	for (iter = 0; iter < arg->num_conf; iter++) {
+		if (en)
+			ret = tegra_nvdisp_crc_enable(dc, conf + iter);
+		else
+			ret = tegra_nvdisp_crc_disable(dc, conf + iter);
+		if (ret)
+			return ret;
+	}
+
+	tegra_nvdisp_update_enable_general_ack_req(dc);
+
+	return 0;
+}
+
+long tegra_dc_crc_enable(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
+{
+	int ret;
 
 	if (!dc->enabled)
 		return -ENODEV;
@@ -246,28 +337,17 @@ long tegra_dc_crc_enable(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
 			return ret;
 	}
 
-	for (iter = 0; iter < arg->num_conf; iter++) {
-		ret = tegra_nvdisp_crc_enable(dc, conf + iter);
-		if (ret)
-			return ret;
-	}
-
-	tegra_nvdisp_update_enable_general_ack_req(dc);
-
-	return 0;
+	if (tegra_dc_is_t21x())
+		return tegra_dc_crc_t21x_en_dis(dc, arg, true);
+	else if (tegra_dc_is_t18x() || tegra_dc_is_t19x())
+		return tegra_dc_crc_nvdisp_en_dis(dc, arg, true);
+	else
+		return -ENOTSUPP;
 }
 
 long tegra_dc_crc_disable(struct tegra_dc *dc,
 			  struct tegra_dc_ext_crc_arg *arg)
 {
-	int ret;
-	struct tegra_dc_ext_crc_conf *conf =
-				(struct tegra_dc_ext_crc_conf *)arg->conf;
-	u8 iter;
-
-	if (!(tegra_dc_is_t18x() || tegra_dc_is_t19x()))
-		return -ENOTSUPP;
-
 	if (!dc->enabled)
 		return -ENODEV;
 
@@ -277,15 +357,12 @@ long tegra_dc_crc_disable(struct tegra_dc *dc,
 	if (dc->crc_ref_cnt.legacy)
 		return -EBUSY;
 
-	for (iter = 0; iter < arg->num_conf; iter++) {
-		ret = tegra_nvdisp_crc_disable(dc, conf + iter);
-		if (ret)
-			return ret;
-	}
-
-	tegra_nvdisp_update_enable_general_ack_req(dc);
-
-	return 0;
+	if (tegra_dc_is_t21x())
+		return tegra_dc_crc_t21x_en_dis(dc, arg, false);
+	else if (tegra_dc_is_t18x() || tegra_dc_is_t19x())
+		return tegra_dc_crc_nvdisp_en_dis(dc, arg, false);
+	else
+		return -ENOTSUPP;
 }
 
 /* Get the Least Recently Matched (lrm) flip ID.
@@ -432,16 +509,29 @@ done:
 	return ret;
 }
 
+static int tegra_dc_crc_t21x_collect(struct tegra_dc *dc,
+				     struct tegra_dc_crc_buf_ele *ele)
+{
+	bool valids = false; /* Logical OR of valid fields of individual CRCs */
+
+	if (!atomic_read(&dc->crc_ref_cnt.rg_comp_sor))
+		return 0;
+
+	ele->rg.crc = tegra_dc_readl(dc, DC_COM_CRC_CHECKSUM_LATCHED);
+	ele->rg.valid = 1;
+
+	valids = ele->rg.valid || ele->sor.valid;
+
+	return valids ? 0 : -EINVAL;
+}
+
 long tegra_dc_crc_get(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
 {
-	int ret;
+	int ret = 0;
 	struct tegra_dc_ext_crc_conf *conf =
 				(struct tegra_dc_ext_crc_conf *)arg->conf;
 	struct tegra_dc_crc_buf_ele crc_ele;
 	u8 id, iter;
-
-	if (!(tegra_dc_is_t18x() || tegra_dc_is_t19x()))
-		return -ENOTSUPP;
 
 	if (!dc->enabled)
 		return -ENODEV;
@@ -463,25 +553,38 @@ long tegra_dc_crc_get(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
 			conf[iter].crc.val = crc_ele.rg.crc;
 			break;
 		case TEGRA_DC_EXT_CRC_TYPE_COMP:
-			conf[iter].crc.valid = crc_ele.comp.valid;
-			conf[iter].crc.val = crc_ele.comp.crc;
+			if (tegra_dc_is_t18x() || tegra_dc_is_t19x()) {
+				conf[iter].crc.valid = crc_ele.comp.valid;
+				conf[iter].crc.val = crc_ele.comp.crc;
+			} else {
+				conf[iter].crc.valid = 0;
+				conf[iter].crc.val = 0;
+				ret = -ENOTSUPP;
+			}
+			break;
+		case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
+			if (tegra_dc_is_t18x() || tegra_dc_is_t19x()) {
+				id = conf[iter].region.id;
+				conf[iter].crc.valid =
+						crc_ele.regional[id].valid;
+				conf[iter].crc.val = crc_ele.regional[id].crc;
+			} else {
+				conf[iter].crc.valid = 0;
+				conf[iter].crc.val = 0;
+				ret = -ENOTSUPP;
+			}
 			break;
 		case TEGRA_DC_EXT_CRC_TYPE_OR:
 			conf[iter].crc.valid = 0;
 			conf[iter].crc.val = 0;
 			return -ENOTSUPP; /* TODO: Implement this */
 			/* break; */
-		case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
-			id = conf[iter].region.id;
-			conf[iter].crc.valid = crc_ele.regional[id].valid;
-			conf[iter].crc.val = crc_ele.regional[id].crc;
-			break;
 		default:
-			return -EINVAL;
+			ret = -EINVAL;
 		}
 	}
 
-	return 0;
+	return ret;
 }
 
 int tegra_dc_crc_process(struct tegra_dc *dc)
@@ -493,7 +596,11 @@ int tegra_dc_crc_process(struct tegra_dc *dc)
 	memset(&crc_ele, 0, sizeof(crc_ele));
 
 	/* Collect all CRCs generated by the HW */
-	ret = tegra_nvdisp_crc_collect(dc, &crc_ele);
+	if (tegra_dc_is_t21x())
+		ret = tegra_dc_crc_t21x_collect(dc, &crc_ele);
+	else if (tegra_dc_is_t18x() || tegra_dc_is_t19x())
+		ret = tegra_nvdisp_crc_collect(dc, &crc_ele);
+
 	if (ret)
 		return ret;
 

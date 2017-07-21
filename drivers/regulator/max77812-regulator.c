@@ -62,10 +62,10 @@
 #define MAX77812_REG_M2_VOUT_S		0x2C
 #define MAX77812_REG_M3_VOUT_S		0x2D
 #define MAX77812_REG_M4_VOUT_S		0x2E
-#define MAX77812_REG_M1_CGF		0x2F
-#define MAX77812_REG_M2_CGF		0x30
-#define MAX77812_REG_M3_CGF		0x31
-#define MAX77812_REG_M4_CGF		0x32
+#define MAX77812_REG_M1_CFG		0x2F
+#define MAX77812_REG_M2_CFG		0x30
+#define MAX77812_REG_M3_CFG		0x31
+#define MAX77812_REG_M4_CFG		0x32
 #define MAX77812_REG_GLB_CFG1		0x33
 #define MAX77812_REG_GLB_CFG2		0x34
 #define MAX77812_REG_GLB_CFG3		0x35
@@ -328,16 +328,16 @@ static int max77812_config_init(struct max77812_regulator *max77812, int id)
 
 	switch (id) {
 	case MAX77812_REG_ID_M1:
-		reg_addr = MAX77812_REG_M1_CGF;
+		reg_addr = MAX77812_REG_M1_CFG;
 		break;
 	case MAX77812_REG_ID_M2:
-		reg_addr = MAX77812_REG_M2_CGF;
+		reg_addr = MAX77812_REG_M2_CFG;
 		break;
 	case MAX77812_REG_ID_M3:
-		reg_addr = MAX77812_REG_M3_CGF;
+		reg_addr = MAX77812_REG_M3_CFG;
 		break;
 	case MAX77812_REG_ID_M4:
-		reg_addr = MAX77812_REG_M4_CGF;
+		reg_addr = MAX77812_REG_M4_CFG;
 		break;
 	}
 

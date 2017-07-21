@@ -696,6 +696,11 @@
 			compatible = "nvidia,tegra_dc_common";
 			reg = <0x0 0x15200000 0x0 0x30000>;
 			nvidia,valid_heads = <0x03>;
+			nvidia,disp_imp_table = <&disp_imp_table>;
+		};
+
+		disp_imp_table: disp_imp_table {
+			status = "disabled";
 		};
 
 		head0: nvdisplay@15200000 {

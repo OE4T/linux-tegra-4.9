@@ -1,7 +1,7 @@
-From 70a3844e819940168c5e73ea4d97a1ad7e31f82b Mon Sep 17 00:00:00 2001
+From 58281bfcf359a165e7cab648716309cc7322d689 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:57 -0500
-Subject: [PATCH 101/327] genirq: Disable irqpoll on -rt
+Subject: [PATCH 101/337] genirq: Disable irqpoll on -rt
 
 Creates long latencies for no value
 
@@ -38,5 +38,5 @@ index 5707f97..73f38dc 100644
  	printk(KERN_WARNING "Misrouted IRQ fixup and polling support "
  				"enabled\n");
 -- 
-2.7.4
+2.1.4
 

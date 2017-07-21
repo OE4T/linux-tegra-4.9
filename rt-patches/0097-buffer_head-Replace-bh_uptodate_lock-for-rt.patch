@@ -1,7 +1,7 @@
-From 26a3e9084d0e61e84bff9312cf1dc241ab843abc Mon Sep 17 00:00:00 2001
+From 3f32ceaf83cd34b9733be00b83c38295fe2904fb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 18 Mar 2011 09:18:52 +0100
-Subject: [PATCH 097/327] buffer_head: Replace bh_uptodate_lock for -rt
+Subject: [PATCH 097/337] buffer_head: Replace bh_uptodate_lock for -rt
 
 Wrap the bit_spin_lock calls into a separate inline and add the RT
 replacements with a real spinlock.
@@ -14,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 44 insertions(+), 21 deletions(-)
 
 diff --git a/fs/buffer.c b/fs/buffer.c
-index b205a62..5646afc 100644
+index 5d8f496..48074bd 100644
 --- a/fs/buffer.c
 +++ b/fs/buffer.c
 @@ -301,8 +301,7 @@ static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
@@ -167,5 +167,5 @@ index ebbacd1..ba18cfe 100644
   * macro tricks to expand the set_buffer_foo(), clear_buffer_foo()
   * and buffer_foo() functions.
 -- 
-2.7.4
+2.1.4
 

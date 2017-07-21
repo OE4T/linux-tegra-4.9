@@ -1,7 +1,7 @@
-From 709b4f45c46c1673e0dd155ae99a749db3c0ea33 Mon Sep 17 00:00:00 2001
+From 814c24a2318596791a238b2c8e0469f45b16fca7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 27 Feb 2016 10:22:23 +0100
-Subject: [PATCH 078/327] iommu/amd: Use WARN_ON_NORT in __attach_device()
+Subject: [PATCH 078/337] iommu/amd: Use WARN_ON_NORT in __attach_device()
 
 RT does not disable interrupts here, but the protection is still
 correct. Fixup the WARN_ON so it won't yell on RT.
@@ -16,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/iommu/amd_iommu.c b/drivers/iommu/amd_iommu.c
-index 11a13b5..baaed0a 100644
+index 41800b6..22c2a32 100644
 --- a/drivers/iommu/amd_iommu.c
 +++ b/drivers/iommu/amd_iommu.c
 @@ -1923,10 +1923,10 @@ static int __attach_device(struct iommu_dev_data *dev_data,
@@ -48,5 +48,5 @@ index 11a13b5..baaed0a 100644
  	if (WARN_ON(!dev_data->domain))
  		return;
 -- 
-2.7.4
+2.1.4
 

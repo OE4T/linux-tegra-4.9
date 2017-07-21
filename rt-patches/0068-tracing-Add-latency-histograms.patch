@@ -1,7 +1,7 @@
-From a0e0add0361dc55dcd6daa579d18a351874c91c6 Mon Sep 17 00:00:00 2001
+From ebf157906be463addd3dceab4f767f61ab2745d2 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 14:03:41 +0100
-Subject: [PATCH 068/327] tracing: Add latency histograms
+Subject: [PATCH 068/337] tracing: Add latency histograms
 
 This patch provides a recording mechanism to store data of potential
 sources of system latencies. The recordings separately determine the
@@ -244,10 +244,10 @@ index 5e00f80..3bddb7c 100644
  #ifdef CONFIG_TIMER_STATS
  	int				start_pid;
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 153d589..724826a 100644
+index e8f91dd..f0df624 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2010,6 +2010,12 @@ struct task_struct {
+@@ -2020,6 +2020,12 @@ struct task_struct {
  	/* bitmask and counter of trace recursion */
  	unsigned long trace_recursion;
  #endif /* CONFIG_TRACING */
@@ -1844,5 +1844,5 @@ index 03cdff8..0b5947e 100644
  		start_critical_timing(a0, a1);
  }
 -- 
-2.7.4
+2.1.4
 

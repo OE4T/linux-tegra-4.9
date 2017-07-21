@@ -1,7 +1,7 @@
-From af5e7f3c00c4830fcdf24500cfce880788c7d2da Mon Sep 17 00:00:00 2001
+From ed46bc16b61a71942ec812f67b38a75afdab0219 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:24 -0500
-Subject: [PATCH 061/327] drivers/net: Use disable_irq_nosync() in 8139too
+Subject: [PATCH 061/337] drivers/net: Use disable_irq_nosync() in 8139too
 
 Use disable_irq_nosync() instead of disable_irq() as this might be
 called in atomic context with netpoll.
@@ -26,5 +26,5 @@ index da4c2d8..1420dfb 100644
  	enable_irq(irq);
  }
 -- 
-2.7.4
+2.1.4
 

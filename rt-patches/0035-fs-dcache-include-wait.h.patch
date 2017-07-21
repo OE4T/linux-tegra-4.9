@@ -1,7 +1,7 @@
-From 104899a9adc0f4735a7fcd8b594635146f2353b7 Mon Sep 17 00:00:00 2001
+From 29a79bec54cab437f4db5a1e02a685789ba6455b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 11:55:23 +0200
-Subject: [PATCH 035/327] fs/dcache: include wait.h
+Subject: [PATCH 035/337] fs/dcache: include wait.h
 
 Since commit d9171b934526 ("parallel lookups machinery, part 4 (and
 last)") dcache.h is using but does not include wait.h. It works as long
@@ -25,5 +25,5 @@ index 9b0477e..655ec7c 100644
  struct path;
  struct vfsmount;
 -- 
-2.7.4
+2.1.4
 

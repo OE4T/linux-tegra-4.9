@@ -1,7 +1,7 @@
-From c55001c30f36d5d1c8bc6b93b009a19454cbad25 Mon Sep 17 00:00:00 2001
+From 585fce09f72bc55cfe1c006137b9aef6223ebe11 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:10 +0100
-Subject: [PATCH 021/327] rtmutex: Clean up
+Subject: [PATCH 021/337] rtmutex: Clean up
 
 Upstream commit aa2bfe55366552cb7e93e8709d66e698d79ccc47
 
@@ -152,5 +152,5 @@ index 6f07357..d1c0712 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-2.7.4
+2.1.4
 

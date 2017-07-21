@@ -1,7 +1,7 @@
-From 2209cad4539bb479f9e1fd2c90dc5a00168b74f7 Mon Sep 17 00:00:00 2001
+From c86dd42c6c6a8889a06ed6bca6ccc4b9ba76ed3d Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Wed, 30 Oct 2013 11:48:33 -0700
-Subject: [PATCH 116/327] mm/memcontrol: Don't call schedule_work_on in
+Subject: [PATCH 116/337] mm/memcontrol: Don't call schedule_work_on in
  preemption disabled context
 
 The following trace is triggered when running ltp oom test cases:
@@ -40,7 +40,6 @@ Call Trace:
 So, to prevent schedule_work_on from being called in preempt disabled context,
 replace the pair of get/put_cpu() to get/put_cpu_light().
 
-
 Signed-off-by: Yang Shi <yang.shi@windriver.com>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
@@ -70,5 +69,5 @@ index 47559cc..efb41a5 100644
  	mutex_unlock(&percpu_charge_mutex);
  }
 -- 
-2.7.4
+2.1.4
 

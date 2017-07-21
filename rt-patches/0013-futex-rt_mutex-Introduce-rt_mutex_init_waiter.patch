@@ -1,7 +1,7 @@
-From 695c13f0979d72201a1310bf29b4c1fa8eb9ae25 Mon Sep 17 00:00:00 2001
+From c5dec80bd963102ca3ad6fc9c1061f2945aa0611 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:56 +0100
-Subject: [PATCH 013/327] futex,rt_mutex: Introduce rt_mutex_init_waiter()
+Subject: [PATCH 013/337] futex,rt_mutex: Introduce rt_mutex_init_waiter()
 
 Upstream commit 50809358dd7199aa7ce232f6877dd09ec30ef374
 
@@ -85,5 +85,5 @@ index 2441c2d..d16de236 100644
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
 -- 
-2.7.4
+2.1.4
 

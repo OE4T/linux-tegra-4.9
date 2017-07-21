@@ -1,7 +1,7 @@
-From 4e6ed79d62f98d543ca46799ffc6d46b7cdf2b1a Mon Sep 17 00:00:00 2001
+From 92e778e353dc5eb195334f1b083006d3d7eb0faa Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 6 Jun 2011 12:20:33 +0200
-Subject: [PATCH 135/327] sched: Move mmdrop to RCU on RT
+Subject: [PATCH 135/337] sched: Move mmdrop to RCU on RT
 
 Takes sleeping locks and calls into the memory allocator, so nothing
 we want to do in task switch and oder atomic contexts.
@@ -37,10 +37,10 @@ index 3139ea4..e107862 100644
  	/* address of the bounds directory */
  	void __user *bd_addr;
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index e01e3a7..5927443 100644
+index e5a144a..4e3a131 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2998,6 +2998,17 @@ static inline void mmdrop(struct mm_struct *mm)
+@@ -3008,6 +3008,17 @@ static inline void mmdrop(struct mm_struct *mm)
  		__mmdrop(mm);
  }
  
@@ -83,7 +83,7 @@ index 46011ff..1f0fd4c 100644
  {
  	VM_BUG_ON(atomic_read(&mm->mm_users));
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index c09812a..eaad9db 100644
+index e678a27..965a6cc 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -2830,8 +2830,12 @@ static struct rq *finish_task_switch(struct task_struct *prev)
@@ -100,7 +100,7 @@ index c09812a..eaad9db 100644
  	if (unlikely(prev_state == TASK_DEAD)) {
  		if (prev->sched_class->task_dead)
  			prev->sched_class->task_dead(prev);
-@@ -5758,6 +5762,8 @@ void sched_setnuma(struct task_struct *p, int nid)
+@@ -5757,6 +5761,8 @@ void sched_setnuma(struct task_struct *p, int nid)
  #endif /* CONFIG_NUMA_BALANCING */
  
  #ifdef CONFIG_HOTPLUG_CPU
@@ -109,8 +109,8 @@ index c09812a..eaad9db 100644
  /*
   * Ensures that the idle task is using init_mm right before its cpu goes
   * offline.
-@@ -5772,7 +5778,12 @@ void idle_task_exit(void)
- 		switch_mm_irqs_off(mm, &init_mm, current);
+@@ -5771,7 +5777,12 @@ void idle_task_exit(void)
+ 		switch_mm(mm, &init_mm, current);
  		finish_arch_post_lock_switch();
  	}
 -	mmdrop(mm);
@@ -123,7 +123,7 @@ index c09812a..eaad9db 100644
  }
  
  /*
-@@ -7795,6 +7806,10 @@ int sched_cpu_dying(unsigned int cpu)
+@@ -7794,6 +7805,10 @@ int sched_cpu_dying(unsigned int cpu)
  	update_max_interval();
  	nohz_balance_exit_idle(cpu);
  	hrtick_clear(rq);
@@ -135,5 +135,5 @@ index c09812a..eaad9db 100644
  }
  #endif
 -- 
-2.7.4
+2.1.4
 

@@ -1,7 +1,7 @@
-From 27f84cfedecd01645f61ea281ffbc8fbdb6fa314 Mon Sep 17 00:00:00 2001
+From 314982fb532334049c387316b87634fcd796bdc2 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:57 +0100
-Subject: [PATCH 014/327] futex,rt_mutex: Restructure
+Subject: [PATCH 014/337] futex,rt_mutex: Restructure
  rt_mutex_finish_proxy_lock()
 
 Upstream commit 38d589f2fd08f1296aea3ce62bebd185125c6d81
@@ -165,5 +165,5 @@ index d16de236..fedd5ab 100644
  extern int rt_mutex_timed_futex_lock(struct rt_mutex *l, struct hrtimer_sleeper *to);
  extern int rt_mutex_futex_trylock(struct rt_mutex *l);
 -- 
-2.7.4
+2.1.4
 

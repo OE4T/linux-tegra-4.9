@@ -1,7 +1,7 @@
-From 1aa91ab51088a61b4e49bb70b5f772b066454f3b Mon Sep 17 00:00:00 2001
+From a7b99bd429cdbcb6e189008b25d3b0a34dca4987 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Feb 2013 22:36:59 +0100
-Subject: [PATCH 050/327] timekeeping: Split jiffies seqlock
+Subject: [PATCH 050/337] timekeeping: Split jiffies seqlock
 
 Replace jiffies_lock seqlock with a simple seqcounter and a rawlock so
 it can be taken in atomic context on RT.
@@ -135,10 +135,10 @@ index 3bcb61b..10cb224 100644
  
  	if (rcu_needs_cpu(basemono, &next_rcu) ||
 diff --git a/kernel/time/timekeeping.c b/kernel/time/timekeeping.c
-index bfe589e..b3e148d 100644
+index 234d3e4..35a90f3 100644
 --- a/kernel/time/timekeeping.c
 +++ b/kernel/time/timekeeping.c
-@@ -2357,8 +2357,10 @@ EXPORT_SYMBOL(hardpps);
+@@ -2377,8 +2377,10 @@ EXPORT_SYMBOL(hardpps);
   */
  void xtime_update(unsigned long ticks)
  {
@@ -166,5 +166,5 @@ index 704f595..763a3e5 100644
  #define CS_NAME_LEN	32
  
 -- 
-2.7.4
+2.1.4
 

@@ -1,7 +1,7 @@
-From 489a13741eb30961491ea1a17035b0ba499b92d5 Mon Sep 17 00:00:00 2001
+From 4768c8f7d97dda709008e4ed6eba9d9581a45c78 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 21 Sep 2011 19:57:12 +0200
-Subject: [PATCH 052/327] signal: Revert ptrace preempt magic
+Subject: [PATCH 052/337] signal: Revert ptrace preempt magic
 
 Upstream commit '53da1d9456fe7f8 fix ptrace slowness' is nothing more
 than a bandaid around the ptrace design trainwreck. It's not a
@@ -13,10 +13,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 8 deletions(-)
 
 diff --git a/kernel/signal.c b/kernel/signal.c
-index 0b14157..c90b5b0 100644
+index deb04d5..9590b67 100644
 --- a/kernel/signal.c
 +++ b/kernel/signal.c
-@@ -1846,15 +1846,7 @@ static void ptrace_stop(int exit_code, int why, int clear_code, siginfo_t *info)
+@@ -1854,15 +1854,7 @@ static void ptrace_stop(int exit_code, int why, int clear_code, siginfo_t *info)
  		if (gstop_done && ptrace_reparented(current))
  			do_notify_parent_cldstop(current, false, why);
  
@@ -33,5 +33,5 @@ index 0b14157..c90b5b0 100644
  	} else {
  		/*
 -- 
-2.7.4
+2.1.4
 

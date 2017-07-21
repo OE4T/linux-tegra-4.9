@@ -1,7 +1,7 @@
-From d7f7204417e7dfe5c6f3ebb3d1e1f6117e66ad75 Mon Sep 17 00:00:00 2001
+From 1215976ae47b05a8faff7ab82bd7765cf2cc8618 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
-Subject: [PATCH 019/327] sched/rtmutex/deadline: Fix a PI crash for deadline
+Subject: [PATCH 019/337] sched/rtmutex/deadline: Fix a PI crash for deadline
  tasks
 
 Upstream commit e96a7705e7d3fef96aec9b590c63b2f6f7d2ba22
@@ -73,10 +73,10 @@ index 325f649..d359b1a 100644
  #else
  # define INIT_RT_MUTEXES(tsk)
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 7f39959..9601460 100644
+index 3fa8fab..95da666 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1809,6 +1809,8 @@ struct task_struct {
+@@ -1819,6 +1819,8 @@ struct task_struct {
  	/* PI waiters blocked on a rt_mutex held by this task */
  	struct rb_root pi_waiters;
  	struct rb_node *pi_waiters_leftmost;
@@ -168,10 +168,10 @@ index 440469b..3c4e5bf 100644
  
  /*
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 8530071..ff1185c 100644
+index 3606ea5..d66badc 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3840,6 +3840,8 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
+@@ -3839,6 +3839,8 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
  		goto out_unlock;
  	}
  
@@ -181,5 +181,5 @@ index 8530071..ff1185c 100644
  	oldprio = p->prio;
  
 -- 
-2.7.4
+2.1.4
 

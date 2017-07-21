@@ -1,7 +1,7 @@
-From f26209cba36bf94956ca6a8b8cff7ca2d6c0ce87 Mon Sep 17 00:00:00 2001
+From afd935979f37515ecfb1054c90ecbf659c8e46da Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
-Subject: [PATCH 072/327] printk: Add a printk kill switch
+Subject: [PATCH 072/337] printk: Add a printk kill switch
 
 Add a prinkt-kill-switch. This is used from (NMI) watchdog to ensure that
 it does not dead-lock with the early printk code.
@@ -10,8 +10,8 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  include/linux/printk.h |  2 ++
  kernel/printk/printk.c | 79 +++++++++++++++++++++++++++++++++++++-------------
- kernel/watchdog.c      | 10 +++++++
- 3 files changed, 71 insertions(+), 20 deletions(-)
+ kernel/watchdog_hld.c  |  9 ++++++
+ 3 files changed, 70 insertions(+), 20 deletions(-)
 
 diff --git a/include/linux/printk.h b/include/linux/printk.h
 index eac1af8..37e647a 100644
@@ -30,7 +30,7 @@ index eac1af8..37e647a 100644
  
  #ifdef CONFIG_PRINTK_NMI
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 20fc294..40b543d 100644
+index 4027154..6a8ca2e 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
 @@ -355,6 +355,58 @@ __packed __aligned(4)
@@ -133,20 +133,19 @@ index 20fc294..40b543d 100644
  static int __add_preferred_console(char *name, int idx, char *options,
  				   char *brl_options)
  {
-diff --git a/kernel/watchdog.c b/kernel/watchdog.c
-index ea6271b..5e2fd52 100644
---- a/kernel/watchdog.c
-+++ b/kernel/watchdog.c
-@@ -390,6 +390,8 @@ static int is_softlockup(unsigned long touch_ts)
- 
- #ifdef CONFIG_HARDLOCKUP_DETECTOR_NMI
- 
+diff --git a/kernel/watchdog_hld.c b/kernel/watchdog_hld.c
+index 12b8dd6..4c90d2e 100644
+--- a/kernel/watchdog_hld.c
++++ b/kernel/watchdog_hld.c
+@@ -19,6 +19,7 @@
+ static DEFINE_PER_CPU(bool, hard_watchdog_warn);
+ static DEFINE_PER_CPU(bool, watchdog_nmi_touch);
+ static DEFINE_PER_CPU(struct perf_event *, watchdog_ev);
 +static DEFINE_RAW_SPINLOCK(watchdog_output_lock);
-+
- static struct perf_event_attr wd_hw_attr = {
- 	.type		= PERF_TYPE_HARDWARE,
- 	.config		= PERF_COUNT_HW_CPU_CYCLES,
-@@ -423,6 +425,13 @@ static void watchdog_overflow_callback(struct perf_event *event,
+ 
+ /* boot commands */
+ /*
+@@ -104,6 +105,13 @@ static void watchdog_overflow_callback(struct perf_event *event,
  		/* only print hardlockups once */
  		if (__this_cpu_read(hard_watchdog_warn) == true)
  			return;
@@ -160,7 +159,7 @@ index ea6271b..5e2fd52 100644
  
  		pr_emerg("Watchdog detected hard LOCKUP on cpu %d", this_cpu);
  		print_modules();
-@@ -440,6 +449,7 @@ static void watchdog_overflow_callback(struct perf_event *event,
+@@ -121,6 +129,7 @@ static void watchdog_overflow_callback(struct perf_event *event,
  				!test_and_set_bit(0, &hardlockup_allcpu_dumped))
  			trigger_allbutself_cpu_backtrace();
  
@@ -169,5 +168,5 @@ index ea6271b..5e2fd52 100644
  			nmi_panic(regs, "Hard LOCKUP");
  
 -- 
-2.7.4
+2.1.4
 

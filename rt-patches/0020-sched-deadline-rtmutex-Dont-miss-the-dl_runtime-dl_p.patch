@@ -1,7 +1,7 @@
-From bc1ec628d0d3a9c606fadd7ed635d160afb02805 Mon Sep 17 00:00:00 2001
+From c2bfa1b8afda500d57cfefcef94a2a814ea09dfa Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:09 +0100
-Subject: [PATCH 020/327] sched/deadline/rtmutex: Dont miss the
+Subject: [PATCH 020/337] sched/deadline/rtmutex: Dont miss the
  dl_runtime/dl_period update
 
 Upstream commit 85e2d4f992868ad78dc8bb2c077b652fcfb3661a
@@ -55,5 +55,5 @@ index 3c4e5bf..f0dc1f6 100644
  			goto out_unlock_pi;
  		else
 -- 
-2.7.4
+2.1.4
 

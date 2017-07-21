@@ -1,7 +1,7 @@
-From e9fb7a77dcb0e7edaa50c5f03d6d8155f16e340e Mon Sep 17 00:00:00 2001
+From cf2b8576e1fbc34483592a951b694418b48e557c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 14:58:57 +0200
-Subject: [PATCH 076/327] kconfig: Add PREEMPT_RT_FULL
+Subject: [PATCH 076/337] kconfig: Add PREEMPT_RT_FULL
 
 Introduce the final symbol for PREEMPT_RT_FULL.
 
@@ -64,5 +64,5 @@ index 6fdc97e..523e042 100755
  
  # Truncate to maximum length
 -- 
-2.7.4
+2.1.4
 

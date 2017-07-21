@@ -1,7 +1,7 @@
-From 03c2ab5b4833657ce0a39f58aa33905e6d040103 Mon Sep 17 00:00:00 2001
+From 9d558b321b833cb017dde455b27a042f6f655877 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
-Subject: [PATCH 056/327] signals: Allow rt tasks to cache one sigqueue struct
+Subject: [PATCH 056/337] signals: Allow rt tasks to cache one sigqueue struct
 
 To avoid allocation allow rt tasks to cache one sigqueue struct in
 task struct.
@@ -16,10 +16,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 69 insertions(+), 5 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 9601460..153d589 100644
+index 95da666..e8f91dd 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1775,6 +1775,7 @@ struct task_struct {
+@@ -1785,6 +1785,7 @@ struct task_struct {
  /* signal handlers */
  	struct signal_struct *signal;
  	struct sighand_struct *sighand;
@@ -65,7 +65,7 @@ index 88408c8..e8c1b06 100644
  	p->utime = p->stime = p->gtime = 0;
  	p->utimescaled = p->stimescaled = 0;
 diff --git a/kernel/signal.c b/kernel/signal.c
-index c90b5b0..9171dcd 100644
+index 9590b67..ed230e5 100644
 --- a/kernel/signal.c
 +++ b/kernel/signal.c
 @@ -14,6 +14,7 @@
@@ -178,17 +178,17 @@ index c90b5b0..9171dcd 100644
   * Flush all pending signals for this kthread.
   */
  void flush_signals(struct task_struct *t)
-@@ -525,7 +583,7 @@ static void collect_signal(int sig, struct sigpending *list, siginfo_t *info)
- still_pending:
- 		list_del_init(&first->list);
- 		copy_siginfo(info, &first->info);
+@@ -532,7 +590,7 @@ static void collect_signal(int sig, struct sigpending *list, siginfo_t *info,
+ 			(info->si_code == SI_TIMER) &&
+ 			(info->si_sys_private);
+ 
 -		__sigqueue_free(first);
 +		sigqueue_free_current(first);
  	} else {
  		/*
  		 * Ok, it wasn't in the queue.  This must be
-@@ -560,6 +618,8 @@ int dequeue_signal(struct task_struct *tsk, sigset_t *mask, siginfo_t *info)
- {
+@@ -568,6 +626,8 @@ int dequeue_signal(struct task_struct *tsk, sigset_t *mask, siginfo_t *info)
+ 	bool resched_timer = false;
  	int signr;
  
 +	WARN_ON_ONCE(tsk != current);
@@ -196,7 +196,7 @@ index c90b5b0..9171dcd 100644
  	/* We only dequeue private signals from ourselves, we don't let
  	 * signalfd steal them
  	 */
-@@ -1485,7 +1545,8 @@ EXPORT_SYMBOL(kill_pid);
+@@ -1493,7 +1553,8 @@ EXPORT_SYMBOL(kill_pid);
   */
  struct sigqueue *sigqueue_alloc(void)
  {
@@ -207,5 +207,5 @@ index c90b5b0..9171dcd 100644
  	if (q)
  		q->flags |= SIGQUEUE_PREALLOC;
 -- 
-2.7.4
+2.1.4
 

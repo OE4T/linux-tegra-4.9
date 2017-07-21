@@ -1,7 +1,7 @@
-From 561154777fdea1f8c564c018c057478dc46a8a0e Mon Sep 17 00:00:00 2001
+From 77c487cb7db8a70cb368e0d0464bf1474577647b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Feb 2017 19:44:39 +0100
-Subject: [PATCH 002/327] lockdep: Handle statically initialized PER_CPU locks
+Subject: [PATCH 002/337] lockdep: Handle statically initialized PER_CPU locks
  proper
 
 If a PER_CPU struct which contains a spin_lock is statically initialized
@@ -278,5 +278,5 @@ index f014ceb..9034915 100644
   * @addr: the address to be converted to physical address
   *
 -- 
-2.7.4
+2.1.4
 

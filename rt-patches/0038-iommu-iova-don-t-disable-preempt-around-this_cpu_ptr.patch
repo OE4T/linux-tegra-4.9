@@ -1,7 +1,7 @@
-From f7a7f72b8efe7634a646d95e062511e648c11824 Mon Sep 17 00:00:00 2001
+From f4849346da8c8f8fa15ba9a9d063a966ba530e37 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 16:58:19 +0200
-Subject: [PATCH 038/327] iommu/iova: don't disable preempt around
+Subject: [PATCH 038/337] iommu/iova: don't disable preempt around
  this_cpu_ptr()
 
 Commit 583248e6620a ("iommu/iova: Disable preemption around use of
@@ -84,5 +84,5 @@ index a9b40ed..c814a24 100644
  	return iova_pfn;
  }
 -- 
-2.7.4
+2.1.4
 

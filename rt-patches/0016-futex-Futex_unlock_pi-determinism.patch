@@ -1,7 +1,7 @@
-From 4dada6e1e005c567688196a24bcab30c862f8806 Mon Sep 17 00:00:00 2001
+From c49ca82d7481296b32e2ce34325ff97fb1b82adf Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:59 +0100
-Subject: [PATCH 016/327] futex: Futex_unlock_pi() determinism
+Subject: [PATCH 016/337] futex: Futex_unlock_pi() determinism
 
 Upstream commit bebe5b514345f09be2c15e414d076b02ecb9cce8
 
@@ -82,5 +82,5 @@ index 1cf0bc6..bfa46ce 100644
  
  		ret = wake_futex_pi(uaddr, uval, pi_state);
 -- 
-2.7.4
+2.1.4
 

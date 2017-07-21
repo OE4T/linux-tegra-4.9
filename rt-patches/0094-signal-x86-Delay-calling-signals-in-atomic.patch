@@ -1,7 +1,7 @@
-From b29277752f3110632d263d17fc30fc8d19f64c5a Mon Sep 17 00:00:00 2001
+From af6912108b54e16b48318314cb62e28e6dad4ba9 Mon Sep 17 00:00:00 2001
 From: Oleg Nesterov <oleg@redhat.com>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 094/327] signal/x86: Delay calling signals in atomic
+Subject: [PATCH 094/337] signal/x86: Delay calling signals in atomic
 
 On x86_64 we must disable preemption before we enable interrupts
 for stack faults, int3 and debugging, because the current task is using
@@ -24,7 +24,6 @@ code will send the signal when preemption is enabled.
 
 [ rostedt: Switched from #ifdef CONFIG_PREEMPT_RT_FULL to
   ARCH_RT_DELAYS_SIGNAL_SEND and added comments to the code. ]
-
 
 Signed-off-by: Oleg Nesterov <oleg@redhat.com>
 Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
@@ -79,10 +78,10 @@ index 8af22be..c370fba 100644
  typedef sigset_t compat_sigset_t;
  #endif
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 8895262..e9d83a0 100644
+index d59656a..59a5142 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1786,6 +1786,10 @@ struct task_struct {
+@@ -1796,6 +1796,10 @@ struct task_struct {
  	sigset_t blocked, real_blocked;
  	sigset_t saved_sigmask;	/* restored if set_restore_sigmask() was used */
  	struct sigpending pending;
@@ -94,10 +93,10 @@ index 8895262..e9d83a0 100644
  	unsigned long sas_ss_sp;
  	size_t sas_ss_size;
 diff --git a/kernel/signal.c b/kernel/signal.c
-index 85f83cf..c884647 100644
+index 5348401..52a8c46 100644
 --- a/kernel/signal.c
 +++ b/kernel/signal.c
-@@ -1216,8 +1216,8 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
+@@ -1224,8 +1224,8 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
   * We don't want to have recursive SIGSEGV's etc, for example,
   * that is why we also clear SIGNAL_UNKILLABLE.
   */
@@ -108,7 +107,7 @@ index 85f83cf..c884647 100644
  {
  	unsigned long int flags;
  	int ret, blocked, ignored;
-@@ -1242,6 +1242,39 @@ force_sig_info(int sig, struct siginfo *info, struct task_struct *t)
+@@ -1250,6 +1250,39 @@ force_sig_info(int sig, struct siginfo *info, struct task_struct *t)
  	return ret;
  }
  
@@ -149,5 +148,5 @@ index 85f83cf..c884647 100644
   * Nuke all other threads in the group.
   */
 -- 
-2.7.4
+2.1.4
 

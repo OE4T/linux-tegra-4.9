@@ -1,7 +1,7 @@
-From ac6cf739f082dc11fe70110f931c6fa0cbb4cee1 Mon Sep 17 00:00:00 2001
+From f04374327e66656f484e40a3a5bbc186be894b22 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 27 Feb 2016 10:47:10 +0100
-Subject: [PATCH 130/327] tick/broadcast: Make broadcast hrtimer irqsafe
+Subject: [PATCH 130/337] tick/broadcast: Make broadcast hrtimer irqsafe
 
 Otherwise we end up with the following:
 
@@ -59,5 +59,5 @@ index 690b797..fe8ba16 100644
  	clockevents_register_device(&ce_broadcast_hrtimer);
  }
 -- 
-2.7.4
+2.1.4
 

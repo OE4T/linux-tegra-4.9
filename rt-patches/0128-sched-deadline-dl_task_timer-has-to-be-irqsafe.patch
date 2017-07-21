@@ -1,7 +1,7 @@
-From 45cd050889ff89e10c260d455de1b4d3f2eb4dee Mon Sep 17 00:00:00 2001
+From 885c8c883765c179d2a56d9097ccc99fca9a42b5 Mon Sep 17 00:00:00 2001
 From: Juri Lelli <juri.lelli@gmail.com>
 Date: Tue, 13 May 2014 15:30:20 +0200
-Subject: [PATCH 128/327] sched/deadline: dl_task_timer has to be irqsafe
+Subject: [PATCH 128/337] sched/deadline: dl_task_timer has to be irqsafe
 
 As for rt_period_timer, dl_task_timer has to be irqsafe.
 
@@ -12,7 +12,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+)
 
 diff --git a/kernel/sched/deadline.c b/kernel/sched/deadline.c
-index c95c512..e00accf92 100644
+index c95c512..e00accf 100644
 --- a/kernel/sched/deadline.c
 +++ b/kernel/sched/deadline.c
 @@ -687,6 +687,7 @@ void init_dl_task_timer(struct sched_dl_entity *dl_se)
@@ -24,5 +24,5 @@ index c95c512..e00accf92 100644
  
  static
 -- 
-2.7.4
+2.1.4
 

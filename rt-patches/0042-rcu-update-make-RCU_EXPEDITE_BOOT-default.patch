@@ -1,7 +1,7 @@
-From 7c008fb687228b709b0d7ff4862cb55f7572de72 Mon Sep 17 00:00:00 2001
+From 47bb1da7a8d00545e0b82d0c441666bb9313cf4c Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 2 Nov 2016 16:45:58 +0100
-Subject: [PATCH 042/327] rcu: update: make RCU_EXPEDITE_BOOT default
+Subject: [PATCH 042/337] rcu: update: make RCU_EXPEDITE_BOOT default
 
 RCU_EXPEDITE_BOOT should speed up the boot process by enforcing
 synchronize_rcu_expedited() instead of synchronize_rcu() during the boot
@@ -16,7 +16,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 2 insertions(+), 17 deletions(-)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index 884b6a3..d7d0756 100644
+index 5410b4e..b029390 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
 @@ -790,19 +790,6 @@ config RCU_NOCB_CPU_ALL
@@ -64,5 +64,5 @@ index 4f6db7e..019b470 100644
  		WRITE_ONCE(rcu_normal, 1);
  }
 -- 
-2.7.4
+2.1.4
 

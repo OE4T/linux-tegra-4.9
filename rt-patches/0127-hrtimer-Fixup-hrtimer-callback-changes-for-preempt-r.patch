@@ -1,7 +1,7 @@
-From 270b09856cfe7235d2fae84b47b7a358c3ebb851 Mon Sep 17 00:00:00 2001
+From bc90e1650009d3112025a10b7f94b387d106da8d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
-Subject: [PATCH 127/327] hrtimer: Fixup hrtimer callback changes for
+Subject: [PATCH 127/337] hrtimer: Fixup hrtimer callback changes for
  preempt-rt
 
 In preempt-rt we can not call the callbacks which take sleeping locks
@@ -68,7 +68,7 @@ index b7c2d54..65d0671 100644
  	unsigned int			active_bases;
  	unsigned int			clock_was_set_seq;
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 5a4fe39..95d59ae 100644
+index c3ed4b7..11b5e0d 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -359,6 +359,7 @@ static void init_rq_hrtick(struct rq *rq)
@@ -340,10 +340,10 @@ index 10cb224..14eaf34 100644
  
  	/* Get the next period (per-CPU) */
 diff --git a/kernel/watchdog.c b/kernel/watchdog.c
-index 5e2fd52..8f0e000 100644
+index 63177be..59fe007 100644
 --- a/kernel/watchdog.c
 +++ b/kernel/watchdog.c
-@@ -600,6 +600,7 @@ static void watchdog_enable(unsigned int cpu)
+@@ -381,6 +381,7 @@ static void watchdog_enable(unsigned int cpu)
  	/* kick off the timer for the hardlockup detector */
  	hrtimer_init(hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
  	hrtimer->function = watchdog_timer_fn;
@@ -352,5 +352,5 @@ index 5e2fd52..8f0e000 100644
  	/* Enable the perf event */
  	watchdog_nmi_enable(cpu);
 -- 
-2.7.4
+2.1.4
 

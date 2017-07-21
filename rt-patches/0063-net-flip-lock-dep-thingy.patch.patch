@@ -1,7 +1,7 @@
-From bafea03949b296bfab2698511a5aec156a79bbcb Mon Sep 17 00:00:00 2001
+From 19ac6e87cc5b83b8f48bec9e680d157001105251 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 28 Jun 2011 10:59:58 +0200
-Subject: [PATCH 063/327] net-flip-lock-dep-thingy.patch
+Subject: [PATCH 063/337] net-flip-lock-dep-thingy.patch
 
 =======================================================
 [ INFO: possible circular locking dependency detected ]
@@ -14,7 +14,6 @@ but task is already holding lock:
  (sk_lock-AF_INET){+.+...}, at: [<ffffffff81433308>] lock_sock+0x10/0x12
 
 which lock already depends on the new lock.
-
 
 the existing dependency chain (in reverse order) is:
 
@@ -88,17 +87,16 @@ Call Trace:
  [<ffffffff8112667a>] sys_close+0xf8/0x13d
  [<ffffffff814ae882>] system_call_fastpath+0x16/0x1b
 
-
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  net/core/sock.c | 3 +--
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/net/core/sock.c b/net/core/sock.c
-index 19562f7..ccfecf2 100644
+index f07eaea..e4a12e2 100644
 --- a/net/core/sock.c
 +++ b/net/core/sock.c
-@@ -2502,12 +2502,11 @@ void lock_sock_nested(struct sock *sk, int subclass)
+@@ -2503,12 +2503,11 @@ void lock_sock_nested(struct sock *sk, int subclass)
  	if (sk->sk_lock.owned)
  		__lock_sock(sk);
  	sk->sk_lock.owned = 1;
@@ -113,5 +111,5 @@ index 19562f7..ccfecf2 100644
  EXPORT_SYMBOL(lock_sock_nested);
  
 -- 
-2.7.4
+2.1.4
 

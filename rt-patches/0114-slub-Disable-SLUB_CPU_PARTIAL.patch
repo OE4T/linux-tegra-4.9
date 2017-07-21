@@ -1,7 +1,7 @@
-From 93215539d8f37514612f03e50452c0841a56808e Mon Sep 17 00:00:00 2001
+From e5e26a4f25e3b653fe5c650a99c581bcf9388f99 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 15 Apr 2015 19:00:47 +0200
-Subject: [PATCH 114/327] slub: Disable SLUB_CPU_PARTIAL
+Subject: [PATCH 114/337] slub: Disable SLUB_CPU_PARTIAL
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:915
 |in_atomic(): 1, irqs_disabled(): 0, pid: 87, name: rcuop/7
@@ -36,10 +36,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index 6db5256..e744b81 100644
+index 2b9b2fa..b123780 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
-@@ -1941,7 +1941,7 @@ config SLAB_FREELIST_RANDOM
+@@ -1945,7 +1945,7 @@ config SLAB_FREELIST_RANDOM
  
  config SLUB_CPU_PARTIAL
  	default y
@@ -49,5 +49,5 @@ index 6db5256..e744b81 100644
  	help
  	  Per cpu partial caches accellerate objects allocation and freeing
 -- 
-2.7.4
+2.1.4
 

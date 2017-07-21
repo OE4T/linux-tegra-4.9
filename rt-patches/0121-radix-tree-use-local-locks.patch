@@ -1,7 +1,7 @@
-From d35afb8d432a6719fd81c1e1326993665456dcd9 Mon Sep 17 00:00:00 2001
+From ecd8c892874ea869480c619402601169c12c563a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 25 Jan 2017 16:34:27 +0100
-Subject: [PATCH 121/327] radix-tree: use local locks
+Subject: [PATCH 121/337] radix-tree: use local locks
 
 The preload functionality uses per-CPU variables and preempt-disable to
 ensure that it does not switch CPUs during its usage. This patch adds
@@ -128,5 +128,5 @@ index 8e6d552..741da5a 100644
   * The maximum index which can be stored in a radix tree
   */
 -- 
-2.7.4
+2.1.4
 

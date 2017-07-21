@@ -1,7 +1,7 @@
-From 0edd9eddc4b6b1709a760f46d10e3b31c50b40f9 Mon Sep 17 00:00:00 2001
+From 7d59421043e542783f52dec417d283b1d53f1fae Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 15 Jul 2010 10:29:00 +0200
-Subject: [PATCH 062/327] suspend: Prevent might sleep splats
+Subject: [PATCH 062/337] suspend: Prevent might sleep splats
 
 timekeeping suspend/resume calls read_persistant_clock() which takes
 rtc_lock. That results in might sleep warnings because at that point
@@ -24,10 +24,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 12 insertions(+)
 
 diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index bc6ed52..cfc57ce 100644
+index 9b68d53..2a27b1a 100644
 --- a/include/linux/kernel.h
 +++ b/include/linux/kernel.h
-@@ -488,6 +488,7 @@ extern enum system_states {
+@@ -489,6 +489,7 @@ extern enum system_states {
  	SYSTEM_HALT,
  	SYSTEM_POWER_OFF,
  	SYSTEM_RESTART,
@@ -111,5 +111,5 @@ index 2d0c99b..880c5a2 100644
  	BUG_ON(irqs_disabled());
  
 -- 
-2.7.4
+2.1.4
 

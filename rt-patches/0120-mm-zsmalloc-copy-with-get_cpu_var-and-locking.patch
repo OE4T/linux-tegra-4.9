@@ -1,7 +1,7 @@
-From eecb8b00e7856b9379a22af6dfd1ac87cf0c3254 Mon Sep 17 00:00:00 2001
+From 05baf4623d2b1df9871e58bbdd254740183aefe1 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 22 Mar 2016 11:16:09 +0100
-Subject: [PATCH 120/327] mm/zsmalloc: copy with get_cpu_var() and locking
+Subject: [PATCH 120/337] mm/zsmalloc: copy with get_cpu_var() and locking
 
 get_cpu_var() disables preemption and triggers a might_sleep() splat later.
 This is replaced with get_locked_var().
@@ -198,5 +198,5 @@ index 1689bb5..e52a8cb 100644
  	migrate_read_unlock(zspage);
  	unpin_tag(handle);
 -- 
-2.7.4
+2.1.4
 

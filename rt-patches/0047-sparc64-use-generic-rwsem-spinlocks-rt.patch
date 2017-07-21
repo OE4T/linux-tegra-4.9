@@ -1,7 +1,7 @@
-From 8defd4cd858dc81ee6df68afa2901ea9922bfe89 Mon Sep 17 00:00:00 2001
+From 2a7bbd89017b94d580b29fc7dd43a1050745e79b Mon Sep 17 00:00:00 2001
 From: Allen Pais <allen.pais@oracle.com>
 Date: Fri, 13 Dec 2013 09:44:41 +0530
-Subject: [PATCH 047/327] sparc64: use generic rwsem spinlocks rt
+Subject: [PATCH 047/337] sparc64: use generic rwsem spinlocks rt
 
 Signed-off-by: Allen Pais <allen.pais@oracle.com>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
@@ -10,7 +10,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 4 deletions(-)
 
 diff --git a/arch/sparc/Kconfig b/arch/sparc/Kconfig
-index 165ecdd..b68a464 100644
+index b27e48e..2965bf7 100644
 --- a/arch/sparc/Kconfig
 +++ b/arch/sparc/Kconfig
 @@ -194,12 +194,10 @@ config NR_CPUS
@@ -29,5 +29,5 @@ index 165ecdd..b68a464 100644
  config GENERIC_HWEIGHT
  	bool
 -- 
-2.7.4
+2.1.4
 

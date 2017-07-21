@@ -1,7 +1,7 @@
-From 4819edfca84f984d688d8bec4b9550799ffe4825 Mon Sep 17 00:00:00 2001
+From 50d8b5ef182d01cd815d8790aa0641fe6add7297 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 20 Jun 2011 09:03:47 +0200
-Subject: [PATCH 083/327] rt: Add local irq locks
+Subject: [PATCH 083/337] rt: Add local irq locks
 
 Introduce locallock. For !RT this maps to preempt_disable()/
 local_irq_disable() so there is not much that changes. For RT this will
@@ -331,5 +331,5 @@ index 491b3f5..b988bf4 100644
  #define PCPU_MIN_UNIT_SIZE		PFN_ALIGN(32 << 10)
  
 -- 
-2.7.4
+2.1.4
 

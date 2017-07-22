@@ -1224,6 +1224,9 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			tegra_dc_incr_syncpt_min(dc, index,
 					flip_win->syncpt_max);
 		}
+		atomic64_inc(&dc->flip_stats.flips_cmpltd);
+	} else {
+		atomic64_inc(&dc->flip_stats.flips_skipped);
 	}
 
 	/* unpin and deref previous front buffers */
@@ -1918,11 +1921,10 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 #endif
 	data->flags = flip_flags;
 
-	mutex_lock(&user->ext->dc->lock);
-	flip_id_local = user->ext->dc->flips_queued++;
+	flip_id_local = atomic64_inc_return
+			(&user->ext->dc->flip_stats.flips_queued);
 	if (flip_id)
 		*flip_id = flip_id_local;
-	mutex_unlock(&user->ext->dc->lock);
 
 	/* Insert the flip in the flip queue if CRC is enabled */
 	if (atomic_read(&ext->dc->crc_ref_cnt.global)) {

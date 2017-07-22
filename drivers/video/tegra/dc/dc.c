@@ -2419,6 +2419,35 @@ static const struct file_operations dbg_hw_index_ops = {
 	.release = single_release,
 };
 
+static int dbg_flip_stats_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc *dc = m->private;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	seq_printf(m, "Flips queued: %ld\n",
+		atomic64_read(&dc->flip_stats.flips_queued));
+	seq_printf(m, "Flips skipped: %ld\n",
+		atomic64_read(&dc->flip_stats.flips_skipped));
+	seq_printf(m, "Flips completed: %ld\n",
+		atomic64_read(&dc->flip_stats.flips_cmpltd));
+
+	return 0;
+}
+
+static int dbg_flip_stats_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_flip_stats_show, inode->i_private);
+}
+
+static const struct file_operations dbg_flip_stats_ops = {
+	.open = dbg_flip_stats_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 {
 	if (dc->debugdir)
@@ -2668,6 +2697,11 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 
 	retval = debugfs_create_file("hw_index", S_IRUGO, dc->debugdir,
 				dc, &dbg_hw_index_ops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("flip_stats", S_IRUGO, dc->debugdir,
+				dc, &dbg_flip_stats_ops);
 	if (!retval)
 		goto remove_out;
 
@@ -6210,6 +6244,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->available_bw = UINT_MAX;
 	}
 #endif
+
+	/* Initialize the flip stats to 0. */
+	atomic64_set(&dc->flip_stats.flips_queued, 0);
+	atomic64_set(&dc->flip_stats.flips_skipped, 0);
+	atomic64_set(&dc->flip_stats.flips_cmpltd, 0);
 
 	tegra_dc_create_debugfs(dc);
 

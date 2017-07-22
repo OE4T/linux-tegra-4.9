@@ -227,6 +227,12 @@ struct tegra_dc_hw_data {
 	enum tegra_dc_hw version;
 };
 
+struct tegra_dc_flip_stats {
+	atomic64_t flips_skipped;
+	atomic64_t flips_queued;
+	atomic64_t flips_cmpltd;
+};
+
 /*
  * struct tegra_dc_client_data - stores all per client specific data for
  * required for notifying when the requested events occur.
@@ -569,8 +575,7 @@ struct tegra_dc {
 	struct frame_lock_info frm_lck_info;
 	unsigned long act_req_mask;
 	struct tegra_dc_clients_info clients_info;
-
-	u64 flips_queued;
+	struct tegra_dc_flip_stats flip_stats;
 
 	struct tegra_dc_ring_buf flip_buf; /* Buffer to save flip requests */
 	struct tegra_dc_ring_buf crc_buf; /* Buffer to save HW generated CRCs */

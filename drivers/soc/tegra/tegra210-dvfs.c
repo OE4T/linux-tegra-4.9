@@ -769,6 +769,34 @@ static struct cvb_dvfs gpu_cvb_dvfs_table[] = {
 	},
 };
 
+#define GPUB01_NA_CVB_TABLE_SLT	\
+	.freqs_mult = KHZ,	\
+	.speedo_scale = 100,	\
+	.thermal_scale = 10,	\
+	.voltage_scale = 1000,	\
+	.cvb_table = {		\
+		/* f	   dfll pll:    c0,       c1,       c2,       c3,       c4,       c5 */    \
+		{   76800, { }, {  2170612,  -187601,     4608,        0,        0,        0 }, }, \
+		{  153600, { }, {  2223724,  -187601,     4608,        0,        0,        0 }, }, \
+		{  230400, { }, {  1015288,   -21829,     -400,        0,        0,        0 }, }, \
+		{  307200, { }, {   971440,   -12807,     -695,        0,        0,        0 }, }, \
+		{  384000, { }, {  2088217,  -155302,     3953,        0,        0,        0 }, }, \
+		{  460800, { }, {  1988503,  -138702,     3411,        0,        0,        0 }, }, \
+		{  537600, { }, {  2448978,  -189747,     4911,        0,        0,        0 }, }, \
+		{  614400, { }, {  2879181,  -235297,     6201,        0,        0,        0 }, }, \
+		{  691200, { }, {  2935092,  -234838,     6104,        0,        0,        0 }, }, \
+		{  768000, { }, {  3078707,  -244842,     6336,        0,        0,        0 }, }, \
+		{  844800, { }, {  3070536,  -234266,     5903,        0,        0,        0 }, }, \
+		{  921600, { }, {  3292765,  -246514,     6047,        0,        0,        0 }, }, \
+		{  998400, { }, {  1479429,     6058,    -2239,        0,        0,        0 }, }, \
+		{ 1075200, { }, {  2468261,   -51939,    -1551,        0,        0,        0 }, }, \
+		{ 1152000, { }, {  2468261,   -51939,    -1551,        0,        0,        0 }, }, \
+		{ 1228800, { }, {  2468261,   -51939,    -1551,        0,        0,        0 }, }, \
+		{ 0,	   { }, { }, }, \
+	}, \
+	.cvb_vmin = {   0, { }, {   700000,        0,        0 }, }, \
+	.cvb_version = "SLT NAPLL En - p4v1"
+
 #define GPUB01_NA_CVB_TABLE	\
 	.freqs_mult = KHZ,	\
 	.speedo_scale = 100,	\
@@ -798,6 +826,13 @@ static struct cvb_dvfs gpu_cvb_dvfs_table[] = {
 	.cvb_version = "NAPLL En - p4v1"
 
 static struct cvb_dvfs gpub01_cvb_dvfs_table[] = {
+	{
+		.speedo_id = 2,
+		.process_id = -1,
+		.max_mv = 1120,
+		.max_freq = 998400,
+		GPUB01_NA_CVB_TABLE_SLT,
+	},
 	{
 		.speedo_id = -1,
 		.process_id = -1,
@@ -844,6 +879,7 @@ static int core_millivolts[MAX_DVFS_FREQS];
 
 /* Include T210b01 core DVFS tables generated from characterization data */
 #include "tegra210b01-core-dvfs.c"
+#include "tegra210b01-slt-core-dvfs.c"
 
 int tegra_dvfs_disable_core_set(const char *arg, const struct kernel_param *kp)
 {
@@ -1312,9 +1348,19 @@ static int get_coreb01_sku_max_mv(void)
 	}
 }
 
+static int get_coreb01slt_sku_max_mv(void)
+{
+	return get_coreb01_sku_max_mv();
+}
+
 static int get_coreb01_sku_min_mv(void)
 {
 	return 800;
+}
+
+static int get_coreb01slt_sku_min_mv(void)
+{
+	return get_coreb01_sku_min_mv();
 }
 
 static int get_core_nominal_mv_index(int speedo_id)
@@ -2026,6 +2072,7 @@ static struct tegra_dvfs_data tegra210b01_dvfs_data = {
 	.cpu_fv_table_size = ARRAY_SIZE(cpub01_fv_dvfs_table),
 	.gpu_cvb_table = gpub01_cvb_dvfs_table,
 	.gpu_cvb_table_size = ARRAY_SIZE(gpub01_cvb_dvfs_table),
+
 	.emc_dvb_table = emcb01_dvb_dvfs_table,
 	.emc_dvb_table_size = ARRAY_SIZE(emcb01_dvb_dvfs_table),
 
@@ -2043,7 +2090,37 @@ static struct tegra_dvfs_data tegra210b01_dvfs_data = {
 	.core_floors = tegra210b01_core_therm_floors,
 	.core_caps = tegra210b01_core_therm_caps,
 	.core_caps_ucm2 = tegra210b01_core_therm_caps_ucm2,
+
 	.core_dvfs_ver = coreb01_dvfs_table_ver,
+};
+
+static struct tegra_dvfs_data tegra210b01slt_dvfs_data = {
+	.rails = tegra210b01_dvfs_rails,
+	.rails_num = ARRAY_SIZE(tegra210b01_dvfs_rails),
+	.cpu_fv_table = cpub01_fv_dvfs_table,
+	.cpu_fv_table_size = ARRAY_SIZE(cpub01_fv_dvfs_table),
+	.gpu_cvb_table = gpub01_cvb_dvfs_table,
+	.gpu_cvb_table_size = ARRAY_SIZE(gpub01_cvb_dvfs_table),
+
+	.emc_dvb_table = emcb01slt_dvb_dvfs_table,
+	.emc_dvb_table_size = ARRAY_SIZE(emcb01slt_dvb_dvfs_table),
+
+	.core_mv = coreb01_voltages_mv,
+	.core_vf_table = coreb01slt_dvfs_table,
+	.core_vf_table_size = ARRAY_SIZE(coreb01slt_dvfs_table),
+	.spi_vf_table = spib01slt_dvfs_table,
+	.spi_slave_vf_table = spi_slaveb01slt_dvfs_table,
+	.qspi_sdr_vf_table = qspi_sdrb01slt_dvfs_table,
+	.qspi_ddr_vf_table = qspi_ddrb01slt_dvfs_table,
+	.sor1_dp_vf_table = sor1_dpb01slt_dvfs_table,
+	.get_core_min_mv = get_coreb01slt_sku_min_mv,
+	.get_core_max_mv = get_coreb01slt_sku_max_mv,
+
+	.core_floors = tegra210b01_core_therm_floors,
+	.core_caps = tegra210b01_core_therm_caps,
+	.core_caps_ucm2 = tegra210b01_core_therm_caps_ucm2,
+
+	.core_dvfs_ver = coreb01slt_dvfs_table_ver,
 };
 
 static void disable_rail_scaling(struct device_node *np)
@@ -2168,6 +2245,10 @@ int tegra210_init_dvfs(struct device *dev)
 
 int tegra210b01_init_dvfs(struct device *dev)
 {
-	init_dvfs_data(&tegra210b01_dvfs_data);
+	if (tegra_sku_info.soc_speedo_id == 2)
+		init_dvfs_data(&tegra210b01slt_dvfs_data);
+	else
+		init_dvfs_data(&tegra210b01_dvfs_data);
+
 	return tegra210x_init_dvfs(dev, false);
 }

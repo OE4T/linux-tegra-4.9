@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	39
+#define QUADD_SAMPLES_VERSION	40
 #define QUADD_IO_VERSION	22
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -62,6 +62,7 @@
 #define QUADD_SAMPLE_VERSION_MMAP_TS		37
 #define QUADD_SAMPLE_VERSION_RAW_EVENTS		38
 #define QUADD_SAMPLE_VERSION_OVERHEAD_INFO	39
+#define QUADD_SAMPLE_VERSION_REPORT_VPID	40
 
 #define QUADD_MMAP_HEADER_VERSION		1
 
@@ -241,7 +242,8 @@ struct quadd_sample_data {
 		thumb_mode:1,
 		state:1,
 		in_interrupt:1,
-		reserved:5;
+		is_vpid:1,
+		reserved:4;
 
 	u8 callchain_nr;
 	u32 events_flags;

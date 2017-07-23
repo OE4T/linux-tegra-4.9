@@ -278,8 +278,8 @@ static int get_sample_data(struct quadd_sample_data *sample,
 		sample->ip = instruction_pointer(regs);
 
 	sample->reserved = 0;
-	sample->pid = task->pid;
-	sample->tgid = task->tgid;
+	sample->pid = task_pid_nr(task);
+	sample->tgid = task_tgid_nr(task);
 	sample->in_interrupt = in_interrupt() ? 1 : 0;
 
 	return 0;
@@ -350,12 +350,13 @@ get_stack_offset(struct task_struct *task,
 static void
 read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 {
+	pid_t vpid, vtgid;
 	u32 state, extra_data = 0, urcs = 0, ts_delta;
 	u64 ts_start, ts_end;
 	int i, vec_idx = 0, bt_size = 0;
 	int nr_events = 0, nr_positive_events = 0;
 	struct pt_regs *user_regs;
-	struct quadd_iovec vec[7];
+	struct quadd_iovec vec[9];
 	struct hrt_event_value events[QUADD_MAX_COUNTERS];
 	u32 events_extra[QUADD_MAX_COUNTERS];
 	struct quadd_event_context event_ctx;
@@ -489,6 +490,23 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 	vec[vec_idx].base = &ts_delta;
 	vec[vec_idx].len = sizeof(ts_delta);
 	vec_idx++;
+
+	vpid = task_pid_vnr(task);
+	vtgid = task_tgid_vnr(task);
+
+	if (s->pid == vpid && s->tgid == vtgid) {
+		s->is_vpid = 0;
+	} else {
+		vec[vec_idx].base = &vpid;
+		vec[vec_idx].len = sizeof(vpid);
+		vec_idx++;
+
+		vec[vec_idx].base = &vtgid;
+		vec[vec_idx].len = sizeof(vtgid);
+		vec_idx++;
+
+		s->is_vpid = 1;
+	}
 
 	quadd_put_sample_this_cpu(&record_data, vec, vec_idx);
 }

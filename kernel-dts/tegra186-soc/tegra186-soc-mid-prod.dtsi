@@ -11,4 +11,47 @@
 
 
 / {
+	spi@3210000 {
+		prod-settings {
+
+			prod_c_cs0 {
+				prod = <
+					0x00000004 0x00000fff 0x00000008>;
+			};
+		};
+	};
+
+	spi@c260000 {
+		prod-settings {
+
+			prod {
+				prod = <
+					0x00000004 0x0000003f 0x00000000>;
+			};
+			prod_c_cs0 {
+				prod = <
+					0x00000004 0x00000fc0 0x00000000>;
+			};
+		};
+	};
+
+	spi@3230000 {
+		prod-settings {
+
+			prod_c_cs0 {
+				prod = <
+					0x00000004 0x00000fff 0x00000008>;
+			};
+		};
+	};
+
+	spi@3240000 {
+		prod-settings {
+
+			prod_c_cs0 {
+				prod = <
+					0x00000004 0x00000fff 0x00000008>;
+			};
+		};
+	};
 };

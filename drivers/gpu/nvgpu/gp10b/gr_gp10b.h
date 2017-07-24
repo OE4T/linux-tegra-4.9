@@ -20,7 +20,7 @@
 
 #include "gk20a/mm_gk20a.h"
 
-struct gpu_ops;
+struct gk20a;
 struct gr_gk20a_isr_data;
 
 enum {
@@ -41,7 +41,7 @@ enum {
 #define NVC0C0_SET_SHADER_EXCEPTIONS		0x1528
 #define NVC0C0_SET_RD_COALESCE			0x0228
 
-void gp10b_init_gr(struct gpu_ops *ops);
+void gp10b_init_gr(struct gk20a *g);
 int gr_gp10b_init_fs_state(struct gk20a *g);
 int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 			struct nvgpu_mem *mem);

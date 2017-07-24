@@ -1,7 +1,7 @@
 /*
  * GP106 GPU GR
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,11 +16,13 @@
 #ifndef _NVGPU_GR_GP106_H_
 #define _NVGPU_GR_GP106_H_
 
+struct gk20a;
+
 enum {
 	PASCAL_B                 = 0xC197,
 	PASCAL_COMPUTE_B         = 0xC1C0,
 };
 
-void gp106_init_gr(struct gpu_ops *gops);
+void gp106_init_gr(struct gk20a *g);
 
 #endif

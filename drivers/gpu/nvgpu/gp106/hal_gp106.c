@@ -416,18 +416,18 @@ int gp106_init_hal(struct gk20a *g)
 		gp106_ops.chip_init_gpu_characteristics;
 	gops->bios_init = gp106_ops.bios_init;
 
-	gops->privsecurity = 1;
+	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, true);
 
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
-	gp106_init_gr(gops);
+	gp106_init_gr(g);
 	gp10b_init_fecs_trace_ops(gops);
 	gp106_init_fb(gops);
 	gp10b_init_ce(gops);
 	gp106_init_gr_ctx(gops);
 	gp106_init_mm(gops);
-	gp106_init_pmu_ops(gops);
+	gp106_init_pmu_ops(g);
 	gp106_init_clk_ops(gops);
 	gp106_init_clk_arb_ops(gops);
 	gp106_init_regops(gops);

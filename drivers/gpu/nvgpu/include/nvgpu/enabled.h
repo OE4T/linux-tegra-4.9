@@ -42,6 +42,7 @@ struct gk20a;
  */
 
 #define NVGPU_SEC_SECUREGPCCS			32
+#define NVGPU_SEC_PRIVSECURITY			33
 
 /*
  * PMU flags.

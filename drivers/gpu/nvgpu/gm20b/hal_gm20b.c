@@ -356,38 +356,38 @@ int gm20b_init_hal(struct gk20a *g)
 
 #ifdef CONFIG_TEGRA_ACR
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
-		gops->privsecurity = 1;
+		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
 	} else {
 		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
 		if (!val) {
 			gk20a_dbg_info("priv security is disabled in HW");
-			gops->privsecurity = 0;
+			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
 		} else {
-			gops->privsecurity = 1;
+			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
 		}
 	}
 #else
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gk20a_dbg_info("running ASIM with PRIV security disabled");
-		gops->privsecurity = 0;
+		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
 	} else {
 		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
 		if (!val) {
-			gops->privsecurity = 0;
+			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
 		} else {
 			gk20a_dbg_info("priv security is not supported but enabled");
-			gops->privsecurity = 1;
+			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
 			return -EPERM;
 		}
 	}
 #endif
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
-	gm20b_init_gr(gops);
+	gm20b_init_gr(g);
 	gm20b_init_fb(gops);
 	gm20b_init_ce2(gops);
 	gm20b_init_gr_ctx(gops);
 	gm20b_init_mm(gops);
-	gm20b_init_pmu_ops(gops);
+	gm20b_init_pmu_ops(g);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
 	gm20b_init_therm_ops(gops);

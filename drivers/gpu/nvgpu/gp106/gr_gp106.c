@@ -234,9 +234,11 @@ fail:
 	return err;
 }
 
-void gp106_init_gr(struct gpu_ops *gops)
+void gp106_init_gr(struct gk20a *g)
 {
-	gp10b_init_gr(gops);
+	struct gpu_ops *gops = &g->ops;
+
+	gp10b_init_gr(g);
 	gops->gr.is_valid_class = gr_gp106_is_valid_class;
 	gops->gr.pagepool_default_size = gr_gp106_pagepool_default_size;
 	gops->gr.handle_sw_method = gr_gp106_handle_sw_method;

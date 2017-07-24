@@ -12,6 +12,7 @@
  */
 
 #include <nvgpu/pmu.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -289,11 +290,11 @@ static int gp106_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	return 0;
 }
 
-void gp106_init_pmu_ops(struct gpu_ops *gops)
+void gp106_init_pmu_ops(struct gk20a *g)
 {
+	struct gpu_ops *gops = &g->ops;
 	gk20a_dbg_fn("");
-
-	if (gops->privsecurity) {
+	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
 		gp106_init_secure_pmu(gops);
 		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
 		gops->pmu.load_lsfalcon_ucode = gp106_load_falcon_ucode;

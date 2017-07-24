@@ -17,7 +17,9 @@
 #define gp106_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
 
-void gp106_init_pmu_ops(struct gpu_ops *gops);
+struct gk20a;
+
+void gp106_init_pmu_ops(struct gk20a *g);
 void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data);
 bool gp106_pmu_is_engine_in_reset(struct gk20a *g);

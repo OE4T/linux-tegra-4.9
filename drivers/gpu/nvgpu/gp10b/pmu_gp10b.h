@@ -16,7 +16,9 @@
 #ifndef __PMU_GP10B_H_
 #define __PMU_GP10B_H_
 
-void gp10b_init_pmu_ops(struct gpu_ops *gops);
+struct gk20a;
+
+void gp10b_init_pmu_ops(struct gk20a *g);
 int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask);
 int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id);
 void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr);

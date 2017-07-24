@@ -42,7 +42,7 @@ static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 
 	gk20a_dbg_info("initialize gpc mmu");
 
-	if (!g->ops.privsecurity) {
+	if (!nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
 		/* Bypass MMU check for non-secure boot. For
 		 * secure-boot,this register write has no-effect */
 		gk20a_writel(g, fb_priv_mmu_phy_secure_r(), 0xffffffff);
@@ -680,7 +680,7 @@ static int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 	gr_gk20a_load_ctxsw_ucode_boot(g, addr_base, segments, reg_offset);
 
 	/* start the falcon immediately if PRIV security is disabled*/
-	if (!g->ops.privsecurity) {
+	if (!nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
 		gk20a_writel(g, reg_offset + gr_fecs_cpuctl_r(),
 				gr_fecs_cpuctl_startcpu_f(0x01));
 	}
@@ -1542,8 +1542,10 @@ static void gm20b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 	gk20a_writel(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset, 0);
 }
 
-void gm20b_init_gr(struct gpu_ops *gops)
+void gm20b_init_gr(struct gk20a *g)
 {
+	struct gpu_ops *gops = &g->ops;
+
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
 	gops->gr.bundle_cb_defaults = gr_gm20b_bundle_cb_defaults;
 	gops->gr.cb_size_default = gr_gm20b_cb_size_default;
@@ -1565,7 +1567,7 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_fs_state = gr_gm20b_init_fs_state;
 	gops->gr.set_hww_esr_report_mask = gr_gm20b_set_hww_esr_report_mask;
 	gops->gr.falcon_load_ucode = gr_gm20b_load_ctxsw_ucode_segments;
-	if (gops->privsecurity)
+	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY))
 		gops->gr.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode;
 	else
 		gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;

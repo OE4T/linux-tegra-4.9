@@ -36,7 +36,7 @@ enum {
 #define NVB1C0_SET_RD_COALESCE			0x0228
 
 #define NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE 0
-void gm20b_init_gr(struct gpu_ops *gops);
+void gm20b_init_gr(struct gk20a *g);
 void gr_gm20b_commit_global_attrib_cb(struct gk20a *g,
 				      struct channel_ctx_gk20a *ch_ctx,
 				      u64 addr, bool patch);

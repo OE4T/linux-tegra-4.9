@@ -2368,9 +2368,11 @@ int gr_gp10b_set_czf_bypass(struct gk20a *g, struct channel_gk20a *ch)
 	return __gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0, false);
 }
 
-void gp10b_init_gr(struct gpu_ops *gops)
+void gp10b_init_gr(struct gk20a *g)
 {
-	gm20b_init_gr(gops);
+	struct gpu_ops *gops = &g->ops;
+
+	gm20b_init_gr(g);
 	gops->gr.init_fs_state = gr_gp10b_init_fs_state;
 	gops->gr.init_preemption_state = gr_gp10b_init_preemption_state;
 	gops->gr.is_valid_class = gr_gp10b_is_valid_class;

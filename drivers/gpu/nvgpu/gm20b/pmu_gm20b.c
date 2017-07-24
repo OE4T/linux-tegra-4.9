@@ -16,6 +16,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/pmu.h>
 #include <nvgpu/fuse.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -273,9 +274,11 @@ static void pmu_dump_security_fuses_gm20b(struct gk20a *g)
 			val);
 }
 
-void gm20b_init_pmu_ops(struct gpu_ops *gops)
+void gm20b_init_pmu_ops(struct gk20a *g)
 {
-	if (gops->privsecurity) {
+	struct gpu_ops *gops = &g->ops;
+
+	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
 		gm20b_init_secure_pmu(gops);
 		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
 		gops->pmu.load_lsfalcon_ucode = gm20b_load_falcon_ucode;

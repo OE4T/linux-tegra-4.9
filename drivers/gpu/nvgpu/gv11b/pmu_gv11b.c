@@ -20,6 +20,7 @@
 
 #include <nvgpu/pmu.h>
 #include <nvgpu/falcon.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 
@@ -234,9 +235,11 @@ static int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id)
 	return 0;
 }
 
-void gv11b_init_pmu_ops(struct gpu_ops *gops)
+void gv11b_init_pmu_ops(struct gk20a *g)
 {
-	gp10b_init_pmu_ops(gops);
+	struct gpu_ops *gops = &g->ops;
+
+	gp10b_init_pmu_ops(g);
 	gops->pmu.pmu_nsbootstrap = gv11b_pmu_bootstrap;
 	gops->pmu.is_pmu_supported = gv11b_is_pmu_supported;
 	gops->pmu.reset_engine = gp106_pmu_engine_reset;

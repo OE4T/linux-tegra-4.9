@@ -358,16 +358,16 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->get_litter_value = gv11b_ops.get_litter_value;
 
 	/* boot in non-secure modes for time beeing */
-	gops->privsecurity = 0;
+	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 
-	gv11b_init_gr(gops);
+	gv11b_init_gr(g);
 	gv11b_init_fecs_trace_ops(gops);
 	gv11b_init_fb(gops);
 	gv11b_init_ce(gops);
 	gv11b_init_gr_ctx(gops);
 	gv11b_init_mm(gops);
-	gv11b_init_pmu_ops(gops);
+	gv11b_init_pmu_ops(g);
 	gv11b_init_regops(gops);
 	gv11b_init_therm_ops(gops);
 

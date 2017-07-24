@@ -29,7 +29,7 @@ struct zbc_s_table {
 	u32 ref_cnt;
 };
 
-struct gpu_ops;
+struct gk20a;
 
 enum {
 	VOLTA_CHANNEL_GPFIFO_A  = 0xC36F,
@@ -59,7 +59,7 @@ enum {
 
 #define NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE 0
 
-void gv11b_init_gr(struct gpu_ops *ops);
+void gv11b_init_gr(struct gk20a *g);
 int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
                         struct nvgpu_mem *mem);
 /*zcull*/

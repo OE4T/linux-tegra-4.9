@@ -25,6 +25,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -3574,7 +3575,7 @@ static void gr_gv11b_init_gpc_mmu(struct gk20a *g)
 
 	nvgpu_log_info(g, "initialize gpc mmu");
 
-	if (!g->ops.privsecurity) {
+	if (!nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
 		/* Bypass MMU check for non-secure boot. For
 		 * secure-boot,this register write has no-effect */
 		gk20a_writel(g, fb_priv_mmu_phy_secure_r(), 0xffffffff);
@@ -3601,9 +3602,11 @@ static void gr_gv11b_init_gpc_mmu(struct gk20a *g)
 			gk20a_readl(g, fb_mmu_debug_rd_r()));
 }
 
-void gv11b_init_gr(struct gpu_ops *gops)
+void gv11b_init_gr(struct gk20a *g)
 {
-	gp10b_init_gr(gops);
+	struct gpu_ops *gops = &g->ops;
+
+	gp10b_init_gr(g);
 	gops->gr.init_preemption_state = NULL;
 	gops->gr.init_fs_state = gr_gv11b_init_fs_state;
 	gops->gr.detect_sm_arch = gr_gv11b_detect_sm_arch;

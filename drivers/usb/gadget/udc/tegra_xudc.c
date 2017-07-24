@@ -176,6 +176,9 @@
 #define  BLCG_UFPCI BIT(1)
 #define  BLCG_FE BIT(2)
 #define  BLCG_COREPLL_PWRDN BIT(8)
+#define  BLCG_IOPLL_0_PWRDN BIT(9)
+#define  BLCG_IOPLL_1_PWRDN BIT(10)
+#define  BLCG_IOPLL_2_PWRDN BIT(11)
 #define  BLCG_ALL 0x1ff
 #define CFG_DEV_SSPI_XFER 0x858
 #define  CFG_DEV_SSPI_XFER_ACKTIMEOUT_SHIFT 0
@@ -3285,6 +3288,22 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 {
 	u32 val, imod;
 
+	if (XUDC_IS_T210(xudc)) {
+		val = xudc_readl(xudc, BLCG);
+		val |= BLCG_ALL;
+		val &= ~(BLCG_DFPCI | BLCG_UFPCI | BLCG_FE |
+				BLCG_COREPLL_PWRDN);
+		val |= BLCG_IOPLL_0_PWRDN;
+		val |= BLCG_IOPLL_1_PWRDN;
+		val |= BLCG_IOPLL_2_PWRDN;
+		xudc_writel(xudc, val, BLCG);
+	} else if (!XUDC_IS_T210(xudc)) {
+		/* T186 WAR: Disable BLCG COREPLL_PWRDN */
+		val = xudc_readl(xudc, BLCG);
+		val &= ~BLCG_COREPLL_PWRDN;
+		xudc_writel(xudc, val, BLCG);
+	}
+
 	/* Set a reasonable U3 exit timer value. */
 	val = xudc_readl(xudc, SSPX_CORE_PADCTL4);
 	val &= ~(SSPX_CORE_PADCTL4_RXDAT_VLD_TIMEOUT_U3_MASK <<
@@ -3876,7 +3895,6 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 {
 	unsigned long flags;
-	u32 val;
 	int err;
 	int partition_id;
 
@@ -3921,19 +3939,6 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 	err = phy_power_on(xudc->usb3_phy);
 	if (err < 0)
 		return err;
-
-	if (XUDC_IS_T210(xudc)) {
-		val = xudc_readl(xudc, BLCG);
-		val |= BLCG_ALL;
-		val &= ~(BLCG_DFPCI | BLCG_UFPCI | BLCG_FE |
-				BLCG_COREPLL_PWRDN);
-		xudc_writel(xudc, val, BLCG);
-	} else if (XUDC_IS_T186(xudc)) {
-		/* T186 WAR: Disable BLCG COREPLL_PWRDN */
-		val = xudc_readl(xudc, BLCG);
-		val &= ~BLCG_COREPLL_PWRDN;
-		xudc_writel(xudc, val, BLCG);
-	}
 
 	tegra_xudc_fpci_ipfs_init(xudc);
 	tegra_xudc_device_params_init(xudc);

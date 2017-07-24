@@ -71,6 +71,7 @@ struct fuse_burn_data {
 	u32 size_bits;
 	u32 reg_offset;
 	bool is_redundant;
+	bool is_big_endian;
 	struct device_attribute attr;
 };
 
@@ -379,7 +380,8 @@ static ssize_t tegra_fuse_show(struct device *dev,
 	struct fuse_burn_data *data;
 	char str[9];
 	u32 *macro_buf;
-	int num_words;
+	int num_words, i;
+	u32 val;
 
 	data = container_of(attr, struct fuse_burn_data, attr);
 	num_words = DIV_ROUND_UP(data->size_bits, 32);
@@ -391,9 +393,17 @@ static ssize_t tegra_fuse_show(struct device *dev,
 
 	tegra_fuse_get_fuse(data, macro_buf);
 	strcpy(buf, "0x");
-	while (num_words--) {
-		sprintf(str, "%08x", macro_buf[num_words]);
-		strcat(buf, str);
+	if (data->is_big_endian) {
+		for (i = 0; i < num_words; i++) {
+			val = cpu_to_be32(macro_buf[i]);
+			sprintf(str, "%08x", val);
+			strcat(buf, str);
+		}
+	} else {
+		while (num_words--) {
+			sprintf(str, "%08x", macro_buf[num_words]);
+			strcat(buf, str);
+		}
 	}
 	strcat(buf, "\n");
 	kfree(macro_buf);
@@ -412,9 +422,10 @@ static ssize_t tegra_fuse_store(struct device *dev,
 	int len = count;
 	int num_nibbles;
 	u32 input_data[9] = {0};
+	u32 temp_data[9] = {0};
 	char str[9] = {0};
 	int copy_cnt, copy_idx;
-	int burn_idx = 0;
+	int burn_idx = 0, idx;
 	int ret;
 
 	fuse_data = container_of(attr, struct fuse_burn_data, attr);
@@ -449,6 +460,13 @@ static ssize_t tegra_fuse_store(struct device *dev,
 		if (ret)
 			return ret;
 		len -= copy_cnt;
+	}
+
+	if (fuse_data->is_big_endian) {
+		for (idx = --burn_idx, copy_cnt = 0; idx >= 0;
+				idx--, copy_cnt++)
+			temp_data[copy_cnt] = cpu_to_be32(input_data[idx]);
+		memcpy(input_data, temp_data, sizeof(input_data));
 	}
 
 	wake_lock(&fuse_dev->wake_lock);
@@ -500,18 +518,19 @@ static ssize_t tegra_fuse_calc_h2_code(struct device *dev,
 	return strlen(buf);
 }
 
-#define FUSE_BURN_DATA(fname, m_off, sbit, size, c_off, is_red)	\
-	{							\
-		.name = #fname,					\
-		.start_offset = m_off,				\
-		.start_bit = sbit,				\
-		.size_bits = size,				\
-		.reg_offset = c_off,				\
-		.is_redundant = is_red,				\
-		.attr.show = tegra_fuse_show,			\
-		.attr.store = tegra_fuse_store,			\
-		.attr.attr.name = #fname,			\
-		.attr.attr.mode = 0660,				\
+#define FUSE_BURN_DATA(fname, m_off, sbit, size, c_off, is_red, is_be)	\
+	{								\
+		.name = #fname,						\
+		.start_offset = m_off,					\
+		.start_bit = sbit,					\
+		.size_bits = size,					\
+		.reg_offset = c_off,					\
+		.is_redundant = is_red,					\
+		.is_big_endian = is_be,					\
+		.attr.show = tegra_fuse_show,				\
+		.attr.store = tegra_fuse_store,				\
+		.attr.attr.name = #fname,				\
+		.attr.attr.mode = 0660,					\
 	}
 #define FUSE_SYSFS_DATA(fname, show_func, store_func)		\
 	{							\
@@ -527,18 +546,18 @@ static struct tegra_fuse_hw_feature tegra210_fuse_chip_data = {
 	.mirroring_support = false,
 	.pgm_time = 5,
 	.burn_data = {
-		FUSE_BURN_DATA(odm_reserved, 0x2e, 17, 256, 0xc8, true),
-		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true),
-		FUSE_BURN_DATA(device_key, 0x2a, 20, 32, 0xb4, true),
-		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true),
-		FUSE_BURN_DATA(odm_production_mode, 0x0, 11, 1, 0xa0, true),
-		FUSE_BURN_DATA(sec_boot_dev_cfg, 0x2c, 20, 16, 0xbc, true),
-		FUSE_BURN_DATA(sec_boot_dev_sel, 0x2e, 4, 3, 0xc0, true),
-		FUSE_BURN_DATA(secure_boot_key, 0x22, 20, 128, 0xa4, true),
-		FUSE_BURN_DATA(public_key, 0xc, 6, 256, 0x64, true),
-		FUSE_BURN_DATA(pkc_disable, 0x52, 7, 1, 0x168, true),
-		FUSE_BURN_DATA(debug_authentication, 0x5a, 19, 5, 0x1e4, true),
-		FUSE_BURN_DATA(aid, 0x67, 2, 32, 0x1f8, false),
+		FUSE_BURN_DATA(odm_reserved, 0x2e, 17, 256, 0xc8, true, false),
+		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true, false),
+		FUSE_BURN_DATA(device_key, 0x2a, 20, 32, 0xb4, true, false),
+		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true, false),
+		FUSE_BURN_DATA(odm_production_mode, 0x0, 11, 1, 0xa0, true, false),
+		FUSE_BURN_DATA(sec_boot_dev_cfg, 0x2c, 20, 16, 0xbc, true, false),
+		FUSE_BURN_DATA(sec_boot_dev_sel, 0x2e, 4, 3, 0xc0, true, false),
+		FUSE_BURN_DATA(secure_boot_key, 0x22, 20, 128, 0xa4, true, false),
+		FUSE_BURN_DATA(public_key, 0xc, 6, 256, 0x64, true, false),
+		FUSE_BURN_DATA(pkc_disable, 0x52, 7, 1, 0x168, true, false),
+		FUSE_BURN_DATA(debug_authentication, 0x5a, 19, 5, 0x1e4, true, false),
+		FUSE_BURN_DATA(aid, 0x67, 2, 32, 0x1f8, false, false),
 		{},
 	},
 };
@@ -548,19 +567,19 @@ static struct tegra_fuse_hw_feature tegra186_fuse_chip_data = {
 	.mirroring_support = true,
 	.pgm_time = 5,
 	.burn_data = {
-		FUSE_BURN_DATA(odm_reserved, 0x2, 2, 256, 0xc8, true),
-		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true),
-		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true),
-		FUSE_BURN_DATA(odm_production_mode, 0x0, 11, 1, 0xa0, true),
-		FUSE_BURN_DATA(debug_authentication, 0x5a, 0, 5, 0x1e4, true),
-		FUSE_BURN_DATA(boot_security_info, 0x0, 16, 6, 0x168, true),
-		FUSE_BURN_DATA(secure_boot_key, 0x4b, 23, 128, 0xa4, false),
-		FUSE_BURN_DATA(public_key, 0x43, 23, 256, 0x64, false),
-		FUSE_BURN_DATA(kek0, 0x59, 22, 128, 0x2c0, false),
-		FUSE_BURN_DATA(kek1, 0x5d, 22, 128, 0x2d0, false),
-		FUSE_BURN_DATA(kek2, 0x61, 22, 128, 0x2e0, false),
-		FUSE_BURN_DATA(odm_info, 0x50, 31, 16, 0x19c, false),
-		FUSE_BURN_DATA(odm_h2, 0x67, 31, 14, 0x33c, false),
+		FUSE_BURN_DATA(odm_reserved, 0x2, 2, 256, 0xc8, true, false),
+		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true, false),
+		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true, false),
+		FUSE_BURN_DATA(odm_production_mode, 0x0, 11, 1, 0xa0, true, false),
+		FUSE_BURN_DATA(debug_authentication, 0x5a, 0, 5, 0x1e4, true, false),
+		FUSE_BURN_DATA(boot_security_info, 0x0, 16, 6, 0x168, true, false),
+		FUSE_BURN_DATA(secure_boot_key, 0x4b, 23, 128, 0xa4, false, true),
+		FUSE_BURN_DATA(public_key, 0x43, 23, 256, 0x64, false, true),
+		FUSE_BURN_DATA(kek0, 0x59, 22, 128, 0x2c0, false, true),
+		FUSE_BURN_DATA(kek1, 0x5d, 22, 128, 0x2d0, false, true),
+		FUSE_BURN_DATA(kek2, 0x61, 22, 128, 0x2e0, false, true),
+		FUSE_BURN_DATA(odm_info, 0x50, 31, 16, 0x19c, false, false),
+		FUSE_BURN_DATA(odm_h2, 0x67, 31, 14, 0x33c, false, false),
 		FUSE_SYSFS_DATA(calc_h2, tegra_fuse_calc_h2_code, NULL),
 		{},
 	},
@@ -571,18 +590,18 @@ static struct tegra_fuse_hw_feature tegra210b01_fuse_chip_data = {
 	.mirroring_support = true,
 	.pgm_time = 5,
 	.burn_data = {
-		FUSE_BURN_DATA(odm_reserved, 0x62, 27, 256, 0xc8, true),
-		FUSE_BURN_DATA(odm_lock, 0, 6, 16, 0x8, true),
-		FUSE_BURN_DATA(device_key, 0x5e, 30, 32, 0xb4, true),
-		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 24, 1, 0xb8, true),
-		FUSE_BURN_DATA(odm_production_mode, 0, 23, 1, 0xa0, true),
-		FUSE_BURN_DATA(secure_boot_key, 0x56, 30, 128, 0xa4, true),
-		FUSE_BURN_DATA(public_key, 0x40, 15, 256, 0x64, true),
-		FUSE_BURN_DATA(boot_security_info, 0x8c, 18, 8, 0x168, true),
-		FUSE_BURN_DATA(debug_authentication, 0, 26, 5, 0x1e4, true),
-		FUSE_BURN_DATA(odm_info, 0x92, 15, 16, 0x19c, true),
-		FUSE_BURN_DATA(kek, 0x1e, 0, 128, 0xd0, true),
-		FUSE_BURN_DATA(bek, 0x26, 0, 128, 0xe0, true),
+		FUSE_BURN_DATA(odm_reserved, 0x62, 27, 256, 0xc8, true, false),
+		FUSE_BURN_DATA(odm_lock, 0, 6, 16, 0x8, true, false),
+		FUSE_BURN_DATA(device_key, 0x5e, 30, 32, 0xb4, true, false),
+		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 24, 1, 0xb8, true, false),
+		FUSE_BURN_DATA(odm_production_mode, 0, 23, 1, 0xa0, true, false),
+		FUSE_BURN_DATA(secure_boot_key, 0x56, 30, 128, 0xa4, true, false),
+		FUSE_BURN_DATA(public_key, 0x40, 15, 256, 0x64, true, false),
+		FUSE_BURN_DATA(boot_security_info, 0x8c, 18, 8, 0x168, true, false),
+		FUSE_BURN_DATA(debug_authentication, 0, 26, 5, 0x1e4, true, false),
+		FUSE_BURN_DATA(odm_info, 0x92, 15, 16, 0x19c, true, false),
+		FUSE_BURN_DATA(kek, 0x1e, 0, 128, 0xd0, true, false),
+		FUSE_BURN_DATA(bek, 0x26, 0, 128, 0xe0, true, false),
 		{},
 	},
 };
@@ -592,15 +611,15 @@ static struct tegra_fuse_hw_feature tegra194_fuse_chip_data = {
 	.mirroring_support = true,
 	.pgm_time = 5,
 	.burn_data = {
-		FUSE_BURN_DATA(odm_reserved, 0x2, 2, 256, 0xc8, true),
-		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true),
-		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true),
-		FUSE_BURN_DATA(odm_production_mode, 0, 11, 1, 0xa0, true),
-		FUSE_BURN_DATA(secure_boot_key, 0x61, 1, 128, 0xa4, true),
-		FUSE_BURN_DATA(public_key, 0x59, 1, 256, 0x64, true),
-		FUSE_BURN_DATA(boot_security_info, 0x66, 21, 16, 0x168, true),
-		FUSE_BURN_DATA(debug_authentication, 0, 20, 5, 0x1e4, true),
-		FUSE_BURN_DATA(odm_info, 0x67, 5, 16, 0x19c, false),
+		FUSE_BURN_DATA(odm_reserved, 0x2, 2, 256, 0xc8, true, false),
+		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true, false),
+		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true, false),
+		FUSE_BURN_DATA(odm_production_mode, 0, 11, 1, 0xa0, true, false),
+		FUSE_BURN_DATA(secure_boot_key, 0x61, 1, 128, 0xa4, true, true),
+		FUSE_BURN_DATA(public_key, 0x59, 1, 256, 0x64, true, true),
+		FUSE_BURN_DATA(boot_security_info, 0x66, 21, 16, 0x168, true, false),
+		FUSE_BURN_DATA(debug_authentication, 0, 20, 5, 0x1e4, true, false),
+		FUSE_BURN_DATA(odm_info, 0x67, 5, 16, 0x19c, false, false),
 		{},
 	},
 };

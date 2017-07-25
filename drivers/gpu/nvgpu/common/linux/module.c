@@ -81,8 +81,11 @@ int gk20a_busy(struct gk20a *g)
 	dev = dev_from_gk20a(g);
 
 	if (pm_runtime_enabled(dev)) {
+		/* Increment usage count and attempt to resume device */
 		ret = pm_runtime_get_sync(dev);
 		if (ret < 0) {
+			/* Mark suspended so runtime pm will retry later */
+			pm_runtime_set_suspended(dev);
 			pm_runtime_put_noidle(dev);
 			atomic_dec(&g->usage_count);
 			goto fail;

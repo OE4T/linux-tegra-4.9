@@ -212,8 +212,6 @@ source "drivers/fpga/Kconfig"
 
 trysource "../nvidia/drivers/staging/mttcan/Kconfig.nvidia"
 
-trysource "../nvidia/drivers/tachometer/Kconfig.nvidia"
-
 trysource "../nvgpu/drivers/gpu/nvgpu/Kconfig.nvgpu"
 
 

@@ -31,7 +31,6 @@ obj-$(CONFIG_THERMAL) += thermal/
 obj-y += net/
 obj-y += i2c/
 obj-$(CONFIG_CPU_IDLE) += cpuidle/
-obj-y += tachometer/
 obj-$(CONFIG_TEGRA186_AHC) += misc/tegra186-ahc/
 obj-y += tty/
 obj-y += input/

@@ -441,6 +441,8 @@ static int pcs_get_function(struct pinctrl_dev *pctldev, unsigned pin,
 	unsigned fselector;
 
 	/* If pin is not described in DTS & enabled, mux_setting is NULL. */
+	if (!pdesc)
+		return -EINVAL;
 	setting = pdesc->mux_setting;
 	if (!setting)
 		return -ENOTSUPP;

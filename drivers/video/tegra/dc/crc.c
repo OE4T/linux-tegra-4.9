@@ -37,7 +37,7 @@
  */
 #define TEGRA_DC_CRC_GET_MAX_FLIP_LOOKAHEAD 128
 
-const char *flip_state_literals[] = {
+static const char *flip_state_literals[] = {
 	"queued", "dequeued", "flipped", "skipped"
 };
 
@@ -74,7 +74,7 @@ static void _tegra_dc_ring_buf_print(struct tegra_dc_ring_buf *buf, u16 i)
 }
 
 __maybe_unused
-void tegra_dc_ring_buf_print(struct tegra_dc_ring_buf *buf)
+static void tegra_dc_ring_buf_print(struct tegra_dc_ring_buf *buf)
 {
 	u16 i;
 

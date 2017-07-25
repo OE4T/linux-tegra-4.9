@@ -840,8 +840,6 @@ void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);
 void tegra_nvdisp_vrr_work(struct work_struct *work);
 #endif
 
-void __attribute__((weak)) tegra_dc_populate_t21x_hw_data(
-	struct tegra_dc_hw_data *);
 void __attribute__((weak)) tegra_dc_populate_t18x_hw_data(
 	struct tegra_dc_hw_data *);
 void __attribute__((weak)) tegra_dc_populate_t19x_hw_data(

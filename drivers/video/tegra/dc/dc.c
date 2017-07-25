@@ -7014,7 +7014,7 @@ inline bool tegra_dc_is_t19x(void)
 	return hw_data && (hw_data->version == TEGRA_DC_HW_T19x);
 }
 
-void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
+static void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
 {
 	if (!hw_data)
 		return;
@@ -7048,8 +7048,10 @@ int tegra_dc_hw_init(void)
 	int ret;
 
 	tegra_dc_populate_t21x_hw_data(&t21x_hw_data);
-	tegra_dc_populate_t18x_hw_data(&t18x_hw_data);
-	tegra_dc_populate_t19x_hw_data(&t19x_hw_data);
+	if (tegra_dc_populate_t18x_hw_data)
+		tegra_dc_populate_t18x_hw_data(&t18x_hw_data);
+	if (tegra_dc_populate_t19x_hw_data)
+		tegra_dc_populate_t19x_hw_data(&t19x_hw_data);
 
 	ret = tegra_dc_assign_hw_data();
 

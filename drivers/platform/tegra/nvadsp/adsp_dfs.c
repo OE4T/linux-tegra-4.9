@@ -47,7 +47,7 @@ enum adsp_dfs_reply {
  * Freqency in Hz.The frequency always needs to be a multiple of 12.8 Mhz and
  * should be extended with a slab 38.4 Mhz.
  */
-static unsigned long adsp_cpu_freq_table[] = {
+static unsigned long adsp_cpu_freq_table_t21x[] = {
 	MIN_ADSP_FREQ,
 	MIN_ADSP_FREQ * 2,
 	MIN_ADSP_FREQ * 3,
@@ -70,6 +70,18 @@ static unsigned long adsp_cpu_freq_table[] = {
 	MIN_ADSP_FREQ * 20,
 	MIN_ADSP_FREQ * 21,
 };
+
+/*
+ * Frequency in Hz.
+ */
+static unsigned long adsp_cpu_freq_table_t18x[] = {
+	150000000lu,
+	300000000lu,
+	600000000lu,
+};
+
+static unsigned long *adsp_cpu_freq_table;
+static int adsp_cpu_freq_table_size;
 
 struct adsp_dfs_policy {
 	bool enable;
@@ -96,12 +108,17 @@ struct adsp_dfs_policy {
 	unsigned long ovr_freq;
 };
 
+
+
+#define MAX_SIZE(x, y)		(x > y ? x : y)
+#define TIME_IN_STATE_SIZE	MAX_SIZE(ARRAY_SIZE(adsp_cpu_freq_table_t21x), \
+					 ARRAY_SIZE(adsp_cpu_freq_table_t18x))
 struct adsp_freq_stats {
 	struct device *dev;
 	unsigned long long last_time;
 	int last_index;
-	u64 time_in_state[sizeof(adsp_cpu_freq_table) \
-		/ sizeof(adsp_cpu_freq_table[0])];
+	u64 time_in_state[TIME_IN_STATE_SIZE];
+
 	int state_num;
 };
 
@@ -190,11 +207,28 @@ static unsigned long adsp_clk_get_rate(struct adsp_dfs_policy *policy)
 	return clk_get_rate(policy->adsp_clk);
 }
 
+static void adsp_cpu_freq_table_setup(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct device_node *node = dev->of_node;
+
+	if (adsp_cpu_freq_table)
+		return;
+
+	if (of_device_is_compatible(node, "nvidia,tegra210-adsp")) {
+		adsp_cpu_freq_table = adsp_cpu_freq_table_t21x;
+		adsp_cpu_freq_table_size = ARRAY_SIZE(adsp_cpu_freq_table_t21x);
+	} else {
+		adsp_cpu_freq_table = adsp_cpu_freq_table_t18x;
+		adsp_cpu_freq_table_size = ARRAY_SIZE(adsp_cpu_freq_table_t18x);
+	}
+}
+
 /* Expects and returns freq in Hz as table is formmed in terms of Hz */
 static unsigned long adsp_get_target_freq(unsigned long tfreq, int *index)
 {
 	int i;
-	int size = sizeof(adsp_cpu_freq_table) / sizeof(adsp_cpu_freq_table[0]);
+	int size = adsp_cpu_freq_table_size;
 
 	if (tfreq <= adsp_cpu_freq_table[0]) {
 		*index = 0;
@@ -795,7 +829,7 @@ void adsp_update_dfs(bool val)
 /* Should be called after ADSP os is loaded */
 int adsp_dfs_core_init(struct platform_device *pdev)
 {
-	int size = sizeof(adsp_cpu_freq_table) / sizeof(adsp_cpu_freq_table[0]);
+	int size = adsp_cpu_freq_table_size;
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
 	uint16_t mid = HOST_ADSP_DFS_MBOX_ID;
 	int ret = 0;
@@ -806,6 +840,10 @@ int adsp_dfs_core_init(struct platform_device *pdev)
 
 	device = &pdev->dev;
 	policy = &dfs_policy;
+
+	/* Set up adsp cpu freq table as per chip */
+	if (!adsp_cpu_freq_table)
+		adsp_cpu_freq_table_setup(pdev);
 
 	ret = adsp_clk_get(policy);
 	if (ret)

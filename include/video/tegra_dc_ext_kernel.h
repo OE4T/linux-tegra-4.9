@@ -192,6 +192,7 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 #endif
 int tegra_dc_get_numof_dispheads(void);
 int tegra_dc_get_numof_dispwindows(void);
+int tegra_dc_get_numof_dispsors(void);
 
 /* needed by tegra-throughput */
 int tegra_dc_set_flip_callback(void (*callback)(void));

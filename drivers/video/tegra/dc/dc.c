@@ -599,6 +599,22 @@ int tegra_bw_create_sysfs(struct device *dev)
 void tegra_bw_remove_sysfs(struct device *dev) {}
 #endif
 
+static void tegra_dc_t21x_activate_general_channel(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
+}
+
+void tegra_dc_activate_general_channel(struct tegra_dc *dc)
+{
+	if (tegra_dc_is_t21x())
+		tegra_dc_t21x_activate_general_channel(dc);
+	else
+		tegra_nvdisp_activate_general_channel(dc);
+}
+
 unsigned long tegra_dc_readl_exported(struct tegra_dc *dc, unsigned long reg)
 {
 	return tegra_dc_readl(dc, reg);
@@ -6838,6 +6854,15 @@ int tegra_dc_get_numof_dispwindows(void)
 }
 EXPORT_SYMBOL(tegra_dc_get_numof_dispwindows);
 
+int tegra_dc_get_numof_dispsors(void)
+{
+	if (!hw_data || !hw_data->valid)
+		return -ENODEV;
+
+	return hw_data->nsors;
+}
+EXPORT_SYMBOL(tegra_dc_get_numof_dispsors);
+
 /* tegra_dc_get_max_lines() - gets v_total for current mode
  * @disp_id : the display id of the concerned head.
  *
@@ -6947,14 +6972,6 @@ static u64 tegra_dc_get_scanline_timestamp(struct tegra_dc *dc,
 	return timestamp;
 }
 
-int tegra_dc_get_numof_dispsors(void)
-{
-	if (!hw_data || !hw_data->valid)
-		return -ENODEV;
-
-	return hw_data->nsors;
-}
-
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void)
 {
 	if (!hw_data || !hw_data->valid)
@@ -7002,6 +7019,11 @@ inline bool tegra_dc_is_t18x(void)
 inline bool tegra_dc_is_t19x(void)
 {
 	return hw_data && (hw_data->version == TEGRA_DC_HW_T19x);
+}
+
+inline bool tegra_dc_is_nvdisplay(void)
+{
+	return (tegra_dc_is_t18x() || tegra_dc_is_t19x());
 }
 
 static void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)

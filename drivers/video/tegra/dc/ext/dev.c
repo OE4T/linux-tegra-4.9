@@ -924,22 +924,40 @@ static void tegra_dc_flip_trace(struct tegra_dc_ext_flip_data *data,
 	}
 }
 
-static void tegra_dc_update_enable_general_ack_req(struct tegra_dc *dc)
+static void tegra_dc_update_postcomp(struct tegra_dc *dc,
+		struct tegra_dc_ext_flip_data *data)
 {
-	u32 reg_val =  GENERAL_UPDATE;
-	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
-	tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
-	reg_val = GENERAL_ACT_REQ;
-	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_CONTROL);
-	tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
-}
+	if (!tegra_dc_is_nvdisplay())
+		return;
 
-static void tegra_dc_ext_enable_update_and_act(struct tegra_dc *dc)
-{
-	if (tegra_dc_is_t21x())
-		tegra_dc_update_enable_general_ack_req(dc);
-	else
-		tegra_nvdisp_update_enable_general_ack_req(dc);
+	/* If we're transitioning between a bypass and
+	 * a non-bypass mode, update the output CSC
+	 * and chroma LPF during this flip.
+	 */
+	if (dc->yuv_bypass_dirty) {
+		tegra_nvdisp_set_ocsc(dc, &dc->mode);
+		tegra_nvdisp_set_chroma_lpf(dc);
+	}
+	if (data->cmu_update_needed)
+		tegra_nvdisp_set_output_lut(dc, &data->user_cmu_v2,
+					    data->new_cmu_values);
+
+	if (data->output_colorspace_update_needed)
+		tegra_nvdisp_set_output_colorspace(dc, data->output_colorspace);
+
+	if (data->output_range_update_needed)
+		tegra_nvdisp_set_output_range(dc, data->limited_range_enable);
+
+	if (data->output_range_update_needed ||
+	    data->output_colorspace_update_needed)
+		tegra_nvdisp_set_csc2(dc);
+
+	/*
+	 * Note: as per current use, this function is called only from
+	 *       flip_worker before tegra_dc_update_windows.
+	 *       Since general channel is activated by default in
+	 *       update_windows, we don't need another activation here
+	 */
 }
 
 static void tegra_dc_ext_flip_worker(struct kthread_work *work)
@@ -1157,35 +1175,8 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 				lock_flip = true;
 
 		/* Perform per flip postcomp updates here */
-		if (!tegra_dc_is_t21x()) {
-			/* If we're transitioning between a bypass and
-			 * a non-bypass mode, update the output CSC
-			 * and chroma LPF during this flip.
-			 */
-			if (dc->yuv_bypass_dirty) {
-				tegra_nvdisp_set_ocsc(dc, &dc->mode);
-				tegra_nvdisp_set_chroma_lpf(dc);
-			}
-			if (data->cmu_update_needed)
-				tegra_nvdisp_update_per_flip_output_lut(dc,
-					&data->user_cmu_v2,
-					data->new_cmu_values);
-			if (data->output_colorspace_update_needed)
-				tegra_nvdisp_update_per_flip_output_colorspace(
-					dc, data->output_colorspace);
-			if (data->output_range_update_needed)
-				tegra_nvdisp_update_per_flip_output_range(dc,
-					data->limited_range_enable);
-			if (data->output_range_update_needed ||
-				data->output_colorspace_update_needed)
-				tegra_nvdisp_update_per_flip_csc2(dc);
-		}
-		/* Perform general update and enable */
-		if (dc->yuv_bypass_dirty || dc->yuv_bypass ||
-			data->output_colorspace_update_needed ||
-			data->output_range_update_needed ||
-			data->cmu_update_needed)
-			tegra_dc_ext_enable_update_and_act(dc);
+		tegra_dc_update_postcomp(dc, data);
+
 		if (dc->yuv_bypass_dirty || dc->yuv_bypass)
 			dc->yuv_bypass_dirty = false;
 

@@ -730,7 +730,7 @@ static inline bool tegra_nvdisp_is_dc_active(struct tegra_dc *dc)
 	return (ctrl_mode != nvdisp_display_command_control_mode_stop_f());
 }
 
-int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
+static int tegra_nvdisp_program_output_lut(struct tegra_dc *dc,
 					struct tegra_dc_lut *lut)
 {
 	tegra_dc_writel(dc,
@@ -1258,7 +1258,7 @@ INIT_EXIT:
 
 }
 
-int tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
+void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
 {
 	/* if color fmt is yuv_422 and postcomp support yuv422
 	 * enable chroma lpf by default
@@ -1276,8 +1276,6 @@ int tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
 		chroma_lpf &= ~nvdisp_procamp_chroma_lpf_enable_f();
 
 	tegra_dc_writel(dc, chroma_lpf, nvdisp_procamp_r());
-
-	return 0;
 }
 
 static int _tegra_nvdisp_set_ec_output_lut(struct tegra_dc *dc,
@@ -1304,8 +1302,7 @@ static int _tegra_nvdisp_set_ec_output_lut(struct tegra_dc *dc,
 	return 0;
 }
 
-int tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
-			struct tegra_dc_mode *mode)
+void tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 {
 	u32 csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
 
@@ -1348,8 +1345,6 @@ int tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
 
 write_reg:
 	tegra_dc_writel(dc, csc2_control, nvdisp_csc2_control_r());
-
-	return 0;
 }
 
 int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
@@ -1450,18 +1445,12 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	tegra_nvdisp_set_chroma_lpf(dc);
 
 	/* general-update */
-	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_update_enable_f(),
-			nvdisp_cmd_state_ctrl_r());
-	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	tegra_nvdisp_activate_general_channel(dc);
 
 #ifdef CONFIG_SWITCH
 	switch_set_state(&dc->modeset_switch,
 			 (mode->h_active << 16) | mode->v_active);
 #endif
-
-	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_act_req_enable_f(),
-			nvdisp_cmd_state_ctrl_r());
-	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
 
 	if (dc->out_ops && dc->out_ops->modeset_notifier)
 		dc->out_ops->modeset_notifier(dc);
@@ -1749,7 +1738,7 @@ static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
 	 */
 	lut = &dc->cmu;
 	if (dc->cmu_enabled) {
-		tegra_nvdisp_set_output_lut(dc, lut);
+		tegra_nvdisp_program_output_lut(dc, lut);
 		tegra_nvdisp_set_color_control(dc);
 
 		act_req_mask |=
@@ -2483,7 +2472,7 @@ static void _tegra_nvdisp_update_cmu(struct tegra_dc *dc,
 	 * consider it if there is any corruption on
 	 * updating cmu while it is running
 	 */
-	tegra_nvdisp_set_output_lut(dc, cmu);
+	tegra_nvdisp_program_output_lut(dc, cmu);
 	dc->cmu_dirty = false;
 }
 
@@ -3756,10 +3745,8 @@ void tegra_dc_enable_sor_t18x(struct tegra_dc *dc, int sor_num, bool enable)
 	tegra_dc_writel(dc, reg_val, nvdisp_win_options_r());
 }
 
-void tegra_nvdisp_update_per_flip_output_lut(
-	struct tegra_dc *dc,
-	struct tegra_dc_ext_cmu_v2 *user_cmu_v2,
-	bool new_cmu_values)
+void tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
+	struct tegra_dc_ext_cmu_v2 *user_cmu_v2, bool new_cmu_values)
 {
 	struct tegra_dc_lut *lut;
 	u32 reg_val = 0;
@@ -3786,8 +3773,8 @@ void tegra_nvdisp_update_per_flip_output_lut(
 	tegra_dc_writel(dc, reg_val, nvdisp_color_ctl_r());
 }
 
-void tegra_nvdisp_update_per_flip_output_colorspace(
-	struct tegra_dc *dc, u16 output_colorspace)
+void tegra_nvdisp_set_output_colorspace(struct tegra_dc *dc,
+					u16 output_colorspace)
 {
 	u32 csc2_control = dc->cached_settings.csc2_control;
 	/* Reset the csc2 control colorspace */
@@ -3808,8 +3795,7 @@ void tegra_nvdisp_update_per_flip_output_colorspace(
 	dc->cached_settings.csc2_control = csc2_control;
 }
 
-void tegra_nvdisp_update_per_flip_output_range(
-	struct tegra_dc *dc, u8 limited_range_enable)
+void tegra_nvdisp_set_output_range(struct tegra_dc *dc, u8 limited_range_enable)
 {
 	u32 csc2_control = dc->cached_settings.csc2_control;
 	/* Reset the csc2 control color range */
@@ -3823,13 +3809,13 @@ void tegra_nvdisp_update_per_flip_output_range(
 	dc->cached_settings.csc2_control = csc2_control;
 }
 
-void tegra_nvdisp_update_per_flip_csc2(struct tegra_dc *dc)
+void tegra_nvdisp_set_csc2(struct tegra_dc *dc)
 {
 	tegra_dc_writel(dc, dc->cached_settings.csc2_control,
 		nvdisp_csc2_control_r());
 }
 
-void tegra_nvdisp_update_enable_general_ack_req(struct tegra_dc *dc)
+void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc)
 {
 	/* Send general ack update and request enable */
 	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_update_enable_f(),

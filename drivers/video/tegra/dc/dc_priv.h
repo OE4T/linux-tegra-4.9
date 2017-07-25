@@ -818,8 +818,6 @@ u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_num, int ihub_switch);
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
 int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
 int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);
-int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
-					struct tegra_dc_lut *lut);
 int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *lut);
 void tegra_dc_cache_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *src_cmu);
 void tegra_nvdisp_get_default_cmu(struct tegra_dc_cmu *default_cmu);
@@ -840,40 +838,25 @@ void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);
 void tegra_nvdisp_vrr_work(struct work_struct *work);
 #endif
 
+int tegra_dc_hw_init(void);
+bool tegra_dc_is_t21x(void);
+bool tegra_dc_is_t18x(void);
+bool tegra_dc_is_t19x(void);
+bool tegra_dc_is_nvdisplay(void);
+
 void __attribute__((weak)) tegra_dc_populate_t18x_hw_data(
 	struct tegra_dc_hw_data *);
 void __attribute__((weak)) tegra_dc_populate_t19x_hw_data(
 	struct tegra_dc_hw_data *);
-int tegra_dc_hw_init(void);
 
-bool __attribute__((weak)) tegra_dc_is_t21x(void);
-bool __attribute__((weak)) tegra_dc_is_t18x(void);
-bool __attribute__((weak)) tegra_dc_is_t19x(void);
-
-int tegra_dc_get_numof_dispsors(void);
 void __attribute__((weak)) tegra_dc_enable_sor_t18x(struct tegra_dc *dc,
 			int sor_num, bool enable);
 void __attribute__((weak)) tegra_dc_enable_sor_t19x(struct tegra_dc *dc,
 			int sor_num, bool enable);
 
-void __attribute__((weak)) tegra_nvdisp_update_per_flip_output_lut(
-	struct tegra_dc *dc,
-	struct tegra_dc_ext_cmu_v2 *user_cmu_v2,
-	bool new_cmu_values);
-void __attribute__((weak))
-	tegra_nvdisp_update_per_flip_output_colorspace(struct tegra_dc *dc,
-	u16 colorspace);
-void __attribute__((weak))
-	tegra_nvdisp_update_per_flip_output_range(struct tegra_dc *dc,
-	u8 limited_range_enable);
-void __attribute__((weak))
-	tegra_nvdisp_update_per_flip_csc2(struct tegra_dc *dc);
-void __attribute__((weak))
-	tegra_nvdisp_update_enable_general_ack_req(struct tegra_dc *dc);
-int __attribute__((weak)) tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
-int __attribute__((weak))
-	tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
-	struct tegra_dc_mode *mode);
+uint64_t __attribute__((weak))
+	tegra_dc_get_vsync_timestamp_t19x(struct tegra_dc *dc);
+uint64_t tegra_dc_get_vsync_timestamp(struct tegra_dc *dc);
 
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void);
 
@@ -881,11 +864,7 @@ int tegra_fb_release_fbmem(struct tegra_fb_info *);
 
 int tegra_dc_client_handle_event(struct tegra_dc *dc,
 		enum tegra_dc_client_cllbck_event_type event_type);
-
-uint64_t __attribute__((weak))
-	tegra_dc_get_vsync_timestamp_t19x(struct tegra_dc *dc);
-
-uint64_t tegra_dc_get_vsync_timestamp(struct tegra_dc *dc);
+void tegra_dc_activate_general_channel(struct tegra_dc *dc);
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
@@ -895,29 +874,59 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
 			     struct tegra_dc_crc_buf_ele *crc_ele);
 void tegra_nvdisp_crc_reset(struct tegra_dc *dc);
+
+void tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
+	struct tegra_dc_ext_cmu_v2 *user_cmu_v2, bool new_cmu_values);
+void tegra_nvdisp_set_output_colorspace(struct tegra_dc *dc, u16 colorspace);
+void tegra_nvdisp_set_output_range(struct tegra_dc *dc, u8 lim_range_enable);
+void tegra_nvdisp_set_csc2(struct tegra_dc *dc);
+void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
+void tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
+void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc);
 #else
 static inline int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 					  struct tegra_dc_ext_crc_conf *conf)
 {
 	return -ENOTSUPP;
 }
-
 static inline int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 					   struct tegra_dc_ext_crc_conf *conf)
 {
 	return -ENOTSUPP;
 }
-
 static inline int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
 					   struct tegra_dc_crc_buf_ele *crc_ele)
 {
 	return -ENOTSUPP;
 }
-
 static inline void tegra_nvdisp_crc_reset(struct tegra_dc *dc)
 {
 }
-
+static inline void tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
+	struct tegra_dc_ext_cmu_v2 *user_cmu_v2, bool new_cmu_values)
+{
+}
+static inline void tegra_nvdisp_set_output_colorspace(struct tegra_dc *dc,
+	u16 colorspace)
+{
+}
+static inline void tegra_nvdisp_set_output_range(struct tegra_dc *dc,
+	u8 lim_range_enable)
+{
+}
+static inline void tegra_nvdisp_set_csc2(struct tegra_dc *dc)
+{
+}
+static inline void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
+{
+}
+static inline void tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
+	struct tegra_dc_mode *mode)
+{
+}
+static inline void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc)
+{
+}
 #endif
 
 #endif

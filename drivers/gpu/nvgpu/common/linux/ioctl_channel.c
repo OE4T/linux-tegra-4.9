@@ -281,10 +281,19 @@ struct channel_gk20a *gk20a_get_channel_from_file(int fd)
 int gk20a_channel_release(struct inode *inode, struct file *filp)
 {
 	struct channel_priv *priv = filp->private_data;
-	struct channel_gk20a *ch = priv->c;
-	struct gk20a *g = priv->g;
+	struct channel_gk20a *ch;
+	struct gk20a *g;
 
 	int err;
+
+	/* We could still end up here even if the channel_open failed, e.g.
+	 * if we ran out of hw channel IDs.
+	 */
+	if (!priv)
+		return 0;
+
+	ch = priv->c;
+	g = priv->g;
 
 	err = gk20a_busy(g);
 	if (err) {

@@ -50,6 +50,7 @@ enum tegra210_idle_index {
 struct tegra210_pm_data {
 	bool cc4_no_retention;
 	bool cc3_no_hvc;
+	bool cc6_allow;
 	/* Idle state index array */
 	int idle_state_idx[IDLE_STATE_MAX];
 };
@@ -121,7 +122,6 @@ static int tegra_bpmp_tolerate_idle(int cpu, int ccxtl, int scxtl)
 static int proc_idle_state_enter(int cpu, int idle_state)
 {
 	u32 ctrl;
-
 	ctrl = 0xffffffff;
 
 	if (t210_pm_data.cc4_no_retention)
@@ -132,6 +132,10 @@ static int proc_idle_state_enter(int cpu, int idle_state)
 		ctrl &= ~(BIT(1) | BIT(0));
 
 	flowctrl_write_cc4_ctrl(cpu, ctrl);
+
+	if (idle_state == t210_pm_data.idle_state_idx[CC6_IDX] &&
+			!t210_pm_data.cc6_allow)
+		return -ENODEV;
 
 	return 0;
 }
@@ -483,6 +487,10 @@ static struct platform_driver tegra210_cpuidle_driver = {
 
 static int __init tegra210_cpuidle_init(void)
 {
+	struct cpuidle_device *dev = __this_cpu_read(cpuidle_devices);
+	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
+	int i;
+
 	if (tegra_get_chip_id() != TEGRA210)
 		goto out;
 
@@ -493,6 +501,17 @@ static int __init tegra210_cpuidle_init(void)
 	platform_driver_register(&tegra210_cpuidle_driver);
 
 	debugfs_init();
+
+	/*
+	 * Disable CC6 during boot. They can be enabled later using the
+	 * fast_cluster_enable knobs from userspace.
+	 */
+	for (i = drv->safe_state_index + 1; i < drv->state_count; i++)
+		if (i == t210_pm_data.idle_state_idx[CC6_IDX])
+			drv->states[i].disabled = true;
+
+	t210_pm_data.cc6_allow = true;
+
 out:
 	return 0;
 }
@@ -529,6 +548,15 @@ static int __init tegra210_pm_init(void)
 	/* Disable CC4 until DFLL clk is ready */
 	t210_pm_data.cc4_no_retention = true;
 
+	/*
+	 * CC6 also needs to be disabled until DFLL clk is ready, but there is
+	 * no explicit hook that notifies when the DFLL init is complete. The
+	 * cluster states can be disabled in the arm cpuidle driver which may
+	 * not be ready here. Use this flag until the tegra_cpuidle driver
+	 * disables the arm cpuidle driver's states during late_init.
+	 */
+	t210_pm_data.cc6_allow = false;
+
 	t210_pm_data.idle_state_idx[C7_IDX] =
 				tegra_of_idle_state_idx_from_name("c7");
 	t210_pm_data.idle_state_idx[CC6_IDX] =
@@ -539,7 +567,6 @@ static int __init tegra210_pm_init(void)
 	tegra210_cpu_pm_register_notifier(&tegra210_cpu_pm_nb);
 	register_cpu_notifier(&tegra210_cpu_nb);
 	register_syscore_ops(&bpmp_sc7_suspend_ops);
-
 out:
 	return 0;
 }

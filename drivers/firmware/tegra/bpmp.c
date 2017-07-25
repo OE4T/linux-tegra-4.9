@@ -295,9 +295,8 @@ static int bpmp_probe(struct platform_device *pdev)
 
 	if (cfg->lin_map) {
 		r = bpmp_linear_map_init(pdev);
-		/* TODO: Handle the error appropriately once SMMU is supported */
 		if (r)
-			dev_info(device, "bpmp_probe: bpmp_linear_map_init failed\n");
+			goto err_out;
 	}
 
 	if (cfg->clk) {

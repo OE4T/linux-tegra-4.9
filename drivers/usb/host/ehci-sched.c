@@ -291,7 +291,10 @@ static void compute_tt_budget(u8 budget_table[EHCI_BANDWIDTH_SIZE],
 
 			/* propagate the time forward */
 			for (uf = ps->phase_uf; uf < 8; ++uf) {
-				x += budget_line[uf];
+				if (uframe + uf < EHCI_BANDWIDTH_SIZE)
+					x += budget_line[uf];
+				else
+					break;
 
 				/* Each microframe lasts 125 us */
 				if (x <= 125) {

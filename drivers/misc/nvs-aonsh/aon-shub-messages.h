@@ -15,7 +15,15 @@
 #include <linux/nvs.h>
 
 #define TEGRA_IVC_ALIGN		64
-#define AON_SHUB_MAX_DATA_SIZE	256
+#define AON_SHUB_MAX_DATA_SIZE	(TEGRA_IVC_ALIGN * 4)
+#define AON_SHUB_MAX_CHIPS	(AON_SHUB_MAX_DATA_SIZE - \
+				offsetof(struct aon_shub_response, \
+					data.snsr_chips.chips)) / \
+				sizeof(struct snsr_chip)
+#define AON_SHUB_MAX_SNSRS	(AON_SHUB_MAX_DATA_SIZE - \
+				offsetof(struct aon_shub_response, \
+					 data.cfg_ids.ids)) / \
+				sizeof(int8_t)
 
 /* All the enums and the fields inside the structs described in this header
  * file supports only [u/s]X type, where X can be 8,16,32. For inter CPU
@@ -34,7 +42,9 @@ enum aon_shub_request_type {
 	AON_SHUB_REQUEST_BATCH = 5,
 	AON_SHUB_REQUEST_FLUSH = 6,
 	AON_SHUB_REQUEST_PAYLOAD = 7,
-	AON_SHUB_REQUEST_MAX = 7,
+	AON_SHUB_REQUEST_CHIP_CFG_IDS = 8,
+	AON_SHUB_REQUEST_SNSR_CHIPS = 9,
+	AON_SHUB_REQUEST_MAX = 9,
 };
 
 /* This enum represents the types of init requests to sensor hub associated
@@ -172,16 +182,20 @@ struct aon_shub_init_snsrs_request {
  * request before init.
  *
  * Fields:
- * chip_id:	sensor chip id.
- * gpio:	GPIO number.
- * i2c_id:	I2C controller id.
- * i2c_addr:	I2C address of the device.
+ * gpio:		GPIO number.
+ * chip_id:		sensor chip id.
+ * i2c_id:		I2C controller id.
+ * i2c_addr:		I2C address of the device.
+ * slave_chip_id:	slave chip id connected to aux I2C bus.
+ * slave_i2c_addr:	slave device i2c address on the aux I2C bus.
  */
 struct aon_shub_init_setup_request {
-	u32 chip_id;
 	u32 gpio;
-	u32 i2c_id;
+	u8 chip_id;
+	u8 i2c_id;
 	u8 i2c_addr;
+	s8 slave_chip_id;
+	u8 slave_i2c_addr;
 };
 
 /* This struct is used to represent data required for a init
@@ -265,6 +279,50 @@ struct aon_shub_snsrcfg_request {
 	u32 index;
 };
 
+/* This struct indicates a sensor chip.
+ *
+ * Fields:
+ * name:	Name of the sensor chip.
+ * chip_id:	chip_id of the sensor.
+ */
+struct snsr_chip {
+	u8 name[32];
+	u32 chip_id;
+};
+
+/* This struct indicates the response to a sensor chips request.
+ *
+ * Fields:
+ * nchips:	Number of chips supported by the shub.
+ * chips:	List of the sensor chips supported by shub.
+ */
+struct aon_shub_snsr_chips_response {
+	u32 nchips;
+	struct snsr_chip chips[];
+};
+
+/* This struct indicates the contents of a request to fetch the sensor config
+ * ids supported by the chip.
+ *
+ * Fields:
+ * chip_id:	chip id of the sensor device.
+ */
+struct aon_shub_chip_cfg_ids_request {
+	u32 chip_id;
+};
+
+/* This struct indicates the contents of a request to fetch the sensor config
+ * ids supported by the chip.
+ *
+ * Fields:
+ * num_snsrs:	NUmber of sensors currenlty supported.
+ * cfg_ids:	cfg ids of the sensors supported.
+ */
+struct aon_shub_chip_cfg_ids_response {
+	u32 num_snsrs;
+	s8 ids[];
+};
+
 /* This struct is used to represent data in response to a system specific
  * request.
  * Fields:
@@ -324,6 +382,7 @@ struct aon_shub_request {
 		struct aon_shub_init_request init;
 		struct aon_shub_sys_request sys;
 		struct aon_shub_snsrcfg_request cfg;
+		struct aon_shub_chip_cfg_ids_request cfg_ids;
 		struct aon_shub_enable_request enable;
 		struct aon_shub_batch_request batch;
 		struct aon_shub_flush_request flush;
@@ -345,6 +404,8 @@ struct aon_shub_response {
 		struct aon_shub_init_response init;
 		struct aon_shub_sys_response sys;
 		struct aon_shub_snsrcfg_response cfg;
+		struct aon_shub_chip_cfg_ids_response cfg_ids;
+		struct aon_shub_snsr_chips_response snsr_chips;
 		struct aon_shub_xfer_response xfer;
 		struct aon_shub_enable_response enable;
 		struct aon_shub_payload_response payload;

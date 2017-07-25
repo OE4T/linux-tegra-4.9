@@ -16,6 +16,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * NVS = NVidia Sensor framework
+ * See nvs_iio.c and nvs.h for nvs documentation
+ * Here is the flow of this driver. Failure in any step causes the driver
+ * probe to fail :
+ * 1. On boot, the kernel driver fetches the sensor count and all the
+ *    sensor chips supported by the sensor hub.
+ * 2. It uses the fetched sensor chips from sensor hub to validate the
+ *    device tree nodes which represent a sensor chip and respective
+ *    attributes.
+ * 3. It then fetches the I2C controller info from the DT and validates
+ *    the controller id. It creates a setup request comprising the sensor
+ *    chip attributes such as the I2C controller it is connected as well
+ *    as the I2C address of the chip, GPIO connected to the chip and sends
+ *    it to the sensor hub.
+ * 4. Upon validating the sensor chip nodes, it uses the I2C controllers
+ *    info (controller id + clock rate) and sends an I2C init request to
+ *    the sensor hub. Upon successful initialization of the I2C controller,
+ *    the driver sends each sensor chip init request. This request also
+ *    includes the init request of the slave chip connected over the
+ *    auxiliary I2C bus of the chip if it supports one.
+ * 5. Upon successful initialization of the I2C controllers and the sensor
+ *    chips, the driver fetches the sensor config list supported by each
+ *    sensor chip and builds a local copy of it. The driver does not fetch
+ *    the entire list present on the sensor hub rather only fetches the
+ *    configs supported by the chips passed in the DT node.
+ * 6. Upon building the local sensor config table, the driver calls
+ *    nvs_probe which sets up all the nvs iio attributes for each sensor
+ *    config and creates the iio sysfs nodes for the NVS HAL to communicate.
+ */
+
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
@@ -41,7 +72,7 @@
 #define AXIS_N		3
 /* block period in ms */
 #define TX_BLOCK_PERIOD 200
-#define IVC_TIMEOUT	100
+#define IVC_TIMEOUT	200
 
 enum I2C_IDS {
 	I2CID_MIN = 1,
@@ -59,6 +90,11 @@ struct aon_shub_sensor {
 	bool genable;	/* global enable */
 };
 
+struct shub_chip_node {
+	struct device_node *dn;
+	u8 chip_id;
+};
+
 struct tegra_aon_shub {
 	struct device		 *dev;
 	struct completion	 *wait_on;
@@ -68,9 +104,12 @@ struct tegra_aon_shub {
 	struct aon_shub_response *shub_resp;
 	/* Interface to the NVS framework */
 	struct nvs_fn_if	 *nvs;
-	struct aon_shub_sensor	 *snsr;
-	struct mutex		shub_mutex;
+	struct aon_shub_sensor	 **snsrs;
+	struct mutex		 shub_mutex;
+	struct snsr_chip	 *chips;
+	struct shub_chip_node	 *chip_nodes;
 	unsigned int		 snsr_cnt;
+	u32			 nchips;
 	u32			 i2c_clk_rates[I2CID_MAX];
 	u32			 chip_id_mask;
 	u32			 adjust_ts_counter;
@@ -84,6 +123,12 @@ static inline int ivc_min_frame_size(void)
 	return cache_line_size();
 }
 
+/*
+ * Android sensor service expects sensor events to have timestamps in
+ * Monotonic time base. However, the sensor events on the sensor hub
+ * are timestamped at the TKE timebase. This API provides a conversion
+ * from the TKE timebase to the monotonic timebase.
+ */
 static inline s64 get_ts_adjustment(u64 tsc_res)
 {
 	s64 tsc = 0;
@@ -136,7 +181,7 @@ static void tegra_aon_shub_mbox_rcv_msg(struct mbox_client *cl, void *rx_msg)
 			shub_resp->data.payload.data[i].ts = (u64)ts;
 			cookie = (int) ts;
 			trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
-			shub->nvs->handler(shub->snsr[snsr_id].nvs_st,
+			shub->nvs->handler(shub->snsrs[snsr_id]->nvs_st,
 				&shub_resp->data.payload.data[i].x,
 				shub_resp->data.payload.data[i].ts);
 			trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
@@ -267,36 +312,173 @@ static void tegra_aon_shub_dbg_cfg(struct device *dev, struct sensor_cfg *cfg)
 }
 #endif
 
+static void tegra_aon_shub_copy_cfg(struct tegra_aon_shub *shub,
+				    struct aon_shub_sensor *sensor)
+{
+	int len;
+	int i;
+
+	/* TODO: Should we rearrange sensor_cfg in nvs.h so that we
+	 * can call memcpy() rather than individual field assignment.
+	 */
+	len = ARRAY_SIZE(sensor->name);
+	strncpy(sensor->name,
+		(char *)shub->shub_resp->data.cfg.name,
+		len);
+	sensor->name[len - 1] = '\0';
+	len = ARRAY_SIZE(sensor->part);
+	strncpy(sensor->part,
+		(char *)shub->shub_resp->data.cfg.part,
+		len);
+	sensor->part[len - 1] = '\0';
+	len = ARRAY_SIZE(sensor->vendor);
+	strncpy(sensor->vendor,
+		(char *)shub->shub_resp->data.cfg.vendor,
+		len);
+	sensor->vendor[len - 1] = '\0';
+	sensor->cfg.name = sensor->name;
+	sensor->cfg.part = sensor->part;
+	sensor->cfg.vendor = sensor->vendor;
+	sensor->cfg.version = shub->shub_resp->data.cfg.version;
+	sensor->cfg.snsr_id = shub->shub_resp->data.cfg.snsr_id;
+	sensor->cfg.kbuf_sz = shub->shub_resp->data.cfg.kbuf_sz;
+	sensor->cfg.timestamp_sz =
+			shub->shub_resp->data.cfg.timestamp_sz;
+	sensor->cfg.snsr_data_n =
+			shub->shub_resp->data.cfg.snsr_data_n;
+	sensor->cfg.ch_n = shub->shub_resp->data.cfg.ch_n;
+	sensor->cfg.ch_n_max = shub->shub_resp->data.cfg.ch_n_max;
+	sensor->cfg.ch_sz = shub->shub_resp->data.cfg.ch_sz;
+	sensor->cfg.max_range.ival =
+			shub->shub_resp->data.cfg.max_range.ival;
+	sensor->cfg.max_range.fval =
+			shub->shub_resp->data.cfg.max_range.fval;
+	sensor->cfg.resolution.ival =
+			shub->shub_resp->data.cfg.resolution.ival;
+	sensor->cfg.resolution.fval =
+			shub->shub_resp->data.cfg.resolution.fval;
+	sensor->cfg.milliamp.ival =
+			shub->shub_resp->data.cfg.milliamp.ival;
+	sensor->cfg.milliamp.fval =
+			shub->shub_resp->data.cfg.milliamp.fval;
+	sensor->cfg.delay_us_min =
+			shub->shub_resp->data.cfg.delay_us_min;
+	sensor->cfg.delay_us_max =
+			shub->shub_resp->data.cfg.delay_us_max;
+	sensor->cfg.fifo_rsrv_evnt_cnt =
+			shub->shub_resp->data.cfg.fifo_rsrv_evnt_cnt;
+	sensor->cfg.fifo_max_evnt_cnt =
+			shub->shub_resp->data.cfg.fifo_max_evnt_cnt;
+	sensor->cfg.flags = shub->shub_resp->data.cfg.flags;
+	sensor->cfg.uncal_lo = shub->shub_resp->data.cfg.uncal_lo;
+	sensor->cfg.uncal_hi = shub->shub_resp->data.cfg.uncal_hi;
+	sensor->cfg.cal_lo = shub->shub_resp->data.cfg.cal_lo;
+	sensor->cfg.cal_hi = shub->shub_resp->data.cfg.cal_hi;
+	sensor->cfg.thresh_lo =
+			shub->shub_resp->data.cfg.thresh_lo;
+	sensor->cfg.thresh_hi =
+			shub->shub_resp->data.cfg.thresh_hi;
+	sensor->cfg.float_significance =
+			shub->shub_resp->data.cfg.float_significance;
+	sensor->cfg.scale.ival =
+			shub->shub_resp->data.cfg.scale.ival;
+	sensor->cfg.scale.fval =
+			shub->shub_resp->data.cfg.scale.fval;
+	sensor->cfg.offset.ival =
+			shub->shub_resp->data.cfg.offset.ival;
+	sensor->cfg.offset.fval =
+			shub->shub_resp->data.cfg.offset.fval;
+	for (i = 0; i < 3; i++) {
+		sensor->cfg.scales[i].ival =
+			shub->shub_resp->data.cfg.resolution.ival;
+		sensor->cfg.scales[i].fval =
+			shub->shub_resp->data.cfg.resolution.fval;
+	}
+	for (i = 0; i < 9; i++) {
+		sensor->cfg.matrix[i] =
+				shub->shub_resp->data.cfg.matrix[i];
+	}
+}
+
+static int tegra_aon_shub_get_cfg(struct tegra_aon_shub *shub, int remote_id)
+{
+	int ret;
+	struct aon_shub_sensor *sensor;
+
+	if (remote_id >= shub->snsr_cnt) {
+		dev_err(shub->dev,
+			"Invalid sensor config index : %d\n", remote_id);
+		return -EINVAL;
+	}
+
+	shub->shub_req->req_type = AON_SHUB_REQUEST_SNSR_CFG;
+	shub->shub_req->data.cfg.index = remote_id;
+	ret = tegra_aon_shub_ivc_msg_send(shub,
+				sizeof(struct aon_shub_request));
+	if (ret) {
+		dev_err(shub->dev, "No response from AON SHUB..!\n");
+		return ret;
+	}
+
+	sensor = devm_kzalloc(shub->dev, sizeof(struct aon_shub_sensor),
+				GFP_KERNEL);
+	if (!sensor)
+		return -ENOMEM;
+
+	shub->snsrs[remote_id] = sensor;
+	tegra_aon_shub_copy_cfg(shub, sensor);
+#ifdef TEGRA_AON_SHUB_DBG_ENABLE
+	tegra_aon_shub_dbg_cfg(shub->dev, &sensor->cfg);
+#endif
+
+	return ret;
+}
+
+static const inline bool is_chipid_valid(struct tegra_aon_shub *shub,
+					 u8 chip_id,
+					 const char *name)
+{
+	int i;
+
+	for (i = 0; i < shub->nchips; i++)
+		if (shub->chips[i].chip_id == chip_id)
+			return !strcmp(name, shub->chips[i].name);
+
+	return false;
+}
+
+static const inline bool is_i2cid_valid(u8 i2c_id)
+{
+	return (i2c_id >= I2CID_MIN && i2c_id <= I2CID_MAX);
+}
+
 static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 				struct device_node *np)
 {
 	int ret;
-	int i;
 	struct device_node *cn;
 	struct device *dev;
 	struct aon_shub_init_setup_request *setup_req;
 	u32 gpio, chip_id;
 	u32 i2c_info[3];
-	bool found;
-
-	/* sanity check */
-	if (!shub || !np)
-		return -EINVAL;
+	u32 aux_chip_info[2];
+	bool aux_slave = false;
+	const char *aux_chip_name;
+	int i = 0;
 
 	dev = shub->dev;
 
 	for_each_child_of_node(np, cn) {
-		found = false;
-		for (i = 0; i < shub->snsr_cnt; i++) {
-			if (!strcmp(cn->name, shub->snsr[i].part)) {
-				nvs_of_dt(cn, &shub->snsr[i].cfg, NULL);
-				shub->snsr[i].genable = true;
-				found = true;
-			}
+		ret = of_property_read_u32(cn, "chip_id", &chip_id);
+		if (ret) {
+			dev_err(dev, "missing <%s> property\n", "chip_id");
+			return ret;
 		}
-		if (!found) {
-			dev_err(dev, "No sensors on %s chip\n", cn->name);
-			continue;
+
+		if (!is_chipid_valid(shub, chip_id, cn->name)) {
+			dev_err(dev, "chip_id %d : chip_name %s mismatch\n",
+				(int)chip_id, cn->name);
+			return -EINVAL;
 		}
 
 		ret = of_property_read_u32(cn, "gpio", &gpio);
@@ -310,24 +492,55 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 			dev_err(dev, "missing <%s> property\n", "i2c_info");
 			return ret;
 		}
-		if (!(i2c_info[0] >= I2CID_MIN && i2c_info[0] <= I2CID_MAX)) {
+
+		if (!is_i2cid_valid(i2c_info[0])) {
 			dev_err(dev, "Invalid I2C controller id\n");
 			return -EINVAL;
 		}
 
-		ret = of_property_read_u32(cn, "chip_id", &chip_id);
-		if (ret) {
-			dev_err(dev, "missing <%s> property\n", "chip_id");
-			return ret;
+		/*
+		 * If the aux_chip property is not present, then it is not
+		 * an error as it is not necessary to have an aux slave
+		 * device. However, if aux_chip property is present and the
+		 * aux_chip_name property is missing, then it is an error.
+		 */
+		ret = of_property_read_u32_array(cn, "aux_chip",
+						 aux_chip_info, 2);
+		if (ret >= 0) {
+			ret = of_property_read_string(cn, "aux_chip_name",
+							&aux_chip_name);
+			if (ret < 0) {
+				dev_err(dev, "missing %s property\n",
+							"aux_chip_name");
+				return ret;
+			}
+			if (!is_chipid_valid(shub, aux_chip_info[0],
+							aux_chip_name)) {
+				dev_err(dev,
+					"aux chip_id : chip_name mismatch\n");
+				return -EINVAL;
+			}
+			aux_slave = true;
+		} else {
+			/*
+			 * aux_chip_info[1] holds the I2C address of the slave
+			 * chip. If the aux_chip_id is < 0, we don't care about
+			 * its I2C address. Only when the chip_id is validated
+			 * the I2C addresses are validated on the remote side.
+			 */
+			aux_chip_info[0] = -1;
 		}
+
 		mutex_lock(&shub->shub_mutex);
 		shub->shub_req->req_type = AON_SHUB_REQUEST_INIT;
 		shub->shub_req->data.init.req = AON_SHUB_INIT_REQUEST_SETUP;
 		setup_req = &shub->shub_req->data.init.data.setup;
+		setup_req->gpio = gpio;
 		setup_req->chip_id = chip_id;
 		setup_req->i2c_id = i2c_info[0];
 		setup_req->i2c_addr = i2c_info[2];
-		setup_req->gpio = gpio;
+		setup_req->slave_chip_id = aux_chip_info[0];
+		setup_req->slave_i2c_addr = aux_slave ? aux_chip_info[1] : 0;
 		ret = tegra_aon_shub_ivc_msg_send(shub,
 					sizeof(struct aon_shub_request));
 		if (ret) {
@@ -337,6 +550,8 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 		if (shub->shub_resp->data.init.init_type !=
 						AON_SHUB_INIT_REQUEST_SETUP) {
 			ret = -EIO;
+			dev_err(shub->dev,
+				"Invalid response to INIT_SETUP request\n");
 			goto err_exit;
 		}
 
@@ -347,10 +562,32 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 			goto err_exit;
 		}
 
+		if (i >= shub->nchips) {
+			dev_err(shub->dev, "Invalid num of chip_nodes: %d\n",
+				i);
+			ret = -EINVAL;
+			goto err_exit;
+		}
+		shub->chip_nodes[i].dn = cn;
+		shub->chip_nodes[i].chip_id = chip_id;
+		i++;
+		if (i >= shub->nchips) {
+			dev_err(shub->dev, "Invalid num of chip_nodes: %d\n",
+				i);
+			ret = -EINVAL;
+			goto err_exit;
+		}
+		if (aux_slave) {
+			shub->chip_nodes[i].dn = cn;
+			shub->chip_nodes[i].chip_id = aux_chip_info[0];
+			i++;
+		}
+
 		if (shub->i2c_clk_rates[i2c_info[0] - I2CID_MIN] < i2c_info[1])
 			shub->i2c_clk_rates[i2c_info[0] - I2CID_MIN] =
 								i2c_info[1];
 		shub->chip_id_mask |= BIT(chip_id - 1);
+		aux_slave = false;
 		mutex_unlock(&shub->shub_mutex);
 	}
 
@@ -366,11 +603,44 @@ static inline int tegra_aon_shub_count_sensor_chips(struct device_node *dn)
 	return of_get_child_count(dn);
 }
 
+static int tegra_aon_shub_get_snsr_chips(struct tegra_aon_shub *shub)
+{
+	int ret;
+	struct aon_shub_snsr_chips_response *resp;
+
+	shub->shub_req->req_type = AON_SHUB_REQUEST_SNSR_CHIPS;
+	ret = tegra_aon_shub_ivc_msg_send(shub,
+					  sizeof(struct aon_shub_request));
+	if (ret) {
+		dev_err(shub->dev, "No response from AON SHUB...!\n");
+		return ret;
+	}
+
+	resp = &shub->shub_resp->data.snsr_chips;
+	shub->nchips = resp->nchips;
+	if (shub->nchips > AON_SHUB_MAX_CHIPS) {
+		dev_err(shub->dev, "Invalid shub->nchips..!\n");
+		return -EINVAL;
+	}
+	shub->chips = devm_kzalloc(shub->dev,
+				sizeof(struct snsr_chip) * resp->nchips,
+				GFP_KERNEL);
+	shub->chip_nodes = devm_kzalloc(shub->dev,
+				sizeof(struct shub_chip_node) * resp->nchips,
+				GFP_KERNEL);
+	if (!shub->chips || !shub->chip_nodes)
+		return -ENOMEM;
+
+	memcpy(shub->chips, resp->chips,
+			sizeof(struct snsr_chip) * resp->nchips);
+
+	return ret;
+}
+
 static int tegra_aon_shub_get_snsr_cnt(struct tegra_aon_shub *shub)
 {
 	int ret = 0;
 
-	mutex_lock(&shub->shub_mutex);
 	shub->shub_req->req_type = AON_SHUB_REQUEST_SYS;
 	shub->shub_req->data.sys.req = AON_SHUB_SYS_REQUEST_SNSR_CNT;
 	ret = tegra_aon_shub_ivc_msg_send(shub,
@@ -380,7 +650,6 @@ static int tegra_aon_shub_get_snsr_cnt(struct tegra_aon_shub *shub)
 		return ret;
 	}
 	shub->snsr_cnt = shub->shub_resp->data.sys.snsr_cnt;
-	mutex_unlock(&shub->shub_mutex);
 
 	return ret;
 }
@@ -388,118 +657,43 @@ static int tegra_aon_shub_get_snsr_cnt(struct tegra_aon_shub *shub)
 static int tegra_aon_shub_preinit(struct tegra_aon_shub *shub)
 {
 	int ret = 0;
-	int i, j;
-	int len;
-
-	ret = tegra_aon_shub_get_snsr_cnt(shub);
-	if (ret)
-		return ret;
-
-	shub->snsr = devm_kzalloc(shub->dev,
-				sizeof(struct aon_shub_sensor) * shub->snsr_cnt,
-				GFP_KERNEL);
-	if (!shub->snsr)
-		return -ENOMEM;
 
 	mutex_lock(&shub->shub_mutex);
-	for (i = 0; i < shub->snsr_cnt; i++) {
-		shub->shub_req->req_type = AON_SHUB_REQUEST_SNSR_CFG;
-		shub->shub_req->data.cfg.index = i;
-		ret = tegra_aon_shub_ivc_msg_send(shub,
-					sizeof(struct aon_shub_request));
-		if (ret) {
-			dev_err(shub->dev, "No response from AON SHUB..!\n");
-			mutex_unlock(&shub->shub_mutex);
-			return ret;
-		}
+	ret = tegra_aon_shub_get_snsr_cnt(shub);
+	if (ret)
+		goto err_exit;
 
-		/* TODO: Should we rearrange sensor_cfg in nvs.h so that we
-		 * can call memcpy() rather than individual field assignment.
-		 */
-		len = ARRAY_SIZE(shub->snsr[i].name);
-		strncpy(shub->snsr[i].name,
-			(char *)shub->shub_resp->data.cfg.name,
-			len);
-		shub->snsr[i].name[len - 1] = '\0';
-		len = ARRAY_SIZE(shub->snsr[i].part);
-		strncpy(shub->snsr[i].part,
-			(char *)shub->shub_resp->data.cfg.part,
-			len);
-		shub->snsr[i].part[len - 1] = '\0';
-		len = ARRAY_SIZE(shub->snsr[i].vendor);
-		strncpy(shub->snsr[i].vendor,
-			(char *)shub->shub_resp->data.cfg.vendor,
-			len);
-		shub->snsr[i].vendor[len - 1] = '\0';
-		shub->snsr[i].cfg.name = shub->snsr[i].name;
-		shub->snsr[i].cfg.part = shub->snsr[i].part;
-		shub->snsr[i].cfg.vendor = shub->snsr[i].vendor;
-		shub->snsr[i].cfg.version = shub->shub_resp->data.cfg.version;
-		shub->snsr[i].cfg.snsr_id = shub->shub_resp->data.cfg.snsr_id;
-		shub->snsr[i].cfg.kbuf_sz = shub->shub_resp->data.cfg.kbuf_sz;
-		shub->snsr[i].cfg.timestamp_sz =
-				shub->shub_resp->data.cfg.timestamp_sz;
-		shub->snsr[i].cfg.snsr_data_n =
-				shub->shub_resp->data.cfg.snsr_data_n;
-		shub->snsr[i].cfg.ch_n = shub->shub_resp->data.cfg.ch_n;
-		shub->snsr[i].cfg.ch_n_max = shub->shub_resp->data.cfg.ch_n_max;
-		shub->snsr[i].cfg.ch_sz = shub->shub_resp->data.cfg.ch_sz;
-		shub->snsr[i].cfg.max_range.ival =
-				shub->shub_resp->data.cfg.max_range.ival;
-		shub->snsr[i].cfg.max_range.fval =
-				shub->shub_resp->data.cfg.max_range.fval;
-		shub->snsr[i].cfg.resolution.ival =
-				shub->shub_resp->data.cfg.resolution.ival;
-		shub->snsr[i].cfg.resolution.fval =
-				shub->shub_resp->data.cfg.resolution.fval;
-		shub->snsr[i].cfg.milliamp.ival =
-				shub->shub_resp->data.cfg.milliamp.ival;
-		shub->snsr[i].cfg.milliamp.fval =
-				shub->shub_resp->data.cfg.milliamp.fval;
-		shub->snsr[i].cfg.delay_us_min =
-				shub->shub_resp->data.cfg.delay_us_min;
-		shub->snsr[i].cfg.delay_us_max =
-				shub->shub_resp->data.cfg.delay_us_max;
-		shub->snsr[i].cfg.fifo_rsrv_evnt_cnt =
-				shub->shub_resp->data.cfg.fifo_rsrv_evnt_cnt;
-		shub->snsr[i].cfg.fifo_max_evnt_cnt =
-				shub->shub_resp->data.cfg.fifo_max_evnt_cnt;
-		shub->snsr[i].cfg.flags = shub->shub_resp->data.cfg.flags;
-		shub->snsr[i].cfg.uncal_lo = shub->shub_resp->data.cfg.uncal_lo;
-		shub->snsr[i].cfg.uncal_hi = shub->shub_resp->data.cfg.uncal_hi;
-		shub->snsr[i].cfg.cal_lo = shub->shub_resp->data.cfg.cal_lo;
-		shub->snsr[i].cfg.cal_hi = shub->shub_resp->data.cfg.cal_hi;
-		shub->snsr[i].cfg.thresh_lo =
-				shub->shub_resp->data.cfg.thresh_lo;
-		shub->snsr[i].cfg.thresh_hi =
-				shub->shub_resp->data.cfg.thresh_hi;
-		shub->snsr[i].cfg.float_significance =
-				shub->shub_resp->data.cfg.float_significance;
-		shub->snsr[i].cfg.scale.ival =
-				shub->shub_resp->data.cfg.scale.ival;
-		shub->snsr[i].cfg.scale.fval =
-				shub->shub_resp->data.cfg.scale.fval;
-		shub->snsr[i].cfg.offset.ival =
-				shub->shub_resp->data.cfg.offset.ival;
-		shub->snsr[i].cfg.offset.fval =
-				shub->shub_resp->data.cfg.offset.fval;
-		for (j = 0; j < 3; j++) {
-			shub->snsr[i].cfg.scales[j].ival =
-				shub->shub_resp->data.cfg.resolution.ival;
-			shub->snsr[i].cfg.scales[j].fval =
-				shub->shub_resp->data.cfg.resolution.fval;
-		}
-		for (j = 0; j < 9; j++) {
-			shub->snsr[i].cfg.matrix[j] =
-					shub->shub_resp->data.cfg.matrix[j];
-		}
-#ifdef TEGRA_AON_SHUB_DBG_ENABLE
-		tegra_aon_shub_dbg_cfg(shub->dev, &shub->snsr[i].cfg);
-#endif
+	shub->snsrs = devm_kzalloc(shub->dev,
+				sizeof(struct aon_shub_sensor *) *
+						shub->snsr_cnt,
+				GFP_KERNEL);
+	if (!shub->snsrs) {
+		ret = -ENOMEM;
+		goto err_exit;
 	}
+
+	ret = tegra_aon_shub_get_snsr_chips(shub);
+	if (ret)
+		dev_err(shub->dev, "shub_get_snsr_chips failed : %d\n", ret);
+
+err_exit:
 	mutex_unlock(&shub->shub_mutex);
 
 	return ret;
+}
+
+static struct device_node *tegra_aon_shub_find_node_by_chip(
+					struct tegra_aon_shub *shub,
+					u8 chip_id)
+{
+	int i;
+
+	for (i = 0; i < shub->nchips; i++)
+		if (shub->chip_nodes[i].chip_id == chip_id)
+			return shub->chip_nodes[i].dn;
+
+	return NULL;
+
 }
 
 static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
@@ -507,9 +701,15 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 	int ret = 0;
 	int snsrs = 0;
 	int i;
+	int count;
 	bool i2c_inited = false;
+	u32 chip_id_msk;
+	u8 chip_id;
 	struct aon_shub_init_i2c_request *i2c_req;
 	struct aon_shub_init_snsrs_request *snsrs_req;
+	struct aon_shub_chip_cfg_ids_response *cfg_ids_resp;
+	struct device_node *dn;
+	s8 cfg[AON_SHUB_MAX_SNSRS];
 
 	mutex_lock(&shub->shub_mutex);
 	for (i = 0; i < ARRAY_SIZE(shub->i2c_clk_rates); i++) {
@@ -569,6 +769,49 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 		dev_err(shub->dev, "Invalid response to sensor init request\n");
 		goto err_exit;
 	}
+	chip_id_msk = shub->chip_id_mask;
+	while (chip_id_msk) {
+		chip_id = __builtin_ctz(chip_id_msk);
+		chip_id_msk &= ~BIT(chip_id);
+		chip_id++;
+		dn = tegra_aon_shub_find_node_by_chip(shub, chip_id);
+		if (dn == NULL) {
+			dev_err(shub->dev,
+				"No device node for chip %d\n", chip_id);
+			ret = -EINVAL;
+			goto err_exit;
+		}
+		shub->shub_req->req_type = AON_SHUB_REQUEST_CHIP_CFG_IDS;
+		shub->shub_req->data.cfg_ids.chip_id = chip_id;
+		ret = tegra_aon_shub_ivc_msg_send(shub,
+				sizeof(struct aon_shub_request));
+		if (ret) {
+			dev_err(shub->dev, "No response from AON SHUB...!\n");
+			goto err_exit;
+		}
+		cfg_ids_resp = &shub->shub_resp->data.cfg_ids;
+		count = cfg_ids_resp->num_snsrs;
+		if (count > AON_SHUB_MAX_SNSRS) {
+			dev_err(shub->dev,
+				"Invalid number of sensors supported..!\n");
+			goto err_exit;
+		}
+		for (i = 0; i < count; i++)
+			cfg[i] = cfg_ids_resp->ids[i];
+		for (i = 0; i < count; i++) {
+			if (cfg[i] == -1)
+				continue;
+			ret = tegra_aon_shub_get_cfg(shub, cfg[i]);
+			if (ret) {
+				dev_err(shub->dev,
+					"shub_get_cfg() failed for id : %d\n",
+					cfg[i]);
+				goto err_exit;
+			}
+			nvs_of_dt(dn, &shub->snsrs[cfg[i]]->cfg, NULL);
+			shub->snsrs[cfg[i]]->genable = true;
+		}
+	}
 	mutex_unlock(&shub->shub_mutex);
 
 	shub->nvs = nvs_iio();
@@ -576,16 +819,18 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 		return -ENODEV;
 
 	for (i = 0; i < shub->snsr_cnt; i++) {
-		if (!shub->snsr[i].genable)
+		if (shub->snsrs[i] == NULL || !shub->snsrs[i]->genable)
 			continue;
-		ret = shub->nvs->probe(&shub->snsr[i].nvs_st, (void *)shub,
+		ret = shub->nvs->probe(&shub->snsrs[i]->nvs_st, (void *)shub,
 					shub->dev,  &aon_shub_nvs_fn,
-					&shub->snsr[i].cfg);
+					&shub->snsrs[i]->cfg);
 		if (!ret)
 			snsrs++;
 	}
-	if (!snsrs)
+	if (!snsrs) {
+		dev_err(shub->dev, "nvs_probe() failed..!\n");
 		return -ENODEV;
+	}
 
 	return 0;
 
@@ -673,8 +918,10 @@ static int tegra_aon_shub_probe(struct platform_device *pdev)
 	}
 
 	ret = tegra_aon_shub_init(shub);
-	if (ret)
+	if (ret) {
+		dev_err(dev, "shub init failed\n");
 		goto exit_free_mbox;
+	}
 
 	shub->adjust_ts_counter = 0;
 	#define _PICO_SECS (1000000000000ULL)

@@ -153,6 +153,7 @@ static int ohci_urb_enqueue (
 	int		i, size = 0;
 	unsigned long	flags;
 	int		retval = 0;
+	unsigned short	temp_maxpacket = 0;
 
 	/* every endpoint has a ed, locate and maybe (re)initialize it */
 	ed = ed_get(ohci, urb->ep, urb->dev, pipe, urb->interval);
@@ -172,15 +173,21 @@ static int ohci_urb_enqueue (
 		// case PIPE_INTERRUPT:
 		// case PIPE_BULK:
 		default:
+			temp_maxpacket = usb_maxpacket(urb->dev, pipe,
+						usb_pipeout(pipe));
 			size += number_of_tds(urb);
 			/* maybe a zero-length packet to wrap it up */
 			if (size == 0)
 				size++;
-			else if ((urb->transfer_flags & URB_ZERO_PACKET) != 0
-				&& (urb->transfer_buffer_length
-					% usb_maxpacket (urb->dev, pipe,
-						usb_pipeout (pipe))) == 0)
-				size++;
+			else if (temp_maxpacket) {
+				if (((urb->transfer_flags &
+					URB_ZERO_PACKET) != 0) &&
+					((urb->transfer_buffer_length %
+					temp_maxpacket) == 0))
+					size++;
+			} else
+				ohci_err(ohci,
+					"usb_maxpacket is returning zero\n");
 			break;
 		case PIPE_ISOCHRONOUS: /* number of packets from URB */
 			size = urb->number_of_packets;

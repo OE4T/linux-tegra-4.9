@@ -168,6 +168,7 @@ struct akm_state {
 	u8 data_out;			/* write value to trigger a sample */
 	s16 magn_uc[AXIS_N];		/* uncalibrated sample data */
 	s16 magn[AXIS_N + 1];		/* data after calibration + status */
+	u8 sts_dummy[6];		/* status reported to NVS is 64-bit */
 	u8 nvi_config;			/* NVI configuration */
 };
 

@@ -1582,19 +1582,26 @@ static int tegra_xhci_unpowergate_partitions(struct tegra_xusb *tegra)
 static int tegra_xhci_powergate_partitions(struct tegra_xusb *tegra)
 {
 	int ret;
+	int err;
 
 	ret = tegra_powergate_partition_with_clk_off(tegra->pgid_host);
 	if (ret) {
 		dev_err(tegra->dev, "can't powergate Host partition\n");
-		return ret;
+		goto out;
 	}
 
 	ret = tegra_powergate_partition_with_clk_off(tegra->pgid_ss);
 	if (ret) {
 		dev_err(tegra->dev, "can't powergate SS partition\n");
-		tegra_unpowergate_partition_with_clk_on(tegra->pgid_host);
+		err = tegra_unpowergate_partition_with_clk_on
+						(tegra->pgid_host);
+		if (err) {
+			dev_err(tegra->dev, "can't unpowergate host partition\n");
+			goto out;
+		}
 	}
 
+out:
 	return ret;
 }
 
@@ -3043,7 +3050,11 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
 			if (!do_wakeup)
 				phy_init(tegra->typed_phys[i][j]);
-			phy_power_on(tegra->typed_phys[i][j]);
+			ret = phy_power_on(tegra->typed_phys[i][j]);
+			if (ret) {
+				dev_err(dev, "phy_power_on failed");
+				goto out;
+			}
 		}
 	}
 

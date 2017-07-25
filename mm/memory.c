@@ -2703,6 +2703,7 @@ out_release:
 }
 
 bool is_vma_temporary_stack(struct vm_area_struct *vma);
+
 /*
  * We enter with non-exclusive mmap_sem (to exclude vma changes,
  * but allow concurrent faults), and pte mapped but not yet locked.

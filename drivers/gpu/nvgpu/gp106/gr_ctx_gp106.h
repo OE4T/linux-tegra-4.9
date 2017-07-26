@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #define GP106_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_C
 #define GP104_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_D
 
-void gp106_init_gr_ctx(struct gpu_ops *gops);
+int gr_gp106_get_netlist_name(struct gk20a *g, int index, char *name);
+bool gr_gp106_is_firmware_defined(void);
 
 #endif /*__GR_CTX_GP106_H__*/

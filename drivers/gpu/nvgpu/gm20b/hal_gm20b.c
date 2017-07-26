@@ -268,6 +268,10 @@ static const struct gpu_ops gm20b_ops = {
 		.get_syncpt_incr_cmd_size = gk20a_fifo_get_syncpt_incr_cmd_size,
 #endif
 	},
+	.gr_ctx = {
+		.get_netlist_name = gr_gm20b_get_netlist_name,
+		.is_fw_defined = gr_gm20b_is_firmware_defined,
+	},
 	.mc = {
 		.intr_enable = mc_gk20a_intr_enable,
 		.intr_unit_config = mc_gk20a_intr_unit_config,
@@ -339,6 +343,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->ce2 = gm20b_ops.ce2;
 	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->fifo = gm20b_ops.fifo;
+	gops->gr_ctx = gm20b_ops.gr_ctx;
 	gops->mc = gm20b_ops.mc;
 	gops->dbg_session_ops = gm20b_ops.dbg_session_ops;
 	gops->debug = gm20b_ops.debug;
@@ -356,6 +361,7 @@ int gm20b_init_hal(struct gk20a *g)
 		gm20b_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = gm20b_ops.get_litter_value;
 
+	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 
@@ -389,7 +395,6 @@ int gm20b_init_hal(struct gk20a *g)
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 	gm20b_init_gr(g);
 	gm20b_init_fb(gops);
-	gm20b_init_gr_ctx(gops);
 	gm20b_init_mm(gops);
 	gm20b_init_pmu_ops(g);
 	gm20b_init_clk_ops(gops);

@@ -1,7 +1,7 @@
 /*
  * GM20B Graphics Context
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 /*#undef GM20B_NETLIST_IMAGE_FW_NAME*/
 #define GM20B_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_B
 
-void gm20b_init_gr_ctx(struct gpu_ops *gops);
+int gr_gm20b_get_netlist_name(struct gk20a *g, int index, char *name);
+bool gr_gm20b_is_firmware_defined(void);
 
 #endif /*__GR_CTX_GM20B_H__*/

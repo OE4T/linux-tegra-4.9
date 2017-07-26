@@ -279,6 +279,10 @@ static const struct gpu_ops gp10b_ops = {
 		.resetup_ramfc = gp10b_fifo_resetup_ramfc,
 		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
 	},
+	.gr_ctx = {
+		.get_netlist_name = gr_gp10b_get_netlist_name,
+		.is_fw_defined = gr_gp10b_is_firmware_defined,
+	},
 	.mc = {
 		.intr_enable = mc_gp10b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -352,6 +356,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->ce2 = gp10b_ops.ce2;
 	gops->clock_gating = gp10b_ops.clock_gating;
 	gops->fifo = gp10b_ops.fifo;
+	gops->gr_ctx = gp10b_ops.gr_ctx;
 	gops->mc = gp10b_ops.mc;
 	gops->debug = gp10b_ops.debug;
 	gops->dbg_session_ops = gp10b_ops.dbg_session_ops;
@@ -369,6 +374,7 @@ int gp10b_init_hal(struct gk20a *g)
 		gp10b_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = gp10b_ops.get_litter_value;
 
+	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 
 #ifdef CONFIG_TEGRA_ACR
@@ -412,7 +418,6 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_gr(g);
 	gp10b_init_fecs_trace_ops(gops);
 	gp10b_init_fb(gops);
-	gp10b_init_gr_ctx(gops);
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(g);
 	gp10b_init_regops(gops);

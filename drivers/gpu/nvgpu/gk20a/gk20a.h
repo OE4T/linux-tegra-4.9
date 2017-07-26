@@ -663,7 +663,6 @@ struct gpu_ops {
 	struct {
 		int (*get_netlist_name)(struct gk20a *g, int index, char *name);
 		bool (*is_fw_defined)(void);
-		bool use_dma_for_fw_bootstrap;
 	} gr_ctx;
 	struct {
 		int (*init)(struct gk20a *g);

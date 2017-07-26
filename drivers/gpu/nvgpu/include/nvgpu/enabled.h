@@ -27,7 +27,7 @@ struct gk20a;
  */
 #define NVGPU_IS_FMODEL				1
 #define NVGPU_DRIVER_IS_DYING			2
-
+#define NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP 3
 /*
  * MM flags.
  */

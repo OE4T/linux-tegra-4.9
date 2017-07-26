@@ -3,7 +3,7 @@
  *
  * GM20B Graphics Context
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,7 +22,7 @@
 #include "gk20a/gk20a.h"
 #include "gr_ctx_gp10b.h"
 
-static int gr_gp10b_get_netlist_name(struct gk20a *g, int index, char *name)
+int gr_gp10b_get_netlist_name(struct gk20a *g, int index, char *name)
 {
 	switch (index) {
 #ifdef GP10B_NETLIST_IMAGE_FW_NAME
@@ -57,17 +57,11 @@ static int gr_gp10b_get_netlist_name(struct gk20a *g, int index, char *name)
 	return -1;
 }
 
-static bool gr_gp10b_is_firmware_defined(void)
+bool gr_gp10b_is_firmware_defined(void)
 {
 #ifdef GP10B_NETLIST_IMAGE_FW_NAME
 	return true;
 #else
 	return false;
 #endif
-}
-
-void gp10b_init_gr_ctx(struct gpu_ops *gops) {
-	gops->gr_ctx.get_netlist_name = gr_gp10b_get_netlist_name;
-	gops->gr_ctx.is_fw_defined = gr_gp10b_is_firmware_defined;
-	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
 }

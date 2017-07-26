@@ -313,6 +313,10 @@ static const struct gpu_ops gp106_ops = {
 		.resetup_ramfc = gp10b_fifo_resetup_ramfc,
 		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
 	},
+	.gr_ctx = {
+		.get_netlist_name = gr_gp106_get_netlist_name,
+		.is_fw_defined = gr_gp106_is_firmware_defined,
+	},
 	.mc = {
 		.intr_enable = mc_gp10b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -403,6 +407,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->ce2 = gp106_ops.ce2;
 	gops->clock_gating = gp106_ops.clock_gating;
 	gops->fifo = gp106_ops.fifo;
+	gops->gr_ctx = gp106_ops.gr_ctx;
 	gops->mc = gp106_ops.mc;
 	gops->debug = gp106_ops.debug;
 	gops->dbg_session_ops = gp106_ops.dbg_session_ops;
@@ -421,6 +426,7 @@ int gp106_init_hal(struct gk20a *g)
 		gp106_ops.chip_init_gpu_characteristics;
 	gops->bios_init = gp106_ops.bios_init;
 
+	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
 	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, true);
@@ -429,7 +435,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_gr(g);
 	gp10b_init_fecs_trace_ops(gops);
 	gp106_init_fb(gops);
-	gp106_init_gr_ctx(gops);
 	gp106_init_mm(gops);
 	gp106_init_pmu_ops(g);
 	gp106_init_clk_ops(gops);
@@ -439,7 +444,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_therm_ops(gops);
 
 	g->name = "gp10x";
-	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = PASCAL_B;

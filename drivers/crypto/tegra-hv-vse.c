@@ -575,10 +575,18 @@ static int tegra_hv_vse_count_sgs(struct scatterlist *sl, u32 nbytes)
 
 static int tegra_hv_vse_sha_init(struct ahash_request *req)
 {
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-	struct tegra_virtual_se_sha_context *sha_ctx = crypto_ahash_ctx(tfm);
+	struct crypto_ahash *tfm;
+	struct tegra_virtual_se_sha_context *sha_ctx;
 
 	if (!req)
+		return -EINVAL;
+
+	tfm = crypto_ahash_reqtfm(req);
+	if (!tfm)
+		return -EINVAL;
+
+	sha_ctx = crypto_ahash_ctx(tfm);
+	if (!sha_ctx)
 		return -EINVAL;
 
 	sha_ctx->digest_size = crypto_ahash_digestsize(tfm);
@@ -624,8 +632,8 @@ static int tegra_hv_vse_sha_finup(struct ahash_request *req)
 
 static int tegra_hv_vse_sha_final(struct ahash_request *req)
 {
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-	struct tegra_virtual_se_sha_context *sha_ctx = crypto_ahash_ctx(tfm);
+	struct crypto_ahash *tfm;
+	struct tegra_virtual_se_sha_context *sha_ctx;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
 	struct scatterlist *sg;
 	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
@@ -678,8 +686,22 @@ static int tegra_hv_vse_sha_final(struct ahash_request *req)
 		}
 	};
 
-	if (!req)
+	if (!req) {
+		dev_err(se_dev->dev, "SHA request not valid\n");
 		return -EINVAL;
+	}
+
+	tfm = crypto_ahash_reqtfm(req);
+	if (!tfm) {
+		dev_err(se_dev->dev, "SHA transform not valid\n");
+		return -EINVAL;
+	}
+
+	sha_ctx = crypto_ahash_ctx(tfm);
+	if (!sha_ctx) {
+		dev_err(se_dev->dev, "SHA context not valid\n");
+		return -EINVAL;
+	}
 
 	if (!req->nbytes) {
 		/*

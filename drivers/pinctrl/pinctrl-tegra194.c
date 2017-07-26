@@ -405,6 +405,7 @@ static struct tegra_function tegra194_functions[] = {
 		.mux_reg = -1,					\
 		.pupd_reg = -1,					\
 		.tri_reg = -1,					\
+		.lpbk_reg = -1,					\
 		.einput_bit = -1,				\
 		.e_io_hv_bit = -1,				\
 		.odrain_bit = -1,				\
@@ -415,6 +416,7 @@ static struct tegra_function tegra194_functions[] = {
 		.lpdr_bit = -1,					\
 		.pbias_buf_bit = -1,				\
 		.preemp_bit = -1,				\
+		.lpbk_bit = -1,					\
 		.rfu_in_bit = -1
 
 #define PIN_PINGROUP_ENTRY_Y(r, bank, pupd, e_io_hv, e_input,	\
@@ -445,7 +447,9 @@ static struct tegra_function tegra194_functions[] = {
 		.preemp_bit = epreemp,				\
 		.rfu_in_bit = 20,				\
 		.drv_reg = -1,					\
-		.lpbk_bit = -1,					\
+		.lpbk_reg = PINGROUP_REG_Y(r),			\
+		.lpbk_bank = bank,				\
+		.lpbk_bit = e_io_hv,				\
 		.pwr_domain = #io_rail
 
 #define drive_touch_clk_pcc4            DRV_PINGROUP_ENTRY_Y(0x2004,	12,	5,	20,	5,	-1,	-1,	-1,	-1,	1)

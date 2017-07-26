@@ -1076,9 +1076,9 @@
 			iommus = <&smmu TEGRA_SID_ISPFALC>;
 		};
 
-		nvcsi@150c0000 {
+		nvcsi@15a00000 {
 			compatible = "nvidia,tegra194-nvcsi";
-			reg = <0x0 0x150c0000 0x0 0x00040000>;
+			reg = <0x0 0x15a00000 0x0 0x00050000>;
 			resets = <&bpmp_resets TEGRA194_RESET_NVCSI>;
 			clocks = <&bpmp_clks TEGRA194_CLK_NVCSI>,
 				 <&bpmp_clks TEGRA194_CLK_NVCSILP>,

@@ -14,12 +14,11 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "gv11b/mm_gv11b.h"
 #include "gv100/mm_gv100.h"
 
 #include <nvgpu/hw/gv100/hw_fb_gv100.h>
 
-static size_t gv100_mm_get_vidmem_size(struct gk20a *g)
+size_t gv100_mm_get_vidmem_size(struct gk20a *g)
 {
 	u32 range = gk20a_readl(g, fb_mmu_local_memory_range_r());
 	u32 mag = fb_mmu_local_memory_range_lower_mag_v(range);
@@ -31,11 +30,4 @@ static size_t gv100_mm_get_vidmem_size(struct gk20a *g)
 		bytes = bytes / 16 * 15;
 
 	return bytes;
-}
-
-void gv100_init_mm(struct gpu_ops *gops)
-{
-	gv11b_init_mm(gops);
-	gops->mm.get_vidmem_size = gv100_mm_get_vidmem_size;
-	gops->mm.get_physical_addr_bits = NULL;
 }

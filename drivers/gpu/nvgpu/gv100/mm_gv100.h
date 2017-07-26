@@ -16,8 +16,8 @@
 #ifndef MM_GV100_H
 #define MM_GV100_H
 
-struct gpu_ops;
+struct gk20a;
 
-void gv100_init_mm(struct gpu_ops *gops);
+size_t gv100_mm_get_vidmem_size(struct gk20a *g);
 
 #endif

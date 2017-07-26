@@ -31,11 +31,13 @@
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/fb_gk20a.h"
+#include "gk20a/mm_gk20a.h"
 
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/fb_gm20b.h"
+#include "gm20b/mm_gm20b.h"
 
 #include "gp10b/fb_gp10b.h"
 
@@ -55,6 +57,7 @@
 #include "gp10b/priv_ring_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
+#include "gp10b/mm_gp10b.h"
 
 #include "gv11b/hal_gv11b.h"
 #include "gv11b/gr_gv11b.h"
@@ -63,7 +66,7 @@
 #include "gv11b/gv11b.h"
 #include "gv11b/ce_gv11b.h"
 #include "gv100/gr_ctx_gv100.h"
-#include "gv100/mm_gv100.h"
+#include "gv11b/mm_gv11b.h"
 #include "gv11b/pmu_gv11b.h"
 #include "gv11b/fb_gv11b.h"
 #include "gv11b/fifo_gv11b.h"
@@ -74,6 +77,7 @@
 #include "gv100.h"
 #include "hal_gv100.h"
 #include "gv100/fb_gv100.h"
+#include "gv100/mm_gv100.h"
 
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
@@ -310,6 +314,32 @@ static const struct gpu_ops gv100_ops = {
 		.max_entries = gk20a_gr_max_entries,
 	},
 #endif /* CONFIG_GK20A_CTXSW_TRACE */
+	.mm = {
+		.support_sparse = gm20b_mm_support_sparse,
+		.gmmu_map = gk20a_locked_gmmu_map,
+		.gmmu_unmap = gk20a_locked_gmmu_unmap,
+		.vm_bind_channel = gk20a_vm_bind_channel,
+		.fb_flush = gk20a_mm_fb_flush,
+		.l2_invalidate = gk20a_mm_l2_invalidate,
+		.l2_flush = gv11b_mm_l2_flush,
+		.cbc_clean = gk20a_mm_cbc_clean,
+		.set_big_page_size = gm20b_mm_set_big_page_size,
+		.get_big_page_sizes = gm20b_mm_get_big_page_sizes,
+		.get_default_big_page_size = gp10b_mm_get_default_big_page_size,
+		.gpu_phys_addr = gv11b_gpu_phys_addr,
+		.get_physical_addr_bits = NULL,
+		.get_mmu_levels = gp10b_mm_get_mmu_levels,
+		.get_vidmem_size = gv100_mm_get_vidmem_size,
+		.init_pdb = gp10b_mm_init_pdb,
+		.init_mm_setup_hw = gv11b_init_mm_setup_hw,
+		.is_bar1_supported = gv11b_mm_is_bar1_supported,
+		.init_inst_block = gv11b_init_inst_block,
+		.mmu_fault_pending = gv11b_mm_mmu_fault_pending,
+		.init_bar2_vm = gb10b_init_bar2_vm,
+		.init_bar2_mm_hw_setup = gv11b_init_bar2_mm_hw_setup,
+		.remove_bar2_vm = gv11b_mm_remove_bar2_vm,
+		.fault_info_mem_destroy = gv11b_mm_fault_info_mem_destroy,
+	},
 	.pramin = {
 		.enter = gk20a_pramin_enter,
 		.exit = gk20a_pramin_exit,
@@ -446,7 +476,6 @@ int gv100_init_hal(struct gk20a *g)
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 
 	gv11b_init_gr(g);
-	gv100_init_mm(gops);
 	gp106_init_pmu_ops(g);
 
 	gv11b_init_uncompressed_kind_map();

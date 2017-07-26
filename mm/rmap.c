@@ -61,6 +61,7 @@
 #include <linux/hugetlb.h>
 #include <linux/backing-dev.h>
 #include <linux/page_idle.h>
+#include <linux/memremap.h>
 
 #include <asm/tlbflush.h>
 
@@ -778,19 +779,33 @@ pte_t *__page_check_address(struct page *page, struct mm_struct *mm,
 		return NULL;
 
 	pte = pte_offset_map(pmd, address);
+
 	/* Make a quick check before getting the lock */
-	if (!sync && !pte_present(*pte)) {
+	if (!sync && (!pte_present(*pte) && !is_device_private_page(page))) {
 		pte_unmap(pte);
 		return NULL;
 	}
 
 	ptl = pte_lockptr(mm, pmd);
+
 check:
 	spin_lock(ptl);
 	if (pte_present(*pte) && page_to_pfn(page) == pte_pfn(*pte)) {
 		*ptlp = ptl;
 		return pte;
 	}
+
+	if (is_swap_pte(*pte) && is_device_private_page(page)) {
+		swp_entry_t entry;
+
+		entry = pte_to_swp_entry(*pte);
+		if (is_device_private_entry(entry) &&
+		    device_private_entry_to_page(entry) == page) {
+			*ptlp = ptl;
+			return pte;
+		}
+	}
+
 	pte_unmap_unlock(pte, ptl);
 	return NULL;
 }
@@ -1495,6 +1510,25 @@ static int try_to_unmap_one(struct page *page, struct vm_area_struct *vma,
 				 PageTransCompound(page));
 	if (!pte)
 		goto out;
+
+	if (IS_ENABLED(CONFIG_MIGRATION) &&
+	    (flags & TTU_MIGRATION) &&
+	    is_zone_device_page(page)) {
+		swp_entry_t entry;
+		pte_t swp_pte;
+
+		pteval = ptep_get_and_clear(mm, address, pte);
+
+		/*
+		 * Store the pfn of the page in a special migration
+		 * pte. do_swap_page() will wait until the migration
+		 * pte is removed and then restart fault handling.
+		 */
+		entry = make_migration_entry(page, 0);
+		swp_pte = swp_entry_to_pte(entry);
+		set_pte_at(mm, address, pte, swp_pte);
+		goto discard;
+	}
 
 	/*
 	 * If the page is mlock()d, we cannot swap it out.

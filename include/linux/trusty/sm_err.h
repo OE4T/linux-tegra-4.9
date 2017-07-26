@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013 Google Inc. All rights reserved
+ * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -39,5 +40,6 @@
 #define SM_ERR_CPU_IDLE			-13	/* SMC call waiting for another CPU */
 #define SM_ERR_NOP_INTERRUPTED		-14	/* Got interrupted. Call back with new SMC_SC_NOP */
 #define SM_ERR_NOP_DONE			-15	/* Cpu idle after SMC_SC_NOP (not an error) */
+#define SM_ERR_NOP_RETRY		-16	/* Retry the previous NOP smc as the first may not have reached TOS */
 
 #endif

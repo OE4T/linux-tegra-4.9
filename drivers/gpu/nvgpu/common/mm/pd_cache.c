@@ -142,14 +142,13 @@ int __nvgpu_pd_cache_alloc_direct(struct gk20a *g,
 
 	pd->mem = nvgpu_kzalloc(g, sizeof(*pd->mem));
 	if (!pd->mem) {
-		pd_dbg(g, "OOM allocating nvgpu_mem struct!");
+		nvgpu_err(g, "OOM allocating nvgpu_mem struct!");
 		return -ENOMEM;
 	}
 
-	err = nvgpu_dma_alloc_flags(g, NVGPU_DMA_FORCE_CONTIGUOUS,
-				    bytes, pd->mem);
+	err = nvgpu_dma_alloc(g, bytes, pd->mem);
 	if (err) {
-		pd_dbg(g, "OOM allocating page directory!");
+		nvgpu_err(g, "OOM allocating page directory!");
 		nvgpu_kfree(g, pd->mem);
 		return -ENOMEM;
 	}
@@ -175,14 +174,13 @@ static int nvgpu_pd_cache_alloc_new(struct gk20a *g,
 
 	pentry = nvgpu_kzalloc(g, sizeof(*pentry));
 	if (!pentry) {
-		pd_dbg(g, "OOM allocating pentry!");
+		nvgpu_err(g, "OOM allocating pentry!");
 		return -ENOMEM;
 	}
 
-	if (nvgpu_dma_alloc_flags(g, NVGPU_DMA_FORCE_CONTIGUOUS,
-				  PAGE_SIZE, &pentry->mem)) {
+	if (nvgpu_dma_alloc(g, PAGE_SIZE, &pentry->mem)) {
 		nvgpu_kfree(g, pentry);
-		pd_dbg(g, "Unable to DMA alloc!");
+		nvgpu_err(g, "Unable to DMA alloc!");
 		return -ENOMEM;
 	}
 
@@ -295,7 +293,7 @@ static int nvgpu_pd_cache_alloc(struct gk20a *g, struct nvgpu_pd_cache *cache,
 		err = nvgpu_pd_cache_alloc_from_partial(g, cache, pentry, pd);
 
 	if (err)
-		pd_dbg(g, "PD-Alloc [C] Failed!");
+		nvgpu_err(g, "PD-Alloc [C] Failed!");
 
 	return err;
 }

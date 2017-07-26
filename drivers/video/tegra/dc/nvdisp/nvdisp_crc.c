@@ -20,6 +20,7 @@
 #include "dc_priv.h"
 #include "dc_priv_defs.h"
 #include "hw_nvdisp_nvdisp.h"
+#include "nvdisp_priv.h"
 
 static struct tegra_nvdisp_rg_region_regs {
 	u32 point;

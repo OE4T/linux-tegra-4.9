@@ -1175,10 +1175,18 @@ error:
 static void tegra_channel_free_sensor_properties(
 		const struct v4l2_subdev *sensor_sd)
 {
-	struct device *sensor_dev = sensor_sd->dev;
-	struct camera_common_data *s_data = to_camera_common_data(sensor_dev);
+	struct device *sensor_dev;
+	struct camera_common_data *s_data;
 
-	if (sensor_dev == NULL || s_data == NULL)
+	if (sensor_sd == NULL)
+		return;
+
+	sensor_dev = sensor_sd->dev;
+	if (sensor_dev == NULL)
+		return;
+
+	s_data = to_camera_common_data(sensor_dev);
+	if (s_data == NULL)
 		return;
 
 	if (s_data->sensor_props.sensor_modes)
@@ -1190,10 +1198,18 @@ static void tegra_channel_free_sensor_properties(
 static int tegra_channel_init_sensor_properties(
 		const struct v4l2_subdev *sensor_sd)
 {
-	struct device *sensor_dev = sensor_sd->dev;
-	struct camera_common_data *s_data = to_camera_common_data(sensor_dev);
+	struct device *sensor_dev;
+	struct camera_common_data *s_data;
 
-	if (sensor_dev == NULL || s_data == NULL)
+	if (sensor_sd == NULL)
+		return -EINVAL;
+
+	sensor_dev = sensor_sd->dev;
+	if (sensor_dev == NULL)
+		return -EINVAL;
+
+	s_data = to_camera_common_data(sensor_dev);
+	if (s_data == NULL)
 		return -EINVAL;
 
 	return sensor_common_init_sensor_properties(sensor_dev,

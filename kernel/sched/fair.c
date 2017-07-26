@@ -54,7 +54,7 @@ unsigned int sysctl_sched_latency = 6000000ULL;
 unsigned int normalized_sysctl_sched_latency = 6000000ULL;
 
 unsigned int sysctl_sched_is_big_little = 1;
-unsigned int sysctl_sched_sync_hint_enable = 1;
+unsigned int sysctl_sched_sync_hint_enable = 0;
 unsigned int sysctl_sched_initial_task_util = 0;
 unsigned int sysctl_sched_cstate_aware = 1;
 
@@ -133,6 +133,7 @@ unsigned int sysctl_sched_cfs_bandwidth_slice = 5000UL;
  * util * 1024 < capacity * margin
  */
 unsigned int capacity_margin = 1280; /* ~20% */
+static unsigned int capacity_down_margin = 1706;
 
 static inline void update_load_add(struct load_weight *lw, unsigned long inc)
 {
@@ -6592,9 +6593,10 @@ static inline int find_best_target(struct task_struct *p, bool boosted, bool pre
 static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
 {
 	struct sched_domain *sd;
-	struct sched_group *sg, *sg_target;
+	struct sched_group *sg, *sg_target, *prev_sg = NULL;
 	int target_max_cap = INT_MAX;
 	int target_cpu = task_cpu(p);
+	int prev_cap = capacity_orig_of(target_cpu);
 	unsigned long task_util_boosted, new_util;
 	int i;
 
@@ -6637,7 +6639,16 @@ static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
 				sg_target = sg;
 				target_max_cap = capacity_of(max_cap_cpu);
 			}
+			if (cpumask_test_cpu(target_cpu, sched_group_cpus(sg)))
+				prev_sg = sg;
 		} while (sg = sg->next, sg != sd->groups);
+
+		/* Hysteresis when moving to a lower capacity CPU */
+		if ((prev_cap > target_max_cap) && prev_sg) {
+			if (task_util(p) * capacity_down_margin >
+					target_max_cap * 1024)
+				sg_target = prev_sg;
+		}
 
 		task_util_boosted = boosted_task_util(p);
 		/* Find cpu with sufficient capacity */

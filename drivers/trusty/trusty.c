@@ -435,6 +435,21 @@ static void nop_work_func(struct work_struct *work)
 		ret = trusty_std_call32(s->dev, SMC_SC_NOP,
 					args[0], args[1], args[2]);
 
+		/*
+		 * In certain cases a NOP smc may have to be re-tried with the original
+		 * parameters as the first call may not have registered/reached the trusty kernel.
+		 * Example:
+		 * In virtualization use case, if a guest's VIRQ is pending at
+		 * the hypervisor, the HV returns the control back to the guest
+		 * without transitioning to TOS. This ensures that the guest's IRQ is handled
+		 * in the shortest time and guest interrupt latency is minimized.
+		 * In such a case, since the request hasn't even reached the TOS, just restarting
+		 * the old smc with parameters as 0 or new set of parameters causes the original
+		 * request/smc to get dropped causing unexpected results.
+		 */
+		if (ret == SM_ERR_NOP_RETRY)
+			continue;
+
 		next = dequeue_nop(s, args);
 
 		if (ret == SM_ERR_NOP_INTERRUPTED)

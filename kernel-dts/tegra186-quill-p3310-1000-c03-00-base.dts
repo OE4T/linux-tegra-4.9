@@ -19,9 +19,6 @@
 	nvidia,dtsfilename = __FILE__;
 	nvidia,dtbbuildtime = __DATE__, __TIME__;
 
-        nvidia,boardids = "3310:0000:C03";
-        nvidia,proc-boardid = "3310:0000:C03";
-
 	pinmux@2430000 {
 		common {
 			gpio_edp2_pp5 {

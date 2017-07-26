@@ -426,6 +426,7 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2,
 	TEGRA_DC_EXT_FLIP_USER_DATA_OUTPUT_CSC,
 	TEGRA_DC_EXT_FLIP_USER_DATA_GET_FLIP_INFO,
+	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_PROPOSE, /* placeholder for new IMP */
 };
 
 /*
@@ -494,6 +495,52 @@ struct tegra_dc_ext_imp_settings {
 	__u64 __user session_id_ptr; /* out - ptr to unsigned 64-bit val */
 	__u64 reserved[4]; /* reserved - must be 0 */
 };
+
+/* Will be used once kernel moves to the new IMP design */
+struct tegra_dc_ext_nvdisp_imp_win_settings {
+	__u8 id;
+
+	__s8 thread_group;
+	__u16 fetch_slots;
+	__u32 pipe_meter;
+	__u64 dvfs_watermark;
+	__u64 min_mempool_entries;
+	__u64 mempool_entries;
+
+	__u64 reserved[4]; /* must be 0 */
+} __attribute__((__packed__));
+
+/* Will be used once kernel moves to the new IMP design */
+struct tegra_dc_ext_nvdisp_imp_head_settings {
+	__u16 curs_fetch_slots;
+	__u32 curs_pipe_meter;
+	__u64 curs_dvfs_watermark;
+	__u64 curs_min_mempool_entries;
+	__u64 curs_mempool_entries;
+
+	struct tegra_dc_ext_nvdisp_imp_win_settings __user *win_settings;
+	__u8 num_wins;
+
+	__u64 reserved[4]; /* must be 0 */
+} __attribute__((__packed__));
+
+/* Will be used once kernel moves to the new IMP design */
+struct tegra_dc_ext_nvdisp_imp_settings {
+	/* Global settings */
+	__u16 total_win_fetch_slots;
+	__u16 total_curs_fetch_slots;
+	__u64 emc_floor_hz;
+	__u64 min_hubclk_hz;
+	__u64 total_iso_bw_with_catchup_kBps;
+	__u64 total_iso_bw_without_catchup_kBps;
+
+	/* Per-head settings */
+	struct tegra_dc_ext_nvdisp_imp_head_settings __user *head_settings;
+	__u8 num_heads;
+
+	__u64 session_id;
+	__u64 reserved[4]; /* must be 0 */
+} __attribute__((__packed__));
 
 /*
  * Variable settings is a pointer to tegra_dc_ext_imp_settings.

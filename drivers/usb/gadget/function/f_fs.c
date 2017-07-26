@@ -2829,8 +2829,10 @@ static int __ffs_func_bind_do_os_desc(enum ffs_os_desc_type type,
 		t = &func->function.os_desc_table[desc->bFirstInterfaceNumber];
 		t->if_id = func->interfaces_nums[desc->bFirstInterfaceNumber];
 		memcpy(t->os_desc->ext_compat_id, &desc->CompatibleID,
-		       ARRAY_SIZE(desc->CompatibleID) +
-		       ARRAY_SIZE(desc->SubCompatibleID));
+			ARRAY_SIZE(desc->CompatibleID));
+		memcpy(t->os_desc->ext_compat_id +
+			ARRAY_SIZE(desc->CompatibleID), &desc->SubCompatibleID,
+			ARRAY_SIZE(desc->SubCompatibleID));
 		length = sizeof(*desc);
 	}
 		break;

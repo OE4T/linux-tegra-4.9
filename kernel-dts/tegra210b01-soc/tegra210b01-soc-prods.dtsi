@@ -55,6 +55,21 @@
 					1 0xDC 0x00001100 0x00000000
 					1 0xE0 0x00001100 0x00000000>;
 			};
+			dmic1_prod {
+				nvidia,prod-boot-init;
+				prod = <0 0xB0 0x01F1F000 0x01F1F000
+					0 0xB4 0x01F1F000 0x01F1F000>;
+			};
+			dmic2_prod {
+				nvidia,prod-boot-init;
+				prod = <0 0xB8 0x01F1F000 0x01F1F000
+					0 0xBC 0x01F1F000 0x01F1F000>;
+			};
+			dmic3_prod {
+				nvidia,prod-boot-init;
+				prod = <0 0xC0 0x01F1F000 0x01F1F000
+					0 0xC4 0x01F1F000 0x01F1F000>;
+			};
 		};
 	};
 

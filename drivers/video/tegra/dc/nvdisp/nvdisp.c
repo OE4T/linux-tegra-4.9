@@ -1373,39 +1373,23 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	tegra_dc_get(dc);
 
 	tegra_dc_program_bandwidth(dc, true);
+
 	tegra_dc_writel(dc,
 		nvdisp_sync_width_h_f(mode->h_sync_width) |
 		nvdisp_sync_width_v_f(v_sync_width),
 		nvdisp_sync_width_r());
-	if ((dc->out->type == TEGRA_DC_OUT_DP) ||
-		(dc->out->type == TEGRA_DC_OUT_FAKE_DP) ||
-		(dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
-		(dc->out->type == TEGRA_DC_OUT_LVDS)) {
-		tegra_dc_writel(dc,
-			nvdisp_back_porch_h_f(mode->h_back_porch) |
-			nvdisp_back_porch_v_f(
-				(v_back_porch - mode->v_ref_to_sync)),
-			nvdisp_back_porch_r());
-		tegra_dc_writel(dc,
-			nvdisp_front_porch_h_f(mode->h_front_porch) |
-			nvdisp_front_porch_v_f(
-				(v_front_porch + mode->v_ref_to_sync)),
-			nvdisp_front_porch_r());
-	} else {
-		tegra_dc_writel(dc,
-			nvdisp_back_porch_h_f(mode->h_back_porch) |
-			nvdisp_back_porch_v_f(v_back_porch),
-			nvdisp_back_porch_r());
-		tegra_dc_writel(dc,
-			nvdisp_front_porch_h_f(mode->h_front_porch) |
-			nvdisp_front_porch_v_f(v_front_porch),
-			nvdisp_front_porch_r());
-	}
 	tegra_dc_writel(dc,
-			nvdisp_active_h_f(mode->h_active) |
-			nvdisp_active_v_f(v_active),
-			nvdisp_active_r());
-
+		nvdisp_back_porch_h_f(mode->h_back_porch) |
+		nvdisp_back_porch_v_f(v_back_porch),
+		nvdisp_back_porch_r());
+	tegra_dc_writel(dc,
+		nvdisp_front_porch_h_f(mode->h_front_porch) |
+		nvdisp_front_porch_v_f(v_front_porch),
+		nvdisp_front_porch_r());
+	tegra_dc_writel(dc,
+		nvdisp_active_h_f(mode->h_active) |
+		nvdisp_active_v_f(v_active),
+		nvdisp_active_r());
 
 #if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (mode->vmode == FB_VMODE_INTERLACED)

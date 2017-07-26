@@ -9,7 +9,6 @@ nvgpu-y += \
 	$(nvgpu-t19x)/gv11b/hal_gv11b.o \
 	$(nvgpu-t19x)/gv11b/gv11b_gating_reglist.o \
 	$(nvgpu-t19x)/gv11b/gr_gv11b.o \
-	$(nvgpu-t19x)/gv11b/fecs_trace_gv11b.o \
 	$(nvgpu-t19x)/gv11b/fb_gv11b.o \
 	$(nvgpu-t19x)/gv11b/fifo_gv11b.o \
 	$(nvgpu-t19x)/gv11b/mm_gv11b.o \

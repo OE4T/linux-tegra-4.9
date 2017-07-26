@@ -115,7 +115,7 @@ static const struct cfg_param {
 	{"nvidia,rcv-sel",		TEGRA_PINCONF_PARAM_RCV_SEL},
 	{"nvidia,io-hv",		TEGRA_PINCONF_PARAM_RCV_SEL},
 	{"nvidia,io-high-voltage",	TEGRA_PINCONF_PARAM_E_IO_HV},
-	{"nvidia,loopback",		TEGRA_PINCONF_PARAM_E_IO_HV},
+	{"nvidia,loopback",		TEGRA_PINCONF_PARAM_LOOPBACK},
 	{"nvidia,high-speed-mode",	TEGRA_PINCONF_PARAM_HIGH_SPEED_MODE},
 	{"nvidia,schmitt",		TEGRA_PINCONF_PARAM_SCHMITT},
 	{"nvidia,low-power-mode",	TEGRA_PINCONF_PARAM_LOW_POWER_MODE},
@@ -465,16 +465,16 @@ static int tegra_pinconf_reg(struct tegra_pmx *pmx,
 		*bit = g->rcv_sel_bit;
 		*width = 1;
 		break;
+	case TEGRA_PINCONF_PARAM_LOOPBACK:
+		*bank = g->lpbk_bank;
+		*reg = g->lpbk_reg;
+		*bit = g->lpbk_bit;
+		*width = 1;
+		break;
 	case TEGRA_PINCONF_PARAM_E_IO_HV:
-		if (g->lpbk_bit == -1) {
-			*bank = g->mux_bank;
-			*reg = g->mux_reg;
-			*bit = g->e_io_hv_bit;
-		} else {
-			*bank = g->drv_bank;
-			*reg = g->drv_reg;
-			*bit = g->lpbk_bit;
-		}
+		*bank = g->mux_bank;
+		*reg = g->mux_reg;
+		*bit = g->e_io_hv_bit;
 		*width = 1;
 		break;
 	case TEGRA_PINCONF_PARAM_HIGH_SPEED_MODE:

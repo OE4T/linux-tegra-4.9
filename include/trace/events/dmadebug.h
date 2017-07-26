@@ -33,8 +33,6 @@
 #include <linux/dma-debug.h>
 #include <asm/io.h>
 
-char *__weak debug_dma_platformdata(struct device *dev);
-
 DECLARE_EVENT_CLASS(dmadebug,
 	TP_PROTO(struct device *dev, dma_addr_t dma_addr, size_t size, \
 		struct page *page),

@@ -2014,14 +2014,6 @@ static int __init dma_debug_do_init(void)
 }
 fs_initcall(dma_debug_do_init);
 
-char *__weak debug_dma_platformdata(struct device *dev)
-{
-	/* empty string by default */
-	static char buf[1];
-
-	return buf;
-}
-
 #ifdef CONFIG_ARM_DMA_USE_IOMMU
 
 /* IOMMU */

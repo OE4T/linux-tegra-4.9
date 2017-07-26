@@ -15,6 +15,8 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
+#include "gk20a/ctxsw_trace_gk20a.h"
+#include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/bus_gk20a.h"
@@ -283,6 +285,24 @@ static const struct gpu_ops gp10b_ops = {
 		.get_netlist_name = gr_gp10b_get_netlist_name,
 		.is_fw_defined = gr_gp10b_is_firmware_defined,
 	},
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	.fecs_trace = {
+		.alloc_user_buffer = gk20a_ctxsw_dev_ring_alloc,
+		.free_user_buffer = gk20a_ctxsw_dev_ring_free,
+		.mmap_user_buffer = gk20a_ctxsw_dev_mmap_buffer,
+		.init = gk20a_fecs_trace_init,
+		.deinit = gk20a_fecs_trace_deinit,
+		.enable = gk20a_fecs_trace_enable,
+		.disable = gk20a_fecs_trace_disable,
+		.is_enabled = gk20a_fecs_trace_is_enabled,
+		.reset = gk20a_fecs_trace_reset,
+		.flush = gp10b_fecs_trace_flush,
+		.poll = gk20a_fecs_trace_poll,
+		.bind_channel = gk20a_fecs_trace_bind_channel,
+		.unbind_channel = gk20a_fecs_trace_unbind_channel,
+		.max_entries = gk20a_gr_max_entries,
+	},
+#endif /* CONFIG_GK20A_CTXSW_TRACE */
 	.mc = {
 		.intr_enable = mc_gp10b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -357,6 +377,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->clock_gating = gp10b_ops.clock_gating;
 	gops->fifo = gp10b_ops.fifo;
 	gops->gr_ctx = gp10b_ops.gr_ctx;
+	gops->fecs_trace = gp10b_ops.fecs_trace;
 	gops->mc = gp10b_ops.mc;
 	gops->debug = gp10b_ops.debug;
 	gops->dbg_session_ops = gp10b_ops.dbg_session_ops;
@@ -416,7 +437,6 @@ int gp10b_init_hal(struct gk20a *g)
 
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 	gp10b_init_gr(g);
-	gp10b_init_fecs_trace_ops(gops);
 	gp10b_init_fb(gops);
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(g);

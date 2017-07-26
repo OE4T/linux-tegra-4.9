@@ -35,12 +35,14 @@ long gk20a_ctxsw_dev_ioctl(struct file *filp,
 ssize_t gk20a_ctxsw_dev_read(struct file *, char __user *, size_t, loff_t *);
 unsigned int gk20a_ctxsw_dev_poll(struct file *, struct poll_table_struct *);
 int gk20a_ctxsw_dev_mmap(struct file *, struct vm_area_struct *);
+int gk20a_ctxsw_dev_ring_alloc(struct gk20a *g, void **buf, size_t *size);
+int gk20a_ctxsw_dev_ring_free(struct gk20a *g);
+int gk20a_ctxsw_dev_mmap_buffer(struct gk20a *g, struct vm_area_struct *vma);
 
 int gk20a_ctxsw_trace_init(struct gk20a *);
 void gk20a_ctxsw_trace_cleanup(struct gk20a *);
 int gk20a_ctxsw_trace_write(struct gk20a *, struct nvgpu_ctxsw_trace_entry *);
 void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid);
-void gk20a_ctxsw_trace_init_ops(struct gpu_ops *ops);
 
 void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch);
 void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg);

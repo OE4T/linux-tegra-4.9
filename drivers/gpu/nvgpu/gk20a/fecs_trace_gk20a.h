@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,7 +14,21 @@
 #ifndef __FECS_TRACE_GK20A_H
 #define __FECS_TRACE_GK20A_H
 
-struct gpu_ops;
-void gk20a_init_fecs_trace_ops(struct gpu_ops *ops);
+struct gk20a;
+struct channel_gk20a;
+struct nvgpu_ctxsw_trace_filter;
+
+int gk20a_fecs_trace_poll(struct gk20a *g);
+int gk20a_fecs_trace_init(struct gk20a *g);
+int gk20a_fecs_trace_bind_channel(struct gk20a *g,
+		struct channel_gk20a *ch);
+int gk20a_fecs_trace_unbind_channel(struct gk20a *g, struct channel_gk20a *ch);
+int gk20a_fecs_trace_reset(struct gk20a *g);
+int gk20a_fecs_trace_deinit(struct gk20a *g);
+int gk20a_gr_max_entries(struct gk20a *g,
+		struct nvgpu_ctxsw_trace_filter *filter);
+int gk20a_fecs_trace_enable(struct gk20a *g);
+int gk20a_fecs_trace_disable(struct gk20a *g);
+bool gk20a_fecs_trace_is_enabled(struct gk20a *g);
 
 #endif /* __FECS_TRACE_GK20A_H */

@@ -22,7 +22,7 @@
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
-static int gp10b_fecs_trace_flush(struct gk20a *g)
+int gp10b_fecs_trace_flush(struct gk20a *g)
 {
 	struct fecs_method_op_gk20a op = {
 		.mailbox = { .id = 0, .data = 0,
@@ -42,15 +42,5 @@ static int gp10b_fecs_trace_flush(struct gk20a *g)
 		nvgpu_err(g, "write timestamp record failed");
 
 	return err;
-}
-
-void gp10b_init_fecs_trace_ops(struct gpu_ops *ops)
-{
-	gk20a_init_fecs_trace_ops(ops);
-	ops->fecs_trace.flush = gp10b_fecs_trace_flush;
-}
-#else
-void gp10b_init_fecs_trace_ops(struct gpu_ops *ops)
-{
 }
 #endif /* CONFIG_GK20A_CTXSW_TRACE */

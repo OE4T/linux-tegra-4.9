@@ -170,7 +170,7 @@ static int gk20a_ctxsw_dev_alloc_buffer(struct gk20a_ctxsw_dev *dev,
 	return 0;
 }
 
-static int gk20a_ctxsw_dev_ring_alloc(struct gk20a *g,
+int gk20a_ctxsw_dev_ring_alloc(struct gk20a *g,
 		void **buf, size_t *size)
 {
 	struct nvgpu_ctxsw_ring_header *hdr;
@@ -194,7 +194,7 @@ static int gk20a_ctxsw_dev_ring_alloc(struct gk20a *g,
 	return 0;
 }
 
-static int gk20a_ctxsw_dev_ring_free(struct gk20a *g)
+int gk20a_ctxsw_dev_ring_free(struct gk20a *g)
 {
 	struct gk20a_ctxsw_dev *dev = &g->ctxsw_trace->devs[0];
 
@@ -457,7 +457,7 @@ static struct vm_operations_struct gk20a_ctxsw_dev_vma_ops = {
 	.close = gk20a_ctxsw_dev_vma_close,
 };
 
-static int gk20a_ctxsw_dev_mmap_buffer(struct gk20a *g,
+int gk20a_ctxsw_dev_mmap_buffer(struct gk20a *g,
 				struct vm_area_struct *vma)
 {
 	return remap_vmalloc_range(vma, g->ctxsw_trace->devs[0].hdr, 0);
@@ -714,11 +714,4 @@ void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
 	gk20a_ctxsw_trace_wake_up(g, 0);
 #endif
 	trace_gk20a_channel_reset(~0, tsg->tsgid);
-}
-
-void gk20a_ctxsw_trace_init_ops(struct gpu_ops *ops)
-{
-	ops->fecs_trace.alloc_user_buffer = gk20a_ctxsw_dev_ring_alloc;
-	ops->fecs_trace.free_user_buffer = gk20a_ctxsw_dev_ring_free;
-	ops->fecs_trace.mmap_user_buffer = gk20a_ctxsw_dev_mmap_buffer;
 }

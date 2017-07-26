@@ -327,7 +327,7 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 	return 0;
 }
 
-static int gk20a_fecs_trace_poll(struct gk20a *g)
+int gk20a_fecs_trace_poll(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
@@ -566,7 +566,7 @@ static inline void gk20a_fecs_trace_debugfs_cleanup(struct gk20a *g)
 
 #endif /* CONFIG_DEBUG_FS */
 
-static int gk20a_fecs_trace_init(struct gk20a *g)
+int gk20a_fecs_trace_init(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace;
 	int err;
@@ -610,7 +610,7 @@ clean:
 	return err;
 }
 
-static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
+int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
 	/*
@@ -678,7 +678,7 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	return 0;
 }
 
-static int gk20a_fecs_trace_unbind_channel(struct gk20a *g, struct channel_gk20a *ch)
+int gk20a_fecs_trace_unbind_channel(struct gk20a *g, struct channel_gk20a *ch)
 {
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(g, ch);
 
@@ -694,7 +694,7 @@ static int gk20a_fecs_trace_unbind_channel(struct gk20a *g, struct channel_gk20a
 	return 0;
 }
 
-static int gk20a_fecs_trace_reset(struct gk20a *g)
+int gk20a_fecs_trace_reset(struct gk20a *g)
 {
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "");
 
@@ -705,7 +705,7 @@ static int gk20a_fecs_trace_reset(struct gk20a *g)
 	return gk20a_fecs_trace_set_read_index(g, 0);
 }
 
-static int gk20a_fecs_trace_deinit(struct gk20a *g)
+int gk20a_fecs_trace_deinit(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
@@ -722,7 +722,7 @@ static int gk20a_fecs_trace_deinit(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_gr_max_entries(struct gk20a *g,
+int gk20a_gr_max_entries(struct gk20a *g,
 		struct nvgpu_ctxsw_trace_filter *filter)
 {
 	int n;
@@ -736,7 +736,7 @@ static int gk20a_gr_max_entries(struct gk20a *g,
 	return n * GK20A_FECS_TRACE_NUM_RECORDS;
 }
 
-static int gk20a_fecs_trace_enable(struct gk20a *g)
+int gk20a_fecs_trace_enable(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 	int write;
@@ -765,7 +765,7 @@ static int gk20a_fecs_trace_enable(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_fecs_trace_disable(struct gk20a *g)
+int gk20a_fecs_trace_disable(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
@@ -775,31 +775,10 @@ static int gk20a_fecs_trace_disable(struct gk20a *g)
 	return -EPERM;
 }
 
-static bool gk20a_fecs_trace_is_enabled(struct gk20a *g)
+bool gk20a_fecs_trace_is_enabled(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
 	return (trace && nvgpu_thread_is_running(&trace->poll_task));
-}
-
-
-void gk20a_init_fecs_trace_ops(struct gpu_ops *ops)
-{
-	gk20a_ctxsw_trace_init_ops(ops);
-	ops->fecs_trace.init = gk20a_fecs_trace_init;
-	ops->fecs_trace.deinit = gk20a_fecs_trace_deinit;
-	ops->fecs_trace.enable = gk20a_fecs_trace_enable;
-	ops->fecs_trace.disable = gk20a_fecs_trace_disable;
-	ops->fecs_trace.is_enabled = gk20a_fecs_trace_is_enabled;
-	ops->fecs_trace.reset = gk20a_fecs_trace_reset;
-	ops->fecs_trace.flush = NULL;
-	ops->fecs_trace.poll = gk20a_fecs_trace_poll;
-	ops->fecs_trace.bind_channel = gk20a_fecs_trace_bind_channel;
-	ops->fecs_trace.unbind_channel = gk20a_fecs_trace_unbind_channel;
-	ops->fecs_trace.max_entries = gk20a_gr_max_entries;
-}
-#else
-void gk20a_init_fecs_trace_ops(struct gpu_ops *ops)
-{
 }
 #endif /* CONFIG_GK20A_CTXSW_TRACE */

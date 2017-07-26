@@ -2789,6 +2789,8 @@ static int tegra_vse_kthread(void *unused)
 
 	ivc_resp_msg =
 		kmalloc(sizeof(struct tegra_virtual_se_ivc_msg_t), GFP_KERNEL);
+	if (!ivc_resp_msg)
+		return -ENOMEM;
 
 	disable_irq(g_ivck->irq);
 	while (!kthread_should_stop()) {
@@ -2879,6 +2881,7 @@ static int tegra_vse_kthread(void *unused)
 		}
 		reinit_completion(&tegra_vse_complete);
 	}
+	kfree(ivc_resp_msg);
 	return 0;
 }
 

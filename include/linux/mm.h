@@ -751,6 +751,7 @@ static inline bool is_zone_device_page(const struct page *page)
 	return page_zonenum(page) == ZONE_DEVICE;
 }
 static inline bool is_device_private_page(const struct page *page);
+static inline bool is_device_public_page(const struct page *page);
 #else
 static inline void get_zone_device_page(struct page *page)
 {
@@ -764,6 +765,11 @@ static inline bool is_zone_device_page(const struct page *page)
 }
 
 static inline bool is_device_private_page(const struct page *page)
+{
+	return false;
+}
+
+static inline bool is_device_public_page(const struct page *page)
 {
 	return false;
 }
@@ -1183,8 +1189,10 @@ struct zap_details {
 	bool check_swap_entries;		/* Check also swap entries */
 };
 
-struct page *vm_normal_page(struct vm_area_struct *vma, unsigned long addr,
-		pte_t pte);
+struct page *_vm_normal_page(struct vm_area_struct *vma, unsigned long addr,
+			     pte_t pte, bool with_public_device);
+#define vm_normal_page(vma, addr, pte) _vm_normal_page(vma, addr, pte, false)
+
 struct page *vm_normal_page_pmd(struct vm_area_struct *vma, unsigned long addr,
 				pmd_t pmd);
 

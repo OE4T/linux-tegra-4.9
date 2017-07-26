@@ -386,6 +386,11 @@ done:
 	return ret;
 }
 
+static inline u16 prev_idx(struct tegra_dc_ring_buf *buf, u16 idx)
+{
+	return idx ? idx - 1 : buf->capacity - 1;
+}
+
 /* Get the Most Recently Matched (mrm) flip ID.
  * Our best estimate is to find this flip ID at the head of the buffer.
  */
@@ -393,11 +398,11 @@ static int _find_mrm(struct tegra_dc *dc, u64 *flip_id)
 {
 	/* Default value when no flips are matched */
 	u64 mrm = 0xFFFFFFFFFFFFFFFF;
-	u16 peek_idx = dc->crc_buf.head;
+	u16 peek_idx;
 	int ret = 0, iter;
 	struct tegra_dc_crc_buf_ele *crc_ele;
 
-	peek_idx = peek_idx ? peek_idx - 1 : dc->crc_buf.capacity - 1;
+	peek_idx = prev_idx(&dc->crc_buf, dc->crc_buf.head);
 
 	ret = tegra_dc_ring_buf_peek(&dc->crc_buf, peek_idx, (char **)&crc_ele);
 	if (ret)
@@ -436,15 +441,18 @@ static bool _is_flip_out_of_bounds(struct tegra_dc *dc, u64 flip_id)
 	return false;
 }
 
-static int _scan_buf_till_tail(struct tegra_dc *dc, u16 peek_idx, u64 flip_id,
-			       struct tegra_dc_crc_buf_ele *crc_ele)
+/* Scan the CRC buffer from @start_idx (inclusive) to @end_idx (exclusive)
+ * to find the element matched with @flip_id
+ */
+static int _scan_crc_buf(struct tegra_dc *dc, u16 start_idx, u16 end_idx,
+			 u64 flip_id, struct tegra_dc_crc_buf_ele *crc_ele)
 {
-	u16 nr_checked = 0;
+	u16 peek_idx = start_idx;
 	struct tegra_dc_ring_buf *buf = &dc->crc_buf;
 	struct tegra_dc_crc_buf_ele *crc_iter = NULL;
 	int iter;
 
-	while (nr_checked < buf->size) {
+	while (peek_idx != end_idx) {
 		tegra_dc_ring_buf_peek(buf, peek_idx, (char **)&crc_iter);
 
 		for (iter = 0; iter < DC_N_WINDOWS; iter++) {
@@ -457,8 +465,7 @@ static int _scan_buf_till_tail(struct tegra_dc *dc, u16 peek_idx, u64 flip_id,
 			}
 		}
 
-		peek_idx = peek_idx ? peek_idx - 1 : buf->capacity - 1;
-		nr_checked++;
+		peek_idx = prev_idx(buf, peek_idx);
 	}
 
 	return -EAGAIN;
@@ -468,9 +475,10 @@ static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 			    struct tegra_dc_crc_buf_ele *crc_ele)
 {
 	int ret = -EAGAIN;
-	u16 peek_idx;
+	u16 start_idx, end_idx;
+	struct tegra_dc_ring_buf *buf = &dc->crc_buf;
 
-	mutex_lock(&dc->crc_buf.lock);
+	mutex_lock(&buf->lock);
 
 	if (_is_flip_out_of_bounds(dc, flip_id)) {
 		ret = -ENODATA;
@@ -480,11 +488,11 @@ static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 	/* At this point, we are committed to return a CRC value to the user,
 	 * even if one is yet to be generated in the imminent future
 	 */
-	while (ret == -EAGAIN) {
-		peek_idx = dc->crc_buf.head;
-		peek_idx = peek_idx ? peek_idx - 1 : dc->crc_buf.capacity - 1;
+	end_idx = prev_idx(buf, buf->tail);
+	start_idx = prev_idx(buf, buf->head);
 
-		ret = _scan_buf_till_tail(dc, peek_idx, flip_id, crc_ele);
+	while (ret == -EAGAIN) {
+		ret = _scan_crc_buf(dc, start_idx, end_idx, flip_id, crc_ele);
 		if (!ret || ret != -EAGAIN)
 			goto done;
 
@@ -492,7 +500,7 @@ static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 		 * to be matched at a certain frame end interrupt, hence wait on
 		 * the event
 		 */
-		mutex_unlock(&dc->crc_buf.lock);
+		mutex_unlock(&buf->lock);
 		reinit_completion(&dc->crc_complete);
 		if (!wait_for_completion_timeout(&dc->crc_complete,
 						 CRC_COMPLETE_TIMEOUT)) {
@@ -500,11 +508,14 @@ static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 			ret = -ETIME;
 			goto done;
 		}
-		mutex_lock(&dc->crc_buf.lock);
+		mutex_lock(&buf->lock);
+
+		end_idx = prev_idx(buf, start_idx);
+		start_idx = prev_idx(buf, buf->head);
 	}
 
 done:
-	mutex_unlock(&dc->crc_buf.lock);
+	mutex_unlock(&buf->lock);
 	return ret;
 }
 

@@ -198,7 +198,7 @@ int pinctrl_dt_to_map(struct pinctrl *p)
 		if (!prop) {
 			if (state == 0) {
 				of_node_put(np);
-				return -ENODEV;
+				return 0;
 			}
 			break;
 		}

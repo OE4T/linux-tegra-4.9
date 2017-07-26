@@ -749,6 +749,7 @@ static inline bool is_zone_device_page(const struct page *page)
 {
 	return page_zonenum(page) == ZONE_DEVICE;
 }
+static inline bool is_device_private_page(const struct page *page);
 #else
 static inline void get_zone_device_page(struct page *page)
 {
@@ -757,6 +758,11 @@ static inline void put_zone_device_page(struct page *page)
 {
 }
 static inline bool is_zone_device_page(const struct page *page)
+{
+	return false;
+}
+
+static inline bool is_device_private_page(const struct page *page)
 {
 	return false;
 }

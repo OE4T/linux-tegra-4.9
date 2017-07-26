@@ -25,6 +25,7 @@
  * Define netlist for silicon only
  * #define GV11B_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_A
 */
-void gv11b_init_gr_ctx(struct gpu_ops *gops);
+int gr_gv11b_get_netlist_name(struct gk20a *g, int index, char *name);
+bool gr_gv11b_is_firmware_defined(void);
 
 #endif /*__GR_CTX_GV11B_H__*/

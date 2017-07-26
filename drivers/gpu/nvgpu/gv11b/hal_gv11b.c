@@ -282,6 +282,10 @@ static const struct gpu_ops gv11b_ops = {
 		.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg,
 		.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout,
 	},
+	.gr_ctx = {
+		.get_netlist_name = gr_gv11b_get_netlist_name,
+		.is_fw_defined = gr_gv11b_is_firmware_defined,
+	},
 	.mc = {
 		.intr_enable = mc_gv11b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -349,6 +353,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->ce2 = gv11b_ops.ce2;
 	gops->clock_gating = gv11b_ops.clock_gating;
 	gops->fifo = gv11b_ops.fifo;
+	gops->gr_ctx = gv11b_ops.gr_ctx;
 	gops->mc = gv11b_ops.mc;
 	gops->debug = gv11b_ops.debug;
 	gops->dbg_session_ops = gv11b_ops.dbg_session_ops;
@@ -365,13 +370,13 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->get_litter_value = gv11b_ops.get_litter_value;
 
 	/* boot in non-secure modes for time beeing */
+	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, false);
 	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 
 	gv11b_init_gr(g);
 	gv11b_init_fecs_trace_ops(gops);
 	gv11b_init_fb(gops);
-	gv11b_init_gr_ctx(gops);
 	gv11b_init_mm(gops);
 	gv11b_init_pmu_ops(g);
 	gv11b_init_regops(gops);

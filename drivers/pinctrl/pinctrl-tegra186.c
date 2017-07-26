@@ -433,12 +433,15 @@ static struct tegra_function tegra186_functions[] = {
 		.pbias_buf_bit = e_io_hv,			\
 		.preemp_bit = e_io_hv,				\
 		.rfu_in_bit = 20,				\
-		.lpbk_bit = -1					\
+		.lpbk_reg = PINGROUP_REG_Y(r),			\
+		.lpbk_bank = bank,				\
+		.lpbk_bit = e_io_hv				\
 
 #define PIN_PINGROUP_ENTRY_N(pg_name)				\
 		.mux_reg = -1,					\
 		.pupd_reg = -1,					\
 		.tri_reg = -1,					\
+		.lpbk_reg = -1,					\
 		.einput_bit = -1,				\
 		.e_io_hv_bit = -1,				\
 		.odrain_bit = -1,				\

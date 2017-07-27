@@ -104,7 +104,7 @@ int xve_get_speed_gp106(struct gk20a *g, u32 *xve_link_speed);
 void xve_disable_aspm_gp106(struct gk20a *g);
 int xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed);
 void xve_available_speeds_gp106(struct gk20a *g, u32 *speed_mask);
-int xve_sw_init_gp106(struct device *dev);
+int xve_sw_init_gp106(struct gk20a *g);
 #if defined(CONFIG_PCI_MSI)
 void xve_rearm_msi_gp106(struct gk20a *g);
 #endif

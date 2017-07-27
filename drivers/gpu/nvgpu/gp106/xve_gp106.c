@@ -22,9 +22,6 @@
 #include "gk20a/gk20a.h"
 #include "gm206/bios_gm206.h"
 #include "gp106/xve_gp106.h"
-#ifdef CONFIG_DEBUG_FS
-#include "gk20a/platform_gk20a.h"
-#endif
 #include "common/linux/os_linux.h"
 
 #include <nvgpu/bug.h>
@@ -603,11 +600,10 @@ static const struct file_operations xve_link_control_status_fops = {
 };
 #endif
 
-int xve_sw_init_gp106(struct device *dev)
+int xve_sw_init_gp106(struct gk20a *g)
 {
 	int err = -ENODEV;
 #ifdef CONFIG_DEBUG_FS
-	struct gk20a *g = gk20a_from_dev(dev);
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *gpu_root = l->debugfs;
 

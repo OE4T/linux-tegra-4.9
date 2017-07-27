@@ -969,7 +969,7 @@ struct gpu_ops {
 	} css;
 #endif
 	struct {
-		int (*sw_init)(struct device *dev);
+		int (*sw_init)(struct gk20a *g);
 		int (*get_speed)(struct gk20a *g, u32 *xve_link_speed);
 		int (*set_speed)(struct gk20a *g, u32 xve_link_speed);
 		void (*available_speeds)(struct gk20a *g, u32 *speed_mask);

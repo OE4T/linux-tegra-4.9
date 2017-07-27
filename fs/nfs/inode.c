@@ -513,6 +513,7 @@ nfs_setattr(struct dentry *dentry, struct iattr *attr)
 	struct inode *inode = d_inode(dentry);
 	struct nfs_fattr *fattr;
 	int error = 0;
+	int err = 0;
 
 	nfs_inc_stats(inode, NFSIOS_VFSSETATTR);
 
@@ -539,9 +540,11 @@ nfs_setattr(struct dentry *dentry, struct iattr *attr)
 	trace_nfs_setattr_enter(inode);
 
 	/* Write all dirty data */
-	if (S_ISREG(inode->i_mode))
-		nfs_sync_inode(inode);
-
+	if (S_ISREG(inode->i_mode)) {
+		err = nfs_sync_inode(inode);
+		if (err < 0)
+			dprintk("nfs_sync_inode failed : %d\n", err);
+	}
 	fattr = nfs_alloc_fattr();
 	if (fattr == NULL) {
 		error = -ENOMEM;

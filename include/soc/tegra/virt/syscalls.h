@@ -34,6 +34,8 @@
 #ifndef __VMM_SYSCALLS_H__
 #define __VMM_SYSCALLS_H__
 
+#include <soc/tegra/virt/tegra_hv_sysmgr.h>
+
 #define HVC_NR_READ_STAT		1
 #define HVC_NR_READ_IVC			2
 #define HVC_NR_READ_GID			3
@@ -293,14 +295,25 @@ static inline int hyp_read_hyp_info(uint64_t *hyp_info_page_pa)
 	return (int)r0;
 }
 
-static inline int hyp_guest_reset(unsigned int vmid)
+static inline int hyp_guest_reset(unsigned int id,
+				  struct hyp_sys_state_info *out)
 {
-	register uint64_t r0 asm("x0") = vmid;
+	register uint64_t r0 asm("x0") = id;
+	register uint64_t r1 asm("x1");
+	register uint64_t r2 asm("x2");
+	register uint64_t r3 asm("x3");
 
-	asm volatile("hvc %1"
-		: "+r"(r0)
+	asm volatile("hvc %4"
+		: "+r"(r0), "=r"(r1),
+		  "=r"(r2), "=r"(r3)
 		: "i"(HVC_NR_GUEST_RESET)
-		: "x1", "x2", "x3", _X4_X17);
+		: _X4_X17);
+
+	if (out != 0) {
+		out->sys_transition_mask = (uint32_t)r1;
+		out->vm_shutdown_mask = (uint32_t)r2;
+		out->vm_reboot_mask = (uint32_t)r3;
+	}
 
 	return (int)r0;
 }

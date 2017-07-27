@@ -28,6 +28,8 @@ Required properties:
 - gpio:	    GPIO number of the GPIO connected to the sensor chip.
 
 Optional Properties:
+- aux_chip: Property holds the slave chip id and I2C addr parameters.
+- aux_chip_name: Property holds the slave chip name.
 - status: set to "ok" or "okay" for normal operation.  Set to anything else
 	  to unload the driver without ever communicating with the device.
   Note: The "anything else" above is typically "disabled".

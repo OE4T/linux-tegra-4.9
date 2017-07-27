@@ -1265,19 +1265,10 @@ int esc_mods_dma_unmap_memory(struct file *fp,
 static void clear_contiguous_cache
 (
 	u64 virt_start,
-	u64 virt_end,
 	u64 phys_start,
-	u64 phys_end
+	u32 size
 )
 {
-	/* We are expecting virt_end and phys_end to point to the first address
-	 * of the next range
-	 */
-	u32 size = virt_end - virt_start;
-
-	WARN_ON(size != phys_end - phys_start);
-	size += (~virt_end + 1) & (~PAGE_MASK);  /* Align up to page boundary */
-
 	mods_debug_printk(DEBUG_MEM_DETAILED,
 	    "clear cache virt 0x%llx phys 0x%llx size 0x%x\n",
 	    virt_start, phys_start, size);
@@ -1290,7 +1281,7 @@ static void clear_contiguous_cache
 	__cpuc_flush_dcache_area((void *)(size_t)(virt_start), size);
 
 	/* Now flush L2 cache. */
-	outer_flush_range(phys_start, phys_end);
+	outer_flush_range(phys_start, phys_start + size);
 #endif
 }
 
@@ -1313,7 +1304,9 @@ static void clear_entry_cache_mappings
 
 	for (i = 0; i < p_mem_info->max_chunks; i++) {
 		struct MODS_PHYS_CHUNK *pt = &p_mem_info->pages[i];
-		u64 cur_vo_end = cur_vo + (PAGE_SIZE << pt->order);
+		u32 chunk_offs     = 0;
+		u32 chunk_offs_end = PAGE_SIZE << pt->order;
+		u64 cur_vo_end     = cur_vo + chunk_offs_end;
 
 		if (!pt->allocated)
 			break;
@@ -1321,31 +1314,43 @@ static void clear_entry_cache_mappings
 		if (virt_offs_end <= cur_vo)
 			break;
 
-		if (virt_offs < cur_vo_end) {
-			u64 clear_vo	 = virt_offs;
-			u64 clear_vo_end = virt_offs_end;
-			u64 clear_pa;
-			u64 clear_pa_end;
+		if (virt_offs >= cur_vo_end) {
+			cur_vo = cur_vo_end;
+			continue;
+		}
 
-			if (clear_vo < cur_vo)
-				clear_vo = cur_vo;
+		if (cur_vo < virt_offs)
+			chunk_offs = (u32)(virt_offs - cur_vo);
 
-			if (clear_vo_end > cur_vo_end)
-				clear_vo_end = cur_vo_end;
+		if (virt_offs_end < cur_vo_end)
+			chunk_offs_end -= (u32)(cur_vo_end - virt_offs_end);
 
-			clear_pa = MODS_DMA_TO_PHYS(pt->dma_addr);
-			if (clear_vo > cur_vo)
-				clear_pa += clear_vo - cur_vo;
+		mods_debug_printk(DEBUG_MEM_DETAILED,
+		    "clear cache %p [%u]\n", p_mem_info, i);
 
-			clear_pa_end = clear_pa + (clear_vo_end - clear_vo);
+		while (chunk_offs < chunk_offs_end) {
+			u32 i_page     = chunk_offs >> PAGE_SHIFT;
+			u32 page_offs  = chunk_offs - (i_page << PAGE_SHIFT);
+			u64 page_va    = (u64)(size_t)kmap_atomic(pt->p_page
+								  + i_page);
+			u64 clear_va   = page_va + page_offs;
+			u64 clear_pa   = MODS_DMA_TO_PHYS(pt->dma_addr)
+							  + chunk_offs;
+			u32 clear_size = PAGE_SIZE - page_offs;
+			u64 remaining  = chunk_offs_end - chunk_offs;
+
+			if ((u64)clear_size > remaining)
+				clear_size = (u32)remaining;
 
 			mods_debug_printk(DEBUG_MEM_DETAILED,
-			    "clear cache %p [%u]\n", p_mem_info, i);
+			    "clear page %u, chunk offs 0x%x, page va 0x%llx\n",
+			    i_page, chunk_offs, page_va);
 
-			clear_contiguous_cache(clear_vo,
-					       clear_vo_end,
-					       clear_pa,
-					       clear_pa_end);
+			clear_contiguous_cache(clear_va, clear_pa, clear_size);
+
+			kunmap_atomic((void *)(size_t)page_va);
+
+			chunk_offs += clear_size;
 		}
 
 		cur_vo = cur_vo_end;
@@ -1429,23 +1434,22 @@ static int mods_post_alloc(struct MODS_PHYS_CHUNK *pt,
 			ptr = p_mem_info->logical_addr + (i << PAGE_SHIFT);
 		} else
 #endif
-			ptr = (u64)(size_t)kmap(pt->p_page + i);
+			ptr = (u64)(size_t)kmap_atomic(pt->p_page + i);
 		if (!ptr) {
 			mods_error_printk("kmap failed\n");
 			return -EINVAL;
 		}
 #if defined(MODS_TEGRA) && !defined(CONFIG_CPA)
 		clear_contiguous_cache(ptr,
-				ptr + PAGE_SIZE,
-				phys_addr + (i << PAGE_SHIFT),
-				phys_addr + ((i+1) << PAGE_SHIFT));
+				       phys_addr + (i << PAGE_SHIFT),
+				       PAGE_SIZE);
 #else
 		ret = mods_set_mem_type(ptr, 1, p_mem_info->cache_type);
 #endif
 #ifdef CONFIG_BIGPHYS_AREA
 		if (p_mem_info->alloc_type != MODS_ALLOC_TYPE_BIGPHYS_AREA)
 #endif
-			kunmap(pt->p_page + i);
+			kunmap_atomic((void *)(size_t)ptr);
 		if (ret) {
 			mods_error_printk("set cache type failed\n");
 			return -EINVAL;
@@ -1467,13 +1471,13 @@ static void mods_pre_free(struct MODS_PHYS_CHUNK *pt,
 			ptr = p_mem_info->logical_addr + (i << PAGE_SHIFT);
 		else
 #endif
-			ptr = (u64)(size_t)kmap(pt->p_page + i);
+			ptr = (u64)(size_t)kmap_atomic(pt->p_page + i);
 		if (ptr)
 			mods_restore_mem_type(ptr, 1, p_mem_info->cache_type);
 #ifdef CONFIG_BIGPHYS_AREA
 		if (p_mem_info->alloc_type != MODS_ALLOC_TYPE_BIGPHYS_AREA)
 #endif
-			kunmap(pt->p_page + i);
+			kunmap_atomic((void *)(size_t)ptr);
 	}
 }
 

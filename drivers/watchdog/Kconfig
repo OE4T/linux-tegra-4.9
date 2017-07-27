@@ -378,16 +378,6 @@ config DW_WATCHDOG
 	  To compile this driver as a module, choose M here: the
 	  module will be called dw_wdt.
 
-config TEGRA_HV_WATCHDOG
-	tristate "Tegra Hypervisor watchdog"
-	depends on TEGRA_HV_MANAGER
-	help
-	  Say Y here to include support for the watchdog timer
-	  embedded in NVIDIA Tegra Hypervisor systems.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called tegra_hv_wdt.
-
 config EP93XX_WATCHDOG
 	tristate "EP93xx Watchdog"
 	depends on ARCH_EP93XX

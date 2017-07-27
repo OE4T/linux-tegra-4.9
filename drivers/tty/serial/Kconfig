@@ -1674,15 +1674,6 @@ config SERIAL_UBLOX_GPS_SPI
 
 	  If unsure, say N.
 
-config TEGRA_HV_COMM
-	tristate "Tegra Hypervisor Communication"
-	depends on TEGRA_HV_MANAGER
-	help
-	  Add support for emulating a TTY device over the Tegra Hypervisor interface.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called tegra_hv_comm.
-
 config SERIAL_UBLOX_GPS
        tristate "u-blox 6 I2C GPS support"
        depends on I2C

@@ -2859,6 +2859,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		tegra_dc_setup_clk(dc, dc->clk);
 	}
 
+	tegra_dpaux_config_pad_mode(dp->dpaux, TEGRA_DPAUX_PAD_MODE_AUX);
 	tegra_dp_dpcd_init(dp);
 
 	tegra_dc_sor_enable_dp(dp->sor);

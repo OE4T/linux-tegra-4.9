@@ -144,7 +144,7 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc_dpaux_data *dpaux,
 	tegra_dpaux_clk_en(dpaux);
 	tegra_dc_io_start(dc);
 	mutex_lock(&dpaux_lock);
-
+	tegra_dpaux_prod_set(dpaux);
 	/*
 	 * Make sure to configure the pad mode before we power it on. If not
 	 * done in this order, there is a chance that the pad will run in the

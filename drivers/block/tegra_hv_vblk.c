@@ -20,7 +20,6 @@
 #include <linux/slab.h>   /* kmalloc() */
 #include <linux/fs.h>   /* everything... */
 #include <linux/errno.h> /* error codes */
-#include <linux/timer.h>
 #include <linux/types.h> /* size_t */
 #include <linux/fcntl.h> /* O_ACCMODE */
 #include <linux/hdreg.h> /* HDIO_GETGEO */
@@ -53,7 +52,6 @@ static int vblk_major;
 /* Minor number and partition management. */
 #define VBLK_MINORS 16
 
-#define transfer_timeout 5 /* 5 sec */
 #define IVC_RESET_RETRIES	30
 
 #define VS_LOG_HEADS 4
@@ -116,7 +114,6 @@ struct vsc_request {
 	struct ivc_blk_request ivc_req;
 	struct request *req;
 	struct req_iterator iter;
-	struct timer_list ivc_timer;
 	void *mempool_virt;
 	uint32_t id;
 	struct vblk_dev* vblkdev;
@@ -198,8 +195,6 @@ struct vblk_dev {
 #define MMC_ERASE_GROUP_END         36     /* S */
 #define MMC_ERASE                   38     /* S */
 
-void ivc_timeout_func(unsigned long req);
-
 /**
  * vblk_get_req: Get a handle to free vsc request.
  */
@@ -216,9 +211,6 @@ static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
 		req->ivc_req.serial_number = bit;
 		req->vblkdev = vblkdev;
 		set_bit(bit, vblkdev->pending_reqs);
-		init_timer(&req->ivc_timer);
-		req->ivc_timer.data = (unsigned long) req;
-		req->ivc_timer.function = ivc_timeout_func;
 		vblkdev->inflight_reqs++;
 	}
 	mutex_unlock(&vblkdev->req_lock);
@@ -540,7 +532,6 @@ static bool complete_bio_req(struct vblk_dev *vblkdev)
 				ivc_blk_res->serial_number);
 		goto no_valid_io;
 	}
-	del_timer_sync(&vsc_req->ivc_timer);
 
 	bio_req = vsc_req->req;
 
@@ -754,15 +745,6 @@ static bool submit_bio_req(struct vblk_dev *vblkdev)
 		goto bio_exit;
 	}
 
-	if (timer_pending(&vsc_req->ivc_timer)) {
-		dev_err(vblkdev->device, "Req %d Unexpected timer pending!\n",
-				vsc_req->id);
-		goto bio_exit;
-	}
-
-	vsc_req->ivc_timer.expires = jiffies + transfer_timeout * HZ;
-	add_timer(&vsc_req->ivc_timer);
-
 	mutex_unlock(&vblkdev->ivc_lock);
 
 	return true;
@@ -809,34 +791,6 @@ static void vblk_request_work(struct work_struct *ws)
 			vblkdev->inflight_reqs == 0) {
 		ioctl_handler(vblkdev);
 	}
-}
-
-void ivc_timeout_func(unsigned long req)
-{
-	struct vsc_request *vsc_req = (struct vsc_request *)req;
-	struct vblk_dev *vblkdev = vsc_req->vblkdev;
-
-	dev_err(vblkdev->device, "timeout! For request ID %d\n",
-			vsc_req->id);
-
-	if (vsc_req->id >= vblkdev->max_requests) {
-		dev_err(vblkdev->device, "Timeout happened for invalid"
-			"request id %d\n", vsc_req->id);
-		return;
-	}
-
-	if (test_bit(vsc_req->id, vblkdev->pending_reqs) == 0) {
-		dev_err(vblkdev->device,
-			"Timeout signalled for Inactive request id %d\n",
-				vsc_req->id);
-		return;
-	}
-
-	req_error_handler(vblkdev, vsc_req->req);
-	/* Actual Request slot should get freed when the Server
-	 * responds
-	 * */
-	vsc_req->req = NULL;
 }
 
 /* The simple form of the request function. */

@@ -20,19 +20,57 @@
 #include <linux/platform_device.h>
 #include <linux/reboot.h>
 #include <linux/mfd/tmpm32xi2c.h>
+#ifdef CONFIG_TEGRA_HV_PM_CTL
+#include <soc/tegra/virt/tegra_hv_pm_ctl.h>
+#endif
 
 struct tmpm32xi2c_poweroff_data {
 	struct device *dev;
 	struct notifier_block reboot_nb;
 };
 
+static int __tmpm32xi2c_send_shutdown_prepare(
+		struct tmpm32xi2c_poweroff_data *data, unsigned char val)
+{
+	struct tmpm32xi2c_chip *chip = dev_get_drvdata(data->dev->parent);
+	unsigned char tx_buf[2];
+	int ret;
+
+	tx_buf[0] = CMD_SHUTDOWN_PREPARE;
+	tx_buf[1] = val;
+
+	/* Send a CMD_SHUTDOWN_PREPARE command to MCU */
+	ret = chip->write_read(chip, tx_buf, sizeof(tx_buf), NULL, 0);
+	if (ret < 0)
+		dev_err(data->dev,
+			"Failed to send SHUTDOWN_PREPARE_%s command, %d\n",
+			(val == SHUTDOWN_PREPARE_SET) ? "SET" : "CLEAR", ret);
+	else
+		dev_info(data->dev,
+			"Sent SHUTDOWN_PREPARE_%s command.\n",
+			(val == SHUTDOWN_PREPARE_SET) ? "SET" : "CLEAR");
+
+	return ret;
+}
+
+#ifdef CONFIG_TEGRA_HV_PM_CTL
+static struct tmpm32xi2c_poweroff_data *poweroff_data;
+
+static int tmpm32xi2c_set_shutdown_prepare(void)
+{
+	if (!poweroff_data)
+		return -ENXIO;
+
+	return __tmpm32xi2c_send_shutdown_prepare(poweroff_data,
+						  SHUTDOWN_PREPARE_SET);
+}
+#endif
+
 static int tmpm32xi2c_poweroff_reboot_notify(struct notifier_block *nb,
 					     unsigned long mode, void *cmd)
 {
 	struct tmpm32xi2c_poweroff_data *data =
 		container_of(nb, struct tmpm32xi2c_poweroff_data, reboot_nb);
-	struct tmpm32xi2c_chip *chip = dev_get_drvdata(data->dev->parent);
-	uint8_t tx_buf[] = { CMD_SHUTDOWN_PREPARE, SHUTDOWN_PREPARE_SET };
 	int ret;
 
 	if ((mode == SYS_HALT) || (mode == SYS_POWER_OFF)) {
@@ -40,7 +78,8 @@ static int tmpm32xi2c_poweroff_reboot_notify(struct notifier_block *nb,
 		 * Send a CMD_SHUTDOWN_PREPARE set command to notify MCU that
 		 * the system is going to shutdown.
 		 */
-		ret = chip->write_read(chip, tx_buf, sizeof(tx_buf), NULL, 0);
+		ret = __tmpm32xi2c_send_shutdown_prepare(data,
+							 SHUTDOWN_PREPARE_SET);
 		if (ret < 0)
 			dev_err(data->dev,
 				"Failed to send SHUTDOWN_PREPARE_SET, %d\n",
@@ -54,9 +93,7 @@ static int tmpm32xi2c_poweroff_reboot_notify(struct notifier_block *nb,
 
 static int tmpm32xi2c_poweroff_probe(struct platform_device *pdev)
 {
-	struct tmpm32xi2c_chip *chip = dev_get_drvdata(pdev->dev.parent);
 	struct tmpm32xi2c_poweroff_data *data;
-	uint8_t tx_buf[] = { CMD_SHUTDOWN_PREPARE, SHUTDOWN_PREPARE_CLEAR };
 	int ret;
 
 	data = devm_kzalloc(&pdev->dev,
@@ -71,7 +108,7 @@ static int tmpm32xi2c_poweroff_probe(struct platform_device *pdev)
 	 * Send a CMD_SHUTDOWN_PREPARE clear command to clear a flag of
 	 * shutdown prepare in MCU F/W.
 	 */
-	ret = chip->write_read(chip, tx_buf, sizeof(tx_buf), NULL, 0);
+	ret = __tmpm32xi2c_send_shutdown_prepare(data, SHUTDOWN_PREPARE_CLEAR);
 	if (ret < 0) {
 		dev_err(&pdev->dev,
 			"Failed to send SHUTDOWN_PREPARE_CLEAR, %d\n", ret);
@@ -87,6 +124,11 @@ static int tmpm32xi2c_poweroff_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+#ifdef CONFIG_TEGRA_HV_PM_CTL
+	poweroff_data = data;
+	tegra_hv_pm_ctl_prepare_shutdown = tmpm32xi2c_set_shutdown_prepare;
+#endif
+
 	return 0;
 }
 
@@ -94,6 +136,9 @@ static int tmpm32xi2c_poweroff_remove(struct platform_device *pdev)
 {
 	struct tmpm32xi2c_poweroff_data *data = platform_get_drvdata(pdev);
 
+#ifdef CONFIG_TEGRA_HV_PM_CTL
+	poweroff_data = NULL;
+#endif
 	unregister_reboot_notifier(&data->reboot_nb);
 
 	return 0;

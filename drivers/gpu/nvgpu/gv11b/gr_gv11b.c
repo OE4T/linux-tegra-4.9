@@ -2113,24 +2113,29 @@ static void gr_gv11b_detect_sm_arch(struct gk20a *g)
 
 static void gr_gv11b_init_sm_id_table(struct gk20a *g)
 {
-	u32 gpc, tpc;
+	u32 gpc, tpc, sm;
 	u32 sm_id = 0;
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
 
 	/* TODO populate smids based on power efficiency */
 	for (tpc = 0; tpc < g->gr.max_tpc_per_gpc_count; tpc++) {
 		for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
 
-			if (tpc < g->gr.gpc_tpc_count[gpc]) {
+			if (tpc >= g->gr.gpc_tpc_count[gpc])
+				continue;
+
+			for (sm = 0; sm < sm_per_tpc; sm++) {
 				g->gr.sm_to_cluster[sm_id].tpc_index = tpc;
 				g->gr.sm_to_cluster[sm_id].gpc_index = gpc;
 				g->gr.sm_to_cluster[sm_id].sm_index = sm_id % 2;
 				g->gr.sm_to_cluster[sm_id].global_tpc_index =
-									sm_id;
+									tpc;
 				sm_id++;
 			}
 		}
 	}
 	g->gr.no_of_sm = sm_id;
+	nvgpu_log_info(g, " total number of sm = %d", g->gr.no_of_sm);
 }
 
 static void gr_gv11b_program_sm_id_numbering(struct gk20a *g,
@@ -2156,7 +2161,7 @@ static int gr_gv11b_load_smid_config(struct gk20a *g)
 	u32 *tpc_sm_id;
 	u32 i, j;
 	u32 tpc_index, gpc_index, tpc_id;
-	u32 sms_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
 	int num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
 
 	tpc_sm_id = kcalloc(gr_cwd_sm_id__size_1_v(), sizeof(u32), GFP_KERNEL);
@@ -2174,7 +2179,7 @@ static int gr_gv11b_load_smid_config(struct gk20a *g)
 			u32 bits;
 
 			tpc_id = (i << 2) + j;
-			sm_id = tpc_id * sms_per_tpc;
+			sm_id = tpc_id * sm_per_tpc;
 
 			if (sm_id >= g->gr.no_of_sm)
 				break;

@@ -309,6 +309,10 @@ static const struct gpu_ops gp10b_ops = {
 		.exit = gk20a_pramin_exit,
 		.data032_r = pram_data032_r,
 	},
+	.therm = {
+		.init_therm_setup_hw = gp10b_init_therm_setup_hw,
+		.elcg_init_idle_filters = gp10b_elcg_init_idle_filters,
+	},
 	.mc = {
 		.intr_enable = mc_gp10b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -385,6 +389,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->gr_ctx = gp10b_ops.gr_ctx;
 	gops->fecs_trace = gp10b_ops.fecs_trace;
 	gops->pramin = gp10b_ops.pramin;
+	gops->therm = gp10b_ops.therm;
 	gops->mc = gp10b_ops.mc;
 	gops->debug = gp10b_ops.debug;
 	gops->dbg_session_ops = gp10b_ops.dbg_session_ops;
@@ -448,7 +453,6 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(g);
 	gp10b_init_regops(gops);
-	gp10b_init_therm_ops(gops);
 
 	g->name = "gp10b";
 

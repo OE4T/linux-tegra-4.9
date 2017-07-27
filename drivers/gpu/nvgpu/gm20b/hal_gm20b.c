@@ -17,6 +17,7 @@
 #include "gk20a/ce2_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fifo_gk20a.h"
+#include "gk20a/therm_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/mc_gk20a.h"
 #include "gk20a/bus_gk20a.h"
@@ -272,6 +273,10 @@ static const struct gpu_ops gm20b_ops = {
 		.get_netlist_name = gr_gm20b_get_netlist_name,
 		.is_fw_defined = gr_gm20b_is_firmware_defined,
 	},
+	.therm = {
+		.init_therm_setup_hw = gm20b_init_therm_setup_hw,
+		.elcg_init_idle_filters = gk20a_elcg_init_idle_filters,
+	},
 	.mc = {
 		.intr_enable = mc_gk20a_intr_enable,
 		.intr_unit_config = mc_gk20a_intr_unit_config,
@@ -344,6 +349,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->fifo = gm20b_ops.fifo;
 	gops->gr_ctx = gm20b_ops.gr_ctx;
+	gops->therm = gm20b_ops.therm;
 	gops->mc = gm20b_ops.mc;
 	gops->dbg_session_ops = gm20b_ops.dbg_session_ops;
 	gops->debug = gm20b_ops.debug;
@@ -399,7 +405,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_pmu_ops(g);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
-	gm20b_init_therm_ops(gops);
 
 	g->name = "gm20b";
 

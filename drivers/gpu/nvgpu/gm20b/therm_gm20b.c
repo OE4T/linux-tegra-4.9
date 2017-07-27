@@ -1,7 +1,7 @@
 /*
  * GM20B THERMAL
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 
 #include <nvgpu/hw/gm20b/hw_therm_gm20b.h>
 
-static int gm20b_init_therm_setup_hw(struct gk20a *g)
+int gm20b_init_therm_setup_hw(struct gk20a *g)
 {
 	u32 v;
 
@@ -66,10 +66,4 @@ static int gm20b_init_therm_setup_hw(struct gk20a *g)
 	gk20a_writel(g, therm_grad_stepping0_r(), v);
 
 	return 0;
-}
-
-void gm20b_init_therm_ops(struct gpu_ops *gops)
-{
-	gops->therm.init_therm_setup_hw = gm20b_init_therm_setup_hw;
-	gops->therm.elcg_init_idle_filters = gk20a_elcg_init_idle_filters;
 }

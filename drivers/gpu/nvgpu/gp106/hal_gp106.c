@@ -343,6 +343,16 @@ static const struct gpu_ops gp106_ops = {
 		.exit = gk20a_pramin_exit,
 		.data032_r = pram_data032_r,
 	},
+	.therm = {
+#ifdef CONFIG_DEBUG_FS
+		.therm_debugfs_init = gp106_therm_debugfs_init,
+#endif /* CONFIG_DEBUG_FS */
+		.elcg_init_idle_filters = gp106_elcg_init_idle_filters,
+		.get_internal_sensor_curr_temp =
+			gp106_get_internal_sensor_curr_temp,
+		.get_internal_sensor_limits = gp106_get_internal_sensor_limits,
+		.configure_therm_alert = gp106_configure_therm_alert,
+	},
 	.mc = {
 		.intr_enable = mc_gp10b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -436,6 +446,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->gr_ctx = gp106_ops.gr_ctx;
 	gops->fecs_trace = gp106_ops.fecs_trace;
 	gops->pramin = gp106_ops.pramin;
+	gops->therm = gp106_ops.therm;
 	gops->mc = gp106_ops.mc;
 	gops->debug = gp106_ops.debug;
 	gops->dbg_session_ops = gp106_ops.dbg_session_ops;
@@ -467,7 +478,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_clk_ops(gops);
 	gp106_init_clk_arb_ops(gops);
 	gp106_init_regops(gops);
-	gp106_init_therm_ops(gops);
 
 	g->name = "gp10x";
 

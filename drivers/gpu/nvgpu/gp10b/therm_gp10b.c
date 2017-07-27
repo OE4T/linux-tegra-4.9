@@ -20,7 +20,7 @@
 
 #include <nvgpu/hw/gp10b/hw_therm_gp10b.h>
 
-static int gp10b_init_therm_setup_hw(struct gk20a *g)
+int gp10b_init_therm_setup_hw(struct gk20a *g)
 {
 	u32 v;
 
@@ -80,7 +80,7 @@ static int gp10b_init_therm_setup_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gp10b_elcg_init_idle_filters(struct gk20a *g)
+int gp10b_elcg_init_idle_filters(struct gk20a *g)
 {
 	u32 gate_ctrl, idle_filter;
 	u32 engine_id;

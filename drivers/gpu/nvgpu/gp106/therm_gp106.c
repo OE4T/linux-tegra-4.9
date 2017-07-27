@@ -11,6 +11,8 @@
  * more details.
  */
 
+#include "gk20a/gk20a.h"
+
 #include "therm_gp106.h"
 #include "therm/thrmpmu.h"
 
@@ -22,13 +24,13 @@
 
 #include <nvgpu/hw/gp106/hw_therm_gp106.h>
 
-static void gp106_get_internal_sensor_limits(s32 *max_24_8, s32 *min_24_8)
+void gp106_get_internal_sensor_limits(s32 *max_24_8, s32 *min_24_8)
 {
 	*max_24_8 = (0x87 << 8);
 	*min_24_8 = ((-216) << 8);
 }
 
-static int gp106_get_internal_sensor_curr_temp(struct gk20a *g, u32 *temp_f24_8)
+int gp106_get_internal_sensor_curr_temp(struct gk20a *g, u32 *temp_f24_8)
 {
 	int err = 0;
 	u32 readval;
@@ -68,7 +70,8 @@ static int therm_get_internal_sensor_curr_temp(void *data, u64 *val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(therm_ctrl_fops, therm_get_internal_sensor_curr_temp, NULL, "%llu\n");
 
-static void gp106_therm_debugfs_init(struct gk20a *g) {
+void gp106_therm_debugfs_init(struct gk20a *g)
+{
 	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 	struct dentry *dbgentry;
 
@@ -79,7 +82,7 @@ static void gp106_therm_debugfs_init(struct gk20a *g) {
 }
 #endif
 
-static int gp106_elcg_init_idle_filters(struct gk20a *g)
+int gp106_elcg_init_idle_filters(struct gk20a *g)
 {
 	u32 gate_ctrl, idle_filter;
 	u32 engine_id;
@@ -117,7 +120,7 @@ static int gp106_elcg_init_idle_filters(struct gk20a *g)
 	return 0;
 }
 
-static u32 gp106_configure_therm_alert(struct gk20a *g, s32 curr_warn_temp)
+u32 gp106_configure_therm_alert(struct gk20a *g, s32 curr_warn_temp)
 {
 	u32 err = 0;
 
@@ -127,15 +130,4 @@ static u32 gp106_configure_therm_alert(struct gk20a *g, s32 curr_warn_temp)
 	}
 
 	return err;
-}
-
-void gp106_init_therm_ops(struct gpu_ops *gops) {
-#ifdef CONFIG_DEBUG_FS
-	gops->therm.therm_debugfs_init = gp106_therm_debugfs_init;
-#endif
-	gops->therm.elcg_init_idle_filters = gp106_elcg_init_idle_filters;
-	gops->therm.get_internal_sensor_curr_temp = gp106_get_internal_sensor_curr_temp;
-	gops->therm.get_internal_sensor_limits =
-			gp106_get_internal_sensor_limits;
-	gops->therm.configure_therm_alert = gp106_configure_therm_alert;
 }

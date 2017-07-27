@@ -940,6 +940,11 @@ static void tegra_i2c_config_prod_settings(struct tegra_i2c_dev *i2c_dev)
 		break;
 	}
 
+	ret = tegra_prod_set_by_name(&i2c_dev->base, "prod",
+				     i2c_dev->prod_list);
+	if (ret == 0)
+		dev_dbg(i2c_dev->dev, "setting default prod\n");
+
 	ret = tegra_prod_set_by_name(&i2c_dev->base, prod_name,
 				     i2c_dev->prod_list);
 	if (ret == 0)

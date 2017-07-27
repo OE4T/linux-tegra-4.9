@@ -303,7 +303,7 @@ static void tegra_sdhci_dump_vendor_regs(struct sdhci_host *host)
 	u32 trim_delay;
 	u8 i;
 
-	pr_err("======= %s: Tuning windows =======\n", mmc_hostname(host->mmc));
+	pr_info("======= %s: Tuning windows =======\n", mmc_hostname(host->mmc));
 	reg = sdhci_readl(host, SDHCI_VNDR_TUN_CTRL0_0);
 	for (i = 0; i <= TUNING_WORD_SEL_MASK; i++) {
 		reg &= ~SDHCI_TUN_CTRL0_TUNING_WORD_SEL_MASK;
@@ -320,31 +320,31 @@ static void tegra_sdhci_dump_vendor_regs(struct sdhci_host *host)
 	trim_delay &= SDHCI_CLOCK_CTRL_TRIM_MASK;
 	pr_info("sdhci: Tap value: %u | Trim value: %u\n", tap_delay,
 			trim_delay);
-	pr_err("==================================\n");
+	pr_info("==================================\n");
 
-	pr_err("Vendor clock ctrl: %#x\n",
+	pr_info("Vendor clock ctrl: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL));
-	pr_err("Vendor SysSW ctrl: %#x\n",
+	pr_info("Vendor SysSW ctrl: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_SYS_SW_CTRL));
-	pr_err("Vendor Err interrupt status : %#x\n",
+	pr_info("Vendor Err interrupt status : %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_ERR_INTR_STATUS));
-	pr_err("Vendor Cap overrides: %#x\n",
+	pr_info("Vendor Cap overrides: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_CAP_OVERRIDES));
-	pr_err("Vendor Misc ctrl: %#x\n",
+	pr_info("Vendor Misc ctrl: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL));
-	pr_err("Vendor Misc ctrl_1: %#x\n",
+	pr_info("Vendor Misc ctrl_1: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL_1));
-	pr_err("Vendor Misc ctrl_2: %#x\n",
+	pr_info("Vendor Misc ctrl_2: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL_2));
-	pr_err("Vendor IO trim ctrl: %#x\n",
+	pr_info("Vendor IO trim ctrl: %#x\n",
 		sdhci_readl(host, SDMMC_VNDR_IO_TRIM_CTRL_0));
-	pr_err("Vendor Tuning ctrl: %#x\n",
+	pr_info("Vendor Tuning ctrl: %#x\n",
 		sdhci_readl(host, SDHCI_VNDR_TUN_CTRL0_0));
-	pr_err("SDMEM comp padctrl: %#x\n",
+	pr_info("SDMEM comp padctrl: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_SDMEM_COMP_PADCTRL));
-	pr_err("Autocal config: %#x\n",
+	pr_info("Autocal config: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_AUTO_CAL_CONFIG));
-	pr_err("Autocal status: %#x\n",
+	pr_info("Autocal status: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_AUTO_CAL_STATUS));
 }
 

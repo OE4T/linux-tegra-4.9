@@ -36,7 +36,10 @@
 
 #define IMX274_GAIN_SHIFT		8
 #define IMX274_MIN_GAIN		(1 << IMX274_GAIN_SHIFT)
-#define IMX274_MAX_GAIN		(23 << IMX274_GAIN_SHIFT)
+#define IMX274_MAX_ANALOG_GAIN		(IMX274_MIN_GAIN * 111 / 5)
+#define IMX274_MAX_DIGITAL_GAIN	64
+#define IMX274_MAX_GAIN	(IMX274_MAX_ANALOG_GAIN * IMX274_MAX_DIGITAL_GAIN)
+
 #define IMX274_MIN_FRAME_LENGTH	(0x8ED)
 #define IMX274_MAX_FRAME_LENGTH	(0xFFFF)
 #define IMX274_MIN_EXPOSURE_COARSE	(0x0001)
@@ -216,9 +219,9 @@ static inline void imx274_get_shr_dol2_regs(imx274_reg *regs,
 static inline void imx274_get_gain_reg(imx274_reg *regs,
 				u16 gain)
 {
-	regs->addr = IMX274_GAIN_ADDR_MSB;
+	regs->addr = IMX274_ANALOG_GAIN_ADDR_MSB;
 	regs->val = (gain >> 8) & 0xff;
-	(regs + 1)->addr = IMX274_GAIN_ADDR_LSB;
+	(regs + 1)->addr = IMX274_ANALOG_GAIN_ADDR_LSB;
 	(regs + 1)->val = (gain) & 0xff;
 }
 
@@ -607,7 +610,10 @@ static int imx274_set_gain(struct imx274 *priv, s32 val)
 	imx274_reg reg_list[2];
 	int err;
 	int i = 0;
-	u16 gain;
+	u32 again;
+	u8 dgain;
+	u16 reg_again;
+	u8 reg_dgain;
 
 	dev_dbg(&priv->i2c_client->dev,
 		"%s: val: %d\n", __func__, val);
@@ -617,10 +623,52 @@ static int imx274_set_gain(struct imx274 *priv, s32 val)
 	else if (val > IMX274_MAX_GAIN)
 		val = IMX274_MAX_GAIN;
 
-	gain = 2048 - (2048 * IMX274_MIN_GAIN / val);
+	if  (val > (IMX274_MAX_ANALOG_GAIN * 32)) {
+		dgain = 64;
+		reg_dgain = 0x06;
+		again = val / dgain;
+	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 16)) {
+		dgain = 32;
+		reg_dgain = 0x05;
+		again = val  / dgain;
+	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 8)) {
+		dgain = 16;
+		reg_dgain = 0x04;
+		again = val / dgain;
+	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 4)) {
+		dgain = 8;
+		reg_dgain = 0x03;
+		again = val / dgain;
+	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 2)) {
+		dgain = 4;
+		reg_dgain = 0x02;
+		again = val / dgain;
+	} else if (val > (IMX274_MAX_ANALOG_GAIN)) {
+		dgain = 2;
+		reg_dgain = 0x01;
+		again = val / dgain;
+	} else  {
+		dgain = 1;
+		reg_dgain = 0x00;
+		again = val / dgain;
+	}
 
-	imx274_get_gain_reg(reg_list, gain);
+	reg_again = 2048 - (2048 * IMX274_MIN_GAIN / again);
+	if (reg_again > 1957)
+		reg_again = 1957;
+
+	imx274_get_gain_reg(reg_list, reg_again);
 	imx274_set_group_hold(priv);
+
+	dev_dbg(&priv->i2c_client->dev,
+		 "%s: val:%d, gain:%d, again:(%d, %d), dgain:(%d, %d)\n",
+			__func__,
+			val,
+			val / IMX274_MIN_GAIN,
+			again / IMX274_MIN_GAIN,
+			reg_again,
+			dgain,
+			reg_dgain);
 
 	/* writing analog gain */
 	for (i = 0; i < 2; i++) {
@@ -629,6 +677,12 @@ static int imx274_set_gain(struct imx274 *priv, s32 val)
 		if (err)
 			goto fail;
 	}
+
+	/* writing digital gain */
+	err = imx274_write_reg(priv->s_data, IMX274_DIGITAL_GAIN_ADDR,
+				reg_dgain);
+	if (err)
+		goto fail;
 
 	return 0;
 
@@ -761,8 +815,8 @@ static u16 imx274_calculate_coarse_time_shr(struct imx274 *priv, u32 rep)
 			IMX274_1080P_MODE_OFFSET) /
 			IMX274_1080P_MODE_HMAX;
 
-		if (shr > priv->vmax-4)
-			shr = priv->vmax-4;
+		if (shr > priv->vmax - 4)
+			shr = priv->vmax - 4;
 		if (shr < 8)
 			shr = 8;
 	} else {

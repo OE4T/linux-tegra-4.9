@@ -547,6 +547,8 @@
 		phy-names = "utmi-2", "usb3-1", "utmi-1", "usb3-0", "utmi-0";
 		nvidia,pmc-wakeup =
 			<&tegra_pmc
+				PMC_WAKE_TYPE_EVENT 39 PMC_TRIGGER_TYPE_HIGH>,
+			<&tegra_pmc
 				PMC_WAKE_TYPE_EVENT 41 PMC_TRIGGER_TYPE_HIGH>,
 			<&tegra_pmc
 				PMC_WAKE_TYPE_EVENT 44 PMC_TRIGGER_TYPE_HIGH>;

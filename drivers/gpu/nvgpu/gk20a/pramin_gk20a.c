@@ -25,7 +25,7 @@
 #include <nvgpu/hw/gk20a/hw_pram_gk20a.h>
 
 /* WARNING: returns pramin_window_lock taken, complement with pramin_exit() */
-static u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
+u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
 			      struct page_alloc_chunk *chunk, u32 w)
 {
 	u64 bufbase = chunk->base;
@@ -56,17 +56,10 @@ static u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
 	return lo;
 }
 
-static void gk20a_pramin_exit(struct gk20a *g, struct nvgpu_mem *mem,
+void gk20a_pramin_exit(struct gk20a *g, struct nvgpu_mem *mem,
 			      struct page_alloc_chunk *chunk)
 {
 	gk20a_dbg(gpu_dbg_mem, "end for %p,%p", mem, chunk);
 
 	nvgpu_spinlock_release(&g->mm.pramin_window_lock);
-}
-
-void gk20a_init_pramin_ops(struct gpu_ops *gops)
-{
-	gops->pramin.enter = gk20a_pramin_enter;
-	gops->pramin.exit = gk20a_pramin_exit;
-	gops->pramin.data032_r = pram_data032_r;
 }

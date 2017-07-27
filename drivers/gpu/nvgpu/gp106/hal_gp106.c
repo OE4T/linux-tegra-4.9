@@ -70,6 +70,7 @@
 #include <nvgpu/hw/gp106/hw_fifo_gp106.h>
 #include <nvgpu/hw/gp106/hw_ram_gp106.h>
 #include <nvgpu/hw/gp106/hw_top_gp106.h>
+#include <nvgpu/hw/gp106/hw_pram_gp106.h>
 
 static int gp106_get_litter_value(struct gk20a *g, int value)
 {
@@ -337,6 +338,11 @@ static const struct gpu_ops gp106_ops = {
 		.max_entries = gk20a_gr_max_entries,
 	},
 #endif /* CONFIG_GK20A_CTXSW_TRACE */
+	.pramin = {
+		.enter = gk20a_pramin_enter,
+		.exit = gk20a_pramin_exit,
+		.data032_r = pram_data032_r,
+	},
 	.mc = {
 		.intr_enable = mc_gp10b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -429,6 +435,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->fifo = gp106_ops.fifo;
 	gops->gr_ctx = gp106_ops.gr_ctx;
 	gops->fecs_trace = gp106_ops.fecs_trace;
+	gops->pramin = gp106_ops.pramin;
 	gops->mc = gp106_ops.mc;
 	gops->debug = gp106_ops.debug;
 	gops->dbg_session_ops = gp106_ops.dbg_session_ops;
@@ -460,7 +467,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_clk_ops(gops);
 	gp106_init_clk_arb_ops(gops);
 	gp106_init_regops(gops);
-	gk20a_init_pramin_ops(gops);
 	gp106_init_therm_ops(gops);
 
 	g->name = "gp10x";

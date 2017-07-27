@@ -17,8 +17,12 @@
 #ifndef __PRAMIN_GK20A_H__
 #define __PRAMIN_GK20A_H__
 
-struct gpu_ops;
+struct gk20a;
+struct nvgpu_mem;
+struct page_alloc_chunk;
 
-void gk20a_init_pramin_ops(struct gpu_ops *ops);
-
+u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
+			      struct page_alloc_chunk *chunk, u32 w);
+void gk20a_pramin_exit(struct gk20a *g, struct nvgpu_mem *mem,
+			      struct page_alloc_chunk *chunk);
 #endif

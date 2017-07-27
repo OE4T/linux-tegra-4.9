@@ -1107,11 +1107,7 @@ static void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
 
 		gv11b_fb_copy_from_hw_fault_buf(g, mem, offset, mmfault);
 
-		/* Extra 1 in buffer size is to detect buffer full.
-		 * Actual number of entries for faults to be snapped are
-		 * one less than number in fault_buffer_size_val
-		 */
-		get_indx = (get_indx + 1) % (entries - 1);
+		get_indx = (get_indx + 1) % entries;
 		nvgpu_log(g, gpu_dbg_intr, "new get index = %d", get_indx);
 
 		gv11b_fb_fault_buffer_get_ptr_update(g, index, get_indx);

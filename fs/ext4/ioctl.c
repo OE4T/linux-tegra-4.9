@@ -307,6 +307,7 @@ static int ext4_ioctl_setproject(struct file *filp, __u32 projid)
 	struct ext4_iloc iloc;
 	struct ext4_inode *raw_inode;
 	struct dquot *transfer_to[MAXQUOTAS] = { };
+	int error;
 
 	if (!ext4_has_feature_project(sb)) {
 		if (projid != EXT4_DEF_PROJID)
@@ -345,8 +346,9 @@ static int ext4_ioctl_setproject(struct file *filp, __u32 projid)
 	}
 	brelse(iloc.bh);
 
-	dquot_initialize(inode);
-
+	error = dquot_initialize(inode);
+	if (!error)
+		ext4_warning(sb, "dquot_initialize failed: %d\n", error);
 	handle = ext4_journal_start(inode, EXT4_HT_QUOTA,
 		EXT4_QUOTA_INIT_BLOCKS(sb) +
 		EXT4_QUOTA_DEL_BLOCKS(sb) + 3);

@@ -26,6 +26,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/pmu.h>
 #include <nvgpu/gmmu.h>
+#include <nvgpu/ltc.h>
 
 #include <trace/events/gk20a.h>
 
@@ -216,8 +217,11 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		goto done;
 	}
 
-	if (g->ops.ltc.init_fs_state)
-		g->ops.ltc.init_fs_state(g);
+	err = nvgpu_init_ltc_support(g);
+	if (err) {
+		nvgpu_err(g, "failed to init ltc");
+		goto done;
+	}
 
 	err = gk20a_init_mm_support(g);
 	if (err) {

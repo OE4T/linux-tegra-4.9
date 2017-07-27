@@ -21,8 +21,6 @@
 #include "gk20a.h"
 #include "gr_gk20a.h"
 
-/* Non HW reg dependent stuff: */
-
 int gk20a_ltc_alloc_phys_cbc(struct gk20a *g, size_t compbit_backing_size)
 {
 	struct gr_gk20a *gr = &g->gr;

@@ -144,9 +144,7 @@ struct gpu_ops {
 					    struct zbc_entry *s_val,
 					    u32 index);
 		void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
-#ifdef CONFIG_DEBUG_FS
-		void (*sync_debugfs)(struct gk20a *g);
-#endif
+		void (*set_enabled)(struct gk20a *g, bool enabled);
 		void (*init_fs_state)(struct gk20a *g);
 		void (*isr)(struct gk20a *g);
 		u32 (*cbc_fix_config)(struct gk20a *g, int base);
@@ -1147,8 +1145,9 @@ struct gk20a {
 
 	u32 emc3d_ratio;
 
+	struct nvgpu_spinlock ltc_enabled_lock;
+
 #ifdef CONFIG_DEBUG_FS
-	struct nvgpu_spinlock debugfs_lock;
 	struct dentry *debugfs_ltc_enabled;
 	struct dentry *debugfs_timeouts_enabled;
 	struct dentry *debugfs_gr_idle_timeout_default;

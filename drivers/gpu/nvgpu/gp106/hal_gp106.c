@@ -204,9 +204,7 @@ static const struct gpu_ops gp106_ops = {
 		.isr = gp10b_ltc_isr,
 		.cbc_fix_config = NULL,
 		.flush = gm20b_flush_ltc,
-#ifdef CONFIG_DEBUG_FS
-		.sync_debugfs = gp10b_ltc_sync_debugfs,
-#endif
+		.set_enabled = gp10b_ltc_set_enabled,
 	},
 	.ce2 = {
 		.isr_stall = gp10b_ce_isr,

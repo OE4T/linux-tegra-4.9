@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -10,15 +10,12 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
+#ifndef __NVGPU_LTC_H__
+#define __NVGPU_LTC_H__
 
-#ifndef LTC_GP10B_H
-#define LTC_GP10B_H
-struct gpu_ops;
+struct gk20a;
 
-void gp10b_ltc_isr(struct gk20a *g);
+int nvgpu_init_ltc_support(struct gk20a *g);
+void nvgpu_ltc_sync_enabled(struct gk20a *g);
 
-int gp10b_determine_L2_size_bytes(struct gk20a *g);
-int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr);
-void gp10b_ltc_init_fs_state(struct gk20a *g);
-void gp10b_ltc_set_enabled(struct gk20a *g, bool enabled);
 #endif

@@ -155,9 +155,7 @@ static const struct gpu_ops gm20b_ops = {
 		.isr = gm20b_ltc_isr,
 		.cbc_fix_config = gm20b_ltc_cbc_fix_config,
 		.flush = gm20b_flush_ltc,
-#ifdef CONFIG_DEBUG_FS
-		.sync_debugfs = gm20b_ltc_sync_debugfs,
-#endif
+		.set_enabled = gm20b_ltc_set_enabled,
 	},
 	.ce2 = {
 		.isr_stall = gk20a_ce2_isr,

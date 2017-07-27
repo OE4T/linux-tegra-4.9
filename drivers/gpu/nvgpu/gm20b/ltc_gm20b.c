@@ -437,25 +437,17 @@ void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 
 }
 
-#ifdef CONFIG_DEBUG_FS
-void gm20b_ltc_sync_debugfs(struct gk20a *g)
+void gm20b_ltc_set_enabled(struct gk20a *g, bool enabled)
 {
 	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
+	u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
 
-	nvgpu_spinlock_acquire(&g->debugfs_lock);
-	if (g->mm.ltc_enabled != g->mm.ltc_enabled_debug) {
-		u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
+	if (enabled)
+		/* bypass disabled (normal caching ops)*/
+		reg &= ~reg_f;
+	else
+		/* bypass enabled (no caching) */
+		reg |= reg_f;
 
-		if (g->mm.ltc_enabled_debug)
-			/* bypass disabled (normal caching ops)*/
-			reg &= ~reg_f;
-		else
-			/* bypass enabled (no caching) */
-			reg |= reg_f;
-
-		gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
-		g->mm.ltc_enabled = g->mm.ltc_enabled_debug;
-	}
-	nvgpu_spinlock_release(&g->debugfs_lock);
+	gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
 }
-#endif

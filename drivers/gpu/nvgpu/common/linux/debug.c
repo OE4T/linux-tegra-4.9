@@ -275,15 +275,10 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 	debugfs_create_u32("log_trace", S_IRUGO|S_IWUSR,
 		platform->debugfs, &g->log_trace);
 
-	nvgpu_spinlock_init(&g->debugfs_lock);
-
-	g->mm.ltc_enabled = true;
-	g->mm.ltc_enabled_debug = true;
-
 	g->debugfs_ltc_enabled =
 			debugfs_create_bool("ltc_enabled", S_IRUGO|S_IWUSR,
 				 platform->debugfs,
-				 &g->mm.ltc_enabled_debug);
+				 &g->mm.ltc_enabled_target);
 
 	g->debugfs_gr_idle_timeout_default =
 			debugfs_create_u32("gr_idle_timeout_default_us",

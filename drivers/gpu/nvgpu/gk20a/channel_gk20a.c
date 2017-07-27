@@ -34,6 +34,7 @@
 #include <nvgpu/cond.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/ltc.h>
 
 #include "gk20a.h"
 #include "ctxsw_trace_gk20a.h"
@@ -2490,11 +2491,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (profile)
 		profile->timestamp[PROFILE_ENTRY] = sched_clock();
 
-#ifdef CONFIG_DEBUG_FS
 	/* update debug settings */
-	if (g->ops.ltc.sync_debugfs)
-		g->ops.ltc.sync_debugfs(g);
-#endif
+	nvgpu_ltc_sync_enabled(g);
 
 	gk20a_dbg_info("channel %d", c->chid);
 

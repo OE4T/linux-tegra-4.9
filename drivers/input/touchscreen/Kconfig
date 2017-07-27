@@ -1214,30 +1214,5 @@ config TOUCHSCREEN_ROHM_BU21023
 	  To compile this driver as a module, choose M here: the
 	  module will be called bu21023_ts.
 
-config TOUCHSCREEN_LR388K7
-	tristate "Sharp LR388K7 touchscreen"
-	depends on SPI_MASTER
-	help
-	  Say Y here if you have a LR388K7 and want to enable
-	  support for the built-in touchscreen.
-
-	  If unsure, say N.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called lr388k7.
-
-config TOUCHSCREEN_RM31080A
-	tristate "RAYDIUM_31080A based touchscreens"
-	depends on SPI_MASTER
-	help
-	  Say Y here if you have a touchscreen interface using the
-	  RAYDIUM_T31080A controller, and your board-specific initialization
-	  code includes that in its table of SPI devices.
-
-	  If unsure, say N (but it's safe to say "Y").
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called RAYDIUM_31080A.
-
 trysource "../nvidia/drivers/input/touchscreen/Kconfig.nvidia"
 endif

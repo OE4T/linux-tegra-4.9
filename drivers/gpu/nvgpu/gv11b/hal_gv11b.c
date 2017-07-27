@@ -35,6 +35,7 @@
 #include "gm20b/fifo_gm20b.h"
 
 #include "gp10b/ltc_gp10b.h"
+#include "gp10b/therm_gp10b.h"
 #include "gp10b/mc_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
@@ -50,7 +51,6 @@
 #include "gr_ctx_gv11b.h"
 #include "mm_gv11b.h"
 #include "pmu_gv11b.h"
-#include "therm_gv11b.h"
 #include "fb_gv11b.h"
 #include "fifo_gv11b.h"
 #include "gv11b_gating_reglist.h"
@@ -306,6 +306,10 @@ static const struct gpu_ops gv11b_ops = {
 		.max_entries = gk20a_gr_max_entries,
 	},
 #endif /* CONFIG_GK20A_CTXSW_TRACE */
+	.therm = {
+		.init_therm_setup_hw = gp10b_init_therm_setup_hw,
+		.elcg_init_idle_filters = gp10b_elcg_init_idle_filters,
+	},
 	.mc = {
 		.intr_enable = mc_gv11b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -375,6 +379,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->fifo = gv11b_ops.fifo;
 	gops->gr_ctx = gv11b_ops.gr_ctx;
 	gops->fecs_trace = gv11b_ops.fecs_trace;
+	gops->therm = gv11b_ops.therm;
 	gops->mc = gv11b_ops.mc;
 	gops->debug = gv11b_ops.debug;
 	gops->dbg_session_ops = gv11b_ops.dbg_session_ops;
@@ -400,7 +405,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_mm(gops);
 	gv11b_init_pmu_ops(g);
 	gv11b_init_regops(gops);
-	gv11b_init_therm_ops(gops);
 
 	g->name = "gv11b";
 

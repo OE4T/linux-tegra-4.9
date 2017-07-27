@@ -13,15 +13,14 @@
  */
 
 #include "debug_mm.h"
-#include "gk20a/platform_gk20a.h"
 #include "os_linux.h"
 
 #include <linux/debugfs.h>
 
 void gk20a_mm_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	debugfs_create_bool("force_pramin", 0664, platform->debugfs,
+	debugfs_create_bool("force_pramin", 0664, l->debugfs,
 			   &g->mm.force_pramin);
 }

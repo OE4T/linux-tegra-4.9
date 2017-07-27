@@ -23,9 +23,6 @@
 #include <nvgpu/kmem.h>
 
 #include "gk20a/gk20a.h"
-#ifdef CONFIG_DEBUG_FS
-#include "gk20a/platform_gk20a.h"
-#endif
 #include "common/linux/os_linux.h"
 
 #include "clk_gp106.h"
@@ -240,10 +237,10 @@ static int gp106_get_rate_show(void *data , u64 *val) {
 DEFINE_SIMPLE_ATTRIBUTE(get_rate_fops, gp106_get_rate_show, NULL, "%llu\n");
 
 
-static int clk_gp106_debugfs_init(struct gk20a *g) {
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
-
-	struct dentry *gpu_root = platform->debugfs;
+static int clk_gp106_debugfs_init(struct gk20a *g)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct dentry *gpu_root = l->debugfs;
 	struct dentry *clocks_root;
 	struct dentry *d;
 	unsigned int i;

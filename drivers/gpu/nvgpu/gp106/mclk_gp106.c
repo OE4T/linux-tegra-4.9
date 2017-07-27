@@ -18,7 +18,6 @@
 
 #include "gk20a/gk20a.h"
 #ifdef CONFIG_DEBUG_FS
-#include "gk20a/platform_gk20a.h"
 #include "common/linux/os_linux.h"
 #endif
 #include "gp106/mclk_gp106.h"
@@ -3495,9 +3494,8 @@ static const struct file_operations mclk_switch_stats_fops = {
 
 static int mclk_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
-
-	struct dentry *gpu_root = platform->debugfs;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct dentry *gpu_root = l->debugfs;
 	struct dentry *d;
 
 	gk20a_dbg(gpu_dbg_info, "g=%p", g);

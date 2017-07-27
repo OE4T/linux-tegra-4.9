@@ -22,10 +22,10 @@
 #include "gk20a/gk20a.h"
 #include "gm206/bios_gm206.h"
 #include "gp106/xve_gp106.h"
-
 #ifdef CONFIG_DEBUG_FS
 #include "gk20a/platform_gk20a.h"
 #endif
+#include "common/linux/os_linux.h"
 
 #include <nvgpu/bug.h>
 
@@ -607,12 +607,12 @@ int xve_sw_init_gp106(struct device *dev)
 {
 	int err = -ENODEV;
 #ifdef CONFIG_DEBUG_FS
-	struct gk20a *g = get_gk20a(dev);
-	struct gk20a_platform *plat = gk20a_get_platform(dev);
-	struct dentry *gpu_root = plat->debugfs;
+	struct gk20a *g = gk20a_from_dev(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct dentry *gpu_root = l->debugfs;
 
-	g->debugfs_xve = debugfs_create_dir("xve", gpu_root);
-	if (IS_ERR_OR_NULL(g->debugfs_xve))
+	l->debugfs_xve = debugfs_create_dir("xve", gpu_root);
+	if (IS_ERR_OR_NULL(l->debugfs_xve))
 		goto fail;
 
 	/*
@@ -620,13 +620,13 @@ int xve_sw_init_gp106(struct device *dev)
 	 * worrying the higher level SW.
 	 */
 	debugfs_create_file("link_speed", S_IRUGO,
-			    g->debugfs_xve, g,
+			    l->debugfs_xve, g,
 			    &xve_link_speed_fops);
 	debugfs_create_file("available_speeds", S_IRUGO,
-			    g->debugfs_xve, g,
+			    l->debugfs_xve, g,
 			    &xve_available_speeds_fops);
 	debugfs_create_file("link_control_status", S_IRUGO,
-			    g->debugfs_xve, g,
+			    l->debugfs_xve, g,
 			    &xve_link_control_status_fops);
 
 	err = 0;

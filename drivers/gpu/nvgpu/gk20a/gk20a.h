@@ -1147,22 +1147,6 @@ struct gk20a {
 
 	struct nvgpu_spinlock ltc_enabled_lock;
 
-#ifdef CONFIG_DEBUG_FS
-	struct dentry *debugfs_ltc_enabled;
-	struct dentry *debugfs_timeouts_enabled;
-	struct dentry *debugfs_gr_idle_timeout_default;
-	struct dentry *debugfs_bypass_smmu;
-	struct dentry *debugfs_disable_bigpage;
-	struct dentry *debugfs_gr_default_attrib_cb_size;
-
-	struct dentry *debugfs_timeslice_low_priority_us;
-	struct dentry *debugfs_timeslice_medium_priority_us;
-	struct dentry *debugfs_timeslice_high_priority_us;
-	struct dentry *debugfs_runlist_interleave;
-	struct dentry *debugfs_allocators;
-	struct dentry *debugfs_xve;
-	struct dentry *debugfs_kmem;
-#endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;
 
 	/*

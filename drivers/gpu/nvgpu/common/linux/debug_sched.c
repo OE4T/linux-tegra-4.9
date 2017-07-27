@@ -13,7 +13,6 @@
  */
 
 #include "debug_sched.h"
-#include "gk20a/platform_gk20a.h"
 #include "os_linux.h"
 
 #include <linux/debugfs.h>
@@ -73,8 +72,8 @@ static const struct file_operations gk20a_sched_debugfs_fops = {
 
 void gk20a_sched_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	debugfs_create_file("sched_ctrl", S_IRUGO, platform->debugfs,
+	debugfs_create_file("sched_ctrl", S_IRUGO, l->debugfs,
 			g, &gk20a_sched_debugfs_fops);
 }

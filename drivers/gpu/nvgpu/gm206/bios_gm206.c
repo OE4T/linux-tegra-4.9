@@ -172,6 +172,7 @@ int gm206_bios_init(struct gk20a *g)
 	unsigned int i;
 	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 #ifdef CONFIG_DEBUG_FS
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *d;
 #endif
 	struct nvgpu_firmware *bios_fw;
@@ -239,7 +240,7 @@ int gm206_bios_init(struct gk20a *g)
 	g->bios_blob.data = g->bios.data;
 	g->bios_blob.size = g->bios.size;
 
-	d = debugfs_create_blob("bios", S_IRUGO, platform->debugfs,
+	d = debugfs_create_blob("bios", S_IRUGO, l->debugfs,
 			&g->bios_blob);
 	if (!d)
 		nvgpu_err(g, "No debugfs?");

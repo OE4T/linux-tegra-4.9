@@ -17,7 +17,6 @@
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
-#include "gk20a/platform_gk20a.h"
 #include "common/linux/os_linux.h"
 #endif
 
@@ -112,22 +111,23 @@ DEFINE_SIMPLE_ATTRIBUTE(
 DEFINE_SIMPLE_ATTRIBUTE(
 		pmgr_voltage_ctrl_fops, pmgr_pwr_devices_get_voltage_u64, NULL, "%llu\n");
 
-static void pmgr_debugfs_init(struct gk20a *g) {
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+static void pmgr_debugfs_init(struct gk20a *g)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *dbgentry;
 
 	dbgentry = debugfs_create_file(
-				"power", S_IRUGO, platform->debugfs, g, &pmgr_power_ctrl_fops);
+				"power", S_IRUGO, l->debugfs, g, &pmgr_power_ctrl_fops);
 	if (!dbgentry)
 		nvgpu_err(g, "debugfs entry create failed for power");
 
 	dbgentry = debugfs_create_file(
-				"current", S_IRUGO, platform->debugfs, g, &pmgr_current_ctrl_fops);
+				"current", S_IRUGO, l->debugfs, g, &pmgr_current_ctrl_fops);
 	if (!dbgentry)
 		nvgpu_err(g, "debugfs entry create failed for current");
 
 	dbgentry = debugfs_create_file(
-				"voltage", S_IRUGO, platform->debugfs, g, &pmgr_voltage_ctrl_fops);
+				"voltage", S_IRUGO, l->debugfs, g, &pmgr_voltage_ctrl_fops);
 	if (!dbgentry)
 		nvgpu_err(g, "debugfs entry create failed for voltage");
 }

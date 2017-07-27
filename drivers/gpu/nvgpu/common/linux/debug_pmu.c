@@ -14,7 +14,6 @@
 
 #include <nvgpu/enabled.h>
 #include "debug_pmu.h"
-#include "gk20a/platform_gk20a.h"
 #include "os_linux.h"
 
 #include <linux/debugfs.h>
@@ -420,64 +419,64 @@ static const struct file_operations security_fops = {
 int gk20a_pmu_debugfs_init(struct gk20a *g)
 {
 	struct dentry *d;
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
 	d = debugfs_create_file(
-		"lpwr_debug", S_IRUGO|S_IWUSR, platform->debugfs, g,
+		"lpwr_debug", S_IRUGO|S_IWUSR, l->debugfs, g,
 						&lpwr_debug_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"mscg_residency", S_IRUGO|S_IWUSR, platform->debugfs, g,
+		"mscg_residency", S_IRUGO|S_IWUSR, l->debugfs, g,
 						&mscg_stat_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"mscg_transitions", S_IRUGO, platform->debugfs, g,
+		"mscg_transitions", S_IRUGO, l->debugfs, g,
 						&mscg_transitions_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"elpg_residency", S_IRUGO|S_IWUSR, platform->debugfs, g,
+		"elpg_residency", S_IRUGO|S_IWUSR, l->debugfs, g,
 						&elpg_stat_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"elpg_transitions", S_IRUGO, platform->debugfs, g,
+		"elpg_transitions", S_IRUGO, l->debugfs, g,
 						&elpg_transitions_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"falc_trace", S_IRUGO, platform->debugfs, g,
+		"falc_trace", S_IRUGO, l->debugfs, g,
 						&falc_trace_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"perfmon_events_enable", S_IRUGO, platform->debugfs, g,
+		"perfmon_events_enable", S_IRUGO, l->debugfs, g,
 						&perfmon_events_enable_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"perfmon_events_count", S_IRUGO, platform->debugfs, g,
+		"perfmon_events_count", S_IRUGO, l->debugfs, g,
 						&perfmon_events_count_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"pmu_security", S_IRUGO, platform->debugfs, g,
+		"pmu_security", S_IRUGO, l->debugfs, g,
 						&security_fops);
 	if (!d)
 		goto err_out;
 	return 0;
 err_out:
 	pr_err("%s: Failed to make debugfs node\n", __func__);
-	debugfs_remove_recursive(platform->debugfs);
+	debugfs_remove_recursive(l->debugfs);
 	return -ENOMEM;
 }

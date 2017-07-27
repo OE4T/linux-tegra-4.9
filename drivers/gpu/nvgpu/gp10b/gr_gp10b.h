@@ -64,9 +64,6 @@ struct gr_t18x {
 		bool force_preemption_cilp;
 		bool dump_ctxsw_stats_on_channel_close;
 #endif
-		struct dentry *debugfs_force_preemption_cilp;
-		struct dentry *debugfs_force_preemption_gfxp;
-		struct dentry *debugfs_dump_ctxsw_stats;
 	} ctx_vars;
 
 	u32 fecs_feature_override_ecc_val;

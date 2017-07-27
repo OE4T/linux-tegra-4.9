@@ -217,49 +217,49 @@ static const struct file_operations pll_param_fops = {
 
 int gm20b_clk_init_debugfs(struct gk20a *g)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *d;
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
-	if (!platform->debugfs)
+	if (!l->debugfs)
 		return -EINVAL;
 
 	d = debugfs_create_file(
-		"rate", S_IRUGO|S_IWUSR, platform->debugfs, g, &rate_fops);
+		"rate", S_IRUGO|S_IWUSR, l->debugfs, g, &rate_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"pll_reg", S_IRUGO, platform->debugfs, g, &pll_reg_fops);
+		"pll_reg", S_IRUGO, l->debugfs, g, &pll_reg_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file("pll_reg_raw",
-		S_IRUGO, platform->debugfs, g, &pll_reg_raw_fops);
+		S_IRUGO, l->debugfs, g, &pll_reg_raw_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"monitor", S_IRUGO, platform->debugfs, g, &monitor_fops);
+		"monitor", S_IRUGO, l->debugfs, g, &monitor_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"voltage", S_IRUGO, platform->debugfs, g, &voltage_fops);
+		"voltage", S_IRUGO, l->debugfs, g, &voltage_fops);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_file(
-		"pll_param", S_IRUGO, platform->debugfs, g, &pll_param_fops);
+		"pll_param", S_IRUGO, l->debugfs, g, &pll_param_fops);
 	if (!d)
 		goto err_out;
 
-	d = debugfs_create_u32("pll_na_mode", S_IRUGO, platform->debugfs,
+	d = debugfs_create_u32("pll_na_mode", S_IRUGO, l->debugfs,
 			       (u32 *)&g->clk.gpc_pll.mode);
 	if (!d)
 		goto err_out;
 
 	d = debugfs_create_u32("fmax2x_at_vmin_safe_t", S_IRUGO,
-		       platform->debugfs, (u32 *)&g->clk.dvfs_safe_max_freq);
+		       l->debugfs, (u32 *)&g->clk.dvfs_safe_max_freq);
 	if (!d)
 		goto err_out;
 
@@ -267,6 +267,6 @@ int gm20b_clk_init_debugfs(struct gk20a *g)
 
 err_out:
 	pr_err("%s: Failed to make debugfs node\n", __func__);
-	debugfs_remove_recursive(platform->debugfs);
+	debugfs_remove_recursive(l->debugfs);
 	return -ENOMEM;
 }

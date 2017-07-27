@@ -83,6 +83,30 @@ struct nvgpu_os_linux {
 
 	struct work_struct nonstall_fn_work;
 	struct workqueue_struct *nonstall_work_queue;
+
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *debugfs;
+	struct dentry *debugfs_alias;
+
+	struct dentry *debugfs_ltc_enabled;
+	struct dentry *debugfs_timeouts_enabled;
+	struct dentry *debugfs_gr_idle_timeout_default;
+	struct dentry *debugfs_bypass_smmu;
+	struct dentry *debugfs_disable_bigpage;
+	struct dentry *debugfs_gr_default_attrib_cb_size;
+
+	struct dentry *debugfs_timeslice_low_priority_us;
+	struct dentry *debugfs_timeslice_medium_priority_us;
+	struct dentry *debugfs_timeslice_high_priority_us;
+	struct dentry *debugfs_runlist_interleave;
+	struct dentry *debugfs_allocators;
+	struct dentry *debugfs_xve;
+	struct dentry *debugfs_kmem;
+
+	struct dentry *debugfs_force_preemption_cilp;
+	struct dentry *debugfs_force_preemption_gfxp;
+	struct dentry *debugfs_dump_ctxsw_stats;
+#endif
 };
 
 static inline struct nvgpu_os_linux *nvgpu_os_linux_from_gk20a(struct gk20a *g)

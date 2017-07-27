@@ -443,6 +443,7 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(&pdev->dev);
 	struct gk20a *g = get_gk20a(&pdev->dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
 	gk20a_dbg(gpu_dbg_shutdown, "Removing nvgpu driver!\n");
 
@@ -474,8 +475,8 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	gk20a_dbg(gpu_dbg_shutdown, "User de-init done.\b");
 
 #ifdef CONFIG_DEBUG_FS
-	debugfs_remove_recursive(platform->debugfs);
-	debugfs_remove_recursive(platform->debugfs_alias);
+	debugfs_remove_recursive(l->debugfs);
+	debugfs_remove_recursive(l->debugfs_alias);
 #endif
 
 	nvgpu_remove_sysfs(dev_from_gk20a(g));

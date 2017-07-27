@@ -18,7 +18,6 @@
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
-#include "gk20a/platform_gk20a.h"
 #include "common/linux/os_linux.h"
 #endif
 
@@ -72,11 +71,11 @@ DEFINE_SIMPLE_ATTRIBUTE(therm_ctrl_fops, therm_get_internal_sensor_curr_temp, NU
 
 void gp106_therm_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *dbgentry;
 
 	dbgentry = debugfs_create_file(
-		"temp", S_IRUGO, platform->debugfs, g, &therm_ctrl_fops);
+		"temp", S_IRUGO, l->debugfs, g, &therm_ctrl_fops);
 	if (!dbgentry)
 		nvgpu_err(g, "debugfs entry create failed for therm_curr_temp");
 }

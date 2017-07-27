@@ -34,19 +34,20 @@ static const struct file_operations gk20a_cde_reload_fops = {
 
 void gk20a_cde_debugfs_init(struct gk20a *g)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	if (!platform->has_cde)
 		return;
 
 	debugfs_create_u32("cde_parameter", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->cde_app.shader_parameter);
+			   l->debugfs, &g->cde_app.shader_parameter);
 	debugfs_create_u32("cde_ctx_count", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->cde_app.ctx_count);
+			   l->debugfs, &g->cde_app.ctx_count);
 	debugfs_create_u32("cde_ctx_usecount", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->cde_app.ctx_usecount);
+			   l->debugfs, &g->cde_app.ctx_usecount);
 	debugfs_create_u32("cde_ctx_count_top", S_IWUSR | S_IRUGO,
-			   platform->debugfs, &g->cde_app.ctx_count_top);
-	debugfs_create_file("reload_cde_firmware", S_IWUSR, platform->debugfs,
+			   l->debugfs, &g->cde_app.ctx_count_top);
+	debugfs_create_file("reload_cde_firmware", S_IWUSR, l->debugfs,
 			    g, &gk20a_cde_reload_fops);
 }

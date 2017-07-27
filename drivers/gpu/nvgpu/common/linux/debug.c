@@ -223,14 +223,14 @@ static const struct file_operations railgate_residency_fops = {
 
 static int gk20a_railgating_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *d;
 
 	if (!g->can_railgate)
 		return 0;
 
 	d = debugfs_create_file(
-		"railgate_residency", S_IRUGO|S_IWUSR, platform->debugfs, g,
+		"railgate_residency", S_IRUGO|S_IWUSR, l->debugfs, g,
 						&railgate_residency_fops);
 	if (!d)
 		return -ENOMEM;
@@ -240,101 +240,101 @@ static int gk20a_railgating_debugfs_init(struct gk20a *g)
 
 void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct device *dev = dev_from_gk20a(g);
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
-	platform->debugfs = debugfs_create_dir(dev_name(dev), NULL);
-	if (!platform->debugfs)
+	l->debugfs = debugfs_create_dir(dev_name(dev), NULL);
+	if (!l->debugfs)
 		return;
 
 	if (debugfs_symlink)
-		platform->debugfs_alias =
+		l->debugfs_alias =
 			debugfs_create_symlink(debugfs_symlink,
 					NULL, dev_name(dev));
 
-	debugfs_create_file("status", S_IRUGO, platform->debugfs,
+	debugfs_create_file("status", S_IRUGO, l->debugfs,
 		dev, &gk20a_debug_fops);
-	debugfs_create_file("gr_status", S_IRUGO, platform->debugfs,
+	debugfs_create_file("gr_status", S_IRUGO, l->debugfs,
 		dev, &gk20a_gr_debug_fops);
 	debugfs_create_u32("trace_cmdbuf", S_IRUGO|S_IWUSR,
-		platform->debugfs, &gk20a_debug_trace_cmdbuf);
+		l->debugfs, &gk20a_debug_trace_cmdbuf);
 
 	debugfs_create_u32("ch_wdt_timeout_ms", S_IRUGO|S_IWUSR,
-		platform->debugfs, &g->ch_wdt_timeout_ms);
+		l->debugfs, &g->ch_wdt_timeout_ms);
 
 	debugfs_create_u32("disable_syncpoints", S_IRUGO|S_IWUSR,
-		platform->debugfs, &g->disable_syncpoints);
+		l->debugfs, &g->disable_syncpoints);
 
 	/* Legacy debugging API. */
 	debugfs_create_u32("dbg_mask", S_IRUGO|S_IWUSR,
-		platform->debugfs, &nvgpu_dbg_mask);
+		l->debugfs, &nvgpu_dbg_mask);
 
 	/* New debug logging API. */
 	debugfs_create_u32("log_mask", S_IRUGO|S_IWUSR,
-		platform->debugfs, &g->log_mask);
+		l->debugfs, &g->log_mask);
 	debugfs_create_u32("log_trace", S_IRUGO|S_IWUSR,
-		platform->debugfs, &g->log_trace);
+		l->debugfs, &g->log_trace);
 
-	g->debugfs_ltc_enabled =
+	l->debugfs_ltc_enabled =
 			debugfs_create_bool("ltc_enabled", S_IRUGO|S_IWUSR,
-				 platform->debugfs,
+				 l->debugfs,
 				 &g->mm.ltc_enabled_target);
 
-	g->debugfs_gr_idle_timeout_default =
+	l->debugfs_gr_idle_timeout_default =
 			debugfs_create_u32("gr_idle_timeout_default_us",
-					S_IRUGO|S_IWUSR, platform->debugfs,
+					S_IRUGO|S_IWUSR, l->debugfs,
 					 &g->gr_idle_timeout_default);
-	g->debugfs_timeouts_enabled =
+	l->debugfs_timeouts_enabled =
 			debugfs_create_bool("timeouts_enabled",
 					S_IRUGO|S_IWUSR,
-					platform->debugfs,
+					l->debugfs,
 					&g->timeouts_enabled);
 
-	g->debugfs_bypass_smmu =
+	l->debugfs_bypass_smmu =
 			debugfs_create_bool("bypass_smmu",
 					S_IRUGO|S_IWUSR,
-					platform->debugfs,
+					l->debugfs,
 					&g->mm.bypass_smmu);
-	g->debugfs_disable_bigpage =
+	l->debugfs_disable_bigpage =
 			debugfs_create_bool("disable_bigpage",
 					S_IRUGO|S_IWUSR,
-					platform->debugfs,
+					l->debugfs,
 					&g->mm.disable_bigpage);
 
-	g->debugfs_timeslice_low_priority_us =
+	l->debugfs_timeslice_low_priority_us =
 			debugfs_create_u32("timeslice_low_priority_us",
 					S_IRUGO|S_IWUSR,
-					platform->debugfs,
+					l->debugfs,
 					&g->timeslice_low_priority_us);
-	g->debugfs_timeslice_medium_priority_us =
+	l->debugfs_timeslice_medium_priority_us =
 			debugfs_create_u32("timeslice_medium_priority_us",
 					S_IRUGO|S_IWUSR,
-					platform->debugfs,
+					l->debugfs,
 					&g->timeslice_medium_priority_us);
-	g->debugfs_timeslice_high_priority_us =
+	l->debugfs_timeslice_high_priority_us =
 			debugfs_create_u32("timeslice_high_priority_us",
 					S_IRUGO|S_IWUSR,
-					platform->debugfs,
+					l->debugfs,
 					&g->timeslice_high_priority_us);
-	g->debugfs_runlist_interleave =
+	l->debugfs_runlist_interleave =
 			debugfs_create_bool("runlist_interleave",
 					S_IRUGO|S_IWUSR,
-					platform->debugfs,
+					l->debugfs,
 					&g->runlist_interleave);
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	g->gr.t18x.ctx_vars.debugfs_force_preemption_gfxp =
+	l->debugfs_force_preemption_gfxp =
 		debugfs_create_bool("force_preemption_gfxp", S_IRUGO|S_IWUSR,
-		platform->debugfs,
+		l->debugfs,
 		&g->gr.t18x.ctx_vars.force_preemption_gfxp);
 
-	g->gr.t18x.ctx_vars.debugfs_force_preemption_cilp =
+	l->debugfs_force_preemption_cilp =
 		debugfs_create_bool("force_preemption_cilp", S_IRUGO|S_IWUSR,
-		platform->debugfs,
+		l->debugfs,
 		&g->gr.t18x.ctx_vars.force_preemption_cilp);
 
-	g->gr.t18x.ctx_vars.debugfs_dump_ctxsw_stats =
+	l->debugfs_dump_ctxsw_stats =
 		debugfs_create_bool("dump_ctxsw_stats_on_channel_close",
-			S_IRUGO|S_IWUSR, platform->debugfs,
+			S_IRUGO|S_IWUSR, l->debugfs,
 			&g->gr.t18x.
 				ctx_vars.dump_ctxsw_stats_on_channel_close);
 #endif
@@ -355,13 +355,13 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 
 void gk20a_debug_deinit(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	if (!platform->debugfs)
+	if (!l->debugfs)
 		return;
 
 	gk20a_fifo_debugfs_deinit(g);
 
-	debugfs_remove_recursive(platform->debugfs);
-	debugfs_remove_recursive(platform->debugfs_alias);
+	debugfs_remove_recursive(l->debugfs);
+	debugfs_remove_recursive(l->debugfs_alias);
 }

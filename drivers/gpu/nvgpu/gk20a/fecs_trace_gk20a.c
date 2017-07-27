@@ -27,7 +27,6 @@
 #include "fecs_trace_gk20a.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
-#include "platform_gk20a.h"
 #include "common/linux/os_linux.h"
 
 #include <nvgpu/log.h>
@@ -537,21 +536,21 @@ DEFINE_SIMPLE_ATTRIBUTE(gk20a_fecs_trace_debugfs_write_fops,
 
 static void gk20a_fecs_trace_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *plat = dev_get_drvdata(dev_from_gk20a(g));
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	debugfs_create_file("ctxsw_trace_read", 0600, plat->debugfs, g,
+	debugfs_create_file("ctxsw_trace_read", 0600, l->debugfs, g,
 		&gk20a_fecs_trace_debugfs_read_fops);
-	debugfs_create_file("ctxsw_trace_write", 0600, plat->debugfs, g,
+	debugfs_create_file("ctxsw_trace_write", 0600, l->debugfs, g,
 		&gk20a_fecs_trace_debugfs_write_fops);
-	debugfs_create_file("ctxsw_trace_ring", 0600, plat->debugfs, g,
+	debugfs_create_file("ctxsw_trace_ring", 0600, l->debugfs, g,
 		&gk20a_fecs_trace_debugfs_ring_fops);
 }
 
 static void gk20a_fecs_trace_debugfs_cleanup(struct gk20a *g)
 {
-	struct gk20a_platform *plat = dev_get_drvdata(dev_from_gk20a(g));
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	debugfs_remove_recursive(plat->debugfs);
+	debugfs_remove_recursive(l->debugfs);
 }
 
 #else

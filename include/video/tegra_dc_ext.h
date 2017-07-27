@@ -1447,7 +1447,7 @@ struct tegra_dc_ext_crc_region {
  * @type       - The block generating the CRC
  * @input_data - Provides an option to collect CRCs over just the active area
  *               of the frame, or the blank areas and sync pulses as well. Only
- *               valid for ENABLE IOCTL
+ *               valid for ENABLE IOCTL and for TEGRA_DC_EXT_CRC_TYPE_RG/COMP
  * @region     - The region of the frame to do CRC calculations over. Only
  *               valid for TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL. See enum
  *               tegra_dc_ext_crc_type.
@@ -1465,8 +1465,11 @@ struct tegra_dc_ext_crc_region {
  */
 struct tegra_dc_ext_crc_conf {
 	enum tegra_dc_ext_crc_type type;
-	enum tegra_dc_ext_crc_input_data input_data;
-	struct tegra_dc_ext_crc_region region;
+	union  {
+		__u8 data8[45];
+		enum tegra_dc_ext_crc_input_data input_data;
+		struct tegra_dc_ext_crc_region region;
+	};
 	struct tegra_dc_ext_crc {
 		__u8 valid; /* A boolean with 0/1 the only valid values */
 		__u32 val;

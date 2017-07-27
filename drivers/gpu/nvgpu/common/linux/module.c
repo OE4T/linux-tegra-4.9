@@ -136,6 +136,7 @@ void gk20a_idle(struct gk20a *g)
 int gk20a_pm_finalize_poweron(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	int err, nice_value;
 
@@ -163,10 +164,10 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	set_user_nice(current, -20);
 
 	/* Enable interrupt workqueue */
-	if (!g->nonstall_work_queue) {
-		g->nonstall_work_queue = alloc_workqueue("%s",
+	if (!l->nonstall_work_queue) {
+		l->nonstall_work_queue = alloc_workqueue("%s",
 						WQ_HIGHPRI, 1, "mc_nonstall");
-		INIT_WORK(&g->nonstall_fn_work, nvgpu_intr_nonstall_cb);
+		INIT_WORK(&l->nonstall_fn_work, nvgpu_intr_nonstall_cb);
 	}
 
 	err = gk20a_finalize_poweron(g);
@@ -825,6 +826,34 @@ static int gk20a_pm_init(struct device *dev)
 	}
 
 	return err;
+}
+
+/*
+ * Start the process for unloading the driver. Set NVGPU_DRIVER_IS_DYING.
+ */
+void gk20a_driver_start_unload(struct gk20a *g)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
+	gk20a_dbg(gpu_dbg_shutdown, "Driver is now going down!\n");
+
+	down_write(&g->busy_lock);
+	__nvgpu_set_enabled(g, NVGPU_DRIVER_IS_DYING, true);
+	up_write(&g->busy_lock);
+
+	if (g->is_virtual)
+		return;
+
+	gk20a_wait_for_idle(dev_from_gk20a(g));
+
+	nvgpu_wait_for_deferred_interrupts(g);
+	gk20a_channel_cancel_pending_sema_waits(g);
+
+	if (l->nonstall_work_queue) {
+		cancel_work_sync(&l->nonstall_fn_work);
+		destroy_workqueue(l->nonstall_work_queue);
+		l->nonstall_work_queue = NULL;
+	}
 }
 
 static inline void set_gk20a(struct platform_device *pdev, struct gk20a *gk20a)

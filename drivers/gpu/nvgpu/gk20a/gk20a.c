@@ -358,32 +358,6 @@ int gk20a_can_busy(struct gk20a *g)
 	return 1;
 }
 
-/*
- * Start the process for unloading the driver. Set NVGPU_DRIVER_IS_DYING.
- */
-void gk20a_driver_start_unload(struct gk20a *g)
-{
-	gk20a_dbg(gpu_dbg_shutdown, "Driver is now going down!\n");
-
-	down_write(&g->busy_lock);
-	__nvgpu_set_enabled(g, NVGPU_DRIVER_IS_DYING, true);
-	up_write(&g->busy_lock);
-
-	if (g->is_virtual)
-		return;
-
-	gk20a_wait_for_idle(dev_from_gk20a(g));
-
-	nvgpu_wait_for_deferred_interrupts(g);
-	gk20a_channel_cancel_pending_sema_waits(g);
-
-	if (g->nonstall_work_queue) {
-		cancel_work_sync(&g->nonstall_fn_work);
-		destroy_workqueue(g->nonstall_work_queue);
-		g->nonstall_work_queue = NULL;
-	}
-}
-
 int gk20a_wait_for_idle(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);

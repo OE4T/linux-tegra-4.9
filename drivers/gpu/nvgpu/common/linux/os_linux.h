@@ -69,6 +69,20 @@ struct nvgpu_os_linux {
 	struct devfreq *devfreq;
 
 	struct device_dma_parameters dma_parms;
+
+	atomic_t hw_irq_stall_count;
+	atomic_t hw_irq_nonstall_count;
+
+	wait_queue_head_t sw_irq_stall_last_handled_wq;
+	atomic_t sw_irq_stall_last_handled;
+
+	atomic_t nonstall_ops;
+
+	wait_queue_head_t sw_irq_nonstall_last_handled_wq;
+	atomic_t sw_irq_nonstall_last_handled;
+
+	struct work_struct nonstall_fn_work;
+	struct workqueue_struct *nonstall_work_queue;
 };
 
 static inline struct nvgpu_os_linux *nvgpu_os_linux_from_gk20a(struct gk20a *g)

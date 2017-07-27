@@ -18,9 +18,11 @@
 
 #include <nvgpu/atomic.h>
 #include <nvgpu/unit.h>
+#include "os_linux.h"
 
 irqreturn_t nvgpu_intr_stall(struct gk20a *g)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	u32 mc_intr_0;
 
 	trace_mc_gk20a_intr_stall(g->name);
@@ -35,7 +37,7 @@ irqreturn_t nvgpu_intr_stall(struct gk20a *g)
 
 	g->ops.mc.intr_stall_pause(g);
 
-	atomic_inc(&g->hw_irq_stall_count);
+	atomic_inc(&l->hw_irq_stall_count);
 
 	trace_mc_gk20a_intr_stall_done(g->name);
 
@@ -44,14 +46,20 @@ irqreturn_t nvgpu_intr_stall(struct gk20a *g)
 
 irqreturn_t nvgpu_intr_thread_stall(struct gk20a *g)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	int hw_irq_count;
+
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
 	trace_mc_gk20a_intr_thread_stall(g->name);
 
+	hw_irq_count = atomic_read(&l->hw_irq_stall_count);
 	g->ops.mc.isr_stall(g);
 	g->ops.mc.intr_stall_resume(g);
+	/* sync handled irq counter before re-enabling interrupts */
+	atomic_set(&l->sw_irq_stall_last_handled, hw_irq_count);
 
-	wake_up_all(&g->sw_irq_stall_last_handled_wq);
+	wake_up_all(&l->sw_irq_stall_last_handled_wq);
 
 	trace_mc_gk20a_intr_thread_stall_done(g->name);
 
@@ -66,6 +74,8 @@ irqreturn_t nvgpu_intr_nonstall(struct gk20a *g)
 	u32 active_engine_id = 0;
 	u32 engine_enum = ENGINE_INVAL_GK20A;
 	int ops_old, ops_new, ops = 0;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
 	if (!g->power_on)
 		return IRQ_NONE;
 
@@ -103,34 +113,36 @@ irqreturn_t nvgpu_intr_nonstall(struct gk20a *g)
 	}
 	if (ops) {
 		do {
-			ops_old = atomic_read(&g->nonstall_ops);
+			ops_old = atomic_read(&l->nonstall_ops);
 			ops_new  = ops_old | ops;
-		} while (ops_old != atomic_cmpxchg(&g->nonstall_ops,
+		} while (ops_old != atomic_cmpxchg(&l->nonstall_ops,
 						ops_old, ops_new));
 
-		queue_work(g->nonstall_work_queue, &g->nonstall_fn_work);
+		queue_work(l->nonstall_work_queue, &l->nonstall_fn_work);
 	}
 
-	hw_irq_count = atomic_inc_return(&g->hw_irq_nonstall_count);
+	hw_irq_count = atomic_inc_return(&l->hw_irq_nonstall_count);
 
 	/* sync handled irq counter before re-enabling interrupts */
-	atomic_set(&g->sw_irq_nonstall_last_handled, hw_irq_count);
+	atomic_set(&l->sw_irq_nonstall_last_handled, hw_irq_count);
 
 	g->ops.mc.intr_nonstall_resume(g);
 
-	wake_up_all(&g->sw_irq_nonstall_last_handled_wq);
+	wake_up_all(&l->sw_irq_nonstall_last_handled_wq);
 
 	return IRQ_HANDLED;
 }
 
 void nvgpu_intr_nonstall_cb(struct work_struct *work)
 {
-	struct gk20a *g = container_of(work, struct gk20a, nonstall_fn_work);
+	struct nvgpu_os_linux *l =
+		container_of(work, struct nvgpu_os_linux, nonstall_fn_work);
+	struct gk20a *g = &l->g;
 	u32 ops;
 	bool semaphore_wakeup, post_events;
 
 	do {
-		ops = atomic_xchg(&g->nonstall_ops, 0);
+		ops = atomic_xchg(&l->nonstall_ops, 0);
 
 		semaphore_wakeup = ops & gk20a_nonstall_ops_wakeup_semaphore;
 		post_events = ops & gk20a_nonstall_ops_post_events;
@@ -138,5 +150,5 @@ void nvgpu_intr_nonstall_cb(struct work_struct *work)
 		if (semaphore_wakeup)
 			gk20a_channel_semaphore_wakeup(g, post_events);
 
-	} while (atomic_read(&g->nonstall_ops) != 0);
+	} while (atomic_read(&l->nonstall_ops) != 0);
 }

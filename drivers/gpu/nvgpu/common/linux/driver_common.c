@@ -38,8 +38,8 @@ static void nvgpu_init_vars(struct gk20a *g)
 	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
-	init_waitqueue_head(&g->sw_irq_stall_last_handled_wq);
-	init_waitqueue_head(&g->sw_irq_nonstall_last_handled_wq);
+	init_waitqueue_head(&l->sw_irq_stall_last_handled_wq);
+	init_waitqueue_head(&l->sw_irq_nonstall_last_handled_wq);
 	gk20a_init_gr(g);
 
 	init_rwsem(&g->busy_lock);
@@ -236,18 +236,19 @@ static int cyclic_delta(int a, int b)
  */
 void nvgpu_wait_for_deferred_interrupts(struct gk20a *g)
 {
-	int stall_irq_threshold = atomic_read(&g->hw_irq_stall_count);
-	int nonstall_irq_threshold = atomic_read(&g->hw_irq_nonstall_count);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	int stall_irq_threshold = atomic_read(&l->hw_irq_stall_count);
+	int nonstall_irq_threshold = atomic_read(&l->hw_irq_nonstall_count);
 
 	/* wait until all stalling irqs are handled */
-	wait_event(g->sw_irq_stall_last_handled_wq,
+	wait_event(l->sw_irq_stall_last_handled_wq,
 		   cyclic_delta(stall_irq_threshold,
-				atomic_read(&g->sw_irq_stall_last_handled))
+				atomic_read(&l->sw_irq_stall_last_handled))
 		   <= 0);
 
 	/* wait until all non-stalling irqs are handled */
-	wait_event(g->sw_irq_nonstall_last_handled_wq,
+	wait_event(l->sw_irq_nonstall_last_handled_wq,
 		   cyclic_delta(nonstall_irq_threshold,
-				atomic_read(&g->sw_irq_nonstall_last_handled))
+				atomic_read(&l->sw_irq_nonstall_last_handled))
 		   <= 0);
 }

@@ -71,14 +71,12 @@ void mc_gp10b_intr_unit_config(struct gk20a *g, bool enable,
 void mc_gp10b_isr_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
-	int hw_irq_count;
 
 	u32 engine_id_idx;
 	u32 active_engine_id = 0;
 	u32 engine_enum = ENGINE_INVAL_GK20A;
 
 	mc_intr_0 = gk20a_readl(g, mc_intr_r(0));
-	hw_irq_count = atomic_read(&g->hw_irq_stall_count);
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr 0x%08x\n", mc_intr_0);
 
@@ -115,9 +113,6 @@ void mc_gp10b_isr_stall(struct gk20a *g)
 		g->ops.ltc.isr(g);
 	if (mc_intr_0 & mc_intr_pbus_pending_f())
 		g->ops.bus.isr(g);
-
-	/* sync handled irq counter before re-enabling interrupts */
-	atomic_set(&g->sw_irq_stall_last_handled, hw_irq_count);
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr done 0x%08x\n", mc_intr_0);
 

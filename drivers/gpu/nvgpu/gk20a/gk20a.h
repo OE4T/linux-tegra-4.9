@@ -1042,10 +1042,6 @@ struct gk20a {
 
 	atomic_t usage_count;
 
-	atomic_t nonstall_ops;
-	struct work_struct nonstall_fn_work;
-	struct workqueue_struct *nonstall_work_queue;
-
 	struct kref refcount;
 
 	struct resource *reg_mem;
@@ -1223,15 +1219,6 @@ struct gk20a {
 	int irq_nonstall;
 	u32 max_ltc_count;
 	u32 ltc_count;
-
-	atomic_t hw_irq_stall_count;
-	atomic_t hw_irq_nonstall_count;
-
-	atomic_t sw_irq_stall_last_handled;
-	wait_queue_head_t sw_irq_stall_last_handled_wq;
-
-	atomic_t sw_irq_nonstall_last_handled;
-	wait_queue_head_t sw_irq_nonstall_last_handled_wq;
 
 	struct gk20a_channel_worker {
 		struct nvgpu_thread poll_task;
@@ -1485,7 +1472,6 @@ int __gk20a_do_idle(struct gk20a *g, bool force_reset);
 int __gk20a_do_unidle(struct gk20a *g);
 
 int gk20a_can_busy(struct gk20a *g);
-void gk20a_driver_start_unload(struct gk20a *g);
 int gk20a_wait_for_idle(struct device *dev);
 
 #define NVGPU_GPU_ARCHITECTURE_SHIFT 4

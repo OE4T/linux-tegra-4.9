@@ -2903,6 +2903,18 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 		tegra_xhci_enable_phy_sleepwalk_wake(tegra);
 
 	if (!tegra->soc->is_xhci_vf) {
+		/* In ELPG, firmware log context is gone. Rewind shared log buffer. */
+		if (test_bit(FW_LOG_CONTEXT_VALID, &tegra->log.flags)) {
+			if (!circ_buffer_full(&tegra->log.circ)) {
+				if (fw_log_wait_empty_timeout(tegra, 500))
+					dev_info(dev, "%s still has logs\n",
+						__func__);
+			}
+
+			tegra->log.dequeue = tegra->log.virt_addr;
+			tegra->log.seq = 0;
+		}
+
 		ret = tegra_xhci_powergate_partitions(tegra);
 		if (ret) {
 			dev_warn(dev, "failed to powergate Host partition %d\n",
@@ -2928,21 +2940,8 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 			phy_exit(tegra->phys[i]);
 	}
 
-	/* In ELPG, firmware log context is gone. Rewind shared log buffer. */
-	if (!tegra->soc->is_xhci_vf) {
-		if (test_bit(FW_LOG_CONTEXT_VALID, &tegra->log.flags)) {
-			if (!circ_buffer_full(&tegra->log.circ)) {
-				if (fw_log_wait_empty_timeout(tegra, 500))
-					dev_info(dev, "%s still has logs\n",
-						__func__);
-			}
-
-			tegra->log.dequeue = tegra->log.virt_addr;
-			tegra->log.seq = 0;
-		}
-
+	if (!tegra->soc->is_xhci_vf)
 		tegra_xusb_clk_disable(tegra);
-	}
 
 out:
 	if (!ret)

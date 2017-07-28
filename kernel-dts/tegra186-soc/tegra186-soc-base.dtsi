@@ -2052,6 +2052,7 @@
 
 #if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 	aconnect@2a41000 {
+
 	tegra_agic: agic-controller@2a41000 {
 		compatible = "nvidia,tegra210-agic";
 		#interrupt-cells = <4>;
@@ -2059,6 +2060,30 @@
 		reg = <0x0 0x02a41000 0x0 0x1000>,
 			<0x0 0x02a42000 0x0 0x2000>;
 		interrupts = <GIC_SPI 145 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+		clocks = <&tegra_car TEGRA186_CLK_APE>;
+		clock-names = "clk";
+		status = "disabled";
+		};
+
+	tegra_agic_1: agic-controller@2a51000 {
+		compatible = "nvidia,tegra210-agic";
+		interrupt-controller;
+		#interrupt-cells = <4>;
+		reg = <0x0 0x02a51000 0x0 0x1000>,
+			<0x0 0x02a52000 0x0 0x2000>;
+		interrupts = <GIC_SPI 146 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+		clocks = <&tegra_car TEGRA186_CLK_APE>;
+		clock-names = "clk";
+		status = "disabled";
+		};
+
+	tegra_agic_2: agic-controller@2a61000 {
+		compatible = "nvidia,tegra210-agic";
+		interrupt-controller;
+		#interrupt-cells = <4>;
+		reg = <0x0 0x02a61000 0x0 0x1000>,
+			<0x0 0x02a62000 0x0 0x2000>;
+		interrupts = <GIC_SPI 147 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
 		clocks = <&tegra_car TEGRA186_CLK_APE>;
 		clock-names = "clk";
 		status = "disabled";
@@ -2074,6 +2099,30 @@
 		reg = <0x0 0x02a41000 0x0 0x1000>,
 		      <0x0 0x02a42000 0x0 0x2000>;
 		interrupts = <0 145 0xf04>;
+		status = "disabled";
+	};
+
+	tegra_agic_1: agic-controller@2a51000 {
+		compatible = "nvidia,tegra18x-agic";
+		interrupt-controller;
+		#interrupt-cells = <4>;
+		no-gic-extension;
+		not-per-cpu;
+		reg = <0x0 0x02a51000 0x0 0x1000>,
+		      <0x0 0x02a52000 0x0 0x2000>;
+		interrupts = <0 146 0xf04>;
+		status = "disabled";
+	};
+
+	tegra_agic_2: agic-controller@2a61000 {
+		compatible = "nvidia,tegra18x-agic";
+		interrupt-controller;
+		#interrupt-cells = <4>;
+		no-gic-extension;
+		not-per-cpu;
+		reg = <0x0 0x02a61000 0x0 0x1000>,
+		      <0x0 0x02a62000 0x0 0x2000>;
+		interrupts = <0 147 0xf04>;
 		status = "disabled";
 	};
 #endif

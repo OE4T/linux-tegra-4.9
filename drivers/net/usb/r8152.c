@@ -30,6 +30,9 @@
 
 #include "r8152_compatibility.h"
 
+/* NV 1947539 coment 59; using GRO appears to confuse the TCP stack */
+#define napi_gro_receive(napi, skb) netif_receive_skb(skb)
+
 /* Version Information */
 #define DRIVER_VERSION "v2.08.0 (2016/12/09)"
 #define DRIVER_AUTHOR "Realtek nic sw <nic_swsd@realtek.com>"

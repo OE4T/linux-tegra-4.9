@@ -869,10 +869,12 @@ static void set_best_clk_source(struct tegra_spi_data *tspi,
 	pclk = clk_get_parent(tspi->clk);
 	crate = clk_get_rate(tspi->clk);
 	prate = clk_get_rate(pclk);
-	cdiv = DIV_ROUND_UP(prate, crate);
-	if (cdiv < tspi->min_div) {
-		crate = DIV_ROUND_UP(prate, tspi->min_div);
-		clk_set_rate(tspi->clk, crate);
+	if (crate) {
+		cdiv = DIV_ROUND_UP(prate, crate);
+		if (cdiv < tspi->min_div) {
+			crate = DIV_ROUND_UP(prate, tspi->min_div);
+			clk_set_rate(tspi->clk, crate);
+	}
 	}
 
 	of_property_for_each_string(node, "nvidia,clk-parents",

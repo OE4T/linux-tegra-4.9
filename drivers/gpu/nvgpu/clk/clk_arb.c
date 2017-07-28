@@ -1178,7 +1178,8 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	nvgpu_mutex_acquire(&arb->pstate_lock);
 	status = nvgpu_lpwr_disable_pg(g, false);
 
-	status = clk_pmu_freq_controller_load(g, false);
+	status = clk_pmu_freq_controller_load(g, false,
+					CTRL_CLK_CLK_FREQ_CONTROLLER_ID_ALL);
 	if (status < 0) {
 		arb->status = status;
 		nvgpu_mutex_release(&arb->pstate_lock);
@@ -1209,7 +1210,8 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		goto exit_arb;
 	}
 
-	status = clk_pmu_freq_controller_load(g, true);
+	status = clk_pmu_freq_controller_load(g, true,
+					 CTRL_CLK_CLK_FREQ_CONTROLLER_ID_ALL);
 	if (status < 0) {
 		arb->status = status;
 		nvgpu_mutex_release(&arb->pstate_lock);

@@ -55,7 +55,7 @@ static void clkrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		phandlerparams->success = 1;
 }
 
-int clk_pmu_freq_controller_load(struct gk20a *g, bool bload)
+int clk_pmu_freq_controller_load(struct gk20a *g, bool bload, u8 bit_idx)
 {
 	struct pmu_cmd cmd;
 	struct pmu_msg msg;
@@ -67,6 +67,7 @@ int clk_pmu_freq_controller_load(struct gk20a *g, bool bload)
 	struct nv_pmu_clk_load *clkload;
 	struct clk_freq_controllers *pclk_freq_controllers;
 	struct ctrl_boardobjgrp_mask_e32 *load_mask;
+	struct boardobjgrpmask_e32 isolate_cfc_mask;
 
 	memset(&payload, 0, sizeof(struct pmu_payload));
 	memset(&rpccall, 0, sizeof(struct nv_pmu_clk_rpc));
@@ -82,10 +83,39 @@ int clk_pmu_freq_controller_load(struct gk20a *g, bool bload)
 
 	load_mask = &rpccall.params.clk_load.payload.freq_controllers.load_mask;
 
-	status = boardobjgrpmask_export(
-		&pclk_freq_controllers->freq_ctrl_load_mask.super,
-		pclk_freq_controllers->freq_ctrl_load_mask.super.bitcount,
-		&load_mask->super);
+	status = boardobjgrpmask_e32_init(&isolate_cfc_mask, NULL);
+
+	if (bit_idx == CTRL_CLK_CLK_FREQ_CONTROLLER_ID_ALL) {
+		status = boardobjgrpmask_export(
+				&pclk_freq_controllers->
+					freq_ctrl_load_mask.super,
+				pclk_freq_controllers->
+					freq_ctrl_load_mask.super.bitcount,
+				&load_mask->super);
+
+
+	} else {
+		status = boardobjgrpmask_bitset(&isolate_cfc_mask.super,
+						bit_idx);
+		status = boardobjgrpmask_export(&isolate_cfc_mask.super,
+					isolate_cfc_mask.super.bitcount,
+					&load_mask->super);
+		if (bload)
+			status = boardobjgrpmask_bitset(
+					&pclk_freq_controllers->
+						freq_ctrl_load_mask.super,
+					bit_idx);
+		else
+			status = boardobjgrpmask_bitclr(
+					&pclk_freq_controllers->
+						freq_ctrl_load_mask.super,
+					bit_idx);
+	}
+
+	if (status) {
+		nvgpu_err(g, "Error in generating mask used to select CFC");
+		goto done;
+	}
 
 	cmd.hdr.unit_id = PMU_UNIT_CLK;
 	cmd.hdr.size =  (u32)sizeof(struct nv_pmu_clk_cmd) +

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,6 +23,7 @@
 #ifndef _CLK_FREQ_CONTROLLER_H_
 #define _CLK_FREQ_CONTROLLER_H_
 
+#define CTRL_CLK_CLK_FREQ_CONTROLLER_ID_ALL  0xFF
 #define CTRL_CLK_CLK_FREQ_CONTROLLER_ID_SYS  0x00
 #define CTRL_CLK_CLK_FREQ_CONTROLLER_ID_LTC  0x01
 #define CTRL_CLK_CLK_FREQ_CONTROLLER_ID_XBAR 0x02

@@ -3171,7 +3171,7 @@ static ssize_t tegra_hdmi_hotplug_dbg_write(struct file *file,
 		return ret;
 
 	tegra_hdmi_set_hotplug_state(hdmi, new_hpd_state);
-
+	ssleep(2);
 	return len;
 }
 

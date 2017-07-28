@@ -1657,7 +1657,7 @@ skip_gpio:
 	if (dc->out_ops->detect)
 		dc->connected = dc->out_ops->detect(dc);
 	mutex_unlock(&dc->lock);
-
+	ssleep(2);
 	return len;
 }
 

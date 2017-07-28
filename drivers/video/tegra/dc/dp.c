@@ -982,7 +982,7 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 	dc->out->hotplug_state = new_state;
 
 	tegra_dp_pending_hpd(dp);
-
+	ssleep(2);
 	return len;
 }
 

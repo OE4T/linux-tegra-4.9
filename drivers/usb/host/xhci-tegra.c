@@ -1883,14 +1883,14 @@ role_update:
 				USB_PORT_FEAT_POWER, tegra->usb3_otg_port_base_1
 				, NULL, 0);
 
-			wait = 10;
+			wait = 1000;
 			do {
 				xhci_hub_control(xhci->shared_hcd, GetPortStatus
 					, 0, tegra->usb3_otg_port_base_1
 					, (char *) &status, sizeof(status));
 				if (!(status & USB_SS_PORT_STAT_POWER))
 					break;
-				usleep_range(10, 20);
+				usleep_range(600, 700);
 			} while (--wait > 0);
 
 			if (status & USB_SS_PORT_STAT_POWER)

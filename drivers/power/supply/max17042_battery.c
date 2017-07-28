@@ -1282,7 +1282,9 @@ static int max17042_probe(struct i2c_client *client,
 		}
 	}
 
-	regmap_read(chip->regmap, MAX17042_STATUS, &val);
+	if (regmap_read(chip->regmap, MAX17042_STATUS, &val))
+		return -EIO;
+
 	if (val & STATUS_POR_BIT) {
 		INIT_WORK(&chip->work, max17042_init_worker);
 		schedule_work(&chip->work);

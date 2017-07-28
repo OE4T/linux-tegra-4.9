@@ -483,8 +483,14 @@ static void test_mb_ahash_speed(const char *algo, unsigned int sec,
 			goto out;
 		}
 
-		if (speed[i].klen)
-			crypto_ahash_setkey(tfm, tvmem[0], speed[i].klen);
+		if (speed[i].klen) {
+			ret = crypto_ahash_setkey(tfm, tvmem[0],
+							speed[i].klen);
+			if (ret) {
+				pr_err("cryto_ahash_setkey failed: %d\n", ret);
+				goto out;
+			}
+		}
 
 		for (k = 0; k < 8; k++)
 			ahash_request_set_crypt(data[k].req, data[k].sg,

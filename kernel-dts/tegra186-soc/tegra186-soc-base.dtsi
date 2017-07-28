@@ -68,12 +68,6 @@
 			status = "disabled";
 		};
 
-		adsp_reserved_mem: adsp_carveout {
-			compatible = "nvidia,tegra18x-adsp-carveout";
-			reg = <0x0 0xd8300000 0x0 0x01000000>;
-			no-map;
-		};
-
 		ramoops_reserved: ramoops_carveout {
 			compatible = "nvidia,ramoops";
 			size = <0x0 0x200000>;

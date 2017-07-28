@@ -1946,7 +1946,6 @@ int fb_mode_is_equal(const struct fb_videomode *mode1,
 	/* Compare all the other information first */
 	if (mode1->xres         != mode2->xres ||
 	    mode1->yres         != mode2->yres ||
-	    mode1->refresh      != mode2->refresh ||
 	    mode1->hsync_len    != mode2->hsync_len ||
 	    mode1->vsync_len    != mode2->vsync_len ||
 	    mode1->left_margin  != mode2->left_margin ||
@@ -1954,6 +1953,18 @@ int fb_mode_is_equal(const struct fb_videomode *mode1,
 	    mode1->upper_margin != mode2->upper_margin ||
 	    mode1->lower_margin != mode2->lower_margin ||
 	    mode1->sync         != mode2->sync)
+		return 0;
+
+	if (mode2->pixclock *
+			(FB_MODE_TOLERANCE_DENOMINATOR-FB_MODE_TOLERANCE_DEFAULT)
+			/ FB_MODE_TOLERANCE_DENOMINATOR
+		> mode1->pixclock
+		||
+		mode2->pixclock *
+			(FB_MODE_TOLERANCE_DENOMINATOR+FB_MODE_TOLERANCE_DEFAULT)
+			/ FB_MODE_TOLERANCE_DENOMINATOR
+		< mode1->pixclock
+	)
 		return 0;
 
 	/* If bitfields already match, skip further testing */
@@ -2009,8 +2020,14 @@ int fb_mode_is_equal_tolerance(const struct fb_videomode *mode1,
 
 	if (mode1->xres             == mode2->xres &&
 		mode1->yres         == mode2->yres &&
-		mode2->pixclock * (1000-tolerance) / 1000 <= mode1->pixclock &&
-		mode1->pixclock <= mode2->pixclock * (1000+tolerance) / 1000 &&
+		mode2->pixclock *
+				(FB_MODE_TOLERANCE_DENOMINATOR-tolerance)
+				/ FB_MODE_TOLERANCE_DENOMINATOR
+			<= mode1->pixclock &&
+		mode1->pixclock <=
+			mode2->pixclock *
+				(FB_MODE_TOLERANCE_DENOMINATOR+tolerance)
+				/ FB_MODE_TOLERANCE_DENOMINATOR &&
 		mode1->hsync_len    == mode2->hsync_len &&
 		mode1->vsync_len    == mode2->vsync_len &&
 		mode1->left_margin  == mode2->left_margin &&
@@ -2024,45 +2041,6 @@ int fb_mode_is_equal_tolerance(const struct fb_videomode *mode1,
 		return 0;
 }
 
-/**
- * fb_var_is_equal - compare two struct fb_var_screeninfo for equality
- * @var1: first variable screen info
- * @var2: second variable screen info
- *
- * This is stricter than strictly necessary, but it is assumed that this will
- * only be called on screen info structures derived from the same mode and
- * will therefore have the exact same flags. Flexibility is sacrificed for
- * simplicity.
- *
- * Returns:
- * True if both screen info structures match, false otherwise.
- */
-static bool fb_var_is_equal(const struct fb_var_screeninfo *var1,
-			    const struct fb_var_screeninfo *var2)
-{
-	if (var1->xres != var2->xres ||
-	    var1->yres != var2->yres ||
-	    var1->pixclock != var2->pixclock ||
-	    var1->left_margin != var2->left_margin ||
-	    var1->right_margin != var2->right_margin ||
-	    var1->upper_margin != var2->upper_margin ||
-	    var1->lower_margin != var2->lower_margin ||
-	    var1->hsync_len != var2->hsync_len ||
-	    var1->vsync_len != var2->vsync_len)
-		return false;
-
-	if (var1->vmode == var2->vmode)
-		return true;
-
-	/*
-	 * This could probably be less strict, similar to what's done in the
-	 * fb_mode_is_equal() function, but given the assumption that both
-	 * screen info structures are derived from the same mode, the above
-	 * checks should be good enough.
-	 */
-
-	return false;
-}
 
 /**
  * fb_find_best_mode - find best matching videomode
@@ -2164,13 +2142,14 @@ const struct fb_videomode *fb_match_mode(const struct fb_var_screeninfo *var,
 {
 	struct list_head *pos;
 	struct fb_modelist *modelist;
-	struct fb_var_screeninfo v;
+	struct fb_videomode *m, mode;
 
+	fb_var_to_videomode(&mode, var);
 	list_for_each(pos, head) {
 		modelist = list_entry(pos, struct fb_modelist, list);
-		fb_videomode_to_var(&v, &modelist->mode);
-		if (fb_var_is_equal(var, &v))
-			return &modelist->mode;
+		m = &modelist->mode;
+		if (fb_mode_is_equal(m, &mode))
+			return m;
 	}
 	return NULL;
 }

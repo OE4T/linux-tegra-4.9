@@ -755,6 +755,8 @@ extern int fb_videomode_from_videomode(const struct videomode *vm,
 #define DMT_SIZE 0x58
 #define HDMI_EXT_MODEDB_SIZE 5
 #define FB_MODE_TOLERANCE_DEFAULT 5
+#define FB_MODE_TOLERANCE_DENOMINATOR 1000
+/* A tolerance of DEFAULT/DENOMINATOR == 5/1000 == 0.5% */
 
 extern void fb_var_to_videomode(struct fb_videomode *mode,
 				const struct fb_var_screeninfo *var);

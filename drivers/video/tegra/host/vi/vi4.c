@@ -25,6 +25,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/uaccess.h>
 #include <linux/module.h>
+#include <media/capture_vi_channel.h>
 
 #include "dev.h"
 #include "nvhost_acm.h"
@@ -401,6 +402,10 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		return err;
 	}
 
+	err = vi_channel_drv_register(pdev);
+	if (err)
+		return err;
+
 	return 0;
 }
 
@@ -408,6 +413,7 @@ static int tegra_vi4_remove(struct platform_device *pdev)
 {
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
+	vi_channel_drv_unregister(&pdev->dev);
 	tegra_vi_media_controller_cleanup(&vi->mc_vi);
 	if (vi->hvnd != NULL)
 		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);

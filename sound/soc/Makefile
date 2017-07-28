@@ -14,6 +14,9 @@ ifneq ($(CONFIG_SND_SOC_AC97_BUS),)
 snd-soc-core-objs += soc-ac97.o
 endif
 
+KVERSION_4_9_TEGRA_ALT:=1
+export KVERSION_4_9_TEGRA_ALT
+
 obj-$(CONFIG_SND_SOC)	+= snd-soc-core.o
 obj-$(CONFIG_SND_SOC)	+= codecs/
 obj-$(CONFIG_SND_SOC)	+= generic/

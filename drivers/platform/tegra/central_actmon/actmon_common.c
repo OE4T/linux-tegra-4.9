@@ -219,19 +219,6 @@ static const struct file_operations type_fops = {
 	.release	= single_release,
 };
 
-static int actv_get(void *data, u64 *val)
-{
-	struct actmon_dev *dev = data;
-	unsigned long flags;
-
-	spin_lock_irqsave(&dev->lock, flags);
-	*val = actmon_dev_avg_freq_get(dev);
-	spin_unlock_irqrestore(&dev->lock, flags);
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(actv_fops, actv_get, NULL,
-	"%llu\n");
-
 static int step_get(void *data, u64 *val)
 {
 	struct actmon_dev *dev = data;
@@ -438,11 +425,6 @@ static int actmon_debugfs_create_dev(struct actmon_dev *dev)
 
 	d = debugfs_create_file(
 		"actv_type", RO_MODE, dir, dev, &type_fops);
-	if (!d)
-		return -ENOMEM;
-
-	d = debugfs_create_file(
-		"avg_activity", RO_MODE, dir, dev, &actv_fops);
 	if (!d)
 		return -ENOMEM;
 

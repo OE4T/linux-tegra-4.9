@@ -1493,6 +1493,8 @@ skip_countries:
 		usb_clear_halt(usb_dev, usb_rcvbulkpipe(usb_dev, epread->bEndpointAddress));
 		usb_clear_halt(usb_dev, usb_sndbulkpipe(usb_dev, epwrite->bEndpointAddress));
 	}
+	if (quirks & DISABLE_AUTOSUSPEND)
+		usb_disable_autosuspend(usb_dev);
 
 	return 0;
 alloc_fail8:
@@ -1782,6 +1784,12 @@ static const struct usb_device_id acm_ids[] = {
 
 	{ USB_DEVICE(0x2912, 0x0001), /* ATOL FPrint */
 	.driver_info = CLEAR_HALT_CONDITIONS,
+	},
+	{ USB_DEVICE(0x10C4, 0x0003), /* Silicon Labs CDC Serial Port */
+	.driver_info = DISABLE_AUTOSUSPEND, /* does not support autosuspend */
+	},
+	{ USB_DEVICE(0x2EB1, 0x0100), /* SmartThings Link V1 CDC Serial Port */
+	.driver_info = DISABLE_AUTOSUSPEND, /* does not support autosuspend */
 	},
 
 	/* Nokia S60 phones expose two ACM channels. The first is

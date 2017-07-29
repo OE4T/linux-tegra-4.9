@@ -43,6 +43,7 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <video/tegrafb.h>
 #include <drm/drm_fixed.h>
+#include <linux/dma-buf.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
@@ -164,6 +165,9 @@ static struct tegra_dc_win	tegra_dc_windows[DC_N_WINDOWS];
 
 static u64 tegra_dc_get_scanline_timestamp(struct tegra_dc *dc,
 						const u32 scanline);
+
+static void tegra_dc_collect_latency_data(struct tegra_dc *dc);
+
 static DEFINE_MUTEX(tegra_dc_lock);
 
 static struct device_dma_parameters tegra_dc_dma_parameters = {
@@ -2450,6 +2454,50 @@ static const struct file_operations dbg_flip_stats_ops = {
 	.release = single_release,
 };
 
+static int dbg_measure_latency_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc *dc = m->private;
+
+	if (WARN_ON(!dc))
+		return -EINVAL;
+
+	mutex_lock(&dc->msrmnt_info.lock);
+	seq_printf(m, "%d\n", dc->msrmnt_info.enabled);
+	mutex_unlock(&dc->msrmnt_info.lock);
+
+	return 0;
+}
+
+static ssize_t dbg_measure_latency_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	int ret;
+	int enable_val;
+	struct seq_file *m = file->private_data;
+	struct tegra_dc *dc = m->private;
+
+	ret = kstrtoint_from_user(addr, len, 10, &enable_val);
+	if (ret < 0)
+		return ret;
+
+	ret = tegra_dc_en_dis_latency_msrmnt_mode(dc, enable_val);
+
+	return len;
+}
+
+static int dbg_measure_latency_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_measure_latency_show, inode->i_private);
+}
+
+static const struct file_operations dbg_measure_latency_ops = {
+	.open = dbg_measure_latency_open,
+	.read = seq_read,
+	.write = dbg_measure_latency_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 {
 	if (dc->debugdir)
@@ -2659,6 +2707,14 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 		}
 	}
 #endif
+
+	if (tegra_dc_is_nvdisplay()) {
+		retval = debugfs_create_file("measure_latency", 0444,
+				dc->debugdir, dc, &dbg_measure_latency_ops);
+		if (!retval)
+			goto remove_out;
+	}
+
 	return;
 
 remove_out:
@@ -4371,8 +4427,11 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 		queue_work(system_freezable_wq, &dc->frame_end_work);
 	}
 
-	if (status & V_PULSE2_INT)
+	if (status & V_PULSE2_INT) {
+		if (test_bit(V_PULSE2_LATENCY_MSRMNT, &dc->vpulse2_ref_count))
+			tegra_dc_collect_latency_data(dc);
 		queue_work(system_freezable_wq, &dc->vpulse2_work);
+	}
 }
 
 static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
@@ -4436,8 +4495,11 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 		queue_work(system_freezable_wq, &dc->frame_end_work);
 	}
 
-	if (status & V_PULSE2_INT)
+	if (status & V_PULSE2_INT) {
+		if (test_bit(V_PULSE2_LATENCY_MSRMNT, &dc->vpulse2_ref_count))
+			tegra_dc_collect_latency_data(dc);
 		queue_work(system_freezable_wq, &dc->vpulse2_work);
+	}
 }
 
 /* XXX: Not sure if we limit look ahead to 1 frame */
@@ -5960,6 +6022,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	mutex_init(&dc->lock);
 	mutex_init(&dc->one_shot_lock);
 	mutex_init(&dc->lp_lock);
+	mutex_init(&dc->msrmnt_info.lock);
 	init_completion(&dc->frame_end_complete);
 	init_completion(&dc->crc_complete);
 	init_waitqueue_head(&dc->wq);
@@ -6930,6 +6993,89 @@ static u64 tegra_dc_get_scanline_timestamp(struct tegra_dc *dc,
 		timestamp -= tegra_dc_line2ns(dc, curr_scanline +
 				(dc->mode_metadata.vtotal_lines - scanline));
 	return timestamp;
+}
+
+/*
+ * tegra_dc_collect_latency_data() - stores relevant info needed
+ *					for latency instrumentation.
+ * @dc : pointer to struct tegra_dc of the current head.
+ *
+ * Currently supports nvdisplay only. Using the already stored
+ * dma_buff_handle and the relevant offset, reads the first 2 pixels of
+ * framebuffer. Returns if not nvdisplay, or the latency_measuring
+ * functionality is disabled or the handle is NULL.
+ *
+ * Return : void
+ */
+static void tegra_dc_collect_latency_data(struct tegra_dc *dc)
+{
+	int ret;
+	struct dma_buf *handle;
+	int page_num = 0;
+	void *ptr;
+	u64 value;
+
+	if (tegra_dc_is_t21x() || !dc->enabled)
+		return;
+
+	mutex_lock(&dc->msrmnt_info.lock);
+
+	handle = dc->msrmnt_info.buf_handle;
+
+	if (!handle || !dc->msrmnt_info.enabled) {
+		dev_dbg(&dc->ndev->dev,
+			"dma_buff is NULL or latency collection is disabled\n");
+		mutex_unlock(&dc->msrmnt_info.lock);
+		return;
+	}
+
+	ret = dma_buf_begin_cpu_access(handle, 0,
+				handle->size, DMA_BIDIRECTIONAL);
+
+	if (ret) {
+		dev_err(&dc->ndev->dev, "dma_buf_begin_cpu_access failed\n");
+		mutex_unlock(&dc->msrmnt_info.lock);
+		return;
+	}
+
+	ptr = dma_buf_kmap(handle, page_num);
+	if (!ptr) {
+		dev_err(&dc->ndev->dev, "dma_buf_kmap failed\n");
+		dma_buf_end_cpu_access(handle, 0,
+				handle->size, DMA_BIDIRECTIONAL);
+		mutex_unlock(&dc->msrmnt_info.lock);
+		return;
+	}
+	value = *((u64 *)(ptr + dc->msrmnt_info.offset));
+	trace_display_embedded_latency(dc->ctrl_num,
+			dc->msrmnt_info.line_num, be64_to_cpup(&value));
+
+	dma_buf_kunmap(handle, page_num, ptr);
+	dma_buf_end_cpu_access(handle, 0, handle->size, DMA_BIDIRECTIONAL);
+	mutex_unlock(&dc->msrmnt_info.lock);
+}
+
+/*
+ * tegra_dc_en_dis_latency_msrmnt_mode() - enables/disables latency
+ *					measurement mode in dc.
+ * @dc : pointer to struct tegra_dc of the current head.
+ * @enable : tells if the latency_measuring functionality has to be enabled
+ * or disabled.
+ *
+ * This wrapper functions calls into the pertinent enable/disable function based
+ * on the chip type.
+ *
+ * Return : 0 if successful else relevant error number
+ */
+int tegra_dc_en_dis_latency_msrmnt_mode(struct tegra_dc *dc, int enable)
+{
+	if (!dc)
+		return -ENODEV;
+
+	if (tegra_dc_is_nvdisplay())
+		tegra_nvdisp_set_msrmnt_mode(dc, enable);
+
+	return 0;
 }
 
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void)

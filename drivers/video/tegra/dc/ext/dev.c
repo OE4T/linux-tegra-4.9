@@ -324,6 +324,8 @@ int tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 		kthread_flush_worker(&win->flip_worker);
 	}
 
+	tegra_dc_en_dis_latency_msrmnt_mode(ext->dc, false);
+
 	/*
 	 * Blank all windows owned by dcext driver, unpin buffers that were
 	 * removed from screen, and advance syncpt.
@@ -946,6 +948,57 @@ static void tegra_dc_update_postcomp(struct tegra_dc *dc,
 	 */
 }
 
+/*
+ * tegra_dc_ext_store_latency_msrmnt_info() - stores relevant info needed
+ *						for latency instrumentation
+ * @dc : pointer to struct tegra_dc of the current head.
+ * @flip_data: pointer the current tegra_dc_ext_flip_data that has all
+ * the relevant info regarding the windows used in the cuurent flip.
+ *
+ * Currently supports nvdisplay only. Gets the first enabled window and
+ * stores the corresponding buff handle and offset. If there are more than
+ * one window enabled, returns and doesn't store the buff handle.
+ *
+ * Return : void
+ */
+static void tegra_dc_ext_store_latency_msrmnt_info(struct tegra_dc *dc,
+				struct tegra_dc_ext_flip_data *flip_data)
+{
+	int i;
+	int nr_windows_enabled = 0;
+	int nr_wins = flip_data->act_window_num;
+	struct tegra_dc_ext_flip_win *flip_win = flip_data->win;
+
+	mutex_lock(&dc->msrmnt_info.lock);
+
+	if (!dc->msrmnt_info.enabled) {
+		mutex_unlock(&dc->msrmnt_info.lock);
+		return;
+	}
+
+	for (i = 0; i < nr_wins; i++) {
+		struct tegra_dc_ext_flip_windowattr_v2 *attr =
+						&flip_win[i].attr;
+		struct tegra_dc_ext_win *ext_win =
+						&dc->ext->win[attr->index];
+
+		if (ext_win->enabled) {
+			dc->msrmnt_info.buf_handle =
+				ext_win->cur_handle[TEGRA_DC_Y]->buf;
+			dc->msrmnt_info.offset = attr->offset;
+			nr_windows_enabled++;
+		}
+		if (nr_windows_enabled > 1) {
+			dev_dbg(&dc->ndev->dev,
+				"More than 1 window enabled. Can't collect msrmnt info\n");
+			dc->msrmnt_info.buf_handle = NULL;
+			break;
+		}
+	}
+
+	mutex_unlock(&dc->msrmnt_info.lock);
+}
+
 static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 {
 	struct tegra_dc_ext_flip_data *data =
@@ -1206,6 +1259,8 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 
 		if (trace_scanout_syncpt_upd_enabled())
 			tegra_dc_flip_trace(data, trace_scanout_syncpt_upd);
+
+		tegra_dc_ext_store_latency_msrmnt_info(dc, data);
 
 		if (dc->out->vrr)
 			trace_scanout_vrr_stats((data->win[win_num-1]).syncpt_max

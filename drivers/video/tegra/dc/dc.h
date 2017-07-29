@@ -830,6 +830,7 @@ struct tegra_dc_out {
 
 #define V_PULSE2_FLIP		0
 #define V_PULSE2_NVSD		1
+#define V_PULSE2_LATENCY_MSRMNT	2
 
 struct tegra_dc_cmu_csc {
 	u16 krr;

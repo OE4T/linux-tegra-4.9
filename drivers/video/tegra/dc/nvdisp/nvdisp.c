@@ -4347,3 +4347,134 @@ void tegra_dc_populate_t18x_hw_data(struct tegra_dc_hw_data *hw_data)
 	hw_data->valid = true;
 	hw_data->version = TEGRA_DC_HW_T18x;
 }
+
+/* _tegra_nvdisp_enable_vpulse2_int() - initializes and enables vpulse2
+ *					interrupt
+ * @dc : pointer to struct tegra_dc of the current head.
+ * @start_pos : line number at which interrupt is expected.
+ *
+ * Return : 0 if successful else the relevant error number.
+ */
+static int _tegra_nvdisp_enable_vpulse2_int(struct tegra_dc *dc, u32 start_pos)
+{
+	u32 val;
+
+	if (!dc || !dc->enabled)
+		return -ENODEV;
+
+	if (start_pos > dc->mode_metadata.vtotal_lines)
+		return -EINVAL;
+
+	tegra_dc_get(dc);
+
+	tegra_dc_writel(dc, start_pos, nvdisp_v_pulse2_position_a_r());
+	val = tegra_dc_readl(dc, nvdisp_disp_signal_option_r());
+	tegra_dc_writel(dc, val | nvdisp_disp_signal_option_v_pulse2_enable_f(),
+						nvdisp_disp_signal_option_r());
+	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_act_req_enable_f(),
+						nvdisp_cmd_state_ctrl_r());
+
+	val = tegra_dc_readl(dc, nvdisp_cmd_int_enable_r());
+	tegra_dc_writel(dc, val | V_PULSE2_INT, nvdisp_cmd_int_enable_r());
+
+	tegra_dc_put(dc);
+
+	return 0;
+}
+
+/* _tegra_nvdisp_disable_vpulse2_int() - disables vpulse2 interrupt
+ * @dc : pointer to struct tegra_dc of the current head.
+ *
+ * Return : -ENODEV if dc isn't present or disabled. 0 if
+ * successful.
+ */
+static int _tegra_nvdisp_disable_vpulse2_int(struct tegra_dc *dc)
+{
+	u32 val;
+
+	if (!dc || !dc->enabled)
+		return -ENODEV;
+
+	tegra_dc_get(dc);
+
+	val = tegra_dc_readl(dc, nvdisp_disp_signal_option_r());
+	tegra_dc_writel(dc, val & ~nvdisp_disp_signal_option_v_pulse2_enable_f()
+					, nvdisp_disp_signal_option_r());
+	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_act_req_enable_f(),
+					nvdisp_cmd_state_ctrl_r());
+	val = tegra_dc_readl(dc, nvdisp_cmd_int_enable_r());
+	tegra_dc_writel(dc, val & ~V_PULSE2_INT, nvdisp_cmd_int_enable_r());
+
+	tegra_dc_put(dc);
+
+	return 0;
+}
+
+/*
+ * tegra_nvdisp_set_msrmnt_mode() - enables latency measurement
+ *					mode in dc.
+ * @dc : pointer to struct tegra_dc of the current head.
+ * @enable : tells whether to enable/disable measurement mode.
+ *
+ * Based on the enable value, configures and resets the vpulse2
+ * interrupt which is used for reading the timestamps.
+ *
+ * Return : void
+ */
+void tegra_nvdisp_set_msrmnt_mode(struct tegra_dc *dc, bool enable)
+{
+	int ret = 0;
+
+	if (!dc)
+		return;
+
+	mutex_lock(&dc->msrmnt_info.lock);
+
+	if (enable && !dc->msrmnt_info.enabled) {
+		dc->msrmnt_info.line_num = dc->mode_metadata.vtotal_lines/2;
+
+		ret = _tegra_nvdisp_enable_vpulse2_int(dc,
+					dc->msrmnt_info.line_num);
+		if (ret) {
+			mutex_unlock(&dc->msrmnt_info.lock);
+			return;
+		}
+
+		/*
+		 * Wait for the frame_end for v_pulse2 programming above to
+		 * take effect.
+		 */
+		_tegra_dc_wait_for_frame_end(dc,
+			div_s64(dc->frametime_ns, 1000000ll) * 2);
+
+		set_bit(V_PULSE2_LATENCY_MSRMNT, &dc->vpulse2_ref_count);
+
+		tegra_dc_get(dc);
+		tegra_dc_unmask_interrupt(dc, V_PULSE2_INT);
+		tegra_dc_put(dc);
+
+	} else if (!enable && dc->msrmnt_info.enabled) {
+		ret = _tegra_nvdisp_disable_vpulse2_int(dc);
+		if (ret) {
+			mutex_unlock(&dc->msrmnt_info.lock);
+			return;
+		}
+
+		/*
+		 * Wait for the frame_end for v_pulse2 programming above to
+		 * take effect.
+		 */
+		_tegra_dc_wait_for_frame_end(dc,
+			div_s64(dc->frametime_ns, 1000000ll) * 2);
+
+		clear_bit(V_PULSE2_LATENCY_MSRMNT, &dc->vpulse2_ref_count);
+
+		tegra_dc_get(dc);
+		tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
+		tegra_dc_put(dc);
+	}
+
+	dc->msrmnt_info.enabled = enable;
+
+	mutex_unlock(&dc->msrmnt_info.lock);
+}

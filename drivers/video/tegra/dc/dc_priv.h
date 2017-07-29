@@ -903,12 +903,18 @@ void __attribute__((weak)) nvdisp_t19x_enable_raster_lock(
 void __attribute__((weak)) tegra_nvdisp_program_common_win_batch_size_t19x(
 							struct tegra_dc *dc);
 
+void __attribute__((weak))
+	tegra_nvdisp_set_msrmnt_mode(struct tegra_dc *dc, bool enable);
+
+int tegra_dc_en_dis_latency_msrmnt_mode(struct tegra_dc *dc, int enable);
+
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void);
 
 int tegra_fb_release_fbmem(struct tegra_fb_info *);
 
 int tegra_dc_client_handle_event(struct tegra_dc *dc,
 		enum tegra_dc_client_cllbck_event_type event_type);
+
 void tegra_dc_activate_general_channel(struct tegra_dc *dc);
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)

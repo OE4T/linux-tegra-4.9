@@ -398,6 +398,26 @@ struct tegra_dc_crc_ref_cnt {
 	bool legacy;
 };
 
+/*
+ * struct tegra_dc_latency_measurement_data - data structure used for
+ *		latency measurement purpose.
+ * @buf_handle : dma_buff handle used for storing currently scanned
+ *		framebuffer by dc.
+ * @offset : offset for the first pixel in the current fb.
+ * @enabled : stores the status that indicates whether measurement info
+ *		has to be collected or not.
+ * @line_num : the scanline at which the latency value is being read.
+ * @lock : used to sequentialize operations on
+ *		tegra_dc_latency_measurement_data.
+ */
+struct tegra_dc_latency_measurement_data {
+	struct dma_buf *buf_handle;
+	u32 offset;
+	bool enabled;
+	u16 line_num;
+	struct mutex lock;
+};
+
 struct tegra_dc {
 	struct platform_device		*ndev;
 	struct tegra_dc_platform_data	*pdata;
@@ -609,5 +629,6 @@ struct tegra_dc {
 	struct tegra_dc_ring_buf crc_buf; /* Buffer to save HW generated CRCs */
 	struct tegra_dc_crc_ref_cnt crc_ref_cnt;
 	bool crc_initialized;
+	struct tegra_dc_latency_measurement_data msrmnt_info;
 };
 #endif

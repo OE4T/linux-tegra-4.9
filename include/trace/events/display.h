@@ -752,6 +752,23 @@ DEFINE_EVENT(display_imp_win_mempool, display_imp_win_mempool_programmed,
 	TP_ARGS(ctrl_num, win_num, mempool_entries)
 );
 
+TRACE_EVENT(display_embedded_latency,
+	TP_PROTO(u32 ctrl_num, u16 line_num, u64 timestamp),
+	TP_ARGS(ctrl_num, line_num, timestamp),
+	TP_STRUCT__entry(
+		__field(u32, ctrl_num)
+		__field(u16, line_num)
+		__field(u64, timestamp)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->line_num = line_num;
+		__entry->timestamp = timestamp;
+	),
+	TP_printk("ctrl_num=%u line_num=%u timestamp=%lld",
+		__entry->ctrl_num, __entry->line_num, __entry->timestamp)
+);
+
 #endif /* _TRACE_DISPLAY_H */
 
 /* This part must be outside protection */

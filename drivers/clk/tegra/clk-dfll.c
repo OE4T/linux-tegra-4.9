@@ -264,10 +264,15 @@
 /* DFLL_ONE_SHOT_AVG_SAMPLES: number of samples for one-shot calibration */
 #define DFLL_ONE_SHOT_AVG_SAMPLES	5
 
+/* DFLL_ONE_SHOT_DELIVERY_RETRY: number of retries for one-shot calibration */
+#define DFLL_ONE_SHOT_DELIVERY_RETRY	4
+
 #define DVCO_RATE_TO_MULT(rate, ref_rate)	((rate) / ((ref_rate) / 2))
 #define MULT_TO_DVCO_RATE(mult, ref_rate)	((mult) * ((ref_rate) / 2))
 #define ROUND_DVCO_MIN_RATE(rate, ref_rate)	\
 	(DIV_ROUND_UP(rate, (ref_rate) / 2) * ((ref_rate) / 2))
+#define READ_LAST_I2C_VAL(td)	((dfll_i2c_readl((td), DFLL_I2C_STS) >> \
+	DFLL_I2C_STS_I2C_LAST_SHIFT) & OUT_MASK)
 
 /*
  * DT configuration flags
@@ -1407,6 +1412,35 @@ static void dfll_calibrate(struct tegra_dfll *td)
  * One-shot calibrate forces and calibrates each target floor once when DFLL is
  * locked or when temperature crosses thermal range threshold.
  */
+static bool is_out_target_delivered(struct tegra_dfll *td, u8 out_target)
+{
+	int i;
+	u8 out_start, out_cur;
+
+	if (td->pmu_if != TEGRA_DFLL_PMU_I2C)
+		return true;
+
+	out_cur = out_start = READ_LAST_I2C_VAL(td);
+
+	/*
+	 * Make sure that I2C transaction that might be in flight when this
+	 * function is called is completed, and last sent I2C value matches
+	 * the target.
+	 */
+	for (i = 0; i < DFLL_ONE_SHOT_DELIVERY_RETRY; i++) {
+		if (!is_output_i2c_req_pending(td) || (out_cur != out_start)) {
+			out_cur = READ_LAST_I2C_VAL(td);
+			if (out_cur == out_target)
+				return true;
+		}
+		udelay(DIV_ROUND_UP(1000000, td->sample_rate));
+		out_cur = READ_LAST_I2C_VAL(td);
+	}
+	pr_debug("%s: delivery of dvco out target %u failed (i2c val %u)\n",
+		 __func__, out_target, out_cur);
+	return false;
+}
+
 static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv)
 {
 	int i, n = 0;
@@ -1421,6 +1455,12 @@ static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv)
 	/* Switch to rate measurement, and synchronize with sample period */
 	dfll_set_monitor_mode(td, DFLL_FREQ);
 	dfll_get_monitor_data(td, &data);
+
+	/* Confirm voltage is delivered and settled */
+	if (!is_out_target_delivered(td, out_min)) {
+		rate = -EBUSY;
+		goto _out;
+	}
 	udelay(td->one_shot_settle_time);
 
 	/* Average measurements. Take the last one "as is" if all unstable */
@@ -1443,7 +1483,7 @@ static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv)
 	rate = MULT_TO_DVCO_RATE(avg_data, td->ref_rate);
 	pr_debug("%s: calibrated dvco_rate_min %lu at %d mV over %d samples\n",
 		 __func__,  rate, mv, n);
-
+_out:
 	dfll_set_force_output_enabled(td, false);
 	return rate;
 }
@@ -1465,9 +1505,7 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 		therm_mv = td->soc->thermal_floor_table[i].millivolts;
 		if (!td->dvco_rate_floors[i]) {
 			rate = dfll_one_shot_calibrate_mv(td, therm_mv);
-			if (rate < 0)
-				return false;
-			else {
+			if (!IS_ERR_VALUE(rate)) {
 				td->dvco_rate_floors[i] =
 				clamp((unsigned long)rate, td->out_rate_min,
 						td->out_rate_max);
@@ -1482,9 +1520,7 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 		mv = td->lut_uv[td->tune_high_out_min] / 1000;
 		if (mv > therm_mv) {
 			rate = dfll_one_shot_calibrate_mv(td, mv);
-			if (rate < 0)
-				return false;
-			else {
+			if (!IS_ERR_VALUE(rate)) {
 				td->tune_high_dvco_rate_min =
 					clamp((unsigned long)rate,
 					td->tune_high_target_rate_min,
@@ -1501,9 +1537,7 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 		if (!td->dvco_rate_floors[i]) {
 			mv = td->lut_uv[td->lut_bottom] / 1000;
 			rate = dfll_one_shot_calibrate_mv(td, mv);
-			if (rate < 0)
-				return false;
-			else {
+			if (!IS_ERR_VALUE(rate)) {
 				td->dvco_rate_floors[i] =
 					clamp((unsigned long)rate,
 						td->out_rate_min,

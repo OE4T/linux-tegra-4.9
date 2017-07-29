@@ -1327,105 +1327,68 @@ static const struct regop_offset_range gv11b_qctl_whitelist_ranges[] = {
 static const u32 gv11b_qctl_whitelist_ranges_count =
 	ARRAY_SIZE(gv11b_qctl_whitelist_ranges);
 
-static const struct regop_offset_range *gv11b_get_global_whitelist_ranges(void)
+const struct regop_offset_range *gv11b_get_global_whitelist_ranges(void)
 {
 	return gv11b_global_whitelist_ranges;
 }
 
-static int gv11b_get_global_whitelist_ranges_count(void)
+int gv11b_get_global_whitelist_ranges_count(void)
 {
 	return gv11b_global_whitelist_ranges_count;
 }
 
-static const struct regop_offset_range *gv11b_get_context_whitelist_ranges(void)
+const struct regop_offset_range *gv11b_get_context_whitelist_ranges(void)
 {
 	return gv11b_global_whitelist_ranges;
 }
 
-static int gv11b_get_context_whitelist_ranges_count(void)
+int gv11b_get_context_whitelist_ranges_count(void)
 {
 	return gv11b_global_whitelist_ranges_count;
 }
 
-static const u32 *gv11b_get_runcontrol_whitelist(void)
+const u32 *gv11b_get_runcontrol_whitelist(void)
 {
 	return gv11b_runcontrol_whitelist;
 }
 
-static int gv11b_get_runcontrol_whitelist_count(void)
+int gv11b_get_runcontrol_whitelist_count(void)
 {
 	return gv11b_runcontrol_whitelist_count;
 }
 
-static const
-struct regop_offset_range *gv11b_get_runcontrol_whitelist_ranges(void)
+const struct regop_offset_range *gv11b_get_runcontrol_whitelist_ranges(void)
 {
 	return gv11b_runcontrol_whitelist_ranges;
 }
 
-static int gv11b_get_runcontrol_whitelist_ranges_count(void)
+int gv11b_get_runcontrol_whitelist_ranges_count(void)
 {
 	return gv11b_runcontrol_whitelist_ranges_count;
 }
 
-static const u32 *gv11b_get_qctl_whitelist(void)
+const u32 *gv11b_get_qctl_whitelist(void)
 {
 	return gv11b_qctl_whitelist;
 }
 
-static int gv11b_get_qctl_whitelist_count(void)
+int gv11b_get_qctl_whitelist_count(void)
 {
 	return gv11b_qctl_whitelist_count;
 }
 
-static const struct regop_offset_range *gv11b_get_qctl_whitelist_ranges(void)
+const struct regop_offset_range *gv11b_get_qctl_whitelist_ranges(void)
 {
 	return gv11b_qctl_whitelist_ranges;
 }
 
-static int gv11b_get_qctl_whitelist_ranges_count(void)
+int gv11b_get_qctl_whitelist_ranges_count(void)
 {
 	return gv11b_qctl_whitelist_ranges_count;
 }
 
-static int gv11b_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
+int gv11b_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
 {
 	/* Not needed on gv11b */
 	return 0;
-}
-
-void gv11b_init_regops(struct gpu_ops *gops)
-{
-	gops->regops.get_global_whitelist_ranges =
-		gv11b_get_global_whitelist_ranges;
-	gops->regops.get_global_whitelist_ranges_count =
-		gv11b_get_global_whitelist_ranges_count;
-
-	gops->regops.get_context_whitelist_ranges =
-		gv11b_get_context_whitelist_ranges;
-	gops->regops.get_context_whitelist_ranges_count =
-		gv11b_get_context_whitelist_ranges_count;
-
-	gops->regops.get_runcontrol_whitelist =
-		gv11b_get_runcontrol_whitelist;
-	gops->regops.get_runcontrol_whitelist_count =
-		gv11b_get_runcontrol_whitelist_count;
-
-	gops->regops.get_runcontrol_whitelist_ranges =
-		gv11b_get_runcontrol_whitelist_ranges;
-	gops->regops.get_runcontrol_whitelist_ranges_count =
-		gv11b_get_runcontrol_whitelist_ranges_count;
-
-	gops->regops.get_qctl_whitelist =
-		gv11b_get_qctl_whitelist;
-	gops->regops.get_qctl_whitelist_count =
-		gv11b_get_qctl_whitelist_count;
-
-	gops->regops.get_qctl_whitelist_ranges =
-		gv11b_get_qctl_whitelist_ranges;
-	gops->regops.get_qctl_whitelist_ranges_count =
-		gv11b_get_qctl_whitelist_ranges_count;
-
-	gops->regops.apply_smpc_war =
-		gv11b_apply_smpc_war;
 }

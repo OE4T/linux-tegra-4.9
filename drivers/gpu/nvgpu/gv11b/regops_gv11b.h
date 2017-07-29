@@ -19,6 +19,18 @@
 #ifndef __REGOPS_GV11B_H_
 #define __REGOPS_GV11B_H_
 
-void gv11b_init_regops(struct gpu_ops *gops);
+const struct regop_offset_range *gv11b_get_global_whitelist_ranges(void);
+int gv11b_get_global_whitelist_ranges_count(void);
+const struct regop_offset_range *gv11b_get_context_whitelist_ranges(void);
+int gv11b_get_context_whitelist_ranges_count(void);
+const u32 *gv11b_get_runcontrol_whitelist(void);
+int gv11b_get_runcontrol_whitelist_count(void);
+const struct regop_offset_range *gv11b_get_runcontrol_whitelist_ranges(void);
+int gv11b_get_runcontrol_whitelist_ranges_count(void);
+const u32 *gv11b_get_qctl_whitelist(void);
+int gv11b_get_qctl_whitelist_count(void);
+const struct regop_offset_range *gv11b_get_qctl_whitelist_ranges(void);
+int gv11b_get_qctl_whitelist_ranges_count(void);
+int gv11b_apply_smpc_war(struct dbg_session_gk20a *dbg_s);
 
 #endif /* __REGOPS_GV11B_H_ */

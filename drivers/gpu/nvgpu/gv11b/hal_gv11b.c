@@ -310,6 +310,29 @@ static const struct gpu_ops gv11b_ops = {
 		.init_therm_setup_hw = gp10b_init_therm_setup_hw,
 		.elcg_init_idle_filters = gp10b_elcg_init_idle_filters,
 	},
+	.regops = {
+		.get_global_whitelist_ranges =
+			gv11b_get_global_whitelist_ranges,
+		.get_global_whitelist_ranges_count =
+			gv11b_get_global_whitelist_ranges_count,
+		.get_context_whitelist_ranges =
+			gv11b_get_context_whitelist_ranges,
+		.get_context_whitelist_ranges_count =
+			gv11b_get_context_whitelist_ranges_count,
+		.get_runcontrol_whitelist = gv11b_get_runcontrol_whitelist,
+		.get_runcontrol_whitelist_count =
+			gv11b_get_runcontrol_whitelist_count,
+		.get_runcontrol_whitelist_ranges =
+			gv11b_get_runcontrol_whitelist_ranges,
+		.get_runcontrol_whitelist_ranges_count =
+			gv11b_get_runcontrol_whitelist_ranges_count,
+		.get_qctl_whitelist = gv11b_get_qctl_whitelist,
+		.get_qctl_whitelist_count = gv11b_get_qctl_whitelist_count,
+		.get_qctl_whitelist_ranges = gv11b_get_qctl_whitelist_ranges,
+		.get_qctl_whitelist_ranges_count =
+			gv11b_get_qctl_whitelist_ranges_count,
+		.apply_smpc_war = gv11b_apply_smpc_war,
+	},
 	.mc = {
 		.intr_enable = mc_gv11b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -380,6 +403,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->gr_ctx = gv11b_ops.gr_ctx;
 	gops->fecs_trace = gv11b_ops.fecs_trace;
 	gops->therm = gv11b_ops.therm;
+	gops->regops = gv11b_ops.regops;
 	gops->mc = gv11b_ops.mc;
 	gops->debug = gv11b_ops.debug;
 	gops->dbg_session_ops = gv11b_ops.dbg_session_ops;
@@ -404,7 +428,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_fb(gops);
 	gv11b_init_mm(gops);
 	gv11b_init_pmu_ops(g);
-	gv11b_init_regops(gops);
 
 	g->name = "gv11b";
 

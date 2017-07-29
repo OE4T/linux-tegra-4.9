@@ -366,12 +366,15 @@ long tegra_dc_crc_disable(struct tegra_dc *dc,
 
 /* Get the Least Recently Matched (lrm) flip ID.
  * Our best estimate is to find this flip ID at the tail of the buffer.
+ * The caller has the option to retrieve the least recently matched flip ID or
+ * the corresponding CRC buffer element
  */
-static int _find_lrm(struct tegra_dc *dc, u64 *flip_id)
+static int _find_lrm(struct tegra_dc *dc, u64 *flip_id,
+		     struct tegra_dc_crc_buf_ele *crc_ele_out)
 {
 	u64 lrm = 0x0; /* Default value when no flips are matched */
 	int ret = 0;
-	struct tegra_dc_crc_buf_ele *crc_ele;
+	struct tegra_dc_crc_buf_ele *crc_ele = NULL;
 
 	ret = tegra_dc_ring_buf_peek(&dc->crc_buf, dc->crc_buf.tail,
 				     (char **)&crc_ele);
@@ -381,8 +384,13 @@ static int _find_lrm(struct tegra_dc *dc, u64 *flip_id)
 	if (crc_ele->matching_flips[0].valid)
 		lrm = crc_ele->matching_flips[0].id;
 
+	if (crc_ele_out)
+		memcpy(crc_ele_out, crc_ele, sizeof(*crc_ele));
+
 done:
-	*flip_id = lrm;
+	if (flip_id)
+		*flip_id = lrm;
+
 	return ret;
 }
 
@@ -393,14 +401,17 @@ static inline u16 prev_idx(struct tegra_dc_ring_buf *buf, u16 idx)
 
 /* Get the Most Recently Matched (mrm) flip ID.
  * Our best estimate is to find this flip ID at the head of the buffer.
+ * The caller has the option to retrieve the most recently matched flip ID or
+ * the corresponding CRC buffer element
  */
-static int _find_mrm(struct tegra_dc *dc, u64 *flip_id)
+static int _find_mrm(struct tegra_dc *dc, u64 *flip_id,
+		     struct tegra_dc_crc_buf_ele *crc_ele_out)
 {
 	/* Default value when no flips are matched */
-	u64 mrm = 0xFFFFFFFFFFFFFFFF;
+	u64 mrm = U64_MAX;
 	u16 peek_idx;
 	int ret = 0, iter;
-	struct tegra_dc_crc_buf_ele *crc_ele;
+	struct tegra_dc_crc_buf_ele *crc_ele = NULL;
 
 	peek_idx = prev_idx(&dc->crc_buf, dc->crc_buf.head);
 
@@ -413,8 +424,13 @@ static int _find_mrm(struct tegra_dc *dc, u64 *flip_id)
 	     iter++)
 		mrm = crc_ele->matching_flips[iter].id;
 
+	if (crc_ele_out)
+		memcpy(crc_ele_out, crc_ele, sizeof(*crc_ele));
+
 done:
-	*flip_id = mrm;
+	if (flip_id)
+		*flip_id = mrm;
+
 	return ret;
 }
 
@@ -422,8 +438,8 @@ static bool _is_flip_out_of_bounds(struct tegra_dc *dc, u64 flip_id)
 {
 	u64 lrm, mrm; /* Least and most recently matched flips */
 
-	_find_lrm(dc, &lrm);
-	_find_mrm(dc, &mrm);
+	_find_lrm(dc, &lrm, NULL);
+	_find_mrm(dc, &mrm, NULL);
 
 	if (mrm < lrm) {
 		dev_err(&dc->ndev->dev, "flip IDs have overflowed "
@@ -479,6 +495,11 @@ static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 	struct tegra_dc_ring_buf *buf = &dc->crc_buf;
 
 	mutex_lock(&buf->lock);
+
+	if (flip_id == U64_MAX) {
+		ret = _find_mrm(dc, NULL, crc_ele);
+		goto done;
+	}
 
 	if (_is_flip_out_of_bounds(dc, flip_id)) {
 		ret = -ENODATA;

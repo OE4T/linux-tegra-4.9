@@ -353,6 +353,29 @@ static const struct gpu_ops gp106_ops = {
 		.get_internal_sensor_limits = gp106_get_internal_sensor_limits,
 		.configure_therm_alert = gp106_configure_therm_alert,
 	},
+	.regops = {
+		.get_global_whitelist_ranges =
+			gp106_get_global_whitelist_ranges,
+		.get_global_whitelist_ranges_count =
+			gp106_get_global_whitelist_ranges_count,
+		.get_context_whitelist_ranges =
+			gp106_get_context_whitelist_ranges,
+		.get_context_whitelist_ranges_count =
+			gp106_get_context_whitelist_ranges_count,
+		.get_runcontrol_whitelist = gp106_get_runcontrol_whitelist,
+		.get_runcontrol_whitelist_count =
+			gp106_get_runcontrol_whitelist_count,
+		.get_runcontrol_whitelist_ranges =
+			gp106_get_runcontrol_whitelist_ranges,
+		.get_runcontrol_whitelist_ranges_count =
+			gp106_get_runcontrol_whitelist_ranges_count,
+		.get_qctl_whitelist = gp106_get_qctl_whitelist,
+		.get_qctl_whitelist_count = gp106_get_qctl_whitelist_count,
+		.get_qctl_whitelist_ranges = gp106_get_qctl_whitelist_ranges,
+		.get_qctl_whitelist_ranges_count =
+			gp106_get_qctl_whitelist_ranges_count,
+		.apply_smpc_war = gp106_apply_smpc_war,
+	},
 	.mc = {
 		.intr_enable = mc_gp10b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -447,6 +470,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->fecs_trace = gp106_ops.fecs_trace;
 	gops->pramin = gp106_ops.pramin;
 	gops->therm = gp106_ops.therm;
+	gops->regops = gp106_ops.regops;
 	gops->mc = gp106_ops.mc;
 	gops->debug = gp106_ops.debug;
 	gops->dbg_session_ops = gp106_ops.dbg_session_ops;
@@ -477,7 +501,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_pmu_ops(g);
 	gp106_init_clk_ops(gops);
 	gp106_init_clk_arb_ops(gops);
-	gp106_init_regops(gops);
 
 	g->name = "gp10x";
 

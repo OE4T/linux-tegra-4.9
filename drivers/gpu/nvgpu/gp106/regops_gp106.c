@@ -1,7 +1,7 @@
 /*
  * Tegra GP106 GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1708,105 +1708,68 @@ static const struct regop_offset_range gp106_qctl_whitelist_ranges[] = {
 static const u32 gp106_qctl_whitelist_ranges_count =
 	ARRAY_SIZE(gp106_qctl_whitelist_ranges);
 
-static const struct regop_offset_range *gp106_get_global_whitelist_ranges(void)
+const struct regop_offset_range *gp106_get_global_whitelist_ranges(void)
 {
 	return gp106_global_whitelist_ranges;
 }
 
-static int gp106_get_global_whitelist_ranges_count(void)
+int gp106_get_global_whitelist_ranges_count(void)
 {
 	return gp106_global_whitelist_ranges_count;
 }
 
-static const struct regop_offset_range *gp106_get_context_whitelist_ranges(void)
+const struct regop_offset_range *gp106_get_context_whitelist_ranges(void)
 {
 	return gp106_global_whitelist_ranges;
 }
 
-static int gp106_get_context_whitelist_ranges_count(void)
+int gp106_get_context_whitelist_ranges_count(void)
 {
 	return gp106_global_whitelist_ranges_count;
 }
 
-static const u32 *gp106_get_runcontrol_whitelist(void)
+const u32 *gp106_get_runcontrol_whitelist(void)
 {
 	return gp106_runcontrol_whitelist;
 }
 
-static int gp106_get_runcontrol_whitelist_count(void)
+int gp106_get_runcontrol_whitelist_count(void)
 {
 	return gp106_runcontrol_whitelist_count;
 }
 
-static const
-struct regop_offset_range *gp106_get_runcontrol_whitelist_ranges(void)
+const struct regop_offset_range *gp106_get_runcontrol_whitelist_ranges(void)
 {
 	return gp106_runcontrol_whitelist_ranges;
 }
 
-static int gp106_get_runcontrol_whitelist_ranges_count(void)
+int gp106_get_runcontrol_whitelist_ranges_count(void)
 {
 	return gp106_runcontrol_whitelist_ranges_count;
 }
 
-static const u32 *gp106_get_qctl_whitelist(void)
+const u32 *gp106_get_qctl_whitelist(void)
 {
 	return gp106_qctl_whitelist;
 }
 
-static int gp106_get_qctl_whitelist_count(void)
+int gp106_get_qctl_whitelist_count(void)
 {
 	return gp106_qctl_whitelist_count;
 }
 
-static const struct regop_offset_range *gp106_get_qctl_whitelist_ranges(void)
+const struct regop_offset_range *gp106_get_qctl_whitelist_ranges(void)
 {
 	return gp106_qctl_whitelist_ranges;
 }
 
-static int gp106_get_qctl_whitelist_ranges_count(void)
+int gp106_get_qctl_whitelist_ranges_count(void)
 {
 	return gp106_qctl_whitelist_ranges_count;
 }
 
-static int gp106_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
+int gp106_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
 {
 	/* Not needed on gp106 */
 	return 0;
-}
-
-void gp106_init_regops(struct gpu_ops *gops)
-{
-	gops->regops.get_global_whitelist_ranges =
-		gp106_get_global_whitelist_ranges;
-	gops->regops.get_global_whitelist_ranges_count =
-		gp106_get_global_whitelist_ranges_count;
-
-	gops->regops.get_context_whitelist_ranges =
-		gp106_get_context_whitelist_ranges;
-	gops->regops.get_context_whitelist_ranges_count =
-		gp106_get_context_whitelist_ranges_count;
-
-	gops->regops.get_runcontrol_whitelist =
-		gp106_get_runcontrol_whitelist;
-	gops->regops.get_runcontrol_whitelist_count =
-		gp106_get_runcontrol_whitelist_count;
-
-	gops->regops.get_runcontrol_whitelist_ranges =
-		gp106_get_runcontrol_whitelist_ranges;
-	gops->regops.get_runcontrol_whitelist_ranges_count =
-		gp106_get_runcontrol_whitelist_ranges_count;
-
-	gops->regops.get_qctl_whitelist =
-		gp106_get_qctl_whitelist;
-	gops->regops.get_qctl_whitelist_count =
-		gp106_get_qctl_whitelist_count;
-
-	gops->regops.get_qctl_whitelist_ranges =
-		gp106_get_qctl_whitelist_ranges;
-	gops->regops.get_qctl_whitelist_ranges_count =
-		gp106_get_qctl_whitelist_ranges_count;
-
-	gops->regops.apply_smpc_war =
-		gp106_apply_smpc_war;
 }

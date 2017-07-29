@@ -2,7 +2,7 @@
  *
  * Tegra GP10B GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,20 @@
 #ifndef __REGOPS_GP10B_H_
 #define __REGOPS_GP10B_H_
 
-void gp10b_init_regops(struct gpu_ops *gops);
+struct dbg_session_gk20a;
+
+const struct regop_offset_range *gp10b_get_global_whitelist_ranges(void);
+int gp10b_get_global_whitelist_ranges_count(void);
+const struct regop_offset_range *gp10b_get_context_whitelist_ranges(void);
+int gp10b_get_context_whitelist_ranges_count(void);
+const u32 *gp10b_get_runcontrol_whitelist(void);
+int gp10b_get_runcontrol_whitelist_count(void);
+const struct regop_offset_range *gp10b_get_runcontrol_whitelist_ranges(void);
+int gp10b_get_runcontrol_whitelist_ranges_count(void);
+const u32 *gp10b_get_qctl_whitelist(void);
+int gp10b_get_qctl_whitelist_count(void);
+const struct regop_offset_range *gp10b_get_qctl_whitelist_ranges(void);
+int gp10b_get_qctl_whitelist_ranges_count(void);
+int gp10b_apply_smpc_war(struct dbg_session_gk20a *dbg_s);
 
 #endif /* __REGOPS_GP10B_H_ */

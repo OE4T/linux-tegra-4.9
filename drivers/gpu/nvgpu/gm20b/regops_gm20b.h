@@ -2,7 +2,7 @@
  *
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,20 @@
 #ifndef __REGOPS_GM20B_H_
 #define __REGOPS_GM20B_H_
 
-void gm20b_init_regops(struct gpu_ops *gops);
+struct dbg_session_gk20a;
+
+const struct regop_offset_range *gm20b_get_global_whitelist_ranges(void);
+int gm20b_get_global_whitelist_ranges_count(void);
+const struct regop_offset_range *gm20b_get_context_whitelist_ranges(void);
+int gm20b_get_context_whitelist_ranges_count(void);
+const u32 *gm20b_get_runcontrol_whitelist(void);
+int gm20b_get_runcontrol_whitelist_count(void);
+const struct regop_offset_range *gm20b_get_runcontrol_whitelist_ranges(void);
+int gm20b_get_runcontrol_whitelist_ranges_count(void);
+const u32 *gm20b_get_qctl_whitelist(void);
+int gm20b_get_qctl_whitelist_count(void);
+const struct regop_offset_range *gm20b_get_qctl_whitelist_ranges(void);
+int gm20b_get_qctl_whitelist_ranges_count(void);
+int gm20b_apply_smpc_war(struct dbg_session_gk20a *dbg_s);
 
 #endif /* __REGOPS_GM20B_H_ */

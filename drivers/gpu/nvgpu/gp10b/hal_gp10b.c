@@ -313,6 +313,29 @@ static const struct gpu_ops gp10b_ops = {
 		.init_therm_setup_hw = gp10b_init_therm_setup_hw,
 		.elcg_init_idle_filters = gp10b_elcg_init_idle_filters,
 	},
+	.regops = {
+		.get_global_whitelist_ranges =
+			gp10b_get_global_whitelist_ranges,
+		.get_global_whitelist_ranges_count =
+			gp10b_get_global_whitelist_ranges_count,
+		.get_context_whitelist_ranges =
+			gp10b_get_context_whitelist_ranges,
+		.get_context_whitelist_ranges_count =
+			gp10b_get_context_whitelist_ranges_count,
+		.get_runcontrol_whitelist = gp10b_get_runcontrol_whitelist,
+		.get_runcontrol_whitelist_count =
+			gp10b_get_runcontrol_whitelist_count,
+		.get_runcontrol_whitelist_ranges =
+			gp10b_get_runcontrol_whitelist_ranges,
+		.get_runcontrol_whitelist_ranges_count =
+			gp10b_get_runcontrol_whitelist_ranges_count,
+		.get_qctl_whitelist = gp10b_get_qctl_whitelist,
+		.get_qctl_whitelist_count = gp10b_get_qctl_whitelist_count,
+		.get_qctl_whitelist_ranges = gp10b_get_qctl_whitelist_ranges,
+		.get_qctl_whitelist_ranges_count =
+			gp10b_get_qctl_whitelist_ranges_count,
+		.apply_smpc_war = gp10b_apply_smpc_war,
+	},
 	.mc = {
 		.intr_enable = mc_gp10b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
@@ -390,6 +413,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->fecs_trace = gp10b_ops.fecs_trace;
 	gops->pramin = gp10b_ops.pramin;
 	gops->therm = gp10b_ops.therm;
+	gops->regops = gp10b_ops.regops;
 	gops->mc = gp10b_ops.mc;
 	gops->debug = gp10b_ops.debug;
 	gops->dbg_session_ops = gp10b_ops.dbg_session_ops;
@@ -452,7 +476,6 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_fb(gops);
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(g);
-	gp10b_init_regops(gops);
 
 	g->name = "gp10b";
 

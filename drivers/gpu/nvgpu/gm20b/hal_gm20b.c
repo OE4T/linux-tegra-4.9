@@ -277,6 +277,29 @@ static const struct gpu_ops gm20b_ops = {
 		.init_therm_setup_hw = gm20b_init_therm_setup_hw,
 		.elcg_init_idle_filters = gk20a_elcg_init_idle_filters,
 	},
+	.regops = {
+		.get_global_whitelist_ranges =
+			gm20b_get_global_whitelist_ranges,
+		.get_global_whitelist_ranges_count =
+			gm20b_get_global_whitelist_ranges_count,
+		.get_context_whitelist_ranges =
+			gm20b_get_context_whitelist_ranges,
+		.get_context_whitelist_ranges_count =
+			gm20b_get_context_whitelist_ranges_count,
+		.get_runcontrol_whitelist = gm20b_get_runcontrol_whitelist,
+		.get_runcontrol_whitelist_count =
+			gm20b_get_runcontrol_whitelist_count,
+		.get_runcontrol_whitelist_ranges =
+			gm20b_get_runcontrol_whitelist_ranges,
+		.get_runcontrol_whitelist_ranges_count =
+			gm20b_get_runcontrol_whitelist_ranges_count,
+		.get_qctl_whitelist = gm20b_get_qctl_whitelist,
+		.get_qctl_whitelist_count = gm20b_get_qctl_whitelist_count,
+		.get_qctl_whitelist_ranges = gm20b_get_qctl_whitelist_ranges,
+		.get_qctl_whitelist_ranges_count =
+			gm20b_get_qctl_whitelist_ranges_count,
+		.apply_smpc_war = gm20b_apply_smpc_war,
+	},
 	.mc = {
 		.intr_enable = mc_gk20a_intr_enable,
 		.intr_unit_config = mc_gk20a_intr_unit_config,
@@ -350,6 +373,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->fifo = gm20b_ops.fifo;
 	gops->gr_ctx = gm20b_ops.gr_ctx;
 	gops->therm = gm20b_ops.therm;
+	gops->regops = gm20b_ops.regops;
 	gops->mc = gm20b_ops.mc;
 	gops->dbg_session_ops = gm20b_ops.dbg_session_ops;
 	gops->debug = gm20b_ops.debug;
@@ -404,7 +428,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_mm(gops);
 	gm20b_init_pmu_ops(g);
 	gm20b_init_clk_ops(gops);
-	gm20b_init_regops(gops);
 
 	g->name = "gm20b";
 

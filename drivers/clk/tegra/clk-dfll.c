@@ -1441,7 +1441,8 @@ static bool is_out_target_delivered(struct tegra_dfll *td, u8 out_target)
 	return false;
 }
 
-static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv)
+static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv,
+				       bool tune_high)
 {
 	int i, n = 0;
 	u32 data, avg_data = 0;
@@ -1463,6 +1464,10 @@ static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv)
 	}
 	udelay(td->one_shot_settle_time);
 
+	/* Tune high during calibration */
+	if (tune_high)
+		dfll_tune_high(td);
+
 	/* Average measurements. Take the last one "as is" if all unstable */
 	for (i = 0; i < DFLL_ONE_SHOT_AVG_SAMPLES; i++) {
 		if (dfll_get_monitor_data(td, &data) < 0) {
@@ -1474,6 +1479,10 @@ static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv)
 		avg_data += data;
 		n++;
 	}
+
+	/* Restore low tuning after calibration */
+	if (tune_high)
+		dfll_tune_low(td);
 
 	if (!n)
 		return -ETIMEDOUT;
@@ -1491,20 +1500,30 @@ _out:
 static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 {
 	bool ret = false;
-	int mv, therm_mv = 0;
+	int mv, therm_mv = 0, tune_mv = 0;
 	int i = td->thermal_floor_index;
 	long rate;
+	enum dfll_tune_range range = td->tune_range;
 
 	if (!(td->cfg_flags & DFLL_ONE_SHOT_CALIBRATE) ||
 	    (td->mode != DFLL_CLOSED_LOOP) || timekeeping_suspended)
 		return ret;
 
-	/* Thermal floors */
+	/* Don't calibrate in range transition */
+	if ((range > DFLL_TUNE_LOW) && (range < DFLL_TUNE_HIGH))
+		return ret;
+
 	if (td->soc->thermal_floor_table_size &&
-	    (i < td->soc->thermal_floor_table_size)) {
+	    (i < td->soc->thermal_floor_table_size))
 		therm_mv = td->soc->thermal_floor_table[i].millivolts;
-		if (!td->dvco_rate_floors[i]) {
-			rate = dfll_one_shot_calibrate_mv(td, therm_mv);
+
+	if (td->tune_high_target_rate_min != ULONG_MAX)
+		tune_mv = td->lut_uv[td->tune_high_out_min] / 1000;
+
+	/* Thermal floors */
+	if (therm_mv && !td->dvco_rate_floors[i]) {
+		if ((range == DFLL_TUNE_LOW) || (therm_mv >= tune_mv)) {
+			rate = dfll_one_shot_calibrate_mv(td, therm_mv, false);
 			if (!IS_ERR_VALUE(rate)) {
 				td->dvco_rate_floors[i] =
 				clamp((unsigned long)rate, td->out_rate_min,
@@ -1515,11 +1534,10 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 	}
 
 	/* Tune high Vmin if specified */
-	if (!td->tune_high_calibrated &&
-	    (td->tune_high_target_rate_min != ULONG_MAX)) {
-		mv = td->lut_uv[td->tune_high_out_min] / 1000;
-		if (mv > therm_mv) {
-			rate = dfll_one_shot_calibrate_mv(td, mv);
+	if (tune_mv && !td->tune_high_calibrated) {
+		if (tune_mv >= therm_mv) {
+			rate = dfll_one_shot_calibrate_mv(
+				td, tune_mv, range == DFLL_TUNE_LOW);
 			if (!IS_ERR_VALUE(rate)) {
 				td->tune_high_dvco_rate_min =
 					clamp((unsigned long)rate,
@@ -1534,9 +1552,9 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 	/* Absolute Vmin matters only when no thermal floors */
 	if (!therm_mv) {
 		i = td->soc->thermal_floor_table_size;
-		if (!td->dvco_rate_floors[i]) {
+		if (!td->dvco_rate_floors[i] && (range == DFLL_TUNE_LOW)) {
 			mv = td->lut_uv[td->lut_bottom] / 1000;
-			rate = dfll_one_shot_calibrate_mv(td, mv);
+			rate = dfll_one_shot_calibrate_mv(td, mv, false);
 			if (!IS_ERR_VALUE(rate)) {
 				td->dvco_rate_floors[i] =
 					clamp((unsigned long)rate,

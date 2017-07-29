@@ -1229,11 +1229,11 @@ static inline void calibration_timer_update(struct tegra_dfll *td)
 	 * calibration. It may be temporarily enabled during calibration;
 	 * use timer update to clean up.
 	 */
-	dfll_set_force_output_enabled(td, false);
-
-	if (td->calibration_delay)
+	if (td->calibration_delay) {
+		dfll_set_force_output_enabled(td, false);
 		mod_timer(&td->calibration_timer,
 			  jiffies + td->calibration_delay + 1);
+	}
 }
 
 /*
@@ -1249,7 +1249,7 @@ static void dfll_calibrate(struct tegra_dfll *td)
 	unsigned long rate_min = td->dvco_rate_min;
 	u8 out_min = dfll_get_output_min(td);
 
-	if (!td->calibration_delay)
+	if (!td->calibration_delay || (td->cfg_flags & DFLL_ONE_SHOT_CALIBRATE))
 		return;
 	/*
 	 *  Enter calibration procedure only if
@@ -1947,9 +1947,10 @@ static int dfll_request_rate(struct tegra_dfll *td, unsigned long rate)
 	if (td->mode == DFLL_CLOSED_LOOP) {
 		dfll_set_close_loop_config(td, &td->last_req);
 		dfll_set_frequency_request(td, &td->last_req);
-		if (dvco_min_updated || dvco_min_crossed)
+		if (dvco_min_updated || dvco_min_crossed ||
+		    (td->cfg_flags & DFLL_ONE_SHOT_CALIBRATE))
 			calibration_timer_update(td);
-	} 
+	}
 
 	return 0;
 }
@@ -1977,8 +1978,14 @@ static void calibration_timer_cb(unsigned long data)
 
 	rate_min = td->dvco_rate_min;
 	dfll_calibrate(td);
+	if (dfll_one_shot_calibrate_floors(td))
+		set_dvco_rate_min(td, &td->last_req);
+
 	if (rate_min != td->dvco_rate_min)
 		dfll_request_rate(td, dfll_request_get(td));
+
+	pr_debug("%s: dvco min in %lu / out %lu\n", __func__, rate_min,
+		 td->dvco_rate_min);
 
 	spin_unlock_irqrestore(&td->lock, flags);
 }
@@ -3213,11 +3220,7 @@ static int calibr_delay_set(void *data, u64 val)
 	unsigned long flags;
 
 	spin_lock_irqsave(&td->lock, flags);
-	if (!(td->cfg_flags & DFLL_ONE_SHOT_CALIBRATE)) {
-		spin_lock_irqsave(&td->lock, flags);
-		td->calibration_delay = msecs_to_jiffies(val);
-		spin_unlock_irqrestore(&td->lock, flags);
-	}
+	td->calibration_delay = msecs_to_jiffies(val);
 	spin_unlock_irqrestore(&td->lock, flags);
 
 	return 0;
@@ -3895,8 +3898,7 @@ int tegra_dfll_register(struct platform_device *pdev,
 	init_timer_deferrable(&td->calibration_timer);
 	td->calibration_timer.function = calibration_timer_cb;
 	td->calibration_timer.data = (unsigned long)td;
-	if (!(td->cfg_flags & DFLL_ONE_SHOT_CALIBRATE))
-		td->calibration_delay = usecs_to_jiffies(DFLL_CALIBR_TIME);
+	td->calibration_delay = usecs_to_jiffies(DFLL_CALIBR_TIME);
 
 #ifdef CONFIG_DEBUG_FS
 	dfll_debug_init(td);

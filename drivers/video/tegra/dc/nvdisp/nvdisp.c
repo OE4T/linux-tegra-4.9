@@ -1282,6 +1282,22 @@ INIT_EXIT:
 
 }
 
+static inline bool tegra_nvdisp_is_lpf_required_t18x(struct tegra_dc *dc)
+{
+	if (dc->yuv_bypass)
+		return false;
+
+	return (dc->mode.vmode & FB_VMODE_Y422);
+}
+
+static inline bool tegra_nvdisp_is_lpf_required(struct tegra_dc *dc)
+{
+	if (tegra_dc_is_t19x())
+		return tegra_nvdisp_is_lpf_required_t19x(dc);
+	else
+		return tegra_nvdisp_is_lpf_required_t18x(dc);
+}
+
 void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
 {
 	/* if color fmt is yuv_422 and postcomp support yuv422
@@ -1291,13 +1307,9 @@ void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
 	u32 chroma_lpf = tegra_dc_readl(dc, nvdisp_procamp_r());
 	chroma_lpf &= ~nvdisp_procamp_chroma_lpf_enable_f();
 
-	if ((dc->mode.vmode & FB_VMODE_Y422)  &&
+	if (tegra_nvdisp_is_lpf_required(dc) &&
 		nvdisp_postcomp_capa_is_yuv422_enable_v(postcomp_capa))
 		chroma_lpf |= nvdisp_procamp_chroma_lpf_enable_f();
-
-	/* disable chroma for by_pass mode */
-	if (dc->yuv_bypass)
-		chroma_lpf &= ~nvdisp_procamp_chroma_lpf_enable_f();
 
 	tegra_dc_writel(dc, chroma_lpf, nvdisp_procamp_r());
 }
@@ -1369,6 +1381,12 @@ void tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 
 write_reg:
 	tegra_dc_writel(dc, csc2_control, nvdisp_csc2_control_r());
+}
+
+static inline void tegra_nvdisp_set_rg_unstall(struct tegra_dc *dc)
+{
+	if (tegra_dc_is_t19x())
+		tegra_nvdisp_set_rg_unstall_t19x(dc);
 }
 
 int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
@@ -1451,6 +1469,8 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	_tegra_nvdisp_set_ec_output_lut(dc, mode);
 
 	tegra_nvdisp_set_chroma_lpf(dc);
+
+	tegra_nvdisp_set_rg_unstall(dc);
 
 	/* general-update */
 	tegra_nvdisp_activate_general_channel(dc);

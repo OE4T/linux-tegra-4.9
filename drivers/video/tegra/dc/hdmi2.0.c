@@ -2762,6 +2762,29 @@ static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
 	return pclk;
 }
 
+static inline void tegra_sor_set_clk_rate(struct tegra_dc_sor_data *sor)
+{
+	struct tegra_dc *dc = sor->dc;
+	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
+	long rate = dc->mode.pclk;
+
+	if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
+		(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
+		rate = rate >> 1;
+		rate = rate * 3;
+	}
+
+	clk_set_rate(sor->sor_clk, rate);
+}
+
+static inline void tegra_dc_hdmi_set_sor_clk_rate(struct tegra_dc_sor_data *sor)
+{
+	if (tegra_dc_is_t19x())
+		tegra_sor_set_clk_rate_t19x(sor);
+	else
+		tegra_sor_set_clk_rate(sor);
+}
+
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	struct clk *parent_clk;
@@ -2770,7 +2793,6 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	long parent_clk_rate;
-	long rate;
 	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_YUV_MASK;
 
 	if (!dc->out->parent_clk) {
@@ -2809,17 +2831,8 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	clk_set_parent(sor->sor_clk, parent_clk);
 
 	/* Set Rate to SOR_CLK*/
-	if (!dc->initialized) {
-		if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
-				(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
-			rate = dc->mode.pclk;
-			rate = rate >> 1;
-			rate = rate * 3;
-			clk_set_rate(sor->sor_clk, rate);
-		} else {
-			clk_set_rate(sor->sor_clk, dc->mode.pclk);
-		}
-	}
+	if (!dc->initialized)
+		tegra_dc_hdmi_set_sor_clk_rate(sor);
 
 	/* Enable SOR_CLK*/
 	if (atomic_inc_return(&hdmi->clock_refcount) == 1)

@@ -288,7 +288,6 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	mc_vi->ndev = pdev;
 	mc_vi->dev = &pdev->dev;
 	INIT_LIST_HEAD(&mc_vi->vi_chans);
-	INIT_LIST_HEAD(&mc_vi->entities);
 	mutex_init(&mc_vi->mipical_lock);
 
 	err = vi_parse_dt(mc_vi, pdev);

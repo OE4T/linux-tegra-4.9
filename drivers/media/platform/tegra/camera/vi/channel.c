@@ -1711,6 +1711,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->num_subdevs = 0;
 	mutex_init(&chan->video_lock);
 	INIT_LIST_HEAD(&chan->capture);
+	INIT_LIST_HEAD(&chan->entities);
 	init_waitqueue_head(&chan->start_wait);
 	spin_lock_init(&chan->start_lock);
 	mutex_init(&chan->stop_kthread_lock);
@@ -1885,7 +1886,6 @@ int tegra_vi_channels_init(struct tegra_mc_vi *vi)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_vi_channels_init);
-
 int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi)
 {
 	int ret = 0, err = 0;

@@ -129,7 +129,8 @@
 	};
 
 	tegra-aotag {
-		status = "disabled";
+		compatible = "nvidia,tegra210b01-aotag";
+		status = "okay";
 	};
 
 	i2c@7000c000 {

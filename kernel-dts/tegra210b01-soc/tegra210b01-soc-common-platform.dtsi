@@ -541,7 +541,7 @@
 	};
 
 	tegra-aotag {
-		status = "disabled";
+		status = "okay";
 	};
 
 	tegra_cec {

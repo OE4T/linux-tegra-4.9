@@ -17,7 +17,8 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
 #ifndef __AHUB_UNIT_FPGA_CLOCK_H__
 #define __AHUB_UNIT_FPGA_CLOCK_H__
 
@@ -478,4 +479,7 @@ void OnAD1937CaptureAndPlayback(int mode,
 	int bitclkInv,
 	int frameRate,
 	AD1937_EXTRA_INFO * extra_info);
+#endif
+#else
+#include "../../../../kernel-4.9/sound/soc/tegra-alt/ahub_unit_fpga_clock.h"
 #endif

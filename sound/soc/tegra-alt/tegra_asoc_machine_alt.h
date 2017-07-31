@@ -16,6 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
 #ifndef __TEGRA_ASOC_MACHINE_ALT_H__
 #define __TEGRA_ASOC_MACHINE_ALT_H__
 
@@ -291,4 +293,7 @@ unsigned int *tegra_machine_get_bclk_ratio_array(void);
 unsigned int *tegra_machine_get_rx_mask_array(void);
 unsigned int *tegra_machine_get_tx_mask_array(void);
 
+#endif
+#else
+#include "../../../../kernel-4.9/sound/soc/tegra-alt/tegra_asoc_machine_alt.h"
 #endif

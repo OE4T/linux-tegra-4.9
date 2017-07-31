@@ -21,7 +21,6 @@
 #include <nvgpu/gmmu.h>
 
 #include "gk20a/gk20a.h"
-#include "gv11b/fb_gv11b.h"
 #include "gv100/fb_gv100.h"
 
 #include <nvgpu/hw/gv100/hw_fb_gv100.h>
@@ -29,7 +28,7 @@
 #define HW_SCRUB_TIMEOUT_DEFAULT	100 /* usec */
 #define HW_SCRUB_TIMEOUT_MAX		2000000 /* usec */
 
-static void gv100_fb_reset(struct gk20a *g)
+void gv100_fb_reset(struct gk20a *g)
 {
 	u32 val;
 	int retries = HW_SCRUB_TIMEOUT_MAX / HW_SCRUB_TIMEOUT_DEFAULT;
@@ -49,10 +48,4 @@ static void gv100_fb_reset(struct gk20a *g)
 	val = gk20a_readl(g, fb_mmu_priv_level_mask_r());
 	val &= ~fb_mmu_priv_level_mask_write_violation_m();
 	gk20a_writel(g, fb_mmu_priv_level_mask_r(), val);
-}
-
-void gv100_init_fb(struct gpu_ops *gops)
-{
-	gv11b_init_fb(gops);
-	gops->fb.reset = gv100_fb_reset;
 }

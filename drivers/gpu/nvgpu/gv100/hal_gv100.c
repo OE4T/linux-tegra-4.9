@@ -30,10 +30,14 @@
 #include "gk20a/pramin_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"
+#include "gk20a/fb_gk20a.h"
 
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
+#include "gm20b/fb_gm20b.h"
+
+#include "gp10b/fb_gp10b.h"
 
 #include "gp106/clk_gp106.h"
 #include "gp106/clk_arb_gp106.h"
@@ -61,7 +65,7 @@
 #include "gv100/gr_ctx_gv100.h"
 #include "gv100/mm_gv100.h"
 #include "gv11b/pmu_gv11b.h"
-#include "gv100/fb_gv100.h"
+#include "gv11b/fb_gv11b.h"
 #include "gv11b/fifo_gv11b.h"
 #include "gv11b/gv11b_gating_reglist.h"
 #include "gv11b/regops_gv11b.h"
@@ -69,6 +73,7 @@
 
 #include "gv100.h"
 #include "hal_gv100.h"
+#include "gv100/fb_gv100.h"
 
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
@@ -199,6 +204,23 @@ static const struct gpu_ops gv100_ops = {
 		.isr_stall = gv11b_ce_isr,
 		.isr_nonstall = gp10b_ce_nonstall_isr,
 		.get_num_pce = gv11b_ce_get_num_pce,
+	},
+	.fb = {
+		.reset = gv100_fb_reset,
+		.init_hw = gk20a_fb_init_hw,
+		.init_fs_state = gv11b_fb_init_fs_state,
+		.init_cbc = gv11b_fb_init_cbc,
+		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
+		.set_use_full_comp_tag_line =
+			gm20b_fb_set_use_full_comp_tag_line,
+		.compression_page_size = gp10b_fb_compression_page_size,
+		.compressible_page_size = gp10b_fb_compressible_page_size,
+		.vpr_info_fetch = gm20b_fb_vpr_info_fetch,
+		.dump_vpr_wpr_info = gm20b_fb_dump_vpr_wpr_info,
+		.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled,
+		.set_debug_mode = gm20b_fb_set_debug_mode,
+		.tlb_invalidate = gk20a_fb_tlb_invalidate,
+		.hub_isr = gv11b_fb_hub_isr,
 	},
 	.fifo = {
 		.init_fifo_setup_hw = gv11b_init_fifo_setup_hw,
@@ -424,9 +446,11 @@ int gv100_init_hal(struct gk20a *g)
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 
 	gv11b_init_gr(g);
-	gv100_init_fb(gops);
 	gv100_init_mm(gops);
 	gp106_init_pmu_ops(g);
+
+	gv11b_init_uncompressed_kind_map();
+	gv11b_init_kind_attr();
 
 	g->name = "gv10x";
 

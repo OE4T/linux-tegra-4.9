@@ -29,9 +29,11 @@
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"
+#include "gk20a/fb_gk20a.h"
 
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
+#include "gm20b/fb_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
 
 #include "gp10b/ltc_gp10b.h"
@@ -41,6 +43,7 @@
 #include "gp10b/priv_ring_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
+#include "gp10b/fb_gp10b.h"
 
 #include "hal_gv11b.h"
 #include "gr_gv11b.h"
@@ -177,6 +180,23 @@ static const struct gpu_ops gv11b_ops = {
 		.isr_stall = gv11b_ce_isr,
 		.isr_nonstall = gp10b_ce_nonstall_isr,
 		.get_num_pce = gv11b_ce_get_num_pce,
+	},
+	.fb = {
+		.reset = gv11b_fb_reset,
+		.init_hw = gk20a_fb_init_hw,
+		.init_fs_state = gv11b_fb_init_fs_state,
+		.init_cbc = gv11b_fb_init_cbc,
+		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
+		.set_use_full_comp_tag_line =
+			gm20b_fb_set_use_full_comp_tag_line,
+		.compression_page_size = gp10b_fb_compression_page_size,
+		.compressible_page_size = gp10b_fb_compressible_page_size,
+		.vpr_info_fetch = gm20b_fb_vpr_info_fetch,
+		.dump_vpr_wpr_info = gm20b_fb_dump_vpr_wpr_info,
+		.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled,
+		.set_debug_mode = gm20b_fb_set_debug_mode,
+		.tlb_invalidate = gk20a_fb_tlb_invalidate,
+		.hub_isr = gv11b_fb_hub_isr,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
@@ -408,6 +428,7 @@ int gv11b_init_hal(struct gk20a *g)
 
 	gops->ltc = gv11b_ops.ltc;
 	gops->ce2 = gv11b_ops.ce2;
+	gops->fb = gv11b_ops.fb;
 	gops->clock_gating = gv11b_ops.clock_gating;
 	gops->fifo = gv11b_ops.fifo;
 	gops->gr_ctx = gv11b_ops.gr_ctx;
@@ -435,9 +456,11 @@ int gv11b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 
 	gv11b_init_gr(g);
-	gv11b_init_fb(gops);
 	gv11b_init_mm(gops);
 	gv11b_init_pmu_ops(g);
+
+	gv11b_init_uncompressed_kind_map();
+	gv11b_init_kind_attr();
 
 	g->name = "gv11b";
 

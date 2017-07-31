@@ -16,7 +16,7 @@
 #ifndef _NVGPU_GV100_FB
 #define _NVGPU_GV100_FB
 
-struct gpu_ops;
+struct gk20a;
 
-void gv100_init_fb(struct gpu_ops *gops);
+void gv100_fb_reset(struct gk20a *g);
 #endif

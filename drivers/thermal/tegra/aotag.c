@@ -3,7 +3,7 @@
  *
  * TEGRA AOTAG (Always-On Thermal Alert Generator) driver.
  *
- * Copyright (c) 2014 - 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014 - 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -28,6 +28,7 @@
 #include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/thermal.h>
+#include <soc/tegra/fuse.h>
 #include "tsensor-fuse.h"
 
 #define PDEV2DEVICE(pdev) (&(pdev->dev))
@@ -169,12 +170,6 @@
  * Data definitions
  */
 
-static const struct of_device_id tegra_aotag_of_match[] = {
-	{ .compatible = "nvidia,tegra21x-aotag" },
-	{ },
-};
-MODULE_DEVICE_TABLE(of, tegra_aotag_of_match);
-
 /*
  * Mask/shift bits in FUSE_TSENSOR_COMMON and
  * FUSE_TSENSOR_COMMON, which are described in
@@ -190,7 +185,7 @@ static const struct tegra_tsensor_fuse tegra_aotag_fuse = {
 	.fuse_spare_realignment = 0,
 };
 
-static const struct tegra_tsensor_configuration tegra_aotag_config = {
+static struct tegra_tsensor_configuration tegra_aotag_config = {
 	.tall = 76,
 	.tiddq_en = 1,
 	.ten_count = 16,
@@ -200,15 +195,36 @@ static const struct tegra_tsensor_configuration tegra_aotag_config = {
 	.pdiv_ate = 8,
 };
 
+static struct tegra_tsensor_configuration tegra210b01_aotag_config = {
+	.tall = 76,
+	.tiddq_en = 1,
+	.ten_count = 16,
+	.tsample = 19,
+	.tsample_ate = 39,
+	.pdiv = 12,
+	.pdiv_ate = 6,
+};
+
 static const struct fuse_corr_coeff tegra_aotag_coeff = {
 	.alpha = 1063200,
 	.beta = -6749000,
 };
 
+static const struct of_device_id tegra_aotag_of_match[] = {
+	{	.compatible = "nvidia,tegra21x-aotag",
+		.data = &tegra_aotag_config,
+	},
+	{	.compatible = "nvidia,tegra210b01-aotag",
+		.data = &tegra210b01_aotag_config,
+	},
+	{ },
+};
+MODULE_DEVICE_TABLE(of, tegra_aotag_of_match);
+
 struct aotag_sensor_info_t {
 	u32 id;
 	const char *name;
-	const struct tegra_tsensor_configuration *config;
+	struct tegra_tsensor_configuration *config;
 	const struct tegra_tsensor_fuse *fuse;
 	const struct fuse_corr_coeff *coeff;
 	struct thermal_zone_device *tzd;
@@ -290,6 +306,12 @@ static int aotag_init(struct platform_device *pdev)
 	int ret = 0;
 	struct device_node *pmc_np = NULL;
 	struct aotag_sensor_info_t *info = NULL;
+	const struct of_device_id *match;
+
+	match = of_match_node(tegra_aotag_of_match, pdev->dev.of_node);
+	if (!match)
+		return -ENODEV;
+
 
 	pmc_np = of_parse_phandle(pdev->dev.of_node, "parent-block", 0);
 	if (unlikely(!pmc_np)) {
@@ -315,7 +337,24 @@ static int aotag_init(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	info->config = &tegra_aotag_config;
+	info->config = (struct tegra_tsensor_configuration *)match->data;
+	/*
+	 * HW WAR for early parts. Account for incorrect ATE fusing during the
+	 * early parts.
+	 */
+	if (tegra_chip_get_revision() == TEGRA210B01_REVISION_A01) {
+		u32 major, minor, rev;
+
+		tegra_fuse_readl(FUSE_CP_REV, &rev);
+		minor = rev & 0x1f;
+		major = (rev >> 5) & 0x3f;
+		if (major == 0 && minor < TEGRA_FUSE_CP_REV_0_3) {
+			dev_info(&pdev->dev, "Applying WAR for CP rev:%d.%d\n",
+				major, minor);
+			info->config->tsample_ate -= 1;
+		}
+	}
+
 	info->fuse = &tegra_aotag_fuse;
 	info->coeff = &tegra_aotag_coeff;
 

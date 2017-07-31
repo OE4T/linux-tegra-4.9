@@ -2357,7 +2357,7 @@
 	tegra_fiq_debugger {
 		compatible = "nvidia,fiq-debugger";
 		use-console-port;
-		interrupts = <1 12 0x0108>;
+		interrupts = <0 123 0x04>;         /* WDT_CPU */
 	};
 
 	ptm {

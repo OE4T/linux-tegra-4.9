@@ -155,11 +155,13 @@
 #define ARM_SMMU_GR0_ID5		0x34
 #define ARM_SMMU_GR0_ID6		0x38
 #define ARM_SMMU_GR0_ID7		0x3c
+#define ARM_SMMU_GR0_sGFAR		0x40
 #define ARM_SMMU_GR0_sGFSR		0x48
 #define ARM_SMMU_GR0_sGFSYNR0		0x50
 #define ARM_SMMU_GR0_sGFSYNR1		0x54
 #define ARM_SMMU_GR0_sGFSYNR2		0x58
 #define ARM_SMMU_GR0_nsCR0		0x400
+#define ARM_SMMU_GR0_nsGFAR		0x440
 #define ARM_SMMU_GR0_nsGFSR		0x448
 #define ARM_SMMU_GR0_nsGFSYNR0		0x450
 #define ARM_SMMU_GR0_nsGFSYNR1		0x454
@@ -1129,22 +1131,28 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 static void arm_smmu_global_fault_printinfo(struct arm_smmu_device *smmu,
 				void __iomem *gr0_base, int smmu_id)
 {
+	int sid;
+	u64 gfar;
 	u32 gfsr, gfsynr0, gfsynr1, gfsynr2;
 
 	gfsr = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSR);
 	gfsynr0 = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSYNR0);
 	gfsynr1 = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSYNR1);
 	gfsynr2 = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSYNR2);
+	gfar = readq_relaxed(gr0_base + ARM_SMMU_GR0_sGFAR);
+	sid = gfsynr1 & 0xFF;
 
 	dev_err_ratelimited(smmu->dev,
 		"SMMU%d: Unexpected {global,context} fault, this could be serious\n", smmu_id);
 	dev_err_ratelimited(smmu->dev,
-		"\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x\n",
-		gfsr, gfsynr0, gfsynr1, gfsynr2);
+		"\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x, "
+		"fault_addr=0x%llx, sid=%d(0x%x - %s)\n",
+		gfsr, gfsynr0, gfsynr1, gfsynr2, gfar, sid, sid, tegra_mc_get_sid_name(sid));
 
 	trace_printk("SMMU%d: Unexpected {global,context} fault, this could be serious\n", smmu_id);
-	trace_printk("\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x\n",
-		gfsr, gfsynr0, gfsynr1, gfsynr2);
+	trace_printk("\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x, "
+		"fault_addr=0x%llx, sid=%d(0x%x - %s\n",
+		gfsr, gfsynr0, gfsynr1, gfsynr2, gfar, sid, sid, tegra_mc_get_sid_name(sid));
 
 	writel_single(gfsr, gr0_base + ARM_SMMU_GR0_sGFSR);
 }

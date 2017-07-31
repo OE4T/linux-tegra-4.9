@@ -4,7 +4,7 @@ subdir-ccflags-y := -Werror
 
 subdir-ccflags-y += -I$(srctree)/../nvidia
 subdir-ccflags-y += -I$(srctree)
-subdir-ccflags-y += -I$(srctree)/sound/soc/tegra-virt-alt/
+subdir-ccflags-y += -I$(srctree)/../nvidia/sound/soc/tegra-virt-alt/
 subdir-ccflags-y += -I$(srctree)/sound/soc/codecs/
 
 # Tegra platform Support

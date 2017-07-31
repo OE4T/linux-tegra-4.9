@@ -1,1 +1,2 @@
 trysource "../nvidia/sound/soc/tegra-alt/Kconfig.nvidia"
+trysource "../nvidia/sound/soc/tegra-virt-alt/Kconfig.nvidia"

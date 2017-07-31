@@ -616,9 +616,8 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 		unsigned Bpp_bw = Bpp * ((yuvp || yuvsp) ? 2 : 1);
 		bool filter_h;
 		bool filter_v;
-#if defined(CONFIG_TEGRA_DC_SCAN_COLUMN)
+
 		scan_column = (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN);
-#endif
 
 		tegra_dc_writel(dc, WINDOW_A_SELECT << win->idx,
 				DC_CMD_DISPLAY_WINDOW_HEADER);

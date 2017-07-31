@@ -37,10 +37,8 @@ static void mods_tegra_dc_set_windowattr_basic(struct tegra_dc_win *win,
 	win->flags = TEGRA_WIN_FLAG_ENABLED;
 	if (mods_win->flags & MODS_TEGRA_DC_WINDOW_FLAG_TILED)
 		win->flags |= TEGRA_WIN_FLAG_TILED;
-#if defined(CONFIG_TEGRA_DC_SCAN_COLUMN)
 	if (mods_win->flags & MODS_TEGRA_DC_WINDOW_FLAG_SCAN_COL)
 		win->flags |= TEGRA_WIN_FLAG_SCAN_COLUMN;
-#endif
 
 	win->fmt = mods_win->pixformat;
 	win->x.full = mods_win->x;

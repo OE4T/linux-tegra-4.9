@@ -129,16 +129,6 @@ config TEGRA_NVDISPLAY
 	    Enable the support for NvDisplay Architecture
 	    If unsure, say N
 
-config TEGRA_DC_SCAN_COLUMN
-	bool
-	depends on TEGRA_DC
-	default y
-	help
-	  Enables access to scan column mode for providing 90 and 270 rotation.
-	  The pixel format for a surface using scancolumn must be encoding
-	  using BlockLinear.
-	  Failure to use proper pixel format will result in EINVAL errors.
-
 config TEGRA_DC_BLOCK_LINEAR
 	bool "Support Block Linear encoding"
 	depends on TEGRA_DC

@@ -32,7 +32,7 @@
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_bus_gv11b.h>
 
-#define NVGPU_L3_ALLOC_BIT	36
+#define NVGPU_L3_ALLOC_BIT	BIT(36)
 
 static bool gv11b_mm_is_bar1_supported(struct gk20a *g)
 {

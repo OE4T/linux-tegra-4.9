@@ -139,16 +139,6 @@ config TEGRA_DC_SCAN_COLUMN
 	  using BlockLinear.
 	  Failure to use proper pixel format will result in EINVAL errors.
 
-config TEGRA_DC_BLENDER_DEPTH
-	bool "Program blender depth for overlays"
-	depends on TEGRA_DC
-	default y
-	help
-	  This option is required for chips that support it.
-	  Disabling this means multiple windows will not be blended correctly.
-	  This may be acceptable in situations where windows never overlap or
-	  if there is there are no overlays and only base.
-
 config TEGRA_DC_BLOCK_LINEAR
 	bool "Support Block Linear encoding"
 	depends on TEGRA_DC

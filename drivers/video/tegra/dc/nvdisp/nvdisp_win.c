@@ -121,9 +121,7 @@ static int tegra_nvdisp_blend(struct tegra_dc_win *win)
 	 * for in-order blending settings. */
 	dc->blend.alpha[win->idx] = win->global_alpha;
 
-#if defined(CONFIG_TEGRA_DC_BLENDER_DEPTH)
 	blend_ctrl = win_blend_layer_control_depth_f(blend->z[idx]);
-#endif
 
 	if (update_blend_seq) {
 		if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_COVERAGE) {

@@ -435,10 +435,8 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 		win->block_height_log2 = flip_win->block_height_log2;
 	}
 #endif
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE)
 		win->flags |= TEGRA_WIN_FLAG_INTERLACE;
-#endif
 
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED) {
 		win->cde.zbc_color = flip_win->cde.zbc_color;
@@ -534,7 +532,6 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 		flip_win->phys_addr_v : flip_win->phys_addr;
 	win->phys_addr_v += flip_win->attr.offset_v;
 
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (ext->dc->mode.vmode == FB_VMODE_INTERLACED) {
 		if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE) {
 			win->phys_addr2 = flip_win->phys_addr +
@@ -558,7 +555,6 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 				flip_win->phys_addr_v : flip_win->phys_addr;
 		}
 	}
-#endif
 
 	if (flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED)
 		win->cde.cde_addr =

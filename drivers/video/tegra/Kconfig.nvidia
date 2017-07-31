@@ -139,17 +139,6 @@ config TEGRA_DC_BLOCK_LINEAR
 	  pixel format.
 	  This needs to be enabled on chips that support it.
 
-config TEGRA_DC_INTERLACE
-	bool
-	depends on TEGRA_DC
-	default y
-	help
-	  Support output in interlaced formats on chips that support it.
-	  This requires that a carefully constructed set of surfaces are
-	  used that match the needs of the interlaced mode.
-	  With this enabled HDMI 1080i is possible. But 480i is not, due
-	  to the lack of pixel doubling support.
-
 config TEGRA_DC_64BIT_SUPPORT
 	bool "64-bit addressing in DC"
 	depends on TEGRA_DC && ARCH_TEGRA_210_SOC

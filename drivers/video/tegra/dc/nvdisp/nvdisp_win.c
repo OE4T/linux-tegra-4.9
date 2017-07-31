@@ -625,7 +625,6 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 			win_cropped_point_v_offset_f(dfixed_trunc(v_offset)),
 			win_cropped_point_r());
 
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if ((dc->mode.vmode == FB_VMODE_INTERLACED) && WIN_IS_FB(win)) {
 		if (!WIN_IS_INTERLACE(win))
 			win->phys_addr2 = win->phys_addr;
@@ -681,7 +680,6 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 				win_cropped_point_fld2_r());
 		}
 	}
-#endif
 
 	if (WIN_IS_BLOCKLINEAR(win)) {
 		nvdisp_win_write(win, win_surface_kind_kind_bl_f() |

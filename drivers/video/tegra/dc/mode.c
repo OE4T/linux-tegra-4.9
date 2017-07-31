@@ -481,7 +481,6 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	tegra_dc_writel(dc, mode->h_active | (v_active << 16),
 			DC_DISP_DISP_ACTIVE);
 
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (mode->vmode == FB_VMODE_INTERLACED)
 		tegra_dc_writel(dc, INTERLACE_MODE_ENABLE |
 			INTERLACE_START_FIELD_1
@@ -509,7 +508,6 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 			(v_front_porch << 16),
 			DC_DISP_INTERLACE_FIELD2_FRONT_PORCH);
 	}
-#endif
 
 	tegra_dc_writel(dc, DE_SELECT_ACTIVE | DE_CONTROL_NORMAL,
 			DC_DISP_DATA_ENABLE_OPTIONS);

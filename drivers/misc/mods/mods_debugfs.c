@@ -183,11 +183,7 @@ static int mods_dc_interlaced_show(struct seq_file *s, void *unused)
 {
 	struct tegra_dc *dc = s->private;
 	u32 i;
-#ifdef CONFIG_TEGRA_DC_INTERLACE
 	const unsigned int head_interlaced = 1;
-#else
-	const unsigned int head_interlaced = 0;
-#endif
 
 	seq_printf(s, "head: %u\n", head_interlaced);
 	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
@@ -490,16 +486,11 @@ static int mods_dc_crc_latched_show(struct seq_file *s, void *unused)
 	struct tegra_dc *dc = s->private;
 	u32 crc = tegra_dc_sysfs_read_checksum_latched(dc);
 	u32 field = 0;
+	u32 val;
 
-#ifdef CONFIG_TEGRA_DC_INTERLACE
-	{
-		u32 val;
-
-		val = tegra_dc_readl_exported(dc, DC_DISP_INTERLACE_CONTROL);
-		if (val & INTERLACE_MODE_ENABLE)
-			field = (val & INTERLACE_STATUS_FIELD_2) ? 1 : 0;
-	}
-#endif
+	val = tegra_dc_readl_exported(dc, DC_DISP_INTERLACE_CONTROL);
+	if (val & INTERLACE_MODE_ENABLE)
+		field = (val & INTERLACE_STATUS_FIELD_2) ? 1 : 0;
 	seq_printf(s, "0x%08x %u\n", crc, field);
 
 	return 0;

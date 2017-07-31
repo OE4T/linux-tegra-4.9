@@ -120,12 +120,10 @@ struct tegra_dc_win {
 	dma_addr_t		phys_addr;
 	dma_addr_t		phys_addr_u;
 	dma_addr_t		phys_addr_v;
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 	/* field 2 starting address */
 	dma_addr_t		phys_addr2;
 	dma_addr_t		phys_addr_u2;
 	dma_addr_t		phys_addr_v2;
-#endif
 	unsigned		stride;
 	unsigned		stride_uv;
 	fixed20_12		x;

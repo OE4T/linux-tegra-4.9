@@ -795,7 +795,6 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 		tegra_dc_writel(dc, dfixed_trunc(v_offset),
 				DC_WINBUF_ADDR_V_OFFSET);
 
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if ((dc->mode.vmode == FB_VMODE_INTERLACED) && WIN_IS_FB(win)) {
 		if (!WIN_IS_INTERLACE(win))
 			win->phys_addr2 = win->phys_addr;
@@ -833,7 +832,6 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 					DC_WINBUF_ADDR_V_OFFSET_FIELD2);
 		}
 	}
-#endif
 
 		if (tegra_dc_feature_has_tiling(dc, win->idx)) {
 			if (WIN_IS_TILED(win))
@@ -901,12 +899,10 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 
 		win_options |= H_DIRECTION_DECREMENT(invert_h);
 		win_options |= V_DIRECTION_DECREMENT(invert_v);
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 		if (tegra_dc_feature_has_interlace(dc, win->idx)) {
 			if (dc->mode.vmode == FB_VMODE_INTERLACED)
 				win_options |= INTERLACE_ENABLE;
 		}
-#endif
 		if (dc_win->csc_dirty) {
 			tegra_dc_set_csc(dc, &dc_win->csc);
 			dc_win->csc_dirty = false;
@@ -1121,13 +1117,11 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 	u32 dirty = 0;
 	bool interlace_done = true;
 
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (dc->mode.vmode == FB_VMODE_INTERLACED) {
 		val = tegra_dc_readl(dc, DC_DISP_INTERLACE_CONTROL);
 		interlace_done = (val & INTERLACE_MODE_ENABLE) &&
 			(val & INTERLACE_STATUS_FIELD_2);
 	}
-#endif
 
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
 	for_each_set_bit(i, &dc->valid_windows,

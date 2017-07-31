@@ -1433,7 +1433,6 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 		nvdisp_active_v_f(v_active),
 		nvdisp_active_r());
 
-#if defined(CONFIG_TEGRA_DC_INTERLACE)
 	if (mode->vmode == FB_VMODE_INTERLACED)
 		tegra_dc_writel(dc, INTERLACE_MODE_ENABLE |
 			INTERLACE_START_FIELD_1
@@ -1457,7 +1456,6 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 			nvdisp_interlace_fld2_fporch_v_f(v_front_porch),
 			nvdisp_interlace_fld2_fporch_r());
 	}
-#endif
 
 	/* TODO: MIPI/CRT/HDMI clock cals */
 	/* TODO: confirm shift clock still exists in T186 */

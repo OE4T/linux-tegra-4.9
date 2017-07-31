@@ -3,7 +3,7 @@
  *
  * GK20A memory kind management
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,22 @@ extern u16 gk20a_kind_attr[];
 #define GK20A_KIND_ATTR_Z            BIT(2)
 #define GK20A_KIND_ATTR_C            BIT(3)
 #define GK20A_KIND_ATTR_ZBC          BIT(4)
+
+/* TBD: not sure on the work creation for gk20a, doubtful */
+static inline bool gk20a_kind_work_creation_sked(u8 k)
+{
+	return false;
+}
+static inline bool gk20a_kind_work_creation_host(u8 k)
+{
+	return false;
+}
+
+static inline bool gk20a_kind_work_creation(u8 k)
+{
+	return gk20a_kind_work_creation_sked(k) ||
+		gk20a_kind_work_creation_host(k);
+}
 
 static inline bool gk20a_kind_is_supported(u8 k)
 {

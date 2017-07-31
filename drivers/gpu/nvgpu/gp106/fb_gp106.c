@@ -21,7 +21,7 @@
 #define HW_SCRUB_TIMEOUT_DEFAULT	100 /* usec */
 #define HW_SCRUB_TIMEOUT_MAX		2000000 /* usec */
 
-static void gp106_fb_reset(struct gk20a *g)
+void gp106_fb_reset(struct gk20a *g)
 {
 	u32 val;
 
@@ -39,12 +39,4 @@ static void gp106_fb_reset(struct gk20a *g)
 	val = gk20a_readl(g, fb_mmu_priv_level_mask_r());
 	val &= ~fb_mmu_priv_level_mask_write_violation_m();
 	gk20a_writel(g, fb_mmu_priv_level_mask_r(), val);
-}
-
-void gp106_init_fb(struct gpu_ops *gops)
-{
-	gp10b_init_fb(gops);
-
-	gops->fb.init_fs_state = NULL;
-	gops->fb.reset = gp106_fb_reset;
 }

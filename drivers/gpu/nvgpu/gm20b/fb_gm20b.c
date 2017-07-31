@@ -25,7 +25,7 @@
 
 #define VPR_INFO_FETCH_WAIT	(5)
 
-static void fb_gm20b_init_fs_state(struct gk20a *g)
+void fb_gm20b_init_fs_state(struct gk20a *g)
 {
 	gk20a_dbg_info("initialize gm20b fb");
 
@@ -434,7 +434,7 @@ void gm20b_init_kind_attr(void)
 	}
 }
 
-static void gm20b_fb_set_mmu_page_size(struct gk20a *g)
+void gm20b_fb_set_mmu_page_size(struct gk20a *g)
 {
 	/* set large page size in fb */
 	u32 fb_mmu_ctrl = gk20a_readl(g, fb_mmu_ctrl_r());
@@ -442,7 +442,7 @@ static void gm20b_fb_set_mmu_page_size(struct gk20a *g)
 	gk20a_writel(g, fb_mmu_ctrl_r(), fb_mmu_ctrl);
 }
 
-static bool gm20b_fb_set_use_full_comp_tag_line(struct gk20a *g)
+bool gm20b_fb_set_use_full_comp_tag_line(struct gk20a *g)
 {
 	/* set large page size in fb */
 	u32 fb_mmu_ctrl = gk20a_readl(g, fb_mmu_ctrl_r());
@@ -452,17 +452,17 @@ static bool gm20b_fb_set_use_full_comp_tag_line(struct gk20a *g)
 	return true;
 }
 
-static unsigned int gm20b_fb_compression_page_size(struct gk20a *g)
+unsigned int gm20b_fb_compression_page_size(struct gk20a *g)
 {
 	return SZ_128K;
 }
 
-static unsigned int gm20b_fb_compressible_page_size(struct gk20a *g)
+unsigned int gm20b_fb_compressible_page_size(struct gk20a *g)
 {
 	return SZ_64K;
 }
 
-static void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
+void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
 {
 	u32 val;
 
@@ -511,7 +511,7 @@ static int gm20b_fb_vpr_info_fetch_wait(struct gk20a *g,
 	return -ETIMEDOUT;
 }
 
-static int gm20b_fb_vpr_info_fetch(struct gk20a *g)
+int gm20b_fb_vpr_info_fetch(struct gk20a *g)
 {
 	if (gm20b_fb_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT)) {
 		return -ETIME;
@@ -523,14 +523,14 @@ static int gm20b_fb_vpr_info_fetch(struct gk20a *g)
 	return gm20b_fb_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT);
 }
 
-static bool gm20b_fb_debug_mode_enabled(struct gk20a *g)
+bool gm20b_fb_debug_mode_enabled(struct gk20a *g)
 {
 	u32 debug_ctrl = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
 	return gr_gpcs_pri_mmu_debug_ctrl_debug_v(debug_ctrl) ==
 		gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_v();
 }
 
-static void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable)
+void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable)
 {
 	u32 reg_val, fb_debug_ctrl, gpc_debug_ctrl;
 
@@ -553,22 +553,4 @@ static void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable)
 	reg_val = set_field(reg_val,
 			gr_gpcs_pri_mmu_debug_ctrl_debug_m(), gpc_debug_ctrl);
 	gk20a_writel(g, gr_gpcs_pri_mmu_debug_ctrl_r(), reg_val);
-}
-
-void gm20b_init_fb(struct gpu_ops *gops)
-{
-	gops->fb.reset = fb_gk20a_reset;
-	gops->fb.init_hw = gk20a_fb_init_hw;
-	gops->fb.init_fs_state = fb_gm20b_init_fs_state;
-	gops->fb.set_mmu_page_size = gm20b_fb_set_mmu_page_size;
-	gops->fb.set_use_full_comp_tag_line = gm20b_fb_set_use_full_comp_tag_line;
-	gops->fb.compression_page_size = gm20b_fb_compression_page_size;
-	gops->fb.compressible_page_size = gm20b_fb_compressible_page_size;
-	gops->fb.vpr_info_fetch = gm20b_fb_vpr_info_fetch;
-	gops->fb.dump_vpr_wpr_info = gm20b_fb_dump_vpr_wpr_info;
-	gops->fb.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled;
-	gops->fb.set_debug_mode = gm20b_fb_set_debug_mode;
-	gops->fb.tlb_invalidate = gk20a_fb_tlb_invalidate;
-	gm20b_init_uncompressed_kind_map();
-	gm20b_init_kind_attr();
 }

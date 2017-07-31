@@ -1430,11 +1430,12 @@ static u32 pka_ctrl_partial_radix(u32 mode)
 {
 	u32 base_words;
 	u32 operand_words;
-	u32 partial_radix;
+	u32 partial_radix = 0;
 
 	base_words = num_words(mode);
 	operand_words = pka1_op_size[mode] / 32;
-	partial_radix = operand_words % base_words;
+	if (base_words)
+		partial_radix = operand_words % base_words;
 
 	return partial_radix;
 }

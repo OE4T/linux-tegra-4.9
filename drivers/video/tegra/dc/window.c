@@ -846,7 +846,6 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 					DC_WIN_BUFFER_ADDR_MODE);
 		}
 
-#if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
 		if (tegra_dc_feature_has_blocklinear(dc, win->idx) ||
 			tegra_dc_feature_has_tiling(dc, win->idx)) {
 				if (WIN_IS_BLOCKLINEAR(win)) {
@@ -866,7 +865,6 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 				}
 		}
 
-#endif
 		if (yuv)
 			win_options |= CSC_ENABLE;
 		else if (tegra_dc_fmt_bpp(win->fmt) < 24)

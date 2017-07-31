@@ -129,16 +129,6 @@ config TEGRA_NVDISPLAY
 	    Enable the support for NvDisplay Architecture
 	    If unsure, say N
 
-config TEGRA_DC_BLOCK_LINEAR
-	bool "Support Block Linear encoding"
-	depends on TEGRA_DC
-	default y
-	help
-	  A swizzled format that makes vertical walks of a surface
-	  consume less bandwidth than a traditional pitched linear
-	  pixel format.
-	  This needs to be enabled on chips that support it.
-
 config TEGRA_DC_64BIT_SUPPORT
 	bool "64-bit addressing in DC"
 	depends on TEGRA_DC && ARCH_TEGRA_210_SOC

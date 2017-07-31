@@ -429,12 +429,10 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 		win->global_alpha = 255;
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN)
 		win->flags |= TEGRA_WIN_FLAG_SCAN_COLUMN;
-#if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_BLOCKLINEAR) {
 		win->flags |= TEGRA_WIN_FLAG_BLOCKLINEAR;
 		win->block_height_log2 = flip_win->block_height_log2;
 	}
-#endif
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE)
 		win->flags |= TEGRA_WIN_FLAG_INTERLACE;
 

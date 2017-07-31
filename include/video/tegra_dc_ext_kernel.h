@@ -154,9 +154,7 @@ struct tegra_dc_win {
 	unsigned		bandwidth;
 	unsigned		new_bandwidth;
 	struct tegra_dc_lut	lut;
-#if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
 	u8	block_height_log2;
-#endif
 	struct {
 		dma_addr_t cde_addr;
 		unsigned offset_x;

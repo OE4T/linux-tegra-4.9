@@ -740,16 +740,12 @@
 	  (CKEY_ ## key | BLEND_CONTROL_ ## control |		\
 	   BLEND_WEIGHT0(weight0) | BLEND_WEIGHT1(weight1))
 
-#if defined(CONFIG_TEGRA_DC_BLOCK_LINEAR)
-
 #define DC_WIN_BUFFER_SURFACE_KIND		0x80b
 #define DC_WIN_BUFFER_SURFACE_PITCH		(0 << 0)
 #define DC_WIN_BUFFER_SURFACE_TILED		(1 << 0)
 #define DC_WIN_BUFFER_SURFACE_BL_16B2		(1 << 1)
 
 #define  BLOCK_HEIGHT_SHIFT     4
-
-#endif
 
 #define DC_WIN_GLOBAL_ALPHA			0x715
 #define  GLOBAL_ALPHA_ENABLE		0x10000

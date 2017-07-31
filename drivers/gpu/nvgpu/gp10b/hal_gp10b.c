@@ -24,6 +24,7 @@
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/mc_gk20a.h"
+#include "gk20a/fb_gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
@@ -47,6 +48,7 @@
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
+#include "gm20b/fb_gm20b.h"
 
 #include "gp10b.h"
 #include "hal_gp10b.h"
@@ -169,6 +171,21 @@ static const struct gpu_ops gp10b_ops = {
 	.ce2 = {
 		.isr_stall = gp10b_ce_isr,
 		.isr_nonstall = gp10b_ce_nonstall_isr,
+	},
+	.fb = {
+		.reset = fb_gk20a_reset,
+		.init_hw = gk20a_fb_init_hw,
+		.init_fs_state = fb_gm20b_init_fs_state,
+		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
+		.set_use_full_comp_tag_line =
+			gm20b_fb_set_use_full_comp_tag_line,
+		.compression_page_size = gp10b_fb_compression_page_size,
+		.compressible_page_size = gp10b_fb_compressible_page_size,
+		.vpr_info_fetch = gm20b_fb_vpr_info_fetch,
+		.dump_vpr_wpr_info = gm20b_fb_dump_vpr_wpr_info,
+		.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled,
+		.set_debug_mode = gm20b_fb_set_debug_mode,
+		.tlb_invalidate = gk20a_fb_tlb_invalidate,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
@@ -405,6 +422,7 @@ int gp10b_init_hal(struct gk20a *g)
 
 	gops->ltc = gp10b_ops.ltc;
 	gops->ce2 = gp10b_ops.ce2;
+	gops->fb = gp10b_ops.fb;
 	gops->clock_gating = gp10b_ops.clock_gating;
 	gops->fifo = gp10b_ops.fifo;
 	gops->gr_ctx = gp10b_ops.gr_ctx;
@@ -471,9 +489,11 @@ int gp10b_init_hal(struct gk20a *g)
 
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 	gp10b_init_gr(g);
-	gp10b_init_fb(gops);
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(g);
+
+	gp10b_init_uncompressed_kind_map();
+	gp10b_init_kind_attr();
 
 	g->name = "gp10b";
 

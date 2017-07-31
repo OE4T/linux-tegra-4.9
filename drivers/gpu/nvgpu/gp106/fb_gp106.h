@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,5 +15,5 @@
 #define FB_GP106_H
 struct gpu_ops;
 
-void gp106_init_fb(struct gpu_ops *gops);
+void gp106_fb_reset(struct gk20a *g);
 #endif

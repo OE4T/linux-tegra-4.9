@@ -42,9 +42,13 @@
 #define	FAULT_TYPE_OTHER_AND_NONREPLAY		0
 #define	FAULT_TYPE_REPLAY			1
 
-struct gpu_ops;
+struct gk20a;
 
-void gv11b_init_fb(struct gpu_ops *gops);
+void gv11b_fb_init_fs_state(struct gk20a *g);
+void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr);
+void gv11b_fb_reset(struct gk20a *g);
+void gv11b_fb_hub_isr(struct gk20a *g);
+
 u32 gv11b_fb_is_fault_buf_enabled(struct gk20a *g,
 				 unsigned int index);
 void gv11b_fb_fault_buf_set_state_hw(struct gk20a *g,
@@ -56,4 +60,7 @@ void gv11b_fb_disable_hub_intr(struct gk20a *g,
 	 unsigned int index, unsigned int intr_type);
 void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, unsigned int index);
 bool gv11b_fb_mmu_fault_pending(struct gk20a *g);
+
+noinline_for_stack void gv11b_init_uncompressed_kind_map(void);
+void gv11b_init_kind_attr(void);
 #endif

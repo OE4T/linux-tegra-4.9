@@ -33,6 +33,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/vm.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/vidmem.h>
 
 #include "gk20a.h"
 #include "gk20a/platform_gk20a.h"

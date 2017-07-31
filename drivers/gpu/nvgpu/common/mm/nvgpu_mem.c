@@ -23,6 +23,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/vidmem.h>
 
 #include "gk20a/gk20a.h"
 

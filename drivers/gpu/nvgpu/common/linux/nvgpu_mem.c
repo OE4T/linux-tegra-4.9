@@ -22,6 +22,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/vidmem.h>
 
 #include <nvgpu/linux/dma.h>
 

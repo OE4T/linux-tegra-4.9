@@ -320,10 +320,6 @@ enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
 					      u64 base, u64 size);
 enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size);
 
-void set_vidmem_page_alloc(struct scatterlist *sgl, u64 addr);
-bool is_vidmem_page_alloc(u64 addr);
-struct nvgpu_page_alloc *get_vidmem_page_alloc(struct scatterlist *sgl);
-
 #if 0 /*related to addr bits above, concern below TBD on which is accurate */
 #define bar1_instance_block_shift_gk20a() (max_physaddr_bits_gk20a() -\
 					   bus_bar1_block_ptr_s())
@@ -399,11 +395,6 @@ int gk20a_vm_release_share(struct gk20a_as_share *as_share);
 int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch);
 int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch);
-
-int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes);
-int gk20a_vidmem_get_space(struct gk20a *g, u64 *space);
-int gk20a_vidbuf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
-		void *buffer, u64 offset, u64 size, u32 cmd);
 
 void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 			struct gk20a_comptags *comptags);

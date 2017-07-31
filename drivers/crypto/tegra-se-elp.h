@@ -25,6 +25,7 @@
 #define ECC_CURVE_NIST_P521		0x0004
 #define C25519_CURVE_C256		0x0005
 #define ECC_CURVE_BRAINPOOL_P256	0x0006
+#define ED25519_CURVE_P256		0x0007
 
 /* Security Engine operation modes */
 enum tegra_se_elp_op_mode {
@@ -61,10 +62,15 @@ struct tegra_se_ecc_curve {
 	char *name;
 	struct tegra_se_ecc_point g;
 	u32 *p;
+	u32 *p2;
+	u32 *p5inv8;
+	u32 *p3inv8;
+	u32 *p1inv4;
 	u32 *n;
 	u32 *a;
 	unsigned int nbytes;
 	unsigned int mode;
+	u32 *vec;
 };
 
 /* NIST P-192 */
@@ -290,6 +296,56 @@ static struct tegra_se_ecc_curve curve_c256 = {
 	.p = c256_p,
 	.n = c256_n,
 	.a = c256_k,
+	.nbytes = 32,
+	.mode = SE_ELP_OP_MODE_ECC256,
+};
+
+static u32 ed25519_d[] = { 0x135978A3ull, 0x75EB4DCAull, 0x4141D8ABull,
+				0x00700A4Dull, 0x7779E898ull, 0x8CC74079ull,
+				0x2B6FFE73ull, 0x52036CEEull };
+static u32 ed25519_q[] = { 0x5CF5D3EDull, 0x5812631Aull, 0xA2F79CD6ull,
+				0x14DEF9DEull, 0x00000000ull, 0x00000000ull,
+				0x00000000ull, 0x10000000ull };
+static u32 ed25519_x[] = { 0x8f25d51aull, 0xc9562d60ull, 0x9525a7b2ull,
+			0x692cc760ull, 0xfdd6dc5cull, 0xc0a4e231ull,
+			0xcd6e53feull, 0x216936d3ull };
+static u32 ed25519_y[] = { 0x66666658ull, 0x66666666ull, 0x66666666ull,
+			0x66666666ull, 0x66666666ull, 0x66666666ull,
+			0x66666666ull, 0x66666666ull };
+static u32 ed25519_p[] = { 0xffffffedull, 0xffffffffull, 0xffffffffull,
+				0xffffffffull, 0xffffffffull, 0xffffffffull,
+				0xffffffffull, 0x7fffffffull };
+static u32 ed25519_p_2[] = { 0xffffffebull, 0xffffffffull, 0xffffffffull,
+				0xffffffffull, 0xffffffffull, 0xffffffffull,
+				0xffffffffull, 0x7fffffffull };
+static u32 ed25519_p_5inv8[] = { 0xfffffffdull, 0xffffffffull, 0xffffffffull,
+				0xffffffffull, 0xffffffffull, 0xffffffffull,
+				0xffffffffull, 0x0fffffffull };
+static u32 ed25519_p_3inv8[] = { 0xfffffffeull, 0xffffffffull, 0xffffffffull,
+				0xffffffffull, 0xffffffffull, 0xffffffffull,
+				0xffffffffull, 0x0fffffffull };
+static  u32 ed25519_p_1inv4[] = { 0x4A0EA0B0ull, 0xC4EE1B27ull, 0xAD2FE478ull,
+				0x2F431806ull, 0x3DFBD7A7ull, 0x2B4D0099ull,
+				0x4FC1DF0Bull, 0x2B832480ull };
+
+static  u32 ed25519_const[] = { 0x00000008ull, 0x00000000ull, 0x00000000ull,
+				0x00000000ull, 0x00000000ull, 0x00000000ull,
+				0x00000000ull, 0x00000000ull };
+
+static struct tegra_se_ecc_curve edcurve_p256 = {
+	.name = "ED25519",
+	.g = {
+		.x = ed25519_x,
+		.y = ed25519_y,
+	},
+	.p = ed25519_p,
+	.p2 = ed25519_p_2,
+	.p5inv8 = ed25519_p_5inv8,
+	.p3inv8 = ed25519_p_3inv8,
+	.p1inv4 = ed25519_p_1inv4,
+	.n = ed25519_q,
+	.a = ed25519_d,
+	.vec = ed25519_const,
 	.nbytes = 32,
 	.mode = SE_ELP_OP_MODE_ECC256,
 };
@@ -577,12 +633,16 @@ static struct tegra_se_ecc_curve curve_c256 = {
 #define ECC_POINT_DOUBLE_PRG_ENTRY_VAL		0x1A
 #define ECC_SHAMIR_TRICK_PRG_ENTRY_VAL		0x23
 #define TEGRA_SE_PKA1_C25519_PMUL_PRG_ENTRY_VAL		0x2E
+#define TEGRA_SE_PKA1_ED25519_PMUL_PRG_ENTRY_VAL	0x2B
+#define TEGRA_SE_PKA1_ED25519_SHAMIR_PRG_ENTRY_VAL	0x33
 
 #define ECC_WEIERSTRASS_ECPV_PRG_ENTRY_VAL               0x27
 #define ECC_WEIERSTRASS_POINT_ADD_PRG_ENTRY_VAL          0x26
 #define ECC_WEIERSTRASS_POINT_MUL_PRG_ENTRY_VAL          0x24
 #define ECC_WEIERSTRASS_POINT_DOUBLE_PRG_ENTRY_VAL       0x25
 #define ECC_WEIERSTRASS_SHAMIR_TRICK_PRG_ENTRY_VAL       0x2A
+
+#define EDDSA_KEY_VEC_SIZE	(1 + 1 + 32) /* version + curve_id + key_data */
 
 #define PKA1_ADDR_OFFSET		0xC000
 
@@ -630,11 +690,19 @@ static struct tegra_se_ecc_curve curve_c256 = {
 #define TEGRA_SE_PKA1_ECC_K_ID		7
 #define TEGRA_SE_PKA1_C25519_K_BANK	BANK_D
 #define TEGRA_SE_PKA1_C25519_K_ID	2
+#define TEGRA_SE_PKA1_ED25519_D_BANK	BANK_C
+#define TEGRA_SE_PKA1_ED25519_D_ID	5
+#define TEGRA_SE_PKA1_ED25519_K_BANK	BANK_A
+#define TEGRA_SE_PKA1_ED25519_K_ID	5
+#define TEGRA_SE_PKA1_ED25519_L_BANK	BANK_B
+#define TEGRA_SE_PKA1_ED25519_L_ID	5
 
-#define PKA1_C25519_FORMAT_KEY_MASK0_2	0xfffffff8
-#define PKA1_C25519_FORMAT_KEY_MASK254	0x40000000
-#define PKA1_C25519_FORMAT_KEY_MASK255	0x7fffffff
-
+#define PKA1_C25519_FORMAT_KEY_MASK_0	0xfffffff8
+#define PKA1_C25519_FORMAT_KEY_MASK_1	0x40000000
+#define PKA1_C25519_FORMAT_KEY_MASK_2	0x7fffffff
+#define PKA1_POINT_ENCODE_Y_MASK	0x7fffffff
+#define PKA1_POINT_ENCODE_X_MASK	0x1
+#define PKA1_POINT_ZERO_INDEX_SHIFT	31
 
 #define TEGRA_SE_PKA1_ENTRY_MODMULT	0xa
 #define TEGRA_SE_PKA1_ENTRY_MODADD	0xb
@@ -642,6 +710,11 @@ static struct tegra_se_ecc_curve curve_c256 = {
 #define TEGRA_SE_PKA1_ENTRY_MODDIV	0xd
 #define TEGRA_SE_PKA1_ENTRY_MODINV	0xe
 #define TEGRA_SE_PKA1_ENTRY_REDUCE	0xf
+#define TEGRA_SE_PKA1_ENTRY_C25519_MOD_EXP	0x30
+#define TEGRA_SE_PKA1_ENTRY_C25519_MOD_SQR	0x32
+#define TEGRA_SE_PKA1_ENTRY_BIT_SERIAL_DP_MOD_REDUCE	0x17
+#define TEGRA_SE_PKA1_ENTRY_NON_MOD_MULT	0x13
+#define TEGRA_SE_PKA1_ENTRY_C25519_MOD_MULT	0x31
 
 #define TEGRA_SE_PKA1_KEYSLOT_ADDR_OFFSET(i)		(0x00008800 + ((i) * 4))
 #define TEGRA_SE_PKA1_KEYSLOT_DATA_OFFSET(i)		(0x00008810 + ((i) * 4))

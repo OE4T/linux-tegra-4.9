@@ -406,9 +406,6 @@ static int dw_msi_setup_irq(struct msi_controller *chip, struct pci_dev *pdev,
 	int irq, pos;
 	struct pcie_port *pp = pdev->bus->sysdata;
 
-	if (desc->msi_attrib.is_msix)
-		return -EINVAL;
-
 	irq = assign_irq(1, desc, &pos);
 	if (irq < 0)
 		return irq;
@@ -426,9 +423,16 @@ static int dw_msi_setup_irqs(struct msi_controller *chip, struct pci_dev *pdev,
 	struct msi_desc *desc;
 	struct pcie_port *pp = pdev->bus->sysdata;
 
-	/* MSI-X interrupts are not supported */
-	if (type == PCI_CAP_ID_MSIX)
-		return -EINVAL;
+	if (type == PCI_CAP_ID_MSIX) {
+		for_each_pci_msi_entry(desc, pdev) {
+			irq = arch_setup_msi_irq(pdev, desc);
+			if (irq < 0)
+				return irq;
+			if (irq > 0)
+				return -ENOSPC;
+		}
+		return 0;
+	}
 
 	WARN_ON(!list_is_singular(&pdev->dev.msi_list));
 	desc = list_entry(pdev->dev.msi_list.next, struct msi_desc, list);

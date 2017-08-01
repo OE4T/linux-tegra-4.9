@@ -15,6 +15,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 
@@ -356,7 +357,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 	pmu->initialized = true;
 	nvgpu_pmu_state_change(g, PMU_STATE_STARTED, true);
 
-	if (g->ops.pmu_ver.is_pmu_zbc_save_supported) {
+	if (nvgpu_is_enabled(g, NVGPU_PMU_ZBC_SAVE)) {
 		/* Save zbc table after PMU is initialized. */
 		pmu->zbc_ready = true;
 		gk20a_pmu_save_zbc(g, 0xf);
@@ -507,8 +508,8 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 	pmu->pmu_ready = false;
 	pmu->perfmon_ready = false;
 	pmu->zbc_ready = false;
-	g->ops.pmu.lspmuwprinitdone = false;
-	g->ops.pmu.fecsbootstrapdone = false;
+	g->pmu_lsf_pmu_wpr_init_done = false;
+	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 
 	nvgpu_log_fn(g, "done");
 	return 0;

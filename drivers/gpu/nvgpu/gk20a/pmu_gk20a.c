@@ -598,7 +598,7 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_zbc_cmd);
-	cmd.cmd.zbc.cmd_type = g->ops.pmu_ver.cmd_id_zbc_table_update;
+	cmd.cmd.zbc.cmd_type = g->pmu_ver_cmd_id_zbc_table_update;
 	cmd.cmd.zbc.entry_mask = ZBC_MASK(entries);
 
 	pmu->zbc_save_done = 0;

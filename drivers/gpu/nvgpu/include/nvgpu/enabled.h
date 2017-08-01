@@ -48,8 +48,10 @@ struct gk20a;
  * PMU flags.
  */
 /* perfmon enabled or disabled for PMU */
-#define NVGPU_PMU_PERFMON			48
-#define NVGPU_PMU_PSTATE			49
+#define NVGPU_PMU_PERFMON				48
+#define NVGPU_PMU_PSTATE				49
+#define NVGPU_PMU_ZBC_SAVE				50
+#define NVGPU_PMU_FECS_BOOTSTRAP_DONE			51
 
 /*
  * Must be greater than the largest bit offset in the above list.

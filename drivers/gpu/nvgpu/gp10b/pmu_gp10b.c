@@ -148,8 +148,8 @@ static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 
 	gk20a_dbg_fn("");
 
-	gp10b_dbg_pmu("wprinit status = %x\n", g->ops.pmu.lspmuwprinitdone);
-	if (g->ops.pmu.lspmuwprinitdone) {
+	gp10b_dbg_pmu("wprinit status = %x\n", g->pmu_lsf_pmu_wpr_init_done);
+	if (g->pmu_lsf_pmu_wpr_init_done) {
 		/* send message to load FECS falcon */
 		memset(&cmd, 0, sizeof(struct pmu_cmd));
 		cmd.hdr.unit_id = PMU_UNIT_ACR;
@@ -185,14 +185,14 @@ int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	if (falconidmask & ~((1 << LSF_FALCON_ID_FECS) |
 				(1 << LSF_FALCON_ID_GPCCS)))
 				return -EINVAL;
-	g->ops.pmu.lsfloadedfalconid = 0;
+	g->pmu_lsf_loaded_falcon_id = 0;
 	/* check whether pmu is ready to bootstrap lsf if not wait for it */
-	if (!g->ops.pmu.lspmuwprinitdone) {
+	if (!g->pmu_lsf_pmu_wpr_init_done) {
 		pmu_wait_message_cond(&g->pmu,
 				gk20a_get_gr_idle_timeout(g),
-				&g->ops.pmu.lspmuwprinitdone, 1);
+				&g->pmu_lsf_pmu_wpr_init_done, 1);
 		/* check again if it still not ready indicate an error */
-		if (!g->ops.pmu.lspmuwprinitdone) {
+		if (!g->pmu_lsf_pmu_wpr_init_done) {
 			nvgpu_err(g, "PMU not ready to load LSF");
 			return -ETIMEDOUT;
 		}
@@ -201,8 +201,8 @@ int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	gp10b_pmu_load_multiple_falcons(g, falconidmask, flags);
 	pmu_wait_message_cond(&g->pmu,
 			gk20a_get_gr_idle_timeout(g),
-			&g->ops.pmu.lsfloadedfalconid, falconidmask);
-	if (g->ops.pmu.lsfloadedfalconid != falconidmask)
+			&g->pmu_lsf_loaded_falcon_id, falconidmask);
+	if (g->pmu_lsf_loaded_falcon_id != falconidmask)
 		return -ETIMEDOUT;
 	return 0;
 }
@@ -418,8 +418,8 @@ void gp10b_init_pmu_ops(struct gk20a *g)
 	gops->pmu.pmu_mutex_size = pwr_pmu_mutex__size_1_v;
 	gops->pmu.pmu_mutex_acquire = gk20a_pmu_mutex_acquire;
 	gops->pmu.pmu_mutex_release = gk20a_pmu_mutex_release;
-	gops->pmu.lspmuwprinitdone = false;
-	gops->pmu.fecsbootstrapdone = false;
+	g->pmu_lsf_pmu_wpr_init_done = false;
+	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;
 	gops->pmu.pmu_elpg_statistics = gp10b_pmu_elpg_statistics;
 	gops->pmu.pmu_pg_init_param = gp10b_pg_gr_init;

@@ -132,7 +132,7 @@ static void pmu_handle_acr_init_wpr_msg(struct gk20a *g, struct pmu_msg *msg,
 	gm20b_dbg_pmu("reply PMU_ACR_CMD_ID_INIT_WPR_REGION");
 
 	if (msg->msg.acr.acrmsg.errorcode == PMU_ACR_SUCCESS)
-		g->ops.pmu.lspmuwprinitdone = 1;
+		g->pmu_lsf_pmu_wpr_init_done = 1;
 	gk20a_dbg_fn("done");
 }
 
@@ -171,7 +171,7 @@ void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 	gm20b_dbg_pmu("reply PMU_ACR_CMD_ID_BOOTSTRAP_FALCON");
 
 	gm20b_dbg_pmu("response code = %x\n", msg->msg.acr.acrmsg.falconid);
-	g->ops.pmu.lsfloadedfalconid = msg->msg.acr.acrmsg.falconid;
+	g->pmu_lsf_loaded_falcon_id = msg->msg.acr.acrmsg.falconid;
 	gk20a_dbg_fn("done");
 }
 
@@ -205,8 +205,8 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags)
 
 	gk20a_dbg_fn("");
 
-	gm20b_dbg_pmu("wprinit status = %x\n", g->ops.pmu.lspmuwprinitdone);
-	if (g->ops.pmu.lspmuwprinitdone) {
+	gm20b_dbg_pmu("wprinit status = %x\n", g->pmu_lsf_pmu_wpr_init_done);
+	if (g->pmu_lsf_pmu_wpr_init_done) {
 		/* send message to load FECS falcon */
 		memset(&cmd, 0, sizeof(struct pmu_cmd));
 		cmd.hdr.unit_id = PMU_UNIT_ACR;
@@ -236,12 +236,12 @@ static int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	if (!(falconidmask == (1 << LSF_FALCON_ID_FECS)))
 		return -EINVAL;
 	/* check whether pmu is ready to bootstrap lsf if not wait for it */
-	if (!g->ops.pmu.lspmuwprinitdone) {
+	if (!g->pmu_lsf_pmu_wpr_init_done) {
 		pmu_wait_message_cond(&g->pmu,
 				gk20a_get_gr_idle_timeout(g),
-				&g->ops.pmu.lspmuwprinitdone, 1);
+				&g->pmu_lsf_pmu_wpr_init_done, 1);
 		/* check again if it still not ready indicate an error */
-		if (!g->ops.pmu.lspmuwprinitdone) {
+		if (!g->pmu_lsf_pmu_wpr_init_done) {
 			nvgpu_err(g, "PMU not ready to load LSF");
 			return -ETIMEDOUT;
 		}
@@ -299,8 +299,8 @@ void gm20b_init_pmu_ops(struct gk20a *g)
 	gops->pmu.pmu_mutex_size = pwr_pmu_mutex__size_1_v;
 	gops->pmu.pmu_mutex_acquire = gk20a_pmu_mutex_acquire;
 	gops->pmu.pmu_mutex_release = gk20a_pmu_mutex_release;
-	gops->pmu.lspmuwprinitdone = 0;
-	gops->pmu.fecsbootstrapdone = false;
+	g->pmu_lsf_pmu_wpr_init_done = 0;
+	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	gops->pmu.write_dmatrfbase = gm20b_write_dmatrfbase;
 	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
 	gops->pmu.pmu_pg_init_param = NULL;

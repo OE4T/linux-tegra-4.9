@@ -755,8 +755,8 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 	}
 
 	flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
-	g->ops.pmu.lsfloadedfalconid = 0;
-	if (g->ops.pmu.fecsbootstrapdone) {
+	g->pmu_lsf_loaded_falcon_id = 0;
+	if (nvgpu_is_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE)) {
 		/* this must be recovery so bootstrap fecs and gpccs */
 		if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS)) {
 			gr_gm20b_load_gpccs_with_bootloader(g);
@@ -776,7 +776,7 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 
 	} else {
 		/* cold boot or rg exit */
-		g->ops.pmu.fecsbootstrapdone = true;
+		__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, true);
 		if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS)) {
 			gr_gm20b_load_gpccs_with_bootloader(g);
 		} else {

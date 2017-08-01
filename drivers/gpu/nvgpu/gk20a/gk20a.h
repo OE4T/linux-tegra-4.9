@@ -656,9 +656,6 @@ struct gpu_ops {
 				u8 value);
 		void (*pg_cmd_eng_buf_load_set_dma_idx)(struct pmu_pg_cmd *pg,
 				u8 value);
-		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
-		u32 cmd_id_zbc_table_update;
-		bool is_pmu_zbc_save_supported;
 	} pmu_ver;
 	struct {
 		int (*get_netlist_name)(struct gk20a *g, int index, char *name);
@@ -822,9 +819,6 @@ struct gpu_ops {
 			void *lsfm,	u32 *p_bl_gen_desc_size, u32 falconid);
 		void (*handle_ext_irq)(struct gk20a *g, u32 intr);
 		void (*set_irqmask)(struct gk20a *g);
-		u32  lspmuwprinitdone;
-		u32  lsfloadedfalconid;
-		bool fecsbootstrapdone;
 	} pmu;
 	struct {
 		int (*init_debugfs)(struct gk20a *g);
@@ -1197,6 +1191,10 @@ struct gk20a {
 
 	struct gpu_ops ops;
 	u32 mc_intr_mask_restore[4];
+	/*used for change of enum zbc update cmd id from ver 0 to ver1*/
+	u32 pmu_ver_cmd_id_zbc_table_update;
+	u32 pmu_lsf_pmu_wpr_init_done;
+	u32 pmu_lsf_loaded_falcon_id;
 
 	int irqs_enabled;
 	int irq_stall; /* can be same as irq_nonstall in case of PCI */

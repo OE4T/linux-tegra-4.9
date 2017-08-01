@@ -16,6 +16,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include <nvgpu/firmware.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 
@@ -1463,8 +1464,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 		g->ops.pmu_ver.set_perfmon_cntr_group_id =
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
-		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
-		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
+		g->pmu_ver_cmd_id_zbc_table_update = 16;
+		__nvgpu_set_enabled(g, NVGPU_PMU_ZBC_SAVE, true);
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v4;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -1565,8 +1566,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 		g->ops.pmu_ver.set_perfmon_cntr_group_id =
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
-		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
-		g->ops.pmu_ver.is_pmu_zbc_save_supported = false;
+		g->pmu_ver_cmd_id_zbc_table_update = 16;
+		__nvgpu_set_enabled(g, NVGPU_PMU_ZBC_SAVE, false);
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v6;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -1673,8 +1674,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 		g->ops.pmu_ver.set_perfmon_cntr_group_id =
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
-		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
-		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
+		g->pmu_ver_cmd_id_zbc_table_update = 16;
+		__nvgpu_set_enabled(g, NVGPU_PMU_ZBC_SAVE, true);
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v5;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -1792,8 +1793,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 		g->ops.pmu_ver.set_perfmon_cntr_group_id =
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
-		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
-		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
+		g->pmu_ver_cmd_id_zbc_table_update = 16;
+		__nvgpu_set_enabled(g, NVGPU_PMU_ZBC_SAVE, true);
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v3;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -1895,8 +1896,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 		g->ops.pmu_ver.set_perfmon_cntr_group_id =
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
-		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
-		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
+		g->pmu_ver_cmd_id_zbc_table_update = 16;
+		__nvgpu_set_enabled(g, NVGPU_PMU_ZBC_SAVE, true);
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v2;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -1991,8 +1992,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 				pg_cmd_eng_buf_load_set_dma_offset_v0;
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_idx =
 				pg_cmd_eng_buf_load_set_dma_idx_v0;
-		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
-		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
+		g->pmu_ver_cmd_id_zbc_table_update = 16;
+		__nvgpu_set_enabled(g, NVGPU_PMU_ZBC_SAVE, true);
 		g->ops.pmu_ver.get_perfmon_cntr_ptr = get_perfmon_cntr_ptr_v0;
 		g->ops.pmu_ver.set_perfmon_cntr_ut = set_perfmon_cntr_ut_v0;
 		g->ops.pmu_ver.set_perfmon_cntr_lt = set_perfmon_cntr_lt_v0;
@@ -2093,8 +2094,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 				pg_cmd_eng_buf_load_set_dma_offset_v0;
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_idx =
 				pg_cmd_eng_buf_load_set_dma_idx_v0;
-		g->ops.pmu_ver.cmd_id_zbc_table_update = 14;
-		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
+		g->pmu_ver_cmd_id_zbc_table_update = 14;
+		__nvgpu_set_enabled(g, NVGPU_PMU_ZBC_SAVE, true);
 		g->ops.pmu_ver.get_perfmon_cntr_ptr = get_perfmon_cntr_ptr_v0;
 		g->ops.pmu_ver.set_perfmon_cntr_ut = set_perfmon_cntr_ut_v0;
 		g->ops.pmu_ver.set_perfmon_cntr_lt = set_perfmon_cntr_lt_v0;

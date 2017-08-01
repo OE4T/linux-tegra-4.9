@@ -850,6 +850,58 @@ static unsigned long tegra_pcie_port_get_pex_ctrl(struct tegra_pcie_port *port)
 	return ret;
 }
 
+static void tegra_pcie_config_clkreq(struct tegra_pcie *pcie, u32 index,
+				     int bi_dir)
+{
+	struct pinctrl		   *clkreq_pin = NULL;
+	struct pinctrl_state	   *clkreq_dir = NULL;
+	int ret = 0;
+
+	PR_FUNC_LINE;
+
+	clkreq_pin = devm_pinctrl_get(pcie->dev);
+	if (IS_ERR(clkreq_pin)) {
+		dev_err(pcie->dev, "config clkreq dir failed: %ld\n",
+			PTR_ERR(clkreq_pin));
+		return;
+	}
+
+	switch (index) {
+	case 0:
+		if (bi_dir)
+			clkreq_dir =
+				pinctrl_lookup_state(clkreq_pin,
+						     "clkreq-0-bi-dir-enable");
+		else
+			clkreq_dir =
+				pinctrl_lookup_state(clkreq_pin,
+						     "clkreq-0-in-dir-enable");
+		break;
+	case 1:
+		if (bi_dir)
+			clkreq_dir =
+				pinctrl_lookup_state(clkreq_pin,
+						     "clkreq-1-bi-dir-enable");
+		else
+			clkreq_dir =
+				pinctrl_lookup_state(clkreq_pin,
+						     "clkreq-1-in-dir-enable");
+		break;
+	default:
+		return;
+	}
+
+	if (IS_ERR(clkreq_dir)) {
+		dev_err(pcie->dev, "missing clkreq_dir_enable state: %ld\n",
+			PTR_ERR(clkreq_dir));
+		return;
+	}
+	ret = pinctrl_select_state(clkreq_pin, clkreq_dir);
+	if (ret < 0)
+		dev_err(pcie->dev,
+			"setting clkreq pin dir state failed: %d\n", ret);
+}
+
 #if defined(CONFIG_PCIEASPM)
 static void tegra_pcie_config_l1ss_l12_thtime(void)
 {
@@ -894,45 +946,6 @@ static void tegra_pcie_enable_ltr_support(void)
 			pcie_capability_write_word(pdev, PCI_EXP_DEVCTL2, val);
 		}
 	}
-}
-
-static void tegra_pcie_config_clkreq(struct tegra_pcie *pcie, u32 index)
-{
-	struct pinctrl		   *clkreq_pin = NULL;
-	struct pinctrl_state	   *clkreq_bi_dir = NULL;
-	int ret = 0;
-
-	PR_FUNC_LINE;
-
-	clkreq_pin = devm_pinctrl_get(pcie->dev);
-	if (IS_ERR(clkreq_pin)) {
-		dev_err(pcie->dev, "config clkreq as a bi-dir failed: %ld\n",
-			PTR_ERR(clkreq_pin));
-		return;
-	}
-
-	switch (index) {
-	case 0:
-		clkreq_bi_dir = pinctrl_lookup_state(clkreq_pin,
-						     "clkreq-0-bi-dir-enable");
-		break;
-	case 1:
-		clkreq_bi_dir = pinctrl_lookup_state(clkreq_pin,
-						     "clkreq-1-bi-dir-enable");
-		break;
-	default:
-		return;
-	}
-
-	if (IS_ERR(clkreq_bi_dir)) {
-		dev_err(pcie->dev, "missing clkreq_bi_dir_enable state: %ld\n",
-			PTR_ERR(clkreq_bi_dir));
-		return;
-	}
-	ret = pinctrl_select_state(clkreq_pin, clkreq_bi_dir);
-	if (ret < 0)
-		dev_err(pcie->dev,
-			"setting clkreq pin bi-dir state failed: %d\n", ret);
 }
 
 struct dev_ids {
@@ -1015,7 +1028,7 @@ static void tegra_pcie_configure_aspm(void)
 			pci_read_config_dword(pdev, i + PCI_L1SS_CAP, &val);
 			if ((val & PCI_L1SS_CAP_L1PMS) ||
 			    (val & PCI_L1SS_CAP_L1PM_MASK))
-				tegra_pcie_config_clkreq(pcie, port->index);
+				tegra_pcie_config_clkreq(pcie, port->index, 1);
 		}
 	}
 	/* L1.2 specific common configuration */
@@ -2491,6 +2504,8 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 		dev_info(pcie->dev, "probing port %u, using %u lanes\n",
 			 port->index, port->lanes);
 
+		/* set clkreq as input to avoid root port control it */
+		tegra_pcie_config_clkreq(pcie, port->index, 0);
 		tegra_pcie_port_enable(port);
 		tegra_pcie_enable_rp_features(port);
 		/* override presence detection */

@@ -3277,6 +3277,7 @@ int mmc_power_save_host(struct mmc_host *host)
 	pr_info("%s: %s: powering down\n", mmc_hostname(host), __func__);
 #endif
 
+	cancel_delayed_work_sync(&host->detect);
 	mmc_bus_get(host);
 
 	if (!host->bus_ops || host->bus_dead) {

@@ -9,6 +9,8 @@ config VIDEO_GS1662
 	---help---
 	  Enable the GS1662 driver which serializes video streams.
 
+trysource "../nvidia/drivers/media/spi/Kconfig.nvidia"
+
 endmenu
 
 endif

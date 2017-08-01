@@ -46,6 +46,13 @@
 			hardware = "quill";
 			fstab {
 				compatible = "android,fstab";
+				system {
+					compatible = "android,system";
+					dev = "/dev/block/platform/3460000.sdhci/by-name/APP";
+					type = "ext4";
+					mnt_flags = "ro";
+					fsmgr_flags = "wait,slotselect";
+				};
 				vendor {
 					compatible = "android,vendor";
 					dev = "/dev/block/platform/3460000.sdhci/by-name/vendor";

@@ -607,6 +607,9 @@ config ARCH_ENABLE_MEMORY_HOTPLUG
     depends on !NUMA
 	def_bool y
 
+config ARCH_ENABLE_MEMORY_HOTREMOVE
+	def_bool y
+
 # Common NUMA Features
 config NUMA
 	bool "Numa Memory Allocation and Scheduler Support"

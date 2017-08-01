@@ -327,19 +327,6 @@ static int tegra_t186ref_bali_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
 			DEFAULT_SAMPLE_RATE, 0, 0);
 
-	/* set sys clk */
-	if (cpu_dai->driver->ops->set_sysclk) {
-		err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
-						SND_SOC_CLOCK_OUT);
-		err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,
-						SND_SOC_CLOCK_IN);
-		if (err < 0) {
-			dev_err(card->dev, "%s cpu DAI srate not set\n",
-				cpu_dai->name);
-			return err;
-		}
-	}
-
 	/* set blck ratio */
 	err = snd_soc_dai_set_bclk_ratio(cpu_dai,
 			tegra_machine_get_bclk_ratio_t18x(rtd));

@@ -39,6 +39,34 @@
  */
 #define QUEUE_EMPTY_TIMEOUT_MS 650
 
+static bool is_host_clk_enabled(struct mmc_host *mmc, int reg)
+{
+	if (mmc->is_host_clk_enabled)
+		return true;
+	else {
+		pr_err("%s: Reg 0x%x being accessed without clock\n",
+			mmc_hostname(mmc), reg);
+		WARN_ON(1);
+		return false;
+	}
+}
+
+static u32 cmdq_reg_readl(struct cmdq_host *cq_host, int reg)
+{
+	if (!is_host_clk_enabled(cq_host->mmc, reg))
+		return 0;
+
+	return cmdq_readl(cq_host, reg);
+}
+
+static void cmdq_reg_writel(struct cmdq_host *cq_host, u32 val, int reg)
+{
+	if (!is_host_clk_enabled(cq_host->mmc, reg))
+		return;
+
+	cmdq_writel(cq_host, val, reg);
+}
+
 static inline u64 *get_desc(struct cmdq_host *cq_host, u8 tag)
 {
 	return cq_host->desc_base + (tag * cq_host->slot_sz);
@@ -90,11 +118,11 @@ static void cmdq_clear_set_irqs(struct cmdq_host *cq_host, u32 clear, u32 set)
 {
 	u32 ier;
 
-	ier = cmdq_readl(cq_host, CQISTE);
+	ier = cmdq_reg_readl(cq_host, CQISTE);
 	ier &= ~clear;
 	ier |= set;
-	cmdq_writel(cq_host, ier, CQISTE);
-	cmdq_writel(cq_host, ier, CQISGE);
+	cmdq_reg_writel(cq_host, ier, CQISTE);
+	cmdq_reg_writel(cq_host, ier, CQISGE);
 	/* ensure the writes are done */
 	mb();
 }
@@ -110,38 +138,38 @@ static void cmdq_dumpregs(struct cmdq_host *cq_host)
 		mmc_hostname(mmc));
 
 	pr_debug(DRV_NAME ": Version: 0x%08x | Caps:  0x%08x\n",
-		cmdq_readl(cq_host, CQVER),
-		cmdq_readl(cq_host, CQCAP));
+		cmdq_reg_readl(cq_host, CQVER),
+		cmdq_reg_readl(cq_host, CQCAP));
 	pr_debug(DRV_NAME ": Queing config: 0x%08x | Queue Ctrl:  0x%08x\n",
-		cmdq_readl(cq_host, CQCFG),
-		cmdq_readl(cq_host, CQCTL));
+		cmdq_reg_readl(cq_host, CQCFG),
+		cmdq_reg_readl(cq_host, CQCTL));
 	pr_debug(DRV_NAME ": Int stat: 0x%08x | Int enab:  0x%08x\n",
-		cmdq_readl(cq_host, CQIS),
-		cmdq_readl(cq_host, CQISTE));
+		cmdq_reg_readl(cq_host, CQIS),
+		cmdq_reg_readl(cq_host, CQISTE));
 	pr_debug(DRV_NAME ": Int sig: 0x%08x | Int Coal:  0x%08x\n",
-		cmdq_readl(cq_host, CQISGE),
-		cmdq_readl(cq_host, CQIC));
+		cmdq_reg_readl(cq_host, CQISGE),
+		cmdq_reg_readl(cq_host, CQIC));
 	pr_debug(DRV_NAME ": TDL base: 0x%08x | TDL up32:  0x%08x\n",
-		cmdq_readl(cq_host, CQTDLBA),
-		cmdq_readl(cq_host, CQTDLBAU));
+		cmdq_reg_readl(cq_host, CQTDLBA),
+		cmdq_reg_readl(cq_host, CQTDLBAU));
 	pr_debug(DRV_NAME ": Doorbell: 0x%08x | Comp Notif:  0x%08x\n",
-		cmdq_readl(cq_host, CQTDBR),
-		cmdq_readl(cq_host, CQTCN));
+		cmdq_reg_readl(cq_host, CQTDBR),
+		cmdq_reg_readl(cq_host, CQTCN));
 	pr_debug(DRV_NAME ": Dev queue: 0x%08x | Dev Pend:  0x%08x\n",
-		cmdq_readl(cq_host, CQDQS),
-		cmdq_readl(cq_host, CQDPT));
+		cmdq_reg_readl(cq_host, CQDQS),
+		cmdq_reg_readl(cq_host, CQDPT));
 	pr_debug(DRV_NAME ": Task clr: 0x%08x | Send stat 1:  0x%08x\n",
-		cmdq_readl(cq_host, CQTCLR),
-		cmdq_readl(cq_host, CQSSC1));
+		cmdq_reg_readl(cq_host, CQTCLR),
+		cmdq_reg_readl(cq_host, CQSSC1));
 	pr_debug(DRV_NAME ": Send stat 2: 0x%08x | DCMD resp:  0x%08x\n",
-		cmdq_readl(cq_host, CQSSC2),
-		cmdq_readl(cq_host, CQCRDCT));
+		cmdq_reg_readl(cq_host, CQSSC2),
+		cmdq_reg_readl(cq_host, CQCRDCT));
 	pr_debug(DRV_NAME ": Resp err mask: 0x%08x | Task err:  0x%08x\n",
-		cmdq_readl(cq_host, CQRMEM),
-		cmdq_readl(cq_host, CQTERRI));
+		cmdq_reg_readl(cq_host, CQRMEM),
+		cmdq_reg_readl(cq_host, CQTERRI));
 	pr_debug(DRV_NAME ": Resp idx: 0x%08x | Resp arg:  0x%08x\n",
-		cmdq_readl(cq_host, CQCRI),
-		cmdq_readl(cq_host, CQCRA));
+		cmdq_reg_readl(cq_host, CQCRI),
+		cmdq_reg_readl(cq_host, CQCRA));
 	pr_debug(DRV_NAME ": ===========================================\n");
 
 	if (cq_host->ops->dump_vendor_regs)
@@ -153,10 +181,8 @@ static void cmdq_wait_cq_empty(struct mmc_host *mmc)
 	struct cmdq_host *cq_host = (struct cmdq_host *)mmc_cmdq_private(mmc);
 	int timeout = QUEUE_EMPTY_TIMEOUT_MS;
 
-	if (cq_host->ops->runtime_pm_get)
-		cq_host->ops->runtime_pm_get(mmc);
 	while (timeout) {
-		if (!cmdq_readl(cq_host, CQTDBR))
+		if (!cmdq_reg_readl(cq_host, CQTDBR))
 			break;
 		mdelay(1);
 		--timeout;
@@ -167,7 +193,7 @@ static void cmdq_wait_cq_empty(struct mmc_host *mmc)
 
 	timeout = QUEUE_EMPTY_TIMEOUT_MS;
 	while (timeout) {
-		if (!cmdq_readl(cq_host, CQTCN))
+		if (!cmdq_reg_readl(cq_host, CQTCN))
 			break;
 		mdelay(1);
 		--timeout;
@@ -175,8 +201,6 @@ static void cmdq_wait_cq_empty(struct mmc_host *mmc)
 	if (!timeout)
 		pr_err("%s: Some tasks are pending for post proccess by CQE\n",
 				mmc_hostname(mmc));
-	if (cq_host->ops->runtime_pm_put)
-		cq_host->ops->runtime_pm_put(mmc);
 }
 
 /**
@@ -201,7 +225,7 @@ static int cmdq_host_alloc_tdl(struct cmdq_host *cq_host)
 
 	/* task descriptor can be 64/128 bit irrespective of arch */
 	if (cq_host->caps & CMDQ_TASK_DESC_SZ_128) {
-		cmdq_writel(cq_host, cmdq_readl(cq_host, CQCFG) |
+		cmdq_reg_writel(cq_host, cmdq_reg_readl(cq_host, CQCFG) |
 			       CQ_TASK_DESC_SZ, CQCFG);
 		cq_host->task_desc_len = 2;
 	} else {
@@ -268,9 +292,6 @@ static int cmdq_enable(struct mmc_host *mmc)
 	struct cmdq_host *cq_host = mmc_cmdq_private(mmc);
 	unsigned long flags;
 
-	if (cq_host->ops->runtime_pm_get)
-		cq_host->ops->runtime_pm_get(mmc);
-
 	spin_lock_irqsave(&cq_host->cmdq_lock, flags);
 	if (!cq_host || !mmc->card || !mmc_card_mmc(mmc->card)) {
 		err = -EINVAL;
@@ -282,7 +303,7 @@ static int cmdq_enable(struct mmc_host *mmc)
 
 	/* TODO: if the legacy MMC host controller is in idle state */
 
-	cqcfg = cmdq_readl(cq_host, CQCFG);
+	cqcfg = cmdq_reg_readl(cq_host, CQCFG);
 	if (cqcfg & 0x1) {
 		pr_info("%s: %s: cq_host is already enabled\n",
 				mmc_hostname(mmc), __func__);
@@ -299,7 +320,7 @@ static int cmdq_enable(struct mmc_host *mmc)
 	cqcfg = ((cq_host->dma64 ? CQ_TASK_DESC_SZ : 0) |
 			(dcmd_enable ? CQ_DCMD : 0));
 
-	cmdq_writel(cq_host, cqcfg, CQCFG);
+	cmdq_reg_writel(cq_host, cqcfg, CQCFG);
 
 	if (!cq_host->desc_base ||
 			!cq_host->trans_desc_base) {
@@ -308,14 +329,14 @@ static int cmdq_enable(struct mmc_host *mmc)
 			goto out;
 	}
 
-	cmdq_writel(cq_host, lower_32_bits(cq_host->desc_dma_base),
+	cmdq_reg_writel(cq_host, lower_32_bits(cq_host->desc_dma_base),
 			CQTDLBA);
-	cmdq_writel(cq_host, upper_32_bits(cq_host->desc_dma_base),
+	cmdq_reg_writel(cq_host, upper_32_bits(cq_host->desc_dma_base),
 			CQTDLBAU);
 
 	/* Enable Interrupt Coalescing feature */
 	if (cq_host->quirks & CMDQ_QUIRK_CQIC_SUPPORT)
-		cmdq_writel(cq_host, (CQIC_ENABLE | CQIC_ICTOVALWEN |
+		cmdq_reg_writel(cq_host, (CQIC_ENABLE | CQIC_ICTOVALWEN |
 			    CQIC_ICTOVAL(CQIC_MAX_ICTOVAL) | CQIC_ICCTHWEN |
 			    CQIC_ICCTH(CQIC_DEFAULT_ICCTH)), CQIC);
 
@@ -338,19 +359,17 @@ static int cmdq_enable(struct mmc_host *mmc)
 	cmdq_clear_set_irqs(cq_host, 0x0, CQ_INT_ALL);
 
 	/* cq_host would use this rca to address the card */
-	cmdq_writel(cq_host, mmc->card->rca, CQSSC2);
+	cmdq_reg_writel(cq_host, mmc->card->rca, CQSSC2);
 
 	/* ensure the writes are done before enabling CQE */
 	mb();
 
 	/* enable CQ_HOST */
-	cmdq_writel(cq_host, cmdq_readl(cq_host, CQCFG) | CQ_ENABLE,
+	cmdq_reg_writel(cq_host, cmdq_reg_readl(cq_host, CQCFG) | CQ_ENABLE,
 		    CQCFG);
 	cq_host->enabled = true;
 out:
 	spin_unlock_irqrestore(&cq_host->cmdq_lock, flags);
-	if (cq_host->ops->runtime_pm_put)
-		cq_host->ops->runtime_pm_put(mmc);
 	return err;
 }
 
@@ -374,11 +393,9 @@ static void cmdq_disable(struct mmc_host *mmc, bool soft)
 	struct cmdq_host *cq_host = (struct cmdq_host *)mmc_cmdq_private(mmc);
 	unsigned long flags;
 
-	if (cq_host->ops->runtime_pm_get)
-		cq_host->ops->runtime_pm_get(mmc);
 	spin_lock_irqsave(&cq_host->cmdq_lock, flags);
 	if (soft) {
-		cmdq_writel(cq_host, cmdq_readl(
+		cmdq_reg_writel(cq_host, cmdq_reg_readl(
 				    cq_host, CQCFG) & ~(CQ_ENABLE),
 			    CQCFG);
 	} else {
@@ -394,8 +411,6 @@ static void cmdq_disable(struct mmc_host *mmc, bool soft)
 	cq_host->enabled = false;
 	mmc_card_clr_cmdq(mmc->card);
 	spin_unlock_irqrestore(&cq_host->cmdq_lock, flags);
-	if (cq_host->ops->runtime_pm_put)
-		cq_host->ops->runtime_pm_put(mmc);
 }
 
 static void cmdq_prep_task_desc(struct mmc_request *mrq,
@@ -558,15 +573,12 @@ static int cmdq_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		goto out;
 	}
 
-	if (cq_host->ops->runtime_pm_get)
-		cq_host->ops->runtime_pm_get(mmc);
-
 	spin_lock_irqsave(&cq_host->cmdq_lock, flags);
 
 	if (mrq->cmdq_req->cmdq_req_flags & DCMD) {
 		cmdq_prep_dcmd_desc(mmc, mrq);
 		cq_host->mrq_slot[31] = mrq;
-		cmdq_writel(cq_host, 1 << 31, CQTDBR);
+		cmdq_reg_writel(cq_host, 1 << 31, CQTDBR);
 		spin_unlock_irqrestore(&cq_host->cmdq_lock, flags);
 		return 0;
 	}
@@ -589,7 +601,7 @@ static int cmdq_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		BUG_ON(1);
 	}
 
-	BUG_ON(cmdq_readl(cq_host, CQTDBR) & (1 << tag));
+	BUG_ON(cmdq_reg_readl(cq_host, CQTDBR) & (1 << tag));
 
 	cq_host->mrq_slot[tag] = mrq;
 	if (cq_host->ops->set_tranfer_params)
@@ -598,7 +610,7 @@ static int cmdq_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	if (cq_host->ops->set_data_timeout)
 		cq_host->ops->set_data_timeout(mmc, 0xe);
 
-	cmdq_writel(cq_host, 1 << tag, CQTDBR);
+	cmdq_reg_writel(cq_host, 1 << tag, CQTDBR);
 	spin_unlock_irqrestore(&cq_host->cmdq_lock, flags);
 
 out:
@@ -612,10 +624,8 @@ static void cmdq_finish_data(struct mmc_host *mmc, unsigned int tag)
 
 	mrq = cq_host->mrq_slot[tag];
 	if (mrq->cmdq_req->cmdq_req_flags & DCMD)
-		mrq->cmd->resp[0] = cmdq_readl(cq_host, CQCRDCT);
+		mrq->cmd->resp[0] = cmdq_reg_readl(cq_host, CQCRDCT);
 	mrq->done(mrq);
-	if (cq_host->ops->runtime_pm_put)
-		cq_host->ops->runtime_pm_put(mmc);
 }
 
 irqreturn_t cmdq_irq(struct mmc_host *mmc, u32 intmask)
@@ -627,15 +637,15 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, u32 intmask)
 
 	spin_lock(&cq_host->cmdq_lock);
 
-	status = cmdq_readl(cq_host, CQIS);
-	cmdq_writel(cq_host, status, CQIS);
+	status = cmdq_reg_readl(cq_host, CQIS);
+	cmdq_reg_writel(cq_host, status, CQIS);
 
-	cqtcn = cmdq_readl(cq_host, CQTCN);
-	cqtdbr = cmdq_readl(cq_host, CQTDBR);
+	cqtcn = cmdq_reg_readl(cq_host, CQTCN);
+	cqtdbr = cmdq_reg_readl(cq_host, CQTDBR);
 
 	if (cq_host->quirks & CMDQ_QUIRK_CQIC_SUPPORT) {
-		cqic = cmdq_readl(cq_host, CQIC);
-		cmdq_writel(cq_host, cqic | CQIC_RESET, CQIC);
+		cqic = cmdq_reg_readl(cq_host, CQIC);
+		cmdq_reg_writel(cq_host, cqic | CQIC_RESET, CQIC);
 	}
 
 	pr_debug("%s: %s: CQIS: %x, intmask: %x\n", mmc_hostname(mmc),
@@ -658,7 +668,7 @@ irqreturn_t cmdq_irq(struct mmc_host *mmc, u32 intmask)
 			cmdq_finish_data(mmc, tag);
 			/* complete DCMD on tag 31 */
 		}
-		cmdq_writel(cq_host, comp_status, CQTCN);
+		cmdq_reg_writel(cq_host, comp_status, CQTCN);
 	} else if (status & CQIS_RED) {
 		/* task response has an error */
 		pr_err("%s: RED error %d !!!\n", mmc_hostname(mmc), status);
@@ -677,7 +687,7 @@ static unsigned int cmdq_poll_clear(struct cmdq_host *cq_host, u32 reg, u32 bit,
 		unsigned timeout)
 {
 	do {
-		if (!(cmdq_readl(cq_host, reg) & bit))
+		if (!(cmdq_reg_readl(cq_host, reg) & bit))
 			break;
 		udelay(1);
 		--timeout;
@@ -700,7 +710,7 @@ static int cmdq_discard_task(struct mmc_host *mmc, u32 tag, bool all)
 		/* Write '1' to 8th bit of CQCTL to clear all tasks sent
 		 * to the device.
 		 */
-		cmdq_writel(cq_host, cmdq_readl(cq_host, CQCTL) |
+		cmdq_reg_writel(cq_host, cmdq_reg_readl(cq_host, CQCTL) |
 				CLEAR_ALL_TASKS, CQCTL);
 
 		/* Poll on CQCTL until 8th bit is set to 0 */
@@ -716,7 +726,7 @@ static int cmdq_discard_task(struct mmc_host *mmc, u32 tag, bool all)
 				mmc_hostname(mmc));
 			goto cqe_resume;
 		}
-	} else if (cmdq_readl(cq_host, CQDPT) & task) {
+	} else if (cmdq_reg_readl(cq_host, CQDPT) & task) {
 		/* CQDPT[tag] == 1, Task queued in the device.
 		 * Send CMD48 to discard the task.
 		 * If CQDPT[tag] == 0 then clear the task from CQTCLR only
@@ -726,7 +736,7 @@ static int cmdq_discard_task(struct mmc_host *mmc, u32 tag, bool all)
 	}
 
 	/* Write '1' to CQTCLR[tag] to clear task in CQE */
-	cmdq_writel(cq_host, cmdq_readl(cq_host, CQTCLR) | task, CQTCLR);
+	cmdq_reg_writel(cq_host, cmdq_reg_readl(cq_host, CQTCLR) | task, CQTCLR);
 
 	/* Poll on CQTCLR[tag] until it is '0' */
 	err = cmdq_poll_clear(cq_host, CQTCLR, task, TASK_CLEAR_TIMEOUT_MS);
@@ -743,7 +753,7 @@ static int cmdq_discard_task(struct mmc_host *mmc, u32 tag, bool all)
 
 cqe_resume:
 	/* Resume CQE operations by writing '0' to 0th bit in CQCTL */
-	cmdq_writel(cq_host, cmdq_readl(cq_host, CQCTL) & ~HALT, CQCTL);
+	cmdq_reg_writel(cq_host, cmdq_reg_readl(cq_host, CQCTL) & ~HALT, CQCTL);
 	return 0;
 }
 
@@ -754,14 +764,12 @@ static int cmdq_halt(struct mmc_host *mmc, bool halt)
 	unsigned timeout = HALT_TIMEOUT_MS;
 	int err = 0;
 
-	if (cq_host->ops->runtime_pm_get)
-		cq_host->ops->runtime_pm_get(mmc);
 	if (halt) {
-		cmdq_writel(cq_host, cmdq_readl(cq_host, CQCTL) | HALT,
+		cmdq_reg_writel(cq_host, cmdq_reg_readl(cq_host, CQCTL) | HALT,
 			    CQCTL);
 		/* Poll for 1000ms until the Halt is set in CQCTL */
 		do {
-			if (cmdq_readl(cq_host, CQCTL) & HALT)
+			if (cmdq_reg_readl(cq_host, CQCTL) & HALT)
 				break;
 			mdelay(1);
 			timeout--;
@@ -771,17 +779,15 @@ static int cmdq_halt(struct mmc_host *mmc, bool halt)
 			pr_err("%s: Setting HALT is failed\n",
 					mmc_hostname(mmc));
 			cmdq_dumpregs(cq_host);
-			cmdq_writel(cq_host, cmdq_readl(cq_host, CQCTL) & 0x1FE,
+			cmdq_reg_writel(cq_host, cmdq_reg_readl(cq_host, CQCTL) & 0x1FE,
 			    CQCTL);
 			err = -ETIMEDOUT;
 		}
 	} else {
-		cmdq_writel(cq_host, cmdq_readl(cq_host, CQCTL) & ~HALT,
+		cmdq_reg_writel(cq_host, cmdq_reg_readl(cq_host, CQCTL) & ~HALT,
 			    CQCTL);
 	}
 
-	if (cq_host->ops->runtime_pm_put)
-		cq_host->ops->runtime_pm_put(mmc);
 	return err;
 }
 

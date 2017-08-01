@@ -180,7 +180,6 @@ struct sdhci_tegra {
 	bool ddr_signaling;
 	bool pad_calib_required;
 	struct sdhci_tegra_clk_src_data *clk_src_data;
-	bool is_clk_enabled;
 	unsigned long curr_clk_rate;
 	unsigned long max_clk_limit;
 	unsigned long max_ddr_clk_limit;
@@ -230,11 +229,34 @@ static int tegra_sdhci_suspend(struct sdhci_host *host);
 static int tegra_sdhci_resume(struct sdhci_host *host);
 static void tegra_sdhci_post_resume(struct sdhci_host *host);
 
+static bool tegra_sdhci_is_clk_enabled(struct sdhci_host *host, int reg)
+{
+	if (host->mmc->is_host_clk_enabled) {
+		return true;
+	} else {
+		dev_err(mmc_dev(host->mmc),
+			"Reg 0x%x being accessed without clock\n", reg);
+		WARN_ON(1);
+		return false;
+	}
+}
+
+static u8 tegra_sdhci_readb(struct sdhci_host *host, int reg)
+{
+	if (!tegra_sdhci_is_clk_enabled(host, reg))
+		return 0;
+
+	return readb(host->ioaddr + reg);
+}
+
 static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
+
+	if (!tegra_sdhci_is_clk_enabled(host, reg))
+		return 0;
 
 	if (unlikely((soc_data->nvquirks & NVQUIRK_FORCE_SDHCI_SPEC_200) &&
 			(reg == SDHCI_HOST_VERSION))) {
@@ -245,11 +267,21 @@ static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
 	return readw(host->ioaddr + reg);
 }
 
+static u32 tegra_sdhci_readl(struct sdhci_host *host, int reg)
+{
+	if (!tegra_sdhci_is_clk_enabled(host, reg))
+		return 0;
+
+	return readl(host->ioaddr + reg);
+}
 static void tegra_sdhci_writeb(struct sdhci_host *host, u8 val, int reg)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
+
+	if (!tegra_sdhci_is_clk_enabled(host, reg))
+		return;
 
 	writeb(val, host->ioaddr + reg);
 	if (soc_data->nvquirks & NVQUIRK_READ_REG_AFTER_WRITE)
@@ -261,6 +293,9 @@ static void tegra_sdhci_writew(struct sdhci_host *host, u16 val, int reg)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
+
+	if (!tegra_sdhci_is_clk_enabled(host, reg))
+		return;
 
 	if (soc_data->nvquirks & NVQUIRK_SHADOW_XFER_MODE_WRITE) {
 		switch (reg) {
@@ -290,6 +325,9 @@ static void tegra_sdhci_writel(struct sdhci_host *host, u32 val, int reg)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
+
+	if (!tegra_sdhci_is_clk_enabled(host, reg))
+		return;
 
 	/* Seems like we're getting spurious timeout and crc errors, so
 	 * disable signalling of them. In case of real errors software
@@ -847,17 +885,19 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	host_clk = tegra_sdhci_apply_clk_limits(host, clock);
 
 	if (clock) {
+		dev_dbg(mmc_dev(host->mmc), "Enabling clk %u, clk enabled %d\n",
+			clock, host->mmc->is_host_clk_enabled);
 		if (!tegra_host->rate_change_needs_clk)
 			tegra_sdhci_set_clk_rate(host, clock);
 		/* Enable SDMMC host CAR clock */
-		if (!tegra_host->is_clk_enabled) {
+		if (!host->mmc->is_host_clk_enabled) {
 			rc = clk_prepare_enable(pltfm_host->clk);
 			if (rc) {
 				dev_err(mmc_dev(host->mmc),
 					"clk enable failed %d\n", rc);
 				return;
 			}
-			tegra_host->is_clk_enabled = true;
+			host->mmc->is_host_clk_enabled = true;
 			vndr_ctrl = sdhci_readb(host,
 				SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
 			vndr_ctrl |= SDHCI_CLOCK_CTRL_SDMMC_CLK;
@@ -891,6 +931,8 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 		/* Enable SDMMC internal and card clocks */
 		sdhci_set_clock(host, clock);
 	} else {
+		dev_dbg(mmc_dev(host->mmc), "Disabling clk %u, clk enabled %d\n",
+			clock, host->mmc->is_host_clk_enabled);
 		/* Disable the card and internal clocks first */
 		sdhci_set_clock(host, clock);
 
@@ -898,7 +940,7 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 			return;
 
 		/* Disable SDMMC host CAR clock */
-		if (tegra_host->is_clk_enabled) {
+		if (host->mmc->is_host_clk_enabled) {
 			/* power down / idle state */
 			tegra_sdhci_vendor_trim_clear_sel_vreg(host, false);
 
@@ -907,8 +949,8 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 			vndr_ctrl &= ~SDHCI_CLOCK_CTRL_SDMMC_CLK;
 			sdhci_writeb(host, vndr_ctrl,
 				SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+			host->mmc->is_host_clk_enabled = false;
 			clk_disable_unprepare(pltfm_host->clk);
-			tegra_host->is_clk_enabled = false;
 			if (tegra_host->emc_clk) {
 				rc = tegra_bwmgr_set_emc(tegra_host->emc_clk, 0,
 						TEGRA_BWMGR_SET_EMC_SHARED_BW);
@@ -1334,7 +1376,9 @@ static void tegra_sdhci_pre_regulator_config(struct sdhci_host *sdhci,
 
 static const struct sdhci_ops tegra_sdhci_ops = {
 	.get_ro     = tegra_sdhci_get_ro,
+	.read_b     = tegra_sdhci_readb,
 	.read_w     = tegra_sdhci_readw,
+	.read_l     = tegra_sdhci_readl,
 	.write_b    = tegra_sdhci_writeb,
 	.write_w    = tegra_sdhci_writew,
 	.write_l    = tegra_sdhci_writel,
@@ -1708,6 +1752,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		goto err_clk_get;
 	}
 	clk_prepare_enable(clk);
+	pltfm_host->clk = clk;
 
 	tegra_host->emc_clk =
 		tegra_bwmgr_register(sdmmc_emc_clinet_id[tegra_host->instance]);
@@ -1726,7 +1771,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	else
 		reset_control_reset(tegra_host->rst);
 
-	pltfm_host->clk = clk;
+	tegra_sdhci_set_clock(host, 400000);
 
 	if (gpio_is_valid(tegra_host->volt_switch_gpio)) {
 		rc = gpio_request(tegra_host->volt_switch_gpio, "sdhci_power");

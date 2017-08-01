@@ -52,27 +52,6 @@ static void sdhci_enable_preset_value(struct sdhci_host *host, bool enable);
 static void sdhci_regulator_config_pre(struct mmc_host *mmc, int vdd,
 						bool flag);
 
-#ifdef CONFIG_PM
-static int sdhci_runtime_pm_get(struct sdhci_host *host);
-static int sdhci_runtime_pm_put(struct sdhci_host *host);
-static void sdhci_runtime_pm_bus_on(struct sdhci_host *host);
-static void sdhci_runtime_pm_bus_off(struct sdhci_host *host);
-#else
-static int sdhci_runtime_pm_get(struct sdhci_host *host)
-{
-	return 0;
-}
-static int sdhci_runtime_pm_put(struct sdhci_host *host)
-{
-	return 0;
-}
-static void sdhci_runtime_pm_bus_on(struct sdhci_host *host)
-{
-}
-static void sdhci_runtime_pm_bus_off(struct sdhci_host *host)
-{
-}
-#endif
 static void sdhci_enable_host_interrupts(struct mmc_host *mmc, bool enable)
 {
 	struct sdhci_host *host;
@@ -80,7 +59,6 @@ static void sdhci_enable_host_interrupts(struct mmc_host *mmc, bool enable)
 
 	host = mmc_priv(mmc);
 
-	sdhci_runtime_pm_get(host);
 	status = sdhci_readl(host, SDHCI_INT_STATUS);
 	sdhci_writel(host, status, SDHCI_INT_STATUS);
 	if (enable) {
@@ -94,7 +72,6 @@ static void sdhci_enable_host_interrupts(struct mmc_host *mmc, bool enable)
 	}
 	sdhci_writel(host, host->ier, SDHCI_INT_ENABLE);
 	sdhci_writel(host, host->ier, SDHCI_SIGNAL_ENABLE);
-	sdhci_runtime_pm_put(host);
 }
 
 static void sdhci_dumpregs(struct sdhci_host *host)
@@ -210,22 +187,6 @@ static void sdhci_disable_card_detection(struct sdhci_host *host)
 	sdhci_set_card_detection(host, false);
 }
 
-static void sdhci_runtime_pm_bus_on(struct sdhci_host *host)
-{
-	if (host->bus_on)
-		return;
-	host->bus_on = true;
-	pm_runtime_get_noresume(host->mmc->parent);
-}
-
-static void sdhci_runtime_pm_bus_off(struct sdhci_host *host)
-{
-	if (!host->bus_on)
-		return;
-	host->bus_on = false;
-	pm_runtime_put_noidle(host->mmc->parent);
-}
-
 void sdhci_reset(struct sdhci_host *host, u8 mask)
 {
 	unsigned long timeout;
@@ -233,12 +194,8 @@ void sdhci_reset(struct sdhci_host *host, u8 mask)
 
 	sdhci_writeb(host, mask, SDHCI_SOFTWARE_RESET);
 
-	if (mask & SDHCI_RESET_ALL) {
+	if (mask & SDHCI_RESET_ALL)
 		host->clock = 0;
-		/* Reset-all turns off SD Bus Power */
-		if (host->quirks2 & SDHCI_QUIRK2_CARD_ON_NEEDS_BUS_ON)
-			sdhci_runtime_pm_bus_off(host);
-	}
 
 	/* Wait max 100 ms */
 	timeout = 100;
@@ -1538,8 +1495,6 @@ void sdhci_set_power_noreg(struct sdhci_host *host, unsigned char mode,
 
 	if (pwr == 0) {
 		sdhci_writeb(host, 0, SDHCI_POWER_CONTROL);
-		if (host->quirks2 & SDHCI_QUIRK2_CARD_ON_NEEDS_BUS_ON)
-			sdhci_runtime_pm_bus_off(host);
 	} else {
 		/*
 		 * Spec says that we should clear the power reg before setting
@@ -1559,9 +1514,6 @@ void sdhci_set_power_noreg(struct sdhci_host *host, unsigned char mode,
 		pwr |= SDHCI_POWER_ON;
 
 		sdhci_writeb(host, pwr, SDHCI_POWER_CONTROL);
-
-		if (host->quirks2 & SDHCI_QUIRK2_CARD_ON_NEEDS_BUS_ON)
-			sdhci_runtime_pm_bus_on(host);
 
 		/*
 		 * Some controllers need an extra 10ms delay of 10ms before
@@ -2027,9 +1979,6 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	struct sdhci_host *host = mmc_priv(mmc);
 	unsigned long flags;
 
-	if (enable)
-		pm_runtime_get_noresume(host->mmc->parent);
-
 	spin_lock_irqsave(&host->lock, flags);
 	if (enable)
 		host->flags |= SDHCI_SDIO_IRQ_ENABLED;
@@ -2038,9 +1987,6 @@ static void sdhci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 
 	sdhci_enable_sdio_irq_nolock(host, enable);
 	spin_unlock_irqrestore(&host->lock, flags);
-
-	if (!enable)
-		pm_runtime_put_noidle(host->mmc->parent);
 }
 
 static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
@@ -3161,6 +3107,9 @@ static void sdhci_disable_irq_wakeups(struct sdhci_host *host)
 
 int sdhci_suspend_host(struct sdhci_host *host)
 {
+	if (host->ops->set_clock)
+		host->ops->set_clock(host, host->mmc->f_init);
+
 	sdhci_disable_card_detection(host);
 
 	mmc_retune_timer_stop(host->mmc);
@@ -3173,7 +3122,8 @@ int sdhci_suspend_host(struct sdhci_host *host)
 	 * the controller context. So, set MMC_PM_KEEP_POWER flag.
 	 */
 	if (!(host->mmc->caps2 & MMC_CAP2_NO_SLEEP_CMD) &&
-		(host->mmc->pm_caps & MMC_PM_KEEP_POWER))
+		(host->mmc->pm_caps & MMC_PM_KEEP_POWER) &&
+		host->mmc->card)
 		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
 
 	host->ier = 0;
@@ -3182,6 +3132,8 @@ int sdhci_suspend_host(struct sdhci_host *host)
 	free_irq(host->irq, host);
 	if (device_may_wakeup(mmc_dev(host->mmc)))
 		sdhci_enable_irq_wakeups(host);
+	if (host->ops->set_clock)
+		host->ops->set_clock(host, 0);
 	return 0;
 }
 
@@ -3238,17 +3190,6 @@ int sdhci_resume_host(struct sdhci_host *host)
 }
 
 EXPORT_SYMBOL_GPL(sdhci_resume_host);
-
-static int sdhci_runtime_pm_get(struct sdhci_host *host)
-{
-	return pm_runtime_get_sync(host->mmc->parent);
-}
-
-static int sdhci_runtime_pm_put(struct sdhci_host *host)
-{
-	pm_runtime_mark_last_busy(host->mmc->parent);
-	return pm_runtime_put_autosuspend(host->mmc->parent);
-}
 
 int sdhci_runtime_suspend_host(struct sdhci_host *host)
 {
@@ -3464,19 +3405,6 @@ static int sdhci_cmdq_enable(struct sdhci_host *host)
 	return cmdq_reenable(host->mmc);
 }
 
-static void sdhci_cmdq_runtime_pm_get(struct mmc_host *mmc)
-{
-	struct sdhci_host *host = mmc_priv(mmc);
-
-	sdhci_runtime_pm_get(host);
-}
-
-static void sdhci_cmdq_runtime_pm_put(struct mmc_host *mmc)
-{
-	struct sdhci_host *host = mmc_priv(mmc);
-
-	sdhci_runtime_pm_put(host);
-}
 #else
 static void sdhci_cmdq_clear_set_irqs(struct mmc_host *mmc, u32 clear, u32 set)
 {
@@ -3503,25 +3431,12 @@ static int sdhci_cmdq_enable(struct sdhci_host *host)
 {
 	return -ENOTSUPP;
 }
-
-static void sdhci_cmdq_runtime_pm_get(struct mmc_host *mmc)
-{
-
-}
-
-static void sdhci_cmdq_runtime_pm_put(struct mmc_host *mmc)
-{
-
-}
-
 #endif
 
 static const struct cmdq_host_ops sdhci_cmdq_ops = {
 	.clear_set_irqs = sdhci_cmdq_clear_set_irqs,
 	.set_data_timeout = sdhci_cmdq_set_data_timeout,
 	.dump_vendor_regs = sdhci_cmdq_dump_vendor_regs,
-	.runtime_pm_get = sdhci_cmdq_runtime_pm_get,
-	.runtime_pm_put = sdhci_cmdq_runtime_pm_put,
 };
 
 int sdhci_setup_host(struct sdhci_host *host)

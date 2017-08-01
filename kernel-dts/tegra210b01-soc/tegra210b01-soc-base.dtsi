@@ -124,32 +124,6 @@
 		};
 	};
 
-	soctherm: soctherm@0x700E2000 {
-		status = "disabled";
-	};
-
-	tegra-aotag {
-		status = "disabled";
-	};
-
-	i2c@7000c000 {
-		tegra_nct72: temp-sensor@4c {
-			status = "disabled";
-		};
-	};
-
-	pwm-fan {
-		status = "disabled";
-	};
-
-	thermal-fan-est {
-		status = "disabled";
-	};
-
-	bthrot_cdev {
-		status = "disabled";
-	};
-
 	/delete-node/ dtv@7000c300;
 
 	tegra-pmc-led-soft-blink-pwm {

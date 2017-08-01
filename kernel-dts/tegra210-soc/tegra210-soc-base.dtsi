@@ -1595,6 +1595,18 @@
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 			};
 		};
+		clkreq_0_in_dir_state: clkreq_0_in_dir {
+			clkreq0 {
+				nvidia,pins = "pex_l0_clkreq_n_pa1";
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+			};
+		};
+		clkreq_1_in_dir_state: clkreq_1_in_dir {
+			clkreq1 {
+				nvidia,pins = "pex_l1_clkreq_n_pa4";
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+			};
+		};
 	};
 
 	pcie-controller@1003000 {
@@ -1623,11 +1635,14 @@
 		interrupt-map = <0 0 0 0 &intc 0 98 0x04>;
 
 		pinctrl-names = "clkreq-0-bi-dir-enable", "clkreq-1-bi-dir-enable",
-						"pex-io-dpd-dis", "pex-io-dpd-en";
+					"clkreq-0-in-dir-enable", "clkreq-1-in-dir-enable",
+					"pex-io-dpd-dis", "pex-io-dpd-en";
 		pinctrl-0 = <&clkreq_0_bi_dir_state>;
 		pinctrl-1 = <&clkreq_1_bi_dir_state>;
-		pinctrl-2 = <&pex_io_dpd_disable_state>;
-		pinctrl-3 = <&pex_io_dpd_enable_state>;
+		pinctrl-2 = <&clkreq_0_in_dir_state>;
+		pinctrl-3 = <&clkreq_1_in_dir_state>;
+		pinctrl-4 = <&pex_io_dpd_disable_state>;
+		pinctrl-5 = <&pex_io_dpd_enable_state>;
 
 		iommus = <&smmu TEGRA_SWGROUP_AFI>;
 

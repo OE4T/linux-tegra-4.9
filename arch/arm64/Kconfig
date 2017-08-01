@@ -604,9 +604,7 @@ config HOTPLUG_CPU
 	  can be controlled through /sys/devices/system/cpu.
 
 config ARCH_ENABLE_MEMORY_HOTPLUG
-	def_bool y
-
-config ARCH_ENABLE_MEMORY_HOTREMOVE
+    depends on !NUMA
 	def_bool y
 
 # Common NUMA Features

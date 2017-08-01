@@ -3116,10 +3116,13 @@ printbuf:
 	}
 
 	if (sdpcm_shared.flags & SDPCM_SHARED_TRAP) {
+	/* Enable this flag if dhdsdio_mem_dump to file is implemented */
+#ifdef DHD_SDIO_MEM_DUMP
 		/* Mem dump to a file on device */
 		dhdsdio_mem_dump(bus);
 		/* In some cases, the host back trace could be relevant too. */
 		WARN_ON(1);
+#endif
 	}
 
 done:

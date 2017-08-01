@@ -77,9 +77,13 @@ int nvgpu_dma_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		 * the lack of it for vidmem - the user should not care when
 		 * using nvgpu_gmmu_alloc_map and it's vidmem, or if there's a
 		 * difference, the user should use the flag explicitly anyway.
+		 *
+		 * Incoming flags are ignored here, since bits other than the
+		 * no-kernel-mapping flag are ignored by the vidmem mapping
+		 * functions anyway.
 		 */
 		int err = nvgpu_dma_alloc_flags_vid(g,
-				flags | NVGPU_DMA_NO_KERNEL_MAPPING,
+				NVGPU_DMA_NO_KERNEL_MAPPING,
 				size, mem);
 
 		if (!err)

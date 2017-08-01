@@ -1,7 +1,7 @@
 /*
  * tegra186-soc-actmon.dtsi: Tegra186 soc dtsi file for central actmon instances
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,13 +43,13 @@
 			nvidia,up_wmark_window = /bits/ 8 <3>;
 			nvidia,down_wmark_window = /bits/ 8 <2>;
 			nvidia,avg_window_log2 = /bits/ 8 <6>;
-			/* Activity counter is increamented every 256 memory
-			 * transactions. Considering 64 bytes Bus and each
-			 * emc clock(DRAM clock) reads 16 Bytes, It will need
-			 * 64/16 = 4 emc clocks to read 64 Bytes wider memory
-			 * bus. Hence count_weight, W = 4 * 256 = 0x400.
+			/*
+			 * count_weight(W) = (no_dram_clock/actmon_pulse) /
+			 * 			no_of_channels
+			 * 		   = 2048 / 4
+			 * 		   = 512 = 0x200
 			 */
-			nvidia,count_weight = <0x400>;
+			nvidia,count_weight = <0x200>;
 			nvidia,type = <1>;
 			status = "disabled";
 		};

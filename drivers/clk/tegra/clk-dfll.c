@@ -3986,6 +3986,12 @@ int tegra_dfll_register(struct platform_device *pdev,
 		return ret;
 	}
 
+	ret = find_lut_index_for_rate(td, td->out_rate_max);
+	if (ret < 0) {
+		dev_err(td->dev, "built invalid LUT\n");
+		return ret;
+	}
+
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(td->dev, "no control register resource\n");

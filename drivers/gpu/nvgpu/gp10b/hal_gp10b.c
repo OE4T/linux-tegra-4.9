@@ -17,6 +17,7 @@
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
+#include "gk20a/mm_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/bus_gk20a.h"
@@ -47,8 +48,8 @@
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
-#include "gm20b/fifo_gm20b.h"
 #include "gm20b/fb_gm20b.h"
+#include "gm20b/mm_gm20b.h"
 
 #include "gp10b.h"
 #include "hal_gp10b.h"
@@ -319,6 +320,30 @@ static const struct gpu_ops gp10b_ops = {
 		.max_entries = gk20a_gr_max_entries,
 	},
 #endif /* CONFIG_GK20A_CTXSW_TRACE */
+	.mm = {
+		.support_sparse = gm20b_mm_support_sparse,
+		.gmmu_map = gk20a_locked_gmmu_map,
+		.gmmu_unmap = gk20a_locked_gmmu_unmap,
+		.vm_bind_channel = gk20a_vm_bind_channel,
+		.fb_flush = gk20a_mm_fb_flush,
+		.l2_invalidate = gk20a_mm_l2_invalidate,
+		.l2_flush = gk20a_mm_l2_flush,
+		.cbc_clean = gk20a_mm_cbc_clean,
+		.set_big_page_size = gm20b_mm_set_big_page_size,
+		.get_big_page_sizes = gm20b_mm_get_big_page_sizes,
+		.get_default_big_page_size = gp10b_mm_get_default_big_page_size,
+		.gpu_phys_addr = gm20b_gpu_phys_addr,
+		.get_physical_addr_bits = gp10b_mm_get_physical_addr_bits,
+		.get_mmu_levels = gp10b_mm_get_mmu_levels,
+		.init_pdb = gp10b_mm_init_pdb,
+		.init_mm_setup_hw = gp10b_init_mm_setup_hw,
+		.is_bar1_supported = gm20b_mm_is_bar1_supported,
+		.init_inst_block = gk20a_init_inst_block,
+		.mmu_fault_pending = gk20a_fifo_mmu_fault_pending,
+		.init_bar2_vm = gb10b_init_bar2_vm,
+		.init_bar2_mm_hw_setup = gb10b_init_bar2_mm_hw_setup,
+		.remove_bar2_vm = gp10b_remove_bar2_vm,
+	},
 	.pramin = {
 		.enter = gk20a_pramin_enter,
 		.exit = gk20a_pramin_exit,
@@ -427,6 +452,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->fifo = gp10b_ops.fifo;
 	gops->gr_ctx = gp10b_ops.gr_ctx;
 	gops->fecs_trace = gp10b_ops.fecs_trace;
+	gops->mm = gp10b_ops.mm;
 	gops->pramin = gp10b_ops.pramin;
 	gops->therm = gp10b_ops.therm;
 	gops->regops = gp10b_ops.regops;
@@ -489,7 +515,6 @@ int gp10b_init_hal(struct gk20a *g)
 
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 	gp10b_init_gr(g);
-	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(g);
 
 	gp10b_init_uncompressed_kind_map();

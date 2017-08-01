@@ -48,6 +48,10 @@
 		android {
 			compatible = "android,firmware";
 			hardware = "quill";
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "vbmeta,kernel,kernel-dtb,APP,vendor";
+			};
 			fstab {
 				compatible = "android,fstab";
 				system {
@@ -55,14 +59,14 @@
 					dev = "/dev/block/platform/3460000.sdhci/by-name/APP";
 					type = "ext4";
 					mnt_flags = "ro";
-					fsmgr_flags = "wait,slotselect";
+					fsmgr_flags = "wait,slotselect,avb";
 				};
 				vendor {
 					compatible = "android,vendor";
 					dev = "/dev/block/platform/3460000.sdhci/by-name/vendor";
 					type = "ext4";
 					mnt_flags = "ro";
-					fsmgr_flags = "wait,slotselect";
+					fsmgr_flags = "wait,slotselect,avb";
 				};
 				odm {
 					compatible = "android,odm";

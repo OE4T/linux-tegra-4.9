@@ -27,8 +27,8 @@
 #include <t18x-common-plugin-manager/tegra186-quill-camera-plugin-manager.dtsi>
 
 / {
-	model = "quill";
-	compatible = "nvidia,quill", "nvidia,tegra186";
+	model = "storm";
+	compatible = "nvidia,storm", "nvidia,tegra186";
 
 	nvidia,dtsfilename = __FILE__;
 	nvidia,boardids = "3489:0000:A0";

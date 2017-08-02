@@ -459,7 +459,7 @@ void gk20a_pmu_msgq_tail(struct nvgpu_pmu *pmu, u32 *tail, bool set)
 			pwr_pmu_msgq_tail_val_f(*tail));
 }
 
-static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
+int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int err = 0;
@@ -493,7 +493,7 @@ static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 
 }
 
-static void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr)
+void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr)
 {
 	gk20a_writel(g, pwr_falcon_dmatrfbase_r(), addr);
 }
@@ -521,7 +521,7 @@ int gk20a_pmu_engine_reset(struct gk20a *g, bool do_reset)
 	return 0;
 }
 
-static bool gk20a_is_pmu_supported(struct gk20a *g)
+bool gk20a_is_pmu_supported(struct gk20a *g)
 {
 	return true;
 }
@@ -537,45 +537,6 @@ u32 gk20a_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
 		return PMU_PG_FEATURE_GR_POWER_GATING_ENABLED;
 
 	return 0;
-}
-
-void gk20a_init_pmu_ops(struct gpu_ops *gops)
-{
-	gops->pmu.is_pmu_supported = gk20a_is_pmu_supported;
-	gops->pmu.prepare_ucode = nvgpu_pmu_prepare_ns_ucode_blob;
-	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
-	gops->pmu.pmu_nsbootstrap = pmu_bootstrap;
-	gops->pmu.pmu_get_queue_head = pwr_pmu_queue_head_r;
-	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
-	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;
-	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
-	gops->pmu.pmu_queue_head = gk20a_pmu_queue_head;
-	gops->pmu.pmu_queue_tail = gk20a_pmu_queue_tail;
-	gops->pmu.pmu_msgq_tail = gk20a_pmu_msgq_tail;
-	gops->pmu.pmu_mutex_size = pwr_pmu_mutex__size_1_v;
-	gops->pmu.pmu_mutex_acquire = gk20a_pmu_mutex_acquire;
-	gops->pmu.pmu_mutex_release = gk20a_pmu_mutex_release;
-	gops->pmu.pmu_setup_elpg = NULL;
-	gops->pmu.init_wpr_region = NULL;
-	gops->pmu.load_lsfalcon_ucode = NULL;
-	gops->pmu.write_dmatrfbase = gk20a_write_dmatrfbase;
-	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
-	gops->pmu.pmu_pg_init_param = NULL;
-	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
-	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
-	gops->pmu.pmu_is_lpwr_feature_supported = NULL;
-	gops->pmu.pmu_lpwr_enable_pg = NULL;
-	gops->pmu.pmu_lpwr_disable_pg = NULL;
-	gops->pmu.pmu_pg_param_post_init = NULL;
-	gops->pmu.dump_secure_fuses = NULL;
-	gops->pmu.is_lazy_bootstrap = NULL;
-	gops->pmu.is_priv_load = NULL;
-	gops->pmu.get_wpr = NULL;
-	gops->pmu.alloc_blob_space = NULL;
-	gops->pmu.pmu_populate_loader_cfg = NULL;
-	gops->pmu.flcn_populate_bl_dmem_desc = NULL;
-	gops->pmu.reset_engine = gk20a_pmu_engine_reset;
-	gops->pmu.is_engine_in_reset = gk20a_pmu_is_engine_in_reset;
 }
 
 static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,

@@ -54,7 +54,9 @@ void gk20a_pmu_msgq_tail(struct nvgpu_pmu *pmu, u32 *tail, bool set);
 u32 gk20a_pmu_read_idle_counter(struct gk20a *g, u32 counter_id);
 void gk20a_pmu_reset_idle_counter(struct gk20a *g, u32 counter_id);
 
-void gk20a_init_pmu_ops(struct gpu_ops *gops);
+int gk20a_init_pmu_setup_hw1(struct gk20a *g);
+void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr);
+bool gk20a_is_pmu_supported(struct gk20a *g);
 
 void pmu_copy_to_dmem(struct nvgpu_pmu *pmu,
 		u32 dst, u8 *src, u32 size, u8 port);

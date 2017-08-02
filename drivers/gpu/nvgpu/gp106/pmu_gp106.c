@@ -32,7 +32,7 @@
 #include <nvgpu/hw/gp106/hw_mc_gp106.h>
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 
-static bool gp106_is_pmu_supported(struct gk20a *g)
+bool gp106_is_pmu_supported(struct gk20a *g)
 {
 	return true;
 }
@@ -69,7 +69,7 @@ int gp106_pmu_engine_reset(struct gk20a *g, bool do_reset)
 	return 0;
 }
 
-static u32 gp106_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
+u32 gp106_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
 {
 	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
 		return PMU_PG_FEATURE_GR_RPPG_ENABLED;
@@ -80,7 +80,7 @@ static u32 gp106_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
 	return 0;
 }
 
-static u32 gp106_pmu_pg_engines_list(struct gk20a *g)
+u32 gp106_pmu_pg_engines_list(struct gk20a *g)
 {
 	return BIT(PMU_PG_ELPG_ENGINE_ID_GRAPHICS) |
 			BIT(PMU_PG_ELPG_ENGINE_ID_MS);
@@ -100,7 +100,7 @@ static void pmu_handle_param_msg(struct gk20a *g, struct pmu_msg *msg,
 			msg->msg.pg.msg_type);
 }
 
-static int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
+int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
@@ -168,7 +168,7 @@ void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 	pg_stat_data->avg_exit_latency_us = stats.exit_latency_avg_us;
 }
 
-static bool gp106_pmu_is_lpwr_feature_supported(struct gk20a *g, u32 feature_id)
+bool gp106_pmu_is_lpwr_feature_supported(struct gk20a *g, u32 feature_id)
 {
 	bool is_feature_supported = false;
 
@@ -188,7 +188,7 @@ static bool gp106_pmu_is_lpwr_feature_supported(struct gk20a *g, u32 feature_id)
 	return is_feature_supported;
 }
 
-static bool gp106_is_lazy_bootstrap(u32 falcon_id)
+bool gp106_is_lazy_bootstrap(u32 falcon_id)
 {
 	bool enable_status = false;
 
@@ -206,7 +206,7 @@ static bool gp106_is_lazy_bootstrap(u32 falcon_id)
 	return enable_status;
 }
 
-static bool gp106_is_priv_load(u32 falcon_id)
+bool gp106_is_priv_load(u32 falcon_id)
 {
 	bool enable_status = false;
 
@@ -258,7 +258,7 @@ static void gp106_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 	gk20a_dbg_fn("done");
 }
 
-static int gp106_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
+int gp106_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 {
 	u32 flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
 
@@ -288,52 +288,4 @@ static int gp106_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	if (g->pmu_lsf_loaded_falcon_id != falconidmask)
 		return -ETIMEDOUT;
 	return 0;
-}
-
-void gp106_init_pmu_ops(struct gk20a *g)
-{
-	struct gpu_ops *gops = &g->ops;
-	gk20a_dbg_fn("");
-	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
-		gp106_init_secure_pmu(gops);
-		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
-		gops->pmu.load_lsfalcon_ucode = gp106_load_falcon_ucode;
-		gops->pmu.is_lazy_bootstrap = gp106_is_lazy_bootstrap;
-		gops->pmu.is_priv_load = gp106_is_priv_load;
-	} else {
-		gk20a_init_pmu_ops(gops);
-		gops->pmu.pmu_setup_hw_and_bootstrap =
-			gm20b_init_nspmu_setup_hw1;
-		gops->pmu.load_lsfalcon_ucode = NULL;
-		gops->pmu.init_wpr_region = NULL;
-	}
-	gops->pmu.pmu_setup_elpg = NULL;
-	gops->pmu.pmu_get_queue_head = pwr_pmu_queue_head_r;
-	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
-	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;
-	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
-	gops->pmu.pmu_queue_head = gk20a_pmu_queue_head;
-	gops->pmu.pmu_queue_tail = gk20a_pmu_queue_tail;
-	gops->pmu.pmu_msgq_tail = gk20a_pmu_msgq_tail;
-	gops->pmu.pmu_mutex_size = pwr_pmu_mutex__size_1_v;
-	gops->pmu.pmu_mutex_acquire = gk20a_pmu_mutex_acquire;
-	gops->pmu.pmu_mutex_release = gk20a_pmu_mutex_release;
-	g->pmu_lsf_pmu_wpr_init_done = 0;
-	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
-	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;
-	gops->pmu.pmu_elpg_statistics = gp106_pmu_elpg_statistics;
-	gops->pmu.pmu_pg_init_param = gp106_pg_param_init;
-	gops->pmu.pmu_pg_supported_engines_list = gp106_pmu_pg_engines_list;
-	gops->pmu.pmu_pg_engines_feature_list = gp106_pmu_pg_feature_list;
-	gops->pmu.pmu_is_lpwr_feature_supported =
-		gp106_pmu_is_lpwr_feature_supported;
-	gops->pmu.pmu_lpwr_enable_pg = nvgpu_lpwr_enable_pg;
-	gops->pmu.pmu_lpwr_disable_pg = nvgpu_lpwr_disable_pg;
-	gops->pmu.pmu_pg_param_post_init = nvgpu_lpwr_post_init;
-	gops->pmu.dump_secure_fuses = NULL;
-	gops->pmu.is_pmu_supported = gp106_is_pmu_supported;
-	gops->pmu.reset_engine = gp106_pmu_engine_reset;
-	gops->pmu.is_engine_in_reset = gp106_pmu_is_engine_in_reset;
-
-	gk20a_dbg_fn("done");
 }

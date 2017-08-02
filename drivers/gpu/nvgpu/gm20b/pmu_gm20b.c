@@ -102,7 +102,7 @@ static struct pg_init_sequence_list _pginitseq_gm20b[] = {
 		{ 0x0010e040, 0x00000000},
 };
 
-static int gm20b_pmu_setup_elpg(struct gk20a *g)
+int gm20b_pmu_setup_elpg(struct gk20a *g)
 {
 	int ret = 0;
 	u32 reg_writes;
@@ -226,7 +226,7 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags)
 	return;
 }
 
-static int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
+int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 {
 	u32  err = 0;
 	u32 flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
@@ -261,7 +261,7 @@ void gm20b_write_dmatrfbase(struct gk20a *g, u32 addr)
 }
 
 /*Dump Security related fuses*/
-static void pmu_dump_security_fuses_gm20b(struct gk20a *g)
+void pmu_dump_security_fuses_gm20b(struct gk20a *g)
 {
 	u32 val;
 
@@ -271,46 +271,4 @@ static void pmu_dump_security_fuses_gm20b(struct gk20a *g)
 			gk20a_readl(g, fuse_opt_priv_sec_en_r()));
 	nvgpu_tegra_fuse_read_gcplex_config_fuse(g, &val);
 	nvgpu_err(g, "FUSE_GCPLEX_CONFIG_FUSE_0: 0x%x", val);
-}
-
-void gm20b_init_pmu_ops(struct gk20a *g)
-{
-	struct gpu_ops *gops = &g->ops;
-
-	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
-		gm20b_init_secure_pmu(gops);
-		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
-		gops->pmu.load_lsfalcon_ucode = gm20b_load_falcon_ucode;
-	} else {
-		gk20a_init_pmu_ops(gops);
-		gops->pmu.pmu_setup_hw_and_bootstrap =
-			gm20b_init_nspmu_setup_hw1;
-		gops->pmu.load_lsfalcon_ucode = NULL;
-		gops->pmu.init_wpr_region = NULL;
-	}
-	gops->pmu.pmu_setup_elpg = gm20b_pmu_setup_elpg;
-	gops->pmu.pmu_get_queue_head = pwr_pmu_queue_head_r;
-	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
-	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;
-	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
-	gops->pmu.pmu_queue_head = gk20a_pmu_queue_head;
-	gops->pmu.pmu_queue_tail = gk20a_pmu_queue_tail;
-	gops->pmu.pmu_msgq_tail = gk20a_pmu_msgq_tail;
-	gops->pmu.pmu_mutex_size = pwr_pmu_mutex__size_1_v;
-	gops->pmu.pmu_mutex_acquire = gk20a_pmu_mutex_acquire;
-	gops->pmu.pmu_mutex_release = gk20a_pmu_mutex_release;
-	g->pmu_lsf_pmu_wpr_init_done = 0;
-	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
-	gops->pmu.write_dmatrfbase = gm20b_write_dmatrfbase;
-	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
-	gops->pmu.pmu_pg_init_param = NULL;
-	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
-	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
-	gops->pmu.pmu_is_lpwr_feature_supported = NULL;
-	gops->pmu.pmu_lpwr_enable_pg = NULL;
-	gops->pmu.pmu_lpwr_disable_pg = NULL;
-	gops->pmu.pmu_pg_param_post_init = NULL;
-	gops->pmu.dump_secure_fuses = pmu_dump_security_fuses_gm20b;
-	gops->pmu.reset_engine = gk20a_pmu_engine_reset;
-	gops->pmu.is_engine_in_reset = gk20a_pmu_is_engine_in_reset;
 }

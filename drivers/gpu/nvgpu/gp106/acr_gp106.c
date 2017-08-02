@@ -56,9 +56,6 @@ typedef int (*get_ucode_details)(struct gk20a *g,
 /*Externs*/
 
 /*Forwards*/
-static int gp106_bootstrap_hs_flcn(struct gk20a *g);
-
-static int gp106_prepare_ucode_blob(struct gk20a *g);
 
 /*Globals*/
 static get_ucode_details pmu_acr_supp_ucode_list[] = {
@@ -67,7 +64,7 @@ static get_ucode_details pmu_acr_supp_ucode_list[] = {
 	gpccs_ucode_details,
 };
 
-static void gp106_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
+void gp106_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
 {
 	inf->nonwpr_base = g->mm.vidmem.bootstrap_base;
 	inf->wpr_base = inf->nonwpr_base + GP106_DGPU_WPR_OFFSET;
@@ -80,7 +77,7 @@ static void flcn64_set_dma(struct falc_u64 *dma_addr, u64 value)
 	dma_addr->hi |= u64_hi32(value);
 }
 
-static int gp106_alloc_blob_space(struct gk20a *g,
+int gp106_alloc_blob_space(struct gk20a *g,
 		size_t size, struct nvgpu_mem *mem)
 {
 	struct wpr_carveout_info wpr_inf;
@@ -104,20 +101,6 @@ static int gp106_alloc_blob_space(struct gk20a *g,
 	return nvgpu_dma_alloc_flags_vid_at(g,
 			NVGPU_DMA_NO_KERNEL_MAPPING, wpr_inf.size, mem,
 			wpr_inf.nonwpr_base);
-}
-
-void gp106_init_secure_pmu(struct gpu_ops *gops)
-{
-	gops->pmu.prepare_ucode = gp106_prepare_ucode_blob;
-	gops->pmu.pmu_setup_hw_and_bootstrap = gp106_bootstrap_hs_flcn;
-	gops->pmu.get_wpr = gp106_wpr_info;
-	gops->pmu.alloc_blob_space = gp106_alloc_blob_space;
-	gops->pmu.pmu_populate_loader_cfg = gp106_pmu_populate_loader_cfg;
-	gops->pmu.flcn_populate_bl_dmem_desc = gp106_flcn_populate_bl_dmem_desc;
-	gops->pmu.falcon_wait_for_halt = sec2_wait_for_halt;
-	gops->pmu.falcon_clear_halt_interrupt_status =
-			sec2_clear_halt_interrupt_status;
-	gops->pmu.init_falcon_setup_hw = init_sec2_setup_hw1;
 }
 /* TODO - check if any free blob res needed*/
 
@@ -373,7 +356,7 @@ rel_sig:
 	return err;
 }
 
-static int gp106_prepare_ucode_blob(struct gk20a *g)
+int gp106_prepare_ucode_blob(struct gk20a *g)
 {
 
 	int err;
@@ -1040,7 +1023,7 @@ int lsf_gen_wpr_requirements(struct gk20a *g,
 
 /*Loads ACR bin to FB mem and bootstraps PMU with bootloader code
  * start and end are addresses of ucode blob in non-WPR region*/
-static int gp106_bootstrap_hs_flcn(struct gk20a *g)
+int gp106_bootstrap_hs_flcn(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = mm->pmu.vm;

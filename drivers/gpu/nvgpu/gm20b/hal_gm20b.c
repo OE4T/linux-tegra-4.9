@@ -26,6 +26,7 @@
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/priv_ring_gk20a.h"
 #include "gk20a/regops_gk20a.h"
+#include "gk20a/pmu_gk20a.h"
 
 #include "ltc_gm20b.h"
 #include "gr_gm20b.h"
@@ -42,6 +43,7 @@
 #include "therm_gm20b.h"
 #include "bus_gm20b.h"
 #include "hal_gm20b.h"
+#include "acr_gm20b.h"
 
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
@@ -53,6 +55,8 @@
 #include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_top_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_pwr_gm20b.h>
 
 #define PRIV_SECURITY_DISABLE 0x01
 
@@ -313,6 +317,31 @@ static const struct gpu_ops gm20b_ops = {
 		.init_therm_setup_hw = gm20b_init_therm_setup_hw,
 		.elcg_init_idle_filters = gk20a_elcg_init_idle_filters,
 	},
+	.pmu = {
+		.pmu_setup_elpg = gm20b_pmu_setup_elpg,
+		.pmu_get_queue_head = pwr_pmu_queue_head_r,
+		.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v,
+		.pmu_get_queue_tail = pwr_pmu_queue_tail_r,
+		.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v,
+		.pmu_queue_head = gk20a_pmu_queue_head,
+		.pmu_queue_tail = gk20a_pmu_queue_tail,
+		.pmu_msgq_tail = gk20a_pmu_msgq_tail,
+		.pmu_mutex_size = pwr_pmu_mutex__size_1_v,
+		.pmu_mutex_acquire = gk20a_pmu_mutex_acquire,
+		.pmu_mutex_release = gk20a_pmu_mutex_release,
+		.write_dmatrfbase = gm20b_write_dmatrfbase,
+		.pmu_elpg_statistics = gk20a_pmu_elpg_statistics,
+		.pmu_pg_init_param = NULL,
+		.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list,
+		.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list,
+		.pmu_is_lpwr_feature_supported = NULL,
+		.pmu_lpwr_enable_pg = NULL,
+		.pmu_lpwr_disable_pg = NULL,
+		.pmu_pg_param_post_init = NULL,
+		.dump_secure_fuses = pmu_dump_security_fuses_gm20b,
+		.reset_engine = gk20a_pmu_engine_reset,
+		.is_engine_in_reset = gk20a_pmu_is_engine_in_reset,
+	},
 	.clk = {
 		.init_clk_support = gm20b_init_clk_support,
 		.suspend_clk_support = gm20b_suspend_clk_support,
@@ -422,6 +451,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->gr_ctx = gm20b_ops.gr_ctx;
 	gops->mm = gm20b_ops.mm;
 	gops->therm = gm20b_ops.therm;
+	gops->pmu = gm20b_ops.pmu;
 	/*
 	 * clk must be assigned member by member
 	 * since some clk ops are assigned during probe prior to HAL init
@@ -483,9 +513,44 @@ int gm20b_init_hal(struct gk20a *g)
 		}
 	}
 #endif
+
+	/* priv security dependent ops */
+	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
+		/* Add in ops from gm20b acr */
+		gops->pmu.is_pmu_supported = gm20b_is_pmu_supported;
+		gops->pmu.prepare_ucode = prepare_ucode_blob;
+		gops->pmu.pmu_setup_hw_and_bootstrap = gm20b_bootstrap_hs_flcn;
+		gops->pmu.is_lazy_bootstrap = gm20b_is_lazy_bootstrap;
+		gops->pmu.is_priv_load = gm20b_is_priv_load;
+		gops->pmu.get_wpr = gm20b_wpr_info;
+		gops->pmu.alloc_blob_space = gm20b_alloc_blob_space;
+		gops->pmu.pmu_populate_loader_cfg =
+			gm20b_pmu_populate_loader_cfg;
+		gops->pmu.flcn_populate_bl_dmem_desc =
+			gm20b_flcn_populate_bl_dmem_desc;
+		gops->pmu.falcon_wait_for_halt = pmu_wait_for_halt;
+		gops->pmu.falcon_clear_halt_interrupt_status =
+			clear_halt_interrupt_status;
+		gops->pmu.init_falcon_setup_hw = gm20b_init_pmu_setup_hw1;
+
+		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
+		gops->pmu.load_lsfalcon_ucode = gm20b_load_falcon_ucode;
+	} else {
+		/* Inherit from gk20a */
+		gops->pmu.is_pmu_supported = gk20a_is_pmu_supported;
+		gops->pmu.prepare_ucode = nvgpu_pmu_prepare_ns_ucode_blob;
+		gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
+		gops->pmu.pmu_nsbootstrap = pmu_bootstrap;
+
+		gops->pmu.load_lsfalcon_ucode = NULL;
+		gops->pmu.init_wpr_region = NULL;
+	}
+
+	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
+	g->pmu_lsf_pmu_wpr_init_done = 0;
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
+
 	gm20b_init_gr(g);
-	gm20b_init_pmu_ops(g);
 
 	gm20b_init_uncompressed_kind_map();
 	gm20b_init_kind_attr();

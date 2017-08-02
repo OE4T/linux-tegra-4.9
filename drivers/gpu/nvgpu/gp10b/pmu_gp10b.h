@@ -18,7 +18,15 @@
 
 struct gk20a;
 
-void gp10b_init_pmu_ops(struct gk20a *g);
+
+bool gp10b_is_lazy_bootstrap(u32 falcon_id);
+bool gp10b_is_priv_load(u32 falcon_id);
+bool gp10b_is_pmu_supported(struct gk20a *g);
+int gp10b_init_pmu_setup_hw1(struct gk20a *g);
+void gp10b_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
+		struct pmu_pg_stats_data *pg_stat_data);
+int gp10b_pmu_setup_elpg(struct gk20a *g);
+void pmu_dump_security_fuses_gp10b(struct gk20a *g);
 int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask);
 int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id);
 void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr);

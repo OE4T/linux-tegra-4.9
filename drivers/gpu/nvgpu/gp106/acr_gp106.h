@@ -19,7 +19,14 @@
 #define GP104_FECS_UCODE_SIG "gp104/fecs_sig.bin"
 #define GP104_GPCCS_UCODE_SIG "gp104/gpccs_sig.bin"
 
-void gp106_init_secure_pmu(struct gpu_ops *gops);
+
+int gp106_bootstrap_hs_flcn(struct gk20a *g);
+int gp106_prepare_ucode_blob(struct gk20a *g);
+int gp106_alloc_blob_space(struct gk20a *g,
+		size_t size, struct nvgpu_mem *mem);
+
+void gp106_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf);
+
 void lsfm_free_ucode_img_res(struct gk20a *g,
 				    struct flcn_ucode_img_v1 *p_img);
 void lsfm_free_nonpmu_ucode_img_res(struct gk20a *g,

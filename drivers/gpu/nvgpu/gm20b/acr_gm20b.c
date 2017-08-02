@@ -51,11 +51,6 @@ typedef int (*get_ucode_details)(struct gk20a *g, struct flcn_ucode_img *udata);
 static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img);
 static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img);
 static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img);
-static int gm20b_bootstrap_hs_flcn(struct gk20a *g);
-static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout);
-static int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout);
-static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
-		void *desc, u32 bl_sz);
 static int lsfm_discover_ucode_images(struct gk20a *g,
 	struct ls_flcn_mgr *plsfm);
 static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr *plsfm,
@@ -68,15 +63,6 @@ static int lsf_gen_wpr_requirements(struct gk20a *g, struct ls_flcn_mgr *plsfm);
 static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 	struct nvgpu_mem *nonwpr);
 static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr *plsfm);
-static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
-	void *lsfm, u32 *p_bl_gen_desc_size);
-static int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
-	void *lsfm, u32 *p_bl_gen_desc_size, u32 falconid);
-static int gm20b_alloc_blob_space(struct gk20a *g,
-		size_t size, struct nvgpu_mem *mem);
-static bool gm20b_is_priv_load(u32 falcon_id);
-static bool gm20b_is_lazy_bootstrap(u32 falcon_id);
-static void gm20b_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf);
 
 /*Globals*/
 static get_ucode_details pmu_acr_supp_ucode_list[] = {
@@ -97,7 +83,7 @@ static void start_gm20b_pmu(struct gk20a *g)
 		pwr_falcon_cpuctl_startcpu_f(1));
 }
 
-static void gm20b_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
+void gm20b_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
 {
 	struct mc_carveout_info mem_inf;
 
@@ -108,28 +94,10 @@ static void gm20b_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
 	inf->size = mem_inf.size;
 }
 
-static bool gm20b_is_pmu_supported(struct gk20a *g)
+bool gm20b_is_pmu_supported(struct gk20a *g)
 {
 	return true;
 }
-
-void gm20b_init_secure_pmu(struct gpu_ops *gops)
-{
-	gops->pmu.is_pmu_supported = gm20b_is_pmu_supported;
-	gops->pmu.prepare_ucode = prepare_ucode_blob;
-	gops->pmu.pmu_setup_hw_and_bootstrap = gm20b_bootstrap_hs_flcn;
-	gops->pmu.is_lazy_bootstrap = gm20b_is_lazy_bootstrap;
-	gops->pmu.is_priv_load = gm20b_is_priv_load;
-	gops->pmu.get_wpr = gm20b_wpr_info;
-	gops->pmu.alloc_blob_space = gm20b_alloc_blob_space;
-	gops->pmu.pmu_populate_loader_cfg = gm20b_pmu_populate_loader_cfg;
-	gops->pmu.flcn_populate_bl_dmem_desc = gm20b_flcn_populate_bl_dmem_desc;
-	gops->pmu.falcon_wait_for_halt = pmu_wait_for_halt;
-	gops->pmu.falcon_clear_halt_interrupt_status =
-			clear_halt_interrupt_status;
-	gops->pmu.init_falcon_setup_hw = gm20b_init_pmu_setup_hw1;
-}
-/* TODO - check if any free blob res needed*/
 
 static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
@@ -334,7 +302,7 @@ rel_sig:
 	return err;
 }
 
-static bool gm20b_is_lazy_bootstrap(u32 falcon_id)
+bool gm20b_is_lazy_bootstrap(u32 falcon_id)
 {
 	bool enable_status = false;
 
@@ -352,7 +320,7 @@ static bool gm20b_is_lazy_bootstrap(u32 falcon_id)
 	return enable_status;
 }
 
-static bool gm20b_is_priv_load(u32 falcon_id)
+bool gm20b_is_priv_load(u32 falcon_id)
 {
 	bool enable_status = false;
 
@@ -370,7 +338,7 @@ static bool gm20b_is_priv_load(u32 falcon_id)
 	return enable_status;
 }
 
-static int gm20b_alloc_blob_space(struct gk20a *g,
+int gm20b_alloc_blob_space(struct gk20a *g,
 		size_t size, struct nvgpu_mem *mem)
 {
 	int err;
@@ -554,7 +522,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 }
 
 
-static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
+int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size)
 {
 	struct wpr_carveout_info wpr_inf;
@@ -626,7 +594,7 @@ static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	return 0;
 }
 
-static int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
+int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size, u32 falconid)
 {
 	struct wpr_carveout_info wpr_inf;
@@ -1066,7 +1034,7 @@ static int lsf_gen_wpr_requirements(struct gk20a *g, struct ls_flcn_mgr *plsfm)
 
 /*Loads ACR bin to FB mem and bootstraps PMU with bootloader code
  * start and end are addresses of ucode blob in non-WPR region*/
-static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
+int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = mm->pmu.vm;
@@ -1291,7 +1259,7 @@ int gm20b_init_nspmu_setup_hw1(struct gk20a *g)
 	return err;
 }
 
-static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
+int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 		void *desc, u32 bl_sz)
 {
 
@@ -1461,7 +1429,7 @@ err_done:
 *	@param[in]	timeout_ms	Timeout in msec for PMU to halt
 *	@return '0' if PMU halts
 */
-static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
+int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 data = 0;
@@ -1490,7 +1458,7 @@ static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 *	@param[in]	timeout_ms	Timeout in msec for halt to clear
 *	@return '0' if PMU halt irq status is clear
 */
-static int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout_ms)
+int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout_ms)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int status = 0;

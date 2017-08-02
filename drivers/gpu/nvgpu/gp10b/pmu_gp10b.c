@@ -252,7 +252,7 @@ int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 	return 0;
 }
 
-static void gp10b_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
+void gp10b_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
@@ -269,7 +269,7 @@ static void gp10b_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 	pg_stat_data->avg_exit_latency_us = stats.exitlatency_avgus;
 }
 
-static int gp10b_pmu_setup_elpg(struct gk20a *g)
+int gp10b_pmu_setup_elpg(struct gk20a *g)
 {
 	int ret = 0;
 	u32 reg_writes;
@@ -299,7 +299,7 @@ void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr)
 				0x0);
 }
 
-static int gp10b_init_pmu_setup_hw1(struct gk20a *g)
+int gp10b_init_pmu_setup_hw1(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int err;
@@ -337,7 +337,7 @@ static int gp10b_init_pmu_setup_hw1(struct gk20a *g)
 
 }
 
-static bool gp10b_is_lazy_bootstrap(u32 falcon_id)
+bool gp10b_is_lazy_bootstrap(u32 falcon_id)
 {
 	bool enable_status = false;
 
@@ -355,7 +355,7 @@ static bool gp10b_is_lazy_bootstrap(u32 falcon_id)
 	return enable_status;
 }
 
-static bool gp10b_is_priv_load(u32 falcon_id)
+bool gp10b_is_priv_load(u32 falcon_id)
 {
 	bool enable_status = false;
 
@@ -374,7 +374,7 @@ static bool gp10b_is_priv_load(u32 falcon_id)
 }
 
 /*Dump Security related fuses*/
-static void pmu_dump_security_fuses_gp10b(struct gk20a *g)
+void pmu_dump_security_fuses_gp10b(struct gk20a *g)
 {
 	u32 val;
 
@@ -386,50 +386,7 @@ static void pmu_dump_security_fuses_gp10b(struct gk20a *g)
 	nvgpu_err(g, "FUSE_GCPLEX_CONFIG_FUSE_0: 0x%x", val);
 }
 
-static bool gp10b_is_pmu_supported(struct gk20a *g)
+bool gp10b_is_pmu_supported(struct gk20a *g)
 {
 	return true;
-}
-
-void gp10b_init_pmu_ops(struct gk20a *g)
-{
-	struct gpu_ops *gops = &g->ops;
-	gops->pmu.is_pmu_supported = gp10b_is_pmu_supported;
-	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
-		gm20b_init_secure_pmu(gops);
-		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
-		gops->pmu.load_lsfalcon_ucode = gp10b_load_falcon_ucode;
-		gops->pmu.is_lazy_bootstrap = gp10b_is_lazy_bootstrap;
-		gops->pmu.is_priv_load = gp10b_is_priv_load;
-	} else {
-		gk20a_init_pmu_ops(gops);
-		gops->pmu.load_lsfalcon_ucode = NULL;
-		gops->pmu.init_wpr_region = NULL;
-		gops->pmu.pmu_setup_hw_and_bootstrap = gp10b_init_pmu_setup_hw1;
-	}
-	gops->pmu.pmu_setup_elpg = gp10b_pmu_setup_elpg;
-	gops->pmu.pmu_get_queue_head = pwr_pmu_queue_head_r;
-	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
-	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;
-	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
-	gops->pmu.pmu_queue_head = gk20a_pmu_queue_head;
-	gops->pmu.pmu_queue_tail = gk20a_pmu_queue_tail;
-	gops->pmu.pmu_msgq_tail = gk20a_pmu_msgq_tail;
-	gops->pmu.pmu_mutex_size = pwr_pmu_mutex__size_1_v;
-	gops->pmu.pmu_mutex_acquire = gk20a_pmu_mutex_acquire;
-	gops->pmu.pmu_mutex_release = gk20a_pmu_mutex_release;
-	g->pmu_lsf_pmu_wpr_init_done = false;
-	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
-	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;
-	gops->pmu.pmu_elpg_statistics = gp10b_pmu_elpg_statistics;
-	gops->pmu.pmu_pg_init_param = gp10b_pg_gr_init;
-	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
-	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
-	gops->pmu.pmu_is_lpwr_feature_supported = NULL;
-	gops->pmu.pmu_lpwr_enable_pg = NULL;
-	gops->pmu.pmu_lpwr_disable_pg = NULL;
-	gops->pmu.pmu_pg_param_post_init = NULL;
-	gops->pmu.dump_secure_fuses = pmu_dump_security_fuses_gp10b;
-	gops->pmu.reset_engine = gk20a_pmu_engine_reset;
-	gops->pmu.is_engine_in_reset = gk20a_pmu_is_engine_in_reset;
 }

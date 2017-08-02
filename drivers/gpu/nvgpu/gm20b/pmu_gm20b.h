@@ -18,7 +18,9 @@
 
 struct gk20a;
 
-void gm20b_init_pmu_ops(struct gk20a *g);
+int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask);
+int gm20b_pmu_setup_elpg(struct gk20a *g);
+void pmu_dump_security_fuses_gm20b(struct gk20a *g);
 void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags);
 int gm20b_pmu_init_acr(struct gk20a *g);
 void gm20b_write_dmatrfbase(struct gk20a *g, u32 addr);

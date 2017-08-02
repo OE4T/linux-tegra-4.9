@@ -435,6 +435,7 @@ struct tegra_xusb {
 	bool cdp_internal;
 };
 
+static int tegra_xhci_hcd_reinit(struct usb_hcd *hcd);
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
 
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
@@ -1913,6 +1914,32 @@ static int tegra_xhci_id_notifier(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+static ssize_t store_reload_hcd(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+	struct usb_hcd	*hcd = tegra->hcd;
+	struct xhci_hcd	*xhci = hcd_to_xhci(hcd);
+	unsigned long flags;
+	int ret, reload;
+
+	ret = kstrtoint(buf, 0, &reload);
+	if (ret != 0 || reload < 0 || reload > 1)
+		return -EINVAL;
+
+	spin_lock_irqsave(&xhci->lock, flags);
+	if (reload && (xhci->recovery_in_progress == false)) {
+		xhci->recovery_in_progress = true;
+		tegra_xhci_hcd_reinit(hcd);
+	}
+	spin_unlock_irqrestore(&xhci->lock, flags);
+
+	return count;
+}
+static DEVICE_ATTR(reload_hcd, 0200, NULL, store_reload_hcd);
+
 static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 {
 	struct tegra_xusb *tegra = context;
@@ -2050,6 +2077,16 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 	pm_runtime_mark_last_busy(tegra->dev);
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
+
+	xhci->recovery_in_progress = false;
+	xhci->pdev = to_platform_device(dev);
+
+	ret = device_create_file(dev, &dev_attr_reload_hcd);
+	if (ret) {
+		dev_err(dev,
+			"Can't register reload_hcd attribute\n");
+		goto remove_usb3;
+	}
 
 	return;
 
@@ -2503,16 +2540,21 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	if (!tegra->soc->is_xhci_vf)
 		cancel_delayed_work_sync(&tegra->firmware_retry_work);
 
+	device_remove_file(&pdev->dev, &dev_attr_reload_hcd);
+
 	if (tegra->fw_loaded || tegra->soc->is_xhci_vf) {
 		struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
 
 		usb_remove_hcd(xhci->shared_hcd);
 		usb_put_hcd(xhci->shared_hcd);
 		usb_remove_hcd(tegra->hcd);
+		devm_iounmap(&pdev->dev, tegra->hcd->regs);
+		devm_release_mem_region(&pdev->dev, tegra->hcd->rsrc_start,
+			tegra->hcd->rsrc_len);
 		usb_put_hcd(tegra->hcd);
 	}
 
-	if (!tegra->soc->is_xhci_vf)
+	if (!tegra->soc->is_xhci_vf) {
 		dma_free_coherent(&pdev->dev, tegra->fw.size, tegra->fw.virt,
 				  tegra->fw.phys);
 
@@ -3507,12 +3549,42 @@ static int tegra_xhci_enable_usb3_lpm_timeout(struct usb_hcd *hcd,
 	return xhci_enable_usb3_lpm_timeout(hcd, udev, state);
 }
 
+static void xhci_reinit_work(struct work_struct *work)
+{
+	unsigned long flags;
+	struct xhci_hcd *xhci = container_of(work,
+				struct xhci_hcd, tegra_xhci_reinit_work);
+	struct platform_device *pdev = xhci->pdev;
+
+	pr_info("xhci_reinit_work: Starting Recovery\n");
+
+	spin_lock_irqsave(&xhci->lock, flags);
+	xhci->xhc_state |= XHCI_STATE_RECOVERY | XHCI_STATE_DYING;
+	spin_unlock_irqrestore(&xhci->lock, flags);
+
+	tegra_xusb_remove(pdev);
+	usleep_range(10, 20);
+	tegra_xusb_probe(pdev);
+
+	/* probe will set recovery_in_progress to false */
+}
+
+static int tegra_xhci_hcd_reinit(struct usb_hcd *hcd)
+{
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+
+	INIT_WORK(&xhci->tegra_xhci_reinit_work, xhci_reinit_work);
+	schedule_work(&xhci->tegra_xhci_reinit_work);
+	return 0;
+}
+
 static int __init tegra_xusb_init(void)
 {
 	xhci_init_driver(&tegra_xhci_hc_driver, &tegra_xhci_overrides);
 	tegra_xhci_hc_driver.update_device = tegra_xhci_update_device;
 	tegra_xhci_hc_driver.alloc_dev = tegra_xhci_alloc_dev;
 	tegra_xhci_hc_driver.free_dev = tegra_xhci_free_dev;
+	tegra_xhci_hc_driver.hcd_reinit = tegra_xhci_hcd_reinit;
 	tegra_xhci_hc_driver.hub_control = tegra_xhci_hub_control;
 	tegra_xhci_hc_driver.hub_status_data = tegra_xhci_hub_status_data;
 	tegra_xhci_hc_driver.enable_usb3_lpm_timeout =

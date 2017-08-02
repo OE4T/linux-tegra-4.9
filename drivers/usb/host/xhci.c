@@ -2,6 +2,7 @@
  * xHCI host controller driver
  *
  * Copyright (C) 2008 Intel Corp.
+ * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sarah Sharp
  * Some code borrowed from the Linux EHCI driver.
@@ -683,7 +684,8 @@ void xhci_stop(struct usb_hcd *hcd)
 
 	mutex_lock(&xhci->mutex);
 
-	if (!(xhci->xhc_state & XHCI_STATE_HALTED)) {
+	if (!(xhci->xhc_state & XHCI_STATE_HALTED) &&
+		!(xhci->xhc_state & XHCI_STATE_RECOVERY)) {
 		spin_lock_irq(&xhci->lock);
 
 		xhci->xhc_state |= XHCI_STATE_HALTED;

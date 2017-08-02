@@ -16,6 +16,7 @@
 #include "linux/nvhost_ioctl.h"
 #include "vi5_formats.h"
 #include "vi5_fops.h"
+#include <soc/tegra/chip-id.h>
 
 static void vi5_init_video_formats(struct tegra_channel *chan)
 {
@@ -105,6 +106,32 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 
 	return 0;
 }
+static int t19x_sim_gpio(struct device *dev, char on)
+{
+#define VI_THI_SIZE	0x10000UL
+#define VI_THI_BASE	0x15f00000
+#define VI_CFG_VGP1_0	0x5068
+#define VGP1_OUTPUT_DATA	1
+#define VGP1_OUTPUT_ENABLE	(1 << 16)
+
+	void *vi_thi_base = NULL;
+	unsigned int val;
+
+	vi_thi_base = ioremap_nocache(VI_THI_BASE, VI_THI_SIZE);
+	if (!vi_thi_base) {
+		dev_err(dev, "Can't map vi-thi base");
+		return -EBUSY;
+	}
+	val = readl(vi_thi_base + VI_CFG_VGP1_0);
+	if (on)
+		writel(val | VGP1_OUTPUT_DATA | VGP1_OUTPUT_ENABLE,
+			vi_thi_base + VI_CFG_VGP1_0);
+	else
+		writel(val & (~VGP1_OUTPUT_DATA) & (~VGP1_OUTPUT_ENABLE),
+			vi_thi_base + VI_CFG_VGP1_0);
+	iounmap(vi_thi_base);
+	return 0;
+}
 
 static int vi5_power_on(struct tegra_channel *chan)
 {
@@ -122,6 +149,8 @@ static int vi5_power_on(struct tegra_channel *chan)
 		return ret;
 
 	if (atomic_add_return(1, &chan->power_on_refcnt) == 1) {
+		if (!tegra_platform_is_silicon())
+			t19x_sim_gpio(vi->dev, 1);
 		ret = tegra_channel_set_power(chan, 1);
 		if (ret < 0) {
 			dev_err(&chan->video.dev, "Failed to power on subdevices\n");
@@ -153,6 +182,8 @@ static void vi5_power_off(struct tegra_channel *chan)
 		ret = tegra_channel_set_power(chan, 0);
 		if (ret < 0)
 			dev_err(&chan->video.dev, "Failed to power off subdevices\n");
+		if (!tegra_platform_is_silicon())
+			t19x_sim_gpio(vi->dev, 0);
 	}
 
 	nvhost_module_idle(vi->ndev);

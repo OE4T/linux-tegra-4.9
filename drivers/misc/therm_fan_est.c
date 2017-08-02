@@ -188,6 +188,16 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 					int trip, int *temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
+	int ret = 0;
+
+	if (trip == 0) {
+		*temp = est->active_trip_temps_hyst[0];
+		goto out;
+	} else if (trip < 0) {
+		*temp = est->active_trip_temps_hyst[0];
+		ret = -EINVAL;
+		goto out;
+	}
 
 	if (est->current_trip_index == 0)
 		*temp = 0;
@@ -196,8 +206,8 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 		*temp = est->active_trip_temps_hyst[trip * 2 - 1];
 	else /* not tripped, then upper */
 		*temp = est->active_trip_temps_hyst[trip * 2];
-
-	return 0;
+out:
+	return ret;
 }
 
 static int therm_fan_est_set_trip_temp(struct thermal_zone_device *thz,

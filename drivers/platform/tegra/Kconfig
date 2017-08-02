@@ -168,6 +168,13 @@ config TEGRA_CBB_NOC
 config POWERGATE_TEGRA_BPMP
         def_bool NV_TEGRA_BPMP
 
+config TEGRA_HV_XHCI_DEBUG
+	bool "Enable Tegra Hypervisor XHCI Server Debug"
+	depends on TEGRA_HV_MANAGER
+	default n
+	help
+	  Enable Tegra XHCI Server debugging when runs in virtualization.
+
 config TEGRA_HSP
 	bool "Enable Tegra Hardware Synchronization Primitives driver"
 	default y

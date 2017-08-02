@@ -328,6 +328,12 @@ M:	Vinayak Pane <vpane@nvidia.com>
 S:	upported
 F:	drivers/misc/tegra_cpc.c
 
+USB
+M:	Ashu Jha <ajha@nvidia.com>
+L:	usb3-sweng@exchange.nvidia.com
+S:	Supported
+F:	drivers/platform/tegra/tegra-hv-xhci-debug.c
+
 TOUCHSCREEN
 M:	David Pu <dpu@nvidia.com>
 L:	sw-mobile-touch@exchange.nvidia.com

@@ -213,4 +213,11 @@ config TEGRA_HSP
 config POWERGATE_TEGRA_BPMP
 	def_bool TEGRA_BPMP
 
+config TEGRA_HV_XHCI_DEBUG
+	bool "Enable Tegra Hypervisor XHCI Server Debug"
+	depends on TEGRA_HV_MANAGER
+	default n
+	help
+	  Enable Tegra XHCI Server debugging when runs in virtualization.
+
 trysource "../nvidia/drivers/platform/tegra/Kconfig.nvidia"

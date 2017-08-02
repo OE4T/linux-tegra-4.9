@@ -514,6 +514,7 @@ L:	usb3-sweng@exchange.nvidia.com
 S:	Supported
 F:	drivers/mailbox/tegra-xusb-mailbox.c
 F:	drivers/misc/tegra-baseband/tegra_usb_modem_power.c
+F:	drivers/platform/tegra/tegra-hv-xhci-debug.c
 F:	drivers/usb/gadget/function/*
 F:	drivers/usb/serial/*
 F:	drivers/usb/gadget/tegra_udc.c

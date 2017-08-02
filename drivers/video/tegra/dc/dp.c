@@ -3418,7 +3418,7 @@ static u32 tegra_dc_dp_sor_crc_check(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
-	return tegra_dc_sor_get_crc(dp->sor, NULL);
+	return tegra_dc_sor_debugfs_get_crc(dp->sor, NULL);
 }
 
 static void tegra_dc_dp_sor_crc_toggle(struct tegra_dc *dc,
@@ -3427,6 +3427,39 @@ static void tegra_dc_dp_sor_crc_toggle(struct tegra_dc *dc,
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
 	tegra_dc_sor_toggle_crc(dp->sor, val);
+}
+
+static int tegra_dc_dp_sor_crc_en_dis(struct tegra_dc *dc,
+				      struct tegra_dc_ext_crc_or_params *params,
+				      bool en)
+{
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+
+	if (params->out_type != TEGRA_DC_EXT_DP)
+		return -EINVAL;
+
+	tegra_dc_sor_crc_en_dis(dp->sor, params->sor_params, en);
+
+	return 0;
+}
+
+static int tegra_dc_dp_sor_crc_en(struct tegra_dc *dc,
+				  struct tegra_dc_ext_crc_or_params *params)
+{
+	return tegra_dc_dp_sor_crc_en_dis(dc, params, true);
+}
+
+static int tegra_dc_dp_sor_crc_dis(struct tegra_dc *dc,
+				   struct tegra_dc_ext_crc_or_params *params)
+{
+	return tegra_dc_dp_sor_crc_en_dis(dc, params, false);
+}
+
+static int tegra_dc_dp_sor_crc_get(struct tegra_dc *dc, u32 *crc)
+{
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+
+	return tegra_dc_sor_crc_get(dp->sor, crc);
 }
 
 static struct tegra_hpd_ops hpd_ops = {
@@ -3462,4 +3495,7 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.get_crc = tegra_dc_dp_sor_crc_check,
 	.toggle_crc = tegra_dc_dp_sor_crc_toggle,
 	.get_connector_instance = tegra_dc_dp_get_sor_ctrl_num,
+	.crc_en = tegra_dc_dp_sor_crc_en,
+	.crc_dis = tegra_dc_dp_sor_crc_dis,
+	.crc_get = tegra_dc_dp_sor_crc_get,
 };

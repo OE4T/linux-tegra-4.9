@@ -189,7 +189,9 @@ void tegra_dc_crc_deinit(struct tegra_dc *dc)
 	dc->crc_buf.tail = 0;
 
 	atomic_set(&dc->crc_ref_cnt.global, 0);
-	atomic_set(&dc->crc_ref_cnt.rg_comp_sor, 0);
+	atomic_set(&dc->crc_ref_cnt.rg, 0);
+	atomic_set(&dc->crc_ref_cnt.comp, 0);
+	atomic_set(&dc->crc_ref_cnt.out, 0);
 	atomic_set(&dc->crc_ref_cnt.regional, 0);
 	dc->crc_ref_cnt.legacy = false;
 
@@ -242,12 +244,12 @@ static int tegra_dc_crc_t21x_rg_en_dis(struct tegra_dc *dc,
 		if (conf->input_data == TEGRA_DC_EXT_CRC_INPUT_DATA_ACTIVE_DATA)
 			reg |= CRC_INPUT_DATA_ACTIVE_DATA;
 
-		atomic_inc(&dc->crc_ref_cnt.rg_comp_sor);
+		atomic_inc(&dc->crc_ref_cnt.rg);
 
 		tegra_dc_writel(dc, reg, DC_COM_CRC_CONTROL);
 		tegra_dc_activate_general_channel(dc);
 	} else {
-		if (atomic_dec_return(&dc->crc_ref_cnt.rg_comp_sor) == 0) {
+		if (atomic_dec_return(&dc->crc_ref_cnt.rg) == 0) {
 			tegra_dc_writel(dc, 0x00, DC_COM_CRC_CONTROL);
 			tegra_dc_activate_general_channel(dc);
 		}
@@ -259,17 +261,85 @@ static int tegra_dc_crc_t21x_rg_en_dis(struct tegra_dc *dc,
 	if (enable) {
 		if (atomic_inc_return(&dc->crc_ref_cnt.global) == 1) {
 			ret = tegra_dc_config_frame_end_intr(dc, true);
-			if (ret)
-				atomic_dec(&dc->crc_ref_cnt.rg_comp_sor);
+			if (ret) {
+				atomic_dec(&dc->crc_ref_cnt.rg);
+				atomic_dec(&dc->crc_ref_cnt.global);
+			}
 		}
 	} else {
 		if (atomic_dec_return(&dc->crc_ref_cnt.global) == 0) {
 			ret = tegra_dc_config_frame_end_intr(dc, false);
-			if (ret)
-				atomic_inc(&dc->crc_ref_cnt.rg_comp_sor);
+			if (ret) {
+				atomic_inc(&dc->crc_ref_cnt.rg);
+				atomic_inc(&dc->crc_ref_cnt.global);
+			}
 		}
 	}
 
+	return ret;
+}
+
+static int tegra_dc_crc_t21x_out_en_dis(struct tegra_dc *dc,
+					struct tegra_dc_ext_crc_conf *conf,
+					bool enable)
+{
+	int ret = 0;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+
+	if (enable) {
+		if (!dc->out_ops->crc_en) {
+			ret = -ENOTSUPP;
+			goto fail;
+		}
+
+		ret = dc->out_ops->crc_en(dc, &conf->or_params);
+		if (ret)
+			goto fail;
+
+		atomic_inc(&dc->crc_ref_cnt.out);
+	} else {
+		if (!dc->out_ops->crc_dis) {
+			ret = -ENOTSUPP;
+			goto fail;
+		}
+
+		if (atomic_dec_return(&dc->crc_ref_cnt.out) == 0) {
+			ret = dc->out_ops->crc_dis(dc, &conf->or_params);
+			if (ret) {
+				atomic_inc(&dc->crc_ref_cnt.out);
+				goto fail;
+			}
+		}
+	}
+
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+
+	if (enable) {
+		if (atomic_inc_return(&dc->crc_ref_cnt.global) == 1) {
+			ret = tegra_dc_config_frame_end_intr(dc, true);
+			if (ret) {
+				atomic_dec(&dc->crc_ref_cnt.out);
+				atomic_dec(&dc->crc_ref_cnt.global);
+			}
+		}
+	} else {
+		if (atomic_dec_return(&dc->crc_ref_cnt.global) == 0) {
+			ret = tegra_dc_config_frame_end_intr(dc, false);
+			if (ret) {
+				atomic_inc(&dc->crc_ref_cnt.out);
+				atomic_inc(&dc->crc_ref_cnt.global);
+			}
+		}
+	}
+
+	return ret;
+
+fail:
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
 	return ret;
 }
 
@@ -289,7 +359,10 @@ static int tegra_dc_crc_t21x_en_dis(struct tegra_dc *dc,
 				return ret;
 			break;
 		case TEGRA_DC_EXT_CRC_TYPE_OR:
-			return -ENOTSUPP; /*TODO: Implement this */
+			ret = tegra_dc_crc_t21x_out_en_dis(dc, &conf[iter], en);
+			if (ret)
+				return ret;
+			break;
 		default:
 			return -ENOTSUPP;
 		}
@@ -543,13 +616,28 @@ done:
 static int tegra_dc_crc_t21x_collect(struct tegra_dc *dc,
 				     struct tegra_dc_crc_buf_ele *ele)
 {
+	int ret = 0;
 	bool valids = false; /* Logical OR of valid fields of individual CRCs */
 
-	if (!atomic_read(&dc->crc_ref_cnt.rg_comp_sor))
-		return 0;
+	if (atomic_read(&dc->crc_ref_cnt.rg)) {
+		ele->rg.crc = tegra_dc_readl(dc, DC_COM_CRC_CHECKSUM_LATCHED);
+		ele->rg.valid = true;
+	}
 
-	ele->rg.crc = tegra_dc_readl(dc, DC_COM_CRC_CHECKSUM_LATCHED);
-	ele->rg.valid = 1;
+	if (atomic_read(&dc->crc_ref_cnt.out)) {
+		if (dc->out_ops->crc_get) {
+			ret = dc->out_ops->crc_get(dc, &ele->sor.crc);
+			/* NOTE: The call to crc_get only collects SOR CRC. In
+			 * case other CRCs (say RG CRC) were collected, we need
+			 * the caller to queue the generated CRC element.
+			 * Hence, we do not propagate this error back to the
+			 * caller, but instead simply refrain from setting the
+			 * valid bit
+			 */
+			if (!ret)
+				ele->sor.valid = true;
+		}
+	}
 
 	valids = ele->rg.valid || ele->sor.valid;
 
@@ -588,7 +676,7 @@ long tegra_dc_crc_get(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
 				conf[iter].crc.valid = crc_ele.comp.valid;
 				conf[iter].crc.val = crc_ele.comp.crc;
 			} else {
-				conf[iter].crc.valid = 0;
+				conf[iter].crc.valid = false;
 				conf[iter].crc.val = 0;
 				ret = -ENOTSUPP;
 			}
@@ -600,16 +688,15 @@ long tegra_dc_crc_get(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
 						crc_ele.regional[id].valid;
 				conf[iter].crc.val = crc_ele.regional[id].crc;
 			} else {
-				conf[iter].crc.valid = 0;
+				conf[iter].crc.valid = false;
 				conf[iter].crc.val = 0;
 				ret = -ENOTSUPP;
 			}
 			break;
 		case TEGRA_DC_EXT_CRC_TYPE_OR:
-			conf[iter].crc.valid = 0;
-			conf[iter].crc.val = 0;
-			return -ENOTSUPP; /* TODO: Implement this */
-			/* break; */
+			conf[iter].crc.valid = crc_ele.sor.valid;
+			conf[iter].crc.val = crc_ele.sor.crc;
+			break;
 		default:
 			ret = -EINVAL;
 		}

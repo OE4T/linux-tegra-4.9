@@ -1419,6 +1419,39 @@ enum tegra_dc_ext_crc_input_data {
 	TEGRA_DC_EXT_CRC_INPUT_DATA_MAX
 };
 
+/* For programming convenience, the enum values are tied to bit values directly
+ * So, please do not reorder
+ */
+enum tegra_dc_ext_crc_sor_data {
+	TEGRA_DC_EXT_CRC_SOR_DATA_ACTIVE_RASTER = 0,
+	TEGRA_DC_EXT_CRC_SOR_DATA_COMPLETE_RASTER = 1,
+	TEGRA_DC_EXT_CRC_SOR_DATA_NON_ACTIVE_RASTER = 2
+};
+
+/* For programming convenience, the enum values are tied to bit values directly
+ * So, please do not reorder
+ */
+enum tegra_dc_ext_crc_sor_stage {
+	TEGRA_DC_EXT_CRC_SOR_STAGE_PRE_SERIALIZE = 0,
+	TEGRA_DC_EXT_CRC_SOR_STAGE_POST_DESERIALIZE = 1
+};
+
+struct tegra_dc_ext_crc_sor_params {
+	enum tegra_dc_ext_crc_sor_data data;
+	enum tegra_dc_ext_crc_sor_stage stage;
+	__u8 reserved[16];
+} __attribute__((__packed__));
+
+/* The structure is extensible to other OR types as well, example DSI */
+struct tegra_dc_ext_crc_or_params {
+	enum tegra_dc_ext_control_output_type out_type;
+	union {
+		__u8 data[25];
+		struct tegra_dc_ext_crc_sor_params sor_params;
+	};
+	__u8 reserved[16];
+} __attribute__((__packed__));
+
 #define TEGRA_DC_EXT_MAX_REGIONS 9
 
 /* tegra_dc_ext_crc_region - A region of the display frame to calculate CRC
@@ -1456,6 +1489,8 @@ struct tegra_dc_ext_crc_region {
  *               region mentioned using region ID
  *               For EN IOCTL, use this to program or modify the parameters of
  *               a specific region.
+ * @or_params -  Configuration parameters for different Output Resources. Only
+ *               valid for ENABLE IOCTL and for TEGRA_DC_EXT_CRC_TYPE_OR
  * @crc        - This is an overloaded argument across the IOCTLs.
  *               For EN IOCTL, use this to program the golden CRC registers by
  *               setting the valid field.
@@ -1469,6 +1504,7 @@ struct tegra_dc_ext_crc_conf {
 		__u8 data8[45];
 		enum tegra_dc_ext_crc_input_data input_data;
 		struct tegra_dc_ext_crc_region region;
+		struct tegra_dc_ext_crc_or_params or_params;
 	};
 	struct tegra_dc_ext_crc {
 		__u8 valid; /* A boolean with 0/1 the only valid values */

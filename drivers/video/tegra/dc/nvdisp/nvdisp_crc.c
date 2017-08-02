@@ -160,33 +160,63 @@ static int tegra_nvdisp_crc_region_enable(struct tegra_dc *dc,
 	return 0;
 }
 
+static void tegra_nvdisp_crc_rg_comp_enable(struct tegra_dc *dc,
+					    struct tegra_dc_ext_crc_conf *conf)
+{
+	u32 ctl = nvdisp_crc_control_enable_enable_f();
+	enum tegra_dc_ext_crc_input_data input_data = conf->input_data;
+
+	if (input_data == TEGRA_DC_EXT_CRC_INPUT_DATA_FULL_FRAME)
+		ctl |= nvdisp_crc_control_input_data_full_frame_f();
+	else
+		ctl |= nvdisp_crc_control_input_data_active_data_f();
+
+	tegra_dc_writel(dc, ctl, nvdisp_crc_control_r());
+}
+
 int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 			    struct tegra_dc_ext_crc_conf *conf)
 {
 	int ret;
 	enum tegra_dc_ext_crc_type type = conf->type;
-	enum tegra_dc_ext_crc_input_data input_data = conf->input_data;
-	u32 ctl = nvdisp_crc_control_enable_enable_f();
 
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 
-	if (type == TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL) {
+	switch (type) {
+	case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
 		ret = tegra_nvdisp_crc_region_enable(dc, conf);
-		if (ret)
+		if (ret) {
+			mutex_unlock(&dc->lock);
 			return ret;
+		}
 
 		atomic_inc(&dc->crc_ref_cnt.regional);
-	} else { /* RG / Comp / SOR */
+		break;
+	case TEGRA_DC_EXT_CRC_TYPE_RG:
+		tegra_nvdisp_crc_rg_comp_enable(dc, conf);
+		atomic_inc(&dc->crc_ref_cnt.rg);
+		break;
+	case TEGRA_DC_EXT_CRC_TYPE_COMP:
+		tegra_nvdisp_crc_rg_comp_enable(dc, conf);
+		atomic_inc(&dc->crc_ref_cnt.comp);
+		break;
+	case TEGRA_DC_EXT_CRC_TYPE_OR:
+		if (!dc->out_ops->crc_en) {
+			mutex_unlock(&dc->lock);
+			return -ENOTSUPP;
+		}
 
-		if (input_data == TEGRA_DC_EXT_CRC_INPUT_DATA_FULL_FRAME)
-			ctl |= nvdisp_crc_control_input_data_full_frame_f();
-		else
-			ctl |= nvdisp_crc_control_input_data_active_data_f();
+		ret = dc->out_ops->crc_en(dc, &conf->or_params);
+		if (ret) {
+			mutex_unlock(&dc->lock);
+			return ret;
+		}
 
-		tegra_dc_writel(dc, ctl, nvdisp_crc_control_r());
-
-		atomic_inc(&dc->crc_ref_cnt.rg_comp_sor);
+		atomic_inc(&dc->crc_ref_cnt.out);
+		break;
+	default:
+		return -ENOTSUPP;
 	}
 
 	tegra_dc_put(dc);
@@ -197,10 +227,22 @@ int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 		if (ret) {
 			atomic_dec(&dc->crc_ref_cnt.global);
 
-			if (type == TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL)
+			switch (type) {
+			case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
 				atomic_dec(&dc->crc_ref_cnt.regional);
-			else
-				atomic_dec(&dc->crc_ref_cnt.rg_comp_sor);
+				break;
+			case TEGRA_DC_EXT_CRC_TYPE_RG:
+				atomic_dec(&dc->crc_ref_cnt.rg);
+				break;
+			case TEGRA_DC_EXT_CRC_TYPE_COMP:
+				atomic_dec(&dc->crc_ref_cnt.comp);
+				break;
+			case TEGRA_DC_EXT_CRC_TYPE_OR:
+				atomic_dec(&dc->crc_ref_cnt.out);
+				break;
+			default:
+				return -ENOTSUPP;
+			}
 
 			return ret;
 		}
@@ -239,7 +281,8 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 
-	if (type == TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL) {
+	switch (type) {
+	case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
 		ret = tegra_nvdisp_crc_region_disable(dc, conf);
 		if (ret) {
 			tegra_dc_put(dc);
@@ -248,9 +291,33 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 		}
 
 		atomic_dec(&dc->crc_ref_cnt.regional);
-	} else {
-		if (atomic_dec_return(&dc->crc_ref_cnt.rg_comp_sor) == 0)
+		break;
+	case TEGRA_DC_EXT_CRC_TYPE_RG:
+		if (atomic_dec_return(&dc->crc_ref_cnt.rg) == 0 &&
+		    atomic_read(&dc->crc_ref_cnt.comp) == 0)
 			tegra_dc_writel(dc, 0x0, nvdisp_crc_control_r());
+		break;
+	case TEGRA_DC_EXT_CRC_TYPE_COMP:
+		if (atomic_dec_return(&dc->crc_ref_cnt.comp) == 0 &&
+		    atomic_read(&dc->crc_ref_cnt.rg) == 0)
+			tegra_dc_writel(dc, 0x0, nvdisp_crc_control_r());
+		break;
+	case TEGRA_DC_EXT_CRC_TYPE_OR:
+		if (atomic_dec_return(&dc->crc_ref_cnt.out) == 0) {
+			if (!dc->out_ops->crc_dis) {
+				mutex_unlock(&dc->lock);
+				return -ENOTSUPP;
+			}
+			ret = dc->out_ops->crc_dis(dc, &conf->or_params);
+			if (ret) {
+				atomic_inc(&dc->crc_ref_cnt.out);
+				mutex_unlock(&dc->lock);
+				return ret;
+			}
+		}
+		break;
+	default:
+		return -ENOTSUPP;
 	}
 
 	tegra_dc_put(dc);
@@ -259,10 +326,22 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 	if (atomic_dec_return(&dc->crc_ref_cnt.global) == 0) {
 		ret = tegra_dc_config_frame_end_intr(dc, false);
 		if (ret) {
-			if (type == TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL)
+			switch (type) {
+			case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
 				atomic_inc(&dc->crc_ref_cnt.regional);
-			else
-				atomic_inc(&dc->crc_ref_cnt.rg_comp_sor);
+				break;
+			case TEGRA_DC_EXT_CRC_TYPE_RG:
+				atomic_inc(&dc->crc_ref_cnt.rg);
+				break;
+			case TEGRA_DC_EXT_CRC_TYPE_COMP:
+				atomic_inc(&dc->crc_ref_cnt.comp);
+				break;
+			case TEGRA_DC_EXT_CRC_TYPE_OR:
+				atomic_inc(&dc->crc_ref_cnt.out);
+				break;
+			default:
+				return -ENOTSUPP;
+			}
 
 			return ret;
 		}
@@ -372,9 +451,19 @@ done:
 	return 0;
 }
 
-static int tegra_nvdisp_crc_sor_get(struct tegra_dc *dc,
-				    struct tegra_dc_crc_buf_ele *e)
+static int tegra_nvdisp_crc_or_get(struct tegra_dc *dc,
+				   struct tegra_dc_crc_buf_ele *e)
 {
+	int ret;
+
+	if (dc->out_ops->crc_get) {
+		ret = dc->out_ops->crc_get(dc, &e->sor.crc);
+		if (ret)
+			return ret;
+	}
+
+	e->sor.valid = true;
+
 	return 0;
 }
 
@@ -384,11 +473,14 @@ int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
 	int ret = 0, iter;
 	bool valids = false; /* Logical OR of valid fields of individual CRCs */
 
-	if (atomic_read(&dc->crc_ref_cnt.rg_comp_sor)) {
+	if (atomic_read(&dc->crc_ref_cnt.rg))
 		tegra_nvdisp_crc_rg_get(dc, e);
+
+	if (atomic_read(&dc->crc_ref_cnt.comp))
 		tegra_nvdisp_crc_comp_get(dc, e);
-		tegra_nvdisp_crc_sor_get(dc, e);
-	}
+
+	if (atomic_read(&dc->crc_ref_cnt.out))
+		tegra_nvdisp_crc_or_get(dc, e);
 
 	if (atomic_read(&dc->crc_ref_cnt.regional))
 		ret = tegra_nvdisp_crc_rg_regional_get(dc, e);

@@ -136,6 +136,12 @@ struct tegra_dc_out_ops {
 	void (*toggle_crc)(struct tegra_dc *dc, u32 val);
 	/* returns sor ctrl_num, it can be extended to DSI if needed */
 	int (*get_connector_instance)(struct tegra_dc *dc);
+	/* Accesses the underlying OR's CRC mechanisms */
+	int (*crc_en)(struct tegra_dc *dc,
+		      struct tegra_dc_ext_crc_or_params *params);
+	int (*crc_dis)(struct tegra_dc *dc,
+		       struct tegra_dc_ext_crc_or_params *params);
+	int (*crc_get)(struct tegra_dc *dc, u32 *crc);
 };
 
 struct tegra_dc_shift_clk_div {
@@ -354,13 +360,17 @@ struct tegra_dc_ring_buf {
  *                o If required expand the ref counts per block (RG/SOR/COMP)
  *                  or per region
  * @global      - Track CRC as a client of the Frame End Interrupt
- * @rg_comp_sor - Track if CRCs for one or more of RG, SOR and COMP are enabled
+ * @rg          - Track if RG CRC is enabled
+ * @comp        - Track if COMP CRC is enabled
+ * @out         - Track if CRC of an Output Resource (OR) is enabled
  * @regional    - Track if regional CRCs are enabled
  * @legacy      - Keep account of whether legacy sysfs API is activated
  */
 struct tegra_dc_crc_ref_cnt {
 	atomic_t global;
-	atomic_t rg_comp_sor;
+	atomic_t rg;
+	atomic_t comp;
+	atomic_t out;
 	atomic_t regional;
 	bool legacy;
 };

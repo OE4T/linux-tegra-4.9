@@ -25,6 +25,7 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <linux/rwsem.h>
 #include <linux/delay.h>
+#include <video/tegra_dc_ext.h>
 #include "dc_priv.h"
 #include "sor_regs.h"
 
@@ -150,7 +151,11 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_sleep(struct tegra_dc_sor_data *sor);
-u32 tegra_dc_sor_get_crc(struct tegra_dc_sor_data *sor, int *timeout);
+int tegra_dc_sor_crc_get(struct tegra_dc_sor_data *sor, u32 *crc);
+u32 tegra_dc_sor_debugfs_get_crc(struct tegra_dc_sor_data *sor, int *timeout);
+void tegra_dc_sor_crc_en_dis(struct tegra_dc_sor_data *sor,
+			     struct tegra_dc_ext_crc_sor_params params,
+			     bool en);
 void tegra_dc_sor_toggle_crc(struct tegra_dc_sor_data *sor, u32 val);
 void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 	bool balanced, bool conforming);

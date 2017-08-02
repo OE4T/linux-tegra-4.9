@@ -29,6 +29,7 @@
 #include <linux/version.h>
 #include <linux/padctrl/padctrl.h>
 #include <linux/tegra_pm_domains.h>
+#include <video/tegra_dc_ext.h>
 
 #include "dc.h"
 #include "sor.h"
@@ -144,7 +145,32 @@ void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 	sor->clk_type = TEGRA_SOR_MACRO_CLK;
 }
 
-u32 tegra_dc_sor_get_crc(struct tegra_dc_sor_data *sor, int *timeout)
+int tegra_dc_sor_crc_get(struct tegra_dc_sor_data *sor, u32 *crc)
+{
+	int ret = 0;
+	u32 val;
+
+	tegra_dc_io_start(sor->dc);
+	tegra_sor_clk_enable(sor);
+
+	val = tegra_sor_readl(sor, NV_SOR_CRCA);
+	val = (val & NV_SOR_CRCA_VALID_DEFAULT_MASK) >> NV_SOR_CRCA_VALID_SHIFT;
+	if (val != NV_SOR_CRCA_VALID_TRUE) {
+		ret = -EINVAL;
+		goto done;
+	}
+
+	*crc = tegra_sor_readl(sor, NV_SOR_CRCB);
+	tegra_sor_writel(sor, NV_SOR_CRCA, NV_SOR_CRCA_VALID_RST);
+
+done:
+	tegra_sor_clk_disable(sor);
+	tegra_dc_io_end(sor->dc);
+
+	return ret;
+}
+
+u32 tegra_dc_sor_debugfs_get_crc(struct tegra_dc_sor_data *sor, int *timeout)
 {
 	struct tegra_dc *dc = sor->dc;
 	u32 reg_val;
@@ -178,52 +204,53 @@ exit:
 	return reg_val;
 }
 
-void tegra_dc_sor_toggle_crc(struct tegra_dc_sor_data *sor, u32 val)
+void tegra_dc_sor_crc_en_dis(struct tegra_dc_sor_data *sor,
+			     struct tegra_dc_ext_crc_sor_params params, bool en)
 {
-	struct tegra_dc *dc = sor->dc;
-	u32 reg_val;
-	u32    data = val;
-	static u8 asy_crcmode;
+	u32 reg;
 
 	tegra_dc_io_start(sor->dc);
 	tegra_sor_clk_enable(sor);
 
-	asy_crcmode = data & (NV_SOR_STATE1_ASY_CRCMODE_DEFAULT_MASK >> 2);
-	asy_crcmode >>= 4;  /* asy_crcmode[1:0] = ASY_CRCMODE */
-	data &= 1;          /* data[0:0] = enable|disable CRC */
-	mutex_lock(&dc->lock);
+	if (en) {
+		reg = NV_SOR_CRCA_VALID_RST << NV_SOR_CRCA_VALID_SHIFT;
+		tegra_sor_write_field(sor, NV_SOR_CRCA,
+				      NV_SOR_CRCA_VALID_DEFAULT_MASK, reg);
 
-	if (data == 1) {
-		reg_val = tegra_sor_readl(sor, NV_SOR_CRCA);
-		if (reg_val & NV_SOR_CRCA_VALID_TRUE) {
-			tegra_sor_write_field(sor,
-				NV_SOR_CRCA,
-				NV_SOR_CRCA_VALID_DEFAULT_MASK,
-				NV_SOR_CRCA_VALID_RST << NV_SOR_CRCA_VALID_SHIFT);
-		}
-		tegra_sor_write_field(sor,
-			NV_SOR_TEST,
-			NV_SOR_TEST_CRC_DEFAULT_MASK,
-			NV_SOR_TEST_CRC_PRE_SERIALIZE << NV_SOR_TEST_CRC_SHIFT);
+		reg = params.stage << NV_SOR_TEST_CRC_SHIFT;
+		tegra_sor_write_field(sor, NV_SOR_TEST,
+				      NV_SOR_TEST_CRC_DEFAULT_MASK, reg);
+
+		reg = params.data << NV_SOR_STATE1_ASY_CRCMODE_SHIFT;
 		tegra_sor_write_field(sor, NV_SOR_STATE1,
-			NV_SOR_STATE1_ASY_CRCMODE_DEFAULT_MASK,
-			asy_crcmode << NV_SOR_STATE1_ASY_CRCMODE_SHIFT);
-		tegra_sor_write_field(sor,
-			NV_SOR_STATE0,
-			NV_SOR_STATE0_UPDATE_DEFAULT_MASK,
-			NV_SOR_STATE0_UPDATE_UPDATE << NV_SOR_STATE0_UPDATE_SHIFT);
+				      NV_SOR_STATE1_ASY_CRCMODE_DEFAULT_MASK,
+				      reg);
+
+		reg = NV_SOR_STATE0_UPDATE_UPDATE << NV_SOR_STATE0_UPDATE_SHIFT;
+		tegra_sor_write_field(sor, NV_SOR_STATE0,
+				      NV_SOR_STATE0_UPDATE_DEFAULT_MASK, reg);
 	}
 
-	reg_val = tegra_sor_readl(sor, NV_SOR_CRC_CNTRL);
-	tegra_sor_write_field(sor,
-		NV_SOR_CRC_CNTRL,
-		NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_DEFAULT_MASK,
-		data << NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_SHIFT);
-	reg_val = tegra_sor_readl(sor, NV_SOR_CRC_CNTRL);
+	tegra_sor_readl(sor, NV_SOR_CRC_CNTRL);
+	reg = en << NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_SHIFT;
+	tegra_sor_write_field(sor, NV_SOR_CRC_CNTRL,
+			      NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_DEFAULT_MASK,
+			      reg);
+	tegra_sor_readl(sor, NV_SOR_CRC_CNTRL);
 
-	mutex_unlock(&dc->lock);
 	tegra_sor_clk_disable(sor);
 	tegra_dc_io_end(sor->dc);
+}
+
+void tegra_dc_sor_toggle_crc(struct tegra_dc_sor_data *sor, u32 val)
+{
+	struct tegra_dc_ext_crc_sor_params params;
+
+	params.stage = TEGRA_DC_EXT_CRC_SOR_STAGE_PRE_SERIALIZE;
+	params.data = val & NV_SOR_STATE1_ASY_CRCMODE_DEFAULT_MASK;
+	params.data >>= NV_SOR_STATE1_ASY_CRCMODE_SHIFT;
+
+	tegra_dc_sor_crc_en_dis(sor, params, val & 0x1);
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -414,7 +441,7 @@ static int sor_crc_show(struct seq_file *s, void *unused)
 	u32 reg_val;
 	int timeout = 0;
 
-	reg_val = tegra_dc_sor_get_crc(sor, &timeout);
+	reg_val = tegra_dc_sor_debugfs_get_crc(sor, &timeout);
 
 	if (!timeout)
 		seq_printf(s, "NV_SOR[%x]_CRCB = 0x%08x\n",

@@ -1683,6 +1683,7 @@
 			};
 		};
 	};
+#endif
 
 	tegra_xudc: xudc@3550000 {
 		compatible = "nvidia,tegra194-xudc";
@@ -1690,7 +1691,9 @@
 			<0x0 0x03558000 0x0 0x1000>;
 		interrupts = <0 166 0x4>;
 
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		nvidia,xusb-padctl = <&xusb_padctl>;
+#endif
 
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_DEV>;
@@ -1729,7 +1732,9 @@
 			"xusb_ss_dev_clk", "xusb_ss",
 			"pll_u_480m", "clk_m", "pll_e";
 
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		nvidia,xusb-padctl = <&xusb_padctl>;
+#endif
 
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_HOST>;
@@ -1743,7 +1748,9 @@
 		reg = <0x0 0x03660000 0x0 0x40000>;
 		interrupts = <0 21 0x4>;
 
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		nvidia,xusb-padctl = <&xusb_padctl>;
+#endif
 
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_VF0>;
@@ -1751,8 +1758,6 @@
 
 		status = "disabled";
 	};
-
-#endif
 
 	gv11b {
 		compatible = "nvidia,gv11b";

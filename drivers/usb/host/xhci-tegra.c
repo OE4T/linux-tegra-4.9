@@ -3280,6 +3280,12 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req,
 					  tegra->typed_phys[USB2_PHY][port]);
 			}
 		}
+
+		if ((type_req == SetPortFeature) &&
+			(value == USB_PORT_FEAT_TEST)) {
+			tegra_phy_xusb_utmi_pad_power_on(
+				tegra->typed_phys[USB2_PHY][port]);
+		}
 	}
 
 	return ret;

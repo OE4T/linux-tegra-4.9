@@ -724,10 +724,21 @@ static void dfll_tune_low(struct tegra_dfll *td)
  */
 static void dfll_tune_high(struct tegra_dfll *td)
 {
+	u32 tune0_high;
+	u32 tune1_high;
+
 	td->tune_range = DFLL_TUNE_HIGH;
 
-	dfll_writel(td, td->soc->cvb->cpu_dfll_data.tune0_high, DFLL_TUNE0);
-	dfll_writel(td, td->soc->cvb->cpu_dfll_data.tune1_low, DFLL_TUNE1);
+	tune0_high = td->soc->cvb->cpu_dfll_data.tune0_high;
+	if (!tune0_high)
+		tune0_high = td->soc->cvb->cpu_dfll_data.tune0_low;
+	dfll_writel(td, tune0_high, DFLL_TUNE0);
+
+	tune1_high = td->soc->cvb->cpu_dfll_data.tune1_high;
+	if (!tune1_high)
+		tune1_high = td->soc->cvb->cpu_dfll_data.tune1_low;
+	dfll_writel(td, tune1_high, DFLL_TUNE1);
+
 	dfll_wmb(td);
 
 	if (td->soc->set_clock_trimmers_high)

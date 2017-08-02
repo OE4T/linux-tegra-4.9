@@ -89,7 +89,7 @@ static const struct cvb_table tegra124_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0x005020ff,
 			.tune0_high = 0x005040ff,
-			.tune1 = 0x00000060,
+			.tune1_low = 0x00000060,
 		}
 	},
 };
@@ -257,7 +257,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -270,7 +270,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -283,7 +283,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 		}
 	},
 	{
@@ -295,7 +295,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 		}
 	},
 	{
@@ -307,7 +307,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 		}
 	},
 	{
@@ -319,7 +319,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 		}
 	},
 	{
@@ -331,7 +331,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -344,7 +344,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -356,7 +356,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		CPU_CVB_TABLE,
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 		}
 	},
 	{
@@ -367,7 +367,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		CPU_CVB_TABLE,
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
-			.tune1 = 0x25501d0,
+			.tune1_low = 0x25501d0,
 		}
 	},
 	{
@@ -379,7 +379,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -392,7 +392,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x25501d0,
+			.tune1_low = 0x25501d0,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -404,7 +404,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		CPU_CVB_TABLE_XA,
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
-			.tune1 = 0x17711BD,
+			.tune1_low = 0x17711BD,
 		}
 	},
 	{
@@ -416,7 +416,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -429,7 +429,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x25501d0,
+			.tune1_low = 0x25501d0,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -441,7 +441,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		CPU_CVB_TABLE,
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 		}
 	},
 	{
@@ -452,7 +452,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		CPU_CVB_TABLE,
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
-			.tune1 = 0x25501d0,
+			.tune1_low = 0x25501d0,
 		}
 	},
 	{
@@ -464,7 +464,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -477,7 +477,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x25501d0,
+			.tune1_low = 0x25501d0,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -490,7 +490,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x20091d9,
+			.tune1_low = 0x20091d9,
 			.tune_high_min_millivolts = 864,
 		}
 	},
@@ -503,7 +503,7 @@ struct cvb_table tegra210_cpu_cvb_tables[] = {
 		.cpu_dfll_data = {
 			.tune0_low = 0xffead0ff,
 			.tune0_high = 0xffead0ff,
-			.tune1 = 0x25501d0,
+			.tune1_low = 0x25501d0,
 			.tune_high_min_millivolts = 864,
 		}
 	},

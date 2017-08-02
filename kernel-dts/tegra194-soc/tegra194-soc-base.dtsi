@@ -265,6 +265,10 @@
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_XUSB_HOST>;
 			};
+			xusb_host_vf0_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_VF0>;
+			};
 			xusb_dev_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_XUSB_DEV>;
@@ -1634,6 +1638,20 @@
 		status = "disabled";
 	};
 
+	tegra_xhci_vf1: xhci@3660000 {
+		compatible = "nvidia,tegra194-xhci-vf1";
+		reg = <0x0 0x03660000 0x0 0x40000>;
+		interrupts = <0 21 0x4>;
+
+		nvidia,xusb-padctl = <&xusb_padctl>;
+
+		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_XUSB_VF0>;
+		dma-coherent;
+
+		status = "disabled";
+	};
+
 #endif
 
 	gv11b {
@@ -1665,6 +1683,11 @@
 		compatible = "nvidia,bwmgr";
 		clocks = <&bpmp_clks TEGRA194_CLK_EMC>;
 		clock-names = "emc";
+		status = "disabled";
+	};
+
+	tegra_hv_xhci_debug@0 {
+		compatible = "nvidia,tegra-hv-xhci-debug";
 		status = "disabled";
 	};
 

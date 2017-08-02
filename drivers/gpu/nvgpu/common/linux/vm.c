@@ -260,7 +260,10 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		map_offset = offset_align;
 
 	bfr.align = nvgpu_get_buffer_alignment(g, sgl, aperture);
-	bfr.pgsz_idx = __get_pte_size(vm, map_offset,
+	if (g->mm.disable_bigpage)
+		bfr.pgsz_idx = gmmu_page_size_small;
+	else
+		bfr.pgsz_idx = __get_pte_size(vm, map_offset,
 				      min_t(u64, bfr.size, bfr.align));
 	mapping_size = mapping_size ? mapping_size : bfr.size;
 

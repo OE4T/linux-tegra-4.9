@@ -28,6 +28,7 @@
 
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/uaccess.h>
 
 #include <nvgpu/debug.h>
 
@@ -173,6 +174,45 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 	gk20a_debug_dump_all_channel_status_ramfc(g, o);
 }
 
+static ssize_t disable_bigpage_read(struct file *file, char __user *user_buf, size_t count, loff_t *ppos)
+{
+	char buf[3];
+	struct gk20a *g = file->private_data;
+
+	if (g->mm.disable_bigpage)
+		buf[0] = 'Y';
+	else
+		buf[0] = 'N';
+	buf[1] = '\n';
+	buf[2] = 0x00;
+	return simple_read_from_buffer(user_buf, count, ppos, buf, 2);
+}
+
+static ssize_t disable_bigpage_write(struct file *file, const char __user *user_buf, size_t count, loff_t *ppos)
+{
+	char buf[32];
+	int buf_size;
+	bool bv;
+	struct gk20a *g = file->private_data;
+
+	buf_size = min(count, (sizeof(buf)-1));
+	if (copy_from_user(buf, user_buf, buf_size))
+		return -EFAULT;
+
+	if (strtobool(buf, &bv) == 0) {
+		g->mm.disable_bigpage = bv;
+		gk20a_init_gpu_characteristics(g);
+	}
+
+	return count;
+}
+
+static struct file_operations disable_bigpage_fops = {
+	.open =		simple_open,
+	.read =		disable_bigpage_read,
+	.write =	disable_bigpage_write,
+};
+
 static int railgate_residency_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;
@@ -296,10 +336,11 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 					l->debugfs,
 					&g->mm.bypass_smmu);
 	l->debugfs_disable_bigpage =
-			debugfs_create_bool("disable_bigpage",
+			debugfs_create_file("disable_bigpage",
 					S_IRUGO|S_IWUSR,
 					l->debugfs,
-					&g->mm.disable_bigpage);
+					g,
+					&disable_bigpage_fops);
 
 	l->debugfs_timeslice_low_priority_us =
 			debugfs_create_u32("timeslice_low_priority_us",

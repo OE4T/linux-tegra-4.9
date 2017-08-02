@@ -76,6 +76,7 @@
 			physical_w = "3.674";
 			physical_h = "2.738";
 
+			sensor_model = "imx274";
 
 			/* Define any required hw resources needed by driver */
 			/* ie. clocks, io pins, power sources */

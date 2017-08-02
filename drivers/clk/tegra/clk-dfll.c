@@ -215,14 +215,6 @@
 #define REF_CLK_CYC_PER_DVCO_SAMPLE	4
 
 /*
- * DFLL_OUTPUT_RAMP_DELAY: after the DFLL's I2C PMIC output starts
- * requesting the minimum TUNE_HIGH voltage, the minimum number of
- * microseconds to wait for the PMIC's voltage output to finish
- * slewing
- */
-#define DFLL_OUTPUT_RAMP_DELAY		100
-
-/*
  * DFLL_TUNE_HIGH_DELAY: number of microseconds to wait between tests
  * to see if the high voltage has been reached yet, during a
  * transition from the low-voltage range to the high-voltage range
@@ -377,8 +369,9 @@ struct tegra_dfll {
 	struct dfll_rate_req		last_req;
 	unsigned long			last_unrounded_rate;
 
-	struct timer_list		tune_timer;
-	unsigned long			tune_delay;
+	struct hrtimer			tune_timer;
+	ktime_t				tune_delay;
+	ktime_t				tune_ramp_delay;
 
 	/* Parameters from DT */
 	u32				droop_ctrl;
@@ -808,7 +801,9 @@ static void dfll_set_close_loop_config(struct tegra_dfll *td,
 	case DFLL_TUNE_LOW:
 		if (dfll_tune_target(td, req->rate) > DFLL_TUNE_LOW) {
 			td->tune_range = DFLL_TUNE_WAIT_DFLL;
-			mod_timer(&td->tune_timer, jiffies + td->tune_delay);
+			if (!timekeeping_suspended)
+				hrtimer_start(&td->tune_timer, td->tune_delay,
+					      HRTIMER_MODE_REL);
 			set_force_out_min(td);
 		}
 		sample_tune_out_last = true;
@@ -846,11 +841,16 @@ static void dfll_set_close_loop_config(struct tegra_dfll *td,
  * reach tune_high_out_min, then waits for the PMIC to react to the
  * command.  No return value.
  */
-static void dfll_tune_timer_cb(unsigned long data)
+static enum hrtimer_restart dfll_tune_timer_cb(struct hrtimer *timer)
 {
-	struct tegra_dfll *td = (struct tegra_dfll *)data;
+	struct tegra_dfll *td;
 	u32 val, out_min, out_last;
 	bool use_ramp_delay;
+	unsigned long flags;
+
+	td = container_of(timer, struct tegra_dfll, tune_timer);
+
+	spin_lock_irqsave(&td->lock, flags);
 
 	if (td->tune_range == DFLL_TUNE_WAIT_DFLL) {
 		out_min = td->lut_min;
@@ -870,14 +870,20 @@ static void dfll_tune_timer_cb(unsigned long data)
 		    (out_last >= td->tune_high_out_min) &&
 		    (out_min >= td->tune_high_out_min)) {
 			td->tune_range = DFLL_TUNE_WAIT_PMIC;
-			mod_timer(&td->tune_timer, jiffies +
-				  usecs_to_jiffies(DFLL_OUTPUT_RAMP_DELAY));
+			hrtimer_start(&td->tune_timer, td->tune_ramp_delay,
+				      HRTIMER_MODE_REL);
 		} else {
-			mod_timer(&td->tune_timer, jiffies + td->tune_delay);
+			hrtimer_start(&td->tune_timer, td->tune_delay,
+				      HRTIMER_MODE_REL);
 		}
 	} else if (td->tune_range == DFLL_TUNE_WAIT_PMIC) {
 		dfll_tune_high(td);
 	}
+	pr_debug("%s: dvco tuning state %d\n", __func__, td->tune_range);	
+
+	spin_unlock_irqrestore(&td->lock, flags);
+
+	return HRTIMER_NORESTART;
 }
 
 /*
@@ -3670,6 +3676,32 @@ void tegra_dfll_resume(struct platform_device *pdev, bool on_dfll)
 	}
 }
 
+/**
+ * tegra_dfll_resume_tuning - restart DFLL tuning timer
+ * @dev: DFLL instance
+ *
+ * Re-start DFLL tuning timer if DFLL resume has moved DFLL out
+ * of low range but has not reached high range, yet. Timer
+ * cannot be restarted by DFLL resume itself, since it is
+ * happening before timekeeping resume.
+ */
+int tegra_dfll_resume_tuning(struct device *dev)
+{
+	struct tegra_dfll *td = dev_get_drvdata(dev);
+	unsigned long flags;
+
+	spin_lock_irqsave(&td->lock, flags);
+
+	if ((td->tune_range > DFLL_TUNE_LOW) &&
+	    (td->tune_range < DFLL_TUNE_HIGH)) {
+		hrtimer_start(&td->tune_timer, td->tune_delay,
+			      HRTIMER_MODE_REL);
+	}
+	spin_unlock_irqrestore(&td->lock, flags);
+
+	return 0;
+}
+
 /*
  * API exported to per-SoC platform drivers
  */
@@ -3815,10 +3847,10 @@ int tegra_dfll_register(struct platform_device *pdev,
 	}
 
 	/* Initialize tuning timer */
-	init_timer(&td->tune_timer);
+	hrtimer_init(&td->tune_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	td->tune_timer.function = dfll_tune_timer_cb;
-	td->tune_timer.data = (unsigned long)td;
-	td->tune_delay = usecs_to_jiffies(DFLL_TUNE_HIGH_DELAY);
+	td->tune_delay = ktime_set(0, DFLL_TUNE_HIGH_DELAY * 1000);
+	td->tune_ramp_delay = ktime_set(0, td->one_shot_settle_time * 1000);
 
 	/* Initialize Vmin calibration timer */
 	init_timer_deferrable(&td->calibration_timer);

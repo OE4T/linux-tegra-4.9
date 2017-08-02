@@ -2504,8 +2504,6 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 		dev_info(pcie->dev, "probing port %u, using %u lanes\n",
 			 port->index, port->lanes);
 
-		/* set clkreq as input to avoid root port control it */
-		tegra_pcie_config_clkreq(pcie, port->index, 0);
 		tegra_pcie_port_enable(port);
 		tegra_pcie_enable_rp_features(port);
 		/* override presence detection */
@@ -4789,6 +4787,8 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 					"pwr_good is down for port %d, ignoring\n",
 					 port->index);
 		}
+		/* set clkreq as input to avoid root port control it */
+		tegra_pcie_config_clkreq(pcie, port->index, 0);
 	}
 
 	/* Enable Runtime PM for PCIe, TODO: Need to add PCIe host device */

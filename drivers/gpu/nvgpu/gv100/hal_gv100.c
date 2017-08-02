@@ -32,19 +32,23 @@
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/fb_gk20a.h"
 #include "gk20a/mm_gk20a.h"
+#include "gk20a/pmu_gk20a.h"
 
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/mm_gm20b.h"
+#include "gm20b/pmu_gm20b.h"
+#include "gm20b/acr_gm20b.h"
 
 #include "gp10b/fb_gp10b.h"
 
 #include "gp106/clk_gp106.h"
 #include "gp106/clk_arb_gp106.h"
 #include "gp106/pmu_gp106.h"
-
+#include "gp106/acr_gp106.h"
+#include "gp106/sec2_gp106.h"
 #include "gm206/bios_gm206.h"
 #include "gp106/therm_gp106.h"
 #include "gp106/xve_gp106.h"
@@ -58,6 +62,7 @@
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/mm_gp10b.h"
+#include "gp10b/pmu_gp10b.h"
 
 #include "gv11b/hal_gv11b.h"
 #include "gv11b/gr_gv11b.h"
@@ -87,6 +92,7 @@
 #include <nvgpu/hw/gv100/hw_ram_gv100.h>
 #include <nvgpu/hw/gv100/hw_top_gv100.h>
 #include <nvgpu/hw/gv100/hw_pram_gv100.h>
+#include <nvgpu/hw/gv100/hw_pwr_gv100.h>
 
 static int gv100_get_litter_value(struct gk20a *g, int value)
 {
@@ -345,6 +351,45 @@ static const struct gpu_ops gv100_ops = {
 		.exit = gk20a_pramin_exit,
 		.data032_r = pram_data032_r,
 	},
+	.pmu = {
+		.init_wpr_region = gm20b_pmu_init_acr,
+		.load_lsfalcon_ucode = gp106_load_falcon_ucode,
+		.is_lazy_bootstrap = gp106_is_lazy_bootstrap,
+		.is_priv_load = gp106_is_priv_load,
+		.prepare_ucode = gp106_prepare_ucode_blob,
+		.pmu_setup_hw_and_bootstrap = gp106_bootstrap_hs_flcn,
+		.get_wpr = gp106_wpr_info,
+		.alloc_blob_space = gp106_alloc_blob_space,
+		.pmu_populate_loader_cfg = gp106_pmu_populate_loader_cfg,
+		.flcn_populate_bl_dmem_desc = gp106_flcn_populate_bl_dmem_desc,
+		.falcon_wait_for_halt = sec2_wait_for_halt,
+		.falcon_clear_halt_interrupt_status =
+			sec2_clear_halt_interrupt_status,
+		.init_falcon_setup_hw = init_sec2_setup_hw1,
+		.pmu_queue_tail = gk20a_pmu_queue_tail,
+		.pmu_get_queue_head = pwr_pmu_queue_head_r,
+		.pmu_mutex_release = gk20a_pmu_mutex_release,
+		.is_pmu_supported = gp106_is_pmu_supported,
+		.pmu_pg_supported_engines_list = gp106_pmu_pg_engines_list,
+		.pmu_elpg_statistics = gp106_pmu_elpg_statistics,
+		.pmu_mutex_acquire = gk20a_pmu_mutex_acquire,
+		.pmu_is_lpwr_feature_supported =
+			gp106_pmu_is_lpwr_feature_supported,
+		.pmu_msgq_tail = gk20a_pmu_msgq_tail,
+		.pmu_pg_engines_feature_list = gp106_pmu_pg_feature_list,
+		.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v,
+		.pmu_queue_head = gk20a_pmu_queue_head,
+		.pmu_pg_param_post_init = nvgpu_lpwr_post_init,
+		.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v,
+		.pmu_pg_init_param = gp106_pg_param_init,
+		.reset_engine = gp106_pmu_engine_reset,
+		.pmu_lpwr_disable_pg = nvgpu_lpwr_disable_pg,
+		.write_dmatrfbase = gp10b_write_dmatrfbase,
+		.pmu_mutex_size = pwr_pmu_mutex__size_1_v,
+		.is_engine_in_reset = gp106_pmu_is_engine_in_reset,
+		.pmu_get_queue_tail = pwr_pmu_queue_tail_r,
+		.pmu_lpwr_enable_pg = nvgpu_lpwr_enable_pg,
+	},
 	.clk = {
 		.init_clk_support = gp106_init_clk_support,
 		.get_crystal_clk_hz = gp106_crystal_clk_hz,
@@ -444,6 +489,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->fecs_trace = gv100_ops.fecs_trace;
 	gops->pramin = gv100_ops.pramin;
 	gops->therm = gv100_ops.therm;
+	gops->pmu = gv100_ops.pmu;
 	gops->mc = gv100_ops.mc;
 	gops->debug = gv100_ops.debug;
 	gops->dbg_session_ops = gv100_ops.dbg_session_ops;
@@ -470,13 +516,14 @@ int gv100_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
 	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
+	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	/* for now */
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 
+	g->pmu_lsf_pmu_wpr_init_done = 0;
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 
 	gv11b_init_gr(g);
-	gp106_init_pmu_ops(g);
 
 	gv11b_init_uncompressed_kind_map();
 	gv11b_init_kind_attr();

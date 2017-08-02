@@ -36,12 +36,12 @@
 
 #define ALIGN_4KB     12
 
-static bool gv11b_is_pmu_supported(struct gk20a *g)
+bool gv11b_is_pmu_supported(struct gk20a *g)
 {
 	return true;
 }
 
-static int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu)
+int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct mm_gk20a *mm = &g->mm;
@@ -178,7 +178,7 @@ static void pmu_handle_pg_param_msg(struct gk20a *g, struct pmu_msg *msg,
 							msg->msg.pg.msg_type);
 }
 
-static int gv11b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
+int gv11b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
@@ -206,7 +206,7 @@ static int gv11b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 	return 0;
 }
 
-static int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id)
+int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
@@ -233,28 +233,4 @@ static int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id)
 		return -EINVAL;
 
 	return 0;
-}
-
-void gv11b_init_pmu_ops(struct gk20a *g)
-{
-	struct gpu_ops *gops = &g->ops;
-
-	gp10b_init_pmu_ops(g);
-	gops->pmu.pmu_nsbootstrap = gv11b_pmu_bootstrap;
-	gops->pmu.is_pmu_supported = gv11b_is_pmu_supported;
-	gops->pmu.reset_engine = gp106_pmu_engine_reset;
-	gops->pmu.is_engine_in_reset = gp106_pmu_is_engine_in_reset;
-	gops->pmu.pmu_get_queue_head = pwr_pmu_queue_head_r;
-	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
-	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;
-	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
-	gops->pmu.pmu_queue_head = gk20a_pmu_queue_head;
-	gops->pmu.pmu_queue_tail = gk20a_pmu_queue_tail;
-	gops->pmu.pmu_mutex_acquire = gk20a_pmu_mutex_acquire;
-	gops->pmu.pmu_mutex_release = gk20a_pmu_mutex_release;
-	gops->pmu.pmu_msgq_tail = gk20a_pmu_msgq_tail;
-	gops->pmu.pmu_mutex_size = pwr_pmu_mutex__size_1_v;
-	gops->pmu.pmu_elpg_statistics = gp106_pmu_elpg_statistics;
-	gops->pmu.pmu_pg_init_param = gv11b_pg_gr_init;
-	gops->pmu.pmu_pg_set_sub_feature_mask = gv11b_pg_set_subfeature_mask;
 }

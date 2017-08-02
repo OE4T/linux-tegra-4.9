@@ -31,12 +31,15 @@
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/fb_gk20a.h"
+#include "gk20a/pmu_gk20a.h"
 
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/mm_gm20b.h"
+#include "gm20b/acr_gm20b.h"
+#include "gm20b/pmu_gm20b.h"
 
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/therm_gp10b.h"
@@ -47,6 +50,9 @@
 #include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/fb_gp10b.h"
 #include "gp10b/mm_gp10b.h"
+#include "gp10b/pmu_gp10b.h"
+
+#include "gp106/pmu_gp106.h"
 
 #include "hal_gv11b.h"
 #include "gr_gv11b.h"
@@ -70,6 +76,7 @@
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_top_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_pwr_gv11b.h>
 
 static int gv11b_get_litter_value(struct gk20a *g, int value)
 {
@@ -368,6 +375,30 @@ static const struct gpu_ops gv11b_ops = {
 		.init_therm_setup_hw = gp10b_init_therm_setup_hw,
 		.elcg_init_idle_filters = gp10b_elcg_init_idle_filters,
 	},
+	.pmu = {
+		.pmu_setup_elpg = gp10b_pmu_setup_elpg,
+		.pmu_get_queue_head = pwr_pmu_queue_head_r,
+		.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v,
+		.pmu_get_queue_tail = pwr_pmu_queue_tail_r,
+		.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v,
+		.pmu_queue_head = gk20a_pmu_queue_head,
+		.pmu_queue_tail = gk20a_pmu_queue_tail,
+		.pmu_msgq_tail = gk20a_pmu_msgq_tail,
+		.pmu_mutex_size = pwr_pmu_mutex__size_1_v,
+		.pmu_mutex_acquire = gk20a_pmu_mutex_acquire,
+		.pmu_mutex_release = gk20a_pmu_mutex_release,
+		.write_dmatrfbase = gp10b_write_dmatrfbase,
+		.pmu_elpg_statistics = gp106_pmu_elpg_statistics,
+		.pmu_pg_init_param = gv11b_pg_gr_init,
+		.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list,
+		.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list,
+		.dump_secure_fuses = pmu_dump_security_fuses_gp10b,
+		.reset_engine = gp106_pmu_engine_reset,
+		.is_engine_in_reset = gp106_pmu_is_engine_in_reset,
+		.pmu_nsbootstrap = gv11b_pmu_bootstrap,
+		.pmu_pg_set_sub_feature_mask = gv11b_pg_set_subfeature_mask,
+		.is_pmu_supported = gv11b_is_pmu_supported,
+	},
 	.regops = {
 		.get_global_whitelist_ranges =
 			gv11b_get_global_whitelist_ranges,
@@ -463,6 +494,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->mm = gv11b_ops.mm;
 	gops->fecs_trace = gv11b_ops.fecs_trace;
 	gops->therm = gv11b_ops.therm;
+	gops->pmu = gv11b_ops.pmu;
 	gops->regops = gv11b_ops.regops;
 	gops->mc = gv11b_ops.mc;
 	gops->debug = gv11b_ops.debug;
@@ -479,13 +511,44 @@ int gv11b_init_hal(struct gk20a *g)
 		gv11b_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = gv11b_ops.get_litter_value;
 
-	/* boot in non-secure modes for time beeing */
+	/* boot in non-secure modes for time being */
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, false);
 	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 
+	/* priv security dependent ops */
+	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
+		/* Add in ops from gm20b acr */
+		gops->pmu.prepare_ucode = prepare_ucode_blob,
+		gops->pmu.pmu_setup_hw_and_bootstrap = gm20b_bootstrap_hs_flcn,
+		gops->pmu.is_lazy_bootstrap = gm20b_is_lazy_bootstrap,
+		gops->pmu.is_priv_load = gm20b_is_priv_load,
+		gops->pmu.get_wpr = gm20b_wpr_info,
+		gops->pmu.alloc_blob_space = gm20b_alloc_blob_space,
+		gops->pmu.pmu_populate_loader_cfg =
+			gm20b_pmu_populate_loader_cfg,
+		gops->pmu.flcn_populate_bl_dmem_desc =
+			gm20b_flcn_populate_bl_dmem_desc,
+		gops->pmu.falcon_wait_for_halt = pmu_wait_for_halt,
+		gops->pmu.falcon_clear_halt_interrupt_status =
+			clear_halt_interrupt_status,
+		gops->pmu.init_falcon_setup_hw = gm20b_init_pmu_setup_hw1,
+
+		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
+		gops->pmu.load_lsfalcon_ucode = gp10b_load_falcon_ucode;
+		gops->pmu.is_lazy_bootstrap = gp10b_is_lazy_bootstrap;
+		gops->pmu.is_priv_load = gp10b_is_priv_load;
+	} else {
+		/* Inherit from gk20a */
+		gops->pmu.prepare_ucode = nvgpu_pmu_prepare_ns_ucode_blob,
+		gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1,
+
+		gops->pmu.load_lsfalcon_ucode = NULL;
+		gops->pmu.init_wpr_region = NULL;
+		gops->pmu.pmu_setup_hw_and_bootstrap = gp10b_init_pmu_setup_hw1;
+	}
+
 	gv11b_init_gr(g);
-	gv11b_init_pmu_ops(g);
 
 	gv11b_init_uncompressed_kind_map();
 	gv11b_init_kind_attr();

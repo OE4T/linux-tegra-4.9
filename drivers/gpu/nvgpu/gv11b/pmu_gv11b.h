@@ -18,6 +18,9 @@
 
 struct gk20a;
 
-void gv11b_init_pmu_ops(struct gk20a *g);
+bool gv11b_is_pmu_supported(struct gk20a *g);
+int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu);
+int gv11b_pg_gr_init(struct gk20a *g, u32 pg_engine_id);
+int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id);
 
 #endif /*__PMU_GV11B_H_*/

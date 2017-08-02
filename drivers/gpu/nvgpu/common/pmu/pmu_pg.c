@@ -206,7 +206,7 @@ int nvgpu_pmu_enable_elpg(struct gk20a *g)
 		pg_engine_id++) {
 
 		if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS &&
-			ACCESS_ONCE(pmu->mscg_stat) == PMU_MSCG_DISABLED)
+			pmu->mscg_stat == PMU_MSCG_DISABLED)
 			continue;
 
 		if (BIT(pg_engine_id) & pg_engine_id_list)
@@ -281,7 +281,7 @@ int nvgpu_pmu_disable_elpg(struct gk20a *g)
 		pg_engine_id++) {
 
 		if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS &&
-			ACCESS_ONCE(pmu->mscg_stat) == PMU_MSCG_DISABLED)
+			pmu->mscg_stat == PMU_MSCG_DISABLED)
 			continue;
 
 		if (BIT(pg_engine_id) & pg_engine_id_list) {

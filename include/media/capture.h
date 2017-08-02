@@ -22,28 +22,9 @@
 #include <stdint.h>
 #endif
 
-#include <linux/ioctl.h>
-#include <linux/videodev2.h>
-
 #define __VI_CAPTURE_ALIGN __aligned(8)
 
-#define VIDIOC_CAPTURE_BASE BASE_VIDIOC_PRIVATE
-#define VIDIOC_CAPTURE_SETUP	\
-		_IOW('V', VIDIOC_CAPTURE_BASE, struct vi_capture_setup)
-#define VIDIOC_CAPTURE_RELEASE	\
-		_IOW('V', VIDIOC_CAPTURE_BASE + 1, __u32)
-#define VIDIOC_CAPTURE_RESET	\
-		_IOW('V', VIDIOC_CAPTURE_BASE + 2, __u32)
-#define VIDIOC_CAPTURE_GET_INFO	\
-		_IOR('V', VIDIOC_CAPTURE_BASE + 3, struct vi_capture_info)
-#define VIDIOC_CAPTURE_SET_CONFIG	\
-		_IOW('V', VIDIOC_CAPTURE_BASE + 4, struct vi_capture_control_msg)
-#define VIDIOC_CAPTURE_REQUEST	\
-		_IOW('V', VIDIOC_CAPTURE_BASE + 5, struct vi_capture_req)
-#define VIDIOC_CAPTURE_STATUS	\
-		_IOW('V', VIDIOC_CAPTURE_BASE + 6, __u32)
-
-struct tegra_channel;
+struct tegra_vi_channel;
 
 struct vi_capture_setup {
 	uint32_t channel_flags;
@@ -79,21 +60,21 @@ struct vi_capture_req {
 	uint64_t reloc_relatives;
 } __VI_CAPTURE_ALIGN;
 
-int vi_capture_init(struct tegra_channel *chan);
-void vi_capture_shutdown(struct tegra_channel *chan);
-int vi_capture_setup(struct tegra_channel *chan,
+int vi_capture_init(struct tegra_vi_channel *chan);
+void vi_capture_shutdown(struct tegra_vi_channel *chan);
+int vi_capture_setup(struct tegra_vi_channel *chan,
 		struct vi_capture_setup *setup);
-int vi_capture_reset(struct tegra_channel *chan,
+int vi_capture_reset(struct tegra_vi_channel *chan,
 		uint32_t reset_flags);
-int vi_capture_release(struct tegra_channel *chan,
+int vi_capture_release(struct tegra_vi_channel *chan,
 		uint32_t reset_flags);
-int vi_capture_get_info(struct tegra_channel *chan,
+int vi_capture_get_info(struct tegra_vi_channel *chan,
 		struct vi_capture_info *info);
-int vi_capture_control_message(struct tegra_channel *chan,
+int vi_capture_control_message(struct tegra_vi_channel *chan,
 		struct vi_capture_control_msg *msg);
-int vi_capture_request(struct tegra_channel *chan,
+int vi_capture_request(struct tegra_vi_channel *chan,
 		struct vi_capture_req *req);
-int vi_capture_status(struct tegra_channel *chan,
+int vi_capture_status(struct tegra_vi_channel *chan,
 		int32_t timeout_ms);
 long vi_capture_ioctl(struct file *file, void *fh,
 		bool use_prio, unsigned int cmd, void *arg);

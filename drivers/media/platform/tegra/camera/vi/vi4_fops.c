@@ -1007,12 +1007,6 @@ static int vi4_power_on(struct tegra_channel *chan)
 		}
 	}
 
-#if defined(CONFIG_TEGRA_CAMERA_RTCPU)
-	ret = vi_capture_init(chan);
-	if (ret < 0)
-		return ret;
-#endif
-
 	return 0;
 }
 
@@ -1024,10 +1018,6 @@ static void vi4_power_off(struct tegra_channel *chan)
 
 	vi = chan->vi;
 	csi = vi->csi;
-
-#if defined(CONFIG_TEGRA_CAMERA_RTCPU)
-	vi_capture_shutdown(chan);
-#endif
 
 	if (atomic_dec_and_test(&chan->power_on_refcnt)) {
 		ret = tegra_channel_set_power(chan, 0);
@@ -1072,6 +1062,5 @@ struct tegra_vi_fops vi4_fops = {
 	.vi_stop_streaming = vi4_channel_stop_streaming,
 	.vi_add_ctrls = vi4_add_ctrls,
 	.vi_init_video_formats = vi4_init_video_formats,
-	.vi_default_ioctl = vi_capture_ioctl,
 	.vi_mfi_work = vi4_mfi_work,
 };

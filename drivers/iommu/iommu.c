@@ -1412,9 +1412,9 @@ size_t iommu_unmap(struct iommu_domain *domain, unsigned long iova, size_t size)
 	 * or we hit an area that isn't mapped.
 	 */
 	while (unmapped < size) {
-		size_t left = size - unmapped;
+		size_t pgsize = iommu_pgsize(domain, iova, size - unmapped);
 
-		unmapped_page = domain->ops->unmap(domain, iova, left);
+		unmapped_page = domain->ops->unmap(domain, iova, pgsize);
 		if (!unmapped_page)
 			break;
 

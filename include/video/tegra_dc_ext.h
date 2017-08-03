@@ -373,14 +373,6 @@ struct tegra_dc_ext_flip_windowattr_v2 {
 	};
 };
 
-#define TEGRA_DC_EXT_FLIP_N_WINDOWS	3
-
-struct tegra_dc_ext_flip {
-	struct tegra_dc_ext_flip_windowattr win[TEGRA_DC_EXT_FLIP_N_WINDOWS];
-	__u32 post_syncpt_id;
-	__u32 post_syncpt_val;
-};
-
 /*
  * Variable win is the pointer to struct tegra_dc_ext_flip_windowattr.
  * Using the modified struct to avoid code conflict in user mode,
@@ -389,7 +381,6 @@ struct tegra_dc_ext_flip {
  * for flip2 use case.
  *
  */
-
 struct tegra_dc_ext_flip_2 {
 	struct tegra_dc_ext_flip_windowattr __user *win;
 	__u8 win_num;
@@ -397,22 +388,6 @@ struct tegra_dc_ext_flip_2 {
 	__u16 reserved2; /* unused - must be 0 */
 	__u32 post_syncpt_id;
 	__u32 post_syncpt_val;
-	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
-};
-
-/*
- * Variable win is the pointer to struct tegra_dc_ext_flip_windowattr_v2.
- * Flags has set to use TEGRA_DC_EXT_FLIP_HEAD_FLAG_V2_ATTR,
- * then use struct tegra_dc_ext_flip_windowattr_v2. If flag is not set
- * to use V2_ATTR, then code will use old struct tegra_dc_ext_flip_windowattr
- *
-*/
-struct tegra_dc_ext_flip_3 {
-	__u64 __user win;
-	__u8 win_num;
-	__u8 flags;
-	__u16 reserved2; /* unused - must be 0 */
-	__s32 post_syncpt_fd;
 	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
 };
 
@@ -649,9 +624,9 @@ struct tegra_dc_ext_flip_user_data {
 } __attribute__((__packed__));
 
 /*
- *tegra_dc_flip_4 : Incorporates a new pointer to an array of 32 bytes of data
- *to pass head specific info. The new nr_elements carries the number of such
- *elements. Everything else remains the same as in tegra_dc_ext_flip_3
+ * tegra_dc_flip_4 : Incorporates a new pointer to an array of 32 bytes of data
+ * to pass head specific info. The new nr_elements carries the number of such
+ * elements.
  */
 struct tegra_dc_ext_flip_4 {
 	__u64 __user win;
@@ -1153,9 +1128,6 @@ struct tegra_dc_ext_scanline_info {
 #define TEGRA_DC_EXT_PUT_WINDOW \
 	_IOW('D', 0x02, __u32)
 
-#define TEGRA_DC_EXT_FLIP \
-	_IOWR('D', 0x03, struct tegra_dc_ext_flip)
-
 #define TEGRA_DC_EXT_GET_CURSOR \
 	_IO('D', 0x04)
 #define TEGRA_DC_EXT_PUT_CURSOR \
@@ -1187,9 +1159,6 @@ struct tegra_dc_ext_scanline_info {
 #define TEGRA_DC_EXT_SET_CMU \
 	_IOW('D', 0x0D, struct tegra_dc_ext_cmu)
 
-#define TEGRA_DC_EXT_FLIP2 \
-	_IOWR('D', 0x0E, struct tegra_dc_ext_flip_2)
-
 #define TEGRA_DC_EXT_GET_CMU \
 	_IOR('D', 0x0F, struct tegra_dc_ext_cmu)
 
@@ -1198,9 +1167,6 @@ struct tegra_dc_ext_scanline_info {
 
 #define TEGRA_DC_EXT_SET_PROPOSED_BW \
 	_IOR('D', 0x13, struct tegra_dc_ext_flip_2)
-
-#define TEGRA_DC_EXT_FLIP3 \
-	_IOWR('D', 0x14, struct tegra_dc_ext_flip_3)
 
 #define TEGRA_DC_EXT_SET_VBLANK \
 	_IOW('D', 0x15, struct tegra_dc_ext_set_vblank)

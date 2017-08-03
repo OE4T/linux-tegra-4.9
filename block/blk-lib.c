@@ -189,7 +189,8 @@ int blkdev_issue_write_same(struct block_device *bdev, sector_t sector,
 
 	if (bio) {
 		ret = submit_bio_wait(bio);
-		bio_put(bio);
+		if (!ret)
+			bio_put(bio);
 	}
 	return ret;
 }

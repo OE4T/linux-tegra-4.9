@@ -172,8 +172,7 @@ static int gic_probe(struct platform_device *pdev)
 
 	pm_runtime_put(dev);
 
-	if (!of_find_compatible_node(dev->of_node, NULL,
-		"nvidia,tegra210-agic"))
+	if (of_device_is_compatible(dev->of_node, "nvidia,tegra210-agic"))
 		tegra_agic = gic;
 
 	dev_info(dev, "GIC IRQ controller registered\n");

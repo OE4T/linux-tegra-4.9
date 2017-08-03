@@ -128,7 +128,8 @@ int blkdev_issue_discard(struct block_device *bdev, sector_t sector,
 		ret = submit_bio_wait(bio);
 		if (ret == -EOPNOTSUPP && !(flags & BLKDEV_DISCARD_ZERO))
 			ret = 0;
-		bio_put(bio);
+		if (!ret)
+			bio_put(bio);
 	}
 	blk_finish_plug(&plug);
 

@@ -237,7 +237,8 @@ static int __blkdev_issue_zeroout(struct block_device *bdev, sector_t sector,
 
 	if (bio) {
 		ret = submit_bio_wait(bio);
-		bio_put(bio);
+		if (!ret)
+			bio_put(bio);
 		return ret;
 	}
 	return 0;

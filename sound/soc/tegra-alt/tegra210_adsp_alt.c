@@ -1691,8 +1691,8 @@ static int tegra210_adsp_pcm_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 
 	ret = tegra210_adsp_send_period_size_msg(prtd->fe_apm,
-					params_period_size(params),
-					TEGRA210_ADSP_MSG_FLAG_SEND);
+			params_buffer_bytes(params)/params_periods(params),
+			TEGRA210_ADSP_MSG_FLAG_SEND);
 	if (ret < 0)
 		return ret;
 

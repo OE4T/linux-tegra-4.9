@@ -472,6 +472,7 @@ struct tegra_xusb_padctl {
 	bool otg_vbus_alwayson;
 
 	bool cdp_used;
+	bool is_xhci_iov;
 };
 
 static inline void padctl_writel(struct tegra_xusb_padctl *padctl, u32 value,

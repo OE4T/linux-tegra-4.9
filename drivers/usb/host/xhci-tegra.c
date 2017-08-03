@@ -312,6 +312,8 @@ struct tegra_xusb_soc {
 
 	bool scale_ss_clock;
 	bool has_ipfs;
+	bool ss_lfps_detector_war;
+
 	bool is_xhci_vf;
 	u8 vf_id;
 };
@@ -2812,6 +2814,7 @@ static int tegra_xhci_wait_for_ports_enter_u3(struct tegra_xusb *tegra)
 	writel(usbcmd, &xhci->op_regs->command);
 
 	for (i = 0; i < num_ports; i++) {
+		bool is_busy = true;
 		char devname[16];
 		u32 portsc = read_portsc(tegra, i);
 
@@ -2822,6 +2825,34 @@ static int tegra_xhci_wait_for_ports_enter_u3(struct tegra_xusb *tegra)
 			continue;
 
 		get_rootport_name(tegra, i, devname, sizeof(devname));
+
+		if (tegra->soc->ss_lfps_detector_war &&
+			DEV_SUPERSPEED(portsc)) {
+			unsigned long end = jiffies + msecs_to_jiffies(200);
+
+			while (time_before(jiffies, end)) {
+				if ((portsc & PORT_PLS_MASK) == XDEV_RESUME)
+					break;
+				spin_unlock_irqrestore(&xhci->lock, flags);
+				msleep(20);
+				spin_lock_irqsave(&xhci->lock, flags);
+
+				portsc = read_portsc(tegra, i);
+				if ((portsc & PORT_PLS_MASK) == XDEV_U3) {
+					dev_info(dev, "%s is suspended\n",
+							devname);
+					is_busy = false;
+					break;
+				}
+			}
+		}
+
+		if (is_busy) {
+			dev_info(dev, "%s is not suspended: %08x\n", devname,
+					portsc);
+			ret = -EBUSY;
+			break;
+		}
 
 		dev_info(dev, "%s is not suspended: %08x\n", devname,
 			portsc);
@@ -3235,6 +3266,7 @@ static const struct tegra_xusb_soc tegra124_soc = {
 
 	.scale_ss_clock = true,
 	.has_ipfs = true,
+	.ss_lfps_detector_war = false,
 };
 MODULE_FIRMWARE("nvidia/tegra124/xusb.bin");
 
@@ -3272,6 +3304,7 @@ static const struct tegra_xusb_soc tegra210_soc = {
 
 	.scale_ss_clock = false,
 	.has_ipfs = true,
+	.ss_lfps_detector_war = true,
 };
 MODULE_FIRMWARE("nvidia/tegra210/xusb.bin");
 
@@ -3300,6 +3333,7 @@ static const struct tegra_xusb_soc tegra186_soc = {
 
 	.scale_ss_clock = false,
 	.has_ipfs = false,
+	.ss_lfps_detector_war = false,
 };
 MODULE_FIRMWARE("tegra18x_xusb_firmware");
 
@@ -3328,6 +3362,7 @@ static const struct tegra_xusb_soc tegra194_soc = {
 
 	.scale_ss_clock = false,
 	.has_ipfs = false,
+	.ss_lfps_detector_war = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
@@ -3355,6 +3390,7 @@ static const struct tegra_xusb_soc tegra194_vf1_soc = {
 
 	.scale_ss_clock = false,
 	.has_ipfs = false,
+	.ss_lfps_detector_war = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
@@ -3382,6 +3418,7 @@ static const struct tegra_xusb_soc tegra194_vf2_soc = {
 
 	.scale_ss_clock = false,
 	.has_ipfs = false,
+	.ss_lfps_detector_war = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 

@@ -2669,6 +2669,32 @@ static inline u32 read_portsc(struct tegra_xusb *tegra, unsigned int port)
 	return readl(&xhci->op_regs->port_status_base + NUM_PORT_REGS * port);
 }
 
+static void get_rootport_name(struct tegra_xusb *tegra, int i,
+		char *name, int size)
+{
+	struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
+	const struct tegra_xusb_soc *soc = tegra->soc;
+	struct usb_hcd *hcd = NULL;
+	int dev_id = -1;
+
+	if ((i >= soc->ports.usb3.offset) &&
+		(i < (soc->ports.usb3.offset + soc->ports.usb3.count))) {
+		hcd = xhci->shared_hcd;
+		dev_id = i - soc->ports.usb3.offset + 1;
+	} else if ((i >= soc->ports.usb2.offset) &&
+		(i < (soc->ports.usb2.offset + soc->ports.usb2.count +
+		soc->ports.hsic.count))) {
+		hcd = xhci->main_hcd;
+		dev_id = i - soc->ports.usb2.offset + 1;
+	}
+
+	memset(name, 0, size);
+	if (hcd)
+		snprintf(name, size, "%d-%d", hcd->self.busnum, dev_id);
+	else
+		snprintf(name, size, "port %d", i);
+}
+
 static enum usb_device_speed port_speed(struct tegra_xusb *tegra,
 					unsigned int port)
 {
@@ -2769,6 +2795,45 @@ static void tegra_xhci_program_utmi_power_lp0_exit(
 	}
 }
 
+static int tegra_xhci_wait_for_ports_enter_u3(struct tegra_xusb *tegra)
+{
+	struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
+	struct device *dev = tegra->dev;
+	u32 usbcmd;
+	int i;
+	int num_ports = HCS_MAX_PORTS(xhci->hcs_params1);
+	int ret = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&xhci->lock, flags);
+
+	usbcmd = readl(&xhci->op_regs->command);
+	usbcmd &= ~CMD_EIE;
+	writel(usbcmd, &xhci->op_regs->command);
+
+	for (i = 0; i < num_ports; i++) {
+		char devname[16];
+		u32 portsc = read_portsc(tegra, i);
+
+		if (!(portsc & PORT_PE))
+			continue;
+
+		if ((portsc & PORT_PLS_MASK) == XDEV_U3)
+			continue;
+
+		get_rootport_name(tegra, i, devname, sizeof(devname));
+
+		dev_info(dev, "%s is not suspended: %08x\n", devname,
+			portsc);
+		ret = -EBUSY;
+		break;
+	}
+
+	spin_unlock_irqrestore(&xhci->lock, flags);
+
+	return ret;
+}
+
 /* caller must hold tegra->lock */
 static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 {
@@ -2781,7 +2846,9 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 	dev_info(dev, "entering ELPG\n");
 
 	/* Wait for ports to enter U3. */
-	usleep_range(10000, 11000);
+	ret = tegra_xhci_wait_for_ports_enter_u3(tegra);
+	if (ret < 0)
+		goto out;
 
 	ret = xhci_suspend(xhci, do_wakeup);
 
@@ -2841,8 +2908,15 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 out:
 	if (!ret)
 		dev_info(tegra->dev, "entering ELPG done\n");
-	else
+	else {
+		u32 usbcmd;
+
+		usbcmd = readl(&xhci->op_regs->command);
+		usbcmd |= CMD_EIE;
+		writel(usbcmd, &xhci->op_regs->command);
+
 		dev_info(tegra->dev, "entering ELPG failed\n");
+	}
 
 	return ret;
 }
@@ -2856,6 +2930,7 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 	bool do_wakeup = runtime ? true : device_may_wakeup(dev);
 	unsigned int i, j;
 	int ret;
+	u32 usbcmd;
 
 	dev_info(dev, "exiting ELPG\n");
 
@@ -2908,6 +2983,10 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 	}
 
 	ret = xhci_resume(xhci, 0);
+
+	usbcmd = readl(&xhci->op_regs->command);
+	usbcmd |= CMD_EIE;
+	writel(usbcmd, &xhci->op_regs->command);
 
 out:
 	if (!ret)

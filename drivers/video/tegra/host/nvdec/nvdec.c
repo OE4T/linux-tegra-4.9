@@ -1,7 +1,7 @@
 /*
  * Tegra NVDEC Module Support
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -348,8 +348,11 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 
 	dev_dbg(&dev->dev, "nvdec_boot: success\n");
 
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
-	te_restore_keyslots();
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL)
+	tlk_restore_keyslots();
+#endif
+#if defined(CONFIG_TRUSTY)
+	trusty_restore_keyslots();
 #endif
 
 	return 0;

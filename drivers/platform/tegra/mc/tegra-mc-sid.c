@@ -63,7 +63,10 @@ const char *tegra_mc_get_sid_name(int sid)
 	int i;
 	struct sid_to_oids *entry;
 
-	BUG_ON(!mc_sid);
+	if (!mc_sid) {
+		pr_err("mc-sid isn't populated yet\n");
+		goto end;
+	}
 
 	for (i = 0; i < mc_sid->soc_data->nsid_to_oids; i++) {
 		entry = &mc_sid->soc_data->sid_to_oids[i];
@@ -72,6 +75,7 @@ const char *tegra_mc_get_sid_name(int sid)
 			return entry->name;
 	}
 
+end:
 	return NULL;
 }
 

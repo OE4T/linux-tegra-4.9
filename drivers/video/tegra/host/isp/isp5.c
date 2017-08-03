@@ -32,6 +32,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <media/isp_channel.h>
 
 #include "isp5.h"
 #include "dev.h"
@@ -145,6 +146,12 @@ static int isp5_probe(struct platform_device *pdev)
 
 	isp5_init_debugfs(isp5);
 
+#if defined(CONFIG_TEGRA_CAMERA_RTCPU)
+	err = isp_channel_drv_register(pdev);
+	if (err)
+		goto deinit;
+#endif
+
 	dev_info(dev, "probed\n");
 
 	return 0;
@@ -162,6 +169,9 @@ static int __exit isp5_remove(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct host_isp5 *isp5 = (struct host_isp5 *)pdata->private_data;
 
+#if defined(CONFIG_TEGRA_CAMERA_RTCPU)
+	isp_channel_drv_unregister(&pdev->dev);
+#endif
 	isp5_remove_debugfs(isp5);
 	platform_device_put(isp5->isp_thi);
 

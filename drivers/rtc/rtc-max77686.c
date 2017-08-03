@@ -7,7 +7,7 @@
  *
  *  This program is free software; you can redistribute  it and/or modify it
  *  under  the terms of  the GNU General  Public License as published by the
- *  Free Software Foundation;  either version 2 of the  License, or (at your
+ *  Free Software Foundation;  either version 2 of the License, or (at your
  *  option) any later version.
  *
  */
@@ -146,13 +146,13 @@ static const unsigned int max77686_map[REG_RTC_END] = {
 	[REG_RTC_CONTROL]    = MAX77686_RTC_CONTROL,
 	[REG_RTC_UPDATE0]    = MAX77686_RTC_UPDATE0,
 	[REG_WTSR_SMPL_CNTL] = MAX77686_WTSR_SMPL_CNTL,
-	[REG_RTC_SEC]        = MAX77686_RTC_SEC,
-	[REG_RTC_MIN]        = MAX77686_RTC_MIN,
-	[REG_RTC_HOUR]       = MAX77686_RTC_HOUR,
+	[REG_RTC_SEC]	     = MAX77686_RTC_SEC,
+	[REG_RTC_MIN]	     = MAX77686_RTC_MIN,
+	[REG_RTC_HOUR]	     = MAX77686_RTC_HOUR,
 	[REG_RTC_WEEKDAY]    = MAX77686_RTC_WEEKDAY,
 	[REG_RTC_MONTH]      = MAX77686_RTC_MONTH,
-	[REG_RTC_YEAR]       = MAX77686_RTC_YEAR,
-	[REG_RTC_DATE]       = MAX77686_RTC_DATE,
+	[REG_RTC_YEAR]	     = MAX77686_RTC_YEAR,
+	[REG_RTC_DATE]	     = MAX77686_RTC_DATE,
 	[REG_ALARM1_SEC]     = MAX77686_ALARM1_SEC,
 	[REG_ALARM1_MIN]     = MAX77686_ALARM1_MIN,
 	[REG_ALARM1_HOUR]    = MAX77686_ALARM1_HOUR,
@@ -218,13 +218,13 @@ static const unsigned int max77802_map[REG_RTC_END] = {
 	[REG_RTC_CONTROL]    = MAX77802_RTC_CONTROL,
 	[REG_RTC_UPDATE0]    = MAX77802_RTC_UPDATE0,
 	[REG_WTSR_SMPL_CNTL] = MAX77802_WTSR_SMPL_CNTL,
-	[REG_RTC_SEC]        = MAX77802_RTC_SEC,
-	[REG_RTC_MIN]        = MAX77802_RTC_MIN,
-	[REG_RTC_HOUR]       = MAX77802_RTC_HOUR,
+	[REG_RTC_SEC]	     = MAX77802_RTC_SEC,
+	[REG_RTC_MIN]	     = MAX77802_RTC_MIN,
+	[REG_RTC_HOUR]	     = MAX77802_RTC_HOUR,
 	[REG_RTC_WEEKDAY]    = MAX77802_RTC_WEEKDAY,
 	[REG_RTC_MONTH]      = MAX77802_RTC_MONTH,
-	[REG_RTC_YEAR]       = MAX77802_RTC_YEAR,
-	[REG_RTC_DATE]       = MAX77802_RTC_DATE,
+	[REG_RTC_YEAR]	     = MAX77802_RTC_YEAR,
+	[REG_RTC_DATE]	     = MAX77802_RTC_DATE,
 	[REG_ALARM1_SEC]     = MAX77802_ALARM1_SEC,
 	[REG_ALARM1_MIN]     = MAX77802_ALARM1_MIN,
 	[REG_ALARM1_HOUR]    = MAX77802_ALARM1_HOUR,
@@ -274,6 +274,7 @@ static inline int _regmap_bulk_write(struct max77686_rtc_info *info,
 		/* Power registers support register-data pair writing */
 		u8 *src = (u8 *)val;
 		int i;
+
 		for (i = 0; i < len; i++) {
 			ret = regmap_write(info->rtc_regmap, reg, *src++);
 			if (ret < 0)
@@ -766,7 +767,12 @@ static int max77686_rtc_probe(struct platform_device *pdev)
 {
 	struct max77686_rtc_info *info;
 	const struct platform_device_id *id = platform_get_device_id(pdev);
+	struct device_node *np;
 	int ret;
+
+	np = of_get_child_by_name(pdev->dev.parent->of_node, "rtc");
+	if (np && !of_device_is_available(np))
+		return -ENODEV;
 
 	info = devm_kzalloc(&pdev->dev, sizeof(struct max77686_rtc_info),
 			    GFP_KERNEL);

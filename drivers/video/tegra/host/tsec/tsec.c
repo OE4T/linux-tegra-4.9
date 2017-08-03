@@ -849,7 +849,7 @@ static int tsec_probe(struct platform_device *dev)
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
 
-	node = of_find_node_by_name(dev->dev.of_node, "carveout");
+	node = of_get_child_by_name(dev->dev.of_node, "carveout");
 	if (node) {
 		DEFINE_DMA_ATTRS(attrs);
 		/* This is currently used only in T124. carveout_addr and

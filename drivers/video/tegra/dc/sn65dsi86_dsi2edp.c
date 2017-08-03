@@ -157,14 +157,11 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	}
 	/* reg.0x5a enhanced framing */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_FRAMING_CFG, (1 << 2));
-	usleep_range(11000, 12000);  /* need a min 10mSec delay */
 	/* reg.0x93 DP num of lanes & SSC */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_SSC_CFG,
 			dsi2edp->init.dp_ssc_cfg);
-	usleep_range(11000, 12000);  /* need a min 10mSec delay */
 	/* reg.0x94 L0mV HBR */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_CFG, 0x80);
-	usleep_range(11000, 12000);  /* need a min 10mSec delay */
 
 	/* reg.0x0d enable DP PLL */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_PLL_EN, (1 << 0));
@@ -176,7 +173,6 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	} while (((val & (1 << 7)) == 0) && (retry++ < RETRY_PLL));
 	if ((val & (1 << 7)) == 0)
 		pr_err("SN65DSI86: DP_PLL not locked\n");
-	usleep_range(1000, 1100);
 
 	/* reg.0x95 POST2 0dB */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_TRAINING_CFG, 0x00);
@@ -207,7 +203,6 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 		} while ((val != 0x1) && (retry++ < RETRY_LT));
 		if (val != 0x1)
 			pr_err("SN65DSI86: semi-auto link training failed\n");
-		usleep_range(1000, 1100);
 	}
 
 	/* reg.0x20-0x21 ch.a h-active */

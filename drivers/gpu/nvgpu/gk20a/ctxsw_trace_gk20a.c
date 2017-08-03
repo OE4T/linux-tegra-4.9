@@ -47,7 +47,7 @@ struct gk20a_ctxsw_dev {
 	size_t size;
 	u32 num_ents;
 
-	atomic_t vma_ref;
+	nvgpu_atomic_t vma_ref;
 
 	struct nvgpu_mutex write_lock;
 };
@@ -152,7 +152,7 @@ static int gk20a_ctxsw_dev_alloc_buffer(struct gk20a_ctxsw_dev *dev,
 	void *buf;
 	int err;
 
-	if ((dev->write_enabled) || (atomic_read(&dev->vma_ref)))
+	if ((dev->write_enabled) || (nvgpu_atomic_read(&dev->vma_ref)))
 		return -EBUSY;
 
 	err = g->ops.fecs_trace.alloc_user_buffer(g, &buf, &size);
@@ -438,18 +438,18 @@ static void gk20a_ctxsw_dev_vma_open(struct vm_area_struct *vma)
 {
 	struct gk20a_ctxsw_dev *dev = vma->vm_private_data;
 
-	atomic_inc(&dev->vma_ref);
+	nvgpu_atomic_inc(&dev->vma_ref);
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "vma_ref=%d",
-		atomic_read(&dev->vma_ref));
+		nvgpu_atomic_read(&dev->vma_ref));
 }
 
 static void gk20a_ctxsw_dev_vma_close(struct vm_area_struct *vma)
 {
 	struct gk20a_ctxsw_dev *dev = vma->vm_private_data;
 
-	atomic_dec(&dev->vma_ref);
+	nvgpu_atomic_dec(&dev->vma_ref);
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "vma_ref=%d",
-		atomic_read(&dev->vma_ref));
+		nvgpu_atomic_read(&dev->vma_ref));
 }
 
 static struct vm_operations_struct gk20a_ctxsw_dev_vma_ops = {
@@ -497,7 +497,7 @@ static int gk20a_ctxsw_init_devs(struct gk20a *g)
 		err = nvgpu_mutex_init(&dev->write_lock);
 		if (err)
 			return err;
-		atomic_set(&dev->vma_ref, 0);
+		nvgpu_atomic_set(&dev->vma_ref, 0);
 		dev++;
 	}
 	return 0;

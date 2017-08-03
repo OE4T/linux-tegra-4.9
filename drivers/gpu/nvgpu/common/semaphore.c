@@ -364,7 +364,7 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 	hw_sema->p = p;
 	hw_sema->idx = hw_sema_idx;
 	hw_sema->offset = SEMAPHORE_SIZE * hw_sema_idx;
-	atomic_set(&hw_sema->next_value, 0);
+	nvgpu_atomic_set(&hw_sema->next_value, 0);
 	nvgpu_init_list_node(&hw_sema->hw_sema_list);
 	nvgpu_mem_wr(ch->g, &p->rw_mem, hw_sema->offset, 0);
 
@@ -425,7 +425,7 @@ struct nvgpu_semaphore *nvgpu_semaphore_alloc(struct channel_gk20a *ch)
 
 	kref_init(&s->ref);
 	s->hw_sema = ch->hw_sema;
-	atomic_set(&s->value, 0);
+	nvgpu_atomic_set(&s->value, 0);
 
 	/*
 	 * Take a ref on the pool so that we can keep this pool alive for

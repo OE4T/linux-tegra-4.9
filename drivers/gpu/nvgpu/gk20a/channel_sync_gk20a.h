@@ -25,7 +25,7 @@ struct gk20a_fence;
 struct gk20a;
 
 struct gk20a_channel_sync {
-	atomic_t refcount;
+	nvgpu_atomic_t refcount;
 
 	/* Generate a gpu wait cmdbuf from syncpoint.
 	 * Returns

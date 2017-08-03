@@ -48,6 +48,7 @@ struct nvgpu_cpu_time_correlation_sample;
 #include <nvgpu/kref.h>
 #include <nvgpu/falcon.h>
 #include <nvgpu/pmu.h>
+#include <nvgpu/atomic.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -1038,7 +1039,7 @@ struct gk20a {
 	 */
 	unsigned long *enabled_flags;
 
-	atomic_t usage_count;
+	nvgpu_atomic_t usage_count;
 
 	struct kref refcount;
 
@@ -1205,7 +1206,7 @@ struct gk20a {
 
 	struct gk20a_channel_worker {
 		struct nvgpu_thread poll_task;
-		atomic_t put;
+		nvgpu_atomic_t put;
 		struct nvgpu_cond wq;
 		struct nvgpu_list_node items;
 		struct nvgpu_spinlock items_lock;

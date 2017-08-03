@@ -43,7 +43,7 @@ static void vgpu_channel_bind(struct channel_gk20a *ch)
 	WARN_ON(err || msg.ret);
 
 	wmb();
-	atomic_set(&ch->bound, true);
+	nvgpu_atomic_set(&ch->bound, true);
 }
 
 static void vgpu_channel_unbind(struct channel_gk20a *ch)
@@ -51,7 +51,7 @@ static void vgpu_channel_unbind(struct channel_gk20a *ch)
 
 	gk20a_dbg_fn("");
 
-	if (atomic_cmpxchg(&ch->bound, true, false)) {
+	if (nvgpu_atomic_cmpxchg(&ch->bound, true, false)) {
 		struct tegra_vgpu_cmd_msg msg;
 		struct tegra_vgpu_channel_config_params *p =
 				&msg.params.channel_config;
@@ -425,7 +425,7 @@ static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid)
 
 	gk20a_dbg_fn("");
 
-	if (!atomic_read(&ch->bound))
+	if (!nvgpu_atomic_read(&ch->bound))
 		return 0;
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_PREEMPT;

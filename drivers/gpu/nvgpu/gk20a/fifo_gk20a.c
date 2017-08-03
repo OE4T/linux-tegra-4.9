@@ -3439,7 +3439,7 @@ void gk20a_dump_channel_status_ramfc(struct gk20a *g,
 		gk20a_debug_output(o, "SEMA STATE: value: 0x%08x "
 				   "next_val: 0x%08x addr: 0x%010llx\n",
 				   __nvgpu_semaphore_read(hw_sema),
-				   atomic_read(&hw_sema->next_value),
+				   nvgpu_atomic_read(&hw_sema->next_value),
 				   nvgpu_hw_sema_addr(hw_sema));
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
@@ -3489,7 +3489,7 @@ void gk20a_debug_dump_all_channel_status_ramfc(struct gk20a *g,
 			continue;
 
 		ch_state[chid]->pid = ch->pid;
-		ch_state[chid]->refs = atomic_read(&ch->ref_count);
+		ch_state[chid]->refs = nvgpu_atomic_read(&ch->ref_count);
 		ch_state[chid]->deterministic = ch->deterministic;
 		nvgpu_mem_rd_n(g, &ch->inst_block, 0,
 				&ch_state[chid]->inst_block[0],
@@ -3591,7 +3591,7 @@ void gk20a_fifo_channel_unbind(struct channel_gk20a *ch_gk20a)
 
 	gk20a_dbg_fn("");
 
-	if (atomic_cmpxchg(&ch_gk20a->bound, true, false)) {
+	if (nvgpu_atomic_cmpxchg(&ch_gk20a->bound, true, false)) {
 		gk20a_writel(g, ccsr_channel_inst_r(ch_gk20a->chid),
 			ccsr_channel_inst_ptr_f(0) |
 			ccsr_channel_inst_bind_false_f());

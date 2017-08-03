@@ -346,7 +346,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 
 	nvgpu_nvhost_syncpt_set_min_eq_max_ext(sp->nvhost_dev, sp->id);
 
-	atomic_set(&sp->ops.refcount, 0);
+	nvgpu_atomic_set(&sp->ops.refcount, 0);
 	sp->ops.wait_syncpt		= gk20a_channel_syncpt_wait_syncpt;
 	sp->ops.wait_fd			= gk20a_channel_syncpt_wait_fd;
 	sp->ops.incr			= gk20a_channel_syncpt_incr;
@@ -619,7 +619,7 @@ static int __semaphore_wait_fd_fast_path(struct channel_gk20a *c,
 		return err;
 
 	nvgpu_semaphore_get(sema);
-	BUG_ON(!atomic_read(&sema->value));
+	BUG_ON(!nvgpu_atomic_read(&sema->value));
 	add_sema_cmd(c->g, c, sema, wait_cmd, 8, true, false);
 
 	/*
@@ -922,7 +922,7 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 		return NULL;
 	}
 #endif
-	atomic_set(&sema->ops.refcount, 0);
+	nvgpu_atomic_set(&sema->ops.refcount, 0);
 	sema->ops.wait_syncpt	= gk20a_channel_semaphore_wait_syncpt;
 	sema->ops.wait_fd	= gk20a_channel_semaphore_wait_fd;
 	sema->ops.incr		= gk20a_channel_semaphore_incr;

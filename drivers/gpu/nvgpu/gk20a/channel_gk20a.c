@@ -100,7 +100,7 @@ static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 		ch = nvgpu_list_first_entry(&f->free_chs, channel_gk20a,
 							  free_chs);
 		nvgpu_list_del(&ch->free_chs);
-		WARN_ON(atomic_read(&ch->ref_count));
+		WARN_ON(nvgpu_atomic_read(&ch->ref_count));
 		WARN_ON(ch->referenceable);
 		f->used_channels++;
 	}
@@ -394,20 +394,20 @@ void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
 }
 
 static void gk20a_wait_until_counter_is_N(
-	struct channel_gk20a *ch, atomic_t *counter, int wait_value,
+	struct channel_gk20a *ch, nvgpu_atomic_t *counter, int wait_value,
 	struct nvgpu_cond *c, const char *caller, const char *counter_name)
 {
 	while (true) {
 		if (NVGPU_COND_WAIT(
 			    c,
-			    atomic_read(counter) == wait_value,
+			    nvgpu_atomic_read(counter) == wait_value,
 			    5000) == 0)
 			break;
 
 		nvgpu_warn(ch->g,
 			   "%s: channel %d, still waiting, %s left: %d, waiting for: %d",
 			   caller, ch->chid, counter_name,
-			   atomic_read(counter), wait_value);
+			   nvgpu_atomic_read(counter), wait_value);
 
 		gk20a_channel_dump_ref_actions(ch);
 	}
@@ -491,7 +491,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	nvgpu_spinlock_release(&ch->ref_obtain_lock);
 
 	/* matches with the initial reference in gk20a_open_new_channel() */
-	atomic_dec(&ch->ref_count);
+	nvgpu_atomic_dec(&ch->ref_count);
 
 	/* wait until no more refs to the channel */
 	if (!force)
@@ -635,7 +635,7 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 	nvgpu_spinlock_acquire(&ch->ref_actions_lock);
 
 	dev_info(dev, "ch %d: refs %d. Actions, most recent last:\n",
-			ch->chid, atomic_read(&ch->ref_count));
+			ch->chid, nvgpu_atomic_read(&ch->ref_count));
 
 	/* start at the oldest possible entry. put is next insertion point */
 	get = ch->ref_actions_put;
@@ -709,7 +709,7 @@ struct channel_gk20a *_gk20a_channel_get(struct channel_gk20a *ch,
 
 	if (likely(ch->referenceable)) {
 		gk20a_channel_save_ref_source(ch, channel_gk20a_ref_action_get);
-		atomic_inc(&ch->ref_count);
+		nvgpu_atomic_inc(&ch->ref_count);
 		ret = ch;
 	} else
 		ret = NULL;
@@ -726,17 +726,17 @@ void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller)
 {
 	gk20a_channel_save_ref_source(ch, channel_gk20a_ref_action_put);
 	trace_gk20a_channel_put(ch->chid, caller);
-	atomic_dec(&ch->ref_count);
+	nvgpu_atomic_dec(&ch->ref_count);
 	nvgpu_cond_broadcast(&ch->ref_count_dec_wq);
 
 	/* More puts than gets. Channel is probably going to get
 	 * stuck. */
-	WARN_ON(atomic_read(&ch->ref_count) < 0);
+	WARN_ON(nvgpu_atomic_read(&ch->ref_count) < 0);
 
 	/* Also, more puts than gets. ref_count can go to 0 only if
 	 * the channel is closing. Channel is probably going to get
 	 * stuck. */
-	WARN_ON(atomic_read(&ch->ref_count) == 0 && ch->referenceable);
+	WARN_ON(nvgpu_atomic_read(&ch->ref_count) == 0 && ch->referenceable);
 }
 
 void gk20a_channel_close(struct channel_gk20a *ch)
@@ -879,7 +879,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	 * references. The initial reference will be decreased in
 	 * gk20a_free_channel() */
 	ch->referenceable = true;
-	atomic_set(&ch->ref_count, 1);
+	nvgpu_atomic_set(&ch->ref_count, 1);
 	wmb();
 
 	return ch;
@@ -1745,7 +1745,7 @@ static int __gk20a_channel_worker_wakeup(struct gk20a *g)
 	 * pair.
 	 */
 
-	put = atomic_inc_return(&g->channel_worker.put);
+	put = nvgpu_atomic_inc_return(&g->channel_worker.put);
 	nvgpu_cond_signal(&g->channel_worker.wq);
 
 	return put;
@@ -1761,7 +1761,7 @@ static int __gk20a_channel_worker_wakeup(struct gk20a *g)
  */
 static bool __gk20a_channel_worker_pending(struct gk20a *g, int get)
 {
-	bool pending = atomic_read(&g->channel_worker.put) != get;
+	bool pending = nvgpu_atomic_read(&g->channel_worker.put) != get;
 
 	/*
 	 * This would be the place for a rmb() pairing a wmb() for a wakeup
@@ -1864,7 +1864,7 @@ int nvgpu_channel_worker_init(struct gk20a *g)
 	int err;
 	char thread_name[64];
 
-	atomic_set(&g->channel_worker.put, 0);
+	nvgpu_atomic_set(&g->channel_worker.put, 0);
 	nvgpu_cond_init(&g->channel_worker.wq);
 	nvgpu_init_list_node(&g->channel_worker.items);
 	nvgpu_spinlock_init(&g->channel_worker.items_lock);
@@ -2086,7 +2086,8 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 			if (g->aggressive_sync_destroy_thresh) {
 				nvgpu_mutex_acquire(&c->sync_lock);
-				if (atomic_dec_and_test(&c->sync->refcount) &&
+				if (nvgpu_atomic_dec_and_test(
+					&c->sync->refcount) &&
 						g->aggressive_sync_destroy) {
 					gk20a_channel_sync_destroy(c->sync);
 					c->sync = NULL;
@@ -2321,7 +2322,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 			}
 			new_sync_created = true;
 		}
-		atomic_inc(&c->sync->refcount);
+		nvgpu_atomic_inc(&c->sync->refcount);
 		nvgpu_mutex_release(&c->sync_lock);
 	}
 
@@ -2774,9 +2775,9 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 
 	c->g = NULL;
 	c->chid = chid;
-	atomic_set(&c->bound, false);
+	nvgpu_atomic_set(&c->bound, false);
 	nvgpu_spinlock_init(&c->ref_obtain_lock);
-	atomic_set(&c->ref_count, 0);
+	nvgpu_atomic_set(&c->ref_count, 0);
 	c->referenceable = false;
 	nvgpu_cond_init(&c->ref_count_dec_wq);
 
@@ -2935,7 +2936,7 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *c = g->fifo.channel+chid;
 		if (gk20a_channel_get(c)) {
-			if (atomic_read(&c->bound)) {
+			if (nvgpu_atomic_read(&c->bound)) {
 				nvgpu_cond_broadcast_interruptible(
 						&c->semaphore_wq);
 				if (post_events) {

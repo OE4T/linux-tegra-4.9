@@ -65,7 +65,9 @@ static u64 nvgpu_lockless_alloc(struct nvgpu_allocator *a, u64 len)
 		ret = cmpxchg(&pa->head, head, new_head);
 		if (ret == head) {
 			addr = pa->base + head * pa->blk_size;
-			atomic_inc(&pa->nr_allocs);
+			nvgpu_atomic_inc(&pa->nr_allocs);
+			alloc_dbg(a, "Alloc node # %d @ addr 0x%llx\n", head,
+				  addr);
 			break;
 		}
 		head = ACCESS_ONCE(pa->head);
@@ -94,7 +96,8 @@ static void nvgpu_lockless_free(struct nvgpu_allocator *a, u64 addr)
 		ACCESS_ONCE(pa->next[cur_idx]) = head;
 		ret = cmpxchg(&pa->head, head, cur_idx);
 		if (ret == head) {
-			atomic_dec(&pa->nr_allocs);
+			nvgpu_atomic_dec(&pa->nr_allocs);
+			alloc_dbg(a, "Free node # %llu\n", cur_idx);
 			break;
 		}
 	}
@@ -125,9 +128,9 @@ static void nvgpu_lockless_print_stats(struct nvgpu_allocator *a,
 	/* Actual stats. */
 	__alloc_pstat(s, a, "Stats:\n");
 	__alloc_pstat(s, a, "  Number allocs = %d\n",
-		      atomic_read(&pa->nr_allocs));
+		      nvgpu_atomic_read(&pa->nr_allocs));
 	__alloc_pstat(s, a, "  Number free   = %d\n",
-		      pa->nr_nodes - atomic_read(&pa->nr_allocs));
+		      pa->nr_nodes - nvgpu_atomic_read(&pa->nr_allocs));
 }
 #endif
 
@@ -193,7 +196,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	a->blk_size = blk_size;
 	a->nr_nodes = nr_nodes;
 	a->flags = flags;
-	atomic_set(&a->nr_allocs, 0);
+	nvgpu_atomic_set(&a->nr_allocs, 0);
 
 	wmb();
 	a->inited = true;

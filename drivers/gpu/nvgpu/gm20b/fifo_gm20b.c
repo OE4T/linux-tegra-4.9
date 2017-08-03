@@ -51,7 +51,7 @@ void channel_gm20b_bind(struct channel_gk20a *c)
 		 ~ccsr_channel_enable_set_f(~0)) |
 		 ccsr_channel_enable_set_true_f());
 	wmb();
-	atomic_set(&c->bound, true);
+	nvgpu_atomic_set(&c->bound, true);
 }
 
 static inline u32 gm20b_engine_id_to_mmu_id(struct gk20a *g, u32 engine_id)

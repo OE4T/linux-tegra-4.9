@@ -30,6 +30,7 @@
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
 #include <nvgpu/kref.h>
+#include <nvgpu/atomic.h>
 
 struct nvgpu_pd_cache;
 
@@ -283,7 +284,7 @@ struct mm_gk20a {
 		struct nvgpu_mutex clear_list_mutex;
 
 		struct work_struct clear_mem_worker;
-		atomic64_t bytes_pending;
+		nvgpu_atomic64_t bytes_pending;
 	} vidmem;
 };
 

@@ -197,7 +197,7 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	WARN_ON(flags != NVGPU_DMA_NO_KERNEL_MAPPING);
 
 	nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
-	before_pending = atomic64_read(&g->mm.vidmem.bytes_pending);
+	before_pending = atomic64_read(&g->mm.vidmem.bytes_pending.atomic_var);
 	addr = __nvgpu_dma_alloc(vidmem_alloc, at, size);
 	nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
 	if (!addr) {
@@ -394,7 +394,7 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 		was_empty = nvgpu_list_empty(&g->mm.vidmem.clear_list_head);
 		nvgpu_list_add_tail(&mem->clear_list_entry,
 			      &g->mm.vidmem.clear_list_head);
-		atomic64_add(mem->size, &g->mm.vidmem.bytes_pending);
+		atomic64_add(mem->size, &g->mm.vidmem.bytes_pending.atomic_var);
 		nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
 
 		if (was_empty) {

@@ -24,6 +24,7 @@
 #include <nvgpu/lock.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/cond.h>
+#include <nvgpu/atomic.h>
 
 struct gk20a;
 struct gr_gk20a;
@@ -173,7 +174,7 @@ struct channel_gk20a {
 
 	struct nvgpu_spinlock ref_obtain_lock;
 	bool referenceable;
-	atomic_t ref_count;
+	nvgpu_atomic_t ref_count;
 	struct nvgpu_cond ref_count_dec_wq;
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
 	/*
@@ -191,7 +192,7 @@ struct channel_gk20a {
 
 	int chid;
 	bool wdt_enabled;
-	atomic_t bound;
+	nvgpu_atomic_t bound;
 	bool first_init;
 	bool vpr;
 	bool deterministic;

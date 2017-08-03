@@ -48,7 +48,7 @@ struct nvgpu_semaphore_sea;
 struct nvgpu_semaphore_int {
 	int idx;			/* Semaphore index. */
 	u32 offset;			/* Offset into the pool. */
-	atomic_t next_value;		/* Next available value. */
+	nvgpu_atomic_t next_value;	/* Next available value. */
 	u32 nr_incrs;			/* Number of increments programmed. */
 	struct nvgpu_semaphore_pool *p;	/* Pool that owns this sema. */
 	struct channel_gk20a *ch;	/* Channel that owns this sema. */
@@ -70,7 +70,7 @@ nvgpu_semaphore_int_from_hw_sema_list(struct nvgpu_list_node *node)
 struct nvgpu_semaphore {
 	struct nvgpu_semaphore_int *hw_sema;
 
-	atomic_t value;
+	nvgpu_atomic_t value;
 	int incremented;
 
 	struct kref ref;
@@ -242,7 +242,7 @@ static inline bool nvgpu_semaphore_is_released(struct nvgpu_semaphore *s)
 	 * the value of the semaphore then the semaphore has been signaled
 	 * (a.k.a. released).
 	 */
-	return (int)sema_val >= atomic_read(&s->value);
+	return (int)sema_val >= nvgpu_atomic_read(&s->value);
 }
 
 static inline bool nvgpu_semaphore_is_acquired(struct nvgpu_semaphore *s)
@@ -252,12 +252,12 @@ static inline bool nvgpu_semaphore_is_acquired(struct nvgpu_semaphore *s)
 
 static inline u32 nvgpu_semaphore_get_value(struct nvgpu_semaphore *s)
 {
-	return (u32)atomic_read(&s->value);
+	return (u32)nvgpu_atomic_read(&s->value);
 }
 
 static inline u32 nvgpu_semaphore_next_value(struct nvgpu_semaphore *s)
 {
-	return (u32)atomic_read(&s->hw_sema->next_value);
+	return (u32)nvgpu_atomic_read(&s->hw_sema->next_value);
 }
 
 /*
@@ -320,7 +320,7 @@ static inline void nvgpu_semaphore_incr(struct nvgpu_semaphore *s)
 {
 	BUG_ON(s->incremented);
 
-	atomic_set(&s->value, atomic_add_return(1, &s->hw_sema->next_value));
+	nvgpu_atomic_set(&s->value, nvgpu_atomic_add_return(1, &s->hw_sema->next_value));
 	s->incremented = 1;
 
 	gpu_sema_verbose_dbg(s->hw_sema->p->sema_sea->gk20a,

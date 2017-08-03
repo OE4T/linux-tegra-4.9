@@ -26,6 +26,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/vm.h>
+#include <nvgpu/atomic.h>
 
 #include "gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -74,10 +75,10 @@ nvgpu_dbg_gpu_get_session_channel(struct dbg_session_gk20a *dbg_s)
 }
 
 /* silly allocator - just increment id */
-static atomic_t unique_id = ATOMIC_INIT(0);
+static nvgpu_atomic_t unique_id = NVGPU_ATOMIC_INIT(0);
 static int generate_unique_id(void)
 {
-	return atomic_add_return(1, &unique_id);
+	return nvgpu_atomic_add_return(1, &unique_id);
 }
 
 static int alloc_session(struct gk20a *g, struct dbg_session_gk20a **_dbg_s)

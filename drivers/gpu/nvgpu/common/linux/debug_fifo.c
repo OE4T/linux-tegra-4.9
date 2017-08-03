@@ -167,7 +167,7 @@ static int gk20a_fifo_profile_enable(void *data, u64 val)
 				}
 				kref_init(&f->profile.ref);
 			}
-			atomic_set(&f->profile.get, 0);
+			atomic_set(&f->profile.get.atomic_var, 0);
 			f->profile.enabled = true;
 		}
 	}
@@ -246,7 +246,7 @@ static int gk20a_fifo_profile_stats(struct seq_file *s, void *unused)
 		return 0;
 	}
 
-	get = atomic_read(&g->fifo.profile.get);
+	get = atomic_read(&g->fifo.profile.get.atomic_var);
 
 	__gk20a_fifo_create_stats(g, percentiles_ioctl,
 		PROFILE_IOCTL_EXIT, PROFILE_IOCTL_ENTRY);
@@ -311,7 +311,7 @@ void gk20a_fifo_debugfs_init(struct gk20a *g)
 
 	nvgpu_mutex_init(&g->fifo.profile.lock);
 	g->fifo.profile.enabled = false;
-	atomic_set(&g->fifo.profile.get, 0);
+	atomic_set(&g->fifo.profile.get.atomic_var, 0);
 	atomic_set(&g->fifo.profile.ref.refcount, 0);
 
 	debugfs_create_file("enable", 0600, profile_root, g,
@@ -342,7 +342,7 @@ struct fifo_profile_gk20a *gk20a_fifo_profile_acquire(struct gk20a *g)
 	/* If kref is zero, profiling is not enabled */
 	if (!kref_get_unless_zero(&f->profile.ref))
 		return NULL;
-	index = atomic_inc_return(&f->profile.get);
+	index = atomic_inc_return(&f->profile.get.atomic_var);
 	profile = &f->profile.data[index % FIFO_PROFILING_ENTRIES];
 
 	return profile;

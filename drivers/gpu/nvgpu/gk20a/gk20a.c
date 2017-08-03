@@ -373,13 +373,13 @@ int gk20a_wait_for_idle(struct gk20a *g)
 	if (g->user_railgate_disabled)
 		target_usage_count = 1;
 
-	while ((atomic_read(&g->usage_count) != target_usage_count)
+	while ((nvgpu_atomic_read(&g->usage_count) != target_usage_count)
 			&& (wait_length-- >= 0))
 		nvgpu_msleep(20);
 
 	if (wait_length < 0) {
 		pr_warn("%s: Timed out waiting for idle (%d)!\n",
-			__func__, atomic_read(&g->usage_count));
+			__func__, nvgpu_atomic_read(&g->usage_count));
 		return -ETIMEDOUT;
 	}
 

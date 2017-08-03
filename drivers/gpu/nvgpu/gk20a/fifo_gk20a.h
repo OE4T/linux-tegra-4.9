@@ -156,7 +156,7 @@ struct fifo_gk20a {
 #ifdef CONFIG_DEBUG_FS
 	struct {
 		struct fifo_profile_gk20a *data;
-		atomic_t get;
+		nvgpu_atomic_t get;
 		bool enabled;
 		u64 *sorted;
 		struct kref ref;

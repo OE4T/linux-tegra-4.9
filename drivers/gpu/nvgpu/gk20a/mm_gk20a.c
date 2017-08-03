@@ -617,7 +617,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	nvgpu_mutex_init(&mm->vidmem.first_clear_mutex);
 
 	INIT_WORK(&mm->vidmem.clear_mem_worker, gk20a_vidmem_clear_mem_worker);
-	atomic64_set(&mm->vidmem.bytes_pending, 0);
+	nvgpu_atomic64_set(&mm->vidmem.bytes_pending, 0);
 	nvgpu_init_list_node(&mm->vidmem.clear_list_head);
 	nvgpu_mutex_init(&mm->vidmem.clear_list_mutex);
 
@@ -1165,7 +1165,7 @@ int gk20a_vidmem_get_space(struct gk20a *g, u64 *space)
 
 	nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
 	*space = nvgpu_alloc_space(allocator) +
-		atomic64_read(&g->mm.vidmem.bytes_pending);
+		nvgpu_atomic64_read(&g->mm.vidmem.bytes_pending);
 	nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
 	return 0;
 #else
@@ -1483,7 +1483,7 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 			   (u64)get_vidmem_page_alloc(mem->priv.sgt->sgl));
 		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
-		WARN_ON(atomic64_sub_return(mem->size,
+		WARN_ON(nvgpu_atomic64_sub_return(mem->size,
 					&g->mm.vidmem.bytes_pending) < 0);
 		mem->size = 0;
 		mem->aperture = APERTURE_INVALID;

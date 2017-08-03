@@ -68,13 +68,13 @@ int gk20a_busy(struct gk20a *g)
 	if (!g)
 		return -ENODEV;
 
-	atomic_inc(&g->usage_count);
+	atomic_inc(&g->usage_count.atomic_var);
 
 	down_read(&g->busy_lock);
 
 	if (!gk20a_can_busy(g)) {
 		ret = -ENODEV;
-		atomic_dec(&g->usage_count);
+		atomic_dec(&g->usage_count.atomic_var);
 		goto fail;
 	}
 
@@ -87,7 +87,7 @@ int gk20a_busy(struct gk20a *g)
 			/* Mark suspended so runtime pm will retry later */
 			pm_runtime_set_suspended(dev);
 			pm_runtime_put_noidle(dev);
-			atomic_dec(&g->usage_count);
+			atomic_dec(&g->usage_count.atomic_var);
 			goto fail;
 		}
 	} else {
@@ -97,7 +97,7 @@ int gk20a_busy(struct gk20a *g)
 				vgpu_pm_finalize_poweron(dev)
 				: gk20a_pm_finalize_poweron(dev);
 			if (ret) {
-				atomic_dec(&g->usage_count);
+				atomic_dec(&g->usage_count.atomic_var);
 				nvgpu_mutex_release(&g->poweron_lock);
 				goto fail;
 			}
@@ -120,7 +120,7 @@ void gk20a_idle(struct gk20a *g)
 {
 	struct device *dev;
 
-	atomic_dec(&g->usage_count);
+	atomic_dec(&g->usage_count.atomic_var);
 
 	dev = dev_from_gk20a(g);
 

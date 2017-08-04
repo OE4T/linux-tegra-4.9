@@ -3116,7 +3116,7 @@ static int gv11b_gr_wait_for_sm_lock_down(struct gk20a *g,
 	u32 warp_esr, global_esr;
 	struct nvgpu_timeout timeout;
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
-			gk20a_gr_tpc_offset(g, tpc);
+			gk20a_gr_tpc_offset(g, tpc) +
 			gv11b_gr_sm_offset(g, sm);
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,

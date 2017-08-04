@@ -105,6 +105,9 @@ static int gv11b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_TPC_IN_GPC_SHARED_BASE:
 		ret = proj_tpc_in_gpc_shared_base_v();
 		break;
+	case GPU_LIT_PPC_IN_GPC_BASE:
+		ret = proj_ppc_in_gpc_base_v();
+		break;
 	case GPU_LIT_PPC_IN_GPC_STRIDE:
 		ret = proj_ppc_in_gpc_stride_v();
 		break;
@@ -129,17 +132,23 @@ static int gv11b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_LTS_STRIDE:
 		ret = proj_lts_stride_v();
 		break;
-	case GPU_LIT_NUM_FBPAS:
-		ret = proj_scal_litter_num_fbpas_v();
-		break;
-	case GPU_LIT_FBPA_STRIDE:
-		ret = proj_fbpa_stride_v();
-		break;
 	case GPU_LIT_SM_PRI_STRIDE:
 		ret = proj_sm_stride_v();
 		break;
+	/* GV11B does not have a FBPA unit, despite what's listed in the
+	 * hw headers or read back through NV_PTOP_SCAL_NUM_FBPAS,
+	 * so hardcode all values to 0.
+	 */
+	case GPU_LIT_NUM_FBPAS:
+	case GPU_LIT_FBPA_STRIDE:
+	case GPU_LIT_FBPA_BASE:
+	case GPU_LIT_FBPA_SHARED_BASE:
+		ret = 0;
+		break;
 
 	default:
+		nvgpu_err(g, "Missing definition %d", value);
+		BUG();
 		break;
 	}
 

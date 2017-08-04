@@ -531,11 +531,11 @@
 	};
 
 	soctherm@0x700E2000 {
-		status = "okay";
+		status = "disabled";
 	};
 
 	tegra-aotag {
-		status = "okay";
+		status = "disabled";
 	};
 
 	tegra_cec {

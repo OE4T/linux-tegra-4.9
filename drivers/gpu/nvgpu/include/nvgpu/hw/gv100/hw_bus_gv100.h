@@ -56,6 +56,10 @@
 #ifndef _hw_bus_gv100_h_
 #define _hw_bus_gv100_h_
 
+static inline u32 bus_sw_scratch_r(u32 i)
+{
+	return 0x00001580 + i*4;
+}
 static inline u32 bus_bar0_window_r(void)
 {
 	return 0x00001700;

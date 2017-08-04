@@ -61,6 +61,7 @@
 #include "gp106/acr_gp106.h"
 #include "gp106/sec2_gp106.h"
 #include "gp106/bios_gp106.h"
+#include "gv100/bios_gv100.h"
 #include "gp106/therm_gp106.h"
 #include "gp106/xve_gp106.h"
 #include "gp106/clk_gp106.h"
@@ -85,6 +86,10 @@
 #include "gv11b/mm_gv11b.h"
 #include "gv11b/pmu_gv11b.h"
 #include "gv11b/fb_gv11b.h"
+#include "gv100/mm_gv100.h"
+#include "gv11b/pmu_gv11b.h"
+#include "gv100/fb_gv100.h"
+#include "gv100/fifo_gv100.h"
 #include "gv11b/fifo_gv11b.h"
 #include "gv11b/gv11b_gating_reglist.h"
 #include "gv11b/regops_gv11b.h"
@@ -208,6 +213,11 @@ int gv100_init_gpu_characteristics(struct gk20a *g)
 
 
 static const struct gpu_ops gv100_ops = {
+	.bios = {
+		.init = gp106_bios_init,
+		.preos_wait_for_halt = gv100_bios_preos_wait_for_halt,
+		.preos_reload_check = gv100_bios_preos_reload_check,
+	},
 	.ltc = {
 		.determine_L2_size_bytes = gp10b_determine_L2_size_bytes,
 		.set_zbc_s_entry = gv11b_ltc_set_zbc_stencil_entry,
@@ -218,7 +228,7 @@ static const struct gpu_ops gv100_ops = {
 		.init_comptags = gp10b_ltc_init_comptags,
 		.cbc_ctrl = gm20b_ltc_cbc_ctrl,
 		.isr = gv11b_ltc_isr,
-		.cbc_fix_config = gv11b_ltc_cbc_fix_config,
+		.cbc_fix_config = NULL,
 		.flush = gm20b_flush_ltc,
 		.set_enabled = gp10b_ltc_set_enabled,
 	},
@@ -374,8 +384,7 @@ static const struct gpu_ops gv100_ops = {
 	.fb = {
 		.reset = gv100_fb_reset,
 		.init_hw = gk20a_fb_init_hw,
-		.init_fs_state = gv11b_fb_init_fs_state,
-		.init_cbc = gv11b_fb_init_cbc,
+		.init_fs_state = NULL,
 		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
 		.set_use_full_comp_tag_line =
 			gm20b_fb_set_use_full_comp_tag_line,
@@ -417,7 +426,7 @@ static const struct gpu_ops gv100_ops = {
 		.trigger_mmu_fault = NULL,
 		.get_mmu_fault_info = NULL,
 		.wait_engine_idle = gk20a_fifo_wait_engine_idle,
-		.get_num_fifos = gv11b_fifo_get_num_fifos,
+		.get_num_fifos = gv100_fifo_get_num_fifos,
 		.get_pbdma_signature = gp10b_fifo_get_pbdma_signature,
 		.set_runlist_interleave = gk20a_fifo_set_runlist_interleave,
 		.tsg_set_timeslice = gk20a_fifo_tsg_set_timeslice,
@@ -633,7 +642,6 @@ static const struct gpu_ops gv100_ops = {
 	},
 	.chip_init_gpu_characteristics = gv100_init_gpu_characteristics,
 	.get_litter_value = gv100_get_litter_value,
-	.bios_init = gp106_bios_init,
 };
 
 int gv100_init_hal(struct gk20a *g)
@@ -641,6 +649,7 @@ int gv100_init_hal(struct gk20a *g)
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
+	gops->bios = gv100_ops.bios;
 	gops->ltc = gv100_ops.ltc;
 	gops->ce2 = gv100_ops.ce2;
 	gops->gr = gv100_ops.gr;
@@ -674,7 +683,6 @@ int gv100_init_hal(struct gk20a *g)
 	gops->chip_init_gpu_characteristics =
 		gv100_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = gv100_ops.get_litter_value;
-	gops->bios_init = gv100_ops.bios_init;
 
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
 	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
@@ -688,6 +696,8 @@ int gv100_init_hal(struct gk20a *g)
 
 	gv11b_init_uncompressed_kind_map();
 	gv11b_init_kind_attr();
+
+	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 
 	g->name = "gv10x";
 

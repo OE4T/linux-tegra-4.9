@@ -968,6 +968,11 @@ static int tegra_xusb_set_ss_clk(struct tegra_xusb *tegra,
 		 * Reparent to PLLU_480M. Set divider first to avoid
 		 * overclocking.
 		 */
+		if (!tegra->pll_u_480m) {
+			dev_err(tegra->dev, "tegra->pll_u_480m is NULL\n");
+			return -EINVAL;
+		}
+
 		old_parent_rate = clk_get_rate(clk_get_parent(clk));
 		new_parent_rate = clk_get_rate(tegra->pll_u_480m);
 		div = new_parent_rate / rate;

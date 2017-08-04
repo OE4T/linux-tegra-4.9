@@ -16,7 +16,11 @@ nvgpu-y += \
 	$(nvgpu-t19x)/gv11b/gr_ctx_gv11b.o \
 	$(nvgpu-t19x)/gv11b/pmu_gv11b.o \
 	$(nvgpu-t19x)/gv11b/subctx_gv11b.o \
-	$(nvgpu-t19x)/gv11b/regops_gv11b.o
+	$(nvgpu-t19x)/gv11b/regops_gv11b.o \
+	$(nvgpu-t19x)/gv100/mm_gv100.o \
+	$(nvgpu-t19x)/gv100/gr_ctx_gv100.o \
+	$(nvgpu-t19x)/gv100/fb_gv100.o \
+	$(nvgpu-t19x)/gv100/hal_gv100.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += $(nvgpu-t19x)/gv11b/platform_gv11b_tegra.o
 nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += $(nvgpu-t19x)/common/linux/nvhost_t19x.o

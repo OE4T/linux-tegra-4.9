@@ -25,7 +25,9 @@
 #define _UAPI__LINUX_NVGPU_T19X_IOCTL_H_
 
 #define NVGPU_GPU_ARCH_GV110 0x00000150
+#define NVGPU_GPU_ARCH_GV100 0x00000140
 #define NVGPU_GPU_IMPL_GV11B 0x0000000B
+#define NVGPU_GPU_IMPL_GV100 0x00000000
 
 /*
  * this flag is used in struct nvgpu_as_map_buffer_ex_args

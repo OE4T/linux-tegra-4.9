@@ -873,6 +873,12 @@ uint64_t __attribute__((weak))
 	tegra_dc_get_vsync_timestamp_t19x(struct tegra_dc *dc);
 uint64_t tegra_dc_get_vsync_timestamp(struct tegra_dc *dc);
 
+int __attribute__((weak)) nvdisp_t19x_program_raster_lock_seq(
+				struct tegra_dc *dc, u32 value);
+
+void __attribute__((weak)) nvdisp_t19x_enable_raster_lock(
+			struct tegra_dc *dc, const ulong valid_heads);
+
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void);
 
 int tegra_fb_release_fbmem(struct tegra_fb_info *);

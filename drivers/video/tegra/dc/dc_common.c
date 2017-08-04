@@ -37,7 +37,7 @@
 
 #define CMDBUF_SIZE		128
 #define NV_DISPLAY_CLASS_ID	0x70
-#define T18X_HEAD_WORD_OFFSET	0x4000
+#define NVDISP_HEAD_WORD_OFFSET	0x4000
 #define T210_HEAD_WORD_OFFSET	0x10000
 #define HEAD_WORD_OFFSET	head_offset
 
@@ -300,12 +300,21 @@ static int _tegra_dc_common_sync_frames(struct tegra_dc *dc, ulong dsp_cmd_reg,
 
 	dc_common->dsp_cmd_reg_val[dc->ctrl_num] = dsp_cmd_reg_val;
 
+	if (tegra_dc_is_t19x()) {
+		ret = nvdisp_t19x_program_raster_lock_seq(dc, dsp_cmd_reg_val);
+		if (ret)
+			goto err_handle;
+	}
+
 	if (!__all_req_rcvd(dc_common->head_data.fr_lck_req_rcvd,
 						dc_common->valid_heads))
 		return 0;
 
-	ret = _dc_common_channel_submit_gather(dsp_cmd_reg,
-			dsp_cmd_state_access_reg, LOCK_TYPE_FRAME);
+	if (tegra_dc_is_t19x())
+		nvdisp_t19x_enable_raster_lock(dc, dc_common->valid_heads);
+	else
+		ret = _dc_common_channel_submit_gather(dsp_cmd_reg,
+				dsp_cmd_state_access_reg, LOCK_TYPE_FRAME);
 	if (ret)
 		goto err_handle;
 
@@ -1023,8 +1032,8 @@ static int tegra_dc_common_assign_head_offset(void)
 
 	if (tegra_dc_is_t21x())
 		head_offset = T210_HEAD_WORD_OFFSET;
-	else if (tegra_dc_is_t18x())
-		head_offset = T18X_HEAD_WORD_OFFSET;
+	else if (tegra_dc_is_nvdisplay())
+		head_offset = NVDISP_HEAD_WORD_OFFSET;
 	else
 		ret = -ENOENT;
 

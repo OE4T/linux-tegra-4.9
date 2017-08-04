@@ -1513,13 +1513,9 @@ static int isp1760_urb_enqueue(struct usb_hcd *hcd, struct urb *urb,
 		/* FIXME: Check bandwidth  */
 		ep_queue = &priv->qh_list[QH_INTERRUPT];
 		break;
-	case PIPE_ISOCHRONOUS:
+	default:
 		dev_err(hcd->self.controller, "%s: isochronous USB packets "
 							"not yet supported\n",
-							__func__);
-		return -EPIPE;
-	default:
-		dev_err(hcd->self.controller, "%s: unknown pipe type\n",
 							__func__);
 		return -EPIPE;
 	}

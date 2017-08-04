@@ -133,6 +133,22 @@ struct falcon_ucode_table_entry_v1 {
 #define APPLICATION_ID_DEVINIT 0x04
 #define APPLICATION_ID_PRE_OS 0x01
 
+#define FALCON_UCODE_FLAGS_VERSION_AVAILABLE 0x1
+#define FALCON_UCODE_IS_VERSION_AVAILABLE(hdr)           \
+	((hdr.v2.v_desc & FALCON_UCODE_FLAGS_VERSION_AVAILABLE) == \
+	FALCON_UCODE_FLAGS_VERSION_AVAILABLE)
+
+/*
+ * version is embedded in bits 8:15 of the header on version 2+
+ * and the header length in bits 16:31
+ */
+
+#define FALCON_UCODE_GET_VERSION(hdr) \
+	((hdr.v2.v_desc >> 8) & 0xff)
+
+#define FALCON_UCODE_GET_DESC_SIZE(hdr) \
+	((hdr.v2.v_desc >> 16) & 0xffff)
+
 struct falcon_ucode_desc_v1 {
 	union {
 		u32 v_desc;
@@ -151,6 +167,29 @@ struct falcon_ucode_desc_v1 {
 	u32 dmem_load_size;
 } __packed;
 
+struct falcon_ucode_desc_v2 {
+	u32 v_desc;
+	u32 stored_size;
+	u32 uncompressed_size;
+	u32 virtual_entry;
+	u32 interface_offset;
+	u32 imem_phys_base;
+	u32 imem_load_size;
+	u32 imem_virt_base;
+	u32 imem_sec_base;
+	u32 imem_sec_size;
+	u32 dmem_offset;
+	u32 dmem_phys_base;
+	u32 dmem_load_size;
+	u32 alt_imem_load_size;
+	u32 alt_dmem_load_size;
+} __packed;
+
+union falcon_ucode_desc {
+	struct falcon_ucode_desc_v1 v1;
+	struct falcon_ucode_desc_v2 v2;
+};
+
 struct application_interface_table_hdr_v1 {
 	u8 version;
 	u8 header_size;
@@ -166,8 +205,10 @@ struct application_interface_entry_v1 {
 #define APPINFO_ID_DEVINIT 0x01
 
 struct devinit_engine_interface {
-	u32 field0;
-	u32 field1;
+	u16 version;
+	u16 size;
+	u16 application_version;
+	u16 application_features;
 	u32 tables_phys_base;
 	u32 tables_virt_base;
 	u32 script_phys_base;
@@ -348,11 +389,14 @@ static void nvgpu_bios_parse_devinit_appinfo(struct gk20a *g, int dmem_offset)
 	struct devinit_engine_interface interface;
 
 	memcpy(&interface, &g->bios.devinit.dmem[dmem_offset], sizeof(interface));
-	gk20a_dbg_fn("devinit tables phys %x script phys %x size %d",
+	gk20a_dbg_fn("devinit version %x tables phys %x script phys %x size %d",
+			interface.version,
 			interface.tables_phys_base,
 			interface.script_phys_base,
 			interface.script_size);
 
+	if (interface.version != 1)
+		return;
 	g->bios.devinit_tables_phys_base = interface.tables_phys_base;
 	g->bios.devinit_script_phys_base = interface.script_phys_base;
 }
@@ -392,28 +436,65 @@ static int nvgpu_bios_parse_appinfo_table(struct gk20a *g, int offset)
 static int nvgpu_bios_parse_falcon_ucode_desc(struct gk20a *g,
 		struct nvgpu_bios_ucode *ucode, int offset)
 {
-	struct falcon_ucode_desc_v1 desc;
+	union falcon_ucode_desc udesc;
+	struct falcon_ucode_desc_v2 desc;
+	u8 version;
+	u16 desc_size;
 
-	memcpy(&desc, &g->bios.data[offset], sizeof(desc));
-	gk20a_dbg_info("falcon ucode desc stored size %d uncompressed size %d",
-			desc.hdr_size.stored_size, desc.uncompressed_size);
+	memcpy(&udesc, &g->bios.data[offset], sizeof(udesc));
+
+	if (FALCON_UCODE_IS_VERSION_AVAILABLE(udesc)) {
+		version = FALCON_UCODE_GET_VERSION(udesc);
+		desc_size = FALCON_UCODE_GET_DESC_SIZE(udesc);
+	} else {
+		version = 1;
+		desc_size = sizeof(udesc.v1);
+	}
+
+	switch (version) {
+	case 1:
+		desc.stored_size = udesc.v1.hdr_size.stored_size;
+		desc.uncompressed_size = udesc.v1.uncompressed_size;
+		desc.virtual_entry = udesc.v1.virtual_entry;
+		desc.interface_offset = udesc.v1.interface_offset;
+		desc.imem_phys_base = udesc.v1.imem_phys_base;
+		desc.imem_load_size = udesc.v1.imem_load_size;
+		desc.imem_virt_base = udesc.v1.imem_virt_base;
+		desc.imem_sec_base = udesc.v1.imem_sec_base;
+		desc.imem_sec_size = udesc.v1.imem_sec_size;
+		desc.dmem_offset = udesc.v1.dmem_offset;
+		desc.dmem_phys_base = udesc.v1.dmem_phys_base;
+		desc.dmem_load_size = udesc.v1.dmem_load_size;
+		break;
+	case 2:
+		memcpy(&desc, &udesc, sizeof(udesc.v2));
+		break;
+	default:
+		gk20a_dbg_info("invalid version");
+		return -EINVAL;
+	}
+
+	gk20a_dbg_info("falcon ucode desc version %x len %x", version, desc_size);
+
+	gk20a_dbg_info("falcon ucode desc stored size %x uncompressed size %x",
+			desc.stored_size, desc.uncompressed_size);
 	gk20a_dbg_info("falcon ucode desc virtualEntry %x, interfaceOffset %x",
 			desc.virtual_entry, desc.interface_offset);
 	gk20a_dbg_info("falcon ucode IMEM phys base %x, load size %x virt base %x sec base %x sec size %x",
 			desc.imem_phys_base, desc.imem_load_size,
 			desc.imem_virt_base, desc.imem_sec_base,
 			desc.imem_sec_size);
-	gk20a_dbg_info("falcon ucode DMEM offset %d phys base %x, load size %d",
+	gk20a_dbg_info("falcon ucode DMEM offset %x phys base %x, load size %x",
 			desc.dmem_offset, desc.dmem_phys_base,
 			desc.dmem_load_size);
 
-	if (desc.hdr_size.stored_size != desc.uncompressed_size) {
+	if (desc.stored_size != desc.uncompressed_size) {
 		gk20a_dbg_info("does not match");
 		return -EINVAL;
 	}
 
 	ucode->code_entry_point = desc.virtual_entry;
-	ucode->bootloader = &g->bios.data[offset] + sizeof(desc);
+	ucode->bootloader = &g->bios.data[offset] + desc_size;
 	ucode->bootloader_phys_base = desc.imem_phys_base;
 	ucode->bootloader_size = desc.imem_load_size - desc.imem_sec_size;
 	ucode->ucode = ucode->bootloader + ucode->bootloader_size;
@@ -424,7 +505,7 @@ static int nvgpu_bios_parse_falcon_ucode_desc(struct gk20a *g,
 	ucode->dmem_size = desc.dmem_load_size;
 
 	return nvgpu_bios_parse_appinfo_table(g,
-			offset + sizeof(desc) +
+			offset + desc_size +
 			desc.dmem_offset + desc.interface_offset);
 }
 

@@ -194,6 +194,66 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ina3221_dcb_index = 1,
 	.ina3221_i2c_address = 0x80,
 	.ina3221_i2c_port = 0x1,
+	},
+	{ /* DEVICE=PG503 SKU 201 */
+	/* ptimer src frequency in hz */
+	.ptimer_src_freq	= 31250000,
+
+	.probe = nvgpu_pci_tegra_probe,
+	.remove = nvgpu_pci_tegra_remove,
+
+	/* power management configuration */
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= false,
+	.can_elpg_init = true,
+	.enable_elpg = true,
+	.enable_elcg = false,
+	.enable_slcg = true,
+	.enable_blcg = true,
+	.enable_mscg = true,
+	.default_pri_timeout = 0x3ff,
+
+	.disable_aspm = true,
+
+	/* power management callbacks */
+	.is_railgated = nvgpu_pci_tegra_is_railgated,
+	.clk_round_rate = nvgpu_pci_clk_round_rate,
+
+	.ch_wdt_timeout_ms = 7000,
+
+	.honors_aperture = true,
+	.vbios_min_version = 0x88001e00,
+	.hardcode_sw_threshold = false,
+	},
+	{ /* DEVICE=PG503 SKU 200 ES */
+	/* ptimer src frequency in hz */
+	.ptimer_src_freq	= 31250000,
+
+	.probe = nvgpu_pci_tegra_probe,
+	.remove = nvgpu_pci_tegra_remove,
+
+	/* power management configuration */
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= false,
+	.can_elpg_init = true,
+	.enable_elpg = true,
+	.enable_elcg = false,
+	.enable_slcg = true,
+	.enable_blcg = true,
+	.enable_mscg = true,
+	.default_pri_timeout = 0x3ff,
+
+	.disable_aspm = true,
+
+	/* power management callbacks */
+	.is_railgated = nvgpu_pci_tegra_is_railgated,
+	.clk_round_rate = nvgpu_pci_clk_round_rate,
+
+	.ch_wdt_timeout_ms = 7000,
+
+	.honors_aperture = true,
+	.vbios_min_version = 0x88001e00,
+	.hardcode_sw_threshold = false,
 	}
 };
 
@@ -221,6 +281,18 @@ static struct pci_device_id nvgpu_pci_table[] = {
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
 		.driver_data = 3,
+	},
+	{
+		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1db1),
+		.class = PCI_BASE_CLASS_DISPLAY << 16,
+		.class_mask = 0xff << 16,
+		.driver_data = 4,
+	},
+	{
+		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1db0),
+		.class = PCI_BASE_CLASS_DISPLAY << 16,
+		.class_mask = 0xff << 16,
+		.driver_data = 4,
 	},
 	{}
 };

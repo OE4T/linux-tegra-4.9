@@ -51,6 +51,11 @@ int gpu_init_hal(struct gk20a *g)
 		if (TEGRA_19x_GPUID_HAL(g))
 			return -ENODEV;
 		break;
+	case BIGGPU_19x_GPUID:
+		if (BIGGPU_19x_GPUID_HAL(g))
+			return -ENODEV;
+		break;
+
 #endif
 	default:
 		nvgpu_err(g, "no support for %x", ver);

@@ -1573,9 +1573,10 @@
 			<&tegra_car TEGRA210_CLK_APB2APE>,
 			<&tegra_car TEGRA210_CLK_ADSP_NEON>,
 			<&tegra_car TEGRA210_CLK_ADSP>,
-			<&tegra_car TEGRA210_CLK_APE_EMC>;
+			<&tegra_car TEGRA210_CLK_APE_EMC>,
+			<&tegra_car TEGRA210_CLK_ADSP_CPU_ABUS>;
 		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
-				"adsp", "adsp.emc";
+				"adsp", "adsp.emc", "adsp_cpu_abus";
 		resets = <&tegra_car TEGRA210_RST_ADSP>;
 		reset-names = "adspall";
 	     nvidia,adsp_unit_fpga_reset = <0x0 0x00000040>;

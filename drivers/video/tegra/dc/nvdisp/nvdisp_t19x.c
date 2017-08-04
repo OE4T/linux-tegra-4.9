@@ -18,6 +18,9 @@
 #include "nvdisp.h"
 #include "hw_nvdisp_t19x_nvdisp.h"
 
+#define RG_STATUS_STALLED 0x08
+#define RG_STATUS_POLL_TIMEOUT_MS 10
+#define RG_STATUS_POLL_INTERVAL_US 1
 #define TEGRA_WINBUF_ADDR_FLAG_BLOCKLINEAR ((dma_addr_t)0x1 << 39)
 
 static struct tegra_dc_pd_clk_info t19x_disp_pd0_clk_info[] = {
@@ -242,4 +245,92 @@ uint64_t tegra_dc_get_vsync_timestamp_t19x(struct tegra_dc *dc)
 	msb = tegra_dc_readl(dc, nvdisp_t19x_rg_vsync_ptimer1_r());
 
 	return (((msb << 32) | lsb) << 5);
+}
+
+/*
+ * nvdisp_t19x_program_raster_lock_seq - program the raster lock
+ *					sequence for t19x.
+ * @dc : head pointer for which raster_lock is required.
+ * @value : informs if head is to be programmed in continuous or
+ * non_continuous mode. This value is passed on from the source as is.
+ *
+ * Return: 0 if successful else -ENODEV if dc isn't found or isn't
+ * enabled.
+ */
+int nvdisp_t19x_program_raster_lock_seq(struct tegra_dc *dc, u32 value)
+{
+	int ret = 0;
+	u32 old_val;
+
+	if (!dc)
+		return -ENODEV;
+/*
+ * For nvdisp_t19x_state_access_r() reg, the implicitly expected value
+ * is WRITE_ASSEMBLY | READ_ACTIVE and ideally we need not program this
+ * combination again. However currently in raster lock workflow the value
+ * of command_state_access is overwritten to write_active in sor.c and
+ * hence we have to explicitly cache and restore here.
+ */
+
+	old_val = tegra_dc_readl(dc, nvdisp_t19x_state_access_r());
+
+	tegra_dc_writel(dc, nvdisp_t19x_state_access_write_mux_assembly_f()
+			| nvdisp_t19x_state_access_read_mux_active_f(),
+			nvdisp_t19x_state_access_r());
+
+	tegra_dc_writel(dc, nvdisp_t19x_display_cmd_option_msf_src_glb_ctrl_f()
+		       | nvdisp_t19x_display_cmd_option_msf_enable_enable_f(),
+			nvdisp_t19x_display_cmd_option_r());
+
+	tegra_dc_writel(dc,
+			nvdisp_t19x_display_command_control_mode_nc_display_f(),
+			nvdisp_t19x_display_command_r());
+
+	tegra_dc_writel(dc, nvdisp_t19x_cmd_state_ctrl_host_trig_enable_f() |
+			nvdisp_t19x_cmd_state_ctrl_general_act_req_enable_f(),
+			nvdisp_t19x_cmd_state_ctrl_r());
+
+	ret = tegra_dc_poll_register(dc, nvdisp_t19x_rg_status_r(),
+		RG_STATUS_STALLED, nvdisp_t19x_rg_status_stalled_yes_f(),
+		RG_STATUS_POLL_INTERVAL_US, RG_STATUS_POLL_TIMEOUT_MS);
+	if (ret) {
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for RG to stall\n");
+		goto restore_cmd_access_state;
+	}
+
+	if (!(value & nvdisp_t19x_display_command_control_mode_c_display_f()))
+		goto restore_cmd_access_state;
+
+	tegra_dc_writel(dc,
+			nvdisp_t19x_display_command_control_mode_c_display_f(),
+			nvdisp_t19x_display_command_r());
+
+	tegra_dc_writel(dc,
+			nvdisp_t19x_cmd_state_ctrl_general_act_req_enable_f(),
+			nvdisp_t19x_cmd_state_ctrl_r());
+
+restore_cmd_access_state:
+	tegra_dc_writel(dc, old_val, nvdisp_t19x_state_access_r());
+
+	return ret;
+}
+
+/*
+ * nvdisp_t19x_enable_raster_lock - programs global_control signal
+ *				required for multi-head RG unstall.
+ * @dc : head pointer
+ * @valid_heads :  a bit_array consisting of ctrl_nums of heads
+ * participating in the frame_lock.
+ *
+ * Return : void
+ */
+void nvdisp_t19x_enable_raster_lock(struct tegra_dc *dc,
+					const ulong valid_heads)
+{
+	tegra_dc_writel(dc, valid_heads, nvdisp_t19x_glb_ctrl_r());
+
+	tegra_dc_readl(dc, nvdisp_t19x_glb_ctrl_r()); /* flush */
+
+	tegra_dc_writel(dc, 0x00, nvdisp_t19x_glb_ctrl_r());
 }

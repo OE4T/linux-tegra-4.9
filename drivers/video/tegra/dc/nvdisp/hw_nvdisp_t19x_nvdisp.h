@@ -206,6 +206,10 @@ static inline u32 nvdisp_t19x_state_access_write_mux_assembly_f(void)
 {
 	return 0x0;
 }
+static inline u32 nvdisp_t19x_state_access_read_mux_active_f(void)
+{
+	return 0x1;
+}
 static inline u32 nvdisp_t19x_display_cmd_option_r(void)
 {
 	return 0x00000031;

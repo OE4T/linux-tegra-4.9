@@ -3771,7 +3771,8 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 	phy_exit(xudc->usb3_phy);
 	phy_exit(xudc->utmi_phy);
 
-	regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
+	if (tegra_platform_is_silicon())
+		regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
 
 	dev_info(xudc->dev, "entering ELPG done\n");
 	return 0;

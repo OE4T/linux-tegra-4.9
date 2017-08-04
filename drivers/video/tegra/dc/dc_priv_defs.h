@@ -192,6 +192,46 @@ struct tegra_dc_imp_settings {
 	u32					owner;
 };
 
+struct tegra_nvdisp_mempool_req {
+	bool program_cursor;
+	u32 cursor_entry;
+
+	u32 *win_entries;
+	u8 *win_ids;
+	u8 num_wins;
+
+	u8 ctrl_num;
+};
+
+struct tegra_nvdisp_imp_head_settings {
+	struct tegra_dc_ext_nvdisp_imp_head_entries entries;
+
+	struct tegra_dc_ext_nvdisp_imp_win_entries *win_entries;
+	u8 num_wins;
+};
+
+/*
+ * This struct is the internal representation that kernel will use to store the
+ * relevant IMP settings. Both the v1 and v2 dc_ext IMP structs will be
+ * converted to this internal format.
+ */
+struct tegra_nvdisp_imp_settings {
+	struct tegra_dc_ext_nvdisp_imp_global_entries global_entries;
+
+	struct tegra_nvdisp_imp_head_settings *head_settings;
+	u8 num_heads;
+
+	struct tegra_nvdisp_mempool_req *decreasing_pool_reqs;
+	struct tegra_nvdisp_mempool_req *increasing_pool_reqs;
+	u8 num_decreasing_pool;
+	u8 num_increasing_pool;
+
+	u64 session_id;
+	u8 owner_ctrl_num;
+
+	struct list_head imp_node;
+};
+
 enum tegra_dc_hw {
 	TEGRA_DC_HW_T210,
 	TEGRA_DC_HW_T18x,

@@ -201,6 +201,25 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_FD	(0 << 0)
 #define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_RAW	(1 << 0)
 
+/*
+ * Temporary flags for determining which IMP structs to use
+ *
+ * These are the legacy v1 structs:
+ * - tegra_dc_ext_imp_head_results
+ * - tegra_dc_ext_imp_settings
+ *
+ * These are the new v2 structs:
+ * - tegra_dc_ext_nvdisp_imp_win_entries
+ * - tegra_dc_ext_nvdisp_imp_win_settings
+ * - tegra_dc_ext_nvdisp_imp_head_entries
+ * - tegra_dc_ext_nvdisp_imp_head_settings
+ * - tegra_dc_ext_nvdisp_imp_global_entries
+ * - tegra_dc_ext_nvdisp_imp_global_settings
+ * - tegra_dc_ext_nvdisp_imp_settings
+ */
+#define TEGRA_DC_EXT_FLIP_FLAG_IMP_V1	(0 << 0)
+#define TEGRA_DC_EXT_FLIP_FLAG_IMP_V2	(1 << 0)
+
 /* Flags for CEA861.3 defined eotfs in HDR Metadata form sink */
 #define TEGRA_DC_EXT_CEA861_3_EOTF_SDR_LR	(1 << 0)
 #define TEGRA_DC_EXT_CEA861_3_EOTF_HDR_LR	(1 << 1)
@@ -401,7 +420,6 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_NVDISP_CMU,
 	TEGRA_DC_EXT_FLIP_USER_DATA_OUTPUT_CSC,
 	TEGRA_DC_EXT_FLIP_USER_DATA_GET_FLIP_INFO,
-	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_PROPOSE, /* placeholder for new IMP */
 };
 
 /*
@@ -442,6 +460,13 @@ struct tegra_dc_ext_imp_user_info {
 	struct tegra_dc_ext_imp_emc_dvfs_pair __user *emc_dvfs_pairs; /* out */
 };
 
+/*
+ * The following structs are part of the legacy v1 IMP interface, and represent
+ * the IMP settings that are sent from userspace to kernel during PROPOSE.
+ *
+ * These structs are selected by setting the TEGRA_DC_EXT_FLIP_FLAG_IMP_V1 flip
+ * user data flag.
+ */
 struct tegra_dc_ext_imp_head_results {
 	__u32	num_windows;
 	__u8	cursor_active;
@@ -471,45 +496,66 @@ struct tegra_dc_ext_imp_settings {
 	__u64 reserved[4]; /* reserved - must be 0 */
 };
 
-/* Will be used once kernel moves to the new IMP design */
-struct tegra_dc_ext_nvdisp_imp_win_settings {
+/*
+ * The following structs are part of the new v2 IMP interface, and represent
+ * the per-window, per-head, and global IMP settings that are sent from
+ * userspace to kernel during PROPOSE.
+ *
+ * These structs are selected by setting the TEGRA_DC_EXT_FLIP_FLAG_IMP_V2 flip
+ * user data flag.
+ */
+struct tegra_dc_ext_nvdisp_imp_win_entries {
 	__u8 id;
-
 	__s8 thread_group;
 	__u16 fetch_slots;
 	__u32 pipe_meter;
 	__u64 dvfs_watermark;
 	__u64 min_mempool_entries;
 	__u64 mempool_entries;
+} __attribute__((__packed__));
+
+struct tegra_dc_ext_nvdisp_imp_win_settings {
+	struct tegra_dc_ext_nvdisp_imp_win_entries entries;
 
 	__u64 reserved[4]; /* must be 0 */
 } __attribute__((__packed__));
 
-/* Will be used once kernel moves to the new IMP design */
-struct tegra_dc_ext_nvdisp_imp_head_settings {
+struct tegra_dc_ext_nvdisp_imp_head_entries {
+	__u8 ctrl_num;
 	__u16 curs_fetch_slots;
 	__u32 curs_pipe_meter;
 	__u64 curs_dvfs_watermark;
 	__u64 curs_min_mempool_entries;
 	__u64 curs_mempool_entries;
+} __attribute__((__packed__));
 
+struct tegra_dc_ext_nvdisp_imp_head_settings {
 	struct tegra_dc_ext_nvdisp_imp_win_settings __user *win_settings;
 	__u8 num_wins;
+
+	struct tegra_dc_ext_nvdisp_imp_head_entries entries;
 
 	__u64 reserved[4]; /* must be 0 */
 } __attribute__((__packed__));
 
-/* Will be used once kernel moves to the new IMP design */
-struct tegra_dc_ext_nvdisp_imp_settings {
-	/* Global settings */
+struct tegra_dc_ext_nvdisp_imp_global_entries {
 	__u16 total_win_fetch_slots;
 	__u16 total_curs_fetch_slots;
 	__u64 emc_floor_hz;
 	__u64 min_hubclk_hz;
 	__u64 total_iso_bw_with_catchup_kBps;
 	__u64 total_iso_bw_without_catchup_kBps;
+} __attribute__((__packed__));
 
-	/* Per-head settings */
+struct tegra_dc_ext_nvdisp_imp_global_settings {
+	struct tegra_dc_ext_nvdisp_imp_global_entries entries;
+
+	__u64 reserved[4]; /* must be 0 */
+} __attribute__((__packed__));
+
+struct tegra_dc_ext_nvdisp_imp_settings {
+	struct tegra_dc_ext_nvdisp_imp_global_settings global_settings;
+
 	struct tegra_dc_ext_nvdisp_imp_head_settings __user *head_settings;
 	__u8 num_heads;
 
@@ -518,6 +564,9 @@ struct tegra_dc_ext_nvdisp_imp_settings {
 } __attribute__((__packed__));
 
 /*
+ * This struct is a flip user data type (TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA)
+ * that is sent from userspace to kernel during IMP PROPOSE only.
+ *
  * Variable settings is a pointer to tegra_dc_ext_imp_settings.
  * reserved is padding so that the total struct size is 26 bytes.
  */
@@ -527,6 +576,9 @@ struct tegra_dc_ext_imp_ptr {
 } __attribute__((__packed__));
 
 /*
+ * This struct is a flip user data type (TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG)
+ * that is sent from userspace to kernel during IMP FLIP only.
+ *
  * Variable session_id is a unique per-head id that designates which IMP
  * settings actually correspond to this flip.
  * reserved is padding so that the total struct size is 26 bytes.

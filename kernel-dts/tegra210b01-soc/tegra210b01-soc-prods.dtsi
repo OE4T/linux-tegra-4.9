@@ -564,9 +564,16 @@
 			#prod-cells = <4>;
 			mask-one-style;
 			prod_c_bias {
-				prod = <
-					0 0x00000284 0x0000003f 0x0000003a
-					>;
+				asic {
+					prod = <
+						0 0x00000284 0x0000003f 0x0000003a
+						>;
+				};
+				char {
+					prod = <
+						0 0x00000284 0x00000700 0x00000300
+						>;
+				};
 			};
 			prod_c_bias_a02 {
 				prod = <

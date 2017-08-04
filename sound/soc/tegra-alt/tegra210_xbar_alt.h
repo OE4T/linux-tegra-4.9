@@ -15,8 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
+
 #ifndef __TEGRA210_XBAR_ALT_H__
 #define __TEGRA210_XBAR_ALT_H__
 
@@ -301,7 +300,4 @@ void tegra210_xbar_read_ahubram(struct regmap *regmap, unsigned int reg_ctrl,
 	 .private_value = ((unsigned long)&(struct tegra_soc_bytes) \
 		{.soc.base = xbase, .soc.num_regs = xregs, .soc.mask = xmask, \
 		 .shift = xshift })}
-#endif
-#else
-#include "../../../../kernel-4.9/sound/soc/tegra-alt/tegra210_xbar_alt.h"
 #endif

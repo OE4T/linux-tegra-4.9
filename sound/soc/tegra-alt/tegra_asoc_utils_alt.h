@@ -20,8 +20,6 @@
  *
  */
 
-#include <linux/version.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
 #ifndef __TEGRA_ASOC_UTILS_ALT_H_
 #define __TEGRA_ASOC_UTILS_ALT_H_
 
@@ -114,7 +112,4 @@ int tegra_alt_asoc_switch_register(struct switch_dev *sdev);
 void tegra_alt_asoc_switch_unregister(struct switch_dev *sdev);
 #endif
 
-#endif
-#else
-#include "../../../../kernel-4.9/sound/soc/tegra-alt/tegra_asoc_utils_alt.h"
 #endif

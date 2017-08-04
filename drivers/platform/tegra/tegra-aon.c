@@ -131,6 +131,7 @@ static void tegra_aon_rx_handler(struct tegra_aon *aon, u32 ivc_chans)
 {
 	struct mbox_chan *mbox_chan;
 	struct ivc *ivc;
+	struct tegra_aon_ivc_chan *ivc_chan;
 	struct tegra_aon_mbox_msg msg;
 	int i;
 
@@ -139,7 +140,11 @@ static void tegra_aon_rx_handler(struct tegra_aon *aon, u32 ivc_chans)
 		i = __builtin_ctz(ivc_chans);
 		ivc_chans &= ~BIT(i);
 		mbox_chan = &aon->mbox.chans[i];
-		ivc = (struct ivc *)mbox_chan->con_priv;
+		ivc_chan = (struct tegra_aon_ivc_chan *)mbox_chan->con_priv;
+		/* check if mailbox client exists */
+		if (ivc_chan->chan_id == -1)
+			continue;
+		ivc = &ivc_chan->ivc;
 		while (tegra_ivc_can_read(ivc)) {
 			msg.data = tegra_ivc_read_get_next_frame(ivc);
 			msg.length = ivc->frame_size;
@@ -387,6 +392,10 @@ static int tegra_aon_mbox_startup(struct mbox_chan *mbox_chan)
 
 static void tegra_aon_mbox_shutdown(struct mbox_chan *mbox_chan)
 {
+	struct tegra_aon_ivc_chan *ivc_chan;
+
+	ivc_chan = (struct tegra_aon_ivc_chan *)mbox_chan->con_priv;
+	ivc_chan->chan_id = -1;
 }
 
 static bool tegra_aon_mbox_last_tx_done(struct mbox_chan *mbox_chan)

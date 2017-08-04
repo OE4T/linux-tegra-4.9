@@ -362,9 +362,8 @@ int gk20a_can_busy(struct gk20a *g)
 	return 1;
 }
 
-int gk20a_wait_for_idle(struct device *dev)
+int gk20a_wait_for_idle(struct gk20a *g)
 {
-	struct gk20a *g = get_gk20a(dev);
 	int wait_length = 150; /* 3 second overall max wait. */
 	int target_usage_count = 0;
 

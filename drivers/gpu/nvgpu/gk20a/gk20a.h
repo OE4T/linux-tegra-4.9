@@ -1455,7 +1455,7 @@ int __gk20a_do_idle(struct gk20a *g, bool force_reset);
 int __gk20a_do_unidle(struct gk20a *g);
 
 int gk20a_can_busy(struct gk20a *g);
-int gk20a_wait_for_idle(struct device *dev);
+int gk20a_wait_for_idle(struct gk20a *g);
 
 #define NVGPU_GPU_ARCHITECTURE_SHIFT 4
 

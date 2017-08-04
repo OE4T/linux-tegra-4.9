@@ -125,22 +125,31 @@
 	};
 
 	soctherm: soctherm@0x700E2000 {
-		status = "okay";
-		compatible = "nvidia,tegra210b01-soctherm";
-		hw-pllx-offsets = <TEGRA124_SOCTHERM_SENSOR_CPU 0 0
-				TEGRA124_SOCTHERM_SENSOR_GPU 0 0>;
-		nvidia,thermtrips = <TEGRA124_SOCTHERM_SENSOR_PLLX 95500>;
+		status = "disabled";
+	};
 
-		throttle-cfgs {
-			throttle_heavy: heavy {
-				nvidia,priority = <100>;
-				nvidia,cpu-throt-percent = <85>;
-				nvidia,gpu-throt-level =
-					<TEGRA_SOCTHERM_THROT_LEVEL_HIGH>;
-				#cooling-cells = <2>;
-			};
+	tegra-aotag {
+		status = "disabled";
+	};
+
+	i2c@7000c000 {
+		tegra_nct72: temp-sensor@4c {
+			status = "disabled";
 		};
 	};
+
+	pwm-fan {
+		status = "disabled";
+	};
+
+	thermal-fan-est {
+		status = "disabled";
+	};
+
+	bthrot_cdev {
+		status = "disabled";
+	};
+
 	/delete-node/ dtv@7000c300;
 
 	tegra-pmc-led-soft-blink-pwm {

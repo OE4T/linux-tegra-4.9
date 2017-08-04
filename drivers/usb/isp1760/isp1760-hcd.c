@@ -1466,9 +1466,9 @@ static void packetize_urb(struct usb_hcd *hcd,
 				packet_type = OUT_PID;
 			else
 				packet_type = IN_PID;
-		} else if (usb_pipebulk(urb->pipe)
-				&& (urb->transfer_flags & URB_ZERO_PACKET)
-				&& !(urb->transfer_buffer_length %
+		} else if (maxpacketsize && usb_pipebulk(urb->pipe) &&
+				(urb->transfer_flags & URB_ZERO_PACKET) &&
+				!(urb->transfer_buffer_length %
 							maxpacketsize)) {
 			one_more = 1;
 		}

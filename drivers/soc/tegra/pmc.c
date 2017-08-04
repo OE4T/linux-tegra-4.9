@@ -512,6 +512,7 @@ struct tegra_io_pad_regulator {
  * struct tegra_pmc - NVIDIA Tegra PMC
  * @base: pointer to I/O remapped register region
  * @reboot_base: pointer to I/O remapped register region for reboot address
+ * @early_base: pointer to I/O remapped register region for early init
  * @clk: pointer to pclk clock
  * @rate: currently configured rate of pclk
  * @suspend_mode: lowest suspend mode available
@@ -534,6 +535,7 @@ struct tegra_pmc {
 	struct device *dev;
 	void __iomem *base;
 	void __iomem *reboot_base;
+	void __iomem *early_base;
 	void __iomem *misc_base;
 	struct clk *clk;
 
@@ -3391,7 +3393,7 @@ static void tegra_pmc_reset_debugfs_init(struct device *dev)
 
 static int tegra_pmc_probe(struct platform_device *pdev)
 {
-	void __iomem *base = pmc->base;
+	void __iomem *base;
 	struct resource *res;
 	int err;
 
@@ -3405,7 +3407,9 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 	if (IS_ERR(pmc->base))
 		return PTR_ERR(pmc->base);
 
-	iounmap(base);
+	/* unmap the base address from the early init, then mark it to NULL */
+	iounmap(pmc->early_base);
+	pmc->early_base = NULL;
 
 	if (pmc->soc->has_reboot_base_address) {
 		base =  pmc->reboot_base;
@@ -4157,6 +4161,9 @@ static int __init tegra_pmc_early_init(void)
 	}
 
 	mutex_init(&pmc->powergates_lock);
+
+	/* backup the base address */
+	pmc->early_base = pmc->base;
 
 	/*
 	 * Invert the interrupt polarity if a PMC device tree node exists and

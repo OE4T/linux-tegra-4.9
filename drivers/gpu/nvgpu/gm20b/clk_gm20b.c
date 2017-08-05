@@ -59,15 +59,15 @@ static struct pll_parms gpc_pll_params_b1 = {
 };
 
 static struct pll_parms gpc_pll_params_c1 = {
-	128000,  2600000,	/* freq */
+	76800,   2600000,	/* freq */
 	1300000, 2600000,	/* vco */
 	19200,   38400,		/* u */
 	1, 255,			/* M */
 	8, 255,			/* N */
 	1, 31,			/* PL */
-	0, 0,			/* DFS_COEFF */
+	-172550, 195374,	/* DFS_COEFF */
 	0, 0,			/* ADC char coeff - to be read from fuses */
-	0x7 << 3,		/* vco control in NA mode */
+	(0x1 << 3) | 0x7,	/* vco control in NA mode */
 	500,			/* Locking and ramping timeout */
 	40,			/* Lock delay in NA mode */
 	5,			/* IDDQ mode exit delay */

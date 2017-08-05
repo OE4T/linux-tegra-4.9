@@ -584,7 +584,7 @@ bool tegra_dc_handle_common_channel_promotion(struct tegra_dc *dc)
 {
 	return false;
 }
-int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
+int tegra_dc_queue_imp_propose(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data)
 {
 	return -ENOSYS;

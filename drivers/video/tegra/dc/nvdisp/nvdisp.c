@@ -3252,58 +3252,6 @@ void tegra_dc_release_common_channel(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_release_common_channel);
 
-static void tegra_nvdisp_flush_imp_queue(void)
-{
-	struct tegra_dc_imp_settings *cur = NULL, *next = NULL;
-
-	mutex_lock(&tegra_nvdisp_lock);
-
-	list_for_each_entry_safe(cur,
-				next,
-				&nvdisp_imp_settings_queue,
-				imp_node) {
-		list_del(&cur->imp_node);
-		kfree(cur);
-	}
-
-	mutex_unlock(&tegra_nvdisp_lock);
-}
-
-int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
-{
-	struct tegra_dc_imp_settings *cur = NULL, *next = NULL;
-	int ret = -EINVAL;
-
-	mutex_lock(&tegra_nvdisp_lock);
-
-	/*
-	 * Since IMP flips are issued in the same respective order as their
-	 * corresponding PROPOSEs, and only one IMP flip can be in-flight at any
-	 * moment in time, any entries that are in front of the one we're
-	 * looking for must be stale. These entries can be safely removed.
-	 *
-	 * If none of the entries in the queue match the one we're looking for,
-	 * return an error.
-	 */
-	list_for_each_entry_safe(cur,
-				next,
-				&nvdisp_imp_settings_queue,
-				imp_node) {
-		if (cur->owner != dc->ctrl_num ||
-			cur->session_id != session_id) {
-			list_del(&cur->imp_node);
-			kfree(cur);
-		} else {
-			ret = 0;
-			break;
-		}
-	}
-
-	mutex_unlock(&tegra_nvdisp_lock);
-	return ret;
-}
-EXPORT_SYMBOL(tegra_dc_validate_imp_queue);
-
 bool tegra_dc_handle_common_channel_promotion(struct tegra_dc *dc)
 {
 	/*
@@ -3328,72 +3276,391 @@ bool tegra_dc_handle_common_channel_promotion(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_handle_common_channel_promotion);
 
-int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
-			struct tegra_dc_ext_flip_user_data *flip_user_data)
+static void dealloc_imp_settings(
+			struct tegra_nvdisp_imp_settings *imp_settings)
 {
-	struct tegra_dc_imp_settings *imp_settings = NULL;
-	struct tegra_dc_ext_imp_settings *ext_settings = NULL;
-	void __user *ext_session_id_ptr = NULL;
-	void __user *ext_imp_ptr = NULL;
-	int ret = 0;
+	int i;
+
+	if (!imp_settings)
+		return;
+
+	for (i = 0; i < imp_settings->num_heads; i++) {
+		struct tegra_nvdisp_imp_head_settings *head_settings;
+
+		head_settings = &imp_settings->head_settings[i];
+		if (head_settings->num_wins > 0)
+			kfree(head_settings->win_entries);
+	}
+
+	if (imp_settings->num_heads > 0)
+		kfree(imp_settings->head_settings);
+	kfree(imp_settings);
+}
+
+static struct tegra_nvdisp_imp_settings *alloc_imp_settings(
+					u8 num_heads, u8 *num_wins_per_head)
+{
+	struct tegra_nvdisp_imp_settings *imp_settings;
+	int i;
 
 	imp_settings = kzalloc(sizeof(*imp_settings), GFP_KERNEL);
 	if (!imp_settings) {
-		dev_err(&dc->ndev->dev,
-			"Failed to allocate memory for IMP settings\n");
+		pr_err("%s: Failed to alloc mem for settings\n", __func__);
+		return imp_settings;
+	}
+
+	imp_settings->head_settings =
+				kcalloc(num_heads,
+					sizeof(*(imp_settings->head_settings)),
+					GFP_KERNEL);
+	if (!imp_settings->head_settings) {
+		pr_err("%s: Failed to alloc mem for heads\n", __func__);
+		kfree(imp_settings);
+
+		return NULL;
+	}
+	imp_settings->num_heads = num_heads;
+
+	for (i = 0; i < num_heads; i++) {
+		struct tegra_nvdisp_imp_head_settings *head_settings;
+
+		head_settings = &imp_settings->head_settings[i];
+		head_settings->win_entries =
+				kcalloc(num_wins_per_head[i],
+					sizeof(*(head_settings->win_entries)),
+					GFP_KERNEL);
+		if (!head_settings->win_entries) {
+			pr_err("%s: Failed to alloc mem for wins\n", __func__);
+			dealloc_imp_settings(imp_settings);
+
+			return NULL;
+		}
+
+		head_settings->num_wins = num_wins_per_head[i];
+	}
+
+	return imp_settings;
+}
+
+static void cpy_from_ext_imp_head_v1(
+		struct tegra_dc_ext_imp_head_results *head_results,
+		struct tegra_nvdisp_imp_head_settings *nvdisp_head,
+		u8 ctrl_num)
+{
+	struct tegra_dc_ext_nvdisp_imp_head_entries *head_entries;
+	u8 num_wins = head_results->num_windows;
+	int i;
+
+	head_entries = &nvdisp_head->entries;
+	head_entries->ctrl_num = ctrl_num;
+	head_entries->curs_fetch_slots =
+				head_results->metering_slots_value_cursor;
+	head_entries->curs_pipe_meter = head_results->pipe_meter_value_cursor;
+	head_entries->curs_dvfs_watermark =
+				head_results->thresh_lwm_dvfs_cursor;
+	head_entries->curs_mempool_entries =
+				head_results->pool_config_entries_cursor;
+
+	for (i = 0; i < num_wins; i++) {
+		struct tegra_dc_ext_nvdisp_imp_win_entries *win_entries;
+
+		win_entries = &nvdisp_head->win_entries[i];
+		win_entries->id = head_results->win_ids[i];
+		win_entries->thread_group = head_results->thread_group_win[i];
+		win_entries->fetch_slots =
+				head_results->metering_slots_value_win[i];
+		win_entries->pipe_meter = head_results->pipe_meter_value_win[i];
+		win_entries->dvfs_watermark =
+				head_results->thresh_lwm_dvfs_win[i];
+		win_entries->mempool_entries =
+				head_results->pool_config_entries_win[i];
+	}
+}
+
+static struct tegra_nvdisp_imp_settings *cpy_from_ext_imp_settings_v1(
+	struct tegra_dc_ext_imp_settings *ext_settings)
+{
+	struct tegra_nvdisp_imp_settings *nvdisp_settings;
+	struct tegra_dc_ext_nvdisp_imp_global_entries *global_entries;
+	u8 active_heads = 0, max_heads = tegra_dc_get_numof_dispheads();
+	u8 num_wins_per_head[max_heads];
+	int i;
+
+	memset(num_wins_per_head, 0, sizeof(num_wins_per_head));
+	for (i = 0; i < max_heads; i++) {
+		struct tegra_dc_ext_imp_head_results *head_results;
+
+		head_results = &ext_settings->imp_results[i];
+		if (head_results->head_active)
+			num_wins_per_head[active_heads++] =
+						head_results->num_windows;
+	}
+
+	nvdisp_settings = alloc_imp_settings(active_heads, num_wins_per_head);
+	if (!nvdisp_settings)
+		return NULL;
+
+	global_entries = &nvdisp_settings->global_entries;
+	global_entries->total_win_fetch_slots =
+					ext_settings->window_slots_value;
+	global_entries->total_curs_fetch_slots =
+					ext_settings->cursor_slots_value;
+	global_entries->emc_floor_hz = ext_settings->proposed_emc_hz;
+	global_entries->min_hubclk_hz = ext_settings->hubclk;
+	global_entries->total_iso_bw_with_catchup_kBps =
+					ext_settings->total_display_iso_bw_kbps;
+	global_entries->total_iso_bw_without_catchup_kBps =
+					ext_settings->required_total_bw_kbps;
+
+	active_heads = 0;
+	for (i = 0; i < max_heads; i++) {
+		struct tegra_dc_ext_imp_head_results *head_results;
+		struct tegra_nvdisp_imp_head_settings *nvdisp_head;
+
+		head_results = &ext_settings->imp_results[i];
+		if (!head_results->head_active)
+			continue;
+
+		nvdisp_head = &nvdisp_settings->head_settings[active_heads++];
+		cpy_from_ext_imp_head_v1(head_results, nvdisp_head, i);
+	}
+
+	return nvdisp_settings;
+}
+
+static int cpy_from_ext_imp_head_v2(
+		struct tegra_dc_ext_nvdisp_imp_head_settings *ext_head,
+		struct tegra_nvdisp_imp_head_settings *nvdisp_head)
+{
+	struct tegra_dc_ext_nvdisp_imp_win_settings *ext_wins;
+	u8 num_wins = ext_head->num_wins;
+	int i, ret = 0;
+
+	ext_wins = kcalloc(num_wins, sizeof(*ext_wins), GFP_KERNEL);
+	if (!ext_wins) {
+		pr_err("%s: Failed to alloc mem for dc_ext wins\n", __func__);
 		return -ENOMEM;
 	}
-	INIT_LIST_HEAD(&imp_settings->imp_node);
 
-	ext_imp_ptr = (void __user *)flip_user_data->imp_ptr.settings;
-	if (copy_from_user(&imp_settings->ext_settings, ext_imp_ptr,
-					sizeof(imp_settings->ext_settings))) {
-		dev_err(&dc->ndev->dev,
-			"Failed to copy IMP results from user\n");
+	if (copy_from_user(ext_wins, (void __user *)ext_head->win_settings,
+					sizeof(*ext_wins) * num_wins)) {
+		pr_err("%s: Failed to copy dc_ext wins from user\n", __func__);
 		ret = -EFAULT;
 
-		goto free_and_ret;
+		goto cpy_imp_wins_ret;
 	}
+
+	nvdisp_head->entries = ext_head->entries;
+	for (i = 0; i < num_wins; i++)
+		nvdisp_head->win_entries[i] = ext_wins[i].entries;
+
+cpy_imp_wins_ret:
+	kfree(ext_wins);
+	return ret;
+}
+
+static struct tegra_nvdisp_imp_settings *cpy_from_ext_imp_settings_v2(
+	struct tegra_dc_ext_nvdisp_imp_settings *ext_settings)
+{
+	struct tegra_nvdisp_imp_settings *nvdisp_settings = NULL;
+	struct tegra_dc_ext_nvdisp_imp_head_settings *ext_heads;
+	u8 num_heads = ext_settings->num_heads;
+	u8 max_heads = tegra_dc_get_numof_dispheads();
+	u8 num_wins_per_head[max_heads];
+	int i, ret = 0;
+
+	ext_heads = kcalloc(num_heads, sizeof(*ext_heads), GFP_KERNEL);
+	if (!ext_heads) {
+		pr_err("%s: Failed to alloc mem for dc_ext heads\n", __func__);
+		return NULL;
+	}
+
+	if (copy_from_user(ext_heads,
+			(void __user *)ext_settings->head_settings,
+			sizeof(*ext_heads) * num_heads)) {
+		pr_err("%s: Failed to copy dc_ext heads from user\n", __func__);
+		goto cpy_imp_v2_ret;
+	}
+
+	memset(num_wins_per_head, 0, sizeof(num_wins_per_head));
+	for (i = 0; i < num_heads; i++)
+		num_wins_per_head[i] = ext_heads[i].num_wins;
+
+	nvdisp_settings = alloc_imp_settings(num_heads, num_wins_per_head);
+	if (!nvdisp_settings)
+		goto cpy_imp_v2_ret;
+
+	nvdisp_settings->global_entries = ext_settings->global_settings.entries;
+	for (i = 0; i < num_heads; i++) {
+		ret = cpy_from_ext_imp_head_v2(&ext_heads[i],
+					&nvdisp_settings->head_settings[i]);
+		if (ret) {
+			dealloc_imp_settings(nvdisp_settings);
+			nvdisp_settings = NULL;
+
+			goto cpy_imp_v2_ret;
+		}
+	}
+
+cpy_imp_v2_ret:
+	kfree(ext_heads);
+	return nvdisp_settings;
+}
+
+static struct tegra_nvdisp_imp_settings *convert_dc_ext_to_nvdisp_imp(
+		struct tegra_dc_ext_flip_user_data *flip_user_data,
+		void __user *ext_settings_ptr,
+		struct tegra_dc_ext_imp_settings *ext_settings_v1,
+		struct tegra_dc_ext_nvdisp_imp_settings *ext_settings_v2)
+{
+	struct tegra_nvdisp_imp_settings *nvdisp_settings;
+	bool use_v2 = flip_user_data->flags & TEGRA_DC_EXT_FLIP_FLAG_IMP_V2;
+	int ret = 0;
+
+	if (use_v2)
+		ret = copy_from_user(ext_settings_v2, ext_settings_ptr,
+						sizeof(*ext_settings_v2));
+	else
+		ret = copy_from_user(ext_settings_v1, ext_settings_ptr,
+						sizeof(*ext_settings_v1));
+
+	if (ret) {
+		pr_err("%s: Failed to copy dc_ext settings\n", __func__);
+		return NULL;
+	}
+
+	if (use_v2)
+		nvdisp_settings =
+				cpy_from_ext_imp_settings_v2(ext_settings_v2);
+	else
+		nvdisp_settings =
+				cpy_from_ext_imp_settings_v1(ext_settings_v1);
+
+	if (!nvdisp_settings)
+		pr_err("%s: Failed to create nvdisp IMP settings\n", __func__);
+
+	return nvdisp_settings;
+}
+
+int tegra_dc_queue_imp_propose(struct tegra_dc *dc,
+			struct tegra_dc_ext_flip_user_data *flip_user_data)
+{
+	struct tegra_dc_ext_imp_settings ext_settings_v1;
+	struct tegra_dc_ext_nvdisp_imp_settings ext_settings_v2;
+	struct tegra_nvdisp_imp_settings *nvdisp_settings;
+	struct tegra_dc_ext_nvdisp_imp_global_entries *global_entries;
+	void __user *ext_session_id_ptr;
+	void __user *ext_settings_ptr;
+	bool use_v2 = flip_user_data->flags & TEGRA_DC_EXT_FLIP_FLAG_IMP_V2;
+	int ret = 0;
+
+	ext_settings_ptr = (void __user *)flip_user_data->imp_ptr.settings;
+	nvdisp_settings = convert_dc_ext_to_nvdisp_imp(flip_user_data,
+						ext_settings_ptr,
+						&ext_settings_v1,
+						&ext_settings_v2);
+	if (!nvdisp_settings)
+		return -EINVAL;
 
 	mutex_lock(&tegra_nvdisp_lock);
 
-	ext_settings = &imp_settings->ext_settings;
+	global_entries = &nvdisp_settings->global_entries;
 	ret = tegra_nvdisp_negotiate_reserved_bw(dc,
-			(u32)ext_settings->total_display_iso_bw_kbps,
-			(u32)ext_settings->required_total_bw_kbps,
-			(u32)ext_settings->proposed_emc_hz,
-			(u32)ext_settings->hubclk);
+			(u32)global_entries->total_iso_bw_with_catchup_kBps,
+			(u32)global_entries->total_iso_bw_without_catchup_kBps,
+			(u32)global_entries->emc_floor_hz,
+			(u32)global_entries->min_hubclk_hz);
 	if (ret) {
 		mutex_unlock(&tegra_nvdisp_lock);
-		goto free_and_ret;
+		dealloc_imp_settings(nvdisp_settings);
+
+		return ret;
 	}
 
-	/* Copy the session id back to the user. */
-	ext_session_id_ptr = (void __user *)ext_settings->session_id_ptr;
+	if (use_v2) {
+		u32 offset = offsetof(struct tegra_dc_ext_nvdisp_imp_settings,
+								session_id);
+		ext_session_id_ptr = ext_settings_ptr + offset;
+	} else {
+		ext_session_id_ptr =
+				(void __user *)ext_settings_v1.session_id_ptr;
+	}
+
 	if (copy_to_user(ext_session_id_ptr, &dc->imp_session_id_cntr,
 					sizeof(dc->imp_session_id_cntr))) {
-		pr_err("Failed to copy session id back to user\n");
-
+		dev_err(&dc->ndev->dev,
+			"Failed to copy IMP session id back to user\n");
 		mutex_unlock(&tegra_nvdisp_lock);
-		goto free_and_ret;
+		dealloc_imp_settings(nvdisp_settings);
+
+		return -EFAULT;
 	}
 
-	imp_settings->owner = dc->ctrl_num;
-	imp_settings->session_id = dc->imp_session_id_cntr;
-	dc->imp_session_id_cntr++;
-	list_add_tail(&imp_settings->imp_node, &nvdisp_imp_settings_queue);
+	nvdisp_settings->session_id = dc->imp_session_id_cntr++;
+	nvdisp_settings->owner_ctrl_num = dc->ctrl_num;
+
+	INIT_LIST_HEAD(&nvdisp_settings->imp_node);
+	list_add_tail(&nvdisp_settings->imp_node, &nvdisp_imp_settings_queue);
+
+	mutex_unlock(&tegra_nvdisp_lock);
 
 	trace_display_imp_propose_queued(dc->ctrl_num,
-						imp_settings->session_id);
+						nvdisp_settings->session_id);
+	return ret;
+}
+EXPORT_SYMBOL(tegra_dc_queue_imp_propose);
+
+static void tegra_nvdisp_flush_imp_queue(void)
+{
+	struct tegra_nvdisp_imp_settings *cur = NULL, *next = NULL;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	list_for_each_entry_safe(cur,
+				next,
+				&nvdisp_imp_settings_queue,
+				imp_node) {
+		list_del(&cur->imp_node);
+		dealloc_imp_settings(cur);
+	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
+}
+
+int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
+{
+	struct tegra_nvdisp_imp_settings *cur = NULL, *next = NULL;
+	int ret = -EINVAL;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	/*
+	 * Since IMP flips are issued in the same respective order as their
+	 * corresponding PROPOSEs, and only one IMP flip can be in-flight at any
+	 * moment in time, any entries that are in front of the one we're
+	 * looking for must be stale. These entries can be safely removed.
+	 *
+	 * If none of the entries in the queue match the one we're looking for,
+	 * return an error.
+	 */
+	list_for_each_entry_safe(cur,
+				next,
+				&nvdisp_imp_settings_queue,
+				imp_node) {
+		if (cur->owner_ctrl_num != dc->ctrl_num ||
+			cur->session_id != session_id) {
+			list_del(&cur->imp_node);
+			dealloc_imp_settings(cur);
+		} else {
+			ret = 0;
+			break;
+		}
+	}
 
 	mutex_unlock(&tegra_nvdisp_lock);
 	return ret;
-
-free_and_ret:
-	kfree(imp_settings);
-	return ret;
 }
-EXPORT_SYMBOL(tegra_dc_handle_imp_propose);
+EXPORT_SYMBOL(tegra_dc_validate_imp_queue);
 
 static void tegra_nvdisp_program_imp_curs_results(struct tegra_dc *dc,
 			struct tegra_dc_ext_imp_head_results *imp_head_results,

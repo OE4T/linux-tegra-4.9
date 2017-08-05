@@ -2954,7 +2954,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 			if (flip_user_data[0].data_type ==
 				TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA) {
-				ret = tegra_dc_handle_imp_propose(
+				ret = tegra_dc_queue_imp_propose(
 						user->ext->dc, flip_user_data);
 				if (ret)
 					goto free_and_ret;

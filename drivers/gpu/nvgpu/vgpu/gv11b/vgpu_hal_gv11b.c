@@ -378,7 +378,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.tsg_bind_channel = vgpu_tsg_bind_channel,
 		.tsg_unbind_channel = vgpu_tsg_unbind_channel,
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
-		.alloc_syncpt_buf = gv11b_fifo_alloc_syncpt_buf,
+		.alloc_syncpt_buf = vgpu_gv11b_fifo_alloc_syncpt_buf,
 		.free_syncpt_buf = gv11b_fifo_free_syncpt_buf,
 		.add_syncpt_wait_cmd = gv11b_fifo_add_syncpt_wait_cmd,
 		.get_syncpt_wait_cmd_size = gv11b_fifo_get_syncpt_wait_cmd_size,

@@ -26,6 +26,8 @@
 #include "common/linux/os_linux.h"
 
 #include <nvgpu/nvhost.h>
+#include <nvgpu/nvhost_t19x.h>
+
 #include <linux/platform_device.h>
 
 static int gv11b_vgpu_probe(struct device *dev)
@@ -35,6 +37,7 @@ static int gv11b_vgpu_probe(struct device *dev)
 	struct resource *r;
 	void __iomem *regs;
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(platform->g);
+	struct gk20a *g = platform->g;
 	int ret;
 
 	r = platform_get_resource_byname(pdev, IORESOURCE_MEM, "usermode");
@@ -50,11 +53,22 @@ static int gv11b_vgpu_probe(struct device *dev)
 	l->t19x.usermode_regs = regs;
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
-	ret = nvgpu_get_nvhost_dev(platform->g);
+	ret = nvgpu_get_nvhost_dev(g);
 	if (ret) {
 		l->t19x.usermode_regs = NULL;
 		return ret;
 	}
+
+	ret = nvgpu_nvhost_syncpt_unit_interface_get_aperture(g->nvhost_dev,
+							&g->syncpt_unit_base,
+							&g->syncpt_unit_size);
+	if (ret) {
+		dev_err(dev, "Failed to get syncpt interface");
+		return -ENOSYS;
+	}
+	g->syncpt_size = nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(1);
+	nvgpu_info(g, "syncpt_unit_base %llx syncpt_unit_size %zx size %x\n",
+		g->syncpt_unit_base, g->syncpt_unit_size, g->syncpt_size);
 #endif
 	vgpu_init_clk_support(platform->g);
 
@@ -62,7 +76,7 @@ static int gv11b_vgpu_probe(struct device *dev)
 }
 
 struct gk20a_platform gv11b_vgpu_tegra_platform = {
-	.has_syncpoints = false,
+	.has_syncpoints = true,
 	.aggressive_sync_destroy_thresh = 64,
 
 	/* power management configuration */

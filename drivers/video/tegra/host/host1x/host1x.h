@@ -82,6 +82,10 @@ struct host1x_device_info {
 	bool		vmserver_owns_engines;
 	/* true if hw supports remote syncpoint interrupts */
 	bool		use_cross_vm_interrupts;
+	/* host1x: reg resources */
+	char		*resources[NVHOST_MODULE_MAX_IORESOURCE_MEM];
+	/* host1x: number of resources */
+	int		nb_resources;
 };
 
 struct nvhost_vm_firmware_area {

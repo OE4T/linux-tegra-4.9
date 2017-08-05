@@ -954,6 +954,40 @@ struct nvhost_syncpt *nvhost_get_syncpt_owner_struct(u32 id,
 	return &host->syncpt;
 }
 
+static int nvhost_device_get_host1x_resources_byname(struct nvhost_master *host)
+{
+	int i;
+	void __iomem *regs = NULL;
+	struct platform_device *dev = host->dev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	int ret;
+
+	for (i = 0; i < host->info.nb_resources; ++i) {
+		struct resource *r = NULL;
+
+		r = platform_get_resource_byname(dev, IORESOURCE_MEM,
+						host->info.resources[i]);
+		/* Get next resource without failing if current resource is not
+		 * present. Resources vary with configurations.
+		 */
+		if (!r)
+			continue;
+
+		regs = devm_ioremap_resource(&dev->dev, r);
+		if (IS_ERR(regs)) {
+			ret = PTR_ERR(regs);
+			goto fail;
+		}
+
+		pdata->aperture[i] = regs;
+	}
+
+	return 0;
+fail:
+	dev_err(&dev->dev, "failed to get register memory\n");
+	return -ENXIO;
+}
+
 static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
@@ -1047,7 +1081,10 @@ static int nvhost_probe(struct platform_device *dev)
 	}
 
 	if (!pdata->virtual_dev) {
-		err = nvhost_device_get_resources(dev);
+		if (host->info.nb_resources)
+			err = nvhost_device_get_host1x_resources_byname(host);
+		else
+			err = nvhost_device_get_resources(dev);
 		if (err) {
 			dev_err(&dev->dev, "failed to get resources\n");
 			goto fail;

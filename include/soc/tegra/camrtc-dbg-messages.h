@@ -73,19 +73,19 @@ enum camrtc_response {
 };
 
 enum camrtc_response_status {
-	CAMRTC_STATUS_OK = 0,
-	CAMRTC_STATUS_ERROR = 1,		/* Generic error */
-	CAMRTC_STATUS_REQ_UNKNOWN = 2,		/* Unknown req_type */
-	CAMRTC_STATUS_NOT_IMPLEMENTED = 3,	/* Request not implemented */
-	CAMRTC_STATUS_INVALID_PARAM = 4,	/* Invalid parameter */
+	CAMRTC_STATUS_OK = 0U,
+	CAMRTC_STATUS_ERROR = 1U,		/* Generic error */
+	CAMRTC_STATUS_REQ_UNKNOWN = 2U,		/* Unknown req_type */
+	CAMRTC_STATUS_NOT_IMPLEMENTED = 3U,	/* Request not implemented */
+	CAMRTC_STATUS_INVALID_PARAM = 4U,	/* Invalid parameter */
 };
 
 enum {
-	CAMRTC_DBG_FRAME_SIZE = 384,
-	CAMRTC_DBG_MAX_DATA = 376,
-	CAMRTC_DBG_READ_MEMORY_COUNT_MAX = 256,
-	CAMRTC_DBG_MAX_PERF_COUNTERS = 31,
-	CAMRTC_DBG_TASK_STAT_MAX = 16,
+	CAMRTC_DBG_FRAME_SIZE = 384U,
+	CAMRTC_DBG_MAX_DATA = 376U,
+	CAMRTC_DBG_READ_MEMORY_COUNT_MAX = 256U,
+	CAMRTC_DBG_MAX_PERF_COUNTERS = 31U,
+	CAMRTC_DBG_TASK_STAT_MAX = 16U,
 };
 
 /* This struct is used to query or set the wake timeout for the target.
@@ -190,7 +190,7 @@ struct camrtc_dbg_get_perf_counters_result {
 
 struct camrtc_dbg_run_test_data {
 	uint64_t timeout;	/* Time in nanoseconds */
-	uint8_t data[CAMRTC_DBG_MAX_TEST_DATA];
+	char data[CAMRTC_DBG_MAX_TEST_DATA];
 } __packed;
 
 struct camrtc_dbg_task_stat {

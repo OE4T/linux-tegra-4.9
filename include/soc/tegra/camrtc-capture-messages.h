@@ -233,6 +233,67 @@ struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG {
 	int32_t result;
 } __CAPTURE_IVC_ALIGN;
 
+
+/**
+ * Capture ISP channel messages
+ */
+
+/**
+ * Message types for isp capture control channel messages.
+ */
+#define CAPTURE_CHANNEL_ISP_SETUP_REQ		U32_C(0x20)
+#define CAPTURE_CHANNEL_ISP_SETUP_RESP		U32_C(0x21)
+#define CAPTURE_CHANNEL_ISP_RESET_REQ		U32_C(0x22)
+#define CAPTURE_CHANNEL_ISP_RESET_RESP		U32_C(0x23)
+#define CAPTURE_CHANNEL_ISP_RELEASE_REQ		U32_C(0x24)
+#define CAPTURE_CHANNEL_ISP_RELEASE_RESP	U32_C(0x25)
+
+/**
+ * Message types for isp capture channel messages.
+ */
+#define CAPTURE_ISP_REQUEST_REQ			U32_C(0x03)
+#define CAPTURE_ISP_STATUS_IND			U32_C(0x04)
+
+#define CAPTURE_ISP_PROGRAM_REQUEST_REQ		U32_C(0x05)
+#define CAPTURE_ISP_PROGRAM_STATUS_IND		U32_C(0x06)
+
+/** Set up RTCPU side resources for ISP capture pipe-line.
+ *
+ * The client shall use the transaction id field in the
+ * standard message header to associate request and response.
+ *
+ * @param channel_config	Capture channel configuration.
+ */
+struct CAPTURE_CHANNEL_ISP_SETUP_REQ_MSG {
+	struct capture_channel_isp_config	channel_config;
+} __CAPTURE_IVC_ALIGN;
+
+/** Acknowledge isp capture channel setup request.
+ *
+ * The transaction id field in the standard message header
+ * will be copied from the associated request.
+ *
+ * The setup response message returns a channel_id, which
+ * identifies this set of resources and is used to refer to the
+ * allocated capture channel in subsequent messages.
+ *
+ * @param result		Return value.
+ * @param channel_id		Capture channel identifier for the new channel.
+ */
+struct CAPTURE_CHANNEL_ISP_SETUP_RESP_MSG {
+	int32_t result;
+	uint32_t channel_id;
+} __CAPTURE_IVC_ALIGN;
+
+typedef struct CAPTURE_CHANNEL_RESET_REQ_MSG
+			CAPTURE_CHANNEL_ISP_RESET_REQ_MSG;
+typedef struct CAPTURE_CHANNEL_RESET_RESP_MSG
+			CAPTURE_CHANNEL_ISP_RESET_RESP_MSG;
+typedef struct CAPTURE_CHANNEL_RELEASE_REQ_MSG
+			CAPTURE_CHANNEL_ISP_RELEASE_REQ_MSG;
+typedef struct CAPTURE_CHANNEL_RELEASE_RESP_MSG
+			CAPTURE_CHANNEL_ISP_RELEASE_RESP_MSG;
+
 /**
  * Message definition for capture control channel messages.
  */
@@ -253,6 +314,14 @@ struct CAPTURE_CONTROL_MSG {
 		struct CAPTURE_SYNCGEN_ENABLE_RESP_MSG syncgen_enable_resp;
 		struct CAPTURE_SYNCGEN_DISABLE_REQ_MSG syncgen_disable_req;
 		struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG syncgen_disable_resp;
+
+		struct CAPTURE_CHANNEL_ISP_SETUP_REQ_MSG channel_isp_setup_req;
+		struct CAPTURE_CHANNEL_ISP_SETUP_RESP_MSG
+						channel_isp_setup_resp;
+		CAPTURE_CHANNEL_ISP_RESET_REQ_MSG channel_isp_reset_req;
+		CAPTURE_CHANNEL_ISP_RESET_RESP_MSG channel_isp_reset_resp;
+		CAPTURE_CHANNEL_ISP_RELEASE_REQ_MSG channel_isp_release_req;
+		CAPTURE_CHANNEL_ISP_RELEASE_RESP_MSG channel_isp_release_resp;
 	};
 } __CAPTURE_IVC_ALIGN;
 
@@ -312,6 +381,149 @@ struct CAPTURE_STATUS_IND_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 /**
+ * Send new isp_capture request on a capture channel.
+ *
+ * The request contains channel identifier and the capture sequence
+ * number (ring-buffer index), which are required to schedule the
+ * isp capture request.
+ * The actual capture programming is stored in isp_capture_descriptor,
+ * stored in DRAM ring buffer, which includes the sequence, ISP
+ * surfaces' details, surface related configs, ISP PB2 iova, input prefences,
+ * and isp_capture status written by RTCPU.
+ *
+ * NvCapture UMD allocates the pool of isp_capture descriptors in setup call,
+ * where each isp_capture_desc is followed by corresponding PB2 memory
+ * (ATOM aligned).
+ * RTCPU would generate the PB2 using surface details found in isp_capture
+ * descriptor.
+ * The ring-buffer (pool) would look like below:
+ *
+ * [isp_capture_desc][PB2][isp_capture_desc][PB2][isp_capture_desc]...
+ *
+ * The isp_capture_descriptor with buffer_index=N can be located within
+ * the ring buffer as follows:
+ *
+ * isp_capture_descriptor *desc = requests + buffer_index * request_size;
+ *
+ * Note, here request_size = sizeof (isp_capture_descriptor) + sizeof (PB2).
+ *
+ * UMD fills isp_capture_desc and submits the request to KMD which pins the
+ * surfaces and PB and then does the in-place replacement with iovas' within
+ * isp_capture_descriptor.
+ * KMD then sends the isp_capture request to RTCPU over capture ivc channel.
+ *
+ * The isp capture request message is asynchronous. Capture completion is
+ * indicated by incrementing the progress syncpoint a pre-calculated
+ * number of times = <number of sub-frames>. The progress-syncpoint is
+ * used to synchronize with down-stream engines. This model assumes that
+ * the capture client knows the number of subframes used in the capture and has
+ * programmed the ISP accordingly.
+ * All stats completion are indicated by incrementing stats progress syncpoint
+ * a number of times = <num-stats-enabled>.
+ *
+ * If the flag CAPTURE_FLAG_ISP_STATUS_REPORT_ENABLE is set in the isp
+ * capture descriptor, RTCPU will store the capture status into status field
+ * of the descriptor. RTCPU will also send a CAPTURE_ISP_STATUS_IND
+ * message to indicate that capture has completed.
+ *
+ * If the flag CAPTURE_FLAG_ISP_ERROR_REPORT_ENABLE is set, RTCPU will send a
+ * CAPTURE_ISP_STATUS_IND upon an error, even if
+ * CAPTURE_FLAG_ISP_STATUS_REPORT_ENABLE is not set.
+ *
+ * Typedef-ed CAPTURE_REQUEST_REQ_MSG.
+ *
+ * @param buffer_index: isp_capture_descriptor index in ring buffer.
+ */
+typedef struct CAPTURE_REQUEST_REQ_MSG CAPTURE_ISP_REQUEST_REQ_MSG;
+
+/** ISP Capture status indication.
+ *
+ * The message is sent after the capture status record has been
+ * written into the capture request descriptor.
+ *
+ * @param buffer_index	Buffer index identifying capture descriptor.
+ */
+typedef struct CAPTURE_STATUS_IND_MSG CAPTURE_ISP_STATUS_IND_MSG;
+
+/**
+ * Send new isp_program request on a capture ivc channel.
+ *
+ * The request contains channel identifier and the program sequence
+ * number (ring-buffer index).
+ * The actual programming details is stored in isp_program
+ * descriptor, which includes the offset to isp_program
+ * buffer (which has PB1 containing ISP HW settings), sequence,
+ * settings-id, activation-flags, isp_program buffer size, iova's
+ * of ISP PB1 and isp_program status written by RTCPU.
+ *
+ * NvCapture UMD allocates the pool of isp_program descriptors in setup call,
+ * where each isp_pgram_descriptor is followed by corresponding isp_program
+ * buffer (ATOM aligned).
+ * The ring-buffer (pool) would look like below:
+ *
+ * [isp_prog_desc][isp_program][isp_prog_desc][isp_program][isp_prog_desc]...
+ *
+ * The isp_program_descriptor with buffer_index=N can be located within
+ * the ring buffer as follows:
+ *
+ * isp_program_descriptor *desc = programs + buffer_index * program_size;
+ *
+ * Note, program_size = sizeof (isp_program_descriptor) + sizeof (isp_program).
+ *
+ * NvISP fills these and submits the isp_program request to KMD which pins the
+ * PB and then does the in-place replacement with iova within
+ * isp_program_descriptor.
+ * KMD then sends the isp_program request to RTCPU over capture ivc channel.
+ *
+ * The sequence is the frame_id which tells RTCPU, that the given isp_program
+ * must be used from that frame_id onwards until UMD provides new one.
+ * So RTCPU will use the sequence field to select the correct isp_program from
+ * the isp_program descriptors' ring buffer for given frame request and will
+ * keep on using it for further frames until the new isp_program (desc) is
+ * provided to be used.
+ * RTCPU populates both matched isp_program (reads from isp program desc) and
+ * isp capture descriptor and forms single task descriptor for given frame
+ * request and feeds it to falcon, which further programs it to ISP.
+ *
+ * settings_id is unique id for isp_program, NvCapture and RTCPU will use
+ * the ring buffer array index as settings_id.
+ * It can also be used to select the correct isp_program for the given
+ * frame, in that case, UMD writes this unique settings_id to sensor's
+ * scratch register, and sensor will send back it as part of embedded data,
+ * when the given settings/gains are applied on that particular frame
+ * coming from sensor.
+ *
+ * RTCPU reads this settings_id back from embedded data and uses it to select
+ * the corresponding isp_program from the isp_program desc ring buffer.
+ * The activation_flags tells the RTCPU which id (sequence or settings_id) to
+ * use to select correct isp_program for the given frame.
+ *
+ * As same isp_program can be used for multiple frames, it can not be freed
+ * when the frame capture is done. RTCPU will send a separate status
+ * indication CAPTURE_ISP_PROGRAM_STATUS_IND message to CCPEX to notify
+ * that the given isp_program is no longer in use and can be freed or reused.
+ * settings_id (ring-buffer index) field is used to uniquely identify the
+ * correct isp_program.
+ * RTCPU also writes the isp_program status in isp program descriptor.
+ *
+ * Typedef-ed CAPTURE_REQUEST_REQ_MSG.
+ *
+ * @param buffer_index: isp_program descriptor index in ring buffer.
+ */
+typedef struct CAPTURE_REQUEST_REQ_MSG CAPTURE_ISP_PROGRAM_REQUEST_REQ_MSG;
+
+/** ISP program status indication.
+ *
+ * The message is sent to notify CCPLEX about the isp_program which is expired
+ * so UMD client can free or reuse it.
+ *
+ * Typedef-ed CAPTURE_STATUS_IND_MSG.
+ *
+ * @param buffer_index: Buffer index identifying ISP program descriptor.
+ */
+typedef struct CAPTURE_STATUS_IND_MSG CAPTURE_ISP_PROGRAM_STATUS_IND_MSG;
+
+/**
  * Message definition for capture channel messages.
  */
 struct CAPTURE_MSG {
@@ -319,6 +531,13 @@ struct CAPTURE_MSG {
 	union {
 		struct CAPTURE_REQUEST_REQ_MSG capture_request_req;
 		struct CAPTURE_STATUS_IND_MSG capture_status_ind;
+
+		CAPTURE_ISP_REQUEST_REQ_MSG capture_isp_request_req;
+		CAPTURE_ISP_STATUS_IND_MSG capture_isp_status_ind;
+		CAPTURE_ISP_PROGRAM_REQUEST_REQ_MSG
+				capture_isp_program_request_req;
+		CAPTURE_ISP_PROGRAM_STATUS_IND_MSG
+				capture_isp_program_status_ind;
 	};
 } __CAPTURE_IVC_ALIGN;
 

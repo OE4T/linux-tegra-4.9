@@ -18,10 +18,10 @@
  * file supports only uintX_t types, where X can be 8,16,32,64.
  */
 #define CAMRTC_TAG64(s0, s1, s2, s3, s4, s5, s6, s7) ( \
-	((uint64_t)s0 << 0) | ((uint64_t)s1 << 8) | \
-	((uint64_t)s2 << 16) | ((uint64_t)s3 << 24) | \
-	((uint64_t)s4 << 32) | ((uint64_t)s5 << 40) | \
-	((uint64_t)s6 << 48) | ((uint64_t)s7 << 56))
+	((uint64_t)(s0) << 0U) | ((uint64_t)(s1) << 8U) | \
+	((uint64_t)(s2) << 16U) | ((uint64_t)(s3) << 24U) | \
+	((uint64_t)(s4) << 32U) | ((uint64_t)(s5) << 40U) | \
+	((uint64_t)(s6) << 48U) | ((uint64_t)(s7) << 56U))
 
 #define CAMRTC_TAG_IVC_SETUP CAMRTC_TAG64('I','V','C', '-', 'S','E','T','U')
 
@@ -49,11 +49,11 @@ struct camrtc_tlv_ivc_setup {
 
 enum {
 	/* 0 .. 127 indicate unknown commands */
-	RTCPU_CH_ERR_NO_SERVICE = 128,
-	RTCPU_CH_ERR_ALREADY,
-	RTCPU_CH_ERR_UNKNOWN_TAG,
-	RTCPU_CH_ERR_INVALID_IOVA,
-	RTCPU_CH_ERR_INVALID_PARAM,
+	RTCPU_CH_ERR_NO_SERVICE = U32_C(128),
+	RTCPU_CH_ERR_ALREADY = U32_C(129),
+	RTCPU_CH_ERR_UNKNOWN_TAG = U32_C(130),
+	RTCPU_CH_ERR_INVALID_IOVA = U32_C(131),
+	RTCPU_CH_ERR_INVALID_PARAM = U32_C(132),
 };
 
 #endif /* INCLUDE_CAMRTC_CHANNELS_H */

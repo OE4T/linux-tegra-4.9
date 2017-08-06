@@ -315,11 +315,10 @@ void gv11b_dump_channel_status_ramfc(struct gk20a *g,
 		inst_mem[ram_fc_sem_payload_lo_w()],
 		inst_mem[ram_fc_sem_execute_w()]);
 	if (hw_sema)
-		gk20a_debug_output(o, "SEMA STATE: value: 0x%08x "
-				   "next_val: 0x%08x addr: 0x%010llx\n",
-				   __nvgpu_semaphore_read(hw_sema),
-				   atomic_read(&hw_sema->next_value),
-				   nvgpu_hw_sema_addr(hw_sema));
+		gk20a_debug_output(o, "SEMA STATE: value: 0x%08x next_val: 0x%08x addr: 0x%010llx\n",
+				  __nvgpu_semaphore_read(hw_sema),
+				  nvgpu_atomic_read(&hw_sema->next_value),
+				  nvgpu_hw_sema_addr(hw_sema));
 	gk20a_debug_output(o, "\n");
 }
 

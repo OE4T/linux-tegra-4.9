@@ -131,6 +131,8 @@ struct tegra_se_elp_dev {
 	struct tegra_se_pka1_slot *slot_list;
 	const struct tegra_se_elp_chipdata *chipdata;
 	u32 *rdata;
+	/* Mutex lock to protect HW */
+	struct mutex hw_lock;
 };
 
 static struct tegra_se_elp_dev *elp_dev;
@@ -1905,7 +1907,7 @@ int tegra_se_pka1_ecc_op(struct tegra_se_pka1_ecc_request *req)
 		return ret;
 
 	se_dev = req->se_dev;
-
+	mutex_lock(&se_dev->hw_lock);
 	ret = clk_prepare_enable(se_dev->c);
 	if (ret) {
 		dev_err(se_dev->dev, "clk_enable failed\n");
@@ -1928,6 +1930,7 @@ exit:
 clk_dis:
 	clk_disable_unprepare(se_dev->c);
 ecc_exit:
+	mutex_unlock(&se_dev->hw_lock);
 	tegra_se_pka1_ecc_exit(req);
 
 	return ret;
@@ -1949,6 +1952,7 @@ static int tegra_se_pka1_mod_op(struct tegra_se_pka1_mod_request *req)
 		return ret;
 
 	se_dev = req->se_dev;
+	mutex_lock(&se_dev->hw_lock);
 	ret = clk_prepare_enable(se_dev->c);
 	if (ret) {
 		dev_err(se_dev->dev, "clk_enable failed\n");
@@ -1971,6 +1975,7 @@ exit:
 clk_dis:
 	clk_disable_unprepare(se_dev->c);
 mod_exit:
+	mutex_unlock(&se_dev->hw_lock);
 	tegra_se_pka1_mod_exit(req);
 
 	return ret;
@@ -2407,9 +2412,11 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 
 	pkeydata = (u8 *)key;
 
+	mutex_lock(&se_dev->hw_lock);
 	ret = clk_prepare_enable(se_dev->c);
 	if (ret) {
 		dev_err(se_dev->dev, "clk_enable failed\n");
+		mutex_unlock(&se_dev->hw_lock);
 		return ret;
 	}
 
@@ -2492,11 +2499,13 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	memset((u8 *)ctx->exponent, 0x0, explen);
 	memset((u8 *)ctx->modulus, 0x0, modlen);
 
+	mutex_unlock(&se_dev->hw_lock);
 	return ret;
 rel_mutex:
 	tegra_se_release_pka1_mutex(se_dev);
 clk_dis:
 	clk_disable_unprepare(se_dev->c);
+	mutex_unlock(&se_dev->hw_lock);
 
 	return ret;
 }
@@ -2589,11 +2598,13 @@ static void tegra_se_pka1_rsa_exit(struct crypto_akcipher *tfm)
 	devm_kfree(se_dev->dev, ctx->exponent);
 	devm_kfree(se_dev->dev, ctx->modulus);
 
+	mutex_lock(&se_dev->hw_lock);
 	clk_prepare_enable(se_dev->c);
 
 	tegra_se_release_pka1_mutex(se_dev);
 
 	clk_disable_unprepare(se_dev->c);
+	mutex_unlock(&se_dev->hw_lock);
 
 	if (!ctx->slot)
 		return;
@@ -2737,11 +2748,13 @@ static int tegra_se_elp_rng_get_random(struct crypto_rng *tfm,
 	struct tegra_se_elp_dev *se_dev = rng_ctx->se_dev;
 	int ret = 0;
 
+	mutex_lock(&se_dev->hw_lock);
 	clk_prepare_enable(se_dev->c);
 	ret = tegra_se_acquire_rng1_mutex(se_dev);
 	if (ret) {
 		dev_err(se_dev->dev, "\n RNG Mutex acquire failed\n");
 		clk_disable_unprepare(se_dev->c);
+		mutex_unlock(&se_dev->hw_lock);
 		return ret;
 	}
 
@@ -2756,6 +2769,7 @@ static int tegra_se_elp_rng_get_random(struct crypto_rng *tfm,
 rel_mutex:
 	tegra_se_release_rng1_mutex(se_dev);
 	clk_disable_unprepare(se_dev->c);
+	mutex_unlock(&se_dev->hw_lock);
 	return ret;
 
 }
@@ -2844,6 +2858,7 @@ static int tegra_se_elp_trng_get_random(struct crypto_rng *tfm,
 	if (data_len == 0)
 		num_blocks = num_blocks - 1;
 
+	mutex_lock(&se_dev->hw_lock);
 	clk_prepare_enable(se_dev->c);
 
 	ret = tegra_se_acquire_pka1_mutex(se_dev);
@@ -2875,6 +2890,7 @@ rel_mutex:
 	tegra_se_release_pka1_mutex(se_dev);
 clk_dis:
 	clk_disable_unprepare(se_dev->c);
+	mutex_unlock(&se_dev->hw_lock);
 	return ret;
 }
 
@@ -3390,6 +3406,7 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 			goto rng_fail;
 		}
 	}
+	mutex_init(&se_dev->hw_lock);
 
 	err = crypto_register_akcipher(&ecdsa_alg);
 	if (err) {
@@ -3428,6 +3445,7 @@ static int tegra_se_elp_remove(struct platform_device *pdev)
 	crypto_unregister_akcipher(&ecdsa_alg);
 	crypto_unregister_akcipher(&pka1_rsa_algs[0]);
 	crypto_unregister_kpp(&ecdh_algs[0]);
+	mutex_destroy(&se_dev->hw_lock);
 
 	return 0;
 }

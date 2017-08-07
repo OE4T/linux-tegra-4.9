@@ -86,6 +86,7 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 	struct si2168_dev *dev = i2c_get_clientdata(client);
 	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int ret;
+	int sys;
 	struct si2168_cmd cmd;
 
 	*status = 0;
@@ -95,7 +96,22 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		goto err;
 	}
 
-	switch (c->delivery_system) {
+	memcpy(cmd.args, "\x87\x01", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 8;
+	ret = si2168_cmd_execute(client, &cmd);
+	if (ret)
+		goto err;
+
+	sys = c->delivery_system;
+	/* check if we found DVBT2 during DVBT tuning */
+	if (sys == SYS_DVBT) {
+		if ((cmd.args[3] & 0x0f) == 7) {
+			sys = SYS_DVBT2;
+		}
+	}
+
+	switch (sys) {
 	case SYS_DVBT:
 		memcpy(cmd.args, "\xa0\x01", 2);
 		cmd.wlen = 2;
@@ -172,7 +188,9 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 
 	switch (c->delivery_system) {
 	case SYS_DVBT:
-		delivery_system = 0x20;
+		delivery_system = 0xf0;
+		/* was 0x20 (DVB-T) but DVB-T/T2 auto-detect */
+		/* is more user friendly */
 		break;
 	case SYS_DVBC_ANNEX_A:
 		delivery_system = 0x30;
@@ -242,6 +260,16 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 		ret = si2168_cmd_execute(client, &cmd);
 		if (ret)
 			goto err;
+	} else if (c->delivery_system == SYS_DVBT) {
+		/* select Auto PLP */
+		cmd.args[0] = 0x52;
+		cmd.args[1] = 0;
+		cmd.args[2] = 0; /* Auto PLP */
+		cmd.wlen = 3;
+		cmd.rlen = 1;
+		ret = si2168_cmd_execute(client, &cmd);
+		if (ret)
+			goto err;
 	}
 
 	memcpy(cmd.args, "\x51\x03", 2);
@@ -281,6 +309,9 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 
 	memcpy(cmd.args, "\x14\x00\x0a\x10\x00\x00", 6);
 	cmd.args[4] = delivery_system | bandwidth;
+	if (delivery_system == 0xf0)
+		cmd.args[5] |= 2; /* Auto detect DVB-T/T2 */
+	cmd.args[5] |= 1; /* inverted spectrum, eg si2157 */
 	cmd.wlen = 6;
 	cmd.rlen = 4;
 	ret = si2168_cmd_execute(client, &cmd);
@@ -300,6 +331,7 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 	}
 
 	memcpy(cmd.args, "\x14\x00\x0f\x10\x10\x00", 6);
+	cmd.args[5] = 0x1e; /* set parameter to 30 (0x1e) */
 	cmd.wlen = 6;
 	cmd.rlen = 4;
 	ret = si2168_cmd_execute(client, &cmd);

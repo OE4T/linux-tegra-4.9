@@ -198,12 +198,64 @@ static inline u32 nvdisp_t19x_rg_vsync_ptimer1_r(void)
 {
 	return 0x0000035d;
 }
+static inline u32 nvdisp_t19x_state_access_r(void)
+{
+	return 0x00000040;
+}
+static inline u32 nvdisp_t19x_state_access_write_mux_assembly_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_t19x_display_cmd_option_r(void)
+{
+	return 0x00000031;
+}
+static inline u32 nvdisp_t19x_display_cmd_option_msf_enable_enable_f(void)
+{
+	return 0x2;
+}
+static inline u32 nvdisp_t19x_display_cmd_option_msf_src_glb_ctrl_f(void)
+{
+	return 0x4;
+}
+static inline u32 nvdisp_t19x_display_command_r(void)
+{
+	return 0x00000032;
+}
+static inline u32 nvdisp_t19x_display_command_control_mode_c_display_f(void)
+{
+	return 0x20;
+}
+static inline u32 nvdisp_t19x_display_command_control_mode_nc_display_f(void)
+{
+	return 0x40;
+}
+static inline u32 nvdisp_t19x_cmd_state_ctrl_r(void)
+{
+	return 0x00000041;
+}
+static inline u32 nvdisp_t19x_cmd_state_ctrl_general_act_req_enable_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_t19x_cmd_state_ctrl_host_trig_enable_f(void)
+{
+	return 0x1000000;
+}
 static inline u32 nvdisp_t19x_rg_status_r(void)
 {
 	return 0x00000362;
 }
+static inline u32 nvdisp_t19x_rg_status_stalled_yes_f(void)
+{
+	return 0x8;
+}
 static inline u32 nvdisp_t19x_rg_status_unstall_force_even_set_enable_f(void)
 {
 	return 0x80000;
+}
+static inline u32 nvdisp_t19x_glb_ctrl_r(void)
+{
+	return 0x0000003f;
 }
 #endif

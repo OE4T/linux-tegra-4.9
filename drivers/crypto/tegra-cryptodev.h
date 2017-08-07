@@ -89,6 +89,7 @@ struct tegra_se_pka1_ecc_request {
 	unsigned int type;
 	char *curve_param_a;
 	char *curve_param_b;
+	char *curve_param_c;
 	char *order;
 	char *base_pt_x;
 	char *base_pt_y;

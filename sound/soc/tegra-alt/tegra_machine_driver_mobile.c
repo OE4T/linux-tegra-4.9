@@ -1163,6 +1163,12 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	machine->soc_data = (struct tegra_machine_soc_data *)match->data;
 
+	if (!machine->soc_data->get_dai_link) {
+		ret = -ENODEV;
+		dev_err(&pdev->dev, "Error: get_dai_link is absent\n");
+		goto err;
+	}
+
 	card->dev = &pdev->dev;
 	platform_set_drvdata(pdev, card);
 	snd_soc_card_set_drvdata(card, machine);

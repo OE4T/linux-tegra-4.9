@@ -28,7 +28,9 @@
 #include <linux/vmalloc.h>
 #include <linux/highmem.h>
 
+#include <asm/io.h>
 #include <asm/memory.h>
+#include <asm/uaccess.h>
 
 #include <trace/events/nvmap.h>
 
@@ -464,8 +466,17 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 
 		if (is_read)
 			ret = copy_to_user((void *)sys_addr, addr, elem_size);
-		else
-			ret = copy_from_user(addr, (void *)sys_addr, elem_size);
+		else {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+			if (h->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+				uaccess_enable_not_uao();
+				memcpy_toio(addr, (void *)sys_addr, elem_size);
+				uaccess_disable_not_uao();
+				ret = 0;
+			} else
+#endif
+				ret = copy_from_user(addr, (void *)sys_addr, elem_size);
+		}
 
 		if (ret)
 			break;

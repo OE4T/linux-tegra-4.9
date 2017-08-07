@@ -1,4 +1,3 @@
-ifeq ($(KVERSION_4_9_TEGRA_ALT),)
 GCOV_PROFILE := y
 
 subdir-ccflags-y := -Werror
@@ -6,6 +5,7 @@ subdir-ccflags-y := -Werror
 subdir-ccflags-y += -I$(srctree)/../nvidia
 subdir-ccflags-y += -I$(srctree)
 subdir-ccflags-y += -I$(srctree)/sound/soc/tegra-virt-alt/
+subdir-ccflags-y += -I$(srctree)/sound/soc/codecs/
 
 # Tegra platform Support
 snd-soc-tegra-alt-pcm-objs := tegra_pcm_alt.o
@@ -99,24 +99,12 @@ obj-$(CONFIG_SND_SOC_TEGRA_T210REF_ALT) += snd-soc-tegra-alt-t210ref.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_ALT) += snd-soc-tegra-alt-machine.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_P2382_ALT) += snd-soc-tegra-alt-t210ref-p2382.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_P2382_ALT) += snd-soc-tegra-alt-machine.o
-endif
 
-subdir-ccflags-y += -Werror
-ifneq ($(KVERSION_4_9_TEGRA_ALT),)
-EXTRA_CFLAGS += -I$(srctree)/sound/soc/tegra-alt
-endif
-EXTRA_CFLAGS += -I$(srctree)
-EXTRA_CFLAGS += -I$(srctree)/../nvidia
-
+# T18x platform support
 snd-soc-tegra186-alt-asrc-objs := tegra186_asrc_alt.o
 snd-soc-tegra186-alt-arad-objs := tegra186_arad_alt.o
 snd-soc-tegra186-alt-dspk-objs := tegra186_dspk_alt.o
-ifeq ($(KVERSION_4_9_TEGRA_ALT),)
 snd-soc-tegra-asoc-machine-alt-t18x-objs := tegra_asoc_machine_alt_t18x.o tegra_asoc_machine_alt.o
-else
-snd-soc-tegra-asoc-machine-alt-t18x-objs := tegra_asoc_machine_alt_t18x.o \
-				 $(call tegra-base-kernel-path)/sound/soc/tegra-alt/tegra_asoc_machine_alt.o
-endif
 
 obj-$(CONFIG_SND_SOC_TEGRA186_ARAD_ALT) += snd-soc-tegra186-alt-arad.o
 obj-$(CONFIG_SND_SOC_TEGRA186_ASRC_ALT) += snd-soc-tegra186-alt-asrc.o

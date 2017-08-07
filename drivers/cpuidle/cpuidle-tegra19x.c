@@ -617,7 +617,7 @@ static int __init tegra19x_cpuidle_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id tegra19x_cpuidle_of[] __initconst = {
+static const struct of_device_id tegra19x_cpuidle_of[] = {
 	{ .compatible = "nvidia,tegra19x-cpuidle" },
 	{}
 };

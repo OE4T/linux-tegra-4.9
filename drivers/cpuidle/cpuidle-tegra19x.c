@@ -67,6 +67,10 @@ static u32 tsc_per_usec;
 #define DRIVER_FLAGS		0
 #endif
 
+#define T19x_NVG_CROSSOVER_C6	0
+#define T19x_NVG_CROSSOVER_CC6	1
+#define T19x_NVG_CROSSOVER_CG7	2
+
 static bool check_mce_version(void)
 {
 	u32 mce_version_major, mce_version_minor;
@@ -303,29 +307,26 @@ static int setup_crossover(int index, int value)
 
 static int c6_xover_write(void *data, u64 val)
 {
-	return setup_crossover(TEGRA_NVG_CHANNEL_CROSSOVER_C6_LOWER_BOUND,
-		(u32) val);
+	return setup_crossover(T19x_NVG_CROSSOVER_C6, (u32) val);
 }
 
 static int cc6_xover_write(void *data, u64 val)
 {
-	return setup_crossover(TEGRA_NVG_CHANNEL_CROSSOVER_CC6_LOWER_BOUND,
-		(u32) val);
+	return setup_crossover(T19x_NVG_CROSSOVER_CC6, (u32) val);
 }
 
 static int cg7_xover_write(void *data, u64 val)
 {
-	return setup_crossover(TEGRA_NVG_CHANNEL_CROSSOVER_CG7_LOWER_BOUND,
-		(u32) val);
+	return setup_crossover(T19x_NVG_CROSSOVER_CG7, (u32) val);
 }
 
 static int set_testmode(void *data, u64 val)
 {
 	testmode = (u32)val;
 	if (testmode) {
-		setup_crossover(TEGRA_NVG_CHANNEL_CROSSOVER_C6_LOWER_BOUND, 0);
-		setup_crossover(TEGRA_NVG_CHANNEL_CROSSOVER_CC6_LOWER_BOUND, 0);
-		setup_crossover(TEGRA_NVG_CHANNEL_CROSSOVER_CG7_LOWER_BOUND, 0);
+		setup_crossover(T19x_NVG_CROSSOVER_C6, 0);
+		setup_crossover(T19x_NVG_CROSSOVER_CC6, 0);
+		setup_crossover(T19x_NVG_CROSSOVER_CG7, 0);
 	} else {
 		/* Restore the cluster state */
 		on_each_cpu_mask(cpu_online_mask,
@@ -493,11 +494,9 @@ static void send_crossover(void *data)
 	int i;
 
 	struct xover_table table1[] = {
-		{"crossover_c1_c6", TEGRA_NVG_CHANNEL_CROSSOVER_C6_LOWER_BOUND},
-		{"crossover_cc1_cc6",
-			TEGRA_NVG_CHANNEL_CROSSOVER_CC6_LOWER_BOUND},
-		{"crossover_cc1_cg7",
-			TEGRA_NVG_CHANNEL_CROSSOVER_CG7_LOWER_BOUND},
+		{"crossover_c1_c6", T19x_NVG_CROSSOVER_C6},
+		{"crossover_cc1_cc6", T19x_NVG_CROSSOVER_CC6},
+		{"crossover_cc1_cg7", T19x_NVG_CROSSOVER_CG7},
 	};
 
 	for_each_child_of_node(of_states, child)

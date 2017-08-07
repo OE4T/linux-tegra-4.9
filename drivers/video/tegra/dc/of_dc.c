@@ -2499,7 +2499,7 @@ static bool is_dc_default_flag(u32 flag)
 		return false;
 }
 
-int parse_imp_windows_values(struct device_node *child_np,
+static int parse_imp_windows_values(struct device_node *child_np,
 			struct platform_device *pdev,
 			struct tegra_dc_ext_imp_settings *settings)
 {
@@ -2570,7 +2570,7 @@ fail_parse:
 	return -EINVAL;
 }
 
-int parse_imp_cursor_values(struct device_node *child_np,
+static int parse_imp_cursor_values(struct device_node *child_np,
 			struct platform_device *pdev,
 			struct tegra_dc_ext_imp_settings *settings)
 {
@@ -2645,7 +2645,7 @@ fail_parse:
 	return -EINVAL;
 }
 
-int tegra_dc_parse_imp_data(struct device_node *imp_np,
+static int tegra_dc_parse_imp_data(struct device_node *imp_np,
 				struct platform_device *pdev,
 				struct nvdisp_imp_table *imp_table)
 {

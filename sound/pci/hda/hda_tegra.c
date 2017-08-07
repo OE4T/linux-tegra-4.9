@@ -2,7 +2,7 @@
  *
  * Implementation of primary ALSA driver code base for NVIDIA Tegra HDA.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -572,6 +572,8 @@ static int hda_tegra_create(struct snd_card *card,
 	err = azx_bus_init(chip, NULL, &hda_tegra_io_ops);
 	if (err < 0)
 		return err;
+
+	chip->bus.needs_damn_long_delay = 0;
 
 	err = snd_device_new(card, SNDRV_DEV_LOWLEVEL, chip, &ops);
 	if (err < 0) {

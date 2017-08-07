@@ -4787,8 +4787,10 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 					"pwr_good is down for port %d, ignoring\n",
 					 port->index);
 		}
-		/* set clkreq as input to avoid root port control it */
-		tegra_pcie_config_clkreq(pcie, port->index, 0);
+		if (pcie->soc_data->program_clkreq_as_bi_dir) {
+			/* set clkreq as input to avoid root port control it */
+			tegra_pcie_config_clkreq(pcie, port->index, 0);
+		}
 	}
 
 	/* Enable Runtime PM for PCIe, TODO: Need to add PCIe host device */

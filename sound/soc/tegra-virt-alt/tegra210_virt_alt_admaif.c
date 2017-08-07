@@ -24,7 +24,7 @@
 
 #include "tegra210_virt_alt_admaif.h"
 #include "tegra_virt_alt_ivc.h"
-#include "tegra_pcm_alt.h"
+#include "../../../../nvidia/sound/soc/tegra-alt/tegra_pcm_alt.h"
 #include "tegra_asoc_xbar_virt_alt.h"
 #include "tegra_asoc_util_virt_alt.h"
 

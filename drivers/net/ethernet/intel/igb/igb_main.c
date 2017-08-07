@@ -763,6 +763,7 @@ u32 igb_rd32(struct e1000_hw *hw, u32 reg)
 		hw->hw_addr = NULL;
 		netif_device_detach(netdev);
 		netdev_err(netdev, "PCIe link lost, device now detached\n");
+		WARN_ON_ONCE(1);
 	}
 
 	return value;
@@ -2032,6 +2033,7 @@ void igb_reset(struct igb_adapter *adapter)
 	/* Re-enable PTP, where applicable. */
 	if (adapter->ptp_flags & IGB_PTP_ENABLED)
 		igb_ptp_reset(adapter);
+	schedule_work(&adapter->watchdog_task);
 
 	igb_get_phy_info(hw);
 }
@@ -7553,6 +7555,7 @@ static int __igb_shutdown(struct pci_dev *pdev, bool *enable_wake,
 	if (netif_running(netdev))
 		__igb_close(netdev, true);
 
+	cancel_work_sync(&adapter->watchdog_task);
 	igb_ptp_suspend(adapter);
 
 	igb_clear_interrupt_scheme(adapter);

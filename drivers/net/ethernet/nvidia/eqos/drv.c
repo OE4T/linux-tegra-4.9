@@ -1377,7 +1377,7 @@ static int eqos_prepare_mc_list(struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	u32 mc_filter[EQOS_HTR_CNT];
+	u32 mc_filter[EQOS_HTR_CNT + 1];
 	struct netdev_hw_addr *ha = NULL;
 	int crc32_val = 0;
 	int ret = 0, i = 1;
@@ -1510,7 +1510,7 @@ static int eqos_prepare_uc_list(struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	u32 uc_filter[EQOS_HTR_CNT];
+	u32 uc_filter[EQOS_HTR_CNT + 1];
 	struct netdev_hw_addr *ha = NULL;
 	int crc32_val = 0;
 	int ret = 0, i = 1;

@@ -45,7 +45,7 @@
 #include "hda_controller.h"
 
 
-static struct of_device_id tegra_disb_pd[] = {
+static const struct of_device_id tegra_disb_pd[] = {
 	{ .compatible = "nvidia,tegra186-disa-pd", },
 	{ .compatible = "nvidia,tegra210-disb-pd", },
 	{ .compatible = "nvidia,tegra132-disb-pd", },
@@ -135,20 +135,20 @@ static int substream_free_pages(struct azx *chip,
 /*
  * Register access ops. Tegra HDA register access is DWORD only.
  */
-static void hda_tegra_writel(u32 value, u32 *addr)
+static void hda_tegra_writel(u32 value, u32 __iomem *addr)
 {
 	writel(value, addr);
 }
 
-static u32 hda_tegra_readl(u32 *addr)
+static u32 hda_tegra_readl(u32 __iomem *addr)
 {
 	return readl(addr);
 }
 
-static void hda_tegra_writew(u16 value, u16 *addr)
+static void hda_tegra_writew(u16 value, u16 __iomem  *addr)
 {
 	unsigned int shift = ((unsigned long)(addr) & 0x3) << 3;
-	void *dword_addr = (void *)((unsigned long)(addr) & ~0x3);
+	void __iomem *dword_addr = (void __iomem *)((unsigned long)(addr) & ~0x3);
 	u32 v;
 
 	v = readl(dword_addr);
@@ -157,20 +157,20 @@ static void hda_tegra_writew(u16 value, u16 *addr)
 	writel(v, dword_addr);
 }
 
-static u16 hda_tegra_readw(u16 *addr)
+static u16 hda_tegra_readw(u16 __iomem *addr)
 {
 	unsigned int shift = ((unsigned long)(addr) & 0x3) << 3;
-	void *dword_addr = (void *)((unsigned long)(addr) & ~0x3);
+	void __iomem *dword_addr = (void __iomem *)((unsigned long)(addr) & ~0x3);
 	u32 v;
 
 	v = readl(dword_addr);
 	return (v >> shift) & 0xffff;
 }
 
-static void hda_tegra_writeb(u8 value, u8 *addr)
+static void hda_tegra_writeb(u8 value, u8 __iomem *addr)
 {
 	unsigned int shift = ((unsigned long)(addr) & 0x3) << 3;
-	void *dword_addr = (void *)((unsigned long)(addr) & ~0x3);
+	void __iomem *dword_addr = (void __iomem *)((unsigned long)(addr) & ~0x3);
 	u32 v;
 
 	v = readl(dword_addr);
@@ -179,10 +179,10 @@ static void hda_tegra_writeb(u8 value, u8 *addr)
 	writel(v, dword_addr);
 }
 
-static u8 hda_tegra_readb(u8 *addr)
+static u8 hda_tegra_readb(u8 __iomem *addr)
 {
 	unsigned int shift = ((unsigned long)(addr) & 0x3) << 3;
-	void *dword_addr = (void *)((unsigned long)(addr) & ~0x3);
+	void __iomem *dword_addr = (void __iomem *)((unsigned long)(addr) & ~0x3);
 	u32 v;
 
 	v = readl(dword_addr);
@@ -246,7 +246,7 @@ static int hda_tegra_enable_clocks(struct hda_tegra *hda)
 
 	rc = clk_prepare_enable(hda->hda_clk);
 	if (rc)
-		return rc;
+		goto err;
 	rc = clk_prepare_enable(hda->hda2codec_2x_clk);
 	if (rc)
 		goto disable_hda;
@@ -260,6 +260,7 @@ disable_codec_2x:
 	clk_disable_unprepare(hda->hda2codec_2x_clk);
 disable_hda:
 	clk_disable_unprepare(hda->hda_clk);
+err:
 	if (hda->is_power_on) {
 		rc = tegra_powergate_partition(hda->partition_id);
 		if (rc < 0) {
@@ -673,8 +674,6 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	err = hda_tegra_first_init(chip, pdev);
 	if (err < 0)
 		goto out_free;
-
-	tegra_pd_add_device(hda->dev);
 
 	if (of_property_read_u32(np, "nvidia,max-codec-slot",
 			&num_codec_slots) < 0)

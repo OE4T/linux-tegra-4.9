@@ -2566,7 +2566,7 @@ int mmc_blk_cmdq_issue_secdiscard_rq(struct mmc_queue *mq, struct request *req)
 	if (!mmc_can_secure_erase_trim(card)) {
 		ret = -EOPNOTSUPP;
 		blk_end_request_all(req, 0);
-		return ret ? 0 : 1;
+		return ret;
 	}
 
 	ctx_info = &host->cmdq_ctx;

@@ -2176,12 +2176,6 @@ int tegra_smmu_save(void)
 	return tegra_smmu_suspend(save_smmu_device);
 }
 
-struct device *get_smmu_device(void)
-{
-	return save_smmu_device;
-}
-EXPORT_SYMBOL(get_smmu_device);
-
 static int tegra_smmu_resume_default(struct device *dev)
 {
 	struct smmu_device *smmu = dev_get_drvdata(dev);

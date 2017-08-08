@@ -111,6 +111,7 @@ int wldev_get_rssi(struct net_device *dev, scb_val_t *prssi);
 
 int wldev_get_ssid(struct net_device *dev, wlc_ssid_t *pssid);
 
+int wldev_reset_band(struct net_device *dev);
 int wldev_get_band(struct net_device *dev, uint *pband);
 
 int wldev_get_mode(struct net_device *dev, uint8 *pband);

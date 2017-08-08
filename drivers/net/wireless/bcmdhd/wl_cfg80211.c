@@ -9360,7 +9360,12 @@ wl_notify_connect_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 				if ((cfg->channel >= 50) && (cfg->channel <= 144)) {
 					err = wldev_set_country(ndev, NULL, true, false);
 					if (err < 0) {
-						WL_ERR(("%s: failed to reset ccode (%d)\n", __func__, err));
+						if (err == BCME_UNSUPPORTED) {
+							/* Re-set band to restore passive channel flags */
+							wldev_reset_band(ndev);
+						} else {
+							WL_ERR(("%s: failed to reset ccode (%d)\n", __func__, err));
+						}
 					}
 				}
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
@@ -14942,7 +14947,12 @@ const wl_event_msg_t *e, void *data)
 		ndev = cfgdev_to_wlc_ndev(cfgdev, cfg);
 		error = wldev_set_country(ndev, NULL, true, false);
 		if (error < 0) {
-			WL_ERR(("%s: failed to reset ccode (%d)\n", __func__, error));
+			if (error == BCME_UNSUPPORTED) {
+				/* Re-set band to restore passive channel flags */
+				wldev_reset_band(ndev);
+			} else {
+				WL_ERR(("%s: failed to reset ccode (%d)\n", __func__, error));
+			}
 		}
 	}
 

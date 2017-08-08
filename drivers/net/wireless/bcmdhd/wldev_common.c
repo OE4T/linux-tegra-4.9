@@ -313,6 +313,24 @@ int wldev_get_ssid(
 	return error;
 }
 
+int wldev_reset_band(
+	struct net_device *ndev)
+{
+	uint band;
+	s32 err = 0;
+
+	err = wldev_get_band(ndev, &band);
+	if (!err) {
+		err = wldev_set_band(ndev, band);
+		if (err < 0) {
+			WLDEV_ERROR(("%s: failed to reset band (%d)\n", __FUNCTION__, err));
+		}
+	} else {
+		WLDEV_ERROR(("%s: failed to get current band (%d)\n", __FUNCTION__, err));
+	}
+	return err;
+}
+
 int wldev_get_band(
 	struct net_device *dev, uint *pband)
 {

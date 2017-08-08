@@ -850,7 +850,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 	/* If new IMP results are pending, go ahead and program them. */
 	if (dc->imp_dirty) {
-		tegra_nvdisp_program_imp_results(dc);
+		tegra_nvdisp_program_imp_settings(dc);
 
 		/*
 		 * The ihub registers live on the COMMON channel. Update the

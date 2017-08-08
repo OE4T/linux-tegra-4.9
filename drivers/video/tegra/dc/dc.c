@@ -3477,7 +3477,7 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 
 	if (((dc->out->type == TEGRA_DC_OUT_HDMI) ||
 		(dc->out->type == TEGRA_DC_OUT_DP)) &&
-		   tegra_is_bl_display_initialized(dc->ndev->id)) {
+		   tegra_is_bl_display_initialized(dc->ctrl_num)) {
 
 		/* For seamless HDMI, read mode parameters from bootloader
 		 * set DC configuration
@@ -3556,7 +3556,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 
 	if (((dc->out->type == TEGRA_DC_OUT_HDMI) ||
 		(dc->out->type == TEGRA_DC_OUT_DP)) &&
-			tegra_is_bl_display_initialized(dc->ndev->id)) {
+			tegra_is_bl_display_initialized(dc->ctrl_num)) {
 		/*
 		 * Bootloader enables clk and host1x in seamless
 		 * usecase. Below extra reference accounts for it
@@ -3576,10 +3576,10 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	 * go with complete initialization.
 	 */
 	if (dc->out->type == TEGRA_DC_OUT_DSI &&
-			!tegra_is_bl_display_initialized(dc->ndev->id)) {
+			!tegra_is_bl_display_initialized(dc->ctrl_num)) {
 		dc->initialized = false;
 	} else if (dc->out->type == TEGRA_DC_OUT_DSI &&
-			tegra_is_bl_display_initialized(dc->ndev->id)) {
+			tegra_is_bl_display_initialized(dc->ctrl_num)) {
 		/*
 		 * In case of dsi->csi loopback support, force re-initialize
 		 * all DSI controllers. So, set dc->initialized to false.
@@ -3592,7 +3592,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 #endif
 	mode = tegra_dc_get_override_mode(dc);
 
-	if (mode && tegra_is_bl_display_initialized(dc->ndev->id)) {
+	if (mode && tegra_is_bl_display_initialized(dc->ctrl_num)) {
 		tegra_dc_set_mode(dc, mode);
 
 		/*

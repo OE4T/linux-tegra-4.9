@@ -64,6 +64,7 @@ config ARCH_TEGRA_132_SOC
 config ARCH_TEGRA_210_SOC
 	bool "NVIDIA Tegra210 SoC"
 	select PINCTRL_TEGRA210
+	select ARCH_TEGRA_VIC
 	help
 	  Enable support for the NVIDIA Tegra210 SoC. Also known as Tegra X1,
 	  the Tegra210 has four Cortex-A57 cores paired with four Cortex-A53
@@ -87,3 +88,7 @@ config TEGRA_KFUSE
 	help
 	  Enable Tegra kfuse support. The kfuse block stores downstream and
 	  upstream HDCP keys for use by the HDMI module.
+
+config ARCH_TEGRA_VIC
+	bool "Tegra VIC support"
+	depends on ARCH_TEGRA

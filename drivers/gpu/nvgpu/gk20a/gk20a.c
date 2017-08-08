@@ -329,7 +329,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		if (platform->disable_aspm && g->ops.xve.disable_aspm)
 			g->ops.xve.disable_aspm(g);
 
-		g->ops.xve.sw_init(g);
 		g->ops.xve.available_speeds(g, &speed);
 
 		/* Set to max speed */

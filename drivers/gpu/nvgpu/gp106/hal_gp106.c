@@ -660,7 +660,6 @@ static const struct gpu_ops gp106_ops = {
 	},
 #endif
 	.xve = {
-		.sw_init          = xve_sw_init_gp106,
 		.get_speed        = xve_get_speed_gp106,
 		.set_speed        = xve_set_speed_gp106,
 		.available_speeds = xve_available_speeds_gp106,
@@ -673,6 +672,7 @@ static const struct gpu_ops gp106_ops = {
 #endif
 		.enable_shadow_rom = xve_enable_shadow_rom_gp106,
 		.disable_shadow_rom = xve_disable_shadow_rom_gp106,
+		.get_link_control_status = xve_get_link_control_status,
 	},
 	.falcon = {
 		.falcon_hal_sw_init = gp106_falcon_hal_sw_init,

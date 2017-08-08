@@ -22,6 +22,7 @@
 #include "debug_pmu.h"
 #include "debug_sched.h"
 #include "debug_hal.h"
+#include "debug_xve.h"
 #include "os_linux.h"
 
 #include "gk20a/gk20a.h"
@@ -394,6 +395,8 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
 	nvgpu_kmem_debugfs_init(g);
 #endif
+	if (g->pci_vendor_id)
+		nvgpu_xve_debugfs_init(g);
 }
 
 void gk20a_debug_deinit(struct gk20a *g)

@@ -29,55 +29,6 @@ int gp106_init_xve_ops(struct gpu_ops *gops);
 #define GPU_XVE_TIMEOUT_MS	500
 
 /*
- * For the available speeds bitmap.
- */
-#define GPU_XVE_SPEED_2P5	(1 << 0)
-#define GPU_XVE_SPEED_5P0	(1 << 1)
-#define GPU_XVE_SPEED_8P0	(1 << 2)
-#define GPU_XVE_NR_SPEEDS	3
-
-#define GPU_XVE_SPEED_MASK	(GPU_XVE_SPEED_2P5 |	\
-				 GPU_XVE_SPEED_5P0 |	\
-				 GPU_XVE_SPEED_8P0)
-
-/*
- * The HW uses a 2 bit field where speed is defined by a number:
- *
- *   NV_XVE_LINK_CONTROL_STATUS_LINK_SPEED_2P5 = 1
- *   NV_XVE_LINK_CONTROL_STATUS_LINK_SPEED_5P0 = 2
- *   NV_XVE_LINK_CONTROL_STATUS_LINK_SPEED_8P0 = 3
- *
- * This isn't ideal for a bitmap with available speeds. So the external
- * APIs think about speeds as a bit in a bitmap and this function converts
- * from those bits to the actual HW speed setting.
- *
- * @speed_bit must have only 1 bit set and must be one of the 3 available
- * HW speeds. Not all chips support all speeds so use available_speeds() to
- * determine what a given chip supports.
- */
-static inline u32 xve_speed_to_hw_speed_setting(u32 speed_bit)
-{
-	if (!speed_bit ||
-	    !is_power_of_2(speed_bit) ||
-	    !(speed_bit & GPU_XVE_SPEED_MASK))
-		return -EINVAL;
-
-	return ilog2(speed_bit) + 1;
-}
-
-static inline const char *xve_speed_to_str(u32 speed)
-{
-	if (!speed || !is_power_of_2(speed) ||
-	    !(speed & GPU_XVE_SPEED_MASK))
-		return "Unknown ???";
-
-	return speed & GPU_XVE_SPEED_2P5 ? "Gen1" :
-	       speed & GPU_XVE_SPEED_5P0 ? "Gen2" :
-	       speed & GPU_XVE_SPEED_8P0 ? "Gen3" :
-	       "Unknown ???";
-}
-
-/*
  * Debugging for the speed change.
  */
 enum xv_speed_change_steps {
@@ -104,7 +55,7 @@ int xve_get_speed_gp106(struct gk20a *g, u32 *xve_link_speed);
 void xve_disable_aspm_gp106(struct gk20a *g);
 int xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed);
 void xve_available_speeds_gp106(struct gk20a *g, u32 *speed_mask);
-int xve_sw_init_gp106(struct gk20a *g);
+u32 xve_get_link_control_status(struct gk20a *g);
 #if defined(CONFIG_PCI_MSI)
 void xve_rearm_msi_gp106(struct gk20a *g);
 #endif

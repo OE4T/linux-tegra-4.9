@@ -14,17 +14,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#include <linux/uaccess.h>
-#endif
-
 #include "gk20a/gk20a.h"
 #include "gm206/bios_gm206.h"
 #include "gp106/xve_gp106.h"
 #include "common/linux/os_linux.h"
 
 #include <nvgpu/bug.h>
+#include <nvgpu/xve.h>
 
 #include <nvgpu/hw/gp106/hw_xp_gp106.h>
 #include <nvgpu/hw/gp106/hw_xve_gp106.h>
@@ -475,165 +471,6 @@ void xve_available_speeds_gp106(struct gk20a *g, u32 *speed_mask)
 	*speed_mask = GPU_XVE_SPEED_2P5 | GPU_XVE_SPEED_5P0;
 }
 
-#ifdef CONFIG_DEBUG_FS
-static ssize_t xve_link_speed_write(struct file *filp,
-				    const char __user *buff,
-				    size_t len, loff_t *off)
-{
-	struct gk20a *g = ((struct seq_file *)filp->private_data)->private;
-	char kbuff[16];
-	u32 buff_size, check_len;
-	u32 link_speed = 0;
-	int ret;
-
-	buff_size = min_t(size_t, 16, len);
-
-	memset(kbuff, 0, 16);
-	if (copy_from_user(kbuff, buff, buff_size))
-		return -EFAULT;
-
-	check_len = strlen("Gen1");
-	if (strncmp(kbuff, "Gen1", check_len) == 0)
-		link_speed = GPU_XVE_SPEED_2P5;
-	else if (strncmp(kbuff, "Gen2", check_len) == 0)
-		link_speed = GPU_XVE_SPEED_5P0;
-	else if (strncmp(kbuff, "Gen3", check_len) == 0)
-		link_speed = GPU_XVE_SPEED_8P0;
-	else
-		nvgpu_err(g, "%s: Unknown PCIe speed: %s",
-			  __func__, kbuff);
-
-	if (!link_speed)
-		return -EINVAL;
-
-	/* Brief pause... To help rate limit this. */
-	nvgpu_msleep(250);
-
-	/*
-	 * And actually set the speed. Yay.
-	 */
-	ret = g->ops.xve.set_speed(g, link_speed);
-	if (ret)
-		return ret;
-
-	return len;
-}
-
-static int xve_link_speed_show(struct seq_file *s, void *unused)
-{
-	struct gk20a *g = s->private;
-	u32 speed;
-	int err;
-
-	err = g->ops.xve.get_speed(g, &speed);
-	if (err)
-		return err;
-
-	seq_printf(s, "Current PCIe speed:\n  %s\n", xve_speed_to_str(speed));
-
-	return 0;
-}
-
-static int xve_link_speed_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, xve_link_speed_show, inode->i_private);
-}
-
-static const struct file_operations xve_link_speed_fops = {
-	.open = xve_link_speed_open,
-	.read = seq_read,
-	.write = xve_link_speed_write,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
-static int xve_available_speeds_show(struct seq_file *s, void *unused)
-{
-	struct gk20a *g = s->private;
-	u32 available_speeds;
-
-	g->ops.xve.available_speeds(g, &available_speeds);
-
-	seq_puts(s, "Available PCIe bus speeds:\n");
-	if (available_speeds & GPU_XVE_SPEED_2P5)
-		seq_puts(s, "  Gen1\n");
-	if (available_speeds & GPU_XVE_SPEED_5P0)
-		seq_puts(s, "  Gen2\n");
-	if (available_speeds & GPU_XVE_SPEED_8P0)
-		seq_puts(s, "  Gen3\n");
-
-	return 0;
-}
-
-static int xve_available_speeds_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, xve_available_speeds_show, inode->i_private);
-}
-
-static const struct file_operations xve_available_speeds_fops = {
-	.open = xve_available_speeds_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
-static int xve_link_control_status_show(struct seq_file *s, void *unused)
-{
-	struct gk20a *g = s->private;
-	u32 link_status;
-
-	link_status = g->ops.xve.xve_readl(g, xve_link_control_status_r());
-	seq_printf(s, "0x%08x\n", link_status);
-
-	return 0;
-}
-
-static int xve_link_control_status_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, xve_link_control_status_show, inode->i_private);
-}
-
-static const struct file_operations xve_link_control_status_fops = {
-	.open = xve_link_control_status_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-#endif
-
-int xve_sw_init_gp106(struct gk20a *g)
-{
-	int err = -ENODEV;
-#ifdef CONFIG_DEBUG_FS
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct dentry *gpu_root = l->debugfs;
-
-	l->debugfs_xve = debugfs_create_dir("xve", gpu_root);
-	if (IS_ERR_OR_NULL(l->debugfs_xve))
-		goto fail;
-
-	/*
-	 * These are just debug nodes. If they fail to get made it's not worth
-	 * worrying the higher level SW.
-	 */
-	debugfs_create_file("link_speed", S_IRUGO,
-			    l->debugfs_xve, g,
-			    &xve_link_speed_fops);
-	debugfs_create_file("available_speeds", S_IRUGO,
-			    l->debugfs_xve, g,
-			    &xve_available_speeds_fops);
-	debugfs_create_file("link_control_status", S_IRUGO,
-			    l->debugfs_xve, g,
-			    &xve_link_control_status_fops);
-
-	err = 0;
-fail:
-	return err;
-#else
-	return err;
-#endif
-}
-
 #if defined(CONFIG_PCI_MSI)
 void xve_rearm_msi_gp106(struct gk20a *g)
 {
@@ -652,4 +489,9 @@ void xve_disable_shadow_rom_gp106(struct gk20a *g)
 {
 	g->ops.xve.xve_writel(g, xve_rom_ctrl_r(),
 			xve_rom_ctrl_rom_shadow_disabled_f());
+}
+
+u32 xve_get_link_control_status(struct gk20a *g)
+{
+	return g->ops.xve.xve_readl(g, xve_link_control_status_r());
 }

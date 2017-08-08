@@ -2317,10 +2317,12 @@ skip_scdc_i2c:
 static void tegra_hdmi_v2_x_host_config(struct tegra_hdmi *hdmi, bool enable)
 {
 	u32 val = NV_SOR_HDMI2_CTRL_SCRAMBLE_ENABLE |
+		NV_SOR_HDMI2_CTRL_SSCP_START |
 		NV_SOR_HDMI2_CTRL_CLK_MODE_DIV_BY_4;
 
 	tegra_sor_write_field(hdmi->sor, NV_SOR_HDMI2_CTRL,
 			NV_SOR_HDMI2_CTRL_SCRAMBLE_ENABLE |
+			NV_SOR_HDMI2_CTRL_SSCP_START_MASK |
 			NV_SOR_HDMI2_CTRL_CLK_MODE_DIV_BY_4,
 			enable ? val : 0);
 }

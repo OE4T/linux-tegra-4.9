@@ -842,7 +842,7 @@ static int hisi_sas_abort_task(struct sas_task *task)
 						     HISI_SAS_INT_ABT_DEV, 0);
 			rc = TMF_RESP_FUNC_COMPLETE;
 		}
-	} else if (task->task_proto & SAS_PROTOCOL_SMP) {
+	} else if ((task->task_proto & SAS_PROTOCOL_SMP) && (task->lldd_task)) {
 		/* SMP */
 		struct hisi_sas_slot *slot = task->lldd_task;
 		u32 tag = slot->idx;

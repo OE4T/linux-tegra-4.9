@@ -42,8 +42,6 @@
 #define HVC_NR_RAISE_IRQ		4
 #define HVC_NR_READ_NGUESTS		5
 #define HVC_NR_READ_IPA_PA		6
-#define HVC_NR_READ_GUEST_RESET_MASK	7
-#define HVC_NR_ACK_GUEST_CLEANUP	8
 #define HVC_NR_READ_HYP_INFO		9
 #define HVC_NR_GUEST_RESET		10
 #define HVC_NR_SYSINFO_IPA		13
@@ -251,32 +249,6 @@ static inline int hyp_raise_irq(unsigned int irq, unsigned int vmid)
 		: "+r"(r0)
 		: "i"(HVC_NR_RAISE_IRQ), "r"(r1)
 		: "x2", "x3", _X4_X17);
-
-	return (int)r0;
-}
-
-static inline int hyp_read_guest_reset_mask(unsigned int *guest_reset_mask)
-{
-	register uint64_t r0 asm("x0");
-	register uint64_t r1 asm("x1");
-
-	asm("hvc %2"
-		: "=r"(r0), "=r"(r1)
-		: "i"(HVC_NR_READ_GUEST_RESET_MASK)
-		: "x2", "x3", _X4_X17);
-
-	*guest_reset_mask = r1;
-	return (int)r0;
-}
-
-static inline int hyp_ack_guest_cleanup(unsigned int vmid)
-{
-	register uint64_t r0 asm("x0") = vmid;
-
-	asm volatile("hvc %1"
-		: "+r"(r0)
-		: "i"(HVC_NR_ACK_GUEST_CLEANUP)
-		: "x1", "x2", "x3", _X4_X17);
 
 	return (int)r0;
 }

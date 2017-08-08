@@ -434,6 +434,6 @@ extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
 
 int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
 			     u64 *buffer_id, u64 *buffer_len);
-void gk20a_vm_unmap_locked_kref(struct kref *ref);
+void gk20a_vm_unmap_locked_ref(struct nvgpu_ref *ref);
 
 #endif /* MM_GK20A_H */

@@ -73,7 +73,7 @@ struct nvgpu_semaphore {
 	nvgpu_atomic_t value;
 	int incremented;
 
-	struct kref ref;
+	struct nvgpu_ref ref;
 };
 
 /*
@@ -106,7 +106,7 @@ struct nvgpu_semaphore_pool {
 	 * done waiting on it. This ref count ensures that the pool doesn't
 	 * go away until all semaphores using this pool are cleaned up first.
 	 */
-	struct kref ref;
+	struct nvgpu_ref ref;
 };
 
 static inline struct nvgpu_semaphore_pool *

@@ -43,7 +43,7 @@ struct gk20a_sync_timeline {
  */
 struct gk20a_sync_pt {
 	struct gk20a			*g;
-	struct kref			refcount;
+	struct nvgpu_ref			refcount;
 	u32				thresh;
 	struct nvgpu_semaphore		*sema;
 	struct gk20a_sync_timeline	*obj;
@@ -170,7 +170,7 @@ static struct gk20a_sync_timeline *to_gk20a_timeline(struct sync_timeline *obj)
 	return (struct gk20a_sync_timeline *)obj;
 }
 
-static void gk20a_sync_pt_free_shared(struct kref *ref)
+static void gk20a_sync_pt_free_shared(struct nvgpu_ref *ref)
 {
 	struct gk20a_sync_pt *pt =
 		container_of(ref, struct gk20a_sync_pt, refcount);
@@ -192,7 +192,7 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 	if (!shared)
 		return NULL;
 
-	kref_init(&shared->refcount);
+	nvgpu_ref_init(&shared->refcount);
 	shared->g = g;
 	shared->obj = obj;
 	shared->sema = sema;
@@ -229,7 +229,7 @@ static void gk20a_sync_pt_free_inst(struct sync_pt *sync_pt)
 {
 	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
 	if (pt)
-		kref_put(&pt->refcount, gk20a_sync_pt_free_shared);
+		nvgpu_ref_put(&pt->refcount, gk20a_sync_pt_free_shared);
 }
 
 static struct sync_pt *gk20a_sync_pt_dup_inst(struct sync_pt *sync_pt)
@@ -242,7 +242,7 @@ static struct sync_pt *gk20a_sync_pt_dup_inst(struct sync_pt *sync_pt)
 	if (!pti)
 		return NULL;
 	pti->shared = pt;
-	kref_get(&pt->refcount);
+	nvgpu_ref_get(&pt->refcount);
 	return &pti->pt;
 }
 

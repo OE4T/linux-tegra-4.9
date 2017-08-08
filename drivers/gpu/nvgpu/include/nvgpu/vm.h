@@ -88,7 +88,7 @@ struct nvgpu_mapped_buf {
 	u64 size;
 	struct dma_buf *dmabuf;
 	struct sg_table *sgt;
-	struct kref ref;
+	struct nvgpu_ref ref;
 	u32 user_mapped;
 	bool own_mem_ref;
 	u32 pgsz_idx;
@@ -142,7 +142,7 @@ struct vm_gk20a {
 
 	const struct gk20a_mmu_level *mmu_levels;
 
-	struct kref ref;
+	struct nvgpu_ref ref;
 
 	struct nvgpu_mutex update_gmmu_lock;
 

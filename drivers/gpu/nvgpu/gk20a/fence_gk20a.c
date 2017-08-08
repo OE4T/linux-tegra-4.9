@@ -33,10 +33,10 @@
 struct gk20a_fence_ops {
 	int (*wait)(struct gk20a_fence *, long timeout);
 	bool (*is_expired)(struct gk20a_fence *);
-	void *(*free)(struct kref *);
+	void *(*free)(struct nvgpu_ref *);
 };
 
-static void gk20a_fence_free(struct kref *ref)
+static void gk20a_fence_free(struct nvgpu_ref *ref)
 {
 	struct gk20a_fence *f =
 		container_of(ref, struct gk20a_fence, ref);
@@ -59,13 +59,13 @@ static void gk20a_fence_free(struct kref *ref)
 void gk20a_fence_put(struct gk20a_fence *f)
 {
 	if (f)
-		kref_put(&f->ref, gk20a_fence_free);
+		nvgpu_ref_put(&f->ref, gk20a_fence_free);
 }
 
 struct gk20a_fence *gk20a_fence_get(struct gk20a_fence *f)
 {
 	if (f)
-		kref_get(&f->ref);
+		nvgpu_ref_get(&f->ref);
 	return f;
 }
 
@@ -175,7 +175,7 @@ struct gk20a_fence *gk20a_alloc_fence(struct channel_gk20a *c)
 		fence = nvgpu_kzalloc(c->g, sizeof(struct gk20a_fence));
 
 	if (fence) {
-		kref_init(&fence->ref);
+		nvgpu_ref_init(&fence->ref);
 		fence->g = c->g;
 	}
 

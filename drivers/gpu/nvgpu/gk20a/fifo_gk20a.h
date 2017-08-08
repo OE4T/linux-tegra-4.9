@@ -159,7 +159,7 @@ struct fifo_gk20a {
 		nvgpu_atomic_t get;
 		bool enabled;
 		u64 *sorted;
-		struct kref ref;
+		struct nvgpu_ref ref;
 		struct nvgpu_mutex lock;
 	} profile;
 #endif

@@ -61,8 +61,8 @@ static long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
 static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work);
 static void nvgpu_clk_arb_run_vf_table_cb(struct work_struct *work);
 static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb);
-static void nvgpu_clk_arb_free_fd(struct kref *refcount);
-static void nvgpu_clk_arb_free_session(struct kref *refcount);
+static void nvgpu_clk_arb_free_fd(struct nvgpu_ref *refcount);
+static void nvgpu_clk_arb_free_session(struct nvgpu_ref *refcount);
 static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
 	u16 sys2clk_target, u16 xbar2clk_target, u16 mclk_target, u32 voltuv,
 	u32 voltuv_sram);
@@ -214,13 +214,13 @@ struct nvgpu_clk_dev {
 	nvgpu_atomic_t enabled_mask;
 	struct nvgpu_clk_notification_queue queue;
 	u32 arb_queue_head;
-	struct kref refcount;
+	struct nvgpu_ref refcount;
 };
 
 struct nvgpu_clk_session {
 	bool zombie;
 	struct gk20a *g;
-	struct kref refcount;
+	struct nvgpu_ref refcount;
 	struct list_head link;
 	struct llist_head targets;
 
@@ -541,9 +541,9 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 	nvgpu_atomic_set(&dev->poll_mask, 0);
 
 	dev->session = session;
-	kref_init(&dev->refcount);
+	nvgpu_ref_init(&dev->refcount);
 
-	kref_get(&session->refcount);
+	nvgpu_ref_get(&session->refcount);
 
 	*_dev = dev;
 
@@ -573,7 +573,7 @@ int nvgpu_clk_arb_init_session(struct gk20a *g,
 		return -ENOMEM;
 	session->g = g;
 
-	kref_init(&session->refcount);
+	nvgpu_ref_init(&session->refcount);
 
 	session->zombie = false;
 	session->target_pool[0].pstate = CTRL_PERF_PSTATE_P8;
@@ -593,7 +593,7 @@ int nvgpu_clk_arb_init_session(struct gk20a *g,
 	return 0;
 }
 
-static void nvgpu_clk_arb_free_fd(struct kref *refcount)
+static void nvgpu_clk_arb_free_fd(struct nvgpu_ref *refcount)
 {
 	struct nvgpu_clk_dev *dev = container_of(refcount,
 			struct nvgpu_clk_dev, refcount);
@@ -602,7 +602,7 @@ static void nvgpu_clk_arb_free_fd(struct kref *refcount)
 	nvgpu_kfree(session->g, dev);
 }
 
-static void nvgpu_clk_arb_free_session(struct kref *refcount)
+static void nvgpu_clk_arb_free_session(struct nvgpu_ref *refcount)
 {
 	struct nvgpu_clk_session *session = container_of(refcount,
 			struct nvgpu_clk_session, refcount);
@@ -621,7 +621,7 @@ static void nvgpu_clk_arb_free_session(struct kref *refcount)
 
 	head = llist_del_all(&session->targets);
 	llist_for_each_entry_safe(dev, tmp, head, node) {
-		kref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 	}
 	synchronize_rcu();
 	nvgpu_kfree(g, session);
@@ -635,7 +635,7 @@ void nvgpu_clk_arb_release_session(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	session->zombie = true;
-	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
+	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
 	if (arb && arb->update_work_queue)
 		queue_work(arb->update_work_queue, &arb->update_fn_work);
 }
@@ -1099,7 +1099,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 							dev->gpc2clk_target_mhz;
 						gpc2clk_set = true;
 					}
-					kref_get(&dev->refcount);
+					nvgpu_ref_get(&dev->refcount);
 					llist_add(&dev->node, &arb->requests);
 				}
 				/* Ensure target is updated before ptr sawp */
@@ -1305,7 +1305,7 @@ exit_arb:
 	llist_for_each_entry_safe(dev, tmp, head, node) {
 		nvgpu_atomic_set(&dev->poll_mask, POLLIN | POLLRDNORM);
 		wake_up_interruptible(&dev->readout_wq);
-		kref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 	}
 
 	nvgpu_atomic_set(&arb->notification_queue.head,
@@ -1523,7 +1523,7 @@ int nvgpu_clk_arb_commit_request_fd(struct gk20a *g,
 		err = -EINVAL;
 		goto fdput_fd;
 	}
-	kref_get(&dev->refcount);
+	nvgpu_ref_get(&dev->refcount);
 	llist_add(&dev->node, &session->targets);
 	if (arb->update_work_queue)
 		queue_work(arb->update_work_queue, &arb->update_fn_work);
@@ -1607,8 +1607,8 @@ static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
 
 	gk20a_dbg_fn("");
 
-	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
-	kref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
+	nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 	return 0;
 }
 
@@ -1631,8 +1631,8 @@ static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 	}
 
 	synchronize_rcu();
-	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
-	kref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
+	nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 
 	return 0;
 }

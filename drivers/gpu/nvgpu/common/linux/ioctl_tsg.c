@@ -260,7 +260,7 @@ int nvgpu_ioctl_tsg_dev_release(struct inode *inode, struct file *filp)
 	struct tsg_private *priv = filp->private_data;
 	struct tsg_gk20a *tsg = priv->tsg;
 
-	kref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 	nvgpu_kfree(tsg->g, priv);
 	return 0;
 }

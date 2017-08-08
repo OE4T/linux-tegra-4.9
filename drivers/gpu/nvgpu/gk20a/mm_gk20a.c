@@ -811,7 +811,7 @@ int nvgpu_vm_get_buffers(struct vm_gk20a *vm,
 		mapped_buffer = mapped_buffer_from_rbtree_node(node);
 		if (mapped_buffer->user_mapped) {
 			buffer_list[i] = mapped_buffer;
-			kref_get(&mapped_buffer->ref);
+			nvgpu_ref_get(&mapped_buffer->ref);
 			i++;
 		}
 		nvgpu_rbtree_enum_next(&node, node);
@@ -827,7 +827,7 @@ int nvgpu_vm_get_buffers(struct vm_gk20a *vm,
 	return 0;
 }
 
-void gk20a_vm_unmap_locked_kref(struct kref *ref)
+void gk20a_vm_unmap_locked_ref(struct nvgpu_ref *ref)
 {
 	struct nvgpu_mapped_buf *mapped_buffer =
 		container_of(ref, struct nvgpu_mapped_buf, ref);
@@ -849,8 +849,8 @@ void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
 	vm->kref_put_batch = &batch;
 
 	for (i = 0; i < num_buffers; ++i)
-		kref_put(&mapped_buffers[i]->ref,
-			 gk20a_vm_unmap_locked_kref);
+		nvgpu_ref_put(&mapped_buffers[i]->ref,
+			 gk20a_vm_unmap_locked_ref);
 
 	vm->kref_put_batch = NULL;
 	nvgpu_vm_mapping_batch_finish_locked(vm, &batch);
@@ -882,8 +882,9 @@ static void nvgpu_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 		nvgpu_timeout_init(vm->mm->g, &timeout, 10000,
 				   NVGPU_TIMER_RETRY_TIMER);
 		do {
-			if (atomic_read(&mapped_buffer->ref.refcount) == 1)
-				break;
+			if (nvgpu_atomic_read(
+				&mapped_buffer->ref.refcount) == 1)
+					break;
 			nvgpu_udelay(5);
 		} while (!nvgpu_timeout_expired_msg(&timeout,
 					    "sync-unmap failed on 0x%llx"));
@@ -902,7 +903,7 @@ static void nvgpu_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 		vm->num_user_mapped_buffers--;
 
 	vm->kref_put_batch = batch;
-	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);
+	nvgpu_ref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_ref);
 	vm->kref_put_batch = NULL;
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);

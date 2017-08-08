@@ -20,7 +20,7 @@
 
 #include <nvgpu/sort.h>
 
-void __gk20a_fifo_profile_free(struct kref *ref);
+void __gk20a_fifo_profile_free(struct nvgpu_ref *ref);
 
 static void *gk20a_fifo_sched_debugfs_seq_start(
 		struct seq_file *s, loff_t *pos)
@@ -145,14 +145,15 @@ static int gk20a_fifo_profile_enable(void *data, u64 val)
 	if (val == 0) {
 		if (f->profile.enabled) {
 			f->profile.enabled = false;
-			kref_put(&f->profile.ref, __gk20a_fifo_profile_free);
+			nvgpu_ref_put(&f->profile.ref,
+				__gk20a_fifo_profile_free);
 		}
 	} else {
 		if (!f->profile.enabled) {
 			/* not kref init as it can have a running condition if
 			 * we enable/disable/enable while kickoff is happening
 			 */
-			if (!kref_get_unless_zero(&f->profile.ref)) {
+			if (!nvgpu_ref_get_unless_zero(&f->profile.ref)) {
 				f->profile.data = vzalloc(
 							FIFO_PROFILING_ENTRIES *
 					sizeof(struct fifo_profile_gk20a));
@@ -165,7 +166,7 @@ static int gk20a_fifo_profile_enable(void *data, u64 val)
 					nvgpu_mutex_release(&f->profile.lock);
 					return -ENOMEM;
 				}
-				kref_init(&f->profile.ref);
+				nvgpu_ref_init(&f->profile.ref);
 			}
 			atomic_set(&f->profile.get.atomic_var, 0);
 			f->profile.enabled = true;
@@ -241,7 +242,7 @@ static int gk20a_fifo_profile_stats(struct seq_file *s, void *unused)
 	u64 percentiles_append[PERCENTILE_RANGES];
 	u64 percentiles_userd[PERCENTILE_RANGES];
 
-	if (!kref_get_unless_zero(&g->fifo.profile.ref)) {
+	if (!nvgpu_ref_get_unless_zero(&g->fifo.profile.ref)) {
 		seq_printf(s, "Profiling disabled\n");
 		return 0;
 	}
@@ -271,7 +272,7 @@ static int gk20a_fifo_profile_stats(struct seq_file *s, void *unused)
 			percentiles_jobtracking[index],
 			percentiles_userd[index]);
 
-	kref_put(&g->fifo.profile.ref, __gk20a_fifo_profile_free);
+	nvgpu_ref_put(&g->fifo.profile.ref, __gk20a_fifo_profile_free);
 
 	return 0;
 }
@@ -312,7 +313,7 @@ void gk20a_fifo_debugfs_init(struct gk20a *g)
 	nvgpu_mutex_init(&g->fifo.profile.lock);
 	g->fifo.profile.enabled = false;
 	atomic_set(&g->fifo.profile.get.atomic_var, 0);
-	atomic_set(&g->fifo.profile.ref.refcount, 0);
+	atomic_set(&g->fifo.profile.ref.refcount.atomic_var, 0);
 
 	debugfs_create_file("enable", 0600, profile_root, g,
 		&gk20a_fifo_profile_enable_debugfs_fops);
@@ -322,7 +323,7 @@ void gk20a_fifo_debugfs_init(struct gk20a *g)
 
 }
 
-void __gk20a_fifo_profile_free(struct kref *ref)
+void __gk20a_fifo_profile_free(struct nvgpu_ref *ref)
 {
 	struct fifo_gk20a *f = container_of(ref, struct fifo_gk20a,
 						profile.ref);
@@ -340,7 +341,7 @@ struct fifo_profile_gk20a *gk20a_fifo_profile_acquire(struct gk20a *g)
 	unsigned int index;
 
 	/* If kref is zero, profiling is not enabled */
-	if (!kref_get_unless_zero(&f->profile.ref))
+	if (!nvgpu_ref_get_unless_zero(&f->profile.ref))
 		return NULL;
 	index = atomic_inc_return(&f->profile.get.atomic_var);
 	profile = &f->profile.data[index % FIFO_PROFILING_ENTRIES];
@@ -352,7 +353,7 @@ struct fifo_profile_gk20a *gk20a_fifo_profile_acquire(struct gk20a *g)
 void gk20a_fifo_profile_release(struct gk20a *g,
 					struct fifo_profile_gk20a *profile)
 {
-	kref_put(&g->fifo.profile.ref, __gk20a_fifo_profile_free);
+	nvgpu_ref_put(&g->fifo.profile.ref, __gk20a_fifo_profile_free);
 }
 
 void gk20a_fifo_debugfs_deinit(struct gk20a *g)
@@ -362,7 +363,7 @@ void gk20a_fifo_debugfs_deinit(struct gk20a *g)
 	nvgpu_mutex_acquire(&f->profile.lock);
 	if (f->profile.enabled) {
 		f->profile.enabled = false;
-		kref_put(&f->profile.ref, __gk20a_fifo_profile_free);
+		nvgpu_ref_put(&f->profile.ref, __gk20a_fifo_profile_free);
 	}
 	nvgpu_mutex_release(&f->profile.lock);
 }

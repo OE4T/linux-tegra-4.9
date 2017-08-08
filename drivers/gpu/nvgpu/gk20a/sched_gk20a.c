@@ -189,7 +189,7 @@ static int gk20a_sched_dev_ioctl_get_params(struct gk20a_sched_ctrl *sched,
 		return -EINVAL;
 
 	tsg = &f->tsg[tsgid];
-	if (!kref_get_unless_zero(&tsg->refcount))
+	if (!nvgpu_ref_get_unless_zero(&tsg->refcount))
 		return -ENXIO;
 
 	arg->pid = tsg->tgid;	/* kernel tgid corresponds to user pid */
@@ -206,7 +206,7 @@ static int gk20a_sched_dev_ioctl_get_params(struct gk20a_sched_ctrl *sched,
 		arg->compute_preempt_mode = 0;
 	}
 
-	kref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 
 	return 0;
 }
@@ -227,7 +227,7 @@ static int gk20a_sched_dev_ioctl_tsg_set_timeslice(
 		return -EINVAL;
 
 	tsg = &f->tsg[tsgid];
-	if (!kref_get_unless_zero(&tsg->refcount))
+	if (!nvgpu_ref_get_unless_zero(&tsg->refcount))
 		return -ENXIO;
 
 	err = gk20a_busy(g);
@@ -239,7 +239,7 @@ static int gk20a_sched_dev_ioctl_tsg_set_timeslice(
 	gk20a_idle(g);
 
 done:
-	kref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 
 	return err;
 }
@@ -260,7 +260,7 @@ static int gk20a_sched_dev_ioctl_tsg_set_runlist_interleave(
 		return -EINVAL;
 
 	tsg = &f->tsg[tsgid];
-	if (!kref_get_unless_zero(&tsg->refcount))
+	if (!nvgpu_ref_get_unless_zero(&tsg->refcount))
 		return -ENXIO;
 
 	err = gk20a_busy(g);
@@ -272,7 +272,7 @@ static int gk20a_sched_dev_ioctl_tsg_set_runlist_interleave(
 	gk20a_idle(g);
 
 done:
-	kref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 
 	return err;
 }
@@ -320,7 +320,7 @@ static int gk20a_sched_dev_ioctl_get_tsg(struct gk20a_sched_ctrl *sched,
 		return -EINVAL;
 
 	tsg = &f->tsg[tsgid];
-	if (!kref_get_unless_zero(&tsg->refcount))
+	if (!nvgpu_ref_get_unless_zero(&tsg->refcount))
 		return -ENXIO;
 
 	nvgpu_mutex_acquire(&sched->status_lock);
@@ -328,7 +328,7 @@ static int gk20a_sched_dev_ioctl_get_tsg(struct gk20a_sched_ctrl *sched,
 		nvgpu_warn(g, "tsgid=%d already referenced", tsgid);
 		/* unlock status_lock as gk20a_tsg_release locks it */
 		nvgpu_mutex_release(&sched->status_lock);
-		kref_put(&tsg->refcount, gk20a_tsg_release);
+		nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 		return -ENXIO;
 	}
 
@@ -364,7 +364,7 @@ static int gk20a_sched_dev_ioctl_put_tsg(struct gk20a_sched_ctrl *sched,
 	nvgpu_mutex_release(&sched->status_lock);
 
 	tsg = &f->tsg[tsgid];
-	kref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 
 	return 0;
 }
@@ -507,7 +507,7 @@ int gk20a_sched_dev_release(struct inode *inode, struct file *filp)
 	for (tsgid = 0; tsgid < f->num_channels; tsgid++) {
 		if (NVGPU_SCHED_ISSET(tsgid, sched->ref_tsg_bitmap)) {
 			tsg = &f->tsg[tsgid];
-			kref_put(&tsg->refcount, gk20a_tsg_release);
+			nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 		}
 	}
 

@@ -767,7 +767,7 @@ int vgpu_probe(struct platform_device *pdev)
 	vgpu_create_sysfs(dev);
 	gk20a_init_gr(gk20a);
 
-	kref_init(&gk20a->refcount);
+	nvgpu_ref_init(&gk20a->refcount);
 
 	return 0;
 }

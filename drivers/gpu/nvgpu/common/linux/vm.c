@@ -155,7 +155,7 @@ static u64 __nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 		else
 			mapped_buffer->own_mem_ref = true;
 	}
-	kref_get(&mapped_buffer->ref);
+	nvgpu_ref_get(&mapped_buffer->ref);
 
 	nvgpu_log(g, gpu_dbg_map,
 		  "gv: 0x%04x_%08x + 0x%-7zu "
@@ -380,7 +380,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->user_mapped = user_mapped ? 1 : 0;
 	mapped_buffer->own_mem_ref = user_mapped;
 	nvgpu_init_list_node(&mapped_buffer->buffer_list);
-	kref_init(&mapped_buffer->ref);
+	nvgpu_ref_init(&mapped_buffer->ref);
 
 	err = nvgpu_insert_mapped_buf(vm, mapped_buffer);
 	if (err) {
@@ -425,6 +425,6 @@ void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset)
 		return;
 	}
 
-	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);
+	nvgpu_ref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_ref);
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }

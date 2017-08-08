@@ -156,7 +156,7 @@ struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
 	p->sema_sea = sea;
 	nvgpu_init_list_node(&p->hw_semas);
 	nvgpu_init_list_node(&p->pool_list_entry);
-	kref_init(&p->ref);
+	nvgpu_ref_init(&p->ref);
 
 	sea->page_count++;
 	nvgpu_list_add(&p->pool_list_entry, &sea->pool_list);
@@ -285,7 +285,7 @@ void nvgpu_semaphore_pool_unmap(struct nvgpu_semaphore_pool *p,
  * Completely free a semaphore_pool. You should make sure this pool is not
  * mapped otherwise there's going to be a memory leak.
  */
-static void nvgpu_semaphore_pool_free(struct kref *ref)
+static void nvgpu_semaphore_pool_free(struct nvgpu_ref *ref)
 {
 	struct nvgpu_semaphore_pool *p =
 		container_of(ref, struct nvgpu_semaphore_pool, ref);
@@ -314,12 +314,12 @@ static void nvgpu_semaphore_pool_free(struct kref *ref)
 
 void nvgpu_semaphore_pool_get(struct nvgpu_semaphore_pool *p)
 {
-	kref_get(&p->ref);
+	nvgpu_ref_get(&p->ref);
 }
 
 void nvgpu_semaphore_pool_put(struct nvgpu_semaphore_pool *p)
 {
-	kref_put(&p->ref, nvgpu_semaphore_pool_free);
+	nvgpu_ref_put(&p->ref, nvgpu_semaphore_pool_free);
 }
 
 /*
@@ -423,7 +423,7 @@ struct nvgpu_semaphore *nvgpu_semaphore_alloc(struct channel_gk20a *ch)
 	if (!s)
 		return NULL;
 
-	kref_init(&s->ref);
+	nvgpu_ref_init(&s->ref);
 	s->hw_sema = ch->hw_sema;
 	nvgpu_atomic_set(&s->value, 0);
 
@@ -438,7 +438,7 @@ struct nvgpu_semaphore *nvgpu_semaphore_alloc(struct channel_gk20a *ch)
 	return s;
 }
 
-static void nvgpu_semaphore_free(struct kref *ref)
+static void nvgpu_semaphore_free(struct nvgpu_ref *ref)
 {
 	struct nvgpu_semaphore *s =
 		container_of(ref, struct nvgpu_semaphore, ref);
@@ -450,10 +450,10 @@ static void nvgpu_semaphore_free(struct kref *ref)
 
 void nvgpu_semaphore_put(struct nvgpu_semaphore *s)
 {
-	kref_put(&s->ref, nvgpu_semaphore_free);
+	nvgpu_ref_put(&s->ref, nvgpu_semaphore_free);
 }
 
 void nvgpu_semaphore_get(struct nvgpu_semaphore *s)
 {
-	kref_get(&s->ref);
+	nvgpu_ref_get(&s->ref);
 }

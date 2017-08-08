@@ -1036,7 +1036,7 @@ struct gk20a {
 
 	nvgpu_atomic_t usage_count;
 
-	struct kref refcount;
+	struct nvgpu_ref refcount;
 
 	struct resource *reg_mem;
 	void __iomem *regs;

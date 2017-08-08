@@ -404,7 +404,7 @@ static int __nvgpu_vm_init(struct mm_gk20a *mm,
 	vm->mapped_buffers = NULL;
 
 	nvgpu_mutex_init(&vm->update_gmmu_lock);
-	kref_init(&vm->ref);
+	nvgpu_ref_init(&vm->ref);
 	nvgpu_init_list_node(&vm->vm_area_list);
 
 	/*
@@ -557,7 +557,7 @@ static void __nvgpu_vm_remove(struct vm_gk20a *vm)
 	nvgpu_kfree(g, vm);
 }
 
-static void __nvgpu_vm_remove_kref(struct kref *ref)
+static void __nvgpu_vm_remove_ref(struct nvgpu_ref *ref)
 {
 	struct vm_gk20a *vm = container_of(ref, struct vm_gk20a, ref);
 
@@ -566,12 +566,12 @@ static void __nvgpu_vm_remove_kref(struct kref *ref)
 
 void nvgpu_vm_get(struct vm_gk20a *vm)
 {
-	kref_get(&vm->ref);
+	nvgpu_ref_get(&vm->ref);
 }
 
 void nvgpu_vm_put(struct vm_gk20a *vm)
 {
-	kref_put(&vm->ref, __nvgpu_vm_remove_kref);
+	nvgpu_ref_put(&vm->ref, __nvgpu_vm_remove_ref);
 }
 
 int nvgpu_insert_mapped_buf(struct vm_gk20a *vm,

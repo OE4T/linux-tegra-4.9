@@ -104,7 +104,7 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 	nvgpu_list_add_tail(&ch->ch_entry, &tsg->ch_list);
 	up_write(&tsg->ch_list_lock);
 
-	kref_get(&tsg->refcount);
+	nvgpu_ref_get(&tsg->refcount);
 
 	gk20a_dbg(gpu_dbg_fn, "BIND tsg:%d channel:%d\n",
 					tsg->tsgid, ch->chid);
@@ -122,7 +122,7 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 	nvgpu_list_del(&ch->ch_entry);
 	up_write(&tsg->ch_list_lock);
 
-	kref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 
 	ch->tsgid = NVGPU_INVALID_TSG_ID;
 
@@ -257,7 +257,7 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 
 	tsg->g = g;
 	tsg->num_active_channels = 0;
-	kref_init(&tsg->refcount);
+	nvgpu_ref_init(&tsg->refcount);
 
 	tsg->tsg_gr_ctx = NULL;
 	tsg->vm = NULL;
@@ -287,11 +287,11 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 	return tsg;
 
 clean_up:
-	kref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 	return NULL;
 }
 
-void gk20a_tsg_release(struct kref *ref)
+void gk20a_tsg_release(struct nvgpu_ref *ref)
 {
 	struct tsg_gk20a *tsg = container_of(ref, struct tsg_gk20a, refcount);
 	struct gk20a *g = tsg->g;

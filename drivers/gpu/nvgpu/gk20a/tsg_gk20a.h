@@ -25,7 +25,7 @@ struct channel_gk20a;
 
 bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch);
 struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g);
-void gk20a_tsg_release(struct kref *ref);
+void gk20a_tsg_release(struct nvgpu_ref *ref);
 
 int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid);
 struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch);
@@ -36,7 +36,7 @@ struct tsg_gk20a {
 	bool in_use;
 	int tsgid;
 
-	struct kref refcount;
+	struct nvgpu_ref refcount;
 
 	struct nvgpu_list_node ch_list;
 	int num_active_channels;

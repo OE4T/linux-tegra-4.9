@@ -33,7 +33,7 @@ struct gk20a_fence {
 
 	/* Valid for all fence types: */
 	bool valid;
-	struct kref ref;
+	struct nvgpu_ref ref;
 	bool wfi;
 	struct sync_fence *sync_fence;
 	const struct gk20a_fence_ops *ops;

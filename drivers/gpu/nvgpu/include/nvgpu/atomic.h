@@ -61,9 +61,17 @@ static inline bool nvgpu_atomic_dec_and_test(nvgpu_atomic_t *v)
 {
 	return __nvgpu_atomic_dec_and_test(v);
 }
+static inline bool nvgpu_atomic_sub_and_test(int i, nvgpu_atomic_t *v)
+{
+	return __nvgpu_atomic_sub_and_test(i, v);
+}
 static inline int nvgpu_atomic_add_return(int i, nvgpu_atomic_t *v)
 {
 	return __nvgpu_atomic_add_return(i, v);
+}
+static inline int nvgpu_atomic_add_unless(nvgpu_atomic_t *v, int a, int u)
+{
+	return __nvgpu_atomic_add_unless(v, a, u);
 }
 static inline void nvgpu_atomic64_set(nvgpu_atomic64_t *v, long i)
 {

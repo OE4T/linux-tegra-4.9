@@ -511,7 +511,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 /*
  * Free the gk20a struct.
  */
-static void gk20a_free_cb(struct kref *refcount)
+static void gk20a_free_cb(struct nvgpu_ref *refcount)
 {
 	struct gk20a *g = container_of(refcount,
 		struct gk20a, refcount);
@@ -544,10 +544,11 @@ struct gk20a * __must_check gk20a_get(struct gk20a *g)
 	 * the code will never be in such a situation that this race is
 	 * possible.
 	 */
-	success = kref_get_unless_zero(&g->refcount);
+	success = nvgpu_ref_get_unless_zero(&g->refcount);
 
 	gk20a_dbg(gpu_dbg_shutdown, "GET: refs currently %d %s",
-		atomic_read(&g->refcount.refcount), success ? "" : "(FAILED)");
+		nvgpu_atomic_read(&g->refcount.refcount),
+			success ? "" : "(FAILED)");
 
 	return success ? g : NULL;
 }
@@ -571,7 +572,7 @@ void gk20a_put(struct gk20a *g)
 	 *  ... Freeing GK20A struct!
 	 */
 	gk20a_dbg(gpu_dbg_shutdown, "PUT: refs currently %d",
-		atomic_read(&g->refcount.refcount));
+		nvgpu_atomic_read(&g->refcount.refcount));
 
-	kref_put(&g->refcount, gk20a_free_cb);
+	nvgpu_ref_put(&g->refcount, gk20a_free_cb);
 }

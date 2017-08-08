@@ -1103,7 +1103,8 @@ static inline int tegra_gpio_debuginit(struct tegra_gpio_info *tgi)
 }
 #endif
 
-int tegra_update_ports_in_controller(struct tegra_gpio_info *tgi, int bank)
+static int tegra_update_ports_in_controller(struct tegra_gpio_info *tgi,
+					     int bank)
 {
 	int i;
 	int count = 0;
@@ -1115,7 +1116,7 @@ int tegra_update_ports_in_controller(struct tegra_gpio_info *tgi, int bank)
 	return count;
 }
 
-void tegra_read_routemap(struct tegra_gpio_info *tgi, int bank,
+static void tegra_read_routemap(struct tegra_gpio_info *tgi, int bank,
 			 int interrupt_count)
 {
 	int j;

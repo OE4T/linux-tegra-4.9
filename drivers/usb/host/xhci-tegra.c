@@ -2152,6 +2152,49 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 	return 0;
 }
 
+static int fpga_clock_hacks(struct platform_device *pdev)
+{
+#define CLK_RST_CONTROLLER_RST_DEV_XUSB_0	(0x470000)
+#define   SWR_XUSB_HOST_RST			(1 << 0)
+#define   SWR_XUSB_DEV_RST			(1 << 1)
+#define   SWR_XUSB_PADCTL_RST			(1 << 2)
+#define   SWR_XUSB_SS_RST			(1 << 3)
+#define CLK_RST_CONTROLLER_CLK_OUT_ENB_XUSB_0	(0x471000)
+#define   CLK_ENB_XUSB				(1 << 0)
+#define   CLK_ENB_XUSB_DEV			(1 << 1)
+#define   CLK_ENB_XUSB_HOST			(1 << 2)
+#define   CLK_ENB_XUSB_SS			(1 << 3)
+#define CLK_RST_CONTROLLER_CLK_OUT_ENB_XUSB_SET_0	(0x471004)
+#define   SET_CLK_ENB_XUSB			(1 << 0)
+#define   SET_CLK_ENB_XUSB_DEV			(1 << 1)
+#define   SET_CLK_ENB_XUSB_HOST			(1 << 2)
+#define   SET_CLK_ENB_XUSB_SS			(1 << 3)
+
+	static void __iomem *car_base;
+	u32 val;
+
+	car_base = devm_ioremap_nocache(&pdev->dev, 0x20000000, 0x1000000);
+	if (IS_ERR(car_base)) {
+		dev_err(&pdev->dev, "failed to map CAR mmio\n");
+		return PTR_ERR(car_base);
+	}
+
+	val = CLK_ENB_XUSB | CLK_ENB_XUSB_DEV | CLK_ENB_XUSB_HOST |
+		CLK_ENB_XUSB_SS;
+	iowrite32(val, car_base + CLK_RST_CONTROLLER_CLK_OUT_ENB_XUSB_0);
+
+	val = ioread32(car_base + CLK_RST_CONTROLLER_RST_DEV_XUSB_0);
+	val &= ~(SWR_XUSB_HOST_RST | SWR_XUSB_DEV_RST |
+			SWR_XUSB_PADCTL_RST | SWR_XUSB_SS_RST);
+	iowrite32(val, car_base + CLK_RST_CONTROLLER_RST_DEV_XUSB_0);
+
+	val = SET_CLK_ENB_XUSB | SET_CLK_ENB_XUSB_DEV | SET_CLK_ENB_XUSB_HOST |
+		SET_CLK_ENB_XUSB_SS;
+	iowrite32(val, car_base + CLK_RST_CONTROLLER_CLK_OUT_ENB_XUSB_SET_0);
+
+	return 0;
+}
+
 static int tegra_xusb_probe(struct platform_device *pdev)
 {
 	struct resource *res, *regs;
@@ -2316,6 +2359,12 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 					err);
 			goto put_padctl;
 		}
+	}
+
+	if (tegra_platform_is_fpga()) {
+		err = fpga_clock_hacks(pdev);
+		if (err)
+			goto put_padctl;
 	}
 
 	err = tegra_xhci_phy_init(pdev);

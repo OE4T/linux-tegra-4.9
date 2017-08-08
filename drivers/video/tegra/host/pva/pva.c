@@ -289,6 +289,12 @@ static int pva_read_ucode(struct platform_device *pdev,
 			fw_info->priv2_buffer.size += useg->size;
 			break;
 		case PVA_UCODE_SEG_TRACE_LOG:
+			/* set the trace log buffer offset from priv2 start
+			 * offset must be 64bytes aligned for dma usage
+			 */
+			fw_info->priv2_buffer.size =
+				 ALIGN(fw_info->priv2_buffer.size + 64, 64);
+
 			/* set the trace log buffer offset from priv2 start */
 			useg->offset = fw_info->priv2_buffer.size;
 			/* set os specified size if uCode passes zero size */

@@ -43,12 +43,15 @@ struct pva_trace_block_hdr {
 	u16 n_entries;
 	u16 reserved_1;
 	u32 reserved_2;
+	u8 align[48];
 };
 
 struct pva_trace_header {
 	u32 block_size;
 	u32 head_offset;
 	u32 tail_offset;
+	u8 align[52];
+
 };
 
 #endif

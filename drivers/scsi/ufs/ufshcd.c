@@ -6612,7 +6612,11 @@ ufshcd_init_latency_hist(struct ufs_hba *hba)
 static void
 ufshcd_exit_latency_hist(struct ufs_hba *hba)
 {
-	device_create_file(hba->dev, &dev_attr_latency_hist);
+	int err;
+
+	err = device_create_file(hba->dev, &dev_attr_latency_hist);
+	if(err)
+		 dev_err(hba->dev, "Failed to create latency_hist sysfs entry %d \n",err);
 }
 
 /**

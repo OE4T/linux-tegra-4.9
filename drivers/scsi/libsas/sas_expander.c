@@ -2029,9 +2029,11 @@ static int sas_rediscover_dev(struct domain_device *dev, int phy_id, bool last)
 		   dev_type_flutter(type, phy->attached_dev_type)) {
 		struct domain_device *ata_dev = sas_ex_to_ata(dev, phy_id);
 		char *action = "";
+		int err;
 
-		sas_ex_phy_discover(dev, phy_id);
-
+		err = sas_ex_phy_discover(dev, phy_id);
+		if(!err)
+			SAS_DPRINTK("ERROR,%d\n",err);
 		if (ata_dev && phy->attached_dev_type == SAS_SATA_PENDING)
 			action = ", needs recovery";
 		SAS_DPRINTK("ex %016llx phy 0x%x broadcast flutter%s\n",

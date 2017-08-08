@@ -130,11 +130,14 @@ static int gm20b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_LTS_STRIDE:
 		ret = proj_lts_stride_v();
 		break;
-	/* GM20B does not have a FBPA unit, despite what's listed in the
-	 * hw headers or read back through NV_PTOP_SCAL_NUM_FBPAS,
-	 * so hardcode all values to 0.
+	/* Even though GM20B doesn't have an FBPA unit, the HW reports one,
+	 * and the microcode as a result leaves space in the context buffer
+	 * for one, so make sure SW accounts for this also.
 	 */
 	case GPU_LIT_NUM_FBPAS:
+		ret = proj_scal_litter_num_fbpas_v();
+		break;
+	/* Hardcode FBPA values other than NUM_FBPAS to 0. */
 	case GPU_LIT_FBPA_STRIDE:
 	case GPU_LIT_FBPA_BASE:
 	case GPU_LIT_FBPA_SHARED_BASE:

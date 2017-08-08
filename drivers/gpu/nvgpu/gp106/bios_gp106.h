@@ -27,6 +27,5 @@ struct gk20a;
 struct gpu_ops;
 
 int gp106_bios_init(struct gk20a *g);
-void gp106_init_bios_ops(struct gpu_ops *gops);
-
+int gp106_bios_preos_wait_for_halt(struct gk20a *g);
 #endif

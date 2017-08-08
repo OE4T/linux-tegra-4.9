@@ -216,6 +216,10 @@ static int gp106_init_gpu_characteristics(struct gk20a *g)
 }
 
 static const struct gpu_ops gp106_ops = {
+	.bios = {
+		.init = gp106_bios_init,
+		.preos_wait_for_halt = gp106_bios_preos_wait_for_halt,
+	},
 	.ltc = {
 		.determine_L2_size_bytes = gp10b_determine_L2_size_bytes,
 		.set_zbc_color_entry = gm20b_ltc_set_zbc_color_entry,
@@ -695,7 +699,6 @@ static const struct gpu_ops gp106_ops = {
 	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,
-	.bios_init = gp106_bios_init,
 };
 
 int gp106_init_hal(struct gk20a *g)
@@ -705,6 +708,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+	gops->bios = gp106_ops.bios;
 	gops->ltc = gp106_ops.ltc;
 	gops->ce2 = gp106_ops.ce2;
 	gops->gr = gp106_ops.gr;
@@ -747,7 +751,6 @@ int gp106_init_hal(struct gk20a *g)
 	gops->get_litter_value = gp106_ops.get_litter_value;
 	gops->chip_init_gpu_characteristics =
 		gp106_ops.chip_init_gpu_characteristics;
-	gops->bios_init = gp106_ops.bios_init;
 
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
 	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);

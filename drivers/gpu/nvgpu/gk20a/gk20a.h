@@ -969,7 +969,11 @@ struct gpu_ops {
 		int (*bar1_bind)(struct gk20a *g, struct nvgpu_mem *bar1_inst);
 	} bus;
 
-	int (*bios_init)(struct gk20a *g);
+	struct {
+		int (*init)(struct gk20a *g);
+		int (*preos_wait_for_halt)(struct gk20a *g);
+		void (*preos_reload_check)(struct gk20a *g);
+	} bios;
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {

@@ -187,8 +187,8 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	nvgpu_flcn_sw_init(g, FALCON_ID_PMU);
 	nvgpu_flcn_sw_init(g, FALCON_ID_SEC2);
 
-	if (g->ops.bios_init)
-		err = g->ops.bios_init(g);
+	if (g->ops.bios.init)
+		err = g->ops.bios.init(g);
 	if (err)
 		goto done;
 

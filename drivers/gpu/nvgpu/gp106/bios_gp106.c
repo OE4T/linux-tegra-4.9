@@ -135,6 +135,16 @@ out:
 	return err;
 }
 
+int gp106_bios_preos_wait_for_halt(struct gk20a *g)
+{
+	int err = 0;
+
+	if (nvgpu_flcn_wait_for_halt(g->pmu.flcn, PMU_BOOT_TIMEOUT_MAX / 1000))
+		err = -ETIMEDOUT;
+
+	return err;
+}
+
 static int gp106_bios_preos(struct gk20a *g)
 {
 	int err = 0;
@@ -145,6 +155,9 @@ static int gp106_bios_preos(struct gk20a *g)
 		err = -ETIMEDOUT;
 		goto out;
 	}
+
+	if (g->ops.bios.preos_reload_check)
+		g->ops.bios.preos_reload_check(g);
 
 	upload_code(g, g->bios.preos.bootloader_phys_base,
 			g->bios.preos.bootloader,
@@ -161,11 +174,7 @@ static int gp106_bios_preos(struct gk20a *g)
 
 	nvgpu_flcn_bootstrap(g->pmu.flcn, g->bios.preos.code_entry_point);
 
-	if (nvgpu_flcn_wait_for_halt(g->pmu.flcn,
-		PMU_BOOT_TIMEOUT_MAX / 1000)) {
-		err = -ETIMEDOUT;
-		goto out;
-	}
+	err = g->ops.bios.preos_wait_for_halt(g);
 
 	nvgpu_flcn_clear_halt_intr_status(g->pmu.flcn,
 			gk20a_get_gr_idle_timeout(g));

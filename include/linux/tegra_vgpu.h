@@ -422,6 +422,23 @@ struct tegra_vgpu_gpu_clk_rate_params {
 	u32 rate; /* in kHz */
 };
 
+/* TEGRA_VGPU_MAX_ENGINES must be equal or greater than num_engines */
+#define TEGRA_VGPU_MAX_ENGINES			4
+struct tegra_vgpu_engines_info {
+	u32 num_engines;
+	struct engineinfo {
+		u32 engine_id;
+		u32 intr_mask;
+		u32 reset_mask;
+		u32 runlist_id;
+		u32 pbdma_id;
+		u32 inst_id;
+		u32 pri_base;
+		u32 engine_enum;
+		u32 fault_id;
+	} info[TEGRA_VGPU_MAX_ENGINES];
+};
+
 #define TEGRA_VGPU_MAX_GPC_COUNT 16
 #define TEGRA_VGPU_MAX_TPC_COUNT_PER_GPC 16
 
@@ -459,6 +476,7 @@ struct tegra_vgpu_constants_params {
 	u32 default_timeslice_us;
 	u32 preempt_ctx_size;
 	u32 channel_base;
+	struct tegra_vgpu_engines_info engines_info;
 };
 
 struct tegra_vgpu_channel_cyclestats_snapshot_params {

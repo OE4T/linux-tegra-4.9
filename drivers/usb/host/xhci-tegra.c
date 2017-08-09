@@ -3100,6 +3100,7 @@ out:
 static inline int set_cdp_enable(struct tegra_xusb *tegra,
 					int port_idx, bool enable)
 {
+	int ret;
 	dev_info(tegra->dev, "%sable %sternal cdp %d\n",
 		enable ? "en" : "dis",
 		tegra->cdp_internal ? "in" : "ex",
@@ -3108,9 +3109,11 @@ static inline int set_cdp_enable(struct tegra_xusb *tegra,
 		if (tegra->cdp_internal)
 			tegra_xusb_padctl_enable_host_cdp(tegra->padctl,
 				tegra->typed_phys[USB2_PHY][port_idx]);
-		else
-			phy_power_on(tegra->cdp_ext_phys[port_idx]);
-
+		else {
+			ret = phy_power_on(tegra->cdp_ext_phys[port_idx]);
+			if (ret)
+				dev_err(tegra->dev, "phy_power_on failed");
+		}
 	} else {
 		if (tegra->cdp_internal)
 			tegra_xusb_padctl_disable_host_cdp(tegra->padctl,

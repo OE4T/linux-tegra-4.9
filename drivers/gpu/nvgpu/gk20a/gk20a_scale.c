@@ -160,19 +160,13 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 	 * To get cap (max) freq, we select MIN of max frequencies
 	 *
 	 * In case we have conflict (min_freq > max_freq) after above
-	 * steps, we ensure that devfreq->min_freq wins over
-	 * qos_max_freq
+	 * steps, we ensure that max_freq wins over min_freq
 	 */
 	min_freq = max_t(u32, devfreq->min_freq, profile->qos_min_freq);
 	max_freq = min_t(u32, devfreq->max_freq, profile->qos_max_freq);
 
-	if (min_freq > max_freq) {
-		if (min_freq == devfreq->min_freq &&
-		    max_freq != devfreq->max_freq) {
-			max_freq = min_t(u32, min_freq, devfreq->max_freq);
-		}
+	if (min_freq > max_freq)
 		min_freq = max_freq;
-	}
 
 	/* Clip requested frequency */
 	if (local_freq < min_freq)

@@ -435,13 +435,12 @@ static struct tegra_hv_i2c_comm_dev *_hv_i2c_get_comm_dev(struct device *dev,
 		struct device_node *hv_dn, uint32_t ivc_queue)
 {
 	static HLIST_HEAD(ivc_comm_devs);
-	static DEFINE_SPINLOCK(ivc_comm_devs_lock);
-	unsigned long flags = 0;
+	static DEFINE_MUTEX(ivc_comm_devs_lock);
 	struct tegra_hv_i2c_comm_dev *comm_dev = NULL;
 	struct tegra_hv_ivc_cookie *ivck = NULL;
 	int err;
 
-	spin_lock_irqsave(&ivc_comm_devs_lock, flags);
+	mutex_lock(&ivc_comm_devs_lock);
 
 	hlist_for_each_entry(comm_dev, &ivc_comm_devs, list) {
 		if (comm_dev->queue_id == ivc_queue)
@@ -500,7 +499,7 @@ static struct tegra_hv_i2c_comm_dev *_hv_i2c_get_comm_dev(struct device *dev,
 	tegra_hv_ivc_channel_reset(ivck);
 
 end:
-	spin_unlock_irqrestore(&ivc_comm_devs_lock, flags);
+	mutex_unlock(&ivc_comm_devs_lock);
 	return comm_dev;
 }
 

@@ -75,12 +75,7 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 	case 44100:
 	case 88200:
 	case 176400:
-		if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA20)
-			new_baseclock = 56448000;
-		else if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA30)
-			new_baseclock = 564480000;
-		else if ((data->soc > TEGRA_ASOC_UTILS_SOC_TEGRA30) &&
-			 (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA186))
+		if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA186)
 			new_baseclock = 338688000;
 		else {
 			new_baseclock = data->clk_rates[PLLA_x11025_RATE];
@@ -106,12 +101,7 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 	case 64000:
 	case 96000:
 	case 192000:
-		if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA20)
-			new_baseclock = 73728000;
-		else if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA30)
-			new_baseclock = 552960000;
-		else if ((data->soc > TEGRA_ASOC_UTILS_SOC_TEGRA30) &&
-			 (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA186))
+		if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA186)
 			new_baseclock = 368640000;
 		else {
 			new_baseclock = data->clk_rates[PLLA_x8000_RATE];
@@ -230,35 +220,12 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 	data->card = card;
 	data->mclk_scale = 256;
 
-	if (of_machine_is_compatible("nvidia,tegra20"))
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA20;
-	else if (of_machine_is_compatible("nvidia,tegra30"))
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA30;
-	else if (of_machine_is_compatible("nvidia,tegra114"))
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA114;
-	else if (of_machine_is_compatible("nvidia,tegra148"))
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA148;
-	else if (of_machine_is_compatible("nvidia,tegra124"))
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA124;
-	else if (of_machine_is_compatible("nvidia,tegra210")  ||
+	if (of_machine_is_compatible("nvidia,tegra210")  ||
 		of_machine_is_compatible("nvidia,tegra210b01"))
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA210;
 	else if (of_machine_is_compatible("nvidia,tegra186"))
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA186;
-	else if (!dev->of_node) {
-		/* non-DT is always Tegra20 */
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC)
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA20;
-#elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA30;
-#elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA114;
-#elif defined(CONFIG_ARCH_TEGRA_14x_SOC)
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA148;
-#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
-		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA124;
-#endif
-	} else
+	else
 		/* DT boot, but unknown SoC */
 		return -EINVAL;
 
@@ -294,10 +261,7 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		goto err_put_pll_a;
 	}
 
-	if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA20)
-		data->clk_cdev1 = clk_get_sys(NULL, "cdev1");
-	else
-		data->clk_cdev1 = tegra_alt_asoc_utils_get_clk(dev, true,
+	data->clk_cdev1 = tegra_alt_asoc_utils_get_clk(dev, true,
 					"extern1");
 
 	if (IS_ERR(data->clk_cdev1)) {
@@ -368,9 +332,6 @@ int tegra_alt_asoc_utils_set_parent(struct tegra_asoc_audio_clock_info *data,
 {
 	int ret = -ENODEV;
 
-	if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA20)
-		return ret;
-
 	if (is_i2s_master) {
 		ret = clk_set_parent(data->clk_cdev1, data->clk_pll_a_out0);
 		if (ret) {
@@ -400,9 +361,6 @@ int tegra_alt_asoc_utils_set_extern_parent(
 {
 	unsigned long rate;
 	int err;
-
-	if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA20)
-		return -ENODEV;
 
 	rate = clk_get_rate(data->clk_cdev1);
 	if (!strcmp(parent, "clk_m")) {

@@ -37,10 +37,8 @@
 #endif
 #define TEGRA_DSI_SIZE			SZ_256K
 
-#if defined(CONFIG_ARCH_TEGRA_VIC)
 #define TEGRA_VIC_BASE			0x54340000
 #define TEGRA_VIC_SIZE			SZ_256K
-#endif
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 #define TEGRA_DSIB_BASE			0x15400000

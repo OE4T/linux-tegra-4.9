@@ -599,17 +599,15 @@ int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 }
 
 static struct of_device_id tegra_flcn_of_match[] = {
-#ifdef CONFIG_ARCH_TEGRA_VIC
+#ifdef CONFIG_TEGRA_GRHOST_VIC
 	{ .compatible = "nvidia,tegra124-vic",
 		.data = (struct nvhost_device_data *)&t124_vic_info },
+	{ .compatible = "nvidia,tegra210-vic",
+		.data = (struct nvhost_device_data *)&t21_vic_info },
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{ .compatible = "nvidia,tegra124-msenc",
 		.data = (struct nvhost_device_data *)&t124_msenc_info },
-#endif
-#ifdef CONFIG_ARCH_TEGRA_VIC
-	{ .compatible = "nvidia,tegra210-vic",
-		.data = (struct nvhost_device_data *)&t21_vic_info },
 #endif
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
 #if defined(CONFIG_TEGRA_GRHOST_NVENC)
@@ -749,7 +747,7 @@ static struct platform_driver flcn_driver = {
 };
 
 static struct of_device_id tegra_flcn_domain_match[] = {
-#ifdef CONFIG_ARCH_TEGRA_VIC
+#ifdef CONFIG_TEGRA_GRHOST_VIC
 	{.compatible = "nvidia,tegra124-vic03-pd",
 	.data = (struct nvhost_device_data *)&t124_vic_info},
 	{.compatible = "nvidia,tegra132-vic03-pd",
@@ -761,7 +759,7 @@ static struct of_device_id tegra_flcn_domain_match[] = {
 	{.compatible = "nvidia,tegra132-msenc-pd",
 	.data = (struct nvhost_device_data *)&t124_msenc_info},
 #endif
-#ifdef CONFIG_ARCH_TEGRA_VIC
+#ifdef CONFIG_TEGRA_GRHOST_VIC
 	{.compatible = "nvidia,tegra210-vic03-pd",
 	 .data = (struct nvhost_device_data *)&t21_vic_info},
 #endif

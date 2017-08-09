@@ -354,7 +354,7 @@ struct nvhost_device_data t21_tsecb_info = {
 };
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_VIC
+#ifdef CONFIG_TEGRA_GRHOST_VIC
 struct nvhost_device_data t21_vic_info = {
 	.num_channels		= 1,
 	.modulemutexes		= {NVMODMUTEX_VIC},

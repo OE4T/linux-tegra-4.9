@@ -1,7 +1,7 @@
 /*
 * Tegra Host1x Virtualization client common driver
 *
-* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -50,7 +50,7 @@ static int nvhost_vhost_client_prepare_poweroff(struct platform_device *pdev)
 }
 
 static struct of_device_id tegra_client_of_match[] = {
-#ifdef CONFIG_ARCH_TEGRA_VIC
+#ifdef CONFIG_TEGRA_GRHOST_VIC
 	{ .compatible = "nvidia,tegra124-vhost-vic",
 		.data = (struct nvhost_device_data *)&t124_vic_info },
 	{ .compatible = "nvidia,tegra210-vhost-vic",
@@ -85,7 +85,7 @@ static struct of_device_id tegra_client_of_match[] = {
 		.data = (struct nvhost_device_data *)&t21_nvjpg_info },
 #endif
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#if defined(CONFIG_TEGRA_GRHOST_VIC)
+#ifdef CONFIG_TEGRA_GRHOST_VIC
 	{ .compatible = "nvidia,tegra186-vhost-vic",
 		.data = (struct nvhost_device_data *)&t18_vic_info },
 #endif

@@ -23,6 +23,8 @@ enum {
 	SAFETY_CONF_IVC_READY = 1,
 };
 
+#define MAX_SAFETY_CHANNELS		5
+
 struct safety_ast_region {
 	u8 ast_id;
 	u32 slave_base;
@@ -42,7 +44,7 @@ struct tegra_safety_ivc {
 		atomic_t response;
 		atomic_t emptied;
 	} cmd;
-	struct tegra_safety_ivc_chan *ivc_chan;
+	struct tegra_safety_ivc_chan *ivc_chan[MAX_SAFETY_CHANNELS];
 };
 
 struct tegra_safety_ivc_chan {
@@ -51,8 +53,8 @@ struct tegra_safety_ivc_chan {
 	struct tegra_safety_ivc *safety_ivc;
 };
 
-int tegra_safety_dev_init(struct device *dev);
-void tegra_safety_dev_exit(struct device *dev);
+int tegra_safety_dev_init(struct device *dev, int index);
+void tegra_safety_dev_exit(struct device *dev, int index);
 void tegra_safety_dev_notify(void);
 
 #endif

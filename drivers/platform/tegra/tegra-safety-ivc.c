@@ -24,10 +24,11 @@
 #include <linux/wait.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
-
 #include <linux/tegra-safety-ivc.h>
 
 #define NV(p) "nvidia," #p
+
+int ivc_chan_count;
 
 /* wake up cmd-resp threads */
 static u32 tegra_safety_ivc_notify(void *data, u32 response)
@@ -220,9 +221,10 @@ static int tegra_ivc_channel_create(
 	}
 
 	ivc_chan->safety_ivc = dev_get_drvdata(dev);
-	safety_ivc->ivc_chan = ivc_chan;
+	safety_ivc->ivc_chan[ivc_chan_count] = ivc_chan;
+	ivc_chan_count++;
 
-	dev_dbg(dev, "%s: RX: 0x%x-0x%x TX: 0x%x-0x%x\n",
+	dev_info(dev, "%s: RX: 0x%x-0x%x TX: 0x%x-0x%x\n",
 			ivc_chan->name, start.rx, end.rx, start.tx, end.tx);
 
 	return 0;
@@ -341,14 +343,18 @@ static int tegra_safety_ivc_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct tegra_safety_ivc *safety_ivc = dev_get_drvdata(dev);
+	int i;
 
 	if (!safety_ivc)
 		return 0;
 
-	tegra_safety_dev_exit(dev);
+	for (i = 0; i < ivc_chan_count; i++)
+		tegra_safety_dev_exit(dev, i);
+
 	tegra_safety_ast_region_free(dev);
 	tegra_hsp_sm_pair_free(safety_ivc->cmd_pair);
 	tegra_hsp_sm_pair_free(safety_ivc->ivc_pair);
+	ivc_chan_count = 0;
 
 	return 0;
 }
@@ -357,7 +363,7 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 {
 	struct tegra_safety_ivc *safety_ivc;
 	struct device *dev = &pdev->dev;
-	int ret;
+	int ret, i;
 
 	dev_info(dev, "probing sce safety driver\n");
 
@@ -395,11 +401,13 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	/* create cmd-resp user space cdev */
-	ret = tegra_safety_dev_init(dev);
-	if (ret) {
-		dev_err(dev, "failed to setup userspace dev: %d\n", ret);
-		goto fail;
+	/* create user space safety cdevs */
+	for (i = 0; i < ivc_chan_count; i++) {
+		ret = tegra_safety_dev_init(dev, i);
+		if (ret) {
+			dev_err(dev, "failed to setup cdev %d\n", ret);
+			goto fail;
+		}
 	}
 
 	dev_info(dev, "successfully probed safety ivc driver\n");

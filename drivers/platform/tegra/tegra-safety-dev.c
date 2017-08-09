@@ -27,8 +27,6 @@
 
 #include <linux/tegra-safety-ivc.h>
 
-#define DEVICE_COUNT 1
-
 #define CCIOGNFRAMES _IOR('c', 1, int)
 #define CCIOGNBYTES _IOR('c', 2, int)
 
@@ -38,35 +36,57 @@ struct tegra_safety_dev_data {
 	struct mutex io_lock;
 	wait_queue_head_t read_waitq;
 	wait_queue_head_t write_waitq;
-	int device_count;
+	int open_count;
 };
 
-static struct tegra_safety_dev_data *dev_data;
+static struct tegra_safety_dev_data *safety_dev_data[MAX_SAFETY_CHANNELS];
 static DEFINE_MUTEX(tegra_safety_dev_lock_open);
 static int tegra_safety_dev_major_number;
 static struct class *tegra_safety_dev_class;
+extern int ivc_chan_count;
+
+static inline struct tegra_safety_dev_data *get_file_to_devdata(struct file *fp)
+{
+	return ((struct tegra_safety_dev_data *)fp->private_data);
+}
 
 static inline struct ivc *get_file_to_ivc(struct file *fp)
 {
-	return &((struct tegra_safety_ivc_chan *)fp->private_data)->ivc;
+	struct tegra_safety_dev_data *dev_data = get_file_to_devdata(fp);
+
+	return &dev_data->ivc_chan->ivc;
 }
 
 static int tegra_safety_dev_open(struct inode *in, struct file *f)
 {
 	unsigned int minor = iminor(in);
-	int ret;
+	struct tegra_safety_dev_data *dev_data = safety_dev_data[minor];
+	int ret = -1;
 
-	if (minor >= DEVICE_COUNT)
+	if (minor >= ivc_chan_count)
 		return -EBADFD;
 
 	ret = mutex_lock_interruptible(&tegra_safety_dev_lock_open);
 	if (ret)
 		return ret;
 
-	dev_data->device_count++;
-	f->private_data = dev_data->ivc_chan;
+	/* For CmdRsp restrict device open to 2 */
+	if ((minor == 0) && (dev_data->open_count >= 2)) {
+		ret = -1;
+		goto error;
+	}
+
+	/* For HeartBeat restrict device open to 1 */
+	if ((minor == 1) && (dev_data->open_count >= 1)) {
+		ret = -1;
+		goto error;
+	}
+
+	dev_data->open_count++;
+	f->private_data = dev_data;
 	nonseekable_open(in, f);
 
+error:
 	mutex_unlock(&tegra_safety_dev_lock_open);
 
 	return ret;
@@ -74,8 +94,11 @@ static int tegra_safety_dev_open(struct inode *in, struct file *f)
 
 static int tegra_safety_dev_release(struct inode *in, struct file *fp)
 {
+	unsigned int minor = iminor(in);
+	struct tegra_safety_dev_data *dev_data = safety_dev_data[minor];
+
 	mutex_lock(&tegra_safety_dev_lock_open);
-	dev_data->device_count--;
+	dev_data->open_count--;
 	mutex_unlock(&tegra_safety_dev_lock_open);
 
 	return 0;
@@ -83,6 +106,7 @@ static int tegra_safety_dev_release(struct inode *in, struct file *fp)
 
 static unsigned int tegra_safety_dev_poll(struct file *fp, poll_table *pt)
 {
+	struct tegra_safety_dev_data *dev_data = get_file_to_devdata(fp);
 	struct ivc *ivc = get_file_to_ivc(fp);
 	unsigned int ret = 0;
 
@@ -102,6 +126,7 @@ static unsigned int tegra_safety_dev_poll(struct file *fp, poll_table *pt)
 static ssize_t tegra_safety_dev_read(struct file *fp, char __user *buffer,
 		size_t len, loff_t *offset)
 {
+	struct tegra_safety_dev_data *dev_data = get_file_to_devdata(fp);
 	struct ivc *ivc = get_file_to_ivc(fp);
 	DEFINE_WAIT(wait);
 	size_t maxbytes = len > ivc->frame_size ? ivc->frame_size : len;
@@ -142,6 +167,7 @@ finish:
 static ssize_t tegra_safety_dev_write(struct file *fp,
 		const char __user *buffer, size_t len, loff_t *offset)
 {
+	struct tegra_safety_dev_data *dev_data = get_file_to_devdata(fp);
 	struct ivc *ivc = get_file_to_ivc(fp);
 	DEFINE_WAIT(wait);
 	size_t maxbytes = len > ivc->frame_size ? ivc->frame_size : len;
@@ -182,6 +208,7 @@ finish:
 static long tegra_safety_dev_ioctl(struct file *fp, unsigned int cmd,
 		unsigned long arg)
 {
+	struct tegra_safety_dev_data *dev_data = get_file_to_devdata(fp);
 	struct ivc *ivc = get_file_to_ivc(fp);
 	int val = 0;
 	long ret;
@@ -220,35 +247,52 @@ static const struct file_operations tegra_safety_dev_fops = {
 
 void tegra_safety_dev_notify(void)
 {
+	struct tegra_safety_dev_data *dev_data;
 	struct ivc *ivc;
 	int can_read, can_write;
+	int i;
 
-	if (!dev_data)
+	if (!safety_dev_data[0])
 		return;
 
-	ivc = &dev_data->ivc_chan->ivc;
+	for (i = 0; i < ivc_chan_count; i++) {
+		dev_data = safety_dev_data[i];
+		if (!dev_data)
+			return;
 
-	mutex_lock(&dev_data->io_lock);
-	can_read = tegra_ivc_can_read(ivc);
-	can_write = tegra_ivc_can_write(ivc);
-	mutex_unlock(&dev_data->io_lock);
+		ivc = &dev_data->ivc_chan->ivc;
 
-	if (can_read)
-		wake_up_interruptible(&dev_data->read_waitq);
+		mutex_lock(&dev_data->io_lock);
+		can_read = tegra_ivc_can_read(ivc);
+		can_write = tegra_ivc_can_write(ivc);
+		mutex_unlock(&dev_data->io_lock);
 
-	if (can_write)
-		wake_up_interruptible(&dev_data->write_waitq);
+		if (can_read)
+			wake_up_interruptible(&dev_data->read_waitq);
+
+		if (can_write)
+			wake_up_interruptible(&dev_data->write_waitq);
+	}
 }
 
-int tegra_safety_dev_init(struct device *dev)
+void tegra_safety_class_exit(struct device *dev)
 {
-	struct tegra_safety_ivc *safety_ivc = dev_get_drvdata(dev);
-	struct tegra_safety_dev_data *data;
-	struct device *char_dev;
-	dev_t start, num;
+	dev_t num = MKDEV(tegra_safety_dev_major_number, 0);
+
+	if (!tegra_safety_dev_class)
+		return;
+
+	class_destroy(tegra_safety_dev_class);
+	unregister_chrdev_region(num, ivc_chan_count);
+	tegra_safety_dev_class = NULL;
+}
+
+int tegra_safety_class_init(struct device *dev)
+{
+	dev_t start;
 	int ret;
 
-	ret = alloc_chrdev_region(&start, 0, DEVICE_COUNT, "safety");
+	ret = alloc_chrdev_region(&start, 0, ivc_chan_count, "safety");
 	if (ret) {
 		dev_alert(dev, "safety: failed to allocate device numbers\n");
 		goto error;
@@ -262,60 +306,88 @@ int tegra_safety_dev_init(struct device *dev)
 		goto error;
 	}
 
-	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
-	if (!data) {
+	return 0;
+
+error:
+	tegra_safety_class_exit(dev);
+
+	return ret;
+}
+
+int tegra_safety_dev_init(struct device *dev, int index)
+{
+	struct tegra_safety_ivc *safety_ivc = dev_get_drvdata(dev);
+	struct tegra_safety_dev_data *dev_data;
+	struct device *char_dev;
+	dev_t num;
+	int ret;
+
+	if (!tegra_safety_dev_class) {
+		ret = tegra_safety_class_init(dev);
+		if (ret) {
+			dev_err(dev, "safety: class init failed\n");
+			goto error;
+		}
+	}
+
+	dev_data = devm_kzalloc(dev, sizeof(*dev_data), GFP_KERNEL);
+	if (!dev_data) {
 		dev_alert(dev, "safety: failed to allocate memory\n");
 		ret = -ENOMEM;
 		goto error;
 	}
 
-	cdev_init(&data->cdev, &tegra_safety_dev_fops);
-	data->cdev.owner = THIS_MODULE;
-	init_waitqueue_head(&data->read_waitq);
-	init_waitqueue_head(&data->write_waitq);
-	mutex_init(&data->io_lock);
+	cdev_init(&dev_data->cdev, &tegra_safety_dev_fops);
+	dev_data->cdev.owner = THIS_MODULE;
+	init_waitqueue_head(&dev_data->read_waitq);
+	init_waitqueue_head(&dev_data->write_waitq);
+	mutex_init(&dev_data->io_lock);
 
-	data->ivc_chan = safety_ivc->ivc_chan;
-	dev_data = data;
-	num = MKDEV(tegra_safety_dev_major_number, 0);
+	dev_data->ivc_chan = safety_ivc->ivc_chan[index];
+	safety_dev_data[index] = dev_data;
+	num = MKDEV(tegra_safety_dev_major_number, index);
 
-	ret = cdev_add(&data->cdev, num, 1);
+	ret = cdev_add(&dev_data->cdev, num, 1);
 	if (ret) {
 		dev_err(dev, "safety: unable to add character device\n");
 		goto error;
 	}
 
 	char_dev = device_create(tegra_safety_dev_class, dev, num,
-			NULL, "cmdresp");
+			NULL, "safety%d", index);
 	if (IS_ERR(char_dev)) {
 		dev_err(dev, "safety: could not create device\n");
 		ret = PTR_ERR(char_dev);
 		goto error;
 	}
 
-	dev_info(dev, "safety: cmd-resp character device registered\n");
+	dev_info(dev, "safety: character device %d registered\n", index);
 
 	return ret;
 
 error:
-	tegra_safety_dev_exit(dev);
+	tegra_safety_dev_exit(dev, index);
+	tegra_safety_class_exit(dev);
+
 	return ret;
 }
 
-void tegra_safety_dev_exit(struct device *dev)
+void tegra_safety_dev_exit(struct device *dev, int index)
 {
-	dev_t num = MKDEV(tegra_safety_dev_major_number, 0);
+	struct tegra_safety_dev_data *dev_data = safety_dev_data[index];
+	dev_t num = MKDEV(tegra_safety_dev_major_number, index);
 
 	if (!dev_data)
 		return;
 
 	device_destroy(tegra_safety_dev_class, num);
 	cdev_del(&dev_data->cdev);
-	class_destroy(tegra_safety_dev_class);
-	unregister_chrdev_region(num, DEVICE_COUNT);
-	dev_data = NULL;
-	dev_info(dev, "safety: cmd-resp character device unregistered\n");
+
+	safety_dev_data[index] = NULL;
+
+	if (index == (ivc_chan_count-1))
+		tegra_safety_class_exit(dev);
+
+	dev_info(dev, "safety: character device %d unregistered\n", index);
 }
 
-MODULE_DESCRIPTION("A Character device for safety command response module");
-MODULE_LICENSE("GPL v2");

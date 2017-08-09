@@ -108,6 +108,9 @@ static int gv11b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_PPC_IN_GPC_BASE:
 		ret = proj_ppc_in_gpc_base_v();
 		break;
+	case GPU_LIT_PPC_IN_GPC_SHARED_BASE:
+		ret = proj_ppc_in_gpc_shared_base_v();
+		break;
 	case GPU_LIT_PPC_IN_GPC_STRIDE:
 		ret = proj_ppc_in_gpc_stride_v();
 		break;

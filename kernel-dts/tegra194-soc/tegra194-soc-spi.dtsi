@@ -30,6 +30,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		dmas = <&gpcdma 15>, <&gpcdma 15>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
@@ -49,6 +50,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		dmas = <&gpcdma 16>, <&gpcdma 16>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "osc";
@@ -69,6 +71,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		dmas = <&gpcdma 17>, <&gpcdma 17>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
@@ -89,6 +92,7 @@
 		#size-cells = <0>;
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		dmas = <&gpcdma 5>, <&gpcdma 5>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p";
@@ -110,6 +114,7 @@
 		#size-cells = <0>;
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		dmas = <&gpcdma 6>, <&gpcdma 6>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p";

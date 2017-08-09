@@ -492,6 +492,7 @@
 	bpmp: bpmp {
 		compatible = "nvidia,tegra186-bpmp";
 		iommus = <&smmu TEGRA_SID_BPMP>;
+		dma-coherent;
 		reg = <0x0 0x0d000000 0x0 0x00800000>,
 		      <0x0 0x4004e000 0x0 0x00001000>,
 		      <0x0 0x4004f000 0x0 0x00001000>;
@@ -536,6 +537,7 @@
 			 <&smmu TEGRA_SID_HC_VM5>,
 			 <&smmu TEGRA_SID_HC_VM6>,
 			 <&smmu TEGRA_SID_HC_VM7>;
+		dma-coherent;
 
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -546,6 +548,7 @@
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX0>;
+			dma-coherent;
 			status = "okay";
 		};
 
@@ -553,6 +556,7 @@
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX1>;
+			dma-coherent;
 			status = "okay";
 		};
 
@@ -560,6 +564,7 @@
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX2>;
+			dma-coherent;
 			status = "okay";
 		};
 
@@ -567,6 +572,7 @@
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX3>;
+			dma-coherent;
 			status = "okay";
 		};
 
@@ -574,6 +580,7 @@
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX4>;
+			dma-coherent;
 			status = "okay";
 		};
 
@@ -581,6 +588,7 @@
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX5>;
+			dma-coherent;
 			status = "okay";
 		};
 
@@ -588,6 +596,7 @@
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX6>;
+			dma-coherent;
 			status = "okay";
 		};
 
@@ -595,6 +604,7 @@
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX7>;
+			dma-coherent;
 			status = "okay";
 		};
 
@@ -607,6 +617,7 @@
 			clock-names = "vic";
 
 			iommus = <&smmu TEGRA_SID_VIC>;
+			dma-coherent;
 		};
 
 		nvjpg@15380000 {
@@ -618,6 +629,7 @@
 			clock-names = "nvjpg";
 
 			iommus = <&smmu TEGRA_SID_NVJPG>;
+			dma-coherent;
 		};
 
 		tsec@15500000 {
@@ -628,6 +640,7 @@
 			clock-names = "tsec";
 
 			iommus = <&smmu TEGRA_SID_TSEC>;
+			dma-coherent;
 		};
 
 		tsecb@15100000 {
@@ -638,6 +651,7 @@
 			clock-names = "tsecb";
 
 			iommus = <&smmu TEGRA_SID_TSECB>;
+			dma-coherent;
 		};
 
 		nvdec@15480000 {
@@ -649,6 +663,7 @@
 			clock-names = "nvdec", "kfuse";
 
 			iommus = <&smmu TEGRA_SID_NVDEC>;
+			dma-coherent;
 		};
 
 		nvdec1@15140000 {
@@ -660,6 +675,7 @@
 			clock-names = "nvdec", "kfuse";
 
 			iommus = <&smmu TEGRA_SID_NVDEC1>;
+			dma-coherent;
 		};
 
 		nvenc@154c0000 {
@@ -671,6 +687,7 @@
 			clock-names = "nvenc";
 
 			iommus = <&smmu TEGRA_SID_NVENC>;
+			dma-coherent;
 		};
 
 		nvenc1@15a80000 {
@@ -682,6 +699,7 @@
 			clock-names = "nvenc";
 
 			iommus = <&smmu TEGRA_SID_NVENC1>;
+			dma-coherent;
 		};
 
 		nvdla0: nvdla0@15880000 {
@@ -696,6 +714,7 @@
 			clock-names = "nvdla0", "nvdla0_flcn";
 
 			iommus = <&smmu TEGRA_SID_NVDLA0>;
+			dma-coherent;
 		};
 
 		nvdla1: nvdla1@158c0000 {
@@ -710,6 +729,7 @@
 			clock-names = "nvdla1", "nvdla1_flcn";
 
 			iommus = <&smmu TEGRA_SID_NVDLA1>;
+			dma-coherent;
 		};
 
 		dc_common {
@@ -1163,6 +1183,7 @@
 			reg = <0x0 0x14800000 0x0 0x00010000>;
 			nvidia,isp-falcon-device = <&isp_thi>;
 			iommus = <&smmu TEGRA_SID_ISP>;
+			dma-coherent;
 		};
 
 		isp_thi: isp-thi@14b00000 {
@@ -1175,6 +1196,7 @@
 			clock-names = "isp";
 
 			iommus = <&smmu TEGRA_SID_ISPFALC>;
+			dma-coherent;
 		};
 
 		nvcsi@15a00000 {
@@ -1230,6 +1252,7 @@
 
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_PVA0>;
+			dma-coherent;
 		};
 
 		pva1: pva1 {
@@ -1246,6 +1269,7 @@
 
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_PVA1>;
+			dma-coherent;
 		};
 
 		se@15810000 {
@@ -1258,6 +1282,7 @@
 			clock-names = "se";
 
 			iommus = <&smmu TEGRA_SID_SE>;
+			dma-coherent;
 
 			status = "okay";
 		};
@@ -1272,6 +1297,7 @@
 			clock-names = "se";
 
 			iommus = <&smmu TEGRA_SID_SE1>;
+			dma-coherent;
 
 			status = "okay";
 		};
@@ -1286,6 +1312,7 @@
 			clock-names = "se";
 
 			iommus = <&smmu TEGRA_SID_SE2>;
+			dma-coherent;
 
 			status = "okay";
 		};
@@ -1300,6 +1327,7 @@
 			clock-names = "se";
 
 			iommus = <&smmu TEGRA_SID_SE3>;
+			dma-coherent;
 
 			status = "okay";
 		};
@@ -1346,6 +1374,7 @@
 		#dma-cells = <1>;
 
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 
 		status = "disabled";
 	};
@@ -1562,6 +1591,7 @@
 
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_DEV>;
+		dma-coherent;
 
 		status = "disabled";
 	};
@@ -1576,6 +1606,7 @@
 
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_HOST>;
+		dma-coherent;
 
 		status = "disabled";
 	};

@@ -27,6 +27,7 @@
 	uarta: serial@3100000 {
 		compatible = "nvidia,tegra20-uart";
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		reg = <0x0 0x03100000 0x0 0x10000>;
 		reg-shift = <2>;
 		interrupts = <0 TEGRA194_IRQ_UARTA 0x04>;
@@ -44,6 +45,7 @@
 	uartb: serial@3110000 {
 		compatible = "nvidia,tegra186-hsuart";
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		reg = <0x0 0x03110000 0x0 0x10000>;
 		reg-shift = <2>;
 		interrupts = <0 TEGRA194_IRQ_UARTB 0x04>;
@@ -61,6 +63,7 @@
 	uartc: serial@c280000 {
 		compatible = "nvidia,tegra186-hsuart";
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		reg = <0x0 0xc280000 0x0 0x10000>;
 		reg-shift = <2>;
 		interrupts = <0 TEGRA194_IRQ_UARTC 0x04>;
@@ -78,6 +81,7 @@
 	uartd: serial@3130000 {
 		compatible = "nvidia,tegra186-hsuart";
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		reg = <0x0 0x03130000 0x0 0x10000>;
 		reg-shift = <2>;
 		interrupts = <0 TEGRA194_IRQ_UARTD 0x04>;
@@ -95,6 +99,7 @@
 	uarte: serial@3140000 {
 		compatible = "nvidia,tegra186-hsuart";
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		reg = <0x0 0x03140000 0x0 0x10000>;
 		reg-shift = <2>;
 		interrupts = <0 TEGRA194_IRQ_UARTE 0x04>;
@@ -112,6 +117,7 @@
 	uartf: serial@3150000 {
 		compatible = "nvidia,tegra186-hsuart";
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		reg = <0x0 0x03150000 0x0 0x10000>;
 		reg-shift = <2>;
 		interrupts = <0 TEGRA194_IRQ_UARTF 0x04>;
@@ -129,6 +135,7 @@
 	uartg: serial@c290000 {
 		compatible = "nvidia,tegra186-hsuart";
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
 		reg = <0x0 0xc290000 0x0 0x10000>;
 		reg-shift = <2>;
 		interrupts = <0 TEGRA194_IRQ_UARTG 0x04>;

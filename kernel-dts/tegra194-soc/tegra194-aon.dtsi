@@ -21,6 +21,7 @@
 		compatible = "nvidia,tegra186-aon";
 		status = "okay";
 		iommus = <&smmu TEGRA_SID_AON>;
+		dma-coherent;
 		reg = <0x0 0x0c1a0000 0x0 0x20000>; /* AON shared semaphore */
 		#mbox-cells = <1>;
 		#stream-id-cells = <1>;

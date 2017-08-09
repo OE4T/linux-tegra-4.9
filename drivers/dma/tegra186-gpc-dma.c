@@ -353,6 +353,8 @@ static struct tegra_dma_desc *tegra_dma_desc_alloc(
 	dma_async_tx_descriptor_init(&dma_desc->txd, &tdc->dma_chan);
 	dma_desc->txd.tx_submit = tegra_dma_tx_submit;
 
+	INIT_LIST_HEAD(&dma_desc->tx_list);
+
 	if (prealloc)
 		tegra_dma_desc_put(tdc, dma_desc);
 
@@ -1820,6 +1822,8 @@ static int tegra_dma_probe(struct platform_device *pdev)
 
 	tegra_pd_add_device(&pdev->dev);
 
+	tdma->dma_dev.dev = &pdev->dev;
+
 	INIT_LIST_HEAD(&tdma->dma_dev.channels);
 	for (i = 0; i < cdata->nr_channels; i++) {
 		struct tegra_dma_channel *tdc = &tdma->channels[i];
@@ -1876,7 +1880,6 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	dma_cap_set(DMA_MEMCPY, tdma->dma_dev.cap_mask);
 	dma_cap_set(DMA_MEMSET, tdma->dma_dev.cap_mask);
 
-	tdma->dma_dev.dev = &pdev->dev;
 	/*
 	 * Only word aligned transfers are supported. Set the copy
 	 * alignment shift.

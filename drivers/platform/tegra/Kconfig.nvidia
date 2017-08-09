@@ -65,3 +65,13 @@ config TEGRA_PTP_NOTIFIER
 	tristate "Enable PTP Notifier"
 	depends on ARCH_TEGRA_18x_SOC
 	default y if EQOS
+
+config TEGRA_SAFETY_SCE
+	tristate "Enable CCPLEX-SCE communication Driver for Safety"
+	depends on ARCH_TEGRA_18x_SOC
+	select TEGRA_IVC
+	select TEGRA_HSP
+	help
+	  This enables communication between CCPLEX and SCE over IVC channel.
+	  This also provides a userspace command response interface as
+	  character device which will be used by other safety modules.

@@ -39,3 +39,5 @@ obj-$(CONFIG_TEGRA_PTP_NOTIFIER) += ptp-notifier.o
 obj-$(CONFIG_DENVER_CPU) += denver-knobs.o
 obj-$(CONFIG_DENVER_DEBUG)+= denver-hardwood.o
 obj-$(CONFIG_DENVER_MCA) += denver_mca.o
+obj-$(CONFIG_TEGRA_SAFETY_SCE) += tegra-safety-ivc.o
+obj-$(CONFIG_TEGRA_SAFETY_SCE) += tegra-safety-dev.o

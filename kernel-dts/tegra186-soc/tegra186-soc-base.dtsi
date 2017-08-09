@@ -1327,6 +1327,8 @@
 			      0 107 0x04>;
 		#dma-cells = <1>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		nvidia,preallocated-descs = <32>;
+		nvidia,preallocate-sg = <32>;
 		status = "disabled";
 	};
 

@@ -366,6 +366,7 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 							pbdma_id,
 							f->pbdma_map[pbdma_id]);
 						found_pbdma_for_runlist = true;
+						break;
 					}
 				}
 

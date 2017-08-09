@@ -111,9 +111,13 @@ static int tegra_machine_driver_probe(struct platform_device *);
 static void dai_link_setup(struct platform_device *);
 static int tegra_machine_sfc_init(struct snd_soc_pcm_runtime *);
 static int tegra_machine_ext_codec_init(struct snd_soc_pcm_runtime *);
+
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 static int tegra_machine_compr_set_params(struct snd_compr_stream *);
 static void tegra_machine_compr_shutdown(struct snd_compr_stream *);
 static int tegra_machine_compr_startup(struct snd_compr_stream *);
+#endif
+
 static void tegra_machine_pcm_shutdown(struct snd_pcm_substream *);
 static int tegra_machine_pcm_startup(struct snd_pcm_substream *);
 static void tegra_machine_pcm_shutdown(struct snd_pcm_substream *);
@@ -292,6 +296,7 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("n Headphone", NULL),
 	SND_SOC_DAPM_HP("o Headphone", NULL),
 	SND_SOC_DAPM_HP("e Headphone", NULL),
+	SND_SOC_DAPM_HP("s Headphone", NULL),
 
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
 	SND_SOC_DAPM_MIC("x Mic", NULL),
@@ -305,6 +310,7 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("c Mic", NULL),
 	SND_SOC_DAPM_MIC("d Mic", NULL),
 	SND_SOC_DAPM_MIC("e Mic", NULL),
+	SND_SOC_DAPM_MIC("s Mic", NULL),
 };
 
 static const struct snd_soc_dapm_route tegra_machine_audio_map[] = {
@@ -902,6 +908,7 @@ static int tegra_machine_dspk_init(struct snd_soc_pcm_runtime *rtd)
 	return err;
 }
 
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 static int tegra_machine_compr_startup(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
@@ -912,6 +919,7 @@ static int tegra_machine_compr_startup(struct snd_compr_stream *cstream)
 
 	return 0;
 }
+
 static void tegra_machine_compr_shutdown(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
@@ -958,6 +966,7 @@ static int tegra_machine_compr_set_params(struct snd_compr_stream *cstream)
 
 	return 0;
 }
+#endif
 
 static int tegra_machine_ext_codec_init(struct snd_soc_pcm_runtime *rtd)
 {

@@ -2989,4 +2989,9 @@
 		compatible = "nvidia,tegra210-pmc-blink-pwm";
 		status = "disabled";
 	};
+
+	nvpmodel {
+		compatible = "nvidia,nvpmodel";
+		status = "okay";
+	};
 };

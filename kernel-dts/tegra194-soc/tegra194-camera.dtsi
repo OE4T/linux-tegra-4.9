@@ -51,9 +51,6 @@
 	};
 
 	camera-ivc-channels {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		echo@0 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
 			nvidia,service = "echo";
@@ -78,7 +75,9 @@
 			nvidia,version = <0>;
 			nvidia,group = <1>;
 			nvidia,frame-count = <1>;
-			nvidia,frame-size = <384>;
+			nvidia,frame-size = <8192>;
+			nvidia,ivc-timeout = <50>;
+			nvidia,test-timeout = <5000>;
 		};
 		ivccontrol@3 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";

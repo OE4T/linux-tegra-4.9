@@ -802,19 +802,6 @@ config CPULOAD_MONITOR
 	  Publish cpu load measured in sysfs, to be used by user space cpu
 	  frequency controllers.
 
-config EQOS_APE_HWDEP
-	tristate "EQOS APE HWDEO Driver"
-	default n
-	depends on TEGRA_NVADSP
-	help
-	Driver provides mechanism to synchronize EAVB and APE clock.
-	This driver copies the EAVB time stamp on APE time registers
-	to synchroniza the initial phase offset. It calculates the
-	frequency offset between the two clocks  by taking subsequent
-	snapshots of the clock and taking the difference. Based on the
-	calculated frequency offset, the pll_a clock (parent of APE clock)
-	frequency is adjusted.
-
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

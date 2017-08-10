@@ -70,6 +70,39 @@
 				prod = <0 0xC0 0x01F1F000 0x01F1F000
 					0 0xC4 0x01F1F000 0x01F1F000>;
 			};
+			i2s4a_uart2_prod {
+				status = "disabled";
+				nvidia,prod-boot-init;
+				prod = <0 0x258 0x01F1F000 0x01F1F000 // I2S4A
+					0 0x25C 0x01F1F000 0x01F1F000
+					0 0x260 0x01F1F000 0x01F1F000
+					0 0x264 0x01F1F000 0x01F1F000>;
+			};
+			dap4_prod {
+				nvidia,prod-boot-init;
+				prod = <0 0xA0 0x01F1F000 0x01616000 // I2S4B
+					0 0xA4 0x01F1F000 0x01616000
+					0 0xA8 0x01F1F000 0x01616000
+					0 0xAC 0x01F1F000 0x01616000>;
+			};
+			gpio_pe6_7_prod {
+				nvidia,prod-boot-init;
+				prod = <0 0xF4 0x01F1F000 0x01F1F000 // I2S5A
+					0 0xF8 0x01F1F000 0x01F1F000>;
+			};
+			spdif_prod {
+				nvidia,prod-boot-init;
+				prod = <0 0x1FC 0x01F1F000 0x01818000 // SPDIF
+					0 0x1F8 0x01F1F000 0x01818000>;
+			};
+			spdif_uart2_bt_prod {
+				status = "disabled";
+				nvidia,prod-boot-init;
+				prod = <0 0x260 0x01F1F000 0x01818000
+					0 0x264 0x01F1F000 0x01818000
+					0 0x18 0x01F1F000 0x01818000
+					0 0x28 0x01F1F000 0x01818000>;
+			};
 		};
 	};
 

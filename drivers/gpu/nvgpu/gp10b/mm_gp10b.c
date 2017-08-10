@@ -285,13 +285,13 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 
 	pte_dbg(g, attrs,
 		"vm=%s "
-		"PTE: i=%-4u size=%-2u offs=%-4u | "
+		"PTE: i=%-4u size=%-2u | "
 		"GPU %#-12llx  phys %#-12llx "
 		"pgsz: %3dkb perm=%-2s kind=%#02x APT=%-6s %c%c%c%c%c "
 		"ctag=0x%08x "
 		"[0x%08x, 0x%08x]",
 		vm->name,
-		pd_idx, l->entry_size, pd_offset,
+		pd_idx, l->entry_size,
 		virt_addr, phys_addr,
 		page_size >> 10,
 		nvgpu_gmmu_perm_str(attrs->rw_flag),

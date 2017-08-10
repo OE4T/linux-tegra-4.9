@@ -34,3 +34,4 @@ obj-$(CONFIG_CPU_IDLE) += cpuidle/
 obj-$(CONFIG_TEGRA186_AHC) += misc/tegra186-ahc/
 obj-y += tty/
 obj-y += input/
+obj-$(CONFIG_NVPMODEL_EMC)      += nvpmodel/

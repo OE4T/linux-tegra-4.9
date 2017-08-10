@@ -169,6 +169,11 @@ M:	Manoj Chourasia <mchourasia@nvidia.com>
 S:	Supported
 F:	drivers/staging/mttcan/*
 
+HV_SECCAN
+M:	Yong Zhang <yongz@nvidia.com>
+S:	Supported
+F:	drivers/net/can/nvsec/*
+
 PLATFORM
 M:	Mallikarjun Kasoju <mkasoju@nvidia.com>
 M:	Laxman Dewangan <ldewangan@nvidia.com>

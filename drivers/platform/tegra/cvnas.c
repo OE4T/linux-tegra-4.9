@@ -206,7 +206,7 @@ static int cvsram_ecc_err_inject(struct seq_file *s, void *data)
 				CVNAS_EC_MERR_ENABLE_OFFSET, val);
 	}
 	for (i = 0; i < dev->nslices; i++) {
-		nvcvsram_writel(dev, CVSRAM_EC_MERR_ENABLE, i,
+		nvcvsram_writel(dev, i, CVSRAM_EC_MERR_ENABLE,
 					CVSRAM_EC_MERR_ENABLE_OFFSET);
 		if (cvnas_debug) {
 			val = nvcvreg_readl(dev, CVSRAM_EC_MERR_ENABLE_OFFSET);
@@ -223,7 +223,7 @@ static int cvsram_ecc_err_inject(struct seq_file *s, void *data)
 				CVNAS_EC_MERR_UNLOCK_OFFSET, val);
 	}
 	for (i = 0; i < dev->nslices; i++) {
-		nvcvsram_writel(dev, CVSRAM_EC_MERR_UNLOCK_INIT, i,
+		nvcvsram_writel(dev, i, CVSRAM_EC_MERR_UNLOCK_INIT,
 					CVSRAM_EC_MERR_UNLOCK_OFFSET);
 		if (cvnas_debug) {
 			val = nvcvreg_readl(dev, CVSRAM_EC_MERR_UNLOCK_OFFSET);
@@ -239,7 +239,7 @@ static int cvsram_ecc_err_inject(struct seq_file *s, void *data)
 				CVNAS_EC_MERR_FORCE_OFFSET, val);
 	}
 	for (i = 0; i < dev->nslices; i++) {
-		nvcvsram_writel(dev, CVSRAM_EC_MERR_ECC_INJECT, i,
+		nvcvsram_writel(dev, i, CVSRAM_EC_MERR_ECC_INJECT,
 					CVSRAM_EC_MERR_FORCE_OFFSET);
 		if (cvnas_debug) {
 			val = nvcvreg_readl(dev, CVSRAM_EC_MERR_FORCE_OFFSET);
@@ -255,7 +255,7 @@ static int cvsram_ecc_err_inject(struct seq_file *s, void *data)
 				CVNAS_EC_MERR_UNLOCK_OFFSET, val);
 	}
 	for (i = 0; i < dev->nslices; i++) {
-		nvcvsram_writel(dev, CVSRAM_EC_MERR_UNLOCK_FINISH, i,
+		nvcvsram_writel(dev, i, CVSRAM_EC_MERR_UNLOCK_FINISH,
 					CVSRAM_EC_MERR_UNLOCK_OFFSET);
 		if (cvnas_debug) {
 			val = nvcvreg_readl(dev, CVSRAM_EC_MERR_UNLOCK_OFFSET);
@@ -382,7 +382,7 @@ static int nvcvnas_power_on(struct cvnas_device *cvnas_dev)
 	pr_info("initializing cvsram FCMs\n");
 	for (i = 0; i < ARRAY_SIZE(fcm_upg_seq); i++) {
 		for (j = 0; j < cvnas_dev->nslices; j++) {
-			nvcvsram_writel(cvnas_dev, fcm_upg_seq[i], j,
+			nvcvsram_writel(cvnas_dev, j, fcm_upg_seq[i],
 					CVSRAM_PWR_CTRL_OFFSET);
 			if (cvnas_debug) {
 				u32 val = nvcvsram_readl(cvnas_dev, j,
@@ -425,7 +425,7 @@ static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 	/* FCM low power mode */
 	for (i = 0; i < ARRAY_SIZE(fcm_pg_seq); i++) {
 		for (j = 0; j < cvnas_dev->nslices; j++) {
-			nvcvsram_writel(cvnas_dev, fcm_pg_seq[i], j,
+			nvcvsram_writel(cvnas_dev, j, fcm_pg_seq[i],
 					CVSRAM_PWR_CTRL_OFFSET);
 			if (cvnas_debug) {
 				val = nvcvsram_readl(cvnas_dev, j,

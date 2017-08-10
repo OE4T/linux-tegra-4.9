@@ -32,7 +32,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <dt-bindings/sound/tas2552.h>
-#include "../codecs/rt5659.h"
+#include "rt5659.h"
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_machine_alt_t18x.h"

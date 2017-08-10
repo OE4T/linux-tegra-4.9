@@ -62,6 +62,9 @@
 #if AKM_NVI_MPU_SUPPORT
 #include <linux/mpu_iio.h>
 #endif /* AKM_NVI_MPU_SUPPORT */
+#ifdef ENABLE_TRACE
+#include <trace/events/nvs_sensors.h>
+#endif // ENABLE_TRACE
 
 #define AKM_DRIVER_VERSION		(336)
 #define AKM_VENDOR			"AsahiKASEI"
@@ -562,6 +565,9 @@ static int akm_read(struct akm_state *st, s64 ts)
 	u8 data[10];
 	unsigned int i;
 	int ret;
+#ifdef ENABLE_TRACE
+	int cookie;
+#endif // ENABLE_TRACE
 
 	ret = akm_i2c_rd(st, st->hal->reg_start_rd, 10, data);
 	if (ret)
@@ -571,7 +577,14 @@ static int akm_read(struct akm_state *st, s64 ts)
 	if (ret > 0) {
 		i = st->hal->reg_st1 - st->hal->reg_start_rd + 1;
 		akm_calc(st, (s16 *)&data[i], false, st->matrix_en);
+#ifdef ENABLE_TRACE
+		cookie = COOKIE(SENSOR_TYPE_MAGNETIC_FIELD, ts);
+		trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 		st->nvs->handler(st->nvs_st, &st->magn, ts);
+#ifdef ENABLE_TRACE
+		trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 	}
 	return ret;
 }
@@ -583,6 +596,9 @@ static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 	bool be = false;
 	unsigned int i;
 	int ret;
+#ifdef ENABLE_TRACE
+	int cookie;
+#endif // ENABLE_TRACE
 
 	if (ts < 0 || !len)
 		/* error - just drop */
@@ -607,6 +623,10 @@ static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 				st->magn[AXIS_N] = be16_to_cpup((u16 *)data);
 			else
 				st->magn[AXIS_N] = le16_to_cpup((u16 *)data);
+#ifdef ENABLE_TRACE
+			cookie = COOKIE(SENSOR_TYPE_MAGNETIC_FIELD, ts);
+			trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 			return;
 		}
 
@@ -622,7 +642,14 @@ static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 		}
 		if (ret > 0) {
 			akm_calc(st, (s16 *)&data[i], be, st->matrix_en);
+#ifdef ENABLE_TRACE
+			cookie = COOKIE(SENSOR_TYPE_MAGNETIC_FIELD, ts);
+			trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 			st->nvs->handler(st->nvs_st, &st->magn, ts);
+#ifdef ENABLE_TRACE
+			trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 		}
 	}
 }

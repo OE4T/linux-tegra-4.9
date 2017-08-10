@@ -5,6 +5,10 @@
 # When adding new entries keep the list in alphabetical order
 
 obj-$(CONFIG_NVI_AK89XX) += nvi-ak89xx.o
+CFLAGS_nvi_ak89xx.o     += -DENABLE_TRACE
+ifneq (,$(filter $(CONFIG_NVI_AK89XX),m))
+CFLAGS_nvi_ak89xx.o     += -DCREATE_TRACE_POINTS
+endif
 ifdef CONFIG_NVI_MPU
 	CFLAGS_nvi_ak89xx.o += -DAKM_NVI_MPU_SUPPORT=1
 endif

@@ -314,7 +314,7 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 			 */
 			BUG_ON(len & ~(PAGE_MASK));
 			handle->ivm_id = ((u64)h->vm_id << NVMAP_IVM_IVMID_SHIFT);
-			handle->ivm_id |= (((offs >> ffs(NVMAP_IVM_ALIGNMENT)) &
+			handle->ivm_id |= (((offs >> (ffs(NVMAP_IVM_ALIGNMENT) - 1)) &
 					 ((1ULL << NVMAP_IVM_OFFSET_WIDTH) - 1)) <<
 					  NVMAP_IVM_OFFSET_SHIFT);
 			handle->ivm_id |= (len >> PAGE_SHIFT);

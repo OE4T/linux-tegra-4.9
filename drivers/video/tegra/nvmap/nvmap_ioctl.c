@@ -560,7 +560,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		 */
 		offs = ((op.ivm_id &
 		       ~((u64)NVMAP_IVM_IVMID_MASK << NVMAP_IVM_IVMID_SHIFT)) >>
-			NVMAP_IVM_LENGTH_WIDTH) << ffs(NVMAP_IVM_ALIGNMENT);
+			NVMAP_IVM_LENGTH_WIDTH) << (ffs(NVMAP_IVM_ALIGNMENT) - 1);
 		size = (op.ivm_id &
 			((1ULL << NVMAP_IVM_LENGTH_WIDTH) - 1)) << PAGE_SHIFT;
 		peer = (op.ivm_id >> NVMAP_IVM_IVMID_SHIFT);

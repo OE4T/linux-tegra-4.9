@@ -132,6 +132,15 @@
 #if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 	xusb_padctl@3520000 {
 		status = "okay";
+		pinctrl-0 = <&vbus_en0_default_state>;
+		pinctrl-1 = <&vbus_en1_default_state>;
+		pinctrl-2 = <&vbus_en0_sfio_tristate_state>;
+		pinctrl-3 = <&vbus_en1_sfio_tristate_state>;
+		pinctrl-4 = <&vbus_en0_sfio_passthrough_state>;
+		pinctrl-5 = <&vbus_en1_sfio_passthrough_state>;
+		pinctrl-names = "vbus_en0_default", "vbus_en1_default",
+			"vbus_en0_sfio_tristate", "vbus_en1_sfio_tristate",
+			"vbus_en0_sfio_passthrough", "vbus_en1_sfio_passthrough";
 
 		pads {
 			usb2 {
@@ -173,11 +182,13 @@
 				status = "okay";
 				mode = "otg";
 				vbus-supply = <&vdd_usb0_5v>;
+				nvidia,oc-pin = <0>;
 			};
 			usb2-1 {
 				status = "okay";
 				mode = "host";
 				vbus-supply = <&vdd_usb1_5v>;
+				nvidia,oc-pin = <1>;
 			};
 			usb3-1 {
 				nvidia,usb2-companion = <1>;

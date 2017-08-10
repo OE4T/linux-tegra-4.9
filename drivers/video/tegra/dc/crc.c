@@ -115,8 +115,11 @@ static int tegra_dc_ring_buf_peek(struct tegra_dc_ring_buf *buf, u16 idx,
 {
 	size_t bytes = _get_bytes_per_ele(buf);
 
-	if (buf->size == 0 || idx >= buf->capacity)
+	if (idx >= buf->capacity)
 		return -EINVAL;
+
+	if (buf->size == 0)
+		return -EAGAIN;
 
 	*in_buf_ptr = (buf->data + idx * bytes);
 
@@ -560,19 +563,49 @@ static int _scan_crc_buf(struct tegra_dc *dc, u16 start_idx, u16 end_idx,
 	return -EAGAIN;
 }
 
+/* When flip_id is set to U64_MAX, retrieve the CRC of the most recently
+ * queued flip. If there are no such flips in the flip queue, return the CRC
+ * of the most recently matched flip. If no flips have been scanned out yet,
+ * return an error to the user context
+ */
+static int _get_special_case_flip_id(struct tegra_dc *dc, u64 *flip_id)
+{
+	int ret = 0;
+	struct tegra_dc_ring_buf *flip_buf = &dc->flip_buf;
+	struct tegra_dc_flip_buf_ele *flip_ele = NULL;
+
+	mutex_lock(&flip_buf->lock);
+	ret = tegra_dc_ring_buf_peek(flip_buf,
+				     prev_idx(flip_buf, flip_buf->head),
+				     (char **)&flip_ele);
+	mutex_unlock(&flip_buf->lock);
+
+	if (ret) {
+		mutex_lock(&dc->crc_buf.lock);
+		ret = _find_mrm(dc, flip_id, NULL);
+		mutex_unlock(&dc->crc_buf.lock);
+	} else {
+		*flip_id = flip_ele->id;
+	}
+
+	return ret;
+}
+
 static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 			    struct tegra_dc_crc_buf_ele *crc_ele)
 {
-	int ret = -EAGAIN;
+	int ret = 0, ret_loop = -EAGAIN;
 	u16 start_idx, end_idx;
 	struct tegra_dc_ring_buf *buf = &dc->crc_buf;
 
-	mutex_lock(&buf->lock);
-
 	if (flip_id == U64_MAX) {
-		ret = _find_mrm(dc, NULL, crc_ele);
-		goto done;
+		/* On success, this will overwrite flip_id to apt value */
+		ret = _get_special_case_flip_id(dc, &flip_id);
+		if (ret)
+			return ret;
 	}
+
+	mutex_lock(&buf->lock);
 
 	if (_is_flip_out_of_bounds(dc, flip_id)) {
 		ret = -ENODATA;
@@ -585,10 +618,13 @@ static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 	end_idx = prev_idx(buf, buf->tail);
 	start_idx = prev_idx(buf, buf->head);
 
-	while (ret == -EAGAIN) {
-		ret = _scan_crc_buf(dc, start_idx, end_idx, flip_id, crc_ele);
-		if (!ret || ret != -EAGAIN)
+	while (ret_loop == -EAGAIN) {
+		ret_loop = _scan_crc_buf(dc, start_idx, end_idx, flip_id,
+					 crc_ele);
+		if (!ret_loop || ret_loop != -EAGAIN) {
+			ret = ret_loop;
 			goto done;
+		}
 
 		/* Control reaching here implies the flip being requested is yet
 		 * to be matched at a certain frame end interrupt, hence wait on

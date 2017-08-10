@@ -1491,9 +1491,11 @@ struct tegra_dc_ext_crc_conf {
  *              separate @conf object for each region
  * @conf      - Pointer to an array of configuration data structures
  *              tegra_dc_ext_crc_conf
- * @flip_id   - ID the flip for which CRC GET request is issued.
- *              Set to 0xFFFFFFFFFFFFFFFF to retrieve the CRC of the most
- *              recent frame.
+ * @flip_id   - Flip ID for which CRC GET request is issued.
+ *              If set to U64_MAX, the get IOCTL shall return the CRCs
+ *              corresponding to the most recently programmed flip over the
+ *              IOCTL interface, or return -EAGAIN if no flips have been
+ *              programmed yet.
  *              flip_id is only valid for GET IOCTL, and a don't care for
  *              the rest
  * @reserved  - Easier way to extend the data structure

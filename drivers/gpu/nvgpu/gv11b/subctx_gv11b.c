@@ -26,7 +26,6 @@
 
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 
 static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
 				struct nvgpu_mem *inst_block);
@@ -143,6 +142,7 @@ void gv11b_subctx_commit_pdb(struct channel_gk20a *c,
 				struct nvgpu_mem *inst_block)
 {
 	struct gk20a *g = c->g;
+	struct fifo_gk20a *f = &g->fifo;
 	struct vm_gk20a *vm = c->vm;
 	u32 lo, hi;
 	u32 subctx_id = 0;
@@ -164,19 +164,10 @@ void gv11b_subctx_commit_pdb(struct channel_gk20a *c,
 		ram_in_sc_page_dir_base_lo_0_f(pdb_addr_lo);
 	nvgpu_log(g, gpu_dbg_info, " pdb info lo %x hi %x",
 					format_word, pdb_addr_hi);
-	for (subctx_id = 0; subctx_id < gv11b_get_max_subctx_count(g);
-							subctx_id++) {
+	for (subctx_id = 0; subctx_id < f->t19x.max_subctx_count; subctx_id++) {
 		lo = ram_in_sc_page_dir_base_vol_0_w() + (4 * subctx_id);
 		hi = ram_in_sc_page_dir_base_hi_0_w() + (4 * subctx_id);
 		nvgpu_mem_wr32(g, inst_block, lo, format_word);
 		nvgpu_mem_wr32(g, inst_block, hi, pdb_addr_hi);
 	}
-}
-
-
-u32 gv11b_get_max_subctx_count(struct gk20a *g)
-{
-	u32 data = gk20a_readl(g, gr_pri_fe_chip_def_info_r());
-
-	return gr_pri_fe_chip_def_info_max_veid_count_v(data);
 }

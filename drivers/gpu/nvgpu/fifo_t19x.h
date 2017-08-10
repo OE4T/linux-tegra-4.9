@@ -16,6 +16,7 @@
 
 struct fifo_t19x {
 	void __iomem *usermode_regs;
+	u32 max_subctx_count;
 };
 
 #endif

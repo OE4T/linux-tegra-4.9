@@ -44,7 +44,7 @@ static int gv11b_tsg_ioctl_bind_channel_ex(struct gk20a *g,
 	ch = gk20a_get_channel_from_file(arg->channel_fd);
 	if (!ch)
 		return -EINVAL;
-	if (arg->subcontext_id < gv11b_get_max_subctx_count(g))
+	if (arg->subcontext_id < g->fifo.t19x.max_subctx_count)
 		ch->t19x.subctx_id = arg->subcontext_id;
 	else
 		return -EINVAL;

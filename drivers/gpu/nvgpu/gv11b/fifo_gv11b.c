@@ -40,6 +40,7 @@
 #include <nvgpu/hw/gv11b/hw_top_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 
 #include "fifo_gv11b.h"
 #include "subctx_gv11b.h"
@@ -1717,16 +1718,20 @@ int gv11b_init_fifo_setup_hw(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 
 	f->t19x.usermode_regs = g->regs + usermode_cfg0_r();
+	f->t19x.max_subctx_count =
+		gr_pri_fe_chip_def_info_max_veid_count_v(
+			gk20a_readl(g, gr_pri_fe_chip_def_info_r()));
 	return 0;
 }
 
 static u32 gv11b_mmu_fault_id_to_gr_veid(struct gk20a *g, u32 gr_eng_fault_id,
 				 u32 mmu_fault_id)
 {
+	struct fifo_gk20a *f = &g->fifo;
 	u32 num_subctx;
 	u32 veid = FIFO_INVAL_VEID;
 
-	num_subctx = gv11b_get_max_subctx_count(g);
+	num_subctx = f->t19x.max_subctx_count;
 
 	if (mmu_fault_id >= gr_eng_fault_id &&
 			mmu_fault_id < (gr_eng_fault_id + num_subctx))

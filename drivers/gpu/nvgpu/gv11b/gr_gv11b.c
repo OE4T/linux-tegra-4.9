@@ -2021,7 +2021,7 @@ static void gv11b_write_bundle_veid_state(struct gk20a *g, u32 index)
 	u32 j;
 	u32  num_subctx, err = 0;
 
-	num_subctx = gv11b_get_max_subctx_count(g);
+	num_subctx = g->fifo.t19x.max_subctx_count;
 
 	for (j = 0; j < num_subctx; j++) {
 

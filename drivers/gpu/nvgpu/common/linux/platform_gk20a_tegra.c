@@ -314,15 +314,12 @@ static void gm20b_tegra_postscale(struct device *dev, unsigned long freq)
 		emc_rate = tegra_bwmgr_get_max_emc_rate();
 
 	emc_params->freq_last_set = emc_rate;
-	nvgpu_mutex_acquire(&platform->railgate_lock);
 	if (platform->is_railgated && platform->is_railgated(dev))
-		goto done;
+		return;
 
 	tegra_bwmgr_set_emc(emc_params->bwmgr_cl, emc_rate,
 			TEGRA_BWMGR_SET_EMC_FLOOR);
 
-done:
-	nvgpu_mutex_release(&platform->railgate_lock);
 }
 
 #endif

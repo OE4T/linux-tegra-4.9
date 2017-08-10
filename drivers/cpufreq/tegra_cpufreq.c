@@ -1024,9 +1024,12 @@ static int tegra_boundaries_policy_notifier(struct notifier_block *nb,
 		qmax = pm_qos_read_max_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
 	}
 
-	/* Clamp pmqos to stay within sysfs limits */
+	/*
+	 * Clamp pmqos to stay within sysfs upper boundary
+	 * but allow pmqos cap override sysfs min freq settings
+	 */
 	qmin = min(qmin, policy->user_policy.max);
-	qmax = max(qmax, policy->user_policy.min);
+	qmax = min(qmax, policy->user_policy.max);
 
 	/* Apply pmqos limits on top of existing limits */
 	policy->min = max(policy->min, qmin);

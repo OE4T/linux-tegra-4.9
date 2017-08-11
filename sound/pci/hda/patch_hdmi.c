@@ -68,7 +68,7 @@ MODULE_PARM_DESC(static_hdmi_pcm, "Don't restrict PCM parameters per ELD info");
 #define is_tegra21x(codec)  ((codec)->core.vendor_id == 0x10de0029)
 #define is_tegra_18x_sor0(codec)  ((codec)->core.vendor_id == 0x10de002d)
 #define is_tegra_18x_sor1(codec)  ((codec)->core.vendor_id == 0x10de002e)
-#define get_sor_num(codec)  (is_tegra_18x_sor0(codec) ? 0 : 1)
+#define get_dev_id(codec)  ((codec)->core.vendor_id & 0xffff)
 
 struct hdmi_spec_per_cvt {
 	hda_nid_t cvt_nid;
@@ -1178,13 +1178,11 @@ static int hdmi_pcm_open(struct hda_pcm_stream *hinfo,
 	if ((is_tegra21x(codec) || is_tegra_18x_sor0(codec)
 		|| is_tegra_18x_sor1(codec)) &&
 		(!eld->monitor_present || !eld->info.lpcm_sad_ready)) {
-		int sor_num;
-
-		sor_num = get_sor_num(codec);
 
 		hinfo->pcm_open_retry_count++;
 		if (!eld->monitor_present) {
-			if (tegra_hdmi_setup_hda_presence(sor_num) < 0) {
+			if (tegra_hdmi_setup_hda_presence(
+						get_dev_id(codec)) < 0) {
 				/* Throttle log after 5 retries */
 				if (hinfo->pcm_open_retry_count < 5) {
 					per_cvt->assigned = 0;
@@ -1821,10 +1819,8 @@ static int generic_hdmi_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 #if IS_ENABLED(CONFIG_SND_HDA_TEGRA)
 	if ((is_tegra21x(codec) || is_tegra_18x_sor0(codec)
 		|| is_tegra_18x_sor1(codec))) {
-		int sor_num, stripe;
+		int stripe;
 		int err = 0;
-
-		sor_num = get_sor_num(codec);
 
 		/* For multi SOR, program SDO lines to support required bw */
 		stripe = snd_hdac_get_stream_stripe_ctl(&codec->bus->core,
@@ -1836,12 +1832,15 @@ static int generic_hdmi_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 
 		if ((substream->runtime->channels == 2) &&
 			is_pcm_format(format))
-			tegra_hdmi_audio_null_sample_inject(true, sor_num);
+			tegra_hdmi_audio_null_sample_inject(true,
+							get_dev_id(codec));
 		else
-			tegra_hdmi_audio_null_sample_inject(false, sor_num);
+			tegra_hdmi_audio_null_sample_inject(false,
+							get_dev_id(codec));
 		/* Set hdmi:audio freq and source selection*/
 		err = tegra_hdmi_setup_audio_freq_source(
-				substream->runtime->rate, HDA, sor_num);
+					substream->runtime->rate, HDA,
+					get_dev_id(codec));
 		if ( err < 0 ) {
 			mutex_unlock(&per_pin->lock);
 			mutex_unlock(&spec->pcm_lock);
@@ -1886,7 +1885,6 @@ static int hdmi_pcm_close(struct hda_pcm_stream *hinfo,
 	struct hdmi_spec_per_cvt *per_cvt;
 	struct hdmi_spec_per_pin *per_pin;
 	int pinctl;
-	int sor_num;
 
 	if (hinfo->nid) {
 		pcm_idx = hinfo_to_pcm_index(codec, hinfo);
@@ -1899,8 +1897,8 @@ static int hdmi_pcm_close(struct hda_pcm_stream *hinfo,
 			((codec)->core.vendor_id == 0x10de0028) ||
 			((codec)->core.vendor_id == 0x10de0029) ||
 			((codec)->core.vendor_id == 0x10de002a)) {
-			sor_num = get_sor_num(codec);
-			tegra_hdmi_audio_null_sample_inject(false, sor_num);
+			tegra_hdmi_audio_null_sample_inject(false,
+							get_dev_id(codec));
 		}
 #endif
 		if (snd_BUG_ON(cvt_idx < 0))

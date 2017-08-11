@@ -164,14 +164,12 @@ static struct tegra210_mc_client_info tegra210_pg_mc_info[] = {
 			[1] = MC_CLIENT_LAST,
 		},
 	},
-#ifdef CONFIG_ARCH_TEGRA_VIC
 	[TEGRA210_POWER_DOMAIN_VIC] = {
 		.hot_reset_clients = {
 			[0] = MC_CLIENT_VIC,
 			[1] = MC_CLIENT_LAST,
 		},
 	},
-#endif
 	[TEGRA210_POWER_DOMAIN_NVDEC] = {
 		.hot_reset_clients = {
 			[0] = MC_CLIENT_NVDEC,
@@ -402,7 +400,6 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 		.reset_id = { TEGRA210_CLK_XUSB_HOST },
 		.reset_id_num = 1,
 	},
-#ifdef CONFIG_ARCH_TEGRA_VIC
 	[TEGRA210_POWER_DOMAIN_VIC] = {
 		.name = "vic",
 		.clk_info = {
@@ -419,7 +416,6 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 		.reset_id = { TEGRA210_CLK_VIC03 },
 		.reset_id_num = 1,
 	},
-#endif
 	[TEGRA210_POWER_DOMAIN_NVDEC] = {
 		.name = "nvdec",
 		.clk_info = {

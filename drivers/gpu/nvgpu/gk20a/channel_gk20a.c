@@ -2668,6 +2668,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	g->ops.fifo.userd_gp_put(g, c);
 
+	if ((NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST & flags) &&
+		g->ops.fifo.reschedule_runlist)
+		g->ops.fifo.reschedule_runlist(g, c->runlist_id);
+
 	/* No hw access beyond this point */
 	if (c->deterministic)
 		up_read(&g->deterministic_busy);

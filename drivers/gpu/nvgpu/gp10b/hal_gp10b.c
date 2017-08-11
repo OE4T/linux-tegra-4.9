@@ -386,6 +386,7 @@ static const struct gpu_ops gp10b_ops = {
 		.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val,
 		.preempt_channel = gk20a_fifo_preempt_channel,
 		.preempt_tsg = gk20a_fifo_preempt_tsg,
+		.reschedule_runlist = gk20a_fifo_reschedule_runlist,
 		.update_runlist = gk20a_fifo_update_runlist,
 		.trigger_mmu_fault = gm20b_fifo_trigger_mmu_fault,
 		.get_mmu_fault_info = gp10b_fifo_get_mmu_fault_info,

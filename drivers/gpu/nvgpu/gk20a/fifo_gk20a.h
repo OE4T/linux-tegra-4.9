@@ -250,6 +250,8 @@ int gk20a_fifo_disable_all_engine_activity(struct gk20a *g,
 				bool wait_for_idle);
 u32 gk20a_fifo_engines_on_ch(struct gk20a *g, u32 chid);
 
+int gk20a_fifo_reschedule_runlist(struct gk20a *g, u32 runlist_id);
+
 int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 chid,
 			      bool add, bool wait_for_finish);
 

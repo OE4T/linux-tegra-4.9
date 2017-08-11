@@ -1,7 +1,7 @@
 /*
  * GP10B Graphics
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -108,6 +108,7 @@ int gp10b_init_gpu_characteristics(struct gk20a *g)
 {
 	gk20a_init_gpu_characteristics(g);
 	g->gpu_characteristics.flags |= gp10b_detect_ecc_enabled_units(g);
-
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_RESCHEDULE_RUNLIST;
 	return 0;
 }

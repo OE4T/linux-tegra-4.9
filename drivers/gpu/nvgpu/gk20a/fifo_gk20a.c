@@ -3211,6 +3211,34 @@ end:
 	return ret;
 }
 
+/* trigger host to expire current timeslice and reschedule runlist from front */
+int gk20a_fifo_reschedule_runlist(struct gk20a *g, u32 runlist_id)
+{
+	struct fifo_runlist_info_gk20a *runlist;
+	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
+	u32 mutex_ret;
+	int ret = 0;
+
+	runlist = &g->fifo.runlist_info[runlist_id];
+	if (nvgpu_mutex_tryacquire(&runlist->mutex)) {
+		mutex_ret = nvgpu_pmu_mutex_acquire(
+			&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+
+		gk20a_writel(g, fifo_runlist_r(),
+			gk20a_readl(g, fifo_runlist_r()));
+		gk20a_fifo_runlist_wait_pending(g, runlist_id);
+
+		if (!mutex_ret)
+			nvgpu_pmu_mutex_release(
+				&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_mutex_release(&runlist->mutex);
+	} else {
+		/* someone else is writing fifo_runlist_r so not needed here */
+		ret = -EBUSY;
+	}
+	return ret;
+}
+
 /* add/remove a channel from runlist
    special cases below: runlist->active_channels will NOT be changed.
    (chid == ~0 && !add) means remove all active channels from runlist.

@@ -170,6 +170,7 @@ extern struct dma_map_ops dma_noop_ops;
 
 static inline int valid_dma_direction(int dma_direction)
 {
+	dma_direction &= DMA_NONE;
 	return ((dma_direction == DMA_BIDIRECTIONAL) ||
 		(dma_direction == DMA_TO_DEVICE) ||
 		(dma_direction == DMA_FROM_DEVICE));

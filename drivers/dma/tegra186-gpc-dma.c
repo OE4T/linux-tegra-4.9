@@ -1729,7 +1729,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	int i;
 	const struct tegra_dma_chip_data *cdata = NULL;
 	struct tegra_dma_chip_data *chip_data = NULL;
-	int start_chan_idx;
+	int start_chan_idx = 0;
 	int nr_chans, stream_id;
 	int preallocated_desc = 0, preallocated_sg = 0;
 

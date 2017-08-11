@@ -17,5 +17,4 @@ config PLATFORM_TEGRA
 
 if PLATFORM_TEGRA
 source "drivers/platform/tegra/Kconfig"
-source "drivers/platform/tegra/nvadsp/Kconfig"
 endif

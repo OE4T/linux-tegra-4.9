@@ -21,7 +21,12 @@ obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG_INIT) += tegra_bootloader_debug_init.o
 obj-y					+= tegra_vpr.o
 obj-y					+= smc-calls.o
 
-obj-$(CONFIG_TEGRA_NVADSP)		+= nvadsp/
+# The wildcard hack is necessary for kernel's make clean.
+ifneq ($(wildcard $(srctree)/../nvidia/drivers/platform/tegra/nvadsp/Makefile*),)
+obj-$(CONFIG_TEGRA_NVADSP) += ../../../../nvidia/drivers/platform/tegra/nvadsp/
+endif
+
+
 obj-$(CONFIG_TEGRA_MC) += mc/
 
 ifeq ($(CONFIG_TEGRA_PTM),y)

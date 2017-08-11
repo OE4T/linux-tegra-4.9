@@ -221,3 +221,4 @@ config TEGRA_HV_XHCI_DEBUG
 	  Enable Tegra XHCI Server debugging when runs in virtualization.
 
 trysource "../nvidia/drivers/platform/tegra/Kconfig.nvidia"
+trysource "../nvidia/drivers/platform/tegra/nvadsp/Kconfig.nvidia"

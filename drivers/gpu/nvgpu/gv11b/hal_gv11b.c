@@ -25,7 +25,6 @@
 #include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/mc_gk20a.h"
-#include "gk20a/mm_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
@@ -36,7 +35,6 @@
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
-#include "gm20b/mm_gm20b.h"
 
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/therm_gp10b.h"
@@ -46,7 +44,6 @@
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/fb_gp10b.h"
-#include "gp10b/mm_gp10b.h"
 
 #include "hal_gv11b.h"
 #include "gr_gv11b.h"
@@ -62,8 +59,6 @@
 #include "gv11b_gating_reglist.h"
 #include "regops_gv11b.h"
 #include "subctx_gv11b.h"
-
-#include "common/linux/platform_gk20a_tegra.h"
 
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
@@ -338,31 +333,6 @@ static const struct gpu_ops gv11b_ops = {
 		.max_entries = gk20a_gr_max_entries,
 	},
 #endif /* CONFIG_GK20A_CTXSW_TRACE */
-	.mm = {
-		.support_sparse = gm20b_mm_support_sparse,
-		.gmmu_map = gk20a_locked_gmmu_map,
-		.gmmu_unmap = gk20a_locked_gmmu_unmap,
-		.vm_bind_channel = gk20a_vm_bind_channel,
-		.fb_flush = gk20a_mm_fb_flush,
-		.l2_invalidate = gk20a_mm_l2_invalidate,
-		.l2_flush = gv11b_mm_l2_flush,
-		.cbc_clean = gk20a_mm_cbc_clean,
-		.set_big_page_size = gm20b_mm_set_big_page_size,
-		.get_big_page_sizes = gm20b_mm_get_big_page_sizes,
-		.get_default_big_page_size = gp10b_mm_get_default_big_page_size,
-		.gpu_phys_addr = gv11b_gpu_phys_addr,
-		.get_physical_addr_bits = gp10b_mm_get_physical_addr_bits,
-		.get_mmu_levels = gp10b_mm_get_mmu_levels,
-		.init_pdb = gp10b_mm_init_pdb,
-		.init_mm_setup_hw = gv11b_init_mm_setup_hw,
-		.is_bar1_supported = gv11b_mm_is_bar1_supported,
-		.init_inst_block = gv11b_init_inst_block,
-		.mmu_fault_pending = gv11b_mm_mmu_fault_pending,
-		.init_bar2_vm = gb10b_init_bar2_vm,
-		.init_bar2_mm_hw_setup = gv11b_init_bar2_mm_hw_setup,
-		.remove_bar2_vm = gv11b_mm_remove_bar2_vm,
-		.fault_info_mem_destroy = gv11b_mm_fault_info_mem_destroy,
-	},
 	.therm = {
 		.init_therm_setup_hw = gp10b_init_therm_setup_hw,
 		.elcg_init_idle_filters = gp10b_elcg_init_idle_filters,
@@ -459,7 +429,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->clock_gating = gv11b_ops.clock_gating;
 	gops->fifo = gv11b_ops.fifo;
 	gops->gr_ctx = gv11b_ops.gr_ctx;
-	gops->mm = gv11b_ops.mm;
 	gops->fecs_trace = gv11b_ops.fecs_trace;
 	gops->therm = gv11b_ops.therm;
 	gops->regops = gv11b_ops.regops;
@@ -484,6 +453,7 @@ int gv11b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 
 	gv11b_init_gr(g);
+	gv11b_init_mm(gops);
 	gv11b_init_pmu_ops(g);
 
 	gv11b_init_uncompressed_kind_map();

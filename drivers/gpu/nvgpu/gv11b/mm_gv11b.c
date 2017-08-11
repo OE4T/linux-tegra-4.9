@@ -34,12 +34,12 @@
 
 #define NVGPU_L3_ALLOC_BIT	BIT(36)
 
-bool gv11b_mm_is_bar1_supported(struct gk20a *g)
+static bool gv11b_mm_is_bar1_supported(struct gk20a *g)
 {
 	return false;
 }
 
-void gv11b_init_inst_block(struct nvgpu_mem *inst_block,
+static void gv11b_init_inst_block(struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm, u32 big_page_size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
@@ -53,12 +53,12 @@ void gv11b_init_inst_block(struct nvgpu_mem *inst_block,
 		g->ops.mm.set_big_page_size(g, inst_block, big_page_size);
 }
 
-bool gv11b_mm_mmu_fault_pending(struct gk20a *g)
+static bool gv11b_mm_mmu_fault_pending(struct gk20a *g)
 {
 	return gv11b_fb_mmu_fault_pending(g);
 }
 
-void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
+static void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 {
 	nvgpu_log_fn(g, " ");
 
@@ -174,7 +174,7 @@ static void gv11b_mm_mmu_hw_fault_buf_deinit(struct gk20a *g)
 	}
 }
 
-void gv11b_mm_remove_bar2_vm(struct gk20a *g)
+static void gv11b_mm_remove_bar2_vm(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 
@@ -221,7 +221,7 @@ static int gv11b_mm_mmu_fault_setup_sw(struct gk20a *g)
 	return err;
 }
 
-int gv11b_init_mm_setup_hw(struct gk20a *g)
+static int gv11b_init_mm_setup_hw(struct gk20a *g)
 {
 	int err = 0;
 
@@ -260,7 +260,7 @@ void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate)
  * checking bit 36 of the phsyical address. So if a mapping should allocte lines
  * in the L3 this bit must be set.
  */
-u64 gv11b_gpu_phys_addr(struct gk20a *g,
+static u64 gv11b_gpu_phys_addr(struct gk20a *g,
 			       struct nvgpu_gmmu_attrs *attrs, u64 phys)
 {
 	if (attrs && attrs->t19x_attrs.l3_alloc)
@@ -269,7 +269,7 @@ u64 gv11b_gpu_phys_addr(struct gk20a *g,
 	return phys;
 }
 
-int gv11b_init_bar2_mm_hw_setup(struct gk20a *g)
+static int gv11b_init_bar2_mm_hw_setup(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
@@ -317,4 +317,20 @@ int gv11b_init_bar2_mm_hw_setup(struct gk20a *g)
 
 	nvgpu_err(g, "bar2 bind failed. gpu unable to access memory");
 	return -EBUSY;
+}
+
+void gv11b_init_mm(struct gpu_ops *gops)
+{
+	gp10b_init_mm(gops);
+	gops->mm.gpu_phys_addr = gv11b_gpu_phys_addr;
+	gops->mm.is_bar1_supported = gv11b_mm_is_bar1_supported;
+	gops->mm.init_inst_block = gv11b_init_inst_block;
+	gops->mm.mmu_fault_pending = gv11b_mm_mmu_fault_pending;
+	gops->mm.l2_flush = gv11b_mm_l2_flush;
+	gops->mm.gpu_phys_addr = gv11b_gpu_phys_addr;
+	gops->mm.init_mm_setup_hw = gv11b_init_mm_setup_hw;
+	gops->mm.fault_info_mem_destroy =
+		 gv11b_mm_fault_info_mem_destroy;
+	gops->mm.remove_bar2_vm = gv11b_mm_remove_bar2_vm;
+	gops->mm.init_bar2_mm_hw_setup = gv11b_init_bar2_mm_hw_setup;
 }

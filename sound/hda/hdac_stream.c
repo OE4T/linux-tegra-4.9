@@ -25,7 +25,10 @@ int snd_hdac_get_stream_stripe_ctl(struct hdac_bus *bus,
 	unsigned int rate = runtime->rate;
 	unsigned int bits_per_sample = runtime->sample_bits;
 	int stripe, value, sdo_line;
-	unsigned int max_sdo_lines = bus->max_sdo_lines;
+	int max_sdo_lines;
+
+	/* T_AZA_GCAP_NSDO is 1:2 bitfields in GCAP register */
+	max_sdo_lines = 1 << ((snd_hdac_chip_readl(bus, GCAP) >> 1) & 0x3);
 
 	/* register fields value 0 for 1 SDO, 1 for 2 SDO, 2 for 4 SDO lines */
 	for (stripe = 2; stripe >= 0; stripe--) {

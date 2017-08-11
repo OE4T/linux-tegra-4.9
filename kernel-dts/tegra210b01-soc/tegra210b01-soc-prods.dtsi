@@ -1121,15 +1121,15 @@
 				};
                                prod_c_dp {
                                            prod = <
-                                               0x0000005c 0x0f000f10 0x01000310        // SOR_NV_PDISP_SOR_PLL0_0      27:24=ICHPMP            0x01
+                                               0x0000005c 0x000f0000 0x00050000        // SOR_NV_PDISP_SOR_PLL0_0      27:24=ICHPMP            0x01
                                                                                        //                              11:08=VCOCAP            0x03
                                                                                        //                              04:04=RESISTORSEL       0x01
-                                               0x00000060 0x03000100 0x00000100        // SOR_NV_PDISP_SOR_PLL1_0      25:24=LVDSCM            0x00
+                                               0x00000060 0x00f00100 0x00400100        // SOR_NV_PDISP_SOR_PLL1_0      25:24=LVDSCM            0x00
                                                                                        //                              08:08=TMDS_TERM         0x01
-                                               0x00000068 0x00002000 0x00002000        // SOR_NV_PDISP_SOR_PLL3_0      13:13=PLVVDD_MODE       0x01
                                                0x00000070 0xffffffff 0x00000000        // SOR_NV_PDISP_SOR_LVDS_0
+                                               0x000001c8 0x00400000 0x00400000
+                                               0x000001cc 0xff000000 0x34000000
                                                0x00000180 0x00000001 0x00000001        // SOR_NV_PDISP_SOR_DP_SPARE0_0 00:00=SEQ_ENABLE        0x01
-                                               0x00000590 0xfcfffeff 0x00000100
                                            >;
                                };
                                prod_c_hbr {

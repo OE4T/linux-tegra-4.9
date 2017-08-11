@@ -21,6 +21,7 @@
 #include <linux/scatterlist.h>
 #include <linux/leds.h>
 #include <linux/platform_device.h>
+#include <linux/of.h>
 
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/host.h>
@@ -314,9 +315,9 @@ static int cmdq_enable(struct mmc_host *mmc)
 
 	/* Enable Interrupt Coalescing feature */
 	if (cq_host->quirks & CMDQ_QUIRK_CQIC_SUPPORT)
-		cmdq_writel(cq_host, (CQIC_ENABLE |
-			    CQIC_ICTOVALWEN | CQIC_MAX_ICTOVAL |
-			    CQIC_ICCTHWEN | CQIC_DEFAULT_ICCTH), CQIC);
+		cmdq_writel(cq_host, (CQIC_ENABLE | CQIC_ICTOVALWEN |
+			    CQIC_ICTOVAL(CQIC_MAX_ICTOVAL) | CQIC_ICCTHWEN |
+			    CQIC_ICCTH(CQIC_DEFAULT_ICCTH)), CQIC);
 
 	/* leave send queue status timer configs to reset values */
 
@@ -816,6 +817,7 @@ struct cmdq_host *cmdq_pltfm_init(struct platform_device *pdev)
 {
 	struct cmdq_host *cq_host;
 	struct resource *cmdq_memres = NULL;
+	struct device_node *np = pdev->dev.of_node;
 
 	/* check and setup CMDQ interface */
 	cmdq_memres = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -829,6 +831,8 @@ struct cmdq_host *cmdq_pltfm_init(struct platform_device *pdev)
 		dev_err(&pdev->dev, "CMDQ: failed to allocate memory for CMDQ\n");
 		return ERR_PTR(-ENOMEM);
 	}
+
+	cq_host->cqic_support = of_property_read_bool(np, "enable-cqic");
 
 	cq_host->mmio = devm_ioremap(&pdev->dev, cmdq_memres->start + CQE_BASE,
 			CQE_RES_SZ);
@@ -859,6 +863,9 @@ int cmdq_init(struct cmdq_host *cq_host, struct mmc_host *mmc,
 
 	if (!cq_host->dma64)
 		cq_host->quirks |= CMDQ_QUIRK_SHORT_TXFR_DESC_SZ;
+
+	if (cq_host->cqic_support)
+		cq_host->quirks |= CMDQ_QUIRK_CQIC_SUPPORT;
 
 	cq_host->caps |= CMDQ_TASK_DESC_SZ_128;
 

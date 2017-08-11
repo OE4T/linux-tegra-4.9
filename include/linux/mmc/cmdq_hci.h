@@ -150,6 +150,7 @@ struct cmdq_host {
 	struct mmc_data *data;	/* Current data request */
 	size_t desc_size;
 	size_t data_size;
+	bool cqic_support; /* CQIC feature support */
 	void *private;
 };
 

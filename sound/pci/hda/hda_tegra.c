@@ -81,8 +81,6 @@ static const struct of_device_id tegra_disb_pd[] = {
 #define NUM_CAPTURE_SD 1
 #define NUM_PLAYBACK_SD 1
 
-#define MAX_SDO_LINES	4
-
 struct hda_tegra {
 	struct azx chip;
 	struct device *dev;
@@ -93,7 +91,6 @@ struct hda_tegra {
 	void __iomem *regs;
 	struct work_struct probe_work;
 	bool is_power_on;
-	unsigned int max_sdo_lines;
 };
 
 #ifdef CONFIG_PM
@@ -454,7 +451,6 @@ static int hda_tegra_init_chip(struct azx *chip, struct platform_device *pdev)
 
 	bus->remap_addr = hda->regs + HDA_BAR0;
 	bus->addr = res->start + HDA_BAR0;
-	bus->max_sdo_lines = hda->max_sdo_lines;
 
 	hda_tegra_init(hda);
 
@@ -606,13 +602,6 @@ static int hda_tegra_probe(struct platform_device *pdev)
 	hda->dev = &pdev->dev;
 	chip = &hda->chip;
 	hda->is_power_on = false;
-
-	if (of_property_read_u32(pdev->dev.of_node,
-			"max-sdo-lines", &hda->max_sdo_lines) < 0)
-		hda->max_sdo_lines = 1;
-
-	if (hda->max_sdo_lines > MAX_SDO_LINES)
-		hda->max_sdo_lines = MAX_SDO_LINES;
 
 	hda->partition_id = tegra_pd_get_powergate_id(tegra_disb_pd);
 	if (hda->partition_id < 0) {

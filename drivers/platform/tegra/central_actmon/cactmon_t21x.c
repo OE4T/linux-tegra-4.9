@@ -375,7 +375,6 @@ static int cactmon_clk_disable_t21x(struct platform_device *pdev)
 
 	if (actmon->actmon_clk) {
 		clk_disable_unprepare(actmon->actmon_clk);
-		devm_clk_put(mon_dev, actmon->actmon_clk);
 		actmon->actmon_clk = NULL;
 		dev_dbg(mon_dev, "actmon clocks disabled\n");
 	}
@@ -399,12 +398,10 @@ static int cactmon_clk_enable_t21x(struct platform_device *pdev)
 	ret = clk_prepare_enable(actmon->actmon_clk);
 	if (ret) {
 		dev_err(mon_dev, "unable to enable actmon clock\n");
-		goto end;
+		return ret;
 	}
 	actmon->freq = clk_get_rate(actmon->actmon_clk) / 1000;
 
-end:
-	devm_clk_put(mon_dev, actmon->actmon_clk);
 	return ret;
 }
 

@@ -19,7 +19,6 @@
 #include "gk20a/fb_gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/therm_gk20a.h"
-#include "gk20a/mm_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/mc_gk20a.h"
 #include "gk20a/bus_gk20a.h"
@@ -42,8 +41,6 @@
 #include "therm_gm20b.h"
 #include "bus_gm20b.h"
 #include "hal_gm20b.h"
-
-#include "common/linux/platform_gk20a_tegra.h"
 
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
@@ -290,27 +287,6 @@ static const struct gpu_ops gm20b_ops = {
 		.get_netlist_name = gr_gm20b_get_netlist_name,
 		.is_fw_defined = gr_gm20b_is_firmware_defined,
 	},
-	.mm = {
-		.support_sparse = gm20b_mm_support_sparse,
-		.gmmu_map = gk20a_locked_gmmu_map,
-		.gmmu_unmap = gk20a_locked_gmmu_unmap,
-		.vm_bind_channel = gk20a_vm_bind_channel,
-		.fb_flush = gk20a_mm_fb_flush,
-		.l2_invalidate = gk20a_mm_l2_invalidate,
-		.l2_flush = gk20a_mm_l2_flush,
-		.cbc_clean = gk20a_mm_cbc_clean,
-		.set_big_page_size = gm20b_mm_set_big_page_size,
-		.get_big_page_sizes = gm20b_mm_get_big_page_sizes,
-		.get_default_big_page_size = gm20b_mm_get_default_big_page_size,
-		.gpu_phys_addr = gm20b_gpu_phys_addr,
-		.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits,
-		.get_mmu_levels = gk20a_mm_get_mmu_levels,
-		.init_pdb = gk20a_mm_init_pdb,
-		.init_mm_setup_hw = gk20a_init_mm_setup_hw,
-		.is_bar1_supported = gm20b_mm_is_bar1_supported,
-		.init_inst_block = gk20a_init_inst_block,
-		.mmu_fault_pending = gk20a_fifo_mmu_fault_pending,
-	},
 	.therm = {
 		.init_therm_setup_hw = gm20b_init_therm_setup_hw,
 		.elcg_init_idle_filters = gk20a_elcg_init_idle_filters,
@@ -422,7 +398,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->fifo = gm20b_ops.fifo;
 	gops->gr_ctx = gm20b_ops.gr_ctx;
-	gops->mm = gm20b_ops.mm;
 	gops->therm = gm20b_ops.therm;
 	/*
 	 * clk must be assigned member by member
@@ -487,6 +462,7 @@ int gm20b_init_hal(struct gk20a *g)
 #endif
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 	gm20b_init_gr(g);
+	gm20b_init_mm(gops);
 	gm20b_init_pmu_ops(g);
 
 	gm20b_init_uncompressed_kind_map();

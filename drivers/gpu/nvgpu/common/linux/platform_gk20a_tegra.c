@@ -662,7 +662,7 @@ void gk20a_tegra_idle(struct device *dev)
 
 void gk20a_tegra_init_secure_alloc(struct gk20a *g)
 {
-	g->ops.secure_alloc = gk20a_tegra_secure_alloc;
+	g->ops.mm.secure_alloc = gk20a_tegra_secure_alloc;
 }
 
 #ifdef CONFIG_COMMON_CLK

@@ -734,17 +734,16 @@ struct gpu_ops {
 		void (*init_inst_block)(struct nvgpu_mem *inst_block,
 				struct vm_gk20a *vm, u32 big_page_size);
 		bool (*mmu_fault_pending)(struct gk20a *g);
+		/* This function is called to allocate secure memory (memory
+		 * that the CPU cannot see). The function should fill the
+		 * context buffer descriptor (especially fields destroy, sgt,
+		 * size).
+		 */
+		int (*secure_alloc)(struct gk20a *g,
+				    struct gr_ctx_buffer_desc *desc,
+				    size_t size);
 		void (*fault_info_mem_destroy)(struct gk20a *g);
 	} mm;
-	/*
-	 * This function is called to allocate secure memory (memory
-	 * that the CPU cannot see). The function should fill the
-	 * context buffer descriptor (especially fields destroy, sgt,
-	 * size).
-	 */
-	int (*secure_alloc)(struct gk20a *g,
-				struct gr_ctx_buffer_desc *desc,
-				size_t size);
 	struct {
 		u32 (*enter)(struct gk20a *g, struct nvgpu_mem *mem,
 			     struct page_alloc_chunk *chunk, u32 w);

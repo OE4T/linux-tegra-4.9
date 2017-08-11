@@ -27,17 +27,17 @@
 #include <nvgpu/hw/gp10b/hw_bus_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_gmmu_gp10b.h>
 
-u32 gp10b_mm_get_default_big_page_size(void)
+static u32 gp10b_mm_get_default_big_page_size(void)
 {
 	return SZ_64K;
 }
 
-u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
+static u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
 {
 	return 36;
 }
 
-int gp10b_init_mm_setup_hw(struct gk20a *g)
+static int gp10b_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct nvgpu_mem *inst_block = &mm->bar1.inst_block;
@@ -68,7 +68,7 @@ int gp10b_init_mm_setup_hw(struct gk20a *g)
 
 }
 
-int gb10b_init_bar2_vm(struct gk20a *g)
+static int gb10b_init_bar2_vm(struct gk20a *g)
 {
 	int err;
 	struct mm_gk20a *mm = &g->mm;
@@ -99,7 +99,7 @@ clean_up_va:
 	return err;
 }
 
-int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
+static int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
@@ -333,13 +333,13 @@ static const struct gk20a_mmu_level gp10b_mm_levels[] = {
 	{.update_entry = NULL}
 };
 
-const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
+static const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
 	u32 big_page_size)
 {
 	return gp10b_mm_levels;
 }
 
-void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
+static void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm)
 {
 	u64 pdb_addr = nvgpu_mem_get_addr(g, vm->pdb.mem);
@@ -360,11 +360,25 @@ void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));
 }
 
-void gp10b_remove_bar2_vm(struct gk20a *g)
+static void gp10b_remove_bar2_vm(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 
 	gp10b_replayable_pagefault_buffer_deinit(g);
 	gk20a_free_inst_block(g, &mm->bar2.inst_block);
 	nvgpu_vm_put(mm->bar2.vm);
+}
+
+
+void gp10b_init_mm(struct gpu_ops *gops)
+{
+	gm20b_init_mm(gops);
+	gops->mm.get_default_big_page_size = gp10b_mm_get_default_big_page_size;
+	gops->mm.get_physical_addr_bits = gp10b_mm_get_physical_addr_bits;
+	gops->mm.init_mm_setup_hw = gp10b_init_mm_setup_hw;
+	gops->mm.init_bar2_vm = gb10b_init_bar2_vm;
+	gops->mm.init_bar2_mm_hw_setup = gb10b_init_bar2_mm_hw_setup;
+	gops->mm.get_mmu_levels = gp10b_mm_get_mmu_levels;
+	gops->mm.init_pdb = gp10b_mm_init_pdb;
+	gops->mm.remove_bar2_vm = gp10b_remove_bar2_vm;
 }

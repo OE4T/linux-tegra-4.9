@@ -1,7 +1,7 @@
 /*
  * GP106 memory management
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 
 #include <nvgpu/hw/gp106/hw_fb_gp106.h>
 
-size_t gp106_mm_get_vidmem_size(struct gk20a *g)
+static size_t gp106_mm_get_vidmem_size(struct gk20a *g)
 {
 	u32 range = gk20a_readl(g, fb_mmu_local_memory_range_r());
 	u32 mag = fb_mmu_local_memory_range_lower_mag_v(range);
@@ -31,4 +31,11 @@ size_t gp106_mm_get_vidmem_size(struct gk20a *g)
 		bytes = bytes / 16 * 15;
 
 	return bytes;
+}
+
+void gp106_init_mm(struct gpu_ops *gops)
+{
+	gp10b_init_mm(gops);
+	gops->mm.get_vidmem_size = gp106_mm_get_vidmem_size;
+	gops->mm.get_physical_addr_bits = NULL;
 }

@@ -20,7 +20,7 @@
 #include <nvgpu/hw/gm20b/hw_gmmu_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
 
-void gm20b_mm_set_big_page_size(struct gk20a *g,
+static void gm20b_mm_set_big_page_size(struct gk20a *g,
 				struct nvgpu_mem *mem, int size)
 {
 	u32 val;
@@ -40,22 +40,22 @@ void gm20b_mm_set_big_page_size(struct gk20a *g,
 	gk20a_dbg_fn("done");
 }
 
-u32 gm20b_mm_get_big_page_sizes(void)
+static u32 gm20b_mm_get_big_page_sizes(void)
 {
 	return SZ_64K | SZ_128K;
 }
 
-u32 gm20b_mm_get_default_big_page_size(void)
+static u32 gm20b_mm_get_default_big_page_size(void)
 {
 	return SZ_128K;
 }
 
-bool gm20b_mm_support_sparse(struct gk20a *g)
+static bool gm20b_mm_support_sparse(struct gk20a *g)
 {
 	return true;
 }
 
-bool gm20b_mm_is_bar1_supported(struct gk20a *g)
+static bool gm20b_mm_is_bar1_supported(struct gk20a *g)
 {
 	return true;
 }
@@ -64,4 +64,27 @@ u64 gm20b_gpu_phys_addr(struct gk20a *g,
 			struct nvgpu_gmmu_attrs *attrs, u64 phys)
 {
 	return phys;
+}
+
+void gm20b_init_mm(struct gpu_ops *gops)
+{
+	gops->mm.support_sparse = gm20b_mm_support_sparse;
+	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
+	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
+	gops->mm.vm_bind_channel = gk20a_vm_bind_channel;
+	gops->mm.fb_flush = gk20a_mm_fb_flush;
+	gops->mm.l2_invalidate = gk20a_mm_l2_invalidate;
+	gops->mm.l2_flush = gk20a_mm_l2_flush;
+	gops->mm.cbc_clean = gk20a_mm_cbc_clean;
+	gops->mm.set_big_page_size = gm20b_mm_set_big_page_size;
+	gops->mm.get_big_page_sizes = gm20b_mm_get_big_page_sizes;
+	gops->mm.get_default_big_page_size = gm20b_mm_get_default_big_page_size;
+	gops->mm.gpu_phys_addr = gm20b_gpu_phys_addr;
+	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
+	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
+	gops->mm.init_pdb = gk20a_mm_init_pdb;
+	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
+	gops->mm.is_bar1_supported = gm20b_mm_is_bar1_supported;
+	gops->mm.init_inst_block = gk20a_init_inst_block;
+	gops->mm.mmu_fault_pending = gk20a_fifo_mmu_fault_pending;
 }

@@ -2383,6 +2383,7 @@ static int tegra_dvfs_probe(struct platform_device *pdev)
 				&tegra_vts_cooling_ops);
 			pr_info("tegra_dvfs: %s: %sregistered\n", name,
 				IS_ERR_OR_NULL(rail->vts_cdev) ? "not " : "");
+			kfree(name);
 		}
 	}
 

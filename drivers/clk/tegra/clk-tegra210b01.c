@@ -2118,10 +2118,11 @@ static void tegra210b01_utmi_param_configure(void)
 	reg &= ~UTMIP_PLL_CFG2_FORCE_PD_SAMP_B_POWERDOWN;
 	reg &= ~UTMIP_PLL_CFG2_FORCE_PD_SAMP_D_POWERDOWN;
 	writel_relaxed(reg, clk_base + UTMIP_PLL_CFG2);
+}
 
-	/* Keep UTMIPLL under s/w control if it is used as PLL_RE reference */
-	if (pll_re_use_utmipll)
-		return;
+static void tegra210b01_utmi_hw_sequencer_enable(void)
+{
+	u32 reg;
 
 	/* Setup HW control of UTMIPLL */
 	reg = readl_relaxed(clk_base + UTMIP_PLL_CFG1);
@@ -2156,10 +2157,17 @@ static int tegra210b01_enable_utmipll(void)
 	bool hw_on = reg & UTMIPLL_HW_PWRDN_CFG0_SEQ_ENABLE;
 	bool locked = reg & UTMIPLL_HW_PWRDN_CFG0_UTMIPLL_LOCK;
 
-	if (hw_on && (pll_re_use_utmipll || !locked)) {
-		WARN(1, "Invalid UTMIP PLL: hw_on pll_re_usage_%s lock_%s\n",
-		     pll_re_use_utmipll ? "on" : "off", locked ? "on" : "off");
-		return -EINVAL;
+	pr_info_once("%s: hw %s, lock %s, use_pllre %s\n", __func__,
+		     hw_on ? "ON" : "OFF", locked ? "1" : "0",
+		     pll_re_use_utmipll ? "YES" : "NO");
+
+	if (hw_on) {
+		if (pll_re_use_utmipll || utmipll_set_defaults(true)) {
+			WARN(1, "UTMIP PLL: hw is ON with invalid %s\n",
+			     pll_re_use_utmipll ? "PLLRE usage" : "M/N values");
+			return -EINVAL;
+		}
+		return 0;
 	}
 
 	if (utmipll_set_defaults(locked)) {
@@ -2167,8 +2175,11 @@ static int tegra210b01_enable_utmipll(void)
 		return -EINVAL;
 	}
 
-	if (!hw_on && (!pll_re_use_utmipll || !locked))
+	if (!locked)
 		tegra210b01_utmi_param_configure();
+
+	if (!pll_re_use_utmipll)
+		tegra210b01_utmi_hw_sequencer_enable();
 
 	return 0;
 }

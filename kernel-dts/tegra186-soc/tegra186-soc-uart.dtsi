@@ -15,7 +15,7 @@
 
 / {
 	uarta: serial@3100000 {
-		compatible = "nvidia,tegra20-uart";
+		compatible = "nvidia,tegra186-hsuart";
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		reg = <0x0 0x03100000 0x0 0x40>;
 		reg-shift = <2>;

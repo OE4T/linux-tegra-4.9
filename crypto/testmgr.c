@@ -1876,7 +1876,6 @@ static int do_test_kpp(struct crypto_kpp *tfm, struct kpp_testvec *vec,
 		       alg);
 		err = -EINVAL;
 	}
-
 free_all:
 	kfree(input_buf);
 free_output:
@@ -1897,6 +1896,9 @@ static int test_kpp(struct crypto_kpp *tfm, const char *alg,
 			pr_err("alg: %s: test failed on vector %d, err=%d\n",
 			       alg, i + 1, ret);
 			return ret;
+		} else {
+			pr_err("alg: %s: test passed on vector %d\n",
+				alg, i + 1);
 		}
 	}
 	return 0;
@@ -2197,32 +2199,44 @@ static int test_ecdsa_akcipher(struct crypto_akcipher *tfm, const char *alg,
 
 	for (i = 0; i < tcount; i++) {
 		err = do_test_ecdsa_verify(tfm, &vecs[i]);
-		if (!err)
+		if (!err) {
+			pr_err("alg: %s: verify passed on vector %d\n",
+				alg, i + 1);
 			continue;
+		}
 
 		return err;
 	}
 
 	for (i = 0; i < tcount; i++) {
 		err = do_test_ecdsa_invalid_verify(tfm, &vecs[i]);
-		if (!err)
+		if (!err) {
+			pr_err("alg: %s: invalid verify passed on vector %d\n",
+			       alg, i + 1);
 			continue;
+		}
 
 		return err;
 	}
 
 	for (i = 0; i < tcount; i++) {
 		err = do_test_ecdsa_sign_verify(tfm, &vecs[i]);
-		if (!err)
+		if (!err) {
+			pr_err("alg: %s: sign verify passed on vector %d\n",
+			       alg, i + 1);
 			continue;
+		}
 
 		return err;
 	}
 
 	for (i = 0; i < tcount; i++) {
 		err = do_test_ecdsa_sign(tfm, &vecs[i]);
-		if (!err)
+		if (!err) {
+			pr_err("alg: %s: sign passed on vector %d\n",
+				alg, i + 1);
 			continue;
+		}
 
 		return err;
 	}

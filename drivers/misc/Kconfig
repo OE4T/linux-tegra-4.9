@@ -373,14 +373,6 @@ config HMC6352
 	  This driver provides support for the Honeywell HMC6352 compass,
 	  providing configuration and heading data via sysfs.
 
-config SENSORS_NCT1008
-	tristate "ON Semiconductor Temperature Sensor"
-	default n
-	depends on I2C
-	help
-	 Say yes here if you wish to include the ON Semiconductor
-	 NCT1008 Temperature sensor.
-
 config DS1682
 	tristate "Dallas DS1682 Total Elapsed Time Recorder with Alarm"
 	depends on I2C

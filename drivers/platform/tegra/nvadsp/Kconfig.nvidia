@@ -1,7 +1,7 @@
 config TEGRA_NVADSP
 	bool "Enable Host ADSP driver"
 	default n
-	depends on ARM_GIC_PM
+	select ARM_GIC_PM
 	select FIQ
 	help
 	  Enables support for Host ADSP driver.

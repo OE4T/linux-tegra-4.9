@@ -265,13 +265,12 @@ static void pmu_dump_security_fuses_gm20b(struct gk20a *g)
 {
 	u32 val;
 
-	nvgpu_err(g, "FUSE_OPT_SEC_DEBUG_EN_0 : 0x%x",
+	nvgpu_err(g, "FUSE_OPT_SEC_DEBUG_EN_0: 0x%x",
 			gk20a_readl(g, fuse_opt_sec_debug_en_r()));
-	nvgpu_err(g, "FUSE_OPT_PRIV_SEC_EN_0 : 0x%x",
+	nvgpu_err(g, "FUSE_OPT_PRIV_SEC_EN_0: 0x%x",
 			gk20a_readl(g, fuse_opt_priv_sec_en_r()));
-	nvgpu_tegra_fuse_read_gcplex_config_fuse(&val);
-	nvgpu_err(g, "FUSE_GCPLEX_CONFIG_FUSE_0 : 0x%x",
-			val);
+	nvgpu_tegra_fuse_read_gcplex_config_fuse(g, &val);
+	nvgpu_err(g, "FUSE_GCPLEX_CONFIG_FUSE_0: 0x%x", val);
 }
 
 void gm20b_init_pmu_ops(struct gk20a *g)

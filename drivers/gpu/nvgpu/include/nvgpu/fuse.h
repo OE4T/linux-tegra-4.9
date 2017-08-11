@@ -13,13 +13,15 @@
 #ifndef __NVGPU_FUSE_H__
 #define __NVGPU_FUSE_H__
 
-int nvgpu_tegra_get_gpu_speedo_id(void);
+struct gk20a;
 
-void nvgpu_tegra_fuse_write_bypass(u32 val);
-void nvgpu_tegra_fuse_write_access_sw(u32 val);
-void nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(u32 val);
-void nvgpu_tegra_fuse_write_opt_gpu_tpc1_disable(u32 val);
-int nvgpu_tegra_fuse_read_gcplex_config_fuse(u32 *val);
-int nvgpu_tegra_fuse_read_reserved_calib(u32 *val);
+int nvgpu_tegra_get_gpu_speedo_id(struct gk20a *g);
+
+void nvgpu_tegra_fuse_write_bypass(struct gk20a *g, u32 val);
+void nvgpu_tegra_fuse_write_access_sw(struct gk20a *g, u32 val);
+void nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(struct gk20a *g, u32 val);
+void nvgpu_tegra_fuse_write_opt_gpu_tpc1_disable(struct gk20a *g, u32 val);
+int nvgpu_tegra_fuse_read_gcplex_config_fuse(struct gk20a *g, u32 *val);
+int nvgpu_tegra_fuse_read_reserved_calib(struct gk20a *g, u32 *val);
 
 #endif

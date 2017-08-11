@@ -1600,15 +1600,15 @@ static void gr_gp10b_init_cyclestats(struct gk20a *g)
 
 static void gr_gp10b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
-	nvgpu_tegra_fuse_write_bypass(0x1);
-	nvgpu_tegra_fuse_write_access_sw(0x0);
+	nvgpu_tegra_fuse_write_bypass(g, 0x1);
+	nvgpu_tegra_fuse_write_access_sw(g, 0x0);
 
 	if (g->gr.gpc_tpc_mask[gpc_index] == 0x1)
-		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(0x2);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(g, 0x2);
 	else if (g->gr.gpc_tpc_mask[gpc_index] == 0x2)
-		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(0x1);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(g, 0x1);
 	else
-		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(0x0);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(g, 0x0);
 }
 
 static void gr_gp10b_get_access_map(struct gk20a *g,

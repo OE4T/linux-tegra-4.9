@@ -33,6 +33,7 @@
 #include <linux/delay.h>
 #include <linux/thermal.h>
 #include <linux/regulator/consumer.h>
+#include <linux/version.h>
 
 /* Register Addresses used in this module. */
 #define LOC_TEMP_RD                  0x00
@@ -1204,10 +1205,20 @@ static void nct1008_work_func(struct work_struct *work)
 	st = nct1008_read_reg(data->client, STATUS_RD);
 	dev_dbg(&client->dev, "%s: interrupt (0x%08x)\n", data->chip_name, st);
 	if ((st & (LOC_LO_BIT | LOC_HI_BIT)) && data->sensors[LOC].thz)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+		thermal_zone_device_update(data->sensors[LOC].thz,
+					   THERMAL_EVENT_UNSPECIFIED);
+#else
 		thermal_zone_device_update(data->sensors[LOC].thz);
+#endif
 
 	if ((st & (EXT_LO_BIT | EXT_HI_BIT)) && data->sensors[EXT].thz)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+		thermal_zone_device_update(data->sensors[EXT].thz,
+					   THERMAL_EVENT_UNSPECIFIED);
+#else
 		thermal_zone_device_update(data->sensors[EXT].thz);
+#endif
 
 	/* Initiate one-shot conversion */
 	err = nct1008_write_reg(data->client, ONE_SHOT, 0x1);
@@ -1999,9 +2010,19 @@ static int __init nct1008_sync_thz(struct device *dev, void *unused)
 {
 	struct nct1008_data *data = dev_get_drvdata(dev);
 	if (data->sensors[LOC].thz)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+		thermal_zone_device_update(data->sensors[LOC].thz,
+					   THERMAL_EVENT_UNSPECIFIED);
+#else
 		thermal_zone_device_update(data->sensors[LOC].thz);
+#endif
 	if (data->sensors[EXT].thz)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+		thermal_zone_device_update(data->sensors[EXT].thz,
+					   THERMAL_EVENT_UNSPECIFIED);
+#else
 		thermal_zone_device_update(data->sensors[EXT].thz);
+#endif
 	return 0;
 }
 

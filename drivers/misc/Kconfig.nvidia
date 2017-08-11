@@ -23,4 +23,12 @@ config SAF36XX_HWDEP
         help
           Provides interfaces for flashing SAF36XX
 
+config SENSORS_NCT1008
+	tristate "ON Semiconductor Temperature Sensor"
+	default n
+	depends on I2C
+	help
+	 Say yes here if you wish to include the ON Semiconductor
+	 NCT1008 Temperature sensor.
+
 trysource "../nvidia/drivers/misc/nvs-dfsh/Kconfig.nvidia"

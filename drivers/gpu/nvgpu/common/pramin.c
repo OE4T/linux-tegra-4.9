@@ -96,10 +96,9 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 			break;
 	}
 
-	offset /= sizeof(u32);
-
 	while (size) {
-		byteoff = g->ops.pramin.enter(g, mem, chunk, offset);
+		byteoff = g->ops.pramin.enter(g, mem, chunk,
+					      offset / sizeof(u32));
 		start_reg = g->ops.pramin.data032_r(byteoff / sizeof(u32));
 		until_end = SZ_1M - (byteoff & (SZ_1M - 1));
 
@@ -118,7 +117,7 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 					list_entry);
 			offset = 0;
 		} else {
-			offset += n / sizeof(u32);
+			offset += n;
 		}
 	}
 }

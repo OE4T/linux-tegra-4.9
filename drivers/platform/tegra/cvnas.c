@@ -412,9 +412,6 @@ static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 	u32 fcm_pg_seq[] =
 		{0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xFF};
 
-	if (tegra_platform_is_vdk())
-		return 0;
-
 	nvcvnas_car_writel(cvnas_dev, ASSERT_CVNAS_FCM_RST, RST_DEV_CVNAS_FCM_SET);
 	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS_FCM);
 	if (val != ASSERT_CVNAS_FCM_RST) {

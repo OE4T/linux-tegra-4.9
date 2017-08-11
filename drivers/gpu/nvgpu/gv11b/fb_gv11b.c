@@ -75,7 +75,7 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 
 }
 
-void gv11b_fb_init_fs_state(struct gk20a *g)
+static void gv11b_fb_init_fs_state(struct gk20a *g)
 {
 	nvgpu_log(g, gpu_dbg_fn, "initialize gv11b fb");
 
@@ -87,7 +87,7 @@ void gv11b_fb_init_fs_state(struct gk20a *g)
 			gk20a_readl(g, fb_mmu_num_active_ltcs_r())));
 }
 
-void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
+static void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 max_size = gr->max_comptag_mem;
 	/* one tag line covers 64KB */
@@ -137,7 +137,7 @@ void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 
 }
 
-void gv11b_fb_reset(struct gk20a *g)
+static void gv11b_fb_reset(struct gk20a *g)
 {
 	u32 val;
 
@@ -251,7 +251,7 @@ static const char *const gpc_client_descs_gv11b[] = {
 	"t1 36", "t1 37", "t1 38", "t1 39",
 };
 
-noinline_for_stack void gv11b_init_uncompressed_kind_map(void)
+static noinline_for_stack void gv11b_init_uncompressed_kind_map(void)
 {
 	int i;
 
@@ -672,7 +672,7 @@ static noinline_for_stack bool gv11b_kind_zbc(u8 k)
 			k <= gmmu_pte_kind_c128_ms8_ms16_2cr_v());
 }
 
-void gv11b_init_kind_attr(void)
+static void gv11b_init_kind_attr(void)
 {
 	u16 k;
 
@@ -1815,7 +1815,7 @@ static void gv11b_fb_handle_mmu_fault(struct gk20a *g, u32 niso_intr)
 				fb_mmu_fault_status_valid_clear_f());
 }
 
-void gv11b_fb_hub_isr(struct gk20a *g)
+static void gv11b_fb_hub_isr(struct gk20a *g)
 {
 	u32 status, niso_intr;
 
@@ -1966,4 +1966,17 @@ static int gv11b_fb_fix_page_fault(struct gk20a *g,
 			"pte after tlb invalidate: %#08x %#08x",
 			pte[1], pte[0]);
 	return err;
+}
+
+void gv11b_init_fb(struct gpu_ops *gops)
+{
+	gp10b_init_fb(gops);
+	gops->fb.hub_isr = gv11b_fb_hub_isr;
+	gops->fb.reset = gv11b_fb_reset;
+	gops->fb.init_fs_state = gv11b_fb_init_fs_state;
+	gops->fb.init_cbc = gv11b_fb_init_cbc;
+
+	gv11b_init_uncompressed_kind_map();
+	gv11b_init_kind_attr();
+
 }

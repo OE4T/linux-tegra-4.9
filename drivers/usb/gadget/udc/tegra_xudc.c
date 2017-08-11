@@ -1019,6 +1019,20 @@ static void ep_unhalt(struct tegra_xudc *xudc, unsigned int ep)
 	xudc_writel(xudc, BIT(ep), EP_STCHG);
 }
 
+static void ep_unhalt_all(struct tegra_xudc *xudc)
+{
+	u32 val;
+
+	val = xudc_readl(xudc, EP_HALT);
+	if (!val)
+		return;
+	xudc_writel(xudc, 0, EP_HALT);
+
+	xudc_readl_poll(xudc, EP_STCHG, val, val);
+
+	xudc_writel(xudc, val, EP_STCHG);
+}
+
 static void ep_wait_for_stopped(struct tegra_xudc *xudc, unsigned int ep)
 {
 	xudc_readl_poll(xudc, EP_STOPPED, BIT(ep), BIT(ep));
@@ -2776,6 +2790,7 @@ static void tegra_xudc_reset(struct tegra_xudc *xudc)
 	ep_ctx_write_deq_ptr(ep0->context, deq_ptr);
 	ep_ctx_write_dcs(ep0->context, ep0->pcs);
 
+	ep_unhalt_all(xudc);
 	ep_reload(xudc, 0);
 	ep_unpause(xudc, 0);
 }

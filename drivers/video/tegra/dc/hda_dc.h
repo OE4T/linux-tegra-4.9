@@ -25,6 +25,7 @@ enum {
 
 struct tegra_dc_hda_data {
 	bool valid; /* set to true only after tegra_hda_set_data */
+	int dev_id;
 	struct tegra_dc_sor_data *sor;
 	struct tegra_dc *dc;
 	struct tegra_edid_hdmi_eld *eld;
@@ -44,5 +45,6 @@ struct tegra_dc_hda_data {
 void *tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink);
 void tegra_hda_reset_data(void *hda_handle);
 int tegra_hdmi_setup_hda_presence(int sor_num);
+int tegra_hda_get_dev_id(struct tegra_dc_sor_data *sor);
 
 #endif

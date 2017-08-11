@@ -502,6 +502,7 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 {
 	int err;
+	int dev_id;
 
 	tegra_unpowergate_partition(hdmi->sor->powergate_id);
 
@@ -521,7 +522,9 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	 * Try to write ELD data to SOR (needed only for boot
 	 * doesn't do anything during hotplug)
 	 */
-	tegra_hdmi_setup_hda_presence(hdmi->sor->ctrl_num);
+	/* Read the dev_id of the sor */
+	dev_id = tegra_hda_get_dev_id(hdmi->sor);
+	tegra_hdmi_setup_hda_presence(dev_id);
 
 	tegra_powergate_partition(hdmi->sor->powergate_id);
 

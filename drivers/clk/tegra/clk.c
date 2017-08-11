@@ -452,6 +452,7 @@ void __init tegra_add_of_provider(struct device_node *np)
 			pr_err
 			    ("Tegra clk %d: register failed with %ld\n",
 			     i, PTR_ERR(clks));
+			continue;
 		}
 		if (!clk) {
 			clks[i] = ERR_PTR(-EINVAL);

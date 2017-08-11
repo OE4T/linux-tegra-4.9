@@ -501,7 +501,7 @@ static int __nvgpu_gmmu_update_page_table_vidmem(struct vm_gk20a *vm,
 		err = __set_pd_level(vm, &vm->pdb,
 				     0,
 				     phys_addr,
-				     virt_addr, length,
+				     virt_addr, chunk_length,
 				     attrs);
 		if (err)
 			break;

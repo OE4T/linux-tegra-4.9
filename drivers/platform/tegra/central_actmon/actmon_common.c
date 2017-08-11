@@ -831,8 +831,7 @@ static int actmon_dev_parse_dt(struct actmon_dev *dev,
 	return 0;
 
 err_out:
-		return ret;
-
+	return ret;
 }
 
 static int actmon_dev_init(struct actmon_dev *dev,
@@ -847,7 +846,7 @@ static int actmon_dev_init(struct actmon_dev *dev,
 	if (ret) {
 		dev_err(mon_dev, "nvidia, type property is not provided for the device %s\n",
 			dev->dn->name);
-			ret = -EINVAL;
+		ret = -EINVAL;
 		goto err_out;
 	}
 	dev->state = ACTMON_UNINITIALIZED;
@@ -918,7 +917,7 @@ static int __init actmon_map_resource(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(mon_dev, "Failed to get resource for actmon device\n");
-			return -EINVAL;
+		return -EINVAL;
 	}
 
 	actmon->base = devm_ioremap_resource(mon_dev, res);
@@ -929,9 +928,9 @@ static int __init actmon_map_resource(struct platform_device *pdev)
 
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
-			dev_err(mon_dev, "Failed to get virtual irq for actmon interrupt\n");
-			return -EINVAL;
-		}
+		dev_err(mon_dev, "Failed to get virtual irq for actmon interrupt\n");
+		return -EINVAL;
+	}
 	actmon->virq = res->start;
 	return 0;
 }
@@ -1009,10 +1008,8 @@ int tegra_actmon_register(struct actmon_drv_data *actmon_data)
 
 	actmon->actmon_kobj = kobject_create_and_add("actmon_avg_activity",
 					kernel_kobj);
-	if (!actmon->actmon_kobj) {
-		pr_err("%s: Couldn't create avg_actv kobj\n",
-				__func__);
-	}
+	if (!actmon->actmon_kobj)
+		dev_err(mon_dev, "Couldn't create avg_actv kobj\n");
 
 	for (i = 0; i < MAX_DEVICES; i++) {
 		dn = of_get_next_available_child(pdev->dev.of_node, dn);
@@ -1033,10 +1030,8 @@ int tegra_actmon_register(struct actmon_drv_data *actmon_data)
 
 		ret = sysfs_create_file(actmon->actmon_kobj,
 			&actmon->devices[i].avgact_attr.attr);
-		if (ret) {
-			pr_err("%s: Couldn't create avg_actv files\n",
-				__func__);
-		}
+		if (ret)
+			dev_err(mon_dev, "Couldn't create avg_actv files\n");
 	}
 #ifdef CONFIG_DEBUG_FS
 	ret = actmon_debugfs_init();

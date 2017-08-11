@@ -918,30 +918,22 @@ static int __init actmon_map_resource(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(mon_dev, "Failed to get resource for actmon device\n");
-			ret = -EINVAL;
-			goto err_out;
+			return -EINVAL;
 	}
 
 	actmon->base = devm_ioremap_resource(mon_dev, res);
 	if (IS_ERR(actmon->base)) {
-		ret = PTR_ERR(actmon->base);
 		dev_err(mon_dev, "Failed to iomap resource reg 0 %d:\n", ret);
-		goto err_out;
+		return PTR_ERR(actmon->base);
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
 			dev_err(mon_dev, "Failed to get virtual irq for actmon interrupt\n");
-			ret = -EINVAL;
-			goto err_out;
+			return -EINVAL;
 		}
 	actmon->virq = res->start;
 	return 0;
-
-err_out:
-	if (actmon->base)
-		devm_iounmap(mon_dev, actmon->base);
-	return ret;
 }
 
 static inline int actmon_reset_init(struct platform_device *pdev)

@@ -984,26 +984,6 @@ static int actmon_reset_deinit(struct platform_device *pdev)
 	return ret;
 }
 
-static void actmon_free_resource(struct platform_device *pdev)
-{
-	int i;
-
-	actmon_reset_deinit(pdev);
-	actmon_clock_disable(pdev);
-
-	if (actmon->base)
-		devm_iounmap(mon_dev, actmon->base);
-
-	for (i = 0; i < MAX_DEVICES; i++) {
-		if (actmon->devices[i].dn)
-			sysfs_remove_file(actmon->actmon_kobj,
-				&actmon->devices[i].avgact_attr.attr);
-
-		actmon->dev_free_resource(&actmon->devices[i], pdev);
-	}
-	devm_kfree(mon_dev, actmon);
-}
-
 int tegra_actmon_register(struct actmon_drv_data *actmon_data)
 {
 	struct device_node *dn = NULL;
@@ -1018,19 +998,19 @@ int tegra_actmon_register(struct actmon_drv_data *actmon_data)
 
 	ret = actmon_map_resource(pdev);
 	if (ret)
-		goto err_out;
+		return ret;
 
 	ret = actmon_clock_enable(pdev);
 	if (ret)
-		goto err_out;
+		return ret;
 
 	ret = actmon_reset_init(pdev);
 	if (ret)
-		goto err_out;
+		goto err_reset;
 
 	ret = actmon_set_sample_prd(pdev);
 	if (ret)
-		goto err_out;
+		goto err_sample;
 
 	if (actmon->ops.set_glb_intr)
 		actmon->ops.set_glb_intr(0xff, actmon->base);
@@ -1052,7 +1032,7 @@ int tegra_actmon_register(struct actmon_drv_data *actmon_data)
 		dev_info(mon_dev, "initialization %s for the device %s\n",
 				ret ? "Failed" : "Completed", dn->name);
 		if (ret)
-			goto err_out;
+			goto err_reset;
 
 		sysfs_attr_init(&actmon->devices[i].avgact_attr.attr);
 		actmon->devices[i].avgact_attr.attr.name = dn->name;
@@ -1069,18 +1049,43 @@ int tegra_actmon_register(struct actmon_drv_data *actmon_data)
 #ifdef CONFIG_DEBUG_FS
 	ret = actmon_debugfs_init();
 	if (ret)
-		goto err_out;
+		goto err_debugfs;
 #endif
 	return 0;
-err_out:
-	actmon_free_resource(pdev);
+err_debugfs:
+	for (i = 0; i < MAX_DEVICES; i++) {
+		if (actmon->devices[i].dn)
+			sysfs_remove_file(actmon->actmon_kobj,
+				&actmon->devices[i].avgact_attr.attr);
+		actmon->dev_free_resource(&actmon->devices[i], pdev);
+	}
+err_reset:
+	actmon_reset_deinit(pdev);
+err_sample:
+	actmon_clock_disable(pdev);
+
 	return ret;
 }
 EXPORT_SYMBOL_GPL(tegra_actmon_register);
 
 int tegra_actmon_remove(struct platform_device *pdev)
 {
-	actmon_free_resource(pdev);
+	int i;
+
+#ifdef CONFIG_DEBUG_FS
+	debugfs_remove_recursive(dbgfs_root);
+#endif
+
+	for (i = 0; i < MAX_DEVICES; i++) {
+		if (actmon->devices[i].dn)
+			sysfs_remove_file(actmon->actmon_kobj,
+				&actmon->devices[i].avgact_attr.attr);
+		actmon->dev_free_resource(&actmon->devices[i], pdev);
+	}
+
+	actmon_reset_deinit(pdev);
+	actmon_clock_disable(pdev);
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_actmon_remove);

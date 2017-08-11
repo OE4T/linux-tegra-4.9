@@ -698,14 +698,7 @@ static int hda_tegra_remove(struct platform_device *pdev)
 
 static void hda_tegra_shutdown(struct platform_device *pdev)
 {
-	struct snd_card *card = dev_get_drvdata(&pdev->dev);
-	struct azx *chip;
-
-	if (!card)
-		return;
-	chip = card->private_data;
-	if (chip && chip->running)
-		azx_stop_chip(chip);
+	return;
 }
 
 static struct platform_driver tegra_platform_hda = {

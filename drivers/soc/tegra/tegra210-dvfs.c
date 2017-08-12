@@ -838,7 +838,7 @@ static struct cvb_dvfs gpub01_cvb_dvfs_table[] = {
 		.speedo_id = -1,
 		.process_id = -1,
 		.max_mv = 1050,
-		.max_freq = 1190400,
+		.max_freq = 1228800,
 		GPUB01_NA_CVB_TABLE,
 	},
 };

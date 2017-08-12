@@ -852,14 +852,6 @@ static unsigned long gpu_cap_rates[MAX_THERMAL_LIMITS];
 static struct clk *vgpu_cap_clk;
 
 /* Core DVFS tables */
-static const int core_voltages_mv[MAX_DVFS_FREQS] = {
-	800, 825, 850, 875, 900, 925, 950, 975, 1000, 1025, 1050, 1062, 1075, 1100, 1125
-};
-
-static const int coreb01_voltages_mv[MAX_DVFS_FREQS] = {
-	650, 675, 700, 725, 750, 775, 800, 825, 850, 875, 900, 925, 950, 975, 1000, 1025, 1050
-};
-
 static int core_millivolts[MAX_DVFS_FREQS];
 
 #define CORE_DVFS(_clk_name, _speedo_id, _process_id, _auto, _mult, _freqs...) \
@@ -2106,7 +2098,7 @@ static struct tegra_dvfs_data tegra210b01slt_dvfs_data = {
 	.emc_dvb_table = emcb01slt_dvb_dvfs_table,
 	.emc_dvb_table_size = ARRAY_SIZE(emcb01slt_dvb_dvfs_table),
 
-	.core_mv = coreb01_voltages_mv,
+	.core_mv = coreb01slt_voltages_mv,
 	.core_vf_table = coreb01slt_dvfs_table,
 	.core_vf_table_size = ARRAY_SIZE(coreb01slt_dvfs_table),
 	.spi_vf_table = spib01slt_dvfs_table,

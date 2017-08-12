@@ -14,6 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+static const int coreb01_voltages_mv[MAX_DVFS_FREQS] = {
+	650, 675, 700, 725, 750, 775, 800, 825, 850, 875, 900, 925, 950, 975, 1000, 1025, 1050
+};
+
 static struct dvfs coreb01_dvfs_table[] = {
 /* Per-bin Tables */
 	/* Core voltages(mV):				    650,     675,     700,     725,     750,     775,     800,     825,     850,     875,     900,     925,     950,     975,    1000,    1025,    1050 */

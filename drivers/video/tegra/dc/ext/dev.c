@@ -3595,9 +3595,17 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 	if (open_count == 0)
 		tegra_dc_reset_imp_state();
 
-	if (!atomic_dec_return(&ext->users_count))
+	if (!atomic_dec_return(&ext->users_count)) {
 		tegra_dc_crc_drop_ref_cnts(ext->dc);
-
+#if IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)
+		i = tegra_fb_redisplay_console(ext->dc->fb);
+		if (i && i != -ENODEV) {
+			pr_err("%s: redisplay console failed with error %d\n",
+				__func__, i);
+			return i;
+		}
+#endif /* IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) */
+	}
 	return 0;
 }
 

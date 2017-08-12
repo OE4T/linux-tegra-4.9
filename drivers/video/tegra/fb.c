@@ -456,6 +456,29 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 	}
 }
 
+/* If there is a console active, make it visible again */
+int tegra_fb_redisplay_console(struct tegra_fb_info *tegra_info)
+{
+	int ret;
+
+	console_lock();
+	if (tegra_info->info->state == FBINFO_STATE_RUNNING) {
+		struct fb_event event;
+		int blank;
+
+		event.info = tegra_info->info;
+		event.data = &blank;
+		blank = FB_BLANK_NORMAL;
+		ret = fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+		blank = FB_BLANK_UNBLANK;
+		ret = fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+	} else {
+		ret = -ENODEV;
+	}
+	console_unlock();
+	return ret;
+}
+
 static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 				struct fb_info *info)
 {

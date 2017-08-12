@@ -965,6 +965,7 @@ struct tegra_fb_info;
 struct resource;
 
 #if IS_ENABLED(CONFIG_FB_TEGRA)
+int tegra_fb_redisplay_console(struct tegra_fb_info *tegra_info);
 struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 					struct tegra_dc *dc,
 					struct tegra_fb_data *fb_data,
@@ -987,6 +988,11 @@ struct tegra_dc_win *tegra_fb_get_blank_win(struct tegra_fb_info *tegra_fb);
 int tegra_fb_set_win_index(struct tegra_dc *dc, unsigned long win_mask);
 struct fb_videomode *tegra_fb_get_mode(struct tegra_dc *dc);
 #else
+int tegra_fb_redisplay_console(struct tegra_fb_info *tegra_info)
+{
+	return -ENODEV;
+}
+
 static inline struct tegra_fb_info *tegra_fb_register(
 	struct platform_device *ndev, struct tegra_dc *dc,
 	struct tegra_fb_data *fb_data, struct resource *fb_mem)

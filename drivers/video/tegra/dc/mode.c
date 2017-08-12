@@ -810,7 +810,9 @@ int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc)
 {
 	struct tegra_edid *edid = NULL;
 	struct fb_monspecs specs;
+	int	ret = 0;
 
+	specs.modedb = NULL;
 	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) && (!dc->initialized) &&
 							tegra_dc_hpd(dc)) {
 		switch (dc->out->type) {
@@ -828,12 +830,13 @@ int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc)
 		}
 
 		if (edid && !tegra_edid_get_monspecs(edid, &specs))
-			return tegra_dc_set_fb_mode(dc, specs.modedb, false);
+			ret = tegra_dc_set_fb_mode(dc, specs.modedb, false);
 		else
-			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode,
+			ret = tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode,
 									false);
 	}
-
-	return 0;
+	if (specs.modedb != NULL)
+		kfree(specs.modedb);
+	return ret;
 }
 EXPORT_SYMBOL(tegra_dc_set_fbcon_boot_mode);

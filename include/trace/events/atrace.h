@@ -105,6 +105,30 @@ TRACE_EVENT(atrace_end,
 
 	TP_printk("tracing_mark_write: E|%s\n", __entry->trace_str)
 );
+
+
+TRACE_EVENT(atrace_counter,
+
+	TP_PROTO(const char *trace_str, int trace_id, u64 trace_count),
+
+	TP_ARGS(trace_str, trace_id, trace_count),
+
+	TP_STRUCT__entry(
+		__field(const char *, trace_str)
+		__field(int, trace_id)
+		__field(u64, trace_count)
+	),
+
+	TP_fast_assign(
+		__entry->trace_str = trace_str;
+		__entry->trace_id = trace_id;
+		__entry->trace_count = trace_count;
+	),
+
+	TP_printk("tracing_mark_write: C|%d|%s|%lld\n", __entry->trace_id,
+		__entry->trace_str, __entry->trace_count)
+);
+
 #endif
 
 /* This part must be outside protection */

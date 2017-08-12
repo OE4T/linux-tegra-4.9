@@ -1388,7 +1388,7 @@ static int get_coreb01_sku_min_mv(void)
 
 static int get_coreb01slt_sku_min_mv(void)
 {
-	return get_coreb01_sku_min_mv();
+	return 650;
 }
 
 static int get_core_nominal_mv_index(int speedo_id)

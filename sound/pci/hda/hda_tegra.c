@@ -40,15 +40,9 @@
 
 #include <sound/core.h>
 #include <sound/initval.h>
-#include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
-#include "../../../../kernel-4.4/sound/pci/hda/hda_codec.h"
-#include "../../../../kernel-4.4/sound/pci/hda/hda_controller.h"
-#else
-#include "../../../../kernel-4.9/sound/pci/hda/hda_codec.h"
-#include "../../../../kernel-4.9/sound/pci/hda/hda_controller.h"
-#endif
+#include "hda_codec.h"
+#include "hda_controller.h"
 
 
 static const struct of_device_id tegra_disb_pd[] = {

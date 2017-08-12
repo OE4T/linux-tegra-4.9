@@ -529,6 +529,34 @@ static struct cpu_dvfs cpu_fv_dvfs_table[] = {
 	},
 };
 
+#define CPUB01_PLL_CVB_TABLE_SLT	\
+	.speedo_scale = 100,	\
+	.voltage_scale = 1000,	\
+	.cvb_pll_table = {	\
+		/* f	                c0,       c1,       c2 */   \
+		{  204000000UL, {        0,        0,        0 } }, \
+		{  306000000UL, {        0,        0,        0 } }, \
+		{  408000000UL, {        0,        0,        0 } }, \
+		{  510000000UL, {        0,        0,        0 } }, \
+		{  612000000UL, {        0,        0,        0 } }, \
+		{  714000000UL, {        0,        0,        0 } }, \
+		{  816000000UL, {        0,        0,        0 } }, \
+		{  918000000UL, {        0,        0,        0 } }, \
+		{ 1020000000UL, {  1120000,        0,        0 } }, \
+		{ 1122000000UL, {  1120000,        0,        0 } }, \
+		{ 1224000000UL, {  1120000,        0,        0 } }, \
+		{ 1326000000UL, {  1120000,        0,        0 } }, \
+		{ 1428000000UL, {  1120000,        0,        0 } }, \
+		{ 1581000000UL, {  1120000,        0,        0 } }, \
+		{ 1683000000UL, {  1120000,        0,        0 } }, \
+		{ 1785000000UL, {  1120000,        0,        0 } }, \
+		{ 1887000000UL, {  1120000,        0,        0 } }, \
+		{ 1963500000UL, {  1120000,        0,        0 } }, \
+		{ 2091000000UL, {  1120000,        0,        0 } }, \
+		{ 0,	        { } }, \
+	}, \
+	.pll_min_millivolts = 800
+
 #define CPUB01_PLL_CVB_TABLE	\
 	.speedo_scale = 100,	\
 	.voltage_scale = 1000,	\
@@ -558,6 +586,12 @@ static struct cpu_dvfs cpu_fv_dvfs_table[] = {
 	.pll_min_millivolts = 800
 
 static struct cpu_dvfs cpub01_fv_dvfs_table[] = {
+	{
+		.speedo_id = 2,
+		.process_id = -1,
+		.max_mv = 1120,
+		CPUB01_PLL_CVB_TABLE_SLT,
+	},
 	{
 		.speedo_id = -1,
 		.process_id = -1,

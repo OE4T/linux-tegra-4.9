@@ -2038,6 +2038,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	res |= tegra_nvdisp_postcomp_init(dc);
 	res |= tegra_nvdisp_rg_init(dc);
 	res |= tegra_nvdisp_cursor_init(dc);
+	res |= tegra_nvdisp_assign_dc_wins(dc);
 
 	if (res) {
 		dev_err(&dc->ndev->dev, "%s, failed head enable\n", __func__);
@@ -2072,8 +2073,6 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	 * is enabled.
 	 */
 	dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
-
-	tegra_nvdisp_assign_dc_wins(dc);
 
 	/* Enable RG underflow logging */
 	tegra_dc_writel(dc, nvdisp_rg_underflow_enable_enable_f() |

@@ -97,7 +97,7 @@ tegra210_core_therm_caps_ucm2[MAX_THERMAL_LIMITS] = {
 
 static struct dvfs_therm_limits
 tegra210b01_core_therm_floors[MAX_THERMAL_LIMITS] = {
-	{TEGRA210B01_SOC_THERMAL_FLOOR_0 / 1000, 850},
+	{TEGRA210B01_SOC_THERMAL_FLOOR_0 / 1000, 800},
 	{0, 0},
 };
 
@@ -1348,7 +1348,7 @@ static int get_coreb01slt_sku_max_mv(void)
 
 static int get_coreb01_sku_min_mv(void)
 {
-	return 800;
+	return 712;
 }
 
 static int get_coreb01slt_sku_min_mv(void)

@@ -634,11 +634,7 @@ static void handle_once_dma_done(struct tegra_dma_channel *tdc,
 
 	list_del(&sgreq->node);
 	if (sgreq->last_sg) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-		dma_desc->dma_status = DMA_SUCCESS;
-#else
 		dma_desc->dma_status = DMA_COMPLETE;
-#endif
 		dma_cookie_complete(&dma_desc->txd);
 		if (!dma_desc->cb_count)
 			list_add_tail(&dma_desc->cb_node, &tdc->cb_desc);
@@ -940,11 +936,7 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 	raw_spin_lock_irqsave(&tdc->lock, flags);
 
 	ret = dma_cookie_status(dc, cookie, txstate);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	if (ret == DMA_SUCCESS) {
-#else
 	if (ret == DMA_COMPLETE) {
-#endif
 		raw_spin_unlock_irqrestore(&tdc->lock, flags);
 		return ret;
 	}
@@ -993,27 +985,6 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 	return ret;
 }
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
-static int tegra_dma_device_control(struct dma_chan *dc, enum dma_ctrl_cmd cmd,
-			unsigned long arg)
-{
-	switch (cmd) {
-	case DMA_SLAVE_CONFIG:
-		return tegra_dma_slave_config(dc,
-				(struct dma_slave_config *)arg);
-
-	case DMA_TERMINATE_ALL:
-		tegra_dma_terminate_all(dc);
-		return 0;
-
-	default:
-		break;
-	}
-
-	return -ENXIO;
-}
-#endif
 
 static inline int get_bus_width(struct tegra_dma_channel *tdc,
 		enum dma_slave_buswidth slave_bw)
@@ -1462,11 +1433,7 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 static struct dma_async_tx_descriptor *tegra_dma_prep_dma_cyclic(
 	struct dma_chan *dc, dma_addr_t buf_addr, size_t buf_len,
 	size_t period_len, enum dma_transfer_direction direction,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	unsigned long flags, void *context)
-#else
 	unsigned long flags)
-#endif
 {
 	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
 	struct tegra_dma_desc *dma_desc = NULL;
@@ -1894,12 +1861,8 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	tdma->dma_dev.device_prep_dma_cyclic = tegra_dma_prep_dma_cyclic;
 	tdma->dma_dev.device_prep_dma_memcpy = tegra_dma_prep_dma_memcpy;
 	tdma->dma_dev.device_prep_dma_memset = tegra_dma_prep_dma_memset;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
-	tdma->dma_dev.device_control = tegra_dma_device_control;
-#else
 	tdma->dma_dev.device_config = tegra_dma_slave_config;
 	tdma->dma_dev.device_terminate_all = tegra_dma_terminate_all;
-#endif
 	tdma->dma_dev.device_tx_status = tegra_dma_tx_status;
 	tdma->dma_dev.device_issue_pending = tegra_dma_issue_pending;
 

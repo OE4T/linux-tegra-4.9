@@ -1707,7 +1707,8 @@ static int smmu_master_show(struct seq_file *s, void *unused)
 		seq_printf(s, "streamids: % 3d ", master->cfg->streamids[i]);
 	seq_printf(s, "\n");
 	for (i = 0; i < master->cfg->num_streamids; i++)
-		seq_printf(s, "smrs:      % 3d ", master->cfg->smrs[i].idx);
+		seq_printf(s, "smrs:      % 3d ",
+			(master->cfg->smrs ? master->cfg->smrs[i].idx : -1));
 	seq_printf(s, "\n");
 	return 0;
 }

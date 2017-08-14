@@ -771,15 +771,16 @@ int tegra_dc_crc_process(struct tegra_dc *dc)
 	 */
 	ret = tegra_dc_ring_buf_peek(&dc->flip_buf, dc->flip_buf.tail,
 				     (char **)&flip_ele);
-
-	while (!ret && flip_ele->state == TEGRA_DC_FLIP_STATE_FLIPPED) {
-		crc_ele.matching_flips[matched].id = flip_ele->id;
-		crc_ele.matching_flips[matched].valid = true;
-		matched++;
-		WARN_ON(matched >= DC_N_WINDOWS);
+	while (!ret && (flip_ele->state == TEGRA_DC_FLIP_STATE_FLIPPED ||
+			flip_ele->state == TEGRA_DC_FLIP_STATE_SKIPPED)) {
+		if (flip_ele->state == TEGRA_DC_FLIP_STATE_FLIPPED) {
+			crc_ele.matching_flips[matched].id = flip_ele->id;
+			crc_ele.matching_flips[matched].valid = true;
+			matched++;
+			WARN_ON(matched >= DC_N_WINDOWS);
+		}
 
 		tegra_dc_ring_buf_remove(&dc->flip_buf);
-
 		ret = tegra_dc_ring_buf_peek(&dc->flip_buf, dc->flip_buf.tail,
 					     (char **)&flip_ele);
 	}

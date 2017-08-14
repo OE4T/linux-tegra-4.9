@@ -965,10 +965,10 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 	bool lock_flip = false;
 	bool show_background =
 		tegra_dc_ext_should_show_background(data, win_num);
-	struct tegra_dc_flip_buf_ele *flip_buf_ele = data->flip_buf_ele;
+	struct tegra_dc_flip_buf_ele *flip_ele = data->flip_buf_ele;
 
-	if (flip_buf_ele)
-		flip_buf_ele->state = TEGRA_DC_FLIP_STATE_DEQUEUED;
+	if (flip_ele)
+		flip_ele->state = TEGRA_DC_FLIP_STATE_DEQUEUED;
 
 	blank_win = kzalloc(sizeof(*blank_win), GFP_KERNEL);
 	if (!blank_win)
@@ -1026,10 +1026,13 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			list_del(&data->timestamp_node);
 		mutex_unlock(&ext_win->queue_lock);
 
-		if (skip_flip)
+		if (skip_flip) {
+			if (flip_ele)
+				flip_ele->state = TEGRA_DC_FLIP_STATE_SKIPPED;
 			old_handle = flip_win->handle[TEGRA_DC_Y];
-		else
+		} else {
 			old_handle = ext_win->cur_handle[TEGRA_DC_Y];
+		}
 
 		if (old_handle) {
 			int j;
@@ -1197,8 +1200,8 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);
 
-		if (flip_buf_ele)
-			flip_buf_ele->state = TEGRA_DC_FLIP_STATE_FLIPPED;
+		if (flip_ele)
+			flip_ele->state = TEGRA_DC_FLIP_STATE_FLIPPED;
 
 		if (trace_scanout_syncpt_upd_enabled())
 			tegra_dc_flip_trace(data, trace_scanout_syncpt_upd);

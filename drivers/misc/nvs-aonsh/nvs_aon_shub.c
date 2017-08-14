@@ -32,6 +32,10 @@
 
 #include <aon-shub-messages.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/atrace.h>
+#define TRACE_SENSOR_ID (100)
+
 #define READJUST_TS_SAMPLES (100)
 
 #define AXIS_N		3
@@ -109,6 +113,7 @@ static void tegra_aon_shub_mbox_rcv_msg(struct mbox_client *cl, void *rx_msg)
 	int snsr_id;
 	u32 i;
 	s64 ts;
+	int cookie;
 
 	shub_resp = (struct aon_shub_response *)msg->data;
 	if (shub_resp->resp_type == AON_SHUB_REQUEST_PAYLOAD) {
@@ -129,9 +134,12 @@ static void tegra_aon_shub_mbox_rcv_msg(struct mbox_client *cl, void *rx_msg)
 			ts = (s64)shub_resp->data.payload.data[i].ts;
 			ts += shub->ts_adjustment;
 			shub_resp->data.payload.data[i].ts = (u64)ts;
+			cookie = (int) ts;
+			trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
 			shub->nvs->handler(shub->snsr[snsr_id].nvs_st,
 				&shub_resp->data.payload.data[i].x,
 				shub_resp->data.payload.data[i].ts);
+			trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
 		}
 	} else {
 		memcpy(shub->shub_resp, msg->data, sizeof(*shub->shub_resp));

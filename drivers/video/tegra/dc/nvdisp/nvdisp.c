@@ -1622,11 +1622,9 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	tegra_dc_writel(dc, nvdisp_incr_syncpt_cntrl_no_stall_f(1),
 		nvdisp_incr_syncpt_cntrl_r());
 
-	/* Disabled this feature as unit fpga hang on enabling this*/
-	if (tegra_platform_is_silicon())
-		tegra_dc_writel(dc, nvdisp_cont_syncpt_vsync_en_enable_f() |
-			nvdisp_cont_syncpt_vsync_indx_f(dc->vblank_syncpt),
-			nvdisp_cont_syncpt_vsync_r());
+	tegra_dc_writel(dc, nvdisp_cont_syncpt_vsync_en_enable_f() |
+		nvdisp_cont_syncpt_vsync_indx_f(dc->vblank_syncpt),
+		nvdisp_cont_syncpt_vsync_r());
 
 	/* Init interrupts */
 	/* Setting Int type. EDGE for most, LEVEL for UF related */

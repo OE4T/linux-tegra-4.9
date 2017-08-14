@@ -3481,7 +3481,7 @@ static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
 	.num_supplies = ARRAY_SIZE(tegra194_xudc_supply_names),
 	.u1_enable = true,
 	.u2_enable = true,
-	.lpm_enable = false,
+	.lpm_enable = true,
 	.invalid_seq_num = false,
 };
 

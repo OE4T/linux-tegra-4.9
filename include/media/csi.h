@@ -156,6 +156,7 @@ int tegra_csi_init(struct tegra_csi_device *csi,
 int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 				struct platform_device *pdev);
 int tegra_csi_media_controller_remove(struct tegra_csi_device *csi);
+struct tegra_csi_device *tegra_get_mc_csi(void);
 int tpg_csi_media_controller_init(struct tegra_csi_device *csi, int pg_mode);
 void tpg_csi_media_controller_cleanup(struct tegra_csi_device *csi);
 #endif

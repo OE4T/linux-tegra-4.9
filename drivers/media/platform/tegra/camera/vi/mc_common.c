@@ -295,16 +295,18 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	if (err)
 		goto mc_init_fail;
 
+	tegra_mcvi = mc_vi;
+
+	err = tegra_vi_v4l2_init(mc_vi);
+	if (err < 0)
+		goto mc_init_fail;
+
 	/*
 	 * if there is no vi channels listed in DT,
 	 * no need to init the channel and graph
 	 */
 	if (mc_vi->num_channels == 0)
 		return 0;
-
-	err = tegra_vi_v4l2_init(mc_vi);
-	if (err < 0)
-		goto mc_init_fail;
 
 	/* Init Tegra VI channels */
 	err = tegra_vi_channels_init(mc_vi);
@@ -317,8 +319,6 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	err = tegra_vi_graph_init(mc_vi);
 	if (err < 0)
 		goto graph_error;
-
-	tegra_mcvi = mc_vi;
 
 	return 0;
 

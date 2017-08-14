@@ -190,11 +190,6 @@ static irqreturn_t nvcsi_thread_isr(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
-struct tegra_csi_device *tegra_get_mc_csi(void)
-{
-	return mc_csi;
-}
-EXPORT_SYMBOL(tegra_get_mc_csi);
 
 int nvcsi_finalize_poweron(struct platform_device *pdev)
 {
@@ -318,7 +313,9 @@ static int nvcsi_probe(struct platform_device *dev)
 	if (err)
 		goto err_client_device_init;
 
-	nvcsi->csi.fops = data->csi_fops;
+	if (data)
+		nvcsi->csi.fops = data->csi_fops;
+
 	err = tegra_csi_media_controller_init(&nvcsi->csi, dev);
 	if (err < 0)
 		goto err_mediacontroller_init;

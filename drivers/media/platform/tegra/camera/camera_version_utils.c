@@ -108,8 +108,9 @@ void tegra_vb2_dma_cleanup(struct device *dev, void *alloc_ctx,
 			atomic_t *refcount)
 {
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
-	if (atomic_dec_return(refcount) == 0)
-		vb2_dma_contig_clear_max_seg_size(dev);
+	atomic_dec_return(refcount);
+	/* dont call vb2_dma_contig_clear_max_seg_size as it will */
+	/* call kfree dma_parms but dma_parms is static member */
 #else
 	vb2_dma_contig_cleanup_ctx(alloc_ctx);
 #endif

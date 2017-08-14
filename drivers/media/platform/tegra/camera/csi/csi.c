@@ -33,6 +33,14 @@
 #include <linux/version.h>
 #define DEFAULT_NUM_TPG_CHANNELS 6
 
+static struct tegra_csi_device *mc_csi;
+
+struct tegra_csi_device *tegra_get_mc_csi(void)
+{
+	return mc_csi;
+}
+EXPORT_SYMBOL(tegra_get_mc_csi);
+
 static int set_csi_properties(struct tegra_csi_device *csi,
 			struct platform_device *pdev)
 {
@@ -805,6 +813,10 @@ int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 {
 	int ret;
 
+	if (!csi)
+		return -EINVAL;
+	mc_csi = csi;
+
 	csi->dev = &pdev->dev;
 	csi->pdev = pdev;
 	csi->tpg_active = 0;
@@ -820,10 +832,12 @@ int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 	 * if there is no csi channels listed in DT,
 	 * no need to init the channel and graph
 	 */
-	if (csi->num_channels == 0)
-		return 0;
+	if (csi->num_channels > 0) {
+		ret = tegra_csi_channels_init(csi);
+		if (ret < 0)
+			dev_err(&pdev->dev, "Failed to init csi channel\n");
+	}
 
-	ret = tegra_csi_channels_init(csi);
 	ret = tegra_csi_init(csi, pdev);
 	if (ret < 0)
 		dev_err(&pdev->dev, "Failed to init csi property,clks\n");

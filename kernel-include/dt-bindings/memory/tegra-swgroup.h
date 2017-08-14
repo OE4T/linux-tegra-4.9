@@ -241,6 +241,12 @@
 #define TEGRA_SID_SE_VM6	0x4e
 #define TEGRA_SID_SE_VM7	0x4f
 
+/* XUSB virtual functions */
+#define TEGRA_SID_XUSB_VF0	0x5d
+#define TEGRA_SID_XUSB_VF1	0x5e
+#define TEGRA_SID_XUSB_VF2	0x5f
+#define TEGRA_SID_XUSB_VF3	0x60
+
 /* Special clients */
 #define TEGRA_SID_PASSTHROUGH	0x7f
 #define TEGRA_SID_INVALID	0x0

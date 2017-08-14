@@ -288,8 +288,8 @@ config TEGRA_IOMMU_SMMU_HV
 
 config TEGRA_IOMMU_SMMU_LINEAR
 	bool "Physical RAM IOVA Liner Mapping Support"
-	depends on TEGRA_IOMMU_SMMU && !PLATFORM_ENABLE_IOMMU
-	default y
+	depends on TEGRA_IOMMU_SMMU
+	default n
 	help
 	  Enables support for linear mapping between physical address
 	  and IO virtual address for RAM. With this enabled, H/W can

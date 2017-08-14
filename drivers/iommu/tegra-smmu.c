@@ -2425,8 +2425,6 @@ void (*free_pdir)(struct smmu_as *as) = free_pdir_default;
 struct iommu_ops *smmu_iommu_ops = &smmu_iommu_ops_default;
 const struct file_operations *smmu_debugfs_stats_fops = &smmu_debugfs_stats_fops_default;
 
-#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
-
 void tegra_smmu_map_misc_device(struct device *dev)
 {
 	smmu_iommu_add_device(dev);
@@ -2438,8 +2436,6 @@ void tegra_smmu_unmap_misc_device(struct device *dev)
 	smmu_iommu_remove_device(dev);
 }
 EXPORT_SYMBOL(tegra_smmu_unmap_misc_device);
-
-#endif
 
 static bool init_done;
 

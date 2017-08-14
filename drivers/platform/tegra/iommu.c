@@ -110,12 +110,6 @@ struct swgid_fixup {
 	struct iommu_linear_map *linear_map;
 };
 
-#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
-#define DUMMY_DEV_NAME "dummy_dev"
-#define DUMMY_DEV_MAX_NAME_SIZE 100
-static char dummy_name[DUMMY_DEV_MAX_NAME_SIZE] = DUMMY_DEV_NAME;
-#endif
-
 /*
  * FIXME: They should have a DT entry with swgroup IDs.
  */
@@ -153,9 +147,6 @@ static struct swgid_fixup tegra_swgid_fixup_t124[] = {
 	{ .name = "vic",	.swgids = SWGIDS_ERROR_CODE, },
 	{ .name = "vi",	.swgids = TEGRA_SWGROUP_BIT(VI), },
 	{ .name = "therm_est",	.swgids = TEGRA_SWGROUP_BIT(PPCS), },
-#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
-	{ .name = dummy_name,	.swgids = TEGRA_SWGROUP_BIT(PPCS) },
-#endif
 	{ .name = "tegra-xhci",	.swgids = TEGRA_SWGROUP_BIT(XUSB_HOST), },
 	{},
 };
@@ -201,9 +192,6 @@ static struct swgid_fixup tegra_swgid_fixup_t210[] = {
 	{ .name = "tegra-udc",	.swgids = TEGRA_SWGROUP_BIT(PPCS) |
 					  TEGRA_SWGROUP_BIT(PPCS1) |
 	  TEGRA_SWGROUP_BIT(PPCS2), },
-#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
-	{ .name = dummy_name,	.swgids = TEGRA_SWGROUP_BIT(PPCS) },
-#endif
 	{},
 };
 

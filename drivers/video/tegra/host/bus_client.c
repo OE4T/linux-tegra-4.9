@@ -1532,6 +1532,11 @@ int nvhost_client_user_init(struct platform_device *dev)
 	if (pdata->kernel_only)
 		return 0;
 
+	if (!nvhost_master) {
+		dev_err(&dev->dev, "failed to get nvhost_master!\n");
+		return -ENODEV;
+	}
+
 	if (!nvhost_master->major) {
 		dev_err(&dev->dev, "Major chrdev number not allocated!\n");
 		return -EINVAL;

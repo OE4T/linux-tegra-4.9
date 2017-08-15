@@ -504,8 +504,10 @@ static struct dentry *debugfs_node_clients_info;
 
 /* keep in sync with tegra_bwmgr_client_id */
 static const char * const tegra_bwmgr_client_names[] = {
-	"cpu_0",
-	"cpu_1",
+	"cpu_cluster_0",
+	"cpu_cluster_1",
+	"cpu_cluster_2",
+	"cpu_cluster_3",
 	"disp_0",
 	"disp_1",
 	"disp_2",

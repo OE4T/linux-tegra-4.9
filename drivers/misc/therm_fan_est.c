@@ -31,6 +31,7 @@
 #include <linux/thermal.h>
 #include <linux/module.h>
 #include <linux/hwmon-sysfs.h>
+#include <linux/version.h>
 
 #define DEFERRED_RESUME_TIME 3000
 #define DEBUG 0
@@ -133,8 +134,12 @@ static void therm_fan_est_work_func(struct work_struct *work)
 		if (update_flag == true) {
 			pr_debug("%s, cur_temp: %ld, cur_trip_index: %d\n",
 				__func__, est->cur_temp, est->current_trip_index);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 			thermal_zone_device_update(est->thz,
 						THERMAL_EVENT_UNSPECIFIED);
+#else
+			thermal_zone_device_update(est->thz);
+#endif
 		}
 		est->current_trip_index = trip_index - 1;
 	}

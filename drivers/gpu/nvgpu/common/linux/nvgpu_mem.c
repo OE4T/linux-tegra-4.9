@@ -397,42 +397,59 @@ int __nvgpu_mem_create_from_pages(struct gk20a *g, struct nvgpu_mem *dest,
 	return 0;
 }
 
-static struct nvgpu_mem_sgl *__nvgpu_mem_sgl_dup(struct gk20a *g,
-						 struct nvgpu_mem_sgl *sgl)
+static void *nvgpu_mem_linux_sgl_next(void *sgl)
 {
-	struct nvgpu_mem_sgl *head, *next;
-
-	head = nvgpu_kzalloc(g, sizeof(*sgl));
-	if (!head)
-		return NULL;
-
-	next = head;
-	while (true) {
-		nvgpu_log(g, gpu_dbg_sgl,
-			  "  phys: 0x%-12llx dma: 0x%-12llx len: 0x%llx",
-			  sgl->phys, sgl->dma, sgl->length);
-
-		next->dma    = sgl->dma;
-		next->phys   = sgl->phys;
-		next->length = sgl->length;
-		next->next   = NULL;
-
-		sgl = nvgpu_mem_sgl_next(sgl);
-		if (!sgl)
-			break;
-
-		next->next = nvgpu_kzalloc(g, sizeof(*sgl));
-		if (!next->next) {
-			nvgpu_mem_sgl_free(g, head);
-			return NULL;
-		}
-		next = next->next;
-	}
-
-	return head;
+	return sg_next((struct scatterlist *)sgl);
 }
 
-static struct nvgpu_mem_sgl *__nvgpu_mem_sgl_create_from_vidmem(
+static u64 nvgpu_mem_linux_sgl_phys(void *sgl)
+{
+	return (u64)sg_phys((struct scatterlist *)sgl);
+}
+
+static u64 nvgpu_mem_linux_sgl_dma(void *sgl)
+{
+	return (u64)sg_dma_address((struct scatterlist *)sgl);
+}
+
+static u64 nvgpu_mem_linux_sgl_length(void *sgl)
+{
+	return (u64)((struct scatterlist *)sgl)->length;
+}
+
+static u64 nvgpu_mem_linux_sgl_gpu_addr(struct gk20a *g, void *sgl,
+					struct nvgpu_gmmu_attrs *attrs)
+{
+	if (sg_dma_address((struct scatterlist *)sgl) == 0)
+		return g->ops.mm.gpu_phys_addr(g, attrs,
+			sg_phys((struct scatterlist *)sgl));
+
+	if (sg_dma_address((struct scatterlist *)sgl) == DMA_ERROR_CODE)
+		return 0;
+
+	return gk20a_mm_smmu_vaddr_translate(g,
+			sg_dma_address((struct scatterlist *)sgl));
+}
+
+static void nvgpu_mem_linux_sgl_free(struct gk20a *g, struct nvgpu_sgt *sgt)
+{
+	/*
+	 * Free this SGT. All we do is free the passed SGT. The actual Linux
+	 * SGT/SGL needs to be freed separately.
+	 */
+	nvgpu_kfree(g, sgt);
+}
+
+static const struct nvgpu_sgt_ops nvgpu_linux_sgt_ops = {
+	.sgl_next     = nvgpu_mem_linux_sgl_next,
+	.sgl_phys     = nvgpu_mem_linux_sgl_phys,
+	.sgl_dma      = nvgpu_mem_linux_sgl_dma,
+	.sgl_length   = nvgpu_mem_linux_sgl_length,
+	.sgl_gpu_addr = nvgpu_mem_linux_sgl_gpu_addr,
+	.sgt_free     = nvgpu_mem_linux_sgl_free,
+};
+
+static struct nvgpu_sgt *__nvgpu_mem_get_sgl_from_vidmem(
 	struct gk20a *g,
 	struct scatterlist *linux_sgl)
 {
@@ -442,70 +459,31 @@ static struct nvgpu_mem_sgl *__nvgpu_mem_sgl_create_from_vidmem(
 	if (!vidmem_alloc)
 		return NULL;
 
-	nvgpu_log(g, gpu_dbg_sgl, "Vidmem sgl:");
-
-	return __nvgpu_mem_sgl_dup(g, vidmem_alloc->sgl);
+	return &vidmem_alloc->sgt;
 }
 
-struct nvgpu_mem_sgl *nvgpu_mem_sgl_create(struct gk20a *g,
-					   struct sg_table *sgt)
+struct nvgpu_sgt *nvgpu_linux_sgt_create(struct gk20a *g, struct sg_table *sgt)
 {
-	struct nvgpu_mem_sgl *head, *sgl, *next;
+	struct nvgpu_sgt *nvgpu_sgt;
 	struct scatterlist *linux_sgl = sgt->sgl;
 
 	if (is_vidmem_page_alloc(sg_dma_address(linux_sgl)))
-		return __nvgpu_mem_sgl_create_from_vidmem(g, linux_sgl);
+		return __nvgpu_mem_get_sgl_from_vidmem(g, linux_sgl);
 
-	head = nvgpu_kzalloc(g, sizeof(*sgl));
-	if (!head)
+	nvgpu_sgt = nvgpu_kzalloc(g, sizeof(*nvgpu_sgt));
+	if (!nvgpu_sgt)
 		return NULL;
 
-	nvgpu_log(g, gpu_dbg_sgl, "Making sgl:");
+	nvgpu_log(g, gpu_dbg_sgl, "Making Linux SGL!");
 
-	sgl = head;
-	while (true) {
-		sgl->dma    = sg_dma_address(linux_sgl);
-		sgl->phys   = sg_phys(linux_sgl);
-		sgl->length = linux_sgl->length;
+	nvgpu_sgt->sgl = sgt->sgl;
+	nvgpu_sgt->ops = &nvgpu_linux_sgt_ops;
 
-		/*
-		 * We don't like offsets in the pages here. This will cause
-		 * problems.
-		 */
-		if (WARN_ON(linux_sgl->offset)) {
-			nvgpu_mem_sgl_free(g, head);
-			return NULL;
-		}
-
-		nvgpu_log(g, gpu_dbg_sgl,
-			  "  phys: 0x%-12llx dma: 0x%-12llx len: 0x%llx",
-			  sgl->phys, sgl->dma, sgl->length);
-
-		/*
-		 * When there's no more SGL ents for the Linux SGL we are
-		 * done. Don't bother making any more SGL ents for the nvgpu
-		 * SGL.
-		 */
-		linux_sgl = sg_next(linux_sgl);
-		if (!linux_sgl)
-			break;
-
-		next = nvgpu_kzalloc(g, sizeof(*sgl));
-		if (!next) {
-			nvgpu_mem_sgl_free(g, head);
-			return NULL;
-		}
-
-		sgl->next = next;
-		sgl = next;
-	}
-
-	nvgpu_log(g, gpu_dbg_sgl, "Done!");
-	return head;
+	return nvgpu_sgt;
 }
 
-struct nvgpu_mem_sgl *nvgpu_mem_sgl_create_from_mem(struct gk20a *g,
-						    struct nvgpu_mem *mem)
+struct nvgpu_sgt *nvgpu_sgt_create_from_mem(struct gk20a *g,
+					    struct nvgpu_mem *mem)
 {
-	return nvgpu_mem_sgl_create(g, mem->priv.sgt);
+	return nvgpu_linux_sgt_create(g, mem->priv.sgt);
 }

@@ -1151,7 +1151,8 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 	struct gk20a_fence *gk20a_fence_out = NULL;
 	struct gk20a_fence *gk20a_last_fence = NULL;
 	struct nvgpu_page_alloc *alloc = NULL;
-	struct nvgpu_mem_sgl *sgl = NULL;
+	struct nvgpu_sgt *sgt = NULL;
+	void *sgl = NULL;
 	int err = 0;
 
 	if (g->mm.vidmem.ce_ctx_id == (u32)~0)
@@ -1159,7 +1160,8 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 
 	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
 
-	sgl = alloc->sgl;
+	sgt = &alloc->sgt;
+	sgl = sgt->sgl;
 	while (sgl) {
 		if (gk20a_last_fence)
 			gk20a_fence_put(gk20a_last_fence);
@@ -1167,8 +1169,8 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 		err = gk20a_ce_execute_ops(g,
 			g->mm.vidmem.ce_ctx_id,
 			0,
-			nvgpu_mem_sgl_phys(sgl),
-			nvgpu_mem_sgl_length(sgl),
+			nvgpu_sgt_get_phys(sgt, sgl),
+			nvgpu_sgt_get_length(sgt, sgl),
 			0x00000000,
 			NVGPU_CE_DST_LOCATION_LOCAL_FB,
 			NVGPU_CE_MEMSET,
@@ -1183,7 +1185,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 		}
 
 		gk20a_last_fence = gk20a_fence_out;
-		sgl = nvgpu_mem_sgl_next(sgl);
+		sgl = nvgpu_sgt_get_next(sgt, sgl);
 	}
 
 	if (gk20a_last_fence) {

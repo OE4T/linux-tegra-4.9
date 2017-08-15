@@ -26,9 +26,9 @@
 
 /* WARNING: returns pramin_window_lock taken, complement with pramin_exit() */
 u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
-		       struct nvgpu_mem_sgl *sgl, u32 w)
+		       struct nvgpu_sgt *sgt, void *sgl, u32 w)
 {
-	u64 bufbase = nvgpu_mem_sgl_phys(sgl);
+	u64 bufbase = nvgpu_sgt_get_phys(sgt, sgl);
 	u64 addr = bufbase + w * sizeof(u32);
 	u32 hi = (u32)((addr & ~(u64)0xfffff)
 		>> bus_bar0_window_target_bar0_window_base_shift_v());
@@ -41,8 +41,8 @@ u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
 	gk20a_dbg(gpu_dbg_mem,
 			"0x%08x:%08x begin for %p,%p at [%llx,%llx] (sz %llx)",
 			hi, lo, mem, sgl, bufbase,
-			bufbase + nvgpu_mem_sgl_phys(sgl),
-			nvgpu_mem_sgl_length(sgl));
+			bufbase + nvgpu_sgt_get_phys(sgt, sgl),
+			nvgpu_sgt_get_length(sgt, sgl));
 
 	WARN_ON(!bufbase);
 
@@ -58,7 +58,7 @@ u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
 }
 
 void gk20a_pramin_exit(struct gk20a *g, struct nvgpu_mem *mem,
-		       struct nvgpu_mem_sgl *sgl)
+		       void *sgl)
 {
 	gk20a_dbg(gpu_dbg_mem, "end for %p,%p", mem, sgl);
 

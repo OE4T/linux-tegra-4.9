@@ -143,20 +143,93 @@ static void nvgpu_page_release_co(struct nvgpu_allocator *a,
 	nvgpu_alloc_release_carveout(&va->source_allocator, co);
 }
 
+static void *nvgpu_page_alloc_sgl_next(void *sgl)
+{
+	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+
+	return nvgpu_sgl->next;
+}
+
+static u64 nvgpu_page_alloc_sgl_phys(void *sgl)
+{
+	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+
+	return nvgpu_sgl->phys;
+}
+
+static u64 nvgpu_page_alloc_sgl_dma(void *sgl)
+{
+	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+
+	return nvgpu_sgl->dma;
+}
+
+static u64 nvgpu_page_alloc_sgl_length(void *sgl)
+{
+	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+
+	return nvgpu_sgl->length;
+}
+
+static u64 nvgpu_page_alloc_sgl_gpu_addr(struct gk20a *g, void *sgl,
+					 struct nvgpu_gmmu_attrs *attrs)
+{
+	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+
+	return nvgpu_sgl->phys;
+}
+
+static void nvgpu_page_alloc_sgt_free(struct gk20a *g, struct nvgpu_sgt *sgt)
+{
+	/*
+	 * No-op here. The free is handled by the page_alloc free() functions.
+	 */
+}
+
+/*
+ * These implement the generic scatter gather ops for pages allocated
+ * by the page allocator. however, the primary aim for this, is of course,
+ * vidmem.
+ */
+static const struct nvgpu_sgt_ops page_alloc_sgl_ops = {
+	.sgl_next = nvgpu_page_alloc_sgl_next,
+	.sgl_phys = nvgpu_page_alloc_sgl_phys,
+	.sgl_dma = nvgpu_page_alloc_sgl_dma,
+	.sgl_length = nvgpu_page_alloc_sgl_length,
+	.sgl_gpu_addr = nvgpu_page_alloc_sgl_gpu_addr,
+	.sgt_free = nvgpu_page_alloc_sgt_free,
+};
+
+/*
+ * This actually frees the sgl memory. Used by the page_alloc free() functions.
+ */
+static void nvgpu_page_alloc_sgl_proper_free(struct gk20a *g,
+					     struct nvgpu_mem_sgl *sgl)
+{
+	struct nvgpu_mem_sgl *next;
+
+	while (sgl) {
+		next = sgl->next;
+		nvgpu_kfree(g, sgl);
+		sgl = next;
+	}
+}
+
 static void __nvgpu_free_pages(struct nvgpu_page_allocator *a,
 			       struct nvgpu_page_alloc *alloc,
 			       bool free_buddy_alloc)
 {
-	struct nvgpu_mem_sgl *sgl = alloc->sgl;
+	struct nvgpu_mem_sgl *sgl = alloc->sgt.sgl;
 
 	if (free_buddy_alloc) {
 		while (sgl) {
-			nvgpu_free(&a->source_allocator, sgl->phys);
-			sgl = nvgpu_mem_sgl_next(sgl);
+			nvgpu_free(&a->source_allocator,
+				   nvgpu_sgt_get_phys(&alloc->sgt, sgl));
+			sgl = nvgpu_sgt_get_next(&alloc->sgt, sgl);
 		}
 	}
 
-	nvgpu_mem_sgl_free(a->owner->g, alloc->sgl);
+	nvgpu_page_alloc_sgl_proper_free(a->owner->g, sgl);
 	nvgpu_kmem_cache_free(a->alloc_cache, alloc);
 }
 
@@ -306,7 +379,7 @@ static int __do_slab_alloc(struct nvgpu_page_allocator *a,
 	alloc->length = slab_page->slab_size;
 	alloc->base = slab_page->page_addr + (offs * slab_page->slab_size);
 
-	sgl         = alloc->sgl;
+	sgl         = alloc->sgt.sgl;
 	sgl->phys   = alloc->base;
 	sgl->dma    = alloc->base;
 	sgl->length = alloc->length;
@@ -338,13 +411,16 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 		palloc_dbg(a, "OOM: could not alloc page_alloc struct!\n");
 		goto fail;
 	}
+
+	alloc->sgt.ops = &page_alloc_sgl_ops;
+
 	sgl = nvgpu_kzalloc(a->owner->g, sizeof(*sgl));
 	if (!sgl) {
 		palloc_dbg(a, "OOM: could not alloc sgl struct!\n");
 		goto fail;
 	}
 
-	alloc->sgl = sgl;
+	alloc->sgt.sgl = sgl;
 	err = __do_slab_alloc(a, slab, alloc);
 	if (err)
 		goto fail;
@@ -432,6 +508,7 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 	memset(alloc, 0, sizeof(*alloc));
 
 	alloc->length = pages << a->page_shift;
+	alloc->sgt.ops = &page_alloc_sgl_ops;
 
 	while (pages) {
 		u64 chunk_addr = 0;
@@ -495,7 +572,7 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 		if (prev_sgl)
 			prev_sgl->next = sgl;
 		else
-			alloc->sgl = sgl;
+			alloc->sgt.sgl = sgl;
 
 		prev_sgl = sgl;
 
@@ -503,12 +580,12 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 	}
 
 	alloc->nr_chunks = i;
-	alloc->base = alloc->sgl->phys;
+	alloc->base = ((struct nvgpu_mem_sgl *)alloc->sgt.sgl)->phys;
 
 	return alloc;
 
 fail_cleanup:
-	sgl = alloc->sgl;
+	sgl = alloc->sgt.sgl;
 	while (sgl) {
 		struct nvgpu_mem_sgl *next = sgl->next;
 
@@ -542,13 +619,13 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages(
 
 	palloc_dbg(a, "Alloc 0x%llx (%llu) id=0x%010llx\n",
 		   pages << a->page_shift, pages, alloc->base);
-	sgl = alloc->sgl;
+	sgl = alloc->sgt.sgl;
 	while (sgl) {
 		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx\n",
 			   i++,
-			   nvgpu_mem_sgl_phys(sgl),
-			   nvgpu_mem_sgl_length(sgl));
-		sgl = sgl->next;
+			   nvgpu_sgt_get_phys(&alloc->sgt, sgl),
+			   nvgpu_sgt_get_length(&alloc->sgt, sgl));
+		sgl = nvgpu_sgt_get_next(&alloc->sgt, sgl);
 	}
 	palloc_dbg(a, "Alloc done\n");
 
@@ -655,6 +732,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
 	if (!alloc || !sgl)
 		goto fail;
 
+	alloc->sgt.ops = &page_alloc_sgl_ops;
 	alloc->base = nvgpu_alloc_fixed(&a->source_allocator, base, length, 0);
 	if (!alloc->base) {
 		WARN(1, "nvgpu: failed to fixed alloc pages @ 0x%010llx", base);
@@ -663,7 +741,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
 
 	alloc->nr_chunks = 1;
 	alloc->length = length;
-	alloc->sgl = sgl;
+	alloc->sgt.sgl = sgl;
 
 	sgl->phys   = alloc->base;
 	sgl->dma    = alloc->base;
@@ -708,13 +786,13 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 
 	palloc_dbg(a, "Alloc [fixed] @ 0x%010llx + 0x%llx (%llu)\n",
 		   alloc->base, aligned_len, pages);
-	sgl = alloc->sgl;
+	sgl = alloc->sgt.sgl;
 	while (sgl) {
 		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx\n",
 			   i++,
-			   nvgpu_mem_sgl_phys(sgl),
-			   nvgpu_mem_sgl_length(sgl));
-		sgl = sgl->next;
+			   nvgpu_sgt_get_phys(&alloc->sgt, sgl),
+			   nvgpu_sgt_get_length(&alloc->sgt, sgl));
+		sgl = nvgpu_sgt_get_next(&alloc->sgt, sgl);
 	}
 
 	a->nr_fixed_allocs++;

@@ -91,10 +91,10 @@ page_alloc_slab_page_from_list_entry(struct nvgpu_list_node *node)
  */
 struct nvgpu_page_alloc {
 	/*
-	 * nvgpu_mem_sgl for describing the actual allocation. Convenient for
+	 * nvgpu_sgt for describing the actual allocation. Convenient for
 	 * GMMU mapping.
 	 */
-	struct nvgpu_mem_sgl *sgl;
+	struct nvgpu_sgt sgt;
 
 	int nr_chunks;
 	u64 length;

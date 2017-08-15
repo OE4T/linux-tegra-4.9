@@ -22,7 +22,7 @@ struct nvgpu_mem;
 struct nvgpu_mem_sgl;
 
 u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
-		       struct nvgpu_mem_sgl *sgl, u32 w);
+		       struct nvgpu_sgt *sgt, void *sgl, u32 w);
 void gk20a_pramin_exit(struct gk20a *g, struct nvgpu_mem *mem,
-		       struct nvgpu_mem_sgl *sgl);
+		       void *sgl);
 #endif

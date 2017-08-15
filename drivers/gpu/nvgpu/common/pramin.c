@@ -84,24 +84,23 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 offset, u32 size, pramin_access_batch_fn loop, u32 **arg)
 {
 	struct nvgpu_page_alloc *alloc = NULL;
-	struct nvgpu_mem_sgl *sgl;
+	struct nvgpu_sgt *sgt;
+	void *sgl;
 	u32 byteoff, start_reg, until_end, n;
 
 	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
-	sgl = alloc->sgl;
-	while (sgl) {
-		if (offset >= nvgpu_mem_sgl_length(sgl)) {
-			offset -= nvgpu_mem_sgl_length(sgl);
-			sgl = sgl->next;
-		} else {
+	sgt = &alloc->sgt;
+	for (sgl = sgt->sgl; sgl; sgl = nvgpu_sgt_get_next(sgt, sgl)) {
+		if (offset >= nvgpu_sgt_get_length(sgt, sgl))
+			offset -= nvgpu_sgt_get_length(sgt, sgl);
+		else
 			break;
-		}
 	}
 
 	while (size) {
-		u32 sgl_len = (u32)nvgpu_mem_sgl_length(sgl);
+		u32 sgl_len = (u32)nvgpu_sgt_get_length(sgt, sgl);
 
-		byteoff = g->ops.pramin.enter(g, mem, sgl,
+		byteoff = g->ops.pramin.enter(g, mem, sgt, sgl,
 					      offset / sizeof(u32));
 		start_reg = g->ops.pramin.data032_r(byteoff / sizeof(u32));
 		until_end = SZ_1M - (byteoff & (SZ_1M - 1));
@@ -117,7 +116,7 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 		size -= n;
 
 		if (n == (sgl_len - offset)) {
-			sgl = nvgpu_mem_sgl_next(sgl);
+			sgl = nvgpu_sgt_get_next(sgt, sgl);
 			offset = 0;
 		} else {
 			offset += n;

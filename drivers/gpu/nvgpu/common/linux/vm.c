@@ -69,19 +69,20 @@ static u64 nvgpu_get_buffer_alignment(struct gk20a *g, struct scatterlist *sgl,
 
 	if (aperture == APERTURE_VIDMEM) {
 		struct nvgpu_page_alloc *alloc = get_vidmem_page_alloc(sgl);
-		struct nvgpu_mem_sgl *sgl_vid = alloc->sgl;
+		struct nvgpu_sgt *sgt = &alloc->sgt;
+		void *sgl_vid = sgt->sgl;
 
 		while (sgl_vid) {
 			chunk_align = 1ULL <<
-				__ffs(nvgpu_mem_sgl_phys(sgl_vid) |
-				nvgpu_mem_sgl_length(sgl_vid));
+				__ffs(nvgpu_sgt_get_phys(sgt, sgl_vid)) |
+				nvgpu_sgt_get_length(sgt, sgl_vid);
 
 			if (align)
 				align = min(align, chunk_align);
 			else
 				align = chunk_align;
 
-			sgl_vid = nvgpu_mem_sgl_next(sgl_vid);
+			sgl_vid = nvgpu_sgt_get_next(sgt, sgl_vid);
 		}
 
 		return align;
@@ -242,7 +243,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	struct nvgpu_vm_area *vm_area = NULL;
 	u32 ctag_offset;
 	enum nvgpu_aperture aperture;
-	struct nvgpu_mem_sgl *nvgpu_sgl;
+	struct nvgpu_sgt *nvgpu_sgt;
 
 	/*
 	 * The kind used as part of the key for map caching. HW may
@@ -399,12 +400,12 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		ctag_offset += buffer_offset >>
 			       ilog2(g->ops.fb.compression_page_size(g));
 
-	nvgpu_sgl = nvgpu_mem_sgl_create(g, bfr.sgt);
+	nvgpu_sgt = nvgpu_linux_sgt_create(g, bfr.sgt);
 
 	/* update gmmu ptes */
 	map_offset = g->ops.mm.gmmu_map(vm,
 					map_offset,
-					nvgpu_sgl,
+					nvgpu_sgt,
 					buffer_offset, /* sg offset */
 					mapping_size,
 					bfr.pgsz_idx,
@@ -419,7 +420,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	if (!map_offset)
 		goto clean_up;
 
-	nvgpu_mem_sgl_free(g, nvgpu_sgl);
+	nvgpu_sgt_free(nvgpu_sgt, g);
 
 	mapped_buffer = nvgpu_kzalloc(g, sizeof(*mapped_buffer));
 	if (!mapped_buffer) {

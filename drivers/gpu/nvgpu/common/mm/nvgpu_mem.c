@@ -19,55 +19,34 @@
 
 #include "gk20a/gk20a.h"
 
-struct nvgpu_mem_sgl *nvgpu_mem_sgl_next(struct nvgpu_mem_sgl *sgl)
+void *nvgpu_sgt_get_next(struct nvgpu_sgt *sgt, void *sgl)
 {
-	return sgl->next;
+	return sgt->ops->sgl_next(sgl);
 }
 
-u64 nvgpu_mem_sgl_phys(struct nvgpu_mem_sgl *sgl)
+u64 nvgpu_sgt_get_phys(struct nvgpu_sgt *sgt, void *sgl)
 {
-	return sgl->phys;
+	return sgt->ops->sgl_phys(sgl);
 }
 
-u64 nvgpu_mem_sgl_dma(struct nvgpu_mem_sgl *sgl)
+u64 nvgpu_sgt_get_dma(struct nvgpu_sgt *sgt, void *sgl)
 {
-	return sgl->dma;
+	return sgt->ops->sgl_dma(sgl);
 }
 
-u64 nvgpu_mem_sgl_length(struct nvgpu_mem_sgl *sgl)
+u64 nvgpu_sgt_get_length(struct nvgpu_sgt *sgt, void *sgl)
 {
-	return sgl->length;
+	return sgt->ops->sgl_length(sgl);
 }
 
-/*
- * This builds a GPU address for the %sgl based on whether an IOMMU is present
- * or not. It also handles turning the physical address into the true GPU
- * physical address that should be programmed into the page tables.
- */
-u64 nvgpu_mem_sgl_gpu_addr(struct gk20a *g, struct nvgpu_mem_sgl *sgl,
+u64 nvgpu_sgt_get_gpu_addr(struct nvgpu_sgt *sgt, struct gk20a *g, void *sgl,
 			   struct nvgpu_gmmu_attrs *attrs)
 {
-	if (nvgpu_mem_sgl_dma(sgl) == 0)
-		return g->ops.mm.gpu_phys_addr(g, attrs,
-					       nvgpu_mem_sgl_phys(sgl));
-
-	if (nvgpu_mem_sgl_dma(sgl) == DMA_ERROR_CODE)
-		return 0;
-
-	return gk20a_mm_smmu_vaddr_translate(g, nvgpu_mem_sgl_dma(sgl));
+	return sgt->ops->sgl_gpu_addr(g, sgl, attrs);
 }
 
-void nvgpu_mem_sgl_free(struct gk20a *g, struct nvgpu_mem_sgl *sgl)
+void nvgpu_sgt_free(struct nvgpu_sgt *sgt, struct gk20a *g)
 {
-	struct nvgpu_mem_sgl *next;
-
-	/*
-	 * Free each of the elements. We expect each element to have been
-	 * nvgpu_k[mz]alloc()ed.
-	 */
-	while (sgl) {
-		next = nvgpu_mem_sgl_next(sgl);
-		nvgpu_kfree(g, sgl);
-		sgl = next;
-	}
+	if (sgt && sgt->ops->sgt_free)
+		sgt->ops->sgt_free(g, sgt);
 }

@@ -361,7 +361,7 @@ static inline phys_addr_t gk20a_mem_phys(struct nvgpu_mem *mem)
 
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			  u64 map_offset,
-			  struct nvgpu_mem_sgl *sgl,
+			  struct nvgpu_sgt *sgt,
 			  u64 buffer_offset,
 			  u64 size,
 			  int pgsz_idx,

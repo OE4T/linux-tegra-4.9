@@ -40,7 +40,7 @@ static inline int add_mem_desc(struct tegra_vgpu_mem_desc *mem_desc,
 
 static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 				u64 map_offset,
-				struct nvgpu_mem_sgl *sgl,
+				struct nvgpu_sgt *sgt,
 				u64 buffer_offset,
 				u64 size,
 				int pgsz_idx,
@@ -66,12 +66,13 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	void *handle = NULL;
 	size_t oob_size;
 	u8 prot;
+	void *sgl;
 
 	gk20a_dbg_fn("");
 
 	/* FIXME: add support for sparse mappings */
 
-	if (WARN_ON(!sgl) || WARN_ON(!g->mm.bypass_smmu))
+	if (WARN_ON(!sgt) || WARN_ON(!g->mm.bypass_smmu))
 		return 0;
 
 	if (space_to_skip & (page_size - 1))
@@ -97,7 +98,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 		err = -EINVAL;
 		goto fail;
 	}
-
+	sgl = sgt->sgl;
 	while (sgl) {
 		u64 phys_addr;
 		u64 chunk_length;
@@ -106,15 +107,15 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 		 * Cut out sgl ents for space_to_skip.
 		 */
 		if (space_to_skip &&
-		    space_to_skip >= nvgpu_mem_sgl_length(sgl)) {
-			space_to_skip -= nvgpu_mem_sgl_length(sgl);
-			sgl = nvgpu_mem_sgl_next(sgl);
+		    space_to_skip >= nvgpu_sgt_get_length(sgt, sgl)) {
+			space_to_skip -= nvgpu_sgt_get_length(sgt, sgl);
+			sgl = nvgpu_sgt_get_next(sgt, sgl);
 			continue;
 		}
 
-		phys_addr = nvgpu_mem_sgl_phys(sgl) + space_to_skip;
+		phys_addr = nvgpu_sgt_get_phys(sgt, sgl) + space_to_skip;
 		chunk_length = min(size,
-				   nvgpu_mem_sgl_length(sgl) - space_to_skip);
+			   nvgpu_sgt_get_length(sgt, sgl) - space_to_skip);
 
 		if (add_mem_desc(&mem_desc[mem_desc_count++], phys_addr,
 				 chunk_length, &oob_size)) {
@@ -124,7 +125,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 
 		space_to_skip = 0;
 		size -= chunk_length;
-		sgl   = nvgpu_mem_sgl_next(sgl);
+		sgl   = nvgpu_sgt_get_next(sgt, sgl);
 
 		if (size == 0)
 			break;

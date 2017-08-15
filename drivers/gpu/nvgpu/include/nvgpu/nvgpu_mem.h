@@ -46,12 +46,41 @@ enum nvgpu_aperture {
 	APERTURE_VIDMEM
 };
 
+struct nvgpu_sgt_ops {
+	void *(*sgl_next)(void *sgl);
+	u64   (*sgl_phys)(void *sgl);
+	u64   (*sgl_dma)(void *sgl);
+	u64   (*sgl_length)(void *sgl);
+	u64   (*sgl_gpu_addr)(struct gk20a *g, void *sgl,
+			      struct nvgpu_gmmu_attrs *attrs);
+	/*
+	 * Note: this operates on the whole SGT not a specific SGL entry.
+	 */
+	void  (*sgt_free)(struct gk20a *g, struct nvgpu_sgt *sgt);
+};
+
+/*
+ * Scatter gather table: this is a list of scatter list entries and the ops for
+ * interacting with those entries.
+ */
+struct nvgpu_sgt {
+	/*
+	 * Ops for interacting with the underlying scatter gather list entries.
+	 */
+	const struct nvgpu_sgt_ops *ops;
+
+	/*
+	 * The first node in the scatter gather list.
+	 */
+	void *sgl;
+};
+
 /*
  * This struct holds the necessary information for describing a struct
  * nvgpu_mem's scatter gather list.
  *
- * These are created in a platform dependent way. As a result the function
- * definition for allocating these lives in the <nvgpu/_OS_/nvgpu_mem.h> file.
+ * Not all nvgpu_sgt's use this particular implementation. Nor is a given OS
+ * required to use this at all.
  */
 struct nvgpu_mem_sgl {
 	/*
@@ -164,6 +193,32 @@ static inline bool nvgpu_mem_is_valid(struct nvgpu_mem *mem)
 
 }
 
+/*
+ * Create a nvgpu_sgt of the default implementation
+ */
+struct nvgpu_sgt *nvgpu_sgt_create(struct gk20a *g);
+
+/**
+ * nvgpu_mem_sgt_create_from_mem - Create a scatter list from an nvgpu_mem.
+ *
+ * @g   - The GPU.
+ * @mem - The source memory allocation to use.
+ *
+ * Create a scatter gather table from the passed @mem struct. This list lets the
+ * calling code iterate across each chunk of a DMA allocation for when that DMA
+ * allocation is not completely contiguous.
+ */
+struct nvgpu_sgt *nvgpu_sgt_create_from_mem(struct gk20a *g,
+					    struct nvgpu_mem *mem);
+
+void *nvgpu_sgt_get_next(struct nvgpu_sgt *sgt, void *sgl);
+u64 nvgpu_sgt_get_phys(struct nvgpu_sgt *sgt, void *sgl);
+u64 nvgpu_sgt_get_dma(struct nvgpu_sgt *sgt, void *sgl);
+u64 nvgpu_sgt_get_length(struct nvgpu_sgt *sgt, void *sgl);
+u64 nvgpu_sgt_get_gpu_addr(struct nvgpu_sgt *sgt, struct gk20a *g, void *sgl,
+			   struct nvgpu_gmmu_attrs *attrs);
+void nvgpu_sgt_free(struct nvgpu_sgt *sgt, struct gk20a *g);
+
 /**
  * nvgpu_mem_create_from_mem - Create a new nvgpu_mem struct from an old one.
  *
@@ -199,27 +254,6 @@ static inline bool nvgpu_mem_is_valid(struct nvgpu_mem *mem)
 int nvgpu_mem_create_from_mem(struct gk20a *g,
 			      struct nvgpu_mem *dest, struct nvgpu_mem *src,
 			      int start_page, int nr_pages);
-
-/**
- * nvgpu_mem_sgl_create_from_mem - Create a scatter list from an nvgpu_mem.
- *
- * @g   - The GPU.
- * @mem - The source memory allocation to use.
- *
- * Create a scatter gather list from the passed @mem struct. This list lets the
- * calling code iterate across each chunk of a DMA allocation for when that DMA
- * allocation is not completely contiguous.
- */
-struct nvgpu_mem_sgl *nvgpu_mem_sgl_create_from_mem(struct gk20a *g,
-						    struct nvgpu_mem *mem);
-void nvgpu_mem_sgl_free(struct gk20a *g, struct nvgpu_mem_sgl *sgl);
-
-struct nvgpu_mem_sgl *nvgpu_mem_sgl_next(struct nvgpu_mem_sgl *sgl);
-u64 nvgpu_mem_sgl_phys(struct nvgpu_mem_sgl *sgl);
-u64 nvgpu_mem_sgl_dma(struct nvgpu_mem_sgl *sgl);
-u64 nvgpu_mem_sgl_length(struct nvgpu_mem_sgl *sgl);
-u64 nvgpu_mem_sgl_gpu_addr(struct gk20a *g, struct nvgpu_mem_sgl *sgl,
-			   struct nvgpu_gmmu_attrs *attrs);
 
 /*
  * Buffer accessors - wrap between begin() and end() if there is no permanent

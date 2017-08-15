@@ -34,7 +34,7 @@ struct gk20a_debug_output;
 struct nvgpu_clk_pll_debug_data;
 struct nvgpu_nvhost_dev;
 struct nvgpu_cpu_time_correlation_sample;
-struct nvgpu_mem_sgl;
+struct nvgpu_mem_sgt;
 
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>
@@ -700,7 +700,7 @@ struct gpu_ops {
 		bool (*support_sparse)(struct gk20a *g);
 		u64 (*gmmu_map)(struct vm_gk20a *vm,
 				u64 map_offset,
-				struct nvgpu_mem_sgl *sgl,
+				struct nvgpu_sgt *sgt,
 				u64 buffer_offset,
 				u64 size,
 				int pgsz_idx,
@@ -760,9 +760,9 @@ struct gpu_ops {
 				size_t size);
 	struct {
 		u32 (*enter)(struct gk20a *g, struct nvgpu_mem *mem,
-			     struct nvgpu_mem_sgl *sgl, u32 w);
+			struct nvgpu_sgt *sgt, void *sgl, u32 w);
 		void (*exit)(struct gk20a *g, struct nvgpu_mem *mem,
-			     struct nvgpu_mem_sgl *sgl);
+			void *sgl);
 		u32 (*data032_r)(u32 i);
 	} pramin;
 	struct {

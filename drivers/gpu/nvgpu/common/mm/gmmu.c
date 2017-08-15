@@ -65,14 +65,14 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 vaddr;
 
-	struct nvgpu_mem_sgl *sgl = nvgpu_mem_sgl_create_from_mem(g, mem);
+	struct nvgpu_sgt *sgt = nvgpu_sgt_create_from_mem(g, mem);
 
-	if (!sgl)
+	if (!sgt)
 		return -ENOMEM;
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	vaddr = g->ops.mm.gmmu_map(vm, addr,
-				   sgl,    /* sg list */
+				   sgt,    /* sg list */
 				   0,      /* sg offset */
 				   size,
 				   gmmu_page_size_kernel,
@@ -86,7 +86,7 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 				   aperture);
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
-	nvgpu_mem_sgl_free(g, sgl);
+	nvgpu_sgt_free(sgt, g);
 
 	if (!vaddr) {
 		nvgpu_err(g, "failed to map buffer!");
@@ -464,7 +464,7 @@ static int __set_pd_level(struct vm_gk20a *vm,
  * VIDMEM version of the update_ptes logic.
  */
 static int __nvgpu_gmmu_update_page_table_vidmem(struct vm_gk20a *vm,
-						 struct nvgpu_mem_sgl *sgl,
+						 struct nvgpu_sgt *sgt,
 						 u64 space_to_skip,
 						 u64 virt_addr,
 						 u64 length,
@@ -472,8 +472,9 @@ static int __nvgpu_gmmu_update_page_table_vidmem(struct vm_gk20a *vm,
 {
 	u64 phys_addr, chunk_length;
 	int err = 0;
+	void *sgl;
 
-	if (!sgl) {
+	if (!sgt) {
 		/*
 		 * This is considered an unmap. Just pass in 0 as the physical
 		 * address for the entire GPU range.
@@ -490,16 +491,17 @@ static int __nvgpu_gmmu_update_page_table_vidmem(struct vm_gk20a *vm,
 	 * Otherwise iterate across all the chunks in this allocation and
 	 * map them.
 	 */
+	sgl = sgt->sgl;
 	while (sgl) {
 		if (space_to_skip &&
-		    space_to_skip >= nvgpu_mem_sgl_length(sgl)) {
-			space_to_skip -= nvgpu_mem_sgl_length(sgl);
-			sgl = nvgpu_mem_sgl_next(sgl);
+		    space_to_skip >= nvgpu_sgt_get_length(sgt, sgl)) {
+			space_to_skip -= nvgpu_sgt_get_length(sgt, sgl);
+			sgl = nvgpu_sgt_get_next(sgt, sgl);
 			continue;
 		}
 
-		phys_addr = nvgpu_mem_sgl_phys(sgl) + space_to_skip;
-		chunk_length = min(length, (nvgpu_mem_sgl_length(sgl) -
+		phys_addr = nvgpu_sgt_get_phys(sgt, sgl) + space_to_skip;
+		chunk_length = min(length, (nvgpu_sgt_get_length(sgt, sgl) -
 					    space_to_skip));
 
 		err = __set_pd_level(vm, &vm->pdb,
@@ -518,27 +520,27 @@ static int __nvgpu_gmmu_update_page_table_vidmem(struct vm_gk20a *vm,
 		 */
 		virt_addr += chunk_length;
 		length    -= chunk_length;
+		sgl = nvgpu_sgt_get_next(sgt, sgl);
 
 		if (length == 0)
 			break;
-
-		sgl = nvgpu_mem_sgl_next(sgl);
 	}
 
 	return err;
 }
 
 static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
-						 struct nvgpu_mem_sgl *sgl,
+						 struct nvgpu_sgt *sgt,
 						 u64 space_to_skip,
 						 u64 virt_addr,
 						 u64 length,
 						 struct nvgpu_gmmu_attrs *attrs)
 {
-	int err;
 	struct gk20a *g = gk20a_from_vm(vm);
+	void *sgl;
+	int err;
 
-	if (!sgl) {
+	if (!sgt) {
 		/*
 		 * This is considered an unmap. Just pass in 0 as the physical
 		 * address for the entire GPU range.
@@ -559,8 +561,10 @@ static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
 	 * mapping is simple since the "physical" address is actually a virtual
 	 * IO address and will be contiguous.
 	 */
+	sgl = sgt->sgl;
+
 	if (!g->mm.bypass_smmu) {
-		u64 io_addr = nvgpu_mem_sgl_gpu_addr(g, sgl, attrs);
+		u64 io_addr = nvgpu_sgt_get_gpu_addr(sgt, g, sgl, attrs);
 
 		io_addr += space_to_skip;
 
@@ -586,15 +590,15 @@ static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
 		 * Cut out sgl ents for space_to_skip.
 		 */
 		if (space_to_skip &&
-		    space_to_skip >= nvgpu_mem_sgl_length(sgl)) {
-			space_to_skip -= nvgpu_mem_sgl_length(sgl);
-			sgl = nvgpu_mem_sgl_next(sgl);
+		    space_to_skip >= nvgpu_sgt_get_length(sgt, sgl)) {
+			space_to_skip -= nvgpu_sgt_get_length(sgt, sgl);
+			sgl = nvgpu_sgt_get_next(sgt, sgl);
 			continue;
 		}
 
-		phys_addr = nvgpu_mem_sgl_phys(sgl) + space_to_skip;
+		phys_addr = nvgpu_sgt_get_phys(sgt, sgl) + space_to_skip;
 		chunk_length = min(length,
-				   nvgpu_mem_sgl_length(sgl) - space_to_skip);
+			nvgpu_sgt_get_length(sgt, sgl) - space_to_skip);
 
 		err = __set_pd_level(vm, &vm->pdb,
 				     0,
@@ -606,7 +610,7 @@ static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
 		space_to_skip = 0;
 		virt_addr += chunk_length;
 		length    -= chunk_length;
-		sgl        = nvgpu_mem_sgl_next(sgl);
+		sgl        = nvgpu_sgt_get_next(sgt, sgl);
 
 		if (length == 0)
 			break;
@@ -631,7 +635,7 @@ static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
  *     case of SMMU usage.
  */
 static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
-					  struct nvgpu_mem_sgl *sgl,
+					  struct nvgpu_sgt *sgt,
 					  u64 space_to_skip,
 					  u64 virt_addr,
 					  u64 length,
@@ -669,10 +673,10 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   "phys offset: %#-4llx;  pgsz: %3dkb perm=%-2s | "
 		   "kind=%#02x APT=%-6s %c%c%c%c%c",
 		   vm->name,
-		   sgl ? "MAP" : "UNMAP",
+		   sgt ? "MAP" : "UNMAP",
 		   virt_addr,
 		   length,
-		   sgl ? nvgpu_mem_sgl_phys(sgl) : 0,
+		   sgt ? nvgpu_sgt_get_phys(sgt, sgt->sgl) : 0,
 		   space_to_skip,
 		   page_size >> 10,
 		   nvgpu_gmmu_perm_str(attrs->rw_flag),
@@ -690,14 +694,14 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 	 */
 	if (attrs->aperture == APERTURE_VIDMEM)
 		err = __nvgpu_gmmu_update_page_table_vidmem(vm,
-							    sgl,
+							    sgt,
 							    space_to_skip,
 							    virt_addr,
 							    length,
 							    attrs);
 	else
 		err = __nvgpu_gmmu_update_page_table_sysmem(vm,
-							    sgl,
+							    sgt,
 							    space_to_skip,
 							    virt_addr,
 							    length,
@@ -706,7 +710,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 	unmap_gmmu_pages(g, &vm->pdb);
 	nvgpu_smp_mb();
 
-	__gmmu_dbg(g, attrs, "%-5s Done!", sgl ? "MAP" : "UNMAP");
+	__gmmu_dbg(g, attrs, "%-5s Done!", sgt ? "MAP" : "UNMAP");
 
 	return err;
 }
@@ -725,7 +729,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
  */
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			  u64 vaddr,
-			  struct nvgpu_mem_sgl *sgl,
+			  struct nvgpu_sgt *sgt,
 			  u64 buffer_offset,
 			  u64 size,
 			  int pgsz_idx,
@@ -774,7 +778,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		allocated = true;
 	}
 
-	err = __nvgpu_gmmu_update_page_table(vm, sgl, buffer_offset,
+	err = __nvgpu_gmmu_update_page_table(vm, sgt, buffer_offset,
 					     vaddr, size, &attrs);
 	if (err) {
 		nvgpu_err(g, "failed to update ptes on map");
@@ -787,6 +791,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		batch->need_tlb_invalidate = true;
 
 	return vaddr;
+
 fail_validate:
 	if (allocated)
 		__nvgpu_vm_free_va(vm, vaddr, pgsz_idx);

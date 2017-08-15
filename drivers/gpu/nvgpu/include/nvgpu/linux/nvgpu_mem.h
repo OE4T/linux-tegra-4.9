@@ -20,6 +20,7 @@
 struct page;
 struct sg_table;
 struct scatterlist;
+struct nvgpu_sgt;
 
 struct gk20a;
 struct nvgpu_mem;
@@ -32,9 +33,11 @@ struct nvgpu_mem_priv {
 };
 
 u64 nvgpu_mem_get_addr_sgl(struct gk20a *g, struct scatterlist *sgl);
-struct nvgpu_mem_sgl *nvgpu_mem_sgl_create(struct gk20a *g,
+struct nvgpu_sgt *nvgpu_mem_linux_sgt_create(struct gk20a *g,
 					   struct sg_table *sgt);
-
+void nvgpu_mem_linux_sgt_free(struct gk20a *g, struct nvgpu_sgt *sgt);
+struct nvgpu_sgt *nvgpu_linux_sgt_create(struct gk20a *g,
+					   struct sg_table *sgt);
 /**
  * __nvgpu_mem_create_from_pages - Create an nvgpu_mem from physical pages.
  *

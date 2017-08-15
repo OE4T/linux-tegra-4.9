@@ -66,12 +66,16 @@ static u64 nvgpu_lockless_alloc(struct nvgpu_allocator *a, u64 len)
 		if (ret == head) {
 			addr = pa->base + head * pa->blk_size;
 			atomic_inc(&pa->nr_allocs);
-			alloc_dbg(a, "Alloc node # %d @ addr 0x%llx\n", head,
-				  addr);
 			break;
 		}
 		head = ACCESS_ONCE(pa->head);
 	}
+
+	if (addr)
+		alloc_dbg(a, "Alloc node # %d @ addr 0x%llx\n", head, addr);
+	else
+		alloc_dbg(a, "Alloc failed!\n");
+
 	return addr;
 }
 
@@ -81,7 +85,9 @@ static void nvgpu_lockless_free(struct nvgpu_allocator *a, u64 addr)
 	int head, ret;
 	u64 cur_idx;
 
-	cur_idx = addr - pa->base;
+	cur_idx = (addr - pa->base) / pa->blk_size;
+
+	alloc_dbg(a, "Free node # %llu @ addr 0x%llx\n", cur_idx, addr);
 
 	while (1) {
 		head = ACCESS_ONCE(pa->head);
@@ -89,7 +95,6 @@ static void nvgpu_lockless_free(struct nvgpu_allocator *a, u64 addr)
 		ret = cmpxchg(&pa->head, head, cur_idx);
 		if (ret == head) {
 			atomic_dec(&pa->nr_allocs);
-			alloc_dbg(a, "Free node # %llu\n", cur_idx);
 			break;
 		}
 	}

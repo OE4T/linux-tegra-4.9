@@ -51,7 +51,7 @@ static void gk20a_fence_free(struct kref *ref)
 
 	if (f->allocator) {
 		if (nvgpu_alloc_initialized(f->allocator))
-			nvgpu_free(f->allocator, (size_t)f);
+			nvgpu_free(f->allocator, (u64)(uintptr_t)f);
 	} else
 		nvgpu_kfree(g, f);
 }

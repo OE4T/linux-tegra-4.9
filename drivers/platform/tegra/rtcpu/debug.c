@@ -37,7 +37,7 @@ struct camrtc_debug {
 	struct {
 		u32 completion_timeout;
 		u32 mods_loops;
-		char test_case[CAMRTC_DBG_MAX_TEST_DATA];
+		char *test_case;
 		size_t test_case_size;
 		u32 test_timeout;
 	} parameters;
@@ -132,10 +132,12 @@ static int camrtc_show_forced_reset_restore(struct seq_file *file, void *data)
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_forced_reset_restore,
 			camrtc_show_forced_reset_restore);
 
-static int camrtc_ivc_dbg_xact(
+static int camrtc_ivc_dbg_full_frame_xact(
 	struct tegra_ivc_channel *ch,
 	struct camrtc_dbg_request *req,
+	size_t req_size,
 	struct camrtc_dbg_response *resp,
+	size_t resp_size,
 	long timeout)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
@@ -171,7 +173,7 @@ static int camrtc_ivc_dbg_xact(
 		goto out;
 	}
 
-	ret = tegra_ivc_write(&ch->ivc, req, sizeof(*req));
+	ret = tegra_ivc_write(&ch->ivc, req, req_size);
 	if (ret < 0) {
 		dev_err(&ch->dev, "IVC write error: %d\n", ret);
 		goto out;
@@ -187,7 +189,7 @@ static int camrtc_ivc_dbg_xact(
 
 		dev_dbg(&ch->dev, "rx msg\n");
 
-		ret = tegra_ivc_read_peek(&ch->ivc, resp, 0, sizeof (*resp));
+		ret = tegra_ivc_read_peek(&ch->ivc, resp, 0, resp_size);
 		if (ret < 0) {
 			dev_err(&ch->dev, "IVC read error: %d\n", ret);
 			goto out;
@@ -207,6 +209,17 @@ out:
 unlock:
 	mutex_unlock(&crd->mutex);
 	return ret;
+}
+
+static inline int camrtc_ivc_dbg_xact(
+	struct tegra_ivc_channel *ch,
+	struct camrtc_dbg_request *req,
+	struct camrtc_dbg_response *resp,
+	long timeout)
+{
+	return camrtc_ivc_dbg_full_frame_xact(ch, req, sizeof(*req),
+					resp, sizeof(*resp),
+					timeout);
 }
 
 static int camrtc_show_ping(struct seq_file *file, void *data)
@@ -400,7 +413,8 @@ static ssize_t camrtc_dbgfs_write_test_case(struct file *file,
 	struct tegra_ivc_channel *ch = file->f_inode->i_private;
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
 	char *test_case = crd->parameters.test_case;
-	size_t size = sizeof(crd->parameters.test_case);
+	size_t size = ch->ivc.frame_size -
+		offsetof(struct camrtc_dbg_request, data.run_test_data.data);
 	ssize_t ret;
 
 	ret = simple_write_to_buffer(test_case, size, f_pos, buf, count);
@@ -420,34 +434,42 @@ static int camrtc_dbgfs_show_test_result(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
-	struct camrtc_dbg_request req = {
-		.req_type = CAMRTC_REQ_RUN_TEST,
-	};
-	struct camrtc_dbg_response resp;
 	int ret;
 	const char *test_case = crd->parameters.test_case;
 	size_t test_case_size = crd->parameters.test_case_size;
 	unsigned long timeout = crd->parameters.test_timeout;
+	void *mem = kzalloc(2 * ch->ivc.frame_size, GFP_KERNEL);
+	struct camrtc_dbg_request *req = mem;
+	struct camrtc_dbg_response *resp = mem + ch->ivc.frame_size;
+	int resultsize = ch->ivc.frame_size -
+		offsetof(struct camrtc_dbg_response, data.run_test_data.data);
+
+	if (mem == NULL)
+		return -ENOMEM;
+
+	req->req_type = CAMRTC_REQ_RUN_TEST;
 
 	/* Timeout is in ms, run_test_data.timeout in ns */
 	if (timeout > 40)
-		req.data.run_test_data.timeout = 1000000ULL * (timeout - 20);
+		req->data.run_test_data.timeout = 1000000ULL * (timeout - 20);
 	else
-		req.data.run_test_data.timeout = 1000000ULL * (timeout / 2);
-	memcpy(req.data.run_test_data.data, test_case, test_case_size);
-	memset(req.data.run_test_data.data + test_case_size, 0,
-		sizeof(req.data.run_test_data.data) - test_case_size);
+		req->data.run_test_data.timeout = 1000000ULL * (timeout / 2);
+	memcpy(req->data.run_test_data.data, test_case, test_case_size);
 
-	ret = camrtc_ivc_dbg_xact(ch, &req, &resp, timeout);
+	ret = camrtc_ivc_dbg_full_frame_xact(ch,
+					req, ch->ivc.frame_size,
+					resp, ch->ivc.frame_size,
+					timeout);
 	if (ret == 0) {
 		seq_printf(file, "result=%u runtime=%llu.%06llu ms\n\n",
-			resp.status,
-			resp.data.run_test_data.timeout / 1000000,
-			resp.data.run_test_data.timeout % 1000000);
+			resp->status,
+			resp->data.run_test_data.timeout / 1000000,
+			resp->data.run_test_data.timeout % 1000000);
 		seq_printf(file, "%.*s",
-			(int)sizeof(resp.data.run_test_data.data),
-			resp.data.run_test_data.data);
+			resultsize, resp->data.run_test_data.data);
 	}
+
+	kfree(mem);
 
 	return ret;
 }
@@ -845,10 +867,11 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	BUG_ON(ch->ivc.frame_size < sizeof(struct camrtc_dbg_request));
 	BUG_ON(ch->ivc.frame_size < sizeof(struct camrtc_dbg_response));
 
-	crd = devm_kzalloc(dev, sizeof(*crd), GFP_KERNEL);
+	crd = devm_kzalloc(dev, sizeof(*crd) + ch->ivc.frame_size, GFP_KERNEL);
 	if (unlikely(crd == NULL))
 		return -ENOMEM;
 
+	crd->parameters.test_case = (char *)(crd + 1);
 	crd->parameters.mods_loops = 20;
 
 	if (of_property_read_u32(dev->of_node,

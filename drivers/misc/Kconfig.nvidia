@@ -31,4 +31,19 @@ config SENSORS_NCT1008
 	 Say yes here if you wish to include the ON Semiconductor
 	 NCT1008 Temperature sensor.
 
+config THERM_EST
+	bool "Thermal estimator driver"
+	default n
+	---help---
+	Thermal driver which estimates temperature based of other sensors.
+
+config FAN_THERM_EST
+	tristate "Fan driving temp estimator"
+	---help---
+	Thermal driver that estimates the fan driving temperature based on
+	other sensors.
+
+	This enables a virtual sensor that polls other registered thermal
+	zone devices for temperature updates.
+
 trysource "../nvidia/drivers/misc/nvs-dfsh/Kconfig.nvidia"

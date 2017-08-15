@@ -2827,14 +2827,9 @@ free_and_ret:
 int tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 				struct tegra_dc_ext_imp_user_info *info)
 {
-
-	u32 ihub_capa;
+	u32 ihub_capa = tegra_dc_readl(dc, nvdisp_ihub_capa_r());
 	int ret = 0;
 
-	if (!dc->enabled)
-		return -EACCES;
-
-	ihub_capa = tegra_dc_readl(dc, nvdisp_ihub_capa_r());
 	/* base entry width is 32 bytes */
 	info->mempool_size = nvdisp_ihub_capa_mempool_entries_v(ihub_capa) *
 			(32 << nvdisp_ihub_capa_mempool_width_v(ihub_capa));

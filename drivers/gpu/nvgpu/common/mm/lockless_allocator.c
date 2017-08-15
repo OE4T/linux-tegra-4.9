@@ -168,7 +168,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	 * Ensure we have space for at least one node & there's no overflow.
 	 * In order to control memory footprint, we require count < INT_MAX
 	 */
-	count = length;
+	count = length / blk_size;
 	if (!base || !count || count > INT_MAX)
 		return -EINVAL;
 

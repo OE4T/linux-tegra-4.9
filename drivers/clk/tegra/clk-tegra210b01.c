@@ -2603,12 +2603,44 @@ void __init tegra210b01_clock_table_init(struct clk **clks)
 	tegra_init_from_table(t210b01_init_table, clks, TEGRA210_CLK_CLK_MAX);
 }
 
+static enum clk_id tegra210b01_integer_div_id[] = {
+	tegra_clk_cilab,
+	tegra_clk_cilcd,
+
+	tegra_clk_spdif_out,
+
+	tegra_clk_sbc1_9,
+	tegra_clk_sbc2_9,
+	tegra_clk_sbc3_9,
+	tegra_clk_sbc4_9,
+
+	tegra_clk_sdmmc_legacy,
+	tegra_clk_i2cslow,
+	tegra_clk_qspi,
+
+	tegra_clk_soc_therm_8,
+	tegra_clk_tsensor,
+};
+
 void tegra210b01_adjust_clks(struct tegra_clk *tegra_clks)
 {
+	int i;
+
 	/* Remove CPU_LP claster clocks */
 	tegra_clks[tegra_clk_cclk_lp].present = false;
 	tegra_clks[tegra_clk_pll_x_out0].present = false;
 
 	/* Prevent 1:1.5 fractional divider setting */
 	div1_5_not_allowed = true;
+
+	/* Prevent any fractional setting */
+	for (i = 0; i < ARRAY_SIZE(tegra210b01_integer_div_id); i++) {
+		enum clk_id cid = tegra210b01_integer_div_id[i];
+
+		if (cid >= tegra_clk_max || !tegra_clks[cid].present) {
+			pr_warn("%s: clk %d is not present\n", __func__, cid);
+			continue;
+		}
+		tegra_clks[cid].use_integer_div = true;
+	}
 }

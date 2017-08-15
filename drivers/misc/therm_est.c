@@ -32,6 +32,7 @@
 #include <linux/module.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/suspend.h>
+#include <linux/version.h>
 
 #define	DEFAULT_TSKIN			25000 /* default tskin in mC */
 
@@ -155,7 +156,11 @@ static void therm_est_work_func(struct work_struct *work)
 
 	if (est->thz && ((est->cur_temp < est->low_limit) ||
 			(est->cur_temp >= est->high_limit))) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 		thermal_zone_device_update(est->thz, THERMAL_EVENT_UNSPECIFIED);
+#else
+		thermal_zone_device_update(est->thz);
+#endif
 		therm_est_update_limits(est);
 	}
 
@@ -193,7 +198,11 @@ static int therm_est_trip_update(void *of_data, int trip)
 {
 	struct therm_estimator *est = (struct therm_estimator *)of_data;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 	thermal_zone_device_update(est->thz, THERMAL_EVENT_UNSPECIFIED);
+#else
+	thermal_zone_device_update(est->thz);
+#endif
 	therm_est_update_limits(est);
 
 	return 0;

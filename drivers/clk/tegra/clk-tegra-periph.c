@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -959,6 +959,9 @@ static void __init periph_clk_init(void __iomem *clk_base,
 		bank = get_reg_bank(data->periph.gate.clk_num);
 		if (!bank)
 			continue;
+
+		if (tegra_clks[data->clk_id].use_integer_div)
+			data->periph.divider.flags |= TEGRA_DIVIDER_INT;
 
 		data->periph.gate.regs = bank;
 		clk = tegra_clk_register_periph(data->name,

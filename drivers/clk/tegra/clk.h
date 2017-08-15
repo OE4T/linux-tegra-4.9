@@ -761,6 +761,7 @@ struct tegra_clk_duplicate {
 struct tegra_clk {
 	int			dt_id;
 	bool			present;
+	bool			use_integer_div;
 };
 
 struct tegra_devclk {

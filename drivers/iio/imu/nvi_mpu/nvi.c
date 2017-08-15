@@ -28,6 +28,9 @@
 #include <linux/mpu_iio.h>
 #include <linux/device.h>
 #include <linux/version.h>
+#ifdef ENABLE_TRACE
+#include <trace/events/nvs_sensors.h>
+#endif // ENABLE_TRACE
 
 #include "nvi.h"
 
@@ -117,6 +120,16 @@ static char *nvi_vregs[] = {
 	"vdd",
 	"vlogic",
 };
+
+#ifdef ENABLE_TRACE
+static int snsr_ids[] = {
+	[DEV_ACC] = SENSOR_TYPE_ACCELEROMETER,
+	[DEV_GYR] = SENSOR_TYPE_GYROSCOPE,
+	[DEV_SM] = SENSOR_TYPE_SIGNIFICANT_MOTION,
+	[DEV_GMR] = SENSOR_TYPE_GEOMAGNETIC_ROTATION_VECTOR,
+	[DEV_GYU] = SENSOR_TYPE_GYROSCOPE_UNCALIBRATED
+};
+#endif // ENABLE_TRACE
 
 static struct nvi_state *nvi_state_local;
 
@@ -2658,6 +2671,15 @@ int nvi_push(struct nvi_state *st, unsigned int dev, u8 *buf, s64 ts)
 	unsigned int m;
 	unsigned int n;
 	int i;
+#ifdef ENABLE_TRACE
+	int cookie = 0;
+	u64 ts_irq = atomic64_read(&st->ts_irq);
+	cookie = COOKIE(SENSOR_TYPE_ACCELEROMETER, ts_irq);
+	trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+	trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
+	cookie = COOKIE(snsr_ids[dev], ts);
+	trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 
 	ch_sz = abs(st->snsr[dev].cfg.ch_sz);
 	m = 0;
@@ -2755,6 +2777,9 @@ int nvi_push(struct nvi_state *st, unsigned int dev, u8 *buf, s64 ts)
 			st->nvs->handler(st->snsr[dev].nvs_st, buf_le, ts);
 		}
 	}
+#ifdef ENABLE_TRACE
+	trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 	return buf_le_i;
 }
 
@@ -2764,6 +2789,15 @@ static int nvi_push_event(struct nvi_state *st, unsigned int dev)
 	u8 val = 1;
 	unsigned int sts;
 	int ret;
+#ifdef ENABLE_TRACE
+	int cookie = 0;
+	u64 ts_irq = atomic64_read(&st->ts_irq);
+	cookie = COOKIE(SENSOR_TYPE_ACCELEROMETER, ts_irq);
+	trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+	trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
+	cookie = COOKIE(snsr_ids[dev], ts);
+	trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 
 	if (st->sts & (NVI_DBG_SPEW_SNSR << dev)) {
 		sts = st->sts;
@@ -2774,6 +2808,9 @@ static int nvi_push_event(struct nvi_state *st, unsigned int dev)
 	} else {
 		ret = st->nvs->handler(st->snsr[dev].nvs_st, &val, ts);
 	}
+#ifdef ENABLE_TRACE
+	trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 	return ret;
 }
 
@@ -2799,6 +2836,7 @@ static int nvi_dev_rd(struct nvi_state *st, unsigned int dev)
 			st->hal->reg->out_h[dev].reg, len, buf);
 	if (!ret)
 		ret = nvi_push(st, dev, buf, nvi_ts_dev(st, 0, dev, 0));
+
 	return ret;
 }
 
@@ -2831,6 +2869,7 @@ static int nvi_fifo_aux(struct nvi_state *st, s64 ts, unsigned int n)
 static int nvi_fifo_dev_rd(struct nvi_state *st, s64 ts, unsigned int n,
 			   unsigned int dev)
 {
+
 	if (st->sts & (NVS_STS_SUSPEND | NVS_STS_SHUTDOWN))
 		return -1;
 
@@ -3134,10 +3173,19 @@ static irqreturn_t nvi_thread(int irq, void *dev_id)
 
 static irqreturn_t nvi_handler(int irq, void *dev_id)
 {
+	u64 ts_old;
+	u64 ts_diff;
+#ifdef ENABLE_TRACE
+	int cookie = 0;
+#endif // ENABLE_TRACE
 	struct nvi_state *st = (struct nvi_state *)dev_id;
 	u64 ts = nvs_timestamp();
-	u64 ts_old = atomic64_xchg(&st->ts_irq, ts);
-	u64 ts_diff = ts - ts_old;
+#ifdef ENABLE_TRACE
+	cookie = COOKIE(SENSOR_TYPE_ACCELEROMETER, ts);
+	trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
+	ts_old = atomic64_xchg(&st->ts_irq, ts);
+	ts_diff = ts - ts_old;
 
 	/* test for MPU IRQ storm problem */
 	if (ts_diff < NVI_IRQ_STORM_MIN_NS) {
@@ -3151,6 +3199,9 @@ static irqreturn_t nvi_handler(int irq, void *dev_id)
 	if (st->sts & NVS_STS_SPEW_IRQ)
 		dev_info(&st->i2c->dev, "%s ts=%llu ts_diff=%llu irq_dis=%x\n",
 			 __func__, ts, ts_diff, st->irq_dis);
+#ifdef ENABLE_TRACE
+	trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
+#endif // ENABLE_TRACE
 	return IRQ_WAKE_THREAD;
 }
 

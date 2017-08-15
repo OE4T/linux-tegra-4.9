@@ -6363,7 +6363,9 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 	u32 num_registers = 0;
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
-	u32 potential_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
+	u32 potential_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count *
+					sm_per_tpc;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
@@ -6441,7 +6443,9 @@ int gr_gk20a_get_pm_ctx_buffer_offsets(struct gk20a *g,
 	u32 num_registers = 0;
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
-	u32 potential_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
+	u32 potential_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count *
+					sm_per_tpc;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
@@ -7719,7 +7723,9 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	struct nvgpu_mem *current_mem = NULL;
 	u32 i, j, offset, v;
 	struct gr_gk20a *gr = &g->gr;
-	u32 max_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
+	u32 max_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count *
+				sm_per_tpc;
 	u32 *offsets = NULL;
 	u32 *offset_addrs = NULL;
 	u32 ctx_op_nr, num_ctx_ops[2] = {num_ctx_wr_ops, num_ctx_rd_ops};

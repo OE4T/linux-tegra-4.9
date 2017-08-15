@@ -1378,7 +1378,7 @@ static void set_cpu_mask(void)
 
 static int __init register_with_emc_bwmgr(void)
 {
-	enum tegra_bwmgr_client_id bw_id = TEGRA_BWMGR_CLIENT_CPU_0;
+	enum tegra_bwmgr_client_id bw_id = TEGRA_BWMGR_CLIENT_CPU_CLUSTER_0;
 	struct tegra_bwmgr_client *bwmgr;
 	int cl;
 	int ret = 0;
@@ -1395,7 +1395,7 @@ static int __init register_with_emc_bwmgr(void)
 			goto err_out;
 		}
 		tfreq_data.pcluster[cl].bwmgr = bwmgr;
-		bw_id = TEGRA_BWMGR_CLIENT_CPU_1;
+		bw_id = TEGRA_BWMGR_CLIENT_CPU_CLUSTER_1;
 	}
 err_out:
 	return ret;

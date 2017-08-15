@@ -25,6 +25,8 @@
 
 #include <linux/nvhost.h>
 
+#include <trace/events/nvhost.h>
+
 #include <uapi/linux/nvhost_pva_ioctl.h>
 
 #include "nvhost_syncpt_unit_interface.h"
@@ -54,6 +56,8 @@ struct pva_hw_task {
 	struct pva_task_surface input_surfaces[PVA_MAX_INPUT_SURFACES];
 	struct pva_task_parameter_desc output_surface_desc;
 	struct pva_task_surface output_surfaces[PVA_MAX_OUTPUT_SURFACES];
+	struct nvhost_notification status_start;
+	struct nvhost_notification status_end;
 };
 
 static void pva_task_dump(struct pva_submit_task *task)
@@ -469,6 +473,7 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 {
 	u8 *hw_preactions = hw_task->preactions;
 	int i = 0, j = 0, ptr = 0;
+	dma_addr_t output_status_addr;
 
 	/* Add waits to preactions list */
 	for (i = 0; i < task->num_prefences; i++) {
@@ -567,6 +572,13 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 					input_status_addr, 0);
 	}
 
+	output_status_addr = task->dma_addr +
+			     offsetof(struct pva_hw_task, status_start);
+	ptr += pva_task_write_ptr_16b_op(
+				&hw_preactions[ptr],
+				TASK_ACT_WRITE_STATUS,
+				output_status_addr, 1);
+
 	ptr += pva_task_write_atomic_op(&hw_preactions[ptr],
 		TASK_ACT_TERMINATE);
 
@@ -588,16 +600,23 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 	int ptr = 0, i = 0;
 	struct platform_device *host1x_pdev =
 			to_platform_device(task->pva->pdev->dev.parent);
+	dma_addr_t output_status_addr;
 	u32 thresh;
+
+	output_status_addr = task->dma_addr +
+			     offsetof(struct pva_hw_task, status_end);
+	ptr += pva_task_write_ptr_16b_op(
+				&hw_postactions[ptr],
+				TASK_ACT_WRITE_STATUS,
+				output_status_addr, 1);
 
 	/* Write Output action status */
 	for (i = 0; i < task->num_output_task_status; i++) {
 		struct pva_status_handle *output_status =
 					task->output_task_status + i;
-		dma_addr_t output_status_addr =
-				task->output_task_status_ext[i].dma_addr  +
-				output_status->offset;
 
+		output_status_addr = task->output_task_status_ext[i].dma_addr +
+				     output_status->offset;
 		ptr += pva_task_write_ptr_16b_op(
 					&hw_postactions[ptr],
 					TASK_ACT_WRITE_STATUS,
@@ -918,9 +937,24 @@ static void pva_task_update(void *priv, int nr_completed)
 {
 	struct pva_submit_task *task = priv;
 	struct nvhost_queue *queue = task->queue;
+	struct pva_hw_task *hw_task = task->va;
+	struct pva *pva = task->pva;
+	struct platform_device *pdev = pva->pdev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	u64 *timestamp_start = (u64 *)&hw_task->status_start.time_stamp;
+	u64 *timestamp_end = (u64 *)&hw_task->status_end.time_stamp;
 
-	nvhost_dbg_info("Completed task %p (0x%llx)", task,
-			(u64)task->dma_addr);
+	trace_nvhost_task_timestamp(dev_name(&pdev->dev),
+				    pdata->class,
+				    queue->syncpt_id,
+				    task->syncpt_thresh,
+				    *timestamp_start,
+				    *timestamp_end);
+
+	nvhost_dbg_info("Completed task %p (0x%llx), start_time=%llu, end_time=%llu",
+			task, (u64)task->dma_addr,
+			*timestamp_start,
+			*timestamp_end);
 
 	/* Unpin job memory. PVA shouldn't be using it anymore */
 	pva_task_unpin_mem(task);

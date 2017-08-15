@@ -116,6 +116,22 @@ static inline u32 proj_tpc_in_gpc_shared_base_v(void)
 {
 	return 0x00001800;
 }
+static inline u32 proj_smpc_base_v(void)
+{
+	return 0x00000200;
+}
+static inline u32 proj_smpc_shared_base_v(void)
+{
+	return 0x00000300;
+}
+static inline u32 proj_smpc_unique_base_v(void)
+{
+	return 0x00000600;
+}
+static inline u32 proj_smpc_stride_v(void)
+{
+	return 0x00000100;
+}
 static inline u32 proj_host_num_engines_v(void)
 {
 	return 0x00000004;

@@ -166,6 +166,18 @@ static int gv11b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_SM_PRI_STRIDE:
 		ret = proj_sm_stride_v();
 		break;
+	case GPU_LIT_SMPC_PRI_BASE:
+		ret = proj_smpc_base_v();
+		break;
+	case GPU_LIT_SMPC_PRI_SHARED_BASE:
+		ret = proj_smpc_shared_base_v();
+		break;
+	case GPU_LIT_SMPC_PRI_UNIQUE_BASE:
+		ret = proj_smpc_unique_base_v();
+		break;
+	case GPU_LIT_SMPC_PRI_STRIDE:
+		ret = proj_smpc_stride_v();
+		break;
 	/* Even though GV11B doesn't have an FBPA unit, the HW reports one,
 	 * and the microcode as a result leaves space in the context buffer
 	 * for one, so make sure SW accounts for this also.

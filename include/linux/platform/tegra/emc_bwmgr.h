@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,8 +20,10 @@
 
 /* keep in sync with tegra_bwmgr_client_names */
 enum tegra_bwmgr_client_id {
-	TEGRA_BWMGR_CLIENT_CPU_0,
-	TEGRA_BWMGR_CLIENT_CPU_1,
+	TEGRA_BWMGR_CLIENT_CPU_CLUSTER_0,
+	TEGRA_BWMGR_CLIENT_CPU_CLUSTER_1,
+	TEGRA_BWMGR_CLIENT_CPU_CLUSTER_2,
+	TEGRA_BWMGR_CLIENT_CPU_CLUSTER_3,
 	TEGRA_BWMGR_CLIENT_DISP0,
 	TEGRA_BWMGR_CLIENT_DISP1,
 	TEGRA_BWMGR_CLIENT_DISP2,

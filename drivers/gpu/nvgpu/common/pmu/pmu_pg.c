@@ -81,7 +81,7 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
 				pmu->initialized = true;
 				nvgpu_pmu_state_change(g, PMU_STATE_STARTED,
-					false);
+					true);
 				WRITE_ONCE(pmu->mscg_stat, PMU_MSCG_DISABLED);
 				/* make status visible */
 				smp_mb();

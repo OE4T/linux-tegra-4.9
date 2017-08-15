@@ -113,7 +113,7 @@ static void therm_est_update_limits(struct therm_estimator *est)
 	}
 
 	if (passive_low_temp != MAX_HIGH_TEMP)
-		low_temp = max(low_temp, passive_low_temp);
+		low_temp = max_t(long, low_temp, passive_low_temp);
 
 	est->low_limit = low_temp;
 	est->high_limit = high_temp;
@@ -130,7 +130,7 @@ static void therm_est_work_func(struct work_struct *work)
 	struct therm_est_coeffs *coeffs_set;
 	s32 *thz_coeffs;
 	long *hist;
-	long temp;
+	int temp;
 	int i, j, index, sum = 0;
 
 	subdevice = est->subdevice;
@@ -170,7 +170,7 @@ static void therm_est_work_func(struct work_struct *work)
 	}
 }
 
-static int therm_est_get_temp(void *of_data, long *temp)
+static int therm_est_get_temp(void *of_data, int *temp)
 {
 	struct therm_estimator *est = (struct therm_estimator *)of_data;
 
@@ -178,7 +178,8 @@ static int therm_est_get_temp(void *of_data, long *temp)
 	return 0;
 }
 
-static int therm_est_get_trend(void *of_data, long *trend)
+static int therm_est_get_trend(void *of_data, int trip,
+			       enum thermal_trend *trend)
 {
 	struct therm_estimator *est = (struct therm_estimator *)of_data;
 
@@ -211,7 +212,7 @@ static int therm_est_trip_update(void *of_data, int trip)
 static int therm_est_init_history(struct therm_estimator *est)
 {
 	struct therm_est_sub_thz *sub_thz;
-	long temp;
+	int temp;
 	int i, j;
 
 	sub_thz = est->subdevice->sub_thz;

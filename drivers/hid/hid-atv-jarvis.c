@@ -341,7 +341,7 @@ struct snd_atvr {
 	uint timeout_jiffies;
 	struct timer_list decoding_timer;
 	uint timer_state;
-	bool timer_enabled;
+	uint32_t timer_enabled;
 	uint timer_callback_count;
 
 	int16_t peak_level;
@@ -385,6 +385,11 @@ struct snd_atvr {
 };
 
 #define ATVR_REMOVE 1
+#define ATVR_TIMER_DISABLED 0
+#define ATVR_TIMER_ENABLED 1
+#define ATVR_TIMER_RESCHEDULING 2
+#define ATVR_TIMER_RESCHEDULE_TIMEOUT 200 /* msec */
+
 #define TS_HOSTCMD_REPORT_SIZE 33
 #define JAR_HOSTCMD_REPORT_SIZE 19
 
@@ -1028,7 +1033,7 @@ static void snd_atvr_timer_callback(unsigned long data)
 
 	/* timer_enabled will be false when stopping a stream. */
 	smp_rmb();
-	if (!atvr_snd->timer_enabled)
+	if (!(atvr_snd->timer_enabled & ATVR_TIMER_ENABLED))
 		return;
 
 	if (!spin_trylock(&atvr_snd->s_substream_lock)) {
@@ -1099,15 +1104,21 @@ static void snd_atvr_timer_callback(unsigned long data)
 		spin_unlock(&atvr_snd->s_substream_lock);
 
 lock_err:
+	atvr_snd->timer_enabled |= ATVR_TIMER_RESCHEDULING;
+	smp_wmb();
+
 	smp_rmb();
-	if (atvr_snd->timer_enabled)
+	if (atvr_snd->timer_enabled & ATVR_TIMER_ENABLED)
 		snd_atvr_schedule_timer(substream);
+
+	atvr_snd->timer_enabled &= ~ATVR_TIMER_RESCHEDULING;
+	smp_wmb();
 }
 
 static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
-	atvr_snd->timer_enabled = true;
+	atvr_snd->timer_enabled = ATVR_TIMER_ENABLED;
 	smp_wmb();
 	atvr_snd->previous_jiffies = jiffies;
 	atvr_snd->timeout_jiffies =
@@ -1123,11 +1134,19 @@ static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 static void snd_atvr_timer_stop(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
+	unsigned long timeout = jiffies +
+		msecs_to_jiffies(ATVR_TIMER_RESCHEDULE_TIMEOUT);
 
-	smp_rmb();
+	do {
+		smp_rmb();
+		if (time_after(jiffies, timeout)) {
+			pr_err("%s: timeout in timer re-schedule.\n", __func__);
+			break;
+		}
+	} while (atvr_snd->timer_enabled & ATVR_TIMER_RESCHEDULING);
 
 	if (atvr_snd->timer_enabled) {
-		atvr_snd->timer_enabled = false;
+		atvr_snd->timer_enabled = ATVR_TIMER_DISABLED;
 		smp_wmb();
 	}
 }

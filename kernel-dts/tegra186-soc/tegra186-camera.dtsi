@@ -82,13 +82,9 @@
 	};
 
 	tegra_sce_ivc: sce-ivc-channels {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		echo@0 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
-			reg = <0x0000>, <0x8000>;
-			reg-names = "rx", "tx";
+			compatible = "nvidia,tegra-ivc-cdev";
+			nvidia,devname = "camchar-echo";
 			nvidia,service = "echo";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
@@ -97,8 +93,6 @@
 		};
 		vinotify@12c0 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-vinotify";
-			reg = <0x012C0>, <0x92C0>;
-			reg-names = "rx", "tx";
 			nvidia,service = "vinotify";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
@@ -108,8 +102,6 @@
 		};
 		mods@32c0 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-mods";
-			reg = <0x032C0>, <0xB2C0>;
-			reg-names = "rx", "tx";
 			nvidia,service = "mods";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
@@ -133,9 +125,8 @@
 			nvidia,frame-size = <64>;
 		};
 		dbg@7c00 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
-			reg = <0x7C00>, <0xFC00>;
-			reg-names = "rx", "tx";
+			compatible = "nvidia,tegra-ivc-cdev";
+			nvidia,devname = "camchar-dbg";
 			nvidia,service = "debug";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
@@ -144,8 +135,6 @@
 		};
 		dbg@7e00 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
-			reg = <0x7E00>, <0xFE00>;
-			reg-names = "rx", "tx";
 			nvidia,service = "debug";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
@@ -217,13 +206,9 @@
 	};
 
 	tegra_ape_ivc: ape-ivc-channels {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		echo@0 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
-			reg = <0x0000>, <0x8000>;
-			reg-names = "rx", "tx";
+			compatible = "nvidia,tegra-ivc-cdev";
+			nvidia,devname = "camchar-echo";
 			nvidia,service = "echo";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
@@ -232,8 +217,6 @@
 		};
 		vinotify@12c0 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-vinotify";
-			reg = <0x012C0>, <0x92C0>;
-			reg-names = "rx", "tx";
 			nvidia,service = "vinotify";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
@@ -258,9 +241,8 @@
 			nvidia,frame-size = <64>;
 		};
 		dbg@7c00 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
-			reg = <0x7C00>, <0xFC00>;
-			reg-names = "rx", "tx";
+			compatible = "nvidia,tegra-ivc-cdev";
+			nvidia,devname = "camchar-dbg";
 			nvidia,service = "debug";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
@@ -269,8 +251,6 @@
 		};
 		dbg@7e00 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
-			reg = <0x7E00>, <0xFE00>;
-			reg-names = "rx", "tx";
 			nvidia,service = "debug";
 			nvidia,version = <0>;
 			nvidia,group = <1>;

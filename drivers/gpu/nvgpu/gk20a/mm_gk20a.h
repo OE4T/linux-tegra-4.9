@@ -342,8 +342,6 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 
 int gk20a_mm_suspend(struct gk20a *g);
 
-u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova);
-
 void gk20a_mm_ltc_isr(struct gk20a *g);
 
 bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g);
@@ -420,7 +418,7 @@ void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,
 					      u32 *pde_lo, u32 *pde_hi);
 int gk20a_mm_pde_coverage_bit_count(struct vm_gk20a *vm);
-u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g);
+u32 gk20a_mm_get_iommu_bit(struct gk20a *g);
 
 const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 						      u32 big_page_size);

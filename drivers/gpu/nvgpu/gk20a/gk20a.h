@@ -741,7 +741,7 @@ struct gpu_ops {
 					  struct nvgpu_mem *mem, int size);
 		u32 (*get_big_page_sizes)(void);
 		u32 (*get_default_big_page_size)(void);
-		u32 (*get_physical_addr_bits)(struct gk20a *g);
+		u32 (*get_iommu_bit)(struct gk20a *g);
 		int (*init_mm_setup_hw)(struct gk20a *g);
 		bool (*is_bar1_supported)(struct gk20a *g);
 		int (*init_bar2_vm)(struct gk20a *g);

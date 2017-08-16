@@ -1271,17 +1271,6 @@ dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 	return addr;
 }
 
-u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, u64 iova)
-{
-	/* ensure it is not vidmem allocation */
-	WARN_ON(is_vidmem_page_alloc(iova));
-
-	if (nvgpu_iommuable(g) && g->ops.mm.get_physical_addr_bits)
-		return iova | 1ULL << g->ops.mm.get_physical_addr_bits(g);
-
-	return iova;
-}
-
 /* for gk20a the "video memory" apertures here are misnomers. */
 static inline u32 big_valid_pde0_bits(struct gk20a *g,
 				      struct nvgpu_gmmu_pd *pd, u64 addr)
@@ -2170,7 +2159,7 @@ int gk20a_mm_suspend(struct gk20a *g)
 	return 0;
 }
 
-u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g)
+u32 gk20a_mm_get_iommu_bit(struct gk20a *g)
 {
 	return 34;
 }

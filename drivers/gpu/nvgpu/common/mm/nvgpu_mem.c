@@ -22,6 +22,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/dma.h>
 
 #include "gk20a/gk20a.h"
 
@@ -55,4 +56,15 @@ void nvgpu_sgt_free(struct nvgpu_sgt *sgt, struct gk20a *g)
 {
 	if (sgt && sgt->ops->sgt_free)
 		sgt->ops->sgt_free(g, sgt);
+}
+
+u64 nvgpu_mem_iommu_translate(struct gk20a *g, u64 phys)
+{
+	/* ensure it is not vidmem allocation */
+	WARN_ON(is_vidmem_page_alloc(phys));
+
+	if (nvgpu_iommuable(g) && g->ops.mm.get_iommu_bit)
+		return phys | 1ULL << g->ops.mm.get_iommu_bit(g);
+
+	return phys;
 }

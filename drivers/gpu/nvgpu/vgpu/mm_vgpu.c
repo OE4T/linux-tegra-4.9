@@ -379,7 +379,7 @@ void vgpu_init_mm_ops(struct gpu_ops *gops)
 	gops->mm.l2_invalidate = vgpu_mm_l2_invalidate;
 	gops->mm.l2_flush = vgpu_mm_l2_flush;
 	gops->fb.tlb_invalidate = vgpu_mm_tlb_invalidate;
-	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
+	gops->mm.get_iommu_bit = gk20a_mm_get_iommu_bit;
 	gops->mm.gpu_phys_addr = gm20b_gpu_phys_addr;
 	gops->mm.init_mm_setup_hw = NULL;
 }

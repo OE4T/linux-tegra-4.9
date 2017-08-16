@@ -41,7 +41,7 @@ u32 gp10b_mm_get_default_big_page_size(void)
 	return SZ_64K;
 }
 
-u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
+u32 gp10b_mm_get_iommu_bit(struct gk20a *g)
 {
 	return 36;
 }

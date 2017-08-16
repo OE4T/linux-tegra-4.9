@@ -268,7 +268,7 @@ u64 nvgpu_mem_get_addr_sgl(struct gk20a *g, struct scatterlist *sgl)
 	if (sg_dma_address(sgl) == DMA_ERROR_CODE)
 		return 0;
 
-	return gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(sgl));
+	return nvgpu_mem_iommu_translate(g, sg_dma_address(sgl));
 }
 
 /*
@@ -452,8 +452,8 @@ static u64 nvgpu_mem_linux_sgl_gpu_addr(struct gk20a *g, void *sgl,
 	if (sg_dma_address((struct scatterlist *)sgl) == DMA_ERROR_CODE)
 		return 0;
 
-	return gk20a_mm_smmu_vaddr_translate(g,
-			sg_dma_address((struct scatterlist *)sgl));
+	return nvgpu_mem_iommu_translate(g,
+				sg_dma_address((struct scatterlist *)sgl));
 }
 
 static void nvgpu_mem_linux_sgl_free(struct gk20a *g, struct nvgpu_sgt *sgt)

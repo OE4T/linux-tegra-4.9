@@ -286,17 +286,6 @@ config TEGRA_IOMMU_SMMU_HV
 	  driver is written to communicate with smmu server partition by
 	  using IVC (Inter VM Commuication) framework.
 
-config TEGRA_IOMMU_SMMU_LINEAR
-	bool "Physical RAM IOVA Liner Mapping Support"
-	depends on TEGRA_IOMMU_SMMU
-	default n
-	help
-	  Enables support for linear mapping between physical address
-	  and IO virtual address for RAM. With this enabled, H/W can
-	  expect virt_to_phys() to work even if it's behined the
-	  IOMMU'able bus. Otherwise DMA API should be used correctly
-	  in device drivers.
-
 config TEGRA_ERRATA_1053704
 	bool "Tegra errata: SMMU Hit-Under-Miss FIFO Out-of-Order"
 	depends on TEGRA_IOMMU_SMMU

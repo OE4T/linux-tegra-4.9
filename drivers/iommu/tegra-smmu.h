@@ -155,13 +155,6 @@
 #define _PTE_ATTR				(_READABLE | _WRITABLE | _NONSECURE)
 #define _PTE_VACANT(addr)			(0)
 
-#ifdef CONFIG_TEGRA_IOMMU_SMMU_LINEAR
-#undef  _PDE_VACANT
-#undef  _PTE_VACANT
-#define _PDE_VACANT(pdn)			(((pdn) << 10) | _PDE_ATTR)
-#define _PTE_VACANT(addr)			((((u32)addr) >> SMMU_PAGE_SHIFT) | _PTE_ATTR)
-#endif
-
 #define SMMU_MK_PDIR(page, attr)		\
 						((page_to_phys(page) >> SMMU_PDIR_SHIFT) | (attr))
 #define SMMU_MK_PDE(page, attr)			\

@@ -210,12 +210,32 @@ static const struct fuse_corr_coeff tegra_aotag_coeff = {
 	.beta = -6749000,
 };
 
+static const struct fuse_corr_coeff tegra210b01_aotag_coeff = {
+	.alpha = 991100,
+	.beta = 1096200,
+};
+
+struct aotag_platform_data {
+	struct tegra_tsensor_configuration *config;
+	const struct fuse_corr_coeff *coeff;
+};
+
+static struct aotag_platform_data tegra210_plat_data = {
+	.config = &tegra_aotag_config,
+	.coeff = &tegra_aotag_coeff,
+};
+
+static struct aotag_platform_data tegra210b01_plat_data = {
+	.config = &tegra210b01_aotag_config,
+	.coeff = &tegra210b01_aotag_coeff,
+};
+
 static const struct of_device_id tegra_aotag_of_match[] = {
 	{	.compatible = "nvidia,tegra21x-aotag",
-		.data = &tegra_aotag_config,
+		.data = &tegra210_plat_data,
 	},
 	{	.compatible = "nvidia,tegra210b01-aotag",
-		.data = &tegra210b01_aotag_config,
+		.data = &tegra210b01_plat_data,
 	},
 	{ },
 };
@@ -307,12 +327,13 @@ static int aotag_init(struct platform_device *pdev)
 	struct device_node *pmc_np = NULL;
 	struct aotag_sensor_info_t *info = NULL;
 	const struct of_device_id *match;
+	struct aotag_platform_data *pdata = NULL;
 
 	match = of_match_node(tegra_aotag_of_match, pdev->dev.of_node);
 	if (!match)
 		return -ENODEV;
 
-
+	pdata = (struct aotag_platform_data *)match->data;
 	pmc_np = of_parse_phandle(pdev->dev.of_node, "parent-block", 0);
 	if (unlikely(!pmc_np)) {
 		dev_err(&pdev->dev, "PMC handle not found.\n");
@@ -337,11 +358,9 @@ static int aotag_init(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	info->config = (struct tegra_tsensor_configuration *)match->data;
-	/*
-	 * HW WAR for early parts. Account for incorrect ATE fusing during the
-	 * early parts.
-	 */
+	info->config = pdata->config;
+	/* HW WAR for early parts. Account for incorrect ATE fusing during the
+	 * early parts. */
 	if (tegra_chip_get_revision() == TEGRA210B01_REVISION_A01) {
 		u32 major, minor, rev;
 
@@ -356,7 +375,7 @@ static int aotag_init(struct platform_device *pdev)
 	}
 
 	info->fuse = &tegra_aotag_fuse;
-	info->coeff = &tegra_aotag_coeff;
+	info->coeff = pdata->coeff;
 
 	return ret;
 }

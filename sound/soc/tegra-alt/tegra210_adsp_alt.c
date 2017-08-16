@@ -171,6 +171,7 @@ struct tegra210_adsp {
 	struct mutex mutex;
 	int init_done;
 	int adsp_started;
+	bool is_shutdown;
 	uint32_t adma_ch_page;
 	uint32_t adma_ch_start;
 	uint32_t adma_ch_cnt;
@@ -1247,7 +1248,7 @@ static int tegra210_adsp_compr_open(struct snd_compr_stream *cstream)
 
 	dev_vdbg(adsp->dev, "%s : DAI ID %d", __func__, rtd->codec_dai->id);
 
-	if (!adsp->init_done)
+	if (!adsp->init_done || adsp->is_shutdown)
 		return -ENODEV;
 
 	if (!adsp->pcm_path[fe_reg][cstream->direction].fe_reg ||
@@ -1571,6 +1572,9 @@ static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 	int i, ret = 0;
 
 	dev_vdbg(adsp->dev, "%s", __func__);
+
+	if (adsp->is_shutdown)
+		return -ENODEV;
 
 	if (!adsp->pcm_path[fe_reg][substream->stream].fe_reg ||
 		!adsp->pcm_path[fe_reg][substream->stream].be_reg) {
@@ -4264,7 +4268,7 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 	apm_msg_t apm_msg;
 	int ret;
 
-	if (!adsp->init_done) {
+	if (!adsp->init_done || adsp->is_shutdown) {
 		dev_warn(adsp->dev, "ADSP is not booted yet\n");
 		return -EPERM;
 	}
@@ -4365,7 +4369,7 @@ static int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
 	unsigned int *tlv_data;
 	int ret = 0;
 
-	if (!adsp->init_done) {
+	if (!adsp->init_done || adsp->is_shutdown) {
 		dev_warn(adsp->dev, "ADSP is not booted yet\n");
 		return 0;
 	}
@@ -4502,7 +4506,7 @@ static int tegra210_adsp_apm_put(struct snd_kcontrol *kcontrol,
 	bool send_msg = 0;
 	int ret = 0;
 
-	if (!adsp->init_done) {
+	if (!adsp->init_done || adsp->is_shutdown) {
 		dev_warn(adsp->dev, "ADSP is not booted yet\n");
 		return -EPERM;
 	}
@@ -4880,6 +4884,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	}
 	dev_set_drvdata(&pdev->dev, adsp);
 	adsp->dev = &pdev->dev;
+	adsp->is_shutdown = false;
 	adsp->soc_data = (struct adsp_soc_data *)match->data;
 
 
@@ -5175,6 +5180,14 @@ static int __maybe_unused tegra210_adsp_audio_platform_remove(
 	return 0;
 }
 
+static void tegra210_adsp_audio_platform_shutdown(
+	struct platform_device *pdev)
+{
+	struct tegra210_adsp *adsp = dev_get_drvdata(&pdev->dev);
+
+	adsp->is_shutdown = true;
+}
+
 static const struct dev_pm_ops tegra210_adsp_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_adsp_runtime_suspend,
 			   tegra210_adsp_runtime_resume, NULL)
@@ -5189,6 +5202,7 @@ static struct platform_driver tegra210_adsp_audio_driver = {
 		.suppress_bind_attrs = true,
 	},
 	.probe = tegra210_adsp_audio_platform_probe,
+	.shutdown = tegra210_adsp_audio_platform_shutdown,
 	/* TODO enable remove() when the driver is hotpluggable */
 	/* .remove = tegra210_adsp_audio_platform_remove, */
 };

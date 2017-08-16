@@ -1457,7 +1457,7 @@ struct eqos_prv_data {
 
 	bool suspended;
 	/* for filtering */
-	int max_hash_table_size;
+	unsigned int max_hash_table_size;
 	int max_addr_reg_cnt;
 
 	/* L3/L4 filtering */

@@ -494,7 +494,6 @@ static const struct gpu_ops gv100_ops = {
 		.get_big_page_sizes = gm20b_mm_get_big_page_sizes,
 		.get_default_big_page_size = gp10b_mm_get_default_big_page_size,
 		.gpu_phys_addr = gv11b_gpu_phys_addr,
-		.get_physical_addr_bits = NULL,
 		.get_mmu_levels = gp10b_mm_get_mmu_levels,
 		.get_vidmem_size = gv100_mm_get_vidmem_size,
 		.init_pdb = gp10b_mm_init_pdb,

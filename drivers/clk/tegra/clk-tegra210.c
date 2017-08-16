@@ -3044,6 +3044,8 @@ static const char *mux_ape[] = {
 	"pll_a_out0", "pll_c4_out0", "pll_c", "pll_c4_out1", "pll_p",
 	"pll_c4_out2", "clk_m"
 };
+#define mux_ape_pll_c4_idx 1
+#define mux_ape_pll_p_idx 4
 
 static struct tegra_clk_periph tegra_ape =
 	TEGRA_CLK_PERIPH(29, 7, 0, 0, 8, 1, 0, 198, TEGRA_PERIPH_ON_APB,
@@ -3138,7 +3140,11 @@ static __init void tegra210_periph_clk_init(
 				   clk_base + 0x6c4, 8, 1, 0, NULL);
 	clks[TEGRA210_CLK_QSPI_OUT] = clk;
 
-
+	if (t210b01) {
+		tegra_ape.rpolicy.low_rate_parent_idx = mux_ape_pll_p_idx;
+		tegra_ape.rpolicy.high_rate_parent_idx = mux_ape_pll_c4_idx;
+		tegra_ape.rpolicy.threshold = 204000000;
+	}
 	clk = tegra_clk_register_periph("ape", mux_ape, ARRAY_SIZE(mux_ape),
 				&tegra_ape, clk_base, CLK_SOURCE_APE, 0);
 	clks[TEGRA210_CLK_APE] = clk;
@@ -3483,8 +3489,8 @@ static __init void tegra210_shared_clk_init(char *sclk_high_clk)
 	clks[TEGRA210_CLK_MSELECT_MASTER] = clk;
 
 	clk = tegra_clk_register_shared_master("ape_master", "ape",
-						TEGRA_SHARED_BUS_RETENTION,
-						12000000, 408000000);
+		TEGRA_SHARED_BUS_RETENTION,
+		12000000, t210b01 ? 998400000 : 408000000);
 	clks[TEGRA210_CLK_APE_MASTER] = clk;
 
 	clk = tegra_clk_register_cbus("cbus", "pll_c", 0, "pll_p", 0,

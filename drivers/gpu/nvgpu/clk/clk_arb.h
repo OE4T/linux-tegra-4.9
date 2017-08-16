@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,12 +11,10 @@
  * more details.
  */
 
-#include "gk20a/gk20a.h"
-
 #ifndef _CLK_ARB_H_
 #define _CLK_ARB_H_
 
-struct nvgpu_clk_arb;
+struct gk20a;
 struct nvgpu_clk_session;
 
 int nvgpu_clk_arb_init_arbiter(struct gk20a *g);

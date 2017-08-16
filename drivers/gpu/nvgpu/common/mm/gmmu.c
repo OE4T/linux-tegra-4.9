@@ -212,7 +212,7 @@ u64 nvgpu_pde_phys_addr(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 	u64 page_addr;
 
 	if (g->mm.has_physical_mode)
-		page_addr = sg_phys(pd->mem->priv.sgt->sgl);
+		page_addr = nvgpu_mem_get_phys_addr(g, pd->mem);
 	else
 		page_addr = nvgpu_mem_get_addr(g, pd->mem);
 

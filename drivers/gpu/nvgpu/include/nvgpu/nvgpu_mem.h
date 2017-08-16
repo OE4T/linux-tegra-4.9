@@ -291,6 +291,7 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		u32 c, u32 size);
 
 u64 nvgpu_mem_get_addr(struct gk20a *g, struct nvgpu_mem *mem);
+u64 nvgpu_mem_get_phys_addr(struct gk20a *g, struct nvgpu_mem *mem);
 
 u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
 		u32 sysmem_mask, u32 vidmem_mask);

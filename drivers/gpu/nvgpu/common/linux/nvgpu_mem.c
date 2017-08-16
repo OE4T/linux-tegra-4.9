@@ -284,6 +284,14 @@ static u64 nvgpu_mem_get_addr_sysmem(struct gk20a *g, struct nvgpu_mem *mem)
  * Return the base address of %mem. Handles whether this is a VIDMEM or SYSMEM
  * allocation.
  *
+ * Note: this API does not make sense to use for _VIDMEM_ buffers with greater
+ * than one scatterlist chunk. If there's more than one scatterlist chunk then
+ * the buffer will not be contiguous. As such the base address probably isn't
+ * very useful. This is true for SYSMEM as well, if there's no IOMMU.
+ *
+ * However! It _is_ OK to use this on discontiguous sysmem buffers _if_ there's
+ * an IOMMU present and enabled for the GPU.
+ *
  * %attrs can be NULL. If it is not NULL then it may be inspected to determine
  * if the address needs to be modified before writing into a PTE.
  */
@@ -303,6 +311,23 @@ u64 nvgpu_mem_get_addr(struct gk20a *g, struct nvgpu_mem *mem)
 	WARN_ON(alloc->nr_chunks != 1);
 
 	return alloc->base;
+}
+
+/*
+ * This should only be used on contiguous buffers regardless of whether
+ * there's an IOMMU present/enabled. This applies to both SYSMEM and
+ * VIDMEM.
+ */
+u64 nvgpu_mem_get_phys_addr(struct gk20a *g, struct nvgpu_mem *mem)
+{
+	/*
+	 * For a VIDMEM buf, this is identical to simply get_addr() so just fall
+	 * back to that.
+	 */
+	if (mem->aperture == APERTURE_VIDMEM)
+		return nvgpu_mem_get_addr(g, mem);
+
+	return sg_phys(mem->priv.sgt->sgl);
 }
 
 /*

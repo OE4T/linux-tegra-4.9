@@ -631,3 +631,10 @@ void nvgpu_free_sgtable(struct gk20a *g, struct sg_table **sgt)
 	nvgpu_kfree(g, *sgt);
 	*sgt = NULL;
 }
+
+bool nvgpu_iommuable(struct gk20a *g)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
+	return device_is_iommuable(l->dev);
+}

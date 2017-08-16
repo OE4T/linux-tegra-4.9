@@ -51,6 +51,20 @@ struct nvgpu_mem;
 #define NVGPU_DMA_READ_ONLY		(1 << 2)
 
 /**
+ * nvgpu_iommuable - Check if GPU is behind IOMMU
+ *
+ * @g - The GPU.
+ *
+ * Returns true if the passed GPU is behind an IOMMU; false otherwise. If the
+ * GPU is iommuable then the DMA address in nvgpu_mem_sgl is valid.
+ *
+ * Note that even if a GPU is behind an IOMMU that does not necessarily mean the
+ * GPU _must_ use DMA addresses. GPUs may still use physical addresses if it
+ * makes sense.
+ */
+bool nvgpu_iommuable(struct gk20a *g);
+
+/**
  * nvgpu_dma_alloc - Allocate DMA memory
  *
  * @g    - The GPU.

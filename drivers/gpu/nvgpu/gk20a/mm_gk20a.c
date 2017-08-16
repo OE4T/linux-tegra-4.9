@@ -1276,8 +1276,7 @@ u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, u64 iova)
 	/* ensure it is not vidmem allocation */
 	WARN_ON(is_vidmem_page_alloc(iova));
 
-	if (device_is_iommuable(dev_from_gk20a(g)) &&
-			g->ops.mm.get_physical_addr_bits)
+	if (nvgpu_iommuable(g) && g->ops.mm.get_physical_addr_bits)
 		return iova | 1ULL << g->ops.mm.get_physical_addr_bits(g);
 
 	return iova;

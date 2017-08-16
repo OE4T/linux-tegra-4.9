@@ -20,6 +20,7 @@
 #include <linux/phy/phy.h>
 #include <linux/phy/tegra/xusb.h>
 #include <linux/platform_device.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/regulator/consumer.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
@@ -574,6 +575,8 @@ static int tegra_xusb_usb2_port_parse_dt(struct tegra_xusb_usb2_port *usb2)
 	struct tegra_xusb_port *port = &usb2->base;
 	struct device_node *np = port->dev.of_node;
 	const char *prop_string;
+	int err = 0;
+	u32 value;
 
 	usb2->internal = of_property_read_bool(np, "nvidia,internal");
 
@@ -592,6 +595,10 @@ static int tegra_xusb_usb2_port_parse_dt(struct tegra_xusb_usb2_port *usb2)
 		if (IS_ERR(usb2->supply))
 			return PTR_ERR(usb2->supply);
 	}
+
+	err = of_property_read_u32(np, "nvidia,oc-pin", &value);
+	if (!err)
+		usb2->oc_pin = value;
 
 	return 0;
 }
@@ -621,6 +628,9 @@ static int tegra_xusb_add_usb2_port(struct tegra_xusb_padctl *padctl,
 	if (err < 0)
 		goto out;
 
+	/* overcurrent disabled by default */
+	usb2->oc_pin = -1;
+
 	usb2->base.ops = padctl->soc->ports.usb2.ops;
 
 	usb2->base.lane = usb2->base.ops->map(&usb2->base);
@@ -634,6 +644,13 @@ static int tegra_xusb_add_usb2_port(struct tegra_xusb_padctl *padctl,
 		tegra_xusb_port_unregister(&usb2->base);
 		goto out;
 	}
+
+	if (usb2->oc_pin > 0 && usb2->oc_pin >= padctl->soc->num_oc_pins) {
+		dev_err(padctl->dev, "Invalid OC pin: %d\n", usb2->oc_pin);
+		usb2->oc_pin = -1;
+	} else
+		dev_dbg(padctl->dev,
+			"USB2 port %d OC pin %d\n", index, usb2->oc_pin);
 
 	list_add_tail(&usb2->base.list, &padctl->ports);
 
@@ -793,6 +810,9 @@ static int tegra_xusb_add_usb3_port(struct tegra_xusb_padctl *padctl,
 	err = tegra_xusb_port_init(&usb3->base, padctl, np, "usb3", index);
 	if (err < 0)
 		goto out;
+
+	/* overcurrent disabled by default */
+	usb3->oc_pin = -1;
 
 	usb3->base.ops = padctl->soc->ports.usb3.ops;
 
@@ -983,6 +1003,144 @@ static struct attribute_group padctl_attr_group = {
 	.attrs = padctl_attrs,
 };
 
+int tegra_xusb_select_vbus_en_state(struct tegra_xusb_padctl *padctl,
+			int pin, bool tristate)
+{
+	int err;
+
+	if (tristate)
+		err = pinctrl_select_state(
+				padctl->oc_pinctrl,
+				padctl->oc_tristate_enable[pin]);
+	else
+		err = pinctrl_select_state(
+				padctl->oc_pinctrl,
+				padctl->oc_passthrough_enable[pin]);
+
+	if (err < 0) {
+		dev_err(padctl->dev,
+			"setting pin %d OC state failed: %d\n", pin, err);
+	}
+	return err;
+}
+
+static int tegra_xusb_setup_oc(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra_xusb_usb2_port *usb2_port;
+	int i, err = 0;
+	bool oc_enabled = false;
+	bool isotg = false;
+
+	/* check oc_pin properties from USB2 phy */
+	for (i = 0; i < padctl->soc->ports.usb2.count; i++) {
+		usb2_port = tegra_xusb_find_usb2_port(padctl, i);
+		if (usb2_port && usb2_port->oc_pin >= 0) {
+			oc_enabled = true;
+			break;
+		}
+	}
+	if (!oc_enabled) {
+		dev_dbg(padctl->dev, "No OC pin defined for USB2/USB3 phys\n");
+		return -EINVAL;
+	}
+
+	/* getting pinctrl for controlling OC pins */
+	padctl->oc_pinctrl = devm_pinctrl_get(padctl->dev);
+	if (IS_ERR_OR_NULL(padctl->oc_pinctrl)) {
+		dev_info(padctl->dev, "Missing OC pinctrl device: %ld\n",
+			PTR_ERR(padctl->oc_pinctrl));
+		return PTR_ERR(padctl->oc_pinctrl);
+	}
+
+	/* OC enable state */
+	padctl->oc_tristate_enable = devm_kcalloc(padctl->dev,
+			padctl->soc->num_oc_pins,
+			sizeof(struct pinctrl_state *), GFP_KERNEL);
+	if (!padctl->oc_tristate_enable)
+		return -ENOMEM;
+	for (i = 0; i < padctl->soc->num_oc_pins; i++) {
+		char state_name[sizeof("vbus_enX_sfio_tristate")];
+
+		sprintf(state_name, "vbus_en%d_sfio_tristate", i);
+		padctl->oc_tristate_enable[i] = pinctrl_lookup_state(
+			padctl->oc_pinctrl, state_name);
+		if (IS_ERR(padctl->oc_tristate_enable[i])) {
+			dev_info(padctl->dev,
+				"Missing OC pin %d pinctrl state %s: %ld\n",
+				 i, state_name,
+				 PTR_ERR(padctl->oc_tristate_enable[i]));
+			return PTR_ERR(padctl->oc_tristate_enable[i]);
+		}
+	}
+
+	/* OC enable passthrough state */
+	padctl->oc_passthrough_enable = devm_kcalloc(padctl->dev,
+			padctl->soc->num_oc_pins,
+			sizeof(struct pinctrl_state *), GFP_KERNEL);
+	if (!padctl->oc_passthrough_enable)
+		return -ENOMEM;
+	for (i = 0; i < padctl->soc->num_oc_pins; i++) {
+		char state_name[sizeof("vbus_enX_sfio_passthrough")];
+
+		sprintf(state_name, "vbus_en%d_sfio_passthrough", i);
+		padctl->oc_passthrough_enable[i] = pinctrl_lookup_state(
+				padctl->oc_pinctrl, state_name);
+		if (IS_ERR(padctl->oc_passthrough_enable[i])) {
+			dev_info(padctl->dev,
+				"Missing OC pin %d pinctrl state %s: %ld\n",
+				 i, state_name,
+				 PTR_ERR(padctl->oc_passthrough_enable[i]));
+			return PTR_ERR(padctl->oc_passthrough_enable[i]);
+		}
+	}
+
+	/* OC disable state */
+	padctl->oc_disable = devm_kcalloc(padctl->dev,
+			padctl->soc->num_oc_pins,
+			sizeof(struct pinctrl_state *), GFP_KERNEL);
+	if (!padctl->oc_disable)
+		return -ENOMEM;
+	for (i = 0; i < padctl->soc->num_oc_pins; i++) {
+		char state_name[sizeof("vbus_enX_default")];
+
+		sprintf(state_name, "vbus_en%d_default", i);
+		padctl->oc_disable[i] = pinctrl_lookup_state(
+				padctl->oc_pinctrl, state_name);
+		if (IS_ERR(padctl->oc_disable[i])) {
+			dev_info(padctl->dev,
+				"Missing OC pin %d pinctrl state %s: %ld\n",
+				 i, state_name,
+				 PTR_ERR(padctl->oc_disable[i]));
+			return PTR_ERR(padctl->oc_disable[i]);
+		}
+	}
+
+	/* switch VBUS pin states to enable OC */
+	for (i = 0; i < padctl->soc->ports.usb2.count; i++) {
+		usb2_port = tegra_xusb_find_usb2_port(padctl, i);
+
+		if (!usb2_port)
+			continue;
+
+		isotg = (usb2_port->port_cap == USB_OTG_CAP);
+
+		if (usb2_port->oc_pin >= 0) {
+			/* this OC pin is in use, enable the pin
+			 * as SFIO input pin for OC detection,
+			 * for OTG port, the default state is
+			 * device mode and VBUS off.
+			 */
+			err = tegra_xusb_select_vbus_en_state(
+				padctl, usb2_port->oc_pin, !isotg);
+
+			if (err < 0)
+				return err;
+		}
+	}
+
+	return 0;
+}
+
 static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 {
 	struct device_node *np = of_node_get(pdev->dev.of_node);
@@ -1060,6 +1218,12 @@ static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "cannot create sysfs group: %d\n", err);
 		goto remove_pads;
 	}
+
+	err = tegra_xusb_setup_oc(padctl);
+	if (err)
+		padctl->oc_pinctrl = NULL;
+	else
+		dev_info(&pdev->dev, "VBUS over-current detection enabled\n");
 
 	return 0;
 
@@ -1417,6 +1581,23 @@ int tegra_xusb_padctl_disable_host_cdp(struct tegra_xusb_padctl
 	return -ENOSYS;
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_disable_host_cdp);
+
+int tegra_xusb_padctl_overcurrent_detected(struct tegra_xusb_padctl *padctl,
+					struct phy *phy)
+{
+	if (padctl->soc->ops->overcurrent_detected)
+		return padctl->soc->ops->overcurrent_detected(phy);
+
+	return -ENOTSUPP;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_overcurrent_detected);
+
+void tegra_xusb_padctl_handle_overcurrent(struct tegra_xusb_padctl *padctl)
+{
+	if (padctl->soc->ops->handle_overcurrent)
+		padctl->soc->ops->handle_overcurrent(padctl);
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_handle_overcurrent);
 
 MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
 MODULE_DESCRIPTION("Tegra XUSB Pad Controller driver");

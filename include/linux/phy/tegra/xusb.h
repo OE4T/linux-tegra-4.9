@@ -91,4 +91,7 @@ int tegra_xusb_padctl_enable_host_cdp(struct tegra_xusb_padctl
 					*padctl, struct phy *phy);
 int tegra_xusb_padctl_disable_host_cdp(struct tegra_xusb_padctl
 					*padctl, struct phy *phy);
+int tegra_xusb_padctl_overcurrent_detected(struct tegra_xusb_padctl *padctl,
+					struct phy *phy);
+void tegra_xusb_padctl_handle_overcurrent(struct tegra_xusb_padctl *padctl);
 #endif /* PHY_TEGRA_XUSB_H */

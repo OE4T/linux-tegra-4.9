@@ -306,6 +306,7 @@ struct tegra_xusb_usb2_port {
 	struct regulator *supply;
 	bool internal;
 	enum tegra_xusb_usb_port_cap port_cap;
+	int oc_pin;
 };
 
 static inline struct tegra_xusb_usb2_port *
@@ -348,6 +349,7 @@ struct tegra_xusb_usb3_port {
 	unsigned int port; /* port number of companion USB2 port */
 	bool internal;
 	enum tegra_xusb_usb_port_cap port_cap;
+	int oc_pin;
 
 	u32 tap1;
 	u32 amp;
@@ -426,11 +428,14 @@ struct tegra_xusb_padctl_ops {
 				*padctl, struct phy *phy);
 	int (*set_host_cdp)(struct tegra_xusb_padctl *padctl, struct phy *phy,
 				bool enable);
+	int (*overcurrent_detected)(struct phy *phy);
+	void (*handle_overcurrent)(struct tegra_xusb_padctl *padctl);
 };
 
 struct tegra_xusb_padctl_soc {
 	const struct tegra_xusb_pad_soc * const *pads;
 	unsigned int num_pads;
+	unsigned int num_oc_pins;
 
 	struct {
 		struct {
@@ -473,6 +478,15 @@ struct tegra_xusb_padctl {
 
 	bool cdp_used;
 	bool is_xhci_iov;
+
+	struct pinctrl *oc_pinctrl;
+	/*
+	 * array of pinctrl_state (of number num_oc_pins)
+	 * for different OC states
+	 */
+	struct pinctrl_state **oc_tristate_enable;
+	struct pinctrl_state **oc_passthrough_enable;
+	struct pinctrl_state **oc_disable;
 };
 
 static inline void padctl_writel(struct tegra_xusb_padctl *padctl, u32 value,
@@ -495,6 +509,8 @@ struct tegra_xusb_lane *tegra_xusb_find_lane(struct tegra_xusb_padctl *padctl,
 					     unsigned int index);
 
 void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy);
+int tegra_xusb_select_vbus_en_state(struct tegra_xusb_padctl *padctl,
+					   int pin, bool tristate);
 
 #if defined(CONFIG_ARCH_TEGRA_124_SOC) || defined(CONFIG_ARCH_TEGRA_132_SOC)
 extern const struct tegra_xusb_padctl_soc tegra124_xusb_padctl_soc;

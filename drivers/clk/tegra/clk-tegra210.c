@@ -46,6 +46,7 @@
 #define CLK_SOURCE_EMC 0x19c
 #define CLK_SOURCE_SOR0 0x414
 #define CLK_SOURCE_SOR1 0x410
+#define CLK_SOURCE_APE 0x6c0
 
 #define CLK_OUT_ENB_Y 0x298
 #define CLK_ENB_PLLP_OUT_CPU BIT(31)
@@ -319,6 +320,11 @@ static const char *mux_pllmcp_clkm[] = {
 #define mux_pllmcp_clkm_idx NULL
 
 static struct clk **clks;
+
+static const char * const aclk_parents[] = {
+	"pll_a1", "pll_c", "pll_p", "pll_a_out0", "pll_c2", "pll_c3",
+	"clk_m"
+};
 
 #define PLL_ENABLE			(1 << 30)
 
@@ -2484,7 +2490,6 @@ static struct tegra_clk tegra210_clks[tegra_clk_max] __initdata = {
 	[tegra_clk_tsecb] = { .dt_id = TEGRA210_CLK_TSECB, .present = true },
 	[tegra_clk_uartape] = { .dt_id = TEGRA210_CLK_UARTAPE, .present = true },
 	[tegra_clk_vi_i2c] = { .dt_id = TEGRA210_CLK_VI_I2C, .present = true },
-	[tegra_clk_ape] = { .dt_id = TEGRA210_CLK_APE, .present = true },
 	[tegra_clk_dbgapb] = { .dt_id = TEGRA210_CLK_DBGAPB, .present = true },
 	[tegra_clk_nvdec] = { .dt_id = TEGRA210_CLK_NVDEC, .present = true },
 	[tegra_clk_nvenc] = { .dt_id = TEGRA210_CLK_NVENC, .present = true },
@@ -2774,11 +2779,6 @@ static struct tegra_pto_table ptodefs[] = {
 
 static struct clk **clks;
 
-static const char * const aclk_parents[] = {
-	"pll_a1", "pll_c", "pll_p", "pll_a_out0", "pll_c2", "pll_c3",
-	"clk_m"
-};
-
 void tegra210_put_utmipll_in_iddq(void)
 {
 	u32 reg;
@@ -3035,6 +3035,14 @@ static struct tegra_clk_periph tegra_sor1_mux =
 			 TEGRA_DIVIDER_INT, 0, TEGRA_PERIPH_NO_GATE,
 			 mux_sor1_idx, &sor1_lock);
 
+static const char *mux_ape[] = {
+	"pll_a_out0", "pll_c4_out0", "pll_c", "pll_c4_out1", "pll_p",
+	"pll_c4_out2", "clk_m"
+};
+
+static struct tegra_clk_periph tegra_ape =
+	TEGRA_CLK_PERIPH(29, 7, 0, 0, 8, 1, 0, 198, TEGRA_PERIPH_ON_APB,
+			 NULL, NULL);
 
 static __init void tegra210_periph_clk_init(
 	void __iomem *clk_base, void __iomem *pmc_base,
@@ -3108,6 +3116,11 @@ static __init void tegra210_periph_clk_init(
 	clk = clk_register_divider(NULL, "qspi_out", "qspi", 0,
 				   clk_base + 0x6c4, 8, 1, 0, NULL);
 	clks[TEGRA210_CLK_QSPI_OUT] = clk;
+
+
+	clk = tegra_clk_register_periph("ape", mux_ape, ARRAY_SIZE(mux_ape),
+				&tegra_ape, clk_base, CLK_SOURCE_APE, 0);
+	clks[TEGRA210_CLK_APE] = clk;
 }
 
 static void __init tegra210_pll_init(void __iomem *clk_base,

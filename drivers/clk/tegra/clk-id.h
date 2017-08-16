@@ -14,7 +14,6 @@ enum clk_id {
 	tegra_clk_apb2ape,
 	tegra_clk_apbdma,
 	tegra_clk_apbif,
-	tegra_clk_ape,
 	tegra_clk_audio0,
 	tegra_clk_audio0_2x,
 	tegra_clk_audio0_mux,

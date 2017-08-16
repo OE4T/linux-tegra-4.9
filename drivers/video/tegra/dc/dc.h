@@ -637,6 +637,7 @@ struct tegra_dc_out {
 	int				hotplug_gpio;
 	int				hotplug_state; /* TEGRA_HPD_STATE_* */
 	int				vrr_hotplug_state;
+	int				prev_hotplug_state;
 	const char			*parent_clk;
 
 	unsigned			max_pixclock;

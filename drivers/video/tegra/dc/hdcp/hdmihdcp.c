@@ -1435,6 +1435,11 @@ exit:
 	return err;
 }
 
+void tegra_nvhdcp_clear_fallback(struct tegra_nvhdcp *nvhdcp)
+{
+	g_fallback = 0;
+}
+
 static void nvhdcp_fallback_worker(struct work_struct *work)
 {
 	struct tegra_nvhdcp *nvhdcp =
@@ -1490,7 +1495,6 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		}
 	}
 
-	g_fallback = 0;
 
 	nvhdcp_vdbg("%s():started thread %s for sor: %x\n", __func__,
 			nvhdcp->name, nvhdcp->hdmi->sor->ctrl_num);

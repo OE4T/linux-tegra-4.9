@@ -787,6 +787,10 @@ static void tegra_hdmi_hpd_worker(struct work_struct *work)
 	connected = tegra_dc_hpd(hdmi->dc);
 	orig_state = hdmi->plug_state;
 
+	if (hdmi->dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL &&
+		hdmi->dc->out->prev_hotplug_state == TEGRA_HPD_STATE_NORMAL)
+			tegra_nvhdcp_clear_fallback(hdmi->nvhdcp);
+
 	if (connected) {
 		switch (orig_state) {
 		case TEGRA_HDMI_MONITOR_ENABLE:
@@ -859,6 +863,7 @@ static irqreturn_t tegra_hdmi_hpd_irq_handler(int irq, void *ptr)
 	if (atomic_read(&hdmi->suspended))
 		return IRQ_HANDLED;
 
+	tegra_nvhdcp_clear_fallback(hdmi->nvhdcp);
 	cancel_delayed_work(&hdmi->hpd_worker);
 
 	if (tegra_edid_get_quirks(hdmi->edid) &
@@ -3376,6 +3381,7 @@ void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state)
 
 	rmb();
 	hotplug_state = dc->out->hotplug_state;
+	dc->out->prev_hotplug_state = hotplug_state;
 
 	if (hotplug_state == TEGRA_HPD_STATE_NORMAL &&
 			new_hpd_state != TEGRA_HPD_STATE_NORMAL &&
@@ -3389,7 +3395,6 @@ void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state)
 
 	dc->out->hotplug_state = new_hpd_state;
 	wmb();
-
 	/*
 	 * sw controlled plug/unplug.
 	 * wait for any already executing hpd worker thread.

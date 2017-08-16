@@ -78,6 +78,7 @@ struct tegra_nvhdcp {
 
 #ifdef CONFIG_HDCP
 void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd);
+void tegra_nvhdcp_clear_fallback(struct tegra_nvhdcp *nvhdcp);
 int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol);
 void tegra_nvhdcp_suspend(struct tegra_nvhdcp *nvhdcp);
 void tegra_nvhdcp_resume(struct tegra_nvhdcp *nvhdcp);
@@ -100,6 +101,7 @@ static inline int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol)
 {
 	return 0;
 }
+void tegra_nvhdcp_clear_fallback(struct tegra_nvhdcp *nvhdcp) { }
 static inline void tegra_nvhdcp_suspend(struct tegra_nvhdcp *nvhdcp) { }
 static inline void tegra_nvhdcp_resume(struct tegra_nvhdcp *nvhdcp) { }
 static inline void tegra_nvhdcp_shutdown(struct tegra_nvhdcp *nvhdcp) { }

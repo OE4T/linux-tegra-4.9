@@ -23,7 +23,6 @@
 #include <nvgpu/pramin.h>
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/enabled.h>
-#include <nvgpu/vidmem.h>
 
 #include "gk20a/gk20a.h"
 
@@ -55,7 +54,7 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 	if (!g->regs && nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
 		return;
 
-	alloc = nvgpu_vidmem_get_page_alloc(mem->priv.sgt->sgl);
+	alloc = mem->vidmem_alloc;
 	sgt = &alloc->sgt;
 
 	nvgpu_sgt_for_each_sgl(sgl, sgt) {

@@ -27,7 +27,6 @@
 #include <nvgpu/errno.h>
 #include <nvgpu/nvgpu_mem.h>
 
-struct scatterlist;
 struct work_struct;
 
 struct gk20a;
@@ -74,8 +73,6 @@ struct nvgpu_vidmem_buf *nvgpu_vidmem_user_alloc(struct gk20a *g, size_t bytes);
 
 void nvgpu_vidmem_buf_free(struct gk20a *g, struct nvgpu_vidmem_buf *buf);
 
-struct nvgpu_page_alloc *nvgpu_vidmem_get_page_alloc(struct scatterlist *sgl);
-void nvgpu_vidmem_set_page_alloc(struct scatterlist *sgl, u64 addr);
 bool nvgpu_addr_is_vidmem_page_alloc(u64 addr);
 int nvgpu_vidmem_get_space(struct gk20a *g, u64 *space);
 
@@ -92,16 +89,6 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem);
 /*
  * When VIDMEM support is not present this interface is used.
  */
-
-static inline struct nvgpu_page_alloc *
-nvgpu_vidmem_get_page_alloc(struct scatterlist *sgl)
-{
-	return NULL;
-}
-
-static inline void nvgpu_vidmem_set_page_alloc(struct scatterlist *sgl, u64 addr)
-{
-}
 
 static inline bool nvgpu_addr_is_vidmem_page_alloc(u64 addr)
 {

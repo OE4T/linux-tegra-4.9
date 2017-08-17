@@ -25,6 +25,7 @@
 #include <nvgpu/vidmem.h>
 
 #include <nvgpu/linux/dma.h>
+#include <nvgpu/linux/vidmem.h>
 
 #include "os_linux.h"
 
@@ -355,7 +356,7 @@ u64 nvgpu_mem_get_addr(struct gk20a *g, struct nvgpu_mem *mem)
 	/*
 	 * Otherwise get the vidmem address.
 	 */
-	alloc = nvgpu_vidmem_get_page_alloc(mem->priv.sgt->sgl);
+	alloc = mem->vidmem_alloc;
 
 	/* This API should not be used with > 1 chunks */
 	WARN_ON(alloc->nr_chunks != 1);

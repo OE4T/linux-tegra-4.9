@@ -39,6 +39,7 @@ struct nvgpu_sgt;
 struct gk20a;
 struct nvgpu_allocator;
 struct nvgpu_gmmu_attrs;
+struct nvgpu_page_alloc;
 
 #define NVGPU_MEM_DMA_ERROR		(~0ULL)
 
@@ -162,6 +163,7 @@ struct nvgpu_mem {
 	/*
 	 * Fields only populated for vidmem allocations.
 	 */
+	struct nvgpu_page_alloc			*vidmem_alloc;
 	struct nvgpu_allocator			*allocator;
 	struct nvgpu_list_node			 clear_list_entry;
 

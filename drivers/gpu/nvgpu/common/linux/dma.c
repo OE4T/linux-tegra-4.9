@@ -28,9 +28,11 @@
 #include <nvgpu/vidmem.h>
 
 #include <nvgpu/linux/dma.h>
+#include <nvgpu/linux/vidmem.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
+
 #include "os_linux.h"
 
 /*
@@ -348,6 +350,7 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 
 	mem->aligned_size = size;
 	mem->aperture = APERTURE_VIDMEM;
+	mem->vidmem_alloc = (struct nvgpu_page_alloc *)(uintptr_t)addr;
 	mem->allocator = vidmem_alloc;
 	mem->priv.flags = flags;
 

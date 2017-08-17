@@ -195,7 +195,7 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 	if (g->mm.vidmem.ce_ctx_id == (u32)~0)
 		return -EINVAL;
 
-	alloc = nvgpu_vidmem_get_page_alloc(mem->priv.sgt->sgl);
+	alloc = mem->vidmem_alloc;
 
 	nvgpu_sgt_for_each_sgl(sgl, &alloc->sgt) {
 		if (gk20a_last_fence)

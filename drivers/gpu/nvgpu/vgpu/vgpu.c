@@ -440,6 +440,7 @@ void vgpu_init_hal_common(struct gk20a *g)
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	vgpu_init_css_ops(gops);
 #endif
+	vgpu_init_ce2_ops(gops);
 	gops->chip_init_gpu_characteristics = vgpu_init_gpu_characteristics;
 	gops->bus.read_ptimer = vgpu_read_ptimer;
 	gops->bus.get_timestamps_zipper = vgpu_get_timestamps_zipper;

@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU CE2
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,4 +32,16 @@ int vgpu_ce2_nonstall_isr(struct gk20a *g,
 	}
 
 	return 0;
+}
+
+static u32 vgpu_ce_get_num_pce(struct gk20a *g)
+{
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
+
+	return priv->constants.num_pce;
+}
+
+void vgpu_init_ce2_ops(struct gpu_ops *gops)
+{
+	gops->ce2.get_num_pce = vgpu_ce_get_num_pce;
 }

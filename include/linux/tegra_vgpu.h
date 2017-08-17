@@ -477,6 +477,7 @@ struct tegra_vgpu_constants_params {
 	u32 preempt_ctx_size;
 	u32 channel_base;
 	struct tegra_vgpu_engines_info engines_info;
+	u32 num_pce;
 };
 
 struct tegra_vgpu_channel_cyclestats_snapshot_params {

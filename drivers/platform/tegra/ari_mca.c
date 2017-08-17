@@ -1048,7 +1048,6 @@ static struct ari_mca_bank ari_mca_banks[] = {
 };
 
 static DEFINE_MUTEX(ari_mca_mutex);
-static struct dentry *mca_root;
 
 static int ari_mca_show(struct seq_file *file, void *data)
 {
@@ -1083,6 +1082,8 @@ static const struct file_operations tegra18_ari_mca_fops = {
 	.release = single_release
 };
 
+#ifdef CONFIG_DEBUG_FS
+static struct dentry *mca_root;
 static int ari_mca_dbgfs_init(void)
 {
 	struct dentry *d;
@@ -1125,6 +1126,12 @@ clean:
 	debugfs_remove_recursive(mca_root);
 	return PTR_ERR(d);
 }
+#else
+static int ari_mca_dbgfs_init(void)
+{
+	return 0;
+}
+#endif
 
 static LIST_HEAD(ari_mca_list);
 static DEFINE_RAW_SPINLOCK(ari_mca_lock);
@@ -1288,7 +1295,9 @@ static void __exit ari_serr_exit(void)
 {
 	unregister_ari_mca_banks();
 	unregister_serr_hook(&hook);
+#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(mca_root);
+#endif
 }
 module_exit(ari_serr_exit);
 MODULE_LICENSE("GPL v2");

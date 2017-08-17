@@ -259,7 +259,6 @@ static int a57_serr_hook(struct pt_regs *regs, int reason,
 }
 
 static DEFINE_MUTEX(a57_serr_mutex);
-static struct dentry *a57_serr_root;
 
 static int a57_merrsr_show(struct seq_file *file, void *data)
 {
@@ -378,6 +377,8 @@ static const struct file_operations tegra18_a57_ecc_fops = {
 	.release = single_release
 };
 
+#ifdef CONFIG_DEBUG_FS
+static struct dentry *a57_serr_root;
 static int a57_serr_dbgfs_init(void)
 {
 	struct dentry *d;
@@ -416,6 +417,12 @@ static int a57_serr_dbgfs_init(void)
 	debugfs_remove_recursive(a57_serr_root);
 	return PTR_ERR(d);
 }
+#else
+static int a57_serr_dbgfs_init(void)
+{
+	return 0;
+}
+#endif
 
 static struct serr_hook hook = {
 	.fn = a57_serr_hook

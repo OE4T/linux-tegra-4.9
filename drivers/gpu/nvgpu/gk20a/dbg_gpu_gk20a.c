@@ -973,7 +973,7 @@ static int nvgpu_dbg_gpu_ioctl_access_fb_memory(struct dbg_session_gk20a *dbg_s,
 				goto fail_idle;
 		}
 
-		err = gk20a_vidbuf_access_memory(g, dmabuf, buffer,
+		err = nvgpu_vidmem_buf_access_memory(g, dmabuf, buffer,
 					 args->offset + offset, access_size,
 					 args->cmd);
 		if (err)

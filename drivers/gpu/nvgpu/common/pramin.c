@@ -55,7 +55,7 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 	if (!g->regs && nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
 		return;
 
-	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
+	alloc = nvgpu_vidmem_get_page_alloc(mem->priv.sgt->sgl);
 	sgt = &alloc->sgt;
 
 	nvgpu_sgt_for_each_sgl(sgl, sgt) {

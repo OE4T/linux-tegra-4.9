@@ -28,13 +28,13 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
-void gk20a_vidmem_destroy(struct gk20a *g)
+void nvgpu_vidmem_destroy(struct gk20a *g)
 {
 	if (nvgpu_alloc_initialized(&g->mm.vidmem.allocator))
 		nvgpu_alloc_destroy(&g->mm.vidmem.allocator);
 }
 
-int gk20a_vidmem_clear_all(struct gk20a *g)
+int nvgpu_vidmem_clear_all(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct gk20a_fence *gk20a_fence_out = NULL;
@@ -106,7 +106,7 @@ int gk20a_vidmem_clear_all(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_init_vidmem(struct mm_gk20a *mm)
+int nvgpu_vidmem_init(struct mm_gk20a *mm)
 {
 	struct gk20a *g = mm->g;
 	size_t size = g->ops.mm.get_vidmem_size ?
@@ -157,7 +157,7 @@ int gk20a_init_vidmem(struct mm_gk20a *mm)
 
 	nvgpu_mutex_init(&mm->vidmem.first_clear_mutex);
 
-	INIT_WORK(&mm->vidmem.clear_mem_worker, gk20a_vidmem_clear_mem_worker);
+	INIT_WORK(&mm->vidmem.clear_mem_worker, nvgpu_vidmem_clear_mem_worker);
 	nvgpu_atomic64_set(&mm->vidmem.bytes_pending, 0);
 	nvgpu_init_list_node(&mm->vidmem.clear_list_head);
 	nvgpu_mutex_init(&mm->vidmem.clear_list_mutex);
@@ -167,7 +167,7 @@ int gk20a_init_vidmem(struct mm_gk20a *mm)
 	return 0;
 }
 
-int gk20a_vidmem_get_space(struct gk20a *g, u64 *space)
+int nvgpu_vidmem_get_space(struct gk20a *g, u64 *space)
 {
 	struct nvgpu_allocator *allocator = &g->mm.vidmem.allocator;
 
@@ -183,7 +183,7 @@ int gk20a_vidmem_get_space(struct gk20a *g, u64 *space)
 	return 0;
 }
 
-int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
+int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	struct gk20a_fence *gk20a_fence_out = NULL;
 	struct gk20a_fence *gk20a_last_fence = NULL;
@@ -194,7 +194,7 @@ int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 	if (g->mm.vidmem.ce_ctx_id == (u32)~0)
 		return -EINVAL;
 
-	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
+	alloc = nvgpu_vidmem_get_page_alloc(mem->priv.sgt->sgl);
 
 	nvgpu_sgt_for_each_sgl(sgl, &alloc->sgt) {
 		if (gk20a_last_fence)
@@ -243,7 +243,7 @@ int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 	return err;
 }
 
-struct nvgpu_mem *get_pending_mem_desc(struct mm_gk20a *mm)
+struct nvgpu_mem *nvgpu_vidmem_get_pending_alloc(struct mm_gk20a *mm)
 {
 	struct nvgpu_mem *mem = NULL;
 

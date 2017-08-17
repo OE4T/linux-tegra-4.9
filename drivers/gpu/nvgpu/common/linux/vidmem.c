@@ -31,24 +31,24 @@
 
 #include "vm_priv.h"
 
-void set_vidmem_page_alloc(struct scatterlist *sgl, u64 addr)
+bool nvgpu_addr_is_vidmem_page_alloc(u64 addr)
+{
+	return !!(addr & 1ULL);
+}
+
+void nvgpu_vidmem_set_page_alloc(struct scatterlist *sgl, u64 addr)
 {
 	/* set bit 0 to indicate vidmem allocation */
 	sg_dma_address(sgl) = (addr | 1ULL);
 }
 
-bool is_vidmem_page_alloc(u64 addr)
-{
-	return !!(addr & 1ULL);
-}
-
-struct nvgpu_page_alloc *get_vidmem_page_alloc(struct scatterlist *sgl)
+struct nvgpu_page_alloc *nvgpu_vidmem_get_page_alloc(struct scatterlist *sgl)
 {
 	u64 addr;
 
 	addr = sg_dma_address(sgl);
 
-	if (is_vidmem_page_alloc(addr))
+	if (nvgpu_addr_is_vidmem_page_alloc(addr))
 		addr = addr & ~1ULL;
 	else
 		WARN_ON(1);
@@ -59,7 +59,7 @@ struct nvgpu_page_alloc *get_vidmem_page_alloc(struct scatterlist *sgl)
 static struct sg_table *gk20a_vidbuf_map_dma_buf(
 	struct dma_buf_attachment *attach, enum dma_data_direction dir)
 {
-	struct gk20a_vidmem_buf *buf = attach->dmabuf->priv;
+	struct nvgpu_vidmem_buf *buf = attach->dmabuf->priv;
 
 	return buf->mem->priv.sgt;
 }
@@ -72,7 +72,7 @@ static void gk20a_vidbuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 
 static void gk20a_vidbuf_release(struct dma_buf *dmabuf)
 {
-	struct gk20a_vidmem_buf *buf = dmabuf->priv;
+	struct nvgpu_vidmem_buf *buf = dmabuf->priv;
 
 	gk20a_dbg_fn("");
 
@@ -104,7 +104,7 @@ static int gk20a_vidbuf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
 static int gk20a_vidbuf_set_private(struct dma_buf *dmabuf,
 		struct device *dev, void *priv, void (*delete)(void *priv))
 {
-	struct gk20a_vidmem_buf *buf = dmabuf->priv;
+	struct nvgpu_vidmem_buf *buf = dmabuf->priv;
 
 	buf->dmabuf_priv = priv;
 	buf->dmabuf_priv_delete = delete;
@@ -115,7 +115,7 @@ static int gk20a_vidbuf_set_private(struct dma_buf *dmabuf,
 static void *gk20a_vidbuf_get_private(struct dma_buf *dmabuf,
 		struct device *dev)
 {
-	struct gk20a_vidmem_buf *buf = dmabuf->priv;
+	struct nvgpu_vidmem_buf *buf = dmabuf->priv;
 
 	return buf->dmabuf_priv;
 }
@@ -131,7 +131,7 @@ static const struct dma_buf_ops gk20a_vidbuf_ops = {
 	.get_drvdata      = gk20a_vidbuf_get_private,
 };
 
-static struct dma_buf *gk20a_vidbuf_export(struct gk20a_vidmem_buf *buf)
+static struct dma_buf *gk20a_vidbuf_export(struct nvgpu_vidmem_buf *buf)
 {
 	DEFINE_DMA_BUF_EXPORT_INFO(exp_info);
 
@@ -143,9 +143,9 @@ static struct dma_buf *gk20a_vidbuf_export(struct gk20a_vidmem_buf *buf)
 	return dma_buf_export(&exp_info);
 }
 
-struct gk20a *gk20a_vidmem_buf_owner(struct dma_buf *dmabuf)
+struct gk20a *nvgpu_vidmem_buf_owner(struct dma_buf *dmabuf)
 {
-	struct gk20a_vidmem_buf *buf = dmabuf->priv;
+	struct nvgpu_vidmem_buf *buf = dmabuf->priv;
 
 	if (dmabuf->ops != &gk20a_vidbuf_ops)
 		return NULL;
@@ -153,9 +153,9 @@ struct gk20a *gk20a_vidmem_buf_owner(struct dma_buf *dmabuf)
 	return buf->g;
 }
 
-int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
+int nvgpu_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 {
-	struct gk20a_vidmem_buf *buf;
+	struct nvgpu_vidmem_buf *buf;
 	int err = 0, fd;
 
 	gk20a_dbg_fn("");
@@ -169,7 +169,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 	if (!g->mm.vidmem.cleared) {
 		nvgpu_mutex_acquire(&g->mm.vidmem.first_clear_mutex);
 		if (!g->mm.vidmem.cleared) {
-			err = gk20a_vidmem_clear_all(g);
+			err = nvgpu_vidmem_clear_all(g);
 			if (err) {
 				nvgpu_err(g,
 				          "failed to clear whole vidmem");
@@ -216,10 +216,10 @@ err_kfree:
 	return err;
 }
 
-int gk20a_vidbuf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
+int nvgpu_vidmem_buf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
 		void *buffer, u64 offset, u64 size, u32 cmd)
 {
-	struct gk20a_vidmem_buf *vidmem_buf;
+	struct nvgpu_vidmem_buf *vidmem_buf;
 	struct nvgpu_mem *mem;
 	int err = 0;
 
@@ -245,17 +245,17 @@ int gk20a_vidbuf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
 	return err;
 }
 
-void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
+void nvgpu_vidmem_clear_mem_worker(struct work_struct *work)
 {
 	struct mm_gk20a *mm = container_of(work, struct mm_gk20a,
 					vidmem.clear_mem_worker);
 	struct gk20a *g = mm->g;
 	struct nvgpu_mem *mem;
 
-	while ((mem = get_pending_mem_desc(mm)) != NULL) {
-		gk20a_gmmu_clear_vidmem_mem(g, mem);
+	while ((mem = nvgpu_vidmem_get_pending_alloc(mm)) != NULL) {
+		nvgpu_vidmem_clear(g, mem);
 		nvgpu_free(mem->allocator,
-			   (u64)get_vidmem_page_alloc(mem->priv.sgt->sgl));
+			   (u64)nvgpu_vidmem_get_page_alloc(mem->priv.sgt->sgl));
 		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
 		WARN_ON(nvgpu_atomic64_sub_return(mem->aligned_size,

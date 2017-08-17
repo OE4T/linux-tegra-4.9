@@ -355,7 +355,7 @@ u64 nvgpu_mem_get_addr(struct gk20a *g, struct nvgpu_mem *mem)
 	/*
 	 * Otherwise get the vidmem address.
 	 */
-	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
+	alloc = nvgpu_vidmem_get_page_alloc(mem->priv.sgt->sgl);
 
 	/* This API should not be used with > 1 chunks */
 	WARN_ON(alloc->nr_chunks != 1);
@@ -549,7 +549,7 @@ static struct nvgpu_sgt *__nvgpu_mem_get_sgl_from_vidmem(
 {
 	struct nvgpu_page_alloc *vidmem_alloc;
 
-	vidmem_alloc = get_vidmem_page_alloc(linux_sgl);
+	vidmem_alloc = nvgpu_vidmem_get_page_alloc(linux_sgl);
 	if (!vidmem_alloc)
 		return NULL;
 
@@ -561,7 +561,7 @@ struct nvgpu_sgt *nvgpu_linux_sgt_create(struct gk20a *g, struct sg_table *sgt)
 	struct nvgpu_sgt *nvgpu_sgt;
 	struct scatterlist *linux_sgl = sgt->sgl;
 
-	if (is_vidmem_page_alloc(sg_dma_address(linux_sgl)))
+	if (nvgpu_addr_is_vidmem_page_alloc(sg_dma_address(linux_sgl)))
 		return __nvgpu_mem_get_sgl_from_vidmem(g, linux_sgl);
 
 	nvgpu_sgt = nvgpu_kzalloc(g, sizeof(*nvgpu_sgt));

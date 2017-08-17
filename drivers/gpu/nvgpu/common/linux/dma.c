@@ -343,7 +343,7 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	if (err)
 		goto fail_kfree;
 
-	set_vidmem_page_alloc(mem->priv.sgt->sgl, addr);
+	nvgpu_vidmem_set_page_alloc(mem->priv.sgt->sgl, addr);
 	sg_set_page(mem->priv.sgt->sgl, NULL, size, 0);
 
 	mem->aligned_size = size;
@@ -535,7 +535,7 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 	} else {
 		nvgpu_memset(g, mem, 0, 0, mem->aligned_size);
 		nvgpu_free(mem->allocator,
-			   (u64)get_vidmem_page_alloc(mem->priv.sgt->sgl));
+			   (u64)nvgpu_vidmem_get_page_alloc(mem->priv.sgt->sgl));
 		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
 		mem->size = 0;

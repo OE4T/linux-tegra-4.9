@@ -350,7 +350,7 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	nvgpu_vm_put(mm->cde.vm);
 
 	nvgpu_semaphore_sea_destroy(g);
-	gk20a_vidmem_destroy(g);
+	nvgpu_vidmem_destroy(g);
 	nvgpu_pd_cache_fini(g);
 }
 
@@ -387,7 +387,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 
 	mm->vidmem.ce_ctx_id = (u32)~0;
 
-	err = gk20a_init_vidmem(mm);
+	err = nvgpu_vidmem_init(mm);
 	if (err)
 		return err;
 

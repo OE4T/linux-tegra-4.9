@@ -42,7 +42,7 @@
 enum nvgpu_aperture gk20a_dmabuf_aperture(struct gk20a *g,
 					  struct dma_buf *dmabuf)
 {
-	struct gk20a *buf_owner = gk20a_vidmem_buf_owner(dmabuf);
+	struct gk20a *buf_owner = nvgpu_vidmem_buf_owner(dmabuf);
 	bool unified_memory = nvgpu_is_enabled(g, NVGPU_MM_UNIFIED_MEMORY);
 
 	if (buf_owner == NULL) {
@@ -97,7 +97,8 @@ static u64 nvgpu_get_buffer_alignment(struct gk20a *g, struct scatterlist *sgl,
 	u64 buf_addr;
 
 	if (aperture == APERTURE_VIDMEM) {
-		struct nvgpu_page_alloc *alloc = get_vidmem_page_alloc(sgl);
+		struct nvgpu_page_alloc *alloc =
+			nvgpu_vidmem_get_page_alloc(sgl);
 		struct nvgpu_sgt *sgt = &alloc->sgt;
 		void *sgl_vid = sgt->sgl;
 

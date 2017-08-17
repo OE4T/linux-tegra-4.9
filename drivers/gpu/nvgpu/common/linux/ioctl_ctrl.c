@@ -693,7 +693,7 @@ static int nvgpu_gpu_alloc_vidmem(struct gk20a *g,
 		return -EINVAL;
 	}
 
-	fd = gk20a_vidmem_buf_alloc(g, args->in.size);
+	fd = nvgpu_vidmem_buf_alloc(g, args->in.size);
 	if (fd < 0)
 		return fd;
 
@@ -715,7 +715,7 @@ static int nvgpu_gpu_get_memory_state(struct gk20a *g,
 	    args->reserved[2] || args->reserved[3])
 		return -EINVAL;
 
-	err = gk20a_vidmem_get_space(g, &args->total_free_bytes);
+	err = nvgpu_vidmem_get_space(g, &args->total_free_bytes);
 
 	gk20a_dbg_fn("done, err=%d, bytes=%lld", err, args->total_free_bytes);
 

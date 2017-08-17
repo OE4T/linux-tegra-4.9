@@ -112,6 +112,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			vcc-supply = <&vdd_3v3>;
+			vcc-pullup-supply = <&vdd_3v3>;
 			status = "disabled";
 			i2c@0 {
 				reg = <0>;

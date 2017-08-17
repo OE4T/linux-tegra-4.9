@@ -3536,10 +3536,8 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 	if (open_count == 0)
 		tegra_dc_reset_imp_state();
 
-	if (atomic_dec_return(&ext->users_count) == 0) {
-		dev_dbg(&ext->dc->ndev->dev, "%s: All users died\n", __func__);
-		/* clean up reference counts */
-	}
+	if (!atomic_dec_return(&ext->users_count))
+		tegra_dc_crc_drop_ref_cnts(ext->dc);
 
 	return 0;
 }

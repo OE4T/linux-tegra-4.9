@@ -1253,6 +1253,7 @@ struct nvdisp_imp_table {
 u64 tegra_dc_get_tsc_time(void);
 
 void tegra_dc_crc_deinit(struct tegra_dc *dc);
+void tegra_dc_crc_drop_ref_cnts(struct tegra_dc *dc);
 void tegra_dc_crc_reset(struct tegra_dc *dc);
 int tegra_dc_crc_process(struct tegra_dc *dc);
 

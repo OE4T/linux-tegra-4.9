@@ -167,6 +167,74 @@ void tegra_dc_crc_reset(struct tegra_dc *dc)
 		tegra_nvdisp_crc_reset(dc);
 }
 
+/* This API cleans up reference counts that track CRC APIs invoked/enabled from
+ * userspace via relevant IOCTLs. If the legacy APIs have been invoked, simply
+ * clear its reference count and return, else call individual CRC disable
+ * routines for each block we support reading back CRCs for.
+ */
+void tegra_dc_crc_drop_ref_cnts(struct tegra_dc *dc)
+{
+	int ret;
+	struct tegra_dc_ext_crc_arg arg;
+	struct tegra_dc_ext_crc_conf *conf = NULL;
+	unsigned int num_conf, i;
+	u8 id; /* region_id */
+
+	mutex_lock(&dc->lock);
+
+	if (dc->crc_ref_cnt.legacy) {
+		dc->crc_ref_cnt.legacy = 0;
+		mutex_unlock(&dc->lock);
+		return;
+	}
+
+	arg.num_conf = atomic_read(&dc->crc_ref_cnt.global);
+	if (!arg.num_conf) {
+		mutex_unlock(&dc->lock);
+		return;
+	}
+
+	memcpy(arg.magic, "TCRC", 4);
+	arg.version = TEGRA_DC_CRC_ARG_VERSION_0;
+
+	conf = kcalloc(arg.num_conf, sizeof(*conf), GFP_KERNEL);
+	if (!conf) {
+		mutex_unlock(&dc->lock);
+		return;
+	}
+
+	arg.conf = (__u64)conf;
+
+	num_conf = 0;
+
+	for (i = 0; i < atomic_read(&dc->crc_ref_cnt.rg); i++)
+		conf[num_conf++].type = TEGRA_DC_EXT_CRC_TYPE_RG;
+
+	for (i = 0; i < atomic_read(&dc->crc_ref_cnt.comp); i++)
+		conf[num_conf++].type = TEGRA_DC_EXT_CRC_TYPE_COMP;
+
+	for (i = 0; i < atomic_read(&dc->crc_ref_cnt.out); i++)
+		conf[num_conf++].type = TEGRA_DC_EXT_CRC_TYPE_OR;
+
+	for (id = 0; id < TEGRA_DC_MAX_CRC_REGIONS; id++) {
+		for (i = 0; i < atomic_read(&dc->crc_ref_cnt.region[id]); i++) {
+			conf[num_conf].type = TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL;
+			conf[num_conf].region.id = id;
+			num_conf++;
+		}
+	}
+
+	WARN_ON(num_conf != arg.num_conf);
+	mutex_unlock(&dc->lock);
+
+	ret = tegra_dc_crc_disable(dc, &arg);
+	if (ret)
+		dev_warn(&dc->ndev->dev, "%s: Disable CRCs failed. ret = %d\n",
+			 __func__, ret);
+
+	kfree(conf);
+}
+
 /* Called when disabling the DC head
  * This function resets only the SW state associated with the CRC mechanism
  */

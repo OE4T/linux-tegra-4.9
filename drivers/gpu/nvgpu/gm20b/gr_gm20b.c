@@ -36,7 +36,7 @@
 #include <nvgpu/hw/gm20b/hw_ctxsw_prog_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 
-static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
+void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 {
 	u32 temp;
 
@@ -73,7 +73,7 @@ static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 		gk20a_readl(g, fb_fbhub_num_active_ltcs_r()));
 }
 
-static void gr_gm20b_bundle_cb_defaults(struct gk20a *g)
+void gr_gm20b_bundle_cb_defaults(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
@@ -85,7 +85,7 @@ static void gr_gm20b_bundle_cb_defaults(struct gk20a *g)
 		gr_pd_ab_dist_cfg2_token_limit_init_v();
 }
 
-static void gr_gm20b_cb_size_default(struct gk20a *g)
+void gr_gm20b_cb_size_default(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
@@ -96,7 +96,7 @@ static void gr_gm20b_cb_size_default(struct gk20a *g)
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 }
 
-static int gr_gm20b_calc_global_ctx_buffer_size(struct gk20a *g)
+int gr_gm20b_calc_global_ctx_buffer_size(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	int size;
@@ -134,7 +134,7 @@ void gr_gm20b_commit_global_attrib_cb(struct gk20a *g,
 		gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_valid_true_f(), patch);
 }
 
-static void gr_gm20b_commit_global_bundle_cb(struct gk20a *g,
+void gr_gm20b_commit_global_bundle_cb(struct gk20a *g,
 					    struct channel_ctx_gk20a *ch_ctx,
 					    u64 addr, u64 size, bool patch)
 {
@@ -170,7 +170,7 @@ static void gr_gm20b_commit_global_bundle_cb(struct gk20a *g,
 
 }
 
-static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
+int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -250,7 +250,7 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 	return 0;
 }
 
-static void gr_gm20b_commit_global_pagepool(struct gk20a *g,
+void gr_gm20b_commit_global_pagepool(struct gk20a *g,
 					    struct channel_ctx_gk20a *ch_ctx,
 					    u64 addr, u32 size, bool patch)
 {
@@ -276,7 +276,7 @@ void gr_gm20b_set_rd_coalesce(struct gk20a *g, u32 data)
 	gk20a_dbg_fn("done");
 }
 
-static int gr_gm20b_handle_sw_method(struct gk20a *g, u32 addr,
+int gr_gm20b_handle_sw_method(struct gk20a *g, u32 addr,
 					  u32 class_num, u32 offset, u32 data)
 {
 	gk20a_dbg_fn("");
@@ -318,7 +318,7 @@ fail:
 	return -EINVAL;
 }
 
-static void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
+void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
@@ -368,7 +368,7 @@ static void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-static void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
+void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
@@ -423,7 +423,7 @@ static void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-static void gr_gm20b_set_hww_esr_report_mask(struct gk20a *g)
+void gr_gm20b_set_hww_esr_report_mask(struct gk20a *g)
 {
 	/* setup sm warp esr report masks */
 	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r(),
@@ -456,7 +456,7 @@ static void gr_gm20b_set_hww_esr_report_mask(struct gk20a *g)
 		gr_gpcs_tpcs_sm_hww_global_esr_report_mask_multiple_warp_errors_report_f());
 }
 
-static bool gr_gm20b_is_valid_class(struct gk20a *g, u32 class_num)
+bool gr_gm20b_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
 
@@ -476,7 +476,7 @@ static bool gr_gm20b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
-static bool gr_gm20b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
+bool gr_gm20b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
 {
 	if (class_num == MAXWELL_B)
 		return true;
@@ -484,7 +484,7 @@ static bool gr_gm20b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
 		return false;
 }
 
-static bool gr_gm20b_is_valid_compute_class(struct gk20a *g, u32 class_num)
+bool gr_gm20b_is_valid_compute_class(struct gk20a *g, u32 class_num)
 {
 	if (class_num == MAXWELL_COMPUTE_B)
 		return true;
@@ -502,7 +502,7 @@ static const u32 _num_sm_dsm_perf_ctrl_regs = 2;
 static u32 *_sm_dsm_perf_regs;
 static u32 _sm_dsm_perf_ctrl_regs[2];
 
-static void gr_gm20b_init_sm_dsm_reg_info(void)
+void gr_gm20b_init_sm_dsm_reg_info(void)
 {
 	if (_sm_dsm_perf_ctrl_regs[0] != 0)
 		return;
@@ -513,7 +513,7 @@ static void gr_gm20b_init_sm_dsm_reg_info(void)
 			      gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control5_r();
 }
 
-static void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
+void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
 					  u32 *num_sm_dsm_perf_regs,
 					  u32 **sm_dsm_perf_regs,
 					  u32 *perf_register_stride)
@@ -523,7 +523,7 @@ static void gr_gm20b_get_sm_dsm_perf_regs(struct gk20a *g,
 	*perf_register_stride = 0;
 }
 
-static void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
+void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 					       u32 *num_sm_dsm_perf_ctrl_regs,
 					       u32 **sm_dsm_perf_ctrl_regs,
 					       u32 *ctrl_register_stride)
@@ -535,7 +535,7 @@ static void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 	    ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
 }
 
-static u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 	u32 val;
 	struct gr_gk20a *gr = &g->gr;
@@ -546,7 +546,7 @@ static u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	return (~val) & ((0x1 << gr->max_tpc_per_gpc_count) - 1);
 }
 
-static void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 	nvgpu_tegra_fuse_write_bypass(g, 0x1);
 	nvgpu_tegra_fuse_write_access_sw(g, 0x0);
@@ -563,7 +563,7 @@ static void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	}
 }
 
-static void gr_gm20b_load_tpc_mask(struct gk20a *g)
+void gr_gm20b_load_tpc_mask(struct gk20a *g)
 {
 	u32 pes_tpc_mask = 0, fuse_tpc_mask;
 	u32 gpc, pes;
@@ -588,7 +588,7 @@ static void gr_gm20b_load_tpc_mask(struct gk20a *g)
 	}
 }
 
-static void gr_gm20b_program_sm_id_numbering(struct gk20a *g,
+void gr_gm20b_program_sm_id_numbering(struct gk20a *g,
 					     u32 gpc, u32 tpc, u32 smid)
 {
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
@@ -604,7 +604,7 @@ static void gr_gm20b_program_sm_id_numbering(struct gk20a *g,
 			gr_gpc0_tpc0_pe_cfg_smid_value_f(smid));
 }
 
-static int gr_gm20b_load_smid_config(struct gk20a *g)
+int gr_gm20b_load_smid_config(struct gk20a *g)
 {
 	u32 *tpc_sm_id;
 	u32 i, j;
@@ -669,7 +669,7 @@ int gr_gm20b_init_fs_state(struct gk20a *g)
 	return 0;
 }
 
-static int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
+int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset)
 {
 	gk20a_writel(g, reg_offset + gr_fecs_dmactl_r(),
@@ -697,7 +697,7 @@ static bool gr_gm20b_is_tpc_addr_shared(struct gk20a *g, u32 addr)
 			 tpc_in_gpc_stride));
 }
 
-static bool gr_gm20b_is_tpc_addr(struct gk20a *g, u32 addr)
+bool gr_gm20b_is_tpc_addr(struct gk20a *g, u32 addr)
 {
 	u32 tpc_in_gpc_base = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_BASE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
@@ -708,7 +708,7 @@ static bool gr_gm20b_is_tpc_addr(struct gk20a *g, u32 addr)
 		|| gr_gm20b_is_tpc_addr_shared(g, addr);
 }
 
-static u32 gr_gm20b_get_tpc_num(struct gk20a *g, u32 addr)
+u32 gr_gm20b_get_tpc_num(struct gk20a *g, u32 addr)
 {
 	u32 i, start;
 	u32 num_tpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_TPC_PER_GPC);
@@ -738,7 +738,7 @@ static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
 		gr_fecs_falcon_hwcfg_r());
 }
 
-static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
+int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 {
 	u32 err, flags;
 	u32 reg_offset = gr_gpcs_gpccs_falcon_hwcfg_r() -
@@ -819,14 +819,14 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 }
 #else
 
-static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
+int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 {
 	return -EPERM;
 }
 
 #endif
 
-static void gr_gm20b_detect_sm_arch(struct gk20a *g)
+void gr_gm20b_detect_sm_arch(struct gk20a *g)
 {
 	u32 v = gk20a_readl(g, gr_gpc0_tpc0_sm_arch_r());
 
@@ -838,12 +838,12 @@ static void gr_gm20b_detect_sm_arch(struct gk20a *g)
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
 }
 
-static u32 gr_gm20b_pagepool_default_size(struct gk20a *g)
+u32 gr_gm20b_pagepool_default_size(struct gk20a *g)
 {
 	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
-static int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
+int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
 			  u32 class,
 			  u32 flags)
@@ -864,7 +864,7 @@ static int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
 	return 0;
 }
 
-static void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
+void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx,
 		struct nvgpu_mem *mem)
 {
@@ -884,7 +884,7 @@ static void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
 	gk20a_dbg_fn("done");
 }
 
-static int gr_gm20b_dump_gr_status_regs(struct gk20a *g,
+int gr_gm20b_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -1022,7 +1022,7 @@ static int gr_gm20b_dump_gr_status_regs(struct gk20a *g,
 	return 0;
 }
 
-static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
+int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 				       bool enable)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
@@ -1051,7 +1051,7 @@ static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 	return 0;
 }
 
-static u32 gr_gm20b_get_fbp_en_mask(struct gk20a *g)
+u32 gr_gm20b_get_fbp_en_mask(struct gk20a *g)
 {
 	u32 fbp_en_mask, opt_fbio;
 	u32 tmp, max_fbps_count;
@@ -1066,7 +1066,7 @@ static u32 gr_gm20b_get_fbp_en_mask(struct gk20a *g)
 	return fbp_en_mask;
 }
 
-static u32 gr_gm20b_get_max_ltc_per_fbp(struct gk20a *g)
+u32 gr_gm20b_get_max_ltc_per_fbp(struct gk20a *g)
 {
 	u32 ltc_per_fbp, reg;
 	reg = gk20a_readl(g,  top_ltc_per_fbp_r());
@@ -1074,7 +1074,7 @@ static u32 gr_gm20b_get_max_ltc_per_fbp(struct gk20a *g)
 	return ltc_per_fbp;
 }
 
-static u32 gr_gm20b_get_max_lts_per_ltc(struct gk20a *g)
+u32 gr_gm20b_get_max_lts_per_ltc(struct gk20a *g)
 {
 	u32 lts_per_ltc, reg;
 	reg = gk20a_readl(g,  top_slices_per_ltc_r());
@@ -1082,7 +1082,7 @@ static u32 gr_gm20b_get_max_lts_per_ltc(struct gk20a *g)
 	return lts_per_ltc;
 }
 
-static u32 *gr_gm20b_rop_l2_en_mask(struct gk20a *g)
+u32 *gr_gm20b_rop_l2_en_mask(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 i, tmp, max_fbps_count, max_ltc_per_fbp;
@@ -1102,7 +1102,7 @@ static u32 *gr_gm20b_rop_l2_en_mask(struct gk20a *g)
 	return gr->fbp_rop_l2_en_mask;
 }
 
-static u32 gr_gm20b_get_max_fbps_count(struct gk20a *g)
+u32 gr_gm20b_get_max_fbps_count(struct gk20a *g)
 {
 	u32 tmp, max_fbps_count;
 	tmp = gk20a_readl(g, top_num_fbps_r());
@@ -1110,7 +1110,7 @@ static u32 gr_gm20b_get_max_fbps_count(struct gk20a *g)
 	return max_fbps_count;
 }
 
-static void gr_gm20b_init_cyclestats(struct gk20a *g)
+void gr_gm20b_init_cyclestats(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	g->gpu_characteristics.flags |=
@@ -1122,7 +1122,7 @@ static void gr_gm20b_init_cyclestats(struct gk20a *g)
 #endif
 }
 
-static void gr_gm20b_enable_cde_in_fecs(struct gk20a *g, struct nvgpu_mem *mem)
+void gr_gm20b_enable_cde_in_fecs(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	u32 cde_v;
 
@@ -1131,7 +1131,7 @@ static void gr_gm20b_enable_cde_in_fecs(struct gk20a *g, struct nvgpu_mem *mem)
 	nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_ctl_o(), cde_v);
 }
 
-static void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
+void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 {
 	/* Check if we have at least one valid warp */
 	/* get paused state on maxwell */
@@ -1210,7 +1210,7 @@ static void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 	}
 }
 
-static void gr_gm20b_get_access_map(struct gk20a *g,
+void gr_gm20b_get_access_map(struct gk20a *g,
 				   u32 **whitelist, int *num_entries)
 {
 	static u32 wl_addr_gm20b[] = {
@@ -1251,7 +1251,7 @@ static void gr_gm20b_get_access_map(struct gk20a *g,
 	*num_entries = ARRAY_SIZE(wl_addr_gm20b);
 }
 
-static int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
+int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 {
 	int sm_id;
 	struct gr_gk20a *gr = &g->gr;
@@ -1281,7 +1281,7 @@ static int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 	return 0;
 }
 
-static int gm20b_gr_update_sm_error_state(struct gk20a *g,
+int gm20b_gr_update_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id,
 		struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state)
 {
@@ -1353,7 +1353,7 @@ fail:
 	return err;
 }
 
-static int gm20b_gr_clear_sm_error_state(struct gk20a *g,
+int gm20b_gr_clear_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id)
 {
 	u32 gpc, tpc, offset;
@@ -1394,7 +1394,7 @@ fail:
 	return err;
 }
 
-static int gr_gm20b_get_preemption_mode_flags(struct gk20a *g,
+int gr_gm20b_get_preemption_mode_flags(struct gk20a *g,
 		struct nvgpu_preemption_modes_rec *preemption_modes_rec)
 {
 	preemption_modes_rec->graphics_preemption_mode_flags =
@@ -1421,7 +1421,7 @@ int gm20b_gr_tpc_disable_override(struct gk20a *g, u32 mask)
 	return 0;
 }
 
-static int gm20b_gr_fuse_override(struct gk20a *g)
+int gm20b_gr_fuse_override(struct gk20a *g)
 {
 	struct device_node *np = dev_from_gk20a(g)->of_node;
 	u32 *fuses;
@@ -1457,7 +1457,7 @@ static int gm20b_gr_fuse_override(struct gk20a *g)
 	return 0;
 }
 
-static bool gr_gm20b_is_ltcs_ltss_addr(struct gk20a *g, u32 addr)
+bool gr_gm20b_is_ltcs_ltss_addr(struct gk20a *g, u32 addr)
 {
 	u32 ltc_shared_base = ltc_ltcs_ltss_v();
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
@@ -1466,7 +1466,7 @@ static bool gr_gm20b_is_ltcs_ltss_addr(struct gk20a *g, u32 addr)
 		(addr < (ltc_shared_base + lts_stride));
 }
 
-static bool gr_gm20b_is_ltcn_ltss_addr(struct gk20a *g, u32 addr)
+bool gr_gm20b_is_ltcn_ltss_addr(struct gk20a *g, u32 addr)
 {
 	u32 lts_shared_base = ltc_ltc0_ltss_v();
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
@@ -1498,7 +1498,7 @@ static void gr_gm20b_update_ltc_lts_addr(struct gk20a *g, u32 addr, u32 ltc_num,
 	*priv_addr_table_index = index;
 }
 
-static void gr_gm20b_split_lts_broadcast_addr(struct gk20a *g, u32 addr,
+void gr_gm20b_split_lts_broadcast_addr(struct gk20a *g, u32 addr,
 					u32 *priv_addr_table,
 					u32 *priv_addr_table_index)
 {
@@ -1518,7 +1518,7 @@ static void gr_gm20b_split_lts_broadcast_addr(struct gk20a *g, u32 addr,
 				priv_addr_table_index);
 }
 
-static void gr_gm20b_split_ltc_broadcast_addr(struct gk20a *g, u32 addr,
+void gr_gm20b_split_ltc_broadcast_addr(struct gk20a *g, u32 addr,
 					u32 *priv_addr_table,
 					u32 *priv_addr_table_index)
 {
@@ -1530,7 +1530,7 @@ static void gr_gm20b_split_ltc_broadcast_addr(struct gk20a *g, u32 addr,
 					priv_addr_table, priv_addr_table_index);
 }
 
-static void gm20b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
+void gm20b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 			u32 global_esr)
 {
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
@@ -1558,122 +1558,4 @@ void gm20a_gr_disable_rd_coalesce(struct gk20a *g)
 			     gr_gpcs_tpcs_tex_m_dbg2_su_rd_coalesce_en_f(0));
 
 	gk20a_writel(g, gr_gpcs_tpcs_tex_m_dbg2_r(), dbg2_reg);
-}
-
-void gm20b_init_gr(struct gk20a *g)
-{
-	struct gpu_ops *gops = &g->ops;
-
-	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
-	gops->gr.bundle_cb_defaults = gr_gm20b_bundle_cb_defaults;
-	gops->gr.cb_size_default = gr_gm20b_cb_size_default;
-	gops->gr.calc_global_ctx_buffer_size =
-		gr_gm20b_calc_global_ctx_buffer_size;
-	gops->gr.commit_global_attrib_cb = gr_gm20b_commit_global_attrib_cb;
-	gops->gr.commit_global_bundle_cb = gr_gm20b_commit_global_bundle_cb;
-	gops->gr.commit_global_cb_manager = gr_gm20b_commit_global_cb_manager;
-	gops->gr.commit_global_pagepool = gr_gm20b_commit_global_pagepool;
-	gops->gr.handle_sw_method = gr_gm20b_handle_sw_method;
-	gops->gr.set_alpha_circular_buffer_size = gr_gm20b_set_alpha_circular_buffer_size;
-	gops->gr.set_circular_buffer_size = gr_gm20b_set_circular_buffer_size;
-	gops->gr.enable_hww_exceptions = gr_gk20a_enable_hww_exceptions;
-	gops->gr.is_valid_class = gr_gm20b_is_valid_class;
-	gops->gr.is_valid_gfx_class = gr_gm20b_is_valid_gfx_class;
-	gops->gr.is_valid_compute_class = gr_gm20b_is_valid_compute_class;
-	gops->gr.get_sm_dsm_perf_regs = gr_gm20b_get_sm_dsm_perf_regs;
-	gops->gr.get_sm_dsm_perf_ctrl_regs = gr_gm20b_get_sm_dsm_perf_ctrl_regs;
-	gops->gr.init_fs_state = gr_gm20b_init_fs_state;
-	gops->gr.set_hww_esr_report_mask = gr_gm20b_set_hww_esr_report_mask;
-	gops->gr.falcon_load_ucode = gr_gm20b_load_ctxsw_ucode_segments;
-	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY))
-		gops->gr.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode;
-	else
-		gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
-	gops->gr.set_gpc_tpc_mask = gr_gm20b_set_gpc_tpc_mask;
-	gops->gr.get_gpc_tpc_mask = gr_gm20b_get_gpc_tpc_mask;
-	gops->gr.free_channel_ctx = gk20a_free_channel_ctx;
-	gops->gr.alloc_obj_ctx = gk20a_alloc_obj_ctx;
-	gops->gr.bind_ctxsw_zcull = gr_gk20a_bind_ctxsw_zcull;
-	gops->gr.get_zcull_info = gr_gk20a_get_zcull_info;
-	gops->gr.is_tpc_addr = gr_gm20b_is_tpc_addr;
-	gops->gr.get_tpc_num = gr_gm20b_get_tpc_num;
-	gops->gr.detect_sm_arch = gr_gm20b_detect_sm_arch;
-	gops->gr.add_zbc_color = gr_gk20a_add_zbc_color;
-	gops->gr.add_zbc_depth = gr_gk20a_add_zbc_depth;
-	gops->gr.zbc_set_table = gk20a_gr_zbc_set_table;
-	gops->gr.zbc_query_table = gr_gk20a_query_zbc;
-	gops->gr.pmu_save_zbc = gk20a_pmu_save_zbc;
-	gops->gr.add_zbc = gr_gk20a_add_zbc;
-	gops->gr.pagepool_default_size = gr_gm20b_pagepool_default_size;
-	gops->gr.init_ctx_state = gr_gk20a_init_ctx_state;
-	gops->gr.alloc_gr_ctx = gr_gm20b_alloc_gr_ctx;
-	gops->gr.free_gr_ctx = gr_gk20a_free_gr_ctx;
-	gops->gr.update_ctxsw_preemption_mode =
-		gr_gm20b_update_ctxsw_preemption_mode;
-	gops->gr.dump_gr_regs = gr_gm20b_dump_gr_status_regs;
-	gops->gr.update_pc_sampling = gr_gm20b_update_pc_sampling;
-	gops->gr.get_fbp_en_mask = gr_gm20b_get_fbp_en_mask;
-	gops->gr.get_max_ltc_per_fbp = gr_gm20b_get_max_ltc_per_fbp;
-	gops->gr.get_max_lts_per_ltc = gr_gm20b_get_max_lts_per_ltc;
-	gops->gr.get_rop_l2_en_mask = gr_gm20b_rop_l2_en_mask;
-	gops->gr.get_max_fbps_count = gr_gm20b_get_max_fbps_count;
-	gops->gr.init_sm_dsm_reg_info = gr_gm20b_init_sm_dsm_reg_info;
-	gops->gr.wait_empty = gr_gk20a_wait_idle;
-	gops->gr.init_cyclestats = gr_gm20b_init_cyclestats;
-	gops->gr.set_sm_debug_mode = gr_gk20a_set_sm_debug_mode;
-	gops->gr.enable_cde_in_fecs = gr_gm20b_enable_cde_in_fecs;
-	gops->gr.bpt_reg_info = gr_gm20b_bpt_reg_info;
-	gops->gr.get_access_map = gr_gm20b_get_access_map;
-	gops->gr.handle_fecs_error = gk20a_gr_handle_fecs_error;
-	gops->gr.handle_sm_exception = gr_gk20a_handle_sm_exception;
-	gops->gr.handle_tex_exception = gr_gk20a_handle_tex_exception;
-	gops->gr.enable_gpc_exceptions = gk20a_gr_enable_gpc_exceptions;
-	gops->gr.enable_exceptions = gk20a_gr_enable_exceptions;
-	gops->gr.get_lrf_tex_ltc_dram_override = NULL;
-	gops->gr.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode;
-	gops->gr.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode;
-	gops->gr.record_sm_error_state = gm20b_gr_record_sm_error_state;
-	gops->gr.update_sm_error_state = gm20b_gr_update_sm_error_state;
-	gops->gr.clear_sm_error_state = gm20b_gr_clear_sm_error_state;
-	gops->gr.suspend_contexts = gr_gk20a_suspend_contexts;
-	gops->gr.resume_contexts = gr_gk20a_resume_contexts;
-	gops->gr.get_preemption_mode_flags = gr_gm20b_get_preemption_mode_flags;
-	gops->gr.fuse_override = gm20b_gr_fuse_override;
-	gops->gr.init_sm_id_table = gr_gk20a_init_sm_id_table;
-	gops->gr.load_smid_config = gr_gm20b_load_smid_config;
-	gops->gr.program_sm_id_numbering = gr_gm20b_program_sm_id_numbering;
-	gops->gr.is_ltcs_ltss_addr = gr_gm20b_is_ltcs_ltss_addr;
-	gops->gr.is_ltcn_ltss_addr = gr_gm20b_is_ltcn_ltss_addr;
-	gops->gr.split_lts_broadcast_addr = gr_gm20b_split_lts_broadcast_addr;
-	gops->gr.split_ltc_broadcast_addr = gr_gm20b_split_ltc_broadcast_addr;
-	gops->gr.setup_rop_mapping = gr_gk20a_setup_rop_mapping;
-	gops->gr.program_zcull_mapping = gr_gk20a_program_zcull_mapping;
-	gops->gr.commit_global_timeslice = gr_gk20a_commit_global_timeslice;
-	gops->gr.commit_inst = gr_gk20a_commit_inst;
-	gops->gr.write_zcull_ptr = gr_gk20a_write_zcull_ptr;
-	gops->gr.write_pm_ptr = gr_gk20a_write_pm_ptr;
-	gops->gr.init_elcg_mode = gr_gk20a_init_elcg_mode;
-	gops->gr.load_tpc_mask = gr_gm20b_load_tpc_mask;
-	gops->gr.inval_icache = gr_gk20a_inval_icache;
-	gops->gr.trigger_suspend = gr_gk20a_trigger_suspend;
-	gops->gr.wait_for_pause = gr_gk20a_wait_for_pause;
-	gops->gr.resume_from_pause = gr_gk20a_resume_from_pause;
-	gops->gr.clear_sm_errors = gr_gk20a_clear_sm_errors;
-	gops->gr.tpc_enabled_exceptions = gr_gk20a_tpc_enabled_exceptions;
-	gops->gr.get_esr_sm_sel = gk20a_gr_get_esr_sm_sel;
-	gops->gr.sm_debugger_attached = gk20a_gr_sm_debugger_attached;
-	gops->gr.suspend_single_sm = gk20a_gr_suspend_single_sm;
-	gops->gr.suspend_all_sms = gk20a_gr_suspend_all_sms;
-	gops->gr.resume_single_sm = gk20a_gr_resume_single_sm;
-	gops->gr.resume_all_sms = gk20a_gr_resume_all_sms;
-	gops->gr.get_sm_hww_warp_esr = gk20a_gr_get_sm_hww_warp_esr;
-	gops->gr.get_sm_hww_global_esr = gk20a_gr_get_sm_hww_global_esr;
-	gops->gr.get_sm_no_lock_down_hww_global_esr_mask =
-			 gk20a_gr_get_sm_no_lock_down_hww_global_esr_mask;
-	gops->gr.lock_down_sm = gk20a_gr_lock_down_sm;
-	gops->gr.wait_for_sm_lock_down = gk20a_gr_wait_for_sm_lock_down;
-	gops->gr.clear_sm_hww = gm20b_gr_clear_sm_hww;
-	gops->gr.init_ovr_sm_dsm_perf =  gk20a_gr_init_ovr_sm_dsm_perf;
-	gops->gr.get_ovr_perf_regs = gk20a_gr_get_ovr_perf_regs;
-	gops->gr.disable_rd_coalesce = gm20a_gr_disable_rd_coalesce;
 }

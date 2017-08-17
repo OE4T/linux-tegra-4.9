@@ -27,6 +27,7 @@
 #include "gk20a/mc_gk20a.h"
 #include "gk20a/fb_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
+#include "gk20a/gr_gk20a.h"
 
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/gr_gp10b.h"
@@ -40,6 +41,7 @@
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/fb_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
+#include "gp10b/gr_gp10b.h"
 
 #include "gp106/fifo_gp106.h"
 #include "gp106/regops_gp106.h"
@@ -51,6 +53,7 @@
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/acr_gm20b.h"
+#include "gm20b/gr_gm20b.h"
 
 #include "gp106/acr_gp106.h"
 #include "gp106/sec2_gp106.h"
@@ -220,6 +223,128 @@ static const struct gpu_ops gp106_ops = {
 	.ce2 = {
 		.isr_stall = gp10b_ce_isr,
 		.isr_nonstall = gp10b_ce_nonstall_isr,
+	},
+	.gr = {
+		.init_gpc_mmu = gr_gm20b_init_gpc_mmu,
+		.bundle_cb_defaults = gr_gm20b_bundle_cb_defaults,
+		.cb_size_default = gr_gp106_cb_size_default,
+		.calc_global_ctx_buffer_size =
+			gr_gp10b_calc_global_ctx_buffer_size,
+		.commit_global_attrib_cb = gr_gp10b_commit_global_attrib_cb,
+		.commit_global_bundle_cb = gr_gp10b_commit_global_bundle_cb,
+		.commit_global_cb_manager = gr_gp10b_commit_global_cb_manager,
+		.commit_global_pagepool = gr_gp10b_commit_global_pagepool,
+		.handle_sw_method = gr_gp106_handle_sw_method,
+		.set_alpha_circular_buffer_size =
+			gr_gp10b_set_alpha_circular_buffer_size,
+		.set_circular_buffer_size = gr_gp10b_set_circular_buffer_size,
+		.enable_hww_exceptions = gr_gk20a_enable_hww_exceptions,
+		.is_valid_class = gr_gp106_is_valid_class,
+		.is_valid_gfx_class = gr_gp10b_is_valid_gfx_class,
+		.is_valid_compute_class = gr_gp10b_is_valid_compute_class,
+		.get_sm_dsm_perf_regs = gr_gm20b_get_sm_dsm_perf_regs,
+		.get_sm_dsm_perf_ctrl_regs = gr_gm20b_get_sm_dsm_perf_ctrl_regs,
+		.init_fs_state = gr_gp10b_init_fs_state,
+		.set_hww_esr_report_mask = gr_gm20b_set_hww_esr_report_mask,
+		.falcon_load_ucode = gr_gm20b_load_ctxsw_ucode_segments,
+		.set_gpc_tpc_mask = gr_gp10b_set_gpc_tpc_mask,
+		.get_gpc_tpc_mask = gr_gm20b_get_gpc_tpc_mask,
+		.free_channel_ctx = gk20a_free_channel_ctx,
+		.alloc_obj_ctx = gk20a_alloc_obj_ctx,
+		.bind_ctxsw_zcull = gr_gk20a_bind_ctxsw_zcull,
+		.get_zcull_info = gr_gk20a_get_zcull_info,
+		.is_tpc_addr = gr_gm20b_is_tpc_addr,
+		.get_tpc_num = gr_gm20b_get_tpc_num,
+		.detect_sm_arch = gr_gm20b_detect_sm_arch,
+		.add_zbc_color = gr_gp10b_add_zbc_color,
+		.add_zbc_depth = gr_gp10b_add_zbc_depth,
+		.zbc_set_table = gk20a_gr_zbc_set_table,
+		.zbc_query_table = gr_gk20a_query_zbc,
+		.pmu_save_zbc = gk20a_pmu_save_zbc,
+		.add_zbc = gr_gk20a_add_zbc,
+		.pagepool_default_size = gr_gp106_pagepool_default_size,
+		.init_ctx_state = gr_gp10b_init_ctx_state,
+		.alloc_gr_ctx = gr_gp10b_alloc_gr_ctx,
+		.free_gr_ctx = gr_gp10b_free_gr_ctx,
+		.update_ctxsw_preemption_mode =
+			gr_gp10b_update_ctxsw_preemption_mode,
+		.dump_gr_regs = gr_gp10b_dump_gr_status_regs,
+		.update_pc_sampling = gr_gm20b_update_pc_sampling,
+		.get_fbp_en_mask = gr_gm20b_get_fbp_en_mask,
+		.get_max_ltc_per_fbp = gr_gm20b_get_max_ltc_per_fbp,
+		.get_max_lts_per_ltc = gr_gm20b_get_max_lts_per_ltc,
+		.get_rop_l2_en_mask = gr_gm20b_rop_l2_en_mask,
+		.get_max_fbps_count = gr_gm20b_get_max_fbps_count,
+		.init_sm_dsm_reg_info = gr_gm20b_init_sm_dsm_reg_info,
+		.wait_empty = gr_gp10b_wait_empty,
+		.init_cyclestats = gr_gp10b_init_cyclestats,
+		.set_sm_debug_mode = gr_gk20a_set_sm_debug_mode,
+		.enable_cde_in_fecs = gr_gm20b_enable_cde_in_fecs,
+		.bpt_reg_info = gr_gm20b_bpt_reg_info,
+		.get_access_map = gr_gp10b_get_access_map,
+		.handle_fecs_error = gr_gp10b_handle_fecs_error,
+		.handle_sm_exception = gr_gp10b_handle_sm_exception,
+		.handle_tex_exception = gr_gp10b_handle_tex_exception,
+		.enable_gpc_exceptions = gk20a_gr_enable_gpc_exceptions,
+		.enable_exceptions = gk20a_gr_enable_exceptions,
+		.get_lrf_tex_ltc_dram_override = get_ecc_override_val,
+		.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode,
+		.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode,
+		.record_sm_error_state = gm20b_gr_record_sm_error_state,
+		.update_sm_error_state = gm20b_gr_update_sm_error_state,
+		.clear_sm_error_state = gm20b_gr_clear_sm_error_state,
+		.suspend_contexts = gr_gp10b_suspend_contexts,
+		.resume_contexts = gr_gk20a_resume_contexts,
+		.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags,
+		.fuse_override = gp10b_gr_fuse_override,
+		.init_sm_id_table = gr_gk20a_init_sm_id_table,
+		.load_smid_config = gr_gp10b_load_smid_config,
+		.program_sm_id_numbering = gr_gm20b_program_sm_id_numbering,
+		.is_ltcs_ltss_addr = gr_gm20b_is_ltcs_ltss_addr,
+		.is_ltcn_ltss_addr = gr_gm20b_is_ltcn_ltss_addr,
+		.split_lts_broadcast_addr = gr_gm20b_split_lts_broadcast_addr,
+		.split_ltc_broadcast_addr = gr_gm20b_split_ltc_broadcast_addr,
+		.setup_rop_mapping = gr_gk20a_setup_rop_mapping,
+		.program_zcull_mapping = gr_gk20a_program_zcull_mapping,
+		.commit_global_timeslice = gr_gk20a_commit_global_timeslice,
+		.commit_inst = gr_gk20a_commit_inst,
+		.write_zcull_ptr = gr_gk20a_write_zcull_ptr,
+		.write_pm_ptr = gr_gk20a_write_pm_ptr,
+		.init_elcg_mode = gr_gk20a_init_elcg_mode,
+		.load_tpc_mask = gr_gm20b_load_tpc_mask,
+		.inval_icache = gr_gk20a_inval_icache,
+		.trigger_suspend = gr_gk20a_trigger_suspend,
+		.wait_for_pause = gr_gk20a_wait_for_pause,
+		.resume_from_pause = gr_gk20a_resume_from_pause,
+		.clear_sm_errors = gr_gk20a_clear_sm_errors,
+		.tpc_enabled_exceptions = gr_gk20a_tpc_enabled_exceptions,
+		.get_esr_sm_sel = gk20a_gr_get_esr_sm_sel,
+		.sm_debugger_attached = gk20a_gr_sm_debugger_attached,
+		.suspend_single_sm = gk20a_gr_suspend_single_sm,
+		.suspend_all_sms = gk20a_gr_suspend_all_sms,
+		.resume_single_sm = gk20a_gr_resume_single_sm,
+		.resume_all_sms = gk20a_gr_resume_all_sms,
+		.get_sm_hww_warp_esr = gp10b_gr_get_sm_hww_warp_esr,
+		.get_sm_hww_global_esr = gk20a_gr_get_sm_hww_global_esr,
+		.get_sm_no_lock_down_hww_global_esr_mask =
+			gk20a_gr_get_sm_no_lock_down_hww_global_esr_mask,
+		.lock_down_sm = gk20a_gr_lock_down_sm,
+		.wait_for_sm_lock_down = gk20a_gr_wait_for_sm_lock_down,
+		.clear_sm_hww = gm20b_gr_clear_sm_hww,
+		.init_ovr_sm_dsm_perf =  gk20a_gr_init_ovr_sm_dsm_perf,
+		.get_ovr_perf_regs = gk20a_gr_get_ovr_perf_regs,
+		.disable_rd_coalesce = gm20a_gr_disable_rd_coalesce,
+		.set_boosted_ctx = NULL,
+		.set_preemption_mode = gr_gp10b_set_preemption_mode,
+		.set_czf_bypass = gr_gp10b_set_czf_bypass,
+		.pre_process_sm_exception = gr_gp10b_pre_process_sm_exception,
+		.set_preemption_buffer_va = gr_gp10b_set_preemption_buffer_va,
+		.init_preemption_state = NULL,
+		.update_boosted_ctx = NULL,
+		.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3,
+		.create_gr_sysfs = NULL,
+		.set_ctxsw_preemption_mode = gr_gp106_set_ctxsw_preemption_mode,
+		.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode
 	},
 	.fb = {
 		.reset = gp106_fb_reset,
@@ -569,6 +694,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gops->ltc = gp106_ops.ltc;
 	gops->ce2 = gp106_ops.ce2;
+	gops->gr = gp106_ops.gr;
 	gops->fb = gp106_ops.fb;
 	gops->clock_gating = gp106_ops.clock_gating;
 	gops->fifo = gp106_ops.fifo;
@@ -618,7 +744,6 @@ int gp106_init_hal(struct gk20a *g)
 
 	g->pmu_lsf_pmu_wpr_init_done = 0;
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
-	gp106_init_gr(g);
 
 	gp10b_init_uncompressed_kind_map();
 	gp10b_init_kind_attr();

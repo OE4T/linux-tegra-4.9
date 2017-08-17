@@ -41,7 +41,7 @@
 
 #define NVGPU_GFXP_WFI_TIMEOUT_US	100LL
 
-static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
+bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
 
@@ -67,7 +67,7 @@ static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
-static bool gr_gp10b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
+bool gr_gp10b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
 {
 	if (class_num == PASCAL_A ||  class_num == MAXWELL_B)
 		return true;
@@ -75,7 +75,7 @@ static bool gr_gp10b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
 		return false;
 }
 
-static bool gr_gp10b_is_valid_compute_class(struct gk20a *g, u32 class_num)
+bool gr_gp10b_is_valid_compute_class(struct gk20a *g, u32 class_num)
 {
 	if (class_num == PASCAL_COMPUTE_A ||  class_num == MAXWELL_COMPUTE_B)
 		return true;
@@ -119,7 +119,7 @@ static void gr_gp10b_sm_lrf_ecc_overcount_war(int single_err,
 		*count_to_adjust = 0;
 }
 
-static int gr_gp10b_handle_sm_exception(struct gk20a *g,
+int gr_gp10b_handle_sm_exception(struct gk20a *g,
 			u32 gpc, u32 tpc, u32 sm,
 			bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr)
@@ -244,7 +244,7 @@ static int gr_gp10b_handle_sm_exception(struct gk20a *g,
 	return ret;
 }
 
-static int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
+int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event)
 {
 	int ret = 0;
@@ -380,7 +380,7 @@ static int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	return ret;
 }
 
-static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
+int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -481,7 +481,7 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 	return 0;
 }
 
-static void gr_gp10b_commit_global_pagepool(struct gk20a *g,
+void gr_gp10b_commit_global_pagepool(struct gk20a *g,
 					    struct channel_ctx_gk20a *ch_ctx,
 					    u64 addr, u32 size, bool patch)
 {
@@ -499,7 +499,7 @@ static void gr_gp10b_commit_global_pagepool(struct gk20a *g,
 		gr_gpcs_gcc_pagepool_total_pages_f(size), patch);
 }
 
-static int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
+int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *color_val, u32 index)
 {
 	u32 i;
@@ -554,7 +554,7 @@ static int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
-static int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
+int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 				struct zbc_entry *depth_val, u32 index)
 {
 	u32 zbc_z;
@@ -592,12 +592,12 @@ static int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
-static u32 gr_gp10b_pagepool_default_size(struct gk20a *g)
+u32 gr_gp10b_pagepool_default_size(struct gk20a *g)
 {
 	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
-static int gr_gp10b_calc_global_ctx_buffer_size(struct gk20a *g)
+int gr_gp10b_calc_global_ctx_buffer_size(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	int size;
@@ -642,7 +642,7 @@ static void gr_gp10b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
 	gk20a_dbg_fn("done");
 }
 
-static void gr_gp10b_set_bes_crop_debug3(struct gk20a *g, u32 data)
+void gr_gp10b_set_bes_crop_debug3(struct gk20a *g, u32 data)
 {
 	u32 val;
 
@@ -667,7 +667,7 @@ static void gr_gp10b_set_bes_crop_debug3(struct gk20a *g, u32 data)
 	gk20a_writel(g, gr_bes_crop_debug3_r(), val);
 }
 
-static int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
+int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
 	gk20a_dbg_fn("");
@@ -718,7 +718,7 @@ fail:
 	return -EINVAL;
 }
 
-static void gr_gp10b_cb_size_default(struct gk20a *g)
+void gr_gp10b_cb_size_default(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
@@ -728,7 +728,7 @@ static void gr_gp10b_cb_size_default(struct gk20a *g)
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 }
 
-static void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
+void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
@@ -776,7 +776,7 @@ static void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-static void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
+void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
@@ -843,7 +843,7 @@ static void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-static int gr_gp10b_init_ctx_state(struct gk20a *g)
+int gr_gp10b_init_ctx_state(struct gk20a *g)
 {
 	struct fecs_method_op_gk20a op = {
 		.mailbox = { .id = 0, .data = 0,
@@ -910,7 +910,7 @@ fail_free:
 	return err;
 }
 
-static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
+int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 				struct gr_ctx_desc *gr_ctx,
 				struct vm_gk20a *vm, u32 class,
 				u32 graphics_preempt_mode,
@@ -1034,7 +1034,7 @@ fail:
 	return err;
 }
 
-static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
+int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
 			  u32 class,
 			  u32 flags)
@@ -1131,7 +1131,7 @@ static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
 	nvgpu_mem_end(g, mem);
 }
 
-static void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
+void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 			  struct gr_ctx_desc *gr_ctx)
 {
 	gk20a_dbg_fn("");
@@ -1151,7 +1151,7 @@ static void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 }
 
 
-static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
+void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx,
 		struct nvgpu_mem *mem)
 {
@@ -1256,7 +1256,7 @@ out:
 	gk20a_dbg_fn("done");
 }
 
-static int gr_gp10b_dump_gr_status_regs(struct gk20a *g,
+int gr_gp10b_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -1402,7 +1402,7 @@ static bool gr_activity_empty_or_preempted(u32 val)
 	return true;
 }
 
-static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
+int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			       u32 expect_delay)
 {
 	u32 delay = expect_delay;
@@ -1453,7 +1453,7 @@ static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 	return -EAGAIN;
 }
 
-static void gr_gp10b_commit_global_attrib_cb(struct gk20a *g,
+void gr_gp10b_commit_global_attrib_cb(struct gk20a *g,
 					     struct channel_ctx_gk20a *ch_ctx,
 					     u64 addr, bool patch)
 {
@@ -1481,7 +1481,7 @@ static void gr_gp10b_commit_global_attrib_cb(struct gk20a *g,
 		gr_gpcs_tpcs_tex_rm_cb_1_valid_true_f(), patch);
 }
 
-static void gr_gp10b_commit_global_bundle_cb(struct gk20a *g,
+void gr_gp10b_commit_global_bundle_cb(struct gk20a *g,
 					    struct channel_ctx_gk20a *ch_ctx,
 					    u64 addr, u64 size, bool patch)
 {
@@ -1516,7 +1516,7 @@ static void gr_gp10b_commit_global_bundle_cb(struct gk20a *g,
 		gr_pd_ab_dist_cfg2_state_limit_f(data), patch);
 }
 
-static int gr_gp10b_load_smid_config(struct gk20a *g)
+int gr_gp10b_load_smid_config(struct gk20a *g)
 {
 	u32 *tpc_sm_id;
 	u32 i, j;
@@ -1586,7 +1586,7 @@ int gr_gp10b_init_fs_state(struct gk20a *g)
 	return gr_gm20b_init_fs_state(g);
 }
 
-static void gr_gp10b_init_cyclestats(struct gk20a *g)
+void gr_gp10b_init_cyclestats(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	g->gpu_characteristics.flags |=
@@ -1598,7 +1598,7 @@ static void gr_gp10b_init_cyclestats(struct gk20a *g)
 #endif
 }
 
-static void gr_gp10b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+void gr_gp10b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 	nvgpu_tegra_fuse_write_bypass(g, 0x1);
 	nvgpu_tegra_fuse_write_access_sw(g, 0x0);
@@ -1611,7 +1611,7 @@ static void gr_gp10b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(g, 0x0);
 }
 
-static void gr_gp10b_get_access_map(struct gk20a *g,
+void gr_gp10b_get_access_map(struct gk20a *g,
 				   u32 **whitelist, int *num_entries)
 {
 	static u32 wl_addr_gp10b[] = {
@@ -1801,7 +1801,7 @@ static int gr_gp10b_clear_cilp_preempt_pending(struct gk20a *g,
  *
  * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
  */
-static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
+int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 		u32 gpc, u32 tpc, u32 sm, u32 global_esr, u32 warp_esr,
 		bool sm_debugger_attached, struct channel_gk20a *fault_ch,
 		bool *early_exit, bool *ignore_debugger)
@@ -1988,7 +1988,7 @@ clean_up:
 	return gk20a_gr_handle_fecs_error(g, __ch, isr_data);
 }
 
-static u32 gp10b_gr_get_sm_hww_warp_esr(struct gk20a *g,
+u32 gp10b_gr_get_sm_hww_warp_esr(struct gk20a *g,
 			u32 gpc, u32 tpc, u32 sm)
 {
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
@@ -2003,7 +2003,7 @@ static u32 gp10b_gr_get_sm_hww_warp_esr(struct gk20a *g,
 	return hww_warp_esr;
 }
 
-static u32 get_ecc_override_val(struct gk20a *g)
+u32 get_ecc_override_val(struct gk20a *g)
 {
 	u32 val;
 
@@ -2046,7 +2046,7 @@ static bool gr_gp10b_suspend_context(struct channel_gk20a *ch,
 	return ctx_resident;
 }
 
-static int gr_gp10b_suspend_contexts(struct gk20a *g,
+int gr_gp10b_suspend_contexts(struct gk20a *g,
 				struct dbg_session_gk20a *dbg_s,
 				int *ctx_resident_ch_fd)
 {
@@ -2122,7 +2122,7 @@ clean_up:
 	return err;
 }
 
-static int gr_gp10b_set_boosted_ctx(struct channel_gk20a *ch,
+int gr_gp10b_set_boosted_ctx(struct channel_gk20a *ch,
 				    bool boost)
 {
 	struct gr_ctx_desc *gr_ctx = ch->ch_ctx.gr_ctx;
@@ -2156,7 +2156,7 @@ unmap_ctx:
 	return err;
 }
 
-static void gr_gp10b_update_boosted_ctx(struct gk20a *g, struct nvgpu_mem *mem,
+void gr_gp10b_update_boosted_ctx(struct gk20a *g, struct nvgpu_mem *mem,
 				       struct gr_ctx_desc *gr_ctx) {
 	u32 v;
 
@@ -2165,7 +2165,7 @@ static void gr_gp10b_update_boosted_ctx(struct gk20a *g, struct nvgpu_mem *mem,
 	nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_pmu_options_o(), v);
 }
 
-static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
+int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 					u32 graphics_preempt_mode,
 					u32 compute_preempt_mode)
 {
@@ -2261,7 +2261,7 @@ unamp_ctx_header:
 	return err;
 }
 
-static int gr_gp10b_get_preemption_mode_flags(struct gk20a *g,
+int gr_gp10b_get_preemption_mode_flags(struct gk20a *g,
 	struct nvgpu_preemption_modes_rec *preemption_modes_rec)
 {
 	preemption_modes_rec->graphics_preemption_mode_flags = (
@@ -2279,7 +2279,7 @@ static int gr_gp10b_get_preemption_mode_flags(struct gk20a *g,
 
 	return 0;
 }
-static int gp10b_gr_fuse_override(struct gk20a *g)
+int gp10b_gr_fuse_override(struct gk20a *g)
 {
 	struct device_node *np = dev_from_gk20a(g)->of_node;
 	u32 *fuses;
@@ -2319,7 +2319,7 @@ static int gp10b_gr_fuse_override(struct gk20a *g)
 	return 0;
 }
 
-static int gr_gp10b_init_preemption_state(struct gk20a *g)
+int gr_gp10b_init_preemption_state(struct gk20a *g)
 {
 	u32 debug_2;
 	u64 sysclk_rate;
@@ -2341,7 +2341,7 @@ static int gr_gp10b_init_preemption_state(struct gk20a *g)
 	return 0;
 }
 
-static void gr_gp10b_set_preemption_buffer_va(struct gk20a *g,
+void gr_gp10b_set_preemption_buffer_va(struct gk20a *g,
 			struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 va = u64_lo32(gpu_va >> 8);
@@ -2366,60 +2366,4 @@ int gr_gp10b_set_czf_bypass(struct gk20a *g, struct channel_gk20a *ch)
 		g->gr.czf_bypass);
 
 	return __gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0, false);
-}
-
-void gp10b_init_gr(struct gk20a *g)
-{
-	struct gpu_ops *gops = &g->ops;
-
-	gm20b_init_gr(g);
-	gops->gr.init_fs_state = gr_gp10b_init_fs_state;
-	gops->gr.init_preemption_state = gr_gp10b_init_preemption_state;
-	gops->gr.is_valid_class = gr_gp10b_is_valid_class;
-	gops->gr.is_valid_gfx_class = gr_gp10b_is_valid_gfx_class;
-	gops->gr.is_valid_compute_class = gr_gp10b_is_valid_compute_class;
-	gops->gr.commit_global_cb_manager = gr_gp10b_commit_global_cb_manager;
-	gops->gr.commit_global_pagepool = gr_gp10b_commit_global_pagepool;
-	gops->gr.set_preemption_buffer_va = gr_gp10b_set_preemption_buffer_va;
-	gops->gr.add_zbc_color = gr_gp10b_add_zbc_color;
-	gops->gr.add_zbc_depth = gr_gp10b_add_zbc_depth;
-	gops->gr.pagepool_default_size = gr_gp10b_pagepool_default_size;
-	gops->gr.calc_global_ctx_buffer_size =
-		gr_gp10b_calc_global_ctx_buffer_size;
-	gops->gr.commit_global_attrib_cb = gr_gp10b_commit_global_attrib_cb;
-	gops->gr.commit_global_bundle_cb = gr_gp10b_commit_global_bundle_cb;
-	gops->gr.handle_sw_method = gr_gp10b_handle_sw_method;
-	gops->gr.cb_size_default = gr_gp10b_cb_size_default;
-	gops->gr.set_alpha_circular_buffer_size =
-		gr_gp10b_set_alpha_circular_buffer_size;
-	gops->gr.set_circular_buffer_size =
-		gr_gp10b_set_circular_buffer_size;
-	gops->gr.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3;
-	gops->gr.init_ctx_state = gr_gp10b_init_ctx_state;
-	gops->gr.alloc_gr_ctx = gr_gp10b_alloc_gr_ctx;
-	gops->gr.free_gr_ctx = gr_gp10b_free_gr_ctx;
-	gops->gr.update_ctxsw_preemption_mode =
-		gr_gp10b_update_ctxsw_preemption_mode;
-	gops->gr.dump_gr_regs = gr_gp10b_dump_gr_status_regs;
-	gops->gr.wait_empty = gr_gp10b_wait_empty;
-	gops->gr.init_cyclestats = gr_gp10b_init_cyclestats;
-	gops->gr.set_gpc_tpc_mask = gr_gp10b_set_gpc_tpc_mask;
-	gops->gr.get_access_map = gr_gp10b_get_access_map;
-	gops->gr.handle_sm_exception = gr_gp10b_handle_sm_exception;
-	gops->gr.handle_tex_exception = gr_gp10b_handle_tex_exception;
-	gops->gr.pre_process_sm_exception =
-		gr_gp10b_pre_process_sm_exception;
-	gops->gr.handle_fecs_error = gr_gp10b_handle_fecs_error;
-	gops->gr.create_gr_sysfs = gr_gp10b_create_sysfs;
-	gops->gr.get_lrf_tex_ltc_dram_override = get_ecc_override_val;
-	gops->gr.suspend_contexts = gr_gp10b_suspend_contexts;
-	gops->gr.set_preemption_mode = gr_gp10b_set_preemption_mode;
-	gops->gr.set_ctxsw_preemption_mode = gr_gp10b_set_ctxsw_preemption_mode;
-	gops->gr.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags;
-	gops->gr.fuse_override = gp10b_gr_fuse_override;
-	gops->gr.load_smid_config = gr_gp10b_load_smid_config;
-	gops->gr.set_boosted_ctx = gr_gp10b_set_boosted_ctx;
-	gops->gr.update_boosted_ctx = gr_gp10b_update_boosted_ctx;
-	gops->gr.set_czf_bypass = gr_gp10b_set_czf_bypass;
-	gops->gr.get_sm_hww_warp_esr = gp10b_gr_get_sm_hww_warp_esr;
 }

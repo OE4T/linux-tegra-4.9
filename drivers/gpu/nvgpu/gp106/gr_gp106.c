@@ -24,7 +24,7 @@
 
 #include <nvgpu/hw/gp106/hw_gr_gp106.h>
 
-static bool gr_gp106_is_valid_class(struct gk20a *g, u32 class_num)
+bool gr_gp106_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
 
@@ -53,7 +53,7 @@ static bool gr_gp106_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
-static u32 gr_gp106_pagepool_default_size(struct gk20a *g)
+u32 gr_gp106_pagepool_default_size(struct gk20a *g)
 {
 	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
@@ -63,7 +63,7 @@ static void gr_gp106_set_go_idle_timeout(struct gk20a *g, u32 data)
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(), data);
 }
 
-static int gr_gp106_handle_sw_method(struct gk20a *g, u32 addr,
+int gr_gp106_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
 	gk20a_dbg_fn("");
@@ -111,7 +111,7 @@ fail:
 	return -EINVAL;
 }
 
-static void gr_gp106_cb_size_default(struct gk20a *g)
+void gr_gp106_cb_size_default(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
@@ -121,7 +121,7 @@ static void gr_gp106_cb_size_default(struct gk20a *g)
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 }
 
-static int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
+int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 				struct gr_ctx_desc *gr_ctx,
 				struct vm_gk20a *vm, u32 class,
 				u32 graphics_preempt_mode,
@@ -232,20 +232,4 @@ fail_free_preempt:
 	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
 fail:
 	return err;
-}
-
-void gp106_init_gr(struct gk20a *g)
-{
-	struct gpu_ops *gops = &g->ops;
-
-	gp10b_init_gr(g);
-	gops->gr.is_valid_class = gr_gp106_is_valid_class;
-	gops->gr.pagepool_default_size = gr_gp106_pagepool_default_size;
-	gops->gr.handle_sw_method = gr_gp106_handle_sw_method;
-	gops->gr.cb_size_default = gr_gp106_cb_size_default;
-	gops->gr.init_preemption_state = NULL;
-	gops->gr.set_ctxsw_preemption_mode = gr_gp106_set_ctxsw_preemption_mode;
-	gops->gr.create_gr_sysfs = NULL;
-	gops->gr.set_boosted_ctx = NULL;
-	gops->gr.update_boosted_ctx = NULL;
 }

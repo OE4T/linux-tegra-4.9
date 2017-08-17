@@ -23,6 +23,15 @@ enum {
 	PASCAL_COMPUTE_B         = 0xC1C0,
 };
 
-void gp106_init_gr(struct gk20a *g);
+bool gr_gp106_is_valid_class(struct gk20a *g, u32 class_num);
+u32 gr_gp106_pagepool_default_size(struct gk20a *g);
+int gr_gp106_handle_sw_method(struct gk20a *g, u32 addr,
+				     u32 class_num, u32 offset, u32 data);
+void gr_gp106_cb_size_default(struct gk20a *g);
+int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
+				struct gr_ctx_desc *gr_ctx,
+				struct vm_gk20a *vm, u32 class,
+				u32 graphics_preempt_mode,
+				u32 compute_preempt_mode);
 
 #endif

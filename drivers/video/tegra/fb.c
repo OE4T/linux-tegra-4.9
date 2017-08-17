@@ -1201,7 +1201,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 		goto err_iounmap_fb;
 	}
 
-#ifndef CONFIG_ARCH_TEGRA_210_SOC
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	if (ndev->id != info->node) {
 		dev_err(&ndev->dev, "FB device numbering does not\n"
 			  "match device numbering of extended\n"

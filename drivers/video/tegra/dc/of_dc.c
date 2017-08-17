@@ -278,7 +278,7 @@ static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 	dc_out->hotplug_report	= p_ops->hotplug_report;
 }
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 static struct device_node *tegra_dc_get_panel_from_disp_board_id(
 		struct tegra_dc_platform_data *pdata)
 {
@@ -413,7 +413,7 @@ static int tegra_dc_parse_panel_ops(struct platform_device *ndev,
 	 *       the first display.
 	 */
 	if (ndev->id == 0) {
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 		/*
 		 * First select panel based on display board-id. If we don't
 		 * find one then select one specified in device-tree.

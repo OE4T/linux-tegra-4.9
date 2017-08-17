@@ -1903,10 +1903,13 @@ static void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 
 	/*
 	 * Ref released when this item gets processed. The caller should hold
-	 * one ref already, so can't fail.
+	 * one ref already, so normally shouldn't fail, but the channel could
+	 * end up being freed between the time the caller got its reference and
+	 * the time we end up here (e.g., if the client got killed); if so, just
+	 * return.
 	 */
-	if (WARN_ON(!gk20a_channel_get(ch))) {
-		nvgpu_warn(g, "cannot get ch ref for worker!");
+	if (!gk20a_channel_get(ch)) {
+		nvgpu_info(g, "cannot get ch ref for worker!");
 		return;
 	}
 

@@ -92,34 +92,19 @@
 #define TEGRA194_CLK_EMC			31
 /** @brief output of gate CLK_ENB_EQOS */
 #define TEGRA194_CLK_EQOS_AXI			32
-/**
- * @brief output of the divider
- * CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_PTP_REF_CLK_0
- */
+/** @brief output of the divider CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_PTP_REF_CLK_0 */
 #define TEGRA194_CLK_EQOS_PTP_REF		33
 /** @brief output of gate CLK_ENB_EQOS_RX */
 #define TEGRA194_CLK_EQOS_RX			34
 /** @brief output of the divider CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_TX_CLK */
 #define TEGRA194_CLK_EQOS_TX			35
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH1
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH1 */
 #define TEGRA194_CLK_EXTPERIPH1			36
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH2
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH2 */
 #define TEGRA194_CLK_EXTPERIPH2			37
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH3
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH3 */
 #define TEGRA194_CLK_EXTPERIPH3			38
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH4
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH4 */
 #define TEGRA194_CLK_EXTPERIPH4			39
 /** @brief output of gate CLK_ENB_FUSE */
 #define TEGRA194_CLK_FUSE			40
@@ -190,33 +175,21 @@
 #define TEGRA194_CLK_MAUD			71
 /** @brief output of gate CLK_ENB_MIPI_CAL */
 #define TEGRA194_CLK_MIPI_CAL			72
-/**
- * @brief output of the divider
- * CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_CORE_PLL_FIXED
- */
+/** @brief output of the divider CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_CORE_PLL_FIXED */
 #define TEGRA194_CLK_MPHY_CORE_PLL_FIXED	73
 /** @brief output of gate CLK_ENB_MPHY_L0_RX_ANA */
 #define TEGRA194_CLK_MPHY_L0_RX_ANA		74
 /** @brief output of gate CLK_ENB_MPHY_L0_RX_LS_BIT */
 #define TEGRA194_CLK_MPHY_L0_RX_LS_BIT		75
-/**
- * @brief output of the divider
- * CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_L0_RX_LS_SYMB
- */
+/** @brief output of the divider CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_L0_RX_LS_SYMB */
 #define TEGRA194_CLK_MPHY_L0_RX_SYMB		76
 /** @brief output of gate CLK_ENB_MPHY_L0_TX_LS_3XBIT */
 #define TEGRA194_CLK_MPHY_L0_TX_LS_3XBIT	77
-/**
- * @brief output of the divider
- * CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_L0_TX_LS_SYMB
- */
+/** @brief output of the divider CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_L0_TX_LS_SYMB */
 #define TEGRA194_CLK_MPHY_L0_TX_SYMB		78
 /** @brief output of gate CLK_ENB_MPHY_L1_RX_ANA */
 #define TEGRA194_CLK_MPHY_L1_RX_ANA		79
-/**
- * @brief output of the divider
- * CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_TX_1MHZ_REF
- */
+/** @brief output of the divider CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_TX_1MHZ_REF */
 #define TEGRA194_CLK_MPHY_TX_1MHZ_REF		80
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_NVCSI */
 #define TEGRA194_CLK_NVCSI			81
@@ -234,10 +207,7 @@
 #define TEGRA194_CLK_NVDISPLAY_P1		87
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_NVDISPLAY_P2 switch divider output */
 #define TEGRA194_CLK_NVDISPLAY_P2		88
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_CLK_SOURCE_NVENC
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_NVENC */
 #define TEGRA194_CLK_NVENC			89
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_NVJPG */
 #define TEGRA194_CLK_NVJPG			90
@@ -247,10 +217,7 @@
 #define TEGRA194_CLK_AON_TOUCH			92
 /** PLL controlled by CLK_RST_CONTROLLER_PLLA_BASE for use by audio clocks */
 #define TEGRA194_CLK_PLLA			93
-/**
- * @brief PLL controlled by CLK_RST_CONTROLLER_PLLAON_BASE
- * for use by IP blocks in the AON domain
- */
+/** @brief PLL controlled by CLK_RST_CONTROLLER_PLLAON_BASE for use by IP blocks in the AON domain */
 #define TEGRA194_CLK_PLLAON			94
 /** @brief PLLD */
 #define TEGRA194_CLK_PLLD			95
@@ -298,17 +265,15 @@
 #define TEGRA194_CLK_SATA_OOB			116
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_AON_I2C_SLOW switch divider output */
 #define TEGRA194_CLK_AON_I2C_SLOW		117
-
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_CLK_SOURCE_SCE_CPU_NIC
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SCE_CPU_NIC */
 #define TEGRA194_CLK_SCE_CPU_NIC		118
 /** @brief output of divider CLK_RST_CONTROLLER_SCE_NIC_RATE */
 #define TEGRA194_CLK_SCE_NIC			119
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC1 */
 #define TEGRA194_CLK_SDMMC1			120
+
 #define TEGRA194_CLK_RSVD_121			121
+
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC3 */
 #define TEGRA194_CLK_SDMMC3			122
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC4 */
@@ -337,7 +302,9 @@
 #define TEGRA194_CLK_IQC1_IN			132
 /** @brief Interface clock from IQC pad (2) */
 #define TEGRA194_CLK_IQC2_IN			133
+
 #define TEGRA194_CLK_RSVD_134			134
+
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPI1 */
 #define TEGRA194_CLK_SPI1			135
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPI2 */
@@ -347,35 +314,17 @@
 
 #define TEGRA194_CLK_RSVD_138			138
 
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC1
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC1 */
 #define TEGRA194_CLK_SYNC_DMIC1			139
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC2
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC2 */
 #define TEGRA194_CLK_SYNC_DMIC2			140
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC3
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC3 */
 #define TEGRA194_CLK_SYNC_DMIC3			141
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC4
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC4 */
 #define TEGRA194_CLK_SYNC_DMIC4			142
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DSPK1
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DSPK1 */
 #define TEGRA194_CLK_SYNC_DSPK1			143
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DSPK2
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DSPK2 */
 #define TEGRA194_CLK_SYNC_DSPK2			144
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_I2S1 */
 #define TEGRA194_CLK_SYNC_I2S1			145
@@ -389,7 +338,9 @@
 #define TEGRA194_CLK_SYNC_I2S5			149
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_I2S6 */
 #define TEGRA194_CLK_SYNC_I2S6			150
+
 #define TEGRA194_CLK_RSVD_151			151
+
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_TACH */
 #define TEGRA194_CLK_TACH			152
 /** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_TSEC */
@@ -410,20 +361,11 @@
 #define TEGRA194_CLK_UARTF			160
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UARTG */
 #define TEGRA194_CLK_UARTG			161
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_CLK_SOURCE_UART_FST_MIPI_CAL
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UART_FST_MIPI_CAL */
 #define TEGRA194_CLK_UART_FST_MIPI_CAL		162
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_CLK_SOURCE_UFSDEV_REF
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UFSDEV_REF */
 #define TEGRA194_CLK_UFSDEV_REF			163
-/**
- * @brief output of mux controlled by
- * CLK_RST_CONTROLLER_CLK_SOURCE_UFSHC_CG_SYS
- */
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UFSHC_CG_SYS */
 #define TEGRA194_CLK_UFSHC			164
 /** @brief output of gate CLK_ENB_USB2_TRK */
 #define TEGRA194_CLK_USB2_TRK			165
@@ -606,13 +548,13 @@
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_SATA_USB_RX_BYP switch divider output */
 #define TEGRA194_CLK_PEX_SATA_USB_RX_BYP	254
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_USB_PAD_PLL0_MGMT switch divider output */
-#define TEGRA19_CLK_PEX_USB_PAD_PLL0_MGMT	255
+#define TEGRA194_CLK_PEX_USB_PAD_PLL0_MGMT	255
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_USB_PAD_PLL1_MGMT switch divider output */
-#define TEGRA19_CLK_PEX_USB_PAD_PLL1_MGMT	256
+#define TEGRA194_CLK_PEX_USB_PAD_PLL1_MGMT	256
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_USB_PAD_PLL2_MGMT switch divider output */
-#define TEGRA19_CLK_PEX_USB_PAD_PLL2_MGMT	257
+#define TEGRA194_CLK_PEX_USB_PAD_PLL2_MGMT	257
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PEX_USB_PAD_PLL3_MGMT switch divider output */
-#define TEGRA19_CLK_PEX_USB_PAD_PLL3_MGMT	258
+#define TEGRA194_CLK_PEX_USB_PAD_PLL3_MGMT	258
 /** @brief CLK_RST_CONTROLLER_CLOCK_SOURCE_NVLINK_SYSCLK switch divider output */
 #define TEGRA194_CLK_NVLINK_SYS			259
 /** @brief output ofthe gate CLK_ENB_RX_NVLINK */
@@ -651,5 +593,17 @@
 #define TEGRA194_CLK_XUSB_SS_DEV		276
 /** @brief xusb_ss_superspeed_clk */
 #define TEGRA194_CLK_XUSB_SS_SUPERSPEED		277
+/** @brief HPLL for display hub clock */
+#define TEGRA194_CLK_PLLDISPHUB			278
+/** @brief Output of divider controlled by CLK_RST_CONTROLLER_CLK_SOURCE_NVDISPLAY_DISP */
+#define TEGRA194_CLK_PLLDISPHUB_DIV		279
+/** @brief NAFLL clock source for CPU cluster 0 */
+#define TEGRA194_CLK_NAFLL_CLUSTER0		280
+/** @brief NAFLL clock source for CPU cluster 1 */
+#define TEGRA194_CLK_NAFLL_CLUSTER1		281
+/** @brief NAFLL clock source for CPU cluster 2 */
+#define TEGRA194_CLK_NAFLL_CLUSTER2		282
+/** @brief NAFLL clock source for CPU cluster 3 */
+#define TEGRA194_CLK_NAFLL_CLUSTER3		283
 
 #endif

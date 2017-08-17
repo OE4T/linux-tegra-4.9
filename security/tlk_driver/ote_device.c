@@ -21,6 +21,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
+#include <linux/platform_device.h>
 #include <linux/printk.h>
 #include <linux/ioctl.h>
 #include <linux/miscdevice.h>
@@ -29,6 +30,7 @@
 #include <linux/list.h>
 #include <linux/dma-mapping.h>
 #include <linux/of.h>
+#include <linux/of_platform.h>
 
 #include "ote_protocol.h"
 
@@ -534,6 +536,28 @@ static long tlk_device_ioctl(struct file *file, unsigned int ioctl_num,
 	return err;
 }
 
+static struct device_node *get_tlk_device_node(void)
+{
+	struct device_node *node = NULL;
+	node = of_find_compatible_node(NULL, NULL, "android,tlk-driver");
+	if (!node)
+		pr_info("TLK node not present in FDT\n");
+	return node;
+}
+
+int te_is_secos_dev_enabled(void)
+{
+	static int tlk_dev_status = 0;
+	struct device_node *node = NULL;
+
+	if (unlikely(tlk_dev_status == 0)) {
+		node = get_tlk_device_node();
+		tlk_dev_status = (node && of_device_is_available(node));
+	}
+
+	return tlk_dev_status;
+}
+
 /*
  * tlk_driver function definitions.
  */
@@ -553,64 +577,49 @@ struct miscdevice tlk_misc_device = {
 	.fops = &tlk_device_fops,
 };
 
-static struct device_node *get_tlk_device_node(void)
-{
-	struct device_node *node;
-
-	node = of_find_compatible_node(NULL, NULL,
-			"nvidia,trusted-little-kernel");
-	if (!node)
-		pr_info("TLK node not present in the FDT\n");
-
-	return node;
-}
-
-int te_is_secos_dev_enabled(void)
-{
-	struct device_node *node = get_tlk_device_node();
-	return node != NULL;
-}
-
-static int __init tlk_init(void)
+static int tlk_driver_probe(struct platform_device *pdev)
 {
 	int ret;
-
-	/* check if the driver node is present in the device tree */
-	if (get_tlk_device_node() == NULL) {
-		return -ENODEV;
-	}
 
 	INIT_LIST_HEAD(&(tlk_dev.used_cmd_list));
 	INIT_LIST_HEAD(&(tlk_dev.free_cmd_list));
 
 	ret = te_create_free_cmd_list(&tlk_dev);
-	if (ret != 0)
+	if (ret != 0) {
+		pr_err("%s: failed to create free_list\n", __func__);
 		return ret;
+	}
 
-	return misc_register(&tlk_misc_device);
-}
+	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
+	if (ret) {
+		pr_err("%s: of_platform_populate failed\n", __func__);
+		return ret;
+	}
 
-module_init(tlk_init);
-
-int ote_property_is_disabled(const char *str)
-{
-	struct device_node *tlk;
-	const char *prop;
-
-	/* check if the driver node is present in the device tree */
-	tlk = get_tlk_device_node();
-	if (!tlk) {
-		pr_warn("%s: TLK device is not present\n", __func__);
+	if (!te_is_secos_dev_enabled()) {
 		return -ENODEV;
 	}
 
-	if (of_property_read_string(tlk, str, &prop)) {
-		pr_warn("missing \"%s\" property\n", str);
-		return -ENXIO;
+	ret = misc_register(&tlk_misc_device);
+	if (ret) {
+		pr_err("%s: misc_register failed: %d\n", __func__, ret);
 	}
 
-	if (strcmp("enabled", prop))
-		return -ENOTSUPP;
-
-	return 0;
+	return ret;
 }
+
+static const struct of_device_id tlk_driver_of_match[] = {
+	{ .compatible = "android,tlk-driver",},
+	{},
+};
+
+static struct platform_driver tlk_driver = {
+	.probe = tlk_driver_probe,
+	.driver = {
+		.name = "tlk-driver",
+		.owner = THIS_MODULE,
+		.of_match_table = tlk_driver_of_match,
+	}
+};
+
+module_platform_driver(tlk_driver);

@@ -87,19 +87,3 @@ int tlk_ss_op(void)
 
 	return OTE_SUCCESS;
 }
-
-static int __init tlk_ss_init(void)
-{
-	int ret;
-
-	/* storage disabled? */
-	ret = ote_property_is_disabled("storage");
-	if (ret) {
-		pr_warn("%s: tlk storage is disabled (%d)\n", __func__, ret);
-		return ret;
-	}
-
-	return 0;
-}
-
-arch_initcall(tlk_ss_init);

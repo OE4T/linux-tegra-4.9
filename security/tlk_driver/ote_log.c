@@ -27,6 +27,7 @@
 #include <asm/page.h>
 #include <linux/dma-mapping.h>
 #include <linux/string.h>
+#include <linux/platform_device.h>
 
 #include "ote_protocol.h"
 
@@ -174,22 +175,8 @@ void ote_print_logs(void)
  * An SMC is made to send the virtual address of the structure to
  * the secure OS.
  */
-static int __init ote_logger_init(void)
+static int ote_logger_probe(struct platform_device *pdev)
 {
-	int ret;
-
-	/* logger disabled? */
-	ret = ote_property_is_disabled("logger");
-	if (ret == -ENODEV) {
-		/* TLK device node is absent */
-		pr_warn("%s: TLK logger is disabled (%d)\n", __func__, ret);
-		return ret;
-	} else if (ret == -ENOTSUPP) {
-		/* Node is present, but logger is disabled */
-		send_smc(TE_SMC_INIT_LOGGER, 0, 0);
-		return ret;
-	}
-
 	if (circ_buf_init(&cb) != 0)
 		return -1;
 
@@ -202,4 +189,23 @@ static int __init ote_logger_init(void)
 	return 0;
 }
 
-arch_initcall(ote_logger_init);
+static const struct of_device_id ote_logger_of_match[] = {
+	{ .compatible = "android,ote-logger",},
+	{},
+};
+
+static struct platform_driver ote_logger_driver = {
+	.probe = ote_logger_probe,
+	.driver = {
+		.name = "ote-logger",
+		.owner = THIS_MODULE,
+		.of_match_table = ote_logger_of_match,
+	}
+};
+
+static int __init ote_logger_driver_init(void)
+{
+	return platform_driver_register(&ote_logger_driver);
+}
+
+subsys_initcall(ote_logger_driver_init);

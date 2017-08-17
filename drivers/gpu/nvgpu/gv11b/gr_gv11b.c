@@ -51,7 +51,7 @@
 #include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 
-static bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
+bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
 
@@ -80,7 +80,7 @@ static bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
-static bool gr_gv11b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
+bool gr_gv11b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
 
@@ -97,7 +97,7 @@ static bool gr_gv11b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
-static bool gr_gv11b_is_valid_compute_class(struct gk20a *g, u32 class_num)
+bool gr_gv11b_is_valid_compute_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
 
@@ -299,7 +299,7 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 }
 
-static void gr_gv11b_enable_hww_exceptions(struct gk20a *g)
+void gr_gv11b_enable_hww_exceptions(struct gk20a *g)
 {
 	/* enable exceptions */
 	gk20a_writel(g, gr_fe_hww_esr_r(),
@@ -310,7 +310,7 @@ static void gr_gv11b_enable_hww_exceptions(struct gk20a *g)
 		     gr_memfmt_hww_esr_reset_active_f());
 }
 
-static void gr_gv11b_enable_exceptions(struct gk20a *g)
+void gr_gv11b_enable_exceptions(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 reg_val;
@@ -581,7 +581,7 @@ static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 }
 
-static int gr_gv11b_handle_tpc_sm_ecc_exception(struct gk20a *g,
+int gr_gv11b_handle_tpc_sm_ecc_exception(struct gk20a *g,
 		u32 gpc, u32 tpc,
 		bool *post_event, struct channel_gk20a *fault_ch,
 		u32 *hww_global_esr)
@@ -606,7 +606,7 @@ static int gr_gv11b_handle_tpc_sm_ecc_exception(struct gk20a *g,
 	return ret;
 }
 
-static int gr_gv11b_handle_gcc_exception(struct gk20a *g, u32 gpc, u32 tpc,
+int gr_gv11b_handle_gcc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr)
 {
@@ -852,7 +852,7 @@ static int gr_gv11b_handle_gpccs_ecc_exception(struct gk20a *g, u32 gpc,
 	return ret;
 }
 
-static int gr_gv11b_handle_gpc_gpcmmu_exception(struct gk20a *g, u32 gpc,
+int gr_gv11b_handle_gpc_gpcmmu_exception(struct gk20a *g, u32 gpc,
 							u32 gpc_exception)
 {
 	if (gpc_exception & gr_gpc0_gpccs_gpc_exception_gpcmmu_m())
@@ -861,7 +861,7 @@ static int gr_gv11b_handle_gpc_gpcmmu_exception(struct gk20a *g, u32 gpc,
 	return 0;
 }
 
-static int gr_gv11b_handle_gpc_gpccs_exception(struct gk20a *g, u32 gpc,
+int gr_gv11b_handle_gpc_gpccs_exception(struct gk20a *g, u32 gpc,
 							u32 gpc_exception)
 {
 	if (gpc_exception & gr_gpc0_gpccs_gpc_exception_gpccs_m())
@@ -871,7 +871,7 @@ static int gr_gv11b_handle_gpc_gpccs_exception(struct gk20a *g, u32 gpc,
 	return 0;
 }
 
-static void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
+void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 tpc_mask;
@@ -889,13 +889,13 @@ static void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
 			    gr_gpcs_gpccs_gpc_exception_en_gpcmmu_f(1)));
 }
 
-static int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
+int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event)
 {
 	return 0;
 }
 
-static int gr_gv11b_zbc_s_query_table(struct gk20a *g, struct gr_gk20a *gr,
+int gr_gv11b_zbc_s_query_table(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_query_params *query_params)
 {
 	u32 index = query_params->index_size;
@@ -911,7 +911,7 @@ static int gr_gv11b_zbc_s_query_table(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
-static bool gr_gv11b_add_zbc_type_s(struct gk20a *g, struct gr_gk20a *gr,
+bool gr_gv11b_add_zbc_type_s(struct gk20a *g, struct gr_gk20a *gr,
 		     struct zbc_entry *zbc_val, int *ret_val)
 {
 	struct zbc_s_table *s_tbl;
@@ -950,7 +950,7 @@ static bool gr_gv11b_add_zbc_type_s(struct gk20a *g, struct gr_gk20a *gr,
 	return added;
 }
 
-static int gr_gv11b_add_zbc_stencil(struct gk20a *g, struct gr_gk20a *gr,
+int gr_gv11b_add_zbc_stencil(struct gk20a *g, struct gr_gk20a *gr,
 				struct zbc_entry *stencil_val, u32 index)
 {
 	u32 zbc_s;
@@ -974,7 +974,7 @@ static int gr_gv11b_add_zbc_stencil(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
-static int gr_gv11b_load_stencil_default_tbl(struct gk20a *g,
+int gr_gv11b_load_stencil_default_tbl(struct gk20a *g,
 		 struct gr_gk20a *gr)
 {
 	struct zbc_entry zbc_val;
@@ -1005,7 +1005,7 @@ static int gr_gv11b_load_stencil_default_tbl(struct gk20a *g,
 	return 0;
 }
 
-static int gr_gv11b_load_stencil_tbl(struct gk20a *g, struct gr_gk20a *gr)
+int gr_gv11b_load_stencil_tbl(struct gk20a *g, struct gr_gk20a *gr)
 {
 	int ret;
 	u32 i;
@@ -1025,12 +1025,12 @@ static int gr_gv11b_load_stencil_tbl(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-static u32 gr_gv11b_pagepool_default_size(struct gk20a *g)
+u32 gr_gv11b_pagepool_default_size(struct gk20a *g)
 {
 	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
-static int gr_gv11b_calc_global_ctx_buffer_size(struct gk20a *g)
+int gr_gv11b_calc_global_ctx_buffer_size(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	int size;
@@ -1138,7 +1138,7 @@ static void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 	}
 }
 
-static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
+int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
 	gk20a_dbg_fn("");
@@ -1192,7 +1192,7 @@ fail:
 	return -EINVAL;
 }
 
-static void gr_gv11b_bundle_cb_defaults(struct gk20a *g)
+void gr_gv11b_bundle_cb_defaults(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
@@ -1204,7 +1204,7 @@ static void gr_gv11b_bundle_cb_defaults(struct gk20a *g)
 		gr_pd_ab_dist_cfg2_token_limit_init_v();
 }
 
-static void gr_gv11b_cb_size_default(struct gk20a *g)
+void gr_gv11b_cb_size_default(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
@@ -1215,7 +1215,7 @@ static void gr_gv11b_cb_size_default(struct gk20a *g)
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 }
 
-static void gr_gv11b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
+void gr_gv11b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
@@ -1261,7 +1261,7 @@ static void gr_gv11b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-static void gr_gv11b_set_circular_buffer_size(struct gk20a *g, u32 data)
+void gr_gv11b_set_circular_buffer_size(struct gk20a *g, u32 data)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
@@ -1442,7 +1442,7 @@ static int gr_gv11b_dump_gr_sm_regs(struct gk20a *g,
 	return 0;
 }
 
-static int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
+int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -1595,7 +1595,7 @@ static bool gr_activity_empty_or_preempted(u32 val)
 	return true;
 }
 
-static int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
+int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 		       u32 expect_delay)
 {
 	u32 delay = expect_delay;
@@ -1647,7 +1647,7 @@ static int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 	return -EAGAIN;
 }
 
-static void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
+void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 					     struct channel_ctx_gk20a *ch_ctx,
 					     u64 addr, bool patch)
 {
@@ -1676,7 +1676,7 @@ static void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 }
 
 
-static void gr_gv11b_init_cyclestats(struct gk20a *g)
+void gr_gv11b_init_cyclestats(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	g->gpu_characteristics.flags |=
@@ -1688,7 +1688,7 @@ static void gr_gv11b_init_cyclestats(struct gk20a *g)
 #endif
 }
 
-static void gr_gv11b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+void gr_gv11b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 	tegra_fuse_writel(0x1, FUSE_FUSEBYPASS_0);
@@ -1706,7 +1706,7 @@ static void gr_gv11b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
 }
 
-static void gr_gv11b_get_access_map(struct gk20a *g,
+void gr_gv11b_get_access_map(struct gk20a *g,
 				   u32 **whitelist, int *num_entries)
 {
 	static u32 wl_addr_gv11b[] = {
@@ -1751,7 +1751,7 @@ static void gr_gv11b_get_access_map(struct gk20a *g,
  *
  * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
  */
-static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
+int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 		u32 gpc, u32 tpc, u32 sm, u32 global_esr, u32 warp_esr,
 		bool sm_debugger_attached, struct channel_gk20a *fault_ch,
 		bool *early_exit, bool *ignore_debugger)
@@ -1940,7 +1940,7 @@ static void gr_gv11b_handle_fecs_ecc_error(struct gk20a *g, u32 intr)
 	}
 }
 
-static int gr_gv11b_handle_fecs_error(struct gk20a *g,
+int gr_gv11b_handle_fecs_error(struct gk20a *g,
 				struct channel_gk20a *__ch,
 				struct gr_gk20a_isr_data *isr_data)
 {
@@ -1957,7 +1957,7 @@ static int gr_gv11b_handle_fecs_error(struct gk20a *g,
 	return ret;
 }
 
-static int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
+int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 map;
 	u32 i, j, mapregs;
@@ -2034,7 +2034,7 @@ static void gv11b_write_bundle_veid_state(struct gk20a *g, u32 index)
 	}
 }
 
-static int gr_gv11b_init_sw_veid_bundle(struct gk20a *g)
+int gr_gv11b_init_sw_veid_bundle(struct gk20a *g)
 {
 	struct av_list_gk20a *sw_veid_bundle_init =
 			&g->gr.ctx_vars.sw_veid_bundle_init;
@@ -2099,7 +2099,7 @@ void gr_gv11b_program_zcull_mapping(struct gk20a *g, u32 zcull_num_entries,
 	}
 }
 
-static void gr_gv11b_detect_sm_arch(struct gk20a *g)
+void gr_gv11b_detect_sm_arch(struct gk20a *g)
 {
 	u32 v = gk20a_readl(g, gr_gpc0_tpc0_sm_arch_r());
 
@@ -2111,7 +2111,7 @@ static void gr_gv11b_detect_sm_arch(struct gk20a *g)
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
 }
 
-static void gr_gv11b_init_sm_id_table(struct gk20a *g)
+void gr_gv11b_init_sm_id_table(struct gk20a *g)
 {
 	u32 gpc, tpc, sm;
 	u32 sm_id = 0;
@@ -2138,7 +2138,7 @@ static void gr_gv11b_init_sm_id_table(struct gk20a *g)
 	nvgpu_log_info(g, " total number of sm = %d", g->gr.no_of_sm);
 }
 
-static void gr_gv11b_program_sm_id_numbering(struct gk20a *g,
+void gr_gv11b_program_sm_id_numbering(struct gk20a *g,
 					u32 gpc, u32 tpc, u32 smid)
 {
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
@@ -2156,7 +2156,7 @@ static void gr_gv11b_program_sm_id_numbering(struct gk20a *g,
 			gr_gpc0_tpc0_pe_cfg_smid_value_f(global_tpc_index));
 }
 
-static int gr_gv11b_load_smid_config(struct gk20a *g)
+int gr_gv11b_load_smid_config(struct gk20a *g)
 {
 	u32 *tpc_sm_id;
 	u32 i, j;
@@ -2204,7 +2204,7 @@ static int gr_gv11b_load_smid_config(struct gk20a *g)
 	return 0;
 }
 
-static int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
+int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
 	u32 addr_lo;
 	u32 addr_hi;
@@ -2239,7 +2239,7 @@ static int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 
 
 
-static int gr_gv11b_commit_global_timeslice(struct gk20a *g,
+int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 					struct channel_gk20a *c, bool patch)
 {
 	struct channel_ctx_gk20a *ch_ctx = NULL;
@@ -2292,7 +2292,7 @@ static int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 	return 0;
 }
 
-static void gv11b_restore_context_header(struct gk20a *g,
+void gv11b_restore_context_header(struct gk20a *g,
 					struct nvgpu_mem *ctxheader)
 {
 	u32 va_lo, va_hi;
@@ -2314,7 +2314,7 @@ static void gv11b_restore_context_header(struct gk20a *g,
         nvgpu_mem_wr(g, ctxheader,
 			ctxsw_prog_main_image_num_save_ops_o(), 0);
 }
-static void gr_gv11b_write_zcull_ptr(struct gk20a *g,
+void gr_gv11b_write_zcull_ptr(struct gk20a *g,
 				struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 va_lo, va_hi;
@@ -2329,7 +2329,7 @@ static void gr_gv11b_write_zcull_ptr(struct gk20a *g,
 }
 
 
-static void gr_gv11b_write_pm_ptr(struct gk20a *g,
+void gr_gv11b_write_pm_ptr(struct gk20a *g,
 				struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 va_lo, va_hi;
@@ -2343,7 +2343,7 @@ static void gr_gv11b_write_pm_ptr(struct gk20a *g,
 		ctxsw_prog_main_image_pm_ptr_hi_o(), va_hi);
 }
 
-static void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
+void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 {
 	u32 gate_ctrl;
 
@@ -2375,7 +2375,7 @@ static void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 	gk20a_writel(g, therm_gate_ctrl_r(engine), gate_ctrl);
 }
 
-static void gr_gv11b_load_tpc_mask(struct gk20a *g)
+void gr_gv11b_load_tpc_mask(struct gk20a *g)
 {
 	u32 pes_tpc_mask = 0, fuse_tpc_mask;
 	u32 gpc, pes, val;
@@ -2405,7 +2405,7 @@ static void gr_gv11b_load_tpc_mask(struct gk20a *g)
 
 }
 
-static void gr_gv11b_set_preemption_buffer_va(struct gk20a *g,
+void gr_gv11b_set_preemption_buffer_va(struct gk20a *g,
 			struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 addr_lo, addr_hi;
@@ -2426,7 +2426,7 @@ static void gr_gv11b_set_preemption_buffer_va(struct gk20a *g,
 
 }
 
-static int gr_gv11b_init_fs_state(struct gk20a *g)
+int gr_gv11b_init_fs_state(struct gk20a *g)
 {
 	u32 data;
 
@@ -2451,7 +2451,7 @@ static int gr_gv11b_init_fs_state(struct gk20a *g)
 	return gr_gm20b_init_fs_state(g);
 }
 
-static void gv11b_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
+void gv11b_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
 				u32 *esr_sm_sel)
 {
 	u32 reg_val;
@@ -2469,7 +2469,7 @@ static void gv11b_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
 			"esr_sm_sel bitmask: 0x%x", *esr_sm_sel);
 }
 
-static int gv11b_gr_sm_trigger_suspend(struct gk20a *g)
+int gv11b_gr_sm_trigger_suspend(struct gk20a *g)
 {
 	u32 dbgr_control0;
 
@@ -2491,7 +2491,7 @@ static int gv11b_gr_sm_trigger_suspend(struct gk20a *g)
 	return 0;
 }
 
-static void gv11b_gr_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
+void gv11b_gr_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 {
 	/* Check if we have at least one valid warp
 	 * get paused state on maxwell
@@ -2559,7 +2559,7 @@ static void gv11b_gr_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 	}
 }
 
-static int gv11b_gr_update_sm_error_state(struct gk20a *g,
+int gv11b_gr_update_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id,
 		struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state)
 {
@@ -2638,7 +2638,7 @@ fail:
 	return err;
 }
 
-static int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
+int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable)
 {
 	struct nvgpu_dbg_gpu_reg_op *ops;
@@ -2697,7 +2697,7 @@ static int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 	return err;
 }
 
-static int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
+int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 {
 	int sm_id;
 	struct gr_gk20a *gr = &g->gr;
@@ -2737,7 +2737,7 @@ static int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 	return 0;
 }
 
-static void gv11b_gr_set_hww_esr_report_mask(struct gk20a *g)
+void gv11b_gr_set_hww_esr_report_mask(struct gk20a *g)
 {
 
 	/* clear hww */
@@ -2767,7 +2767,7 @@ static void gv11b_gr_set_hww_esr_report_mask(struct gk20a *g)
 		gr_gpc0_tpc0_sm0_hww_global_esr_report_mask_multiple_warp_errors_report_f());
 }
 
-static bool gv11b_gr_sm_debugger_attached(struct gk20a *g)
+bool gv11b_gr_sm_debugger_attached(struct gk20a *g)
 {
 	u32 debugger_mode;
 	u32 dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r());
@@ -2787,7 +2787,7 @@ static bool gv11b_gr_sm_debugger_attached(struct gk20a *g)
 	return false;
 }
 
-static void gv11b_gr_suspend_single_sm(struct gk20a *g,
+void gv11b_gr_suspend_single_sm(struct gk20a *g,
 		u32 gpc, u32 tpc, u32 sm,
 		u32 global_esr_mask, bool check_errors)
 {
@@ -2823,7 +2823,7 @@ static void gv11b_gr_suspend_single_sm(struct gk20a *g,
 	}
 }
 
-static void gv11b_gr_suspend_all_sms(struct gk20a *g,
+void gv11b_gr_suspend_all_sms(struct gk20a *g,
 		u32 global_esr_mask, bool check_errors)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -2868,7 +2868,7 @@ static void gv11b_gr_suspend_all_sms(struct gk20a *g,
 	}
 }
 
-static void gv11b_gr_resume_single_sm(struct gk20a *g,
+void gv11b_gr_resume_single_sm(struct gk20a *g,
 		u32 gpc, u32 tpc, u32 sm)
 {
 	u32 dbgr_control0, dbgr_status0;
@@ -2936,7 +2936,7 @@ static void gv11b_gr_resume_single_sm(struct gk20a *g,
 
 }
 
-static void gv11b_gr_resume_all_sms(struct gk20a *g)
+void gv11b_gr_resume_all_sms(struct gk20a *g)
 {
 	u32 dbgr_control0, dbgr_status0;
 	/*
@@ -3001,7 +3001,7 @@ static void gv11b_gr_resume_all_sms(struct gk20a *g)
 			dbgr_control0, dbgr_status0);
 }
 
-static int gv11b_gr_resume_from_pause(struct gk20a *g)
+int gv11b_gr_resume_from_pause(struct gk20a *g)
 {
 	int err = 0;
 	u32 reg_val;
@@ -3020,7 +3020,7 @@ static int gv11b_gr_resume_from_pause(struct gk20a *g)
 	return err;
 }
 
-static u32 gv11b_gr_get_sm_hww_warp_esr(struct gk20a *g,
+u32 gv11b_gr_get_sm_hww_warp_esr(struct gk20a *g,
 			u32 gpc, u32 tpc, u32 sm)
 {
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
@@ -3032,7 +3032,7 @@ static u32 gv11b_gr_get_sm_hww_warp_esr(struct gk20a *g,
 	return hww_warp_esr;
 }
 
-static u32 gv11b_gr_get_sm_hww_global_esr(struct gk20a *g,
+u32 gv11b_gr_get_sm_hww_global_esr(struct gk20a *g,
 			u32 gpc, u32 tpc, u32 sm)
 {
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
@@ -3045,7 +3045,7 @@ static u32 gv11b_gr_get_sm_hww_global_esr(struct gk20a *g,
 	return hww_global_esr;
 }
 
-static u32 gv11b_gr_get_sm_no_lock_down_hww_global_esr_mask(struct gk20a *g)
+u32 gv11b_gr_get_sm_no_lock_down_hww_global_esr_mask(struct gk20a *g)
 {
 	/*
 	 * These three interrupts don't require locking down the SM. They can
@@ -3104,7 +3104,7 @@ static void gv11b_gr_sm_dump_warp_bpt_pause_trap_mask_regs(struct gk20a *g,
 		warps_paused, warps_trapped);
 }
 
-static int gv11b_gr_wait_for_sm_lock_down(struct gk20a *g,
+int gv11b_gr_wait_for_sm_lock_down(struct gk20a *g,
 		u32 gpc, u32 tpc, u32 sm,
 		u32 global_esr_mask, bool check_errors)
 {
@@ -3190,7 +3190,7 @@ static int gv11b_gr_wait_for_sm_lock_down(struct gk20a *g,
 	return -ETIMEDOUT;
 }
 
-static int gv11b_gr_lock_down_sm(struct gk20a *g,
+int gv11b_gr_lock_down_sm(struct gk20a *g,
 			 u32 gpc, u32 tpc, u32 sm, u32 global_esr_mask,
 			 bool check_errors)
 {
@@ -3212,7 +3212,7 @@ static int gv11b_gr_lock_down_sm(struct gk20a *g,
 			check_errors);
 }
 
-static void gv11b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
+void gv11b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 				u32 global_esr)
 {
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc) +
@@ -3232,7 +3232,7 @@ static void gv11b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 						offset));
 }
 
-static int gr_gv11b_handle_tpc_mpc_exception(struct gk20a *g,
+int gr_gv11b_handle_tpc_mpc_exception(struct gk20a *g,
 		u32 gpc, u32 tpc, bool *post_event)
 {
 	u32 esr;
@@ -3263,7 +3263,7 @@ static int gr_gv11b_handle_tpc_mpc_exception(struct gk20a *g,
 static const u32 _num_ovr_perf_regs = 20;
 static u32 _ovr_perf_regs[20] = { 0, };
 
-static void gv11b_gr_init_ovr_sm_dsm_perf(void)
+void gv11b_gr_init_ovr_sm_dsm_perf(void)
 {
 	if (_ovr_perf_regs[0] != 0)
 		return;
@@ -3301,7 +3301,7 @@ static const u32 _num_sm_dsm_perf_ctrl_regs = 2;
 static u32 *_sm_dsm_perf_regs;
 static u32 _sm_dsm_perf_ctrl_regs[2];
 
-static void gv11b_gr_init_sm_dsm_reg_info(void)
+void gv11b_gr_init_sm_dsm_reg_info(void)
 {
 	if (_sm_dsm_perf_ctrl_regs[0] != 0)
 		return;
@@ -3312,7 +3312,7 @@ static void gv11b_gr_init_sm_dsm_reg_info(void)
 			      gr_egpc0_etpc0_sm_dsm_perf_counter_control5_r();
 }
 
-static void gv11b_gr_get_sm_dsm_perf_regs(struct gk20a *g,
+void gv11b_gr_get_sm_dsm_perf_regs(struct gk20a *g,
 					  u32 *num_sm_dsm_perf_regs,
 					  u32 **sm_dsm_perf_regs,
 					  u32 *perf_register_stride)
@@ -3323,7 +3323,7 @@ static void gv11b_gr_get_sm_dsm_perf_regs(struct gk20a *g,
 		ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v();
 }
 
-static void gv11b_gr_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
+void gv11b_gr_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 					       u32 *num_sm_dsm_perf_ctrl_regs,
 					       u32 **sm_dsm_perf_ctrl_regs,
 					       u32 *ctrl_register_stride)
@@ -3334,14 +3334,14 @@ static void gv11b_gr_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 		ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
 }
 
-static void gv11b_gr_get_ovr_perf_regs(struct gk20a *g, u32 *num_ovr_perf_regs,
+void gv11b_gr_get_ovr_perf_regs(struct gk20a *g, u32 *num_ovr_perf_regs,
 					       u32 **ovr_perf_regs)
 {
 	*num_ovr_perf_regs = _num_ovr_perf_regs;
 	*ovr_perf_regs = _ovr_perf_regs;
 }
 
-static void gv11b_gr_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
+void gv11b_gr_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
 {
 	u32 reg_val;
 	u32 quad_ctrl;
@@ -3393,7 +3393,7 @@ static bool pri_is_egpc_addr_shared(struct gk20a *g, u32 addr)
 		(addr < egpc_shared_base + gpc_stride);
 }
 
-static bool gv11b_gr_pri_is_egpc_addr(struct gk20a *g, u32 addr)
+bool gv11b_gr_pri_is_egpc_addr(struct gk20a *g, u32 addr)
 {
 	u32 egpc_base = g->ops.gr.get_egpc_base(g);
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
@@ -3404,7 +3404,7 @@ static bool gv11b_gr_pri_is_egpc_addr(struct gk20a *g, u32 addr)
 		pri_is_egpc_addr_shared(g, addr);
 }
 
-static bool gv11b_gr_pri_is_etpc_addr(struct gk20a *g, u32 addr)
+bool gv11b_gr_pri_is_etpc_addr(struct gk20a *g, u32 addr)
 {
 	u32 egpc_addr = 0;
 
@@ -3454,7 +3454,7 @@ static u32 pri_etpc_addr(struct gk20a *g, u32 addr, u32 gpc, u32 tpc)
 		addr;
 }
 
-static void gv11b_gr_get_egpc_etpc_num(struct gk20a *g, u32 addr,
+void gv11b_gr_get_egpc_etpc_num(struct gk20a *g, u32 addr,
 			u32 *egpc_num, u32 *etpc_num)
 {
 	u32 egpc_addr = 0;
@@ -3467,7 +3467,7 @@ static void gv11b_gr_get_egpc_etpc_num(struct gk20a *g, u32 addr,
 			"egpc_num = %d etpc_num = %d", *egpc_num, *etpc_num);
 }
 
-static int gv11b_gr_decode_egpc_addr(struct gk20a *g, u32 addr, int *addr_type,
+int gv11b_gr_decode_egpc_addr(struct gk20a *g, u32 addr, int *addr_type,
 	u32 *gpc_num, u32 *tpc_num, u32 *broadcast_flags)
 {
 	u32 gpc_addr;
@@ -3506,7 +3506,7 @@ static int gv11b_gr_decode_egpc_addr(struct gk20a *g, u32 addr, int *addr_type,
 	return -EINVAL;
 }
 
-static void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
+void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 		 u32 gpc, u32 broadcast_flags, u32 *priv_addr_table, u32 *t)
 {
 	u32 gpc_num, tpc_num;
@@ -3569,12 +3569,12 @@ static void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 	}
 }
 
-static u32 gv11b_gr_get_egpc_base(struct gk20a *g)
+u32 gv11b_gr_get_egpc_base(struct gk20a *g)
 {
 	return EGPC_PRI_BASE;
 }
 
-static void gr_gv11b_init_gpc_mmu(struct gk20a *g)
+void gr_gv11b_init_gpc_mmu(struct gk20a *g)
 {
 	u32 temp;
 
@@ -3605,105 +3605,4 @@ static void gr_gv11b_init_gpc_mmu(struct gk20a *g)
 			gk20a_readl(g, fb_mmu_debug_wr_r()));
 	gk20a_writel(g, gr_gpcs_pri_mmu_debug_rd_r(),
 			gk20a_readl(g, fb_mmu_debug_rd_r()));
-}
-
-void gv11b_init_gr(struct gk20a *g)
-{
-	struct gpu_ops *gops = &g->ops;
-
-	gp10b_init_gr(g);
-	gops->gr.init_preemption_state = NULL;
-	gops->gr.init_fs_state = gr_gv11b_init_fs_state;
-	gops->gr.detect_sm_arch = gr_gv11b_detect_sm_arch;
-	gops->gr.is_valid_class = gr_gv11b_is_valid_class;
-	gops->gr.is_valid_gfx_class = gr_gv11b_is_valid_gfx_class;
-	gops->gr.is_valid_compute_class = gr_gv11b_is_valid_compute_class;
-	gops->gr.set_preemption_buffer_va = gr_gv11b_set_preemption_buffer_va;
-	gops->gr.add_zbc_s = gr_gv11b_add_zbc_stencil;
-	gops->gr.load_zbc_s_default_tbl = gr_gv11b_load_stencil_default_tbl;
-	gops->gr.load_zbc_s_tbl = gr_gv11b_load_stencil_tbl;
-	gops->gr.zbc_s_query_table = gr_gv11b_zbc_s_query_table;
-	gops->gr.add_zbc_type_s = gr_gv11b_add_zbc_type_s;
-	gops->gr.pagepool_default_size = gr_gv11b_pagepool_default_size;
-	gops->gr.calc_global_ctx_buffer_size =
-		gr_gv11b_calc_global_ctx_buffer_size;
-	gops->gr.commit_global_attrib_cb = gr_gv11b_commit_global_attrib_cb;
-	gops->gr.handle_sw_method = gr_gv11b_handle_sw_method;
-	gops->gr.bundle_cb_defaults = gr_gv11b_bundle_cb_defaults;
-	gops->gr.cb_size_default = gr_gv11b_cb_size_default;
-	gops->gr.set_alpha_circular_buffer_size =
-		gr_gv11b_set_alpha_circular_buffer_size;
-	gops->gr.set_circular_buffer_size =
-		gr_gv11b_set_circular_buffer_size;
-	gops->gr.dump_gr_regs = gr_gv11b_dump_gr_status_regs;
-	gops->gr.wait_empty = gr_gv11b_wait_empty;
-	gops->gr.init_cyclestats = gr_gv11b_init_cyclestats;
-	gops->gr.set_gpc_tpc_mask = gr_gv11b_set_gpc_tpc_mask;
-	gops->gr.get_access_map = gr_gv11b_get_access_map;
-	gops->gr.handle_sm_exception = gr_gk20a_handle_sm_exception;
-	gops->gr.handle_gcc_exception = gr_gv11b_handle_gcc_exception;
-	gops->gr.handle_tex_exception = gr_gv11b_handle_tex_exception;
-	gops->gr.enable_gpc_exceptions = gr_gv11b_enable_gpc_exceptions;
-	gops->gr.enable_exceptions = gr_gv11b_enable_exceptions;
-	gops->gr.enable_hww_exceptions = gr_gv11b_enable_hww_exceptions;
-	gops->gr.pre_process_sm_exception =
-		gr_gv11b_pre_process_sm_exception;
-	gops->gr.handle_fecs_error = gr_gv11b_handle_fecs_error;
-	gops->gr.create_gr_sysfs = gr_gv11b_create_sysfs;
-	gops->gr.setup_rop_mapping = gr_gv11b_setup_rop_mapping;
-	gops->gr.init_sw_veid_bundle = gr_gv11b_init_sw_veid_bundle;
-	gops->gr.program_zcull_mapping = gr_gv11b_program_zcull_mapping;
-	gops->gr.commit_global_timeslice = gr_gv11b_commit_global_timeslice;
-	gops->gr.init_sm_id_table = gr_gv11b_init_sm_id_table;
-	gops->gr.load_smid_config = gr_gv11b_load_smid_config;
-	gops->gr.program_sm_id_numbering =
-			gr_gv11b_program_sm_id_numbering;
-	gops->gr.commit_inst = gr_gv11b_commit_inst;
-	gops->gr.restore_context_header = gv11b_restore_context_header;
-	gops->gr.write_zcull_ptr = gr_gv11b_write_zcull_ptr;
-	gops->gr.write_pm_ptr = gr_gv11b_write_pm_ptr;
-	gops->gr.init_elcg_mode = gr_gv11b_init_elcg_mode;
-	gops->gr.load_tpc_mask = gr_gv11b_load_tpc_mask;
-	gops->gr.handle_gpc_gpccs_exception =
-			gr_gv11b_handle_gpc_gpccs_exception;
-	gops->gr.set_czf_bypass = NULL;
-	gops->gr.handle_gpc_gpcmmu_exception =
-			gr_gv11b_handle_gpc_gpcmmu_exception;
-	gops->gr.get_esr_sm_sel = gv11b_gr_get_esr_sm_sel;
-	gops->gr.trigger_suspend = gv11b_gr_sm_trigger_suspend;
-	gops->gr.bpt_reg_info = gv11b_gr_bpt_reg_info;
-	gops->gr.update_sm_error_state = gv11b_gr_update_sm_error_state;
-	gops->gr.set_sm_debug_mode = gv11b_gr_set_sm_debug_mode;
-	gops->gr.record_sm_error_state = gv11b_gr_record_sm_error_state;
-	gops->gr.set_hww_esr_report_mask = gv11b_gr_set_hww_esr_report_mask;
-	gops->gr.sm_debugger_attached = gv11b_gr_sm_debugger_attached;
-	gops->gr.suspend_single_sm = gv11b_gr_suspend_single_sm;
-	gops->gr.suspend_all_sms = gv11b_gr_suspend_all_sms;
-	gops->gr.resume_single_sm = gv11b_gr_resume_single_sm;
-	gops->gr.resume_all_sms = gv11b_gr_resume_all_sms;
-	gops->gr.resume_from_pause = gv11b_gr_resume_from_pause;
-	gops->gr.get_sm_hww_warp_esr = gv11b_gr_get_sm_hww_warp_esr;
-	gops->gr.get_sm_hww_global_esr = gv11b_gr_get_sm_hww_global_esr;
-	gops->gr.get_sm_no_lock_down_hww_global_esr_mask =
-			 gv11b_gr_get_sm_no_lock_down_hww_global_esr_mask;
-	gops->gr.lock_down_sm = gv11b_gr_lock_down_sm;
-	gops->gr.wait_for_sm_lock_down = gv11b_gr_wait_for_sm_lock_down;
-	gops->gr.clear_sm_hww = gv11b_gr_clear_sm_hww;
-	gops->gr.handle_tpc_sm_ecc_exception =
-			gr_gv11b_handle_tpc_sm_ecc_exception;
-	gops->gr.handle_tpc_mpc_exception =
-			gr_gv11b_handle_tpc_mpc_exception;
-	gops->gr.init_ovr_sm_dsm_perf =  gv11b_gr_init_ovr_sm_dsm_perf;
-	gops->gr.init_sm_dsm_reg_info = gv11b_gr_init_sm_dsm_reg_info;
-	gops->gr.get_sm_dsm_perf_regs = gv11b_gr_get_sm_dsm_perf_regs;
-	gops->gr.get_sm_dsm_perf_ctrl_regs = gv11b_gr_get_sm_dsm_perf_ctrl_regs;
-	gops->gr.get_ovr_perf_regs = gv11b_gr_get_ovr_perf_regs;
-	gops->gr.access_smpc_reg = gv11b_gr_access_smpc_reg;
-	gops->gr.decode_egpc_addr = gv11b_gr_decode_egpc_addr;
-	gops->gr.egpc_etpc_priv_addr_table = gv11b_gr_egpc_etpc_priv_addr_table;
-	gops->gr.get_egpc_etpc_num = gv11b_gr_get_egpc_etpc_num;
-	gops->gr.get_egpc_base = gv11b_gr_get_egpc_base;
-	gops->gr.is_egpc_addr = gv11b_gr_pri_is_egpc_addr;
-	gops->gr.is_etpc_addr = gv11b_gr_pri_is_etpc_addr;
-	gops->gr.init_gpc_mmu = gr_gv11b_init_gpc_mmu;
 }

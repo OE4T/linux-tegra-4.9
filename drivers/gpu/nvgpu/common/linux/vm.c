@@ -266,6 +266,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		bfr.pgsz_idx = __get_pte_size(vm, map_offset,
 				      min_t(u64, bfr.size, bfr.align));
 	mapping_size = mapping_size ? mapping_size : bfr.size;
+	mapping_size = ALIGN(mapping_size, SZ_4K);
 
 	/* Check if we should use a fixed offset for mapping this buffer */
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {

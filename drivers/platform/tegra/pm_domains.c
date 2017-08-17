@@ -54,36 +54,26 @@
 #ifdef CONFIG_ARCH_TEGRA_210_SOC
 static int tegra_mc_clk_power_off(struct generic_pm_domain *genpd)
 {
-	unsigned long flags;
 	int32_t val = cpu_to_le32(true);
 	struct tegra_pm_domain *pd = to_tegra_pd(genpd);
 
 	if (!pd)
 		return -EINVAL;
 
-	raw_local_irq_save(flags);
-	tegra_bpmp_send_receive_atomic(MRQ_SCX_ENABLE,
+	return tegra_bpmp_send_receive(MRQ_SCX_ENABLE,
 			&val, sizeof(val), NULL, 0);
-	raw_local_irq_restore(flags);
-
-	return 0;
 }
 
 static int tegra_mc_clk_power_on(struct generic_pm_domain *genpd)
 {
-	unsigned long flags;
 	int val = cpu_to_le32(false);
 	struct tegra_pm_domain *pd = to_tegra_pd(genpd);
 
 	if (!pd)
 		return -EINVAL;
 
-	raw_local_irq_save(flags);
-	tegra_bpmp_send_receive_atomic(MRQ_SCX_ENABLE,
+	return tegra_bpmp_send_receive(MRQ_SCX_ENABLE,
 			&val, sizeof(val), NULL, 0);
-	raw_local_irq_restore(flags);
-
-	return 0;
 }
 #endif
 

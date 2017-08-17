@@ -121,6 +121,10 @@
 										 //				29:29=AUTO_CAL_ENABLE 0x1
 					>;
 				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
+					>;
+				};
 			};
 			prod_c_hs {
 				asic {
@@ -133,6 +137,10 @@
 										 //				29:29=AUTO_CAL_ENABLE 0x1
 					>;
 				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
+					>;
+				};
 			};
 			prod_c_ddr52 {
 				asic {
@@ -143,6 +151,10 @@
 										 //				6:0=AUTO_CAL_PU_OFFSET 0x5
 										 //				28:28=AUTO_CAL_SLW_OVERRIDE 0x1
 										 //				29:29=AUTO_CAL_ENABLE 0x1
+					>;
+				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
 					>;
 				};
 			};
@@ -171,6 +183,10 @@
 										 //				29:29=AUTO_CAL_ENABLE 0x1
 					>;
 				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
+					>;
+				};
 			};
 
 			prod {
@@ -190,6 +206,10 @@
 						0x0000120 0x00020001 0x00001	// SDMMC_VENDOR_MISC_CNTRL_0	0:0=ERASE_TIMEOUT_LIMIT	0x1
 										// 				17:17=SDMMC_SPARE1[1]	0x0
 						0x00001F0 0x00080000 0x00080000	// SDMMC_IO_SPARE_0		19:19=SPARE_OUT[3] 0x1
+					>;
+				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
 					>;
 				};
 			};
@@ -337,6 +357,10 @@
 										 //				29:29=AUTO_CAL_ENABLE 0x1
 					>;
 				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
+					>;
+				};
 			};
 			prod_c_hs {
 				asic {
@@ -347,6 +371,10 @@
 										 //				6:0=AUTO_CAL_PU_OFFSET 0x5
 										 //				28:28=AUTO_CAL_SLW_OVERRIDE 0x1
 										 //				29:29=AUTO_CAL_ENABLE 0x1
+					>;
+				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
 					>;
 				};
 			};
@@ -361,6 +389,10 @@
 										 //				29:29=AUTO_CAL_ENABLE 0x1
 					>;
 				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
+					>;
+				};
 			};
 			prod_c_sdr25 {
 				asic {
@@ -371,6 +403,10 @@
 										 //				6:0=AUTO_CAL_PU_OFFSET 0x5
 										 //				28:28=AUTO_CAL_SLW_OVERRIDE 0x1
 										 //				29:29=AUTO_CAL_ENABLE 0x1
+					>;
+				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
 					>;
 				};
 			};
@@ -386,6 +422,10 @@
 										 //				29:29=AUTO_CAL_ENABLE 0x1
 					>;
 				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
+					>;
+				};
 			};
 			prod_c_sdr104 {
 				asic {
@@ -399,6 +439,10 @@
 										 //				29:29=AUTO_CAL_ENABLE 0x1
 					>;
 				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
+					>;
+				};
 			};
 			prod_c_ddr52 {
 				asic {
@@ -409,6 +453,10 @@
 										 //				6:0=AUTO_CAL_PU_OFFSET 0x5
 										 //				28:28=AUTO_CAL_SLW_OVERRIDE 0x1
 										 //				29:29=AUTO_CAL_ENABLE 0x1
+					>;
+				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
 					>;
 				};
 			};
@@ -424,6 +472,10 @@
 										 //				29:29=AUTO_CAL_ENABLE 0x1
 					>;
 				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
+					>;
+				};
 			};
 			prod_c_hs400 {
 				asic {
@@ -435,6 +487,10 @@
 										 //				6:0=AUTO_CAL_PU_OFFSET 0x5
 										 //				28:28=AUTO_CAL_SLW_OVERRIDE 0x1
 										 //				29:29=AUTO_CAL_ENABLE 0x1
+					>;
+				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
 					>;
 				};
 			};
@@ -455,6 +511,10 @@
 						0x0000120 0x00020001 0x00001	// SDMMC_VENDOR_MISC_CNTRL_0	0:0=ERASE_TIMEOUT_LIMIT	0x1
 										// 				17:17=SDMMC_SPARE1[1]	0x0
 						0x00001F0 0x00080000 0x00080000	// SDMMC_IO_SPARE_0		19:19=SPARE_OUT[3] 0x1
+					>;
+				};
+				char {
+					prod = <0x00000100 0x00FF0000 0x000B0000 // SDMMC_VENDOR_CLOCK_CNTRL_0 // 23:16=TAP_VAL   0xB
 					>;
 				};
 			};

@@ -301,10 +301,15 @@ static const struct tegra_kfuse_soc tegra186_kfuse_soc = {
 	.sensing_support = true,
 };
 
+static const struct tegra_kfuse_soc tegra194_kfuse_soc = {
+	.sensing_support = true,
+};
+
 static const struct of_device_id tegra_kfuse_of_match[] = {
 	{ .compatible = "nvidia,tegra124-kfuse", .data = &tegra124_kfuse_soc, },
 	{ .compatible = "nvidia,tegra210-kfuse", .data = &tegra210_kfuse_soc, },
 	{ .compatible = "nvidia,tegra186-kfuse", .data = &tegra186_kfuse_soc, },
+	{ .compatible = "nvidia,tegra194-kfuse", .data = &tegra194_kfuse_soc, },
 	{ },
 };
 

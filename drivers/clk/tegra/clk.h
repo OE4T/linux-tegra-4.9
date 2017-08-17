@@ -560,6 +560,12 @@ struct clk *tegra_clk_register_periph_fixed(const char *name,
 					    unsigned int div,
 					    unsigned int num);
 
+struct tegra_clk_periph_reparent_policy {
+	u8 low_rate_parent_idx;
+	u8 high_rate_parent_idx;
+	unsigned long threshold;
+};
+
 /**
  * struct clk-periph - peripheral clock
  *
@@ -568,6 +574,7 @@ struct clk *tegra_clk_register_periph_fixed(const char *name,
  * @mux:	mux clock
  * @divider:	divider clock
  * @gate:	gate clock
+ * @rpolicy	reparent policy
  * @mux_ops:	mux clock ops
  * @div_ops:	divider clock ops
  * @gate_ops:	gate clock ops
@@ -578,6 +585,7 @@ struct tegra_clk_periph {
 	struct clk_mux		mux;
 	struct tegra_clk_frac_div	divider;
 	struct tegra_clk_periph_gate	gate;
+	struct tegra_clk_periph_reparent_policy	rpolicy;
 
 	const struct clk_ops	*mux_ops;
 	const struct clk_ops	*div_ops;

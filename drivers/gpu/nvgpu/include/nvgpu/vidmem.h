@@ -25,9 +25,9 @@
 
 #include <nvgpu/types.h>
 #include <nvgpu/errno.h>
+#include <nvgpu/nvgpu_mem.h>
 
 struct scatterlist;
-struct dma_buf;
 struct work_struct;
 
 struct gk20a;
@@ -35,36 +35,57 @@ struct mm_gk20a;
 struct nvgpu_mem;
 
 struct nvgpu_vidmem_buf {
-	struct gk20a *g;
-	struct nvgpu_mem *mem;
-	struct dma_buf *dmabuf;
-	void *dmabuf_priv;
-	void (*dmabuf_priv_delete)(void *);
+	/*
+	 * Must be a pointer since control of this mem is passed over to the
+	 * vidmem background clearing thread when the vidmem buf is freed.
+	 */
+	struct nvgpu_mem	*mem;
+
+	struct gk20a		*g;
+
+	/*
+	 * Filled in by each OS - this holds the necessary data to export this
+	 * buffer to userspace. This will eventually be replaced by a struct
+	 * which shall be defined in the OS specific vidmem.h header file.
+	 */
+	void			*priv;
 };
 
 #if defined(CONFIG_GK20A_VIDMEM)
 
+/**
+ * nvgpu_vidmem_user_alloc - Allocates a vidmem buffer for userspace
+ *
+ * @g     - The GPU.
+ * @bytes - Size of the buffer in bytes.
+ *
+ * Allocate a generic (OS agnostic) vidmem buffer. This does not allocate the OS
+ * specific interfacing for userspace sharing. Instead is is expected that the
+ * OS specific code will allocate that OS specific data and add it to this
+ * buffer.
+ *
+ * The buffer allocated here is intended to use used by userspace, hence the
+ * extra struct over nvgpu_mem. If a vidmem buffer is needed by the kernel
+ * driver only then a simple nvgpu_dma_alloc_vid() or the like is sufficient.
+ *
+ * Returns a pointer to a vidmem buffer on success, 0 otherwise.
+ */
+struct nvgpu_vidmem_buf *nvgpu_vidmem_user_alloc(struct gk20a *g, size_t bytes);
+
+void nvgpu_vidmem_buf_free(struct gk20a *g, struct nvgpu_vidmem_buf *buf);
+
 struct nvgpu_page_alloc *nvgpu_vidmem_get_page_alloc(struct scatterlist *sgl);
 void nvgpu_vidmem_set_page_alloc(struct scatterlist *sgl, u64 addr);
 bool nvgpu_addr_is_vidmem_page_alloc(u64 addr);
-int nvgpu_vidmem_buf_alloc(struct gk20a *g, size_t bytes);
 int nvgpu_vidmem_get_space(struct gk20a *g, u64 *space);
 
 struct nvgpu_mem *nvgpu_vidmem_get_pending_alloc(struct mm_gk20a *mm);
 
 void nvgpu_vidmem_destroy(struct gk20a *g);
 int nvgpu_vidmem_init(struct mm_gk20a *mm);
-int nvgpu_vidmem_clear_all(struct gk20a *g);
 
 void nvgpu_vidmem_clear_mem_worker(struct work_struct *work);
 int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem);
-
-/*
- * Will need to be moved later on once we have the Linux vidmem.h file.
- */
-struct gk20a *nvgpu_vidmem_buf_owner(struct dma_buf *dmabuf);
-int nvgpu_vidmem_buf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
-		void *buffer, u64 offset, u64 size, u32 cmd);
 
 #else /* !defined(CONFIG_GK20A_VIDMEM) */
 
@@ -91,6 +112,12 @@ static inline int nvgpu_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 {
 	return -ENOSYS;
 }
+
+static inline void nvgpu_vidmem_buf_free(struct gk20a *g,
+					 struct nvgpu_vidmem_buf *buf)
+{
+}
+
 static inline int nvgpu_vidmem_get_space(struct gk20a *g, u64 *space)
 {
 	return -ENOSYS;
@@ -117,19 +144,6 @@ static inline int nvgpu_vidmem_clear_all(struct gk20a *g)
 
 static inline int nvgpu_vidmem_clear(struct gk20a *g,
 					      struct nvgpu_mem *mem)
-{
-	return -ENOSYS;
-}
-
-static inline struct gk20a *nvgpu_vidmem_buf_owner(struct dma_buf *dmabuf)
-{
-	return NULL;
-}
-
-static inline int nvgpu_vidmem_buf_access_memory(struct gk20a *g,
-					     struct dma_buf *dmabuf,
-					     void *buffer, u64 offset,
-					     u64 size, u32 cmd)
 {
 	return -ENOSYS;
 }

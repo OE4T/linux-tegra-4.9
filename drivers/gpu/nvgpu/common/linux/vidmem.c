@@ -25,6 +25,7 @@
 #include <nvgpu/page_allocator.h>
 
 #include <nvgpu/linux/dma.h>
+#include <nvgpu/linux/vidmem.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -73,14 +74,16 @@ static void gk20a_vidbuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 static void gk20a_vidbuf_release(struct dma_buf *dmabuf)
 {
 	struct nvgpu_vidmem_buf *buf = dmabuf->priv;
+	struct nvgpu_vidmem_linux *linux_buf = buf->priv;
+	struct gk20a *g = buf->g;
 
 	gk20a_dbg_fn("");
 
-	if (buf->dmabuf_priv)
-		buf->dmabuf_priv_delete(buf->dmabuf_priv);
+	if (linux_buf && linux_buf->dmabuf_priv_delete)
+		linux_buf->dmabuf_priv_delete(linux_buf->dmabuf_priv);
 
-	nvgpu_dma_free(buf->g, buf->mem);
-	nvgpu_kfree(buf->g, buf);
+	nvgpu_kfree(g, linux_buf);
+	nvgpu_vidmem_buf_free(g, buf);
 }
 
 static void *gk20a_vidbuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
@@ -105,9 +108,10 @@ static int gk20a_vidbuf_set_private(struct dma_buf *dmabuf,
 		struct device *dev, void *priv, void (*delete)(void *priv))
 {
 	struct nvgpu_vidmem_buf *buf = dmabuf->priv;
+	struct nvgpu_vidmem_linux *linux_buf = buf->priv;
 
-	buf->dmabuf_priv = priv;
-	buf->dmabuf_priv_delete = delete;
+	linux_buf->dmabuf_priv = priv;
+	linux_buf->dmabuf_priv_delete = delete;
 
 	return 0;
 }
@@ -116,8 +120,9 @@ static void *gk20a_vidbuf_get_private(struct dma_buf *dmabuf,
 		struct device *dev)
 {
 	struct nvgpu_vidmem_buf *buf = dmabuf->priv;
+	struct nvgpu_vidmem_linux *linux_buf = buf->priv;
 
-	return buf->dmabuf_priv;
+	return linux_buf->dmabuf_priv;
 }
 
 static const struct dma_buf_ops gk20a_vidbuf_ops = {
@@ -153,66 +158,45 @@ struct gk20a *nvgpu_vidmem_buf_owner(struct dma_buf *dmabuf)
 	return buf->g;
 }
 
-int nvgpu_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
+int nvgpu_vidmem_export_linux(struct gk20a *g, size_t bytes)
 {
 	struct nvgpu_vidmem_buf *buf;
-	int err = 0, fd;
+	struct nvgpu_vidmem_linux *priv;
+	int err, fd;
 
-	gk20a_dbg_fn("");
-
-	buf = nvgpu_kzalloc(g, sizeof(*buf));
-	if (!buf)
+	priv = nvgpu_kzalloc(g, sizeof(*priv));
+	if (!priv)
 		return -ENOMEM;
 
-	buf->g = g;
-
-	if (!g->mm.vidmem.cleared) {
-		nvgpu_mutex_acquire(&g->mm.vidmem.first_clear_mutex);
-		if (!g->mm.vidmem.cleared) {
-			err = nvgpu_vidmem_clear_all(g);
-			if (err) {
-				nvgpu_err(g,
-				          "failed to clear whole vidmem");
-				goto err_kfree;
-			}
-		}
-		nvgpu_mutex_release(&g->mm.vidmem.first_clear_mutex);
+	buf = nvgpu_vidmem_user_alloc(g, bytes);
+	if (!buf) {
+		err = -ENOMEM;
+		goto fail;
 	}
 
-	buf->mem = nvgpu_kzalloc(g, sizeof(struct nvgpu_mem));
-	if (!buf->mem)
-		goto err_kfree;
-
-	buf->mem->mem_flags |= NVGPU_MEM_FLAG_USER_MEM;
-
-	err = nvgpu_dma_alloc_vid(g, bytes, buf->mem);
-	if (err)
-		goto err_memfree;
-
-	buf->dmabuf = gk20a_vidbuf_export(buf);
-	if (IS_ERR(buf->dmabuf)) {
-		err = PTR_ERR(buf->dmabuf);
-		goto err_bfree;
+	priv->dmabuf = gk20a_vidbuf_export(buf);
+	if (IS_ERR(priv->dmabuf)) {
+		err = PTR_ERR(priv->dmabuf);
+		goto fail;
 	}
+
+	buf->priv = priv;
 
 	fd = tegra_alloc_fd(current->files, 1024, O_RDWR);
 	if (fd < 0) {
 		/* ->release frees what we have done */
-		dma_buf_put(buf->dmabuf);
+		dma_buf_put(priv->dmabuf);
 		return fd;
 	}
 
 	/* fclose() on this drops one ref, freeing the dma buf */
-	fd_install(fd, buf->dmabuf->file);
+	fd_install(fd, priv->dmabuf->file);
 
 	return fd;
 
-err_bfree:
-	nvgpu_dma_free(g, buf->mem);
-err_memfree:
-	nvgpu_kfree(g, buf->mem);
-err_kfree:
-	nvgpu_kfree(g, buf);
+fail:
+	nvgpu_kfree(g, priv);
+	nvgpu_vidmem_buf_free(g, buf);
 	return err;
 }
 

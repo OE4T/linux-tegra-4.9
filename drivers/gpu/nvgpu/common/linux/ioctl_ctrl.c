@@ -26,6 +26,9 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/bus.h>
 #include <nvgpu/vidmem.h>
+#include <nvgpu/log.h>
+
+#include <nvgpu/linux/vidmem.h>
 
 #include "ioctl_ctrl.h"
 #include "ioctl_tsg.h"
@@ -33,9 +36,8 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/fence_gk20a.h"
-#include "os_linux.h"
 
-#include <nvgpu/log.h>
+#include "os_linux.h"
 
 #define HZ_TO_MHZ(a) ((a > 0xF414F9CD7ULL) ? 0xffff : (a >> 32) ? \
 	(u32) ((a * 0x10C8ULL) >> 32) : (u16) ((u32) a/MHZ))
@@ -693,7 +695,7 @@ static int nvgpu_gpu_alloc_vidmem(struct gk20a *g,
 		return -EINVAL;
 	}
 
-	fd = nvgpu_vidmem_buf_alloc(g, args->in.size);
+	fd = nvgpu_vidmem_export_linux(g, args->in.size);
 	if (fd < 0)
 		return fd;
 

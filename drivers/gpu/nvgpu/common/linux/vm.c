@@ -26,6 +26,7 @@
 #include <nvgpu/vidmem.h>
 #include <nvgpu/enabled.h>
 
+#include <nvgpu/linux/vidmem.h>
 #include <nvgpu/linux/nvgpu_mem.h>
 
 #include "gk20a/gk20a.h"

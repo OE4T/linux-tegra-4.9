@@ -22,6 +22,7 @@
 
 #include <linux/scatterlist.h>
 
+#include <nvgpu/dma.h>
 #include <nvgpu/vidmem.h>
 #include <nvgpu/page_allocator.h>
 
@@ -34,7 +35,7 @@ void nvgpu_vidmem_destroy(struct gk20a *g)
 		nvgpu_alloc_destroy(&g->mm.vidmem.allocator);
 }
 
-int nvgpu_vidmem_clear_all(struct gk20a *g)
+static int __nvgpu_vidmem_do_clear_all(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct gk20a_fence *gk20a_fence_out = NULL;
@@ -256,4 +257,81 @@ struct nvgpu_mem *nvgpu_vidmem_get_pending_alloc(struct mm_gk20a *mm)
 	nvgpu_mutex_release(&mm->vidmem.clear_list_mutex);
 
 	return mem;
+}
+
+static int nvgpu_vidmem_clear_all(struct gk20a *g)
+{
+	int err;
+
+	if (g->mm.vidmem.cleared)
+		return 0;
+
+	nvgpu_mutex_acquire(&g->mm.vidmem.first_clear_mutex);
+	if (!g->mm.vidmem.cleared) {
+		err = __nvgpu_vidmem_do_clear_all(g);
+		if (err) {
+			nvgpu_mutex_release(&g->mm.vidmem.first_clear_mutex);
+			nvgpu_err(g, "failed to clear whole vidmem");
+			return err;
+		}
+	}
+	nvgpu_mutex_release(&g->mm.vidmem.first_clear_mutex);
+
+	return 0;
+}
+
+struct nvgpu_vidmem_buf *nvgpu_vidmem_user_alloc(struct gk20a *g, size_t bytes)
+{
+	struct nvgpu_vidmem_buf *buf;
+	int err;
+
+	err = nvgpu_vidmem_clear_all(g);
+	if (err)
+		return NULL;
+
+	buf = nvgpu_kzalloc(g, sizeof(*buf));
+	if (!buf)
+		return NULL;
+
+	buf->g = g;
+	buf->mem = nvgpu_kzalloc(g, sizeof(*buf->mem));
+	if (!buf->mem)
+		goto fail;
+
+	err = nvgpu_dma_alloc_vid(g, bytes, buf->mem);
+	if (err)
+		goto fail;
+
+	/*
+	 * Alerts the DMA API that when we free this vidmem buf we have to
+	 * clear it to avoid leaking data to userspace.
+	 */
+	buf->mem->mem_flags |= NVGPU_MEM_FLAG_USER_MEM;
+
+	return buf;
+
+fail:
+	/* buf will never be NULL here. */
+	nvgpu_kfree(g, buf->mem);
+	nvgpu_kfree(g, buf);
+	return NULL;
+}
+
+void nvgpu_vidmem_buf_free(struct gk20a *g, struct nvgpu_vidmem_buf *buf)
+{
+	/*
+	 * In some error paths it's convenient to be able to "free" a NULL buf.
+	 */
+	if (!buf)
+		return;
+
+	nvgpu_dma_free(g, buf->mem);
+
+	/*
+	 * We don't free buf->mem here. This is handled by nvgpu_dma_free()!
+	 * Since these buffers are cleared in the background the nvgpu_mem
+	 * struct must live on through that. We transfer ownership here to the
+	 * DMA API and let the DMA API free the buffer.
+	 */
+	nvgpu_kfree(g, buf);
 }

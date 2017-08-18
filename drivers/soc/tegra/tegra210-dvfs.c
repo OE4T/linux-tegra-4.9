@@ -103,13 +103,13 @@ tegra210b01_core_therm_floors[MAX_THERMAL_LIMITS] = {
 
 static struct dvfs_therm_limits
 tegra210b01_core_therm_caps[MAX_THERMAL_LIMITS] = {
-	{TEGRA210B01_SOC_THERMAL_CAP_0 / 1000, 1120},
+	{TEGRA210B01_SOC_THERMAL_CAP_0 / 1000, 1010},
 	{0, 0},
 };
 
 static struct dvfs_therm_limits
 tegra210b01_core_therm_caps_ucm2[MAX_THERMAL_LIMITS] = {
-	{TEGRA210B01_SOC_THERMAL_CAP_0 / 1000, 1120},
+	{TEGRA210B01_SOC_THERMAL_CAP_0 / 1000, 1010},
 	{0, 0},
 };
 

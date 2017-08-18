@@ -945,6 +945,9 @@ static int rx6110_spi_probe(struct spi_device *spi)
  */
 	rx6110->rtc->max_user_freq = 1;
 	rx6110_sysfs_init(&rx6110->rtc->dev);
+
+	rx6110->rtc->uie_unsupported = 1;
+
 	return 0;
 }
 
@@ -1022,6 +1025,9 @@ static int rx6110_i2c_probe(struct i2c_client *client,
   */
 	rx6110->rtc->max_user_freq = 1;
 	rx6110_sysfs_init(&rx6110->rtc->dev);
+
+	rx6110->rtc->uie_unsupported = 1;
+
 	return 0;
 }
 

@@ -842,7 +842,7 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct mmc_command *cmd)
 		if (unlikely(length_mask | offset_mask)) {
 			for_each_sg(data->sg, sg, data->sg_len, i) {
 				if (sg->length & length_mask) {
-					DBG("Reverting to PIO because of transfer size (%d)\n",
+					DBG("Reverting to PIO because of transfer size (%zd)\n",
 					    sg->length);
 					host->flags &= ~SDHCI_REQ_USE_DMA;
 					break;

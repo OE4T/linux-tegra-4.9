@@ -853,7 +853,7 @@ next_sg:
 	offset %= PAGE_SIZE;
 
 	/* don't overrun current sg */
-	count = min(sg->length - qc->cursg_ofs, bytes);
+	count = min(sg->length - qc->cursg_ofs, (size_t)bytes);
 
 	/* don't cross page boundaries */
 	count = min(count, (unsigned int)PAGE_SIZE - offset);

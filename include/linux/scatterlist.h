@@ -12,11 +12,11 @@ struct scatterlist {
 	unsigned long	sg_magic;
 #endif
 	unsigned long	page_link;
-	unsigned int	offset;
-	unsigned int	length;
+	unsigned long 	offset;
+	size_t		length;
 	dma_addr_t	dma_address;
 #ifdef CONFIG_NEED_SG_DMA_LENGTH
-	unsigned int	dma_length;
+	size_t		dma_length;
 #endif
 };
 
@@ -110,7 +110,7 @@ static inline void sg_assign_page(struct scatterlist *sg, struct page *page)
  *
  **/
 static inline void sg_set_page(struct scatterlist *sg, struct page *page,
-			       unsigned int len, unsigned int offset)
+			       size_t len, unsigned long offset)
 {
 	sg_assign_page(sg, page);
 	sg->offset = offset;

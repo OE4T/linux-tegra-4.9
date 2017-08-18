@@ -1543,7 +1543,8 @@ void gv11b_fifo_init_eng_method_buffers(struct gk20a *g,
 {
 	struct vm_gk20a *vm = g->mm.bar2.vm;
 	int err = 0;
-	unsigned int i, runque, method_buffer_size;
+	int i;
+	unsigned int runque, method_buffer_size;
 	unsigned int num_pbdma = g->fifo.num_pbdma;
 
 	if (tsg->eng_method_buffers != NULL)
@@ -1565,9 +1566,9 @@ void gv11b_fifo_init_eng_method_buffers(struct gk20a *g,
 			break;
 	}
 	if (err) {
-		for (i = runque; i < runque; i--)
+		for (i = (runque - 1); i >= 0; i--)
 			nvgpu_dma_unmap_free(vm,
-				 &tsg->eng_method_buffers[runque]);
+				 &tsg->eng_method_buffers[i]);
 
 		nvgpu_kfree(g, tsg->eng_method_buffers);
 		tsg->eng_method_buffers = NULL;

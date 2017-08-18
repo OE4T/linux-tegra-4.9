@@ -1955,22 +1955,11 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	int res;
 	int pclk = 0, ret = 0;
 	struct clk *parent_clk = NULL;
-	struct clk *hubparent_clk = NULL;
 
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return false;
 
 	tegra_dc_unpowergate_locked(dc);
-
-	/* Set HUB CLOCK PARENT as PLLP/ ENABLE */
-	/* Change the HUB to HUBPLL for higher clocks */
-	hubparent_clk = tegra_disp_clk_get(&dc->ndev->dev, "pllp_display");
-	if (IS_ERR_OR_NULL(hubparent_clk)) {
-		dev_err(&dc->ndev->dev, "hub parent clock get failed\n");
-		ret = -ENOENT;
-		return ret; /*TODO: Add proper cleanup later */
-	}
-	clk_set_parent(hubclk, hubparent_clk);
 
 	/* set clock status to inuse */
 	mutex_lock(&tegra_nvdisp_lock);

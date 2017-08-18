@@ -696,6 +696,7 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc)
 {
 	unsigned long flags;
 	unsigned int type;
+	int err;
 
 	spin_lock_irqsave(&xudc->lock, flags);
 	if (xudc->device_mode) {
@@ -718,8 +719,13 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc)
 
 	pm_runtime_get_sync(xudc->dev);
 
-	phy_power_on(xudc->utmi_phy);
-	phy_power_on(xudc->usb3_phy);
+	err = phy_power_on(xudc->utmi_phy);
+	if (err < 0)
+		dev_err(xudc->dev, "utmi power on failed %d\n", err);
+	err = phy_power_on(xudc->usb3_phy);
+	if (err < 0)
+		dev_err(xudc->dev, "usb3 phy power on failed %d\n", err);
+
 	spin_lock_irqsave(&xudc->lock, flags);
 	dev_info(xudc->dev, "device mode on\n");
 	tegra_xusb_padctl_set_vbus_override(xudc->padctl);
@@ -734,6 +740,7 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 	bool connected = false;
 	unsigned long flags;
 	u32 pls, val;
+	int err;
 
 	spin_lock_irqsave(&xudc->lock, flags);
 	if (!xudc->device_mode) {
@@ -781,8 +788,13 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 
 	/* Make sure interrupt handler has completed before powergating. */
 	synchronize_irq(xudc->irq);
-	phy_power_off(xudc->utmi_phy);
-	phy_power_off(xudc->usb3_phy);
+	err = phy_power_off(xudc->utmi_phy);
+	if (err < 0)
+		dev_err(xudc->dev, "utmi_phy power off failed %d\n", err);
+
+	err = phy_power_off(xudc->usb3_phy);
+	if (err < 0)
+		dev_err(xudc->dev, "usb3_phy power off failed %d\n", err);
 
 	if (xudc->ucd)
 		tegra_ucd_set_charger_type(xudc->ucd, EXTCON_NONE);

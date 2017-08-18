@@ -16,7 +16,7 @@
 #include <t18x-common-platforms/tegra186-quill-common-p3489-1000-a00.dtsi>
 #include <t18x-common-platforms/tegra186-quill-power-tree-p3489-1000-a00-00.dtsi>
 #include <t18x-common-platforms/tegra186-quill-camera-modules.dtsi>
-//#include <t18x-common-modules/tegra186-cvb-e3320-1000-a00.dtsi>
+#include <t18x-common-modules/tegra186-display-e3320-1000-a00.dtsi>
 
 /* comms dtsi file should be included after gpio dtsi file */
 #include <t18x-common-platforms/tegra186-quill-comms.dtsi>

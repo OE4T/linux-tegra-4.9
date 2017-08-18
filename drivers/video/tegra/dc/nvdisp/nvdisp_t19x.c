@@ -229,7 +229,7 @@ dma_addr_t nvdisp_t19x_get_addr_flag(struct tegra_dc_win *win)
 	return addr_flag;
 }
 
-/*
+/**
  * tegra_dc_get_vsync_timestamp_t19x - read the vsync from
  *					the ptimer regs.
  * @dc: pointer to struct tegra_dc for the current head.
@@ -247,7 +247,7 @@ uint64_t tegra_dc_get_vsync_timestamp_t19x(struct tegra_dc *dc)
 	return (((msb << 32) | lsb) << 5);
 }
 
-/*
+/**
  * nvdisp_t19x_program_raster_lock_seq - program the raster lock
  *					sequence for t19x.
  * @dc : head pointer for which raster_lock is required.
@@ -264,13 +264,13 @@ int nvdisp_t19x_program_raster_lock_seq(struct tegra_dc *dc, u32 value)
 
 	if (!dc)
 		return -ENODEV;
-/*
- * For nvdisp_t19x_state_access_r() reg, the implicitly expected value
- * is WRITE_ASSEMBLY | READ_ACTIVE and ideally we need not program this
- * combination again. However currently in raster lock workflow the value
- * of command_state_access is overwritten to write_active in sor.c and
- * hence we have to explicitly cache and restore here.
- */
+	/**
+	 * For nvdisp_t19x_state_access_r() reg, the implicitly expected value
+	 * is WRITE_ASSEMBLY | READ_ACTIVE and ideally we need not program this
+	 * combination again. However currently in raster lock workflow the
+	 * value of command_state_access is overwritten to write_active in sor.c
+	 * and hence we have to explicitly cache and restore here.
+	 */
 
 	old_val = tegra_dc_readl(dc, nvdisp_t19x_state_access_r());
 
@@ -316,7 +316,7 @@ restore_cmd_access_state:
 	return ret;
 }
 
-/*
+/**
  * nvdisp_t19x_enable_raster_lock - programs global_control signal
  *				required for multi-head RG unstall.
  * @dc : head pointer

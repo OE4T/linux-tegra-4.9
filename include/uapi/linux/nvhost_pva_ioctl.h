@@ -205,12 +205,8 @@ struct pva_fence {
  * @postfences: Pointer to post-fence structures
  * @input_surfaces: Pointer to input surfaces
  * @input_scalars: Information for input scalars
- * @input_2dpoint: Information for input 2d points
- * @input_rois: Pointer to input ROIs
  * @output_surfaces: Pointer to output surfaces
  * @output_scalars: Information for output scalars
- * @output_2dpoint: Information for output 2d points
- * @output_rois: Pointer to output ROIs
  * @input_task_status: Pointer to input status structure
  * @output_task_status: Pointer to output status structure
  *
@@ -227,19 +223,17 @@ struct pva_ioctl_submit_task {
 	__u8 num_output_task_status;
 	__u16 num_pointers;
 	__u64 pointers;
-	__u8 reserved[4];
+	__u8 reserved0[4];
 	__u32 operation;
 	__u64 timeout;
 	__u64 prefences;
 	__u64 postfences;
 	__u64 input_surfaces;
 	struct pva_task_parameter input_scalars;
-	struct pva_task_parameter input_2dpoint;
-	struct pva_task_parameter input_rois;
+	u8 reserved1[16];
 	__u64 output_surfaces;
 	struct pva_task_parameter output_scalars;
-	struct pva_task_parameter output_2dpoint;
-	struct pva_task_parameter output_rois;
+	u8 reserved2[16];
 	__u64 input_task_status;
 	__u64 output_task_status;
 };

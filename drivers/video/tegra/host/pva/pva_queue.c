@@ -64,23 +64,16 @@ static void pva_task_dump(struct pva_submit_task *task)
 {
 	int i;
 
-	nvhost_dbg_info("task=%p, input_scalars=(handle=%u, offset=%x), "
-			"input_surfaces=%p, input_points=(handle=%u, offset=%u), "
-			"input_rois=(handle=%u, offset=%u), "
+	nvhost_dbg_info("task=%p, "
+			"input_scalars=(handle=%u, offset=%x), "
+			"input_surfaces=%p, "
 			"output_scalars=(handle=%u, offset=%u), "
-			"output_surfaces=%p, output_points=(handle=%u, offset=%u), "
-			"output_rois=(handle=%u, offset=%u)",
-			task, task->input_scalars.handle,
-			task->input_scalars.offset, task->input_surfaces,
-			task->input_2dpoint.handle,
-			task->input_2dpoint.offset,
-			task->input_rois.handle, task->input_rois.offset,
-			task->output_scalars.handle,
-			task->output_scalars.offset,
-			task->output_surfaces,
-			task->output_2dpoint.handle,
-			task->output_2dpoint.offset,
-			task->output_rois.handle, task->output_rois.offset);
+			"output_surfaces=%p",
+			task,
+			task->input_scalars.handle, task->input_scalars.offset,
+			task->input_surfaces,
+			task->output_scalars.handle, task->output_scalars.offset,
+			task->output_surfaces);
 
 	for (i = 0; i < task->num_prefences; i++)
 		nvhost_dbg_info("prefence %d: type=%u, "
@@ -223,11 +216,7 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 	}
 
 	UNPIN_MEMORY(task->input_scalars_ext);
-	UNPIN_MEMORY(task->input_rois_ext);
-	UNPIN_MEMORY(task->input_2dpoint_ext);
 	UNPIN_MEMORY(task->output_scalars_ext);
-	UNPIN_MEMORY(task->output_rois_ext);
-	UNPIN_MEMORY(task->output_2dpoint_ext);
 
 #undef UNPIN_MEMORY
 }
@@ -357,23 +346,9 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 		PIN_MEMORY(task->input_scalars_ext,
 			task->input_scalars.handle);
 
-	if (task->input_rois.handle)
-		PIN_MEMORY(task->input_rois_ext, task->input_rois.handle);
-
-	if (task->input_2dpoint.handle)
-		PIN_MEMORY(task->input_2dpoint_ext,
-			task->input_2dpoint.handle);
-
 	if (task->output_scalars.handle)
 		PIN_MEMORY(task->output_scalars_ext,
 			task->output_scalars.handle);
-
-	if (task->output_rois.handle)
-		PIN_MEMORY(task->output_rois_ext, task->output_rois.handle);
-
-	if (task->output_2dpoint.handle)
-		PIN_MEMORY(task->output_2dpoint_ext,
-			task->output_2dpoint.handle);
 
 #undef PIN_MEMORY
 
@@ -753,25 +728,9 @@ static void pva_task_write_non_surfaces(struct pva_submit_task *task,
 		       task->input_scalars_ext,
 		       PVA_PARAM_SCALAR_LIST,
 		       hw_task->task.num_input_parameters);
-	COPY_PARAMETER(hw_input_parameters, task->input_rois,
-		       task->input_rois_ext,
-		       PVA_PARAM_ROI_LIST,
-		       hw_task->task.num_input_parameters);
-	COPY_PARAMETER(hw_input_parameters, task->input_2dpoint,
-		       task->input_2dpoint_ext,
-		       PVA_PARAM_2DPOINTS_LIST,
-		       hw_task->task.num_input_parameters);
 	COPY_PARAMETER(hw_output_parameters, task->output_scalars,
 		       task->output_scalars_ext,
 		       PVA_PARAM_SCALAR_LIST,
-		       hw_task->task.num_output_parameters);
-	COPY_PARAMETER(hw_output_parameters, task->output_rois,
-		       task->output_rois_ext,
-		       PVA_PARAM_ROI_LIST,
-		       hw_task->task.num_output_parameters);
-	COPY_PARAMETER(hw_output_parameters, task->output_2dpoint,
-		       task->output_2dpoint_ext,
-		       PVA_PARAM_2DPOINTS_LIST,
 		       hw_task->task.num_output_parameters);
 #undef COPY_PARAMETER
 }

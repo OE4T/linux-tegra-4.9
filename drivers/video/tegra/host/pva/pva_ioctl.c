@@ -87,11 +87,7 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	task->num_output_surfaces	= ioctl_task->num_output_surfaces;
 	task->num_pointers		= ioctl_task->num_pointers;
 	task->input_scalars		= ioctl_task->input_scalars;
-	task->input_2dpoint		= ioctl_task->input_2dpoint;
-	task->input_rois		= ioctl_task->input_rois;
 	task->output_scalars		= ioctl_task->output_scalars;
-	task->output_2dpoint		= ioctl_task->output_2dpoint;
-	task->output_rois		= ioctl_task->output_rois;
 	task->timeout			= ioctl_task->timeout;
 
 #define COPY_FIELD(dst, src, num, type)					\

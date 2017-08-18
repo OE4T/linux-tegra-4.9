@@ -63,12 +63,8 @@ struct pva_parameter_ext {
  * postfences			Post-fence structures
  * input_surfaces		Input surfaces structures
  * input_scalars		Information for input scalars
- * input_2dpoint		Information for input 2d points
- * input_rois			Input ROIs
  * output_surfaces		Output surfaces
  * output_scalars		Information for output scalars
- * output_2dpoint		Information for output 2d points
- * output_rois			Output ROIs
  * input_task_status		Input status structure
  * output_task_status		Output status structure
  *
@@ -101,12 +97,8 @@ struct pva_submit_task {
 	struct pva_fence postfences[PVA_MAX_POSTFENCES];
 	struct pva_surface input_surfaces[PVA_MAX_INPUT_SURFACES];
 	struct pva_task_parameter input_scalars;
-	struct pva_task_parameter input_2dpoint;
-	struct pva_task_parameter input_rois;
 	struct pva_surface output_surfaces[PVA_MAX_OUTPUT_SURFACES];
 	struct pva_task_parameter output_scalars;
-	struct pva_task_parameter output_2dpoint;
-	struct pva_task_parameter output_rois;
 	struct pva_status_handle input_task_status[PVA_MAX_INPUT_STATUS];
 	struct pva_status_handle output_task_status[PVA_MAX_OUTPUT_STATUS];
 	struct pva_memory_handle pointers[PVA_MAX_POINTERS];
@@ -118,12 +110,8 @@ struct pva_submit_task {
 	struct pva_parameter_ext postfences_sema_ext[PVA_MAX_POSTFENCES];
 	struct pva_parameter_ext input_surfaces_ext[PVA_MAX_INPUT_SURFACES];
 	struct pva_parameter_ext input_scalars_ext;
-	struct pva_parameter_ext input_2dpoint_ext;
-	struct pva_parameter_ext input_rois_ext;
 	struct pva_parameter_ext output_surfaces_ext[PVA_MAX_OUTPUT_SURFACES];
 	struct pva_parameter_ext output_scalars_ext;
-	struct pva_parameter_ext output_2dpoint_ext;
-	struct pva_parameter_ext output_rois_ext;
 	struct pva_parameter_ext input_task_status_ext[PVA_MAX_INPUT_STATUS];
 	struct pva_parameter_ext output_task_status_ext[PVA_MAX_OUTPUT_STATUS];
 	struct pva_parameter_ext

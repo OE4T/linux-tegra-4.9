@@ -21,6 +21,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/nvhost.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
@@ -73,7 +74,7 @@ static inline bool gk20a_fence_is_valid(struct gk20a_fence *f)
 {
 	bool valid = f->valid;
 
-	rmb();
+	nvgpu_smp_rmb();
 	return valid;
 }
 
@@ -252,7 +253,7 @@ int gk20a_fence_from_semaphore(
 	f->semaphore_wq = semaphore_wq;
 
 	/* commit previous writes before setting the valid flag */
-	wmb();
+	nvgpu_smp_wmb();
 	f->valid = true;
 
 	return 0;
@@ -327,7 +328,7 @@ int gk20a_fence_from_syncpt(
 	f->syncpt_value = value;
 
 	/* commit previous writes before setting the valid flag */
-	wmb();
+	nvgpu_smp_wmb();
 	f->valid = true;
 
 	return 0;

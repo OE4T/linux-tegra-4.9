@@ -17,6 +17,7 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/barrier.h>
 
 #include "lockless_allocator_priv.h"
 
@@ -39,7 +40,7 @@ static int nvgpu_lockless_alloc_inited(struct nvgpu_allocator *a)
 	struct nvgpu_lockless_allocator *pa = a->priv;
 	int inited = pa->inited;
 
-	rmb();
+	nvgpu_smp_rmb();
 	return inited;
 }
 
@@ -198,7 +199,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	a->flags = flags;
 	nvgpu_atomic_set(&a->nr_allocs, 0);
 
-	wmb();
+	nvgpu_smp_wmb();
 	a->inited = true;
 
 #ifdef CONFIG_DEBUG_FS

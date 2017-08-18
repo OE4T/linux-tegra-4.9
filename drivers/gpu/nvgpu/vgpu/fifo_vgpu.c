@@ -20,6 +20,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/barrier.h>
 
 #include "vgpu/vgpu.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
@@ -42,7 +43,7 @@ static void vgpu_channel_bind(struct channel_gk20a *ch)
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 
-	wmb();
+	nvgpu_smp_wmb();
 	nvgpu_atomic_set(&ch->bound, true);
 }
 
@@ -370,7 +371,7 @@ static int vgpu_init_fifo_setup_hw(struct gk20a *g)
 		v = gk20a_bar1_readl(g, bar1_vaddr);
 
 		*cpu_vaddr = v1;
-		smp_mb();
+		nvgpu_smp_mb();
 
 		if (v1 != gk20a_bar1_readl(g, bar1_vaddr)) {
 			nvgpu_err(g, "bar1 broken @ gk20a!");
@@ -728,7 +729,7 @@ static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 
 	/* mark channel as faulted */
 	ch->has_timedout = true;
-	wmb();
+	nvgpu_smp_wmb();
 	/* unblock pending waits */
 	nvgpu_cond_broadcast_interruptible(&ch->semaphore_wq);
 	nvgpu_cond_broadcast_interruptible(&ch->notifier_wq);

@@ -31,6 +31,7 @@
 #include <nvgpu/firmware.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
@@ -554,8 +555,8 @@ int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 	gk20a_writel(g, gr_fecs_method_push_r(),
 		gr_fecs_method_push_adr_f(op.method.addr));
 
-	/* op.mb.id == 4 cases require waiting for completion on
-	 * for op.mb.id == 0 */
+	/* op.mailbox.id == 4 cases require waiting for completion on
+	 * for op.mailbox.id == 0 */
 	if (op.mailbox.id == 4)
 		op.mailbox.id = 0;
 

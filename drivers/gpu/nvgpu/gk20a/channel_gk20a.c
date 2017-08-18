@@ -35,6 +35,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/ltc.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a.h"
 #include "ctxsw_trace_gk20a.h"
@@ -245,9 +246,9 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 
 		/*
 		 * ensure put is read before any subsequent reads.
-		 * see corresponding wmb in gk20a_channel_add_job()
+		 * see corresponding nvgpu_smp_wmb in gk20a_channel_add_job()
 		 */
-		rmb();
+		nvgpu_smp_rmb();
 
 		while (tmp_get != put) {
 			job = &ch->joblist.pre_alloc.jobs[tmp_get];
@@ -618,7 +619,7 @@ unbind:
 	/* make sure we catch accesses of unopened channels in case
 	 * there's non-refcounted channel pointers hanging around */
 	ch->g = NULL;
-	wmb();
+	nvgpu_smp_wmb();
 
 	/* ALWAYS last */
 	free_channel(f, ch);
@@ -880,7 +881,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	 * gk20a_free_channel() */
 	ch->referenceable = true;
 	nvgpu_atomic_set(&ch->ref_count, 1);
-	wmb();
+	nvgpu_smp_wmb();
 
 	return ch;
 }
@@ -993,9 +994,9 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 
 	/*
 	 * commit the previous writes before making the entry valid.
-	 * see the corresponding rmb() in gk20a_free_priv_cmdbuf().
+	 * see the corresponding nvgpu_smp_rmb() in gk20a_free_priv_cmdbuf().
 	 */
-	wmb();
+	nvgpu_smp_wmb();
 
 	e->valid = true;
 	gk20a_dbg_fn("done");
@@ -1025,9 +1026,10 @@ static int channel_gk20a_alloc_job(struct channel_gk20a *c,
 
 		/*
 		 * ensure all subsequent reads happen after reading get.
-		 * see corresponding wmb in gk20a_channel_clean_up_jobs()
+		 * see corresponding nvgpu_smp_wmb in
+		 * gk20a_channel_clean_up_jobs()
 		 */
-		rmb();
+		nvgpu_smp_rmb();
 
 		if (CIRC_SPACE(put, get, c->joblist.pre_alloc.length))
 			*job_out = &c->joblist.pre_alloc.jobs[put];
@@ -1137,7 +1139,7 @@ bool channel_gk20a_is_prealloc_enabled(struct channel_gk20a *c)
 {
 	bool pre_alloc_enabled = c->joblist.pre_alloc.enabled;
 
-	rmb();
+	nvgpu_smp_rmb();
 	return pre_alloc_enabled;
 }
 
@@ -1194,9 +1196,10 @@ static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
 
 	/*
 	 * commit the previous writes before setting the flag.
-	 * see corresponding rmb in channel_gk20a_is_prealloc_enabled()
+	 * see corresponding nvgpu_smp_rmb in
+	 * channel_gk20a_is_prealloc_enabled()
 	 */
-	wmb();
+	nvgpu_smp_wmb();
 	c->joblist.pre_alloc.enabled = true;
 
 	return 0;
@@ -1218,9 +1221,10 @@ static void channel_gk20a_free_prealloc_resources(struct channel_gk20a *c)
 
 	/*
 	 * commit the previous writes before disabling the flag.
-	 * see corresponding rmb in channel_gk20a_is_prealloc_enabled()
+	 * see corresponding nvgpu_smp_rmb in
+	 * channel_gk20a_is_prealloc_enabled()
 	 */
-	wmb();
+	nvgpu_smp_wmb();
 	c->joblist.pre_alloc.enabled = false;
 }
 
@@ -1741,8 +1745,8 @@ static int __gk20a_channel_worker_wakeup(struct gk20a *g)
 	/*
 	 * Currently, the only work type is associated with a lock, which deals
 	 * with any necessary barriers. If a work type with no locking were
-	 * added, a a wmb() would be needed here. See ..worker_pending() for a
-	 * pair.
+	 * added, a nvgpu_smp_wmb() would be needed here. See
+	 * ..worker_pending() for a pair.
 	 */
 
 	put = nvgpu_atomic_inc_return(&g->channel_worker.put);
@@ -1764,8 +1768,9 @@ static bool __gk20a_channel_worker_pending(struct gk20a *g, int get)
 	bool pending = nvgpu_atomic_read(&g->channel_worker.put) != get;
 
 	/*
-	 * This would be the place for a rmb() pairing a wmb() for a wakeup
-	 * if we had any work with no implicit barriers caused by locking.
+	 * This would be the place for a nvgpu_smp_rmb() pairing
+	 * a nvgpu_smp_wmb() for a wakeup if we had any work with
+	 * no implicit barriers caused by locking.
 	 */
 
 	return pending;
@@ -1939,7 +1944,7 @@ int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 
 	if (e->valid) {
 		/* read the entry's valid flag before reading its contents */
-		rmb();
+		nvgpu_smp_rmb();
 		if ((q->get != e->off) && e->off != 0)
 			nvgpu_err(g, "requests out-of-order, ch=%d",
 				  c->chid);
@@ -1984,10 +1989,11 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 
 		/*
 		 * ensure all pending write complete before adding to the list.
-		 * see corresponding rmb in gk20a_channel_clean_up_jobs() &
+		 * see corresponding nvgpu_smp_rmb in
+		 * gk20a_channel_clean_up_jobs() &
 		 * gk20a_channel_abort_clean_up()
 		 */
-		wmb();
+		nvgpu_smp_wmb();
 		channel_gk20a_joblist_add(c, job);
 
 		if (!pre_alloc_enabled)
@@ -2061,10 +2067,10 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 		/*
 		 * ensure that all subsequent reads occur after checking
-		 * that we have a valid node. see corresponding wmb in
+		 * that we have a valid node. see corresponding nvgpu_smp_wmb in
 		 * gk20a_channel_add_job().
 		 */
-		rmb();
+		nvgpu_smp_rmb();
 		job = channel_gk20a_joblist_peek(c);
 		channel_gk20a_joblist_unlock(c);
 
@@ -2127,9 +2133,9 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 		/*
 		 * ensure all pending writes complete before freeing up the job.
-		 * see corresponding rmb in channel_gk20a_alloc_job().
+		 * see corresponding nvgpu_smp_rmb in channel_gk20a_alloc_job().
 		 */
-		wmb();
+		nvgpu_smp_wmb();
 
 		channel_gk20a_free_job(c, job);
 		job_finished = 1;

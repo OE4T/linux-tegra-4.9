@@ -18,6 +18,7 @@
 #include <nvgpu/allocator.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/barrier.h>
 
 #include "bitmap_allocator_priv.h"
 
@@ -40,7 +41,7 @@ static int nvgpu_bitmap_alloc_inited(struct nvgpu_allocator *a)
 	struct nvgpu_bitmap_allocator *ba = a->priv;
 	int inited = ba->inited;
 
-	rmb();
+	nvgpu_smp_rmb();
 	return inited;
 }
 
@@ -408,7 +409,7 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 		goto fail;
 	}
 
-	wmb();
+	nvgpu_smp_wmb();
 	a->inited = true;
 
 #ifdef CONFIG_DEBUG_FS

@@ -21,6 +21,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/log.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/barrier.h>
 
 #include <nvgpu/hw/gm20b/hw_ccsr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
@@ -50,7 +51,7 @@ void channel_gm20b_bind(struct channel_gk20a *c)
 		(gk20a_readl(g, ccsr_channel_r(c->chid)) &
 		 ~ccsr_channel_enable_set_f(~0)) |
 		 ccsr_channel_enable_set_true_f());
-	wmb();
+	nvgpu_smp_wmb();
 	nvgpu_atomic_set(&c->bound, true);
 }
 

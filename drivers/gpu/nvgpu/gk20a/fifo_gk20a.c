@@ -30,6 +30,7 @@
 #include <nvgpu/log2.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/nvhost.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a.h"
 #include "ctxsw_trace_gk20a.h"
@@ -966,7 +967,7 @@ int gk20a_init_fifo_setup_hw(struct gk20a *g)
 		v = gk20a_bar1_readl(g, bar1_vaddr);
 
 		*cpu_vaddr = v1;
-		smp_mb();
+		nvgpu_smp_mb();
 
 		if (v1 != gk20a_bar1_readl(g, bar1_vaddr)) {
 			nvgpu_err(g, "bar1 broken @ gk20a: CPU wrote 0x%x, \
@@ -1309,7 +1310,7 @@ static void gk20a_fifo_set_has_timedout_and_wake_up_wqs(struct gk20a *g,
 	if (refch) {
 		/* mark channel as faulted */
 		refch->has_timedout = true;
-		wmb();
+		nvgpu_smp_wmb();
 		/* unblock pending waits */
 		nvgpu_cond_broadcast_interruptible(&refch->semaphore_wq);
 		nvgpu_cond_broadcast_interruptible(&refch->notifier_wq);

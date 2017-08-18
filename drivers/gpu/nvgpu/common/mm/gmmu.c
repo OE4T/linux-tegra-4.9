@@ -21,6 +21,7 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/page_allocator.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -164,8 +165,8 @@ int nvgpu_gmmu_init_page_table(struct vm_gk20a *vm)
 		return err;
 
 	/*
-	 * One mb() is done after all mapping operations. Don't need individual
-	 * barriers for each PD write.
+	 * One nvgpu_smp_mb() is done after all mapping operations. Don't need
+	 * individual barriers for each PD write.
 	 */
 	vm->pdb.mem->skip_wmb = true;
 
@@ -259,8 +260,8 @@ static int pd_allocate(struct vm_gk20a *vm,
 	}
 
 	/*
-	 * One mb() is done after all mapping operations. Don't need individual
-	 * barriers for each PD write.
+	 * One nvgpu_smp_mb() is done after all mapping operations. Don't need
+	 * individual barriers for each PD write.
 	 */
 	pd->mem->skip_wmb = true;
 
@@ -714,7 +715,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 							    attrs);
 
 	unmap_gmmu_pages(g, &vm->pdb);
-	mb();
+	nvgpu_smp_mb();
 
 	__gmmu_dbg(g, attrs, "%-5s Done!", sgt ? "MAP" : "UNMAP");
 
@@ -983,7 +984,7 @@ int __nvgpu_set_pte(struct gk20a *g, struct vm_gk20a *vm, u64 vaddr, u32 *pte)
 	 * There probably also needs to be a TLB invalidate as well but we leave
 	 * that to the caller of this function.
 	 */
-	wmb();
+	nvgpu_smp_wmb();
 
 	return 0;
 }

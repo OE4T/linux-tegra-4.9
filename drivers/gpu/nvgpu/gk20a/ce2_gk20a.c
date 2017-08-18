@@ -27,6 +27,7 @@
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
+#include <nvgpu/barrier.h>
 
 static u32 ce2_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {
@@ -654,7 +655,7 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 		/* take always the postfence as it is needed for protecting the ce context */
 		submit_flags |= NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET;
 
-		wmb();
+		nvgpu_smp_wmb();
 
 		ret = gk20a_submit_channel_gpfifo(ce_ctx->ch, &gpfifo, NULL,
 					1, submit_flags, &fence,

@@ -22,6 +22,7 @@
 #include <nvgpu/hashtable.h>
 #include <nvgpu/circ_buf.h>
 #include <nvgpu/thread.h>
+#include <nvgpu/barrier.h>
 
 #include "ctxsw_trace_gk20a.h"
 #include "fecs_trace_gk20a.h"
@@ -370,7 +371,7 @@ int gk20a_fecs_trace_poll(struct gk20a *g)
 	}
 
 	/* ensure FECS records has been updated before incrementing read index */
-	wmb();
+	nvgpu_smp_wmb();
 	gk20a_fecs_trace_set_read_index(g, read);
 
 done:

@@ -27,6 +27,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/kref.h>
 #include <nvgpu/log.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/gk20a.h"
 #include "clk/clk_arb.h"
@@ -386,7 +387,7 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 		goto init_fail;
 	do {
 		/* Check that first run is completed */
-		smp_mb();
+		nvgpu_smp_mb();
 		wait_event_interruptible(arb->request_wq,
 			nvgpu_atomic_read(&arb->req_nr));
 	} while (!nvgpu_atomic_read(&arb->req_nr));
@@ -578,7 +579,7 @@ int nvgpu_clk_arb_init_session(struct gk20a *g,
 	session->target_pool[0].pstate = CTRL_PERF_PSTATE_P8;
 	/* make sure that the initialization of the pool is visible
 	 * before the update */
-	smp_wmb();
+	nvgpu_smp_wmb();
 	session->target = &session->target_pool[0];
 
 	init_llist_head(&session->targets);
@@ -706,7 +707,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 	table = ACCESS_ONCE(arb->current_vf_table);
 	/* make flag visible when all data has resolved in the tables */
-	smp_rmb();
+	nvgpu_smp_rmb();
 
 	table = (table == &arb->vf_table_pool[0]) ? &arb->vf_table_pool[1] :
 		&arb->vf_table_pool[0];
@@ -980,7 +981,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 	}
 
 	/* make table visible when all data has resolved in the tables */
-	smp_wmb();
+	nvgpu_smp_wmb();
 	xchg(&arb->current_vf_table, table);
 
 exit_vf_table:
@@ -1077,7 +1078,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 					&session->target_pool[1] :
 					&session->target_pool[0];
 			/* Do not reorder pointer */
-			smp_rmb();
+			nvgpu_smp_rmb();
 			head = llist_del_all(&session->targets);
 			if (head) {
 
@@ -1102,7 +1103,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 					llist_add(&dev->node, &arb->requests);
 				}
 				/* Ensure target is updated before ptr sawp */
-				smp_wmb();
+				nvgpu_smp_wmb();
 				xchg(&session->target, target);
 			}
 
@@ -1148,7 +1149,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	if (pstate == VF_POINT_INVALID_PSTATE) {
 		arb->status = -EINVAL;
 		/* make status visible */
-		smp_mb();
+		nvgpu_smp_mb();
 		goto exit_arb;
 	}
 
@@ -1175,7 +1176,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
-		smp_mb();
+		nvgpu_smp_mb();
 		goto exit_arb;
 	}
 	status = volt_set_noiseaware_vmin(g, nuvmin, nuvmin_sram);
@@ -1184,7 +1185,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
-		smp_mb();
+		nvgpu_smp_mb();
 		goto exit_arb;
 	}
 
@@ -1196,7 +1197,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
-		smp_mb();
+		nvgpu_smp_mb();
 		goto exit_arb;
 	}
 
@@ -1206,7 +1207,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
-		smp_mb();
+		nvgpu_smp_mb();
 		goto exit_arb;
 	}
 
@@ -1216,7 +1217,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
-		smp_mb();
+		nvgpu_smp_mb();
 		goto exit_arb;
 	}
 
@@ -1224,7 +1225,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 			&arb->actual_pool[1] : &arb->actual_pool[0];
 
 	/* do not reorder this pointer */
-	smp_rmb();
+	nvgpu_smp_rmb();
 	actual->gpc2clk = gpc2clk_target;
 	actual->mclk = mclk_target;
 	arb->voltuv_actual = voltuv;
@@ -1232,7 +1233,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	arb->status = status;
 
 	/* Make changes visible to other threads */
-	smp_wmb();
+	nvgpu_smp_wmb();
 	xchg(&arb->actual, actual);
 
 	status = nvgpu_lpwr_enable_pg(g, false);
@@ -1241,12 +1242,12 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
-		smp_mb();
+		nvgpu_smp_mb();
 		goto exit_arb;
 	}
 
 	/* status must be visible before atomic inc */
-	smp_wmb();
+	nvgpu_smp_wmb();
 	nvgpu_atomic_inc(&arb->req_nr);
 
 	/* Unlock pstate change for PG */
@@ -1287,7 +1288,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 			(curr - debug->switch_avg) * (curr - prev_avg);
 	}
 	/* commit changes before exchanging debug pointer */
-	smp_wmb();
+	nvgpu_smp_wmb();
 	xchg(&arb->debug, debug);
 #endif
 
@@ -1687,7 +1688,7 @@ int nvgpu_clk_arb_get_session_target_mhz(struct nvgpu_clk_session *session,
 	do {
 		target = ACCESS_ONCE(session->target);
 		/* no reordering of this pointer */
-		smp_rmb();
+		nvgpu_smp_rmb();
 
 		switch (api_domain) {
 		case NVGPU_GPU_CLK_DOMAIN_MCLK:
@@ -1716,7 +1717,7 @@ int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 	do {
 		actual = ACCESS_ONCE(arb->actual);
 		/* no reordering of this pointer */
-		smp_rmb();
+		nvgpu_smp_rmb();
 
 		switch (api_domain) {
 		case NVGPU_GPU_CLK_DOMAIN_MCLK:
@@ -1854,7 +1855,7 @@ static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 
 		table = ACCESS_ONCE(arb->current_vf_table);
 		/* pointer to table can be updated by callback */
-		smp_rmb();
+		nvgpu_smp_rmb();
 
 		if (!table)
 			continue;
@@ -2039,7 +2040,7 @@ static int nvgpu_clk_arb_stats_show(struct seq_file *s, void *unused)
 
 	debug = ACCESS_ONCE(arb->debug);
 	/* Make copy of structure and ensure no reordering */
-	smp_rmb();
+	nvgpu_smp_rmb();
 	if (!debug)
 		return -EINVAL;
 

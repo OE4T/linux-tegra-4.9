@@ -29,6 +29,7 @@
 
 #include <nvgpu/log.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/barrier.h>
 
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
@@ -635,7 +636,7 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 	dev->ents[write_idx] = *entry;
 
 	/* ensure record is written before updating write index */
-	smp_wmb();
+	nvgpu_smp_wmb();
 
 	write_idx++;
 	if (unlikely(write_idx >= hdr->num_ents))

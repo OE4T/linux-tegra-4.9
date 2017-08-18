@@ -18,6 +18,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -1064,7 +1065,7 @@ static int nvgpu_buddy_alloc_inited(struct nvgpu_allocator *a)
 	struct nvgpu_buddy_allocator *ba = a->priv;
 	int inited = ba->initialized;
 
-	rmb();
+	nvgpu_smp_rmb();
 	return inited;
 }
 
@@ -1289,7 +1290,7 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	if (err)
 		goto fail;
 
-	wmb();
+	nvgpu_smp_wmb();
 	a->initialized = 1;
 
 #ifdef CONFIG_DEBUG_FS

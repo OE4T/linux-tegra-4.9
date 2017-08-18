@@ -16,6 +16,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/gk20a.h"
 
@@ -394,7 +395,7 @@ void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
 	}
 
 	/* make status visible */
-	smp_mb();
+	nvgpu_smp_mb();
 }
 
 static int nvgpu_pg_init_task(void *arg)

@@ -14,6 +14,7 @@
 #include <nvgpu/pmu.h>
 #include <nvgpu/log.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/gk20a.h"
 
@@ -84,7 +85,7 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 					true);
 				WRITE_ONCE(pmu->mscg_stat, PMU_MSCG_DISABLED);
 				/* make status visible */
-				smp_mb();
+				nvgpu_smp_mb();
 			} else
 				nvgpu_pmu_state_change(g, PMU_STATE_ELPG_BOOTED,
 					true);

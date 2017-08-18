@@ -49,6 +49,7 @@ struct nvgpu_cpu_time_correlation_sample;
 #include <nvgpu/falcon.h>
 #include <nvgpu/pmu.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/barrier.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -1324,7 +1325,7 @@ static inline void gk20a_writel(struct gk20a *g, u32 r, u32 v)
 		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
 	} else {
 		writel_relaxed(v, g->regs + r);
-		wmb();
+		nvgpu_smp_wmb();
 		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x", r, v);
 	}
 }
@@ -1351,7 +1352,7 @@ static inline void gk20a_writel_check(struct gk20a *g, u32 r, u32 v)
 		__gk20a_warn_on_no_regs();
 		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
 	} else {
-		wmb();
+		nvgpu_smp_wmb();
 		do {
 			writel_relaxed(v, g->regs + r);
 		} while (readl(g->regs + r) != v);
@@ -1365,7 +1366,7 @@ static inline void gk20a_bar1_writel(struct gk20a *g, u32 b, u32 v)
 		__gk20a_warn_on_no_regs();
 		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x (failed)", b, v);
 	} else {
-		wmb();
+		nvgpu_smp_wmb();
 		writel_relaxed(v, g->bar1 + b);
 		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x", b, v);
 	}

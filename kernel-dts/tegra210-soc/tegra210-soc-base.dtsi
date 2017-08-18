@@ -131,10 +131,11 @@
 	};
 
 	tlk {
-		compatible = "nvidia,trusted-little-kernel";
-		logger = "enabled";
-		storage = "enabled";
+		compatible = "android,tlk-driver";
 		status = "disabled";
+		log  {
+			compatible = "android,ote-logger";
+		};
 	};
 
 	arm-pmu {

@@ -78,6 +78,7 @@
 #define CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
 #define FECS_ARB_CMD_TIMEOUT_MAX 40
 #define FECS_ARB_CMD_TIMEOUT_DEFAULT 2
+#define GFXP_WFI_TIMEOUT_COUNT_DEFAULT 100000
 
 static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g);
 
@@ -4840,6 +4841,8 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 
 	if (g->ops.gr.init_czf_bypass)
 		g->ops.gr.init_czf_bypass(g);
+
+	gr->gfxp_wfi_timeout_count = GFXP_WFI_TIMEOUT_COUNT_DEFAULT;
 
 	nvgpu_mutex_init(&gr->ctx_mutex);
 	nvgpu_spinlock_init(&gr->ch_tlb_lock);

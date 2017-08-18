@@ -954,6 +954,52 @@ static ssize_t pd_max_batches_read(struct device *dev,
 
 static DEVICE_ATTR(pd_max_batches, ROOTRW, pd_max_batches_read, pd_max_batches_store);
 
+static ssize_t gfxp_wfi_timeout_count_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct gk20a *g = get_gk20a(dev);
+	struct gr_gk20a *gr = &g->gr;
+	unsigned long val = 0;
+	int err = -1;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (val >= 100*1000*1000) /* 100ms @ 1Ghz */
+		return -EINVAL;
+
+	gr->gfxp_wfi_timeout_count = val;
+
+	if (g->ops.gr.init_preemption_state && g->power_on) {
+		err = gk20a_busy(g);
+		if (err)
+			return err;
+
+		err = gr_gk20a_elpg_protected_call(g,
+			g->ops.gr.init_preemption_state(g));
+
+		gk20a_idle(g);
+
+		if (err)
+			return err;
+	}
+
+	return count;
+}
+
+static ssize_t gfxp_wfi_timeout_count_read(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+	struct gr_gk20a *gr = &g->gr;
+	u32 val = gr->gfxp_wfi_timeout_count;
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", val);
+}
+
+static DEVICE_ATTR(gfxp_wfi_timeout_count, (S_IRWXU|S_IRGRP|S_IROTH),
+		gfxp_wfi_timeout_count_read, gfxp_wfi_timeout_count_store);
+
 
 void nvgpu_remove_sysfs(struct device *dev)
 {
@@ -989,6 +1035,7 @@ void nvgpu_remove_sysfs(struct device *dev)
 
 	device_remove_file(dev, &dev_attr_czf_bypass);
 	device_remove_file(dev, &dev_attr_pd_max_batches);
+	device_remove_file(dev, &dev_attr_gfxp_wfi_timeout_count);
 
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;
@@ -1035,6 +1082,7 @@ int nvgpu_create_sysfs(struct device *dev)
 
 	error |= device_create_file(dev, &dev_attr_czf_bypass);
 	error |= device_create_file(dev, &dev_attr_pd_max_batches);
+	error |= device_create_file(dev, &dev_attr_gfxp_wfi_timeout_count);
 
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;

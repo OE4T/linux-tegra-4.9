@@ -75,7 +75,7 @@ obj-$(CONFIG_SND_SOC_TEGRA_T210REF_P2382_ALT) += snd-soc-tegra-alt-machine.o
 snd-soc-tegra186-alt-asrc-objs := tegra186_asrc_alt.o
 snd-soc-tegra186-alt-arad-objs := tegra186_arad_alt.o
 snd-soc-tegra186-alt-dspk-objs := tegra186_dspk_alt.o
-snd-soc-tegra-asoc-machine-alt-t18x-objs := tegra_asoc_machine_alt_t18x.o tegra_asoc_machine_alt.o
+snd-soc-tegra-asoc-machine-alt-t18x-objs := tegra_asoc_machine_alt_t18x.o
 
 obj-$(CONFIG_SND_SOC_TEGRA186_ARAD_ALT) += snd-soc-tegra186-alt-arad.o
 obj-$(CONFIG_SND_SOC_TEGRA186_ASRC_ALT) += snd-soc-tegra186-alt-asrc.o

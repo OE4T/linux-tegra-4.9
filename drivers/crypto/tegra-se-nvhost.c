@@ -708,7 +708,7 @@ static unsigned int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes)
 
 	while (sl) {
 		sg_nents++;
-		nbytes -= min(sl->length, nbytes);
+		nbytes -= min(sl->length, (size_t)nbytes);
 		if (!nbytes)
 			break;
 		sl = sg_next(sl);
@@ -1439,8 +1439,8 @@ static int tegra_map_sg(struct device *dev, struct scatterlist *sg,
 			return ret;
 		}
 		se_ll->addr = sg_dma_address(sg);
-		se_ll->data_len = min(sg->length, total_loop);
-		total_loop -= min(sg->length, total_loop);
+		se_ll->data_len = min(sg->length, (size_t)total_loop);
+		total_loop -= min(sg->length, (size_t)total_loop);
 		sg = sg_next(sg);
 		se_ll++;
 	}

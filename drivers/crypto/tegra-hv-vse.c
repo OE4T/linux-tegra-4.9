@@ -520,7 +520,7 @@ static int tegra_hv_vse_prepare_ivc_linked_list(
 			goto exit;
 		}
 		sg_count++;
-		len = min(src_sg->length, total_len);
+		len = min(src_sg->length, (size_t)total_len);
 		addr = sg_dma_address(src_sg);
 		addr_offset = 0;
 		while (len >= TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE) {

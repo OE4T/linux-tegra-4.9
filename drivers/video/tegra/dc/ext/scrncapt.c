@@ -113,7 +113,7 @@ static size_t scrncapt_copy_dcbuf(void  __user *pDst,
 		size_t  ofs, l;
 		unsigned long  flags;
 
-		pr_debug("@@ %s: copy to %p from %p(PA=%llx) nents=%d len=%lu\n",
+		pr_debug("@@ %s: copy to %p from %p(PA=%llx) nents=%u len=%zu\n",
 			__func__, pDst, sg_virt(&pSrcBuf->sgt->sgl[0]),
 			sg_phys(&pSrcBuf->sgt->sgl[0]),
 			pSrcBuf->sgt->nents, len);
@@ -136,13 +136,13 @@ static size_t scrncapt_copy_dcbuf(void  __user *pDst,
 
 			ofs += l;
 			if (sg->offset) {
-				pr_debug("@@!! %s.%d: sgl[].offset:%d\n",
+				pr_debug("@@!! %s.%d: sgl[].offset:%lu\n",
 					__func__, __LINE__, sg->offset);
 			}
 		}
 		local_irq_restore(flags);
 		if (ofs != len) {
-			pr_debug("@@!! %s.%d: copied only %lu out of %lu\n",
+			pr_debug("@@!! %s.%d: copied only %lu out of %zu\n",
 				__func__, __LINE__, ofs, len);
 		}
 		copied = ofs;

@@ -308,6 +308,7 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 	int err = 0;
 	struct ov5693 *priv = (struct ov5693 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	u32 frame_time;
 
 	dev_dbg(&priv->i2c_client->dev, "%s: power on\n", __func__);
 
@@ -351,8 +352,22 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 	usleep_range(2000, 2010);
 
 	pw->state = SWITCH_ON;
+
+	/*
+	 * need SW standby LP11 for mipical.
+	 * sensor default is LP00, this will transition to LP11
+	 */
 	ov5693_write_reg(s_data, 0x0100, 0x1);
 	ov5693_write_reg(s_data, 0x0100, 0x0);
+	/*
+	 * Sleep to allow SW reset to settle into LP11. After writing
+	 * 0x1, according to the datasheet, it could take the remainder
+	 * of the frame tiem to settle.  Streaming too soon after this
+	 * may have unintended consequences.
+	 */
+	frame_time = OV5693_DEFAULT_FRAME_LENGTH *
+			OV5693_DEFAULT_LINE_LENGTH / OV5693_DEFAULT_PIXEL_CLOCK;
+	usleep_range(frame_time, frame_time + 1000);
 
 	return 0;
 

@@ -22,15 +22,24 @@
 		status = "disabled";
 	};
 
-	tegra-hsp@29a0000 { /* Do not use SCE HSP */
+	/* SCE HSP is not disabled, it can be used by Safety FW */
+
+	rtcpu@b000000 {	/* Do not use SCE as camera-rtcpu */
 		status = "disabled";
 	};
 
-	rtcpu@b000000 {	/* Do not use SCE as camera-rtcpu */
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@2a41000 {
+#endif
+	tegra-hsp@29a0000 { /* Do not use APE HSP */
 		status = "disabled";
 	};
 
 	rtcpu@2993000 {	/* Do not use APE as camera-rtcpu */
 		status = "disabled";
 	};
+
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#endif
 };

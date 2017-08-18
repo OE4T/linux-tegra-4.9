@@ -1311,7 +1311,7 @@ static int _tegra_nvdisp_set_ec_output_lut(struct tegra_dc *dc,
 	if (!nvdisp_lut)
 		return -ENOMEM;
 
-	if (mode->vmode & FB_VMODE_EC_ENABLE) {
+	if (mode->vmode & FB_VMODE_SET_YUV_MASK) {
 		if (mode->vmode & FB_VMODE_Y24 ||
 		    mode->vmode & FB_VMODE_Y30) {
 			nvdisp_copy_output_lut(nvdisp_lut->rgb,
@@ -1329,42 +1329,53 @@ static int _tegra_nvdisp_set_ec_output_lut(struct tegra_dc *dc,
 
 void tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 {
-	u32 csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
+	u32 csc2_control;
 
 	/* If mode is not dirty, then set user cached csc2 values */
 	if (!dc->mode_dirty) {
 		csc2_control = dc->cached_settings.csc2_control;
 		goto write_reg;
 	}
-	/* Check whether the extended colorimetry
-	 * is requested in mode set for output csc
-	 */
 
-	if (mode->vmode & FB_VMODE_EC_ENABLE) {
-		u32 ec = mode->vmode & FB_VMODE_EC_MASK;
-		if ((ec == FB_VMODE_EC_ADOBE_YCC601) ||
-			(ec == FB_VMODE_EC_SYCC601) ||
-			(ec == FB_VMODE_EC_XVYCC601))
-			csc2_control =
-				nvdisp_csc2_control_output_color_sel_y601_f();
-		else if ((ec == FB_VMODE_EC_BT2020_CYCC) ||
-			(ec == FB_VMODE_EC_BT2020_YCC_RGB))
-			csc2_control =
-				nvdisp_csc2_control_output_color_sel_y2020_f();
-		else if (ec == FB_VMODE_EC_XVYCC709)
-			csc2_control =
-				nvdisp_csc2_control_output_color_sel_y709_f();
+	if (mode->vmode & FB_VMODE_BYPASS) {
+		/* Use rgb ocsc and disable range scaling for yuv bypass. */
+		csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f() |
+		               nvdisp_csc2_control_limit_rgb_disable_f();
+		goto update_cache;
 	}
 
-	/* For yuv-bypass - set to default */
-	if (dc->yuv_bypass)
-		csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
+	if (mode->vmode & FB_VMODE_YUV_MASK) {
+		u32 ec = mode->vmode & (FB_VMODE_EC_MASK & ~FB_VMODE_EC_ENABLE);
 
-	if ((dc->mode.vmode & FB_VMODE_LIMITED_RANGE) && (!dc->yuv_bypass))
+		switch (ec) {
+		case FB_VMODE_EC_ADOBE_YCC601:
+		case FB_VMODE_EC_SYCC601:
+		case FB_VMODE_EC_XVYCC601:
+			csc2_control =
+				nvdisp_csc2_control_output_color_sel_y601_f();
+			break;
+		case FB_VMODE_EC_XVYCC709:
+		default:
+			csc2_control =
+				nvdisp_csc2_control_output_color_sel_y709_f();
+			break;
+		case FB_VMODE_EC_BT2020_CYCC:
+		case FB_VMODE_EC_BT2020_YCC_RGB:
+			csc2_control =
+				nvdisp_csc2_control_output_color_sel_y2020_f();
+			break;
+		}
+
+	} else {
+		csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
+	}
+
+	if (dc->mode.vmode & FB_VMODE_LIMITED_RANGE)
 		csc2_control |= nvdisp_csc2_control_limit_rgb_enable_f();
 	else
 		csc2_control |= nvdisp_csc2_control_limit_rgb_disable_f();
 
+update_cache:
 	/* Set user data cache */
 	dc->cached_settings.csc2_control = csc2_control;
 

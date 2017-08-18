@@ -26,7 +26,9 @@
 #include <dt-bindings/gpio/tegra194-gpio.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra194-swgroup.h>
+#include "dt-bindings/soc/tegra194-powergate.h"
 #include "tegra194-soc/tegra194-soc-sata.dtsi"
+#include "tegra194-soc/tegra194-soc-power-domain.dtsi"
 #include "tegra194-trusty.dtsi"
 #include "tegra194-soc-uart.dtsi"
 #include "tegra194-soc-ufshc.dtsi"

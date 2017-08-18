@@ -483,9 +483,11 @@ int gv100_init_hal(struct gk20a *g)
 
 	gops->ltc = gv100_ops.ltc;
 	gops->ce2 = gv100_ops.ce2;
+	gops->fb = gv100_ops.fb;
 	gops->clock_gating = gv100_ops.clock_gating;
 	gops->fifo = gv100_ops.fifo;
 	gops->gr_ctx = gv100_ops.gr_ctx;
+	gops->mm = gv100_ops.mm;
 	gops->fecs_trace = gv100_ops.fecs_trace;
 	gops->pramin = gv100_ops.pramin;
 	gops->therm = gv100_ops.therm;

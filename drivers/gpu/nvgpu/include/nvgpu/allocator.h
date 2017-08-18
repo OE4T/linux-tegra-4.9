@@ -281,20 +281,6 @@ static inline void nvgpu_alloc_disable_dbg(struct nvgpu_allocator *a)
 /*
  * Debug stuff.
  */
-extern u32 nvgpu_alloc_tracing_on;
-
-#define nvgpu_alloc_trace_func()			\
-	do {						\
-		if (nvgpu_alloc_tracing_on)		\
-			trace_printk("%s\n", __func__);	\
-	} while (0)
-
-#define nvgpu_alloc_trace_func_done()				\
-	do {							\
-		if (nvgpu_alloc_tracing_on)			\
-			trace_printk("%s_done\n", __func__);	\
-	} while (0)
-
 #define __alloc_pstat(seq, allocator, fmt, arg...)		\
 	do {							\
 		if (s)						\

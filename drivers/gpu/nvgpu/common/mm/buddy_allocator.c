@@ -785,8 +785,6 @@ static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
 	int pte_size;
 	struct nvgpu_buddy_allocator *a = __a->priv;
 
-	nvgpu_alloc_trace_func();
-
 	alloc_lock(__a);
 
 	order = balloc_get_order(a, len);
@@ -794,7 +792,6 @@ static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
 	if (order > a->max_order) {
 		alloc_unlock(__a);
 		alloc_dbg(balloc_owner(a), "Alloc fail\n");
-		nvgpu_alloc_trace_func_done();
 		return 0;
 	}
 
@@ -822,7 +819,6 @@ static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
 
 	alloc_unlock(__a);
 
-	nvgpu_alloc_trace_func_done();
 	return addr;
 }
 
@@ -837,8 +833,6 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 	struct nvgpu_buddy *bud;
 	struct nvgpu_fixed_alloc *falloc = NULL;
 	struct nvgpu_buddy_allocator *a = __a->priv;
-
-	nvgpu_alloc_trace_func();
 
 	/* If base isn't aligned to an order 0 block, fail. */
 	if (base & (a->blk_size - 1))
@@ -890,14 +884,12 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 
 	alloc_dbg(balloc_owner(a), "Alloc (fixed) 0x%llx\n", base);
 
-	nvgpu_alloc_trace_func_done();
 	return base;
 
 fail_unlock:
 	alloc_unlock(__a);
 fail:
 	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), falloc);
-	nvgpu_alloc_trace_func_done();
 	return 0;
 }
 
@@ -932,12 +924,8 @@ static void nvgpu_buddy_bfree(struct nvgpu_allocator *__a, u64 addr)
 	struct nvgpu_fixed_alloc *falloc;
 	struct nvgpu_buddy_allocator *a = __a->priv;
 
-	nvgpu_alloc_trace_func();
-
-	if (!addr) {
-		nvgpu_alloc_trace_func_done();
+	if (!addr)
 		return;
-	}
 
 	alloc_lock(__a);
 
@@ -966,7 +954,6 @@ static void nvgpu_buddy_bfree(struct nvgpu_allocator *__a, u64 addr)
 done:
 	alloc_unlock(__a);
 	alloc_dbg(balloc_owner(a), "Free 0x%llx\n", addr);
-	nvgpu_alloc_trace_func_done();
 	return;
 }
 

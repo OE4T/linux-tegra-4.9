@@ -20,8 +20,6 @@
 
 #include <nvgpu/allocator.h>
 
-u32 nvgpu_alloc_tracing_on;
-
 void nvgpu_alloc_print_stats(struct nvgpu_allocator *__a,
 			     struct seq_file *s, int lock)
 {
@@ -76,7 +74,4 @@ void nvgpu_alloc_debugfs_init(struct gk20a *g)
 		l->debugfs_allocators = NULL;
 		return;
 	}
-
-	debugfs_create_u32("tracing", 0664, l->debugfs_allocators,
-			   &nvgpu_alloc_tracing_on);
 }

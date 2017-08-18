@@ -448,11 +448,13 @@ static struct hc_driver __read_mostly tegra_xhci_hc_driver;
 
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 static const struct of_device_id tegra_xusba_pd[] = {
+	{ .compatible = "nvidia,tegra194-xusba-pd", },
 	{ .compatible = "nvidia,tegra186-xusba-pd", },
 	{},
 };
 
 static const struct of_device_id tegra_xusbc_pd[] = {
+	{ .compatible = "nvidia,tegra194-xusbc-pd", },
 	{ .compatible = "nvidia,tegra186-xusbc-pd", },
 	{},
 };
@@ -2333,7 +2335,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 			return PTR_ERR(tegra->ipfs_base);
 	}
 
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
+	if (!tegra->soc->is_xhci_vf) {
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		tegra->pgid_ss = tegra_pd_get_powergate_id(tegra_xusba_pd);
 #else
@@ -2497,7 +2499,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 		goto disable_regulator;
 	}
 
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
+	if (!tegra->soc->is_xhci_vf) {
 		err = tegra_xhci_unpowergate_partitions(tegra);
 		if (err) {
 			dev_err(&pdev->dev, "failed to unpowergate (%d)\n",
@@ -2561,7 +2563,7 @@ unregister_extcon:
 		}
 	}
 powergate_partitions:
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf)
+	if (!tegra->soc->is_xhci_vf)
 		tegra_xhci_powergate_partitions(tegra);
 disable_phy:
 	tegra_xusb_debugfs_deinit(tegra);
@@ -2614,8 +2616,10 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 		regulator_bulk_disable(tegra->soc->num_supplies,
 				tegra->supplies);
 		tegra_xusb_clk_disable(tegra);
-		tegra_xhci_powergate_partitions(tegra);
 	}
+
+	if (!tegra->soc->is_xhci_vf)
+		tegra_xhci_powergate_partitions(tegra);
 
 	tegra_xusb_padctl_put(tegra->padctl);
 
@@ -2978,7 +2982,7 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 			phy_exit(tegra->phys[i]);
 	}
 
-	if (!tegra->soc->is_xhci_vf)
+	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf)
 		tegra_xusb_clk_disable(tegra);
 
 out:
@@ -3016,7 +3020,9 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 			dev_warn(dev, "failed to enable xhci clocks %d\n", ret);
 			goto out;
 		}
+	}
 
+	if (!tegra->soc->is_xhci_vf) {
 		ret = tegra_xhci_unpowergate_partitions(tegra);
 		if (ret < 0) {
 			dev_warn(dev, "failed to unpowergate partitions %d\n",

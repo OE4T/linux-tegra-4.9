@@ -16,7 +16,9 @@
 #ifndef __NVGPU_ATOMIC_LINUX_H__
 #define __NVGPU_ATOMIC_LINUX_H__
 
+#ifdef __KERNEL__
 #include <linux/atomic.h>
+#endif
 
 typedef struct nvgpu_atomic {
   atomic_t atomic_var;

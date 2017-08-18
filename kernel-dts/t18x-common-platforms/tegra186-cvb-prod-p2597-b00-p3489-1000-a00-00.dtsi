@@ -121,28 +121,6 @@
 				label = "vpp-en-rail", "vmm-en-rail";
 			};
 		};
-
-		/* outp,outn enable gpios set through plugin manager dt */
-		tps65132@3e {
-			reg = <0x3e>;
-			compatible = "ti,tps65132";
-			status = "okay";
-			vpp_lcd: outp {
-				regulator-name = "outp";
-				regulator-min-microvolt = <4000000>;
-				regulator-max-microvolt = <6000000>;
-				enable-active-high;
-			};
-
-			vmm_lcd: outn {
-				regulator-name = "outn";
-				regulator-min-microvolt = <4000000>;
-				regulator-max-microvolt = <6000000>;
-				enable-active-high;
-				ti,disable-active-discharge;
-			};
-		};
-
 	};
 
 	fixed-regulators {

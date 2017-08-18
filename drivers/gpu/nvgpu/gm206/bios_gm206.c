@@ -11,13 +11,10 @@
  * more details.
  */
 
-#include <linux/pci.h>
-
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/timers.h>
-#include <nvgpu/firmware.h>
 #include <nvgpu/falcon.h>
 #include <nvgpu/enabled.h>
 
@@ -176,48 +173,25 @@ int gm206_bios_init(struct gk20a *g)
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *d;
 #endif
-	struct nvgpu_firmware *bios_fw;
 	int err;
-	struct pci_dev *pdev = to_pci_dev(dev_from_gk20a(g));
-	char rom_name[sizeof(BIOS_OVERLAY_NAME_FORMATTED)];
 
 	gk20a_dbg_fn("");
 
-	snprintf(rom_name, sizeof(rom_name), BIOS_OVERLAY_NAME, pdev->device);
-	gk20a_dbg_info("checking for VBIOS overlay %s", rom_name);
-	bios_fw = nvgpu_request_firmware(g, rom_name,
-			NVGPU_REQUEST_FIRMWARE_NO_WARN |
-			NVGPU_REQUEST_FIRMWARE_NO_SOC);
-	if (bios_fw) {
-		gk20a_dbg_info("using VBIOS overlay");
-		g->bios.size = bios_fw->size - ROM_FILE_PAYLOAD_OFFSET;
-		g->bios.data = vmalloc(g->bios.size);
-		if (!g->bios.data) {
-			err = -ENOMEM;
-			goto free_firmware;
-		}
+	gk20a_dbg_info("reading bios from EEPROM");
+	g->bios.size = BIOS_SIZE;
+	g->bios.data = nvgpu_vmalloc(g, BIOS_SIZE);
+	if (!g->bios.data)
+		return -ENOMEM;
+	g->ops.xve.disable_shadow_rom(g);
+	for (i = 0; i < g->bios.size/4; i++) {
+		u32 val = be32_to_cpu(gk20a_readl(g, 0x300000 + i*4));
 
-		memcpy(g->bios.data, &bios_fw->data[ROM_FILE_PAYLOAD_OFFSET],
-		       g->bios.size);
-
-		nvgpu_release_firmware(g, bios_fw);
-	} else {
-		gk20a_dbg_info("reading bios from EEPROM");
-		g->bios.size = BIOS_SIZE;
-		g->bios.data = nvgpu_vmalloc(g, BIOS_SIZE);
-		if (!g->bios.data)
-			return -ENOMEM;
-		g->ops.xve.disable_shadow_rom(g);
-		for (i = 0; i < g->bios.size/4; i++) {
-			u32 val = be32_to_cpu(gk20a_readl(g, 0x300000 + i*4));
-
-			g->bios.data[(i*4)] = (val >> 24) & 0xff;
-			g->bios.data[(i*4)+1] = (val >> 16) & 0xff;
-			g->bios.data[(i*4)+2] = (val >> 8) & 0xff;
-			g->bios.data[(i*4)+3] = val & 0xff;
-		}
-		g->ops.xve.enable_shadow_rom(g);
+		g->bios.data[(i*4)] = (val >> 24) & 0xff;
+		g->bios.data[(i*4)+1] = (val >> 16) & 0xff;
+		g->bios.data[(i*4)+2] = (val >> 8) & 0xff;
+		g->bios.data[(i*4)+3] = val & 0xff;
 	}
+	g->ops.xve.enable_shadow_rom(g);
 
 	err = nvgpu_bios_parse_rom(g);
 	if (err)
@@ -263,8 +237,4 @@ int gm206_bios_init(struct gk20a *g)
 	}
 
 	return 0;
-
-free_firmware:
-	nvgpu_release_firmware(g, bios_fw);
-	return err;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -148,17 +148,25 @@ enum pva_task_parameter_type_e {
 	PVA_PARAM_SURFACE_LIST	= 1U,
 	PVA_PARAM_ROI_LIST	= 2U,
 	PVA_PARAM_2DPOINTS_LIST	= 3U,
-	PVA_PARAM_POINTER_LIST	= 4U,
+	PVA_PARAM_OPAQUE_DATA	= 4U,
 	PVA_PARAM_LAST		= 5U,		/* must be last! */
 };
 
+#define PVA_TASK_POINTER_AUX_SIZE_MASK		0x00ffffffffffffff
+#define PVA_TASK_POINTER_AUX_SIZE_SHIFT		0
+#define PVA_TASK_POINTER_AUX_FLAGS_MASK		0xff00000000000000
+#define PVA_TASK_POINTER_AUX_FLAGS_SHIFT	56
+#define PVA_TASK_POINTER_AUX_FLAGS_CVNAS	(1 << 0)
 
 struct pva_task_pointer {
 	u64	address;
-	u32	size;
-	u8	flags;
-	u8	reserved[3];
-};
+	u64	aux;
+} __packed;
+
+struct pva_task_opaque_data_desc {
+	u16	primary_payload_size;
+} __packed;
+
 struct pva_task_parameter_array {
 	u64	address;
 	u32	size;

@@ -181,14 +181,15 @@ struct pva_fence {
 	__u32 semaphore_value;
 };
 
-#define PVA_MAX_TASKS		1
-#define PVA_MAX_PREFENCES	8
-#define PVA_MAX_POSTFENCES	8
-#define PVA_MAX_INPUT_STATUS	8
-#define PVA_MAX_OUTPUT_STATUS	8
-#define PVA_MAX_INPUT_SURFACES	8
-#define PVA_MAX_OUTPUT_SURFACES	8
-#define PVA_MAX_POINTERS	128
+#define PVA_MAX_TASKS			1
+#define PVA_MAX_PREFENCES		8
+#define PVA_MAX_POSTFENCES		8
+#define PVA_MAX_INPUT_STATUS		8
+#define PVA_MAX_OUTPUT_STATUS		8
+#define PVA_MAX_INPUT_SURFACES		8
+#define PVA_MAX_OUTPUT_SURFACES		8
+#define PVA_MAX_POINTERS		128
+#define PVA_MAX_PRIMARY_PAYLOAD_SIZE	4096
 
 /**
  * struct pva_ioctl_submit_task - Describe a task for PVA
@@ -223,17 +224,18 @@ struct pva_ioctl_submit_task {
 	__u8 num_output_task_status;
 	__u16 num_pointers;
 	__u64 pointers;
-	__u8 reserved0[4];
+	__u32 primary_payload_size;
 	__u32 operation;
 	__u64 timeout;
 	__u64 prefences;
 	__u64 postfences;
 	__u64 input_surfaces;
 	struct pva_task_parameter input_scalars;
-	u8 reserved1[16];
+	__u64 primary_payload;
+	u8 reserved0[8];
 	__u64 output_surfaces;
 	struct pva_task_parameter output_scalars;
-	u8 reserved2[16];
+	u8 reserved1[16];
 	__u64 input_task_status;
 	__u64 output_task_status;
 };

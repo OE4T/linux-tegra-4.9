@@ -69,7 +69,8 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	    ioctl_task->num_output_task_status > PVA_MAX_OUTPUT_STATUS ||
 	    ioctl_task->num_input_surfaces > PVA_MAX_INPUT_SURFACES ||
 	    ioctl_task->num_output_surfaces > PVA_MAX_OUTPUT_SURFACES ||
-	    ioctl_task->num_pointers > PVA_MAX_POINTERS) {
+	    ioctl_task->num_pointers > PVA_MAX_POINTERS ||
+	    ioctl_task->primary_payload_size > PVA_MAX_PRIMARY_PAYLOAD_SIZE) {
 		err = -EINVAL;
 		goto err_out;
 	}
@@ -86,9 +87,19 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	task->num_input_surfaces	= ioctl_task->num_input_surfaces;
 	task->num_output_surfaces	= ioctl_task->num_output_surfaces;
 	task->num_pointers		= ioctl_task->num_pointers;
+	task->primary_payload_size	= ioctl_task->primary_payload_size;
 	task->input_scalars		= ioctl_task->input_scalars;
 	task->output_scalars		= ioctl_task->output_scalars;
 	task->timeout			= ioctl_task->timeout;
+
+	/* Copy the user primary_payload */
+	if (task->primary_payload_size) {
+		err = copy_from_user(task->primary_payload,
+				(void __user *)(ioctl_task->primary_payload),
+				ioctl_task->primary_payload_size);
+		if (err < 0)
+			goto err_out;
+	}
 
 #define COPY_FIELD(dst, src, num, type)					\
 	do {								\
@@ -102,7 +113,6 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 			goto err_out;					\
 		}							\
 	} while (0)
-
 
 	/* Copy the fields */
 	COPY_FIELD(task->input_surfaces, ioctl_task->input_surfaces,

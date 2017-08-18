@@ -19,6 +19,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/gmmu.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/kind_gk20a.h"
@@ -721,7 +722,7 @@ static void gv11b_fb_fault_buffer_get_ptr_update(struct gk20a *g,
 	/* make sure get ptr update is visible to everyone to avoid
 	 * reading already read entry
 	 */
-	mb();
+	nvgpu_mb();
 }
 
 static u32 gv11b_fb_fault_buffer_get_index(struct gk20a *g,

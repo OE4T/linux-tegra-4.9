@@ -24,6 +24,7 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/nvhost_t19x.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -247,7 +248,7 @@ void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 	nvgpu_mem_wr32(g, userd_mem, offset + ram_userd_gp_put_w(),
 							c->gpfifo.put);
 	/* commit everything to cpu */
-	smp_mb();
+	nvgpu_smp_mb();
 
 	gv11b_ring_channel_doorbell(c);
 }

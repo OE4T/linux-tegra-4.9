@@ -23,6 +23,7 @@
 #include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/rculist.h>
 
 #include <linux/tegra-hsp.h>
@@ -550,6 +551,9 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 	if (hsp->reset == ERR_PTR(-EPROBE_DEFER))
 		return -EPROBE_DEFER;
 
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
+
 	reg = readl(tegra_hsp_reg(&pdev->dev, TEGRA_HSP_DIMENSIONING));
 	hsp->n_sm = reg & 0xf;
 	hsp->n_ss = (reg >> 4) & 0xf;
@@ -557,6 +561,8 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 	hsp->n_db = (reg >> 12) & 0xf;
 	hsp->n_si = (reg >> 16) & 0xf;
 	hsp->mbox_ie = of_property_read_bool(pdev->dev.of_node, NV(mbox-ie));
+
+	pm_runtime_put(&pdev->dev);
 
 	if ((resource_size(r) >> 16) < (1 + (hsp->n_sm / 2) + hsp->n_ss +
 					hsp->n_as + (hsp->n_db > 0))) {
@@ -571,6 +577,7 @@ static __exit int tegra_hsp_remove(struct platform_device *pdev)
 {
 	struct tegra_hsp *hsp = platform_get_drvdata(pdev);
 
+	pm_runtime_disable(&pdev->dev);
 	reset_control_put(hsp->reset);
 	return 0;
 }

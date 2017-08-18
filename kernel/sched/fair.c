@@ -5414,6 +5414,11 @@ static inline bool capacity_aware(void)
 	return sched_feat(CAPACITY_AWARE);
 }
 
+static inline bool energy_aware(void)
+{
+	return sched_feat(ENERGY_AWARE);
+}
+
 struct energy_env {
 	struct sched_group	*sg_top;
 	struct sched_group	*sg_cap;
@@ -6616,6 +6621,94 @@ static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
 	sg = sd->groups;
 	sg_target = sg;
 
+	/*
+	 * Find group with sufficient capacity. We only get here if no cpu is
+	 * overutilized. We may end up overutilizing a cpu by adding the task,
+	 * but that should not be any worse than select_idle_sibling().
+	 * load_balance() should sort it out later as we get above the tipping
+	 * point.
+	 */
+	do {
+		/* Assuming all cpus are the same in group */
+		int max_cap_cpu = group_first_cpu(sg);
+
+		/*
+		 * Assume smaller max capacity means more energy-efficient.
+		 * Ideally we should query the energy model for the right
+		 * answer but it easily ends up in an exhaustive search.
+		 */
+		if (capacity_of(max_cap_cpu) < target_max_cap &&
+		    task_fits_max(p, max_cap_cpu)) {
+			sg_target = sg;
+			target_max_cap = capacity_of(max_cap_cpu);
+		}
+		if (cpumask_test_cpu(target_cpu, sched_group_cpus(sg)))
+			prev_sg = sg;
+	} while (sg = sg->next, sg != sd->groups);
+
+	/* Hysteresis when moving to a lower capacity CPU */
+	if ((prev_cap > target_max_cap) && prev_sg) {
+		if (task_util(p) * capacity_down_margin >
+				target_max_cap * 1024)
+			sg_target = prev_sg;
+	}
+
+	task_util_boosted = boosted_task_util(p);
+	/* Find cpu with sufficient capacity */
+	for_each_cpu_and(i, tsk_cpus_allowed(p), sched_group_cpus(sg_target)) {
+		/*
+		 * p's blocked utilization is still accounted for on prev_cpu
+		 * so prev_cpu will receive a negative bias due to the double
+		 * accounting. However, the blocked utilization may be zero.
+		 */
+		new_util = cpu_util(i) + task_util_boosted;
+
+		/*
+		 * Ensure minimum capacity to grant the required boost.
+		 * The target CPU can be already at a capacity level higher
+		 * than the one required to boost the task.
+		 */
+		if (new_util > capacity_orig_of(i))
+			continue;
+
+		/* cpu has capacity at higher OPP, keep it as fallback */
+		if (target_cpu == task_cpu(p))
+			target_cpu = i;
+
+		if (idle_cpu(i)) {
+			target_cpu = i;
+			break;
+		}
+	}
+
+	return target_cpu;
+}
+
+static int energy_aware_wake_cpu(struct task_struct *p, int target, int sync)
+{
+	struct sched_domain *sd;
+	struct sched_group *sg, *sg_target;
+	int target_max_cap = INT_MAX;
+	int target_cpu = task_cpu(p);
+	unsigned long task_util_boosted, new_util;
+	int i;
+
+	if (sysctl_sched_sync_hint_enable && sync) {
+		int cpu = smp_processor_id();
+		cpumask_t search_cpus;
+		cpumask_and(&search_cpus, tsk_cpus_allowed(p), cpu_online_mask);
+		if (cpumask_test_cpu(cpu, &search_cpus))
+			return cpu;
+	}
+
+	sd = rcu_dereference(per_cpu(sd_ea, task_cpu(p)));
+
+	if (!sd)
+		return target;
+
+	sg = sd->groups;
+	sg_target = sg;
+
 	if (sysctl_sched_is_big_little) {
 
 		/*
@@ -6639,16 +6732,7 @@ static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
 				sg_target = sg;
 				target_max_cap = capacity_of(max_cap_cpu);
 			}
-			if (cpumask_test_cpu(target_cpu, sched_group_cpus(sg)))
-				prev_sg = sg;
 		} while (sg = sg->next, sg != sd->groups);
-
-		/* Hysteresis when moving to a lower capacity CPU */
-		if ((prev_cap > target_max_cap) && prev_sg) {
-			if (task_util(p) * capacity_down_margin >
-					target_max_cap * 1024)
-				sg_target = prev_sg;
-		}
 
 		task_util_boosted = boosted_task_util(p);
 		/* Find cpu with sufficient capacity */
@@ -6668,14 +6752,15 @@ static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
 			if (new_util > capacity_orig_of(i))
 				continue;
 
+			if (new_util < capacity_curr_of(i)) {
+				target_cpu = i;
+				if (cpu_rq(i)->nr_running)
+					break;
+			}
+
 			/* cpu has capacity at higher OPP, keep it as fallback */
 			if (target_cpu == task_cpu(p))
 				target_cpu = i;
-
-			if (idle_cpu(i)) {
-				target_cpu = i;
-				break;
-			}
 		}
 	} else {
 		/*
@@ -6694,6 +6779,22 @@ static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
 			if ((boosted || prefer_idle) && idle_cpu(target_cpu))
 				return target_cpu;
 		}
+	}
+
+	if (target_cpu != task_cpu(p)) {
+		struct energy_env eenv = {
+			.util_delta	= task_util(p),
+			.src_cpu	= task_cpu(p),
+			.dst_cpu	= target_cpu,
+			.task		= p,
+		};
+
+		/* Not enough spare capacity on previous cpu */
+		if (cpu_overutilized(task_cpu(p)))
+			return target_cpu;
+
+		if (energy_diff(&eenv) >= 0)
+			return task_cpu(p);
 	}
 
 	return target_cpu;
@@ -6724,7 +6825,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 		record_wakee(p);
 		want_affine = (!wake_wide(p) && task_fits_max(p, cpu) &&
 			cpumask_test_cpu(cpu, tsk_cpus_allowed(p))) ||
-			capacity_aware();
+			energy_aware() || capacity_aware();
 	}
 
 	rcu_read_lock();
@@ -6755,7 +6856,9 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 	}
 
 	if (!sd) {
-		if (capacity_aware() && !cpu_rq(cpu)->rd->overutilized)
+		if (energy_aware() && !cpu_rq(cpu)->rd->overutilized)
+			new_cpu = energy_aware_wake_cpu(p, prev_cpu, sync);
+		else if (capacity_aware() && !cpu_rq(cpu)->rd->overutilized)
 			new_cpu = capacity_aware_wake_cpu(p, prev_cpu, sync);
 		else if (sd_flag & SD_BALANCE_WAKE) /* XXX always ? */
 			new_cpu = select_idle_sibling(p, prev_cpu, new_cpu);
@@ -8692,6 +8795,9 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	 */
 	update_sd_lb_stats(env, &sds);
 
+	if (energy_aware() && !env->dst_rq->rd->overutilized)
+		goto out_balanced;
+
 	if (capacity_aware() && !env->dst_rq->rd->overutilized)
 		goto out_balanced;
 
@@ -9243,7 +9349,7 @@ static int idle_balance(struct rq *this_rq)
 	 */
 	this_rq->idle_stamp = rq_clock(this_rq);
 
-	if (!capacity_aware() &&
+	if (!energy_aware() && !capacity_aware() &&
 	    (this_rq->avg_idle < sysctl_sched_migration_cost ||
 	     !this_rq->rd->overload)) {
 		rcu_read_lock();
@@ -9773,15 +9879,15 @@ static inline bool nohz_kick_needed(struct rq *rq)
 		return false;
 
 	if (rq->nr_running >= 2 &&
-	    (!capacity_aware() || cpu_overutilized(cpu)))
+	    ((!energy_aware() && !capacity_aware()) || cpu_overutilized(cpu)))
 		return true;
 
-	if (capacity_aware() && rq->misfit_task)
+	if ((energy_aware() || capacity_aware()) && rq->misfit_task)
 		return true;
 
 	rcu_read_lock();
 	sds = rcu_dereference(per_cpu(sd_llc_shared, cpu));
-	if (sds && !capacity_aware()) {
+	if (sds && !energy_aware()) {
 		/*
 		 * XXX: write a coherent comment on why we do this.
 		 * See also: http://lkml.kernel.org/r/20111202010832.602203411@sbsiddha-desk.sc.intel.com

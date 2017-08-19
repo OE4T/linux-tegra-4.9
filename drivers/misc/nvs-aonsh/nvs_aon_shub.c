@@ -57,6 +57,7 @@
 #include <linux/time.h>
 #include <linux/time64.h>
 #include <linux/timekeeping.h>
+#include <linux/jiffies.h>
 
 #include <asm/io.h>
 #include <asm/arch_timer.h>
@@ -205,7 +206,7 @@ static int tegra_aon_shub_ivc_msg_send(struct tegra_aon_shub *shub, int len)
 			status);
 	} else {
 		status = wait_for_completion_timeout(shub->wait_on,
-							IVC_TIMEOUT);
+						msecs_to_jiffies(IVC_TIMEOUT));
 		if (status == 0) {
 			dev_err(shub->dev,
 				"Timeout waiting for IVC response\n");
@@ -416,7 +417,8 @@ static int tegra_aon_shub_get_cfg(struct tegra_aon_shub *shub, int remote_id)
 	ret = tegra_aon_shub_ivc_msg_send(shub,
 				sizeof(struct aon_shub_request));
 	if (ret) {
-		dev_err(shub->dev, "No response from AON SHUB..!\n");
+		dev_err(shub->dev, " %s No response from AON SHUB..!\n",
+			__func__);
 		return ret;
 	}
 
@@ -646,7 +648,8 @@ static int tegra_aon_shub_get_snsr_cnt(struct tegra_aon_shub *shub)
 	ret = tegra_aon_shub_ivc_msg_send(shub,
 					  sizeof(struct aon_shub_request));
 	if (ret) {
-		dev_err(shub->dev, "No response from AON SHUB...!\n");
+		dev_err(shub->dev, "%s No response from AON SHUB...!\n",
+			__func__);
 		return ret;
 	}
 	shub->snsr_cnt = shub->shub_resp->data.sys.snsr_cnt;
@@ -786,7 +789,8 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 		ret = tegra_aon_shub_ivc_msg_send(shub,
 				sizeof(struct aon_shub_request));
 		if (ret) {
-			dev_err(shub->dev, "No response from AON SHUB...!\n");
+			dev_err(shub->dev,
+				"chip_cfg_ids : No response from AON SHUB!\n");
 			goto err_exit;
 		}
 		cfg_ids_resp = &shub->shub_resp->data.cfg_ids;

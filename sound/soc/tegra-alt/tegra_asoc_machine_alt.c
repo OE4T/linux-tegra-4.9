@@ -1806,3 +1806,4 @@ unsigned int *tegra_machine_get_tx_mask_array(void)
 EXPORT_SYMBOL_GPL(tegra_machine_get_tx_mask_array);
 MODULE_AUTHOR("Arun Shamanna Lakshmi <aruns@nvidia.com>");
 MODULE_AUTHOR("Junghyun Kim <juskim@nvidia.com>");
+MODULE_LICENSE("GPL");

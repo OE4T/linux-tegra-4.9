@@ -53,6 +53,9 @@ struct gk20a;
 #define NVGPU_PMU_ZBC_SAVE				50
 #define NVGPU_PMU_FECS_BOOTSTRAP_DONE			51
 
+/* whether to run PREOS binary on dGPUs */
+#define NVGPU_PMU_RUN_PREOS			52
+
 /*
  * Must be greater than the largest bit offset in the above list.
  */

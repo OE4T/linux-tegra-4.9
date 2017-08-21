@@ -19,6 +19,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/firmware.h>
 #include <nvgpu/falcon.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -254,7 +255,7 @@ int gm206_bios_init(struct gk20a *g)
 		return err;
 	}
 
-	if (platform->run_preos) {
+	if (nvgpu_is_enabled(g, NVGPU_PMU_RUN_PREOS)) {
 		err = gm206_bios_preos(g);
 		if (err) {
 			nvgpu_err(g, "pre-os failed");

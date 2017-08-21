@@ -134,6 +134,13 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	g->pmu.aelpg_param[4] = APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
 }
 
+static void nvgpu_init_vbios_vars(struct gk20a *g)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+
+	__nvgpu_set_enabled(g, NVGPU_PMU_RUN_PREOS, platform->run_preos);
+}
+
 static void nvgpu_init_mm_vars(struct gk20a *g)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
@@ -164,6 +171,7 @@ int nvgpu_probe(struct gk20a *g,
 	nvgpu_init_timeout(g);
 	nvgpu_init_timeslice(g);
 	nvgpu_init_pm_vars(g);
+	nvgpu_init_vbios_vars(g);
 
 	/* Initialize the platform interface. */
 	err = platform->probe(dev);

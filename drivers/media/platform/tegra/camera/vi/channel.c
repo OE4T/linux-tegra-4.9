@@ -527,37 +527,6 @@ void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 	spin_unlock(lock);
 }
 
-#define __tegra_channel_device_call_subdevs_all_p(v4l2_dev, sd, cond, o,\
-		f, args...)						\
-({									\
-	long __err = 0;							\
-	long e = 0;							\
-									\
-	list_for_each_entry((sd), &(v4l2_dev)->subdevs, list) {		\
-		if ((cond) && (sd)->ops->o && (sd)->ops->o->f)		\
-			e = (sd)->ops->o->f((sd), ##args);		\
-		if (!__err && e && e != -ENOIOCTLCMD)			\
-			__err = e;					\
-		e = 0;							\
-	}								\
-	__err;								\
-})
-
-/*
- * Call the specified callback for all subdevs matching grp_id (if 0, then
- * match them all), errors are ignored until the end, and the first error
- * encountered is returned. If the callback returns an error other than 0 or
- * -ENOIOCTLCMD, then return with that error code. Note that you cannot
- * add or delete a subdev while walking the subdevs list.
- */
-#define tegra_channel_device_call_all(v4l2_dev, grpid, o, f, args...)	\
-({									\
-	struct v4l2_subdev *__sd;					\
-	__tegra_channel_device_call_subdevs_all_p(v4l2_dev, __sd,	\
-			!(grpid) || __sd->grp_id == (grpid), o, f,	\
-			##args);					\
-})
-
 /*
  * -----------------------------------------------------------------------------
  * subdevice set/unset operations
@@ -1626,6 +1595,7 @@ static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_s_fmt_vid_cap		= tegra_channel_set_format,
 	.vidioc_try_fmt_vid_cap		= tegra_channel_try_format,
 	.vidioc_reqbufs			= vb2_ioctl_reqbufs,
+	.vidioc_prepare_buf		= vb2_ioctl_prepare_buf,
 	.vidioc_querybuf		= vb2_ioctl_querybuf,
 	.vidioc_qbuf			= vb2_ioctl_qbuf,
 	.vidioc_dqbuf			= vb2_ioctl_dqbuf,

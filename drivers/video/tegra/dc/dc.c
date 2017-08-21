@@ -6197,8 +6197,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 #endif
 		tegra_dc_get(dc);
-		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem,
-			NULL);
+		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem);
 		tegra_dc_put(dc);
 		if (IS_ERR_OR_NULL(dc->fb)) {
 			dc->fb = NULL;

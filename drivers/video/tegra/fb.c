@@ -86,6 +86,36 @@ struct tegra_fb_info {
 /* palette array used by the fbcon */
 static u32 pseudo_palette[16];
 
+static void *tegra_fb_check_and_alloc_framebuffer(struct fb_info *info)
+{
+	struct tegra_fb_info *tegra_fb = info->par;
+	struct tegra_dc *dc = tegra_fb->win.dc;
+	struct tegra_fb_data *fb_data = dc->pdata->fb;
+	phys_addr_t fb_size;
+	void *fb_base = NULL;
+
+	if (tegra_fb->fb_size)
+		return tegra_fb->win.virt_addr;
+
+	fb_size = fb_data->fbmem_size ? : DEFAULT_FBMEM_SIZE;
+	fb_base = dma_alloc_writecombine(&tegra_fb->ndev->dev,
+			fb_size, &tegra_fb->phys_start, GFP_KERNEL);
+	if (!fb_base) {
+		dev_err(&tegra_fb->ndev->dev,
+		"failed to allocate framebuffer\n");
+		return NULL;
+	}
+
+	info->screen_base = fb_base;
+	info->screen_size = fb_size;
+	tegra_fb->win.virt_addr = fb_base;
+	tegra_fb->win.phys_addr = tegra_fb->phys_start;
+	tegra_fb->fb_size = fb_size;
+	tegra_fb->valid = true;
+
+	return fb_base;
+}
+
 int tegra_fb_release_fbmem(struct tegra_fb_info *info)
 {
 	if (info && info->phys_start) {
@@ -133,7 +163,8 @@ static int tegra_fb_check_var(struct fb_var_screeninfo *var,
 	struct tegra_dc_out_ops *ops = dc->out_ops;
 	struct fb_videomode mode;
 
-	if ((var->yres * var->xres * var->bits_per_pixel / 8 * 2) >
+	if (tegra_fb->valid &&
+		(var->yres * var->xres * var->bits_per_pixel / 8 * 2) >
 		info->screen_size) {
 		dev_err(&tegra_fb->ndev->dev,
 			"FB %lu is NOT enough for %dx%d %dbpp!\n",
@@ -442,6 +473,9 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 		return 0;
 #endif
 
+	if (!tegra_fb->valid && !tegra_fb_check_and_alloc_framebuffer(info))
+		return -ENOMEM;
+
 	if (!tegra_fb->win.cur_handle) {
 		flush_start = info->screen_base +
 		(var->yoffset * info->fix.line_length);
@@ -479,18 +513,33 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 static void tegra_fb_fillrect(struct fb_info *info,
 			      const struct fb_fillrect *rect)
 {
+	struct tegra_fb_info *tegra_fb = info->par;
+
+	if (!tegra_fb->valid && !tegra_fb_check_and_alloc_framebuffer(info))
+		return;
+
 	cfb_fillrect(info, rect);
 }
 
 static void tegra_fb_copyarea(struct fb_info *info,
 			      const struct fb_copyarea *region)
 {
+	struct tegra_fb_info *tegra_fb = info->par;
+
+	if (!tegra_fb->valid && !tegra_fb_check_and_alloc_framebuffer(info))
+		return;
+
 	cfb_copyarea(info, region);
 }
 
 static void tegra_fb_imageblit(struct fb_info *info,
 			       const struct fb_image *image)
 {
+	struct tegra_fb_info *tegra_fb = info->par;
+
+	if (!tegra_fb->valid && !tegra_fb_check_and_alloc_framebuffer(info))
+		return;
+
 	cfb_imageblit(info, image);
 }
 
@@ -679,32 +728,20 @@ static int tegra_fb_set_mode(struct tegra_dc *dc, int fps)
 	return -EIO;
 }
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 static int tegra_fb_mmap(struct fb_info *info,
 		struct vm_area_struct *vma)
 {
 	struct tegra_fb_info *tegra_fb = info->par;
-	int fb_size = tegra_fb->fb_mem->end - tegra_fb->fb_mem->start + 1;
 
+	if (!tegra_fb->valid && !tegra_fb_check_and_alloc_framebuffer(info))
+		return -ENOMEM;
+
+	tegra_fb->mmap_count++;
 	return dma_mmap_writecombine(&tegra_fb->ndev->dev, vma,
-			info->screen_base, tegra_fb->phys_start,
-			fb_size);
+					tegra_fb->win.virt_addr,
+					tegra_fb->phys_start,
+					tegra_fb->fb_size);
 }
-#else
-static int tegra_fb_mmap(struct fb_info *fb_info, struct vm_area_struct *vma)
-{
-	struct tegra_fb_info *info = fb_info->par;
-
-	if (info->phys_start) {
-		info->mmap_count++;
-		return dma_mmap_writecombine(&info->ndev->dev, vma,
-				info->win.virt_addr,
-				info->phys_start,
-				info->fb_size);
-	}
-	return -ENOMEM;
-}
-#endif
 
 static struct fb_ops tegra_fb_ops = {
 	.owner = THIS_MODULE,
@@ -1057,8 +1094,7 @@ static void tegra_fb_copy_fbmem(void *to, size_t size, struct resource *fb)
 struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 					struct tegra_dc *dc,
 					struct tegra_fb_data *fb_data,
-					struct resource *fb_mem,
-					void *virt_addr)
+					struct resource *fb_mem)
 {
 	struct fb_info *info;
 	struct tegra_fb_info *tegra_fb;
@@ -1091,20 +1127,25 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_fb->yres = fb_data->yres;
 
 	tegra_fb->win.idx = fb_data->win;
+	tegra_fb->win.dc = dc;
 
-	fb_size = fb_data->fbmem_size ? : DEFAULT_FBMEM_SIZE;
-	fb_base = dma_alloc_writecombine(&ndev->dev, fb_size,
-			&tegra_fb->phys_start, GFP_KERNEL);
-	if (!fb_base) {
-		dev_err(&ndev->dev, "failed to allocate framebuffer\n");
-		ret = -EBUSY;
-		goto err_free;
+	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) ||
+				(fb_mem && fb_mem->start)) {
+		fb_base = tegra_fb_check_and_alloc_framebuffer(info);
+		if (!fb_base) {
+			ret = -EBUSY;
+			goto err_free;
+		}
+
+		/* copy content from the bootloader framebuffer */
+		tegra_fb_copy_fbmem(fb_base, fb_size, fb_mem);
+	} else {
+		tegra_fb->valid = false;
+		tegra_fb->fb_size = 0;
+		tegra_fb->phys_start = 0;
+		tegra_fb->win.virt_addr = 0;
+		tegra_fb->win.phys_addr = 0;
 	}
-
-	/* copy content from the bootloader framebuffer */
-	tegra_fb_copy_fbmem(fb_base, fb_size, fb_mem);
-	tegra_fb->fb_size = fb_size;
-	tegra_fb->valid = true;
 
 	dma_set_attr(DMA_ATTR_WRITE_COMBINE, __DMA_ATTR(attrs));
 	tegra_fb->blank_base = dma_alloc_attrs(&ndev->dev,
@@ -1128,8 +1169,8 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 
 	info->fbops = &tegra_fb_ops;
 	info->pseudo_palette = pseudo_palette;
-	info->screen_base = fb_base;
-	info->screen_size = fb_size;
+	info->screen_base = tegra_fb->win.virt_addr;
+	info->screen_size = tegra_fb->fb_size;
 	info->state = FBINFO_STATE_SUSPENDED;
 	strlcpy(info->fix.id, "tegra_fb", sizeof(info->fix.id));
 	info->fix.type		= FB_TYPE_PACKED_PIXELS;
@@ -1140,7 +1181,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	/* Note:- Use tegra_fb_info.phys_start instead of
 	 *        fb_info.fix->smem_start when LPAE is enabled. */
 	info->fix.smem_start	= (u32)tegra_fb->phys_start;
-	info->fix.smem_len	= fb_size;
+	info->fix.smem_len	= tegra_fb->fb_size;
 	info->fix.line_length = stride;
 	INIT_LIST_HEAD(&info->modelist);
 	/* pick first mode as the default for initialization */
@@ -1153,7 +1194,6 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	info->var.height		= tegra_dc_get_out_height(dc);
 	info->var.width			= tegra_dc_get_out_width(dc);
 
-	tegra_fb->win.dc = dc;
 	tegra_fb->win.x.full = dfixed_const(0);
 	tegra_fb->win.y.full = dfixed_const(0);
 	tegra_fb->win.w.full = dfixed_const(fb_data->xres);
@@ -1164,8 +1204,6 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_fb->win.out_w = fb_data->xres;
 	tegra_fb->win.out_h = fb_data->yres;
 	tegra_fb->win.z = 0;
-	tegra_fb->win.phys_addr = tegra_fb->phys_start;
-	tegra_fb->win.virt_addr = fb_base;
 	tegra_fb->win.phys_addr_u = 0;
 	tegra_fb->win.phys_addr_v = 0;
 	tegra_fb->win.stride = info->fix.line_length;

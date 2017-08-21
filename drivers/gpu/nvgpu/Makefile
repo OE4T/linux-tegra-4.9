@@ -38,6 +38,7 @@ nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += common/linux/nvhost_t19x.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/gv11b/platform_gv11b_vgpu_tegra.o \
+	vgpu/gv11b/vgpu_gv11b.o \
 	vgpu/gv11b/vgpu_hal_gv11b.o \
 	vgpu/gv11b/vgpu_gr_gv11b.o \
 	vgpu/gv11b/vgpu_fifo_gv11b.o \

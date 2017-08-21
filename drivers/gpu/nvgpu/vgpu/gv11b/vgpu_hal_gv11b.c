@@ -78,6 +78,7 @@
 
 #include <nvgpu/enabled.h>
 
+#include "vgpu_gv11b.h"
 #include "vgpu_gr_gv11b.h"
 #include "vgpu_fifo_gv11b.h"
 #include "vgpu_subctx_gv11b.h"
@@ -551,7 +552,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 	.priv_ring = {
 		.isr = gp10b_priv_ring_isr,
 	},
-	.chip_init_gpu_characteristics = vgpu_init_gpu_characteristics,
+	.chip_init_gpu_characteristics = vgpu_gv11b_init_gpu_characteristics,
 	.get_litter_value = gv11b_get_litter_value,
 };
 

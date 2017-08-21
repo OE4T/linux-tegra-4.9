@@ -46,4 +46,16 @@ config FAN_THERM_EST
 	This enables a virtual sensor that polls other registered thermal
 	zone devices for temperature updates.
 
+config EQOS_APE_HWDEP
+	tristate "EQOS APE HWDEO Driver"
+	default n
+	depends on TEGRA_NVADSP
+	help
+	  Driver provides mechanism to synchronize EAVB and APE clock.
+	  This driver copies the EAVB time stamp on APE time registers
+	  to synchroniza the initial phase offset. It calculates the
+	  frequency offset between the two clocks  by taking subsequent
+	  snapshots of the clock and taking the difference. Based on the
+	  calculated frequency offset, the pll_a clock (parent of APE clock)
+	  frequency is adjusted.
 trysource "../nvidia/drivers/misc/nvs-dfsh/Kconfig.nvidia"

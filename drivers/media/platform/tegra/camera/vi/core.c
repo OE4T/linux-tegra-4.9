@@ -51,22 +51,6 @@ u32 tegra_core_get_fourcc_by_idx(struct tegra_channel *chan,
 }
 
 /**
- * tegra_core_get_description_by_idx - get description of a tegra_video format
- * @index: array index of the tegra_video_formats
- */
-void tegra_core_get_description_by_idx(struct tegra_channel *chan,
-			unsigned int index, __u8 *description)
-{
-	if (index > (chan->num_video_formats - 1))
-		return;
-
-	if (description)
-		strlcpy(description,
-			chan->video_formats[index]->description,
-			sizeof(chan->video_formats[index]->description));
-}
-
-/**
  * tegra_core_get_word_count - Calculate word count
  * @frame_width: number of pixels per line
  * @fmt: Tegra Video format struct which has BPP information

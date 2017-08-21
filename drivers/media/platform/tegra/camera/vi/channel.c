@@ -740,7 +740,6 @@ tegra_channel_enum_format(struct file *file, void *fh, struct v4l2_fmtdesc *f)
 
 	index -= 1;
 	f->pixelformat = tegra_core_get_fourcc_by_idx(chan, index);
-	tegra_core_get_description_by_idx(chan, index, f->description);
 
 	return 0;
 }

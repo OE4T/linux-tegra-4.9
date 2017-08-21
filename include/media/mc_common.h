@@ -316,8 +316,6 @@ const struct tegra_video_format *tegra_core_get_format_by_code(
 		unsigned int code, unsigned offset);
 const struct tegra_video_format *tegra_core_get_format_by_fourcc(
 		struct tegra_channel *chan, u32 fourcc);
-void tegra_core_get_description_by_idx(struct tegra_channel *chan,
-		unsigned int index, __u8 *description);
 void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 					  enum vb2_buffer_state state);
 int tegra_channel_set_stream(struct tegra_channel *chan, bool on);

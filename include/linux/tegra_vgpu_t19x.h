@@ -31,4 +31,6 @@ union tegra_vgpu_t19x_params {
 	struct tegra_vgpu_free_ctx_header_params free_ctx_header;
 };
 
+#define TEGRA_VGPU_ATTRIB_MAX_SUBCTX_COUNT	100
+
 #endif

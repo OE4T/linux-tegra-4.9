@@ -349,8 +349,8 @@ int nvhost_syncpt_unit_interface_get_aperture(
 	if (host_pdev == NULL || base == NULL || size == NULL)
 		return -ENOSYS;
 
-	res = platform_get_resource(host_pdev, IORESOURCE_MEM,
-				    HOST1X_MSS_APERTURE);
+	res = platform_get_resource_byname(host_pdev, IORESOURCE_MEM,
+					   "sem-syncpt-shim");
 
 	*base = (phys_addr_t)res->start;
 	*size = (size_t)res->end - (size_t)res->start + 1;
@@ -427,8 +427,8 @@ int nvhost_syncpt_unit_interface_init(struct platform_device *engine_pdev)
 	 * addressing
 	 */
 	host_pdev = to_platform_device(engine_pdev->dev.parent);
-	res = platform_get_resource(host_pdev, IORESOURCE_MEM,
-				    HOST1X_MSS_APERTURE);
+	res = platform_get_resource_byname(host_pdev, IORESOURCE_MEM,
+					"sem-syncpt-shim");
 	range_start = (dma_addr_t)res->start;
 	range_size = (unsigned int)res->end - (unsigned int)res->start + 1;
 

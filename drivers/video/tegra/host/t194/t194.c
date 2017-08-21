@@ -198,6 +198,13 @@ static struct host1x_device_info host1x04_info = {
 	.firmware_area_size = SZ_1M,
 	.nb_actmons	= 1,
 	.use_cross_vm_interrupts = 1,
+	.resources	= {
+		"guest",
+		"hypervisor",
+		"actmon",
+		"sem-syncpt-shim"
+	},
+	.nb_resources	= 4,
 };
 
 struct nvhost_device_data t19_host1x_info = {

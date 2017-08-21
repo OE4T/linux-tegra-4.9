@@ -53,6 +53,7 @@
 #include <soc/tegra/chip-id.h>
 #include <linux/ktime.h>
 #include <linux/string.h>
+#include <linux/dma-override.h>
 
 #include <linux/amba/bus.h>
 
@@ -2154,7 +2155,7 @@ static int arm_smmu_alloc_init_pte(struct arm_smmu_device *smmu, pmd_t *pmd,
 	 */
 	do {
 		int i = 1;
-
+		u64 set_bit = 0;
 		pteval &= ~ARM_SMMU_PTE_CONT;
 
 		if (arm_smmu_pte_is_contiguous_range(addr, end,
@@ -2185,8 +2186,11 @@ static int arm_smmu_alloc_init_pte(struct arm_smmu_device *smmu, pmd_t *pmd,
 			continue;
 		}
 
+		if (prot & DMA_FOR_NVLINK)
+			set_bit = (1 << (NVLINK_PHY_BIT - PAGE_SHIFT));
+
 		do {
-			*pte = pfn_pte(pfn, __pgprot(pteval));
+			*pte = pfn_pte(pfn | set_bit, __pgprot(pteval));
 		} while (pte++, pfn++, addr += PAGE_SIZE, --i);
 	} while (addr != end);
 

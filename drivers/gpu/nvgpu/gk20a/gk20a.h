@@ -1259,6 +1259,9 @@ struct gk20a {
 	 * from monitoring power, current and voltage */
 	bool power_sensor_missing;
 
+	/* The minimum VBIOS version supported */
+	u32 vbios_min_version;
+
 	/* memory training sequence and mclk switch scripts */
 	u32 mem_config_idx;
 

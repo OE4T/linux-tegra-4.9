@@ -22,7 +22,6 @@
 #include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/platform_gk20a.h"
 #include "gm20b/fifo_gm20b.h"
 #include "bios_gm206.h"
 #include "gp106/mclk_gp106.h"
@@ -171,7 +170,6 @@ out:
 int gm206_bios_init(struct gk20a *g)
 {
 	unsigned int i;
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 #ifdef CONFIG_DEBUG_FS
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *d;
@@ -223,8 +221,7 @@ int gm206_bios_init(struct gk20a *g)
 	if (err)
 		return err;
 
-	if (g->gpu_characteristics.vbios_version <
-	    platform->vbios_min_version) {
+	if (g->gpu_characteristics.vbios_version < g->vbios_min_version) {
 		nvgpu_err(g, "unsupported VBIOS version %08x",
 				g->gpu_characteristics.vbios_version);
 		return -EINVAL;

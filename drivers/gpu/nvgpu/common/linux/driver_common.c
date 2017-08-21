@@ -139,6 +139,7 @@ static void nvgpu_init_vbios_vars(struct gk20a *g)
 	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	__nvgpu_set_enabled(g, NVGPU_PMU_RUN_PREOS, platform->run_preos);
+	g->vbios_min_version = platform->vbios_min_version;
 }
 
 static void nvgpu_init_mm_vars(struct gk20a *g)

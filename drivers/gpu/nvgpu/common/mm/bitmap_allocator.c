@@ -311,7 +311,7 @@ static void nvgpu_bitmap_alloc_destroy(struct nvgpu_allocator *__a)
 	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), a);
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 static void nvgpu_bitmap_print_stats(struct nvgpu_allocator *__a,
 				     struct seq_file *s, int lock)
 {
@@ -347,7 +347,7 @@ static const struct nvgpu_allocator_ops bitmap_ops = {
 
 	.fini		= nvgpu_bitmap_alloc_destroy,
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 	.print_stats	= nvgpu_bitmap_print_stats,
 #endif
 };

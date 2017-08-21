@@ -20,12 +20,6 @@
 
 #include <nvgpu/allocator.h>
 
-void nvgpu_alloc_print_stats(struct nvgpu_allocator *__a,
-			     struct seq_file *s, int lock)
-{
-	__a->ops->print_stats(__a, s, lock);
-}
-
 static int __alloc_show(struct seq_file *s, void *unused)
 {
 	struct nvgpu_allocator *a = s->private;

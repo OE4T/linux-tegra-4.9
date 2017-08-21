@@ -17,8 +17,16 @@
 #ifndef __NVGPU_ALLOCATOR_H__
 #define __NVGPU_ALLOCATOR_H__
 
+#ifdef __KERNEL__
+/*
+ * The Linux kernel has this notion of seq_files for printing info to userspace.
+ * One of the allocator function pointers takes advantage of this and allows the
+ * debug output to be directed either to nvgpu_log() or a seq_file.
+ */
 #include <linux/seq_file.h>
+#endif
 
+#include <nvgpu/log.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/list.h>
 
@@ -72,7 +80,7 @@ struct nvgpu_allocator_ops {
 	/* Destructor. */
 	void (*fini)(struct nvgpu_allocator *allocator);
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 	/* Debugging. */
 	void (*print_stats)(struct nvgpu_allocator *allocator,
 			    struct seq_file *s, int lock);
@@ -246,7 +254,7 @@ u64  nvgpu_alloc_space(struct nvgpu_allocator *a);
 
 void nvgpu_alloc_destroy(struct nvgpu_allocator *allocator);
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 void nvgpu_alloc_print_stats(struct nvgpu_allocator *a,
 			     struct seq_file *s, int lock);
 #endif
@@ -281,35 +289,36 @@ static inline void nvgpu_alloc_disable_dbg(struct nvgpu_allocator *a)
 /*
  * Debug stuff.
  */
+#ifdef __KERNEL__
 #define __alloc_pstat(seq, allocator, fmt, arg...)		\
 	do {							\
-		if (s)						\
+		if (seq)					\
 			seq_printf(seq, fmt, ##arg);		\
 		else						\
 			alloc_dbg(allocator, fmt, ##arg);	\
 	} while (0)
-
-#define __alloc_dbg(a, fmt, arg...)					\
-	pr_info("%-25s %25s() " fmt, (a)->name, __func__, ##arg)
-
-#if defined(ALLOCATOR_DEBUG)
-/*
- * Always print the debug messages...
- */
-#define alloc_dbg(a, fmt, arg...) __alloc_dbg(a, fmt, ##arg)
-#else
-/*
- * Only print debug messages if debug is enabled for a given allocator.
- */
-#define alloc_dbg(a, fmt, arg...)			\
-	do {						\
-		if ((a)->debug)				\
-			__alloc_dbg((a), fmt, ##arg);	\
-	} while (0)
-
 #endif
-#define balloc_pr(alloctor, format, arg...)		\
-	pr_info("%-25s %25s() " format,			\
-		alloctor->name, __func__, ##arg)
+
+#define __alloc_dbg(a, fmt, arg...)				\
+	nvgpu_log((a)->g, gpu_dbg_alloc, "%25s " fmt, (a)->name, ##arg)
+
+/*
+ * This gives finer control over debugging messages. By defining the
+ * ALLOCATOR_DEBUG macro prints for an allocator will only get made if
+ * that allocator's debug flag is set.
+ *
+ * Otherwise debugging is as normal: debug statements for all allocators
+ * if the GPU debugging mask bit is set. Note: even when ALLOCATOR_DEBUG
+ * is set gpu_dbg_alloc must still also be set to true.
+ */
+#if defined(ALLOCATOR_DEBUG)
+#define alloc_dbg(a, fmt, arg...)				\
+	do {							\
+		if ((a)->debug)					\
+			__alloc_dbg((a), fmt, ##arg);		\
+	} while (0)
+#else
+#define alloc_dbg(a, fmt, arg...) __alloc_dbg(a, fmt, ##arg)
+#endif
 
 #endif /* NVGPU_ALLOCATOR_H */

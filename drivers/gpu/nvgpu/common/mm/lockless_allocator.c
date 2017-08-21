@@ -116,7 +116,7 @@ static void nvgpu_lockless_alloc_destroy(struct nvgpu_allocator *a)
 	nvgpu_kfree(nvgpu_alloc_to_gpu(a), pa);
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 static void nvgpu_lockless_print_stats(struct nvgpu_allocator *a,
 				   struct seq_file *s, int lock)
 {
@@ -146,7 +146,7 @@ static const struct nvgpu_allocator_ops pool_ops = {
 
 	.fini		= nvgpu_lockless_alloc_destroy,
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 	.print_stats	= nvgpu_lockless_print_stats,
 #endif
 };

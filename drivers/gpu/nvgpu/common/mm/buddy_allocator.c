@@ -1076,7 +1076,7 @@ static u64 nvgpu_buddy_alloc_space(struct nvgpu_allocator *a)
 	return space;
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 /*
  * Print the buddy allocator top level stats. If you pass @s as NULL then the
  * stats are printed to the kernel log. This lets this code be used for
@@ -1174,7 +1174,7 @@ static const struct nvgpu_allocator_ops buddy_ops = {
 
 	.fini		= nvgpu_buddy_allocator_destroy,
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 	.print_stats	= nvgpu_buddy_print_stats,
 #endif
 };

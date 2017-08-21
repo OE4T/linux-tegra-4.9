@@ -756,7 +756,7 @@ static void nvgpu_page_allocator_destroy(struct nvgpu_allocator *__a)
 	alloc_unlock(__a);
 }
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 static void nvgpu_page_print_stats(struct nvgpu_allocator *__a,
 				   struct seq_file *s, int lock)
 {
@@ -833,7 +833,7 @@ static const struct nvgpu_allocator_ops page_ops = {
 
 	.fini		= nvgpu_page_allocator_destroy,
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef __KERNEL__
 	.print_stats	= nvgpu_page_print_stats,
 #endif
 };

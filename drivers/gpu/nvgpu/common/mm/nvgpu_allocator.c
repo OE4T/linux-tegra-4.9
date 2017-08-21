@@ -114,6 +114,14 @@ void nvgpu_alloc_destroy(struct nvgpu_allocator *a)
 	memset(a, 0, sizeof(*a));
 }
 
+#ifdef __KERNEL__
+void nvgpu_alloc_print_stats(struct nvgpu_allocator *__a,
+			     struct seq_file *s, int lock)
+{
+	__a->ops->print_stats(__a, s, lock);
+}
+#endif
+
 /*
  * Handle the common init stuff for a nvgpu_allocator.
  */

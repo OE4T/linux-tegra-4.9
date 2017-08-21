@@ -796,6 +796,14 @@ static int max77620_regulator_probe(struct platform_device *pdev)
 		rdesc = &rinfo[id].desc;
 		pmic->rinfo[id] = &max77620_regs_info[id];
 		pmic->enable_power_mode[id] = MAX77620_POWER_MODE_NORMAL;
+		pmic->reg_pdata[id].active_fps_src = -1;
+		pmic->reg_pdata[id].active_fps_pd_slot = -1;
+		pmic->reg_pdata[id].active_fps_pu_slot = -1;
+		pmic->reg_pdata[id].suspend_fps_src = -1;
+		pmic->reg_pdata[id].suspend_fps_pd_slot = -1;
+		pmic->reg_pdata[id].suspend_fps_pu_slot = -1;
+		pmic->reg_pdata[id].power_ok = -1;
+		pmic->reg_pdata[id].ramp_rate_setting = -1;
 
 		ret = max77620_read_slew_rate(pmic, id);
 		if (ret < 0)

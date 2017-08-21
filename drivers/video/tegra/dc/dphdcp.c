@@ -801,13 +801,6 @@ static int tsec_hdcp_dp_verify_vprime(struct tegra_dphdcp *dphdcp)
 	if (!pkt || !hdcp_context)
 		goto exit;
 	if (tegra_dc_is_t18x()) {
-		ta_ctx = NULL;
-		/* Open a trusted sesion with HDCP TA */
-		e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
-		if (e) {
-			dphdcp_err("Invalid session id\n");
-			goto exit;
-		}
 		e = get_srm_signature(hdcp_context, nonce, pkt, ta_ctx);
 		if (e) {
 			dphdcp_err("Error getting srm signature!\n");

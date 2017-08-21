@@ -1774,7 +1774,6 @@ static int tegra_channel_csi_init(struct tegra_channel *chan)
 int tegra_channel_init(struct tegra_channel *chan)
 {
 	int ret;
-	int ioctl_value = 0;
 	struct tegra_mc_vi *vi = chan->vi;
 
 	ret = tegra_channel_csi_init(chan);
@@ -1834,11 +1833,6 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->video.ioctl_ops = &tegra_channel_ioctl_ops;
 	chan->video.ctrl_handler = &chan->ctrl_handler;
 	chan->video.lock = &chan->video_lock;
-
-	ioctl_value = _IOC_NR(VIDIOC_G_PRIORITY);
-	set_bit(ioctl_value, chan->video.valid_ioctls);
-	ioctl_value = _IOC_NR(VIDIOC_S_PRIORITY);
-	set_bit(ioctl_value, chan->video.valid_ioctls);
 
 	video_set_drvdata(&chan->video, chan);
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)

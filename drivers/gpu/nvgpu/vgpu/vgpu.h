@@ -108,6 +108,7 @@ int vgpu_gm20b_init_hal(struct gk20a *g);
 int vgpu_gp10b_init_hal(struct gk20a *g);
 
 void vgpu_init_dbg_session_ops(struct gpu_ops *gops);
+int vgpu_init_gpu_characteristics(struct gk20a *g);
 
 void vgpu_create_sysfs(struct device *dev);
 void vgpu_remove_sysfs(struct device *dev);

@@ -341,7 +341,7 @@ static void vgpu_detect_chip(struct gk20a *g)
 			g->gpu_characteristics.rev);
 }
 
-static int vgpu_init_gpu_characteristics(struct gk20a *g)
+int vgpu_init_gpu_characteristics(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int err;

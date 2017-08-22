@@ -561,13 +561,6 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	ret = mbox_controller_register(&aon->mbox);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to register mailbox: %d\n", ret);
-		tegra_hsp_sm_pair_free(aon->hsp_sm_pair);
-		goto exit;
-	}
-
 	ret = device_create_file(dev, &dev_attr_ivc_dbg);
 	if (ret) {
 		dev_err(dev, "failed to create device file: %d\n", ret);
@@ -582,7 +575,15 @@ static int tegra_aon_probe(struct platform_device *pdev)
 					(u32)aon->ipcbuf_size);
 	tegra_hsp_sm_pair_write(aon->hsp_sm_pair, SMBOX_IVC_READY_MSG);
 
-	dev_dbg(&pdev->dev, "tegra aon driver probe OK\n");
+	ret = mbox_controller_register(&aon->mbox);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to register mailbox: %d\n", ret);
+		tegra_hsp_sm_pair_free(aon->hsp_sm_pair);
+		goto exit;
+	}
+
+	dev_info(&pdev->dev, "tegra aon driver probe OK\n");
+
 	return ret;
 
 exit:

@@ -423,8 +423,7 @@ long tegra_dc_crc_disable(struct tegra_dc *dc,
 	if (!dc->crc_initialized)
 		return -EPERM;
 
-	if (dc->crc_ref_cnt.legacy)
-		return -EBUSY;
+	WARN_ON(dc->crc_ref_cnt.legacy);
 
 	if (tegra_dc_is_t21x())
 		return tegra_dc_crc_t21x_en_dis(dc, arg, false);
@@ -533,7 +532,7 @@ static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 		 */
 		flip_id = atomic64_read(&dc->flip_stats.flips_queued);
 		if (!flip_id)
-			return -EAGAIN;
+			return -ENODATA;
 	}
 
 	if (_is_flip_out_of_bounds(dc, flip_id))
@@ -623,8 +622,7 @@ long tegra_dc_crc_get(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
 	if (!dc->crc_initialized)
 		return -EPERM;
 
-	if (dc->crc_ref_cnt.legacy)
-		return -EBUSY;
+	WARN_ON(dc->crc_ref_cnt.legacy);
 
 	ret = _find_crc_in_buf(dc, arg->flip_id, &crc_ele);
 	if (ret)
@@ -663,7 +661,7 @@ long tegra_dc_crc_get(struct tegra_dc *dc, struct tegra_dc_ext_crc_arg *arg)
 			conf[iter].crc.val = crc_ele.sor.crc;
 			break;
 		default:
-			ret = -EINVAL;
+			ret = -ENOTSUPP;
 		}
 	}
 

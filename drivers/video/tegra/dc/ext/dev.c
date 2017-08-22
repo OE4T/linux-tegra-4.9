@@ -2608,7 +2608,7 @@ static int tegra_dc_crc_sanitize_args(struct tegra_dc_ext_crc_arg *args)
 		return -EINVAL;
 
 	if (args->version >= TEGRA_DC_CRC_ARG_VERSION_MAX)
-		return -EINVAL;
+		return -ENOTSUPP;
 
 	if (args->num_conf >
 		TEGRA_DC_EXT_CRC_TYPE_MAX - 1 + TEGRA_DC_EXT_MAX_REGIONS)

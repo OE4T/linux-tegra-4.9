@@ -225,16 +225,22 @@ static void vid_cap_buf_finish(struct vb2_buffer *vb)
 	unsigned seq = vbuf->sequence;
 	unsigned p;
 
-	for (p = 0; p < tpg_g_buffers(&dev->tpg); p++) {
-		struct vb2_queue *q = vb->vb2_queue;
+	/*
+	 * DMA mapping invalid during queue cancel and error
+	 * states.  Only set up for the CPU copy when streaming.
+	 */
+	if (vb->state == VB2_BUF_STATE_DONE) {
+		for (p = 0; p < tpg_g_buffers(&dev->tpg); p++) {
+			struct vb2_queue *q = vb->vb2_queue;
 
-		if (q->memory == V4L2_MEMORY_DMABUF) {
-			struct dma_buf *dbuf = dma_buf_get(vb->planes[p].m.fd);
-			enum dma_data_direction dma_dir =
-				q->is_output ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
+			if (q->memory == V4L2_MEMORY_DMABUF) {
+				struct dma_buf *dbuf = dma_buf_get(vb->planes[p].m.fd);
+				enum dma_data_direction dma_dir =
+					q->is_output ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
 
-			dma_buf_end_cpu_access(dbuf, 0,
-				vb->planes[p].length, dma_dir);
+				dma_buf_end_cpu_access(dbuf, 0,
+					vb->planes[p].length, dma_dir);
+			}
 		}
 	}
 

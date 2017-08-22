@@ -84,4 +84,17 @@
 		};
 
 	};
+
+       	arm-pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts = <0 384 0x4>,
+			     <0 385 0x4>,
+			     <0 386 0x4>,
+			     <0 387 0x4>,
+			     <0 388 0x4>,
+			     <0 389 0x4>,
+			     <0 390 0x4>,
+			     <0 391 0x4>;
+		status = "disabled";
+	};
 };

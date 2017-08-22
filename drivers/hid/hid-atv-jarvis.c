@@ -380,6 +380,7 @@ struct snd_atvr {
 	/* count of packets received from this device */
 	int packet_counter;
 	spinlock_t s_substream_lock;
+	spinlock_t timer_lock;
 	uint32_t substream_state;
 	bool pcm_stopped;
 };
@@ -387,8 +388,6 @@ struct snd_atvr {
 #define ATVR_REMOVE 1
 #define ATVR_TIMER_DISABLED 0
 #define ATVR_TIMER_ENABLED 1
-#define ATVR_TIMER_RESCHEDULING 2
-#define ATVR_TIMER_RESCHEDULE_TIMEOUT 200 /* msec */
 
 #define TS_HOSTCMD_REPORT_SIZE 33
 #define JAR_HOSTCMD_REPORT_SIZE 19
@@ -1028,14 +1027,18 @@ static void snd_atvr_timer_callback(unsigned long data)
 	uint readable;
 	uint packets_read;
 	bool need_silence = false;
+	unsigned long flags;
 	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)data;
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
 
 	/* timer_enabled will be false when stopping a stream. */
-	smp_rmb();
-	if (!(atvr_snd->timer_enabled & ATVR_TIMER_ENABLED))
+	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
+	if (!(atvr_snd->timer_enabled & ATVR_TIMER_ENABLED)) {
+		spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
 		return;
+	}
 
+	spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
 	if (!spin_trylock(&atvr_snd->s_substream_lock)) {
 		pr_info("%s: trylock fail\n", __func__);
 		goto lock_err;
@@ -1104,22 +1107,21 @@ static void snd_atvr_timer_callback(unsigned long data)
 		spin_unlock(&atvr_snd->s_substream_lock);
 
 lock_err:
-	atvr_snd->timer_enabled |= ATVR_TIMER_RESCHEDULING;
-	smp_wmb();
-
-	smp_rmb();
+	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
 	if (atvr_snd->timer_enabled & ATVR_TIMER_ENABLED)
 		snd_atvr_schedule_timer(substream);
-
-	atvr_snd->timer_enabled &= ~ATVR_TIMER_RESCHEDULING;
-	smp_wmb();
+	spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
 }
 
 static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
+	unsigned long flags;
+
+	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
 	atvr_snd->timer_enabled = ATVR_TIMER_ENABLED;
-	smp_wmb();
+	spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
+
 	atvr_snd->previous_jiffies = jiffies;
 	atvr_snd->timeout_jiffies =
 		msecs_to_jiffies(SND_ATVR_RUNNING_TIMEOUT_MSEC);
@@ -1134,21 +1136,12 @@ static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 static void snd_atvr_timer_stop(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
-	unsigned long timeout = jiffies +
-		msecs_to_jiffies(ATVR_TIMER_RESCHEDULE_TIMEOUT);
+	unsigned long flags;
 
-	do {
-		smp_rmb();
-		if (time_after(jiffies, timeout)) {
-			pr_err("%s: timeout in timer re-schedule.\n", __func__);
-			break;
-		}
-	} while (atvr_snd->timer_enabled & ATVR_TIMER_RESCHEDULING);
-
-	if (atvr_snd->timer_enabled) {
+	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
+	if (atvr_snd->timer_enabled)
 		atvr_snd->timer_enabled = ATVR_TIMER_DISABLED;
-		smp_wmb();
-	}
+	spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
 }
 
 /* ===================================================================== */
@@ -1467,6 +1460,7 @@ static int atvr_snd_initialize(struct hid_device *hdev,
 	atvr_snd->card_index = dev;
 	mutex_init(&atvr_snd->hdev_lock);
 	spin_lock_init(&atvr_snd->s_substream_lock);
+	spin_lock_init(&atvr_snd->timer_lock);
 	atvr_snd->substream_state = 0;
 	err = snd_atvr_alloc_audio_buffs(atvr_snd);
 

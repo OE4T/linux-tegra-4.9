@@ -788,6 +788,12 @@ static int tegra_se_pka1_done_verify(struct tegra_se_elp_dev *se_dev)
 		return -EFAULT;
 	}
 
+	/* Mask PKA1 & TRNG interrupt bit */
+	se_elp_writel(se_dev, PKA1,
+		      TEGRA_SE_PKA1_CTRL_SE_INTR_MASK_EIP1_TRNG(ELP_DISABLE) |
+		      TEGRA_SE_PKA1_CTRL_SE_INTR_MASK_EIP0_PKA(ELP_DISABLE),
+		      TEGRA_SE_PKA1_CTRL_SE_INTR_MASK_OFFSET);
+
 	return 0;
 }
 

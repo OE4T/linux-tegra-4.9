@@ -79,11 +79,22 @@ static int gk20a_as_ioctl_map_buffer_ex(
 		struct gk20a_as_share *as_share,
 		struct nvgpu_as_map_buffer_ex_args *args)
 {
+	s16 compressible_kind;
+	s16 incompressible_kind;
+
 	gk20a_dbg_fn("");
+
+	if (args->flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
+		compressible_kind = args->compr_kind;
+		incompressible_kind = args->incompr_kind;
+	} else {
+		compressible_kind = args->kind;
+		incompressible_kind = NV_KIND_INVALID;
+	}
 
 	return nvgpu_vm_map_buffer(as_share->vm, args->dmabuf_fd,
 				   &args->offset, args->flags,
-				   args->kind,
+				   compressible_kind, incompressible_kind,
 				   args->buffer_offset,
 				   args->mapping_size,
 				   NULL);
@@ -97,6 +108,7 @@ static int gk20a_as_ioctl_map_buffer(
 	return nvgpu_vm_map_buffer(as_share->vm, args->dmabuf_fd,
 				   &args->o_a.offset,
 				   args->flags, NV_KIND_DEFAULT,
+				   NV_KIND_DEFAULT,
 				   0, 0, NULL);
 	/* args->o_a.offset will be set if !err */
 }
@@ -158,6 +170,9 @@ static int gk20a_as_ioctl_map_buffer_batch(
 	}
 
 	for (i = 0; i < args->num_maps; ++i) {
+		s16 compressible_kind;
+		s16 incompressible_kind;
+
 		struct nvgpu_as_map_buffer_ex_args map_args;
 		memset(&map_args, 0, sizeof(map_args));
 
@@ -167,10 +182,19 @@ static int gk20a_as_ioctl_map_buffer_batch(
 			break;
 		}
 
+		if (map_args.flags &
+		    NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
+			compressible_kind = map_args.compr_kind;
+			incompressible_kind = map_args.incompr_kind;
+		} else {
+			compressible_kind = map_args.kind;
+			incompressible_kind = NV_KIND_INVALID;
+		}
+
 		err = nvgpu_vm_map_buffer(
 			as_share->vm, map_args.dmabuf_fd,
 			&map_args.offset, map_args.flags,
-			map_args.kind,
+			compressible_kind, incompressible_kind,
 			map_args.buffer_offset,
 			map_args.mapping_size,
 			&batch);

@@ -1929,6 +1929,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 			0,
 			0,
 			0,
+			0,
 			args->mapping_size,
 			NULL);
 	if (err)

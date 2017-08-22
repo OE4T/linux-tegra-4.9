@@ -177,11 +177,46 @@ static u64 __nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 	return mapped_buffer->addr;
 }
 
+static int setup_bfr_kind_fields(struct buffer_attrs *bfr, s16 compr_kind,
+				 s16 incompr_kind, u32 flags)
+{
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
+		/* were we supplied with a kind in either parameter? */
+		if ((compr_kind < 0 || compr_kind >= NV_KIND_ATTR_SIZE) &&
+		    (incompr_kind < 0 || incompr_kind >= NV_KIND_ATTR_SIZE))
+			return -EINVAL;
+
+		if (compr_kind != NV_KIND_INVALID) {
+			bfr->use_kind_v = true;
+			bfr->kind_v = (u8)compr_kind;
+		}
+
+		if (incompr_kind != NV_KIND_INVALID) {
+			bfr->use_uc_kind_v = true;
+			bfr->uc_kind_v = (u8)incompr_kind;
+		}
+	} else {
+		if (compr_kind < 0 || compr_kind >= NV_KIND_ATTR_SIZE)
+			return -EINVAL;
+
+		bfr->use_kind_v = true;
+		bfr->kind_v = (u8)compr_kind;
+
+		/*
+		 * Note: setup_buffer_kind_and_compression() will
+		 * figure out uc_kind_v or return an error
+		 */
+	}
+
+	return 0;
+}
+
 u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		 struct dma_buf *dmabuf,
 		 u64 offset_align,
 		 u32 flags,
-		 int kind,
+		 s16 compr_kind,
+		 s16 incompr_kind,
 		 bool user_mapped,
 		 int rw_flag,
 		 u64 buffer_offset,
@@ -203,6 +238,22 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	u32 ctag_offset;
 	enum nvgpu_aperture aperture;
 
+	/*
+	 * The kind used as part of the key for map caching. HW may
+	 * actually be programmed with the fallback kind in case the
+	 * key kind is compressible but we're out of comptags.
+	 */
+	s16 map_key_kind;
+
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
+		if (compr_kind != NV_KIND_INVALID)
+			map_key_kind = compr_kind;
+		else
+			map_key_kind = incompr_kind;
+	} else {
+		map_key_kind = compr_kind;
+	}
+
 	if (user_mapped && vm->userspace_managed &&
 	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
 		nvgpu_err(g, "non-fixed-offset mapping not available on "
@@ -216,7 +267,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	if (!vm->userspace_managed) {
 		map_offset = __nvgpu_vm_find_mapping(
 			vm, dmabuf, offset_align,
-			flags, kind,
+			flags, map_key_kind,
 			user_mapped, rw_flag);
 		if (map_offset) {
 			nvgpu_mutex_release(&vm->update_gmmu_lock);
@@ -239,12 +290,10 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
-	if (kind >= NV_KIND_ATTR_SIZE) {
-		err = -EINVAL;
+	err = setup_bfr_kind_fields(&bfr, compr_kind, incompr_kind, flags);
+	if (err)
 		goto clean_up;
-	} else {
-		bfr.kind_v = (u8)kind;
-	}
+
 	bfr.size = dmabuf->size;
 	sgl = bfr.sgt->sgl;
 
@@ -306,10 +355,15 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		err = gk20a_alloc_comptags(g, dev, dmabuf,
 					   ctag_allocator,
 					   bfr.ctag_lines);
-		if (err) {
-			/* ok to fall back here if we ran out */
+		if (unlikely(err)) {
 			/* TBD: we can partially alloc ctags as well... */
-			bfr.kind_v = bfr.uc_kind_v;
+			if (bfr.use_uc_kind_v) {
+				/* no comptags, but fallback kind available */
+				bfr.kind_v = bfr.uc_kind_v;
+			} else {
+				nvgpu_err(g, "comptag alloc failed and no fallback kind specified");
+				goto clean_up;
+			}
 		} else {
 			gk20a_get_comptags(dev,
 					   dmabuf, &comptags);
@@ -371,7 +425,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->ctag_allocated_lines = bfr.ctag_allocated_lines;
 	mapped_buffer->vm          = vm;
 	mapped_buffer->flags       = flags;
-	mapped_buffer->kind        = kind;
+	mapped_buffer->kind        = map_key_kind;
 	mapped_buffer->va_allocated = va_allocated;
 	mapped_buffer->user_mapped = user_mapped ? 1 : 0;
 	mapped_buffer->own_mem_ref = user_mapped;

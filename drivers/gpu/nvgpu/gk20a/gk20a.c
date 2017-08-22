@@ -411,7 +411,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 			gpu->available_big_page_sizes |= g->ops.mm.get_big_page_sizes();
 	}
 
-	gpu->flags = NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS;
+	gpu->flags = NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS |
+		NVGPU_GPU_FLAGS_SUPPORT_MAP_DIRECT_KIND_CTRL;
 
 	if (IS_ENABLED(CONFIG_SYNC))
 		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS;

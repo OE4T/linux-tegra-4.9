@@ -975,7 +975,7 @@ __releases(&l->cde_app->mutex)
 	u64 big_page_mask = 0;
 	u32 flags;
 	int err, i;
-	const s32 compbits_kind = 0;
+	const s16 compbits_kind = 0;
 
 	gk20a_dbg(gpu_dbg_cde, "compbits_byte_offset=%llu scatterbuffer_byte_offset=%llu",
 		  compbits_byte_offset, scatterbuffer_byte_offset);
@@ -1038,8 +1038,11 @@ __releases(&l->cde_app->mutex)
 	/* map the destination buffer */
 	get_dma_buf(compbits_scatter_buf); /* a ref for nvgpu_vm_map */
 	map_vaddr = nvgpu_vm_map(cde_ctx->vm, compbits_scatter_buf, 0,
-				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				 compbits_kind, true,
+				 NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE |
+				 NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL,
+				 NV_KIND_INVALID,
+				 compbits_kind, /* incompressible kind */
+				 true,
 				 gk20a_mem_flag_none,
 				 map_offset, map_size,
 				 NULL);

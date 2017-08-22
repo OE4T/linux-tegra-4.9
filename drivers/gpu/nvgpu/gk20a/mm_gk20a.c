@@ -822,14 +822,11 @@ static void nvgpu_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }
 
-int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
-				      u32 flags,
-				      struct buffer_attrs *bfr,
-				      enum gmmu_pgsz_gk20a pgsz_idx)
+static int setup_kind_legacy(struct vm_gk20a *vm, struct buffer_attrs *bfr,
+			     bool *pkind_compressible)
 {
-	bool kind_compressible;
 	struct gk20a *g = gk20a_from_vm(vm);
-	int ctag_granularity = g->ops.fb.compression_page_size(g);
+	bool kind_compressible;
 
 	if (unlikely(bfr->kind_v == gmmu_pte_kind_invalid_v()))
 		bfr->kind_v = gmmu_pte_kind_pitch_v();
@@ -840,7 +837,7 @@ int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 	}
 
 	bfr->uc_kind_v = gmmu_pte_kind_invalid_v();
-	/* find a suitable uncompressed kind if it becomes necessary later */
+	/* find a suitable incompressible kind if it becomes necessary later */
 	kind_compressible = gk20a_kind_is_compressible(bfr->kind_v);
 	if (kind_compressible) {
 		bfr->uc_kind_v = gk20a_get_uncompressed_kind(bfr->kind_v);
@@ -852,6 +849,36 @@ int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 			return -EINVAL;
 		}
 	}
+
+	*pkind_compressible = kind_compressible;
+	return 0;
+}
+
+int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
+				      u32 flags,
+				      struct buffer_attrs *bfr,
+				      enum gmmu_pgsz_gk20a pgsz_idx)
+{
+	bool kind_compressible;
+	struct gk20a *g = gk20a_from_vm(vm);
+	int ctag_granularity = g->ops.fb.compression_page_size(g);
+
+	if (!bfr->use_kind_v)
+		bfr->kind_v = gmmu_pte_kind_invalid_v();
+	if (!bfr->use_uc_kind_v)
+		bfr->uc_kind_v = gmmu_pte_kind_invalid_v();
+
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
+		kind_compressible = (bfr->kind_v != gmmu_pte_kind_invalid_v());
+		if (!kind_compressible)
+			bfr->kind_v = bfr->uc_kind_v;
+	} else {
+		int err = setup_kind_legacy(vm, bfr, &kind_compressible);
+
+		if (err)
+			return err;
+	}
+
 	/* comptags only supported for suitable kinds, 128KB pagesize */
 	if (kind_compressible &&
 	    vm->gmmu_page_sizes[pgsz_idx] < g->ops.fb.compressible_page_size(g)) {
@@ -864,6 +891,9 @@ int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 		bfr->ctag_lines = DIV_ROUND_UP_ULL(bfr->size, ctag_granularity);
 	else
 		bfr->ctag_lines = 0;
+
+	bfr->use_kind_v = (bfr->kind_v != gmmu_pte_kind_invalid_v());
+	bfr->use_uc_kind_v = (bfr->uc_kind_v != gmmu_pte_kind_invalid_v());
 
 	return 0;
 }
@@ -1649,7 +1679,8 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,
 			u64 *offset_align,
 			u32 flags, /*NVGPU_AS_MAP_BUFFER_FLAGS_*/
-			int kind,
+			s16 compr_kind,
+			s16 incompr_kind,
 			u64 buffer_offset,
 			u64 mapping_size,
 			struct vm_gk20a_mapping_batch *batch)
@@ -1690,7 +1721,7 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	}
 
 	ret_va = nvgpu_vm_map(vm, dmabuf, *offset_align,
-			flags, kind, true,
+			flags, compr_kind, incompr_kind, true,
 			gk20a_mem_flag_none,
 			buffer_offset,
 			mapping_size,

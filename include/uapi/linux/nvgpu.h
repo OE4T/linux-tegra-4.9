@@ -146,6 +146,9 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_IO_COHERENCE		(1ULL << 20)
 /* NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_RESCHEDULE_RUNLIST	(1ULL << 21)
+/* Direct PTE kind control is supported (map_buffer_ex) */
+#define NVGPU_GPU_FLAGS_SUPPORT_MAP_DIRECT_KIND_CTRL	(1ULL << 23)
+
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;
@@ -1751,6 +1754,7 @@ struct nvgpu_as_map_buffer_args {
 #define NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT	    (1 << 4)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE	    (1 << 5)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS (1 << 6)
+#define NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL  (1 << 8)
 	__u32 reserved;		/* in */
 	__u32 dmabuf_fd;	/* in */
 	__u32 page_size;	/* inout, 0:= best fit to buffer */
@@ -1760,7 +1764,7 @@ struct nvgpu_as_map_buffer_args {
 	} o_a;
 };
 
- /*
+/*
  * Mapping dmabuf fds into an address space:
  *
  * The caller requests a mapping to a particular page 'kind'.
@@ -1772,7 +1776,37 @@ struct nvgpu_as_map_buffer_args {
 struct nvgpu_as_map_buffer_ex_args {
 	__u32 flags;		/* in/out */
 #define NV_KIND_DEFAULT -1
-	__s32 kind;		/* in (-1 represents default) */
+	union {
+		/*
+		 * Used if NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL
+		 * is not set.
+		 */
+		__s32 kind;	/* in (-1 represents default) */
+
+		/*
+		 * If NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is
+		 * set, this is used, instead. The rules are:
+		 *
+		 * - If both compr_kind and incompr_kind are set
+		 *   (i.e., value is other than NV_KIND_INVALID),
+		 *   kernel attempts to use compr_kind first.
+		 *
+		 * - If compr_kind is set, kernel attempts to allocate
+		 *   comptags for the buffer. If successful,
+		 *   compr_kind is used as the PTE kind.
+		 *
+		 * - If incompr_kind is set, kernel uses incompr_kind
+		 *   as the PTE kind. Comptags are not allocated.
+		 *
+		 * - If neither compr_kind or incompr_kind is set, the
+		 *   map call will fail.
+		 */
+#define NV_KIND_INVALID -1
+		struct {
+		       __s16 compr_kind;
+		       __s16 incompr_kind;
+	       };
+	};
 	__u32 dmabuf_fd;	/* in */
 	__u32 page_size;	/* inout, 0:= best fit to buffer */
 

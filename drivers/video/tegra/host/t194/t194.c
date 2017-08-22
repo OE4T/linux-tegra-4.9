@@ -206,7 +206,6 @@ struct nvhost_device_data t19_host1x_hv_info = {
 		{"host1x", UINT_MAX},
 		{"actmon", UINT_MAX}
 	},
-	.can_powergate          = false,
 	.autosuspend_delay      = 2000,
 	.private_data		= &host1x04_info,
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
@@ -262,7 +261,6 @@ struct nvhost_device_data t19_vi_thi_info = {
 
 struct nvhost_device_data t19_vi5_info = {
 	.devfs_name		= "vi5",
-	.can_powergate          = true,
 	.keepalive		= true,
 	.autosuspend_delay      = 500,
 	.moduleid		= NVHOST_MODULE_VI,
@@ -283,7 +281,6 @@ struct nvhost_device_data t19_nvcsi_info = {
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVCSI},
 	.class			= NV_VIDEO_STREAMING_NVCSI_CLASS_ID,
 	.ctrl_ops		= &tegra194_nvcsi_ctrl_ops,
-	.can_powergate          = true,
 	.autosuspend_delay      = 500,
 	.finalize_poweron	= tegra194_nvcsi_finalize_poweron,
 	.prepare_poweroff	= tegra194_nvcsi_prepare_poweroff,
@@ -304,7 +301,6 @@ struct nvhost_device_data t19_isp_thi_info = {
 	.class			= NV_VIDEO_STREAMING_ISP_CLASS_ID,
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_ISP},
 	.keepalive		= true,
-	.can_powergate          = true,
 	.autosuspend_delay      = 500,
 	.poweron_reset		= true,
 	.clocks			= {
@@ -319,7 +315,6 @@ struct nvhost_device_data t19_isp_thi_info = {
 
 struct nvhost_device_data t19_isp5_info = {
 	.devfs_name		= "isp5",
-	.can_powergate          = true,
 	.keepalive		= true,
 	.autosuspend_delay      = 500,
 	.moduleid		= NVHOST_MODULE_ISP,
@@ -561,6 +556,7 @@ struct nvhost_device_data t19_pva1_info = {
 	.devfs_name		= "pva1",
 	.class			= NV_PVA1_CLASS_ID,
 	.autosuspend_delay      = 500,
+	.can_powergate          = true,
 	.pre_poweron		= cv_cluster_unclamp,
 	.finalize_poweron	= pva_finalize_poweron,
 	.prepare_poweroff	= pva_prepare_poweroff,
@@ -586,6 +582,7 @@ struct nvhost_device_data t19_pva0_info = {
 	},
 	.ctrl_ops		= &tegra_pva_ctrl_ops,
 	.devfs_name		= "pva0",
+	.can_powergate          = true,
 	.class			= NV_PVA0_CLASS_ID,
 	.autosuspend_delay      = 500,
 	.pre_poweron		= cv_cluster_unclamp,
@@ -672,7 +669,6 @@ struct nvhost_device_data t19_slvsec_info = {
 	},
 	.devfs_name		= "slvs-ec",
 	.class			= NV_SLVSEC_CLASS_ID,
-	.can_powergate          = true,
 	.autosuspend_delay      = 500,
 	.finalize_poweron	= slvsec_finalize_poweron,
 	.prepare_poweroff	= slvsec_prepare_poweroff,

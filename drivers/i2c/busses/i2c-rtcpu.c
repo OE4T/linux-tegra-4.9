@@ -183,7 +183,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	}
 
 	/* Probe the I2C hardware */
-	pm_runtime_enable(i2c_dev->dev);
+	pm_runtime_enable(&pdev->dev);
 
 	/* Register I2C bus */
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
@@ -199,12 +199,13 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	ret = i2c_add_numbered_adapter(&i2c_dev->adapter);
 	if (ret) {
 		dev_err(i2c_dev->dev, "Cannot add I2C adapter: %d\n", ret);
-		goto disable_clk;
+		goto pm_disable;
 	}
 
-	pm_runtime_enable(&i2c_dev->adapter.dev);
-
 	return 0;
+
+pm_disable:
+	pm_runtime_disable(&pdev->dev);
 
 disable_clk:
 	tegra_i2c_rtcpu_clock_disable(i2c_clk_config);
@@ -227,7 +228,6 @@ static int tegra_i2c_remove(struct platform_device *pdev)
 	struct tegra_i2c *i2c_dev = platform_get_drvdata(pdev);
 
 	i2c_del_adapter(&i2c_dev->adapter);
-	pm_runtime_disable(&i2c_dev->adapter.dev);
 	pm_runtime_disable(&pdev->dev);
 
 	return 0;

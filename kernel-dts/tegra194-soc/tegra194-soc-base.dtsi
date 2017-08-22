@@ -1563,4 +1563,51 @@
 		mboxes = <&aon 1>;
 		status = "okay";
 	};
+
+	xhci_server {
+		compatible = "nvidia,tegra194-xhci-hv";
+		vfs_num = <4>;
+
+		/* Index 0 : XUSB PF base address and size
+		 * Index 1 : XUSB PF CFG (FPCI) base address and size
+		 * Index 2 : XUSB VF0 base address and size
+		 * Index 3 : XUSB PADCTL base address and size
+		 * Index 4 : XUSB AO base address and size
+		 */
+		reg = <0x0 0x3610000 0x0 0x50000>,
+			<0x0 0x3600000 0x0 0x10000>,
+			<0x0 0x3660000 0x0 0x50000>,
+			<0x0 0x3520000 0x0 0x10000>,
+			<0x0 0x3540000 0x0 0x10000>;
+
+		pf {
+			ss_start = <1>;
+			ss_num = <4>;
+			hs_start = <5>;
+			hs_num = <4>;
+		};
+
+		vfs {
+			/*
+			 * portmap : Add all the ports(Host/Device Mode) that
+			 * are owned by a Guest. Even if there is a micro-B port
+			 * which is device only, add it to portmap so that
+			 * XHCI_SERVER can validate when VF accesses PAD/AO
+			 * Registers for the device only port
+			 */
+
+			vf@1 {
+				slots = <36>;
+			};
+			vf@2 {
+				slots = <36>;
+			};
+			vf@3 {
+				slots = <36>;
+			};
+			vf@4 {
+				slots = <36>;
+			};
+		};
+	};
 };

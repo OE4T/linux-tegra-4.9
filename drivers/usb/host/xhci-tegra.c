@@ -32,6 +32,7 @@
 #include <linux/circ_buf.h>
 #include <linux/extcon.h>
 #include <linux/pm_qos.h>
+#include <linux/tegra-ivc.h>
 
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-powergate.h>
@@ -492,6 +493,9 @@ struct tegra_xusb {
 	unsigned int boost_cpu_trigger;
 	unsigned long cpufreq_last_boosted;
 	bool cpu_boost_enabled;
+	struct tegra_hv_ivc_cookie *ivck;
+	char ivc_rx[128]; /* Buffer to receive pad ivc message */
+	struct work_struct ivc_work;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -2189,6 +2193,100 @@ static int tegra_xhci_id_notifier(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+
+static irqreturn_t tegra_xhci_pad_ivc_irq(int irq, void *data)
+{
+	struct tegra_xusb *tegra = data;
+	int ret;
+
+	if (tegra_hv_ivc_channel_notified(tegra->ivck) != 0) {
+		dev_info(tegra->dev, "ivc channel not usable\n");
+		return IRQ_HANDLED;
+	}
+
+	if (tegra_hv_ivc_can_read(tegra->ivck)) {
+		/* Read the current message for the xhci_server to be
+		 * able to send further messages on next pad interrupt
+		 */
+		ret = tegra_hv_ivc_read(tegra->ivck, tegra->ivc_rx, 128);
+		if (ret < 0) {
+			dev_err(tegra->dev,
+				"IVC Read of PAD Interrupt Failed: %d\n", ret);
+		} else {
+			/* Schedule work to execute the PADCTL IRQ Function
+			 * which takes the appropriate action.
+			 */
+			schedule_work(&tegra->ivc_work);
+		}
+	} else {
+		dev_info(tegra->dev, "Can not read ivc channel: %d\n",
+							tegra->ivck->irq);
+	}
+	return IRQ_HANDLED;
+}
+
+static void tegra_xhci_ivc_work(struct work_struct *work)
+{
+	struct tegra_xusb *tegra = container_of(work, struct tegra_xusb,
+						ivc_work);
+
+	tegra_xusb_padctl_irq(tegra->ivck->irq, tegra);
+}
+
+int init_ivc_communication(struct platform_device *pdev)
+{
+	uint32_t id;
+	int ret;
+	struct device *dev = &pdev->dev;
+	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+	struct device_node *np, *hv_np;
+
+	np = dev->of_node;
+	if (!np) {
+		dev_err(dev, "init_ivc: couldnt get of_node handle\n");
+		return -EINVAL;
+	}
+
+	hv_np = of_parse_phandle(np, "ivc", 0);
+	if (!hv_np) {
+		dev_err(dev, "ivc_init: couldnt find ivc DT node\n");
+		return -EINVAL;
+	}
+
+	ret = of_property_read_u32_index(np, "ivc", 1, &id);
+	if (ret) {
+		dev_err(dev, "ivc_init: Error in reading IVC DT\n");
+		of_node_put(hv_np);
+		return -EINVAL;
+	}
+
+	tegra->ivck = tegra_hv_ivc_reserve(hv_np, id, NULL);
+	of_node_put(hv_np);
+	if (IS_ERR_OR_NULL(tegra->ivck)) {
+		dev_err(dev, "Failed to reserve ivc channel:%d\n", id);
+		ret = PTR_ERR(tegra->ivck);
+		tegra->ivck = NULL;
+		return ret;
+	}
+
+	dev_info(dev, "Reserved IVC channel #%d - frame_size=%d irq %d\n",
+			id, tegra->ivck->frame_size, tegra->ivck->irq);
+
+	tegra_hv_ivc_channel_reset(tegra->ivck);
+
+	INIT_WORK(&tegra->ivc_work, tegra_xhci_ivc_work);
+
+	ret = devm_request_irq(dev, tegra->ivck->irq, tegra_xhci_pad_ivc_irq,
+						0, dev_name(dev), tegra);
+	if (ret) {
+		dev_err(dev, "Unable to request irq(%d)\n", tegra->ivck->irq);
+		tegra_hv_ivc_unreserve(tegra->ivck);
+		return ret;
+	}
+
+	return 0;
+}
+
 static ssize_t store_reload_hcd(struct device *dev,
 	struct device_attribute *attr,
 	const char *buf, size_t count)
@@ -2341,6 +2439,17 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 			goto remove_mbox_irq;
 		}
 		tegra->fw_loaded = true;
+	} else {
+		/* In Virtualization, the PAD interrupt is owned by xhci_server
+		 *  and Host driver needs to initiate an IVC channel to receive
+		 * the interruptd from the xhci_server.
+		 */
+		ret = init_ivc_communication(pdev);
+		if (ret < 0) {
+			dev_err(dev,
+			"Failed to init IVC channel with xhci_server\n");
+			goto remove_usb3;
+		}
 	}
 
 	tegra_xhci_update_otg_role(tegra);
@@ -2371,8 +2480,12 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 
 	/* Free up as much as we can and wait to be unbound. */
 remove_padctl_irq:
-	if (!tegra->soc->is_xhci_vf)
+	if (!tegra->soc->is_xhci_vf) {
 		devm_free_irq(dev, tegra->padctl_irq, tegra);
+	} else {
+		devm_free_irq(dev, tegra->ivck->irq, tegra);
+		tegra_hv_ivc_unreserve(tegra->ivck);
+	}
 remove_mbox_irq:
 	if (!tegra->soc->is_xhci_vf)
 		devm_free_irq(dev, tegra->mbox_irq, tegra);
@@ -2941,6 +3054,8 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	if (tegra->soc->handle_oc)
 		cancel_work_sync(&tegra->oc_work);
 
+	cancel_work_sync(&tegra->ivc_work);
+
 	if (tegra->cpu_boost_enabled)
 		tegra_xusb_boost_cpu_deinit(tegra);
 
@@ -2959,6 +3074,11 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	device_remove_file(&pdev->dev, &dev_attr_reload_hcd);
 
 	sysfs_remove_group(&pdev->dev.kobj, &tegra_xhci_attr_group);
+
+	if (tegra->soc->is_xhci_vf && (tegra->ivck != NULL)) {
+		tegra_hv_ivc_unreserve(tegra->ivck);
+		devm_free_irq(dev, tegra->ivck->irq, tegra);
+	}
 
 	if (tegra->fw_loaded || tegra->soc->is_xhci_vf) {
 		struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
@@ -3542,6 +3662,7 @@ static int tegra_xusb_suspend(struct device *dev)
 	if (tegra->soc->handle_oc)
 		flush_work(&tegra->oc_work);
 
+	flush_work(&tegra->ivc_work);
 	mutex_lock(&tegra->lock);
 
 	if (pm_runtime_suspended(dev)) {
@@ -3574,10 +3695,10 @@ static int tegra_xusb_suspend(struct device *dev)
 out:
 	if (!ret) {
 		tegra->suspended = true;
-
-		if (device_may_wakeup(dev)) {
+		if (!tegra->soc->is_xhci_vf && device_may_wakeup(dev)) {
 			if (enable_irq_wake(tegra->padctl_irq))
-				dev_err(dev, "failed to enable padctl wakes\n");
+				dev_err(dev,
+				"failed to enable padctl wakes\n");
 		}
 		pm_runtime_disable(dev);
 	}
@@ -3671,11 +3792,11 @@ static int tegra_xhci_resume(struct device *dev)
 
 	ret = tegra_xhci_resume_common(dev);
 
-	if (device_may_wakeup(dev)) {
+	if (!tegra->soc->is_xhci_vf && device_may_wakeup(dev)) {
 		if (disable_irq_wake(tegra->padctl_irq))
-			dev_err(dev, "failed to disable padctl wakes\n");
+			dev_err(dev,
+			"failed to disable padctl wakes\n");
 	}
-
 	return ret;
 }
 #endif /* IS_ENABLED(CONFIG_PM_SLEEP) */

@@ -100,6 +100,16 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 		break;
 	}
 
+	case _IOC_NR(VI_CAPTURE_SET_CONFIG): {
+		struct vi_capture_control_msg tmp;
+		if (copy_from_user(&tmp, ptr, sizeof(tmp)))
+			break;
+		err = vi_capture_control_message(chan, &tmp);
+		if (err)
+			dev_err(chan->dev, "vi capture set config failed\n");
+		break;
+	}
+
 	case _IOC_NR(VI_CAPTURE_REQUEST): {
 		struct vi_capture_req tmp;
 		if (copy_from_user(&tmp, ptr, sizeof(tmp)))

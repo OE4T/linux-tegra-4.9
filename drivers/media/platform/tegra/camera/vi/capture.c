@@ -26,6 +26,15 @@
 #include "soc/tegra/camrtc-capture.h"
 #include "soc/tegra/camrtc-capture-messages.h"
 
+/* Remove after constants integrated into camrtc-capture-messages.h */
+#ifndef CAPTURE_CHANNEL_TPG_SETUP_REQ
+#define CAPTURE_CHANNEL_TPG_SETUP_REQ   U32_C(0x30)
+#define CAPTURE_CHANNEL_TPG_SETUP_RESP  U32_C(0x31)
+#define CAPTURE_CHANNEL_TPG_START_REQ   U32_C(0x32)
+#define CAPTURE_CHANNEL_TPG_START_RESP  U32_C(0x33)
+#define CAPTURE_CHANNEL_TPG_STOP_REQ    U32_C(0x34)
+#define CAPTURE_CHANNEL_TPG_STOP_RESP   U32_C(0x35)
+#endif
 
 #define CAPTURE_CHANNEL_UNKNOWN_RESP 0xFFFFFFFF
 #define CAPTURE_CHANNEL_INVALID_ID 0xFFFF
@@ -92,13 +101,17 @@ static void vi_capture_ivc_control_callback(const void *ivc_resp,
 	case CAPTURE_PDAF_CONFIG_RESP:
 	case CAPTURE_SYNCGEN_ENABLE_RESP:
 	case CAPTURE_SYNCGEN_DISABLE_RESP:
+	case CAPTURE_CHANNEL_TPG_SETUP_RESP:
+	case CAPTURE_CHANNEL_TPG_START_RESP:
+	case CAPTURE_CHANNEL_TPG_STOP_RESP:
 		memcpy(&capture->control_resp_msg, control_msg,
 				sizeof(*control_msg));
 		complete(&capture->control_resp);
 		break;
 	default:
 		dev_err(chan->dev,
-			"%s: unknown capture control resp", __func__);
+			"%s: unknown capture control resp 0x%x", __func__,
+			control_msg->header.msg_id);
 		break;
 	}
 }
@@ -693,9 +706,19 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 	case CAPTURE_SYNCGEN_DISABLE_REQ:
 		resp_id = CAPTURE_SYNCGEN_DISABLE_RESP;
 		break;
+	case CAPTURE_CHANNEL_TPG_SETUP_REQ:
+		resp_id = CAPTURE_CHANNEL_TPG_SETUP_RESP;
+		break;
+	case CAPTURE_CHANNEL_TPG_START_REQ:
+		resp_id = CAPTURE_CHANNEL_TPG_START_RESP;
+		break;
+	case CAPTURE_CHANNEL_TPG_STOP_REQ:
+		resp_id = CAPTURE_CHANNEL_TPG_STOP_RESP;
+		break;
 	default:
 		dev_err(chan->dev,
-				"%s: unknown capture control resp", __func__);
+				"%s: unknown capture control req %x", __func__,
+				header->msg_id);
 		err = -EINVAL;
 		goto fail;
 	}
@@ -925,11 +948,13 @@ int vi_capture_status(struct tegra_vi_channel *chan,
 	ret = wait_for_completion_killable_timeout(
 			&capture->capture_resp,
 			(unsigned long)(timeout_ms/1000*HZ));
+	/* Possible return values:
+	 * -ERESTARTSYS if interrupted, 0 if timed out, positive (at least 1,
+	 * or number of jiffies left till timeout) if completed */
 	if (ret <= 0) {
 		dev_err(chan->dev,
 			"no reply from camera processor\n");
 		return -ETIMEDOUT;
-	}
-
-	return ret;
+	} else
+		return 0;
 }

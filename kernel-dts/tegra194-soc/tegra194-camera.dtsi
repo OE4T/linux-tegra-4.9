@@ -78,6 +78,7 @@
 			nvidia,frame-size = <8192>;
 			nvidia,ivc-timeout = <50>;
 			nvidia,test-timeout = <5000>;
+			nvidia,mem-map = <&rce_rm &vi &isp>;
 		};
 		ivccontrol@3 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";
@@ -103,7 +104,7 @@
 		nvidia,log-prefix = "[RCE]";
 	};
 
-	rce-rm@bc00000 {
+	rce_rm: rce-rm@bc00000 {
 		compatible = "nvidia,tegra194-rce-rm";
 		reg = <0 0xbc00000 0 0x1000>;
 

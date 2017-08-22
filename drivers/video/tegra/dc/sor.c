@@ -1464,8 +1464,6 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 		NV_SOR_CSTM_LVDS_EN_DISABLE);
 
 	tegra_dc_sor_config_pwm(sor, 1024, 1024);
-
-	tegra_dc_sor_update(sor);
 }
 
 static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
@@ -1670,6 +1668,7 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 			DC_CMD_STATE_ACCESS);
 
 	tegra_dc_sor_config_panel(sor, false);
+	tegra_dc_sor_update(sor);
 
 	/* WAR for bug 1428181 */
 	tegra_dc_sor_enable_sor(sor, true);

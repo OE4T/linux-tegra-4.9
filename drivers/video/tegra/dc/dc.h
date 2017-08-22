@@ -1243,10 +1243,9 @@ struct nvdisp_isoclient_bw_info {
 #endif
 
 struct nvdisp_imp_table {
-	struct tegra_dc_ext_imp_settings *settings;
-	int entries; /* entries in @settings */
-	bool valid;  /* @settings are valid or not */
-	int  chosen_index;  /* Registered @entries index */
+	struct tegra_nvdisp_imp_settings *settings;
+	u8 num_settings;
+	struct tegra_nvdisp_imp_settings *boot_setting;
 };
 
 

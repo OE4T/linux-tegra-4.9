@@ -150,12 +150,12 @@ static struct nvdisp_isoclient_bw_info ihub_bw_info;
 
 static u32 tegra_nvdisp_get_max_pending_bw(struct tegra_dc *dc)
 {
-	struct tegra_dc_imp_settings *settings;
+	struct tegra_nvdisp_imp_settings *settings;
 	u32 max_pending_bw = 0;
 
 	list_for_each_entry(settings, &nvdisp_imp_settings_queue, imp_node) {
 		u32 pending_bw =
-			settings->ext_settings.total_display_iso_bw_kbps;
+			settings->global_entries.total_iso_bw_with_catchup_kBps;
 
 		if (pending_bw > max_pending_bw)
 			max_pending_bw = pending_bw;
@@ -589,31 +589,32 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 	if (max_emc_rate == 0 || total_iso_bw == 0)
 		return 0;
 
+	/* If platform settings are present, register them. */
 	imp_table = tegra_dc_common_get_imp_table();
-
-
-	/* If platform settings present, register them */
-	if (imp_table) {
-		imp_table->valid = true;
-		pdata_cfg = kcalloc(imp_table->entries,
+	if (imp_table && imp_table->num_settings > 0) {
+		pdata_cfg = kcalloc(imp_table->num_settings,
 				sizeof(*pdata_cfg), GFP_KERNEL);
 
 		if (!pdata_cfg)
 			return -ENOMEM;
 
-		for (i = 0; i < imp_table->entries; i++) {
-			struct nvdisp_bandwidth_config
-					*cfg = &pdata_cfg[i];
-			struct tegra_dc_ext_imp_settings
-					*settings = &imp_table->settings[i];
+		for (i = 0; i < imp_table->num_settings; i++) {
+			struct nvdisp_bandwidth_config *cfg;
+			struct tegra_nvdisp_imp_settings *imp_settings;
+			struct tegra_dc_ext_nvdisp_imp_global_entries *g_ents;
 
-			cfg->iso_bw = settings->total_display_iso_bw_kbps;
-			cfg->total_bw = settings->required_total_bw_kbps;
-			cfg->hubclk = settings->hubclk;
-			cfg->emc_la_floor = settings->proposed_emc_hz;
+			cfg = &pdata_cfg[i];
+			imp_settings = &imp_table->settings[i];
+			g_ents = &imp_settings->global_entries;
+
+			cfg->iso_bw = g_ents->total_iso_bw_with_catchup_kBps;
+			cfg->total_bw =
+				g_ents->total_iso_bw_without_catchup_kBps;
+			cfg->hubclk = g_ents->min_hubclk_hz;
+			cfg->emc_la_floor = g_ents->emc_floor_hz;
 		}
 		bw_cfg_table = pdata_cfg;
-		bw_cfg_entries = imp_table->entries;
+		bw_cfg_entries = imp_table->num_settings;
 	}
 
 	/*
@@ -666,12 +667,9 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 		pr_info("%s: max config hubclk = %u Hz\n",
 			__func__, cfg->hubclk);
 
-		/*
-		 * DT has config parameters and registered from one
-		 * of available set, save here registered set.
-		 */
-		if (imp_table && imp_table->valid)
-			imp_table->chosen_index = i;
+		/* If we registered one of the platform settings, cache it. */
+		if (imp_table && imp_table->num_settings > 0)
+			imp_table->boot_setting = &imp_table->settings[i];
 
 		break;
 	}

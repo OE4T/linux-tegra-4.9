@@ -29,6 +29,8 @@
 #include <linux/clk/tegra.h>
 #include <soc/tegra/reset.h>
 #include <soc/tegra/common.h>
+#include <soc/tegra/fuse.h>
+#include <linux/platform/tegra/mc.h>
 
 #define MAX_CLK_EN_NUM			15
 #define MAX_HOTRESET_CLIENT_NUM		4
@@ -61,7 +63,7 @@ struct powergate_partition_info {
 #define EMULATION_MC_FLUSH_TIMEOUT 100
 #define TEGRA210_POWER_DOMAIN_NVENC TEGRA210_POWER_DOMAIN_MPE
 
-enum mc_client {
+enum mc_client_type {
 	MC_CLIENT_AFI		= 0,
 	MC_CLIENT_AVPC		= 1,
 	MC_CLIENT_DC		= 2,
@@ -92,7 +94,7 @@ enum mc_client {
 };
 
 struct tegra210_mc_client_info {
-	enum mc_client	hot_reset_clients[MAX_HOTRESET_CLIENT_NUM];
+	enum mc_client_type hot_reset_clients[MAX_HOTRESET_CLIENT_NUM];
 };
 
 static struct tegra210_mc_client_info tegra210_pg_mc_info[] = {
@@ -506,11 +508,6 @@ struct mc_client_hotreset_reg {
 	u32 status_reg;
 };
 
-static struct mc_client_hotreset_reg tegra210_mc_reg[] = {
-	[0] = { .control_reg = 0x200, .status_reg = 0x204 },
-	[1] = { .control_reg = 0x970, .status_reg = 0x974 },
-};
-
 struct tegra210_powergate_info {
 	bool valid;
 	unsigned int mask;
@@ -578,14 +575,9 @@ static int tegra210_pg_unpowergate_partition(int id);
 static int tegra210_pg_mc_flush(int id);
 static int tegra210_pg_mc_flush_done(int id);
 
-static u32 mc_read(unsigned long reg)
+static u32  __maybe_unused mc_read(unsigned long reg)
 {
         return readl(tegra_mc + reg);
-}
-
-static void mc_write(u32 val, unsigned long reg)
-{
-        writel_relaxed(val, tegra_mc + reg);
 }
 
 /* PMC register read/write */
@@ -1111,103 +1103,43 @@ static int tegra1xx_unpowergate_partition_with_clk_on(int id,
 	return ret;
 }
 
-
-static bool tegra210_pg_hotreset_check(u32 status_reg, u32 *status)
-{
-	int i;
-	u32 curr_status;
-	u32 prev_status;
-	unsigned long flags;
-
-	spin_lock_irqsave(&tegra210_pg_lock, flags);
-	prev_status = mc_read(status_reg);
-	for (i = 0; i < HOTRESET_READ_COUNTS; i++) {
-		curr_status = mc_read(status_reg);
-		if (curr_status != prev_status) {
-			spin_unlock_irqrestore(&tegra210_pg_lock, flags);
-			return false;
-		}
-	}
-	*status = curr_status;
-	spin_unlock_irqrestore(&tegra210_pg_lock, flags);
-
-	return true;
-}
-
 static int tegra210_pg_mc_flush(int id)
 {
-	u32 idx, rst_control, rst_status;
-	u32 rst_control_reg, rst_status_reg;
-	enum mc_client mc_client_bit;
-	unsigned long flags;
-	unsigned int timeout;
-	bool ret;
-	int reg_idx;
+	u32 idx;
+	enum mc_client_type mc_client_bit;
+	int ret = EINVAL;
 
 	for (idx = 0; idx < MAX_HOTRESET_CLIENT_NUM; idx++) {
 		mc_client_bit =
 			t210_pg_info[id].mc_info->hot_reset_clients[idx];
 		if (mc_client_bit == MC_CLIENT_LAST)
 			break;
-
-		reg_idx = mc_client_bit / 32;
-		mc_client_bit %= 32;
-		rst_control_reg = tegra210_mc_reg[reg_idx].control_reg;
-		rst_status_reg = tegra210_mc_reg[reg_idx].status_reg;
-
-		spin_lock_irqsave(&tegra210_pg_lock, flags);
-		rst_control = mc_read(rst_control_reg);
-		rst_control |= (1 << mc_client_bit);
-		mc_write(rst_control, rst_control_reg);
-		spin_unlock_irqrestore(&tegra210_pg_lock, flags);
-
-		timeout = 0;
-		do {
-			udelay(10);
-			rst_status = 0;
-			ret = tegra210_pg_hotreset_check(rst_status_reg,
-								&rst_status);
-			if ((timeout++ > EMULATION_MC_FLUSH_TIMEOUT) &&
-				(tegra_platform_is_qt() ||
-				tegra_platform_is_fpga())) {
-				pr_warn("%s flush %d timeout\n", __func__, id);
-				break;
-			}
-			if (!ret)
-				continue;
-		} while (!(rst_status & (1 << mc_client_bit)));
+		ret = tegra_mc_flush(mc_client_bit);
+		if (ret)
+			break;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int tegra210_pg_mc_flush_done(int id)
 {
-	u32 idx, rst_control, rst_control_reg;
-	enum mc_client mc_client_bit;
-	unsigned long flags;
-	int reg_idx;
+	u32 idx;
+	enum mc_client_type mc_client_bit;
+	int ret = -EINVAL;
 
 	for (idx = 0; idx < MAX_HOTRESET_CLIENT_NUM; idx++) {
 		mc_client_bit =
 			t210_pg_info[id].mc_info->hot_reset_clients[idx];
 		if (mc_client_bit == MC_CLIENT_LAST)
 			break;
-
-		reg_idx = mc_client_bit / 32;
-		mc_client_bit %= 32;
-		rst_control_reg = tegra210_mc_reg[reg_idx].control_reg;
-
-		spin_lock_irqsave(&tegra210_pg_lock, flags);
-		rst_control = mc_read(rst_control_reg);
-		rst_control &= ~(1 << mc_client_bit);
-		mc_write(rst_control, rst_control_reg);
-		spin_unlock_irqrestore(&tegra210_pg_lock, flags);
-
+		ret = tegra_mc_flush_done(mc_client_bit);
+		if (ret)
+			break;
 	}
 	wmb();
 
-	return 0;
+	return ret;
 }
 
 static int tegra210_pg_powergate(int id)

@@ -1086,11 +1086,7 @@ struct gk20a {
 	struct railgate_stats pstats;
 #endif
 	u32 gr_idle_timeout_default;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
-	u32 timeouts_enabled;
-#else
 	bool timeouts_enabled;
-#endif
 	unsigned int ch_wdt_timeout_ms;
 
 	struct nvgpu_mutex poweron_lock;
@@ -1102,11 +1098,7 @@ struct gk20a {
 	u32 timeslice_high_priority_us;
 	u32 min_timeslice_us;
 	u32 max_timeslice_us;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
-	u32 runlist_interleave;
-#else
 	bool runlist_interleave;
-#endif
 
 	bool slcg_enabled;
 	bool blcg_enabled;

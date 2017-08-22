@@ -16,8 +16,6 @@
 #ifndef _NVGPU_GR_GP10B_H_
 #define _NVGPU_GR_GP10B_H_
 
-#include <linux/version.h>
-
 #include "gk20a/mm_gk20a.h"
 
 struct gk20a;
@@ -55,15 +53,9 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 struct gr_t18x {
 	struct {
 		u32 preempt_image_size;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
-		u32 force_preemption_gfxp;
-		u32 force_preemption_cilp;
-		u32 dump_ctxsw_stats_on_channel_close;
-#else
 		bool force_preemption_gfxp;
 		bool force_preemption_cilp;
 		bool dump_ctxsw_stats_on_channel_close;
-#endif
 	} ctx_vars;
 
 	u32 fecs_feature_override_ecc_val;

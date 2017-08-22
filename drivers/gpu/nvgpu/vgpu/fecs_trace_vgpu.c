@@ -14,7 +14,6 @@
 #include <linux/string.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra_vgpu.h>
-#include <linux/version.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
@@ -69,11 +68,7 @@ static int vgpu_fecs_trace_init(struct gk20a *g)
 		goto fail;
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	vcst->buf = ioremap_cached(vcst->cookie->ipa, vcst->cookie->size);
-#else
 	vcst->buf = ioremap_cache(vcst->cookie->ipa, vcst->cookie->size);
-#endif
 	if (!vcst->buf) {
 		dev_info(dev_from_gk20a(g), "ioremap_cache failed\n");
 		err = -EINVAL;

@@ -17,7 +17,6 @@
  */
 
 #include <linux/clk.h>
-#include <linux/version.h>
 
 #include <soc/tegra/tegra-dvfs.h>
 

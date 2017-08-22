@@ -13,8 +13,6 @@
  * more details.
  */
 
-#include <linux/version.h>
-
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
@@ -97,23 +95,15 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		return -EINVAL;
 
 	/* validate syncpt ids */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	list_for_each_entry(pt, &sync_fence->pt_list_head, pt_list) {
-#else
 	for (i = 0; i < sync_fence->num_fences; i++) {
 		pt = sync_pt_from_fence(sync_fence->cbs[i].sync_pt);
-#endif
 		wait_id = nvgpu_nvhost_sync_pt_id(pt);
 		if (!wait_id || !nvgpu_nvhost_syncpt_is_valid_pt_ext(
 					sp->nvhost_dev, wait_id)) {
 			sync_fence_put(sync_fence);
 			return -EINVAL;
 		}
-#if !(LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0))
 	}
-#else
-	}
-#endif
 
 	num_wait_cmds = nvgpu_nvhost_sync_num_pts(sync_fence);
 	if (num_wait_cmds == 0) {
@@ -132,13 +122,9 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	}
 
 	i = 0;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	list_for_each_entry(pt, &sync_fence->pt_list_head, pt_list) {
-#else
 	for (i = 0; i < sync_fence->num_fences; i++) {
 		struct fence *f = sync_fence->cbs[i].sync_pt;
 		struct sync_pt *pt = sync_pt_from_fence(f);
-#endif
 		u32 wait_id = nvgpu_nvhost_sync_pt_id(pt);
 		u32 wait_value = nvgpu_nvhost_sync_pt_thresh(pt);
 
@@ -154,12 +140,7 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 				i * wait_cmd_size, wait_id, wait_value,
 				sp->syncpt_buf.gpu_va);
 		}
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-		i++;
 	}
-#else
-	}
-#endif
 
 	WARN_ON(i != num_wait_cmds);
 	sync_fence_put(sync_fence);
@@ -675,11 +656,7 @@ static int gk20a_channel_semaphore_wait_fd(
 	}
 
 	/* If the fence has signaled there is no reason to wait on it. */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	status = sync_fence->status;
-#else
 	status = atomic_read(&sync_fence->status);
-#endif
 	if (status == 0) {
 		sync_fence_put(sync_fence);
 		goto skip_slow_path;

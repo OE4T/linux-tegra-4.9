@@ -16,6 +16,7 @@
 
 #include <linux/dma-attrs.h>
 #include <linux/dma-mapping.h>
+#include <linux/version.h>
 
 #include <nvgpu/dma.h>
 #include <nvgpu/lock.h>

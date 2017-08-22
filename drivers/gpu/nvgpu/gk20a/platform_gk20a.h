@@ -17,7 +17,6 @@
 #define _GK20A_PLATFORM_H_
 
 #include <linux/device.h>
-#include <linux/version.h>
 
 #include <nvgpu/lock.h>
 

@@ -18,8 +18,6 @@
 #ifndef _GK20A_SYNC_H_
 #define _GK20A_SYNC_H_
 
-#include <linux/version.h>
-
 struct sync_timeline;
 struct sync_fence;
 struct sync_pt;

@@ -16,8 +16,6 @@
 #ifndef _NVHOST_GM20B_GR_MMU_H
 #define _NVHOST_GM20B_GR_MMU_H
 
-#include <linux/version.h>
-
 struct gk20a;
 
 enum {

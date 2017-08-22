@@ -1056,7 +1056,6 @@ static const struct dma_buf_ops gk20a_vidbuf_ops = {
 
 static struct dma_buf *gk20a_vidbuf_export(struct gk20a_vidmem_buf *buf)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 	DEFINE_DMA_BUF_EXPORT_INFO(exp_info);
 
 	exp_info.priv = buf;
@@ -1065,10 +1064,6 @@ static struct dma_buf *gk20a_vidbuf_export(struct gk20a_vidmem_buf *buf)
 	exp_info.flags = O_RDWR;
 
 	return dma_buf_export(&exp_info);
-#else
-	return dma_buf_export(buf, &gk20a_vidbuf_ops, buf->mem->size,
-			O_RDWR, NULL);
-#endif
 }
 #endif
 

@@ -13,7 +13,6 @@
  * more details.
  */
 
-#include <linux/version.h>
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/hrtimer.h>
@@ -75,23 +74,6 @@ int gk20a_is_sema_backed_sync_fence(struct sync_fence *fence)
 {
 	struct sync_timeline *t;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	struct sync_pt *spt;
-	int i = 0;
-
-	if (list_empty(&fence->pt_list_head))
-		return 0;
-
-	list_for_each_entry(spt, &fence->pt_list_head, pt_list) {
-		i++;
-
-		if (i >= 2)
-			return 0;
-	}
-
-	spt = list_first_entry(&fence->pt_list_head, struct sync_pt, pt_list);
-	t = spt->parent;
-#else
 	struct fence *pt = fence->cbs[0].sync_pt;
 	struct sync_pt *spt = sync_pt_from_fence(pt);
 
@@ -102,7 +84,6 @@ int gk20a_is_sema_backed_sync_fence(struct sync_fence *fence)
 		return 0;
 
 	t = sync_pt_parent(spt);
-#endif
 
 	if (t->ops == &gk20a_sync_timeline_ops)
 		return 1;
@@ -114,15 +95,6 @@ struct nvgpu_semaphore *gk20a_sync_fence_get_sema(struct sync_fence *f)
 	struct sync_pt *spt;
 	struct gk20a_sync_pt_inst *pti;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	if (!f)
-		return NULL;
-
-	if (!gk20a_is_sema_backed_sync_fence(f))
-		return NULL;
-
-	spt = list_first_entry(&f->pt_list_head, struct sync_pt, pt_list);
-#else
 	struct fence *pt;
 
 	if (!f)
@@ -133,7 +105,6 @@ struct nvgpu_semaphore *gk20a_sync_fence_get_sema(struct sync_fence *f)
 
 	pt = f->cbs[0].sync_pt;
 	spt = sync_pt_from_fence(pt);
-#endif
 	pti = container_of(spt, struct gk20a_sync_pt_inst, pt);
 
 	return pti->shared->sema;

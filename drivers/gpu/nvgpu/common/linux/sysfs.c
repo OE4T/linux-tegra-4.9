@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/version.h>
 #include <linux/device.h>
 #include <linux/pm_runtime.h>
 #include <linux/fb.h>

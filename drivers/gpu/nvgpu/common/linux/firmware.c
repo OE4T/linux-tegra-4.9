@@ -44,14 +44,10 @@ static const struct firmware *do_request_firmware(struct device *dev,
 		fw_name = fw_path;
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	err = request_firmware(&fw, fw_name, dev);
-#else
 	if (flags & NVGPU_REQUEST_FIRMWARE_NO_WARN)
 		err = request_firmware_direct(&fw, fw_name, dev);
 	else
 		err = request_firmware(&fw, fw_name, dev);
-#endif
 
 	nvgpu_kfree(get_gk20a(dev), fw_path);
 	if (err)

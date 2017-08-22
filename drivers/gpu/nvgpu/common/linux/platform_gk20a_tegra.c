@@ -13,7 +13,6 @@
  * more details.
  */
 
-#include <linux/version.h>
 #include <linux/of_platform.h>
 #include <linux/debugfs.h>
 #include <linux/platform_data/tegra_edp.h>
@@ -822,10 +821,8 @@ static int gk20a_tegra_probe(struct device *dev)
 			dev_warn(dev, "board does not support scaling");
 		}
 		platform->g->clk.gpc_pll.id = GM20B_GPC_PLL_B1;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 		if (tegra_chip_get_revision() > TEGRA210_REVISION_A04p)
 			platform->g->clk.gpc_pll.id = GM20B_GPC_PLL_C1;
-#endif
 	}
 
 	if (tegra_get_chip_id() == TEGRA132)
@@ -841,9 +838,7 @@ static int gk20a_tegra_probe(struct device *dev)
 			return ret;
 	}
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 	pmc = ioremap(TEGRA_PMC_BASE, 4096);
-#endif
 
 	return 0;
 }

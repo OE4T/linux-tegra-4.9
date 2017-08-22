@@ -20,7 +20,6 @@
 
 #include <linux/scatterlist.h>
 #include <linux/iommu.h>
-#include <linux/version.h>
 #include <asm/dma-iommu.h>
 #include <asm/cacheflush.h>
 
@@ -248,24 +247,15 @@ struct mm_gk20a {
 	bool use_full_comp_tag_line;
 	bool ltc_enabled_current;
 	bool ltc_enabled_target;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
-	u32 bypass_smmu;
-	u32 disable_bigpage;
-#else
 	bool bypass_smmu;
 	bool disable_bigpage;
-#endif
 	bool has_physical_mode;
 
 	struct nvgpu_mem sysmem_flush;
 
 	u32 pramin_window;
 	struct nvgpu_spinlock pramin_window_lock;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
-	u32 force_pramin; /* via debugfs */
-#else
 	bool force_pramin; /* via debugfs */
-#endif
 
 	struct {
 		size_t size;

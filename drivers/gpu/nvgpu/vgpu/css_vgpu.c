@@ -68,11 +68,7 @@ static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 		goto fail;
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
-	buf = ioremap_cached(css_cookie->ipa, css_cookie->size);
-#else
 	buf = ioremap_cache(css_cookie->ipa, css_cookie->size);
-#endif
 	if (!buf) {
 		nvgpu_info(g, "ioremap_cache failed");
 		err = -EINVAL;

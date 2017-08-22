@@ -405,12 +405,8 @@ struct tegra_hsp_sm_pair *of_tegra_hsp_sm_pair_by_name(
 	const struct device_node *np, char const *name,
 	tegra_hsp_sm_full_fn full, tegra_hsp_sm_empty_fn empty, void *data)
 {
-	int index;
-
-	/* The of_property_match_string() prototype will be fixed in _next */
-	/* Until then, we have to cast to non-const */
 	/* If match fails, index will be -1 and parse_phandles fails */
-	index = of_property_match_string((struct device_node *)np,
+	int index = of_property_match_string(np,
 			NV(hsp-shared-mailbox-names), name);
 
 	return of_tegra_hsp_sm_pair_request(np, index, full, empty, data);

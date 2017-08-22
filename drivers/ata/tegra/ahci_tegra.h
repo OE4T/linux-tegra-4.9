@@ -34,7 +34,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/of_gpio.h>
 
-#include "../ahci.h"
+#include <ahci.h>
 
 #define DRV_NAME "tegra_ahci"
 

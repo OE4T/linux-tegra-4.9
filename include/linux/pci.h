@@ -1091,6 +1091,11 @@ int pci_set_power_state(struct pci_dev *dev, pci_power_t state);
 pci_power_t pci_choose_state(struct pci_dev *dev, pm_message_t state);
 bool pci_pme_capable(struct pci_dev *dev, pci_power_t state);
 void pci_pme_active(struct pci_dev *dev, bool enable);
+#ifdef CONFIG_PCIE_PME
+void pcie_pme_disable_msi(void);
+#else
+static inline void pcie_pme_disable_msi(void) {}
+#endif
 int __pci_enable_wake(struct pci_dev *dev, pci_power_t state,
 		      bool runtime, bool enable);
 int pci_wake_from_d3(struct pci_dev *dev, bool enable);

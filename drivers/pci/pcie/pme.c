@@ -40,6 +40,11 @@ static int __init pcie_pme_setup(char *str)
 }
 __setup("pcie_pme=", pcie_pme_setup);
 
+void pcie_pme_disable_msi(void)
+{
+	pcie_pme_msi_disabled = true;
+}
+
 enum pme_suspend_level {
 	PME_SUSPEND_NONE = 0,
 	PME_SUSPEND_WAKEUP,

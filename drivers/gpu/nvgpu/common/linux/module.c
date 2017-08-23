@@ -706,7 +706,10 @@ static int gk20a_pm_runtime_resume(struct device *dev)
 	if (err)
 		goto fail;
 
-	err = gk20a_pm_finalize_poweron(dev);
+	if (gk20a_gpu_is_virtual(dev))
+		err = vgpu_pm_finalize_poweron(dev);
+	else
+		err = gk20a_pm_finalize_poweron(dev);
 	if (err)
 		goto fail_poweron;
 
@@ -722,7 +725,10 @@ static int gk20a_pm_runtime_suspend(struct device *dev)
 {
 	int err = 0;
 
-	err = gk20a_pm_prepare_poweroff(dev);
+	if (gk20a_gpu_is_virtual(dev))
+		err = vgpu_pm_prepare_poweroff(dev);
+	else
+		err = gk20a_pm_prepare_poweroff(dev);
 	if (err)
 		goto fail;
 

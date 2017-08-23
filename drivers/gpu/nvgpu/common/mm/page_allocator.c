@@ -777,6 +777,16 @@ static void nvgpu_page_print_stats(struct nvgpu_allocator *__a,
 	__alloc_pstat(s, __a, "  pages freed    %lld\n", a->pages_freed);
 	__alloc_pstat(s, __a, "\n");
 
+	__alloc_pstat(s, __a, "Page size:       %lld KB\n",
+		      a->page_size >> 10);
+	__alloc_pstat(s, __a, "Total pages:     %lld (%lld MB)\n",
+		      a->length / a->page_size,
+		      a->length >> 20);
+	__alloc_pstat(s, __a, "Available pages: %lld (%lld MB)\n",
+		      nvgpu_alloc_space(&a->source_allocator) / a->page_size,
+		      nvgpu_alloc_space(&a->source_allocator) >> 20);
+	__alloc_pstat(s, __a, "\n");
+
 	/*
 	 * Slab info.
 	 */

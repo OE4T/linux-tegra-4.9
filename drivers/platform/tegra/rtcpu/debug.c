@@ -438,7 +438,7 @@ static int camrtc_dbgfs_show_test_result(struct seq_file *file, void *data)
 	const char *test_case = crd->parameters.test_case;
 	size_t test_case_size = crd->parameters.test_case_size;
 	unsigned long timeout = crd->parameters.test_timeout;
-	void *mem = kzalloc(2 * ch->ivc.frame_size, GFP_KERNEL);
+	void *mem = kzalloc(2 * ch->ivc.frame_size, GFP_KERNEL | __GFP_ZERO);
 	struct camrtc_dbg_request *req = mem;
 	struct camrtc_dbg_response *resp = mem + ch->ivc.frame_size;
 	int resultsize = ch->ivc.frame_size -
@@ -482,23 +482,33 @@ static int camrtc_dbgfs_show_test_list(struct seq_file *file, void *data)
 	struct camrtc_dbg_request req = {
 		.req_type = CAMRTC_REQ_RUN_TEST,
 	};
-	struct camrtc_dbg_response resp;
+	struct camrtc_dbg_response *resp;
 	int ret;
+
+	resp = kzalloc(ch->ivc.frame_size, GFP_KERNEL | __GFP_ZERO);
+	if (resp == NULL)
+		return -ENOMEM;
 
 	memset(req.data.run_test_data.data, 0,
 		sizeof(req.data.run_test_data.data));
 	strcpy(req.data.run_test_data.data, "list\n");
 
-	ret = camrtc_ivc_dbg_xact(ch, &req, &resp, 0);
-	if (ret == 0) {
-		char const *list = (char const *)resp.data.run_test_data.data;
+	ret = camrtc_ivc_dbg_full_frame_xact(ch, &req, sizeof(req),
+					resp, ch->ivc.frame_size, 0);
+	if (ret == 0 && resp->status == CAMRTC_STATUS_OK) {
+		char const *list = (char const *)resp->data.run_test_data.data;
+		size_t textsize = ch->ivc.frame_size -
+			offsetof(struct camrtc_dbg_response,
+				data.run_test_data.data);
 
-		if (memchr(list, '\0', sizeof(resp.data.run_test_data.data))) {
+		if (memchr(list, '\0', textsize)) {
 			list += strcspn(list, "\n");
 			list += strspn(list, "\n");
 			seq_puts(file, list);
 		}
 	}
+
+	kfree(resp);
 
 	return ret;
 }

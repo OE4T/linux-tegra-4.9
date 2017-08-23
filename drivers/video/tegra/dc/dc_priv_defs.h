@@ -172,26 +172,6 @@ enum tegra_dc_cursor_color_format {
 	TEGRA_DC_CURSOR_COLORFMT_A8R8G8B8,
 };
 
-struct tegra_dc_pool_allocation {
-	bool	program_cursor;
-	u32	cursor_entry;
-	size_t	num_wins;
-	u32	win_ids[DC_N_WINDOWS];
-	u32	win_entries[DC_N_WINDOWS];
-};
-
-struct tegra_dc_imp_settings {
-	struct tegra_dc_ext_imp_settings	ext_settings;
-
-	struct tegra_dc_pool_allocation
-			decreasing_pool[TEGRA_DC_EXT_N_HEADS];
-	struct tegra_dc_pool_allocation
-			increasing_pool[TEGRA_DC_EXT_N_HEADS];
-	struct list_head			imp_node;
-	u64					session_id;
-	u32					owner;
-};
-
 struct tegra_nvdisp_mempool_req {
 	bool program_cursor;
 	u32 cursor_entry;

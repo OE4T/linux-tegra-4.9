@@ -318,10 +318,15 @@ static int dvfs_rail_apply_limits(struct dvfs_rail *rail, int millivolts,
 	if (rail->therm_caps && warn_on_cap) {
 		int i = rail->therm_cap_idx;
 
-		if ((i > 0) && (millivolts > rail->therm_caps[i - 1].mv))
-			WARN(1, "tegra_dvfs: %s set to %dmV above cap %dmV\n",
+		if ((i > 0) && (millivolts > rail->therm_caps[i - 1].mv)) {
+			WARN(!rail->therm_cap_warned,
+			     "tegra_dvfs: %s set to %dmV above cap %dmV\n",
 			     rail->reg_id, millivolts,
 			     rail->therm_caps[i - 1].mv);
+			rail->therm_cap_warned = true;
+		} else {
+			rail->therm_cap_warned = false;
+		}
 	}
 
 	if (rail->override_millivolts) {

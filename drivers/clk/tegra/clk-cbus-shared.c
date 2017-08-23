@@ -375,7 +375,9 @@ static unsigned long _clk_shared_bus_update(struct tegra_clk_cbus_shared *cbus,
 	}
 
 	rate = override_rate ? : max(rate, bw);
+#ifdef CONFIG_TEGRA_CLK_DEBUG
 	ceiling = override_rate ? cbus->max_rate : ceiling;
+#endif
 
 	if (bus_top && bus_slow && rate_cap) {
 		*bus_top = top;

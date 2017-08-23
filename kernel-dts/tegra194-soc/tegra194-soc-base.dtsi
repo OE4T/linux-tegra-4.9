@@ -1801,4 +1801,10 @@
 				<340000  204000>,
 				<000000  102000>;
 	};
+
+	cbbnocaxi@2300000 {
+		compatible = "nvidia,tegra194-CBBNOCAXI-bridge";
+		reg = <0x0 0x02300000 0x0 0x1000>;
+		status = "disabled";
+	};
 };

@@ -1,7 +1,7 @@
 /*
  * ov23850.c - ov23850 sensor driver
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -4088,7 +4088,6 @@ static const int ov23850_30fps[] = {
 };
 
 static const struct camera_common_frmfmt ov23850_frmfmt[] = {
-	{{5632, 4224}, ov23850_20fps, 1, 0, OV23850_MODE_5632X4224},
 	{{5632, 3168}, ov23850_30fps, 1, 0, OV23850_MODE_5632X3168},
 };
 #endif  /* __OV23850_I2C_TABLES__ */

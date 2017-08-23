@@ -1639,14 +1639,14 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 		goto err_parse_dt;
 	pdata->extended_range = (bool) proc;
 
-	if (of_property_read_u32(np, "offset", &proc)) {
-		if (!of_property_read_bool(np, "support-fuse-offset"))
-			goto err_parse_dt;
-		pdata->fuse_offset = true;
-	} else {
+	pdata->offset = 0;
+	pdata->fuse_offset = false;
+	if (!of_property_read_u32(np, "offset", &proc))
 		pdata->offset = proc;
-		pdata->fuse_offset = false;
-	}
+	else if (of_property_read_bool(np, "support-fuse-offset"))
+		pdata->fuse_offset = true;
+	else
+		dev_info(&client->dev, "programming offset of 0C\n");
 
 	if (of_property_read_bool(np, "temp-alert-gpio")) {
 		nct72_gpio = of_get_named_gpio(

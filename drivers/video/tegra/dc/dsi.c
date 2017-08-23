@@ -5278,6 +5278,21 @@ err:
 	return err;
 }
 
+static int tegra_dc_dsi_hpd_init(struct tegra_dc *dc)
+{
+	int err = -EPERM;
+#if defined(CONFIG_TEGRA_LVDS2FPDL_DS90UB947)
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+
+	/* hotplugging will be detected if DSI to LVDS bridge
+	 * is enabled
+	 */
+	if (dsi && dsi->info.dsi2lvds_bridge_enable)
+		err = 0;
+#endif
+	return err;
+}
+
 static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 {
 #if defined(CONFIG_TEGRA_NVDISPLAY)
@@ -5294,11 +5309,11 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
  */
 static bool tegra_dc_dsi_detect(struct tegra_dc *dc)
 {
-	bool	result = true;
+	bool result = true;
 
 #if defined(CONFIG_TEGRA_LVDS2FPDL_DS90UB947)
 	/* DrivePX2: DSI->sn65dsi85(LVDS)->ds90ub947(FPDLink) */
-	struct tegra_dc_dsi_data	*dsi = tegra_dc_get_outdata(dc);
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
 	if (dsi->info.dsi2lvds_bridge_enable)
 		result = ds90ub947_lvds2fpdlink3_detect(dc);
@@ -5443,6 +5458,7 @@ static void tegra_dc_dsi_modeset_notifier(struct tegra_dc *dc)
 
 struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.init = tegra_dc_dsi_init,
+	.hotplug_init = tegra_dc_dsi_hpd_init,
 	.destroy = tegra_dc_dsi_destroy,
 	.detect = tegra_dc_dsi_detect,
 	.enable = tegra_dc_dsi_enable,

@@ -201,34 +201,7 @@
 			*
 			*/
 
-			mode0 { // OV23850_MODE_5632X4224
-				mclk_khz = "24000";
-				num_lanes = "4";
-				tegra_sinterface = "serial_a";
-				discontinuous_clk = "no";
-				dpcm_enable = "false";
-				cil_settletime = "0";
-
-				active_w = "5632";
-				active_h = "4224";
-				pixel_t = "bayer_bggr";
-				readout_orientation = "270";
-				line_length = "6000";
-				inherent_gain = "1";
-				mclk_multiplier = "25";
-				pix_clk_hz = "600000000";
-
-				min_gain_val = "1.0";
-				max_gain_val = "15.5";
-				min_hdr_ratio = "1";
-				max_hdr_ratio = "64";
-				min_framerate = "3.05185";
-				max_framerate = "20";
-				min_exp_time = "20";
-				max_exp_time = "327350";
-			};
-
-			mode1 { // OV23850_MODE_5632X3168
+			mode0 { // OV23850_MODE_5632X3168
 				mclk_khz = "24000";
 				num_lanes = "4";
 				tegra_sinterface = "serial_a";
@@ -317,34 +290,7 @@
 			vcmvdd-reg = "vvcm";
 			devnode = "video1";
 
-			mode0 { // OV23850_MODE_5632X4224
-				mclk_khz = "24000";
-				num_lanes = "4";
-				tegra_sinterface = "serial_c";
-				discontinuous_clk = "no";
-				dpcm_enable = "false";
-				cil_settletime = "0";
-
-				active_w = "5632";
-				active_h = "4224";
-				pixel_t = "bayer_bggr";
-				readout_orientation = "270";
-				line_length = "6000";
-				inherent_gain = "1";
-				mclk_multiplier = "25";
-				pix_clk_hz = "600000000";
-
-				min_gain_val = "1.0";
-				max_gain_val = "15.5";
-				min_hdr_ratio = "1";
-				max_hdr_ratio = "64";
-				min_framerate = "3.05185";
-				max_framerate = "20";
-				min_exp_time = "20";
-				max_exp_time = "327350";
-			};
-
-			mode1 { // OV23850_MODE_5632X3168
+			mode0 { // OV23850_MODE_5632X3168
 				mclk_khz = "24000";
 				num_lanes = "4";
 				tegra_sinterface = "serial_c";

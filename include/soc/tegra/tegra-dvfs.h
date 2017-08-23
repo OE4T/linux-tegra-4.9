@@ -130,6 +130,7 @@ struct dvfs_rail {
 	struct dvfs_therm_limits *therm_caps;
 	int therm_caps_size;
 	int therm_cap_idx;
+	bool therm_cap_warned;
 
 	const char *nvver;
 };

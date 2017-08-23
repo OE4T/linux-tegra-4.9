@@ -35,6 +35,9 @@
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
 #endif
+#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#include "t194/t194.h"
+#endif
 
 #define TEGRA_ISPB_BASE			0x54680000
 #define TEGRA_ISP_BASE			0x54600000
@@ -112,6 +115,32 @@ static struct of_device_id tegra_client_of_match[] = {
 #if defined(CONFIG_TEGRA_GRHOST_NVCSI)
 	{ .compatible = "nvidia,tegra186-vhost-nvcsi",
 		.data = (struct nvhost_device_data *)&t18_nvcsi_info },
+#endif
+#ifdef CONFIG_TEGRA_T19X_GRHOST
+#if defined(CONFIG_TEGRA_GRHOST_VIC)
+	{ .compatible = "nvidia,tegra194-vhost-vic",
+		.data = (struct nvhost_device_data *)&t19_vic_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
+	{ .compatible = "nvidia,tegra194-vhost-nvjpg",
+		.data = (struct nvhost_device_data *)&t19_nvjpg_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
+	{ .compatible = "nvidia,tegra194-vhost-nvenc",
+		.data = (struct nvhost_device_data *)&t19_msenc_info,
+		.name = "nvenc" },
+	{ .compatible = "nvidia,tegra194-vhost-nvenc",
+		.data = (struct nvhost_device_data *)&t19_nvenc1_info,
+		.name = "nvenc1" },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
+	{ .compatible = "nvidia,tegra194-vhost-nvdec",
+		.data = (struct nvhost_device_data *)&t19_nvdec_info,
+		.name = "nvdec" },
+	{ .compatible = "nvidia,tegra194-vhost-nvdec",
+		.data = (struct nvhost_device_data *)&t19_nvdec1_info,
+		.name = "nvdec1" },
+#endif
 #endif
 #endif
 	{ },

@@ -1,7 +1,7 @@
 /*
  * Tegra Host Virtualization Interfaces to Server
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,6 +28,8 @@ enum {
 	TEGRA_VHOST_MODULE_MSENC,
 	TEGRA_VHOST_MODULE_NVDEC,
 	TEGRA_VHOST_MODULE_NVJPG,
+	TEGRA_VHOST_MODULE_NVENC1,
+	TEGRA_VHOST_MODULE_NVDEC1,
 };
 
 enum {

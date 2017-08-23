@@ -1639,10 +1639,6 @@ int nvhost_client_device_init(struct platform_device *dev)
 	dev->dev.dma_parms = &pdata->dma_parms;
 	dma_set_max_seg_size(&dev->dev, UINT_MAX);
 
-	/* disable context isolation in simulation */
-	if (tegra_platform_is_vdk())
-		pdata->isolate_contexts = false;
-
 	dev_info(&dev->dev, "initialized\n");
 
 	if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) {

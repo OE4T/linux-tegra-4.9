@@ -321,6 +321,9 @@ static void tegra_pm_irq_resume(void)
 	u32 reg = WAKE_AOWAKE_STATUS_R_31_0_0;
 	u32 mask = WAKE_AOWAKE_TIER2_ROUTING_31_0_0;
 
+	if (is_tegra_hypervisor_mode())
+		return;
+
 	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4, mask += 4) {
 		status = tegra_aowake_read(reg);
 		status = status & tegra_aowake_read(mask);
@@ -337,6 +340,9 @@ static int tegra_pm_irq_suspend(void)
 	u32 wake_enb[WAKE_NR_VECTORS];
 	enum tegra_revision revision;
 	int i;
+
+	if (is_tegra_hypervisor_mode())
+		return 0;
 
 	wke_read_sw_wake_status(status);
 

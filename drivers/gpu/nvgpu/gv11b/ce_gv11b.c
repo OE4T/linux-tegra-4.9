@@ -36,7 +36,7 @@ u32 gv11b_ce_get_num_pce(struct gk20a *g)
 	u32 num_pce;
 	u32 ce_pce_map = gk20a_readl(g, ce_pce_map_r());
 
-	num_pce = get_count_order(ce_pce_map) + 1;
+	num_pce = hweight32(ce_pce_map);
 	nvgpu_log_info(g, "num PCE: %d", num_pce);
 	return num_pce;
 }

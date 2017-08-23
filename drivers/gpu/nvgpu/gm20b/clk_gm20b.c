@@ -1539,6 +1539,9 @@ int gm20b_clk_pll_reg_write(struct gk20a *g, u32 reg, u32 val)
 	    (reg != trim_sys_bypassctrl_r()))
 		return -EPERM;
 
+	if (reg == trim_sys_gpcpll_dvfs2_r())
+		reg = trim_gpc_bcast_gpcpll_dvfs2_r();
+
 	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
 		nvgpu_mutex_release(&g->clk.clk_mutex);
@@ -1568,7 +1571,7 @@ int gm20b_clk_get_pll_debug_data(struct gk20a *g,
 	d->trim_sys_gpc2clk_out_reg = trim_sys_gpc2clk_out_r();
 	d->trim_sys_gpc2clk_out_val = gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	d->trim_sys_gpcpll_cfg_reg = trim_sys_gpcpll_cfg_r();
-	d->trim_sys_gpcpll_dvfs2_reg = trim_sys_gpcpll_dvfs2_r();
+	d->trim_sys_gpcpll_dvfs2_reg = trim_gpc_bcast_gpcpll_dvfs2_r();
 
 	reg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	d->trim_sys_gpcpll_cfg_val = reg;

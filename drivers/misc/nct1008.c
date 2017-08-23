@@ -1728,7 +1728,7 @@ static int nct1008_probe(struct i2c_client *client,
 	if (client->dev.of_node) {
 		dev_info(&client->dev, "find device tree node, parsing dt\n");
 		pdata = nct1008_dt_parse(client);
-		if (IS_ERR(pdata)) {
+		if (IS_ERR_OR_NULL(pdata)) {
 			err = PTR_ERR(pdata);
 			dev_err(&client->dev,
 				"Parsing of node failed, %d\n", err);

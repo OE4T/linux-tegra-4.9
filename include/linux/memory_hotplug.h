@@ -143,6 +143,8 @@ extern void arch_refresh_nodedata(int nid, pg_data_t *pgdat);
 #define arch_free_nodedata(pgdat)	generic_free_nodedata(pgdat)
 
 #ifndef CONFIG_ARCH_HAS_ADD_PAGES
+extern int zone_for_memory(int nid, u64 start, u64 size, int zone_default,
+		bool for_device);
 static inline int add_pages(int nid, unsigned long start_pfn,
 			    unsigned long nr_pages, bool for_device)
 {

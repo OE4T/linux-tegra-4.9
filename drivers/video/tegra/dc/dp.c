@@ -1,7 +1,7 @@
 /*
  * dp.c: tegra dp driver.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2017,7 +2017,7 @@ static void tegra_dp_hpd_config(struct tegra_dc_dp_data *dp)
 #undef TEGRA_DP_HPD_UNPLUG_MIN_US
 }
 
-static void tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
+static int tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
 	int ret;
@@ -2032,12 +2032,16 @@ static void tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
 			"dp: failed to read the revision number from sink\n");
 
 	ret = tegra_dp_init_max_link_cfg(dp, cfg);
-	if (ret)
+	if (ret) {
 		dev_err(&dp->dc->ndev->dev, "dp: failed to init link cfg\n");
+		return ret;
+	}
 
 	tegra_dc_dpaux_write(dp->dpaux, DPAUX_DP_AUXCTL_CMD_AUXWR,
 		NV_DPCD_SOURCE_IEEE_OUI, data_ieee_oui_be, &size_ieee_oui,
 		&auxstat);
+
+	return 0;
 }
 
 void tegra_dp_tpg(struct tegra_dc_dp_data *dp, u32 tp, u32 n_lanes)
@@ -2435,7 +2439,10 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		tegra_dc_setup_clk(dc, dc->clk);
 	}
 
-	tegra_dp_dpcd_init(dp);
+	if (tegra_dp_dpcd_init(dp)) {
+		dev_err(&dp->dc->ndev->dev, "dp: failed dpcd init\n");
+		return;
+	}
 
 	tegra_dc_sor_enable_dp(dp->sor);
 

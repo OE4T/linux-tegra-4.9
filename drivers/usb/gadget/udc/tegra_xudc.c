@@ -3459,7 +3459,7 @@ static void tegra_xudc_non_std_charger_work(struct work_struct *work)
 static const char * const tegra210_xudc_supply_names[] = {
 	"hvdd_usb",
 	"avddio_usb",
-	"avdd-pll-utmip",
+	"avdd_pll_utmip",
 };
 
 static const char * const tegra186_xudc_supply_names[] = {
@@ -3512,7 +3512,7 @@ static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
 
 static struct of_device_id tegra_xudc_of_match[] = {
 	{
-		.compatible = "nvidia,tegra210-xudc-new",
+		.compatible = "nvidia,tegra210-xudc",
 		.data = &tegra210_xudc_soc_data
 	},
 	{

@@ -33,6 +33,7 @@ obj-$(CONFIG_TEGRA_18X_SERROR) += tegra18_serr.o
 obj-$(CONFIG_TEGRA_BRIDGE_MCA) += bridge_mca.o
 obj-$(CONFIG_TEGRA_A57_SERR) += tegra18_a57_serr.o
 obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += cactmon_t18x.o
+obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += cactmon_t21x.o
 ifeq ($(CONFIG_HW_PERF_EVENTS), y)
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_perf_uncore.o
 endif

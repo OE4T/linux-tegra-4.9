@@ -63,7 +63,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	u32 page_size  = vm->gmmu_page_sizes[pgsz_idx];
 	u64 space_to_skip = buffer_offset;
 	u64 buffer_size = 0;
-	u32 mem_desc_count = 0;
+	u32 mem_desc_count = 0, i;
 	struct scatterlist *sgl;
 	void *handle = NULL;
 	size_t oob_size;
@@ -78,6 +78,8 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 
 	if (space_to_skip & (page_size - 1))
 		return 0;
+
+	memset(&msg, 0, sizeof(msg));
 
 	/* Allocate (or validate when map_offset != 0) the virtual address. */
 	if (!map_offset) {
@@ -172,7 +174,19 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 fail:
 	if (handle)
 		tegra_gr_comm_oob_put_ptr(handle);
-	nvgpu_err(g, "%s: failed with err=%d", __func__, err);
+	nvgpu_err(g, "Failed: err=%d, msg.ret=%d", err, msg.ret);
+	nvgpu_err(g,
+		  "  Map: %-5s GPU virt %#-12llx +%#-9llx "
+		  "phys offset: %#-4llx;  pgsz: %3dkb perm=%-2s | "
+		  "kind=%#02x APT=%-6s",
+		  vm->name, map_offset, buffer_size, buffer_offset,
+		  vm->gmmu_page_sizes[pgsz_idx] >> 10,
+		  nvgpu_gmmu_perm_str(rw_flag),
+		  kind_v, "SYSMEM");
+	for (i = 0; i < mem_desc_count; i++)
+		nvgpu_err(g, "  > 0x%010llx + 0x%llx",
+			  mem_desc[i].addr, mem_desc[i].length);
+
 	return 0;
 }
 

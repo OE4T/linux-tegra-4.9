@@ -1,7 +1,7 @@
 /*
  * ina3221.c - driver for TI INA3221
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on hwmon driver:
  * 		drivers/hwmon/ina3221.c
@@ -86,6 +86,7 @@
 #define U32_MINUS_1	((u32) -1)
 enum {
 	CHANNEL_NAME = 0,
+	CRIT_POWER_LIMIT,
 	CRIT_CURRENT_LIMIT,
 	WARN_CURRENT_LIMIT,
 	RUNNING_MODE,
@@ -104,6 +105,7 @@ enum mode {
 
 struct ina3221_chan_pdata {
 	const char *rail_name;
+	u32 crit_power_limits;
 	u32 warn_conf_limits;
 	u32 crit_conf_limits;
 	u32 shunt_resistor;
@@ -505,10 +507,46 @@ static int __locked_set_crit_warn_limits(struct ina3221_chip *chip)
 	return ret;
 }
 
-static int ina3221_set_channel_critical(struct ina3221_chip *chip,
-	int channel, int curr_limit)
+static int __locked_get_crit_warn_limits(struct ina3221_chip *chip)
+{
+	struct ina3221_chan_pdata *cpdata;
+	int i;
+	int ret = 0;
+	int voltage_mv;
+	u16 vbus;
+
+	for (i = 0; i < INA3221_NUMBER_OF_RAILS; i++) {
+		cpdata = &chip->pdata->cpdata[i];
+
+		if (cpdata->crit_conf_limits != U32_MINUS_1 ||
+		    cpdata->crit_power_limits != U32_MINUS_1) {
+			ret = __locked_do_conversion(chip, NULL, &vbus, i);
+			if (ret < 0) {
+				dev_err(chip->dev,
+					"Volt read on channel %d failed: %d\n",
+					i, ret);
+				goto exit;
+			}
+			voltage_mv = busv_register_to_mv(vbus);
+
+			if (cpdata->crit_power_limits != U32_MINUS_1)
+				cpdata->crit_conf_limits =
+				cpdata->crit_power_limits * 1000 / voltage_mv;
+			else
+				cpdata->crit_power_limits =
+				cpdata->crit_conf_limits * voltage_mv / 1000;
+		}
+	}
+exit:
+	return ret;
+}
+
+static int ina3221_set_channel_critical_current(struct ina3221_chip *chip,
+						int channel, int curr_limit)
 {
 	struct ina3221_chan_pdata *cpdata = &chip->pdata->cpdata[channel];
+	u16 vbus;
+	int volt_mv;
 	int ret;
 
 	mutex_lock(&chip->mutex);
@@ -518,14 +556,24 @@ static int ina3221_set_channel_critical(struct ina3221_chip *chip,
 		return -EIO;
 	}
 
+	ret = __locked_do_conversion(chip, NULL, &vbus, channel);
+	if (ret < 0) {
+		dev_err(chip->dev, "Voltage read on channel %d failed: %d\n",
+			channel, ret);
+	goto exit;
+	}
+	volt_mv = busv_register_to_mv(vbus);
+
+	cpdata->crit_power_limits = (volt_mv * curr_limit) / 1000;
 	cpdata->crit_conf_limits = curr_limit;
 	ret = __locked_set_crit_alert_register(chip, channel);
+exit:
 	mutex_unlock(&chip->mutex);
 	return ret;
 }
 
-static int ina3221_get_channel_critical(struct ina3221_chip *chip,
-	int channel, int *curr_limit)
+static int ina3221_get_channel_critical_current(struct ina3221_chip *chip,
+						int channel, int *curr_limit)
 {
 	struct ina3221_chan_pdata *cpdata = &chip->pdata->cpdata[channel];
 	u32 crit_reg_addr = INA3221_CRIT(channel);
@@ -601,6 +649,71 @@ static int ina3221_get_channel_warning(struct ina3221_chip *chip,
 	ret = 0;
 exit:
 	mutex_unlock(&chip->mutex);
+	return ret;
+}
+
+static int ina3221_set_channel_critical_power(struct ina3221_chip *chip,
+					      int channel, int power_limit)
+{
+	struct ina3221_chan_pdata *cpdata = &chip->pdata->cpdata[channel];
+	int ret;
+	int current_limit = -EINVAL;
+	int volt;
+
+	cpdata->crit_power_limits = power_limit;
+
+	/* get channel input voltage */
+	ret = ina3221_get_channel_voltage(chip, channel, &volt);
+	if (ret < 0) {
+		dev_err(chip->dev,
+			"failed to get channel input voltage: %d", ret);
+		goto exit;
+	}
+	/* calculate critical current limit */
+	if (power_limit > 0 && volt >= 0)
+		current_limit = power_limit * 1000 / volt;
+
+	/* set critical current limit */
+	ret = ina3221_set_channel_critical_current(chip, channel,
+						   current_limit);
+	if (ret < 0)
+		dev_err(chip->dev,
+			"failed to set channel critical current limit: %d",
+			ret);
+exit:
+	return ret;
+}
+
+static int ina3221_get_channel_critical_power(struct ina3221_chip *chip,
+					      int channel, int *power_limit)
+{
+	struct ina3221_chan_pdata *cpdata = &chip->pdata->cpdata[channel];
+	int ret;
+	int volt;
+	int current_limit;
+
+	/* get critical current limit */
+	ret = ina3221_get_channel_critical_current(chip, channel,
+						   &current_limit);
+	if (ret < 0) {
+		dev_err(chip->dev,
+			"failed to get channel critical current limit: %d",
+			ret);
+		goto exit;
+	}
+
+	/* get input voltage */
+	ret = ina3221_get_channel_voltage(chip, channel, &volt);
+	if (ret < 0) {
+		dev_err(chip->dev,
+			"failed to get channel input voltage: %d", ret);
+		goto exit;
+	}
+
+	*power_limit = (current_limit * volt) / 1000;
+
+	cpdata->crit_power_limits = *power_limit;
+exit:
 	return ret;
 }
 
@@ -773,6 +886,7 @@ static ssize_t ina3221_show_channel(struct device *dev,
 	int ret;
 	int current_ma;
 	int voltage_mv;
+	int power_mw;
 
 	if (channel >= 3) {
 		dev_err(dev, "Invalid channel Id %d\n", channel);
@@ -784,8 +898,16 @@ static ssize_t ina3221_show_channel(struct device *dev,
 		return snprintf(buf, PAGE_SIZE, "%s\n",
 				chip->pdata->cpdata[channel].rail_name);
 
+	case CRIT_POWER_LIMIT:
+		ret = ina3221_get_channel_critical_power(chip, channel,
+							 &power_mw);
+		if (!ret)
+			return snprintf(buf, PAGE_SIZE, "%d mw\n", power_mw);
+		return ret;
+
 	case CRIT_CURRENT_LIMIT:
-		ret = ina3221_get_channel_critical(chip, channel, &current_ma);
+		ret = ina3221_get_channel_critical_current(chip, channel,
+							   &current_ma);
 		if (!ret)
 			return snprintf(buf, PAGE_SIZE, "%d ma\n", current_ma);
 		return ret;
@@ -824,6 +946,7 @@ static ssize_t ina3221_set_channel(struct device *dev,
 	int channel = UNPACK_CHAN(this_attr->address);
 	long val;
 	int current_ma;
+	int power_mw;
 	int ret;
 
 	if (channel >= 3) {
@@ -832,12 +955,22 @@ static ssize_t ina3221_set_channel(struct device *dev,
 	}
 
 	switch (mode) {
+	case CRIT_POWER_LIMIT:
+		if (kstrtol(buf, 10, &val) < 0)
+			return -EINVAL;
+
+		power_mw = (int)val;
+		ret = ina3221_set_channel_critical_power(chip, channel,
+							 power_mw);
+		return ret < 0 ? ret : len;
+
 	case CRIT_CURRENT_LIMIT:
 		if (kstrtol(buf, 10, &val) < 0)
 			return -EINVAL;
 
 		current_ma = (int) val;
-		ret = ina3221_set_channel_critical(chip, channel, current_ma);
+		ret = ina3221_set_channel_critical_current(chip, channel,
+							   current_ma);
 		return ret < 0 ? ret : len;
 
 	case WARN_CURRENT_LIMIT:
@@ -863,6 +996,16 @@ static IIO_DEVICE_ATTR(rail_name_1, S_IRUGO | S_IWUSR,
 static IIO_DEVICE_ATTR(rail_name_2, S_IRUGO | S_IWUSR,
 		ina3221_show_channel, ina3221_set_channel,
 		PACK_MODE_CHAN(CHANNEL_NAME, 2));
+
+static IIO_DEVICE_ATTR(crit_power_limit_0, S_IRUGO | S_IWUSR,
+		ina3221_show_channel, ina3221_set_channel,
+		PACK_MODE_CHAN(CRIT_POWER_LIMIT, 0));
+static IIO_DEVICE_ATTR(crit_power_limit_1, S_IRUGO | S_IWUSR,
+		ina3221_show_channel, ina3221_set_channel,
+		PACK_MODE_CHAN(CRIT_POWER_LIMIT, 1));
+static IIO_DEVICE_ATTR(crit_power_limit_2, S_IRUGO | S_IWUSR,
+		ina3221_show_channel, ina3221_set_channel,
+		PACK_MODE_CHAN(CRIT_POWER_LIMIT, 2));
 
 static IIO_DEVICE_ATTR(crit_current_limit_0, S_IRUGO | S_IWUSR,
 		ina3221_show_channel, ina3221_set_channel,
@@ -902,6 +1045,9 @@ static struct attribute *ina3221_attributes[] = {
 	&iio_dev_attr_rail_name_0.dev_attr.attr,
 	&iio_dev_attr_rail_name_1.dev_attr.attr,
 	&iio_dev_attr_rail_name_2.dev_attr.attr,
+	&iio_dev_attr_crit_power_limit_0.dev_attr.attr,
+	&iio_dev_attr_crit_power_limit_1.dev_attr.attr,
+	&iio_dev_attr_crit_power_limit_2.dev_attr.attr,
 	&iio_dev_attr_crit_current_limit_0.dev_attr.attr,
 	&iio_dev_attr_crit_current_limit_1.dev_attr.attr,
 	&iio_dev_attr_crit_current_limit_2.dev_attr.attr,
@@ -1012,6 +1158,14 @@ static struct ina3221_platform_data *ina3221_get_platform_data_dt(
 		else
 			pdata->cpdata[reg].crit_conf_limits = U32_MINUS_1;
 
+		ret = of_property_read_u32(child,
+					   "ti,power-critical-limit-mw",
+					   &pval);
+		if (!ret)
+			pdata->cpdata[reg].crit_power_limits = pval;
+		else
+			pdata->cpdata[reg].crit_power_limits = U32_MINUS_1;
+
 		ret = of_property_read_u32(child, "ti,shunt-resistor-mohm",
 				&pval);
 		if (!ret)
@@ -1089,6 +1243,18 @@ static int ina3221_probe(struct i2c_client *client,
 	register_hotcpu_notifier(&(chip->nb_hot));
 	cpufreq_register_notifier(&(chip->nb_cpufreq),
 			CPUFREQ_TRANSITION_NOTIFIER);
+
+	/* calculate critical current limit based on input voltage
+	 * and critical power limit.
+	 */
+	ina3221_set_mode_val(chip, TRIGGERED);
+	ret = __locked_get_crit_warn_limits(chip);
+	if (ret < 0) {
+		dev_err(&client->dev, "Not able to get warn and crit limits!\n");
+		goto exit_pd;
+	}
+
+	ina3221_set_mode_val(chip, chip->mode);
 
 	ret = __locked_set_crit_warn_limits(chip);
 	if (ret < 0) {

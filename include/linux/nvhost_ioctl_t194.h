@@ -28,4 +28,6 @@ enum nvhost_module_id_t194 {
 	NVHOST_MODULE_NVDEC1 = 13,
 };
 
+#define NVHOST_RELOC_TYPE_NVLINK 3
+
 #endif

@@ -1445,7 +1445,7 @@ static const struct tegra_xusb_pad_soc tegra210_hsic_pad = {
 
 static const char *tegra210_pcie_functions[] = {
 	"pcie-x1",
-	"usb3-ss",
+	"xusb",
 	"sata",
 	"pcie-x4",
 };
@@ -1523,7 +1523,7 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 
 	mutex_lock(&padctl->lock);
 
-	if (tegra_xusb_lane_check(lane, "usb3-ss") && priv->prod_list) {
+	if (tegra_xusb_lane_check(lane, "xusb") && priv->prod_list) {
 		char prod_name[] = "prod_c_ssX";
 
 		port = tegra_xusb_find_usb3_port(padctl, lane->index);
@@ -1990,14 +1990,14 @@ static const struct tegra_xusb_lane_map tegra210_usb3_map[] = {
 	{ 2, "pcie", 0 },
 	{ 2, "pcie", 3 },
 	{ 3, "pcie", 4 },
-	{ 3, "pcie", 4 },
+	{ 3, "sata", 0 },
 	{ 0, NULL,   0 }
 };
 
 static struct tegra_xusb_lane *
 tegra210_usb3_port_map(struct tegra_xusb_port *port)
 {
-	return tegra_xusb_port_find_lane(port, tegra210_usb3_map, "usb3-ss");
+	return tegra_xusb_port_find_lane(port, tegra210_usb3_map, "xusb");
 }
 
 static const struct tegra_xusb_port_ops tegra210_usb3_port_ops = {

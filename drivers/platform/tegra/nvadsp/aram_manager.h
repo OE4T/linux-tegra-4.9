@@ -1,7 +1,7 @@
 /*
  * Header file for aram manager
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,13 +18,6 @@
 
 #include "mem_manager.h"
 
-int aram_init(unsigned long addr, unsigned long size);
-void aram_exit(void);
-
-void *aram_request(const char *name, size_t size);
-bool aram_release(void *handle);
-
-unsigned long aram_get_address(void *handle);
-void aram_print(void);
-
+int nvadsp_aram_init(unsigned long addr, unsigned long size);
+void nvadsp_aram_exit(void);
 #endif /* __TEGRA_NVADSP_ARAM_MANAGER_H */

@@ -3,7 +3,7 @@
  *
  * ADSP OS App management
  *
- * Copyright (C) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -387,7 +387,7 @@ static void free_instance_memory(nvadsp_app_info_t *app,
 	}
 
 	if (mem->aram_flag)
-		aram_release(mem->aram);
+		nvadsp_aram_release(mem->aram);
 	else if (mem->aram)
 		nvadsp_free_coherent(sz->aram, mem->aram, iova_mem->aram);
 	mem->aram = NULL;
@@ -395,7 +395,7 @@ static void free_instance_memory(nvadsp_app_info_t *app,
 	mem->aram_flag = 0;
 
 	if (mem->aram_x_flag) {
-		aram_release(mem->aram_x);
+		nvadsp_aram_release(mem->aram_x);
 		mem->aram_x = NULL;
 		iova_mem->aram_x = 0;
 		mem->aram_flag = 0;
@@ -454,9 +454,9 @@ static int create_instance_memory(nvadsp_app_info_t *app,
 	}
 
 	if (sz->aram) {
-		aram_handle = aram_request(name, sz->aram);
+		aram_handle = nvadsp_aram_request(name, sz->aram);
 		if (!IS_ERR_OR_NULL(aram_handle)) {
-			iova_mem->aram = aram_get_address(aram_handle);
+			iova_mem->aram = nvadsp_aram_get_address(aram_handle);
 			mem->aram = aram_handle;
 			iova_mem->aram_flag = mem->aram_flag = 1;
 			dev_dbg(dev, "%s aram %x\n", name, iova_mem->aram);
@@ -479,9 +479,9 @@ static int create_instance_memory(nvadsp_app_info_t *app,
 	}
 
 	if (sz->aram_x) {
-		aram_handle = aram_request(name, sz->aram);
+		aram_handle = nvadsp_aram_request(name, sz->aram);
 		if (!IS_ERR_OR_NULL(aram_handle)) {
-			iova_mem->aram_x = aram_get_address(aram_handle);
+			iova_mem->aram_x = nvadsp_aram_get_address(aram_handle);
 			mem->aram_x = aram_handle;
 			iova_mem->aram_x_flag = mem->aram_x_flag = 1;
 			dev_dbg(dev, "aram_x %x\n", iova_mem->aram_x);

@@ -3,7 +3,7 @@
  *
  * ARAM manager
  *
- * Copyright (C) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -19,6 +19,7 @@
 #define pr_fmt(fmt) "%s : %d, " fmt, __func__, __LINE__
 
 #include <linux/debugfs.h>
+#include <linux/tegra_nvadsp.h>
 
 #include "aram_manager.h"
 
@@ -27,53 +28,53 @@ static void *aram_handle;
 static LIST_HEAD(aram_alloc_list);
 static LIST_HEAD(aram_free_list);
 
-void aram_print(void)
+void nvadsp_aram_print(void)
 {
 	mem_print(aram_handle);
 }
-EXPORT_SYMBOL(aram_print);
+EXPORT_SYMBOL(nvadsp_aram_print);
 
-void *aram_request(const char *name, size_t size)
+void *nvadsp_aram_request(const char *name, size_t size)
 {
 	return mem_request(aram_handle, name, size);
 }
-EXPORT_SYMBOL(aram_request);
+EXPORT_SYMBOL(nvadsp_aram_request);
 
-bool aram_release(void *handle)
+bool nvadsp_aram_release(void *handle)
 {
 	return mem_release(aram_handle, handle);
 }
-EXPORT_SYMBOL(aram_release);
+EXPORT_SYMBOL(nvadsp_aram_release);
 
-unsigned long aram_get_address(void *handle)
+unsigned long nvadsp_aram_get_address(void *handle)
 {
 	return mem_get_address(handle);
 }
-EXPORT_SYMBOL(aram_get_address);
+EXPORT_SYMBOL(nvadsp_aram_get_address);
 
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *aram_dump_debugfs_file;
 
-static int aram_dump(struct seq_file *s, void *data)
+static int nvadsp_aram_dump(struct seq_file *s, void *data)
 {
 	mem_dump(aram_handle, s);
 	return 0;
 }
 
-static int aram_dump_open(struct inode *inode, struct file *file)
+static int nvadsp_aram_dump_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, aram_dump, inode->i_private);
+	return single_open(file, nvadsp_aram_dump, inode->i_private);
 }
 
 static const struct file_operations aram_dump_fops = {
-	.open		= aram_dump_open,
+	.open		= nvadsp_aram_dump_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
 #endif
 
-int aram_init(unsigned long addr, unsigned long size)
+int nvadsp_aram_init(unsigned long addr, unsigned long size)
 {
 	aram_handle = create_mem_manager("ARAM", addr, size);
 	if (IS_ERR(aram_handle)) {
@@ -92,14 +93,12 @@ int aram_init(unsigned long addr, unsigned long size)
 #endif
 	return 0;
 }
-EXPORT_SYMBOL(aram_init);
 
-void aram_exit(void)
+void nvadsp_aram_exit(void)
 {
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove(aram_dump_debugfs_file);
 #endif
 	destroy_mem_manager(aram_handle);
 }
-EXPORT_SYMBOL(aram_exit);
 

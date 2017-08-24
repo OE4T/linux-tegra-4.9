@@ -357,7 +357,7 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 
 	aram_addr = drv_data->adsp_mem[ARAM_ALIAS_0_ADDR];
 	aram_size = drv_data->adsp_mem[ARAM_ALIAS_0_SIZE];
-	ret = aram_init(aram_addr, aram_size);
+	ret = nvadsp_aram_init(aram_addr, aram_size);
 	if (ret)
 		dev_err(dev, "Failed to init aram\n");
 err:
@@ -375,7 +375,7 @@ static int nvadsp_remove(struct platform_device *pdev)
 #ifdef CONFIG_TEGRA_EMC_APE_DFS
 	emc_dfs_exit();
 #endif
-	aram_exit();
+	nvadsp_aram_exit();
 
 	pm_runtime_disable(&pdev->dev);
 

@@ -186,12 +186,6 @@ nvadsp_dram_sync_single_for_device(struct device *nvadsp_dev,
 				   nvadsp_data_direction_t direction);
 
 /*
- * ARAM Bookkeeping
- */
-bool nvadsp_aram_request(char *start, size_t size, char *id);
-void nvadsp_aram_release(char *start, size_t size);
-
-/*
  * ADSP OS
  */
 
@@ -398,5 +392,11 @@ static inline void adsp_update_dfs(bool enable)
 	return;
 }
 #endif
+
+void *nvadsp_aram_request(const char *name, size_t size);
+bool nvadsp_aram_release(void *handle);
+
+unsigned long nvadsp_aram_get_address(void *handle);
+void nvadsp_aram_print(void);
 
 #endif /* __LINUX_TEGRA_NVADSP_H */

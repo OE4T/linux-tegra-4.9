@@ -1662,6 +1662,10 @@ static inline u32 gr_pd_ab_dist_cfg1_r(void)
 {
 	return 0x004064c4;
 }
+static inline u32 gr_pd_ab_dist_cfg1_max_batches_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
 static inline u32 gr_pd_ab_dist_cfg1_max_batches_init_f(void)
 {
 	return 0xffff;

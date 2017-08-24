@@ -322,6 +322,7 @@ struct gr_gk20a {
 	u32 alpha_cb_size;
 	u32 timeslice_mode;
 	u32 czf_bypass;
+	u32 pd_max_batches;
 
 	struct gr_ctx_buffer_desc global_ctx_buffer[NR_GLOBAL_CTX_BUF];
 

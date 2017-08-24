@@ -420,9 +420,15 @@ int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 		gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v()) /
 		gr_pd_ab_dist_cfg1_max_output_granularity_v();
 
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg1_r(),
-		gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
-		gr_pd_ab_dist_cfg1_max_batches_init_f(), patch);
+	if (g->gr.pd_max_batches) {
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg1_r(),
+			gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
+			gr_pd_ab_dist_cfg1_max_batches_f(g->gr.pd_max_batches), patch);
+	} else {
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg1_r(),
+			gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
+			gr_pd_ab_dist_cfg1_max_batches_init_f(), patch);
+	}
 
 	attrib_offset_in_chunk = alpha_offset_in_chunk +
 		gr->tpc_count * gr->alpha_cb_size;
@@ -751,9 +757,15 @@ void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_granularity_v() /
 		gr_pd_ab_dist_cfg1_max_output_granularity_v();
 
-	gk20a_writel(g, gr_pd_ab_dist_cfg1_r(),
-		gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
-		gr_pd_ab_dist_cfg1_max_batches_init_f());
+	if (g->gr.pd_max_batches) {
+		gk20a_writel(g, gr_pd_ab_dist_cfg1_r(),
+			gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
+			gr_pd_ab_dist_cfg1_max_batches_f(g->gr.pd_max_batches));
+	} else {
+		gk20a_writel(g, gr_pd_ab_dist_cfg1_r(),
+			gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
+			gr_pd_ab_dist_cfg1_max_batches_init_f());
+	}
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		stride = gpc_stride * gpc_index;

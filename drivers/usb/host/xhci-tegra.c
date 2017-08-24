@@ -481,12 +481,14 @@ static struct hc_driver __read_mostly tegra_xhci_hc_driver;
 static const struct of_device_id tegra_xusba_pd[] = {
 	{ .compatible = "nvidia,tegra194-xusba-pd", },
 	{ .compatible = "nvidia,tegra186-xusba-pd", },
+	{ .compatible = "nvidia,tegra210-xusba-pd", },
 	{},
 };
 
 static const struct of_device_id tegra_xusbc_pd[] = {
 	{ .compatible = "nvidia,tegra194-xusbc-pd", },
 	{ .compatible = "nvidia,tegra186-xusbc-pd", },
+	{ .compatible = "nvidia,tegra210-xusbc-pd", },
 	{},
 };
 #endif
@@ -3471,18 +3473,17 @@ static const struct tegra_xusb_soc tegra124_soc = {
 MODULE_FIRMWARE("nvidia/tegra124/xusb.bin");
 
 static const char * const tegra210_supply_names[] = {
-	"dvddio-pex",
-	"hvddio-pex",
-	"avdd-usb",
-	"avdd-pll-utmip",
-	"avdd-pll-uerefe",
-	"dvdd-pex-pll",
-	"hvdd-pex-pll-e",
+	"hvdd_usb",
+	"avdd_pll_utmip",
+	"vddio_hsic",
+	"avddio_usb",
+	"dvdd_sata",
+	"avddio_pll_uerefe",
 };
 
 static const struct tegra_xusb_soc tegra210_soc = {
 	.device_id = XHCI_DEVICE_ID_T210,
-	.firmware = "nvidia/tegra210/xusb.bin",
+	.firmware = "tegra21x_xusb_firmware",
 	.supply_names = tegra210_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra210_supply_names),
 
@@ -3508,7 +3509,7 @@ static const struct tegra_xusb_soc tegra210_soc = {
 	.ss_lfps_detector_war = true,
 	.handle_oc = false,
 };
-MODULE_FIRMWARE("nvidia/tegra210/xusb.bin");
+MODULE_FIRMWARE("tegra21x_xusb_firmware");
 
 static const char * const tegra186_supply_names[] = {
 };
@@ -3635,7 +3636,7 @@ MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
 static const struct of_device_id tegra_xusb_of_match[] = {
 	{ .compatible = "nvidia,tegra124-xusb", .data = &tegra124_soc },
-	{ .compatible = "nvidia,tegra210-xusb", .data = &tegra210_soc },
+	{ .compatible = "nvidia,tegra210-xhci", .data = &tegra210_soc },
 	{ .compatible = "nvidia,tegra186-xhci", .data = &tegra186_soc },
 	{ .compatible = "nvidia,tegra194-xhci", .data = &tegra194_soc },
 	{ .compatible = "nvidia,tegra194-xhci-vf1", .data = &tegra194_vf1_soc },

@@ -47,6 +47,8 @@ obj-$(CONFIG_TEGRA_THERMAL_THROTTLE)        += tegra_throttle.o
 obj-$(CONFIG_TEGRA_CLUSTER_CONTROL) += sysfs-cluster.o
 obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL) += sysfs-cluster.o
 
+obj-$(CONFIG_PSTORE_RAM) += tegra_ramoops.o
+
 obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += central_actmon/
 obj-$(CONFIG_TEGRA_CPU_VOLT_CAP)	+= tegra_volt_cap.o
 

@@ -343,7 +343,7 @@ static int pin_array_ids(struct platform_device *dev,
 			goto clean_up_attach;
 		}
 
-		sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+		sgt = dma_buf_map_attachment(attach, ids[i].direction);
 		if (IS_ERR(sgt)) {
 			err = PTR_ERR(sgt);
 			goto clean_up_map;
@@ -361,6 +361,7 @@ static int pin_array_ids(struct platform_device *dev,
 		phys_addr[ids[i].index] = sg_dma_address(sgt->sgl);
 		unpin_data[pin_count].buf = buf;
 		unpin_data[pin_count].attach = attach;
+		unpin_data[pin_count].direction = ids[i].direction;
 		unpin_data[pin_count++].sgt = sgt;
 
 		prev_id = ids[i].id;
@@ -369,7 +370,7 @@ static int pin_array_ids(struct platform_device *dev,
 	return pin_count;
 
 clean_up_iommu:
-	dma_buf_unmap_attachment(attach, sgt, DMA_BIDIRECTIONAL);
+	dma_buf_unmap_attachment(attach, sgt, ids[i].direction);
 clean_up_map:
 	dma_buf_detach(buf, attach);
 clean_up_attach:
@@ -377,7 +378,7 @@ clean_up_attach:
 clean_up:
 	for (i = 0; i < pin_count; i++) {
 		dma_buf_unmap_attachment(unpin_data[i].attach,
-			unpin_data[i].sgt, DMA_BIDIRECTIONAL);
+			unpin_data[i].sgt, unpin_data[i].direction);
 		dma_buf_detach(unpin_data[i].buf, unpin_data[i].attach);
 		dma_buf_put(unpin_data[i].buf);
 	}
@@ -390,11 +391,18 @@ static int pin_job_mem(struct nvhost_job *job)
 	int i;
 	int count = 0;
 	int result;
+	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 
 	for (i = 0; i < job->num_relocs; i++) {
 		struct nvhost_reloc *reloc = &job->relocarray[i];
+		struct nvhost_reloc_type *type = &job->reloctypearray[i];
+		enum dma_data_direction direction = DMA_BIDIRECTIONAL;
+
+		if (pdata->get_dma_direction)
+			direction = pdata->get_dma_direction(type->reloc_type);
 
 		job->pin_ids[count].id = reloc->target;
+		job->pin_ids[count].direction = direction;
 		count++;
 	}
 
@@ -412,6 +420,7 @@ static int pin_job_mem(struct nvhost_job *job)
 		struct nvhost_job_gather *g = &job->gathers[i];
 
 		job->pin_ids[count].id = g->mem_id;
+		job->pin_ids[count].direction = DMA_BIDIRECTIONAL;
 		count++;
 	}
 
@@ -593,7 +602,7 @@ void nvhost_job_unpin(struct nvhost_job *job)
 		struct nvhost_job_unpin *unpin = &job->unpins[i];
 
 		dma_buf_unmap_attachment(unpin->attach, unpin->sgt,
-						DMA_BIDIRECTIONAL);
+					 unpin->direction);
 		dma_buf_detach(unpin->buf, unpin->attach);
 		dma_buf_put(unpin->buf);
 	}

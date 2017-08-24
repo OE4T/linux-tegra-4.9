@@ -50,12 +50,14 @@ struct nvhost_job_syncpt {
 struct nvhost_pinid {
 	u32 id;
 	u32 index;
+	enum dma_data_direction direction;
 };
 
 struct nvhost_job_unpin {
 	struct sg_table *sgt;
 	struct dma_buf *buf;
 	struct dma_buf_attachment *attach;
+	enum dma_data_direction direction;
 };
 
 /*

@@ -24,7 +24,7 @@
 #include <linux/wait.h>
 #include <linux/tegra-ivc.h>
 
-#include "mipi_cal.h"
+#include "../mipi_cal.h"
 #include "vmipi.h"
 
 static const char *tegra_vmipi_cmd[] = {

@@ -448,7 +448,8 @@ struct page *cma_alloc_at(struct cma *cma, size_t count,
 		bitmap_no = bitmap_find_next_zero_area_off(cma->bitmap,
 				bitmap_maxno, start, bitmap_count, mask,
 				offset);
-		if (bitmap_no >= bitmap_maxno || (start && start != bitmap_no)) {
+		if (bitmap_no >= bitmap_maxno ||
+			(start_pfn && start != bitmap_no)) {
 			mutex_unlock(&cma->lock);
 			break;
 		}

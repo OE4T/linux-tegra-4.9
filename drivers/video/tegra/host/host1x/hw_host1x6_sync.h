@@ -50,8 +50,6 @@
 #ifndef _hw_host1x6_sync_h_
 #define _hw_host1x6_sync_h_
 
-extern bool use_vm_threshold_registers;
-
 static inline u32 host1x_sync_intstatus_r(void)
 {
 	return 0x1c;
@@ -250,10 +248,7 @@ static inline u32 host1x_sync_syncpt_0_r(void)
 }
 static inline u32 host1x_sync_syncpt_int_thresh_0_r(void)
 {
-	if (use_vm_threshold_registers)
-		return 0x9980;
-
-	return 0x8d00;
+	return 0x9980;
 }
 static inline u32 host1x_sync_syncpt_prot_en_0_r(void)
 {

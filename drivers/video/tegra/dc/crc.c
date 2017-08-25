@@ -31,12 +31,6 @@
 #define TEGRA_DC_CRC_BUF_CAPACITY 1024 /* in units of number of elements */
 #define CRC_COMPLETE_TIMEOUT msecs_to_jiffies(1000)
 
-/* Flip values are 16 bit unsigned integer values. To avoid ugly type casts for
- * complicated checks involved in situations when flip IDs are recycled, define
- * a limit on how far into the future can the user query the CRCs
- */
-#define TEGRA_DC_CRC_GET_MAX_FLIP_LOOKAHEAD 128
-
 static const char *flip_state_literals[] = {
 	"queued", "dequeued", "flipped", "skipped"
 };
@@ -442,11 +436,8 @@ long tegra_dc_crc_disable(struct tegra_dc *dc,
 
 /* Get the Least Recently Matched (lrm) flip ID.
  * Our best estimate is to find this flip ID at the tail of the buffer.
- * The caller has the option to retrieve the least recently matched flip ID or
- * the corresponding CRC buffer element
  */
-static int _find_lrm(struct tegra_dc *dc, u64 *flip_id,
-		     struct tegra_dc_crc_buf_ele *crc_ele_out)
+static int _find_lrm(struct tegra_dc *dc, u64 *flip_id)
 {
 	u64 lrm = 0x0; /* Default value when no flips are matched */
 	int ret = 0;
@@ -460,13 +451,8 @@ static int _find_lrm(struct tegra_dc *dc, u64 *flip_id,
 	if (crc_ele->matching_flips[0].valid)
 		lrm = crc_ele->matching_flips[0].id;
 
-	if (crc_ele_out)
-		memcpy(crc_ele_out, crc_ele, sizeof(*crc_ele));
-
 done:
-	if (flip_id)
-		*flip_id = lrm;
-
+	*flip_id = lrm;
 	return ret;
 }
 
@@ -475,58 +461,27 @@ static inline u16 prev_idx(struct tegra_dc_ring_buf *buf, u16 idx)
 	return idx ? idx - 1 : buf->capacity - 1;
 }
 
-/* Get the Most Recently Matched (mrm) flip ID.
- * Our best estimate is to find this flip ID at the head of the buffer.
- * The caller has the option to retrieve the most recently matched flip ID or
- * the corresponding CRC buffer element
- */
-static int _find_mrm(struct tegra_dc *dc, u64 *flip_id,
-		     struct tegra_dc_crc_buf_ele *crc_ele_out)
-{
-	/* Default value when no flips are matched */
-	u64 mrm = U64_MAX;
-	u16 peek_idx;
-	int ret = 0, iter;
-	struct tegra_dc_crc_buf_ele *crc_ele = NULL;
-
-	peek_idx = prev_idx(&dc->crc_buf, dc->crc_buf.head);
-
-	ret = tegra_dc_ring_buf_peek(&dc->crc_buf, peek_idx, (char **)&crc_ele);
-	if (ret)
-		goto done;
-
-	for (iter = 0;
-	     iter < DC_N_WINDOWS && crc_ele->matching_flips[iter].valid;
-	     iter++)
-		mrm = crc_ele->matching_flips[iter].id;
-
-	if (crc_ele_out)
-		memcpy(crc_ele_out, crc_ele, sizeof(*crc_ele));
-
-done:
-	if (flip_id)
-		*flip_id = mrm;
-
-	return ret;
-}
-
 static bool _is_flip_out_of_bounds(struct tegra_dc *dc, u64 flip_id)
 {
-	u64 lrm, mrm; /* Least and most recently matched flips */
+	u64 lrm; /* Least recently matched flip */
+	u64 mrq; /* Most recently queued flip */
 
-	_find_lrm(dc, &lrm, NULL);
-	_find_mrm(dc, &mrm, NULL);
+	mutex_lock(&dc->crc_buf.lock);
+	_find_lrm(dc, &lrm);
+	mutex_unlock(&dc->crc_buf.lock);
 
-	if (mrm < lrm) {
+	mrq = atomic64_read(&dc->flip_stats.flips_queued);
+
+	if (mrq < lrm) {
 		dev_err(&dc->ndev->dev, "flip IDs have overflowed "
-					"lrm = %llu, mrm = %llu\n", lrm, mrm);
+					"lrm = %llu, mrq = %llu\n", lrm, mrq);
 		return true;
 	}
 
-	if (flip_id < lrm ||
-	    flip_id > mrm + TEGRA_DC_CRC_GET_MAX_FLIP_LOOKAHEAD) {
-		dev_err(&dc->ndev->dev, "flip_id %llu out of bounds\n",
-				flip_id);
+	if (flip_id < lrm || flip_id > mrq) {
+		dev_err(&dc->ndev->dev, "flip_id %llu out of bounds "
+					"lrm = %llu, mrq = %llu\n",
+					flip_id, lrm, mrq);
 		return true;
 	}
 
@@ -542,10 +497,12 @@ static int _scan_crc_buf(struct tegra_dc *dc, u16 start_idx, u16 end_idx,
 	u16 peek_idx = start_idx;
 	struct tegra_dc_ring_buf *buf = &dc->crc_buf;
 	struct tegra_dc_crc_buf_ele *crc_iter = NULL;
-	int iter;
+	int iter, ret;
 
 	while (peek_idx != end_idx) {
-		tegra_dc_ring_buf_peek(buf, peek_idx, (char **)&crc_iter);
+		ret = tegra_dc_ring_buf_peek(buf, peek_idx, (char **)&crc_iter);
+		if (ret)
+			return ret;
 
 		for (iter = 0; iter < DC_N_WINDOWS; iter++) {
 			if (!crc_iter->matching_flips[iter].valid)
@@ -563,34 +520,6 @@ static int _scan_crc_buf(struct tegra_dc *dc, u16 start_idx, u16 end_idx,
 	return -EAGAIN;
 }
 
-/* When flip_id is set to U64_MAX, retrieve the CRC of the most recently
- * queued flip. If there are no such flips in the flip queue, return the CRC
- * of the most recently matched flip. If no flips have been scanned out yet,
- * return an error to the user context
- */
-static int _get_special_case_flip_id(struct tegra_dc *dc, u64 *flip_id)
-{
-	int ret = 0;
-	struct tegra_dc_ring_buf *flip_buf = &dc->flip_buf;
-	struct tegra_dc_flip_buf_ele *flip_ele = NULL;
-
-	mutex_lock(&flip_buf->lock);
-	ret = tegra_dc_ring_buf_peek(flip_buf,
-				     prev_idx(flip_buf, flip_buf->head),
-				     (char **)&flip_ele);
-	mutex_unlock(&flip_buf->lock);
-
-	if (ret) {
-		mutex_lock(&dc->crc_buf.lock);
-		ret = _find_mrm(dc, flip_id, NULL);
-		mutex_unlock(&dc->crc_buf.lock);
-	} else {
-		*flip_id = flip_ele->id;
-	}
-
-	return ret;
-}
-
 static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 			    struct tegra_dc_crc_buf_ele *crc_ele)
 {
@@ -599,18 +528,18 @@ static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 	struct tegra_dc_ring_buf *buf = &dc->crc_buf;
 
 	if (flip_id == U64_MAX) {
-		/* On success, this will overwrite flip_id to apt value */
-		ret = _get_special_case_flip_id(dc, &flip_id);
-		if (ret)
-			return ret;
+		/* Overwrite flip_id with most recently queued flip. If no
+		 * flips have been queued yet, return an error to the user
+		 */
+		flip_id = atomic64_read(&dc->flip_stats.flips_queued);
+		if (!flip_id)
+			return -EAGAIN;
 	}
+
+	if (_is_flip_out_of_bounds(dc, flip_id))
+		return -ENODATA;
 
 	mutex_lock(&buf->lock);
-
-	if (_is_flip_out_of_bounds(dc, flip_id)) {
-		ret = -ENODATA;
-		goto done;
-	}
 
 	/* At this point, we are committed to return a CRC value to the user,
 	 * even if one is yet to be generated in the imminent future

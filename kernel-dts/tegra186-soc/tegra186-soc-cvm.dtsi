@@ -77,10 +77,6 @@
 		status = "okay";
 	};
 
-	tegra-aon-ivc-echo {
-		status = "okay";
-	};
-
 	timer {
 		status = "okay";
 	};

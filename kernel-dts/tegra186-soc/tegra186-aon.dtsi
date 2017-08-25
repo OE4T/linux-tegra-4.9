@@ -63,12 +63,6 @@
 		};
 	};
 
-	tegra-aon-ivc-echo {
-		compatible = "nvidia,tegra186-aon-ivc-echo";
-		mboxes = <&aon 0>;
-		status = "disabled";
-	};
-
 	aondbg {
 		compatible = "nvidia,tegra186-aondbg";
 		mboxes = <&aon 1>;

@@ -20,6 +20,7 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 #include <linux/tegra-aon.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
@@ -44,6 +45,7 @@ static inline int ivc_min_frame_size(void)
 #define SHRD_SEM_CLR	0x8u
 #define AON_SS_MAX	8
 
+#define IVC_INIT_TIMEOUT_US (200000)
 
 enum smbox_msgs {
 	SMBOX_IVC_READY_MSG = 0xAAAA5555,
@@ -71,7 +73,8 @@ struct tegra_aon {
 	u32 ivc_carveout_base_ss;
 	u32 ivc_carveout_size_ss;
 	u32 ivc_dbg_enable_ss;
-	u32 ivc_notify_ss;
+	u32 ivc_tx_ss;
+	u32 ivc_rx_ss;
 };
 
 struct tegra_aon_ivc_chan {
@@ -122,7 +125,7 @@ static void tegra_aon_notify_remote(struct ivc *ivc)
 	struct tegra_aon_ivc_chan *ivc_chan;
 
 	ivc_chan = container_of(ivc, struct tegra_aon_ivc_chan, ivc);
-	tegra_aon_hsp_ss_set(ivc_chan->aon, ivc_chan->aon->ivc_notify_ss,
+	tegra_aon_hsp_ss_set(ivc_chan->aon, ivc_chan->aon->ivc_tx_ss,
 				BIT(ivc_chan->chan_id));
 	tegra_hsp_sm_pair_write(ivc_chan->aon->hsp_sm_pair, SMBOX_IVC_NOTIFY);
 }
@@ -164,8 +167,8 @@ static u32 tegra_aon_hsp_sm_full_notify(void *data, u32 value)
 		return 0;
 	}
 
-	ss_val = tegra_aon_hsp_ss_status(aon, aon->ivc_notify_ss);
-	tegra_aon_hsp_ss_clr(aon, aon->ivc_notify_ss, ss_val);
+	ss_val = tegra_aon_hsp_ss_status(aon, aon->ivc_rx_ss);
+	tegra_aon_hsp_ss_clr(aon, aon->ivc_rx_ss, ss_val);
 	tegra_aon_rx_handler(aon, ss_val);
 
 	return 0;
@@ -377,7 +380,7 @@ static int tegra_aon_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
 	bytes = tegra_ivc_write(&ivc_chan->ivc, msg->data, msg->length);
 	ret = (bytes != msg->length) ? -EBUSY : 0;
 	if (bytes < 0) {
-		pr_err("%s mbox send failed with error %d\n", __func__, ret);
+		pr_err("%s mbox send failed with error %d\n", __func__, bytes);
 		ret = bytes;
 	}
 	ivc_chan->last_tx_done = (ret == 0);
@@ -468,6 +471,7 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	struct device_node *dn = dev->of_node;
 	int num_chans;
 	int ret = 0;
+	ktime_t tstart;
 
 	dev_dbg(&pdev->dev, "tegra aon driver probe Start\n");
 
@@ -514,10 +518,17 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = of_property_read_u32(dn, NV("ivc-notify-ss"),
-					&aon->ivc_notify_ss);
+	ret = of_property_read_u32(dn, NV("ivc-rx-ss"),
+					&aon->ivc_rx_ss);
 	if (ret) {
-		dev_err(dev, "missing <%s> property\n", NV("ivc-notify-ss"));
+		dev_err(dev, "missing <%s> property\n", NV("ivc-rx-ss"));
+		return ret;
+	}
+
+	ret = of_property_read_u32(dn, NV("ivc-tx-ss"),
+					&aon->ivc_tx_ss);
+	if (ret) {
+		dev_err(dev, "missing <%s> property\n", NV("ivc-tx-ss"));
 		return ret;
 	}
 
@@ -574,6 +585,16 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	tegra_aon_hsp_ss_set(aon, aon->ivc_carveout_size_ss,
 					(u32)aon->ipcbuf_size);
 	tegra_hsp_sm_pair_write(aon->hsp_sm_pair, SMBOX_IVC_READY_MSG);
+
+	tstart = ktime_get();
+	while (!tegra_hsp_sm_pair_is_empty(aon->hsp_sm_pair)) {
+		if (ktime_us_delta(ktime_get(), tstart) > IVC_INIT_TIMEOUT_US) {
+			dev_err(dev, "IVC init timeout\n");
+			tegra_hsp_sm_pair_free(aon->hsp_sm_pair);
+			ret = -ETIMEDOUT;
+			goto exit;
+		}
+	}
 
 	ret = mbox_controller_register(&aon->mbox);
 	if (ret) {

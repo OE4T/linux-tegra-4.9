@@ -90,6 +90,9 @@ struct tegra_dc_ext {
 	bool				enabled;
 	bool				vblank_enabled;
 
+	/* all users that have opened the file descriptor for the ext device */
+	atomic_t			users_count;
+
 	/* scanline trigger */
 	int			scanline_trigger;
 	/* scanline work queue */

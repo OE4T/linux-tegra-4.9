@@ -3483,6 +3483,8 @@ static int tegra_dc_open(struct inode *inode, struct file *filp)
 	ext = container_of(inode->i_cdev, struct tegra_dc_ext, cdev);
 	user->ext = ext;
 
+	atomic_inc(&ext->users_count);
+
 	filp->private_data = user;
 
 	open_count = atomic_inc_return(&dc_open_count);
@@ -3533,6 +3535,11 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 
 	if (open_count == 0)
 		tegra_dc_reset_imp_state();
+
+	if (atomic_dec_return(&ext->users_count) == 0) {
+		dev_dbg(&ext->dc->ndev->dev, "%s: All users died\n", __func__);
+		/* clean up reference counts */
+	}
 
 	return 0;
 }

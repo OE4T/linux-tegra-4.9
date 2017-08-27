@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -94,7 +94,7 @@ struct tegra_hsp_sm_pair *of_tegra_hsp_sm_pair_by_name(
 	const struct device_node *np, char const *name,
 	tegra_hsp_sm_full_fn, tegra_hsp_sm_empty_fn, void *);
 void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *);
-void tegra_hsp_sm_pair_write(const struct tegra_hsp_sm_pair *, u32 value);
+void tegra_hsp_sm_pair_write(struct tegra_hsp_sm_pair *, u32 value);
 bool tegra_hsp_sm_pair_is_empty(const struct tegra_hsp_sm_pair *);
 
 #endif

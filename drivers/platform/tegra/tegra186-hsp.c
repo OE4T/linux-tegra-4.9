@@ -33,7 +33,7 @@
 struct tegra_hsp {
 	void __iomem *base;
 	struct reset_control *reset;
-	struct mutex lock;
+	spinlock_t lock;
 	u8 n_sm;
 	u8 n_as;
 	u8 n_ss;
@@ -58,6 +58,7 @@ struct tegra_hsp_sm_pair {
 	struct device dev;
 };
 
+#define TEGRA_HSP_IR			(0x304)
 #define TEGRA_HSP_IE(si)		(0x100 + (4 * (si)))
 #define TEGRA_HSP_IE_SM_EMPTY(sm)	(0x1u << (sm))
 #define TEGRA_HSP_IE_SM_FULL(sm)	(0x100u << (sm))
@@ -82,27 +83,41 @@ static void __iomem *tegra_hsp_ie_reg(struct device *dev, u8 si)
 	return tegra_hsp_reg(dev, TEGRA_HSP_IE(si));
 }
 
+static void __iomem *tegra_hsp_ir_reg(struct device *dev)
+{
+	return tegra_hsp_reg(dev, TEGRA_HSP_IR);
+}
+
+static inline bool tegra_hsp_irq_is_shared(struct tegra_hsp_irq *hi)
+{
+	return (hi->si_index != 0xff);
+}
+
 static void tegra_hsp_irq_suspend(struct device *dev, struct tegra_hsp_irq *hi)
 {
-	if (hi->si_index != 0xff) {
+	unsigned long flags;
+
+	if (tegra_hsp_irq_is_shared(hi)) {
 		struct tegra_hsp *hsp = dev_get_drvdata(dev);
 		void __iomem *reg = tegra_hsp_ie_reg(dev, hi->si_index);
 
-		mutex_lock(&hsp->lock);
+		spin_lock_irqsave(&hsp->lock, flags);
 		writel(readl(reg) & ~(1u << hi->ie_shift), reg);
-		mutex_unlock(&hsp->lock);
+		spin_unlock_irqrestore(&hsp->lock, flags);
 	}
 }
 
 static void tegra_hsp_irq_resume(struct device *dev, struct tegra_hsp_irq *hi)
 {
-	if (hi->si_index != 0xff) {
+	unsigned long flags;
+
+	if (tegra_hsp_irq_is_shared(hi)) {
 		struct tegra_hsp *hsp = dev_get_drvdata(dev);
 		void __iomem *reg = tegra_hsp_ie_reg(dev, hi->si_index);
 
-		mutex_lock(&hsp->lock);
+		spin_lock_irqsave(&hsp->lock, flags);
 		writel(readl(reg) | (1u << hi->ie_shift), reg);
-		mutex_unlock(&hsp->lock);
+		spin_unlock_irqrestore(&hsp->lock, flags);
 	}
 }
 
@@ -112,22 +127,35 @@ static void __iomem *tegra_hsp_sm_reg(struct device *dev, u32 sm)
 }
 
 static void tegra_hsp_enable_per_sm_irq(struct device *dev,
-					const struct tegra_hsp_irq *hi,
+					struct tegra_hsp_irq *hi,
 					int irq)
 {
 	if (hi->per_sm_ie != 0)
 		writel(1, tegra_hsp_sm_reg(dev, hi->index) + hi->per_sm_ie);
+	else if (tegra_hsp_irq_is_shared(hi))
+		tegra_hsp_irq_resume(dev, (struct tegra_hsp_irq *)hi);
 	else if (!(irq < 0))
-		enable_irq(irq);
+		enable_irq(irq); /* APE HSP uses internal interrupts */
 }
 
 static void tegra_hsp_disable_per_sm_irq(struct device *dev,
-					const struct tegra_hsp_irq *hi)
+					 struct tegra_hsp_irq *hi)
 {
 	if (hi->per_sm_ie != 0)
 		writel(0, tegra_hsp_sm_reg(dev, hi->index) + hi->per_sm_ie);
+	else if (tegra_hsp_irq_is_shared(hi))
+		tegra_hsp_irq_suspend(dev, (struct tegra_hsp_irq *)hi);
 	else
 		disable_irq_nosync(hi->irq);
+}
+
+static inline bool tegra_hsp_irq_is_set(struct device *dev,
+					struct tegra_hsp_irq *hi)
+{
+	return tegra_hsp_irq_is_shared(hi) ?
+		((readl(tegra_hsp_ir_reg(dev)) &
+		  readl(tegra_hsp_ie_reg(dev, hi->si_index))) &
+		 (1u << hi->ie_shift)) : true;
 }
 
 static irqreturn_t tegra_hsp_full_isr(int irq, void *data)
@@ -137,8 +165,13 @@ static irqreturn_t tegra_hsp_full_isr(int irq, void *data)
 		container_of(hi, struct tegra_hsp_sm_pair, full);
 	struct device *dev = pair->dev.parent;
 	void __iomem *reg = tegra_hsp_sm_reg(dev, hi->index);
-	u32 value = readl(reg);
+	u32 value;
 	void *drv_data;
+
+	if (!tegra_hsp_irq_is_set(dev, hi))
+		return IRQ_NONE;
+
+	value = readl(reg);
 
 	if (!(value & TEGRA_HSP_SM_FULL))
 		return IRQ_NONE;
@@ -161,9 +194,14 @@ static irqreturn_t tegra_hsp_empty_isr(int irq, void *data)
 		container_of(hi, struct tegra_hsp_sm_pair, empty);
 	struct device *dev = pair->dev.parent;
 	void __iomem *reg = tegra_hsp_sm_reg(dev, hi->index);
-	u32 value = readl(reg);
+	u32 value;
 
-	if (value & TEGRA_HSP_SM_FULL)
+	if (!tegra_hsp_irq_is_set(dev, hi))
+		return IRQ_NONE;
+
+	value = readl(reg);
+
+	if ((value & TEGRA_HSP_SM_FULL))
 		return IRQ_NONE;
 
 	tegra_hsp_disable_per_sm_irq(dev, &pair->empty);
@@ -230,8 +268,7 @@ static int tegra_hsp_get_sm_irq(struct device *dev, bool empty,
 	unsigned long flags = IRQF_ONESHOT;
 	char name[7];
 
-	if (!empty || hi->per_sm_ie != 0)
-		flags |= IRQF_SHARED;
+	flags |= IRQF_SHARED;
 
 	/* Look for dedicated internal IRQ */
 	sprintf(name, empty ? "empty%X" : "full%X", hi->index);
@@ -446,7 +483,7 @@ EXPORT_SYMBOL(tegra_hsp_sm_pair_free);
  * This writes a value to the producer side mailbox of a mailbox pair.
  * The mailbox must be empty (especially if notify_empty callback is non-nul).
  */
-void tegra_hsp_sm_pair_write(const struct tegra_hsp_sm_pair *pair,
+void tegra_hsp_sm_pair_write(struct tegra_hsp_sm_pair *pair,
 				u32 value)
 {
 	struct device *dev = pair->dev.parent;
@@ -527,7 +564,8 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	platform_set_drvdata(pdev, hsp);
-	mutex_init(&hsp->lock);
+
+	spin_lock_init(&hsp->lock);
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (r == NULL)

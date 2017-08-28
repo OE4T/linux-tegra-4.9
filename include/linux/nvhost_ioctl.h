@@ -410,6 +410,7 @@ enum nvhost_module_id {
 	NVHOST_MODULE_NVDEC,
 	NVHOST_MODULE_NVJPG,
 	NVHOST_MODULE_VII2C,
+	NVHOST_MODULE_TSECB = (1<<16) | NVHOST_MODULE_TSEC,
 };
 
 struct nvhost_characteristics {

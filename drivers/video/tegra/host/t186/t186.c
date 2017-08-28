@@ -392,6 +392,7 @@ struct nvhost_device_data t18_tsecb_info = {
 	.can_powergate          = true,
 	.autosuspend_delay      = 500,
 	.keepalive		= true,
+	.moduleid		= NVHOST_MODULE_TSECB,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_tsec_t186_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,

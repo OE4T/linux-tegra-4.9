@@ -340,6 +340,7 @@ struct nvhost_device_data t21_tsecb_info = {
 	.can_powergate		= true,
 	.autosuspend_delay	= TSEC_AUTOSUSPEND_DELAY,
 	.keepalive		= true,
+	.moduleid		= NVHOST_MODULE_TSECB,
 	.engine_can_cg		= true,
 	.engine_cg_regs		= t21x_tsec_gating_registers,
 	.poweron_reset		= true,

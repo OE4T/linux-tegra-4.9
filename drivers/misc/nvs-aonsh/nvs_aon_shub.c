@@ -274,9 +274,78 @@ static int tegra_aon_shub_enable(void *client, int snsr_id, int enable)
 	return ret;
 }
 
+static int tegra_aon_shub_max_range(void *client, int snsr_id, int max_range)
+{
+	struct tegra_aon_shub *shub = (struct tegra_aon_shub *)client;
+	int ret = 0, i;
+	int len;
+
+	if (max_range < 0)
+		return -EINVAL;
+
+	mutex_lock(&shub->shub_mutex);
+	shub->shub_req->req_type = AON_SHUB_REQUEST_RANGE;
+	shub->shub_req->data.range.snsr_id = snsr_id;
+	shub->shub_req->data.range.setting = max_range;
+	ret = tegra_aon_shub_ivc_msg_send(shub,
+					  sizeof(struct aon_shub_request));
+	if (ret) {
+		dev_err(shub->dev,
+			"range ERR: snsr_id: %d setting: %d!\n",
+			snsr_id, max_range);
+		goto exit;
+	}
+	ret = shub->shub_resp->data.range.err;
+	switch (ret) {
+	case AON_SHUB_RANGE_NO_ERR:
+		memcpy(&shub->snsrs[snsr_id]->cfg.max_range,
+				&shub->shub_resp->data.range.max_range,
+				sizeof(struct nvs_float) * 2);
+		/* AXIS sensors need resolution to be put in the scales */
+		len = shub->snsrs[snsr_id]->cfg.ch_n_max;
+		if (len) {
+			for (i = 0; i < len; i++) {
+				memcpy(&shub->snsrs[snsr_id]->cfg.scales[i],
+					&shub->shub_resp->data.range.resolution,
+					sizeof(struct nvs_float));
+			}
+		}
+		break;
+	case AON_SHUB_RANGE_ENODEV:
+		/* Invalid snsr_id passed for range setting */
+		ret = -ENODEV;
+		break;
+	case AON_SHUB_RANGE_EACCES:
+		/* can't change the setting on the fly while the device is
+		 * active. Disable the device first.
+		 */
+		ret = -EACCES;
+		break;
+	case AON_SHUB_RANGE_EINVAL:
+		/* Range setting exceeds max setting */
+		ret = -EINVAL;
+		break;
+	case AON_SHUB_RANGE_EPERM:
+		/* No provision to modify the range for this device */
+		ret = -EPERM;
+		break;
+	default:
+		break;
+	}
+
+	if (ret)
+		dev_err(shub->dev, "range ERR: %d\n", ret);
+
+exit:
+	mutex_unlock(&shub->shub_mutex);
+
+	return ret;
+}
+
 static struct nvs_fn_dev aon_shub_nvs_fn = {
 	.enable	= tegra_aon_shub_enable,
 	.batch	= tegra_aon_shub_batch,
+	.max_range = tegra_aon_shub_max_range,
 };
 
 #ifdef TEGRA_AON_SHUB_DBG_ENABLE

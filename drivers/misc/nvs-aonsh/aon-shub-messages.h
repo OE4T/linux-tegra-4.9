@@ -44,7 +44,8 @@ enum aon_shub_request_type {
 	AON_SHUB_REQUEST_PAYLOAD = 7,
 	AON_SHUB_REQUEST_CHIP_CFG_IDS = 8,
 	AON_SHUB_REQUEST_SNSR_CHIPS = 9,
-	AON_SHUB_REQUEST_MAX = 9,
+	AON_SHUB_REQUEST_RANGE = 10,
+	AON_SHUB_REQUEST_MAX = 10,
 };
 
 /* This enum represents the types of init requests to sensor hub associated
@@ -72,6 +73,15 @@ enum aon_shub_sys_request_type {
 enum aon_shub_status {
 	AON_SHUB_STATUS_OK = 0,
 	AON_SHUB_STATUS_ERROR = 1,
+};
+
+/* This enum represents the types of errors in a sensors range setting */
+enum aon_shub_range_err_status {
+	AON_SHUB_RANGE_NO_ERR = 0,
+	AON_SHUB_RANGE_ENODEV = 1,
+	AON_SHUB_RANGE_EPERM = 2,
+	AON_SHUB_RANGE_EINVAL = 3,
+	AON_SHUB_RANGE_EACCES = 4,
 };
 
 /* This struct is used to represent sensor payload from the SHUB.
@@ -127,6 +137,32 @@ struct aon_shub_batch_request {
 	s32 flags;
 	u32 period;
 	u32 timeout;
+};
+
+/* This struct represents the range setting for a given sensor. The idea
+ * here is that you never really know what the actual range is. So instead,
+ * you can just increment the number of settings until you get an error.
+ * Setting goes from 0 to n where n would be the max settings index.
+ * Fields:
+ * snsr_id:	Sensor handle to identify the sensor
+ * setting:	index to the range table.
+ */
+struct aon_shub_range_request {
+	s32 snsr_id;
+	u32 setting;
+};
+
+/* This struct is used to represent data in response to a sensor range request
+ * to the SHUB.
+ * Fields:
+ * err:		error status of the setting.
+ * max_range:	range that has been set.
+ * resolution:	resolution corresponding to the range setting.
+ */
+struct aon_shub_range_response {
+	u32 err;
+	struct nvs_float max_range;
+	struct nvs_float resolution;
 };
 
 /* This struct is used to represent data required for a flush request
@@ -386,6 +422,7 @@ struct aon_shub_request {
 		struct aon_shub_enable_request enable;
 		struct aon_shub_batch_request batch;
 		struct aon_shub_flush_request flush;
+		struct aon_shub_range_request range;
 	} data;
 };
 
@@ -408,6 +445,7 @@ struct aon_shub_response {
 		struct aon_shub_snsr_chips_response snsr_chips;
 		struct aon_shub_xfer_response xfer;
 		struct aon_shub_enable_response enable;
+		struct aon_shub_range_response range;
 		struct aon_shub_payload_response payload;
 	} data;
 };

@@ -246,9 +246,6 @@ int nvhost_module_do_idle(struct device *dev)
 	/* acquire busy lock to block other busy() calls */
 	down_write(&pdata->busy_lock);
 
-	if (pm_runtime_status_suspended(dev))
-		return 0;
-
 	/* prevent suspend by incrementing usage counter */
 	pm_runtime_get_sync(dev);
 
@@ -274,7 +271,7 @@ int nvhost_module_do_idle(struct device *dev)
 	return 0;
 
 fail_drop_usage_count:
-	pm_runtime_put_noidle(dev);
+	pm_runtime_put_sync(dev);
 	up_write(&pdata->busy_lock);
 
 	return -EBUSY;

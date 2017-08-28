@@ -24,12 +24,24 @@
 	#define skb_vlan_tag_get_id(__skb)		vlan_tx_tag_get_id(__skb)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
 	#define napi_alloc_skb(napi, length)		netdev_alloc_skb_ip_align(netdev,length)
+	#define napi_complete_done(n, d)		napi_complete(n)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0)
+	#ifndef smp_mb__before_atomic
+	#define smp_mb__before_atomic()			smp_mb()
+	#endif
+
+	#ifndef smp_mb__after_atomic
+	#define smp_mb__after_atomic()			smp_mb()
+	#endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0)
+	#define IS_ERR_OR_NULL(ptr)			(!ptr)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
 	#define ether_addr_copy(dst, src)		memcpy(dst, src, ETH_ALEN)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
 	#define BIT(nr)					(1UL << (nr))
 	#define BIT_ULL(nr)				(1ULL << (nr))
 	#define BITS_PER_BYTE				8
+	#define reinit_completion(x)			((x)->done = 0)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 	#define NETIF_F_HW_VLAN_CTAG_RX			NETIF_F_HW_VLAN_RX
 	#define NETIF_F_HW_VLAN_CTAG_TX			NETIF_F_HW_VLAN_TX
@@ -129,6 +141,8 @@
 
 		udelay(min % 1000);
 	}
+
+	#define work_busy(x)				0
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
 	static inline bool pci_dev_run_wake(struct pci_dev *dev)
 	{
@@ -423,6 +437,8 @@
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0) */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0) */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,15,0) */
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,16,0) */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0) */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0) */
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(4,5,0) */

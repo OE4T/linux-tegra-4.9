@@ -504,6 +504,7 @@ struct nvhost_device_data t19_tsecb_info = {
 	},
 	.autosuspend_delay      = 500,
 	.keepalive		= true,
+	.moduleid               = NVHOST_MODULE_TSECB,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_tsec_t194_finalize_poweron,
 	.prepare_poweroff	= nvhost_tsec_prepare_poweroff,

@@ -64,6 +64,18 @@ struct vi_capture_req {
 	uint64_t reloc_relatives;
 } __VI_CAPTURE_ALIGN;
 
+/*
+ * The compand configuration describes a piece-wise linear
+ * tranformation function used by the VI companding module.
+ */
+#define VI_CAPTURE_NUM_COMPAND_KNEEPTS 10
+struct vi_capture_compand {
+	uint32_t base[VI_CAPTURE_NUM_COMPAND_KNEEPTS];
+	uint32_t scale[VI_CAPTURE_NUM_COMPAND_KNEEPTS];
+	uint32_t offset[VI_CAPTURE_NUM_COMPAND_KNEEPTS];
+} __VI_CAPTURE_ALIGN;
+
+
 int vi_capture_init(struct tegra_vi_channel *chan);
 void vi_capture_shutdown(struct tegra_vi_channel *chan);
 int vi_capture_setup(struct tegra_vi_channel *chan,
@@ -80,6 +92,8 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 		struct vi_capture_req *req);
 int vi_capture_status(struct tegra_vi_channel *chan,
 		int32_t timeout_ms);
+int vi_capture_set_compand(struct tegra_vi_channel *chan,
+		struct vi_capture_compand *compand);
 long vi_capture_ioctl(struct file *file, void *fh,
 		bool use_prio, unsigned int cmd, void *arg);
 #endif

@@ -525,6 +525,7 @@ unpins_list_fail:
 	return err;
 }
 
+
 int vi_capture_reset(struct tegra_vi_channel *chan,
 		uint32_t reset_flags)
 {
@@ -569,6 +570,53 @@ int vi_capture_reset(struct tegra_vi_channel *chan,
 
 submit_fail:
 	return err;
+}
+
+int vi_capture_set_compand(struct tegra_vi_channel *chan,
+		struct vi_capture_compand *compand)
+{
+	uint32_t ii;
+	struct vi_capture *capture = chan->capture_data;
+	struct CAPTURE_CONTROL_MSG control_desc;
+	int32_t result;
+	struct vi_compand_config *desc_compand;
+	int err = 0;
+
+	if (capture == NULL) {
+		dev_err(chan->dev,
+			 "%s: vi capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
+
+	if (capture->channel_id == CAPTURE_CHANNEL_INVALID_ID) {
+		dev_err(chan->dev,
+			"%s: setup channel first\n", __func__);
+		return -ENODEV;
+	}
+
+	memset(&control_desc, 0, sizeof(control_desc));
+	control_desc.header.msg_id = CAPTURE_COMPAND_CONFIG_REQ;
+	control_desc.header.channel_id = capture->channel_id;
+	desc_compand = &control_desc.compand_config_req.compand_config;
+	for (ii = 0; ii < VI_CAPTURE_NUM_COMPAND_KNEEPTS; ii++) {
+		desc_compand->base[ii] = compand->base[ii];
+		desc_compand->scale[ii] = compand->scale[ii];
+		desc_compand->offset[ii] = compand->offset[ii];
+	}
+
+	err = vi_capture_ivc_send_control(chan, &control_desc,
+		sizeof(control_desc), CAPTURE_COMPAND_CONFIG_RESP);
+	if (err < 0)
+		return err;
+
+	result = capture->control_resp_msg.compand_config_resp.result;
+	if (result != CAPTURE_OK) {
+		dev_err(chan->dev, "%s: setting compand config failed, result: %d",
+				__func__, result);
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 int vi_capture_release(struct tegra_vi_channel *chan,

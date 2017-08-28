@@ -43,6 +43,7 @@
 #define VI_CAPTURE_GET_INFO	_IOR('I', 5, struct vi_capture_info)
 #define VI_CAPTURE_REQUEST	_IOW('I', 6, struct vi_capture_req)
 #define VI_CAPTURE_STATUS	_IOW('I', 7, __u32)
+#define VI_CAPTURE_SET_COMPAND	_IOW('I', 8, struct vi_capture_compand)
 
 struct vi_channel_drv {
 	struct device *dev;
@@ -130,6 +131,18 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 		if (err)
 			dev_err(chan->dev,
 				"vi capture get status failed\n");
+		break;
+	}
+
+	case _IOC_NR(VI_CAPTURE_SET_COMPAND): {
+		struct vi_capture_compand compand;
+
+		if (copy_from_user(&compand, ptr, sizeof(compand)))
+			break;
+		err = vi_capture_set_compand(chan, &compand);
+		if (err)
+			dev_err(chan->dev,
+				"setting compand failed\n");
 		break;
 	}
 

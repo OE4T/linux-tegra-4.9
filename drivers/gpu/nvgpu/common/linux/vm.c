@@ -266,6 +266,12 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	mapping_size = mapping_size ? mapping_size : bfr.size;
 	mapping_size = ALIGN(mapping_size, SZ_4K);
 
+	if ((mapping_size > bfr.size) ||
+	    (buffer_offset > (bfr.size - mapping_size))) {
+		err = -EINVAL;
+		goto clean_up;
+	}
+
 	/* Check if we should use a fixed offset for mapping this buffer */
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
 		err = nvgpu_vm_area_validate_buffer(vm, offset_align, mapping_size,

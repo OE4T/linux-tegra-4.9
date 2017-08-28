@@ -17,6 +17,7 @@
 #include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/kernel.h> /* printk() */
+#include <linux/pm.h>
 #include <linux/slab.h>   /* kmalloc() */
 #include <linux/fs.h>   /* everything... */
 #include <linux/errno.h> /* error codes */
@@ -1257,6 +1258,49 @@ static void vblk_exit(void)
 	unregister_blkdev(vblk_major, "vblk");
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra_hv_vblk_suspend(struct device *dev)
+{
+	struct vblk_dev *vblkdev = dev_get_drvdata(dev);
+	unsigned long flags;
+
+	if (vblkdev->queue) {
+		spin_lock_irqsave(vblkdev->queue->queue_lock, flags);
+		blk_stop_queue(vblkdev->queue);
+		spin_unlock_irqrestore(vblkdev->queue->queue_lock, flags);
+
+		disable_irq(vblkdev->ivck->irq);
+
+		flush_workqueue(vblkdev->wq);
+	}
+
+	return 0;
+}
+
+static int tegra_hv_vblk_resume(struct device *dev)
+{
+	struct vblk_dev *vblkdev = dev_get_drvdata(dev);
+	unsigned long flags;
+
+	if (vblkdev->queue) {
+		enable_irq(vblkdev->ivck->irq);
+
+		spin_lock_irqsave(vblkdev->queue->queue_lock, flags);
+		blk_start_queue(vblkdev->queue);
+		spin_unlock_irqrestore(vblkdev->queue->queue_lock, flags);
+
+		queue_work_on(WORK_CPU_UNBOUND, vblkdev->wq, &vblkdev->work);
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_hv_vblk_pm_ops = {
+	.suspend = tegra_hv_vblk_suspend,
+	.resume = tegra_hv_vblk_resume,
+};
+#endif /* CONFIG_PM_SLEEP */
+
 #ifdef CONFIG_OF
 static struct of_device_id tegra_hv_vblk_match[] = {
 	{ .compatible = "nvidia,tegra-hv-storage", },
@@ -1272,6 +1316,9 @@ static struct platform_driver tegra_hv_vblk_driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(tegra_hv_vblk_match),
+#ifdef CONFIG_PM_SLEEP
+		.pm = &tegra_hv_vblk_pm_ops,
+#endif
 	},
 };
 

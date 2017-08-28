@@ -655,6 +655,37 @@ static struct of_device_id tegra_flcn_of_match[] = {
 	{ },
 };
 
+static ssize_t force_idle_store(struct device *device,
+				struct device_attribute *attr, const char *buf,
+				size_t count)
+{
+	int err;
+	unsigned long val = 0;
+
+	if (kstrtoul(buf, 0, &val) < 0)
+		return -EINVAL;
+
+	if (val)
+		err = nvhost_module_do_idle(device);
+	else
+		err = nvhost_module_do_unidle(device);
+
+	if (err)
+		return err;
+
+	return count;
+}
+
+static ssize_t force_idle_read(struct device *device,
+				struct device_attribute *attr, char *buf)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(device);
+
+	return sprintf(buf, "%d\n", pdata->forced_idle ? 1 : 0);
+}
+
+static DEVICE_ATTR(force_idle, 0744, force_idle_read, force_idle_store);
+
 static int flcn_probe(struct platform_device *dev)
 {
 	int err;
@@ -686,6 +717,10 @@ static int flcn_probe(struct platform_device *dev)
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
 
+	err = device_create_file(&dev->dev, &dev_attr_force_idle);
+	if (err)
+		return err;
+
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		return err;
@@ -711,6 +746,7 @@ static int flcn_probe(struct platform_device *dev)
 static int __exit flcn_remove(struct platform_device *pdev)
 {
 	nvhost_client_device_release(pdev);
+	device_remove_file(&pdev->dev, &dev_attr_force_idle);
 
 	return 0;
 }

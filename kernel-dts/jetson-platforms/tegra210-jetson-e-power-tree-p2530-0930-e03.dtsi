@@ -212,6 +212,33 @@
 		usb_vbus-supply = <&battery_reg>;
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	xusb_padctl@7009f000 {
+		vddio-hsic-supply = <&max77620_ldo0>;
+		avdd_pll_uerefe-supply = <&max77620_ldo7>;
+		hvdd_pex_pll_e-supply = <&max77620_sd3>;
+		dvdd_pex_pll-supply = <&max77620_ldo1>;
+		hvddio_pex-supply = <&max77620_sd3>;
+		dvddio_pex-supply = <&max77620_ldo1>;
+		hvdd_sata-supply = <&max77620_sd3>;
+		dvdd_sata_pll-supply = <&max77620_ldo8>;
+		hvddio_sata-supply = <&max77620_sd3>;
+		dvddio_sata-supply = <&max77620_ldo8>;
+
+		ports {
+			usb2-0 {
+				vbus-supply = <&battery_reg>;
+			};
+			usb2-2 {
+				vbus-supply = <&usb_vbus1>;
+			};
+			usb2-3 {
+				vbus-supply = <&vdd_3v3>;
+			};
+		};
+	};
+#endif
+
 	 pinctrl@7009f000 {
 		vbus-0-supply = <&battery_reg>;
 		vbus-2-supply = <&usb_vbus1>;

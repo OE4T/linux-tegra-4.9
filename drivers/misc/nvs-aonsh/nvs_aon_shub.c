@@ -116,6 +116,7 @@ struct tegra_aon_shub {
 	u32			 adjust_ts_counter;
 	u64			 ts_res_ns;
 	s64			 ts_adjustment;
+	bool			 last_tx_done;
 };
 
 /* This has to be a multiple of the cache line size */
@@ -193,11 +194,20 @@ static void tegra_aon_shub_mbox_rcv_msg(struct mbox_client *cl, void *rx_msg)
 	}
 }
 
+static void tegra_aon_shub_mbox_tx_done(struct mbox_client *cl, void *tx_msg,
+					int r)
+{
+	struct tegra_aon_shub *shub = dev_get_drvdata(cl->dev);
+
+	shub->last_tx_done = !r;
+}
+
 static int tegra_aon_shub_ivc_msg_send(struct tegra_aon_shub *shub, int len)
 {
 	int status;
 	struct tegra_aon_mbox_msg msg;
 
+	shub->last_tx_done = false;
 	msg.length = len;
 	msg.data = (void *)shub->shub_req;
 	status = mbox_send_message(shub->mbox, (void *)&msg);
@@ -208,8 +218,8 @@ static int tegra_aon_shub_ivc_msg_send(struct tegra_aon_shub *shub, int len)
 		status = wait_for_completion_timeout(shub->wait_on,
 						msecs_to_jiffies(IVC_TIMEOUT));
 		if (status == 0) {
-			dev_err(shub->dev,
-				"Timeout waiting for IVC response\n");
+			dev_err(shub->dev, "Timeout: failed on IVC %s\n",
+				shub->last_tx_done ? "RX" : "TX");
 			return -ETIMEDOUT;
 		}
 		status = shub->shub_resp->status;
@@ -233,8 +243,9 @@ static int tegra_aon_shub_batch(void *client, int snsr_id, int flags,
 	ret = tegra_aon_shub_ivc_msg_send(shub,
 					  sizeof(struct aon_shub_request));
 	if (ret)
-		dev_err(shub->dev, "%s : No response from AON SHUB...!\n",
-			__func__);
+		dev_err(shub->dev,
+			"batch ERR: snsr_id: %d period: %u timeout: %u!\n",
+			snsr_id, period, timeout);
 	mutex_unlock(&shub->shub_mutex);
 
 	return ret;
@@ -252,8 +263,9 @@ static int tegra_aon_shub_enable(void *client, int snsr_id, int enable)
 	ret = tegra_aon_shub_ivc_msg_send(shub,
 					  sizeof(struct aon_shub_request));
 	if (ret) {
-		dev_err(shub->dev, " %s : No response from AON SHUB...!\n",
-			__func__);
+		dev_err(shub->dev,
+			"enable ERR: snsr_id: %d enable: %d!\n",
+			snsr_id, enable);
 	} else {
 		ret = shub->shub_resp->data.enable.enable;
 	}
@@ -869,6 +881,7 @@ static int tegra_aon_shub_probe(struct platform_device *pdev)
 	shub->cl.tx_tout = TX_BLOCK_PERIOD;
 	shub->cl.knows_txdone = false;
 	shub->cl.rx_callback = tegra_aon_shub_mbox_rcv_msg;
+	shub->cl.tx_done = tegra_aon_shub_mbox_tx_done;
 	shub->mbox = mbox_request_channel(&shub->cl, 0);
 	if (IS_ERR(shub->mbox)) {
 		ret = PTR_ERR(shub->mbox);

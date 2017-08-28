@@ -972,6 +972,7 @@ static int tegra_hv_vse_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	ivc_req_msg->hdr.num_reqs = 1;
 	ivc_tx = &ivc_req_msg->d[0].tx;
+	vse_thread_start = true;
 	if (!rsa_ctx->key_alloated) {
 		/* Allocate RSA key slot */
 		ivc_tx->engine = VIRTUAL_SE_RSA;
@@ -988,7 +989,6 @@ static int tegra_hv_vse_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 		if (err)
 			goto exit;
 
-		vse_thread_start = true;
 		err = wait_for_completion_timeout(&priv->alg_complete,
 				TEGRA_HV_VSE_TIMEOUT);
 		if (err == 0) {
@@ -1118,7 +1118,7 @@ static void tegra_hv_vse_rsa_cra_exit(struct crypto_tfm *tfm)
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 	init_completion(&priv->alg_complete);
-
+	vse_thread_start = true;
 	err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 			sizeof(struct tegra_virtual_se_ivc_msg_t));
 	if (err) {
@@ -1126,7 +1126,6 @@ static void tegra_hv_vse_rsa_cra_exit(struct crypto_tfm *tfm)
 		goto free_mem;
 	}
 
-	vse_thread_start = true;
 	err = wait_for_completion_timeout(&priv->alg_complete,
 			TEGRA_HV_VSE_TIMEOUT);
 	if (err == 0)
@@ -1186,6 +1185,8 @@ static int tegra_hv_vse_aes_set_keyiv(struct tegra_virtual_se_dev *se_dev,
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 	init_completion(&priv->alg_complete);
+	vse_thread_start = true;
+
 	err = tegra_hv_vse_send_ivc(se_dev,
 			pivck,
 			ivc_req_msg,
@@ -1383,7 +1384,7 @@ static void tegra_hv_vse_process_new_req(struct tegra_virtual_se_dev *se_dev)
 		usleep_range(8, 10);
 
 	atomic_add(1, &se_dev->ivc_count);
-
+	vse_thread_start = true;
 	err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 			sizeof(struct tegra_virtual_se_ivc_msg_t));
 	if (err) {
@@ -1391,7 +1392,6 @@ static void tegra_hv_vse_process_new_req(struct tegra_virtual_se_dev *se_dev)
 			"\n %s send ivc failed %d\n", __func__, err);
 		goto exit;
 	}
-	vse_thread_start = true;
 	goto exit_return;
 
 exit:
@@ -1536,13 +1536,13 @@ static void tegra_hv_vse_aes_cra_exit(struct crypto_tfm *tfm)
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 	init_completion(&priv->alg_complete);
+	vse_thread_start = true;
 	err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 			sizeof(struct tegra_virtual_se_ivc_msg_t));
 	if (err) {
 		devm_kfree(se_dev->dev, priv);
 		goto free_mem;
 	}
-	vse_thread_start = true;
 
 	err = wait_for_completion_timeout(&priv->alg_complete,
 			TEGRA_HV_VSE_TIMEOUT);
@@ -1734,6 +1734,7 @@ static int tegra_hv_vse_cmac_final(struct ahash_request *req)
 		err = -ENOMEM;
 		goto free_mem;
 	}
+	vse_thread_start = true;
 	/* first process all blocks except last block */
 	if (blocks_to_process) {
 		total_len = blocks_to_process * TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE;
@@ -1760,7 +1761,6 @@ static int tegra_hv_vse_cmac_final(struct ahash_request *req)
 		priv_data_ptr->priv_data = (unsigned int *)priv;
 		priv->cmd = VIRTUAL_SE_PROCESS;
 		priv->se_dev = se_dev;
-		vse_thread_start = true;
 		init_completion(&priv->alg_complete);
 		err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 				sizeof(struct tegra_virtual_se_ivc_msg_t));
@@ -1938,6 +1938,7 @@ static int tegra_hv_vse_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	ivc_req_msg->hdr.num_reqs = 1;
 	ivc_tx = &ivc_req_msg->d[0].tx;
+	vse_thread_start = true;
 	if (!ctx->is_key_slot_allocated) {
 		/* Allocate AES key slot */
 		ivc_tx->engine = VIRTUAL_SE_AES1;
@@ -1947,7 +1948,6 @@ static int tegra_hv_vse_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 		priv_data_ptr->priv_data = (unsigned int *)priv;
 		priv->cmd = VIRTUAL_SE_KEY_SLOT;
 		priv->se_dev = se_dev;
-		vse_thread_start = true;
 		init_completion(&priv->alg_complete);
 
 		err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
@@ -2105,6 +2105,8 @@ static void tegra_hv_vse_cmac_cra_exit(struct crypto_tfm *tfm)
 	priv->cmd = VIRTUAL_SE_PROCESS;
 	priv->se_dev = se_dev;
 	init_completion(&priv->alg_complete);
+	vse_thread_start = true;
+
 	err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 			sizeof(struct tegra_virtual_se_ivc_msg_t));
 	if (err) {
@@ -2201,6 +2203,7 @@ static int tegra_hv_vse_rng_drbg_get_random(struct crypto_rng *tfm,
 		priv->cmd = VIRTUAL_SE_PROCESS;
 		priv->se_dev = se_dev;
 		init_completion(&priv->alg_complete);
+		vse_thread_start = true;
 
 		err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 				sizeof(struct tegra_virtual_se_ivc_msg_t));
@@ -2209,7 +2212,6 @@ static int tegra_hv_vse_rng_drbg_get_random(struct crypto_rng *tfm,
 			goto exit;
 		}
 
-		vse_thread_start = true;
 		time_left = wait_for_completion_timeout(&priv->alg_complete,
 				TEGRA_HV_VSE_TIMEOUT);
 		if (time_left == 0) {
@@ -2291,6 +2293,7 @@ static int tegra_hv_vse_rng1_get_trng(struct crypto_rng *tfm,
 		priv->cmd = VIRTUAL_RNG1_PROCESS;
 		priv->se_dev = se_dev;
 		init_completion(&priv->alg_complete);
+		vse_thread_start = true;
 
 		err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 				sizeof(struct tegra_virtual_se_ivc_msg_t));
@@ -2298,7 +2301,7 @@ static int tegra_hv_vse_rng1_get_trng(struct crypto_rng *tfm,
 			dlen = 0;
 			goto exit;
 		}
-		vse_thread_start = true;
+
 		time_left = wait_for_completion_timeout(&priv->alg_complete,
 				TEGRA_HV_VSE_TIMEOUT);
 		if ((time_left == 0) || (priv->rng1.status)) {
@@ -2383,6 +2386,7 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 		priv->cmd = VIRTUAL_SE_KEY_SLOT;
 		priv->se_dev = se_dev;
 		init_completion(&priv->alg_complete);
+		vse_thread_start = true;
 
 		err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 				sizeof(struct tegra_virtual_se_ivc_msg_t));
@@ -2391,7 +2395,6 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 			goto free_mem;
 		}
 
-		vse_thread_start = true;
 		err = wait_for_completion_timeout(&priv->alg_complete,
 				TEGRA_HV_VSE_TIMEOUT);
 		if (err == 0) {

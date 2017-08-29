@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,6 +25,8 @@
 #include <linux/sched.h>
 #include <linux/nvhost.h>
 #include <linux/atomic.h>
+
+#include "nvhost_ktime.h"
 
 /* when searching for free syncpt id, start from this base */
 #define NVHOST_FREE_SYNCPT_BASE(sp)	\
@@ -157,7 +159,7 @@ u32 nvhost_syncpt_read(struct nvhost_syncpt *sp, u32 id);
 int nvhost_syncpt_incr(struct nvhost_syncpt *sp, u32 id);
 
 int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id, u32 thresh,
-			u32 timeout, u32 *value, struct timespec *ts,
+			u32 timeout, u32 *value, struct nvhost_timespec *ts,
 			bool interruptible);
 
 static inline int nvhost_syncpt_wait(struct nvhost_syncpt *sp, u32 id, u32 thresh)

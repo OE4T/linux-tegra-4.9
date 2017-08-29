@@ -68,7 +68,7 @@ static void waiter_release(struct kref *kref)
 	kfree(waiter);
 }
 
-int nvhost_intr_release_time(void *ref, struct timespec *ts)
+int nvhost_intr_release_time(void *ref, struct nvhost_timespec *ts)
 {
 	struct nvhost_waitlist *waiter = ref;
 	if (atomic_read(&waiter->state) == WLS_PENDING)
@@ -103,7 +103,7 @@ static bool add_waiter_to_queue(struct nvhost_waitlist *waiter,
  * and gather all completed waiters into lists by actions
  */
 static void remove_completed_waiters(struct list_head *head, u32 sync,
-			struct timespec isr_recv,
+			struct nvhost_timespec isr_recv,
 			struct list_head *completed[NVHOST_INTR_ACTION_COUNT])
 {
 	struct list_head *dest;
@@ -215,7 +215,7 @@ static void action_signal_sync_pt(struct nvhost_waitlist *waiter)
 {
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	struct nvhost_sync_pt *pt = waiter->data;
-	ktime_t time = timespec_to_ktime(waiter->isr_recv);
+	ktime_t time = timespec_to_ktime(waiter->isr_recv.ts);
 	nvhost_sync_pt_signal(pt, ktime_to_ns(time));
 #endif
 }

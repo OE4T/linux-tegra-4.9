@@ -197,7 +197,7 @@ static int nvhost_ioctl_ctrl_syncpt_waitmex(struct nvhost_ctrl_userctx *ctx,
 {
 	u32 timeout;
 	int err;
-	struct timespec ts;
+	struct nvhost_timespec nvts;
 	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
 		return -EINVAL;
 	if (args->timeout == NVHOST_NO_TIMEOUT)
@@ -207,9 +207,10 @@ static int nvhost_ioctl_ctrl_syncpt_waitmex(struct nvhost_ctrl_userctx *ctx,
 
 	err = nvhost_syncpt_wait_timeout(&ctx->dev->syncpt, args->id,
 					args->thresh, timeout, &args->value,
-					&ts, true);
-	args->tv_sec = ts.tv_sec;
-	args->tv_nsec = ts.tv_nsec;
+					&nvts, true);
+	args->tv_sec = nvts.ts.tv_sec;
+	args->tv_nsec = nvts.ts.tv_nsec;
+	args->clock_id = nvts.clock;
 	trace_nvhost_ioctl_ctrl_syncpt_wait(args->id, args->thresh,
 					    args->timeout, args->value, err);
 

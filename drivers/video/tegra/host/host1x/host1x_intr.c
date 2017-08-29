@@ -42,7 +42,7 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 	struct nvhost_intr *intr = &dev->intr;
 	unsigned long reg;
 	int i, id;
-	struct timespec isr_recv;
+	struct nvhost_timespec isr_recv;
 
 	nvhost_ktime_get_ts(&isr_recv);
 

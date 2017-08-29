@@ -21,21 +21,40 @@
 #ifndef __NVHOST_KTIME_H
 #define __NVHOST_KTIME_H
 
+enum nvhost_clock_id {
+	NVHOST_CLOCK_UNKNOWN = 0,
+	NVHOST_CLOCK_MONOTONIC,
+	NVHOST_CLOCK_PTP
+};
+
+struct nvhost_timespec {
+	struct timespec ts;
+	enum nvhost_clock_id clock;
+};
+
 #ifdef CONFIG_TEGRA_PTP_NOTIFIER
 #include <linux/platform/tegra/ptp-notifier.h>
 
-#define nvhost_ktime_get_ts(ts)		\
+#define nvhost_ktime_get_ts(nvts)	\
 do {					\
-	u64 time_ns = get_ptp_hwtime();	\
-	*ts = ns_to_timespec(time_ns);	\
+	u64 time_ns;			\
+	int err = get_ptp_hwtime(&time_ns);		\
+	if (err) {					\
+		ktime_get_ts(&(nvts)->ts);			\
+		(nvts)->clock = NVHOST_CLOCK_MONOTONIC;	\
+	} else {						\
+		(nvts)->ts = ns_to_timespec(time_ns);		\
+		(nvts)->clock = NVHOST_CLOCK_PTP;		\
+	}							\
 } while (0)
 
 #else
 #include <linux/ktime.h>
 
-#define nvhost_ktime_get_ts(ts)		\
+#define nvhost_ktime_get_ts(nvts)	\
 do {					\
-	ktime_get_ts(ts);		\
+	ktime_get_ts(&(nvts)->ts);			\
+	(nvts)->clock = NVHOST_CLOCK_MONOTONIC;	\
 } while (0)
 
 #endif

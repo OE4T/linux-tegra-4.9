@@ -217,7 +217,7 @@ static bool syncpt_update_min_is_expired(
  */
 int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			u32 thresh, u32 timeout, u32 *value,
-			struct timespec *ts, bool interruptible)
+			struct nvhost_timespec *ts, bool interruptible)
 {
 	void *ref = NULL;
 	struct nvhost_waitlist *waiter = NULL;
@@ -1415,8 +1415,16 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	struct nvhost_master *master = nvhost_get_host(dev);
 	struct nvhost_syncpt *sp =
 		nvhost_get_syncpt_owner_struct(id, &master->syncpt);
-	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value, ts,
+	struct nvhost_timespec nvts, *pnvts;
+	int ret;
+
+	pnvts = ts ? &nvts : NULL;
+
+	ret = nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value, pnvts,
 			false);
+	if (ts)
+		*ts = nvts.ts;
+	return ret;
 }
 EXPORT_SYMBOL(nvhost_syncpt_wait_timeout_ext);
 

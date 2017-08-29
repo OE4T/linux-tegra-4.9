@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2009-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -363,8 +363,8 @@ struct nvhost_ctrl_syncpt_waitmex_args {
 	__u32 value;
 	__u32 tv_sec;
 	__u32 tv_nsec;
-	__u32 reserved_1;
-	__u32 reserved_2;
+	__u32 clock_id;
+	__u32 reserved;
 };
 
 struct nvhost_ctrl_sync_fence_info {

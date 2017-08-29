@@ -27,6 +27,8 @@
 #include <linux/workqueue.h>
 #include <linux/spinlock.h>
 
+#include "nvhost_ktime.h"
+
 struct nvhost_channel;
 struct platform_device;
 
@@ -85,7 +87,7 @@ struct nvhost_waitlist {
 	u32 thresh;
 	enum nvhost_intr_action action;
 	atomic_t state;
-	struct timespec isr_recv;
+	struct nvhost_timespec isr_recv;
 	void *data;
 	int count;
 	wait_queue_head_t wq;
@@ -97,7 +99,7 @@ struct nvhost_intr_syncpt {
 	spinlock_t lock;
 	struct list_head wait_head;
 	char thresh_irq_name[12];
-	struct timespec isr_recv;
+	struct nvhost_timespec isr_recv;
 	struct work_struct low_prio_work;
 	struct list_head low_prio_handlers[NVHOST_INTR_LOW_PRIO_COUNT];
 };
@@ -151,7 +153,7 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync);
 void nvhost_intr_deinit(struct nvhost_intr *intr);
 int nvhost_intr_start(struct nvhost_intr *intr, u32 hz);
 int nvhost_intr_stop(struct nvhost_intr *intr);
-int nvhost_intr_release_time(void *ref, struct timespec *ts);
+int nvhost_intr_release_time(void *ref, struct nvhost_timespec *ts);
 void nvhost_intr_enable_host_irq(struct nvhost_intr *intr, int irq,
 				 void (*host_isr)(u32, void *),
 				 void *priv);

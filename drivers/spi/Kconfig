@@ -674,10 +674,6 @@ config SPI_THUNDERX
 	  SPI host driver for the hardware found on Cavium ThunderX
 	  SOCs.
 
-
-config QSPI_TEGRA
-	bool "Nvidia Tegra QSPI Controller"
-
 config SPI_TOPCLIFF_PCH
 	tristate "Intel EG20T PCH/LAPIS Semicon IOH(ML7213/ML7223/ML7831) SPI"
 	depends on PCI && (X86_32 || MIPS || COMPILE_TEST)

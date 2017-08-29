@@ -230,6 +230,9 @@
 #define XUSB_PADCTL_UPHY_USB3_PADX_ECTL6(x) (0xa74 + (x) * 0x40)
 #define XUSB_PADCTL_UPHY_USB3_PAD_ECTL6_RX_EQ_CTRL_H_VAL 0xfcf01368
 
+static unsigned int
+tegra210_usb3_lane_map(struct tegra_xusb_lane *lane);
+
 struct tegra210_xusb_fuse_calibration {
 	u32 hs_curr_level[4];
 	u32 hs_term_range_adj;
@@ -1115,6 +1118,33 @@ static const struct phy_ops tegra210_usb2_phy_ops = {
 	.owner = THIS_MODULE,
 };
 
+static inline bool is_utmi_phy(struct phy *phy)
+{
+	return phy->ops == &tegra210_usb2_phy_ops;
+}
+
+static bool is_utmi_phy_has_otg_cap(struct tegra_xusb_padctl *padctl,
+				struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	unsigned int index;
+	struct tegra_xusb_usb2_port *port;
+
+	if (!phy)
+		return false;
+
+	lane = phy_get_drvdata(phy);
+	index = lane->index;
+
+	port = tegra_xusb_find_usb2_port(padctl, index);
+	if (!port) {
+		dev_err(padctl->dev, "no port found for USB2 lane %u\n", index);
+		return -ENODEV;
+	}
+
+	return port->port_cap == USB_OTG_CAP;
+}
+
 static struct tegra_xusb_pad *
 tegra210_usb2_pad_probe(struct tegra_xusb_padctl *padctl,
 			const struct tegra_xusb_pad_soc *soc,
@@ -1526,10 +1556,11 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 	if (tegra_xusb_lane_check(lane, "xusb") && priv->prod_list) {
 		char prod_name[] = "prod_c_ssX";
 
-		port = tegra_xusb_find_usb3_port(padctl, lane->index);
+		port = tegra_xusb_find_usb3_port(padctl,
+						tegra210_usb3_lane_map(lane));
 		if (!port) {
 			dev_err(&phy->dev, "no port found for USB3 lane %u\n",
-								lane->index);
+						lane->index);
 			return -ENODEV;
 		}
 
@@ -2006,6 +2037,68 @@ static const struct tegra_xusb_port_ops tegra210_usb3_port_ops = {
 	.map = tegra210_usb3_port_map,
 };
 
+unsigned int
+tegra210_usb3_lane_find_port_index(struct tegra_xusb_lane *lane,
+				const struct tegra_xusb_lane_map *map,
+				const char *function)
+{
+	unsigned int port_index = -1;
+
+	for (map = map; map->type; map++) {
+		if (map->index == lane->index &&
+			strcmp(map->type, lane->pad->soc->name) == 0)
+			return map->port;
+	}
+
+	return port_index;
+}
+
+static unsigned int
+tegra210_usb3_lane_map(struct tegra_xusb_lane *lane)
+{
+	return tegra210_usb3_lane_find_port_index(lane,
+				tegra210_usb3_map, "xusb");
+}
+
+static inline bool is_usb3_phy(struct phy *phy)
+{
+	return phy->ops == &tegra210_pcie_phy_ops;
+}
+
+static bool is_usb3_phy_has_otg_cap(struct tegra_xusb_padctl *padctl,
+				struct phy *phy)
+{
+		struct tegra_xusb_lane *lane;
+		unsigned int index;
+		struct tegra_xusb_usb3_port *port;
+
+		if (!phy)
+			return false;
+
+		lane = phy_get_drvdata(phy);
+		index = tegra210_usb3_lane_map(lane);
+
+		port = tegra_xusb_find_usb3_port(padctl, index);
+		if (!port) {
+			dev_err(padctl->dev, "no port found for USB3 lane %u\n",
+					index);
+			return false;
+		}
+
+	return port->port_cap == USB_OTG_CAP;
+}
+
+static bool tegra210_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,
+				struct phy *phy)
+{
+	if (is_utmi_phy(phy))
+		return is_utmi_phy_has_otg_cap(padctl, phy);
+	else if (is_usb3_phy(phy))
+		return is_usb3_phy_has_otg_cap(padctl, phy);
+
+	return false;
+}
+
 static int
 tegra210_xusb_read_fuse_calibration(struct tegra210_xusb_fuse_calibration *fuse)
 {
@@ -2108,6 +2201,7 @@ static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.usb3_set_lfps_detect = tegra210_usb3_set_lfps_detect,
 	.hsic_set_idle = tegra210_hsic_set_idle,
 	.regulators_init = tegra210_xusb_padctl_regulators_init,
+	.has_otg_cap = tegra210_xusb_padctl_has_otg_cap,
 };
 
 static const char * const tegra210_supply_names[] = {

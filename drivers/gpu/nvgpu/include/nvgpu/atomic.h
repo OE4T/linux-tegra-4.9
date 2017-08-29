@@ -16,7 +16,9 @@
 #ifndef __NVGPU_ATOMIC_H__
 #define __NVGPU_ATOMIC_H__
 
+#ifdef __KERNEL__
 #include <nvgpu/linux/atomic.h>
+#endif
 
 #define NVGPU_ATOMIC_INIT(i)	__nvgpu_atomic_init(i)
 #define NVGPU_ATOMIC64_INIT(i)	__nvgpu_atomic64_init(i)

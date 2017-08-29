@@ -242,7 +242,7 @@ config TEGRA_IOMMU_GART
 
 config OF_TEGRA_IOMMU_SMMU
 	bool
-	depends on PLATFORM_TEGRA
+	depends on ARCH_TEGRA
 	help
 	  Enables device tree parsing for tegra-smmu and arm-smmu that is
 	  getting used in Tegra platforms.

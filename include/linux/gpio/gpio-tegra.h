@@ -17,7 +17,7 @@
 #ifndef __LINUX_GPIO_TEGRA_H
 #define __LINUX_GPIO_TEGRA_H
 
-#ifdef CONFIG_PLATFORM_TEGRA
+#ifdef CONFIG_ARCH_TEGRA
 int tegra_gpio_get_bank_int_nr(int gpio);
 #else
 static inline int tegra_gpio_get_bank_int_nr(int gpio)

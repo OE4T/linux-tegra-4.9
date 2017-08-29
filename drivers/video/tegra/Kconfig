@@ -1,6 +1,6 @@
 trysource "../nvidia/drivers/video/tegra/nvmap/Kconfig.nvidia"
 
-if PLATFORM_TEGRA
+if ARCH_TEGRA
 
 config TEGRA_GR_VIRTUALIZATION
 	bool "Tegra graphics virtualization support"

@@ -9,12 +9,6 @@ source "drivers/platform/goldfish/Kconfig"
 
 source "drivers/platform/chrome/Kconfig"
 
-config PLATFORM_TEGRA
-	bool "NVIDIA Tegra platform"
-	default y if ARCH_TEGRA
-	help
-	  Enable support for misc Tegra drivers.
-
-if PLATFORM_TEGRA
+if ARCH_TEGRA
 source "drivers/platform/tegra/Kconfig"
 endif

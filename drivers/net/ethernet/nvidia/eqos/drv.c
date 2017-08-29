@@ -3398,19 +3398,22 @@ static int eqos_handle_prv_ts_ioctl(struct eqos_prv_data *pdata,
  */
 
 static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
-				 struct ifr_data_struct *req)
+				 struct ifreq *ifr)
 {
-	unsigned int qinx = req->qinx;
-	struct tx_ring *ptx_ring =
-	    GET_TX_WRAPPER_DESC(qinx);
-	struct rx_ring *prx_ring =
-	    GET_RX_WRAPPER_DESC(qinx);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct net_device *dev = pdata->dev;
+	struct ifr_data_struct req;
+	struct tx_ring *ptx_ring;
+	struct rx_ring *prx_ring;
+	unsigned int qinx;
 	int ret = 0;
 
 	pr_debug("-->eqos_handle_prv_ioctl\n");
 
+	if (copy_from_user(&req, ifr->ifr_data, sizeof(req)))
+		return -EFAULT;
+
+	qinx = req.qinx;
 	if (qinx > EQOS_QUEUE_CNT) {
 		pr_err("Queue number %d is invalid\n"
 		       "Hardware has only %d Tx/Rx Queues\n",
@@ -3419,7 +3422,10 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		return ret;
 	}
 
-	switch (req->cmd) {
+	ptx_ring = GET_TX_WRAPPER_DESC(qinx);
+	prx_ring = GET_RX_WRAPPER_DESC(qinx);
+
+	switch (req.cmd) {
 	case EQOS_POWERUP_MAGIC_CMD:
 		if (pdata->hw_feat.mgk_sel) {
 			ret = eqos_powerup(dev, EQOS_IOCTL_CONTEXT);
@@ -3461,7 +3467,7 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 
 	case EQOS_POWERDOWN_REMOTE_WAKEUP_CMD:
 		if (pdata->hw_feat.rwk_sel) {
-			ret = eqos_configure_remotewakeup(dev, req);
+			ret = eqos_configure_remotewakeup(dev, &req);
 			if (ret == 0)
 				ret = EQOS_CONFIG_SUCCESS;
 			else
@@ -3472,7 +3478,7 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		break;
 
 	case EQOS_RX_THRESHOLD_CMD:
-		prx_ring->rx_threshold_val = req->flags;
+		prx_ring->rx_threshold_val = req.flags;
 		hw_if->config_rx_threshold(qinx,
 					   prx_ring->rx_threshold_val);
 		pr_err("Configured Rx threshold with %d\n",
@@ -3480,7 +3486,7 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		break;
 
 	case EQOS_TX_THRESHOLD_CMD:
-		ptx_ring->tx_threshold_val = req->flags;
+		ptx_ring->tx_threshold_val = req.flags;
 		hw_if->config_tx_threshold(qinx,
 					   ptx_ring->tx_threshold_val);
 		pr_err("Configured Tx threshold with %d\n",
@@ -3488,46 +3494,46 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		break;
 
 	case EQOS_RSF_CMD:
-		prx_ring->rsf_on = req->flags;
+		prx_ring->rsf_on = req.flags;
 		hw_if->config_rsf_mode(qinx, prx_ring->rsf_on);
 		pr_err("Receive store and forward mode %s\n",
 		       (prx_ring->rsf_on) ? "enabled" : "disabled");
 		break;
 
 	case EQOS_TSF_CMD:
-		ptx_ring->tsf_on = req->flags;
+		ptx_ring->tsf_on = req.flags;
 		hw_if->config_tsf_mode(qinx, ptx_ring->tsf_on);
 		pr_err("Transmit store and forward mode %s\n",
 		       (ptx_ring->tsf_on) ? "enabled" : "disabled");
 		break;
 
 	case EQOS_OSF_CMD:
-		ptx_ring->osf_on = req->flags;
+		ptx_ring->osf_on = req.flags;
 		hw_if->config_osf_mode(qinx, ptx_ring->osf_on);
 		pr_err("Transmit DMA OSF mode is %s\n",
 		       (ptx_ring->osf_on) ? "enabled" : "disabled");
 		break;
 
 	case EQOS_INCR_INCRX_CMD:
-		pdata->incr_incrx = req->flags;
+		pdata->incr_incrx = req.flags;
 		hw_if->config_incr_incrx_mode(pdata->incr_incrx);
 		pr_err("%s mode is enabled\n",
 		       (pdata->incr_incrx) ? "INCRX" : "INCR");
 		break;
 
 	case EQOS_RX_PBL_CMD:
-		prx_ring->rx_pbl = req->flags;
+		prx_ring->rx_pbl = req.flags;
 		eqos_config_rx_pbl(pdata, prx_ring->rx_pbl, qinx);
 		break;
 
 	case EQOS_TX_PBL_CMD:
-		ptx_ring->tx_pbl = req->flags;
+		ptx_ring->tx_pbl = req.flags;
 		eqos_config_tx_pbl(pdata, ptx_ring->tx_pbl, qinx);
 		break;
 
 	case EQOS_PTPOFFLOADING_CMD:
 		if (pdata->hw_feat.tsstssel) {
-			ret = eqos_config_ptpoffload(pdata, req->ptr);
+			ret = eqos_config_ptpoffload(pdata, req.ptr);
 		} else {
 			pr_err("No HW support for PTP\n");
 			ret = EQOS_NO_HW_SUPPORT;
@@ -3536,9 +3542,9 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 
 	case EQOS_SA0_DESC_CMD:
 		if (pdata->hw_feat.sa_vlan_ins) {
-			pdata->tx_sa_ctrl_via_desc = req->flags;
+			pdata->tx_sa_ctrl_via_desc = req.flags;
 			pdata->tx_sa_ctrl_via_reg = EQOS_SA0_NONE;
-			if (req->flags == EQOS_SA0_NONE) {
+			if (req.flags == EQOS_SA0_NONE) {
 				memcpy(pdata->mac_addr, pdata->dev->dev_addr,
 				       EQOS_MAC_ADDR_LEN);
 			} else {
@@ -3559,9 +3565,9 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 
 	case EQOS_SA1_DESC_CMD:
 		if (pdata->hw_feat.sa_vlan_ins) {
-			pdata->tx_sa_ctrl_via_desc = req->flags;
+			pdata->tx_sa_ctrl_via_desc = req.flags;
 			pdata->tx_sa_ctrl_via_reg = EQOS_SA1_NONE;
-			if (req->flags == EQOS_SA1_NONE) {
+			if (req.flags == EQOS_SA1_NONE) {
 				memcpy(pdata->mac_addr, pdata->dev->dev_addr,
 				       EQOS_MAC_ADDR_LEN);
 			} else {
@@ -3582,9 +3588,9 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 
 	case EQOS_SA0_REG_CMD:
 		if (pdata->hw_feat.sa_vlan_ins) {
-			pdata->tx_sa_ctrl_via_reg = req->flags;
+			pdata->tx_sa_ctrl_via_reg = req.flags;
 			pdata->tx_sa_ctrl_via_desc = EQOS_SA0_NONE;
-			if (req->flags == EQOS_SA0_NONE) {
+			if (req.flags == EQOS_SA0_NONE) {
 				memcpy(pdata->mac_addr, pdata->dev->dev_addr,
 				       EQOS_MAC_ADDR_LEN);
 			} else {
@@ -3605,9 +3611,9 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 
 	case EQOS_SA1_REG_CMD:
 		if (pdata->hw_feat.sa_vlan_ins) {
-			pdata->tx_sa_ctrl_via_reg = req->flags;
+			pdata->tx_sa_ctrl_via_reg = req.flags;
 			pdata->tx_sa_ctrl_via_desc = EQOS_SA1_NONE;
-			if (req->flags == EQOS_SA1_NONE) {
+			if (req.flags == EQOS_SA1_NONE) {
 				memcpy(pdata->mac_addr, pdata->dev->dev_addr,
 				       EQOS_MAC_ADDR_LEN);
 			} else {
@@ -3628,7 +3634,7 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 
 	case EQOS_SETUP_CONTEXT_DESCRIPTOR:
 		if (pdata->hw_feat.sa_vlan_ins) {
-			ptx_ring->context_setup = req->context_setup;
+			ptx_ring->context_setup = req.context_setup;
 			if (ptx_ring->context_setup == 1) {
 				pr_err("Context descriptor will be transmitted"
 				       " with every normal descriptor on %d DMA Channel\n",
@@ -3644,28 +3650,28 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		break;
 
 	case EQOS_GET_RX_QCNT:
-		req->qinx = EQOS_RX_QUEUE_CNT;
+		req.qinx = EQOS_RX_QUEUE_CNT;
 		break;
 
 	case EQOS_GET_TX_QCNT:
-		req->qinx = EQOS_TX_QUEUE_CNT;
+		req.qinx = EQOS_TX_QUEUE_CNT;
 		break;
 
 	case EQOS_GET_CONNECTED_SPEED:
-		req->connected_speed = pdata->speed;
+		req.connected_speed = pdata->speed;
 		break;
 
 	case EQOS_DCB_ALGORITHM:
-		eqos_program_dcb_algorithm(pdata, req);
+		eqos_program_dcb_algorithm(pdata, &req);
 		break;
 
 	case EQOS_AVB_ALGORITHM:
-		eqos_program_avb_algorithm(pdata, req);
+		eqos_program_avb_algorithm(pdata, &req);
 		break;
 
 	case EQOS_L3_L4_FILTER_CMD:
 		if (pdata->hw_feat.l3l4_filter_num > 0) {
-			ret = eqos_config_l3_l4_filtering(dev, req->flags);
+			ret = eqos_config_l3_l4_filtering(dev, req.flags);
 			if (ret == 0)
 				ret = EQOS_CONFIG_SUCCESS;
 			else
@@ -3675,59 +3681,59 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		}
 		break;
 	case EQOS_IPV4_FILTERING_CMD:
-		ret = eqos_config_ip4_filters(dev, req);
+		ret = eqos_config_ip4_filters(dev, &req);
 		break;
 	case EQOS_IPV6_FILTERING_CMD:
-		ret = eqos_config_ip6_filters(dev, req);
+		ret = eqos_config_ip6_filters(dev, &req);
 		break;
 	case EQOS_UDP_FILTERING_CMD:
-		ret = eqos_config_tcp_udp_filters(dev, req, 1);
+		ret = eqos_config_tcp_udp_filters(dev, &req, 1);
 		break;
 	case EQOS_TCP_FILTERING_CMD:
-		ret = eqos_config_tcp_udp_filters(dev, req, 0);
+		ret = eqos_config_tcp_udp_filters(dev, &req, 0);
 		break;
 	case EQOS_VLAN_FILTERING_CMD:
-		ret = eqos_config_vlan_filter(dev, req);
+		ret = eqos_config_vlan_filter(dev, &req);
 		break;
 	case EQOS_L2_DA_FILTERING_CMD:
-		ret = eqos_confing_l2_da_filter(dev, req);
+		ret = eqos_confing_l2_da_filter(dev, &req);
 		break;
 	case EQOS_ARP_OFFLOAD_CMD:
-		ret = eqos_config_arp_offload(dev, req);
+		ret = eqos_config_arp_offload(dev, &req);
 		break;
 	case EQOS_AXI_PBL_CMD:
-		pdata->axi_pbl = req->flags;
+		pdata->axi_pbl = req.flags;
 		hw_if->config_axi_pbl_val(pdata->axi_pbl);
 		pr_err("AXI PBL value: %d\n", pdata->axi_pbl);
 		break;
 	case EQOS_AXI_WORL_CMD:
-		pdata->axi_worl = req->flags;
+		pdata->axi_worl = req.flags;
 		hw_if->config_axi_worl_val(pdata->axi_worl);
 		pr_err("AXI WORL value: %d\n", pdata->axi_worl);
 		break;
 	case EQOS_AXI_RORL_CMD:
-		pdata->axi_rorl = req->flags;
+		pdata->axi_rorl = req.flags;
 		hw_if->config_axi_rorl_val(pdata->axi_rorl);
 		pr_err("AXI RORL value: %d\n", pdata->axi_rorl);
 		break;
 	case EQOS_MAC_LOOPBACK_MODE_CMD:
-		ret = eqos_config_mac_loopback_mode(dev, req->flags);
+		ret = eqos_config_mac_loopback_mode(dev, req.flags);
 		if (ret == 0)
 			ret = EQOS_CONFIG_SUCCESS;
 		else
 			ret = EQOS_CONFIG_FAIL;
 		break;
 	case EQOS_PFC_CMD:
-		ret = eqos_config_pfc(dev, req->flags);
+		ret = eqos_config_pfc(dev, req.flags);
 		break;
 	case EQOS_PHY_LOOPBACK:
-		ret = eqos_handle_phy_loopback(pdata, (void *)req);
+		ret = eqos_handle_phy_loopback(pdata, (void *)&req);
 		break;
 	case EQOS_MEM_ISO_TEST:
-		ret = eqos_handle_mem_iso_ioctl(pdata, (void *)req);
+		ret = eqos_handle_mem_iso_ioctl(pdata, (void *)&req);
 		break;
 	case EQOS_CSR_ISO_TEST:
-		ret = eqos_handle_csr_iso_ioctl(pdata, (void *)req);
+		ret = eqos_handle_csr_iso_ioctl(pdata, (void *)&req);
 		break;
 	default:
 		ret = -EOPNOTSUPP;
@@ -4005,7 +4011,6 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct ifr_data_struct *req = ifr->ifr_ifru.ifru_data;
 	struct mii_ioctl_data *data = if_mii(ifr);
 	unsigned int reg_val = 0;
 	int ret = 0;
@@ -4045,8 +4050,7 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 		break;
 
 	case EQOS_PRV_IOCTL:
-		ret = eqos_handle_prv_ioctl(pdata, req);
-		req->command_error = ret;
+		ret = eqos_handle_prv_ioctl(pdata, ifr);
 		break;
 
 	case EQOS_PRV_TS_IOCTL:

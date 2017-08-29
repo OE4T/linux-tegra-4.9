@@ -77,7 +77,7 @@ static void eqos_config_rx_pbl(struct eqos_prv_data *pdata,
 				      UINT rx_pbl, UINT ch_no);
 
 static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
-					struct ifr_data_struct *req);
+				 struct ifreq *ifr);
 static int eqos_handle_prv_ts_ioctl(struct eqos_prv_data *pdata,
 				    struct ifreq *ifr);
 

@@ -30,8 +30,6 @@
 #include <nvgpu/falcon.h>
 #include <nvgpu/enabled.h>
 
-#include <nvgpu/linux/dma.h>
-
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "mm_gm20b.h"

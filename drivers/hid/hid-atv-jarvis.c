@@ -217,13 +217,16 @@ static struct switch_dev shdr_mic_switch = {
 #define DEBUG_WITH_MISC_DEVICE 0
 
 /* Debug feature to trace audio packets being received */
-#define DEBUG_AUDIO_RECEPTION 1
+#define DEBUG_AUDIO_RECEPTION 0
 
 /* Debug feature to trace tx audio packets */
 #define DEBUG_AUDIO_TX 0
 
 /* Debug feature to trace HID reports we see */
-#define DEBUG_HID_RAW_INPUT 0
+/* #define DEBUG_HID_RAW_INPUT */
+
+/* Debug timer related issue */
+/* #define DEBUG_TIMER */
 
 #if (DEBUG_WITH_MISC_DEVICE == 1)
 static int16_t large_pcm_buffer[1280*1024];
@@ -869,6 +872,7 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 	struct shdr_device *shdr_dev = hid_get_drvdata(hdev);
 	struct snd_card *shdr_card;
 	struct snd_atvr *atvr_snd;
+	unsigned long flags;
 	int ret;
 
 	if (shdr_dev == NULL)
@@ -882,10 +886,11 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 
 	smp_rmb();
 	if (atvr_snd != NULL && atvr_snd->pcm_stopped == false) {
-		spin_lock(&atvr_snd->s_substream_lock);
+		spin_lock_irqsave(&atvr_snd->s_substream_lock, flags);
 
 		if (atvr_snd->substream_state & ATVR_REMOVE) {
-			spin_unlock(&atvr_snd->s_substream_lock);
+			spin_unlock_irqrestore(&atvr_snd->s_substream_lock,
+					flags);
 			return;
 		}
 
@@ -908,7 +913,7 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 			smp_wmb();
 		}
 		atvr_snd->packet_counter++;
-		spin_unlock(&atvr_snd->s_substream_lock);
+		spin_unlock_irqrestore(&atvr_snd->s_substream_lock, flags);
 	}
 
 	if (dropped_packet)
@@ -1030,6 +1035,10 @@ static void snd_atvr_timer_callback(unsigned long data)
 	unsigned long flags;
 	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)data;
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
+#ifdef DEBUG_TIMER
+	struct timeval t0, t1;
+	int diff;
+#endif
 
 	/* timer_enabled will be false when stopping a stream. */
 	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
@@ -1037,18 +1046,17 @@ static void snd_atvr_timer_callback(unsigned long data)
 		spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
 		return;
 	}
-
 	spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
-	if (!spin_trylock(&atvr_snd->s_substream_lock)) {
-		pr_info("%s: trylock fail\n", __func__);
-		goto lock_err;
-	}
 
+	spin_lock_irqsave(&atvr_snd->s_substream_lock, flags);
 	if (atvr_snd->substream_state & ATVR_REMOVE) {
-		spin_unlock(&atvr_snd->s_substream_lock);
+		spin_unlock_irqrestore(&atvr_snd->s_substream_lock, flags);
 		return;
 	}
 
+#ifdef DEBUG_TIMER
+	do_gettimeofday(&t0);
+#endif
 	atvr_snd->timer_callback_count++;
 
 	switch (atvr_snd->timer_state) {
@@ -1099,12 +1107,26 @@ static void snd_atvr_timer_callback(unsigned long data)
 				atvr_snd,
 				atvr_snd->write_index,
 				frames_to_silence);
-		spin_unlock(&atvr_snd->s_substream_lock);
+#ifdef DEBUG_TIMER
+		do_gettimeofday(&t1);
+#endif
+		spin_unlock_irqrestore(&atvr_snd->s_substream_lock, flags);
 		/* This can cause snd_atvr_pcm_trigger() to be called, which
 		 * may try to stop the timer. */
 		snd_atvr_handle_frame_advance(substream, frames_to_silence);
-	} else
-		spin_unlock(&atvr_snd->s_substream_lock);
+	} else {
+#ifdef DEBUG_TIMER
+		do_gettimeofday(&t1);
+#endif
+		spin_unlock_irqrestore(&atvr_snd->s_substream_lock, flags);
+	}
+#ifdef DEBUG_TIMER
+	/* diff has unit of ms */
+	diff = (t1.tv_sec - t0.tv_sec) * 1000 +
+		(t1.tv_usec - t0.tv_usec) / 1000;
+	if (diff >= 3)
+		pr_err("callback took %d ms\n", diff);
+#endif
 
 lock_err:
 	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
@@ -1300,7 +1322,9 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 		runtime->hw.info &= ~(SNDRV_PCM_INFO_MMAP
 			| SNDRV_PCM_INFO_MMAP_VALID);
 
+#ifdef DEBUG_TIMER
 	snd_atvr_log("%s, built %s %s\n", __func__, __DATE__, __TIME__);
+#endif
 
 	return ret;
 }
@@ -1313,10 +1337,12 @@ static int snd_atvr_pcm_close(struct snd_pcm_substream *substream)
 	snd_atvr_timer_stop(substream);
 	del_timer_sync(&atvr_snd->decoding_timer);
 
+#ifdef DEBUG_TIMER
 	if (atvr_snd->timer_callback_count > 0)
 		snd_atvr_log("processed %d packets in %d timer callbacks\n",
 			atvr_snd->packet_counter,
 			atvr_snd->timer_callback_count);
+#endif
 
 	ret = atomic_fifo_init(&atvr_snd->fifo_controller,
 				   MAX_PACKETS_PER_BUFFER);
@@ -1641,7 +1667,7 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 
 	atvr_snd = shdr_card->private_data;
 
-#if (DEBUG_HID_RAW_INPUT == 1)
+#ifdef DEBUG_HID_RAW_INPUT
 	pr_info("%s: report->id = 0x%x, size = %d\n",
 		__func__, report->id, size);
 	if (size <= 22) {
@@ -1682,8 +1708,10 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 			key_data[2] &= ~KEYCODE_PRESENT_IN_AUDIO_PACKET_FLAG;
 			hid_report_raw_event(hdev, 0, key_data,
 					     sizeof(key_data), 0);
+#ifdef DEBUG_HID_RAW_INPUT
 			pr_info("%s: generated hid keycode 0x%02x%02x\n",
 				__func__, key_data[2], key_data[1]);
+#endif
 		}
 
 		/* send the audio part to the alsa audio decoder for mSBC */

@@ -435,6 +435,16 @@ config PWM_TEGRA_PMC_BLINK
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-tegra-blink.
 
+config PWM_TEGRA_DFLL
+	tristate "NVIDIA Tegra DFLL PWM support"
+	depends on ARCH_TEGRA
+	help
+	  PWM driver support for the Tegra DFLL module found on NVIDIA
+	  Tegra SoCs.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pwm-tegra-dfll.
+
 config  PWM_TIECAP
 	tristate "ECAP PWM support"
 	depends on ARCH_OMAP2PLUS || ARCH_DAVINCI_DA8XX

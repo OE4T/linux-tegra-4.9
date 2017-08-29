@@ -436,6 +436,11 @@ bool  update_is_hsync_safe(struct tegra_dc_win *cur_win,
 		);
 }
 
+void tegra_dc_set_background_color(struct tegra_dc *dc,
+				u32 background_color)
+{
+	tegra_dc_writel(dc, background_color, DC_DISP_BLEND_BACKGROUND_COLOR);
+}
 
 void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 	unsigned int xoff, unsigned int yoff, unsigned int width,
@@ -616,6 +621,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 		unsigned Bpp_bw = Bpp * ((yuvp || yuvsp) ? 2 : 1);
 		bool filter_h;
 		bool filter_v;
+		u32 color = DISP_BLEND_BACKGROUND_COLOR_DEFAULT;
 
 		scan_column = (win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN);
 
@@ -631,21 +637,14 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
 			if (dc->yuv_bypass) {
 				if (tegra_dc_is_yuv420_8bpc(&dc->mode))
-					tegra_dc_writel(dc,
-						RGB_TO_YUV420_8BPC_BLACK_PIX,
-						DC_DISP_BLEND_BACKGROUND_COLOR);
+					color = RGB_TO_YUV420_8BPC_BLACK_PIX;
 				else if (tegra_dc_is_yuv420_10bpc(&dc->mode))
-					tegra_dc_writel(dc,
-						RGB_TO_YUV420_10BPC_BLACK_PIX,
-						DC_DISP_BLEND_BACKGROUND_COLOR);
+					color = RGB_TO_YUV420_10BPC_BLACK_PIX;
 				else if (tegra_dc_is_yuv422_12bpc(&dc->mode))
-					tegra_dc_writel(dc,
-						RGB_TO_YUV422_10BPC_BLACK_PIX,
-						DC_DISP_BLEND_BACKGROUND_COLOR);
+					color = RGB_TO_YUV422_10BPC_BLACK_PIX;
 				else if (tegra_dc_is_yuv444_8bpc(&dc->mode))
-					tegra_dc_writel(dc,
-						RGB_TO_YUV444_8BPC_BLACK_PIX,
-						DC_DISP_BLEND_BACKGROUND_COLOR);
+					color = RGB_TO_YUV444_8BPC_BLACK_PIX;
+				tegra_dc_set_background_color(dc, color);
 			}
 			continue;
 

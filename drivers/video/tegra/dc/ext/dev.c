@@ -133,6 +133,8 @@ struct tegra_dc_ext_flip_data {
 	u32 output_colorspace;
 	u8 limited_range_enable;
 	struct tegra_dc_flip_buf_ele *flip_buf_ele;
+	bool background_color_update_needed;
+	u32 background_color;
 };
 
 struct tegra_dc_ext_scanline_data {
@@ -908,6 +910,16 @@ static void tegra_dc_flip_trace(struct tegra_dc_ext_flip_data *data,
 	}
 }
 
+static void tegra_dc_update_background_color(struct tegra_dc *dc,
+		struct tegra_dc_ext_flip_data *data)
+{
+	if (tegra_dc_is_nvdisplay())
+		tegra_nvdisp_set_background_color(dc, data->background_color);
+	else
+		tegra_dc_set_background_color(dc, data->background_color);
+	data->background_color_update_needed = false;
+}
+
 static void tegra_dc_update_postcomp(struct tegra_dc *dc,
 		struct tegra_dc_ext_flip_data *data)
 {
@@ -1237,6 +1249,9 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			(dc->out->type == TEGRA_DC_OUT_DP) ||
 			(dc->out->type == TEGRA_DC_OUT_FAKE_DP)))
 				lock_flip = true;
+
+		if (data->background_color_update_needed)
+			tegra_dc_update_background_color(dc, data);
 
 		/* Perform per flip postcomp updates here */
 		tegra_dc_update_postcomp(dc, data);
@@ -1742,6 +1757,18 @@ end:
 	return ret;
 }
 
+static int tegra_dc_ext_configure_background_color_user_data(
+	struct tegra_dc_ext_flip_data *flip_kdata,
+	struct tegra_dc_ext_flip_user_data *flip_udata)
+{
+	struct tegra_dc_ext_udata_background_color *background_color =
+		&flip_udata->background_color;
+
+	flip_kdata->background_color_update_needed = true;
+	flip_kdata->background_color = background_color->background_color;
+	return 0;
+}
+
 static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			struct tegra_dc_ext_flip_user_data *flip_user_data,
 			int nr_user_data)
@@ -1830,6 +1857,12 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			if (ret)
 				return ret;
 
+			break;
+		case TEGRA_DC_EXT_FLIP_USER_DATA_BACKGROUND_COLOR:
+			ret = tegra_dc_ext_configure_background_color_user_data(
+				data, &flip_user_data[i]);
+			if (ret)
+				return ret;
 			break;
 		default:
 			dev_err(&data->ext->dc->ndev->dev,

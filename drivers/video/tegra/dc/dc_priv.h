@@ -43,6 +43,12 @@
 
 #define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ)
 
+/* Note: the hw reset value for background color on T210 is 0x00000000.
+ * We are using a sw reset value here, which is 0xff000000.
+ * Bits 31:24 correspond to background alpha and 0xff value represents opaque.
+ */
+
+#define DISP_BLEND_BACKGROUND_COLOR_DEFAULT 0xff000000
 #define RGB_TO_YUV420_8BPC_BLACK_PIX 0x00801010
 #define RGB_TO_YUV420_10BPC_BLACK_PIX 0x00000000
 #define RGB_TO_YUV422_10BPC_BLACK_PIX 0x00001080
@@ -232,6 +238,7 @@ int tegra_dc_cursor_resume(struct tegra_dc *dc);
 void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 	unsigned int xoff, unsigned int yoff, unsigned int width,
 	unsigned int height);
+void tegra_dc_set_background_color(struct tegra_dc *dc, u32 background_color);
 int tegra_dc_slgc_disp0(struct notifier_block *nb, unsigned long unused0,
 	void *unused1);
 
@@ -369,6 +376,8 @@ void tegra_nvdisp_set_output_range(struct tegra_dc *dc, u8 lim_range_enable);
 void tegra_nvdisp_set_csc2(struct tegra_dc *dc);
 void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
 void tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
+void tegra_nvdisp_set_background_color(struct tegra_dc *dc,
+					u32 background_color);
 void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc);
 void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
@@ -427,6 +436,11 @@ static inline void tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
 	struct tegra_dc_mode *mode)
 {
 }
+static inline void tegra_nvdisp_set_background_color(struct tegra_dc *dc,
+						     u32 background_color)
+{
+}
+
 static inline void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc)
 {
 }

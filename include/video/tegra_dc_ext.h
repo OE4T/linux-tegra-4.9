@@ -420,6 +420,7 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_NVDISP_CMU,
 	TEGRA_DC_EXT_FLIP_USER_DATA_OUTPUT_CSC,
 	TEGRA_DC_EXT_FLIP_USER_DATA_GET_FLIP_INFO,
+	TEGRA_DC_EXT_FLIP_USER_DATA_BACKGROUND_COLOR,
 };
 
 /*
@@ -646,6 +647,16 @@ struct tegra_dc_ext_udata_output_csc {
 	__u8 reserved[21];
 } __attribute__((__packed__));
 
+struct tegra_dc_ext_udata_background_color {
+	/* bits 31:24	- Background Alpha
+	 * bits 23:16	- Background Blue
+	 * bits 15:8	- Background Green
+	 * bits 7:0	- Background Red
+	 */
+	__u32 background_color;
+	__u8 reserved[22];
+} __attribute__((__packed__));
+
 /*
  * Variable "flip_id" is a per-head unique value that is returned from kernel to
  * user-space. User-space can then pass this flip_id to TEGRA_DC_EXT_CRC_GET
@@ -674,6 +685,7 @@ struct tegra_dc_ext_flip_user_data {
 		struct tegra_dc_ext_udata_nvdisp_cmu nvdisp_cmu;
 		struct tegra_dc_ext_udata_output_csc output_csc;
 		struct tegra_dc_ext_flip_info flip_info;
+		struct tegra_dc_ext_udata_background_color background_color;
 	};
 } __attribute__((__packed__));
 

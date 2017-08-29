@@ -829,7 +829,6 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		if (!WIN_IS_ENABLED(win)) {
 			u32 win_options;
 
-			tegra_nvdisp_set_background_color(dc);
 			update_mask |=
 				nvdisp_cmd_state_ctrl_win_a_update_enable_f()
 				<< win->idx;

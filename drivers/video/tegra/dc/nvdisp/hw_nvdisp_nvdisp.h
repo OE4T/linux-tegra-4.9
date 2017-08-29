@@ -1690,6 +1690,10 @@ static inline u32 nvdisp_background_color_r(void)
 {
 	return 0x000004e4U;
 }
+static inline u32 nvdisp_background_color_reset_val_v(void)
+{
+	return 0xff000000;
+}
 static inline u32 nvdisp_interlace_ctl_r(void)
 {
 	return 0x000004e5U;

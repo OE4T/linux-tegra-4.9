@@ -684,9 +684,15 @@ static unsigned int yuv12bpc_regamma_lut[] = {
 		0x9FDF, 0x9FE7, 0x9FEF, 0x9FF7, 0x9FFF,
 };
 
-void tegra_nvdisp_set_background_color(struct tegra_dc *dc)
+void tegra_nvdisp_set_background_color(struct tegra_dc *dc,
+					u32 background_color)
 {
-	u32 reg_val = 0x0;
+	tegra_dc_writel(dc, background_color, nvdisp_background_color_r());
+}
+
+static void tegra_nvdisp_mode_set_background_color(struct tegra_dc *dc)
+{
+	u32 reg_val = nvdisp_background_color_reset_val_v();
 
 	if (dc->yuv_bypass) {
 		int yuv_flag = dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
@@ -710,8 +716,7 @@ void tegra_nvdisp_set_background_color(struct tegra_dc *dc)
 			break;
 		}
 	}
-	tegra_dc_writel(dc, reg_val, nvdisp_background_color_r());
-
+	tegra_nvdisp_set_background_color(dc, reg_val);
 }
 
 static inline void tegra_nvdisp_program_common_fetch_meter(struct tegra_dc *dc,
@@ -1475,6 +1480,8 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 		pr_info("Redo Clock pclk 0x%x != dc-pclk 0x%x\n",
 				mode->pclk, dc->mode.pclk);
 
+	tegra_nvdisp_mode_set_background_color(dc);
+
 	tegra_nvdisp_set_ocsc(dc, mode);
 	_tegra_nvdisp_set_ec_output_lut(dc, mode);
 
@@ -1670,8 +1677,6 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	if (dc->mode.pclk)
 		dc->yuv_bypass = (dc->mode.vmode & FB_VMODE_SET_YUV_MASK) &&
 					(dc->mode.vmode & FB_VMODE_BYPASS);
-
-	tegra_nvdisp_set_background_color(dc);
 
 	for_each_set_bit(i, &dc->valid_windows,
 			tegra_dc_get_numof_dispwindows()) {

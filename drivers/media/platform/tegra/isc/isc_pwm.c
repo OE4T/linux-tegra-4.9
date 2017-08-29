@@ -87,8 +87,19 @@ static struct pwm_device *of_isc_pwm_xlate(struct pwm_chip *pc,
 			const struct of_phandle_args *args)
 {
 	struct pwm_device *pwm;
+	int err = 0;
 
 	pwm = pwm_request_from_chip(pc, args->args[0], NULL);
+	if (!args->args[1]) {
+		dev_err(pc->dev, "Period should be larger than 0\n");
+		return NULL;
+	}
+
+	err = pwm_config(pwm, args->args[1]/4, args->args[1]);
+	if (err) {
+		dev_err(pc->dev, "can't config PWM: %d\n", err);
+		return NULL;
+	}
 
 	return pwm;
 }
@@ -103,7 +114,7 @@ static const struct pwm_ops isc_pwm_ops = {
 static int isc_pwm_probe(struct platform_device *pdev)
 {
 	struct isc_pwm_info *info = NULL;
-	int err = 0;
+	int err = 0, npwm;
 
 	dev_info(&pdev->dev, "%sing...\n", __func__);
 
@@ -115,12 +126,18 @@ static int isc_pwm_probe(struct platform_device *pdev)
 	atomic_set(&info->in_use, 0);
 	mutex_init(&info->mutex);
 
+	err = of_property_read_u32(pdev->dev.of_node, "npwm", &npwm);
+	if (err < 0) {
+		dev_err(&pdev->dev, "npwm is not defined: %d\n", err);
+		return err;
+	}
+
 	info->chip.dev = &pdev->dev;
 	info->chip.ops = &isc_pwm_ops;
 	info->chip.base = -1;
-	info->chip.npwm = MAX_PWM_ON_CHIP;
+	info->chip.npwm = npwm;
 	info->chip.of_xlate = of_isc_pwm_xlate;
-	info->chip.of_pwm_n_cells = 1;
+	info->chip.of_pwm_n_cells = 2;
 
 	err = pwmchip_add(&info->chip);
 	if (err < 0) {

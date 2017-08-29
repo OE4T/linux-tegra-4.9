@@ -112,6 +112,13 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 
 	gk20a_dbg_fn("");
 
+	/*
+	 * Save the old size but for actual allocation purposes the size is
+	 * going to be page aligned.
+	 */
+	mem->size = size;
+	size = PAGE_ALIGN(size);
+
 	if (flags) {
 		DEFINE_DMA_ATTRS(dma_attrs);
 
@@ -148,7 +155,7 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	if (err)
 		goto fail_free;
 
-	mem->size = size;
+	mem->aligned_size = size;
 	mem->aperture = APERTURE_SYSMEM;
 	mem->priv.flags = flags;
 
@@ -187,6 +194,9 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	int before_pending;
 
 	gk20a_dbg_fn("");
+
+	mem->size = size;
+	size = PAGE_ALIGN(size);
 
 	if (!nvgpu_alloc_initialized(&g->mm.vidmem.allocator))
 		return -ENOSYS;
@@ -228,7 +238,7 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	set_vidmem_page_alloc(mem->priv.sgt->sgl, addr);
 	sg_set_page(mem->priv.sgt->sgl, NULL, size, 0);
 
-	mem->size = size;
+	mem->aligned_size = size;
 	mem->aperture = APERTURE_VIDMEM;
 	mem->allocator = vidmem_alloc;
 	mem->priv.flags = flags;
@@ -352,16 +362,16 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 			nvgpu_dma_flags_to_attrs(&dma_attrs, mem->priv.flags);
 
 			if (mem->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
-				dma_free_attrs(d, mem->size, mem->priv.pages,
+				dma_free_attrs(d, mem->aligned_size, mem->priv.pages,
 					sg_dma_address(mem->priv.sgt->sgl),
 					__DMA_ATTR(dma_attrs));
 			} else {
-				dma_free_attrs(d, mem->size, mem->cpu_va,
+				dma_free_attrs(d, mem->aligned_size, mem->cpu_va,
 					sg_dma_address(mem->priv.sgt->sgl),
 					__DMA_ATTR(dma_attrs));
 			}
 		} else {
-			dma_free_coherent(d, mem->size, mem->cpu_va,
+			dma_free_coherent(d, mem->aligned_size, mem->cpu_va,
 					sg_dma_address(mem->priv.sgt->sgl));
 		}
 		mem->cpu_va = NULL;
@@ -379,6 +389,7 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
 	mem->size = 0;
+	mem->aligned_size = 0;
 	mem->aperture = APERTURE_INVALID;
 }
 
@@ -395,7 +406,8 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 		was_empty = nvgpu_list_empty(&g->mm.vidmem.clear_list_head);
 		nvgpu_list_add_tail(&mem->clear_list_entry,
 			      &g->mm.vidmem.clear_list_head);
-		atomic64_add(mem->size, &g->mm.vidmem.bytes_pending.atomic_var);
+		atomic64_add(mem->aligned_size,
+			     &g->mm.vidmem.bytes_pending.atomic_var);
 		nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
 
 		if (was_empty) {
@@ -403,12 +415,13 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 			schedule_work(&g->mm.vidmem.clear_mem_worker);
 		}
 	} else {
-		nvgpu_memset(g, mem, 0, 0, mem->size);
+		nvgpu_memset(g, mem, 0, 0, mem->aligned_size);
 		nvgpu_free(mem->allocator,
 			   (u64)get_vidmem_page_alloc(mem->priv.sgt->sgl));
 		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
 		mem->size = 0;
+		mem->aligned_size = 0;
 		mem->aperture = APERTURE_INVALID;
 	}
 #endif

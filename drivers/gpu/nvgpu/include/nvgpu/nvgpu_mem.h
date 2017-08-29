@@ -50,6 +50,7 @@ struct nvgpu_mem {
 	 */
 	enum nvgpu_aperture			 aperture;
 	size_t					 size;
+	size_t					 aligned_size;
 	u64					 gpu_va;
 	bool					 skip_wmb;
 

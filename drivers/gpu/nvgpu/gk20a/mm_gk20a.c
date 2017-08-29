@@ -1207,7 +1207,7 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 			   (u64)get_vidmem_page_alloc(mem->priv.sgt->sgl));
 		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
-		WARN_ON(nvgpu_atomic64_sub_return(mem->size,
+		WARN_ON(nvgpu_atomic64_sub_return(mem->aligned_size,
 					&g->mm.vidmem.bytes_pending) < 0);
 		mem->size = 0;
 		mem->aperture = APERTURE_INVALID;

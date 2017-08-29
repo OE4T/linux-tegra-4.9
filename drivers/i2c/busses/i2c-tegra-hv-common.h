@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,6 +33,8 @@ int hv_i2c_get_max_payload(struct tegra_hv_i2c_comm_chan *comm_chan,
 int hv_i2c_comm_chan_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan,
 		phys_addr_t base);
 void hv_i2c_comm_chan_free(struct tegra_hv_i2c_comm_chan *comm_chan);
+void hv_i2c_comm_suspend(struct tegra_hv_i2c_comm_chan *comm_chan);
+void hv_i2c_comm_resume(struct tegra_hv_i2c_comm_chan *comm_chan);
 void *hv_i2c_comm_init(struct device *dev, i2c_isr_handler handler,
 		void *data);
 void tegra_hv_i2c_poll_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan);

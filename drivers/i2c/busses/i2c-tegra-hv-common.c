@@ -1,7 +1,7 @@
 /*
  * IVC based Library for I2C services.
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -295,12 +295,24 @@ void hv_i2c_comm_chan_free(struct tegra_hv_i2c_comm_chan *comm_chan)
 
 }
 
+void hv_i2c_comm_suspend(struct tegra_hv_i2c_comm_chan *comm_chan)
+{
+	disable_irq(comm_chan->ivck->irq);
+	cancel_work_sync(&comm_chan->hv_comm_dev->work);
+}
+
+void hv_i2c_comm_resume(struct tegra_hv_i2c_comm_chan *comm_chan)
+{
+	enable_irq(comm_chan->ivck->irq);
+	schedule_work(&comm_chan->hv_comm_dev->work);
+}
+
 static irqreturn_t hv_i2c_isr(int irq, void *dev_id)
 {
 	struct tegra_hv_i2c_comm_dev *comm_dev =
 		(struct tegra_hv_i2c_comm_dev *)dev_id;
 
-	queue_work(system_wq, &comm_dev->work);
+	schedule_work(&comm_dev->work);
 
 	return IRQ_HANDLED;
 }

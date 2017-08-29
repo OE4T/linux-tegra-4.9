@@ -1,7 +1,7 @@
 /*
  * drivers/i2c/busses/i2c-tegra-hv.c
  *
- * Copyright (C) 2015-2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2015-2017 NVIDIA Corporation.  All rights reserved.
  * Author: Arnab Basu <abasu@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -337,6 +337,33 @@ static void tegra_hv_i2c_shutdown(struct platform_device *pdev)
 	i2c_shutdown_adapter(&i2c_dev->adapter);
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra_hv_i2c_suspend(struct device *dev)
+{
+	struct tegra_hv_i2c_dev *i2c_dev = dev_get_drvdata(dev);
+
+	i2c_shutdown_adapter(&i2c_dev->adapter);
+	hv_i2c_comm_suspend(i2c_dev->comm_chan);
+
+	return 0;
+}
+
+static int tegra_hv_i2c_resume(struct device *dev)
+{
+	struct tegra_hv_i2c_dev *i2c_dev = dev_get_drvdata(dev);
+
+	hv_i2c_comm_resume(i2c_dev->comm_chan);
+	i2c_shutdown_clear_adapter(&i2c_dev->adapter);
+
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_hv_i2c_pm_ops = {
+	.suspend_noirq = tegra_hv_i2c_suspend,
+	.resume_noirq = tegra_hv_i2c_resume,
+};
+#endif /* CONFIG_PM_SLEEP */
+
 static struct platform_device_id tegra_hv_i2c_devtype[] = {
 	{
 		.name = "tegra12-hv-i2c",
@@ -354,7 +381,9 @@ static struct platform_driver tegra_hv_i2c_driver = {
 		.name  = "tegra-hv-i2c",
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(tegra_hv_i2c_of_match),
-		.pm    = NULL,
+#ifdef CONFIG_PM_SLEEP
+		.pm    = &tegra_hv_i2c_pm_ops,
+#endif
 	},
 };
 

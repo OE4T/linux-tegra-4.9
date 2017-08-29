@@ -15,6 +15,8 @@
 
 #ifdef __KERNEL__
 #include <linux/types.h>
+#else
+#include <nvgpu_rmos/include/types.h>
 #endif
 
 #endif

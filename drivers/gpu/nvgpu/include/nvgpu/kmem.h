@@ -34,6 +34,8 @@ struct gk20a;
  */
 #ifdef __KERNEL__
 #include <nvgpu/linux/kmem.h>
+#else
+#include <nvgpu_rmos/include/kmem.h>
 #endif
 
 /**

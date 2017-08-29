@@ -15,6 +15,8 @@
 
 #ifdef __KERNEL__
 #include <linux/bug.h>
+#else
+#include <nvgpu_rmos/include/bug.h>
 #endif
 
 #endif

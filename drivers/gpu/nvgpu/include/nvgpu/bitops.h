@@ -16,6 +16,8 @@
 #ifdef __KERNEL__
 #include <linux/bitops.h>
 #include <linux/bitmap.h>
+#else
+#include <nvgpu_rmos/include/bitops.h>
 #endif
 
 #endif

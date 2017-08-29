@@ -19,6 +19,8 @@
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/cond.h>
+#else
+#include <nvgpu_rmos/include/cond.h>
 #endif
 
 /*

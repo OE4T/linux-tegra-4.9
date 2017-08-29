@@ -17,7 +17,11 @@
 #ifndef NVGPU_LOCK_H
 #define NVGPU_LOCK_H
 
+#ifdef __KERNEL__
 #include <nvgpu/linux/lock.h>
+#else
+#include <nvgpu_rmos/include/lock.h>
+#endif
 
 /*
  * struct nvgpu_mutex

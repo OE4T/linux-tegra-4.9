@@ -20,7 +20,11 @@
 #include <nvgpu/types.h>
 #include <nvgpu/list.h>
 
+#ifdef __KERNEL__
 #include <nvgpu/linux/nvgpu_mem.h>
+#else
+#include <nvgpu_rmos/include/nvgpu_mem.h>
+#endif
 
 struct page;
 struct sg_table;

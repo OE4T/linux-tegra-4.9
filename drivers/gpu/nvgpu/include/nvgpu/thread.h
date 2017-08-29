@@ -19,6 +19,8 @@
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/thread.h>
+#else
+#include <nvgpu_rmos/include/thread.h>
 #endif
 
 /**

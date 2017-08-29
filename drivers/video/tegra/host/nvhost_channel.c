@@ -38,7 +38,7 @@
 int nvhost_alloc_channels(struct nvhost_master *host)
 {
 	struct nvhost_channel *ch;
-	int index, err;
+	int index, err, max_channels;
 
 	host->chlist = kzalloc(nvhost_channel_nb_channels(host) *
 			       sizeof(struct nvhost_channel *), GFP_KERNEL);
@@ -47,8 +47,11 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 
 	mutex_init(&host->chlist_mutex);
 	mutex_init(&host->ch_alloc_mutex);
+	max_channels = nvhost_channel_nb_channels(host);
 
-	for (index = 0;	index < nvhost_channel_nb_channels(host); index++) {
+	sema_init(&host->free_channels, max_channels);
+
+	for (index = 0; index < max_channels; index++) {
 		ch = kzalloc(sizeof(*ch), GFP_KERNEL);
 		if (!ch) {
 			dev_err(&host->dev->dev, "failed to alloc channels\n");
@@ -86,6 +89,51 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 	return 0;
 }
 
+/*
+ * Must be called with the chlist_mutex held.
+ *
+ * Returns the allocated channel. If no channel was found for any reason,
+ * returns NULL. Under normal conditions, this call will block till an existing
+ * channel is freed.
+ */
+static struct nvhost_channel* nvhost_channel_alloc(struct nvhost_master *host)
+{
+	int index, max_channels;
+
+	mutex_unlock(&host->chlist_mutex);
+	down(&host->free_channels);
+	mutex_lock(&host->chlist_mutex);
+
+	max_channels = nvhost_channel_nb_channels(host);
+	index = find_first_zero_bit(host->allocated_channels, max_channels);
+	if (index >= max_channels) {
+		pr_err("%s: Free channels sema and allocated mask out of sync!\n",
+			__func__);
+		return NULL;
+	}
+
+	/* Reserve the channel */
+	set_bit(index, host->allocated_channels);
+	return host->chlist[index];
+}
+
+/*
+ * Must be called with the chlist_mutex held.
+ */
+static void nvhost_channel_free(struct nvhost_master *host,
+				struct nvhost_channel *ch)
+{
+	int index = nvhost_channel_get_index_from_id(host, ch->chid);
+	int bit_set = test_and_clear_bit(index, host->allocated_channels);
+
+	if (!bit_set) {
+		pr_err("%s: Freeing already freed channel?\n", __func__);
+		WARN_ON(1);
+		return;
+	}
+	up(&host->free_channels);
+}
+
 int nvhost_channel_remove_identifier(struct nvhost_device_data *pdata,
 			void *identifier)
 {
@@ -118,7 +166,6 @@ static void nvhost_channel_unmap_locked(struct kref *ref)
 	struct nvhost_device_data *pdata;
 	struct nvhost_master *host;
 	int i = 0;
-	int index;
 	int err;
 
 	if (!ch->dev) {
@@ -183,8 +230,7 @@ err_module_busy:
 	/* drop reference to the vm */
 	nvhost_vm_put(ch->vm);
 
-	index = nvhost_channel_get_index_from_id(host, ch->chid);
-	clear_bit(index, host->allocated_channels);
+	nvhost_channel_free(host, ch);
 
 	ch->vm = NULL;
 	ch->dev = NULL;
@@ -234,19 +280,14 @@ int nvhost_channel_map_with_vm(struct nvhost_device_data *pdata,
 		}
 	}
 
-	do {
-		index = find_first_zero_bit(host->allocated_channels,
-					    max_channels);
-		if (index >= max_channels) {
-			mutex_unlock(&host->chlist_mutex);
-			usleep_range(900, 1000);
-			mutex_lock(&host->chlist_mutex);
-		}
-	} while (index >= max_channels);
-
-	/* Reserve the channel */
-	set_bit(index, host->allocated_channels);
-	ch = host->chlist[index];
+	ch = nvhost_channel_alloc(host);
+	if (!ch) {
+		pr_err("%s: Couldn't find a free channel. Sema out of sync\n",
+			__func__);
+		mutex_unlock(&host->chlist_mutex);
+		mutex_unlock(&host->ch_alloc_mutex);
+		return -EINVAL;
+	}
 
 	/* Bind the reserved channel to the device */
 	ch->dev = pdata->pdev;
@@ -277,9 +318,9 @@ int nvhost_channel_map_with_vm(struct nvhost_device_data *pdata,
 err_alloc_vm:
 	/* re-acquire chlist mutex for freeing the channel */
 	mutex_lock(&host->chlist_mutex);
-	clear_bit(index, host->allocated_channels);
 	ch->dev = NULL;
 	ch->identifier = NULL;
+	nvhost_channel_free(host, ch);
 	mutex_unlock(&host->chlist_mutex);
 
 	mutex_unlock(&host->ch_alloc_mutex);
@@ -338,7 +379,9 @@ int nvhost_channel_abort(struct nvhost_device_data *pdata,
 
 	cdma_op().handle_timeout(&ch->cdma, true);
 
+	mutex_lock(&host->chlist_mutex);
 	kref_put(&ch->refcount, nvhost_channel_unmap_locked);
+	mutex_unlock(&host->chlist_mutex);
 
 	return 0;
 }

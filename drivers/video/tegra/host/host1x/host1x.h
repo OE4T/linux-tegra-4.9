@@ -117,6 +117,7 @@ struct nvhost_master {
 	struct nvhost_channel **chlist;	/* channel list */
 	struct mutex chlist_mutex;	/* mutex for channel list */
 	struct mutex ch_alloc_mutex;	/* mutex for channel allocation */
+	struct semaphore free_channels; /* Semaphore tracking free channels */
 	unsigned long allocated_channels[2];
 
 	/* nvhost vm specific structures */

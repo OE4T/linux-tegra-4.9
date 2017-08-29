@@ -296,19 +296,11 @@ int gk20a_alloc_comptags(struct gk20a *g,
 			 struct device *dev,
 			 struct dma_buf *dmabuf,
 			 struct gk20a_comptag_allocator *allocator,
-			 u32 lines, bool user_mappable,
-			 u64 *ctag_map_win_size,
-			 u32 *ctag_map_win_ctagline)
+			 u32 lines)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
 	u32 ctaglines_allocsize;
-	u32 ctagline_align;
 	u32 offset;
-	u32 alignment_lines;
-	const u32 aggregate_cacheline_sz =
-		g->gr.cacheline_size * g->gr.slices_per_ltc *
-		g->ltc_count;
-	const u32 small_pgsz = 4096;
 	int err;
 
 	if (!priv)
@@ -317,42 +309,7 @@ int gk20a_alloc_comptags(struct gk20a *g,
 	if (!lines)
 		return -EINVAL;
 
-	if (!user_mappable) {
-		ctaglines_allocsize = lines;
-		ctagline_align = 1;
-	} else {
-		/*
-		 * For security, align the allocation on a page, and reserve
-		 * whole pages. Unfortunately, we cannot ask the allocator to
-		 * align here, since compbits per cacheline is not always a
-		 * power of two. So, we just have to allocate enough extra that
-		 * we're guaranteed to find a ctagline inside the allocation so
-		 * that: 1) it is the first ctagline in a cacheline that starts
-		 * at a page boundary, and 2) we can add enough overallocation
-		 * that the ctaglines of the succeeding allocation are on
-		 * different page than ours.
-		 */
-
-		ctagline_align =
-			(lcm(aggregate_cacheline_sz, small_pgsz) /
-			 aggregate_cacheline_sz) *
-			g->gr.comptags_per_cacheline;
-
-		ctaglines_allocsize =
-			/* for alignment */
-			ctagline_align +
-
-			/* lines rounded up to cachelines */
-			DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline) *
-			g->gr.comptags_per_cacheline +
-
-			/* trail-padding */
-			DIV_ROUND_UP(aggregate_cacheline_sz, small_pgsz) *
-			g->gr.comptags_per_cacheline;
-
-		if (ctaglines_allocsize < lines)
-			return -EINVAL; /* integer overflow */
-	}
+	ctaglines_allocsize = lines;
 
 	/* store the allocator so we can use it when we free the ctags */
 	priv->comptag_allocator = allocator;
@@ -361,53 +318,9 @@ int gk20a_alloc_comptags(struct gk20a *g,
 	if (err)
 		return err;
 
-	/*
-	 * offset needs to be at the start of a page/cacheline boundary;
-	 * prune the preceding ctaglines that were allocated for alignment.
-	 */
-	alignment_lines =
-		DIV_ROUND_UP(offset, ctagline_align) * ctagline_align - offset;
-	if (alignment_lines) {
-		gk20a_comptaglines_free(allocator, offset, alignment_lines);
-		offset += alignment_lines;
-		ctaglines_allocsize -= alignment_lines;
-	}
-
-	/*
-	 * check if we can prune the trailing, too; we just need to reserve
-	 * whole pages and ctagcachelines.
-	 */
-	if (user_mappable) {
-		u32 needed_cachelines =
-			DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline);
-		u32 needed_bytes = round_up(needed_cachelines *
-					    aggregate_cacheline_sz,
-					    small_pgsz);
-		u32 first_unneeded_cacheline =
-			DIV_ROUND_UP(needed_bytes, aggregate_cacheline_sz);
-		u32 needed_ctaglines = first_unneeded_cacheline *
-			g->gr.comptags_per_cacheline;
-		u64 win_size;
-
-		if (needed_ctaglines < ctaglines_allocsize) {
-			gk20a_comptaglines_free(allocator,
-				offset + needed_ctaglines,
-				ctaglines_allocsize - needed_ctaglines);
-			ctaglines_allocsize = needed_ctaglines;
-		}
-
-		*ctag_map_win_ctagline = offset;
-		win_size =
-			DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline) *
-			aggregate_cacheline_sz;
-
-		*ctag_map_win_size = round_up(win_size, small_pgsz);
-	}
-
 	priv->comptags.offset = offset;
 	priv->comptags.lines = lines;
 	priv->comptags.allocated_lines = ctaglines_allocsize;
-	priv->comptags.user_mappable = user_mappable;
 
 	return 0;
 }
@@ -1202,191 +1115,6 @@ int gk20a_vidbuf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
 #endif
 }
 
-int nvgpu_vm_get_compbits_info(struct vm_gk20a *vm,
-			       u64 mapping_gva,
-			       u64 *compbits_win_size,
-			       u32 *compbits_win_ctagline,
-			       u32 *mapping_ctagline,
-			       u32 *flags)
-{
-	struct nvgpu_mapped_buf *mapped_buffer;
-	struct gk20a *g = vm->mm->g;
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-
-	mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, mapping_gva);
-
-	if (!mapped_buffer || !mapped_buffer->user_mapped)
-	{
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		nvgpu_err(g, "%s: bad offset 0x%llx", __func__, mapping_gva);
-		return -EFAULT;
-	}
-
-	*compbits_win_size = 0;
-	*compbits_win_ctagline = 0;
-	*mapping_ctagline = 0;
-	*flags = 0;
-
-	if (mapped_buffer->ctag_offset)
-		*flags |= NVGPU_AS_GET_BUFFER_COMPBITS_INFO_FLAGS_HAS_COMPBITS;
-
-	if (mapped_buffer->ctags_mappable)
-	{
-		*flags |= NVGPU_AS_GET_BUFFER_COMPBITS_INFO_FLAGS_MAPPABLE;
-		*compbits_win_size = mapped_buffer->ctag_map_win_size;
-		*compbits_win_ctagline = mapped_buffer->ctag_map_win_ctagline;
-		*mapping_ctagline = mapped_buffer->ctag_offset;
-	}
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-	return 0;
-}
-
-
-int nvgpu_vm_map_compbits(struct vm_gk20a *vm,
-			  u64 mapping_gva,
-			  u64 *compbits_win_gva,
-			  u64 *mapping_iova,
-			  u32 flags)
-{
-	struct nvgpu_mapped_buf *mapped_buffer;
-	struct gk20a *g = gk20a_from_vm(vm);
-	const bool fixed_mapping =
-		(flags & NVGPU_AS_MAP_BUFFER_COMPBITS_FLAGS_FIXED_OFFSET) != 0;
-
-	if (vm->userspace_managed && !fixed_mapping) {
-		nvgpu_err(g,
-			  "%s: non-fixed-offset mapping is not available on userspace managed address spaces",
-			  __func__);
-		return -EFAULT;
-	}
-
-	if (fixed_mapping && !vm->userspace_managed) {
-		nvgpu_err(g,
-			  "%s: fixed-offset mapping is available only on userspace managed address spaces",
-			  __func__);
-		return -EFAULT;
-	}
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-
-	mapped_buffer =	__nvgpu_vm_find_mapped_buf(vm, mapping_gva);
-
-	if (!mapped_buffer || !mapped_buffer->user_mapped) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		nvgpu_err(g, "%s: bad offset 0x%llx", __func__, mapping_gva);
-		return -EFAULT;
-	}
-
-	if (!mapped_buffer->ctags_mappable) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		nvgpu_err(g, "%s: comptags not mappable, offset 0x%llx",
-			  __func__, mapping_gva);
-		return -EFAULT;
-	}
-
-	if (!mapped_buffer->ctag_map_win_addr) {
-		const u32 small_pgsz_index = 0; /* small pages, 4K */
-		const u32 aggregate_cacheline_sz =
-			g->gr.cacheline_size * g->gr.slices_per_ltc *
-			g->ltc_count;
-
-		/* first aggregate cacheline to map */
-		u32 cacheline_start; /* inclusive */
-
-		/* offset of the start cacheline (will be page aligned) */
-		u64 cacheline_offset_start;
-
-		if (!mapped_buffer->ctag_map_win_size) {
-			nvgpu_mutex_release(&vm->update_gmmu_lock);
-			nvgpu_err(g,
-				  "%s: mapping 0x%llx does not have "
-				  "mappable comptags",
-				  __func__, mapping_gva);
-			return -EFAULT;
-		}
-
-		cacheline_start = mapped_buffer->ctag_offset /
-			g->gr.comptags_per_cacheline;
-		cacheline_offset_start =
-			(u64)cacheline_start * aggregate_cacheline_sz;
-
-		if (fixed_mapping) {
-			struct buffer_attrs bfr;
-			int err;
-			struct nvgpu_vm_area *vm_area = NULL;
-
-			memset(&bfr, 0, sizeof(bfr));
-
-			bfr.pgsz_idx = small_pgsz_index;
-
-			err = nvgpu_vm_area_validate_buffer(
-				vm, *compbits_win_gva, mapped_buffer->ctag_map_win_size,
-				bfr.pgsz_idx, &vm_area);
-
-			if (err) {
-				nvgpu_mutex_release(&vm->update_gmmu_lock);
-				return err;
-			}
-
-			if (vm_area) {
-				/* this would create a dangling GPU VA
-				 * pointer if the space is freed
-				 * before before the buffer is
-				 * unmapped */
-				nvgpu_mutex_release(&vm->update_gmmu_lock);
-				nvgpu_err(g,
-					  "%s: comptags cannot be mapped into allocated space",
-					  __func__);
-				return -EINVAL;
-			}
-		}
-
-		mapped_buffer->ctag_map_win_addr =
-			g->ops.mm.gmmu_map(
-				vm,
-				!fixed_mapping ? 0 : *compbits_win_gva, /* va */
-				g->gr.compbit_store.mem.priv.sgt,
-				cacheline_offset_start, /* sg offset */
-				mapped_buffer->ctag_map_win_size, /* size */
-				small_pgsz_index,
-				0, /* kind */
-				0, /* ctag_offset */
-				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				gk20a_mem_flag_read_only,
-				false, /* clear_ctags */
-				false, /* sparse */
-				false, /* priv */
-				NULL,  /* mapping_batch handle */
-				g->gr.compbit_store.mem.aperture);
-
-		if (!mapped_buffer->ctag_map_win_addr) {
-			nvgpu_mutex_release(&vm->update_gmmu_lock);
-			nvgpu_err(g,
-				  "%s: failed to map comptags for mapping 0x%llx",
-				  __func__, mapping_gva);
-			return -ENOMEM;
-		}
-	} else if (fixed_mapping && *compbits_win_gva &&
-		   mapped_buffer->ctag_map_win_addr != *compbits_win_gva) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		nvgpu_err(g,
-			  "%s: re-requesting comptags map into mismatching address. buffer offset 0x"
-			  "%llx, existing comptag map at 0x%llx, requested remap 0x%llx",
-			  __func__, mapping_gva,
-			  mapped_buffer->ctag_map_win_addr, *compbits_win_gva);
-		return -EINVAL;
-	}
-
-	*mapping_iova = nvgpu_mem_get_addr_sgl(g, mapped_buffer->sgt->sgl);
-	*compbits_win_gva = mapped_buffer->ctag_map_win_addr;
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-	return 0;
-}
-
 #if defined(CONFIG_GK20A_VIDMEM)
 static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 {
@@ -1687,19 +1415,6 @@ void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
 {
 	struct vm_gk20a *vm = mapped_buffer->vm;
 	struct gk20a *g = vm->mm->g;
-
-	if (mapped_buffer->ctag_map_win_addr) {
-		/* unmap compbits */
-
-		g->ops.mm.gmmu_unmap(vm,
-				     mapped_buffer->ctag_map_win_addr,
-				     mapped_buffer->ctag_map_win_size,
-				     0,       /* page size 4k */
-				     true,    /* va allocated */
-				     gk20a_mem_flag_none,
-				     false,   /* not sparse */
-				     batch);  /* batch handle */
-	}
 
 	g->ops.mm.gmmu_unmap(vm,
 		mapped_buffer->addr,

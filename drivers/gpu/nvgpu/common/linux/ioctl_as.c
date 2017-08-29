@@ -227,31 +227,6 @@ static int gk20a_as_ioctl_get_va_regions(
 	return 0;
 }
 
-static int gk20a_as_ioctl_get_buffer_compbits_info(
-		struct gk20a_as_share *as_share,
-		struct nvgpu_as_get_buffer_compbits_info_args *args)
-{
-	gk20a_dbg_fn("");
-	return nvgpu_vm_get_compbits_info(as_share->vm,
-					  args->mapping_gva,
-					  &args->compbits_win_size,
-					  &args->compbits_win_ctagline,
-					  &args->mapping_ctagline,
-					  &args->flags);
-}
-
-static int gk20a_as_ioctl_map_buffer_compbits(
-		struct gk20a_as_share *as_share,
-		struct nvgpu_as_map_buffer_compbits_args *args)
-{
-	gk20a_dbg_fn("");
-	return nvgpu_vm_map_compbits(as_share->vm,
-				     args->mapping_gva,
-				     &args->compbits_win_gva,
-				     &args->mapping_iova,
-				     args->flags);
-}
-
 int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 {
 	struct nvgpu_os_linux *l;
@@ -363,14 +338,6 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		trace_gk20a_as_ioctl_get_va_regions(g->name);
 		err = gk20a_as_ioctl_get_va_regions(as_share,
 				(struct nvgpu_as_get_va_regions_args *)buf);
-		break;
-	case NVGPU_AS_IOCTL_GET_BUFFER_COMPBITS_INFO:
-		err = gk20a_as_ioctl_get_buffer_compbits_info(as_share,
-				(struct nvgpu_as_get_buffer_compbits_info_args *)buf);
-		break;
-	case NVGPU_AS_IOCTL_MAP_BUFFER_COMPBITS:
-		err = gk20a_as_ioctl_map_buffer_compbits(as_share,
-				(struct nvgpu_as_map_buffer_compbits_args *)buf);
 		break;
 	case NVGPU_AS_IOCTL_MAP_BUFFER_BATCH:
 		err = gk20a_as_ioctl_map_buffer_batch(as_share,

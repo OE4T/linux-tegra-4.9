@@ -199,8 +199,6 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	struct gk20a_comptags comptags;
 	bool clear_ctags = false;
 	struct scatterlist *sgl;
-	u64 ctag_map_win_size = 0;
-	u32 ctag_map_win_ctagline = 0;
 	struct nvgpu_vm_area *vm_area = NULL;
 	u32 ctag_offset;
 	enum nvgpu_aperture aperture;
@@ -298,15 +296,10 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 				     g->ops.fb.compression_page_size(g));
 
 	if (bfr.ctag_lines && !comptags.lines) {
-		const bool user_mappable =
-			!!(flags & NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS);
-
 		/* allocate compression resources if needed */
 		err = gk20a_alloc_comptags(g, dev, dmabuf,
 					   ctag_allocator,
-					   bfr.ctag_lines, user_mappable,
-					   &ctag_map_win_size,
-					   &ctag_map_win_ctagline);
+					   bfr.ctag_lines);
 		if (err) {
 			/* ok to fall back here if we ran out */
 			/* TBD: we can partially alloc ctags as well... */
@@ -370,9 +363,6 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->ctag_offset = bfr.ctag_offset;
 	mapped_buffer->ctag_lines  = bfr.ctag_lines;
 	mapped_buffer->ctag_allocated_lines = bfr.ctag_allocated_lines;
-	mapped_buffer->ctags_mappable = bfr.ctag_user_mappable;
-	mapped_buffer->ctag_map_win_size = ctag_map_win_size;
-	mapped_buffer->ctag_map_win_ctagline = ctag_map_win_ctagline;
 	mapped_buffer->vm          = vm;
 	mapped_buffer->flags       = flags;
 	mapped_buffer->kind        = kind;

@@ -96,13 +96,6 @@ struct nvgpu_mapped_buf {
 	u32 ctag_lines;
 	u32 ctag_allocated_lines;
 
-	/* For comptag mapping, these are the mapping window parameters */
-	bool ctags_mappable;
-	u64 ctag_map_win_addr; /* non-zero if mapped */
-	u64 ctag_map_win_size; /* non-zero if ctags_mappable */
-	u32 ctag_map_win_ctagline; /* ctagline at win start, set if
-				    * ctags_mappable */
-
 	u32 flags;
 	u32 kind;
 	bool va_allocated;

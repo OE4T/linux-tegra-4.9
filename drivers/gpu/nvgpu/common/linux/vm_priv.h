@@ -49,12 +49,6 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		 u64 mapping_size,
 		 struct vm_gk20a_mapping_batch *mapping_batch);
 
-int nvgpu_vm_map_compbits(struct vm_gk20a *vm,
-			  u64 mapping_gva,
-			  u64 *compbits_win_gva,
-			  u64 *mapping_iova,
-			  u32 flags);
-
 /* Note: batch may be NULL if map op is not part of a batch */
 int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,
@@ -86,8 +80,6 @@ int gk20a_alloc_comptags(struct gk20a *g,
 			 struct device *dev,
 			 struct dma_buf *dmabuf,
 			 struct gk20a_comptag_allocator *allocator,
-			 u32 lines, bool user_mappable,
-			 u64 *ctag_map_win_size,
-			 u32 *ctag_map_win_ctagline);
+			 u32 lines);
 
 #endif

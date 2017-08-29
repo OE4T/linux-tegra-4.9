@@ -389,13 +389,6 @@ struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf);
 void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
 		    struct sg_table *sgt);
 
-int nvgpu_vm_get_compbits_info(struct vm_gk20a *vm,
-			       u64 mapping_gva,
-			       u64 *compbits_win_size,
-			       u32 *compbits_win_ctagline,
-			       u32 *mapping_ctagline,
-			       u32 *flags);
-
 /* vm-as interface */
 struct nvgpu_as_alloc_space_args;
 struct nvgpu_as_free_space_args;

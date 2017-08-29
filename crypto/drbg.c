@@ -1617,10 +1617,16 @@ static int drbg_kcapi_hash(struct drbg_state *drbg, unsigned char *outval,
 {
 	struct sdesc *sdesc = (struct sdesc *)drbg->priv_data;
 	struct drbg_string *input = NULL;
+	int ret;
 
 	crypto_shash_init(&sdesc->shash);
-	list_for_each_entry(input, in, list)
-		crypto_shash_update(&sdesc->shash, input->buf, input->len);
+	list_for_each_entry(input, in, list) {
+		ret = crypto_shash_update(&sdesc->shash, input->buf,
+				input->len);
+		if (ret)
+			pr_info("DRBG:crypto_shash_update failed: %d\n", ret);
+			return ret;
+	}
 	return crypto_shash_final(&sdesc->shash, outval);
 }
 #endif /* (CONFIG_CRYPTO_DRBG_HASH || CONFIG_CRYPTO_DRBG_HMAC) */

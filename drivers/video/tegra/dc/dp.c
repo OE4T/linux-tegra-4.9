@@ -2089,6 +2089,8 @@ static void _tegra_dpaux_init(struct tegra_dc_dp_data *dp)
 {
 	if (dp->sor->safe_clk)
 		tegra_sor_safe_clk_enable(dp->sor);
+
+	tegra_unpowergate_partition(dp->dpaux->powergate_id);
 	tegra_dpaux_clk_en(dp->dpaux);
 
 	tegra_dc_io_start(dp->dc);
@@ -2117,11 +2119,6 @@ static void tegra_dpaux_init(struct tegra_dc_dp_data *dp)
 static int tegra_dc_dp_hotplug_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-
-	/*
-	 * SOR partition must be awake for dpaux
-	 */
-	tegra_dc_unpowergate_locked(dc);
 
 	/*
 	 * dp interrupts are received by dpaux.
@@ -3213,7 +3210,7 @@ static void tegra_dc_dp_suspend(struct tegra_dc *dc)
 
 	tegra_dp_hpd_suspend(dp);
 
-	tegra_dc_powergate_locked(dc);
+	tegra_powergate_partition(dp->dpaux->powergate_id);
 }
 
 static void tegra_dc_dp_resume(struct tegra_dc *dc)
@@ -3222,8 +3219,6 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 
 	if (!dp->suspended)
 		return;
-
-	tegra_dc_unpowergate_locked(dc);
 
 	if (dp->pdata->hdmi2fpd_bridge_enable)
 		hdmi2fpd_resume(dc);

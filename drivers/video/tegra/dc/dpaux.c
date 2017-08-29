@@ -20,13 +20,19 @@
 #include <linux/err.h>
 #include <linux/tegra_prod.h>
 #include <linux/of_irq.h>
+#include <linux/tegra_pm_domains.h>
 
 #include "dpaux_regs.h"
 #include "dc_priv.h"
 #include "dpaux.h"
 #include "dp.h"
 #include "hdmi2.0.h"
-#include "../../../../arch/arm/mach-tegra/iomap.h"
+
+static struct of_device_id tegra_dpaux_pd[] = {
+	{ .compatible = "nvidia,tegra210-sor-pd", },
+	{ .compatible = "nvidia,tegra186-disa-pd", },
+	{},
+};
 
 static DEFINE_MUTEX(dpaux_lock);
 
@@ -140,7 +146,7 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc_dpaux_data *dpaux,
 	}
 
 	dc = dpaux->dc;
-	tegra_dc_unpowergate_locked(dc);
+	tegra_unpowergate_partition(dpaux->powergate_id);
 	tegra_dpaux_clk_en(dpaux);
 	tegra_dc_io_start(dc);
 	mutex_lock(&dpaux_lock);
@@ -157,7 +163,7 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc_dpaux_data *dpaux,
 	mutex_unlock(&dpaux_lock);
 	tegra_dc_io_end(dc);
 	tegra_dpaux_clk_dis(dpaux);
-	tegra_dc_powergate_locked(dc);
+	tegra_powergate_partition(dpaux->powergate_id);
 }
 
 void tegra_dpaux_prod_set(struct tegra_dc_dpaux_data *dpaux)
@@ -179,7 +185,7 @@ void tegra_dpaux_prod_set(struct tegra_dc_dpaux_data *dpaux)
 		return;
 	}
 
-	tegra_dc_unpowergate_locked(dc);
+	tegra_unpowergate_partition(dpaux->powergate_id);
 	tegra_dpaux_clk_en(dpaux);
 	tegra_dc_io_start(dc);
 
@@ -198,7 +204,7 @@ void tegra_dpaux_prod_set(struct tegra_dc_dpaux_data *dpaux)
 
 	tegra_dc_io_end(dc);
 	tegra_dpaux_clk_dis(dpaux);
-	tegra_dc_powergate_locked(dc);
+	tegra_powergate_partition(dpaux->powergate_id);
 }
 
 struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc,
@@ -300,6 +306,7 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc,
 		}
 	}
 
+	dpaux->powergate_id = tegra_pd_get_powergate_id(tegra_dpaux_pd);
 	dpaux->dc = dc;
 	dpaux->base = base;
 	dpaux->clk = clk;

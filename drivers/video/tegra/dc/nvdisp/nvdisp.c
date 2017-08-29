@@ -68,6 +68,14 @@ static struct reset_control *nvdisp_common_rst[DC_N_WINDOWS+1];
 
 static int tegra_nvdisp_set_color_control(struct tegra_dc *dc);
 
+/*
+ * As per nvdisplay programming guidelines, only hubclk,dispclk,dscclk,
+ * pclk0 clocks should be enabled before accessing any display register
+ * in head0 power domain. But, as BL is unconditionally unpowergating
+ * all display powerdomains, enabling pclk1 and pclk2 clocks
+ * even here as WAR to avoid display register access issues in kernel
+ * Bug 200343370 tracks issue in BL.
+ */
 static struct tegra_dc_pd_clk_info t18x_disp_pd0_clk_info[] = {
 	{
 		.name = "nvdisplayhub",
@@ -83,6 +91,14 @@ static struct tegra_dc_pd_clk_info t18x_disp_pd0_clk_info[] = {
 	},
 	{
 		.name = "nvdisp_dsc",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_p1",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_p2",
 		.clk = NULL,
 	},
 };
@@ -1178,8 +1194,6 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	int i;
 	char syncpt_name[] = "disp_a";
 
-/*	mutex_lock(&tegra_nvdisp_lock); */
-
 	ret = tegra_nvdisp_reset_prepare(dc);
 	if (ret)
 		return ret;
@@ -1275,7 +1289,6 @@ INIT_CLK_ERR:
 	if (!IS_ERR_OR_NULL(compclk))
 		tegra_disp_clk_put(&dc->ndev->dev, compclk);
 INIT_EXIT:
-/*	mutex_unlock(&tegra_nvdisp_lock); */
 	return ret;
 
 }

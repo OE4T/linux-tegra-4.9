@@ -26,6 +26,7 @@ struct tegra_dc_dpaux_data {
 	struct tegra_prod *prod_list;
 	struct device_node *np; /* dpaux@******** */
 	int ctrl_num; /* this should match with sor->ctrl_num */
+	int powergate_id;
 };
 
 enum tegra_dpaux_pad_mode {

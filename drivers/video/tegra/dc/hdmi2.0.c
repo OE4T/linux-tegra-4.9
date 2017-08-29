@@ -124,6 +124,7 @@ static inline void _tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
 	mutex_lock(&hdmi->ddc_refcount_lock);
 	if (hdmi->ddc_refcount++)
 		goto fail;
+	tegra_unpowergate_partition(hdmi->dpaux->powergate_id);
 	tegra_hdmi_get(hdmi->dc);
 	/*
 	 * hdmi uses i2c lane muxed on dpaux1 pad.
@@ -150,6 +151,7 @@ static inline void _tegra_hdmi_ddc_disable(struct tegra_hdmi *hdmi)
 	 */
 	tegra_dpaux_pad_power(hdmi->dpaux, false);
 	tegra_hdmi_put(hdmi->dc);
+	tegra_powergate_partition(hdmi->dpaux->powergate_id);
 
 fail:
 	mutex_unlock(&hdmi->ddc_refcount_lock);
@@ -1613,8 +1615,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 		specs.modedb = NULL;
 		if (tegra_dc_hpd(dc) && (!dc->initialized)) {
-			/* Unpowergate DC before reading EDID */
-			tegra_dc_unpowergate_locked(hdmi->dc);
 			if (!tegra_edid_get_monspecs(hdmi->edid, &specs)) {
 				err = tegra_dc_set_fb_mode(dc, specs.modedb, false);
 				if (err) {
@@ -1633,7 +1633,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 						__func__, err);
 				}
 			}
-			tegra_dc_powergate_locked(hdmi->dc);
 		} else {
 			err = tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 			if (err) {
@@ -3237,26 +3236,13 @@ static const struct file_operations tegra_hdmi_hotplug_dbg_ops = {
 
 static void tegra_hdmi_ddc_power_toggle(struct tegra_hdmi *dc_hdmi, int value)
 {
-
-	int partition_id = -1;
-
 	if (!dc_hdmi || !dc_hdmi->sor)
 		return;
 
-	partition_id = dc_hdmi->sor->powergate_id;
-
-	if (partition_id < 0)
-		return;
-
-	if (value == 0) {
+	if (value == 0)
 		_tegra_hdmi_ddc_disable(dc_hdmi);
-		tegra_powergate_partition(partition_id);
-
-	} else if (value == 1) {
-		tegra_unpowergate_partition(partition_id);
+	else if (value == 1)
 		_tegra_hdmi_ddc_enable(dc_hdmi);
-	}
-
 }
 
 static int tegra_hdmi_ddc_power_toggle_dbg_show(struct seq_file *m,

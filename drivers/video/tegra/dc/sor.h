@@ -498,11 +498,6 @@ static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
 		reset_control_deassert(sor->rst);
 		mdelay(1);
 	}
-#else
-	tegra_periph_reset_assert(sor->sor_clk);
-	mdelay(2);
-	tegra_periph_reset_deassert(sor->sor_clk);
-	mdelay(1);
 #endif
 	up_write(&sor->reset_lock);
 }

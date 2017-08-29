@@ -129,10 +129,6 @@ extern void tegra210_set_sata_pll_seq_sw(bool state);
 extern void tegra210_put_utmipll_in_iddq(void);
 extern void tegra210_put_utmipll_out_iddq(void);
 
-struct clk;
-static inline void tegra_periph_reset_deassert(struct clk *c) { }
-static inline void tegra_periph_reset_assert(struct clk *c) { }
-
 #ifdef CONFIG_COMMON_CLK
 /* To be implemented for COMMON CLK framework */
 /* Get max rate safe at min voltage in all t-ranges; return zero if unknown */

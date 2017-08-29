@@ -151,11 +151,16 @@
 		};
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@2a41000 {
+#endif
 	tegra_ape: rtcpu@2993000 {
 		compatible = "nvidia,tegra186-ape-ivc";
 		status = "disabled";
 
+#if !defined(LINUX_VERSION) || LINUX_VERSION < 409
 		power-domains = <&ape_pd>;
+#endif
 		reg =	<0 0x02993000 0 0x1000>, /* APE EVP */
 			<0 0x02990000 0 0x0800>, /* AMISC */
 			<0 0x02994000 0 0x2000>; /* ACAST */
@@ -208,10 +213,17 @@
 
 		hsp {
 			compatible = "nvidia,tegra186-hsp-mailbox";
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+			device = <&ape_hsp>;
+#endif
 			nvidia,hsp-shared-mailbox = <&ape_hsp 1 &ape_hsp 6>;
 			nvidia,hsp-shared-mailbox-names = "ivc-pair", "cmd-pair";
 		};
 	};
+
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#endif
 
 	tegra_rtcpu_ape_trace: tegra-rtcpu-ape-trace {
 		nvidia,enable-printk;

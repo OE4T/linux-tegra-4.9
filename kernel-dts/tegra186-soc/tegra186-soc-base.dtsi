@@ -1176,9 +1176,15 @@
 		status = "disabled";
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@2a41000 {
+#endif
 	ape_hsp: tegra-hsp@29a0000 {
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x029a0000 0x0 0x00090000>;
+#if !defined(LINUX_VERSION) || LINUX_VERSION < 409
+		power-domains = <&ape_pd>;
+#endif
 		interrupt-parent = <&tegra_agic>;
 		interrupts =
 			<GIC_SPI INT_AMISC_MBOX_FULL0
@@ -1231,6 +1237,9 @@
 				"shared4";
 		status = "disabled";
 	};
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#endif
 
 	aon_hsp: tegra-hsp@c150000 {
 		compatible = "nvidia,tegra186-hsp";

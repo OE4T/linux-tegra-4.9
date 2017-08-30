@@ -25,6 +25,10 @@
 		status = "disabled";
 		nvidia,hsp-shared-mailbox = <&aon_hsp 2>;
 		nvidia,hsp-shared-mailbox-names = "ivc-pair";
+		nvidia,ivc-carveout-base-ss = <0>;
+		nvidia,ivc-carveout-size-ss = <1>;
+		nvidia,ivc-notify-ss = <1>;
+		nvidia,ivc-dbg-enable-ss = <0>;
 
 		ivc-channels@80000000 {
 			#address-cells = <1>;

@@ -355,7 +355,6 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 			err_status = -ETIMEDOUT;
 			xv_sc_dbg(EXEC_CHANGE, "  timeout; pl_link_config = 0x%x",
 				pl_link_config);
-			break;
 		}
 
 		xv_sc_dbg(EXEC_CHANGE, "  Change done... Checking status");
@@ -376,8 +375,10 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 			  link_speed_setting,
 			  xve_link_control_status_link_speed_v(link_control_status));
 
-		if (err_status == -ETIMEDOUT)
+		if (err_status == -ETIMEDOUT) {
 			xv_sc_dbg(EXEC_CHANGE, "  Oops timed out?");
+			break;
+		}
 	} while (attempts-- > 0 &&
 		 link_speed_setting !=
 		 xve_link_control_status_link_speed_v(link_control_status));

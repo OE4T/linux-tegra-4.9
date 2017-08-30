@@ -28,8 +28,8 @@
 #include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/thermal.h>
+#include <linux/tsensor-fuse.h>
 #include <soc/tegra/fuse.h>
-#include "tsensor-fuse.h"
 
 #define PDEV2DEVICE(pdev) (&(pdev->dev))
 #define PDEV2SENSOR_INFO(pdev) \

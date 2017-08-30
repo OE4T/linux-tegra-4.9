@@ -482,7 +482,7 @@ exit:
 }
 
 static int tegra_dc_parse_out_type(struct platform_device *ndev,
-	struct tegra_dc_platform_data *pdata)
+	struct tegra_dc_platform_data *pdata, bool pdata_initialized)
 {
 	u32 temp;
 	int ret = 0;
@@ -497,14 +497,20 @@ static int tegra_dc_parse_out_type(struct platform_device *ndev,
 		goto exit;
 	}
 
-	if (of_property_read_u32(temp_np, "nvidia,out-type", &temp)) {
-		dev_err(&ndev->dev, "mandatory property %s not found\n",
+	/* Check for OR out_type from dt when not using crossbar
+	 * or when restoring to boot topology in crossbar
+	 */
+	if (!pdata_initialized ||
+			pdata->default_out->type == TEGRA_DC_TOPOLOGY_RESTORE) {
+		if (of_property_read_u32(temp_np, "nvidia,out-type", &temp)) {
+			dev_err(&ndev->dev, "mandatory property %s not found\n",
 				"nvidia,out-type");
-		ret = -ENODEV;
-		goto exit;
+			ret = -ENODEV;
+			goto exit;
+		}
+		pdata->default_out->type = (int)temp;
 	}
 
-	pdata->default_out->type = (int)temp;
 	if ((pdata->default_out->type < TEGRA_DC_OUT_RGB) ||
 	    (pdata->default_out->type >= TEGRA_DC_OUT_MAX)) {
 		dev_err(&ndev->dev, "invalid out_type:%d\n",
@@ -2898,10 +2904,10 @@ fail_parse_imp_table:
 }
 
 struct tegra_dc_platform_data *of_dc_parse_platform_data(
-	struct platform_device *ndev)
+	struct platform_device *ndev, struct tegra_dc_platform_data *boot_pdata)
 {
 	u32 temp;
-	int err;
+	int err = 0;
 #if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
 	int check_val;
 #endif
@@ -2916,6 +2922,9 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	struct device_node *entry = NULL;
 	struct property *prop;
 	struct tegra_dc_out *def_out;
+	bool pdata_initialized = false;
+	struct tegra_dc *dc;
+	char dc_or_conn_node[CHAR_BUF_SIZE_MAX];
 	struct device_node *cmu_np = NULL;
 	struct device_node *cmu_adbRGB_np = NULL;
 
@@ -2925,57 +2934,92 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	 * since it is expected data for these needs to be
 	 * parsed from DTB.
 	 */
-	pdata = devm_kzalloc(&ndev->dev,
-		sizeof(struct tegra_dc_platform_data), GFP_KERNEL);
-	if (!pdata) {
-		dev_err(&ndev->dev, "not enough memory\n");
-		err = -ENOMEM;
-		goto fail_parse;
-	}
+	if (boot_pdata) {
+		pdata_initialized = true;
+		pdata = boot_pdata;
+		dc = tegra_get_dc_from_dev(&ndev->dev);
+	} else {
+		pdata = devm_kzalloc(&ndev->dev,
+			sizeof(struct tegra_dc_platform_data), GFP_KERNEL);
+		if (!pdata) {
+			dev_err(&ndev->dev, "not enough memory\n");
+			err = -ENOMEM;
+			goto fail_parse;
+		}
 
-	pdata->default_out = devm_kzalloc(&ndev->dev,
-		sizeof(struct tegra_dc_out), GFP_KERNEL);
-	if (!pdata->default_out) {
-		dev_err(&ndev->dev, "not enough memory\n");
-		err = -ENOMEM;
-		goto fail_parse;
+		pdata->default_out = devm_kzalloc(&ndev->dev,
+			sizeof(struct tegra_dc_out), GFP_KERNEL);
+		if (!pdata->default_out) {
+			dev_err(&ndev->dev, "not enough memory\n");
+			err = -ENOMEM;
+			goto fail_parse;
+		}
+
+		pdata->fb = devm_kzalloc(&ndev->dev,
+			sizeof(struct tegra_fb_data), GFP_KERNEL);
+		if (!pdata->fb) {
+			dev_err(&ndev->dev, "not enough memory\n");
+			err = -ENOMEM;
+			goto fail_parse;
+		}
 	}
 	def_out = pdata->default_out;
-
-	pdata->fb = devm_kzalloc(&ndev->dev,
-		sizeof(struct tegra_fb_data), GFP_KERNEL);
-	if (!pdata->fb) {
-		dev_err(&ndev->dev, "not enough memory\n");
-		err = -ENOMEM;
-		goto fail_parse;
-	}
 
 	if (!of_property_read_u32(np, "nvidia,frame_lock_enable", &temp)) {
 		pdata->frame_lock_enable = (bool)temp;
 		OF_DC_LOG("nvidia,frame_lock_enable%d\n", pdata->frame_lock_enable);
 	}
 
-	pdata->conn_np = of_parse_phandle(np, "nvidia,dc-connector", 0);
+	/* Check for connector during crossbar */
+	if (pdata_initialized &&
+			(dc->current_topology.conn_inst !=
+			TEGRA_DC_TOPOLOGY_RESTORE)) {
+		switch (def_out->type) {
+		case TEGRA_DC_OUT_FAKE_DP:
+		case TEGRA_DC_OUT_HDMI:
+		case TEGRA_DC_OUT_DP:
+			if (dc->current_topology.conn_inst == 0) {
+				pdata->conn_np =
+					of_find_node_by_path("/host1x/sor");
+			} else {
+				snprintf(dc_or_conn_node, 13, "/host1x/sor%d",
+					dc->current_topology.conn_inst);
+				pdata->conn_np =
+					of_find_node_by_path(dc_or_conn_node);
+			}
+		break;
+		case TEGRA_DC_OUT_DSI:
+			pdata->conn_np = of_find_node_by_path("/host1x/dsi");
+			break;
+		break;
+		}
+	} else {
+		pdata->conn_np = of_parse_phandle(np, "nvidia,dc-connector", 0);
+		/*
+		 * Note: boot-loader still uses "nvidia,dc-or-node" property.
+		 *       But that property is not mandatory for kernel.
+		 *       Kernel driver finds panel using phandle via
+		 *       "nvidia,dc-connector". However both should point to
+		 *       same node.
+		 */
+		err = of_property_read_string(np, "nvidia,dc-or-node",
+			&dc_or_node);
+		if (err) {
+			dev_err(&ndev->dev, "optional:nvidia,dc-or-node not defined\n");
+		} else {
+			if (strcmp(of_node_full_name(pdata->conn_np),
+					dc_or_node))
+				dev_err(&ndev->dev, "%s: does not match %s\n",
+					of_node_full_name(pdata->conn_np),
+					dc_or_node);
+		}
+	}
+
 	if (IS_ERR_OR_NULL(pdata->conn_np)) {
 		dev_err(&ndev->dev, "mandatory prop:%s not defined\n",
 			"nvidia,dc-connector");
 		err = PTR_ERR(pdata->conn_np);
 		goto fail_parse;
-	}
-
-	/*
-	 * Note: boot-loader still uses "nvidia,dc-or-node" property.
-	 *       But that property is not mandatory for kernel.
-	 *       Kernel driver finds panel using phandle via
-	 *       "nvidia,dc-connector". However both should point to same node.
-	 */
-	err = of_property_read_string(np, "nvidia,dc-or-node", &dc_or_node);
-	if (err) {
-		dev_err(&ndev->dev, "optional:nvidia,dc-or-node not defined\n");
-	} else {
-		if (strcmp(of_node_full_name(pdata->conn_np), dc_or_node))
-			dev_err(&ndev->dev, "%s: does not match %s\n",
-				of_node_full_name(pdata->conn_np), dc_or_node);
 	}
 
 	if (!of_property_read_u32(np, "nvidia,dc-ctrlnum", &temp)) {
@@ -2990,13 +3034,31 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	dev_info(&ndev->dev, "disp%d connected to head%d->%s\n", ndev->id,
 		(int)pdata->ctrl_num, of_node_full_name(pdata->conn_np));
 
-	err = tegra_dc_parse_panel_ops(ndev, pdata);
-	if (err) {
-		dev_err(&ndev->dev, "err:%d parsing panel_ops\n", err);
-		goto fail_parse;
+	/* Check for panel node during crossbar */
+	if (pdata_initialized) {
+		pdata->panel_np = NULL;
+		if (def_out->type == TEGRA_DC_OUT_HDMI)
+			pdata->panel_np = of_get_child_by_name(pdata->conn_np,
+				"hdmi-display");
+		else if ((def_out->type == TEGRA_DC_OUT_DP) ||
+			(def_out->type == TEGRA_DC_OUT_FAKE_DP))
+			pdata->panel_np = of_get_child_by_name(pdata->conn_np,
+				"dp-display");
+
+		if (!pdata->panel_np) {
+			pr_warn("crossbar: no panel found for out_type %d\n",
+				def_out->type);
+			err = -ENODEV;
+		}
+	} else {
+		err = tegra_dc_parse_panel_ops(ndev, pdata);
+		if (err) {
+			dev_err(&ndev->dev, "err:%d parsing panel_ops\n", err);
+			goto fail_parse;
+		}
 	}
 
-	err = tegra_dc_parse_out_type(ndev, pdata);
+	err = tegra_dc_parse_out_type(ndev, pdata, pdata_initialized);
 	if (err) {
 		dev_err(&ndev->dev, "err:%d parsing out_type\n", err);
 		goto fail_parse;
@@ -3031,7 +3093,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	}
 
 	if (def_out->type == TEGRA_DC_OUT_DSI) {
-
+		/* TODO: Add crossbar implementation for DSI */
 		def_out->dsi = devm_kzalloc(&ndev->dev,
 				sizeof(struct tegra_dsi_out), GFP_KERNEL);
 		if (!def_out->dsi) {
@@ -3093,6 +3155,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 			def_out->postsuspend	= dc_dp_out_postsuspend;
 		}
 	} else if (def_out->type == TEGRA_DC_OUT_HDMI) {
+
 		def_out->hdmi_out = devm_kzalloc(&ndev->dev,
 				sizeof(struct tegra_hdmi_out), GFP_KERNEL);
 		if (!def_out->hdmi_out) {
@@ -3114,27 +3177,27 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		}
 		if (!of_property_read_u32(np_target_disp,
 				"nvidia,hdmi-dsi-bridge", &temp)) {
-			pdata->default_out->hdmi_out->
+			def_out->hdmi_out->
 				hdmi2dsi_bridge_enable = (bool)temp;
 			OF_DC_LOG("hdmi2dsi_bridge_enabled %d\n",
-				pdata->default_out->hdmi_out->
+				def_out->hdmi_out->
 					hdmi2dsi_bridge_enable);
 		}
 		if (!of_property_read_u32(np_target_disp,
 					"generic-infoframe-type", &temp))
-			pdata->default_out->hdmi_out->
+			def_out->hdmi_out->
 				generic_infoframe_type = (u8)temp;
 		else
-			pdata->default_out->hdmi_out->
+			def_out->hdmi_out->
 				generic_infoframe_type =
 				HDMI_INFOFRAME_TYPE_HDR;
 		pr_info("generic_infoframe_type: 0x%02x\n",
-				pdata->default_out->hdmi_out->
+				def_out->hdmi_out->
 					generic_infoframe_type);
-		if (pdata->default_out->hdmi_out->generic_infoframe_type ==
+		if (def_out->hdmi_out->generic_infoframe_type ==
 			HDMI_INFOFRAME_TYPE_SPD)
 			parse_spd_infoframe(ndev, np_target_disp,
-				pdata->default_out);
+				def_out);
 		/* fixed panel ops is dominant. If fixed panel ops
 		 * is not defined, we set default hdmi panel ops */
 		if (!def_out->enable && !def_out->disable) {
@@ -3255,7 +3318,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 			dev_err(&ndev->dev,
 				"nvidia,hdmi-vrr-caps specified for a non-HDMI head, disregarded\n");
 		} else {
-
 			def_out->vrr = devm_kzalloc(&ndev->dev,
 					sizeof(struct tegra_vrr), GFP_KERNEL);
 			if (!def_out->vrr) {

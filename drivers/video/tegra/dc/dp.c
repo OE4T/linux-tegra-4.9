@@ -1710,7 +1710,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	 * If the new output type is fakeDP and an DPAUX instance from a
 	 * previous output type exists, re-use it.
 	 */
-	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data) {
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data
+			&& !tegra_dc_is_nvdisplay()) {
 		struct tegra_dc_dp_data *dp_copy =
 					(struct tegra_dc_dp_data *)dc->out_data;
 
@@ -1772,11 +1773,12 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 
 	/*
-	 * If the new output type is fakeDP and an SOR instance from a previous
-	 * output type exists, re-use it.
+	 * If the new output type is fakeDP and an SOR instance
+	 * from a previous output type exists, re-use it.
 	 */
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data &&
-		 ((struct tegra_dc_dp_data *)dc->out_data)->sor) {
+		 ((struct tegra_dc_dp_data *)dc->out_data)->sor &&
+		 !tegra_dc_is_nvdisplay()) {
 		dp->sor = ((struct tegra_dc_dp_data *)dc->out_data)->sor;
 	} else {
 		dp->sor = tegra_dc_sor_init(dc, &dp->link_cfg);
@@ -2455,6 +2457,9 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = NULL;
 
+	if (!dc->current_topology.valid)
+		return;
+
 	dp = tegra_dc_get_outdata(dc);
 
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
@@ -2500,6 +2505,7 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 	devm_kfree(&dc->ndev->dev, dp->audio_switch_name);
 	free_irq(dp->irq, dp);
 	devm_kfree(&dc->ndev->dev, dp);
+	dc->current_topology.valid = false;
 }
 
 static void tegra_dc_dp_disable(struct tegra_dc *dc)

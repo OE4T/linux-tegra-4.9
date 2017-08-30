@@ -120,6 +120,12 @@ enum {
 	TEGRA_DSI_LINK1,
 };
 
+#define TEGRA_DC_TOPOLOGY_INVALID -2
+#define TEGRA_DC_TOPOLOGY_NARGS 3
+#define TEGRA_DC_TOPOLOGY_RESTORE -1
+#define TEGRA_DC_TOPOLOGY_ARG_MIN -1
+#define TEGRA_DC_TOPOLOGY_ARG_MAX 10
+
 struct tegra_dsi_cmd {
 	u8	cmd_type;
 	u8	data_id;
@@ -1146,6 +1152,8 @@ static inline struct tegra_dc *tegra_get_dc_from_dev(struct device *dev)
 	return platform_get_drvdata(container_of(dev,
 				struct platform_device, dev));
 }
+
+void tegra_dc_shutdown(struct platform_device *ndev);
 
 void tegra_get_fb_resource(struct resource *fb_res, int instance);
 unsigned tegra_dc_out_flags_from_dev(struct device *dev);

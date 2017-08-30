@@ -151,7 +151,8 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc);
 static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq);
 static int _tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable);
 
-static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out);
+static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out,
+		bool initialized);
 #ifdef PM
 static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state);
 static int tegra_dc_resume(struct platform_device *ndev);
@@ -728,6 +729,22 @@ void tegra_dc_release_dc_out(struct tegra_dc *dc)
 			dc->out_ops->release(dc);
 		tegra_dc_put(dc);
 	}
+}
+
+bool tegra_dc_hotplug_supported(struct tegra_dc *dc)
+{
+	/* For HDMI|DP, hotplug always supported
+	 * For eDP, hotplug is never supported
+	 * For fake DP, SW hotplug is supported
+	 * Else GPIO# determines if hotplug supported
+	 */
+	if (dc->out->type == TEGRA_DC_OUT_HDMI)
+		return true;
+	else if (dc->out->type == TEGRA_DC_OUT_DP ||
+			dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return tegra_dc_is_ext_dp_panel(dc);
+	else
+		return (dc->out->hotplug_gpio > 0 ? true : false);
 }
 
 #define DUMP_REG(a) do {			\
@@ -1412,7 +1429,8 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		}
 
 		if (allocate) {
-			ret = tegra_dc_set_out(dc, dc->pdata->default_out);
+			ret = tegra_dc_set_out(dc, dc->pdata->default_out,
+				true);
 				if (ret < 0) {
 					dev_err(&dc->ndev->dev,
 					"Failed to initialize DC out ops\n");
@@ -1823,6 +1841,293 @@ static const struct file_operations dbg_degamma_fops = {
 	.open = dbg_degamma_open,
 	.read = seq_read,
 	.write = dbg_degamma_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static bool tegra_dc_or_is_dsi(struct tegra_dc *dc)
+{
+	if (dc->out_ops && !dc->out_ops->get_connector_instance &&
+			dc->out->type == TEGRA_DC_OUT_DSI)
+		return true;
+	else
+		return false;
+}
+
+static int dbg_nvdisp_topology_show(struct seq_file *m, void *unused)
+{
+	int i;
+	struct tegra_dc *dc;
+
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		dc = tegra_dc_get_dc(i);
+		if (dc == NULL)
+			continue;
+
+		if (!dc->current_topology.valid) {
+			seq_printf(m, "DISPLAY ID:%d DANGLING TOPOLOGY\n", i);
+			continue;
+		}
+
+		if (tegra_dc_or_is_dsi(dc))
+			seq_printf(m, "DISPLAY ID:%d OUT_TYPE:%d DSI\n", i,
+				dc->current_topology.protocol);
+		else
+			seq_printf(m, "DISPLAY ID:%d OUT_TYPE:%d SOR%d\n", i,
+				dc->current_topology.protocol,
+				dc->current_topology.conn_inst);
+	}
+	return 0;
+}
+
+static int dbg_nvdisp_topology_open(struct inode *inode,
+	struct file *file)
+{
+	return single_open(file, dbg_nvdisp_topology_show,
+		inode->i_private);
+}
+
+static bool is_topology_same(struct tegra_dc_topology topology1,
+		struct tegra_dc_topology topology2)
+{
+	if (topology1.disp_id != topology2.disp_id)
+		return false;
+
+	if (topology1.protocol != topology2.protocol)
+		return false;
+
+	if (topology1.conn_inst != topology2.conn_inst)
+		return false;
+
+	return true;
+}
+
+static bool is_topology_reset(struct tegra_dc_topology topology)
+{
+	if ((topology.disp_id == TEGRA_DC_TOPOLOGY_RESTORE) &&
+		(topology.protocol == TEGRA_DC_TOPOLOGY_RESTORE) &&
+		(topology.conn_inst == TEGRA_DC_TOPOLOGY_RESTORE))
+		return true;
+
+	return false;
+}
+
+static bool is_topology_possible(struct tegra_dc_topology topology)
+{
+	struct tegra_dc *dc = NULL;
+
+	/* Check to see if restore boot topology is called */
+	if (is_topology_reset(topology))
+		return true;
+
+	if (topology.disp_id >= tegra_dc_get_numof_dispheads())
+		return false;
+
+	if (topology.conn_inst >= tegra_dc_get_numof_dispsors())
+		return false;
+
+	/* Prevent crossbar on DSI display until support is added in sw */
+	dc = tegra_dc_get_dc(topology.disp_id);
+	if (dc->out->type == TEGRA_DC_OUT_DSI)
+		return false;
+
+	/* Currently supports only DP,FAKE_DP and HDMI in SW */
+	if ((topology.protocol == TEGRA_DC_OUT_FAKE_DP) ||
+		(topology.protocol == TEGRA_DC_OUT_DP) ||
+		(topology.protocol == TEGRA_DC_OUT_HDMI)) {
+		return true;
+	}
+
+	return false;
+}
+
+static int tegra_dc_topology_parse(char *buf, int nargs,
+		struct tegra_dc_topology *topology)
+{
+	char *b = NULL, *orig_b = NULL, *c = NULL;
+	int i = 0, args[TEGRA_DC_TOPOLOGY_NARGS] = {TEGRA_DC_TOPOLOGY_INVALID};
+
+	orig_b = kstrdup(buf, GFP_KERNEL);
+	b = orig_b;
+
+	for (i = 0; i < nargs; i++) {
+		if (!b)
+			break;
+		b = strim(b);
+		c = strsep(&b, ":");
+		if (!strlen(c))
+			break;
+		args[i] = simple_strtol(c, NULL, 10);
+		if (args[i] < TEGRA_DC_TOPOLOGY_ARG_MIN ||
+				args[i] > TEGRA_DC_TOPOLOGY_ARG_MAX)
+			break;
+	}
+
+	kfree(orig_b);
+
+	if (i == nargs) {
+		topology->disp_id = args[0];
+		topology->protocol = args[1];
+		topology->conn_inst = args[2];
+		return 0;
+	} else {
+		return -EINVAL;
+	}
+}
+
+static int tegra_dc_crossbar_display_reinit(struct tegra_dc *dc,
+	struct tegra_dc_topology topology)
+{
+	int ret = 0;
+
+	dc->pdata->default_out->type = topology.protocol;
+	dc->current_topology = topology;
+
+	/* Parse the platform data again */
+	dc->pdata = of_dc_parse_platform_data(dc->ndev, dc->pdata);
+	if (IS_ERR_OR_NULL(dc->pdata)) {
+		pr_warn("crossbar: parsing platform data for new topology failed\n");
+		return -EFAULT;
+	}
+
+	if (dc->out && dc->out->hotplug_init)
+		dc->out->hotplug_init(&dc->ndev->dev);
+
+	ret = tegra_dc_set_out(dc, dc->pdata->default_out, true);
+	if (ret < 0) {
+		pr_warn("crossbar: initialize DC out ops for new topology failed\n");
+		return -EFAULT;
+	}
+
+	dc->hotplug_supported = tegra_dc_hotplug_supported(dc);
+
+	if (dc->out_ops && dc->out_ops->hotplug_init)
+		dc->out_ops->hotplug_init(dc);
+
+	if (dc->out_ops && dc->out_ops->detect)
+		dc->connected = dc->out_ops->detect(dc);
+
+	dc->current_topology.valid = true;
+
+	return ret;
+}
+
+static ssize_t dbg_nvdisp_topology_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	int res = 0, ret = 0;
+	int i = 0;
+	char buf[CHAR_BUF_SIZE_MAX] = {'\0'};
+	struct tegra_dc *primary =  NULL;
+	struct tegra_dc *curr = NULL;
+	bool dangling = false;
+	struct tegra_dc_topology topology = {false, TEGRA_DC_TOPOLOGY_INVALID,
+		TEGRA_DC_TOPOLOGY_INVALID, TEGRA_DC_TOPOLOGY_INVALID};
+
+	res = copy_from_user(buf, addr, CHAR_BUF_SIZE_MAX);
+
+	ret = tegra_dc_topology_parse(buf, TEGRA_DC_TOPOLOGY_NARGS, &topology);
+	if (ret < 0) {
+		pr_warn("crossbar: invalid input format for topology\n");
+		return -EINVAL;
+	}
+
+	/* Check to see if all displays allocated and disabled */
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		curr = tegra_dc_get_dc(i);
+		if (!curr) {
+			pr_warn("crossbar: all displays are not registered\n");
+			return -EINVAL;
+		}
+		if (curr->enabled) {
+			pr_warn("crossbar: all displays are not disabled\n");
+			return -EINVAL;
+		}
+	}
+
+	curr = NULL;
+
+	if (!is_topology_possible(topology)) {
+		pr_warn("crossbar: topology %d:%d:%d not possible\n",
+			topology.disp_id, topology.protocol,
+			topology.conn_inst);
+		return -EINVAL;
+	}
+
+	if (is_topology_reset(topology)) {
+		/* Reset topology */
+		/* Destroy out_type and sor for reconfigured displays */
+		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+			curr = tegra_dc_get_dc(i);
+			if (!is_topology_same(curr->current_topology,
+					curr->boot_topology)) {
+				/* disable the dc and output controllers */
+				tegra_dc_shutdown(curr->ndev);
+				if (curr->out_ops && curr->out_ops->destroy)
+					curr->out_ops->destroy(curr);
+			}
+		}
+
+		/* Reinitialize only reconfigured displays */
+		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+			curr = tegra_dc_get_dc(i);
+			if (!is_topology_same(curr->current_topology,
+					curr->boot_topology)) {
+				ret = tegra_dc_crossbar_display_reinit(curr,
+					curr->boot_topology);
+				if (ret < 0)
+					break;
+			}
+		}
+	} else {
+		/* Single display workflow */
+		primary = tegra_dc_get_dc(topology.disp_id);
+		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+			curr = tegra_dc_get_dc(i);
+			if (!curr) {
+				continue;
+			} else if (tegra_dc_or_is_dsi(curr)) {
+				continue;
+			} else {
+				if (curr->out_ops &&
+					curr->out_ops->get_connector_instance &&
+					(curr->out_ops->get_connector_instance(curr)
+					== topology.conn_inst)) {
+					dangling = true;
+					break;
+				}
+			}
+		}
+
+		tegra_dc_shutdown(primary->ndev);
+		if (primary && primary->out_ops && primary->out_ops->destroy)
+			primary->out_ops->destroy(primary);
+		if (dangling) {
+			tegra_dc_shutdown(curr->ndev);
+			if (curr->out_ops && curr->out_ops->destroy)
+				curr->out_ops->destroy(curr);
+		}
+		ret = tegra_dc_crossbar_display_reinit(primary, topology);
+	}
+
+	if (ret < 0) {
+		pr_warn("crossbar: switching to topology %d:%d:%d failed\n",
+			topology.disp_id, topology.protocol,
+			topology.conn_inst);
+		return -EINVAL;
+	}
+
+	pr_info("crossbar: switching to topology %d:%d:%d success\n",
+		topology.disp_id, topology.protocol, topology.conn_inst);
+
+	return len;
+
+}
+
+static const struct file_operations dbg_nvdisp_topology_fops = {
+	.open = dbg_nvdisp_topology_open,
+	.read = seq_read,
+	.write = dbg_nvdisp_topology_write,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -2821,6 +3126,11 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 			if (!retval)
 				goto remove_out;
 		}
+		retval = debugfs_create_file("nvdisp_topology",
+			S_IRUGO, dc->debug_common_dir, NULL,
+			&dbg_nvdisp_topology_fops);
+		if (!retval)
+			goto remove_out;
 	}
 #endif
 
@@ -3614,12 +3924,18 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 		return NULL;
 }
 
-static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
+static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out,
+		bool initialized)
 {
-	struct tegra_dc_mode *mode;
+	struct tegra_dc_mode *mode = NULL;
 	int err = 0;
 
 	dc->out = out;
+
+	if (initialized) {
+		dc->initialized = false;
+		goto bypass_init_check;
+	}
 
 	if (((dc->out->type == TEGRA_DC_OUT_HDMI) ||
 		(dc->out->type == TEGRA_DC_OUT_DP)) &&
@@ -3658,7 +3974,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	}
 #endif
 	mode = tegra_dc_get_override_mode(dc);
-
+bypass_init_check:
 	if (mode && tegra_is_bl_display_initialized(dc->ctrl_num)) {
 		tegra_dc_set_mode(dc, mode);
 
@@ -6031,7 +6347,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		goto err_free;
 	}
 
-	dt_pdata = of_dc_parse_platform_data(ndev);
+	dt_pdata = of_dc_parse_platform_data(ndev, dt_pdata);
 	if (IS_ERR_OR_NULL(dt_pdata)) {
 		if (dt_pdata)
 			ret = PTR_ERR(dt_pdata);
@@ -6230,7 +6546,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if (dc->pdata->default_out) {
 		if (dc->pdata->default_out->hotplug_init)
 			dc->pdata->default_out->hotplug_init(&dc->ndev->dev);
-		ret = tegra_dc_set_out(dc, dc->pdata->default_out);
+		ret = tegra_dc_set_out(dc, dc->pdata->default_out, false);
 		if (ret < 0) {
 			dev_err(&dc->ndev->dev, "failed to initialize DC out ops\n");
 			goto err_put_clk;
@@ -6250,18 +6566,19 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	nvdisp_register_backlight_notifier(dc);
 #endif
 
-	/* For HDMI|DP, hotplug always supported
-	 * For eDP, hotplug is never supported
-	 * For fake DP, SW hotplug is supported
-	 * Else GPIO# determines if hotplug supported
-	 */
-	if (dc->out->type == TEGRA_DC_OUT_HDMI)
-		dc->hotplug_supported = true;
-	else if (dc->out->type == TEGRA_DC_OUT_DP ||
-			dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		dc->hotplug_supported = tegra_dc_is_ext_dp_panel(dc);
+	dc->boot_topology.disp_id = dc->ndev->id;
+	dc->boot_topology.protocol = dc->out->type;
+
+	if (dc->out_ops->get_connector_instance)
+		dc->boot_topology.conn_inst =
+			dc->out_ops->get_connector_instance(dc);
 	else
-		dc->hotplug_supported = dc->out->hotplug_gpio > 0;
+		dc->boot_topology.conn_inst = TEGRA_DC_TOPOLOGY_INVALID;
+
+	dc->boot_topology.valid = true;
+	dc->current_topology = dc->boot_topology;
+
+	dc->hotplug_supported = tegra_dc_hotplug_supported(dc);
 
 	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 		dc->out->type == TEGRA_DC_OUT_LVDS) {
@@ -6286,6 +6603,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 	dc->emc_clk = emc_clk;
 #endif
+
 	/*
 	 * The emc_la clock is being added to set the floor value
 	 * for emc depending on the LA calculaions for each window
@@ -6712,7 +7030,7 @@ static int tegra_dc_resume(struct platform_device *ndev)
 
 #endif /* CONFIG_PM */
 
-static void tegra_dc_shutdown(struct platform_device *ndev)
+void tegra_dc_shutdown(struct platform_device *ndev)
 {
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 

@@ -98,6 +98,8 @@ void tegra_dc_put(struct tegra_dc *dc);
 void tegra_dc_hold_dc_out(struct tegra_dc *dc);
 void tegra_dc_release_dc_out(struct tegra_dc *dc);
 
+bool tegra_dc_hotplug_supported(struct tegra_dc *dc);
+
 /* defined in dc.c, used in ext/dev.c */
 void tegra_dc_call_flip_callback(void);
 
@@ -185,7 +187,8 @@ struct tegra_dsi_cmd *dsi_parse_cmd_dt(struct device *dev,
 		u32 n_cmd);
 
 struct tegra_dc_platform_data
-	*of_dc_parse_platform_data(struct platform_device *ndev);
+	*of_dc_parse_platform_data(struct platform_device *ndev,
+	struct tegra_dc_platform_data *boot_pdata);
 
 struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np);
 void tegra_panel_register_ops(struct tegra_dc_out *dc_out,

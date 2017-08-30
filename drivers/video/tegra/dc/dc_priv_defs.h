@@ -251,6 +251,13 @@ struct tegra_dc_hw_data {
 	enum tegra_dc_hw version;
 };
 
+struct tegra_dc_topology {
+	bool valid;	/* check if topology is dangling */
+	int disp_id;	/* fb id and display logical instance */
+	int protocol;	/* out type */
+	int conn_inst;	/* SOR/DSI instance number. */
+};
+
 struct tegra_dc_flip_stats {
 	atomic64_t flips_skipped;
 	atomic64_t flips_queued;
@@ -558,6 +565,8 @@ struct tegra_dc {
 	struct dentry			*debug_common_dir;
 #endif
 #endif
+	struct tegra_dc_topology		boot_topology;
+	struct tegra_dc_topology		current_topology;
 	struct delayed_work		underflow_work;
 	u32				one_shot_delay_ms;
 	struct delayed_work		one_shot_work;

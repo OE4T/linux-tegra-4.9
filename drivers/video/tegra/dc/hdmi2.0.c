@@ -1725,6 +1725,9 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = NULL;
 
+	if (!dc->current_topology.valid)
+		return;
+
 	hdmi = tegra_dc_get_outdata(dc);
 
 	if (hdmi->pdata->hdmi2fpd_bridge_enable)
@@ -1772,6 +1775,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	devm_kfree(&dc->ndev->dev, hdmi->audio_switch_name);
 	tegra_hdmi_debugfs_remove(hdmi);
 	devm_kfree(&dc->ndev->dev, hdmi);
+	dc->current_topology.valid = false;
 }
 
 static void tegra_hdmi_config(struct tegra_hdmi *hdmi)

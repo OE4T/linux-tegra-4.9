@@ -310,6 +310,9 @@ static const struct soc_enum tegra_virt_t186_arad_source =
 					tegra186_arad_mux_text,
 					tegra186_arad_mux_value);
 
+static const struct soc_enum tegra_virt_t210_mvc_curvetype =
+	SOC_ENUM_SINGLE_EXT(NUM_MVC_CURVETYPE, tegra210_mvc_curve_type_text);
+
 static const struct snd_kcontrol_new tegra_virt_t210ref_controls[] = {
 MUX_ENUM_CTRL_DECL("ADMAIF1 Mux", 0x00, &tegra_virt_t210ref_source),
 MUX_ENUM_CTRL_DECL("ADMAIF2 Mux", 0x01, &tegra_virt_t210ref_source),
@@ -440,6 +443,17 @@ SFC_OUT_FREQ_CTRL_DECL("SFC1 output rate", 0x00),
 SFC_OUT_FREQ_CTRL_DECL("SFC2 output rate", 0x01),
 SFC_OUT_FREQ_CTRL_DECL("SFC3 output rate", 0x02),
 SFC_OUT_FREQ_CTRL_DECL("SFC4 output rate", 0x03),
+
+MVC_CURVE_TYPE_CTRL_DECL("MVC1 Curve Type", 0x00,
+			&tegra_virt_t210_mvc_curvetype),
+MVC_CURVE_TYPE_CTRL_DECL("MVC2 Curve Type", 0x01,
+			&tegra_virt_t210_mvc_curvetype),
+
+MVC_TAR_VOL_CTRL_DECL("MVC1 Vol", 0x00),
+MVC_TAR_VOL_CTRL_DECL("MVC2 Vol", 0x01),
+
+MVC_MUTE_CTRL_DECL("MVC1 Mute", 0x00),
+MVC_MUTE_CTRL_DECL("MVC2 Mute", 0x01),
 
 AMX_ENABLE_CTRL_DECL("AMX1-1 Enable", 0x01, 0x01),
 AMX_ENABLE_CTRL_DECL("AMX1-2 Enable", 0x01, 0x02),
@@ -622,6 +636,17 @@ SFC_OUT_FREQ_CTRL_DECL("SFC1 output rate", 0x00),
 SFC_OUT_FREQ_CTRL_DECL("SFC2 output rate", 0x01),
 SFC_OUT_FREQ_CTRL_DECL("SFC3 output rate", 0x02),
 SFC_OUT_FREQ_CTRL_DECL("SFC4 output rate", 0x03),
+
+MVC_CURVE_TYPE_CTRL_DECL("MVC1 Curve Type", 0x00,
+			&tegra_virt_t210_mvc_curvetype),
+MVC_CURVE_TYPE_CTRL_DECL("MVC2 Curve Type", 0x01,
+			&tegra_virt_t210_mvc_curvetype),
+
+MVC_TAR_VOL_CTRL_DECL("MVC1 Vol", 0x00),
+MVC_TAR_VOL_CTRL_DECL("MVC2 Vol", 0x01),
+
+MVC_MUTE_CTRL_DECL("MVC1 Mute", 0x00),
+MVC_MUTE_CTRL_DECL("MVC2 Mute", 0x01),
 
 ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio1 Int", 0x01),
 ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio2 Int", 0x02),

@@ -78,6 +78,12 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_I2S_GET_LOOPBACK_ENABLE,
 	NVAUDIO_ASRC_SET_RATIO,
 	NVAUDIO_ASRC_GET_RATIO,
+	NVAUDIO_MVC_SET_CURVETYPE,
+	NVAUDIO_MVC_GET_CURVETYPE,
+	NVAUDIO_MVC_SET_TAR_VOL,
+	NVAUDIO_MVC_GET_TAR_VOL,
+	NVAUDIO_MVC_SET_MUTE,
+	NVAUDIO_MVC_GET_MUTE,
 	NVAUDIO_CMD_MAX,
 };
 
@@ -106,6 +112,13 @@ struct nvaudio_ivc_t210_sfc_info {
 	int32_t		id;
 	uint32_t	in_freq;
 	uint32_t	out_freq;
+};
+
+struct nvaudio_ivc_t210_mvc_info {
+	int32_t		id;
+	uint32_t	curve_type;
+	uint32_t	tar_vol;
+	uint32_t	mute;
 };
 
 struct nvaudio_ivc_t186_asrc_info {
@@ -151,6 +164,7 @@ struct nvaudio_ivc_msg {
 		struct nvaudio_ivc_dmaif_info		dmaif_info;
 		struct nvaudio_ivc_t210_amixer_info	amixer_info;
 		struct nvaudio_ivc_t210_sfc_info	sfc_info;
+		struct nvaudio_ivc_t210_mvc_info	mvc_info;
 		struct nvaudio_ivc_t186_asrc_info	asrc_info;
 		struct nvaudio_ivc_t186_arad_info	arad_info;
 		struct nvaudio_ivc_t210_amx_info	amx_info;

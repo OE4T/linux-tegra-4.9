@@ -47,6 +47,11 @@ const char * const tegra186_asrc_ratio_source_text[] = {
 	"SW",
 };
 
+const char * const tegra210_mvc_curve_type_text[] = {
+	"Poly",
+	"Linear",
+};
+
 int tegra_virt_t210mixer_get_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -360,6 +365,113 @@ int tegra_virt_t210sfc_set_out_freq(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 EXPORT_SYMBOL(tegra_virt_t210sfc_set_out_freq);
+
+int tegra_virt_t210mvc_get_curve_type(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mvc_get_curve_type);
+
+int tegra_virt_t210mvc_set_curve_type(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	long int reg = (long int)kcontrol->tlv.p;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_MVC_SET_CURVETYPE;
+	msg.params.mvc_info.id = reg;
+	msg.params.mvc_info.curve_type =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mvc_set_curve_type);
+
+int tegra_virt_t210mvc_get_tar_vol(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mvc_get_tar_vol);
+
+int tegra_virt_t210mvc_set_tar_vol(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_MVC_SET_TAR_VOL;
+	msg.params.mvc_info.id = reg;
+	msg.params.mvc_info.tar_vol =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mvc_set_tar_vol);
+
+int tegra_virt_t210mvc_get_mute(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mvc_get_mute);
+
+int tegra_virt_t210mvc_set_mute(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_MVC_SET_MUTE;
+	msg.params.mvc_info.id = reg;
+	msg.params.mvc_info.mute =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mvc_set_mute);
 
 int tegra186_virt_asrc_get_ratio(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)

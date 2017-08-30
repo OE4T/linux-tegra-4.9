@@ -28,6 +28,8 @@
 #define NUM_ARAD_SOURCES	11
 #define NUM_ARAD_LANES		6
 #define NUM_ASRC_MODE		2
+#define NUM_MVC_CURVETYPE	2
+#define MAX_MVC_TAR_VOL         16000
 
 #define MIXER_GAIN_CTRL_DECL(ename, reg) \
 	SOC_SINGLE_EXT(ename, reg,	\
@@ -59,6 +61,24 @@
 	0, 192000, 0,	\
 	tegra_virt_t210sfc_get_out_freq,	\
 	tegra_virt_t210sfc_set_out_freq)
+
+#define MVC_CURVE_TYPE_CTRL_DECL(ename, reg, src) \
+	SOC_ENUM_EXT_REG(ename, reg,	\
+	src,	\
+	tegra_virt_t210mvc_get_curve_type,	\
+	tegra_virt_t210mvc_set_curve_type)
+
+#define MVC_TAR_VOL_CTRL_DECL(ename, id) \
+	SOC_SINGLE_EXT(ename, id,	\
+	0, MAX_MVC_TAR_VOL, 0,	\
+	tegra_virt_t210mvc_get_tar_vol,	\
+	tegra_virt_t210mvc_set_tar_vol)
+
+#define MVC_MUTE_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 1, 0,	\
+	tegra_virt_t210mvc_get_mute,	\
+	tegra_virt_t210mvc_set_mute)
 
 #define ASRC_RATIO_INT_CTRL_DECL(ename, reg) \
 	SOC_SINGLE_EXT(ename, reg,	\
@@ -169,6 +189,7 @@ enum {
 extern const int tegra186_arad_mux_value[];
 extern const char * const tegra186_arad_mux_text[];
 extern const char * const tegra186_asrc_ratio_source_text[];
+extern const char * const tegra210_mvc_curve_type_text[];
 
 int tegra_virt_t210mixer_get_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
@@ -195,6 +216,21 @@ int tegra_virt_t210sfc_set_in_freq(struct snd_kcontrol *kcontrol,
 int tegra_virt_t210sfc_get_out_freq(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int tegra_virt_t210sfc_set_out_freq(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
+int tegra_virt_t210mvc_get_curve_type(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210mvc_set_curve_type(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
+int tegra_virt_t210mvc_get_tar_vol(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210mvc_set_tar_vol(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
+int tegra_virt_t210mvc_get_mute(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210mvc_set_mute(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 
 int tegra186_virt_asrc_get_ratio(struct snd_kcontrol *kcontrol,

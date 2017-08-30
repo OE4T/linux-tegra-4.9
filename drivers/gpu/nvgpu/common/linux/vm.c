@@ -243,7 +243,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		err = -EINVAL;
 		goto clean_up;
 	} else {
-		bfr.kind_v = kind;
+		bfr.kind_v = (u8)kind;
 	}
 	bfr.size = dmabuf->size;
 	sgl = bfr.sgt->sgl;

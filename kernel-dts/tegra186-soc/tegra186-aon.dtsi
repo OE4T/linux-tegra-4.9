@@ -19,7 +19,7 @@
 / {
 	aon: aon@c160000 {
 		compatible = "nvidia,tegra186-aon";
-		reg = <0x0 0x0c1a0000 0x0 0x20000>; /* AON shared semaphore */
+		reg = <0x0 0x0c1a0000 0x0 0x40000>; /* AON shared semaphore */
 		#mbox-cells = <1>;
 		iommus = <&smmu TEGRA_SID_AON>;
 		status = "disabled";
@@ -27,8 +27,10 @@
 		nvidia,hsp-shared-mailbox-names = "ivc-pair";
 		nvidia,ivc-carveout-base-ss = <0>;
 		nvidia,ivc-carveout-size-ss = <1>;
-		nvidia,ivc-notify-ss = <1>;
+		nvidia,ivc-rx-ss = <2>;
+		nvidia,ivc-tx-ss = <3>;
 		nvidia,ivc-dbg-enable-ss = <0>;
+
 
 		ivc-channels@80000000 {
 			#address-cells = <1>;

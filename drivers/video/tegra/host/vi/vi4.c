@@ -66,7 +66,7 @@ static irqreturn_t nvhost_vi4_error_isr(int irq, void *dev_id)
 	r = host1x_readl(pdev, VI_NOTIFY_ERROR_0);
 	if (r) {
 		host1x_writel(pdev, VI_NOTIFY_ERROR_0, 1);
-		dev_err(&pdev->dev, "notify buffer overflow\n");
+		dev_err_ratelimited(&pdev->dev, "notify buffer overflow\n");
 		atomic_inc(&vi->notify_overflow);
 
 		/* FIXME: does not work with RTCPU-based VI Notify */
@@ -77,20 +77,20 @@ static irqreturn_t nvhost_vi4_error_isr(int irq, void *dev_id)
 	r = host1x_readl(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0);
 	if (r) {
 		host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0, r);
-		dev_err(&pdev->dev, "safety error mask 0x%08X\n", r);
+		dev_err_ratelimited(&pdev->dev, "safety error mask 0x%08X\n", r);
 	}
 
 	r = host1x_readl(pdev, VI_FMLITE_ERROR_0);
 	if (r) {
 		host1x_writel(pdev, VI_FMLITE_ERROR_0, 1);
-		dev_err(&pdev->dev, "FM-Lite buffer overflow\n");
+		dev_err_ratelimited(&pdev->dev, "FM-Lite buffer overflow\n");
 		atomic_inc(&vi->fmlite_overflow);
 	}
 
 	r = host1x_readl(pdev, VI_CFG_INTERRUPT_STATUS_0);
 	if (r) {
 		host1x_writel(pdev, VI_CFG_INTERRUPT_STATUS_0, 1);
-		dev_err(&pdev->dev, "master error\n");
+		dev_err_ratelimited(&pdev->dev, "master error\n");
 		atomic_inc(&vi->overflow);
 	}
 

@@ -36,13 +36,12 @@
 
 	ether_qos@2490000 {
 		prod-settings {
-			#prod-cells = <3>;
+			#prod-cells = <4>;
 			prod {
-				prod = <
-					0x00008800 0xDFF7FFFF 0x08000007	// ETHER_QOS_SDMEMCOMPPADCTRL_0
-										// 0:3 EQOS2TMC_CFG_SDMEMCOMP_VREF_SEL 0x7
-										// 27:28 COMP_PAD_DRV_TYPE 0x1
-										// 31 PAD_E_INPUT_OR_E_PWRD 0x0 (to save power)
+				prod = <0 0x8800 0xDFF7FFFF 0x08000007	// ETHER_QOS_SDMEMCOMPPADCTRL_0
+									// 0:3 EQOS2TMC_CFG_SDMEMCOMP_VREF_SEL 0x7
+									// 27:28 COMP_PAD_DRV_TYPE 0x1
+									// 31 PAD_E_INPUT_OR_E_PWRD 0x0 (to save power)
 				>;
 			};
 		};

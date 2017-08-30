@@ -2499,6 +2499,43 @@ static INT mdio_poll(void)
 	return -Y_FAILURE;
 }
 
+static int write_c45_phy_regs(int phyaddr, int phyreg, u16 phydata,
+			      int mdc_cr)
+{
+	u8 devadd = ((phyreg >> 16) & 0x1f);
+	u16 reg = (u16)(phyreg & 0xffff);
+	unsigned long mac_gmiiar;
+
+	/* write the data */
+	MAC_GMIIDR_GD_WR(phydata);
+
+	/* Write the register address */
+	MAC_GMIIDR_RA_WR(reg);
+
+	/* initiate the MII write operation by updating desired */
+	/* phy address/id (0 - 31) */
+	/* device address */
+	/* CSR Clock Range (20 - 35MHz) */
+	/* Select write operation */
+	/* Set Clause 45 PHY Enable */
+	/* set busy bit */
+	mdc_cr <<= 8;
+
+	mac_gmiiar = ((phyaddr) << 21) | ((devadd) << 16) | mdc_cr |
+		     BIT(2) | BIT(1) | BIT(0);
+
+	MAC_GMIIAR_WR(mac_gmiiar);
+
+	/* delay some to allow mac to set busy bit */
+	udelay(2);
+
+	/* wait for MII write operation to complete */
+	if (mdio_poll() == -Y_FAILURE)
+		return -Y_FAILURE;
+
+	return Y_SUCCESS;
+}
+
 static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data,
 				INT mdc_cr)
 {
@@ -2507,6 +2544,10 @@ static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data,
 	/* wait for any previous MII read/write operation to complete */
 	if (mdio_poll() == -Y_FAILURE)
 		return -Y_FAILURE;
+
+	if (phy_reg & MII_ADDR_C45)
+		return write_c45_phy_regs(phy_id, phy_reg, phy_reg_data,
+					  mdc_cr);
 
 	/* write the data */
 	MAC_GMIIDR_GD_WR(phy_reg_data);
@@ -2532,6 +2573,47 @@ static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data,
 	return Y_SUCCESS;
 }
 
+static int read_c45_phy_regs(int phyaddr, int phyreg, int *phy_reg_data,
+			     int mdc_cr)
+{
+	u8 devadd = ((phyreg >> 16) & 0x1f);
+	u16 reg = (u16)(phyreg & 0xffff);
+	unsigned long mac_gmiiar;
+	unsigned long mac_gmiidr;
+
+	/* Write the register address */
+	MAC_GMIIDR_RA_WR(reg);
+
+	/* initiate the MII write operation by updating desired */
+	/* phy address/id (0 - 31) */
+	/* device address */
+	/* CSR Clock Range (20 - 35MHz) */
+	/* Select read operation */
+	/* Set Clause 45 PHY Enable */
+	/* set busy bit */
+	mdc_cr <<= 8;
+
+	mac_gmiiar = ((phyaddr) << 21) | ((devadd) << 16) | mdc_cr |
+		     ((0x3) << 2) | BIT(1) | BIT(0);
+
+	MAC_GMIIAR_WR(mac_gmiiar);
+
+	/* delay some to allow mac to set busy bit */
+	udelay(2);
+
+	/* wait for MII write operation to complete */
+	if (mdio_poll() == -Y_FAILURE)
+		return -Y_FAILURE;
+
+	/* read the data */
+	MAC_GMIIDR_RD(mac_gmiidr);
+
+	*phy_reg_data =
+		GET_VALUE(mac_gmiidr, MAC_GMIIDR_GD_LPOS, MAC_GMIIDR_GD_HPOS);
+
+	return 0;
+}
+
 /*!
 * \brief This sequence is used to read the phy registers
 * \param[in] phy_id
@@ -2551,6 +2633,9 @@ static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data,
 	/* wait for any previous MII read/write operation to complete */
 	if (mdio_poll() == -Y_FAILURE)
 		return -Y_FAILURE;
+
+	if (phy_reg & MII_ADDR_C45)
+		return read_c45_phy_regs(phy_id, phy_reg, phy_reg_data, mdc_cr);
 
 	/* initiate the MII read operation by updating desired */
 	/* phy address/id (0 - 31) */

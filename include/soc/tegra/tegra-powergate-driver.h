@@ -56,7 +56,7 @@ struct tegra_powergate_driver_ops {
 };
 
 /* INIT APIs: New SoC needs to add its support here */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 struct tegra_powergate_driver_ops *tegra210_powergate_init_chip_support(void);
 #else
 static inline

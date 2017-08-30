@@ -43,7 +43,7 @@
 				reg = <0x0>;
 				ti,rail-name = "VDD_IN";
 				ti,shunt-resistor-mohm = <20>;
-				ti,current-critical-limit-ma = <2105>;
+				ti,power-critical-limit-mw = <40000>;
 				shunt-volt-offset-uv = <&p2180_shuntv_offset>;
 			};
 

@@ -23,11 +23,6 @@
 #include <media/capture.h>
 #include <media/capture_vi_channel.h>
 
-#ifdef CONFIG_TEGRA_T19X_GRHOST
-#include "host1x/host1x.h"
-#include "nvhost_syncpt_unit_interface.h"
-#endif
-
 #include "soc/tegra/camrtc-capture.h"
 #include "soc/tegra/camrtc-capture-messages.h"
 
@@ -35,6 +30,10 @@
 #define CAPTURE_CHANNEL_UNKNOWN_RESP 0xFFFFFFFF
 #define CAPTURE_CHANNEL_INVALID_ID 0xFFFF
 #define CAPTURE_CHANNEL_INVALID_MASK 0llu
+#define PROGRESS_SP_IDX 0
+#define EMBDATA_SP_IDX 1
+#define LINETIMER_SP_IDX 2
+#define CAPTURE_CHANNEL_MAX_NUM_SPS 3
 
 struct vi_capture_buf {
 	struct dma_buf *buf;
@@ -57,9 +56,7 @@ struct vi_capture {
 	uint32_t queue_depth;
 	uint32_t request_size;
 
-	struct syncpoint_info progress_sp;
-	struct syncpoint_info embdata_sp;
-	struct syncpoint_info linetimer_sp;
+	uint32_t syncpts[CAPTURE_CHANNEL_MAX_NUM_SPS];
 
 	struct completion control_resp;
 	struct completion capture_resp;
@@ -311,106 +308,24 @@ static void unpin_memory(struct vi_capture_buf *unpin_data)
 	unpin_data->iova = 0;
 }
 
-static int vi_capture_setup_syncpts(struct tegra_vi_channel *chan, uint32_t flags);
+static int vi_capture_setup_syncpts(struct tegra_vi_channel *chan);
 static void vi_capture_release_syncpts(struct tegra_vi_channel *chan);
 
-static int vi_capture_setup_syncpt(struct tegra_vi_channel *chan,
-				const char *name, bool enable,
-				struct syncpoint_info *sp)
-{
-	struct platform_device *pdev = chan->ndev;
-	uint32_t id;
-
-	memset(sp, 0, sizeof(*sp));
-	sp->gos_index = GOS_INDEX_INVALID;
-
-	if (!enable)
-		return 0;
-
-	id = nvhost_get_syncpt_client_managed(pdev, name);
-	if (id == 0)
-		return -ENODEV;
-
-	sp->id = id;
-
-#ifdef CONFIG_TEGRA_T19X_GRHOST
-	sp->shim_addr = nvhost_syncpt_address(pdev, id);
-#endif
-
-	return 0;
-}
-
-#ifdef CONFIG_TEGRA_T19X_GRHOST
-static int vi_capture_setup_gos(struct tegra_vi_channel *chan,
-				struct syncpoint_info *sp)
-{
-	struct platform_device *pdev = chan->ndev;
-	uint32_t gos_id, gos_offset;
-	int err = -ENODEV;
-
-	err = nvhost_syncpt_alloc_gos_backing(pdev, sp->id);
-	if (err < 0)
-		return err;
-
-	err = nvhost_syncpt_get_gos(pdev, sp->id, &gos_id, &gos_offset);
-	if (err < 0)
-		goto cleanup;
-
-	sp->gos_index = gos_id;
-	sp->gos_offset = gos_offset;
-
-	return 0;
-
-cleanup:
-	dev_err(chan->dev, "%s: syncpoint %i GoS setup failed: %d",
-		__func__, sp->id, err);
-
-	return err;
-}
-
-static void vi_capture_release_gos(struct tegra_vi_channel *chan,
-				struct syncpoint_info *sp)
-{
-	if (sp->id) {
-		struct nvhost_syncpt *syncpt =
-			nvhost_get_syncpt_owner_struct(sp->id, NULL);
-
-		if (syncpt)
-			nvhost_syncpt_release_gos_backing(syncpt, sp->id);
-		else
-			dev_err(chan->dev, "%s: syncpoint %i GoS release failed!",
-				__func__, sp->id);
-	}
-}
-#endif
-
-static int vi_capture_setup_syncpts(struct tegra_vi_channel *chan, uint32_t flags)
+static int vi_capture_setup_syncpts(struct tegra_vi_channel *chan)
 {
 	struct vi_capture *capture = chan->capture_data;
+	int i;
 	int err = 0;
 
-	err = vi_capture_setup_syncpt(chan, "progress", true,
-			&capture->progress_sp);
-	if (err < 0)
-		goto fail;
-
-	err = vi_capture_setup_syncpt(chan, "embdata",
-				(flags & CAPTURE_CHANNEL_FLAG_EMBDATA) != 0,
-				&capture->embdata_sp);
-	if (err < 0)
-		goto fail;
-
-	err = vi_capture_setup_syncpt(chan, "linetimer",
-				(flags & CAPTURE_CHANNEL_FLAG_LINETIMER) != 0,
-				&capture->embdata_sp);
-	if (err < 0)
-		goto fail;
-
-#ifdef CONFIG_TEGRA_T19X_GRHOST
-	err = vi_capture_setup_gos(chan, &capture->progress_sp);
-	if (err < 0)
-		goto fail;
-#endif
+	for (i = 0; i < CAPTURE_CHANNEL_MAX_NUM_SPS; i++) {
+			capture->syncpts[i] = nvhost_get_syncpt_client_managed(
+			chan->ndev, "vi-capture");
+		if (capture->syncpts[i] == 0) {
+			dev_err(chan->dev, "failed to get syncpt %i!\n", i);
+			err = -ENODEV;
+			goto fail;
+		}
+	}
 
 	return 0;
 
@@ -419,26 +334,17 @@ fail:
 	return err;
 }
 
-static void vi_capture_release_syncpt(struct tegra_vi_channel *chan,
-				struct syncpoint_info *sp)
-{
-	if (sp->id)
-		nvhost_syncpt_put_ref_ext(chan->ndev, sp->id);
-
-	memset(sp, 0, sizeof(*sp));
-}
-
 static void vi_capture_release_syncpts(struct tegra_vi_channel *chan)
 {
 	struct vi_capture *capture = chan->capture_data;
+	int i;
 
-#ifdef CONFIG_TEGRA_T19X_GRHOST
-	vi_capture_release_gos(chan, &capture->progress_sp);
-#endif
-
-	vi_capture_release_syncpt(chan, &capture->progress_sp);
-	vi_capture_release_syncpt(chan, &capture->embdata_sp);
-	vi_capture_release_syncpt(chan, &capture->linetimer_sp);
+	for (i = 0; i < CAPTURE_CHANNEL_MAX_NUM_SPS; i++) {
+		if (capture->syncpts[i] != 0)
+			nvhost_syncpt_put_ref_ext(chan->ndev,
+					capture->syncpts[i]);
+		capture->syncpts[i] = 0;
+	}
 }
 
 int vi_capture_setup(struct tegra_vi_channel *chan,
@@ -496,9 +402,11 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 		goto unpins_list_fail;
 	}
 
-	err = vi_capture_setup_syncpts(chan, setup->channel_flags);
-	if (err < 0)
+	err = vi_capture_setup_syncpts(chan);
+	if (err < 0) {
+		dev_err(chan->dev, "%s: syncpt setup failed\n", __func__);
 		goto syncpt_fail;
+	}
 
 	err = tegra_capture_ivc_register_control_cb(
 			&vi_capture_ivc_control_callback,
@@ -519,9 +427,9 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	config->request_size = setup->request_size;
 	config->requests = capture->requests.iova;
 
-	config->progress_sp = capture->progress_sp;
-	config->embdata_sp = capture->embdata_sp;
-	config->linetimer_sp = capture->linetimer_sp;
+	config->progress_sp.id = capture->syncpts[PROGRESS_SP_IDX];
+	config->embdata_sp.id = capture->syncpts[EMBDATA_SP_IDX];
+	config->linetimer_sp.id = capture->syncpts[LINETIMER_SP_IDX];
 
 	err = vi_capture_ivc_send_control(chan, &control_desc,
 			sizeof(control_desc), CAPTURE_CHANNEL_SETUP_RESP);
@@ -681,19 +589,18 @@ submit_fail:
 }
 
 static int vi_capture_read_syncpt(struct tegra_vi_channel *chan,
-		struct syncpoint_info *sp, uint32_t *val)
+		uint32_t index, uint32_t *val)
 {
+	struct vi_capture *capture = chan->capture_data;
 	int err;
 
-	if (sp->id) {
-		err = nvhost_syncpt_read_ext_check(chan->ndev,
-						sp->id, val);
-		if (err < 0) {
-			dev_err(chan->dev,
-				"%s: get syncpt %i val failed\n", __func__,
-				sp->id);
-			return -EINVAL;
-		}
+	err = nvhost_syncpt_read_ext_check(chan->ndev,
+			capture->syncpts[index], val);
+	if (err < 0) {
+		dev_err(chan->dev,
+			 "%s: get progress syncpt %i val failed\n", __func__,
+			 index);
+		return -EINVAL;
 	}
 
 	return 0;
@@ -720,19 +627,19 @@ int vi_capture_get_info(struct tegra_vi_channel *chan,
 	if (info == NULL)
 		return -EINVAL;
 
-	info->syncpts.progress_syncpt = capture->progress_sp.id;
-	info->syncpts.emb_data_syncpt = capture->embdata_sp.id;
-	info->syncpts.line_timer_syncpt = capture->linetimer_sp.id;
+	info->syncpts.progress_syncpt = capture->syncpts[PROGRESS_SP_IDX];
+	info->syncpts.emb_data_syncpt = capture->syncpts[EMBDATA_SP_IDX];
+	info->syncpts.line_timer_syncpt = capture->syncpts[LINETIMER_SP_IDX];
 
-	err = vi_capture_read_syncpt(chan, &capture->progress_sp,
+	err = vi_capture_read_syncpt(chan, PROGRESS_SP_IDX,
 			&info->syncpts.progress_syncpt_val);
 	if (err < 0)
 		return err;
-	err = vi_capture_read_syncpt(chan, &capture->embdata_sp,
+	err = vi_capture_read_syncpt(chan, EMBDATA_SP_IDX,
 			&info->syncpts.emb_data_syncpt_val);
 	if (err < 0)
 		return err;
-	err = vi_capture_read_syncpt(chan, &capture->linetimer_sp,
+	err = vi_capture_read_syncpt(chan, LINETIMER_SP_IDX,
 			&info->syncpts.line_timer_syncpt_val);
 	if (err < 0)
 		return err;

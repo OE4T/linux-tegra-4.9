@@ -12,10 +12,6 @@ ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 obj-y += mc_common.o core.o channel.o graph.o vi2_fops.o vi4_fops.o
 endif
 
-ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
-ccflags-y += -I$(srctree)/../t19x/drivers/video/tegra/host
-endif
-
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += capture.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += capture_vi_channel.o
 

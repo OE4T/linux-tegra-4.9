@@ -55,6 +55,7 @@
 #include "gp10b/gr_gp10b.h"
 
 #include "gp106/pmu_gp106.h"
+#include "gp106/acr_gp106.h"
 
 #include "hal_gv11b.h"
 #include "gr_gv11b.h"
@@ -65,6 +66,7 @@
 #include "gr_ctx_gv11b.h"
 #include "mm_gv11b.h"
 #include "pmu_gv11b.h"
+#include "acr_gv11b.h"
 #include "fb_gv11b.h"
 #include "fifo_gv11b.h"
 #include "gv11b_gating_reglist.h"
@@ -79,6 +81,7 @@
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_top_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_pwr_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_fuse_gv11b.h>
 
 static int gv11b_get_litter_value(struct gk20a *g, int value)
 {
@@ -633,6 +636,8 @@ int gv11b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
+	u32 val;
+	bool priv_security;
 
 	gops->ltc = gv11b_ops.ltc;
 	gops->ce2 = gv11b_ops.ce2;
@@ -661,33 +666,38 @@ int gv11b_init_hal(struct gk20a *g)
 		gv11b_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = gv11b_ops.get_litter_value;
 
-	/* boot in non-secure modes for time being */
+	val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
+	if (val) {
+		priv_security = true;
+		pr_err("priv security is enabled\n");
+	} else {
+		priv_security = false;
+		pr_err("priv security is disabled\n");
+	}
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, false);
-	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
-	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
+	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, priv_security);
+	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, priv_security);
 
 	/* priv security dependent ops */
 	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
 		/* Add in ops from gm20b acr */
-		gops->pmu.prepare_ucode = prepare_ucode_blob,
-		gops->pmu.pmu_setup_hw_and_bootstrap = gm20b_bootstrap_hs_flcn,
-		gops->pmu.is_lazy_bootstrap = gm20b_is_lazy_bootstrap,
-		gops->pmu.is_priv_load = gm20b_is_priv_load,
+		gops->pmu.prepare_ucode = gp106_prepare_ucode_blob,
+		gops->pmu.pmu_setup_hw_and_bootstrap = gv11b_bootstrap_hs_flcn,
 		gops->pmu.get_wpr = gm20b_wpr_info,
 		gops->pmu.alloc_blob_space = gm20b_alloc_blob_space,
 		gops->pmu.pmu_populate_loader_cfg =
-			gm20b_pmu_populate_loader_cfg,
+			gp106_pmu_populate_loader_cfg,
 		gops->pmu.flcn_populate_bl_dmem_desc =
-			gm20b_flcn_populate_bl_dmem_desc,
+			gp106_flcn_populate_bl_dmem_desc,
 		gops->pmu.falcon_wait_for_halt = pmu_wait_for_halt,
 		gops->pmu.falcon_clear_halt_interrupt_status =
 			clear_halt_interrupt_status,
-		gops->pmu.init_falcon_setup_hw = gm20b_init_pmu_setup_hw1,
+		gops->pmu.init_falcon_setup_hw = gv11b_init_pmu_setup_hw1,
 
 		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
 		gops->pmu.load_lsfalcon_ucode = gp10b_load_falcon_ucode;
-		gops->pmu.is_lazy_bootstrap = gp10b_is_lazy_bootstrap;
-		gops->pmu.is_priv_load = gp10b_is_priv_load;
+		gops->pmu.is_lazy_bootstrap = gv11b_is_lazy_bootstrap,
+		gops->pmu.is_priv_load = gv11b_is_priv_load,
 
 		gops->gr.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode;
 	} else {
@@ -702,8 +712,10 @@ int gv11b_init_hal(struct gk20a *g)
 		gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
 	}
 
+	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	gv11b_init_uncompressed_kind_map();
 	gv11b_init_kind_attr();
+	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 
 	g->name = "gv11b";
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -133,5 +133,13 @@ static inline u32 fuse_opt_ecc_en_r(void)
 static inline u32 fuse_opt_feature_fuses_override_disable_r(void)
 {
 	return 0x000213f0;
+}
+static inline u32 fuse_opt_sec_debug_en_r(void)
+{
+	return 0x00021218;
+}
+static inline u32 fuse_opt_priv_sec_en_r(void)
+{
+	return 0x00021434;
 }
 #endif

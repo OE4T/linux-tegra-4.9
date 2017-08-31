@@ -695,8 +695,8 @@ static void dfll_tune_low(struct tegra_dfll *td)
 {
 	td->tune_range = DFLL_TUNE_LOW;
 
-	dfll_writel(td, td->soc->cvb->cpu_dfll_data.tune0_low, DFLL_TUNE0);
-	dfll_writel(td, td->soc->cvb->cpu_dfll_data.tune1_low, DFLL_TUNE1);
+	dfll_writel(td, td->soc->tune0_low, DFLL_TUNE0);
+	dfll_writel(td, td->soc->tune1_low, DFLL_TUNE1);
 	dfll_wmb(td);
 
 	if (td->soc->set_clock_trimmers_low)
@@ -723,14 +723,14 @@ static void dfll_tune_high(struct tegra_dfll *td)
 
 	td->tune_range = DFLL_TUNE_HIGH;
 
-	tune0_high = td->soc->cvb->cpu_dfll_data.tune0_high;
+	tune0_high = td->soc->tune0_high;
 	if (!tune0_high)
-		tune0_high = td->soc->cvb->cpu_dfll_data.tune0_low;
+		tune0_high = td->soc->tune0_low;
 	dfll_writel(td, tune0_high, DFLL_TUNE0);
 
-	tune1_high = td->soc->cvb->cpu_dfll_data.tune1_high;
+	tune1_high = td->soc->tune1_high;
 	if (!tune1_high)
-		tune1_high = td->soc->cvb->cpu_dfll_data.tune1_low;
+		tune1_high = td->soc->tune1_low;
 	dfll_writel(td, tune1_high, DFLL_TUNE1);
 
 	dfll_wmb(td);
@@ -2620,11 +2620,11 @@ static void dfll_init_tuning_thresholds(struct tegra_dfll *td)
 	if ((out_min + 2) > max_voltage_index)
 		return;
 
-	if (td->soc->cvb->cpu_dfll_data.tune_high_margin_millivolts) {
+	if (td->soc->tune_high_margin_millivolts) {
 		unsigned int mv;
 
 		mv = td->soc->tune_high_min_millivolts +
-		   td->soc->cvb->cpu_dfll_data.tune_high_margin_millivolts;
+		   td->soc->tune_high_margin_millivolts;
 		if (mv * 1000 > td->lut_uv[max_voltage_index])
 			return;
 		out_start = max((u8)(out_min + 1), find_mv_out_cap(td, mv));

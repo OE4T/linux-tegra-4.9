@@ -605,6 +605,13 @@ static int get_alignment_from_regulator(struct device *dev,
 	return 0;
 }
 
+#define INIT_TUNE_PRAM(p) \
+do {								\
+	if (of_property_read_u32(pdev->dev.of_node,		\
+			"nvidia,dfll-override-" #p, &soc->p))	\
+		soc->p = soc->cvb->cpu_dfll_data.p;		\
+} while (0)
+
 static int tegra124_dfll_fcpu_probe(struct platform_device *pdev)
 {
 	int process_id, speedo_id, speedo_value, err;
@@ -680,8 +687,12 @@ static int tegra124_dfll_fcpu_probe(struct platform_device *pdev)
 		return PTR_ERR(soc->cvb);
 	}
 
-	soc->tune_high_min_millivolts =
-		soc->cvb->cpu_dfll_data.tune_high_min_millivolts;
+	INIT_TUNE_PRAM(tune0_low);
+	INIT_TUNE_PRAM(tune0_high);
+	INIT_TUNE_PRAM(tune1_low);
+	INIT_TUNE_PRAM(tune1_high);
+	INIT_TUNE_PRAM(tune_high_min_millivolts);
+	INIT_TUNE_PRAM(tune_high_margin_millivolts);
 
 	thermal = fcpu_data->cpu_thermal_table;
 	err = tegra_cvb_build_thermal_table(thermal, speedo_value,

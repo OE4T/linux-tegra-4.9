@@ -1699,6 +1699,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			__func__, err);
 #endif
 
+#ifdef CONFIG_TEGRA_HDA_DC
+	tegra_hda_init(dc, hdmi);
+#endif
+
 	hdmi_instance++;
 	return 0;
 
@@ -1717,6 +1721,10 @@ fail_sor_np:
 static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+#ifdef CONFIG_TEGRA_HDA_DC
+	tegra_hda_destroy(hdmi->hda_handle);
+#endif
 
 	tegra_hdmi_debugfs_remove(hdmi);
 	if (hdmi->pdata->hdmi2fpd_bridge_enable)
@@ -2674,7 +2682,10 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	hdmi->enabled = true;
 
-	hdmi->hda_handle = tegra_hda_set_data(dc, hdmi, SINK_HDMI);
+#ifdef CONFIG_TEGRA_HDA_DC
+	tegra_hda_enable(hdmi->hda_handle);
+#endif
+
 #ifdef CONFIG_SWITCH
 	if (!hdmi->dvi)
 		switch_set_state(&hdmi->audio_switch, 1);
@@ -3009,7 +3020,9 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 #endif
 
 	tegra_hdmi_controller_disable(hdmi);
-	tegra_hda_reset_data(hdmi->hda_handle);
+#ifdef CONFIG_TEGRA_HDA_DC
+	tegra_hda_disable(hdmi->hda_handle);
+#endif
 
 	return;
 }

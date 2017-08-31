@@ -2376,6 +2376,11 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 #endif
 
+#ifdef CONFIG_TEGRA_HDA_DC
+	if (tegra_dc_is_ext_dp_panel(dc) && dp->sor->audio_support)
+		tegra_hda_init(dc, dp);
+#endif
+
 	if (!(dc->mode.pclk) && IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
 		tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 
@@ -2917,9 +2922,9 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	/* Host is ready. Start link training. */
 	dp->enabled = true;
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#ifdef CONFIG_TEGRA_HDA_DC
 	if (tegra_dc_is_ext_dp_panel(dc) && sor->audio_support)
-		dp->hda_handle = tegra_hda_set_data(dc, dp, SINK_DP);
+		tegra_hda_enable(dp->hda_handle);
 #endif
 
 	if (likely(dc->out->type != TEGRA_DC_OUT_FAKE_DP) &&
@@ -2976,6 +2981,11 @@ void tegra_dc_dp_enable_link(struct tegra_dc_dp_data *dp)
 static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+
+#ifdef CONFIG_TEGRA_HDA_DC
+	if (tegra_dc_is_ext_dp_panel(dc) && dp->sor->audio_support)
+		tegra_hda_destroy(dp->hda_handle);
+#endif
 
 	tegra_dc_dp_debugfs_remove(dp);
 
@@ -3057,9 +3067,9 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	tegra_dc_io_end(dc);
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
-	if (tegra_dc_is_ext_dp_panel(dc))
-		tegra_hda_reset_data(dp->hda_handle);
+#ifdef CONFIG_TEGRA_HDA_DC
+	if (tegra_dc_is_ext_dp_panel(dc) && dp->sor->audio_support)
+		tegra_hda_disable(dp->hda_handle);
 #endif
 
 #ifdef CONFIG_SWITCH

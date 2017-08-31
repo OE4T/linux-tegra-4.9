@@ -31,8 +31,8 @@
 #include "dp.h"
 #include "hda_dc.h"
 
-static DEFINE_MUTEX(hda_lock);
-static struct tegra_dc_hda_data *hda_inst;
+static struct tegra_hda_inst *hda_inst;
+DEFINE_MUTEX(global_hda_lock);
 
 #define to_hdmi(DATA)	((struct tegra_hdmi *)DATA)
 #define to_dp(DATA)	((struct tegra_dc_dp_data *)DATA)
@@ -57,17 +57,27 @@ EXPORT_SYMBOL(tegra_hda_get_dev_id);
 static int tegra_hda_get_sor_num(int dev_id)
 {
 	int i;
+	int val = -EINVAL;
 
 	if (!hda_inst)
-		return -EAGAIN;
+		goto err;
 
 	for (i = 0; i < tegra_dc_get_numof_dispsors(); i++) {
-		struct tegra_dc_hda_data *hda = &hda_inst[i];
+		struct tegra_dc_hda_data *hda;
 
-		if (hda->valid && (dev_id == hda->dev_id))
-			return hda->sor->ctrl_num;
+		hda = hda_inst[i].hda;
+		if (!hda)
+			continue;
+
+		if (hda_inst[i].valid && (dev_id == hda->dev_id)) {
+			val = hda->sor->ctrl_num;
+			if (val >= tegra_dc_get_numof_dispsors())
+				val = -EINVAL;
+			break;
+		}
 	}
-	return -EINVAL;
+err:
+	return val;
 }
 
 static void tegra_hda_get_eld_header(u8 *eld_mem_block,
@@ -158,17 +168,22 @@ static int tegra_hda_eld_config(struct tegra_dc_hda_data *hda)
 int tegra_hdmi_setup_hda_presence(int dev_id)
 {
 	struct tegra_dc_hda_data *hda;
+	int sor_num, val = -EINVAL;
 
-	int sor_num = tegra_hda_get_sor_num(dev_id);
-	if (sor_num < 0 || sor_num >= tegra_dc_get_numof_dispsors())
-		return -EINVAL;
+	mutex_lock(&global_hda_lock);
+	sor_num = tegra_hda_get_sor_num(dev_id);
+	if (sor_num < 0) {
+		mutex_unlock(&global_hda_lock);
+		return sor_num;
+	}
 
-	hda = &hda_inst[sor_num];
-	if (!hda->valid)
-		return -EAGAIN;
+	mutex_lock(&hda_inst[sor_num].hda_inst_lock);
+	mutex_unlock(&global_hda_lock);
 
-	if (hda->sink == SINK_HDMI && to_hdmi(hda->client_data)->dvi)
-		return -ENODEV;
+	hda = hda_inst[sor_num].hda;
+	if ((hda->sink == TEGRA_DC_OUT_HDMI) &&
+			to_hdmi(hda->client_data)->dvi)
+		goto err;
 
 	if (*(hda->enabled) && *(hda->eld_valid)) {
 		tegra_unpowergate_partition(hda->sor->powergate_id);
@@ -186,22 +201,25 @@ int tegra_hdmi_setup_hda_presence(int dev_id)
 		tegra_dc_io_end(hda->dc);
 		tegra_sor_clk_disable(hda->sor);
 		tegra_powergate_partition(hda->sor->powergate_id);
-		return 0;
+		val = 0;
 	}
 
-	return -ENODEV;
+err:
+	mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
+	return val;
 }
 EXPORT_SYMBOL(tegra_hdmi_setup_hda_presence);
 
 static void tegra_hdmi_audio_infoframe(struct tegra_dc_hda_data *hda)
 {
-	if (hda->sink == SINK_HDMI && to_hdmi(hda->client_data)->dvi)
+	if ((hda->sink == TEGRA_DC_OUT_HDMI) &&
+					to_hdmi(hda->client_data)->dvi)
 		return;
 
 	/* disable audio infoframe before configuring */
 	tegra_sor_writel_ext(hda->sor, NV_SOR_HDMI_AUDIO_INFOFRAME_CTRL, 0);
 
-	if (hda->sink == SINK_HDMI) {
+	if (hda->sink == TEGRA_DC_OUT_HDMI) {
 		to_hdmi(hda->client_data)->audio.channel_cnt =
 			HDMI_AUDIO_CHANNEL_CNT_2;
 		tegra_hdmi_infoframe_pkt_write(to_hdmi(hda->client_data),
@@ -280,10 +298,10 @@ static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src,
 	u32 val;
 	struct tegra_dc_dp_link_config *cfg = NULL;
 
-	if (hda->sink == SINK_DP)
+	if (hda->sink == TEGRA_DC_OUT_DP)
 		cfg = &to_dp(hda->client_data)->link_cfg;
 
-	if (hda->sink == SINK_HDMI && to_hdmi(hda->client_data)->dvi)
+	if ((hda->sink == TEGRA_DC_OUT_HDMI) && to_hdmi(hda->client_data)->dvi)
 		return;
 
 	/* hda is the only audio source */
@@ -298,7 +316,7 @@ static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src,
 		(1 << HDMI_AUDIO_HBR_ENABLE_SHIFT) |
 		tegra_sor_readl_ext(hda->sor, NV_PDISP_SOR_AUDIO_SPARE0_0));
 
-	if (hda->sink == SINK_DP) {
+	if (hda->sink == TEGRA_DC_OUT_DP) {
 		/* program h/vblank sym */
 		tegra_sor_write_field_ext(hda->sor,
 			NV_SOR_DP_AUDIO_HBLANK_SYMBOLS,
@@ -324,7 +342,7 @@ static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src,
 			NV_SOR_DP_OUTPUT_CHANNEL_STATUS2_OVERRIDE_DIS);
 	}
 
-	if (hda->sink == SINK_HDMI) {
+	if (hda->sink == TEGRA_DC_OUT_HDMI) {
 		tegra_hdmi_audio_acr(audio_freq, hda);
 		tegra_hdmi_audio_infoframe(hda);
 	}
@@ -337,17 +355,21 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 {
 	bool valid_freq;
 	struct tegra_dc_hda_data *hda;
+	int sor_num, val = -EINVAL;
 
-	int sor_num = tegra_hda_get_sor_num(dev_id);
-	if (sor_num < 0 || sor_num >= tegra_dc_get_numof_dispsors())
-		return -EINVAL;
+	mutex_lock(&global_hda_lock);
+	sor_num = tegra_hda_get_sor_num(dev_id);
+	if (sor_num < 0) {
+		mutex_unlock(&global_hda_lock);
+		return sor_num;
+	}
 
-	hda = &hda_inst[sor_num];
-	if (!hda->valid)
-		return -ENODEV;
+	mutex_lock(&hda_inst[sor_num].hda_inst_lock);
+	mutex_unlock(&global_hda_lock);
 
-	if (hda->sink == SINK_HDMI && to_hdmi(hda->client_data)->dvi)
-		return -ENODEV;
+	hda = hda_inst[sor_num].hda;
+	if ((hda->sink == TEGRA_DC_OUT_HDMI) && to_hdmi(hda->client_data)->dvi)
+		goto err;
 
 	valid_freq = AUDIO_FREQ_32K == audio_freq ||
 			AUDIO_FREQ_44_1K == audio_freq ||
@@ -368,10 +390,11 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 		tegra_dc_io_end(hda->dc);
 		tegra_sor_clk_disable(hda->sor);
 		tegra_powergate_partition(hda->sor->powergate_id);
-	} else {
-		return -EINVAL;
+		val = 0;
 	}
-	return 0;
+err:
+	mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
+	return val;
 }
 EXPORT_SYMBOL(tegra_hdmi_setup_audio_freq_source);
 
@@ -379,15 +402,19 @@ EXPORT_SYMBOL(tegra_hdmi_setup_audio_freq_source);
 int tegra_hdmi_audio_null_sample_inject(bool on, int dev_id)
 {
 	struct tegra_dc_hda_data *hda;
+	int sor_num;
 
-	int sor_num = tegra_hda_get_sor_num(dev_id);
-	if (sor_num < 0 || sor_num >= tegra_dc_get_numof_dispsors())
-		return -EINVAL;
+	mutex_lock(&global_hda_lock);
+	sor_num = tegra_hda_get_sor_num(dev_id);
+	if (sor_num < 0) {
+		mutex_unlock(&global_hda_lock);
+		return sor_num;
+	}
 
-	hda = &hda_inst[sor_num];
-	if (!hda->valid)
-		return -ENODEV;
+	mutex_lock(&hda_inst[sor_num].hda_inst_lock);
+	mutex_unlock(&global_hda_lock);
 
+	hda = hda_inst[sor_num].hda;
 	tegra_unpowergate_partition(hda->sor->powergate_id);
 	tegra_sor_clk_enable(hda->sor);
 	tegra_dc_io_start(hda->dc);
@@ -407,9 +434,26 @@ int tegra_hdmi_audio_null_sample_inject(bool on, int dev_id)
 	tegra_dc_io_end(hda->dc);
 	tegra_sor_clk_disable(hda->sor);
 	tegra_powergate_partition(hda->sor->powergate_id);
+	mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
 	return 0;
 }
 EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
+
+static void tegra_dc_hda_put_clocks(struct tegra_dc_hda_data *hda)
+{
+	if (!IS_ERR_OR_NULL(hda->hda_clk))
+		clk_put(hda->hda_clk);
+	if (!IS_ERR_OR_NULL(hda->hda2codec_clk))
+		clk_put(hda->hda2codec_clk);
+	if (!IS_ERR_OR_NULL(hda->hda2hdmi_clk))
+		clk_put(hda->hda2hdmi_clk);
+	if (hda->sink == TEGRA_DC_OUT_DP) {
+		if (!IS_ERR_OR_NULL(hda->pll_p_clk))
+			clk_put(hda->pll_p_clk);
+		if (!IS_ERR_OR_NULL(hda->maud_clk))
+			clk_put(hda->maud_clk);
+	}
+}
 
 static void tegra_dc_hda_get_clocks(struct tegra_dc *dc,
 					struct tegra_dc_hda_data *hda)
@@ -440,20 +484,13 @@ static void tegra_dc_hda_get_clocks(struct tegra_dc *dc,
 		goto err_get_clk;
 	}
 
-	if (hda->sink == SINK_DP) {
+	if (hda->sink == TEGRA_DC_OUT_DP) {
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 		hda->pll_p_clk = tegra_disp_of_clk_get_by_name(np_sor,
 						"pllp_out0");
 		if (IS_ERR_OR_NULL(hda->pll_p_clk)) {
 			dev_err(&dc->ndev->dev,
 				"hda: can't get pllp_out0 clock\n");
-			goto err_get_clk;
-		}
-
-		hda->maud_clk = tegra_disp_of_clk_get_by_name(np_sor, "maud");
-		if (IS_ERR_OR_NULL(hda->maud_clk)) {
-			dev_err(&hda->dc->ndev->dev,
-				"hda: can't get maud clock\n");
 			goto err_get_clk;
 		}
 #else
@@ -464,62 +501,29 @@ static void tegra_dc_hda_get_clocks(struct tegra_dc *dc,
 				"hda: can't get pll_p clock\n");
 			goto err_get_clk;
 		}
+#endif
 		hda->maud_clk = tegra_disp_of_clk_get_by_name(np_sor, "maud");
 		if (IS_ERR_OR_NULL(hda->maud_clk)) {
 			dev_err(&hda->dc->ndev->dev,
 				"hda: can't get maud clock\n");
 			goto err_get_clk;
 		}
-#endif
 		clk_set_parent(hda->maud_clk, hda->pll_p_clk);
 	}
 	return;
 
 err_get_clk:
-	if (!IS_ERR_OR_NULL(hda->hda_clk))
-		clk_put(hda->hda_clk);
-	if (!IS_ERR_OR_NULL(hda->hda2codec_clk))
-		clk_put(hda->hda2codec_clk);
-	if (!IS_ERR_OR_NULL(hda->hda2hdmi_clk))
-		clk_put(hda->hda2hdmi_clk);
-	if (hda->sink == SINK_DP) {
-		if (!IS_ERR_OR_NULL(hda->pll_p_clk))
-			clk_put(hda->pll_p_clk);
-		if (!IS_ERR_OR_NULL(hda->maud_clk))
-			clk_put(hda->maud_clk);
-	}
+	tegra_dc_hda_put_clocks(hda);
 	return;
-}
-
-static void tegra_dc_hda_put_clocks(struct tegra_dc_hda_data *hda)
-{
-	if (!hda)
-		return;
-
-	if (!IS_ERR_OR_NULL(hda->hda_clk))
-		clk_put(hda->hda_clk);
-	if (!IS_ERR_OR_NULL(hda->hda2codec_clk))
-		clk_put(hda->hda2codec_clk);
-	if (!IS_ERR_OR_NULL(hda->hda2hdmi_clk))
-		clk_put(hda->hda2hdmi_clk);
-	if (hda->sink == SINK_DP) {
-		if (!IS_ERR_OR_NULL(hda->pll_p_clk))
-			clk_put(hda->pll_p_clk);
-		if (!IS_ERR_OR_NULL(hda->maud_clk))
-			clk_put(hda->maud_clk);
-	}
 }
 
 static void tegra_dc_hda_enable_clocks(struct tegra_dc_hda_data *hda)
 {
-	if (!hda)
-		return;
-
 	clk_prepare_enable(hda->hda_clk);
 	clk_prepare_enable(hda->hda2codec_clk);
 	clk_prepare_enable(hda->hda2hdmi_clk);
 
-	if (hda->sink == SINK_DP) {
+	if (hda->sink == TEGRA_DC_OUT_DP) {
 		clk_set_rate(hda->maud_clk, 102000000);
 		clk_prepare_enable(hda->maud_clk);
 	}
@@ -527,10 +531,7 @@ static void tegra_dc_hda_enable_clocks(struct tegra_dc_hda_data *hda)
 
 static void tegra_dc_hda_disable_clocks(struct tegra_dc_hda_data *hda)
 {
-	if (!hda)
-		return;
-
-	if (hda->sink == SINK_DP)
+	if (hda->sink == TEGRA_DC_OUT_DP)
 		clk_disable_unprepare(hda->maud_clk);
 
 	clk_disable_unprepare(hda->hda2hdmi_clk);
@@ -538,83 +539,134 @@ static void tegra_dc_hda_disable_clocks(struct tegra_dc_hda_data *hda)
 	clk_disable_unprepare(hda->hda_clk);
 }
 
-void *tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink)
+void tegra_hda_enable(void *hda_handle)
 {
-	int sor_num;
-	struct tegra_dc_sor_data *sor;
-	struct tegra_dc_hda_data *hda;
+	unsigned int sor_num;
+	struct tegra_dc_hda_data *hda = hda_handle;
 
-	if (sink == SINK_HDMI) {
-		sor = to_hdmi(data)->sor;
-		sor_num = sor->ctrl_num;
-	} else if (sink == SINK_DP) {
-		sor = to_dp(data)->sor;
-		sor_num = sor->ctrl_num;
-	} else {
-		dev_err(&dc->ndev->dev, "%s:invalid sink:%d\n", __func__, sink);
-		return NULL;
-	}
+	if (!hda_inst || !hda)
+		return;
 
-	mutex_lock(&hda_lock);
-	if (!hda_inst) {
-		int size = tegra_dc_get_numof_dispsors() * sizeof(*hda_inst);
+	sor_num = hda->sor->ctrl_num;
+	if (sor_num >= tegra_dc_get_numof_dispsors())
+		return;
 
-		hda_inst = kzalloc(size, GFP_KERNEL);
-		if (!hda_inst) {
-			mutex_unlock(&hda_lock);
-			return NULL;
-		}
-	}
-
-	hda = &hda_inst[sor_num];
-	hda->valid = true;
-	mutex_unlock(&hda_lock);
-
-	hda->client_data = data;
-	hda->sink = sink;
-
-	if (hda->sink == SINK_HDMI) {
-		hda->sor = to_hdmi(hda->client_data)->sor;
-		hda->dc = to_hdmi(hda->client_data)->dc;
-		hda->eld = &to_hdmi(hda->client_data)->eld;
-		hda->enabled = &to_hdmi(hda->client_data)->enabled;
-		hda->eld_valid = &to_hdmi(hda->client_data)->eld_valid;
-	}
-
-	if (hda->sink == SINK_DP) {
-		hda->sor = to_dp(hda->client_data)->sor;
-		hda->dc = to_dp(hda->client_data)->dc;
-		hda->eld = &to_dp(hda->client_data)->hpd_data.eld;
-		hda->enabled = &to_dp(hda->client_data)->enabled;
-		hda->eld_valid =
-			&to_dp(hda->client_data)->hpd_data.eld_retrieved;
-		hda->eld->conn_type = 1; /* For DP, conn_type = 1 */
-	}
-
-	hda->null_sample_inject = false;
-	tegra_dc_hda_get_clocks(dc, hda);
 	tegra_dc_hda_enable_clocks(hda);
+
+	if (hda->sink == TEGRA_DC_OUT_DP)
+		hda->eld->conn_type = 1; /* For DP, conn_type = 1 */
 
 	/* Read the dev_id of the sor */
 	hda->dev_id = tegra_hda_get_dev_id(hda->sor);
+
+	mutex_lock(&global_hda_lock);
+	hda_inst[sor_num].valid = true;
+	hda_inst[sor_num].hda = hda;
+	mutex_unlock(&global_hda_lock);
+
 	tegra_hdmi_setup_hda_presence(hda->dev_id);
-	return (void *)hda;
 }
 
-void tegra_hda_reset_data(void *hda_handle)
+void tegra_hda_disable(void *hda_handle)
 {
-	int i;
-	bool free_hda_mem = true;
+	int sor_num;
 	struct tegra_dc_hda_data *hda = (struct tegra_dc_hda_data *)hda_handle;
 
 	if (!hda || !hda_inst)
 		return;
 
 	tegra_dc_hda_disable_clocks(hda);
-	tegra_dc_hda_put_clocks(hda);
 
-	mutex_lock(&hda_lock);
-	hda->valid = false;
+	mutex_lock(&global_hda_lock);
+	sor_num = tegra_hda_get_sor_num(hda->dev_id);
+	if (sor_num < 0) {
+		mutex_unlock(&global_hda_lock);
+		return;
+	}
+
+	hda_inst[sor_num].valid = false;
+	mutex_unlock(&global_hda_lock);
+}
+
+void tegra_hda_init(struct tegra_dc *dc, void *data)
+{
+	int i, size;
+	struct tegra_dc_hda_data *hda;
+
+	mutex_lock(&global_hda_lock);
+	if (!hda_inst) {
+		size = tegra_dc_get_numof_dispsors() * sizeof(*hda_inst);
+
+		hda_inst = kzalloc(size, GFP_KERNEL);
+		if (!hda_inst) {
+			mutex_unlock(&global_hda_lock);
+			goto err;
+		}
+
+		for (i = 0; i < tegra_dc_get_numof_dispsors(); i++)
+			mutex_init(&hda_inst[i].hda_inst_lock);
+	}
+	mutex_unlock(&global_hda_lock);
+
+	if ((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+			(dc->out->type == TEGRA_DC_OUT_DP)) {
+		hda = kzalloc(sizeof(*hda), GFP_KERNEL);
+		if (!hda)
+			goto err;
+
+		hda->sink = dc->out->type;
+		hda->client_data = data;
+		hda->sink = dc->out->type;
+		hda->null_sample_inject = false;
+		tegra_dc_hda_get_clocks(dc, hda);
+		if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+			struct tegra_hdmi *hdmi = data;
+
+			hdmi->hda_handle = hda;
+			hda->sor = to_hdmi(hda->client_data)->sor;
+			hda->dc = to_hdmi(hda->client_data)->dc;
+			hda->eld = &to_hdmi(hda->client_data)->eld;
+			hda->enabled = &to_hdmi(hda->client_data)->enabled;
+			hda->eld_valid = &to_hdmi(hda->client_data)->eld_valid;
+		} else if (dc->out->type == TEGRA_DC_OUT_DP) {
+			struct tegra_dc_dp_data *dp = data;
+
+			dp->hda_handle = hda;
+			hda->sor = to_dp(hda->client_data)->sor;
+			hda->dc = to_dp(hda->client_data)->dc;
+			hda->eld = &to_dp(hda->client_data)->hpd_data.eld;
+			hda->enabled = &to_dp(hda->client_data)->enabled;
+			hda->eld_valid =
+			&to_dp(hda->client_data)->hpd_data.eld_retrieved;
+		}
+	}
+	return;
+err:
+	dev_err(&dc->ndev->dev,
+		"Failed to allocate hda handle memory");
+}
+
+void tegra_hda_destroy(void *hda_handle)
+{
+	int i, sor_num;
+	bool free_hda_mem = true;
+	struct tegra_dc_hda_data *hda = (struct tegra_dc_hda_data *)hda_handle;
+
+	mutex_lock(&global_hda_lock);
+	if (!hda_inst)
+		goto err;
+
+	if (hda) {
+		sor_num = tegra_hda_get_sor_num(hda->dev_id);
+		if (sor_num < 0)
+			goto err;
+
+		mutex_lock(&hda_inst[sor_num].hda_inst_lock);
+		tegra_dc_hda_put_clocks(hda);
+		kfree(hda);
+		hda = NULL;
+		mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
+	}
 
 	for (i = 0; i < tegra_dc_get_numof_dispsors(); i++) {
 		if (hda_inst[i].valid) {
@@ -622,9 +674,14 @@ void tegra_hda_reset_data(void *hda_handle)
 			break;
 		}
 	}
+
 	if (free_hda_mem) {
+		for (i = 0; i < tegra_dc_get_numof_dispsors(); i++)
+			mutex_destroy(&hda_inst[i].hda_inst_lock);
+
 		kfree(hda_inst);
 		hda_inst = NULL;
 	}
-	mutex_unlock(&hda_lock);
+err:
+	mutex_unlock(&global_hda_lock);
 }

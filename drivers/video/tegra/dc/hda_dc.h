@@ -18,13 +18,7 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_HDA_DC_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_HDA_DC_H__
 
-enum {
-	SINK_HDMI = 0,
-	SINK_DP = 1,
-};
-
 struct tegra_dc_hda_data {
-	bool valid; /* set to true only after tegra_hda_set_data */
 	int dev_id;
 	struct tegra_dc_sor_data *sor;
 	struct tegra_dc *dc;
@@ -42,9 +36,17 @@ struct tegra_dc_hda_data {
 	void *client_data;
 };
 
-void *tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink);
-void tegra_hda_reset_data(void *hda_handle);
+struct tegra_hda_inst {
+	bool valid; /* set to true only after tegra_hda_set_data */
+	struct tegra_dc_hda_data *hda;
+	struct mutex hda_inst_lock;
+};
+
+void tegra_hda_enable(void *hda_handle);
+void tegra_hda_disable(void *hda_handle);
 int tegra_hdmi_setup_hda_presence(int sor_num);
 int tegra_hda_get_dev_id(struct tegra_dc_sor_data *sor);
+void tegra_hda_init(struct tegra_dc *dc, void *data);
+void tegra_hda_destroy(void *hda_handle);
 
 #endif

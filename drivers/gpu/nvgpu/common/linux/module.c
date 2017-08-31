@@ -276,11 +276,6 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	if (!g->power_on)
 		goto done;
 
-	if (gk20a_fifo_is_engine_busy(g)) {
-		ret = -EBUSY;
-		goto done;
-	}
-
 	gk20a_scale_suspend(dev);
 
 	gk20a_cde_suspend(l);

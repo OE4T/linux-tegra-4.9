@@ -96,9 +96,6 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	if (gk20a_fifo_is_engine_busy(g))
-		return -EBUSY;
-
 	ret = gk20a_channel_suspend(g);
 	if (ret)
 		return ret;

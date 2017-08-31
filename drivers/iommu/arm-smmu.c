@@ -2322,7 +2322,6 @@ static int arm_smmu_add_device(struct device *dev)
 	struct dma_iommu_mapping *mapping;
 	int ret;
 	int i;
-	u64 swgids = 0;
 	struct device_node *np = dev_get_dev_node(dev);
 	struct of_phandle_args args;
 	struct of_phandle_args master_spec = {0};
@@ -2376,9 +2375,6 @@ static int arm_smmu_add_device(struct device *dev)
 	}
 
 	cfg = master->cfg;
-
-	for (i = 0; i < cfg->num_streamids; i++)
-		swgids |= BIT(cfg->streamids[i]);
 
 	if (dev_is_pci(dev)) {
 		struct pci_dev *pdev = to_pci_dev(dev);

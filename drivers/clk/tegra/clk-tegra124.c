@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1503,6 +1503,7 @@ static void __init tegra124_132_clock_init_post(struct device_node *np)
  */
 static void __init tegra124_clock_init(struct device_node *np)
 {
+	has_ccplex_therm_control = true;
 	tegra124_132_clock_init_pre(np);
 	tegra_clk_apply_init_table = tegra124_clock_apply_init_table;
 	tegra124_132_clock_init_post(np);

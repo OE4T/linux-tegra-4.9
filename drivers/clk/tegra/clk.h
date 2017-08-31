@@ -1,5 +1,5 @@
-	/*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+/*
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -38,6 +38,7 @@ struct tegra_clk_sync_source {
 
 extern const struct clk_ops tegra_clk_sync_source_ops;
 extern int *periph_clk_enb_refcnt;
+extern bool has_ccplex_therm_control;
 
 struct clk *tegra_clk_register_sync_source(const char *name,
 		unsigned long fixed_rate, unsigned long max_rate);

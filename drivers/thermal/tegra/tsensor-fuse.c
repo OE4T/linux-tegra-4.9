@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014 - 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -79,7 +79,7 @@ static s64 div64_s64_precise(s64 a, s32 b)
 	return r >> 16;
 }
 
-int tegra_calc_shared_calib(const struct tegra_soctherm_fuse *tfuse,
+int tegra_calc_shared_calib(const struct tegra_tsensor_fuse *tfuse,
 			    struct tsensor_shared_calib *shared)
 {
 	u32 val;
@@ -113,11 +113,11 @@ int tegra_calc_shared_calib(const struct tegra_soctherm_fuse *tfuse,
 	return 0;
 }
 
-int tegra_calc_tsensor_calib(const struct tegra_tsensor *sensor,
+int tegra_calc_tsensor_calib(const struct tegra_tsensor_configuration *cfg,
 			     const struct tsensor_shared_calib *shared,
-			     u32 *calibration)
+			     const struct fuse_corr_coeff *corr,
+			     u32 *calibration, u32 offset)
 {
-	const struct tegra_tsensor_group *sensor_group;
 	u32 val, calib;
 	s32 actual_tsensor_ft, actual_tsensor_cp;
 	s32 delta_sens, delta_temp;
@@ -126,9 +126,7 @@ int tegra_calc_tsensor_calib(const struct tegra_tsensor *sensor,
 	s64 temp;
 	int err;
 
-	sensor_group = sensor->group;
-
-	err = tegra_fuse_readl(sensor->calib_fuse_offset, &val);
+	err = tegra_fuse_readl(offset, &val);
 	if (err)
 		return err;
 
@@ -140,8 +138,8 @@ int tegra_calc_tsensor_calib(const struct tegra_tsensor *sensor,
 	delta_sens = actual_tsensor_ft - actual_tsensor_cp;
 	delta_temp = shared->actual_temp_ft - shared->actual_temp_cp;
 
-	mult = sensor_group->pdiv * sensor->config->tsample_ate;
-	div = sensor->config->tsample * sensor_group->pdiv_ate;
+	mult = cfg->pdiv * cfg->tsample_ate;
+	div = cfg->tsample * cfg->pdiv_ate;
 
 	temp = (s64)delta_temp * (1LL << 13) * mult;
 	therma = div64_s64_precise(temp, (s64)delta_sens * div);
@@ -150,10 +148,10 @@ int tegra_calc_tsensor_calib(const struct tegra_tsensor *sensor,
 		((s64)actual_tsensor_cp * shared->actual_temp_ft);
 	thermb = div64_s64_precise(temp, delta_sens);
 
-	temp = (s64)therma * sensor->fuse_corr_alpha;
+	temp = (s64)therma * corr->alpha;
 	therma = div64_s64_precise(temp, CALIB_COEFFICIENT);
 
-	temp = (s64)thermb * sensor->fuse_corr_alpha + sensor->fuse_corr_beta;
+	temp = (s64)thermb * corr->alpha + corr->beta;
 	thermb = div64_s64_precise(temp, CALIB_COEFFICIENT);
 
 	calib = ((u16)therma << SENSOR_CONFIG2_THERMA_SHIFT) |

@@ -2125,9 +2125,6 @@ int tegra186_xusb_padctl_remote_wake_detected(struct phy *phy)
 	padctl = lane->pad->padctl;
 	index = lane->index;
 
-	if (index < 0)
-		return -EINVAL;
-
 	if (is_utmi_phy(phy))
 		return tegra186_utmi_phy_remote_wake_detected(padctl, index);
 	else if (is_usb3_phy(phy))

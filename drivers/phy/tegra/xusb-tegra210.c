@@ -2151,6 +2151,81 @@ static int tegra210_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
 	return 0;
 }
 
+void tegra210_utmi_pad_power_on(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_usb2_lane *usb2;
+	struct tegra_xusb_padctl *padctl;
+	unsigned int index;
+	struct device *dev;
+	u32 reg;
+
+	if (!phy)
+		return;
+
+	lane = phy_get_drvdata(phy);
+	usb2 = to_usb2_lane(lane);
+	padctl = lane->pad->padctl;
+	index = lane->index;
+	dev = padctl->dev;
+
+	dev_info(dev, "power on UTMI pads %d\n", index);
+
+	if (usb2->powered_on)
+		return;
+
+	//tegra210_utmi_bias_pad_power_on(padctl);
+
+	udelay(2);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+	reg &= ~XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
+	reg &= ~XUSB_PADCTL_USB2_OTG_PAD_CTL1_PD_DR;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
+
+	usb2->powered_on = true;
+}
+
+void tegra210_utmi_pad_power_down(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_usb2_lane *usb2;
+	struct tegra_xusb_padctl *padctl;
+	unsigned int index;
+	struct device *dev;
+	u32 reg;
+
+	if (!phy)
+		return;
+
+	lane = phy_get_drvdata(phy);
+	usb2 = to_usb2_lane(lane);
+	padctl = lane->pad->padctl;
+	index = lane->index;
+	dev = padctl->dev;
+
+	dev_info(dev, "power down UTMI pad %d\n", index);
+
+	if (!usb2->powered_on)
+		return;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+	reg |= XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
+	reg |= XUSB_PADCTL_USB2_OTG_PAD_CTL1_PD_DR;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
+
+	udelay(2);
+
+	//tegra210_utmi_bias_pad_power_off(padctl);
+	usb2->powered_on = false;
+}
+
 static int
 tegra210_xusb_read_fuse_calibration(struct tegra210_xusb_fuse_calibration *fuse)
 {
@@ -2256,6 +2331,8 @@ static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.has_otg_cap = tegra210_xusb_padctl_has_otg_cap,
 	.vbus_override = tegra210_xusb_padctl_vbus_override,
 	.id_override = tegra210_xusb_padctl_id_override,
+	.utmi_pad_power_on = tegra210_utmi_pad_power_on,
+	.utmi_pad_power_down = tegra210_utmi_pad_power_down,
 };
 
 static const char * const tegra210_supply_names[] = {

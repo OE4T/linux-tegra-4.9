@@ -1601,6 +1601,26 @@ void tegra_xusb_padctl_handle_overcurrent(struct tegra_xusb_padctl *padctl)
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_handle_overcurrent);
 
+void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+
+	if (padctl->soc->ops->utmi_pad_power_on)
+		padctl->soc->ops->utmi_pad_power_on(phy);
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_power_on);
+
+void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+
+	if (padctl->soc->ops->utmi_pad_power_down)
+		padctl->soc->ops->utmi_pad_power_down(phy);
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_power_down);
+
 MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
 MODULE_DESCRIPTION("Tegra XUSB Pad Controller driver");
 MODULE_LICENSE("GPL v2");

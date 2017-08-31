@@ -433,6 +433,8 @@ struct tegra_xusb_padctl_ops {
 	int (*overcurrent_detected)(struct phy *phy);
 	void (*handle_overcurrent)(struct tegra_xusb_padctl *padctl);
 	int (*regulators_init)(struct tegra_xusb_padctl *padctl);
+	void (*utmi_pad_power_on)(struct phy *phy);
+	void (*utmi_pad_power_down)(struct phy *phy);
 };
 
 struct tegra_xusb_padctl_soc {
@@ -515,7 +517,6 @@ struct tegra_xusb_lane *tegra_xusb_find_lane(struct tegra_xusb_padctl *padctl,
 					     const char *name,
 					     unsigned int index);
 
-void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy);
 int tegra_xusb_select_vbus_en_state(struct tegra_xusb_padctl *padctl,
 					   int pin, bool tristate);
 

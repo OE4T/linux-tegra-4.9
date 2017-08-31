@@ -479,7 +479,7 @@ static void tegra186_utmi_bias_pad_power_off(struct tegra_xusb_padctl *padctl)
 	mutex_unlock(&padctl->lock);
 }
 
-void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy)
+void tegra186_utmi_pad_power_on(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane;
 	struct tegra_xusb_usb2_lane *usb2;
@@ -516,9 +516,8 @@ void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy)
 
 	usb2->powered_on = true;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_power_on);
 
-void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy)
+void tegra186_utmi_pad_power_down(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane;
 	struct tegra_xusb_usb2_lane *usb2;
@@ -554,7 +553,6 @@ void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy)
 	tegra186_utmi_bias_pad_power_off(padctl);
 	usb2->powered_on = false;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_power_down);
 
 #define oc_debug(u) \
 		dev_dbg(u->dev, "%s(%d):OC_DET %#x, VBUS_OC_MAP %#x, "\
@@ -832,7 +830,7 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 
 static int tegra186_utmi_phy_power_off(struct phy *phy)
 {
-	tegra_phy_xusb_utmi_pad_power_down(phy);
+	tegra186_utmi_pad_power_down(phy);
 
 	return 0;
 }
@@ -2164,7 +2162,7 @@ static int tegra186_xusb_padctl_utmi_pad_charger_detect_on(
 	lane = phy_get_drvdata(phy);
 	index = lane->index;
 
-	tegra_phy_xusb_utmi_pad_power_on(phy);
+	tegra186_utmi_pad_power_on(phy);
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
 	reg &= ~USB2_OTG_PD_ZI;
@@ -2222,7 +2220,7 @@ static int tegra186_xusb_padctl_utmi_pad_charger_detect_off(
 	reg &= ~(USB2_OTG_PD2 | USB2_OTG_PD2_OVRD_EN);
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
 
-	tegra_phy_xusb_utmi_pad_power_down(phy);
+	tegra186_utmi_pad_power_down(phy);
 
 	return 0;
 }
@@ -2621,6 +2619,8 @@ static const struct tegra_xusb_padctl_ops tegra186_xusb_padctl_ops = {
 	.set_host_cdp = tegra186_usb2_set_host_cdp,
 	.overcurrent_detected = tegra186_phy_xusb_overcurrent_detected,
 	.handle_overcurrent = tegra186_phy_xusb_handle_overcurrent,
+	.utmi_pad_power_on = tegra186_utmi_pad_power_on,
+	.utmi_pad_power_down = tegra186_utmi_pad_power_down,
 };
 
 const struct tegra_xusb_padctl_soc tegra186_xusb_padctl_soc = {

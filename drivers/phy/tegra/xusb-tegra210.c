@@ -230,6 +230,12 @@
 #define XUSB_PADCTL_UPHY_USB3_PADX_ECTL6(x) (0xa74 + (x) * 0x40)
 #define XUSB_PADCTL_UPHY_USB3_PAD_ECTL6_RX_EQ_CTRL_H_VAL 0xfcf01368
 
+#define XUSB_PADCTL_USB2_VBUS_ID	(0xc60)
+#define		VBUS_OVERRIDE_VBUS_ON	BIT(14)
+#define		ID_OVERRIDE(x)			(((x) & 0xf) << 18)
+#define		ID_OVERRIDE_GROUNDED	ID_OVERRIDE(0)
+#define		ID_OVERRIDE_FLOATING	ID_OVERRIDE(8)
+
 static unsigned int
 tegra210_usb3_lane_map(struct tegra_xusb_lane *lane);
 
@@ -2099,6 +2105,52 @@ static bool tegra210_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,
 	return false;
 }
 
+static int tegra210_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
+					      bool set)
+{
+	u32 reg;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID);
+	if (set) {
+		reg |= VBUS_OVERRIDE_VBUS_ON;
+		reg &= ~ID_OVERRIDE(~0);
+		reg |= ID_OVERRIDE_FLOATING;
+	} else
+		reg &= ~VBUS_OVERRIDE_VBUS_ON;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_VBUS_ID);
+
+	schedule_work(&padctl->otg_vbus_work);
+	return 0;
+}
+
+static int tegra210_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
+					 bool set)
+{
+	u32 reg;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID);
+	if (set) {
+		if (reg & VBUS_OVERRIDE_VBUS_ON) {
+			reg &= ~VBUS_OVERRIDE_VBUS_ON;
+			padctl_writel(padctl, reg, XUSB_PADCTL_USB2_VBUS_ID);
+			usleep_range(1000, 2000);
+
+			reg = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID);
+		}
+
+		reg &= ~ID_OVERRIDE(~0);
+		reg |= ID_OVERRIDE_GROUNDED;
+	} else {
+		reg &= ~ID_OVERRIDE(~0);
+		reg |= ID_OVERRIDE_FLOATING;
+	}
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_VBUS_ID);
+
+	schedule_work(&padctl->otg_vbus_work);
+
+	return 0;
+}
+
 static int
 tegra210_xusb_read_fuse_calibration(struct tegra210_xusb_fuse_calibration *fuse)
 {
@@ -2202,6 +2254,8 @@ static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.hsic_set_idle = tegra210_hsic_set_idle,
 	.regulators_init = tegra210_xusb_padctl_regulators_init,
 	.has_otg_cap = tegra210_xusb_padctl_has_otg_cap,
+	.vbus_override = tegra210_xusb_padctl_vbus_override,
+	.id_override = tegra210_xusb_padctl_id_override,
 };
 
 static const char * const tegra210_supply_names[] = {

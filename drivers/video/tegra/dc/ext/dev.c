@@ -358,14 +358,15 @@ static int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 	/* Check if the window exists */
 	if (!p_data) {
 		dev_err(&dc->ndev->dev,
-			"window %d feature is not found.\n", win->idx);
+			"Window %d is not found.\n", win->idx);
 		goto fail;
 	}
 	/* Check the window format */
 	if (!test_bit_win_colorfmt(win->fmt, p_data,
 			WIN_FEATURE_ENTRY_SIZE)) {
 		dev_err(&dc->ndev->dev,
-			"Color format of window %d is invalid.\n", win->idx);
+			"Color format of window %d is invalid: %u.\n",
+			win->idx, win->fmt);
 		goto fail;
 	}
 
@@ -393,7 +394,7 @@ static int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 	if ((win->flags & TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN) &&
 		!tegra_dc_feature_has_scan_column(dc, win->idx)) {
 		dev_err(&dc->ndev->dev,
-			"rotation not supported for window %d.\n", win->idx);
+			"Rotation not supported for window %d.\n", win->idx);
 		goto fail;
 	}
 
@@ -401,7 +402,8 @@ static int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,
 	 * even if the HW can do it. */
 	if ((win->flags & TEGRA_DC_EXT_FLIP_FLAG_COMPRESSED) &&
 		(win->flags & TEGRA_DC_EXT_FLIP_FLAG_INTERLACE)) {
-		dev_err(&dc->ndev->dev, "compression and interlace not supported for window %d.\n",
+		dev_err(&dc->ndev->dev,
+			"Compression and interlace can't both be on win %d.\n",
 			win->idx);
 		goto fail;
 	}

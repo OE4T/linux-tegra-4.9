@@ -957,7 +957,7 @@
                                                0x00000070 0xffffffff 0x00000000        // SOR_NV_PDISP_SOR_LVDS_0
                                                0x00000170 0x00002000 0x00002000        // SOR_NV_PDISP_SOR_DP_PADCTL0  15:8=TX_PU_VALUE        0x20
                                                0x00000180 0x00000001 0x00000001        // SOR_NV_PDISP_SOR_DP_SPARE0_0 00:00=SEQ_ENABLE        0x01
-                                               0x000001c8 0x00400000 0x00400000        // SOR_NV_PDISP_SOR_PLL4_0      22:22=ENABLE_LCKDET     0x01
+                                               0x000001c8 0x00400000 0x00000000        // SOR_NV_PDISP_SOR_PLL4_0      22:22=ENABLE_LCKDET     0x00
                                                0x000001cc 0xff000000 0x34000000        // SOR_NV_PDISP_SOR_PADCTL2_0   31:24=SPAREPLL          0x34
                                            >;
                                };

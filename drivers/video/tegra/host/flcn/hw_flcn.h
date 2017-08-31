@@ -70,6 +70,18 @@ static inline u32 flcn_clk_override_r(void)
 {
 	return 0x00000e00;
 }
+static inline u32 flcn_irqmclr_r(void)
+{
+	return 0x1014;
+}
+static inline u32 flcn_irqmclr_swgen0_set_f(void)
+{
+	return 0x40;
+}
+static inline u32 flcn_irqmclr_swgen1_set_f(void)
+{
+	return 0x80;
+}
 static inline u32 flcn_irqsclr_r(void)
 {
 	return 0x1004;

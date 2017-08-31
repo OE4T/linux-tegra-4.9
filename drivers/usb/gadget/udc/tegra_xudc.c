@@ -2633,7 +2633,8 @@ static void tegra_xudc_handle_transfer_completion(struct tegra_xudc *xudc,
 		dev_warn(xudc->dev, "transfer event on dequeued request\n");
 	}
 
-	tegra_xudc_ep_kick_queue(ep);
+	if (ep->desc)
+		tegra_xudc_ep_kick_queue(ep);
 }
 
 static void tegra_xudc_handle_transfer_event(struct tegra_xudc *xudc,

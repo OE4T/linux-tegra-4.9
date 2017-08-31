@@ -58,7 +58,6 @@ void gv11b_fb_enable_hub_intr(struct gk20a *g,
 	 unsigned int index, unsigned int intr_type);
 void gv11b_fb_disable_hub_intr(struct gk20a *g,
 	 unsigned int index, unsigned int intr_type);
-void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, unsigned int index);
 bool gv11b_fb_mmu_fault_pending(struct gk20a *g);
 
 noinline_for_stack void gv11b_init_uncompressed_kind_map(void);

@@ -73,7 +73,7 @@ struct vi_capture {
 	struct CAPTURE_CONTROL_MSG control_resp_msg;
 
 	struct mutex unpins_list_lock;
-	struct vi_capture_unpins *unpins_list;
+	struct vi_capture_unpins **unpins_list;
 };
 
 static void vi_capture_ivc_control_callback(const void *ivc_resp,
@@ -408,7 +408,7 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 
 	/* allocate for unpin list based on queue depth */
 	capture->unpins_list = devm_kzalloc(chan->dev,
-			sizeof(struct vi_capture_unpins) * capture->queue_depth,
+			sizeof(struct vi_capture_unpins *) * capture->queue_depth,
 			GFP_KERNEL);
 	if (unlikely(capture->unpins_list == NULL)) {
 		dev_err(chan->dev, "failed to allocate unpins array\n");
@@ -754,7 +754,7 @@ static int vi_capture_request_pin_and_reloc(struct tegra_vi_channel *chan,
 	uint32_t prev_mem = 0;
 	int last_page = -1;
 	dma_addr_t surface_phys_addr = 0;
-	int i, pin_count = 0;
+	int i = 0;
 	int err = 0;
 
 	err = copy_from_user(local_reloc_relatives, reloc_relatives,
@@ -813,19 +813,12 @@ static int vi_capture_request_pin_and_reloc(struct tegra_vi_channel *chan,
 
 		if (mem != prev_mem) {
 			err = pin_memory(chan->dev,
-					 mem, &unpins->data[pin_count]);
+					 mem, &unpins->data[unpins->num_unpins]);
 			if (err < 0) {
-				unpins->num_unpins = pin_count;
 				goto fail;
 			}
+			unpins->num_unpins++;
 			surface_phys_addr = unpins->data[i].iova;
-
-			mutex_lock(&capture->unpins_list_lock);
-			memcpy(&capture->unpins_list[req->buffer_index],
-					unpins, sizeof(*unpins));
-			mutex_unlock(&capture->unpins_list_lock);
-
-			pin_count++;
 		}
 
 		target_phys_addr = surface_phys_addr + target_offset;
@@ -845,7 +838,11 @@ static int vi_capture_request_pin_and_reloc(struct tegra_vi_channel *chan,
 		    capture->request_size, DMA_TO_DEVICE);
 	}
 
-	unpins->num_unpins = pin_count;
+	/* assign the unpins list to the capture to be unpinned and */
+	/* freed at capture completion (vi_capture_request_unpin) */
+	mutex_lock(&capture->unpins_list_lock);
+	capture->unpins_list[req->buffer_index] = unpins;
+	mutex_unlock(&capture->unpins_list_lock);
 
 	return 0;
 
@@ -869,10 +866,13 @@ static void vi_capture_request_unpin(struct tegra_vi_channel *chan,
 	int i = 0;
 
 	mutex_lock(&capture->unpins_list_lock);
-	unpins = &capture->unpins_list[buffer_index];
-	for (i = 0; i < unpins->num_unpins; i++)
-		unpin_memory(&unpins->data[i]);
-	unpins->num_unpins = 0u;
+	unpins = capture->unpins_list[buffer_index];
+	if (unpins != NULL) {
+		for (i = 0; i < unpins->num_unpins; i++)
+			unpin_memory(&unpins->data[i]);
+		capture->unpins_list[buffer_index] = NULL;
+		devm_kfree(chan->dev, unpins);
+	}
 	mutex_unlock(&capture->unpins_list_lock);
 }
 

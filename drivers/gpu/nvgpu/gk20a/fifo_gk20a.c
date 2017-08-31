@@ -1333,12 +1333,12 @@ bool gk20a_fifo_error_tsg(struct gk20a *g,
 		struct tsg_gk20a *tsg)
 {
 	struct channel_gk20a *ch = NULL;
-	bool verbose = true;
+	bool verbose = false;
 
 	down_read(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 		if (gk20a_channel_get(ch)) {
-			verbose = gk20a_fifo_error_ch(g, ch);
+			verbose |= gk20a_fifo_error_ch(g, ch);
 			gk20a_channel_put(ch);
 		}
 	}

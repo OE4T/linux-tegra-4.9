@@ -537,16 +537,16 @@ int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	addr_base += (wpr_inf.wpr_base);
 
-	gp106_dbg_pmu("pmu loader cfg u32 addrbase %x\n", (u32)addr_base);
+	gp106_dbg_pmu("pmu loader cfg addrbase 0x%llx\n", addr_base);
 	/*From linux*/
-	addr_code = u64_lo32((addr_base +
+	addr_code = addr_base +
 				desc->app_start_offset +
-				desc->app_resident_code_offset) );
+				desc->app_resident_code_offset;
 	gp106_dbg_pmu("app start %d app res code off %d\n",
 		desc->app_start_offset, desc->app_resident_code_offset);
-	addr_data = u64_lo32((addr_base +
+	addr_data = addr_base +
 				desc->app_start_offset +
-				desc->app_resident_data_offset) );
+				desc->app_resident_data_offset;
 	gp106_dbg_pmu("app res data offset%d\n",
 		desc->app_resident_data_offset);
 	gp106_dbg_pmu("bl start off %d\n", desc->bootloader_start_offset);
@@ -607,23 +607,23 @@ int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	*/
 	addr_base = p_lsfm->lsb_header.ucode_off;
 	g->ops.pmu.get_wpr(g, &wpr_inf);
-	if (falconid == LSF_FALCON_ID_GPCCS)
+	if (falconid == LSF_FALCON_ID_GPCCS &&
+		g->pmu.wpr_buf.aperture == APERTURE_SYSMEM)
 		addr_base += g->pmu.wpr_buf.gpu_va;
 	else
 		addr_base += wpr_inf.wpr_base;
 
-	gp106_dbg_pmu("gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
-			p_lsfm->wpr_header.falcon_id);
-	addr_code = u64_lo32((addr_base +
+	gp106_dbg_pmu("falcon ID %x", p_lsfm->wpr_header.falcon_id);
+	gp106_dbg_pmu("gen loader cfg addrbase %llx ", addr_base);
+	addr_code = addr_base +
 				desc->app_start_offset +
-				desc->app_resident_code_offset) );
-	addr_data = u64_lo32((addr_base +
+				desc->app_resident_code_offset;
+	addr_data = addr_base +
 				desc->app_start_offset +
-				desc->app_resident_data_offset) );
+				desc->app_resident_data_offset;
 
-	gp106_dbg_pmu("gen cfg %x u32 addrcode %x & data %x load offset %xID\n",
-			(u32)addr_code, (u32)addr_data, desc->bootloader_start_offset,
-			p_lsfm->wpr_header.falcon_id);
+	gp106_dbg_pmu("gen cfg addrcode %llx data %llx load offset %x",
+			addr_code, addr_data, desc->bootloader_start_offset);
 
 	/* Populate the LOADER_CONFIG state */
 	memset((void *) ldr_cfg, 0, sizeof(struct flcn_bl_dmem_desc_v1));

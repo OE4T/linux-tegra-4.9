@@ -193,7 +193,8 @@ EXPORT_SYMBOL_GPL(of_pm_clk_add_clk);
 int of_pm_clk_add_clks(struct device *dev)
 {
 	struct clk **clks;
-	unsigned int i, count;
+	unsigned int i;
+	int count = 0;
 	int ret;
 
 	if (!dev || !dev->of_node)

@@ -38,6 +38,7 @@
 
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
+#include "acr_t19x.h"
 #endif
 
 /*Defines*/
@@ -197,6 +198,11 @@ int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 			fecs_sig = nvgpu_request_firmware(g,
 					GM20B_FECS_UCODE_SIG, 0);
 			break;
+		case BIGGPU_19x_GPUID:
+			fecs_sig = nvgpu_request_firmware(g,
+					BIGGPU_FECS_UCODE_SIG,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
+			break;
 #endif
 		default:
 			nvgpu_err(g, "no support for GPUID %x", ver);
@@ -288,6 +294,11 @@ int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 		case TEGRA_19x_GPUID:
 			gpccs_sig = nvgpu_request_firmware(g,
 					T18x_GPCCS_UCODE_SIG, 0);
+			break;
+		case BIGGPU_19x_GPUID:
+			gpccs_sig = nvgpu_request_firmware(g,
+					BIGGPU_GPCCS_UCODE_SIG,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
 #endif
 		default:

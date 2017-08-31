@@ -514,7 +514,8 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	if (!channel_found) {
 		gk20a_dbg_fn("channel not bounded, fd=%d\n", args->channel_fd);
-		return -EINVAL;
+		err = -EINVAL;
+		goto out;
 	}
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
@@ -523,6 +524,8 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	nvgpu_mutex_release(&dbg_s->ch_list_lock);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
+out:
+	gk20a_channel_put(ch);
 	return err;
 }
 
@@ -584,13 +587,16 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	struct channel_gk20a *ch;
 	struct dbg_session_channel_data *ch_data;
 	struct dbg_session_data *session_data;
+	int err = 0;
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s fd=%d",
 		   g->name, args->channel_fd);
 
-	/* even though get_file_channel is doing this it releases it as well */
-	/* by holding it here we'll keep it from disappearing while the
-	 * debugger is in session */
+	/*
+	 * Although gk20a_get_channel_from_file gives us a channel ref, need to
+	 * hold a ref to the file during the session lifetime. See comment in
+	 * struct dbg_session_channel_data.
+	 */
 	f = fget(args->channel_fd);
 	if (!f)
 		return -ENODEV;
@@ -598,8 +604,8 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	ch = gk20a_get_channel_from_file(args->channel_fd);
 	if (!ch) {
 		gk20a_dbg_fn("no channel found for fd");
-		fput(f);
-		return -EINVAL;
+		err = -EINVAL;
+		goto out_fput;
 	}
 
 	gk20a_dbg_fn("%s hwchid=%d", g->name, ch->chid);
@@ -609,8 +615,8 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	ch_data = nvgpu_kzalloc(g, sizeof(*ch_data));
 	if (!ch_data) {
-		fput(f);
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto out_chput;
 	}
 	ch_data->ch_f = f;
 	ch_data->channel_fd = args->channel_fd;
@@ -619,9 +625,8 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	session_data = nvgpu_kzalloc(g, sizeof(*session_data));
 	if (!session_data) {
-		nvgpu_kfree(g, ch_data);
-		fput(f);
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto out_kfree;
 	}
 	session_data->dbg_s = dbg_s;
 	nvgpu_init_list_node(&session_data->dbg_s_entry);
@@ -636,7 +641,19 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	nvgpu_mutex_release(&ch->dbg_s_lock);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
+	gk20a_channel_put(ch);
+
 	return 0;
+
+out_kfree:
+	nvgpu_kfree(g, ch_data);
+out_chput:
+	gk20a_channel_put(ch);
+	nvgpu_mutex_release(&ch->dbg_s_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
+out_fput:
+	fput(f);
+	return err;
 }
 
 static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,

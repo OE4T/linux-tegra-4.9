@@ -260,8 +260,15 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 	return 0;
 }
 
+/*
+ * This returns the channel with a reference. The caller must
+ * gk20a_channel_put() the ref back after use.
+ *
+ * NULL is returned if the channel was not found.
+ */
 struct channel_gk20a *gk20a_get_channel_from_file(int fd)
 {
+	struct channel_gk20a *ch;
 	struct channel_priv *priv;
 	struct file *f = fget(fd);
 
@@ -274,8 +281,9 @@ struct channel_gk20a *gk20a_get_channel_from_file(int fd)
 	}
 
 	priv = (struct channel_priv *)f->private_data;
+	ch = gk20a_channel_get(priv->c);
 	fput(f);
-	return priv->c;
+	return ch;
 }
 
 int gk20a_channel_release(struct inode *inode, struct file *filp)

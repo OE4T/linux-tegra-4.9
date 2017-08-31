@@ -354,6 +354,8 @@ static int nvgpu_gpu_ioctl_inval_icache(
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	err = g->ops.gr.inval_icache(g, ch);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
+	gk20a_channel_put(ch);
 	return err;
 }
 
@@ -393,6 +395,7 @@ static int nvgpu_gpu_ioctl_set_debug_mode(
 		err = -ENOSYS;
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
+	gk20a_channel_put(ch);
 	return err;
 }
 

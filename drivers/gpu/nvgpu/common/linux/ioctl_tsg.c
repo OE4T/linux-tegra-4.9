@@ -49,6 +49,8 @@ static int gk20a_tsg_bind_channel_fd(struct tsg_gk20a *tsg, int ch_fd)
 		return -EINVAL;
 
 	err = ch->g->ops.fifo.tsg_bind_channel(tsg, ch);
+
+	gk20a_channel_put(ch);
 	return err;
 }
 

@@ -93,7 +93,14 @@ dbg_session_data_from_dbg_s_entry(struct nvgpu_list_node *node)
 };
 
 struct dbg_session_channel_data {
-	struct file          *ch_f;
+	/*
+	 * We have to keep a ref to the _file_, not the channel, because
+	 * close(channel_fd) is synchronous and would deadlock if we had an
+	 * open debug session fd holding a channel ref at that time. Holding a
+	 * ref to the file makes close(channel_fd) just drop a kernel ref to
+	 * the file; the channel will close when the last file ref is dropped.
+	 */
+	struct file *ch_f;
 	int channel_fd;
 	int chid;
 	struct nvgpu_list_node ch_entry;

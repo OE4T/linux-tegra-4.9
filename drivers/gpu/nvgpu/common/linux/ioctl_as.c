@@ -42,14 +42,19 @@ static int gk20a_as_ioctl_bind_channel(
 	gk20a_dbg_fn("");
 
 	ch = gk20a_get_channel_from_file(args->channel_fd);
-	if (!ch || gk20a_channel_as_bound(ch))
+	if (!ch)
 		return -EINVAL;
+
+	if (gk20a_channel_as_bound(ch)) {
+		err = -EINVAL;
+		goto out;
+	}
 
 	/* this will set channel_gk20a->vm */
 	err = ch->g->ops.mm.vm_bind_channel(as_share, ch);
-	if (err)
-		return err;
 
+out:
+	gk20a_channel_put(ch);
 	return err;
 }
 

@@ -24,6 +24,7 @@
 #define NVGPU_PMU_NS_UCODE_IMAGE	"gpmu_ucode.bin"
 
 /* PMU F/W version */
+#define APP_VERSION_BIGGPU	22752892
 #define APP_VERSION_NC_3	22204331
 #define APP_VERSION_NC_2	20429989
 #define APP_VERSION_NC_1	20313802
@@ -1219,6 +1220,32 @@ static void get_pmu_init_msg_pmu_queue_params_v4(struct pmu_queue *queue,
 	queue->offset   = init->queue_offset + current_ptr;
 }
 
+static void get_pmu_init_msg_pmu_queue_params_v5(struct pmu_queue *queue,
+	u32 id, void *pmu_init_msg)
+{
+	struct pmu_init_msg_pmu_v4 *init = pmu_init_msg;
+	u32 current_ptr = 0;
+	u8 i;
+	u8 tmp_id = id;
+
+	if (tmp_id == PMU_COMMAND_QUEUE_HPQ)
+		tmp_id = PMU_QUEUE_HPQ_IDX_FOR_V3;
+	else if (tmp_id == PMU_COMMAND_QUEUE_LPQ)
+		tmp_id = PMU_QUEUE_LPQ_IDX_FOR_V3;
+	else if (tmp_id == PMU_MESSAGE_QUEUE)
+		tmp_id = PMU_QUEUE_MSG_IDX_FOR_V4;
+	else
+		return;
+
+	queue->index    = init->queue_index[tmp_id];
+	queue->size = init->queue_size[tmp_id];
+	if (tmp_id != 0) {
+		for (i = 0 ; i < tmp_id; i++)
+			current_ptr += init->queue_size[i];
+	}
+	queue->offset   = init->queue_offset + current_ptr;
+}
+
 static void get_pmu_init_msg_pmu_queue_params_v3(struct pmu_queue *queue,
 	u32 id, void *pmu_init_msg)
 {
@@ -1538,6 +1565,7 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 			get_pmu_sequence_out_alloc_ptr_v1;
 		break;
 	case APP_VERSION_NC_3:
+	case APP_VERSION_BIGGPU:
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =
 				pg_cmd_eng_buf_load_size_v2;
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_cmd_type =
@@ -1600,8 +1628,12 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 				pmu_allocation_get_fb_addr_v3;
 		g->ops.pmu_ver.pmu_allocation_get_fb_size =
 				pmu_allocation_get_fb_size_v3;
-		g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
-			get_pmu_init_msg_pmu_queue_params_v4;
+		if (pmu->desc->app_version == APP_VERSION_BIGGPU)
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
+				get_pmu_init_msg_pmu_queue_params_v5;
+		else
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
+				get_pmu_init_msg_pmu_queue_params_v4;
 		g->ops.pmu_ver.get_pmu_msg_pmu_init_msg_ptr =
 			get_pmu_msg_pmu_init_msg_ptr_v4;
 		g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_off =

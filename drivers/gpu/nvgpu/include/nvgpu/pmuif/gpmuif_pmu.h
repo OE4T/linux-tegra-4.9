@@ -161,6 +161,7 @@ struct pmu_init_msg_pmu_v2 {
 #define PMU_QUEUE_HPQ_IDX_FOR_V3 0
 #define PMU_QUEUE_LPQ_IDX_FOR_V3 1
 #define PMU_QUEUE_MSG_IDX_FOR_V3 2
+#define PMU_QUEUE_MSG_IDX_FOR_V4 4
 struct pmu_init_msg_pmu_v3 {
 	u8 msg_type;
 	u8  queue_index[PMU_QUEUE_COUNT_FOR_V3];

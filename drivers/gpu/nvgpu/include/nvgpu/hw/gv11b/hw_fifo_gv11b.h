@@ -382,6 +382,18 @@ static inline u32 fifo_fb_timeout_period_init_f(void)
 {
 	return 0x3c00;
 }
+static inline u32 fifo_fb_timeout_detection_m(void)
+{
+	return 0x1 << 31;
+}
+static inline u32 fifo_fb_timeout_detection_enabled_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fifo_fb_timeout_detection_disabled_f(void)
+{
+	return 0x0;
+}
 static inline u32 fifo_sched_disable_r(void)
 {
 	return 0x00002630;
@@ -538,17 +550,37 @@ static inline u32 fifo_eng_ctxsw_timeout_period_f(u32 v)
 {
 	return (v & 0x7fffffff) << 0;
 }
+static inline u32 fifo_eng_ctxsw_timeout_period_m(void)
+{
+	return 0x7fffffff << 0;
+}
 static inline u32 fifo_eng_ctxsw_timeout_period_v(u32 r)
 {
 	return (r >> 0) & 0x7fffffff;
+}
+static inline u32 fifo_eng_ctxsw_timeout_period_init_f(void)
+{
+	return 0x3fffff;
+}
+static inline u32 fifo_eng_ctxsw_timeout_period_max_f(void)
+{
+	return 0x7fffffff;
 }
 static inline u32 fifo_eng_ctxsw_timeout_detection_f(u32 v)
 {
 	return (v & 0x1) << 31;
 }
+static inline u32 fifo_eng_ctxsw_timeout_detection_m(void)
+{
+	return 0x1 << 31;
+}
 static inline u32 fifo_eng_ctxsw_timeout_detection_enabled_f(void)
 {
 	return 0x80000000;
+}
+static inline u32 fifo_eng_ctxsw_timeout_detection_disabled_f(void)
+{
+	return 0x0;
 }
 static inline u32 fifo_pbdma_status_r(u32 i)
 {

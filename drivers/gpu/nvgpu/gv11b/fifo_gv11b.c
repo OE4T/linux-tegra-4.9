@@ -1166,10 +1166,27 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 
 	timeout = gk20a_readl(g, fifo_fb_timeout_r());
 	nvgpu_log_info(g, "fifo_fb_timeout reg val = 0x%08x", timeout);
+	if (!nvgpu_platform_is_silicon(g)) {
+		timeout = set_field(timeout, fifo_fb_timeout_period_m(),
+					fifo_fb_timeout_period_max_f());
+		timeout = set_field(timeout, fifo_fb_timeout_detection_m(),
+					fifo_fb_timeout_detection_disabled_f());
+		nvgpu_log_info(g, "new fifo_fb_timeout reg val = 0x%08x",
+					timeout);
+		gk20a_writel(g, fifo_fb_timeout_r(), timeout);
+	}
+
 	for (i = 0; i < host_num_pbdma; i++) {
 		timeout = gk20a_readl(g, pbdma_timeout_r(i));
 		nvgpu_log_info(g, "pbdma_timeout reg val = 0x%08x",
 						 timeout);
+		if (!nvgpu_platform_is_silicon(g)) {
+			timeout = set_field(timeout, pbdma_timeout_period_m(),
+					pbdma_timeout_period_max_f());
+			nvgpu_log_info(g, "new pbdma_timeout reg val = 0x%08x",
+						 timeout);
+			gk20a_writel(g, pbdma_timeout_r(i), timeout);
+		}
 	}
 
 	/* clear and enable pbdma interrupt */
@@ -1189,12 +1206,26 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 	/* clear ctxsw timeout interrupts */
 	gk20a_writel(g, fifo_intr_ctxsw_timeout_r(), ~0);
 
-	/* enable ctxsw timeout */
-	timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US;
-	timeout = scale_ptimer(timeout,
-		ptimer_scalingfactor10x(g->ptimer_src_freq));
-	timeout |= fifo_eng_ctxsw_timeout_detection_enabled_f();
-	gk20a_writel(g, fifo_eng_ctxsw_timeout_r(), timeout);
+	if (nvgpu_platform_is_silicon(g)) {
+		/* enable ctxsw timeout */
+		timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US;
+		timeout = scale_ptimer(timeout,
+			ptimer_scalingfactor10x(g->ptimer_src_freq));
+		timeout |= fifo_eng_ctxsw_timeout_detection_enabled_f();
+		gk20a_writel(g, fifo_eng_ctxsw_timeout_r(), timeout);
+	} else {
+		timeout = gk20a_readl(g, fifo_eng_ctxsw_timeout_r());
+		nvgpu_log_info(g, "fifo_eng_ctxsw_timeout reg val = 0x%08x",
+						 timeout);
+		timeout = set_field(timeout, fifo_eng_ctxsw_timeout_period_m(),
+				fifo_eng_ctxsw_timeout_period_max_f());
+		timeout = set_field(timeout,
+				fifo_eng_ctxsw_timeout_detection_m(),
+				fifo_eng_ctxsw_timeout_detection_disabled_f());
+		nvgpu_log_info(g, "new fifo_eng_ctxsw_timeout reg val = 0x%08x",
+						 timeout);
+		gk20a_writel(g, fifo_eng_ctxsw_timeout_r(), timeout);
+	}
 
 	/* clear runlist interrupts */
 	gk20a_writel(g, fifo_intr_runlist_r(), ~0);

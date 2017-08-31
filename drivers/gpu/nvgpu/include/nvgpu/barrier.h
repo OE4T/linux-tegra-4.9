@@ -30,6 +30,8 @@
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/barrier.h>
+#else
+#include <nvgpu_rmos/include/barrier.h>
 #endif
 
 #define nvgpu_mb()	__nvgpu_mb()

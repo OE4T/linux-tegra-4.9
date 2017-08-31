@@ -24,6 +24,8 @@
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/atomic.h>
+#else
+#include <nvgpu_rmos/include/atomic.h>
 #endif
 
 #define NVGPU_ATOMIC_INIT(i)	__nvgpu_atomic_init(i)

@@ -367,10 +367,10 @@
 	aon_hsp: tegra-hsp@c150000 {
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x0c150000 0x0 0x00090000>;
-		interrupts =	<0 133 0x4>,
-				<0 134 0x4>,
-				<0 135 0x4>,
-				<0 136 0x4>;
+		interrupts =	<0 TEGRA194_IRQ_AON_HSP_SHARED_1 0x4>,
+				<0 TEGRA194_IRQ_AON_HSP_SHARED_2 0x4>,
+				<0 TEGRA194_IRQ_AON_HSP_SHARED_3 0x4>,
+				<0 TEGRA194_IRQ_AON_HSP_SHARED_4 0x4>;
 		interrupt-names = "shared1", "shared2", "shared3", "shared4";
 		status = "okay";
 	};
@@ -379,14 +379,14 @@
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x03c00000 0x0 0x000a0000>;
 		interrupts =	<0 176 0x4>,
-				<0 120 0x4>,
-				<0 121 0x4>,
-				<0 122 0x4>,
-				<0 123 0x4>,
-				<0 124 0x4>,
-				<0 125 0x4>,
-				<0 126 0x4>,
-				<0 127 0x4>;
+				<0 TEGRA194_IRQ_TOP0_HSP_SHARED_0 0x4>,
+				<0 TEGRA194_IRQ_TOP0_HSP_SHARED_1 0x4>,
+				<0 TEGRA194_IRQ_TOP0_HSP_SHARED_2 0x4>,
+				<0 TEGRA194_IRQ_TOP0_HSP_SHARED_3 0x4>,
+				<0 TEGRA194_IRQ_TOP0_HSP_SHARED_4 0x4>,
+				<0 TEGRA194_IRQ_TOP0_HSP_SHARED_5 0x4>,
+				<0 TEGRA194_IRQ_TOP0_HSP_SHARED_6 0x4>,
+				<0 TEGRA194_IRQ_TOP0_HSP_SHARED_7 0x4>;
 		interrupt-names = "doorbell",
 				"shared0", "shared1", "shared2", "shared3",
 				"shared4", "shared5", "shared6", "shared7";
@@ -397,10 +397,10 @@
 	hsp_rce: tegra-hsp@b950000 {
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x0b950000 0x0 0x00090000>;
-		interrupts =	<0 182 0x4>,
-				<0 183 0x4>,
-				<0 184 0x4>,
-				<0 185 0x4>;
+		interrupts =	<0 TEGRA194_IRQ_RCE_HSP_SHARED_1 0x4>,
+				<0 TEGRA194_IRQ_RCE_HSP_SHARED_2 0x4>,
+				<0 TEGRA194_IRQ_RCE_HSP_SHARED_3 0x4>,
+				<0 TEGRA194_IRQ_RCE_HSP_SHARED_4 0x4>;
 		nvidia,mbox-ie;
 		interrupt-names = "shared1", "shared2", "shared3", "shared4";
 		status = "disabled";

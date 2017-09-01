@@ -142,6 +142,27 @@ extern void arch_refresh_nodedata(int nid, pg_data_t *pgdat);
 #define arch_alloc_nodedata(nid)	generic_alloc_nodedata(nid)
 #define arch_free_nodedata(pgdat)	generic_free_nodedata(pgdat)
 
+#ifndef CONFIG_ARCH_HAS_ADD_PAGES
+extern int zone_for_memory(int nid, u64 start, u64 size, int zone_default,
+		bool for_device);
+static inline int add_pages(int nid, unsigned long start_pfn,
+			    unsigned long nr_pages, bool for_device)
+{
+	unsigned long start = start_pfn << PAGE_SHIFT;
+	unsigned long size = nr_pages << PAGE_SHIFT;
+	struct pglist_data *pgdat = NODE_DATA(nid);
+	struct zone *zone;
+
+	zone = pgdat->node_zones + zone_for_memory(nid, start, size,
+						   ZONE_NORMAL, for_device);
+
+	return __add_pages(nid, zone, start_pfn, nr_pages);
+}
+#else /* ARCH_HAS_ADD_PAGES */
+int add_pages(int nid, unsigned long start_pfn,
+	      unsigned long nr_pages, bool for_device);
+#endif /* ARCH_HAS_ADD_PAGES */
+
 #ifdef CONFIG_NUMA
 /*
  * If ARCH_HAS_NODEDATA_EXTENSION=n, this func is used to allocate pgdat.

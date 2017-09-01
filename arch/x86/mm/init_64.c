@@ -636,7 +636,7 @@ void __init paging_init(void)
  * After memory hotplug the variables max_pfn, max_low_pfn and high_memory need
  * updating.
  */
-static void  update_end_of_memory_vars(u64 start, u64 size)
+static void update_end_of_memory_vars(u64 start, u64 size)
 {
 	unsigned long end_pfn = PFN_UP(start + size);
 
@@ -647,20 +647,17 @@ static void  update_end_of_memory_vars(u64 start, u64 size)
 	}
 }
 
-/*
- * Memory is added always to NORMAL zone. This means you will never get
- * additional DMA/DMA32 memory.
- */
-int arch_add_memory(int nid, u64 start, u64 size, bool for_device)
+int add_pages(int nid, unsigned long start_pfn,
+	      unsigned long nr_pages, bool for_device)
 {
+	unsigned long start = start_pfn << PAGE_SHIFT;
+	unsigned long size = nr_pages << PAGE_SHIFT;
 	struct pglist_data *pgdat = NODE_DATA(nid);
-	struct zone *zone = pgdat->node_zones +
-		zone_for_memory(nid, start, size, ZONE_NORMAL, for_device);
-	unsigned long start_pfn = start >> PAGE_SHIFT;
-	unsigned long nr_pages = size >> PAGE_SHIFT;
+	struct zone *zone;
 	int ret;
 
-	init_memory_mapping(start, start + size);
+	zone = pgdat->node_zones + zone_for_memory(nid, start, size,
+						   ZONE_NORMAL, for_device);
 
 	ret = __add_pages(nid, zone, start_pfn, nr_pages);
 	WARN_ON_ONCE(ret);
@@ -669,6 +666,20 @@ int arch_add_memory(int nid, u64 start, u64 size, bool for_device)
 	update_end_of_memory_vars(start, size);
 
 	return ret;
+}
+
+/*
+ * Memory is added always to NORMAL zone. This means you will never get
+ * additional DMA/DMA32 memory.
+ */
+int arch_add_memory(int nid, u64 start, u64 size, bool for_device)
+{
+	unsigned long start_pfn = start >> PAGE_SHIFT;
+	unsigned long nr_pages = size >> PAGE_SHIFT;
+
+	init_memory_mapping(start, start + size);
+
+	return add_pages(nid, start_pfn, nr_pages, for_device);
 }
 EXPORT_SYMBOL_GPL(arch_add_memory);
 

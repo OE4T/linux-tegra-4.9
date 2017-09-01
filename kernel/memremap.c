@@ -11,13 +11,14 @@
  * General Public License for more details.
  */
 #include <linux/radix-tree.h>
-#include <linux/memremap.h>
 #include <linux/device.h>
 #include <linux/types.h>
 #include <linux/pfn_t.h>
 #include <linux/io.h>
 #include <linux/mm.h>
 #include <linux/memory_hotplug.h>
+#include <linux/swap.h>
+#include <linux/swapops.h>
 
 #ifndef ioremap_cache
 /* temporary while we convert existing ioremap_cache users to memremap */
@@ -190,9 +191,51 @@ EXPORT_SYMBOL(get_zone_device_page);
 
 void put_zone_device_page(struct page *page)
 {
+	int count = page_ref_dec_return(page);
+
+	/*
+	 * If refcount is 1 then page is freed and refcount is stable as nobody
+	 * holds a reference on the page.
+	 */
+	if (count == 1) {
+		page->mapping = NULL;
+		mem_cgroup_uncharge(page);
+
+		page->pgmap->page_free(page, page->pgmap->data);
+	} else if (!count)
+		__put_page(page);
+
 	put_dev_pagemap(page->pgmap);
 }
 EXPORT_SYMBOL(put_zone_device_page);
+
+#if IS_ENABLED(CONFIG_DEVICE_PRIVATE)
+int device_private_entry_fault(struct vm_area_struct *vma,
+		       unsigned long addr,
+		       swp_entry_t entry,
+		       unsigned int flags,
+		       pmd_t *pmdp)
+{
+	struct page *page = device_private_entry_to_page(entry);
+
+	/*
+	 * The page_fault() callback must migrate page back to system memory
+	 * so that CPU can access it. This might fail for various reasons
+	 * (device issue, device was unsafely unplugged, ...). When such
+	 * error conditions happen, the callback must return VM_FAULT_SIGBUS.
+	 *
+	 * Note that because memory cgroup charges are accounted to the device
+	 * memory, this should never fail because of memory restrictions (but
+	 * allocation of regular system page might still fail because we are
+	 * out of memory).
+	 *
+	 * There is a more in-depth description of what that callback can and
+	 * cannot do, in include/linux/memremap.h
+	 */
+	return page->pgmap->page_fault(vma, addr, page, flags, pmdp);
+}
+EXPORT_SYMBOL(device_private_entry_fault);
+#endif /* CONFIG_DEVICE_PRIVATE */
 
 static void pgmap_radix_release(struct resource *res)
 {
@@ -328,6 +371,10 @@ void *devm_memremap_pages(struct device *dev, struct resource *res,
 	}
 	pgmap->ref = ref;
 	pgmap->res = &page_map->res;
+	pgmap->type = MEMORY_DEVICE_HOST;
+	pgmap->page_fault = NULL;
+	pgmap->page_free = NULL;
+	pgmap->data = NULL;
 
 	mutex_lock(&pgmap_lock);
 	error = 0;

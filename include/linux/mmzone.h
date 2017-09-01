@@ -749,6 +749,13 @@ static inline bool is_dev_zone(const struct zone *zone)
 }
 #endif
 
+#ifndef CONFIG_NEED_MULTIPLE_NODES
+
+extern struct pglist_data contig_page_data;
+#define NODE_DATA(nid)		(&contig_page_data)
+#define NODE_MEM_MAP(nid)	mem_map
+#endif
+
 #include <linux/memory_hotplug.h>
 
 extern struct mutex zonelists_mutex;
@@ -880,10 +887,6 @@ extern char numa_zonelist_order[];
 #define NUMA_ZONELIST_ORDER_LEN 16	/* string buffer size */
 
 #ifndef CONFIG_NEED_MULTIPLE_NODES
-
-extern struct pglist_data contig_page_data;
-#define NODE_DATA(nid)		(&contig_page_data)
-#define NODE_MEM_MAP(nid)	mem_map
 
 #else /* CONFIG_NEED_MULTIPLE_NODES */
 

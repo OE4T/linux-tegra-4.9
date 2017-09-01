@@ -413,7 +413,7 @@ static int nvgpu_pg_init_task(void *arg)
 			(pg_init->state_change == true), 0);
 
 		pmu->pg_init.state_change = false;
-		pmu_state = ACCESS_ONCE(pmu->pmu_state);
+		pmu_state = NV_ACCESS_ONCE(pmu->pmu_state);
 
 		if (pmu_state == PMU_STATE_EXIT) {
 			nvgpu_pmu_dbg(g, "pmu state exit");

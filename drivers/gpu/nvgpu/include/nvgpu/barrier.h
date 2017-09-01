@@ -37,4 +37,6 @@
 #define nvgpu_read_barrier_depends() __nvgpu_read_barrier_depends()
 #define nvgpu_smp_read_barrier_depends() __nvgpu_smp_read_barrier_depends()
 
+#define NV_ACCESS_ONCE(x)	__NV_ACCESS_ONCE(x)
+
 #endif /* __NVGPU_BARRIER_H__ */

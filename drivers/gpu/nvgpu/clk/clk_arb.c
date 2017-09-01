@@ -705,7 +705,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 	struct clk_set_info *p5_info, *p0_info;
 
 
-	table = ACCESS_ONCE(arb->current_vf_table);
+	table = NV_ACCESS_ONCE(arb->current_vf_table);
 	/* make flag visible when all data has resolved in the tables */
 	nvgpu_smp_rmb();
 
@@ -1073,7 +1073,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		if (!session->zombie) {
 			mclk_set = false;
 			gpc2clk_set = false;
-			target = ACCESS_ONCE(session->target) ==
+			target = NV_ACCESS_ONCE(session->target) ==
 				&session->target_pool[0] ?
 					&session->target_pool[1] :
 					&session->target_pool[0];
@@ -1221,7 +1221,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		goto exit_arb;
 	}
 
-	actual = ACCESS_ONCE(arb->actual) == &arb->actual_pool[0] ?
+	actual = NV_ACCESS_ONCE(arb->actual) == &arb->actual_pool[0] ?
 			&arb->actual_pool[1] : &arb->actual_pool[0];
 
 	/* do not reorder this pointer */
@@ -1374,7 +1374,7 @@ static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
 			notification = &arb->notification_queue.
 						notifications[(index+1) % size];
 			alarm_detected =
-				ACCESS_ONCE(notification->notification);
+				NV_ACCESS_ONCE(notification->notification);
 
 			if (!(enabled_mask & alarm_detected))
 				continue;
@@ -1382,7 +1382,7 @@ static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
 			queue_index++;
 			dev->queue.notifications[
 				queue_index % dev->queue.size].timestamp =
-					ACCESS_ONCE(notification->timestamp);
+					NV_ACCESS_ONCE(notification->timestamp);
 
 			dev->queue.notifications[
 				queue_index % dev->queue.size].notification =
@@ -1686,7 +1686,7 @@ int nvgpu_clk_arb_get_session_target_mhz(struct nvgpu_clk_session *session,
 	struct nvgpu_clk_arb_target *target;
 
 	do {
-		target = ACCESS_ONCE(session->target);
+		target = NV_ACCESS_ONCE(session->target);
 		/* no reordering of this pointer */
 		nvgpu_smp_rmb();
 
@@ -1703,7 +1703,7 @@ int nvgpu_clk_arb_get_session_target_mhz(struct nvgpu_clk_session *session,
 			*freq_mhz = 0;
 			err = -EINVAL;
 		}
-	} while (target != ACCESS_ONCE(session->target));
+	} while (target != NV_ACCESS_ONCE(session->target));
 	return err;
 }
 
@@ -1715,7 +1715,7 @@ int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 	struct nvgpu_clk_arb_target *actual;
 
 	do {
-		actual = ACCESS_ONCE(arb->actual);
+		actual = NV_ACCESS_ONCE(arb->actual);
 		/* no reordering of this pointer */
 		nvgpu_smp_rmb();
 
@@ -1732,7 +1732,7 @@ int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 			*freq_mhz = 0;
 			err = -EINVAL;
 		}
-	} while (actual != ACCESS_ONCE(arb->actual));
+	} while (actual != NV_ACCESS_ONCE(arb->actual));
 	return err;
 }
 
@@ -1853,7 +1853,7 @@ static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 		mclk_voltuv = 0;
 		mclk_voltuv_sram = 0;
 
-		table = ACCESS_ONCE(arb->current_vf_table);
+		table = NV_ACCESS_ONCE(arb->current_vf_table);
 		/* pointer to table can be updated by callback */
 		nvgpu_smp_rmb();
 
@@ -1943,7 +1943,7 @@ recalculate_vf_point:
 		mclk_voltuv_sram = mclk_vf->uvolt_sram;
 
 	} while (!table ||
-		(ACCESS_ONCE(arb->current_vf_table) != table));
+		(NV_ACCESS_ONCE(arb->current_vf_table) != table));
 
 find_exit:
 	*voltuv = gpc2clk_voltuv > mclk_voltuv ? gpc2clk_voltuv : mclk_voltuv;
@@ -1961,7 +1961,7 @@ find_exit:
  * arbiter must be blocked before calling this function */
 int nvgpu_clk_arb_get_current_pstate(struct gk20a *g)
 {
-	return ACCESS_ONCE(g->clk_arb->actual->pstate);
+	return NV_ACCESS_ONCE(g->clk_arb->actual->pstate);
 }
 
 static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
@@ -2038,7 +2038,7 @@ static int nvgpu_clk_arb_stats_show(struct seq_file *s, void *unused)
 	u64 num;
 	s64 tmp, avg, std, max, min;
 
-	debug = ACCESS_ONCE(arb->debug);
+	debug = NV_ACCESS_ONCE(arb->debug);
 	/* Make copy of structure and ensure no reordering */
 	nvgpu_smp_rmb();
 	if (!debug)

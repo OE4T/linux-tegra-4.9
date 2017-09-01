@@ -28,15 +28,6 @@ config SND_SOC_TEGRA_ALT_FORCE_CARD_REG
 	  Say Y or M if you want to register the sound card even if audio codec
 	  is not connected/present on board.
 
-config SND_SOC_TEGRA_ASOC_MACHINE_T18X_ALT
-	tristate "Tegra ASoC machine driver"
-	depends on SND_SOC_TEGRA_ALT
-	help
-	  Say Y or M,
-	  if you want to add support for
-	  Tegra ASoC
-	  machine driver.
-
 config SND_SOC_TEGRA_T186REF_P4573_ALT
 	tristate "SoC Audio support for P4573 with CS53L30 and RT5658"
 	depends on SND_SOC_TEGRA_T186REF_ALT
@@ -255,7 +246,6 @@ config SND_SOC_TEGRA_T186REF_ALT
 	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
 	select SND_SOC_SPDIF
 	select SND_SOC_TEGRA_ASOC_MACHINE_ALT
-	select SND_SOC_TEGRA_ASOC_MACHINE_T18X_ALT
 	select SND_SOC_COMPRESS
 	help
 	  Say Y or M here.
@@ -287,7 +277,6 @@ config SND_SOC_TEGRA_T186REF_MOBILE_ALT
 	select SND_SOC_RT5659
 	select SND_SOC_COMPRESS
 	select SND_SOC_TEGRA_ASOC_MACHINE_ALT
-	select SND_SOC_TEGRA_ASOC_MACHINE_T18X_ALT
 	help
 	  Say Y or M here.
 

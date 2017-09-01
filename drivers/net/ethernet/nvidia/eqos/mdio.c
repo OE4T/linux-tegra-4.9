@@ -343,8 +343,9 @@ static void eqos_adjust_link(struct net_device *dev)
 	if (phydev == NULL)
 		return;
 
-	DBGPR_MDIO("-->eqos_adjust_link. address %d link %d\n", phydev->addr,
-		   phydev->link);
+	DBGPR_MDIO("-->eqos_adjust_link. address %d link %d\n",
+		   phydev->mdio.addr, phydev->link);
+
 	spin_lock(&pdata->lock);
 
 	if (phydev->link) {

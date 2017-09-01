@@ -23,6 +23,14 @@
 #define RG_STATUS_POLL_INTERVAL_US 1
 #define TEGRA_WINBUF_ADDR_FLAG_BLOCKLINEAR ((dma_addr_t)0x1 << 39)
 
+/*
+ * As per nvdisplay programming guidelines, only hubclk,dispclk and
+ * pclk0 clocks should be enabled before accessing any display register
+ * in head0 power domain. But, as BL is unconditionally unpowergating
+ * all display powerdomains, enabling pclk1 and pclk2 and pclk3 clocks
+ * even here as WAR to avoid display register access issues in kernel
+ * Bug 200343370 tracks issue in BL.
+ */
 static struct tegra_dc_pd_clk_info t19x_disp_pd0_clk_info[] = {
 	{
 		.name = "nvdisplayhub",
@@ -34,6 +42,18 @@ static struct tegra_dc_pd_clk_info t19x_disp_pd0_clk_info[] = {
 	},
 	{
 		.name = "nvdisplay_p0",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_p1",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_p2",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_p3",
 		.clk = NULL,
 	},
 };

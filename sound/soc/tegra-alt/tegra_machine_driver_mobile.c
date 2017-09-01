@@ -35,7 +35,6 @@
 #include "rt5659.h"
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
-#include "tegra_asoc_machine_alt_t18x.h"
 #include "tegra210_xbar_alt.h"
 
 #ifdef CONFIG_SWITCH
@@ -172,13 +171,11 @@ static const struct tegra_machine_soc_data soc_data_tegra210 = {
 	.write_cdev1_state		= false,
 	.write_idle_bias_off_state	= false,
 
-#if IS_ENABLED(CONFIG_SND_SOC_TEGRA_ASOC_MACHINE_ALT)
 	.get_bclk_ratio			= &tegra_machine_get_bclk_ratio,
 	.get_dai_link			= &tegra_machine_get_dai_link,
 	.get_codec_conf			= &tegra_machine_get_codec_conf,
 	.append_dai_link		= &tegra_machine_append_dai_link,
 	.append_codec_conf		= &tegra_machine_append_codec_conf,
-#endif
 };
 
 /* t186 soc data */
@@ -200,13 +197,11 @@ static const struct tegra_machine_soc_data soc_data_tegra186 = {
 	.write_cdev1_state		= true,
 	.write_idle_bias_off_state	= true,
 
-#if IS_ENABLED(CONFIG_SND_SOC_TEGRA_ASOC_MACHINE_T18X_ALT)
 	.get_bclk_ratio			= &tegra_machine_get_bclk_ratio_t18x,
 	.get_dai_link			= &tegra_machine_get_dai_link_t18x,
 	.get_codec_conf			= &tegra_machine_get_codec_conf_t18x,
 	.append_dai_link		= &tegra_machine_append_dai_link_t18x,
 	.append_codec_conf		= &tegra_machine_append_codec_conf_t18x,
-#endif
 };
 
 /* structure to match device tree node */
@@ -1172,9 +1167,13 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	machine->soc_data = (struct tegra_machine_soc_data *)match->data;
 
-	if (!machine->soc_data->get_dai_link) {
+	if (!machine->soc_data->get_dai_link ||
+		!machine->soc_data->get_bclk_ratio ||
+		!machine->soc_data->get_codec_conf ||
+		!machine->soc_data->append_dai_link ||
+		!machine->soc_data->append_codec_conf) {
 		ret = -ENODEV;
-		dev_err(&pdev->dev, "Error: get_dai_link is absent\n");
+		dev_err(&pdev->dev, "Error: callback APIs are missing\n");
 		goto err;
 	}
 

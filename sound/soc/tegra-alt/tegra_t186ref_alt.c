@@ -33,7 +33,6 @@
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
-#include "tegra_asoc_machine_alt_t18x.h"
 #include "ahub_unit_fpga_clock.h"
 
 #include <linux/clk.h>

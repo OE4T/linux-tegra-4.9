@@ -22,7 +22,6 @@
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
-#include "tegra_asoc_machine_alt_t18x.h"
 #include "tegra210_xbar_alt.h"
 
 #define DRV_NAME "tegra186-snd-bali"

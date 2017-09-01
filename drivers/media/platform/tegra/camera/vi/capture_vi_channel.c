@@ -49,6 +49,7 @@ struct vi_channel_drv {
 	struct platform_device *ndev;
 	struct mutex lock;
 	u8 num_channels;
+	const struct vi_channel_drv_ops *ops;
 	struct tegra_vi_channel __rcu *channels[];
 };
 
@@ -197,6 +198,7 @@ struct tegra_vi_channel *vi_channel_open_ex(unsigned channel)
 	chan->drv = chan_drv;
 	chan->dev = chan_drv->dev;
 	chan->ndev = chan_drv->ndev;
+	chan->ops = chan_drv->ops;
 
  	err = vi_channel_power_on_vi_device(chan);
 	if (err < 0)
@@ -285,7 +287,8 @@ static const struct file_operations vi_channel_fops = {
 static struct class *vi_channel_class;
 static int vi_channel_major;
 
-int vi_channel_drv_register(struct platform_device *ndev)
+int vi_channel_drv_register(struct platform_device *ndev,
+	const struct vi_channel_drv_ops *ops)
 {
 	struct vi_channel_drv *chan_drv;
 	int err = 0;
@@ -299,6 +302,7 @@ int vi_channel_drv_register(struct platform_device *ndev)
 
 	chan_drv->dev = &ndev->dev;
 	chan_drv->ndev = ndev;
+	chan_drv->ops = ops;
 	chan_drv->num_channels = MAX_VI_CHANNELS;
 	mutex_init(&chan_drv->lock);
 

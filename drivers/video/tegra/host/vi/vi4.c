@@ -26,6 +26,7 @@
 #include <linux/uaccess.h>
 #include <linux/module.h>
 #include <media/capture_vi_channel.h>
+#include <soc/tegra/camrtc-capture.h>
 
 #include "dev.h"
 #include "nvhost_acm.h"
@@ -317,6 +318,45 @@ static bool tegra_camera_rtcpu_available(void)
 	return of_device_is_available(dn);
 }
 
+static int vi4_alloc_syncpt(struct platform_device *pdev,
+			const char *name,
+			uint32_t *syncpt_id,
+			dma_addr_t *syncpt_addr,
+			uint32_t *gos_index,
+			uint32_t *gos_offset)
+{
+	uint32_t id;
+
+	id = nvhost_get_syncpt_client_managed(pdev, name);
+	if (id == 0)
+		return -ENODEV;
+
+	*syncpt_id = id;
+	*syncpt_addr = 0;
+	*gos_index = GOS_INDEX_INVALID;
+	*gos_offset = 0;
+
+	return 0;
+}
+
+static void vi4_release_syncpt(struct platform_device *pdev, uint32_t id)
+{
+	nvhost_syncpt_put_ref_ext(pdev, id);
+}
+
+static void vi4_get_gos_table(struct platform_device *pdev, int *count,
+			const dma_addr_t **table)
+{
+	*table = 0;
+	*count = 0;
+}
+
+static struct vi_channel_drv_ops vi4_channel_drv_ops = {
+	.alloc_syncpt = vi4_alloc_syncpt,
+	.release_syncpt = vi4_release_syncpt,
+	.get_gos_table = vi4_get_gos_table,
+};
+
 static int tegra_vi4_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
@@ -408,7 +448,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	err = vi_channel_drv_register(pdev);
+	err = vi_channel_drv_register(pdev, &vi4_channel_drv_ops);
 	if (err)
 		return err;
 

@@ -25,8 +25,16 @@
 
 struct vi_channel_drv;
 
-int vi_channel_drv_register(struct platform_device *);
-void vi_channel_drv_unregister(struct device *);
+struct vi_channel_drv_ops {
+	int (*alloc_syncpt)(struct platform_device *pdev, const char *name,
+			uint32_t *syncpt_id, dma_addr_t *syncpt_addr,
+			uint32_t *gos_index, uint32_t *gos_offset);
+
+	void (*release_syncpt)(struct platform_device *pdev, uint32_t id);
+
+	void (*get_gos_table)(struct platform_device *pdev, int *count,
+			const dma_addr_t **table);
+};
 
 struct tegra_vi_channel {
 	struct device *dev;
@@ -34,7 +42,12 @@ struct tegra_vi_channel {
 	struct vi_channel_drv *drv;
 	struct rcu_head rcu;
 	struct vi_capture *capture_data;
+	const struct vi_channel_drv_ops *ops;
 };
+
+int vi_channel_drv_register(struct platform_device *,
+			const struct vi_channel_drv_ops *);
+void vi_channel_drv_unregister(struct device *);
 
 /* Internal APIs for VI mode driver */
 struct tegra_vi_channel *vi_channel_open_ex(unsigned channel);

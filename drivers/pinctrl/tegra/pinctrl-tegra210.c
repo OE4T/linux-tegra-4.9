@@ -195,6 +195,9 @@
 #define TEGRA_PIN_BATT_BCL			_PIN(5)
 #define TEGRA_PIN_CLK_REQ			_PIN(6)
 #define TEGRA_PIN_SHUTDOWN			_PIN(7)
+#define TEGRA_DRV_PAD_QSPI_COMP			_PIN(8)
+#define TEGRA_DRV_PAD_QSPI_COMP_CONTROL		_PIN(9)
+#define TEGRA_DRV_PAD_QSPI_LPBK_CONTROL		_PIN(10)
 
 static const struct pinctrl_pin_desc tegra210_pins[] = {
 	PINCTRL_PIN(TEGRA_PIN_PEX_L0_RST_N_PA0, "PEX_L0_RST_N PA0"),
@@ -1117,6 +1120,18 @@ static const unsigned drive_sdmmc3_pins[] = {
 static const unsigned drive_sdmmc4_pins[] = {
 };
 
+static const unsigned drive_qspi_comp_pins[] = {
+	TEGRA_DRV_PAD_QSPI_COMP,
+};
+
+static const unsigned drive_qspi_comp_control_pins[] = {
+	TEGRA_DRV_PAD_QSPI_COMP_CONTROL,
+};
+
+static const unsigned drive_qspi_lpbk_control_pins[] = {
+	TEGRA_DRV_PAD_QSPI_LPBK_CONTROL,
+};
+
 enum tegra_mux {
 	TEGRA_MUX_AUD,
 	TEGRA_MUX_BCL,
@@ -1553,6 +1568,9 @@ static const struct tegra_pingroup tegra210_groups[] = {
 	DRV_PINGROUP(sdmmc2, 0xa9c, 2,  6,  8,  6,  28, 2,  30, 2),
 	DRV_PINGROUP(sdmmc3, 0xab0, 12, 7,  20, 7,  28, 2,  30, 2),
 	DRV_PINGROUP(sdmmc4, 0xab4, 2,  6,  8,  6,  28, 2,  30, 2),
+	DRV_PINGROUP(qspi_comp_control, 0xb70, -1, -1, -1, -1, -1, -1, -1, -1),
+	DRV_PINGROUP(qspi_lpbk_control, 0xb78, -1, -1, -1, -1, -1, -1, -1, -1),
+	DRV_PINGROUP(qspi_comp, 0xa78, 12, 5, 20, 5, -1, -1, -1, -1),
 };
 
 static const struct tegra_pinctrl_soc_data tegra210_pinctrl = {

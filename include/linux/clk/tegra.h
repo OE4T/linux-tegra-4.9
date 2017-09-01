@@ -138,4 +138,6 @@ static inline long tegra_emc_round_rate_updown(unsigned long rate, bool up)
 }
 #endif
 
+int tegra_super_cdiv_use_therm_controls(bool);
+
 #endif /* __LINUX_CLK_TEGRA_H_ */

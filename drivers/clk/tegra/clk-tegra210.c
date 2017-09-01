@@ -3180,6 +3180,7 @@ static void __init tegra210_clock_init(struct device_node *np)
 		return;
 	}
 
+	has_ccplex_therm_control = 1;
 	clks = tegra_clk_init(clk_base, TEGRA210_CLK_CLK_MAX,
 			      TEGRA210_CAR_BANK_COUNT);
 	if (!clks)

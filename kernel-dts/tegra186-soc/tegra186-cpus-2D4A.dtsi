@@ -156,5 +156,5 @@
 		interrupt-affinity = <&{/cpus/cpu@0}>;
 	};
 
-	#include "tegra186-cpus-energy.dtsi"
+	#include "tegra186-cpus-energy-2D4A.dtsi"
 };

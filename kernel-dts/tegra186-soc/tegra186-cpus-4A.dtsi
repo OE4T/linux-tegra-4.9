@@ -42,51 +42,59 @@
 			};
 		};
 
-		cpu_a57_0: cpu@0 {
+		cpu_a57_0: cpu@2 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x100>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
+			cpu-ipc = <1024>;
 			next-level-cache = <&L2_A57>;
 			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_A57 &CPU_COST_A57>;
 		};
 
-		cpu_a57_1: cpu@1 {
+		cpu_a57_1: cpu@3 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
+			cpu-ipc = <1024>;
 			next-level-cache = <&L2_A57>;
 			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_A57 &CPU_COST_A57>;
 		};
 
-		cpu_a57_2: cpu@2 {
+		cpu_a57_2: cpu@4 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x102>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
+			cpu-ipc = <1024>;
 			next-level-cache = <&L2_A57>;
 			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_A57 &CPU_COST_A57>;
 		};
 
-		cpu_a57_3: cpu@3 {
+		cpu_a57_3: cpu@5 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x103>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
+			cpu-ipc = <1024>;
 			next-level-cache = <&L2_A57>;
 			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_A57 &CPU_COST_A57>;
 		};
 
-		L2_A57: l2-cache {
-                        compatible = "cache";
-                        cache-unified;
-                        cache-level = <2>;
-                };
+		L2_A57: l2-cache0 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <2>;
+		};
 	};
 
 	arm-pmu {
@@ -95,7 +103,9 @@
 			     <0 297 0x4>,
 			     <0 298 0x4>,
 			     <0 299 0x4>;
-		interrupt-affinity = <&{/cpus/cpu@0} &{/cpus/cpu@1}
-				      &{/cpus/cpu@2} &{/cpus/cpu@3}>;
+		interrupt-affinity = <&{/cpus/cpu@2} &{/cpus/cpu@3}
+				      &{/cpus/cpu@4} &{/cpus/cpu@5}>;
 	};
+
+	#include "tegra186-cpus-energy-4A.dtsi"
 };

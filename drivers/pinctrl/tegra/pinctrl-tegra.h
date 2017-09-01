@@ -1,7 +1,7 @@
 /*
  * Driver for the NVIDIA Tegra pinmux
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -63,6 +63,8 @@ enum tegra_pinconf_param {
 	TEGRA_PINCONF_PARAM_RFU_IN,
 	/* argument: Boolean */
 	TEGRA_PINCONF_PARAM_PAD_POWER,
+	/* argument: pinmux settings */
+	TEGRA_PINCONF_PARAM_FUNCTION,
 };
 
 enum tegra_pinconf_pull {

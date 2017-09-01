@@ -278,12 +278,14 @@ static int get_gpu_cpu_ways(void *data, u64 *val)
 
 static int set_gpu_cpu_ways(void *data, u64 val)
 {
-	int ret = 0;
 	u32 igpu_cpu_ways = (u32)val;
+	int ret = 0;
 
 	if (igpu_cpu_ways != cache_data->ioctl_data.igpu_cpu_ways) {
 		ret = t19x_set_l3_cache_ways(igpu_cpu_ways,
 				cache_data->ioctl_data.igpu_only_ways);
+		if (!ret)
+			cache_data->ioctl_data.igpu_cpu_ways = igpu_cpu_ways;
 	}
 
 	return ret;
@@ -299,12 +301,14 @@ static int get_gpu_only_ways(void *data, u64 *val)
 
 static int set_gpu_only_ways(void *data, u64 val)
 {
-	int ret = 0;
 	u32 igpu_only_ways = (u32)val;
+	int ret = 0;
 
 	if (igpu_only_ways != cache_data->ioctl_data.igpu_only_ways) {
 		ret = t19x_set_l3_cache_ways(
 			cache_data->ioctl_data.igpu_cpu_ways, igpu_only_ways);
+		if (!ret)
+			cache_data->ioctl_data.igpu_only_ways = igpu_only_ways;
 	}
 
 	return ret;

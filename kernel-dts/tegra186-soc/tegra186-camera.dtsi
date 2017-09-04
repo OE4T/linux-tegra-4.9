@@ -112,7 +112,7 @@
 			nvidia,service = "vinotify";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
-			nvidia,frame-count = <63>;
+			nvidia,frame-count = <64>;
 			nvidia,frame-size = <128>;
 			device = <&tegra_vi>;
 		};
@@ -256,7 +256,7 @@
 			nvidia,service = "vinotify";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
-			nvidia,frame-count = <63>;
+			nvidia,frame-count = <64>;
 			nvidia,frame-size = <128>;
 			device = <&tegra_vi>;
 		};

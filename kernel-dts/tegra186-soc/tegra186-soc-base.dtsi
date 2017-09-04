@@ -1721,9 +1721,10 @@
 			clocks = <&tegra_car TEGRA186_CLK_I2S1>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 				<&tegra_car TEGRA186_CLK_I2S1_SYNC_INPUT>,
-				<&tegra_car TEGRA186_CLK_SYNC_I2S1>;
+				<&tegra_car TEGRA186_CLK_SYNC_I2S1>,
+				<&tegra_car TEGRA186_CLK_I2S1_SYNC_INPUT>;
 			clock-names = "i2s1", "pll_a_out0", "ext_audio_sync",
-						"audio_sync";
+						"audio_sync", "clk_sync_input";
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <>;
 			pinctrl-1 = <>;
@@ -1738,9 +1739,10 @@
 			clocks = <&tegra_car TEGRA186_CLK_I2S2>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 				<&tegra_car TEGRA186_CLK_I2S2_SYNC_INPUT>,
-				<&tegra_car TEGRA186_CLK_SYNC_I2S2>;
+				<&tegra_car TEGRA186_CLK_SYNC_I2S2>,
+				<&tegra_car TEGRA186_CLK_I2S2_SYNC_INPUT>;
 			clock-names = "i2s2", "pll_a_out0", "ext_audio_sync",
-						"audio_sync";
+						"audio_sync", "clk_sync_input";
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <>;
 			pinctrl-1 = <>;
@@ -1755,9 +1757,10 @@
 			clocks = <&tegra_car TEGRA186_CLK_I2S3>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 				<&tegra_car TEGRA186_CLK_I2S3_SYNC_INPUT>,
-				<&tegra_car TEGRA186_CLK_SYNC_I2S3>;
+				<&tegra_car TEGRA186_CLK_SYNC_I2S3>,
+				<&tegra_car TEGRA186_CLK_I2S3_SYNC_INPUT>;
 			clock-names = "i2s3", "pll_a_out0", "ext_audio_sync",
-						"audio_sync";
+						"audio_sync", "clk_sync_input";
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <>;
 			pinctrl-1 = <>;
@@ -1772,9 +1775,10 @@
 			clocks = <&tegra_car TEGRA186_CLK_I2S4>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 				<&tegra_car TEGRA186_CLK_I2S4_SYNC_INPUT>,
-				<&tegra_car TEGRA186_CLK_SYNC_I2S4>;
+				<&tegra_car TEGRA186_CLK_SYNC_I2S4>,
+				<&tegra_car TEGRA186_CLK_I2S4_SYNC_INPUT>;
 			clock-names = "i2s4", "pll_a_out0", "ext_audio_sync",
-						"audio_sync";
+						"audio_sync", "clk_sync_input";
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <>;
 			pinctrl-1 = <>;
@@ -1789,9 +1793,10 @@
 			clocks = <&tegra_car TEGRA186_CLK_I2S5>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 				<&tegra_car TEGRA186_CLK_I2S5_SYNC_INPUT>,
-				<&tegra_car TEGRA186_CLK_SYNC_I2S5>;
+				<&tegra_car TEGRA186_CLK_SYNC_I2S5>,
+				<&tegra_car TEGRA186_CLK_I2S5_SYNC_INPUT>;
 			clock-names = "i2s5", "pll_a_out0", "ext_audio_sync",
-						"audio_sync";
+						"audio_sync", "clk_sync_input";
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <>;
 			pinctrl-1 = <>;
@@ -1806,9 +1811,10 @@
 			clocks = <&tegra_car TEGRA186_CLK_I2S6>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 				<&tegra_car TEGRA186_CLK_I2S6_SYNC_INPUT>,
-				<&tegra_car TEGRA186_CLK_SYNC_I2S6>;
+				<&tegra_car TEGRA186_CLK_SYNC_I2S6>,
+				<&tegra_car TEGRA186_CLK_I2S6_SYNC_INPUT>;
 			clock-names = "i2s6", "pll_a_out0", "ext_audio_sync",
-						"audio_sync";
+						"audio_sync", "clk_sync_input";
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <>;
 			pinctrl-1 = <>;

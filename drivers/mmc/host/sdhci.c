@@ -1576,7 +1576,7 @@ EXPORT_SYMBOL_GPL(sdhci_set_power_noreg);
 void sdhci_set_power(struct sdhci_host *host, unsigned char mode,
 		     unsigned short vdd)
 {
-	if (IS_ERR(host->mmc->supply.vmmc))
+	if (IS_ERR_OR_NULL(host->mmc->supply.vmmc))
 		sdhci_set_power_noreg(host, mode, vdd);
 	else
 		sdhci_set_power_reg(host, mode, vdd);
@@ -1769,7 +1769,7 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if (host->flags & SDHCI_DEVICE_DEAD) {
 		spin_unlock_irqrestore(&host->lock, flags);
-		if (!IS_ERR(mmc->supply.vmmc) &&
+		if (!IS_ERR_OR_NULL(mmc->supply.vmmc) &&
 		    ios->power_mode == MMC_POWER_OFF)
 			mmc_regulator_set_ocr(mmc, mmc->supply.vmmc, 0);
 		return;
@@ -2071,7 +2071,7 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 		ctrl &= ~SDHCI_CTRL_VDD_180;
 		sdhci_writew(host, ctrl, SDHCI_HOST_CONTROL2);
 
-		if (!IS_ERR(mmc->supply.vqmmc)) {
+		if (!IS_ERR_OR_NULL(mmc->supply.vqmmc)) {
 			ret = mmc_regulator_set_vqmmc(mmc, ios);
 			if (ret) {
 				pr_warn("%s: Switching to 3.3V signalling voltage failed\n",
@@ -2096,7 +2096,7 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 	case MMC_SIGNAL_VOLTAGE_180:
 		if (!(host->flags & SDHCI_SIGNALING_180))
 			return -EINVAL;
-		if (!IS_ERR(mmc->supply.vqmmc)) {
+		if (!IS_ERR_OR_NULL(mmc->supply.vqmmc)) {
 			ret = mmc_regulator_set_vqmmc(mmc, ios);
 			if (ret) {
 				pr_warn("%s: Switching to 1.8V signalling voltage failed\n",
@@ -2130,7 +2130,7 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 	case MMC_SIGNAL_VOLTAGE_120:
 		if (!(host->flags & SDHCI_SIGNALING_120))
 			return -EINVAL;
-		if (!IS_ERR(mmc->supply.vqmmc)) {
+		if (!IS_ERR_OR_NULL(mmc->supply.vqmmc)) {
 			ret = mmc_regulator_set_vqmmc(mmc, ios);
 			if (ret) {
 				pr_warn("%s: Switching to 1.2V signalling voltage failed\n",
@@ -3787,7 +3787,7 @@ int sdhci_setup_host(struct sdhci_host *host)
 		mmc->caps |= MMC_CAP_NEEDS_POLL;
 
 	/* If vqmmc regulator and no 1.8V signalling, then there's no UHS */
-	if (!IS_ERR(mmc->supply.vqmmc)) {
+	if (!IS_ERR_OR_NULL(mmc->supply.vqmmc)) {
 		sdhci_regulator_config_pre(mmc, 1, true);
 		ret = regulator_enable(mmc->supply.vqmmc);
 		if (!regulator_is_supported_voltage(mmc->supply.vqmmc, 1700000,
@@ -3829,7 +3829,7 @@ int sdhci_setup_host(struct sdhci_host *host)
 		mmc->caps2 |= MMC_CAP2_HS400;
 
 	if ((mmc->caps2 & MMC_CAP2_HSX00_1_2V) &&
-	    (IS_ERR(mmc->supply.vqmmc) ||
+	    (IS_ERR_OR_NULL(mmc->supply.vqmmc) ||
 	     !regulator_is_supported_voltage(mmc->supply.vqmmc, 1100000,
 					     1300000)))
 		mmc->caps2 &= ~MMC_CAP2_HSX00_1_2V;
@@ -3875,7 +3875,7 @@ int sdhci_setup_host(struct sdhci_host *host)
 	 * value.
 	 */
 	max_current_caps = sdhci_readl(host, SDHCI_MAX_CURRENT);
-	if (!max_current_caps && !IS_ERR(mmc->supply.vmmc)) {
+	if (!max_current_caps && !IS_ERR_OR_NULL(mmc->supply.vmmc)) {
 		int curr = regulator_get_current_limit(mmc->supply.vmmc);
 		if (curr > 0) {
 
@@ -4013,7 +4013,7 @@ int sdhci_setup_host(struct sdhci_host *host)
 	return 0;
 
 unreg:
-	if (!IS_ERR(mmc->supply.vqmmc))
+	if (!IS_ERR_OR_NULL(mmc->supply.vqmmc))
 		regulator_disable(mmc->supply.vqmmc);
 undma:
 	if (host->align_buffer)
@@ -4105,7 +4105,7 @@ unirq:
 untasklet:
 	tasklet_kill(&host->finish_tasklet);
 
-	if (!IS_ERR(mmc->supply.vqmmc))
+	if (!IS_ERR_OR_NULL(mmc->supply.vqmmc))
 		regulator_disable(mmc->supply.vqmmc);
 
 	if (host->align_buffer)
@@ -4168,7 +4168,7 @@ void sdhci_remove_host(struct sdhci_host *host, int dead)
 
 	tasklet_kill(&host->finish_tasklet);
 
-	if (!IS_ERR(mmc->supply.vqmmc))
+	if (!IS_ERR_OR_NULL(mmc->supply.vqmmc))
 		regulator_disable(mmc->supply.vqmmc);
 
 	if (host->align_buffer)

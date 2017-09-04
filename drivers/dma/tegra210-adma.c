@@ -1155,10 +1155,53 @@ static const struct tegra_adma_chip_data tegra186_chip_data = {
 		.mask	= T186_ADMA_CH_FIFO_CTRL_RX_FIFO_SIZE_MASK,
 	},
 };
+
+static const struct tegra_adma_chip_data tegra194_chip_data = {
+	.nr_channels		= 32,
+	.ch_reg_size		= 0x100,
+	.ch_base_offset		= 0x10000,
+	.ch_page_size		= 0x10000,
+	.global_int_clear	= T186_ADMA_GLOBAL_INT_CLEAR,
+	.global_reg_offset	= 0,
+	.slave_id		= 4,
+	.outstanding_request	= (0x8 << 4),
+	.tegra_adast_init	= tegra_adast_init,
+	.adma_war = {
+		.smp_sta_reg		= T186_SHRD_SMP_STA,
+		.smp_sta_set_reg	= T186_SHRD_SMP_STA_SET,
+		.smp_sta_clear_reg	= T186_SHRD_SMP_STA_CLR,
+		.is_adma_war		= false,
+	},
+	.tx_request = {
+		.shift	= T186_ADMA_CH_CTRL_TX_REQ_SEL_SHIFT,
+		.mask	= T186_ADMA_CH_CTRL_TX_REQ_SEL_MASK,
+		.max	= T186_ADMA_CH_CTRL_TX_REQ_MAX,
+	},
+	.rx_request	= {
+		.shift	= T186_ADMA_CH_CTRL_RX_REQ_SEL_SHIFT,
+		.mask	= T186_ADMA_CH_CTRL_RX_REQ_SEL_MASK,
+		.max	= T186_ADMA_CH_CTRL_RX_REQ_MAX,
+	},
+	.burst_size	= {
+		.shift	= ADMA_CH_CONFIG_BURST_SIZE_SHIFT,
+		.mask	= T186_ADMA_CH_CONFIG_BURST_SIZE_MASK,
+		.max	= 15,
+	},
+	.tx_fifo	= {
+		.shift	= ADMA_CH_FIFO_CTRL_TX_FIFO_SIZE_SHIFT,
+		.mask	= T186_ADMA_CH_FIFO_CTRL_TX_FIFO_SIZE_MASK,
+	},
+	.rx_fifo	= {
+		.shift	= ADMA_CH_FIFO_CTRL_RX_FIFO_SIZE_SHIFT,
+		.mask	= T186_ADMA_CH_FIFO_CTRL_RX_FIFO_SIZE_MASK,
+	},
+};
+
 static const struct of_device_id tegra_adma_of_match[] = {
 	{ .compatible = "nvidia,tegra210-adma", .data = &tegra210_chip_data},
 	{ .compatible = "nvidia,tegra210-adma-hv", .data = &tegra186_chip_data},
 	{ .compatible = "nvidia,tegra186-adma", .data = &tegra186_chip_data},
+	{ .compatible = "nvidia,tegra194-adma", .data = &tegra194_chip_data},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_adma_of_match);

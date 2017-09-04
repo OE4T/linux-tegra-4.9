@@ -396,11 +396,13 @@ static int mmc_speed_opt_set(void *data, u64 val)
 		return 0;
 	}
 
-	if ((val != UHS_DDR50_BUS_SPEED) && (val != UHS_SDR104_BUS_SPEED)) {
+	if ((val != UHS_DDR50_BUS_SPEED) && (val != UHS_SDR104_BUS_SPEED) &&
+		(val != UHS_HS400_BUS_SPEED)) {
 		pr_info("%s: Usage info, Below are the list of possible switch\n",
 				mmc_hostname(host));
-		pr_info("DDR50 to HS200 ( echo 3 > /d/mmc0/speed)\n");
-		pr_info("HS200 to DDR50 ( echo 4 > /d/mmc0/speed)\n");
+		pr_info("DDR50/HS400 to HS200 ( echo 3 > /d/mmc0/speed)\n");
+		pr_info("HS200/HS400 to DDR50 ( echo 4 > /d/mmc0/speed)\n");
+		pr_info("HS200/DDR50 to HS400 ( echo 5 > /d/mmc0/speed)\n");
 		return -EINVAL;
 	}
 

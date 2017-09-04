@@ -29,6 +29,9 @@
 
 #define DEFAULT_CMD6_TIMEOUT_MS	500
 
+static int mmc_select_hs400es(struct mmc_card *card);
+static int mmc_hs200_tuning(struct mmc_card *card);
+
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
 	0,		0,		0,		0
@@ -1347,22 +1350,28 @@ int mmc_ddr_to_hs400(struct mmc_card *card)
 	int err = 0;
 	/* Switch to HS200 */
 	err = mmc_ddr_to_hs200(card);
-	if (!err)
-		err = mmc_select_hs400(card); /* Switch to HS400 */
-	else
-		return err;
 	if (!err) {
-	/* Controller enable enhanced strobe function */
-		card->host->ios.enhanced_strobe = true;
-		if (card->host->ops->hs400_enhanced_strobe)
-			card->host->ops->hs400_enhanced_strobe(card->host,
-				&card->host->ios);
-	/* Execute DLL calibration since device switched to hs400 mode */
-		if (card->host->ops->post_init)
-			card->host->ops->post_init(card->host);
+		if ((card->host->caps2 & MMC_CAP2_HS400_ES) &&
+			(card->mmc_avail_type & EXT_CSD_CARD_TYPE_HS400ES)) {
+			err = mmc_select_hs400es(card);
+			mmc_set_bus_speed(card);
+		} else {
+			if (mmc_card_hs200(card)) {
+				err = mmc_hs200_tuning(card);
+				if (err)
+					return err;
+				err = mmc_select_hs400(card);
+				if (err)
+					return err;
+			}
+		}
 	} else {
 		err = mmc_hs200_to_ddr(card);
+		return err;
 	}
+	/* Execute DLL calibration since device switched to hs400 mode*/
+	if (card->host->ops->post_init)
+		card->host->ops->post_init(card->host);
 	return err;
 }
 
@@ -1401,19 +1410,25 @@ int mmc_hs400_to_ddr(struct mmc_card *card)
 
 int mmc_hs200_to_hs400(struct mmc_card *card)
 {
-	int err;
+	int err = 0;
 
-	err = mmc_select_hs400(card);
-	if (!err) {
-	/* Controller enable enhanced strobe function */
-		card->host->ios.enhanced_strobe = true;
-		if (card->host->ops->hs400_enhanced_strobe)
-			card->host->ops->hs400_enhanced_strobe(card->host,
-				&card->host->ios);
-	/* Execute DLL carlibration since device switched to hs400 mode */
-		if (card->host->ops->post_init)
-			card->host->ops->post_init(card->host);
+	 if ((card->host->caps2 & MMC_CAP2_HS400_ES) &&
+		(card->mmc_avail_type & EXT_CSD_CARD_TYPE_HS400ES)) {
+		 err = mmc_select_hs400es(card);
+		 mmc_set_bus_speed(card);
+	} else {
+		if (mmc_card_hs200(card)) {
+			err = mmc_hs200_tuning(card);
+			if (err)
+				return err;
+			err = mmc_select_hs400(card);
+			if (err)
+				return err;
+		}
 	}
+	/* Execute DLL carlibration since device switched to hs400 mode */
+	if (card->host->ops->post_init)
+		card->host->ops->post_init(card->host);
 	return err;
 }
 

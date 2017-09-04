@@ -309,6 +309,7 @@ struct tegra_xusb_usb2_port {
 	bool internal;
 	enum tegra_xusb_usb_port_cap port_cap;
 	int oc_pin;
+	int usb3_port_fake; /* only required for T210 device mode */
 };
 
 static inline struct tegra_xusb_usb2_port *

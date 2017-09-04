@@ -600,6 +600,11 @@ static int tegra_xusb_usb2_port_parse_dt(struct tegra_xusb_usb2_port *usb2)
 	if (!err)
 		usb2->oc_pin = value;
 
+	if (!of_property_read_u32(np, "nvidia,usb3-port-fake", &value))
+		usb2->usb3_port_fake = value;
+	else
+		usb2->usb3_port_fake = -1; /* default */
+
 	return 0;
 }
 

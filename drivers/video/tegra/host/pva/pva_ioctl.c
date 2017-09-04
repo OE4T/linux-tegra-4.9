@@ -566,7 +566,6 @@ static int pva_release(struct inode *inode, struct file *file)
 {
 	struct pva_private *priv = file->private_data;
 
-	nvhost_queue_abort(priv->queue);
 	nvhost_queue_put(priv->queue);
 	nvhost_module_remove_client(priv->pva->pdev, priv);
 

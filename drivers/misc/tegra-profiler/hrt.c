@@ -233,7 +233,10 @@ static void put_header(int cpuid)
 static void
 put_sched_sample(struct task_struct *task, int is_sched_in)
 {
+	int vec_idx = 0;
+	u32 vpid, vtgid;
 	unsigned int cpu, flags;
+	struct quadd_iovec vec[2];
 	struct quadd_record_data record;
 	struct quadd_sched_data *s = &record.sched;
 
@@ -245,15 +248,33 @@ put_sched_sample(struct task_struct *task, int is_sched_in)
 
 	s->sched_in = is_sched_in ? 1 : 0;
 	s->time = quadd_get_time();
-	s->pid = task->pid;
-	s->tgid = task->tgid;
+	s->pid = task_pid_nr(task);
+	s->tgid = task_tgid_nr(task);
 
+	s->is_vpid = 0;
 	s->reserved = 0;
 
 	s->data[QUADD_SCHED_IDX_TASK_STATE] = get_task_state(task);
 	s->data[QUADD_SCHED_IDX_RESERVED] = 0;
 
-	quadd_put_sample_this_cpu(&record, NULL, 0);
+	if (!(task->flags & PF_EXITING)) {
+		vpid = task_pid_vnr(task);
+		vtgid = task_tgid_vnr(task);
+
+		if (s->pid != vpid || s->tgid != vtgid) {
+			vec[vec_idx].base = &vpid;
+			vec[vec_idx].len = sizeof(vpid);
+			vec_idx++;
+
+			vec[vec_idx].base = &vtgid;
+			vec[vec_idx].len = sizeof(vtgid);
+			vec_idx++;
+
+			s->is_vpid = 1;
+		}
+	}
+
+	quadd_put_sample_this_cpu(&record, vec, vec_idx);
 }
 
 static int get_sample_data(struct quadd_sample_data *sample,
@@ -350,7 +371,7 @@ get_stack_offset(struct task_struct *task,
 static void
 read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 {
-	pid_t vpid, vtgid;
+	u32 vpid, vtgid;
 	u32 state, extra_data = 0, urcs = 0, ts_delta;
 	u64 ts_start, ts_end;
 	int i, vec_idx = 0, bt_size = 0;

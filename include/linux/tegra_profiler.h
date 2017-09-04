@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	40
+#define QUADD_SAMPLES_VERSION	41
 #define QUADD_IO_VERSION	22
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -63,6 +63,7 @@
 #define QUADD_SAMPLE_VERSION_RAW_EVENTS		38
 #define QUADD_SAMPLE_VERSION_OVERHEAD_INFO	39
 #define QUADD_SAMPLE_VERSION_REPORT_VPID	40
+#define QUADD_SAMPLE_VERSION_SCHED_REPORT_VPID	41
 
 #define QUADD_MMAP_HEADER_VERSION		1
 
@@ -307,7 +308,8 @@ struct quadd_sched_data {
 	u32	cpu:6,
 		lp_mode:1,
 		sched_in:1,
-		reserved:24;
+		is_vpid:1,
+		reserved:23;
 
 	u32 data[2];
 };

@@ -1,0 +1,243 @@
+#!/usr/bin/python
+#
+# Simple script for formatting RFR messages for nvgpu changes.
+#
+
+import os
+import re
+import json
+import argparse
+import subprocess
+
+VERSION = '1.0.0'
+
+# Gerrit commit URL formats. These are regular expressions to match the
+# incoming URLs against.
+gr_fmts = [ r'http://git-master/r/(\d+)',
+            r'http://git-master/r/#/c/(\d+)/',
+            r'http://git-master.nvidia.com/r/(\d+)',
+            r'http://git-master.nvidia.com/r/#/c/(\d+)/',
+            r'https://git-master/r/(\d+)',
+            r'https://git-master/r/#/c/(\d+)/',
+            r'https://git-master.nvidia.com/r/(\d+)',
+            r'https://git-master.nvidia.com/r/#/c/(\d+)/' ]
+
+# The user to use. May be overridden but the default comes from the environment.
+user = os.environ['USER']
+
+# Gerrit query command to obtain the patch URL. The substitution will be the
+# gerrit Change-ID parsed from the git commit message.
+gr_query_cmd = 'ssh %s@git-master -p 29418 gerrit query --format json %s'
+
+def parse_args():
+    """
+    Parse arguments to rfr.
+    """
+
+    ep="""This program will format commit messages into something that can be
+sent to the nvgpu mailing list for review
+"""
+    help_msg="""Git or gerrit commits to describe. Can be either a git or gerrit
+commit ID. If the ID starts with a 'I' then it will be treated as a gerrit ID.
+If the commit ID looks like a gerrit URL then it is treated as a gerrit URL.
+Otherwise it's treated as a git commit ID.
+"""
+    parser = argparse.ArgumentParser(description='RFR formatting tool',
+                                     epilog=ep)
+
+    parser.add_argument('-V', '--version', action='store_true', default=False,
+                        help='print the program version')
+    parser.add_argument('-m', '--msg', action='store', default=None,
+                        help='Custom message to add to the RFR email')
+
+    # Positionals: the gerrit URLs.
+    parser.add_argument('commits', metavar='Commit-IDs',
+                        nargs='+',
+                        help=help_msg)
+
+    arg_parser = parser.parse_args()
+
+    return arg_parser
+
+def get_gerrit_url_id(cmt):
+    """
+    Determines if the passed cmt is a gerrit commit URL. If it is then this
+    returns the URL ID; otherwise it returns None.
+    """
+
+    for fmt in gr_fmts:
+        p = re.compile(fmt)
+        m = p.search(cmt)
+        if m:
+            return m.group(1)
+
+    return None
+
+def gerrit_query(change):
+    """
+    Query gerrit for the JSON change information. Return a python object
+    describing the JSON data.
+
+    change can either be a Change-Id or the numeric change number from a URL.
+
+    Note there is an interesting limitation with this: gerrit can have multiple
+    changes with the same Change-Id (./sigh). So if you query a change ID that
+    points to multiple changes you get back all of them.
+
+    This script just uses the first. Ideally one could filter by branch or by
+    some other distinguishing factor.
+    """
+
+    query_cmd = gr_query_cmd % (user, change)
+
+    prog = subprocess.Popen(query_cmd, shell=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout_data, stderr_data = prog.communicate()
+    if prog.returncode != 0:
+        print('`%s\' failed!' % query_cmd)
+        return False
+
+    commit = json.loads(stdout_data.decode('utf-8').splitlines()[0])
+    if 'id' not in commit:
+        print('%s is not a gerrit commit!?' % change)
+        print('Most likely you need to push the change.')
+        return None
+
+    return commit
+
+def commit_info_from_gerrit_change_id(change_id):
+    """
+    Return a dict with all the gerrit info from a gerrit change ID.
+    """
+
+    return gerrit_query(change_id)
+
+def gerrit_change_id_from_gerrit_cl(cmt):
+    """
+    Return the gerrit Change-Id from the passed Gerrit URL.
+    """
+
+    cl = get_gerrit_url_id(cmt)
+    if not cl:
+        return None
+
+    commit = gerrit_query(cl)
+    if not commit:
+        return None
+
+    return commit['id']
+
+def gerrit_change_id_from_git_commit(cmt_id):
+    """
+    Return the gerrit Change-Id from the passed git cmt_id. Returns None if
+    this doesn't appear to be a cmt_id or doesn't have a Change-Id line.
+    """
+
+    cid_re = re.compile(r'Change-Id: (I[a-z0-9]{40})')
+
+    # First obtain the commit message itself.
+    prog = subprocess.Popen('git show --stat %s' % cmt_id, shell=True,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout_data, stderr_data = prog.communicate()
+    if prog.returncode != 0:
+        print('`git show %s\' failed?!' % cmt_id)
+        return None
+
+    m = cid_re.search(stdout_data.decode('utf-8'))
+    if m:
+        return m.group(1)
+
+    return None
+
+def indent_lines(text, ind):
+    """
+    Prepend each new line in the passed text with ind.
+    """
+    return ''.join(ind + l + '\n' for l in text.splitlines())
+
+def display_commits(commits, extra_message):
+    """
+    Takes a list of the commits to print.
+    """
+
+    whole_template = """
+Hi All,
+
+I would like you to review the following changes.
+{extra_message}
+{cmt_descriptions}
+Thanks!
+{cmt_verbose}"""
+
+    cmt_template = """
++----------------------------------------
+| {url}
+| {subject}
+| Author: {author}
+
+{cmtmsg}"""
+
+    commits_info = [ ]
+    for cmt in commits:
+        commits_info.append(commit_info_from_gerrit_change_id(cmt))
+
+    cmt_descriptions = ''
+    for c in commits_info:
+        cmt_descriptions += "  %s - %s\n" % (c['url'], c['subject'])
+        print(cmt_descriptions)
+
+    # Add new lines around the extra_message, if applicable. Otherwise we don't
+    # want anything to show up for extra_message.
+    if extra_message:
+        extra_message = '\n%s\n' % extra_message
+    else:
+        extra_message = ''
+
+    cmt_verbose = ''
+    for c in commits_info:
+        cmt_verbose += cmt_template.format(url=c['url'], subject=c['subject'],
+                                           author=c['owner']['name'],
+                                           cmtmsg=indent_lines(
+                                               c['commitMessage'], '  '))
+
+    print(whole_template.format(cmt_descriptions=cmt_descriptions,
+                                extra_message=extra_message,
+                                cmt_verbose=cmt_verbose))
+
+def main():
+    """
+    The magic happens here.
+    """
+
+    arg_parser = parse_args()
+    commits = [ ]
+
+    if arg_parser.version:
+        print('Version: %s' % VERSION)
+        exit(0)
+
+    # Builds a dictionary of Gerrit Change-Ids. From the Change-Ids we can then
+    # get the commit message and URL.
+    #
+    # This also builds an array of those same commit IDs to track the ordering
+    # of the commits so that the user can choose the order of the patches based
+    # on the order in which they pass the commits.
+    for cmt in arg_parser.commits:
+        if cmt[0] == 'I':
+            cid = cmt
+        elif get_gerrit_url_id(cmt):
+            cid = gerrit_change_id_from_gerrit_cl(cmt)
+        else:
+            cid = gerrit_change_id_from_git_commit(cmt)
+
+        if cid:
+            commits.append(cid)
+        else:
+            print('Warning: \'%s\' doesn\'t appear to be a commit!' % cmt)
+
+    display_commits(commits, arg_parser.msg)
+
+if __name__ == '__main__':
+    main()

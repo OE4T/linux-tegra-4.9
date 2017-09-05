@@ -26,6 +26,9 @@ ifneq ($(wildcard $(srctree)/../nvidia/drivers/platform/tegra/nvadsp/Makefile*),
 obj-$(CONFIG_TEGRA_NVADSP) += ../../../../nvidia/drivers/platform/tegra/nvadsp/
 endif
 
+
+obj-$(CONFIG_TEGRA_MC) += mc/
+
 ifeq ($(CONFIG_TEGRA_PTM),y)
 obj-$(CONFIG_ARCH_TEGRA_21x_SOC)         += tegra_ptm_t210.o
 endif

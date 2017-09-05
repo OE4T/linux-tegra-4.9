@@ -385,13 +385,6 @@ config CRYPTO_DEV_S5P
 	  Select this to offload Samsung S5PV210 or S5PC110, Exynos from AES
 	  algorithms execution.
 
-config TEGRA_CRYPTO_DEV
-	tristate "Device node to access tegra aes hardware"
-	depends on CRYPTO_DEV_TEGRA_ELLIPTIC_SE
-	help
-	  Dev node /dev/tegra-crypto in order to get access to tegra aes
-	  hardware from user space
-
 config CRYPTO_DEV_TEGRA_ELLIPTIC_SE
 	tristate "Tegra SE for Elliptic crypto algorithms"
 	select CRYPTO_ECDH
@@ -580,7 +573,5 @@ config CRYPTO_DEV_ROCKCHIP
 source "drivers/crypto/chelsio/Kconfig"
 
 trysource "../nvidia/drivers/crypto/Kconfig.nvidia"
-
-trysource "../nvidia/drivers/crypto/elliptic/Kconfig.nvidia"
 
 endif # CRYPTO_HW

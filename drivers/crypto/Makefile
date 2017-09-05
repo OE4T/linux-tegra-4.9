@@ -23,7 +23,6 @@ obj-$(CONFIG_CRYPTO_DEV_PADLOCK_SHA) += padlock-sha.o
 obj-$(CONFIG_CRYPTO_DEV_PICOXCELL) += picoxcell_crypto.o
 obj-$(CONFIG_CRYPTO_DEV_PPC4XX) += amcc/
 obj-$(CONFIG_CRYPTO_DEV_S5P) += s5p-sss.o
-obj-$(CONFIG_TEGRA_CRYPTO_DEV) += tegra-cryptodev.o
 obj-$(CONFIG_CRYPTO_DEV_TEGRA_SE) += tegra-se.o
 obj-$(CONFIG_CRYPTO_DEV_TEGRA_ELLIPTIC_SE) += tegra-se-elp.o
 obj-$(CONFIG_CRYPTO_DEV_SAHARA) += sahara.o

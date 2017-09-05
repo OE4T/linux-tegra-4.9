@@ -581,7 +581,7 @@ static void qh_link_periodic(struct ehci_hcd *ehci, struct ehci_qh *qh)
 		/* sorting each branch by period (slow-->fast)
 		 * enables sharing interior tree nodes
 		 */
-		while (here.ptr && qh != here.qh) {
+		while (here.qh && here.ptr && qh != here.qh) {
 			if (qh->ps.period > here.qh->ps.period)
 				break;
 			prev = &here.qh->qh_next;

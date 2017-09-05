@@ -585,11 +585,32 @@ static int tegra_get_modedb(struct tegra_dc *dc, struct tegra_fb_modedb *modedb,
 	struct fb_info *info)
 {
 	unsigned i;
-	struct fb_var_screeninfo __user *modedb_ptr;
-	struct fb_modelist *modelist;
+	struct fb_var_screeninfo __user *modedb_ptr = NULL;
+	struct fb_modelist *modelist = NULL;
 
 	i = 0;
+
+	if (list_empty(&info->modelist)) {
+		/* if modelist empty, return modelength as 0 */
+		modedb->modedb_len = 0;
+		return 0;
+	}
+
 	modedb_ptr = user_ptr(modedb->modedb);
+
+	if (modedb->modedb_len == 0) {
+		list_for_each_entry(modelist, &info->modelist, list) {
+			i++;
+
+			if (modelist->mode.vmode & FB_VMODE_STEREO_MASK)
+				i++;
+		}
+		modedb->modedb_len = i;
+		return 0;
+	}
+
+	i = 0;
+
 	list_for_each_entry(modelist, &info->modelist, list) {
 		struct fb_var_screeninfo var;
 
@@ -621,15 +642,7 @@ static int tegra_get_modedb(struct tegra_dc *dc, struct tegra_fb_modedb *modedb,
 			i++;
 		}
 	}
-
-	/*
-	 * If modedb_len == 0, return how many modes are
-	 * available; otherwise, return how many modes were written.
-	 */
-	if (modedb->modedb_len == 0)
-		modedb->modedb_len = i;
-	else
-		modedb->modedb_len = min(modedb->modedb_len, i);
+	modedb->modedb_len = min(modedb->modedb_len, i);
 
 	return 0;
 }
@@ -1083,7 +1096,7 @@ int tegra_fb_set_win_index(struct tegra_dc *dc, unsigned long win_mask)
 	unsigned stride = 0;
 	struct tegra_fb_info *tegra_fb;
 
-	if (!dc && !dc->fb)
+	if (!dc || !dc->fb)
 		return -1;
 
 	tegra_fb = dc->fb;

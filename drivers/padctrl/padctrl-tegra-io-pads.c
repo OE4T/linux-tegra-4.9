@@ -21,7 +21,6 @@
 struct tegra_io_pad_info {
 	const char *name;
 	int id;
-	bool dynamic_pad_voltage;
 };
 
 #define TEGRA_IO_PAD_INFO(_id, _name)		\
@@ -213,143 +212,11 @@ static struct padctrl_desc tegra_io_pads_padctrl_desc = {
 	.ops = &tegra_io_pad_padctrl_ops,
 };
 
-static int tegra_io_pad_parse_dt(struct tegra_io_pads_padcontrol *padctrl)
-
-{
-	struct padctrl_dev *pad_dev = padctrl->pad_dev;
-	struct device *dev = padctrl->dev;
-	struct device_node *pad_np, *child;
-	struct tegra_io_pad_info *pad;
-	u32 pval;
-	int id;
-	const char *pad_name, *name;
-	bool dpd_en, dpd_dis, pad_en, pad_dis, io_dpd_en, io_dpd_dis;
-	bool dyn_pad_volt;
-	int n_child;
-	u32 *volt_configs, *iodpd_configs;
-	int i, vcount, dpd_count, pindex;
-	int ret;
-
-	pad_np = of_get_child_by_name(dev->of_node, "io-pad-defaults");
-	if (!pad_np)
-		return 0;
-
-	/* Ignore the nodes if disabled */
-	ret = of_device_is_available(pad_np);
-	if (!ret)
-		return 0;
-
-	n_child = of_get_available_child_count(pad_np);
-	if (!n_child)
-		return 0;
-
-	n_child *= 2;
-	volt_configs = kzalloc(n_child * sizeof(*volt_configs), GFP_KERNEL);
-	if (!volt_configs)
-		return -ENOMEM;
-
-	iodpd_configs = kzalloc(n_child * sizeof(*iodpd_configs), GFP_KERNEL);
-	if (!iodpd_configs) {
-		kfree(volt_configs);
-		return -ENOMEM;
-	}
-
-	vcount = 0;
-	dpd_count = 0;
-	for_each_available_child_of_node(pad_np, child) {
-		name = of_get_property(child, "nvidia,pad-name", NULL);
-		if (!name)
-			name = child->name;
-
-		for (i = 0; i < ARRAY_SIZE(tegra_io_pads_info); ++i) {
-			pad = &tegra_io_pads_info[i];
-			if (strcmp(name, pad->name))
-				continue;
-
-			ret = of_property_read_u32(child,
-					"nvidia,io-pad-init-voltage", &pval);
-			if (!ret) {
-				volt_configs[vcount++] = i;
-				volt_configs[vcount++] = pval;
-			}
-
-			pad->dynamic_pad_voltage = of_property_read_bool(child,
-					"nvidia,enable-dynamic-pad-voltage");
-
-			dpd_en = of_property_read_bool(child,
-						"nvidia,deep-power-down-enable");
-			dpd_dis = of_property_read_bool(child,
-						"nvidia,deep-power-down-disable");
-			pad_en = of_property_read_bool(child,
-						"nvidia,io-pad-power-enable");
-			pad_dis = of_property_read_bool(child,
-						"nvidia,io-pad-power-disable");
-
-			io_dpd_en = dpd_en | pad_dis;
-			io_dpd_dis = dpd_dis | pad_en;
-
-			if ((dpd_en && pad_en)	|| (dpd_dis && pad_dis) ||
-					(io_dpd_en & io_dpd_dis)) {
-				pr_err("PMC: Conflict on io-pad %s config\n",
-					name);
-				continue;
-			}
-			if (io_dpd_en || io_dpd_dis) {
-				iodpd_configs[dpd_count++] = i;
-				iodpd_configs[dpd_count++] = !!io_dpd_dis;
-			}
-		}
-	}
-
-	for (i = 0; i < vcount; i += 2) {
-		if (!volt_configs[i + 1])
-			continue;
-
-		pindex = volt_configs[i];
-		id = tegra_io_pads_info[volt_configs[i]].id;
-		pad_name = tegra_io_pads_info[volt_configs[i]].name;
-
-		dyn_pad_volt = tegra_io_pads_info[pindex].dynamic_pad_voltage;
-		tegra_io_pads_info[pindex].dynamic_pad_voltage = true;
-		ret = tegra_io_pad_set_voltage(pad_dev, id,
-						    volt_configs[i + 1]);
-		if (ret < 0) {
-			dev_warn(dev, "PMC: IO pad %s voltage config failed: %d\n",
-				 pad_name, ret);
-			WARN_ON(1);
-		} else {
-			dev_info(dev, "PMC: IO pad %s voltage is %d\n",
-				 pad_name, volt_configs[i + 1]);
-		}
-		tegra_io_pads_info[pindex].dynamic_pad_voltage = dyn_pad_volt;
-	}
-
-	for (i = 0; i < dpd_count; i += 2) {
-		id = tegra_io_pads_info[iodpd_configs[i]].id;
-		pad_name = tegra_io_pads_info[iodpd_configs[i]].name;
-
-		ret = tegra_io_pad_set_power(pad_dev, id,
-						  iodpd_configs[i + 1]);
-		if (ret < 0) {
-			dev_warn(dev, "PMC: IO pad %s power config failed: %d\n",
-				 pad_name, ret);
-			WARN_ON(1);
-		} else {
-			dev_info(dev, "PMC: IO pad %s power is %s\n",
-				 pad_name, (iodpd_configs[i + 1]) ?
-				 "enable" : "disable");
-		}
-	}
-
-	kfree(volt_configs);
-	kfree(iodpd_configs);
-	return 0;
-}
-
 int tegra_io_pads_padctrl_init(struct device *dev)
 {
 	struct tegra_io_pads_padcontrol *padctrl;
 	struct padctrl_config config = { };
+	struct device_node *pad_np;
 	int ret;
 
 	padctrl = devm_kzalloc(dev, sizeof(*padctrl), GFP_KERNEL);
@@ -372,7 +239,12 @@ int tegra_io_pads_padctrl_init(struct device *dev)
 	if (of_property_read_bool(dev->of_node, "clear-all-io-pads-dpd"))
 		tegra_pmc_io_dpd_clear();
 
-	tegra_io_pad_parse_dt(padctrl);
+	pad_np = of_get_child_by_name(dev->of_node, "io-pad-defaults");
+	if (pad_np) {
+		dev_warn(dev, "WARNING: IO pad defaults is supported via pinctrl\n");
+		WARN_ON(1);
+		return 0;
+	}
 
 	dev_info(dev, "IO padctrl driver initialized\n");
 

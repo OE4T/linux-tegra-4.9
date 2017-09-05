@@ -55,66 +55,11 @@ config TEGRA_18X_SERROR
           The Tegra18 SError handler. This handles Denver SErrors, A57 SErrors,
 	  CCPLEX errors, and fabric slave errors.
 
-config TEGRA_BWMGR
-        bool "Enable EMC Bandwidth Manager"
-        depends on COMMON_CLK
-        default n
-        help
-          Enables Bandwidth manager support for EMC clock. Required when using Common Clock Framework
-
 config TEGRA_CAMERA_RTCPU
 	bool "Enable Tegra Camera RTCPU Driver"
 	depends on ARCH_TEGRA_18x_SOC
 	select TEGRA_IVC
 	select TEGRA_HSP
-
-config TEGRA_ISOMGR
-        bool "Isochronous Bandwidth Manager "
-        help
-          When enabled, drivers for ISO units can obtain ISO BW.
-          The memory controller (MC) for each Tegra platform can supply
-          a limited amount of isochronous (real-time) bandwidth.  When
-          enabled, isomgr will manage a pool of ISO BW.
-
-config TEGRA_ISOMGR_POOL_KB_PER_SEC
-        int "Size of isomgr pool "
-        default 0
-        help
-          Set this maximum ISO BW (in Kbytes/sec) that platform supports.
-          The memory controller (MC) for each Tegra platform can supply
-          a limited amount of isochronous (real-time) bandwidth.  Each
-          platform must specify the maximum amount of ISO BW that isomgr
-          should manage.
-
-config TEGRA_ISOMGR_SYSFS
-        bool "Visibility into Isochronous Bandwidth Manager state "
-        depends on TEGRA_ISOMGR
-        help
-          When enabled, sysfs can be used to query isomgr state.
-          This is used for visibility into isomgr state.  It could
-          be useful in debug or in understanding performance on a
-          running system.
-
-config TEGRA_ISOMGR_MAX_ISO_BW_QUIRK
-        bool "Relax Max ISO Bw limit"
-        depends on TEGRA_ISOMGR
-        default n
-        help
-          When enabled, allows system with less ISO bw continue to
-          work. This is necessary for systems running at lower
-          EMC clock freq or on FPGA.
-
-config TEGRA_MC
-        bool "Tegra MC"
-        default y
-        help
-          Enable Tegra MC.
-
-config TEGRA_OF_MCERR
-        bool "Tegra MCERR OF"
-        default y
-        help
-          Enable Tegra MC ERR OF.
 
 config TEGRA_PTP_NOTIFIER
 	tristate "Enable PTP Notifier"

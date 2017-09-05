@@ -3051,11 +3051,17 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 
 	for (i = 0; i < MAX_PHY_TYPES; i++) {
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
-			if (!do_wakeup)
-				phy_init(tegra->typed_phys[i][j]);
+			if (!do_wakeup) {
+				ret = phy_init(tegra->typed_phys[i][j]);
+				if (ret) {
+					dev_err(dev, "phy_init failed:%d\n",
+						ret);
+					goto out;
+				}
+			}
 			ret = phy_power_on(tegra->typed_phys[i][j]);
 			if (ret) {
-				dev_err(dev, "phy_power_on failed");
+				dev_err(dev, "phy_power_on failed:%d\n", ret);
 				goto out;
 			}
 		}

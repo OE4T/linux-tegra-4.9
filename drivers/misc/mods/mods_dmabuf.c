@@ -27,6 +27,10 @@
 
 #include "mods_internal.h"
 
+static void dummy_release(struct device *dev)
+{
+}
+
 static struct device_dma_parameters dma_parms = {
 	.max_segment_size = UINT_MAX,
 };
@@ -36,6 +40,7 @@ static struct platform_device dummy_device = {
 	.id = -1,
 	.dev = {
 		.dma_parms = &dma_parms,
+		.release   = dummy_release,
 	},
 };
 

@@ -1923,6 +1923,49 @@ out:
 	return err;
 }
 
+
+/**
+ * ufshcd_get_refclk_value - get programmed bRefClkFreq value
+ * @hba: per-adapter instance
+ * @value: variable to store read value
+ *
+ * Get Refclkfreq value
+ */
+int ufshcd_get_refclk_value(struct ufs_hba *hba, u32 *value)
+{
+	return ufshcd_query_attr(hba, UPIU_QUERY_OPCODE_READ_ATTR,
+			QUERY_ATTR_IDN_REF_CLK_FREQ, 0, 0, value);
+}
+EXPORT_SYMBOL(ufshcd_get_refclk_value);
+
+/**
+ * ufshcd_set_refclk_value - Write bRefClkFreq value
+ * @hba: per-adapter instance
+ * @value: value to be written
+ *
+ * Set Refclkfreq value
+ */
+int ufshcd_set_refclk_value(struct ufs_hba *hba, u32 *value)
+{
+	return ufshcd_query_attr(hba, UPIU_QUERY_OPCODE_WRITE_ATTR,
+			QUERY_ATTR_IDN_REF_CLK_FREQ, 0, 0, value);
+}
+EXPORT_SYMBOL(ufshcd_set_refclk_value);
+
+/**
+ * ufshcd_get_config_desc_lock - Read configuration descriptor lock
+ * @hba: per-adapter instance
+ * @value: varibale to store read value
+ *
+ * Read device configuration descriptor lock
+ */
+int ufshcd_get_config_desc_lock(struct ufs_hba *hba, u32 *value)
+{
+	return ufshcd_query_attr(hba, UPIU_QUERY_OPCODE_READ_ATTR,
+			QUERY_ATTR_IDN_CONF_DESC_LCK, 0, 0, value);
+}
+EXPORT_SYMBOL(ufshcd_get_config_desc_lock);
+
 /**
  * ufshcd_query_attr_retry() - API function for sending query
  * attribute with retries
@@ -2056,6 +2099,24 @@ int ufshcd_query_descriptor_retry(struct ufs_hba *hba,
 	return err;
 }
 EXPORT_SYMBOL(ufshcd_query_descriptor_retry);
+
+/**
+ * ufshcd_set_config_desc - Write configuration Descriptor
+ * @hba: per-adapter instance
+ * @desc_buf: configuration descriptor buffer
+ *
+ * Write configuration Descriptor
+ */
+int ufshcd_set_config_desc(struct ufs_hba *hba, u8 *desc_buf)
+{
+	u32 lun_desc_len;
+
+	lun_desc_len = ufs_query_desc_max_size[QUERY_DESC_IDN_CONFIGURAION];
+
+	return  ufshcd_query_descriptor_retry(hba, UPIU_QUERY_OPCODE_WRITE_DESC,
+		QUERY_DESC_IDN_CONFIGURAION, 0, 0, desc_buf, &lun_desc_len);
+}
+EXPORT_SYMBOL(ufshcd_set_config_desc);
 
 /**
  * ufshcd_read_desc_param - read the specified descriptor parameter

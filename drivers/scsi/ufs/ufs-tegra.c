@@ -36,7 +36,7 @@
 #include "unipro.h"
 #include "ufs-tegra.h"
 #include "ufshci.h"
-
+#include "ufs-provision.h"
 
 #ifdef CONFIG_DEBUG_FS
 static int ufs_tegra_show_configuration(struct seq_file *s, void *data)
@@ -90,6 +90,7 @@ void ufs_tegra_init_debugfs(struct ufs_hba *hba)
 	device_root = debugfs_create_dir(dev_name(hba->dev), NULL);
 	debugfs_create_file("configuration", S_IFREG | S_IRUGO,
 			device_root, hba, &ufs_tegra_debugfs_ops);
+	debugfs_provision_init(hba, device_root);
 }
 #endif
 
@@ -1289,6 +1290,7 @@ static void ufs_tegra_exit(struct ufs_hba *hba)
 
 	if (tegra_platform_is_silicon())
 		ufs_tegra_disable_mphylane_clks(ufs_tegra);
+	debugfs_provision_exit(hba);
 }
 
 /**

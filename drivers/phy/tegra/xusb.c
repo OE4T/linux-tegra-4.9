@@ -776,12 +776,6 @@ static int tegra_xusb_usb3_port_parse_dt(struct tegra_xusb_usb3_port *usb3)
 
 	usb3->internal = of_property_read_bool(np, "nvidia,internal");
 
-	if (tegra_platform_is_silicon()) {
-		usb3->supply = devm_regulator_get(&port->dev, "vbus");
-		if (IS_ERR(usb3->supply))
-			return PTR_ERR(usb3->supply);
-	}
-
 	return 0;
 }
 

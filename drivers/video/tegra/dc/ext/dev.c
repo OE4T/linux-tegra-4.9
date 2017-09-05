@@ -457,7 +457,7 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 	else if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020)
 		win->flags |= TEGRA_WIN_FLAG_CS_REC2020;
 	else
-		win->flags |= TEGRA_WIN_FLAG_CS_DEFAULT;
+		win->flags |= TEGRA_WIN_FLAG_CS_NONE;
 
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_NONE)
 		win->flags |= TEGRA_WIN_FLAG_DEGAMMA_NONE;
@@ -1596,6 +1596,7 @@ static int tegra_dc_ext_configure_output_csc_user_data(
 
 	if (flip_udata->flags & TEGRA_DC_EXT_FLIP_FLAG_UPDATE_OCSC_CS) {
 		switch (user_csc->output_colorspace) {
+		case TEGRA_DC_EXT_FLIP_FLAG_CS_NONE:
 		case TEGRA_DC_EXT_FLIP_FLAG_CS_REC601:
 		case TEGRA_DC_EXT_FLIP_FLAG_CS_REC709:
 		case TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020:

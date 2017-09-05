@@ -4182,12 +4182,14 @@ void tegra_nvdisp_set_output_colorspace(struct tegra_dc *dc,
 	/* Reset the csc2 control colorspace */
 	csc2_control &= ~(nvdisp_csc2_control_output_color_sel_y2020_f());
 
-	if (output_colorspace == TEGRA_DC_EXT_FLIP_FLAG_CS_REC601) {
-		csc2_control = nvdisp_csc2_control_output_color_sel_y601_f();
-	} else if (output_colorspace == TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020) {
-		csc2_control = nvdisp_csc2_control_output_color_sel_y2020_f();
+	if (output_colorspace == TEGRA_DC_EXT_FLIP_FLAG_CS_NONE) {
+		csc2_control |= nvdisp_csc2_control_output_color_sel_rgb_f();
+	} else if (output_colorspace == TEGRA_DC_EXT_FLIP_FLAG_CS_REC601) {
+		csc2_control |= nvdisp_csc2_control_output_color_sel_y601_f();
 	} else if (output_colorspace == TEGRA_DC_EXT_FLIP_FLAG_CS_REC709) {
-		csc2_control = nvdisp_csc2_control_output_color_sel_y709_f();
+		csc2_control |= nvdisp_csc2_control_output_color_sel_y709_f();
+	} else if (output_colorspace == TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020) {
+		csc2_control |= nvdisp_csc2_control_output_color_sel_y2020_f();
 	} else {
 		dev_err(&dc->ndev->dev, "%s: unsupported colorspace=%u\n",
 			__func__, output_colorspace);

@@ -226,6 +226,9 @@ static int  scrncapt_get_info_win(struct tegra_dc *dc, int winidx,
 		winattr->flags |= TEGRA_DC_EXT_FLIP_FLAG_CS_REC709;
 	else if (win->flags & TEGRA_WIN_FLAG_CS_REC2020)
 		winattr->flags |= TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020;
+	else if ((win->flags & TEGRA_WIN_FLAG_CS_MASK) ==
+				TEGRA_WIN_FLAG_CS_NONE)
+		winattr->flags |= TEGRA_DC_EXT_FLIP_FLAG_CS_NONE;
 	winattr->x         = win->x.full;
 	winattr->y         = win->y.full;
 	winattr->w         = win->w.full;

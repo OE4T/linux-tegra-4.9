@@ -42,7 +42,7 @@ struct nvmap_handle_ref;
 #define TEGRA_WIN_FLAG_INPUT_RANGE_LIMITED	(1 << 12)
 #define TEGRA_WIN_FLAG_INPUT_RANGE_BYPASS	(2 << 12)
 #define TEGRA_WIN_FLAG_CS_MASK		(7 << 14)
-#define TEGRA_WIN_FLAG_CS_DEFAULT	(0 << 14)
+#define TEGRA_WIN_FLAG_CS_NONE		(0 << 14)
 #define TEGRA_WIN_FLAG_CS_REC601	(1 << 14)
 #define TEGRA_WIN_FLAG_CS_REC709	(2 << 14)
 #define TEGRA_WIN_FLAG_CS_REC2020	(4 << 14)

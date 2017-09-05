@@ -385,17 +385,6 @@ config CRYPTO_DEV_S5P
 	  Select this to offload Samsung S5PV210 or S5PC110, Exynos from AES
 	  algorithms execution.
 
-config CRYPTO_DEV_TEGRA_ELLIPTIC_SE
-	tristate "Tegra SE for Elliptic crypto algorithms"
-	select CRYPTO_ECDH
-	select CRYPTO_ECDSA
-	help
-	  This option allows you to have support of Security Engine
-	  for Elliptic PKA1 and RNG1 Crypto Algorithms. PKA1 supports
-	  Public Key Algorithms, RSA (upto 4K bits) and ECC (Elliptic
-	  Curve Cryptography, upto 521 bits) features internally. RNG1
-	  supports random number generation.
-
 config CRYPTO_DEV_TEGRA_SE
 	tristate "Tegra SE driver for crypto algorithms"
 	select CRYPTO_AES

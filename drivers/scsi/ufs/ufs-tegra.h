@@ -135,7 +135,7 @@ enum {
  * MPHY Context save armphy_rx_apb registers
  */
 
-static u16 mphy_rx_apb[] = {
+static u16 __attribute__ ((unused)) mphy_rx_apb[] = {
 0x080, /* MPHY_RX_APB_CAPABILITY_80_83_0 */
 0x084, /* MPHY_RX_APB_CAPABILITY_84_87_0 */
 0x088, /* MPHY_RX_APB_CAPABILITY_88_8B_0 */
@@ -190,7 +190,7 @@ static u16 mphy_rx_apb[] = {
  * MPHY Context save armphy_tx_apb registers
  */
 
-static u16 mphy_tx_apb[] = {
+static u16  __attribute__ ((unused)) mphy_tx_apb[] = {
 0x000, /* MPHY_TX_APB_TX_CAPABILITY_00_03_0 */
 0x004, /* MPHY_TX_APB_TX_CAPABILITY_04_07_0 */
 0x008, /* MPHY_TX_APB_TX_CAPABILITY_08_0B_0 */
@@ -286,6 +286,12 @@ struct ufs_tegra_host {
 
 	/* UFS tegra deviations from standard UFSHCI spec. */
 	unsigned int nvquirks;
+#ifdef CONFIG_DEBUG_FS
+	u32 refclk_value;
+	long program_refclk;
+	u8 *lun_desc_buf;
+	long program_lun;
+#endif
 };
 
 extern struct ufs_hba_variant_ops ufs_hba_tegra_vops;
@@ -347,7 +353,7 @@ static inline void ufs_aux_clear_bits(void __iomem *ufs_aux_base, u32 val,
 	ufs_aux_writel(ufs_aux_base, update_val, offset);
 }
 
-static void ufs_save_regs(void __iomem *reg_base, u32 *save_addr,
+static inline void ufs_save_regs(void __iomem *reg_base, u32 *save_addr,
 				u16 reg_array[], u32 no_of_regs)
 {
 	u32 regs;
@@ -357,7 +363,7 @@ static void ufs_save_regs(void __iomem *reg_base, u32 *save_addr,
 		*dest = readl(reg_base + (u32)reg_array[regs]);
 }
 
-static void ufs_restore_regs(void __iomem *reg_base, u32 *save_addr,
+static inline void ufs_restore_regs(void __iomem *reg_base, u32 *save_addr,
 				u16 reg_array[], u32 no_of_regs)
 {
 	u32 regs;

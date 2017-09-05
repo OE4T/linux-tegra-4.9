@@ -181,7 +181,11 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	if (ret)
 		return ret;
 
-	if (tegra_chan->bypass) {
+	/* if it is bypass and real sensor, return here
+	 * else let tegra_csi_start_streaming handle it
+	 * depending on bypass and pg_mode flags
+	 */
+	if (tegra_chan->bypass && !tegra_chan->pg_mode) {
 		atomic_set(&chan->is_streaming, enable);
 		return 0;
 	}

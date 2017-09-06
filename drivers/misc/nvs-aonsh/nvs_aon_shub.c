@@ -73,6 +73,7 @@
 #define AXIS_N		3
 /* block period in ms */
 #define TX_BLOCK_PERIOD 200
+#define INIT_TOUT_COUNT 15
 #define IVC_TIMEOUT	200
 
 enum I2C_IDS {
@@ -202,7 +203,7 @@ static void tegra_aon_shub_mbox_tx_done(struct mbox_client *cl, void *tx_msg,
 	shub->last_tx_done = !r;
 }
 
-static int tegra_aon_shub_ivc_msg_send(struct tegra_aon_shub *shub, int len)
+static int tegra_aon_shub_ivc_msg_send(struct tegra_aon_shub *shub, int len, int timeout)
 {
 	int status;
 	struct tegra_aon_mbox_msg msg;
@@ -216,7 +217,7 @@ static int tegra_aon_shub_ivc_msg_send(struct tegra_aon_shub *shub, int len)
 			status);
 	} else {
 		status = wait_for_completion_timeout(shub->wait_on,
-						msecs_to_jiffies(IVC_TIMEOUT));
+						msecs_to_jiffies(timeout));
 		if (status == 0) {
 			dev_err(shub->dev, "Timeout: failed on IVC %s\n",
 				shub->last_tx_done ? "RX" : "TX");
@@ -241,7 +242,8 @@ static int tegra_aon_shub_batch(void *client, int snsr_id, int flags,
 	shub->shub_req->data.batch.period = period;
 	shub->shub_req->data.batch.timeout = timeout;
 	ret = tegra_aon_shub_ivc_msg_send(shub,
-					  sizeof(struct aon_shub_request));
+					  sizeof(struct aon_shub_request),
+					  IVC_TIMEOUT);
 	if (ret)
 		dev_err(shub->dev,
 			"batch ERR: snsr_id: %d period: %u timeout: %u!\n",
@@ -261,7 +263,8 @@ static int tegra_aon_shub_enable(void *client, int snsr_id, int enable)
 	shub->shub_req->data.enable.snsr_id = snsr_id;
 	shub->shub_req->data.enable.enable = enable;
 	ret = tegra_aon_shub_ivc_msg_send(shub,
-					  sizeof(struct aon_shub_request));
+					  sizeof(struct aon_shub_request),
+					  IVC_TIMEOUT);
 	if (ret) {
 		dev_err(shub->dev,
 			"enable ERR: snsr_id: %d enable: %d!\n",
@@ -288,7 +291,8 @@ static int tegra_aon_shub_max_range(void *client, int snsr_id, int max_range)
 	shub->shub_req->data.range.snsr_id = snsr_id;
 	shub->shub_req->data.range.setting = max_range;
 	ret = tegra_aon_shub_ivc_msg_send(shub,
-					  sizeof(struct aon_shub_request));
+					  sizeof(struct aon_shub_request),
+					  IVC_TIMEOUT);
 	if (ret) {
 		dev_err(shub->dev,
 			"range ERR: snsr_id: %d setting: %d!\n",
@@ -496,7 +500,8 @@ static int tegra_aon_shub_get_cfg(struct tegra_aon_shub *shub, int remote_id)
 	shub->shub_req->req_type = AON_SHUB_REQUEST_SNSR_CFG;
 	shub->shub_req->data.cfg.index = remote_id;
 	ret = tegra_aon_shub_ivc_msg_send(shub,
-				sizeof(struct aon_shub_request));
+				sizeof(struct aon_shub_request),
+				IVC_TIMEOUT);
 	if (ret) {
 		dev_err(shub->dev, " %s No response from AON SHUB..!\n",
 			__func__);
@@ -625,7 +630,8 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 		setup_req->slave_chip_id = aux_chip_info[0];
 		setup_req->slave_i2c_addr = aux_slave ? aux_chip_info[1] : 0;
 		ret = tegra_aon_shub_ivc_msg_send(shub,
-					sizeof(struct aon_shub_request));
+					sizeof(struct aon_shub_request),
+					IVC_TIMEOUT);
 		if (ret) {
 			dev_err(shub->dev, "No response from AON SHUB...!\n");
 			goto err_exit;
@@ -693,7 +699,8 @@ static int tegra_aon_shub_get_snsr_chips(struct tegra_aon_shub *shub)
 
 	shub->shub_req->req_type = AON_SHUB_REQUEST_SNSR_CHIPS;
 	ret = tegra_aon_shub_ivc_msg_send(shub,
-					  sizeof(struct aon_shub_request));
+					  sizeof(struct aon_shub_request),
+					  IVC_TIMEOUT);
 	if (ret) {
 		dev_err(shub->dev, "No response from AON SHUB...!\n");
 		return ret;
@@ -726,8 +733,17 @@ static int tegra_aon_shub_get_snsr_cnt(struct tegra_aon_shub *shub)
 
 	shub->shub_req->req_type = AON_SHUB_REQUEST_SYS;
 	shub->shub_req->data.sys.req = AON_SHUB_SYS_REQUEST_SNSR_CNT;
+	/*
+	 * Work around bug 1986718: The very first HSP interrupt from
+	 * SPE to CCPLEX is delayed by several hundred milliseconds for
+	 * reasons unknown currently. The following timeout count of
+	 * "15" was emperically derived over 120 reboots. The max delay
+	 * seen was around 1.5 secs. To account for unexpected conditions,
+	 * I am using twice the max currently.
+	 */
 	ret = tegra_aon_shub_ivc_msg_send(shub,
-					  sizeof(struct aon_shub_request));
+					  sizeof(struct aon_shub_request),
+					  INIT_TOUT_COUNT * IVC_TIMEOUT);
 	if (ret) {
 		dev_err(shub->dev, "%s No response from AON SHUB...!\n",
 			__func__);
@@ -805,7 +821,8 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 		i2c_req->i2c_id = i + 1;
 		i2c_req->clk_rate = shub->i2c_clk_rates[i];
 		ret = tegra_aon_shub_ivc_msg_send(shub,
-					sizeof(struct aon_shub_request));
+					sizeof(struct aon_shub_request),
+					IVC_TIMEOUT);
 		if (ret) {
 			dev_err(shub->dev,
 				"%s : No response from AON SHUB...!\n",
@@ -836,7 +853,8 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 	snsrs_req = &shub->shub_req->data.init.data.snsrs_init;
 	snsrs_req->chip_id_mask = shub->chip_id_mask;
 	ret = tegra_aon_shub_ivc_msg_send(shub,
-					sizeof(struct aon_shub_request));
+					sizeof(struct aon_shub_request),
+					IVC_TIMEOUT);
 	if (ret) {
 		dev_err(shub->dev, "%s : No response from AON SHUB...!\n",
 			__func__);
@@ -868,7 +886,8 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 		shub->shub_req->req_type = AON_SHUB_REQUEST_CHIP_CFG_IDS;
 		shub->shub_req->data.cfg_ids.chip_id = chip_id;
 		ret = tegra_aon_shub_ivc_msg_send(shub,
-				sizeof(struct aon_shub_request));
+				sizeof(struct aon_shub_request),
+				IVC_TIMEOUT);
 		if (ret) {
 			dev_err(shub->dev,
 				"chip_cfg_ids : No response from AON SHUB!\n");

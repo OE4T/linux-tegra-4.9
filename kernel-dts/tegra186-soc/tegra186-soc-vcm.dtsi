@@ -357,10 +357,6 @@
 		};
 	};
 
-	cluster_clk_priv@e090000 {
-		status = "okay";
-	};
-
 	reserved-memory {
 		vpr: vpr-carveout {
 			status = "disabled";

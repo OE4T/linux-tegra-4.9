@@ -21,6 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/types.h>
+#include "cvb.h"
 
 /**
  * struct tegra_dfll_soc_data - SoC-specific hooks/integration for the DFLL driver
@@ -35,6 +36,12 @@ struct tegra_dfll_soc_data {
 	struct device *dev;
 	unsigned long max_freq;
 	const struct cvb_table *cvb;
+	struct rail_alignment alignment;
+	unsigned int min_millivolts;
+	unsigned int tune_high_min_millivolts;
+	u32 tune0_low;
+	u32 tune0_high;
+	u32 tune1;
 
 	void (*init_clock_trimmers)(void);
 	void (*set_clock_trimmers_high)(void);

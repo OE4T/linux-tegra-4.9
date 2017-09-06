@@ -248,7 +248,6 @@ static int vi_channel_open(struct inode *inode, struct file *file)
 {
 	unsigned channel = iminor(inode);
 	struct tegra_vi_channel *chan;
-	int err;
 
 	chan = vi_channel_open_ex(channel);
 	if (IS_ERR(chan))
@@ -257,8 +256,6 @@ static int vi_channel_open(struct inode *inode, struct file *file)
 	file->private_data = chan;
 
 	return nonseekable_open(inode, file);
-
-	return err;
 }
 
 static int vi_channel_release(struct inode *inode, struct file *file)

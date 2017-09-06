@@ -53,6 +53,8 @@ enum camrtc_request {
 
 	CAMRTC_REQ_GET_MEM_USAGE,                       /* 15 (0x0f) */
 
+	CAMRTC_REQ_RUN_MEM_TEST,                        /* 16 (0x10) */
+
 	CAMRTC_REQUEST_TYPE_MAX,
 };
 
@@ -186,11 +188,53 @@ struct camrtc_dbg_get_perf_counters_result {
 } __packed;
 
 
-#define CAMRTC_DBG_MAX_TEST_DATA (CAMRTC_DBG_MAX_DATA - 8)
+#define CAMRTC_DBG_MAX_TEST_DATA (CAMRTC_DBG_MAX_DATA - 8U)
 
+/* This structure is used pass textual input data to functional test
+ * case and get back the test output, including verdict.
+ *
+ * Fields:
+ *   timeout: maximum time test may run in nanoseconds
+ *      data: textual data (e.g., test name, verdict)
+ */
 struct camrtc_dbg_run_test_data {
 	uint64_t timeout;	/* Time in nanoseconds */
 	char data[CAMRTC_DBG_MAX_TEST_DATA];
+} __packed;
+
+#define CAMRTC_DBG_NUM_MEM_TEST_MEM 8U
+
+#define CAMRTC_DBG_MAX_MEM_TEST_DATA (CAMRTC_DBG_MAX_DATA - 12U - \
+		(sizeof(struct camrtc_dbg_test_mem) * CAMRTC_DBG_NUM_MEM_TEST_MEM))
+
+struct camrtc_dbg_test_mem {
+	uint64_t size;
+	uint64_t rtcpu_iova;
+	uint64_t vi_iova;
+	uint64_t isp_iova;
+};
+
+struct camrtc_dbg_streamids {
+	uint8_t rtcpu;
+	uint8_t vi;
+	uint8_t isp;
+	uint8_t _pad;
+};
+
+/* This structure is used pass memory areas and textual input data to
+ * functional test case and get back the test output, including
+ * verdict.
+ *
+ * Fields:
+ *   timeout: maximum time test may run in nanoseconds
+ *     mem[]: address and size of memory areas passed to the test
+ *      data: textual data (e.g., test name, verdict)
+ */
+struct camrtc_dbg_run_mem_test_data {
+	uint64_t timeout;	/* Time in nanoseconds */
+	struct camrtc_dbg_test_mem mem[CAMRTC_DBG_NUM_MEM_TEST_MEM];
+	struct camrtc_dbg_streamids streamids;
+	char data[CAMRTC_DBG_MAX_MEM_TEST_DATA];
 } __packed;
 
 struct camrtc_dbg_task_stat {
@@ -257,6 +301,7 @@ struct camrtc_dbg_request {
 		struct camrtc_dbg_read_memory rm_data;
 		struct camrtc_dbg_set_perf_counters set_perf_data;
 		struct camrtc_dbg_run_test_data run_test_data;
+		struct camrtc_dbg_run_mem_test_data run_mem_test_data;
 		struct camrtc_dbg_enable_vi_stat enable_vi_stat;
 	} data;
 } __packed;
@@ -282,6 +327,7 @@ struct camrtc_dbg_response {
 		struct camrtc_dbg_read_memory_result rm_data;
 		struct camrtc_dbg_get_perf_counters_result get_perf_data;
 		struct camrtc_dbg_run_test_data run_test_data;
+		struct camrtc_dbg_run_mem_test_data run_mem_test_data;
 		struct camrtc_dbg_task_stat task_stat_data;
 		struct camrtc_dbg_vi_stat vi_stat;
 		struct camrtc_dbg_mem_usage mem_usage;

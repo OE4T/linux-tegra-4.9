@@ -53,6 +53,7 @@ struct CAPTURE_MSG_HEADER {
 #define CAPTURE_SYNCGEN_DISABLE_REQ		U32_C(0x1C)
 #define CAPTURE_SYNCGEN_DISABLE_RESP		U32_C(0x1D)
 
+
 /**
  * Message types for capture channel messages.
  */
@@ -163,6 +164,49 @@ struct CAPTURE_CHANNEL_RELEASE_RESP_MSG {
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
+/** Setup test pattern generator
+ *
+ */
+struct CAPTURE_CHANNEL_TPG_SETUP_REQ_MSG {
+	union nvcsi_tpg_config tpg_config;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CHANNEL_TPG_SETUP_RESP_MSG {
+	int32_t result;
+	uint32_t __pad;
+} __CAPTURE_IVC_ALIGN;
+
+/** Start test pattern generator
+ *
+ */
+struct CAPTURE_CHANNEL_TPG_START_REQ_MSG {
+	uint8_t stream;
+	uint8_t channel;
+	uint16_t __pad16;
+	uint32_t __pad;
+	struct nvcsi_tpg_rate_config tpg_rate_config;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CHANNEL_TPG_START_RESP_MSG {
+	int32_t result;
+	uint32_t __pad;
+} __CAPTURE_IVC_ALIGN;
+
+/** Stop test pattern generator
+ *
+ */
+struct CAPTURE_CHANNEL_TPG_STOP_REQ_MSG {
+	uint8_t stream;
+	uint8_t channel;
+	uint16_t __pad16;
+	uint32_t __pad;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG {
+	int32_t result;
+	uint32_t __pad;
+} __CAPTURE_IVC_ALIGN;
+
 /** Configure the piece-wise linear function used by the VI companding module.
  *
  * The companding table is shared by all capture channels and must be
@@ -257,6 +301,19 @@ struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG {
 #define CAPTURE_ISP_PROGRAM_REQUEST_REQ		U32_C(0x05)
 #define CAPTURE_ISP_PROGRAM_STATUS_IND		U32_C(0x06)
 
+
+/**
+ * Message types for test pattern generator
+ */
+
+#define CAPTURE_CHANNEL_TPG_SETUP_REQ   U32_C(0x30)
+#define CAPTURE_CHANNEL_TPG_SETUP_RESP  U32_C(0x31)
+#define CAPTURE_CHANNEL_TPG_START_REQ   U32_C(0x32)
+#define CAPTURE_CHANNEL_TPG_START_RESP  U32_C(0x33)
+#define CAPTURE_CHANNEL_TPG_STOP_REQ    U32_C(0x34)
+#define CAPTURE_CHANNEL_TPG_STOP_RESP   U32_C(0x35)
+
+
 /** Set up RTCPU side resources for ISP capture pipe-line.
  *
  * The client shall use the transaction id field in the
@@ -315,9 +372,15 @@ struct CAPTURE_CONTROL_MSG {
 		struct CAPTURE_SYNCGEN_DISABLE_REQ_MSG syncgen_disable_req;
 		struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG syncgen_disable_resp;
 
+		struct CAPTURE_CHANNEL_TPG_SETUP_REQ_MSG tpg_setup_req;
+		struct CAPTURE_CHANNEL_TPG_SETUP_RESP_MSG tpg_setup_resp;
+		struct CAPTURE_CHANNEL_TPG_START_REQ_MSG tpg_start_req;
+		struct CAPTURE_CHANNEL_TPG_START_RESP_MSG tpg_start_resp;
+		struct CAPTURE_CHANNEL_TPG_STOP_REQ_MSG tpg_stop_req;
+		struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG tpg_stop_resp;
+
 		struct CAPTURE_CHANNEL_ISP_SETUP_REQ_MSG channel_isp_setup_req;
-		struct CAPTURE_CHANNEL_ISP_SETUP_RESP_MSG
-						channel_isp_setup_resp;
+		struct CAPTURE_CHANNEL_ISP_SETUP_RESP_MSG channel_isp_setup_resp;
 		CAPTURE_CHANNEL_ISP_RESET_REQ_MSG channel_isp_reset_req;
 		CAPTURE_CHANNEL_ISP_RESET_RESP_MSG channel_isp_reset_resp;
 		CAPTURE_CHANNEL_ISP_RELEASE_REQ_MSG channel_isp_release_req;

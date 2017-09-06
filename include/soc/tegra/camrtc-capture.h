@@ -32,6 +32,56 @@ typedef struct syncpoint_info {
 	iova_t shim_addr;
 } syncpoint_info_t __CAPTURE_IVC_ALIGN;
 
+/*
+ * The size for each unit includes the standard ISP5 HW stats
+ * header size.
+ *
+ * Size break down for each unit.
+ *  FB = 32 byte header + (256 x 4) bytes. FB has 256 windows with 4 bytes
+ *       of stats data per window.
+ *  FM = 32 byte header + (64 x 64 x 2 x 4) bytes. FM can have 64 x 64 windows
+ *       with each windows having 2 bytes of data for each color channel.
+ *  AFM = 32 byte header + 8 byte statistics data per ROI.
+ *  LAC = 32 byte header + ( (32 x 32) x ((4 + 2 + 2) x 4) )
+ *        Each ROI has 32x32 windows with each window containing 8
+ *        bytes of data per color channel.
+ *  Hist = Header + (256 x 4 x 4) bytes since Hist unit has 256 bins and
+ *         each bin collects 4 byte data for each color channel + 4 Dwords for
+ *         excluded pixel count due to elliptical mask per color channel.
+ *  Pru = 32 byte header + (8 x 4) bytes for bad pixel count and accumulated
+ *        pixel adjustment for pixels both inside and outside the ROI.
+ *  LTM = 32 byte header + (128 x 4) bytes for histogram data + (8 x 8 x 4 x 2)
+ *        bytes for soft key average and count. Soft key statistics are
+ *        collected by dividing the frame into a 8x8 array region.
+ */
+
+#define ISP5_STATS_HW_HEADER_SIZE    (32UL)
+#define ISP5_STATS_FB_MAX_SIZE       (1056UL)
+#define ISP5_STATS_FM_MAX_SIZE       (32800UL)
+#define ISP5_STATS_AFM_ROI_MAX_SIZE  (40UL)
+#define ISP5_STATS_LAC_ROI_MAX_SIZE  (32800UL)
+#define ISP5_STATS_HIST_MAX_SIZE     (4144UL)
+#define ISP5_STATS_OR_MAX_SIZE       (64UL)
+#define ISP5_STATS_LTM_MAX_SIZE      (1056UL)
+
+#define ISP5_STATS_FB_OFFSET         (0)
+#define ISP5_STATS_FM_OFFSET         (ISP5_STATS_FB_OFFSET + ISP5_STATS_FB_MAX_SIZE)
+#define ISP5_STATS_AFM_OFFSET        (ISP5_STATS_FM_OFFSET + ISP5_STATS_FM_MAX_SIZE)
+#define ISP5_STATS_LAC0_OFFSET       (ISP5_STATS_AFM_OFFSET + ISP5_STATS_AFM_ROI_MAX_SIZE * 8)
+#define ISP5_STATS_LAC1_OFFSET       (ISP5_STATS_LAC0_OFFSET + ISP5_STATS_LAC_ROI_MAX_SIZE * 4)
+#define ISP5_STATS_HIST0_OFFSET      (ISP5_STATS_LAC1_OFFSET + ISP5_STATS_LAC_ROI_MAX_SIZE * 4)
+#define ISP5_STATS_HIST1_OFFSET      (ISP5_STATS_HIST0_OFFSET + ISP5_STATS_HIST_MAX_SIZE)
+#define ISP5_STATS_OR_OFFSET         (ISP5_STATS_HIST1_OFFSET + ISP5_STATS_HIST_MAX_SIZE)
+#define ISP5_STATS_LTM_OFFSET        (ISP5_STATS_OR_OFFSET + ISP5_STATS_OR_MAX_SIZE)
+
+#define ISP5_STATS_TOTAL_SIZE        (ISP5_STATS_FB_MAX_SIZE + \
+                                     ISP5_STATS_FM_MAX_SIZE + \
+                                     (ISP5_STATS_AFM_ROI_MAX_SIZE * 8) + \
+                                     (ISP5_STATS_LAC_ROI_MAX_SIZE * 8) + \
+                                     (ISP5_STATS_HIST_MAX_SIZE * 2) + \
+                                     ISP5_STATS_OR_MAX_SIZE + \
+                                     ISP5_STATS_LTM_MAX_SIZE) // Total = 305984 Bytes
+
 #define VI_NUM_ATOMP_SURFACES	4
 
 /* Generic */
@@ -421,9 +471,9 @@ struct capture_descriptor {
 #define NVCSI_DATA_TYPE_RAW20			U32_C(47)
 #define NVCSI_DATA_TYPE_Unknown			U32_C(64)
 
-#define NVCSI_TPG_FLAG_PATCH_MODE		U32_C(1)
-#define NVCSI_TPG_FLAG_PHASE_INCREMENT		U32_C(2)
-#define NVCSI_TPG_FLAG_AUTO_STOP		U32_C(4)
+#define NVCSI_TPG_FLAG_PATCH_MODE		U16_C(1)
+#define NVCSI_TPG_FLAG_PHASE_INCREMENT		U16_C(2)
+#define NVCSI_TPG_FLAG_AUTO_STOP		U16_C(4)
 
 struct nvcsi_tpg_config_t186
 {

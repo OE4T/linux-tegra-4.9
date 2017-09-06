@@ -104,7 +104,7 @@ static int tegra_aon_ivc_echo_probe(struct platform_device *pdev)
 	}
 
 	drvdata->rx_data = devm_kzalloc(dev, drvdata->frame_size, GFP_KERNEL);
-	if (!drvdata) {
+	if (!drvdata->rx_data) {
 		ret = -ENOMEM;
 		goto out;
 	}

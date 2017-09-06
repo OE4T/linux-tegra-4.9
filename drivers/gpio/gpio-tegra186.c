@@ -1228,6 +1228,10 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		for (i = 0; i < tgi->soc->interrupt_out_count; i++) {
 			res = platform_get_resource(pdev, IORESOURCE_IRQ, i +
 				    (bank * tgi->soc->interrupt_out_count));
+			if (!res) {
+				dev_err(&pdev->dev, "Missing IRQ resource\n");
+				return -ENODEV;
+			}
 			tgi->tg_contrlr[bank].irq[i +
 				 tgi->soc->interrupt_valid_offset] = res->start;
 			/* read each port routemap */

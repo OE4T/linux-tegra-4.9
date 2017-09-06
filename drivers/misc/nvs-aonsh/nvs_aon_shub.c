@@ -265,7 +265,7 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 	int ret;
 	int i;
 	struct device_node *cn;
-	struct device *dev = shub->dev;
+	struct device *dev;
 	struct aon_shub_init_setup_request *setup_req;
 	u32 gpio, chip_id;
 	u32 i2c_info[3];
@@ -274,6 +274,8 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 	/* sanity check */
 	if (!shub || !np)
 		return -EINVAL;
+
+	dev = shub->dev;
 
 	for_each_child_of_node(np, cn) {
 		found = false;

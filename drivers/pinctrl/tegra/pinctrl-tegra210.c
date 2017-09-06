@@ -388,6 +388,10 @@ static const unsigned sata_led_active_pa5_pins[] = {
 	TEGRA_PIN_SATA_LED_ACTIVE_PA5,
 };
 
+static const unsigned pa5_pins[] = {
+	TEGRA_PIN_SATA_LED_ACTIVE_PA5,
+};
+
 static const unsigned pa6_pins[] = {
 	TEGRA_PIN_PA6,
 };
@@ -1401,6 +1405,7 @@ static const struct tegra_pingroup tegra210_groups[] = {
 	PINGROUP(pex_l1_rst_n_pa3,     PE1,        RSVD1,  RSVD2, RSVD3, 0x3044, N,   N,       Y,       Y,	0xa64, 12,      5,       20,      5,       -1,     -1,     -1,     -1, -1),
 	PINGROUP(pex_l1_clkreq_n_pa4,  PE1,        RSVD1,  RSVD2, RSVD3, 0x3048, N,   N,       Y,       Y,	0xa60, 12,      5,       20,      5,       -1,     -1,     -1,     -1, -1),
 	PINGROUP(sata_led_active_pa5,  SATA,       RSVD1,  RSVD2, RSVD3, 0x304c, N,   N,       N,       Y,	0xa94, 12,      5,       20,      5,       -1,     -1,     -1,     -1, -1),
+	PINGROUP(pa5,                  RSVD0,      RSVD1,  RSVD2, RSVD3, 0x304c, N,   N,       N,       Y,	0xa94, 12,      5,       20,      5,       -1,     -1,     -1,     -1, -1),
 	PINGROUP(spi1_mosi_pc0,        SPI1,       RSVD1,  RSVD2, RSVD3, 0x3050, Y,   Y,       N,       N,	0xae0, -1,      -1,      -1,      -1,      28,     2,      30,     2, -1),
 	PINGROUP(spi1_miso_pc1,        SPI1,       RSVD1,  RSVD2, RSVD3, 0x3054, Y,   Y,       N,       N,	0xadc, -1,      -1,      -1,      -1,      28,     2,      30,     2, -1),
 	PINGROUP(spi1_sck_pc2,         SPI1,       RSVD1,  RSVD2, RSVD3, 0x3058, Y,   Y,       N,       N,	0xae4, -1,      -1,      -1,      -1,      28,     2,      30,     2, -1),

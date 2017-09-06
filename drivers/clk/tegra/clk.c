@@ -406,6 +406,7 @@ ssize_t parent_fops_write(struct file *file, const char __user *buf,
 	ssize_t ret = len;
 	struct clk *clk;
 	struct seq_file *s;
+	int err;
 
 	s = (struct seq_file *)file->private_data;
 	clk = (struct clk *)s->private;
@@ -425,12 +426,13 @@ ssize_t parent_fops_write(struct file *file, const char __user *buf,
 
 	parent = clk_get_sys("tegra-clk-debug", parent_name);
 	if (IS_ERR_OR_NULL(parent)) {
-		ret = -EFAULT;
+		ret = -EINVAL;
 		goto out;
 	}
 
-	if (clk_set_parent(clk, parent))
-		ret = -EFAULT;
+	err = clk_set_parent(clk, parent);
+	if (err < 0)
+		ret = err;
 
 out:
 	kfree(parent_name);
@@ -457,21 +459,23 @@ void tegra_clk_debugfs_add(struct clk *clk)
 {
 #ifdef CONFIG_TEGRA_CLK_DEBUG
 	const char *name;
+	struct clk_hw *hw;
 	struct dentry *d;
 
 	name = __clk_get_name(clk);
-	d = __clk_debugfs_add_file(clk, "clk_update_rate", 0200, clk,
-				   &rate_fops);
+	hw = __clk_get_hw(clk);
+	d = clk_debugfs_add_file(hw, "clk_update_rate", 0200, clk,
+				 &rate_fops);
 	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
 		pr_err("debugfs clk_update_rate failed %s\n", name);
 
-	d = __clk_debugfs_add_file(clk, "clk_state", 0644, clk,
-				   &state_fops);
+	d = clk_debugfs_add_file(hw, "clk_state", 0644, clk,
+				 &state_fops);
 	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
 		pr_err("debugfs clk_state failed %s\n", name);
 
-	d = __clk_debugfs_add_file(clk, "clk_parent", 0644, clk,
-				   &parent_fops);
+	d = clk_debugfs_add_file(hw, "clk_parent", 0644, clk,
+				 &parent_fops);
 	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
 		pr_err("debugfs clk_parent failed %s\n", name);
 #endif
@@ -480,21 +484,16 @@ void tegra_clk_debugfs_add(struct clk *clk)
 void __init tegra_add_of_provider(struct device_node *np)
 {
 	int i;
-	struct clk *clk;
 
 	for (i = 0; i < clk_num; i++) {
-		clk = clks[i];
-		if (IS_ERR(clk)) {
+		if (IS_ERR(clks[i])) {
 			pr_err
 			    ("Tegra clk %d: register failed with %ld\n",
-			     i, PTR_ERR(clks));
-			continue;
-		}
-		if (!clk) {
+			     i, PTR_ERR(clks[i]));
+		} else if (!clks[i]) {
 			clks[i] = ERR_PTR(-EINVAL);
-			continue;
-		}
-		tegra_clk_debugfs_add(clk);
+		} else
+			tegra_clk_debugfs_add(clks[i]);
 	}
 
 	clk_data.clks = clks;

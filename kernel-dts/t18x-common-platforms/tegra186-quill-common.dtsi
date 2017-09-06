@@ -32,7 +32,7 @@
 #include "tegra186-quill-pwm-fan.dtsi"
 #include "tegra186-quill-thermal-fan-est.dtsi"
 #include "tegra186-host1x-camera.dtsi"
-
+#include "tegra186-quill-thermal-skin.dtsi"
 / {
         compatible = "nvidia,tegra186";
 
@@ -70,7 +70,7 @@
 
 	i2c@3160000 {
 		status = "okay";
-		lp8557-backlight-s-wuxga-8-0@2c {
+		lp8557_backlight: lp8557-backlight-s-wuxga-8-0@2c {
 			status = "disabled";
 			disable-on-kernel-charging;
 			compatible = "ti,lp8557";
@@ -174,7 +174,7 @@
 
 	i2c@c240000 {
 		status = "okay";
-		lp8556-backlight-s-wqxga-10-1@2c {
+		lp8556_backlight: lp8556-backlight-s-wqxga-10-1@2c {
 			status = "disabled";
 			disable-on-kernel-charging;
 			compatible = "ti,lp8556";

@@ -16,6 +16,7 @@
 #include "tegra186-quill-common.dtsi"
 #include "tegra186-quill-p3310-1000-a00-powermon.dtsi"
 #include "tegra186-quill-thermal.dtsi"
+#include "tegra186-quill-tskin-feature.dtsi"
 
 #define EXTCON_NONE		0
 #define EXTCON_USB             1

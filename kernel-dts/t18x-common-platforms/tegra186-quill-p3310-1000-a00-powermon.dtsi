@@ -24,6 +24,7 @@
 			ti,enable-forced-continuous;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			#io-channel-cells = <1>;
 			channel@0 {
 				reg = <0x0>;
 				ti,rail-name = "VDD_SYS_GPU";
@@ -48,6 +49,7 @@
 			ti,enable-forced-continuous;
 			#address-cells = <1>;
 			#size-cells = <0>;
+			#io-channel-cells = <1>;
 			channel@0 {
 				reg = <0x0>;
 				ti,rail-name = "VDD_IN";

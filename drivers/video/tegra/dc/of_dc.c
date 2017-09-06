@@ -2496,8 +2496,8 @@ static int parse_imp_windows_values(struct device_node *child_np,
 			struct platform_device *pdev,
 			struct tegra_dc_ext_imp_settings *settings)
 {
-	u32 win_cnt = tegra_dc_get_numof_dispwindows();
-	u32 head_cnt = tegra_dc_get_numof_dispheads();
+	int win_cnt = tegra_dc_get_numof_dispwindows();
+	int head_cnt = tegra_dc_get_numof_dispheads();
 	int j = 0;
 	struct tegra_dc_ext_imp_head_results *imp_results;
 
@@ -2567,7 +2567,7 @@ static int parse_imp_cursor_values(struct device_node *child_np,
 			struct platform_device *pdev,
 			struct tegra_dc_ext_imp_settings *settings)
 {
-	u32 head_cnt = tegra_dc_get_numof_dispheads();
+	int head_cnt = tegra_dc_get_numof_dispheads();
 	u32 head_mapping[head_cnt];
 	u32 head_values[head_cnt];
 	int j = 0;

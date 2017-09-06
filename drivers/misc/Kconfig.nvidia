@@ -65,4 +65,12 @@ config EQOS_APE_HWDEP
 	  snapshots of the clock and taking the difference. Based on the
 	  calculated frequency offset, the pll_a clock (parent of APE clock)
 	  frequency is adjusted.
+
+config TEGRA_SKIN
+	tristate "Thermal skin temperature estimator"
+	---help---
+	  Thermal driver which estimates hotspot(s) tempeature based on power
+	  features like rail power, rail current, backlight brightness. The
+	  driver estimates multiple hotspot temperatures based on OF configuration.
+
 trysource "../nvidia/drivers/misc/nvs-dfsh/Kconfig.nvidia"

@@ -211,6 +211,7 @@ L:	sw-mobile-therm@exchange.nvidia.com
 S:	Supported
 F:	drivers/thermal/*
 F:	drivers/platform/tegra/tegra18_throttle.c
+F:	drivers/misc/tegra-skin.c
 
 POWER: GATING AND STATES
 M:	Matthew Longnecker <mlongnecker@nvidia.com>

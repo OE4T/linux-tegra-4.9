@@ -131,20 +131,16 @@ int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
 	u8 *read_ptr = NULL;
 	int read_len = 0;
 
-	tegra_ivc_channel_runtime_get(i2c_ivc_dev->chan);
+	if (i2c_ivc_dev == NULL || i2c_ivc_dev->chan == NULL)
+		return -EIO;
 
-	if (i2c_ivc_dev == NULL) {
-		ret = -EIO;
-		goto error;
-	}
-	if (i2c_ivc_dev->chan == NULL) {
-		ret = -EIO;
-		goto error;
-	}
-	if (num == 0) {
-		ret = 0;
-		goto error;
-	}
+	if (num == 0)
+		return 0;
+
+	ret = tegra_ivc_channel_runtime_get(i2c_ivc_dev->chan);
+	if (ret < 0)
+		return ret;
+
 	if (tegra_ivc_rpc_channel_is_suspended(i2c_ivc_dev->chan)) {
 		ret = -EBUSY;
 		goto error;

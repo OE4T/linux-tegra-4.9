@@ -34,7 +34,6 @@
 #include "tegra-board-id.h"
 #include "board.h"
 #include "iomap.h"
-#include <linux/platform/tegra/dvfs.h>
 #include <linux/platform_data/lp855x.h>
 
 #define PRISM_THRESHOLD		50

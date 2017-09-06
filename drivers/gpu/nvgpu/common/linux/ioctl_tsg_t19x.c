@@ -33,21 +33,26 @@ static int gv11b_tsg_ioctl_bind_channel_ex(struct gk20a *g,
 	nvgpu_mutex_acquire(&sched->control_lock);
 	if (sched->control_locked) {
 		err = -EPERM;
-		goto done;
+		goto mutex_release;
 	}
 	err = gk20a_busy(g);
 	if (err) {
 		nvgpu_err(g, "failed to power on gpu");
-		goto done;
+		goto mutex_release;
 	}
 
 	ch = gk20a_get_channel_from_file(arg->channel_fd);
-	if (!ch)
-		return -EINVAL;
-	if (arg->subcontext_id < g->fifo.t19x.max_subctx_count)
+	if (!ch) {
+		err = -EINVAL;
+		goto idle;
+	}
+	if (arg->subcontext_id < g->fifo.t19x.max_subctx_count) {
 		ch->t19x.subctx_id = arg->subcontext_id;
-	else
-		return -EINVAL;
+	} else {
+		err = -EINVAL;
+		goto ch_put;
+	}
+
 	nvgpu_log(g, gpu_dbg_info, "channel id : %d : subctx: %d",
 				ch->chid, ch->t19x.subctx_id);
 
@@ -56,8 +61,11 @@ static int gv11b_tsg_ioctl_bind_channel_ex(struct gk20a *g,
 		ch->t19x.runqueue_sel = 1;
 
 	err = ch->g->ops.fifo.tsg_bind_channel(tsg, ch);
+ch_put:
+	gk20a_channel_put(ch);
+idle:
 	gk20a_idle(g);
-done:
+mutex_release:
 	nvgpu_mutex_release(&sched->control_lock);
 	return err;
 }

@@ -111,6 +111,7 @@ static int tegra124_dfll_fcpu_probe(struct platform_device *pdev)
 	struct tegra_dfll_soc_data *soc;
 	const struct of_device_id *of_id;
 	const struct dfll_fcpu_data *fcpu_data;
+	struct rail_alignment align;
 
 	of_id = of_match_device(tegra124_dfll_fcpu_of_match, &pdev->dev);
 	fcpu_data = of_id->data;
@@ -135,12 +136,30 @@ static int tegra124_dfll_fcpu_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	err = of_property_read_u32(pdev->dev.of_node, "nvidia,align-offset-uv",
+					&align.offset_uv);
+	if (err < 0) {
+		dev_err(&pdev->dev,
+			"offset uv not found, default to table value\n");
+		align.offset_uv = 0;
+	}
+
+	err = of_property_read_u32(pdev->dev.of_node, "nvidia,align-step-uv",
+					&align.step_uv);
+	if (err < 0) {
+		dev_err(&pdev->dev,
+			"step uv not found, default to table value\n");
+		align.step_uv = 0;
+	}
+
 	soc->max_freq = fcpu_data->cpu_max_freq_table[speedo_id];
 
 	soc->cvb = tegra_cvb_add_opp_table(soc->dev, fcpu_data->cpu_cvb_tables,
 					   fcpu_data->cpu_cvb_tables_size,
-					   process_id, speedo_id, speedo_value,
-					   soc->max_freq);
+					   &align, process_id, speedo_id,
+					   speedo_value, soc->max_freq);
+	soc->alignment = align;
+
 	if (IS_ERR(soc->cvb)) {
 		dev_err(&pdev->dev, "couldn't add OPP table: %ld\n",
 			PTR_ERR(soc->cvb));

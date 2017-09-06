@@ -15,7 +15,7 @@
 #ifndef __DRIVERS_THERMAL_TEGRA_SOCTHERM_H
 #define __DRIVERS_THERMAL_TEGRA_SOCTHERM_H
 
-#include "tsensor-fuse.h"
+#include <linux/tsensor-fuse.h>
 
 #define THERMCTL_LEVEL0_GROUP_CPU               0x0
 #define THERMCTL_LEVEL0_GROUP_GPU		0x4

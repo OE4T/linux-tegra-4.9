@@ -3775,6 +3775,13 @@ void tegra_dc_sysfs_enable_crc(struct tegra_dc *dc)
 {
 	u32 val;
 
+	if (dc->crc_ref_cnt.legacy) {
+		pr_err("CRC is already enabled.\n");
+		return;
+	}
+
+	dc->crc_ref_cnt.legacy = true;
+
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 
@@ -3791,6 +3798,13 @@ void tegra_dc_sysfs_enable_crc(struct tegra_dc *dc)
 
 void tegra_dc_sysfs_disable_crc(struct tegra_dc *dc)
 {
+	if (!dc->crc_ref_cnt.legacy) {
+		pr_err("CRC is already disabled.\n");
+		return;
+	}
+
+	dc->crc_ref_cnt.legacy = false;
+
 	/* Unregister a client of frame_end interrupt */
 	tegra_dc_config_frame_end_intr(dc, false);
 
@@ -3809,6 +3823,11 @@ u32 tegra_dc_sysfs_read_checksum_latched(struct tegra_dc *dc)
 
 	if (!dc) {
 		pr_err("Failed to get dc: NULL parameter.\n");
+		goto crc_error;
+	}
+
+	if (!dc->crc_ref_cnt.legacy) {
+		pr_err("CRC is not enabled.\n");
 		goto crc_error;
 	}
 

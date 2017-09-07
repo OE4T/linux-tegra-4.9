@@ -641,3 +641,137 @@ struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_less_than(
 
 	return mapped_buffer_from_rbtree_node(node);
 }
+
+int nvgpu_vm_get_buffers(struct vm_gk20a *vm,
+			 struct nvgpu_mapped_buf ***mapped_buffers,
+			 int *num_buffers)
+{
+	struct nvgpu_mapped_buf *mapped_buffer;
+	struct nvgpu_mapped_buf **buffer_list;
+	struct nvgpu_rbtree_node *node = NULL;
+	int i = 0;
+
+	if (vm->userspace_managed) {
+		*mapped_buffers = NULL;
+		*num_buffers = 0;
+		return 0;
+	}
+
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
+
+	buffer_list = nvgpu_big_zalloc(vm->mm->g, sizeof(*buffer_list) *
+				       vm->num_user_mapped_buffers);
+	if (!buffer_list) {
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
+		return -ENOMEM;
+	}
+
+	nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
+	while (node) {
+		mapped_buffer = mapped_buffer_from_rbtree_node(node);
+		if (mapped_buffer->user_mapped) {
+			buffer_list[i] = mapped_buffer;
+			nvgpu_ref_get(&mapped_buffer->ref);
+			i++;
+		}
+		nvgpu_rbtree_enum_next(&node, node);
+	}
+
+	BUG_ON(i != vm->num_user_mapped_buffers);
+
+	*num_buffers = vm->num_user_mapped_buffers;
+	*mapped_buffers = buffer_list;
+
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
+
+	return 0;
+}
+
+void nvgpu_vm_unmap_locked_ref(struct nvgpu_ref *ref)
+{
+	struct nvgpu_mapped_buf *mapped_buffer =
+		container_of(ref, struct nvgpu_mapped_buf, ref);
+	nvgpu_vm_unmap_locked(mapped_buffer, mapped_buffer->vm->kref_put_batch);
+}
+
+void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
+				 struct nvgpu_mapped_buf **mapped_buffers,
+				 int num_buffers)
+{
+	int i;
+	struct vm_gk20a_mapping_batch batch;
+
+	if (num_buffers == 0)
+		return;
+
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
+	nvgpu_vm_mapping_batch_start(&batch);
+	vm->kref_put_batch = &batch;
+
+	for (i = 0; i < num_buffers; ++i)
+		nvgpu_ref_put(&mapped_buffers[i]->ref,
+			 nvgpu_vm_unmap_locked_ref);
+
+	vm->kref_put_batch = NULL;
+	nvgpu_vm_mapping_batch_finish_locked(vm, &batch);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
+
+	nvgpu_big_free(vm->mm->g, mapped_buffers);
+}
+
+static void nvgpu_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
+				struct vm_gk20a_mapping_batch *batch)
+{
+	struct gk20a *g = vm->mm->g;
+	struct nvgpu_mapped_buf *mapped_buffer;
+
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
+
+	mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, offset);
+	if (!mapped_buffer) {
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
+		nvgpu_err(g, "invalid addr to unmap 0x%llx", offset);
+		return;
+	}
+
+	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+		struct nvgpu_timeout timeout;
+
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
+
+		nvgpu_timeout_init(vm->mm->g, &timeout, 10000,
+				   NVGPU_TIMER_RETRY_TIMER);
+		do {
+			if (nvgpu_atomic_read(
+				&mapped_buffer->ref.refcount) == 1)
+					break;
+			nvgpu_udelay(5);
+		} while (!nvgpu_timeout_expired_msg(&timeout,
+					    "sync-unmap failed on 0x%llx"));
+
+		nvgpu_mutex_acquire(&vm->update_gmmu_lock);
+	}
+
+	if (mapped_buffer->user_mapped == 0) {
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
+		nvgpu_err(g, "addr already unmapped from user 0x%llx", offset);
+		return;
+	}
+
+	mapped_buffer->user_mapped--;
+	if (mapped_buffer->user_mapped == 0)
+		vm->num_user_mapped_buffers--;
+
+	vm->kref_put_batch = batch;
+	nvgpu_ref_put(&mapped_buffer->ref, nvgpu_vm_unmap_locked_ref);
+	vm->kref_put_batch = NULL;
+
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
+}
+
+int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
+			  struct vm_gk20a_mapping_batch *batch)
+{
+	nvgpu_vm_unmap_user(vm, offset, batch);
+	return 0;
+}

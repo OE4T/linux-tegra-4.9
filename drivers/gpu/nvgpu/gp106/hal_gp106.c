@@ -529,6 +529,8 @@ static const struct gpu_ops gp106_ops = {
 		.init_bar2_mm_hw_setup = gb10b_init_bar2_mm_hw_setup,
 		.remove_bar2_vm = gp10b_remove_bar2_vm,
 		.get_vidmem_size = gp106_mm_get_vidmem_size,
+		.get_kind_invalid = gm20b_get_kind_invalid,
+		.get_kind_pitch = gm20b_get_kind_pitch,
 	},
 	.pramin = {
 		.enter = gk20a_pramin_enter,

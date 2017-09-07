@@ -342,6 +342,8 @@ static const struct gpu_ops vgpu_gm20b_ops = {
 		.is_bar1_supported = gm20b_mm_is_bar1_supported,
 		.init_inst_block = gk20a_init_inst_block,
 		.mmu_fault_pending = gk20a_fifo_mmu_fault_pending,
+		.get_kind_invalid = gm20b_get_kind_invalid,
+		.get_kind_pitch = gm20b_get_kind_pitch,
 	},
 	.therm = {
 		.init_therm_setup_hw = gm20b_init_therm_setup_hw,

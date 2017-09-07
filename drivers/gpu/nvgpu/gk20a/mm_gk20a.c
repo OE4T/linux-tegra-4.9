@@ -22,11 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/dma-buf.h>
-#include <linux/dma-mapping.h>
-#include <linux/dma-attrs.h>
-#include <linux/lcm.h>
-#include <uapi/linux/nvgpu.h>
 #include <trace/events/gk20a.h>
 
 #include <nvgpu/vm.h>
@@ -46,8 +41,6 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/vidmem.h>
 
-#include <nvgpu/linux/dma.h>
-
 #include "gk20a.h"
 #include "platform_gk20a.h"
 #include "mm_gk20a.h"
@@ -63,13 +56,6 @@
 #include <nvgpu/hw/gk20a/hw_bus_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_flush_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
-
-/*
- * Necessary while transitioning to less coupled code. Will be removed once
- * all the common APIs no longers have Linux stuff in them.
- */
-#include "common/linux/vm_priv.h"
-#include "common/linux/dmabuf.h"
 
 /*
  * GPU mapping life cycle
@@ -330,209 +316,6 @@ int gk20a_mm_pde_coverage_bit_count(struct vm_gk20a *vm)
 	return vm->mmu_levels[0].lo_bit[0];
 }
 
-int nvgpu_vm_get_buffers(struct vm_gk20a *vm,
-			 struct nvgpu_mapped_buf ***mapped_buffers,
-			 int *num_buffers)
-{
-	struct nvgpu_mapped_buf *mapped_buffer;
-	struct nvgpu_mapped_buf **buffer_list;
-	struct nvgpu_rbtree_node *node = NULL;
-	int i = 0;
-
-	if (vm->userspace_managed) {
-		*mapped_buffers = NULL;
-		*num_buffers = 0;
-		return 0;
-	}
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-
-	buffer_list = nvgpu_big_zalloc(vm->mm->g, sizeof(*buffer_list) *
-				       vm->num_user_mapped_buffers);
-	if (!buffer_list) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		return -ENOMEM;
-	}
-
-	nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
-	while (node) {
-		mapped_buffer = mapped_buffer_from_rbtree_node(node);
-		if (mapped_buffer->user_mapped) {
-			buffer_list[i] = mapped_buffer;
-			nvgpu_ref_get(&mapped_buffer->ref);
-			i++;
-		}
-		nvgpu_rbtree_enum_next(&node, node);
-	}
-
-	BUG_ON(i != vm->num_user_mapped_buffers);
-
-	*num_buffers = vm->num_user_mapped_buffers;
-	*mapped_buffers = buffer_list;
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-	return 0;
-}
-
-void gk20a_vm_unmap_locked_ref(struct nvgpu_ref *ref)
-{
-	struct nvgpu_mapped_buf *mapped_buffer =
-		container_of(ref, struct nvgpu_mapped_buf, ref);
-	nvgpu_vm_unmap_locked(mapped_buffer, mapped_buffer->vm->kref_put_batch);
-}
-
-void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
-				 struct nvgpu_mapped_buf **mapped_buffers,
-				 int num_buffers)
-{
-	int i;
-	struct vm_gk20a_mapping_batch batch;
-
-	if (num_buffers == 0)
-		return;
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-	nvgpu_vm_mapping_batch_start(&batch);
-	vm->kref_put_batch = &batch;
-
-	for (i = 0; i < num_buffers; ++i)
-		nvgpu_ref_put(&mapped_buffers[i]->ref,
-			 gk20a_vm_unmap_locked_ref);
-
-	vm->kref_put_batch = NULL;
-	nvgpu_vm_mapping_batch_finish_locked(vm, &batch);
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-	nvgpu_big_free(vm->mm->g, mapped_buffers);
-}
-
-static void nvgpu_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
-				struct vm_gk20a_mapping_batch *batch)
-{
-	struct gk20a *g = vm->mm->g;
-	struct nvgpu_mapped_buf *mapped_buffer;
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-
-	mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, offset);
-	if (!mapped_buffer) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		nvgpu_err(g, "invalid addr to unmap 0x%llx", offset);
-		return;
-	}
-
-	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		struct nvgpu_timeout timeout;
-
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-		nvgpu_timeout_init(vm->mm->g, &timeout, 10000,
-				   NVGPU_TIMER_RETRY_TIMER);
-		do {
-			if (nvgpu_atomic_read(
-				&mapped_buffer->ref.refcount) == 1)
-					break;
-			nvgpu_udelay(5);
-		} while (!nvgpu_timeout_expired_msg(&timeout,
-					    "sync-unmap failed on 0x%llx"));
-
-		nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-	}
-
-	if (mapped_buffer->user_mapped == 0) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		nvgpu_err(g, "addr already unmapped from user 0x%llx", offset);
-		return;
-	}
-
-	mapped_buffer->user_mapped--;
-	if (mapped_buffer->user_mapped == 0)
-		vm->num_user_mapped_buffers--;
-
-	vm->kref_put_batch = batch;
-	nvgpu_ref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_ref);
-	vm->kref_put_batch = NULL;
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-}
-
-static int setup_kind_legacy(struct vm_gk20a *vm, struct buffer_attrs *bfr,
-			     bool *pkind_compressible)
-{
-	struct gk20a *g = gk20a_from_vm(vm);
-	bool kind_compressible;
-
-	if (unlikely(bfr->kind_v == gmmu_pte_kind_invalid_v()))
-		bfr->kind_v = gmmu_pte_kind_pitch_v();
-
-	if (unlikely(!gk20a_kind_is_supported(bfr->kind_v))) {
-		nvgpu_err(g, "kind 0x%x not supported", bfr->kind_v);
-		return -EINVAL;
-	}
-
-	bfr->uc_kind_v = gmmu_pte_kind_invalid_v();
-	/* find a suitable incompressible kind if it becomes necessary later */
-	kind_compressible = gk20a_kind_is_compressible(bfr->kind_v);
-	if (kind_compressible) {
-		bfr->uc_kind_v = gk20a_get_uncompressed_kind(bfr->kind_v);
-		if (unlikely(bfr->uc_kind_v == gmmu_pte_kind_invalid_v())) {
-			/* shouldn't happen, but it is worth cross-checking */
-			nvgpu_err(g, "comptag kind 0x%x can't be"
-				   " downgraded to uncompressed kind",
-				   bfr->kind_v);
-			return -EINVAL;
-		}
-	}
-
-	*pkind_compressible = kind_compressible;
-	return 0;
-}
-
-int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
-				      u32 flags,
-				      struct buffer_attrs *bfr,
-				      enum gmmu_pgsz_gk20a pgsz_idx)
-{
-	bool kind_compressible;
-	struct gk20a *g = gk20a_from_vm(vm);
-	int ctag_granularity = g->ops.fb.compression_page_size(g);
-
-	if (!bfr->use_kind_v)
-		bfr->kind_v = gmmu_pte_kind_invalid_v();
-	if (!bfr->use_uc_kind_v)
-		bfr->uc_kind_v = gmmu_pte_kind_invalid_v();
-
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
-		kind_compressible = (bfr->kind_v != gmmu_pte_kind_invalid_v());
-		if (!kind_compressible)
-			bfr->kind_v = bfr->uc_kind_v;
-	} else {
-		int err = setup_kind_legacy(vm, bfr, &kind_compressible);
-
-		if (err)
-			return err;
-	}
-
-	/* comptags only supported for suitable kinds, 128KB pagesize */
-	if (kind_compressible &&
-	    vm->gmmu_page_sizes[pgsz_idx] < g->ops.fb.compressible_page_size(g)) {
-		/* it is safe to fall back to uncompressed as
-		   functionality is not harmed */
-		bfr->kind_v = bfr->uc_kind_v;
-		kind_compressible = false;
-	}
-	if (kind_compressible)
-		bfr->ctag_lines = DIV_ROUND_UP_ULL(bfr->size, ctag_granularity);
-	else
-		bfr->ctag_lines = 0;
-
-	bfr->use_kind_v = (bfr->kind_v != gmmu_pte_kind_invalid_v());
-	bfr->use_uc_kind_v = (bfr->uc_kind_v != gmmu_pte_kind_invalid_v());
-
-	return 0;
-}
-
 /* for gk20a the "video memory" apertures here are misnomers. */
 static inline u32 big_valid_pde0_bits(struct gk20a *g,
 				      struct nvgpu_gmmu_pd *pd, u64 addr)
@@ -698,43 +481,6 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 	pd_write(g, pd, pd_offset + 1, pte_w[1]);
 }
 
-/* NOTE! mapped_buffers lock must be held */
-void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
-			   struct vm_gk20a_mapping_batch *batch)
-{
-	struct vm_gk20a *vm = mapped_buffer->vm;
-	struct gk20a *g = vm->mm->g;
-
-	g->ops.mm.gmmu_unmap(vm,
-		mapped_buffer->addr,
-		mapped_buffer->size,
-		mapped_buffer->pgsz_idx,
-		mapped_buffer->va_allocated,
-		gk20a_mem_flag_none,
-		mapped_buffer->vm_area ?
-		  mapped_buffer->vm_area->sparse : false,
-		batch);
-
-	gk20a_mm_unpin(dev_from_vm(vm), mapped_buffer->dmabuf,
-		       mapped_buffer->sgt);
-
-	/* remove from mapped buffer tree and remove list, free */
-	nvgpu_remove_mapped_buf(vm, mapped_buffer);
-	if (!nvgpu_list_empty(&mapped_buffer->buffer_list))
-		nvgpu_list_del(&mapped_buffer->buffer_list);
-
-	/* keep track of mapped buffers */
-	if (mapped_buffer->user_mapped)
-		vm->num_user_mapped_buffers--;
-
-	if (mapped_buffer->own_mem_ref)
-		dma_buf_put(mapped_buffer->dmabuf);
-
-	nvgpu_kfree(g, mapped_buffer);
-
-	return;
-}
-
 const struct gk20a_mmu_level gk20a_mm_levels_64k[] = {
 	{.hi_bit = {NV_GMMU_VA_RANGE-1, NV_GMMU_VA_RANGE-1},
 	 .lo_bit = {26, 26},
@@ -851,76 +597,6 @@ int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch)
 {
 	return __gk20a_vm_bind_channel(as_share->vm, ch);
-}
-
-int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
-			int dmabuf_fd,
-			u64 *offset_align,
-			u32 flags, /*NVGPU_AS_MAP_BUFFER_FLAGS_*/
-			s16 compr_kind,
-			s16 incompr_kind,
-			u64 buffer_offset,
-			u64 mapping_size,
-			struct vm_gk20a_mapping_batch *batch)
-{
-	int err = 0;
-	struct dma_buf *dmabuf;
-	u64 ret_va;
-
-	gk20a_dbg_fn("");
-
-	/* get ref to the mem handle (released on unmap_locked) */
-	dmabuf = dma_buf_get(dmabuf_fd);
-	if (IS_ERR(dmabuf)) {
-		nvgpu_warn(gk20a_from_vm(vm), "%s: fd %d is not a dmabuf",
-			 __func__, dmabuf_fd);
-		return PTR_ERR(dmabuf);
-	}
-
-	/* verify that we're not overflowing the buffer, i.e.
-	 * (buffer_offset + mapping_size)> dmabuf->size.
-	 *
-	 * Since buffer_offset + mapping_size could overflow, first check
-	 * that mapping size < dmabuf_size, at which point we can subtract
-	 * mapping_size from both sides for the final comparison.
-	 */
-	if ((mapping_size > dmabuf->size) ||
-			(buffer_offset > (dmabuf->size - mapping_size))) {
-		nvgpu_err(gk20a_from_vm(vm),
-			"buf size %llx < (offset(%llx) + map_size(%llx))\n",
-			(u64)dmabuf->size, buffer_offset, mapping_size);
-		return -EINVAL;
-	}
-
-	err = gk20a_dmabuf_alloc_drvdata(dmabuf, dev_from_vm(vm));
-	if (err) {
-		dma_buf_put(dmabuf);
-		return err;
-	}
-
-	ret_va = nvgpu_vm_map(vm, dmabuf, *offset_align,
-			flags, compr_kind, incompr_kind, true,
-			gk20a_mem_flag_none,
-			buffer_offset,
-			mapping_size,
-			batch);
-
-	*offset_align = ret_va;
-	if (!ret_va) {
-		dma_buf_put(dmabuf);
-		err = -EINVAL;
-	}
-
-	return err;
-}
-
-int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
-			  struct vm_gk20a_mapping_batch *batch)
-{
-	gk20a_dbg_fn("");
-
-	nvgpu_vm_unmap_user(vm, offset, batch);
-	return 0;
 }
 
 int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
@@ -1296,30 +972,6 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 
 hw_was_off:
 	gk20a_idle_nosuspend(g);
-}
-
-int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
-		      struct dma_buf **dmabuf,
-		      u64 *offset)
-{
-	struct nvgpu_mapped_buf *mapped_buffer;
-
-	gk20a_dbg_fn("gpu_va=0x%llx", gpu_va);
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-
-	mapped_buffer = __nvgpu_vm_find_mapped_buf_range(vm, gpu_va);
-	if (!mapped_buffer) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		return -EINVAL;
-	}
-
-	*dmabuf = mapped_buffer->dmabuf;
-	*offset = gpu_va - mapped_buffer->addr;
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-	return 0;
 }
 
 int gk20a_mm_suspend(struct gk20a *g)

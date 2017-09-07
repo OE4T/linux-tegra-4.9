@@ -31,9 +31,10 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/allocator.h>
 
+struct dma_buf;
+
 struct vm_gk20a;
 struct nvgpu_vm_area;
-struct buffer_attrs;
 struct gk20a_comptag_allocator;
 
 /**
@@ -212,6 +213,7 @@ int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
 
 void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
 			   struct vm_gk20a_mapping_batch *batch);
+void nvgpu_vm_unmap_locked_ref(struct nvgpu_ref *ref);
 
 /*
  * These all require the VM update lock to be held.
@@ -223,9 +225,6 @@ struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_range(
 struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_less_than(
 	struct vm_gk20a *vm, u64 addr);
 
-int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
-		      struct dma_buf **dmabuf,
-		      u64 *offset);
 int nvgpu_insert_mapped_buf(struct vm_gk20a *vm,
 			    struct nvgpu_mapped_buf *mapped_buffer);
 void nvgpu_remove_mapped_buf(struct vm_gk20a *vm,

@@ -74,3 +74,13 @@ u64 gm20b_gpu_phys_addr(struct gk20a *g,
 {
 	return phys;
 }
+
+u32 gm20b_get_kind_invalid(void)
+{
+	return gmmu_pte_kind_invalid_v();
+}
+
+u32 gm20b_get_kind_pitch(void)
+{
+	return gmmu_pte_kind_pitch_v();
+}

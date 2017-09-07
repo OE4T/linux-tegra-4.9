@@ -38,4 +38,6 @@ bool gm20b_mm_is_bar1_supported(struct gk20a *g);
 int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g);
 u64 gm20b_gpu_phys_addr(struct gk20a *g,
 			struct nvgpu_gmmu_attrs *attrs, u64 phys);
+u32 gm20b_get_kind_invalid(void);
+u32 gm20b_get_kind_pitch(void);
 #endif

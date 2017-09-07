@@ -88,9 +88,9 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset);
 
 /* find buffer corresponding to va */
-int nvgpu_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
-			 struct dma_buf **dmabuf,
-			 u64 *offset);
+int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
+		      struct dma_buf **dmabuf,
+		      u64 *offset);
 
 enum nvgpu_aperture gk20a_dmabuf_aperture(struct gk20a *g,
 					  struct dma_buf *dmabuf);
@@ -98,9 +98,5 @@ int validate_fixed_buffer(struct vm_gk20a *vm,
 			  struct buffer_attrs *bfr,
 			  u64 map_offset, u64 map_size,
 			  struct nvgpu_vm_area **pva_node);
-int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
-				      u32 flags,
-				      struct buffer_attrs *bfr,
-				      enum gmmu_pgsz_gk20a pgsz_idx);
 
 #endif

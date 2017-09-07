@@ -2141,7 +2141,12 @@ static int set_lt_data(struct tegra_dp_out *dpout)
 	for (j = 0; j < 4; j++) {
 		for (m = 0; m < 4; m++) {
 			for (n = 0; n < 4-m; n++) {
-				dpout->lt_data[DP_VS].data[j][m][n] = tegra_dp_vs_regs[j][m][n];
+				if (tegra_dc_is_nvdisplay())
+					dpout->lt_data[DP_VS].data[j][m][n] =
+					tegra_dp_vs_regs_nvdisplay[j][m][n];
+				else
+					dpout->lt_data[DP_VS].data[j][m][n] =
+						tegra_dp_vs_regs[j][m][n];
 				dpout->lt_data[DP_PE].data[j][m][n] = tegra_dp_pe_regs[j][m][n];
 				dpout->lt_data[DP_PC].data[j][m][n] = tegra_dp_pc_regs[j][m][n];
 				dpout->lt_data[DP_TX_PU].data[j][m][n] = tegra_dp_tx_pu[j][m][n];

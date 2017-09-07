@@ -85,7 +85,6 @@ static const u8 tegra_dp_link_config_priority[][2] = {
 	{SOR_LINK_SPEED_G1_62, 1}, /* 1.62Gbps */
 };
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
 static const u32 tegra_dp_vs_regs[][4][4] = {
 	/* postcursor2 L0 */
 	{
@@ -120,8 +119,8 @@ static const u32 tegra_dp_vs_regs[][4][4] = {
 		{0x32},
 	},
 };
-#else
-static const u32 tegra_dp_vs_regs[][4][4] = {
+
+static const u32 tegra_dp_vs_regs_nvdisplay[][4][4] = {
 	/* postcursor2 L0 */
 	{
 		/* pre-emphasis: L0, L1, L2, L3 */
@@ -155,7 +154,6 @@ static const u32 tegra_dp_vs_regs[][4][4] = {
 		{0x32},
 	},
 };
-#endif
 
 static const u32 tegra_dp_pe_regs[][4][4] = {
 	/* postcursor2 L0 */

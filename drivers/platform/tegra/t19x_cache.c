@@ -20,7 +20,7 @@
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
 #include <linux/platform_device.h>
-#include <uapi/linux/t19x_cache.h>
+#include <uapi/linux/tegra_l3_cache.h>
 
 #define MASK GENMASK(15, 12)
 #define T19x_CACHE_STR	"l3_cache"

@@ -1,5 +1,5 @@
 /*
- * t19x_cache.h
+ * tegra_l3_cache.h
  *
  * declarations for t19x cache
  *
@@ -15,8 +15,8 @@
  * more details.
  */
 
-#ifndef __T19x_CACHE_H
-#define __T19x_CACHE_H
+#ifndef __TEGRA_L3_CACHE_H
+#define __TEGRA_L3_CACHE_H
 
 #include <linux/ioctl.h>
 #include <linux/types.h>
@@ -42,4 +42,4 @@ struct tegra_l3_ioctl_data {
 #define TEGRA_L3_CACHE_IOCTL_MAX_ARG_SIZE  \
 		sizeof(struct tegra_l3_ioctl_data)
 
-#endif /*  __T19x_CACHE_H */
+#endif /*  __TEGRA_L3_CACHE_H */

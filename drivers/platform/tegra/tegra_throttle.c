@@ -581,7 +581,7 @@ static const struct of_device_id tegra_throttle_of_match[] = {
 
 static struct platform_driver tegra_throttle_driver = {
 	.driver = {
-		.name = "tegra18-throttle",
+		.name = "tegra-throttle",
 		.owner = THIS_MODULE,
 		.of_match_table = tegra_throttle_of_match,
 	},

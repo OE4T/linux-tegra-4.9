@@ -2,8 +2,8 @@
 #define _LINUX_STEPPER_H_
 
 #include <linux/types.h>
-#define STEPPER_DEV_MAX		  10
-#define STEPPER_NAME_SIZE	  20
+#define CONFIG_STEPPER_DEV_MAX		10
+#define STEPPER_NAME_SIZE	20
 
 /*states indicate stepper motor direction of rotation*/
 enum stepper_direction {
@@ -104,8 +104,8 @@ struct stepper_ops {
 	int (*set_direction)(struct device *, enum stepper_direction);
 	int (*set_rate)(struct device *, int, enum stepper_rate_ramp);
 	int (*set_ramp_rate)(struct device *, int, enum stepper_ramp_mode);
-	int (*get_param)(struct device *, enum stepper_param, int offset);
-	int (*set_param)(struct device *, enum stepper_param, int offset,
+	int (*get_param)(struct device *, enum stepper_param, loff_t offset);
+	int (*set_param)(struct device *, enum stepper_param, loff_t offset,
 				int val);
 };
 
@@ -125,7 +125,7 @@ struct stepper_device {
 	struct device dev;
 	struct module *owner;
 	int id;
-	int offset;
+	loff_t offset;
 	char name[STEPPER_NAME_SIZE];
 	const struct stepper_ops *ops;
 	struct mutex ops_lock;

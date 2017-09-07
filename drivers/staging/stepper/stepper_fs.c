@@ -38,41 +38,48 @@ static ssize_t
 status_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
+	int ret;
+
+	ret = stepper->ops->get_param(dev, STEPPER_STATUS, 0);
+	if (ret < 0)
+		return ret;
 
 	return sprintf(buf, "Input port status = 0x%x\n",
-		stepper->ops->get_param(dev, STEPPER_STATUS, 0) & 0xff);
+		ret & 0xff);
 }
 static DEVICE_ATTR_RO(status);
-
 
 static ssize_t
 start_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	int data;
-	ssize_t ret;
 	struct stepper_device *stepper = to_stepper_device(dev);
-	int dir, speed;
+	ssize_t ret;
+	int data, dir, speed;
 
 	data = stepper->ops->get_param(dev, STEPPER_START, 0);
+	if (data < 0)
+		return data;
 	if (data) {
 		dir = stepper->ops->get_param(dev, STEPPER_DIRECTION, 0);
 		if (dir)
 			speed = stepper->ops->get_param(dev,
-				STEPPER_CW_RATE, 0);
+				STEPPER_CCW_RATE, 0);
 		else
 			speed = stepper->ops->get_param(dev,
-				STEPPER_CCW_RATE, 0);
+				STEPPER_CW_RATE, 0);
 
 		ret = sprintf(buf, "Motor started %s with speed %d\n",
-			dir?"clockwise":"counter-clockwise", speed);
-	} else
+			      dir ? "counter-clockwise" : "clockwise", speed);
+	} else {
 		ret = sprintf(buf, "Motor stopped\n");
+	}
+
 	return ret;
 }
 
 static ssize_t
 start_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
+	    const char *buf, size_t n)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
 	int ret;
@@ -86,8 +93,8 @@ start_store(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 
 	ret = stepper->ops->set_param(dev, STEPPER_START, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -95,7 +102,7 @@ static DEVICE_ATTR_RW(start);
 
 static ssize_t
 stop_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
+	   const char *buf, size_t n)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
 	int ret;
@@ -109,8 +116,8 @@ stop_store(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 
 	ret = stepper->ops->set_param(dev, STEPPER_EMERGENCY, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -120,14 +127,18 @@ static ssize_t
 speed_cw_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
+	int ret;
 
-	return sprintf(buf, "Motor clockwise speed = %d\n",
-		stepper->ops->get_param(dev, STEPPER_CW_RATE, 0));
+	ret = stepper->ops->get_param(dev, STEPPER_CW_RATE, 0);
+	if (ret < 0)
+		return ret;
+
+	return sprintf(buf, "Motor clockwise speed = %d\n", ret);
 }
 
 static ssize_t
 speed_cw_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
+	       const char *buf, size_t n)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
 	int ret;
@@ -137,12 +148,9 @@ speed_cw_store(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
-	if (val < 0)
-		return -EINVAL;
-
 	ret = stepper->ops->set_param(dev, STEPPER_CW_RATE, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -152,9 +160,13 @@ static ssize_t
 speed_ccw_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
+	int ret;
 
-	return sprintf(buf, "Motor counter clockwise speed = %d\n",
-		stepper->ops->get_param(dev, STEPPER_CCW_RATE, 0));
+	ret = stepper->ops->get_param(dev, STEPPER_CCW_RATE, 0);
+	if (ret < 0)
+		return ret;
+
+	return sprintf(buf, "Motor counter clockwise speed = %d\n", ret);
 }
 
 static ssize_t
@@ -169,12 +181,9 @@ speed_ccw_store(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
-	if (val < 0)
-		return -EINVAL;
-
 	ret = stepper->ops->set_param(dev, STEPPER_CCW_RATE, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -184,14 +193,18 @@ static ssize_t
 ramp_up_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
+	int ret;
 
-	return sprintf(buf, "Motor ramp up rate = %d\nMax value = 13\n",
-		stepper->ops->get_param(dev, STEPPER_RAMPUP_VAL, 0));
+	ret = stepper->ops->get_param(dev, STEPPER_RAMPUP_VAL, 0);
+	if (ret < 0)
+		return ret;
+
+	return sprintf(buf, "Motor ramp up rate = %d\nMax value = 13\n", ret);
 }
 
 static ssize_t
 ramp_up_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
+	      const char *buf, size_t n)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
 	int ret;
@@ -201,12 +214,9 @@ ramp_up_store(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
-	if ((val > 0xf) || (val < 0))
-		return -EINVAL;
-
 	ret = stepper->ops->set_param(dev, STEPPER_RAMPUP_VAL, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -216,9 +226,13 @@ static ssize_t
 ramp_down_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
+	int ret;
 
-	return sprintf(buf, "Motor ramp down rate = %d\nMax value = 13\n",
-		stepper->ops->get_param(dev, STEPPER_RAMPDOWN_VAL, 0));
+	ret = stepper->ops->get_param(dev, STEPPER_RAMPDOWN_VAL, 0);
+	if (ret < 0)
+		return ret;
+
+	return sprintf(buf, "Motor ramp down rate = %d\nMax value = 13\n", ret);
 }
 
 static ssize_t
@@ -233,12 +247,9 @@ ramp_down_store(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
-	if ((val > 0xf) || (val < 0))
-		return -EINVAL;
-
 	ret = stepper->ops->set_param(dev, STEPPER_RAMPDOWN_VAL, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -249,13 +260,14 @@ direction_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
 	int dir = stepper->ops->get_param(dev, STEPPER_DIRECTION, 0);
-	ssize_t ret;
+
+	if (dir < 0)
+		return dir;
 
 	if (dir)
-		ret = sprintf(buf, "Clockwise rotation active\n");
+		return sprintf(buf, "Counter clockwise rotation active\n");
 	else
-		ret = sprintf(buf, "Counter clockwise rotation active\n");
-	return ret;
+		return sprintf(buf, "Clockwise rotation active\n");
 }
 
 static ssize_t
@@ -274,8 +286,8 @@ direction_store(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 
 	ret = stepper->ops->set_param(dev, STEPPER_DIRECTION, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -285,16 +297,18 @@ static ssize_t
 steps_cw_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
-	ssize_t ret;
+	int ret;
 
-	ret = sprintf(buf, "Finite steps to rotate clockwise = %d\n",
-		stepper->ops->get_param(dev, STEPPER_CW_STEPS, 0));
-	return ret;
+	ret = stepper->ops->get_param(dev, STEPPER_CW_STEPS, 0);
+	if (ret < 0)
+		return ret;
+
+	return sprintf(buf, "Finite steps to rotate clockwise = %d\n", ret);
 }
 
 static ssize_t
 steps_cw_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
+	       const char *buf, size_t n)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
 	int ret;
@@ -304,12 +318,9 @@ steps_cw_store(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
-	if (val < 0)
-		return -EINVAL;
-
 	ret = stepper->ops->set_param(dev, STEPPER_CW_STEPS, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -319,11 +330,14 @@ static ssize_t
 steps_ccw_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
-	ssize_t ret;
+	int ret;
 
-	ret = sprintf(buf, "Finite steps to rotate counter clockwise = %d\n",
-		stepper->ops->get_param(dev, STEPPER_CCW_STEPS, 0));
-	return ret;
+	ret = stepper->ops->get_param(dev, STEPPER_CCW_STEPS, 0);
+	if (ret < 0)
+		return ret;
+
+	return sprintf(buf, "Finite steps to rotate counter clockwise = %d\n",
+		       ret);
 }
 
 static ssize_t
@@ -338,12 +352,9 @@ steps_ccw_store(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
-	if (val < 0)
-		return -EINVAL;
-
 	ret = stepper->ops->set_param(dev, STEPPER_CCW_STEPS, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -353,21 +364,24 @@ static ssize_t
 mode_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
-	ssize_t ret;
+	int ret;
 
-	ret = sprintf(buf, "Mode \tDescription\r\n"
+	ret = stepper->ops->get_param(dev, STEPPER_MODE, 0);
+	if (ret < 0)
+		return ret;
+
+	return sprintf(buf, "Mode \tDescription\r\n"
 				"0\tContinuous\r\n"
 				"1\tRotate till P0 sensor\r\n"
 				"2\tCW then CCW\r\n"
 				"3\tCCW then CW\r\n"
 				"4\tFinite number of steps\r\n\r\nValue\t%d\n",
-		stepper->ops->get_param(dev, STEPPER_MODE, 0));
-	return ret;
+		ret);
 }
 
 static ssize_t
 mode_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
+	   const char *buf, size_t n)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
 	int ret;
@@ -377,12 +391,9 @@ mode_store(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
-	if ((val > STEPPER_FINITE_STEPS) || (val < 0))
-		return -EINVAL;
-
 	ret = stepper->ops->set_param(dev, STEPPER_MODE, 0, val);
-	if (ret != 0)
-		return -EINVAL;
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
@@ -391,29 +402,22 @@ static DEVICE_ATTR_RW(mode);
 static ssize_t
 offset_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	int data;
-	ssize_t ret;
 	struct stepper_device *stepper = to_stepper_device(dev);
 
-	data = stepper->offset;
-	ret = sprintf(buf, "Pointing at index = %d\n", data);
-	return ret;
+	return sprintf(buf, "Pointing at index = %lld\n", stepper->offset);
 }
 
 static ssize_t
 offset_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
+	     const char *buf, size_t n)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
 	int ret;
-	unsigned long val;
+	loff_t val;
 
-	ret = kstrtoul(buf, 0, &val);
+	ret = kstrtoul(buf, 0, (unsigned long *)&val);
 	if (ret)
 		return ret;
-
-	if (val < 0)
-		return -EINVAL;
 
 	stepper->offset =  val;
 
@@ -425,18 +429,18 @@ static ssize_t
 reg_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	int data;
-	ssize_t ret;
 	struct stepper_device *stepper = to_stepper_device(dev);
 
 	data = stepper->ops->get_param(dev, STEPPER_REG_OP, stepper->offset);
-	ret = sprintf(buf, "Reading from register: %d, value = %d\n",
+	if (data < 0)
+		return data;
+	return sprintf(buf, "Reading from register: %lld, value = %d\n",
 		stepper->offset, data);
-	return ret;
 }
 
 static ssize_t
 reg_store(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
+	  const char *buf, size_t n)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
 	int ret;
@@ -446,27 +450,20 @@ reg_store(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return ret;
 
-	if (val < 0)
-		return -EINVAL;
-
 	ret = stepper->ops->set_param(dev, STEPPER_REG_OP, stepper->offset,
-					val);
-	if (ret != 0)
-		return -EINVAL;
+				      val);
+	if (ret < 0)
+		return ret;
 
 	return n;
 }
 static DEVICE_ATTR_RW(reg);
 
-
 static umode_t stepper_attr_is_visible(struct kobject *kobj,
-				   struct attribute *attr, int n)
+				       struct attribute *attr, int n)
 {
-	umode_t mode = attr->mode;
-
-	return mode;
+	return attr->mode;
 }
-
 
 static struct attribute *stepper_attrs[] = {
 	&dev_attr_start.attr,
@@ -505,4 +502,3 @@ EXPORT_SYMBOL_GPL(stepper_get_dev_attribute_groups);
 MODULE_AUTHOR("Vishruth Jain <vishruthj@nvidia.com");
 MODULE_DESCRIPTION("Stepper motor class filesystem");
 MODULE_LICENSE("GPL");
-

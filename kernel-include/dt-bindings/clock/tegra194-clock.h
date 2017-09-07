@@ -338,9 +338,8 @@
 #define TEGRA194_CLK_SYNC_I2S5			149
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_I2S6 */
 #define TEGRA194_CLK_SYNC_I2S6			150
-
-#define TEGRA194_CLK_RSVD_151			151
-
+/** @brief controls MPHY_FORCE_LS_MODE upon enable & disable */
+#define TEGRA194_CLK_MPHY_FORCE_LS_MODE		151
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_TACH */
 #define TEGRA194_CLK_TACH			152
 /** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_TSEC */

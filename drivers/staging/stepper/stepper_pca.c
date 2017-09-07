@@ -9,7 +9,6 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
  */
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -30,8 +29,6 @@
 #define MCNTL_MOTOR_RESTART	0x40
 #define MAX_RAMP_FACTOR		15
 #define MAX_PULSE_WIDTH		0x1fff
-
-extern struct class *stepper_class;
 
 enum address_map {
 	MODE,
@@ -65,6 +62,7 @@ enum address_map {
 	SUBADDR2,
 	SUBADDR3,
 	ALLCALLADR,
+	STEPCOUNT0,
 	STEPCOUNT1,
 	STEPCOUNT2,
 	STEPCOUNT3,
@@ -74,13 +72,15 @@ enum address_map {
 struct pca9629a_stepper {
 	struct i2c_client	*stepper_i2c;
 	struct stepper_device	*stepper_dev;
+	u8			motor_state;
 };
 
-
 /*Send device commands to set the stepper motor direction*/
-static int stepper_set_direction(struct i2c_client *client, enum stepper_direction direction)
+static int stepper_set_direction(struct i2c_client *client,
+				 enum stepper_direction direction)
 {
 	struct i2c_adapter *adap = client->adapter;
+	struct pca9629a_stepper *stepper = i2c_get_clientdata(client);
 	int ret = 0;
 	unsigned char command[2], data;
 	struct i2c_msg msg[2] = {
@@ -97,20 +97,23 @@ static int stepper_set_direction(struct i2c_client *client, enum stepper_directi
 			.buf = &data,
 		},
 	};
+
 	command[0] = MCNTL;
 	ret = i2c_transfer(adap, msg, 2);
 	if (ret == 2) {
-		if (direction == STEPPER_CLKWISE) {
-			command[1] = data & (0xfc);
-		} else if (direction == STEPPER_ANTI_CLKWISE) {
+		command[1] = data & (0xfc);
+		if (direction == STEPPER_ANTI_CLKWISE)
 			command[1] = data | 0x01;
-		}
+
 		msg[0].len = 2;
 		ret = i2c_transfer(adap, msg, 1);
 		if (ret != 1) {
-			dev_err(&client->dev, "%s: direction i2c trxfer error\n", __func__);
+			dev_err(&client->dev, "%s: direction i2c trxfer error\n",
+				__func__);
 			ret = -EIO;
 		} else {
+			/*update motor state*/
+			stepper->motor_state = command[1];
 			ret = 0;
 		}
 	} else {
@@ -120,43 +123,29 @@ static int stepper_set_direction(struct i2c_client *client, enum stepper_directi
 
 	return ret;
 }
+
 /*Enable the stepper motor*/
 static int stepper_start(struct i2c_client *client)
 {
 	struct i2c_adapter *adap = client->adapter;
+	struct pca9629a_stepper *stepper = i2c_get_clientdata(client);
 	int ret = 0;
-	unsigned char command[2], data;
-	struct i2c_msg msg[2] = {
-		{
-			.addr = client->addr,
-			.flags = 0,
-			.len = 1,
-			.buf = &command[0],
-		},
-		{
-			.addr = client->addr,
-			.flags = I2C_M_RD,
-			.len = 1,
-			.buf = &data,
-		},
+	unsigned char command[2];
+	struct i2c_msg msg = {
+		.addr = client->addr,
+		.flags = 0,
+		.len = 1,
+		.buf = &command[0],
 	};
-	command[0] = MCNTL;
-	ret = i2c_transfer(adap, msg, 2);
-	if (ret == 2) {
-		command[1] = data | 0x80;
-		msg[0].len = 2;
-		ret = i2c_transfer(adap, msg, 1);
-		if (ret != 1) {
-			ret = -EIO;
-		} else {
-			ret = 0;
-		}
-	} else {
-		dev_err(&client->dev, "%s: i2c txfer failure\n", __func__);
-		ret = -EIO;
-	}
 
-	return ret;
+	command[0] = MCNTL;
+	command[1] = stepper->motor_state | 0x80;
+	msg.len = 2;
+	ret = i2c_transfer(adap, &msg, 1);
+	if (ret != 1)
+		return -EIO;
+	else
+		return 0;
 }
 
 /*Restart the stepper motor with new parameters if it is already running*/
@@ -188,11 +177,10 @@ static int stepper_restart(struct i2c_client *client)
 				(MCNTL_MOTOR_START | MCNTL_MOTOR_RESTART);
 			msg[0].len = 2;
 			ret = i2c_transfer(adap, &msg[0], 1);
-			if (ret != 1) {
+			if (ret != 1)
 				ret = -EIO;
-			} else {
+			else
 				ret = 0;
-			}
 		} else {
 		       ret = -EINVAL;
 		}
@@ -232,7 +220,8 @@ static int stepper_stop(struct i2c_client *client)
 		msg[0].len = 2;
 		ret = i2c_transfer(adap, msg, 1);
 		if (ret != 1) {
-			dev_err(&client->dev, "%s: i2c txfer failure\n", __func__);
+			dev_err(&client->dev, "%s: i2c txfer failure\n",
+				__func__);
 			ret = -EIO;
 		} else {
 			ret = 0;
@@ -243,7 +232,6 @@ static int stepper_stop(struct i2c_client *client)
 	}
 
 	return ret;
-
 }
 
 /*Immediately stop without caring for ramp down delay if enabled*/
@@ -268,41 +256,43 @@ static int stepper_emergency_stop(struct i2c_client *client)
 	};
 	command[0] = MCNTL;
 	ret = i2c_transfer(adap, msg, 2);
-	if (ret == 2)
-	{
+	if (ret == 2) {
 		command[1] = data | 0x20;
 		msg[0].len = 2;
 		ret = i2c_transfer(adap, msg, 1);
 		if (ret != 1) {
-			dev_err(&client->dev,"%s: i2c txfer failure\n", __func__);
+			dev_err(&client->dev, "%s: i2c txfer failure\n",
+				__func__);
 			ret = -EIO;
 		} else {
 			ret = 0;
 		}
-	} else
+	} else {
 		ret = -EIO;
+	}
 
 	return ret;
-
 }
 
-/*Set step rate  rate is input as percentage.
-  range - 0 to 100
-  rate is changed by changing the pulse width of both CW and CCW directions
-  registers - 0x16, 0x17 for CW, 0x18, 0x19 for CCW.
-  pulse width register has reserved 3 bits in MSB for prescaler.
-  width = 2POW(prescaler)*(pulse width)
-  lower the width, faster the stepping rate
-  Min = 0 = 3usec
-  Max = 0xffff = 3145728 usec = 3.146 sec
-  Limiting the prescaler = 0, step granularity is 3us.  Max = 1fff = 24573usec = 24.573ms
-  rate = 0 = Max
-  rate = 100 = Min
+/*
+ * Set step rate  rate is input as percentage.
+ * range - 0 to 100
+ * rate is changed by changing the pulse width of both CW and CCW directions
+ * registers - 0x16, 0x17 for CW, 0x18, 0x19 for CCW.
+ * pulse width register has reserved 3 bits in MSB for prescaler.
+ * width = 2POW(prescaler)*(pulse width)
+ * lower the width, faster the stepping rate
+ * Min = 0 = 3usec
+ * Max = 0xffff = 3145728 usec = 3.146 sec
+ * Limiting the prescaler = 0, step granularity is 3us.  Max = 1fff = 24573usec
+ * rate = 0 = Max
+ * rate = 100 = Min
 */
-static int stepper_set_rate(struct i2c_client *client, int rate, bool is_continuous)
+static int stepper_set_rate(struct i2c_client *client, int rate,
+			    bool is_continuous)
 {
 	struct i2c_adapter *adap = client->adapter;
-	int ret = -1;
+	int ret = -EINVAL;
 	unsigned short width;
 	unsigned char command[5];
 	struct i2c_msg msg = {
@@ -315,17 +305,21 @@ static int stepper_set_rate(struct i2c_client *client, int rate, bool is_continu
 		return -1;
 
 	command[0] = CWPWL | 0x80;
-	width = (unsigned short) MAX_PULSE_WIDTH - (unsigned short)(rate *MAX_PULSE_WIDTH / 100);
-	command[1] = command[3] = width & 0xff;
-	command[2] = command[4] = (width & 0xff00) >> 8;
+	width = (unsigned short)MAX_PULSE_WIDTH -
+		(unsigned short)(rate * MAX_PULSE_WIDTH / 100);
+	command[1] = width & 0xff;
+	command[3] = width & 0xff;
+	command[2] = (width & 0xff00) >> 8;
+	command[4] = (width & 0xff00) >> 8;
+
 	ret = i2c_transfer(adap, &msg, 1);
 	if (ret == 1) {
-		if (is_continuous) {
+		if (is_continuous)
 			ret = stepper_restart(client);
-		} else
+		else
 			ret = 0;
 	} else {
-		ret = -1;
+		ret = -EIO;
 	}
 
 	return ret;
@@ -335,57 +329,58 @@ static int stepper_reset(struct i2c_client *client)
 {
 	struct i2c_adapter *adap = client->adapter;
 	int ret = 0;
-	unsigned char data;
-	unsigned char parameters[32] = {
-	0x80,
-	0x20, 0x00, 0x00, 0x03, 0x13,
-	0x1c, 0x00, 0x00, 0x68, 0x00,
-	0x00, 0x50, 0x80, 0x35, 0x35,
-	0x00, 0x00, 0x00, 0xff, 0xff,
-	0xff, 0xff, 0x0a, 0x1a, 0x0a,
-	0x1a, 0xc0, 0xe2, 0xe4, 0xe6,
-	0xe0
+	struct i2c_msg msg;
+	unsigned char reset_regs[MAX_REG + 1] = {
+		0x80,/*address of the first register with auto increment*/
+		0x00, 0x00, 0x00,
+		0x03/*reg-0x03 -P0 and P1 as inputs*/,
+		0x13/*reg-0x04 -P0 and P1 interrupt on falling edge*/,
+		0x1f/*reg-0x05 -mask all interrupts*/,
+		0x00, 0x00,
+		0x68/*reg-0x08 -interrupt based control*/,
+		0x00, 0x00/*reg-0x09 & 0x0a -extra steps*/,
+		0x50/*reg-0x0b -output config and motor type selection*/,
+		0x80,
+		0x35, 0x35/*reg-0x0d & 0x0e -ramp control*/,
+		0x00, 0x00, 0x00,
+		/*step count registers - reg-0x12, 0x13, 0x14, 0x15*/
+		0x01, 0x00, 0x01, 0x00,
+		/*pulse width configuration - reg-0x16, 0x17, 0x18, 0x19*/
+		0x0a, 0x1a, 0x0a, 0x1a,
+		0xc0/*reg-0x1a -motor control- start motor*/,
+		0xe2, 0xe4, 0xe6, 0xe0,
+		0x00, 0x00, 0x00, 0x00
 	};
-	struct i2c_msg msg[2];
+
+
+	/*Set motor parameters*/
+	msg.addr = client->addr;
+	msg.flags = 0;
+	/*All register values prefixed with register index*/
+	msg.len = MAX_REG + 1;
+	msg.buf = reset_regs;
 
 	/*Reset the device*/
-	msg[0].addr = 0;
-	msg[0].flags = 0;
-	msg[0].len = 1;
-	msg[0].buf = &data;
-	data = 0x06;
-	ret = i2c_transfer(adap, msg, 1);
-	if (ret == 1) {
-		/*Set motor parameters*/
-		msg[0].addr = client->addr;
-		msg[0].flags = 0;
-		msg[0].len = 32;
-		msg[0].buf = parameters;
-		ret = i2c_transfer(adap, msg, 1);
-		if (ret != 32) {
-			ret = -1;
-		} else {
-			ret = 0;
-		}
-	} else {
-		ret = -1;
-	}
+	ret = i2c_transfer(adap, &msg, 1);
+
 	return ret;
 }
 
 static int stepper_send(struct i2c_client *client, const char *buf, size_t len)
 {
 	struct i2c_adapter *adap = client->adapter;
-	char data[50];
+	char *data;
 	int ret = 0;
 	struct i2c_msg msg = {
 	    .addr = client->addr,
 	    .flags = 0,
 	    .len = len,
-	    .buf = data,
 	};
-	if (data == NULL)
+
+	data = devm_kzalloc(&client->dev, 50, GFP_KERNEL);
+	if (!data)
 		return -ENOMEM;
+	msg.buf = data;
 	memcpy(data, buf, len);
 	/*Set address auto-increment flag*/
 	data[0] |= 0x80;
@@ -396,15 +391,17 @@ static int stepper_send(struct i2c_client *client, const char *buf, size_t len)
 		dev_err(&client->dev, "%s: i2c txfer failure\n", __func__);
 		ret = -EIO;
 	}
+	devm_kfree(&client->dev, data);
 	return ret;
 }
 
-static int stepper_receive(struct i2c_client *client, int offset, char *buf, size_t len)
+static int stepper_receive(struct i2c_client *client, loff_t offset, char *buf,
+			   size_t len)
 {
 	struct i2c_adapter *adap = client->adapter;
 	int ret = 0, i;
-	char command = 0x80 | offset;
-	char data[50];
+	char command = 0x80 | (unsigned char)offset;
+	char *data;
 	struct i2c_msg msg[2] = {
 		{
 			.addr = client->addr,
@@ -416,14 +413,15 @@ static int stepper_receive(struct i2c_client *client, int offset, char *buf, siz
 			.addr = client->addr,
 			.flags = I2C_M_RD,
 			.len = len,
-			.buf = data,
 		},
 	};
 
 	if (len > MAX_REG)
 		len = MAX_REG;
-	if (data == NULL)
+	data = devm_kzalloc(&client->dev, len, GFP_KERNEL);
+	if (!data)
 		return -ENOMEM;
+	msg[1].buf = data;
 	ret = i2c_transfer(adap, &msg[0], 2);
 	if (ret == 2) {
 		ret = 0;
@@ -431,8 +429,9 @@ static int stepper_receive(struct i2c_client *client, int offset, char *buf, siz
 			buf[i] = data[i];
 	} else {
 		dev_err(&client->dev, "%s: i2c txfer failure\n", __func__);
-		ret = -1;
+		ret = -EIO;
 	}
+	devm_kfree(&client->dev, data);
 	return ret;
 }
 
@@ -440,11 +439,14 @@ int pca9629a_stepper_open(struct device *dev)
 {
 	return 0;
 }
+
 int pca9629a_stepper_release(struct device *dev)
 {
 	return 0;
 }
-int pca9629a_stepper_ioctl(struct device *dev, unsigned int attr, unsigned long val)
+
+int pca9629a_stepper_ioctl(struct device *dev, unsigned int attr,
+			   unsigned long val)
 {
 	switch (attr) {
 	case 1/*start*/:
@@ -455,9 +457,11 @@ int pca9629a_stepper_ioctl(struct device *dev, unsigned int attr, unsigned long 
 	break;
 	case 3:/*direction*/
 		if (val == 0)
-			stepper_set_direction(to_i2c_client(dev->parent), STEPPER_CLKWISE);
+			stepper_set_direction(to_i2c_client(dev->parent),
+					      STEPPER_CLKWISE);
 		else
-			stepper_set_direction(to_i2c_client(dev->parent), STEPPER_ANTI_CLKWISE);
+			stepper_set_direction(to_i2c_client(dev->parent),
+					      STEPPER_ANTI_CLKWISE);
 	break;
 	case 4/*Emergency stop*/:
 		stepper_emergency_stop(to_i2c_client(dev->parent));
@@ -475,6 +479,7 @@ int pca9629a_stepper_ioctl(struct device *dev, unsigned int attr, unsigned long 
 
 	return 0;
 }
+
 int pca9629a_stepper_write(struct device *dev, const char *buf, size_t len)
 {
 	int ret = stepper_send(to_i2c_client(dev->parent), buf, len);
@@ -485,7 +490,8 @@ int pca9629a_stepper_write(struct device *dev, const char *buf, size_t len)
 int pca9629a_stepper_read(struct device *dev, char *buf, size_t len)
 {
 	struct stepper_device *stepper = to_stepper_device(dev);
-	int ret = stepper_receive(to_i2c_client(dev->parent), stepper->offset, buf, len);
+	int ret = stepper_receive(to_i2c_client(dev->parent), stepper->offset,
+				  buf, len);
 
 	return ret;
 }
@@ -518,10 +524,12 @@ int pca9629a_stepper_set_dir(struct device *dev, enum stepper_direction dir)
 	return ret;
 }
 
-int pca9629a_stepper_set_rate(struct device *dev, int val, enum stepper_rate_ramp immediate)
+int pca9629a_stepper_set_rate(struct device *dev, int val,
+			      enum stepper_rate_ramp immediate)
 {
 	bool is_continuous;
 	int ret;
+
 	if (immediate == STEPPER_RATE_CONTINUOUS)
 		is_continuous = 1;
 	else
@@ -531,11 +539,13 @@ int pca9629a_stepper_set_rate(struct device *dev, int val, enum stepper_rate_ram
 	return ret;
 }
 
-int pca9629a_stepper_set_ramp(struct device *dev, int val, enum stepper_ramp_mode mode)
+int pca9629a_stepper_set_ramp(struct device *dev, int val,
+			      enum stepper_ramp_mode mode)
 {
 	char buff[2];
 	int ret;
-	buff[1] = 0x30 | (unsigned char)((val * MAX_RAMP_FACTOR)/100);
+
+	buff[1] = 0x30 | (unsigned char)((val * MAX_RAMP_FACTOR) / 100);
 	if (mode == STEPPER_RAMP_UP)
 		buff[0] = RUCNTL;
 	else
@@ -545,16 +555,20 @@ int pca9629a_stepper_set_ramp(struct device *dev, int val, enum stepper_ramp_mod
 	return ret;
 }
 
-int pca9629a_stepper_get_param(struct device *dev, enum stepper_param param, int offset)
+int pca9629a_stepper_get_param(struct device *dev, enum stepper_param param,
+			       loff_t offset)
 {
-	int ret = -1, reg = 0, err = -1, val2 = 0;
-	char data[4];
+	int ret = -EINVAL, reg = 0, err = -EINVAL, val2 = 0;
+	char data[4] = {0, 0, 0, 0};
+	struct pca9629a_stepper *stepper =
+				i2c_get_clientdata(to_i2c_client(dev->parent));
+
 	switch (param) {
 	case STEPPER_STATUS:
 		reg = IP;
 		err = stepper_receive(to_i2c_client(dev->parent), reg, data, 1);
-		if (err != 0)
-			ret = 2;
+		if (err)
+			ret = err;
 		else
 			ret = *((int *)(&data[0]));
 	break;
@@ -562,108 +576,128 @@ int pca9629a_stepper_get_param(struct device *dev, enum stepper_param param, int
 	case STEPPER_START:
 		reg = MCNTL;
 		err = stepper_receive(to_i2c_client(dev->parent), reg, data, 1);
-		if (err != 0)
-			ret = 2;
+		if (err)
+			ret = err;
 		else
 			ret = *((int *)(&data[0]));
 	break;
 	case STEPPER_CW_RATE:
 		reg = CWPWL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&ret, 2);
-		if (err == 0) {
-			ret = ret & 0x1fff;
-			ret = MAX_PULSE_WIDTH - ret;
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&ret, 2);
+		if (err) {
+			ret = err;
 			goto exit;
 		}
-		ret = -1;
+		ret = ret & 0x1fff;
+		ret = MAX_PULSE_WIDTH - ret;
 	break;
 	case STEPPER_CCW_RATE:
 		reg = CCWPWL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&ret, 2);
-		if (err == 0) {
-			ret = ret & 0x1fff;
-			ret = MAX_PULSE_WIDTH - ret;
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&ret, 2);
+		if (err) {
+			ret = err;
 			goto exit;
 		}
-		ret = -1;
+		ret = ret & 0x1fff;
+		ret = MAX_PULSE_WIDTH - ret;
 	break;
 	case STEPPER_MAX_RATE:
 		ret = MAX_PULSE_WIDTH;
 	break;
 	case STEPPER_RAMPUP_VAL:
 		reg = RUCNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&ret, 1);
-		if (err == 0) {
-			ret = ret & 0x0f;
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&ret, 1);
+		if (err) {
+			ret = err;
 			goto exit;
 		}
+		ret = ret & 0x0f;
 	break;
 	case STEPPER_RAMPDOWN_VAL:
 		reg = RDCNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&ret, 1);
-		if (err == 0) {
-			ret = ret & 0x0f;
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&ret, 1);
+		if (err) {
+			ret = err;
 			goto exit;
 		}
+		ret = ret & 0x0f;
 	break;
 	case STEPPER_DIRECTION:
 		reg =  MCNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&ret, 1);
-		if (err == 0) {
-			ret = ret & 0x01;
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&ret, 1);
+		if (err) {
+			ret = err;
 			goto exit;
 		}
+		ret = ret & 0x01;
+		/*update motor state*/
+		stepper->motor_state = ret;
 	break;
 	case STEPPER_CW_STEPS:
 		reg = CWSCOUNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&ret, 2);
-		if (err == 0) {
-			ret = ret & 0xffff;
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&ret, 2);
+		if (err) {
+			ret = err;
 			goto exit;
 		}
-
+		ret = ret & 0xffff;
 	break;
 	case STEPPER_CCW_STEPS:
 		reg = CCWSCOUNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&ret, 2);
-		if (err == 0) {
-			ret = ret & 0xffff;
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&ret, 2);
+		if (err) {
+			ret = err;
 			goto exit;
 		}
-
+		ret = ret & 0xffff;
 	break;
 	case STEPPER_MODE:
 		reg =  MCNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&ret, 1);
-		if (err == 0) {
-			/*Read PMA*/
-			reg = PMA;
-			err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&val2, 1);
-			if (err) {
-				ret = -1;
-				goto exit;
-			}
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&ret, 1);
+		if (err) {
+			ret = err;
+			goto exit;
+		}
+		/*update motor state*/
+		stepper->motor_state = ret;
+		/*Read PMA*/
+		reg = PMA;
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&val2, 1);
+		if (err) {
+			ret = err;
+			goto exit;
+		}
 
-			if (val2 & 0xff)
-				ret = STEPPER_FINITE_STEPS;
-			else {
-				if ((ret & 0x03) >= 0x02) {
-					if (ret & 0x01)
-						ret = STEPPER_CCW_THEN_CW;
-					else
-						ret = STEPPER_CW_THEN_CCW;
-				} else
-					ret = STEPPER_CONTINUOUS;
+		if (val2 & 0xff) {
+			ret = STEPPER_FINITE_STEPS;
+		} else {
+			if ((ret & 0x03) >= 0x02) {
+				if (ret & 0x01)
+					ret = STEPPER_CCW_THEN_CW;
+				else
+					ret = STEPPER_CW_THEN_CCW;
+			} else {
+				ret = STEPPER_CONTINUOUS;
 			}
 		}
 	break;
 	case STEPPER_REG_OP:
 		if ((offset < MAX_REG) && (offset >= 0)) {
-			ret = stepper_receive(to_i2c_client(dev->parent), offset, (char *)&val2, 1);
-			if (!ret)
-				ret = val2;
+			err = stepper_receive(to_i2c_client(dev->parent),
+					      offset, (char *)&val2, 1);
+			if (err)
+				ret = err;
 			else
-				ret = -1;
+				ret = val2;
 		}
 	break;
 	default:
@@ -673,13 +707,16 @@ exit:
 	return ret;
 }
 
-int pca9629a_stepper_set_param(struct device *dev, enum stepper_param param, int offset, int value)
+int pca9629a_stepper_set_param(struct device *dev, enum stepper_param param,
+			       loff_t offset, int value)
 {
-	int ret = -1, reg = 0, err = -1, val2 = 0;
+	int ret = -EINVAL, reg = 0, err = -EINVAL, val2 = 0;
 	char *buf;
+	struct pca9629a_stepper *stepper =
+			i2c_get_clientdata(to_i2c_client(dev->parent));
 
 	buf = devm_kzalloc(dev, 10, GFP_KERNEL);
-	if (buf == NULL)
+	if (!buf)
 		return -ENOMEM;
 
 	switch (param) {
@@ -696,17 +733,18 @@ int pca9629a_stepper_set_param(struct device *dev, enum stepper_param param, int
 		buf[2] = (val2 >> 8) & 0x1f;
 		buf[0] = CWPWL | 0x80;
 		ret = stepper_send(to_i2c_client(dev->parent), buf, 3);
-		if (ret != 0)
+		if (ret)
 			goto exit;
 		reg =  MCNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&val2, 1);
-		if (err == 0) {
-			buf[0] = reg;
-			buf[1] = (val2 & 0xff) | 0x40;/*Restart with updated rate*/
-			ret = stepper_send(to_i2c_client(dev->parent), buf, 2);
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&val2, 1);
+		if (err) {
+			ret = err;
 			goto exit;
 		}
-		ret = -1;
+		buf[0] = reg;/*Restart with updated rate*/
+		buf[1] = (val2 & 0xff) | 0x40;
+		ret = stepper_send(to_i2c_client(dev->parent), buf, 2);
 	break;
 	case STEPPER_CCW_RATE:
 		/*Value will be limited to MAX_PULSE_WIDTH = 0x1fff*/
@@ -715,36 +753,43 @@ int pca9629a_stepper_set_param(struct device *dev, enum stepper_param param, int
 		buf[2] = (val2 >> 8) & 0x1f;
 		buf[0] = CCWPWL | 0x80;
 		ret = stepper_send(to_i2c_client(dev->parent), buf, 3);
-		if (ret != 0)
+		if (ret)
 			goto exit;
 		reg =  MCNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&val2, 1);
-		if (err == 0) {
-			buf[0] = reg;
-			buf[1] = (val2 & 0xff) | 0x40;/*Restart with updated rate*/
-			ret = stepper_send(to_i2c_client(dev->parent), buf, 2);
+		ret = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&val2, 1);
+		if (ret)
 			goto exit;
-		}
-		ret = -1;
-
+		buf[0] = reg;/*Restart with updated rate*/
+		buf[1] = (val2 & 0xff) | 0x40;
+		ret = stepper_send(to_i2c_client(dev->parent), buf, 2);
 	break;
 	case STEPPER_RAMPUP_VAL:
+		if (value > 0x0f)
+			goto exit;
 		buf[0] = RUCNTL;
 		buf[1] = (value & 0x0f) | 0x30;/*Enable immediately*/
 		ret = stepper_send(to_i2c_client(dev->parent), buf, 2);
 	break;
 	case STEPPER_RAMPDOWN_VAL:
+		if (value > 0x0f)
+			goto exit;
 		buf[0] = RDCNTL;
 		buf[1] = (value & 0x0f) | 0x30;/*Enable immediately*/
 		ret = stepper_send(to_i2c_client(dev->parent), buf, 2);
 	break;
 	case STEPPER_DIRECTION:
 		buf[0] =  MCNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), buf[0], (char *)&ret, 1);
-		if (err == 0) {
-			buf[1] = (ret & 0xfe) | value;
-			ret = stepper_send(to_i2c_client(dev->parent), buf, 2);
+		err = stepper_receive(to_i2c_client(dev->parent), buf[0],
+				      (char *)&ret, 1);
+		if (err) {
+			ret = err;
+			goto exit;
 		}
+		buf[1] = (ret & 0xfe) | value;
+		/*update motor state*/
+		stepper->motor_state = buf[1];
+		ret = stepper_send(to_i2c_client(dev->parent), buf, 2);
 	break;
 	case STEPPER_CW_STEPS:
 		buf[0] = CWSCOUNTL;
@@ -759,44 +804,46 @@ int pca9629a_stepper_set_param(struct device *dev, enum stepper_param param, int
 		ret = stepper_send(to_i2c_client(dev->parent), buf, 3);
 	break;
 	case STEPPER_MODE:
+		if (value > STEPPER_FINITE_STEPS)
+			goto exit;
 		reg =  MCNTL;
-		err = stepper_receive(to_i2c_client(dev->parent), reg, (char *)&ret, 1);
-		if (err == 0) {
-			buf[0] = reg;
-			if (value == STEPPER_CONTINUOUS)
-				buf[1] = (ret & 0xfd);
-			else if (value == STEPPER_CW_THEN_CCW)
-				buf[1] = (ret & 0xfc) | 0x02;
-			else if (value == STEPPER_CCW_THEN_CW)
-				buf[1] = (ret & 0xfc) | 0x03;
-			else
-				buf[1] = ret & 0xff;
-
-			err = stepper_send(to_i2c_client(dev->parent), buf, 2);
-			if (err) {
-				ret = -1;
-				goto exit;
-			}
-			/*write PMA*/
-			buf[0] = PMA;
-			if (value == STEPPER_CONTINUOUS)
-				buf[1] = 0;
-			else if (value == STEPPER_CW_THEN_CCW)
-				buf[1] = 0;
-			else if (value == STEPPER_CCW_THEN_CW)
-				buf[1] = 0;
-			else
-				buf[1] = 1;
-
-			err = stepper_send(to_i2c_client(dev->parent), buf, 2);
-			if (err) {
-				ret = -1;
-				goto exit;
-			}
+		err = stepper_receive(to_i2c_client(dev->parent), reg,
+				      (char *)&ret, 1);
+		if (err) {
+			ret = err;
+			goto exit;
 		}
+		buf[0] = reg;
+		if (value == STEPPER_CONTINUOUS)
+			buf[1] = (ret & 0xfd);
+		else if (value == STEPPER_CW_THEN_CCW)
+			buf[1] = (ret & 0xfc) | 0x02;
+		else if (value == STEPPER_CCW_THEN_CW)
+			buf[1] = (ret & 0xfc) | 0x03;
+		else
+			buf[1] = ret & 0xff;
+
+		err = stepper_send(to_i2c_client(dev->parent), buf, 2);
+		if (err) {
+			ret = err;
+			goto exit;
+		}
+		stepper->motor_state = buf[1];
+		/*write PMA*/
+		buf[0] = PMA;
+		if (value == STEPPER_CONTINUOUS)
+			buf[1] = 0;
+		else if (value == STEPPER_CW_THEN_CCW)
+			buf[1] = 0;
+		else if (value == STEPPER_CCW_THEN_CW)
+			buf[1] = 0;
+		else
+			buf[1] = 1;
+		err = stepper_send(to_i2c_client(dev->parent), buf, 2);
+		ret = err;
 	break;
 	case STEPPER_EMERGENCY:
-		stepper_emergency_stop(to_i2c_client(dev->parent));
+		ret = stepper_emergency_stop(to_i2c_client(dev->parent));
 	break;
 	case STEPPER_REG_OP:
 		if ((offset < MAX_REG) && (offset >= 0)) {
@@ -813,6 +860,7 @@ exit:
 	devm_kfree(dev, buf);
 	return ret;
 }
+
 static const struct stepper_ops pca9629a_stepper_ops = {
 	.open = pca9629a_stepper_open,
 	.release = pca9629a_stepper_release,
@@ -829,46 +877,48 @@ static const struct stepper_ops pca9629a_stepper_ops = {
 	.set_param = pca9629a_stepper_set_param
 };
 
-
-static int pca9629a_stepper_probe(struct i2c_client *client, const struct i2c_device_id *id)
+static int pca9629a_stepper_probe(struct i2c_client *client,
+				  const struct i2c_device_id *id)
 {
 	struct pca9629a_stepper *stepper;
-	int err = 0;
 
-	stepper = devm_kzalloc(&client->dev, sizeof(struct pca9629a_stepper), GFP_KERNEL);
-	if (!stepper) {
-		dev_err(&client->dev, "Error assigning memory for pca9629a_stepper\n");
+	stepper = devm_kzalloc(&client->dev, sizeof(struct pca9629a_stepper),
+			       GFP_KERNEL);
+	if (!stepper)
 		return -ENOMEM;
-	}
 
 	i2c_set_clientdata(client, stepper);
-	stepper->stepper_dev = stepper_device_register(client->name, &client->dev, &pca9629a_stepper_ops, THIS_MODULE);
+	stepper->stepper_dev = stepper_device_register(client->name,
+						       &client->dev,
+						       &pca9629a_stepper_ops,
+						       THIS_MODULE);
 	if (!stepper->stepper_dev)
 		return -ENODEV;
 
-	if (&stepper->stepper_dev->chardev == NULL) {
-		goto err;
-		err = -ENODEV;
-	}
+	if (!(&stepper->stepper_dev->chardev))
+		return -ENODEV;
+
 	stepper_reset(client);
 
-err:
-	return err;
+	return 0;
 }
 
 static int pca9629a_stepper_remove(struct i2c_client *client)
 {
 	struct pca9629a_stepper *stepper;
+
 	stepper = i2c_get_clientdata(client);
 	stepper->stepper_dev->ops->ioctl(&stepper->stepper_dev->dev, 1, 0);
 	stepper_device_remove(stepper->stepper_dev);
 	return 0;
 }
+
 static struct i2c_device_id stepper_id_table[] = {
 	{"stepper_pca", 0},
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, stepper_id_table);
+
 static const struct of_device_id stepper_dt_ids[] = {
 	{.compatible = "stepper_pca", },
 	{}

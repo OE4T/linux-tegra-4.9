@@ -559,8 +559,17 @@ static int __maybe_unused tegra_dsi_syncpt
 	if (!nvhost_syncpt_read_ext_check(dsi->dc->ndev, dsi->syncpt_id, &val))
 		dsi->syncpt_val = val;
 
-	val = DSI_INCR_SYNCPT_COND(OP_DONE) |
-		DSI_INCR_SYNCPT_INDX(dsi->syncpt_id);
+	if (tegra_dc_is_nvdisplay())
+		val = DSI_INCR_SYNCPT_COND(OP_DONE,
+					DSI_SYNCPT_INDX_FIELD_SIZE_NVDISPLAY) |
+			DSI_INCR_SYNCPT_INDX(dsi->syncpt_id,
+					DSI_SYNCPT_INDX_FIELD_SIZE_NVDISPLAY);
+	else
+		val = DSI_INCR_SYNCPT_COND(OP_DONE,
+					DSI_SYNCPT_INDX_FIELD_SIZE) |
+			DSI_INCR_SYNCPT_INDX(dsi->syncpt_id,
+					DSI_SYNCPT_INDX_FIELD_SIZE);
+
 	if (dsi->info.ganged_type && dsi->info.ganged_write_to_all_links)
 		tegra_dsi_writel(dsi, val, DSI_INCR_SYNCPT);
 	else

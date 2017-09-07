@@ -26,14 +26,19 @@ enum {
 enum {
 	OP_DONE = 1,
 };
+#define DSI_SYNCPT_INDX_FIELD_SIZE		8
+#define DSI_SYNCPT_INDX_FIELD_SIZE_NVDISPLAY	10
 #define DSI_INCR_SYNCPT 0x00
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-#define DSI_INCR_SYNCPT_COND(x)		(((x) & 0xff) << 10)
-#define DSI_INCR_SYNCPT_INDX(x)		(((x) & 0x3ff) << 0)
-#else
-#define DSI_INCR_SYNCPT_COND(x)		(((x) & 0xff) << 8)
-#define DSI_INCR_SYNCPT_INDX(x)		(((x) & 0xff) << 0)
-#endif
+/* DSI_INCR_SYNCPT_COND for
+ * T21x		- (((x) & 0xff) << 8)
+ * Nvdisplay	- (((x) & 0xff) << 10)
+ */
+#define DSI_INCR_SYNCPT_COND(x, y)		(((x) & 0xff) << y)
+/* DSI_INCR_SYNCPT_INDX for
+ * T21x		- (((x) & 0xff) << 0)
+ * Nvdisplay	- (((x) & 0x3ff) << 0)
+ */
+#define DSI_INCR_SYNCPT_INDX(x, y)		(((x) & ((1 << (y)) - 1)) << 0)
 
 #define DSI_INCR_SYNCPT_CNTRL 0x01
 #define DSI_INCR_SYNCPT_ERROR 0x02

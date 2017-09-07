@@ -513,52 +513,34 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 static void nvgpu_pci_remove(struct pci_dev *pdev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(&pdev->dev);
 	struct gk20a *g = get_gk20a(&pdev->dev);
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct device *dev = dev_from_gk20a(g);
+	int err;
 
-	gk20a_dbg(gpu_dbg_shutdown, "Removing nvgpu driver!\n");
+	/* no support yet for unbind if DGPU is in VGPU mode */
+	if (gk20a_gpu_is_virtual(dev))
+		return;
 
-	if (g->irqs_enabled)
-		disable_irq(g->irq_stall);
+	/* only idle the GPU if the GPU is powered on */
+	if (g->power_on) {
+		gk20a_driver_start_unload(g);
+		err = nvgpu_quiesce(g);
+		/* TODO: handle failure to idle */
+		WARN(err, "gpu failed to idle during driver removal");
+	}
 
-	devm_free_irq(&pdev->dev, g->irq_stall, g);
+	nvgpu_remove(dev, &nvgpu_pci_class);
 
 #if defined(CONFIG_PCI_MSI)
-	if (g->msi_enabled) {
+	if (g->msi_enabled)
 		pci_disable_msi(pdev);
-		g->msi_enabled = false;
+	else {
+		/* IRQ does not need to be enabled in MSI as the line is not
+		 * shared
+		 */
+		enable_irq(g->irq_stall);
 	}
 #endif
-	gk20a_dbg(gpu_dbg_shutdown, "IRQs disabled.\n");
-
-	/*
-	 * Wait for the driver to finish up all the IOCTLs it's working on
-	 * before cleaning up the driver's data structures.
-	 */
-	gk20a_driver_start_unload(g);
-	gk20a_dbg(gpu_dbg_shutdown, "Driver idle.\n");
-
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	nvgpu_clk_arb_cleanup_arbiter(g);
-#endif
-
-	gk20a_user_deinit(dev_from_gk20a(g), &nvgpu_pci_class);
-	gk20a_dbg(gpu_dbg_shutdown, "User de-init done.\b");
-
-#ifdef CONFIG_DEBUG_FS
-	debugfs_remove_recursive(l->debugfs);
-	debugfs_remove_recursive(l->debugfs_alias);
-#endif
-
-	nvgpu_remove_sysfs(dev_from_gk20a(g));
-
-	if (platform->remove)
-		platform->remove(dev_from_gk20a(g));
-	gk20a_dbg(gpu_dbg_shutdown, "Platform remove done.\b");
-
-	enable_irq(g->irq_stall);
-
 	gk20a_get_platform(&pdev->dev)->g = NULL;
 	gk20a_put(g);
 }

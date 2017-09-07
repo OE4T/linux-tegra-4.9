@@ -640,6 +640,48 @@ static int gk20a_pm_unrailgate(struct device *dev)
 	return ret;
 }
 
+/*
+ * Idle the GPU in preparation of shutdown/remove.
+ * gk20a_driver_start_unload() does not idle the GPU, but instead changes the SW
+ * state to prevent further activity on the driver SW side.
+ * On driver removal quiesce() should be called after start_unload()
+ */
+int nvgpu_quiesce(struct gk20a *g)
+{
+	int err;
+	struct device *dev = dev_from_gk20a(g);
+
+	err = gk20a_wait_for_idle(g);
+	if (err) {
+		nvgpu_err(g, "failed to idle GPU, err=%d", err);
+		return err;
+	}
+
+	err = gk20a_fifo_disable_all_engine_activity(g, true);
+	if (err) {
+		nvgpu_err(g, "failed to disable engine activity, err=%d",
+			err);
+		return err;
+	}
+
+	err = gk20a_fifo_wait_engine_idle(g);
+	if (err) {
+		nvgpu_err(g, "failed to idle engines, err=%d",
+			err);
+		return err;
+	}
+
+	if (gk20a_gpu_is_virtual(dev))
+		err = vgpu_pm_prepare_poweroff(dev);
+	else
+		err = gk20a_pm_prepare_poweroff(dev);
+
+	if (err)
+		nvgpu_err(g, "failed to prepare for poweroff, err=%d",
+			err);
+	return err;
+}
+
 static void gk20a_pm_shutdown(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = platform_get_drvdata(pdev);
@@ -668,35 +710,9 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 	/* Prevent more requests by disabling Runtime PM */
 	__pm_runtime_disable(&pdev->dev, false);
 
-	err = gk20a_wait_for_idle(g);
-	if (err) {
-		nvgpu_err(g, "failed to idle GPU, err=%d", err);
+	err = nvgpu_quiesce(g);
+	if (err)
 		goto finish;
-	}
-
-	err = gk20a_fifo_disable_all_engine_activity(g, true);
-	if (err) {
-		nvgpu_err(g, "failed to disable engine activity, err=%d",
-			err);
-		goto finish;
-	}
-
-	err = gk20a_fifo_wait_engine_idle(g);
-	if (err) {
-		nvgpu_err(g, "failed to idle engines, err=%d",
-			err);
-		goto finish;
-	}
-
-	if (gk20a_gpu_is_virtual(&pdev->dev))
-		err = vgpu_pm_prepare_poweroff(&pdev->dev);
-	else
-		err = gk20a_pm_prepare_poweroff(&pdev->dev);
-	if (err) {
-		nvgpu_err(g, "failed to prepare for poweroff, err=%d",
-			err);
-		goto finish;
-	}
 
 	err = gk20a_pm_railgate(&pdev->dev);
 	if (err)
@@ -854,6 +870,9 @@ void gk20a_driver_start_unload(struct gk20a *g)
 
 	down_write(&g->busy_lock);
 	__nvgpu_set_enabled(g, NVGPU_DRIVER_IS_DYING, true);
+	/* GR SW ready needs to be invalidated at this time with the busy lock
+	 * held to prevent a racing condition on the gr/mm code */
+	g->gr.sw_ready = false;
 	up_write(&g->busy_lock);
 
 	if (g->is_virtual)
@@ -979,17 +998,13 @@ static int gk20a_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int __exit gk20a_remove(struct platform_device *pdev)
+int nvgpu_remove(struct device *dev, struct class *class)
 {
-	struct device *dev = &pdev->dev;
 	struct gk20a *g = get_gk20a(dev);
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	gk20a_dbg_fn("");
-
-	if (gk20a_gpu_is_virtual(dev))
-		return vgpu_remove(pdev);
 
 	if (platform->has_cde)
 		gk20a_cde_destroy(l);
@@ -1001,16 +1016,11 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_exit(dev);
 
-	if (g->remove_support)
-		g->remove_support(g);
-
-	gk20a_ce_destroy(g);
-
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	nvgpu_clk_arb_cleanup_arbiter(g);
 #endif
 
-	gk20a_user_deinit(dev, &nvgpu_class);
+	gk20a_user_deinit(dev, class);
 
 	gk20a_debug_deinit(g);
 
@@ -1026,12 +1036,26 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 	if (platform->remove)
 		platform->remove(dev);
 
-	set_gk20a(pdev, NULL);
-	gk20a_put(g);
-
 	gk20a_dbg_fn("removed");
 
 	return 0;
+}
+
+static int __exit gk20a_remove(struct platform_device *pdev)
+{
+	int err;
+	struct device *dev = &pdev->dev;
+	struct gk20a *g = get_gk20a(dev);
+
+	if (gk20a_gpu_is_virtual(dev))
+		return vgpu_remove(pdev);
+
+	err = nvgpu_remove(dev, &nvgpu_class);
+
+	set_gk20a(pdev, NULL);
+	gk20a_put(g);
+
+	return err;
 }
 
 static struct platform_driver gk20a_driver = {

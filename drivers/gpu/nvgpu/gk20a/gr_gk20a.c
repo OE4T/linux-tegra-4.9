@@ -3044,36 +3044,6 @@ out:
 	return err;
 }
 
-int gk20a_comptag_allocator_init(struct gk20a_comptag_allocator *allocator,
-		unsigned long size)
-{
-	nvgpu_mutex_init(&allocator->lock);
-	/*
-	 * 0th comptag is special and is never used. The base for this bitmap
-	 * is 1, and its size is one less than the size of comptag store.
-	 */
-	size--;
-	allocator->bitmap = vzalloc(BITS_TO_LONGS(size) * sizeof(long));
-	if (!allocator->bitmap)
-		return -ENOMEM;
-	allocator->size = size;
-	return 0;
-}
-
-void gk20a_comptag_allocator_destroy(struct gk20a_comptag_allocator *allocator)
-{
-	struct gr_gk20a *gr = container_of(allocator,
-					   struct gr_gk20a, comp_tags);
-
-	/*
-	 * called only when exiting the driver (gk20a_remove, or unwinding the
-	 * init stage); no users should be active, so taking the mutex is
-	 * unnecessary here.
-	 */
-	allocator->size = 0;
-	nvgpu_vfree(gr->g, allocator->bitmap);
-}
-
 static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 {
 	struct gk20a *g = gr->g;
@@ -3148,7 +3118,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 		nvgpu_big_free(g, gr->ctx_vars.hwpm_ctxsw_buffer_offset_map);
 	gr->ctx_vars.hwpm_ctxsw_buffer_offset_map = NULL;
 
-	gk20a_comptag_allocator_destroy(&gr->comp_tags);
+	gk20a_comptag_allocator_destroy(g, &gr->comp_tags);
 }
 
 static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)

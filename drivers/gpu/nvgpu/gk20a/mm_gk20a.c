@@ -22,7 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/scatterlist.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-attrs.h>
@@ -70,6 +69,7 @@
  * all the common APIs no longers have Linux stuff in them.
  */
 #include "common/linux/vm_priv.h"
+#include "common/linux/dmabuf.h"
 
 /*
  * GPU mapping life cycle
@@ -107,190 +107,6 @@ static int __must_check gk20a_init_bar1_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_hwpm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_cde_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_ce_vm(struct mm_gk20a *mm);
-
-struct gk20a_dmabuf_priv {
-	struct nvgpu_mutex lock;
-
-	struct gk20a *g;
-
-	struct gk20a_comptag_allocator *comptag_allocator;
-	struct gk20a_comptags comptags;
-
-	struct dma_buf_attachment *attach;
-	struct sg_table *sgt;
-
-	int pin_count;
-
-	struct nvgpu_list_node states;
-
-	u64 buffer_id;
-};
-
-static int gk20a_comptaglines_alloc(struct gk20a_comptag_allocator *allocator,
-		u32 *offset, u32 len)
-{
-	unsigned long addr;
-	int err = 0;
-
-	nvgpu_mutex_acquire(&allocator->lock);
-	addr = bitmap_find_next_zero_area(allocator->bitmap, allocator->size,
-			0, len, 0);
-	if (addr < allocator->size) {
-		/* number zero is reserved; bitmap base is 1 */
-		*offset = 1 + addr;
-		bitmap_set(allocator->bitmap, addr, len);
-	} else {
-		err = -ENOMEM;
-	}
-	nvgpu_mutex_release(&allocator->lock);
-
-	return err;
-}
-
-static void gk20a_comptaglines_free(struct gk20a_comptag_allocator *allocator,
-		u32 offset, u32 len)
-{
-	/* number zero is reserved; bitmap base is 1 */
-	u32 addr = offset - 1;
-	WARN_ON(offset == 0);
-	WARN_ON(addr > allocator->size);
-	WARN_ON(addr + len > allocator->size);
-
-	nvgpu_mutex_acquire(&allocator->lock);
-	bitmap_clear(allocator->bitmap, addr, len);
-	nvgpu_mutex_release(&allocator->lock);
-}
-
-static void gk20a_mm_delete_priv(void *_priv)
-{
-	struct gk20a_buffer_state *s, *s_tmp;
-	struct gk20a_dmabuf_priv *priv = _priv;
-	struct gk20a *g;
-
-	if (!priv)
-		return;
-
-	g = priv->g;
-
-	if (priv->comptags.lines) {
-		BUG_ON(!priv->comptag_allocator);
-		gk20a_comptaglines_free(priv->comptag_allocator,
-				priv->comptags.offset,
-				priv->comptags.allocated_lines);
-	}
-
-	/* Free buffer states */
-	nvgpu_list_for_each_entry_safe(s, s_tmp, &priv->states,
-				gk20a_buffer_state, list) {
-		gk20a_fence_put(s->fence);
-		nvgpu_list_del(&s->list);
-		nvgpu_kfree(g, s);
-	}
-
-	nvgpu_kfree(g, priv);
-}
-
-struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf)
-{
-	struct gk20a_dmabuf_priv *priv;
-
-	priv = dma_buf_get_drvdata(dmabuf, dev);
-	if (WARN_ON(!priv))
-		return ERR_PTR(-EINVAL);
-
-	nvgpu_mutex_acquire(&priv->lock);
-
-	if (priv->pin_count == 0) {
-		priv->attach = dma_buf_attach(dmabuf, dev);
-		if (IS_ERR(priv->attach)) {
-			nvgpu_mutex_release(&priv->lock);
-			return (struct sg_table *)priv->attach;
-		}
-
-		priv->sgt = dma_buf_map_attachment(priv->attach,
-						   DMA_BIDIRECTIONAL);
-		if (IS_ERR(priv->sgt)) {
-			dma_buf_detach(dmabuf, priv->attach);
-			nvgpu_mutex_release(&priv->lock);
-			return priv->sgt;
-		}
-	}
-
-	priv->pin_count++;
-	nvgpu_mutex_release(&priv->lock);
-	return priv->sgt;
-}
-
-void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
-		    struct sg_table *sgt)
-{
-	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
-	dma_addr_t dma_addr;
-
-	if (IS_ERR(priv) || !priv)
-		return;
-
-	nvgpu_mutex_acquire(&priv->lock);
-	WARN_ON(priv->sgt != sgt);
-	priv->pin_count--;
-	WARN_ON(priv->pin_count < 0);
-	dma_addr = sg_dma_address(priv->sgt->sgl);
-	if (priv->pin_count == 0) {
-		dma_buf_unmap_attachment(priv->attach, priv->sgt,
-					 DMA_BIDIRECTIONAL);
-		dma_buf_detach(dmabuf, priv->attach);
-	}
-	nvgpu_mutex_release(&priv->lock);
-}
-
-void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
-			struct gk20a_comptags *comptags)
-{
-	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
-
-	if (!comptags)
-		return;
-
-	if (!priv) {
-		memset(comptags, 0, sizeof(*comptags));
-		return;
-	}
-
-	*comptags = priv->comptags;
-}
-
-int gk20a_alloc_comptags(struct gk20a *g,
-			 struct device *dev,
-			 struct dma_buf *dmabuf,
-			 struct gk20a_comptag_allocator *allocator,
-			 u32 lines)
-{
-	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
-	u32 ctaglines_allocsize;
-	u32 offset;
-	int err;
-
-	if (!priv)
-		return -ENOSYS;
-
-	if (!lines)
-		return -EINVAL;
-
-	ctaglines_allocsize = lines;
-
-	/* store the allocator so we can use it when we free the ctags */
-	priv->comptag_allocator = allocator;
-	err = gk20a_comptaglines_alloc(allocator, &offset,
-			       ctaglines_allocsize);
-	if (err)
-		return err;
-
-	priv->comptags.offset = offset;
-	priv->comptags.lines = lines;
-	priv->comptags.allocated_lines = ctaglines_allocsize;
-
-	return 0;
-}
 
 static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 {
@@ -1037,87 +853,6 @@ int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 	return __gk20a_vm_bind_channel(as_share->vm, ch);
 }
 
-int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
-{
-	struct gk20a *g = gk20a_get_platform(dev)->g;
-	struct gk20a_dmabuf_priv *priv;
-	static u64 priv_count = 0;
-
-	priv = dma_buf_get_drvdata(dmabuf, dev);
-	if (likely(priv))
-		return 0;
-
-	nvgpu_mutex_acquire(&g->mm.priv_lock);
-	priv = dma_buf_get_drvdata(dmabuf, dev);
-	if (priv)
-		goto priv_exist_or_err;
-
-	priv = nvgpu_kzalloc(g, sizeof(*priv));
-	if (!priv) {
-		priv = ERR_PTR(-ENOMEM);
-		goto priv_exist_or_err;
-	}
-
-	nvgpu_mutex_init(&priv->lock);
-	nvgpu_init_list_node(&priv->states);
-	priv->buffer_id = ++priv_count;
-	priv->g = g;
-	dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
-
-priv_exist_or_err:
-	nvgpu_mutex_release(&g->mm.priv_lock);
-	if (IS_ERR(priv))
-		return -ENOMEM;
-
-	return 0;
-}
-
-int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct gk20a *g,
-			   u64 offset, struct gk20a_buffer_state **state)
-{
-	int err = 0;
-	struct gk20a_dmabuf_priv *priv;
-	struct gk20a_buffer_state *s;
-	struct device *dev = dev_from_gk20a(g);
-
-	if (WARN_ON(offset >= (u64)dmabuf->size))
-		return -EINVAL;
-
-	err = gk20a_dmabuf_alloc_drvdata(dmabuf, dev);
-	if (err)
-		return err;
-
-	priv = dma_buf_get_drvdata(dmabuf, dev);
-	if (WARN_ON(!priv))
-		return -ENOSYS;
-
-	nvgpu_mutex_acquire(&priv->lock);
-
-	nvgpu_list_for_each_entry(s, &priv->states, gk20a_buffer_state, list)
-		if (s->offset == offset)
-			goto out;
-
-	/* State not found, create state. */
-	s = nvgpu_kzalloc(g, sizeof(*s));
-	if (!s) {
-		err = -ENOMEM;
-		goto out;
-	}
-
-	s->offset = offset;
-	nvgpu_init_list_node(&s->list);
-	nvgpu_mutex_init(&s->lock);
-	nvgpu_list_add_tail(&s->list, &priv->states);
-
-out:
-	nvgpu_mutex_release(&priv->lock);
-	if (!err)
-		*state = s;
-	return err;
-
-
-}
-
 int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,
 			u64 *offset_align,
@@ -1612,35 +1347,4 @@ const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 {
 	return (big_page_size == SZ_64K) ?
 		 gk20a_mm_levels_64k : gk20a_mm_levels_128k;
-}
-
-int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
-			     u64 *buffer_id, u64 *buffer_len)
-{
-	struct dma_buf *dmabuf;
-	struct gk20a_dmabuf_priv *priv;
-	int err = 0;
-
-	dmabuf = dma_buf_get(dmabuf_fd);
-	if (IS_ERR(dmabuf)) {
-		dev_warn(dev, "%s: fd %d is not a dmabuf", __func__, dmabuf_fd);
-		return PTR_ERR(dmabuf);
-	}
-
-	err = gk20a_dmabuf_alloc_drvdata(dmabuf, dev);
-	if (err) {
-		dev_warn(dev, "Failed to allocate dmabuf drvdata (err = %d)",
-			 err);
-		goto clean_up;
-	}
-
-	priv = dma_buf_get_drvdata(dmabuf, dev);
-	if (likely(priv)) {
-		*buffer_id = priv->buffer_id;
-		*buffer_len = dmabuf->size;
-	}
-
-clean_up:
-	dma_buf_put(dmabuf);
-	return err;
 }

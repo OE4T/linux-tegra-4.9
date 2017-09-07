@@ -102,10 +102,5 @@ int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 				      u32 flags,
 				      struct buffer_attrs *bfr,
 				      enum gmmu_pgsz_gk20a pgsz_idx);
-int gk20a_alloc_comptags(struct gk20a *g,
-			 struct device *dev,
-			 struct dma_buf *dmabuf,
-			 struct gk20a_comptag_allocator *allocator,
-			 u32 lines);
 
 #endif

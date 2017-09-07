@@ -117,13 +117,6 @@ gk20a_buffer_state_from_list(struct nvgpu_list_node *node)
 		((uintptr_t)node - offsetof(struct gk20a_buffer_state, list));
 };
 
-struct gk20a_comptags {
-	u32 offset;
-	u32 lines;
-	u32 allocated_lines;
-	bool user_mappable;
-};
-
 struct priv_cmd_queue {
 	struct nvgpu_mem mem;
 	u32 size;	/* num of entries in words */
@@ -369,10 +362,6 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 			     bool sparse,
 			     struct vm_gk20a_mapping_batch *batch);
 
-struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf);
-void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
-		    struct sg_table *sgt);
-
 /* vm-as interface */
 struct nvgpu_as_alloc_space_args;
 struct nvgpu_as_free_space_args;
@@ -380,14 +369,6 @@ int gk20a_vm_release_share(struct gk20a_as_share *as_share);
 int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch);
 int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch);
-
-void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
-			struct gk20a_comptags *comptags);
-
-int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
-
-int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct gk20a *g,
-			   u64 offset, struct gk20a_buffer_state **state);
 
 void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,

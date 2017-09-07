@@ -120,7 +120,7 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	if (err)
 		return err;
 
-	err = gk20a_comptag_allocator_init(&gr->comp_tags, max_comptag_lines);
+	err = gk20a_comptag_allocator_init(g, &gr->comp_tags, max_comptag_lines);
 	if (err)
 		return err;
 

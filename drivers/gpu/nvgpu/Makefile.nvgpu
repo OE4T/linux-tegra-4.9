@@ -51,6 +51,8 @@ nvgpu-y := \
 	common/linux/rwsem.o \
 	common/linux/cde_gm20b.o \
 	common/linux/cde_gp10b.o \
+	common/linux/comptags.o \
+	common/linux/dmabuf.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
@@ -61,6 +63,7 @@ nvgpu-y := \
 	common/mm/vm.o \
 	common/mm/vm_area.o \
 	common/mm/nvgpu_mem.o \
+	common/mm/comptags.o \
 	common/bus.o \
 	common/enabled.o \
 	common/pramin.o \

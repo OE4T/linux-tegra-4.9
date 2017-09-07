@@ -60,6 +60,9 @@ struct notifier_block;
 enum {
 	TRUSTY_CALL_PREPARE,
 	TRUSTY_CALL_RETURNED,
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+	TRUSTY_CALL_VQ_POLLING,
+#endif
 };
 int trusty_call_notifier_register(struct device *dev,
 				  struct notifier_block *n);

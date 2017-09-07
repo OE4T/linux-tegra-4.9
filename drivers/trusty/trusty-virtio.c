@@ -30,6 +30,7 @@
 #include <linux/virtio_config.h>
 #include <linux/virtio_ids.h>
 #include <linux/virtio_ring.h>
+#include <linux/kthread.h>
 
 #include <linux/atomic.h>
 
@@ -49,6 +50,9 @@ struct trusty_ctx {
 	struct mutex		mlock; /* protects vdev_list */
 	struct workqueue_struct	*kick_wq;
 	struct workqueue_struct	*check_wq;
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+	struct task_struct	*vq_poll;
+#endif
 };
 
 struct trusty_vring {
@@ -79,6 +83,35 @@ struct trusty_vdev {
 
 #define vdev_to_tvdev(vd)  container_of((vd), struct trusty_vdev, vdev)
 
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+#define VQ_POLLING_THREAD_NAME	"vq_polling_thread"
+#define VQ_POLLING_INTERVAL	1000 /* ms */
+
+static int trusty_call_notify(struct notifier_block *nb,
+			      unsigned long action, void *data);
+
+static int vq_polling_thread(void *data)
+{
+	struct trusty_ctx *tctx;
+
+	if (data == NULL)
+		return -EFAULT;
+
+	tctx = data;
+
+	dev_dbg(tctx->dev, "Starting %s\n", VQ_POLLING_THREAD_NAME);
+
+	do {
+		trusty_call_notify(&tctx->call_notifier, TRUSTY_CALL_VQ_POLLING, NULL);
+		schedule_timeout_uninterruptible(msecs_to_jiffies(VQ_POLLING_INTERVAL));
+	} while (!kthread_should_stop());
+
+	dev_info(tctx->dev, "%s stopped\n", VQ_POLLING_THREAD_NAME);
+
+	return 0;
+}
+#endif
+
 static void check_all_vqs(workitem_t *work)
 {
 	uint i;
@@ -97,8 +130,13 @@ static int trusty_call_notify(struct notifier_block *nb,
 {
 	struct trusty_ctx *tctx;
 
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+	if ((action != TRUSTY_CALL_RETURNED) && (action != TRUSTY_CALL_VQ_POLLING))
+		return NOTIFY_DONE;
+#else
 	if (action != TRUSTY_CALL_RETURNED)
 		return NOTIFY_DONE;
+#endif
 
 	tctx = container_of(nb, struct trusty_ctx, call_notifier);
 	schedule_workitem(tctx->check_wq, &tctx->check_vqs);
@@ -616,6 +654,17 @@ static int trusty_virtio_add_devices(struct trusty_ctx *tctx)
 		goto err_start_virtio;
 	}
 
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+	/* create and run a polling thread to poll if new Rx buffers available in the VQs */
+	tctx->vq_poll = kthread_run(vq_polling_thread, tctx, VQ_POLLING_THREAD_NAME);
+	if (IS_ERR(tctx->vq_poll)) {
+		ret = PTR_ERR(tctx->vq_poll);
+		dev_err(tctx->dev, "failed to kthread_run %s, err = %d\n",
+			VQ_POLLING_THREAD_NAME, ret);
+		goto err_start_virtio;
+	}
+#endif
+
 	/* attach shared area */
 	tctx->shared_va = descr_va;
 	tctx->shared_sz = descr_buf_sz;
@@ -686,6 +735,15 @@ static int trusty_virtio_probe(struct platform_device *pdev)
 
 err_add_devices:
 	destroy_workqueue(tctx->kick_wq);
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+	/* stop the vq polling thread */
+	if (tctx->vq_poll) {
+		ret = kthread_stop(tctx->vq_poll);
+		dev_dbg(&pdev->dev, "thread %s exited with status %d\n",
+				VQ_POLLING_THREAD_NAME, ret);
+		tctx->vq_poll = NULL;
+	}
+#endif
 err_create_kick_wq:
 	destroy_workqueue(tctx->check_wq);
 err_create_check_wq:
@@ -696,8 +754,21 @@ err_create_check_wq:
 static int trusty_virtio_remove(struct platform_device *pdev)
 {
 	struct trusty_ctx *tctx = platform_get_drvdata(pdev);
+	int ret = 0;
 
 	dev_err(&pdev->dev, "removing\n");
+
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+	/* stop the vq polling thread */
+	if (tctx->vq_poll) {
+		ret = kthread_stop(tctx->vq_poll);
+		dev_dbg(&pdev->dev, "thread %s exited with status %d\n",
+				VQ_POLLING_THREAD_NAME, ret);
+		tctx->vq_poll = NULL;
+		/* reset the ret value to make sure driver is removed */
+		ret = 0;
+	}
+#endif
 
 	/* unregister call notifier and wait until workqueue is done */
 	trusty_call_notifier_unregister(tctx->dev->parent,
@@ -720,7 +791,7 @@ static int trusty_virtio_remove(struct platform_device *pdev)
 
 	/* free context */
 	kfree(tctx);
-	return 0;
+	return ret;
 }
 
 static const struct of_device_id trusty_of_match[] = {

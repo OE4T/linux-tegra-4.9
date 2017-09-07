@@ -20,6 +20,7 @@ struct gk20a;
 
 void gm20b_cde_get_program_numbers(struct gk20a *g,
 					  u32 block_height_log2,
+					  u32 shader_parameter,
 					  int *hprog_out, int *vprog_out);
 
 #endif

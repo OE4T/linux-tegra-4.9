@@ -28,15 +28,16 @@ enum programs {
 
 void gm20b_cde_get_program_numbers(struct gk20a *g,
 					  u32 block_height_log2,
+					  u32 shader_parameter,
 					  int *hprog_out, int *vprog_out)
 {
 	int hprog = PROG_HPASS;
 	int vprog = (block_height_log2 >= 2) ?
 		PROG_VPASS_LARGE : PROG_VPASS_SMALL;
-	if (g->cde_app.shader_parameter == 1) {
+	if (shader_parameter == 1) {
 		hprog = PROG_PASSTHROUGH;
 		vprog = PROG_PASSTHROUGH;
-	} else if (g->cde_app.shader_parameter == 2) {
+	} else if (shader_parameter == 2) {
 		hprog = PROG_HPASS_DEBUG;
 		vprog = (block_height_log2 >= 2) ?
 			PROG_VPASS_LARGE_DEBUG :

@@ -19,8 +19,6 @@
 #ifndef _CDE_GK20A_H_
 #define _CDE_GK20A_H_
 
-#include "mm_gk20a.h"
-
 #define MAX_CDE_BUFS		10
 #define MAX_CDE_PARAMS		64
 #define MAX_CDE_USER_PARAMS	40
@@ -214,7 +212,7 @@ struct gk20a_cde_param {
 };
 
 struct gk20a_cde_ctx {
-	struct gk20a *g;
+	struct nvgpu_os_linux *l;
 	struct device *dev;
 
 	/* channel related data */
@@ -284,11 +282,11 @@ struct gk20a_cde_app {
 	u32 shader_parameter;
 };
 
-void gk20a_cde_destroy(struct gk20a *g);
-void gk20a_cde_suspend(struct gk20a *g);
-int gk20a_init_cde_support(struct gk20a *g);
-int gk20a_cde_reload(struct gk20a *g);
-int gk20a_cde_convert(struct gk20a *g,
+void gk20a_cde_destroy(struct nvgpu_os_linux *l);
+void gk20a_cde_suspend(struct nvgpu_os_linux *l);
+int gk20a_init_cde_support(struct nvgpu_os_linux *l);
+int gk20a_cde_reload(struct nvgpu_os_linux *l);
+int gk20a_cde_convert(struct nvgpu_os_linux *l,
 		struct dma_buf *compbits_buf,
 		u64 compbits_byte_offset,
 		u64 scatterbuffer_byte_offset,
@@ -297,7 +295,7 @@ int gk20a_cde_convert(struct gk20a *g,
 		int num_params, struct gk20a_fence **fence_out);
 
 int gk20a_prepare_compressible_read(
-		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,
+		struct nvgpu_os_linux *l, u32 buffer_fd, u32 request, u64 offset,
 		u64 compbits_hoffset, u64 compbits_voffset,
 		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,

@@ -117,9 +117,6 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 	if (gk20a_fifo_is_engine_busy(g))
 		return -EBUSY;
 
-	/* cancel any pending cde work */
-	gk20a_cde_suspend(g);
-
 	gk20a_ce_suspend(g);
 
 	ret = gk20a_channel_suspend(g);

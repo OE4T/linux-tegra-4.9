@@ -39,6 +39,7 @@
 #include "pci.h"
 #include "module.h"
 #include "intr.h"
+#include "cde.h"
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
@@ -185,7 +186,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	gk20a_scale_resume(dev_from_gk20a(g));
 
 	if (platform->has_cde)
-		gk20a_init_cde_support(g);
+		gk20a_init_cde_support(l);
 
 done:
 	if (err)
@@ -197,6 +198,7 @@ done:
 static int gk20a_pm_prepare_poweroff(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int ret = 0;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
@@ -207,7 +209,14 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	if (!g->power_on)
 		goto done;
 
+	if (gk20a_fifo_is_engine_busy(g)) {
+		ret = -EBUSY;
+		goto done;
+	}
+
 	gk20a_scale_suspend(dev);
+
+	gk20a_cde_suspend(l);
 
 	ret = gk20a_prepare_poweroff(g);
 	if (ret)
@@ -974,6 +983,7 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct gk20a *g = get_gk20a(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	gk20a_dbg_fn("");
@@ -982,7 +992,7 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 		return vgpu_remove(pdev);
 
 	if (platform->has_cde)
-		gk20a_cde_destroy(g);
+		gk20a_cde_destroy(l);
 
 	gk20a_ctxsw_trace_cleanup(g);
 

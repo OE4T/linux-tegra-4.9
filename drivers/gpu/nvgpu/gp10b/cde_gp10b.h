@@ -21,6 +21,7 @@ struct sg_table;
 
 void gp10b_cde_get_program_numbers(struct gk20a *g,
 					  u32 block_height_log2,
+					  u32 shader_parameter,
 					  int *hprog_out, int *vprog_out);
 bool gp10b_need_scatter_buffer(struct gk20a *g);
 int gp10b_populate_scatter_buffer(struct gk20a *g,

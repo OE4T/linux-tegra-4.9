@@ -45,6 +45,7 @@ nvgpu-y := \
 	common/linux/vm.o \
 	common/linux/intr.o \
 	common/linux/sysfs.o \
+	common/linux/cde.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
@@ -92,7 +93,6 @@ nvgpu-y := \
 	gk20a/ltc_gk20a.o \
 	gk20a/fb_gk20a.o \
 	gk20a/hal.o \
-	gk20a/cde_gk20a.o \
 	gk20a/tsg_gk20a.o \
 	gk20a/ctxsw_trace_gk20a.o \
 	gk20a/fecs_trace_gk20a.o \

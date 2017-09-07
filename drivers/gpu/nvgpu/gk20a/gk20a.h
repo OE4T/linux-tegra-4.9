@@ -60,7 +60,6 @@ struct nvgpu_cpu_time_correlation_sample;
 #include "pmu_gk20a.h"
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
-#include "cde_gk20a.h"
 #include "sched_gk20a.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "clk/clk.h"
@@ -928,6 +927,7 @@ struct gpu_ops {
 	struct {
 		void (*get_program_numbers)(struct gk20a *g,
 					    u32 block_height_log2,
+					    u32 shader_parameter,
 					    int *hprog, int *vprog);
 		bool (*need_scatter_buffer)(struct gk20a *g);
 		int (*populate_scatter_buffer)(struct gk20a *g,
@@ -1217,7 +1217,6 @@ struct gk20a {
 
 	struct gk20a_sched_ctrl sched_ctrl;
 
-	struct gk20a_cde_app cde_app;
 	bool mmu_debug_ctrl;
 
 	u32 tpc_fs_mask_user;

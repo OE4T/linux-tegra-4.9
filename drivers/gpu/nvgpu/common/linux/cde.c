@@ -31,13 +31,14 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/firmware.h>
 
-#include "gk20a.h"
-#include "channel_gk20a.h"
-#include "mm_gk20a.h"
-#include "cde_gk20a.h"
-#include "fence_gk20a.h"
-#include "gr_gk20a.h"
-#include "common/linux/os_linux.h"
+#include "gk20a/gk20a.h"
+#include "gk20a/channel_gk20a.h"
+#include "gk20a/mm_gk20a.h"
+#include "gk20a/fence_gk20a.h"
+#include "gk20a/gr_gk20a.h"
+
+#include "cde.h"
+#include "os_linux.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
@@ -49,7 +50,7 @@
 #include "common/linux/vm_priv.h"
 
 static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx);
-static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g);
+static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct nvgpu_os_linux *l);
 
 #define CTX_DELETE_TIME 1000
 
@@ -65,7 +66,7 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 		nvgpu_dma_unmap_free(cde_ctx->vm, mem);
 	}
 
-	nvgpu_kfree(cde_ctx->g, cde_ctx->init_convert_cmd);
+	nvgpu_kfree(&cde_ctx->l->g, cde_ctx->init_convert_cmd);
 
 	cde_ctx->convert_cmd = NULL;
 	cde_ctx->init_convert_cmd = NULL;
@@ -79,7 +80,8 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 static void gk20a_cde_remove_ctx(struct gk20a_cde_ctx *cde_ctx)
 __must_hold(&cde_app->mutex)
 {
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	struct channel_gk20a *ch = cde_ctx->ch;
 	struct vm_gk20a *vm = ch->vm;
 
@@ -95,7 +97,7 @@ __must_hold(&cde_app->mutex)
 
 	/* housekeeping on app */
 	nvgpu_list_del(&cde_ctx->list);
-	cde_ctx->g->cde_app.ctx_count--;
+	l->cde_app.ctx_count--;
 	nvgpu_kfree(g, cde_ctx);
 }
 
@@ -104,7 +106,7 @@ static void gk20a_cde_cancel_deleter(struct gk20a_cde_ctx *cde_ctx,
 __releases(&cde_app->mutex)
 __acquires(&cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
+	struct gk20a_cde_app *cde_app = &cde_ctx->l->cde_app;
 
 	/* permanent contexts do not have deleter works */
 	if (!cde_ctx->is_temporary)
@@ -119,10 +121,10 @@ __acquires(&cde_app->mutex)
 	}
 }
 
-static void gk20a_cde_remove_contexts(struct gk20a *g)
-__must_hold(&cde_app->mutex)
+static void gk20a_cde_remove_contexts(struct nvgpu_os_linux *l)
+__must_hold(&l->cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 	struct gk20a_cde_ctx *cde_ctx, *cde_ctx_save;
 
 	/* safe to go off the mutex in cancel_deleter since app is
@@ -142,38 +144,38 @@ __must_hold(&cde_app->mutex)
 	}
 }
 
-static void gk20a_cde_stop(struct gk20a *g)
-__must_hold(&cde_app->mutex)
+static void gk20a_cde_stop(struct nvgpu_os_linux *l)
+__must_hold(&l->cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 
 	/* prevent further conversions and delayed works from working */
 	cde_app->initialised = false;
 	/* free all data, empty the list */
-	gk20a_cde_remove_contexts(g);
+	gk20a_cde_remove_contexts(l);
 }
 
-void gk20a_cde_destroy(struct gk20a *g)
-__acquires(&cde_app->mutex)
-__releases(&cde_app->mutex)
+void gk20a_cde_destroy(struct nvgpu_os_linux *l)
+__acquires(&l->cde_app->mutex)
+__releases(&l->cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 
 	if (!cde_app->initialised)
 		return;
 
 	nvgpu_mutex_acquire(&cde_app->mutex);
-	gk20a_cde_stop(g);
+	gk20a_cde_stop(l);
 	nvgpu_mutex_release(&cde_app->mutex);
 
 	nvgpu_mutex_destroy(&cde_app->mutex);
 }
 
-void gk20a_cde_suspend(struct gk20a *g)
-__acquires(&cde_app->mutex)
-__releases(&cde_app->mutex)
+void gk20a_cde_suspend(struct nvgpu_os_linux *l)
+__acquires(&l->cde_app->mutex)
+__releases(&l->cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 	struct gk20a_cde_ctx *cde_ctx, *cde_ctx_save;
 
 	if (!cde_app->initialised)
@@ -195,13 +197,13 @@ __releases(&cde_app->mutex)
 
 }
 
-static int gk20a_cde_create_context(struct gk20a *g)
-__must_hold(&cde_app->mutex)
+static int gk20a_cde_create_context(struct nvgpu_os_linux *l)
+__must_hold(&l->cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 	struct gk20a_cde_ctx *cde_ctx;
 
-	cde_ctx = gk20a_cde_allocate_context(g);
+	cde_ctx = gk20a_cde_allocate_context(l);
 	if (IS_ERR(cde_ctx))
 		return PTR_ERR(cde_ctx);
 
@@ -213,21 +215,21 @@ __must_hold(&cde_app->mutex)
 	return 0;
 }
 
-static int gk20a_cde_create_contexts(struct gk20a *g)
-__must_hold(&g->cde_app->mutex)
+static int gk20a_cde_create_contexts(struct nvgpu_os_linux *l)
+__must_hold(&l->cde_app->mutex)
 {
 	int err;
 	int i;
 
 	for (i = 0; i < NUM_CDE_CONTEXTS; i++) {
-		err = gk20a_cde_create_context(g);
+		err = gk20a_cde_create_context(l);
 		if (err)
 			goto out;
 	}
 
 	return 0;
 out:
-	gk20a_cde_remove_contexts(g);
+	gk20a_cde_remove_contexts(l);
 	return err;
 }
 
@@ -236,7 +238,8 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 			      struct gk20a_cde_hdr_buf *buf)
 {
 	struct nvgpu_mem *mem;
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	int err;
 
 	/* check that the file can hold the buf */
@@ -276,7 +279,8 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 static int gk20a_replace_data(struct gk20a_cde_ctx *cde_ctx, void *target,
 			      int type, s32 shift, u64 mask, u64 value)
 {
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	u32 *target_mem_ptr = target;
 	u64 *target_mem_ptr_u64 = target;
 	u64 current_value, new_value;
@@ -325,7 +329,8 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 {
 	struct nvgpu_mem *source_mem;
 	struct nvgpu_mem *target_mem;
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	u32 *target_mem_ptr;
 	u64 vaddr;
 	int err;
@@ -373,7 +378,8 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 
 static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 {
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	struct nvgpu_mem *target_mem;
 	u32 *target_mem_ptr;
 	u64 new_data;
@@ -464,7 +470,8 @@ static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
 				struct gk20a_cde_hdr_param *param)
 {
 	struct nvgpu_mem *target_mem;
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 
 	if (param->target_buf >= cde_ctx->num_bufs) {
 		nvgpu_warn(g, "cde: invalid buffer parameter. param idx = %d, target_buf=%u, num_bufs=%u",
@@ -506,7 +513,8 @@ static int gk20a_init_cde_required_class(struct gk20a_cde_ctx *cde_ctx,
 					 struct nvgpu_firmware *img,
 					 u32 required_class)
 {
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	struct nvgpu_alloc_obj_ctx_args alloc_obj_ctx;
 	int err;
 
@@ -532,7 +540,8 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 				  struct gk20a_cde_cmd_elem *cmd_elem,
 				  u32 num_elems)
 {
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	struct nvgpu_gpfifo **gpfifo, *gpfifo_elem;
 	u32 *num_entries;
 	unsigned int i;
@@ -551,7 +560,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 	}
 
 	/* allocate gpfifo entries to be pushed */
-	*gpfifo = nvgpu_kzalloc(cde_ctx->g,
+	*gpfifo = nvgpu_kzalloc(g,
 				sizeof(struct nvgpu_gpfifo) * num_elems);
 	if (!*gpfifo) {
 		nvgpu_warn(g, "cde: could not allocate memory for gpfifo entries");
@@ -596,7 +605,8 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 
 static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
 {
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	unsigned long init_bytes = cde_ctx->init_cmd_num_entries *
 		sizeof(struct nvgpu_gpfifo);
 	unsigned long conv_bytes = cde_ctx->convert_cmd_num_entries *
@@ -605,7 +615,7 @@ static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
 	struct nvgpu_gpfifo *combined_cmd;
 
 	/* allocate buffer that has space for both */
-	combined_cmd = nvgpu_kzalloc(cde_ctx->g, total_bytes);
+	combined_cmd = nvgpu_kzalloc(g, total_bytes);
 	if (!combined_cmd) {
 		nvgpu_warn(g,
 			"cde: could not allocate memory for gpfifo entries");
@@ -617,8 +627,8 @@ static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
 	memcpy(combined_cmd + cde_ctx->init_cmd_num_entries,
 			cde_ctx->convert_cmd, conv_bytes);
 
-	nvgpu_kfree(cde_ctx->g, cde_ctx->init_convert_cmd);
-	nvgpu_kfree(cde_ctx->g, cde_ctx->convert_cmd);
+	nvgpu_kfree(g, cde_ctx->init_convert_cmd);
+	nvgpu_kfree(g, cde_ctx->convert_cmd);
 
 	cde_ctx->init_convert_cmd = combined_cmd;
 	cde_ctx->convert_cmd = combined_cmd
@@ -630,8 +640,9 @@ static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
 static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 			      struct nvgpu_firmware *img)
 {
-	struct gk20a *g = cde_ctx->g;
-	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 	u32 *data = (u32 *)img->data;
 	u32 num_of_elems;
 	struct gk20a_cde_hdr_elem *elem;
@@ -724,7 +735,8 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 				    u32 op, struct nvgpu_fence *fence,
 				    u32 flags, struct gk20a_fence **fence_out)
 {
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	struct nvgpu_gpfifo *gpfifo = NULL;
 	int num_entries = 0;
 
@@ -756,7 +768,7 @@ static void gk20a_cde_ctx_release(struct gk20a_cde_ctx *cde_ctx)
 __acquires(&cde_app->mutex)
 __releases(&cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
+	struct gk20a_cde_app *cde_app = &cde_ctx->l->cde_app;
 
 	gk20a_dbg(gpu_dbg_cde_ctx, "releasing use on %p", cde_ctx);
 	trace_gk20a_cde_release(cde_ctx);
@@ -781,8 +793,9 @@ __releases(&cde_app->mutex)
 	struct delayed_work *delay_work = to_delayed_work(work);
 	struct gk20a_cde_ctx *cde_ctx = container_of(delay_work,
 			struct gk20a_cde_ctx, ctx_deleter_work);
-	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
-	struct gk20a *g = cde_ctx->g;
+	struct gk20a_cde_app *cde_app = &cde_ctx->l->cde_app;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	int err;
 
 	/* someone has just taken it? engine deletion started? */
@@ -823,10 +836,11 @@ out:
 	gk20a_idle(g);
 }
 
-static struct gk20a_cde_ctx *gk20a_cde_do_get_context(struct gk20a *g)
+static struct gk20a_cde_ctx *gk20a_cde_do_get_context(struct nvgpu_os_linux *l)
 __must_hold(&cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a *g = &l->g;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 	struct gk20a_cde_ctx *cde_ctx;
 
 	/* exhausted? */
@@ -862,7 +876,7 @@ __must_hold(&cde_app->mutex)
 			"cde: no free contexts, count=%d",
 			cde_app->ctx_count);
 
-	cde_ctx = gk20a_cde_allocate_context(g);
+	cde_ctx = gk20a_cde_allocate_context(l);
 	if (IS_ERR(cde_ctx)) {
 		nvgpu_warn(g, "cde: cannot allocate context: %ld",
 				PTR_ERR(cde_ctx));
@@ -881,11 +895,12 @@ __must_hold(&cde_app->mutex)
 	return cde_ctx;
 }
 
-static struct gk20a_cde_ctx *gk20a_cde_get_context(struct gk20a *g)
+static struct gk20a_cde_ctx *gk20a_cde_get_context(struct nvgpu_os_linux *l)
 __releases(&cde_app->mutex)
 __acquires(&cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a *g = &l->g;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 	struct gk20a_cde_ctx *cde_ctx = NULL;
 	struct nvgpu_timeout timeout;
 
@@ -893,7 +908,7 @@ __acquires(&cde_app->mutex)
 			   NVGPU_TIMER_CPU_TIMER);
 
 	do {
-		cde_ctx = gk20a_cde_do_get_context(g);
+		cde_ctx = gk20a_cde_do_get_context(l);
 		if (PTR_ERR(cde_ctx) != -EAGAIN)
 			break;
 
@@ -906,8 +921,9 @@ __acquires(&cde_app->mutex)
 	return cde_ctx;
 }
 
-static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
+static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct nvgpu_os_linux *l)
 {
+	struct gk20a *g = &l->g;
 	struct gk20a_cde_ctx *cde_ctx;
 	int ret;
 
@@ -915,7 +931,7 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 	if (!cde_ctx)
 		return ERR_PTR(-ENOMEM);
 
-	cde_ctx->g = g;
+	cde_ctx->l = l;
 	cde_ctx->dev = dev_from_gk20a(g);
 
 	ret = gk20a_cde_load(cde_ctx);
@@ -935,16 +951,17 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 	return cde_ctx;
 }
 
-int gk20a_cde_convert(struct gk20a *g,
+int gk20a_cde_convert(struct nvgpu_os_linux *l,
 		      struct dma_buf *compbits_scatter_buf,
 		      u64 compbits_byte_offset,
 		      u64 scatterbuffer_byte_offset,
 		      struct nvgpu_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
 		      int num_params, struct gk20a_fence **fence_out)
-__acquires(&cde_app->mutex)
-__releases(&cde_app->mutex)
+__acquires(&l->cde_app->mutex)
+__releases(&l->cde_app->mutex)
 {
+	struct gk20a *g = &l->g;
 	struct gk20a_cde_ctx *cde_ctx = NULL;
 	struct gk20a_comptags comptags;
 	u64 mapped_compbits_offset = 0;
@@ -972,9 +989,9 @@ __releases(&cde_app->mutex)
 	if (err)
 		return err;
 
-	nvgpu_mutex_acquire(&g->cde_app.mutex);
-	cde_ctx = gk20a_cde_get_context(g);
-	nvgpu_mutex_release(&g->cde_app.mutex);
+	nvgpu_mutex_acquire(&l->cde_app.mutex);
+	cde_ctx = gk20a_cde_get_context(l);
+	nvgpu_mutex_release(&l->cde_app.mutex);
 	if (IS_ERR(cde_ctx)) {
 		err = PTR_ERR(cde_ctx);
 		goto exit_idle;
@@ -1158,8 +1175,9 @@ __acquires(&cde_app->mutex)
 __releases(&cde_app->mutex)
 {
 	struct gk20a_cde_ctx *cde_ctx = data;
-	struct gk20a *g = cde_ctx->g;
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 	bool channel_idle;
 
 	channel_gk20a_joblist_lock(ch);
@@ -1188,7 +1206,7 @@ __releases(&cde_app->mutex)
 			/* mark it to be deleted, replace with a new one */
 			nvgpu_mutex_acquire(&cde_app->mutex);
 			cde_ctx->is_temporary = true;
-			if (gk20a_cde_create_context(g)) {
+			if (gk20a_cde_create_context(l)) {
 				nvgpu_err(g, "cde: can't replace context");
 			}
 			nvgpu_mutex_release(&cde_app->mutex);
@@ -1208,7 +1226,8 @@ __releases(&cde_app->mutex)
 
 static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 {
-	struct gk20a *g = cde_ctx->g;
+	struct nvgpu_os_linux *l = cde_ctx->l;
+	struct gk20a *g = &l->g;
 	struct nvgpu_firmware *img;
 	struct channel_gk20a *ch;
 	struct gr_gk20a *gr = &g->gr;
@@ -1288,11 +1307,12 @@ err_get_gk20a_channel:
 	return err;
 }
 
-int gk20a_cde_reload(struct gk20a *g)
-__acquires(&cde_app->mutex)
-__releases(&cde_app->mutex)
+int gk20a_cde_reload(struct nvgpu_os_linux *l)
+__acquires(&l->cde_app->mutex)
+__releases(&l->cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a *g = &l->g;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 	int err;
 
 	if (!cde_app->initialised)
@@ -1304,9 +1324,9 @@ __releases(&cde_app->mutex)
 
 	nvgpu_mutex_acquire(&cde_app->mutex);
 
-	gk20a_cde_stop(g);
+	gk20a_cde_stop(l);
 
-	err = gk20a_cde_create_contexts(g);
+	err = gk20a_cde_create_contexts(l);
 	if (!err)
 		cde_app->initialised = true;
 
@@ -1316,11 +1336,11 @@ __releases(&cde_app->mutex)
 	return err;
 }
 
-int gk20a_init_cde_support(struct gk20a *g)
+int gk20a_init_cde_support(struct nvgpu_os_linux *l)
 __acquires(&cde_app->mutex)
 __releases(&cde_app->mutex)
 {
-	struct gk20a_cde_app *cde_app = &g->cde_app;
+	struct gk20a_cde_app *cde_app = &l->cde_app;
 	int err;
 
 	if (cde_app->initialised)
@@ -1340,7 +1360,7 @@ __releases(&cde_app->mutex)
 	cde_app->ctx_count_top = 0;
 	cde_app->ctx_usecount = 0;
 
-	err = gk20a_cde_create_contexts(g);
+	err = gk20a_cde_create_contexts(l);
 	if (!err)
 		cde_app->initialised = true;
 
@@ -1393,7 +1413,7 @@ enum cde_launch_patch_id {
 #define MAX_CDE_LAUNCH_PATCHES		  32
 
 static int gk20a_buffer_convert_gpu_to_cde_v1(
-		struct gk20a *g,
+		struct nvgpu_os_linux *l,
 		struct dma_buf *dmabuf, u32 consumer,
 		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
 		u64 scatterbuffer_offset,
@@ -1401,6 +1421,7 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 		u32 submit_flags, struct nvgpu_fence *fence_in,
 		struct gk20a_buffer_state *state)
 {
+	struct gk20a *g = &l->g;
 	struct gk20a_cde_param params[MAX_CDE_LAUNCH_PATCHES];
 	int param = 0;
 	int err = 0;
@@ -1426,6 +1447,7 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 
 	if (g->ops.cde.get_program_numbers)
 		g->ops.cde.get_program_numbers(g, block_height_log2,
+					       l->cde_app.shader_parameter,
 					       &hprog, &vprog);
 	else {
 		nvgpu_warn(g, "cde: chip not supported");
@@ -1450,11 +1472,11 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 		  wgx, wgy, gridw_h, gridh_h, gridw_v, gridh_v);
 	gk20a_dbg(gpu_dbg_cde, "hprog=%d, offset=0x%x, regs=%d, vprog=%d, offset=0x%x, regs=%d",
 		  hprog,
-		  g->cde_app.arrays[ARRAY_PROGRAM_OFFSET][hprog],
-		  g->cde_app.arrays[ARRAY_REGISTER_COUNT][hprog],
+		  l->cde_app.arrays[ARRAY_PROGRAM_OFFSET][hprog],
+		  l->cde_app.arrays[ARRAY_REGISTER_COUNT][hprog],
 		  vprog,
-		  g->cde_app.arrays[ARRAY_PROGRAM_OFFSET][vprog],
-		  g->cde_app.arrays[ARRAY_REGISTER_COUNT][vprog]);
+		  l->cde_app.arrays[ARRAY_PROGRAM_OFFSET][vprog],
+		  l->cde_app.arrays[ARRAY_REGISTER_COUNT][vprog]);
 
 	/* Write parameters */
 #define WRITE_PATCH(NAME, VALUE) \
@@ -1483,40 +1505,40 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 	WRITE_PATCH(PATCH_V_VPC_CURRENT_GRID_SIZE_Z, 1);
 
 	WRITE_PATCH(PATCH_H_QMD_PROGRAM_OFFSET,
-		g->cde_app.arrays[ARRAY_PROGRAM_OFFSET][hprog]);
+		l->cde_app.arrays[ARRAY_PROGRAM_OFFSET][hprog]);
 	WRITE_PATCH(PATCH_H_QMD_REGISTER_COUNT,
-		g->cde_app.arrays[ARRAY_REGISTER_COUNT][hprog]);
+		l->cde_app.arrays[ARRAY_REGISTER_COUNT][hprog]);
 	WRITE_PATCH(PATCH_V_QMD_PROGRAM_OFFSET,
-		g->cde_app.arrays[ARRAY_PROGRAM_OFFSET][vprog]);
+		l->cde_app.arrays[ARRAY_PROGRAM_OFFSET][vprog]);
 	WRITE_PATCH(PATCH_V_QMD_REGISTER_COUNT,
-		g->cde_app.arrays[ARRAY_REGISTER_COUNT][vprog]);
+		l->cde_app.arrays[ARRAY_REGISTER_COUNT][vprog]);
 
 	if (consumer & NVGPU_GPU_COMPBITS_CDEH) {
 		WRITE_PATCH(PATCH_H_LAUNCH_WORD1,
-			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][0]);
+			l->cde_app.arrays[ARRAY_LAUNCH_COMMAND][0]);
 		WRITE_PATCH(PATCH_H_LAUNCH_WORD2,
-			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][1]);
+			l->cde_app.arrays[ARRAY_LAUNCH_COMMAND][1]);
 	} else {
 		WRITE_PATCH(PATCH_H_LAUNCH_WORD1,
-			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][2]);
+			l->cde_app.arrays[ARRAY_LAUNCH_COMMAND][2]);
 		WRITE_PATCH(PATCH_H_LAUNCH_WORD2,
-			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][3]);
+			l->cde_app.arrays[ARRAY_LAUNCH_COMMAND][3]);
 	}
 
 	if (consumer & NVGPU_GPU_COMPBITS_CDEV) {
 		WRITE_PATCH(PATCH_V_LAUNCH_WORD1,
-			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][0]);
+			l->cde_app.arrays[ARRAY_LAUNCH_COMMAND][0]);
 		WRITE_PATCH(PATCH_V_LAUNCH_WORD2,
-			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][1]);
+			l->cde_app.arrays[ARRAY_LAUNCH_COMMAND][1]);
 	} else {
 		WRITE_PATCH(PATCH_V_LAUNCH_WORD1,
-			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][2]);
+			l->cde_app.arrays[ARRAY_LAUNCH_COMMAND][2]);
 		WRITE_PATCH(PATCH_V_LAUNCH_WORD2,
-			g->cde_app.arrays[ARRAY_LAUNCH_COMMAND][3]);
+			l->cde_app.arrays[ARRAY_LAUNCH_COMMAND][3]);
 	}
 #undef WRITE_PATCH
 
-	err = gk20a_cde_convert(g, dmabuf,
+	err = gk20a_cde_convert(l, dmabuf,
 				compbits_hoffset,
 				scatterbuffer_offset,
 				fence_in, submit_flags,
@@ -1534,30 +1556,31 @@ out:
 }
 
 static int gk20a_buffer_convert_gpu_to_cde(
-		struct gk20a *g, struct dma_buf *dmabuf, u32 consumer,
+		struct nvgpu_os_linux *l, struct dma_buf *dmabuf, u32 consumer,
 		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
 		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,
 		u32 submit_flags, struct nvgpu_fence *fence_in,
 		struct gk20a_buffer_state *state)
 {
+	struct gk20a *g = &l->g;
 	int err = 0;
 
-	if (!g->cde_app.initialised)
+	if (!l->cde_app.initialised)
 		return -ENOSYS;
 
 	gk20a_dbg(gpu_dbg_cde, "firmware version = %d\n",
-		g->cde_app.firmware_version);
+		l->cde_app.firmware_version);
 
-	if (g->cde_app.firmware_version == 1) {
+	if (l->cde_app.firmware_version == 1) {
 		err = gk20a_buffer_convert_gpu_to_cde_v1(
-		    g, dmabuf, consumer, offset, compbits_hoffset,
+		    l, dmabuf, consumer, offset, compbits_hoffset,
 		    compbits_voffset, scatterbuffer_offset,
 		    width, height, block_height_log2,
 		    submit_flags, fence_in, state);
 	} else {
 		nvgpu_err(g, "unsupported CDE firmware version %d",
-			g->cde_app.firmware_version);
+			l->cde_app.firmware_version);
 		err = -EINVAL;
 	}
 
@@ -1565,7 +1588,7 @@ static int gk20a_buffer_convert_gpu_to_cde(
 }
 
 int gk20a_prepare_compressible_read(
-		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,
+		struct nvgpu_os_linux *l, u32 buffer_fd, u32 request, u64 offset,
 		u64 compbits_hoffset, u64 compbits_voffset,
 		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,
@@ -1573,6 +1596,7 @@ int gk20a_prepare_compressible_read(
 		u32 *valid_compbits, u32 *zbc_color,
 		struct gk20a_fence **fence_out)
 {
+	struct gk20a *g = &l->g;
 	int err = 0;
 	struct gk20a_buffer_state *state;
 	struct dma_buf *dmabuf;
@@ -1606,7 +1630,7 @@ int gk20a_prepare_compressible_read(
 		if ((state->valid_compbits & NVGPU_GPU_COMPBITS_GPU) &&
 		    missing_cde_bits) {
 			err = gk20a_buffer_convert_gpu_to_cde(
-					g, dmabuf,
+					l, dmabuf,
 					missing_cde_bits,
 					offset, compbits_hoffset,
 					compbits_voffset, scatterbuffer_offset,

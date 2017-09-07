@@ -138,6 +138,7 @@ static int gk20a_ctrl_prepare_compressible_read(
 		struct gk20a *g,
 		struct nvgpu_gpu_prepare_compressible_read_args *args)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct nvgpu_fence fence;
 	struct gk20a_fence *fence_out = NULL;
 	int ret = 0;
@@ -146,7 +147,7 @@ static int gk20a_ctrl_prepare_compressible_read(
 	fence.id = args->fence.syncpt_id;
 	fence.value = args->fence.syncpt_value;
 
-	ret = gk20a_prepare_compressible_read(g, args->handle,
+	ret = gk20a_prepare_compressible_read(l, args->handle,
 			args->request_compbits, args->offset,
 			args->compbits_hoffset, args->compbits_voffset,
 			args->scatterbuffer_offset,

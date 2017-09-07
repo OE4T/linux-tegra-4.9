@@ -32,17 +32,18 @@ enum gp10b_programs {
 
 void gp10b_cde_get_program_numbers(struct gk20a *g,
 					  u32 block_height_log2,
+					  u32 shader_parameter,
 					  int *hprog_out, int *vprog_out)
 {
 	int hprog, vprog;
 
-	if (g->cde_app.shader_parameter == 1) {
+	if (shader_parameter == 1) {
 		hprog = GP10B_PROG_PASSTHROUGH;
 		vprog = GP10B_PROG_PASSTHROUGH;
 	} else {
 		hprog = GP10B_PROG_HPASS;
 		vprog = GP10B_PROG_VPASS;
-		if (g->cde_app.shader_parameter == 2) {
+		if (shader_parameter == 2) {
 			hprog = GP10B_PROG_HPASS_DEBUG;
 			vprog = GP10B_PROG_VPASS_DEBUG;
 		}

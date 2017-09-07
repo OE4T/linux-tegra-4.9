@@ -19,6 +19,7 @@
 #include <linux/cdev.h>
 
 #include "gk20a/gk20a.h"
+#include "cde.h"
 
 struct nvgpu_os_linux {
 	struct gk20a g;
@@ -108,6 +109,7 @@ struct nvgpu_os_linux {
 	struct dentry *debugfs_force_preemption_gfxp;
 	struct dentry *debugfs_dump_ctxsw_stats;
 #endif
+	struct gk20a_cde_app cde_app;
 };
 
 static inline struct nvgpu_os_linux *nvgpu_os_linux_from_gk20a(struct gk20a *g)

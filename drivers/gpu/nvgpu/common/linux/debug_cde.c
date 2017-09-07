@@ -22,8 +22,8 @@
 static ssize_t gk20a_cde_reload_write(struct file *file,
 	const char __user *userbuf, size_t count, loff_t *ppos)
 {
-	struct gk20a *g = file->private_data;
-	gk20a_cde_reload(g);
+	struct nvgpu_os_linux *l = file->private_data;
+	gk20a_cde_reload(l);
 	return count;
 }
 
@@ -41,13 +41,13 @@ void gk20a_cde_debugfs_init(struct gk20a *g)
 		return;
 
 	debugfs_create_u32("cde_parameter", S_IWUSR | S_IRUGO,
-			   l->debugfs, &g->cde_app.shader_parameter);
+			   l->debugfs, &l->cde_app.shader_parameter);
 	debugfs_create_u32("cde_ctx_count", S_IWUSR | S_IRUGO,
-			   l->debugfs, &g->cde_app.ctx_count);
+			   l->debugfs, &l->cde_app.ctx_count);
 	debugfs_create_u32("cde_ctx_usecount", S_IWUSR | S_IRUGO,
-			   l->debugfs, &g->cde_app.ctx_usecount);
+			   l->debugfs, &l->cde_app.ctx_usecount);
 	debugfs_create_u32("cde_ctx_count_top", S_IWUSR | S_IRUGO,
-			   l->debugfs, &g->cde_app.ctx_count_top);
+			   l->debugfs, &l->cde_app.ctx_count_top);
 	debugfs_create_file("reload_cde_firmware", S_IWUSR, l->debugfs,
-			    g, &gk20a_cde_reload_fops);
+			    l, &gk20a_cde_reload_fops);
 }

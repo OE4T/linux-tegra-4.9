@@ -916,6 +916,9 @@ static int tegra210_usb3_set_lfps_detect(struct tegra_xusb_padctl *padctl,
 	if (!port)
 		return -ENODEV;
 
+	dev_dbg(padctl->dev, "set usb3-%d lfps detect %s\n",
+			index, enable ? "enable" : "disable");
+
 	lane = port->lane;
 
 	if (lane->pad == padctl->pcie)
@@ -988,6 +991,10 @@ tegra210_usb2_lane_probe(struct tegra_xusb_pad *pad, struct device_node *np,
 		return ERR_PTR(err);
 	}
 
+	dev_info(pad->padctl->dev, "dev = %s, lane = %s, function = %s\n",
+		dev_name(&pad->lanes[index]->dev), pad->soc->lanes[index].name,
+		usb2->base.soc->funcs[usb2->base.function]);
+
 	return &usb2->base;
 }
 
@@ -1008,6 +1015,11 @@ static int tegra210_usb2_phy_init(struct phy *phy)
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	u32 value;
+
+	dev_dbg(padctl->dev, "phy init lane = %s, port = %s\n",
+		lane->pad->soc->lanes[lane->index].name,
+		dev_name(&tegra_xusb_find_usb2_port(
+				lane->pad->padctl, lane->index)->base.dev));
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
 	value &= ~(XUSB_PADCTL_USB2_PAD_MUX_USB2_BIAS_PAD_MASK <<
@@ -1037,6 +1049,11 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 	unsigned int index = lane->index;
 	u32 value;
 	int err;
+
+	dev_dbg(padctl->dev, "phy power on lane = %s, port = %s\n",
+		lane->pad->soc->lanes[lane->index].name,
+		dev_name(&tegra_xusb_find_usb2_port(
+				lane->pad->padctl, lane->index)->base.dev));
 
 	port = tegra_xusb_find_usb2_port(padctl, index);
 	if (!port) {
@@ -1211,6 +1228,11 @@ static int tegra210_usb2_phy_power_off(struct phy *phy)
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	struct tegra_xusb_usb2_port *port;
 	u32 value;
+
+	dev_dbg(padctl->dev, "phy power off lane = %s, port = %s\n",
+		lane->pad->soc->lanes[lane->index].name,
+		dev_name(&tegra_xusb_find_usb2_port(
+				lane->pad->padctl, lane->index)->base.dev));
 
 	port = tegra_xusb_find_usb2_port(padctl, lane->index);
 	if (!port) {
@@ -1395,6 +1417,10 @@ tegra210_hsic_lane_probe(struct tegra_xusb_pad *pad, struct device_node *np,
 		return ERR_PTR(err);
 	}
 
+	dev_info(pad->padctl->dev, "dev = %s, lane = %s, function = %s\n",
+		dev_name(&pad->lanes[index]->dev), pad->soc->lanes[index].name,
+		hsic->base.soc->funcs[hsic->base.function]);
+
 	return &hsic->base;
 }
 
@@ -1415,6 +1441,9 @@ static int tegra210_hsic_phy_init(struct phy *phy)
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	u32 value;
+
+	dev_dbg(padctl->dev, "phy init lane = %s\n",
+		lane->pad->soc->lanes[lane->index].name);
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
 	value &= ~(XUSB_PADCTL_USB2_PAD_MUX_HSIC_PAD_TRK_MASK <<
@@ -1443,6 +1472,9 @@ static int tegra210_hsic_phy_power_on(struct phy *phy)
 	unsigned int index = lane->index;
 	u32 value;
 	int err;
+
+	dev_dbg(padctl->dev, "phy power on lane = %s\n",
+		lane->pad->soc->lanes[lane->index].name);
 
 	priv = to_tegra210_xusb_padctl(padctl);
 
@@ -1539,6 +1571,9 @@ static int tegra210_hsic_phy_power_off(struct phy *phy)
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	unsigned int index = lane->index;
 	u32 value;
+
+	dev_dbg(padctl->dev, "phy power off lane = %s\n",
+		lane->pad->soc->lanes[lane->index].name);
 
 	value = padctl_readl(padctl, XUSB_PADCTL_HSIC_PADX_CTL0(index));
 	value |= XUSB_PADCTL_HSIC_PAD_CTL0_PD_RX_DATA0 |
@@ -1677,6 +1712,10 @@ tegra210_pcie_lane_probe(struct tegra_xusb_pad *pad, struct device_node *np,
 		return ERR_PTR(err);
 	}
 
+	dev_info(pad->padctl->dev, "dev = %s, lane = %s, function = %s\n",
+		dev_name(&pad->lanes[index]->dev), pad->soc->lanes[index].name,
+		pcie->base.soc->funcs[pcie->base.function]);
+
 	return &pcie->base;
 }
 
@@ -1724,6 +1763,9 @@ static int tegra210_pcie_phy_init(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 
+	dev_dbg(lane->pad->padctl->dev, "phy init lane = %s\n",
+		lane->pad->soc->lanes[lane->index].name);
+
 	return tegra210_xusb_padctl_enable(lane->pad->padctl);
 }
 
@@ -1742,6 +1784,9 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 	u32 value;
 	int err;
 	struct tegra_xusb_usb3_port *port;
+
+	dev_dbg(padctl->dev, "phy power on lane = %s\n",
+		lane->pad->soc->lanes[lane->index].name);
 
 	mutex_lock(&padctl->lock);
 
@@ -1786,6 +1831,9 @@ static int tegra210_pcie_phy_power_off(struct phy *phy)
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	u32 value;
+
+	dev_dbg(padctl->dev, "phy power off lane = %s\n",
+		lane->pad->soc->lanes[lane->index].name);
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB3_PAD_MUX);
 	value &= ~XUSB_PADCTL_USB3_PAD_MUX_PCIE_IDDQ_DISABLE(lane->index);
@@ -1917,6 +1965,10 @@ tegra210_sata_lane_probe(struct tegra_xusb_pad *pad, struct device_node *np,
 		return ERR_PTR(err);
 	}
 
+	dev_info(pad->padctl->dev, "dev = %s, lane = %s, function = %s\n",
+		dev_name(&pad->lanes[index]->dev), pad->soc->lanes[index].name,
+		sata->base.soc->funcs[sata->base.function]);
+
 	return &sata->base;
 }
 
@@ -1936,6 +1988,9 @@ static int tegra210_sata_phy_init(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 
+	dev_dbg(lane->pad->padctl->dev, "phy init lane = %s\n",
+		lane->pad->soc->lanes[lane->index].name);
+
 	return tegra210_xusb_padctl_enable(lane->pad->padctl);
 }
 
@@ -1952,6 +2007,9 @@ static int tegra210_sata_phy_power_on(struct phy *phy)
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	u32 value;
 	int err;
+
+	dev_dbg(padctl->dev, "phy power on lane = %s\n",
+		lane->pad->soc->lanes[lane->index].name);
 
 	mutex_lock(&padctl->lock);
 
@@ -1973,6 +2031,9 @@ static int tegra210_sata_phy_power_off(struct phy *phy)
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	u32 value;
+
+	dev_dbg(padctl->dev, "phy power off lane = %s\n",
+		lane->pad->soc->lanes[lane->index].name);
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB3_PAD_MUX);
 	value &= ~XUSB_PADCTL_USB3_PAD_MUX_SATA_IDDQ_DISABLE(lane->index);
@@ -2078,7 +2139,14 @@ static void tegra210_usb2_port_disable(struct tegra_xusb_port *port)
 static struct tegra_xusb_lane *
 tegra210_usb2_port_map(struct tegra_xusb_port *port)
 {
-	return tegra_xusb_find_lane(port->padctl, "usb2", port->index);
+	struct tegra_xusb_lane *lane =
+		tegra_xusb_find_lane(port->padctl, "usb2", port->index);
+
+	dev_dbg(port->padctl->dev, "port = %s map to lane = %s\n",
+		dev_name(&port->dev),
+		lane->pad->soc->lanes[lane->index].name);
+
+	return lane;
 }
 
 static const struct tegra_xusb_port_ops tegra210_usb2_port_ops = {
@@ -2116,6 +2184,10 @@ static int tegra210_usb3_port_enable(struct tegra_xusb_port *port)
 	unsigned int index = port->index;
 	u32 value;
 	int err;
+
+	dev_dbg(padctl->dev, "enable usb3 port = %s\n",
+		dev_name(&tegra_xusb_find_usb3_port(lane->pad->padctl,
+			tegra210_usb3_lane_map(lane))->base.dev));
 
 	value = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_MAP);
 
@@ -2192,6 +2264,10 @@ static void tegra210_usb3_port_disable(struct tegra_xusb_port *port)
 	unsigned int index = port->index;
 	u32 value;
 
+	dev_dbg(padctl->dev, "disable usb3 port = %s\n",
+		dev_name(&tegra_xusb_find_usb3_port(lane->pad->padctl,
+			tegra210_usb3_lane_map(lane))->base.dev));
+
 	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM1);
 	value |= XUSB_PADCTL_ELPG_PROGRAM1_SSPX_ELPG_CLAMP_EN_EARLY(index);
 	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM1);
@@ -2239,16 +2315,21 @@ static const struct tegra_xusb_lane_map tegra210b01_usb3_map[] = {
 static struct tegra_xusb_lane *
 tegra210_usb3_port_map(struct tegra_xusb_port *port)
 {
+	struct tegra_xusb_lane *lane;
 	int err = t210b01_compatible(port->padctl);
 
 	if (err == 1)
-		return tegra_xusb_port_find_lane(port,
+		lane = tegra_xusb_port_find_lane(port,
 						tegra210b01_usb3_map, "xusb");
-	else if (err == 0)
-		return tegra_xusb_port_find_lane(port,
-						tegra210_usb3_map, "xusb");
 	else
-		return NULL;
+		lane = tegra_xusb_port_find_lane(port,
+						tegra210_usb3_map, "xusb");
+
+	dev_dbg(port->padctl->dev, "port = %s map to lane = %s\n",
+			dev_name(&port->dev),
+			lane->pad->soc->lanes[lane->index].name);
+
+	return lane;
 }
 
 static const struct tegra_xusb_port_ops tegra210_usb3_port_ops = {
@@ -2262,15 +2343,18 @@ tegra210_usb3_lane_find_port_index(struct tegra_xusb_lane *lane,
 				const struct tegra_xusb_lane_map *map,
 				const char *function)
 {
-	unsigned int port_index = -1;
-
 	for (map = map; map->type; map++) {
 		if (map->index == lane->index &&
-			strcmp(map->type, lane->pad->soc->name) == 0)
+			strcmp(map->type, lane->pad->soc->name) == 0) {
+			dev_dbg(lane->pad->padctl->dev,
+				"lane = %s map to port = usb3-%d\n",
+				lane->pad->soc->lanes[lane->index].name,
+				map->port);
 			return map->port;
+		}
 	}
 
-	return port_index;
+	return -1;
 }
 
 static unsigned int

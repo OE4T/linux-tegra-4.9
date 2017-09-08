@@ -837,6 +837,10 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state;
 	int err = 0;
 
+	/* Not currently supported in the virtual case */
+	if (g->is_virtual)
+		return -ENOSYS;
+
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch)
 		return -EINVAL;

@@ -860,9 +860,11 @@
 				"hda2hdmi_rst";
 
 			sor0_hdmi_display: hdmi-display {
+				compatible = "hdmi,display";
 				status = "disabled";
 			};
 			sor0_dp_display: dp-display {
+				compatible = "dp, display";
 				status = "disabled";
 			};
 		}; //sor
@@ -897,9 +899,11 @@
 				"hda2hdmi_rst";
 
 			sor1_hdmi_display: hdmi-display {
+				compatible = "hdmi,display";
 				status = "disabled";
 			};
 			sor1_dp_display: dp-display {
+				compatible = "dp, display";
 				status = "disabled";
 			};
 		}; //sor1
@@ -938,9 +942,11 @@
 				"hda2hdmi_rst";
 
 			sor2_hdmi_display: hdmi-display {
+				compatible = "hdmi,display";
 				status = "disabled";
 			};
 			sor2_dp_display: dp-display {
+				compatible = "dp, display";
 				status = "disabled";
 			};
 		}; //sor2
@@ -979,9 +985,11 @@
 				"hda2hdmi_rst";
 
 			sor3_hdmi_display: hdmi-display {
+				compatible = "hdmi,display";
 				status = "disabled";
 			};
 			sor3_dp_display: dp-display {
+				compatible = "dp, display";
 				status = "disabled";
 			};
 		}; //sor3

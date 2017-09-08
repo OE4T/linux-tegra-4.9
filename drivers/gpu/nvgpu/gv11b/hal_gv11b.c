@@ -73,6 +73,7 @@
 #include "regops_gv11b.h"
 #include "subctx_gv11b.h"
 
+#include <nvgpu/bus.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
 
@@ -610,6 +611,7 @@ static const struct gpu_ops gv11b_ops = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
 		.read_ptimer = gk20a_read_ptimer,
+		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
 		.bar1_bind = NULL,
 	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)

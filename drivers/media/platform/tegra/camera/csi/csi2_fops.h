@@ -14,6 +14,7 @@
 
 #ifndef __CSI2_H__
 #define __CSI2_H__
+#define TEGRA_CSICIL_CLK_MHZ 102
 
 extern const struct tegra_csi_fops csi2_fops;
 

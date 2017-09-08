@@ -19,6 +19,7 @@
 #include <linux/list.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_graph.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
 
@@ -40,6 +41,7 @@
 #include <trace/events/camera_common.h>
 
 #include "mipical/mipi_cal.h"
+#include "nvcsi/nvcsi.h"
 
 #define TPG_CSI_GROUP_ID	10
 
@@ -1205,6 +1207,57 @@ static int tegra_channel_init_sensor_properties(
 		sensor_dev->of_node, &s_data->sensor_props);
 }
 
+static int tegra_channel_connect_sensor(
+	struct tegra_channel *chan, struct v4l2_subdev *sensor_sd)
+{
+	struct device *sensor_dev;
+	struct device_node *sensor_of_node;
+	struct tegra_csi_device *csi_device;
+	struct device_node *ep_node;
+
+	if (!chan)
+		return -EINVAL;
+
+	if (!sensor_sd)
+		return -EINVAL;
+
+	sensor_dev = sensor_sd->dev;
+	if (!sensor_dev)
+		return -EINVAL;
+
+	sensor_of_node = sensor_dev->of_node;
+	if (!sensor_of_node)
+		return -EINVAL;
+
+	csi_device = tegra_get_mc_csi();
+	WARN_ON(!csi_device);
+	if (!csi_device)
+		return -ENODEV;
+
+	for_each_endpoint_of_node(sensor_of_node, ep_node) {
+		struct device_node *csi_chan_of_node;
+		struct tegra_csi_channel *csi_chan;
+
+		csi_chan_of_node =
+			of_graph_get_remote_port_parent(ep_node);
+
+		list_for_each_entry(csi_chan, &csi_device->csi_chans, list)
+			if (csi_chan->of_node == csi_chan_of_node)
+				break;
+
+		of_node_put(csi_chan_of_node);
+
+		if (!csi_chan)
+			continue;
+
+		csi_chan->s_data =
+			to_camera_common_data(chan->subdev_on_csi->dev);
+
+	}
+
+	return 0;
+}
+
 int tegra_channel_init_subdevices(struct tegra_channel *chan)
 {
 	int ret = 0;
@@ -1305,6 +1358,14 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 	if (ret < 0) {
 		dev_err(chan->vi->dev, "%s: failed to setup sensor props\n",
 			__func__);
+		goto fail;
+	}
+
+	/* Add a link for the camera_common_data in the tegra_csi_channel. */
+	ret = tegra_channel_connect_sensor(chan, chan->subdev_on_csi);
+	if (ret < 0) {
+		dev_err(chan->vi->dev,
+			"%s: failed to connect sensor to channel\n", __func__);
 		goto fail;
 	}
 

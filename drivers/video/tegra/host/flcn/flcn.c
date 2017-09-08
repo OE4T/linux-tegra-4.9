@@ -498,6 +498,33 @@ static int nvhost_flcn_init_sw(struct platform_device *dev)
 	return err;
 }
 
+static int nvhost_flcn_deinit_sw(struct platform_device *dev)
+{
+	struct flcn *v = get_flcn(dev);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+#endif
+
+	if (!v)
+		return 0;
+
+	if (v->mapped) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+		dma_free_attrs(&dev->dev, v->size, v->mapped, v->dma_addr,
+			       &attrs);
+#else
+		dma_free_attrs(&dev->dev, v->size, v->mapped, v->dma_addr,
+			       DMA_ATTR_READ_ONLY);
+#endif
+		v->mapped = NULL;
+		v->dma_addr = 0;
+	}
+	kfree(v);
+	set_flcn(dev, NULL);
+	return 0;
+}
+
 int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 {
 	struct flcn *v;
@@ -684,7 +711,35 @@ static ssize_t force_idle_read(struct device *device,
 	return sprintf(buf, "%d\n", pdata->forced_idle ? 1 : 0);
 }
 
+static ssize_t reload_fw_write(struct device *device,
+			       struct device_attribute *attr,
+			       const char *buf, size_t count)
+{
+	int err;
+	unsigned long val = 0;
+	struct platform_device *pdev = to_platform_device(device);
+
+	if (kstrtoul(buf, 0, &val) < 0)
+		return -EINVAL;
+
+	if (!val)
+		return -EINVAL;
+
+	err = nvhost_module_do_idle(device);
+	if (err)
+		return err;
+
+	nvhost_flcn_deinit_sw(pdev);
+
+	err = nvhost_module_do_unidle(device);
+	if (err)
+		return err;
+
+	return count;
+}
+
 static DEVICE_ATTR(force_idle, 0744, force_idle_read, force_idle_store);
+static DEVICE_ATTR(reload_fw, 0200, NULL, reload_fw_write);
 
 static int flcn_probe(struct platform_device *dev)
 {
@@ -718,6 +773,10 @@ static int flcn_probe(struct platform_device *dev)
 	platform_set_drvdata(dev, pdata);
 
 	err = device_create_file(&dev->dev, &dev_attr_force_idle);
+	if (err)
+		return err;
+
+	err = device_create_file(&dev->dev, &dev_attr_reload_fw);
 	if (err)
 		return err;
 

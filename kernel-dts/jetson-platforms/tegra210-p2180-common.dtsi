@@ -75,6 +75,9 @@
 		reg = < 0x0 0x80000000 0x0 0x80000000 >;
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@702c0000 {
+#endif
 	adma@702e2000  {
 		dma-channels = <10>;
 		status = "okay";
@@ -99,6 +102,9 @@
 			vddio-dmic-supply = <&max77620_sd3>;
 		};
 	};
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#endif
 
 	wifi-antenna-tuning {
 		status = "disabled";

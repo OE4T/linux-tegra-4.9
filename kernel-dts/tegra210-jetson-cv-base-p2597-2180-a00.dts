@@ -101,6 +101,9 @@
 		status = "okay";
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@702c0000 {
+#endif
 	adma@702e2000  {
 		dma-channels = <10>;
 		status = "okay";
@@ -134,6 +137,9 @@
 			fsync-width = <0>;
 		};
 	};
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#endif
 
 	sata@70020000 {
 		compatible = "nvidia,tegra210-ahci-sata";
@@ -419,6 +425,9 @@
 		};
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@702c0000 {
+#endif
 	adsp_audio {
 		compr-ops = <1>;
 		num-plugin = <5>;
@@ -448,6 +457,9 @@
 			widget-name = "AEC";
 		};
 	};
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#endif
 
 	extcon {
 		extcon@0 {

@@ -190,6 +190,11 @@
 #define AFI_MSG_PM_PME1						(1 << 20)
 #define AFI_MSG_RP_INT_MASK					0x10001000
 
+#define AFI_MSG_1_0						0x194
+#define AFI_MSG_1_PM_PME_MASK					0x00000010
+#define AFI_MSG_1_INTX_MASK					0x00001f00
+#define AFI_MSG_1_PM_PME					(1 << 4)
+
 #define RP_VEND_XP						0x00000F00
 #define RP_VEND_XP_OPPORTUNISTIC_ACK				(1 << 27)
 #define RP_VEND_XP_OPPORTUNISTIC_UPDATEFC			(1 << 28)
@@ -1179,11 +1184,12 @@ static void handle_sb_intr(struct tegra_pcie *pcie)
 	u32 mesg;
 
 	PR_FUNC_LINE;
+	/* Port 0 and 1 */
 	mesg = afi_readl(pcie, AFI_MSG_0);
 	if (mesg & AFI_MSG_INTX_MASK)
 		/* notify device isr for INTx messages from pcie devices */
 		dev_dbg(pcie->dev,
-			"Legacy INTx interrupt occurred %x\n", mesg);
+			"Legacy INTx interrupt occurred %x on port 0/1\n", mesg);
 	else if (mesg & AFI_MSG_PM_PME_MASK) {
 		struct tegra_pcie_port *port, *tmp;
 		/* handle PME messages */
@@ -1198,6 +1204,28 @@ static void handle_sb_intr(struct tegra_pcie *pcie)
 		rp_writel(port, mesg, NV_PCIE2_RP_RSR);
 	} else
 		afi_writel(pcie, mesg, AFI_MSG_0);
+
+	if (pcie->soc_data->num_ports <= 2)
+		return;
+
+	/* Port 2 */
+	mesg = afi_readl(pcie, AFI_MSG_1_0);
+	if (mesg & AFI_MSG_1_INTX_MASK)
+		/* notify device isr for INTx messages from pcie devices */
+		dev_dbg(pcie->dev,
+			"Legacy INTx interrupt occurred %x on port 2\n", mesg);
+	else if (mesg & AFI_MSG_1_PM_PME_MASK) {
+		struct tegra_pcie_port *port, *tmp;
+		/* handle PME messages */
+		list_for_each_entry_safe(port, tmp, &pcie->ports, list) {
+			if ((port->index == 2) && (mesg & AFI_MSG_1_PM_PME))
+				break;
+		}
+		mesg = rp_readl(port, NV_PCIE2_RP_RSR);
+		mesg |= NV_PCIE2_RP_RSR_PMESTAT;
+		rp_writel(port, mesg, NV_PCIE2_RP_RSR);
+	} else
+		afi_writel(pcie, mesg, AFI_MSG_1_0);
 }
 
 static irqreturn_t tegra_pcie_isr(int irq, void *arg)

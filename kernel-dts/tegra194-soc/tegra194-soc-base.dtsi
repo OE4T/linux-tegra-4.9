@@ -636,6 +636,12 @@
 			iommus = <&smmu TEGRA_SID_NVDLA1>;
 		};
 
+		dc_common {
+			compatible = "nvidia,tegra_dc_common";
+			reg = <0x0 0x15200000 0x0 0x40000>;
+			nvidia,valid_heads = <0x0>;
+		};
+
 		head0: nvdisplay@15200000 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-dc";

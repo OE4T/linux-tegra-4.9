@@ -1037,6 +1037,11 @@
 
 				>;
 			};
+			prod_c_dphy_csi {
+				prod = <
+					0x00000000 0x00000010 0x00000010 // MIPI_CAL_MIPI_CAL_CTRL_0	4=MIPI_CAL_CLKEN_OVR	0x1
+				>;
+			};
 		};
 	};
 

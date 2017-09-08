@@ -934,9 +934,11 @@
 			pad-names = "hdmi-dp0";
 			status = "disabled";
 			sor0_hdmi_display: hdmi-display {
+				compatible = "hdmi,display";
 				status = "disabled";
 			};
 			sor0_dp_display: dp-display {
+				compatible = "dp, display";
 				status = "disabled";
 			};
 		};
@@ -971,9 +973,11 @@
 			pad-names = "hdmi-dp1";
 			status = "disabled";
 			sor1_hdmi_display: hdmi-display {
+				compatible = "hdmi,display";
 				status = "disabled";
 			};
 			sor1_dp_display: dp-display {
+				compatible = "dp, display";
 				status = "disabled";
 			};
 		};

@@ -21,6 +21,7 @@
 / {
 	dvfs {
 		compatible = "nvidia,tegra210-dvfs";
+		vdd-cpu-supply = <&cpu_ovr_reg>;
 	};
 
 	i2c@7000d000 {

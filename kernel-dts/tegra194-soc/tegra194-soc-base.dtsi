@@ -37,6 +37,7 @@
 #include "tegra194-soc-i2c.dtsi"
 #include "tegra194-camera.dtsi"
 #include "tegra194-soc/tegra194-soc-actmon.dtsi"
+#include "tegra194-soc/tegra194-soc-disp-imp.dtsi"
 #include "tegra194-soc/tegra194-aon.dtsi"
 
 / {

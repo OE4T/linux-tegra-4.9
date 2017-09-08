@@ -278,19 +278,22 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 
 	/* ...and then output surfaces */
 	for (i = 0; i < task->num_output_surfaces; i++) {
-		/* HACK: nvmap doesn't support CVNAS yet */
 		if (task->output_surfaces[i].surface_handle == 0) {
+			/* HACK: To support the MISR test
+			 * Kernel is not suppose to convert the address being
+			 * passed from the UMD. So setting dma_addr as  the
+			 * offset passed from KMD and size to 4MB
+			 */
 			u32 offset = task->output_surfaces[i].surface_offset;
 
-			if (offset > cvsram_sz) {
+			/* Only root is allowed to use offsets */
+			if (current_uid().val != 0) {
 				err = -EINVAL;
 				goto err_map_handle;
 			}
 
-			task->output_surfaces_ext[i].dma_addr = cvsram_base;
-			task->output_surfaces_ext[i].size = cvsram_sz - offset;
-			task->output_surfaces_ext[i].heap =
-				NVHOST_BUFFERS_HEAP_CVNAS;
+			task->output_surfaces_ext[i].dma_addr = offset;
+			task->output_surfaces_ext[i].size =  0x400000;
 		} else {
 			PIN_MEMORY(task->output_surfaces_ext[i],
 				task->output_surfaces[i].surface_handle);

@@ -152,6 +152,25 @@ static void intr_disable_all_syncpt_intrs(struct nvhost_intr *intr)
 }
 
 /*
+ * Check if some client erroneously added extra increments and we have
+ * MIN > MAX situation
+ * If yes, set MIN == MAX explicitly
+ */
+static void intr_handle_extra_increments(struct nvhost_master *dev,
+					 unsigned int id)
+{
+	u32 min, max;
+
+	if (nvhost_syncpt_client_managed(&dev->syncpt, id))
+		return;
+
+	min = nvhost_syncpt_update_min(&dev->syncpt, id);
+	max = nvhost_syncpt_read_maxval(dev->dev, id);
+	if ((s32)(min - max) > 0)
+		nvhost_syncpt_set_min_eq_max(&dev->syncpt, id);
+}
+
+/*
  * Acknowledge that the syncpoint interrupt is handled. If disable_intr is set,
  * the syncpoint interrupt is also disabled.
  */
@@ -168,6 +187,8 @@ static void intr_syncpt_intr_ack(struct nvhost_intr_syncpt *syncpt,
 		host1x_writel(dev->dev,
 		       host1x_sync_syncpt_thresh_int_disable_r() + reg,
 			bit_mask(id));
+
+	intr_handle_extra_increments(dev, id);
 
 	host1x_writel(dev->dev,
 		host1x_sync_syncpt_thresh_cpu0_int_status_r() + reg,

@@ -1189,19 +1189,17 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 			&nvdisp_emc_dvfs_table, sizeof(nvdisp_emc_dvfs_table));
 
 #ifdef CONFIG_TEGRA_ISOMGR
-	if (!tegra_platform_is_vdk()) {
-		/*
-		 * Register the IHUB bw client. The bwmgr id that we pass in
-		 * must be different from the one that's internally mapped to
-		 * the ISO client id.
-		 */
-		ret = tegra_nvdisp_bandwidth_register(TEGRA_ISO_CLIENT_DISP_0,
+	/*
+	 * Register the IHUB bw client. The bwmgr id that we pass in
+	 * must be different from the one that's internally mapped to
+	 * the ISO client id.
+	 */
+	ret = tegra_nvdisp_bandwidth_register(TEGRA_ISO_CLIENT_DISP_0,
 					TEGRA_BWMGR_CLIENT_DISP1);
-		if (ret) {
-			dev_err(&dc->ndev->dev,
-					"failed to register ihub bw client\n");
-			goto BW_REG_ERR;
-		}
+	if (ret) {
+		dev_err(&dc->ndev->dev,
+				"failed to register ihub bw client\n");
+		goto BW_REG_ERR;
 	}
 #endif
 
@@ -1213,8 +1211,7 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_ISOMGR
 BW_REG_ERR:
-	if (!tegra_platform_is_vdk())
-		tegra_nvdisp_bandwidth_unregister();
+	tegra_nvdisp_bandwidth_unregister();
 #endif
 INIT_PD_ERR:
 	_tegra_nvdisp_destroy_pd_table(dc);
@@ -1499,8 +1496,7 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_ISOMGR
 	/* Save reference to isohub bw info */
-	if (!tegra_platform_is_vdk())
-		tegra_nvdisp_bandwidth_attach(dc);
+	tegra_nvdisp_bandwidth_attach(dc);
 #endif
 
 	if (tegra_bpmp_running()) {
@@ -1712,6 +1708,9 @@ static void tegra_nvdisp_postcomp_imp_init(struct tegra_dc *dc)
 	if (!any_dc_enabled)
 		tegra_nvdisp_program_common_win_batch_size(dc);
 
+	if (!tegra_platform_is_silicon())
+		return;
+
 	imp_table = tegra_dc_common_get_imp_table();
 	if (!imp_table)
 		return;
@@ -1812,9 +1811,73 @@ static u8 swap_imp_boot_wins(
 	return num_wins;
 }
 
-static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
+static void tegra_nvdisp_dc_wins_imp_init(struct tegra_dc *dc)
 {
 	struct nvdisp_imp_table *imp_table;
+	struct tegra_dc_win *win;
+	int max_num_wins = tegra_dc_get_numof_dispwindows();
+	int i;
+
+	/*
+	 * For non-silicon platforms, assign a 1:1 thread group mapping and get
+	 * out. Dynamic IMP won't be enabled on these platforms, which means
+	 * that the reset values for the other IHUB registers should be fine.
+	 */
+	if (!tegra_platform_is_silicon()) {
+		for_each_set_bit(i, &dc->pdata->win_mask, max_num_wins) {
+			win = tegra_dc_get_window(dc, i);
+			if (!win)
+				continue;
+
+			nvdisp_win_write(win, win_ihub_thread_group_num_f(i) |
+				win_ihub_thread_group_enable_yes_f(),
+				win_ihub_thread_group_r());
+		}
+
+		return;
+	}
+
+	imp_table = tegra_dc_common_get_imp_table();
+	if (imp_table) {
+		struct tegra_nvdisp_imp_settings *boot_setting;
+		struct tegra_nvdisp_imp_head_settings *head_settings;
+		u8 cur_win_num;
+
+		boot_setting = imp_table->boot_setting;
+		head_settings = find_imp_head_by_ctrl_num(boot_setting, dc);
+
+		cur_win_num = head_settings->num_wins;
+		head_settings->num_wins =
+			swap_imp_boot_wins(head_settings, dc->pdata->win_mask);
+
+		for (i = 0; i < head_settings->num_wins; i++) {
+			struct tegra_dc_ext_nvdisp_imp_win_entries *win_entry;
+			u32 tg = win_ihub_thread_group_enable_no_f();
+
+			win_entry = &head_settings->win_entries[i];
+			tegra_nvdisp_program_imp_win_entries(dc,
+						win_entry->thread_group,
+						win_entry->fetch_slots,
+						win_entry->pipe_meter,
+						win_entry->dvfs_watermark,
+						win_entry->mempool_entries,
+						win_entry->id,
+						dc->ctrl_num);
+
+			win = tegra_dc_get_window(dc, win_entry->id);
+			if (win_entry->thread_group >= 0)
+				tg = win_ihub_thread_group_enable_yes_f() |
+						win_ihub_thread_group_num_f(
+						win_entry->thread_group);
+			nvdisp_win_write(win, tg, win_ihub_thread_group_r());
+		}
+
+		head_settings->num_wins = cur_win_num;
+	}
+}
+
+static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
+{
 	u32 update_mask = nvdisp_cmd_state_ctrl_common_act_update_enable_f();
 	u32 act_req_mask = nvdisp_cmd_state_ctrl_common_act_req_enable_f();
 	int num_wins = tegra_dc_get_numof_dispwindows();
@@ -1843,48 +1906,7 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 		}
 	}
 
-	/*
-	 * Program default ihub values for the windows that were just assigned
-	 * to this head.
-	 */
-	imp_table = tegra_dc_common_get_imp_table();
-	if (imp_table) {
-		struct tegra_nvdisp_imp_settings *boot_setting;
-		struct tegra_nvdisp_imp_head_settings *head_settings;
-		u8 cur_win_num;
-
-		boot_setting = imp_table->boot_setting;
-		head_settings = find_imp_head_by_ctrl_num(boot_setting, dc);
-
-		cur_win_num = head_settings->num_wins;
-		head_settings->num_wins =
-			swap_imp_boot_wins(head_settings, dc->pdata->win_mask);
-
-		for (idx = 0; idx < head_settings->num_wins; idx++) {
-			struct tegra_dc_ext_nvdisp_imp_win_entries *win_entry;
-			struct tegra_dc_win *win;
-			u32 tg = win_ihub_thread_group_enable_no_f();
-
-			win_entry = &head_settings->win_entries[idx];
-			tegra_nvdisp_program_imp_win_entries(dc,
-						win_entry->thread_group,
-						win_entry->fetch_slots,
-						win_entry->pipe_meter,
-						win_entry->dvfs_watermark,
-						win_entry->mempool_entries,
-						win_entry->id,
-						dc->ctrl_num);
-
-			win = tegra_dc_get_window(dc, win_entry->id);
-			if (win_entry->thread_group >= 0)
-				tg = win_ihub_thread_group_enable_yes_f() |
-						win_ihub_thread_group_num_f(
-						win_entry->thread_group);
-			nvdisp_win_write(win, tg, win_ihub_thread_group_r());
-		}
-
-		head_settings->num_wins = cur_win_num;
-	}
+	tegra_nvdisp_dc_wins_imp_init(dc);
 
 	/* Wait for COMMON_ACT_REQ to complete or time out. */
 	if (tegra_dc_enable_update_and_act(dc, update_mask, act_req_mask)) {
@@ -3979,6 +4001,9 @@ void tegra_dc_reset_imp_state(void)
 	struct nvdisp_bandwidth_config max_bw_cfg = {0};
 	int num_heads = tegra_dc_get_numof_dispheads();
 	int i;
+
+	if (!tegra_platform_is_silicon())
+		return;
 
 	/*
 	 * Try to find any registered DC instance. It doesn't matter which one

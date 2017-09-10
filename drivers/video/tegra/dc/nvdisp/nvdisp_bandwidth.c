@@ -79,69 +79,6 @@ static struct kobject *common_bw_kobj;
 
 #ifdef CONFIG_TEGRA_ISOMGR
 
-/*
- * The following configs were calculated offline with these common settings:
- *
- * - 3 active heads:
- *	- 4096x2160@60p
- * - 1 active cursor per head:
- *	- 4BPP packed
- *	- Pitch
- *	- LUT disabled
- * - N active windows across all heads:
- *	- 4BPP packed
- *	- BLx4
- *	- LUT disabled
- *	- Horizontal/vertical scaling disabled
- *	- Compression disabled
- *	- Rotation disabled
- *	- Fullscreen
- */
-static struct nvdisp_bandwidth_config max_bw_configs[] = {
-	/* 6 windows */
-	{
-		.iso_bw = 16727000,		/* 16727    MB/s */
-		.total_bw = 15206400,		/* 15206.4  MB/s */
-		.emc_la_floor = 665600000,	/* 665.6    MHz  */
-		.hubclk = 357620000,		/* 357.62   MHz  */
-	},
-	/* 5 windows */
-	{
-		.iso_bw = 13939200,		/* 13939.2  MB/s */
-		.total_bw = 12672000,		/* 12672    MB/s */
-		.emc_la_floor = 531200000,	/* 531.2    MHz  */
-		.hubclk = 320060000,		/* 320.06   MHz  */
-	},
-	/* 4 windows */
-	{
-		.iso_bw = 11151400,		/* 11151.14 MB/s */
-		.total_bw = 10137600,		/* 10137.6  MB/s */
-		.emc_la_floor = 332800000,	/* 332.8    MHz  */
-		.hubclk = 282500000,		/* 282.5    MHz  */
-	},
-	/* 3 windows */
-	{
-		.iso_bw = 8363500,		/* 8363.5   MB/s */
-		.total_bw = 7603200,		/* 7603.2   MB/s */
-		.emc_la_floor = 332800000,	/* 332.8    MHz  */
-		.hubclk = 244940000,		/* 244.94   MHz  */
-	},
-	/* 2 windows */
-	{
-		.iso_bw = 5924200,		/* 5924.2   MB/s */
-		.total_bw = 5385600,		/* 5385.6   MB/s */
-		.emc_la_floor = 204000000,	/* 204      MHz  */
-		.hubclk = 207380000,		/* 207.38   MHz  */
-	},
-	/* 1 window */
-	{
-		.iso_bw = 3136300,		/* 3136.3   MB/s */
-		.total_bw = 2851200,		/* 2851.2   MB/s */
-		.emc_la_floor = 102000000,	/* 102      MHz  */
-		.hubclk = 169820000,		/* 169.82   MHz  */
-	},
-};
-
 /* Output id that we pass to tegra_dc_ext_process_bandwidth_negotiate */
 #define NVDISP_BW_OUTPUT_ID		0
 
@@ -380,18 +317,21 @@ void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
 	 * Use the max config settings. These values will eventually be adjusted
 	 * through IMP, if the client supports it.
 	 */
-	struct nvdisp_bandwidth_config *max_bw_config =
-						&ihub_bw_info.max_config;
+	struct nvdisp_bandwidth_config *max_bw_config;
 	u32 new_iso_bw = 0;
 	u32 new_total_bw = 0;
 	u32 new_emc = 0;
 	u32 new_hubclk = 0;
 	bool before_win_update = true;
 
+	if (!tegra_platform_is_silicon())
+		return;
+
 	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
 		IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle))
 		return;
 
+	max_bw_config = &ihub_bw_info.max_config;
 	new_iso_bw = max_bw_config->iso_bw;
 	new_total_bw = max_bw_config->total_bw;
 	new_emc = max_bw_config->emc_la_floor;
@@ -420,6 +360,9 @@ void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc)
 	u32 new_emc = 0;
 	u32 new_hubclk = 0;
 	bool before_win_update = false;
+
+	if (!tegra_platform_is_silicon())
+		return;
 
 	tegra_nvdisp_program_bandwidth(dc,
 				new_iso_bw,
@@ -540,6 +483,9 @@ static void tegra_nvdisp_bandwidth_renegotiate(void *p, u32 avail_bw)
  */
 void tegra_nvdisp_bandwidth_attach(struct tegra_dc *dc)
 {
+	if (!tegra_platform_is_silicon())
+		return;
+
 	if (!dc) {
 		pr_err("%s: dc is NULL!\n", __func__);
 		return;
@@ -557,22 +503,19 @@ void tegra_nvdisp_get_max_bw_cfg(struct nvdisp_bandwidth_config *max_cfg)
 }
 
 /*
- * Registers the max possible bandwidth configuration
- * from platform data or max_bw_configs[].
- * return 0 on success and -E2BIG/ENOENT/ENOMEM on failure
+ * Registers the max possible bandwidth configuration from platform data
+ * Return 0 on success and -E2BIG/ENOENT/ENOMEM on failure
  */
 static int tegra_nvdisp_bandwidth_register_max_config(
 					enum tegra_iso_client iso_client)
 {
+	struct nvdisp_bandwidth_config *bw_cfg_table;
+	struct nvdisp_imp_table *imp_table;
 	tegra_isomgr_handle isomgr_handle = NULL;
 	u32 max_emc_rate, emc_to_dram_factor;
 	u32 total_iso_bw;
 	bool found_max_cfg = false;
 	int ret = 0, i;
-	u8 bw_cfg_entries = ARRAY_SIZE(max_bw_configs);
-	struct nvdisp_bandwidth_config *bw_cfg_table = max_bw_configs;
-	struct nvdisp_imp_table *imp_table = NULL;
-	struct nvdisp_bandwidth_config *pdata_cfg = NULL;
 
 	/* DRAM frequency (Hz) */
 	max_emc_rate = tegra_bwmgr_get_max_emc_rate();
@@ -589,42 +532,37 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 	if (max_emc_rate == 0 || total_iso_bw == 0)
 		return 0;
 
-	/* If platform settings are present, register them. */
 	imp_table = tegra_dc_common_get_imp_table();
-	if (imp_table && imp_table->num_settings > 0) {
-		pdata_cfg = kcalloc(imp_table->num_settings,
-				sizeof(*pdata_cfg), GFP_KERNEL);
+	if (!imp_table || imp_table->num_settings <= 0)
+		return -ENOENT;
 
-		if (!pdata_cfg)
-			return -ENOMEM;
+	bw_cfg_table = kcalloc(imp_table->num_settings, sizeof(*bw_cfg_table),
+				GFP_KERNEL);
+	if (!bw_cfg_table)
+		return -ENOMEM;
 
-		for (i = 0; i < imp_table->num_settings; i++) {
-			struct nvdisp_bandwidth_config *cfg;
-			struct tegra_nvdisp_imp_settings *imp_settings;
-			struct tegra_dc_ext_nvdisp_imp_global_entries *g_ents;
+	for (i = 0; i < imp_table->num_settings; i++) {
+		struct nvdisp_bandwidth_config *cfg;
+		struct tegra_nvdisp_imp_settings *imp_settings;
+		struct tegra_dc_ext_nvdisp_imp_global_entries *g_ents;
 
-			cfg = &pdata_cfg[i];
-			imp_settings = &imp_table->settings[i];
-			g_ents = &imp_settings->global_entries;
+		cfg = &bw_cfg_table[i];
+		imp_settings = &imp_table->settings[i];
+		g_ents = &imp_settings->global_entries;
 
-			cfg->iso_bw = g_ents->total_iso_bw_with_catchup_kBps;
-			cfg->total_bw =
-				g_ents->total_iso_bw_without_catchup_kBps;
-			cfg->hubclk = g_ents->min_hubclk_hz;
-			cfg->emc_la_floor = g_ents->emc_floor_hz;
-		}
-		bw_cfg_table = pdata_cfg;
-		bw_cfg_entries = imp_table->num_settings;
+		cfg->iso_bw = g_ents->total_iso_bw_with_catchup_kBps;
+		cfg->total_bw = g_ents->total_iso_bw_without_catchup_kBps;
+		cfg->hubclk = g_ents->min_hubclk_hz;
+		cfg->emc_la_floor = g_ents->emc_floor_hz;
 	}
 
 	/*
-	 * Start with the highest-bw config and continue
-	 * to fallback until we find one that works.
+	 * Start with the highest-bw config and continue to fallback until we
+	 * find one that works.
 	 */
-
-	for (i = 0; i <= bw_cfg_entries - 1; i++) {
-		u32 cfg_dram_freq = 0;
+	for (i = 0; i < imp_table->num_settings; i++) {
 		struct nvdisp_bandwidth_config *cfg = &bw_cfg_table[i];
+		u32 cfg_dram_freq = 0;
 
 		/*
 		 * Check that our dedicated request doesn't exceed the total ISO
@@ -647,7 +585,7 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 
 		/*
 		 * Check that the required EMC floor doesn't exceed the max EMC
-		 * exceed the max EMC rate allowed.
+		 * rate allowed.
 		 */
 		cfg_dram_freq = cfg->emc_la_floor * emc_to_dram_factor;
 		if (tegra_bwmgr_round_rate(cfg_dram_freq) > max_emc_rate) {
@@ -668,18 +606,16 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 			__func__, cfg->hubclk);
 
 		/* If we registered one of the platform settings, cache it. */
-		if (imp_table && imp_table->num_settings > 0)
-			imp_table->boot_setting = &imp_table->settings[i];
-
+		imp_table->boot_setting = &imp_table->settings[i];
 		break;
 	}
 
-	if (found_max_cfg)
+	if (imp_table->boot_setting)
 		ret = 0;
 	else
 		pr_err("%s: couldn't find valid max config!\n", __func__);
 
-	kfree(pdata_cfg);
+	kfree(bw_cfg_table);
 	return ret;
 }
 
@@ -697,6 +633,9 @@ int tegra_nvdisp_bandwidth_register(enum tegra_iso_client iso_client,
 				enum tegra_bwmgr_client_id bwmgr_client)
 {
 	int ret = 0;
+
+	if (!tegra_platform_is_silicon())
+		return ret;
 
 	mutex_lock(&tegra_nvdisp_lock);
 	memset(&ihub_bw_info, 0, sizeof(ihub_bw_info));
@@ -727,6 +666,9 @@ unlock_and_ret:
  */
 void tegra_nvdisp_bandwidth_unregister(void)
 {
+	if (!tegra_platform_is_silicon())
+		return;
+
 	mutex_lock(&tegra_nvdisp_lock);
 
 	if (!IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle))

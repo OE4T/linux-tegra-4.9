@@ -2497,44 +2497,6 @@ static bool is_dc_default_flag(u32 flag)
 		return false;
 }
 
-static void init_default_imp_settings(
-				struct tegra_nvdisp_imp_settings *imp_settings)
-{
-	struct tegra_dc_ext_nvdisp_imp_global_entries *global_entries;
-	int i;
-
-	global_entries = &imp_settings->global_entries;
-	global_entries->total_win_fetch_slots = 0x1;
-	global_entries->total_curs_fetch_slots = 0x1;
-
-	for (i = 0; i < imp_settings->num_heads; i++) {
-		struct tegra_nvdisp_imp_head_settings *head_settings;
-		struct tegra_dc_ext_nvdisp_imp_head_entries *head_entries;
-		int j;
-
-		head_settings = &imp_settings->head_settings[i];
-		head_entries = &head_settings->entries;
-
-		head_entries->ctrl_num = i;
-		head_entries->curs_fetch_slots = 0x1;
-		head_entries->curs_pipe_meter = 0x0;
-		head_entries->curs_dvfs_watermark = 0x0;
-		head_entries->curs_mempool_entries = 0x10;
-
-		for (j = 0; j < head_settings->num_wins; j++) {
-			struct tegra_dc_ext_nvdisp_imp_win_entries *win_entry;
-
-			win_entry = &head_settings->win_entries[j];
-			win_entry->id = j;
-			win_entry->thread_group = j;
-			win_entry->fetch_slots = 0x1;
-			win_entry->pipe_meter = 0x0;
-			win_entry->dvfs_watermark = 0x0;
-			win_entry->mempool_entries = 0x331;
-		}
-	}
-}
-
 static int parse_imp_win_values(struct device_node *settings_np,
 			struct platform_device *pdev,
 			struct tegra_nvdisp_imp_settings *imp_settings,
@@ -2768,22 +2730,35 @@ static int tegra_dc_parse_imp_data(struct device_node *imp_np,
 	struct device_node *settings_np = NULL;
 	struct tegra_nvdisp_imp_settings *imp_settings;
 	int ret = 0, i = 0;
+	u32 num_settings = 0;
 
-	imp_table->num_settings = of_get_child_count(imp_np);
-	if (imp_table->num_settings <= 0) {
-		dev_err(&pdev->dev, "No IMP table entries found\n");
+	ret = of_property_read_u32(imp_np, "num_settings", &num_settings);
+	if (ret || !num_settings) {
+		dev_err(&pdev->dev, "No IMP table settings found\n");
 		return -ENOENT;
 	}
 
 	imp_table->settings = devm_kzalloc(&pdev->dev,
-		sizeof(*(imp_table->settings)) * imp_table->num_settings,
+		sizeof(*(imp_table->settings)) * num_settings,
 		GFP_KERNEL);
 	if (!imp_table->settings)
 		return -ENOMEM;
+	imp_table->num_settings = num_settings;
 
-	for_each_child_of_node(imp_np, settings_np) {
+	for (i = 0; i < num_settings; i++) {
 		struct tegra_dc_ext_nvdisp_imp_global_entries *global_entries;
+		char settings_name[CHAR_BUF_SIZE_MAX] = {0};
 		int num_head_entries, num_win_entries;
+
+		snprintf(settings_name, sizeof(settings_name),
+						"disp_imp_settings_%d", i);
+		settings_np = of_get_child_by_name(imp_np, settings_name);
+		if (!settings_np) {
+			dev_err(&pdev->dev, "Can't find %s\n", settings_name);
+			ret = -ENOENT;
+
+			goto fail_parse_imp_table;
+		}
 
 		num_head_entries = of_property_count_u8_elems(settings_np,
 						"nvidia,imp_head_mapping");
@@ -2862,8 +2837,7 @@ static int tegra_dc_parse_imp_data(struct device_node *imp_np,
 			goto fail_parse_imp_table;
 
 		of_node_put(settings_np);
-		i++;
-	} /* for each child */
+	}
 
 	return ret;
 
@@ -3400,7 +3374,6 @@ struct tegra_dc_common_platform_data
 	struct tegra_dc_common_platform_data *pdata;
 	struct device_node *np = pdev->dev.of_node;
 	struct device_node *imp_np = NULL;
-	struct nvdisp_imp_table *imp_table = NULL;
 
 	u32 temp;
 	pdata = devm_kzalloc(&pdev->dev,
@@ -3418,47 +3391,20 @@ struct tegra_dc_common_platform_data
 	}
 
 	imp_np = of_parse_phandle(np, "nvidia,disp_imp_table", 0);
-	if (imp_np) {
+	if (imp_np && of_device_is_available(imp_np)) {
 		pdata->imp_table = devm_kzalloc(&pdev->dev,
 				sizeof(*(pdata->imp_table)), GFP_KERNEL);
 		if (!pdata->imp_table)
 			goto fail_parse_pdata;
 
-		imp_table = pdata->imp_table;
-	}
-
-	if (imp_np && of_device_is_available(imp_np)) {
-		if (tegra_dc_parse_imp_data(imp_np, pdev, imp_table))
+		if (tegra_dc_parse_imp_data(imp_np, pdev, pdata->imp_table))
 			goto fail_parse_imp_table;
-	} else if (imp_np) {
-		/*
-		 * As of right now, the boot-time IMP settings haven't been
-		 * migrated to device tree on an SOC-level. For platforms that
-		 * aren't using the device tree approach, hardcode the reset
-		 * values as the defaults. All of this ugly logic will be
-		 * removed once SOC-level IMP settings are added to device tree.
-		 */
-		imp_table->boot_setting = devm_kzalloc(&pdev->dev,
-				sizeof(*(imp_table->boot_setting)), GFP_KERNEL);
-		if (!imp_table->boot_setting)
-			goto fail_parse_imp_table;
-
-		if (alloc_imp_table_settings(pdev, imp_table->boot_setting,
-					tegra_dc_get_numof_dispheads(),
-					tegra_dc_get_numof_dispwindows())) {
-			dealloc_imp_table_settings(imp_table->boot_setting);
-			kfree(imp_table->boot_setting);
-
-			goto fail_parse_imp_table;
-		}
-
-		init_default_imp_settings(imp_table->boot_setting);
 	}
 
 	return pdata;
 
 fail_parse_imp_table:
-	kfree(imp_table);
+	kfree(pdata->imp_table);
 fail_parse_pdata:
 	kfree(pdata);
 	return NULL;

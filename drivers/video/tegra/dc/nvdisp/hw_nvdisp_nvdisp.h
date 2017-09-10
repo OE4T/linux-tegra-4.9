@@ -1322,6 +1322,10 @@ static inline u32 nvdisp_cursor_position_v_range_v(u32 r)
 {
 	return (r >> 16) & 0xffff;
 }
+static inline u32 nvdisp_cursor_position_h_size_s(void)
+{
+	return 16;
+}
 static inline u32 nvdisp_cursor_cropped_point_in_r(void)
 {
 	return 0x00000442;

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisp/nvdisp_cursor.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -18,6 +18,7 @@
 #include "dc.h"
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
+#include "hw_nvdisp_nvdisp.h"
 
 #include "dc_config.h"
 #include "dc_priv.h"
@@ -127,7 +128,8 @@ int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 			CURSOR_POINT_IN(point_in_x, point_in_y),
 			DC_DISP_PCALC_HEAD_SET_CROPPED_POINT_IN_CURSOR);
 	tegra_dc_writel(dc,
-			CURSOR_POSITION(x, y),
+			CURSOR_POSITION(x, y,
+					nvdisp_cursor_position_h_size_s()),
 			DC_DISP_CURSOR_POSITION);
 
 	return 0;

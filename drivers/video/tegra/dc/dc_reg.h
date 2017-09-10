@@ -88,9 +88,7 @@
 #define  GPIO_1_INT		(1 << 19)
 #define  GPIO_2_INT		(1 << 20)
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-#define  SMARTDIM_INT		(1 << 24)
-#endif
+#define  SMARTDIM_INT		(1 << 24) /* Used only on Nvdisplay */
 
 #define  NVDISP_UF_INT		(1 << 23)
 #define  HC_UF_INT		(1 << 23) /* Cursor or WinH */
@@ -548,15 +546,10 @@
 #define   CURSOR_SIZE_256		(0x3 << 24)
 
 #define DC_DISP_CURSOR_POSITION			0x440
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-#define   CURSOR_POSITION(_x, _y)		\
-	(((_x) & ((1 << 16) - 1)) |		\
-	(((_y) & ((1 << 16) - 1)) << 16))
-#else
-#define   CURSOR_POSITION(_x, _y)		\
-	(((_x) & ((1 << 14) - 1)) |		\
-	(((_y) & ((1 << 14) - 1)) << 16))
-#endif
+#define H_CURSOR_POSITION_SIZE			14 /* For T21x */
+#define   CURSOR_POSITION(_x, _y, h_size)		\
+	(((_x) & ((1 << h_size) - 1)) |		\
+	(((_y) & ((1 << h_size) - 1)) << 16))
 
 #define DC_DISP_CURSOR_POSITION_NS		0x441
 #define DC_DISP_INIT_SEQ_CONTROL		0x442

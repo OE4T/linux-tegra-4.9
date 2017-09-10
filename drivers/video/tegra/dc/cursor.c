@@ -159,7 +159,8 @@ static int set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	nvdisp_set_cursor_position(dc, x, y);
 #else
-	tegra_dc_writel(dc, CURSOR_POSITION(x, y), DC_DISP_CURSOR_POSITION);
+	tegra_dc_writel(dc, CURSOR_POSITION(x, y, H_CURSOR_POSITION_SIZE),
+			DC_DISP_CURSOR_POSITION);
 #endif
 
 	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);

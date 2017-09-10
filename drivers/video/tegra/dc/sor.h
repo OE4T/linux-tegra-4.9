@@ -408,42 +408,46 @@ static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,
 
 static inline void tegra_sor_clk_enable(struct tegra_dc_sor_data *sor)
 {
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (tegra_platform_is_silicon() && tegra_bpmp_running())
-#else
-	if (tegra_platform_is_silicon() || tegra_bpmp_running())
-#endif
-		clk_prepare_enable(sor->sor_clk);
+	if (tegra_dc_is_nvdisplay()) {
+		if (tegra_platform_is_silicon() && tegra_bpmp_running())
+			clk_prepare_enable(sor->sor_clk);
+	} else {
+		if (tegra_platform_is_silicon() || tegra_bpmp_running())
+			clk_prepare_enable(sor->sor_clk);
+	}
 }
 
 static inline void tegra_sor_clk_disable(struct tegra_dc_sor_data *sor)
 {
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (tegra_platform_is_silicon() && tegra_bpmp_running())
-#else
-	if (tegra_platform_is_silicon() || tegra_bpmp_running())
-#endif
-		clk_disable_unprepare(sor->sor_clk);
+	if (tegra_dc_is_nvdisplay()) {
+		if (tegra_platform_is_silicon() && tegra_bpmp_running())
+			clk_disable_unprepare(sor->sor_clk);
+	} else {
+		if (tegra_platform_is_silicon() || tegra_bpmp_running())
+			clk_disable_unprepare(sor->sor_clk);
+	}
 }
 
 static inline void tegra_sor_safe_clk_enable(struct tegra_dc_sor_data *sor)
 {
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (tegra_platform_is_silicon() && tegra_bpmp_running())
-#else
-	if (tegra_platform_is_silicon() || tegra_bpmp_running())
-#endif
-		clk_prepare_enable(sor->safe_clk);
+	if (tegra_dc_is_nvdisplay()) {
+		if (tegra_platform_is_silicon() && tegra_bpmp_running())
+			clk_prepare_enable(sor->safe_clk);
+	} else {
+		if (tegra_platform_is_silicon() || tegra_bpmp_running())
+			clk_prepare_enable(sor->safe_clk);
+	}
 }
 
 static inline void tegra_sor_safe_clk_disable(struct tegra_dc_sor_data *sor)
 {
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (tegra_platform_is_silicon() && tegra_bpmp_running())
-#else
-	if (tegra_platform_is_silicon() || tegra_bpmp_running())
-#endif
-		clk_disable_unprepare(sor->safe_clk);
+	if (tegra_dc_is_nvdisplay()) {
+		if (tegra_platform_is_silicon() && tegra_bpmp_running())
+			clk_disable_unprepare(sor->safe_clk);
+	} else {
+		if (tegra_platform_is_silicon() || tegra_bpmp_running())
+			clk_disable_unprepare(sor->safe_clk);
+	}
 }
 
 static inline int lt_param_idx(int link_bw)
@@ -469,11 +473,11 @@ static inline int lt_param_idx(int link_bw)
 static inline int tegra_get_sor_reset_ctrl(struct tegra_dc_sor_data *sor,
 	struct device_node *np_sor, const char *res_name)
 {
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	/* Use only if bpmp is enabled */
-	if (!tegra_bpmp_running())
-		return 0;
-#endif
+	if (tegra_dc_is_nvdisplay()) {
+		/* Use only if bpmp is enabled */
+		if (!tegra_bpmp_running())
+			return 0;
+	}
 
 	sor->rst = of_reset_control_get(np_sor, res_name);
 	if (IS_ERR(sor->rst)) {
@@ -491,14 +495,12 @@ static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
 		return;
 
 	down_write(&sor->reset_lock);
-#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	if (sor->rst) {
 		reset_control_assert(sor->rst);
 		mdelay(2);
 		reset_control_deassert(sor->rst);
 		mdelay(1);
 	}
-#endif
 	up_write(&sor->reset_lock);
 }
 

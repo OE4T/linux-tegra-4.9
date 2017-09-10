@@ -2859,14 +2859,8 @@ int tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 }
 EXPORT_SYMBOL(tegra_nvdisp_get_imp_user_info);
 
-static struct tegra_dc_imp_settings *tegra_nvdisp_get_pending_imp_settings(void)
-{
-	return list_first_entry_or_null(&nvdisp_imp_settings_queue,
-					struct tegra_dc_imp_settings,
-					imp_node);
-}
-
-static struct tegra_nvdisp_imp_settings *tegra_nvdisp_current_imp_settings(void)
+static struct tegra_nvdisp_imp_settings
+				*tegra_nvdisp_get_current_imp_settings(void)
 {
 	return list_first_entry_or_null(&nvdisp_imp_settings_queue,
 					struct tegra_nvdisp_imp_settings,
@@ -2965,248 +2959,6 @@ static void tegra_nvdisp_notify_common_channel_promoted(struct tegra_dc *dc)
 	dc->common_channel_intr_enabled = false;
 	wake_up_nr(&nvdisp_common_channel_promotion_wq.wq, 1);
 }
-
-static struct tegra_dc *find_dc_by_ctrl_num(u32 ctrl_num)
-{
-	int i;
-
-	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
-		struct tegra_dc *dc = tegra_dc_get_dc(i);
-
-		if (dc && dc->ctrl_num == ctrl_num)
-			return dc;
-	}
-
-	return NULL;
-}
-
-static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
-				struct tegra_dc_pool_allocation *head_alloc)
-{
-	u32 entries = 0;
-	int i;
-
-	if (!dc || !dc->enabled)
-		return;
-
-	/* program cursor mempool */
-	if (head_alloc->program_cursor) {
-		entries = head_alloc->cursor_entry;
-		tegra_dc_writel(dc,
-			nvdisp_ihub_cursor_pool_config_entries_f(entries),
-			nvdisp_ihub_cursor_pool_config_r());
-
-		trace_display_imp_cursor_mempool_programmed(dc->ctrl_num,
-								entries);
-	}
-
-	/* program wgrp mempool */
-	for (i = 0; i < head_alloc->num_wins; i++) {
-		struct tegra_dc_win *win = NULL;
-
-		win = tegra_dc_get_window(dc, head_alloc->win_ids[i]);
-		if (!win)
-			continue;
-
-		entries = head_alloc->win_entries[i];
-		nvdisp_win_write(win,
-			win_ihub_pool_config_entries_f(entries),
-			win_ihub_pool_config_r());
-
-		trace_display_imp_win_mempool_programmed(dc->ctrl_num, win->idx,
-								entries);
-	}
-
-	tegra_nvdisp_activate_common_channel(dc);
-	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
-}
-
-static void tegra_nvdisp_program_other_mempool(struct tegra_dc *dc,
-				struct tegra_dc_imp_settings *imp_settings,
-				bool before_win_update)
-{
-	int i;
-
-	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
-		struct tegra_dc_pool_allocation *head_alloc = NULL;
-		struct tegra_dc *other_dc = NULL;
-		u32 ctrl_num = 0;
-
-		other_dc = tegra_dc_get_dc(i);
-		if (!other_dc)
-			continue;
-		ctrl_num = other_dc->ctrl_num;
-
-		if (before_win_update)
-			head_alloc = &imp_settings->decreasing_pool[ctrl_num];
-		else
-			head_alloc = &imp_settings->increasing_pool[ctrl_num];
-
-		if (head_alloc->program_cursor || head_alloc->num_wins > 0)
-			tegra_nvdisp_program_dc_mempool(other_dc, head_alloc);
-	}
-}
-
-static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
-				struct tegra_dc_imp_settings *imp_settings)
-{
-	/*
-	 * Per the register manual, SW must follow these rules in order to
-	 * dynamically adjust mempool in a safe manner:
-	 *
-	 * "1. at no time can the sum of the entries allocated to the wgrps
-	 *     exceed the number of available entries in the latency buffer
-	 *     (IHUB_COMMON_CAPA_MEMPOOL_ENTRIES).
-	 *  2. when changing allocations, all allocation decreases must be
-	 *     done first, then once the decreases are all effective, the
-	 *     increases can be done lest an intermediate state occur which
-	 *     violates the first rule above."
-	 */
-
-	int i, j;
-
-	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
-		struct tegra_dc_ext_imp_head_results *head_result = NULL;
-		struct tegra_dc_pool_allocation *head_alloc = NULL;
-		struct tegra_dc *other_dc = NULL;
-		u32 old_val = 0, new_val = 0;
-		u32 ctrl_num = 0;
-
-		other_dc = tegra_dc_get_dc(i);
-		if (!other_dc || !other_dc->enabled || other_dc == dc)
-			continue;
-
-		ctrl_num = other_dc->ctrl_num;
-		head_result = &imp_settings->ext_settings.imp_results[ctrl_num];
-		if (!head_result->head_active)
-			continue;
-
-		old_val = tegra_nvdisp_get_active_curs_pool(other_dc);
-		new_val = head_result->pool_config_entries_cursor;
-
-		if (new_val < old_val)
-			head_alloc = &imp_settings->decreasing_pool[ctrl_num];
-		else if (new_val > old_val)
-			head_alloc = &imp_settings->increasing_pool[ctrl_num];
-
-		if (head_alloc) {
-			head_alloc->program_cursor = true;
-			head_alloc->cursor_entry = new_val;
-		}
-
-		for (j = 0; j < head_result->num_windows; j++) {
-			struct tegra_dc_win *win = NULL;
-			u32 win_id = 0;
-
-			win_id = head_result->win_ids[j];
-			win = tegra_dc_get_window(other_dc, win_id);
-			if (!win)
-				continue;
-
-			head_alloc = NULL;
-			old_val = tegra_nvdisp_get_active_win_pool(win);
-			new_val = head_result->pool_config_entries_win[j];
-			if (new_val < old_val)
-				head_alloc =
-				&imp_settings->decreasing_pool[ctrl_num];
-			else if (new_val > old_val)
-				head_alloc =
-				&imp_settings->increasing_pool[ctrl_num];
-
-			if (head_alloc) {
-				int cur_win = head_alloc->num_wins;
-
-				head_alloc->win_ids[cur_win] = win_id;
-				head_alloc->win_entries[cur_win] = new_val;
-				head_alloc->num_wins += 1;
-			}
-		}
-	}
-}
-
-void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
-{
-	struct tegra_dc_imp_settings *imp_settings = NULL;
-	struct tegra_dc_ext_imp_settings *ext_settings = NULL;
-
-	if (!dc) {
-		pr_err("%s: DC is NULL\n", __func__);
-		return;
-	}
-
-	if (!dc->enabled) {
-		pr_err("%s: DC %d is NOT enabled\n", __func__, dc->ctrl_num);
-		return;
-	}
-
-	mutex_lock(&tegra_nvdisp_lock);
-
-	imp_settings = tegra_nvdisp_get_pending_imp_settings();
-	if (!imp_settings) {
-		mutex_unlock(&tegra_nvdisp_lock);
-		return;
-	}
-
-	/*
-	 * - The cursor and wgrp latency registers take effect immediately.
-	 *   As such, disable latency events for now and re-enable them after
-	 *   the rest of the window channel state has promoted.
-	 * - Make sure our ISO bandwidth and hubclk requirements are met before
-	 *   changing the current isohub settings.
-	 */
-	ext_settings = &imp_settings->ext_settings;
-	if (before_win_update) {
-		tegra_nvdisp_disable_ihub_latency_events(dc);
-
-		tegra_nvdisp_program_bandwidth(dc,
-				(u32)ext_settings->total_display_iso_bw_kbps,
-				(u32)ext_settings->required_total_bw_kbps,
-				(u32)ext_settings->proposed_emc_hz,
-				(u32)ext_settings->hubclk,
-				before_win_update);
-	}
-
-	mutex_unlock(&tegra_nvdisp_lock);
-
-	/* Make sure there's no pending change on the current head. */
-	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
-
-	if (before_win_update) {
-		mutex_lock(&tegra_nvdisp_lock);
-		tegra_nvdisp_generate_mempool_ordering(dc, imp_settings);
-		mutex_unlock(&tegra_nvdisp_lock);
-	}
-
-	tegra_nvdisp_program_other_mempool(dc, imp_settings, before_win_update);
-
-	if (!before_win_update) {
-		mutex_lock(&tegra_nvdisp_lock);
-
-		/*
-		 * Update our bandwidth requirements after the new window state
-		 * and isohub settings have promoted.
-		 */
-		tegra_nvdisp_program_bandwidth(dc,
-				(u32)ext_settings->total_display_iso_bw_kbps,
-				(u32)ext_settings->required_total_bw_kbps,
-				(u32)ext_settings->proposed_emc_hz,
-				(u32)ext_settings->hubclk,
-				before_win_update);
-
-		/* Re-enable ihub latency events. */
-		tegra_nvdisp_enable_ihub_latency_events(dc);
-
-		/*
-		 * These IMP settings are no longer pending. Remove them from
-		 * the global queue and free the associated memory.
-		 */
-		list_del(&imp_settings->imp_node);
-		kfree(imp_settings);
-
-		mutex_unlock(&tegra_nvdisp_lock);
-	}
-}
-EXPORT_SYMBOL(tegra_dc_adjust_imp);
 
 static bool tegra_nvdisp_common_channel_is_free(void)
 {
@@ -3327,6 +3079,7 @@ EXPORT_SYMBOL(tegra_dc_handle_common_channel_promotion);
 static void dealloc_imp_settings(
 			struct tegra_nvdisp_imp_settings *imp_settings)
 {
+	struct tegra_nvdisp_mempool_req *req;
 	int i;
 
 	if (!imp_settings)
@@ -3340,9 +3093,77 @@ static void dealloc_imp_settings(
 			kfree(head_settings->win_entries);
 	}
 
+	if (imp_settings->decreasing_pool_reqs) {
+		for (i = 0; i < imp_settings->num_heads; i++) {
+			req = &imp_settings->decreasing_pool_reqs[i];
+			kfree(req->win_ids);
+			kfree(req->win_entries);
+		}
+	}
+
+	if (imp_settings->increasing_pool_reqs) {
+		for (i = 0; i < imp_settings->num_heads; i++) {
+			req = &imp_settings->increasing_pool_reqs[i];
+			kfree(req->win_ids);
+			kfree(req->win_entries);
+		}
+	}
+
+	kfree(imp_settings->decreasing_pool_reqs);
+	kfree(imp_settings->increasing_pool_reqs);
+
 	if (imp_settings->num_heads > 0)
 		kfree(imp_settings->head_settings);
 	kfree(imp_settings);
+}
+
+static int alloc_pool_reqs(struct tegra_nvdisp_imp_settings *imp_settings)
+{
+	size_t pool_reqs_size;
+	int i;
+
+	pool_reqs_size = sizeof(*(imp_settings->decreasing_pool_reqs)) *
+							imp_settings->num_heads;
+
+	imp_settings->decreasing_pool_reqs =
+					kzalloc(pool_reqs_size, GFP_KERNEL);
+	if (!imp_settings->decreasing_pool_reqs) {
+		pr_err("%s: Failed to alloc mem for dec mempool\n", __func__);
+		return -ENOMEM;
+	}
+
+	imp_settings->increasing_pool_reqs =
+					kzalloc(pool_reqs_size, GFP_KERNEL);
+	if (!imp_settings->increasing_pool_reqs) {
+		pr_err("%s: Failed to alloc mem for inc mempool\n", __func__);
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < imp_settings->num_heads; i++) {
+		struct tegra_nvdisp_mempool_req *dec_pool, *inc_pool;
+		size_t win_ids_size, win_entries_size;
+
+		dec_pool = &imp_settings->decreasing_pool_reqs[i];
+		inc_pool = &imp_settings->increasing_pool_reqs[i];
+
+		win_ids_size = sizeof(*(dec_pool->win_ids)) *
+					tegra_dc_get_numof_dispwindows();
+		win_entries_size = sizeof(*(dec_pool->win_entries)) *
+					tegra_dc_get_numof_dispwindows();
+
+		dec_pool->win_ids = kzalloc(win_ids_size, GFP_KERNEL);
+		dec_pool->win_entries = kzalloc(win_entries_size, GFP_KERNEL);
+		inc_pool->win_ids = kzalloc(win_ids_size, GFP_KERNEL);
+		inc_pool->win_entries = kzalloc(win_entries_size, GFP_KERNEL);
+
+		if (!dec_pool->win_ids || !dec_pool->win_entries ||
+			!inc_pool->win_ids || !inc_pool->win_entries) {
+			pr_err("%s: No mem for mempool win\n", __func__);
+			return -ENOMEM;
+		}
+	}
+
+	return 0;
 }
 
 static struct tegra_nvdisp_imp_settings *alloc_imp_settings(
@@ -3385,6 +3206,11 @@ static struct tegra_nvdisp_imp_settings *alloc_imp_settings(
 		}
 
 		head_settings->num_wins = num_wins_per_head[i];
+	}
+
+	if (alloc_pool_reqs(imp_settings)) {
+		dealloc_imp_settings(imp_settings);
+		imp_settings = NULL;
 	}
 
 	return imp_settings;
@@ -3710,6 +3536,247 @@ int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
 }
 EXPORT_SYMBOL(tegra_dc_validate_imp_queue);
 
+static struct tegra_dc *find_dc_by_ctrl_num(u32 ctrl_num)
+{
+	int i;
+
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		struct tegra_dc *dc = tegra_dc_get_dc(i);
+
+		if (dc && dc->ctrl_num == ctrl_num)
+			return dc;
+	}
+
+	return NULL;
+}
+
+static void tegra_nvdisp_generate_mempool_reqs(struct tegra_dc *dc,
+				struct tegra_nvdisp_imp_settings *imp_settings)
+{
+	int i;
+
+	for (i = 0; i < imp_settings->num_heads; i++) {
+		struct tegra_nvdisp_imp_head_settings *head_settings;
+		struct tegra_nvdisp_mempool_req *dec_pool, *inc_pool;
+		struct tegra_nvdisp_mempool_req *cur_pool = NULL;
+		struct tegra_dc *other_dc;
+		u32 old_val, new_val;
+		u8 num_dec, num_inc;
+		int j;
+
+		head_settings = &imp_settings->head_settings[i];
+		other_dc =
+			find_dc_by_ctrl_num(head_settings->entries.ctrl_num);
+		if (!other_dc || !other_dc->enabled || other_dc == dc)
+			continue;
+
+		num_dec = imp_settings->num_decreasing_pool;
+		num_inc = imp_settings->num_increasing_pool;
+		dec_pool = &imp_settings->decreasing_pool_reqs[num_dec];
+		inc_pool = &imp_settings->increasing_pool_reqs[num_inc];
+
+		old_val = tegra_nvdisp_get_active_curs_pool(other_dc);
+		new_val = head_settings->entries.curs_mempool_entries;
+		if (new_val < old_val)
+			cur_pool = dec_pool;
+		else if (new_val > old_val)
+			cur_pool = inc_pool;
+
+		if (cur_pool) {
+			cur_pool->program_cursor = true;
+			cur_pool->cursor_entry = new_val;
+			cur_pool = NULL;
+		}
+
+		for (j = 0; j < head_settings->num_wins; j++) {
+			struct tegra_dc_ext_nvdisp_imp_win_entries *win_entries;
+			struct tegra_dc_win *win;
+
+			win_entries = &head_settings->win_entries[j];
+			win = tegra_dc_get_window(other_dc, win_entries->id);
+			if (!win)
+				continue;
+
+			old_val = tegra_nvdisp_get_active_win_pool(win);
+			new_val = win_entries->mempool_entries;
+			if (new_val < old_val)
+				cur_pool = dec_pool;
+			else if (new_val > old_val)
+				cur_pool = inc_pool;
+
+			if (cur_pool) {
+				u8 num_wins = cur_pool->num_wins;
+
+				cur_pool->win_ids[num_wins] = win_entries->id;
+				cur_pool->win_entries[num_wins] = new_val;
+				cur_pool->num_wins++;
+				cur_pool = NULL;
+			}
+		}
+
+		if (dec_pool->program_cursor || dec_pool->num_wins > 0) {
+			dec_pool->ctrl_num = other_dc->ctrl_num;
+			imp_settings->num_decreasing_pool++;
+		}
+
+		if (inc_pool->program_cursor || inc_pool->num_wins > 0) {
+			inc_pool->ctrl_num = other_dc->ctrl_num;
+			imp_settings->num_increasing_pool++;
+		}
+	}
+}
+
+static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
+				struct tegra_nvdisp_mempool_req *mempool_req)
+{
+	u32 entries = 0;
+	int i;
+
+	if (!dc || !dc->enabled)
+		return;
+
+	if (mempool_req->program_cursor) {
+		entries = mempool_req->cursor_entry;
+		tegra_dc_writel(dc,
+			nvdisp_ihub_cursor_pool_config_entries_f(entries),
+			nvdisp_ihub_cursor_pool_config_r());
+
+		trace_display_imp_cursor_mempool_programmed(dc->ctrl_num,
+								entries);
+	}
+
+	for (i = 0; i < mempool_req->num_wins; i++) {
+		struct tegra_dc_win *win;
+
+		win = tegra_dc_get_window(dc, mempool_req->win_ids[i]);
+		if (!win)
+			continue;
+
+		entries = mempool_req->win_entries[i];
+		nvdisp_win_write(win,
+			win_ihub_pool_config_entries_f(entries),
+			win_ihub_pool_config_r());
+
+		trace_display_imp_win_mempool_programmed(dc->ctrl_num, win->idx,
+								entries);
+	}
+
+	tegra_nvdisp_activate_common_channel(dc);
+	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
+}
+
+static void tegra_nvdisp_program_other_mempool(struct tegra_dc *dc,
+				struct tegra_nvdisp_imp_settings *imp_settings,
+				bool before_win_update)
+{
+	struct tegra_nvdisp_mempool_req *mempool_reqs;
+	int i, num_reqs;
+
+	if (before_win_update) {
+		mempool_reqs = imp_settings->decreasing_pool_reqs;
+		num_reqs = imp_settings->num_decreasing_pool;
+	} else {
+		mempool_reqs = imp_settings->increasing_pool_reqs;
+		num_reqs = imp_settings->num_increasing_pool;
+	}
+
+	for (i = 0; i < num_reqs; i++) {
+		struct tegra_nvdisp_mempool_req *req;
+		struct tegra_dc *other_dc;
+
+		req = &mempool_reqs[i];
+		other_dc = find_dc_by_ctrl_num(req->ctrl_num);
+		if (!other_dc)
+			continue;
+
+		tegra_nvdisp_program_dc_mempool(other_dc, req);
+	}
+}
+
+void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
+{
+	struct tegra_nvdisp_imp_settings *imp_settings;
+	struct tegra_dc_ext_nvdisp_imp_global_entries *global_entries;
+
+	if (!dc) {
+		pr_err("%s: DC is NULL\n", __func__);
+		return;
+	}
+
+	if (!dc->enabled) {
+		pr_err("%s: DC %d is NOT enabled\n", __func__, dc->ctrl_num);
+		return;
+	}
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	imp_settings = tegra_nvdisp_get_current_imp_settings();
+	if (!imp_settings) {
+		mutex_unlock(&tegra_nvdisp_lock);
+		return;
+	}
+
+	/*
+	 * - The cursor and wgrp latency registers take effect immediately.
+	 *   As such, disable latency events for now and re-enable them after
+	 *   the rest of the window channel state has promoted.
+	 * - Make sure our ISO bandwidth and hubclk requirements are met before
+	 *   changing the current isohub settings.
+	 */
+	global_entries = &imp_settings->global_entries;
+	if (before_win_update) {
+		tegra_nvdisp_disable_ihub_latency_events(dc);
+
+		tegra_nvdisp_program_bandwidth(dc,
+			(u32)global_entries->total_iso_bw_with_catchup_kBps,
+			(u32)global_entries->total_iso_bw_without_catchup_kBps,
+			(u32)global_entries->emc_floor_hz,
+			(u32)global_entries->min_hubclk_hz,
+			before_win_update);
+	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
+
+	/* Make sure there's no pending change on the current head. */
+	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
+
+	if (before_win_update) {
+		mutex_lock(&tegra_nvdisp_lock);
+		tegra_nvdisp_generate_mempool_reqs(dc, imp_settings);
+		mutex_unlock(&tegra_nvdisp_lock);
+	}
+
+	tegra_nvdisp_program_other_mempool(dc, imp_settings, before_win_update);
+
+	if (!before_win_update) {
+		mutex_lock(&tegra_nvdisp_lock);
+
+		/*
+		 * Update our bandwidth requirements after the new window state
+		 * and isohub settings have promoted.
+		 */
+		tegra_nvdisp_program_bandwidth(dc,
+			(u32)global_entries->total_iso_bw_with_catchup_kBps,
+			(u32)global_entries->total_iso_bw_without_catchup_kBps,
+			(u32)global_entries->emc_floor_hz,
+			(u32)global_entries->min_hubclk_hz,
+			before_win_update);
+
+		/* Re-enable ihub latency events. */
+		tegra_nvdisp_enable_ihub_latency_events(dc);
+
+		/*
+		 * These IMP settings are no longer pending. Remove them from
+		 * the global queue and free the associated memory.
+		 */
+		list_del(&imp_settings->imp_node);
+		dealloc_imp_settings(imp_settings);
+
+		mutex_unlock(&tegra_nvdisp_lock);
+	}
+}
+EXPORT_SYMBOL(tegra_dc_adjust_imp);
+
 static void tegra_nvdisp_program_imp_curs_entries(struct tegra_dc *dc,
 						u32 fetch_slots,
 						u32 pipe_meter,
@@ -3855,7 +3922,7 @@ void tegra_nvdisp_program_imp_settings(struct tegra_dc *dc)
 	if (!dc || !dc->enabled)
 		return;
 
-	imp_settings = tegra_nvdisp_current_imp_settings();
+	imp_settings = tegra_nvdisp_get_current_imp_settings();
 	if (!imp_settings)
 		return;
 

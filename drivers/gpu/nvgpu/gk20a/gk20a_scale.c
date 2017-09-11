@@ -55,9 +55,9 @@ int gk20a_scale_qos_notify(struct notifier_block *nb,
 	mutex_lock(&devfreq->lock);
 	/* check for pm_qos min and max frequency requirement */
 	profile->qos_min_freq =
-		pm_qos_read_min_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000;
+	  (unsigned long)pm_qos_read_min_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000UL;
 	profile->qos_max_freq =
-		pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000;
+	  (unsigned long)pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000UL;
 
 	if (profile->qos_min_freq > profile->qos_max_freq) {
 		nvgpu_err(g,

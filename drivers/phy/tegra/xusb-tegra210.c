@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  * Copyright (C) 2015 Google, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1987,6 +1987,34 @@ tegra210_xusb_read_fuse_calibration(struct tegra210_xusb_fuse_calibration *fuse)
 	return 0;
 }
 
+static int
+tegra210_xusb_padctl_regulators_init(struct tegra_xusb_padctl *padctl)
+{
+	struct device *dev = padctl->dev;
+	size_t size;
+	int err;
+	int i;
+
+	size = padctl->soc->num_supplies * sizeof(struct regulator_bulk_data);
+	padctl->supplies = devm_kzalloc(dev, size, GFP_ATOMIC);
+	if (!padctl->supplies) {
+		dev_err(dev, "failed to alloc memory for regulators\n");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < padctl->soc->num_supplies; i++)
+		padctl->supplies[i].supply = padctl->soc->supply_names[i];
+
+	err = devm_regulator_bulk_get(dev, padctl->soc->num_supplies,
+					padctl->supplies);
+	if (err) {
+		dev_err(dev, "failed to request regulators %d\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
 static struct tegra_xusb_padctl *
 tegra210_xusb_padctl_probe(struct device *dev,
 			   const struct tegra_xusb_padctl_soc *soc)
@@ -2017,6 +2045,19 @@ static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.remove = tegra210_xusb_padctl_remove,
 	.usb3_set_lfps_detect = tegra210_usb3_set_lfps_detect,
 	.hsic_set_idle = tegra210_hsic_set_idle,
+	.regulators_init = tegra210_xusb_padctl_regulators_init,
+};
+
+static const char * const tegra210_supply_names[] = {
+	"avdd_pll_uerefe",
+	"hvdd_pex_pll_e",
+	"dvdd_pex_pll",
+	"hvddio_pex",
+	"dvddio_pex",
+	"hvdd_sata",
+	"dvdd_sata_pll",
+	"hvddio_sata",
+	"dvddio_sata",
 };
 
 const struct tegra_xusb_padctl_soc tegra210_xusb_padctl_soc = {
@@ -2037,6 +2078,8 @@ const struct tegra_xusb_padctl_soc tegra210_xusb_padctl_soc = {
 		},
 	},
 	.ops = &tegra210_xusb_padctl_ops,
+	.supply_names = tegra210_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra210_supply_names),
 };
 EXPORT_SYMBOL_GPL(tegra210_xusb_padctl_soc);
 

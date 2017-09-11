@@ -1160,6 +1160,14 @@ static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 	if (IS_ERR(padctl))
 		return PTR_ERR(padctl);
 
+	if (soc->ops->regulators_init) {
+		err = soc->ops->regulators_init(padctl);
+		if (err < 0) {
+			dev_err(&pdev->dev, "failed to init regulators\n");
+			goto remove;
+		}
+	}
+
 	np = of_node_get(pdev->dev.of_node);
 	if (of_find_property(np, "is_xhci_iov", NULL))
 		padctl->is_xhci_iov = true;

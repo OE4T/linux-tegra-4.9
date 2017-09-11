@@ -430,6 +430,7 @@ struct tegra_xusb_padctl_ops {
 				bool enable);
 	int (*overcurrent_detected)(struct phy *phy);
 	void (*handle_overcurrent)(struct tegra_xusb_padctl *padctl);
+	int (*regulators_init)(struct tegra_xusb_padctl *padctl);
 };
 
 struct tegra_xusb_padctl_soc {
@@ -445,6 +446,8 @@ struct tegra_xusb_padctl_soc {
 	} ports;
 
 	const struct tegra_xusb_padctl_ops *ops;
+	const char * const *supply_names;
+	unsigned int num_supplies;
 };
 
 struct tegra_xusb_padctl {
@@ -487,6 +490,8 @@ struct tegra_xusb_padctl {
 	struct pinctrl_state **oc_tristate_enable;
 	struct pinctrl_state **oc_passthrough_enable;
 	struct pinctrl_state **oc_disable;
+
+	struct regulator_bulk_data *supplies;
 };
 
 static inline void padctl_writel(struct tegra_xusb_padctl *padctl, u32 value,

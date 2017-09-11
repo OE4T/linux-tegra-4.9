@@ -710,20 +710,24 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	u32 runlist_id;
 	int func_ret;
 	int ret = 0;
+	u32 tsgid;
 
-	gk20a_dbg_fn("");
-
-	if (id_type == ID_TYPE_TSG)
+	if (id_type == ID_TYPE_TSG) {
 		runlist_id = f->tsg[id].runlist_id;
-	else
+		tsgid = id;
+	} else {
 		runlist_id = f->channel[id].runlist_id;
+		tsgid = f->channel[id].tsgid;
+	}
+
+	nvgpu_log_info(g, "Check preempt pending for tsgid = %u", tsgid);
 
 	runlist_served_pbdmas = f->runlist_info[runlist_id].pbdma_bitmask;
 	runlist_served_engines = f->runlist_info[runlist_id].eng_bitmask;
 
 	for_each_set_bit(pbdma_id, &runlist_served_pbdmas, f->num_pbdma) {
 
-		func_ret = gv11b_fifo_poll_pbdma_chan_status(g, id, pbdma_id,
+		func_ret = gv11b_fifo_poll_pbdma_chan_status(g, tsgid, pbdma_id,
 							 timeout_rc_type);
 		if (func_ret != 0) {
 			gk20a_dbg_info("preempt timeout pbdma %d", pbdma_id);
@@ -735,7 +739,7 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 
 	for_each_set_bit(act_eng_id, &runlist_served_engines, f->num_engines) {
 
-		func_ret = gv11b_fifo_poll_eng_ctx_status(g, id, act_eng_id,
+		func_ret = gv11b_fifo_poll_eng_ctx_status(g, tsgid, act_eng_id,
 				&f->runlist_info[runlist_id].reset_eng_bitmask,
 				 timeout_rc_type);
 

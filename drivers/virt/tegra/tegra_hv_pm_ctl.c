@@ -65,7 +65,7 @@ int tegra_hv_pm_ctl_trigger_sys_shutdown(void)
 
 	ret = hyp_guest_reset(SYS_SHUTDOWN_INIT_CMD, NULL);
 	if (ret < 0) {
-		pr_err("%s: Failed to run system shutdown, %d\n",
+		pr_err("%s: Failed to trigger system shutdown, %d\n",
 			__func__, ret);
 		return ret;
 	}
@@ -79,8 +79,36 @@ int tegra_hv_pm_ctl_trigger_sys_reboot(void)
 
 	ret = hyp_guest_reset(SYS_REBOOT_INIT_CMD, NULL);
 	if (ret < 0) {
-		pr_err("%s: Failed to run system reboot, %d\n",
+		pr_err("%s: Failed to trigger system reboot, %d\n",
 			__func__, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+int tegra_hv_pm_ctl_trigger_guest_suspend(u32 vmid)
+{
+	int ret;
+
+	ret = hyp_guest_reset(GUEST_SUSPEND_REQ_CMD(vmid), NULL);
+	if (ret < 0) {
+		pr_err("%s: Failed to trigger guest%u suspend, %d\n",
+			__func__, vmid, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+int tegra_hv_pm_ctl_trigger_guest_resume(u32 vmid)
+{
+	int ret;
+
+	ret = hyp_guest_reset(GUEST_RESUME_INIT_CMD(vmid), NULL);
+	if (ret < 0) {
+		pr_err("%s: Failed to trigger guest%u resume, %d\n",
+			__func__, vmid, ret);
 		return ret;
 	}
 
@@ -318,12 +346,58 @@ static ssize_t trigger_sys_reboot_store(struct device *dev,
 	return count;
 }
 
+static ssize_t trigger_guest_suspend_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct tegra_hv_pm_ctl *data = dev_get_drvdata(dev);
+	unsigned int val;
+	int ret;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret) {
+		dev_err(data->dev, "%s: Failed to convert string to uint\n",
+			__func__);
+		return ret;
+	}
+
+	ret = tegra_hv_pm_ctl_trigger_guest_suspend(val);
+	if (ret < 0)
+		return ret;
+
+	return count;
+}
+
+static ssize_t trigger_guest_resume_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct tegra_hv_pm_ctl *data = dev_get_drvdata(dev);
+	unsigned int val;
+	int ret;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret) {
+		dev_err(data->dev, "%s: Failed to convert string to uint\n",
+			__func__);
+		return ret;
+	}
+
+	ret = tegra_hv_pm_ctl_trigger_guest_resume(val);
+	if (ret < 0)
+		return ret;
+
+	return count;
+}
+
 static DEVICE_ATTR_RO(ivc_id);
 static DEVICE_ATTR_RO(ivc_frame_size);
 static DEVICE_ATTR_RO(ivc_nframes);
 static DEVICE_ATTR_RO(ivc_peer_vmid);
 static DEVICE_ATTR_WO(trigger_sys_shutdown);
 static DEVICE_ATTR_WO(trigger_sys_reboot);
+static DEVICE_ATTR_WO(trigger_guest_suspend);
+static DEVICE_ATTR_WO(trigger_guest_resume);
 
 static struct attribute *tegra_hv_pm_ctl_attributes[] = {
 	&dev_attr_ivc_id.attr,
@@ -332,6 +406,8 @@ static struct attribute *tegra_hv_pm_ctl_attributes[] = {
 	&dev_attr_ivc_peer_vmid.attr,
 	&dev_attr_trigger_sys_shutdown.attr,
 	&dev_attr_trigger_sys_reboot.attr,
+	&dev_attr_trigger_guest_suspend.attr,
+	&dev_attr_trigger_guest_resume.attr,
 	NULL
 };
 

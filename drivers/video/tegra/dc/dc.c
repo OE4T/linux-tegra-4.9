@@ -976,7 +976,7 @@ static int dbg_timestamp_show(struct seq_file *s, void *unused)
 	do {
 		tmp = (u32)(tegra_dc_readl(dc, DC_COM_RG_DPCA) >> 16);
 		timestamp = tegra_dc_get_vsync_timestamp(dc);
-		frame_cnt = (u32)(tegra_dc_readl(dc, DC_COM_RG_DPCA) >> 16);
+		frame_cnt = tegra_dc_get_frame_cnt(dc);
 	} while (tmp != frame_cnt);
 
 	seq_printf(s, "vsync_timestamp : %llu\n"

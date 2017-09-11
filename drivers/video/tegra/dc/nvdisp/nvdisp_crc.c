@@ -387,7 +387,8 @@ static int tegra_nvdisp_crc_rg_regional_get(struct tegra_dc *dc,
 	ctl = tegra_dc_readl(dc, nvdisp_rg_region_crc_control_r());
 	if (ctl & crc_readback_location_mask) {
 		dev_err(&dc->ndev->dev,
-			"Golden CRCs are already programmed. Ignore reading\n");
+			"Golden CRCs are already programmed. Ignore reading "
+			"status = %#x, ctl = %#x\n", status, ctl);
 		return -EPERM;
 	}
 
@@ -424,19 +425,22 @@ static int tegra_nvdisp_crc_rg_get(struct tegra_dc *dc,
 
 	status = tegra_dc_readl(dc, nvdisp_rg_crca_r());
 
-	if (status & nvdisp_rg_crca_error_true_f()) {
-		dev_err(&dc->ndev->dev, "Error reading RG CRC\n");
-		status |= nvdisp_rg_crca_error_true_f();
-		goto done;
-	}
-
 	if (status & nvdisp_rg_crca_valid_true_f()) {
 		e->rg.crc = tegra_dc_readl(dc, nvdisp_rg_crcb_r());
 		e->rg.valid = true;
 	}
 
-done:
-	tegra_dc_writel(dc, status, nvdisp_rg_crca_r());
+	if (status & nvdisp_rg_crca_error_true_f()) {
+		dev_err(&dc->ndev->dev, "Error reading RG CRC. "
+			"Frame #%u status = %#x\n", tegra_dc_get_frame_cnt(dc),
+			status);
+
+		e->rg.crc = 0;
+		e->rg.valid = false;
+
+		status |= nvdisp_rg_crca_error_true_f();
+		tegra_dc_writel(dc, status, nvdisp_rg_crca_r());
+	}
 
 	return 0;
 }
@@ -448,19 +452,22 @@ static int tegra_nvdisp_crc_comp_get(struct tegra_dc *dc,
 
 	status = tegra_dc_readl(dc, nvdisp_comp_crca_r());
 
-	if (status & nvdisp_comp_crca_error_true_f()) {
-		dev_err(&dc->ndev->dev, "Error reading COMP CRC\n");
-		status |= nvdisp_comp_crca_error_true_f();
-		goto done;
-	}
-
 	if (status & nvdisp_comp_crca_valid_true_f()) {
 		e->comp.crc = tegra_dc_readl(dc, nvdisp_comp_crcb_r());
 		e->comp.valid = true;
 	}
 
-done:
-	tegra_dc_writel(dc, status, nvdisp_comp_crca_r());
+	if (status & nvdisp_comp_crca_error_true_f()) {
+		dev_err(&dc->ndev->dev, "Error reading COMP CRC. "
+			"Frame #%u status = %#x\n", tegra_dc_get_frame_cnt(dc),
+			status);
+
+		e->comp.crc = 0;
+		e->comp.valid = false;
+
+		status |= nvdisp_comp_crca_error_true_f();
+		tegra_dc_writel(dc, status, nvdisp_comp_crca_r());
+	}
 
 	return 0;
 }

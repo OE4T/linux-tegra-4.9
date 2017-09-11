@@ -191,6 +191,11 @@ static inline void _tegra_dc_write_table(struct tegra_dc *dc, const u32 *table,
 		tegra_dc_writel(dc, table[i * 2 + 1], table[i * 2]);
 }
 
+static inline u32 tegra_dc_get_frame_cnt(struct tegra_dc *dc)
+{
+	return tegra_dc_readl(dc, DC_COM_RG_DPCA) >> 16;
+}
+
 #define tegra_dc_write_table(dc, table)		\
 	_tegra_dc_write_table(dc, table, ARRAY_SIZE(table) / 2)
 

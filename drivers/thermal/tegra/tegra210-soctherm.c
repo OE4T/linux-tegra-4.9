@@ -145,14 +145,14 @@ static const struct tegra_tsensor_group *tegra210b01_tsensor_groups[] = {
 	&tegra210_tsensor_group_pll,
 };
 
-struct tsensor_group_offsets tegra210_tsensor_group_offsets[] = {
+static struct tsensor_group_offsets tegra210_tsensor_group_offsets[] = {
 	{.ttg = &tegra210_tsensor_group_cpu,},
 	{.ttg = &tegra210_tsensor_group_gpu,},
 	{.ttg = &tegra210_tsensor_group_mem,},
 	{.ttg = &tegra210_tsensor_group_pll,},
 };
 
-struct tsensor_group_thermtrips tegra210_tsensor_thermtrips[] = {
+static struct tsensor_group_thermtrips tegra210_tsensor_thermtrips[] = {
 	{.id = TEGRA124_SOCTHERM_SENSOR_NUM},
 	{.id = TEGRA124_SOCTHERM_SENSOR_NUM},
 	{.id = TEGRA124_SOCTHERM_SENSOR_NUM},

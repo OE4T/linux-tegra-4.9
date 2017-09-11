@@ -211,7 +211,12 @@ struct sdhci_tegra {
 	unsigned int instance;
 	int volt_switch_gpio;
 	bool force_non_rem_rescan;
+	bool static_parent_clk_mapping;
+	int parent_clk_index[MMC_TIMING_COUNTER];
 };
+
+static int sdhci_tegra_parse_parent_list_from_dt(struct platform_device *pdev,
+	struct sdhci_tegra *host);
 
 /* Module params */
 static unsigned int en_boot_part_access;
@@ -733,6 +738,7 @@ static void tegra_sdhci_set_clk_parent(struct sdhci_host *host,
 	struct sdhci_tegra_clk_src_data *clk_src_data;
 	unsigned long parent_clk_rate, rate, nearest_freq_rate = 0;
 	int rc;
+	int mode = 0;
 	u8 i, sel_parent_idx = 0;
 
 	if (tegra_platform_is_fpga())
@@ -744,6 +750,14 @@ static void tegra_sdhci_set_clk_parent(struct sdhci_host *host,
 		return;
 	}
 
+	if (tegra_host->static_parent_clk_mapping) {
+		mode = host->mmc->ios.timing;
+		if (tegra_host->parent_clk_index[mode] != -EINVAL) {
+			sel_parent_idx = tegra_host->parent_clk_index[mode];
+			goto set_parent;
+		}
+	}
+
 	for (i = 0; i < clk_src_data->parent_clk_src_cnt; i++) {
 		parent_clk_rate = clk_src_data->parent_clk_rate[i];
 		rate = get_nearest_clock_freq(parent_clk_rate, desired_rate);
@@ -753,6 +767,7 @@ static void tegra_sdhci_set_clk_parent(struct sdhci_host *host,
 		}
 	}
 
+set_parent:
 	dev_dbg(mmc_dev(host->mmc), "chosen clk parent %s, parent rate %lu\n",
 		clk_src_data->parent_clk_name[sel_parent_idx],
 		clk_src_data->parent_clk_rate[sel_parent_idx]);
@@ -1555,6 +1570,8 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 
 	tegra_host->en_periodic_cflush = of_property_read_bool(np,
 			"nvidia,en-periodic-cflush");
+	tegra_host->static_parent_clk_mapping = of_property_read_bool(np,
+		 "nvidia,set-parent-clk");
 	if (tegra_host->en_periodic_cflush) {
 		val = 0;
 		of_property_read_u32(np, "nvidia,periodic-cflush-to", &val);
@@ -1572,6 +1589,43 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 		"force-non-removable-rescan");
 	return 0;
 }
+
+static int sdhci_tegra_parse_parent_list_from_dt(struct platform_device *pdev,
+	struct sdhci_tegra *tegra_host)
+{
+	struct device_node *np = pdev->dev.of_node;
+	const char *curr_mode_parent_clk[MMC_TIMING_COUNTER];
+	const char *pll_str;
+	int i, j, cnt;
+
+	if (!np)
+		return -EINVAL;
+
+	if (!of_find_property(np, "nvidia,parent_clk_list", NULL))
+		return -ENXIO;
+
+	cnt = of_property_count_strings(np, "nvidia,parent_clk_list");
+	if (cnt != MMC_TIMING_COUNTER)
+		return -EINVAL;
+
+	for (i = 0; i < cnt; i++) {
+		of_property_read_string_index(np, "nvidia,parent_clk_list",
+			i, &pll_str);
+		curr_mode_parent_clk[i] = pll_str;
+		/* Initialize parent clock index array with invalid */
+		tegra_host->parent_clk_index[i] = -EINVAL;
+	}
+
+	for (i = 0; i < tegra_host->clk_src_data->parent_clk_src_cnt; i++) {
+		for (j = 0; j < MMC_TIMING_COUNTER; j++) {
+			if (!strcmp(curr_mode_parent_clk[j],
+				tegra_host->clk_src_data->parent_clk_name[i]))
+				tegra_host->parent_clk_index[j] = i;
+		}
+	}
+	return 0;
+}
+
 
 static int sdhci_tegra_probe(struct platform_device *pdev)
 {
@@ -1625,6 +1679,15 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (rc)
 		dev_err(mmc_dev(host->mmc),
 			"Failed to find parent clocks\n");
+
+	if (tegra_host->static_parent_clk_mapping) {
+		rc = sdhci_tegra_parse_parent_list_from_dt(pdev, tegra_host);
+		if (rc) {
+			tegra_host->static_parent_clk_mapping = false;
+			dev_err(mmc_dev(host->mmc),
+				"Failed to find parent clocks %d\n", rc);
+		}
+	}
 
 	tegra_sdhci_init_pinctrl_info(&pdev->dev, tegra_host);
 
@@ -1826,14 +1889,13 @@ err:
 static struct platform_driver sdhci_tegra_driver = {
 	.driver		= {
 		.name	= "sdhci-tegra",
-		.of_match_table = sdhci_tegra_dt_match,
+		.of_match_table	= sdhci_tegra_dt_match,
 		.pm	= &sdhci_pltfm_pmops,
 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe		= sdhci_tegra_probe,
 	.remove		= sdhci_pltfm_unregister,
 };
-
 module_platform_driver(sdhci_tegra_driver);
 
 module_param(en_boot_part_access, uint, 0444);

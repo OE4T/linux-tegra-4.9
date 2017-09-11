@@ -2638,7 +2638,8 @@ int mmc_blk_cmdq_issue_flush_rq(struct mmc_queue *mq, struct request *req)
 	if (host->en_periodic_cflush && host->flush_timeout &&
 			!host->cache_flush_needed) {
 		blk_end_request(req, 0, 0);
-		return 0;
+		err = 0;
+		goto done;
 	}
 
 	BUG_ON((req->tag < 0) || (req->tag > card->ext_csd.cmdq_depth));
@@ -2662,7 +2663,7 @@ int mmc_blk_cmdq_issue_flush_rq(struct mmc_queue *mq, struct request *req)
 					EXT_CSD_FLUSH_CACHE, 1,
 				     MMC_FLUSH_REQ_TIMEOUT_MS, true, true);
 	if (err)
-		return err;
+		goto done;
 
 	err = mmc_blk_cmdq_start_req(card->host, cmdq_req);
 	if (host->en_periodic_cflush && host->flush_timeout && !err) {
@@ -2670,6 +2671,10 @@ int mmc_blk_cmdq_issue_flush_rq(struct mmc_queue *mq, struct request *req)
 		mod_timer(&host->flush_timer, jiffies +
 			msecs_to_jiffies(host->flush_timeout));
 	}
+	return err;
+
+done:
+	mmc_release_host(host);
 	return err;
 }
 EXPORT_SYMBOL(mmc_blk_cmdq_issue_flush_rq);
@@ -2706,7 +2711,7 @@ int mmc_blk_cmdq_complete_rq(struct request *rq)
 		if (err)
 			pr_err("%s: cq: error occurred during task discard\n",
 					mmc_hostname(host));
-		return err;
+		goto done;
 	}
 
 	BUG_ON(!test_and_clear_bit(cmdq_req->tag,
@@ -2717,14 +2722,19 @@ int mmc_blk_cmdq_complete_rq(struct request *rq)
 		spin_unlock(&ctx_info->cmdq_ctx_lock);
 		blk_end_request_all(rq, 0);
 		up(&ctx_info->thread_sem);
-		return 0;
+		err = 0;
+		goto done;
 	}
 
 	if (test_and_clear_bit(0, &ctx_info->req_starved))
 		blk_run_queue(rq->q);
 
 	blk_end_request(rq, 0, cmdq_req->data.bytes_xfered);
-	return 0;
+	err = 0;
+
+done:
+	mmc_release_host(host);
+	return err;
 }
 
 /*
@@ -2952,7 +2962,7 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 		pr_err("%s: %s: partition switch failed %d\n",
 				md->disk->disk_name, __func__, ret);
 		blk_end_request_all(req, ret);
-		goto switch_failure;
+		goto done;
 	}
 
 	if (!mmc_card_cmdq(card)) {
@@ -2965,7 +2975,7 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 			spin_lock_irq(mq->queue->queue_lock);
 			blk_requeue_request(mq->queue, req);
 			spin_unlock_irq(mq->queue->queue_lock);
-			goto switch_failure;
+			goto done;
 		}
 	}
 
@@ -2973,17 +2983,21 @@ static int mmc_blk_cmdq_issue_rq(struct mmc_queue *mq, struct request *req)
 		mmc_get_card(card);
 		ret = mmc_blk_cmdq_issue_discard_rq(mq, req);
 		mmc_put_card(card);
+		goto done;
 	} else if (req && req_op(req) == REQ_OP_SECURE_ERASE) {
 		mmc_get_card(card);
 		ret = mmc_blk_cmdq_issue_secdiscard_rq(mq, req);
 		mmc_put_card(card);
+		goto done;
 	} else if (req && req_op(req) == REQ_OP_FLUSH) {
 		ret = mmc_blk_cmdq_issue_flush_rq(mq, req);
 	} else {
 		ret = mmc_blk_cmdq_issue_rw_rq(mq, req);
 	}
+	/* release host in mmc_blk_cmdq_complete_rq */
+	return ret;
 
-switch_failure:
+done:
 	mmc_release_host(card->host);
 	return ret;
 }

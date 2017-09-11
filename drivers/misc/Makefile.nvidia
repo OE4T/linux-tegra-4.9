@@ -1,4 +1,4 @@
-obj-y += mods/
+obj-$(CONFIG_MODS) += mods/
 
 obj-$(CONFIG_NVS_DFSH) += nvs-dfsh/
 obj-$(CONFIG_SAF775x_HWDEP) += saf775x/

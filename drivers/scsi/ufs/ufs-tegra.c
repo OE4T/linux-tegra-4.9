@@ -660,6 +660,13 @@ void ufs_tegra_ufs_aux_ref_clk_disable(struct ufs_tegra_host *ufs_tegra)
 						UFSHC_AUX_UFSHC_DEV_CTRL_0);
 }
 
+void ufs_tegra_aux_reset_enable(struct ufs_tegra_host *ufs_tegra)
+{
+	ufs_aux_clear_bits(ufs_tegra->ufs_aux_base,
+					UFSHC_DEV_RESET,
+					UFSHC_AUX_UFSHC_DEV_CTRL_0);
+}
+
 void ufs_tegra_ufs_aux_prog(struct ufs_tegra_host *ufs_tegra)
 {
 
@@ -1270,6 +1277,8 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 		ufs_tegra_ufs_deassert_reset(ufs_tegra);
 		ufs_tegra_disable_mphy_slcg(ufs_tegra);
 		ufs_tegra_mphy_rx_advgran(ufs_tegra);
+		ufs_tegra_ufs_aux_ref_clk_disable(ufs_tegra);
+		ufs_tegra_aux_reset_enable(ufs_tegra);
 		ufs_tegra_ufs_aux_prog(ufs_tegra);
 		ufs_tegra_cfg_vendor_registers(hba);
 #ifdef CONFIG_DEBUG_FS

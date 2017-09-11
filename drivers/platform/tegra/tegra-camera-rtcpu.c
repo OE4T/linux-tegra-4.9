@@ -43,6 +43,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-rtcpu-monitor.h>
 #include <linux/tegra-rtcpu-trace.h>
+#include <linux/version.h>
 #include <linux/wait.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
@@ -226,6 +227,7 @@ static const struct tegra_cam_rtcpu_pdata ape_pdata = {
 struct tegra_cam_rtcpu {
 	const char *name;
 	struct tegra_ivc_bus *ivc;
+	struct device *hsp_device;
 	struct tegra_hsp_sm_pair *sm_pair;
 	struct tegra_rtcpu_trace *tracer;
 	struct {
@@ -1060,6 +1062,29 @@ static int tegra_cam_rtcpu_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static struct device *tegra_camrtc_get_hsp_device(struct device_node *hsp_node)
+{
+	struct device_node *of_node;
+	struct platform_device *pdev;
+
+	of_node = of_parse_phandle(hsp_node, "device", 0);
+	if (of_node == NULL)
+		return NULL;
+
+	pdev = of_find_device_by_node(of_node);
+	of_node_put(of_node);
+
+	if (pdev == NULL)
+		return ERR_PTR(-EPROBE_DEFER);
+
+	if (&pdev->dev.driver == NULL) {
+		platform_device_put(pdev);
+		return ERR_PTR(-EPROBE_DEFER);
+	}
+
+	return &pdev->dev;
+}
+
 static int tegra_camrtc_mbox_init(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -1071,7 +1096,25 @@ static int tegra_camrtc_mbox_init(struct device *dev)
 	mutex_init(&rtcpu->cmd.mutex);
 	init_waitqueue_head(&rtcpu->cmd.response_waitq);
 	init_waitqueue_head(&rtcpu->cmd.empty_waitq);
+
 	hsp_node = of_get_child_by_name(dev->of_node, "hsp");
+	rtcpu->hsp_device = tegra_camrtc_get_hsp_device(hsp_node);
+	if (IS_ERR(rtcpu->hsp_device)) {
+		of_node_put(hsp_node);
+		return PTR_ERR(rtcpu->hsp_device);
+	}
+
+	if (rtcpu->hsp_device != NULL) {
+		int ret = pm_runtime_get_sync(rtcpu->hsp_device);
+		if (ret < 0) {
+			dev_warn(rtcpu->hsp_device,
+				"power on failure: %d\n", ret);
+			put_device(rtcpu->hsp_device);
+			rtcpu->hsp_device = NULL;
+			return ret;
+		}
+	}
+
 	rtcpu->sm_pair = of_tegra_hsp_sm_pair_by_name(hsp_node,
 					"cmd-pair", tegra_camrtc_full_notify,
 					tegra_camrtc_empty_notify, rtcpu);
@@ -1103,6 +1146,11 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 			tegra_camrtc_suspend_core(&pdev->dev);
 		tegra_hsp_sm_pair_free(rtcpu->sm_pair);
 		rtcpu->sm_pair = NULL;
+	}
+
+	if (!IS_ERR_OR_NULL(rtcpu->hsp_device)) {
+		pm_runtime_put(rtcpu->hsp_device);
+		put_device(rtcpu->hsp_device);
 	}
 
 	tegra_rtcpu_trace_destroy(rtcpu->tracer);
@@ -1191,11 +1239,13 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		goto put_and_fail;
 	}
 
+#if defined(LINUX_VERSION) && LINUX_VERSION < 409
 	if (pdata->id == TEGRA_CAM_RTCPU_APE) {
 		/* APE power domain powergates APE block when suspending */
 		/* This won't do */
 		pm_runtime_get(dev);
 	}
+#endif
 
 	ret = tegra_camrtc_get_fw_hash(dev, rtcpu->fw_hash);
 	if (ret == 0)

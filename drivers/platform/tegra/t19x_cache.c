@@ -31,7 +31,7 @@
 #define MAX_L3_WAYS			16
 
 #ifdef CONFIG_DEBUG_FS
-	struct dentry *t19x_l3cache_root;
+static struct dentry *t19x_l3cache_root;
 #endif
 
 struct cache_drv_data {

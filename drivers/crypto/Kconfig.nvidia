@@ -6,6 +6,12 @@ config TEGRA_CRYPTO_DEV
 	  Dev node /dev/tegra-crypto in order to get access to tegra aes
 	  hardware from user space
 
+config CRYPTO_DEV_TEGRA_SE
+	tristate "Tegra SE driver for crypto algorithms"
+	select CRYPTO_AES
+	help
+	  This option allows you to have support of Security Engine for crypto acceleration.
+
 config CRYPTO_DEV_TEGRA_ELLIPTIC_SE
 	tristate "Tegra SE for Elliptic crypto algorithms"
 	select CRYPTO_ECDH

@@ -2102,6 +2102,7 @@ static struct i2c_driver nct1008_driver = {
 		.pm = &nct1008_pm_ops,
 #endif
 		.of_match_table = nct1008_of_match,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe		= nct1008_probe,
 	.remove		= nct1008_remove,

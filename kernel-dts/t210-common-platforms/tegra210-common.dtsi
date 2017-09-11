@@ -151,4 +151,8 @@
 	i2c@7000c700 {
 		nvidia,restrict_clk_rate_change_runtime;
 	};
+
+	nvdumper {
+		status = "okay";
+	};
 };

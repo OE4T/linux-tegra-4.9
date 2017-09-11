@@ -1571,19 +1571,6 @@ static int tegra186_usb3_phy_init(struct phy *phy)
 	port->port_cap = companion_usb2_port->port_cap;
 	port->oc_pin = companion_usb2_port->oc_pin;
 
-	/* only enable regulator when OC is disabled for host only ports */
-	/* OC is disabled when either oc_pinctrl is NULL or oc_pin is not
-	 * defined (-1)
-	 */
-	if (port->supply && port->port_cap == USB_HOST_CAP &&
-		(!padctl->oc_pinctrl || port->oc_pin < 0)) {
-		rc = regulator_enable(port->supply);
-		if (rc) {
-			dev_err(dev, "enable port %d vbus failed %d\n",
-				index, rc);
-		}
-	}
-
 	if (port->port_cap == USB_OTG_CAP) {
 		if (padctl->usb3_otg_port_base_1)
 			dev_warn(dev, "enabling OTG on multiple USB3 ports\n");
@@ -1613,14 +1600,6 @@ static int tegra186_usb3_phy_exit(struct phy *phy)
 	}
 
 	mutex_lock(&padctl->lock);
-
-	if (port->supply && port->port_cap == USB_HOST_CAP) {
-		rc = regulator_disable(port->supply);
-		if (rc) {
-			dev_err(dev, "disable port %d vbus failed %d\n",
-				index, rc);
-		}
-	}
 
 	mutex_unlock(&padctl->lock);
 

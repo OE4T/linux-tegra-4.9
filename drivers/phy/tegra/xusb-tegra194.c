@@ -1053,14 +1053,6 @@ static int tegra194_usb3_phy_init(struct phy *phy)
 
 	port->port_cap = companion_usb2_port->port_cap;
 
-	if (port->supply && port->port_cap == USB_HOST_CAP) {
-		rc = regulator_enable(port->supply);
-		if (rc) {
-			dev_err(dev, "enable port %d vbus failed %d\n",
-				index, rc);
-		}
-	}
-
 	mutex_unlock(&padctl->lock);
 
 	return rc;
@@ -1084,14 +1076,6 @@ static int tegra194_usb3_phy_exit(struct phy *phy)
 	}
 
 	mutex_lock(&padctl->lock);
-
-	if (port->supply && port->port_cap == USB_HOST_CAP) {
-		rc = regulator_disable(port->supply);
-		if (rc) {
-			dev_err(dev, "disable port %d vbus failed %d\n",
-				index, rc);
-		}
-	}
 
 	mutex_unlock(&padctl->lock);
 

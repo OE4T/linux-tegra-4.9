@@ -1985,15 +1985,6 @@ static int tegra210_usb3_port_enable(struct tegra_xusb_port *port)
 	value |= XUSB_PADCTL_SS_PORT_MAP_PORTX_MAP(index, usb3->port);
 	padctl_writel(padctl, value, XUSB_PADCTL_SS_PORT_MAP);
 
-	/*
-	 * TODO: move this code into the PCIe/SATA PHY ->power_on() callbacks
-	 * and conditionalize based on mux function? This seems to work, but
-	 * might not be the exact proper sequence.
-	 */
-	err = regulator_enable(usb3->supply);
-	if (err < 0)
-		return err;
-
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_USB3_PADX_ECTL1(index));
 	value &= ~(XUSB_PADCTL_UPHY_USB3_PAD_ECTL1_TX_TERM_CTRL_MASK <<
 		   XUSB_PADCTL_UPHY_USB3_PAD_ECTL1_TX_TERM_CTRL_SHIFT);
@@ -2053,7 +2044,6 @@ static int tegra210_usb3_port_enable(struct tegra_xusb_port *port)
 
 static void tegra210_usb3_port_disable(struct tegra_xusb_port *port)
 {
-	struct tegra_xusb_usb3_port *usb3 = to_usb3_port(port);
 	struct tegra_xusb_padctl *padctl = port->padctl;
 	struct tegra_xusb_lane *lane = port->lane;
 	unsigned int index = port->index;
@@ -2079,8 +2069,6 @@ static void tegra210_usb3_port_disable(struct tegra_xusb_port *port)
 		tegra210_sata_uphy_disable(padctl);
 	else
 		tegra210_pex_uphy_disable(padctl);
-
-	regulator_disable(usb3->supply);
 
 	value = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_MAP);
 	value &= ~XUSB_PADCTL_SS_PORT_MAP_PORTX_MAP_MASK(index);

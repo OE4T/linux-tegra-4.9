@@ -36,6 +36,7 @@
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/dma-mapping.h>
+#include <linux/pm_runtime.h>
 #include <linux/mmc/cmdq_hci.h>
 
 #include <linux/tegra_prod.h>
@@ -127,6 +128,9 @@
 
 #define SDHOST_LOW_VOLT_MIN	1800000
 
+/* Set min identification clock of 400 KHz */
+#define SDMMC_TEGRA_FALLBACK_CLK_HZ	400000
+#define SDHCI_RTPM_MSEC_TMOUT 10
 #define SDMMC_EMC_MAX_FREQ	150000000
 
 static unsigned int sdmmc_emc_clinet_id[] = {
@@ -212,6 +216,7 @@ struct sdhci_tegra {
 	bool force_non_rem_rescan;
 	bool static_parent_clk_mapping;
 	int parent_clk_index[MMC_TIMING_COUNTER];
+	bool disable_rtpm;
 };
 
 static int sdhci_tegra_parse_parent_list_from_dt(struct platform_device *pdev,
@@ -227,6 +232,9 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 	int type);
 static int tegra_sdhci_suspend(struct sdhci_host *host);
 static int tegra_sdhci_resume(struct sdhci_host *host);
+static void tegra_sdhci_complete(struct sdhci_host *host);
+static int tegra_sdhci_runtime_suspend(struct sdhci_host *host);
+static int tegra_sdhci_runtime_resume(struct sdhci_host *host);
 static void tegra_sdhci_post_resume(struct sdhci_host *host);
 
 static bool tegra_sdhci_is_clk_enabled(struct sdhci_host *host, int reg)
@@ -1397,6 +1405,9 @@ static const struct sdhci_ops tegra_sdhci_ops = {
 	.post_init = tegra_sdhci_post_init,
 	.suspend = tegra_sdhci_suspend,
 	.resume = tegra_sdhci_resume,
+	.complete = tegra_sdhci_complete,
+	.runtime_suspend = tegra_sdhci_runtime_suspend,
+	.runtime_resume = tegra_sdhci_runtime_resume,
 	.platform_resume = tegra_sdhci_post_resume,
 	.card_event = tegra_sdhci_card_event,
 	.dump_vendor_regs = tegra_sdhci_dump_vendor_regs,
@@ -1631,6 +1642,12 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 
 	tegra_host->force_non_rem_rescan = of_property_read_bool(np,
 		"force-non-removable-rescan");
+
+	tegra_host->disable_rtpm = of_property_read_bool(np,
+		"nvidia,disable-rtpm");
+	if (tegra_host->disable_rtpm)
+		dev_info(&pdev->dev, "runtime pm disabled\n");
+
 	return 0;
 }
 
@@ -1751,7 +1768,6 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		rc = PTR_ERR(clk);
 		goto err_clk_get;
 	}
-	clk_prepare_enable(clk);
 	pltfm_host->clk = clk;
 
 	tegra_host->emc_clk =
@@ -1771,7 +1787,20 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	else
 		reset_control_reset(tegra_host->rst);
 
-	tegra_sdhci_set_clock(host, 400000);
+	if (tegra_host->disable_rtpm) {
+		tegra_sdhci_set_clock(host, SDMMC_TEGRA_FALLBACK_CLK_HZ);
+		host->mmc->is_host_clk_enabled = true;
+	} else {
+		pm_runtime_enable(mmc_dev(host->mmc));
+		pm_runtime_get_sync(mmc_dev(host->mmc));
+		/*
+		 * set autosuspend delay results in suspend call if
+		 * set active is called before pm_runtime_enable
+		 */
+		pm_runtime_set_autosuspend_delay(mmc_dev(host->mmc),
+			SDHCI_RTPM_MSEC_TMOUT);
+		pm_runtime_use_autosuspend(mmc_dev(host->mmc));
+	}
 
 	if (gpio_is_valid(tegra_host->volt_switch_gpio)) {
 		rc = gpio_request(tegra_host->volt_switch_gpio, "sdhci_power");
@@ -1827,12 +1856,19 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (rc)
 		goto err_add_host;
 
+	if (!tegra_host->disable_rtpm) {
+		pm_runtime_mark_last_busy(mmc_dev(host->mmc));
+		pm_runtime_put_autosuspend(mmc_dev(host->mmc));
+	}
+
 	/* Initialize debugfs */
 	sdhci_tegra_debugfs_init(host);
 
 	return 0;
 
 err_add_host:
+	if (!tegra_host->disable_rtpm)
+		pm_runtime_disable(mmc_dev(host->mmc));
 	clk_disable_unprepare(pltfm_host->clk);
 err_clk_get:
 err_power_req:
@@ -1856,6 +1892,7 @@ static int tegra_sdhci_suspend(struct sdhci_host *host)
 			tegra_host->wake_enable_failed = true;
 		}
 	}
+	tegra_sdhci_set_clock(host, 0);
 
 	return 0;
 }
@@ -1883,6 +1920,48 @@ static int tegra_sdhci_resume(struct sdhci_host *host)
 	return ret;
 }
 
+static void tegra_sdhci_complete(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+
+	if (!tegra_host->disable_rtpm) {
+		pm_runtime_set_active(mmc_dev(host->mmc));
+		pm_runtime_enable(mmc_dev(host->mmc));
+		dev_dbg(mmc_dev(host->mmc), "resume complete runtime enable\n");
+	}
+}
+
+static int tegra_sdhci_runtime_suspend(struct sdhci_host *host)
+{
+	/* Disable clock */
+	dev_dbg(mmc_dev(host->mmc), "Runtime suspend started\n");
+	tegra_sdhci_set_clock(host, 0);
+	dev_dbg(mmc_dev(host->mmc), "Runtime suspend done\n");
+
+	return 0;
+}
+
+static int tegra_sdhci_runtime_resume(struct sdhci_host *host)
+{
+	unsigned int clk;
+
+	/* Clock enable should be invoked with a non-zero freq */
+	if (host->clock)
+		clk = host->clock;
+	else if (host->mmc->ios.clock)
+		clk = host->mmc->ios.clock;
+	else
+		clk = SDMMC_TEGRA_FALLBACK_CLK_HZ;
+
+	dev_dbg(mmc_dev(host->mmc),
+		"Runtime resume started. Setting clk freq %u\n", clk);
+	tegra_sdhci_set_clock(host, clk);
+	dev_dbg(mmc_dev(host->mmc), "Runtime resume done\n");
+
+	return 0;
+}
+
 static void tegra_sdhci_post_resume(struct sdhci_host *host)
 {
 	bool dll_calib_req = false;
@@ -1891,7 +1970,6 @@ static void tegra_sdhci_post_resume(struct sdhci_host *host)
 		(host->mmc->ios.timing == MMC_TIMING_MMC_HS400));
 	if (dll_calib_req)
 		tegra_sdhci_post_init(host);
-
 }
 
 static void sdhci_tegra_debugfs_init(struct sdhci_host *host)

@@ -602,6 +602,9 @@ struct sdhci_ops {
 	void	(*post_init)(struct sdhci_host *host);
 	int	(*suspend)(struct sdhci_host *host);
 	int	(*resume)(struct sdhci_host *host);
+	void	(*complete)(struct sdhci_host *host);
+	int	(*runtime_suspend)(struct sdhci_host *host);
+	int	(*runtime_resume)(struct sdhci_host *host);
 	void	(*platform_resume)(struct sdhci_host *host);
 	void	(*dump_vendor_regs)(struct sdhci_host *host);
 	void	(*pre_regulator_config)(struct sdhci_host *sdhci, int vdd,

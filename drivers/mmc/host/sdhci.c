@@ -1859,9 +1859,8 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		}
 
 		/* Re-enable SD Clock */
-		spin_unlock_irqrestore(&host->lock, flags);
-		host->ops->set_clock(host, host->clock);
-		spin_lock_irqsave(&host->lock, flags);
+		clk |= SDHCI_CLOCK_CARD_EN;
+		sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
 	} else
 		sdhci_writeb(host, ctrl, SDHCI_HOST_CONTROL);
 
@@ -3107,9 +3106,6 @@ static void sdhci_disable_irq_wakeups(struct sdhci_host *host)
 
 int sdhci_suspend_host(struct sdhci_host *host)
 {
-	if (host->ops->set_clock)
-		host->ops->set_clock(host, host->mmc->f_init);
-
 	sdhci_disable_card_detection(host);
 
 	mmc_retune_timer_stop(host->mmc);
@@ -3132,8 +3128,7 @@ int sdhci_suspend_host(struct sdhci_host *host)
 	free_irq(host->irq, host);
 	if (device_may_wakeup(mmc_dev(host->mmc)))
 		sdhci_enable_irq_wakeups(host);
-	if (host->ops->set_clock)
-		host->ops->set_clock(host, 0);
+
 	return 0;
 }
 

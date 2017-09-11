@@ -65,6 +65,13 @@ struct hyp_sys_state_info {
 
 	/* Indicates which VM reboot request is pending */
 	uint32_t vm_reboot_mask;
+
+	/* Indicates which VM suspend request is pending */
+	uint32_t vm_suspend_phase_1_mask;
+	uint32_t vm_suspend_phase_2_mask;
+
+	/* Indicates which VM resume request is pending */
+	uint32_t vm_resume_mask;
 };
 
 /*
@@ -86,6 +93,11 @@ enum system_function_id {
 	SYSTEM_SHUTDOWN_COMPLETE,
 	SYSTEM_REBOOT_INIT,
 	SYSTEM_REBOOT_COMPLETE,
+	GUEST_SUSPEND_REQ,
+	GUEST_SUSPEND_INIT,
+	GUEST_SUSPEND_COMPLETE,
+	GUEST_RESUME_INIT,
+	GUEST_RESUME_COMPLETE,
 	MAX_FUNC_ID,
 };
 
@@ -102,5 +114,11 @@ enum system_function_id {
 #define SYS_SHUTDOWN_COMPLETE_CMD	CREATE_CMD(SYSTEM_SHUTDOWN_COMPLETE, 0)
 #define SYS_REBOOT_INIT_CMD		CREATE_CMD(SYSTEM_REBOOT_INIT, 0)
 #define SYS_REBOOT_COMPLETE_CMD		CREATE_CMD(SYSTEM_REBOOT_COMPLETE, 0)
+#define GUEST_SUSPEND_REQ_CMD(vmid)       CREATE_CMD(GUEST_SUSPEND_REQ,vmid)
+#define GUEST_SUSPEND_INIT_CMD(vmid)      CREATE_CMD(GUEST_SUSPEND_INIT,vmid)
+#define GUEST_SUSPEND_COMPLETE_CMD(vmid) \
+		CREATE_CMD(GUEST_SUSPEND_COMPLETE,vmid)
+#define GUEST_RESUME_INIT_CMD(vmid)       CREATE_CMD(GUEST_RESUME_INIT,vmid)
+#define GUEST_RESUME_COMPLETE_CMD(vmid)   CREATE_CMD(GUEST_RESUME_COMPLETE,vmid)
 
 #endif /* _TEGRA_HV_SYSMGR_H */

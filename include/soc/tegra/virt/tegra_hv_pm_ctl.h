@@ -18,5 +18,7 @@ extern int (*tegra_hv_pm_ctl_prepare_shutdown)(void);
 
 int tegra_hv_pm_ctl_trigger_sys_shutdown(void);
 int tegra_hv_pm_ctl_trigger_sys_reboot(void);
+int tegra_hv_pm_ctl_trigger_guest_suspend(u32 vmid);
+int tegra_hv_pm_ctl_trigger_guest_resume(u32 vmid);
 
 #endif /* _TEGRA_HV_PM_CTL_H */

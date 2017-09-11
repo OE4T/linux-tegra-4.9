@@ -100,9 +100,9 @@
 #define I2C_CLK_DIVISOR_HS_MODE_MASK		0xFFFF
 
 #define I2C_BUS_CLEAR_CNFG			0x084
-#define I2C_TLOW				2
+#define I2C_TLOW				4
 #define I2C_TLOW_SHIFT				0
-#define I2C_THIGH				4
+#define I2C_THIGH				2
 #define I2C_THIGH_SHIFT				8
 #define I2C_INTERFACE_TIMING_1			0x098
 #define I2C_HS_INTERFACE_TIMING_0		0x09C

@@ -3,7 +3,7 @@
  *
  * Very loosely based on virtio_net.c
  *
- * Copyright (C) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -808,6 +808,72 @@ static int tegra_hv_net_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int tegra_hv_net_suspend(struct platform_device *pdev,
+				pm_message_t state)
+{
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct tegra_hv_net *hvn = netdev_priv(ndev);
+
+	/* If the netdev is not even running, no action */
+	if (!netif_running(ndev))
+		return 0;
+
+	/* As this device is going to suspend,
+	 * link can't be considered up, although we are not resetting
+	 * the IVC channel. Therefore mark the link detached
+	 * This would stop tx from getting queued as well
+	 */
+	netif_device_detach(ndev);
+
+	ndev->netdev_ops->ndo_stop(ndev);
+
+	/* tegra_hv_net_stop uses netif_stop_queue to disable the queue.
+	 * netif_stop_queue doesn't prevent xmit_transfer running on another
+	 * cpu, so additionally we need netif_tx_disable
+	 */
+	netif_tx_disable(ndev);
+
+	/* Now no further job should be coming in, but
+	 * there could be one queued or running already.
+	 * Cancel or wait for such a job
+	 */
+	cancel_work_sync(&hvn->xmit_work);
+
+	/* Workqueue should not be running at this point,
+	 * so disable irq
+	 */
+	disable_irq(ndev->irq);
+
+	return 0;
+}
+
+static int tegra_hv_net_resume(struct platform_device *pdev)
+{
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct tegra_hv_net *hvn = netdev_priv(ndev);
+
+	if (!netif_running(ndev))
+		return 0;
+
+	enable_irq(ndev->irq);
+
+	ndev->netdev_ops->ndo_open(ndev);
+
+	/* Would wake the queue and mark the link enabled */
+	netif_device_attach(ndev);
+
+	 /* Start the queue blindly, in case the previous
+	  * work was cancelled during suspend
+	  * If there is no pending xmit,
+	  * the workqueue will wake up then exit gracefully
+	  */
+	queue_work_on(WORK_CPU_UNBOUND, hvn->xmit_wq, &hvn->xmit_work);
+
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_OF
 static struct of_device_id tegra_hv_net_match[] = {
 	{ .compatible = "nvidia,tegra-hv-net", },
@@ -819,6 +885,10 @@ MODULE_DEVICE_TABLE(of, tegra_hv_net_match);
 static struct platform_driver tegra_hv_net_driver = {
 	.probe	= tegra_hv_net_probe,
 	.remove	= tegra_hv_net_remove,
+#ifdef CONFIG_PM_SLEEP
+	.suspend = tegra_hv_net_suspend,
+	.resume = tegra_hv_net_resume,
+#endif
 	.driver	= {
 		.name		= DRV_NAME,
 		.owner		= THIS_MODULE,

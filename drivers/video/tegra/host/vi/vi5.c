@@ -33,6 +33,8 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <media/capture_vi_channel.h>
+#include <soc/tegra/camrtc-capture.h>
+#include <soc/tegra/chip-id.h>
 
 #include "vi5.h"
 #include "dev.h"
@@ -50,6 +52,8 @@ struct host_vi5 {
 	struct platform_device *pdev;
 	struct platform_device *vi_thi;
 	struct vi vi_common;
+	dma_addr_t *gos_table;
+	uint32_t gos_count;
 
 	/* Debugfs */
 	struct vi5_debug {
@@ -86,6 +90,80 @@ int vi5_prepare_poweroff(struct platform_device *pdev)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(vi5_prepare_poweroff);
+
+static int vi5_alloc_syncpt(struct platform_device *pdev,
+			const char *name,
+			uint32_t *syncpt_id,
+			dma_addr_t *syncpt_addr,
+			uint32_t *gos_index,
+			uint32_t *gos_offset)
+{
+	struct host_vi5 *vi5 = (struct host_vi5 *) nvhost_get_private_data(pdev);
+	uint32_t id;
+	uint32_t index = GOS_INDEX_INVALID;
+	uint32_t offset = 0;
+	dma_addr_t addr;
+	int err = -ENODEV;
+
+	id = nvhost_get_syncpt_client_managed(vi5->vi_thi, name);
+	if (id == 0) {
+		dev_err(&pdev->dev, "%s: syncpt allocation failed\n", __func__);
+		return -ENODEV;
+	}
+
+	addr = nvhost_syncpt_address(vi5->vi_thi, id);
+	if (!addr) {
+		dev_err(&pdev->dev, "%s: syncpt address not found\n", __func__);
+		goto cleanup;
+	}
+
+	err = nvhost_syncpt_get_gos(vi5->vi_thi, id, &index, &offset);
+	if (err < 0) {
+		if (!tegra_platform_is_sim())
+			goto cleanup;
+
+		dev_warn(&pdev->dev, "%s: GoS not supported on VDK\n",
+			__func__);
+	}
+
+	*syncpt_id = id;
+	*syncpt_addr = addr;
+	*gos_index = index;
+	*gos_offset = offset;
+
+	dev_info(&pdev->dev, "%s: id=%u addr=0x%llx gos_index=%u gos_offset=%u\n",
+		__func__, id, addr, index, offset);
+
+	return 0;
+
+cleanup:
+	nvhost_syncpt_put_ref_ext(vi5->vi_thi, id);
+	return err;
+}
+
+static void vi5_release_syncpt(struct platform_device *pdev, uint32_t id)
+{
+	struct host_vi5 *vi5 = (struct host_vi5 *) nvhost_get_private_data(pdev);
+
+	dev_info(&pdev->dev, "%s: id=%u\n", __func__, id);
+
+	nvhost_syncpt_put_ref_ext(vi5->vi_thi, id);
+}
+
+static void vi5_get_gos_table(struct platform_device *pdev, int *count,
+			const dma_addr_t **table)
+{
+	struct host_vi5 *vi5 = (struct host_vi5 *) nvhost_get_private_data(pdev);
+
+	*table = vi5->gos_table;
+	*count = vi5->gos_count;
+}
+
+static struct vi_channel_drv_ops vi5_channel_drv_ops = {
+	.alloc_syncpt = vi5_alloc_syncpt,
+	.release_syncpt = vi5_release_syncpt,
+	.get_gos_table = vi5_get_gos_table,
+};
 
 static int vi5_probe(struct platform_device *pdev)
 {
@@ -145,9 +223,33 @@ static int vi5_probe(struct platform_device *pdev)
 	if (err)
 		goto deinit;
 
-	err = nvhost_syncpt_unit_interface_init(pdev);
+	err = nvhost_syncpt_unit_interface_init(thi);
 	if (err)
 		goto deinit;
+
+	err = nvhost_syncpt_get_cv_dev_address_table(vi5->vi_thi,
+						&vi5->gos_count,
+						&vi5->gos_table);
+	if (err) {
+		if (!tegra_platform_is_sim()) {
+			dev_err(&pdev->dev,
+				"%s: failed to get GoS table: err=%d\n",
+				__func__, err);
+			goto deinit;
+		}
+
+		dev_warn(&pdev->dev, "%s: GoS not supported on VDK\n",
+			__func__);
+	}
+
+	/* XXX - debug */
+	else {
+		int i;
+
+		for (i = 0; i < vi5->gos_count; i++)
+			dev_info(dev, "%s: GoS table #%d addr=0x%llx\n",
+				__func__, i, vi5->gos_table[i]);
+	}
 
 	/* Steal vi-thi HW aperture */
 	thi_info = platform_get_drvdata(thi);
@@ -163,7 +265,7 @@ static int vi5_probe(struct platform_device *pdev)
 		err = 0;
 	}
 
-	err = vi_channel_drv_register(pdev);
+	err = vi_channel_drv_register(pdev, &vi5_channel_drv_ops);
 	if (err)
 		goto device_release;
 

@@ -37,6 +37,7 @@
 #include "tegra194-soc-i2c.dtsi"
 #include "tegra194-camera.dtsi"
 #include "tegra194-soc/tegra194-soc-actmon.dtsi"
+#include "tegra194-soc/tegra194-aon.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";
@@ -1544,59 +1545,6 @@
 		clocks = <&bpmp_clks TEGRA194_CLK_EMC>;
 		clock-names = "emc";
 		status = "disabled";
-	};
-
-	aon: aon@c000000 {
-		compatible = "nvidia,tegra186-aon";
-		iommus = <&smmu TEGRA_SID_AON>;
-		reg = <0x0 0x0c1a0000 0x0 0x20000>; /* AON shared semaphore */
-		#mbox-cells = <1>;
-		#stream-id-cells = <1>;
-		nvidia,hsp-shared-mailbox = <&aon_hsp 2>;
-		nvidia,hsp-shared-mailbox-names = "ivc-pair";
-		status = "okay";
-
-		ivc-channels@80000000 {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			ivc_aon_echo@0 {
-				reg = <0x0000>, <0x10000>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <16>;
-				nvidia,frame-size = <64>;
-			};
-			ivc_aon_aondbg@480 {
-				reg = <0x0480>, <0x10480>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <2>;
-				nvidia,frame-size = <128>;
-			};
-			ivc_aon_spi@600 {
-				reg = <0x0600>, <0x10600>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <2>;
-				nvidia,frame-size = <24704>;
-			};
-			ivc_can0@c780 {
-				reg = <0xc780>, <0x1c780>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <16>;
-				nvidia,frame-size = <128>;
-			};
-			ivc_can1@d000 {
-				reg = <0xd000>, <0x1d000>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <16>;
-				nvidia,frame-size = <128>;
-			};
-		};
-	};
-
-	aondbg {
-		compatible = "nvidia,tegra186-aondbg";
-		mboxes = <&aon 1>;
-		status = "okay";
 	};
 
 	xhci_server {

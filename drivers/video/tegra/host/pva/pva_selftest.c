@@ -28,7 +28,7 @@
 /* Defines for self test-mode in ucode */
 #define PVA_MBOX_VAL_TESTS_DONE		0x57800000
 #define PVA_SELF_TESTMODE_START_ADDR	0x90000000
-#define PVA_SELF_TESTMODE_ADDR_SIZE	0x00400000
+#define PVA_SELF_TESTMODE_ADDR_SIZE	0x00800000
 
 int pva_run_ucode_selftest(struct platform_device *pdev)
 {

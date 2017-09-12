@@ -64,7 +64,7 @@
 			compatible = "nvidia,gosmem";
 			no-map;
 			status = "okay";
-			cvdevs = <&nvdla0 &nvdla1 &pva0 &pva1>;
+			cvdevs = <&nvdla0 &nvdla1 &pva0 &pva1 &vi_thi &isp_thi>;
 		};
 
 	};
@@ -222,15 +222,18 @@
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
 			};
+			isp_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_ISP>;
+			};
 			vi_domain {
 				/* Use camera_vm0_as for firmware tests */
-				address-space = <&camera_vm0_as>;
+				address-space = <&common_as>;
 				sid-list = <TEGRA_SID(VI)>;
 			};
 			rce_rm_domain {
 				address-space = <&camera_vm0_as>;
 				sid-list = <TEGRA_SID(RCE_RM)
-					    TEGRA_SID(ISP)
 					    TEGRA_SID(ISPFALC)
 					    TEGRA_SID(VIFALC)>;
 			};
@@ -1159,6 +1162,7 @@
 			/* cfg page is used by slvsec as well as ch35 */
 			reg = <0x0 0x15c10000 0x0 0x00230000>;
 			nvidia,vi-falcon-device = <&vi_thi>;
+			nvidia,rce-rm-device = <&rce_rm>;
 			iommus = <&smmu TEGRA_SID_VI>;
 			iso-smmu;
 		};
@@ -1182,6 +1186,7 @@
 			compatible = "nvidia,tegra194-isp";
 			reg = <0x0 0x14800000 0x0 0x00010000>;
 			nvidia,isp-falcon-device = <&isp_thi>;
+			nvidia,rce-rm-device = <&rce_rm>;
 			iommus = <&smmu TEGRA_SID_ISP>;
 			dma-coherent;
 		};

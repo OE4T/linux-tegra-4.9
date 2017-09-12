@@ -277,6 +277,8 @@ struct ufs_hba_variant_ops {
 				    enum ufs_notify_change_status);
 	int	(*setup_clocks)(struct ufs_hba *, bool);
 	int     (*setup_regulators)(struct ufs_hba *, bool);
+	void	(*hce_disable_notify)(struct ufs_hba *,
+				     enum ufs_notify_change_status);
 	int	(*hce_enable_notify)(struct ufs_hba *,
 				     enum ufs_notify_change_status);
 	int	(*link_startup_notify)(struct ufs_hba *,
@@ -792,6 +794,13 @@ static inline int ufshcd_vops_setup_regulators(struct ufs_hba *hba, bool status)
 		return hba->vops->setup_regulators(hba, status);
 
 	return 0;
+}
+
+static inline void ufshcd_vops_hce_disable_notify(struct ufs_hba *hba,
+						bool status)
+{
+	if (hba->vops && hba->vops->hce_disable_notify)
+		hba->vops->hce_disable_notify(hba, status);
 }
 
 static inline int ufshcd_vops_hce_enable_notify(struct ufs_hba *hba,

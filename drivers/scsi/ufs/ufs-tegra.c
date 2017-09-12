@@ -1019,6 +1019,22 @@ out:
 	return ret;
 }
 
+static void ufs_tegra_hce_disable_notify(struct ufs_hba *hba,
+		enum ufs_notify_change_status status)
+{
+	struct ufs_tegra_host *ufs_tegra = hba->priv;
+
+	switch (status) {
+	case PRE_CHANGE:
+		ufs_aux_update(ufs_tegra->ufs_aux_base,
+					UFSHC_CG_SYS_CLK_OVR_ON,
+					UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_0);
+		break;
+	default:
+		break;
+	}
+}
+
 static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 		enum ufs_notify_change_status status)
 {
@@ -1039,6 +1055,9 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 				UFSHC_AUX_UFSHC_DEV_CTRL_0);
 		break;
 	case POST_CHANGE:
+		ufs_aux_clear_bits(ufs_tegra->ufs_aux_base,
+					UFSHC_CG_SYS_CLK_OVR_ON,
+					UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_0);
 		ufs_tegra_ufs_aux_prog(ufs_tegra);
 		ufs_tegra_cfg_vendor_registers(hba);
 		clk_disable_unprepare(ufs_tegra->mphy_force_ls_mode);
@@ -1323,6 +1342,7 @@ struct ufs_hba_variant_ops ufs_hba_tegra_vops = {
 	.exit                   = ufs_tegra_exit,
 	.suspend		= ufs_tegra_suspend,
 	.resume			= ufs_tegra_resume,
+	.hce_disable_notify     = ufs_tegra_hce_disable_notify,
 	.hce_enable_notify      = ufs_tegra_hce_enable_notify,
 	.link_startup_notify	= ufs_tegra_link_startup_notify,
 	.pwr_change_notify      = ufs_tegra_pwr_change_notify,

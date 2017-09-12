@@ -38,10 +38,12 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
+#include "nvhost_syncpt_unit_interface.h"
 #include "t194/t194.h"
 
 struct host_isp5 {
 	struct platform_device *pdev;
+	struct platform_device *rce_rm;
 	struct platform_device *isp_thi;
 
 	/* Debugfs */
@@ -84,12 +86,13 @@ static int isp5_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
+	struct device_node *rm_np;
+	struct platform_device *rm = NULL;
 	struct device_node *thi_np;
 	struct platform_device *thi = NULL;
+	struct nvhost_device_data *thi_info;
 	struct host_isp5 *isp5;
 	int err = 0;
-
-	dev_info(dev, "probing\n");
 
 	info = (void *)of_device_get_match_data(dev);
 	if (unlikely(info == NULL)) {
@@ -97,18 +100,38 @@ static int isp5_probe(struct platform_device *pdev)
 		return -ENODATA;
 	}
 
+	rm_np = of_parse_phandle(dev->of_node, "nvidia,rce-rm-device", 0);
+	if (rm_np == NULL) {
+		dev_WARN(dev, "missing %s handle\n", "nvidia,rce-rm-device");
+		return -ENODEV;
+	}
+
+	rm = of_find_device_by_node(rm_np);
+	of_node_put(rm_np);
+
+	if (rm == NULL)
+		return -ENODEV;
+
+	if (rm->dev.driver == NULL) {
+		err = -EPROBE_DEFER;
+		goto put_rm;
+	}
+
 	thi_np = of_parse_phandle(dev->of_node, "nvidia,isp-falcon-device", 0);
 	if (thi_np == NULL) {
 		dev_WARN(dev, "missing %s handle\n",
 			"nvidia,isp-falcon-device");
-		return -ENODEV;
+		err = -ENODEV;
+		goto put_rm;
 	}
 
 	thi = of_find_device_by_node(thi_np);
 	of_node_put(thi_np);
 
-	if (thi == NULL)
-		return -ENODEV;
+	if (thi == NULL) {
+		err = -ENODEV;
+		goto put_rm;
+	}
 
 	if (thi->dev.driver == NULL) {
 		platform_device_put(thi);
@@ -119,6 +142,7 @@ static int isp5_probe(struct platform_device *pdev)
 	if (!isp5)
 		return -ENOMEM;
 
+	isp5->rce_rm = rm;
 	isp5->isp_thi = thi;
 	isp5->pdev = pdev;
 	info->pdev = pdev;
@@ -138,29 +162,33 @@ static int isp5_probe(struct platform_device *pdev)
 	if (err)
 		goto deinit;
 
-	{
-		struct nvhost_device_data *thi_info = platform_get_drvdata(thi);
-		/* Steal isp-thi HW aperture */
-		info->aperture[1] = thi_info->aperture[0];
-	}
-
-	isp5_init_debugfs(isp5);
+	err = nvhost_syncpt_unit_interface_init(thi);
+	if (err)
+		goto device_release;
 
 #if defined(CONFIG_TEGRA_CAMERA_RTCPU)
 	err = isp_channel_drv_register(pdev);
 	if (err)
-		goto deinit;
+		goto device_release;
 #endif
 
-	dev_info(dev, "probed\n");
+	/* Steal isp-thi HW aperture */
+	thi_info = platform_get_drvdata(thi);
+	info->aperture[1] = thi_info->aperture[0];
 
+	isp5_init_debugfs(isp5);
 	return 0;
 
+device_release:
+	nvhost_client_device_release(pdev);
 deinit:
 	nvhost_module_deinit(pdev);
 put_thi:
 	platform_device_put(thi);
-	dev_err(dev, "probe failed: %d\n", err);
+put_rm:
+	platform_device_put(rm);
+	if (err != -EPROBE_DEFER)
+		dev_err(dev, "probe failed: %d\n", err);
 	return err;
 }
 
@@ -174,6 +202,7 @@ static int __exit isp5_remove(struct platform_device *pdev)
 #endif
 	isp5_remove_debugfs(isp5);
 	platform_device_put(isp5->isp_thi);
+	platform_device_put(isp5->rce_rm);
 
 	return 0;
 }

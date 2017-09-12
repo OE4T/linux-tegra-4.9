@@ -174,7 +174,6 @@ Thanks!
     cmt_template = """
 +----------------------------------------
 | {url}
-| {subject}
 | Author: {author}
 
 {cmtmsg}"""
@@ -186,7 +185,6 @@ Thanks!
     cmt_descriptions = ''
     for c in commits_info:
         cmt_descriptions += "  %s - %s\n" % (c['url'], c['subject'])
-        print(cmt_descriptions)
 
     # Add new lines around the extra_message, if applicable. Otherwise we don't
     # want anything to show up for extra_message.
@@ -197,7 +195,7 @@ Thanks!
 
     cmt_verbose = ''
     for c in commits_info:
-        cmt_verbose += cmt_template.format(url=c['url'], subject=c['subject'],
+        cmt_verbose += cmt_template.format(url=c['url'],
                                            author=c['owner']['name'],
                                            cmtmsg=indent_lines(
                                                c['commitMessage'], '  '))

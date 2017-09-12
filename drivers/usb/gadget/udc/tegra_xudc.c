@@ -41,6 +41,7 @@
 #include <linux/usb/gadget.h>
 #include <linux/usb/tegra_usb_charger.h>
 #include <linux/workqueue.h>
+#include <linux/pm_qos.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 
@@ -211,9 +212,11 @@
 #define XUDC_DEVICE_ID_T186     0x10e2
 #define XUDC_DEVICE_ID_T194     0x10ff
 
+/* Default parameters for boosting EMC/CPU frequency */
 #define XUDC_EMC_MAX_FREQ	150000000		/* 150 MHz	*/
 #define BOOST_TRIGGER		16384			/* 16 KB	*/
-#define RESTORE_DELAY		msecs_to_jiffies(2*1000)/* 2 sec	*/
+#define EMC_RESTORE_DELAY	msecs_to_jiffies(2*1000)/* 2 sec	*/
+#define CPU_BOOST_TIMEOUT	2000
 
 #define XUDC_IS_T210(t) \
 	(t->soc ? (t->soc->device_id == XUDC_DEVICE_ID_T210) : false)
@@ -551,6 +554,14 @@ struct tegra_xudc {
 #define TOGGLE_VBUS_WAIT_MS 100
 	struct delayed_work plc_reset_work;
 	bool wait_csc;
+
+	struct pm_qos_request core_req;
+	struct pm_qos_request boost_cpufreq_req;
+	struct work_struct	boost_cpufreq_work;
+	unsigned int boost_cpu_freq;
+	unsigned long cpufreq_last_boosted;
+	bool cpu_boost_enabled;
+	bool cpu_boost_work_scheduled;
 };
 
 #define XUDC_TRB_MAX_BUFFER_SIZE 65536
@@ -841,7 +852,7 @@ static void tegra_xudc_boost_emc_work(struct work_struct *work)
 	}
 
 	if (!xudc->restore_work_scheduled) {
-		schedule_delayed_work(&xudc->restore_emc, RESTORE_DELAY);
+		schedule_delayed_work(&xudc->restore_emc, EMC_RESTORE_DELAY);
 		xudc->restore_work_scheduled = true;
 	}
 	xudc->last_boosted = jiffies;
@@ -855,9 +866,9 @@ static void tegra_xudc_restore_emc_work(struct work_struct *work)
 						restore_emc);
 	unsigned long flags;
 
-	if (time_is_after_jiffies(xudc->last_boosted + RESTORE_DELAY)) {
+	if (time_is_after_jiffies(xudc->last_boosted + EMC_RESTORE_DELAY)) {
 		dev_dbg(xudc->dev, "schedule restore emc work\n");
-		schedule_delayed_work(&xudc->restore_emc, RESTORE_DELAY);
+		schedule_delayed_work(&xudc->restore_emc, EMC_RESTORE_DELAY);
 		return;
 	}
 
@@ -872,6 +883,48 @@ static void tegra_xudc_restore_emc_work(struct work_struct *work)
 		xudc->restore_work_scheduled = false;
 	}
 	spin_unlock_irqrestore(&xudc->lock, flags);
+}
+
+static void tegra_xudc_boost_cpufreq_fn(struct work_struct *work)
+{
+	struct tegra_xudc *xudc = container_of(work, struct tegra_xudc,
+						boost_cpufreq_work);
+	unsigned long delay = CPU_BOOST_TIMEOUT;
+	s32 cpu_freq = xudc->boost_cpu_freq * 1000;
+
+	dev_dbg(xudc->dev, "Boost CPU freq %d KHz, with timeout %lu ms\n",
+						cpu_freq, delay);
+
+	if (XUDC_IS_T210(xudc))
+		pm_qos_update_request_timeout(&xudc->core_req,
+			cpu_freq, delay * 1000);
+	pm_qos_update_request_timeout(&xudc->boost_cpufreq_req,
+		cpu_freq, delay * 1000);
+
+	xudc->cpufreq_last_boosted = jiffies;
+	xudc->cpu_boost_work_scheduled = false;
+}
+
+static void tegra_xudc_boost_cpu_init(struct tegra_xudc *xudc)
+{
+	INIT_WORK(&xudc->boost_cpufreq_work, tegra_xudc_boost_cpufreq_fn);
+
+	if (XUDC_IS_T210(xudc))
+		pm_qos_add_request(&xudc->core_req, PM_QOS_MIN_ONLINE_CPUS,
+							PM_QOS_DEFAULT_VALUE);
+	pm_qos_add_request(&xudc->boost_cpufreq_req,
+		PM_QOS_CPU_FREQ_MIN, PM_QOS_DEFAULT_VALUE);
+	xudc->cpufreq_last_boosted = jiffies;
+	xudc->cpu_boost_work_scheduled = false;
+}
+
+static void tegra_xudc_boost_cpu_deinit(struct tegra_xudc *xudc)
+{
+	cancel_work_sync(&xudc->boost_cpufreq_work);
+
+	if (XUDC_IS_T210(xudc))
+		pm_qos_remove_request(&xudc->core_req);
+	pm_qos_remove_request(&xudc->boost_cpufreq_req);
 }
 
 static int tegra_xudc_data_role_notifier(struct notifier_block *nb,
@@ -1265,6 +1318,7 @@ __tegra_xudc_ep_queue(struct tegra_xudc_ep *ep, struct tegra_xudc_request *req)
 {
 	struct tegra_xudc *xudc = ep->xudc;
 	int err;
+	bool skip_cpu_boost = false;
 
 	if (usb_endpoint_xfer_control(ep->desc) && !list_empty(&ep->queue)) {
 		dev_err(xudc->dev, "control ep has pending transfers\n");
@@ -1303,8 +1357,19 @@ __tegra_xudc_ep_queue(struct tegra_xudc_ep *ep, struct tegra_xudc_request *req)
 	req->usb_req.status = -EINPROGRESS;
 	req->usb_req.actual = 0;
 
-	if (req->usb_req.length >= BOOST_TRIGGER)
-		schedule_work(&xudc->boost_emc);
+	if (req->usb_req.length >= BOOST_TRIGGER) {
+		if (xudc->bwmgr)
+			schedule_work(&xudc->boost_emc);
+		if (time_is_after_jiffies(xudc->cpufreq_last_boosted
+			       + (msecs_to_jiffies(CPU_BOOST_TIMEOUT / 2))))
+			skip_cpu_boost = true;
+		if (xudc->cpu_boost_enabled && !skip_cpu_boost &&
+					!xudc->cpu_boost_work_scheduled) {
+			dev_dbg(xudc->dev, "Scheduling cpu boost work\n");
+			schedule_work(&xudc->boost_cpufreq_work);
+			xudc->cpu_boost_work_scheduled = true;
+		}
+	}
 
 	list_add_tail(&req->list, &ep->queue);
 
@@ -3693,6 +3758,14 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	xudc->emc_frequency_boosted = false;
 	xudc->restore_work_scheduled = false;
 
+	of_property_read_u32(pdev->dev.of_node, "nvidia,boost_cpu_freq",
+						&xudc->boost_cpu_freq);
+
+	if (xudc->boost_cpu_freq > 0) {
+		dev_info(xudc->dev, "PMQOS CPU boost enabled\n");
+		xudc->cpu_boost_enabled = true;
+	}
+
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id_xusba = tegra_pd_get_powergate_id(tegra_xusba_pd);
 	partition_id_xusbb = tegra_pd_get_powergate_id(tegra_xusbb_pd);
@@ -3811,6 +3884,11 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	if (tegra_platform_is_fpga())
 		tegra_fpga_hack_init(xudc);
 
+	if (xudc->cpu_boost_enabled) {
+		dev_info(xudc->dev, "Initialize boost_cpufreq work\n");
+		tegra_xudc_boost_cpu_init(xudc);
+	}
+
 	return 0;
 
 free_eps:
@@ -3851,6 +3929,9 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 
 	if (xudc->bwmgr)
 		tegra_bwmgr_unregister(xudc->bwmgr);
+
+	if (xudc->cpu_boost_enabled)
+		tegra_xudc_boost_cpu_deinit(xudc);
 
 	usb_del_gadget_udc(&xudc->gadget);
 	tegra_xudc_free_eps(xudc);

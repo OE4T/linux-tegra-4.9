@@ -3273,11 +3273,31 @@ static int tune_high_mv_set(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(tune_high_mv_fops, tune_high_mv_get, tune_high_mv_set,
                         "%llu\n");
 
+
+static void dfll_invalidate_one_shot(struct tegra_dfll *td)
+{
+	int i;
+
+	for (i = 0; i <= td->soc->thermal_floor_table_size; i++)
+		td->dvco_rate_floors[i] = 0;
+	td->tune_high_calibrated = false;
+}
+
+static void dfll_one_shot_log_time(struct tegra_dfll *td)
+{
+	ktime_t start, end;
+
+	start = ktime_get();
+	dfll_one_shot_calibrate_floors(td);
+	end = ktime_get();
+
+	pr_debug("%s: time_us: %lld\n", __func__, ktime_us_delta(end, start));
+}
+
 static int calibrate_floors_set(void *data, u64 val)
 {
 	struct tegra_dfll *td = data;
 	unsigned long flags, rate;
-	int i;
 
 	if (!val)
 		return 0;
@@ -3288,13 +3308,11 @@ static int calibrate_floors_set(void *data, u64 val)
 	}
 
 	spin_lock_irqsave(&td->lock, flags);
-	for (i = 0; i <= td->soc->thermal_floor_table_size; i++)
-		td->dvco_rate_floors[i] = 0;
-	td->tune_high_calibrated = false;
+	dfll_invalidate_one_shot(td);
 
 	rate = dfll_request_get(td);
 	dfll_request_rate(td, td->out_rate_min);
-	dfll_one_shot_calibrate_floors(td);
+	dfll_one_shot_log_time(td);
 	set_dvco_rate_min(td, &td->last_req);
 	dfll_request_rate(td, rate);
 

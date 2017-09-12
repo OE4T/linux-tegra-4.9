@@ -613,6 +613,13 @@ int eqos_mdio_register(struct net_device *dev)
 	new_bus->phy_mask = ~(1 << pdata->phyaddr);
 	new_bus->parent = &pdata->pdev->dev;
 
+	for (i = 0; i < PHY_MAX_ADDR; ++i) {
+		if (i == pdata->phyaddr)
+			new_bus->irq[i] = pdata->phyirq;
+		else
+			new_bus->irq[i] = PHY_POLL;
+	}
+
 	ret = mdiobus_register(new_bus);
 	if (ret != 0) {
 		pr_err("%s: Cannot register as MDIO bus\n", new_bus->name);
@@ -620,19 +627,6 @@ int eqos_mdio_register(struct net_device *dev)
 		return ret;
 	}
 	pdata->mii = new_bus;
-
-	for (i = 0; i < PHY_MAX_ADDR; i++) {
-		struct phy_device *phydev;
-
-		if (i != pdata->phyaddr)
-			continue;
-
-		phydev = mdiobus_get_phy(new_bus, i);
-		if (phydev) {
-			new_bus->irq[i] = pdata->phyirq;
-			phydev->irq = pdata->phyirq;
-		}
-	}
 
 	DBGPR_MDIO("<--eqos_mdio_register\n");
 

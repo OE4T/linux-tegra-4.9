@@ -110,8 +110,6 @@
 
 		iommus = <&smmu TEGRA_SID_RCE_RM>;
 
-		nvidia,vi-device = <&vi>;
-
-		nvidia,scratch-size = <0x600000>; /* 6M */
+		nvidia,scratch-area = <0x80000000 0x600000>; /* 6M */
 	};
 };

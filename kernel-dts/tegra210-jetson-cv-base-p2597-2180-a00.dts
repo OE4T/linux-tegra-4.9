@@ -567,7 +567,7 @@
 			usb2-0 {
 				status = "okay";
 				mode = "otg";
-				nvidia,usb3-port-fake = <2>;
+				nvidia,usb3-port-fake = <3>;
 			};
 			usb2-1 {
 				status = "okay";
@@ -602,7 +602,7 @@
 				nvidia,function = "xusb";
 				nvidia,port-cap =
 					<TEGRA_PADCTL_PORT_OTG_CAP>;
-				nvidia,usb3-port-fake = <2>;
+				nvidia,usb3-port-fake = <3>;
 			};
 			usb2-std-A-port0 {
 				 nvidia,lanes = "otg-2";

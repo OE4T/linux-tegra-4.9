@@ -42,6 +42,7 @@
 #define HVC_NR_RAISE_IRQ		4
 #define HVC_NR_READ_NGUESTS		5
 #define HVC_NR_READ_IPA_PA		6
+#define HVC_NR_READ_GUEST_STATE		7
 #define HVC_NR_READ_HYP_INFO		9
 #define HVC_NR_GUEST_RESET		10
 #define HVC_NR_SYSINFO_IPA		13
@@ -174,6 +175,9 @@ struct hyp_server_page {
 
 #ifdef CONFIG_ARM64
 
+#define _X3_X17 "x3", "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", \
+"x13", "x14", "x15", "x16", "x17"
+
 #define _X4_X17 "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", \
 "x13", "x14", "x15", "x16", "x17"
 
@@ -253,6 +257,20 @@ static inline int hyp_raise_irq(unsigned int irq, unsigned int vmid)
 	return (int)r0;
 }
 
+static inline int hyp_read_guest_state(unsigned int vmid, unsigned int *state)
+{
+	register uint64_t r0 asm("x0") = vmid;
+	register uint64_t r1 asm("x1");
+
+	asm("hvc %2"
+		: "+r"(r0), "=r"(r1)
+		: "i"(HVC_NR_READ_GUEST_STATE)
+		: "x2", _X3_X17);
+
+	*state = (unsigned int)r1;
+	return (int)r0;
+}
+
 static inline int hyp_read_hyp_info(uint64_t *hyp_info_page_pa)
 {
 	register uint64_t r0 asm("x0");
@@ -302,6 +320,7 @@ static inline uint64_t hyp_sysinfo_ipa(void)
 	return r0;
 }
 
+#undef _X3_X17
 #undef _X4_X17
 
 #else

@@ -50,6 +50,34 @@
 #ifndef _hw_nvdisp_t19x_nvdisp_h_
 #define _hw_nvdisp_t19x_nvdisp_h_
 
+static inline u32 nvdisp_t19x_ihub_common_config_r(void)
+{
+	return 0x00000067;
+}
+static inline u32 nvdisp_t19x_ihub_common_config_request_batch_size_1_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_t19x_ihub_common_config_request_batch_size_2_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_t19x_ihub_common_config_request_batch_size_4_f(void)
+{
+	return 0x2;
+}
+static inline u32 nvdisp_t19x_ihub_common_config_request_batch_size_8_f(void)
+{
+	return 0x3;
+}
+static inline u32 nvdisp_t19x_ihub_common_config_request_batch_size_16_f(void)
+{
+	return 0x4;
+}
+static inline u32 nvdisp_t19x_ihub_common_config_request_batch_size_32_f(void)
+{
+	return 0x5;
+}
 static inline u32 nvdisp_t19x_win_options_r(void)
 {
 	return 0x00000402;

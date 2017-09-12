@@ -19,10 +19,10 @@
 / {
 	aon: aon@c160000 {
 		compatible = "nvidia,tegra186-aon";
+		status = "disabled";
 		reg = <0x0 0x0c1a0000 0x0 0x40000>; /* AON shared semaphore */
 		#mbox-cells = <1>;
 		iommus = <&smmu TEGRA_SID_AON>;
-		status = "disabled";
 		nvidia,hsp-shared-mailbox = <&aon_hsp 2>;
 		nvidia,hsp-shared-mailbox-names = "ivc-pair";
 		nvidia,ivc-carveout-base-ss = <0>;

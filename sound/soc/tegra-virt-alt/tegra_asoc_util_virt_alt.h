@@ -20,6 +20,7 @@
 #define __LINUX_VIRT_UTIL_H
 
 #include <sound/soc.h>
+#include "tegra_asoc_metadata_util_alt.h"
 
 #define MIXER_CONFIG_SHIFT_VALUE 16
 #define TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK		0x1F
@@ -171,6 +172,16 @@
 	tegra_virt_i2s_get_loopback_enable,	\
 	tegra_virt_i2s_set_loopback_enable)
 
+#define METADATA_CTRL_DECL(ename) \
+	{.iface = SNDRV_CTL_ELEM_IFACE_MIXER, \
+	.name = ename, .info = tegra_bytes_info, \
+	.get = tegra_virt_get_metadata, \
+	.put = tegra_virt_set_metadata, \
+	.private_value = ((unsigned long)&(struct soc_bytes) \
+		{.base = 1, .mask = SNDRV_CTL_ELEM_TYPE_BYTES, \
+		.num_regs = (sizeof(uint16_t) * \
+		(TEGRA_AUDIO_METADATA_HDR_LENGTH + 1)), \
+		 })}
 enum {
 	numerator1_enum = 0,
 	numerator2_enum,
@@ -316,5 +327,24 @@ int tegra_virt_i2s_set_loopback_enable(
 int tegra_virt_i2s_get_loopback_enable(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
-
+int tegra_metadata_get_init(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_metadata_set_init(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_metadata_get_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_metadata_set_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_metadata_setup(struct platform_device *pdev,
+	struct tegra_audio_metadata_cntx *psad,	struct snd_soc_card *card);
+int tegra_virt_set_metadata(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_get_metadata(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
 #endif

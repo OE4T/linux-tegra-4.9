@@ -26,6 +26,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/tegra_pm_domains.h>
 
+#include "tegra_asoc_metadata_util_alt.h"
 #include "tegra210_virt_alt_admaif.h"
 #include "tegra_asoc_machine_virt_alt.h"
 #include "tegra_asoc_util_virt_alt.h"
@@ -38,6 +39,18 @@ static const struct snd_soc_dapm_widget tegra_virt_dapm_widgets[] = {
 static const struct snd_soc_dapm_route tegra_virt_dapm_routes[] = {
 	{"Headphone", NULL, "OUT"},
 	{"IN", NULL, "LineIn"},
+};
+
+
+static struct tegra_audio_metadata_cntx meta = {
+	.metadata_mode = HEADER_MODE,
+	.init_metadata_flood = 0,
+	.enable_metadata_flood = 0,
+
+	/* 0 indexed */
+	.admaif_id = 3,
+	.dma_id = 3,
+	.dma_ch_page = 0,
 };
 
 static struct snd_soc_card tegra_virt_t210ref_card = {
@@ -224,6 +237,7 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 		codec_drv->capture.rate_max = 192000;
 	}
 #endif
+	tegra_metadata_setup(pdev, &meta, card);
 	tegra_pd_add_device(&pdev->dev);
 	pm_runtime_forbid(&pdev->dev);
 

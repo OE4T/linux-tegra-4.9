@@ -28,7 +28,7 @@
 #include "tegra_asoc_xbar_virt_alt.h"
 #include "tegra_asoc_util_virt_alt.h"
 
-
+#define NUM_META_CONTROLS	3
 
 static const unsigned int tegra210_rates[] = {
 	8000, 11025, 12000, 16000, 22050,
@@ -238,6 +238,17 @@ static int tegra210_admaif_dai_probe(struct snd_soc_dai *dai)
 
 	dai->capture_dma_data = &admaif->capture_dma_data[dai->id];
 	dai->playback_dma_data = &admaif->playback_dma_data[dai->id];
+
+	return 0;
+}
+
+static int tegra_bytes_info(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_info *uinfo)
+{
+	struct soc_bytes *params = (void *)kcontrol->private_value;
+
+	uinfo->type = params->mask;
+	uinfo->count = params->num_regs;
 
 	return 0;
 }
@@ -789,9 +800,16 @@ I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S3 Loopback", 0x03),
 I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S4 Loopback", 0x04),
 I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S5 Loopback", 0x05),
 I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S6 Loopback", 0x06),
+
+/* Metadata controls should be always the last ones */
+SOC_SINGLE_BOOL_EXT("SAD Init", 0,
+		tegra_metadata_get_init, tegra_metadata_set_init),
+SOC_SINGLE_BOOL_EXT("SAD Enable", 0,
+		tegra_metadata_get_enable, tegra_metadata_set_enable),
+METADATA_CTRL_DECL("SAD Metadata"),
 };
 
-static const struct snd_soc_component_driver tegra210_admaif_dai_driver = {
+static struct snd_soc_component_driver tegra210_admaif_dai_driver = {
 	.name		= "tegra210-virt-pcm",
 	.controls = tegra_virt_t186ref_controls,
 	.num_controls = ARRAY_SIZE(tegra_virt_t186ref_controls),
@@ -806,6 +824,7 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev,
 	unsigned int admaif_ch_list[MAX_ADMAIF_IDS] = {0};
 	struct tegra_virt_admaif_soc_data *soc_data = data;
 	int adma_count = 0;
+	bool meta_enabled = false;
 
 	admaif = devm_kzalloc(&pdev->dev, sizeof(*admaif), GFP_KERNEL);
 	if (admaif == NULL) {
@@ -910,6 +929,15 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev,
 		}
 		adma_count++;
 	}
+
+	/* Remove exposing metadata controls if not enabled in device node */
+	meta_enabled = of_property_read_bool(pdev->dev.of_node,
+		"sad_enabled");
+	if (!meta_enabled) {
+		tegra210_admaif_dai_driver.num_controls =
+		ARRAY_SIZE(tegra_virt_t186ref_controls) - NUM_META_CONTROLS;
+	}
+
 	ret = snd_soc_register_component(&pdev->dev,
 					&tegra210_admaif_dai_driver,
 					tegra210_admaif_dais,

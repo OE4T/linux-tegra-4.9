@@ -3256,8 +3256,6 @@ static int fout_mv_set(void *data, u64 val)
 		u8 out_value;
 
 		out_value = find_mv_out_cap(td, val);
-		if (td->pmu_if == TEGRA_DFLL_PMU_I2C)
-			out_value = td->lut[out_value];
 		dfll_set_force_output_value(td, out_value);
 		dfll_set_force_output_enabled(td, true);
 	} else {

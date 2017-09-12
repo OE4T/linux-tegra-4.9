@@ -420,7 +420,7 @@ static struct uart_driver tegra_combined_uart_driver = {
 	.driver_name	= "tegra-combined-uart",
 	.dev_name	= "ttyTCU",
 	.major		= TTY_MAJOR,
-	.minor		= 70,
+	.minor		= 143,
 	.cons		= &tegra_combined_uart_console,
 	.nr		= 1,
 };

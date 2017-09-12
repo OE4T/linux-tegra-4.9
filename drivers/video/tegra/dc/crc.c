@@ -172,6 +172,8 @@ void tegra_dc_crc_reset(struct tegra_dc *dc)
  */
 void tegra_dc_crc_deinit(struct tegra_dc *dc)
 {
+	u8 i = 0;
+
 	if (!dc->crc_initialized)
 		return;
 
@@ -190,6 +192,10 @@ void tegra_dc_crc_deinit(struct tegra_dc *dc)
 	atomic_set(&dc->crc_ref_cnt.comp, 0);
 	atomic_set(&dc->crc_ref_cnt.out, 0);
 	atomic_set(&dc->crc_ref_cnt.regional, 0);
+
+	for (i = 0; i < TEGRA_DC_MAX_CRC_REGIONS; i++)
+		atomic_set(&dc->crc_ref_cnt.region[i], 0);
+
 	dc->crc_ref_cnt.legacy = false;
 
 	mutex_destroy(&dc->flip_buf.lock);

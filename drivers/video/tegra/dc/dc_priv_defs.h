@@ -383,7 +383,9 @@ struct tegra_dc_ring_buf {
  * @rg          - Track if RG CRC is enabled
  * @comp        - Track if COMP CRC is enabled
  * @out         - Track if CRC of an Output Resource (OR) is enabled
+ * @region      - Track if CRC for a region is enabled
  * @regional    - Track if regional CRCs are enabled
+ *                Should always be a sum of reference counts of each region
  * @legacy      - Keep account of whether legacy sysfs API is activated
  */
 struct tegra_dc_crc_ref_cnt {
@@ -391,6 +393,7 @@ struct tegra_dc_crc_ref_cnt {
 	atomic_t rg;
 	atomic_t comp;
 	atomic_t out;
+	atomic_t region[TEGRA_DC_MAX_CRC_REGIONS];
 	atomic_t regional;
 	bool legacy;
 };

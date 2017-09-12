@@ -121,9 +121,6 @@ static int tegra_nvdisp_crc_region_enable(struct tegra_dc *dc,
 	u32 crc_readback_location_mask =
 	nvdisp_rg_region_crc_control_readback_location_readback_golden_f();
 
-	if (region->id >= TEGRA_DC_EXT_MAX_REGIONS)
-		return -EINVAL;
-
 	if (conf->crc.valid) {
 		dev_err(&dc->ndev->dev,
 			"Programming golden CRCs is yet to be supported\n");
@@ -179,18 +176,26 @@ int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 {
 	int ret;
 	enum tegra_dc_ext_crc_type type = conf->type;
+	u8 id; /* region id */
 
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 
 	switch (type) {
 	case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
+		id = conf->region.id;
+		if (id >= TEGRA_DC_EXT_MAX_REGIONS) {
+			mutex_unlock(&dc->lock);
+			return -EINVAL;
+		}
+
 		ret = tegra_nvdisp_crc_region_enable(dc, conf);
 		if (ret) {
 			mutex_unlock(&dc->lock);
 			return ret;
 		}
 
+		atomic_inc(&dc->crc_ref_cnt.region[id]);
 		atomic_inc(&dc->crc_ref_cnt.regional);
 		break;
 	case TEGRA_DC_EXT_CRC_TYPE_RG:
@@ -229,7 +234,9 @@ int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 
 			switch (type) {
 			case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
+				id = conf->region.id;
 				atomic_dec(&dc->crc_ref_cnt.regional);
+				atomic_dec(&dc->crc_ref_cnt.region[id]);
 				break;
 			case TEGRA_DC_EXT_CRC_TYPE_RG:
 				atomic_dec(&dc->crc_ref_cnt.rg);
@@ -251,14 +258,11 @@ int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 	return 0;
 }
 
-static int tegra_nvdisp_crc_region_disable(struct tegra_dc *dc,
-					   struct tegra_dc_ext_crc_conf *conf)
+static void tegra_nvdisp_crc_region_disable(struct tegra_dc *dc,
+					    struct tegra_dc_ext_crc_conf *conf)
 {
 	struct tegra_dc_ext_crc_region *region = &conf->region;
 	u32 control;
-
-	if (region->id >= TEGRA_DC_EXT_MAX_REGIONS)
-		return -EINVAL;
 
 	tegra_dc_writel(dc, 0x0, regs[region->id].point);
 	tegra_dc_writel(dc, 0x0, regs[region->id].size);
@@ -268,8 +272,6 @@ static int tegra_nvdisp_crc_region_disable(struct tegra_dc *dc,
 	control ^= masks[region->id].enable;
 
 	tegra_dc_writel(dc, control, nvdisp_rg_region_crc_control_r());
-
-	return 0;
 }
 
 int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
@@ -277,18 +279,21 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 {
 	int ret = 0;
 	enum tegra_dc_ext_crc_type type = conf->type;
+	u8 id; /* region id */
 
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 
 	switch (type) {
 	case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
-		ret = tegra_nvdisp_crc_region_disable(dc, conf);
-		if (ret) {
-			tegra_dc_put(dc);
+		id = conf->region.id;
+		if (id >= TEGRA_DC_EXT_MAX_REGIONS) {
 			mutex_unlock(&dc->lock);
-			return ret;
+			return -EINVAL;
 		}
+
+		if (!atomic_dec_return(&dc->crc_ref_cnt.region[id]))
+			tegra_nvdisp_crc_region_disable(dc, conf);
 
 		atomic_dec(&dc->crc_ref_cnt.regional);
 		break;
@@ -328,6 +333,8 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 		if (ret) {
 			switch (type) {
 			case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
+				id = conf->region.id;
+				atomic_inc(&dc->crc_ref_cnt.region[id]);
 				atomic_inc(&dc->crc_ref_cnt.regional);
 				break;
 			case TEGRA_DC_EXT_CRC_TYPE_RG:

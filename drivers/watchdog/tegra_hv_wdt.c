@@ -327,6 +327,16 @@ static int tegra_hv_wdt_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra_hv_wdt_suspend(struct platform_device *pdev,
+				pm_message_t state)
+{
+	struct tegra_hv_wdt *hv = platform_get_drvdata(pdev);
+
+	return tegra_hv_wdt_ping(&hv->wdt);
+}
+#endif
+
 static const struct of_device_id tegra_hv_wdt_match[] = {
 	{ .compatible = "nvidia,tegra-hv-wdt", },
 	{}
@@ -335,6 +345,9 @@ static const struct of_device_id tegra_hv_wdt_match[] = {
 static struct platform_driver tegra_hv_wdt_driver = {
 	.probe		= tegra_hv_wdt_probe,
 	.remove		= tegra_hv_wdt_remove,
+#ifdef CONFIG_PM_SLEEP
+	.suspend	= tegra_hv_wdt_suspend,
+#endif
 	.driver		= {
 		.owner		= THIS_MODULE,
 		.name		= "tegra_hv_wdt",

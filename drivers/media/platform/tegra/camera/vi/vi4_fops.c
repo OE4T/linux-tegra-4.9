@@ -672,6 +672,11 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 	unsigned long request_pixelrate;
 	struct v4l2_subdev_frame_interval fie;
 	unsigned long csi_freq = 0;
+	unsigned int num_ppc = NUM_PPC;
+
+	/* if bytes per pixel is greater than 2, then num_ppc is 4 */
+	if (chan->fmtinfo->bpp.numerator > 2)
+		num_ppc = (NUM_PPC >> 1);
 
 	fie.interval.denominator = DEFAULT_FRAMERATE;
 	fie.interval.numerator = 1;
@@ -680,6 +685,25 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 				video, g_frame_interval))
 		v4l2_subdev_call(chan->subdev_on_csi, video,
 				g_frame_interval, &fie);
+	else {
+		if (v4l2_subdev_has_op(chan->subdev_on_csi,
+				video, g_dv_timings)) {
+			u32 total_width;
+			u32 total_height;
+			struct v4l2_dv_timings dvtimings;
+			struct v4l2_bt_timings *timings = &dvtimings.bt;
+
+			v4l2_subdev_call(chan->subdev_on_csi,
+				video, g_dv_timings, &dvtimings);
+			total_width = timings->width + timings->hfrontporch +
+				timings->hsync + timings->hbackporch;
+			total_height = timings->height + timings->vfrontporch +
+				timings->vsync + timings->vbackporch;
+			fie.interval.denominator = timings->pixelclock /
+				(total_width * total_height);
+		}
+	}
+
 	if (on) {
 		/* for PG, using default frequence */
 		if (chan->pg_mode) {
@@ -700,7 +724,7 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 				* VI_CSI_CLK_SCALE;
 			csi_freq = ((long long)chan->format.width
 				* chan->format.height
-				* fie.interval.denominator) / NUM_PPC;
+				* fie.interval.denominator) / num_ppc;
 		}
 
 		/* VI clk should be slightly faster than CSI clk*/

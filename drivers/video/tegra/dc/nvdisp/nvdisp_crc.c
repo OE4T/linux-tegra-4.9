@@ -174,7 +174,7 @@ static void tegra_nvdisp_crc_rg_comp_enable(struct tegra_dc *dc,
 int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 			    struct tegra_dc_ext_crc_conf *conf)
 {
-	int ret;
+	int ret = 0;
 	enum tegra_dc_ext_crc_type type = conf->type;
 	u8 id; /* region id */
 
@@ -185,15 +185,13 @@ int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 	case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
 		id = conf->region.id;
 		if (id >= TEGRA_DC_EXT_MAX_REGIONS) {
-			mutex_unlock(&dc->lock);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto error_out;
 		}
 
 		ret = tegra_nvdisp_crc_region_enable(dc, conf);
-		if (ret) {
-			mutex_unlock(&dc->lock);
-			return ret;
-		}
+		if (ret)
+			goto error_out;
 
 		atomic_inc(&dc->crc_ref_cnt.region[id]);
 		atomic_inc(&dc->crc_ref_cnt.regional);
@@ -208,20 +206,19 @@ int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 		break;
 	case TEGRA_DC_EXT_CRC_TYPE_OR:
 		if (!dc->out_ops->crc_en) {
-			mutex_unlock(&dc->lock);
-			return -ENOTSUPP;
+			ret = -ENOTSUPP;
+			goto error_out;
 		}
 
 		ret = dc->out_ops->crc_en(dc, &conf->or_params);
-		if (ret) {
-			mutex_unlock(&dc->lock);
-			return ret;
-		}
+		if (ret)
+			goto error_out;
 
 		atomic_inc(&dc->crc_ref_cnt.out);
 		break;
 	default:
-		return -ENOTSUPP;
+		ret = -ENOTSUPP;
+		goto error_out;
 	}
 
 	tegra_dc_put(dc);
@@ -256,6 +253,11 @@ int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 	}
 
 	return 0;
+
+error_out:
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+	return ret;
 }
 
 static void tegra_nvdisp_crc_region_disable(struct tegra_dc *dc,
@@ -288,8 +290,8 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 	case TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL:
 		id = conf->region.id;
 		if (id >= TEGRA_DC_EXT_MAX_REGIONS) {
-			mutex_unlock(&dc->lock);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto error_out;
 		}
 
 		if (!atomic_dec_return(&dc->crc_ref_cnt.region[id]))
@@ -310,19 +312,19 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 	case TEGRA_DC_EXT_CRC_TYPE_OR:
 		if (atomic_dec_return(&dc->crc_ref_cnt.out) == 0) {
 			if (!dc->out_ops->crc_dis) {
-				mutex_unlock(&dc->lock);
-				return -ENOTSUPP;
+				ret = -ENOTSUPP;
+				goto error_out;
 			}
 			ret = dc->out_ops->crc_dis(dc, &conf->or_params);
 			if (ret) {
 				atomic_inc(&dc->crc_ref_cnt.out);
-				mutex_unlock(&dc->lock);
-				return ret;
+				goto error_out;
 			}
 		}
 		break;
 	default:
-		return -ENOTSUPP;
+		ret = -ENOTSUPP;
+		goto error_out;
 	}
 
 	tegra_dc_put(dc);
@@ -354,6 +356,11 @@ int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 		}
 	}
 
+	return 0;
+
+error_out:
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
 	return ret;
 }
 

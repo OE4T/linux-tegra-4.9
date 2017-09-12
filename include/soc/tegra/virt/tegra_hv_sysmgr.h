@@ -101,6 +101,18 @@ enum system_function_id {
 	MAX_FUNC_ID,
 };
 
+typedef enum  {
+	VM_STATE_BOOT,
+	VM_STATE_HALT,
+	VM_STATE_UNHALT,
+	VM_STATE_REBOOT,
+	VM_STATE_SHUTDOWN,
+	VM_STATE_SUSPEND,
+	VM_STATE_RESUME,
+	VM_STATE_INVALID,
+	VM_STATE_MAX
+} vm_state;
+
 #define CREATE_CMD(func_id, vmid)	((func_id << 24U) | vmid)
 
 #define QUERY_CMD			CREATE_CMD(QUERY_SYSTEM_STATE, 0)

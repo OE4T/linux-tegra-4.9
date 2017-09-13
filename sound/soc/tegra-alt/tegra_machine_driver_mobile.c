@@ -772,7 +772,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
-		if (!machine->is_codec_dummy) {
+		if (!strcmp(rtd->codec_dai->name, "tas2552-amplifier")) {
 			err = snd_soc_dai_set_sysclk(rtd->codec_dai,
 				TAS2552_PDM_CLK_IVCLKIN, clk_out_rate,
 				SND_SOC_CLOCK_IN);
@@ -788,7 +788,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
-		if (!machine->is_codec_dummy) {
+		if (!strcmp(rtd->codec_dai->name, "tas2552-amplifier")) {
 			err = snd_soc_dai_set_sysclk(rtd->codec_dai,
 				TAS2552_PDM_CLK_IVCLKIN, clk_out_rate,
 				SND_SOC_CLOCK_IN);

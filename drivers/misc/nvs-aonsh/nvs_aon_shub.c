@@ -58,15 +58,12 @@
 #include <linux/time64.h>
 #include <linux/timekeeping.h>
 #include <linux/jiffies.h>
+#include <linux/trace_imu.h>
 
 #include <asm/io.h>
 #include <asm/arch_timer.h>
 
 #include <aon-shub-messages.h>
-
-#define CREATE_TRACE_POINTS
-#include <trace/events/atrace.h>
-#define TRACE_SENSOR_ID (100)
 
 #define READJUST_TS_SAMPLES (100)
 
@@ -75,6 +72,8 @@
 #define TX_BLOCK_PERIOD 200
 #define INIT_TOUT_COUNT 15
 #define IVC_TIMEOUT	200
+
+#define SENSOR_TYPE_UNKNOWN 0
 
 enum I2C_IDS {
 	I2CID_MIN = 1,
@@ -89,6 +88,7 @@ struct aon_shub_sensor {
 	char vendor[32];
 	void *nvs_st;
 	struct sensor_cfg cfg;
+	int type;
 	bool genable;	/* global enable */
 };
 
@@ -120,10 +120,30 @@ struct tegra_aon_shub {
 	bool			 last_tx_done;
 };
 
+static const char *const snsr_types[] = {
+	[SENSOR_TYPE_UNKNOWN]		= "generic_sensor",
+	[SENSOR_TYPE_ACCELEROMETER]	= "accelerometer",
+	[SENSOR_TYPE_MAGNETIC_FIELD]	= "magnetic_field",
+	[SENSOR_TYPE_ORIENTATION]	= "orientation",
+	[SENSOR_TYPE_GYROSCOPE]		= "gyroscope",
+};
+
 /* This has to be a multiple of the cache line size */
 static inline int ivc_min_frame_size(void)
 {
 	return cache_line_size();
+}
+
+static inline int get_snsr_type(const char *snsr_name)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(snsr_types); i++) {
+		if (!strcmp(snsr_types[i], snsr_name))
+			return i;
+	}
+
+	return -1;
 }
 
 /*
@@ -182,7 +202,7 @@ static void tegra_aon_shub_mbox_rcv_msg(struct mbox_client *cl, void *rx_msg)
 			ts = (s64)shub_resp->data.payload.data[i].ts;
 			ts += shub->ts_adjustment;
 			shub_resp->data.payload.data[i].ts = (u64)ts;
-			cookie = (int) ts;
+			cookie = COOKIE(shub->snsrs[snsr_id]->type, ts);
 			trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
 			shub->nvs->handler(shub->snsrs[snsr_id]->nvs_st,
 				&shub_resp->data.payload.data[i].x,
@@ -425,6 +445,7 @@ static void tegra_aon_shub_copy_cfg(struct tegra_aon_shub *shub,
 		(char *)shub->shub_resp->data.cfg.vendor,
 		len);
 	sensor->vendor[len - 1] = '\0';
+	sensor->type = get_snsr_type(sensor->name);
 	sensor->cfg.name = sensor->name;
 	sensor->cfg.part = sensor->part;
 	sensor->cfg.vendor = sensor->vendor;

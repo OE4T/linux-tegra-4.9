@@ -23,11 +23,8 @@
 #include <linux/nvs.h>
 #include <linux/crc32.h>
 #include <linux/time.h>
+#include <linux/trace_imu.h>
 #include "nvs_dfsh.h"
-
-#define CREATE_TRACE_POINTS
-#include <trace/events/atrace.h>
-#define TRACE_SENSOR_ID			(100)
 
 #define DFSH_DRIVER_VERSION		(1)
 #define DFSH_NAME				"dfsh"
@@ -289,6 +286,20 @@ static int pkt_payload_len(unsigned char type)
 	}
 }
 
+static int dfsh_msg_id2snsr_type(unsigned char type)
+{
+	switch (type) {
+	case MSG_ACCEL:
+		return SENSOR_TYPE_ACCELEROMETER;
+	case MSG_GYRO:
+		return SENSOR_TYPE_GYROSCOPE;
+	case MSG_MAGN:
+		return SENSOR_TYPE_MAGNETIC_FIELD;
+	default:
+		return 0;
+	}
+}
+
 static int dfsh_msg_id2snsr_id(u8 msg_id)
 {
 	int snsr_id;
@@ -503,11 +514,6 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 	struct sensor_sync_pkt_t sensor_sync_pkt;
 	int cookie;
 
-	ktime_get_ts64(&k_ts);
-	k_ts_ns = timespec_to_ns(&k_ts);
-	cookie = (int) k_ts_ns;
-	trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
-
 	/* sanity check index */
 	if (st->pkt_byte_idx >= sizeof(st->pkt_buf))
 		/* Reset if byte index longer than longest packet */
@@ -553,8 +559,15 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 					       sizeof(ts));
 					/*convert timestamp from usec to nsec*/
 					ts = ts * 1000;
+					ktime_get_ts64(&k_ts);
+					k_ts_ns = timespec_to_ns(&k_ts);
 					if (prev_mcutime == ts)
 						k_ts_ns = prev_ktime;
+					cookie = COOKIE(dfsh_msg_id2snsr_type(st->pkt.header.type),
+							k_ts_ns);
+
+					trace_async_atrace_begin(__func__, TRACE_SENSOR_ID, cookie);
+
 					if (st->pkt.header.type == MSG_CAMERA) {
 						st->nvs->handler
 							(st->nvs_st[snsr_id],
@@ -582,6 +595,8 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 							&st->pkt_buf[data_i],
 							k_ts_ns);
 					}
+					trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
+
 				} else if (st->pkt.header.type == MSG_MCU) {
 					/* message from MCU */
 					dev_dbg(tty->dev, "received MCU cmd response:%x\n",
@@ -608,7 +623,6 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 		}
 		break;
 	}
-	trace_async_atrace_end(__func__, TRACE_SENSOR_ID, cookie);
 }
 
 static void dfsh_receive_buf(struct tty_struct *tty, const unsigned char *cp,

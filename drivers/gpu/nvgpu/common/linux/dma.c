@@ -18,10 +18,12 @@
 #include <linux/dma-mapping.h>
 #include <linux/version.h>
 
+#include <nvgpu/log.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/gmmu.h>
+#include <nvgpu/kmem.h>
 #include <nvgpu/enabled.h>
 
 #include <nvgpu/linux/dma.h>
@@ -29,6 +31,101 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "os_linux.h"
+
+/*
+ * Enough to hold all the possible flags in string form. When a new flag is
+ * added it must be added here as well!!
+ */
+#define NVGPU_DMA_STR_SIZE					\
+	sizeof("NO_KERNEL_MAPPING FORCE_CONTIGUOUS READ_ONLY")
+
+/*
+ * The returned string is kmalloc()ed here but must be freed by the caller.
+ */
+static char *nvgpu_dma_flags_to_str(struct gk20a *g, unsigned long flags)
+{
+	char *buf = nvgpu_kzalloc(g, NVGPU_DMA_STR_SIZE);
+	int bytes_available = NVGPU_DMA_STR_SIZE;
+
+	/*
+	 * Return the empty buffer if there's no flags. Makes it easier on the
+	 * calling code to just print it instead of any if (NULL) type logic.
+	 */
+	if (!flags)
+		return buf;
+
+#define APPEND_FLAG(flag, str_flag)					\
+	do {								\
+		if (flags & flag) {					\
+			strncat(buf, str_flag, bytes_available);	\
+			bytes_available -= strlen(str_flag);		\
+		}							\
+	} while (0)
+
+	APPEND_FLAG(NVGPU_DMA_NO_KERNEL_MAPPING, "NO_KERNEL_MAPPING ");
+	APPEND_FLAG(NVGPU_DMA_FORCE_CONTIGUOUS,  "FORCE_CONTIGUOUS ");
+	APPEND_FLAG(NVGPU_DMA_READ_ONLY,         "READ_ONLY");
+#undef APPEND_FLAG
+
+	return buf;
+}
+
+/**
+ * __dma_dbg - Debug print for DMA allocs and frees.
+ *
+ * @g     - The GPU.
+ * @size  - The requested size of the alloc (size_t).
+ * @flags - The flags (unsigned long).
+ * @type  - A string describing the type (i.e: sysmem or vidmem).
+ * @what  - A string with 'alloc' or 'free'.
+ *
+ * @flags is the DMA flags. If there are none or it doesn't make sense to print
+ * flags just pass 0.
+ *
+ * Please use dma_dbg_alloc() and dma_dbg_free() instead of this function.
+ */
+static void __dma_dbg(struct gk20a *g, size_t size, unsigned long flags,
+		      const char *type, const char *what)
+{
+	char *flags_str = NULL;
+
+	/*
+	 * Don't bother making the flags_str if debugging is
+	 * not enabled. This saves a malloc and a free.
+	 */
+	if (!nvgpu_log_mask_enabled(g, gpu_dbg_dma))
+		return;
+
+	flags_str = nvgpu_dma_flags_to_str(g, flags);
+
+	__nvgpu_log_dbg(g, gpu_dbg_dma,
+			__func__, __LINE__,
+			"DMA %s: [%s] size=%-7zu aligned=%-7zu %s",
+			what, type,
+			size, PAGE_ALIGN(size),
+			flags_str);
+
+	if (flags_str)
+		nvgpu_kfree(g, flags_str);
+}
+
+#define dma_dbg_alloc(g, size, flags, type)				\
+	__dma_dbg(g, size, flags, type, "alloc")
+#define dma_dbg_free(g, size, flags, type)				\
+	__dma_dbg(g, size, flags, type, "free")
+
+/*
+ * For after the DMA alloc is done.
+ */
+#define __dma_dbg_done(g, size, type, what)				\
+	nvgpu_log(g, gpu_dbg_dma,					\
+		  "DMA %s: [%s] size=%-7zu Done!",			\
+		  what, type, size);					\
+
+#define dma_dbg_alloc_done(g, size, type)				\
+	__dma_dbg_done(g, size, type, "alloc")
+#define dma_dbg_free_done(g, size, type)				\
+	__dma_dbg_done(g, size, type, "free")
 
 #if defined(CONFIG_GK20A_VIDMEM)
 static u64 __nvgpu_dma_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,
@@ -110,7 +207,7 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	int err;
 	dma_addr_t iova;
 
-	gk20a_dbg_fn("");
+	dma_dbg_alloc(g, size, flags, "sysmem");
 
 	/*
 	 * Save the old size but for actual allocation purposes the size is
@@ -159,7 +256,7 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	mem->aperture = APERTURE_SYSMEM;
 	mem->priv.flags = flags;
 
-	gk20a_dbg_fn("done");
+	dma_dbg_alloc_done(g, mem->size, "sysmem");
 
 	return 0;
 
@@ -194,7 +291,7 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 		&g->mm.vidmem.bootstrap_allocator;
 	int before_pending;
 
-	gk20a_dbg_fn("");
+	dma_dbg_alloc(g, size, flags, "vidmem");
 
 	mem->size = size;
 	size = PAGE_ALIGN(size);
@@ -246,7 +343,7 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 
 	nvgpu_init_list_node(&mem->clear_list_entry);
 
-	gk20a_dbg_fn("done at 0x%llx size %zu", addr, size);
+	dma_dbg_alloc_done(g, mem->size, "vidmem");
 
 	return 0;
 
@@ -355,6 +452,8 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	struct device *d = dev_from_gk20a(g);
 
+	dma_dbg_free(g, mem->size, mem->priv.flags, "sysmem");
+
 	if (!(mem->mem_flags & NVGPU_MEM_FLAG_SHADOW_COPY) &&
 	    !(mem->mem_flags & __NVGPU_MEM_FLAG_NO_DMA) &&
 	    (mem->cpu_va || mem->priv.pages)) {
@@ -390,6 +489,8 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 	if (mem->priv.sgt)
 		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
+	dma_dbg_free_done(g, mem->size, "sysmem");
+
 	mem->size = 0;
 	mem->aligned_size = 0;
 	mem->aperture = APERTURE_INVALID;
@@ -399,6 +500,9 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	bool was_empty;
+	size_t mem_size = mem->size;
+
+	dma_dbg_free(g, mem->size, mem->priv.flags, "vidmem");
 
 	/* Sanity check - only this supported when allocating. */
 	WARN_ON(mem->priv.flags != NVGPU_DMA_NO_KERNEL_MAPPING);
@@ -426,6 +530,8 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 		mem->aligned_size = 0;
 		mem->aperture = APERTURE_INVALID;
 	}
+
+	dma_dbg_free_done(g, mem_size, "vidmem");
 #endif
 }
 

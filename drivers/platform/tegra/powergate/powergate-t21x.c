@@ -599,7 +599,7 @@ static bool tegra210_pg_skip(int id)
 	switch (t210_pg_info[id].part_id) {
 	case TEGRA210_POWER_DOMAIN_VENC:
 	case TEGRA210_POWER_DOMAIN_VE2:
-		/* T214 has SE2 in place of ISP2 and powergate
+		/* T210b01 has SE2 in place of ISP2 and powergate
 		 * is not supported for SE2.
 		 */
 		if (chipid == TEGRA210B01 && major >= 2)

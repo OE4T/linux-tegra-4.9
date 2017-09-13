@@ -167,6 +167,7 @@ fail_free:
 	dma_free_coherent(d, size, mem->cpu_va, iova);
 	mem->cpu_va = NULL;
 	mem->priv.sgt = NULL;
+	mem->size = 0;
 	return err;
 }
 
@@ -253,6 +254,7 @@ fail_kfree:
 	nvgpu_kfree(g, mem->priv.sgt);
 fail_physfree:
 	nvgpu_free(&g->mm.vidmem.allocator, addr);
+	mem->size = 0;
 	return err;
 #else
 	return -ENOSYS;

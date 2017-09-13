@@ -39,7 +39,7 @@ struct nvgpu_gmmu_attrs;
  * memory actually was allocated from.
  */
 enum nvgpu_aperture {
-	APERTURE_INVALID, /* unallocated or N/A */
+	APERTURE_INVALID = 0, /* unallocated or N/A */
 	APERTURE_SYSMEM,
 	APERTURE_VIDMEM
 };
@@ -120,6 +120,24 @@ static inline const char *nvgpu_aperture_str(enum nvgpu_aperture aperture)
 		case APERTURE_VIDMEM:  return "VIDMEM";
 	};
 	return "UNKNOWN";
+}
+
+/*
+ * Returns true if the passed nvgpu_mem has been allocated (i.e it's valid for
+ * subsequent use).
+ */
+static inline bool nvgpu_mem_is_valid(struct nvgpu_mem *mem)
+{
+	/*
+	 * Internally the DMA APIs must set/unset the aperture flag when
+	 * allocating/freeing the buffer. So check that to see if the *mem
+	 * has been allocated or not.
+	 *
+	 * This relies on mem_descs being zeroed before being initialized since
+	 * APERTURE_INVALID is equal to 0.
+	 */
+	return mem->aperture != APERTURE_INVALID;
+
 }
 
 /**

@@ -192,6 +192,7 @@ static struct marvell_hw_stat marvell_hw_stats[] = {
 
 struct marvell_priv {
 	u64 stats[ARRAY_SIZE(marvell_hw_stats)];
+	bool copper;
 };
 
 static int marvell_ack_interrupt(struct phy_device *phydev)
@@ -610,23 +611,8 @@ static int marvell_config_aneg_fiber(struct phy_device *phydev)
 	return changed;
 }
 
-static int m88e1512_config_aneg(struct phy_device *phydev)
-{
-	/* Do nothing: auto-neng not required in RGMII-1000-X */
-	return 0;
-}
 
-static int m88e1512_read_status(struct phy_device *phydev)
-{
-	int val = 0;
 
-	/* set the fibre reg page */
-	val = phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1512_FIBER);
-	if (val < 0)
-		return val;
-
-	return genphy_read_status(phydev);
-}
 
 static int m88e1510_config_aneg(struct phy_device *phydev)
 {
@@ -663,64 +649,7 @@ static int marvell_config_init(struct phy_device *phydev)
 	return marvell_of_reg_init(phydev);
 }
 
-static int m88e1512_config_init(struct phy_device *phydev)
-{
-	int val, ret, timeout = 20;
 
-	phydev->autoneg = AUTONEG_DISABLE;
-
-	/* Set the page to 18, to program General control register 1 */
-	ret = phy_write(phydev, MII_MARVELL_PHY_PAGE, MARVEL_88E1512_PAGE18);
-	if (ret < 0)
-		goto err;
-
-	val = phy_read(phydev, MARVEL_88E1512_G_CTRL_REG);
-	if (val < 0) {
-		ret = val;
-		goto err;
-	}
-
-	/* RGMII to 1000BASE-X */
-	val = (val & 0xfffc) | MARVEL_88E1512_MODE_RGMII_1000X;
-
-	ret = phy_write(phydev, MARVEL_88E1512_G_CTRL_REG, val);
-	if (ret < 0)
-		goto err;
-
-	/* set the fibre reg page */
-	val = phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1512_FIBER);
-	if (val < 0) {
-		ret = val;
-		goto err;
-	}
-
-	/* apply software reset*/
-	val = phy_read(phydev, MII_BMCR);
-	if (val < 0) {
-		ret = val;
-		goto err;
-	}
-
-	val = (val & 0x7fff) | BMCR_RESET;
-
-	ret = phy_write(phydev, MII_BMCR, val);
-	if (ret < 0)
-		goto err;
-
-	/* wait until reset clear or timeout*/
-	while ((phy_read(phydev, MII_BMCR) & BMCR_RESET) && timeout) {
-		msleep(1);
-		timeout--;
-	}
-	return m88e1512_read_status(phydev);
-err:
-	/* set the fibre reg page default */
-	ret = phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1512_FIBER);
-
-	/* ensure controller link adjustment */
-	phydev->state = PHY_FORCING;
-	return ret;
-}
 
 static int m88e1116r_config_init(struct phy_device *phydev)
 {
@@ -1329,6 +1258,96 @@ error:
 	return err;
 }
 
+static int m88e1512_config_aneg(struct phy_device *phydev)
+{
+	struct marvell_priv *priv = phydev->priv;
+
+	if (priv->copper)
+		return m88e1510_config_aneg(phydev);
+
+	/* Do nothing: auto-neng not required in RGMII-1000-X */
+	return 0;
+}
+
+static int m88e1512_read_status(struct phy_device *phydev)
+{
+	struct marvell_priv *priv = phydev->priv;
+	int val = 0;
+
+	if (priv->copper)
+		return marvell_read_status(phydev);
+
+	/* set the fibre reg page */
+	val = phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1512_FIBER);
+	if (val < 0)
+		return val;
+
+	return genphy_read_status(phydev);
+}
+
+static int m88e1512_config_init(struct phy_device *phydev)
+{
+	int val, ret, timeout = 20;
+	struct marvell_priv *priv = phydev->priv;
+
+	if (priv->copper)
+		return m88e1510_config_init(phydev);
+
+	phydev->autoneg = AUTONEG_DISABLE;
+
+	/* Set the page to 18, to program General control register 1 */
+	ret = phy_write(phydev, MII_MARVELL_PHY_PAGE, MARVEL_88E1512_PAGE18);
+	if (ret < 0)
+		goto err;
+
+	val = phy_read(phydev, MARVEL_88E1512_G_CTRL_REG);
+	if (val < 0) {
+		ret = val;
+		goto err;
+	}
+
+	/* RGMII to 1000BASE-X */
+	val = (val & 0xfffc) | MARVEL_88E1512_MODE_RGMII_1000X;
+
+	ret = phy_write(phydev, MARVEL_88E1512_G_CTRL_REG, val);
+	if (ret < 0)
+		goto err;
+
+	/* set the fibre reg page */
+	val = phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1512_FIBER);
+	if (val < 0) {
+		ret = val;
+		goto err;
+	}
+
+	/* apply software reset*/
+	val = phy_read(phydev, MII_BMCR);
+	if (val < 0) {
+		ret = val;
+		goto err;
+	}
+
+	val = (val & 0x7fff) | BMCR_RESET;
+
+	ret = phy_write(phydev, MII_BMCR, val);
+	if (ret < 0)
+		goto err;
+
+	/* wait until reset clear or timeout*/
+	while ((phy_read(phydev, MII_BMCR) & BMCR_RESET) && timeout) {
+		msleep(1);
+		timeout--;
+	}
+	return m88e1512_read_status(phydev);
+err:
+	/* set the fibre reg page default */
+	ret = phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1512_FIBER);
+
+	/* ensure controller link adjustment */
+	phydev->state = PHY_FORCING;
+	return ret;
+}
+
 /* marvell_suspend
  *
  * Some Marvell's phys have two modes: fiber and copper.
@@ -1576,10 +1595,15 @@ static void marvell_get_stats(struct phy_device *phydev,
 static int marvell_probe(struct phy_device *phydev)
 {
 	struct marvell_priv *priv;
+	struct device_node *of_node = phydev->mdio.dev.of_node;
 
 	priv = devm_kzalloc(&phydev->mdio.dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
+	if (of_node)
+		priv->copper = of_property_read_bool(of_node,
+						"marvell,copper-mode");
 
 	phydev->priv = priv;
 
@@ -1776,9 +1800,15 @@ static struct phy_driver marvell_drivers[] = {
 		.phy_id_mask = MARVELL_PHY_ID_MASK,
 		.name = "Marvell 88E1512",
 		.features = PHY_GBIT_FEATURES | SUPPORTED_Pause,
+		.probe = marvell_probe,
 		.config_aneg = &m88e1512_config_aneg,
 		.config_init = &m88e1512_config_init,
 		.read_status = &m88e1512_read_status,
+		.resume = &marvell_resume,
+		.suspend = &marvell_suspend,
+		.get_sset_count = marvell_get_sset_count,
+		.get_strings = marvell_get_strings,
+		.get_stats = marvell_get_stats,
 	},
 	{
 		.phy_id = MARVELL_PHY_ID_88E1510,

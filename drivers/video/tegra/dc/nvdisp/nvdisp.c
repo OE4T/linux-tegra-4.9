@@ -2140,32 +2140,6 @@ void tegra_nvdisp_stop_display(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_nvdisp_stop_display);
 
-u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_number,
-				int ihub_switch)
-{
-	u32 reg = 0;
-	u32 ret_val = 0;
-
-	mutex_lock(&dc->lock);
-	tegra_dc_get(dc);
-
-	switch (ihub_switch) {
-	case 0: /* mempool size */
-		reg = tegra_dc_readl(dc, nvdisp_ihub_capa_r());
-		/* base entry width is 32 bytes */
-		ret_val = nvdisp_ihub_capa_mempool_entries_v(reg) *
-			(32 << nvdisp_ihub_capa_mempool_width_v(reg));
-		break;
-	default:
-		break;
-	}
-
-	tegra_dc_put(dc);
-	mutex_unlock(&dc->lock);
-
-	return ret_val;
-}
-
 void tegra_nvdisp_sysfs_enable_crc(struct tegra_dc *dc)
 {
 	mutex_lock(&dc->lock);

@@ -2456,101 +2456,6 @@ static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 #endif
 }
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-/*
- * ihub_win_num specifies the window number. A value of -1 should be used if
- * the property you want to read isn't window specific.
- */
-static int ihub_win_num;
-
-static int dbg_ihub_win_num_show(struct seq_file *s, void *unused)
-{
-	struct tegra_dc *dc = s->private;
-
-	if (WARN_ON(!dc || !dc->out))
-		return -EINVAL;
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	seq_put_decimal_ll(s, '\0', ihub_win_num);
-#else
-	seq_put_decimal_ll(s, "", ihub_win_num);
-#endif
-	seq_putc(s, '\n');
-	return 0;
-}
-
-static int dbg_ihub_win_num_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, dbg_ihub_win_num_show, inode->i_private);
-}
-
-static ssize_t dbg_ihub_win_num_write(struct file *file,
-	const char __user *addr, size_t len, loff_t *pos)
-{
-	struct seq_file *m = file->private_data; /* single_open() initialized */
-	struct tegra_dc *dc = m ? m->private : NULL;
-	int ret;
-	long new_win_num;
-
-	if (WARN_ON(!dc || !dc->out))
-		return -EINVAL;
-
-	ret = kstrtol_from_user(addr, len, 10, &new_win_num);
-	if (ret < 0)
-		return ret;
-
-	mutex_lock(&dc->lock);
-	ihub_win_num = new_win_num;
-	mutex_unlock(&dc->lock);
-
-	return len;
-}
-
-static const struct file_operations dbg_ihub_win_num_ops = {
-	.open = dbg_ihub_win_num_open,
-	.read = seq_read,
-	.write = dbg_ihub_win_num_write,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
-static int dbg_ihub_mempool_size_show(struct seq_file *s, void *unused)
-{
-	struct tegra_dc *dc = s->private;
-
-	if (WARN_ON(!dc || !dc->out))
-		return -EINVAL;
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	seq_put_decimal_ll(s, '\0', tegra_nvdisp_ihub_read(dc, -1, 0));
-#else
-	seq_put_decimal_ll(s, "", tegra_nvdisp_ihub_read(dc, -1, 0));
-#endif
-	seq_putc(s, '\n');
-	return 0;
-}
-
-static int dbg_ihub_mempool_size_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, dbg_ihub_mempool_size_show, inode->i_private);
-}
-
-static ssize_t dbg_ihub_mempool_size_write(struct file *file,
-	const char __user *addr, size_t len, loff_t *pos)
-{
-	return -EINVAL; /* read-only property */
-}
-
-static const struct file_operations dbg_ihub_mempool_size_ops = {
-	.open = dbg_ihub_mempool_size_open,
-	.read = seq_read,
-	.write = dbg_ihub_mempool_size_write,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
-#endif
-
 /*Create file for all elements of nvdc_nvdisp_cmu per window*/
 #define CREATE_NVDISP_WIN_CSC_SYSFS(name)                               \
 do {                                                                    \
@@ -2565,7 +2470,7 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 {
 	struct dentry *retval, *vrrdir;
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	struct dentry *ihubdir, *windir, *wincscdir;
+	struct dentry *windir, *wincscdir;
 	char   winname[50];
 	u32 i;
 #endif
@@ -2657,22 +2562,6 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 				dc, &dbg_window_toggle_ops);
 	if (!retval)
 		goto remove_out;
-
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	ihubdir = debugfs_create_dir("ihub", dc->debugdir);
-	if (!ihubdir)
-		goto remove_out;
-
-	retval = debugfs_create_file("win_num", S_IRUGO, ihubdir,
-				dc, &dbg_ihub_win_num_ops);
-	if (!retval)
-		goto remove_out;
-
-	retval = debugfs_create_file("mempool_size", S_IRUGO, ihubdir,
-				dc, &dbg_ihub_mempool_size_ops);
-	if (!retval)
-		goto remove_out;
-#endif
 
 	retval = debugfs_create_file("cmu_lut1", S_IRUGO, dc->debugdir, dc,
 		&cmu_lut1_fops);

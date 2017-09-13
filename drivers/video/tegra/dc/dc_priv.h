@@ -815,8 +815,6 @@ int tegra_nvdisp_test_and_set_compclk(unsigned long rate,
 void reg_dump(struct tegra_dc *dc, void *data,
 	void (*print)(void *data, const char *str));
 
-u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_num, int ihub_switch);
-
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
 int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
 int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);

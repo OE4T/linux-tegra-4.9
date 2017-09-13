@@ -122,6 +122,27 @@ EXPORT_SYMBOL(tegra_ivc_i2c_get_dev);
 
 static int tegra_ivc_i2c_add_single(struct tegra_ivc_channel *chan);
 
+static void tegra_ivc_i2c_single_call_callback(
+	int ret,
+	const struct tegra_ivc_rpc_response_frame *rep,
+	void *param)
+{
+	struct device *dev = param;
+	struct camrtc_rpc_i2c_response *rpc_rsp;
+
+	if (ret != 0) {
+		dev_err(dev, "I2C transaction callback failure: %d\n", ret);
+		return;
+	}
+
+	rpc_rsp = (struct camrtc_rpc_i2c_response *)rep->payload32;
+	if (rpc_rsp->result != 0) {
+		dev_err(dev,
+			"I2C transaction callback response failure: %d\n",
+			(int)rpc_rsp->result);
+	}
+}
+
 int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
 	const struct i2c_msg *reqs, int num)
 {
@@ -130,6 +151,11 @@ int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
 	int ret = 0, len = 0;
 	u8 *read_ptr = NULL;
 	int read_len = 0;
+    /*
+     * blocking call always enabled, make false to enable
+	 * non-blocking calls
+	 */
+	bool is_blocking = true;
 
 	if (i2c_ivc_dev == NULL || i2c_ivc_dev->chan == NULL)
 		return -EIO;
@@ -174,6 +200,10 @@ int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
 			struct camrtc_rpc_i2c_response *rpc_rsp;
 
 			i2c_ivc_dev->rpc_i2c_req.request_len = len;
+			i2c_ivc_dev->rpc_i2c_req.callback = is_blocking ?
+				NULL : tegra_ivc_i2c_single_call_callback;
+			i2c_ivc_dev->rpc_i2c_req.callback_param =
+				&i2c_ivc_dev->chan->dev;
 			ret = tegra_ivc_rpc_call(i2c_ivc_dev->chan,
 				&i2c_ivc_dev->rpc_i2c_req);
 
@@ -187,7 +217,13 @@ int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
 			}
 
 			rpc_rsp = &i2c_ivc_dev->rpc_i2c_rsp;
-			if (rpc_rsp->result) {
+			/* response results only matter if the call is blocking,
+			 * else ignore
+			 */
+			if (rpc_rsp->result && is_blocking) {
+				dev_err(&i2c_ivc_dev->chan->dev,
+					"I2C transaction response at addr 0x%x failed: %d\n",
+					reqs[0].addr, rpc_rsp->result);
 				ret = -EIO;
 				goto error;
 			}
@@ -215,6 +251,10 @@ int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
 			pbuf[0] = CAMRTC_I2C_REQUEST_FLAG_READ;
 			++i2c_ivc_dev->stat.reads;
 			i2c_ivc_dev->stat.read_bytes += preq->len;
+			/* a single read request among all requests makes the
+			 * whole request to rtcpu blocking
+			 */
+			is_blocking = true;
 		}
 
 		if ((preq->flags & I2C_M_NOSTART) == 0) {
@@ -409,7 +449,7 @@ static int tegra_ivc_i2c_add_single(struct tegra_ivc_channel *chan)
 		sizeof(i2c_ivc_dev->rpc_i2c_rsp);
 	i2c_ivc_dev->rpc_i2c_req.response = &i2c_ivc_dev->rpc_i2c_rsp;
 	i2c_ivc_dev->rpc_i2c_req.callback = NULL;
-	i2c_ivc_dev->rpc_i2c_req.callback_param = NULL;
+	i2c_ivc_dev->rpc_i2c_req.callback_param = &i2c_ivc_dev->chan->dev;
 	i2c_ivc_dev->rpc_i2c_req.timeout_ms =
 		I2C_CAMRTC_RPC_IVC_SINGLE_TIMEOUT_MS;
 	i2c_ivc_dev->is_added = true;

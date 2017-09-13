@@ -56,10 +56,20 @@
 #include <soc/tegra/tegra-ivc-rpc.h>
 
 /*
+ * ENABLE_IVC_RPC_TRACE is used to enable tracing
+ * at boot time.
+ * For tracing at boot. Makse sure to update bootargs
+ * in DT file and add trace_event=tegra_rpc:*
+ */
+#define ENABLE_IVC_RPC_TRACE 0
+#define CREATE_TRACE_POINTS
+#include <trace/events/tegra_ivc_rpc.h>
+
+/*
  * Configuration
  */
 
-#define TEGRA_IVC_RPC_TIMEOUT_MS_DEFAULT	100
+#define TEGRA_IVC_RPC_TIMEOUT_MS_DEFAULT	500
 
 /*
  * RPC private data structures
@@ -291,6 +301,7 @@ static void tegra_ivc_rpc_rx_tasklet_rpc(
 	/* In asynchronous mode, no one is waiting for the response.
 	 * The registered callback function is invoked here.
 	 */
+	trace_rpc_callback(tx_desc->seq_num);
 	tx_desc->callback(tx_desc->ret_code, rsp,
 		tx_desc->callback_param);
 
@@ -358,6 +369,7 @@ static void tegra_ivc_rpc_timer(unsigned long arg)
 	if (!found)
 		return;
 
+	trace_rpc_timer(tx_desc->seq_num);
 	/* Callback function is called with error code */
 	tx_desc->callback(TEGRA_IVC_RPC_ERR_TIMEOUT, NULL,
 		tx_desc->callback_param);
@@ -384,6 +396,16 @@ int tegra_ivc_rpc_call(
 	tx_desc = kmem_cache_alloc(tx_desc_cache, GFP_KERNEL);
 	if (tx_desc == NULL)
 		return TEGRA_IVC_RPC_ERR_MEMORY;
+
+#if ENABLE_IVC_RPC_TRACE
+    /*
+	 * This function is called before system boots and
+	 * tracing can be turned on. So, turning on it here
+	 * for tracing at boot. Make sure to update bootargs
+	 * in DT file and add trace_event=tegra_rpc:*
+	 */
+	tracing_on();
+#endif
 
 	/* Fill TX descriptor */
 	seq_num = atomic_add_return(1, &rpc->next_seq_num);
@@ -443,16 +465,24 @@ int tegra_ivc_rpc_call(
 	tx_desc->in_list = true;
 	spin_unlock_bh(&rpc->tx_list_lock);
 
+	/* Creating timer before sending out msg, as to have timer
+	 * running to avoid a race condition of no timer on reply
+	 * back for this msg
+	 */
+	if (param->callback) {
+		setup_timer(&tx_desc->rx_timer, tegra_ivc_rpc_timer,
+			(unsigned long) tx_desc);
+		mod_timer(&tx_desc->rx_timer, jiffies + timeout_jiffies);
+	}
+
 	/* Send out the request frame */
+	trace_rpc_send_msg(seq_num, param->callback ? false : true);
 	tegra_ivc_write_advance(&chan->ivc);
 
 	mutex_unlock(&chan->ivc_wr_lock);
 
 	/* In case of asynchronous mode, do not wait for response */
 	if (param->callback) {
-		setup_timer(&tx_desc->rx_timer, tegra_ivc_rpc_timer,
-			(unsigned long) tx_desc);
-		mod_timer(&tx_desc->rx_timer, jiffies + timeout_jiffies);
 		return 0;
 	}
 

@@ -29,10 +29,8 @@
 #define TOP0_SHARED_MBOX0	0x0
 #define MBOX0_FULL_BIT		8
 
-#define PKT_RCVD_BIT		26
-#define NUM_BYTES_FIELD_BIT	27
-#define LAST_PKT_BIT		29
-#define FIRST_PKT_BIT		30
+#define NUM_BYTES_FIELD_BIT	24
+#define FLUSH_BIT		26
 #define INTR_TRIGGER_BIT	31
 
 static u8 __iomem *top0_mbox01_base;
@@ -46,8 +44,6 @@ static struct uart_driver tegra_combined_uart_driver;
 static void tegra_combined_uart_console_write(struct console *co,
 						const char *s,
 						unsigned int count);
-
-static spinlock_t mbox_lock;
 
 /*
  * This function does nothing. This function is used to fill in the function
@@ -121,8 +117,6 @@ static void tegra_combined_uart_start_tx(struct uart_port *port)
 
 /*
  * Handles an RX message from the combined UART server.
- *
- * mbox_lock must be held before calling this function.
  */
 static void tegra_combined_uart_handle_rx_msg(uint32_t mbox_val)
 {
@@ -137,11 +131,6 @@ static void tegra_combined_uart_handle_rx_msg(uint32_t mbox_val)
 		tty_insert_flip_char(port, ch, TTY_NORMAL);
 	}
 	tty_flip_buffer_push(port);
-
-	/* clear the mailbox register: top0_shared_mbox0 */
-	writel(0, top0_mbox01_base + TOP0_SHARED_MBOX0);
-	/* ack by writing to spe mailbox register */
-	writel(BIT(PKT_RCVD_BIT) | BIT(INTR_TRIGGER_BIT), spe_mbox_reg);
 }
 
 /*
@@ -157,7 +146,6 @@ static void tegra_combined_uart_console_write(struct console *co,
 	int num_packets, curr_packet_bytes, last_packet_bytes;
 	u32 reg_val;
 	int i, j;
-	unsigned long flags;
 
 	num_packets = count / 3;
 	if (count % 3 != 0) {
@@ -170,11 +158,9 @@ static void tegra_combined_uart_console_write(struct console *co,
 	/* Loop for processing each 3 char packet */
 	for (i = 0; i < num_packets; i++) {
 		reg_val = BIT(INTR_TRIGGER_BIT);
-		if (i == 0)
-			reg_val |= BIT(FIRST_PKT_BIT);
 
 		if (i == num_packets - 1) {
-			reg_val |= BIT(LAST_PKT_BIT);
+			reg_val |= BIT(FLUSH_BIT);
 			curr_packet_bytes = last_packet_bytes;
 		} else {
 			curr_packet_bytes = 3;
@@ -190,29 +176,9 @@ static void tegra_combined_uart_console_write(struct console *co,
 			reg_val |= s[i*3 + j] << (j * 8);
 
 		/* Send current packet to SPE */
-		spin_lock_irqsave(&mbox_lock, flags);
 		while (readl(spe_mbox_reg) & BIT(INTR_TRIGGER_BIT))
 			cpu_relax();
 		writel(reg_val, spe_mbox_reg);
-		while (readl(spe_mbox_reg) & BIT(INTR_TRIGGER_BIT))
-			cpu_relax();
-
-		/*
-		 * Wait for SPE to ACK that it received the current packet.
-		 * TODO: Add support for interrupt based operation.
-		 */
-		for (;;) {
-			do {
-				cpu_relax();
-				reg_val = readl(top0_mbox01_base + TOP0_SHARED_MBOX0);
-			} while (!(reg_val & BIT(INTR_TRIGGER_BIT)));
-			if (reg_val & BIT(PKT_RCVD_BIT))
-				break;
-			tegra_combined_uart_handle_rx_msg(reg_val);
-		}
-
-		writel(0, top0_mbox01_base + TOP0_SHARED_MBOX0);
-		spin_unlock_irqrestore(&mbox_lock, flags);
 	}
 }
 
@@ -234,23 +200,17 @@ static int __init tegra_combined_uart_console_setup(struct console *co,
 static irqreturn_t tegra_combined_uart_rx(int irq, void *dev_id)
 {
 	u32 reg_val;
-	unsigned long flags;
 
 	/* read the mailbox register: top0_shared_mbox0 */
-	spin_lock_irqsave(&mbox_lock, flags);
 	reg_val = readl(top0_mbox01_base + TOP0_SHARED_MBOX0);
 	if (!(reg_val & BIT(INTR_TRIGGER_BIT))) {
-		spin_unlock_irqrestore(&mbox_lock, flags);
-		return IRQ_HANDLED;
-	}
-	if (reg_val & BIT(PKT_RCVD_BIT)) {
-		spin_unlock_irqrestore(&mbox_lock, flags);
-		pr_err("Unexpected PKT_RCVD_BIT");
 		return IRQ_HANDLED;
 	}
 
 	tegra_combined_uart_handle_rx_msg(reg_val);
-	spin_unlock_irqrestore(&mbox_lock, flags);
+
+	/* clear the mailbox register: top0_shared_mbox0 */
+	writel(0, top0_mbox01_base + TOP0_SHARED_MBOX0);
 
 	return IRQ_HANDLED;
 }
@@ -278,8 +238,6 @@ static int tegra_combined_uart_probe(struct platform_device *pdev)
 
 	if (!np)
 		return -ENODEV;
-
-	spin_lock_init(&mbox_lock);
 
 	top0_mbox01_base = (u8 *)(of_io_request_and_map(np, 0,
 		    "Tegra Combined UART TOP0_HSP Linux mailbox"));

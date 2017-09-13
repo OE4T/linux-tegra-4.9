@@ -1057,6 +1057,10 @@ int eqos_probe(struct platform_device *pdev)
 	}
 	pdata->interface = of_get_phy_mode(node);
 
+	pdata->phy_node = of_parse_phandle(node, "phy-handle", 0);
+	if (!pdata->phy_node)
+		pr_debug("%s(): phy handle not found\n", __func__);
+
 	pdata->use_fixed_phy = false;
 	if (of_phy_is_fixed_link(node)) {
 		ret = eqos_fixed_phy_register(ndev);

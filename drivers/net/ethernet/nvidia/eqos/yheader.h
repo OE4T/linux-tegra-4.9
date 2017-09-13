@@ -1379,6 +1379,7 @@ struct eqos_prv_data {
 
 	struct mii_bus *mii;
 	struct phy_device *phydev;
+	struct device_node *phy_node;
 	int oldlink;
 	int speed;
 	int oldspeed;

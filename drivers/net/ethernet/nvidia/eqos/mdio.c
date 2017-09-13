@@ -470,16 +470,20 @@ int eqos_init_phy(struct net_device *dev)
 	pdata->speed = 0;
 	pdata->oldduplex = -1;
 
-	snprintf(bus_id, MII_BUS_ID_SIZE, "dwc_phy-%x", pdata->bus_id);
+	if (pdata->phy_node)
+		phydev = of_phy_connect(dev, pdata->phy_node,
+					&eqos_adjust_link, 0, pdata->interface);
+	else {
+		snprintf(bus_id, MII_BUS_ID_SIZE, "dwc_phy-%x", pdata->bus_id);
 
-	snprintf(phy_id_fmt, MII_BUS_ID_SIZE + 3, PHY_ID_FMT, bus_id,
-		 pdata->phyaddr);
+		snprintf(phy_id_fmt, MII_BUS_ID_SIZE + 3, PHY_ID_FMT, bus_id,
+			 pdata->phyaddr);
 
-	DBGPR_MDIO("trying to attach to %s\n", phy_id_fmt);
+		phydev = phy_connect(dev, phy_id_fmt, &eqos_adjust_link,
+				     pdata->interface);
+	}
 
-	phydev = phy_connect(dev, phy_id_fmt, &eqos_adjust_link,
-			     pdata->interface);
-	if (IS_ERR(phydev)) {
+	if (!phydev) {
 		pr_err("%s: Could not attach to PHY\n", dev->name);
 		return PTR_ERR(phydev);
 	}
@@ -565,6 +569,7 @@ int eqos_mdio_register(struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct mii_bus *new_bus = NULL;
+	struct device_node *mdio_node = NULL;
 	int phyaddr = 0;
 	unsigned short phy_detected = 0;
 	int ret = Y_SUCCESS, i;
@@ -620,8 +625,15 @@ int eqos_mdio_register(struct net_device *dev)
 			new_bus->irq[i] = PHY_POLL;
 	}
 
-	ret = mdiobus_register(new_bus);
-	if (ret != 0) {
+	if (pdata->phy_node)
+		mdio_node = of_get_parent(pdata->phy_node);
+
+	if (mdio_node)
+		ret = of_mdiobus_register(new_bus, mdio_node);
+	else
+		ret = mdiobus_register(new_bus);
+
+	if (ret) {
 		pr_err("%s: Cannot register as MDIO bus\n", new_bus->name);
 		mdiobus_free(new_bus);
 		return ret;

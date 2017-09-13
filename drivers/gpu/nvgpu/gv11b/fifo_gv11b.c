@@ -785,6 +785,21 @@ static int __locked_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 	return ret;
 }
 
+/* TSG enable sequence applicable for Volta and onwards */
+int gv11b_fifo_enable_tsg(struct tsg_gk20a *tsg)
+{
+	struct gk20a *g = tsg->g;
+	struct channel_gk20a *ch;
+
+	down_read(&tsg->ch_list_lock);
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
+		g->ops.fifo.enable_channel(ch);
+	}
+	up_read(&tsg->ch_list_lock);
+
+	return 0;
+}
+
 int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 {
 	struct fifo_gk20a *f = &g->fifo;

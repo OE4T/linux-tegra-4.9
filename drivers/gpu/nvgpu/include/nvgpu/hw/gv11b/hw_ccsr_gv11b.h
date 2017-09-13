@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -109,6 +109,42 @@ static inline u32 ccsr_channel_enable_clr_true_f(void)
 static inline u32 ccsr_channel_status_v(u32 r)
 {
 	return (r >> 24) & 0xf;
+}
+static inline u32 ccsr_channel_status_pending_ctx_reload_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 ccsr_channel_status_pending_acq_ctx_reload_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 ccsr_channel_status_on_pbdma_ctx_reload_v(void)
+{
+	return 0x0000000a;
+}
+static inline u32 ccsr_channel_status_on_pbdma_and_eng_ctx_reload_v(void)
+{
+	return 0x0000000b;
+}
+static inline u32 ccsr_channel_status_on_eng_ctx_reload_v(void)
+{
+	return 0x0000000c;
+}
+static inline u32 ccsr_channel_status_on_eng_pending_ctx_reload_v(void)
+{
+	return 0x0000000d;
+}
+static inline u32 ccsr_channel_status_on_eng_pending_acq_ctx_reload_v(void)
+{
+	return 0x0000000e;
+}
+static inline u32 ccsr_channel_next_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 ccsr_channel_next_true_v(void)
+{
+	return 0x00000001;
 }
 static inline u32 ccsr_channel_pbdma_faulted_f(u32 v)
 {

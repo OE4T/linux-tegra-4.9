@@ -207,6 +207,4 @@ config ZPA2326_SPI
 	tristate
 	select REGMAP_SPI
 
-trysource "../nvidia/drivers/iio/pressure/Kconfig.nvidia"
-
 endmenu

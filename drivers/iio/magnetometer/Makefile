@@ -23,7 +23,3 @@ obj-$(CONFIG_IIO_ST_MAGN_SPI_3AXIS) += st_magn_spi.o
 obj-$(CONFIG_SENSORS_HMC5843)		+= hmc5843_core.o
 obj-$(CONFIG_SENSORS_HMC5843_I2C)	+= hmc5843_i2c.o
 obj-$(CONFIG_SENSORS_HMC5843_SPI)	+= hmc5843_spi.o
-
-ifneq ($(wildcard $(srctree)/../nvidia/drivers/iio/magnetometer/Makefile.*),)
-obj-y += ../../../../nvidia/drivers/iio/magnetometer/
-endif

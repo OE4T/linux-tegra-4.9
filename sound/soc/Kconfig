@@ -76,8 +76,4 @@ source "sound/soc/codecs/Kconfig"
 # generic frame-work
 source "sound/soc/generic/Kconfig"
 
-trysource "../nvidia/sound/soc/Kconfig"
-trysource "../nvidia/sound/soc/Kconfig.nvidia"
-trysource "sound/soc/Kconfig.nvidia"
-
 endif	# SND_SOC

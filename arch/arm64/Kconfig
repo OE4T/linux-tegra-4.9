@@ -115,8 +115,6 @@ config ARM64
 config 64BIT
 	def_bool y
 
-trysource "../nvidia/arch/arm64/Kconfig.nvidia"
-
 config ARCH_TEGRA_18x_SOC
 	bool "Tegra 18x family SOC Kconfig placeholder"
 	select ARCH_TEGRA_18x_SOC_PRIVATE
@@ -124,7 +122,6 @@ config ARCH_TEGRA_18x_SOC
 	help
 	  Kconfig placeholder for NVIDIA Tegra18x family of SoCs
 
-trysource "../t19x/arch/arm64/Kconfig.nvidia"
 config ARCH_TEGRA_19x_SOC
 	select ARCH_TEGRA_19x_SOC_PRIVATE
 	bool "Tegra 19x family SOC"

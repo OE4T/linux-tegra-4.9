@@ -28,5 +28,3 @@ config PINCTRL_TEGRA_XUSB
 	select GENERIC_PHY
 	select PINCONF
 	select PINMUX
-
-trysource "../nvidia/drivers/pinctrl/Kconfig.nvidia"

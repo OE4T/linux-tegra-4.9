@@ -10,6 +10,4 @@ config TEGRA_SOCTHERM
 	  zones to manage temperatures. This option is also required for the
 	  emergency thermal reset (thermtrip) feature to function.
 
-trysource "../nvidia/drivers/thermal/tegra/Kconfig.nvidia"
-
 endmenu

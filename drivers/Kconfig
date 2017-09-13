@@ -208,11 +208,4 @@ source "drivers/hwtracing/intel_th/Kconfig"
 
 source "drivers/fpga/Kconfig"
 
-trysource "../nvidia/drivers/nvpmodel/Kconfig.nvidia"
-
-trysource "../nvidia/drivers/staging/mttcan/Kconfig.nvidia"
-
-trysource "../nvgpu/drivers/gpu/nvgpu/Kconfig.nvgpu"
-
-
 endmenu

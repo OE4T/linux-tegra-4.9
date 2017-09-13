@@ -1,7 +1,5 @@
 menu "HD-Audio"
 
-source "../nvidia/sound/pci/Kconfig.nvidia"
-
 config SND_HDA
 	tristate
 	select SND_PCM

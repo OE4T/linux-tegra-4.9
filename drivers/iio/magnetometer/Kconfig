@@ -175,6 +175,4 @@ config SENSORS_HMC5843_SPI
 	  - hmc5843_core (core functions)
 	  - hmc5843_spi (support for HMC5983)
 
-trysource "../nvidia/drivers/iio/magnetometer/Kconfig.nvidia"
-
 endmenu

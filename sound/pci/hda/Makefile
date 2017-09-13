@@ -45,8 +45,3 @@ obj-$(CONFIG_SND_HDA_CODEC_HDMI) += snd-hda-codec-hdmi.o
 # otherwise the codec patches won't be hooked before the PCI probe
 # when built in kernel
 obj-$(CONFIG_SND_HDA_INTEL) += snd-hda-intel.o
-
-# The wildcard hack is necessary for kernel's make clean.
-ifneq ($(wildcard $(srctree)/../nvidia/sound/pci/Makefile*),)
-obj-$(CONFIG_SND_HDA_TEGRA) += ../../../../nvidia/sound/pci/
-endif

@@ -297,6 +297,4 @@ config STK8BA50
 	  Choosing M will build the driver as a module. If so, the module
 	  will be called stk8ba50.
 
-trysource "../nvidia/drivers/iio/accel/Kconfig.nvidia"
-
 endmenu

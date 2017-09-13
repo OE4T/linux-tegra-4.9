@@ -7,7 +7,3 @@ obj-$(CONFIG_AS3935)		+= as3935.o
 obj-$(CONFIG_LIDAR_LITE_V2)	+= pulsedlight-lidar-lite-v2.o
 obj-$(CONFIG_SX9500)		+= sx9500.o
 GCOV_PROFILE := y
-
-ifneq ($(wildcard $(srctree)/../nvidia/drivers/iio/proximity/Makefile.*),)
-obj-y += ../../../../nvidia/drivers/iio/proximity/
-endif

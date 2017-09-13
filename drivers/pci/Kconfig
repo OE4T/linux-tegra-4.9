@@ -133,4 +133,3 @@ config PCI_HYPERV
 
 source "drivers/pci/hotplug/Kconfig"
 source "drivers/pci/host/Kconfig"
-trysource "../t19x/drivers/pci/Kconfig.t19x"

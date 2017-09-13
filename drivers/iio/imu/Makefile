@@ -17,7 +17,3 @@ obj-y += bmi160/
 obj-y += inv_mpu6050/
 obj-$(CONFIG_KMX61) += kmx61.o
 obj-y += inv_mpu/
-
-ifneq ($(wildcard $(srctree)/../nvidia/drivers/iio/imu/nvi_mpu/Makefile.*),)
-obj-y += ../../../../nvidia/drivers/iio/imu/nvi_mpu/
-endif

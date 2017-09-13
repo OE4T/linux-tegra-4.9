@@ -555,6 +555,4 @@ config CRYPTO_DEV_ROCKCHIP
 
 source "drivers/crypto/chelsio/Kconfig"
 
-trysource "../nvidia/drivers/crypto/Kconfig.nvidia"
-
 endif # CRYPTO_HW

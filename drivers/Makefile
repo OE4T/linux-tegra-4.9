@@ -180,15 +180,3 @@ obj-$(CONFIG_STM)		+= hwtracing/stm/
 obj-$(CONFIG_ANDROID)		+= android/
 obj-$(CONFIG_NVMEM)		+= nvmem/
 obj-$(CONFIG_FPGA)		+= fpga/
-
-ifneq ($(wildcard $(srctree)/../nvidia/drivers/Makefile.*),)
-obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += ../../nvidia/drivers/
-endif
-
-ifneq ($(wildcard $(srctree)/../t19x/drivers/Makefile.*),)
-obj-$(CONFIG_ARCH_TEGRA_19x_SOC) += ../../t19x/drivers/
-endif
-
-ifneq ($(wildcard $(srctree)/../nvidia/drivers/Makefile.*),)
-obj-y += ../../nvidia/drivers/
-endif

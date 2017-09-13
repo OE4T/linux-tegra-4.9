@@ -45,6 +45,4 @@ config SX9500
 	  To compile this driver as a module, choose M here: the
 	  module will be called sx9500.
 
-trysource "../nvidia/drivers/iio/proximity/Kconfig.nvidia"
-
 endmenu

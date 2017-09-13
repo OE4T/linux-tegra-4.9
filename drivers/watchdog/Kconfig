@@ -1,4 +1,3 @@
-
 #
 # Watchdog device configuration
 #
@@ -1906,6 +1905,4 @@ config WATCHDOG_PRETIMEOUT_GOV_PANIC
 	  event put the kernel into panic.
 
 endif # WATCHDOG_PRETIMEOUT_GOV
-
-trysource "../nvidia/drivers/watchdog/Kconfig.nvidia"
 endif # WATCHDOG

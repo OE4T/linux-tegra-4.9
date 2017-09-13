@@ -544,6 +544,4 @@ config CLKSRC_ST_LPC
 	  Enable this option to use the Low Power controller timer
 	  as clocksource.
 
-trysource "../nvidia/drivers/clocksource/Kconfig.nvidia"
-
 endmenu

@@ -34,7 +34,3 @@ obj-$(CONFIG_TSL4531)		+= tsl4531.o
 obj-$(CONFIG_US5182D)		+= us5182d.o
 obj-$(CONFIG_VCNL4000)		+= vcnl4000.o
 obj-$(CONFIG_VEML6070)		+= veml6070.o
-
-ifneq ($(wildcard $(srctree)/../nvidia/drivers/iio/light/Makefile.*),)
-obj-y += ../../../../nvidia/drivers/iio/light/
-endif

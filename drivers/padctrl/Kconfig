@@ -5,7 +5,3 @@ menuconfig PADCTRL
 
 	  This framework provides a generic interface to PAD
 	  devices.
-
-if PADCTRL
-trysource "../nvidia/drivers/padctrl/Kconfig.nvidia"
-endif

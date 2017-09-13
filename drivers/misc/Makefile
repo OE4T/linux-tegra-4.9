@@ -78,14 +78,3 @@ $(obj)/lkdtm_rodata_objcopy.o: $(obj)/lkdtm_rodata.o FORCE
 	$(call if_changed,objcopy)
 obj-$(CONFIG_CPULOAD_MONITOR)	+= cpuload.o
 obj-y				+= inter-tegra/
-
-ifneq ($(wildcard $(srctree)/../nvidia/drivers/misc/nvs/Makefile.*),)
-obj-y += ../../../nvidia/drivers/misc/nvs/
-endif
-ifneq ($(wildcard $(srctree)/../nvidia/drivers/misc/nvs-aonsh/Makefile.*),)
-obj-y += ../../../nvidia/drivers/misc/nvs-aonsh/
-endif
-ifneq ($(wildcard $(srctree)/../nvidia/drivers/misc/tegra-profiler/Makefile*),)
-obj-$(CONFIG_TEGRA_PROFILER) += ../../../nvidia/drivers/misc/tegra-profiler/
-endif
-

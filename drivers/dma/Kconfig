@@ -601,6 +601,4 @@ config DMATEST
 config DMA_ENGINE_RAID
 	bool
 
-trysource "../nvidia/drivers/dma/Kconfig.nvidia"
-
 endif

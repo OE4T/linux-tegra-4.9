@@ -1,5 +1,3 @@
-trysource "../nvidia/drivers/video/tegra/nvmap/Kconfig.nvidia"
-
 if ARCH_TEGRA
 
 config TEGRA_GR_VIRTUALIZATION
@@ -11,8 +9,6 @@ config TEGRA_GR_VIRTUALIZATION
 	  drivers.
 
 endif
-
-trysource "../nvidia/drivers/video/tegra/Kconfig.nvidia"
 
 config TEGRA_DC
 	tristate "Tegra Display Contoller"

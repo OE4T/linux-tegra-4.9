@@ -159,5 +159,3 @@ config CAN_DEBUG_DEVICES
 	  on.
 
 endmenu
-
-trysource "../nvidia/drivers/net/can/Kconfig.nvidia"

@@ -1214,5 +1214,4 @@ config TOUCHSCREEN_ROHM_BU21023
 	  To compile this driver as a module, choose M here: the
 	  module will be called bu21023_ts.
 
-trysource "../nvidia/drivers/input/touchscreen/Kconfig.nvidia"
 endif

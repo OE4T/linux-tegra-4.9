@@ -366,6 +366,4 @@ config VEML6070
 	 To compile this driver as a module, choose M here: the
 	 module will be called veml6070.
 
-trysource "../nvidia/drivers/iio/light/Kconfig.nvidia"
-
 endmenu

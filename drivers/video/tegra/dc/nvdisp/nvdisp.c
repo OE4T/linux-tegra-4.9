@@ -3191,11 +3191,11 @@ static struct tegra_nvdisp_imp_settings *cpy_from_ext_imp_settings_v1(
 	u8 num_wins_per_head[max_heads];
 	int i;
 
-	memset(num_wins_per_head, 0, sizeof(num_wins_per_head));
 	for (i = 0; i < max_heads; i++) {
 		struct tegra_dc_ext_imp_head_results *head_results;
 
 		head_results = &ext_settings->imp_results[i];
+		num_wins_per_head[i] = 0;
 		if (head_results->head_active)
 			num_wins_per_head[active_heads++] =
 						head_results->num_windows;
@@ -3287,9 +3287,15 @@ static struct tegra_nvdisp_imp_settings *cpy_from_ext_imp_settings_v2(
 		goto cpy_imp_v2_ret;
 	}
 
-	memset(num_wins_per_head, 0, sizeof(num_wins_per_head));
 	for (i = 0; i < num_heads; i++)
 		num_wins_per_head[i] = ext_heads[i].num_wins;
+
+	/*
+	 * Zero out the remaining entries individually. We can't use memset()
+	 * since this is a variable-length array.
+	 */
+	for (; i < max_heads; i++)
+		num_wins_per_head[i] = 0;
 
 	nvdisp_settings = alloc_imp_settings(num_heads, num_wins_per_head);
 	if (!nvdisp_settings)
@@ -3885,13 +3891,19 @@ static struct tegra_nvdisp_imp_settings *cpy_imp_entries(
 	u8 num_heads = src_settings->num_heads;
 	int i;
 
-	memset(num_wins_per_head, 0, sizeof(num_wins_per_head));
 	for (i = 0; i < num_heads; i++) {
 		struct tegra_nvdisp_imp_head_settings *head_settings;
 
 		head_settings = &src_settings->head_settings[i];
 		num_wins_per_head[i] = head_settings->num_wins;
 	}
+
+	/*
+	 * Zero out the remaining entries individually. We can't use memset()
+	 * since this is a variable-length array.
+	 */
+	for (; i < max_heads; i++)
+		num_wins_per_head[i] = 0;
 
 	dst_settings = alloc_imp_settings(num_heads, num_wins_per_head);
 	if (!dst_settings)

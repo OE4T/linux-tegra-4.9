@@ -2671,6 +2671,21 @@ void gk20a_fifo_set_runlist_state(struct gk20a *g, u32 runlists_mask,
 	gk20a_dbg_fn("done");
 }
 
+void gk20a_fifo_enable_tsg_sched(struct gk20a *g, struct tsg_gk20a *tsg)
+{
+	gk20a_fifo_set_runlist_state(g, fifo_sched_disable_runlist_m(
+					tsg->runlist_id), RUNLIST_ENABLED,
+					!RUNLIST_INFO_MUTEX_LOCKED);
+
+}
+
+void gk20a_fifo_disable_tsg_sched(struct gk20a *g, struct tsg_gk20a *tsg)
+{
+	gk20a_fifo_set_runlist_state(g, fifo_sched_disable_runlist_m(
+					tsg->runlist_id), RUNLIST_DISABLED,
+					!RUNLIST_INFO_MUTEX_LOCKED);
+}
+
 int gk20a_fifo_enable_engine_activity(struct gk20a *g,
 				struct fifo_engine_info_gk20a *eng_info)
 {
@@ -3411,6 +3426,27 @@ const char *gk20a_decode_pbdma_chan_eng_ctx_status(u32 index)
 		return not_found_str[0];
 	else
 		return pbdma_chan_eng_ctx_status_str[index];
+}
+
+bool gk20a_fifo_channel_status_is_next(struct gk20a *g, u32 chid)
+{
+	u32 channel = gk20a_readl(g, ccsr_channel_r(chid));
+
+	return ccsr_channel_next_v(channel) == ccsr_channel_next_true_v();
+}
+
+bool gk20a_fifo_channel_status_is_ctx_reload(struct gk20a *g, u32 chid)
+{
+	u32 channel = gk20a_readl(g, ccsr_channel_r(chid));
+	u32 status = ccsr_channel_status_v(channel);
+
+	return (status == ccsr_channel_status_pending_ctx_reload_v() ||
+		status == ccsr_channel_status_pending_acq_ctx_reload_v() ||
+		status == ccsr_channel_status_on_pbdma_ctx_reload_v() ||
+		status == ccsr_channel_status_on_pbdma_and_eng_ctx_reload_v() ||
+		status == ccsr_channel_status_on_eng_ctx_reload_v() ||
+		status == ccsr_channel_status_on_eng_pending_ctx_reload_v() ||
+		status == ccsr_channel_status_on_eng_pending_acq_ctx_reload_v());
 }
 
 void gk20a_dump_channel_status_ramfc(struct gk20a *g,

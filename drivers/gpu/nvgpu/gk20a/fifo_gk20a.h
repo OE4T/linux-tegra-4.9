@@ -248,6 +248,9 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 			bool wait_for_idle);
 int gk20a_fifo_disable_all_engine_activity(struct gk20a *g,
 				bool wait_for_idle);
+void gk20a_fifo_enable_tsg_sched(struct gk20a *g, struct tsg_gk20a *tsg);
+void gk20a_fifo_disable_tsg_sched(struct gk20a *g, struct tsg_gk20a *tsg);
+
 u32 gk20a_fifo_engines_on_ch(struct gk20a *g, u32 chid);
 
 int gk20a_fifo_reschedule_runlist(struct gk20a *g, u32 runlist_id);
@@ -361,6 +364,9 @@ const char *gk20a_decode_ccsr_chan_status(u32 index);
 const char *gk20a_decode_pbdma_chan_eng_ctx_status(u32 index);
 void gk20a_fifo_enable_channel(struct channel_gk20a *ch);
 void gk20a_fifo_disable_channel(struct channel_gk20a *ch);
+
+bool gk20a_fifo_channel_status_is_next(struct gk20a *g, u32 chid);
+bool gk20a_fifo_channel_status_is_ctx_reload(struct gk20a *g, u32 chid);
 
 struct channel_gk20a *gk20a_refch_from_inst_ptr(struct gk20a *g, u64 inst_ptr);
 void gk20a_fifo_channel_unbind(struct channel_gk20a *ch_gk20a);

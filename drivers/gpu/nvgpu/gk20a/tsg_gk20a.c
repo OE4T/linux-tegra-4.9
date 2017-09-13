@@ -29,12 +29,36 @@ int gk20a_enable_tsg(struct tsg_gk20a *tsg)
 {
 	struct gk20a *g = tsg->g;
 	struct channel_gk20a *ch;
+	bool is_next, is_ctx_reload;
 
+	gk20a_fifo_disable_tsg_sched(g, tsg);
+
+	/*
+	 * Due to h/w bug that exists in Maxwell and Pascal,
+	 * we first need to enable all channels with NEXT and CTX_RELOAD set,
+	 * and then rest of the channels should be enabled
+	 */
 	down_read(&tsg->ch_list_lock);
 	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
+		is_next = gk20a_fifo_channel_status_is_next(g, ch->chid);
+		is_ctx_reload = gk20a_fifo_channel_status_is_ctx_reload(g, ch->chid);
+
+		if (is_next || is_ctx_reload)
+			g->ops.fifo.enable_channel(ch);
+	}
+
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
+		is_next = gk20a_fifo_channel_status_is_next(g, ch->chid);
+		is_ctx_reload = gk20a_fifo_channel_status_is_ctx_reload(g, ch->chid);
+
+		if (is_next || is_ctx_reload)
+			continue;
+
 		g->ops.fifo.enable_channel(ch);
 	}
 	up_read(&tsg->ch_list_lock);
+
+	gk20a_fifo_enable_tsg_sched(g, tsg);
 
 	return 0;
 }

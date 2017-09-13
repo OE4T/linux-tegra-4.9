@@ -1,0 +1,9 @@
+if ATA
+config AHCI_TEGRA_DOWNSTREAM
+	tristate "TEGRA AHCI SATA support"
+	select ARCH_TEGRA_HAS_SATA
+	help
+	  This option enables support for TEGRA AHCI Serial ATA.
+
+	  If unsure, say N.
+endif # ATA

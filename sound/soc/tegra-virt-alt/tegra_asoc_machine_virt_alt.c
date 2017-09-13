@@ -75,7 +75,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 1 */
@@ -88,7 +88,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 2 */
@@ -101,7 +101,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 3 */
@@ -114,7 +114,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 4 */
@@ -127,7 +127,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 5 */
@@ -140,7 +140,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 6 */
@@ -153,7 +153,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 7 */
@@ -166,7 +166,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 8 */
@@ -179,7 +179,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 9 */
@@ -192,7 +192,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 10 */
@@ -205,7 +205,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 11 */
@@ -218,7 +218,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 12 */
@@ -231,7 +231,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 13 */
@@ -244,7 +244,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 14 */
@@ -257,7 +257,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 15 */
@@ -270,7 +270,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 16 */
@@ -283,7 +283,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 17 */
@@ -296,7 +296,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 18 */
@@ -309,7 +309,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 19 */
@@ -322,7 +322,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 20 */
@@ -554,7 +554,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_dai_name = "ADSP-FE1",
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		/* 41 */
@@ -566,7 +566,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_dai_name = "ADSP-FE2",
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM3",
@@ -577,7 +577,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM4",
@@ -588,7 +588,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM5",
@@ -599,7 +599,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM6",
@@ -610,7 +610,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM7",
@@ -621,7 +621,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM8",
@@ -632,7 +632,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM9",
@@ -643,7 +643,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM10",
@@ -654,7 +654,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM11",
@@ -665,7 +665,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM12",
@@ -676,7 +676,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM13",
@@ -687,7 +687,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM14",
@@ -698,7 +698,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 	{
 		.name = "ADSP PCM15",
@@ -709,7 +709,7 @@ static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 		.codec_name = ADSP_CPU_NAME,
 		.platform_name = ADSP_CPU_NAME,
 		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
+		.ignore_suspend = 0,
 	},
 
 };

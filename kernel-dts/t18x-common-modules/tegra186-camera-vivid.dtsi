@@ -101,34 +101,7 @@
 			* Sensor embedded metadata height in units of rows.
 			* If sensor does not support embedded metadata value should be 0.
 			*/
-			mode0 { // VIVID_3840x2160
-				tegra_sinterface = "host";
-				pix_clk_hz = "297000000";
-				readout_orientation = "90";
-
-				active_w = "3840";
-				active_h = "2160";
-				pixel_t = "bayer_bggr10";
-				line_length = "4400";
-
-				horz_front_porch = "176";
-				horz_sync = "88";
-				horz_back_porch = "296";
-				vert_front_porch = "8";
-				vert_sync = "10";
-				vert_back_porch = "72";
-
-				gain_factor = "16";
-				framerate_factor = "1";
-				min_gain_val = "1";
-				max_gain_val = "256";
-				min_exp_time = "34";
-				max_exp_time = "999994";
-				min_framerate = "1";
-				max_framerate = "30";
-				embedded_metadata_height = "1";
-			};
-			mode1 { // VIVID_1920x1080
+			mode0 { // VIVID_1920x1080
 				tegra_sinterface = "host";
 				pix_clk_hz = "74250000";
 				readout_orientation = "90";
@@ -144,33 +117,6 @@
 				vert_front_porch = "4";
 				vert_sync = "5";
 				vert_back_porch = "36";
-
-				gain_factor = "16";
-				framerate_factor = "1";
-				min_gain_val = "1";
-				max_gain_val = "256";
-				min_exp_time = "34";
-				max_exp_time = "999994";
-				min_framerate = "1";
-				max_framerate = "30";
-				embedded_metadata_height = "1";
-			};
-			mode2 { // VIVID_1280x720
-				tegra_sinterface = "host";
-				pix_clk_hz = "74250000";
-				readout_orientation = "90";
-
-				active_w = "1280";
-				active_h = "720";
-				pixel_t = "bayer_bggr10";
-				line_length = "3300";
-
-				horz_front_porch = "1760";
-				horz_sync = "40";
-				horz_back_porch = "220";
-				vert_front_porch = "5";
-				vert_sync = "5";
-				vert_back_porch = "20";
 
 				gain_factor = "16";
 				framerate_factor = "1";

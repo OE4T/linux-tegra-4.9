@@ -354,3 +354,17 @@ void nvdisp_t19x_enable_raster_lock(struct tegra_dc *dc,
 
 	tegra_dc_writel(dc, 0x00, nvdisp_t19x_glb_ctrl_r());
 }
+
+/**
+ * tegra_nvdisp_program_common_win_batch_size_t19x - programs the default win
+ *						request batch size (8) for T19x
+ * @dc : head pointer
+ *
+ * Return: void
+ */
+inline void tegra_nvdisp_program_common_win_batch_size_t19x(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc,
+		nvdisp_t19x_ihub_common_config_request_batch_size_8_f(),
+		nvdisp_t19x_ihub_common_config_r());
+}

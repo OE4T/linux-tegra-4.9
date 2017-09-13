@@ -1680,6 +1680,13 @@ static struct tegra_nvdisp_imp_head_settings *find_imp_head_by_ctrl_num(
 	return NULL;
 }
 
+static inline void tegra_nvdisp_program_common_win_batch_size(
+							struct tegra_dc *dc)
+{
+	if (tegra_dc_is_t19x())
+		tegra_nvdisp_program_common_win_batch_size_t19x(dc);
+}
+
 static void tegra_nvdisp_postcomp_imp_init(struct tegra_dc *dc)
 {
 	struct nvdisp_imp_table *imp_table;
@@ -1688,10 +1695,6 @@ static void tegra_nvdisp_postcomp_imp_init(struct tegra_dc *dc)
 	struct tegra_dc_ext_nvdisp_imp_head_entries *head_entries;
 	bool any_dc_enabled = false;
 	int i;
-
-	imp_table = tegra_dc_common_get_imp_table();
-	if (!imp_table)
-		return;
 
 	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
@@ -1703,9 +1706,19 @@ static void tegra_nvdisp_postcomp_imp_init(struct tegra_dc *dc)
 	}
 
 	/*
-	 * Use any_dc_enabled to ensure that only one head programs default
-	 * values for the common fetch metering, and to ensure that this only
-	 * happens when we're transitioning from a state with no active heads.
+	 * Use any_dc_enabled to ensure that the common win batch request size
+	 * is only programmed by the first head that comes up.
+	 */
+	if (!any_dc_enabled)
+		tegra_nvdisp_program_common_win_batch_size(dc);
+
+	imp_table = tegra_dc_common_get_imp_table();
+	if (!imp_table)
+		return;
+
+	/*
+	 * Use any dc_enabled to ensure that the common fetch metering is only
+	 * initialized by the first head that comes up.
 	 */
 	boot_setting = imp_table->boot_setting;
 	if (!any_dc_enabled)
@@ -1735,13 +1748,11 @@ static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
 	u32 update_mask = 0;
 	u32 act_req_mask = 0;
 
-	if (!tegra_platform_is_vdk()) {
-		tegra_nvdisp_postcomp_imp_init(dc);
-		update_mask |=
-			nvdisp_cmd_state_ctrl_common_act_update_enable_f();
-		act_req_mask |=
-			nvdisp_cmd_state_ctrl_common_act_req_enable_f();
-	}
+	tegra_nvdisp_postcomp_imp_init(dc);
+	update_mask |=
+		nvdisp_cmd_state_ctrl_common_act_update_enable_f();
+	act_req_mask |=
+		nvdisp_cmd_state_ctrl_common_act_req_enable_f();
 
 	/*
 	 * Set the LUT address in the HW register. Enable the default sRGB_LUT.

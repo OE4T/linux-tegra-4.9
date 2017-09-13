@@ -882,6 +882,9 @@ int __attribute__((weak)) nvdisp_t19x_program_raster_lock_seq(
 void __attribute__((weak)) nvdisp_t19x_enable_raster_lock(
 			struct tegra_dc *dc, const ulong valid_heads);
 
+void __attribute__((weak)) tegra_nvdisp_program_common_win_batch_size_t19x(
+							struct tegra_dc *dc);
+
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void);
 
 int tegra_fb_release_fbmem(struct tegra_fb_info *);

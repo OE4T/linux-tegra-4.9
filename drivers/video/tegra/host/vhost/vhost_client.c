@@ -35,7 +35,7 @@
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
 #endif
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_T19X_GRHOST
 #include "t194/t194.h"
 #endif
 

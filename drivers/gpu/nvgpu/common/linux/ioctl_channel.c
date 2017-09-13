@@ -823,6 +823,11 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 #endif
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
+
+	if ((NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST & args->flags) &&
+		!capable(CAP_SYS_NICE))
+		return -EPERM;
+
 	ret = gk20a_submit_channel_gpfifo(ch, NULL, args, args->num_entries,
 					  args->flags, &args->fence,
 					  &fence_out, false, profile);

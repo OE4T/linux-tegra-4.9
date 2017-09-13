@@ -475,6 +475,8 @@ struct gpu_ops {
 		int (*resetup_ramfc)(struct channel_gk20a *c);
 		int (*preempt_channel)(struct gk20a *g, u32 chid);
 		int (*preempt_tsg)(struct gk20a *g, u32 tsgid);
+		int (*enable_tsg)(struct tsg_gk20a *tsg);
+		int (*disable_tsg)(struct tsg_gk20a *tsg);
 		int (*reschedule_runlist)(struct gk20a *g, u32 runlist_id);
 		int (*update_runlist)(struct gk20a *g, u32 runlist_id,
 				u32 chid, bool add,

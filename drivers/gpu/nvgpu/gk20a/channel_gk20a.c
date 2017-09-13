@@ -200,7 +200,7 @@ int gk20a_enable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
 		tsg = &g->fifo.tsg[ch->tsgid];
-		gk20a_enable_tsg(tsg);
+		g->ops.fifo.enable_tsg(tsg);
 	} else {
 		g->ops.fifo.enable_channel(ch);
 	}
@@ -214,7 +214,7 @@ int gk20a_disable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
 		tsg = &g->fifo.tsg[ch->tsgid];
-		gk20a_disable_tsg(tsg);
+		g->ops.fifo.disable_tsg(tsg);
 	} else {
 		g->ops.fifo.disable_channel(ch);
 	}

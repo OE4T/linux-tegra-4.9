@@ -409,7 +409,7 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
-		gk20a_enable_tsg(tsg);
+		g->ops.fifo.enable_tsg(tsg);
 		gk20a_idle(g);
 		break;
 		}
@@ -422,7 +422,7 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
-		gk20a_disable_tsg(tsg);
+		g->ops.fifo.disable_tsg(tsg);
 		gk20a_idle(g);
 		break;
 		}

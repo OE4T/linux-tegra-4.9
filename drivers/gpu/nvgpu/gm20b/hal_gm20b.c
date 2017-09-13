@@ -28,6 +28,7 @@
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/gr_gk20a.h"
+#include "gk20a/tsg_gk20a.h"
 
 #include "ltc_gm20b.h"
 #include "gr_gm20b.h"
@@ -365,6 +366,8 @@ static const struct gpu_ops gm20b_ops = {
 		.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val,
 		.preempt_channel = gk20a_fifo_preempt_channel,
 		.preempt_tsg = gk20a_fifo_preempt_tsg,
+		.enable_tsg = gk20a_enable_tsg,
+		.disable_tsg = gk20a_disable_tsg,
 		.update_runlist = gk20a_fifo_update_runlist,
 		.trigger_mmu_fault = gm20b_fifo_trigger_mmu_fault,
 		.get_mmu_fault_info = gk20a_fifo_get_mmu_fault_info,

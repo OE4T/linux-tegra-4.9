@@ -1383,7 +1383,7 @@ void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt)
 
 	gk20a_dbg_fn("");
 
-	gk20a_disable_tsg(tsg);
+	g->ops.fifo.disable_tsg(tsg);
 
 	if (preempt)
 		g->ops.fifo.preempt_tsg(g, tsgid);

@@ -100,9 +100,11 @@ static void __dma_dbg(struct gk20a *g, size_t size, unsigned long flags,
 
 	__nvgpu_log_dbg(g, gpu_dbg_dma,
 			__func__, __LINE__,
-			"DMA %s: [%s] size=%-7zu aligned=%-7zu %s",
+			"DMA %s: [%s] size=%-7zu "
+			"aligned=%-7zu total=%-10llukB %s",
 			what, type,
 			size, PAGE_ALIGN(size),
+			g->dma_memory_used >> 10,
 			flags_str);
 
 	if (flags_str)
@@ -207,6 +209,12 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	int err;
 	dma_addr_t iova;
 
+	/*
+	 * Before the debug print so we see this in the total. But during
+	 * cleanup in the fail path this has to be subtracted.
+	 */
+	g->dma_memory_used += mem->aligned_size;
+
 	dma_dbg_alloc(g, size, flags, "sysmem");
 
 	/*
@@ -261,6 +269,7 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	return 0;
 
 fail_free:
+	g->dma_memory_used -= mem->aligned_size;
 	dma_free_coherent(d, size, mem->cpu_va, iova);
 	mem->cpu_va = NULL;
 	mem->priv.sgt = NULL;
@@ -451,6 +460,8 @@ fail_free:
 static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	struct device *d = dev_from_gk20a(g);
+
+	g->dma_memory_used -= mem->aligned_size;
 
 	dma_dbg_free(g, mem->size, mem->priv.flags, "sysmem");
 

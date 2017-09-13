@@ -1269,6 +1269,8 @@ struct gk20a {
 	/* memory training sequence and mclk switch scripts */
 	u32 mem_config_idx;
 
+	u64 dma_memory_used;
+
 #if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
 	phys_addr_t	syncpt_unit_base;
 	size_t		syncpt_unit_size;

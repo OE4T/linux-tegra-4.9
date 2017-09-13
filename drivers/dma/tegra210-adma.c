@@ -31,6 +31,7 @@
 #define ADMA_CH_CMD						0x00
 #define ADMA_CH_STATUS						0x0c
 #define ADMA_CH_STATUS_XFER_EN					BIT(0)
+#define ADMA_CH_STATUS_XFER_PAUSED				BIT(1)
 
 #define ADMA_CH_INT_STATUS					0x10
 #define ADMA_CH_INT_STATUS_XFER_DONE				BIT(0)
@@ -75,6 +76,12 @@
 #define T186_ADMA_CH_FIFO_CTRL_RX_FIFO_SIZE_MASK		0x3f
 #define ADMA_CH_FIFO_CTRL_OVRFW_THRES(val)             (((val) & 0xf) << 24)
 #define ADMA_CH_FIFO_CTRL_STARV_THRES(val)             (((val) & 0xf) << 16)
+
+#define ADMA_CH_CTRL_XFER_PAUSE_SHIFT				0
+#define ADMA_CH_CTRL_XFER_PAUSE_MASK	\
+	(1 << ADMA_CH_CTRL_XFER_PAUSE_SHIFT)
+
+#define TEGRA_ADMA_BURST_COMPLETE_TIME				20
 
 #define ADMA_CH_TC_STATUS					0x30
 #define ADMA_CH_LOWER_SRC_ADDR					0x34
@@ -767,6 +774,49 @@ static void tegra_adma_issue_pending(struct dma_chan *dc)
 	spin_unlock_irqrestore(&tdc->vc.lock, flags);
 }
 
+static int tegra_adma_is_paused(struct tegra_adma_chan *tdc)
+{
+	u32 csts;
+
+	csts = tdma_ch_read(tdc, ADMA_CH_STATUS);
+	csts &= ADMA_CH_STATUS_XFER_PAUSED;
+	return csts;
+}
+
+static int tegra_adma_pause(struct dma_chan *dc)
+{
+	struct tegra_adma_chan *tdc = to_tegra_adma_chan(dc);
+	struct tegra_adma_desc *desc = tdc->desc;
+	struct tegra_adma_chan_regs *ch_regs = &desc->ch_regs;
+	u32 dcnt = 10;
+
+	ch_regs->ctrl = tdma_ch_read(tdc, ADMA_CH_CTRL);
+	ch_regs->ctrl |= (1 << ADMA_CH_CTRL_XFER_PAUSE_SHIFT);
+	tdma_ch_write(tdc, ADMA_CH_CTRL, ch_regs->ctrl);
+
+	while (tegra_adma_is_paused(tdc) &&
+	       dcnt--)
+		udelay(TEGRA_ADMA_BURST_COMPLETE_TIME);
+
+	if (!dcnt)
+		dev_err(tdc2dev(tdc), "unable to pause DMA channel\n");
+
+	return 0;
+}
+
+static int tegra_adma_resume(struct dma_chan *dc)
+{
+	struct tegra_adma_chan *tdc = to_tegra_adma_chan(dc);
+	struct tegra_adma_desc *desc = tdc->desc;
+	struct tegra_adma_chan_regs *ch_regs = &desc->ch_regs;
+
+	ch_regs->ctrl = tdma_ch_read(tdc, ADMA_CH_CTRL);
+	ch_regs->ctrl &= ~(1 << ADMA_CH_CTRL_XFER_PAUSE_SHIFT);
+	tdma_ch_write(tdc, ADMA_CH_CTRL, ch_regs->ctrl);
+
+	return 0;
+}
+
 static int tegra_adma_terminate_all(struct dma_chan *dc)
 {
 	struct tegra_adma_chan *tdc = to_tegra_adma_chan(dc);
@@ -1336,6 +1386,8 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	tdma->dma_dev.device_config = tegra_adma_slave_config;
 	tdma->dma_dev.device_tx_status = tegra_adma_tx_status;
 	tdma->dma_dev.device_terminate_all = tegra_adma_terminate_all;
+	tdma->dma_dev.device_pause = tegra_adma_pause;
+	tdma->dma_dev.device_resume = tegra_adma_resume;
 	tdma->dma_dev.src_addr_widths = BIT(DMA_SLAVE_BUSWIDTH_4_BYTES);
 	tdma->dma_dev.dst_addr_widths = BIT(DMA_SLAVE_BUSWIDTH_4_BYTES);
 	tdma->dma_dev.directions = BIT(DMA_DEV_TO_MEM) | BIT(DMA_MEM_TO_DEV);

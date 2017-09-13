@@ -20,7 +20,6 @@
 #include <linux/platform/tegra/latency_allowance.h>
 #include <linux/platform/tegra/mc-regs-t21x.h>
 #include <linux/platform/tegra/mc.h>
-#include <linux/platform/tegra/clock.h>
 #include <soc/tegra/chip-id.h>
 
 #include "la_priv.h"

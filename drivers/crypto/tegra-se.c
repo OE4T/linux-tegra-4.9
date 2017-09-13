@@ -2637,7 +2637,7 @@ static int tegra_se_dh_compute_value(struct kpp_request *req)
 	struct scatterlist *src_sg;
 	struct tegra_se_ll *src_ll, *dst_ll;
 	u32 num_src_sgs, num_dst_sgs;
-	u8 *base_buff;
+	u8 *base_buff = NULL;
 	struct scatterlist src;
 	int err, j;
 	u32 val, total, zpad_sz;

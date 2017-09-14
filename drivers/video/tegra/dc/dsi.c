@@ -4715,25 +4715,6 @@ static void _tegra_dc_dsi_destroy(struct tegra_dc *dc)
 	kfree(dsi);
 }
 
-static void tegra_dsi_config_phy_clk(struct tegra_dc_dsi_data *dsi,
-							u32 settings)
-{
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
-	struct clk *parent_clk = NULL;
-	struct clk *base_clk = NULL;
-	int i = 0;
-
-	for (i = 0; i < dsi->max_instances; i++) {
-		parent_clk = clk_get_parent(dsi->dsi_clk[i]);
-		base_clk = clk_get_parent(parent_clk);
-
-		tegra_clk_cfg_ex(base_clk ? base_clk : parent_clk,
-				TEGRA_CLK_PLLD_DSI_OUT_ENB,
-				settings);
-	}
-#endif
-}
-
 static int tegra_dsi_te_on_off(struct tegra_dc_dsi_data *dsi, bool flag)
 {
 	int ret;
@@ -4795,8 +4776,6 @@ static int _tegra_dsi_host_suspend(struct tegra_dc *dc,
 
 		/* fall through */
 	case DSI_HOST_SUSPEND_LV1:
-		/* Disable dsi fast and slow clock */
-		tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_DISABLE);
 		/* fall through */
 	case DSI_HOST_SUSPEND_LV0:
 		/* Disable dsi source clock */
@@ -4830,11 +4809,9 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 		tegra_dsi_clk_enable(dsi);
 		break;
 	case DSI_HOST_SUSPEND_LV1:
-		tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_ENABLE);
 		tegra_dsi_clk_enable(dsi);
 		break;
 	case DSI_HOST_SUSPEND_LV2:
-		tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_ENABLE);
 		tegra_dsi_clk_enable(dsi);
 
 		err = dsi_pinctrl_state_active(dsi);
@@ -5026,9 +5003,6 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 	/* Suspend core-logic */
 	val = DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_DISABLE);
 	tegra_dsi_writel(dsi, val, DSI_POWER_CONTROL);
-
-	/* Disable dsi fast and slow clock */
-	tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_DISABLE);
 
 	/* Disable dsi source clock */
 	tegra_dsi_clk_disable(dsi);
@@ -5384,7 +5358,6 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		}
 	}
 #endif
-	tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_ENABLE);
 
 	/* Fix me: Revert bpmp check once bpmp FW is fixed */
 #ifdef CONFIG_TEGRA_NVDISPLAY

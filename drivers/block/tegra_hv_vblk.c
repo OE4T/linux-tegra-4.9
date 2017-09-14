@@ -130,6 +130,18 @@ enum IOCTL_STATUS {
 };
 
 /*
+ * ToDo:
+ * we should replace mmc_combo_cmd_info and MMC_COMBO_IOC_CMD
+ * with mmc_ioc_multi_cmd and MMC_IOC_MULTI_CMD _IOWR if mnand
+ * tools use kernel-4.4 default command mmc_ioc_multi_cmd
+ */
+struct mmc_combo_cmd_info {
+	uint8_t  num_of_combo_cmds;
+	struct mmc_ioc_cmd *mmc_ioc_cmd_list;
+};
+#define MMC_COMBO_IOC_CMD _IOWR(MMC_BLOCK_MAJOR, 1, struct mmc_combo_cmd_info)
+
+/*
 * The drvdata of virtual device.
 */
 struct vblk_dev {
@@ -152,6 +164,7 @@ struct vblk_dev {
 	struct device *device;
 	void *shared_buffer;
 	uint8_t *cmd_frame;
+	struct mmc_combo_cmd_info mcci;
 	struct mutex ioctl_lock;
 	spinlock_t queue_lock;
 	enum IOCTL_STATUS ioctl_status;
@@ -310,15 +323,15 @@ static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 }
 
 static int vblk_prepare_passthrough_cmd(struct vblk_dev *vblkdev,
-	void __user *user, unsigned int combo)
+	void __user *user, uint8_t combo)
 {
 	int err = 0;
 	struct combo_info_t *combo_info;
 	struct combo_cmd_t *combo_cmd;
 	int i = 0;
-	uint64_t num_cmd;
+	u8 num_cmd;
+	struct mmc_combo_cmd_info mcci = {0};
 	struct mmc_ioc_cmd ic;
-	struct mmc_ioc_multi_cmd __user *user_cmd;
 	struct mmc_ioc_cmd __user *usr_ptr;
 	uint32_t combo_cmd_size;
 	unsigned long remainingbytes;
@@ -326,18 +339,21 @@ static int vblk_prepare_passthrough_cmd(struct vblk_dev *vblkdev,
 
 	combo_info = (struct combo_info_t *)vblkdev->cmd_frame;
 
-	if (combo == MMC_IOC_MULTI_CMD) {
-		user_cmd = (struct mmc_ioc_multi_cmd __user *)user;
-		if (copy_from_user(&num_cmd, &user_cmd->num_of_cmds,
-				sizeof(num_cmd))) {
+	if (combo) {
+		tmpaddr = (uint8_t *)&mcci;
+		if (copy_from_user((void *)tmpaddr, user,
+			sizeof(struct mmc_combo_cmd_info))) {
 			err = -EFAULT;
 			goto out;
 		}
 
-		if (num_cmd > MMC_IOC_MAX_CMDS)
-			return -EINVAL;
+		num_cmd = mcci.num_of_combo_cmds;
+		if (num_cmd < 1) {
+			err = -EINVAL;
+			goto out;
+		}
 
-		usr_ptr = (void * __user)&user_cmd->cmds;
+		usr_ptr = (void * __user)mcci.mmc_ioc_cmd_list;
 	} else {
 		num_cmd = 1;
 		usr_ptr = (void * __user)user;
@@ -350,13 +366,6 @@ static int vblk_prepare_passthrough_cmd(struct vblk_dev *vblkdev,
 
 	combo_cmd_size = sizeof(struct combo_info_t) +
 		sizeof(struct combo_cmd_t) * combo_info->count;
-
-	if (combo_cmd_size > vblkdev->ivck->frame_size) {
-		dev_err(vblkdev->device,
-			" ivc frame has no enough space to serve ioctl\n");
-		err = -EFAULT;
-		goto out;
-	}
 
 	tmpaddr = (uint8_t *)&ic;
 	for (i = 0; i < combo_info->count; i++) {
@@ -832,11 +841,11 @@ static int vblk_ioctl_cmd(struct block_device *bdev,
 		unsigned int cmd, void __user *user)
 {
 	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
-	uint64_t num_cmd;
+	u8 num_cmd;
+	struct mmc_combo_cmd_info mcci = {0};
 	struct mmc_ioc_cmd ic;
 	struct mmc_ioc_cmd *ic_ptr = &ic;
-	struct mmc_ioc_multi_cmd __user *user_cmd;
-	struct mmc_ioc_cmd __user *usr_ptr;
+	struct mmc_ioc_cmd __user *usr_ptr = NULL;
 	struct combo_cmd_t *combo_cmd;
 	uint32_t i;
 	int err = 0;
@@ -866,18 +875,20 @@ static int vblk_ioctl_cmd(struct block_device *bdev,
 		goto out;
 	}
 
-	if (cmd == MMC_IOC_MULTI_CMD) {
-		user_cmd = (struct mmc_ioc_multi_cmd __user *)user;
-		if (copy_from_user(&num_cmd, &user_cmd->num_of_cmds,
-				sizeof(num_cmd))) {
+	if (cmd == MMC_COMBO_IOC_CMD) {
+		if (copy_from_user(&mcci, user,
+			sizeof(struct mmc_combo_cmd_info))) {
 			err = -EFAULT;
 			goto out;
 		}
 
-		if (num_cmd > MMC_IOC_MAX_CMDS)
-			return -EINVAL;
+		num_cmd = mcci.num_of_combo_cmds;
+		if (num_cmd < 1) {
+			err = -EINVAL;
+			goto out;
+		}
 
-		usr_ptr = (void * __user)&user_cmd->cmds;
+		usr_ptr = (void * __user)mcci.mmc_ioc_cmd_list;
 	} else {
 		usr_ptr = (void * __user)user;
 		num_cmd = 1;
@@ -929,7 +940,7 @@ int vblk_ioctl(struct block_device *bdev, fmode_t mode,
 
 	mutex_lock(&vblkdev->ioctl_lock);
 	switch (cmd) {
-	case MMC_IOC_MULTI_CMD:
+	case MMC_COMBO_IOC_CMD:
 	case MMC_IOC_CMD:
 		ret = vblk_ioctl_cmd(bdev,
 			cmd, (void __user *)arg);

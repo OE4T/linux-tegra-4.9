@@ -172,7 +172,8 @@ static int gic_probe(struct platform_device *pdev)
 
 	pm_runtime_put(dev);
 
-	if (of_device_is_compatible(dev->of_node, "nvidia,tegra210-agic"))
+	if (of_device_is_compatible(dev->of_node, "nvidia,tegra210-agic") ||
+	of_device_is_compatible(dev->of_node, "nvidia,tegra186-agic"))
 		tegra_agic = gic;
 
 	dev_info(dev, "GIC IRQ controller registered\n");
@@ -211,8 +212,16 @@ static const struct gic_data agic_t18x_data = {
 	.num_interfaces = MAX_AGIC_T18x_INTERFACES,
 };
 
+static const struct gic_data agic_t21x_data = {
+	.clk_data = &gic400_data,
+	.supports_routing = true,
+	.num_interfaces = MAX_AGIC_T210_INTERFACES,
+};
+
+
 static const struct of_device_id gic_match[] = {
-	{ .compatible = "nvidia,tegra210-agic",	.data = &agic_t18x_data },
+	{ .compatible = "nvidia,tegra186-agic",	.data = &agic_t18x_data },
+	{ .compatible = "nvidia,tegra210-agic",	.data = &agic_t21x_data },
 	{},
 };
 MODULE_DEVICE_TABLE(of, gic_match);

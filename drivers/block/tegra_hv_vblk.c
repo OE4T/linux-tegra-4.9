@@ -1210,7 +1210,7 @@ unmap_mempool:
 	iounmap(vblkdev->shared_buffer);
 
 free_mempool:
-	kfree(ivmk);
+	tegra_hv_mempool_unreserve(ivmk);
 
 free_drvdata:
 	platform_set_drvdata(pdev, NULL);

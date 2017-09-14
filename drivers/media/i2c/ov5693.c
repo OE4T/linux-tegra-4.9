@@ -38,7 +38,6 @@
 #define OV5693_MAX_COARSE_DIFF		6
 
 #define OV5693_GAIN_SHIFT		8
-#define OV5693_REAL_GAIN_SHIFT		4
 #define OV5693_MIN_GAIN		(1 << OV5693_GAIN_SHIFT)
 #define OV5693_MAX_GAIN		(16 << OV5693_GAIN_SHIFT)
 #define OV5693_MAX_UNREAL_GAIN	(0x0F80)
@@ -78,8 +77,6 @@ struct ov5693 {
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
-
-	int				reg_offset;
 
 	s32				group_hold_prev;
 	u32				frame_length;

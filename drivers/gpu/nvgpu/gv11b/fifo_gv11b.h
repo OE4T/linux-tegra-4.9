@@ -103,4 +103,6 @@ void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 u32 gv11b_fifo_get_syncpt_incr_cmd_size(bool wfi_cmd);
 int gv11b_init_fifo_setup_hw(struct gk20a *g);
 
+void gv11b_fifo_tsg_verify_status_faulted(struct channel_gk20a *ch);
+
 #endif

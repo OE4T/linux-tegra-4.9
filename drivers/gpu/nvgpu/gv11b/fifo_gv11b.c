@@ -1811,3 +1811,38 @@ void gv11b_mmu_fault_id_to_eng_pbdma_id_and_veid(struct gk20a *g,
 	else
 		*pbdma_id = FIFO_INVAL_PBDMA_ID;
 }
+
+static bool gk20a_fifo_channel_status_is_eng_faulted(struct gk20a *g, u32 chid)
+{
+	u32 channel = gk20a_readl(g, ccsr_channel_r(chid));
+
+	return ccsr_channel_eng_faulted_v(channel) ==
+		ccsr_channel_eng_faulted_true_v();
+}
+
+void gv11b_fifo_tsg_verify_status_faulted(struct channel_gk20a *ch)
+{
+	struct gk20a *g = ch->g;
+	struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+
+	/*
+	 * If channel has FAULTED set, clear the CE method buffer
+	 * if saved out channel is same as faulted channel
+	 */
+	if (!gk20a_fifo_channel_status_is_eng_faulted(g, ch->chid))
+		return;
+
+	if (tsg->eng_method_buffers == NULL)
+		return;
+
+	/*
+	 * CE method buffer format :
+	 * DWord0 = method count
+	 * DWord1 = channel id
+	 *
+	 * It is sufficient to write 0 to method count to invalidate
+	 */
+	if ((u32)ch->chid ==
+	    nvgpu_mem_rd32(g, &tsg->eng_method_buffers[ASYNC_CE_RUNQUE], 1))
+		nvgpu_mem_wr32(g, &tsg->eng_method_buffers[ASYNC_CE_RUNQUE], 0, 0);
+}

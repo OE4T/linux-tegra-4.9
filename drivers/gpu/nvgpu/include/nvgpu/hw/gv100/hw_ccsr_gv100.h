@@ -146,6 +146,10 @@ static inline u32 ccsr_channel_next_true_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 ccsr_channel_force_ctx_reload_true_f(void)
+{
+	return 0x100;
+}
 static inline u32 ccsr_channel_pbdma_faulted_f(u32 v)
 {
 	return (v & 0x1) << 22;
@@ -158,9 +162,17 @@ static inline u32 ccsr_channel_eng_faulted_f(u32 v)
 {
 	return (v & 0x1) << 23;
 }
+static inline u32 ccsr_channel_eng_faulted_v(u32 r)
+{
+	return (r >> 23) & 0x1;
+}
 static inline u32 ccsr_channel_eng_faulted_reset_f(void)
 {
 	return 0x800000;
+}
+static inline u32 ccsr_channel_eng_faulted_true_v(void)
+{
+	return 0x00000001;
 }
 static inline u32 ccsr_channel_busy_v(u32 r)
 {

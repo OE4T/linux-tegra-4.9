@@ -2684,9 +2684,56 @@ static int tegra_pmc_io_pads_pinconf_set(struct pinctrl_dev *pctldev,
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static void tegra_pmc_io_pads_pinconf_dbg_show(struct pinctrl_dev *pctldev,
+					       struct seq_file *s,
+					       unsigned int pin)
+{
+	struct tegra_pmc *tpmc = pinctrl_dev_get_drvdata(pctldev);
+	unsigned long config = 0;
+	u16 param, param_val;
+	int ret;
+	int i;
+
+	for (i = 0; i < tpmc->pinctrl_desc.num_custom_params; ++i) {
+		param = tpmc->pinctrl_desc.custom_params[i].param;
+		config = pinconf_to_config_packed(param, 0);
+		ret = tegra_pmc_io_pads_pinconf_get(pctldev, pin, &config);
+		if (ret < 0)
+			continue;
+		param_val = pinconf_to_config_argument(config);
+		switch (param) {
+		case TEGRA_IO_PAD_POWER_SOURCE_VOLTAGE:
+			if (param_val == TEGRA_IO_PAD_VOLTAGE_1200000UV)
+				seq_puts(s, "\n\t\tPad voltage 1200000uV");
+			else if (param_val == TEGRA_IO_PAD_VOLTAGE_1800000UV)
+				seq_puts(s, "\n\t\tPad voltage 1800000uV");
+			else
+				seq_puts(s, "\n\t\tPad voltage 3300000uV");
+			break;
+
+		case TEGRA_IO_PAD_DYNAMIC_VOLTAGE_SWITCH:
+			seq_printf(s, "\n\t\tSwitching voltage: %s",
+				 (param_val) ? "Enable" : "Disable");
+			break;
+		default:
+			break;
+		}
+	}
+}
+#else
+static void tegra_pmc_io_pads_pinconf_dbg_show(struct pinctrl_dev *pctldev,
+					       struct seq_file *s,
+					       unsigned int pin)
+{
+}
+
+#endif
+
 static const struct pinconf_ops tegra_pmc_io_pads_pinconf_ops = {
 	.pin_config_get = tegra_pmc_io_pads_pinconf_get,
 	.pin_config_set = tegra_pmc_io_pads_pinconf_set,
+	.pin_config_dbg_show = tegra_pmc_io_pads_pinconf_dbg_show,
 	.is_generic = true,
 };
 

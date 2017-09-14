@@ -860,6 +860,7 @@
 			clock-names = "vic";
 			iommus = <&smmu TEGRA_SID_VIC>;
 			status = "disabled";
+			interrupts = <0 206 0x04>;
 		};
 
 		nvenc@154c0000 {

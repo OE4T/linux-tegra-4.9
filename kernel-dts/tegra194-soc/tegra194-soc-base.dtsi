@@ -66,6 +66,8 @@
 
 		gos_reserved: grid-of-semaphores {
 			compatible = "nvidia,gosmem";
+			size = <0 0x600000>;
+			alignment = <0 0x1000>;
 			no-map;
 			status = "okay";
 			cvdevs = <&nvdla0 &nvdla1 &pva0 &pva1 &vi_thi &isp_thi>;
@@ -75,7 +77,13 @@
 
 	tegra-carveouts {
 		compatible = "nvidia,carveouts-t19x";
-		memory-region = <&generic_reserved &gos_reserved>;
+                /* *************Note**************
+		 * Zero sized memory regions has to be kept at the end of "memory-region"
+		 * array. "memory-region" parser stops parsing other regions in the array
+                 * once it finds Zero size "memory-region". Hence keep non zero sized
+		 * "memory-region" before the zero sized ones.
+		 */
+		memory-region = <&gos_reserved &generic_reserved>;
 	};
 
 	tegra-cache {

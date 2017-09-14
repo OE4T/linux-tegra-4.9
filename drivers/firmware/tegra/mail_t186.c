@@ -116,7 +116,8 @@ static int virt_channel_init(const struct channel_cfg *cfg,
 		if (index >= cfg->thread_ch_0) {
 			err = request_threaded_irq(
 					cookie->irq,
-					hv_bpmp_irq_handler, NULL, 0,
+					hv_bpmp_irq_handler, NULL,
+					IRQF_NO_SUSPEND,
 					"bpmp_irq_handler", &cookie);
 		} else
 			err = 0;

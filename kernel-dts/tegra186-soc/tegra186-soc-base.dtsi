@@ -1186,7 +1186,7 @@
 		status = "disabled";
 
 	tegra_agic: agic-controller@2a41000 {
-		compatible = "nvidia,tegra210-agic";
+		compatible = "nvidia,tegra186-agic";
 		#interrupt-cells = <4>;
 		interrupt-controller;
 		reg = <0x0 0x02a41000 0x0 0x1000>,
@@ -1198,7 +1198,7 @@
 		};
 
 	tegra_agic_1: agic-controller@2a51000 {
-		compatible = "nvidia,tegra210-agic";
+		compatible = "nvidia,tegra186-agic";
 		interrupt-controller;
 		#interrupt-cells = <4>;
 		reg = <0x0 0x02a51000 0x0 0x1000>,
@@ -1210,7 +1210,7 @@
 		};
 
 	tegra_agic_2: agic-controller@2a61000 {
-		compatible = "nvidia,tegra210-agic";
+		compatible = "nvidia,tegra186-agic";
 		interrupt-controller;
 		#interrupt-cells = <4>;
 		reg = <0x0 0x02a61000 0x0 0x1000>,

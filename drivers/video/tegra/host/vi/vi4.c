@@ -87,6 +87,12 @@ static irqreturn_t nvhost_vi4_error_isr(int irq, void *dev_id)
 		atomic_inc(&vi->fmlite_overflow);
 	}
 
+	r = host1x_readl(pdev, VI_ISPBUFA_ERROR_0);
+	if (r) {
+		host1x_writel(pdev, VI_ISPBUFA_ERROR_0, 1);
+		dev_err_ratelimited(&pdev->dev, "ISPBUF buffer overflow\n");
+	}
+
 	r = host1x_readl(pdev, VI_CFG_INTERRUPT_STATUS_0);
 	if (r) {
 		host1x_writel(pdev, VI_CFG_INTERRUPT_STATUS_0, 1);

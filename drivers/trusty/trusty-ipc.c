@@ -846,6 +846,7 @@ static void dn_handle_event(void *data, int event)
 		break;
 
 	case TIPC_CHANNEL_DISCONNECTED:
+	case TIPC_CHANNEL_NOT_FOUND:
 		dn_disconnected(dn);
 		break;
 

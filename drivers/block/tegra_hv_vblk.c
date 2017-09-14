@@ -21,167 +21,34 @@
 #include <linux/slab.h>   /* kmalloc() */
 #include <linux/fs.h>   /* everything... */
 #include <linux/errno.h> /* error codes */
-#include <linux/types.h> /* size_t */
 #include <linux/fcntl.h> /* O_ACCMODE */
 #include <linux/hdreg.h> /* HDIO_GETGEO */
 #include <linux/kdev_t.h>
 #include <linux/vmalloc.h>
-#include <linux/genhd.h>
-#include <linux/blkdev.h>
-#include <linux/buffer_head.h> /* invalidate_bdev */
-#include <linux/bio.h>
 #include <linux/interrupt.h>
 #include <soc/tegra/chip-id.h>
-#include <linux/tegra-ivc.h>
-#include <linux/workqueue.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
-#include <linux/mmc/ioctl.h>
-#include <linux/mutex.h>
 #include <linux/delay.h>
 #include <asm/uaccess.h>
 #include <asm-generic/bug.h>
+#include <scsi/scsi.h>
+#include <scsi/sg.h>
 #include <linux/dma-mapping.h>
-
-#define DRV_NAME "tegra_hv_vblk"
+#include <asm/cacheflush.h>
+#include "tegra_vblk.h"
 
 static int vblk_major;
 
-/* Minor number and partition management. */
-#define VBLK_MINORS 16
+static int vblk_complete_ioctl_req(struct vblk_dev *vblkdev,
+		struct vsc_request *vsc_req);
 
-#define IVC_RESET_RETRIES	30
-
-#define VS_LOG_HEADS 4
-#define VS_LOG_SECTS 16
-
-enum cmd_mode {
-	R_TRANSFER = 0,
-	W_TRANSFER,
-	R_CONFIG,
-	R_TRANSFER_SHARED_BUF,
-	W_TRANSFER_SHARED_BUF,
-	CMD_PASS_THROUGH = 0x55aaaa55,
-	UNKNOWN_CMD = 0xffffffff,
-};
-
-#define SECTOR_SIZE 512
-
-#pragma pack(push)
-#pragma pack(1)
-struct ivc_blk_request {
-	enum cmd_mode cmd;      /* 0:read 1:write */
-	uint64_t blk_offset; /* Blk cursor */
-	uint32_t num_blks; /* Total Block number to transfer */
-	uint32_t serial_number;
-	uint32_t mempool_offset;
-};
-
-struct ivc_blk_result {
-	uint32_t status;        /* 0 for success, < 0 for error */
-	uint32_t num_blks; /* number of blocks to complete */
-	uint32_t serial_number;
-};
-
-struct virtual_storage_configinfo {
-	enum cmd_mode cmd;                /* 2:configinfo */
-	uint64_t num_blks;                /* Total number of blocks */
-	uint32_t hardblk_size;           /* Block Size */
-	uint32_t max_blks_per_io;       /* Limit number of Blocks per I/O*/
-	uint32_t virtual_storage_ver;     /* Version of virtual storage */
-};
-
-struct combo_cmd_t {
-	uint32_t cmd;
-	uint32_t arg;
-	uint32_t response[4];
-	uint32_t buf_offset;
-	uint32_t data_len;
-};
-
-struct combo_info_t {
-	enum     cmd_mode cmd;
-	uint32_t count;
-	int32_t  result;
-};
-#pragma pack(pop)
-
-#define MAX_VSC_REQS 32
-
-struct vsc_request {
-	struct ivc_blk_request ivc_req;
-	struct request *req;
-	struct req_iterator iter;
-	void *mempool_virt;
-	uint32_t id;
-	struct vblk_dev* vblkdev;
-};
-
-enum IOCTL_STATUS {
-	IOCTL_SUCCESS = 0,
-	IOCTL_FAILURE,
-	IOCTL_IDLE,
-	IOCTL_WAIT_BUS,
-	IOCTL_PROGRESS,
-	IOCTL_UNKNOWN = 0xffffffff,
-};
-
-/*
-* The drvdata of virtual device.
-*/
-struct vblk_dev {
-	struct virtual_storage_configinfo config;
-	uint64_t size;                   /* Device size in bytes */
-	short users;                     /* How many users */
-	short media_change;              /* Flag a media change? */
-	spinlock_t lock;                 /* For mutual exclusion */
-	struct request_queue *queue;     /* The device request queue */
-	struct gendisk *gd;              /* The gendisk structure */
-	uint32_t ivc_id;
-	uint32_t ivm_id;
-	struct tegra_hv_ivc_cookie *ivck;
-	struct tegra_hv_ivm_cookie *ivmk;
-	uint32_t devnum;
-	bool initialized;
-	struct work_struct init;
-	struct work_struct work;
-	struct workqueue_struct *wq;
-	struct device *device;
-	void *shared_buffer;
-	uint8_t *cmd_frame;
-	struct mutex ioctl_lock;
-	spinlock_t queue_lock;
-	enum IOCTL_STATUS ioctl_status;
-	struct completion ioctl_complete;
-	struct vsc_request reqs[MAX_VSC_REQS];
-	DECLARE_BITMAP(pending_reqs, MAX_VSC_REQS);
-	uint32_t inflight_reqs;
-	uint32_t max_requests;
-	struct mutex req_lock;
-	struct mutex ivc_lock;
-};
-
-/* MMCSD passthrough commands used */
-#define MMC_SEND_CID                2
-#define MMC_SWITCH                  6
-#define MMC_SEND_EXT_CSD            8
-#define MMC_IF_COND                 8
-#define MMC_SEND_STATUS             13
-#define MMC_READ_SINGLE_BLOCK       17     /* read single block */
-#define MMC_READ_MULTIPLE_BLOCK     18     /* read multiple blocks */
-#define MMC_WRITE_BLOCK             24     /* write single block */
-#define MMC_WRITE_MULTIPLE_BLOCK    25     /* write multiple blocks */
-#define MMC_GEN_CMD                 56     /* Hynix F26/Toshiba specific */
-#define MMC_MANF0_CMD               60     /* Hynix F20 specific */
-#define MMC_STOP_TRANSMISSION       12
-#define MMC_SECTOR_START            32     /* S */
-#define MMC_SECTOR_END              33     /* S */
-#define MMC_ERASE_GROUP_START       35     /* S */
-#define MMC_ERASE_GROUP_END         36     /* S */
-#define MMC_ERASE                   38     /* S */
+static int vblk_prep_ioctl_req(struct vblk_dev *vblkdev,
+		struct vblk_ioctl_req *ioctl_req,
+		struct vsc_request *vsc_req);
 
 /**
  * vblk_get_req: Get a handle to free vsc request.
@@ -195,9 +62,7 @@ static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
 	bit = find_first_zero_bit(vblkdev->pending_reqs, vblkdev->max_requests);
 	if (bit < vblkdev->max_requests) {
 		req = &vblkdev->reqs[bit];
-		req->id = bit;
 		req->ivc_req.serial_number = bit;
-		req->vblkdev = vblkdev;
 		set_bit(bit, vblkdev->pending_reqs);
 		vblkdev->inflight_reqs++;
 	}
@@ -262,7 +127,9 @@ static void vblk_put_req(struct vsc_request *req)
 			req->id);
 	} else {
 		clear_bit(req->id, vblkdev->pending_reqs);
-		memset(req, 0, sizeof(struct vsc_request));
+		memset(&req->ivc_req, 0, sizeof(struct ivc_request));
+		req->req = NULL;
+		memset(&req->iter, 0, sizeof(struct req_iterator));
 		vblkdev->inflight_reqs--;
 	}
 exit:
@@ -271,7 +138,7 @@ exit:
 
 static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 {
-	struct ivc_blk_request *ivc_blk_req;
+	struct ivc_request *ivc_req;
 	int i = 0;
 
 	/* This while loop exits as long as the remote endpoint cooperates. */
@@ -286,17 +153,14 @@ static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 			schedule_timeout(usecs_to_jiffies(1));
 		}
 	}
-	ivc_blk_req = (struct ivc_blk_request *)
+	ivc_req = (struct ivc_request *)
 		tegra_hv_ivc_write_get_next_frame(vblkdev->ivck);
-	if (IS_ERR_OR_NULL(ivc_blk_req)) {
+	if (IS_ERR_OR_NULL(ivc_req)) {
 		dev_err(vblkdev->device, "no empty frame for write\n");
 		return -EIO;
 	}
 
-	ivc_blk_req->cmd = R_CONFIG;
-	ivc_blk_req->blk_offset = 0;
-	ivc_blk_req->num_blks = 0;
-	ivc_blk_req->mempool_offset = 0;
+	ivc_req->cmd = VBLK_GET_CONFIG;
 
 	dev_info(vblkdev->device, "send config cmd to ivc #%d\n",
 		vblkdev->ivc_id);
@@ -413,7 +277,7 @@ static int vblk_get_configinfo(struct vblk_dev *vblkdev)
 	if (len != sizeof(struct virtual_storage_configinfo))
 		return -EIO;
 
-	if (vblkdev->config.cmd != R_CONFIG)
+	if (vblkdev->config.cmd != VBLK_GET_CONFIG)
 		return -EIO;
 
 	if (vblkdev->config.num_blks == 0) {
@@ -427,14 +291,12 @@ static int vblk_get_configinfo(struct vblk_dev *vblkdev)
 static void req_error_handler(struct vblk_dev *vblkdev, struct request *breq)
 {
 	dev_err(vblkdev->device,
-		"Error for request pos %llx direction %d size %x\n",
+		"Error for request pos %llx type %llx size %x\n",
 		(blk_rq_pos(breq) * (uint64_t)SECTOR_SIZE),
-		rq_data_dir(breq),
+		req_op(breq),
 		blk_rq_bytes(breq));
 
-	spin_lock(vblkdev->queue->queue_lock);
-	__blk_end_request_all(breq, -EIO);
-	spin_unlock(vblkdev->queue->queue_lock);
+	blk_end_request_all(breq, -EIO);
 }
 
 static void ioctl_handler(struct vblk_dev *vblkdev)
@@ -490,76 +352,89 @@ out:
 
 static bool complete_bio_req(struct vblk_dev *vblkdev)
 {
-	struct ivc_blk_result *ivc_blk_res;
+	struct ivc_result *ivc_res;
 	int status = 0;
 	struct bio_vec bvec;
 	size_t size;
 	size_t total_size = 0;
 	struct vsc_request *vsc_req = NULL;
+	struct ivc_request *ivc_req;
 	struct request *bio_req;
 	void *buffer;
-
-	/* Take a lock to protect concurrent accesses to IVC queue */
-	mutex_lock(&vblkdev->ivc_lock);
 
 	if (!tegra_hv_ivc_can_read(vblkdev->ivck))
 		goto no_valid_io;
 
-	ivc_blk_res = (struct ivc_blk_result *)
+	ivc_res = (struct ivc_result *)
 		tegra_hv_ivc_read_get_next_frame(vblkdev->ivck);
-	if (IS_ERR_OR_NULL(ivc_blk_res)) {
+	if (IS_ERR_OR_NULL(ivc_res)) {
 		dev_err(vblkdev->device, "ivc read failed\n");
 		goto no_valid_io;
 	}
 
-	status = ivc_blk_res->status;
+	status = ivc_res->status;
 	if (status != 0) {
-		dev_err(vblkdev->device, "Block IO request error = %d\n",
+		dev_err(vblkdev->device, "IO request error = %d\n",
 				status);
 	}
 
-	vsc_req = vblk_get_req_by_sr_num(vblkdev, ivc_blk_res->serial_number);
+	vsc_req = vblk_get_req_by_sr_num(vblkdev, ivc_res->serial_number);
 	if (vsc_req == NULL) {
 		dev_err(vblkdev->device, "serial_number mismatch num %d!\n",
-				ivc_blk_res->serial_number);
+				ivc_res->serial_number);
 		goto no_valid_io;
 	}
 
 	bio_req = vsc_req->req;
+	ivc_req = &vsc_req->ivc_req;
 
-	if ((status == 0) && (bio_req != NULL)) {
-		if (rq_data_dir(bio_req) == READ) {
-			rq_for_each_segment(bvec, bio_req, vsc_req->iter) {
-				size = bvec.bv_len;
-				buffer = page_address(bvec.bv_page) +
-					bvec.bv_offset;
+	if ((bio_req != NULL) && (status == 0)) {
+		if (bio_req->cmd_type == REQ_TYPE_DRV_PRIV) {
+			if (vblk_complete_ioctl_req(vblkdev, vsc_req)) {
+				req_error_handler(vblkdev, bio_req);
+			} else {
+				if (blk_end_request(bio_req, 0, 0)) {
+					dev_err(vblkdev->device,
+						"Error completing private request!\n");
+				}
+			}
+		} else {
+			if (req_op(bio_req) == REQ_OP_READ) {
+				rq_for_each_segment(bvec, bio_req,
+					vsc_req->iter) {
+					size = bvec.bv_len;
+					buffer = page_address(bvec.bv_page) +
+						bvec.bv_offset;
 
-				if ((total_size + size) >
-					(vsc_req->ivc_req.num_blks *
+					if ((total_size + size) >
+						(ivc_req->num_blks *
 						vblkdev->config.hardblk_size))
-					size = (vsc_req->ivc_req.num_blks *
+					{
+						size =
+						(ivc_req->num_blks *
 						vblkdev->config.hardblk_size) -
-						total_size;
-				memcpy(buffer,
-					vsc_req->mempool_virt + total_size,
-					size);
+							total_size;
+					}
+					memcpy(buffer,
+						vsc_req->mempool_virt +
+						total_size,
+						size);
 
-				total_size += size;
-				if (total_size == (vsc_req->ivc_req.num_blks *
-					vblkdev->config.hardblk_size))
-					break;
+					total_size += size;
+					if (total_size ==
+						(ivc_req->num_blks *
+						vblkdev->config.hardblk_size))
+						break;
+				}
+			}
+
+			if (blk_end_request(bio_req, 0,
+				ivc_req->num_blks *
+					vblkdev->config.hardblk_size)) {
+				dev_err(vblkdev->device,
+					"Error completing fs request!\n");
 			}
 		}
-
-		spin_lock(vblkdev->queue->queue_lock);
-		if (__blk_end_request(bio_req, 0,
-			vsc_req->ivc_req.num_blks *
-				vblkdev->config.hardblk_size)) {
-			dev_err(vblkdev->device,
-				"Error completing the request!\n");
-		}
-		spin_unlock(vblkdev->queue->queue_lock);
-
 	} else if ((bio_req != NULL) && (status != 0)) {
 		req_error_handler(vblkdev, bio_req);
 	} else {
@@ -568,11 +443,6 @@ static bool complete_bio_req(struct vblk_dev *vblkdev)
 			vsc_req->id);
 	}
 
-	dma_free_coherent(vblkdev->device,
-		(vsc_req->ivc_req.num_blks * vblkdev->config.hardblk_size),
-		NULL,
-		(dma_addr_t)(vsc_req->mempool_virt - vblkdev->shared_buffer));
-
 	vblk_put_req(vsc_req);
 
 	if (tegra_hv_ivc_read_advance(vblkdev->ivck)) {
@@ -580,23 +450,18 @@ static bool complete_bio_req(struct vblk_dev *vblkdev)
 			"Couldn't increment read frame pointer!\n");
 	}
 
-	mutex_unlock(&vblkdev->ivc_lock);
-
 	return true;
 
 no_valid_io:
-	mutex_unlock(&vblkdev->ivc_lock);
-
 	return false;
 }
 
 static bool bio_req_sanity_check(struct vblk_dev *vblkdev,
-		struct request *bio_req)
+		struct request *bio_req,
+		struct vsc_request *vsc_req)
 {
 	uint64_t start_offset = (blk_rq_pos(bio_req) * (uint64_t)SECTOR_SIZE);
 	uint64_t req_bytes = blk_rq_bytes(bio_req);
-	uint64_t max_io_bytes = (vblkdev->config.hardblk_size *
-			vblkdev->config.max_blks_per_io);
 
 
 	if ((start_offset >= vblkdev->size) || (req_bytes > vblkdev->size) ||
@@ -621,9 +486,9 @@ static bool bio_req_sanity_check(struct vblk_dev *vblkdev,
 		return false;
 	}
 
-	if (req_bytes > max_io_bytes) {
-		dev_err(vblkdev->device, "Req bytes %llx greater than %llx!\n",
-			req_bytes, max_io_bytes);
+	if (req_bytes > (uint64_t)vsc_req->mempool_len) {
+		dev_err(vblkdev->device, "Req bytes %llx greater than %x!\n",
+			req_bytes, vsc_req->mempool_len);
 		return false;
 	}
 
@@ -638,15 +503,11 @@ static bool submit_bio_req(struct vblk_dev *vblkdev)
 {
 	struct vsc_request *vsc_req = NULL;
 	struct request *bio_req = NULL;
-	struct ivc_blk_request *ivc_blk_req;
-	dma_addr_t phys;
+	struct ivc_request *ivc_req;
 	struct bio_vec bvec;
 	size_t size;
 	size_t total_size = 0;
 	void *buffer;
-
-	/* Take a lock to protect concurrent accesses to IVC queue */
-	mutex_lock(&vblkdev->ivc_lock);
 
 	if (!tegra_hv_ivc_can_write(vblkdev->ivck))
 		goto bio_exit;
@@ -662,88 +523,96 @@ static bool submit_bio_req(struct vblk_dev *vblkdev)
 	bio_req = blk_fetch_request(vblkdev->queue);
 	spin_unlock(vblkdev->queue->queue_lock);
 
-	if (bio_req != NULL) {
-		if (bio_req->cmd_type != REQ_TYPE_FS) {
-			dev_err(vblkdev->device, "Skip non-fs request\n");
-			goto bio_exit;
-		}
-	} else {
+	if (bio_req == NULL)
 		goto bio_exit;
-	}
 
-	if (rq_data_dir(bio_req) == READ) {
-		vsc_req->ivc_req.cmd = R_TRANSFER_SHARED_BUF;
-	} else if (rq_data_dir(bio_req) == WRITE) {
-		vsc_req->ivc_req.cmd = W_TRANSFER_SHARED_BUF;
-	} else {
-		dev_err(vblkdev->device,
-			"Request direction is not read/write!\n");
-		goto bio_exit;
-	}
-
-	vsc_req->iter.bio = NULL;
-	if (!bio_req_sanity_check(vblkdev, bio_req)) {
+	if ((bio_req->cmd_type != REQ_TYPE_FS) &&
+		      (bio_req->cmd_type != REQ_TYPE_DRV_PRIV))	{
+		dev_err(vblkdev->device, "unsupported cmd type %d!\n",
+				bio_req->cmd_type);
 		goto bio_exit;
 	}
 
 	vsc_req->req = bio_req;
+	ivc_req = &vsc_req->ivc_req;
 
-	ivc_blk_req = &vsc_req->ivc_req;
-	ivc_blk_req->blk_offset = ((blk_rq_pos(bio_req) *
-			(uint64_t)SECTOR_SIZE) / vblkdev->config.hardblk_size);
-	ivc_blk_req->num_blks = ((blk_rq_sectors(bio_req) * SECTOR_SIZE) /
-					vblkdev->config.hardblk_size);
+	if (bio_req->cmd_type == REQ_TYPE_FS) {
+		if (req_op(bio_req) == REQ_OP_READ) {
+			ivc_req->cmd = VBLK_READ;
+		} else if (req_op(bio_req) == REQ_OP_WRITE) {
+			ivc_req->cmd = VBLK_WRITE;
+		} else if (req_op(bio_req) == REQ_OP_FLUSH) {
+			ivc_req->cmd = VBLK_FLUSH;
+		} else {
+			dev_err(vblkdev->device,
+				"Request direction is not read/write!\n");
+			goto bio_exit;
+		}
 
-	vsc_req->mempool_virt = dma_alloc_coherent(vblkdev->device,
-				blk_rq_bytes(bio_req),
-				&phys,
-				GFP_KERNEL);
-	if (phys >= vblkdev->ivmk->size) {
-		dev_err(vblkdev->device,
-			"dma alloc coherent of size %d failed\n",
-			blk_rq_bytes(bio_req));
-		goto bio_exit;
-	}
+		vsc_req->iter.bio = NULL;
+		if (req_op(bio_req) == REQ_OP_FLUSH) {
+			ivc_req->blk_offset = 0;
+			ivc_req->num_blks = vblkdev->config.num_blks;
+		} else {
+			if (!bio_req_sanity_check(vblkdev, bio_req, vsc_req)) {
+				goto bio_exit;
+			}
 
-	ivc_blk_req->mempool_offset = phys;
-	vsc_req->mempool_virt = (vblkdev->shared_buffer + phys);
+			ivc_req->blk_offset = ((blk_rq_pos(bio_req) *
+				(uint64_t)SECTOR_SIZE)
+				/ vblkdev->config.hardblk_size);
+			ivc_req->num_blks = ((blk_rq_sectors(bio_req) *
+				SECTOR_SIZE) /
+				vblkdev->config.hardblk_size);
 
-	if (rq_data_dir(bio_req) == WRITE) {
-		rq_for_each_segment(bvec, bio_req, vsc_req->iter) {
-			size = bvec.bv_len;
-			buffer = page_address(bvec.bv_page) +
+			ivc_req->data_offset = vsc_req->mempool_offset;
+		}
+
+		if (req_op(bio_req) == REQ_OP_WRITE) {
+			rq_for_each_segment(bvec, bio_req, vsc_req->iter) {
+				size = bvec.bv_len;
+				buffer = page_address(bvec.bv_page) +
 						bvec.bv_offset;
 
-			if ((total_size + size) > (ivc_blk_req->num_blks *
-				vblkdev->config.hardblk_size))
-				size = (ivc_blk_req->num_blks *
-					vblkdev->config.hardblk_size) -
-					total_size;
+				if ((total_size + size) >
+					(ivc_req->num_blks *
+					vblkdev->config.hardblk_size))
+				{
+					size = (ivc_req->num_blks *
+						vblkdev->config.hardblk_size) -
+						total_size;
+				}
 
-			memcpy(vsc_req->mempool_virt + total_size, buffer,
-					size);
-			total_size += size;
-			if (total_size == (ivc_blk_req->num_blks *
-				vblkdev->config.hardblk_size))
-				break;
+				memcpy(vsc_req->mempool_virt + total_size,
+					buffer, size);
+				total_size += size;
+				if (total_size == (ivc_req->num_blks *
+					vblkdev->config.hardblk_size)) {
+					break;
+				}
+			}
+		}
+	} else if (bio_req->cmd_type == REQ_TYPE_DRV_PRIV) {
+		if (vblk_prep_ioctl_req(vblkdev,
+			(struct vblk_ioctl_req *)bio_req->special,
+			vsc_req)) {
+			dev_err(vblkdev->device,
+				"Failed to prepare ioctl request!\n");
+			goto bio_exit;
 		}
 	}
 
-	if (!tegra_hv_ivc_write(vblkdev->ivck, ivc_blk_req,
-				sizeof(struct ivc_blk_request))) {
+	if (!tegra_hv_ivc_write(vblkdev->ivck, ivc_req,
+				sizeof(struct ivc_request))) {
 		dev_err(vblkdev->device,
 			"Request Id %d IVC write failed!\n",
 				vsc_req->id);
 		goto bio_exit;
 	}
 
-	mutex_unlock(&vblkdev->ivc_lock);
-
 	return true;
 
 bio_exit:
-	mutex_unlock(&vblkdev->ivc_lock);
-
 	if (vsc_req != NULL) {
 		vblk_put_req(vsc_req);
 	}
@@ -920,6 +789,341 @@ out:
 	return err;
 }
 
+static int vblk_prep_sg_io(struct vblk_dev *vblkdev,
+		struct vblk_ioctl_req *ioctl_req,
+		void __user *user)
+{
+	int err = 0;
+	sg_io_hdr_t *hp = NULL;
+	uint32_t header_len = sizeof(sg_io_hdr_t);
+	struct vblk_sg_io_hdr *vblk_hp;
+	uint32_t vblk_sg_header_len = sizeof(struct vblk_sg_io_hdr);
+	uint32_t ioctl_offset;
+	uint32_t vblk_hp_offset;
+	uint32_t cmnd_offset;
+	void *cmnd;
+	uint32_t sbp_offset;
+	void *sbp;
+	uint32_t data_buf_offset;
+	void *data_buf;
+	uint32_t data_buf_size;
+	uint32_t ioctl_len;
+	uint32_t *ioctl_id;
+	void *ioctl_buf = NULL;
+
+	hp = kmalloc(header_len, GFP_KERNEL);
+	if (hp == NULL) {
+		return -ENOMEM;
+	}
+
+	if (copy_from_user(hp, user, header_len)) {
+		err = -EFAULT;
+		goto free_hp;
+	}
+
+	if ((!hp->cmdp) || (hp->cmd_len < 6) ||
+		(hp->cmd_len > VBLK_SG_MAX_CMD_LEN)) {
+		err = -EMSGSIZE;
+		goto free_hp;
+	}
+
+	ioctl_offset = 0;
+	vblk_hp_offset = ioctl_offset + sizeof(*ioctl_id);
+	if (vblk_hp_offset < ioctl_offset) {
+		err = -ENOMEM;
+		goto free_hp;
+	}
+
+	cmnd_offset = (vblk_hp_offset + vblk_sg_header_len);
+	if (cmnd_offset < vblk_hp_offset) {
+		err = -ENOMEM;
+		goto free_hp;
+	}
+
+	sbp_offset = (cmnd_offset + hp->cmd_len);
+	if (sbp_offset < cmnd_offset) {
+		err = - EMSGSIZE;
+		goto free_hp;
+	}
+
+	data_buf_offset = (sbp_offset + hp->mx_sb_len);
+	if (data_buf_offset < sbp_offset) {
+		err = -EMSGSIZE;
+		goto free_hp;
+	}
+	data_buf_offset = ALIGN(data_buf_offset,
+			vblkdev->config.hardblk_size);
+	data_buf_size = ALIGN(hp->dxfer_len,
+			vblkdev->config.hardblk_size);
+
+	ioctl_len = data_buf_offset + data_buf_size;
+	if (ioctl_len < data_buf_offset) {
+		err = -EMSGSIZE;
+		goto free_hp;
+	}
+
+	ioctl_buf = kmalloc(ioctl_len, GFP_KERNEL);
+	if (ioctl_buf == NULL) {
+		err = -ENOMEM;
+		goto free_hp;
+	}
+
+	ioctl_id = (uint32_t *)ioctl_buf;
+	*ioctl_id = VBLK_SG_IO_ID;
+
+	vblk_hp = (struct vblk_sg_io_hdr *)(ioctl_buf + vblk_hp_offset);
+	sbp = (ioctl_buf + sbp_offset);
+	cmnd = (ioctl_buf + cmnd_offset);
+	if (copy_from_user(cmnd, hp->cmdp, hp->cmd_len)) {
+		err = -EFAULT;
+		goto free_ioctl_buf;
+	}
+
+	data_buf = (ioctl_buf + data_buf_offset);
+
+	switch (hp->dxfer_direction) {
+	case SG_DXFER_NONE:
+		vblk_hp->data_direction = SCSI_DATA_NONE;
+		break;
+	case SG_DXFER_TO_DEV:
+		vblk_hp->data_direction = SCSI_TO_DEVICE;
+		break;
+	case SG_DXFER_FROM_DEV:
+		vblk_hp->data_direction = SCSI_FROM_DEVICE;
+		break;
+	case SG_DXFER_TO_FROM_DEV:
+		vblk_hp->data_direction = SCSI_BIDIRECTIONAL;
+		break;
+	default:
+		err = -EBADMSG;
+		goto free_ioctl_buf;
+	}
+
+	if ((vblk_hp->data_direction == SCSI_TO_DEVICE) ||
+		(vblk_hp->data_direction == SCSI_BIDIRECTIONAL)) {
+		if (copy_from_user(data_buf, hp->dxferp, hp->dxfer_len)) {
+			err = -EFAULT;
+			goto free_ioctl_buf;
+		}
+	}
+
+	vblk_hp->cmd_len = hp->cmd_len;
+	vblk_hp->mx_sb_len = hp->mx_sb_len;
+	vblk_hp->dxfer_len = hp->dxfer_len;
+	vblk_hp->xfer_arg_offset = data_buf_offset;
+	vblk_hp->cmdp_arg_offset = cmnd_offset;
+	vblk_hp->sbp_arg_offset = sbp_offset;
+
+	ioctl_req->ioctl_buf = ioctl_buf;
+	ioctl_req->ioctl_len = ioctl_len;
+
+free_ioctl_buf:
+	if (err && ioctl_buf)
+		kfree (ioctl_buf);
+
+free_hp:
+	if (hp)
+		kfree(hp);
+
+	return err;
+}
+
+static int vblk_complete_sg_io(struct vblk_dev *vblkdev,
+		struct vblk_ioctl_req *ioctl_req,
+		void __user *user)
+{
+	sg_io_hdr_t *hp = NULL;
+	uint32_t header_len = sizeof(sg_io_hdr_t);
+	struct vblk_sg_io_hdr *vblk_hp;
+	uint32_t vblk_hp_offset;
+	void *sbp;
+	void *data_buf;
+	int err = 0;
+
+	hp = kmalloc(header_len, GFP_KERNEL);
+	if (hp == NULL) {
+		return -ENOMEM;
+	}
+
+	if (copy_from_user(hp, user, header_len)) {
+		err = -EFAULT;
+		goto free_hp;
+	}
+
+	vblk_hp_offset = sizeof(uint32_t);
+	vblk_hp = (struct vblk_sg_io_hdr *)(ioctl_req->ioctl_buf + vblk_hp_offset);
+	hp->status = 0xff & vblk_hp->status;
+	hp->masked_status = status_byte(vblk_hp->status);
+	hp->msg_status = msg_byte(vblk_hp->status);
+	hp->host_status = host_byte(vblk_hp->status);
+	hp->driver_status = driver_byte(vblk_hp->status);
+	hp->sb_len_wr = vblk_hp->sb_len_wr;
+	/* TODO: Handle the residual length */
+	hp->resid = 0;
+
+	sbp = (ioctl_req->ioctl_buf + vblk_hp->sbp_arg_offset);
+	if ((hp->sb_len_wr != 0) && (hp->sbp != NULL)) {
+		if (copy_to_user(hp->sbp, sbp, hp->sb_len_wr)) {
+			err = -EFAULT;
+			goto free_hp;
+		}
+	}
+
+	data_buf = (ioctl_req->ioctl_buf + vblk_hp->xfer_arg_offset);
+
+	if ((vblk_hp->data_direction == SCSI_FROM_DEVICE) ||
+		(vblk_hp->data_direction == SCSI_BIDIRECTIONAL)) {
+		if (copy_to_user(hp->dxferp, data_buf, vblk_hp->dxfer_len)) {
+			err = -EFAULT;
+			goto free_hp;
+		}
+	}
+
+	if (copy_to_user(user, hp, header_len)) {
+		err = -EFAULT;
+		goto free_hp;
+	}
+
+free_hp:
+	if (ioctl_req->ioctl_buf)
+		kfree(ioctl_req->ioctl_buf);
+
+	if (hp)
+		kfree(hp);
+
+	return err;
+}
+
+static int vblk_complete_ioctl_req(struct vblk_dev *vblkdev,
+		struct vsc_request *vsc_req)
+{
+	struct vblk_ioctl_req *ioctl_req = vsc_req->ioctl_req;
+	int32_t ret = 0;
+
+	if (ioctl_req == NULL) {
+		dev_err(vblkdev->device,
+			"Invalid ioctl request for completion!\n");
+		ret = -EINVAL;
+		goto comp_exit;
+	}
+
+	memcpy(ioctl_req->ioctl_buf, vsc_req->mempool_virt,
+			ioctl_req->ioctl_len);
+comp_exit:
+	return ret;
+}
+
+static int vblk_prep_ioctl_req(struct vblk_dev *vblkdev,
+		struct vblk_ioctl_req *ioctl_req,
+		struct vsc_request *vsc_req)
+{
+	int32_t ret = 0;
+	struct ivc_request *ivc_req;
+
+	if (ioctl_req == NULL) {
+		dev_err(vblkdev->device,
+			"Invalid ioctl request for preparation!\n");
+		return -EINVAL;
+	}
+
+
+	if (ioctl_req->ioctl_len > vsc_req->mempool_len) {
+		dev_err(vblkdev->device,
+			"Ioctl length exceeding mempool length!\n");
+		return -EINVAL;
+	}
+
+	if (ioctl_req->ioctl_buf == NULL) {
+		dev_err(vblkdev->device,
+			"Ioctl buffer invalid!\n");
+		return -EINVAL;
+	}
+
+	ivc_req = &vsc_req->ivc_req;
+	ivc_req->cmd = VBLK_IOCTL;
+	memcpy(vsc_req->mempool_virt, ioctl_req->ioctl_buf,
+			ioctl_req->ioctl_len);
+	ivc_req->data_offset = vsc_req->mempool_offset;
+	ivc_req->ioctl_len = ioctl_req->ioctl_len;
+
+	vsc_req->ioctl_req = ioctl_req;
+
+	return ret;
+}
+
+static int vblk_submit_ioctl_req(struct block_device *bdev,
+		unsigned int cmd, void __user *user)
+{
+	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
+	struct vblk_ioctl_req *ioctl_req = NULL;
+	struct request *rq;
+	int err;
+
+	/*
+	 * The caller must have CAP_SYS_RAWIO, and must be calling this on the
+	 * whole block device, not on a partition.  This prevents overspray
+	 * between sibling partitions.
+	 */
+	if ((!capable(CAP_SYS_RAWIO)) || (bdev != bdev->bd_contains))
+		return -EPERM;
+
+	ioctl_req = kmalloc(sizeof(struct vblk_ioctl_req), GFP_KERNEL);
+	if (!ioctl_req) {
+		dev_err(vblkdev->device,
+			"failed to alloc memory for ioctl req!\n");
+		return -ENOMEM;
+	}
+
+	switch (cmd) {
+	case SG_IO:
+		err = vblk_prep_sg_io(vblkdev, ioctl_req,
+			user);
+		break;
+	default:
+		dev_err(vblkdev->device, "unsupported command %x!\n", cmd);
+		err = -EINVAL;
+		goto free_ioctl_req;
+	}
+
+	if (err)
+		goto free_ioctl_req;
+
+	rq = blk_get_request(vblkdev->queue, READ, GFP_KERNEL);
+	if (IS_ERR_OR_NULL(rq)) {
+		dev_err(vblkdev->device,
+			"Failed to get handle to a request!\n");
+		err = PTR_ERR(rq);
+		goto free_ioctl_req;
+	}
+
+	rq->cmd_type = REQ_TYPE_DRV_PRIV;
+	rq->special = (void *)ioctl_req;
+
+	err = blk_execute_rq(vblkdev->queue, vblkdev->gd, rq, 0);
+
+	blk_put_request(rq);
+
+	if (err)
+		goto free_ioctl_req;
+
+	switch (cmd) {
+	case SG_IO:
+		err = vblk_complete_sg_io(vblkdev, ioctl_req,
+			user);
+		break;
+	default:
+		dev_err(vblkdev->device, "unsupported command %x!\n", cmd);
+		err = -EINVAL;
+		goto free_ioctl_req;
+	}
+
+free_ioctl_req:
+	if (ioctl_req)
+		kfree(ioctl_req);
+
+	return err;
+}
+
 /* The ioctl() implementation */
 int vblk_ioctl(struct block_device *bdev, fmode_t mode,
 	unsigned int cmd, unsigned long arg)
@@ -935,6 +1139,10 @@ int vblk_ioctl(struct block_device *bdev, fmode_t mode,
 			cmd, (void __user *)arg);
 		break;
 
+	case SG_IO:
+		ret = vblk_submit_ioctl_req(bdev, cmd,
+			(void __user *)arg);
+		break;
 	default:  /* unknown command */
 		ret = -ENOTTY;
 		break;
@@ -956,8 +1164,10 @@ const struct block_device_operations vblk_ops = {
 /* Set up virtual device. */
 static void setup_device(struct vblk_dev *vblkdev)
 {
-	uint32_t max_requests;
 	uint32_t max_io_bytes;
+	uint32_t req_id;
+	uint32_t max_requests;
+	struct vsc_request *req;
 
 	vblkdev->size =
 		vblkdev->config.num_blks * vblkdev->config.hardblk_size;
@@ -984,35 +1194,59 @@ static void setup_device(struct vblk_dev *vblkdev)
 	blk_queue_physical_block_size(vblkdev->queue,
 		vblkdev->config.hardblk_size);
 
+	if ((vblkdev->config.req_types_supported & VBLK_BLK_REQ_F) &&
+		(vblkdev->config.blk_req_ops_supported & VBLK_FLUSH_OP_F)) {
+		blk_queue_write_cache(vblkdev->queue, true, false);
+	}
+
 	/* Set the maximum number of requests possible using
 	 * server returned information */
 	max_io_bytes = (vblkdev->config.hardblk_size *
 				vblkdev->config.max_blks_per_io);
+	if (max_io_bytes == 0) {
+		dev_err(vblkdev->device, "Maximum io bytes value is 0!\n");
+		return;
+	}
+
 	max_requests = ((vblkdev->ivmk->size) / max_io_bytes);
-	vblkdev->max_requests = max_requests;
 
 	if (max_requests < MAX_VSC_REQS) {
 		dev_warn(vblkdev->device,
 			"Setting Max requests to %d, consider "
 			"increasing mempool size !\n",
-			vblkdev->max_requests);
+			max_requests);
 	} else if (max_requests > MAX_VSC_REQS) {
-		vblkdev->max_requests = MAX_VSC_REQS;
+		max_requests = MAX_VSC_REQS;
 		dev_warn(vblkdev->device,
 			"Reducing the max requests to %d, consider"
 			" supporting more requests for the vblkdev!\n",
 			MAX_VSC_REQS);
 	}
 
-	if (vblkdev->ivck->nframes < vblkdev->max_requests) {
+	if (vblkdev->ivck->nframes < max_requests) {
 		dev_warn(vblkdev->device,
 			"IVC frames %d less than possible max requests %d!\n",
-			vblkdev->ivck->nframes, vblkdev->max_requests);
+			vblkdev->ivck->nframes, max_requests);
 	}
 
-	mutex_init(&vblkdev->req_lock);
-	mutex_init(&vblkdev->ivc_lock);
+	for (req_id = 0; req_id < max_requests; req_id++){
+		req = &vblkdev->reqs[req_id];
+		req->mempool_virt = (void *)((uintptr_t)vblkdev->shared_buffer +
+			(uintptr_t)(req_id * max_io_bytes));
+		req->mempool_offset = (req_id * max_io_bytes);
+		req->mempool_len = max_io_bytes;
+		req->id = req_id;
+		req->vblkdev = vblkdev;
+	}
 
+	if (max_requests == 0) {
+		dev_err(vblkdev->device,
+			"maximum requests set to 0!\n");
+		return;
+	}
+	mutex_init(&vblkdev->req_lock);
+
+	vblkdev->max_requests = max_requests;
 	blk_queue_max_hw_sectors(vblkdev->queue, max_io_bytes / SECTOR_SIZE);
 	queue_flag_set_unlocked(QUEUE_FLAG_NONROT, vblkdev->queue);
 
@@ -1027,6 +1261,13 @@ static void setup_device(struct vblk_dev *vblkdev)
 	vblkdev->gd->fops = &vblk_ops;
 	vblkdev->gd->queue = vblkdev->queue;
 	vblkdev->gd->private_data = vblkdev;
+
+	/* Don't allow scanning of the device when block
+	 * requests are not supported */
+	if (!(vblkdev->config.req_types_supported & VBLK_BLK_REQ_F)) {
+		vblkdev->gd->flags |= GENHD_FL_NO_PART_SCAN;
+	}
+
 	snprintf(vblkdev->gd->disk_name, 32, "vblkdev%d", vblkdev->devnum);
 	set_capacity(vblkdev->gd, (vblkdev->size / SECTOR_SIZE));
 	add_disk(vblkdev->gd);
@@ -1130,6 +1371,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto free_drvdata;
 	}
+	vblkdev->ivmk = ivmk;
 
 	vblkdev->shared_buffer = ioremap_cache(ivmk->ipa, ivmk->size);
 	if (IS_ERR_OR_NULL(vblkdev->shared_buffer)) {
@@ -1138,16 +1380,6 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto free_mempool;
 	}
-
-	ret = dma_declare_coherent_memory(vblkdev->device, ivmk->ipa,
-				0, ivmk->size,
-			DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
-	if (!(ret & DMA_MEMORY_NOMAP)) {
-		dev_err(dev, "dma_declare_coherent_memory failed\n");
-		goto unmap_mempool;
-	}
-
-	vblkdev->ivmk = ivmk;
 
 	vblkdev->cmd_frame = kzalloc(vblkdev->ivck->frame_size, GFP_KERNEL);
 	if (vblkdev->cmd_frame == NULL) {

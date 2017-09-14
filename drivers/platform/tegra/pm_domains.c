@@ -84,10 +84,37 @@ static int __init tegra210_init_mc_clk(struct generic_pm_domain *pd)
 	return 0;
 }
 
+static int tegra_legacy_power_off(struct generic_pm_domain *genpd)
+{
+	struct tegra_pm_domain *pd = to_tegra_pd(genpd);
+
+	return tegra_powergate_partition(pd->partition_id);
+}
+
+static int tegra_legacy_power_on(struct generic_pm_domain *genpd)
+{
+	struct tegra_pm_domain *pd = to_tegra_pd(genpd);
+
+	return tegra_unpowergate_partition(pd->partition_id);
+}
+
+static int __init tegra_init_legacy_ops(struct generic_pm_domain *pd)
+{
+	struct tegra_pm_domain *tpd = to_tegra_pd(pd);
+
+	if (tpd->partition_id == -1)
+		return -EINVAL;
+
+	pd->power_off = tegra_legacy_power_off;
+	pd->power_on = tegra_legacy_power_on;
+	return 0;
+}
+
 /* Do not add to this list */
 static const struct of_device_id tegra_pd_match[] __initconst = {
 	{.compatible = "nvidia,tegra210-mc-clk-pd", .data = tegra210_init_mc_clk},
 	{.compatible = "nvidia,tegra186-adsp-pd", .data = NULL},
+	{.compatible = "nvidia,tegra210-pcie-pd", .data = tegra_init_legacy_ops},
 	{},
 };
 
@@ -139,6 +166,9 @@ static int __init tegra_init_pd(struct device_node *np)
 
 	if (of_property_read_bool(np, "is_off"))
 		is_off = true;
+
+	if (of_property_read_u32(np, "partition-id", &tpd->partition_id))
+		tpd->partition_id = -1;
 
 	pm_genpd_init(gpd, &simple_qos_governor, is_off);
 

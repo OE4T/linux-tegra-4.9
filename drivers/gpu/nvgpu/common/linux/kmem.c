@@ -71,51 +71,85 @@ void nvgpu_big_free(struct gk20a *g, void *p)
 
 void *__nvgpu_kmalloc(struct gk20a *g, size_t size, unsigned long ip)
 {
+	void *alloc;
+
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_kmalloc(g, size, ip);
+	alloc = __nvgpu_track_kmalloc(g, size, ip);
 #else
-	return kmalloc(size, GFP_KERNEL);
+	alloc = kmalloc(size, GFP_KERNEL);
 #endif
+
+	kmem_dbg(g, "kmalloc: size=%-6ld addr=0x%p gfp=0x%08x",
+		 size, alloc, GFP_KERNEL);
+
+	return alloc;
 }
 
 void *__nvgpu_kzalloc(struct gk20a *g, size_t size, unsigned long ip)
 {
+	void *alloc;
+
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_kzalloc(g, size, ip);
+	alloc = __nvgpu_track_kzalloc(g, size, ip);
 #else
-	return kzalloc(size, GFP_KERNEL);
+	alloc = kzalloc(size, GFP_KERNEL);
 #endif
+
+	kmem_dbg(g, "kzalloc: size=%-6ld addr=0x%p gfp=0x%08x",
+		 size, alloc, GFP_KERNEL);
+
+	return alloc;
 }
 
 void *__nvgpu_kcalloc(struct gk20a *g, size_t n, size_t size, unsigned long ip)
 {
+	void *alloc;
+
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_kcalloc(g, n, size, ip);
+	alloc = __nvgpu_track_kcalloc(g, n, size, ip);
 #else
-	return kcalloc(n, size, GFP_KERNEL);
+	alloc = kcalloc(n, size, GFP_KERNEL);
 #endif
+
+	kmem_dbg(g, "kcalloc: size=%-6ld addr=0x%p gfp=0x%08x",
+		 n * size, alloc, GFP_KERNEL);
+
+	return alloc;
 }
 
 void *__nvgpu_vmalloc(struct gk20a *g, unsigned long size, unsigned long ip)
 {
+	void *alloc;
+
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_vmalloc(g, size, ip);
+	alloc = __nvgpu_track_vmalloc(g, size, ip);
 #else
-	return vmalloc(size);
+	alloc = vmalloc(size);
 #endif
+
+	kmem_dbg(g, "vmalloc: size=%-6ld addr=0x%p", size, alloc);
+
+	return alloc;
 }
 
 void *__nvgpu_vzalloc(struct gk20a *g, unsigned long size, unsigned long ip)
 {
+	void *alloc;
+
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_vzalloc(g, size, ip);
+	alloc = __nvgpu_track_vzalloc(g, size, ip);
 #else
-	return vzalloc(size);
+	alloc = vzalloc(size);
 #endif
+
+	kmem_dbg(g, "vzalloc: size=%-6ld addr=0x%p", size, alloc);
+
+	return alloc;
 }
 
 void __nvgpu_kfree(struct gk20a *g, void *addr)
 {
+	kmem_dbg(g, "kfree: addr=0x%p", addr);
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
 	__nvgpu_track_kfree(g, addr);
 #else
@@ -125,6 +159,7 @@ void __nvgpu_kfree(struct gk20a *g, void *addr)
 
 void __nvgpu_vfree(struct gk20a *g, void *addr)
 {
+	kmem_dbg(g, "vfree: addr=0x%p", addr);
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
 	__nvgpu_track_vfree(g, addr);
 #else
@@ -292,7 +327,6 @@ void *__nvgpu_track_vmalloc(struct gk20a *g, unsigned long size,
 	if (!alloc)
 		return NULL;
 
-	kmem_dbg("vmalloc: size=%-6ld addr=0x%p", size, alloc);
 	__nvgpu_check_valloc_size(size);
 
 	/*
@@ -313,7 +347,6 @@ void *__nvgpu_track_vzalloc(struct gk20a *g, unsigned long size,
 	if (!alloc)
 		return NULL;
 
-	kmem_dbg("vzalloc: size=%-6ld addr=0x%p", size, alloc);
 	__nvgpu_check_valloc_size(size);
 
 	/*
@@ -333,8 +366,6 @@ void *__nvgpu_track_kmalloc(struct gk20a *g, size_t size, unsigned long ip)
 	if (!alloc)
 		return NULL;
 
-	kmem_dbg("kmalloc: size=%-6ld addr=0x%p gfp=0x%08x",
-		 size, alloc, GFP_KERNEL);
 	__nvgpu_check_kalloc_size(size);
 
 	__nvgpu_save_kmem_alloc(g->kmallocs, size, roundup_pow_of_two(size),
@@ -350,8 +381,6 @@ void *__nvgpu_track_kzalloc(struct gk20a *g, size_t size, unsigned long ip)
 	if (!alloc)
 		return NULL;
 
-	kmem_dbg("kzalloc: size=%-6ld addr=0x%p gfp=0x%08x",
-		 size, alloc, GFP_KERNEL);
 	__nvgpu_check_kalloc_size(size);
 
 	__nvgpu_save_kmem_alloc(g->kmallocs, size, roundup_pow_of_two(size),
@@ -368,8 +397,6 @@ void *__nvgpu_track_kcalloc(struct gk20a *g, size_t n, size_t size,
 	if (!alloc)
 		return NULL;
 
-	kmem_dbg("kcalloc: size=%-6ld addr=0x%p gfp=0x%08x",
-		 n * size, alloc, GFP_KERNEL);
 	__nvgpu_check_kalloc_size(n * size);
 
 	__nvgpu_save_kmem_alloc(g->kmallocs, n * size,
@@ -390,8 +417,6 @@ void __nvgpu_track_vfree(struct gk20a *g, void *addr)
 
 	vfree(addr);
 
-	kmem_dbg("vfree: addr=0x%p", addr);
-
 	__nvgpu_free_kmem_alloc(g->vmallocs, (u64)(uintptr_t)addr);
 }
 
@@ -401,8 +426,6 @@ void __nvgpu_track_kfree(struct gk20a *g, void *addr)
 		return;
 
 	kfree(addr);
-
-	kmem_dbg("kfree: addr=0x%p", addr);
 
 	__nvgpu_free_kmem_alloc(g->kmallocs, (u64)(uintptr_t)addr);
 }

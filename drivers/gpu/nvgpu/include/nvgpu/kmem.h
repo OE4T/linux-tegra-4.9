@@ -185,8 +185,8 @@ void nvgpu_kmem_cache_free(struct nvgpu_kmem_cache *cache, void *ptr);
  */
 #define nvgpu_vfree(g, addr)		__nvgpu_vfree(g, addr)
 
-#define kmem_dbg(fmt, args...)			\
-	gk20a_dbg(gpu_dbg_kmem, fmt, ##args)
+#define kmem_dbg(g, fmt, args...)		\
+	nvgpu_log(g, gpu_dbg_kmem, fmt, ##args)
 
 /**
  * nvgpu_kmem_init - Initialize the kmem tracking stuff.

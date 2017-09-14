@@ -372,6 +372,29 @@
 		status = "disabled";
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	aconnect@702c0000 {
+		compatible = "nvidia,tegra210-aconnect";
+		clocks = <&tegra_car TEGRA210_CLK_APE>,
+			 <&tegra_car TEGRA210_CLK_APB2APE>;
+		clock-names = "ape", "apb2ape";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0x702c0000 0x0 0x702c0000 0x00040000>;
+
+		tegra_agic: agic@702f9000 {
+			compatible = "nvidia,tegra210-agic";
+			#interrupt-cells = <3>;
+			interrupt-controller;
+			reg = <0x702f9000 0x2000>,
+			      <0x702fa000 0x2000>;
+			interrupts = <GIC_SPI 102 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+			clocks = <&tegra_car TEGRA210_CLK_APE>;
+			clock-names = "clk";
+
+		};
+	};
+#else
 	tegra_agic: agic-controller {
 		compatible = "nvidia,tegra210-agic";
 		interrupt-controller;
@@ -385,6 +408,7 @@
 		interrupts = <0 102 0xf04>;
 		status = "disabled";
 	};
+#endif
 
 	timer {
 		compatible = "arm,armv8-timer";

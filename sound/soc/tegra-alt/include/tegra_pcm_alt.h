@@ -2,7 +2,7 @@
  * tegra_pcm_alt.h - Definitions for Tegra PCM driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on code copyright/by:
  *

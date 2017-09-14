@@ -2,6 +2,8 @@ GCOV_PROFILE := y
 
 subdir-ccflags-y := -Werror
 ccflags-y += -I$(src)/../tegra-alt
+ccflags-y += -I$(src)/../tegra-alt/include/
+ccflags-y += -I$(src)/../tegra-alt/machine_drivers/
 ccflags-y += -I$(src)/../codecs
 
 # Tegra platform Support

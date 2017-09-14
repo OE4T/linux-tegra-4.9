@@ -1,7 +1,7 @@
 /*
  * tegra_t186ref_p4573_alt.c - Tegra t186 Machine driver for P4573 board
  *
- * Copyright (c) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,

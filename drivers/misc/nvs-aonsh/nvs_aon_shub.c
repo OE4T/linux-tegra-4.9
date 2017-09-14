@@ -63,7 +63,7 @@
 #include <asm/io.h>
 #include <asm/arch_timer.h>
 
-#include <aon-shub-messages.h>
+#include "aon-shub-messages.h"
 
 #define READJUST_TS_SAMPLES (100)
 

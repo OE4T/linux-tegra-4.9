@@ -25,7 +25,7 @@
 #include <linux/cdev.h>
 #include <linux/fs.h>
 
-#include <eqos_ape_global.h>
+#include "eqos_ape_global.h"
 
 struct eqos_ape_cmd {
 	int ppm;

@@ -1,6 +1,0 @@
-config SPI_TEGRA186_AON
-	bool "Tegra18x AON SPI proxy driver"
-	depends on ARCH_TEGRA_18x_SOC
-	default y
-	select TEGRA_IVC
-	select TEGRA_HSP

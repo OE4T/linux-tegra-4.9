@@ -1,9 +1,9 @@
 GCOV_PROFILE := y
 subdir-ccflags-y := -Werror
-ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/host
-ifeq ($(CONFIG_TEGRA_NVDISPLAY),y)
-ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/dc
-ccflags-y += -I$(srctree)/../nvidia/drivers/platform/tegra
+ccflags-y += -I$(overlay)/drivers/video/tegra/host
+ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
+ccflags-y += -I$(overlay)/drivers/video/tegra/dc
+ccflags-y += -I$(overlay)/drivers/platform/tegra
 endif
 ccflags-y += -I$(srctree)/arch/arm/mach-tegra
 obj-y += dc_common.o dc.o mode.o clock.o window.o dc_client.o
@@ -24,7 +24,7 @@ obj-$(CONFIG_TEGRA_LVDS2FPDL_DS90UB947) += ds90ub947-q1.o
 obj-$(CONFIG_TEGRA_DS90UH948Q_DESER)    += ds90uh948q_deser.o
 obj-$(CONFIG_TEGRA_EDP2LVDS_PS8625) += ps8625_edp2lvds.o
 ccflags-y +=-DCOMMON_MIPICAL_SUPPORTED\
-	-I$(srctree)/../nvidia/drivers/media/platform/tegra
+	-I$(overlay)/drivers/media/platform/tegra
 
 ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
@@ -69,3 +69,4 @@ obj-$(CONFIG_TEGRA_HDMIVRR) += hdmivrr.o
 obj-y += panel/
 obj-$(CONFIG_TEGRA_CEC_SUPPORT) += ../../../misc/tegra-cec/
 obj-y += crc.o
+obj-$(CONFIG_TEGRA_NVDISPLAY) += nvdisp/

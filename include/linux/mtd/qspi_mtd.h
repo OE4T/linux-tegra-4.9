@@ -3,7 +3,7 @@
  *
  * Author: Mike Lavender, mike@steroidmicros.com
  * Copyright (c) 2005, Intec Automation Inc.
- * Copyright (C) 2013-2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2013-2017 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -231,6 +231,8 @@ struct qcmdset cmd_info_table[OPERATION_MAX_LIMIT] = {
 	 .flags = (_flags),				\
 	 })
 
+#define QSPI_BRINGUP_BUILD	1
+
 struct qspi {
 	struct spi_device	*spi;
 	struct mutex		lock;
@@ -242,6 +244,12 @@ struct qspi {
 	u8			curr_cmd_mode;
 	u8			is_quad_set;
 	struct	flash_info	*flash_info;
+#ifdef QSPI_BRINGUP_BUILD
+	u8			force_sdr;
+	u8			enable_qpi_mode;
+	u8			override_bus_width;
+	u8			qspi_bus_width;
+#endif
 };
 
 /*

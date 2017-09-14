@@ -86,12 +86,196 @@ static int qspi_write_en(struct qspi *flash,
 static int wait_till_ready(struct qspi *flash, uint8_t is_sleep);
 static int qspi_read_any_reg(struct qspi *flash,
 			uint32_t regaddr, uint8_t *pdata);
+static int qspi_write_any_reg(struct qspi *flash,
+		uint32_t regaddr, uint8_t data);
 
 static inline struct qspi *mtd_to_qspi(struct mtd_info *mtd)
 {
 	return container_of(mtd, struct qspi, mtd);
 }
 
+#ifdef QSPI_BRINGUP_BUILD
+/*
+ * Enable/ Disable QPI Mode. Shall be called with
+ * 1. flash->lock taken.
+ * 2. WIP bit cleared
+ */
+
+static int qspi_qpi_flag_set(struct qspi *flash, uint8_t is_set)
+{
+	uint8_t regval;
+	int status = PASS;
+
+	pr_debug("%s: %s %d\n", dev_name(&flash->spi->dev), __func__, is_set);
+
+	if (((flash->curr_cmd_mode == X4) && is_set) ||
+			((flash->curr_cmd_mode == X1) && !is_set)) {
+		return status;
+	}
+
+	status = qspi_read_any_reg(flash, RWAR_CR2V, &regval);
+	if (status) {
+		pr_err("error: %s CR2V read failed: bset: %d, Status: x%x\n",
+				__func__, is_set, status);
+		return status;
+	}
+
+	if (is_set)
+		regval |= 0x40;
+	else
+		regval &= ~0x40;
+	status = qspi_write_any_reg(flash, RWAR_CR2V, regval);
+	if (status) {
+		pr_err("error: %s CR2V write failed: bset: %d, Status: x%x\n",
+				__func__, is_set, status);
+		return status;
+	}
+
+	if (is_set)
+		flash->curr_cmd_mode = X4;
+	else
+		flash->curr_cmd_mode = X1;
+
+	status = wait_till_ready(flash, FALSE);
+	if (status) {
+		pr_err("error: %s: WIP failed: bset:%d, Status: x%x\n",
+				__func__, is_set, status);
+	}
+	return status;
+}
+
+static ssize_t force_sdr_set(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct qspi *flash = dev_get_drvdata(dev);
+
+	if (flash && count) {
+		flash->force_sdr = ((buf[0] - '0') > 0);
+		return count;
+	}
+
+	return -ENODEV;
+}
+
+static ssize_t force_sdr_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
+{
+	struct qspi *flash = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%d", flash->force_sdr);
+
+	return -ENODEV;
+}
+
+static DEVICE_ATTR(qspi_force_sdr, 0644, force_sdr_show,
+						force_sdr_set);
+
+static ssize_t qspi_mode_set(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct qspi *flash = dev_get_drvdata(dev);
+	u16 mode;
+
+	if (flash && count) {
+		mode = (buf[0] - '0') & (SPI_CPHA|SPI_CPOL);
+		flash->spi->mode &= ~(SPI_CPHA|SPI_CPOL);
+		flash->spi->mode |= mode;
+		return count;
+	}
+
+	return -ENODEV;
+}
+
+static ssize_t qspi_mode_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
+{
+	struct qspi *flash = dev_get_drvdata(dev);
+	u16 mode = flash->spi->mode & (SPI_CPHA|SPI_CPOL);
+
+	return sprintf(buf, "%d\n", mode);
+}
+
+static DEVICE_ATTR(qspi_mode, 0644, qspi_mode_show, qspi_mode_set);
+
+static ssize_t enable_qpi_mode_set(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct qspi *flash = dev_get_drvdata(dev);
+
+	if (flash && count) {
+		flash->enable_qpi_mode = ((buf[0] - '0') > 0);
+		if (flash->enable_qpi_mode)
+			qspi_qpi_flag_set(flash, TRUE);
+		else
+			qspi_qpi_flag_set(flash, FALSE);
+		return count;
+	}
+
+	return -ENODEV;
+}
+
+static ssize_t enable_qpi_mode_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
+{
+	struct qspi *flash = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%d\n", flash->enable_qpi_mode);
+}
+
+static DEVICE_ATTR(qspi_enable_qpi_mode, 0644, enable_qpi_mode_show,
+		enable_qpi_mode_set);
+
+static ssize_t force_bus_width_set(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct qspi *flash = dev_get_drvdata(dev);
+	u8 bus_width;
+
+	if (flash && count) {
+		bus_width = buf[0] - '0';
+		flash->override_bus_width = 1;
+		switch (bus_width) {
+		case 1:
+			flash->qspi_bus_width = X1;
+			break;
+		case 2:
+			flash->qspi_bus_width = X2;
+			break;
+		case 4:
+			flash->qspi_bus_width = X4;
+			break;
+		default:
+			flash->override_bus_width = 0;
+			break;
+		}
+		return count;
+	}
+
+	return -ENODEV;
+}
+
+static ssize_t force_bus_width_show(struct device *dev,
+		struct device_attribute *attr,
+		char *buf)
+{
+	struct qspi *flash = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%d %d", flash->override_bus_width,
+			flash->qspi_bus_width);
+
+	return -ENODEV;
+}
+
+static DEVICE_ATTR(qspi_force_bus_width, 0644, force_bus_width_show,
+		force_bus_width_set);
+#endif
 /*
  * Set Mode for transfer request
  * Function sets Bus width, DDR/SDR and opcode
@@ -497,6 +681,11 @@ static int erase_chip(struct qspi *flash)
 	set_mode(&t[0], FALSE,
 		X1, cmd_opcode);
 
+#ifdef QSPI_BRINGUP_BUILD
+	if (flash->enable_qpi_mode)
+		set_mode(&t[0], FALSE, flash->curr_cmd_mode, cmd_opcode);
+#endif
+
 	spi_message_add_tail(&t[0], &m);
 	status = spi_sync(flash->spi, &m);
 	if (status < 0) {
@@ -556,6 +745,12 @@ static int erase_sector(struct qspi *flash, u32 offset,
 	t[0].cs_change = TRUE;
 	set_mode(&t[0], FALSE,
 		X1, flash->erase_opcode);
+
+#ifdef QSPI_BRINGUP_BUILD
+	if (flash->enable_qpi_mode)
+		set_mode(&t[0], FALSE,
+				flash->curr_cmd_mode, flash->erase_opcode);
+#endif
 
 	spi_message_add_tail(&t[0], &m);
 
@@ -711,6 +906,47 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 					&cmd_info_table[QUAD_IO_READ]);
 	}
 
+#ifdef QSPI_BRINGUP_BUILD
+	if (flash->force_sdr)
+		if (flash->cmd_table.qcmd.op_code ==
+				cmd_info_table[DDR_QUAD_IO_READ].qcmd.op_code)
+			copy_cmd_default(&flash->cmd_table,
+					&cmd_info_table[QUAD_IO_READ]);
+
+	if (flash->override_bus_width) {
+		if (flash->force_sdr)
+			switch (flash->qspi_bus_width) {
+			case X1:
+				copy_cmd_default(&flash->cmd_table,
+					&cmd_info_table[FAST_READ]);
+				break;
+			case X2:
+				copy_cmd_default(&flash->cmd_table,
+					&cmd_info_table[DUAL_IO_READ]);
+				break;
+			case X4:
+				copy_cmd_default(&flash->cmd_table,
+					&cmd_info_table[QUAD_IO_READ]);
+				break;
+			}
+		else
+			switch (flash->qspi_bus_width) {
+			case X1:
+				copy_cmd_default(&flash->cmd_table,
+					&cmd_info_table[DDR_FAST_READ]);
+				break;
+			case X2:
+				copy_cmd_default(&flash->cmd_table,
+					&cmd_info_table[DDR_DUAL_IO_READ]);
+				break;
+			case X4:
+				copy_cmd_default(&flash->cmd_table,
+					&cmd_info_table[DDR_QUAD_IO_READ]);
+				break;
+			}
+	}
+#endif
+
 	/* check if possible to merge cmd and address */
 	if ((flash->cmd_table.qcmd.is_ddr ==
 		flash->cmd_table.qaddr.is_ddr) &&
@@ -787,6 +1023,11 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 		spi_message_add_tail(&t[2], &m);
 	}
 
+#ifdef QSPI_BRINGUP_BUILD
+	if (flash->enable_qpi_mode)
+		qspi_qpi_flag_set(flash, FALSE);
+#endif
+
 	/* Enable QUAD bit before doing QUAD i/o operation */
 	if (flash->cmd_table.qdata.bus_width == X4) {
 		err = qspi_quad_flag_set(flash, TRUE);
@@ -841,6 +1082,13 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 				&cmd_info_table[PAGE_PROGRAM]);
 	}
 
+#ifdef QSPI_BRINGUP_BUILD
+	if (flash->enable_qpi_mode) {
+		copy_cmd_default(&flash->cmd_table,
+				&cmd_info_table[QPI_PAGE_PROGRAM]);
+	}
+#endif
+
 	cmd_addr_buf[0] = opcode = flash->cmd_table.qcmd.op_code;
 	cmd_addr_buf[1] = (offset >> 24) & 0xFF;
 	cmd_addr_buf[2] = (offset >> 16) & 0xFF;
@@ -871,7 +1119,10 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 		t[1].cs_change = TRUE;
 		spi_message_add_tail(&t[1], &m);
 		/* Wait until finished previous write command. */
-
+#ifdef QSPI_BRINGUP_BUILD
+		if (flash->enable_qpi_mode)
+			err = qspi_qpi_flag_set(flash, TRUE);
+#endif
 		if (err) {
 			pr_err("error: %s: QPI/QUAD set failed: Status: x%x ",
 				__func__, err);
@@ -897,7 +1148,6 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 
 		*retlen = m.actual_length - (flash->cmd_table.qaddr.len + 1);
 clear_qmode:
-
 		mutex_unlock(&flash->lock);
 		return err;
 	} else {
@@ -925,6 +1175,10 @@ clear_qmode:
 		t[1].cs_change = TRUE;
 		spi_message_add_tail(&t[1], &m);
 
+#ifdef QSPI_BRINGUP_BUILD
+		if (flash->enable_qpi_mode)
+			err = qspi_qpi_flag_set(flash, TRUE);
+#endif
 		if (err) {
 			pr_err("error: %s: QPI/QUAD set failed: Status: x%x ",
 				__func__, err);
@@ -1215,6 +1469,13 @@ static int qspi_probe(struct spi_device *spi)
 			wait_till_ready(flash, FALSE);
 		}
 	}
+
+#ifdef QSPI_BRINGUP_BUILD
+	device_create_file(&spi->dev, &dev_attr_qspi_force_sdr);
+	device_create_file(&spi->dev, &dev_attr_qspi_mode);
+	device_create_file(&spi->dev, &dev_attr_qspi_enable_qpi_mode);
+	device_create_file(&spi->dev, &dev_attr_qspi_force_bus_width);
+#endif
 
 	/* partitions should match sector boundaries; and it may be good to
 	 * use readonly partitions for writeprotected sectors (BP2..BP0).

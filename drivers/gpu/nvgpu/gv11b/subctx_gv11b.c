@@ -53,7 +53,6 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 {
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
 	struct gk20a *g = c->g;
-	struct gr_gk20a *gr = &g->gr;
 	int ret = 0;
 
 	nvgpu_log(g, gpu_dbg_fn, "gv11b_alloc_subctx_header");
@@ -61,7 +60,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 	if (ctx->mem.gpu_va == 0) {
 		ret = nvgpu_dma_alloc_flags_sys(g,
 				NVGPU_DMA_NO_KERNEL_MAPPING,
-				gr->ctx_vars.golden_image_size,
+				ctxsw_prog_fecs_header_v(),
 				&ctx->mem);
 		if (ret) {
 			nvgpu_err(g, "failed to allocate sub ctx header");
@@ -124,6 +123,10 @@ int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 		ctxsw_prog_main_image_context_buffer_ptr_hi_o(), addr_hi);
 	nvgpu_mem_wr(g, gr_mem,
 		ctxsw_prog_main_image_context_buffer_ptr_o(), addr_lo);
+
+	nvgpu_mem_wr(g, gr_mem,
+                ctxsw_prog_main_image_ctl_o(),
+                ctxsw_prog_main_image_ctl_type_per_veid_header_v());
 	nvgpu_mem_end(g, gr_mem);
 	return ret;
 }

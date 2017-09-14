@@ -1,0 +1,23 @@
+ifdef CONFIG_TEGRA_T19X_GRHOST
+
+GCOV_PROFILE := y
+ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/../t19x/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/../t19x/include
+ccflags-y += -Idrivers/devfreq
+ccflags-y += -Wno-multichar
+
+subdir-ccflags-y := -Werror
+
+obj-y  += nvhost_queue.o \
+	  nvhost_buffer.o \
+	  nvhost_syncpt_unit_interface.o \
+	  nvhost_cv_pm.o
+
+obj-$(CONFIG_TEGRA_GRHOST) += t194/
+obj-$(CONFIG_TEGRA_GRHOST_PVA) += pva/
+obj-$(CONFIG_TEGRA_GRHOST_NVDLA) += nvdla/
+obj-$(CONFIG_TEGRA_GRHOST_SLVSEC) += slvsec/
+obj-$(CONFIG_TEGRA_GRHOST) += nvhost_minimal_pm/
+
+endif

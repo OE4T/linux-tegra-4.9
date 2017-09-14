@@ -1,3 +1,0 @@
-ccflags-y += -Werror
-
-obj-y += tegra-rce-rm.o

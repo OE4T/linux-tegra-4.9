@@ -1,0 +1,10 @@
+ifdef CONFIG_ARCH_TEGRA_19x_SOC
+
+GCOV_PROFILE := y
+subdir-ccflags-y := -Werror
+ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/dc
+ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/dc/nvdisp
+
+obj-y += nvdisp_t19x.o
+
+endif

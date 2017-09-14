@@ -1,1 +1,0 @@
-obj-$(CONFIG_TEGRA_PCIE_EP_MEM)	+= tegra-pcie-ep-mem.o

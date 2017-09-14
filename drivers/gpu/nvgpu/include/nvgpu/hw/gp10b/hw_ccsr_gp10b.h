@@ -146,6 +146,10 @@ static inline u32 ccsr_channel_next_true_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 ccsr_channel_force_ctx_reload_true_f(void)
+{
+	return 0x100;
+}
 static inline u32 ccsr_channel_busy_v(u32 r)
 {
 	return (r >> 28) & 0x1;

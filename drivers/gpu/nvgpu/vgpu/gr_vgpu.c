@@ -418,7 +418,7 @@ static void vgpu_gr_free_channel_pm_ctx(struct channel_gk20a *c)
 	pm_ctx->mem.gpu_va = 0;
 }
 
-static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c)
+static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c, bool is_tsg)
 {
 	gk20a_dbg_fn("");
 
@@ -427,7 +427,7 @@ static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c)
 	vgpu_gr_unmap_global_ctx_buffers(c);
 	vgpu_gr_free_channel_patch_ctx(c);
 	vgpu_gr_free_channel_pm_ctx(c);
-	if (!gk20a_is_channel_marked_as_tsg(c))
+	if (!is_tsg)
 		vgpu_gr_free_channel_gr_ctx(c);
 
 	/* zcull_ctx, pm_ctx */

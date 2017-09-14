@@ -368,6 +368,7 @@ static const struct gpu_ops gm20b_ops = {
 		.preempt_tsg = gk20a_fifo_preempt_tsg,
 		.enable_tsg = gk20a_enable_tsg,
 		.disable_tsg = gk20a_disable_tsg,
+		.tsg_verify_status_ctx_reload = gm20b_fifo_tsg_verify_status_ctx_reload,
 		.update_runlist = gk20a_fifo_update_runlist,
 		.trigger_mmu_fault = gm20b_fifo_trigger_mmu_fault,
 		.get_mmu_fault_info = gk20a_fifo_get_mmu_fault_info,

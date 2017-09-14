@@ -139,16 +139,19 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 
 int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 {
-	struct fifo_gk20a *f = &ch->g->fifo;
-	struct tsg_gk20a *tsg = &f->tsg[ch->tsgid];
+	struct gk20a *g = ch->g;
+	struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+	int err;
 
-	down_write(&tsg->ch_list_lock);
-	nvgpu_list_del(&ch->ch_entry);
-	up_write(&tsg->ch_list_lock);
+	err = gk20a_fifo_tsg_unbind_channel(ch);
+	if (err)
+		return err;
 
 	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
-
 	ch->tsgid = NVGPU_INVALID_TSG_ID;
+
+	gk20a_dbg(gpu_dbg_fn, "UNBIND tsg:%d channel:%d\n",
+					tsg->tsgid, ch->chid);
 
 	return 0;
 }

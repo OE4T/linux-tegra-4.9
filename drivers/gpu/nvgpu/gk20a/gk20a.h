@@ -212,7 +212,7 @@ struct gpu_ops {
 		int (*load_ctxsw_ucode)(struct gk20a *g);
 		u32 (*get_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
 		void (*set_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
-		void (*free_channel_ctx)(struct channel_gk20a *c);
+		void (*free_channel_ctx)(struct channel_gk20a *c, bool is_tsg);
 		int (*alloc_obj_ctx)(struct channel_gk20a  *c,
 				struct nvgpu_alloc_obj_ctx_args *args);
 		int (*bind_ctxsw_zcull)(struct gk20a *g, struct gr_gk20a *gr,
@@ -477,6 +477,8 @@ struct gpu_ops {
 		int (*preempt_tsg)(struct gk20a *g, u32 tsgid);
 		int (*enable_tsg)(struct tsg_gk20a *tsg);
 		int (*disable_tsg)(struct tsg_gk20a *tsg);
+		void (*tsg_verify_status_ctx_reload)(struct channel_gk20a *ch);
+		void (*tsg_verify_status_faulted)(struct channel_gk20a *ch);
 		int (*reschedule_runlist)(struct gk20a *g, u32 runlist_id);
 		int (*update_runlist)(struct gk20a *g, u32 runlist_id,
 				u32 chid, bool add,

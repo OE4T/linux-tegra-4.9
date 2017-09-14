@@ -506,7 +506,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a *c,
 			struct nvgpu_alloc_obj_ctx_args *args);
 int gk20a_free_obj_ctx(struct channel_gk20a *c,
 			struct nvgpu_free_obj_ctx_args *args);
-void gk20a_free_channel_ctx(struct channel_gk20a *c);
+void gk20a_free_channel_ctx(struct channel_gk20a *c, bool is_tsg);
 
 int gk20a_gr_isr(struct gk20a *g);
 int gk20a_gr_nonstall_isr(struct gk20a *g);

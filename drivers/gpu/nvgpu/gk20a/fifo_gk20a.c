@@ -1899,6 +1899,62 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 	return 0;
 }
 
+static int gk20a_fifo_tsg_unbind_channel_verify_status(struct channel_gk20a *ch)
+{
+	struct gk20a *g = ch->g;
+
+	if (g->ops.fifo.tsg_verify_status_ctx_reload)
+		g->ops.fifo.tsg_verify_status_ctx_reload(ch);
+
+	if (g->ops.fifo.tsg_verify_status_faulted)
+		g->ops.fifo.tsg_verify_status_faulted(ch);
+
+	if (gk20a_fifo_channel_status_is_next(g, ch->chid))
+		nvgpu_err(g, "Channel %d to be removed from TSG has NEXT set!",
+			ch->chid);
+
+	return 0;
+}
+
+int gk20a_fifo_tsg_unbind_channel(struct channel_gk20a *ch)
+{
+	struct gk20a *g = ch->g;
+	struct fifo_gk20a *f = &g->fifo;
+	struct tsg_gk20a *tsg = &f->tsg[ch->tsgid];
+	int err;
+
+	/* Disable TSG and examine status before unbinding channel */
+	g->ops.fifo.disable_tsg(tsg);
+
+	err = g->ops.fifo.preempt_tsg(g, tsg->tsgid);
+	if (err)
+		goto fail_enable_tsg;
+
+	err = gk20a_fifo_tsg_unbind_channel_verify_status(ch);
+	if (err)
+		goto fail_enable_tsg;
+
+	/* Channel should be seen as TSG channel while updating runlist */
+	err = channel_gk20a_update_runlist(ch, false);
+	if (err)
+		goto fail_enable_tsg;
+
+	/* Remove channel from TSG and re-enable rest of the channels */
+	down_write(&tsg->ch_list_lock);
+	nvgpu_list_del(&ch->ch_entry);
+	up_write(&tsg->ch_list_lock);
+
+	g->ops.fifo.enable_tsg(tsg);
+
+	gk20a_channel_abort_clean_up(ch);
+
+	return 0;
+
+fail_enable_tsg:
+	g->ops.fifo.enable_tsg(tsg);
+	return err;
+}
+
 u32 gk20a_fifo_get_failing_engine_data(struct gk20a *g,
 			int *__id, bool *__is_tsg)
 {

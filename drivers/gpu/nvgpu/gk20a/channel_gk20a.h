@@ -398,6 +398,7 @@ void channel_gk20a_joblist_lock(struct channel_gk20a *c);
 void channel_gk20a_joblist_unlock(struct channel_gk20a *c);
 bool channel_gk20a_joblist_is_empty(struct channel_gk20a *c);
 
+int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add);
 u32 gk20a_channel_get_timeslice(struct channel_gk20a *ch);
 int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int timeslice_period,

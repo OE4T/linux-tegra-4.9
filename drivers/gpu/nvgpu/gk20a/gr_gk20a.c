@@ -2868,14 +2868,14 @@ static void gr_gk20a_free_channel_pm_ctx(struct channel_gk20a *c)
 	}
 }
 
-void gk20a_free_channel_ctx(struct channel_gk20a *c)
+void gk20a_free_channel_ctx(struct channel_gk20a *c, bool is_tsg)
 {
 	if(c->g->ops.fifo.free_channel_ctx_header)
 		c->g->ops.fifo.free_channel_ctx_header(c);
 	gr_gk20a_unmap_global_ctx_buffers(c);
 	gr_gk20a_free_channel_patch_ctx(c);
 	gr_gk20a_free_channel_pm_ctx(c);
-	if (!gk20a_is_channel_marked_as_tsg(c))
+	if (!is_tsg)
 		gr_gk20a_free_channel_gr_ctx(c);
 
 	/* zcull_ctx */

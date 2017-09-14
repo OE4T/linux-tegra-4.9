@@ -183,3 +183,31 @@ void gm20b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
 	f->intr.pbdma.restartable_0 =
 		pbdma_intr_0_device_pending_f();
 }
+
+static void gm20b_fifo_set_ctx_reload(struct channel_gk20a *ch)
+{
+	struct gk20a *g = ch->g;
+	u32 channel = gk20a_readl(g, ccsr_channel_r(ch->chid));
+
+	gk20a_writel(g, ccsr_channel_r(ch->chid),
+		channel | ccsr_channel_force_ctx_reload_true_f());
+}
+
+void gm20b_fifo_tsg_verify_status_ctx_reload(struct channel_gk20a *ch)
+{
+	struct gk20a *g = ch->g;
+	struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+	struct channel_gk20a *temp_ch;
+
+	/* If CTX_RELOAD is set on a channel, move it to some other channel */
+	if (gk20a_fifo_channel_status_is_ctx_reload(ch->g, ch->chid)) {
+		down_read(&tsg->ch_list_lock);
+		nvgpu_list_for_each_entry(temp_ch, &tsg->ch_list, channel_gk20a, ch_entry) {
+			if (temp_ch->chid != ch->chid) {
+				gm20b_fifo_set_ctx_reload(temp_ch);
+				break;
+			}
+		}
+		up_read(&tsg->ch_list_lock);
+	}
+}

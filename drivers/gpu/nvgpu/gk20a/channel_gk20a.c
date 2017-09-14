@@ -82,9 +82,6 @@ static void channel_gk20a_joblist_delete(struct channel_gk20a *c,
 static struct channel_gk20a_job *channel_gk20a_joblist_peek(
 		struct channel_gk20a *c);
 
-static int channel_gk20a_update_runlist(struct channel_gk20a *c,
-					bool add);
-
 static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch);
 
 static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
@@ -189,7 +186,7 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 	return 0;
 }
 
-static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
+int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 {
 	return c->g->ops.fifo.update_runlist(c->g, c->runlist_id, c->chid, add, true);
 }
@@ -459,6 +456,8 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	struct dbg_session_gk20a *dbg_s;
 	struct dbg_session_data *session_data, *tmp_s;
 	struct dbg_session_channel_data *ch_data, *tmp;
+	bool was_tsg = false;
+	int err;
 
 	gk20a_dbg_fn("");
 
@@ -467,7 +466,19 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	trace_gk20a_free_channel(ch->chid);
 
 	/* abort channel and remove from runlist */
-	gk20a_disable_channel(ch);
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		err = g->ops.fifo.tsg_unbind_channel(ch);
+		if (err)
+			nvgpu_err(g, "failed to unbind channel %d from TSG", ch->chid);
+		/*
+		 * Channel is not a part of TSG this point onwards
+		 * So stash its status and use it whenever necessary
+		 * e.g. while releasing gr_ctx in g->ops.gr.free_channel_ctx()
+		 */
+		was_tsg = true;
+	} else {
+		gk20a_disable_channel(ch);
+	}
 
 	/* wait until there's only our ref to the channel */
 	if (!force)
@@ -524,7 +535,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 		g->ops.fecs_trace.unbind_channel(g, ch);
 
 	/* release channel ctx */
-	g->ops.gr.free_channel_ctx(ch);
+	g->ops.gr.free_channel_ctx(ch, was_tsg);
 
 	gk20a_gr_flush_channel_tlb(gr);
 
@@ -571,9 +582,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	nvgpu_wait_for_deferred_interrupts(g);
 
 unbind:
-	if (gk20a_is_channel_marked_as_tsg(ch))
-		g->ops.fifo.tsg_unbind_channel(ch);
-
 	g->ops.fifo.unbind_channel(ch);
 	g->ops.fifo.free_inst(g, ch);
 

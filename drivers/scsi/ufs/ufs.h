@@ -133,7 +133,7 @@ enum flag_idn {
 	QUERY_FLAG_IDN_FDEVICEINIT      = 0x01,
 	QUERY_FLAG_IDN_PWR_ON_WPE	= 0x03,
 	QUERY_FLAG_IDN_BKOPS_EN         = 0x04,
-	QUERY_FLAG_IDN_MAX		= 0x0C,
+	QUERY_FLAG_IDN_MAX		= 0x0E,
 };
 
 /* Attribute idn for Query requests */
@@ -144,7 +144,7 @@ enum attr_idn {
 	QUERY_ATTR_IDN_CONF_DESC_LCK	= 0x0B,
 	QUERY_ATTR_IDN_EE_CONTROL	= 0x0D,
 	QUERY_ATTR_IDN_EE_STATUS	= 0x0E,
-	QUERY_ATTR_IDN_MAX		= 0x17,
+	QUERY_ATTR_IDN_MAX		= 0x30,
 };
 
 /* Descriptor idn for Query requests */

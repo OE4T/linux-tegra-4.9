@@ -5342,6 +5342,7 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 	u32 attr = 0;
 	u8 *desc = NULL;
 	int data_len = 0;
+	u8 flag_u8;
 
 	ioctl_req = devm_kzalloc(hba->dev, sizeof(struct ufs_ioc_query_req),
 		GFP_KERNEL);
@@ -5349,6 +5350,7 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 		err = -ENOMEM;
 		goto out;
 	}
+
 	/* Copy the user buffer to kernel buffer */
 	err = copy_from_user(ioctl_req, buf, sizeof(struct ufs_ioc_query_req));
 	if (err) {
@@ -5367,21 +5369,22 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 			err = -EINVAL;
 			goto out_release_mem;
 		}
+
 		data_len = min_t(int, QUERY_DESC_MAX_SIZE, ioctl_req->buf_size);
 		desc = devm_kzalloc(hba->dev, data_len, GFP_KERNEL);
 		if (desc == NULL) {
 			err = -ENOMEM;
 			goto out_release_mem;
 		}
+
 		err = __ufshcd_query_descriptor(hba, ioctl_req->opcode,
 			ioctl_req->idn, ioctl_req->index, ioctl_req->selector,
 			desc, &data_len);
-		if (err) {
-			devm_kfree(hba->dev, desc);
-			goto out_release_mem;
+		if (!err) {
+			err = copy_to_user(ioctl_req->buffer, desc, data_len);
+			ioctl_req->buf_size = data_len;
 		}
-		err = copy_to_user(ioctl_req->buffer, desc, data_len);
-		ioctl_req->buf_size = data_len;
+
 		devm_kfree(hba->dev, desc);
 		break;
 
@@ -5390,20 +5393,22 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 			err = -EINVAL;
 			goto out_release_mem;
 		}
+
 		data_len = min_t(int, QUERY_DESC_MAX_SIZE, ioctl_req->buf_size);
 		desc = devm_kzalloc(hba->dev, data_len, GFP_KERNEL);
 		if (desc == NULL) {
 			err = -ENOMEM;
 			goto out_release_mem;
 		}
-		err = copy_from_user(desc, ioctl_req->buffer, data_len);
-		if (err)
-			goto out_release_mem;
 
-		err = __ufshcd_query_descriptor(hba, ioctl_req->opcode,
-			ioctl_req->idn, ioctl_req->index, ioctl_req->selector,
-			desc, &data_len);
-		ioctl_req->buf_size = data_len;
+		err = copy_from_user(desc, ioctl_req->buffer, data_len);
+		if (!err) {
+			err = __ufshcd_query_descriptor(hba, ioctl_req->opcode,
+				ioctl_req->idn, ioctl_req->index,
+				ioctl_req->selector, desc, &data_len);
+			ioctl_req->buf_size = data_len;
+		}
+
 		devm_kfree(hba->dev, desc);
 		break;
 
@@ -5412,21 +5417,20 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 			err = -EINVAL;
 			goto out_release_mem;
 		}
+
 		if (ioctl_req->buf_size != sizeof(u32)) {
 			err = -EINVAL;
 			goto out_release_mem;
 		}
+
 		err = ufshcd_query_attr(hba, ioctl_req->opcode, ioctl_req->idn,
 			ioctl_req->index, ioctl_req->selector, &attr);
-		if (err)
-			goto out_release_mem;
-		err = copy_to_user(ioctl_req->buffer, (void *)&attr,
-			sizeof(u32));
-
+		if (!err)
+			err = copy_to_user(ioctl_req->buffer, (void *)&attr,
+				sizeof(u32));
 		break;
 
 	case UPIU_QUERY_OPCODE_WRITE_ATTR:
-
 		if (ioctl_req->idn > QUERY_ATTR_IDN_MAX) {
 			err = -EINVAL;
 			goto out_release_mem;
@@ -5439,12 +5443,10 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 
 		err = copy_from_user((void *)&attr, ioctl_req->buffer,
 			sizeof(u32));
-
-		if (err)
-			goto out_release_mem;
-
-		err = ufshcd_query_attr(hba, ioctl_req->opcode,	ioctl_req->idn,
-			ioctl_req->index, ioctl_req->selector, &attr);
+		if (!err)
+			err = ufshcd_query_attr(hba, ioctl_req->opcode,
+				ioctl_req->idn,	ioctl_req->index,
+				ioctl_req->selector, &attr);
 		break;
 
 	case UPIU_QUERY_OPCODE_READ_FLAG:
@@ -5452,17 +5454,20 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 			err = -EINVAL;
 			goto out_release_mem;
 		}
+
 		if (ioctl_req->buf_size != sizeof(u8)) {
 			err = -EINVAL;
 			goto out_release_mem;
 		}
+
 		err = ufshcd_query_flag(hba, ioctl_req->opcode, ioctl_req->idn,
 			&flag);
-		if (err)
-			goto out_release_mem;
+		if (!err) {
+			flag_u8 = (u8)flag;
+			err = copy_to_user(ioctl_req->buffer, (void *)&flag_u8,
+				sizeof(u8));
+		}
 
-		err = copy_to_user(ioctl_req->buffer, (void *)&flag,
-			sizeof(u8));
 		break;
 
 	case UPIU_QUERY_OPCODE_SET_FLAG:
@@ -5472,6 +5477,7 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 			err = -EINVAL;
 			goto out_release_mem;
 		}
+
 		err = ufshcd_query_flag(hba, ioctl_req->opcode,	ioctl_req->idn,
 			NULL);
 		break;

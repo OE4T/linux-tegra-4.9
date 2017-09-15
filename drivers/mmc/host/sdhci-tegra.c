@@ -217,6 +217,7 @@ struct sdhci_tegra {
 	bool static_parent_clk_mapping;
 	int parent_clk_index[MMC_TIMING_COUNTER];
 	bool disable_rtpm;
+	bool disable_clk_gate;
 };
 
 static int sdhci_tegra_parse_parent_list_from_dt(struct platform_device *pdev,
@@ -1645,8 +1646,19 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 
 	tegra_host->disable_rtpm = of_property_read_bool(np,
 		"nvidia,disable-rtpm");
-	if (tegra_host->disable_rtpm)
+	if (tegra_host->disable_rtpm) {
+		tegra_host->disable_clk_gate = true;
+#ifdef CONFIG_PM
 		dev_info(&pdev->dev, "runtime pm disabled\n");
+#endif
+	} else {
+		tegra_host->disable_clk_gate = of_property_read_bool(np,
+			"disable-dynamic-clock-gating");
+#ifdef CONFIG_PM
+		if (tegra_host->disable_clk_gate)
+			dev_info(&pdev->dev, "clock gating disabled\n");
+#endif
+	}
 
 	return 0;
 }
@@ -1791,6 +1803,10 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		tegra_sdhci_set_clock(host, SDMMC_TEGRA_FALLBACK_CLK_HZ);
 		host->mmc->is_host_clk_enabled = true;
 	} else {
+		if (tegra_host->disable_clk_gate) {
+			tegra_sdhci_set_clock(host, SDMMC_TEGRA_FALLBACK_CLK_HZ);
+			host->mmc->is_host_clk_enabled = true;
+		}
 		pm_runtime_enable(mmc_dev(host->mmc));
 		pm_runtime_get_sync(mmc_dev(host->mmc));
 		/*
@@ -1934,30 +1950,33 @@ static void tegra_sdhci_complete(struct sdhci_host *host)
 
 static int tegra_sdhci_runtime_suspend(struct sdhci_host *host)
 {
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+
 	/* Disable clock */
-	dev_dbg(mmc_dev(host->mmc), "Runtime suspend started\n");
-	tegra_sdhci_set_clock(host, 0);
-	dev_dbg(mmc_dev(host->mmc), "Runtime suspend done\n");
+	if (!tegra_host->disable_clk_gate)
+		tegra_sdhci_set_clock(host, 0);
 
 	return 0;
 }
 
 static int tegra_sdhci_runtime_resume(struct sdhci_host *host)
 {
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	unsigned int clk;
 
-	/* Clock enable should be invoked with a non-zero freq */
-	if (host->clock)
-		clk = host->clock;
-	else if (host->mmc->ios.clock)
-		clk = host->mmc->ios.clock;
-	else
-		clk = SDMMC_TEGRA_FALLBACK_CLK_HZ;
+	if (!tegra_host->disable_clk_gate) {
+		/* Clock enable should be invoked with a non-zero freq */
+		if (host->clock)
+			clk = host->clock;
+		else if (host->mmc->ios.clock)
+			clk = host->mmc->ios.clock;
+		else
+			clk = SDMMC_TEGRA_FALLBACK_CLK_HZ;
 
-	dev_dbg(mmc_dev(host->mmc),
-		"Runtime resume started. Setting clk freq %u\n", clk);
-	tegra_sdhci_set_clock(host, clk);
-	dev_dbg(mmc_dev(host->mmc), "Runtime resume done\n");
+		tegra_sdhci_set_clock(host, clk);
+	}
 
 	return 0;
 }

@@ -209,7 +209,7 @@ int sdhci_pltfm_unregister(struct platform_device *pdev)
 }
 EXPORT_SYMBOL_GPL(sdhci_pltfm_unregister);
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
 static int sdhci_pltfm_runtime_suspend(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
@@ -231,18 +231,22 @@ static int sdhci_pltfm_runtime_resume(struct device *dev)
 
 	return ret;
 }
+#endif /* defined(CONFIG_PM) */
 
+#ifdef CONFIG_PM_SLEEP
 static int sdhci_pltfm_suspend(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
 	int ret = 0;
 
+#ifdef CONFIG_PM
 	if (pm_runtime_status_suspended(dev))
 		sdhci_pltfm_runtime_resume(dev);
 
 	/* disable runtime pm */
 	if (pm_runtime_enabled(dev))
 		pm_runtime_disable(dev);
+#endif
 
 	ret = sdhci_suspend_host(host);
 	if (ret) {
@@ -283,7 +287,7 @@ static void sdhci_pltfm_complete(struct device *dev)
 		host->ops->complete(host);
 }
 
-#endif
+#endif /* defined(CONFIG_PM_SLEEP) */
 
 const struct dev_pm_ops sdhci_pltfm_pmops = {
 	.complete = sdhci_pltfm_complete,

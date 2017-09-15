@@ -636,8 +636,6 @@ int vgpu_gv11b_init_hal(struct gk20a *g)
 	}
 
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
-	gv11b_init_uncompressed_kind_map();
-	gv11b_init_kind_attr();
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 
 	g->name = "gv11b";

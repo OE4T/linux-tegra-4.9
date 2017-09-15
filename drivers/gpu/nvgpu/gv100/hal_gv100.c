@@ -764,11 +764,6 @@ int gv100_init_hal(struct gk20a *g)
 	g->pmu_lsf_pmu_wpr_init_done = 0;
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 
-	gv11b_init_uncompressed_kind_map();
-	gv11b_init_kind_attr();
-
-	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
-
 	g->name = "gv10x";
 
 	return 0;

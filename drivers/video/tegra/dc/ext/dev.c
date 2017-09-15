@@ -960,7 +960,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 	struct tegra_dc_dmabuf *old_handle;
 	struct tegra_dc *dc = ext->dc;
 	int i, nr_unpin = 0, nr_win = 0;
-	bool skip_flip = false;
+	bool skip_flip = true;
 	bool wait_for_vblank = false;
 	bool lock_flip = false;
 	bool show_background =
@@ -986,6 +986,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 		s64 head_timestamp = -1;
 		int j = 0;
 		u32 reg_val = 0;
+		bool win_skip_flip = false;
 
 		if (index < 0 || !test_bit(index, &dc->valid_windows))
 			continue;
@@ -997,7 +998,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 
 		if (!(atomic_dec_and_test(&ext_win->nr_pending_flips)) &&
 			(flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_CURSOR))
-			skip_flip = true;
+			win_skip_flip = true;
 
 		mutex_lock(&ext_win->queue_lock);
 		list_for_each_entry(temp, &ext_win->timestamp_queue,
@@ -1015,8 +1016,8 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 				s64 timestamp = tegra_timespec_to_ns(
 					&temp->win[i].attr.timestamp);
 
-				skip_flip = !tegra_dc_does_vsync_separate(dc,
-						timestamp, head_timestamp);
+				win_skip_flip = !tegra_dc_does_vsync_separate(
+					dc, timestamp, head_timestamp);
 				/* Look ahead only one flip */
 				break;
 			}
@@ -1026,7 +1027,9 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			list_del(&data->timestamp_node);
 		mutex_unlock(&ext_win->queue_lock);
 
-		if (skip_flip) {
+		skip_flip = skip_flip && win_skip_flip;
+
+		if (win_skip_flip) {
 			if (flip_ele)
 				flip_ele->state = TEGRA_DC_FLIP_STATE_SKIPPED;
 			old_handle = flip_win->handle[TEGRA_DC_Y];
@@ -1037,7 +1040,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 		if (old_handle) {
 			int j;
 			for (j = 0; j < TEGRA_DC_NUM_PLANES; j++) {
-				if (skip_flip)
+				if (win_skip_flip)
 					old_handle = flip_win->handle[j];
 				else
 					old_handle = ext_win->cur_handle[j];
@@ -1127,7 +1130,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			}
 		}
 
-		if (!skip_flip)
+		if (!win_skip_flip)
 			tegra_dc_ext_set_windowattr(ext, win, &data->win[i]);
 
 		if (dc->yuv_bypass) {
@@ -1164,10 +1167,9 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 	if (trace_sync_wt_ovr_syncpt_upd_enabled())
 		tegra_dc_flip_trace(data, trace_sync_wt_ovr_syncpt_upd);
 
-	if (dc->enabled && !skip_flip)
+	if (dc->enabled && !skip_flip) {
 		tegra_dc_set_hdr(dc, &data->hdr_data, data->hdr_cache_dirty);
 
-	if (dc->enabled && !skip_flip) {
 		dc->blanked = false;
 		if (dc->out_ops && dc->out_ops->vrr_enable)
 				dc->out_ops->vrr_enable(dc,

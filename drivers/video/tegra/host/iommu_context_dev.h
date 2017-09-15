@@ -19,7 +19,7 @@
 #ifndef IOMMU_CONTEXT_DEV_H
 #define IOMMU_CONTEXT_DEV_H
 
-struct platform_device *iommu_context_dev_allocate(void);
+struct platform_device *iommu_context_dev_allocate(void *identifier);
 void iommu_context_dev_release(struct platform_device *pdev);
 int iommu_context_dev_get_streamid(struct platform_device *pdev);
 int iommu_context_dev_map_static(void *vaddr, dma_addr_t paddr, size_t size);

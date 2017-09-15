@@ -224,7 +224,7 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 	mutex_unlock(&host->vm_mutex);
 
 	if (vm_op().init && vm->enable_hw) {
-		err = vm_op().init(vm);
+		err = vm_op().init(vm, identifier);
 		if (err)
 			goto err_init;
 	}

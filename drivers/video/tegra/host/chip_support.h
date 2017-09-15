@@ -65,7 +65,7 @@ struct nvhost_cdma_ops {
 };
 
 struct nvhost_vm_ops {
-	int (*init)(struct nvhost_vm *vm);
+	int (*init)(struct nvhost_vm *vm, void *identifier);
 	void (*deinit)(struct nvhost_vm *vm);
 	int (*pin_static_buffer)(struct platform_device *pdev,
 				 void *vaddr, dma_addr_t paddr,

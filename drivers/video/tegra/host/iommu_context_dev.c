@@ -47,24 +47,65 @@ struct iommu_ctx {
 	struct list_head list;
 	struct device_dma_parameters dma_parms;
 	bool allocated;
+	void *prev_identifier;
 };
 
 static LIST_HEAD(iommu_ctx_list);
 static LIST_HEAD(iommu_static_mappings_list);
 static DEFINE_MUTEX(iommu_ctx_list_mutex);
 
-struct platform_device *iommu_context_dev_allocate(void)
+struct platform_device *iommu_context_dev_allocate(void *identifier)
 {
-	struct iommu_ctx *ctx;
+	struct iommu_ctx *ctx, *ctx_new = NULL;
+	bool dirty = false;
 
 	mutex_lock(&iommu_ctx_list_mutex);
+	/*
+	 * First check if we have same identifier stashed into
+	 * some context device
+	 * If yes, use that context device since it will have all
+	 * the mappings stashed too
+	 */
 	list_for_each_entry(ctx, &iommu_ctx_list, list) {
-		if (!ctx->allocated) {
+		if (!ctx->allocated && identifier == ctx->prev_identifier) {
 			ctx->allocated = true;
 			mutex_unlock(&iommu_ctx_list_mutex);
 			return ctx->pdev;
 		}
 	}
+
+	/*
+	 * Otherwise, find a device which does not have any identifier stashed
+	 * If there is no device left without identifier stashed, use any of
+	 * the free device and explicitly remove all the stashings from it
+	 */
+	list_for_each_entry(ctx, &iommu_ctx_list, list) {
+		if (!ctx->allocated && !ctx_new) {
+			ctx_new = ctx;
+			dirty = true;
+		}
+		if (!ctx->allocated && !ctx->prev_identifier) {
+			ctx_new = ctx;
+			dirty = false;
+			break;
+		}
+	}
+
+	if (ctx_new) {
+		if (dirty) {
+			/*
+			 * Ensure that all stashed mappings are removed from this context device
+			 * before this context device gets reassigned to some other process
+			 */
+			dma_buf_release_stash(&ctx_new->pdev->dev);
+		}
+
+		ctx_new->prev_identifier = identifier;
+		ctx_new->allocated = true;
+		mutex_unlock(&iommu_ctx_list_mutex);
+		return ctx_new->pdev;
+	}
+
 	mutex_unlock(&iommu_ctx_list_mutex);
 
 	return NULL;
@@ -200,8 +241,8 @@ static int iommu_context_dev_probe(struct platform_device *pdev)
 	pdev->dev.dma_parms = &ctx->dma_parms;
 	dma_set_max_seg_size(&pdev->dev, UINT_MAX);
 
-	/* disable lazy unmapping for context devices */
-	dma_buf_disable_lazy_unmapping(&pdev->dev);
+	/* flag required to handle stashings in context devices */
+	pdev->dev.context_dev = true;
 
 	dev_info(&pdev->dev, "initialized (streamid=%d)",
 		 iommu_get_hwid(pdev->dev.archdata.iommu, &pdev->dev, 0));

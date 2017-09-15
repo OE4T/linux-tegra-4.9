@@ -6434,14 +6434,13 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	mutex_lock(&dc->lock);
 	ret = tegra_dc_io_start(dc);
 
-	if (dc->out_ops && dc->out_ops->suspend)
-		dc->out_ops->suspend(dc);
-
 	if (dc->enabled) {
 		_tegra_dc_disable(dc);
-
 		dc->suspended = true;
 	}
+
+	if (dc->out_ops && dc->out_ops->suspend)
+		dc->out_ops->suspend(dc);
 
 	tegra_dc_release_common_channel(dc);
 
@@ -6484,6 +6483,12 @@ static int tegra_dc_resume(struct platform_device *ndev)
 	/* To pan the fb on resume */
 	tegra_fb_pan_display_reset(dc->fb);
 
+	if (dc->out && dc->out->hotplug_init)
+		dc->out->hotplug_init(&ndev->dev);
+
+	if (dc->out_ops && dc->out_ops->resume)
+		dc->out_ops->resume(dc);
+
 	if (dc->enabled) {
 		dc->enabled = false;
 		_tegra_dc_set_default_videomode(dc);
@@ -6500,12 +6505,6 @@ static int tegra_dc_resume(struct platform_device *ndev)
 	 */
 	if (!tegra_dc_ext_is_userspace_active() && !tegra_dc_is_powered(dc))
 		tegra_dc_unpowergate_locked(dc);
-
-	if (dc->out && dc->out->hotplug_init)
-		dc->out->hotplug_init(&ndev->dev);
-
-	if (dc->out_ops && dc->out_ops->resume)
-		dc->out_ops->resume(dc);
 
 	mutex_unlock(&dc->lock);
 	tegra_dc_cursor_resume(dc);

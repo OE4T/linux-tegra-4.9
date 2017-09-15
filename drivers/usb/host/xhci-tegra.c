@@ -1394,6 +1394,14 @@ static void tegra_xusb_mbox_handle(struct tegra_xusb *tegra,
 								     enable);
 			if (err < 0)
 				break;
+
+			if (XHCI_IS_T210(tegra) && !enable) {
+				/*
+				 * Add this delay to increase stability of
+				 * directing U3.
+				 */
+				usleep_range(500, 1000);
+			}
 		}
 
 		if (err < 0) {

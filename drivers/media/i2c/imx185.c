@@ -544,14 +544,12 @@ static int imx185_set_gain(struct imx185 *priv, s64 val)
 {
 	imx185_reg reg_list[1];
 	int err;
-	s64 gain64;
 	u8 gain;
 
 	/* translate value */
-	gain64 = (s64)(val / FIXED_POINT_SCALING_FACTOR);
-	gain = (u8)(gain64 * 160 / 48);
+	gain = (u8) (val * 160 / (48 * FIXED_POINT_SCALING_FACTOR));
 	dev_dbg(&priv->i2c_client->dev,
-		"%s:  gain reg: %d, db: %lld\n",  __func__, gain, gain64);
+		"%s:  gain reg: %d\n",  __func__, gain);
 
 	imx185_get_gain_reg(reg_list, gain);
 

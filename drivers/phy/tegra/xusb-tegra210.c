@@ -551,25 +551,21 @@ disable:
 	return err;
 }
 
+/* must be called under padctl->lock */
 static void tegra210_pex_uphy_disable(struct tegra_xusb_padctl *padctl)
 {
 	struct tegra_xusb_pcie_pad *pcie = to_pcie_pad(padctl->pcie);
 
-	mutex_lock(&padctl->lock);
-
 	if (WARN_ON(pcie->enable == 0))
-		goto unlock;
+		return;
 
 	if (--pcie->enable > 0)
-		goto unlock;
+		return;
 
 	reset_control_assert(pcie->rst);
 	clk_disable_unprepare(pcie->pll);
 	if (t210b01_compatible(padctl) == 1)
 		clk_disable_unprepare(pcie->uphy_mgmt_clk);
-
-unlock:
-	mutex_unlock(&padctl->lock);
 }
 
 /* must be called under padctl->lock */
@@ -798,23 +794,19 @@ disable:
 	return err;
 }
 
+/* must be called under padctl->lock */
 static void tegra210_sata_uphy_disable(struct tegra_xusb_padctl *padctl)
 {
 	struct tegra_xusb_sata_pad *sata = to_sata_pad(padctl->sata);
 
-	mutex_lock(&padctl->lock);
-
 	if (WARN_ON(sata->enable == 0))
-		goto unlock;
+		return;
 
 	if (--sata->enable > 0)
-		goto unlock;
+		return;
 
 	reset_control_assert(sata->rst);
 	clk_disable_unprepare(sata->pll);
-
-unlock:
-	mutex_unlock(&padctl->lock);
 }
 
 static int tegra210_xusb_padctl_enable(struct tegra_xusb_padctl *padctl)
@@ -1014,12 +1006,22 @@ static int tegra210_usb2_phy_init(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct tegra_xusb_usb2_port *port;
 	u32 value;
+	int err;
+
+	port = tegra_xusb_find_usb2_port(padctl, index);
+	if (!port) {
+		dev_err(&phy->dev, "no port found for USB2 lane %u\n", index);
+		return -ENODEV;
+	}
 
 	dev_dbg(padctl->dev, "phy init lane = %s, port = %s\n",
 		lane->pad->soc->lanes[lane->index].name,
-		dev_name(&tegra_xusb_find_usb2_port(
-				lane->pad->padctl, lane->index)->base.dev));
+		dev_name(&port->base.dev));
+
+	mutex_lock(&padctl->lock);
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
 	value &= ~(XUSB_PADCTL_USB2_PAD_MUX_USB2_BIAS_PAD_MASK <<
@@ -1028,14 +1030,56 @@ static int tegra210_usb2_phy_init(struct phy *phy)
 		 XUSB_PADCTL_USB2_PAD_MUX_USB2_BIAS_PAD_SHIFT;
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_PAD_MUX);
 
+
+	/* only enable regulator when OC is disabled for host only ports */
+	/* OC is disabled when either oc_pinctrl is NULL or oc_pin is not
+	 * defined (-1)
+	 */
+	if (port->supply && port->port_cap == USB_HOST_CAP &&
+		(!padctl->oc_pinctrl || port->oc_pin < 0)) {
+		err = regulator_enable(port->supply);
+		if (err) {
+			mutex_unlock(&padctl->lock);
+			return err;
+		}
+	}
+
+	if (port->port_cap == USB_OTG_CAP) {
+		if (padctl->usb2_otg_port_base_1)
+			dev_warn(padctl->dev, "enabling OTG on multiple USB2 ports\n");
+		padctl->usb2_otg_port_base_1 = index + 1;
+		dev_info(padctl->dev, "enabled OTG on UTMI pad %d\n", index);
+	}
+
+	mutex_unlock(&padctl->lock);
+
 	return tegra210_xusb_padctl_enable(padctl);
 }
 
 static int tegra210_usb2_phy_exit(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct tegra_xusb_usb2_port *port;
 
-	return tegra210_xusb_padctl_disable(lane->pad->padctl);
+	port = tegra_xusb_find_usb2_port(padctl, index);
+	if (!port) {
+		dev_err(&phy->dev, "no port found for USB2 lane %u\n", index);
+		return -ENODEV;
+	}
+
+	mutex_lock(&padctl->lock);
+
+	if (port->supply && port->port_cap == USB_HOST_CAP)
+		regulator_disable(port->supply);
+
+	if (index == padctl->usb2_otg_port_base_1 - 1)
+		padctl->usb2_otg_port_base_1 = 0;
+
+	mutex_unlock(&padctl->lock);
+
+	return tegra210_xusb_padctl_disable(padctl);
 }
 
 static int tegra210_usb2_phy_power_on(struct phy *phy)
@@ -1050,16 +1094,17 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 	u32 value;
 	int err;
 
-	dev_dbg(padctl->dev, "phy power on lane = %s, port = %s\n",
-		lane->pad->soc->lanes[lane->index].name,
-		dev_name(&tegra_xusb_find_usb2_port(
-				lane->pad->padctl, lane->index)->base.dev));
-
 	port = tegra_xusb_find_usb2_port(padctl, index);
 	if (!port) {
 		dev_err(&phy->dev, "no port found for USB2 lane %u\n", index);
 		return -ENODEV;
 	}
+
+	dev_dbg(padctl->dev, "phy power on lane = %s, port = %s\n",
+		lane->pad->soc->lanes[lane->index].name,
+		dev_name(&port->base.dev));
+
+	mutex_lock(&padctl->lock);
 
 	priv = to_tegra210_xusb_padctl(padctl);
 
@@ -1169,12 +1214,6 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 	padctl_writel(padctl, value,
 		      XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(index));
 
-	err = regulator_enable(port->supply);
-	if (err)
-		return err;
-
-	mutex_lock(&padctl->lock);
-
 	if (pad->enable > 0) {
 		pad->enable++;
 		mutex_unlock(&padctl->lock);
@@ -1183,7 +1222,7 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 
 	err = clk_prepare_enable(pad->clk);
 	if (err)
-		goto disable_regulator;
+		goto out;
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 	value &= ~((XUSB_PADCTL_USB2_BIAS_PAD_CTL1_TRK_START_TIMER_MASK <<
@@ -1215,8 +1254,7 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 
 	return 0;
 
-disable_regulator:
-	regulator_disable(port->supply);
+out:
 	mutex_unlock(&padctl->lock);
 	return err;
 }
@@ -1229,17 +1267,16 @@ static int tegra210_usb2_phy_power_off(struct phy *phy)
 	struct tegra_xusb_usb2_port *port;
 	u32 value;
 
-	dev_dbg(padctl->dev, "phy power off lane = %s, port = %s\n",
-		lane->pad->soc->lanes[lane->index].name,
-		dev_name(&tegra_xusb_find_usb2_port(
-				lane->pad->padctl, lane->index)->base.dev));
-
 	port = tegra_xusb_find_usb2_port(padctl, lane->index);
 	if (!port) {
 		dev_err(&phy->dev, "no port found for USB2 lane %u\n",
 			lane->index);
 		return -ENODEV;
 	}
+
+	dev_dbg(padctl->dev, "phy power off lane = %s, port = %s\n",
+		lane->pad->soc->lanes[lane->index].name,
+		dev_name(&port->base.dev));
 
 	mutex_lock(&padctl->lock);
 
@@ -1282,7 +1319,6 @@ static int tegra210_usb2_phy_power_off(struct phy *phy)
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
 
 out:
-	regulator_disable(port->supply);
 	mutex_unlock(&padctl->lock);
 	return 0;
 }
@@ -1445,12 +1481,16 @@ static int tegra210_hsic_phy_init(struct phy *phy)
 	dev_dbg(padctl->dev, "phy init lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
+	mutex_lock(&padctl->lock);
+
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
 	value &= ~(XUSB_PADCTL_USB2_PAD_MUX_HSIC_PAD_TRK_MASK <<
 		   XUSB_PADCTL_USB2_PAD_MUX_HSIC_PAD_TRK_SHIFT);
 	value |= XUSB_PADCTL_USB2_PAD_MUX_HSIC_PAD_TRK_XUSB <<
 		 XUSB_PADCTL_USB2_PAD_MUX_HSIC_PAD_TRK_SHIFT;
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_PAD_MUX);
+
+	mutex_unlock(&padctl->lock);
 
 	return tegra210_xusb_padctl_enable(padctl);
 }
@@ -1476,6 +1516,8 @@ static int tegra210_hsic_phy_power_on(struct phy *phy)
 	dev_dbg(padctl->dev, "phy power on lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
+	mutex_lock(&padctl->lock);
+
 	priv = to_tegra210_xusb_padctl(padctl);
 
 	if (priv->prod_list) {
@@ -1490,8 +1532,10 @@ static int tegra210_hsic_phy_power_on(struct phy *phy)
 	}
 
 	err = regulator_enable(pad->supply);
-	if (err)
+	if (err) {
+		mutex_unlock(&padctl->lock);
 		return err;
+	}
 
 	padctl_writel(padctl, hsic->strobe_trim,
 		      XUSB_PADCTL_HSIC_STRB_TRIM_CONTROL);
@@ -1557,10 +1601,12 @@ static int tegra210_hsic_phy_power_on(struct phy *phy)
 
 	clk_disable_unprepare(pad->clk);
 
+	mutex_unlock(&padctl->lock);
 	return 0;
 
 disable:
 	regulator_disable(pad->supply);
+	mutex_unlock(&padctl->lock);
 	return err;
 }
 
@@ -1574,6 +1620,8 @@ static int tegra210_hsic_phy_power_off(struct phy *phy)
 
 	dev_dbg(padctl->dev, "phy power off lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
+
+	mutex_lock(&padctl->lock);
 
 	value = padctl_readl(padctl, XUSB_PADCTL_HSIC_PADX_CTL0(index));
 	value |= XUSB_PADCTL_HSIC_PAD_CTL0_PD_RX_DATA0 |
@@ -1589,6 +1637,7 @@ static int tegra210_hsic_phy_power_off(struct phy *phy)
 
 	regulator_disable(pad->supply);
 
+	mutex_unlock(&padctl->lock);
 	return 0;
 }
 
@@ -1798,6 +1847,7 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 		if (!port) {
 			dev_err(&phy->dev, "no port found for USB3 lane %u\n",
 						lane->index);
+			mutex_unlock(&padctl->lock);
 			return -ENODEV;
 		}
 
@@ -1835,12 +1885,15 @@ static int tegra210_pcie_phy_power_off(struct phy *phy)
 	dev_dbg(padctl->dev, "phy power off lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
+	mutex_lock(&padctl->lock);
+
 	value = padctl_readl(padctl, XUSB_PADCTL_USB3_PAD_MUX);
 	value &= ~XUSB_PADCTL_USB3_PAD_MUX_PCIE_IDDQ_DISABLE(lane->index);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB3_PAD_MUX);
 
 	tegra210_pex_uphy_disable(padctl);
 
+	mutex_unlock(&padctl->lock);
 	return 0;
 }
 
@@ -2035,12 +2088,15 @@ static int tegra210_sata_phy_power_off(struct phy *phy)
 	dev_dbg(padctl->dev, "phy power off lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
+	mutex_lock(&padctl->lock);
+
 	value = padctl_readl(padctl, XUSB_PADCTL_USB3_PAD_MUX);
 	value &= ~XUSB_PADCTL_USB3_PAD_MUX_SATA_IDDQ_DISABLE(lane->index);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB3_PAD_MUX);
 
 	tegra210_sata_uphy_disable(lane->pad->padctl);
 
+	mutex_unlock(&padctl->lock);
 	return 0;
 }
 
@@ -2176,6 +2232,7 @@ static const struct tegra_xusb_port_ops tegra210_hsic_port_ops = {
 	.map = tegra210_hsic_port_map,
 };
 
+/* must be called under padctl->lock */
 static int tegra210_usb3_port_enable(struct tegra_xusb_port *port)
 {
 	struct tegra_xusb_usb3_port *usb3 = to_usb3_port(port);
@@ -2257,6 +2314,7 @@ static int tegra210_usb3_port_enable(struct tegra_xusb_port *port)
 	return 0;
 }
 
+/* must be called under padctl->lock */
 static void tegra210_usb3_port_disable(struct tegra_xusb_port *port)
 {
 	struct tegra_xusb_padctl *padctl = port->padctl;
@@ -2416,6 +2474,8 @@ static int tegra210_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
 {
 	u32 reg;
 
+	dev_dbg(padctl->dev, "%s vbus override\n", set ? "set" : "clear");
+
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID);
 	if (set) {
 		reg |= VBUS_OVERRIDE_VBUS_ON;
@@ -2433,6 +2493,8 @@ static int tegra210_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
 					 bool set)
 {
 	u32 reg;
+
+	dev_dbg(padctl->dev, "%s id override\n", set ? "set" : "clear");
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID);
 	if (set) {
@@ -2622,9 +2684,163 @@ static void tegra210_xusb_padctl_remove(struct tegra_xusb_padctl *padctl)
 {
 }
 
+/* should only be called with a UTMI phy and with padctl->lock held */
+static void tegra210_enable_vbus_oc(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+
+	dev_dbg(padctl->dev, "enable VBUS OC on %s\n",
+			dev_name(&tegra_xusb_find_usb2_port(
+					padctl, lane->index)->base.dev));
+
+	/* TODO implement */
+}
+
+/* should only be called with a UTMI phy and with padctl->lock held */
+static void tegra210_disable_vbus_oc(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+
+	dev_dbg(padctl->dev, "disable VBUS OC on %s\n",
+			dev_name(&tegra_xusb_find_usb2_port(
+					padctl, lane->index)->base.dev));
+
+	/* TODO implement */
+}
+
+static int tegra210_xusb_padctl_vbus_power_on(struct tegra_xusb_padctl *padctl,
+					unsigned int index)
+{
+	int rc = 0;
+	int status;
+	struct tegra_xusb_usb2_port *port;
+
+	port = tegra_xusb_find_usb2_port(padctl, index);
+	if (!port) {
+		dev_err(padctl->dev, "no port found for USB2 lane %u\n", index);
+		return -ENODEV;
+	}
+
+	if (!port->supply) {
+		dev_err(padctl->dev, "no vbus-supply found for USB2-%u\n",
+			index);
+		return -ENODEV;
+	}
+
+	dev_dbg(padctl->dev, "power on VBUS on %s\n",
+			dev_name(&port->base.dev));
+
+	mutex_lock(&padctl->lock);
+
+	if (padctl->oc_pinctrl && port->oc_pin >= 0) {
+		rc = tegra_xusb_select_vbus_en_state(padctl,
+						port->oc_pin, true);
+		tegra210_enable_vbus_oc(padctl->usb2->lanes[index]);
+	} else {
+		status = regulator_is_enabled(port->supply);
+		if (!status) {
+			rc = regulator_enable(port->supply);
+			if (rc)
+				dev_err(padctl->dev,
+				"enable usb2-%d vbus failed %d\n", index, rc);
+		}
+
+		dev_dbg(padctl->dev, "%s: usb2-%d vbus status: %d->%d\n",
+			__func__, index, status,
+			regulator_is_enabled(port->supply));
+	}
+	mutex_unlock(&padctl->lock);
+	return rc;
+}
+
+static int tegra210_xusb_padctl_vbus_power_off(struct tegra_xusb_padctl *padctl,
+					unsigned int index)
+{
+	int rc = 0;
+	int status;
+	struct tegra_xusb_usb2_port *port;
+
+	port = tegra_xusb_find_usb2_port(padctl, index);
+	if (!port) {
+		dev_err(padctl->dev, "no port found for USB2 lane %u\n", index);
+		return -ENODEV;
+	}
+
+	if (padctl->otg_vbus_alwayson) {
+		dev_info(padctl->dev, "%s: usb2-%d vbus cannot off due to alwayson\n",
+			__func__, index);
+		return -EINVAL;
+	}
+
+	if (!port->supply) {
+		dev_err(padctl->dev, "no vbus-supply found for USB2-%u\n",
+			index);
+		return -ENODEV;
+	}
+
+	dev_dbg(padctl->dev, "power off VBUS on %s\n",
+			dev_name(&port->base.dev));
+
+	mutex_lock(&padctl->lock);
+
+	if (padctl->oc_pinctrl && port->oc_pin >= 0) {
+		rc = tegra_xusb_select_vbus_en_state(padctl,
+						port->oc_pin, false);
+		tegra210_disable_vbus_oc(padctl->usb2->lanes[index]);
+	} else {
+		status = regulator_is_enabled(port->supply);
+		if (status) {
+			rc = regulator_disable(port->supply);
+			if (rc)
+				dev_err(padctl->dev,
+					"disable usb2-%d vbus failed %d\n",
+					index, rc);
+		}
+
+		dev_dbg(padctl->dev, "%s: usb2-%d vbus status: %d->%d\n",
+			__func__, index, status,
+			regulator_is_enabled(port->supply));
+	}
+	mutex_unlock(&padctl->lock);
+	return rc;
+}
+
+static void tegra210_xusb_padctl_otg_vbus_handle
+			(struct tegra_xusb_padctl *padctl, unsigned int index)
+{
+	u32 reg;
+	int err;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID);
+	dev_dbg(padctl->dev, "USB2_VBUS_ID 0x%x otg_vbus_on was %d\n", reg,
+		padctl->otg_vbus_on);
+
+	if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_GROUNDED) {
+		/* entering host mode role */
+		if (!padctl->otg_vbus_on) {
+			err = tegra210_xusb_padctl_vbus_power_on(padctl, index);
+			if (!err)
+				padctl->otg_vbus_on = true;
+		}
+	} else if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_FLOATING) {
+		/* leaving host mode role */
+		if (padctl->otg_vbus_on) {
+			err = tegra210_xusb_padctl_vbus_power_off(padctl,
+								  index);
+			if (!err)
+				padctl->otg_vbus_on = false;
+		}
+	}
+}
+
 static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.probe = tegra210_xusb_padctl_probe,
 	.remove = tegra210_xusb_padctl_remove,
+	.vbus_power_on = tegra210_xusb_padctl_vbus_power_on,
+	.vbus_power_off = tegra210_xusb_padctl_vbus_power_off,
+	.otg_vbus_handle = tegra210_xusb_padctl_otg_vbus_handle,
 	.usb3_set_lfps_detect = tegra210_usb3_set_lfps_detect,
 	.hsic_set_idle = tegra210_hsic_set_idle,
 	.has_otg_cap = tegra210_xusb_padctl_has_otg_cap,

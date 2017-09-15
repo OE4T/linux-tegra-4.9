@@ -17,6 +17,10 @@
  */
 
 / {
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+        aconnect@702c0000 {
+                status = "okay";
+#endif
 	ahub {
 		status = "okay";
 
@@ -184,6 +188,14 @@
 		};
 	};
 
+	adsp_audio {
+		status = "okay";
+	};
+
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+        };
+#endif
+
 	spdif_dit0: spdif-dit.0@0 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x0 0x0 0x0>;
@@ -207,9 +219,5 @@
 	spdif_dit4: spdif-dit.4@4 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x04 0x0 0x0>;
-	};
-
-	adsp_audio {
-		status = "okay";
 	};
 };

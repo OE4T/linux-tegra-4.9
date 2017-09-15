@@ -1261,43 +1261,6 @@
 
 	};
 
-	adma: adma@702e2000 {
-		compatible = "nvidia,tegra210-adma";
-		wakeup-disable;
-		interrupt-parent = <&tegra_agic>;
-		reg =	<0x0 0x702e2000 0x0 0xc00>,	/* CH Reg */
-			<0x0 0x702e2c00 0x0 0x1400>,	/* GLOBAL Reg */
-			<0x0 0x702ec000 0x0 0x72>;	/* AMISC Reg */
-		power-domains = <&ape_pd>;
-		clocks = <&tegra_car TEGRA210_CLK_D_AUDIO>,
-				 <&tegra_car TEGRA210_CLK_APB2APE>,
-				 <&tegra_car TEGRA210_CLK_APE>;
-		clock-names = "ahub", "apb2ape", "adma.ape";
-		interrupts =  <GIC_SPI INT_ADMA_EOT0 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>,
-			      <GIC_SPI INT_ADMA_EOT1 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>,
-			      <GIC_SPI INT_ADMA_EOT2 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>,
-			      <GIC_SPI INT_ADMA_EOT3 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>,
-			      <GIC_SPI INT_ADMA_EOT4 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>,
-			      <GIC_SPI INT_ADMA_EOT5 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>,
-			      <GIC_SPI INT_ADMA_EOT6 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>,
-			      <GIC_SPI INT_ADMA_EOT7 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>,
-			      <GIC_SPI INT_ADMA_EOT8 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>,
-			      <GIC_SPI INT_ADMA_EOT9 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>;
-			#dma-cells = <1>;
-			dma-channels = <10>;
-		status = "disabled";
-	};
-
 	se: se@70012000 {
 		compatible = "nvidia,tegra210-se";
 		power-domains = <&mc_clk_pd>;
@@ -1311,6 +1274,32 @@
 		status = "disabled";
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+        aconnect@702c0000 {
+#endif
+	adma: adma@702e2000 {
+                compatible = "nvidia,tegra210-adma";
+                interrupt-parent = <&tegra_agic>;
+                reg =   <0x0 0x702e2000 0x0 0xc00>,     /* CH Reg */
+                        <0x0 0x702e2c00 0x0 0x1400>,    /* GLOBAL Reg */
+                        <0x0 0x702ec000 0x0 0x72>;      /* AMISC Reg */
+                clocks = <&tegra_car TEGRA210_CLK_D_AUDIO>;
+                clock-names = "d_audio";
+                interrupts =  <GIC_SPI INT_ADMA_EOT0 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT1 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT2 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT3 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT4 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT5 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT6 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT7 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT8 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT9 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>;
+		#dma-cells = <1>;
+		dma-channels = <10>;
+		status = "disabled";
+        };
+
 	tegra_axbar: ahub {
 		compatible = "nvidia,tegra210-axbar";
 		wakeup-disable;
@@ -1320,7 +1309,6 @@
 				<&tegra_car TEGRA210_CLK_APE>,
 				<&tegra_car TEGRA210_CLK_APB2APE>;
 		clock-names = "ahub", "pll_a_out0", "xbar.ape", "apb2ape";
-		power-domains = <&ape_pd>;
 		status = "disabled";
 
 		#address-cells = <1>;
@@ -1636,25 +1624,11 @@
 		};
 	};
 
-	hda@70030000 {
-		compatible = "nvidia,tegra30-hda";
-		reg = <0x0 0x70030000 0x0 0x10000>;
-		interrupts = <0 81 0x04>;
-		clocks = <&tegra_car TEGRA210_CLK_HDA>,
-			     <&tegra_car TEGRA210_CLK_HDA2HDMI>,
-			     <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
-			     <&tegra_car TEGRA210_CLK_MAUD>;
-		clock-names = "hda", "hda2hdmi",
-					  "hda2codec_2x", "maud";
-		status = "disabled";
-	};
-
 	tegra_adsp_audio: adsp_audio {
 		compatible = "nvidia,tegra210-adsp-audio";
 		wakeup-disable;
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		interrupt-parent = <&tegra_agic>;
-		power-domains = <&adsp_pd>;
 		interrupts = <GIC_SPI INT_ADMA_EOT10 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>,
 			     <GIC_SPI INT_ADMA_EOT11 IRQ_TYPE_LEVEL_HIGH
@@ -1680,6 +1654,26 @@
 		clock-names = "ahub", "ape";
 		status = "disabled";
 	};
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	};
+#else
+	adma@702e2000 {
+		wakeup-disable;
+		power-domains = <&ape_pd>;
+		clocks = <&tegra_car TEGRA210_CLK_D_AUDIO>,
+			<&tegra_car TEGRA210_CLK_APB2APE>,
+			<&tegra_car TEGRA210_CLK_APE>;
+		clock-names = "ahub", "apb2ape", "adma.ape";
+	};
+
+	ahub {
+		power-domains = <&ape_pd>;
+	};
+
+	adsp_audio {
+		power-domains = <&adsp_pd>;
+	};
+#endif
 
 	adsp {
 	     compatible = "nvidia,tegra210-adsp";
@@ -1729,6 +1723,19 @@
 		reset-names = "adspall";
 	     nvidia,adsp_unit_fpga_reset = <0x0 0x00000040>;
 	     status = "disabled";
+	};
+
+	hda@70030000 {
+		compatible = "nvidia,tegra30-hda";
+		reg = <0x0 0x70030000 0x0 0x10000>;
+		interrupts = <0 81 0x04>;
+		clocks = <&tegra_car TEGRA210_CLK_HDA>,
+			     <&tegra_car TEGRA210_CLK_HDA2HDMI>,
+			     <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
+			     <&tegra_car TEGRA210_CLK_MAUD>;
+		clock-names = "hda", "hda2hdmi",
+					  "hda2codec_2x", "maud";
+		status = "disabled";
 	};
 
 	pinmux@700008d4 {

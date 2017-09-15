@@ -88,15 +88,11 @@ static int tegra_csi_power(struct tegra_csi_device *csi,
 
 	trace_csi_s_power("enable", enable);
 	if (enable) {
-		tegra_mipi_bias_pad_enable();
 		err = csi->fops->csi_power_on(csi);
 		if (!err)
 			atomic_inc(&csi->power_ref);
-		if (!chan->pg_mode)
-			csi->fops->mipical(chan);
 	} else {
 		err = csi->fops->csi_power_off(csi);
-		tegra_mipi_bias_pad_disable();
 		if (!err)
 			atomic_dec(&csi->power_ref);
 	}
@@ -806,6 +802,33 @@ void tpg_csi_media_controller_cleanup(struct tegra_csi_device *csi)
 	csi->tpg_start = NULL;
 }
 EXPORT_SYMBOL(tpg_csi_media_controller_cleanup);
+
+int tegra_csi_mipi_calibrate(struct tegra_csi_device *csi,
+				bool on)
+{
+	struct tegra_csi_channel *chan;
+
+	if (!on) {
+		tegra_mipi_bias_pad_disable();
+		return 0;
+	}
+
+	tegra_mipi_bias_pad_enable();
+	list_for_each_entry(chan, &csi->csi_chans, list) {
+		int ret = 0;
+
+		if (chan->pg_mode)
+			continue;
+
+		ret = csi->fops->mipical(chan);
+		if (ret)
+			dev_err(csi->dev,
+				"calibration failed with %d error\n", ret);
+	}
+
+	return 0;
+}
+
 int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 				    struct platform_device *pdev)
 {

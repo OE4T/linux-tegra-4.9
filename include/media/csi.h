@@ -150,6 +150,8 @@ void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
 int tegra_csi_init(struct tegra_csi_device *csi,
 		struct platform_device *pdev);
+int tegra_csi_mipi_calibrate(struct tegra_csi_device *csi,
+				bool on);
 int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 				struct platform_device *pdev);
 int tegra_csi_media_controller_remove(struct tegra_csi_device *csi);

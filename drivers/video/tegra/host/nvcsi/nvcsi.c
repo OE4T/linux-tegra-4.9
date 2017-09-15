@@ -204,13 +204,17 @@ int nvcsi_finalize_poweron(struct platform_device *pdev)
 		}
 	}
 
-	return 0;
+	return tegra_csi_mipi_calibrate(&nvcsi->csi, true);
 }
 
 int nvcsi_prepare_poweroff(struct platform_device *pdev)
 {
 	struct nvcsi *nvcsi = nvhost_get_private_data(pdev);
 	int ret;
+
+	ret = tegra_csi_mipi_calibrate(&nvcsi->csi, false);
+	if (ret)
+		dev_err(&pdev->dev, "disable mipi calibraiton failed\n");
 
 	if (nvcsi->regulator) {
 		ret = regulator_disable(nvcsi->regulator);

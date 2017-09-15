@@ -248,11 +248,16 @@ struct tegra_qspi_data {
 #ifdef QSPI_BRINGUP_BUILD
 	int					qspi_force_unpacked_mode;
 	int					qspi_enable_cmbseq_mode;
+	int					qspi_enable_prod_override;
+	int					qspi_force_pio_mode;
+	int					qspi_force_dma_mode;
 #endif
 };
 
 static int tegra_qspi_runtime_suspend(struct device *dev);
 static int tegra_qspi_runtime_resume(struct device *dev);
+static int tegra_qspi_clk_enable(struct tegra_qspi_data *tqspi);
+static void tegra_qspi_clk_disable(struct tegra_qspi_data *tqspi);
 
 static struct tegra_qspi_device_controller_data
 	*tegra_qspi_get_cdata_dt(struct spi_device *spi);
@@ -347,6 +352,234 @@ static ssize_t force_cmbseq_mode_show(struct device *dev,
 
 static DEVICE_ATTR(qspi_enable_cmbseq_mode, 0644, force_cmbseq_mode_show,
 						force_cmbseq_mode_set);
+
+static ssize_t enable_prod_override_set(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	if (tqspi && count) {
+		tqspi->qspi_enable_prod_override = ((buf[0] - '0')  > 0);
+		return count;
+	}
+
+	return -ENODEV;
+}
+
+static ssize_t enable_prod_override_show(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	return sprintf(buf, "%d\n", tqspi->qspi_enable_prod_override);
+
+	return -ENODEV;
+}
+
+static DEVICE_ATTR(qspi_enable_prod_override, 0644, enable_prod_override_show,
+						enable_prod_override_set);
+
+static ssize_t enable_clk_always_on_set(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	if (tqspi && count) {
+		tqspi->clock_always_on = ((buf[0] - '0')  > 0);
+		if (tqspi->clock_always_on)
+			tegra_qspi_clk_enable(tqspi);
+		else
+			tegra_qspi_clk_disable(tqspi);
+		return count;
+	}
+
+	return -ENODEV;
+}
+
+static ssize_t enable_clk_always_on_show(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	return sprintf(buf, "%d\n", tqspi->clock_always_on);
+
+	return -ENODEV;
+}
+
+static DEVICE_ATTR(qspi_enable_clk_always_on, 0644, enable_clk_always_on_show,
+						enable_clk_always_on_set);
+
+static ssize_t bus_speed_set(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+	int ret = 0;
+	long speed;
+	u32 actual_speed;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	if (tqspi && count) {
+		ret = kstrtol(buf, 10, &speed);
+		if (ret != 0)
+			return -EINVAL;
+		if (tqspi->cur_speed != speed) {
+			tqspi->qspi_max_frequency = speed;
+			tqspi->cur_speed = tqspi->qspi_max_frequency;
+			ret = clk_set_rate(tqspi->clk, speed);
+			if (ret < 0) {
+				dev_err(tqspi->dev,
+						"Failed to set QSPI clock freq: %d\n",
+						ret);
+				return -EINVAL;
+			}
+			actual_speed = clk_get_rate(tqspi->clk);
+			if (actual_speed > 0) {
+				ret = clk_set_rate(tqspi->sdr_ddr_clk,
+						actual_speed >> 1);
+				if (ret < 0) {
+					dev_err(tqspi->dev,
+							"Failed to set QSPI OUT clock freq: %d\n",
+							ret);
+					return -EINVAL;
+				}
+			}
+		}
+		return count;
+	}
+
+	return -ENODEV;
+}
+
+static ssize_t bus_speed_show(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+	u32 actual_qspi_speed;
+	u32 actual_qspi_out_speed;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	actual_qspi_speed = clk_get_rate(tqspi->clk);
+	actual_qspi_out_speed = clk_get_rate(tqspi->sdr_ddr_clk);
+
+	return sprintf(buf, "qspi:%d, qspi_out:%d\n",
+			actual_qspi_speed,
+			actual_qspi_out_speed);
+
+	return -ENODEV;
+}
+
+static DEVICE_ATTR(qspi_bus_speed, 0644, bus_speed_show,
+						bus_speed_set);
+
+static ssize_t force_pio_mode_set(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	if (tqspi && count) {
+		tqspi->qspi_force_pio_mode = ((buf[0] - '0')  > 0);
+		return count;
+	}
+
+	return -ENODEV;
+}
+
+static ssize_t force_pio_mode_show(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	return sprintf(buf, "%d\n", tqspi->qspi_force_pio_mode);
+
+	return -ENODEV;
+}
+
+static DEVICE_ATTR(qspi_force_pio_mode, 0644, force_pio_mode_show,
+						force_pio_mode_set);
+
+static ssize_t force_dma_mode_set(struct device *dev,
+				     struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	if (tqspi && count) {
+		tqspi->qspi_force_dma_mode = ((buf[0] - '0')  > 0);
+		return count;
+	}
+
+	return -ENODEV;
+}
+
+static ssize_t force_dma_mode_show(struct device *dev,
+				      struct device_attribute *attr,
+				      char *buf)
+{
+	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_qspi_data *tqspi;
+
+	if (!master)
+		return -ENODEV;
+
+	tqspi = spi_master_get_devdata(master);
+	return sprintf(buf, "%d\n", tqspi->qspi_force_dma_mode);
+
+	return -ENODEV;
+}
+
+static DEVICE_ATTR(qspi_force_dma_mode, 0644, force_dma_mode_show,
+						force_dma_mode_set);
 #endif
 
 #ifdef QSPI_DUMP_REGISTERS
@@ -480,11 +713,25 @@ static unsigned tegra_qspi_calculate_curr_xfer_param(
 		max_len = min(remain_len, tqspi->max_buf_size);
 		tqspi->curr_dma_words = max_len / tqspi->bytes_per_word;
 		total_fifo_words = (max_len + 3) / 4;
+#ifdef QSPI_BRINGUP_BUILD
+		if (tqspi->qspi_force_pio_mode)
+			if (tqspi->curr_dma_words > QSPI_FIFO_DEPTH) {
+				tqspi->curr_dma_words = QSPI_FIFO_DEPTH;
+				total_fifo_words = QSPI_FIFO_DEPTH;
+			}
+#endif
 	} else {
 		max_word = (remain_len - 1) / tqspi->bytes_per_word + 1;
 		max_word = min(max_word, tqspi->max_buf_size / 4);
 		tqspi->curr_dma_words = max_word;
 		total_fifo_words = max_word;
+#ifdef QSPI_BRINGUP_BUILD
+		if (tqspi->qspi_force_pio_mode)
+			if (tqspi->curr_dma_words > QSPI_FIFO_DEPTH) {
+				tqspi->curr_dma_words = QSPI_FIFO_DEPTH;
+				total_fifo_words = QSPI_FIFO_DEPTH;
+			}
+#endif
 	}
 
 	return total_fifo_words;
@@ -968,6 +1215,10 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 	int clk_mhz;
 	int err;
 
+#ifdef QSPI_BRINGUP_BUILD
+	if (tqspi->qspi_enable_prod_override)
+		return;
+#endif
 	if (tqspi->prod_list)
 		goto regs_por;
 
@@ -1147,6 +1398,18 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	}
 
 	tegra_qspi_writel(tqspi, tqspi->qspi_num_dummy_cycle, QSPI_MISC_REG);
+
+#ifdef QSPI_BRINGUP_BUILD
+	if (tqspi->qspi_force_dma_mode) {
+		ret = tegra_qspi_start_dma_based_transfer(tqspi, t);
+		return ret;
+	}
+
+	if (tqspi->qspi_force_pio_mode) {
+		ret = tegra_qspi_start_cpu_based_transfer(tqspi, t);
+		return ret;
+	}
+#endif
 
 	if (total_fifo_words > QSPI_FIFO_DEPTH)
 		ret = tegra_qspi_start_dma_based_transfer(tqspi, t);
@@ -1577,6 +1840,13 @@ static irqreturn_t handle_dma_based_xfer(struct tegra_qspi_data *tqspi)
 		goto exit;
 	}
 
+#ifdef QSPI_BRINGUP_BUILD
+	if (tqspi->qspi_force_dma_mode) {
+		err = tegra_qspi_start_dma_based_transfer(tqspi, t);
+		goto exit;
+	}
+#endif
+
 	/* Continue transfer in current message */
 	total_fifo_words = tegra_qspi_calculate_curr_xfer_param(tqspi->cur_qspi,
 								tqspi, t);
@@ -1935,6 +2205,26 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 		goto exit_pm_disable;
 
 	ret = device_create_file(dev, &dev_attr_qspi_enable_cmbseq_mode);
+	if (ret  < 0)
+		goto exit_pm_disable;
+
+	ret = device_create_file(dev, &dev_attr_qspi_enable_prod_override);
+	if (ret  < 0)
+		goto exit_pm_disable;
+
+	ret = device_create_file(dev, &dev_attr_qspi_enable_clk_always_on);
+	if (ret  < 0)
+		goto exit_pm_disable;
+
+	ret = device_create_file(dev, &dev_attr_qspi_bus_speed);
+	if (ret  < 0)
+		goto exit_pm_disable;
+
+	ret = device_create_file(dev, &dev_attr_qspi_force_pio_mode);
+	if (ret  < 0)
+		goto exit_pm_disable;
+
+	ret = device_create_file(dev, &dev_attr_qspi_force_dma_mode);
 	if (ret  < 0)
 		goto exit_pm_disable;
 

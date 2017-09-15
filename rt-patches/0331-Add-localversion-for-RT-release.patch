@@ -1,7 +1,7 @@
-From 97debd5f4819477f46d0e61947510a9e42878826 Mon Sep 17 00:00:00 2001
+From b7ebea7c343f8f3f060b79563841172cda85c423 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 8 Jul 2011 20:25:16 +0200
-Subject: [PATCH 331/337] Add localversion for -RT release
+Subject: [PATCH 331/332] Add localversion for -RT release
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---

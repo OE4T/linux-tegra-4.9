@@ -1,7 +1,7 @@
-From bfa51c7568d1700ec8cb1210fc529c2cee1d53ac Mon Sep 17 00:00:00 2001
+From ec399634ffeaece9eb0f3e91d95a0266f914d8bd Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 9 May 2017 17:11:10 +0200
-Subject: [PATCH 187/337] futex/rtmutex: Cure RT double blocking issue
+Subject: [PATCH 187/332] futex/rtmutex: Cure RT double blocking issue
 
 RT has a problem when the wait on a futex/rtmutex got interrupted by a
 timeout or a signal. task->pi_blocked_on is still set when returning from
@@ -25,7 +25,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 19 insertions(+)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 43f1394..6e52bce 100644
+index 43f1394a..6e52bce 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -2388,6 +2388,7 @@ int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,

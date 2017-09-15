@@ -1,7 +1,7 @@
-From a10698446a2a83843871d2ddd4e76ce57933590f Mon Sep 17 00:00:00 2001
+From 1afbce16d68165c74e05cd7d8acc325aba5700ce Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
-Subject: [PATCH 286/337] cpu/rt: Rework cpu down for PREEMPT_RT
+Subject: [PATCH 286/332] cpu/rt: Rework cpu down for PREEMPT_RT
 
 Bringing a CPU down is a pain with the PREEMPT_RT kernel because
 tasks can be preempted in many more places than in non-RT. In
@@ -55,10 +55,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 280 insertions(+), 41 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 695b7a1..cabf788 100644
+index 3e549fb..ce18bed 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2588,6 +2588,10 @@ extern void do_set_cpus_allowed(struct task_struct *p,
+@@ -2664,6 +2664,10 @@ extern void do_set_cpus_allowed(struct task_struct *p,
  
  extern int set_cpus_allowed_ptr(struct task_struct *p,
  				const struct cpumask *new_mask);
@@ -69,7 +69,7 @@ index 695b7a1..cabf788 100644
  #else
  static inline void do_set_cpus_allowed(struct task_struct *p,
  				      const struct cpumask *new_mask)
-@@ -2600,6 +2604,9 @@ static inline int set_cpus_allowed_ptr(struct task_struct *p,
+@@ -2676,6 +2680,9 @@ static inline int set_cpus_allowed_ptr(struct task_struct *p,
  		return -EINVAL;
  	return 0;
  }
@@ -80,7 +80,7 @@ index 695b7a1..cabf788 100644
  
  #ifdef CONFIG_NO_HZ_COMMON
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 04f129c..b751360 100644
+index a44e19a..cd60daf 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -210,16 +210,10 @@ static int cpu_hotplug_disabled;
@@ -430,7 +430,7 @@ index 04f129c..b751360 100644
  	cpuhp_lock_release();
  }
  
-@@ -907,6 +1058,9 @@ static int takedown_cpu(unsigned int cpu)
+@@ -920,6 +1071,9 @@ static int takedown_cpu(unsigned int cpu)
  	kthread_park(per_cpu_ptr(&cpuhp_state, cpu)->thread);
  	smpboot_park_threads(cpu);
  
@@ -441,7 +441,7 @@ index 04f129c..b751360 100644
  	 * Prevent irq alloc/free while the dying cpu reorganizes the
  	 * interrupt affinities.
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index fa8c0b5..71b0eb6 100644
+index 6267e61..b8d79c9 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1168,6 +1168,84 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)

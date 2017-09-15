@@ -1,7 +1,7 @@
-From a50851fe7ecc0a1de192ab6b6cce1e7eb0f2d625 Mon Sep 17 00:00:00 2001
+From cfde18f03b235bea0ebd08fd5dfc6dede472f5e5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 31 Aug 2016 17:21:56 +0200
-Subject: [PATCH 245/337] net: add back the missing serialization in
+Subject: [PATCH 245/332] net: add back the missing serialization in
  ip_send_unicast_reply()
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -35,7 +35,7 @@ This is brings back the old locks.
 |[<c0011478>] (do_work_pending) from [<c000e740>] (work_pending+0xc/0x20)
 |Code: e3530001 8a000001 e3a00040 ea000011 (e5973010)
 
-Change-Id: I16918d9d5ed7bcf5f01f500e4112425c27ab8204
+Change-Id: I6ee89a598281c5de175b697607914f2057a96a98
 Cc: stable-rt@vger.kernel.org
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---

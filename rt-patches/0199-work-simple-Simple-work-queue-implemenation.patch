@@ -1,14 +1,14 @@
-From e332625659e50a50dd6dc4d9979fc2235148c3ab Mon Sep 17 00:00:00 2001
+From c7e6c538e0738c2e77915ad38edeae984847393d Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <daniel.wagner@bmw-carit.de>
 Date: Fri, 11 Jul 2014 15:26:11 +0200
-Subject: [PATCH 199/337] work-simple: Simple work queue implemenation
+Subject: [PATCH 199/332] work-simple: Simple work queue implemenation
 
 Provides a framework for enqueuing callbacks from irq context
 PREEMPT_RT_FULL safe. The callbacks are executed in kthread context.
 
 Bases on wait-simple.
 
-Change-Id: Ic0a0e0cdff69e70037430e6ea231eb4b8360d796
+Change-Id: Iae545ffdcf45899086d0660d1d72b57cd0d6f388
 Cc: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Signed-off-by: Daniel Wagner <daniel.wagner@bmw-carit.de>
 ---

@@ -1,7 +1,7 @@
-From d168aa0fef82530715685b69bb628b990a2b4eb6 Mon Sep 17 00:00:00 2001
+From 55891e5e32eb5cfde3940d13c4993651d0c16048 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 7 Apr 2017 09:04:07 +0200
-Subject: [PATCH 028/337] futex: Fix small (and harmless looking)
+Subject: [PATCH 028/332] futex: Fix small (and harmless looking)
  inconsistencies
 
 Upstream commit 94ffac5d847cfd790bb37b7cef1cad803743985e
@@ -23,10 +23,10 @@ Signed-off-by: Ingo Molnar <mingo@kernel.org>
  1 file changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index e687a04..497b243 100644
+index 51455f2..216a642 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -1023,7 +1023,8 @@ static int attach_to_pi_state(u32 __user *uaddr, u32 uval,
+@@ -1024,7 +1024,8 @@ static int attach_to_pi_state(u32 __user *uaddr, u32 uval,
  			      struct futex_pi_state **ps)
  {
  	pid_t pid = uval & FUTEX_TID_MASK;
@@ -36,7 +36,7 @@ index e687a04..497b243 100644
  
  	/*
  	 * Userspace might have messed up non-PI and PI futexes [3]
-@@ -1439,6 +1440,11 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
+@@ -1440,6 +1441,11 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
  	if (ret)
  		goto out_unlock;
  
@@ -48,7 +48,7 @@ index e687a04..497b243 100644
  	raw_spin_lock(&pi_state->owner->pi_lock);
  	WARN_ON(list_empty(&pi_state->list));
  	list_del_init(&pi_state->list);
-@@ -1450,9 +1456,6 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
+@@ -1451,9 +1457,6 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
  	pi_state->owner = new_owner;
  	raw_spin_unlock(&new_owner->pi_lock);
  

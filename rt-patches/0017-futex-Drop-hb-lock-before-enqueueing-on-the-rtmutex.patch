@@ -1,7 +1,7 @@
-From 71e78968c5181b729f37323921e2aacfbe92256d Mon Sep 17 00:00:00 2001
+From f0d54a22ed61a14b253104de7bc05d963aa8b713 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:36:00 +0100
-Subject: [PATCH 017/337] futex: Drop hb->lock before enqueueing on the rtmutex
+Subject: [PATCH 017/332] futex: Drop hb->lock before enqueueing on the rtmutex
 
 Upstream commit 56222b212e8edb1cf51f5dd73ff645809b082b40
 
@@ -54,10 +54,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 52 insertions(+), 30 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index bfa46ce..ac03650 100644
+index 3d1be05..cdd205a 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -2652,20 +2652,33 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2653,20 +2653,33 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
  		goto no_block;
  	}
  
@@ -96,7 +96,7 @@ index bfa46ce..ac03650 100644
  
  	if (unlikely(to))
  		hrtimer_start_expires(&to->timer, HRTIMER_MODE_ABS);
-@@ -2678,6 +2691,9 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2679,6 +2692,9 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
  	 * first acquire the hb->lock before removing the lock from the
  	 * rt_mutex waitqueue, such that we can keep the hb and rt_mutex
  	 * wait lists consistent.
@@ -106,7 +106,7 @@ index bfa46ce..ac03650 100644
  	 */
  	if (ret && !rt_mutex_cleanup_proxy_lock(&q.pi_state->pi_mutex, &rt_waiter))
  		ret = 0;
-@@ -2789,10 +2805,6 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
+@@ -2790,10 +2806,6 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
  
  		get_pi_state(pi_state);
  		/*

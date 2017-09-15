@@ -1,7 +1,7 @@
-From 6e4374d2ac6a13e27bb8702f8d23522aebe2e988 Mon Sep 17 00:00:00 2001
+From d04bd5ad299ed6bb239634793535d44daaac85fa Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 May 2010 18:29:35 +0200
-Subject: [PATCH 258/337] ARM: at91: tclib: Default to tclib timer for RT
+Subject: [PATCH 258/332] ARM: at91: tclib: Default to tclib timer for RT
 
 RT is not too happy about the shared timer interrupt in AT91
 devices. Default to tclib timer for RT.
@@ -12,7 +12,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
-index 9b044cf..59cd7f0 100644
+index 9ec13d0..c24eb8b 100644
 --- a/drivers/misc/Kconfig
 +++ b/drivers/misc/Kconfig
 @@ -54,6 +54,7 @@ config AD525X_DPOT_SPI

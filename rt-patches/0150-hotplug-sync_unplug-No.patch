@@ -1,7 +1,7 @@
-From 321d876a104a61f6f658348387bfa5474c39b400 Mon Sep 17 00:00:00 2001
+From 4af0acc2e5bbbd15750b32067e3a150988dc5017 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Sun, 16 Oct 2011 18:56:43 +0800
-Subject: [PATCH 150/337] hotplug: sync_unplug: No " " in task name
+Subject: [PATCH 150/332] hotplug: sync_unplug: No " " in task name
 
 Otherwise the output will look a little odd.
 
@@ -13,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index c9c4eb2..60c360d 100644
+index d517082..ab63d1d 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -318,7 +318,7 @@ static int cpu_unplug_begin(unsigned int cpu)

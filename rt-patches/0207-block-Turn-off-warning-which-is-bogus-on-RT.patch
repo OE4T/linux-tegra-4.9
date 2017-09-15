@@ -1,7 +1,7 @@
-From 5f2643de14fe5158d601f78e61af428dcf02efb0 Mon Sep 17 00:00:00 2001
+From 3a616af1170051641afe5bbaa812300c4c806ed3 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jun 2011 17:05:09 +0200
-Subject: [PATCH 207/337] block: Turn off warning which is bogus on RT
+Subject: [PATCH 207/332] block: Turn off warning which is bogus on RT
 
 On -RT the context is always with IRQs enabled. Ignore this warning on -RT.
 

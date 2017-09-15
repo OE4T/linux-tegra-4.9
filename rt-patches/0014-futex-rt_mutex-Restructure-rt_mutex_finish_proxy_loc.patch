@@ -1,7 +1,7 @@
-From 314982fb532334049c387316b87634fcd796bdc2 Mon Sep 17 00:00:00 2001
+From 3e6dc2f8325c11af4151a299d54c239e99c4afa7 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:57 +0100
-Subject: [PATCH 014/337] futex,rt_mutex: Restructure
+Subject: [PATCH 014/332] futex,rt_mutex: Restructure
  rt_mutex_finish_proxy_lock()
 
 Upstream commit 38d589f2fd08f1296aea3ce62bebd185125c6d81
@@ -41,10 +41,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 55 insertions(+), 12 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 272d92d..ea76018 100644
+index 5708b18..b72be87 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -3030,10 +3030,13 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -3031,10 +3031,13 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  		 */
  		WARN_ON(!q.pi_state);
  		pi_mutex = &q.pi_state->pi_mutex;

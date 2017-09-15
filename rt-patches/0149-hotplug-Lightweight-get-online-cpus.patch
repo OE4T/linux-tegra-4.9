@@ -1,7 +1,7 @@
-From 4262533d7c5336646a973b5deae5866546f0c240 Mon Sep 17 00:00:00 2001
+From f2f20b7bfe0d328312566af3e14e3cdd861be24d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 15 Jun 2011 12:36:06 +0200
-Subject: [PATCH 149/337] hotplug: Lightweight get online cpus
+Subject: [PATCH 149/332] hotplug: Lightweight get online cpus
 
 get_online_cpus() is a heavy weight function which involves a global
 mutex. migrate_disable() wants a simpler construct which prevents only
@@ -50,7 +50,7 @@ index 1f26096..721599c 100644
  #define __hotcpu_notifier(fn, pri)	do { (void)(fn); } while (0)
  /* These aren't inline functions due to a GCC bug. */
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 7da7ed8..c9c4eb2 100644
+index 7b1a8eb..d517082 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -239,6 +239,100 @@ static struct {
@@ -154,7 +154,7 @@ index 7da7ed8..c9c4eb2 100644
  
  void get_online_cpus(void)
  {
-@@ -877,6 +971,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -890,6 +984,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
  	int prev_state, ret = 0;
  	bool hasdied = false;
@@ -163,7 +163,7 @@ index 7da7ed8..c9c4eb2 100644
  
  	if (num_online_cpus() == 1)
  		return -EBUSY;
-@@ -884,7 +980,27 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -897,7 +993,27 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	if (!cpu_present(cpu))
  		return -EINVAL;
  
@@ -191,7 +191,7 @@ index 7da7ed8..c9c4eb2 100644
  
  	cpuhp_tasks_frozen = tasks_frozen;
  
-@@ -923,6 +1039,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -936,6 +1052,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  
  	hasdied = prev_state != st->state && st->state == CPUHP_OFFLINE;
  out:

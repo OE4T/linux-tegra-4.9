@@ -1,7 +1,7 @@
-From 80422af254014a1480dd4ee60ac10bb2f660de99 Mon Sep 17 00:00:00 2001
+From 716919ce62a57053995f7f41f87831969a9827f5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 17:57:03 +0200
-Subject: [PATCH 037/337] fs/dcache: init in_lookup_hashtable
+Subject: [PATCH 037/332] fs/dcache: init in_lookup_hashtable
 
 in_lookup_hashtable was introduced in commit 94bdd655caba ("parallel
 lookups machinery, part 3") and never initialized but since it is in
@@ -13,10 +13,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 5 insertions(+)
 
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 362396a..734d24d 100644
+index 227a4f9..2e869be 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
-@@ -3605,6 +3605,11 @@ EXPORT_SYMBOL(d_genocide);
+@@ -3633,6 +3633,11 @@ EXPORT_SYMBOL(d_genocide);
  
  void __init vfs_caches_init_early(void)
  {

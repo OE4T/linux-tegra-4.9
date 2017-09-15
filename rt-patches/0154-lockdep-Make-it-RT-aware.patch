@@ -1,7 +1,7 @@
-From cb3069620d4984aa3ef7d207530496ca4d415649 Mon Sep 17 00:00:00 2001
+From 4f2ac8a8a55f2a6869e9728e7aaebccd7f7951e8 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 18:51:23 +0200
-Subject: [PATCH 154/337] lockdep: Make it RT aware
+Subject: [PATCH 154/332] lockdep: Make it RT aware
 
 teach lockdep that we don't really do softirqs on -RT.
 

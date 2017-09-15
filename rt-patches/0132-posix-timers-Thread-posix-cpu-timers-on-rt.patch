@@ -1,7 +1,7 @@
-From 9eeba0f13e0b0d490cfcddeb7f9248ae38033492 Mon Sep 17 00:00:00 2001
+From 95b76e918cafc6733c4445b1411c3fedd57194ff Mon Sep 17 00:00:00 2001
 From: John Stultz <johnstul@us.ibm.com>
 Date: Fri, 3 Jul 2009 08:29:58 -0500
-Subject: [PATCH 132/337] posix-timers: Thread posix-cpu-timers on -rt
+Subject: [PATCH 132/332] posix-timers: Thread posix-cpu-timers on -rt
 
 posix-cpu-timer code takes non -rt safe locks in hard irq
 context. Move it to a thread.
@@ -43,10 +43,10 @@ index d359b1a..a56e263 100644
  		[PIDTYPE_PID]  = INIT_PID_LINK(PIDTYPE_PID),		\
  		[PIDTYPE_PGID] = INIT_PID_LINK(PIDTYPE_PGID),		\
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 59a5142..3fb8096 100644
+index 177634a..ef8bebc 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1760,6 +1760,9 @@ struct task_struct {
+@@ -1832,6 +1832,9 @@ struct task_struct {
  
  	struct task_cputime cputime_expires;
  	struct list_head cpu_timers[3];
@@ -57,7 +57,7 @@ index 59a5142..3fb8096 100644
  /* process credentials */
  	const struct cred __rcu *ptracer_cred; /* Tracer's credentials at attach */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index e8c1b06..70dc53c 100644
+index eb3d7d7..bc1d86d 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -1428,6 +1428,9 @@ static void rt_mutex_init_task(struct task_struct *p)

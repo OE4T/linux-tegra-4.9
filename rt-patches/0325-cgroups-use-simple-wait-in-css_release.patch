@@ -1,7 +1,7 @@
-From f65547d76a3eac26d0414ca6b1a37d7c380ef77e Mon Sep 17 00:00:00 2001
+From d60e56ad48f0a46ef8ebb10912562a57e7c516e1 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 15:52:24 +0100
-Subject: [PATCH 325/337] cgroups: use simple wait in css_release()
+Subject: [PATCH 325/332] cgroups: use simple wait in css_release()
 
 To avoid:
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
@@ -27,7 +27,7 @@ To avoid:
 | [<ffffffff810948d8>] kthread+0xe8/0x100
 | [<ffffffff815b9c3c>] ret_from_fork+0x7c/0xb0
 
-Change-Id: I6c269ab8b8a58b586e0a86a8cf3cbf64a4124124
+Change-Id: I53df9309bac2f6a5601af2de8b268af59bea0a84
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/cgroup-defs.h | 2 ++
@@ -55,7 +55,7 @@ index 080dd59..d74531a 100644
  
  /*
 diff --git a/kernel/cgroup.c b/kernel/cgroup.c
-index 14540ee..c3231f5 100644
+index c8515ca..2d7060d 100644
 --- a/kernel/cgroup.c
 +++ b/kernel/cgroup.c
 @@ -5042,10 +5042,10 @@ static void css_free_rcu_fn(struct rcu_head *rcu_head)
@@ -82,7 +82,7 @@ index 14540ee..c3231f5 100644
  }
  
  static void init_and_link_css(struct cgroup_subsys_state *css,
-@@ -5751,6 +5751,7 @@ static int __init cgroup_wq_init(void)
+@@ -5755,6 +5755,7 @@ static int __init cgroup_wq_init(void)
  	 */
  	cgroup_destroy_wq = alloc_workqueue("cgroup_destroy", 0, 1);
  	BUG_ON(!cgroup_destroy_wq);

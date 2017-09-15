@@ -1,7 +1,7 @@
-From a246aed6f50c2e0c00abc5478098ee572576a3bd Mon Sep 17 00:00:00 2001
+From 7cb640cca9b6a8896ad35cd522e3a27263d7eefd Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 11:03:47 +0100
-Subject: [PATCH 310/337] x86: Support for lazy preemption
+Subject: [PATCH 310/332] x86: Support for lazy preemption
 
 Implement the x86 pieces for lazy preempt.
 
@@ -81,7 +81,7 @@ index edba860..4a33895 100644
  	jz	restore_all
  	call	preempt_schedule_irq
 diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index 9b9cee6..28401f8 100644
+index 38dedcf..65916d4 100644
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
 @@ -546,7 +546,23 @@ retint_kernel:

@@ -1,7 +1,7 @@
-From bc2dd0ad9c081287ba8c0a5f75676463b76f743a Mon Sep 17 00:00:00 2001
+From de68e1df1f1ba4a7769ab5a0758053f9cf0debd2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Dec 2011 00:07:16 +0100
-Subject: [PATCH 066/337] pci: Use __wake_up_all_locked in
+Subject: [PATCH 066/332] pci: Use __wake_up_all_locked in
  pci_unblock_user_cfg_access()
 
 The waitqueue is protected by the pci_lock, so we can just avoid to

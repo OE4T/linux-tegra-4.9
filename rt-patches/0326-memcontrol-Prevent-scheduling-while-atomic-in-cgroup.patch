@@ -1,7 +1,7 @@
-From bdb16fd9cdeea51c82a204a2f549b7a0f2e3b416 Mon Sep 17 00:00:00 2001
+From 530f8e5ca7c138d16c6cbb2135a02358b5591136 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sat, 21 Jun 2014 10:09:48 +0200
-Subject: [PATCH 326/337] memcontrol: Prevent scheduling while atomic in cgroup
+Subject: [PATCH 326/332] memcontrol: Prevent scheduling while atomic in cgroup
  code
 
 mm, memcg: make refill_stock() use get_cpu_light()

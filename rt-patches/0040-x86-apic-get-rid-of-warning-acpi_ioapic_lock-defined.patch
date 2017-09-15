@@ -1,7 +1,7 @@
-From 4661c6f911ba38dcac02f3d4651de11cc1e495f9 Mon Sep 17 00:00:00 2001
+From 8e694ecc256e76da0c3713e78abb1940989abe56 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 21 Oct 2016 10:29:11 +0200
-Subject: [PATCH 040/337] x86/apic: get rid of "warning: 'acpi_ioapic_lock'
+Subject: [PATCH 040/332] x86/apic: get rid of "warning: 'acpi_ioapic_lock'
  defined but not used"
 
 kbuild test robot reported this against the -RT tree:
@@ -31,7 +31,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+)
 
 diff --git a/arch/x86/kernel/acpi/boot.c b/arch/x86/kernel/acpi/boot.c
-index 931ced8..167975a 100644
+index d3e0d04..11e5725 100644
 --- a/arch/x86/kernel/acpi/boot.c
 +++ b/arch/x86/kernel/acpi/boot.c
 @@ -87,7 +87,9 @@ static u64 acpi_lapic_addr __initdata = APIC_DEFAULT_PHYS_BASE;

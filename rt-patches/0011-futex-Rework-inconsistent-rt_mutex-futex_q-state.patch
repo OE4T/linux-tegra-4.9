@@ -1,7 +1,7 @@
-From 596a6870b8ba6500f20178974454ab51d9c68093 Mon Sep 17 00:00:00 2001
+From f573f8367962cd3c84510448c7c39ea2ebf4269e Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:54 +0100
-Subject: [PATCH 011/337] futex: Rework inconsistent rt_mutex/futex_q state
+Subject: [PATCH 011/332] futex: Rework inconsistent rt_mutex/futex_q state
 
 Upstream commit 73d786bd043ebc855f349c81ea805f6b11cbf2aa
 
@@ -58,10 +58,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 14 insertions(+), 36 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 295e901..4ea7988 100644
+index b970b95..81439b9 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -1402,12 +1402,19 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter
+@@ -1403,12 +1403,19 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter
  	new_owner = rt_mutex_next_owner(&pi_state->pi_mutex);
  
  	/*
@@ -86,7 +86,7 @@ index 295e901..4ea7988 100644
  
  	/*
  	 * We pass it to the next owner. The WAITERS bit is always
-@@ -2330,7 +2337,6 @@ static long futex_wait_restart(struct restart_block *restart);
+@@ -2331,7 +2338,6 @@ static long futex_wait_restart(struct restart_block *restart);
   */
  static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
  {
@@ -94,7 +94,7 @@ index 295e901..4ea7988 100644
  	int ret = 0;
  
  	if (locked) {
-@@ -2344,43 +2350,15 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
+@@ -2345,43 +2351,15 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
  	}
  
  	/*

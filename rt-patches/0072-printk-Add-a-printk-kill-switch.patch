@@ -1,7 +1,7 @@
-From afd935979f37515ecfb1054c90ecbf659c8e46da Mon Sep 17 00:00:00 2001
+From d187d96e5707386d31488ea8ab8e1bcdd72f22ff Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
-Subject: [PATCH 072/337] printk: Add a printk kill switch
+Subject: [PATCH 072/332] printk: Add a printk kill switch
 
 Add a prinkt-kill-switch. This is used from (NMI) watchdog to ensure that
 it does not dead-lock with the early printk code.
@@ -30,7 +30,7 @@ index eac1af8..37e647a 100644
  
  #ifdef CONFIG_PRINTK_NMI
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 4027154..6a8ca2e 100644
+index f8d8097..2703cad 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
 @@ -355,6 +355,58 @@ __packed __aligned(4)

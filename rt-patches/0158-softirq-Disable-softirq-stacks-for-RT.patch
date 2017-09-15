@@ -1,7 +1,7 @@
-From 95e2dddafd1b79cc31fe7a997bc7ada08dba469f Mon Sep 17 00:00:00 2001
+From 4aee76f6f5a2d021bf2c312d326179262d8bdee8 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 18 Jul 2011 13:59:17 +0200
-Subject: [PATCH 158/337] softirq: Disable softirq stacks for RT
+Subject: [PATCH 158/332] softirq: Disable softirq stacks for RT
 
 Disable extra stacks for softirqs. We want to preempt softirqs and
 having them on special IRQ-stack does not make this easier.
@@ -19,10 +19,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  8 files changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/arch/powerpc/kernel/irq.c b/arch/powerpc/kernel/irq.c
-index 3c05c31..f83f6ac 100644
+index 028a22b..a75e2dd 100644
 --- a/arch/powerpc/kernel/irq.c
 +++ b/arch/powerpc/kernel/irq.c
-@@ -638,6 +638,7 @@ void irq_ctx_init(void)
+@@ -651,6 +651,7 @@ void irq_ctx_init(void)
  	}
  }
  
@@ -30,7 +30,7 @@ index 3c05c31..f83f6ac 100644
  void do_softirq_own_stack(void)
  {
  	struct thread_info *curtp, *irqtp;
-@@ -655,6 +656,7 @@ void do_softirq_own_stack(void)
+@@ -668,6 +669,7 @@ void do_softirq_own_stack(void)
  	if (irqtp->flags)
  		set_bits(irqtp->flags, &curtp->flags);
  }
@@ -119,7 +119,7 @@ index 5cbf03c..6067d93 100644
  #ifdef CONFIG_HOTPLUG_CPU
  void fixup_irqs(void)
 diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index ef766a3..9b9cee6 100644
+index e7b0e7f..38dedcf 100644
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
 @@ -894,6 +894,7 @@ bad_gs:

@@ -1,7 +1,7 @@
-From e01fee9a415603dccb479c3b129f7dc60371b0cc Mon Sep 17 00:00:00 2001
+From 4d4f53edc3449933ec169fd9f833482bd72da8dc Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:12 +0100
-Subject: [PATCH 023/337] sched,tracing: Update trace_sched_pi_setprio()
+Subject: [PATCH 023/332] sched,tracing: Update trace_sched_pi_setprio()
 
 Upstream commit b91473ff6e979c0028f02f90e40c844959c736d8
 
@@ -29,7 +29,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 10 insertions(+), 8 deletions(-)
 
 diff --git a/include/trace/events/sched.h b/include/trace/events/sched.h
-index 4cd7333..e5f9d0a 100644
+index 3412605..360b762 100644
 --- a/include/trace/events/sched.h
 +++ b/include/trace/events/sched.h
 @@ -70,7 +70,7 @@ DECLARE_EVENT_CLASS(sched_wakeup_template,
@@ -99,10 +99,10 @@ index 4cd7333..e5f9d0a 100644
  
  	TP_printk("comm=%s pid=%d oldprio=%d newprio=%d",
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 9214a8d..4071a5f 100644
+index 02a1d5d..2d694d7 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3878,7 +3878,7 @@ void rt_mutex_setprio(struct task_struct *p, struct task_struct *pi_task)
+@@ -3879,7 +3879,7 @@ void rt_mutex_setprio(struct task_struct *p, struct task_struct *pi_task)
  		goto out_unlock;
  	}
  

@@ -1,7 +1,7 @@
-From c81e7be46f7f67b60abaaebd952c81c2ab5d1591 Mon Sep 17 00:00:00 2001
+From 2d33e366c03a9df60644ffcc1aa5602802d80665 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 8 Nov 2013 17:34:54 +0100
-Subject: [PATCH 090/337] usb: Use _nort in giveback function
+Subject: [PATCH 090/332] usb: Use _nort in giveback function
 
 Since commit 94dfd7ed ("USB: HCD: support giveback of URB in tasklet
 context") I see
@@ -43,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/usb/core/hcd.c b/drivers/usb/core/hcd.c
-index 8a7c6bba..ad3b668 100644
+index 882fc4e..14ab604 100644
 --- a/drivers/usb/core/hcd.c
 +++ b/drivers/usb/core/hcd.c
 @@ -1764,9 +1764,9 @@ static void __usb_hcd_giveback_urb(struct urb *urb)

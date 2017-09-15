@@ -1,7 +1,7 @@
-From 7846e56d4b5bf9d335fbb92380fcfa77857fce2f Mon Sep 17 00:00:00 2001
+From 763527fe1029fee4a6beda1b8983530dcebb24f9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 17:19:44 +0100
-Subject: [PATCH 092/337] mm/workingset: Do not protect workingset_shadow_nodes
+Subject: [PATCH 092/332] mm/workingset: Do not protect workingset_shadow_nodes
  with irq off
 
 workingset_shadow_nodes is protected by local_irq_disable(). Some users

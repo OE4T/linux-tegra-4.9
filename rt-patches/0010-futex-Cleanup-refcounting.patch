@@ -1,7 +1,7 @@
-From 3e6fbb9e353d84580341da8e3339144f1e3aa77e Mon Sep 17 00:00:00 2001
+From 3a0a71fe77bb2367862e4320f0d90b69a5c03fa8 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:53 +0100
-Subject: [PATCH 010/337] futex: Cleanup refcounting
+Subject: [PATCH 010/332] futex: Cleanup refcounting
 
 Upstream commit bf92cf3a5100f5a0d5f9834787b130159397cb22
 
@@ -25,10 +25,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 9 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 88ba9b9..295e901 100644
+index 2d2267e..b970b95 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -800,7 +800,7 @@ static int refill_pi_state_cache(void)
+@@ -801,7 +801,7 @@ static int refill_pi_state_cache(void)
  	return 0;
  }
  
@@ -37,7 +37,7 @@ index 88ba9b9..295e901 100644
  {
  	struct futex_pi_state *pi_state = current->pi_state_cache;
  
-@@ -810,6 +810,11 @@ static struct futex_pi_state * alloc_pi_state(void)
+@@ -811,6 +811,11 @@ static struct futex_pi_state * alloc_pi_state(void)
  	return pi_state;
  }
  
@@ -49,7 +49,7 @@ index 88ba9b9..295e901 100644
  /*
   * Drops a reference to the pi_state object and frees or caches it
   * when the last reference is gone.
-@@ -854,7 +859,7 @@ static void put_pi_state(struct futex_pi_state *pi_state)
+@@ -855,7 +860,7 @@ static void put_pi_state(struct futex_pi_state *pi_state)
   * Look up the task based on what TID userspace gave us.
   * We dont trust it.
   */
@@ -58,7 +58,7 @@ index 88ba9b9..295e901 100644
  {
  	struct task_struct *p;
  
-@@ -1101,7 +1106,7 @@ static int attach_to_pi_state(u32 __user *uaddr, u32 uval,
+@@ -1102,7 +1107,7 @@ static int attach_to_pi_state(u32 __user *uaddr, u32 uval,
  		goto out_einval;
  
  out_attach:
@@ -67,7 +67,7 @@ index 88ba9b9..295e901 100644
  	raw_spin_unlock_irq(&pi_state->pi_mutex.wait_lock);
  	*ps = pi_state;
  	return 0;
-@@ -1988,7 +1993,7 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
+@@ -1989,7 +1994,7 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
  			 * refcount on the pi_state and store the pointer in
  			 * the futex_q object of the waiter.
  			 */

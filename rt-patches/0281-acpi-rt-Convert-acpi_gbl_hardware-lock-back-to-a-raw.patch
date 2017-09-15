@@ -1,7 +1,7 @@
-From 650e9cc27c4a98922a5bcf3aaa11019ee3275216 Mon Sep 17 00:00:00 2001
+From 58fc1f1c26d65b9b8d005be41a5603f649a34d8e Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Wed, 13 Feb 2013 09:26:05 -0500
-Subject: [PATCH 281/337] acpi/rt: Convert acpi_gbl_hardware lock back to a
+Subject: [PATCH 281/332] acpi/rt: Convert acpi_gbl_hardware lock back to a
  raw_spinlock_t
 
 We hit the following bug with 3.6-rt:
@@ -129,7 +129,7 @@ index 98c26ff..6e236f2 100644
  }
  
 diff --git a/drivers/acpi/acpica/utmutex.c b/drivers/acpi/acpica/utmutex.c
-index 1507337..357e7ca 100644
+index 15073375..357e7ca 100644
 --- a/drivers/acpi/acpica/utmutex.c
 +++ b/drivers/acpi/acpica/utmutex.c
 @@ -88,7 +88,7 @@ acpi_status acpi_ut_mutex_initialize(void)

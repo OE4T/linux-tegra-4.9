@@ -1,7 +1,7 @@
-From eae5d087339485f7bb6354189f09fe5b291e774d Mon Sep 17 00:00:00 2001
+From 0935697c1d77320f87102b35b192e4fc631a1e14 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 12 Oct 2015 11:18:40 +0200
-Subject: [PATCH 263/337] arm64/xen: Make XEN depend on !RT
+Subject: [PATCH 263/332] arm64/xen: Make XEN depend on !RT
 
 It's not ready and probably never will be, unless xen folks have a
 look at it.
@@ -12,10 +12,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index e4298ea..8eb78d1 100644
+index 54f34c0..328efe8 100644
 --- a/arch/arm64/Kconfig
 +++ b/arch/arm64/Kconfig
-@@ -722,7 +722,7 @@ config XEN_DOM0
+@@ -724,7 +724,7 @@ config XEN_DOM0
  
  config XEN
  	bool "Xen guest support on ARM64"

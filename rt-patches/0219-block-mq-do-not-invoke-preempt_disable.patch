@@ -1,7 +1,7 @@
-From e02d81c60824b4dbc3e7850a4940db5e92b31329 Mon Sep 17 00:00:00 2001
+From f92a4c0d77c23af4ea4eee6c6d7e27f8c239cad9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 219/337] block/mq: do not invoke preempt_disable()
+Subject: [PATCH 219/332] block/mq: do not invoke preempt_disable()
 
 preempt_disable() and get_cpu() don't play well together with the sleeping
 locks it tries to allocate later.

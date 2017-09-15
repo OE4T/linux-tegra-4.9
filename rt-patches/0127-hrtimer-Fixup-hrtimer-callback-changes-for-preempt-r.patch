@@ -1,7 +1,7 @@
-From bc90e1650009d3112025a10b7f94b387d106da8d Mon Sep 17 00:00:00 2001
+From b7a17045269cb862d196fc03137d70b8de28dd86 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
-Subject: [PATCH 127/337] hrtimer: Fixup hrtimer callback changes for
+Subject: [PATCH 127/332] hrtimer: Fixup hrtimer callback changes for
  preempt-rt
 
 In preempt-rt we can not call the callbacks which take sleeping locks
@@ -68,7 +68,7 @@ index b7c2d54..65d0671 100644
  	unsigned int			active_bases;
  	unsigned int			clock_was_set_seq;
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index c3ed4b7..11b5e0d 100644
+index c123d1c..6cce968f 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -359,6 +359,7 @@ static void init_rq_hrtick(struct rq *rq)
@@ -328,10 +328,10 @@ index 552d232..3d3c7c7 100644
  
  /**
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index 10cb224..14eaf34 100644
+index d743434..c119678 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
-@@ -1198,6 +1198,7 @@ void tick_setup_sched_timer(void)
+@@ -1210,6 +1210,7 @@ void tick_setup_sched_timer(void)
  	 * Emulate tick processing via per-CPU hrtimers:
  	 */
  	hrtimer_init(&ts->sched_timer, CLOCK_MONOTONIC, HRTIMER_MODE_ABS);

@@ -1,7 +1,7 @@
-From 5c2bbf21ae3abd28544666cc8c6dcc5f01e05e5b Mon Sep 17 00:00:00 2001
+From 81b9ca213ce3d738a385d1c672698986cb6f11d9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 14:35:49 +0200
-Subject: [PATCH 228/337] fs/dcache: use swait_queue instead of waitqueue
+Subject: [PATCH 228/332] fs/dcache: use swait_queue instead of waitqueue
 
 __d_lookup_done() invokes wake_up_all() while holding a hlist_bl_lock()
 which disables preemption. As a workaround convert it to swait.
@@ -35,10 +35,10 @@ index a27fc87..791aecb 100644
  	cifs_dbg(FYI, "%s: for %s\n", __func__, name->name);
  
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 0f9935b..ff04a70 100644
+index a079692..ea7dad2 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
-@@ -2396,21 +2396,24 @@ static inline void end_dir_add(struct inode *dir, unsigned n)
+@@ -2424,21 +2424,24 @@ static inline void end_dir_add(struct inode *dir, unsigned n)
  
  static void d_wait_lookup(struct dentry *dentry)
  {
@@ -74,7 +74,7 @@ index 0f9935b..ff04a70 100644
  {
  	unsigned int hash = name->hash;
  	struct hlist_bl_head *b = in_lookup_hash(parent, hash);
-@@ -2519,7 +2522,7 @@ void __d_lookup_done(struct dentry *dentry)
+@@ -2547,7 +2550,7 @@ void __d_lookup_done(struct dentry *dentry)
  	hlist_bl_lock(b);
  	dentry->d_flags &= ~DCACHE_PAR_LOOKUP;
  	__hlist_bl_del(&dentry->d_u.d_in_lookup_hash);
@@ -97,7 +97,7 @@ index fc8ba62..256d083 100644
  	if (!o->nodeid) {
  		/*
 diff --git a/fs/namei.c b/fs/namei.c
-index 79177c9..d17b9a5 100644
+index e10895c..d30345b 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
 @@ -1641,7 +1641,7 @@ static struct dentry *lookup_slow(const struct qstr *name,
@@ -119,7 +119,7 @@ index 79177c9..d17b9a5 100644
  	if (unlikely(IS_DEADDIR(dir_inode)))
  		return -ENOENT;
 diff --git a/fs/nfs/dir.c b/fs/nfs/dir.c
-index aa128ff..a66e7d7 100644
+index 63ed518..ba90d41 100644
 --- a/fs/nfs/dir.c
 +++ b/fs/nfs/dir.c
 @@ -485,7 +485,7 @@ static
@@ -131,7 +131,7 @@ index aa128ff..a66e7d7 100644
  	struct dentry *dentry;
  	struct dentry *alias;
  	struct inode *dir = d_inode(parent);
-@@ -1487,7 +1487,7 @@ int nfs_atomic_open(struct inode *dir, struct dentry *dentry,
+@@ -1491,7 +1491,7 @@ int nfs_atomic_open(struct inode *dir, struct dentry *dentry,
  		    struct file *file, unsigned open_flags,
  		    umode_t mode, int *opened)
  {
@@ -163,10 +163,10 @@ index 0165a95..58990c8 100644
  	status = -EBUSY;
  	spin_lock(&dentry->d_lock);
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 2a5ef48..4511755 100644
+index 901062e..914d56da6 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
-@@ -1837,7 +1837,7 @@ bool proc_fill_cache(struct file *file, struct dir_context *ctx,
+@@ -1847,7 +1847,7 @@ bool proc_fill_cache(struct file *file, struct dir_context *ctx,
  
  	child = d_hash_and_lookup(dir, &qname);
  	if (!child) {
@@ -189,7 +189,7 @@ index d4e37ac..000cea4 100644
  		if (IS_ERR(child))
  			return false;
 diff --git a/include/linux/dcache.h b/include/linux/dcache.h
-index 655ec7c..6a7b10b 100644
+index ed921bc..403f29c 100644
 --- a/include/linux/dcache.h
 +++ b/include/linux/dcache.h
 @@ -101,7 +101,7 @@ struct dentry {
@@ -211,7 +211,7 @@ index 655ec7c..6a7b10b 100644
  extern struct dentry * d_add_ci(struct dentry *, struct inode *, struct qstr *);
  extern struct dentry * d_exact_alias(struct dentry *, struct inode *);
 diff --git a/include/linux/nfs_xdr.h b/include/linux/nfs_xdr.h
-index beb1e10..ebaf2e7 100644
+index 3bf867a..71c6bdd 100644
 --- a/include/linux/nfs_xdr.h
 +++ b/include/linux/nfs_xdr.h
 @@ -1490,7 +1490,7 @@ struct nfs_unlinkdata {

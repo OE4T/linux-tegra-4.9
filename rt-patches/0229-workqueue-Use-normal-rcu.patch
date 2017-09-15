@@ -1,7 +1,7 @@
-From 963634520405c9c48b5eac637857943f93cd6fcf Mon Sep 17 00:00:00 2001
+From 87aff31dbfd346550114b84e8c6a8b06a908fd27 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 24 Jul 2013 15:26:54 +0200
-Subject: [PATCH 229/337] workqueue: Use normal rcu
+Subject: [PATCH 229/332] workqueue: Use normal rcu
 
 There is no need for sched_rcu. The undocumented reason why sched_rcu
 is used is to avoid a few explicit rcu_read_lock()/unlock() pairs by
@@ -14,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 52 insertions(+), 43 deletions(-)
 
 diff --git a/kernel/workqueue.c b/kernel/workqueue.c
-index 479d840..86f36d1 100644
+index 776dda0..718c0cb 100644
 --- a/kernel/workqueue.c
 +++ b/kernel/workqueue.c
 @@ -125,7 +125,7 @@ enum {
@@ -247,7 +247,7 @@ index 479d840..86f36d1 100644
  }
  
  /**
-@@ -4064,7 +4069,7 @@ void destroy_workqueue(struct workqueue_struct *wq)
+@@ -4078,7 +4083,7 @@ void destroy_workqueue(struct workqueue_struct *wq)
  		 * The base ref is never dropped on per-cpu pwqs.  Directly
  		 * schedule RCU free.
  		 */
@@ -256,7 +256,7 @@ index 479d840..86f36d1 100644
  	} else {
  		/*
  		 * We're the sole accessor of @wq at this point.  Directly
-@@ -4157,7 +4162,8 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
+@@ -4172,7 +4177,8 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
  	struct pool_workqueue *pwq;
  	bool ret;
  
@@ -266,7 +266,7 @@ index 479d840..86f36d1 100644
  
  	if (cpu == WORK_CPU_UNBOUND)
  		cpu = smp_processor_id();
-@@ -4168,7 +4174,8 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
+@@ -4183,7 +4189,8 @@ bool workqueue_congested(int cpu, struct workqueue_struct *wq)
  		pwq = unbound_pwq_by_node(wq, cpu_to_node(cpu));
  
  	ret = !list_empty(&pwq->delayed_works);
@@ -276,7 +276,7 @@ index 479d840..86f36d1 100644
  
  	return ret;
  }
-@@ -4194,15 +4201,15 @@ unsigned int work_busy(struct work_struct *work)
+@@ -4209,15 +4216,15 @@ unsigned int work_busy(struct work_struct *work)
  	if (work_pending(work))
  		ret |= WORK_BUSY_PENDING;
  
@@ -296,7 +296,7 @@ index 479d840..86f36d1 100644
  
  	return ret;
  }
-@@ -4391,7 +4398,7 @@ void show_workqueue_state(void)
+@@ -4406,7 +4413,7 @@ void show_workqueue_state(void)
  	unsigned long flags;
  	int pi;
  
@@ -305,7 +305,7 @@ index 479d840..86f36d1 100644
  
  	pr_info("Showing busy workqueues and worker pools:\n");
  
-@@ -4444,7 +4451,7 @@ void show_workqueue_state(void)
+@@ -4459,7 +4466,7 @@ void show_workqueue_state(void)
  		spin_unlock_irqrestore(&pool->lock, flags);
  	}
  
@@ -314,7 +314,7 @@ index 479d840..86f36d1 100644
  }
  
  /*
-@@ -4782,16 +4789,16 @@ bool freeze_workqueues_busy(void)
+@@ -4797,16 +4804,16 @@ bool freeze_workqueues_busy(void)
  		 * nr_active is monotonically decreasing.  It's safe
  		 * to peek without lock.
  		 */
@@ -334,7 +334,7 @@ index 479d840..86f36d1 100644
  	}
  out_unlock:
  	mutex_unlock(&wq_pool_mutex);
-@@ -4981,7 +4988,8 @@ static ssize_t wq_pool_ids_show(struct device *dev,
+@@ -4996,7 +5003,8 @@ static ssize_t wq_pool_ids_show(struct device *dev,
  	const char *delim = "";
  	int node, written = 0;
  
@@ -344,7 +344,7 @@ index 479d840..86f36d1 100644
  	for_each_node(node) {
  		written += scnprintf(buf + written, PAGE_SIZE - written,
  				     "%s%d:%d", delim, node,
-@@ -4989,7 +4997,8 @@ static ssize_t wq_pool_ids_show(struct device *dev,
+@@ -5004,7 +5012,8 @@ static ssize_t wq_pool_ids_show(struct device *dev,
  		delim = " ";
  	}
  	written += scnprintf(buf + written, PAGE_SIZE - written, "\n");

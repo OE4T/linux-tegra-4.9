@@ -1,7 +1,7 @@
-From b70daffd4a08815b906d5e4309956f99ba6902f1 Mon Sep 17 00:00:00 2001
+From 3cb8a6f0272f727323096e0287fab39eb610ca61 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Fri, 20 Jan 2017 18:10:20 +0100
-Subject: [PATCH 164/337] softirq: wake the timer softirq if needed
+Subject: [PATCH 164/332] softirq: wake the timer softirq if needed
 
 The irq-exit path only checks the "normal"-softirq thread if it is
 running and ignores the state of the "timer"-softirq thread. It is possible

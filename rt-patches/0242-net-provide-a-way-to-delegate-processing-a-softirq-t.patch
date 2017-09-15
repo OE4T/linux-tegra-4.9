@@ -1,7 +1,7 @@
-From 99941c910a708813965be39fbb5674f5bcd634c8 Mon Sep 17 00:00:00 2001
+From 3fa95d1d41c84b554cb5462a3f7ddd110e4af368 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 15:39:05 +0100
-Subject: [PATCH 242/337] net: provide a way to delegate processing a softirq
+Subject: [PATCH 242/332] net: provide a way to delegate processing a softirq
  to ksoftirqd
 
 If the NET_RX uses up all of his budget it moves the following NAPI
@@ -71,10 +71,10 @@ index af2fd81..819bd7c 100644
   */
  void raise_softirq_irqoff(unsigned int nr)
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 44e527f..5a64a7e 100644
+index 47c08c1..f45443d 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -5280,7 +5280,7 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
+@@ -5297,7 +5297,7 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
  	list_splice_tail(&repoll, &list);
  	list_splice(&list, &sd->poll_list);
  	if (!list_empty(&sd->poll_list))

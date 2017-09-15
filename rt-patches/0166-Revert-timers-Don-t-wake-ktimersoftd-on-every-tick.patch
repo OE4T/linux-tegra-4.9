@@ -1,7 +1,7 @@
-From 9c4e42b0b455155260332a599dfdf2443679cf8f Mon Sep 17 00:00:00 2001
+From 6fc55f4a35070aa031e0f9dfedaa2d25bcdfee6f Mon Sep 17 00:00:00 2001
 From: Anna-Maria Gleixner <anna-maria@linutronix.de>
 Date: Fri, 26 May 2017 19:16:07 +0200
-Subject: [PATCH 166/337] Revert "timers: Don't wake ktimersoftd on every tick"
+Subject: [PATCH 166/332] Revert "timers: Don't wake ktimersoftd on every tick"
 
 This reverts commit 032f93cae150a ("timers: Don't wake ktimersoftd on
 every tick").
@@ -22,11 +22,11 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 29 insertions(+), 67 deletions(-)
 
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index aff560f..a126620 100644
+index f20bbcc..06ccccf 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -206,8 +206,6 @@ struct timer_base {
- 	bool			is_idle;
+@@ -207,8 +207,6 @@ struct timer_base {
+ 	bool			must_forward_clk;
  	DECLARE_BITMAP(pending_map, WHEEL_SIZE);
  	struct hlist_head	vectors[WHEEL_SIZE];
 -	struct hlist_head	expired_lists[LVL_DEPTH];
@@ -34,7 +34,7 @@ index aff560f..a126620 100644
  } ____cacheline_aligned;
  
  static DEFINE_PER_CPU(struct timer_base, timer_bases[NR_BASES]);
-@@ -1355,8 +1353,7 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
+@@ -1368,8 +1366,7 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
  	}
  }
  
@@ -44,7 +44,7 @@ index aff560f..a126620 100644
  {
  	while (!hlist_empty(head)) {
  		struct timer_list *timer;
-@@ -1387,38 +1384,21 @@ static inline void __expire_timers(struct timer_base *base,
+@@ -1400,38 +1397,21 @@ static inline void __expire_timers(struct timer_base *base,
  	}
  }
  
@@ -88,7 +88,7 @@ index aff560f..a126620 100644
  		}
  		/* Is it time to look at the next level? */
  		if (clk & LVL_CLK_MASK)
-@@ -1426,6 +1406,7 @@ static void __collect_expired_timers(struct timer_base *base)
+@@ -1439,6 +1419,7 @@ static void __collect_expired_timers(struct timer_base *base)
  		/* Shift clock for the next level granularity */
  		clk >>= LVL_CLK_SHIFT;
  	}
@@ -96,7 +96,7 @@ index aff560f..a126620 100644
  }
  
  #ifdef CONFIG_NO_HZ_COMMON
-@@ -1618,7 +1599,8 @@ void timer_clear_idle(void)
+@@ -1637,7 +1618,8 @@ void timer_clear_idle(void)
  	base->is_idle = false;
  }
  
@@ -106,7 +106,7 @@ index aff560f..a126620 100644
  {
  	/*
  	 * NOHZ optimization. After a long idle sleep we need to forward the
-@@ -1635,49 +1617,20 @@ static void collect_expired_timers(struct timer_base *base)
+@@ -1654,49 +1636,20 @@ static void collect_expired_timers(struct timer_base *base)
  		if (time_after(next, jiffies)) {
  			/* The call site will increment clock! */
  			base->clk = jiffies - 1;
@@ -161,7 +161,7 @@ index aff560f..a126620 100644
  /*
   * Called from the timer interrupt handler to charge one tick to the current
   * process.  user_tick is 1 if the tick is user time, 0 for system.
-@@ -1704,11 +1657,22 @@ void update_process_times(int user_tick)
+@@ -1723,11 +1676,22 @@ void update_process_times(int user_tick)
   */
  static inline void __run_timers(struct timer_base *base)
  {
@@ -186,7 +186,7 @@ index aff560f..a126620 100644
  	raw_spin_unlock_irq(&base->lock);
  	wakeup_timer_waiters(base);
  }
-@@ -1734,12 +1698,12 @@ void run_local_timers(void)
+@@ -1766,12 +1730,12 @@ void run_local_timers(void)
  
  	hrtimer_run_queues();
  	/* Raise the softirq only if required. */
@@ -201,7 +201,7 @@ index aff560f..a126620 100644
  			return;
  	}
  	raise_softirq(TIMER_SOFTIRQ);
-@@ -1909,7 +1873,6 @@ int timers_dead_cpu(unsigned int cpu)
+@@ -1941,7 +1905,6 @@ int timers_dead_cpu(unsigned int cpu)
  		raw_spin_lock_nested(&old_base->lock, SINGLE_DEPTH_NESTING);
  
  		BUG_ON(old_base->running_timer);
@@ -209,7 +209,7 @@ index aff560f..a126620 100644
  
  		for (i = 0; i < WHEEL_SIZE; i++)
  			migrate_timer_list(new_base, old_base->vectors + i);
-@@ -1936,7 +1899,6 @@ static void __init init_timer_cpu(int cpu)
+@@ -1968,7 +1931,6 @@ static void __init init_timer_cpu(int cpu)
  #ifdef CONFIG_PREEMPT_RT_FULL
  		init_swait_queue_head(&base->wait_for_running_timer);
  #endif

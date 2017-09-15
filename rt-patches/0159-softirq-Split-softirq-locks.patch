@@ -1,7 +1,7 @@
-From a9451003873f913570e20223476e55960f2e2a91 Mon Sep 17 00:00:00 2001
+From 09e1b3520ed31d8af528b5c0468933020e22caa7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 4 Oct 2012 14:20:47 +0100
-Subject: [PATCH 159/337] softirq: Split softirq locks
+Subject: [PATCH 159/332] softirq: Split softirq locks
 
 The 3.x RT series removed the split softirq implementation in favour
 of pushing softirq processing into the context of the thread which
@@ -178,10 +178,10 @@ index 2b761d0..5f73377 100644
  /*
   * Are we in NMI context?
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 96f28d6..4b8a089 100644
+index b54e775..cd87ab5 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2066,6 +2066,8 @@ struct task_struct {
+@@ -2138,6 +2138,8 @@ struct task_struct {
  #endif
  #ifdef CONFIG_PREEMPT_RT_BASE
  	struct rcu_head put_rcu;
@@ -190,7 +190,7 @@ index 96f28d6..4b8a089 100644
  #endif
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
-@@ -2382,6 +2384,7 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut,
+@@ -2458,6 +2460,7 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut,
  /*
   * Per process flags
   */
@@ -810,7 +810,7 @@ index 8669000..ec9b361 100644
  	.thread_fn		= run_ksoftirqd,
  	.thread_comm		= "ksoftirqd/%u",
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index 14eaf34..4367249 100644
+index c119678..ddf9104 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
 @@ -882,14 +882,7 @@ static bool can_stop_idle_tick(int cpu, struct tick_sched *ts)
@@ -830,10 +830,10 @@ index 14eaf34..4367249 100644
  	}
  
 diff --git a/net/core/dev.c b/net/core/dev.c
-index a726bfe..b2a29e0 100644
+index 38ee7c4..1a66301 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3857,11 +3857,9 @@ int netif_rx_ni(struct sk_buff *skb)
+@@ -3864,11 +3864,9 @@ int netif_rx_ni(struct sk_buff *skb)
  
  	trace_netif_rx_ni_entry(skb);
  

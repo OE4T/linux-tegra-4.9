@@ -1,7 +1,7 @@
-From e051342577e3c16fe2277534156195bbc0cd1989 Mon Sep 17 00:00:00 2001
+From 71cd19f02113a46da82dd87e84f95a5b4313063e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 26 Sep 2012 16:21:08 +0200
-Subject: [PATCH 295/337] net: Another local_irq_disable/kmalloc headache
+Subject: [PATCH 295/332] net: Another local_irq_disable/kmalloc headache
 
 Replace it by a local lock. Though that's pretty inefficient :(
 

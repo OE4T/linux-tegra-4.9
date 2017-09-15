@@ -1,7 +1,7 @@
-From b2bddbd6795b089db670dfdc019c81a68cfe744e Mon Sep 17 00:00:00 2001
+From 1aa3045b64a08b8214c0cd4191982e9a8a989221 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Wed, 14 Dec 2011 13:05:54 +0100
-Subject: [PATCH 196/337] rt: Improve the serial console PASS_LIMIT
+Subject: [PATCH 196/332] rt: Improve the serial console PASS_LIMIT
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -20,7 +20,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 10 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/tty/serial/8250/8250_core.c b/drivers/tty/serial/8250/8250_core.c
-index e8819aa..dd7f9bf 100644
+index aad82fa..41f8e94 100644
 --- a/drivers/tty/serial/8250/8250_core.c
 +++ b/drivers/tty/serial/8250/8250_core.c
 @@ -58,7 +58,16 @@ static struct uart_driver serial8250_reg;

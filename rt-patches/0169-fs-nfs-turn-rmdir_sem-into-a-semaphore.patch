@@ -1,7 +1,7 @@
-From a1a032bfc6867f362d1daedc554cd552ce4873d2 Mon Sep 17 00:00:00 2001
+From bdbc5851b615c2807e1baacfbbf44c75998d08fb Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 10:51:27 +0200
-Subject: [PATCH 169/337] fs/nfs: turn rmdir_sem into a semaphore
+Subject: [PATCH 169/332] fs/nfs: turn rmdir_sem into a semaphore
 
 The RW semaphore had a reader side which used the _non_owner version
 because it most likely took the reader lock in one thread and released it
@@ -21,10 +21,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 43 insertions(+), 4 deletions(-)
 
 diff --git a/fs/nfs/dir.c b/fs/nfs/dir.c
-index 53e02b8..aa128ff 100644
+index d04ec381..63ed518 100644
 --- a/fs/nfs/dir.c
 +++ b/fs/nfs/dir.c
-@@ -1802,7 +1802,11 @@ int nfs_rmdir(struct inode *dir, struct dentry *dentry)
+@@ -1806,7 +1806,11 @@ int nfs_rmdir(struct inode *dir, struct dentry *dentry)
  
  	trace_nfs_rmdir_enter(dir, dentry);
  	if (d_really_is_positive(dentry)) {
@@ -36,7 +36,7 @@ index 53e02b8..aa128ff 100644
  		error = NFS_PROTO(dir)->rmdir(dir, &dentry->d_name);
  		/* Ensure the VFS deletes this inode */
  		switch (error) {
-@@ -1812,7 +1816,11 @@ int nfs_rmdir(struct inode *dir, struct dentry *dentry)
+@@ -1816,7 +1820,11 @@ int nfs_rmdir(struct inode *dir, struct dentry *dentry)
  		case -ENOENT:
  			nfs_dentry_handle_enoent(dentry);
  		}
@@ -49,10 +49,10 @@ index 53e02b8..aa128ff 100644
  		error = NFS_PROTO(dir)->rmdir(dir, &dentry->d_name);
  	trace_nfs_rmdir_exit(dir, dentry, error);
 diff --git a/fs/nfs/inode.c b/fs/nfs/inode.c
-index bf4ec5e..36cd5fc9 100644
+index fa148b2..0ebce45 100644
 --- a/fs/nfs/inode.c
 +++ b/fs/nfs/inode.c
-@@ -1957,7 +1957,11 @@ static void init_once(void *foo)
+@@ -1960,7 +1960,11 @@ static void init_once(void *foo)
  	nfsi->nrequests = 0;
  	nfsi->commit_info.ncommit = 0;
  	atomic_set(&nfsi->commit_info.rpcs_out, 0);

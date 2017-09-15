@@ -1,7 +1,7 @@
-From 369984d4ff3a0f0c8fdcdd74a56f95d791303985 Mon Sep 17 00:00:00 2001
+From 5b665837368de9cc1acb5518698cffeaaf607309 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
-Subject: [PATCH 133/337] sched: Move task_struct cleanup to RCU
+Subject: [PATCH 133/332] sched: Move task_struct cleanup to RCU
 
 __put_task_struct() does quite some expensive work. We don't want to
 burden random tasks with that.
@@ -13,10 +13,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 3fb8096..e5a144a 100644
+index ef8bebc..e24be4c 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2064,6 +2064,9 @@ struct task_struct {
+@@ -2136,6 +2136,9 @@ struct task_struct {
  	unsigned int	sequential_io;
  	unsigned int	sequential_io_avg;
  #endif
@@ -26,7 +26,7 @@ index 3fb8096..e5a144a 100644
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
  #endif
-@@ -2321,6 +2324,15 @@ extern struct pid *cad_pid;
+@@ -2397,6 +2400,15 @@ extern struct pid *cad_pid;
  extern void free_task(struct task_struct *tsk);
  #define get_task_struct(tsk) do { atomic_inc(&(tsk)->usage); } while(0)
  
@@ -42,7 +42,7 @@ index 3fb8096..e5a144a 100644
  extern void __put_task_struct(struct task_struct *t);
  
  static inline void put_task_struct(struct task_struct *t)
-@@ -2328,6 +2340,7 @@ static inline void put_task_struct(struct task_struct *t)
+@@ -2404,6 +2416,7 @@ static inline void put_task_struct(struct task_struct *t)
  	if (atomic_dec_and_test(&t->usage))
  		__put_task_struct(t);
  }
@@ -51,7 +51,7 @@ index 3fb8096..e5a144a 100644
  struct task_struct *task_rcu_dereference(struct task_struct **ptask);
  struct task_struct *try_get_task_struct(struct task_struct **ptask);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 70dc53c..46011ff 100644
+index bc1d86d..49141d7 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -376,7 +376,9 @@ static inline void put_signal_struct(struct signal_struct *sig)

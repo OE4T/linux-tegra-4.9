@@ -1,7 +1,7 @@
-From c2aef621bbbacdff1d9f8d36c423581af9344d00 Mon Sep 17 00:00:00 2001
+From 1a8de40720c97e68fa31f85a4b59b7fd6b439e22 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:51 +0100
-Subject: [PATCH 008/337] futex,rt_mutex: Provide futex specific rt_mutex API
+Subject: [PATCH 008/332] futex,rt_mutex: Provide futex specific rt_mutex API
 
 Upstream commit 5293c2efda37775346885c7e924d4ef7018ea60b
 
@@ -37,10 +37,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 62 insertions(+), 32 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 4ec902e..c11837c 100644
+index 5729150..cf07ae4 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -914,7 +914,7 @@ void exit_pi_state_list(struct task_struct *curr)
+@@ -915,7 +915,7 @@ void exit_pi_state_list(struct task_struct *curr)
  		pi_state->owner = NULL;
  		raw_spin_unlock_irq(&curr->pi_lock);
  
@@ -49,7 +49,7 @@ index 4ec902e..c11837c 100644
  
  		spin_unlock(&hb->lock);
  
-@@ -1362,20 +1362,18 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter
+@@ -1363,20 +1363,18 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter
  	pi_state->owner = new_owner;
  	raw_spin_unlock(&new_owner->pi_lock);
  
@@ -78,7 +78,7 @@ index 4ec902e..c11837c 100644
  
  	return 0;
  }
-@@ -2251,7 +2249,7 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
+@@ -2252,7 +2250,7 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
  		 * task acquired the rt_mutex after we removed ourself from the
  		 * rt_mutex waiters list.
  		 */
@@ -87,7 +87,7 @@ index 4ec902e..c11837c 100644
  			locked = 1;
  			goto out;
  		}
-@@ -2566,7 +2564,7 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2567,7 +2565,7 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
  	if (!trylock) {
  		ret = rt_mutex_timed_futex_lock(&q.pi_state->pi_mutex, to);
  	} else {
@@ -96,7 +96,7 @@ index 4ec902e..c11837c 100644
  		/* Fixup the trylock return value: */
  		ret = ret ? 0 : -EWOULDBLOCK;
  	}
-@@ -2589,7 +2587,7 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2590,7 +2588,7 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
  	 * it and return the fault to userspace.
  	 */
  	if (ret && (rt_mutex_owner(&q.pi_state->pi_mutex) == current))
@@ -105,7 +105,7 @@ index 4ec902e..c11837c 100644
  
  	/* Unqueue and drop the lock */
  	unqueue_me_pi(&q);
-@@ -2896,7 +2894,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2897,7 +2895,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  			spin_lock(q.lock_ptr);
  			ret = fixup_pi_state_owner(uaddr2, &q, current);
  			if (ret && rt_mutex_owner(&q.pi_state->pi_mutex) == current)
@@ -114,7 +114,7 @@ index 4ec902e..c11837c 100644
  			/*
  			 * Drop the reference to the pi state which
  			 * the requeue_pi() code acquired for us.
-@@ -2936,7 +2934,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2937,7 +2935,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  		 * userspace.
  		 */
  		if (ret && rt_mutex_owner(pi_mutex) == current)

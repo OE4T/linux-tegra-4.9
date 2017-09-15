@@ -1,7 +1,7 @@
-From 92e778e353dc5eb195334f1b083006d3d7eb0faa Mon Sep 17 00:00:00 2001
+From ffd4624c1363b91ae0ff3eb605db666a30bcf116 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 6 Jun 2011 12:20:33 +0200
-Subject: [PATCH 135/337] sched: Move mmdrop to RCU on RT
+Subject: [PATCH 135/332] sched: Move mmdrop to RCU on RT
 
 Takes sleeping locks and calls into the memory allocator, so nothing
 we want to do in task switch and oder atomic contexts.
@@ -15,7 +15,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  4 files changed, 45 insertions(+), 2 deletions(-)
 
 diff --git a/include/linux/mm_types.h b/include/linux/mm_types.h
-index 3139ea4..e107862 100644
+index 5942478..c73ab85 100644
 --- a/include/linux/mm_types.h
 +++ b/include/linux/mm_types.h
 @@ -11,6 +11,7 @@
@@ -26,8 +26,8 @@ index 3139ea4..e107862 100644
  #include <linux/page-flags-layout.h>
  #include <linux/workqueue.h>
  #include <asm/page.h>
-@@ -516,6 +517,9 @@ struct mm_struct {
- 	bool tlb_flush_pending;
+@@ -520,6 +521,9 @@ struct mm_struct {
+ 	bool tlb_flush_batched;
  #endif
  	struct uprobes_state uprobes_state;
 +#ifdef CONFIG_PREEMPT_RT_BASE
@@ -37,10 +37,10 @@ index 3139ea4..e107862 100644
  	/* address of the bounds directory */
  	void __user *bd_addr;
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index e5a144a..4e3a131 100644
+index e24be4c..b7d4ba7 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -3008,6 +3008,17 @@ static inline void mmdrop(struct mm_struct *mm)
+@@ -3084,6 +3084,17 @@ static inline void mmdrop(struct mm_struct *mm)
  		__mmdrop(mm);
  }
  
@@ -59,10 +59,10 @@ index e5a144a..4e3a131 100644
  {
  	struct mm_struct *mm = container_of(work, struct mm_struct, async_put_work);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 46011ff..1f0fd4c 100644
+index 49141d7..94e267d 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -865,6 +865,19 @@ void __mmdrop(struct mm_struct *mm)
+@@ -866,6 +866,19 @@ void __mmdrop(struct mm_struct *mm)
  }
  EXPORT_SYMBOL_GPL(__mmdrop);
  
@@ -83,7 +83,7 @@ index 46011ff..1f0fd4c 100644
  {
  	VM_BUG_ON(atomic_read(&mm->mm_users));
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index e678a27..965a6cc 100644
+index e9dc99b..d25ed5e 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -2830,8 +2830,12 @@ static struct rq *finish_task_switch(struct task_struct *prev)
@@ -100,7 +100,7 @@ index e678a27..965a6cc 100644
  	if (unlikely(prev_state == TASK_DEAD)) {
  		if (prev->sched_class->task_dead)
  			prev->sched_class->task_dead(prev);
-@@ -5757,6 +5761,8 @@ void sched_setnuma(struct task_struct *p, int nid)
+@@ -5758,6 +5762,8 @@ void sched_setnuma(struct task_struct *p, int nid)
  #endif /* CONFIG_NUMA_BALANCING */
  
  #ifdef CONFIG_HOTPLUG_CPU
@@ -109,7 +109,7 @@ index e678a27..965a6cc 100644
  /*
   * Ensures that the idle task is using init_mm right before its cpu goes
   * offline.
-@@ -5771,7 +5777,12 @@ void idle_task_exit(void)
+@@ -5772,7 +5778,12 @@ void idle_task_exit(void)
  		switch_mm(mm, &init_mm, current);
  		finish_arch_post_lock_switch();
  	}
@@ -123,7 +123,7 @@ index e678a27..965a6cc 100644
  }
  
  /*
-@@ -7794,6 +7805,10 @@ int sched_cpu_dying(unsigned int cpu)
+@@ -7828,6 +7839,10 @@ int sched_cpu_dying(unsigned int cpu)
  	update_max_interval();
  	nohz_balance_exit_idle(cpu);
  	hrtick_clear(rq);

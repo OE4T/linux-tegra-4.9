@@ -1,7 +1,7 @@
-From e51e49a1851462fcec26f70f12b3252318ce0f89 Mon Sep 17 00:00:00 2001
+From 16de526ef0bb92f7b60a8282bb71496f7e1712f9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 10 Feb 2017 18:21:04 +0100
-Subject: [PATCH 182/337] rt: Drop mutex_disable() on !DEBUG configs and the
+Subject: [PATCH 182/332] rt: Drop mutex_disable() on !DEBUG configs and the
  GPL suffix from export symbol
 
 Alex Goins reported that mutex_destroy() on RT will force a GPL only symbol

@@ -1,7 +1,7 @@
-From a2bd15243afbebbd6cc55b7d844c709c0f5521c0 Mon Sep 17 00:00:00 2001
+From 5c6df2813c3eb8ba034e78dd28e71237e7cc34fb Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
-Subject: [PATCH 241/337] net: move xmit_recursion to per-task variable on -RT
+Subject: [PATCH 241/332] net: move xmit_recursion to per-task variable on -RT
 
 A softirq on -RT can be preempted. That means one task is in
 __dev_queue_xmit(), gets preempted and another task may enter
@@ -82,10 +82,10 @@ index 2bb937c..c550f7d 100644
  struct net_device *__dev_get_by_index(struct net *net, int ifindex);
  struct net_device *dev_get_by_index_rcu(struct net *net, int ifindex);
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 0ca5963..624e14a 100644
+index 87448af..aaf91f7 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2097,6 +2097,9 @@ struct task_struct {
+@@ -2169,6 +2169,9 @@ struct task_struct {
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
  #endif
@@ -96,10 +96,10 @@ index 0ca5963..624e14a 100644
  #ifdef CONFIG_MMU
  	struct task_struct *oom_reaper_list;
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 4ec84ca..44e527f 100644
+index 37c56cd..47c08c1 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3166,8 +3166,10 @@ static void skb_update_prio(struct sk_buff *skb)
+@@ -3173,8 +3173,10 @@ static void skb_update_prio(struct sk_buff *skb)
  #define skb_update_prio(skb)
  #endif
  
@@ -110,7 +110,7 @@ index 4ec84ca..44e527f 100644
  
  /**
   *	dev_loopback_xmit - loop back @skb
-@@ -3401,8 +3403,7 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
+@@ -3408,8 +3410,7 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
  		int cpu = smp_processor_id(); /* ok because BHs are off */
  
  		if (txq->xmit_lock_owner != cpu) {
@@ -120,7 +120,7 @@ index 4ec84ca..44e527f 100644
  				goto recursion_alert;
  
  			skb = validate_xmit_skb(skb, dev);
-@@ -3412,9 +3413,9 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
+@@ -3419,9 +3420,9 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
  			HARD_TX_LOCK(dev, txq, cpu);
  
  			if (!netif_xmit_stopped(txq)) {

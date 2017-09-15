@@ -1,7 +1,7 @@
-From 20e93cda880d1615890513e9314d206a6617324c Mon Sep 17 00:00:00 2001
+From a1dae01e8536df1a7a608c5352d6f1341fddec32 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:00:34 +0100
-Subject: [PATCH 226/337] fs: dcache: Use cpu_chill() in trylock loops
+Subject: [PATCH 226/332] fs: dcache: Use cpu_chill() in trylock loops
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Use cpu_chill() instead of cpu_relax() to let the system
@@ -41,7 +41,7 @@ index d8e6d42..2e689ab 100644
  			}
  			spin_unlock(&p->d_lock);
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 734d24d..0f9935b 100644
+index 2e869be..a079692 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
 @@ -19,6 +19,7 @@
@@ -52,7 +52,7 @@ index 734d24d..0f9935b 100644
  #include <linux/slab.h>
  #include <linux/init.h>
  #include <linux/hash.h>
-@@ -750,6 +751,8 @@ static inline bool fast_dput(struct dentry *dentry)
+@@ -777,6 +778,8 @@ static inline bool fast_dput(struct dentry *dentry)
   */
  void dput(struct dentry *dentry)
  {
@@ -61,7 +61,7 @@ index 734d24d..0f9935b 100644
  	if (unlikely(!dentry))
  		return;
  
-@@ -788,9 +791,18 @@ void dput(struct dentry *dentry)
+@@ -815,9 +818,18 @@ void dput(struct dentry *dentry)
  	return;
  
  kill_it:
@@ -83,7 +83,7 @@ index 734d24d..0f9935b 100644
  		goto repeat;
  	}
  }
-@@ -2324,7 +2336,7 @@ void d_delete(struct dentry * dentry)
+@@ -2352,7 +2364,7 @@ void d_delete(struct dentry * dentry)
  	if (dentry->d_lockref.count == 1) {
  		if (!spin_trylock(&inode->i_lock)) {
  			spin_unlock(&dentry->d_lock);
@@ -93,7 +93,7 @@ index 734d24d..0f9935b 100644
  		}
  		dentry->d_flags &= ~DCACHE_CANT_MOUNT;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 4dec6c2..7f0ced6 100644
+index 3c92a33..4385e3d 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -14,6 +14,7 @@
@@ -104,7 +104,7 @@ index 4dec6c2..7f0ced6 100644
  #include <linux/security.h>
  #include <linux/idr.h>
  #include <linux/init.h>		/* init_rootfs */
-@@ -358,7 +359,7 @@ int __mnt_want_write(struct vfsmount *m)
+@@ -359,7 +360,7 @@ int __mnt_want_write(struct vfsmount *m)
  	smp_mb();
  	while (ACCESS_ONCE(mnt->mnt.mnt_flags) & MNT_WRITE_HOLD) {
  		preempt_enable();

@@ -1,7 +1,7 @@
-From b1a0baef1115a15e4d9b03e3c8aef74cd1fda790 Mon Sep 17 00:00:00 2001
+From 8fc372b97461ce0109d8cbb97e3d426b6bda6336 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 2 Mar 2012 10:36:57 -0500
-Subject: [PATCH 285/337] cpu: Make hotplug.lock a "sleeping" spinlock on RT
+Subject: [PATCH 285/332] cpu: Make hotplug.lock a "sleeping" spinlock on RT
 
 Tasks can block on hotplug.lock in pin_current_cpu(), but their state
 might be != RUNNING. So the mutex wakeup will set the state
@@ -24,7 +24,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 25 insertions(+), 7 deletions(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 2b1244d..04f129c 100644
+index 67d2b17..a44e19a 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -210,10 +210,16 @@ static int cpu_hotplug_disabled;

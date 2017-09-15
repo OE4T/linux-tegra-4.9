@@ -1,7 +1,7 @@
-From baacbab437adb5807c8a673b591c1f7f63aed9a1 Mon Sep 17 00:00:00 2001
+From 3746b4b43ea2aee496b87b5974eee9147b82ee86 Mon Sep 17 00:00:00 2001
 From: Haris Okanovic <haris.okanovic@ni.com>
 Date: Fri, 3 Feb 2017 17:26:44 +0100
-Subject: [PATCH 165/337] timers: Don't wake ktimersoftd on every tick
+Subject: [PATCH 165/332] timers: Don't wake ktimersoftd on every tick
 
 We recently upgraded from 4.1 to 4.6 and noticed a minor latency
 regression caused by an additional thread wakeup (ktimersoftd) in
@@ -34,11 +34,11 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 67 insertions(+), 29 deletions(-)
 
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index a126620..aff560f 100644
+index 06ccccf..f20bbcc 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -206,6 +206,8 @@ struct timer_base {
- 	bool			is_idle;
+@@ -207,6 +207,8 @@ struct timer_base {
+ 	bool			must_forward_clk;
  	DECLARE_BITMAP(pending_map, WHEEL_SIZE);
  	struct hlist_head	vectors[WHEEL_SIZE];
 +	struct hlist_head	expired_lists[LVL_DEPTH];
@@ -46,7 +46,7 @@ index a126620..aff560f 100644
  } ____cacheline_aligned;
  
  static DEFINE_PER_CPU(struct timer_base, timer_bases[NR_BASES]);
-@@ -1353,7 +1355,8 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
+@@ -1366,7 +1368,8 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
  	}
  }
  
@@ -56,7 +56,7 @@ index a126620..aff560f 100644
  {
  	while (!hlist_empty(head)) {
  		struct timer_list *timer;
-@@ -1384,21 +1387,38 @@ static void expire_timers(struct timer_base *base, struct hlist_head *head)
+@@ -1397,21 +1400,38 @@ static void expire_timers(struct timer_base *base, struct hlist_head *head)
  	}
  }
  
@@ -100,7 +100,7 @@ index a126620..aff560f 100644
  		}
  		/* Is it time to look at the next level? */
  		if (clk & LVL_CLK_MASK)
-@@ -1406,7 +1426,6 @@ static int __collect_expired_timers(struct timer_base *base,
+@@ -1419,7 +1439,6 @@ static int __collect_expired_timers(struct timer_base *base,
  		/* Shift clock for the next level granularity */
  		clk >>= LVL_CLK_SHIFT;
  	}
@@ -108,7 +108,7 @@ index a126620..aff560f 100644
  }
  
  #ifdef CONFIG_NO_HZ_COMMON
-@@ -1599,8 +1618,7 @@ void timer_clear_idle(void)
+@@ -1618,8 +1637,7 @@ void timer_clear_idle(void)
  	base->is_idle = false;
  }
  
@@ -118,7 +118,7 @@ index a126620..aff560f 100644
  {
  	/*
  	 * NOHZ optimization. After a long idle sleep we need to forward the
-@@ -1617,20 +1635,49 @@ static int collect_expired_timers(struct timer_base *base,
+@@ -1636,20 +1654,49 @@ static int collect_expired_timers(struct timer_base *base,
  		if (time_after(next, jiffies)) {
  			/* The call site will increment clock! */
  			base->clk = jiffies - 1;
@@ -173,7 +173,7 @@ index a126620..aff560f 100644
  /*
   * Called from the timer interrupt handler to charge one tick to the current
   * process.  user_tick is 1 if the tick is user time, 0 for system.
-@@ -1657,22 +1704,11 @@ void update_process_times(int user_tick)
+@@ -1676,22 +1723,11 @@ void update_process_times(int user_tick)
   */
  static inline void __run_timers(struct timer_base *base)
  {
@@ -198,7 +198,7 @@ index a126620..aff560f 100644
  	raw_spin_unlock_irq(&base->lock);
  	wakeup_timer_waiters(base);
  }
-@@ -1698,12 +1734,12 @@ void run_local_timers(void)
+@@ -1730,12 +1766,12 @@ void run_local_timers(void)
  
  	hrtimer_run_queues();
  	/* Raise the softirq only if required. */
@@ -213,7 +213,7 @@ index a126620..aff560f 100644
  			return;
  	}
  	raise_softirq(TIMER_SOFTIRQ);
-@@ -1873,6 +1909,7 @@ int timers_dead_cpu(unsigned int cpu)
+@@ -1905,6 +1941,7 @@ int timers_dead_cpu(unsigned int cpu)
  		raw_spin_lock_nested(&old_base->lock, SINGLE_DEPTH_NESTING);
  
  		BUG_ON(old_base->running_timer);
@@ -221,7 +221,7 @@ index a126620..aff560f 100644
  
  		for (i = 0; i < WHEEL_SIZE; i++)
  			migrate_timer_list(new_base, old_base->vectors + i);
-@@ -1899,6 +1936,7 @@ static void __init init_timer_cpu(int cpu)
+@@ -1931,6 +1968,7 @@ static void __init init_timer_cpu(int cpu)
  #ifdef CONFIG_PREEMPT_RT_FULL
  		init_swait_queue_head(&base->wait_for_running_timer);
  #endif

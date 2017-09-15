@@ -1,7 +1,7 @@
-From 8d1fed95448023aafbce573679980b6d2045bbd5 Mon Sep 17 00:00:00 2001
+From 9a6fa342c957d4c55837357d708f919b743c79e0 Mon Sep 17 00:00:00 2001
 From: "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
 Date: Mon, 4 Nov 2013 13:21:10 -0800
-Subject: [PATCH 305/337] rcu: Eliminate softirq processing from rcutree
+Subject: [PATCH 305/332] rcu: Eliminate softirq processing from rcutree
 
 Running RCU out of softirq is a problem for some workloads that would
 like to manage RCU core processing independently of other softirq work,
@@ -210,7 +210,7 @@ index e803255..958ac10 100644
  						 struct rcu_node *rnp);
  #endif /* #ifdef CONFIG_RCU_BOOST */
 diff --git a/kernel/rcu/tree_plugin.h b/kernel/rcu/tree_plugin.h
-index 5f846df..7c656f8 100644
+index a375276..be12d1a 100644
 --- a/kernel/rcu/tree_plugin.h
 +++ b/kernel/rcu/tree_plugin.h
 @@ -24,26 +24,10 @@

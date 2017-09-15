@@ -1,7 +1,7 @@
-From 6d40a17a1ac7ef5a2331c4085ee091d45e42403a Mon Sep 17 00:00:00 2001
+From 4e64128d2c17015db06993195754513530ca8fc0 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 28 Jul 2011 10:43:51 +0200
-Subject: [PATCH 268/337] mm, rt: kmap_atomic scheduling
+Subject: [PATCH 268/332] mm, rt: kmap_atomic scheduling
 
 In fact, with migrate_disable() existing one could play games with
 kmap_atomic. You could save/restore the kmap_atomic slots on context
@@ -229,7 +229,7 @@ index b76e9cc..396d5c4 100644
  }
  
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 624e14a..695b7a1 100644
+index aaf91f7..3e549fb 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -26,6 +26,7 @@ struct sched_param {
@@ -240,7 +240,7 @@ index 624e14a..695b7a1 100644
  
  #include <asm/page.h>
  #include <asm/ptrace.h>
-@@ -2094,6 +2095,12 @@ struct task_struct {
+@@ -2166,6 +2167,12 @@ struct task_struct {
  	int softirq_nestcnt;
  	unsigned int softirqs_raised;
  #endif

@@ -1,7 +1,7 @@
-From 04f53f58507e21ebb45d3a02f038b238961a9ea0 Mon Sep 17 00:00:00 2001
+From 6b2cf8c16aa7292b13ee3af27d6c04d653576176 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
-Subject: [PATCH 224/337] block: blk-mq: Use swait
+Subject: [PATCH 224/332] block: blk-mq: Use swait
 
 | BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
 | in_atomic(): 1, irqs_disabled(): 0, pid: 255, name: kworker/u257:6

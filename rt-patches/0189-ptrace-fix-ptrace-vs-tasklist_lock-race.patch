@@ -1,7 +1,7 @@
-From 9488aa2ee9f77ed357657bfbf40a7cf9c0bc6b56 Mon Sep 17 00:00:00 2001
+From 2b9d6a0e99214cdcb2175d3f33481afc061af9b7 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Aug 2013 18:21:04 +0200
-Subject: [PATCH 189/337] ptrace: fix ptrace vs tasklist_lock race
+Subject: [PATCH 189/332] ptrace: fix ptrace vs tasklist_lock race
 
 As explained by Alexander Fyodorov <halcy@yandex.ru>:
 
@@ -30,7 +30,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 68 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index b0a81be..0ca5963 100644
+index 2016a9b..87448af 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -245,10 +245,7 @@ extern char ___assert_task_state[1 - 2*!!(
@@ -44,7 +44,7 @@ index b0a81be..0ca5963 100644
  #define task_contributes_to_load(task)	\
  				((task->state & TASK_UNINTERRUPTIBLE) != 0 && \
  				 (task->flags & PF_FROZEN) == 0 && \
-@@ -3474,6 +3471,51 @@ static inline int signal_pending_state(long state, struct task_struct *p)
+@@ -3550,6 +3547,51 @@ static inline int signal_pending_state(long state, struct task_struct *p)
  	return (state & TASK_INTERRUPTIBLE) || __fatal_signal_pending(p);
  }
  
@@ -117,7 +117,7 @@ index f39a7be9..583ce3a 100644
  	}
  	spin_unlock_irq(&task->sighand->siglock);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 42b185a..f81680c 100644
+index 888bb83..8e48544 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1414,6 +1414,18 @@ int migrate_swap(struct task_struct *cur, struct task_struct *p)

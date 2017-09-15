@@ -1,7 +1,7 @@
-From ba9c3c2605c58536fe8da830f8b6f7bb10fd98eb Mon Sep 17 00:00:00 2001
+From cf7f8d4237386107dda2d75d5250ec513aa95490 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
-Subject: [PATCH 183/337] kernel/locking: use an exclusive wait_q for sleepers
+Subject: [PATCH 183/332] kernel/locking: use an exclusive wait_q for sleepers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -43,10 +43,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 215a063..b0a81be 100644
+index 1417eef..2016a9b 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1036,8 +1036,20 @@ struct wake_q_head {
+@@ -1046,8 +1046,20 @@ struct wake_q_head {
  #define WAKE_Q(name)					\
  	struct wake_q_head name = { WAKE_Q_TAIL, &name.first }
  
@@ -69,7 +69,7 @@ index 215a063..b0a81be 100644
  extern void __wake_up_q(struct wake_q_head *head, bool sleeper);
  
  static inline void wake_up_q(struct wake_q_head *head)
-@@ -1843,6 +1855,7 @@ struct task_struct {
+@@ -1915,6 +1927,7 @@ struct task_struct {
  	raw_spinlock_t pi_lock;
  
  	struct wake_q_node wake_q;
@@ -78,7 +78,7 @@ index 215a063..b0a81be 100644
  #ifdef CONFIG_RT_MUTEXES
  	/* PI waiters blocked on a rt_mutex held by this task */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 43a8dcb..103aaeb9 100644
+index 6bd05d5..d275943 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -558,6 +558,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
@@ -103,7 +103,7 @@ index b99ddf3..c1a3b9f 100644
  		wake_q_add(wake_q, waiter->task);
  	raw_spin_unlock(&current->pi_lock);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 64d4d8c..42b185a 100644
+index a1e3267..888bb83 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -444,9 +444,15 @@ static bool set_nr_if_polling(struct task_struct *p)

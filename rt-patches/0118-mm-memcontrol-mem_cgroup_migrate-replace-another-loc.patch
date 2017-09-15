@@ -1,7 +1,7 @@
-From 14f8c9c76befa84a428cf941f6f6637a2f81153a Mon Sep 17 00:00:00 2001
+From ed78831e56419379e8cc3b665ba560f0248b7ab5 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 5 Jun 2016 08:11:13 +0200
-Subject: [PATCH 118/337] mm/memcontrol: mem_cgroup_migrate() - replace another
+Subject: [PATCH 118/332] mm/memcontrol: mem_cgroup_migrate() - replace another
  local_irq_disable() w. local_lock_irq()
 
 v4.6 grew a local_irq_disable() in mm/memcontrol.c::mem_cgroup_migrate().

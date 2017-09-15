@@ -1,7 +1,7 @@
-From d5924ec8b53fa9062a4a2c453a1fbb77bb37f95b Mon Sep 17 00:00:00 2001
+From 5524433caba9a7a1d1c4bd4eac6a89c3cb3aea74 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Thu, 28 Jul 2011 11:16:00 +0800
-Subject: [PATCH 151/337] hotplug: Reread hotplug_pcp on pin_current_cpu()
+Subject: [PATCH 151/332] hotplug: Reread hotplug_pcp on pin_current_cpu()
  retry
 
 When retry happens, it's likely that the task has been migrated to
@@ -20,7 +20,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 60c360d..d696f9f 100644
+index ab63d1d..5296dd6 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -257,9 +257,11 @@ static DEFINE_PER_CPU(struct hotplug_pcp, hotplug_pcp);

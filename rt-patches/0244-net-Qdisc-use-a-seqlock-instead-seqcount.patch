@@ -1,7 +1,7 @@
-From 92ce787d3e192043814c9472d672adc3981c7b74 Mon Sep 17 00:00:00 2001
+From ce5d6e334461b8fb15d25d85f4d8873d8ee3a3ef Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 17:36:35 +0200
-Subject: [PATCH 244/337] net/Qdisc: use a seqlock instead seqcount
+Subject: [PATCH 244/332] net/Qdisc: use a seqlock instead seqcount
 
 The seqcount disables preemption on -RT while it is held which can't
 remove. Also we don't want the reader to spin for ages if the writer is
@@ -106,7 +106,7 @@ index 0000000..a703429
 +
 +#endif
 diff --git a/include/net/sch_generic.h b/include/net/sch_generic.h
-index e6aa0a2..b57736f 100644
+index f18fc1a..5d2c9b8 100644
 --- a/include/net/sch_generic.h
 +++ b/include/net/sch_generic.h
 @@ -10,6 +10,7 @@
@@ -243,10 +243,10 @@ index 508e051..bc3b17b 100644
  		      struct gnet_stats_basic_cpu __percpu *cpu,
  		      struct gnet_stats_basic_packed *b)
 diff --git a/net/sched/sch_api.c b/net/sched/sch_api.c
-index 206dc24..00ea9bd 100644
+index 195a3b2..7bf29e3 100644
 --- a/net/sched/sch_api.c
 +++ b/net/sched/sch_api.c
-@@ -981,7 +981,7 @@ static struct Qdisc *qdisc_create(struct net_device *dev,
+@@ -978,7 +978,7 @@ static struct Qdisc *qdisc_create(struct net_device *dev,
  			rcu_assign_pointer(sch->stab, stab);
  		}
  		if (tca[TCA_RATE]) {

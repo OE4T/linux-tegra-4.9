@@ -1,7 +1,7 @@
-From 6dfe29b605a77959f10c4e6c0fee5ff12d6080ae Mon Sep 17 00:00:00 2001
+From 9379bd1dc6e2b87a5d3819cd42586f3a361ef1f2 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <a.p.zijlstra@chello.nl>
 Date: Sat, 13 Aug 2011 00:23:17 +0200
-Subject: [PATCH 190/337] rcu: Frob softirq test
+Subject: [PATCH 190/332] rcu: Frob softirq test
 
 With RT_FULL we get the below wreckage:
 
@@ -155,7 +155,7 @@ Signed-off-by: Peter Zijlstra <a.p.zijlstra@chello.nl>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/rcu/tree_plugin.h b/kernel/rcu/tree_plugin.h
-index 56583e7..a26ed59 100644
+index e3944c4..a95d623 100644
 --- a/kernel/rcu/tree_plugin.h
 +++ b/kernel/rcu/tree_plugin.h
 @@ -426,7 +426,7 @@ void rcu_read_unlock_special(struct task_struct *t)

@@ -1,7 +1,7 @@
-From 331dd7e51f39659084eb0fd9b4ee13d3d2a16dc1 Mon Sep 17 00:00:00 2001
+From 28f20a740ac4a9d382d0fd12a9ef75e6c81bd7f3 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 13:51:17 +0100
-Subject: [PATCH 248/337] net: sysrq via icmp
+Subject: [PATCH 248/332] net: sysrq via icmp
 
 There are (probably rare) situations when a system crashed and the system
 console becomes unresponsive but the network icmp layer still is alive.
@@ -110,7 +110,7 @@ index a6f8b75..ea125ac 100644
  	/* should there be an ICMP stat for ignored echos? */
  	return true;
 diff --git a/net/ipv4/sysctl_net_ipv4.c b/net/ipv4/sysctl_net_ipv4.c
-index cf7cfa4..5d1656e 100644
+index d540bf1..0549cea 100644
 --- a/net/ipv4/sysctl_net_ipv4.c
 +++ b/net/ipv4/sysctl_net_ipv4.c
 @@ -703,6 +703,13 @@ static struct ctl_table ipv4_net_table[] = {

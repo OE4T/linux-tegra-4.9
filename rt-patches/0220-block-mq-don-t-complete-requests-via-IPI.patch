@@ -1,7 +1,7 @@
-From 53238e8e50a956e6788d7071aceb7426840b8ff2 Mon Sep 17 00:00:00 2001
+From ba3840a4a5cdf29d144199834c9ac4f25464e378 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 15:10:08 +0100
-Subject: [PATCH 220/337] block/mq: don't complete requests via IPI
+Subject: [PATCH 220/332] block/mq: don't complete requests via IPI
 
 The IPI runs in hardirq context and there are sleeping locks. This patch
 moves the completion into a workqueue.

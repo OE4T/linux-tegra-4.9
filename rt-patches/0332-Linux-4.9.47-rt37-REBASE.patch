@@ -1,7 +1,7 @@
-From 7ebfceb49ccaa4d06a9c6a9d3cb8ae8c30702c22 Mon Sep 17 00:00:00 2001
+From 533a8013d3bc651110e3fa4a85d97897ed9bcd2e Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Wed, 5 Jul 2017 13:15:02 -0400
-Subject: [PATCH 332/337] Linux 4.9.35-rt25 REBASE
+Subject: [PATCH 332/332] Linux 4.9.47-rt37 REBASE
 
 Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
 ---
@@ -9,12 +9,12 @@ Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/localversion-rt b/localversion-rt
-index 9a218ca..c5b71f9 100644
+index 9a218ca..a3b2408 100644
 --- a/localversion-rt
 +++ b/localversion-rt
 @@ -1 +1 @@
 --rt23
-+-rt25
++-rt37
 -- 
 2.1.4
 

@@ -1,7 +1,7 @@
-From 29a79bec54cab437f4db5a1e02a685789ba6455b Mon Sep 17 00:00:00 2001
+From 069e5e214e9bc63db161c0e35aa591b08abcaa91 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 11:55:23 +0200
-Subject: [PATCH 035/337] fs/dcache: include wait.h
+Subject: [PATCH 035/332] fs/dcache: include wait.h
 
 Since commit d9171b934526 ("parallel lookups machinery, part 4 (and
 last)") dcache.h is using but does not include wait.h. It works as long
@@ -13,7 +13,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+)
 
 diff --git a/include/linux/dcache.h b/include/linux/dcache.h
-index 9b0477e..655ec7c 100644
+index 3d4a198..ed921bc 100644
 --- a/include/linux/dcache.h
 +++ b/include/linux/dcache.h
 @@ -11,6 +11,7 @@

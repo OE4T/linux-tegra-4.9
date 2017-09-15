@@ -1,13 +1,13 @@
-From ca8464f0d9ebe24e056b3bd2fa88983a224e34f2 Mon Sep 17 00:00:00 2001
+From f6b8171b07ded7431ef692d76f2b101475e86f0d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
-Subject: [PATCH 200/337] completion: Use simple wait queues
+Subject: [PATCH 200/332] completion: Use simple wait queues
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
 contention on the waitqueue lock.
 
-Change-Id: I2f78d59a435a0bf29372ad50a358caba25e1e921
+Change-Id: I99805aa50a276de34b8f0eed51359cc20653d656
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  .../net/wireless/intersil/orinoco/orinoco_usb.c    |  2 +-
@@ -38,10 +38,10 @@ index bca6935..d7a35ee 100644
  		}
  		break;
 diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
-index f9c9980..e7adb02 100644
+index ebaf30a..55c7aed 100644
 --- a/drivers/usb/gadget/function/f_fs.c
 +++ b/drivers/usb/gadget/function/f_fs.c
-@@ -1593,7 +1593,7 @@ static void ffs_data_put(struct ffs_data *ffs)
+@@ -1594,7 +1594,7 @@ static void ffs_data_put(struct ffs_data *ffs)
  		pr_info("%s(): freeing\n", __func__);
  		ffs_data_clear(ffs);
  		BUG_ON(waitqueue_active(&ffs->ev.waitq) ||
@@ -110,7 +110,7 @@ index 5d5aaae..3bca159 100644
  
  /**
 diff --git a/include/linux/suspend.h b/include/linux/suspend.h
-index 448321b..20abb96 100644
+index 538f1ed..88be5ba 100644
 --- a/include/linux/suspend.h
 +++ b/include/linux/suspend.h
 @@ -193,6 +193,12 @@ struct platform_freeze_ops {
@@ -307,10 +307,10 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(completion_done);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index f81680c..ccda519 100644
+index 8e48544..b8486e9 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3501,7 +3501,10 @@ void migrate_disable(void)
+@@ -3502,7 +3502,10 @@ void migrate_disable(void)
  	}
  
  #ifdef CONFIG_SCHED_DEBUG
@@ -322,7 +322,7 @@ index f81680c..ccda519 100644
  #endif
  
  	if (p->migrate_disable) {
-@@ -3528,7 +3531,10 @@ void migrate_enable(void)
+@@ -3529,7 +3532,10 @@ void migrate_enable(void)
  	}
  
  #ifdef CONFIG_SCHED_DEBUG

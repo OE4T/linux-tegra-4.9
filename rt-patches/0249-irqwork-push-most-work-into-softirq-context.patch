@@ -1,7 +1,7 @@
-From c0bee66dc501f5f4dfac98dc6972cf4b3aa87826 Mon Sep 17 00:00:00 2001
+From 3fedb4bc0e907ee4b593176dc1231edd79033a79 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 23 Jun 2015 15:32:51 +0200
-Subject: [PATCH 249/337] irqwork: push most work into softirq context
+Subject: [PATCH 249/332] irqwork: push most work into softirq context
 
 Initially we defered all irqwork into softirq because we didn't want the
 latency spikes if perf or another user was busy and delayed the RT task.
@@ -159,7 +159,7 @@ index 5ec4772..8516742 100644
  #endif /* CONFIG_SMP */
  	/* We start is dequeued state, because no RT tasks are queued */
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index 4367249..66d8548 100644
+index ddf9104..4688f82 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
 @@ -220,6 +220,7 @@ static void nohz_full_kick_func(struct irq_work *work)
@@ -171,10 +171,10 @@ index 4367249..66d8548 100644
  
  /*
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index a126620..a09f626 100644
+index 06ccccf..ff99d24 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -1644,7 +1644,7 @@ void update_process_times(int user_tick)
+@@ -1663,7 +1663,7 @@ void update_process_times(int user_tick)
  	scheduler_tick();
  	run_local_timers();
  	rcu_check_callbacks(user_tick);
@@ -183,9 +183,9 @@ index a126620..a09f626 100644
  	if (in_irq())
  		irq_work_tick();
  #endif
-@@ -1684,6 +1684,10 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
- {
- 	struct timer_base *base = this_cpu_ptr(&timer_bases[BASE_STD]);
+@@ -1716,6 +1716,10 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
+ 	 */
+ 	base->must_forward_clk = false;
  
 +#if defined(CONFIG_IRQ_WORK) && defined(CONFIG_PREEMPT_RT_FULL)
 +	irq_work_tick();

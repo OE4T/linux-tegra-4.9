@@ -1,7 +1,7 @@
-From b2f5d520a30dfb4382048c1da320df5ea2c90a34 Mon Sep 17 00:00:00 2001
+From 44ca8a52c99d7be1a99e5f0c191028a997901aa4 Mon Sep 17 00:00:00 2001
 From: "Darren Hart (VMware)" <dvhart@infradead.org>
 Date: Fri, 14 Apr 2017 15:46:08 -0700
-Subject: [PATCH 030/337] MAINTAINERS: Add FUTEX SUBSYSTEM
+Subject: [PATCH 030/332] MAINTAINERS: Add FUTEX SUBSYSTEM
 
 Upstream commit 59cd42c29618c45cd3c56da43402b14f611888dd
 

@@ -22,6 +22,7 @@
 #include <linux/fs.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
+#include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/nvmap.h>
@@ -31,13 +32,13 @@
 #include <asm/io.h>
 #include <asm/memory.h>
 #include <asm/uaccess.h>
-
+#include <soc/tegra/common.h>
 #include <trace/events/nvmap.h>
 
 #include "nvmap_ioctl.h"
 #include "nvmap_priv.h"
 
-#include <linux/list.h>
+
 extern struct device tegra_vpr_dev;
 
 static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
@@ -271,6 +272,32 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 			arg, &op, sizeof(op), 1,  ref->handle->dmabuf);
 }
 
+static int set_vpr_fail_data(void *user_addr, ulong user_stride,
+		       ulong elem_size, ulong count)
+{
+	int ret = 0;
+	void *vaddr;
+
+	vaddr = vmalloc(PAGE_SIZE);
+	if (!vaddr)
+		return -ENOMEM;
+	memset(vaddr, 0xFF, PAGE_SIZE);
+
+	while (!ret && count--) {
+		ulong size_to_copy = elem_size;
+
+		while (!ret && size_to_copy) {
+			ret = copy_to_user(user_addr, vaddr,
+				size_to_copy > PAGE_SIZE ? PAGE_SIZE : size_to_copy);
+			size_to_copy -= (size_to_copy > PAGE_SIZE ? PAGE_SIZE : size_to_copy);
+		}
+		user_addr += user_stride;
+	}
+
+	vfree(vaddr);
+	return ret;
+}
+
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 			  size_t op_size)
 {
@@ -289,6 +316,7 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	unsigned long addr, offset, elem_size, hmem_stride, user_stride;
 	unsigned long count;
 	int handle;
+	int ret;
 
 #ifdef CONFIG_COMPAT
 	if (op_size == sizeof(op32)) {
@@ -333,6 +361,15 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	h = nvmap_handle_get_from_fd(handle);
 	if (!h)
 		return -EINVAL;
+
+	if (is_read && soc_is_tegra186_n_later() &&
+		h->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+		/* VPR memory is not readable from CPU.
+		 * Memset buffer to all 0xFF's for backward compatibility. */
+		ret = set_vpr_fail_data((void *)addr, user_stride, elem_size, count);
+		nvmap_handle_put(h);
+		return ret ?: -EPERM;
+	}
 
 	nvmap_kmaps_inc(h);
 	trace_nvmap_ioctl_rw_handle(client, h, is_read, offset,

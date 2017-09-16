@@ -1320,9 +1320,10 @@ static void tegra_dc_sor_power_down(struct tegra_dc_sor_data *sor)
 static u32 tegra_sor_get_pixel_depth(struct tegra_dc *dc)
 {
 	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
+	int yuv_bypass_mode = dc->mode.vmode & FB_VMODE_BYPASS;
 	u32 pixel_depth = 0;
 
-	if (dc->out->type == TEGRA_DC_OUT_HDMI && !dc->yuv_bypass) {
+	if (dc->out->type == TEGRA_DC_OUT_HDMI && !yuv_bypass_mode) {
 		if (yuv_flag & FB_VMODE_Y422) {
 			if (yuv_flag & FB_VMODE_Y24)
 				pixel_depth =

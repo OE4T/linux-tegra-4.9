@@ -484,7 +484,7 @@
 #define TEGRA210_CLK_SBC4_SCLK 447
 #define TEGRA210_CLK_QSPI_SCLK 448
 #define TEGRA210_CLK_BOOT_APB_SCLK 449
-/* 450   */
+#define TEGRA210_CLK_EMC_MASTER 450
 /* 451  */
 /* 452  */
 /* 453  */
@@ -514,7 +514,7 @@
 /* 477  */
 /* 478  */
 /* 479  */
-/* 480  */
+#define TEGRA210_CLK_OVERRIDE_EMC 480
 /* 481  */
 /* 482  */
 /* 483  */

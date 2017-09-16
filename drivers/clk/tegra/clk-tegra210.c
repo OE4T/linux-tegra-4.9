@@ -2529,6 +2529,7 @@ static struct tegra_clk tegra210_clks[tegra_clk_max] __initdata = {
 	[tegra_clk_vcm_apb_sclk] = { .dt_id = TEGRA210_CLK_VCM_APB_SCLK, .present = true },
 	[tegra_clk_pll_a1] = { .dt_id = TEGRA210_CLK_PLL_A1, .present = true },
 	[tegra_clk_vic_floor_cbus] = { .dt_id = TEGRA210_CLK_VIC_FLOOR_CBUS, .present = true },
+	[tegra_clk_override_emc] = { .dt_id = TEGRA210_CLK_OVERRIDE_EMC, .present = true },
 };
 
 static struct tegra_devclk devclks[] __initdata = {
@@ -3266,6 +3267,10 @@ static __init void tegra210_shared_clk_init(char *sclk_high_clk)
 	clk_register_clkdev(clk, "sbus", NULL);
 	clks[TEGRA210_CLK_SBUS] = clk;
 	sbus_cbus = to_clk_cbus_shared(__clk_get_hw(clk));
+
+	clk = tegra_clk_register_shared_master("emc_master", "emc", 0,
+						12750000, 1800000000);
+	clks[TEGRA210_CLK_EMC_MASTER] = clk;
 
 	clk = tegra_clk_register_shared_master("gbus", "gpu", 0,
 						12000000, 1300000000);

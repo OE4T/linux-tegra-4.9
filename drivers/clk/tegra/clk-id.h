@@ -352,6 +352,7 @@ enum clk_id {
 	tegra_clk_floor_sclk,
 	tegra_clk_override_c2bus,
 	tegra_clk_override_c3bus,
+	tegra_clk_override_emc,
 	tegra_clk_override_sclk,
 	tegra_clk_sbc1_sclk,
 	tegra_clk_sbc2_sclk,

@@ -5828,10 +5828,6 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	if (pdata->phydev)
 		phy_stop_machine(pdata->phydev);
 
-	/* Stop the PHY state machine */
-	if (pdata->phydev)
-		phy_stop_machine(pdata->phydev);
-
 	/* turn off sources of data into dev */
 	netif_tx_disable(pdata->dev);
 

@@ -5908,14 +5908,9 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 	if (pdata->hw_feat.pcs_sel)
 		hw_if->control_an(1, 0);
 
-	if (pdata->phydev) {
-		pdata->oldlink = 0;
-		pdata->speed = 0;
-		pdata->oldduplex = -1;
+	phy_start(pdata->phydev);
+	phy_start_machine(pdata->phydev);
 
-		phy_start(pdata->phydev);
-		phy_start_machine(pdata->phydev);
-	}
 #ifdef EQOS_ENABLE_EEE
 	if (pdata->phydev)
 		pdata->eee_enabled = eqos_eee_init(pdata);
@@ -5925,8 +5920,7 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 	pdata->eee_enabled = false;
 #endif
 
-	if (pdata->phydev)
-		netif_tx_start_all_queues(pdata->dev);
+	netif_tx_start_all_queues(pdata->dev);
 
 	pr_debug("<--%s()\n", __func__);
 }

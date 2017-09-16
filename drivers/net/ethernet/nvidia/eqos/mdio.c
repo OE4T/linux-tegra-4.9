@@ -466,9 +466,9 @@ int eqos_init_phy(struct net_device *dev)
 
 	DBGPR_MDIO("-->eqos_init_phy\n");
 
-	pdata->oldlink = 0;
-	pdata->speed = 0;
-	pdata->oldduplex = -1;
+	pdata->oldlink = false;
+	pdata->speed = SPEED_UNKNOWN;
+	pdata->oldduplex = SPEED_UNKNOWN;
 
 	if (pdata->phy_node)
 		phydev = of_phy_connect(dev, pdata->phy_node,

@@ -239,7 +239,6 @@ void bcm54xx_low_power_mode(struct phy_device *phydev,
 	} else {
 		pr_debug("%s(): re-initialze phy after exiting "
 			 "from iddq-lp mode\n", __func__);
-		phy_init_hw(phydev);
 		phydev->dev_flags &= ~BCM_IDDQ_EN;
 	}
 }
@@ -565,6 +564,18 @@ static int brcm_fet_config_intr(struct phy_device *phydev)
 	return err;
 }
 
+int bcm89610_suspend(struct phy_device *phydev)
+{
+	bcm54xx_low_power_mode(phydev, true);
+	return 0;
+}
+
+int bcm89610_resume(struct phy_device *phydev)
+{
+	bcm54xx_low_power_mode(phydev, false);
+	return 0;
+}
+
 static struct phy_driver broadcom_drivers[] = {
 {
 	.phy_id		= PHY_ID_BCM5411,
@@ -723,6 +734,8 @@ static struct phy_driver broadcom_drivers[] = {
 	.low_power_mode = bcm54xx_low_power_mode,
 	.ack_interrupt  = bcm_phy_ack_intr,
 	.config_intr    = bcm_phy_config_intr,
+	.resume		= bcm89610_resume,
+	.suspend	= bcm89610_suspend,
 } };
 
 module_phy_driver(broadcom_drivers);

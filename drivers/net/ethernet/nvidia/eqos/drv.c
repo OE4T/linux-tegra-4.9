@@ -1332,11 +1332,6 @@ static int eqos_close(struct net_device *dev)
 
 	pr_debug("-->%s\n", __func__);
 
-	/* Put PHY in low power mode */
-	if (pdata->phydev && pdata->phydev->drv &&
-	    pdata->phydev->drv->low_power_mode)
-		pdata->phydev->drv->low_power_mode(pdata->phydev, true);
-
 	/* Stop and disconnect the PHY */
 	if (pdata->phydev) {
 		phy_stop(pdata->phydev);
@@ -5845,17 +5840,6 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 
 	/* disable MAC TX */
 	hw_if->stop_mac_tx();
-
-	if (pdata->phydev && pdata->phydev->drv &&
-	    pdata->phydev->drv->low_power_mode) {
-		pdata->phydev->drv->low_power_mode(pdata->phydev, true);
-		if (!pdata->suspended)
-			phy_stop_interrupts(pdata->phydev);
-	} else if (pdata->phydev) {
-		/* stop the PHY */
-		phy_stop(pdata->phydev);
-		gpio_set_value(pdata->phy_reset_gpio, 0);
-	}
 
 	/* stop DMA RX */
 	eqos_stop_all_ch_rx_dma(pdata);

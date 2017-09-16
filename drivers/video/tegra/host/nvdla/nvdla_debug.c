@@ -81,7 +81,6 @@ static const struct file_operations nvdla_fw_ver_fops = {
 static int debug_dla_tracedump_show(struct seq_file *s, void *data)
 {
 	char *bufptr;
-	struct flcn *m;
 	struct nvdla_device *nvdla_dev;
 	struct platform_device *pdev;
 	uint32_t i = 0, cindex = 0;
@@ -90,13 +89,9 @@ static int debug_dla_tracedump_show(struct seq_file *s, void *data)
 
 	nvdla_dev = (struct nvdla_device *)s->private;
 	pdev = nvdla_dev->pdev;
-	m = get_flcn(pdev);
 
-	if (!m)
-		return 0;
-
-	if (m->trace_dump_va && nvdla_dev->trace_enable) {
-		bufptr = (char *)m->trace_dump_va;
+	if (nvdla_dev->trace_dump_va && nvdla_dev->trace_enable) {
+		bufptr = (char *)nvdla_dev->trace_dump_va;
 
 		if (!strcmp(bufptr, ""))
 			return 0;
@@ -174,7 +169,6 @@ static int debug_dla_eventmask_help_show(struct seq_file *s, void *data)
 static int debug_dla_bintracedump_show(struct seq_file *s, void *data)
 {
 	char *bufptr;
-	struct flcn *m;
 	struct nvdla_device *nvdla_dev;
 	struct platform_device *pdev;
 	uint32_t i = 0;
@@ -183,13 +177,9 @@ static int debug_dla_bintracedump_show(struct seq_file *s, void *data)
 
 	nvdla_dev = (struct nvdla_device *)s->private;
 	pdev = nvdla_dev->pdev;
-	m = get_flcn(pdev);
 
-	if (!m)
-		return 0;
-
-	if (m->trace_dump_va && nvdla_dev->trace_enable) {
-		bufptr = (char *)m->trace_dump_va;
+	if (nvdla_dev->trace_dump_va && nvdla_dev->trace_enable) {
+		bufptr = (char *)nvdla_dev->trace_dump_va;
 
 		if (!strcmp(bufptr, ""))
 			return 0;

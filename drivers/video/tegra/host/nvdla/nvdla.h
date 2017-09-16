@@ -163,6 +163,10 @@ struct nvdla_cmd_data {
  * @trace_enable	to enable/disable the DLA firmware trace
  * @events_mask		mask to set/reset the different DLA firmware trace event
  * @is_gos_enabled	flag to check if GoS enabled
+ * @debug_dump_pa	physical address of print buffer
+ * @debug_dump_va	virtual address of print buffer
+ * @trace_dump_pa	physical address of trace buffer
+ * @trace_dump_va	virtual address of trace buffer
  */
 struct nvdla_device {
 	struct platform_device *pdev;
@@ -178,6 +182,10 @@ struct nvdla_device {
 	u32 trace_enable;
 	u32 events_mask;
 	bool is_gos_enabled;
+	dma_addr_t debug_dump_pa;
+	u32 *debug_dump_va;
+	dma_addr_t trace_dump_pa;
+	u32 *trace_dump_va;
 };
 
 /**

@@ -51,7 +51,6 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 {
 	uint32_t message;
 	uint32_t mailbox0;
-	struct flcn *m = get_flcn(pdev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 
@@ -61,7 +60,8 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 	message = mailbox0 & DLA_RESPONSE_MSG_MASK;
 
 	if (message == DLA_MSG_DEBUG_PRINT)
-		dev_err(&pdev->dev, "falcon: %s", (char *)m->debug_dump_va);
+		dev_err(&pdev->dev, "falcon: %s",
+				(char *)nvdla_dev->debug_dump_va);
 
 	if ((message == DLA_MSG_CMD_COMPLETE ||
 				message == DLA_MSG_CMD_ERROR) &&
@@ -227,32 +227,23 @@ int nvdla_send_cmd(struct platform_device *pdev,
 static int nvdla_alloc_trace_region(struct platform_device *pdev)
 {
 	int err = 0;
-	struct flcn *m;
 	struct nvdla_cmd_mem_info trace_cmd_mem_info;
 	struct nvdla_cmd_data cmd_data;
 	struct dla_region_printf *trace_region = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 
 	if (!pdata->flcn_isr)
 		return 0;
 
-	nvdla_dbg_fn(pdev, "");
-
-	m = get_flcn(pdev);
-	if (!m) {
-		nvdla_dbg_err(pdev, "falcon is not booted!");
-		err = -ENXIO;
-		goto falcon_not_booted;
-	}
-
 	/* Trace buffer allocation must be done at once only. */
-	if (!m->trace_dump_va) {
+	if (!nvdla_dev->trace_dump_va) {
 		/* allocate trace region */
-		m->trace_dump_va = dma_alloc_attrs(&pdev->dev,
-				   TRACE_BUFFER_SIZE, &m->trace_dump_pa,
+		nvdla_dev->trace_dump_va = dma_alloc_attrs(&pdev->dev,
+				   TRACE_BUFFER_SIZE, &nvdla_dev->trace_dump_pa,
 				   GFP_KERNEL, __DMA_ATTR(attrs));
 
-		if (!m->trace_dump_va) {
+		if (!nvdla_dev->trace_dump_va) {
 			nvdla_dbg_err(pdev,
 				"dma trace memory allocation failed");
 			err = -ENOMEM;
@@ -271,7 +262,7 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 	trace_region = (struct dla_region_printf *)(trace_cmd_mem_info.va);
 
 	trace_region->region = DLA_REGION_TRACE;
-	trace_region->address = m->trace_dump_pa;
+	trace_region->address = nvdla_dev->trace_dump_pa;
 	trace_region->size = TRACE_BUFFER_SIZE;
 
 	cmd_data.method_id = DLA_CMD_SET_REGIONS;
@@ -292,14 +283,15 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 
 trace_send_cmd_failed:
 alloc_trace_cmd_failed:
-	if (m->trace_dump_pa) {
+	if (nvdla_dev->trace_dump_pa) {
 		dma_free_attrs(&pdev->dev, TRACE_BUFFER_SIZE,
-			m->trace_dump_va, m->trace_dump_pa, __DMA_ATTR(attrs));
-		m->trace_dump_va = NULL;
-		m->trace_dump_pa = 0;
+			nvdla_dev->trace_dump_va, nvdla_dev->trace_dump_pa,
+			__DMA_ATTR(attrs));
+		nvdla_dev->trace_dump_va = NULL;
+
+		nvdla_dev->trace_dump_pa = 0;
 	}
 fail_alloc_trace_dma:
-falcon_not_booted:
 
 	return err;
 }
@@ -307,30 +299,23 @@ falcon_not_booted:
 static int nvdla_alloc_dump_region(struct platform_device *pdev)
 {
 	int err = 0;
-	struct flcn *m;
 	struct dla_region_printf *region;
 	struct nvdla_cmd_mem_info debug_cmd_mem_info;
 	struct nvdla_cmd_data cmd_data;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 
 	if (!pdata->flcn_isr)
 		return 0;
 
 	nvdla_dbg_fn(pdev, "");
 
-	m = get_flcn(pdev);
-	if (!m) {
-		nvdla_dbg_err(pdev, "falcon is not booted!");
-		err = -ENXIO;
-		goto fal_not_booted;
-	}
-
 	/* allocate dump region only once */
-	if (!m->debug_dump_va) {
-		m->debug_dump_va = dma_alloc_attrs(&pdev->dev,
-				   DEBUG_BUFFER_SIZE, &m->debug_dump_pa,
+	if (!nvdla_dev->debug_dump_va) {
+		nvdla_dev->debug_dump_va = dma_alloc_attrs(&pdev->dev,
+				   DEBUG_BUFFER_SIZE, &nvdla_dev->debug_dump_pa,
 				   GFP_KERNEL, __DMA_ATTR(attrs));
-		if (!m->debug_dump_va) {
+		if (!nvdla_dev->debug_dump_va) {
 			nvdla_dbg_err(pdev, "debug dump dma alloc failed");
 			err = -ENOMEM;
 			goto fail_to_alloc_debug_dump;
@@ -348,9 +333,9 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 	region->region = DLA_REGION_PRINTF;
 	region->size = DEBUG_BUFFER_SIZE;
 #if CURRENT_FW_VERSION > FW_VERSION(0, 6, 0)
-	region->address = m->debug_dump_pa;
+	region->address = nvdla_dev->debug_dump_pa;
 #else
-	region->address = ALIGNED_DMA(m->debug_dump_pa);
+	region->address = ALIGNED_DMA(nvdla_dev->debug_dump_pa);
 #endif
 
 	/* prepare command data */
@@ -373,15 +358,14 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 
 region_send_cmd_failed:
 set_region_failed:
-	if (m->debug_dump_pa) {
+	if (nvdla_dev->debug_dump_pa) {
 		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
-			m->debug_dump_va, m->debug_dump_pa, __DMA_ATTR(attrs));
-		m->debug_dump_va = NULL;
-		m->debug_dump_pa = 0;
+			nvdla_dev->debug_dump_va, nvdla_dev->debug_dump_pa,
+			__DMA_ATTR(attrs));
+		nvdla_dev->debug_dump_va = NULL;
+		nvdla_dev->debug_dump_pa = 0;
 	}
 fail_to_alloc_debug_dump:
-fal_not_booted:
-
 	return err;
 }
 
@@ -658,29 +642,26 @@ static int __exit nvdla_remove(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
-	struct flcn *m;
 
 	nvhost_queue_deinit(nvdla_dev->pool);
 	nvhost_client_device_release(pdev);
 
-	m = get_flcn(pdev);
-	if (!m)
-		return -ENXIO;
-
-	if (m->trace_dump_pa) {
+	if (nvdla_dev->trace_dump_pa) {
 		dma_free_attrs(&pdev->dev, TRACE_BUFFER_SIZE,
-			       m->trace_dump_va, m->trace_dump_pa,
+			       nvdla_dev->trace_dump_va,
+			       nvdla_dev->trace_dump_pa,
 			       __DMA_ATTR(attrs));
-		m->trace_dump_va = NULL;
-		m->trace_dump_pa = 0;
+		nvdla_dev->trace_dump_va = NULL;
+		nvdla_dev->trace_dump_pa = 0;
 	}
 
-	if (m->debug_dump_pa) {
+	if (nvdla_dev->debug_dump_pa) {
 		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
-			       m->debug_dump_va, m->debug_dump_pa,
+			       nvdla_dev->debug_dump_va,
+			       nvdla_dev->debug_dump_pa,
 			       __DMA_ATTR(attrs));
-		m->debug_dump_va = NULL;
-		m->debug_dump_pa = 0;
+		nvdla_dev->debug_dump_va = NULL;
+		nvdla_dev->debug_dump_pa = 0;
 	}
 
 	/* free command mem in last */

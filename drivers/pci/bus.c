@@ -90,6 +90,7 @@ void pci_bus_remove_resources(struct pci_bus *bus)
 		kfree(bus_res);
 	}
 }
+EXPORT_SYMBOL_GPL(pci_bus_remove_resources);
 
 int devm_request_pci_bus_resources(struct device *dev,
 				   struct list_head *resources)

@@ -249,6 +249,30 @@
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_AON>;
 			};
+			pcie0_domain {
+				address-space = <&pcie0_as>;
+				sid-list = <TEGRA_SID_PCIE0>;
+			};
+			pcie1_domain {
+				address-space = <&pcie1_as>;
+				sid-list = <TEGRA_SID_PCIE1>;
+			};
+			pcie2_domain {
+				address-space = <&pcie2_as>;
+				sid-list = <TEGRA_SID_PCIE2>;
+			};
+			pcie3_domain {
+				address-space = <&pcie3_as>;
+				sid-list = <TEGRA_SID_PCIE3>;
+			};
+			pcie4_domain {
+				address-space = <&pcie4_as>;
+				sid-list = <TEGRA_SID_PCIE4>;
+			};
+			pcie5_domain {
+				address-space = <&pcie5_as>;
+				sid-list = <TEGRA_SID_PCIE5>;
+			};
 		};
 
 		address-space-prop {
@@ -269,6 +293,48 @@
 			common_as: common {
 				iova-start = <0x0 0x80000000>;
 				iova-size = <0x0 0x7FF00000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			pcie0_as: pcie0 {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x4 0x7FFFFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			pcie1_as: pcie1 {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0xFFFFFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			pcie2_as: pcie2 {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0xFFFFFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			pcie3_as: pcie3 {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0xFFFFFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			pcie4_as: pcie4 {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x4 0x7FFFFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			pcie5_as: pcie5 {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x4 0x7FFFFFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

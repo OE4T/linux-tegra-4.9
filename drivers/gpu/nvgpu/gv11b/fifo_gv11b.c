@@ -977,9 +977,9 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 		client_type = mmfault->client_type;
 		if (gk20a_is_channel_marked_as_tsg(refch))
 			tsg = &g->fifo.tsg[refch->tsgid];
-			gv11b_fifo_reset_pbdma_and_eng_faulted(g, refch,
-				mmfault->faulted_pbdma,
-				mmfault->faulted_engine);
+		gv11b_fifo_reset_pbdma_and_eng_faulted(g, refch,
+			mmfault->faulted_pbdma,
+			mmfault->faulted_engine);
 	} else {
 		if (id_type == ID_TYPE_TSG)
 			tsg = &g->fifo.tsg[id];

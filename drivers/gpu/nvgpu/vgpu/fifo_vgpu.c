@@ -232,15 +232,15 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		if (!runlist->active_channels)
 			goto clean_up_runlist;
 
-			runlist_size  = sizeof(u16) * f->num_channels;
-			for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-				int err = nvgpu_dma_alloc_sys(g, runlist_size,
+		runlist_size  = sizeof(u16) * f->num_channels;
+		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
+			int err = nvgpu_dma_alloc_sys(g, runlist_size,
 						&runlist->mem[i]);
-				if (err) {
-					dev_err(d, "memory allocation failed\n");
-					goto clean_up_runlist;
-				}
+			if (err) {
+				dev_err(d, "memory allocation failed\n");
+				goto clean_up_runlist;
 			}
+		}
 		nvgpu_mutex_init(&runlist->mutex);
 
 		/* None of buffers is pinned if this value doesn't change.

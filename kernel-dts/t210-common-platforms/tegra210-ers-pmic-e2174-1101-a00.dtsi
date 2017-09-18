@@ -297,13 +297,13 @@
 				status = "disabled";
 				regulator-name = "batt_regulator";
 				regulator-max-microamp = <3000000>;
-				ti,disbale-suspend-during-charging;
-				ti,charge-voltage-limit-millivolt = <4200>;
-				ti,charge-term-current-limit-milliamp = <384>;
+				ti,disable-suspend-on-charging;
+				ti,charge-voltage-limit-mv = <4200>;
+				ti,charge-term-current-limit-ma = <384>;
 				ti,ir-comp-voltage-millivolt = <112>;
 				ti,ir-comp-resister-ohm = <70>;
-				ti,pre-charge-current-limit-milliamp = <768>;
-				ti,thermal-regulation-threshold-degc = <120>;
+				ti,pre-charge-current-limit-ma = <768>;
+				ti,thermal-reg-threshold-degc = <120>;
 			};
 
 			usb0_vbus: vbus {

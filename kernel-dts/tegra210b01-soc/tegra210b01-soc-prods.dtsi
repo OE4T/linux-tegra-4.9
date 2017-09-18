@@ -973,6 +973,11 @@
                                                0x000001cc 0xff000000 0x34000000        // SOR_NV_PDISP_SOR_PADCTL2_0   31:24=SPAREPLL          0x34
                                            >;
                                };
+                               prod_c_hbr2 {
+                                       prod = <
+                                               0x0000004c 0x00000003 0x00000003        // SOR_NV_PDISP_SOR_CLK_CNTRL_0 1:0=DIFF_DPCLK          0x3
+                                       >;
+                               };
 			};
 		};
 

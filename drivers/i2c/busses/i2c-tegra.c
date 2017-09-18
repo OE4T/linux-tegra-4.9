@@ -310,7 +310,7 @@ struct tegra_i2c_dev {
 	int sda_gpio;
 	struct i2c_algo_bit_data bit_data;
 	const struct i2c_algorithm *bit_algo;
-	bool bit_banging_xfer_after_shutdown;
+	bool bit_bang_after_shutdown;
 	bool is_shutdown;
 	u32 low_clock_count;
 	u32 high_clock_count;
@@ -348,7 +348,7 @@ struct tegra_i2c_dev {
 	bool use_single_xfer_complete;
 	bool use_multi_xfer_complete;
 	bool disable_multi_pkt_mode;
-	bool restrict_clk_rate_change_runtime;
+	bool restrict_clk_change;
 	bool transfer_in_progress;
 };
 
@@ -2023,7 +2023,7 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 		return -EBUSY;
 
 	if ((i2c_dev->is_shutdown || adap->atomic_xfer_only)
-			&& i2c_dev->bit_banging_xfer_after_shutdown)
+			&& i2c_dev->bit_bang_after_shutdown)
 		return tegra_i2c_gpio_xfer(adap, msgs, num);
 
 	if (adap->atomic_xfer_only)
@@ -2106,8 +2106,12 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 	i2c_dev->scl_gpio = of_get_named_gpio(np, "scl-gpio", 0);
 	i2c_dev->sda_gpio = of_get_named_gpio(np, "sda-gpio", 0);
 
-	i2c_dev->bit_banging_xfer_after_shutdown = of_property_read_bool(np,
-			"nvidia,bit-banging-xfer-after-shutdown");
+	i2c_dev->bit_bang_after_shutdown = of_property_read_bool(np,
+			"nvidia,bit-bang-after-shutdown");
+	if (!i2c_dev->bit_bang_after_shutdown) {
+		i2c_dev->bit_bang_after_shutdown = of_property_read_bool(np,
+				"nvidia,bit-banging-xfer-after-shutdown");
+	}
 
 	ret = of_property_read_u32(np, "nvidia,hs-master-code", &prop);
 	if (!ret)
@@ -2119,8 +2123,13 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 			"nvidia,clock-always-on");
 	i2c_dev->disable_multi_pkt_mode = of_property_read_bool(np,
 			"nvidia,disable-multi-pkt-mode");
-	i2c_dev->restrict_clk_rate_change_runtime = of_property_read_bool(np,
-			"nvidia,restrict_clk_rate_change_runtime");
+
+	i2c_dev->restrict_clk_change = of_property_read_bool(np,
+			"nvidia,restrict-clk-change");
+	if (!i2c_dev->restrict_clk_change) {
+		i2c_dev->restrict_clk_change = of_property_read_bool(np,
+				"nvidia,restrict_clk_rate_change_runtime");
+	}
 }
 
 static bool tegra_i2c_clk_rate_supported(void *data, unsigned long bus_clk_rate)
@@ -2128,7 +2137,7 @@ static bool tegra_i2c_clk_rate_supported(void *data, unsigned long bus_clk_rate)
 	struct i2c_adapter *adap = (struct i2c_adapter *)data;
 	struct tegra_i2c_dev *i2c_dev = i2c_get_adapdata(adap);
 
-	if (i2c_dev->restrict_clk_rate_change_runtime)
+	if (i2c_dev->restrict_clk_change)
 		return false;
 	if (bus_clk_rate == I2C_HS_MODE && !i2c_dev->hw->has_hs_mode_support)
 		return false;

@@ -1780,22 +1780,34 @@ static struct bq2419x_platform_data *bq2419x_dt_parse(struct i2c_client *client,
 
 		ret = of_property_read_u32(batt_reg_node,
 				"ti,input-voltage-limit-millivolt", &pval);
+		if (ret < 0)
+			ret = of_property_read_u32(batt_reg_node,
+				"ti,input-voltage-limit-mv", &pval);
 		if (!ret)
 			bcharger_pdata->input_voltage_limit_mV = pval;
 
 		ret = of_property_read_u32(batt_reg_node,
 				"ti,fast-charge-current-limit-milliamp", &pval);
+		if (ret < 0)
+			ret = of_property_read_u32(batt_reg_node,
+				"ti,fast-charge-current-limit-ma", &pval);
 		if (!ret)
 			bcharger_pdata->fast_charge_current_limit_mA =
 							pval;
 
 		ret = of_property_read_u32(batt_reg_node,
 				"ti,pre-charge-current-limit-milliamp", &pval);
+		if (ret < 0)
+			ret = of_property_read_u32(batt_reg_node,
+				"ti,pre-charge-current-limit-ma", &pval);
 		if (!ret)
 			bcharger_pdata->pre_charge_current_limit_mA = pval;
 
 		ret = of_property_read_u32(batt_reg_node,
 				"ti,charge-term-current-limit-milliamp", &pval);
+		if (ret < 0)
+			ret = of_property_read_u32(batt_reg_node,
+				"ti,charge-term-current-limit-ma", &pval);
 		if (!ret)
 			bcharger_pdata->termination_current_limit_mA = pval;
 
@@ -1811,18 +1823,28 @@ static struct bq2419x_platform_data *bq2419x_dt_parse(struct i2c_client *client,
 
 		ret = of_property_read_u32(batt_reg_node,
 				"ti,thermal-regulation-threshold-degc", &pval);
+		if (ret < 0)
+			ret = of_property_read_u32(batt_reg_node,
+				"ti,thermal-reg-threshold-degc", &pval);
 		if (!ret)
 			bcharger_pdata->thermal_regulation_threshold_degC =
 						pval;
 
 		ret = of_property_read_u32(batt_reg_node,
 				"ti,charge-voltage-limit-millivolt", &pval);
+		if (ret < 0)
+			ret = of_property_read_u32(batt_reg_node,
+				"ti,charge-voltage-limit-mv", &pval);
 		if (!ret)
 			pdata->bcharger_pdata->charge_voltage_limit_mV = pval;
 
 		pdata->bcharger_pdata->disable_suspend_during_charging =
 				of_property_read_bool(batt_reg_node,
 				"ti,disbale-suspend-during-charging");
+		if (!pdata->bcharger_pdata->disable_suspend_during_charging)
+			pdata->bcharger_pdata->disable_suspend_during_charging =
+				of_property_read_bool(batt_reg_node,
+				"ti,disable-suspend-on-charging");
 
 		ret = of_property_read_u32(batt_reg_node,
 					"ti,auto-rechg-power-on-time",

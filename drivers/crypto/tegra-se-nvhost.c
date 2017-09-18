@@ -1551,6 +1551,7 @@ static void tegra_se_process_new_req(struct tegra_se_dev *se_dev)
 					     se_dev->cmdbuf_cnt, true);
 	if (err)
 		goto cmdbuf_out;
+	se_dev->dynamic_mem = false;
 
 	return;
 cmdbuf_out:
@@ -1566,6 +1567,7 @@ mem_out:
 	se_dev->req_cnt = 0;
 	se_dev->gather_buf_sz = 0;
 	se_dev->cmdbuf_cnt = 0;
+	se_dev->dynamic_mem = false;
 }
 
 static void tegra_se_work_handler(struct work_struct *work)

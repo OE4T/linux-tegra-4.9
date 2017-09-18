@@ -302,6 +302,7 @@ static const struct gpu_ops gp10b_ops = {
 		.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3,
 		.create_gr_sysfs = gr_gp10b_create_sysfs,
 		.set_ctxsw_preemption_mode = gr_gp10b_set_ctxsw_preemption_mode,
+		.init_ctxsw_hdr_data = gr_gp10b_init_ctxsw_hdr_data,
 	},
 	.fb = {
 		.reset = fb_gk20a_reset,

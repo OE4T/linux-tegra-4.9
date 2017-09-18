@@ -2379,3 +2379,17 @@ int gr_gp10b_set_czf_bypass(struct gk20a *g, struct channel_gk20a *ch)
 
 	return __gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0, false);
 }
+
+void gr_gp10b_init_ctxsw_hdr_data(struct gk20a *g, struct nvgpu_mem *mem)
+{
+	gk20a_gr_init_ctxsw_hdr_data(g, mem);
+
+	nvgpu_mem_wr(g, mem,
+			ctxsw_prog_main_image_num_wfi_save_ops_o(), 0);
+	nvgpu_mem_wr(g, mem,
+			ctxsw_prog_main_image_num_cta_save_ops_o(), 0);
+	nvgpu_mem_wr(g, mem,
+			ctxsw_prog_main_image_num_gfxp_save_ops_o(), 0);
+	nvgpu_mem_wr(g, mem,
+			ctxsw_prog_main_image_num_cilp_save_ops_o(), 0);
+}

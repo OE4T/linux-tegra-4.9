@@ -133,6 +133,7 @@ int gr_gp10b_init_preemption_state(struct gk20a *g);
 void gr_gp10b_set_preemption_buffer_va(struct gk20a *g,
 			struct nvgpu_mem *mem, u64 gpu_va);
 int gr_gp10b_set_czf_bypass(struct gk20a *g, struct channel_gk20a *ch);
+void gr_gp10b_init_ctxsw_hdr_data(struct gk20a *g, struct nvgpu_mem *mem);
 
 struct gr_t18x {
 	struct {

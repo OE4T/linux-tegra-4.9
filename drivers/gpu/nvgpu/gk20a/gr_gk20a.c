@@ -1821,6 +1821,15 @@ cleanup_pm_buf:
 	return ret;
 }
 
+void gk20a_gr_init_ctxsw_hdr_data(struct gk20a *g,
+				struct nvgpu_mem *mem)
+{
+	nvgpu_mem_wr(g, mem,
+			ctxsw_prog_main_image_num_save_ops_o(), 0);
+	nvgpu_mem_wr(g, mem,
+			ctxsw_prog_main_image_num_restore_ops_o(), 0);
+}
+
 /* load saved fresh copy of gloden image into channel gr_ctx */
 int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 					struct channel_gk20a *c)
@@ -1860,11 +1869,10 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 		nvgpu_mem_wr_n(g, mem, 0,
 			gr->ctx_vars.local_golden_image,
 			gr->ctx_vars.golden_image_size);
-		nvgpu_mem_wr(g, mem,
-			ctxsw_prog_main_image_num_save_ops_o(), 0);
-		nvgpu_mem_wr(g, mem,
-			ctxsw_prog_main_image_num_restore_ops_o(), 0);
 	}
+
+	if (g->ops.gr.init_ctxsw_hdr_data)
+		g->ops.gr.init_ctxsw_hdr_data(g, mem);
 
 	if (g->ops.gr.enable_cde_in_fecs && c->cde)
 		g->ops.gr.enable_cde_in_fecs(g, mem);

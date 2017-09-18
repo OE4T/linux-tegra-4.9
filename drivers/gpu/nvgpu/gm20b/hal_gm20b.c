@@ -283,6 +283,7 @@ static const struct gpu_ops gm20b_ops = {
 		.init_ovr_sm_dsm_perf =  gk20a_gr_init_ovr_sm_dsm_perf,
 		.get_ovr_perf_regs = gk20a_gr_get_ovr_perf_regs,
 		.disable_rd_coalesce = gm20a_gr_disable_rd_coalesce,
+		.init_ctxsw_hdr_data = gk20a_gr_init_ctxsw_hdr_data,
 	},
 	.fb = {
 		.reset = fb_gk20a_reset,

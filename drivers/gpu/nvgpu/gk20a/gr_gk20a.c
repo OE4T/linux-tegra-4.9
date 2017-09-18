@@ -104,18 +104,11 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 		u32 *ctx_id)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct ctx_header_desc *ctx_header = &ch_ctx->ctx_header;
-	struct nvgpu_mem *ctx_header_mem = &ctx_header->mem;
-	struct nvgpu_mem *mem;
+	struct nvgpu_mem *mem = &ch_ctx->gr_ctx->mem;
 
 	/* Channel gr_ctx buffer is gpu cacheable.
 	   Flush and invalidate before cpu update. */
 	g->ops.mm.l2_flush(g, true);
-
-	if (ctx_header_mem->gpu_va)
-		mem = ctx_header_mem;
-	else
-		mem = &ch_ctx->gr_ctx->mem;
 
 	if (nvgpu_mem_begin(g, mem))
 		return -ENOMEM;
@@ -681,20 +674,10 @@ int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 					struct channel_ctx_gk20a *ch_ctx)
 {
-	struct ctx_header_desc *ctx = &ch_ctx->ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
-
 	nvgpu_mem_end(g, &ch_ctx->patch_ctx.mem);
 
 	/* Write context count to context image if it is mapped */
-	if (ctxheader->gpu_va) {
-
-		if (ctxheader->cpu_va)
-			nvgpu_mem_wr(g, ctxheader,
-			     ctxsw_prog_main_image_patch_count_o(),
-			     ch_ctx->patch_ctx.data_count);
-
-	} else if (ch_ctx->gr_ctx->mem.cpu_va) {
+	if (ch_ctx->gr_ctx->mem.cpu_va) {
 		nvgpu_mem_wr(g, &ch_ctx->gr_ctx->mem,
 			     ctxsw_prog_main_image_patch_count_o(),
 			     ch_ctx->patch_ctx.data_count);
@@ -1357,8 +1340,6 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	struct aiv_list_gk20a *sw_ctx_load = &g->gr.ctx_vars.sw_ctx_load;
 	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
 	u32 last_method_data = 0;
-	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
 
 	gk20a_dbg_fn("");
 
@@ -1549,14 +1530,7 @@ restore_fe_go_idle:
 	nvgpu_mem_wr(g, gold_mem, ctxsw_prog_main_image_zcull_o(),
 		 ctxsw_prog_main_image_zcull_mode_no_ctxsw_v());
 
-	if (nvgpu_mem_begin(g, ctxheader))
-		goto clean_up;
-
-	if (ctxheader->gpu_va)
-		g->ops.gr.write_zcull_ptr(g, ctxheader, 0);
-	else
-		g->ops.gr.write_zcull_ptr(g, gold_mem, 0);
-	nvgpu_mem_end(g, ctxheader);
+	g->ops.gr.write_zcull_ptr(g, gold_mem, 0);
 
 	err = g->ops.gr.commit_inst(c, ch_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
 	if (err)
@@ -1564,8 +1538,7 @@ restore_fe_go_idle:
 
 	gr_gk20a_fecs_ctx_image_save(c, gr_fecs_method_push_adr_wfi_golden_save_v());
 
-	if (nvgpu_mem_begin(g, ctxheader))
-		goto clean_up;
+
 
 	if (gr->ctx_vars.local_golden_image == NULL) {
 
@@ -1576,17 +1549,11 @@ restore_fe_go_idle:
 			err = -ENOMEM;
 			goto clean_up;
 		}
+		nvgpu_mem_rd_n(g, gold_mem, 0,
+			gr->ctx_vars.local_golden_image,
+			gr->ctx_vars.golden_image_size);
 
-		if (ctxheader->gpu_va)
-			nvgpu_mem_rd_n(g, ctxheader, 0,
-				gr->ctx_vars.local_golden_image,
-				gr->ctx_vars.golden_image_size);
-		else
-			nvgpu_mem_rd_n(g, gold_mem, 0,
-				gr->ctx_vars.local_golden_image,
-				gr->ctx_vars.golden_image_size);
 	}
-	nvgpu_mem_end(g, ctxheader);
 
 	err = g->ops.gr.commit_inst(c, gr_mem->gpu_va);
 	if (err)
@@ -1618,8 +1585,6 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 	struct nvgpu_mem *mem;
 	u32 data;
 	int ret;
-	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
 
 	gk20a_dbg_fn("");
 
@@ -1651,34 +1616,17 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 		goto out;
 	}
 
-	if (nvgpu_mem_begin(g, ctxheader)) {
-		ret = -ENOMEM;
-		goto clean_up_mem;
-	}
-	if (ctxheader->gpu_va)
-		data = nvgpu_mem_rd(g, ctxheader,
-			ctxsw_prog_main_image_pm_o());
-	else
-		data = nvgpu_mem_rd(g, mem,
-			ctxsw_prog_main_image_pm_o());
+	data = nvgpu_mem_rd(g, mem,
+		ctxsw_prog_main_image_pm_o());
 
 	data = data & ~ctxsw_prog_main_image_pm_smpc_mode_m();
 	data |= enable_smpc_ctxsw ?
 		ctxsw_prog_main_image_pm_smpc_mode_ctxsw_f() :
 		ctxsw_prog_main_image_pm_smpc_mode_no_ctxsw_f();
 
-	if (ctxheader->gpu_va)
-		nvgpu_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_pm_o(),
-			data);
-	else
-		nvgpu_mem_wr(g, mem,
-			ctxsw_prog_main_image_pm_o(),
-			data);
+	nvgpu_mem_wr(g, mem,
+		ctxsw_prog_main_image_pm_o(), data);
 
-	nvgpu_mem_end(g, ctxheader);
-
-clean_up_mem:
 	nvgpu_mem_end(g, mem);
 out:
 	gk20a_enable_channel_tsg(g, c);
@@ -1862,14 +1810,9 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 		goto clean_up_mem;
 	}
 
-	if (ctxheader->gpu_va) {
-		if (g->ops.gr.restore_context_header)
-			g->ops.gr.restore_context_header(g, ctxheader);
-	} else {
-		nvgpu_mem_wr_n(g, mem, 0,
-			gr->ctx_vars.local_golden_image,
-			gr->ctx_vars.golden_image_size);
-	}
+	nvgpu_mem_wr_n(g, mem, 0,
+		gr->ctx_vars.local_golden_image,
+		gr->ctx_vars.golden_image_size);
 
 	if (g->ops.gr.init_ctxsw_hdr_data)
 		g->ops.gr.init_ctxsw_hdr_data(g, mem);
@@ -1923,19 +1866,19 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_patch_count_o(),
 		 ch_ctx->patch_ctx.data_count);
-	nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_patch_adr_lo_o(),
-		 virt_addr_lo);
-	nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_patch_adr_hi_o(),
-		 virt_addr_hi);
 
 	if (ctxheader->gpu_va) {
 		nvgpu_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_patch_count_o(),
-			ch_ctx->patch_ctx.data_count);
-		nvgpu_mem_wr(g, ctxheader,
 			ctxsw_prog_main_image_patch_adr_lo_o(),
 			virt_addr_lo);
-			nvgpu_mem_wr(g, ctxheader,
+		nvgpu_mem_wr(g, ctxheader,
+			ctxsw_prog_main_image_patch_adr_hi_o(),
+			virt_addr_hi);
+	} else {
+		nvgpu_mem_wr(g, mem,
+			ctxsw_prog_main_image_patch_adr_lo_o(),
+			virt_addr_lo);
+		nvgpu_mem_wr(g, mem,
 			ctxsw_prog_main_image_patch_adr_hi_o(),
 			virt_addr_hi);
 	}
@@ -6606,6 +6549,8 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 	u32 *ovr_perf_regs = NULL;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	struct ctx_header_desc *ctx = &ch_ctx->ctx_header;
+	struct nvgpu_mem *ctxheader = &ctx->mem;
 
 	g->ops.gr.init_ovr_sm_dsm_perf();
 	g->ops.gr.init_sm_dsm_reg_info();
@@ -6640,12 +6585,21 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 				nvgpu_mem_wr(g, mem,
 					 ctxsw_prog_main_image_patch_count_o(),
 					 ch_ctx->patch_ctx.data_count);
-				nvgpu_mem_wr(g, mem,
-					 ctxsw_prog_main_image_patch_adr_lo_o(),
-					 vaddr_lo);
-				nvgpu_mem_wr(g, mem,
-					 ctxsw_prog_main_image_patch_adr_hi_o(),
-					 vaddr_hi);
+				if (ctxheader->gpu_va) {
+					nvgpu_mem_wr(g, ctxheader,
+						ctxsw_prog_main_image_patch_adr_lo_o(),
+						vaddr_lo);
+					nvgpu_mem_wr(g, ctxheader,
+						ctxsw_prog_main_image_patch_adr_hi_o(),
+						vaddr_hi);
+				} else {
+					nvgpu_mem_wr(g, mem,
+						ctxsw_prog_main_image_patch_adr_lo_o(),
+						vaddr_lo);
+					nvgpu_mem_wr(g, mem,
+						ctxsw_prog_main_image_patch_adr_hi_o(),
+						vaddr_hi);
+				}
 
 				/* we're not caching these on cpu side,
 				   but later watch for it */

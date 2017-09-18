@@ -1168,6 +1168,9 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct nvgpu_mem *mem)
 {
 	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
+	struct ctx_header_desc *ctx = &ch_ctx->ctx_header;
+	struct nvgpu_mem *ctxheader = &ctx->mem;
+
 	u32 gfxp_preempt_option =
 		ctxsw_prog_main_image_graphics_preemption_options_control_gfxp_f();
 	u32 cilp_preempt_option =
@@ -1204,9 +1207,14 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		u32 size;
 		u32 cbes_reserve;
 
-		if (g->ops.gr.set_preemption_buffer_va)
-			g->ops.gr.set_preemption_buffer_va(g, mem,
+		if (g->ops.gr.set_preemption_buffer_va) {
+			if (ctxheader->gpu_va)
+				g->ops.gr.set_preemption_buffer_va(g, ctxheader,
 				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va);
+			else
+				g->ops.gr.set_preemption_buffer_va(g, mem,
+				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va);
+		}
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 		if (err) {
@@ -2247,12 +2255,8 @@ int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 		goto enable_ch;
 
 	if (g->ops.gr.update_ctxsw_preemption_mode) {
-		if (ctxheader->gpu_va)
-			g->ops.gr.update_ctxsw_preemption_mode(ch->g,
-							ch_ctx, ctxheader);
-		else
-			g->ops.gr.update_ctxsw_preemption_mode(ch->g,
-							ch_ctx, mem);
+		g->ops.gr.update_ctxsw_preemption_mode(ch->g,
+						ch_ctx, mem);
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 		if (err) {

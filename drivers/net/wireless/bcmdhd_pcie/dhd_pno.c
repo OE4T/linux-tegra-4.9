@@ -3,13 +3,14 @@
  * Prefered Network Offload and Wi-Fi Location Service(WLS) code.
  *
  * Copyright (C) 1999-2017, Broadcom Corporation
- * 
+ * Copyright (C) 2017, NVIDIA CORPORATION. All rights reserved.
+ *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- * 
+ *
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -17,7 +18,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- * 
+ *
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -2808,12 +2809,12 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 	bool allocate_header = FALSE;
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
+	_pno_state = PNO_GET_PNOSTATE(dhd);
 	if (!dhd_support_sta_mode(dhd)) {
 		err = BCME_BADOPTION;
 		goto exit_no_unlock;
 	}
 	DHD_PNO(("%s enter\n", __FUNCTION__));
-	_pno_state = PNO_GET_PNOSTATE(dhd);
 
 	if (!WLS_SUPPORTED(_pno_state)) {
 		DHD_ERROR(("%s : wifi location service is not supported\n", __FUNCTION__));

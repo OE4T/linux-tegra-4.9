@@ -20,6 +20,7 @@
 			gpios = <
 				TEGRA_GPIO(H, 0) 0
 				TEGRA_GPIO(I, 0) 0
+				TEGRA_GPIO(I, 2) 0
 				>;
 			label = "wlan-default-output-high-h0",
 				"wlan-default-output-high-i0";

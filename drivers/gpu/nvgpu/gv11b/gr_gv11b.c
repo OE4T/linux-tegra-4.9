@@ -2309,10 +2309,6 @@ void gv11b_restore_context_header(struct gk20a *g,
 			ctxsw_prog_main_image_context_buffer_ptr_hi_o(), va_hi);
 	nvgpu_mem_wr(g, ctxheader,
 			ctxsw_prog_main_image_context_buffer_ptr_o(), va_lo);
-        nvgpu_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_num_restore_ops_o(), 0);
-        nvgpu_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_num_save_ops_o(), 0);
 }
 void gr_gv11b_write_zcull_ptr(struct gk20a *g,
 				struct nvgpu_mem *mem, u64 gpu_va)

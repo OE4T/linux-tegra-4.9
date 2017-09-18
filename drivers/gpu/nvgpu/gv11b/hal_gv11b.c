@@ -343,6 +343,7 @@ static const struct gpu_ops gv11b_ops = {
 		.handle_tpc_sm_ecc_exception =
 			gr_gv11b_handle_tpc_sm_ecc_exception,
 		.decode_egpc_addr = gv11b_gr_decode_egpc_addr,
+		.init_ctxsw_hdr_data = gr_gp10b_init_ctxsw_hdr_data,
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,

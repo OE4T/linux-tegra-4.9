@@ -1616,7 +1616,7 @@ static int of_parse_dvfs_rail_cdev_trips(struct device_node *node,
 
 	of_property_for_each_phandle_with_args(iter, node, "nvidia,trips",
 					       NULL, cells_num) {
-		struct device_node *trip_dn = iter.out_args.np;
+		struct device_node *trip_dn = iter.node;
 
 		if (i >= MAX_THERMAL_LIMITS) {
 			pr_err("tegra_dvfs: list of scaling cdev trips exceeds max limit\n");
@@ -1632,12 +1632,17 @@ static int of_parse_dvfs_rail_cdev_trips(struct device_node *node,
 			therm_trips_table[i] = t / 1000; /* convert mC to C */
 
 		if (cells_num && therm_limits_table) {
-			int mv = iter.out_args.args[0];
+			int mv = 0;
+			struct of_phandle_args dvfs_args;
+			dvfs_args.args_count = of_phandle_iterator_args(&iter,
+						dvfs_args.args, MAX_PHANDLE_ARGS);
+
+			mv = dvfs_args.args[0];
 			mv = tegra_round_voltage(mv, align, up);
 			therm_limits_table[i].temperature = t / 1000;
 			therm_limits_table[i].mv = mv;
 			if (cells_num == 2 && therm_limits_ucm2_table) {
-				mv = iter.out_args.args[1];
+				mv = dvfs_args.args[1];
 				mv = tegra_round_voltage(mv, align, up);
 				therm_limits_ucm2_table[i].temperature = t/1000;
 				therm_limits_ucm2_table[i].mv = mv;

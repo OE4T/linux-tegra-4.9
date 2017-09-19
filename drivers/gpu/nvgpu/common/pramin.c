@@ -16,6 +16,7 @@
 
 #include <nvgpu/pramin.h>
 #include <nvgpu/page_allocator.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 
@@ -87,6 +88,14 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 	struct nvgpu_sgt *sgt;
 	void *sgl;
 	u32 byteoff, start_reg, until_end, n;
+
+	/*
+	 * TODO: Vidmem is not accesible through pramin on shutdown path.
+	 * driver should be refactored to prevent this from happening, but for
+	 * now it is ok just to ignore the writes
+	 */
+	if (!g->regs && nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
+		return;
 
 	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
 	sgt = &alloc->sgt;

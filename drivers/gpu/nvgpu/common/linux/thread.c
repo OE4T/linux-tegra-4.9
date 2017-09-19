@@ -46,8 +46,10 @@ int nvgpu_thread_create(struct nvgpu_thread *thread,
 
 void nvgpu_thread_stop(struct nvgpu_thread *thread)
 {
-	kthread_stop(thread->task);
-	thread->task = NULL;
+	if (thread->task) {
+		kthread_stop(thread->task);
+		thread->task = NULL;
+	}
 };
 
 bool nvgpu_thread_should_stop(struct nvgpu_thread *thread)

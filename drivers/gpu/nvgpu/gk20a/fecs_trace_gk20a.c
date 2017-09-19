@@ -67,6 +67,7 @@ struct gk20a_fecs_trace {
 	struct nvgpu_mutex hash_lock;
 	struct nvgpu_mutex poll_lock;
 	struct nvgpu_thread poll_task;
+	bool init;
 };
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
@@ -547,20 +548,9 @@ static void gk20a_fecs_trace_debugfs_init(struct gk20a *g)
 		&gk20a_fecs_trace_debugfs_ring_fops);
 }
 
-static void gk20a_fecs_trace_debugfs_cleanup(struct gk20a *g)
-{
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-
-	debugfs_remove_recursive(l->debugfs);
-}
-
 #else
 
 static void gk20a_fecs_trace_debugfs_init(struct gk20a *g)
-{
-}
-
-static inline void gk20a_fecs_trace_debugfs_cleanup(struct gk20a *g)
 {
 }
 
@@ -598,6 +588,9 @@ int gk20a_fecs_trace_init(struct gk20a *g)
 		NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE;
 
 	gk20a_fecs_trace_debugfs_init(g);
+
+	trace->init = true;
+
 	return 0;
 
 clean_hash_lock:
@@ -682,15 +675,17 @@ int gk20a_fecs_trace_unbind_channel(struct gk20a *g, struct channel_gk20a *ch)
 {
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(g, ch);
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
+	if (g->fecs_trace) {
+		gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
 			"ch=%p context_ptr=%x", ch, context_ptr);
 
-	if (g->ops.fecs_trace.is_enabled(g)) {
-		if (g->ops.fecs_trace.flush)
-			g->ops.fecs_trace.flush(g);
-		gk20a_fecs_trace_poll(g);
+		if (g->ops.fecs_trace.is_enabled(g)) {
+			if (g->ops.fecs_trace.flush)
+				g->ops.fecs_trace.flush(g);
+			gk20a_fecs_trace_poll(g);
+		}
+		gk20a_fecs_trace_hash_del(g, context_ptr);
 	}
-	gk20a_fecs_trace_hash_del(g, context_ptr);
 	return 0;
 }
 
@@ -709,7 +704,9 @@ int gk20a_fecs_trace_deinit(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	gk20a_fecs_trace_debugfs_cleanup(g);
+	if (!trace->init)
+		return 0;
+
 	nvgpu_thread_stop(&trace->poll_task);
 	gk20a_fecs_trace_free_ring(g);
 	gk20a_fecs_trace_free_hash_table(g);

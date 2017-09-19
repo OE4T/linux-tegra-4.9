@@ -521,13 +521,12 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	if (gk20a_gpu_is_virtual(dev))
 		return;
 
-	/* only idle the GPU if the GPU is powered on */
-	if (g->power_on) {
-		gk20a_driver_start_unload(g);
-		err = nvgpu_quiesce(g);
-		/* TODO: handle failure to idle */
-		WARN(err, "gpu failed to idle during driver removal");
-	}
+	gk20a_driver_start_unload(g);
+	err = nvgpu_quiesce(g);
+	/* TODO: handle failure to idle */
+	WARN(err, "gpu failed to idle during driver removal");
+
+	nvgpu_free_irq(g);
 
 	nvgpu_remove(dev, &nvgpu_pci_class);
 

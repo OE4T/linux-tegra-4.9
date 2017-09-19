@@ -2223,7 +2223,8 @@ static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 	if (nvgpu_alloc_initialized(&pmu->dmem))
 		nvgpu_alloc_destroy(&pmu->dmem);
 
-	nvgpu_release_firmware(g, pmu->fw);
+	if (pmu->fw)
+		nvgpu_release_firmware(g, pmu->fw);
 
 	nvgpu_mutex_destroy(&pmu->elpg_mutex);
 	nvgpu_mutex_destroy(&pmu->pg_mutex);

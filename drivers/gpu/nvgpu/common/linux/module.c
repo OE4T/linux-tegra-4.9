@@ -226,9 +226,12 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	 * After this point, gk20a interrupts should not get
 	 * serviced.
 	 */
-	disable_irq(g->irq_stall);
-	if (g->irq_stall != g->irq_nonstall)
-		disable_irq(g->irq_nonstall);
+	if (g->irqs_enabled) {
+		disable_irq(g->irq_stall);
+		if (g->irq_stall != g->irq_nonstall)
+			disable_irq(g->irq_nonstall);
+		g->irqs_enabled = 0;
+	}
 
 	/* Decrement platform power refcount */
 	if (platform->idle)
@@ -641,6 +644,18 @@ static int gk20a_pm_unrailgate(struct device *dev)
 }
 
 /*
+ * Remove association of the driver with OS interrupt handler
+ */
+void nvgpu_free_irq(struct gk20a *g)
+{
+	struct device *dev = dev_from_gk20a(g);
+
+	devm_free_irq(dev, g->irq_stall, g);
+	if (g->irq_stall != g->irq_nonstall)
+		devm_free_irq(dev, g->irq_nonstall, g);
+}
+
+/*
  * Idle the GPU in preparation of shutdown/remove.
  * gk20a_driver_start_unload() does not idle the GPU, but instead changes the SW
  * state to prevent further activity on the driver SW side.
@@ -651,24 +666,27 @@ int nvgpu_quiesce(struct gk20a *g)
 	int err;
 	struct device *dev = dev_from_gk20a(g);
 
-	err = gk20a_wait_for_idle(g);
-	if (err) {
-		nvgpu_err(g, "failed to idle GPU, err=%d", err);
-		return err;
-	}
+	if (g->power_on) {
+		err = gk20a_wait_for_idle(g);
+		if (err) {
+			nvgpu_err(g, "failed to idle GPU, err=%d", err);
+			return err;
+		}
 
-	err = gk20a_fifo_disable_all_engine_activity(g, true);
-	if (err) {
-		nvgpu_err(g, "failed to disable engine activity, err=%d",
-			err);
+		err = gk20a_fifo_disable_all_engine_activity(g, true);
+		if (err) {
+			nvgpu_err(g,
+				"failed to disable engine activity, err=%d",
+				err);
 		return err;
-	}
+		}
 
-	err = gk20a_fifo_wait_engine_idle(g);
-	if (err) {
-		nvgpu_err(g, "failed to idle engines, err=%d",
-			err);
-		return err;
+		err = gk20a_fifo_wait_engine_idle(g);
+		if (err) {
+			nvgpu_err(g, "failed to idle engines, err=%d",
+				err);
+			return err;
+		}
 	}
 
 	if (gk20a_gpu_is_virtual(dev))
@@ -679,6 +697,7 @@ int nvgpu_quiesce(struct gk20a *g)
 	if (err)
 		nvgpu_err(g, "failed to prepare for poweroff, err=%d",
 			err);
+
 	return err;
 }
 

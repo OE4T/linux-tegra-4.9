@@ -267,6 +267,5 @@ int gm20b_clk_init_debugfs(struct gk20a *g)
 
 err_out:
 	pr_err("%s: Failed to make debugfs node\n", __func__);
-	debugfs_remove_recursive(l->debugfs);
 	return -ENOMEM;
 }

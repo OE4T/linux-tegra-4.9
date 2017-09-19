@@ -477,6 +477,5 @@ int gk20a_pmu_debugfs_init(struct gk20a *g)
 	return 0;
 err_out:
 	pr_err("%s: Failed to make debugfs node\n", __func__);
-	debugfs_remove_recursive(l->debugfs);
 	return -ENOMEM;
 }

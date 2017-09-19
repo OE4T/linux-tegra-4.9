@@ -55,8 +55,6 @@ void nvgpu_init_alloc_debug(struct gk20a *g, struct nvgpu_allocator *a)
 
 void nvgpu_fini_alloc_debug(struct nvgpu_allocator *a)
 {
-	if (!IS_ERR_OR_NULL(a->debugfs_entry))
-		debugfs_remove(a->debugfs_entry);
 }
 
 void nvgpu_alloc_debugfs_init(struct gk20a *g)

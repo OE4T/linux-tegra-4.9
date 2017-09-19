@@ -465,21 +465,30 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 	trace_gk20a_free_channel(ch->chid);
 
-	/* abort channel and remove from runlist */
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		err = g->ops.fifo.tsg_unbind_channel(ch);
-		if (err)
-			nvgpu_err(g, "failed to unbind channel %d from TSG", ch->chid);
-		/*
-		 * Channel is not a part of TSG this point onwards
-		 * So stash its status and use it whenever necessary
-		 * e.g. while releasing gr_ctx in g->ops.gr.free_channel_ctx()
-		 */
-		was_tsg = true;
-	} else {
-		gk20a_disable_channel(ch);
+	/*
+	 * Disable channel/TSG and unbind here. This should not be executed if
+	 * HW access is not available during shutdown/removal path as it will
+	 * trigger a timeout
+	 */
+	if (!nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING)) {
+		/* abort channel and remove from runlist */
+		if (gk20a_is_channel_marked_as_tsg(ch)) {
+			err = g->ops.fifo.tsg_unbind_channel(ch);
+			if (err)
+				nvgpu_err(g,
+					"failed to unbind channel %d from TSG",
+					ch->chid);
+			/*
+			 * Channel is not a part of TSG this point onwards
+			 * So stash its status and use it whenever necessary
+			 * e.g. while releasing gr_ctx in
+			 * g->ops.gr.free_channel_ctx()
+			 */
+			was_tsg = true;
+		} else {
+			gk20a_disable_channel(ch);
+		}
 	}
-
 	/* wait until there's only our ref to the channel */
 	if (!force)
 		gk20a_wait_until_counter_is_N(

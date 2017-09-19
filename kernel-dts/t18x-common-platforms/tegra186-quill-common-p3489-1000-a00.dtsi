@@ -95,7 +95,6 @@
 						    0x1 0x2
 						    0x2 0x1>;
 			gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(X, 7) 0 &spmic 0 0>;
-			extcon-gpio,out-cable-name-strings = "USB", "USB-Host";
 			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_Host EXTCON_NONE>;
 			wakeup-source;
 			#extcon-cells = <1>;

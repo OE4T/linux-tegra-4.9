@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,13 +11,13 @@
  * more details.
  */
 
-#ifndef NVGPU_BIOS_GM206_H
-#define NVGPU_BIOS_GM206_H
+#ifndef NVGPU_BIOS_GP106_H
+#define NVGPU_BIOS_GP106_H
 
 struct gk20a;
 struct gpu_ops;
 
-int gm206_bios_init(struct gk20a *g);
-void gm206_init_bios_ops(struct gpu_ops *gops);
+int gp106_bios_init(struct gk20a *g);
+void gp106_init_bios_ops(struct gpu_ops *gops);
 
 #endif

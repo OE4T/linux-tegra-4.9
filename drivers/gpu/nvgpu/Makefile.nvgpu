@@ -113,7 +113,6 @@ nvgpu-y := \
 	gm20b/regops_gm20b.o \
 	gm20b/cde_gm20b.o \
 	gm20b/therm_gm20b.o \
-	gm206/bios_gm206.o \
 	boardobj/boardobj.o \
 	boardobj/boardobjgrp.o \
 	boardobj/boardobjgrpmask.o \
@@ -199,6 +198,7 @@ nvgpu-y += \
 	gp106/fifo_gp106.o \
 	gp106/fb_gp106.o \
 	gp106/regops_gp106.o \
+	gp106/bios_gp106.o \
 	pstate/pstate.o \
 	clk/clk_vin.o \
 	clk/clk_fll.o \

@@ -17,7 +17,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
-#include "gm206/bios_gm206.h"
+#include "gp106/bios_gp106.h"
 #include "common/linux/os_linux.h"
 
 #include "boardobj/boardobjgrp.h"

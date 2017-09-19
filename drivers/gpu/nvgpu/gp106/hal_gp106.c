@@ -60,7 +60,7 @@
 #include "gp106/clk_gp106.h"
 #include "gp106/clk_arb_gp106.h"
 #include "gp106/mclk_gp106.h"
-#include "gm206/bios_gm206.h"
+#include "gp106/bios_gp106.h"
 #include "gp106/therm_gp106.h"
 #include "gp106/xve_gp106.h"
 #include "gp106/fifo_gp106.h"
@@ -685,7 +685,7 @@ static const struct gpu_ops gp106_ops = {
 	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,
-	.bios_init = gm206_bios_init,
+	.bios_init = gp106_bios_init,
 };
 
 int gp106_init_hal(struct gk20a *g)

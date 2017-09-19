@@ -20,15 +20,15 @@
 
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
-#include "bios_gm206.h"
+#include "bios_gp106.h"
 #include "gp106/mclk_gp106.h"
 #ifdef CONFIG_DEBUG_FS
 #include "common/linux/os_linux.h"
 #endif
 
-#include <nvgpu/hw/gm206/hw_pwr_gm206.h>
-#include <nvgpu/hw/gm206/hw_mc_gm206.h>
-#include <nvgpu/hw/gm206/hw_top_gm206.h>
+#include <nvgpu/hw/gp106/hw_pwr_gp106.h>
+#include <nvgpu/hw/gp106/hw_mc_gp106.h>
+#include <nvgpu/hw/gp106/hw_top_gp106.h>
 
 #define PMU_BOOT_TIMEOUT_DEFAULT	100 /* usec */
 #define PMU_BOOT_TIMEOUT_MAX		2000000 /* usec */
@@ -67,7 +67,7 @@ static void upload_data(struct gk20a *g, u32 dst, u8 *src, u32 size, u8 port)
 		gk20a_writel(g, pwr_falcon_dmemd_r(port), src_u32[i]);
 }
 
-static int gm206_bios_devinit(struct gk20a *g)
+static int gp106_bios_devinit(struct gk20a *g)
 {
 	int err = 0;
 	int devinit_completed;
@@ -126,7 +126,7 @@ out:
 	return err;
 }
 
-static int gm206_bios_preos(struct gk20a *g)
+static int gp106_bios_preos(struct gk20a *g)
 {
 	int err = 0;
 
@@ -166,7 +166,7 @@ out:
 	return err;
 }
 
-int gm206_bios_init(struct gk20a *g)
+int gp106_bios_init(struct gk20a *g)
 {
 	unsigned int i;
 #ifdef CONFIG_DEBUG_FS
@@ -222,14 +222,14 @@ int gm206_bios_init(struct gk20a *g)
 
 	gk20a_dbg_fn("done");
 
-	err = gm206_bios_devinit(g);
+	err = gp106_bios_devinit(g);
 	if (err) {
 		nvgpu_err(g, "devinit failed");
 		return err;
 	}
 
 	if (nvgpu_is_enabled(g, NVGPU_PMU_RUN_PREOS)) {
-		err = gm206_bios_preos(g);
+		err = gp106_bios_preos(g);
 		if (err) {
 			nvgpu_err(g, "pre-os failed");
 			return err;

@@ -21,7 +21,7 @@
 
 #include "ctrl/ctrlvolt.h"
 
-#include "gm206/bios_gm206.h"
+#include "gp106/bios_gp106.h"
 
 #include "clk.h"
 #include "clk_vin.h"

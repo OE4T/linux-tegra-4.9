@@ -15,7 +15,7 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "gm206/bios_gm206.h"
+#include "gp106/bios_gp106.h"
 #include "gp106/xve_gp106.h"
 #include "common/linux/os_linux.h"
 

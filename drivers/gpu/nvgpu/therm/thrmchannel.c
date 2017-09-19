@@ -18,7 +18,7 @@
 #include "thrmchannel.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include "gm206/bios_gm206.h"
+#include "gp106/bios_gp106.h"
 
 static u32 _therm_channel_pmudatainit_device(struct gk20a *g,
 			struct boardobj *board_obj_ptr,

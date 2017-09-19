@@ -17,7 +17,7 @@
 #include "gk20a/gk20a.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include "gm206/bios_gm206.h"
+#include "gp106/bios_gp106.h"
 #include "ctrl/ctrlvolt.h"
 #include "ctrl/ctrlperf.h"
 

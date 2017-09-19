@@ -18,7 +18,7 @@
 #include "thrmdev.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include "gm206/bios_gm206.h"
+#include "gp106/bios_gp106.h"
 #include "ctrl/ctrltherm.h"
 
 static struct boardobj *construct_therm_device(struct gk20a *g,

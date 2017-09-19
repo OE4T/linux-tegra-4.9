@@ -31,64 +31,6 @@
 #define TEGRA_DC_CRC_BUF_CAPACITY 1024 /* in units of number of elements */
 #define CRC_COMPLETE_TIMEOUT msecs_to_jiffies(1000)
 
-static const char *flip_state_literals[] = {
-	"queued", "dequeued", "flipped", "skipped"
-};
-
-/* type = 0 => flips, 1=> CRC */
-__maybe_unused
-static void _tegra_dc_ring_buf_print(struct tegra_dc_ring_buf *buf, u16 i)
-{
-	struct tegra_dc_flip_buf_ele *flip;
-	struct tegra_dc_crc_buf_ele *crc;
-	int iter;
-
-	switch (buf->type) {
-	case TEGRA_DC_RING_BUF_FLIP:
-		flip = (struct tegra_dc_flip_buf_ele *)
-			(buf->data + i * sizeof(*flip));
-		pr_info("%llu-%s ", flip->id, flip_state_literals[flip->state]);
-		break;
-	case TEGRA_DC_RING_BUF_CRC:
-		crc = (struct tegra_dc_crc_buf_ele *)
-			(buf->data + i * sizeof(*crc));
-
-		for (iter = 0; iter < DC_N_WINDOWS; iter++)
-			pr_info("%llu-%1d ", crc->matching_flips[iter].id,
-				crc->matching_flips[iter].valid);
-		pr_info("%4d-%1d ", crc->rg.crc, crc->rg.valid);
-		pr_info("%4d-%1d ", crc->comp.crc, crc->comp.valid);
-		pr_info("%4d-%1d ", crc->sor.crc, crc->sor.valid);
-
-		for (iter = 0; iter < TEGRA_DC_MAX_CRC_REGIONS; iter++)
-			pr_info("%4d-%1d ", crc->regional[iter].crc,
-					    crc->regional[iter].valid);
-		break;
-	}
-}
-
-__maybe_unused
-static void tegra_dc_ring_buf_print(struct tegra_dc_ring_buf *buf)
-{
-	u16 i;
-
-	pr_info("==================================================\n");
-	pr_info("head=%d, tail=%d, size=%d\n", buf->head, buf->tail, buf->size);
-
-	if (buf->size) {
-		if (buf->head > buf->tail) {
-			for (i = buf->tail; i < buf->head; i++)
-				_tegra_dc_ring_buf_print(buf, i);
-		} else { /* Head has rolled over */
-			for (i = buf->tail; i < buf->capacity; i++)
-				_tegra_dc_ring_buf_print(buf, i);
-			for (i = 0; i < buf->head; i++)
-				_tegra_dc_ring_buf_print(buf, i);
-		}
-	}
-	pr_info("==================================================\n");
-}
-
 static inline size_t _get_bytes_per_ele(struct tegra_dc_ring_buf *buf)
 {
 	switch (buf->type) {

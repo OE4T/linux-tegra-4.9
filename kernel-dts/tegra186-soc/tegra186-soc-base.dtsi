@@ -398,6 +398,17 @@
 					};
 				};
 			};
+			hsic {
+				status = "disabled";
+				clocks = <&tegra_car TEGRA186_CLK_HSIC_TRK>;
+				clock-names = "trk";
+				lanes {
+					hsic-0 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+				};
+			};
 		};
 
 		ports {
@@ -417,6 +428,9 @@
 				status = "disabled";
 			};
 			usb3-2 {
+				status = "disabled";
+			};
+			hsic-0 {
 				status = "disabled";
 			};
 		};

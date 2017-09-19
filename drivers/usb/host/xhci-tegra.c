@@ -432,6 +432,7 @@ struct tegra_xusb {
 	struct phy **cdp_ext_phys; /* external cdp phys */
 
 	unsigned int num_phys;
+	unsigned int num_hsic_port; /* count */
 
 	/* Firmware loading related */
 	struct delayed_work firmware_retry_work;
@@ -1154,8 +1155,8 @@ enum tegra_xusb_mbox_cmd {
 	MBOX_CMD_SET_SS_PWR_GATING,
 	MBOX_CMD_SET_SS_PWR_UNGATING,
 	MBOX_CMD_SAVE_DFE_CTLE_CTX,
-	MBOX_CMD_AIRPLANE_MODE_ENABLED, /* unused */
-	MBOX_CMD_AIRPLANE_MODE_DISABLED, /* unused */
+	MBOX_CMD_AIRPLANE_MODE_ENABLED,
+	MBOX_CMD_AIRPLANE_MODE_DISABLED,
 	MBOX_CMD_START_HSIC_IDLE,
 	MBOX_CMD_STOP_HSIC_IDLE,
 	MBOX_CMD_DBC_WAKE_STACK, /* unused */
@@ -1441,7 +1442,8 @@ static void tegra_xusb_mbox_handle(struct tegra_xusb *tegra,
 
 		rsp.data = msg->data;
 		break;
-
+	case MBOX_CMD_ACK:
+		break;
 	default:
 		dev_warn(dev, "unknown message: %#x\n", msg->cmd);
 		break;
@@ -1772,6 +1774,7 @@ static int tegra_xhci_load_firmware(struct tegra_xusb *tegra)
 	u32 value;
 
 	header = (struct tegra_xusb_fw_header *)tegra->fw.virt;
+	header->num_hsic_port = tegra->num_hsic_port;
 
 	if (csb_readl(tegra, XUSB_CSB_MP_ILOAD_BASE_LO) != 0) {
 		dev_info(dev, "Firmware already loaded, Falcon state %#x\n",
@@ -2361,6 +2364,9 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 						tegra->usb2_otg_port_base_1 =
 									j + 1;
 				}
+
+				if (phy && strstr(prop, "hsic"))
+					tegra->num_hsic_port++;
 			}
 
 			tegra->typed_phys[i][j] = phy;
@@ -2482,6 +2488,59 @@ static int tegra_sysfs_register(struct platform_device *pdev)
 
 	return ret;
 }
+
+static bool hsic_power_on;
+static ssize_t hsic_power_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", hsic_power_on);
+}
+
+static ssize_t hsic_power_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t n)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+	struct tegra_xusb_mbox_msg msg;
+	unsigned int on;
+	int port;
+	int rc;
+
+	if (kstrtouint(buf, 10, &on))
+		return -EINVAL;
+
+	if (!!on == !!hsic_power_on)
+		return n;
+
+	if (on)
+		msg.cmd = MBOX_CMD_AIRPLANE_MODE_DISABLED;
+	else
+		msg.cmd = MBOX_CMD_AIRPLANE_MODE_ENABLED;
+
+	port = tegra->soc->ports.hsic.offset;
+	msg.data = BIT(port + 1);
+
+	rc = tegra_xusb_mbox_send(tegra, &msg);
+	if (rc < 0)
+		dev_err(dev, "failed to send message to firmware %d\n", rc);
+
+	if (on)
+		rc = tegra_xusb_padctl_hsic_set_idle(tegra->padctl, 0, true);
+	else
+		rc = tegra_xusb_padctl_hsic_reset(tegra->padctl, 0);
+
+	hsic_power_on = on;
+	return n;
+}
+static DEVICE_ATTR(hsic_power, 0644, hsic_power_show, hsic_power_store);
+
+static struct attribute *tegra_xhci_attrs[] = {
+	&dev_attr_hsic_power.attr,
+	NULL,
+};
+static struct attribute_group tegra_xhci_attr_group = {
+	.attrs = tegra_xhci_attrs,
+};
 
 static int tegra_xusb_probe(struct platform_device *pdev)
 {
@@ -2757,6 +2816,12 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	if (tegra->cpu_boost_enabled)
 		tegra_xusb_boost_cpu_init(tegra);
 
+	err = sysfs_create_group(&pdev->dev.kobj, &tegra_xhci_attr_group);
+	if (err) {
+		dev_err(&pdev->dev, "cannot create sysfs group: %d\n", err);
+		goto unregister_extcon;
+	}
+
 	/* TODO: look up dtb */
 	device_init_wakeup(tegra->dev, true);
 
@@ -2818,6 +2883,8 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 
 	pm_runtime_get_sync(tegra->dev);
 	device_remove_file(&pdev->dev, &dev_attr_reload_hcd);
+
+	sysfs_remove_group(&pdev->dev.kobj, &tegra_xhci_attr_group);
 
 	if (tegra->fw_loaded || tegra->soc->is_xhci_vf) {
 		struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);

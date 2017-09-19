@@ -1905,7 +1905,7 @@ static int tegra186_utmi_phy_exit(struct phy *phy)
 
 	mutex_lock(&padctl->lock);
 
-	if (padctl->vbus[port] &&
+	if (padctl->vbus[port] && regulator_is_enabled(padctl->vbus[port]) &&
 			padctl->utmi_ports[port].port_cap == HOST_ONLY) {
 		rc = regulator_disable(padctl->vbus[port]);
 		if (rc) {

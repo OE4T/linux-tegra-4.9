@@ -3136,7 +3136,7 @@ int gv11b_gr_wait_for_sm_lock_down(struct gk20a *g,
 			check_errors &&
 			(gr_gpc0_tpc0_sm0_hww_warp_esr_error_v(warp_esr) ==
 			 gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_v()) &&
-			((global_esr & ~global_esr_mask) == 0);
+			((global_esr & global_esr_mask) == 0);
 
 		if (locked_down) {
 		/*

@@ -1764,11 +1764,18 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	u32 hblank, max_ac, rekey;
 	unsigned long val;
 	u32 dispclk_div_8_2;
+	u32 arm_video_range;
+
+	if ((dc->mode.vmode & FB_VMODE_BYPASS) ||
+	    !(dc->mode.vmode & FB_VMODE_LIMITED_RANGE))
+		arm_video_range = NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_FULL;
+	else
+		arm_video_range = NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_LIMITED;
 
 	tegra_sor_write_field(sor, NV_SOR_INPUT_CONTROL,
 			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_LIMITED |
 			NV_SOR_INPUT_CONTROL_HDMI_SRC_SELECT_DISPLAYB,
-			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_LIMITED |
+			arm_video_range |
 			NV_SOR_INPUT_CONTROL_HDMI_SRC_SELECT_DISPLAYB);
 
 	if (tegra_bpmp_running()) {

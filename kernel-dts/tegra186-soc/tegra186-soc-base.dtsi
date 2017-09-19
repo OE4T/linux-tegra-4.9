@@ -911,6 +911,7 @@
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&tegra_car TEGRA186_CLK_SOR0>,
 				 <&tegra_car TEGRA186_CLK_SOR_SAFE>,
+				 <&tegra_car TEGRA186_CLK_PLLDP>,
 				 <&tegra_car TEGRA186_CLK_SOR0_PAD_CLKOUT>,
 				 <&tegra_car TEGRA186_CLK_SOR0_OUT>,
 				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
@@ -918,7 +919,7 @@
 				 <&tegra_car TEGRA186_CLK_HDA>,
 				 <&tegra_car TEGRA186_CLK_HDA2CODEC_2X>,
 				 <&tegra_car TEGRA186_CLK_HDA2HDMICODEC>;
-			clock-names = "sor0", "sor_safe",
+			clock-names = "sor0", "sor_safe", "pll_dp",
 				      "sor0_pad_clkout", "sor0_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -950,6 +951,7 @@
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&tegra_car TEGRA186_CLK_SOR1>,
 				 <&tegra_car TEGRA186_CLK_SOR_SAFE>,
+				 <&tegra_car TEGRA186_CLK_PLLDP>,
 				 <&tegra_car TEGRA186_CLK_SOR1_PAD_CLKOUT>,
 				 <&tegra_car TEGRA186_CLK_SOR1_OUT>,
 				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
@@ -957,7 +959,7 @@
 				 <&tegra_car TEGRA186_CLK_HDA>,
 				 <&tegra_car TEGRA186_CLK_HDA2CODEC_2X>,
 				 <&tegra_car TEGRA186_CLK_HDA2HDMICODEC>;
-			clock-names = "sor1", "sor_safe",
+			clock-names = "sor1", "sor_safe", "pll_dp",
 				      "sor1_pad_clkout", "sor1_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -985,9 +987,8 @@
 			reg = <0x0 0x155c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
 			nvidia,dpaux-ctrlnum = <0>;
-			clocks = <&tegra_car TEGRA186_CLK_DPAUX>,
-				 <&tegra_car TEGRA186_CLK_PLLDP>;
-			clock-names = "dpaux", "plldp";
+			clocks = <&tegra_car TEGRA186_CLK_DPAUX>;
+			clock-names = "dpaux";
 			resets = <&tegra_car TEGRA186_RESET_DPAUX>;
 			reset-names = "dpaux";
 			power-domains = <&disa_pd>;
@@ -999,9 +1000,8 @@
 			reg = <0x0 0x15040000 0x0 0x00040000>;
 			interrupts = <0 160 0x4>; /* INT_DPAUX_1 */
 			nvidia,dpaux-ctrlnum = <1>;
-			clocks = <&tegra_car TEGRA186_CLK_DPAUX1>,
-				 <&tegra_car TEGRA186_CLK_PLLDP>;
-			clock-names = "dpaux1", "plldp";
+			clocks = <&tegra_car TEGRA186_CLK_DPAUX1>;
+			clock-names = "dpaux1";
 			resets = <&tegra_car TEGRA186_RESET_DPAUX1>;
 			reset-names = "dpaux1";
 			power-domains = <&disa_pd>;

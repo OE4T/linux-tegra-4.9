@@ -264,8 +264,6 @@ static void cactmon_bwmgr_unregister_t21x(
 static int actmon_dev_platform_init_t21x(struct actmon_dev *adev,
 		struct platform_device *pdev)
 {
-	struct tegra_bwmgr_client *bwclnt = (struct tegra_bwmgr_client *)
-		adev->clnt;
 	int ret = 0;
 
 	ret = cactmon_bwmgr_register_t21x(adev, pdev);
@@ -274,8 +272,8 @@ static int actmon_dev_platform_init_t21x(struct actmon_dev *adev,
 
 	adev->dev_name = adev->dn->name;
 	adev->max_freq = tegra_bwmgr_get_max_emc_rate();
-	tegra_bwmgr_set_emc(bwclnt, adev->max_freq,
-			TEGRA_BWMGR_SET_EMC_FLOOR);
+	tegra_bwmgr_set_emc((struct tegra_bwmgr_client *)adev->clnt,
+			    adev->max_freq, TEGRA_BWMGR_SET_EMC_FLOOR);
 	adev->max_freq /= 1000;
 	actmon_dev_reg_ops_init(adev);
 	adev->actmon_dev_set_rate = actmon_dev_set_rate;

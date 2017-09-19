@@ -104,6 +104,14 @@ struct nvgpu_mem_sgl {
 	u64			 length;
 };
 
+/*
+ * Iterate over the SGL entries in an SGT.
+ */
+#define nvgpu_sgt_for_each_sgl(__sgl__, __sgt__)		\
+	for ((__sgl__) = (__sgt__)->sgl;			\
+	     (__sgl__) != NULL;					\
+	     (__sgl__) = nvgpu_sgt_get_next(__sgt__, __sgl__))
+
 struct nvgpu_mem {
 	/*
 	 * Populated for all nvgpu_mem structs - vidmem or system.

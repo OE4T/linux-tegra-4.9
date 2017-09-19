@@ -105,7 +105,8 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 
 	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
 	sgt = &alloc->sgt;
-	for (sgl = sgt->sgl; sgl; sgl = nvgpu_sgt_get_next(sgt, sgl)) {
+
+	nvgpu_sgt_for_each_sgl(sgl, sgt) {
 		if (offset >= nvgpu_sgt_get_length(sgt, sgl))
 			offset -= nvgpu_sgt_get_length(sgt, sgl);
 		else

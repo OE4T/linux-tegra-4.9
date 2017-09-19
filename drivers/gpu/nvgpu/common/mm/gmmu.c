@@ -497,8 +497,7 @@ static int __nvgpu_gmmu_update_page_table_vidmem(struct vm_gk20a *vm,
 	 * Otherwise iterate across all the chunks in this allocation and
 	 * map them.
 	 */
-	sgl = sgt->sgl;
-	while (sgl) {
+	nvgpu_sgt_for_each_sgl(sgl, sgt) {
 		if (space_to_skip &&
 		    space_to_skip >= nvgpu_sgt_get_length(sgt, sgl)) {
 			space_to_skip -= nvgpu_sgt_get_length(sgt, sgl);
@@ -526,7 +525,6 @@ static int __nvgpu_gmmu_update_page_table_vidmem(struct vm_gk20a *vm,
 		 */
 		virt_addr += chunk_length;
 		length    -= chunk_length;
-		sgl = nvgpu_sgt_get_next(sgt, sgl);
 
 		if (length == 0)
 			break;
@@ -544,7 +542,7 @@ static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	void *sgl;
-	int err;
+	int err = 0;
 
 	if (!sgt) {
 		/*
@@ -567,10 +565,8 @@ static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
 	 * mapping is simple since the "physical" address is actually a virtual
 	 * IO address and will be contiguous.
 	 */
-	sgl = sgt->sgl;
-
 	if (!g->mm.bypass_smmu) {
-		u64 io_addr = nvgpu_sgt_get_gpu_addr(sgt, g, sgl, attrs);
+		u64 io_addr = nvgpu_sgt_get_gpu_addr(sgt, g, sgt->sgl, attrs);
 
 		io_addr += space_to_skip;
 
@@ -588,7 +584,7 @@ static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
 	 * Finally: last possible case: do the no-IOMMU mapping. In this case we
 	 * really are mapping physical pages directly.
 	 */
-	while (sgl) {
+	nvgpu_sgt_for_each_sgl(sgl, sgt) {
 		u64 phys_addr;
 		u64 chunk_length;
 
@@ -616,7 +612,6 @@ static int __nvgpu_gmmu_update_page_table_sysmem(struct vm_gk20a *vm,
 		space_to_skip = 0;
 		virt_addr += chunk_length;
 		length    -= chunk_length;
-		sgl        = nvgpu_sgt_get_next(sgt, sgl);
 
 		if (length == 0)
 			break;

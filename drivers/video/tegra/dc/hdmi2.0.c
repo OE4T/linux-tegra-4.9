@@ -1863,13 +1863,11 @@ static void tegra_hdmi_get_cea_fb_videomode(struct fb_videomode *m,
 {
 	struct tegra_dc *dc = hdmi->dc;
 	struct tegra_dc_mode dc_mode;
-	int yuv_flag;
 	bool yuv_bypass_vmode = false;
 
 	memcpy(&dc_mode, &dc->mode, sizeof(dc->mode));
 
 	/* get CEA video timings */
-	yuv_flag = dc_mode.vmode & FB_VMODE_YUV_MASK;
 	yuv_bypass_vmode = (dc_mode.vmode & FB_VMODE_YUV_MASK) &&
 				(dc_mode.vmode & FB_VMODE_BYPASS);
 
@@ -1878,13 +1876,13 @@ static void tegra_hdmi_get_cea_fb_videomode(struct fb_videomode *m,
 	 * not as part of the modeset.
 	 */
 	if (yuv_bypass_vmode || tegra_dc_is_t21x()) {
-		if (tegra_dc_is_yuv420_8bpc(yuv_flag)) {
+		if (tegra_dc_is_yuv420_8bpc(&dc_mode)) {
 			dc_mode.h_back_porch *= 2;
 			dc_mode.h_front_porch *= 2;
 			dc_mode.h_sync_width *= 2;
 			dc_mode.h_active *= 2;
 			dc_mode.pclk *= 2;
-		} else if (yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y30)) {
+		} else if (tegra_dc_is_yuv420_10bpc(&dc_mode)) {
 			dc_mode.h_back_porch = (dc_mode.h_back_porch * 8) / 5;
 			dc_mode.h_front_porch = (dc_mode.h_front_porch * 8) / 5;
 			dc_mode.h_sync_width = (dc_mode.h_sync_width * 8) / 5;
@@ -2572,7 +2570,7 @@ static bool tegra_hdmi_gcp_default_phase_en(struct tegra_hdmi *hdmi)
 	if (!tegra_hdmi_gcp_color_depth(hdmi))
 		return false;
 
-	if ((yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) ||
+	if (tegra_dc_is_yuv420_10bpc(&hdmi->dc->mode) ||
 			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36)) ||
 			(IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)))
 		return true;

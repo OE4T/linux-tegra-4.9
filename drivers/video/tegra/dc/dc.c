@@ -5407,12 +5407,11 @@ void tegra_dc_blank_wins(struct tegra_dc *dc, unsigned windows)
 	int nr_win = 0;
 
 	/* YUV420 10bpc variables */
-	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
 	bool yuv_420_10b_path = false;
 	int fb_win_idx = -1;
 	int fb_win_pos = -1;
 
-	if (dc->yuv_bypass && yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+	if (dc->yuv_bypass && tegra_dc_is_yuv420_10bpc(&dc->mode))
 		yuv_420_10b_path = true;
 
 #ifdef CONFIG_TEGRA_NVDISPLAY

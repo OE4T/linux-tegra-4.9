@@ -696,6 +696,7 @@ void tegra_nvdisp_set_background_color(struct tegra_dc *dc)
 			reg_val = RGB_TO_YUV420_8BPC_BLACK_PIX;
 			break;
 		case FB_VMODE_Y420 | FB_VMODE_Y30:
+			reg_val = RGB_TO_YUV420_10BPC_BLACK_PIX;
 			break;
 		case FB_VMODE_Y422 | FB_VMODE_Y36:
 			reg_val = RGB_TO_YUV422_10BPC_BLACK_PIX;

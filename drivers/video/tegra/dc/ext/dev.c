@@ -621,10 +621,9 @@ static int tegra_dc_ext_should_show_background(
 		int win_num)
 {
 	struct tegra_dc *dc = data->ext->dc;
-	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
 	int i;
 
-	if (!dc->yuv_bypass || yuv_flag != (FB_VMODE_Y420 | FB_VMODE_Y30))
+	if (!dc->yuv_bypass || !tegra_dc_is_yuv420_10bpc(&dc->mode))
 		return false;
 
 	for (i = 0; i < win_num; i++) {

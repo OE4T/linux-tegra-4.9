@@ -591,7 +591,6 @@ int _tegra_dc_set_mode(struct tegra_dc *dc,
 				const struct tegra_dc_mode *mode)
 {
 	struct tegra_dc_mode new_mode = *mode;
-	int yuv_flag = new_mode.vmode & FB_VMODE_YUV_MASK;
 	bool yuv_bypass_vmode = false;
 
 	yuv_bypass_vmode = (new_mode.vmode & FB_VMODE_YUV_MASK) &&
@@ -602,13 +601,13 @@ int _tegra_dc_set_mode(struct tegra_dc *dc,
 	 * not as part of the modeset.
 	 */
 	if (yuv_bypass_vmode || tegra_dc_is_t21x()) {
-		if (tegra_dc_is_yuv420_8bpc(yuv_flag)) {
+		if (tegra_dc_is_yuv420_8bpc(&new_mode)) {
 			new_mode.h_back_porch /= 2;
 			new_mode.h_front_porch /= 2;
 			new_mode.h_sync_width /= 2;
 			new_mode.h_active /= 2;
 			new_mode.pclk /= 2;
-		} else if (yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y30)) {
+		} else if (tegra_dc_is_yuv420_10bpc(&new_mode)) {
 			new_mode.h_back_porch = (new_mode.h_back_porch * 5) / 8;
 			new_mode.h_front_porch =
 					(new_mode.h_front_porch * 5) / 8;

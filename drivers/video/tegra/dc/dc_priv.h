@@ -474,10 +474,34 @@ static inline bool tegra_dc_is_yuv_semi_planar(int fmt)
 	return false;
 }
 
-static inline bool tegra_dc_is_yuv420_8bpc(int yuv_flag)
+static inline bool tegra_dc_is_yuv420_8bpc(const struct tegra_dc_mode *mode)
 {
-	return ((yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y24)) ||
-		(yuv_flag & (FB_VMODE_Y420_ONLY | FB_VMODE_Y24)));
+	int yuv_flag = mode->vmode & FB_VMODE_YUV_MASK;
+
+	return ((yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y24)) ||
+		(yuv_flag == (FB_VMODE_Y420_ONLY | FB_VMODE_Y24)));
+}
+
+static inline bool tegra_dc_is_yuv420_10bpc(const struct tegra_dc_mode *mode)
+{
+	int yuv_flag = mode->vmode & FB_VMODE_YUV_MASK;
+
+	return ((yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) ||
+		(yuv_flag == (FB_VMODE_Y420_ONLY | FB_VMODE_Y30)));
+}
+
+static inline bool tegra_dc_is_yuv422_12bpc(const struct tegra_dc_mode *mode)
+{
+	int yuv_flag = mode->vmode & FB_VMODE_YUV_MASK;
+
+	return (yuv_flag == (FB_VMODE_Y422 | FB_VMODE_Y36));
+}
+
+static inline bool tegra_dc_is_yuv444_8bpc(const struct tegra_dc_mode *mode)
+{
+	int yuv_flag = mode->vmode & FB_VMODE_YUV_MASK;
+
+	return (yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y24));
 }
 
 static inline u32 tegra_dc_unmask_interrupt(struct tegra_dc *dc, u32 int_val)

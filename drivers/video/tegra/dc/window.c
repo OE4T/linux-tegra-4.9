@@ -631,22 +631,21 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 			dc_win->dirty = no_vsync ? 0 : 1;
 			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
 			if (dc->yuv_bypass) {
-				if (dc->mode.vmode &
-					(FB_VMODE_Y420 | FB_VMODE_Y420_ONLY |
-					 FB_VMODE_Y24))
+				if (tegra_dc_is_yuv420_8bpc(&dc->mode))
 					tegra_dc_writel(dc,
 						RGB_TO_YUV420_8BPC_BLACK_PIX,
 						DC_DISP_BLEND_BACKGROUND_COLOR);
-				else if (dc->mode.vmode &
-					(FB_VMODE_Y420 | FB_VMODE_Y420_ONLY |
-					 FB_VMODE_Y30))
+				else if (tegra_dc_is_yuv420_10bpc(&dc->mode))
 					tegra_dc_writel(dc,
 						RGB_TO_YUV420_10BPC_BLACK_PIX,
 						DC_DISP_BLEND_BACKGROUND_COLOR);
-				else if (dc->mode.vmode &
-					(FB_VMODE_Y422 | FB_VMODE_Y36))
+				else if (tegra_dc_is_yuv422_12bpc(&dc->mode))
 					tegra_dc_writel(dc,
 						RGB_TO_YUV422_10BPC_BLACK_PIX,
+						DC_DISP_BLEND_BACKGROUND_COLOR);
+				else if (tegra_dc_is_yuv444_8bpc(&dc->mode))
+					tegra_dc_writel(dc,
+						RGB_TO_YUV444_8BPC_BLACK_PIX,
 						DC_DISP_BLEND_BACKGROUND_COLOR);
 			}
 			continue;

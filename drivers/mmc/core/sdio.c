@@ -197,6 +197,9 @@ static int sdio_read_cccr(struct mmc_card *card, u32 ocr)
 				card->cccr.high_speed = 0;
 				card->sw_caps.hs_max_dtr = 25000000;
 			}
+		} else {
+			card->sw_caps.sd3_bus_mode |= (SD_MODE_UHS_SDR25 |
+				SD_MODE_UHS_SDR12);
 		}
 	}
 
@@ -502,10 +505,8 @@ static int sdio_set_bus_speed_mode(struct mmc_card *card)
 	if (err)
 		return err;
 
-	if (bus_speed) {
-		mmc_set_timing(card->host, timing);
-		mmc_set_clock(card->host, card->sw_caps.uhs_max_dtr);
-	}
+	mmc_set_timing(card->host, timing);
+	mmc_set_clock(card->host, card->sw_caps.uhs_max_dtr);
 
 	return 0;
 }

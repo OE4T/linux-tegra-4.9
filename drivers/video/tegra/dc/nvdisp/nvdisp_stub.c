@@ -136,16 +136,6 @@ static int disp_fb_linear_set(void)
 }
 arch_initcall(disp_fb_linear_set);
 
-int tegra_dvfs_set_rate(struct clk *c, unsigned long rate)
-{
-	return 0;
-}
-
-int tegra_dvfs_use_alt_freqs_on_clk(struct clk *c, bool use_alt_freq)
-{
-	return 0;
-}
-
 int tegra_panel_gpio_get_dt(const char *comp_str,
 				struct tegra_panel_of *panel)
 {

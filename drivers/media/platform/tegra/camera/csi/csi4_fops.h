@@ -14,7 +14,6 @@
 
 #ifndef __CSI4_H__
 #define __CSI4_H__
-#define TEGRA_CSICIL_CLK_MHZ 204
 
 extern struct tegra_csi_fops csi4_fops;
 

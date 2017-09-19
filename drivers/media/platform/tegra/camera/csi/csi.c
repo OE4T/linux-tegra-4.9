@@ -206,32 +206,6 @@ start_fail:
 	return ret;
 }
 
-
-/* Used to calculate the settling time based on the mipi and cil clocks */
-unsigned int tegra_csi_ths_settling_time(
-		struct tegra_csi_device *csi,
-		const unsigned int csicil_clk_mhz,
-		const unsigned int mipi_clk_mhz)
-{
-	unsigned int cil_settletime;
-
-	cil_settletime = (115 * csicil_clk_mhz + 8000 * csicil_clk_mhz
-		/ (2 * mipi_clk_mhz) - 5500) / 1000;
-	return cil_settletime;
-}
-EXPORT_SYMBOL(tegra_csi_ths_settling_time);
-
-unsigned int tegra_csi_clk_settling_time(
-	struct tegra_csi_device *csi,
-	const unsigned int csicil_clk_mhz)
-{
-	unsigned int clk_settletime;
-
-	clk_settletime = ((95 + 300) * csicil_clk_mhz - 13000) / 2000;
-	return clk_settletime;
-}
-EXPORT_SYMBOL(tegra_csi_clk_settling_time);
-
 /*
  * Only use this subdevice media bus ops for test pattern generator,
  * because CSI device is an separated subdevice which has 6 source
@@ -544,7 +518,6 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 		ret = of_property_read_u32(chan_dt, "reg", &value);
 		if (ret < 0)
 			return -EINVAL;
-		chan->of_node = chan_dt;
 		if (value == index)
 			break;
 	}

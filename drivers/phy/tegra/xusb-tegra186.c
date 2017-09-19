@@ -446,6 +446,7 @@ static void tegra186_utmi_bias_pad_power_on(struct tegra_xusb_padctl *padctl)
 	mutex_unlock(&padctl->lock);
 }
 
+static inline bool is_utmi_phy(struct phy *phy);
 static void tegra186_utmi_bias_pad_power_off(struct tegra_xusb_padctl *padctl)
 {
 	struct tegra186_xusb_padctl *priv = to_tegra186_xusb_padctl(padctl);
@@ -488,7 +489,7 @@ void tegra186_utmi_pad_power_on(struct phy *phy)
 	struct device *dev;
 	u32 reg;
 
-	if (!phy)
+	if (!phy || !is_utmi_phy(phy))
 		return;
 
 	lane = phy_get_drvdata(phy);
@@ -526,7 +527,7 @@ void tegra186_utmi_pad_power_down(struct phy *phy)
 	struct device *dev;
 	u32 reg;
 
-	if (!phy)
+	if (!phy || !is_utmi_phy(phy))
 		return;
 
 	lane = phy_get_drvdata(phy);
@@ -1276,6 +1277,518 @@ static const struct tegra_xusb_port_ops tegra186_usb2_port_ops = {
 	.map = tegra186_usb2_port_map,
 };
 
+/* HSIC PHY support */
+static struct tegra_xusb_lane *
+tegra186_hsic_lane_probe(struct tegra_xusb_pad *pad, struct device_node *np,
+			 unsigned int index)
+{
+	struct tegra_xusb_hsic_lane *hsic;
+	int err;
+
+	hsic = kzalloc(sizeof(*hsic), GFP_KERNEL);
+	if (!hsic)
+		return ERR_PTR(-ENOMEM);
+
+	INIT_LIST_HEAD(&hsic->base.list);
+	hsic->base.soc = &pad->soc->lanes[index];
+	hsic->base.index = index;
+	hsic->base.pad = pad;
+	hsic->base.np = np;
+
+	err = tegra_xusb_lane_parse_dt(&hsic->base, np);
+	if (err < 0) {
+		kfree(hsic);
+		return ERR_PTR(err);
+	}
+
+	return &hsic->base;
+}
+
+static void tegra186_hsic_lane_remove(struct tegra_xusb_lane *lane)
+{
+	struct tegra_xusb_hsic_lane *hsic = to_hsic_lane(lane);
+
+	kfree(hsic);
+}
+
+static const struct tegra_xusb_lane_ops tegra186_hsic_lane_ops = {
+	.probe = tegra186_hsic_lane_probe,
+	.remove = tegra186_hsic_lane_remove,
+};
+
+static int tegra186_hsic_phy_power_on(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	struct tegra186_xusb_padctl *priv = to_tegra186_xusb_padctl(padctl);
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	struct tegra_xusb_hsic_pad *pad;
+	int err;
+	u32 reg;
+
+	dev_dbg(dev, "phy power on HSIC %d\n", index);
+
+	pad = to_hsic_pad(lane->pad);
+	if (!pad) {
+		dev_err(dev, "no pad found for HSIC lane %u\n", index);
+		return -ENODEV;
+	}
+
+	if (priv->prod_list) {
+		char prod_name[] = "prod_c_hsicX";
+
+		sprintf(prod_name, "prod_c_hsic%d", index);
+		err = tegra_prod_set_by_name(&padctl->regs, prod_name,
+					     priv->prod_list);
+		if (err) {
+			dev_dbg(dev, "failed to apply prod for hsic pad%d\n",
+				index);
+		}
+	}
+
+	err = regulator_enable(pad->supply);
+	if (err) {
+		dev_err(dev, "enable hsic %d power failed %d\n",
+			index, err);
+		return err;
+	}
+
+	err = clk_prepare_enable(pad->clk);
+	if (err) {
+		dev_err(dev, "failed to enable HSIC tracking clock %d\n",
+			err);
+	}
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_HSIC_PAD_TRK_CTL0);
+	reg &= ~HSIC_TRK_START_TIMER(~0);
+	reg |= HSIC_TRK_START_TIMER(0x1e);
+	reg &= ~HSIC_TRK_DONE_RESET_TIMER(~0);
+	reg |= HSIC_TRK_DONE_RESET_TIMER(0xa);
+	padctl_writel(padctl, reg, XUSB_PADCTL_HSIC_PAD_TRK_CTL0);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_HSIC_PADX_CTL0(index));
+	reg &= ~(HSIC_PD_TX_DATA0 | HSIC_PD_TX_STROBE |
+		HSIC_PD_RX_DATA0 | HSIC_PD_RX_STROBE |
+		HSIC_PD_ZI_DATA0 | HSIC_PD_ZI_STROBE);
+	padctl_writel(padctl, reg, XUSB_PADCTL_HSIC_PADX_CTL0(index));
+
+	udelay(1);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_HSIC_PAD_TRK_CTL0);
+	reg &= ~HSIC_PD_TRK;
+	padctl_writel(padctl, reg, XUSB_PADCTL_HSIC_PAD_TRK_CTL0);
+
+	usleep_range(50, 60);
+
+	clk_disable_unprepare(pad->clk);
+
+	return 0;
+}
+
+static int tegra186_hsic_phy_power_off(struct phy *phy)
+{
+
+	return 0;
+}
+
+static int tegra186_hsic_phy_enable_sleepwalk(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	struct tegra186_xusb_padctl *priv = to_tegra186_xusb_padctl(padctl);
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "enable sleepwalk HSIC port %d\n", index);
+
+	/* ensure sleepwalk logic is disabled */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg &= ~MASTER_ENABLE;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	/* ensure sleepwalk logics are in low power mode */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg |= MASTER_CFG_SEL;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	/* set debounce time */
+	reg = ao_readl(priv, XUSB_AO_USB_DEBOUNCE_DEL);
+	reg &= ~UHSIC_LINE_DEB_CNT(~0);
+	reg |= UHSIC_LINE_DEB_CNT(1);
+	ao_writel(priv, reg, XUSB_AO_USB_DEBOUNCE_DEL);
+
+	/* ensure fake events of sleepwalk logic are desiabled */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg &= ~(FAKE_STROBE_VAL | FAKE_DATA_VAL |
+		FAKE_STROBE_EN | FAKE_DATA_EN);
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	/* ensure wake events of sleepwalk logic are not latched */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg &= ~LINE_WAKEUP_EN;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	/* disable wake event triggers of sleepwalk logic */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg &= ~WAKE_VAL(~0);
+	reg |= WAKE_VAL_NONE;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	/* power down the line state detectors of the port */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_PAD_CFG(index));
+	reg |= (STROBE_VAL_PD | DATA0_VAL_PD);
+	ao_writel(priv, reg, XUSB_AO_UHSIC_PAD_CFG(index));
+
+	/* save state, HSIC always comes up as HS */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SAVED_STATE(index));
+	reg &= ~MODE(~0);
+	reg |= MODE_HS;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SAVED_STATE(index));
+
+	/* enable the trigger of the sleepwalk logic */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg |= (WAKE_WALK_EN | LINEVAL_WALK_EN);
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	/* reset the walk pointer and clear the alarm of the sleepwalk logic,
+	 * as well as capture the configuration of the USB2.0 port
+	 */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_TRIGGERS(index));
+	reg |= (HSIC_CLR_WALK_PTR | HSIC_CLR_WAKE_ALARM | HSIC_CAP_CFG);
+	ao_writel(priv, reg, XUSB_AO_UHSIC_TRIGGERS(index));
+
+	/* setup the pull-ups and pull-downs of the signals during the four
+	 * stages of sleepwalk.
+	 * maintain a HSIC IDLE and keep driving HSIC RESUME upon remote wake
+	 */
+	reg = (RPD_DATA0_A | RPU_DATA0_B | RPU_DATA0_C | RPU_DATA0_D);
+	reg |= (RPU_STROBE_A | RPD_STROBE_B | RPD_STROBE_C | RPD_STROBE_D);
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK(index));
+
+	/* power up the line state detectors of the port */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_PAD_CFG(index));
+	reg &= ~(DATA0_VAL_PD | STROBE_VAL_PD);
+	ao_writel(priv, reg, XUSB_AO_UHSIC_PAD_CFG(index));
+
+	usleep_range(150, 200);
+
+	/* switch the electric control of the USB2.0 pad to XUSB_AO */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_PAD_CFG(index));
+	reg |= USE_XUSB_AO;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_PAD_CFG(index));
+
+	/* set the wake signaling trigger events */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg &= ~WAKE_VAL(~0);
+	reg |= WAKE_VAL_DS10;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	/* enable the wake detection */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg |= (MASTER_ENABLE | LINE_WAKEUP_EN);
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	return 0;
+}
+
+static int tegra186_hsic_phy_disable_sleepwalk(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	struct tegra186_xusb_padctl *priv = to_tegra186_xusb_padctl(padctl);
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "disable sleepwalk HSIC port %d\n", index);
+
+	/* disable the wake detection */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg &= ~(MASTER_ENABLE | LINE_WAKEUP_EN);
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	/* switch the electric control of the USB2.0 pad to XUSB vcore logic */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_PAD_CFG(index));
+	reg &= ~USE_XUSB_AO;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_PAD_CFG(index));
+
+	/* disable wake event triggers of sleepwalk logic */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+	reg &= ~WAKE_VAL(~0);
+	reg |= WAKE_VAL_NONE;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
+
+	/* power down the line state detectors of the port */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_PAD_CFG(index));
+	reg |= (STROBE_VAL_PD | DATA0_VAL_PD);
+	ao_writel(priv, reg, XUSB_AO_UHSIC_PAD_CFG(index));
+
+	/* clear alarm of the sleepwalk logic */
+	reg = ao_readl(priv, XUSB_AO_UHSIC_TRIGGERS(index));
+	reg |= HSIC_CLR_WAKE_ALARM;
+	ao_writel(priv, reg, XUSB_AO_UHSIC_TRIGGERS(index));
+
+	return 0;
+}
+
+static int tegra186_hsic_phy_enable_wake(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy enable wake HSIC %d\n", index);
+
+	mutex_lock(&padctl->lock);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg |= USB2_HSIC_PORT_WAKE_INTERRUPT_ENABLE(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	usleep_range(10, 20);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg |= USB2_HSIC_PORT_WAKEUP_EVENT(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+static int tegra186_hsic_phy_disable_wake(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy disable wake HSIC %d\n", index);
+
+	mutex_lock(&padctl->lock);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg &= ~USB2_HSIC_PORT_WAKE_INTERRUPT_ENABLE(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	usleep_range(10, 20);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg |= USB2_HSIC_PORT_WAKEUP_EVENT(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+static int tegra186_hsic_phy_init(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct tegra_xusb_hsic_port *port;
+	int rc = 0;
+
+	dev_dbg(padctl->dev, "phy init HSIC %d\n", index);
+
+	port = tegra_xusb_find_hsic_port(padctl, index);
+	if (!port) {
+		dev_err(padctl->dev, "no port found for HSIC lane %u\n", index);
+		return -ENODEV;
+	}
+
+	return rc;
+}
+
+static int tegra186_hsic_phy_exit(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct tegra_xusb_hsic_port *port;
+	int rc = 0;
+
+	dev_dbg(padctl->dev, "phy exit HSIC %d\n", index);
+
+	port = tegra_xusb_find_hsic_port(padctl, index);
+	if (!port) {
+		dev_err(padctl->dev, "no port found for HSIC lane %u\n", index);
+		return -ENODEV;
+	}
+
+	return rc;
+}
+
+static const struct phy_ops hsic_phy_ops = {
+	.init = tegra186_hsic_phy_init,
+	.exit = tegra186_hsic_phy_exit,
+	.power_on = tegra186_hsic_phy_power_on,
+	.power_off = tegra186_hsic_phy_power_off,
+	.owner = THIS_MODULE,
+};
+
+static inline bool is_hsic_phy(struct phy *phy)
+{
+	return phy->ops == &hsic_phy_ops;
+}
+
+static struct tegra_xusb_pad *
+tegra186_hsic_pad_probe(struct tegra_xusb_padctl *padctl,
+			const struct tegra_xusb_pad_soc *soc,
+			struct device_node *np)
+{
+	struct tegra_xusb_hsic_pad *hsic;
+	struct tegra_xusb_pad *pad;
+	int err;
+
+	hsic = kzalloc(sizeof(*hsic), GFP_KERNEL);
+	if (!hsic)
+		return ERR_PTR(-ENOMEM);
+
+	pad = &hsic->base;
+	pad->ops = &tegra186_hsic_lane_ops;
+	pad->soc = soc;
+
+	err = tegra_xusb_pad_init(pad, padctl, np);
+	if (err < 0) {
+		kfree(hsic);
+		goto out;
+	}
+
+	hsic->clk = devm_clk_get(&pad->dev, "trk");
+	if (IS_ERR(hsic->clk)) {
+		err = PTR_ERR(hsic->clk);
+		dev_dbg(&pad->dev, "failed to get hsic trk clock: %d\n", err);
+		goto unregister;
+	}
+
+	hsic->supply = devm_regulator_get(&pad->dev, "vddio-hsic");
+	if (IS_ERR(hsic->supply)) {
+		err = PTR_ERR(hsic->supply);
+		if (err != -EPROBE_DEFER) {
+			dev_err(&pad->dev, "failed get vddio-hsic supply: %d\n",
+				err);
+		}
+		goto unregister;
+	}
+
+	err = tegra_xusb_pad_register(pad, &hsic_phy_ops);
+	if (err < 0)
+		goto unregister;
+
+	dev_set_drvdata(&pad->dev, pad);
+
+	return pad;
+
+unregister:
+	device_unregister(&pad->dev);
+out:
+	return ERR_PTR(err);
+}
+
+static void tegra186_hsic_pad_remove(struct tegra_xusb_pad *pad)
+{
+	struct tegra_xusb_hsic_pad *hsic = to_hsic_pad(pad);
+
+	kfree(hsic);
+}
+
+static const struct tegra_xusb_pad_ops tegra186_hsic_pad_ops = {
+	.probe = tegra186_hsic_pad_probe,
+	.remove = tegra186_hsic_pad_remove,
+};
+
+static const char * const tegra186_hsic_functions[] = {
+	"xusb",
+};
+
+static const struct tegra_xusb_lane_soc tegra186_hsic_lanes[] = {
+	TEGRA186_LANE("hsic-0", 0,  0, 0, hsic),
+};
+
+static const struct tegra_xusb_pad_soc tegra186_hsic_pad = {
+	.name = "hsic",
+	.num_lanes = ARRAY_SIZE(tegra186_hsic_lanes),
+	.lanes = tegra186_hsic_lanes,
+	.ops = &tegra186_hsic_pad_ops,
+};
+
+static int tegra186_hsic_port_enable(struct tegra_xusb_port *port)
+{
+	return 0;
+}
+
+static void tegra186_hsic_port_disable(struct tegra_xusb_port *port)
+{
+}
+
+static struct tegra_xusb_lane *
+tegra186_hsic_port_map(struct tegra_xusb_port *port)
+{
+	return tegra_xusb_find_lane(port->padctl, "hsic", port->index);
+}
+
+static const struct tegra_xusb_port_ops tegra186_hsic_port_ops = {
+	.enable = tegra186_hsic_port_enable,
+	.disable = tegra186_hsic_port_disable,
+	.map = tegra186_hsic_port_map,
+};
+
+static int tegra186_hsic_set_idle(struct tegra_xusb_padctl *padctl,
+				  unsigned int index, bool idle)
+{
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	if (index >= 1) {
+		dev_err(dev, "%s invalid HSIC pad %u\n", __func__, index);
+		return -EINVAL;
+	}
+
+	dev_dbg(dev, "%s set HSIC %u idle %d\n", __func__, index, idle);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_HSIC_PADX_CTL0(index));
+	reg &= ~(HSIC_RPD_DATA0 | HSIC_RPU_DATA0);
+	reg &= ~(HSIC_RPU_STROBE | HSIC_RPD_STROBE);
+	if (idle)
+		reg |= (HSIC_RPD_DATA0 | HSIC_RPU_STROBE);
+	padctl_writel(padctl, reg, XUSB_PADCTL_HSIC_PADX_CTL0(index));
+
+	return 0;
+}
+
+static int tegra186_hsic_reset(struct tegra_xusb_padctl *padctl,
+				unsigned int index)
+{
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	if (index >= 1) {
+		dev_err(dev, "%s invalid HSIC pad %u\n", __func__, index);
+		return -EINVAL;
+	}
+
+	dev_dbg(dev, "%s set HSIC %u reset\n", __func__, index);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_HSIC_PADX_CTL0(index));
+	reg &= ~(HSIC_RPD_DATA0 | HSIC_RPU_DATA0);
+	reg &= ~(HSIC_RPU_STROBE | HSIC_RPD_STROBE);
+	reg |= (HSIC_RPD_DATA0 | HSIC_RPD_STROBE);
+	padctl_writel(padctl, reg, XUSB_PADCTL_HSIC_PADX_CTL0(index));
+
+	return 0;
+}
+
 /* SuperSpeed PHY support */
 static struct tegra_xusb_lane *
 tegra186_usb3_lane_probe(struct tegra_xusb_pad *pad, struct device_node *np,
@@ -1724,9 +2237,7 @@ static const struct tegra_xusb_pad_soc tegra186_usb3_pad = {
 static const struct tegra_xusb_pad_soc * const tegra186_pads[] = {
 	&tegra186_usb2_pad,
 	&tegra186_usb3_pad,
-#if 0 /* TODO implement */
 	&tegra186_hsic_pad,
-#endif
 };
 
 static int
@@ -2049,6 +2560,11 @@ static int tegra186_xusb_padctl_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
 			return tegra186_utmi_phy_enable_sleepwalk(phy, speed);
 		else
 			return tegra186_utmi_phy_disable_sleepwalk(phy);
+	} else if (is_hsic_phy(phy)) {
+		if (enable)
+			return tegra186_hsic_phy_enable_sleepwalk(phy);
+		else
+			return tegra186_hsic_phy_disable_sleepwalk(phy);
 	} else
 		return -EINVAL;
 
@@ -2071,6 +2587,11 @@ static int tegra186_xusb_padctl_phy_wake(struct tegra_xusb_padctl *padctl,
 			return tegra186_utmi_phy_enable_wake(phy);
 		else
 			return tegra186_utmi_phy_disable_wake(phy);
+	} else if (is_hsic_phy(phy)) {
+		if (enable)
+			return tegra186_hsic_phy_enable_wake(phy);
+		else
+			return tegra186_hsic_phy_disable_wake(phy);
 	} else
 		return -EINVAL;
 
@@ -2614,6 +3135,8 @@ static const struct tegra_xusb_padctl_ops tegra186_xusb_padctl_ops = {
 	.handle_overcurrent = tegra186_phy_xusb_handle_overcurrent,
 	.utmi_pad_power_on = tegra186_utmi_pad_power_on,
 	.utmi_pad_power_down = tegra186_utmi_pad_power_down,
+	.hsic_set_idle = tegra186_hsic_set_idle,
+	.hsic_reset = tegra186_hsic_reset,
 };
 
 static const char * const tegra186_supply_names[] = {
@@ -2635,13 +3158,10 @@ const struct tegra_xusb_padctl_soc tegra186_xusb_padctl_soc = {
 			.ops = &tegra186_usb3_port_ops,
 			.count = TEGRA186_USB3_PHYS,
 		},
-#if 0 /* TODO implement */
 		.hsic = {
 			.ops = &tegra186_hsic_port_ops,
 			.count = TEGRA186_HSIC_PHYS,
 		},
-
-#endif
 	},
 	.ops = &tegra186_xusb_padctl_ops,
 	.supply_names = tegra186_supply_names,

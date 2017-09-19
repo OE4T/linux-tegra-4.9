@@ -345,6 +345,9 @@ to_hsic_port(struct tegra_xusb_port *port)
 	return container_of(port, struct tegra_xusb_hsic_port, base);
 }
 
+struct tegra_xusb_hsic_port *
+tegra_xusb_find_hsic_port(struct tegra_xusb_padctl *padctl, unsigned int index);
+
 struct tegra_xusb_usb3_port {
 	struct tegra_xusb_port base;
 	bool context_saved;
@@ -391,6 +394,7 @@ struct tegra_xusb_padctl_ops {
 				 unsigned int index);
 	int (*hsic_set_idle)(struct tegra_xusb_padctl *padctl,
 			     unsigned int index, bool idle);
+	int (*hsic_reset)(struct tegra_xusb_padctl *padctl, unsigned int index);
 	int (*usb3_set_lfps_detect)(struct tegra_xusb_padctl *padctl,
 				    unsigned int index, bool enable);
 	int (*vbus_override)(struct tegra_xusb_padctl *padctl, bool set);

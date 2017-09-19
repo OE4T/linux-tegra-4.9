@@ -513,6 +513,18 @@ tegra_xusb_find_usb2_port(struct tegra_xusb_padctl *padctl, unsigned int index)
 	return NULL;
 }
 
+struct tegra_xusb_hsic_port *
+tegra_xusb_find_hsic_port(struct tegra_xusb_padctl *padctl, unsigned int index)
+{
+	struct tegra_xusb_port *port;
+
+	port = tegra_xusb_find_port(padctl, "hsic", index);
+	if (port)
+		return to_hsic_port(port);
+
+	return NULL;
+}
+
 struct tegra_xusb_usb3_port *
 tegra_xusb_find_usb3_port(struct tegra_xusb_padctl *padctl, unsigned int index)
 {
@@ -1366,6 +1378,16 @@ int tegra_xusb_padctl_hsic_set_idle(struct tegra_xusb_padctl *padctl,
 	return -ENOSYS;
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_hsic_set_idle);
+
+int tegra_xusb_padctl_hsic_reset(struct tegra_xusb_padctl *padctl,
+				    unsigned int port)
+{
+	if (padctl->soc->ops->hsic_reset)
+		return padctl->soc->ops->hsic_reset(padctl, port);
+
+	return -ENODEV;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_hsic_reset);
 
 int tegra_xusb_padctl_usb3_set_lfps_detect(struct tegra_xusb_padctl *padctl,
 					   unsigned int port, bool enable)

@@ -180,6 +180,10 @@ static inline u32 gr_exception_ds_m(void)
 {
 	return 0x1 << 4;
 }
+static inline u32 gr_exception_sked_m(void)
+{
+	return 0x1 << 8;
+}
 static inline u32 gr_exception1_r(void)
 {
 	return 0x00400118;

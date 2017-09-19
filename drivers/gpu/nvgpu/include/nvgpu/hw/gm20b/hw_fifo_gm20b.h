@@ -304,6 +304,10 @@ static inline u32 fifo_intr_mmu_fault_info_type_v(u32 r)
 {
 	return (r >> 0) & 0xf;
 }
+static inline u32 fifo_intr_mmu_fault_info_write_v(u32 r)
+{
+	return (r >> 7) & 0x1;
+}
 static inline u32 fifo_intr_mmu_fault_info_engine_subid_v(u32 r)
 {
 	return (r >> 6) & 0x1;

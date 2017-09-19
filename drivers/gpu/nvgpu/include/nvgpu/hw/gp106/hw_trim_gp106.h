@@ -55,6 +55,7 @@
  */
 #ifndef _hw_trim_gp106_h_
 #define _hw_trim_gp106_h_
+
 static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_r(void)
 {
 	return 0x00132924;
@@ -93,7 +94,7 @@ static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_write_en_v(u32 r)
 }
 static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_write_en_deasserted_f(void)
 {
-	return 0;
+	return 0x0;
 }
 static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_write_en_asserted_f(void)
 {
@@ -117,7 +118,7 @@ static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_enable_v(u32 r)
 }
 static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_enable_deasserted_f(void)
 {
-	return 0;
+	return 0x0;
 }
 static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_enable_asserted_f(void)
 {
@@ -141,7 +142,7 @@ static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_reset_v(u32 r)
 }
 static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_reset_deasserted_f(void)
 {
-	return 0;
+	return 0x0;
 }
 static inline u32 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_reset_asserted_f(void)
 {
@@ -161,7 +162,7 @@ static inline u32 trim_fbpa_bcast_clk_cntr_ncltcclk_cfg_r(void)
 }
 static inline u32 trim_fbpa_bcast_clk_cntr_ncltcclk_cfg_source_dramdiv4_rec_clk1_f(void)
 {
-	return 0x20000000;
+	return 0x30000000;
 }
 static inline u32 trim_fbpa_bcast_clk_cntr_ncltcclk_cnt_r(void)
 {
@@ -191,5 +192,4 @@ static inline u32 trim_sys_clk_cntr_ncsyspll_cnt_r(void)
 {
 	return 0x001373b4;
 }
-
 #endif

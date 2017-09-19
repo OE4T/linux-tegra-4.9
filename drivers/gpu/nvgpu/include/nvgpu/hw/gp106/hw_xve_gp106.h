@@ -152,6 +152,10 @@ static inline u32 xve_priv_xv_cya_l1_enable_v(u32 r)
 {
 	return (r >> 8) & 0x1;
 }
+static inline u32 xve_cya_2_r(void)
+{
+	return 0x00000704;
+}
 static inline u32 xve_reset_r(void)
 {
 	return 0x00000718;
@@ -200,9 +204,4 @@ static inline u32 xve_reset_clock_counter_val_v(u32 r)
 {
 	return (r >> 17) & 0x7ff;
 }
-static inline u32 xve_cya_2_r(void)
-{
-	return 0x00000704;
-}
-
 #endif

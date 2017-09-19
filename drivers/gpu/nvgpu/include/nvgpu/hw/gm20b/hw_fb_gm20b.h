@@ -344,4 +344,8 @@ static inline u32 fb_mmu_wpr_info_index_wpr2_addr_hi_v(void)
 {
 	return 0x00000005;
 }
+static inline u32 fb_niso_flush_sysmem_addr_r(void)
+{
+	return 0x00100c10;
+}
 #endif

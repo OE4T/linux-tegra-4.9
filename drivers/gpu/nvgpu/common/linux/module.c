@@ -268,6 +268,7 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int ret = 0;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	bool irqs_enabled;
 
 	gk20a_dbg_fn("");
 
@@ -276,6 +277,15 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	if (!g->power_on)
 		goto done;
 
+	/* disable IRQs and wait for completion */
+	irqs_enabled = g->irqs_enabled;
+	if (irqs_enabled) {
+		disable_irq(g->irq_stall);
+		if (g->irq_stall != g->irq_nonstall)
+			disable_irq(g->irq_nonstall);
+		g->irqs_enabled = 0;
+	}
+
 	gk20a_scale_suspend(dev);
 
 	gk20a_cde_suspend(l);
@@ -283,17 +293,6 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	ret = gk20a_prepare_poweroff(g);
 	if (ret)
 		goto error;
-
-	/*
-	 * After this point, gk20a interrupts should not get
-	 * serviced.
-	 */
-	if (g->irqs_enabled) {
-		disable_irq(g->irq_stall);
-		if (g->irq_stall != g->irq_nonstall)
-			disable_irq(g->irq_nonstall);
-		g->irqs_enabled = 0;
-	}
 
 	/* Decrement platform power refcount */
 	if (platform->idle)
@@ -306,6 +305,14 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	return 0;
 
 error:
+	/* re-enabled IRQs if previously enabled */
+	if (irqs_enabled) {
+		enable_irq(g->irq_stall);
+		if (g->irq_stall != g->irq_nonstall)
+			enable_irq(g->irq_nonstall);
+		g->irqs_enabled = 1;
+	}
+
 	gk20a_scale_resume(dev);
 done:
 	nvgpu_mutex_release(&g->poweroff_lock);

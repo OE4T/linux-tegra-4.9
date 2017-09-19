@@ -368,6 +368,11 @@ int ttcan_set_bitrate(struct ttcan_controller *ttcan)
 		else
 			cccr_reg &= ~(MTT_CCCR_BRSE_MASK);
 
+		if (ttcan->bt_config.fd_flags & CAN_FD_NON_ISO_FLAG)
+			cccr_reg |= MTT_CCCR_NISO_MASK;
+		else
+			cccr_reg &= ~(MTT_CCCR_NISO_MASK);
+
 		if (temp_reg != cccr_reg) {
 			ret = ttcan_write32_check(ttcan, ADR_MTTCAN_CCCR,
 				cccr_reg, MTTCAN_CCCR_MSK);

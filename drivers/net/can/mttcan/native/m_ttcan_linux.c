@@ -899,6 +899,9 @@ static int mttcan_do_set_bittiming(struct net_device *dev)
 	else
 		priv->ttcan->bt_config.fd_flags = 0;
 
+	if (priv->can.ctrlmode & CAN_CTRLMODE_FD_NON_ISO)
+		priv->ttcan->bt_config.fd_flags |= CAN_FD_NON_ISO_FLAG;
+
 	err = ttcan_set_bitrate(priv->ttcan);
 	if (err) {
 		netdev_err(priv->dev, "Unable to set bitrate\n");
@@ -1057,8 +1060,8 @@ static struct net_device *alloc_mttcan_dev(void)
 	priv->can.do_set_mode = mttcan_set_mode;
 	priv->can.do_get_berr_counter = mttcan_get_berr_counter;
 	priv->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK |
-	    CAN_CTRLMODE_LISTENONLY | CAN_CTRLMODE_FD |
-	    CAN_CTRLMODE_BERR_REPORTING | CAN_CTRLMODE_ONE_SHOT;
+	    CAN_CTRLMODE_LISTENONLY | CAN_CTRLMODE_FD | CAN_CTRLMODE_FD_NON_ISO
+	    | CAN_CTRLMODE_BERR_REPORTING | CAN_CTRLMODE_ONE_SHOT;
 
 	netif_napi_add(dev, &priv->napi, mttcan_poll_ir, MTT_CAN_NAPI_WEIGHT);
 

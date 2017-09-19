@@ -66,10 +66,11 @@
 #define CAN_FD_MASK  0xFB
 #define CAN_DIR_MASK 0xF7
 
-#define CAN_BRS_FLAG 0x01
-#define CAN_ESI_FLAG 0x02
-#define CAN_FD_FLAG  0x04
-#define CAN_DIR_RX   0x08
+#define CAN_BRS_FLAG		0x01
+#define CAN_ESI_FLAG		0x02
+#define CAN_FD_FLAG		0x04
+#define CAN_DIR_RX		0x08
+#define CAN_FD_NON_ISO_FLAG	0x10
 
 #define MTTCAN_RAM_SIZE	4096
 #define CAN_WORD_IN_BYTES 4

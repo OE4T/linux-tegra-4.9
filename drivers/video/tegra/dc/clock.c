@@ -37,17 +37,16 @@ unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 		TEGRA_DC_OUT_FAKE_DSIB == dc->out->type ||
 		TEGRA_DC_OUT_FAKE_DSI_GANGED == dc->out->type) {
 		div = DIV_ROUND_CLOSEST(rate * 2, pclk);
-#ifdef CONFIG_TEGRA_NVDISPLAY
+		if (tegra_dc_is_nvdisplay())
 			return rate;	/*shift_clk_div is not available*/
-#endif
 	} else { /* round-up for divider for other display types */
 		div = DIV_ROUND_UP(rate * 2, pclk);
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
-	if (dc->out->type == TEGRA_DC_OUT_HDMI)
-		return rate;
-#endif
+	if (tegra_dc_is_t21x()) {
+		if (dc->out->type == TEGRA_DC_OUT_HDMI)
+			return rate;
+	}
 
 	if (div < 2)
 		return 0;
@@ -82,9 +81,8 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		pclk = dc->out_ops->setup_clk(dc, clk);
 	else
 		pclk = 0;
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	tegra_nvdisp_set_compclk(dc);
-#endif
+	if (tegra_dc_is_nvdisplay())
+		tegra_nvdisp_set_compclk(dc);
 
 	WARN_ONCE(!pclk, "pclk is 0\n");
 #ifdef CONFIG_TEGRA_CORE_DVFS

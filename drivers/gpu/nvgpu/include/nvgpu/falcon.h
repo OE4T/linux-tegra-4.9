@@ -32,11 +32,13 @@
 #define FALCON_ID_PMU       (0)
 #define FALCON_ID_FECS      (2)
 #define FALCON_ID_GPCCS     (3)
+#define FALCON_ID_NVDEC     (4)
 #define FALCON_ID_SEC2      (7)
 
 /*
  * Falcon Base address Defines
  */
+#define FALCON_NVDEC_BASE  0x00084000
 #define FALCON_PWR_BASE    0x0010a000
 #define FALCON_SEC_BASE    0x00087000
 #define FALCON_FECS_BASE   0x00409000

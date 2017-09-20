@@ -1075,6 +1075,7 @@ struct gk20a {
 	struct nvgpu_falcon sec2_flcn;
 	struct nvgpu_falcon fecs_flcn;
 	struct nvgpu_falcon gpccs_flcn;
+	struct nvgpu_falcon nvdec_flcn;
 	struct clk_gk20a clk;
 	struct fifo_gk20a fifo;
 	struct gr_gk20a gr;

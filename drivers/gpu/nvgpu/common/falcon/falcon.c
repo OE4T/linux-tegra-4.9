@@ -321,6 +321,10 @@ void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
 		flcn = &g->gpccs_flcn;
 		flcn->flcn_id = flcn_id;
 		break;
+	case FALCON_ID_NVDEC:
+		flcn = &g->nvdec_flcn;
+		flcn->flcn_id = flcn_id;
+		break;
 	default:
 		nvgpu_err(g, "Invalid/Unsupported falcon ID %x", flcn_id);
 		break;

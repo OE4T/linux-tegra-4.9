@@ -74,6 +74,11 @@ void gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 		flcn->is_falcon_supported = true;
 		flcn->is_interrupt_enabled = false;
 	break;
+	case FALCON_ID_NVDEC:
+		flcn->flcn_base = FALCON_NVDEC_BASE;
+		flcn->is_falcon_supported = true;
+		flcn->is_interrupt_enabled = true;
+	break;
 	default:
 		flcn->is_falcon_supported = false;
 		nvgpu_err(g, "Invalid flcn request");

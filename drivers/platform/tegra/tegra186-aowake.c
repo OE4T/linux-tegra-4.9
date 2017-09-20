@@ -80,9 +80,13 @@ EXPORT_SYMBOL(tegra_aowake_update);
 static void aowake_configure_pmic_polarity(struct device *dev,
 		struct tegra_aowake_info *taowake)
 {
+	struct device_node *np = dev->of_node;
 	unsigned long reg;
 
-	taowake->invert_pmic_interrupt = of_property_read_bool(dev->of_node,
+	taowake->invert_pmic_interrupt = of_property_read_bool(np,
+						"nvidia,invert-interrupt");
+	if (!taowake->invert_pmic_interrupt)
+		taowake->invert_pmic_interrupt = of_property_read_bool(np,
 				"nvidia,invert-pmic-interrupt-polarity");
 
 	reg = readl(taowake->aobase + WAKE_AOWAKE_CTRL_0);

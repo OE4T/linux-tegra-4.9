@@ -432,6 +432,8 @@ struct gpu_ops {
 		unsigned int (*compressible_page_size)(struct gk20a *g);
 		void (*dump_vpr_wpr_info)(struct gk20a *g);
 		int (*vpr_info_fetch)(struct gk20a *g);
+		void (*read_wpr_info)(struct gk20a *g,
+				struct wpr_carveout_info *inf);
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
 		void (*set_debug_mode)(struct gk20a *g, bool enable);
 		void (*tlb_invalidate)(struct gk20a *g, struct nvgpu_mem *pdb);

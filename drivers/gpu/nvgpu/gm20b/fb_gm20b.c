@@ -24,6 +24,7 @@
 #include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
 
 #define VPR_INFO_FETCH_WAIT	(5)
+#define WPR_INFO_ADDR_ALIGNMENT 0x0000000c
 
 void fb_gm20b_init_fs_state(struct gk20a *g)
 {
@@ -521,6 +522,37 @@ int gm20b_fb_vpr_info_fetch(struct gk20a *g)
 			fb_mmu_vpr_info_fetch_true_v());
 
 	return gm20b_fb_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT);
+}
+
+void gm20b_fb_read_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
+{
+	u32 val = 0;
+	u64 wpr_start = 0;
+	u64 wpr_end = 0;
+
+	val = gk20a_readl(g, fb_mmu_wpr_info_r());
+	val &= ~0xF;
+	val |= fb_mmu_wpr_info_index_wpr1_addr_lo_v();
+	gk20a_writel(g, fb_mmu_wpr_info_r(), val);
+
+	val = gk20a_readl(g, fb_mmu_wpr_info_r()) >> 0x4;
+	wpr_start = hi32_lo32_to_u64(
+			(val >> (32 - WPR_INFO_ADDR_ALIGNMENT)),
+			(val << WPR_INFO_ADDR_ALIGNMENT));
+
+	val = gk20a_readl(g, fb_mmu_wpr_info_r());
+	val &= ~0xF;
+	val |= fb_mmu_wpr_info_index_wpr1_addr_hi_v();
+	gk20a_writel(g, fb_mmu_wpr_info_r(), val);
+
+	val = gk20a_readl(g, fb_mmu_wpr_info_r()) >> 0x4;
+	wpr_end = hi32_lo32_to_u64(
+			(val >> (32 - WPR_INFO_ADDR_ALIGNMENT)),
+			(val << WPR_INFO_ADDR_ALIGNMENT));
+
+	inf->wpr_base = wpr_start;
+	inf->nonwpr_base = 0;
+	inf->size = (wpr_end - wpr_start);
 }
 
 bool gm20b_fb_debug_mode_enabled(struct gk20a *g)

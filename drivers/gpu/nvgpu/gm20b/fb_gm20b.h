@@ -23,6 +23,7 @@ bool gm20b_fb_set_use_full_comp_tag_line(struct gk20a *g);
 unsigned int gm20b_fb_compression_page_size(struct gk20a *g);
 unsigned int gm20b_fb_compressible_page_size(struct gk20a *g);
 void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g);
+void gm20b_fb_read_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf);
 int gm20b_fb_vpr_info_fetch(struct gk20a *g);
 bool gm20b_fb_debug_mode_enabled(struct gk20a *g);
 void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable);

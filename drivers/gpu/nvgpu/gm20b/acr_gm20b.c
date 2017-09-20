@@ -11,12 +11,7 @@
  * more details.
  */
 
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#endif
-
 #include <nvgpu/types.h>
-#include <linux/platform/tegra/mc.h>
 
 #include <nvgpu/dma.h>
 #include <nvgpu/gmmu.h>
@@ -83,13 +78,7 @@ static void start_gm20b_pmu(struct gk20a *g)
 
 void gm20b_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
 {
-	struct mc_carveout_info mem_inf;
-
-	mc_get_carveout_info(&mem_inf, NULL, MC_SECURITY_CARVEOUT2);
-
-	inf->wpr_base = mem_inf.base;
-	inf->nonwpr_base = 0;
-	inf->size = mem_inf.size;
+	g->ops.fb.read_wpr_info(g, inf);
 }
 
 bool gm20b_is_pmu_supported(struct gk20a *g)

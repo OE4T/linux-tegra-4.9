@@ -92,17 +92,20 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 /*
  * Must be called with the chlist_mutex held.
  *
- * Returns the allocated channel. If no channel was found for any reason,
+ * Returns the allocated channel. If no channel could be allocated within a
+ * reasonable time, returns ERR_PTR(-EBUSY). In an internal error situation,
  * returns NULL. Under normal conditions, this call will block till an existing
  * channel is freed.
  */
 static struct nvhost_channel* nvhost_channel_alloc(struct nvhost_master *host)
 {
-	int index, max_channels;
+	int index, max_channels, err;
 
 	mutex_unlock(&host->chlist_mutex);
-	down(&host->free_channels);
+	err = down_timeout(&host->free_channels, msecs_to_jiffies(5000));
 	mutex_lock(&host->chlist_mutex);
+	if (err)
+		return ERR_PTR(-EBUSY);
 
 	max_channels = nvhost_channel_nb_channels(host);
 	index = find_first_zero_bit(host->allocated_channels, max_channels);
@@ -281,6 +284,12 @@ int nvhost_channel_map_with_vm(struct nvhost_device_data *pdata,
 	}
 
 	ch = nvhost_channel_alloc(host);
+	if (PTR_ERR(ch) == -EBUSY) {
+		pr_err("%s: Timeout while allocating channel\n", __func__);
+		mutex_unlock(&host->chlist_mutex);
+		mutex_unlock(&host->ch_alloc_mutex);
+		return -EBUSY;
+	}
 	if (!ch) {
 		pr_err("%s: Couldn't find a free channel. Sema out of sync\n",
 			__func__);

@@ -130,8 +130,8 @@ static struct snd_soc_dai_link
 		.stream_name = "ADSP EAVB",
 		.cpu_dai_name = "ADSP EAVB",
 		.codec_dai_name = "ADSP-EAVB",
-		.cpu_name = "adsp_audio",
-		.codec_name = "adsp_audio",
+		.cpu_name = ADSP_CPU_NAME,
+		.codec_name = ADSP_CPU_NAME,
 		.params = &tegra_t186ref_eavb_link_params[0],
 	},
 };

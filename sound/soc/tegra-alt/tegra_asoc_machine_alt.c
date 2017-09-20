@@ -19,7 +19,6 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <sound/soc.h>
-#include <linux/version.h>
 
 #include "tegra_asoc_machine_alt.h"
 
@@ -69,12 +68,6 @@ static const char * const bit_format[] = {
 
 	"dsd_u8", "dsd_u16_le",
 };
-
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 8, 0)
-#define ADSP_CPU_NAME "aconnect@2a41000:adsp_audio"
-#else
-#define ADSP_CPU_NAME "adsp_audio"
-#endif
 
 static struct snd_soc_dai_link
 	tegra210_xbar_dai_links[TEGRA210_XBAR_DAI_LINKS] = {

@@ -29,22 +29,6 @@ config TEGRA3_PM
 	help
 	  Enable Tegra3 power and cluster management.
 
-config TEGRA_PMC
-	bool "Tegra PMC"
-	default n
-	help
-	  Enable Tegra PMC.
-
-config TEGRA210_BOOTROM_PMC
-	bool "Tegra210 bootrom commands from PMC"
-	depends on ARCH_TEGRA_210_SOC
-	help
-	  Tegra210 bootrom has the feature to issue i2c commands to
-	  external device like PMIC to send commands. These commands
-	  are needed to pass through PMC on specific format.
-	  This driver supports the formatting of data as per bootrom
-	  need
-
 config TEGRA_POWERGATE
 	bool "Tegra powergate support"
 	default y

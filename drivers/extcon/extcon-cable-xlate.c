@@ -395,7 +395,6 @@ static int ecx_probe(struct platform_device *pdev)
 	if (!pdata && pdev->dev.of_node) {
 		pdata = ecx_get_pdata_from_dt(pdev);
 		if (IS_ERR(pdata)) {
-			ret = PTR_ERR(pdata);
 			pdata = NULL;
 		}
 	}

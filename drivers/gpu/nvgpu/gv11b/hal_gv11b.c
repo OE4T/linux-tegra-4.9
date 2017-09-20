@@ -357,6 +357,7 @@ static const struct gpu_ops gv11b_ops = {
 		.compressible_page_size = gp10b_fb_compressible_page_size,
 		.vpr_info_fetch = gm20b_fb_vpr_info_fetch,
 		.dump_vpr_wpr_info = gm20b_fb_dump_vpr_wpr_info,
+		.read_wpr_info = gm20b_fb_read_wpr_info,
 		.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled,
 		.set_debug_mode = gm20b_fb_set_debug_mode,
 		.tlb_invalidate = gk20a_fb_tlb_invalidate,

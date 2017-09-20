@@ -98,22 +98,21 @@
 #define NV_SOR_STATE1_ASY_OWNER_HEAD2				(3)
 #define NV_SOR_HEADNUM(i)					(i+1)
 
+/* Specific to T18X */
+#define NV_HEAD_STATE0_T18X(i)					(0x151 + i)
+#define NV_HEAD_STATE1_T18X(i)					(0x154 + i)
+#define NV_HEAD_STATE2_T18X(i)					(0x157 + i)
+#define NV_HEAD_STATE3_T18X(i)					(0x15a + i)
+#define NV_HEAD_STATE4_T18X(i)					(0x15d + i)
+#define NV_HEAD_STATE5_T18X(i)					(0x160 + i)
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-#define NV_HEAD_STATE0(i)					(0x151 + i)
-#define NV_HEAD_STATE1(i)					(0x154 + i)
-#define NV_HEAD_STATE2(i)					(0x157 + i)
-#define NV_HEAD_STATE3(i)					(0x15a + i)
-#define NV_HEAD_STATE4(i)					(0x15d + i)
-#define NV_HEAD_STATE5(i)					(0x160 + i)
-#else
+/* Specific to T21X */
 #define NV_HEAD_STATE0(i)					(0x5 + i)
 #define NV_HEAD_STATE1(i)					(0x7 + i)
 #define NV_HEAD_STATE2(i)					(0x9 + i)
 #define NV_HEAD_STATE3(i)					(0xb + i)
 #define NV_HEAD_STATE4(i)					(0xd + i)
 #define NV_HEAD_STATE5(i)					(0xf + i)
-#endif
 
 #define NV_HEAD_STATE0_INTERLACED_SHIFT				(4)
 #define NV_HEAD_STATE0_INTERLACED_DEFAULT_MASK			(0x3 << 4)
@@ -178,13 +177,14 @@
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_LVDS			(7 << 2)
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7			(10 << 2)
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4			(20 << 2)
-#if defined(CONFIG_TEGRA_NVDISPLAY)
+
+/* Specific to Nvdisplay */
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_16			(8 << 2)
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_43			(9 << 2)
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G3_24			(12 << 2)
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G4_32			(16 << 2)
 #define NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G8_1			(30 << 2)
-#endif
+/* Nvdisplay specific registers end here */
 
 #define NV_SOR_CAP						(0x14)
 #define NV_SOR_CAP_DP_A_SHIFT					(24)
@@ -279,19 +279,17 @@
 #define NV_SOR_TEST_TEST_ENABLE_DISABLE				(0 << 1)
 #define NV_SOR_TEST_TEST_ENABLE_ENABLE				(1 << 1)
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-#define NV_SOR_PLL0						(0x163)
-#define NV_SOR_PLL1						(0x164)
-#define NV_SOR_PLL2						(0x165)
-#define NV_SOR_PLL3						(0x166)
-#define NV_SOR_PLL4						(0x167)
-#else
+#define NV_SOR_PLL0_T18X					(0x163)
+#define NV_SOR_PLL1_T18X					(0x164)
+#define NV_SOR_PLL2_T18X					(0x165)
+#define NV_SOR_PLL3_T18X					(0x166)
+#define NV_SOR_PLL4_T18X					(0x167)
+
 #define NV_SOR_PLL0						(0x17)
 #define NV_SOR_PLL1						(0x18)
 #define NV_SOR_PLL2						(0x19)
 #define NV_SOR_PLL3						(0x1a)
 #define NV_SOR_PLL4						(-1)
-#endif
 
 #define NV_SOR_PLL0_ICHPMP_SHFIT				(24)
 #define NV_SOR_PLL0_ICHPMP_DEFAULT_MASK				(0xf << 24)
@@ -817,11 +815,8 @@
 #define NV_SOR_DP_MN_N_VAL_SHIFT				(0)
 #define NV_SOR_DP_MN_N_VAL_DEFAULT_MASK				(0xffffff)
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-#define NV_SOR_DP_PADCTL(i)					(0x168 + (i))
-#else
+#define NV_SOR_DP_PADCTL_T18X(i)				(0x168 + (i))
 #define NV_SOR_DP_PADCTL(i)					(0x5c + (i))
-#endif
 
 #define NV_SOR_DP_PADCTL_SPARE_SHIFT				(25)
 #define NV_SOR_DP_PADCTL_SPARE_DEFAULT_MASK			(0x7f << 25)
@@ -992,7 +987,7 @@
 
 #define NV_SOR_DP_INT_ENABLE			0x171
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
+/* Specific to Nvdisplay */
 #define NV_SOR_FPGA_HDMI_HEAD_SEL				(0x173)
 #define NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD0_MODE_FIELD		(1 << 0)
 #define NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD0_MODE_HDMI		(0 << 0)
@@ -1008,7 +1003,7 @@
 #define NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD2_OUT_EN_ENABLE	(1 << 5)
 
 #define NV_SOR_FPGA_DISPCLK_HEAD_SEL				(0x174)
-#endif
+/* Nvdisplay specific registers end here */
 
 #define NV_SOR_HDMI_ACR_CTRL			0xb1
 #define NV_SOR_HDMI_ACR_0320_SUBPACK_LOW	0xb2

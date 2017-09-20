@@ -231,6 +231,8 @@ static inline u32 nv_sor_head_state0(u32 i)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_head_state0_t19x(i);
+	else if (tegra_dc_is_t18x())
+		return NV_HEAD_STATE0_T18X(i);
 	else
 		return NV_HEAD_STATE0(i);
 }
@@ -239,6 +241,8 @@ static inline u32 nv_sor_head_state1(u32 i)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_head_state1_t19x(i);
+	else if (tegra_dc_is_t18x())
+		return NV_HEAD_STATE1_T18X(i);
 	else
 		return NV_HEAD_STATE1(i);
 }
@@ -247,6 +251,8 @@ static inline u32 nv_sor_head_state2(u32 i)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_head_state2_t19x(i);
+	else if (tegra_dc_is_t18x())
+		return NV_HEAD_STATE2_T18X(i);
 	else
 		return NV_HEAD_STATE2(i);
 }
@@ -255,6 +261,8 @@ static inline u32 nv_sor_head_state3(u32 i)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_head_state3_t19x(i);
+	else if (tegra_dc_is_t18x())
+		return NV_HEAD_STATE3_T18X(i);
 	else
 		return NV_HEAD_STATE3(i);
 }
@@ -263,6 +271,8 @@ static inline u32 nv_sor_head_state4(u32 i)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_head_state4_t19x(i);
+	else if (tegra_dc_is_t18x())
+		return NV_HEAD_STATE4_T18X(i);
 	else
 		return NV_HEAD_STATE4(i);
 }
@@ -271,6 +281,8 @@ static inline u32 nv_sor_head_state5(u32 i)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_head_state5_t19x(i);
+	else if (tegra_dc_is_t18x())
+		return NV_HEAD_STATE5_T18X(i);
 	else
 		return NV_HEAD_STATE5(i);
 }
@@ -279,6 +291,8 @@ static inline u32 nv_sor_pll0(void)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_pll0_t19x();
+	else if (tegra_dc_is_t18x())
+		return NV_SOR_PLL0_T18X;
 	else
 		return NV_SOR_PLL0;
 }
@@ -287,6 +301,8 @@ static inline u32 nv_sor_pll1(void)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_pll1_t19x();
+	else if (tegra_dc_is_t18x())
+		return NV_SOR_PLL1_T18X;
 	else
 		return NV_SOR_PLL1;
 }
@@ -295,6 +311,8 @@ static inline u32 nv_sor_pll2(void)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_pll2_t19x();
+	else if (tegra_dc_is_t18x())
+		return NV_SOR_PLL2_T18X;
 	else
 		return NV_SOR_PLL2;
 }
@@ -303,6 +321,8 @@ static inline u32 nv_sor_pll3(void)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_pll3_t19x();
+	else if (tegra_dc_is_t18x())
+		return NV_SOR_PLL3_T18X;
 	else
 		return NV_SOR_PLL3;
 }
@@ -311,6 +331,8 @@ static inline u32 nv_sor_pll4(void)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_pll4_t19x();
+	else if (tegra_dc_is_t18x())
+		return NV_SOR_PLL4_T18X;
 	else
 		return NV_SOR_PLL4;
 }
@@ -319,6 +341,8 @@ static inline u32 nv_sor_dp_padctl(u32 i)
 {
 	if (tegra_dc_is_t19x())
 		return nv_sor_dp_padctl_t19x(i);
+	else if (tegra_dc_is_t18x())
+		return NV_SOR_DP_PADCTL_T18X(i);
 	else
 		return NV_SOR_DP_PADCTL(i);
 }

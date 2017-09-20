@@ -6586,12 +6586,22 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 					 ctxsw_prog_main_image_patch_count_o(),
 					 ch_ctx->patch_ctx.data_count);
 				if (ctxheader->gpu_va) {
+					/*
+					 * Main context can be gr_ctx or pm_ctx.
+					 * CPU access for relevant ctx is taken
+					 * care of in the calling function
+					 * __gr_gk20a_exec_ctx_ops. Need to take
+					 * care of cpu access to ctxheader here.
+					 */
+					if (nvgpu_mem_begin(g, ctxheader))
+						return -ENOMEM;
 					nvgpu_mem_wr(g, ctxheader,
 						ctxsw_prog_main_image_patch_adr_lo_o(),
 						vaddr_lo);
 					nvgpu_mem_wr(g, ctxheader,
 						ctxsw_prog_main_image_patch_adr_hi_o(),
 						vaddr_hi);
+					 nvgpu_mem_end(g, ctxheader);
 				} else {
 					nvgpu_mem_wr(g, mem,
 						ctxsw_prog_main_image_patch_adr_lo_o(),

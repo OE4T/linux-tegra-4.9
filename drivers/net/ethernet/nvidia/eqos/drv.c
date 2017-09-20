@@ -3347,7 +3347,6 @@ static int eqos_handle_prv_ts_ioctl(struct eqos_prv_data *pdata,
 		break;
 
 	default:
-		ret = -EINVAL;
 		pr_err("eqos ioctl: Unsupported clockid\n");
 	}
 

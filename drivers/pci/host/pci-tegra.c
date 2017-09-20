@@ -2639,10 +2639,18 @@ static int tegra_pcie_scale_voltage(struct tegra_pcie *pcie)
 	}
 
 	if (sd->dvfs_mselect) {
+		struct clk *mselect_clk;
+
 		active_lanes = 0;
 		dev_dbg(pcie->dev, "mselect_clk is set @ %u\n",
 			sd->dvfs_tbl[active_lanes][is_gen2].afi_clk);
-		err = clk_set_rate(clk_get_sys("tegra_pcie", "mselect"),
+		mselect_clk = devm_clk_get(pcie->dev, "mselect");
+		if (IS_ERR(mselect_clk)) {
+			dev_err(pcie->dev, "mselect clk_get failed: %ld\n",
+				PTR_ERR(mselect_clk));
+			return PTR_ERR(mselect_clk);
+		}
+		err = clk_set_rate(mselect_clk,
 				   sd->dvfs_tbl[active_lanes][is_gen2].afi_clk);
 		if (err) {
 			dev_err(pcie->dev,

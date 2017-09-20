@@ -290,6 +290,14 @@ static inline u32 falcon_falcon_cpuctl_startcpu_f(u32 v)
 {
 	return (v & 0x1) << 1;
 }
+static inline u32 falcon_falcon_cpuctl_sreset_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 falcon_falcon_cpuctl_hreset_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
 static inline u32 falcon_falcon_cpuctl_halt_intr_f(u32 v)
 {
 	return (v & 0x1) << 4;
@@ -301,6 +309,10 @@ static inline u32 falcon_falcon_cpuctl_halt_intr_m(void)
 static inline u32 falcon_falcon_cpuctl_halt_intr_v(u32 r)
 {
 	return (r >> 4) & 0x1;
+}
+static inline u32 falcon_falcon_cpuctl_stopped_m(void)
+{
+	return 0x1 << 5;
 }
 static inline u32 falcon_falcon_cpuctl_cpuctl_alias_en_f(u32 v)
 {
@@ -390,18 +402,6 @@ static inline u32 falcon_falcon_hwcfg_dmem_size_v(u32 r)
 {
 	return (r >> 9) & 0x1ff;
 }
-static inline u32 falcon_falcon_hwcfg1_r(void)
-{
-	return 0x0000012c;
-}
-static inline u32 falcon_falcon_hwcfg1_core_rev_v(u32 r)
-{
-	return (r >> 0) & 0xf;
-}
-static inline u32 falcon_falcon_hwcfg1_security_model_v(u32 r)
-{
-	return (r >> 4) & 0x3;
-}
 static inline u32 falcon_falcon_dmatrfbase_r(void)
 {
 	return 0x00000110;
@@ -437,6 +437,42 @@ static inline u32 falcon_falcon_dmatrfcmd_ctxdma_f(u32 v)
 static inline u32 falcon_falcon_dmatrffboffs_r(void)
 {
 	return 0x0000011c;
+}
+static inline u32 falcon_falcon_imctl_debug_r(void)
+{
+	return 0x0000015c;
+}
+static inline u32 falcon_falcon_imctl_debug_addr_blk_f(u32 v)
+{
+	return (v & 0xffffff) << 0;
+}
+static inline u32 falcon_falcon_imctl_debug_cmd_f(u32 v)
+{
+	return (v & 0x7) << 24;
+}
+static inline u32 falcon_falcon_imstat_r(void)
+{
+	return 0x00000144;
+}
+static inline u32 falcon_falcon_traceidx_r(void)
+{
+	return 0x00000148;
+}
+static inline u32 falcon_falcon_traceidx_maxidx_v(u32 r)
+{
+	return (r >> 16) & 0xff;
+}
+static inline u32 falcon_falcon_traceidx_idx_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 falcon_falcon_tracepc_r(void)
+{
+	return 0x0000014c;
+}
+static inline u32 falcon_falcon_tracepc_pc_v(u32 r)
+{
+	return (r >> 0) & 0xffffff;
 }
 static inline u32 falcon_falcon_exterraddr_r(void)
 {

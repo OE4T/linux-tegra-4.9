@@ -440,7 +440,8 @@ static void eqos_adjust_link(struct net_device *dev)
 		/* recalibrate once we disable tristate*/
 		hw_if->pad_calibrate(pdata);
 	}
-	msleep(3000);
+
+
 	DBGPR_MDIO("<--eqos_adjust_link\n");
 }
 

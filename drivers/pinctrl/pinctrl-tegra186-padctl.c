@@ -2459,6 +2459,7 @@ static void tegra_xusb_phy_mbox_work(struct work_struct *work)
 	struct tegra_xusb_mbox_msg *msg = &padctl->mbox_req;
 	struct tegra_xusb_mbox_msg resp;
 	u32 ports;
+	int ret = 0;
 
 	dev_dbg(padctl->dev, "mailbox command %d\n", msg->cmd);
 	resp.cmd = 0;
@@ -2477,8 +2478,11 @@ static void tegra_xusb_phy_mbox_work(struct work_struct *work)
 		break;
 	}
 
-	if (resp.cmd)
-		mbox_send_message(padctl->mbox_chan, &resp);
+	if (resp.cmd) {
+		ret = mbox_send_message(padctl->mbox_chan, &resp);
+		if (ret < 0)
+			dev_err(padctl->dev, "mbox_send_message failed\n");
+	}
 }
 
 static bool is_phy_mbox_message(u32 cmd)

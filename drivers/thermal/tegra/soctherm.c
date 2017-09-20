@@ -556,13 +556,15 @@ static int throttrip_program(struct device *dev,
 			     struct soctherm_throt_cfg *stc,
 			     int trip_temp)
 {
-	struct tegra_soctherm *ts = dev_get_drvdata(dev);
+	struct tegra_soctherm *ts;
 	int temp, cpu_throt, gpu_throt;
 	unsigned int throt;
 	u32 r, reg_off;
 
 	if (!dev || !sg || !stc || !stc->init)
 		return -EINVAL;
+
+	ts = dev_get_drvdata(dev);
 
 	temp = enforce_temp_range(dev, trip_temp) / ts->soc->thresh_grain;
 

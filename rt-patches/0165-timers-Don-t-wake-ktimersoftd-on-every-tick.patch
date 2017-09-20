@@ -1,7 +1,7 @@
-From 3746b4b43ea2aee496b87b5974eee9147b82ee86 Mon Sep 17 00:00:00 2001
+From 3d7311a415c93baacd0bdef93bd13cadb290f174 Mon Sep 17 00:00:00 2001
 From: Haris Okanovic <haris.okanovic@ni.com>
 Date: Fri, 3 Feb 2017 17:26:44 +0100
-Subject: [PATCH 165/332] timers: Don't wake ktimersoftd on every tick
+Subject: [PATCH 165/336] timers: Don't wake ktimersoftd on every tick
 
 We recently upgraded from 4.1 to 4.6 and noticed a minor latency
 regression caused by an additional thread wakeup (ktimersoftd) in

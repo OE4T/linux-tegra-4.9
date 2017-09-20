@@ -1,7 +1,7 @@
-From 6d587262936d7b514f48cd6286d26486f962c6cc Mon Sep 17 00:00:00 2001
+From d9582b6a5e2bf1eafcf6679692db4b07ab089abd Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Thu, 29 Sep 2011 12:24:30 -0500
-Subject: [PATCH 051/332] tracing: Account for preempt off in
+Subject: [PATCH 051/336] tracing: Account for preempt off in
  preempt_schedule()
 
 The preempt_schedule() uses the preempt_disable_notrace() version

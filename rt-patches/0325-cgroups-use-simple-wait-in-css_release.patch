@@ -1,7 +1,7 @@
-From d60e56ad48f0a46ef8ebb10912562a57e7c516e1 Mon Sep 17 00:00:00 2001
+From 83622527925e7c2fdc382c11874445f372c27c60 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 15:52:24 +0100
-Subject: [PATCH 325/332] cgroups: use simple wait in css_release()
+Subject: [PATCH 325/336] cgroups: use simple wait in css_release()
 
 To avoid:
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914

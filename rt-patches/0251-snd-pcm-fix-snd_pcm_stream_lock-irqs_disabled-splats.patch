@@ -1,7 +1,7 @@
-From d31203e47634f39ddb6c1cb337605560f0ab5a95 Mon Sep 17 00:00:00 2001
+From 2bfcd3f1d272f0e512e503459ef9a23a084551fb Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Wed, 18 Feb 2015 15:09:23 +0100
-Subject: [PATCH 251/332] snd/pcm: fix snd_pcm_stream_lock*() irqs_disabled()
+Subject: [PATCH 251/336] snd/pcm: fix snd_pcm_stream_lock*() irqs_disabled()
  splats
 
 Locking functions previously using read_lock_irq()/read_lock_irqsave() were

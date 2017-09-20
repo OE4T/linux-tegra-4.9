@@ -1,7 +1,7 @@
-From 7cb640cca9b6a8896ad35cd522e3a27263d7eefd Mon Sep 17 00:00:00 2001
+From de0b706975fbe739d7da6a7f85c696c2f1af44b7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 11:03:47 +0100
-Subject: [PATCH 310/332] x86: Support for lazy preemption
+Subject: [PATCH 310/336] x86: Support for lazy preemption
 
 Implement the x86 pieces for lazy preempt.
 
@@ -17,7 +17,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  7 files changed, 79 insertions(+), 3 deletions(-)
 
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 14c8248..f8a995c 100644
+index a9308cc..4806d9b 100644
 --- a/arch/x86/Kconfig
 +++ b/arch/x86/Kconfig
 @@ -17,6 +17,7 @@ config X86_64

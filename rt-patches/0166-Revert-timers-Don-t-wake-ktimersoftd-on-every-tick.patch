@@ -1,7 +1,7 @@
-From 6fc55f4a35070aa031e0f9dfedaa2d25bcdfee6f Mon Sep 17 00:00:00 2001
+From fa49e98e0f2c836fb8c952c952e80deb418e9bcb Mon Sep 17 00:00:00 2001
 From: Anna-Maria Gleixner <anna-maria@linutronix.de>
 Date: Fri, 26 May 2017 19:16:07 +0200
-Subject: [PATCH 166/332] Revert "timers: Don't wake ktimersoftd on every tick"
+Subject: [PATCH 166/336] Revert "timers: Don't wake ktimersoftd on every tick"
 
 This reverts commit 032f93cae150a ("timers: Don't wake ktimersoftd on
 every tick").

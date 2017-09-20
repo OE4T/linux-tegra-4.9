@@ -1,7 +1,7 @@
-From 763527fe1029fee4a6beda1b8983530dcebb24f9 Mon Sep 17 00:00:00 2001
+From c158ea1605cf9265a66c7de14b35c91c322a6ed2 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 17:19:44 +0100
-Subject: [PATCH 092/332] mm/workingset: Do not protect workingset_shadow_nodes
+Subject: [PATCH 092/336] mm/workingset: Do not protect workingset_shadow_nodes
  with irq off
 
 workingset_shadow_nodes is protected by local_irq_disable(). Some users
@@ -18,7 +18,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 29 insertions(+), 18 deletions(-)
 
 diff --git a/include/linux/swap.h b/include/linux/swap.h
-index 55ff559..eb11263 100644
+index c1111f9..e8d2c44 100644
 --- a/include/linux/swap.h
 +++ b/include/linux/swap.h
 @@ -11,6 +11,7 @@
@@ -29,7 +29,7 @@ index 55ff559..eb11263 100644
  #include <asm/page.h>
  
  struct notifier_block;
-@@ -247,7 +248,8 @@ struct swap_info_struct {
+@@ -265,7 +266,8 @@ struct swap_info_struct {
  void *workingset_eviction(struct address_space *mapping, struct page *page);
  bool workingset_refault(void *shadow);
  void workingset_activation(struct page *page);

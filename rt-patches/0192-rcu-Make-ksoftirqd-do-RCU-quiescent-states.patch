@@ -1,7 +1,7 @@
-From 3ad6ba993a9c562f7fb0b8a99f898715382fa973 Mon Sep 17 00:00:00 2001
+From 317c52f4b8c536e932efb88ec06be91ce3825be2 Mon Sep 17 00:00:00 2001
 From: "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
 Date: Wed, 5 Oct 2011 11:45:18 -0700
-Subject: [PATCH 192/332] rcu: Make ksoftirqd do RCU quiescent states
+Subject: [PATCH 192/336] rcu: Make ksoftirqd do RCU quiescent states
 
 Implementing RCU-bh in terms of RCU-preempt makes the system vulnerable
 to network-based denial-of-service attacks.  This patch therefore

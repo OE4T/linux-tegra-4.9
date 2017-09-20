@@ -1,7 +1,7 @@
-From 533a8013d3bc651110e3fa4a85d97897ed9bcd2e Mon Sep 17 00:00:00 2001
+From e1bc78a996e5e8c4eafb95b66f6a7cdeec1845f8 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Wed, 5 Jul 2017 13:15:02 -0400
-Subject: [PATCH 332/332] Linux 4.9.47-rt37 REBASE
+Subject: [PATCH 332/336] Linux 4.9.47-rt37 REBASE
 
 Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
 ---

@@ -1,7 +1,7 @@
-From 86259443ab7eb445ba19692ba6a8e39001b115e1 Mon Sep 17 00:00:00 2001
+From bb24c6b507694852db7907d9d6045e902f16188b Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
-Subject: [PATCH 019/332] sched/rtmutex/deadline: Fix a PI crash for deadline
+Subject: [PATCH 019/336] sched/rtmutex/deadline: Fix a PI crash for deadline
  tasks
 
 Upstream commit e96a7705e7d3fef96aec9b590c63b2f6f7d2ba22
@@ -98,10 +98,10 @@ index a30b172..60d0c47 100644
  extern void rt_mutex_adjust_pi(struct task_struct *p);
  static inline bool tsk_is_pi_blocked(struct task_struct *tsk)
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 50bf262..d6260cd 100644
+index ab7681e..7d87377 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -1418,6 +1418,7 @@ static void rt_mutex_init_task(struct task_struct *p)
+@@ -1421,6 +1421,7 @@ static void rt_mutex_init_task(struct task_struct *p)
  #ifdef CONFIG_RT_MUTEXES
  	p->pi_waiters = RB_ROOT;
  	p->pi_waiters_leftmost = NULL;

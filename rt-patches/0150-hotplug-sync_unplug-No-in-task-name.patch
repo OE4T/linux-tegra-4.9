@@ -1,7 +1,7 @@
-From 4af0acc2e5bbbd15750b32067e3a150988dc5017 Mon Sep 17 00:00:00 2001
+From d398c53c76b56c8b0ad76f17a433a64aeb7d4203 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Sun, 16 Oct 2011 18:56:43 +0800
-Subject: [PATCH 150/332] hotplug: sync_unplug: No " " in task name
+Subject: [PATCH 150/336] hotplug: sync_unplug: No " " in task name
 
 Otherwise the output will look a little odd.
 

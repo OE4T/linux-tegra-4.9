@@ -1,7 +1,7 @@
-From ed78831e56419379e8cc3b665ba560f0248b7ab5 Mon Sep 17 00:00:00 2001
+From 706cbbdd9e5ef87ce7b1570ad04e980d2f83734c Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 5 Jun 2016 08:11:13 +0200
-Subject: [PATCH 118/332] mm/memcontrol: mem_cgroup_migrate() - replace another
+Subject: [PATCH 118/336] mm/memcontrol: mem_cgroup_migrate() - replace another
  local_irq_disable() w. local_lock_irq()
 
 v4.6 grew a local_irq_disable() in mm/memcontrol.c::mem_cgroup_migrate().
@@ -14,10 +14,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/mm/memcontrol.c b/mm/memcontrol.c
-index 3daeee3..58d0329 100644
+index 26c2fed..a5d6301 100644
 --- a/mm/memcontrol.c
 +++ b/mm/memcontrol.c
-@@ -5659,10 +5659,10 @@ void mem_cgroup_migrate(struct page *oldpage, struct page *newpage)
+@@ -5721,10 +5721,10 @@ void mem_cgroup_migrate(struct page *oldpage, struct page *newpage)
  
  	commit_charge(newpage, memcg, false);
  

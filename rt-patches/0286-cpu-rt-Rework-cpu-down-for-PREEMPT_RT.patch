@@ -1,7 +1,7 @@
-From 1afbce16d68165c74e05cd7d8acc325aba5700ce Mon Sep 17 00:00:00 2001
+From 13bdcb7c7bc3bd013af47168af00697fd5a5cfde Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
-Subject: [PATCH 286/332] cpu/rt: Rework cpu down for PREEMPT_RT
+Subject: [PATCH 286/336] cpu/rt: Rework cpu down for PREEMPT_RT
 
 Bringing a CPU down is a pain with the PREEMPT_RT kernel because
 tasks can be preempted in many more places than in non-RT. In

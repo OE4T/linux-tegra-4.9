@@ -1,7 +1,7 @@
-From e6523415dbd1b180fe24ddb48b342c4309463ea5 Mon Sep 17 00:00:00 2001
+From fb40f6714db42ba9030a241b54e3094da565c82b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 27 Jun 2014 16:24:52 +0200
-Subject: [PATCH 330/332] workqueue: Prevent deadlock/stall on RT
+Subject: [PATCH 330/336] workqueue: Prevent deadlock/stall on RT
 
 Austin reported a XFS deadlock/stall on RT where scheduled work gets
 never exececuted and tasks are waiting for each other for ever.

@@ -1,7 +1,7 @@
-From 3fa95d1d41c84b554cb5462a3f7ddd110e4af368 Mon Sep 17 00:00:00 2001
+From 28bc6ebad343e5de64fae94812ba4faffdb9f3b0 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 15:39:05 +0100
-Subject: [PATCH 242/332] net: provide a way to delegate processing a softirq
+Subject: [PATCH 242/336] net: provide a way to delegate processing a softirq
  to ksoftirqd
 
 If the NET_RX uses up all of his budget it moves the following NAPI

@@ -1,7 +1,7 @@
-From 390e5b86add061f910fb784f5238dd15e28b18bf Mon Sep 17 00:00:00 2001
+From ef0f40bb84e82154d1178e6c47e9b49fcba9abae Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:51 -0500
-Subject: [PATCH 106/332] mm/swap: Convert to percpu locked
+Subject: [PATCH 106/336] mm/swap: Convert to percpu locked
 
 Replace global locks (get_cpu + local_irq_save) with "local_locks()".
 Currently there is one of for "rotate" and one for "swap".
@@ -16,10 +16,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  4 files changed, 29 insertions(+), 18 deletions(-)
 
 diff --git a/include/linux/swap.h b/include/linux/swap.h
-index eb11263..52bf547 100644
+index e8d2c44..b228818 100644
 --- a/include/linux/swap.h
 +++ b/include/linux/swap.h
-@@ -294,6 +294,7 @@ extern unsigned long nr_free_pagecache_pages(void);
+@@ -312,6 +312,7 @@ extern unsigned long nr_free_pagecache_pages(void);
  
  
  /* linux/mm/swap.c */
@@ -61,7 +61,7 @@ index 2e69418..efd32a8 100644
  
  		/*
 diff --git a/mm/swap.c b/mm/swap.c
-index 4dcf852..93840ec 100644
+index adea901..796f366 100644
 --- a/mm/swap.c
 +++ b/mm/swap.c
 @@ -32,6 +32,7 @@

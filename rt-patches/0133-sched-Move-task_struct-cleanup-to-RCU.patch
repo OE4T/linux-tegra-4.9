@@ -1,7 +1,7 @@
-From 5b665837368de9cc1acb5518698cffeaaf607309 Mon Sep 17 00:00:00 2001
+From e3f94bcb84b65d80e93926afba0e1e5d9e50079d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
-Subject: [PATCH 133/332] sched: Move task_struct cleanup to RCU
+Subject: [PATCH 133/336] sched: Move task_struct cleanup to RCU
 
 __put_task_struct() does quite some expensive work. We don't want to
 burden random tasks with that.
@@ -51,10 +51,10 @@ index ef8bebc..e24be4c 100644
  struct task_struct *task_rcu_dereference(struct task_struct **ptask);
  struct task_struct *try_get_task_struct(struct task_struct **ptask);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index bc1d86d..49141d7 100644
+index a7cf483..bb2ddfe 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -376,7 +376,9 @@ static inline void put_signal_struct(struct signal_struct *sig)
+@@ -377,7 +377,9 @@ static inline void put_signal_struct(struct signal_struct *sig)
  	if (atomic_dec_and_test(&sig->sigcnt))
  		free_signal_struct(sig);
  }
@@ -65,7 +65,7 @@ index bc1d86d..49141d7 100644
  void __put_task_struct(struct task_struct *tsk)
  {
  	WARN_ON(!tsk->exit_state);
-@@ -393,7 +395,18 @@ void __put_task_struct(struct task_struct *tsk)
+@@ -394,7 +396,18 @@ void __put_task_struct(struct task_struct *tsk)
  	if (!profile_handoff_task(tsk))
  		free_task(tsk);
  }

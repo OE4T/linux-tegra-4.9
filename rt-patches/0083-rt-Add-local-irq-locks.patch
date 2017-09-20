@@ -1,7 +1,7 @@
-From afaa9bd81fb568c3afd1d9fe96ad02bab801ce0b Mon Sep 17 00:00:00 2001
+From fe74b7d0905878dadb74cb0d0084b7db618aa6c4 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 20 Jun 2011 09:03:47 +0200
-Subject: [PATCH 083/332] rt: Add local irq locks
+Subject: [PATCH 083/336] rt: Add local irq locks
 
 Introduce locallock. For !RT this maps to preempt_disable()/
 local_irq_disable() so there is not much that changes. For RT this will

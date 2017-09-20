@@ -1,7 +1,7 @@
-From d5b12bd17b254003e7a9d4a2e0fed24a5ceb90cf Mon Sep 17 00:00:00 2001
+From a7bd6c918ac76a6233f96096296920c7147a8b90 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 8 Feb 2016 16:15:28 +0100
-Subject: [PATCH 292/332] rt/locking: Reenable migration accross schedule
+Subject: [PATCH 292/336] rt/locking: Reenable migration accross schedule
 
 We currently disable migration across lock acquisition. That includes the part
 where we block on the lock and schedule out. We cannot disable migration after

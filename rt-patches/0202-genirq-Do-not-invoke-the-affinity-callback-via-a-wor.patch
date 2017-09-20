@@ -1,7 +1,7 @@
-From 7bc2d0c6d4800b18cb034f652e8d44f25fbc7fbc Mon Sep 17 00:00:00 2001
+From 43f12a66bb01ee09a07b16d40da67c487689fd14 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 21 Aug 2013 17:48:46 +0200
-Subject: [PATCH 202/332] genirq: Do not invoke the affinity callback via a
+Subject: [PATCH 202/336] genirq: Do not invoke the affinity callback via a
  workqueue on RT
 
 Joe Korty reported, that __irq_set_affinity_locked() schedules a

@@ -1,7 +1,7 @@
-From fddea6aa30eddda82e4e49a8e29b3d0a1c0163a1 Mon Sep 17 00:00:00 2001
+From 484c66e99ccb9ffad5a9c7b2c8a5ccb1ff176204 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 6 Jun 2017 14:20:37 +0200
-Subject: [PATCH 138/332] sched: Prevent task state corruption by spurious lock
+Subject: [PATCH 138/336] sched: Prevent task state corruption by spurious lock
  wakeup
 
 Mathias and others reported GDB failures on RT.

@@ -1,7 +1,7 @@
-From 4f6d61a1cd54d05dd7f29e9921e08a4f27ba0e1c Mon Sep 17 00:00:00 2001
+From 15383b785afff4f6bd02e6d7ba1b784a7ff65a7d Mon Sep 17 00:00:00 2001
 From: Mikko Perttunen <mperttunen@nvidia.com>
 Date: Fri, 19 May 2017 10:48:54 +0300
-Subject: [PATCH 333/337] rwsem_rt: fix compilation error on -Werror
+Subject: [PATCH 333/336] rwsem_rt: fix compilation error on -Werror
 
 Comparison between signed and unsigned variables causes compilation
 error on some compilers when -Werror is enabled.

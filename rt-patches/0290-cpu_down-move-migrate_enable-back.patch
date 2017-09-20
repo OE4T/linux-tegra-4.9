@@ -1,7 +1,7 @@
-From 7a8181212e053dc096ecf58784736f5762bd34ee Mon Sep 17 00:00:00 2001
+From e4fa00e2fd81a1e4d23e34d206636ad874a28f4f Mon Sep 17 00:00:00 2001
 From: Tiejun Chen <tiejun.chen@windriver.com>
 Date: Thu, 7 Nov 2013 10:06:07 +0800
-Subject: [PATCH 290/332] cpu_down: move migrate_enable() back
+Subject: [PATCH 290/336] cpu_down: move migrate_enable() back
 
 Commit 08c1ab68, "hotplug-use-migrate-disable.patch", intends to
 use migrate_enable()/migrate_disable() to replace that combination
@@ -33,7 +33,7 @@ Signed-off-by: Tiejun Chen <tiejun.chen@windriver.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index d8dd4f3..1d1b2ecb 100644
+index d8dd4f3..1d1b2ec 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -1208,6 +1208,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,

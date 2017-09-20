@@ -1,7 +1,7 @@
-From 712dd7896ac64dabce936e369265144b737abdb9 Mon Sep 17 00:00:00 2001
+From a5e38b57c795f7183a98e70cd426a133911109b0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Jun 2011 19:47:03 +0200
-Subject: [PATCH 232/332] sched: Distangle worker accounting from rqlock
+Subject: [PATCH 232/336] sched: Distangle worker accounting from rqlock
 
 The worker accounting for cpu bound workers is plugged into the core
 scheduler code and the wakeup code. This is not a hard requirement and

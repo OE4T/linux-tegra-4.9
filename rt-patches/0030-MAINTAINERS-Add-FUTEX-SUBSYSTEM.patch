@@ -1,7 +1,7 @@
-From 44ca8a52c99d7be1a99e5f0c191028a997901aa4 Mon Sep 17 00:00:00 2001
+From 803532d7b9787212f27396dd24c42eccd4657808 Mon Sep 17 00:00:00 2001
 From: "Darren Hart (VMware)" <dvhart@infradead.org>
 Date: Fri, 14 Apr 2017 15:46:08 -0700
-Subject: [PATCH 030/332] MAINTAINERS: Add FUTEX SUBSYSTEM
+Subject: [PATCH 030/336] MAINTAINERS: Add FUTEX SUBSYSTEM
 
 Upstream commit 59cd42c29618c45cd3c56da43402b14f611888dd
 
@@ -23,7 +23,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 17 insertions(+)
 
 diff --git a/MAINTAINERS b/MAINTAINERS
-index 16b0a2e..2cc8b85 100644
+index a75d3bb..2c9324a 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
 @@ -5196,6 +5196,23 @@ F:	fs/fuse/

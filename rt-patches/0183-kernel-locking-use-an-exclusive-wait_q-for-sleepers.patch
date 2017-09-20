@@ -1,7 +1,7 @@
-From cf7f8d4237386107dda2d75d5250ec513aa95490 Mon Sep 17 00:00:00 2001
+From 86082e71e42a23856749f59df166d320da732309 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
-Subject: [PATCH 183/332] kernel/locking: use an exclusive wait_q for sleepers
+Subject: [PATCH 183/336] kernel/locking: use an exclusive wait_q for sleepers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -78,10 +78,10 @@ index 1417eef..2016a9b 100644
  #ifdef CONFIG_RT_MUTEXES
  	/* PI waiters blocked on a rt_mutex held by this task */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 6bd05d5..d275943 100644
+index 45227c3..1c4edaf 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -558,6 +558,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
+@@ -559,6 +559,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
  	tsk->splice_pipe = NULL;
  	tsk->task_frag.page = NULL;
  	tsk->wake_q.next = NULL;

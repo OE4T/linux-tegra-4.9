@@ -1,7 +1,7 @@
-From 64bee410373c2fe27f3f44b35b1bed8253d32b27 Mon Sep 17 00:00:00 2001
+From 035c1aadf1507bead99818c4696fb4704617f67f Mon Sep 17 00:00:00 2001
 From: Manikanta <mmaddireddy@nvidia.com>
-Date: Tue, 27 Jun 2017 01:16:30 +0530
-Subject: [PATCH 334/337] net: wireless: bcmdhd_pcie: fix warnings after apply
+Date: Tue, 27 Jun 2017 14:57:52 +0530
+Subject: [PATCH 335/336] net: wireless: bcmdhd: fix warnings after applying
  rt-patches
 
 Issue: Member type in struct completion is changed from
@@ -11,26 +11,26 @@ Fix: Use appropriate swait function call
 
 bug 200320017
 
-Change-Id: I384754b98b5d0f4592ffca50bd8d7c8562f175d4
+Change-Id: I8e93104f6ee6689e2199c888ec8677fd0466caaf
 Signed-off-by: Manikanta <mmaddireddy@nvidia.com>
 ---
- drivers/net/wireless/bcmdhd_pcie/dhd_pno.c | 4 ++--
+ drivers/net/wireless/bcmdhd/dhd_pno.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/net/wireless/bcmdhd_pcie/dhd_pno.c b/drivers/net/wireless/bcmdhd_pcie/dhd_pno.c
-index ff698fa..0edba98 100644
---- a/drivers/net/wireless/bcmdhd_pcie/dhd_pno.c
-+++ b/drivers/net/wireless/bcmdhd_pcie/dhd_pno.c
-@@ -3068,7 +3068,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
+diff --git a/drivers/net/wireless/bcmdhd/dhd_pno.c b/drivers/net/wireless/bcmdhd/dhd_pno.c
+index f85e873..be221c3 100644
+--- a/drivers/net/wireless/bcmdhd/dhd_pno.c
++++ b/drivers/net/wireless/bcmdhd/dhd_pno.c
+@@ -1550,7 +1550,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
+ 		_params->params_batch.get_batch.bytes_written = err;
  	}
  	mutex_unlock(&_pno_state->pno_mutex);
- exit_no_unlock:
 -	if (waitqueue_active(&_pno_state->get_batch_done.wait))
 +	if (swait_active(&_pno_state->get_batch_done.wait))
  		complete(&_pno_state->get_batch_done);
  	return err;
  }
-@@ -3820,7 +3820,7 @@ dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
+@@ -1996,7 +1996,7 @@ dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
  	{
  		struct dhd_pno_batch_params *params_batch;
  		params_batch = &_pno_state->pno_params_arr[INDEX_OF_BATCH_PARAMS].params_batch;

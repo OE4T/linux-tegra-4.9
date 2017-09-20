@@ -1,7 +1,7 @@
-From 02a906005183e2bca3b2e3bb1dbd0807a487c939 Mon Sep 17 00:00:00 2001
+From 5362deef6fc62a2e6868b7b0295ae0ead228e26e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 11:01:51 +0200
-Subject: [PATCH 148/332] stop_machine: Use raw spinlocks
+Subject: [PATCH 148/336] stop_machine: Use raw spinlocks
 
 Use raw-locks in stomp_machine() to allow locking in irq-off regions.
 

@@ -1,7 +1,7 @@
-From c543d9bb79872af850335074b44fe4e45c42ed62 Mon Sep 17 00:00:00 2001
+From 29386a65b98bd58ad8a48d89d2600ad98a88ceab Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 14 Dec 2011 01:03:49 +0100
-Subject: [PATCH 282/332] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
+Subject: [PATCH 282/336] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
 
 There are "valid" GFP_ATOMIC allocations such as
 
@@ -46,7 +46,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 935b5fb..14c8248 100644
+index 9bdc8ad..a9308cc 100644
 --- a/arch/x86/Kconfig
 +++ b/arch/x86/Kconfig
 @@ -900,7 +900,7 @@ config IOMMU_HELPER

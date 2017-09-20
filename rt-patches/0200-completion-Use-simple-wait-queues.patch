@@ -1,7 +1,7 @@
-From f6b8171b07ded7431ef692d76f2b101475e86f0d Mon Sep 17 00:00:00 2001
+From adf73bf54ad6a5e53c54023d43f2ab9813cdfd40 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
-Subject: [PATCH 200/332] completion: Use simple wait queues
+Subject: [PATCH 200/336] completion: Use simple wait queues
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the

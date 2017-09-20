@@ -1,7 +1,7 @@
-From ea5042816376ccaed59b186ef1b78d222a22b335 Mon Sep 17 00:00:00 2001
+From d3078aced8a40506a29c0d5a111a152eaa3e9406 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <sebastian@breakpoint.cc>
 Date: Mon, 28 Oct 2013 09:36:37 +0100
-Subject: [PATCH 184/332] rtmutex: Add RT aware ww locks
+Subject: [PATCH 184/336] rtmutex: Add RT aware ww locks
 
 lockdep says:
 | --------------------------------------------------------------------------

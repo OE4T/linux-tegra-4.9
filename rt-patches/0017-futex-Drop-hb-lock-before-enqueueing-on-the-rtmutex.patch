@@ -1,7 +1,7 @@
-From f0d54a22ed61a14b253104de7bc05d963aa8b713 Mon Sep 17 00:00:00 2001
+From 319b6c92bb0b3cecdf5b5b10edf9a7a967678fd9 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:36:00 +0100
-Subject: [PATCH 017/332] futex: Drop hb->lock before enqueueing on the rtmutex
+Subject: [PATCH 017/336] futex: Drop hb->lock before enqueueing on the rtmutex
 
 Upstream commit 56222b212e8edb1cf51f5dd73ff645809b082b40
 

@@ -1,7 +1,7 @@
-From e68cc455e319df3369ef324b2eb15452ed1b2ee3 Mon Sep 17 00:00:00 2001
+From 1eb7a48f07eb65045f18bb8f11a4be908ccf171c Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:10 +0100
-Subject: [PATCH 021/332] rtmutex: Clean up
+Subject: [PATCH 021/336] rtmutex: Clean up
 
 Upstream commit aa2bfe55366552cb7e93e8709d66e698d79ccc47
 

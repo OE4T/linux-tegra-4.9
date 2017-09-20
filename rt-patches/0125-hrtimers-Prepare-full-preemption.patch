@@ -1,7 +1,7 @@
-From ffb9361c285286a6b6f74042f2404288ce361bb6 Mon Sep 17 00:00:00 2001
+From aae5c86b40364985e93ad5809111115ee5eeafaf Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
-Subject: [PATCH 125/332] hrtimers: Prepare full preemption
+Subject: [PATCH 125/336] hrtimers: Prepare full preemption
 
 Make cancellation of a running callback in softirq context safe
 against preemption.

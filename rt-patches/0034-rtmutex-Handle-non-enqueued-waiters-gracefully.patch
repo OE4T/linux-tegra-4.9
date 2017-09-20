@@ -1,7 +1,7 @@
-From eeb2e44837b7378475db906d2df7836acc6c9b3c Mon Sep 17 00:00:00 2001
+From 28431dc1da6c892c3f92f6797d3fbf3277bb4ec2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 6 Nov 2015 18:51:03 +0100
-Subject: [PATCH 034/332] rtmutex: Handle non enqueued waiters gracefully
+Subject: [PATCH 034/336] rtmutex: Handle non enqueued waiters gracefully
 
 Yimin debugged that in case of a PI wakeup in progress when
 rt_mutex_start_proxy_lock() calls task_blocks_on_rt_mutex() the latter

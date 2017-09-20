@@ -1,7 +1,7 @@
-From 6b2cf8c16aa7292b13ee3af27d6c04d653576176 Mon Sep 17 00:00:00 2001
+From 37713c3371c15b534a5df762e07369f7b7415985 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
-Subject: [PATCH 224/332] block: blk-mq: Use swait
+Subject: [PATCH 224/336] block: blk-mq: Use swait
 
 | BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
 | in_atomic(): 1, irqs_disabled(): 0, pid: 255, name: kworker/u257:6
@@ -76,19 +76,19 @@ index 86e54c3..537f905 100644
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
 diff --git a/block/blk-mq.c b/block/blk-mq.c
-index c7bc5e6..48c9652 100644
+index 2cbfe49..21298c3 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
 @@ -72,7 +72,7 @@ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
  
- static void blk_mq_freeze_queue_wait(struct request_queue *q)
+ void blk_mq_freeze_queue_wait(struct request_queue *q)
  {
 -	wait_event(q->mq_freeze_wq, percpu_ref_is_zero(&q->q_usage_counter));
 +	swait_event(q->mq_freeze_wq, percpu_ref_is_zero(&q->q_usage_counter));
  }
+ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_wait);
  
- /*
-@@ -110,7 +110,7 @@ void blk_mq_unfreeze_queue(struct request_queue *q)
+@@ -120,7 +120,7 @@ void blk_mq_unfreeze_queue(struct request_queue *q)
  	WARN_ON_ONCE(freeze_depth < 0);
  	if (!freeze_depth) {
  		percpu_ref_reinit(&q->q_usage_counter);
@@ -97,7 +97,7 @@ index c7bc5e6..48c9652 100644
  	}
  }
  EXPORT_SYMBOL_GPL(blk_mq_unfreeze_queue);
-@@ -129,7 +129,7 @@ void blk_mq_wake_waiters(struct request_queue *q)
+@@ -139,7 +139,7 @@ void blk_mq_wake_waiters(struct request_queue *q)
  	 * dying, we need to ensure that processes currently waiting on
  	 * the queue are notified as well.
  	 */

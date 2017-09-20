@@ -1,7 +1,7 @@
-From 7ca20d61310e1cfb69b62c12204ed75198da7cdd Mon Sep 17 00:00:00 2001
+From 4d37ec8c697cf5a4eb0494b97a450e01842837c9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 4 Feb 2016 16:38:10 +0100
-Subject: [PATCH 303/332] kernel/perf: mark perf_cpu_context's timer as irqsafe
+Subject: [PATCH 303/336] kernel/perf: mark perf_cpu_context's timer as irqsafe
 
 Otherwise we get a WARN_ON() backtrace and some events are reported as
 "not counted".

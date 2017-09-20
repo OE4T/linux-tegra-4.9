@@ -1,7 +1,7 @@
-From 262b7e953a6414036cc354b0ad72e72426e0e7ab Mon Sep 17 00:00:00 2001
+From 81b4038d552f1bd322373e2a3aa61b9f5a8ef733 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 16 Feb 2015 18:49:10 +0100
-Subject: [PATCH 201/332] fs/aio: simple simple work
+Subject: [PATCH 201/336] fs/aio: simple simple work
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:768
 |in_atomic(): 1, irqs_disabled(): 0, pid: 26, name: rcuos/2
@@ -29,7 +29,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 17 insertions(+), 7 deletions(-)
 
 diff --git a/fs/aio.c b/fs/aio.c
-index 0fcb49a..211ebc2 100644
+index a2e12e5..e3907c4 100644
 --- a/fs/aio.c
 +++ b/fs/aio.c
 @@ -40,6 +40,7 @@
@@ -57,7 +57,7 @@ index 0fcb49a..211ebc2 100644
  	aio_mnt = kern_mount(&aio_fs);
  	if (IS_ERR(aio_mnt))
  		panic("Failed to create aio fs mount.");
-@@ -581,9 +583,9 @@ static int kiocb_cancel(struct aio_kiocb *kiocb)
+@@ -589,9 +591,9 @@ static int kiocb_cancel(struct aio_kiocb *kiocb)
  	return cancel(&kiocb->common);
  }
  
@@ -69,7 +69,7 @@ index 0fcb49a..211ebc2 100644
  
  	pr_debug("freeing %p\n", ctx);
  
-@@ -602,8 +604,8 @@ static void free_ioctx_reqs(struct percpu_ref *ref)
+@@ -610,8 +612,8 @@ static void free_ioctx_reqs(struct percpu_ref *ref)
  	if (ctx->rq_wait && atomic_dec_and_test(&ctx->rq_wait->count))
  		complete(&ctx->rq_wait->comp);
  
@@ -80,7 +80,7 @@ index 0fcb49a..211ebc2 100644
  }
  
  /*
-@@ -611,9 +613,9 @@ static void free_ioctx_reqs(struct percpu_ref *ref)
+@@ -619,9 +621,9 @@ static void free_ioctx_reqs(struct percpu_ref *ref)
   * and ctx->users has dropped to 0, so we know no more kiocbs can be submitted -
   * now it's safe to cancel any that need to be.
   */
@@ -92,7 +92,7 @@ index 0fcb49a..211ebc2 100644
  	struct aio_kiocb *req;
  
  	spin_lock_irq(&ctx->ctx_lock);
-@@ -632,6 +634,14 @@ static void free_ioctx_users(struct percpu_ref *ref)
+@@ -640,6 +642,14 @@ static void free_ioctx_users(struct percpu_ref *ref)
  	percpu_ref_put(&ctx->reqs);
  }
  

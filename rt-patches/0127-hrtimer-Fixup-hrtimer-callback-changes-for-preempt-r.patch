@@ -1,7 +1,7 @@
-From b7a17045269cb862d196fc03137d70b8de28dd86 Mon Sep 17 00:00:00 2001
+From 5c188e98461223159f434d246a75474a6ad48952 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
-Subject: [PATCH 127/332] hrtimer: Fixup hrtimer callback changes for
+Subject: [PATCH 127/336] hrtimer: Fixup hrtimer callback changes for
  preempt-rt
 
 In preempt-rt we can not call the callbacks which take sleeping locks

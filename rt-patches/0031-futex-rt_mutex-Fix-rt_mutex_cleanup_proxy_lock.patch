@@ -1,7 +1,7 @@
-From 964355c976f50282998c06fe9450b21b2c463474 Mon Sep 17 00:00:00 2001
+From 58ddf40dd68c77642ad8701c10a7e4c8498f1c48 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 22 May 2017 13:04:50 -0700
-Subject: [PATCH 031/332] futex,rt_mutex: Fix rt_mutex_cleanup_proxy_lock()
+Subject: [PATCH 031/336] futex,rt_mutex: Fix rt_mutex_cleanup_proxy_lock()
 
 Markus reported that the glibc/nptl/tst-robustpi8 test was failing after
 commit:

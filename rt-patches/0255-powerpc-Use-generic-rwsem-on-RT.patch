@@ -1,7 +1,7 @@
-From 2f6a8e2b02ec6bbc8fa92d0afd6878f620c9559a Mon Sep 17 00:00:00 2001
+From b1821c2a4ee92d7a745779eb9eb253bcfce15c6d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 255/332] powerpc: Use generic rwsem on RT
+Subject: [PATCH 255/336] powerpc: Use generic rwsem on RT
 
 Use generic code which uses rtmutex
 

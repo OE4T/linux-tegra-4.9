@@ -1,7 +1,7 @@
-From 3b80efdaa77176272d93aea129db3a1fd99fe329 Mon Sep 17 00:00:00 2001
+From caaa1856b81ef2883e1576d0301fbef7737992e6 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 27 Sep 2012 11:11:46 +0200
-Subject: [PATCH 115/332] mm: page_alloc: Use local_lock_on() instead of plain
+Subject: [PATCH 115/336] mm: page_alloc: Use local_lock_on() instead of plain
  spinlock
 
 The plain spinlock while sufficient does not update the local_lock

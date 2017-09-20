@@ -1,7 +1,7 @@
-From ba3840a4a5cdf29d144199834c9ac4f25464e378 Mon Sep 17 00:00:00 2001
+From 0b03a58863d2c336bee290bba112a37037b0b52e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 15:10:08 +0100
-Subject: [PATCH 220/332] block/mq: don't complete requests via IPI
+Subject: [PATCH 220/336] block/mq: don't complete requests via IPI
 
 The IPI runs in hardirq context and there are sleeping locks. This patch
 moves the completion into a workqueue.
@@ -29,10 +29,10 @@ index 6b0f070..86e54c3 100644
  	rq->q = q;
  	rq->__sector = (sector_t) -1;
 diff --git a/block/blk-mq.c b/block/blk-mq.c
-index 1be0901..c7bc5e6 100644
+index baf5763..2cbfe49 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
-@@ -177,6 +177,9 @@ static void blk_mq_rq_ctx_init(struct request_queue *q, struct blk_mq_ctx *ctx,
+@@ -187,6 +187,9 @@ static void blk_mq_rq_ctx_init(struct request_queue *q, struct blk_mq_ctx *ctx,
  	rq->resid_len = 0;
  	rq->sense = NULL;
  
@@ -42,7 +42,7 @@ index 1be0901..c7bc5e6 100644
  	INIT_LIST_HEAD(&rq->timeout_list);
  	rq->timeout = 0;
  
-@@ -345,6 +348,17 @@ void blk_mq_end_request(struct request *rq, int error)
+@@ -355,6 +358,17 @@ void blk_mq_end_request(struct request *rq, int error)
  }
  EXPORT_SYMBOL(blk_mq_end_request);
  
@@ -60,7 +60,7 @@ index 1be0901..c7bc5e6 100644
  static void __blk_mq_complete_request_remote(void *data)
  {
  	struct request *rq = data;
-@@ -352,6 +366,8 @@ static void __blk_mq_complete_request_remote(void *data)
+@@ -362,6 +376,8 @@ static void __blk_mq_complete_request_remote(void *data)
  	rq->q->softirq_done_fn(rq);
  }
  
@@ -69,7 +69,7 @@ index 1be0901..c7bc5e6 100644
  static void blk_mq_ipi_complete_request(struct request *rq)
  {
  	struct blk_mq_ctx *ctx = rq->mq_ctx;
-@@ -368,10 +384,14 @@ static void blk_mq_ipi_complete_request(struct request *rq)
+@@ -378,10 +394,14 @@ static void blk_mq_ipi_complete_request(struct request *rq)
  		shared = cpus_share_cache(cpu, ctx->cpu);
  
  	if (cpu != ctx->cpu && !shared && cpu_online(ctx->cpu)) {
@@ -85,7 +85,7 @@ index 1be0901..c7bc5e6 100644
  		rq->q->softirq_done_fn(rq);
  	}
 diff --git a/include/linux/blk-mq.h b/include/linux/blk-mq.h
-index 535ab2e..cfc2468 100644
+index 00b4043..4498f82 100644
 --- a/include/linux/blk-mq.h
 +++ b/include/linux/blk-mq.h
 @@ -209,7 +209,7 @@ static inline u16 blk_mq_unique_tag_to_tag(u32 unique_tag)

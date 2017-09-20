@@ -1,7 +1,7 @@
-From 1aa3045b64a08b8214c0cd4191982e9a8a989221 Mon Sep 17 00:00:00 2001
+From 5f476d493e0a965518d3099515cacd5d2500db13 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Wed, 14 Dec 2011 13:05:54 +0100
-Subject: [PATCH 196/332] rt: Improve the serial console PASS_LIMIT
+Subject: [PATCH 196/336] rt: Improve the serial console PASS_LIMIT
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

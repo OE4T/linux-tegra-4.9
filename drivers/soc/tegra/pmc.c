@@ -2101,8 +2101,12 @@ static int tegra_pmc_parse_bootrom_cmd(struct device *dev,
 			     &bcommands->command_retry_count);
 	of_property_read_u32(np, "nvidia,delay-between-commands-us",
 			     &bcommands->delay_between_commands);
-	of_property_read_u32(np, "nvidia,wait-before-start-bus-clear-us",
-			     &bcommands->wait_before_bus_clear);
+
+	ret = of_property_read_u32(np, "nvidia,wait-before-start-bus-clear-us",
+				   &bcommands->wait_before_bus_clear);
+	if (ret < 0)
+		of_property_read_u32(np, "nvidia,wait-start-bus-clear-us",
+				     &bcommands->wait_before_bus_clear);
 
 	nblock = 0;
 	for_each_available_child_of_node(np, child) {
@@ -3188,7 +3192,10 @@ static int tegra_pmc_parse_dt(struct tegra_pmc *pmc, struct device_node *np)
 	pmc->core_off_time = value;
 
 	pmc->corereq_high = of_property_read_bool(np,
-				"nvidia,core-power-req-active-high");
+				"nvidia,core-pwr-req-active-high");
+	if (!pmc->corereq_high)
+		pmc->corereq_high = of_property_read_bool(np,
+					"nvidia,core-power-req-active-high");
 
 	pmc->sysclkreq_high = of_property_read_bool(np,
 				"nvidia,sys-clock-req-active-high");

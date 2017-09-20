@@ -38,6 +38,7 @@ Optional properties:
   1 (LP1): CPU voltage off and DRAM in self-refresh
   2 (LP2): CPU voltage off
 - nvidia,core-power-req-active-high : Boolean, core power request active-high
+- nvidia,core-pwr-req-active-high : Same as nvidia,core-power-req-active-high.
 - nvidia,sys-clock-req-active-high : Boolean, system clock request active-high
 - nvidia,combined-power-req : Boolean, combined power request for CPU & Core
 - nvidia,cpu-pwr-good-en : Boolean, CPU power good signal (from PMIC to PMC)

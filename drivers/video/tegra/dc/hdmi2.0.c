@@ -288,7 +288,7 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	if (!mode->pixclock)
 		return false;
 
-	if (mode->xres > 4096)
+	if (mode->xres > 4096 || mode->yres > 2160)
 		return false;
 
 #if defined(CONFIG_TEGRA_YUV_BYPASS_MODE_FILTER)

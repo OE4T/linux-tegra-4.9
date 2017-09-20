@@ -135,5 +135,6 @@ config MTK_SMI
 	  clocks for each local arbiter.
 
 source "drivers/memory/samsung/Kconfig"
+source "drivers/memory/tegra/Kconfig"
 
 endif

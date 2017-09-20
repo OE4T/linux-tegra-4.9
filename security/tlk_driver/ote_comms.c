@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2012-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -464,7 +464,7 @@ EXPORT_SYMBOL(te_authenticate_vrr);
  * Takes UUID of the TA and size as argument
  * Returns Session ID if success or ERR when failure
  */
-int te_open_trusted_session(u32 *ta_uuid, u32 uuid_size,
+int te_open_trusted_session_tlk(u32 *ta_uuid, u32 uuid_size,
 				u32 *session_id)
 {
 	struct te_request *request;
@@ -518,14 +518,14 @@ error:
 	mutex_unlock(&smc_lock);
 	return OTE_ERROR_GENERIC;
 }
-EXPORT_SYMBOL(te_open_trusted_session);
+EXPORT_SYMBOL(te_open_trusted_session_tlk);
 
 /*
  * Command to close session opened with the trusted app.
  * This API should only be called from the kernel space.
  * Takes session Id and UUID of the TA as arguments
  */
-void te_close_trusted_session(u32 session_id, u32 *ta_uuid,
+void te_close_trusted_session_tlk(u32 session_id, u32 *ta_uuid,
 				u32 uuid_size)
 {
 	struct te_request *request;
@@ -567,7 +567,7 @@ error:
 		te_put_used_cmd_desc(&tlk_dev, cmd_desc);
 	mutex_unlock(&smc_lock);
 }
-EXPORT_SYMBOL(te_close_trusted_session);
+EXPORT_SYMBOL(te_close_trusted_session_tlk);
 
 /*
  * Command to launch operations from the linux kernel to
@@ -578,7 +578,7 @@ EXPORT_SYMBOL(te_close_trusted_session);
  * TA should be passed as arguments
  * Returns SUCCESS or FAILURE
  */
-int te_launch_trusted_oper(u8 *buf_ptr, u32 buf_len, u32 session_id,
+int te_launch_trusted_oper_tlk(u8 *buf_ptr, u32 buf_len, u32 session_id,
 			u32 *ta_uuid, u32 ta_cmd, u32 uuid_size)
 {
 	u32 i;
@@ -653,4 +653,4 @@ error:
 	mutex_unlock(&smc_lock);
 	return OTE_ERROR_GENERIC;
 }
-EXPORT_SYMBOL(te_launch_trusted_oper);
+EXPORT_SYMBOL(te_launch_trusted_oper_tlk);

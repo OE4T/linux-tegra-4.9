@@ -85,22 +85,6 @@ static struct kobject *common_bw_kobj;
 /* Global bw info shared across all heads */
 static struct nvdisp_isoclient_bw_info ihub_bw_info;
 
-static u32 tegra_nvdisp_get_max_pending_bw(struct tegra_dc *dc)
-{
-	struct tegra_nvdisp_imp_settings *settings;
-	u32 max_pending_bw = 0;
-
-	list_for_each_entry(settings, &nvdisp_imp_settings_queue, imp_node) {
-		u32 pending_bw =
-			settings->global_entries.total_iso_bw_with_catchup_kBps;
-
-		if (pending_bw > max_pending_bw)
-			max_pending_bw = pending_bw;
-	}
-
-	return max_pending_bw;
-}
-
 static int tegra_nvdisp_set_latency_allowance(u32 bw, u32 emc_freq)
 {
 	struct dc_to_la_params disp_params;
@@ -747,7 +731,7 @@ static ssize_t core_bw_settings_store(struct kobject *kobj,
 	 * such, make sure there are no pending IMP requests before proceeding
 	 * in order to avoid conflicting requirements.
 	 */
-	if (!list_empty(&nvdisp_imp_settings_queue)) {
+	if (tegra_nvdisp_get_current_imp_settings()) {
 		pr_err("%s: pending IMP request(s), try again\n", __func__);
 		res = -EAGAIN;
 		goto core_bw_store_unlock;

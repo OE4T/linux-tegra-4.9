@@ -17,10 +17,11 @@
 #ifndef __DRIVER_VIDEO_TEGRA_DC_NVDISP_H
 #define __DRIVER_VIDEO_TEGRA_DC_NVDISP_H
 
+#include <soc/tegra/bpmp_abi.h>
+#include <soc/tegra/tegra_bpmp.h>
+
 extern struct mutex tegra_nvdisp_lock;
 extern struct clk *hubclk;
-
-extern struct list_head nvdisp_imp_settings_queue;
 
 #define NVDISP_TEGRA_POLL_TIMEOUT_MS	50
 
@@ -30,6 +31,22 @@ struct nvdisp_request_wq {
 	wait_queue_head_t	wq;
 	atomic_t		nr_pending;
 	int			timeout_per_entry;
+};
+
+struct nvdisp_common_imp_caps {
+	u32 total_mempool_size_bytes;
+};
+
+struct nvdisp_common_imp_data {
+	struct list_head imp_settings_queue;
+
+	struct nvdisp_request_wq common_channel_reservation_wq;
+	struct nvdisp_request_wq common_channel_promotion_wq;
+
+	struct mrq_emc_dvfs_latency_response emc_dvfs_table;
+
+	struct nvdisp_common_imp_caps caps;
+	bool caps_initialized;
 };
 
 void tegra_nvdisp_set_background_color(struct tegra_dc *dc);
@@ -42,6 +59,7 @@ int tegra_nvdisp_set_win_csc(struct tegra_dc_win *win,
 			struct tegra_dc_nvdisp_win_csc *nvdisp_win_csc);
 
 void tegra_nvdisp_set_common_channel_pending(struct tegra_dc *dc);
+struct tegra_nvdisp_imp_settings *tegra_nvdisp_get_current_imp_settings(void);
 void tegra_nvdisp_program_imp_settings(struct tegra_dc *dc);
 
 int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc, u32 new_iso_bw,
@@ -50,6 +68,7 @@ int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc, u32 new_iso_bw,
 	u32 new_total_bw, u32 new_emc, u32 new_hubclk);
 void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc);
 void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc);
+u32 tegra_nvdisp_get_max_pending_bw(struct tegra_dc *dc);
 void tegra_nvdisp_get_max_bw_cfg(struct nvdisp_bandwidth_config *max_cfg);
 
 int __attribute__((weak)) tegra_nvdisp_set_control_t19x(struct tegra_dc *dc);

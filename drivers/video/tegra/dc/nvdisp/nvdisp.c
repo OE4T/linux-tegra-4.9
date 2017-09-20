@@ -28,9 +28,6 @@
 #include <linux/debugfs.h>
 #include <linux/ktime.h>
 
-#include <soc/tegra/bpmp_abi.h>
-#include <soc/tegra/tegra_bpmp.h>
-
 #include "dc.h"
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
@@ -43,13 +40,7 @@
 
 DEFINE_MUTEX(tegra_nvdisp_lock);
 
-LIST_HEAD(nvdisp_imp_settings_queue);
-
-static struct nvdisp_request_wq nvdisp_common_channel_reservation_wq;
-static struct nvdisp_request_wq nvdisp_common_channel_promotion_wq;
-
-/* EMC DVFS table that will be exported to userspace IMP */
-static struct mrq_emc_dvfs_latency_response nvdisp_emc_dvfs_table;
+static struct nvdisp_common_imp_data g_imp;
 
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025
@@ -1029,49 +1020,6 @@ int tegra_nvdisp_test_and_set_compclk(unsigned long rate, struct tegra_dc *dc)
 	return 0;
 }
 
-static void _tegra_nvdisp_init_imp_wqs(void)
-{
-	int num_heads = tegra_dc_get_numof_dispheads();
-	int timeout;
-
-	/*
-	 * Initialize the promotion workqueue:
-	 * - Use 1 HZ to represent the worst-case time for a pending ACT_REQ
-	 *   to promote.
-	 * - The "nr_pending" field will be ignored for this workqueue, but go
-	 *   ahead and initialize it to 0.
-	 */
-	init_waitqueue_head(&nvdisp_common_channel_promotion_wq.wq);
-	atomic_set(&nvdisp_common_channel_promotion_wq.nr_pending, 0);
-	nvdisp_common_channel_promotion_wq.timeout_per_entry = HZ;
-
-	/* Initialize the reservation workqueue. */
-	init_waitqueue_head(&nvdisp_common_channel_reservation_wq.wq);
-	atomic_set(&nvdisp_common_channel_reservation_wq.nr_pending, 0);
-
-	/*
-	 * We can quickly calculate the worst-case time for an IMP flip by doing
-	 * the following:
-	 * 1) Use 1 HZ as the base value. This roughly corresponds to an 1 fps
-	 *    refresh rate.
-	 * 2) For a single IMP flip on head X, we may need to promote BOTH
-	 *    decreasing and increasing mempool requests for all the other
-	 *    heads. This is why there's a factor of 2. Keep using the
-	 *    worst-case promotion time of 1 HZ.
-	 */
-	timeout = HZ;
-	timeout += max(num_heads - 1, 0) * 2 * HZ;
-
-	/*
-	 * The COMMON channel barrier can be held during head enable/disable as
-	 * well. Each of these operations should complete within a few
-	 * microseconds, but we still need to consider them to approximate our
-	 * upper bound.
-	 */
-	timeout = max(timeout, NVDISP_HEAD_ENABLE_DISABLE_TIMEOUT_HZ);
-	nvdisp_common_channel_reservation_wq.timeout_per_entry = timeout;
-}
-
 static int _tegra_nvdisp_init_pd_table(struct tegra_dc *dc)
 {
 	struct tegra_dc_pd_table *pd_table = tegra_dc_get_disp_pd_table();
@@ -1135,6 +1083,95 @@ static void _tegra_nvdisp_destroy_pd_table(struct tegra_dc *dc)
 	}
 }
 
+static void tegra_nvdisp_init_imp_wqs(void)
+{
+	struct nvdisp_request_wq *reservation_wq;
+	struct nvdisp_request_wq *promotion_wq;
+	int num_heads = tegra_dc_get_numof_dispheads();
+	int timeout;
+
+	reservation_wq = &g_imp.common_channel_reservation_wq;
+	promotion_wq = &g_imp.common_channel_promotion_wq;
+
+	/*
+	 * Initialize the promotion workqueue:
+	 * - Use 1 HZ to represent the worst-case time for a pending ACT_REQ
+	 *   to promote.
+	 * - The "nr_pending" field will be ignored for this workqueue, but go
+	 *   ahead and initialize it to 0.
+	 */
+	init_waitqueue_head(&promotion_wq->wq);
+	atomic_set(&promotion_wq->nr_pending, 0);
+	promotion_wq->timeout_per_entry = HZ;
+
+	/* Initialize the reservation workqueue. */
+	init_waitqueue_head(&reservation_wq->wq);
+	atomic_set(&reservation_wq->nr_pending, 0);
+
+	/*
+	 * We can quickly calculate the worst-case time for an IMP flip by doing
+	 * the following:
+	 * 1) Use 1 HZ as the base value. This roughly corresponds to an 1 fps
+	 *    refresh rate.
+	 * 2) For a single IMP flip on head X, we may need to promote BOTH
+	 *    decreasing and increasing mempool requests for all the other
+	 *    heads. This is why there's a factor of 2. Keep using the
+	 *    worst-case promotion time of 1 HZ.
+	 */
+	timeout = HZ;
+	timeout += max(num_heads - 1, 0) * 2 * HZ;
+
+	/*
+	 * The COMMON channel barrier can be held during head enable/disable as
+	 * well. Each of these operations should complete within a few
+	 * microseconds, but we still need to consider them to approximate our
+	 * upper bound.
+	 */
+	timeout = max(timeout, NVDISP_HEAD_ENABLE_DISABLE_TIMEOUT_HZ);
+	reservation_wq->timeout_per_entry = timeout;
+}
+
+static void tegra_nvdisp_init_common_imp_data(void)
+{
+	INIT_LIST_HEAD(&g_imp.imp_settings_queue);
+
+	tegra_nvdisp_init_imp_wqs();
+
+	tegra_bpmp_send_receive(MRQ_EMC_DVFS_LATENCY, NULL, 0,
+			&g_imp.emc_dvfs_table,
+			sizeof(g_imp.emc_dvfs_table));
+}
+
+static u32 _tegra_nvdisp_get_total_mempool_size(struct tegra_dc *dc)
+{
+#define MEMPOOL_WIDTH	(32)
+
+	u32 mempool_entries, bytes_per_entry;
+	u32 ihub_capa;
+
+	ihub_capa = tegra_dc_readl(dc, nvdisp_ihub_capa_r());
+	mempool_entries = nvdisp_ihub_capa_mempool_entries_v(ihub_capa);
+	bytes_per_entry =
+		(MEMPOOL_WIDTH << nvdisp_ihub_capa_mempool_width_v(ihub_capa));
+
+	return mempool_entries * bytes_per_entry;
+
+#undef MEMPOOL_WIDTH
+}
+
+static void tegra_nvdisp_init_common_imp_caps(struct tegra_dc *dc)
+{
+	mutex_lock(&tegra_nvdisp_lock);
+
+	if (unlikely(!g_imp.caps_initialized)) {
+		g_imp.caps.total_mempool_size_bytes =
+				_tegra_nvdisp_get_total_mempool_size(dc);
+		g_imp.caps_initialized = true;
+	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
+}
+
 static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 {
 	int ret = 0;
@@ -1184,10 +1221,6 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	if (ret)
 		goto INIT_PD_ERR;
 
-	/* Fill in the EMC DVFS table */
-	tegra_bpmp_send_receive(MRQ_EMC_DVFS_LATENCY, NULL, 0,
-			&nvdisp_emc_dvfs_table, sizeof(nvdisp_emc_dvfs_table));
-
 #ifdef CONFIG_TEGRA_ISOMGR
 	/*
 	 * Register the IHUB bw client. The bwmgr id that we pass in
@@ -1203,7 +1236,7 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	}
 #endif
 
-	_tegra_nvdisp_init_imp_wqs();
+	tegra_nvdisp_init_common_imp_data();
 	tegra_nvdisp_crc_region_init();
 
 	dc->valid_windows = 0;
@@ -2058,6 +2091,13 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 
 	enable_irq(dc->irq);
 
+	/*
+	 * These IMP caps only need to be initialized once. However, we're
+	 * putting this function call here during head enable in order to avoid
+	 * separate powergate/rst handling during init.
+	 */
+	tegra_nvdisp_init_common_imp_caps(dc);
+
 	res = tegra_nvdisp_head_init(dc);
 	res |= tegra_nvdisp_postcomp_init(dc);
 	res |= tegra_nvdisp_rg_init(dc);
@@ -2772,13 +2812,14 @@ v_taps_free_and_ret:
 static int tegra_nvdisp_get_emc_dvfs_user_info(
 					struct tegra_dc_ext_imp_user_info *info)
 {
+	struct mrq_emc_dvfs_latency_response *dvfs_table;
 	struct tegra_dc_ext_imp_emc_dvfs_pair *pairs;
 	u32 num_pairs = 0;
 	size_t i;
 	int ret = 0;
 
-	num_pairs = min(nvdisp_emc_dvfs_table.num_pairs,
-						info->emc_dvfs_pairs_requested);
+	dvfs_table = &g_imp.emc_dvfs_table;
+	num_pairs = min(dvfs_table->num_pairs, info->emc_dvfs_pairs_requested);
 	pairs = kzalloc(num_pairs * sizeof(*pairs), GFP_KERNEL);
 	if (!pairs) {
 		ret = -ENOMEM;
@@ -2787,9 +2828,9 @@ static int tegra_nvdisp_get_emc_dvfs_user_info(
 
 	for (i = 0; i < num_pairs; i++) {
 		/* DRAM to EMC */
-		pairs[i].freq = nvdisp_emc_dvfs_table.pairs[i].freq /
+		pairs[i].freq = dvfs_table->pairs[i].freq /
 					bwmgr_get_emc_to_dram_freq_factor();
-		pairs[i].latency = nvdisp_emc_dvfs_table.pairs[i].latency;
+		pairs[i].latency = dvfs_table->pairs[i].latency;
 	}
 
 	if (copy_to_user(info->emc_dvfs_pairs, pairs,
@@ -2823,12 +2864,27 @@ int tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 }
 EXPORT_SYMBOL(tegra_nvdisp_get_imp_user_info);
 
-static struct tegra_nvdisp_imp_settings
-				*tegra_nvdisp_get_current_imp_settings(void)
+struct tegra_nvdisp_imp_settings *tegra_nvdisp_get_current_imp_settings(void)
 {
-	return list_first_entry_or_null(&nvdisp_imp_settings_queue,
+	return list_first_entry_or_null(&g_imp.imp_settings_queue,
 					struct tegra_nvdisp_imp_settings,
 					imp_node);
+}
+
+u32 tegra_nvdisp_get_max_pending_bw(struct tegra_dc *dc)
+{
+	struct tegra_nvdisp_imp_settings *settings;
+	u32 max_pending_bw = 0;
+
+	list_for_each_entry(settings, &g_imp.imp_settings_queue, imp_node) {
+		u32 pending_bw =
+			settings->global_entries.total_iso_bw_with_catchup_kBps;
+
+		if (pending_bw > max_pending_bw)
+			max_pending_bw = pending_bw;
+	}
+
+	return max_pending_bw;
 }
 
 static inline bool tegra_nvdisp_common_channel_is_clean(struct tegra_dc *dc)
@@ -2887,7 +2943,10 @@ static void tegra_nvdisp_activate_common_channel(struct tegra_dc *dc)
 
 static void tegra_nvdisp_wait_for_common_channel_to_promote(struct tegra_dc *dc)
 {
+	struct nvdisp_request_wq *promotion_wq;
 	int timeout = 0;
+
+	promotion_wq = &g_imp.common_channel_promotion_wq;
 
 	mutex_lock(&tegra_nvdisp_lock);
 
@@ -2900,8 +2959,8 @@ static void tegra_nvdisp_wait_for_common_channel_to_promote(struct tegra_dc *dc)
 	 * Use an exclusive wait since only one HEAD can program COMMON channel
 	 * state at any given time.
 	 */
-	timeout = nvdisp_common_channel_promotion_wq.timeout_per_entry;
-	___wait_event(nvdisp_common_channel_promotion_wq.wq,
+	timeout = promotion_wq->timeout_per_entry;
+	___wait_event(promotion_wq->wq,
 		___wait_cond_timeout(tegra_nvdisp_common_channel_is_clean(dc)),
 		TASK_UNINTERRUPTIBLE, WQ_FLAG_EXCLUSIVE, timeout,
 		mutex_unlock(&tegra_nvdisp_lock);
@@ -2921,7 +2980,7 @@ static void tegra_nvdisp_notify_common_channel_promoted(struct tegra_dc *dc)
 	/* Wake up one exclusive waiter. There should only be one. */
 	dc->common_channel_pending = false;
 	dc->common_channel_intr_enabled = false;
-	wake_up_nr(&nvdisp_common_channel_promotion_wq.wq, 1);
+	wake_up_nr(&g_imp.common_channel_promotion_wq.wq, 1);
 }
 
 static bool tegra_nvdisp_common_channel_is_free(void)
@@ -2939,15 +2998,17 @@ static bool tegra_nvdisp_common_channel_is_free(void)
 
 int tegra_dc_reserve_common_channel(struct tegra_dc *dc)
 {
+	struct nvdisp_request_wq *reservation_wq;
 	int cur_nr_pending = 0;
 	int timeout = 0;
 	int ret = 0;
 
+	reservation_wq = &g_imp.common_channel_reservation_wq;
+
 	mutex_lock(&tegra_nvdisp_lock);
 
-	cur_nr_pending =
-		atomic_read(&nvdisp_common_channel_reservation_wq.nr_pending);
-	atomic_inc(&nvdisp_common_channel_reservation_wq.nr_pending);
+	cur_nr_pending = atomic_read(&reservation_wq->nr_pending);
+	atomic_inc(&reservation_wq->nr_pending);
 
 	if (tegra_nvdisp_common_channel_is_free()) {
 		dc->common_channel_reserved = true;
@@ -2960,7 +3021,7 @@ int tegra_dc_reserve_common_channel(struct tegra_dc *dc)
 	 * Scale the per-entry timeout value by the number of outstanding
 	 * requests that need to be serviced before this one.
 	 */
-	timeout = nvdisp_common_channel_reservation_wq.timeout_per_entry;
+	timeout = reservation_wq->timeout_per_entry;
 	timeout *= max(cur_nr_pending, 1);
 
 	/*
@@ -2968,7 +3029,7 @@ int tegra_dc_reserve_common_channel(struct tegra_dc *dc)
 	 * This ensures that the list of pending waiters is always aligned with
 	 * the global queue of IMP settings.
 	 */
-	ret = ___wait_event(nvdisp_common_channel_reservation_wq.wq,
+	ret = ___wait_event(reservation_wq->wq,
 		___wait_cond_timeout(tegra_nvdisp_common_channel_is_free()),
 		TASK_UNINTERRUPTIBLE, WQ_FLAG_EXCLUSIVE, timeout,
 		mutex_unlock(&tegra_nvdisp_lock);
@@ -2979,7 +3040,7 @@ int tegra_dc_reserve_common_channel(struct tegra_dc *dc)
 	 * If we timed out, manually restore "nr_pending" and return an error.
 	 */
 	if (!tegra_nvdisp_common_channel_is_free()) {
-		atomic_dec(&nvdisp_common_channel_reservation_wq.nr_pending);
+		atomic_dec(&reservation_wq->nr_pending);
 		mutex_unlock(&tegra_nvdisp_lock);
 
 		dev_err(&dc->ndev->dev,
@@ -3000,6 +3061,10 @@ EXPORT_SYMBOL(tegra_dc_reserve_common_channel);
 
 void tegra_dc_release_common_channel(struct tegra_dc *dc)
 {
+	struct nvdisp_request_wq *reservation_wq;
+
+	reservation_wq = &g_imp.common_channel_reservation_wq;
+
 	mutex_lock(&tegra_nvdisp_lock);
 
 	if (!dc->common_channel_reserved) {
@@ -3009,8 +3074,8 @@ void tegra_dc_release_common_channel(struct tegra_dc *dc)
 
 	/* Wake up the next exclusive waiter. */
 	dc->common_channel_reserved = false;
-	atomic_dec(&nvdisp_common_channel_reservation_wq.nr_pending);
-	wake_up_nr(&nvdisp_common_channel_reservation_wq.wq, 1);
+	atomic_dec(&reservation_wq->nr_pending);
+	wake_up_nr(&reservation_wq->wq, 1);
 
 	mutex_unlock(&tegra_nvdisp_lock);
 }
@@ -3444,7 +3509,7 @@ int tegra_dc_queue_imp_propose(struct tegra_dc *dc,
 	nvdisp_settings->owner_ctrl_num = dc->ctrl_num;
 
 	INIT_LIST_HEAD(&nvdisp_settings->imp_node);
-	list_add_tail(&nvdisp_settings->imp_node, &nvdisp_imp_settings_queue);
+	list_add_tail(&nvdisp_settings->imp_node, &g_imp.imp_settings_queue);
 
 	mutex_unlock(&tegra_nvdisp_lock);
 
@@ -3462,7 +3527,7 @@ static void tegra_nvdisp_flush_imp_queue(void)
 
 	list_for_each_entry_safe(cur,
 				next,
-				&nvdisp_imp_settings_queue,
+				&g_imp.imp_settings_queue,
 				imp_node) {
 		list_del(&cur->imp_node);
 		dealloc_imp_settings(cur);
@@ -3489,7 +3554,7 @@ int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
 	 */
 	list_for_each_entry_safe(cur,
 				next,
-				&nvdisp_imp_settings_queue,
+				&g_imp.imp_settings_queue,
 				imp_node) {
 		if (cur->owner_ctrl_num != dc->ctrl_num ||
 			cur->session_id != session_id) {
@@ -4061,8 +4126,7 @@ void tegra_dc_reset_imp_state(void)
 
 	/* Add the default settings to the IMP queue. */
 	INIT_LIST_HEAD(&reset_settings->imp_node);
-	list_add_tail(&reset_settings->imp_node,
-					&nvdisp_imp_settings_queue);
+	list_add_tail(&reset_settings->imp_node, &g_imp.imp_settings_queue);
 
 	/* Follow the same basic flow as an actual IMP flip. */
 	if (tegra_nvdisp_negotiate_reserved_bw(master_dc,

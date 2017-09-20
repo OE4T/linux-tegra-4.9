@@ -389,15 +389,6 @@ static int tegra_mc_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	if (IS_ENABLED(CONFIG_TEGRA_IOMMU_SMMU)) {
-		mc->smmu = tegra_smmu_probe(&pdev->dev, mc->soc->smmu, mc);
-		if (IS_ERR(mc->smmu)) {
-			dev_err(&pdev->dev, "failed to probe SMMU: %ld\n",
-				PTR_ERR(mc->smmu));
-			return PTR_ERR(mc->smmu);
-		}
-	}
-
 	mc->irq = platform_get_irq(pdev, 0);
 	if (mc->irq < 0) {
 		dev_err(&pdev->dev, "interrupt not specified\n");

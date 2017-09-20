@@ -50,4 +50,6 @@ void vgpu_gv11b_init_fifo_ops(struct gpu_ops *gops)
 
 	gops->fifo.init_fifo_setup_hw = vgpu_gv11b_init_fifo_setup_hw;
 	gops->fifo.free_channel_ctx_header = vgpu_gv11b_free_subctx_header;
+	/* TODO: implement it for CE fault */
+	gops->fifo.tsg_verify_status_faulted = NULL;
 }

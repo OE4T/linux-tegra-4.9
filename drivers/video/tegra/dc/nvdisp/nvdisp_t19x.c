@@ -209,17 +209,15 @@ inline bool tegra_nvdisp_is_lpf_required_t19x(struct tegra_dc *dc)
 		return false;
 
 	return ((yuv_flag & FB_VMODE_Y422) ||
-		tegra_dc_is_yuv420_8bpc(yuv_flag));
+		tegra_dc_is_yuv420_8bpc(&dc->mode));
 }
 
 inline void tegra_nvdisp_set_rg_unstall_t19x(struct tegra_dc *dc)
 {
-	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
-
 	if (dc->yuv_bypass)
 		return;
 
-	if (tegra_dc_is_yuv420_8bpc(yuv_flag))
+	if (tegra_dc_is_yuv420_8bpc(&dc->mode))
 		tegra_dc_writel(dc,
 			tegra_dc_readl(dc, nvdisp_t19x_rg_status_r()) |
 			nvdisp_t19x_rg_status_unstall_force_even_set_enable_f(),

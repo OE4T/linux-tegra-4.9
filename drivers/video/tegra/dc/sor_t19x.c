@@ -114,10 +114,8 @@ inline void tegra_sor_program_fpga_clk_mux_t19x(
 	u32 reg_val = 0;
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
-		int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
-
 		reg_val |= NV_SOR_FPGA_CLK_SEL_FPGA_PCLK_MUX_SEL_HDMI;
-		if (tegra_dc_is_yuv420_8bpc(yuv_flag))
+		if (tegra_dc_is_yuv420_8bpc(&dc->mode))
 			reg_val |= NV_SOR_FPGA_CLK_SEL_FPGA_HDMI420_SEL_ENABLE;
 	} else if (dc->out->type == TEGRA_DC_OUT_DP ||
 			dc->out->type == TEGRA_DC_OUT_FAKE_DP) {
@@ -137,11 +135,11 @@ inline void tegra_sor_set_clk_rate_t19x(struct tegra_dc_sor_data *sor)
 
 	if (!dc->yuv_bypass) {
 		if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
-			(yuv_flag & (FB_VMODE_Y444 | FB_VMODE_Y36))) {
+			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
 			/* 3:2 pclk:orclk */
 			rate = rate >> 1;
 			rate = rate * 3;
-		} else if (tegra_dc_is_yuv420_8bpc(yuv_flag)) {
+		} else if (tegra_dc_is_yuv420_8bpc(&dc->mode)) {
 			/* 2:1 pclk:orclk */
 			rate = rate >> 1;
 		}
@@ -157,7 +155,7 @@ u32 tegra_sor_get_pixel_depth_t19x(struct tegra_dc *dc)
 	u32 pixel_depth = 0;
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI && !yuv_bypass_mode) {
-		if (tegra_dc_is_yuv420_8bpc(yuv_flag)) {
+		if (tegra_dc_is_yuv420_8bpc(&dc->mode)) {
 			pixel_depth = NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_12_420 |
 				NV_SOR_STATE1_ASY_CHROMA_V_DECIMATE_ENABLE;
 		} else if (yuv_flag & FB_VMODE_Y422) {
@@ -193,12 +191,10 @@ u32 tegra_sor_get_pixel_depth_t19x(struct tegra_dc *dc)
 inline u32 tegra_sor_get_adjusted_hblank_t19x(struct tegra_dc *dc,
 					u32 hblank_end)
 {
-	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
-
 	if (dc->yuv_bypass || dc->out->type != TEGRA_DC_OUT_HDMI)
 		return hblank_end;
 
-	if (tegra_dc_is_yuv420_8bpc(yuv_flag))
+	if (tegra_dc_is_yuv420_8bpc(&dc->mode))
 		hblank_end = hblank_end / 2;
 
 	return hblank_end;

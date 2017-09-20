@@ -73,7 +73,6 @@ static int dp_instance;
 
 static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp);
 static void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp);
-static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp);
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
 					bool enable);
 __maybe_unused
@@ -122,497 +121,6 @@ static inline void tegra_dp_hpd_suspend(struct tegra_dc_dp_data *dp)
 	tegra_hpd_suspend(&dp->hpd_data);
 }
 
-static inline unsigned long
-tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
-				u32 reg, u32 mask, u32 exp_val,
-				u32 poll_interval_us, u32 timeout_ms)
-{
-	unsigned long	timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
-	u32		reg_val	   = 0;
-
-	if (tegra_platform_is_vdk())
-		return 0;
-
-	do {
-		usleep_range(poll_interval_us, poll_interval_us << 1);
-		reg_val = tegra_dpaux_readl(dp->dpaux, reg);
-	} while (((reg_val & mask) != exp_val) &&
-		time_after(timeout_jf, jiffies));
-
-	if ((reg_val & mask) == exp_val)
-		return 0;	/* success */
-	dev_dbg(&dp->dc->ndev->dev,
-		"dpaux_poll_register 0x%x: timeout\n", reg);
-	return jiffies - timeout_jf + 1;
-}
-
-static inline int tegra_dpaux_wait_transaction(struct tegra_dc_dp_data *dp)
-{
-	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
-	int err = 0;
-
-	if (likely(tegra_platform_is_silicon()) ||
-		unlikely(tegra_platform_is_fpga())) {
-		reinit_completion(&dp->aux_tx);
-		tegra_dpaux_int_toggle(dpaux, DPAUX_INTR_EN_AUX_TX_DONE, true);
-		if (tegra_dpaux_readl(dpaux, DPAUX_DP_AUXCTL) &
-				DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING) {
-			if (!wait_for_completion_timeout(&dp->aux_tx,
-				msecs_to_jiffies(DP_AUX_TIMEOUT_MS)))
-				err = -EBUSY;
-		}
-		tegra_dpaux_int_toggle(dpaux, DPAUX_INTR_EN_AUX_TX_DONE, false);
-	}
-
-	if (err)
-		dev_err(&dp->dc->ndev->dev, "dp: aux tx timeout\n");
-	return err;
-}
-
-
-/*
- * To config DPAUX Transaction Control
- * o Inputs
- *  - dp    : pointer to DP information
- *  - cmd   : transaction command DPAUX_DP_AUXCTL_CMD_xxx
- *  - addr  : transaction address (20 bit sink device AUX reg addr space)
- *  - p_wrdt: pointer to the write data buffer / NULL:no write data
- *  - size  : 1-16: number of byte to read/write
- *            0   : address only transaction
- * o Outputs
- *  - return: error status; 0:no error / !0:error
- */
-static int tegra_dp_aux_tx_config(struct tegra_dc_dp_data *dp,
-				u32 cmd, u32 addr, u8 *p_wrdt, u32 size)
-{
-	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
-	int i;
-	u32  *data = (u32 *)p_wrdt;
-
-	if (DP_AUX_MAX_BYTES < size)
-		goto fail;
-
-	switch (cmd) {
-	case DPAUX_DP_AUXCTL_CMD_I2CWR:
-	case DPAUX_DP_AUXCTL_CMD_I2CRD:
-	case DPAUX_DP_AUXCTL_CMD_I2CREQWSTAT:
-	case DPAUX_DP_AUXCTL_CMD_MOTWR:
-	case DPAUX_DP_AUXCTL_CMD_MOTRD:
-	case DPAUX_DP_AUXCTL_CMD_MOTREQWSTAT:
-	case DPAUX_DP_AUXCTL_CMD_AUXWR:
-	case DPAUX_DP_AUXCTL_CMD_AUXRD:
-		tegra_dpaux_write_field(dpaux, DPAUX_DP_AUXCTL,
-					DPAUX_DP_AUXCTL_CMD_MASK, cmd);
-		break;
-	default:
-		goto fail;
-	};
-	tegra_dpaux_write_field(dpaux, DPAUX_DP_AUXCTL,
-				DPAUX_DP_AUXCTL_CMDLEN_MASK,
-				size ? size - 1 : 0);
-	tegra_dpaux_write_field(dpaux, DPAUX_DP_AUXCTL,
-			DPAUX_DP_AUXCTL_ADDRESS_ONLY_MASK,
-			(0 == size) ? DPAUX_DP_AUXCTL_ADDRESS_ONLY_TRUE :
-				DPAUX_DP_AUXCTL_ADDRESS_ONLY_FALSE);
-
-	tegra_dpaux_writel(dpaux, DPAUX_DP_AUXADDR, addr);
-	for (i = 0; size && data && i < (DP_AUX_MAX_BYTES / 4); ++i)
-		tegra_dpaux_writel(dpaux, DPAUX_DP_AUXDATA_WRITE_W(i), data[i]);
-
-	return 0;
-fail:
-	return -EINVAL;
-}
-
-int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
-	u32 cmd, u32 addr, u8 *data, u32 *size, u32 *aux_stat)
-{
-	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
-	int err = 0;
-	u32 timeout_retries = DP_AUX_TIMEOUT_MAX_TRIES;
-	u32 defer_retries	= DP_AUX_DEFER_MAX_TRIES;
-
-	if (!dpaux) {
-		dev_err(&dp->dc->ndev->dev,
-			"%s: dpaux must be non-NULL\n", __func__);
-		return -ENODEV;
-	}
-
-	WARN_ON(!mutex_is_locked(&dp->dpaux_lock));
-
-	switch (cmd) {
-	case DPAUX_DP_AUXCTL_CMD_I2CWR:
-	case DPAUX_DP_AUXCTL_CMD_MOTWR:
-	case DPAUX_DP_AUXCTL_CMD_AUXWR:
-		break;
-	default:
-		dev_err(&dp->dc->ndev->dev,
-			"dp: invalid aux write cmd: 0x%x\n", cmd);
-		return -EINVAL;
-	};
-
-	err = tegra_dp_aux_tx_config(dp, cmd, addr, data, *size);
-	if (err < 0) {
-		dev_err(&dp->dc->ndev->dev, "dp: incorrect aux tx params\n");
-		return err;
-	}
-
-	if (tegra_platform_is_silicon()) {
-		*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
-		if (!(*aux_stat & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
-			dev_err(&dp->dc->ndev->dev, "dp: HPD is not detected\n");
-			return -EFAULT;
-		}
-	}
-
-	while (1) {
-		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
-		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
-			usleep_range(DP_DPCP_RETRY_SLEEP_NS,
-				DP_DPCP_RETRY_SLEEP_NS << 1);
-
-		tegra_dpaux_write_field(dpaux, DPAUX_DP_AUXCTL,
-					DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,
-					DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING);
-
-		if (tegra_dpaux_wait_transaction(dp))
-			dev_err(&dp->dc->ndev->dev,
-				"dp: aux write transaction timeout\n");
-
-		*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
-
-		if ((*aux_stat & DPAUX_DP_AUXSTAT_TIMEOUT_ERROR_PENDING) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_RX_ERROR_PENDING) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_SINKSTAT_ERROR_PENDING) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_NO_STOP_ERROR_PENDING) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_NACK) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_I2CNACK)) {
-			if (timeout_retries-- > 0) {
-				dev_info(&dp->dc->ndev->dev,
-					"dp: aux write retry (0x%x) -- %d\n",
-					*aux_stat, timeout_retries);
-				/* clear the error bits */
-				tegra_dpaux_writel(dpaux, DPAUX_DP_AUXSTAT,
-					*aux_stat);
-				continue;
-			} else {
-				dev_err(&dp->dc->ndev->dev,
-					"dp: aux write got error (0x%x)\n",
-					*aux_stat);
-				return -EFAULT;
-			}
-		}
-
-		if ((*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_I2CDEFER) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_DEFER)) {
-			if (defer_retries-- > 0) {
-				dev_info(&dp->dc->ndev->dev,
-					"dp: aux write defer (0x%x) -- %d\n",
-					*aux_stat, defer_retries);
-				/* clear the error bits */
-				tegra_dpaux_writel(dpaux, DPAUX_DP_AUXSTAT,
-					*aux_stat);
-				continue;
-			} else {
-				dev_err(&dp->dc->ndev->dev,
-					"dp: aux write defer exceeds max retries "
-					"(0x%x)\n",
-					*aux_stat);
-				return -EFAULT;
-			}
-		}
-
-		if ((*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_MASK) ==
-			DPAUX_DP_AUXSTAT_REPLYTYPE_ACK) {
-			(*size)++;
-			return 0;
-		} else {
-			dev_err(&dp->dc->ndev->dev,
-				"dp: aux write failed (0x%x)\n", *aux_stat);
-			return -EFAULT;
-		}
-	}
-	/* Should never come to here */
-	return -EFAULT;
-}
-
-int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
-	u8 *data, u32 *size, u32 *aux_stat)
-{
-	u32	cur_size = 0;
-	u32	finished = 0;
-	int	ret	 = 0;
-
-	if (*size == 0) {
-		dev_err(&dp->dc->ndev->dev,
-			"dp: aux write size can't be 0\n");
-		return -EINVAL;
-	}
-
-	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		return ret;
-
-	mutex_lock(&dp->dpaux_lock);
-	tegra_dc_io_start(dp->dc);
-	do {
-		cur_size = *size - finished;
-		if (cur_size > DP_AUX_MAX_BYTES)
-			cur_size = DP_AUX_MAX_BYTES;
-
-		ret = tegra_dc_dpaux_write_chunk_locked(dp, cmd, addr,
-			data, &cur_size, aux_stat);
-
-		finished += cur_size;
-		addr += cur_size;
-		data += cur_size;
-
-		if (ret)
-			break;
-	} while (*size > finished);
-	tegra_dc_io_end(dp->dc);
-	mutex_unlock(&dp->dpaux_lock);
-
-	*size = finished;
-	return ret;
-}
-
-int tegra_dc_dpaux_read_chunk_locked(struct tegra_dc_dp_data *dp,
-	u32 cmd, u32 addr, u8 *data, u32 *size, u32 *aux_stat)
-{
-	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
-	int err = 0;
-	u32 timeout_retries = DP_AUX_TIMEOUT_MAX_TRIES;
-	u32 defer_retries	= DP_AUX_DEFER_MAX_TRIES;
-
-	if (!dpaux) {
-		dev_err(&dp->dc->ndev->dev,
-			"%s: dpaux must be non-NULL\n", __func__);
-		return -ENODEV;
-	}
-
-	WARN_ON(!mutex_is_locked(&dp->dpaux_lock));
-
-	switch (cmd) {
-	case DPAUX_DP_AUXCTL_CMD_I2CRD:
-	case DPAUX_DP_AUXCTL_CMD_I2CREQWSTAT:
-	case DPAUX_DP_AUXCTL_CMD_MOTREQWSTAT:
-	case DPAUX_DP_AUXCTL_CMD_MOTRD:
-	case DPAUX_DP_AUXCTL_CMD_AUXRD:
-		break;
-	default:
-		dev_err(&dp->dc->ndev->dev,
-			"dp: invalid aux read cmd: 0x%x\n", cmd);
-		return -EINVAL;
-	};
-
-	err = tegra_dp_aux_tx_config(dp, cmd, addr, NULL, *size);
-	if (err < 0) {
-		dev_err(&dp->dc->ndev->dev, "dp: incorrect aux tx params\n");
-		return err;
-	}
-
-	if (tegra_platform_is_silicon()) {
-		*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
-		if (!(*aux_stat & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
-			dev_err(&dp->dc->ndev->dev, "dp: HPD is not detected\n");
-			return -EFAULT;
-		}
-	}
-
-	while (1) {
-		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
-		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
-			usleep_range(DP_DPCP_RETRY_SLEEP_NS,
-				DP_DPCP_RETRY_SLEEP_NS << 1);
-
-		tegra_dpaux_write_field(dpaux, DPAUX_DP_AUXCTL,
-					DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,
-					DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING);
-
-		if (tegra_dpaux_wait_transaction(dp))
-			dev_err(&dp->dc->ndev->dev,
-				"dp: aux read transaction timeout\n");
-
-		*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
-
-		if ((*aux_stat & DPAUX_DP_AUXSTAT_TIMEOUT_ERROR_PENDING) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_RX_ERROR_PENDING) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_SINKSTAT_ERROR_PENDING) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_NO_STOP_ERROR_PENDING)) {
-			if (timeout_retries-- > 0) {
-				dev_info(&dp->dc->ndev->dev,
-					"dp: aux read retry (0x%x) -- %d\n",
-					*aux_stat, timeout_retries);
-				/* clear the error bits */
-				tegra_dpaux_writel(dpaux, DPAUX_DP_AUXSTAT,
-					*aux_stat);
-				continue; /* retry */
-			} else {
-				dev_err(&dp->dc->ndev->dev,
-					"dp: aux read got error (0x%x)\n",
-					*aux_stat);
-				return -EFAULT;
-			}
-		}
-
-		if ((*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_I2CDEFER) ||
-			(*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_DEFER)) {
-			if (defer_retries-- > 0) {
-				dev_info(&dp->dc->ndev->dev,
-					"dp: aux read defer (0x%x) -- %d\n",
-					*aux_stat, defer_retries);
-				/* clear the error bits */
-				tegra_dpaux_writel(dpaux, DPAUX_DP_AUXSTAT,
-					*aux_stat);
-				continue;
-			} else {
-				dev_err(&dp->dc->ndev->dev,
-					"dp: aux read defer exceeds max retries "
-					"(0x%x)\n", *aux_stat);
-				return -EFAULT;
-			}
-		}
-
-		if ((*aux_stat & DPAUX_DP_AUXSTAT_REPLYTYPE_MASK) ==
-			DPAUX_DP_AUXSTAT_REPLYTYPE_ACK) {
-			int i;
-			u32 temp_data[4];
-
-			for (i = 0; i < DP_AUX_MAX_BYTES/4; ++i)
-				temp_data[i] = tegra_dpaux_readl(dpaux,
-					DPAUX_DP_AUXDATA_READ_W(i));
-
-			*size = ((*aux_stat) & DPAUX_DP_AUXSTAT_REPLY_M_MASK);
-			memcpy(data, temp_data, *size);
-
-			return 0;
-		} else {
-			dev_err(&dp->dc->ndev->dev,
-				"dp: aux read failed (0x%x\n", *aux_stat);
-			return -EFAULT;
-		}
-	}
-	/* Should never come to here */
-	return -EFAULT;
-}
-
-int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
-	u8 *data, u32 *size, u32 *aux_stat)
-{
-	u32	finished = 0;
-	u32	cur_size;
-	int	ret	 = 0;
-
-	if (*size == 0) {
-		dev_err(&dp->dc->ndev->dev,
-			"dp: aux read size can't be 0\n");
-		return -EINVAL;
-	}
-
-	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		return  ret;
-
-	mutex_lock(&dp->dpaux_lock);
-	tegra_dc_io_start(dp->dc);
-	do {
-		cur_size = *size - finished;
-		if (cur_size > DP_AUX_MAX_BYTES)
-			cur_size = DP_AUX_MAX_BYTES;
-
-		ret = tegra_dc_dpaux_read_chunk_locked(dp, cmd, addr,
-			data, &cur_size, aux_stat);
-
-		if (ret)
-			break;
-
-		/* cur_size should be the real size returned */
-		addr += cur_size;
-		data += cur_size;
-		finished += cur_size;
-
-	} while (*size > finished);
-	tegra_dc_io_end(dp->dc);
-	mutex_unlock(&dp->dpaux_lock);
-
-	*size = finished;
-	return ret;
-}
-
-/* TODO: Handle update status scenario and size > 16 bytes*/
-static int tegra_dc_dp_i2c_write(struct tegra_dc_dp_data *dp, u32 i2c_addr,
-				u8 *data, u32 *size, u32 *aux_stat)
-{
-	int ret = 0;
-
-	if (*size == 0) {
-		dev_err(&dp->dc->ndev->dev,
-			"dp: i2c write size can't be 0\n");
-		return -EINVAL;
-	}
-
-	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		return ret;
-
-	mutex_lock(&dp->dpaux_lock);
-	tegra_dc_io_start(dp->dc);
-
-	ret = tegra_dc_dpaux_write_chunk_locked(dp,
-			DPAUX_DP_AUXCTL_CMD_MOTWR,
-			i2c_addr, data, size, aux_stat);
-
-	tegra_dc_io_end(dp->dc);
-	mutex_unlock(&dp->dpaux_lock);
-
-	return ret;
-}
-
-static int tegra_dc_dp_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
-				u8 *data, u32 *size, u32 *aux_stat)
-{
-	u32 finished = 0;
-	u32 cur_size;
-	int ret = 0;
-
-	if (*size == 0) {
-		dev_err(&dp->dc->ndev->dev,
-			"dp: i2c read size can't be 0\n");
-		return -EINVAL;
-	}
-
-	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		return ret;
-
-	mutex_lock(&dp->dpaux_lock);
-	tegra_dc_io_start(dp->dc);
-	do {
-		cur_size = *size - finished;
-
-		if (cur_size > DP_AUX_MAX_BYTES)
-			cur_size = DP_AUX_MAX_BYTES;
-
-		ret = tegra_dc_dpaux_read_chunk_locked(dp,
-			DPAUX_DP_AUXCTL_CMD_MOTRD,
-			i2c_addr, data, &cur_size, aux_stat);
-		if (ret)
-			break;
-
-		data += cur_size;
-		finished += cur_size;
-	} while (*size > finished);
-
-	cur_size = 0;
-	tegra_dc_dpaux_read_chunk_locked(dp,
-			DPAUX_DP_AUXCTL_CMD_I2CRD,
-			i2c_addr, data, &cur_size, aux_stat);
-
-	tegra_dc_io_end(dp->dc);
-	mutex_unlock(&dp->dpaux_lock);
-
-	*size = finished;
-
-	return ret;
-}
-
 int tegra_dc_dp_dpcd_read(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 *data_ptr)
 {
@@ -623,12 +131,13 @@ int tegra_dc_dp_dpcd_read(struct tegra_dc_dp_data *dp, u32 cmd,
 	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
 		return ret;
 
-	mutex_lock(&dp->dpaux_lock);
-	tegra_dc_io_start(dp->dc);
-	ret = tegra_dc_dpaux_read_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
-		cmd, data_ptr, &size, &status);
-	tegra_dc_io_end(dp->dc);
-	mutex_unlock(&dp->dpaux_lock);
+	mutex_lock(&dp->dpaux->lock);
+	tegra_dpaux_get(dp->dpaux);
+	ret = tegra_dc_dpaux_read_chunk_locked(dp->dpaux,
+			DPAUX_DP_AUXCTL_CMD_AUXRD, cmd, data_ptr,
+			&size, &status);
+	tegra_dpaux_put(dp->dpaux);
+	mutex_unlock(&dp->dpaux->lock);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,
 			"dp: Failed to read DPCD data. CMD 0x%x, Status 0x%x\n",
@@ -657,7 +166,7 @@ static int tegra_dc_dp_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 		if (!pmsg->flags) {
 			len = pmsg->len;
 
-			status = tegra_dc_dp_i2c_write(dp, pmsg->addr,
+			status = tegra_dc_dpaux_i2c_write(dp->dpaux, pmsg->addr,
 						pmsg->buf, &len, &aux_stat);
 			if (status) {
 				dev_err(&dp->dc->ndev->dev,
@@ -669,7 +178,7 @@ static int tegra_dc_dp_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 		} else if (pmsg->flags & I2C_M_RD) {
 			len = pmsg->len;
 
-			status = tegra_dc_dp_i2c_read(dp, pmsg->addr,
+			status = tegra_dc_dpaux_i2c_read(dp->dpaux, pmsg->addr,
 						pmsg->buf, &len, &aux_stat);
 			if (status) {
 				dev_err(&dp->dc->ndev->dev,
@@ -707,12 +216,12 @@ int tegra_dc_dp_dpcd_write(struct tegra_dc_dp_data *dp, u32 cmd,
 	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
 		return 0;
 
-	mutex_lock(&dp->dpaux_lock);
-	tegra_dc_io_start(dp->dc);
-	ret = tegra_dc_dpaux_write_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
-		cmd, &data, &size, &status);
-	tegra_dc_io_end(dp->dc);
-	mutex_unlock(&dp->dpaux_lock);
+	mutex_lock(&dp->dpaux->lock);
+	tegra_dpaux_get(dp->dpaux);
+	ret = tegra_dc_dpaux_write_chunk_locked(dp->dpaux,
+			DPAUX_DP_AUXCTL_CMD_AUXWR, cmd, &data, &size, &status);
+	tegra_dpaux_put(dp->dpaux);
+	mutex_unlock(&dp->dpaux->lock);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,
 			"dp: Failed to write DPCD data. CMD 0x%x, Status 0x%x\n",
@@ -746,7 +255,7 @@ static inline u64 tegra_div64(u64 dividend, u32 divisor)
 }
 
 #ifdef CONFIG_DEBUG_FS
-static int dbg_dp_show(struct seq_file *s, void *unused)
+static int dbg_dp_dpaux_show(struct seq_file *s, void *unused)
 {
 #define DUMP_REG(a) seq_printf(s, "%-32s  %03x	%08x\n",	\
 		#a, a, tegra_dpaux_readl(dpaux, a))
@@ -754,8 +263,7 @@ static int dbg_dp_show(struct seq_file *s, void *unused)
 	struct tegra_dc_dp_data *dp = s->private;
 	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
 
-	tegra_dc_io_start(dp->dc);
-	tegra_dpaux_clk_en(dpaux);
+	tegra_dpaux_get(dpaux);
 
 	DUMP_REG(DPAUX_INTR_EN_AUX);
 	DUMP_REG(DPAUX_INTR_AUX);
@@ -768,19 +276,17 @@ static int dbg_dp_show(struct seq_file *s, void *unused)
 	DUMP_REG(DPAUX_HYBRID_PADCTL);
 	DUMP_REG(DPAUX_HYBRID_SPARE);
 
-	tegra_dpaux_clk_dis(dpaux);
-	tegra_dc_io_end(dp->dc);
-
+	tegra_dpaux_put(dpaux);
 	return 0;
 }
 
-static int dbg_dp_open(struct inode *inode, struct file *file)
+static int dbg_dp_dpaux_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, dbg_dp_show, inode->i_private);
+	return single_open(file, dbg_dp_dpaux_show, inode->i_private);
 }
 
 static const struct file_operations dbg_fops = {
-	.open		= dbg_dp_open,
+	.open		= dbg_dp_dpaux_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= single_release,
@@ -1116,7 +622,7 @@ static int dpaux_i2c_data_show(struct seq_file *s, void *unused)
 	if (!data)
 		return -ENOMEM;
 
-	ret = tegra_dc_dp_i2c_read(dp, addr, data, &size, &aux_stat);
+	ret = tegra_dc_dpaux_i2c_read(dp->dpaux, addr, data, &size, &aux_stat);
 	if (ret) {
 		seq_printf(s, "Error reading %d bytes from I2C reg %x",
 			dp->dpaux_i2c_dbg_num_bytes,
@@ -1144,6 +650,7 @@ static int dpaux_dpcd_data_show(struct seq_file *s, void *unused)
 	if (!data)
 		return -ENOMEM;
 
+	tegra_dpaux_get(dp->dpaux);
 	for (i = 0; i < size; i++) {
 		ret = tegra_dc_dp_dpcd_read(dp, addr+i, data+i);
 		if (ret) {
@@ -1159,6 +666,7 @@ static int dpaux_dpcd_data_show(struct seq_file *s, void *unused)
 	dpaux_print_data(s, data, size);
 
 free_mem:
+	tegra_dpaux_put(dp->dpaux);
 	kfree(data);
 	return ret;
 }
@@ -1227,7 +735,7 @@ static ssize_t dpaux_i2c_data_set(struct file *file,
 		goto free_mem;
 	}
 
-	ret = tegra_dc_dp_i2c_write(dp, addr, data, &size, &aux_stat);
+	ret = tegra_dc_dpaux_i2c_write(dp->dpaux, addr, data, &size, &aux_stat);
 	if (!ret)
 		ret = count;
 	else
@@ -1260,7 +768,7 @@ static ssize_t dpaux_dpcd_data_set(struct file *file,
 		goto free_mem;
 	}
 
-	ret = tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
+	ret = tegra_dc_dpaux_write(dp->dpaux, DPAUX_DP_AUXCTL_CMD_AUXWR,
 				addr, data, &size, &aux_stat);
 	if (!ret)
 		ret = count;
@@ -1369,7 +877,7 @@ static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
 			debug_dirname);
 		return;
 	}
-	retval = debugfs_create_file("regs", S_IRUGO, dp->debugdir, dp,
+	retval = debugfs_create_file("dpaux_regs", S_IRUGO, dp->debugdir, dp,
 		&dbg_fops);
 	if (!retval)
 		goto free_out;
@@ -1425,18 +933,16 @@ static void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp)
 { }
 #endif
 
-static void tegra_dpaux_enable(struct tegra_dc_dp_data *dp)
+static void tegra_dp_dpaux_enable(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
 
-	/* do not enable interrupt for now. */
-	tegra_dpaux_writel(dpaux, DPAUX_INTR_EN_AUX, 0x0);
-
-	/* clear interrupt */
-	tegra_dpaux_writel(dpaux, DPAUX_INTR_AUX, 0xffffffff);
-
-	tegra_dpaux_prod_set(dpaux);
-	tegra_dpaux_pad_power(dpaux, true);
+	tegra_dpaux_config_pad_mode(dpaux, TEGRA_DPAUX_PAD_MODE_AUX);
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		tegra_dp_enable_irq(dp->irq);
+		tegra_dp_hpd_config(dp);
+		tegra_dp_default_int(dp, true);
+	}
 }
 
 static int tegra_dp_panel_power_state(struct tegra_dc_dp_data *dp, u8 state)
@@ -1921,13 +1427,13 @@ static void tegra_dp_irq_evt_worker(struct work_struct *work)
 					irq_evt_dwork);
 	struct tegra_dc *dc = dp->dc;
 	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
-	u32 aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
+	u32 aux_stat;
 	bool link_stable = !!true;
 	u8 dpcd_200h_205h[DPCD_LINK_SINK_STATUS_REGS] = {0, 0, 0, 0, 0, 0};
 	u32 n_lanes = dp->lt_data.n_lanes;
 
-	tegra_dc_io_start(dc);
-
+	tegra_dpaux_get(dpaux);
+	aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
 	if (aux_stat & DPAUX_DP_AUXSTAT_SINKSTAT_ERROR_PENDING) {
 		int cnt;
 
@@ -2018,7 +1524,7 @@ static void tegra_dp_irq_evt_worker(struct work_struct *work)
 			"dp: link stable, ignore irq event\n");
 	}
 done:
-	tegra_dc_io_end(dc);
+	tegra_dpaux_put(dpaux);
 
 #undef LANE0_1_CR_CE_SL_MASK
 #undef LANE0_CR_CE_SL_MASK
@@ -2040,19 +1546,22 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 		return IRQ_HANDLED;
 	}
 
+	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return IRQ_HANDLED;
+
 	if (dp->suspended) {
 		dev_info(&dc->ndev->dev,
 			"dp: irq received while suspended, ignoring\n");
 		return IRQ_HANDLED;
 	}
 
-	tegra_dc_io_start(dc);
+	tegra_dpaux_get(dpaux);
 
 	/* clear pending bits */
 	status = tegra_dpaux_readl(dpaux, DPAUX_INTR_AUX);
 	tegra_dpaux_writel(dpaux, DPAUX_INTR_AUX, status);
 
-	tegra_dc_io_end(dc);
+	tegra_dpaux_put(dpaux);
 
 	if (status & (DPAUX_INTR_AUX_PLUG_EVENT_PENDING |
 		DPAUX_INTR_AUX_UNPLUG_EVENT_PENDING)) {
@@ -2078,40 +1587,25 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 	}
 
 	if (status & DPAUX_INTR_AUX_TX_DONE_PENDING)
-		complete_all(&dp->aux_tx);
+		complete_all(&dpaux->aux_tx);
 
 	return IRQ_HANDLED;
 }
 
-static void _tegra_dpaux_init(struct tegra_dc_dp_data *dp)
+static void tegra_dp_dpaux_init(struct tegra_dc_dp_data *dp)
 {
+	WARN_ON(!dp || !dp->dc || !dp->dpaux);
+
 	if (dp->sor->safe_clk)
 		tegra_sor_safe_clk_enable(dp->sor);
 
-	tegra_unpowergate_partition(dp->dpaux->powergate_id);
-	tegra_dpaux_clk_en(dp->dpaux);
+	tegra_dpaux_get(dp->dpaux);
 
-	tegra_dc_io_start(dp->dc);
+	/* do not enable interrupt for now. */
+	tegra_dpaux_writel(dp->dpaux, DPAUX_INTR_EN_AUX, 0x0);
 
-	tegra_dp_reset(dp);
-
-	tegra_dpaux_enable(dp);
-
-	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
-		tegra_dp_hpd_config(dp);
-		tegra_dp_default_int(dp, true);
-	}
-
-	tegra_dc_io_end(dp->dc);
-}
-
-static void tegra_dpaux_init(struct tegra_dc_dp_data *dp)
-{
-	BUG_ON(!dp->dc || !dp);
-
-	_tegra_dpaux_init(dp);
-	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
-		tegra_dp_enable_irq(dp->irq);
+	/* clear interrupt */
+	tegra_dpaux_writel(dp->dpaux, DPAUX_INTR_AUX, 0xffffffff);
 }
 
 static int tegra_dc_dp_hotplug_init(struct tegra_dc *dc)
@@ -2122,7 +1616,8 @@ static int tegra_dc_dp_hotplug_init(struct tegra_dc *dc)
 	 * dp interrupts are received by dpaux.
 	 * Initialize dpaux to receive hotplug events.
 	 */
-	tegra_dpaux_init(dp);
+	tegra_dp_dpaux_init(dp);
+	tegra_dp_dpaux_enable(dp);
 
 	return 0;
 }
@@ -2231,10 +1726,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_audio_switch;
 	}
 
-	if (tegra_dc_is_nvdisplay())
-		parent_clk = tegra_dpaux_get_clk(dp->dpaux, "plldp");
-	else
-		parent_clk = tegra_dpaux_get_clk(dp->dpaux, "pll_dp");
+	parent_clk = tegra_disp_of_clk_get_by_name(sor_np, "pll_dp");
 
 	if (IS_ERR_OR_NULL(parent_clk)) {
 		dev_err(&dc->ndev->dev, "dp: clock pll_dp unavailable\n");
@@ -2318,10 +1810,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		}
 	}
 
-	init_completion(&dp->aux_tx);
 	init_completion(&dp->hpd_plug);
-
-	mutex_init(&dp->dpaux_lock);
 
 	tegra_dc_set_outdata(dc, dp);
 
@@ -2435,7 +1924,7 @@ static void tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
 		dev_err(&dp->dc->ndev->dev,
 			"dp: failed to init link configuration\n");
 
-	tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
+	tegra_dc_dpaux_write(dp->dpaux, DPAUX_DP_AUXCTL_CMD_AUXWR,
 		NV_DPCD_SOURCE_IEEE_OUI, data_ieee_oui_be, &size_ieee_oui,
 		&auxstat);
 }
@@ -2514,7 +2003,7 @@ static void tegra_dp_read_sink_cap(struct tegra_dc_dp_data *dp)
 
 	dp->sink_cap_valid = false;
 
-	err = tegra_dc_dpaux_read(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
+	err = tegra_dc_dpaux_read(dp->dpaux, DPAUX_DP_AUXCTL_CMD_AUXRD,
 				start_offset, dp->sink_cap, &sink_cap_rd_size,
 				&aux_stat);
 	if (!err)
@@ -2605,31 +2094,6 @@ static void tegra_dp_hpd_op_edid_recheck(void *drv_data)
 	 * As per specification, panel is expected to send irq_event to
 	 * indicate synchronization loss to host.
 	 */
-}
-
-static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
-{
-	if (tegra_platform_is_vdk())
-		return;
-
-	if (!dp || !dp->dpaux)
-		return;
-
-	/* Seamless prevent reset */
-	if (dp->dc->initialized)
-		return;
-
-	/* Use only if bpmp is enabled */
-	/* bpmp is supported in silicon and simulation */
-	if (!tegra_bpmp_running())
-		return;
-
-	if (dp->dpaux->rst) {
-		reset_control_assert(dp->dpaux->rst);
-		mdelay(2);
-		reset_control_deassert(dp->dpaux->rst);
-		mdelay(1);
-	}
 }
 
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
@@ -2858,7 +2322,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		tegra_dc_setup_clk(dc, dc->clk);
 	}
 
-	tegra_dpaux_config_pad_mode(dp->dpaux, TEGRA_DPAUX_PAD_MODE_AUX);
 	tegra_dp_dpcd_init(dp);
 
 	tegra_dc_sor_enable_dp(dp->sor);
@@ -3032,9 +2495,9 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 		dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dphdcp_set_plug(dp->dphdcp, false);
 #endif
-	cancel_delayed_work_sync(&dp->irq_evt_dwork);
 
 	if (dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		cancel_delayed_work_sync(&dp->irq_evt_dwork);
 		tegra_dp_lt_force_disable(&dp->lt_data);
 		ret = tegra_dp_lt_wait_for_completion(&dp->lt_data,
 					STATE_DONE_FAIL, LT_TIMEOUT_MS);
@@ -3175,11 +2638,9 @@ static bool tegra_dc_dp_hpd_state(struct tegra_dc *dc)
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP || tegra_platform_is_vdk())
 		return true;
 
-	tegra_dpaux_clk_en(dpaux);
-	tegra_dc_io_start(dc);
+	tegra_dpaux_get(dpaux);
 	val = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
-	tegra_dc_io_end(dc);
-
+	tegra_dpaux_put(dpaux);
 	return !!(val & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED);
 }
 
@@ -3211,16 +2672,17 @@ static void tegra_dc_dp_suspend(struct tegra_dc *dc)
 
 	tegra_dp_lt_invalidate(&dp->lt_data);
 
-	/* do not process hpd in suspend. Disable dpaux clocks. */
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dp_disable_irq(dp->irq);
+
 	if (dp->sor->safe_clk)
 		tegra_sor_safe_clk_disable(dp->sor);
-	tegra_dpaux_clk_dis(dp->dpaux);
 
 	tegra_dp_hpd_suspend(dp);
 
-	tegra_powergate_partition(dp->dpaux->powergate_id);
+	/* do not process hpd in suspend. Disable dpaux clocks. */
+	tegra_dpaux_pad_power(dp->dpaux, false);
+	tegra_dpaux_put(dp->dpaux);
 }
 
 static void tegra_dc_dp_resume(struct tegra_dc *dc)
@@ -3234,7 +2696,7 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 		hdmi2fpd_resume(dc);
 
 	/* Get ready to receive any hpd event */
-	tegra_dpaux_init(dp);
+	tegra_dc_dp_hotplug_init(dc);
 
 	if (tegra_platform_is_sim() &&
 		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL)) {

@@ -124,8 +124,8 @@ static inline void _tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
 	mutex_lock(&hdmi->ddc_refcount_lock);
 	if (hdmi->ddc_refcount++)
 		goto fail;
-	tegra_unpowergate_partition(hdmi->dpaux->powergate_id);
 	tegra_hdmi_get(hdmi->dc);
+	tegra_dpaux_get(hdmi->dpaux);
 	/*
 	 * hdmi uses i2c lane muxed on dpaux1 pad.
 	 * Enable dpaux1 pads and configure the mux.
@@ -150,8 +150,8 @@ static inline void _tegra_hdmi_ddc_disable(struct tegra_hdmi *hdmi)
 	 * Disable dpaux1 pads.
 	 */
 	tegra_dpaux_pad_power(hdmi->dpaux, false);
+	tegra_dpaux_put(hdmi->dpaux);
 	tegra_hdmi_put(hdmi->dc);
-	tegra_powergate_partition(hdmi->dpaux->powergate_id);
 
 fail:
 	mutex_unlock(&hdmi->ddc_refcount_lock);

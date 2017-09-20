@@ -566,8 +566,8 @@ static int tegra_nvsr_read_dpaux(struct tegra_dc_nvsr_data *nvsr,
 	u32 aux_stat;
 	u8 data[DP_AUX_MAX_BYTES] = {0};
 
-	ret = tegra_dc_dpaux_read(nvsr->out_data.dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
-		reg, data, &size, &aux_stat);
+	ret = tegra_dc_dpaux_read((nvsr->out_data.dp)->dpaux,
+			DPAUX_DP_AUXCTL_CMD_AUXRD, reg, data, &size, &aux_stat);
 	NVSR_RETV(ret,
 		"DPAUX read failed: reg = 0x%x, size = %d, aux_stat = %d\n",
 		reg, size, aux_stat);
@@ -592,8 +592,8 @@ static int tegra_nvsr_write_dpaux(struct tegra_dc_nvsr_data *nvsr,
 		val = val >> 8;
 	}
 
-	ret = tegra_dc_dpaux_write(nvsr->out_data.dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
-		reg, data, &size, &aux_stat);
+	ret = tegra_dc_dpaux_write((nvsr->out_data.dp)->dpaux,
+			DPAUX_DP_AUXCTL_CMD_AUXWR, reg, data, &size, &aux_stat);
 
 	if (ret && (nvsr->src_id.device != HX8880_A))
 		return ret;

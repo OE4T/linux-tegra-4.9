@@ -29,6 +29,7 @@
 #include "dc.h"
 #include "dphdcp.h"
 #include "dp.h"
+#include "dpaux.h"
 #include "edid.h"
 #include "sor.h"
 #include "sor_regs.h"
@@ -147,6 +148,7 @@ static int tegra_dphdcp_read(struct tegra_dc_dp_data *dp, u32 cmd,
 	u32 status = 0;
 	u32 cursize = 0;
 	int ret = 0;
+	struct tegra_dc_dpaux_data *dpaux = NULL;
 
 	if (!dp || !data_ptr || !aux_status) {
 		dphdcp_err("Null params sent\n");
@@ -156,11 +158,14 @@ static int tegra_dphdcp_read(struct tegra_dc_dp_data *dp, u32 cmd,
 	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
 		return -EIO;
 
+	dpaux = dp->dpaux;
 	cursize = size;
-	mutex_lock(&dp->dpaux_lock);
-	ret = tegra_dc_dpaux_read_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
+	mutex_lock(&dpaux->lock);
+	tegra_dpaux_get(dp->dpaux);
+	ret = tegra_dc_dpaux_read_chunk_locked(dpaux, DPAUX_DP_AUXCTL_CMD_AUXRD,
 		cmd, data_ptr, &cursize, &status);
-	mutex_unlock(&dp->dpaux_lock);
+	tegra_dpaux_put(dp->dpaux);
+	mutex_unlock(&dpaux->lock);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,
 			"dp: Failed to read data. CMD 0x%x, Status 0x%x\n",
@@ -175,6 +180,7 @@ static int tegra_dphdcp_write(struct tegra_dc_dp_data *dp, u32 cmd,
 	u32 status = 0;
 	u32 cursize = 0;
 	int ret;
+	struct tegra_dc_dpaux_data *dpaux = NULL;
 
 	if (!dp || !data) {
 		dphdcp_err("Null params sent\n");
@@ -184,11 +190,15 @@ static int tegra_dphdcp_write(struct tegra_dc_dp_data *dp, u32 cmd,
 	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
 		return -EIO;
 
+	dpaux = dp->dpaux;
 	cursize = size;
-	mutex_lock(&dp->dpaux_lock);
-	ret = tegra_dc_dpaux_write_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
-		cmd, data, &cursize, &status);
-	mutex_unlock(&dp->dpaux_lock);
+	mutex_lock(&dpaux->lock);
+	tegra_dpaux_get(dp->dpaux);
+	ret = tegra_dc_dpaux_write_chunk_locked(dpaux,
+			DPAUX_DP_AUXCTL_CMD_AUXWR, cmd, data,
+			&cursize, &status);
+	tegra_dpaux_put(dp->dpaux);
+	mutex_unlock(&dpaux->lock);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,
 			"dp: Failed to write data. CMD 0x%x, Status 0x%x\n",

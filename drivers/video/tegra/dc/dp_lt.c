@@ -22,6 +22,7 @@
 #include "dc.h"
 #include <linux/moduleparam.h>
 #include "dp_lt.h"
+#include "dpaux.h"
 #include "dp.h"
 #include "sor.h"
 #include "sor_regs.h"
@@ -370,7 +371,7 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 
 		training_lanex_set[cnt] = val;
 	}
-	tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
+	tegra_dc_dpaux_write(dp->dpaux, DPAUX_DP_AUXCTL_CMD_AUXWR,
 			NV_DPCD_TRAINING_LANE0_SET, training_lanex_set,
 			&training_lanex_set_size, &aux_stat);
 

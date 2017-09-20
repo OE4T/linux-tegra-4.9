@@ -34,12 +34,7 @@
 extern struct tegra_dp_test_settings default_dp_test_settings;
 #endif
 
-#define DP_AUX_MAX_BYTES 16
-#define DP_AUX_TIMEOUT_MS 1000
-#define DP_DPCP_RETRY_SLEEP_NS 400
 #define TEGRA_NVHDCP_MAX_DEVS 127
-#define DP_AUX_DEFER_MAX_TRIES 7
-#define DP_AUX_TIMEOUT_MAX_TRIES 2
 #define DP_POWER_ON_MAX_TRIES 3
 #define DP_CLOCK_RECOVERY_MAX_TRIES 7
 #define DP_CLOCK_RECOVERY_TOT_TRIES 15
@@ -108,13 +103,10 @@ struct tegra_dc_dp_data {
 
 	struct tegra_dphdcp *dphdcp;
 
-	struct completion aux_tx;
 	struct completion hpd_plug;
 
 	struct tegra_dp_out_ops *out_ops;
 	struct tegra_dp_out *pdata;
-
-	struct mutex dpaux_lock;
 
 	struct tegra_prod *prod_list;
 
@@ -190,18 +182,9 @@ enum {
 
 int tegra_dp_dpcd_write_field(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 mask, u8 data);
-int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
-	u8 *data, u32 *size, u32 *aux_stat);
-int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
-	u8 *data, u32 *size, u32 *aux_stat);
 void tegra_dc_dp_pre_disable_link(struct tegra_dc_dp_data *dp);
 void tegra_dc_dp_disable_link(struct tegra_dc_dp_data *dp, bool powerdown);
 void tegra_dc_dp_enable_link(struct tegra_dc_dp_data *dp);
-
-int tegra_dc_dpaux_read_chunk_locked(struct tegra_dc_dp_data *dp,
-	u32 cmd, u32 addr, u8 *data, u32 *size, u32 *aux_stat);
-int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
-	u32 cmd, u32 addr, u8 *data, u32 *size, u32 *aux_stat);
 void tegra_dp_update_link_config(struct tegra_dc_dp_data *dp);
 int tegra_dc_dp_dpcd_read(struct tegra_dc_dp_data *dp, u32 cmd, u8 *data_ptr);
 int tegra_dc_dp_dpcd_write(struct tegra_dc_dp_data *dp, u32 cmd, u8 data);

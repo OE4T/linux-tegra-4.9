@@ -192,6 +192,14 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
+	if (g->ops.fb.mem_unlock) {
+		err = g->ops.fb.mem_unlock(g);
+		if (err) {
+			nvgpu_err(g, "failed to unlock memory");
+			goto done;
+		}
+	}
+
 	err = g->ops.fifo.reset_enable_hw(g);
 
 	if (err) {

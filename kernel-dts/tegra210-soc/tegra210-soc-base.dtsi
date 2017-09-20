@@ -1780,8 +1780,9 @@
 		interrupt-names = "intr", "msi";
 
 		clocks = <&tegra_car 72>,
-			<&tegra_car 70>;
-		clock-names = "afi", "pcie";
+			<&tegra_car 70>,
+			<&tegra_car 99>;
+		clock-names = "afi", "pcie", "mselect";
 
 		resets = <&tegra_car 72>,
 			<&tegra_car 70>,

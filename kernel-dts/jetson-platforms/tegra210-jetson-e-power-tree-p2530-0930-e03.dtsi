@@ -289,7 +289,7 @@
 			reset-commands {
 				nvidia,command-retries-count = <2>;
 				nvidia,delay-between-commands-us = <10>;
-				nvidia,wait-before-start-bus-clear-us = <10>;
+				nvidia,wait-start-bus-clear-us = <10>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				commands@4-003c {
@@ -306,7 +306,7 @@
 			power-off-commands {
 				nvidia,command-retries-count = <2>;
 				nvidia,delay-between-commands-us = <10>;
-				nvidia,wait-before-start-bus-clear-us = <10>;
+				nvidia,wait-start-bus-clear-us = <10>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				commands@4-003c {

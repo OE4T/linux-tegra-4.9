@@ -291,9 +291,9 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 			crypto_skcipher_decrypt(req);
 		if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
 			/* crypto driver is asynchronous */
-			ret = wait_for_completion_interruptible(&tcrypt_complete.restart);
-
-			if (ret < 0)
+			ret = wait_for_completion_timeout(&tcrypt_complete.restart,
+						msecs_to_jiffies(5000));
+			if (ret == 0)
 				goto process_req_buf_out;
 
 			if (tcrypt_complete.req_err < 0) {

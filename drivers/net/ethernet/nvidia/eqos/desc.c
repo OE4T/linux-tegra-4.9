@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -900,8 +900,8 @@ static int tx_swcx_alloc(struct net_device *dev, struct sk_buff *skb)
 		offset = 0;
 		while (len) {
 			ptx_swcx = GET_TX_BUF_PTR(qinx, idx);
-		if (ptx_swcx->len)
-			goto tx_swcx_alloc_failed;
+			if (ptx_swcx->len)
+				goto tx_swcx_alloc_failed;
 
 			size = min(len, EQOS_MAX_DATA_PER_TXD);
 

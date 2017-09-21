@@ -250,6 +250,7 @@ static int max77620_poweroff_probe(struct platform_device *pdev)
 	bool use_power_reset = false;
 	bool avoid_power_off_command = false;
 	unsigned int poweroff_event_recorder;
+	const char *prop_name = NULL;
 	int count;
 	int ret;
 
@@ -258,12 +259,27 @@ static int max77620_poweroff_probe(struct platform_device *pdev)
 
 		use_power_off = of_property_read_bool(np,
 				"maxim,system-pmic-power-off");
+		if (!use_power_off)
+			use_power_off = of_property_read_bool(np,
+						"system-pmic-power-off");
+
 		use_power_reset = of_property_read_bool(np,
 				"maxim,system-pmic-power-reset");
+		if (!use_power_reset)
+			use_power_reset = of_property_read_bool(np,
+						"system-pmic-power-reset");
+
 		system_pc = of_property_read_bool(np,
 				"maxim,system-power-controller");
+		if (!system_pc)
+			system_pc = of_property_read_bool(np,
+						"system-power-controller");
+
 		avoid_power_off_command = of_property_read_bool(np,
 				"maxim,avoid-power-off-commands");
+		if (!avoid_power_off_command)
+			avoid_power_off_command = of_property_read_bool(np,
+						"avoid-power-off-commands");
 		if (system_pc) {
 			use_power_off = true;
 			use_power_reset = true;
@@ -286,7 +302,12 @@ static int max77620_poweroff_probe(struct platform_device *pdev)
 	if (!np)
 		goto gpio_done;
 
-	count = of_property_count_u32_elems(np, "maxim,power-reset-gpio-states");
+	if (of_property_read_bool(np, "maxim,power-reset-gpio-states"))
+		prop_name = "maxim,power-reset-gpio-states";
+	else
+		prop_name = "power-reset-gpio-states";
+
+	count = of_property_count_u32_elems(np, prop_name);
 	if (count == -EINVAL)
 		goto gpio_done;
 
@@ -300,10 +321,8 @@ static int max77620_poweroff_probe(struct platform_device *pdev)
 		u32 val = 0;
 		int index = count * 2;
 
-		of_property_read_u32_index(np, "maxim,power-reset-gpio-states",
-				index, &gpio);
-		of_property_read_u32_index(np, "maxim,power-reset-gpio-states",
-				index + 1, &val);
+		of_property_read_u32_index(np, prop_name, index, &gpio);
+		of_property_read_u32_index(np, prop_name, index + 1, &val);
 		max77620_poweroff->gpio_state[count] =
 					GPIO_VAL_TO_STATE(gpio, val);
 	}

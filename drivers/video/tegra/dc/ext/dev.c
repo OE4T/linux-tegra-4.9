@@ -2830,7 +2830,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 		}
 
-		ret = tegra_nvdisp_get_imp_user_info(user->ext->dc, info);
+		ret = tegra_nvdisp_get_imp_user_info(info);
 		if (ret) {
 			kfree(info);
 			return ret;

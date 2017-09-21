@@ -2754,8 +2754,6 @@ static int tegra_nvdisp_get_v_taps_user_info(
 		goto v_taps_free_and_ret;
 	}
 
-	mutex_lock(&tegra_nvdisp_lock);
-
 	for (i = 0; i < num_wins; i++) {
 		int win_capc, win_cape;
 		int min_width;
@@ -2764,13 +2762,12 @@ static int tegra_nvdisp_get_v_taps_user_info(
 
 		for (j = 0; j < tegra_dc_get_numof_dispheads(); j++) {
 			owner_dc = tegra_dc_get_dc(j);
-			if (!owner_dc || !owner_dc->enabled)
+			if (!owner_dc)
 				continue;
 
-			if (test_bit(win_ids[i], &owner_dc->valid_windows)) {
-				win = tegra_dc_get_window(owner_dc, win_ids[i]);
+			win = tegra_dc_get_window(owner_dc, win_ids[i]);
+			if (win)
 				break;
-			}
 		}
 
 		if (!win)
@@ -2793,12 +2790,9 @@ static int tegra_nvdisp_get_v_taps_user_info(
 	}
 
 	if (copy_to_user(info->v_taps, v_taps, win_arr_size)) {
-		mutex_unlock(&tegra_nvdisp_lock);
 		ret = -EFAULT;
 		goto v_taps_free_and_ret;
 	}
-
-	mutex_unlock(&tegra_nvdisp_lock);
 
 v_taps_free_and_ret:
 	kfree(win_ids);
@@ -2816,9 +2810,12 @@ static int tegra_nvdisp_get_emc_dvfs_user_info(
 	struct tegra_dc_ext_imp_emc_dvfs_pair *pairs;
 	u32 num_pairs = 0;
 	size_t i;
+	int emc_to_dram_factor;
 	int ret = 0;
 
 	dvfs_table = &g_imp.emc_dvfs_table;
+	emc_to_dram_factor = bwmgr_get_emc_to_dram_freq_factor();
+
 	num_pairs = min(dvfs_table->num_pairs, info->emc_dvfs_pairs_requested);
 	pairs = kzalloc(num_pairs * sizeof(*pairs), GFP_KERNEL);
 	if (!pairs) {
@@ -2829,7 +2826,7 @@ static int tegra_nvdisp_get_emc_dvfs_user_info(
 	for (i = 0; i < num_pairs; i++) {
 		/* DRAM to EMC */
 		pairs[i].freq = dvfs_table->pairs[i].freq /
-					bwmgr_get_emc_to_dram_freq_factor();
+					emc_to_dram_factor;
 		pairs[i].latency = dvfs_table->pairs[i].latency;
 	}
 
@@ -2846,15 +2843,11 @@ free_and_ret:
 	return ret;
 }
 
-int tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
-				struct tegra_dc_ext_imp_user_info *info)
+int tegra_nvdisp_get_imp_user_info(struct tegra_dc_ext_imp_user_info *info)
 {
-	u32 ihub_capa = tegra_dc_readl(dc, nvdisp_ihub_capa_r());
 	int ret = 0;
 
-	/* base entry width is 32 bytes */
-	info->mempool_size = nvdisp_ihub_capa_mempool_entries_v(ihub_capa) *
-			(32 << nvdisp_ihub_capa_mempool_width_v(ihub_capa));
+	info->mempool_size = g_imp.caps.total_mempool_size_bytes;
 
 	ret = tegra_nvdisp_get_v_taps_user_info(info);
 	if (ret)

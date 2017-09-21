@@ -823,8 +823,7 @@ void reg_dump(struct tegra_dc *dc, void *data,
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
 int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
 int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);
-int tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
-				struct tegra_dc_ext_imp_user_info *info);
+int tegra_nvdisp_get_imp_user_info(struct tegra_dc_ext_imp_user_info *info);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);
 void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
 void tegra_nvdisp_stop_display(struct tegra_dc *dc);

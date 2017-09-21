@@ -1376,6 +1376,7 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 	unsigned int id_type;
 	u32 num_lce, act_eng_bitmask = 0;
 	int err = 0;
+	u32 id = ((u32)~0);
 
 	if (!mmfault->valid)
 		return;
@@ -1417,10 +1418,13 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 		nvgpu_log(g, gpu_dbg_intr, "UNBOUND INST BLOCK MMU FAULT");
 
 		} else if (mmfault->refch) {
-			if (gk20a_is_channel_marked_as_tsg(mmfault->refch))
+			if (gk20a_is_channel_marked_as_tsg(mmfault->refch)) {
+				id = mmfault->refch->tsgid;
 				id_type = ID_TYPE_TSG;
-			else
+			} else {
+				id = mmfault->chid;
 				id_type = ID_TYPE_CHANNEL;
+			}
 		} else {
 			id_type = ID_TYPE_UNKNOWN;
 		}
@@ -1428,7 +1432,7 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 			act_eng_bitmask = BIT(mmfault->faulted_engine);
 
 		g->ops.fifo.teardown_ch_tsg(g, act_eng_bitmask,
-			mmfault->chid, id_type, RC_TYPE_MMU_FAULT, mmfault);
+			id, id_type, RC_TYPE_MMU_FAULT, mmfault);
 	} else {
 		err = gv11b_fb_fix_page_fault(g, mmfault);
 		if (err) {

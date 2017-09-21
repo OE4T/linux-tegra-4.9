@@ -77,11 +77,13 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 #endif
 
 	ret = vi_enable_irq(tegra_vi);
-	if (ret)
+	if (ret) {
 		dev_err(&tegra_vi->ndev->dev, "%s: vi_enable_irq failed\n",
 			__func__);
+		return ret;
+	}
 
-	return ret;
+	return tegra_csi_mipi_calibrate(&tegra_vi->csi, true);
 }
 
 int nvhost_vi_prepare_poweroff(struct platform_device *dev)
@@ -91,6 +93,13 @@ int nvhost_vi_prepare_poweroff(struct platform_device *dev)
 
 	if (!tegra_vi)
 		return -EINVAL;
+
+	ret = tegra_csi_mipi_calibrate(&tegra_vi->csi, false);
+	if (ret) {
+		dev_err(&tegra_vi->ndev->dev, "%s:disable calibration failed\n",
+			__func__);
+		return ret;
+	}
 
 	ret = vi_disable_irq(tegra_vi);
 	if (ret) {

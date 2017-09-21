@@ -471,9 +471,32 @@ static int csi2_mipi_cal(struct tegra_csi_channel *chan)
 	unsigned int lanes, num_ports, val, csi_port;
 	struct tegra_csi_port *port;
 	struct tegra_csi_device *csi = chan->csi;
+	int err;
 
 	lanes = 0;
 	num_ports = 0;
+
+	/* sensor is not bound yet, calibration cannot be performed */
+	if (chan->sensor_sd == NULL)
+		return 0;
+
+	/*
+	 * Mipi calibration is done when CSI is powered on, for VI2
+	 * calibration is dependent on sensor standby state. Depending
+	 * on sensor driver spec, the proper state is achieved when the
+	 * sensor is powered on or during the blanking interval between
+	 * frames. To cover both the states, sensor starts streaming as
+	 * well for calibration. Note that after the calibration although
+	 * sensor power is off, CSI power and pad power stays on ensuring
+	 * the lanes are calibrated for the actual streaming session.
+	 */
+	err = v4l2_subdev_call(chan->sensor_sd, core, s_power, true);
+	if (err < 0 && err != ENOIOCTLCMD)
+		return err;
+
+	err = v4l2_subdev_call(chan->sensor_sd, video, s_stream, true);
+	if (err < 0 && err != ENOIOCTLCMD)
+		return err;
 
 	while (num_ports < chan->numports) {
 		port = &chan->ports[num_ports];
@@ -500,7 +523,22 @@ static int csi2_mipi_cal(struct tegra_csi_channel *chan)
 			"Selected no CSI lane, cannot do calibration");
 		return -EINVAL;
 	}
-	return tegra_mipi_calibration(lanes);
+
+	err = tegra_mipi_calibration(lanes);
+	if (err) {
+		dev_err(csi->dev, "mipi calibration failed\n");
+		return err;
+	}
+
+	err = v4l2_subdev_call(chan->sensor_sd, video, s_stream, false);
+	if (err < 0 && err != ENOIOCTLCMD)
+		return err;
+
+	err = v4l2_subdev_call(chan->sensor_sd, core, s_power, false);
+	if (err < 0 && err != ENOIOCTLCMD)
+		return err;
+
+	return 0;
 }
 
 static int csi2_power_on(struct tegra_csi_device *csi)

@@ -1252,6 +1252,7 @@ static int tegra_channel_connect_sensor(
 
 		csi_chan->s_data =
 			to_camera_common_data(chan->subdev_on_csi->dev);
+		csi_chan->sensor_sd = chan->subdev_on_csi;
 
 	}
 

@@ -111,6 +111,7 @@ struct tegra_csi_channel {
 	struct v4l2_subdev subdev;
 	struct media_pad *pads;
 	struct media_pipeline pipe;
+	struct v4l2_subdev *sensor_sd;
 
 	struct tegra_csi_device *csi;
 	struct tegra_csi_port *ports;

@@ -766,6 +766,16 @@ static long mipi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		dev_err(mipi->dev, "Selected lane %x, skip mipical\n", lanes);
 		return 0;
 	}
+	case _IOC_NR(TEGRA_MIPI_IOCTL_CAL_STATUS): {
+		u32 status = 0;
+
+		regmap_read(mipi->regmap, ADDR(CIL_MIPI_CAL_STATUS), &status);
+		if (copy_to_user((void __user *)arg, &status, sizeof(u32))) {
+			dev_err(mipi->dev, "Fail to copy kernel data to user\n");
+			return -EFAULT;
+		}
+		return 0;
+	}
 	default:
 		dev_err(mipi->dev, "Unknown ioctl\n");
 		return -EINVAL;

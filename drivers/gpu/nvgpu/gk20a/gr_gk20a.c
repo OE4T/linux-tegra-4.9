@@ -4170,7 +4170,9 @@ void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config)
 			g->ops.gr.init_elcg_mode(g, mode_config,
 						active_engine_id);
 		else
-			nvgpu_err(g, "invalid cg mode %d %d", cgmode, mode_config);
+			nvgpu_err(g, "invalid cg mode %d, config %d for "
+							"act_eng_id %d",
+					cgmode, mode_config, active_engine_id);
 	}
 }
 

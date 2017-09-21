@@ -151,10 +151,17 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 
 	 /* This function must be called with g->dbg_sessions_lock held */
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %d",
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %d",
 		   g->name, powermode);
 
 	switch (powermode) {
+	/*
+	 * Powergate mode here refers to railgate+powergate+clockgate
+	 * so in case slcg/blcg/elcg are disabled and railgating is enabled,
+	 * disable railgating and then set is_pg_disabled = true
+	 * Similarly re-enable railgating and not other features if they are not
+	 * enabled when powermode=MODE_ENABLE
+	 */
 	case NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE:
 		/* save off current powergate, clk state.
 		 * set gpu module's can_powergate = 0.
@@ -171,7 +178,8 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 		if ((dbg_s->is_pg_disabled == false) &&
 		    (g->dbg_powergating_disabled_refcount++ == 0)) {
 
-			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "module busy");
+			nvgpu_log(g, gpu_dbg_gpu_dbg | gpu_dbg_fn,
+							"module busy");
 			err = gk20a_busy(g);
 			if (err)
 				return err;
@@ -181,18 +189,16 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 
 			if (g->ops.clock_gating.slcg_gr_load_gating_prod)
 				g->ops.clock_gating.slcg_gr_load_gating_prod(g,
-						false);
+					false);
 			if (g->ops.clock_gating.slcg_perf_load_gating_prod)
 				g->ops.clock_gating.slcg_perf_load_gating_prod(g,
-						false);
+					false);
 			if (g->ops.clock_gating.slcg_ltc_load_gating_prod)
 				g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
-						false);
+					false);
 
 			gr_gk20a_init_cg_mode(g, BLCG_MODE, BLCG_RUN);
-			g->elcg_enabled = false;
 			gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
-
 		}
 
 		dbg_s->is_pg_disabled = true;
@@ -210,23 +216,33 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 		if (dbg_s->is_pg_disabled &&
 		    --g->dbg_powergating_disabled_refcount == 0) {
 
-			g->elcg_enabled = true;
-			gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_AUTO);
-			gr_gk20a_init_cg_mode(g, BLCG_MODE, BLCG_AUTO);
+			if (g->elcg_enabled)
+				gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_AUTO);
 
-			if (g->ops.clock_gating.slcg_ltc_load_gating_prod)
-				g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
-						g->slcg_enabled);
-			if (g->ops.clock_gating.slcg_perf_load_gating_prod)
-				g->ops.clock_gating.slcg_perf_load_gating_prod(g,
-						g->slcg_enabled);
-			if (g->ops.clock_gating.slcg_gr_load_gating_prod)
-				g->ops.clock_gating.slcg_gr_load_gating_prod(g,
-						g->slcg_enabled);
+			if (g->blcg_enabled)
+				gr_gk20a_init_cg_mode(g, BLCG_MODE, BLCG_AUTO);
 
+			if (g->slcg_enabled) {
+				if (g->ops.clock_gating.
+					slcg_ltc_load_gating_prod)
+					g->ops.clock_gating.
+					slcg_ltc_load_gating_prod(g,
+					g->slcg_enabled);
+				if (g->ops.clock_gating.
+					slcg_perf_load_gating_prod)
+					g->ops.clock_gating.
+					slcg_perf_load_gating_prod(g,
+					g->slcg_enabled);
+				if (g->ops.clock_gating.
+					slcg_gr_load_gating_prod)
+					g->ops.clock_gating.
+					slcg_gr_load_gating_prod(g,
+					g->slcg_enabled);
+			}
 			nvgpu_pmu_pg_global_enable(g, true);
 
-			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "module idle");
+			nvgpu_log(g, gpu_dbg_gpu_dbg | gpu_dbg_fn,
+						"module idle");
 			gk20a_idle(g);
 		}
 
@@ -241,7 +257,7 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 		break;
 	}
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %d done",
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %d done",
 		   g->name, powermode);
 	return err;
 }

@@ -1276,6 +1276,8 @@
 
 #if defined(LINUX_VERSION) && LINUX_VERSION >= 409
         aconnect@702c0000 {
+		#address-cells = <2>;
+		#size-cells = <2>;
 #endif
 	adma: adma@702e2000 {
                 compatible = "nvidia,tegra210-adma";

@@ -153,8 +153,6 @@ struct hda_pcm_stream {
 	unsigned int maxbps;	/* supported max. bit per sample */
 	const struct snd_pcm_chmap_elem *chmap; /* chmap to override */
 	struct hda_pcm_ops ops;
-
-	int pcm_open_retry_count;
 };
 
 /* PCM types */

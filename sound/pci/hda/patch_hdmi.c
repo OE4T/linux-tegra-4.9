@@ -1177,49 +1177,8 @@ static int hdmi_pcm_open(struct hda_pcm_stream *hinfo,
 
 	eld = &per_pin->sink_eld;
 
-#if IS_ENABLED(CONFIG_SND_HDA_TEGRA)
-	if (is_tegra_hdmi(codec) &&
-		(!eld->monitor_present || !eld->info.lpcm_sad_ready)) {
-
-		hinfo->pcm_open_retry_count++;
-		if (!eld->monitor_present) {
-			if (tegra_hdmi_setup_hda_presence(
-						get_dev_id(codec)) < 0) {
-				/* Throttle log after 5 retries */
-				if (hinfo->pcm_open_retry_count < 5) {
-					per_cvt->assigned = 0;
-					hinfo->nid = 0;
-					snd_hda_spdif_ctls_unassign(codec, pcm_idx);
-					mutex_unlock(&spec->pcm_lock);
-					codec_warn(codec,
-						"HDMI: No HDMI device"
-						" connected\n");
-				}
-				return -ENODEV;
-			}
-		}
-		if ((is_os_l4t()) &&  (!eld->info.lpcm_sad_ready)) {
-			/* hdmi detected, wait for eld available */
-			int wait_count = 3;
-
-			do {
-				usleep_range(5000, 10000);
-				codec_dbg(codec, "hdmi: eld wait\n");
-			} while (!eld->info.lpcm_sad_ready && wait_count-- > 0);
-		}
-		if (!eld->info.lpcm_sad_ready) {
-			per_cvt->assigned = 0;
-			hinfo->nid = 0;
-			snd_hda_spdif_ctls_unassign(codec, pcm_idx);
-			mutex_unlock(&spec->pcm_lock);
-			return -ENODEV;
-		}
-		hinfo->pcm_open_retry_count = 0;
-	}
-#endif
-
 	/* Restrict capabilities by ELD if this isn't disabled */
-	if (!static_hdmi_pcm && (eld->eld_valid || eld->info.lpcm_sad_ready)) {
+	if (!static_hdmi_pcm && eld->eld_valid) {
 		snd_hdmi_eld_update_pcm_info(&eld->info, hinfo);
 		if (hinfo->channels_min > hinfo->channels_max ||
 		    !hinfo->rates || !hinfo->formats) {
@@ -1822,6 +1781,7 @@ static int generic_hdmi_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 	if (is_tegra_hdmi(codec)) {
 		int stripe;
 		int err = 0;
+		struct hdmi_eld *pin_eld = &per_pin->sink_eld;
 
 		/* For multi SOR, program SDO lines to support required bw */
 		stripe = snd_hdac_get_stream_stripe_ctl(&codec->bus->core,
@@ -1838,17 +1798,20 @@ static int generic_hdmi_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 		else
 			tegra_hdmi_audio_null_sample_inject(false,
 							get_dev_id(codec));
+
 		/* Set hdmi:audio freq and source selection*/
 		err = tegra_hdmi_setup_audio_freq_source(
 					substream->runtime->rate, HDA,
 					get_dev_id(codec));
 		if ( err < 0 ) {
-			mutex_unlock(&per_pin->lock);
-			mutex_unlock(&spec->pcm_lock);
-			codec_err(codec,
+			codec_dbg(codec,
 				"Unable to set hdmi audio freq to %d\n",
 						substream->runtime->rate);
-			return err;
+			if (pin_eld->monitor_present || pin_eld->eld_valid) {
+				mutex_unlock(&per_pin->lock);
+				mutex_unlock(&spec->pcm_lock);
+				return err;
+			}
 		}
 	}
 #endif
@@ -1937,7 +1900,6 @@ static int hdmi_pcm_close(struct hda_pcm_stream *hinfo,
 		per_pin->channels = 0;
 		mutex_unlock(&per_pin->lock);
 		mutex_unlock(&spec->pcm_lock);
-		hinfo->pcm_open_retry_count = 0;
 	}
 
 	return 0;

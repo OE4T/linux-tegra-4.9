@@ -191,27 +191,14 @@ struct tegra_vi_channel *vi_channel_open_ex(unsigned channel)
 	mutex_unlock(&chdrv_lock);
 
 	chan = kzalloc(sizeof(*chan), GFP_KERNEL);
-	if (unlikely(chan == NULL)) {
-		err = -ENOMEM;
-		goto error;
-	}
+	if (unlikely(chan == NULL))
+		return ERR_PTR(-ENOMEM);
 
 	chan->drv = chan_drv;
 	chan->dev = chan_drv->dev;
 	chan->ndev = chan_drv->ndev;
 
-	mutex_lock(&chan_drv->lock);
-	if (rcu_access_pointer(chan_drv->channels[channel]) != NULL) {
-		mutex_unlock(&chan_drv->lock);
-		kfree(chan);
-		err = -EBUSY;
-		goto error;
-	}
-
-	rcu_assign_pointer(chan_drv->channels[channel], chan);
-	mutex_unlock(&chan_drv->lock);
-
-	err = vi_channel_power_on_vi_device(chan);
+ 	err = vi_channel_power_on_vi_device(chan);
 	if (err < 0)
 		goto error;
 
@@ -219,8 +206,23 @@ struct tegra_vi_channel *vi_channel_open_ex(unsigned channel)
 	if (err < 0)
 		goto error;
 
+	mutex_lock(&chan_drv->lock);
+	if (rcu_access_pointer(chan_drv->channels[channel]) != NULL) {
+		mutex_unlock(&chan_drv->lock);
+		err = -EBUSY;
+		goto rcu_err;
+	}
+
+	rcu_assign_pointer(chan_drv->channels[channel], chan);
+	mutex_unlock(&chan_drv->lock);
+
 	return chan;
+
+rcu_err:
+	vi_channel_power_off_vi_device(chan);
+	vi_capture_shutdown(chan);
 error:
+	kfree(chan);
 	return ERR_PTR(err);
 }
 EXPORT_SYMBOL(vi_channel_open_ex);

@@ -216,12 +216,13 @@ static unsigned int hdmi_get_eld_data(struct hda_codec *codec, hda_nid_t nid,
 {
 	unsigned int val;
 
-	val = snd_hda_codec_read(codec, nid, 0,
-					AC_VERB_GET_HDMI_ELDD, byte_index);
-
 	if (codec->custom_eld_data) {
 		codec_dbg(codec, "HDMI: Warning! Using custom ELD values!!\n");
 		val = codec->custom_eld_data[byte_index];
+	} else {
+		/* return from SOR registers */
+		val = snd_hda_codec_read(codec, nid, 0,
+			AC_VERB_GET_HDMI_ELDD, byte_index);
 	}
 
 #ifdef BE_PARANOID

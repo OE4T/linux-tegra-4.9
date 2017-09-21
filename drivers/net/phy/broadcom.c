@@ -564,6 +564,13 @@ static int brcm_fet_config_intr(struct phy_device *phydev)
 	return err;
 }
 
+static int bcm89610_probe(struct phy_device *phydev)
+{
+	bcm54xx_low_power_mode(phydev, true);
+
+	return 0;
+}
+
 int bcm89610_suspend(struct phy_device *phydev)
 {
 	bcm54xx_low_power_mode(phydev, true);
@@ -728,6 +735,7 @@ static struct phy_driver broadcom_drivers[] = {
 	.features       = PHY_GBIT_FEATURES |
 			  SUPPORTED_Pause | SUPPORTED_Asym_Pause,
 	.flags          = PHY_HAS_MAGICANEG | PHY_HAS_INTERRUPT,
+	.probe		= bcm89610_probe,
 	.config_init    = bcm54xx_config_init,
 	.config_aneg    = genphy_config_aneg,
 	.read_status    = genphy_read_status,

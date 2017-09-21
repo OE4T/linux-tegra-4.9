@@ -1781,7 +1781,7 @@ static struct tegra_spi_chip_data tegra210_spi_chip_data = {
 static struct tegra_spi_chip_data tegra186_spi_chip_data = {
 	.intr_mask_reg = true,
 	.set_rx_tap_delay = false,
-	.slcg_support = true,
+	.slcg_support = false,
 };
 
 static const struct of_device_id tegra_spi_of_match[] = {

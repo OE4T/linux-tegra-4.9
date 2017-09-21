@@ -1085,6 +1085,8 @@
 			compatible = "nvidia,tegra210-tsec";
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x54500000 0x0 0x00040000>;
+			clocks = <&tegra_car TEGRA210_CLK_TSEC>;
+			clock-names = "tsec";
 			resets = <&tegra_car TEGRA210_CLK_TSEC>;
 			iommus = <&smmu TEGRA_SWGROUP_TSEC>;
 			status = "disabled";

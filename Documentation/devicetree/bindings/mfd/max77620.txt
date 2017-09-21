@@ -110,6 +110,14 @@ For DT binding details of different sub modules like GPIO, pincontrol,
 regulator, power, please refer respective device-tree binding document
 under their respective sub-system directories.
 
+There is anothe name of these properties to reduce the property name
+length to meet ePAPR specs. The another name is without vendor as
+follows:
+	maxim,fps-event-source -> fps-event-source
+	maxim,shutdown-fps-time-period-us -> shutdown-fps-time-period-us
+	maxim,suspend-fps-time-period-us -> suspend-fps-time-period-us
+	maxim,device-state-on-disabled-event -> device-state-on-disabled-event
+	
 Example:
 --------
 #include <dt-bindings/mfd/max77620.h>

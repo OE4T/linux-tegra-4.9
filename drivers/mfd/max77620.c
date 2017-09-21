@@ -296,6 +296,10 @@ static int max77620_config_fps(struct max77620_chip *chip,
 
 	ret = of_property_read_u32(fps_np, "maxim,shutdown-fps-time-period-us",
 				   &param_val);
+	if (ret < 0)
+		ret = of_property_read_u32(fps_np,
+					   "shutdown-fps-time-period-us",
+					   &param_val);
 	if (!ret) {
 		mask |= MAX77620_FPS_TIME_PERIOD_MASK;
 		chip->shutdown_fps_period[fps_id] = min(param_val,
@@ -307,12 +311,18 @@ static int max77620_config_fps(struct max77620_chip *chip,
 
 	ret = of_property_read_u32(fps_np, "maxim,suspend-fps-time-period-us",
 				   &param_val);
+	if (ret < 0)
+		ret = of_property_read_u32(fps_np, "suspend-fps-time-period-us",
+					   &param_val);
 	if (!ret)
 		chip->suspend_fps_period[fps_id] = min(param_val,
 						       fps_max_period);
 
 	ret = of_property_read_u32(fps_np, "maxim,fps-event-source",
 				   &param_val);
+	if (ret < 0)
+		ret = of_property_read_u32(fps_np, "fps-event-source",
+					   &param_val);
 	if (!ret) {
 		if (param_val > 2) {
 			dev_err(dev, "FPS%d event-source invalid\n", fps_id);
@@ -330,6 +340,10 @@ static int max77620_config_fps(struct max77620_chip *chip,
 		ret = of_property_read_u32(fps_np,
 				"maxim,device-state-on-disabled-event",
 				&param_val);
+		if (ret < 0)
+			ret = of_property_read_u32(fps_np,
+					"device-state-on-disabled-event",
+					&param_val);
 		if (!ret) {
 			if (param_val == 0)
 				chip->sleep_enable = true;

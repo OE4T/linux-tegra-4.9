@@ -66,12 +66,6 @@
 				nvidia,frame-count = <16>;
 				nvidia,frame-size = <128>;
 			};
-			ivc_aon_shub@d880 {
-				reg = <0xd880>, <0x1d880>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <4>;
-				nvidia,frame-size = <256>;
-			};
 		};
 	};
 
@@ -91,24 +85,4 @@
 		mboxes = <&aon 4>;
 		status = "disabled";
 	};
-
-	aon_shub {
-		status = "disabled";
-		compatible = "nvidia,tegra186_aon_shub";
-		mboxes = <&aon 5>;
-
-		icm20628@68 {
-			i2c_info = <1 100000 0x68>;
-			chip_id = <1>;
-			accelerometer_matrix = [00 01 00 01 00 00 00 00 ff];
-			gyroscope_matrix = [00 01 00 01 00 00 00 00 ff];
-		};
-
-		ak8963c@0c {
-			i2c_info = <1 100000 0x0c>;
-			chip_id = <2>;
-			magnetic_field_matrix = [00 01 00 01 00 00 00 00 ff];
-		};
-	};
-
 };

@@ -22,6 +22,7 @@
 #include <linux/hardirq.h>
 #include <linux/iio/imu/tsfw_icm20628.h>
 #include <linux/jiffies.h>
+#include <linux/ratelimit.h>
 #include <linux/slab.h>
 #include <linux/time.h>
 #include <linux/wait.h>
@@ -82,6 +83,8 @@ MODULE_LICENSE("GPL v2");
 #define PACKET_TYPE_ADPCM 0
 #define PACKET_TYPE_MSBC  1
 
+/* timer callback occurs every 20ms, and silence max timeout is 5 seconds */
+#define MAX_SILENCE_COUNTER 250
 
 /* Normally SBC has a H2 header but because we want
  * to embed keycode support while audio is active without
@@ -178,6 +181,8 @@ struct shdr_device {
 	int hid_miss_war_timeout;
 };
 
+/* counter of how many continous silent timer callback in a row */
+static unsigned int silence_counter;
 static int num_remotes;
 static struct mutex snd_cards_lock;
 static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;  /* Index 0-MAX */
@@ -1046,6 +1051,12 @@ static void snd_atvr_timer_callback(unsigned long data)
 		spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
 		return;
 	}
+
+	if (silence_counter > MAX_SILENCE_COUNTER) {
+		spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
+		printk_ratelimited(KERN_INFO "max silence timeout reached.\n");
+		return;
+	}
 	spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
 
 	spin_lock_irqsave(&atvr_snd->s_substream_lock, flags);
@@ -1130,6 +1141,10 @@ static void snd_atvr_timer_callback(unsigned long data)
 
 lock_err:
 	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
+	if (need_silence)
+		silence_counter += 1;
+	else
+		silence_counter = 0;
 	if (atvr_snd->timer_enabled & ATVR_TIMER_ENABLED)
 		snd_atvr_schedule_timer(substream);
 	spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
@@ -1142,6 +1157,7 @@ static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 
 	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
 	atvr_snd->timer_enabled = ATVR_TIMER_ENABLED;
+	silence_counter = 0;
 	spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
 
 	atvr_snd->previous_jiffies = jiffies;
@@ -1161,6 +1177,7 @@ static void snd_atvr_timer_stop(struct snd_pcm_substream *substream)
 	unsigned long flags;
 
 	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
+	silence_counter = 0;
 	if (atvr_snd->timer_enabled)
 		atvr_snd->timer_enabled = ATVR_TIMER_DISABLED;
 	spin_unlock_irqrestore(&atvr_snd->timer_lock, flags);
@@ -1859,6 +1876,7 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 
 	switch_set_state(&shdr_mic_switch, true);
 
+	silence_counter = 0;
 	pr_info("%s: remotes count %d->%d\n", __func__,
 		num_remotes, num_remotes+1);
 	num_remotes++;

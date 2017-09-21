@@ -69,6 +69,24 @@ static const struct pinconf_generic_params max77620_cfg_params[] = {
 	}, {
 		.property = "maxim,suspend-fps-power-down-slot",
 		.param = MAX77620_SUSPEND_FPS_POWER_DOWN_SLOTS,
+	}, {
+		.property = "active-fps-source",
+		.param = MAX77620_ACTIVE_FPS_SOURCE,
+	}, {
+		.property = "active-fps-power-up-slot",
+		.param = MAX77620_ACTIVE_FPS_POWER_ON_SLOTS,
+	}, {
+		.property = "active-fps-power-down-slot",
+		.param = MAX77620_ACTIVE_FPS_POWER_DOWN_SLOTS,
+	}, {
+		.property = "suspend-fps-source",
+		.param = MAX77620_SUSPEND_FPS_SOURCE,
+	}, {
+		.property = "suspend-fps-power-up-slot",
+		.param = MAX77620_SUSPEND_FPS_POWER_ON_SLOTS,
+	}, {
+		.property = "suspend-fps-power-down-slot",
+		.param = MAX77620_SUSPEND_FPS_POWER_DOWN_SLOTS,
 	},
 };
 

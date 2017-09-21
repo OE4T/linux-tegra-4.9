@@ -269,7 +269,7 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 	[TEGRA210_POWER_DOMAIN_NVENC] = {
 		.name = "nvenc",
 		.clk_info = {
-			[0] = { .clk_name = "nvenc.cbus", .clk_type = CLK_ONLY },
+			[0] = { .clk_name = "nvenc", .clk_type = CLK_ONLY },
 		},
 		.slcg_info = {
 			[0] = { .clk_name = "mc_capa" },
@@ -405,7 +405,7 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 	[TEGRA210_POWER_DOMAIN_VIC] = {
 		.name = "vic",
 		.clk_info = {
-			[0] = { .clk_name = "vic03.cbus", .clk_type = CLK_ONLY },
+			[0] = { .clk_name = "vic03", .clk_type = CLK_ONLY },
 		},
 		.slcg_info = {
 			[0] = { .clk_name = "mc_capa" },

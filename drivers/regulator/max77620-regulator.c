@@ -608,30 +608,50 @@ static int max77620_of_parse_cb(struct device_node *np,
 	int ret;
 
 	ret = of_property_read_u32(np, "maxim,active-fps-source", &pval);
+	if (ret < 0)
+		ret = of_property_read_u32(np, "active-fps-source", &pval);
 	rpdata->active_fps_src = (!ret) ? pval : MAX77620_FPS_SRC_DEF;
 
 	ret = of_property_read_u32(np, "maxim,active-fps-power-up-slot", &pval);
+	if (ret < 0)
+		ret = of_property_read_u32(np, "active-fps-power-up-slot",
+					   &pval);
 	rpdata->active_fps_pu_slot = (!ret) ? pval : -1;
 
 	ret = of_property_read_u32(
 			np, "maxim,active-fps-power-down-slot", &pval);
+	if (ret < 0)
+		ret = of_property_read_u32(np, "active-fps-power-down-slot",
+					   &pval);
 	rpdata->active_fps_pd_slot = (!ret) ? pval : -1;
 
 	ret = of_property_read_u32(np, "maxim,suspend-fps-source", &pval);
+	if (ret < 0)
+		ret = of_property_read_u32(np, "suspend-fps-source", &pval);
 	rpdata->suspend_fps_src = (!ret) ? pval : -1;
 
 	ret = of_property_read_u32(
 			np, "maxim,suspend-fps-power-up-slot", &pval);
+	if (ret < 0)
+		ret = of_property_read_u32(np, "suspend-fps-power-up-slot",
+					   &pval);
 	rpdata->suspend_fps_pu_slot = (!ret) ? pval : -1;
 
 	ret = of_property_read_u32(
 			np, "maxim,suspend-fps-power-down-slot", &pval);
+	if (ret < 0)
+		ret = of_property_read_u32(np, "suspend-fps-power-down-slot",
+					   &pval);
 	rpdata->suspend_fps_pd_slot = (!ret) ? pval : -1;
 
 	ret = of_property_read_u32(np, "maxim,power-ok-control", &pval);
+	if (ret < 0)
+		ret = of_property_read_u32(np, "power-ok-control", &pval);
 	rpdata->power_ok = (!ret) ? pval : -1;
 
 	ret = of_property_read_u32(np, "maxim,ramp-rate-setting", &pval);
+	if (ret < 0)
+		ret = of_property_read_u32(np, "ramp-rate-setting", &pval);
 	rpdata->ramp_rate_setting = (!ret) ? pval : 0;
 
 	return max77620_init_pmic(pmic, desc->id);

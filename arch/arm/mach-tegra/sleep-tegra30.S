@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,13 +16,13 @@
 
 #include <linux/linkage.h>
 
+#include <soc/tegra/flowctrl.h>
 #include <soc/tegra/fuse.h>
 
 #include <asm/asm-offsets.h>
 #include <asm/assembler.h>
 #include <asm/cache.h>
 
-#include "flowctrl.h"
 #include "irammap.h"
 #include "sleep.h"
 

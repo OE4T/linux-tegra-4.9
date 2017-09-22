@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,5 +21,6 @@
 
 #define TEGRA_MIPI_IOCTL_BIAS_PAD_CTRL _IOW(TEGRA_MIPI_IOCTL_MAGIC, 1, u32)
 #define TEGRA_MIPI_IOCTL_CAL _IOW(TEGRA_MIPI_IOCTL_MAGIC, 2, u32)
+#define TEGRA_MIPI_IOCTL_CAL_STATUS _IOR(TEGRA_MIPI_IOCTL_MAGIC, 3, __u32)
 
 #endif

@@ -166,7 +166,7 @@ static int __init tegra_flowctrl_init(void)
 	unsigned long size = 0;
 	struct device_node *np;
 
-	if (!soc_is_tegra())
+	if (!soc_is_tegra210_n_before())
 		goto out;
 
 	np = of_find_matching_node(NULL, matches);

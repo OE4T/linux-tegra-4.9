@@ -58,6 +58,9 @@ struct gk20a;
 #define NVGPU_PMU_PSTATE				49
 #define NVGPU_PMU_ZBC_SAVE				50
 #define NVGPU_PMU_FECS_BOOTSTRAP_DONE			51
+#define NVGPU_GPU_CAN_BLCG                              52
+#define NVGPU_GPU_CAN_SLCG                              53
+#define NVGPU_GPU_CAN_ELCG                              54
 
 /* whether to run PREOS binary on dGPUs */
 #define NVGPU_PMU_RUN_PREOS			52

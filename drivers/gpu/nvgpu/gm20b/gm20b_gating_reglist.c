@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,6 +26,7 @@
 #define __gm20b_gating_reglist_h__
 
 #include "gm20b_gating_reglist.h"
+#include <nvgpu/enabled.h>
 
 struct gating_desc {
 	u32 addr;
@@ -290,6 +291,10 @@ void gm20b_slcg_bus_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_bus) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_bus[i].addr,
@@ -305,6 +310,10 @@ void gm20b_slcg_ce2_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_ce2) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_ce2[i].addr,
@@ -320,6 +329,10 @@ void gm20b_slcg_chiplet_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_chiplet) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_chiplet[i].addr,
@@ -340,6 +353,10 @@ void gm20b_slcg_fb_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_fb) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_fb[i].addr,
@@ -355,6 +372,10 @@ void gm20b_slcg_fifo_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_fifo) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_fifo[i].addr,
@@ -370,6 +391,10 @@ void gr_gm20b_slcg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_gr) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_gr[i].addr,
@@ -385,6 +410,10 @@ void ltc_gm20b_slcg_ltc_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_ltc) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_ltc[i].addr,
@@ -400,6 +429,10 @@ void gm20b_slcg_perf_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_perf) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_perf[i].addr,
@@ -415,6 +448,10 @@ void gm20b_slcg_priring_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_priring) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_priring[i].addr,
@@ -430,6 +467,10 @@ void gm20b_slcg_pwr_csb_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_pwr_csb) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_pwr_csb[i].addr,
@@ -445,6 +486,10 @@ void gm20b_slcg_pmu_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_pmu) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_pmu[i].addr,
@@ -460,6 +505,10 @@ void gm20b_slcg_therm_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_therm) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_therm[i].addr,
@@ -475,6 +524,10 @@ void gm20b_slcg_xbar_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_slcg_xbar) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_slcg_xbar[i].addr,
@@ -490,6 +543,10 @@ void gm20b_blcg_bus_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_blcg_bus) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_blcg_bus[i].addr,
@@ -505,6 +562,10 @@ void gm20b_blcg_ctxsw_firmware_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_blcg_ctxsw_prog) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_blcg_ctxsw_prog[i].addr,
@@ -520,6 +581,10 @@ void gm20b_blcg_fb_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_blcg_fb) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_blcg_fb[i].addr,
@@ -535,6 +600,10 @@ void gm20b_blcg_fifo_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_blcg_fifo) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_blcg_fifo[i].addr,
@@ -550,6 +619,10 @@ void gm20b_blcg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_blcg_gr) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_blcg_gr[i].addr,
@@ -565,6 +638,10 @@ void gm20b_blcg_ltc_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_blcg_ltc) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_blcg_ltc[i].addr,
@@ -580,6 +657,10 @@ void gm20b_blcg_pwr_csb_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_blcg_pwr_csb) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_blcg_pwr_csb[i].addr,
@@ -595,6 +676,10 @@ void gm20b_blcg_pmu_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_blcg_pmu) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_blcg_pmu[i].addr,
@@ -610,6 +695,10 @@ void gm20b_blcg_xbar_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_blcg_xbar) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_blcg_xbar[i].addr,
@@ -625,6 +714,10 @@ void gr_gm20b_pg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gm20b_pg_gr) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gm20b_pg_gr[i].addr,

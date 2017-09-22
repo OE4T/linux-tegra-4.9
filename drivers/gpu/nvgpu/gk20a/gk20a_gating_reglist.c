@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA Corporation.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,6 +26,7 @@
 #define __gk20a_gating_reglist_h__
 
 #include "gk20a_gating_reglist.h"
+#include <nvgpu/enabled.h>
 
 struct gating_desc {
 	u32 addr;
@@ -305,6 +306,10 @@ void gr_gk20a_slcg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_slcg_gr) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_slcg_gr[i].addr,
@@ -325,6 +330,10 @@ void gr_gk20a_slcg_perf_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_slcg_perf) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_slcg_perf[i].addr,
@@ -340,6 +349,10 @@ void gr_gk20a_blcg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_blcg_gr) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_blcg_gr[i].addr,
@@ -355,6 +368,10 @@ void gr_gk20a_pg_gr_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_pg_gr) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_pg_gr[i].addr,
@@ -370,6 +387,10 @@ void gr_gk20a_slcg_therm_load_gating_prod(struct gk20a *g,
 {
 	u32 i;
 	u32 size = sizeof(gk20a_slcg_therm) / sizeof(struct gating_desc);
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
+		return;
+
 	for (i = 0; i < size; i++) {
 		if (prod)
 			gk20a_writel(g, gk20a_slcg_therm[i].addr,

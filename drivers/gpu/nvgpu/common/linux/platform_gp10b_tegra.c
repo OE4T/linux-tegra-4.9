@@ -373,6 +373,9 @@ struct gk20a_platform gp10b_tegra_platform = {
 	.enable_blcg		= true,
 	.enable_slcg		= true,
 	.enable_elcg		= true,
+	.can_slcg               = true,
+	.can_blcg               = true,
+	.can_elcg               = true,
 	.enable_aelpg       = true,
 	.enable_perfmon         = true,
 

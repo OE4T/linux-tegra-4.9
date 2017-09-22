@@ -91,6 +91,15 @@ struct gk20a_platform {
 	/* Engine Level Clock Gating: true = enable flase = disable */
 	bool enable_elcg;
 
+	/* Should be populated at probe. */
+	bool can_slcg;
+
+	/* Should be populated at probe. */
+	bool can_blcg;
+
+	/* Should be populated at probe. */
+	bool can_elcg;
+
 	/* Engine Level Power Gating: true = enable flase = disable */
 	bool enable_elpg;
 

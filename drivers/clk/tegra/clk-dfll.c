@@ -274,6 +274,8 @@
 #define MULT_TO_DVCO_RATE(mult, ref_rate)	((mult) * ((ref_rate) / 2))
 #define ROUND_DVCO_MIN_RATE(rate, ref_rate)	\
 	(DIV_ROUND_UP(rate, (ref_rate) / 2) * ((ref_rate) / 2))
+#define ROUND_DVCO_MAX_RATE(rate, ref_rate)     MULT_TO_DVCO_RATE( \
+	min(DVCO_RATE_TO_MULT((rate), (ref_rate)), (ulong)FREQ_MAX), (ref_rate))
 #define READ_LAST_I2C_VAL(td)	((dfll_i2c_readl((td), DFLL_I2C_STS) >> \
 	DFLL_I2C_STS_I2C_LAST_SHIFT) & OUT_MASK)
 
@@ -365,6 +367,7 @@ struct tegra_dfll {
 	unsigned long			ref_rate;
 	unsigned long			i2c_clk_rate;
 	unsigned long			dvco_rate_min;
+	unsigned long			dvco_calibration_max;
 	unsigned long			out_rate_min;
 	unsigned long			out_rate_max;
 
@@ -998,8 +1001,8 @@ static void set_dvco_rate_min(struct tegra_dfll *td, struct dfll_rate_req *req)
 		td->calibration_range_min = td->out_rate_min;
 
 	td->calibration_range_max = td->dvco_rate_min + range;
-	if (td->calibration_range_max > td->out_rate_max)
-		td->calibration_range_max = td->out_rate_max;
+	if (td->calibration_range_max > td->dvco_calibration_max)
+		td->calibration_range_max = td->dvco_calibration_max;
 }
 
 /*
@@ -1559,7 +1562,7 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 			if (!IS_ERR_VALUE(rate)) {
 				td->dvco_rate_floors[i] =
 				clamp((unsigned long)rate, td->out_rate_min,
-						td->out_rate_max);
+						td->dvco_calibration_max);
 				ret = true;
 			}
 		}
@@ -1575,7 +1578,7 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 				td->tune_high_dvco_rate_floors[i] =
 					clamp((unsigned long)rate,
 					td->tune_high_target_rate_min,
-					td->out_rate_max);
+					td->dvco_calibration_max);
 				td->tune_high_calibrated = true;
 				ret = true;
 			}
@@ -1592,7 +1595,7 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 				td->dvco_rate_floors[i] =
 					clamp((unsigned long)rate,
 						td->out_rate_min,
-						td->out_rate_max);
+						td->dvco_calibration_max);
 				ret = true;
 			}
 		}
@@ -1700,6 +1703,14 @@ static void dfll_init_out_if(struct tegra_dfll *td)
 
 	set_dvco_rate_min(td, &td->last_req);
 	set_force_out_min(td);
+	if (td->soc->cvb->cpu_dfll_data.dvco_calibration_max)
+		td->dvco_calibration_max =
+			ROUND_DVCO_MAX_RATE(
+			      td->soc->cvb->cpu_dfll_data.dvco_calibration_max,
+			      td->ref_rate);
+	else
+		td->dvco_calibration_max =
+			ROUND_DVCO_MAX_RATE(td->out_rate_max, td->ref_rate);
 
 	td->lut_min = td->thermal_floor_output;
 	td->lut_max = td->thermal_cap_output;
@@ -1867,11 +1878,16 @@ static int dfll_calculate_rate_request(struct tegra_dfll *td,
 	u32 val;
 
 	/*
-	 * If requested rate is below the minimum DVCO rate, active the scaler.
-	 * In the future the DVCO minimum voltage should be selected based on
-	 * chip temperature and the actual minimum rate should be calibrated
-	 * at runtime.
+	 * Requested rate must be below output maximum, i.e. maximum CPU DVFS
+	 * rate. It can, however, be below output minimum as long as it is
+	 * reached with DFLL output scaler from the minimum DVCO rate that
+	 * depends on temperature and tuning mode.
 	 */
+	if (rate > td->out_rate_max) {
+		pr_debug("%s: dfll request %lu is too high\n", __func__, rate);
+		return -EINVAL;
+	}
+
 	req->scale_bits = DFLL_FREQ_REQ_SCALE_MAX - 1;
 	if (rate < td->dvco_rate_min) {
 		int scale;
@@ -1887,7 +1903,12 @@ static int dfll_calculate_rate_request(struct tegra_dfll *td,
 		rate = td->dvco_rate_min;
 	}
 
-	/* Convert requested rate into frequency request and scale settings */
+	/*
+	 * Convert requested rate into frequency request and scale settings.
+	 * LUT voltage index is set to match CPU DVFS voltage for DVCO target
+	 * rate. It is possible for DVCO target to exceed output maximum.
+	 * In this case LUT voltage index is set to maximum voltage.
+	 */
 	val = DVCO_RATE_TO_MULT(rate, td->ref_rate);
 	if (val > FREQ_MAX) {
 		dev_err(td->dev, "%s: Rate %lu is above dfll range\n",
@@ -1896,10 +1917,10 @@ static int dfll_calculate_rate_request(struct tegra_dfll *td,
 	}
 	req->mult_bits = val;
 	req->dvco_target_rate = MULT_TO_DVCO_RATE(req->mult_bits, td->ref_rate);
-	req->lut_index = find_lut_index_for_rate(td, req->dvco_target_rate);
+	rate = min(req->dvco_target_rate, td->out_rate_max);
+	req->lut_index = find_lut_index_for_rate(td, rate);
 	if (req->lut_index < 0) {
-		pr_debug("%s: dvco target %lu is too high\n", __func__,
-			 req->dvco_target_rate);
+		pr_debug("%s: dvco target %lu is too high\n", __func__, rate);
 		return req->lut_index;
 	}
 
@@ -3514,6 +3535,8 @@ static int profiles_show(struct seq_file *s, void *data)
 		   (r ? : td->out_rate_min) / 1000,
 		   r ? " (calibrated)"  : "");
 
+	seq_printf(s, "DVCO_CALIBRATION_MAX: %lukHz\n",
+		   td->dvco_calibration_max / 1000);
 	return 0;
 }
 

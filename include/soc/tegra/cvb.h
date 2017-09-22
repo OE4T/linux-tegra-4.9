@@ -49,6 +49,7 @@ struct cvb_cpu_dfll_data {
 	u32 tune1_high;
 	unsigned int tune_high_min_millivolts;
 	unsigned int tune_high_margin_millivolts;
+	unsigned long dvco_calibration_max;
 };
 
 struct thermal_coefficients {

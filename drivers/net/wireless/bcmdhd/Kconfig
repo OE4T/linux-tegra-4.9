@@ -80,7 +80,7 @@ config BCMDHD_DISABLE_MCC
 config BCMDHD_CUSTOM_SYSFS_TEGRA
 	bool "Custom sysfs for Tegra platform"
 	depends on BCMDHD
-	default y
+	default n
 	---help---
 	  Enable custom sysfs for Tegra platform.
 

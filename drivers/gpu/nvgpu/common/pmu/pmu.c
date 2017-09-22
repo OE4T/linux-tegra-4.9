@@ -499,7 +499,8 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 	nvgpu_pmu_get_pg_stats(g,
 		PMU_PG_ELPG_ENGINE_ID_GRAPHICS,	&pg_stat_data);
 
-	nvgpu_pmu_disable_elpg(g);
+	if (nvgpu_pmu_disable_elpg(g))
+		nvgpu_err(g, "failed to set disable elpg");
 	pmu->initialized = false;
 
 	/* update the s/w ELPG residency counters */

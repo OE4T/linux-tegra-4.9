@@ -1209,8 +1209,10 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 		nvgpu_err(g, "unsupported engine_id %d", engine_id);
 
 	if (engine_enum == ENGINE_GR_GK20A) {
-		if (g->support_pmu && g->can_elpg)
-			nvgpu_pmu_disable_elpg(g);
+		if (g->support_pmu && g->can_elpg) {
+			if (nvgpu_pmu_disable_elpg(g))
+				nvgpu_err(g, "failed to set disable elpg");
+		}
 		/* resetting engine will alter read/write index.
 		 * need to flush circular buffer before re-enabling FECS.
 		 */
@@ -1457,8 +1459,10 @@ static bool gk20a_fifo_handle_mmu_fault(
 	g->fifo.deferred_reset_pending = false;
 
 	/* Disable power management */
-	if (g->support_pmu && g->can_elpg)
-		nvgpu_pmu_disable_elpg(g);
+	if (g->support_pmu && g->can_elpg) {
+		if (nvgpu_pmu_disable_elpg(g))
+			nvgpu_err(g, "failed to set disable elpg");
+	}
 	if (g->ops.clock_gating.slcg_gr_load_gating_prod)
 		g->ops.clock_gating.slcg_gr_load_gating_prod(g,
 				false);

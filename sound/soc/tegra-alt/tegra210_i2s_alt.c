@@ -313,35 +313,13 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 	struct tegra210_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 	unsigned int mask, val, data_offset;
 
-	mask = TEGRA210_I2S_CTRL_EDGE_CTRL_MASK;
-	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
-	case SND_SOC_DAIFMT_NB_NF:
-		val = TEGRA210_I2S_CTRL_EDGE_CTRL_POS_EDGE;
-		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
-		break;
-	case SND_SOC_DAIFMT_NB_IF:
-		val = TEGRA210_I2S_CTRL_EDGE_CTRL_POS_EDGE;
-		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
-		break;
-	case SND_SOC_DAIFMT_IB_NF:
-		val = TEGRA210_I2S_CTRL_EDGE_CTRL_NEG_EDGE;
-		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
-		break;
-	case SND_SOC_DAIFMT_IB_IF:
-		val = TEGRA210_I2S_CTRL_EDGE_CTRL_NEG_EDGE;
-		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	mask |= TEGRA210_I2S_CTRL_MASTER_EN_MASK;
+	mask = TEGRA210_I2S_CTRL_MASTER_EN_MASK;
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
-		val &= ~(TEGRA210_I2S_CTRL_MASTER_EN);
+		val = 0;
 		break;
 	case SND_SOC_DAIFMT_CBM_CFM:
-		val |= TEGRA210_I2S_CTRL_MASTER_EN;
+		val = TEGRA210_I2S_CTRL_MASTER_EN;
 		break;
 	default:
 		return -EINVAL;
@@ -352,25 +330,50 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_DSP_A:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE;
+		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
 		data_offset = 1;
 		break;
 	case SND_SOC_DAIFMT_DSP_B:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE;
+		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
 		data_offset = 0;
 		break;
 	/* I2S mode has data offset of 1 */
 	case SND_SOC_DAIFMT_I2S:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_LRCK_MODE;
+		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
 		data_offset = 1;
 		break;
 	/* LJ/RJ mode assumed to operate at bclk = 64fs */
 	case SND_SOC_DAIFMT_RIGHT_J:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_LRCK_MODE;
+		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
 		data_offset = 16;
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_LRCK_MODE;
+		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
 		data_offset = 0;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	mask |= TEGRA210_I2S_CTRL_EDGE_CTRL_MASK;
+	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
+	case SND_SOC_DAIFMT_NB_NF:
+		val |= TEGRA210_I2S_CTRL_EDGE_CTRL_POS_EDGE;
+		break;
+	case SND_SOC_DAIFMT_NB_IF:
+		val |= TEGRA210_I2S_CTRL_EDGE_CTRL_POS_EDGE;
+		val ^= TEGRA210_I2S_CTRL_LRCK_POLARITY_MASK;
+		break;
+	case SND_SOC_DAIFMT_IB_NF:
+		val |= TEGRA210_I2S_CTRL_EDGE_CTRL_NEG_EDGE;
+		break;
+	case SND_SOC_DAIFMT_IB_IF:
+		val |= TEGRA210_I2S_CTRL_EDGE_CTRL_NEG_EDGE;
+		val ^= TEGRA210_I2S_CTRL_LRCK_POLARITY_MASK;
 		break;
 	default:
 		return -EINVAL;

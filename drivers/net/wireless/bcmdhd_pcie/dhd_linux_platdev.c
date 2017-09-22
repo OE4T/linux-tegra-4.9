@@ -326,8 +326,8 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 	struct resource *resource;
 	wifi_adapter_info_t *adapter;
 #ifdef CONFIG_DTS
-#if defined(OOB_INTR_ONLY) || defined(BCMPCIE_OOB_HOST_WAKE)
-	int irq;
+#if defined(OOB_INTR_ONLY)
+	int irq, gpio;
 #endif /* defined(OOB_INTR_ONLY) */
 #endif /* CONFIG_DTS */
 
@@ -347,7 +347,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 		adapter->intr_flags = resource->flags & IRQF_TRIGGER_MASK;
 	}
 
-#if defined (OOB_PARAM)
+#if defined (OOB_PARAM) || defined(BCMPCIE_OOB_HOST_WAKE)
 	adapter->oob_disable = FALSE;
 #endif /* OOB_PARAM */
 

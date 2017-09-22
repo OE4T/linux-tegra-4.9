@@ -123,7 +123,6 @@ typedef struct dhdpcie_os_info {
 	bool			oob_irq_enabled;
 	bool			oob_irq_wake_enabled;
 	spinlock_t		oob_irq_spinlock;
-	bool			oob_irq_is_nested;
 	void			*dev;		/* handle to the underlying device */
 } dhdpcie_os_info_t;
 #endif /* BCMPCIE_OOB_HOST_WAKE */
@@ -1308,18 +1307,11 @@ void dhdpcie_oob_intr_set(dhd_bus_t *bus, bool enable)
 	spin_lock_irqsave(&dhdpcie_osinfo->oob_irq_spinlock, flags);
 	if ((dhdpcie_osinfo->oob_irq_enabled != enable) &&
 		(dhdpcie_osinfo->oob_irq_num > 0)) {
-		if (dhdpcie_osinfo->oob_irq_is_nested)
-			spin_unlock_irqrestore(
-				&dhdpcie_osinfo->oob_irq_spinlock, flags);
 		if (enable) {
 			enable_irq(dhdpcie_osinfo->oob_irq_num);
 		} else {
 			disable_irq_nosync(dhdpcie_osinfo->oob_irq_num);
 		}
-		if (dhdpcie_osinfo->oob_irq_is_nested)
-			spin_lock_irqsave(
-				&dhdpcie_osinfo->oob_irq_spinlock, flags);
-
 		dhdpcie_osinfo->oob_irq_enabled = enable;
 	}
 	spin_unlock_irqrestore(&dhdpcie_osinfo->oob_irq_spinlock, flags);
@@ -1373,16 +1365,14 @@ int dhdpcie_oob_intr_register(dhd_bus_t *bus)
 		DHD_INFO_HW4(("%s OOB irq=%d flags=%X \n", __FUNCTION__,
 			(int)dhdpcie_osinfo->oob_irq_num,
 			(int)dhdpcie_osinfo->oob_irq_flags));
-		err = request_any_context_irq(dhdpcie_osinfo->oob_irq_num,
-			wlan_oob_irq, dhdpcie_osinfo->oob_irq_flags,
-			"dhdpcie_host_wake", bus);
-		if (err < 0) {
+		err = request_irq(dhdpcie_osinfo->oob_irq_num, wlan_oob_irq,
+			dhdpcie_osinfo->oob_irq_flags, "dhdpcie_host_wake",
+			bus);
+		if (err) {
 			DHD_ERROR(("%s: request_irq failed with %d\n",
 				__FUNCTION__, err));
 			return err;
 		}
-		dhdpcie_osinfo->oob_irq_is_nested = (err == IRQC_IS_NESTED);
-
 		err = enable_irq_wake(dhdpcie_osinfo->oob_irq_num);
 		if (!err) {
 			dhdpcie_osinfo->oob_irq_wake_enabled = TRUE;

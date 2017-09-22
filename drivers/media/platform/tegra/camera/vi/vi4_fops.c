@@ -672,11 +672,12 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 	unsigned long request_pixelrate;
 	struct v4l2_subdev_frame_interval fie;
 	unsigned long csi_freq = 0;
-	unsigned int num_ppc = NUM_PPC;
+	unsigned int ppc_multiplier = 1;
 
 	/* if bytes per pixel is greater than 2, then num_ppc is 4 */
+	/* since num_ppc in nvhost framework is always 8, use multiplier */
 	if (chan->fmtinfo->bpp.numerator > 2)
-		num_ppc = (NUM_PPC >> 1);
+		ppc_multiplier = 2;
 
 	fie.interval.denominator = DEFAULT_FRAMERATE;
 	fie.interval.numerator = 1;
@@ -713,6 +714,7 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 				return ret;
 			request_pixelrate = csi_freq * PG_BITRATE /
 				chan->fmtinfo->width;
+			request_pixelrate *= ppc_multiplier;
 		} else {
 			/**
 			 * TODO: use real sensor pixelrate
@@ -721,10 +723,7 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 			request_pixelrate = (long long)(chan->format.width
 				* chan->format.height
 				* fie.interval.denominator / 100)
-				* VI_CSI_CLK_SCALE;
-			csi_freq = ((long long)chan->format.width
-				* chan->format.height
-				* fie.interval.denominator) / num_ppc;
+				* VI_CSI_CLK_SCALE * ppc_multiplier;
 		}
 
 		/* VI clk should be slightly faster than CSI clk*/

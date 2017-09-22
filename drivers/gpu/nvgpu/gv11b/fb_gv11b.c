@@ -1434,13 +1434,19 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 		g->ops.fifo.teardown_ch_tsg(g, act_eng_bitmask,
 			id, id_type, RC_TYPE_MMU_FAULT, mmfault);
 	} else {
-		err = gv11b_fb_fix_page_fault(g, mmfault);
-		if (err) {
+		if (mmfault->fault_type == gmmu_fault_type_pte_v()) {
+			nvgpu_log(g, gpu_dbg_intr, "invalid pte! try to fix");
+			err = gv11b_fb_fix_page_fault(g, mmfault);
+			if (err)
+				*invalidate_replay_val |=
+					fb_mmu_invalidate_replay_cancel_global_f();
+			else
+				*invalidate_replay_val |=
+					fb_mmu_invalidate_replay_start_ack_all_f();
+		} else {
+			/* cancel faults other than invalid pte */
 			*invalidate_replay_val |=
 				fb_mmu_invalidate_replay_cancel_global_f();
-		} else {
-			*invalidate_replay_val |=
-				fb_mmu_invalidate_replay_start_ack_all_f();
 		}
 		/* refch in mmfault is assigned at the time of copying
 		 * fault info from snap reg or bar2 fault buf
@@ -1959,6 +1965,17 @@ static int gv11b_fb_fix_page_fault(struct gk20a *g,
 	}
 	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_pte,
 			"pte: %#08x %#08x", pte[1], pte[0]);
+
+	if (pte[0] == 0x0 && pte[1] == 0x0) {
+		nvgpu_log(g, gpu_dbg_intr | gpu_dbg_pte,
+				"pte all zeros, do not set valid");
+		return -1;
+	}
+	if (pte[0] & gmmu_new_pte_valid_true_f()) {
+		nvgpu_log(g, gpu_dbg_intr | gpu_dbg_pte,
+				"pte valid already set");
+		return -1;
+	}
 
 	pte[0] |= gmmu_new_pte_valid_true_f();
 	if (pte[0] & gmmu_new_pte_read_only_true_f())

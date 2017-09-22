@@ -1272,6 +1272,10 @@ static inline u32 gmmu_fault_type_unbound_inst_block_v(void)
 {
 	return 0x00000004U;
 }
+static inline u32 gmmu_fault_type_pte_v(void)
+{
+	return 0x00000002U;
+}
 static inline u32 gmmu_fault_mmu_eng_id_bar2_v(void)
 {
 	return 0x00000005U;

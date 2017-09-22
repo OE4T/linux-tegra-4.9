@@ -24,7 +24,6 @@
 #ifndef __PSTATE_H__
 #define __PSTATE_H__
 
-#include "gk20a/gk20a.h"
 #include "clk/clk.h"
 
 #define CTRL_PERF_PSTATE_TYPE_3X	0x3
@@ -34,6 +33,8 @@
 #define CTRL_PERF_PSTATE_P8		8
 
 #define CLK_SET_INFO_MAX_SIZE		(32)
+
+struct gk20a;
 
 struct clk_set_info {
 	enum nv_pmu_clk_clkwhich clkwhich;

@@ -237,7 +237,7 @@ config TEGRA_HDMI2DSI_TC358870
 
 config TEGRA_HDA_DC
 	bool "Enable HDA DC driver"
-	depends on TEGRA_HDMI2_0 || (TEGRA_DP && (ARCH_TEGRA_210_SOC || ARCH_TEGRA_18x_SOC))
+	depends on TEGRA_HDMI2_0 || TEGRA_DP
 	default y
 	help
 	  Say Y here to enable separate HDA driver in DC space.

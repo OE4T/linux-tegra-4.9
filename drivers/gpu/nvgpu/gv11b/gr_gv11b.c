@@ -2352,6 +2352,9 @@ void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 {
 	u32 gate_ctrl;
 
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_ELCG))
+		return;
+
 	gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(engine));
 
 	switch (mode) {

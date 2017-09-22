@@ -133,6 +133,13 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 	.probe = gv11b_tegra_probe,
 	.remove = gv11b_tegra_remove,
 
+	.enable_slcg            = false,
+	.enable_blcg            = false,
+	.enable_elcg            = false,
+	.can_slcg               = false,
+	.can_blcg               = false,
+	.can_elcg               = false,
+
 	/* power management callbacks */
 	.suspend = gv11b_tegra_suspend,
 	.railgate = gv11b_tegra_railgate,

@@ -72,6 +72,9 @@ struct gk20a_platform gv11b_vgpu_tegra_platform = {
 	.enable_elcg            = false,
 	.enable_elpg            = false,
 	.enable_aelpg           = false,
+	.can_slcg               = false,
+	.can_blcg               = false,
+	.can_elcg               = false,
 
 	.ch_wdt_timeout_ms = 5000,
 

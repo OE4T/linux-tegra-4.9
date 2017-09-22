@@ -27,6 +27,7 @@
 
 #include <linux/types.h>
 #include "gv11b_gating_reglist.h"
+#include <nvgpu/enabled.h>
 
 struct gating_desc {
 	u32 addr;
@@ -282,7 +283,7 @@ void gv11b_slcg_bus_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_bus) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -301,7 +302,7 @@ void gv11b_slcg_ce2_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_ce2) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -320,7 +321,7 @@ void gv11b_slcg_chiplet_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_chiplet) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -344,7 +345,7 @@ void gv11b_slcg_fb_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_fb) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -363,7 +364,7 @@ void gv11b_slcg_fifo_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_fifo) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -382,7 +383,7 @@ void gr_gv11b_slcg_gr_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_gr) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -401,7 +402,7 @@ void ltc_gv11b_slcg_ltc_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_ltc) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -420,7 +421,7 @@ void gv11b_slcg_perf_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_perf) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -439,7 +440,7 @@ void gv11b_slcg_priring_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_priring) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -458,7 +459,7 @@ void gv11b_slcg_pwr_csb_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_pwr_csb) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -477,7 +478,7 @@ void gv11b_slcg_pmu_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_pmu) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -496,7 +497,7 @@ void gv11b_slcg_therm_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_therm) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -515,7 +516,7 @@ void gv11b_slcg_xbar_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_slcg_xbar) / sizeof(struct gating_desc);
 
-	if (!g->slcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -534,7 +535,7 @@ void gv11b_blcg_bus_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_bus) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -553,7 +554,7 @@ void gv11b_blcg_ce_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_ce) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -572,7 +573,7 @@ void gv11b_blcg_ctxsw_firmware_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_ctxsw_prog) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -591,7 +592,7 @@ void gv11b_blcg_fb_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_fb) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -610,7 +611,7 @@ void gv11b_blcg_fifo_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_fifo) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -629,7 +630,7 @@ void gv11b_blcg_gr_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_gr) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -648,7 +649,7 @@ void gv11b_blcg_ltc_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_ltc) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -667,7 +668,7 @@ void gv11b_blcg_pwr_csb_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_pwr_csb) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -686,7 +687,7 @@ void gv11b_blcg_pmu_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_pmu) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -705,7 +706,7 @@ void gv11b_blcg_xbar_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_blcg_xbar) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {
@@ -724,7 +725,7 @@ void gr_gv11b_pg_gr_load_gating_prod(struct gk20a *g,
 	u32 i;
 	u32 size = sizeof(gv11b_pg_gr) / sizeof(struct gating_desc);
 
-	if (!g->blcg_enabled)
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
 		return;
 
 	for (i = 0; i < size; i++) {

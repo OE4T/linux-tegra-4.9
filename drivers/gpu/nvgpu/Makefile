@@ -256,12 +256,3 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/gp10b/vgpu_gr_gp10b.o  \
 	vgpu/gp10b/vgpu_mm_gp10b.o
 endif
-
-ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
-ifneq ($(wildcard $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile),)
-include $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile
-endif
-ifneq ($(wildcard $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile.nvgpu-t19x),)
-include $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile.nvgpu-t19x
-endif
-endif

@@ -56,6 +56,7 @@
 #include "fifo_gv11b.h"
 #include "subctx_gv11b.h"
 #include "gr_gv11b.h"
+#include "mc_gv11b.h"
 
 #define PBDMA_SUBDEVICE_ID  1
 
@@ -393,44 +394,34 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 				 u32 pbdma_id, unsigned int timeout_rc_type)
 {
 	struct nvgpu_timeout timeout;
-	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
+	unsigned long delay = GR_IDLE_CHECK_DEFAULT; /* in micro seconds */
 	u32 pbdma_stat;
 	u32 chan_stat;
 	int ret = -EBUSY;
 
-	/*
-	 * If the PBDMA has a stalling interrupt and receives a NACK, the PBDMA
-	 * won't save out until the STALLING interrupt is cleared. Note that
-	 * the stalling interrupt need not be directly addressed, as simply
-	 * clearing of the interrupt bit will be sufficient to allow the PBDMA
-	 * to save out. If the stalling interrupt was due to a SW method or
-	 * another deterministic failure, the PBDMA will assert it when the
-	 * channel is reloaded/resumed. Note that the fault will still be
-	 * reported to SW.
-	 */
-
-	if (timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
-		/* called from recovery */
-		u32 pbdma_intr_0, pbdma_intr_1;
-
-		pbdma_intr_0 = gk20a_readl(g, pbdma_intr_0_r(pbdma_id));
-		pbdma_intr_1 = gk20a_readl(g, pbdma_intr_1_r(pbdma_id));
-
-		if (pbdma_intr_0)
-			gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
-		if (pbdma_intr_1)
-			gk20a_writel(g, pbdma_intr_1_r(pbdma_id), pbdma_intr_1);
-	}
-
+	/* timeout in milli seconds */
 	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 
+	nvgpu_log(g, gpu_dbg_info, "wait preempt pbdma %d", pbdma_id);
 	/* Verify that ch/tsg is no longer on the pbdma */
 	do {
+		/*
+		 * If the PBDMA has a stalling interrupt and receives a NACK,
+		 * the PBDMA won't save out until the STALLING interrupt is
+		 * cleared. Stalling interrupt need not be directly addressed,
+		 * as simply clearing of the interrupt bit will be sufficient
+		 * to allow the PBDMA to save out. If the stalling interrupt
+		 * was due to a SW method or another deterministic failure,
+		 * the PBDMA will assert it when the channel is reloaded
+		 * or resumed. Note that the fault will still be
+		 * reported to SW.
+		 */
+
+		gk20a_fifo_handle_pbdma_intr(g, &g->fifo, pbdma_id, RC_NO);
+
 		pbdma_stat = gk20a_readl(g, fifo_pbdma_status_r(pbdma_id));
 		chan_stat  = fifo_pbdma_status_chan_status_v(pbdma_stat);
-
-		gk20a_dbg_info("wait preempt pbdma");
 
 		if (chan_stat ==
 			 fifo_pbdma_status_chan_status_valid_v() ||
@@ -473,26 +464,36 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 }
 
 static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
-			 u32 engine_idx, u32 *reset_eng_bitmask,
+			 u32 act_eng_id, u32 *reset_eng_bitmask,
 			 unsigned int timeout_rc_type)
 {
 	struct nvgpu_timeout timeout;
-	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
+	unsigned long delay = GR_IDLE_CHECK_DEFAULT; /* in micro seconds */
 	u32 eng_stat;
 	u32 ctx_stat;
 	int ret = -EBUSY;
+	bool stall_intr = false;
 
+	/* timeout in milli seconds */
 	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 
+	nvgpu_log(g, gpu_dbg_info, "wait preempt act engine id: %u",
+			act_eng_id);
 	/* Check if ch/tsg has saved off the engine or if ctxsw is hung */
 	do {
-		eng_stat = gk20a_readl(g, fifo_engine_status_r(engine_idx));
+		eng_stat = gk20a_readl(g, fifo_engine_status_r(act_eng_id));
 		ctx_stat  = fifo_engine_status_ctx_status_v(eng_stat);
 
+		if (gv11b_mc_is_stall_and_eng_intr_pending(g, act_eng_id)) {
+			stall_intr = true;
+			nvgpu_log(g, gpu_dbg_info | gpu_dbg_intr,
+					"stall intr set, "
+					"preemption will not finish");
+		}
 		if (ctx_stat ==
 			 fifo_engine_status_ctx_status_ctxsw_switch_v()) {
-			gk20a_dbg_info("engine save hasn't started yet");
+			/* Eng save hasn't started yet. Continue polling */
 
 		} else if (ctx_stat ==
 			 fifo_engine_status_ctx_status_valid_v() ||
@@ -500,14 +501,12 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 			 fifo_engine_status_ctx_status_ctxsw_save_v()) {
 
 			if (id == fifo_engine_status_id_v(eng_stat)) {
-				if (timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
-				/* called from recovery, eng seems to be hung */
-					*reset_eng_bitmask |= BIT(engine_idx);
+				if (stall_intr ||
+					timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
+					/* preemption will not finish */
+					*reset_eng_bitmask |= BIT(act_eng_id);
 					ret = 0;
 					break;
-				} else {
-					gk20a_dbg_info("wait preempt engine. "
-					"ctx_status (valid/save)=%u", ctx_stat);
 				}
 			} else {
 				/* context is not running on the engine */
@@ -520,14 +519,12 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 
 			if (id == fifo_engine_status_next_id_v(eng_stat)) {
 
-				if (timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
-				/* called from recovery, eng seems to be hung */
-					*reset_eng_bitmask |= BIT(engine_idx);
+				if (stall_intr ||
+					timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
+					/* preemption will not finish */
+					*reset_eng_bitmask |= BIT(act_eng_id);
 					ret = 0;
 					break;
-				} else {
-					gk20a_dbg_info("wait preempt engine. "
-					"ctx_status (load)=%u", ctx_stat);
 				}
 			} else {
 				/* context is not running on the engine */
@@ -540,7 +537,7 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 			ret = 0;
 			break;
 		}
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(unsigned long,
 				delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired_msg(&timeout,
@@ -712,7 +709,7 @@ static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
 			break;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(unsigned long,
 				delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired_msg(&timeout,
@@ -758,7 +755,7 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 
 	f->runlist_info[runlist_id].reset_eng_bitmask = 0;
 
-	for_each_set_bit(act_eng_id, &runlist_served_engines, f->num_engines) {
+	for_each_set_bit(act_eng_id, &runlist_served_engines, f->max_engines) {
 
 		func_ret = gv11b_fifo_poll_eng_ctx_status(g, tsgid, act_eng_id,
 				&f->runlist_info[runlist_id].reset_eng_bitmask,

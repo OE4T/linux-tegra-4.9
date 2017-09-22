@@ -1,7 +1,7 @@
 /*
  * SDIO access interface for drivers - linux specific (pci only)
  *
- * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: bcmsdh_linux.c 662741 2016-11-08 09:37:17Z $
+ * $Id: bcmsdh_linux.c 514727 2014-11-12 03:02:48Z $
  */
 
 /**
@@ -51,6 +51,12 @@ extern void dhdsdio_isr(void * args);
 #include <linux/platform_data/gpio-odin.h>
 #endif /* defined(CONFIG_ARCH_ODIN) */
 #include <dhd_linux.h>
+
+#ifdef	CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+#include "dhd_custom_sysfs_tegra.h"
+#endif
+
+extern int bcmdhd_irq_number;
 
 /* driver info, initialized when bcmsdh_register is called */
 static bcmsdh_driver_t drvinfo = {NULL, NULL, NULL, NULL};
@@ -143,9 +149,6 @@ void* bcmsdh_probe(osl_t *osh, void *dev, void *sdioh, void *adapter_info, uint 
 	bcmsdh_info_t *bcmsdh;
 	uint32 vendevid;
 	bcmsdh_os_info_t *bcmsdh_osinfo = NULL;
-#ifdef OOB_PARAM
-	wifi_adapter_info_t *adapter = (wifi_adapter_info_t *)adapter_info;
-#endif /* OOB_PARAM */
 
 	bcmsdh = bcmsdh_attach(osh, sdioh, &regs);
 	if (bcmsdh == NULL) {
@@ -169,17 +172,15 @@ void* bcmsdh_probe(osl_t *osh, void *dev, void *sdioh, void *adapter_info, uint 
 #endif /* !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36)) */
 
 #if defined(OOB_INTR_ONLY)
-	OOB_PARAM_IF(!(adapter->oob_disable)) {
-		spin_lock_init(&bcmsdh_osinfo->oob_irq_spinlock);
-		/* Get customer specific OOB IRQ parametres: IRQ number as IRQ type */
-		bcmsdh_osinfo->oob_irq_num = wifi_platform_get_irq_number(adapter_info,
-			&bcmsdh_osinfo->oob_irq_flags);
-		if  (bcmsdh_osinfo->oob_irq_num < 0) {
-			SDLX_MSG(("%s: Host OOB irq is not defined\n", __FUNCTION__));
-			goto err;
-		}
+	spin_lock_init(&bcmsdh_osinfo->oob_irq_spinlock);
+	/* Get customer specific OOB IRQ parametres: IRQ number as IRQ type */
+	bcmsdh_osinfo->oob_irq_num = wifi_platform_get_irq_number(adapter_info,
+		&bcmsdh_osinfo->oob_irq_flags);
+	if  (bcmsdh_osinfo->oob_irq_num < 0) {
+		SDLX_MSG(("%s: Host OOB irq is not defined\n", __FUNCTION__));
+		goto err;
 	}
-#endif /* defined(OOB_INTR_ONLY) */
+#endif /* defined(BCMLXSDMMC) */
 
 	/* Read the vendor/device ID from the CIS */
 	vendevid = bcmsdh_query_device(bcmsdh);

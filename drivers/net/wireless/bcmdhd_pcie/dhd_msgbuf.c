@@ -3,7 +3,7 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -26,7 +26,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_msgbuf.c 664367 2017-03-23 09:23:22Z $
+ * $Id: dhd_msgbuf.c 605475 2015-12-10 12:49:49Z $
  */
 
 
@@ -145,7 +145,7 @@ struct msgbuf_ring; /* ring context for common and flow rings */
 
 #if defined(PCIE_D2H_SYNC)
 #define PCIE_D2H_SYNC_WAIT_TRIES    (512UL)
-#define PCIE_D2H_SYNC_NUM_OF_STEPS	(3UL)
+#define PCIE_D2H_SYNC_NUM_OF_STEPS	(8UL)
 #define PCIE_D2H_SYNC_DELAY			(50UL)	/* in terms of usecs */
 
 /**
@@ -697,10 +697,12 @@ dhd_prot_d2h_sync_seqnum(dhd_pub_t *dhd, msgbuf_ring_t *ring,
 
 			OSL_CACHE_INV(msg, msglen); /* invalidate and try again */
 			OSL_CPU_RELAX(); /* CPU relax for msg_seqnum  value to update */
-#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890)
+#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) || \
+	IS_ENABLED(CONFIG_PCI_TEGRA)
 			/* For ARM there is no pause in cpu_relax, so add extra delay */
 			OSL_DELAY(delay * step);
-#endif /* defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) */
+#endif /* defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) || \
+	IS_ENABLED(CONFIG_PCI_TEGRA) */
 		} /* for PCIE_D2H_SYNC_WAIT_TRIES */
 	} /* for number of steps */
 
@@ -773,10 +775,12 @@ dhd_prot_d2h_sync_xorcsum(dhd_pub_t *dhd, msgbuf_ring_t *ring,
 
 			OSL_CACHE_INV(msg, msglen); /* invalidate and try again */
 			OSL_CPU_RELAX(); /* CPU relax for msg_seqnum  value to update */
-#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890)
+#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) || \
+	IS_ENABLED(CONFIG_PCI_TEGRA)
 			/* For ARM there is no pause in cpu_relax, so add extra delay */
 			OSL_DELAY(delay * step);
-#endif /* defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) */
+#endif /* defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) || \
+	IS_ENABLED(CONFIG_PCI_TEGRA) */
 
 		} /* for PCIE_D2H_SYNC_WAIT_TRIES */
 	} /* for number of steps */
@@ -1804,7 +1808,6 @@ dhd_pktid_map_free(dhd_pub_t *dhd, dhd_pktid_map_handle_t *handle, uint32 nkey,
 	dhd_pktid_item_t *locker;
 	void * pkt;
 	uint32 flags;
-	unsigned long locker_addr;
 
 	ASSERT(handle != NULL);
 
@@ -1839,16 +1842,6 @@ dhd_pktid_map_free(dhd_pub_t *dhd, dhd_pktid_map_handle_t *handle, uint32 nkey,
 
 		DHD_ERROR(("%s:%d: Error! Invalid Buffer Free for pktid<%u> \n",
 			__FUNCTION__, __LINE__, nkey));
-#ifdef BCMDMA64OSL
-		PHYSADDRTOULONG(locker->pa, locker_addr);
-#else
-		locker_addr = PHYSADDRLO(locker->pa);
-#endif /* BCMDMA64OSL */
-		DHD_ERROR(("%s:%d: locker->state <%d>, locker->pkttype <%d>,"
-			"pkttype <%d> locker->pa <0x%lx> \n",
-			__FUNCTION__, __LINE__, locker->state, locker->pkttype,
-			pkttype, locker_addr));
-
 		ASSERT(locker->pkttype == pkttype);
 
 		return NULL;
@@ -2571,8 +2564,12 @@ dhd_sync_with_dongle(dhd_pub_t *dhd)
 		revinfo.deviceid, revinfo.vendorid, revinfo.chipnum));
 
 	dhd_process_cid_mac(dhd, TRUE);
+
 	ret = dhd_preinit_ioctls(dhd);
-	dhd_process_cid_mac(dhd, FALSE);
+
+	if (!ret) {
+		dhd_process_cid_mac(dhd, FALSE);
+	}
 
 	/* Always assumes wl for now */
 	dhd->iswl = TRUE;
@@ -2952,6 +2949,15 @@ dhd_prot_rxbuf_post(dhd_pub_t *dhd, uint16 count, bool use_rsv_pktid)
 		}
 
 		if (PHYSADDRISZERO(pa)) {
+			if (SECURE_DMA_ENAB(dhd->osh)) {
+				DHD_GENERAL_LOCK(dhd, flags);
+				SECURE_DMA_UNMAP(dhd->osh, pa, pktlen, DMA_RX, 0, DHD_DMAH_NULL,
+				    ring->dma_buf.secdma, 0);
+				DHD_GENERAL_UNLOCK(dhd, flags);
+			} else {
+				DMA_UNMAP(dhd->osh, pa, pktlen, DMA_RX, 0, DHD_DMAH_NULL);
+			}
+
 			PKTFREE(dhd->osh, p, FALSE);
 			DHD_ERROR(("Invalid phyaddr 0\n"));
 			ASSERT(0);
@@ -3793,7 +3799,7 @@ dhd_prot_txstatus_process(dhd_pub_t *dhd, void *msg)
 
 		/* Release the Lock when no more tx packets are pending */
 		if (prot->active_tx_count == 0)
-			 DHD_TXFL_WAKE_UNLOCK(dhd);
+			 DHD_OS_WAKE_UNLOCK(dhd);
 
 	} else {
 		DHD_ERROR(("Extra packets are freed\n"));
@@ -4161,7 +4167,7 @@ dhd_prot_txdata(dhd_pub_t *dhd, void *PKTBUF, uint8 ifidx)
 		pa = DMA_MAP(dhd->osh, PKTDATA(dhd->osh, PKTBUF), pktlen, DMA_TX, PKTBUF, 0);
 	}
 
-	if (PHYSADDRISZERO(pa)) {
+	if ((PHYSADDRHI(pa) == 0) && (PHYSADDRLO(pa) == 0)) {
 		DHD_ERROR(("Something really bad, unless 0 is a valid phyaddr\n"));
 		ASSERT(0);
 	}
@@ -4266,7 +4272,7 @@ dhd_prot_txdata(dhd_pub_t *dhd, void *PKTBUF, uint8 ifidx)
 	 * to finish.
 	 */
 	if (prot->active_tx_count == 1)
-		DHD_TXFL_WAKE_LOCK(dhd);
+		DHD_OS_WAKE_LOCK(dhd);
 
 	DHD_GENERAL_UNLOCK(dhd, flags);
 
@@ -4652,26 +4658,22 @@ static int
 dhd_msgbuf_query_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len, uint8 action)
 {
 	int ret = 0;
-	uint copylen = 0;
-
-	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
-
-	if (!len || !buf) {
-		DHD_ERROR(("%s(): Zero length bailing\n", __FUNCTION__));
+	DHD_TRACE(("%s: Enter\n", __func__));
+	if (!buf || !len) {
+		DHD_ERROR(("%s(): Zero length bailing\n", __func__));
 		ret = BCME_BADARG;
 		goto done;
 	}
-
-	/* Respond "bcmerror" and "bcmerrorstr" with local cache */
 	if (cmd == WLC_GET_VAR) {
-		if ((len >= strlen("bcmerrorstr")) && (!strcmp((char *)buf, "bcmerrorstr"))) {
-			copylen = MIN(len, BCME_STRLEN);
-			strncpy((char *)buf, bcmerrorstr(dhd->dongle_error), copylen);
-			*(uint8 *)(buf + (copylen - 1)) = '\0';
+		/* Respond "bcmerror" and "bcmerrorstr" with local cache */
+		if ((len > strlen("bcmerrorstr")) &&
+		    !strcmp(buf, "bcmerrorstr")) {
+			strlcpy(buf, bcmerrorstr(dhd->dongle_error), len);
 			goto done;
-		} else if ((len >= strlen("bcmerror")) && !strcmp((char *)buf, "bcmerror")) {
-			store32_ua(buf, dhd->dongle_error);
-			*(uint8 *)(buf + (sizeof(uint32))) = '\0';
+		} else if ((len > strlen("bcmerror")) &&
+			   !strcmp(buf, "bcmerror")) {
+			memcpy(buf, &dhd->dongle_error,
+			       sizeof(dhd->dongle_error));
 			goto done;
 		}
 	}
@@ -4702,7 +4704,7 @@ dhd_msgbuf_wait_ioctl_cmplt(dhd_pub_t *dhd, uint32 len, void *buf)
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
-	if (dhd_query_bus_erros(dhd)) {
+	if (dhd->dongle_reset) {
 		ret = -EIO;
 		goto out;
 	}
@@ -4717,7 +4719,6 @@ dhd_msgbuf_wait_ioctl_cmplt(dhd_pub_t *dhd, uint32 len, void *buf)
 	if (timeleft == 0) {
 		dhd->rxcnt_timeout++;
 		dhd->rx_ctlerrs++;
-		dhd->iovar_timeout_occured = TRUE;
 		DHD_ERROR(("%s: resumed on timeout rxcnt_timeout %d ioctl_cmd %d "
 			"trans_id %d state %d busstate=%d ioctl_received=%d\n",
 			__FUNCTION__, dhd->rxcnt_timeout, prot->curr_ioctl_cmd,
@@ -4727,8 +4728,8 @@ dhd_msgbuf_wait_ioctl_cmplt(dhd_pub_t *dhd, uint32 len, void *buf)
 		dhd_prot_debug_info_print(dhd);
 
 #ifdef DHD_FW_COREDUMP
-		/* Collect socram dump */
-		if (dhd->memdump_enabled) {
+		/* As soon as FW TRAP occurs, FW dump will be collected from dhdpcie_checkdied */
+		if (dhd->memdump_enabled && !dhd->dongle_trap_occured) {
 			/* collect core dump */
 			dhd->memdump_type = DUMP_TYPE_RESUMED_ON_TIMEOUT;
 			dhd_bus_mem_dump(dhd);
@@ -4953,10 +4954,6 @@ dhd_fillup_ioct_reqst(dhd_pub_t *dhd, uint16 len, uint cmd, void* buf, int ifidx
 	unsigned long flags;
 	uint16 alloced = 0;
 	msgbuf_ring_t *ring = &prot->h2dring_ctrl_subn;
-
-	if (dhd_query_bus_erros(dhd)) {
-		return -EIO;
-	}
 
 	rqstlen = len;
 	resplen = len;
@@ -5981,24 +5978,19 @@ void dhd_prot_print_flow_ring(dhd_pub_t *dhd, void *msgbuf_flow_info,
 void dhd_prot_print_info(dhd_pub_t *dhd, struct bcmstrbuf *strbuf)
 {
 	dhd_prot_t *prot = dhd->prot;
-	bcm_bprintf(strbuf,
-		"%8s %4s %4s %5s %17s %17s %7s\n",
-		"Type", "RBP", "RD", "WR", "BASE(VA)", "BASE(PA)", "SIZE");
-	bcm_bprintf(strbuf, "%8s %4s", "CtrlPost", "NA");
-	dhd_prot_print_flow_ring(dhd, &prot->h2dring_ctrl_subn, strbuf,
-		"%5d %5d %17p %8x:%8x %7d\n");
-	bcm_bprintf(strbuf, "%8s %4s", "CtrlCpl", "NA");
-	dhd_prot_print_flow_ring(dhd, &prot->d2hring_ctrl_cpln, strbuf,
-		"%5d %5d %17p %8x:%8x %7d\n");
-	bcm_bprintf(strbuf, "%8s %4d", "RxPost", prot->rxbufpost);
-	dhd_prot_print_flow_ring(dhd, &prot->h2dring_rxp_subn, strbuf,
-		 "%5d %5d %17p %8x:%8x %7d\n");
-	bcm_bprintf(strbuf, "%8s %4s", "RxCpl", "NA");
-	dhd_prot_print_flow_ring(dhd, &prot->d2hring_rx_cpln, strbuf,
-		"%5d %5d %17p %8x:%8x %7d\n");
-	bcm_bprintf(strbuf, "%8s %4s", "TxCpl", "NA");
-	dhd_prot_print_flow_ring(dhd, &prot->d2hring_tx_cpln, strbuf,
-		"%5d %5d %17p %8x:%8x %7d\n");
+	bcm_bprintf(strbuf, "CtrlPost: ");
+	dhd_prot_print_flow_ring(dhd, &prot->h2dring_ctrl_subn, strbuf, NULL);
+	bcm_bprintf(strbuf, "CtrlCpl: ");
+	dhd_prot_print_flow_ring(dhd, &prot->d2hring_ctrl_cpln, strbuf, NULL);
+
+	bcm_bprintf(strbuf, "RxPost: ");
+	bcm_bprintf(strbuf, "RBP %d ", prot->rxbufpost);
+	dhd_prot_print_flow_ring(dhd, &prot->h2dring_rxp_subn, strbuf, NULL);
+	bcm_bprintf(strbuf, "RxCpl: ");
+	dhd_prot_print_flow_ring(dhd, &prot->d2hring_rx_cpln, strbuf, NULL);
+
+	bcm_bprintf(strbuf, "TxCpl: ");
+	dhd_prot_print_flow_ring(dhd, &prot->d2hring_tx_cpln, strbuf, NULL);
 	bcm_bprintf(strbuf, "active_tx_count %d	 pktidmap_avail %d\n",
 		dhd->prot->active_tx_count,
 		DHD_PKTID_AVAIL(dhd->prot->pktid_map_handle));

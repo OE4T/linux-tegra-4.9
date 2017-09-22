@@ -1,7 +1,7 @@
 /*
  * Common function shared by Linux WEXT, cfg80211 and p2p drivers
  *
- * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: wldev_common.h 619484 2016-02-17 02:14:06Z $
+ * $Id: wldev_common.h 556083 2015-05-12 14:03:00Z $
  */
 #ifndef __WLDEV_COMMON_H__
 #define __WLDEV_COMMON_H__
@@ -105,7 +105,6 @@ extern int net_os_wake_lock_timeout_enable(struct net_device *dev, int val);
 extern int net_os_set_dtim_skip(struct net_device *dev, int val);
 extern int net_os_set_suspend_disable(struct net_device *dev, int val);
 extern int net_os_set_suspend(struct net_device *dev, int val, int force);
-extern int net_os_set_max_dtim_enable(struct net_device *dev, int val);
 extern int wl_iw_parse_ssid_list_tlv(char** list_str, wlc_ssid_ext_t* ssid,
 	int max, int *bytes_left);
 
@@ -120,5 +119,24 @@ int wldev_get_band(struct net_device *dev, uint *pband);
 int wldev_get_mode(struct net_device *dev, uint8 *pband);
 int wldev_get_datarate(struct net_device *dev, int *datarate);
 int wldev_set_band(struct net_device *dev, uint band);
+
+#define CMD_SETIOVAR		"SETIOVAR"
+#define CMD_GETIOVAR		"GETIOVAR"
+#define CMD_SETMIRACAST		"SETMIRACAST"
+#define CMD_ASSOCRESPIE		"ASSOCRESPIE"
+#define CMD_RXRATESTATS		"RXRATESTATS"
+#define CMD_MAXLINKSPEED	"MAXLINKSPEED"
+#define CMD_AMPDU_SEND_DELBA	"AMPDU_SEND_DELBA"
+#define CMD_MKEEP_ALIVE		"MKEEP_ALIVE"
+
+int wldev_miracast_tuning(struct net_device *dev, char *command, int total_len);
+int wldev_get_assoc_resp_ie(struct net_device *dev, char *command, int total_len);
+int wldev_get_rx_rate_stats(struct net_device *dev, char *command, int total_len);
+int wldev_get_max_linkspeed(struct net_device *dev, char *command, int total_len);
+int wl_android_mkeep_alive(struct net_device *dev, char *command, int total_len);
+int wl_android_get_iovar(struct net_device *dev, char *command, int total_len);
+int wl_android_set_iovar(struct net_device *dev, char *command, int total_len);
+int wl_android_ampdu_send_delba(struct net_device *dev, char *command);
+void dhd_set_ampdu_rx_tid(struct net_device *dev, int ampdu_rx_tid);
 
 #endif /* __WLDEV_COMMON_H__ */

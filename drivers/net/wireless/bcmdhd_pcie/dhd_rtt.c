@@ -1,7 +1,7 @@
 /*
  * Broadcom Dongle Host Driver (DHD), RTT
  *
- * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_rtt.c 612549 2016-01-14 07:39:32Z $
+ * $Id: dhd_rtt.c 606280 2015-12-15 05:28:25Z $
  */
 #ifdef RTT_SUPPORT
 #include <typedefs.h>
@@ -488,7 +488,7 @@ dhd_rtt_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 	int err = BCME_OK;
 	int len = 0;
 	int idx;
-	uint event_type, reason, ftm_cnt;
+	uint status, event_type, flags, reason, ftm_cnt;
 	rtt_status_info_t *rtt_status;
 	wl_proxd_event_data_t* evp;
 	struct rtt_noti_callback *iter;
@@ -498,6 +498,8 @@ dhd_rtt_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 	rtt_status = GET_RTTSTATE(dhd);
 	NULL_CHECK(rtt_status, "rtt_status is NULL", err);
 	event_type = ntoh32_ua((void *)&event->event_type);
+	flags = ntoh16_ua((void *)&event->flags);
+	status = ntoh32_ua((void *)&event->status);
 	reason = ntoh32_ua((void *)&event->reason);
 
 	if (event_type != WLC_E_PROXD) {

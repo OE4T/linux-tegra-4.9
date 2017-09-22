@@ -1,7 +1,7 @@
 /*
  * Common function shared by Linux WEXT, cfg80211 and p2p drivers
  *
- * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -372,6 +372,7 @@ int wldev_get_mode(
 	error = wldev_ioctl(dev, WLC_GET_BSS_INFO, (void*)buf, WL_EXTRA_BUF_MAX, false);
 	if (error) {
 		WLDEV_ERROR(("%s:failed:%d\n", __FUNCTION__, error));
+		kfree(buf);
 		return -1;
 	}
 	bss = (struct  wl_bss_info *)(buf + 4);
@@ -399,10 +400,12 @@ int wldev_get_mode(
 				strcpy(cap, "a");
 		} else {
 			WLDEV_ERROR(("%s:Mode get failed\n", __FUNCTION__));
+			kfree(buf);
 			return -1;
 		}
 
 	}
+	kfree(buf);
 	return error;
 }
 int wldev_set_country(

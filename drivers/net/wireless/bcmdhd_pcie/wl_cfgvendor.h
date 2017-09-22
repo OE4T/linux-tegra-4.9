@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 Vendor Extension Code
  *
- * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: wl_cfgvendor.h 630676 2016-04-11 15:20:57Z $
+ * $Id: wl_cfgvendor.h 605796 2015-12-11 13:45:36Z $
  */
 
 
@@ -88,10 +88,8 @@ typedef enum {
 	ANDROID_NL80211_SUBCMD_TDLS_RANGE_END	= 0x13FF,
 	/* This is reserved for future usage */
 
-	/* define all wifi calling related commands between 0x1600 and 0x16FF */
-	ANDROID_NL80211_SUBCMD_WIFI_OFFLOAD_RANGE_START = 0x1600,
-	ANDROID_NL80211_SUBCMD_WIFI_OFFLOAD_RANGE_END   = 0x16FF
 } ANDROID_VENDOR_SUB_COMMAND;
+
 enum andr_vendor_subcmd {
 	GSCAN_SUBCMD_GET_CAPABILITIES = ANDROID_NL80211_SUBCMD_GSCAN_RANGE_START,
 	GSCAN_SUBCMD_SET_CONFIG,
@@ -113,9 +111,6 @@ enum andr_vendor_subcmd {
 	RTT_SUBCMD_GETCAPABILITY,
 
 	LSTATS_SUBCMD_GET_INFO = ANDROID_NL80211_SUBCMD_LSTATS_RANGE_START,
-
-	WIFI_OFFLOAD_SUBCMD_START_MKEEP_ALIVE = ANDROID_NL80211_SUBCMD_WIFI_OFFLOAD_RANGE_START,
-	WIFI_OFFLOAD_SUBCMD_STOP_MKEEP_ALIVE,
     /* Add more sub commands here */
 	VENDOR_SUBCMD_MAX
 };
@@ -209,15 +204,6 @@ enum rtt_attributes {
 	RTT_ATTRIBUTE_TARGET_NUM_RETRY
 };
 
-enum mkeep_alive_attributes {
-	MKEEP_ALIVE_ATTRIBUTE_ID,
-	MKEEP_ALIVE_ATTRIBUTE_IP_PKT,
-	MKEEP_ALIVE_ATTRIBUTE_IP_PKT_LEN,
-	MKEEP_ALIVE_ATTRIBUTE_SRC_MAC_ADDR,
-	MKEEP_ALIVE_ATTRIBUTE_DST_MAC_ADDR,
-	MKEEP_ALIVE_ATTRIBUTE_PERIOD_MSEC
-};
-
 typedef enum wl_vendor_event {
 	BRCM_VENDOR_EVENT_UNSPEC,
 	BRCM_VENDOR_EVENT_PRIV_STR,
@@ -228,9 +214,8 @@ typedef enum wl_vendor_event {
 	GOOGLE_RTT_COMPLETE_EVENT,
 	GOOGLE_SCAN_COMPLETE_EVENT,
 	GOOGLE_GSCAN_GEOFENCE_LOST_EVENT,
-	GOOGLE_RSSI_MONITOR_EVENT,
-	GOOGLE_MKEEP_ALIVE_EVENT,
-	BRCM_VENDOR_EVENT_IDSUP_STATUS
+	BRCM_VENDOR_EVENT_IDSUP_STATUS,
+	BRCM_VENDOR_EVENT_DRIVER_HANG
 } wl_vendor_event_t;
 
 enum andr_wifi_attr {

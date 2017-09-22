@@ -1,7 +1,7 @@
 /*
  * Linux OS Independent Layer
  *
- * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: linux_osl.c 657686 2016-09-02 06:39:10Z $
+ * $Id: linux_osl.c 602478 2015-11-26 04:46:12Z $
  */
 
 #define LINUX_PORT
@@ -564,7 +564,7 @@ static struct sk_buff *osl_alloc_skb(osl_t *osh, unsigned int len)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)
 	gfp_t flags = (in_atomic() || irqs_disabled()) ? GFP_ATOMIC : GFP_KERNEL;
 #if defined(CONFIG_SPARSEMEM) && defined(CONFIG_ZONE_DMA)
-	flags |= GFP_ATOMIC;
+	flags |= GFP_DMA;
 #endif
 #ifdef DHD_USE_ATOMIC_PKTGET
 	flags = GFP_ATOMIC;
@@ -900,42 +900,30 @@ void * BCMFASTPATH
 osl_pkt_frmnative(osl_t *osh, void *pkt)
 #endif /* BCMDBG_CTRACE */
 {
-	struct sk_buff *cskb;
 	struct sk_buff *nskb;
-	unsigned long pktalloced = 0;
-
+#ifdef BCMDBG_CTRACE
+	struct sk_buff *nskb1, *nskb2;
+#endif
 
 	if (osh->pub.pkttag)
 		OSL_PKTTAG_CLEAR(pkt);
 
-	/* walk the PKTCLINK() list */
-	for (cskb = (struct sk_buff *)pkt;
-		cskb != NULL;
-		cskb = PKTISCHAINED(cskb) ? PKTCLINK(cskb) : NULL) {
-
-		/* walk the pkt buffer list */
-		for (nskb = cskb; nskb; nskb = nskb->next) {
-
-			/* Increment the packet counter */
-			pktalloced++;
-
-			/* clean the 'prev' pointer
-			 * Kernel 3.18 is leaving skb->prev pointer set to skb
-			 * to indicate a non-fragmented skb
-			 */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
-			nskb->prev = NULL;
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0) */
-
+	/* Increment the packet counter */
+	for (nskb = (struct sk_buff *)pkt; nskb; nskb = nskb->next) {
+		atomic_add(PKTISCHAINED(nskb) ? PKTCCNT(nskb) : 1, &osh->cmn->pktalloced);
 
 #ifdef BCMDBG_CTRACE
-		ADD_CTRACE(osh, nskb, file, line);
-#endif /* BCMDBG_CTRACE */
-		}
-	}
-	/* Increment the packet counter */
-	atomic_add(pktalloced, &osh->cmn->pktalloced);
+		for (nskb1 = nskb; nskb1 != NULL; nskb1 = nskb2) {
+			if (PKTISCHAINED(nskb1)) {
+				nskb2 = PKTCLINK(nskb1);
+			}
+			else
+				nskb2 = NULL;
 
+			ADD_CTRACE(osh, nskb1, file, line);
+		}
+#endif /* BCMDBG_CTRACE */
+	}
 	return (void *)pkt;
 }
 
@@ -1621,9 +1609,10 @@ dmaaddr_t BCMFASTPATH
 osl_dma_map(osl_t *osh, void *va, uint size, int direction, void *p, hnddma_seg_map_t *dmah)
 {
 	int dir;
-	dmaaddr_t ret_addr;
+#ifdef BCMDMA64OSL
+	dmaaddr_t ret;
 	dma_addr_t  map_addr;
-	int ret;
+#endif /* BCMDMA64OSL */
 
 	ASSERT((osh && (osh->magic == OS_HANDLE_MAGIC)));
 	dir = (direction == DMA_TX)? PCI_DMA_TODEVICE: PCI_DMA_FROMDEVICE;
@@ -1631,24 +1620,14 @@ osl_dma_map(osl_t *osh, void *va, uint size, int direction, void *p, hnddma_seg_
 
 
 
+#ifdef BCMDMA64OSL
 	map_addr = pci_map_single(osh->pdev, va, size, dir);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
-	ret = pci_dma_mapping_error(osh->pdev, map_addr);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 5))
-	ret = pci_dma_mapping_error(map_addr);
+	PHYSADDRLOSET(ret, map_addr & 0xffffffff);
+	PHYSADDRHISET(ret, (map_addr >> 32) & 0xffffffff);
+	return ret;
 #else
-	ret = 0;
-#endif
-	if (ret) {
-		printk("%s: Failed to map memory\n", __FUNCTION__);
-		PHYSADDRLOSET(ret_addr, 0);
-		PHYSADDRHISET(ret_addr, 0);
-	} else {
-		PHYSADDRLOSET(ret_addr, map_addr & 0xffffffff);
-		PHYSADDRHISET(ret_addr, (map_addr >> 32) & 0xffffffff);
-	}
-
-	return ret_addr;
+	return (pci_map_single(osh->pdev, va, size, dir));
+#endif /* BCMDMA64OSL */
 }
 
 void BCMFASTPATH

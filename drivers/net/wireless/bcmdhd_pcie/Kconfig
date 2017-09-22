@@ -30,13 +30,6 @@ config BCMDHD_NVRAM_PATH
 	---help---
 	  Path to the calibration file.
 
-config BCMDHD_ES4_NVRAM_PATH
-	depends on BCMDHD
-	string "NVRAM ES4 path"
-	default "/system/etc/wifi/bcmdhd.cal"
-	---help---
-	  Path to the calibration file.
-
 config DHD_USE_STATIC_BUF
 	bool "Enable memory preallocation"
 	depends on BCMDHD

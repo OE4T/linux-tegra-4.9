@@ -171,10 +171,6 @@ typedef struct _pcie_enhanced_caphdr {
 #define	PCI_GPIO_IN		0xb0	/* pci config space gpio input (>=rev3) */
 #define	PCI_GPIO_OUT		0xb4	/* pci config space gpio output (>=rev3) */
 #define	PCI_GPIO_OUTEN		0xb8	/* pci config space gpio output enable (>=rev3) */
-#undef PCI_L1SS_CTRL2			/* avoid incompatible user-mode
-						* definition from
-						* uapi/linux/pci_regs.h
-					*/
 #define	PCI_L1SS_CTRL2		0x24c	/* The L1 PM Substates Control register */
 
 /* Private Registers */

@@ -11,8 +11,7 @@ DHDCFLAGS += -Wall -Wstrict-prototypes -Dlinux -DLINUX -DBCMDRIVER \
 	-DEMBEDDED_PLATFORM -DPNO_SUPPORT                                     \
 	-DDHD_DONOT_FORWARD_BCMEVENT_AS_NETWORK_PKT                           \
 	-DCUSTOMER_HW2 -DGET_CUSTOM_MAC_ENABLE -DDHD_FW_COREDUMP              \
-	-DSEC_ENHANCEMENT -DDHD_VERSION_NO_DATE_TIME                          \
-	-DENABLE_INSMOD_NO_FW_LOAD -DCONFIG_DTS
+	-DSHOW_LOGTRACE -DSEC_ENHANCEMENT -DDHD_VERSION_NO_DATE_TIME
 
 #################
 # Common feature
@@ -21,7 +20,7 @@ DHDCFLAGS += -DWL_VIRTUAL_APSTA
 
 DHDCFLAGS += -DWL_CFG80211
 # Print out kernel panic point of file and line info when assertion happened
-#DHDCFLAGS += -DBCMASSERT_LOG
+DHDCFLAGS += -DBCMASSERT_LOG
 
 #ARCH specific flags
 #In case of x86 architechture, pls enable below flag
@@ -190,7 +189,7 @@ endif
 
 
 ifneq ($(CONFIG_BCM4339),)
-  DHDCFLAGS += -DBCM4339_CHIP -DBCMPCIE_OOB_HOST_WAKE -DHW_OOB
+  DHDCFLAGS += -DBCM4339_CHIP -DHW_OOB
 
   # tput enhancement
   DHDCFLAGS += -DCUSTOM_GLOM_SETTING=8 -DCUSTOM_RXCHAIN=1
@@ -248,9 +247,9 @@ ifneq ($(CONFIG_BCMDHD_PCIE),)
   DHDOFILES += pcie_core.o
 endif
 
-ifneq ($(CONFIG_BCMDHD),n)
-  bcmdhd_pcie-objs := $(DHDOFILES)
-  obj-$(DRIVER_TYPE)   += bcmdhd_pcie.o
+ifeq ($(CONFIG_BCMDHD),m)
+  bcmdhd-objs := $(DHDOFILES)
+  obj-$(DRIVER_TYPE)   += bcmdhd.o
 endif
 
 ifeq ($(CONFIG_BCMDHDX),m)

@@ -1776,7 +1776,6 @@ void dhd_pktid_audit_fail_cb(dhd_pub_t *dhdp);
 
 int dhd_android_ap_isolate_getval(struct net_device *dev);
 void dhd_android_ap_isolate_setval(struct net_device *dev, int val);
-extern bool is_es4_module(void);
 
 #ifdef OOB_PARAM
 extern uint dhd_get_oob_disable(struct dhd_bus* bus);

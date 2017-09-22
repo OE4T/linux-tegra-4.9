@@ -7436,27 +7436,6 @@ int dhd_get_fw_mode(dhd_info_t *dhdinfo)
 	return DHD_FLAG_STA_MODE;
 }
 
-static inline bool is_file_valid(const char *file)
-{
-	struct file *fp;
-	mm_segment_t old_fs = get_fs();
-
-	if (!file)
-		return false;
-
-	set_fs(KERNEL_DS);
-
-	fp = filp_open(file, O_RDONLY, 0);
-	if (IS_ERR_OR_NULL(fp)) {
-		set_fs(old_fs);
-		return false;
-	}
-
-	filp_close(fp, NULL);
-	set_fs(old_fs);
-	return true;
-}
-
 bool dhd_update_fw_nv_path(dhd_info_t *dhdinfo)
 {
 	int fw_len;
@@ -7479,32 +7458,21 @@ bool dhd_update_fw_nv_path(dhd_info_t *dhdinfo)
 	/* set default firmware and nvram path for built-in type driver */
 	if (!dhd_download_fw_on_driverload) {
 #ifdef CONFIG_BCMDHD_FW_PATH
-		if (is_file_valid(CONFIG_BCMDHD_FW_PATH))
-			fw = CONFIG_BCMDHD_FW_PATH;
+		fw = CONFIG_BCMDHD_FW_PATH;
 #endif /* CONFIG_BCMDHD_FW_PATH */
 #ifdef CONFIG_BCMDHD_NVRAM_PATH
-		if (is_file_valid(CONFIG_BCMDHD_NVRAM_PATH))
-			nv = CONFIG_BCMDHD_NVRAM_PATH;
+		nv = CONFIG_BCMDHD_NVRAM_PATH;
 #endif /* CONFIG_BCMDHD_NVRAM_PATH */
-#ifdef CONFIG_BCMDHD_ES4_NVRAM_PATH
-		if (is_es4_module()) {
-			if (is_file_valid(CONFIG_BCMDHD_ES4_NVRAM_PATH)) {
-				nv = CONFIG_BCMDHD_ES4_NVRAM_PATH;
-				DHD_INFO(("ES4 module detected, Nvram \
-					 path updated to %s\n", nv));
-			}
-		}
-#endif
 	}
 
 	/* check if we need to initialize the path */
-	if (adapter && adapter->fw_path && adapter->fw_path[0] != '\0') {
-		if (is_file_valid(adapter->fw_path))
+	if (dhdinfo->fw_path[0] == '\0') {
+		if (adapter && adapter->fw_path && adapter->fw_path[0] != '\0')
 			fw = adapter->fw_path;
-	}
 
-	if (adapter && adapter->nv_path && adapter->nv_path[0] != '\0') {
-		if (is_file_valid(adapter->nv_path))
+	}
+	if (dhdinfo->nv_path[0] == '\0') {
+		if (adapter && adapter->nv_path && adapter->nv_path[0] != '\0')
 			nv = adapter->nv_path;
 	}
 
@@ -7512,15 +7480,10 @@ bool dhd_update_fw_nv_path(dhd_info_t *dhdinfo)
 	 *
 	 * TODO: need a solution for multi-chip, can't use the same firmware for all chips
 	 */
-	if (firmware_path[0] != '\0') {
-		if (is_file_valid(firmware_path))
-			fw = firmware_path;
-	}
-
-	if (nvram_path[0] != '\0') {
-		if (is_file_valid(nvram_path))
-			nv = nvram_path;
-	}
+	if (firmware_path[0] != '\0')
+		fw = firmware_path;
+	if (nvram_path[0] != '\0')
+		nv = nvram_path;
 
 	if (fw && fw[0] != '\0') {
 		fw_len = strlen(fw);

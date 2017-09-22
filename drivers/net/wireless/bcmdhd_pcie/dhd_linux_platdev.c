@@ -48,14 +48,9 @@
 #endif /* CONFIG_DTS */
 
 
-#define WIFI_PLAT_NAME		"bcmdhd_pcie_wlan"
+#define WIFI_PLAT_NAME		"bcmdhd_wlan"
 #define WIFI_PLAT_NAME2		"bcm4329_wlan"
 #define WIFI_PLAT_EXT		"bcmdhd_wifi_platform"
-
-#define BOARD_SKU	"2382"
-#define BOARD_INITIAL	"699-"
-#define BOARD_SKU_VER	'E'
-#define BOARD_SKU_VER_MAX	'Z'
 
 #ifdef CONFIG_DTS
 struct regulator *wifi_regulator = NULL;
@@ -288,39 +283,6 @@ void *wifi_platform_get_country_code(wifi_adapter_info_t *adapter, char *ccode)
 	return NULL;
 }
 
-bool is_es4_module(void)
-{
-	struct device_node *of_chosen;
-	bool ret = false;
-	/*
-	   Put logic to have correct NV here
-	 */
-	of_chosen = of_find_node_by_path("/chosen");
-	if (of_chosen) {
-		const char *sku, *sku_version;
-
-		sku = of_get_property(of_chosen, "nvidia,sku", NULL);
-		sku_version = of_get_property(of_chosen,
-						"nvidia,sku_version", NULL);
-		if (sku && sku_version) {
-			DHD_INFO(("sku= %s, sku_version=%s\n", sku, sku_version));
-			if ((0 == strncmp(BOARD_INITIAL, sku, 4)) &&
-					 (0 == strncmp(BOARD_SKU, sku+5, 4))) {
-				if (BOARD_SKU_VER <= *sku_version && BOARD_SKU_VER_MAX >= *sku_version)
-					ret = true;
-			}
-		}
-	}
-	return ret;
-}
-static inline bool is_antenna_tuned(void)
-{
-	struct device_node *np;
-
-	np = of_find_node_by_name(NULL, "wifi-antenna-tuning");
-	return of_device_is_available(np);
-}
-
 static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 {
 	struct resource *resource;
@@ -347,7 +309,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 		adapter->intr_flags = resource->flags & IRQF_TRIGGER_MASK;
 	}
 
-#if defined (OOB_PARAM) || defined(BCMPCIE_OOB_HOST_WAKE)
+#ifdef OOB_PARAM
 	adapter->oob_disable = FALSE;
 #endif /* OOB_PARAM */
 
@@ -357,10 +319,23 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 		DHD_ERROR(("%s regulator is null\n", __FUNCTION__));
 		return -1;
 	}
-#if defined(OOB_INTR_ONLY) || defined(BCMPCIE_OOB_HOST_WAKE)
+#if defined(OOB_INTR_ONLY)
 	OOB_PARAM_IF(!(adapter->oob_disable)) {
 		/* This is to get the irq for the OOB */
-		irq = platform_get_irq(pdev, 0);
+		gpio = of_get_gpio(pdev->dev.of_node, 0);
+
+		if (gpio < 0) {
+			DHD_ERROR(("%s no GPIO for OOB in device tree.\n", __FUNCTION__));
+#if defined(OOB_PARAM)
+			DHD_ERROR(("%s continue with non-OOB mode.\n", __FUNCTION__));
+			adapter->oob_disable = TRUE;
+			goto out;
+#else
+			return -1;
+#endif /* defined(OOB_PARAM) */
+		}
+
+		irq = gpio_to_irq(gpio);
 		if (irq < 0) {
 			DHD_ERROR(("%s irq information is incorrect\n", __FUNCTION__));
 			return -1;
@@ -380,17 +355,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 #if defined(OOB_PARAM)
 out:
 #endif /* defined(OOB_PARAM) */
-#endif /* defined(OOB_INTR_ONLY) || defined(BCMPCIE_OOB_HOST_WAKE)*/
-
-	adapter->fw_path = of_get_property(pdev->dev.of_node, "fw_path", NULL);
-	adapter->nv_path = of_get_property(pdev->dev.of_node, "nv_path", NULL);
-
-	if (is_es4_module())
-		adapter->nv_path = of_get_property(pdev->dev.of_node,
-							"nv_path_es4", NULL);
-	if (is_antenna_tuned())
-		adapter->nv_path = of_get_property(pdev->dev.of_node,
-							"tuned_nv_path", NULL);
+#endif /* defined(OOB_INTR_ONLY) */
 #endif /* CONFIG_DTS */
 
 	wifi_plat_dev_probe_ret = dhd_wifi_platform_load();
@@ -460,7 +425,7 @@ static int wifi_plat_dev_drv_resume(struct platform_device *pdev)
 
 #ifdef CONFIG_DTS
 static const struct of_device_id wifi_device_dt_match[] = {
-	{ .compatible = "android,bcmdhd_pcie_wlan", },
+	{ .compatible = "android,bcmdhd_wlan", },
 	{},
 };
 #endif /* CONFIG_DTS */
@@ -564,6 +529,11 @@ static int wifi_ctrlfunc_register_drv(void)
 		wifi_plat_dev_probe_ret = dhd_wifi_platform_load();
 	}
 #endif /* !defined(CONFIG_DTS) */
+
+
+#ifdef CONFIG_DTS
+	wifi_plat_dev_probe_ret = platform_driver_register(&wifi_platform_dev_driver);
+#endif /* CONFIG_DTS */
 
 	/* return probe function's return value if registeration succeeded */
 	return wifi_plat_dev_probe_ret;

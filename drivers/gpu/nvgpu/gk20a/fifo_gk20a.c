@@ -1237,16 +1237,21 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 		if (g->ops.fecs_trace.reset)
 			g->ops.fecs_trace.reset(g);
 #endif
-
-		/* HALT_PIPELINE method, halt GR engine. */
-		if (gr_gk20a_halt_pipe(g))
-			nvgpu_err(g, "failed to HALT gr pipe");
-
-		/*
-		 * Resetting engine using mc_enable_r() is not enough; we must
-		 * do full init sequence.
-		 */
-		gk20a_gr_reset(g);
+		if (!nvgpu_platform_is_simulation(g)) {
+			/*HALT_PIPELINE method, halt GR engine*/
+			if (gr_gk20a_halt_pipe(g))
+				nvgpu_err(g, "failed to HALT gr pipe");
+			/*
+			 * resetting engine using mc_enable_r() is not
+			 * enough, we do full init sequence
+			 */
+			nvgpu_log(g, gpu_dbg_info, "resetting gr engine");
+			gk20a_gr_reset(g);
+		} else {
+			nvgpu_log(g, gpu_dbg_info,
+				"HALT gr pipe not supported and "
+				"gr cannot be reset without halting gr pipe");
+		}
 		if (g->support_pmu && g->can_elpg)
 			nvgpu_pmu_enable_elpg(g);
 	}

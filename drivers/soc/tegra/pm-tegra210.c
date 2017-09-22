@@ -496,6 +496,11 @@ static int __init tegra210_cpuidle_init(void)
 	if (tegra_get_chip_id() != TEGRA210)
 		goto out;
 
+	if (!dev || !drv) {
+		pr_err("%s: no cpuidle devices or driver\n", __func__);
+		return -ENODEV;
+	}
+
 	/*
 	 * To avoid the race condition between DFLL clock ready
 	 * and CC4 engagement. Put this in late_inticall.

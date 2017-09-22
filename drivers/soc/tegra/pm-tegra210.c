@@ -63,7 +63,8 @@ static void tegra210_bpmp_enable_suspend(int mode, int flags)
 {
 	s32 mb[] = { cpu_to_le32(mode), cpu_to_le32(flags) };
 
-	tegra_bpmp_send(MRQ_ENABLE_SUSPEND, &mb, sizeof(mb));
+	tegra_bpmp_send_receive_atomic(MRQ_ENABLE_SUSPEND, NULL, 0,
+				       &mb, sizeof(mb));
 }
 
 static int tegra210_bpmp_suspend(void)
@@ -116,7 +117,8 @@ static int tegra_bpmp_tolerate_idle(int cpu, int ccxtl, int scxtl)
 	data[1] = cpu_to_le32(ccxtl);
 	data[2] = cpu_to_le32(scxtl);
 
-	return tegra_bpmp_send(MRQ_TOLERATE_IDLE, data, sizeof(data));
+	return tegra_bpmp_send_receive(MRQ_TOLERATE_IDLE, NULL, 0,
+				       data, sizeof(data));
 }
 
 static int proc_idle_state_enter(int cpu, int idle_state)

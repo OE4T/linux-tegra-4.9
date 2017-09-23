@@ -511,6 +511,8 @@ static const char * const tegra_bwmgr_client_names[] = {
 	"disp_0",
 	"disp_1",
 	"disp_2",
+	"disp1_la_emc",
+	"disp2_la_emc",
 	"usbd",
 	"xhci",
 	"sdmmc1",

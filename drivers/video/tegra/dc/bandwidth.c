@@ -26,6 +26,7 @@
 #include <trace/events/display.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/tegra_emc.h>
 #include <linux/platform/tegra/mc.h>
 
@@ -565,7 +566,8 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 			emc_freq_hz, bw, disp_params);
 
 		if (!err) {
-			clk_set_rate(dc->emc_la_clk, emc_freq_hz);
+			tegra_bwmgr_set_emc(dc->emc_la_handle, emc_freq_hz,
+						TEGRA_BWMGR_SET_EMC_SHARED_BW);
 			break;
 		}
 

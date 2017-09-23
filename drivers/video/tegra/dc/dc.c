@@ -40,6 +40,7 @@
 #include <linux/gpio.h>
 #include <linux/nvhost.h>
 #include <linux/clk/tegra.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 #include <video/tegrafb.h>
 #include <drm/drm_fixed.h>
 #ifdef CONFIG_SWITCH
@@ -121,6 +122,11 @@ static struct of_device_id tegra_disb_pd[] = {
 	{},
 };
 #endif
+
+static unsigned int display_la_emc_client_id[] = {
+	TEGRA_BWMGR_CLIENT_DISP1_LA_EMC,
+	TEGRA_BWMGR_CLIENT_DISP2_LA_EMC
+};
 
 struct fb_videomode tegra_dc_vga_mode = {
 	.refresh = 60,
@@ -5169,8 +5175,6 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 
 	tegra_dc_put(dc);
 
-	tegra_disp_clk_prepare_enable(dc->emc_la_clk);
-
 	return true;
 }
 #endif
@@ -5379,8 +5383,6 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 #else
 		;
 #endif
-
-	tegra_disp_clk_disable_unprepare(dc->emc_la_clk);
 #endif
 }
 
@@ -5805,9 +5807,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #elif !defined(CONFIG_TEGRA_NVDISPLAY)
 	int isomgr_client_id = -1;
 #endif
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	struct clk *emc_la_clk;
-#endif
+	struct tegra_bwmgr_client *emc_la_handle;
 	struct device_node *np = ndev->dev.of_node;
 	struct resource *fb_mem = NULL;
 	char clk_name[16];
@@ -6096,18 +6096,24 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	 * The emc_la clock is being added to set the floor value
 	 * for emc depending on the LA calculaions for each window
 	 */
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	snprintf(clk_name, sizeof(clk_name), "disp%u_la_emc",
-			dc->ctrl_num + 1);
-	emc_la_clk = tegra_disp_clk_get(&ndev->dev, clk_name);
-	if (IS_ERR_OR_NULL(emc_la_clk)) {
-		dev_err(&ndev->dev, "can't get %s clock\n", clk_name);
-		ret = -ENOENT;
-		goto err_put_clk;
+	if (!tegra_dc_is_nvdisplay()) {
+		snprintf(clk_name, sizeof(clk_name), "disp%u_la_emc",
+						dc->ctrl_num + 1);
+		emc_la_handle = tegra_bwmgr_register(
+					display_la_emc_client_id[dc->ctrl_num]);
+		if (IS_ERR_OR_NULL(emc_la_handle)) {
+			dev_err(&ndev->dev, "can't get handle %s\n", clk_name);
+			ret = -ENOENT;
+			return ret;
+		}
+		dc->emc_la_handle = emc_la_handle;
+		ret = tegra_bwmgr_set_emc(dc->emc_la_handle, 0,
+				TEGRA_BWMGR_SET_EMC_SHARED_BW);
+		if (ret) {
+			dev_err(&ndev->dev, "can't set emc clock: %d\n", ret);
+			return ret;
+		}
 	}
-	dc->emc_la_clk = emc_la_clk;
-	clk_set_rate(dc->emc_la_clk, 0);
-#endif
 
 	dc->ext = tegra_dc_ext_register(ndev, dc);
 	if (IS_ERR_OR_NULL(dc->ext)) {
@@ -6318,9 +6324,8 @@ err_disable_dc:
 #elif !defined(CONFIG_TEGRA_ISOMGR)
 	tegra_disp_clk_put(&ndev->dev, emc_clk);
 #endif
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	tegra_disp_clk_put(&ndev->dev, dc->emc_la_clk);
-#endif
+	if (!tegra_dc_is_nvdisplay())
+		tegra_bwmgr_unregister(dc->emc_la_handle);
 err_put_clk:
 #ifdef CONFIG_SWITCH
 	if (dc->switchdev_registered)
@@ -6390,9 +6395,9 @@ static int tegra_dc_remove(struct platform_device *ndev)
 #else
 	tegra_disp_clk_put(&ndev->dev, dc->emc_clk);
 #endif
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	tegra_disp_clk_put(&ndev->dev, dc->emc_la_clk);
-#endif
+
+	if (!tegra_dc_is_nvdisplay())
+		tegra_bwmgr_unregister(dc->emc_la_handle);
 
 	tegra_disp_clk_put(&ndev->dev, dc->clk);
 	iounmap(dc->base);

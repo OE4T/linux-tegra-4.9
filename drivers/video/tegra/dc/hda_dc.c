@@ -485,23 +485,23 @@ static void tegra_dc_hda_get_clocks(struct tegra_dc *dc,
 	}
 
 	if (hda->sink == TEGRA_DC_OUT_DP) {
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-		hda->pll_p_clk = tegra_disp_of_clk_get_by_name(np_sor,
-						"pllp_out0");
-		if (IS_ERR_OR_NULL(hda->pll_p_clk)) {
-			dev_err(&dc->ndev->dev,
-				"hda: can't get pllp_out0 clock\n");
-			goto err_get_clk;
+		if (tegra_dc_is_nvdisplay()) {
+			hda->pll_p_clk = tegra_disp_of_clk_get_by_name(np_sor,
+					"pllp_out0");
+			if (IS_ERR_OR_NULL(hda->pll_p_clk)) {
+				dev_err(&dc->ndev->dev,
+						"hda: can't get pllp_out0 clock\n");
+				goto err_get_clk;
+			}
+		} else {
+			hda->pll_p_clk = tegra_disp_of_clk_get_by_name(np_sor,
+					"pll_p");
+			if (IS_ERR_OR_NULL(hda->pll_p_clk)) {
+				dev_err(&dc->ndev->dev,
+						"hda: can't get pll_p clock\n");
+				goto err_get_clk;
+			}
 		}
-#else
-		hda->pll_p_clk = tegra_disp_of_clk_get_by_name(np_sor,
-								"pll_p");
-		if (IS_ERR_OR_NULL(hda->pll_p_clk)) {
-			dev_err(&dc->ndev->dev,
-				"hda: can't get pll_p clock\n");
-			goto err_get_clk;
-		}
-#endif
 		hda->maud_clk = tegra_disp_of_clk_get_by_name(np_sor, "maud");
 		if (IS_ERR_OR_NULL(hda->maud_clk)) {
 			dev_err(&hda->dc->ndev->dev,

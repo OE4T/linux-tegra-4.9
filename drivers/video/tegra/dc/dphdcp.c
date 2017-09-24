@@ -1211,54 +1211,57 @@ repeater_auth:
 		goto failure;
 	}
 	dphdcp_vdbg("read Bksv from device: 0x%016llx\n", dphdcp->b_ksv);
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	*pkt = HDCP_TA_CMD_BKSV;
-	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
-	*(pkt + 2*HDCP_CMD_OFFSET) = dphdcp->b_ksv;
-	*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
-	*(pkt + 4*HDCP_CMD_OFFSET) = repeater_flag;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-	if (e) {
-		dphdcp_err("te launch operation failed with error: %d\n", e);
-		goto failure;
-	} else {
-		/* check if Bksv verification was successful */
-		hdcp_ta_ret = (int)*pkt;
-		if (hdcp_ta_ret) {
-			dphdcp_err("Bksv verify failure\n");
+
+	if (tegra_dc_is_nvdisplay()) {
+		*pkt = HDCP_TA_CMD_BKSV;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
+		*(pkt + 2*HDCP_CMD_OFFSET) = dphdcp->b_ksv;
+		*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+		*(pkt + 4*HDCP_CMD_OFFSET) = repeater_flag;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		if (e) {
+			dphdcp_err("te launch operation failed with error:%d\n",
+					e);
 			goto failure;
 		} else {
-			dphdcp_vdbg("loaded Bksv into controller\n");
-			/* check if R0 read was successful */
-			hdcp_ta_ret = (int)*(pkt);
+			/* check if Bksv verification was successful */
+			hdcp_ta_ret = (int)*pkt;
 			if (hdcp_ta_ret) {
-				dphdcp_err("R0 read failure\n");
+				dphdcp_err("Bksv verify failure\n");
 				goto failure;
+			} else {
+				dphdcp_vdbg("loaded Bksv into controller\n");
+				/* check if R0 read was successful */
+				hdcp_ta_ret = (int)*(pkt);
+				if (hdcp_ta_ret) {
+					dphdcp_err("R0 read failure\n");
+					goto failure;
+				}
 			}
 		}
-	}
-#else
-	/*
-	 * verify the bksv to be if it has a correct combination of
-	 * 1's and 0's
-	 */
-	if (verify_ksv(dphdcp->b_ksv)) {
-		dphdcp_err("Bksv verify failure! (0x%016llx)\n", dphdcp->b_ksv);
-		goto failure;
-	}
+	} else {
+		/*
+		 * verify the bksv to be if it has a correct combination of
+		 * 1's and 0's
+		 */
+		if (verify_ksv(dphdcp->b_ksv)) {
+			dphdcp_err("Bksv verify failure! (0x%016llx)\n",
+					dphdcp->b_ksv);
+			goto failure;
+		}
 
-	set_bksv(sor, dphdcp->b_ksv, (b_caps & BCAPS_REPEATER));
-	dphdcp_vdbg("Loaded Bksv into controller\n");
+		set_bksv(sor, dphdcp->b_ksv, (b_caps & BCAPS_REPEATER));
+		dphdcp_vdbg("Loaded Bksv into controller\n");
 
-	/* check if the computations of Km, Ks, M0 and R0 are over */
-	e = wait_hdcp_ctrl(sor, R0_VALID, NULL);
-	if (e) {
-		dphdcp_err("R0 read failure\n");
-		goto failure;
+		/* check if the computations of Km, Ks, M0 and R0 are over */
+		e = wait_hdcp_ctrl(sor, R0_VALID, NULL);
+		if (e) {
+			dphdcp_err("R0 read failure\n");
+			goto failure;
+		}
+
+		dphdcp_vdbg("R0 valid\n");
 	}
-
-	dphdcp_vdbg("R0 valid\n");
-#endif
 	mutex_unlock(&dphdcp->lock);
 
 	msleep(100); /* cannot read R0' within 100 ms of writing AKSV */

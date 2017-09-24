@@ -814,7 +814,6 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 		}
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 	/* T210 and T186 supports fractional divider and hence can support the * 1000 / 1001 modes.
 	   For now, only enable support for 24, 30 and 60 Hz modes. */
 	{
@@ -863,7 +862,6 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 			kfree(frac_modes);
 		}
 	}
-#endif
 
 	for (j = 0; j < specs->modedb_len; j++) {
 		if (!new_data->rgb_quant_selectable &&

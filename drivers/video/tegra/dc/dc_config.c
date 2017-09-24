@@ -20,8 +20,6 @@
 
 #include "dc_config.h"
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
-
 static struct tegra_dc_feature_entry t210_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FORMATS,
 			{ TEGRA_WIN_FMT_T210_LOW, TEGRA_WIN_FMT_T210_HIGH } },
@@ -156,7 +154,6 @@ static struct tegra_dc_feature t210_feature_table_a = {
 static struct tegra_dc_feature t210_feature_table_b = {
 	ARRAY_SIZE(t210_feature_entries_b), t210_feature_entries_b,
 };
-#endif
 
 static int tegra_dc_get_feature(struct tegra_dc_feature *feature, int win_idx,
 					enum tegra_dc_feature_option option)
@@ -319,14 +316,16 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 {
 	int i;
 	struct tegra_dc_feature_entry *entry;
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
-	if (!dc->ndev->id)
-		dc->feature = &t210_feature_table_a;
-	else
-		dc->feature = &t210_feature_table_b;
-#elif defined(CONFIG_TEGRA_NVDISPLAY)
-	nvdisp_dc_feature_register(dc);
-#endif
+
+	if (tegra_dc_is_nvdisplay()) {
+		nvdisp_dc_feature_register(dc);
+	} else {
+		if (!dc->ndev->id)
+			dc->feature = &t210_feature_table_a;
+		else
+			dc->feature = &t210_feature_table_b;
+	}
+
 	/* Count the number of windows using gen1 blender. */
 	dc->gen1_blend_num = 0;
 	for (i = 0; i < dc->feature->num_entries; i++) {

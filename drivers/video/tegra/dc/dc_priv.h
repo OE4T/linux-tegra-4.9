@@ -268,7 +268,6 @@ int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
 void reg_dump(struct tegra_dc *dc, void *data,
 	void (*print)(void *data, const char *str));
 
-void nvdisp_dc_feature_register(struct tegra_dc *dc);
 int tegra_nvdisp_get_imp_user_info(struct tegra_dc_ext_imp_user_info *info);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);
 void tegra_nvdisp_stop_display(struct tegra_dc *dc);
@@ -361,6 +360,7 @@ void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
 void tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc);
 void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
+void nvdisp_dc_feature_register(struct tegra_dc *dc);
 int tegra_nvdisp_test_and_set_compclk(unsigned long rate,
 					struct tegra_dc *dc);
 int tegra_nvdisp_program_mode(struct tegra_dc *dc,
@@ -416,6 +416,9 @@ static inline void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc)
 {
 }
 static inline void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc)
+{
+}
+static inline void nvdisp_dc_feature_register(struct tegra_dc *dc)
 {
 }
 static inline int tegra_nvdisp_test_and_set_compclk(unsigned long rate,

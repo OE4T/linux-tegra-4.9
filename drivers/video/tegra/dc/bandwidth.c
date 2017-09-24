@@ -26,9 +26,7 @@
 #include <trace/events/display.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
-#if !defined(CONFIG_ARCH_TEGRA_210_SOC)
 #include <linux/platform/tegra/tegra_emc.h>
-#endif
 #include <linux/platform/tegra/mc.h>
 
 #include <video/tegra_dc_ext.h>
@@ -898,11 +896,10 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 	pclk = tegra_dc_get_out_max_pixclock(dc);
 	if (!pclk) {
 		 if (dc->out->type == TEGRA_DC_OUT_HDMI) {
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
-			pclk = KHZ2PICOS(600000); /* 600MHz max */
-#else
-			pclk = KHZ2PICOS(150000); /* 150MHz max */
-#endif
+			if (tegra_dc_is_t21x())
+				pclk = KHZ2PICOS(600000); /* 600MHz max */
+			else
+				pclk = KHZ2PICOS(150000); /* 150MHz max */
 		} else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
 			(dc->out->type == TEGRA_DC_OUT_FAKE_DP) ||
 			(dc->out->type == TEGRA_DC_OUT_NULL) ||

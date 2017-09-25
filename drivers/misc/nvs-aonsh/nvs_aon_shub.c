@@ -304,7 +304,10 @@ static int tegra_aon_shub_max_range(void *client, int snsr_id, int max_range)
 	case AON_SHUB_RANGE_NO_ERR:
 		memcpy(&shub->snsrs[snsr_id]->cfg.max_range,
 				&shub->shub_resp->data.range.max_range,
-				sizeof(struct nvs_float) * 2);
+				sizeof(struct nvs_float));
+		memcpy(&shub->snsrs[snsr_id]->cfg.resolution,
+				&shub->shub_resp->data.range.resolution,
+				sizeof(struct nvs_float));
 		/* AXIS sensors need resolution to be put in the scales */
 		len = shub->snsrs[snsr_id]->cfg.ch_n_max;
 		if (len) {
@@ -522,7 +525,7 @@ static int tegra_aon_shub_get_cfg(struct tegra_aon_shub *shub, int remote_id)
 	return ret;
 }
 
-static const inline bool is_chipid_valid(struct tegra_aon_shub *shub,
+static inline bool is_chipid_valid(struct tegra_aon_shub *shub,
 					 u8 chip_id,
 					 const char *name)
 {
@@ -535,7 +538,7 @@ static const inline bool is_chipid_valid(struct tegra_aon_shub *shub,
 	return false;
 }
 
-static const inline bool is_i2cid_valid(u8 i2c_id)
+static inline bool is_i2cid_valid(u8 i2c_id)
 {
 	return (i2c_id >= I2CID_MIN && i2c_id <= I2CID_MAX);
 }

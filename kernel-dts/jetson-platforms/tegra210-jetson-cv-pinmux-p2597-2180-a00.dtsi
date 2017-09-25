@@ -3,13 +3,17 @@
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 2 of the License.
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
@@ -22,15 +26,6 @@
 		pinctrl-1 = <&drive_default>;
 		pinctrl-2 = <&pinmux_unused_lowpower>;
 
-		/*
-		 * When booting with U-Boot, U-Boot will program the entire
-		 * pinmux itself, based on its own configuration tables. To
-		 * avoid the kernel performing redundant pinmux configuration,
-		 * U-Boot deletes the pinctrl-names property above. In that
-		 * scenario, all of the pinmux data below is ignored. In any
-		 * other scenario, the following pinmux data is still applied
-		 * by the kernel.
-		 */
 		pinmux_default: common {
 			/* SFIO Pin Configuration */
 			aud_mclk_pbb0 {
@@ -259,7 +254,7 @@
 				nvidia,pins = "pex_l0_clkreq_n_pa1";
 				nvidia,function = "pe0";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
 			};
@@ -277,7 +272,7 @@
 				nvidia,pins = "pex_l1_clkreq_n_pa4";
 				nvidia,function = "pe1";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
 			};
@@ -1176,7 +1171,7 @@
 			wifi_wake_ap_ph2 {
 				nvidia,pins = "wifi_wake_ap_ph2";
 				nvidia,function = "rsvd0";
-				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 			};
@@ -1200,7 +1195,7 @@
 			bt_wake_ap_ph5 {
 				nvidia,pins = "bt_wake_ap_ph5";
 				nvidia,function = "rsvd0";
-				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 			};

@@ -58,258 +58,258 @@
 
 static inline u32 trim_sys_gpcpll_cfg_r(void)
 {
-	return 0x00137000;
+	return 0x00137000U;
 }
 static inline u32 trim_sys_gpcpll_cfg_enable_m(void)
 {
-	return 0x1 << 0;
+	return 0x1U << 0U;
 }
 static inline u32 trim_sys_gpcpll_cfg_enable_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 trim_sys_gpcpll_cfg_enable_no_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 trim_sys_gpcpll_cfg_enable_yes_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 trim_sys_gpcpll_cfg_iddq_m(void)
 {
-	return 0x1 << 1;
+	return 0x1U << 1U;
 }
 static inline u32 trim_sys_gpcpll_cfg_iddq_v(u32 r)
 {
-	return (r >> 1) & 0x1;
+	return (r >> 1U) & 0x1U;
 }
 static inline u32 trim_sys_gpcpll_cfg_iddq_power_on_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 trim_sys_gpcpll_cfg_enb_lckdet_m(void)
 {
-	return 0x1 << 4;
+	return 0x1U << 4U;
 }
 static inline u32 trim_sys_gpcpll_cfg_enb_lckdet_power_on_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 trim_sys_gpcpll_cfg_enb_lckdet_power_off_f(void)
 {
-	return 0x10;
+	return 0x10U;
 }
 static inline u32 trim_sys_gpcpll_cfg_pll_lock_v(u32 r)
 {
-	return (r >> 17) & 0x1;
+	return (r >> 17U) & 0x1U;
 }
 static inline u32 trim_sys_gpcpll_cfg_pll_lock_true_f(void)
 {
-	return 0x20000;
+	return 0x20000U;
 }
 static inline u32 trim_sys_gpcpll_coeff_r(void)
 {
-	return 0x00137004;
+	return 0x00137004U;
 }
 static inline u32 trim_sys_gpcpll_coeff_mdiv_f(u32 v)
 {
-	return (v & 0xff) << 0;
+	return (v & 0xffU) << 0U;
 }
 static inline u32 trim_sys_gpcpll_coeff_mdiv_m(void)
 {
-	return 0xff << 0;
+	return 0xffU << 0U;
 }
 static inline u32 trim_sys_gpcpll_coeff_mdiv_v(u32 r)
 {
-	return (r >> 0) & 0xff;
+	return (r >> 0U) & 0xffU;
 }
 static inline u32 trim_sys_gpcpll_coeff_ndiv_f(u32 v)
 {
-	return (v & 0xff) << 8;
+	return (v & 0xffU) << 8U;
 }
 static inline u32 trim_sys_gpcpll_coeff_ndiv_m(void)
 {
-	return 0xff << 8;
+	return 0xffU << 8U;
 }
 static inline u32 trim_sys_gpcpll_coeff_ndiv_v(u32 r)
 {
-	return (r >> 8) & 0xff;
+	return (r >> 8U) & 0xffU;
 }
 static inline u32 trim_sys_gpcpll_coeff_pldiv_f(u32 v)
 {
-	return (v & 0x3f) << 16;
+	return (v & 0x3fU) << 16U;
 }
 static inline u32 trim_sys_gpcpll_coeff_pldiv_m(void)
 {
-	return 0x3f << 16;
+	return 0x3fU << 16U;
 }
 static inline u32 trim_sys_gpcpll_coeff_pldiv_v(u32 r)
 {
-	return (r >> 16) & 0x3f;
+	return (r >> 16U) & 0x3fU;
 }
 static inline u32 trim_sys_sel_vco_r(void)
 {
-	return 0x00137100;
+	return 0x00137100U;
 }
 static inline u32 trim_sys_sel_vco_gpc2clk_out_m(void)
 {
-	return 0x1 << 0;
+	return 0x1U << 0U;
 }
 static inline u32 trim_sys_sel_vco_gpc2clk_out_init_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 trim_sys_sel_vco_gpc2clk_out_init_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 trim_sys_sel_vco_gpc2clk_out_bypass_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 trim_sys_sel_vco_gpc2clk_out_vco_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 trim_sys_gpc2clk_out_r(void)
 {
-	return 0x00137250;
+	return 0x00137250U;
 }
 static inline u32 trim_sys_gpc2clk_out_bypdiv_s(void)
 {
-	return 6;
+	return 6U;
 }
 static inline u32 trim_sys_gpc2clk_out_bypdiv_f(u32 v)
 {
-	return (v & 0x3f) << 0;
+	return (v & 0x3fU) << 0U;
 }
 static inline u32 trim_sys_gpc2clk_out_bypdiv_m(void)
 {
-	return 0x3f << 0;
+	return 0x3fU << 0U;
 }
 static inline u32 trim_sys_gpc2clk_out_bypdiv_v(u32 r)
 {
-	return (r >> 0) & 0x3f;
+	return (r >> 0U) & 0x3fU;
 }
 static inline u32 trim_sys_gpc2clk_out_bypdiv_by31_f(void)
 {
-	return 0x3c;
+	return 0x3cU;
 }
 static inline u32 trim_sys_gpc2clk_out_vcodiv_s(void)
 {
-	return 6;
+	return 6U;
 }
 static inline u32 trim_sys_gpc2clk_out_vcodiv_f(u32 v)
 {
-	return (v & 0x3f) << 8;
+	return (v & 0x3fU) << 8U;
 }
 static inline u32 trim_sys_gpc2clk_out_vcodiv_m(void)
 {
-	return 0x3f << 8;
+	return 0x3fU << 8U;
 }
 static inline u32 trim_sys_gpc2clk_out_vcodiv_v(u32 r)
 {
-	return (r >> 8) & 0x3f;
+	return (r >> 8U) & 0x3fU;
 }
 static inline u32 trim_sys_gpc2clk_out_vcodiv_by1_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 trim_sys_gpc2clk_out_sdiv14_m(void)
 {
-	return 0x1 << 31;
+	return 0x1U << 31U;
 }
 static inline u32 trim_sys_gpc2clk_out_sdiv14_indiv4_mode_f(void)
 {
-	return 0x80000000;
+	return 0x80000000U;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cfg_r(u32 i)
 {
-	return 0x00134124 + i*512;
+	return 0x00134124U + i*512U;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cfg_noofipclks_f(u32 v)
 {
-	return (v & 0x3fff) << 0;
+	return (v & 0x3fffU) << 0U;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cfg_write_en_asserted_f(void)
 {
-	return 0x10000;
+	return 0x10000U;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cfg_enable_asserted_f(void)
 {
-	return 0x100000;
+	return 0x100000U;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cfg_reset_asserted_f(void)
 {
-	return 0x1000000;
+	return 0x1000000U;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cnt_r(u32 i)
 {
-	return 0x00134128 + i*512;
+	return 0x00134128U + i*512U;
 }
 static inline u32 trim_gpc_clk_cntr_ncgpcclk_cnt_value_v(u32 r)
 {
-	return (r >> 0) & 0xfffff;
+	return (r >> 0U) & 0xfffffU;
 }
 static inline u32 trim_sys_gpcpll_cfg2_r(void)
 {
-	return 0x0013700c;
+	return 0x0013700cU;
 }
 static inline u32 trim_sys_gpcpll_cfg2_pll_stepa_f(u32 v)
 {
-	return (v & 0xff) << 24;
+	return (v & 0xffU) << 24U;
 }
 static inline u32 trim_sys_gpcpll_cfg2_pll_stepa_m(void)
 {
-	return 0xff << 24;
+	return 0xffU << 24U;
 }
 static inline u32 trim_sys_gpcpll_cfg3_r(void)
 {
-	return 0x00137018;
+	return 0x00137018U;
 }
 static inline u32 trim_sys_gpcpll_cfg3_pll_stepb_f(u32 v)
 {
-	return (v & 0xff) << 16;
+	return (v & 0xffU) << 16U;
 }
 static inline u32 trim_sys_gpcpll_cfg3_pll_stepb_m(void)
 {
-	return 0xff << 16;
+	return 0xffU << 16U;
 }
 static inline u32 trim_sys_gpcpll_ndiv_slowdown_r(void)
 {
-	return 0x0013701c;
+	return 0x0013701cU;
 }
 static inline u32 trim_sys_gpcpll_ndiv_slowdown_slowdown_using_pll_m(void)
 {
-	return 0x1 << 22;
+	return 0x1U << 22U;
 }
 static inline u32 trim_sys_gpcpll_ndiv_slowdown_slowdown_using_pll_yes_f(void)
 {
-	return 0x400000;
+	return 0x400000U;
 }
 static inline u32 trim_sys_gpcpll_ndiv_slowdown_slowdown_using_pll_no_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 trim_sys_gpcpll_ndiv_slowdown_en_dynramp_m(void)
 {
-	return 0x1 << 31;
+	return 0x1U << 31U;
 }
 static inline u32 trim_sys_gpcpll_ndiv_slowdown_en_dynramp_yes_f(void)
 {
-	return 0x80000000;
+	return 0x80000000U;
 }
 static inline u32 trim_sys_gpcpll_ndiv_slowdown_en_dynramp_no_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_r(void)
 {
-	return 0x001328a0;
+	return 0x001328a0U;
 }
 static inline u32 trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_pll_dynramp_done_synced_v(u32 r)
 {
-	return (r >> 24) & 0x1;
+	return (r >> 24U) & 0x1U;
 }
 #endif

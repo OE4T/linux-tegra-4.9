@@ -58,34 +58,34 @@
 
 static inline u32 pri_ringstation_sys_master_config_r(u32 i)
 {
-	return 0x00122300 + i*4;
+	return 0x00122300U + i*4U;
 }
 static inline u32 pri_ringstation_sys_decode_config_r(void)
 {
-	return 0x00122204;
+	return 0x00122204U;
 }
 static inline u32 pri_ringstation_sys_decode_config_ring_m(void)
 {
-	return 0x7 << 0;
+	return 0x7U << 0U;
 }
 static inline u32 pri_ringstation_sys_decode_config_ring_drop_on_ring_not_started_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 pri_ringstation_sys_priv_error_adr_r(void)
 {
-	return 0x00122120;
+	return 0x00122120U;
 }
 static inline u32 pri_ringstation_sys_priv_error_wrdat_r(void)
 {
-	return 0x00122124;
+	return 0x00122124U;
 }
 static inline u32 pri_ringstation_sys_priv_error_info_r(void)
 {
-	return 0x00122128;
+	return 0x00122128U;
 }
 static inline u32 pri_ringstation_sys_priv_error_code_r(void)
 {
-	return 0x0012212c;
+	return 0x0012212cU;
 }
 #endif

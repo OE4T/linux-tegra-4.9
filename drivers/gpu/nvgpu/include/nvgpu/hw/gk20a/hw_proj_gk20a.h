@@ -58,106 +58,106 @@
 
 static inline u32 proj_gpc_base_v(void)
 {
-	return 0x00500000;
+	return 0x00500000U;
 }
 static inline u32 proj_gpc_shared_base_v(void)
 {
-	return 0x00418000;
+	return 0x00418000U;
 }
 static inline u32 proj_gpc_stride_v(void)
 {
-	return 0x00008000;
+	return 0x00008000U;
 }
 static inline u32 proj_ltc_stride_v(void)
 {
-	return 0x00002000;
+	return 0x00002000U;
 }
 static inline u32 proj_lts_stride_v(void)
 {
-	return 0x00000400;
+	return 0x00000400U;
 }
 static inline u32 proj_fbpa_stride_v(void)
 {
-	return 0x00001000;
+	return 0x00001000U;
 }
 static inline u32 proj_ppc_in_gpc_base_v(void)
 {
-	return 0x00003000;
+	return 0x00003000U;
 }
 static inline u32 proj_ppc_in_gpc_shared_base_v(void)
 {
-	return 0x00003e00;
+	return 0x00003e00U;
 }
 static inline u32 proj_ppc_in_gpc_stride_v(void)
 {
-	return 0x00000200;
+	return 0x00000200U;
 }
 static inline u32 proj_rop_base_v(void)
 {
-	return 0x00410000;
+	return 0x00410000U;
 }
 static inline u32 proj_rop_shared_base_v(void)
 {
-	return 0x00408800;
+	return 0x00408800U;
 }
 static inline u32 proj_rop_stride_v(void)
 {
-	return 0x00000400;
+	return 0x00000400U;
 }
 static inline u32 proj_tpc_in_gpc_base_v(void)
 {
-	return 0x00004000;
+	return 0x00004000U;
 }
 static inline u32 proj_tpc_in_gpc_stride_v(void)
 {
-	return 0x00000800;
+	return 0x00000800U;
 }
 static inline u32 proj_tpc_in_gpc_shared_base_v(void)
 {
-	return 0x00001800;
+	return 0x00001800U;
 }
 static inline u32 proj_host_num_engines_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 proj_host_num_pbdma_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 proj_scal_litter_num_tpc_per_gpc_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 proj_scal_litter_num_fbps_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 proj_scal_litter_num_fbpas_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 proj_scal_litter_num_gpcs_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 proj_scal_litter_num_pes_per_gpc_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 proj_scal_litter_num_tpcs_per_pes_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 proj_scal_litter_num_zcull_banks_v(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 proj_scal_max_gpcs_v(void)
 {
-	return 0x00000020;
+	return 0x00000020U;
 }
 static inline u32 proj_scal_max_tpc_per_gpc_v(void)
 {
-	return 0x00000008;
+	return 0x00000008U;
 }
 #endif

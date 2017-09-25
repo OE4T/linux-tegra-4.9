@@ -58,390 +58,390 @@
 
 static inline u32 ctxsw_prog_fecs_header_v(void)
 {
-	return 0x00000100;
+	return 0x00000100U;
 }
 static inline u32 ctxsw_prog_main_image_num_gpcs_o(void)
 {
-	return 0x00000008;
+	return 0x00000008U;
 }
 static inline u32 ctxsw_prog_main_image_patch_count_o(void)
 {
-	return 0x00000010;
+	return 0x00000010U;
 }
 static inline u32 ctxsw_prog_main_image_context_id_o(void)
 {
-	return 0x000000f0;
+	return 0x000000f0U;
 }
 static inline u32 ctxsw_prog_main_image_patch_adr_lo_o(void)
 {
-	return 0x00000014;
+	return 0x00000014U;
 }
 static inline u32 ctxsw_prog_main_image_patch_adr_hi_o(void)
 {
-	return 0x00000018;
+	return 0x00000018U;
 }
 static inline u32 ctxsw_prog_main_image_zcull_o(void)
 {
-	return 0x0000001c;
+	return 0x0000001cU;
 }
 static inline u32 ctxsw_prog_main_image_zcull_mode_no_ctxsw_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ctxsw_prog_main_image_zcull_mode_separate_buffer_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 ctxsw_prog_main_image_zcull_ptr_o(void)
 {
-	return 0x00000020;
+	return 0x00000020U;
 }
 static inline u32 ctxsw_prog_main_image_pm_o(void)
 {
-	return 0x00000028;
+	return 0x00000028U;
 }
 static inline u32 ctxsw_prog_main_image_pm_mode_m(void)
 {
-	return 0x7 << 0;
+	return 0x7U << 0U;
 }
 static inline u32 ctxsw_prog_main_image_pm_mode_ctxsw_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ctxsw_prog_main_image_pm_mode_no_ctxsw_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ctxsw_prog_main_image_pm_smpc_mode_m(void)
 {
-	return 0x7 << 3;
+	return 0x7U << 3U;
 }
 static inline u32 ctxsw_prog_main_image_pm_smpc_mode_ctxsw_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 ctxsw_prog_main_image_pm_smpc_mode_no_ctxsw_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ctxsw_prog_main_image_pm_ptr_o(void)
 {
-	return 0x0000002c;
+	return 0x0000002cU;
 }
 static inline u32 ctxsw_prog_main_image_num_save_ops_o(void)
 {
-	return 0x000000f4;
+	return 0x000000f4U;
 }
 static inline u32 ctxsw_prog_main_image_num_restore_ops_o(void)
 {
-	return 0x000000f8;
+	return 0x000000f8U;
 }
 static inline u32 ctxsw_prog_main_image_magic_value_o(void)
 {
-	return 0x000000fc;
+	return 0x000000fcU;
 }
 static inline u32 ctxsw_prog_main_image_magic_value_v_value_v(void)
 {
-	return 0x600dc0de;
+	return 0x600dc0deU;
 }
 static inline u32 ctxsw_prog_local_priv_register_ctl_o(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 ctxsw_prog_local_priv_register_ctl_offset_v(u32 r)
 {
-	return (r >> 0) & 0xffff;
+	return (r >> 0U) & 0xffffU;
 }
 static inline u32 ctxsw_prog_local_image_ppc_info_o(void)
 {
-	return 0x000000f4;
+	return 0x000000f4U;
 }
 static inline u32 ctxsw_prog_local_image_ppc_info_num_ppcs_v(u32 r)
 {
-	return (r >> 0) & 0xffff;
+	return (r >> 0U) & 0xffffU;
 }
 static inline u32 ctxsw_prog_local_image_ppc_info_ppc_mask_v(u32 r)
 {
-	return (r >> 16) & 0xffff;
+	return (r >> 16U) & 0xffffU;
 }
 static inline u32 ctxsw_prog_local_image_num_tpcs_o(void)
 {
-	return 0x000000f8;
+	return 0x000000f8U;
 }
 static inline u32 ctxsw_prog_local_magic_value_o(void)
 {
-	return 0x000000fc;
+	return 0x000000fcU;
 }
 static inline u32 ctxsw_prog_local_magic_value_v_value_v(void)
 {
-	return 0xad0becab;
+	return 0xad0becabU;
 }
 static inline u32 ctxsw_prog_main_extended_buffer_ctl_o(void)
 {
-	return 0x000000ec;
+	return 0x000000ecU;
 }
 static inline u32 ctxsw_prog_main_extended_buffer_ctl_offset_v(u32 r)
 {
-	return (r >> 0) & 0xffff;
+	return (r >> 0U) & 0xffffU;
 }
 static inline u32 ctxsw_prog_main_extended_buffer_ctl_size_v(u32 r)
 {
-	return (r >> 16) & 0xff;
+	return (r >> 16U) & 0xffU;
 }
 static inline u32 ctxsw_prog_extended_buffer_segments_size_in_bytes_v(void)
 {
-	return 0x00000100;
+	return 0x00000100U;
 }
 static inline u32 ctxsw_prog_extended_marker_size_in_bytes_v(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 ctxsw_prog_extended_sm_dsm_perf_counter_register_stride_v(void)
 {
-	return 0x00000005;
+	return 0x00000005U;
 }
 static inline u32 ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 ctxsw_prog_extended_num_smpc_quadrants_v(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 ctxsw_prog_main_image_priv_access_map_config_o(void)
 {
-	return 0x000000a0;
+	return 0x000000a0U;
 }
 static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_s(void)
 {
-	return 2;
+	return 2U;
 }
 static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_f(u32 v)
 {
-	return (v & 0x3) << 0;
+	return (v & 0x3U) << 0U;
 }
 static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_m(void)
 {
-	return 0x3 << 0;
+	return 0x3U << 0U;
 }
 static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_v(u32 r)
 {
-	return (r >> 0) & 0x3;
+	return (r >> 0U) & 0x3U;
 }
 static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_allow_all_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ctxsw_prog_main_image_priv_access_map_config_mode_use_map_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 ctxsw_prog_main_image_priv_access_map_addr_lo_o(void)
 {
-	return 0x000000a4;
+	return 0x000000a4U;
 }
 static inline u32 ctxsw_prog_main_image_priv_access_map_addr_hi_o(void)
 {
-	return 0x000000a8;
+	return 0x000000a8U;
 }
 static inline u32 ctxsw_prog_main_image_misc_options_o(void)
 {
-	return 0x0000003c;
+	return 0x0000003cU;
 }
 static inline u32 ctxsw_prog_main_image_misc_options_verif_features_m(void)
 {
-	return 0x1 << 3;
+	return 0x1U << 3U;
 }
 static inline u32 ctxsw_prog_main_image_misc_options_verif_features_disabled_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_control_o(void)
 {
-	return 0x000000ac;
+	return 0x000000acU;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_control_num_records_f(u32 v)
 {
-	return (v & 0xffff) << 0;
+	return (v & 0xffffU) << 0U;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o(void)
 {
-	return 0x000000b0;
+	return 0x000000b0U;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_v_m(void)
 {
-	return 0xfffffff << 0;
+	return 0xfffffffU << 0U;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_m(void)
 {
-	return 0x3 << 28;
+	return 0x3U << 28U;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_vid_mem_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_coherent_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_noncoherent_f(void)
 {
-	return 0x30000000;
+	return 0x30000000U;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_o(void)
 {
-	return 0x000000b4;
+	return 0x000000b4U;
 }
 static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_v_f(u32 v)
 {
-	return (v & 0xffffffff) << 0;
+	return (v & 0xffffffffU) << 0U;
 }
 static inline u32 ctxsw_prog_record_timestamp_record_size_in_bytes_v(void)
 {
-	return 0x00000080;
+	return 0x00000080U;
 }
 static inline u32 ctxsw_prog_record_timestamp_record_size_in_words_v(void)
 {
-	return 0x00000020;
+	return 0x00000020U;
 }
 static inline u32 ctxsw_prog_record_timestamp_magic_value_lo_o(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_magic_value_lo_v_value_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_magic_value_hi_o(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 ctxsw_prog_record_timestamp_magic_value_hi_v_value_v(void)
 {
-	return 0x600dbeef;
+	return 0x600dbeefU;
 }
 static inline u32 ctxsw_prog_record_timestamp_context_id_o(void)
 {
-	return 0x00000008;
+	return 0x00000008U;
 }
 static inline u32 ctxsw_prog_record_timestamp_context_ptr_o(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 ctxsw_prog_record_timestamp_new_context_id_o(void)
 {
-	return 0x00000010;
+	return 0x00000010U;
 }
 static inline u32 ctxsw_prog_record_timestamp_new_context_ptr_o(void)
 {
-	return 0x00000014;
+	return 0x00000014U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_lo_o(void)
 {
-	return 0x00000018;
+	return 0x00000018U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_o(void)
 {
-	return 0x0000001c;
+	return 0x0000001cU;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_v_f(u32 v)
 {
-	return (v & 0xffffff) << 0;
+	return (v & 0xffffffU) << 0U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_v_v(u32 r)
 {
-	return (r >> 0) & 0xffffff;
+	return (r >> 0U) & 0xffffffU;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_f(u32 v)
 {
-	return (v & 0xff) << 24;
+	return (v & 0xffU) << 24U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_m(void)
 {
-	return 0xff << 24;
+	return 0xffU << 24U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_v(u32 r)
 {
-	return (r >> 24) & 0xff;
+	return (r >> 24U) & 0xffU;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_ctxsw_req_by_host_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_ctxsw_req_by_host_f(void)
 {
-	return 0x1000000;
+	return 0x1000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_f(void)
 {
-	return 0x2000000;
+	return 0x2000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_wfi_v(void)
 {
-	return 0x0000000a;
+	return 0x0000000aU;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_wfi_f(void)
 {
-	return 0xa000000;
+	return 0xa000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_gfxp_v(void)
 {
-	return 0x0000000b;
+	return 0x0000000bU;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_gfxp_f(void)
 {
-	return 0xb000000;
+	return 0xb000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_ctap_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_ctap_f(void)
 {
-	return 0xc000000;
+	return 0xc000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_cilp_v(void)
 {
-	return 0x0000000d;
+	return 0x0000000dU;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_cilp_f(void)
 {
-	return 0xd000000;
+	return 0xd000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_save_end_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_save_end_f(void)
 {
-	return 0x3000000;
+	return 0x3000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_restore_start_v(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_restore_start_f(void)
 {
-	return 0x4000000;
+	return 0x4000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_context_start_v(void)
 {
-	return 0x00000005;
+	return 0x00000005U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_context_start_f(void)
 {
-	return 0x5000000;
+	return 0x5000000U;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_invalid_timestamp_v(void)
 {
-	return 0x000000ff;
+	return 0x000000ffU;
 }
 static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_invalid_timestamp_f(void)
 {
-	return 0xff000000;
+	return 0xff000000U;
 }
 #endif

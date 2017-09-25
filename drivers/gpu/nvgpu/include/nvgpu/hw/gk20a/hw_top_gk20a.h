@@ -58,154 +58,154 @@
 
 static inline u32 top_num_gpcs_r(void)
 {
-	return 0x00022430;
+	return 0x00022430U;
 }
 static inline u32 top_num_gpcs_value_v(u32 r)
 {
-	return (r >> 0) & 0x1f;
+	return (r >> 0U) & 0x1fU;
 }
 static inline u32 top_tpc_per_gpc_r(void)
 {
-	return 0x00022434;
+	return 0x00022434U;
 }
 static inline u32 top_tpc_per_gpc_value_v(u32 r)
 {
-	return (r >> 0) & 0x1f;
+	return (r >> 0U) & 0x1fU;
 }
 static inline u32 top_num_fbps_r(void)
 {
-	return 0x00022438;
+	return 0x00022438U;
 }
 static inline u32 top_num_fbps_value_v(u32 r)
 {
-	return (r >> 0) & 0x1f;
+	return (r >> 0U) & 0x1fU;
 }
 static inline u32 top_device_info_r(u32 i)
 {
-	return 0x00022700 + i*4;
+	return 0x00022700U + i*4U;
 }
 static inline u32 top_device_info__size_1_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 top_device_info_chain_v(u32 r)
 {
-	return (r >> 31) & 0x1;
+	return (r >> 31U) & 0x1U;
 }
 static inline u32 top_device_info_chain_enable_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 top_device_info_engine_enum_v(u32 r)
 {
-	return (r >> 26) & 0xf;
+	return (r >> 26U) & 0xfU;
 }
 static inline u32 top_device_info_runlist_enum_v(u32 r)
 {
-	return (r >> 21) & 0xf;
+	return (r >> 21U) & 0xfU;
 }
 static inline u32 top_device_info_intr_enum_v(u32 r)
 {
-	return (r >> 15) & 0x1f;
+	return (r >> 15U) & 0x1fU;
 }
 static inline u32 top_device_info_reset_enum_v(u32 r)
 {
-	return (r >> 9) & 0x1f;
+	return (r >> 9U) & 0x1fU;
 }
 static inline u32 top_device_info_type_enum_v(u32 r)
 {
-	return (r >> 2) & 0x1fffffff;
+	return (r >> 2U) & 0x1fffffffU;
 }
 static inline u32 top_device_info_type_enum_graphics_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 top_device_info_type_enum_graphics_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 top_device_info_type_enum_copy0_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 top_device_info_type_enum_copy0_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 top_device_info_type_enum_copy1_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 top_device_info_type_enum_copy1_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 top_device_info_type_enum_copy2_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 top_device_info_type_enum_copy2_f(void)
 {
-	return 0xc;
+	return 0xcU;
 }
 static inline u32 top_device_info_engine_v(u32 r)
 {
-	return (r >> 5) & 0x1;
+	return (r >> 5U) & 0x1U;
 }
 static inline u32 top_device_info_runlist_v(u32 r)
 {
-	return (r >> 4) & 0x1;
+	return (r >> 4U) & 0x1U;
 }
 static inline u32 top_device_info_intr_v(u32 r)
 {
-	return (r >> 3) & 0x1;
+	return (r >> 3U) & 0x1U;
 }
 static inline u32 top_device_info_reset_v(u32 r)
 {
-	return (r >> 2) & 0x1;
+	return (r >> 2U) & 0x1U;
 }
 static inline u32 top_device_info_entry_v(u32 r)
 {
-	return (r >> 0) & 0x3;
+	return (r >> 0U) & 0x3U;
 }
 static inline u32 top_device_info_entry_not_valid_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 top_device_info_entry_enum_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 top_device_info_entry_engine_type_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 top_device_info_entry_data_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 top_fs_status_fbp_r(void)
 {
-	return 0x00022548;
+	return 0x00022548U;
 }
 static inline u32 top_fs_status_fbp_cluster_v(u32 r)
 {
-	return (r >> 0) & 0xffff;
+	return (r >> 0U) & 0xffffU;
 }
 static inline u32 top_fs_status_fbp_cluster_enable_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 top_fs_status_fbp_cluster_enable_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 top_fs_status_fbp_cluster_disable_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 top_fs_status_fbp_cluster_disable_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 #endif

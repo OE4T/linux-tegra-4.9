@@ -19,9 +19,9 @@
 
 s64 nvs_timestamp(void)
 {
-	struct timespec ts;
+	struct timespec64 ts;
 
-	get_monotonic_boottime(&ts);
+	ktime_get_ts64(&ts);
 	return timespec_to_ns(&ts);
 }
 EXPORT_SYMBOL_GPL(nvs_timestamp);

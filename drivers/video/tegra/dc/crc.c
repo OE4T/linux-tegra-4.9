@@ -535,6 +535,26 @@ static int _scan_crc_buf(struct tegra_dc *dc, u16 start_idx, u16 end_idx,
 	return -EAGAIN;
 }
 
+/* Wraps calls to wait APIs depending upon the platform */
+static int tegra_dc_crc_wait_till_frame_end(struct tegra_dc *dc)
+{
+	int ret = 0;
+
+	if (tegra_platform_is_silicon()) {
+		if (!wait_for_completion_timeout(&dc->crc_complete,
+						 CRC_COMPLETE_TIMEOUT)) {
+			dev_err(&dc->ndev->dev, "CRC read timed out\n");
+			ret = -ETIME;
+		}
+	} else {
+		ret = wait_for_completion_interruptible(&dc->crc_complete);
+		if (ret)
+			dev_err(&dc->ndev->dev, "CRC read wait interrupted\n");
+	}
+
+	return ret;
+}
+
 static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 			    struct tegra_dc_crc_buf_ele *crc_ele)
 {
@@ -576,12 +596,11 @@ static int _find_crc_in_buf(struct tegra_dc *dc, u64 flip_id,
 		 */
 		mutex_unlock(&buf->lock);
 		reinit_completion(&dc->crc_complete);
-		if (!wait_for_completion_timeout(&dc->crc_complete,
-						 CRC_COMPLETE_TIMEOUT)) {
-			dev_err(&dc->ndev->dev, "CRC read timed out\n");
-			ret = -ETIME;
-			goto done;
-		}
+
+		ret = tegra_dc_crc_wait_till_frame_end(dc); /* Blocking call */
+		if (ret)
+			return ret;
+
 		mutex_lock(&buf->lock);
 
 		end_idx = prev_idx(buf, start_idx);

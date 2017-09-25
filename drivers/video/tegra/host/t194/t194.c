@@ -266,6 +266,7 @@ struct nvhost_device_data t19_vi_thi_info = {
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", 408000000},
+		{"vi-const", 408000000},
 		{"nvcsi", 204000000},
 		{"nvcsilp", 204000000},
 	},

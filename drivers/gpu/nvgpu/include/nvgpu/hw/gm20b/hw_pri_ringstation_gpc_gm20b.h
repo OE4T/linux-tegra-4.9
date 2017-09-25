@@ -58,22 +58,22 @@
 
 static inline u32 pri_ringstation_gpc_master_config_r(u32 i)
 {
-	return 0x00128300 + i*4;
+	return 0x00128300U + i*4U;
 }
 static inline u32 pri_ringstation_gpc_gpc0_priv_error_adr_r(void)
 {
-	return 0x00128120;
+	return 0x00128120U;
 }
 static inline u32 pri_ringstation_gpc_gpc0_priv_error_wrdat_r(void)
 {
-	return 0x00128124;
+	return 0x00128124U;
 }
 static inline u32 pri_ringstation_gpc_gpc0_priv_error_info_r(void)
 {
-	return 0x00128128;
+	return 0x00128128U;
 }
 static inline u32 pri_ringstation_gpc_gpc0_priv_error_code_r(void)
 {
-	return 0x0012812c;
+	return 0x0012812cU;
 }
 #endif

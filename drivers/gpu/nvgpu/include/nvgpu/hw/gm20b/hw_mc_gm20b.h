@@ -58,230 +58,230 @@
 
 static inline u32 mc_boot_0_r(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 mc_boot_0_architecture_v(u32 r)
 {
-	return (r >> 24) & 0x1f;
+	return (r >> 24U) & 0x1fU;
 }
 static inline u32 mc_boot_0_implementation_v(u32 r)
 {
-	return (r >> 20) & 0xf;
+	return (r >> 20U) & 0xfU;
 }
 static inline u32 mc_boot_0_major_revision_v(u32 r)
 {
-	return (r >> 4) & 0xf;
+	return (r >> 4U) & 0xfU;
 }
 static inline u32 mc_boot_0_minor_revision_v(u32 r)
 {
-	return (r >> 0) & 0xf;
+	return (r >> 0U) & 0xfU;
 }
 static inline u32 mc_intr_r(u32 i)
 {
-	return 0x00000100 + i*4;
+	return 0x00000100U + i*4U;
 }
 static inline u32 mc_intr_pfifo_pending_f(void)
 {
-	return 0x100;
+	return 0x100U;
 }
 static inline u32 mc_intr_pmu_pending_f(void)
 {
-	return 0x1000000;
+	return 0x1000000U;
 }
 static inline u32 mc_intr_ltc_pending_f(void)
 {
-	return 0x2000000;
+	return 0x2000000U;
 }
 static inline u32 mc_intr_priv_ring_pending_f(void)
 {
-	return 0x40000000;
+	return 0x40000000U;
 }
 static inline u32 mc_intr_pbus_pending_f(void)
 {
-	return 0x10000000;
+	return 0x10000000U;
 }
 static inline u32 mc_intr_mask_0_r(void)
 {
-	return 0x00000640;
+	return 0x00000640U;
 }
 static inline u32 mc_intr_mask_0_pmu_enabled_f(void)
 {
-	return 0x1000000;
+	return 0x1000000U;
 }
 static inline u32 mc_intr_en_0_r(void)
 {
-	return 0x00000140;
+	return 0x00000140U;
 }
 static inline u32 mc_intr_en_0_inta_disabled_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 mc_intr_en_0_inta_hardware_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 mc_intr_mask_1_r(void)
 {
-	return 0x00000644;
+	return 0x00000644U;
 }
 static inline u32 mc_intr_mask_1_pmu_s(void)
 {
-	return 1;
+	return 1U;
 }
 static inline u32 mc_intr_mask_1_pmu_f(u32 v)
 {
-	return (v & 0x1) << 24;
+	return (v & 0x1U) << 24U;
 }
 static inline u32 mc_intr_mask_1_pmu_m(void)
 {
-	return 0x1 << 24;
+	return 0x1U << 24U;
 }
 static inline u32 mc_intr_mask_1_pmu_v(u32 r)
 {
-	return (r >> 24) & 0x1;
+	return (r >> 24U) & 0x1U;
 }
 static inline u32 mc_intr_mask_1_pmu_enabled_f(void)
 {
-	return 0x1000000;
+	return 0x1000000U;
 }
 static inline u32 mc_intr_en_1_r(void)
 {
-	return 0x00000144;
+	return 0x00000144U;
 }
 static inline u32 mc_intr_en_1_inta_disabled_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 mc_intr_en_1_inta_hardware_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 mc_enable_r(void)
 {
-	return 0x00000200;
+	return 0x00000200U;
 }
 static inline u32 mc_enable_xbar_enabled_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 mc_enable_l2_enabled_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 mc_enable_pmedia_s(void)
 {
-	return 1;
+	return 1U;
 }
 static inline u32 mc_enable_pmedia_f(u32 v)
 {
-	return (v & 0x1) << 4;
+	return (v & 0x1U) << 4U;
 }
 static inline u32 mc_enable_pmedia_m(void)
 {
-	return 0x1 << 4;
+	return 0x1U << 4U;
 }
 static inline u32 mc_enable_pmedia_v(u32 r)
 {
-	return (r >> 4) & 0x1;
+	return (r >> 4U) & 0x1U;
 }
 static inline u32 mc_enable_priv_ring_enabled_f(void)
 {
-	return 0x20;
+	return 0x20U;
 }
 static inline u32 mc_enable_ce0_m(void)
 {
-	return 0x1 << 6;
+	return 0x1U << 6U;
 }
 static inline u32 mc_enable_pfifo_enabled_f(void)
 {
-	return 0x100;
+	return 0x100U;
 }
 static inline u32 mc_enable_pgraph_enabled_f(void)
 {
-	return 0x1000;
+	return 0x1000U;
 }
 static inline u32 mc_enable_pwr_v(u32 r)
 {
-	return (r >> 13) & 0x1;
+	return (r >> 13U) & 0x1U;
 }
 static inline u32 mc_enable_pwr_disabled_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 mc_enable_pwr_enabled_f(void)
 {
-	return 0x2000;
+	return 0x2000U;
 }
 static inline u32 mc_enable_pfb_enabled_f(void)
 {
-	return 0x100000;
+	return 0x100000U;
 }
 static inline u32 mc_enable_ce2_m(void)
 {
-	return 0x1 << 21;
+	return 0x1U << 21U;
 }
 static inline u32 mc_enable_ce2_enabled_f(void)
 {
-	return 0x200000;
+	return 0x200000U;
 }
 static inline u32 mc_enable_blg_enabled_f(void)
 {
-	return 0x8000000;
+	return 0x8000000U;
 }
 static inline u32 mc_enable_perfmon_enabled_f(void)
 {
-	return 0x10000000;
+	return 0x10000000U;
 }
 static inline u32 mc_enable_hub_enabled_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 mc_intr_ltc_r(void)
 {
-	return 0x0000017c;
+	return 0x0000017cU;
 }
 static inline u32 mc_enable_pb_r(void)
 {
-	return 0x00000204;
+	return 0x00000204U;
 }
 static inline u32 mc_enable_pb_0_s(void)
 {
-	return 1;
+	return 1U;
 }
 static inline u32 mc_enable_pb_0_f(u32 v)
 {
-	return (v & 0x1) << 0;
+	return (v & 0x1U) << 0U;
 }
 static inline u32 mc_enable_pb_0_m(void)
 {
-	return 0x1 << 0;
+	return 0x1U << 0U;
 }
 static inline u32 mc_enable_pb_0_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 mc_enable_pb_0_enabled_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 mc_enable_pb_sel_f(u32 v, u32 i)
 {
-	return (v & 0x1) << (0 + i*1);
+	return (v & 0x1U) << (0U + i*1U);
 }
 static inline u32 mc_elpg_enable_r(void)
 {
-	return 0x0000020c;
+	return 0x0000020cU;
 }
 static inline u32 mc_elpg_enable_xbar_enabled_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 mc_elpg_enable_pfb_enabled_f(void)
 {
-	return 0x100000;
+	return 0x100000U;
 }
 static inline u32 mc_elpg_enable_hub_enabled_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 #endif

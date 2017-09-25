@@ -58,30 +58,30 @@
 
 static inline u32 ce2_intr_status_r(void)
 {
-	return 0x00106908;
+	return 0x00106908U;
 }
 static inline u32 ce2_intr_status_blockpipe_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ce2_intr_status_blockpipe_reset_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ce2_intr_status_nonblockpipe_pending_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 ce2_intr_status_nonblockpipe_reset_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 ce2_intr_status_launcherr_pending_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 ce2_intr_status_launcherr_reset_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 #endif

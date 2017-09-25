@@ -58,514 +58,514 @@
 
 static inline u32 fifo_bar1_base_r(void)
 {
-	return 0x00002254;
+	return 0x00002254U;
 }
 static inline u32 fifo_bar1_base_ptr_f(u32 v)
 {
-	return (v & 0xfffffff) << 0;
+	return (v & 0xfffffffU) << 0U;
 }
 static inline u32 fifo_bar1_base_ptr_align_shift_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 fifo_bar1_base_valid_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 fifo_bar1_base_valid_true_f(void)
 {
-	return 0x10000000;
+	return 0x10000000U;
 }
 static inline u32 fifo_runlist_base_r(void)
 {
-	return 0x00002270;
+	return 0x00002270U;
 }
 static inline u32 fifo_runlist_base_ptr_f(u32 v)
 {
-	return (v & 0xfffffff) << 0;
+	return (v & 0xfffffffU) << 0U;
 }
 static inline u32 fifo_runlist_base_target_vid_mem_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 fifo_runlist_base_target_sys_mem_coh_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 fifo_runlist_base_target_sys_mem_ncoh_f(void)
 {
-	return 0x30000000;
+	return 0x30000000U;
 }
 static inline u32 fifo_runlist_r(void)
 {
-	return 0x00002274;
+	return 0x00002274U;
 }
 static inline u32 fifo_runlist_engine_f(u32 v)
 {
-	return (v & 0xf) << 20;
+	return (v & 0xfU) << 20U;
 }
 static inline u32 fifo_eng_runlist_base_r(u32 i)
 {
-	return 0x00002280 + i*8;
+	return 0x00002280U + i*8U;
 }
 static inline u32 fifo_eng_runlist_base__size_1_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_eng_runlist_r(u32 i)
 {
-	return 0x00002284 + i*8;
+	return 0x00002284U + i*8U;
 }
 static inline u32 fifo_eng_runlist__size_1_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_eng_runlist_length_f(u32 v)
 {
-	return (v & 0xffff) << 0;
+	return (v & 0xffffU) << 0U;
 }
 static inline u32 fifo_eng_runlist_length_max_v(void)
 {
-	return 0x0000ffff;
+	return 0x0000ffffU;
 }
 static inline u32 fifo_eng_runlist_pending_true_f(void)
 {
-	return 0x100000;
+	return 0x100000U;
 }
 static inline u32 fifo_pb_timeslice_r(u32 i)
 {
-	return 0x00002350 + i*4;
+	return 0x00002350U + i*4U;
 }
 static inline u32 fifo_pb_timeslice_timeout_16_f(void)
 {
-	return 0x10;
+	return 0x10U;
 }
 static inline u32 fifo_pb_timeslice_timescale_0_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 fifo_pb_timeslice_enable_true_f(void)
 {
-	return 0x10000000;
+	return 0x10000000U;
 }
 static inline u32 fifo_pbdma_map_r(u32 i)
 {
-	return 0x00002390 + i*4;
+	return 0x00002390U + i*4U;
 }
 static inline u32 fifo_intr_0_r(void)
 {
-	return 0x00002100;
+	return 0x00002100U;
 }
 static inline u32 fifo_intr_0_bind_error_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 fifo_intr_0_bind_error_reset_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 fifo_intr_0_sched_error_pending_f(void)
 {
-	return 0x100;
+	return 0x100U;
 }
 static inline u32 fifo_intr_0_sched_error_reset_f(void)
 {
-	return 0x100;
+	return 0x100U;
 }
 static inline u32 fifo_intr_0_chsw_error_pending_f(void)
 {
-	return 0x10000;
+	return 0x10000U;
 }
 static inline u32 fifo_intr_0_chsw_error_reset_f(void)
 {
-	return 0x10000;
+	return 0x10000U;
 }
 static inline u32 fifo_intr_0_fb_flush_timeout_pending_f(void)
 {
-	return 0x800000;
+	return 0x800000U;
 }
 static inline u32 fifo_intr_0_fb_flush_timeout_reset_f(void)
 {
-	return 0x800000;
+	return 0x800000U;
 }
 static inline u32 fifo_intr_0_lb_error_pending_f(void)
 {
-	return 0x1000000;
+	return 0x1000000U;
 }
 static inline u32 fifo_intr_0_lb_error_reset_f(void)
 {
-	return 0x1000000;
+	return 0x1000000U;
 }
 static inline u32 fifo_intr_0_dropped_mmu_fault_pending_f(void)
 {
-	return 0x8000000;
+	return 0x8000000U;
 }
 static inline u32 fifo_intr_0_dropped_mmu_fault_reset_f(void)
 {
-	return 0x8000000;
+	return 0x8000000U;
 }
 static inline u32 fifo_intr_0_mmu_fault_pending_f(void)
 {
-	return 0x10000000;
+	return 0x10000000U;
 }
 static inline u32 fifo_intr_0_pbdma_intr_pending_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 fifo_intr_0_runlist_event_pending_f(void)
 {
-	return 0x40000000;
+	return 0x40000000U;
 }
 static inline u32 fifo_intr_0_channel_intr_pending_f(void)
 {
-	return 0x80000000;
+	return 0x80000000U;
 }
 static inline u32 fifo_intr_en_0_r(void)
 {
-	return 0x00002140;
+	return 0x00002140U;
 }
 static inline u32 fifo_intr_en_0_sched_error_f(u32 v)
 {
-	return (v & 0x1) << 8;
+	return (v & 0x1U) << 8U;
 }
 static inline u32 fifo_intr_en_0_sched_error_m(void)
 {
-	return 0x1 << 8;
+	return 0x1U << 8U;
 }
 static inline u32 fifo_intr_en_0_mmu_fault_f(u32 v)
 {
-	return (v & 0x1) << 28;
+	return (v & 0x1U) << 28U;
 }
 static inline u32 fifo_intr_en_0_mmu_fault_m(void)
 {
-	return 0x1 << 28;
+	return 0x1U << 28U;
 }
 static inline u32 fifo_intr_en_1_r(void)
 {
-	return 0x00002528;
+	return 0x00002528U;
 }
 static inline u32 fifo_intr_bind_error_r(void)
 {
-	return 0x0000252c;
+	return 0x0000252cU;
 }
 static inline u32 fifo_intr_sched_error_r(void)
 {
-	return 0x0000254c;
+	return 0x0000254cU;
 }
 static inline u32 fifo_intr_sched_error_code_f(u32 v)
 {
-	return (v & 0xff) << 0;
+	return (v & 0xffU) << 0U;
 }
 static inline u32 fifo_intr_sched_error_code_ctxsw_timeout_v(void)
 {
-	return 0x0000000a;
+	return 0x0000000aU;
 }
 static inline u32 fifo_intr_chsw_error_r(void)
 {
-	return 0x0000256c;
+	return 0x0000256cU;
 }
 static inline u32 fifo_intr_mmu_fault_id_r(void)
 {
-	return 0x0000259c;
+	return 0x0000259cU;
 }
 static inline u32 fifo_intr_mmu_fault_eng_id_graphics_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 fifo_intr_mmu_fault_eng_id_graphics_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 fifo_intr_mmu_fault_inst_r(u32 i)
 {
-	return 0x00002800 + i*16;
+	return 0x00002800U + i*16U;
 }
 static inline u32 fifo_intr_mmu_fault_inst_ptr_v(u32 r)
 {
-	return (r >> 0) & 0xfffffff;
+	return (r >> 0U) & 0xfffffffU;
 }
 static inline u32 fifo_intr_mmu_fault_inst_ptr_align_shift_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 fifo_intr_mmu_fault_lo_r(u32 i)
 {
-	return 0x00002804 + i*16;
+	return 0x00002804U + i*16U;
 }
 static inline u32 fifo_intr_mmu_fault_hi_r(u32 i)
 {
-	return 0x00002808 + i*16;
+	return 0x00002808U + i*16U;
 }
 static inline u32 fifo_intr_mmu_fault_info_r(u32 i)
 {
-	return 0x0000280c + i*16;
+	return 0x0000280cU + i*16U;
 }
 static inline u32 fifo_intr_mmu_fault_info_type_v(u32 r)
 {
-	return (r >> 0) & 0xf;
+	return (r >> 0U) & 0xfU;
 }
 static inline u32 fifo_intr_mmu_fault_info_write_v(u32 r)
 {
-	return (r >> 7) & 0x1;
+	return (r >> 7U) & 0x1U;
 }
 static inline u32 fifo_intr_mmu_fault_info_engine_subid_v(u32 r)
 {
-	return (r >> 6) & 0x1;
+	return (r >> 6U) & 0x1U;
 }
 static inline u32 fifo_intr_mmu_fault_info_engine_subid_gpc_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 fifo_intr_mmu_fault_info_engine_subid_hub_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_intr_mmu_fault_info_client_v(u32 r)
 {
-	return (r >> 8) & 0x3f;
+	return (r >> 8U) & 0x3fU;
 }
 static inline u32 fifo_intr_pbdma_id_r(void)
 {
-	return 0x000025a0;
+	return 0x000025a0U;
 }
 static inline u32 fifo_intr_pbdma_id_status_f(u32 v, u32 i)
 {
-	return (v & 0x1) << (0 + i*1);
+	return (v & 0x1U) << (0U + i*1U);
 }
 static inline u32 fifo_intr_pbdma_id_status_v(u32 r, u32 i)
 {
-	return (r >> (0 + i*1)) & 0x1;
+	return (r >> (0U + i*1U)) & 0x1U;
 }
 static inline u32 fifo_intr_pbdma_id_status__size_1_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_intr_runlist_r(void)
 {
-	return 0x00002a00;
+	return 0x00002a00U;
 }
 static inline u32 fifo_fb_timeout_r(void)
 {
-	return 0x00002a04;
+	return 0x00002a04U;
 }
 static inline u32 fifo_fb_timeout_period_m(void)
 {
-	return 0x3fffffff << 0;
+	return 0x3fffffffU << 0U;
 }
 static inline u32 fifo_fb_timeout_period_max_f(void)
 {
-	return 0x3fffffff;
+	return 0x3fffffffU;
 }
 static inline u32 fifo_error_sched_disable_r(void)
 {
-	return 0x0000262c;
+	return 0x0000262cU;
 }
 static inline u32 fifo_sched_disable_r(void)
 {
-	return 0x00002630;
+	return 0x00002630U;
 }
 static inline u32 fifo_sched_disable_runlist_f(u32 v, u32 i)
 {
-	return (v & 0x1) << (0 + i*1);
+	return (v & 0x1U) << (0U + i*1U);
 }
 static inline u32 fifo_sched_disable_runlist_m(u32 i)
 {
-	return 0x1 << (0 + i*1);
+	return 0x1U << (0U + i*1U);
 }
 static inline u32 fifo_sched_disable_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_preempt_r(void)
 {
-	return 0x00002634;
+	return 0x00002634U;
 }
 static inline u32 fifo_preempt_pending_true_f(void)
 {
-	return 0x100000;
+	return 0x100000U;
 }
 static inline u32 fifo_preempt_type_channel_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 fifo_preempt_type_tsg_f(void)
 {
-	return 0x1000000;
+	return 0x1000000U;
 }
 static inline u32 fifo_preempt_chid_f(u32 v)
 {
-	return (v & 0xfff) << 0;
+	return (v & 0xfffU) << 0U;
 }
 static inline u32 fifo_preempt_id_f(u32 v)
 {
-	return (v & 0xfff) << 0;
+	return (v & 0xfffU) << 0U;
 }
 static inline u32 fifo_trigger_mmu_fault_r(u32 i)
 {
-	return 0x00002a30 + i*4;
+	return 0x00002a30U + i*4U;
 }
 static inline u32 fifo_trigger_mmu_fault_id_f(u32 v)
 {
-	return (v & 0x1f) << 0;
+	return (v & 0x1fU) << 0U;
 }
 static inline u32 fifo_trigger_mmu_fault_enable_f(u32 v)
 {
-	return (v & 0x1) << 8;
+	return (v & 0x1U) << 8U;
 }
 static inline u32 fifo_engine_status_r(u32 i)
 {
-	return 0x00002640 + i*8;
+	return 0x00002640U + i*8U;
 }
 static inline u32 fifo_engine_status__size_1_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 fifo_engine_status_id_v(u32 r)
 {
-	return (r >> 0) & 0xfff;
+	return (r >> 0U) & 0xfffU;
 }
 static inline u32 fifo_engine_status_id_type_v(u32 r)
 {
-	return (r >> 12) & 0x1;
+	return (r >> 12U) & 0x1U;
 }
 static inline u32 fifo_engine_status_id_type_chid_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 fifo_engine_status_id_type_tsgid_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_engine_status_ctx_status_v(u32 r)
 {
-	return (r >> 13) & 0x7;
+	return (r >> 13U) & 0x7U;
 }
 static inline u32 fifo_engine_status_ctx_status_invalid_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 fifo_engine_status_ctx_status_valid_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_engine_status_ctx_status_ctxsw_load_v(void)
 {
-	return 0x00000005;
+	return 0x00000005U;
 }
 static inline u32 fifo_engine_status_ctx_status_ctxsw_save_v(void)
 {
-	return 0x00000006;
+	return 0x00000006U;
 }
 static inline u32 fifo_engine_status_ctx_status_ctxsw_switch_v(void)
 {
-	return 0x00000007;
+	return 0x00000007U;
 }
 static inline u32 fifo_engine_status_next_id_v(u32 r)
 {
-	return (r >> 16) & 0xfff;
+	return (r >> 16U) & 0xfffU;
 }
 static inline u32 fifo_engine_status_next_id_type_v(u32 r)
 {
-	return (r >> 28) & 0x1;
+	return (r >> 28U) & 0x1U;
 }
 static inline u32 fifo_engine_status_next_id_type_chid_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 fifo_engine_status_faulted_v(u32 r)
 {
-	return (r >> 30) & 0x1;
+	return (r >> 30U) & 0x1U;
 }
 static inline u32 fifo_engine_status_faulted_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_engine_status_engine_v(u32 r)
 {
-	return (r >> 31) & 0x1;
+	return (r >> 31U) & 0x1U;
 }
 static inline u32 fifo_engine_status_engine_idle_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 fifo_engine_status_engine_busy_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_engine_status_ctxsw_v(u32 r)
 {
-	return (r >> 15) & 0x1;
+	return (r >> 15U) & 0x1U;
 }
 static inline u32 fifo_engine_status_ctxsw_in_progress_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_engine_status_ctxsw_in_progress_f(void)
 {
-	return 0x8000;
+	return 0x8000U;
 }
 static inline u32 fifo_pbdma_status_r(u32 i)
 {
-	return 0x00003080 + i*4;
+	return 0x00003080U + i*4U;
 }
 static inline u32 fifo_pbdma_status__size_1_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_pbdma_status_id_v(u32 r)
 {
-	return (r >> 0) & 0xfff;
+	return (r >> 0U) & 0xfffU;
 }
 static inline u32 fifo_pbdma_status_id_type_v(u32 r)
 {
-	return (r >> 12) & 0x1;
+	return (r >> 12U) & 0x1U;
 }
 static inline u32 fifo_pbdma_status_id_type_chid_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 fifo_pbdma_status_id_type_tsgid_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_pbdma_status_chan_status_v(u32 r)
 {
-	return (r >> 13) & 0x7;
+	return (r >> 13U) & 0x7U;
 }
 static inline u32 fifo_pbdma_status_chan_status_valid_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 fifo_pbdma_status_chan_status_chsw_load_v(void)
 {
-	return 0x00000005;
+	return 0x00000005U;
 }
 static inline u32 fifo_pbdma_status_chan_status_chsw_save_v(void)
 {
-	return 0x00000006;
+	return 0x00000006U;
 }
 static inline u32 fifo_pbdma_status_chan_status_chsw_switch_v(void)
 {
-	return 0x00000007;
+	return 0x00000007U;
 }
 static inline u32 fifo_pbdma_status_next_id_v(u32 r)
 {
-	return (r >> 16) & 0xfff;
+	return (r >> 16U) & 0xfffU;
 }
 static inline u32 fifo_pbdma_status_next_id_type_v(u32 r)
 {
-	return (r >> 28) & 0x1;
+	return (r >> 28U) & 0x1U;
 }
 static inline u32 fifo_pbdma_status_next_id_type_chid_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 fifo_pbdma_status_chsw_v(u32 r)
 {
-	return (r >> 15) & 0x1;
+	return (r >> 15U) & 0x1U;
 }
 static inline u32 fifo_pbdma_status_chsw_in_progress_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 #endif

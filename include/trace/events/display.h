@@ -321,6 +321,22 @@ TRACE_EVENT(scanout_vrr_stats,
 		__entry->syncpt_val_value,__entry->db_val_value)
 );
 
+TRACE_EVENT(dc_flip_dropped,
+	TP_PROTO(bool dc_enabled, bool flip_skipped),
+	TP_ARGS(dc_enabled, flip_skipped),
+	TP_STRUCT__entry(
+		__field(const char*, dc_disabled_value)
+		__field(const char*, flip_skipped_value)
+	),
+	TP_fast_assign(
+		__entry->dc_disabled_value = dc_enabled ? "false" : "true";
+		__entry->flip_skipped_value = flip_skipped ? "true" : "false";
+	),
+	TP_printk("dc disabled:%s, flip skipped:%s",
+		__entry->dc_disabled_value, __entry->flip_skipped_value)
+);
+
+
 TRACE_EVENT(hdr_data_update,
 	TP_PROTO(struct tegra_dc *dc, struct tegra_dc_hdr *hdr),
 	TP_ARGS(dc, hdr),

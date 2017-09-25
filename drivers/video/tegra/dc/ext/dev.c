@@ -1221,6 +1221,8 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			trace_display_imp_flip_completed(dc->ctrl_num,
 							data->imp_session_id);
 		}
+	} else {
+		trace_dc_flip_dropped(dc->enabled, skip_flip);
 	}
 
 	if (data->imp_dirty)

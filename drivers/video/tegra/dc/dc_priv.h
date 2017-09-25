@@ -825,7 +825,6 @@ int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
 int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);
 int tegra_nvdisp_get_imp_user_info(struct tegra_dc_ext_imp_user_info *info);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);
-void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
 void tegra_nvdisp_stop_display(struct tegra_dc *dc);
 #ifdef CONFIG_TEGRA_ISOMGR
 void tegra_nvdisp_bandwidth_attach(struct tegra_dc *dc);
@@ -909,6 +908,7 @@ void tegra_nvdisp_set_csc2(struct tegra_dc *dc);
 void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
 void tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc);
+void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
 #else
 static inline int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 					  struct tegra_dc_ext_crc_conf *conf)
@@ -951,6 +951,9 @@ static inline void tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
 {
 }
 static inline void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc)
+{
+}
+static inline void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc)
 {
 }
 #endif

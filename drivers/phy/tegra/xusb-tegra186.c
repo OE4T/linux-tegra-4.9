@@ -2613,6 +2613,12 @@ static const struct tegra_xusb_padctl_ops tegra186_xusb_padctl_ops = {
 	.utmi_pad_power_down = tegra186_utmi_pad_power_down,
 };
 
+static const char * const tegra186_supply_names[] = {
+	"avdd_usb",		/* 3.3V, vddp_usb */
+	"vclamp_usb",		/* 1.8V, vclamp_usb_init */
+	"avdd_pll_erefeut",	/* 1.8V, pll_utmip_avdd */
+};
+
 const struct tegra_xusb_padctl_soc tegra186_xusb_padctl_soc = {
 	.num_pads = ARRAY_SIZE(tegra186_pads),
 	.num_oc_pins = TEGRA186_OC_PIN_NUM,
@@ -2635,6 +2641,8 @@ const struct tegra_xusb_padctl_soc tegra186_xusb_padctl_soc = {
 #endif
 	},
 	.ops = &tegra186_xusb_padctl_ops,
+	.supply_names = tegra186_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra186_supply_names),
 };
 EXPORT_SYMBOL_GPL(tegra186_xusb_padctl_soc);
 

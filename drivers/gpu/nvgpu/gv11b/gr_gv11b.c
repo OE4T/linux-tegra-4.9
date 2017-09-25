@@ -2023,7 +2023,7 @@ int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-static void gv11b_write_bundle_veid_state(struct gk20a *g, u32 index)
+static int gv11b_write_bundle_veid_state(struct gk20a *g, u32 index)
 {
 	struct av_list_gk20a *sw_veid_bundle_init =
 			&g->gr.ctx_vars.sw_veid_bundle_init;
@@ -2033,7 +2033,7 @@ static void gv11b_write_bundle_veid_state(struct gk20a *g, u32 index)
 	num_subctx = g->fifo.t19x.max_subctx_count;
 
 	for (j = 0; j < num_subctx; j++) {
-
+		nvgpu_log_fn(g, "write bundle_address_r for subctx: %d", j);
 		gk20a_writel(g, gr_pipe_bundle_address_r(),
 			sw_veid_bundle_init->l[index].addr |
 			gr_pipe_bundle_address_veid_f(j));
@@ -2041,6 +2041,7 @@ static void gv11b_write_bundle_veid_state(struct gk20a *g, u32 index)
 		err = gr_gk20a_wait_fe_idle(g, gk20a_get_gr_idle_timeout(g),
 					    GR_IDLE_CHECK_DEFAULT);
 	}
+	return err;
 }
 
 int gr_gv11b_init_sw_veid_bundle(struct gk20a *g)
@@ -2051,30 +2052,34 @@ int gr_gv11b_init_sw_veid_bundle(struct gk20a *g)
 	u32 last_bundle_data = 0;
 	u32 err = 0;
 
-	gk20a_dbg_fn("");
 	for (i = 0; i < sw_veid_bundle_init->count; i++) {
+		nvgpu_log_fn(g, "veid bundle count: %d", i);
 
 		if (i == 0 || last_bundle_data !=
 				sw_veid_bundle_init->l[i].value) {
 			gk20a_writel(g, gr_pipe_bundle_data_r(),
 				sw_veid_bundle_init->l[i].value);
 			last_bundle_data = sw_veid_bundle_init->l[i].value;
+			nvgpu_log_fn(g, "last_bundle_data : 0x%08x",
+						last_bundle_data);
 		}
 
 		if (gr_pipe_bundle_address_value_v(
 			sw_veid_bundle_init->l[i].addr) == GR_GO_IDLE_BUNDLE) {
+			nvgpu_log_fn(g, "go idle bundle");
 				gk20a_writel(g, gr_pipe_bundle_address_r(),
 					sw_veid_bundle_init->l[i].addr);
 				err |= gr_gk20a_wait_idle(g,
 						gk20a_get_gr_idle_timeout(g),
 						GR_IDLE_CHECK_DEFAULT);
 		} else
-			gv11b_write_bundle_veid_state(g, i);
+			err = gv11b_write_bundle_veid_state(g, i);
 
-		if (err)
+		if (err) {
+			nvgpu_err(g, "failed to init sw veid bundle");
 			break;
+		}
 	}
-	gk20a_dbg_fn("done");
 	return err;
 }
 

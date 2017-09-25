@@ -60,33 +60,51 @@ static int sensor_common_parse_signal_props(
 {
 	const char *temp_str;
 	int err = 0;
+	u32 value = 0;
+	u64 val64 = 0;
 
 	/* Do not report error for these properties yet */
-	read_property_u32(node, "readout_orientation",
-		&signal->readout_orientation);
-	read_property_u32(node, "num_lanes",
-		&signal->num_lanes);
-	read_property_u32(node, "mclk_khz",
-		&signal->mclk_freq);
-	err = read_property_u64(node, "pix_clk_hz",
-		&signal->pixel_clock.val);
+	err = read_property_u32(node, "readout_orientation", &value);
+	if (err)
+		signal->readout_orientation = 0;
+	else
+		signal->readout_orientation = value;
+
+	err = read_property_u32(node, "num_lanes", &value);
+	if (err)
+		signal->num_lanes = 0;
+	else
+		signal->num_lanes = value;
+
+	err = read_property_u32(node, "mclk_khz", &value);
+	if (err)
+		signal->mclk_freq = 0;
+	else
+		signal->mclk_freq = value;
+
+	err = read_property_u64(node, "pix_clk_hz", &val64);
 	if (err) {
 		dev_err(dev, "%s:pix_clk_hz property missing\n", __func__);
 		return err;
 	}
-	read_property_u32(node, "cil_settletime",
-		&signal->cil_settletime);
+	signal->pixel_clock.val = val64;
+
+	err = read_property_u32(node, "cil_settletime", &value);
+	if (err)
+		signal->cil_settletime = 0;
+	else
+		signal->cil_settletime = value;
+
 	/* initialize default if this prop not available */
-	err = of_property_read_string(node, "discontinuous_clk",
-		&temp_str);
+	err = of_property_read_string(node, "discontinuous_clk", &temp_str);
 	if (!err)
 		signal->discontinuous_clk =
 			!strncmp(temp_str, "yes", sizeof("yes"));
 	else
 		signal->discontinuous_clk = 1;
+
 	/* initialize default if this prop not available */
-	err = of_property_read_string(node, "dpcm_enable",
-		&temp_str);
+	err = of_property_read_string(node, "dpcm_enable", &temp_str);
 	if (!err)
 		signal->dpcm_enable =
 			!strncmp(temp_str, "true", sizeof("true"));
@@ -136,6 +154,7 @@ static int sensor_common_parse_image_props(
 	const char *phase_str, *mode_str;
 	int depth;
 	char pix_format[24];
+	u32 value = 0;
 
 	err = read_property_u32(node, "active_w",
 		&image->width);
@@ -159,8 +178,11 @@ static int sensor_common_parse_image_props(
 	}
 
 	/* embedded_metadata_height is optional */
-	read_property_u32(node, "embedded_metadata_height",
-		&image->embedded_metadata_height);
+	err = read_property_u32(node, "embedded_metadata_height", &value);
+	if (err)
+		image->embedded_metadata_height = 0;
+	else
+		image->embedded_metadata_height = value;
 
 	err = of_property_read_string(node, "pixel_t", &temp_str);
 	if (err) {
@@ -191,6 +213,7 @@ static int sensor_common_parse_image_props(
 		sprintf(pix_format, "%s_%s%d", mode_str, phase_str, depth);
 		temp_str = pix_format;
 	}
+
 	err = extract_pixel_format(temp_str, &image->pixel_format);
 	if (err) {
 		dev_err(dev, "Unsupported pixel format\n");
@@ -205,19 +228,45 @@ static int sensor_common_parse_dv_timings(
 	struct device *dev, struct device_node *node,
 	struct sensor_dv_timings *timings)
 {
+	int err = 0;
+	u32 value = 0;
+
 	/* Do not report error for these properties yet */
-	read_property_u32(node, "horz_front_porch",
-		&timings->hfrontporch);
-	read_property_u32(node, "horz_sync",
-		&timings->hsync);
-	read_property_u32(node, "horz_back_porch",
-		&timings->hbackporch);
-	read_property_u32(node, "vert_front_porch",
-		&timings->vfrontporch);
-	read_property_u32(node, "vert_sync",
-		&timings->vsync);
-	read_property_u32(node, "vert_back_porch",
-		&timings->vbackporch);
+	err = read_property_u32(node, "horz_front_porch", &value);
+	if (err)
+		timings->hfrontporch = 0;
+	else
+		timings->hfrontporch = value;
+
+	err = read_property_u32(node, "horz_sync", &value);
+	if (err)
+		timings->hsync = 0;
+	else
+		timings->hsync = value;
+
+	err = read_property_u32(node, "horz_back_porch", &value);
+	if (err)
+		timings->hbackporch = 0;
+	else
+		timings->hbackporch = value;
+
+	err = read_property_u32(node, "vert_front_porch", &value);
+	if (err)
+		timings->vfrontporch = 0;
+	else
+		timings->vfrontporch = value;
+
+	err = read_property_u32(node, "vert_sync", &value);
+	if (err)
+		timings->vsync = 0;
+	else
+		timings->vsync = value;
+
+	err = read_property_u32(node, "vert_back_porch", &value);
+	if (err)
+		timings->vbackporch = 0;
+	else
+		timings->vbackporch = value;
 
 	return 0;
 }
@@ -227,66 +276,93 @@ static int sensor_common_parse_control_props(
 	struct sensor_control_properties *control)
 {
 	int err = 0;
+	u32 value = 0;
+	u64 val64 = 0;
 
-	err = read_property_u32(node, "gain_factor",
-		&control->gain_factor);
+	err = read_property_u32(node, "gain_factor", &value);
 	if (err) {
 		dev_dbg(dev, "%s:%s:property missing\n",
 			__func__, "gain_factor");
+		control->gain_factor = 1;
 		return 0;
-	}
+	} else
+		control->gain_factor = value;
 
-	err = read_property_u32(node, "framerate_factor",
-		&control->framerate_factor);
-	if (err)
+	err = read_property_u32(node, "framerate_factor", &value);
+	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
 			__func__, "framerate_factor");
+		control->framerate_factor = 1;
+	} else
+		control->framerate_factor = value;
 
 	/* ignore err for this prop */
-	err = read_property_u32(node, "inherent_gain",
-		&control->inherent_gain);
-
-	err = read_property_u32(node, "min_gain_val",
-		&control->min_gain_val);
+	err = read_property_u32(node, "inherent_gain", &value);
 	if (err)
+		control->inherent_gain = 0;
+	else
+		control->inherent_gain = value;
+
+	err = read_property_u32(node, "min_gain_val", &value);
+	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
 			__func__, "min_gain_val");
+		control->min_gain_val = 0;
+	} else
+		control->min_gain_val = value;
 
-	err = read_property_u32(node, "max_gain_val",
-		&control->max_gain_val);
-	if (err)
+	err = read_property_u32(node, "max_gain_val", &value);
+	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
 			__func__, "max_gain_val");
+		control->max_gain_val = 0;
+	} else
+		control->max_gain_val = value;
 
 	/* ignore err for this prop */
-	err = read_property_u32(node, "min_hdr_ratio",
-		&control->min_hdr_ratio);
-	err = read_property_u32(node, "max_hdr_ratio",
-		&control->max_hdr_ratio);
-
-	err = read_property_u32(node, "min_framerate",
-		&control->min_framerate);
+	err = read_property_u32(node, "min_hdr_ratio", &value);
 	if (err)
+		control->min_hdr_ratio = 0;
+	else
+		control->min_hdr_ratio = value;
+
+	err = read_property_u32(node, "max_hdr_ratio", &value);
+	if (err)
+		control->max_hdr_ratio = 0;
+	else
+		control->max_hdr_ratio = value;
+
+	err = read_property_u32(node, "min_framerate", &value);
+	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
 			__func__, "min_framerate");
+		control->min_framerate = 0;
+	} else
+		control->min_framerate = value;
 
-	err = read_property_u32(node, "max_framerate",
-		&control->max_framerate);
-	if (err)
+	err = read_property_u32(node, "max_framerate", &value);
+	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
 			__func__, "max_framerate");
+		control->max_framerate = 0;
+	} else
+		control->max_framerate = value;
 
-	err = read_property_u64(node, "min_exp_time",
-		&control->min_exp_time.val);
-	if (err)
+	err = read_property_u64(node, "min_exp_time", &val64);
+	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
 			__func__, "min_exp_time");
+		control->min_exp_time.val = 0;
+	}
+		control->min_exp_time.val = val64;
 
-	err = read_property_u64(node, "max_exp_time",
-		&control->max_exp_time.val);
-	if (err)
+	err = read_property_u64(node, "max_exp_time", &val64);
+	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
 			__func__, "max_exp_time");
+		control->max_exp_time.val = 0;
+	} else
+		control->max_exp_time.val = val64;
 
 	return err;
 }

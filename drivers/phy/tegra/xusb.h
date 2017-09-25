@@ -432,7 +432,6 @@ struct tegra_xusb_padctl_ops {
 				bool enable);
 	int (*overcurrent_detected)(struct phy *phy);
 	void (*handle_overcurrent)(struct tegra_xusb_padctl *padctl);
-	int (*regulators_init)(struct tegra_xusb_padctl *padctl);
 	void (*utmi_pad_power_on)(struct phy *phy);
 	void (*utmi_pad_power_down)(struct phy *phy);
 };

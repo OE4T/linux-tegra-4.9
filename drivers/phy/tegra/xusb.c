@@ -1140,6 +1140,34 @@ static int tegra_xusb_setup_oc(struct tegra_xusb_padctl *padctl)
 	return 0;
 }
 
+static int
+tegra_xusb_padctl_regulators_init(struct tegra_xusb_padctl *padctl)
+{
+	struct device *dev = padctl->dev;
+	size_t size;
+	int err;
+	int i;
+
+	size = padctl->soc->num_supplies * sizeof(struct regulator_bulk_data);
+	padctl->supplies = devm_kzalloc(dev, size, GFP_ATOMIC);
+	if (!padctl->supplies) {
+		dev_err(dev, "failed to alloc memory for regulators\n");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < padctl->soc->num_supplies; i++)
+		padctl->supplies[i].supply = padctl->soc->supply_names[i];
+
+	err = devm_regulator_bulk_get(dev, padctl->soc->num_supplies,
+					padctl->supplies);
+	if (err) {
+		dev_err(dev, "failed to request regulators %d\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
 static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 {
 	struct device_node *np = of_node_get(pdev->dev.of_node);
@@ -1164,14 +1192,6 @@ static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 	padctl = soc->ops->probe(&pdev->dev, soc);
 	if (IS_ERR(padctl))
 		return PTR_ERR(padctl);
-
-	if (soc->ops->regulators_init) {
-		err = soc->ops->regulators_init(padctl);
-		if (err < 0) {
-			dev_err(&pdev->dev, "failed to init regulators\n");
-			goto remove;
-		}
-	}
 
 	np = of_node_get(pdev->dev.of_node);
 	if (of_find_property(np, "is_xhci_iov", NULL))
@@ -1204,6 +1224,18 @@ static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 		err = reset_control_deassert(padctl->rst);
 		if (err < 0)
 			goto remove;
+
+		err = tegra_xusb_padctl_regulators_init(padctl);
+		if (err < 0)
+			goto remove;
+
+		err = regulator_bulk_enable(padctl->soc->num_supplies,
+					    padctl->supplies);
+		if (err) {
+			dev_err(&pdev->dev, "failed to enable regulators %d\n",
+				err);
+			goto remove;
+		}
 	}
 
 	INIT_WORK(&padctl->otg_vbus_work, tegra_xusb_otg_vbus_work);

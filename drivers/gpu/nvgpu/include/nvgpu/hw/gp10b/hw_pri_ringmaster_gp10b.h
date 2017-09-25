@@ -58,110 +58,110 @@
 
 static inline u32 pri_ringmaster_command_r(void)
 {
-	return 0x0012004c;
+	return 0x0012004cU;
 }
 static inline u32 pri_ringmaster_command_cmd_m(void)
 {
-	return 0x3f << 0;
+	return 0x3fU << 0U;
 }
 static inline u32 pri_ringmaster_command_cmd_v(u32 r)
 {
-	return (r >> 0) & 0x3f;
+	return (r >> 0U) & 0x3fU;
 }
 static inline u32 pri_ringmaster_command_cmd_no_cmd_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 pri_ringmaster_command_cmd_start_ring_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 pri_ringmaster_command_cmd_ack_interrupt_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 pri_ringmaster_command_cmd_enumerate_stations_f(void)
 {
-	return 0x3;
+	return 0x3U;
 }
 static inline u32 pri_ringmaster_command_cmd_enumerate_stations_bc_grp_all_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 pri_ringmaster_command_data_r(void)
 {
-	return 0x00120048;
+	return 0x00120048U;
 }
 static inline u32 pri_ringmaster_start_results_r(void)
 {
-	return 0x00120050;
+	return 0x00120050U;
 }
 static inline u32 pri_ringmaster_start_results_connectivity_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 pri_ringmaster_start_results_connectivity_pass_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 pri_ringmaster_intr_status0_r(void)
 {
-	return 0x00120058;
+	return 0x00120058U;
 }
 static inline u32 pri_ringmaster_intr_status0_ring_start_conn_fault_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 pri_ringmaster_intr_status0_disconnect_fault_v(u32 r)
 {
-	return (r >> 1) & 0x1;
+	return (r >> 1U) & 0x1U;
 }
 static inline u32 pri_ringmaster_intr_status0_overflow_fault_v(u32 r)
 {
-	return (r >> 2) & 0x1;
+	return (r >> 2U) & 0x1U;
 }
 static inline u32 pri_ringmaster_intr_status0_gbl_write_error_sys_v(u32 r)
 {
-	return (r >> 8) & 0x1;
+	return (r >> 8U) & 0x1U;
 }
 static inline u32 pri_ringmaster_intr_status1_r(void)
 {
-	return 0x0012005c;
+	return 0x0012005cU;
 }
 static inline u32 pri_ringmaster_global_ctl_r(void)
 {
-	return 0x00120060;
+	return 0x00120060U;
 }
 static inline u32 pri_ringmaster_global_ctl_ring_reset_asserted_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 pri_ringmaster_global_ctl_ring_reset_deasserted_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 pri_ringmaster_enum_fbp_r(void)
 {
-	return 0x00120074;
+	return 0x00120074U;
 }
 static inline u32 pri_ringmaster_enum_fbp_count_v(u32 r)
 {
-	return (r >> 0) & 0x1f;
+	return (r >> 0U) & 0x1fU;
 }
 static inline u32 pri_ringmaster_enum_gpc_r(void)
 {
-	return 0x00120078;
+	return 0x00120078U;
 }
 static inline u32 pri_ringmaster_enum_gpc_count_v(u32 r)
 {
-	return (r >> 0) & 0x1f;
+	return (r >> 0U) & 0x1fU;
 }
 static inline u32 pri_ringmaster_enum_ltc_r(void)
 {
-	return 0x0012006c;
+	return 0x0012006cU;
 }
 static inline u32 pri_ringmaster_enum_ltc_count_v(u32 r)
 {
-	return (r >> 0) & 0x1f;
+	return (r >> 0U) & 0x1fU;
 }
 #endif

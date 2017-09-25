@@ -58,502 +58,502 @@
 
 static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
 {
-	return 0x0014046c;
+	return 0x0014046cU;
 }
 static inline u32 ltc_ltc0_lts0_dstg_cfg0_r(void)
 {
-	return 0x00140518;
+	return 0x00140518U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_cfg0_r(void)
 {
-	return 0x0017e318;
+	return 0x0017e318U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_cfg0_vdc_4to2_disable_m(void)
 {
-	return 0x1 << 15;
+	return 0x1U << 15U;
 }
 static inline u32 ltc_ltc0_lts0_tstg_cfg1_r(void)
 {
-	return 0x00140494;
+	return 0x00140494U;
 }
 static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_ways_v(u32 r)
 {
-	return (r >> 0) & 0xffff;
+	return (r >> 0U) & 0xffffU;
 }
 static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_v(u32 r)
 {
-	return (r >> 16) & 0x3;
+	return (r >> 16U) & 0x3U;
 }
 static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_all_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_half_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltc0_lts0_tstg_cfg1_active_sets_quarter_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_r(void)
 {
-	return 0x0017e26c;
+	return 0x0017e26cU;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clean_active_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_invalidate_active_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clear_v(u32 r)
 {
-	return (r >> 2) & 0x1;
+	return (r >> 2U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clear_active_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl1_clear_active_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 ltc_ltc0_lts0_cbc_ctrl1_r(void)
 {
-	return 0x0014046c;
+	return 0x0014046cU;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl2_r(void)
 {
-	return 0x0017e270;
+	return 0x0017e270U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl2_clear_lower_bound_f(u32 v)
 {
-	return (v & 0x3ffff) << 0;
+	return (v & 0x3ffffU) << 0U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl3_r(void)
 {
-	return 0x0017e274;
+	return 0x0017e274U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_f(u32 v)
 {
-	return (v & 0x3ffff) << 0;
+	return (v & 0x3ffffU) << 0U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_init_v(void)
 {
-	return 0x0003ffff;
+	return 0x0003ffffU;
 }
 static inline u32 ltc_ltcs_ltss_cbc_base_r(void)
 {
-	return 0x0017e278;
+	return 0x0017e278U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_base_alignment_shift_v(void)
 {
-	return 0x0000000b;
+	return 0x0000000bU;
 }
 static inline u32 ltc_ltcs_ltss_cbc_base_address_v(u32 r)
 {
-	return (r >> 0) & 0x3ffffff;
+	return (r >> 0U) & 0x3ffffffU;
 }
 static inline u32 ltc_ltcs_ltss_cbc_num_active_ltcs_r(void)
 {
-	return 0x0017e27c;
+	return 0x0017e27cU;
 }
 static inline u32 ltc_ltcs_misc_ltc_num_active_ltcs_r(void)
 {
-	return 0x0017e000;
+	return 0x0017e000U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_param_r(void)
 {
-	return 0x0017e280;
+	return 0x0017e280U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_param_comptags_per_cache_line_v(u32 r)
 {
-	return (r >> 0) & 0xffff;
+	return (r >> 0U) & 0xffffU;
 }
 static inline u32 ltc_ltcs_ltss_cbc_param_cache_line_size_v(u32 r)
 {
-	return (r >> 24) & 0xf;
+	return (r >> 24U) & 0xfU;
 }
 static inline u32 ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(u32 r)
 {
-	return (r >> 28) & 0xf;
+	return (r >> 28U) & 0xfU;
 }
 static inline u32 ltc_ltcs_ltss_cbc_param2_r(void)
 {
-	return 0x0017e3f4;
+	return 0x0017e3f4U;
 }
 static inline u32 ltc_ltcs_ltss_cbc_param2_gobs_per_comptagline_per_slice_v(u32 r)
 {
-	return (r >> 0) & 0xffff;
+	return (r >> 0U) & 0xffffU;
 }
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_r(void)
 {
-	return 0x0017e2ac;
+	return 0x0017e2acU;
 }
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_f(u32 v)
 {
-	return (v & 0x1f) << 16;
+	return (v & 0x1fU) << 16U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_index_r(void)
 {
-	return 0x0017e338;
+	return 0x0017e338U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_index_address_f(u32 v)
 {
-	return (v & 0xf) << 0;
+	return (v & 0xfU) << 0U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(u32 i)
 {
-	return 0x0017e33c + i*4;
+	return 0x0017e33cU + i*4U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(void)
 {
-	return 0x0017e34c;
+	return 0x0017e34cU;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_depth_clear_value_field_s(void)
 {
-	return 32;
+	return 32U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_depth_clear_value_field_f(u32 v)
 {
-	return (v & 0xffffffff) << 0;
+	return (v & 0xffffffffU) << 0U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_depth_clear_value_field_m(void)
 {
-	return 0xffffffff << 0;
+	return 0xffffffffU << 0U;
 }
 static inline u32 ltc_ltcs_ltss_dstg_zbc_depth_clear_value_field_v(u32 r)
 {
-	return (r >> 0) & 0xffffffff;
+	return (r >> 0U) & 0xffffffffU;
 }
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_r(void)
 {
-	return 0x0017e2b0;
+	return 0x0017e2b0U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f(void)
 {
-	return 0x10000000;
+	return 0x10000000U;
 }
 static inline u32 ltc_ltcs_ltss_g_elpg_r(void)
 {
-	return 0x0017e214;
+	return 0x0017e214U;
 }
 static inline u32 ltc_ltcs_ltss_g_elpg_flush_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_g_elpg_flush_pending_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_g_elpg_flush_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltc0_ltss_g_elpg_r(void)
 {
-	return 0x00140214;
+	return 0x00140214U;
 }
 static inline u32 ltc_ltc0_ltss_g_elpg_flush_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ltc_ltc0_ltss_g_elpg_flush_pending_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltc0_ltss_g_elpg_flush_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltc1_ltss_g_elpg_r(void)
 {
-	return 0x00142214;
+	return 0x00142214U;
 }
 static inline u32 ltc_ltc1_ltss_g_elpg_flush_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ltc_ltc1_ltss_g_elpg_flush_pending_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltc1_ltss_g_elpg_flush_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_intr_r(void)
 {
-	return 0x0017e20c;
+	return 0x0017e20cU;
 }
 static inline u32 ltc_ltcs_ltss_intr_ecc_sec_error_pending_f(void)
 {
-	return 0x100;
+	return 0x100U;
 }
 static inline u32 ltc_ltcs_ltss_intr_ecc_ded_error_pending_f(void)
 {
-	return 0x200;
+	return 0x200U;
 }
 static inline u32 ltc_ltcs_ltss_intr_en_evicted_cb_m(void)
 {
-	return 0x1 << 20;
+	return 0x1U << 20U;
 }
 static inline u32 ltc_ltcs_ltss_intr_en_illegal_compstat_access_m(void)
 {
-	return 0x1 << 30;
+	return 0x1U << 30U;
 }
 static inline u32 ltc_ltcs_ltss_intr_en_ecc_sec_error_enabled_f(void)
 {
-	return 0x1000000;
+	return 0x1000000U;
 }
 static inline u32 ltc_ltcs_ltss_intr_en_ecc_ded_error_enabled_f(void)
 {
-	return 0x2000000;
+	return 0x2000000U;
 }
 static inline u32 ltc_ltc0_lts0_intr_r(void)
 {
-	return 0x0014040c;
+	return 0x0014040cU;
 }
 static inline u32 ltc_ltc0_lts0_dstg_ecc_report_r(void)
 {
-	return 0x0014051c;
+	return 0x0014051cU;
 }
 static inline u32 ltc_ltc0_lts0_dstg_ecc_report_sec_count_m(void)
 {
-	return 0xff << 0;
+	return 0xffU << 0U;
 }
 static inline u32 ltc_ltc0_lts0_dstg_ecc_report_sec_count_v(u32 r)
 {
-	return (r >> 0) & 0xff;
+	return (r >> 0U) & 0xffU;
 }
 static inline u32 ltc_ltc0_lts0_dstg_ecc_report_ded_count_m(void)
 {
-	return 0xff << 16;
+	return 0xffU << 16U;
 }
 static inline u32 ltc_ltc0_lts0_dstg_ecc_report_ded_count_v(u32 r)
 {
-	return (r >> 16) & 0xff;
+	return (r >> 16U) & 0xffU;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_r(void)
 {
-	return 0x0017e2a0;
+	return 0x0017e2a0U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_pending_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_max_cycles_between_invalidates_v(u32 r)
 {
-	return (r >> 8) & 0xf;
+	return (r >> 8U) & 0xfU;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_max_cycles_between_invalidates_3_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_max_cycles_between_invalidates_3_f(void)
 {
-	return 0x300;
+	return 0x300U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_last_class_v(u32 r)
 {
-	return (r >> 28) & 0x1;
+	return (r >> 28U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_last_class_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_last_class_true_f(void)
 {
-	return 0x10000000;
+	return 0x10000000U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_normal_class_v(u32 r)
 {
-	return (r >> 29) & 0x1;
+	return (r >> 29U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_normal_class_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_normal_class_true_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_first_class_v(u32 r)
 {
-	return (r >> 30) & 0x1;
+	return (r >> 30U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_first_class_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_first_class_true_f(void)
 {
-	return 0x40000000;
+	return 0x40000000U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_r(void)
 {
-	return 0x0017e2a4;
+	return 0x0017e2a4U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_pending_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_max_cycles_between_cleans_v(u32 r)
 {
-	return (r >> 8) & 0xf;
+	return (r >> 8U) & 0xfU;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_max_cycles_between_cleans_3_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_max_cycles_between_cleans_3_f(void)
 {
-	return 0x300;
+	return 0x300U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_wait_for_fb_to_pull_v(u32 r)
 {
-	return (r >> 16) & 0x1;
+	return (r >> 16U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_wait_for_fb_to_pull_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_wait_for_fb_to_pull_true_f(void)
 {
-	return 0x10000;
+	return 0x10000U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_last_class_v(u32 r)
 {
-	return (r >> 28) & 0x1;
+	return (r >> 28U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_last_class_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_last_class_true_f(void)
 {
-	return 0x10000000;
+	return 0x10000000U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_normal_class_v(u32 r)
 {
-	return (r >> 29) & 0x1;
+	return (r >> 29U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_normal_class_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_normal_class_true_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_first_class_v(u32 r)
 {
-	return (r >> 30) & 0x1;
+	return (r >> 30U) & 0x1U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_first_class_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt1_clean_evict_first_class_true_f(void)
 {
-	return 0x40000000;
+	return 0x40000000U;
 }
 static inline u32 ltc_ltc0_ltss_tstg_cmgmt0_r(void)
 {
-	return 0x001402a0;
+	return 0x001402a0U;
 }
 static inline u32 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltc0_ltss_tstg_cmgmt1_r(void)
 {
-	return 0x001402a4;
+	return 0x001402a4U;
 }
 static inline u32 ltc_ltc0_ltss_tstg_cmgmt1_clean_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltc1_ltss_tstg_cmgmt0_r(void)
 {
-	return 0x001422a0;
+	return 0x001422a0U;
 }
 static inline u32 ltc_ltc1_ltss_tstg_cmgmt0_invalidate_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ltc_ltc1_ltss_tstg_cmgmt0_invalidate_pending_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltc1_ltss_tstg_cmgmt0_invalidate_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltc1_ltss_tstg_cmgmt1_r(void)
 {
-	return 0x001422a4;
+	return 0x001422a4U;
 }
 static inline u32 ltc_ltc1_ltss_tstg_cmgmt1_clean_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ltc_ltc1_ltss_tstg_cmgmt1_clean_pending_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ltc_ltc1_ltss_tstg_cmgmt1_clean_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ltc_ltc0_lts0_tstg_info_1_r(void)
 {
-	return 0x0014058c;
+	return 0x0014058cU;
 }
 static inline u32 ltc_ltc0_lts0_tstg_info_1_slice_size_in_kb_v(u32 r)
 {
-	return (r >> 0) & 0xffff;
+	return (r >> 0U) & 0xffffU;
 }
 static inline u32 ltc_ltc0_lts0_tstg_info_1_slices_per_l2_v(u32 r)
 {
-	return (r >> 16) & 0x1f;
+	return (r >> 16U) & 0x1fU;
 }
 #endif

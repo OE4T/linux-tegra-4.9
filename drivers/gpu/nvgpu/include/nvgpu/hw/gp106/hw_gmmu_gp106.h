@@ -58,1218 +58,1218 @@
 
 static inline u32 gmmu_new_pde_is_pte_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pde_is_pte_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_pde_aperture_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pde_aperture_invalid_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_pde_aperture_video_memory_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 gmmu_new_pde_aperture_sys_mem_coh_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 gmmu_new_pde_aperture_sys_mem_ncoh_f(void)
 {
-	return 0x6;
+	return 0x6U;
 }
 static inline u32 gmmu_new_pde_address_sys_f(u32 v)
 {
-	return (v & 0xffffff) << 8;
+	return (v & 0xffffffU) << 8U;
 }
 static inline u32 gmmu_new_pde_address_sys_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pde_vol_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pde_vol_true_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 gmmu_new_pde_vol_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_pde_address_shift_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 gmmu_new_pde__size_v(void)
 {
-	return 0x00000008;
+	return 0x00000008U;
 }
 static inline u32 gmmu_new_dual_pde_is_pte_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_dual_pde_is_pte_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_big_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_big_invalid_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_big_video_memory_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_big_sys_mem_coh_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f(void)
 {
-	return 0x6;
+	return 0x6U;
 }
 static inline u32 gmmu_new_dual_pde_address_big_sys_f(u32 v)
 {
-	return (v & 0xfffffff) << 4;
+	return (v & 0xfffffffU) << 4U;
 }
 static inline u32 gmmu_new_dual_pde_address_big_sys_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_small_w(void)
 {
-	return 2;
+	return 2U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_small_invalid_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_small_video_memory_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_small_sys_mem_coh_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f(void)
 {
-	return 0x6;
+	return 0x6U;
 }
 static inline u32 gmmu_new_dual_pde_vol_small_w(void)
 {
-	return 2;
+	return 2U;
 }
 static inline u32 gmmu_new_dual_pde_vol_small_true_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 gmmu_new_dual_pde_vol_small_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_dual_pde_vol_big_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_dual_pde_vol_big_true_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 gmmu_new_dual_pde_vol_big_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_dual_pde_address_small_sys_f(u32 v)
 {
-	return (v & 0xffffff) << 8;
+	return (v & 0xffffffU) << 8U;
 }
 static inline u32 gmmu_new_dual_pde_address_small_sys_w(void)
 {
-	return 2;
+	return 2U;
 }
 static inline u32 gmmu_new_dual_pde_address_shift_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 gmmu_new_dual_pde_address_big_shift_v(void)
 {
-	return 0x00000008;
+	return 0x00000008U;
 }
 static inline u32 gmmu_new_dual_pde__size_v(void)
 {
-	return 0x00000010;
+	return 0x00000010U;
 }
 static inline u32 gmmu_new_pte__size_v(void)
 {
-	return 0x00000008;
+	return 0x00000008U;
 }
 static inline u32 gmmu_new_pte_valid_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pte_valid_true_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 gmmu_new_pte_valid_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_pte_privilege_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pte_privilege_true_f(void)
 {
-	return 0x20;
+	return 0x20U;
 }
 static inline u32 gmmu_new_pte_privilege_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_pte_address_sys_f(u32 v)
 {
-	return (v & 0xffffff) << 8;
+	return (v & 0xffffffU) << 8U;
 }
 static inline u32 gmmu_new_pte_address_sys_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pte_address_vid_f(u32 v)
 {
-	return (v & 0xffffff) << 8;
+	return (v & 0xffffffU) << 8U;
 }
 static inline u32 gmmu_new_pte_address_vid_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pte_vol_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pte_vol_true_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 gmmu_new_pte_vol_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_pte_aperture_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pte_aperture_video_memory_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 gmmu_new_pte_aperture_sys_mem_coh_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 gmmu_new_pte_aperture_sys_mem_ncoh_f(void)
 {
-	return 0x6;
+	return 0x6U;
 }
 static inline u32 gmmu_new_pte_read_only_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 gmmu_new_pte_read_only_true_f(void)
 {
-	return 0x40;
+	return 0x40U;
 }
 static inline u32 gmmu_new_pte_comptagline_f(u32 v)
 {
-	return (v & 0x3ffff) << 4;
+	return (v & 0x3ffffU) << 4U;
 }
 static inline u32 gmmu_new_pte_comptagline_w(void)
 {
-	return 1;
+	return 1U;
 }
 static inline u32 gmmu_new_pte_kind_f(u32 v)
 {
-	return (v & 0xff) << 24;
+	return (v & 0xffU) << 24U;
 }
 static inline u32 gmmu_new_pte_kind_w(void)
 {
-	return 1;
+	return 1U;
 }
 static inline u32 gmmu_new_pte_address_shift_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 gmmu_pte_kind_f(u32 v)
 {
-	return (v & 0xff) << 4;
+	return (v & 0xffU) << 4U;
 }
 static inline u32 gmmu_pte_kind_w(void)
 {
-	return 1;
+	return 1U;
 }
 static inline u32 gmmu_pte_kind_invalid_v(void)
 {
-	return 0x000000ff;
+	return 0x000000ffU;
 }
 static inline u32 gmmu_pte_kind_pitch_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 gmmu_pte_kind_z16_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 gmmu_pte_kind_z16_2c_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 gmmu_pte_kind_z16_ms2_2c_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 gmmu_pte_kind_z16_ms4_2c_v(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 gmmu_pte_kind_z16_ms8_2c_v(void)
 {
-	return 0x00000005;
+	return 0x00000005U;
 }
 static inline u32 gmmu_pte_kind_z16_ms16_2c_v(void)
 {
-	return 0x00000006;
+	return 0x00000006U;
 }
 static inline u32 gmmu_pte_kind_z16_2z_v(void)
 {
-	return 0x00000007;
+	return 0x00000007U;
 }
 static inline u32 gmmu_pte_kind_z16_ms2_2z_v(void)
 {
-	return 0x00000008;
+	return 0x00000008U;
 }
 static inline u32 gmmu_pte_kind_z16_ms4_2z_v(void)
 {
-	return 0x00000009;
+	return 0x00000009U;
 }
 static inline u32 gmmu_pte_kind_z16_ms8_2z_v(void)
 {
-	return 0x0000000a;
+	return 0x0000000aU;
 }
 static inline u32 gmmu_pte_kind_z16_ms16_2z_v(void)
 {
-	return 0x0000000b;
+	return 0x0000000bU;
 }
 static inline u32 gmmu_pte_kind_z16_2cz_v(void)
 {
-	return 0x00000036;
+	return 0x00000036U;
 }
 static inline u32 gmmu_pte_kind_z16_ms2_2cz_v(void)
 {
-	return 0x00000037;
+	return 0x00000037U;
 }
 static inline u32 gmmu_pte_kind_z16_ms4_2cz_v(void)
 {
-	return 0x00000038;
+	return 0x00000038U;
 }
 static inline u32 gmmu_pte_kind_z16_ms8_2cz_v(void)
 {
-	return 0x00000039;
+	return 0x00000039U;
 }
 static inline u32 gmmu_pte_kind_z16_ms16_2cz_v(void)
 {
-	return 0x0000005f;
+	return 0x0000005fU;
 }
 static inline u32 gmmu_pte_kind_z16_4cz_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 gmmu_pte_kind_z16_ms2_4cz_v(void)
 {
-	return 0x0000000d;
+	return 0x0000000dU;
 }
 static inline u32 gmmu_pte_kind_z16_ms4_4cz_v(void)
 {
-	return 0x0000000e;
+	return 0x0000000eU;
 }
 static inline u32 gmmu_pte_kind_z16_ms8_4cz_v(void)
 {
-	return 0x0000000f;
+	return 0x0000000fU;
 }
 static inline u32 gmmu_pte_kind_z16_ms16_4cz_v(void)
 {
-	return 0x00000010;
+	return 0x00000010U;
 }
 static inline u32 gmmu_pte_kind_s8z24_v(void)
 {
-	return 0x00000011;
+	return 0x00000011U;
 }
 static inline u32 gmmu_pte_kind_s8z24_1z_v(void)
 {
-	return 0x00000012;
+	return 0x00000012U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms2_1z_v(void)
 {
-	return 0x00000013;
+	return 0x00000013U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms4_1z_v(void)
 {
-	return 0x00000014;
+	return 0x00000014U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms8_1z_v(void)
 {
-	return 0x00000015;
+	return 0x00000015U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms16_1z_v(void)
 {
-	return 0x00000016;
+	return 0x00000016U;
 }
 static inline u32 gmmu_pte_kind_s8z24_2cz_v(void)
 {
-	return 0x00000017;
+	return 0x00000017U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms2_2cz_v(void)
 {
-	return 0x00000018;
+	return 0x00000018U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms4_2cz_v(void)
 {
-	return 0x00000019;
+	return 0x00000019U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms8_2cz_v(void)
 {
-	return 0x0000001a;
+	return 0x0000001aU;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms16_2cz_v(void)
 {
-	return 0x0000001b;
+	return 0x0000001bU;
 }
 static inline u32 gmmu_pte_kind_s8z24_2cs_v(void)
 {
-	return 0x0000001c;
+	return 0x0000001cU;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms2_2cs_v(void)
 {
-	return 0x0000001d;
+	return 0x0000001dU;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms4_2cs_v(void)
 {
-	return 0x0000001e;
+	return 0x0000001eU;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms8_2cs_v(void)
 {
-	return 0x0000001f;
+	return 0x0000001fU;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms16_2cs_v(void)
 {
-	return 0x00000020;
+	return 0x00000020U;
 }
 static inline u32 gmmu_pte_kind_s8z24_4cszv_v(void)
 {
-	return 0x00000021;
+	return 0x00000021U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms2_4cszv_v(void)
 {
-	return 0x00000022;
+	return 0x00000022U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms4_4cszv_v(void)
 {
-	return 0x00000023;
+	return 0x00000023U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms8_4cszv_v(void)
 {
-	return 0x00000024;
+	return 0x00000024U;
 }
 static inline u32 gmmu_pte_kind_s8z24_ms16_4cszv_v(void)
 {
-	return 0x00000025;
+	return 0x00000025U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc12_v(void)
 {
-	return 0x00000026;
+	return 0x00000026U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc4_v(void)
 {
-	return 0x00000027;
+	return 0x00000027U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc8_v(void)
 {
-	return 0x00000028;
+	return 0x00000028U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc24_v(void)
 {
-	return 0x00000029;
+	return 0x00000029U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc12_1zv_v(void)
 {
-	return 0x0000002e;
+	return 0x0000002eU;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc4_1zv_v(void)
 {
-	return 0x0000002f;
+	return 0x0000002fU;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc8_1zv_v(void)
 {
-	return 0x00000030;
+	return 0x00000030U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc24_1zv_v(void)
 {
-	return 0x00000031;
+	return 0x00000031U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc12_2cs_v(void)
 {
-	return 0x00000032;
+	return 0x00000032U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc4_2cs_v(void)
 {
-	return 0x00000033;
+	return 0x00000033U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc8_2cs_v(void)
 {
-	return 0x00000034;
+	return 0x00000034U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc24_2cs_v(void)
 {
-	return 0x00000035;
+	return 0x00000035U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc12_2czv_v(void)
 {
-	return 0x0000003a;
+	return 0x0000003aU;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc4_2czv_v(void)
 {
-	return 0x0000003b;
+	return 0x0000003bU;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc8_2czv_v(void)
 {
-	return 0x0000003c;
+	return 0x0000003cU;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc24_2czv_v(void)
 {
-	return 0x0000003d;
+	return 0x0000003dU;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc12_2zv_v(void)
 {
-	return 0x0000003e;
+	return 0x0000003eU;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc4_2zv_v(void)
 {
-	return 0x0000003f;
+	return 0x0000003fU;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc8_2zv_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc24_2zv_v(void)
 {
-	return 0x00000041;
+	return 0x00000041U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc12_4cszv_v(void)
 {
-	return 0x00000042;
+	return 0x00000042U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms4_vc4_4cszv_v(void)
 {
-	return 0x00000043;
+	return 0x00000043U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc8_4cszv_v(void)
 {
-	return 0x00000044;
+	return 0x00000044U;
 }
 static inline u32 gmmu_pte_kind_v8z24_ms8_vc24_4cszv_v(void)
 {
-	return 0x00000045;
+	return 0x00000045U;
 }
 static inline u32 gmmu_pte_kind_z24s8_v(void)
 {
-	return 0x00000046;
+	return 0x00000046U;
 }
 static inline u32 gmmu_pte_kind_z24s8_1z_v(void)
 {
-	return 0x00000047;
+	return 0x00000047U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms2_1z_v(void)
 {
-	return 0x00000048;
+	return 0x00000048U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms4_1z_v(void)
 {
-	return 0x00000049;
+	return 0x00000049U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms8_1z_v(void)
 {
-	return 0x0000004a;
+	return 0x0000004aU;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms16_1z_v(void)
 {
-	return 0x0000004b;
+	return 0x0000004bU;
 }
 static inline u32 gmmu_pte_kind_z24s8_2cs_v(void)
 {
-	return 0x0000004c;
+	return 0x0000004cU;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms2_2cs_v(void)
 {
-	return 0x0000004d;
+	return 0x0000004dU;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms4_2cs_v(void)
 {
-	return 0x0000004e;
+	return 0x0000004eU;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms8_2cs_v(void)
 {
-	return 0x0000004f;
+	return 0x0000004fU;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms16_2cs_v(void)
 {
-	return 0x00000050;
+	return 0x00000050U;
 }
 static inline u32 gmmu_pte_kind_z24s8_2cz_v(void)
 {
-	return 0x00000051;
+	return 0x00000051U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms2_2cz_v(void)
 {
-	return 0x00000052;
+	return 0x00000052U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms4_2cz_v(void)
 {
-	return 0x00000053;
+	return 0x00000053U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms8_2cz_v(void)
 {
-	return 0x00000054;
+	return 0x00000054U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms16_2cz_v(void)
 {
-	return 0x00000055;
+	return 0x00000055U;
 }
 static inline u32 gmmu_pte_kind_z24s8_4cszv_v(void)
 {
-	return 0x00000056;
+	return 0x00000056U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms2_4cszv_v(void)
 {
-	return 0x00000057;
+	return 0x00000057U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms4_4cszv_v(void)
 {
-	return 0x00000058;
+	return 0x00000058U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms8_4cszv_v(void)
 {
-	return 0x00000059;
+	return 0x00000059U;
 }
 static inline u32 gmmu_pte_kind_z24s8_ms16_4cszv_v(void)
 {
-	return 0x0000005a;
+	return 0x0000005aU;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc12_v(void)
 {
-	return 0x0000005b;
+	return 0x0000005bU;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc4_v(void)
 {
-	return 0x0000005c;
+	return 0x0000005cU;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc8_v(void)
 {
-	return 0x0000005d;
+	return 0x0000005dU;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc24_v(void)
 {
-	return 0x0000005e;
+	return 0x0000005eU;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc12_1zv_v(void)
 {
-	return 0x00000063;
+	return 0x00000063U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc4_1zv_v(void)
 {
-	return 0x00000064;
+	return 0x00000064U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc8_1zv_v(void)
 {
-	return 0x00000065;
+	return 0x00000065U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc24_1zv_v(void)
 {
-	return 0x00000066;
+	return 0x00000066U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc12_2cs_v(void)
 {
-	return 0x00000067;
+	return 0x00000067U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc4_2cs_v(void)
 {
-	return 0x00000068;
+	return 0x00000068U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc8_2cs_v(void)
 {
-	return 0x00000069;
+	return 0x00000069U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc24_2cs_v(void)
 {
-	return 0x0000006a;
+	return 0x0000006aU;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc12_2czv_v(void)
 {
-	return 0x0000006f;
+	return 0x0000006fU;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc4_2czv_v(void)
 {
-	return 0x00000070;
+	return 0x00000070U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc8_2czv_v(void)
 {
-	return 0x00000071;
+	return 0x00000071U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc24_2czv_v(void)
 {
-	return 0x00000072;
+	return 0x00000072U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc12_2zv_v(void)
 {
-	return 0x00000073;
+	return 0x00000073U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc4_2zv_v(void)
 {
-	return 0x00000074;
+	return 0x00000074U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc8_2zv_v(void)
 {
-	return 0x00000075;
+	return 0x00000075U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc24_2zv_v(void)
 {
-	return 0x00000076;
+	return 0x00000076U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc12_4cszv_v(void)
 {
-	return 0x00000077;
+	return 0x00000077U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms4_vc4_4cszv_v(void)
 {
-	return 0x00000078;
+	return 0x00000078U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc8_4cszv_v(void)
 {
-	return 0x00000079;
+	return 0x00000079U;
 }
 static inline u32 gmmu_pte_kind_z24v8_ms8_vc24_4cszv_v(void)
 {
-	return 0x0000007a;
+	return 0x0000007aU;
 }
 static inline u32 gmmu_pte_kind_zf32_v(void)
 {
-	return 0x0000007b;
+	return 0x0000007bU;
 }
 static inline u32 gmmu_pte_kind_zf32_1z_v(void)
 {
-	return 0x0000007c;
+	return 0x0000007cU;
 }
 static inline u32 gmmu_pte_kind_zf32_ms2_1z_v(void)
 {
-	return 0x0000007d;
+	return 0x0000007dU;
 }
 static inline u32 gmmu_pte_kind_zf32_ms4_1z_v(void)
 {
-	return 0x0000007e;
+	return 0x0000007eU;
 }
 static inline u32 gmmu_pte_kind_zf32_ms8_1z_v(void)
 {
-	return 0x0000007f;
+	return 0x0000007fU;
 }
 static inline u32 gmmu_pte_kind_zf32_ms16_1z_v(void)
 {
-	return 0x00000080;
+	return 0x00000080U;
 }
 static inline u32 gmmu_pte_kind_zf32_2cs_v(void)
 {
-	return 0x00000081;
+	return 0x00000081U;
 }
 static inline u32 gmmu_pte_kind_zf32_ms2_2cs_v(void)
 {
-	return 0x00000082;
+	return 0x00000082U;
 }
 static inline u32 gmmu_pte_kind_zf32_ms4_2cs_v(void)
 {
-	return 0x00000083;
+	return 0x00000083U;
 }
 static inline u32 gmmu_pte_kind_zf32_ms8_2cs_v(void)
 {
-	return 0x00000084;
+	return 0x00000084U;
 }
 static inline u32 gmmu_pte_kind_zf32_ms16_2cs_v(void)
 {
-	return 0x00000085;
+	return 0x00000085U;
 }
 static inline u32 gmmu_pte_kind_zf32_2cz_v(void)
 {
-	return 0x00000086;
+	return 0x00000086U;
 }
 static inline u32 gmmu_pte_kind_zf32_ms2_2cz_v(void)
 {
-	return 0x00000087;
+	return 0x00000087U;
 }
 static inline u32 gmmu_pte_kind_zf32_ms4_2cz_v(void)
 {
-	return 0x00000088;
+	return 0x00000088U;
 }
 static inline u32 gmmu_pte_kind_zf32_ms8_2cz_v(void)
 {
-	return 0x00000089;
+	return 0x00000089U;
 }
 static inline u32 gmmu_pte_kind_zf32_ms16_2cz_v(void)
 {
-	return 0x0000008a;
+	return 0x0000008aU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc12_v(void)
 {
-	return 0x0000008b;
+	return 0x0000008bU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc4_v(void)
 {
-	return 0x0000008c;
+	return 0x0000008cU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc8_v(void)
 {
-	return 0x0000008d;
+	return 0x0000008dU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc24_v(void)
 {
-	return 0x0000008e;
+	return 0x0000008eU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc12_1cs_v(void)
 {
-	return 0x0000008f;
+	return 0x0000008fU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc4_1cs_v(void)
 {
-	return 0x00000090;
+	return 0x00000090U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc8_1cs_v(void)
 {
-	return 0x00000091;
+	return 0x00000091U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc24_1cs_v(void)
 {
-	return 0x00000092;
+	return 0x00000092U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc12_1zv_v(void)
 {
-	return 0x00000097;
+	return 0x00000097U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc4_1zv_v(void)
 {
-	return 0x00000098;
+	return 0x00000098U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc8_1zv_v(void)
 {
-	return 0x00000099;
+	return 0x00000099U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc24_1zv_v(void)
 {
-	return 0x0000009a;
+	return 0x0000009aU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc12_1czv_v(void)
 {
-	return 0x0000009b;
+	return 0x0000009bU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc4_1czv_v(void)
 {
-	return 0x0000009c;
+	return 0x0000009cU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc8_1czv_v(void)
 {
-	return 0x0000009d;
+	return 0x0000009dU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc24_1czv_v(void)
 {
-	return 0x0000009e;
+	return 0x0000009eU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc12_2cs_v(void)
 {
-	return 0x0000009f;
+	return 0x0000009fU;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc4_2cs_v(void)
 {
-	return 0x000000a0;
+	return 0x000000a0U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc8_2cs_v(void)
 {
-	return 0x000000a1;
+	return 0x000000a1U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc24_2cs_v(void)
 {
-	return 0x000000a2;
+	return 0x000000a2U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc12_2cszv_v(void)
 {
-	return 0x000000a3;
+	return 0x000000a3U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms4_vc4_2cszv_v(void)
 {
-	return 0x000000a4;
+	return 0x000000a4U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc8_2cszv_v(void)
 {
-	return 0x000000a5;
+	return 0x000000a5U;
 }
 static inline u32 gmmu_pte_kind_x8z24_x16v8s8_ms8_vc24_2cszv_v(void)
 {
-	return 0x000000a6;
+	return 0x000000a6U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc12_v(void)
 {
-	return 0x000000a7;
+	return 0x000000a7U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc4_v(void)
 {
-	return 0x000000a8;
+	return 0x000000a8U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc8_v(void)
 {
-	return 0x000000a9;
+	return 0x000000a9U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc24_v(void)
 {
-	return 0x000000aa;
+	return 0x000000aaU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc12_1cs_v(void)
 {
-	return 0x000000ab;
+	return 0x000000abU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc4_1cs_v(void)
 {
-	return 0x000000ac;
+	return 0x000000acU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc8_1cs_v(void)
 {
-	return 0x000000ad;
+	return 0x000000adU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc24_1cs_v(void)
 {
-	return 0x000000ae;
+	return 0x000000aeU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc12_1zv_v(void)
 {
-	return 0x000000b3;
+	return 0x000000b3U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc4_1zv_v(void)
 {
-	return 0x000000b4;
+	return 0x000000b4U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc8_1zv_v(void)
 {
-	return 0x000000b5;
+	return 0x000000b5U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc24_1zv_v(void)
 {
-	return 0x000000b6;
+	return 0x000000b6U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc12_1czv_v(void)
 {
-	return 0x000000b7;
+	return 0x000000b7U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc4_1czv_v(void)
 {
-	return 0x000000b8;
+	return 0x000000b8U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc8_1czv_v(void)
 {
-	return 0x000000b9;
+	return 0x000000b9U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc24_1czv_v(void)
 {
-	return 0x000000ba;
+	return 0x000000baU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc12_2cs_v(void)
 {
-	return 0x000000bb;
+	return 0x000000bbU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc4_2cs_v(void)
 {
-	return 0x000000bc;
+	return 0x000000bcU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc8_2cs_v(void)
 {
-	return 0x000000bd;
+	return 0x000000bdU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc24_2cs_v(void)
 {
-	return 0x000000be;
+	return 0x000000beU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc12_2cszv_v(void)
 {
-	return 0x000000bf;
+	return 0x000000bfU;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms4_vc4_2cszv_v(void)
 {
-	return 0x000000c0;
+	return 0x000000c0U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc8_2cszv_v(void)
 {
-	return 0x000000c1;
+	return 0x000000c1U;
 }
 static inline u32 gmmu_pte_kind_zf32_x16v8s8_ms8_vc24_2cszv_v(void)
 {
-	return 0x000000c2;
+	return 0x000000c2U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_v(void)
 {
-	return 0x000000c3;
+	return 0x000000c3U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_1cs_v(void)
 {
-	return 0x000000c4;
+	return 0x000000c4U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms2_1cs_v(void)
 {
-	return 0x000000c5;
+	return 0x000000c5U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms4_1cs_v(void)
 {
-	return 0x000000c6;
+	return 0x000000c6U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms8_1cs_v(void)
 {
-	return 0x000000c7;
+	return 0x000000c7U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms16_1cs_v(void)
 {
-	return 0x000000c8;
+	return 0x000000c8U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_2cszv_v(void)
 {
-	return 0x000000ce;
+	return 0x000000ceU;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms2_2cszv_v(void)
 {
-	return 0x000000cf;
+	return 0x000000cfU;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms4_2cszv_v(void)
 {
-	return 0x000000d0;
+	return 0x000000d0U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms8_2cszv_v(void)
 {
-	return 0x000000d1;
+	return 0x000000d1U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms16_2cszv_v(void)
 {
-	return 0x000000d2;
+	return 0x000000d2U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_2cs_v(void)
 {
-	return 0x000000d3;
+	return 0x000000d3U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms2_2cs_v(void)
 {
-	return 0x000000d4;
+	return 0x000000d4U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms4_2cs_v(void)
 {
-	return 0x000000d5;
+	return 0x000000d5U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms8_2cs_v(void)
 {
-	return 0x000000d6;
+	return 0x000000d6U;
 }
 static inline u32 gmmu_pte_kind_zf32_x24s8_ms16_2cs_v(void)
 {
-	return 0x000000d7;
+	return 0x000000d7U;
 }
 static inline u32 gmmu_pte_kind_generic_16bx2_v(void)
 {
-	return 0x000000fe;
+	return 0x000000feU;
 }
 static inline u32 gmmu_pte_kind_c32_2c_v(void)
 {
-	return 0x000000d8;
+	return 0x000000d8U;
 }
 static inline u32 gmmu_pte_kind_c32_2cbr_v(void)
 {
-	return 0x000000d9;
+	return 0x000000d9U;
 }
 static inline u32 gmmu_pte_kind_c32_2cba_v(void)
 {
-	return 0x000000da;
+	return 0x000000daU;
 }
 static inline u32 gmmu_pte_kind_c32_2cra_v(void)
 {
-	return 0x000000db;
+	return 0x000000dbU;
 }
 static inline u32 gmmu_pte_kind_c32_2bra_v(void)
 {
-	return 0x000000dc;
+	return 0x000000dcU;
 }
 static inline u32 gmmu_pte_kind_c32_ms2_2c_v(void)
 {
-	return 0x000000dd;
+	return 0x000000ddU;
 }
 static inline u32 gmmu_pte_kind_c32_ms2_2cbr_v(void)
 {
-	return 0x000000de;
+	return 0x000000deU;
 }
 static inline u32 gmmu_pte_kind_c32_ms4_2c_v(void)
 {
-	return 0x000000df;
+	return 0x000000dfU;
 }
 static inline u32 gmmu_pte_kind_c32_ms4_2cbr_v(void)
 {
-	return 0x000000e0;
+	return 0x000000e0U;
 }
 static inline u32 gmmu_pte_kind_c32_ms4_2cba_v(void)
 {
-	return 0x000000e1;
+	return 0x000000e1U;
 }
 static inline u32 gmmu_pte_kind_c32_ms4_2cra_v(void)
 {
-	return 0x000000e2;
+	return 0x000000e2U;
 }
 static inline u32 gmmu_pte_kind_c32_ms4_2bra_v(void)
 {
-	return 0x000000e3;
+	return 0x000000e3U;
 }
 static inline u32 gmmu_pte_kind_c32_ms4_4cbra_v(void)
 {
-	return 0x0000002c;
+	return 0x0000002cU;
 }
 static inline u32 gmmu_pte_kind_c32_ms8_ms16_2c_v(void)
 {
-	return 0x000000e4;
+	return 0x000000e4U;
 }
 static inline u32 gmmu_pte_kind_c32_ms8_ms16_2cra_v(void)
 {
-	return 0x000000e5;
+	return 0x000000e5U;
 }
 static inline u32 gmmu_pte_kind_c64_2c_v(void)
 {
-	return 0x000000e6;
+	return 0x000000e6U;
 }
 static inline u32 gmmu_pte_kind_c64_2cbr_v(void)
 {
-	return 0x000000e7;
+	return 0x000000e7U;
 }
 static inline u32 gmmu_pte_kind_c64_2cba_v(void)
 {
-	return 0x000000e8;
+	return 0x000000e8U;
 }
 static inline u32 gmmu_pte_kind_c64_2cra_v(void)
 {
-	return 0x000000e9;
+	return 0x000000e9U;
 }
 static inline u32 gmmu_pte_kind_c64_2bra_v(void)
 {
-	return 0x000000ea;
+	return 0x000000eaU;
 }
 static inline u32 gmmu_pte_kind_c64_ms2_2c_v(void)
 {
-	return 0x000000eb;
+	return 0x000000ebU;
 }
 static inline u32 gmmu_pte_kind_c64_ms2_2cbr_v(void)
 {
-	return 0x000000ec;
+	return 0x000000ecU;
 }
 static inline u32 gmmu_pte_kind_c64_ms4_2c_v(void)
 {
-	return 0x000000ed;
+	return 0x000000edU;
 }
 static inline u32 gmmu_pte_kind_c64_ms4_2cbr_v(void)
 {
-	return 0x000000ee;
+	return 0x000000eeU;
 }
 static inline u32 gmmu_pte_kind_c64_ms4_2cba_v(void)
 {
-	return 0x000000ef;
+	return 0x000000efU;
 }
 static inline u32 gmmu_pte_kind_c64_ms4_2cra_v(void)
 {
-	return 0x000000f0;
+	return 0x000000f0U;
 }
 static inline u32 gmmu_pte_kind_c64_ms4_2bra_v(void)
 {
-	return 0x000000f1;
+	return 0x000000f1U;
 }
 static inline u32 gmmu_pte_kind_c64_ms4_4cbra_v(void)
 {
-	return 0x0000002d;
+	return 0x0000002dU;
 }
 static inline u32 gmmu_pte_kind_c64_ms8_ms16_2c_v(void)
 {
-	return 0x000000f2;
+	return 0x000000f2U;
 }
 static inline u32 gmmu_pte_kind_c64_ms8_ms16_2cra_v(void)
 {
-	return 0x000000f3;
+	return 0x000000f3U;
 }
 static inline u32 gmmu_pte_kind_c128_2c_v(void)
 {
-	return 0x000000f4;
+	return 0x000000f4U;
 }
 static inline u32 gmmu_pte_kind_c128_2cr_v(void)
 {
-	return 0x000000f5;
+	return 0x000000f5U;
 }
 static inline u32 gmmu_pte_kind_c128_ms2_2c_v(void)
 {
-	return 0x000000f6;
+	return 0x000000f6U;
 }
 static inline u32 gmmu_pte_kind_c128_ms2_2cr_v(void)
 {
-	return 0x000000f7;
+	return 0x000000f7U;
 }
 static inline u32 gmmu_pte_kind_c128_ms4_2c_v(void)
 {
-	return 0x000000f8;
+	return 0x000000f8U;
 }
 static inline u32 gmmu_pte_kind_c128_ms4_2cr_v(void)
 {
-	return 0x000000f9;
+	return 0x000000f9U;
 }
 static inline u32 gmmu_pte_kind_c128_ms8_ms16_2c_v(void)
 {
-	return 0x000000fa;
+	return 0x000000faU;
 }
 static inline u32 gmmu_pte_kind_c128_ms8_ms16_2cr_v(void)
 {
-	return 0x000000fb;
+	return 0x000000fbU;
 }
 static inline u32 gmmu_pte_kind_x8c24_v(void)
 {
-	return 0x000000fc;
+	return 0x000000fcU;
 }
 static inline u32 gmmu_pte_kind_pitch_no_swizzle_v(void)
 {
-	return 0x000000fd;
+	return 0x000000fdU;
 }
 static inline u32 gmmu_pte_kind_smsked_message_v(void)
 {
-	return 0x000000ca;
+	return 0x000000caU;
 }
 static inline u32 gmmu_pte_kind_smhost_message_v(void)
 {
-	return 0x000000cb;
+	return 0x000000cbU;
 }
 static inline u32 gmmu_pte_kind_s8_v(void)
 {
-	return 0x0000002a;
+	return 0x0000002aU;
 }
 static inline u32 gmmu_pte_kind_s8_2s_v(void)
 {
-	return 0x0000002b;
+	return 0x0000002bU;
 }
 #endif

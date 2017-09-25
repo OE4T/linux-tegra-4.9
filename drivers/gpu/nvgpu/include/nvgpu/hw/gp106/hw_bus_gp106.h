@@ -58,166 +58,166 @@
 
 static inline u32 bus_bar0_window_r(void)
 {
-	return 0x00001700;
+	return 0x00001700U;
 }
 static inline u32 bus_bar0_window_base_f(u32 v)
 {
-	return (v & 0xffffff) << 0;
+	return (v & 0xffffffU) << 0U;
 }
 static inline u32 bus_bar0_window_target_vid_mem_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 bus_bar0_window_target_sys_mem_coherent_f(void)
 {
-	return 0x2000000;
+	return 0x2000000U;
 }
 static inline u32 bus_bar0_window_target_sys_mem_noncoherent_f(void)
 {
-	return 0x3000000;
+	return 0x3000000U;
 }
 static inline u32 bus_bar0_window_target_bar0_window_base_shift_v(void)
 {
-	return 0x00000010;
+	return 0x00000010U;
 }
 static inline u32 bus_bar1_block_r(void)
 {
-	return 0x00001704;
+	return 0x00001704U;
 }
 static inline u32 bus_bar1_block_ptr_f(u32 v)
 {
-	return (v & 0xfffffff) << 0;
+	return (v & 0xfffffffU) << 0U;
 }
 static inline u32 bus_bar1_block_target_vid_mem_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 bus_bar1_block_target_sys_mem_coh_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 bus_bar1_block_target_sys_mem_ncoh_f(void)
 {
-	return 0x30000000;
+	return 0x30000000U;
 }
 static inline u32 bus_bar1_block_mode_virtual_f(void)
 {
-	return 0x80000000;
+	return 0x80000000U;
 }
 static inline u32 bus_bar2_block_r(void)
 {
-	return 0x00001714;
+	return 0x00001714U;
 }
 static inline u32 bus_bar2_block_ptr_f(u32 v)
 {
-	return (v & 0xfffffff) << 0;
+	return (v & 0xfffffffU) << 0U;
 }
 static inline u32 bus_bar2_block_target_vid_mem_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 bus_bar2_block_target_sys_mem_coh_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 bus_bar2_block_target_sys_mem_ncoh_f(void)
 {
-	return 0x30000000;
+	return 0x30000000U;
 }
 static inline u32 bus_bar2_block_mode_virtual_f(void)
 {
-	return 0x80000000;
+	return 0x80000000U;
 }
 static inline u32 bus_bar1_block_ptr_shift_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 bus_bar2_block_ptr_shift_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 bus_bind_status_r(void)
 {
-	return 0x00001710;
+	return 0x00001710U;
 }
 static inline u32 bus_bind_status_bar1_pending_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 bus_bind_status_bar1_pending_empty_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 bus_bind_status_bar1_pending_busy_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 bus_bind_status_bar1_outstanding_v(u32 r)
 {
-	return (r >> 1) & 0x1;
+	return (r >> 1U) & 0x1U;
 }
 static inline u32 bus_bind_status_bar1_outstanding_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 bus_bind_status_bar1_outstanding_true_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 bus_bind_status_bar2_pending_v(u32 r)
 {
-	return (r >> 2) & 0x1;
+	return (r >> 2U) & 0x1U;
 }
 static inline u32 bus_bind_status_bar2_pending_empty_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 bus_bind_status_bar2_pending_busy_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 bus_bind_status_bar2_outstanding_v(u32 r)
 {
-	return (r >> 3) & 0x1;
+	return (r >> 3U) & 0x1U;
 }
 static inline u32 bus_bind_status_bar2_outstanding_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 bus_bind_status_bar2_outstanding_true_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 bus_intr_0_r(void)
 {
-	return 0x00001100;
+	return 0x00001100U;
 }
 static inline u32 bus_intr_0_pri_squash_m(void)
 {
-	return 0x1 << 1;
+	return 0x1U << 1U;
 }
 static inline u32 bus_intr_0_pri_fecserr_m(void)
 {
-	return 0x1 << 2;
+	return 0x1U << 2U;
 }
 static inline u32 bus_intr_0_pri_timeout_m(void)
 {
-	return 0x1 << 3;
+	return 0x1U << 3U;
 }
 static inline u32 bus_intr_en_0_r(void)
 {
-	return 0x00001140;
+	return 0x00001140U;
 }
 static inline u32 bus_intr_en_0_pri_squash_m(void)
 {
-	return 0x1 << 1;
+	return 0x1U << 1U;
 }
 static inline u32 bus_intr_en_0_pri_fecserr_m(void)
 {
-	return 0x1 << 2;
+	return 0x1U << 2U;
 }
 static inline u32 bus_intr_en_0_pri_timeout_m(void)
 {
-	return 0x1 << 3;
+	return 0x1U << 3U;
 }
 #endif

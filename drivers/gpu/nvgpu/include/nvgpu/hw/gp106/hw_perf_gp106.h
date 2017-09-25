@@ -58,154 +58,154 @@
 
 static inline u32 perf_pmasys_control_r(void)
 {
-	return 0x001b4000;
+	return 0x001b4000U;
 }
 static inline u32 perf_pmasys_control_membuf_status_v(u32 r)
 {
-	return (r >> 4) & 0x1;
+	return (r >> 4U) & 0x1U;
 }
 static inline u32 perf_pmasys_control_membuf_status_overflowed_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 perf_pmasys_control_membuf_status_overflowed_f(void)
 {
-	return 0x10;
+	return 0x10U;
 }
 static inline u32 perf_pmasys_control_membuf_clear_status_f(u32 v)
 {
-	return (v & 0x1) << 5;
+	return (v & 0x1U) << 5U;
 }
 static inline u32 perf_pmasys_control_membuf_clear_status_v(u32 r)
 {
-	return (r >> 5) & 0x1;
+	return (r >> 5U) & 0x1U;
 }
 static inline u32 perf_pmasys_control_membuf_clear_status_doit_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 perf_pmasys_control_membuf_clear_status_doit_f(void)
 {
-	return 0x20;
+	return 0x20U;
 }
 static inline u32 perf_pmasys_mem_block_r(void)
 {
-	return 0x001b4070;
+	return 0x001b4070U;
 }
 static inline u32 perf_pmasys_mem_block_base_f(u32 v)
 {
-	return (v & 0xfffffff) << 0;
+	return (v & 0xfffffffU) << 0U;
 }
 static inline u32 perf_pmasys_mem_block_target_f(u32 v)
 {
-	return (v & 0x3) << 28;
+	return (v & 0x3U) << 28U;
 }
 static inline u32 perf_pmasys_mem_block_target_v(u32 r)
 {
-	return (r >> 28) & 0x3;
+	return (r >> 28U) & 0x3U;
 }
 static inline u32 perf_pmasys_mem_block_target_lfb_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 perf_pmasys_mem_block_target_lfb_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 perf_pmasys_mem_block_target_sys_coh_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 perf_pmasys_mem_block_target_sys_coh_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 perf_pmasys_mem_block_target_sys_ncoh_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 perf_pmasys_mem_block_target_sys_ncoh_f(void)
 {
-	return 0x30000000;
+	return 0x30000000U;
 }
 static inline u32 perf_pmasys_mem_block_valid_f(u32 v)
 {
-	return (v & 0x1) << 31;
+	return (v & 0x1U) << 31U;
 }
 static inline u32 perf_pmasys_mem_block_valid_v(u32 r)
 {
-	return (r >> 31) & 0x1;
+	return (r >> 31U) & 0x1U;
 }
 static inline u32 perf_pmasys_mem_block_valid_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 perf_pmasys_mem_block_valid_true_f(void)
 {
-	return 0x80000000;
+	return 0x80000000U;
 }
 static inline u32 perf_pmasys_mem_block_valid_false_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 perf_pmasys_mem_block_valid_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 perf_pmasys_outbase_r(void)
 {
-	return 0x001b4074;
+	return 0x001b4074U;
 }
 static inline u32 perf_pmasys_outbase_ptr_f(u32 v)
 {
-	return (v & 0x7ffffff) << 5;
+	return (v & 0x7ffffffU) << 5U;
 }
 static inline u32 perf_pmasys_outbaseupper_r(void)
 {
-	return 0x001b4078;
+	return 0x001b4078U;
 }
 static inline u32 perf_pmasys_outbaseupper_ptr_f(u32 v)
 {
-	return (v & 0xff) << 0;
+	return (v & 0xffU) << 0U;
 }
 static inline u32 perf_pmasys_outsize_r(void)
 {
-	return 0x001b407c;
+	return 0x001b407cU;
 }
 static inline u32 perf_pmasys_outsize_numbytes_f(u32 v)
 {
-	return (v & 0x7ffffff) << 5;
+	return (v & 0x7ffffffU) << 5U;
 }
 static inline u32 perf_pmasys_mem_bytes_r(void)
 {
-	return 0x001b4084;
+	return 0x001b4084U;
 }
 static inline u32 perf_pmasys_mem_bytes_numbytes_f(u32 v)
 {
-	return (v & 0xfffffff) << 4;
+	return (v & 0xfffffffU) << 4U;
 }
 static inline u32 perf_pmasys_mem_bump_r(void)
 {
-	return 0x001b4088;
+	return 0x001b4088U;
 }
 static inline u32 perf_pmasys_mem_bump_numbytes_f(u32 v)
 {
-	return (v & 0xfffffff) << 4;
+	return (v & 0xfffffffU) << 4U;
 }
 static inline u32 perf_pmasys_enginestatus_r(void)
 {
-	return 0x001b40a4;
+	return 0x001b40a4U;
 }
 static inline u32 perf_pmasys_enginestatus_rbufempty_f(u32 v)
 {
-	return (v & 0x1) << 4;
+	return (v & 0x1U) << 4U;
 }
 static inline u32 perf_pmasys_enginestatus_rbufempty_empty_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 perf_pmasys_enginestatus_rbufempty_empty_f(void)
 {
-	return 0x10;
+	return 0x10U;
 }
 #endif

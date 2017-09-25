@@ -58,10 +58,10 @@
 
 static inline u32 fbpa_cstatus_r(void)
 {
-	return 0x009a020c;
+	return 0x009a020cU;
 }
 static inline u32 fbpa_cstatus_ramamount_v(u32 r)
 {
-	return (r >> 0) & 0x1ffff;
+	return (r >> 0U) & 0x1ffffU;
 }
 #endif

@@ -58,106 +58,106 @@
 
 static inline u32 ccsr_channel_inst_r(u32 i)
 {
-	return 0x00800000 + i*8;
+	return 0x00800000U + i*8U;
 }
 static inline u32 ccsr_channel_inst__size_1_v(void)
 {
-	return 0x00001000;
+	return 0x00001000U;
 }
 static inline u32 ccsr_channel_inst_ptr_f(u32 v)
 {
-	return (v & 0xfffffff) << 0;
+	return (v & 0xfffffffU) << 0U;
 }
 static inline u32 ccsr_channel_inst_target_vid_mem_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ccsr_channel_inst_target_sys_mem_coh_f(void)
 {
-	return 0x20000000;
+	return 0x20000000U;
 }
 static inline u32 ccsr_channel_inst_target_sys_mem_ncoh_f(void)
 {
-	return 0x30000000;
+	return 0x30000000U;
 }
 static inline u32 ccsr_channel_inst_bind_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ccsr_channel_inst_bind_true_f(void)
 {
-	return 0x80000000;
+	return 0x80000000U;
 }
 static inline u32 ccsr_channel_r(u32 i)
 {
-	return 0x00800004 + i*8;
+	return 0x00800004U + i*8U;
 }
 static inline u32 ccsr_channel__size_1_v(void)
 {
-	return 0x00001000;
+	return 0x00001000U;
 }
 static inline u32 ccsr_channel_enable_v(u32 r)
 {
-	return (r >> 0) & 0x1;
+	return (r >> 0U) & 0x1U;
 }
 static inline u32 ccsr_channel_enable_set_f(u32 v)
 {
-	return (v & 0x1) << 10;
+	return (v & 0x1U) << 10U;
 }
 static inline u32 ccsr_channel_enable_set_true_f(void)
 {
-	return 0x400;
+	return 0x400U;
 }
 static inline u32 ccsr_channel_enable_clr_true_f(void)
 {
-	return 0x800;
+	return 0x800U;
 }
 static inline u32 ccsr_channel_status_v(u32 r)
 {
-	return (r >> 24) & 0xf;
+	return (r >> 24U) & 0xfU;
 }
 static inline u32 ccsr_channel_status_pending_ctx_reload_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 ccsr_channel_status_pending_acq_ctx_reload_v(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 ccsr_channel_status_on_pbdma_ctx_reload_v(void)
 {
-	return 0x0000000a;
+	return 0x0000000aU;
 }
 static inline u32 ccsr_channel_status_on_pbdma_and_eng_ctx_reload_v(void)
 {
-	return 0x0000000b;
+	return 0x0000000bU;
 }
 static inline u32 ccsr_channel_status_on_eng_ctx_reload_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 ccsr_channel_status_on_eng_pending_ctx_reload_v(void)
 {
-	return 0x0000000d;
+	return 0x0000000dU;
 }
 static inline u32 ccsr_channel_status_on_eng_pending_acq_ctx_reload_v(void)
 {
-	return 0x0000000e;
+	return 0x0000000eU;
 }
 static inline u32 ccsr_channel_next_v(u32 r)
 {
-	return (r >> 1) & 0x1;
+	return (r >> 1U) & 0x1U;
 }
 static inline u32 ccsr_channel_next_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ccsr_channel_force_ctx_reload_true_f(void)
 {
-	return 0x100;
+	return 0x100U;
 }
 static inline u32 ccsr_channel_busy_v(u32 r)
 {
-	return (r >> 28) & 0x1;
+	return (r >> 28U) & 0x1U;
 }
 #endif

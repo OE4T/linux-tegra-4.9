@@ -130,7 +130,7 @@ static void __dma_dbg(struct gk20a *g, size_t size, unsigned long flags,
 	__dma_dbg_done(g, size, type, "free")
 
 #if defined(CONFIG_GK20A_VIDMEM)
-static u64 __nvgpu_dma_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,
+static u64 __nvgpu_dma_alloc(struct nvgpu_allocator *allocator, u64 at,
 				size_t size)
 {
 	u64 addr = 0;
@@ -290,7 +290,7 @@ int nvgpu_dma_alloc_flags_vid(struct gk20a *g, unsigned long flags,
 }
 
 int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
-		size_t size, struct nvgpu_mem *mem, dma_addr_t at)
+		size_t size, struct nvgpu_mem *mem, u64 at)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	u64 addr;

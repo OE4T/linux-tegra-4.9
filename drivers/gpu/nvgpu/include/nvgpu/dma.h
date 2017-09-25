@@ -172,7 +172,7 @@ int nvgpu_dma_alloc_flags_vid(struct gk20a *g, unsigned long flags,
  *   %NVGPU_DMA_NO_KERNEL_MAPPING
  */
 int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
-		size_t size, struct nvgpu_mem *mem, dma_addr_t at);
+		size_t size, struct nvgpu_mem *mem, u64 at);
 
 /**
  * nvgpu_dma_free - Free a DMA allocation

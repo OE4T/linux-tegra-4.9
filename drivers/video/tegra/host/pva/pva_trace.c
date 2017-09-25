@@ -70,9 +70,6 @@ void pva_trace_copy_to_ftrace(struct pva *pva)
 	trace = &pva->pva_trace;
 	th = (struct pva_trace_header *)trace->addr;
 
-	nvhost_dbg_info("th->block_size: %u\tth->head_offset: %u\tth->tail_offset: %u\n",
-			th->block_size, th->head_offset, th->tail_offset);
-
 	/*
 	 * Read from current head to tail offset. Though tail offset might
 	 * get change in background by FW. Read till current tail ONLY.
@@ -80,6 +77,10 @@ void pva_trace_copy_to_ftrace(struct pva *pva)
 	if ((th == NULL) || !th->block_size || !th->head_offset
 		|| !th->tail_offset)
 		return;
+
+	nvhost_dbg_info("th->block_size: %u\tth->head_offset: %u\tth->tail_offset: %u\n",
+			th->block_size, th->head_offset, th->tail_offset);
+
 	/*
 	 * If head_offset and tail_offset are same, nothing to read.
 	 */

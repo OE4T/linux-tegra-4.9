@@ -34,6 +34,7 @@
 
 struct page;
 struct sg_table;
+struct nvgpu_sgt;
 
 struct gk20a;
 struct nvgpu_allocator;

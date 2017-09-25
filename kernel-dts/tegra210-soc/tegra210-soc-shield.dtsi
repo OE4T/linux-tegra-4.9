@@ -405,9 +405,17 @@
 		status = "disabled";
 	};
 
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
+	aconnect@702c0000 {
+#endif
+
 	adsp {
 		status = "okay";
 	};
+
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
+	};
+#endif
 
 	pcie-controller@1003000 {
 		status = "disabled";

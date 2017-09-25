@@ -395,6 +395,54 @@
 			clock-names = "clk";
 
 		};
+
+		adsp {
+			compatible = "nvidia,tegra210-adsp";
+			wakeup-disable;
+			interrupt-parent = <&tegra_agic>;
+			reg = <0x0 0x702ef000 0x0 0x1000>, /* AMC */
+			      <0x0 0x702ec000 0x0 0x2000>, /* AMISC */
+			      <0x0 0x702ee000 0x0 0x1000>, /* ABRIDGE */
+			      <0x0 0x702dc800 0x0 0x0>, /* FPGA RESET REG */
+			      <0x0 0x0 0x0 0x1>, /* AHSP */
+			      <0x0 0x01000000 0x0 0x6f2c0000>, /* DRAM MAP1 */
+			      <0x0 0x70300000 0x0 0x8fd00000>; /* DRAM MAP2 */
+			iommus = <&smmu TEGRA_SWGROUP_APE>;
+			nvidia,adsp_mem = <0x80300000 0x01000000>, /* ADSP OS */
+					  <0x80B00000 0x00800000>, /* ADSP APP */
+					  <0x00400000 0x00010000>, /* ARAM ALIAS 0 */
+					  <0x80300000 0x00200000>; /* ACSR */
+			nvidia,adsp-evp-base = <0x702ef700 0x00000040>;
+			interrupts = <GIC_SPI INT_AMISC_MBOX_EMPTY1 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST>, /* MBOX SEND */
+				     <GIC_SPI INT_AMISC_MBOX_FULL0 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST>, /* MBOX RECV */
+				      <GIC_SPI INT_ADSP_WDT IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST>, /* Watchdog */
+				     <GIC_SPI INT_WFI IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST>, /* WFI */
+				     <GIC_SPI INT_AMC_ERR IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST>, /* AMC ERR IRQ */
+				     <GIC_SPI INT_ADSP_ACTMON IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST>, /* ADSP ACTMON IRQ */
+				     <GIC_SPI INT_AMISC_MBOX_EMPTY0 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ADSP MBOX SEND */
+				     <GIC_SPI INT_AMISC_MBOX_FULL1 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ADSP MBOX RECV */
+				     <GIC_SPI INT_AMISC_MBOX_FULL2 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>; /* ADSP FIQ HANDLER */
+			clocks = <&tegra_car TEGRA210_CLK_ADSP_APE>,
+				 <&tegra_car TEGRA210_CLK_APB2APE>,
+				 <&tegra_car TEGRA210_CLK_ADSP_NEON>,
+				 <&tegra_car TEGRA210_CLK_ADSP>,
+				 <&tegra_car TEGRA210_CLK_ADSP_CPU_ABUS>;
+			clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
+				      "adsp", "adsp_cpu_abus";
+			resets = <&tegra_car TEGRA210_RST_ADSP>;
+			reset-names = "adspall";
+			nvidia,adsp_unit_fpga_reset = <0x0 0x00000040>;
+			status = "disabled";
+		};
 	};
 #else
 	tegra_agic: agic-controller {
@@ -410,8 +458,58 @@
 		interrupts = <0 102 0xf04>;
 		status = "disabled";
 	};
-#endif
 
+       adsp {
+            compatible = "nvidia,tegra210-adsp";
+            wakeup-disable;
+            interrupt-parent = <&tegra_agic>;
+            reg = <0x0 0x702ef000 0x0 0x1000>, /* AMC */
+                  <0x0 0x702ec000 0x0 0x2000>, /* AMISC */
+                  <0x0 0x702ee000 0x0 0x1000>, /* ABRIDGE */
+                  <0x0 0x702dc800 0x0 0x0>, /* FPGA RESET REG */
+                  <0x0 0x0 0x0 0x1>, /* AHSP */
+                 <0x0 0x01000000 0x0 0x6f2c0000>, /* DRAM MAP1 */
+                  <0x0 0x70300000 0x0 0x8fd00000>; /* DRAM MAP2 */
+            iommus = <&smmu TEGRA_SWGROUP_APE>;
+            power-domains = <&adsp_pd>;
+            nvidia,adsp_mem = <0x80300000 0x01000000>, /* ADSP OS */
+                              <0x80B00000 0x00800000>, /* ADSP APP */
+                              <0x00400000 0x00010000>, /* ARAM ALIAS 0 */
+                             <0x80300000 0x00200000>; /* ACSR */
+            nvidia,adsp-evp-base = <0x702ef700 0x00000040>;
+            interrupts = <GIC_SPI INT_AMISC_MBOX_EMPTY1 IRQ_TYPE_LEVEL_HIGH
+                               ROUTE_TO_HOST>, /* MBOX SEND */
+                            <GIC_SPI INT_AMISC_MBOX_FULL0 IRQ_TYPE_LEVEL_HIGH
+                               ROUTE_TO_HOST>, /* MBOX RECV */
+                            <GIC_SPI INT_ADSP_WDT IRQ_TYPE_LEVEL_HIGH
+                               ROUTE_TO_HOST>, /* Watchdog */
+                           <GIC_SPI INT_WFI IRQ_TYPE_LEVEL_HIGH
+                               ROUTE_TO_HOST>, /* WFI */
+                            <GIC_SPI INT_AMC_ERR IRQ_TYPE_LEVEL_HIGH
+                               ROUTE_TO_HOST>, /* AMC ERR IRQ */
+                            <GIC_SPI INT_ADSP_ACTMON IRQ_TYPE_LEVEL_HIGH
+                               ROUTE_TO_HOST>, /* ADSP ACTMON IRQ */
+                            <GIC_SPI INT_AMISC_MBOX_EMPTY0 IRQ_TYPE_LEVEL_HIGH
+                              ROUTE_TO_ADSP>, /* ADSP MBOX SEND */
+                            <GIC_SPI INT_AMISC_MBOX_FULL1 IRQ_TYPE_LEVEL_HIGH
+                               ROUTE_TO_ADSP>, /* ADSP MBOX RECV */
+                            <GIC_SPI INT_AMISC_MBOX_FULL2 IRQ_TYPE_LEVEL_HIGH
+                               ROUTE_TO_ADSP>; /* ADSP FIQ HANDLER */
+               clocks = <&tegra_car TEGRA210_CLK_ADSP_APE>,
+                       <&tegra_car TEGRA210_CLK_APB2APE>,
+                       <&tegra_car TEGRA210_CLK_ADSP_NEON>,
+                       <&tegra_car TEGRA210_CLK_ADSP>,
+                       <&tegra_car TEGRA210_CLK_APE_EMC>,
+                       <&tegra_car TEGRA210_CLK_ADSP_CPU_ABUS>;
+               clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
+                               "adsp", "adsp.emc", "adsp_cpu_abus";
+               resets = <&tegra_car TEGRA210_RST_ADSP>;
+               reset-names = "adspall";
+           nvidia,adsp_unit_fpga_reset = <0x0 0x00000040>;
+            status = "disabled";
+       };
+
+#endif
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupt-parent = <&intc>;
@@ -1704,55 +1802,7 @@
 	};
 #endif
 
-	adsp {
-	     compatible = "nvidia,tegra210-adsp";
-	     wakeup-disable;
-	     interrupt-parent = <&tegra_agic>;
-	     reg = <0x0 0x702ef000 0x0 0x1000>, /* AMC */
-		   <0x0 0x702ec000 0x0 0x2000>, /* AMISC */
-		   <0x0 0x702ee000 0x0 0x1000>, /* ABRIDGE */
-		   <0x0 0x702dc800 0x0 0x0>, /* FPGA RESET REG */
-		   <0x0 0x0 0x0 0x1>, /* AHSP */
-		   <0x0 0x01000000 0x0 0x6f2c0000>, /* DRAM MAP1 */
-		   <0x0 0x70300000 0x0 0x8fd00000>; /* DRAM MAP2 */
-	     iommus = <&smmu TEGRA_SWGROUP_APE>;
-	     power-domains = <&adsp_pd>;
-	     nvidia,adsp_mem = <0x80300000 0x01000000>, /* ADSP OS */
-			       <0x80B00000 0x00800000>, /* ADSP APP */
-			       <0x00400000 0x00010000>, /* ARAM ALIAS 0 */
-			       <0x80300000 0x00200000>; /* ACSR */
-	     nvidia,adsp-evp-base = <0x702ef700 0x00000040>;
-	     interrupts = <GIC_SPI INT_AMISC_MBOX_EMPTY1 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>, /* MBOX SEND */
-			     <GIC_SPI INT_AMISC_MBOX_FULL0 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>, /* MBOX RECV */
-			     <GIC_SPI INT_ADSP_WDT IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>, /* Watchdog */
-			     <GIC_SPI INT_WFI IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>, /* WFI */
-			     <GIC_SPI INT_AMC_ERR IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>, /* AMC ERR IRQ */
-			     <GIC_SPI INT_ADSP_ACTMON IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_HOST>, /* ADSP ACTMON IRQ */
-			     <GIC_SPI INT_AMISC_MBOX_EMPTY0 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_ADSP>, /* ADSP MBOX SEND */
-			     <GIC_SPI INT_AMISC_MBOX_FULL1 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_ADSP>, /* ADSP MBOX RECV */
-			     <GIC_SPI INT_AMISC_MBOX_FULL2 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_ADSP>; /* ADSP FIQ HANDLER */
-		clocks = <&tegra_car TEGRA210_CLK_ADSP_APE>,
-			<&tegra_car TEGRA210_CLK_APB2APE>,
-			<&tegra_car TEGRA210_CLK_ADSP_NEON>,
-			<&tegra_car TEGRA210_CLK_ADSP>,
-			<&tegra_car TEGRA210_CLK_APE_EMC>,
-			<&tegra_car TEGRA210_CLK_ADSP_CPU_ABUS>;
-		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
-				"adsp", "adsp.emc", "adsp_cpu_abus";
-		resets = <&tegra_car TEGRA210_RST_ADSP>;
-		reset-names = "adspall";
-	     nvidia,adsp_unit_fpga_reset = <0x0 0x00000040>;
-	     status = "disabled";
-	};
+
 
 	hda@70030000 {
 		compatible = "nvidia,tegra30-hda";

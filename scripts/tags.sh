@@ -21,8 +21,12 @@ ignore="$ignore ( -name *.mod.c ) -prune -o"
 # to force full paths for a non-O= build
 if [ "${KBUILD_SRC}" = "" ]; then
 	tree=
+	tree_nvgpu=
+	tree_nvidia=
 else
 	tree=${srctree}/
+	tree_nvgpu=${srctree}/../nvgpu/
+	tree_nvidia=${srctree}/../nvidia/
 fi
 
 # ignore userspace tools
@@ -76,7 +80,7 @@ find_include_sources()
 # we could benefit from a list of dirs to search in here
 find_other_sources()
 {
-	find ${tree}* $ignore \
+	find ${tree}* ${tree_nvgpu}* ${tree_nvidia}* $ignore \
 	     \( -name include -o -name arch -o -name '.tmp_*' \) -prune -o \
 	       -name "$1" -not -type l -print;
 }

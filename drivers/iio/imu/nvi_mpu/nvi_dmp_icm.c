@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1422,7 +1422,7 @@ static int nvi_dmp_en(struct nvi_state *st)
 }
 
 #if ICM_DMP_FW_VER == 0
-static const u8 const dmp_fw_20628[] = {
+static const u8 dmp_fw_20628[] = {
 	/* bank 0: 0x0090 */
 	0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2330,7 +2330,7 @@ static const u8 const dmp_fw_20628[] = {
 	0x00, 0xD8, 0xF1, 0xFF
 };
 #elif ICM_DMP_FW_VER == 1
-static const u8 const dmp_fw_20628[] = {
+static const u8 dmp_fw_20628[] = {
 	/* bank 0: 0x0090 */
 	0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -3240,7 +3240,7 @@ static const u8 const dmp_fw_20628[] = {
 	0xD9, 0x00, 0xD8, 0xF1, 0xFF
 };
 #else /* ICM_DMP_FW_VER == 2 */
-static const u8 const dmp_fw_20628[] = {
+static const u8 dmp_fw_20628[] = {
 	/* bank 0: 0x0090 */
 	0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

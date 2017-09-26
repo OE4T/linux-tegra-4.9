@@ -382,7 +382,7 @@ struct aux_ports {
 };
 
 struct nvi_dmp {
-	const u8 const *fw;
+	const u8 *fw;
 	unsigned int fw_ver;
 	unsigned int fw_len;
 	unsigned int fw_crc32;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -705,7 +705,7 @@ static int nvi_dmp_en(struct nvi_state *st)
 	return ret;
 }
 
-static const u8 const dmp_fw_6515[] = {
+static const u8 dmp_fw_6515[] = {
 	/* bank 0: 0x0020 */
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

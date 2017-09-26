@@ -33,6 +33,10 @@
 #define TEGRA_CRYPTO_KEY_256_SIZE	32
 #define TEGRA_CRYPTO_KEY_192_SIZE	24
 #define TEGRA_CRYPTO_KEY_128_SIZE	16
+/* 14 AES key slots chosen for keyslt_test, leaving ssk/srk keyslots for which
+ * driver does not allocate slots
+ */
+#define TEGRA_CRYPTO_AES_TEST_KEYSLOTS	14
 
 #define CRYPTO_KEY_LEN_MASK	0x3FF
 
@@ -130,6 +134,7 @@ struct tegra_crypt_req {
 	int plaintext_sz;
 	int skip_key;
 	int skip_iv;
+	bool skip_exit;
 };
 #define TEGRA_CRYPTO_IOCTL_PROCESS_REQ	\
 		_IOWR(0x98, 101, struct tegra_crypt_req)

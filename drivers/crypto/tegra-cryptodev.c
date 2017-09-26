@@ -73,6 +73,7 @@ struct tegra_crypto_ctx {
 	struct crypto_rng *rng_drbg;
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
 	int use_ssk;
+	bool skip_exit;
 };
 
 struct tegra_crypto_completion {
@@ -168,12 +169,40 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 static int tegra_crypto_dev_release(struct inode *inode, struct file *filp)
 {
 	struct tegra_crypto_ctx *ctx = filp->private_data;
+	int i = 0;
+	static int tfm_index;
+	int ret = 0;
 
-	if (ctx->aes_tfm[TEGRA_CRYPTO_CBC])
+	/* store_tfm is needed to store the tfms in order to free them
+	 * later when skip_exit becomes false
+	 */
+	static struct crypto_skcipher *store_tfm[
+					TEGRA_CRYPTO_AES_TEST_KEYSLOTS];
+
+	/* Only when skip_exit is false, the concerned tfm is freed,
+	 * else it is just saved in store_tfm that is freed later
+	 */
+	if (tfm_index >= TEGRA_CRYPTO_AES_TEST_KEYSLOTS) {
+		pr_err("Invalid key slot index usage: %d\n", tfm_index);
+		ret = -ERANGE;
+		goto out;
+	}
+
+	if (ctx->aes_tfm[TEGRA_CRYPTO_CBC] && ctx->skip_exit)
+		store_tfm[tfm_index++] = ctx->aes_tfm[TEGRA_CRYPTO_CBC];
+
+	if (ctx->aes_tfm[TEGRA_CRYPTO_CBC] && !ctx->skip_exit) {
 		crypto_free_skcipher(ctx->aes_tfm[TEGRA_CRYPTO_CBC]);
+
+		for (i = tfm_index - 1; i >= 0; i--)
+			crypto_free_skcipher(store_tfm[i]);
+		tfm_index = 0;
+	}
+out:
 	kfree(ctx);
 	filp->private_data = NULL;
-	return 0;
+
+	return ret;
 }
 
 static void tegra_crypt_complete(struct crypto_async_request *req, int err)
@@ -189,7 +218,6 @@ static void tegra_crypt_complete(struct crypto_async_request *req, int err)
 static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 				struct tegra_crypt_req *crypt_req)
 {
-
 	struct crypto_skcipher *tfm;
 	struct skcipher_request *req = NULL;
 	struct scatterlist in_sg;
@@ -218,6 +246,8 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 		filp->private_data = ctx;
 	} else {
 		tfm = ctx->aes_tfm[TEGRA_CRYPTO_CBC];
+		ctx->skip_exit = crypt_req->skip_exit;
+		filp->private_data = ctx;
 	}
 
 	req = skcipher_request_alloc(tfm, GFP_KERNEL);

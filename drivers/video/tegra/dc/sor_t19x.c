@@ -153,9 +153,10 @@ inline void tegra_sor_set_clk_rate_t19x(struct tegra_dc_sor_data *sor)
 u32 tegra_sor_get_pixel_depth_t19x(struct tegra_dc *dc)
 {
 	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
+	int yuv_bypass_mode = dc->mode.vmode & FB_VMODE_BYPASS;
 	u32 pixel_depth = 0;
 
-	if (dc->out->type == TEGRA_DC_OUT_HDMI && !dc->yuv_bypass) {
+	if (dc->out->type == TEGRA_DC_OUT_HDMI && !yuv_bypass_mode) {
 		if (tegra_dc_is_yuv420_8bpc(yuv_flag)) {
 			pixel_depth = NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_12_420 |
 				NV_SOR_STATE1_ASY_CHROMA_V_DECIMATE_ENABLE;

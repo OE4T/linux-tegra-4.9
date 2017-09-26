@@ -835,8 +835,6 @@ int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win);
 void tegra_nvdisp_sysfs_enable_crc(struct tegra_dc *dc);
 void tegra_nvdisp_sysfs_disable_crc(struct tegra_dc *dc);
 u32 tegra_nvdisp_sysfs_read_rg_crc(struct tegra_dc *dc);
-int tegra_nvdisp_program_mode(struct tegra_dc *dc,
-			struct tegra_dc_mode *mode);
 void tegra_nvdisp_underflow_handler(struct tegra_dc *dc);
 int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
 void reg_dump(struct tegra_dc *dc, void *data,
@@ -932,6 +930,8 @@ void tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc);
 void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
 int tegra_nvdisp_test_and_set_compclk(unsigned long rate, struct tegra_dc *dc);
+int tegra_nvdisp_program_mode(struct tegra_dc *dc,
+			struct tegra_dc_mode *mode);
 #else
 static inline int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 					  struct tegra_dc_ext_crc_conf *conf)
@@ -981,6 +981,11 @@ static inline void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc)
 }
 static inline int tegra_nvdisp_test_and_set_compclk(unsigned long rate,
 						    struct tegra_dc *dc)
+{
+	return -ENOTSUPP;
+}
+static inline int tegra_nvdisp_program_mode(struct tegra_dc *dc,
+			struct tegra_dc_mode *mode)
 {
 	return -ENOTSUPP;
 }

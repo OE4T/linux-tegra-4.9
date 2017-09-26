@@ -716,12 +716,12 @@ int tegra_dc_update_mode(struct tegra_dc *dc)
 {
 	int ret = 0;
 
-	if (dc->mode_dirty)
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		ret = tegra_nvdisp_program_mode(dc, &dc->mode);
-#else
-		ret = tegra_dc_program_mode(dc, &dc->mode);
-#endif
+	if (dc->mode_dirty) {
+		if (tegra_dc_is_nvdisplay())
+			ret = tegra_nvdisp_program_mode(dc, &dc->mode);
+		else
+			ret = tegra_dc_program_mode(dc, &dc->mode);
+	}
 
 	/* Update tracing constants */
 	if (!dc->mode_dirty) {

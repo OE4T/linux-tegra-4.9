@@ -565,6 +565,7 @@ void tegra_hda_enable(void *hda_handle)
 	mutex_unlock(&global_hda_lock);
 
 	tegra_hdmi_setup_hda_presence(hda->dev_id);
+	tegra_hdmi_setup_audio_freq_source(hda->audio_freq, HDA, hda->dev_id);
 }
 
 void tegra_hda_disable(void *hda_handle)

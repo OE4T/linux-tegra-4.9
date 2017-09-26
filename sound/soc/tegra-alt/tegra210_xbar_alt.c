@@ -1515,6 +1515,13 @@ static int tegra_dev_xbar_probe(struct platform_device *pdev)
 	struct tegra_xbar_soc_data *soc_data;
 	int ret;
 
+	/* required to register the xbar codec with generic name */
+	if (dev_set_name(&pdev->dev, "%s", DRV_NAME) < 0) {
+		dev_err(&pdev->dev, "error in setting xbar device name\n");
+		ret = -ENODEV;
+		goto err;
+	}
+
 	match = of_match_device(tegra_xbar_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");

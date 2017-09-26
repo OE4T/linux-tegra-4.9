@@ -119,7 +119,7 @@ static struct snd_soc_dai_link
 		.cpu_dai_name = "ARAD OUT",
 		.codec_dai_name = "ARAD1",
 		.cpu_name = "tegra186-arad",
-		.codec_name = "2900800.ahub",
+		.codec_name = "tegra210-axbar",
 		.params = &tegra_t186ref_arad_link_params[0],
 	},
 };
@@ -130,8 +130,8 @@ static struct snd_soc_dai_link
 		.stream_name = "ADSP EAVB",
 		.cpu_dai_name = "ADSP EAVB",
 		.codec_dai_name = "ADSP-EAVB",
-		.cpu_name = ADSP_CPU_NAME,
-		.codec_name = ADSP_CPU_NAME,
+		.cpu_name = "tegra210-adsp",
+		.codec_name = "tegra210-adsp",
 		.params = &tegra_t186ref_eavb_link_params[0],
 	},
 };

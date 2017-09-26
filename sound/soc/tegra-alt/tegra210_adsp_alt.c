@@ -4871,6 +4871,11 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 
 	pr_info("tegra210_adsp_audio_platform_probe: platform probe started\n");
 
+	if (dev_set_name(&pdev->dev, "%s", DRV_NAME_ADSP) < 0) {
+		dev_err(&pdev->dev, "error in setting adsp device name\n");
+		return -ENODEV;
+	}
+
 	match = of_match_device(tegra210_adsp_audio_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");

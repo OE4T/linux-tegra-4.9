@@ -19,14 +19,6 @@
 #ifndef __TEGRA_ASOC_MACHINE_ALT_H__
 #define __TEGRA_ASOC_MACHINE_ALT_H__
 
-#include <linux/version.h>
-
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 8, 0)
-#define ADSP_CPU_NAME "aconnect@2a41000:adsp_audio"
-#else
-#define ADSP_CPU_NAME "adsp_audio"
-#endif
-
 enum tegra210_xbar_dai_link {
 	TEGRA210_DAI_LINK_ADMAIF1,
 	TEGRA210_DAI_LINK_ADMAIF2,

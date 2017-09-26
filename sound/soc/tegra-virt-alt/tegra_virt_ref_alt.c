@@ -30,16 +30,7 @@
 #include "tegra210_virt_alt_admaif.h"
 #include "tegra_asoc_machine_virt_alt.h"
 #include "tegra_asoc_util_virt_alt.h"
-
-static const struct snd_soc_dapm_widget tegra_virt_dapm_widgets[] = {
-	SND_SOC_DAPM_HP("Headphone", NULL),
-	SND_SOC_DAPM_LINE("LineIn", NULL),
-};
-
-static const struct snd_soc_dapm_route tegra_virt_dapm_routes[] = {
-	{"Headphone", NULL, "OUT"},
-	{"IN", NULL, "LineIn"},
-};
+#include "tegra_asoc_xbar_virt_alt.h"
 
 
 static struct tegra_audio_metadata_cntx meta = {
@@ -56,20 +47,12 @@ static struct tegra_audio_metadata_cntx meta = {
 static struct snd_soc_card tegra_virt_t210ref_card = {
 	.name = "t210ref-virt-card",
 	.owner = THIS_MODULE,
-	.dapm_widgets = tegra_virt_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra_virt_dapm_widgets),
-	.dapm_routes = tegra_virt_dapm_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra_virt_dapm_routes),
 	.fully_routed = true,
 };
 
 static struct snd_soc_card tegra_virt_t186ref_card = {
 	.name = "t186ref-virt-card",
 	.owner = THIS_MODULE,
-	.dapm_widgets = tegra_virt_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra_virt_dapm_widgets),
-	.dapm_routes = tegra_virt_dapm_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra_virt_dapm_routes),
 	.fully_routed = true,
 };
 
@@ -146,18 +129,13 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 		card->num_links = soc_data->num_ch;
 	}
 
-	for (i = 0; i < card->num_links; i++) {
-		/* each ADMAIF has one corresponding ADSP-ADMAIF node,
-		* thus doing multiplication by 2
-		*/
-		if (i < (soc_data->num_ch * 2)) {
-			card->dai_link[i].codec_of_node =
-			of_parse_phandle(pdev->dev.of_node, "codec", 0);
-		}
-	}
-
 	if (tegra210_virt_admaif_register_component(pdev, soc_data)) {
 		dev_err(&pdev->dev, "Failed register admaif component\n");
+		return -EINVAL;
+	}
+
+	if (tegra_virt_xbar_register_codec(pdev)) {
+		dev_err(&pdev->dev, "Failed register xbar component\n");
 		return -EINVAL;
 	}
 

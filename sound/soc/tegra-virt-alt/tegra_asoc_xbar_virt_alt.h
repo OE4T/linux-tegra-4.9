@@ -34,13 +34,47 @@
 	.tlv.p = (unsigned int *) xcount,	\
 }
 
-#define MUX_ENUM_CTRL_DECL(ename, reg, src) \
-	SOC_ENUM_EXT_REG(ename, MUX_REG(reg),	\
-	src,	\
-	tegra_virt_get_route,	\
-	tegra_virt_put_route)
+#define SOC_VALUE_ENUM_WIDE(xreg, shift, xmax, xtexts, xvalues) \
+{	.reg = xreg, .shift_l = shift, .shift_r = shift, \
+	.items = xmax, .texts = xtexts, .values = xvalues, \
+	.mask = xmax ? roundup_pow_of_two(xmax) - 1 : 0}
+
+#define SOC_VALUE_ENUM_WIDE_DECL(name, xreg, shift, \
+		xtexts, xvalues) \
+	static struct soc_enum name = SOC_VALUE_ENUM_WIDE(xreg, shift, \
+					ARRAY_SIZE(xtexts), xtexts, xvalues)
+
+#define MUX_ENUM_CTRL_DECL_186(ename, id) \
+	SOC_VALUE_ENUM_WIDE_DECL(ename##_enum, MUX_REG(id), 0,	\
+			tegra_virt_t186ref_source_text, \
+			tegra_virt_t186ref_source_value); \
+	static const struct snd_kcontrol_new ename##_control = \
+		SOC_DAPM_ENUM_EXT("Route", ename##_enum,\
+				tegra_virt_get_route,\
+				tegra_virt_put_route)
 
 #define MUX_VALUE(npart, nbit) (1 + nbit + npart * 32)
+
+#define WIDGETS(sname, ename) \
+	SND_SOC_DAPM_AIF_IN(sname " RX", NULL, 0, SND_SOC_NOPM, 0, 0), \
+	SND_SOC_DAPM_MUX(sname " Mux", SND_SOC_NOPM, 0, 0, &ename##_control)
+
+#define TX_WIDGETS(sname) \
+	SND_SOC_DAPM_AIF_IN(sname " RX", NULL, 0, SND_SOC_NOPM, 0, 0)
+
+#define SND_SOC_DAPM_OUT(wname) \
+	{.id = snd_soc_dapm_spk, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = NULL,}
+
+#define SND_SOC_DAPM_IN(wname) \
+	{.id = snd_soc_dapm_mic, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = NULL,}
+
+#define CODEC_WIDGET(sname) \
+	SND_SOC_DAPM_IN(sname " MIC"), \
+	SND_SOC_DAPM_OUT(sname " HEADPHONE")
+
+
 extern const int tegra_virt_t210ref_source_value[];
 extern const char * const tegra_virt_t210ref_source_text[];
 extern const int tegra_virt_t186ref_source_value[];
@@ -51,4 +85,5 @@ int tegra_virt_get_route(struct snd_kcontrol *kcontrol,
 int tegra_virt_put_route(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 void tegra_virt_set_enum_source(const struct soc_enum *enum_virt);
+int tegra_virt_xbar_register_codec(struct platform_device *pdev);
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -48,7 +48,12 @@
 #define PVA_UCODE_SEG_R5_CRASHDUMP	15 /* space for R5 crash dump */
 #define PVA_UCODE_SEG_VPU_CRASHDUMP	16 /* space for a VPU crash dump */
 #define PVA_UCODE_SEG_TRACE_LOG		17 /* space for PVA trace logs */
-#define PVA_UCODE_SEG_NEXT		18 /* must be last */
+#define PVA_UCODE_SEG_VPU_APP_DESC	18 /* VPU Application Descriptor */
+#define PVA_UCODE_SEG_VPU_APP_INFO	19 /* VPU Application Interface Info */
+#define PVA_UCODE_SEG_VPU_APP_EXP	20 /* VPU Application DMA records */
+#define PVA_UCODE_SEG_DRAM_CACHED	21 /* cachable DRAM area */
+#define PVA_UCODE_SEG_DRAM_UNCACHED	22 /* uncached DRAM area */
+#define PVA_UCODE_SEG_NEXT		23 /* must be last */
 
 #define PVA_HDR_MAGIC		0x31415650	/* PVA1 in little endian */
 #define PVA_HDR_VERSION		0x00010000	/* version 1.0 of the header */

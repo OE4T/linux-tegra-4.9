@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
@@ -208,6 +209,11 @@ static int pva_free_fw(struct platform_device *pdev, struct pva *pva)
 	return 0;
 }
 
+/*
+ * IOVA is set to start from 2GB address.
+ */
+#define DRAM_IOVA_START_ADDRESS 0x80000000
+
 static int pva_read_ucode(struct platform_device *pdev,
 		const char *fw_name, struct pva *pva)
 {
@@ -283,6 +289,16 @@ static int pva_read_ucode(struct platform_device *pdev,
 				+ (PVA_UCODE_SEG_HDR_LENGTH * w));
 
 		switch (useg->type) {
+		case PVA_UCODE_SEG_DRAM_CACHED:
+			/* Total 2GB of contiguous memory for cache
+			 * Set the DRAM CACHE physical addr as iova start
+			 */
+			useg->phys_addr = DRAM_IOVA_START_ADDRESS;
+			break;
+		case PVA_UCODE_SEG_DRAM_UNCACHED:
+			/* Set the Uncache size as Zero */
+			useg->size = 0;
+			break;
 		case PVA_UCODE_SEG_R5_OVERLAY:
 		case PVA_UCODE_SEG_R5_CRASHDUMP:
 		case PVA_UCODE_SEG_VPU_CRASHDUMP:

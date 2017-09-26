@@ -530,7 +530,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			VIFALR,
 			VIFALW,
 		},
-		.ord = OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "VIFALC",
 	},
 	{
@@ -544,7 +544,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			ISPFALW,
 			ISPRA1,
 		},
-		.ord = OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "ISP",
 	},
 	{

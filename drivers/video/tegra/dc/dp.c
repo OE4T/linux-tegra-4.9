@@ -45,9 +45,7 @@
 #include "dp_lt.h"
 #include "dp_auto.h"
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 #include "hda_dc.h"
-#endif
 
 #include "fake_panel.h"
 #include <linux/tegra_prod.h>
@@ -2233,11 +2231,10 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_audio_switch;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	parent_clk = tegra_dpaux_get_clk(dp->dpaux, "plldp");
-#elif defined(CONFIG_ARCH_TEGRA_210_SOC)
-	parent_clk = tegra_dpaux_get_clk(dp->dpaux, "pll_dp");
-#endif
+	if (tegra_dc_is_nvdisplay())
+		parent_clk = tegra_dpaux_get_clk(dp->dpaux, "plldp");
+	else
+		parent_clk = tegra_dpaux_get_clk(dp->dpaux, "pll_dp");
 
 	if (IS_ERR_OR_NULL(parent_clk)) {
 		dev_err(&dc->ndev->dev, "dp: clock pll_dp unavailable\n");
@@ -2900,24 +2897,25 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_sor_port_enable(sor, true);
 	tegra_sor_config_xbar(dp->sor);
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (!dp->dc->initialized) {
-		tegra_sor_clk_switch_setup(sor, true);
+	if (tegra_dc_is_nvdisplay()) {
+		if (!dp->dc->initialized) {
+			tegra_sor_clk_switch_setup(sor, true);
 
-		/* switch to macro feedback clock */
-		clk_set_parent(sor->src_switch_clk, sor->brick_clk);
+			/* switch to macro feedback clock */
+			clk_set_parent(sor->src_switch_clk, sor->brick_clk);
 
-		tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
-			NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
-			NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
-		tegra_dc_sor_set_link_bandwidth(sor, dp->link_cfg.link_bw ? :
+			tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
+				NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
+				NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
+			tegra_dc_sor_set_link_bandwidth(sor,
+				dp->link_cfg.link_bw ? :
 				NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
+		}
+	} else {
+		tegra_dp_clk_enable(dp);
+		tegra_sor_config_dp_clk(dp->sor);
+		tegra_dc_setup_clk(dc, dc->clk);
 	}
-#else
-	tegra_dp_clk_enable(dp);
-	tegra_sor_config_dp_clk(dp->sor);
-	tegra_dc_setup_clk(dc, dc->clk);
-#endif
 
 	/* Host is ready. Start link training. */
 	dp->enabled = true;
@@ -3000,9 +2998,8 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 
 	tegra_hpd_shutdown(&dp->hpd_data);
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	clk_put(dp->parent_clk);
-#endif
+	if (tegra_dc_is_t21x())
+		clk_put(dp->parent_clk);
 
 	dp->prod_list = NULL;
 
@@ -3054,12 +3051,12 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	tegra_dc_sor_detach(dp->sor);
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	tegra_sor_clk_switch_setup(dp->sor, false);
+	if (tegra_dc_is_nvdisplay()) {
+		tegra_sor_clk_switch_setup(dp->sor, false);
 
-	/* switch back to SOR safe clock */
-	clk_set_parent(dp->sor->src_switch_clk, dp->sor->safe_clk);
-#endif
+		/* switch back to SOR safe clock */
+		clk_set_parent(dp->sor->src_switch_clk, dp->sor->safe_clk);
+	}
 
 	tegra_dc_sor_disable(dp->sor, false);
 
@@ -3099,28 +3096,29 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 	struct clk *dc_parent_clk;
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	struct tegra_dc_sor_data *sor = dp->sor;
-#endif
+	struct tegra_dc_sor_data *sor = NULL;
 
 	if (!tegra_platform_is_silicon())
 		return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 
 	if (clk == dc->clk) {
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		dc_parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+		if (tegra_dc_is_nvdisplay()) {
+			dc_parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
 					dc->out->parent_clk);
-		if (IS_ERR_OR_NULL(dc_parent_clk)) {
-			dev_err(&dc->ndev->dev, "dp: failed to get clock %s\n",
-					dc->out->parent_clk);
-			return -EINVAL;
+			if (IS_ERR_OR_NULL(dc_parent_clk)) {
+				dev_err(&dc->ndev->dev,
+						"dp: failed to get clock %s\n",
+						dc->out->parent_clk);
+				return -EINVAL;
+			}
+		} else {
+			if (dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+				dc_parent_clk = clk_get_sys(NULL,
+						"pll_d2_out0");
+			else
+				dc_parent_clk = clk_get_sys(NULL,
+						dc->out->parent_clk);
 		}
-#else
-		if (dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-			dc_parent_clk = clk_get_sys(NULL, "pll_d2_out0");
-		else
-			dc_parent_clk = clk_get_sys(NULL, dc->out->parent_clk);
-#endif
 		clk_set_parent(dc->clk, dc_parent_clk);
 	}
 
@@ -3134,28 +3132,30 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	}
 
 	/* BRINGUP HACK: NEED TO CLEAN UP CLK PROGRAMMING SEQUENCE */
-#ifdef CONFIG_TEGRA_NVDISPLAY
 
-	/* enable pll_dp */
-	tegra_dp_clk_enable(dp);
+	if (tegra_dc_is_nvdisplay()) {
+		sor = dp->sor;
 
-	/* enable SOR safe clock */
-	tegra_sor_safe_clk_enable(sor);
+		/* enable pll_dp */
+		tegra_dp_clk_enable(dp);
 
-	/* Change for seamless */
-	if (!dc->initialized) {
-		/* switch sor_pad_clk to use SOR safe clock for now */
-		clk_set_parent(sor->src_switch_clk, sor->safe_clk);
+		/* enable SOR safe clock */
+		tegra_sor_safe_clk_enable(sor);
 
-		/* set parent of SOR brick clock to pll_dp */
-		clk_set_parent(sor->brick_clk, dp->parent_clk);
+		/* Change for seamless */
+		if (!dc->initialized) {
+			/* switch sor_pad_clk to use SOR safe clock for now */
+			clk_set_parent(sor->src_switch_clk, sor->safe_clk);
+
+			/* set parent of SOR brick clock to pll_dp */
+			clk_set_parent(sor->brick_clk, dp->parent_clk);
+		}
+
+		/* enable sor_pad_clk */
+		tegra_disp_clk_prepare_enable(sor->src_switch_clk);
+		/* enable SOR brick clock */
+		tegra_disp_clk_prepare_enable(sor->brick_clk);
 	}
-
-	/* enable sor_pad_clk */
-	tegra_disp_clk_prepare_enable(sor->src_switch_clk);
-	/* enable SOR brick clock */
-	tegra_disp_clk_prepare_enable(sor->brick_clk);
-#endif
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
@@ -3344,13 +3344,13 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 	if (!mode->pixclock)
 		return false;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (mode->xres > 8192)
-		return false;
-#else
-	if (mode->xres > 4096)
-		return false;
-#endif
+	if (tegra_dc_is_nvdisplay()) {
+		if (mode->xres > 8192)
+			return false;
+	} else {
+		if (mode->xres > 4096)
+			return false;
+	}
 
 	if (mode->pixclock && tegra_dc_get_out_max_pixclock(dc) &&
 		mode->pixclock < tegra_dc_get_out_max_pixclock(dc))

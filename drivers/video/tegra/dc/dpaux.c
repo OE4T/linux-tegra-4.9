@@ -268,11 +268,11 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc,
 	}
 
 	/* Query the DPAUX clock. */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	clk = tegra_disp_of_clk_get_by_name(dpaux_np, dpaux_name);
-#else
-	clk = clk_get_sys(NULL, dpaux_name);
-#endif
+	if (tegra_dc_is_nvdisplay())
+		clk = tegra_disp_of_clk_get_by_name(dpaux_np, dpaux_name);
+	else
+		clk = clk_get_sys(NULL, dpaux_name);
+
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "%s: %s clk unavailable\n", __func__,
 			dpaux_name);
@@ -320,9 +320,8 @@ err_put_rst:
 	if (rst)
 		reset_control_put(rst);
 err_put_clk:
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	clk_put(clk);
-#endif
+	if (tegra_dc_is_t21x())
+		clk_put(clk);
 err_unmap_region:
 	iounmap(base);
 release_mem:
@@ -352,11 +351,10 @@ struct clk *tegra_dpaux_get_clk(struct tegra_dc_dpaux_data *dpaux,
 	if (!dpaux || !clk_name)
 		return NULL;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	return tegra_disp_of_clk_get_by_name(dpaux->np, clk_name);
-#elif defined(CONFIG_ARCH_TEGRA_210_SOC)
-	return clk_get_sys(NULL, clk_name);
-#endif
+	if (tegra_dc_is_nvdisplay())
+		return tegra_disp_of_clk_get_by_name(dpaux->np, clk_name);
+	else
+		return clk_get_sys(NULL, clk_name);
 }
 
 void tegra_dpaux_destroy_data(struct tegra_dc_dpaux_data *dpaux)
@@ -373,9 +371,8 @@ void tegra_dpaux_destroy_data(struct tegra_dc_dpaux_data *dpaux)
 	if (dpaux->rst)
 		reset_control_put(dpaux->rst);
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	clk_put(dpaux->clk);
-#endif
+	if (tegra_dc_is_t21x())
+		clk_put(dpaux->clk);
 
 	iounmap(dpaux->base);
 

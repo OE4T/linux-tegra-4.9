@@ -1185,6 +1185,12 @@
 			compatible = "nvidia,tegra194-vi";
 			/* cfg page is used by slvsec as well as ch35 */
 			reg = <0x0 0x15c10000 0x0 0x00230000>;
+			clocks = <&bpmp_clks TEGRA194_CLK_VI>,
+				 <&bpmp_clks TEGRA194_CLK_VI_CONST>,
+				 <&bpmp_clks TEGRA194_CLK_NVCSI>,
+				 <&bpmp_clks TEGRA194_CLK_NVCSILP>;
+			clock-names = "vi", "vi-const", "nvcsi", "nvcsilp";
+
 			nvidia,vi-falcon-device = <&vi_thi>;
 			nvidia,rce-rm-device = <&rce_rm>;
 			iommus = <&smmu TEGRA_SID_VI>;
@@ -1199,9 +1205,10 @@
 				 <&bpmp_resets TEGRA194_RESET_TSCTNVI>;
 			reset-names = "vi", "tsctnvi";
 			clocks = <&bpmp_clks TEGRA194_CLK_VI>,
+			         <&bpmp_clks TEGRA194_CLK_VI_CONST>,
 				 <&bpmp_clks TEGRA194_CLK_NVCSI>,
 				 <&bpmp_clks TEGRA194_CLK_NVCSILP>;
-			clock-names = "vi", "nvcsi", "nvcsilp";
+			clock-names = "vi", "vi-const", "nvcsi", "nvcsilp";
 
 			iommus = <&smmu TEGRA_SID_VIFALC>;
 		};

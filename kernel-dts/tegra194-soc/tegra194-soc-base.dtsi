@@ -933,6 +933,7 @@
 
 			clocks = <&bpmp_clks TEGRA194_CLK_SOR0>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
+				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
 				 <&bpmp_clks TEGRA194_CLK_SOR0_PAD_CLKOUT>,
 				 <&bpmp_clks TEGRA194_CLK_SOR0_OUT>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
@@ -940,7 +941,7 @@
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "sor0", "sor_safe",
+			clock-names = "sor0", "sor_safe", "pll_dp",
 				      "sor0_pad_clkout", "sor0_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -972,6 +973,7 @@
 
 			clocks = <&bpmp_clks TEGRA194_CLK_SOR1>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
+				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_OUT>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
@@ -979,7 +981,7 @@
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "sor1", "sor_safe",
+			clock-names = "sor1", "sor_safe", "pll_dp",
 				      "sor1_pad_clkout", "sor1_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -1015,6 +1017,7 @@
 				  */
 				 <&bpmp_clks TEGRA194_CLK_SOR1>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
+				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_OUT>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
@@ -1022,7 +1025,7 @@
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "sor2", "sor_safe",
+			clock-names = "sor2", "sor_safe", "pll_dp",
 				      "sor2_pad_clkout", "sor2_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -1058,6 +1061,7 @@
 				  */
 				 <&bpmp_clks TEGRA194_CLK_SOR1>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
+				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_OUT>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
@@ -1065,7 +1069,7 @@
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "sor3", "sor_safe",
+			clock-names = "sor3", "sor_safe", "pll_dp",
 				      "sor3_pad_clkout", "sor3_out",
 				      "pllp_out0", "maud", "hda",
 				      "hda2codec_2x", "hda2hdmi";
@@ -1093,9 +1097,8 @@
 			interrupts = <0 159 4>;
 			nvidia,dpaux-ctrlnum = <0>;
 
-			clocks = <&bpmp_clks TEGRA194_CLK_DPAUX>,
-				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
-			clock-names = "dpaux", "plldp";
+			clocks = <&bpmp_clks TEGRA194_CLK_DPAUX>;
+			clock-names = "dpaux";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX>;
 			reset-names = "dpaux";
 		}; //dpaux0
@@ -1107,9 +1110,8 @@
 			interrupts = <0 160 4>;
 			nvidia,dpaux-ctrlnum = <1>;
 
-			clocks = <&bpmp_clks TEGRA194_CLK_DPAUX1>,
-				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
-			clock-names = "dpaux1", "plldp";
+			clocks = <&bpmp_clks TEGRA194_CLK_DPAUX1>;
+			clock-names = "dpaux1";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX1>;
 			reset-names = "dpaux1";
 		}; //dpaux1
@@ -1125,9 +1127,8 @@
 				  * todo: TEGRA194_CLK_DPAUX2* not defined yet
 				  *       so use TEGRA194_CLK_DPAUX1*
 				  */
-				 <&bpmp_clks TEGRA194_CLK_DPAUX1>,
-				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
-			clock-names = "dpaux2", "plldp";
+				 <&bpmp_clks TEGRA194_CLK_DPAUX1>;
+			clock-names = "dpaux2";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX2>;
 			reset-names = "dpaux2";
 		}; //dpaux2
@@ -1143,9 +1144,8 @@
 				  * todo: TEGRA194_CLK_DPAUX3* not defined yet
 				  *       so use TEGRA194_CLK_DPAUX1*
 				  */
-				 <&bpmp_clks TEGRA194_CLK_DPAUX1>,
-				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
-			clock-names = "dpaux3", "plldp";
+				 <&bpmp_clks TEGRA194_CLK_DPAUX1>;
+			clock-names = "dpaux3";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX3>;
 			reset-names = "dpaux3";
 		}; //dpaux3

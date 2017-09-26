@@ -147,7 +147,7 @@
 		};
 
 		fragment-p3489-A00 {
-			ids = ">=3489-0000-A00";
+			ids = ">=3489-0000-A00", ">=3489-0000-200";
 
 			override@0 {
 				target = <&{/bpmp_i2c/spmic@3c/regulators/ldo6}>;

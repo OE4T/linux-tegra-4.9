@@ -509,16 +509,20 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 
 	total_iso_bw = tegra_isomgr_get_total_iso_bw();
 
-	/*
-	 * WAR: Return immediately if either the total ISO bw or the max EMC
-	 * clock are reported as 0.
-	 */
-	if (max_emc_rate == 0 || total_iso_bw == 0)
-		return 0;
-
 	imp_table = tegra_dc_common_get_imp_table();
 	if (!imp_table || imp_table->num_settings <= 0)
 		return -ENOENT;
+
+	/*
+	 * WAR: Some platforms, such as tegrasim, expose themselves as silicon,
+	 * but do not correctly model MC with respect to the max EMC rate and
+	 * total available ISO bw. For these platforms, pick the first entry in
+	 * the IMP table by default, and get out.
+	 */
+	if (max_emc_rate == 0 || total_iso_bw == 0) {
+		imp_table->boot_setting = imp_table->settings;
+		return 0;
+	}
 
 	bw_cfg_table = kcalloc(imp_table->num_settings, sizeof(*bw_cfg_table),
 				GFP_KERNEL);

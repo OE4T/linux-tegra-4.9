@@ -62,37 +62,45 @@ void gk20a_bus_init_hw(struct gk20a *g)
 
 void gk20a_bus_isr(struct gk20a *g)
 {
-	u32 val, err_code;
+	u32 val, save0, save1, err_code;
+
 	val = gk20a_readl(g, bus_intr_0_r());
+
 	if (val & (bus_intr_0_pri_squash_m() |
 			bus_intr_0_pri_fecserr_m() |
 			bus_intr_0_pri_timeout_m())) {
-		gk20a_dbg(gpu_dbg_intr, "pmc_enable : 0x%x",
+
+		nvgpu_log(g, gpu_dbg_intr, "pmc_enable : 0x%x",
 			gk20a_readl(g, mc_enable_r()));
-		gk20a_dbg(gpu_dbg_intr, "NV_PBUS_INTR_0 : 0x%x", val);
-		gk20a_dbg(gpu_dbg_intr,
-			"NV_PTIMER_PRI_TIMEOUT_SAVE_0: 0x%x\n",
-			gk20a_readl(g, timer_pri_timeout_save_0_r()));
-		gk20a_dbg(gpu_dbg_intr,
-			"NV_PTIMER_PRI_TIMEOUT_SAVE_1: 0x%x\n",
-			gk20a_readl(g, timer_pri_timeout_save_1_r()));
-		err_code = gk20a_readl(g, timer_pri_timeout_fecs_errcode_r());
-		gk20a_dbg(gpu_dbg_intr,
-			"NV_PTIMER_PRI_TIMEOUT_FECS_ERRCODE: 0x%x\n",
-			err_code);
-		if (err_code == 0xbadf13)
-			gk20a_dbg(gpu_dbg_intr,
-			"NV_PGRAPH_PRI_GPC0_GPCCS_FS_GPC: 0x%x\n",
-			gk20a_readl(g, gr_gpc0_fs_gpc_r()));
+
+		save0 = gk20a_readl(g, timer_pri_timeout_save_0_r());
+		if (timer_pri_timeout_save_0_fecs_tgt_v(save0)) {
+
+			err_code = gk20a_readl(g,
+					timer_pri_timeout_fecs_errcode_r());
+			/* write and addr fields are not reliable */
+			nvgpu_err(g, "NV_PBUS_INTR_0: 0x%08x "
+					"FECS_ERRCODE 0x%08x", val, err_code);
+
+			if ((err_code & 0xffffff00) == 0xbadf1300)
+				nvgpu_err(g, "NV_PGRAPH_PRI_GPC0_GPCCS_FS_GPC: "
+					"0x%08x",
+					gk20a_readl(g, gr_gpc0_fs_gpc_r()));
+		} else {
+			save1 = gk20a_readl(g, timer_pri_timeout_save_1_r());
+			nvgpu_err(g, "NV_PBUS_INTR_0: 0x%08x ADR 0x%08x "
+				"R/W %s  DATA 0x%08x",
+				val,
+				timer_pri_timeout_save_0_addr_v(save0) << 2,
+				timer_pri_timeout_save_0_write_v(save0) ?
+				"WRITE" : "READ", save1);
+		}
 
 		gk20a_writel(g, timer_pri_timeout_save_0_r(), 0);
 		gk20a_writel(g, timer_pri_timeout_save_1_r(), 0);
+	} else {
+		nvgpu_err(g, "Unhandled NV_PBUS_INTR_0: 0x%08x", val);
 	}
-
-	if (val)
-		gk20a_dbg(gpu_dbg_intr,
-			"Unhandled pending pbus interrupt\n");
-
 	gk20a_writel(g, bus_intr_0_r(), val);
 }
 
@@ -141,7 +149,7 @@ int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 	u64 iova = nvgpu_inst_block_addr(g, bar1_inst);
 	u32 ptr_v = (u32)(iova >> bus_bar1_block_ptr_shift_v());
 
-	gk20a_dbg_info("bar1 inst block ptr: 0x%08x", ptr_v);
+	nvgpu_log(g, gpu_dbg_info, "bar1 inst block ptr: 0x%08x", ptr_v);
 
 	gk20a_writel(g, bus_bar1_block_r(),
 		     nvgpu_aperture_mask(g, bar1_inst,

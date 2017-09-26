@@ -99,9 +99,7 @@ extern struct tegra_panel_ops dsi_n_wqxga_6_0_ops;
 extern struct tegra_panel_ops dsi_s_4kuhd_5_46_ops;
 extern struct tegra_panel_ops dsi_b_1440_1600_3_5_ops;
 extern struct tegra_panel_ops edp_p_3000_2000_13_5_ops;
-#ifdef CONFIG_TEGRA_NVDISPLAY
 extern struct tegra_panel_ops panel_sim_ops;
-#endif
 
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;

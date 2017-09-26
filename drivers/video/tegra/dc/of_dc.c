@@ -144,6 +144,13 @@ struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np)
 		return NULL;
 	}
 
+	if (tegra_dc_is_nvdisplay()) {
+		if (of_device_is_compatible(panel_np, "nvidia,sim-panel")) {
+			p_ops = &panel_sim_ops;
+			return p_ops;
+		}
+	}
+
 	if (of_device_is_compatible(panel_np, "s,wuxga-8-0"))
 		p_ops = &dsi_s_wuxga_8_0_ops;
 	else if (of_device_is_compatible(panel_np, "s,wuxga-7-0"))
@@ -184,10 +191,6 @@ struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np)
 		p_ops = &dsi_b_1440_1600_3_5_ops;
 	else if (of_device_is_compatible(panel_np, "p-edp,3000-2000-13-5"))
 		p_ops = &edp_p_3000_2000_13_5_ops;
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	else if (of_device_is_compatible(panel_np, "nvidia,sim-panel"))
-		p_ops = &panel_sim_ops;
-#endif
 	else
 		pr_err("%s: unknown panel: %s\n", __func__,
 			of_node_full_name(panel_np));
@@ -281,7 +284,6 @@ void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 	dc_out->hotplug_report	= p_ops->hotplug_report;
 }
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 static struct device_node *tegra_dc_get_panel_from_disp_board_id(
 		struct tegra_dc_platform_data *pdata)
 {
@@ -392,7 +394,6 @@ static struct device_node *tegra_dc_get_panel_from_disp_board_id(
 
 	return panel_np;
 }
-#endif
 
 static int tegra_dc_parse_panel_ops(struct platform_device *ndev,
 	struct tegra_dc_platform_data *pdata)
@@ -415,8 +416,7 @@ static int tegra_dc_parse_panel_ops(struct platform_device *ndev,
 	 * Note: carrying legacy logic of retrieving panel_np only for
 	 *       the first display.
 	 */
-	if (ndev->id == 0) {
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
+	if ((ndev->id == 0) && (tegra_dc_is_t21x())) {
 		/*
 		 * First select panel based on display board-id. If we don't
 		 * find one then select one specified in device-tree.
@@ -432,7 +432,6 @@ static int tegra_dc_parse_panel_ops(struct platform_device *ndev,
 		} else if (IS_ERR(panel_np)) {
 			panel_np = NULL;
 		}
-#endif
 	}
 
 	/*
@@ -881,11 +880,6 @@ static int parse_sd_settings(struct device_node *np,
 	int  sd_j = 0;
 	int sd_index = 0;
 	u32 temp;
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	int gain_count;
-	int gain_array_count;
-	int backlight_count;
-#endif
 
 	if (of_device_is_available(np)) {
 		sd_settings->enable = (unsigned) 1;
@@ -912,43 +906,51 @@ static int parse_sd_settings(struct device_node *np,
 		sd_settings->hw_update_delay = (u8) temp;
 		OF_DC_LOG("nvidia,hw-update-delay %d\n", temp);
 	}
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (!of_property_read_u32(np, "nvidia,sw-update-delay", &temp)) {
-		sd_settings->sw_update_delay = (u8) temp;
-		OF_DC_LOG("nvidia,sw-update-delay %d\n", temp);
-	}
-	gain_count = 0;
-	gain_array_count = 0;
-	sd_settings->gain_luts_parsed = 0;
-	of_property_for_each_u32(np, "nvidia,gain_table", prop, p, u)
-		gain_count++;
-	if (gain_count) {
+	if (tegra_dc_is_nvdisplay()) {
+		int gain_count;
+		int gain_array_count;
+		int backlight_count;
+
+		if (!of_property_read_u32(np, "nvidia,sw-update-delay",
+					&temp)) {
+			sd_settings->sw_update_delay = (u8) temp;
+			OF_DC_LOG("nvidia,sw-update-delay %d\n", temp);
+		}
 		gain_count = 0;
 		gain_array_count = 0;
-		of_property_for_each_u32(np, "nvidia,gain_table", prop, p, u) {
-			sd_settings->pixel_gain_tables[gain_array_count]
-				[gain_count] = u;
-			if ((gain_count%32) == 31) {
-				gain_count = 0;
-				gain_array_count++;
-			} else
-				gain_count++;
+		sd_settings->gain_luts_parsed = 0;
+		of_property_for_each_u32(np, "nvidia,gain_table", prop, p, u)
+			gain_count++;
+		if (gain_count) {
+			gain_count = 0;
+			gain_array_count = 0;
+			of_property_for_each_u32(np, "nvidia,gain_table",
+						prop, p, u) {
+				sd_settings->pixel_gain_tables[gain_array_count]
+					[gain_count] = u;
+				if ((gain_count%32) == 31) {
+					gain_count = 0;
+					gain_array_count++;
+				} else
+					gain_count++;
+			}
 		}
-	}
-	backlight_count = 0;
-	of_property_for_each_u32(np, "nvidia,backlight_table", prop, p, u)
-		backlight_count++;
-	if (backlight_count) {
 		backlight_count = 0;
 		of_property_for_each_u32(np, "nvidia,backlight_table",
-				prop, p, u) {
-			sd_settings->backlight_table[backlight_count] = u;
+					prop, p, u)
 			backlight_count++;
+		if (backlight_count) {
+			backlight_count = 0;
+			of_property_for_each_u32(np, "nvidia,backlight_table",
+					prop, p, u) {
+				sd_settings->backlight_table[backlight_count] =
+									u;
+				backlight_count++;
+			}
 		}
+		if ((gain_count) && (backlight_count))
+			sd_settings->gain_luts_parsed = 1;
 	}
-	if ((gain_count) && (backlight_count))
-		sd_settings->gain_luts_parsed = 1;
-#endif
 	if (!of_property_read_u32(np, "nvidia,bin-width", &temp)) {
 		s32 s32_val;
 		s32_val = (s32)temp;
@@ -3459,11 +3461,11 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		pdata->cmu_enable = false;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	/* no valid window set for device */
-	if (pdata->win_mask == 0)
-		pdata->fb->win = -1;
-#endif
+	if (tegra_dc_is_nvdisplay()) {
+		/* no valid window set for device */
+		if (pdata->win_mask == 0)
+			pdata->fb->win = -1;
+	}
 
 	if ((def_out->type == TEGRA_DC_OUT_DP) ||
 	    (def_out->type == TEGRA_DC_OUT_FAKE_DP)) {

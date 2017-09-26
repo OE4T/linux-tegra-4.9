@@ -447,17 +447,19 @@ struct tegra_dc {
 	struct clk			*parent_clk_safe;
 	struct reset_control		*rst;
 
-#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_ISOMGR)
+	/* Nvdisplay and Isomgr */
 	/* Reference to a single instance */
 	struct nvdisp_isoclient_bw_info	*ihub_bw_info;
 	bool				la_dirty;
-#elif defined(CONFIG_TEGRA_ISOMGR)
+
+	/* T21x and Isomgr */
 	tegra_isomgr_handle		isomgr_handle;
 	u32				reserved_bw;
 	u32				available_bw;
-#else
+
+	/* Used when Isomgr is not defined */
 	struct clk			*emc_clk;
-#endif
+
 	struct tegra_bwmgr_client	*emc_la_handle;
 	long				bw_kbps; /* bandwidth in KBps */
 	long				new_bw_kbps;

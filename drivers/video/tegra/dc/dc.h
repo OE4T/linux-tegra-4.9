@@ -36,10 +36,12 @@
 #define DEFAULT_FPGA_FREQ_KHZ	160000
 
 #define TEGRA_DC_EXT_FLIP_MAX_WINDOW 6
-#if defined(CONFIG_TEGRA_NVDISPLAY)
+
+/* Nvdisplay specific */
 #define GAIN_TABLE_MAX_ENTRIES	32
 #define ADAPTATION_FACTOR_MAX_LEVELS	51
-#endif
+/* Nvdisplay specific ends here */
+
 extern atomic_t sd_brightness;
 
 extern struct fb_videomode tegra_dc_vga_mode;
@@ -570,7 +572,7 @@ struct tegra_dc_sd_window {
 };
 
 struct tegra_dc_sd_settings {
-#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* Specific to Nvdisplay */
 	bool update_sd;
 	unsigned upper_bound;
 	unsigned lower_bound;
@@ -591,7 +593,9 @@ struct tegra_dc_sd_settings {
 	int backlight_adjust_steps;
 	u8 sw_update_delay;
 	int frame_runner;
-#endif
+	/* Specific to Nvdisplay ends here */
+
+	/* Specific to T21x */
 	unsigned enable;
 	u8 turn_off_brightness;
 	u8 turn_on_brightness;
@@ -611,14 +615,8 @@ struct tegra_dc_sd_settings {
 
 	struct tegra_dc_sd_agg_priorities agg_priorities;
 
-	bool use_vid_luma;
-	struct tegra_dc_sd_rgb coeff;
-
 	bool k_limit_enable;
 	u16 k_limit;
-
-	bool sd_window_enable;
-	struct tegra_dc_sd_window sd_window;
 
 	bool soft_clipping_enable;
 	u8 soft_clipping_threshold;
@@ -634,6 +632,13 @@ struct tegra_dc_sd_settings {
 	struct tegra_dc_sd_blp blp;
 	u8 bltf[4][4][4];
 	struct tegra_dc_sd_rgb lut[4][9];
+	/* Specific to T21x ends here */
+
+	bool use_vid_luma;
+	struct tegra_dc_sd_rgb coeff;
+
+	bool sd_window_enable;
+	struct tegra_dc_sd_window sd_window;
 
 	atomic_t *sd_brightness;
 	char *bl_device_name;
@@ -1234,7 +1239,6 @@ struct tegra_dp_out {
  * On T18x, isohub is the only memclient that's relevant to display.
  * The following structs keep track of its isoclient info.
  */
-#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_ISOMGR)
 struct nvdisp_bandwidth_config {
 	u32 iso_bw;		/* KB/s */
 	u32 total_bw;		/* KB/s */
@@ -1256,7 +1260,6 @@ struct nvdisp_isoclient_bw_info {
 	u32				emc_at_res_bw;		/* Hz */
 	u32				hubclk_at_res_bw;	/* Hz */
 };
-#endif
 
 struct nvdisp_imp_table {
 	struct tegra_nvdisp_imp_settings *settings;

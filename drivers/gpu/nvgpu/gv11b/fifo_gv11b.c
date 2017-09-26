@@ -1779,8 +1779,7 @@ int gv11b_init_fifo_setup_hw(struct gk20a *g)
 
 	f->t19x.usermode_regs = g->regs + usermode_cfg0_r();
 	f->t19x.max_subctx_count =
-		gr_pri_fe_chip_def_info_max_veid_count_v(
-			gk20a_readl(g, gr_pri_fe_chip_def_info_r()));
+		gr_pri_fe_chip_def_info_max_veid_count_init_v();
 	return 0;
 }
 

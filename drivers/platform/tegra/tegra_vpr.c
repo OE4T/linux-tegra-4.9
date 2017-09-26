@@ -147,8 +147,10 @@ void tegra_register_idle_unidle(int (*do_idle)(void *),
 
 	mutex_lock(&vpr_lock);
 	for (i = 0; i < NUM_MODULES_IDLE_VPR_RESIZE; i++) {
-		if (vpr_user_module[i].do_idle == do_idle)
+		if (do_idle == vpr_user_module[i].do_idle) {
+			vpr_user_module[i].data = data;
 			goto unlock;
+		}
 	}
 
 	for (i = 0; i < NUM_MODULES_IDLE_VPR_RESIZE; i++) {

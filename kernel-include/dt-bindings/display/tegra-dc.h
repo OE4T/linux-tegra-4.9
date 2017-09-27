@@ -90,5 +90,9 @@
 #define TEGRA_DC_OUT_PIN_POL_LOW	0
 #define TEGRA_DC_OUT_PIN_POL_HIGH	1
 
+/* tegra_hdmi_out.generic_infoframe_type */
+#define HDMI_INFOFRAME_TYPE_SPD		0x83
+#define HDMI_INFOFRAME_TYPE_HDR		0x87
+
 #endif /* __TEGRA_DC_H */
 

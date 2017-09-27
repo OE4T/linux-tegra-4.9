@@ -63,6 +63,7 @@ void gk20a_busy_noresume(struct gk20a *g)
 
 int gk20a_busy(struct gk20a *g)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int ret = 0;
 	struct device *dev;
 
@@ -71,7 +72,7 @@ int gk20a_busy(struct gk20a *g)
 
 	atomic_inc(&g->usage_count.atomic_var);
 
-	down_read(&g->busy_lock);
+	down_read(&l->busy_lock);
 
 	if (!gk20a_can_busy(g)) {
 		ret = -ENODEV;
@@ -107,7 +108,7 @@ int gk20a_busy(struct gk20a *g)
 	}
 
 fail:
-	up_read(&g->busy_lock);
+	up_read(&l->busy_lock);
 
 	return ret < 0 ? ret : 0;
 }
@@ -282,12 +283,13 @@ static struct of_device_id tegra_gk20a_of_match[] = {
  *
  * In success, this call MUST be balanced by caller with __gk20a_do_unidle()
  *
- * Acquires two locks : &g->busy_lock and &platform->railgate_lock
+ * Acquires two locks : &l->busy_lock and &platform->railgate_lock
  * In success, we hold these locks and return
  * In failure, we release these locks and return
  */
 int __gk20a_do_idle(struct gk20a *g, bool force_reset)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct nvgpu_timeout timeout;
@@ -303,7 +305,7 @@ int __gk20a_do_idle(struct gk20a *g, bool force_reset)
 	gk20a_channel_deterministic_idle(g);
 
 	/* acquire busy lock to block other busy() calls */
-	down_write(&g->busy_lock);
+	down_write(&l->busy_lock);
 
 	/* acquire railgate lock to prevent unrailgate in midst of do_idle() */
 	nvgpu_mutex_acquire(&platform->railgate_lock);
@@ -406,7 +408,7 @@ fail_drop_usage_count:
 	pm_runtime_put_noidle(dev);
 fail_timeout:
 	nvgpu_mutex_release(&platform->railgate_lock);
-	up_write(&g->busy_lock);
+	up_write(&l->busy_lock);
 	gk20a_channel_deterministic_unidle(g);
 	return -EBUSY;
 }
@@ -429,6 +431,7 @@ static int gk20a_do_idle(void *_g)
  */
 int __gk20a_do_unidle(struct gk20a *g)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int err;
@@ -453,7 +456,7 @@ int __gk20a_do_unidle(struct gk20a *g)
 
 	/* release the lock and open up all other busy() calls */
 	nvgpu_mutex_release(&platform->railgate_lock);
-	up_write(&g->busy_lock);
+	up_write(&l->busy_lock);
 
 	gk20a_channel_deterministic_unidle(g);
 
@@ -887,12 +890,12 @@ void gk20a_driver_start_unload(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_shutdown, "Driver is now going down!\n");
 
-	down_write(&g->busy_lock);
+	down_write(&l->busy_lock);
 	__nvgpu_set_enabled(g, NVGPU_DRIVER_IS_DYING, true);
 	/* GR SW ready needs to be invalidated at this time with the busy lock
 	 * held to prevent a racing condition on the gr/mm code */
 	g->gr.sw_ready = false;
-	up_write(&g->busy_lock);
+	up_write(&l->busy_lock);
 
 	if (g->is_virtual)
 		return;

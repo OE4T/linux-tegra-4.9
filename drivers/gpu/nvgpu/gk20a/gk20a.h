@@ -1084,7 +1084,6 @@ struct gk20a {
 	u32 log_mask;
 	u32 log_trace;
 
-	struct rw_semaphore busy_lock;
 	/*
 	 * Guards access to hardware when usual gk20a_{busy,idle} are skipped
 	 * for submits and held for channel lifetime but dropped for an ongoing

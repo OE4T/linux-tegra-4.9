@@ -712,7 +712,7 @@ int vgpu_probe(struct platform_device *pdev)
 
 	vgpu_init_vars(gk20a, platform);
 
-	init_rwsem(&gk20a->busy_lock);
+	init_rwsem(&l->busy_lock);
 
 	nvgpu_spinlock_init(&gk20a->mc_enable_lock);
 

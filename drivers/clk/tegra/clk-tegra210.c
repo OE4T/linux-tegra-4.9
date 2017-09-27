@@ -41,6 +41,8 @@
 
 #define CLK_SOURCE_CSITE 0x1d4
 #define CLK_SOURCE_EMC 0x19c
+#define CLK_SOURCE_SOR0 0x414
+#define CLK_SOURCE_SOR1 0x410
 
 #define RST_DFLL_DVCO 0x2f4
 #define DVFS_DFLL_RESET_SHIFT 0
@@ -280,6 +282,7 @@ static DEFINE_SPINLOCK(pll_e_lock);
 static DEFINE_SPINLOCK(pll_re_lock);
 static DEFINE_SPINLOCK(pll_u_lock);
 static DEFINE_SPINLOCK(emc_lock);
+static DEFINE_SPINLOCK(sor1_lock);
 
 /* possible OSC frequencies in Hz */
 static unsigned long tegra210_input_freq[] = {
@@ -2330,8 +2333,6 @@ static struct tegra_clk tegra210_clks[tegra_clk_max] __initdata = {
 	[tegra_clk_dpaux1] = { .dt_id = TEGRA210_CLK_DPAUX1, .present = true },
 	[tegra_clk_sor0] = { .dt_id = TEGRA210_CLK_SOR0, .present = true },
 	[tegra_clk_sor0_lvds] = { .dt_id = TEGRA210_CLK_SOR0_LVDS, .present = true },
-	[tegra_clk_sor1] = { .dt_id = TEGRA210_CLK_SOR1, .present = true },
-	[tegra_clk_sor1_src] = { .dt_id = TEGRA210_CLK_SOR1_SRC, .present = true },
 	[tegra_clk_gpu] = { .dt_id = TEGRA210_CLK_GPU, .present = true },
 	[tegra_clk_pll_g_ref] = { .dt_id = TEGRA210_CLK_PLL_G_REF, .present = true, },
 	[tegra_clk_uartb_8] = { .dt_id = TEGRA210_CLK_UARTB, .present = true },
@@ -2628,8 +2629,6 @@ static struct tegra_devclk devclks[] __initdata = {
 	{ .con_id = "dsib", .dt_id = TEGRA210_CLK_DSIB },
 	{ .con_id = "sor1", .dt_id = TEGRA210_CLK_SOR1 },
 	{ .con_id = "mipi-cal", .dt_id = TEGRA210_CLK_MIPI_CAL },
-	{ .con_id = "dpaux", .dt_id = TEGRA210_CLK_DPAUX },
-	{ .con_id = "dpaux1", .dt_id = TEGRA210_CLK_DPAUX1 },
 	{ .con_id = "hda2codec_2x", .dt_id = TEGRA210_CLK_HDA2CODEC_2X },
 	{ .con_id = "hda2hdmi", .dt_id = TEGRA210_CLK_HDA2HDMI },
 	{ .con_id = "disp1", .dt_id = TEGRA210_CLK_DISP1 },
@@ -2926,6 +2925,24 @@ static __init void tegra210_emc_clk_init(void __iomem *clk_base)
 	clks[TEGRA210_CLK_MC] = clk;
 }
 
+static const char *mux_sorsafe_plldp[] = { "sor_safe", "pll_dp" };
+static const char *mux_sorsafe_sor1brick_sor1mux[] = { "sor_safe", "sor1_brick", "sor1_mux"};
+
+static const char *mux_sor1[] = { "pll_p", "pll_d_out0", "pll_d2_out0", "clk_m" };
+static u32 mux_sor1_idx[] = { [0] = 0, [1] = 2, [2] = 5, [3] = 6 };
+
+static struct tegra_clk_periph tegra_sor0 =
+	TEGRA_CLK_PERIPH(14, 1, 0, 0, 0, 0, 0, 182, 0, NULL, NULL);
+
+static struct tegra_clk_periph tegra_sor1 =
+	TEGRA_CLK_PERIPH(14, 3, 0, 0, 0, 0, 0, 183, 0, NULL, &sor1_lock);
+
+static struct tegra_clk_periph tegra_sor1_mux =
+	TEGRA_CLK_PERIPH(29, 7, 0, 0, 7, 1, TEGRA_DIVIDER_ROUND_UP |
+			 TEGRA_DIVIDER_INT, 0, TEGRA_PERIPH_NO_GATE,
+			 mux_sor1_idx, &sor1_lock);
+
+
 static __init void tegra210_periph_clk_init(void __iomem *clk_base,
 					    void __iomem *pmc_base)
 {
@@ -2940,13 +2957,26 @@ static __init void tegra210_periph_clk_init(void __iomem *clk_base,
 					      1, 17, 222);
 	clks[TEGRA210_CLK_SOR_SAFE] = clk;
 
-	clk = tegra_clk_register_periph_fixed("dpaux", "sor_safe", 0, clk_base,
-					      1, 17, 181);
-	clks[TEGRA210_CLK_DPAUX] = clk;
+	clk = tegra_clk_register_periph_nodiv("sor0", mux_sorsafe_plldp,
+			       ARRAY_SIZE(mux_sorsafe_plldp), &tegra_sor0,
+			       clk_base, CLK_SOURCE_SOR0);
 
-	clk = tegra_clk_register_periph_fixed("dpaux1", "sor_safe", 0, clk_base,
-					      1, 17, 207);
-	clks[TEGRA210_CLK_DPAUX1] = clk;
+	clks[TEGRA210_CLK_SOR0] = clk;
+
+	clk = tegra_clk_register_periph_nodiv("sor1", mux_sorsafe_sor1brick_sor1mux,
+			       ARRAY_SIZE(mux_sorsafe_sor1brick_sor1mux), &tegra_sor1,
+			       clk_base, CLK_SOURCE_SOR1);
+
+	clks[TEGRA210_CLK_SOR1] = clk;
+
+	clk = tegra_clk_register_periph("sor1_mux", mux_sor1,
+					ARRAY_SIZE(mux_sor1), &tegra_sor1_mux,
+					clk_base, CLK_SOURCE_SOR1, 0);
+
+	clks[TEGRA210_CLK_SOR1_MUX] = clk;
+
+	clk = tegra_clk_register_sync_source("sor1_brick", 0, ULONG_MAX);
+	clks[TEGRA210_CLK_SOR1_BRICK] = clk;
 
 	/* dsia */
 	clk = tegra_clk_register_periph_gate("dsia", "pll_d_dsi_out", 0,

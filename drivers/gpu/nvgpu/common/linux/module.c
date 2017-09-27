@@ -40,6 +40,7 @@
 #include "module.h"
 #include "intr.h"
 #include "cde.h"
+#include "ioctl.h"
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION

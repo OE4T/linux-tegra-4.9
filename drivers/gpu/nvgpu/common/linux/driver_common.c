@@ -29,6 +29,7 @@
 #include "module.h"
 #include "os_linux.h"
 #include "sysfs.h"
+#include "ioctl.h"
 
 #define EMC3D_DEFAULT_RATIO 750
 

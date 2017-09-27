@@ -46,6 +46,7 @@
 
 #include "common/linux/module.h"
 #include "common/linux/os_linux.h"
+#include "common/linux/ioctl.h"
 
 #ifdef CONFIG_TEGRA_19x_GPU
 #include <vgpu/vgpu_t19x.h>

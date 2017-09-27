@@ -31,6 +31,7 @@
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";
+				generic-infoframe-type = <HDMI_INFOFRAME_TYPE_HDR>;
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
 					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;

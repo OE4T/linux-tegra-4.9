@@ -45,10 +45,6 @@
 			vif-supply = <&en_vdd_cam>;
 			vvcm-suply = <&en_vdd_vcm_2v8>;
 		};
-		lc898212_2: lc898212@72 {
-			vvcm-supply = <&en_vdd_vcm_2v8>;
-			support_mfi = "true";
-		};
 	};
 
 	i2c@c240000 {
@@ -66,10 +62,6 @@
 			vdig-supply = <&en_vdd_sys>;
 			vif-supply = <&en_vdd_cam>;
 			vvcm-suply = <&en_vdd_vcm_2v8>;
-		};
-		lc898212_1: lc898212@72 {
-			vvcm-supply = <&en_vdd_vcm_2v8>;
-			support_mfi = "true";
 		};
 	};
 

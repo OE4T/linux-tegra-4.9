@@ -205,9 +205,6 @@
 		e3323_cam0: ov23850_a@10 {
 			status = "disabled";
 		};
-		e3323_vcm0: lc898212@72 {
-			status = "disabled";
-		};
 		tca6408@21 {
 			status = "disabled";
 		};
@@ -280,9 +277,6 @@
 
 	i2c@c240000 {
 		e3323_cam1: ov23850_c@36 {
-			status = "disabled";
-		};
-		e3323_vcm1: lc898212@72 {
 			status = "disabled";
 		};
 	};

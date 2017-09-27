@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -26,6 +26,9 @@
 #define CAMRTC_TAG_IVC_SETUP CAMRTC_TAG64('I','V','C', '-', 'S','E','T','U')
 
 #define CAMRTC_TAG_NV_TRACE CAMRTC_TAG64('N','V',' ','T','R','A','C','E')
+
+#define CAMRTC_TAG_NV_COVERAGE \
+	CAMRTC_TAG64('N', 'V', ' ', 'C', 'O', 'V', 'E', 'R')
 
 struct camrtc_tlv {
 	uint64_t tag;

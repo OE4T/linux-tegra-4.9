@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,6 +52,7 @@
 
 #include "soc/tegra/camrtc-commands.h"
 #include "soc/tegra/camrtc-ctrl-commands.h"
+#include <linux/tegra-rtcpu-coverage.h>
 
 #ifndef RTCPU_DRIVER_SM5_VERSION
 #define RTCPU_DRIVER_SM5_VERSION U32_C(5)
@@ -168,6 +169,7 @@ struct tegra_cam_rtcpu {
 	struct device *hsp_device;
 	struct tegra_hsp_sm_pair *sm_pair;
 	struct tegra_rtcpu_trace *tracer;
+	struct tegra_rtcpu_coverage *coverage;
 	struct {
 		struct mutex mutex;
 		wait_queue_head_t response_waitq;
@@ -825,6 +827,21 @@ static int tegra_camrtc_boot_sync(struct device *dev)
 		}
 	}
 
+	if (rtcpu->coverage != NULL) {
+		ret = tegra_rtcpu_coverage_boot_sync(rtcpu->coverage);
+		if (ret < 0) {
+			dev_info(dev, "coverage boot sync status: %d\n", ret);
+
+			/*
+			 * Not a fatal error, don't stop the sync.
+			 * But go ahead and remove the coverage debug FS
+			 * entries and release the memory.
+			 */
+			tegra_rtcpu_coverage_destroy(rtcpu->coverage);
+			rtcpu->coverage = NULL;
+		}
+	}
+
 	return 0;
 
 error:
@@ -859,7 +876,7 @@ int tegra_camrtc_iovm_setup(struct device *dev, dma_addr_t iova)
 
 	if (RTCPU_GET_COMMAND_ID(ret) == RTCPU_CMD_ERROR) {
 		u32 error = RTCPU_GET_COMMAND_VALUE(ret);
-		dev_err(dev, "IOVM setup error: %u\n", error);
+		dev_info(dev, "IOVM setup error: %u\n", error);
 		return -EIO;
 	}
 
@@ -1060,6 +1077,9 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 	}
 
 	tegra_rtcpu_trace_destroy(rtcpu->tracer);
+	if (rtcpu->coverage != NULL)
+		tegra_rtcpu_coverage_destroy(rtcpu->coverage);
+
 	tegra_camrtc_poweroff(&pdev->dev);
 	tegra_pd_remove_device(&pdev->dev);
 	tegra_cam_rtcpu_mon_destroy(rtcpu->monitor);
@@ -1120,6 +1140,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	dma_set_max_seg_size(dev, UINT_MAX);
 
 	rtcpu->tracer = tegra_rtcpu_trace_create(dev, rtcpu->camera_devices);
+
+	rtcpu->coverage = tegra_rtcpu_coverage_create(dev);
 
 	ret = tegra_camrtc_mbox_init(dev);
 	if (ret)

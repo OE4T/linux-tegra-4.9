@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -365,6 +365,8 @@ int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus)
 		int ret = tegra_camrtc_iovm_setup(bus->dev.parent,
 						bus->regions[i].iova);
 		if (ret < 0) {
+			dev_err(&bus->dev,
+				"RTCPU IVC bus: IOVM setup error: %u\n", ret);
 			tegra_ivc_bus_stop(&bus->dev);
 			return ret;
 		}

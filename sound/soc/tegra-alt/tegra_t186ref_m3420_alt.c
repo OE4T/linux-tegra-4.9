@@ -18,6 +18,7 @@
 
 #include <linux/clk.h>
 #include <linux/module.h>
+#include <linux/version.h>
 #include <linux/pm_runtime.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
@@ -31,12 +32,11 @@
 struct tegra186_m3420 {
 	struct tegra_asoc_audio_clock_info audio_clock;
 	struct mutex lock;
-	struct snd_soc_dai *i2s_master;
+	struct snd_soc_pcm_runtime *i2s_master;
 	unsigned int num_codec_links;
 	unsigned int clk_ena_count;
 	unsigned int srate;
 	unsigned int i2s_master_id;
-	unsigned int i2s_master_idx;
 };
 
 static int tegra186_m3420_clocks_init(struct snd_soc_card *card,
@@ -103,7 +103,7 @@ static int tegra186_m3420_clocks_init(struct snd_soc_card *card,
 		return err;
 	}
 
-	err = pm_runtime_get_sync(machine->i2s_master->dev);
+	err = pm_runtime_get_sync(machine->i2s_master->cpu_dai->dev);
 	if (err < 0) {
 		dev_err(card->dev, "Failed to enable I2S master\n");
 		tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
@@ -124,7 +124,7 @@ static int tegra186_m3420_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_pcm_stream *stream;
 	struct tegra186_m3420 *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx, dai_fmt, bclk_ratio;
+	unsigned int dai_fmt, bclk_ratio;
 	int err;
 
 	if (params_format(params) != SNDRV_PCM_FORMAT_S16_LE) {
@@ -138,19 +138,19 @@ static int tegra186_m3420_hw_params(struct snd_pcm_substream *substream,
 	if (err)
 		return err;
 
-	idx = tegra_machine_get_codec_dai_link_idx_t18x(name);
+	rtd = snd_soc_get_pcm_runtime(card, name);
+	if (!rtd)
+		return -EINVAL;
 
-	stream = (struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+	stream = (struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	stream->rate_min = params_rate(params);
 
-	bclk_ratio = tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]);
+	bclk_ratio = tegra_machine_get_bclk_ratio_t18x(rtd);
 	if (bclk_ratio >= 0) {
-		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
-						 bclk_ratio);
-
+		err = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai, bclk_ratio);
 		if (err < 0) {
 			dev_err(card->dev, "Failed to set bclk ratio for %s\n",
-				card->rtd[idx].dai_link->name);
+				rtd->dai_link->name);
 			return err;
 		}
 	}
@@ -166,16 +166,16 @@ static int tegra186_m3420_hw_params(struct snd_pcm_substream *substream,
 	 * bit-clock and frame-sync signals force the codecs that don't
 	 * interface with I2S1 to be bit-clock and frame-sync slaves.
 	 */
-	if (machine->i2s_master != card->rtd[idx].cpu_dai) {
-		dai_fmt = card->rtd[idx].dai_link->dai_fmt;
+	if (machine->i2s_master != rtd) {
+		dai_fmt = rtd->dai_link->dai_fmt;
 		dai_fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
 		dai_fmt |= SND_SOC_DAIFMT_CBS_CFS;
-		err = snd_soc_dai_set_fmt(card->rtd[idx].codec_dai, dai_fmt);
+		err = snd_soc_dai_set_fmt(rtd->codec_dai, dai_fmt);
 		if (err)
 			return err;
 	}
 
-	return snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai, 0,
+	return snd_soc_dai_set_sysclk(rtd->codec_dai, 0,
 				      machine->audio_clock.clk_out_rate,
 				      SND_SOC_CLOCK_IN);
 }
@@ -217,7 +217,7 @@ static void tegra186_m3420_shutdown(struct snd_pcm_substream *substream)
 		machine->clk_ena_count--;
 
 		if (!machine->clk_ena_count) {
-			pm_runtime_put_sync(machine->i2s_master->dev);
+			pm_runtime_put_sync(machine->i2s_master->cpu_dai->dev);
 			tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
 		}
 	}
@@ -225,8 +225,10 @@ static void tegra186_m3420_shutdown(struct snd_pcm_substream *substream)
 	mutex_unlock(&machine->lock);
 }
 
-static int tegra186_m3420_i2s_index(struct snd_soc_card *card, unsigned int id)
+struct snd_soc_pcm_runtime *tegra186_m3420_i2s_rtd(struct snd_soc_card *card,
+						   unsigned int id)
 {
+	struct snd_soc_pcm_runtime *rtd;
 	const char *name;
 
 	switch (id) {
@@ -244,29 +246,35 @@ static int tegra186_m3420_i2s_index(struct snd_soc_card *card, unsigned int id)
 		break;
 	default:
 		dev_err(card->dev, "Invalid I2S master!");
-		return -EINVAL;
+		return ERR_PTR(-EINVAL);
 	}
 
-	return tegra_machine_get_codec_dai_link_idx_t18x(name);
+	rtd = snd_soc_get_pcm_runtime(card, name);
+	if (!rtd)
+		return ERR_PTR(-EINVAL);
+
+	return rtd;
 }
 
-static int tegra186_m3420_i2s_fmt(struct snd_soc_card *card, unsigned int idx,
+static int tegra186_m3420_i2s_fmt(struct snd_soc_card *card,
+				  struct snd_soc_pcm_runtime *rtd,
 				  bool is_master)
 {
 	unsigned int dai_fmt;
 
-	dai_fmt = card->rtd[idx].dai_link->dai_fmt;
+	dai_fmt = rtd->dai_link->dai_fmt;
 	dai_fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
 	dai_fmt |= is_master ? SND_SOC_DAIFMT_CBM_CFM : SND_SOC_DAIFMT_CBS_CFS;
 
-	return snd_soc_dai_set_fmt(card->rtd[idx].cpu_dai, dai_fmt);
+	return snd_soc_dai_set_fmt(rtd->cpu_dai, dai_fmt);
 }
 
 static int tegra186_m3420_i2s_config(struct snd_soc_card *card,
 				     struct tegra186_m3420 *machine,
 				     unsigned new_master_id)
 {
-	int new_master_idx, ret = 0;
+	struct snd_soc_pcm_runtime *rtd, *new_master_rtd;
+	int ret = 0;
 
 	mutex_lock(&machine->lock);
 
@@ -280,31 +288,31 @@ static int tegra186_m3420_i2s_config(struct snd_soc_card *card,
 		goto out;
 	}
 
-	ret = tegra186_m3420_i2s_index(card, new_master_id);
-	if (ret < 0)
+	rtd = tegra186_m3420_i2s_rtd(card, new_master_id);
+	if (IS_ERR(rtd)) {
+		ret = PTR_ERR(rtd);
 		goto out;
+	}
 
-	new_master_idx = ret;
+	new_master_rtd = rtd;
 
 	/* Configure the current I2S master as an I2S slave */
 	if (machine->i2s_master) {
-		ret = tegra186_m3420_i2s_fmt(card, machine->i2s_master_idx,
-						  false);
+		ret = tegra186_m3420_i2s_fmt(card, machine->i2s_master, false);
 		if (ret)
 			goto out;
 	}
 
 	/* Configure the new I2S master */
-	ret = tegra186_m3420_i2s_fmt(card, new_master_idx, true);
+	ret = tegra186_m3420_i2s_fmt(card, new_master_rtd, true);
 	if (ret) {
-		tegra186_m3420_i2s_fmt(card, machine->i2s_master_idx,
-					    true);
+		if (machine->i2s_master)
+			tegra186_m3420_i2s_fmt(card, machine->i2s_master, true);
 		goto out;
 	}
 
 	machine->i2s_master_id = new_master_id;
-	machine->i2s_master_idx = new_master_idx;
-	machine->i2s_master = card->rtd[new_master_idx].cpu_dai;
+	machine->i2s_master = new_master_rtd;
 
 out:
 	mutex_unlock(&machine->lock);
@@ -382,12 +390,18 @@ static const struct snd_soc_dapm_widget tegra_m3420_dapm_widgets[] = {
 
 static int tegra186_m3420_suspend_pre(struct snd_soc_card *card)
 {
-	unsigned int idx;
+	struct snd_soc_pcm_runtime *rtd;
 
 	/* DAPM dai link stream work for non pcm links */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
+	unsigned int idx;
 	for (idx = 0; idx < card->num_rtd; idx++) {
-		if (card->rtd[idx].dai_link->params)
-			INIT_DELAYED_WORK(&card->rtd[idx].delayed_work, NULL);
+		rtd = &card->rtd[idx];
+#else
+	list_for_each_entry(rtd, &card->rtd_list, list) {
+#endif
+		if (rtd->dai_link->params)
+			INIT_DELAYED_WORK(&rtd->delayed_work, NULL);
 	}
 
 	return 0;

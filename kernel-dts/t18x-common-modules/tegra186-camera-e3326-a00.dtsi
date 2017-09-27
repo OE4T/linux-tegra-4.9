@@ -79,6 +79,9 @@
 			avdd-reg = "vana";
 			iovdd-reg = "vif";
 
+			/* Sensor output flip settings */
+			vertical-flip = "true";
+
 			/**
 			* A modeX node is required to support v4l2 driver
 			* implementation with NVIDIA camera software stack

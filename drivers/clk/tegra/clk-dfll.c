@@ -2438,6 +2438,25 @@ u32 tegra_dfll_get_peak_thermal_floor_mv(void)
 }
 EXPORT_SYMBOL(tegra_dfll_get_peak_thermal_floor_mv);
 
+/**
+ * tegra_dfll_get_min_millivolts - return DFLL min millivolts
+ */
+u32 tegra_dfll_get_min_millivolts(void)
+{
+	return tegra_dfll_dev->soc->min_millivolts;
+}
+EXPORT_SYMBOL(tegra_dfll_get_min_millivolts);
+
+/**
+ * tegra_dfll_get_alignment - return DFLL alignment
+ */
+struct rail_alignment *tegra_dfll_get_alignment(void)
+{
+	if (!tegra_dfll_dev)
+		return ERR_PTR(-EPROBE_DEFER);
+	return &tegra_dfll_dev->soc->alignment;
+}
+EXPORT_SYMBOL(tegra_dfll_get_alignment);
 
 /*
  * DFLL initialization

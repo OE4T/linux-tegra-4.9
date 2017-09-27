@@ -967,6 +967,7 @@ unsigned long tegra_dvfs_get_maxrate(struct clk *c)
 
 	return freqs[num_freqs - 1];
 }
+EXPORT_SYMBOL(tegra_dvfs_get_maxrate);
 
 unsigned long tegra_dvfs_round_rate(struct clk *c, unsigned long rate)
 {
@@ -1639,6 +1640,7 @@ struct dvfs_rail *tegra_dvfs_get_rail_by_name(char *name)
 
 	return NULL;
 }
+EXPORT_SYMBOL(tegra_dvfs_get_rail_by_name);
 
 bool tegra_dvfs_is_rail_up(struct dvfs_rail *rail)
 {
@@ -1656,6 +1658,7 @@ bool tegra_dvfs_is_rail_up(struct dvfs_rail *rail)
 	mutex_unlock(&dvfs_lock);
 	return ret;
 }
+EXPORT_SYMBOL(tegra_dvfs_is_rail_up);
 
 int tegra_dvfs_rail_power_up(struct dvfs_rail *rail)
 {
@@ -1676,6 +1679,7 @@ int tegra_dvfs_rail_power_up(struct dvfs_rail *rail)
 	mutex_unlock(&dvfs_lock);
 	return ret;
 }
+EXPORT_SYMBOL(tegra_dvfs_rail_power_up);
 
 int tegra_dvfs_rail_power_down(struct dvfs_rail *rail)
 {
@@ -1696,6 +1700,7 @@ int tegra_dvfs_rail_power_down(struct dvfs_rail *rail)
 	mutex_unlock(&dvfs_lock);
 	return ret;
 }
+EXPORT_SYMBOL(tegra_dvfs_rail_power_down);
 
 unsigned long tegra_dvfs_get_fmax_at_vmin_safe_t(struct clk *c)
 {
@@ -1706,11 +1711,13 @@ unsigned long tegra_dvfs_get_fmax_at_vmin_safe_t(struct clk *c)
 
 	return d->fmax_at_vmin_safe_t;
 }
+EXPORT_SYMBOL(tegra_dvfs_get_fmax_at_vmin_safe_t);
 
 bool tegra_dvfs_is_rail_ready(struct dvfs_rail *rail)
 {
 	return rail->is_ready;
 }
+EXPORT_SYMBOL(tegra_dvfs_is_rail_ready);
 
 /*
  * Validate rail thermal floors/caps, and get its size.

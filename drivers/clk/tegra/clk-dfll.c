@@ -2407,6 +2407,38 @@ error:
 }
 EXPORT_SYMBOL(tegra_dfll_get_by_phandle);
 
+/**
+ * tegra_dfll_get_thermal_floor_mv - return millivolts of thermal floor
+ */
+u32 tegra_dfll_get_thermal_floor_mv(void)
+{
+	return tegra_dfll_dev->lut_uv[tegra_dfll_dev->thermal_floor_output]
+		/ 1000;
+}
+EXPORT_SYMBOL(tegra_dfll_get_thermal_floor_mv);
+
+/**
+ * tegra_dfll_get_thermal_cap_mv - return millivolts of thermal cap
+ */
+u32 tegra_dfll_get_thermal_cap_mv(void)
+{
+	return tegra_dfll_dev->lut_uv[tegra_dfll_dev->thermal_cap_output]
+		/ 1000;
+}
+EXPORT_SYMBOL(tegra_dfll_get_thermal_cap_mv);
+
+/**
+ * tegra_dfll_get_peak_thermal_floor_mv - get millivolts of peak thermal floor
+ */
+u32 tegra_dfll_get_peak_thermal_floor_mv(void)
+{
+	int mv = tegra_dfll_dev->soc->thermal_floor_table[0].millivolts;
+
+       return tegra_round_voltage(mv, &tegra_dfll_dev->soc->alignment, 1);
+}
+EXPORT_SYMBOL(tegra_dfll_get_peak_thermal_floor_mv);
+
+
 /*
  * DFLL initialization
  */

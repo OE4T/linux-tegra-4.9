@@ -107,9 +107,13 @@ void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 			ram_rl_entry_chan_runqueue_selector_f(
 						c->t19x.runqueue_sel) |
 			ram_rl_entry_chan_userd_target_f(
-			ram_rl_entry_chan_userd_target_sys_mem_ncoh_v()) |
+				nvgpu_aperture_mask(g, &g->fifo.userd,
+				ram_rl_entry_chan_userd_target_sys_mem_ncoh_v(),
+				ram_rl_entry_chan_userd_target_vid_mem_v())) |
 			ram_rl_entry_chan_inst_target_f(
-			ram_rl_entry_chan_userd_target_sys_mem_ncoh_v());
+				nvgpu_aperture_mask(g, &c->inst_block,
+				ram_rl_entry_chan_inst_target_sys_mem_ncoh_v(),
+				ram_rl_entry_chan_inst_target_vid_mem_v()));
 
 	addr_lo = u64_lo32(c->userd_iova) >>
 			ram_rl_entry_chan_userd_ptr_align_shift_v();

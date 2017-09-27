@@ -672,6 +672,14 @@ static inline u32 ram_rl_entry_chan_inst_target_sys_mem_ncoh_v(void)
 {
 	return 0x00000003;
 }
+static inline u32 ram_rl_entry_chan_inst_target_sys_mem_coh_v(void)
+{
+	return 0x00000002U;
+}
+static inline u32 ram_rl_entry_chan_inst_target_vid_mem_v(void)
+{
+	return 0x00000000U;
+}
 static inline u32 ram_rl_entry_chan_userd_target_f(u32 v)
 {
 	return (v & 0x3) << 6;

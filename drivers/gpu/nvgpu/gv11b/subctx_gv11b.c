@@ -158,12 +158,15 @@ void gv11b_subctx_commit_pdb(struct channel_gk20a *c,
 	u32 format_word;
 	u32 pdb_addr_lo, pdb_addr_hi;
 	u64 pdb_addr;
+	u32 aperture = nvgpu_aperture_mask(g, vm->pdb.mem,
+			ram_in_sc_page_dir_base_target_sys_mem_ncoh_v(),
+			ram_in_sc_page_dir_base_target_vid_mem_v());
 
 	pdb_addr = nvgpu_mem_get_addr(g, vm->pdb.mem);
 	pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	pdb_addr_hi = u64_hi32(pdb_addr);
 	format_word = ram_in_sc_page_dir_base_target_f(
-		ram_in_sc_page_dir_base_target_sys_mem_ncoh_v(), 0) |
+		aperture, 0) |
 		ram_in_sc_page_dir_base_vol_f(
 		ram_in_sc_page_dir_base_vol_true_v(), 0) |
 		ram_in_sc_page_dir_base_fault_replay_tex_f(1, 0) |

@@ -157,10 +157,12 @@
 #define PLLD_SDM_EN_MASK BIT(16)
 
 #define PLLD2_SDM_EN_MASK BIT(31)
+#define PLLD2_SDM_RESET_MASK BIT(27)
 #define PLLD2_SSC_EN_MASK 0
 
 #define PLLDP_SS_CFG	0x598
 #define PLLDP_SDM_EN_MASK BIT(31)
+#define PLLDP_SDM_RESET_MASK BIT(27)
 #define PLLDP_SSC_EN_MASK BIT(30)
 #define PLLDP_SS_CTRL1	0x59c
 #define PLLDP_SS_CTRL2	0x5a0
@@ -2109,6 +2111,7 @@ static struct tegra_clk_pll_params pll_d2_params = {
 	.sdm_din_mask = PLLA_SDM_DIN_MASK,
 	.sdm_ctrl_reg = PLLD2_MISC1,
 	.sdm_ctrl_en_mask = PLLD2_SDM_EN_MASK,
+	.sdm_ctrl_reset_mask = PLLD2_SDM_RESET_MASK,
 	/* disable spread-spectrum for pll_d2 */
 	.ssc_ctrl_reg = 0,
 	.ssc_ctrl_en_mask = 0,
@@ -2153,6 +2156,7 @@ static struct tegra_clk_pll_params pll_dp_params = {
 	.sdm_din_mask = PLLA_SDM_DIN_MASK,
 	.sdm_ctrl_reg = PLLDP_SS_CFG,
 	.sdm_ctrl_en_mask = PLLDP_SDM_EN_MASK,
+	.sdm_ctrl_reset_mask = PLLD2_SDM_RESET_MASK,
 	.ssc_ctrl_reg = PLLDP_SS_CFG,
 	.ssc_ctrl_en_mask = PLLDP_SSC_EN_MASK,
 	.round_p_to_pdiv = pll_qlin_p_to_pdiv,

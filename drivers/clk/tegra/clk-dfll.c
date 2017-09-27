@@ -181,6 +181,13 @@
 #define DFLL_INTR_MAX_MASK		0x2
 
 #define DFLL_CC4_HVC			0x74
+#define DFLL_CC4_HVC_CTRL_SHIFT		0
+#define DFLL_CC4_HVC_CTRL_MASK		(0x3 << DFLL_CC4_HVC_CTRL_SHIFT)
+#define DFLL_CC4_HVC_FORCE_VAL_SHIFT	2
+#define DFLL_CC4_HVC_FORCE_VAL_MASK \
+	(OUT_MASK << DFLL_CC4_HVC_FORCE_VAL_SHIFT)
+#define DFLL_CC4_HVC_FORCE_EN		(0x1 << 8)
+
 /*
  * Integrated I2C controller registers - relative to td->i2c_controller_base
  */
@@ -276,6 +283,7 @@
 #define DFLL_CALIBRATE_FORCE_VMIN	BIT(0)
 #define DFLL_DEFER_FORCE_CALIBRATE	BIT(1)
 #define DFLL_ONE_SHOT_CALIBRATE		BIT(2)
+#define DFLL_HAS_IDLE_OVERRIDE		BIT(3)
 
 /**
  * enum dfll_ctrl_mode - DFLL hardware operating mode
@@ -660,6 +668,15 @@ static void dfll_set_output_limits(struct tegra_dfll *td,
 		dfll_i2c_writel(td, val, DFLL_OUTPUT_CFG);
 		dfll_i2c_wmb(td);
 	}
+
+	if (td->cfg_flags & DFLL_HAS_IDLE_OVERRIDE) {
+		/* Override mode force value follows active mode Vmin */
+		val = dfll_readl(td, DFLL_CC4_HVC);
+		val &= ~DFLL_CC4_HVC_FORCE_VAL_MASK;
+		val |= td->lut_min << DFLL_CC4_HVC_FORCE_VAL_SHIFT;
+		dfll_writel(td, val, DFLL_CC4_HVC);
+		dfll_wmb(td);
+	}
 }
 
 /*
@@ -977,6 +994,17 @@ static void dfll_set_mode(struct tegra_dfll *td,
 {
 	td->mode = mode;
 	dfll_writel(td, mode - 1, DFLL_CTRL);
+
+	if (td->cfg_flags & DFLL_HAS_IDLE_OVERRIDE) {
+		/* Override mode follows active mode up to open loop */
+		u32 val = dfll_readl(td, DFLL_CC4_HVC);
+		val &= ~(DFLL_CC4_HVC_CTRL_MASK | DFLL_CC4_HVC_FORCE_EN);
+		if (mode >= DFLL_OPEN_LOOP) {
+			val |= DFLL_OPEN_LOOP - 1;
+			val |= DFLL_CC4_HVC_FORCE_EN;
+		}
+		dfll_writel(td, val, DFLL_CC4_HVC);
+	}
 	dfll_wmb(td);
 	udelay(1);
 }
@@ -1631,6 +1659,12 @@ static void dfll_init_out_if(struct tegra_dfll *td)
 
 		dfll_load_i2c_lut(td);
 		dfll_init_i2c_if(td);
+	}
+
+	if (td->cfg_flags & DFLL_HAS_IDLE_OVERRIDE) {
+		val = td->lut_min << DFLL_CC4_HVC_FORCE_VAL_SHIFT;
+		dfll_writel(td, val, DFLL_CC4_HVC);
+		dfll_wmb(td);
 	}
 }
 
@@ -3057,13 +3091,15 @@ static int registers_show(struct seq_file *s, void *data)
 		seq_printf(s, "[0x%02x] = 0x%08x\n", offs,
 			   dfll_i2c_readl(td, offs));
 
-	seq_puts(s, "\nOVERRIDE REGISTERS:\n");
-	offs = DFLL_CC4_HVC;
-	if (td->pmu_if == TEGRA_DFLL_PMU_I2C)
-		val = dfll_i2c_readl(td, offs);
-	else
-		val = dfll_readl(td, offs);
-	seq_printf(s, "[0x%02x] = 0x%08x\n", offs, val);
+	if (td->cfg_flags & DFLL_HAS_IDLE_OVERRIDE) {
+		seq_puts(s, "\nOVERRIDE REGISTERS:\n");
+		offs = DFLL_CC4_HVC;
+		if (td->pmu_if == TEGRA_DFLL_PMU_I2C)
+			val = dfll_i2c_readl(td, offs);
+		else
+			val = dfll_readl(td, offs);
+		seq_printf(s, "[0x%02x] = 0x%08x\n", offs, val);
+	}
 
 	if (td->pmu_if == TEGRA_DFLL_PMU_I2C) {
 		seq_puts(s, "\nINTEGRATED I2C CONTROLLER REGISTERS:\n");
@@ -3391,6 +3427,9 @@ static int dfll_fetch_common_params(struct tegra_dfll *td)
 
 	if (of_property_read_bool(dn, "nvidia,one-shot-calibrate"))
 		td->cfg_flags |= DFLL_ONE_SHOT_CALIBRATE;
+
+	if (of_property_read_bool(dn, "nvidia,idle-override"))
+		td->cfg_flags |= DFLL_HAS_IDLE_OVERRIDE;
 
 	if (of_property_read_string(dn, "clock-output-names",
 				    &td->output_clock_name)) {

@@ -3734,6 +3734,10 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		pr_err("Unsupported command call\n");
 	}
 
+	req.command_error = ret;
+	if (copy_to_user(ifr->ifr_data, &req, sizeof(req)))
+		return -EFAULT;
+
 	pr_debug("<--eqos_handle_prv_ioctl\n");
 
 	return ret;

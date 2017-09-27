@@ -19,12 +19,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#ifndef __NVGPU_IO_T19X_H__
+#define __NVGPU_IO_T19X_H__
 
-#ifndef _FIFO_T19X_H_
-#define _FIFO_T19X_H_
-
-struct fifo_t19x {
-	u32 max_subctx_count;
-};
+#ifdef __KERNEL__
+#include "linux/io_t19x.h"
+#endif
 
 #endif

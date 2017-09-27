@@ -23,6 +23,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "vgpu/clk_vgpu.h"
+#include "common/linux/os_linux.h"
 
 #include <nvgpu/nvhost.h>
 #include <linux/platform_device.h>
@@ -33,7 +34,7 @@ static int gv11b_vgpu_probe(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct resource *r;
 	void __iomem *regs;
-	struct fifo_gk20a *f = &platform->g->fifo;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(platform->g);
 	int ret;
 
 	r = platform_get_resource_byname(pdev, IORESOURCE_MEM, "usermode");
@@ -46,12 +47,12 @@ static int gv11b_vgpu_probe(struct device *dev)
 		dev_err(dev, "failed to map usermode regs\n");
 		return PTR_ERR(regs);
 	}
-	f->t19x.usermode_regs = regs;
+	l->t19x.usermode_regs = regs;
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	ret = nvgpu_get_nvhost_dev(platform->g);
 	if (ret) {
-		f->t19x.usermode_regs = NULL;
+		l->t19x.usermode_regs = NULL;
 		return ret;
 	}
 #endif

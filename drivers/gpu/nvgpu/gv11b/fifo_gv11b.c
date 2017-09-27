@@ -61,15 +61,6 @@
 static void gv11b_fifo_init_ramfc_eng_method_buffer(struct gk20a *g,
 			struct channel_gk20a *ch, struct nvgpu_mem *mem);
 
-static inline void gv11b_usermode_writel(struct gk20a *g, u32 r, u32 v)
-{
-	struct fifo_gk20a *f = &g->fifo;
-	void __iomem *reg = f->t19x.usermode_regs + (r - usermode_cfg0_r());
-
-	writel_relaxed(v, reg);
-	gk20a_dbg(gpu_dbg_reg, "usermode r=0x%x v=0x%x", r, v);
-}
-
 void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 {
 
@@ -1787,7 +1778,6 @@ int gv11b_init_fifo_setup_hw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 
-	f->t19x.usermode_regs = g->regs + usermode_cfg0_r();
 	f->t19x.max_subctx_count =
 		gr_pri_fe_chip_def_info_max_veid_count_init_v();
 	return 0;

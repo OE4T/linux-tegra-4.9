@@ -720,7 +720,7 @@ static void tegra_hdmi_hpd_worker(struct work_struct *work)
 	mutex_lock(&hdmi->hpd_lock);
 
 	connected = tegra_dc_hpd(hdmi->dc);
-	orig_state = hdmi->enabled ? hdmi->plug_state : hdmi->enabled;
+	orig_state = hdmi->plug_state;
 
 	if (connected) {
 		switch (orig_state) {

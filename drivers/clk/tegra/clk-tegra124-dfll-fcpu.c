@@ -550,6 +550,7 @@ static const unsigned long tegra210b01_cpu_max_freq_table[] = {
 		.tune1_low  = 0x21107FF,			  \
 		.tune_high_min_millivolts = 850,		  \
 		.tune_high_margin_millivolts = 38,		  \
+		.dvco_calibration_max = ULONG_MAX,		  \
 	}, \
 	.cvb_version = "FCPU Table - p4v3-AggressiveSLT"
 
@@ -587,6 +588,7 @@ static const unsigned long tegra210b01_cpu_max_freq_table[] = {
 		.tune1_low  = 0x21107FF,			  \
 		.tune_high_min_millivolts = 850,		  \
 		.tune_high_margin_millivolts = 38,		  \
+		.dvco_calibration_max = ULONG_MAX,		  \
 	}, \
 	.cvb_version = "FCPU Table - p4v3-AggressiveSLT"
 
@@ -623,6 +625,7 @@ static const unsigned long tegra210b01_cpu_max_freq_table[] = {
 		.tune1_high = 0x03FFF7FF,			  \
 		.tune_high_min_millivolts = 850,		  \
 		.tune_high_margin_millivolts = 38,		  \
+		.dvco_calibration_max = ULONG_MAX,		  \
 	}, \
 	.cvb_version = "FCPU Table - p4v3"
 

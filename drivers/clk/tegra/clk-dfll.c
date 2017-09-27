@@ -3389,6 +3389,9 @@ static int dfll_fetch_common_params(struct tegra_dfll *td)
 	if (of_property_read_bool(dn, "nvidia,defer-force-calibrate"))
 		td->cfg_flags |= DFLL_DEFER_FORCE_CALIBRATE;
 
+	if (of_property_read_bool(dn, "nvidia,one-shot-calibrate"))
+		td->cfg_flags |= DFLL_ONE_SHOT_CALIBRATE;
+
 	if (of_property_read_string(dn, "clock-output-names",
 				    &td->output_clock_name)) {
 		dev_err(td->dev, "missing clock-output-names property\n");

@@ -23,9 +23,7 @@
 #ifdef CONFIG_TEGRA_SYS_EDP
 #include <soc/tegra/sysedp.h>
 #endif
-#if defined(CONFIG_TEGRA_NVDISPLAY)
 #include "dsi_padctrl.h"
-#endif
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 #define MAX_DSI_INSTANCE	4
@@ -155,9 +153,7 @@ struct tegra_dc_dsi_data {
 	struct sysedp_consumer *sysedpc;
 	struct padctrl *dsi_io_padctrl[MAX_DSI_INSTANCE];
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dsi_padctrl *pad_ctrl;
-#endif
 	struct pinctrl *pin;
 	struct pinctrl_state *pin_state[PAD_INVALID];
 

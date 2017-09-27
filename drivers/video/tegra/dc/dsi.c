@@ -361,11 +361,16 @@ static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
  * while reading/writing. As the register is not used currently,
  * skipping this change.
  */
-#if defined CONFIG_TEGRA_NVDISPLAY
-#define GET_BYTE_OFFSET(reg)	((reg > 8) ? ((reg + 1) * 4) : (reg * 4))
-#else
+#define GET_BYTE_OFFSET_NVDISPLAY(reg) ((reg > 8) ? ((reg + 1) * 4) : (reg * 4))
 #define GET_BYTE_OFFSET(reg)	(reg * 4)
-#endif
+
+static inline u32 get_byte_offset(u32 reg)
+{
+	if (tegra_dc_is_nvdisplay())
+		return GET_BYTE_OFFSET_NVDISPLAY(reg);
+	else
+		return GET_BYTE_OFFSET(reg);
+}
 
 unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 							u32 reg, int index)
@@ -378,9 +383,9 @@ unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 		"DSI is clock gated!"))
 			return 0;
 	}
-	ret = readl(dsi->base[index] + GET_BYTE_OFFSET(reg));
+	ret = readl(dsi->base[index] + get_byte_offset(reg));
 	trace_display_readl(dsi->dc, ret,
-			(char *)dsi->base[index] + GET_BYTE_OFFSET(reg));
+			(char *)dsi->base[index] + get_byte_offset(reg));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_controller_readl);
@@ -395,8 +400,8 @@ void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 			return;
 	}
 	trace_display_writel(dsi->dc, val,
-			(char *)dsi->base[index] + GET_BYTE_OFFSET(reg));
-	writel(val, dsi->base[index] + GET_BYTE_OFFSET(reg));
+			(char *)dsi->base[index] + get_byte_offset(reg));
+	writel(val, dsi->base[index] + get_byte_offset(reg));
 }
 EXPORT_SYMBOL(tegra_dsi_controller_writel);
 
@@ -404,9 +409,9 @@ unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 {
 	unsigned long ret;
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
-	ret = readl(dsi->base[DSI_INSTANCE_0] + GET_BYTE_OFFSET(reg));
+	ret = readl(dsi->base[DSI_INSTANCE_0] + get_byte_offset(reg));
 	trace_display_readl(dsi->dc, ret,
-		(char *)dsi->base[DSI_INSTANCE_0] + GET_BYTE_OFFSET(reg));
+		(char *)dsi->base[DSI_INSTANCE_0] + get_byte_offset(reg));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_readl);
@@ -417,8 +422,8 @@ void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	for (i = 0; i < dsi->max_instances; i++) {
 		trace_display_writel(dsi->dc, val,
-			(char *)dsi->base[i] + GET_BYTE_OFFSET(reg));
-		writel(val, dsi->base[i] + GET_BYTE_OFFSET(reg));
+			(char *)dsi->base[i] + get_byte_offset(reg));
+		writel(val, dsi->base[i] + get_byte_offset(reg));
 	}
 }
 EXPORT_SYMBOL(tegra_dsi_writel);
@@ -1041,11 +1046,10 @@ static void tegra_dsi_get_phy_timing(struct tegra_dc_dsi_data *dsi,
 
 static inline int tegra_dsi_ignore_phy_timing_range_violation(void)
 {
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	return 1;
-#else
-	return 0;
-#endif
+	if (tegra_dc_is_nvdisplay())
+		return 1;
+	else
+		return 0;
 }
 
 static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
@@ -2096,10 +2100,11 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 	 * Shift clock divider is removed in T18x. There is no display
 	 * clock control register and not shift clk div programming.
 	 */
-#if defined CONFIG_TEGRA_NVDISPLAY
-	tegra_dc_clk_set_rate(dc, dc->mode.pclk);
-	return;
-#endif
+	if (tegra_dc_is_nvdisplay()) {
+		tegra_dc_clk_set_rate(dc, dc->mode.pclk);
+		return;
+	}
+
 	/* formula: (dsi->shift_clk_div - 1) * 2 */
 	shift_clk_div_register = DIV_ROUND_CLOSEST(
 				((dsi->shift_clk_div.mul -
@@ -2114,9 +2119,6 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 	}
 
 	tegra_dc_get(dc);
-
-	val = PIXEL_CLK_DIVIDER_PCD1 |
-		SHIFT_CLK_DIVIDER(shift_clk_div_register + 2);
 
 	/* TODO: find out if PCD3 option is required */
 	val = PIXEL_CLK_DIVIDER_PCD1 |
@@ -2167,13 +2169,14 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 		return;
 	}
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST((1000 * 1000 * 1000),
-					dsi->current_dsi_clk_khz);
-#else
-	dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST((1000 * 1000 * 1000),
-					(dsi->current_dsi_clk_khz * 2));
-#endif
+	if (tegra_dc_is_nvdisplay())
+		dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST(
+						(1000 * 1000 * 1000),
+						dsi->current_dsi_clk_khz);
+	else
+		dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST(
+						(1000 * 1000 * 1000),
+						(dsi->current_dsi_clk_khz * 2));
 }
 
 static void tegra_dsi_set_dsc_clk(struct tegra_dc *dc,
@@ -2341,9 +2344,9 @@ static void tegra_dsi_pad_disable(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	return;
-#endif
+	if (tegra_dc_is_nvdisplay())
+		return;
+
 	if (dsi->info.controller_vs == DSI_VS_1) {
 		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_0_VS1);
 		val &= ~(DSI_PAD_CONTROL_0_VS1_PAD_PDIO(0xf) |
@@ -2373,9 +2376,9 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	return;
-#endif
+	if (tegra_dc_is_nvdisplay())
+		return;
+
 	if (dsi->info.controller_vs == DSI_VS_1) {
 		val = tegra_dsi_readl(dsi, DSI_PAD_CONTROL_0_VS1);
 		val &= ~(DSI_PAD_CONTROL_0_VS1_PAD_PDIO(0xf) |
@@ -2466,16 +2469,20 @@ static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
 	int i;
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	struct clk *clk72mhz = NULL;
-	struct device_node *np_dsi = tegra_dc_get_conn_np(dsi->dc);
-	clk72mhz = tegra_disp_of_clk_get_by_name(np_dsi, "clk72mhz");
-	if (IS_ERR_OR_NULL(clk72mhz)) {
-		dev_err(&dsi->dc->ndev->dev, "dsi: can't get clk72mhz clock\n");
-		return;
+	struct device_node *np_dsi = NULL;
+
+	if (tegra_dc_is_t21x()) {
+		np_dsi = tegra_dc_get_conn_np(dsi->dc);
+		clk72mhz = tegra_disp_of_clk_get_by_name(np_dsi,
+							"clk72mhz");
+		if (IS_ERR_OR_NULL(clk72mhz)) {
+			dev_err(&dsi->dc->ndev->dev,
+					"dsi: can't get clk72mhz clock\n");
+			return;
+		}
+		tegra_disp_clk_prepare_enable(clk72mhz);
 	}
-	tegra_disp_clk_prepare_enable(clk72mhz);
-#endif
 	/* Calibration settings begin */
 
 	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_1_VS1);
@@ -2513,10 +2520,11 @@ static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 			tegra_mipi_calibration(DSIC|DSID);
 		}
 	}
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
-	tegra_disp_clk_disable_unprepare(clk72mhz);
-	clk_put(clk72mhz);
-#endif
+
+	if (tegra_dc_is_t21x()) {
+		tegra_disp_clk_disable_unprepare(clk72mhz);
+		clk_put(clk72mhz);
+	}
 }
 
 static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
@@ -2530,16 +2538,6 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration(dsi);
 }
 
-#if !defined(CONFIG_TEGRA_NVDISPLAY) && !defined(CONFIG_ARCH_TEGRA_210_SOC)
-static void tegra_dsi_panelB_enable(void)
-{
-	unsigned int val;
-
-	val = readl(IO_ADDRESS(APB_MISC_GP_MIPI_PAD_CTRL_0));
-	val |= DSIB_MODE_ENABLE;
-	writel(val, (IO_ADDRESS(APB_MISC_GP_MIPI_PAD_CTRL_0)));
-}
-#endif
 static int tegra_dsi_init_hw(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi)
 {
@@ -2559,9 +2557,8 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	if (err < 0)
 		return err;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	tegra_dsi_pad_calibration(dsi);
-#endif
+	if (tegra_dc_is_nvdisplay())
+		tegra_dsi_pad_calibration(dsi);
 
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
@@ -2574,12 +2571,6 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 		DSI_POWER_CONTROL);
 	/* stabilization delay */
 	udelay(300);
-#if !defined(CONFIG_TEGRA_NVDISPLAY) && !defined(CONFIG_ARCH_TEGRA_210_SOC)
-
-	if (dsi->info.dsi_instance || dsi->info.ganged_type ||
-		dsi->info.dsi_csi_loopback)
-		tegra_dsi_panelB_enable();
-#endif
 	tegra_dsi_set_phy_timing(dsi, DSI_LPHS_IN_LP_MODE);
 
 	/* Initialize DSI registers */
@@ -2596,19 +2587,20 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 			tegra_dsi_writel(dsi, 0, *p);
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
-	if (tegra_platform_is_fpga()) {
-		if (dsi->info.video_data_type ==
-				TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE) {
-			/* HW fpga WAR: dsi byte clk to dsi pixel clk ratio */
-			tegra_dsi_writel(dsi, 0x8, dsi->regs->init_seq_data_15);
+	if (tegra_dc_is_t21x()) {
+		if (tegra_platform_is_fpga()) {
+			if (dsi->info.video_data_type ==
+					TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE) {
+				/* HW fpga WAR: dsi byte clk to dsi pixel
+				 * clk rate.
+				 */
+				tegra_dsi_writel(dsi, 0x8,
+						dsi->regs->init_seq_data_15);
+			}
 		}
-	}
-#endif
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	tegra_dsi_pad_calibration(dsi);
-#endif
+		tegra_dsi_pad_calibration(dsi);
+	}
 
 	tegra_dsi_writel(dsi,
 		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE),
@@ -4153,10 +4145,8 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	if (dsi->pad_ctrl)
+	if (tegra_dc_is_nvdisplay() && dsi->pad_ctrl)
 		tegra_dsi_padctrl_enable(dsi->pad_ctrl);
-#endif
 
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
@@ -4479,13 +4469,14 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	char *dsi_clk_name[4] = {"dsi", "dsib", "dsic", "dsid"};
 	char *dsi_lp_clk_name[4] = {"dsia_lp", "dsib_lp", "dsic_lp", "dsid_lp"};
 	char *dsi_reset_name[4] = {"dsia", "dsib", "dsic", "dsid"};
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	char *dsi_fixed_clk_name = "pllp_display";
-#else
-	char *dsi_fixed_clk_name = "pll_p_out3";
-#endif
+	char *dsi_fixed_clk_name = NULL;
 	struct device_node *np_dsi = tegra_dc_get_conn_np(dc);
 	const struct of_device_id *of_dev;
+
+	if (tegra_dc_is_nvdisplay())
+		dsi_fixed_clk_name = "pllp_display";
+	else
+		dsi_fixed_clk_name = "pll_p_out3";
 
 	if (!np_dsi || !of_device_is_available(np_dsi)) {
 		dev_err(&dc->ndev->dev, "dsi not available\n");
@@ -4565,14 +4556,14 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi->dsi_io_padctrl[i] = dsi_io_padctrl;
 	}
 
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
-	dsi->pin = devm_pinctrl_get(&dc->ndev->dev);
-	if (IS_ERR_OR_NULL(dsi->pin)) {
-		dev_info(&dc->ndev->dev, "missing pinctrl [%ld]\n",
-				PTR_ERR(dsi->pin));
-		dsi->pin = NULL;
+	if (tegra_dc_is_t21x()) {
+		dsi->pin = devm_pinctrl_get(&dc->ndev->dev);
+		if (IS_ERR_OR_NULL(dsi->pin)) {
+			dev_info(&dc->ndev->dev, "missing pinctrl [%ld]\n",
+					PTR_ERR(dsi->pin));
+			dsi->pin = NULL;
+		}
 	}
-#endif
 
 	/* Initialise pad registers needed for split link */
 	if (dc->out->dsi->split_link_type) {
@@ -4590,9 +4581,8 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi_fixed_clk = NULL;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	{
-		#define	CLK_NAME_MAX_LEN	13
+	if (tegra_dc_is_nvdisplay()) {
+#define	CLK_NAME_MAX_LEN	13
 		char disp_clk_name[CLK_NAME_MAX_LEN];
 		int	ctrl_num;
 
@@ -4600,14 +4590,14 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		if (0 > ctrl_num)
 			ctrl_num = 0;
 		snprintf(disp_clk_name, CLK_NAME_MAX_LEN, "nvdisplay_p%c",
-			'0' + ctrl_num);
+				'0' + ctrl_num);
 		dc_clk = tegra_disp_clk_get(&dc->ndev->dev, disp_clk_name);
 
-		#undef	CLK_NAME_MAX_LEN
+#undef	CLK_NAME_MAX_LEN
+	} else {
+		dc_clk = tegra_disp_clk_get(&dc->ndev->dev, "disp1");
 	}
-#else
-	dc_clk = tegra_disp_clk_get(&dc->ndev->dev, "disp1");
-#endif
+
 	if (IS_ERR_OR_NULL(dc_clk)) {
 		dev_err(&dc->ndev->dev, "dsi: dc clock %s unavailable\n",
 			dev_name(&dc->ndev->dev));
@@ -4925,11 +4915,12 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 		goto fail;
 	}
 
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
-	/* Shutting down. Drop any reference to dc clk */
-	while (tegra_platform_is_silicon() && tegra_dc_is_clk_enabled(dc->clk))
-		tegra_dc_put(dc);
-#endif
+	if (tegra_dc_is_t21x()) {
+		/* Shutting down. Drop any reference to dc clk */
+		while (tegra_platform_is_silicon() &&
+			tegra_dc_is_clk_enabled(dc->clk))
+			tegra_dc_put(dc);
+	}
 
 	pm_runtime_put_sync(&dc->ndev->dev);
 fail:
@@ -5007,10 +4998,8 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 	/* Disable dsi source clock */
 	tegra_dsi_clk_disable(dsi);
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	if (dsi->pad_ctrl)
+	if (tegra_dc_is_nvdisplay() && dsi->pad_ctrl)
 		tegra_dsi_padctrl_disable(dsi->pad_ctrl);
-#endif
 
 	dsi->enabled = false;
 	dsi->host_suspended = true;
@@ -5215,9 +5204,8 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	dsi = tegra_dc_get_outdata(dc);
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (tegra_platform_is_silicon() && tegra_bpmp_running()) {
-#endif
+	if (tegra_dc_is_t21x() || (tegra_dc_is_nvdisplay() &&
+		tegra_platform_is_silicon() && tegra_bpmp_running())) {
 		if (!dsi->avdd_dsi_csi) {
 			dsi->avdd_dsi_csi =  devm_regulator_get(&dc->ndev->dev,
 				"avdd_dsi_csi");
@@ -5229,19 +5217,19 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 				goto err_reg;
 			}
 		}
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	} else {
-		dsi->avdd_dsi_csi = NULL;
+		if (tegra_dc_is_nvdisplay())
+			dsi->avdd_dsi_csi = NULL;
 	}
-#endif
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
-	if (IS_ERR(dsi->pad_ctrl)) {
-		dev_err(&dc->ndev->dev, "dsi: Padctrl init failed\n");
-		err = PTR_ERR(dsi->pad_ctrl);
-		goto err_padctrl;
+
+	if (tegra_dc_is_nvdisplay()) {
+		dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
+		if (IS_ERR(dsi->pad_ctrl)) {
+			dev_err(&dc->ndev->dev, "dsi: Padctrl init failed\n");
+			err = PTR_ERR(dsi->pad_ctrl);
+			goto err_reg;
+		}
 	}
-#endif
 	if (dsi->pin)
 		dsi_pinctrl_init(dc);
 
@@ -5251,9 +5239,6 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 					      sysedp_name);
 #endif
 	return 0;
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-err_padctrl:
-#endif
 err_reg:
 	_tegra_dc_dsi_destroy(dc);
 	tegra_dc_set_outdata(dc, NULL);
@@ -5278,9 +5263,8 @@ static int tegra_dc_dsi_hpd_init(struct tegra_dc *dc)
 
 static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 {
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	tegra_dsi_padctrl_shutdown(dc);
-#endif
+	if (tegra_dc_is_nvdisplay())
+		tegra_dsi_padctrl_shutdown(dc);
 	_tegra_dc_dsi_destroy(dc);
 }
 
@@ -5304,16 +5288,13 @@ static bool tegra_dc_dsi_detect(struct tegra_dc *dc)
 	return result;
 }
 
-static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
+static void tegra_dc_dsi_setup_clk_t21x(struct tegra_dc *dc,
+					struct clk *clk)
 {
 	unsigned long rate;
-	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	struct clk *parent_clk = NULL;
 	struct clk *base_clk = NULL;
 	int err;
-
-	if (dc->out->dsc_en && dsi->dsc_clk)
-		tegra_dsi_set_dsc_clk(dc, dsi);
 
 	/* divide by 1000 to avoid overflow */
 	dc->mode.pclk /= 1000;
@@ -5324,24 +5305,6 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	rate *= 1000;
 	dc->mode.pclk *= 1000;
 
-	if (dc->initialized)
-		goto skip_setup;
-
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (clk == dc->clk) {
-		base_clk = tegra_disp_clk_get(&dc->ndev->dev,
-			dc->out->parent_clk ? dc->out->parent_clk : "pll_d");
-	} else {
-		if (dc->pdata->default_out->dsi->dsi_instance) {
-			parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
-				dc->out->parent_clk ? : "pll_d");
-		} else {
-			parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
-				"pll_d_out1");
-			base_clk = clk_get_parent(parent_clk);
-		}
-	}
-#else
 	if (clk == dc->clk) {
 		parent_clk = clk_get_sys(NULL,
 				dc->out->parent_clk ? : "pll_d_out0");
@@ -5357,26 +5320,76 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 			base_clk = clk_get_parent(parent_clk);
 		}
 	}
-#endif
 
-	/* Fix me: Revert bpmp check once bpmp FW is fixed */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (tegra_bpmp_running() && base_clk && rate != clk_get_rate(base_clk)) {
-		tegra_nvdisp_test_and_set_compclk(rate, dc);
-#else
 	if (rate != clk_get_rate(base_clk)) {
-#endif
 		err = clk_set_rate(base_clk, rate);
 		if (err)
 			dev_err(&dc->ndev->dev, "Failed to set pll freq\n");
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (parent_clk && (clk_get_parent(clk) != parent_clk))
-#else
 	if (clk_get_parent(clk) != parent_clk)
-#endif
 		clk_set_parent(clk, parent_clk);
+
+}
+
+static void tegra_dc_dsi_setup_clk_nvdisplay(struct tegra_dc *dc,
+						struct clk *clk)
+{
+	unsigned long rate;
+	struct clk *parent_clk = NULL;
+	struct clk *base_clk = NULL;
+	int err;
+
+	/* divide by 1000 to avoid overflow */
+	dc->mode.pclk /= 1000;
+
+	rate = (dc->mode.pclk * dc->shift_clk_div.mul * 2)
+		/ dc->shift_clk_div.div;
+
+	rate *= 1000;
+	dc->mode.pclk *= 1000;
+
+	if (clk == dc->clk) {
+		base_clk = tegra_disp_clk_get(&dc->ndev->dev,
+			dc->out->parent_clk ? dc->out->parent_clk : "pll_d");
+	} else {
+		if (dc->pdata->default_out->dsi->dsi_instance) {
+			parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+				dc->out->parent_clk ? : "pll_d");
+		} else {
+			parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+				"pll_d_out1");
+			base_clk = clk_get_parent(parent_clk);
+		}
+	}
+
+	if (tegra_bpmp_running() && base_clk &&
+			rate != clk_get_rate(base_clk)) {
+		tegra_nvdisp_test_and_set_compclk(rate, dc);
+		err = clk_set_rate(base_clk, rate);
+		if (err)
+			dev_err(&dc->ndev->dev, "Failed to set pll freq\n");
+	}
+
+	if (parent_clk && (clk_get_parent(clk) != parent_clk))
+		clk_set_parent(clk, parent_clk);
+
+}
+
+static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
+{
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+
+	if (dc->out->dsc_en && dsi->dsc_clk)
+		tegra_dsi_set_dsc_clk(dc, dsi);
+
+	if (dc->initialized)
+		goto skip_setup;
+
+	if (tegra_dc_is_nvdisplay())
+		tegra_dc_dsi_setup_clk_nvdisplay(dc, clk);
+	else
+		tegra_dc_dsi_setup_clk_t21x(dc, clk);
 
 skip_setup:
 #ifdef CONFIG_TEGRA_CORE_DVFS

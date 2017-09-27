@@ -18,6 +18,9 @@
 
 #include <linux/cdev.h>
 
+#ifdef CONFIG_TEGRA_19x_GPU
+#include <nvgpu/linux/os_linux_t19x.h>
+#endif
 #include "gk20a/gk20a.h"
 #include "cde.h"
 
@@ -85,6 +88,17 @@ struct nvgpu_os_linux {
 	struct work_struct nonstall_fn_work;
 	struct workqueue_struct *nonstall_work_queue;
 
+	struct resource *reg_mem;
+	void __iomem *regs;
+	void __iomem *regs_saved;
+
+	struct resource *bar1_mem;
+	void __iomem *bar1;
+	void __iomem *bar1_saved;
+
+#ifdef CONFIG_TEGRA_19x_GPU
+	struct nvgpu_os_linux_t19x t19x;
+#endif
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debugfs;
 	struct dentry *debugfs_alias;

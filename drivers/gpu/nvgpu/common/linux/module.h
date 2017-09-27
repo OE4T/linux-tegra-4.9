@@ -13,6 +13,10 @@
 #ifndef __NVGPU_COMMON_LINUX_MODULE_H__
 #define __NVGPU_COMMON_LINUX_MODULE_H__
 
+#ifdef CONFIG_TEGRA_19x_GPU
+#include <nvgpu/linux/module_t19x.h>
+#endif
+
 struct gk20a;
 struct device;
 

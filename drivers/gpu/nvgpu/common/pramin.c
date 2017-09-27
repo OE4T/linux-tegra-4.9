@@ -51,7 +51,7 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 	 * driver should be refactored to prevent this from happening, but for
 	 * now it is ok just to ignore the writes
 	 */
-	if (!g->regs && nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
+	if (!gk20a_io_exists(g) && nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
 		return;
 
 	alloc = mem->vidmem_alloc;

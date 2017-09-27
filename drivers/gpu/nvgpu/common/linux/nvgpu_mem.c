@@ -105,9 +105,10 @@ void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem)
 
 static void pramin_access_batch_rd_n(struct gk20a *g, u32 start, u32 words, u32 **arg)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	u32 r = start, *dest_u32 = *arg;
 
-	if (!g->regs) {
+	if (!l->regs) {
 		__gk20a_warn_on_no_regs();
 		return;
 	}
@@ -182,15 +183,16 @@ void nvgpu_mem_rd_n(struct gk20a *g, struct nvgpu_mem *mem,
 
 static void pramin_access_batch_wr_n(struct gk20a *g, u32 start, u32 words, u32 **arg)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	u32 r = start, *src_u32 = *arg;
 
-	if (!g->regs) {
+	if (!l->regs) {
 		__gk20a_warn_on_no_regs();
 		return;
 	}
 
 	while (words--) {
-		writel_relaxed(*src_u32++, g->regs + r);
+		writel_relaxed(*src_u32++, l->regs + r);
 		r += sizeof(u32);
 	}
 
@@ -256,15 +258,16 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 
 static void pramin_access_batch_set(struct gk20a *g, u32 start, u32 words, u32 **arg)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	u32 r = start, repeat = **arg;
 
-	if (!g->regs) {
+	if (!l->regs) {
 		__gk20a_warn_on_no_regs();
 		return;
 	}
 
 	while (words--) {
-		writel_relaxed(repeat, g->regs + r);
+		writel_relaxed(repeat, l->regs + r);
 		r += sizeof(u32);
 	}
 }

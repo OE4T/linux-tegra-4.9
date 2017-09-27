@@ -65,32 +65,6 @@ void __nvgpu_check_gpu_state(struct gk20a *g)
 	}
 }
 
-/*
- * Locks out the driver from accessing GPU registers. This prevents access to
- * thse registers after the GPU has been clock or power gated. This should help
- * find annoying bugs where register reads and writes are silently dropped
- * after the GPU has been turned off. On older chips these reads and writes can
- * also lock the entire CPU up.
- */
-int gk20a_lockout_registers(struct gk20a *g)
-{
-	g->regs = NULL;
-	g->bar1 = NULL;
-
-	return 0;
-}
-
-/*
- * Undoes gk20a_lockout_registers().
- */
-int gk20a_restore_registers(struct gk20a *g)
-{
-	g->regs = g->regs_saved;
-	g->bar1 = g->bar1_saved;
-
-	return 0;
-}
-
 void __gk20a_warn_on_no_regs(void)
 {
 	WARN_ONCE(1, "Attempted access to GPU regs after unmapping!");

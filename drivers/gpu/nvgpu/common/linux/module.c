@@ -137,6 +137,23 @@ void gk20a_idle(struct gk20a *g)
 	}
 }
 
+/*
+ * Undoes gk20a_lockout_registers().
+ */
+static int gk20a_restore_registers(struct gk20a *g)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
+	l->regs = l->regs_saved;
+	l->bar1 = l->bar1_saved;
+
+#ifdef CONFIG_TEGRA_19x_GPU
+	t19x_restore_registers(g);
+#endif
+
+	return 0;
+}
+
 int gk20a_pm_finalize_poweron(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -196,6 +213,27 @@ done:
 		g->power_on = false;
 
 	return err;
+}
+
+/*
+ * Locks out the driver from accessing GPU registers. This prevents access to
+ * thse registers after the GPU has been clock or power gated. This should help
+ * find annoying bugs where register reads and writes are silently dropped
+ * after the GPU has been turned off. On older chips these reads and writes can
+ * also lock the entire CPU up.
+ */
+static int gk20a_lockout_registers(struct gk20a *g)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
+	l->regs = NULL;
+	l->bar1 = NULL;
+
+#ifdef CONFIG_TEGRA_19x_GPU
+	t19x_lockout_registers(g);
+#endif
+
+	return 0;
 }
 
 static int gk20a_pm_prepare_poweroff(struct device *dev)
@@ -511,6 +549,8 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 
 void gk20a_remove_support(struct gk20a *g)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
 	tegra_unregister_idle_unidle(gk20a_do_idle);
 
 	nvgpu_kfree(g, g->dbg_regops_tmp_buf);
@@ -535,36 +575,41 @@ void gk20a_remove_support(struct gk20a *g)
 
 	/* free mappings to registers, etc */
 
-	if (g->regs) {
-		iounmap(g->regs);
-		g->regs = NULL;
+	if (l->regs) {
+		iounmap(l->regs);
+		l->regs = NULL;
 	}
-	if (g->bar1) {
-		iounmap(g->bar1);
-		g->bar1 = NULL;
+	if (l->bar1) {
+		iounmap(l->bar1);
+		l->bar1 = NULL;
 	}
+
+#ifdef CONFIG_TEGRA_19x_GPU
+	t19x_remove_support(g);
+#endif
 }
 
 static int gk20a_init_support(struct platform_device *dev)
 {
 	int err = 0;
 	struct gk20a *g = get_gk20a(&dev->dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
 	tegra_register_idle_unidle(gk20a_do_idle, gk20a_do_unidle, g);
 
-	g->regs = gk20a_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
-					 &g->reg_mem);
-	if (IS_ERR(g->regs)) {
+	l->regs = gk20a_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
+					 &l->reg_mem);
+	if (IS_ERR(l->regs)) {
 		nvgpu_err(g, "failed to remap gk20a registers");
-		err = PTR_ERR(g->regs);
+		err = PTR_ERR(l->regs);
 		goto fail;
 	}
 
-	g->bar1 = gk20a_ioremap_resource(dev, GK20A_BAR1_IORESOURCE_MEM,
-					 &g->bar1_mem);
-	if (IS_ERR(g->bar1)) {
+	l->bar1 = gk20a_ioremap_resource(dev, GK20A_BAR1_IORESOURCE_MEM,
+					 &l->bar1_mem);
+	if (IS_ERR(l->bar1)) {
 		nvgpu_err(g, "failed to remap gk20a bar1");
-		err = PTR_ERR(g->bar1);
+		err = PTR_ERR(l->bar1);
 		goto fail;
 	}
 
@@ -583,6 +628,10 @@ static int gk20a_init_support(struct platform_device *dev)
 		if (err)
 			goto fail;
 	}
+
+#ifdef CONFIG_TEGRA_19x_GPU
+	t19x_init_support(g);
+#endif
 
 	return 0;
 

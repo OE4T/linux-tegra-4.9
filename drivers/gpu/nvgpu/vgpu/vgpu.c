@@ -216,6 +216,7 @@ static int vgpu_intr_thread(void *dev_id)
 
 static void vgpu_remove_support(struct gk20a *g)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct vgpu_priv_data *priv =
 		vgpu_get_priv_data_from_dev(dev_from_gk20a(g));
 	struct tegra_vgpu_intr_msg msg;
@@ -245,18 +246,20 @@ static void vgpu_remove_support(struct gk20a *g)
 
 	/* free mappings to registers, etc*/
 
-	if (g->bar1) {
-		iounmap(g->bar1);
-		g->bar1 = NULL;
+	if (l->bar1) {
+		iounmap(l->bar1);
+		l->bar1 = NULL;
 	}
 }
 
 static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 {
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
 	nvgpu_mutex_init(&g->poweron_lock);
 	nvgpu_mutex_init(&g->poweroff_lock);
-	g->regs_saved = g->regs;
-	g->bar1_saved = g->bar1;
+	l->regs_saved = l->regs;
+	l->bar1_saved = l->bar1;
 
 	nvgpu_init_list_node(&g->pending_sema_waits);
 	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
@@ -276,6 +279,7 @@ static int vgpu_init_support(struct platform_device *pdev)
 {
 	struct resource *r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	struct gk20a *g = get_gk20a(&pdev->dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	void __iomem *regs;
 	int err = 0;
 
@@ -292,8 +296,8 @@ static int vgpu_init_support(struct platform_device *pdev)
 			err = PTR_ERR(regs);
 			goto fail;
 		}
-		g->bar1 = regs;
-		g->bar1_mem = r;
+		l->bar1 = regs;
+		l->bar1_mem = r;
 	}
 
 	nvgpu_mutex_init(&g->dbg_sessions_lock);

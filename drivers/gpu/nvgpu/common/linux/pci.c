@@ -348,20 +348,21 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 {
 	int err = 0;
 	struct gk20a *g = get_gk20a(&pdev->dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	g->regs = ioremap(pci_resource_start(pdev, 0),
+	l->regs = ioremap(pci_resource_start(pdev, 0),
 			  pci_resource_len(pdev, 0));
-	if (IS_ERR(g->regs)) {
+	if (IS_ERR(l->regs)) {
 		nvgpu_err(g, "failed to remap gk20a registers");
-		err = PTR_ERR(g->regs);
+		err = PTR_ERR(l->regs);
 		goto fail;
 	}
 
-	g->bar1 = ioremap(pci_resource_start(pdev, 1),
+	l->bar1 = ioremap(pci_resource_start(pdev, 1),
 			  pci_resource_len(pdev, 1));
-	if (IS_ERR(g->bar1)) {
+	if (IS_ERR(l->bar1)) {
 		nvgpu_err(g, "failed to remap gk20a bar1");
-		err = PTR_ERR(g->bar1);
+		err = PTR_ERR(l->bar1);
 		goto fail;
 	}
 

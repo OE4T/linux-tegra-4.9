@@ -44,6 +44,7 @@ struct nvgpu_mem_sgt;
 
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>
+#include <nvgpu/io.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
@@ -1067,14 +1068,6 @@ struct gk20a {
 
 	struct nvgpu_ref refcount;
 
-	struct resource *reg_mem;
-	void __iomem *regs;
-	void __iomem *regs_saved;
-
-	struct resource *bar1_mem;
-	void __iomem *bar1;
-	void __iomem *bar1_saved;
-
 	const char *name;
 
 	bool gpu_reset_done;
@@ -1339,80 +1332,8 @@ enum gk20a_nonstall_ops {
 };
 
 /* register accessors */
-int gk20a_lockout_registers(struct gk20a *g);
-int gk20a_restore_registers(struct gk20a *g);
-
 void __nvgpu_check_gpu_state(struct gk20a *g);
 void __gk20a_warn_on_no_regs(void);
-
-static inline void gk20a_writel(struct gk20a *g, u32 r, u32 v)
-{
-	if (unlikely(!g->regs)) {
-		__gk20a_warn_on_no_regs();
-		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
-	} else {
-		writel_relaxed(v, g->regs + r);
-		nvgpu_smp_wmb();
-		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x", r, v);
-	}
-}
-static inline u32 gk20a_readl(struct gk20a *g, u32 r)
-{
-
-	u32 v = 0xffffffff;
-
-	if (unlikely(!g->regs)) {
-		__gk20a_warn_on_no_regs();
-		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
-	} else {
-		v = readl(g->regs + r);
-		if (v == 0xffffffff)
-			__nvgpu_check_gpu_state(g);
-		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x", r, v);
-	}
-
-	return v;
-}
-static inline void gk20a_writel_check(struct gk20a *g, u32 r, u32 v)
-{
-	if (unlikely(!g->regs)) {
-		__gk20a_warn_on_no_regs();
-		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
-	} else {
-		nvgpu_smp_wmb();
-		do {
-			writel_relaxed(v, g->regs + r);
-		} while (readl(g->regs + r) != v);
-		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x", r, v);
-	}
-}
-
-static inline void gk20a_bar1_writel(struct gk20a *g, u32 b, u32 v)
-{
-	if (unlikely(!g->bar1)) {
-		__gk20a_warn_on_no_regs();
-		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x (failed)", b, v);
-	} else {
-		nvgpu_smp_wmb();
-		writel_relaxed(v, g->bar1 + b);
-		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x", b, v);
-	}
-}
-
-static inline u32 gk20a_bar1_readl(struct gk20a *g, u32 b)
-{
-	u32 v = 0xffffffff;
-
-	if (unlikely(!g->bar1)) {
-		__gk20a_warn_on_no_regs();
-		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x (failed)", b, v);
-	} else {
-		v = readl(g->bar1 + b);
-		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x", b, v);
-	}
-
-	return v;
-}
 
 /* convenience */
 static inline struct gk20a *gk20a_from_as(struct gk20a_as *as)

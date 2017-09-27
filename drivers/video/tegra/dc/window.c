@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -49,7 +49,6 @@ static bool tegra_dc_windows_are_clean(struct tegra_dc_win *windows[],
 	return true;
 }
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
 static int get_topmost_window(u32 *depths, unsigned long *wins, int win_num)
 {
 	int idx, best = -1;
@@ -242,7 +241,6 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 	}
 	tegra_dc_io_end(dc);
 }
-#endif	/* TEGRA_NVDISPLAY */
 
 /* does not support syncing windows on multiple dcs in one call */
 int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
@@ -554,8 +552,6 @@ static void tegra_dc_vrr_cancel_vfp(struct tegra_dc *dc)
 	}
 }
 
-
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
 /* Program registers for each window. struct tegra_dc_win --> Assembly registers
  */
 static int _tegra_dc_program_windows(struct tegra_dc *dc,
@@ -931,10 +927,9 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 
 	tegra_dc_set_dynamic_emc(dc);
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 	/* prevent FIFO from taking in stale data after a reset */
-	tegra_dc_writel(dc, MEMFETCH_RESET, DC_WINBUF_MEMFETCH_CONTROL);
-#endif
+	if (tegra_dc_is_t21x())
+		tegra_dc_writel(dc, MEMFETCH_RESET, DC_WINBUF_MEMFETCH_CONTROL);
 
 	/* WIN_x_UPDATE is the same as WIN_x_ACT_REQ << 8 */
 	tegra_dc_writel(dc, update_mask << 8, DC_CMD_STATE_CONTROL);
@@ -990,7 +985,6 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 	}
 	return 0;
 }
-#endif
 
 /* Does not support updating windows on multiple dcs in one call.
  * Requires a matching sync_windows to avoid leaking ref-count on clocks.
@@ -1062,13 +1056,13 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	WARN_ONCE((!wait_for_vblank && dirty_rect),
 		"Can't do partial window update without vsync!");
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	e = tegra_nvdisp_update_windows(dc, windows, n, dirty_rect,
-		wait_for_vblank, (lock_flip & wait_for_vblank));
-#else
-	e = _tegra_dc_program_windows(dc, windows, n, dirty_rect,
-		wait_for_vblank, (lock_flip & wait_for_vblank));
-#endif
+	if (tegra_dc_is_nvdisplay())
+		e = tegra_nvdisp_update_windows(dc, windows, n, dirty_rect,
+			wait_for_vblank, (lock_flip & wait_for_vblank));
+	else
+		e = _tegra_dc_program_windows(dc, windows, n, dirty_rect,
+			wait_for_vblank, (lock_flip & wait_for_vblank));
+
 	if (lock_flip && wait_for_vblank) {
 		int ret;
 		dc->frm_lck_info.job_pending = true;

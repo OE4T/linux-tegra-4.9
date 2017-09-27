@@ -34,55 +34,6 @@
  */
 #define GK20A_FORCE_PRAMIN_DEFAULT false
 
-void pramin_access_batch_rd_n(struct gk20a *g, u32 start, u32 words, u32 **arg)
-{
-	u32 r = start, *dest_u32 = *arg;
-
-	if (!g->regs) {
-		__gk20a_warn_on_no_regs();
-		return;
-	}
-
-	while (words--) {
-		*dest_u32++ = gk20a_readl(g, r);
-		r += sizeof(u32);
-	}
-
-	*arg = dest_u32;
-}
-
-void pramin_access_batch_wr_n(struct gk20a *g, u32 start, u32 words, u32 **arg)
-{
-	u32 r = start, *src_u32 = *arg;
-
-	if (!g->regs) {
-		__gk20a_warn_on_no_regs();
-		return;
-	}
-
-	while (words--) {
-		writel_relaxed(*src_u32++, g->regs + r);
-		r += sizeof(u32);
-	}
-
-	*arg = src_u32;
-}
-
-void pramin_access_batch_set(struct gk20a *g, u32 start, u32 words, u32 **arg)
-{
-	u32 r = start, repeat = **arg;
-
-	if (!g->regs) {
-		__gk20a_warn_on_no_regs();
-		return;
-	}
-
-	while (words--) {
-		writel_relaxed(repeat, g->regs + r);
-		r += sizeof(u32);
-	}
-}
-
 /*
  * The PRAMIN range is 1 MB, must change base addr if a buffer crosses that.
  * This same loop is used for read/write/memset. Offset and size in bytes.

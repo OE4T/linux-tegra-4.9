@@ -102,6 +102,23 @@ void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem)
 	mem->cpu_va = NULL;
 }
 
+static void pramin_access_batch_rd_n(struct gk20a *g, u32 start, u32 words, u32 **arg)
+{
+	u32 r = start, *dest_u32 = *arg;
+
+	if (!g->regs) {
+		__gk20a_warn_on_no_regs();
+		return;
+	}
+
+	while (words--) {
+		*dest_u32++ = gk20a_readl(g, r);
+		r += sizeof(u32);
+	}
+
+	*arg = dest_u32;
+}
+
 u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
 {
 	u32 data = 0;
@@ -162,6 +179,23 @@ void nvgpu_mem_rd_n(struct gk20a *g, struct nvgpu_mem *mem,
 	}
 }
 
+static void pramin_access_batch_wr_n(struct gk20a *g, u32 start, u32 words, u32 **arg)
+{
+	u32 r = start, *src_u32 = *arg;
+
+	if (!g->regs) {
+		__gk20a_warn_on_no_regs();
+		return;
+	}
+
+	while (words--) {
+		writel_relaxed(*src_u32++, g->regs + r);
+		r += sizeof(u32);
+	}
+
+	*arg = src_u32;
+}
+
 void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
 {
 	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
@@ -216,6 +250,21 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 			wmb();
 	} else {
 		WARN_ON("Accessing unallocated nvgpu_mem");
+	}
+}
+
+static void pramin_access_batch_set(struct gk20a *g, u32 start, u32 words, u32 **arg)
+{
+	u32 r = start, repeat = **arg;
+
+	if (!g->regs) {
+		__gk20a_warn_on_no_regs();
+		return;
+	}
+
+	while (words--) {
+		writel_relaxed(repeat, g->regs + r);
+		r += sizeof(u32);
 	}
 }
 

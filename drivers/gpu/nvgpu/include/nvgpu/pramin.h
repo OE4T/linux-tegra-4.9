@@ -36,13 +36,6 @@ struct nvgpu_mem;
 typedef void (*pramin_access_batch_fn)(struct gk20a *g, u32 start, u32 words,
 				       u32 **arg);
 
-/*
- * Generally useful batch functions.
- */
-void pramin_access_batch_rd_n(struct gk20a *g, u32 start, u32 words, u32 **arg);
-void pramin_access_batch_wr_n(struct gk20a *g, u32 start, u32 words, u32 **arg);
-void pramin_access_batch_set(struct gk20a *g, u32 start, u32 words, u32 **arg);
-
 void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 				 u32 offset, u32 size,
 				 pramin_access_batch_fn loop, u32 **arg);

@@ -2601,6 +2601,7 @@ void tegra_soctherm_gpu_tsens_invalidate(bool low_voltage_range)
 	writel(r, hw_pllx.sensor_valid_reg);
 	spin_unlock_irqrestore(&soctherm_lock, flags);
 }
+EXPORT_SYMBOL_GPL(tegra_soctherm_gpu_tsens_invalidate);
 
 static void soctherm_hw_pllx_offsets_init(struct tegra_soctherm *tegra)
 {

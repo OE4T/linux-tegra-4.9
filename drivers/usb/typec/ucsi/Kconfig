@@ -36,4 +36,14 @@ config UCSI_ACPI
 	  To compile the driver as a module, choose M here: the module will be
 	  called ucsi_acpi
 
+config UCSI_CCG
+        tristate "CCGx UCSI Interface Driver"
+        help
+          This driver enables UCSI support on platforms that expose UCSI
+          interface as I2C device which interfaced with Cypress CCG4 TypeC
+          controller.
+
+          To compile the driver as a module, choose M here: the module will be
+          called ucsi_ccg
+
 endif

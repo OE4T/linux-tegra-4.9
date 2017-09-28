@@ -34,8 +34,8 @@
 	pwm-fan {
 		status = "okay";
 		compatible = "pwm-fan";
-
-		pwms = <&tegra_pwm4 3 45334>;
+		#pwm-cells = <1>;
+		pwms = <&tegra_pwm4 0 45334>;
 		shared_data = <&pwm_fan_shared_data>;
 		active_pwm = <0 80 120 160 255 255 255 255 255 255>;
 	};

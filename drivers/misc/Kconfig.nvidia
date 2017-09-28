@@ -1,5 +1,7 @@
 config MODS
 	tristate "NVIDIA MODS driver"
+	select OF_DYNAMIC
+	select OF_RESOLVE
 	default n
 	---help---
 	The NVIDIA MODS driver gives user space software direct access to

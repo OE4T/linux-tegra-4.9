@@ -29,10 +29,10 @@
 struct gk20a;
 
 enum nvgpu_log_type {
-	ERROR,
-	WARNING,
-	DEBUG,
-	INFO,
+	NVGPU_ERROR,
+	NVGPU_WARNING,
+	NVGPU_DEBUG,
+	NVGPU_INFO,
 };
 
 /*
@@ -118,7 +118,7 @@ int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask);
  * Uncondtionally print an error message.
  */
 #define nvgpu_err(g, fmt, arg...)					\
-	__nvgpu_log_msg(g, __func__, __LINE__, ERROR, fmt, ##arg)
+	__nvgpu_log_msg(g, __func__, __LINE__, NVGPU_ERROR, fmt, ##arg)
 
 /**
  * nvgpu_err - Print a warning
@@ -130,7 +130,7 @@ int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask);
  * Uncondtionally print a warming message.
  */
 #define nvgpu_warn(g, fmt, arg...)					\
-	__nvgpu_log_msg(g, __func__, __LINE__, WARNING, fmt, ##arg)
+	__nvgpu_log_msg(g, __func__, __LINE__, NVGPU_WARNING, fmt, ##arg)
 
 /**
  * nvgpu_info - Print an info message
@@ -142,7 +142,7 @@ int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask);
  * Unconditionally print an information message.
  */
 #define nvgpu_info(g, fmt, arg...)					\
-	__nvgpu_log_msg(g, __func__, __LINE__, INFO, fmt, ##arg)
+	__nvgpu_log_msg(g, __func__, __LINE__, NVGPU_INFO, fmt, ##arg)
 
 /*
  * Some convenience macros.
@@ -170,7 +170,7 @@ extern u32 nvgpu_dbg_mask;
 	do {								\
 		if (((log_mask) & nvgpu_dbg_mask) != 0)			\
 			__nvgpu_log_msg(NULL, __func__, __LINE__,	\
-					DEBUG, fmt "\n", ##arg);	\
+					NVGPU_DEBUG, fmt "\n", ##arg);	\
 	} while (0)
 
 /*

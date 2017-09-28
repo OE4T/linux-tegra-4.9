@@ -82,7 +82,7 @@ static void __nvgpu_really_print_log(u32 trace, const char *gpu_name,
 	const char *log_type = log_types[type];
 
 	switch (type) {
-	case DEBUG:
+	case NVGPU_DEBUG:
 		/*
 		 * We could use pr_debug() here but we control debug enablement
 		 * separately from the Linux kernel. Perhaps this is a bug in
@@ -90,13 +90,13 @@ static void __nvgpu_really_print_log(u32 trace, const char *gpu_name,
 		 */
 		pr_info(LOG_FMT, name, func_name, line, log_type, log);
 		break;
-	case INFO:
+	case NVGPU_INFO:
 		pr_info(LOG_FMT, name, func_name, line, log_type, log);
 		break;
-	case WARNING:
+	case NVGPU_WARNING:
 		pr_warn(LOG_FMT, name, func_name, line, log_type, log);
 		break;
-	case ERROR:
+	case NVGPU_ERROR:
 		pr_err(LOG_FMT, name, func_name, line, log_type, log);
 		break;
 	}
@@ -134,5 +134,5 @@ void __nvgpu_log_dbg(struct gk20a *g, u32 log_mask,
 	va_end(args);
 
 	__nvgpu_really_print_log(g->log_trace, nvgpu_log_name(g),
-				 func_name, line, DEBUG, log);
+				 func_name, line, NVGPU_DEBUG, log);
 }

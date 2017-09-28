@@ -28,6 +28,9 @@
 #include <linux/llist.h>
 #include <linux/uaccess.h>
 #include <linux/poll.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 
 #include <nvgpu/bitops.h>
 #include <nvgpu/lock.h>

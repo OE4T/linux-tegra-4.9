@@ -31,9 +31,6 @@
 #include "gm20b/fifo_gm20b.h"
 #include "bios_gp106.h"
 #include "gp106/mclk_gp106.h"
-#ifdef CONFIG_DEBUG_FS
-#include "common/linux/os_linux.h"
-#endif
 
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 #include <nvgpu/hw/gp106/hw_mc_gp106.h>
@@ -187,10 +184,6 @@ out:
 int gp106_bios_init(struct gk20a *g)
 {
 	unsigned int i;
-#ifdef CONFIG_DEBUG_FS
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct dentry *d;
-#endif
 	int err;
 
 	gk20a_dbg_fn("");
@@ -232,40 +225,24 @@ int gp106_bios_init(struct gk20a *g)
 			g->power_sensor_missing = true;
 	}
 
-#ifdef CONFIG_DEBUG_FS
-	g->bios_blob.data = g->bios.data;
-	g->bios_blob.size = g->bios.size;
-
-	d = debugfs_create_blob("bios", S_IRUGO, l->debugfs,
-			&g->bios_blob);
-	if (!d) {
-		err = -EINVAL;
-		nvgpu_err(g, "No debugfs?");
-		goto free_firmware;
-	}
-#endif
 	gk20a_dbg_fn("done");
 
 	err = gp106_bios_devinit(g);
 	if (err) {
 		nvgpu_err(g, "devinit failed");
-		goto free_debugfs;
+		goto free_firmware;
 	}
 
 	if (nvgpu_is_enabled(g, NVGPU_PMU_RUN_PREOS)) {
 		err = gp106_bios_preos(g);
 		if (err) {
 			nvgpu_err(g, "pre-os failed");
-			goto free_debugfs;
+			goto free_firmware;
 		}
 	}
 	g->bios_is_init = true;
 
 	return 0;
-free_debugfs:
-#ifdef CONFIG_DEBUG_FS
-	debugfs_remove(d);
-#endif
 free_firmware:
 	if (g->bios.data)
 		nvgpu_vfree(g, g->bios.data);

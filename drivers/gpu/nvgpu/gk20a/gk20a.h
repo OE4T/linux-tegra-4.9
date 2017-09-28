@@ -45,9 +45,6 @@ struct nvgpu_mem_sgt;
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>
 #include <nvgpu/io.h>
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#endif
 
 #include <nvgpu/as.h>
 #include <nvgpu/log.h>
@@ -1239,9 +1236,6 @@ struct gk20a {
 	u32 tpc_fs_mask_user;
 
 	struct nvgpu_bios bios;
-#ifdef CONFIG_DEBUG_FS
-	struct debugfs_blob_wrapper bios_blob;
-#endif
 	bool bios_is_init;
 
 	struct nvgpu_clk_arb *clk_arb;

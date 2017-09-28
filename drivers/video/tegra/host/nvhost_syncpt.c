@@ -248,8 +248,9 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	if (value)
 		*value = 0;
 
-	/* first check cache */
-	if (nvhost_syncpt_is_expired(sp, id, thresh)) {
+	/* check cache value unless the syncpoint is remote */
+	if (nvhost_syncpt_is_valid_pt(sp, id) &&
+		nvhost_syncpt_is_expired(sp, id, thresh)) {
 		if (value)
 			*value = nvhost_syncpt_read_min(sp, id);
 		if (ts)

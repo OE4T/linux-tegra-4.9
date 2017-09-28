@@ -1135,6 +1135,9 @@ static int tegra186_utmi_phy_exit(struct phy *phy)
 		}
 	}
 
+	if (index == padctl->usb2_otg_port_base_1 - 1)
+		padctl->usb2_otg_port_base_1 = 0;
+
 	mutex_unlock(&padctl->lock);
 
 	return rc;
@@ -1601,6 +1604,9 @@ static int tegra186_usb3_phy_exit(struct phy *phy)
 
 	mutex_lock(&padctl->lock);
 
+	if (index == padctl->usb3_otg_port_base_1 - 1)
+		padctl->usb3_otg_port_base_1 = 0;
+
 	mutex_unlock(&padctl->lock);
 
 	return rc;
@@ -1625,6 +1631,7 @@ static bool is_usb3_phy_has_otg_cap(struct tegra_xusb_padctl *padctl,
 	struct tegra_xusb_lane *lane;
 	unsigned int index;
 	struct tegra_xusb_usb3_port *port;
+	struct tegra_xusb_usb2_port *companion_usb2_port;
 
 	if (!phy)
 		return false;
@@ -1638,7 +1645,11 @@ static bool is_usb3_phy_has_otg_cap(struct tegra_xusb_padctl *padctl,
 		return false;
 	}
 
-	return port->port_cap == USB_OTG_CAP;
+	companion_usb2_port = tegra_xusb_find_usb2_port(padctl, port->port);
+	if (!companion_usb2_port)
+		return false;
+
+	return companion_usb2_port->port_cap == USB_OTG_CAP;
 }
 
 static struct tegra_xusb_pad *

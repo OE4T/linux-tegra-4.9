@@ -49,6 +49,8 @@
 #endif
 #endif
 #include "os_linux.h"
+#include "cde_gm20b.h"
+#include "cde_gp10b.h"
 
 #define CLASS_NAME "nvidia-gpu"
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
@@ -154,6 +156,26 @@ static int gk20a_restore_registers(struct gk20a *g)
 	return 0;
 }
 
+static int nvgpu_init_os_linux_ops(struct nvgpu_os_linux *l) {
+	struct gk20a *g = &l->g;
+	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+
+	switch (ver) {
+	case GK20A_GPUID_GM20B:
+	case GK20A_GPUID_GM20B_B:
+		l->ops.cde = gm20b_cde_ops.cde;
+		break;
+	case NVGPU_GPUID_GP10B:
+		l->ops.cde = gp10b_cde_ops.cde;
+		break;
+	default:
+		/* CDE is optional, so today ignoring unknown chip is fine */
+		break;
+	}
+
+	return 0;
+}
+
 int gk20a_pm_finalize_poweron(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -197,6 +219,10 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 
 	trace_gk20a_finalize_poweron_done(dev_name(dev));
+
+	err = nvgpu_init_os_linux_ops(l);
+	if (err)
+		goto done;
 
 	enable_irq(g->irq_stall);
 	if (g->irq_stall != g->irq_nonstall)

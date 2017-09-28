@@ -1068,8 +1068,8 @@ __releases(&l->cde_app->mutex)
 	}
 
 	if (scatterbuffer_byte_offset &&
-	    g->ops.cde.need_scatter_buffer &&
-	    g->ops.cde.need_scatter_buffer(g)) {
+	    l->ops.cde.need_scatter_buffer &&
+	    l->ops.cde.need_scatter_buffer(g)) {
 		struct sg_table *sgt;
 		void *scatter_buffer;
 
@@ -1092,7 +1092,7 @@ __releases(&l->cde_app->mutex)
 			err = -EINVAL;
 			goto exit_unmap_surface;
 		} else {
-			err = g->ops.cde.populate_scatter_buffer(g, sgt,
+			err = l->ops.cde.populate_scatter_buffer(g, sgt,
 					compbits_byte_offset, scatter_buffer,
 					scatterbuffer_size);
 			WARN_ON(err);
@@ -1463,8 +1463,8 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 	int hprog = -1;
 	int vprog = -1;
 
-	if (g->ops.cde.get_program_numbers)
-		g->ops.cde.get_program_numbers(g, block_height_log2,
+	if (l->ops.cde.get_program_numbers)
+		l->ops.cde.get_program_numbers(g, block_height_log2,
 					       l->cde_app.shader_parameter,
 					       &hprog, &vprog);
 	else {

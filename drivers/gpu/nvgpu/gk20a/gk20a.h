@@ -943,18 +943,6 @@ struct gpu_ops {
 		int (*perfbuffer_enable)(struct gk20a *g, u64 offset, u32 size);
 		int (*perfbuffer_disable)(struct gk20a *g);
 	} dbg_session_ops;
-	struct {
-		void (*get_program_numbers)(struct gk20a *g,
-					    u32 block_height_log2,
-					    u32 shader_parameter,
-					    int *hprog, int *vprog);
-		bool (*need_scatter_buffer)(struct gk20a *g);
-		int (*populate_scatter_buffer)(struct gk20a *g,
-					       struct sg_table *sgt,
-					       size_t surface_size,
-					       void *scatter_buffer_ptr,
-					       size_t scatter_buffer_size);
-	} cde;
 
 	int (*get_litter_value)(struct gk20a *g, int value);
 	int (*chip_init_gpu_characteristics)(struct gk20a *g);

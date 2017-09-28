@@ -1,5 +1,5 @@
 /*
- * GM20B CDE
+ * GP10B CDE
  *
  * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -22,14 +22,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVHOST_GM20B_CDE
-#define _NVHOST_GM20B_CDE
+#ifndef _NVHOST_GP10B_CDE
+#define _NVHOST_GP10B_CDE
 
-struct gk20a;
+#include "os_linux.h"
 
-void gm20b_cde_get_program_numbers(struct gk20a *g,
-					  u32 block_height_log2,
-					  u32 shader_parameter,
-					  int *hprog_out, int *vprog_out);
+extern struct nvgpu_os_linux_ops gp10b_cde_ops;
 
 #endif

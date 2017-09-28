@@ -50,7 +50,6 @@
 #include "pmu_gm20b.h"
 #include "clk_gm20b.h"
 #include "regops_gm20b.h"
-#include "cde_gm20b.h"
 #include "therm_gm20b.h"
 #include "bus_gm20b.h"
 #include "hal_gm20b.h"
@@ -539,9 +538,6 @@ static const struct gpu_ops gm20b_ops = {
 		.perfbuffer_enable = gk20a_perfbuf_enable_locked,
 		.perfbuffer_disable = gk20a_perfbuf_disable_locked,
 	},
-	.cde = {
-		.get_program_numbers = gm20b_cde_get_program_numbers,
-	},
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
@@ -601,7 +597,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->mc = gm20b_ops.mc;
 	gops->dbg_session_ops = gm20b_ops.dbg_session_ops;
 	gops->debug = gm20b_ops.debug;
-	gops->cde = gm20b_ops.cde;
 	gops->bus = gm20b_ops.bus;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gops->css = gm20b_ops.css;

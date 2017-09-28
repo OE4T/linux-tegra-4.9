@@ -22,37 +22,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-#include "cde_gm20b.h"
+#ifndef _NVHOST_GM20B_CDE
+#define _NVHOST_GM20B_CDE
 
-enum programs {
-	PROG_HPASS              = 0,
-	PROG_VPASS_LARGE        = 1,
-	PROG_VPASS_SMALL        = 2,
-	PROG_HPASS_DEBUG        = 3,
-	PROG_VPASS_LARGE_DEBUG  = 4,
-	PROG_VPASS_SMALL_DEBUG  = 5,
-	PROG_PASSTHROUGH        = 6,
-};
+#include "os_linux.h"
 
-void gm20b_cde_get_program_numbers(struct gk20a *g,
-					  u32 block_height_log2,
-					  u32 shader_parameter,
-					  int *hprog_out, int *vprog_out)
-{
-	int hprog = PROG_HPASS;
-	int vprog = (block_height_log2 >= 2) ?
-		PROG_VPASS_LARGE : PROG_VPASS_SMALL;
-	if (shader_parameter == 1) {
-		hprog = PROG_PASSTHROUGH;
-		vprog = PROG_PASSTHROUGH;
-	} else if (shader_parameter == 2) {
-		hprog = PROG_HPASS_DEBUG;
-		vprog = (block_height_log2 >= 2) ?
-			PROG_VPASS_LARGE_DEBUG :
-			PROG_VPASS_SMALL_DEBUG;
-	}
+extern struct nvgpu_os_linux_ops gm20b_cde_ops;
 
-	*hprog_out = hprog;
-	*vprog_out = vprog;
-}
+#endif

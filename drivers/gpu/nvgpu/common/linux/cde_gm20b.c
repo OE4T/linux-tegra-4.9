@@ -1,5 +1,5 @@
 /*
- * GP10B CDE
+ * GM20B CDE
  *
  * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -22,21 +22,43 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVHOST_GP10B_CDE
-#define _NVHOST_GP10B_CDE
+#include "gk20a/gk20a.h"
+#include "cde_gm20b.h"
 
-struct gk20a;
-struct sg_table;
+enum programs {
+	PROG_HPASS              = 0,
+	PROG_VPASS_LARGE        = 1,
+	PROG_VPASS_SMALL        = 2,
+	PROG_HPASS_DEBUG        = 3,
+	PROG_VPASS_LARGE_DEBUG  = 4,
+	PROG_VPASS_SMALL_DEBUG  = 5,
+	PROG_PASSTHROUGH        = 6,
+};
 
-void gp10b_cde_get_program_numbers(struct gk20a *g,
+static void gm20b_cde_get_program_numbers(struct gk20a *g,
 					  u32 block_height_log2,
 					  u32 shader_parameter,
-					  int *hprog_out, int *vprog_out);
-bool gp10b_need_scatter_buffer(struct gk20a *g);
-int gp10b_populate_scatter_buffer(struct gk20a *g,
-					 struct sg_table *sgt,
-					 size_t surface_size,
-					 void *scatter_buffer_ptr,
-					 size_t scatter_buffer_size);
+					  int *hprog_out, int *vprog_out)
+{
+	int hprog = PROG_HPASS;
+	int vprog = (block_height_log2 >= 2) ?
+		PROG_VPASS_LARGE : PROG_VPASS_SMALL;
+	if (shader_parameter == 1) {
+		hprog = PROG_PASSTHROUGH;
+		vprog = PROG_PASSTHROUGH;
+	} else if (shader_parameter == 2) {
+		hprog = PROG_HPASS_DEBUG;
+		vprog = (block_height_log2 >= 2) ?
+			PROG_VPASS_LARGE_DEBUG :
+			PROG_VPASS_SMALL_DEBUG;
+	}
 
-#endif
+	*hprog_out = hprog;
+	*vprog_out = vprog;
+}
+
+struct nvgpu_os_linux_ops gm20b_cde_ops = {
+	.cde = {
+		.get_program_numbers = gm20b_cde_get_program_numbers,
+	},
+};

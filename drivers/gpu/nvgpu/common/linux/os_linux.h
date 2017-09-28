@@ -24,6 +24,21 @@
 #include "gk20a/gk20a.h"
 #include "cde.h"
 
+struct nvgpu_os_linux_ops {
+	struct {
+		void (*get_program_numbers)(struct gk20a *g,
+					    u32 block_height_log2,
+					    u32 shader_parameter,
+					    int *hprog, int *vprog);
+		bool (*need_scatter_buffer)(struct gk20a *g);
+		int (*populate_scatter_buffer)(struct gk20a *g,
+					       struct sg_table *sgt,
+					       size_t surface_size,
+					       void *scatter_buffer_ptr,
+					       size_t scatter_buffer_size);
+	} cde;
+};
+
 struct nvgpu_os_linux {
 	struct gk20a g;
 	struct device *dev;
@@ -99,6 +114,9 @@ struct nvgpu_os_linux {
 #ifdef CONFIG_TEGRA_19x_GPU
 	struct nvgpu_os_linux_t19x t19x;
 #endif
+
+	struct nvgpu_os_linux_ops ops;
+
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debugfs;
 	struct dentry *debugfs_alias;

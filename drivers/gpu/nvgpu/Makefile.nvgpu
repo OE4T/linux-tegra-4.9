@@ -48,6 +48,8 @@ nvgpu-y := \
 	common/linux/cde.o \
 	common/linux/io.o \
 	common/linux/rwsem.o \
+	common/linux/cde_gm20b.o \
+	common/linux/cde_gp10b.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
@@ -115,7 +117,6 @@ nvgpu-y := \
 	gm20b/pmu_gm20b.o \
 	gm20b/mm_gm20b.o \
 	gm20b/regops_gm20b.o \
-	gm20b/cde_gm20b.o \
 	gm20b/therm_gm20b.o \
 	boardobj/boardobj.o \
 	boardobj/boardobjgrp.o \
@@ -192,7 +193,6 @@ nvgpu-y += \
 	gp10b/rpfb_gp10b.o \
 	gp10b/gp10b_gating_reglist.o \
 	gp10b/regops_gp10b.o \
-	gp10b/cde_gp10b.o \
 	gp10b/therm_gp10b.o \
 	gp10b/fecs_trace_gp10b.o \
 	gp10b/priv_ring_gp10b.o \

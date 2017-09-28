@@ -51,7 +51,6 @@
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/gp10b_gating_reglist.h"
 #include "gp10b/regops_gp10b.h"
-#include "gp10b/cde_gp10b.h"
 #include "gp10b/therm_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
 
@@ -574,11 +573,6 @@ static const struct gpu_ops gp10b_ops = {
 		.perfbuffer_enable = gk20a_perfbuf_enable_locked,
 		.perfbuffer_disable = gk20a_perfbuf_disable_locked,
 	},
-	.cde = {
-		.get_program_numbers = gp10b_cde_get_program_numbers,
-		.need_scatter_buffer = gp10b_need_scatter_buffer,
-		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
-	},
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
@@ -628,7 +622,6 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->mc = gp10b_ops.mc;
 	gops->debug = gp10b_ops.debug;
 	gops->dbg_session_ops = gp10b_ops.dbg_session_ops;
-	gops->cde = gp10b_ops.cde;
 	gops->bus = gp10b_ops.bus;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gops->css = gp10b_ops.css;

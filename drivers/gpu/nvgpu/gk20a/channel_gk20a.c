@@ -1773,7 +1773,7 @@ static int __gk20a_channel_worker_wakeup(struct gk20a *g)
 	 */
 
 	put = nvgpu_atomic_inc_return(&g->channel_worker.put);
-	nvgpu_cond_signal(&g->channel_worker.wq);
+	nvgpu_cond_signal_interruptible(&g->channel_worker.wq);
 
 	return put;
 }
@@ -1867,7 +1867,7 @@ static int gk20a_channel_poll_worker(void *arg)
 	while (!nvgpu_thread_should_stop(&worker->poll_task)) {
 		int ret;
 
-		ret = NVGPU_COND_WAIT(
+		ret = NVGPU_COND_WAIT_INTERRUPTIBLE(
 				&worker->wq,
 				__gk20a_channel_worker_pending(g, get),
 				watchdog_interval) > 0;

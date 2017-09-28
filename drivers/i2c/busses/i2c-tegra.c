@@ -44,6 +44,7 @@
 #include <asm/unaligned.h>
 
 #define TEGRA_I2C_TIMEOUT (msecs_to_jiffies(10000))
+#define TEGRA_I2C_TIMEOUT_IN_USEC (jiffies_to_usecs(TEGRA_I2C_TIMEOUT))
 #define BYTES_PER_FIFO_WORD 4
 
 #define I2C_CNFG				0x000
@@ -350,6 +351,7 @@ struct tegra_i2c_dev {
 	bool disable_multi_pkt_mode;
 	bool restrict_clk_change;
 	bool transfer_in_progress;
+	bool do_polled_io;
 };
 
 static void dvc_writel(struct tegra_i2c_dev *i2c_dev, u32 val, unsigned long reg)
@@ -1262,6 +1264,39 @@ done:
 	return IRQ_HANDLED;
 }
 
+
+static int wait_polled_io(struct tegra_i2c_dev *i2c_dev)
+{
+	int ret;
+	u32 status, int_mask;
+	/* In case of polled IO don't use interrupts
+	 * rather perform the FIFO rx/tx and wait for the interrupt
+	 * status to change */
+	u64 timeout_us = TEGRA_I2C_TIMEOUT_IN_USEC;
+
+	/* Wait while completion is not signalled and transaction
+	 * has not timed out */
+	while(!(ret = try_wait_for_completion(&i2c_dev->msg_complete))
+			&& timeout_us) {
+		do {
+			udelay(50);
+			if (timeout_us < 50)
+				timeout_us = 0;
+			else
+				timeout_us -= 50;
+			status = i2c_readl(i2c_dev, I2C_INT_STATUS);
+			int_mask = i2c_readl(i2c_dev, I2C_INT_MASK);
+			status &= int_mask;
+		} while (!status && timeout_us);
+
+		/* We have a pending interrupt */
+		if (status)
+			tegra_i2c_isr(i2c_dev->irq, i2c_dev);
+	}
+
+	return ret;
+}
+
 static int tegra_i2c_issue_bus_clear(struct tegra_i2c_dev *i2c_dev)
 {
 	int time_left, err;
@@ -1281,7 +1316,11 @@ static int tegra_i2c_issue_bus_clear(struct tegra_i2c_dev *i2c_dev)
 		i2c_writel(i2c_dev, reg, I2C_BUS_CLEAR_CNFG);
 		tegra_i2c_unmask_irq(i2c_dev, I2C_INT_BUS_CLR_DONE);
 
-		time_left = wait_for_completion_timeout(&i2c_dev->msg_complete,
+		if (i2c_dev->do_polled_io)
+			time_left = wait_polled_io(i2c_dev);
+		else
+			time_left =
+				wait_for_completion_timeout(&i2c_dev->msg_complete,
 							TEGRA_I2C_TIMEOUT);
 		if (time_left == 0) {
 			dev_err(i2c_dev->dev, "timed out for bus clear\n");
@@ -1659,17 +1698,21 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev, u8 *buffer,
 		}
 	}
 
-	time_left = wait_for_completion_timeout(&i2c_dev->msg_complete,
-						TEGRA_I2C_TIMEOUT);
-	if (time_left == 0) {
-		dev_err(i2c_dev->dev, "pio timed out addr: 0x%x tlen:%d rlen:%d\n",
-			i2c_dev->msg_add, tx_len, rx_len);
-		tegra_i2c_reg_dump(i2c_dev);
-		if (i2c_dev->is_curr_dma_xfer) {
-			if (i2c_dev->curr_direction & DATA_DMA_DIR_TX)
-				dmaengine_terminate_all(i2c_dev->tx_dma_chan);
-			if (i2c_dev->curr_direction & DATA_DMA_DIR_RX)
-				dmaengine_terminate_all(i2c_dev->rx_dma_chan);
+	if (i2c_dev->do_polled_io)
+		time_left = wait_polled_io(i2c_dev);
+	else {
+		time_left = wait_for_completion_timeout(&i2c_dev->msg_complete,
+							TEGRA_I2C_TIMEOUT);
+		if (time_left == 0) {
+			dev_err(i2c_dev->dev, "pio timed out addr: 0x%x tlen:%d rlen:%d\n",
+				i2c_dev->msg_add, tx_len, rx_len);
+			tegra_i2c_reg_dump(i2c_dev);
+			if (i2c_dev->is_curr_dma_xfer) {
+				if (i2c_dev->curr_direction & DATA_DMA_DIR_TX)
+					dmaengine_terminate_all(i2c_dev->tx_dma_chan);
+				if (i2c_dev->curr_direction & DATA_DMA_DIR_RX)
+					dmaengine_terminate_all(i2c_dev->rx_dma_chan);
+			}
 		}
 	}
 
@@ -2125,6 +2168,10 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 			"multi-master");
 
 	i2c_dev->scl_gpio = of_get_named_gpio(np, "scl-gpio", 0);
+
+	i2c_dev->do_polled_io = of_property_read_bool(np,
+					"nvidia,do-polled-io");
+
 	i2c_dev->sda_gpio = of_get_named_gpio(np, "sda-gpio", 0);
 
 	i2c_dev->bit_bang_after_shutdown = of_property_read_bool(np,
@@ -2138,7 +2185,11 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 	if (!ret)
 		i2c_dev->hs_master_code = prop;
 
-	i2c_dev->disable_dma_mode = !of_property_read_bool(np, "dmas");
+	if (!i2c_dev->do_polled_io)
+		i2c_dev->disable_dma_mode = of_property_read_bool(np,
+			"dmas");
+	else
+		i2c_dev->disable_dma_mode = true;
 	i2c_dev->is_clkon_always = of_property_read_bool(np,
 			"nvidia,clock-always-on");
 	i2c_dev->disable_multi_pkt_mode = of_property_read_bool(np,
@@ -2510,13 +2561,15 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 		goto disable_div_clk;
 	}
 
-	ret = devm_request_irq(&pdev->dev, i2c_dev->irq, tegra_i2c_isr,
-			       IRQF_NO_SUSPEND, dev_name(&pdev->dev), i2c_dev);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to request irq %i\n", i2c_dev->irq);
-		goto disable_div_clk;
+	/* No need to register irq when polled io mode is being used */
+	if (!i2c_dev->do_polled_io) {
+		ret = devm_request_irq(&pdev->dev, i2c_dev->irq, tegra_i2c_isr,
+				       IRQF_NO_SUSPEND, dev_name(&pdev->dev), i2c_dev);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to request irq %i\n", i2c_dev->irq);
+			goto disable_div_clk;
+		}
 	}
-
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
 	i2c_dev->adapter.owner = THIS_MODULE;
 	i2c_dev->adapter.class = I2C_CLASS_DEPRECATED;

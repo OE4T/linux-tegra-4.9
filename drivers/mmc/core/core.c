@@ -1725,7 +1725,7 @@ int mmc_regulator_set_ocr(struct mmc_host *mmc,
 		}
 		if (mmc->ops->pre_regulator_config)
 			mmc->ops->pre_regulator_config(mmc, vdd_bit, false);
-	} else if (mmc->regulator_enabled) {
+	} else if (mmc->regulator_enabled && regulator_is_enabled(supply)) {
 		result = regulator_disable(supply);
 		if (result == 0)
 			mmc->regulator_enabled = false;

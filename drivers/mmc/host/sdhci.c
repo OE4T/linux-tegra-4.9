@@ -1883,7 +1883,7 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 static int sdhci_get_cd(struct mmc_host *mmc)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
-	int gpio_cd = mmc_gpio_get_cd(mmc);
+	int gpio_cd = mmc->rem_card_present;
 
 	if (host->flags & SDHCI_DEVICE_DEAD)
 		return 0;

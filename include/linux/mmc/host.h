@@ -441,6 +441,8 @@ struct mmc_host {
 	bool			trigger_card_event; /* card_event necessary */
 	bool			skip_host_clkgate; /* Skip host clock gating */
 	bool			is_host_clk_enabled; /* Is host clock gated */
+	bool			rem_card_present;	/* Removable card status */
+	bool			cd_cap_invert;		/* invert capability status */
 
 	struct mmc_card		*card;		/* device attached to this host */
 

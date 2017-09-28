@@ -44,7 +44,7 @@ static void nvgpu_init_vars(struct gk20a *g)
 	gk20a_init_gr(g);
 
 	init_rwsem(&l->busy_lock);
-	init_rwsem(&g->deterministic_busy);
+	nvgpu_rwsem_init(&g->deterministic_busy);
 
 	nvgpu_spinlock_init(&g->mc_enable_lock);
 

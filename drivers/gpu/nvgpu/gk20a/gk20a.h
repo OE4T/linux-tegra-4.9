@@ -58,6 +58,7 @@ struct nvgpu_mem_sgt;
 #include <nvgpu/pmu.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/rwsem.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -1082,7 +1083,7 @@ struct gk20a {
 	 * for submits and held for channel lifetime but dropped for an ongoing
 	 * gk20a_do_idle().
 	 */
-	struct rw_semaphore deterministic_busy;
+	struct nvgpu_rwsem deterministic_busy;
 
 	struct nvgpu_falcon pmu_flcn;
 	struct nvgpu_falcon sec2_flcn;

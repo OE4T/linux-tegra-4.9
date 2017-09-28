@@ -602,10 +602,10 @@ unbind:
 
 	/* put back the channel-wide submit ref from init */
 	if (ch->deterministic) {
-		down_read(&g->deterministic_busy);
+		nvgpu_rwsem_down_read(&g->deterministic_busy);
 		ch->deterministic = false;
 		gk20a_idle(g);
-		up_read(&g->deterministic_busy);
+		nvgpu_rwsem_up_read(&g->deterministic_busy);
 	}
 
 	ch->vpr = false;
@@ -1268,7 +1268,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		c->vpr = true;
 
 	if (flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC) {
-		down_read(&g->deterministic_busy);
+		nvgpu_rwsem_down_read(&g->deterministic_busy);
 		/*
 		 * Railgating isn't deterministic; instead of disallowing
 		 * railgating globally, take a power refcount for this
@@ -1280,12 +1280,12 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		 */
 		err = gk20a_busy(g);
 		if (err) {
-			up_read(&g->deterministic_busy);
+			nvgpu_rwsem_up_read(&g->deterministic_busy);
 			return err;
 		}
 
 		c->deterministic = true;
-		up_read(&g->deterministic_busy);
+		nvgpu_rwsem_up_read(&g->deterministic_busy);
 	}
 
 	/* an address space needs to have been bound at this point. */
@@ -1397,10 +1397,10 @@ clean_up:
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
 clean_up_idle:
 	if (c->deterministic) {
-		down_read(&g->deterministic_busy);
+		nvgpu_rwsem_down_read(&g->deterministic_busy);
 		gk20a_idle(g);
 		c->deterministic = false;
-		up_read(&g->deterministic_busy);
+		nvgpu_rwsem_up_read(&g->deterministic_busy);
 	}
 	nvgpu_err(g, "fail");
 	return err;
@@ -2661,7 +2661,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	/* Grab access to HW to deal with do_idle */
 	if (c->deterministic)
-		down_read(&g->deterministic_busy);
+		nvgpu_rwsem_down_read(&g->deterministic_busy);
 
 	trace_gk20a_channel_submit_gpfifo(g->name,
 					  c->chid,
@@ -2741,7 +2741,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	/* No hw access beyond this point */
 	if (c->deterministic)
-		up_read(&g->deterministic_busy);
+		nvgpu_rwsem_up_read(&g->deterministic_busy);
 
 	trace_gk20a_channel_submitted_gpfifo(g->name,
 				c->chid,
@@ -2765,7 +2765,7 @@ clean_up:
 	gk20a_fence_put(pre_fence);
 	gk20a_fence_put(post_fence);
 	if (c->deterministic)
-		up_read(&g->deterministic_busy);
+		nvgpu_rwsem_up_read(&g->deterministic_busy);
 	else if (need_deferred_cleanup)
 		gk20a_idle(g);
 
@@ -2787,7 +2787,7 @@ void gk20a_channel_deterministic_idle(struct gk20a *g)
 	u32 chid;
 
 	/* Grab exclusive access to the hw to block new submits */
-	down_write(&g->deterministic_busy);
+	nvgpu_rwsem_down_write(&g->deterministic_busy);
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
@@ -2845,7 +2845,7 @@ void gk20a_channel_deterministic_unidle(struct gk20a *g)
 	}
 
 	/* Release submits, new deterministic channels and frees */
-	up_write(&g->deterministic_busy);
+	nvgpu_rwsem_up_write(&g->deterministic_busy);
 }
 
 int gk20a_init_channel_support(struct gk20a *g, u32 chid)

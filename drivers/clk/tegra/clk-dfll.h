@@ -63,6 +63,14 @@ struct tegra_dfll_soc_data {
 	unsigned int thermal_cap_table_size;
 };
 
+
+/*
+ * These thermal boundaries are not set in thermal zone as trip-points, but
+ * must be below/above all other actually set DFLL thermal trip-points.
+ */
+#define DFLL_THERMAL_CAP_NOCAP		0
+#define DFLL_THERMAL_FLOOR_NOFLOOR	125000
+
 int tegra_dfll_register(struct platform_device *pdev,
 			struct tegra_dfll_soc_data *soc);
 struct tegra_dfll_soc_data *tegra_dfll_unregister(struct platform_device *pdev);

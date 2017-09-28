@@ -37,7 +37,6 @@
  *
  */
 
-#include <dt-bindings/thermal/tegra210-dfll-trips.h>
 #include <linux/clk.h>
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
@@ -3484,7 +3483,7 @@ static int profiles_show(struct seq_file *s, void *data)
 	seq_printf(s, "THERM CAPS:%s\n", size ? "" : " NONE");
 	for (i = 0; i < size; i++) {
 		tv = td->soc->thermal_cap_table[i];
-		if (tv.temp == TEGRA210_DFLL_THERMAL_CAP_NOCAP / 1000)
+		if (tv.temp == DFLL_THERMAL_CAP_NOCAP / 1000)
 			continue;
 		v = find_mv_out_floor(td, tv.millivolts);
 		seq_printf(s, "%3dC.. %5dmV\n",

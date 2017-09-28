@@ -652,17 +652,17 @@ struct cvb_table tegra210b01_cpu_cvb_tables[] = {
 
 static struct thermal_tv tegra210_thermal_floor_table[] = {
 	{TEGRA210_DFLL_THERMAL_FLOOR_0 / 1000, 950},
-	{TEGRA210_DFLL_THERMAL_FLOOR_4 / 1000,   0},
+	{DFLL_THERMAL_FLOOR_NOFLOOR / 1000,    0},
 };
 
 static const struct thermal_tv tegra210_thermal_cap_table[] = {
-	{TEGRA210_DFLL_THERMAL_CAP_NOCAP / 1000, INT_MAX},
+	{DFLL_THERMAL_CAP_NOCAP / 1000,      INT_MAX},
 	{TEGRA210_DFLL_THERMAL_CAP_0 / 1000, 1170},
 	{TEGRA210_DFLL_THERMAL_CAP_1 / 1000, 1132},
 };
 
 static const struct thermal_tv tegra210_thermal_cap_ucm2_table[] = {
-	{TEGRA210_DFLL_THERMAL_CAP_NOCAP / 1000, INT_MAX},
+	{DFLL_THERMAL_CAP_NOCAP / 1000,      INT_MAX},
 	{TEGRA210_DFLL_THERMAL_CAP_0 / 1000, 1162},
 	{TEGRA210_DFLL_THERMAL_CAP_1 / 1000, 1090},
 };
@@ -682,11 +682,11 @@ static const struct thermal_table tegra210_cpu_thermal_table = {
 
 static struct thermal_tv tegra210b01_thermal_floor_table[] = {
 	{TEGRA210B01_DFLL_THERMAL_FLOOR_0 / 1000, 800},
-	{TEGRA210B01_DFLL_THERMAL_FLOOR_NOFLOOR / 1000,   0},
+	{DFLL_THERMAL_FLOOR_NOFLOOR / 1000,       0},
 };
 
 static const struct thermal_tv tegra210b01_thermal_cap_table[] = {
-	{TEGRA210B01_DFLL_THERMAL_CAP_NOCAP / 1000, INT_MAX},
+	{DFLL_THERMAL_CAP_NOCAP / 1000,         INT_MAX},
 	{TEGRA210B01_DFLL_THERMAL_CAP_0 / 1000, 1060},
 	{TEGRA210B01_DFLL_THERMAL_CAP_1 / 1000, 1010},
 };

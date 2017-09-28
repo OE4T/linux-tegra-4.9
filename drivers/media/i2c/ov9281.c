@@ -90,6 +90,7 @@
 #define OV9281_DEFAULT_FRAME_LENGTH	0x071C
 #define OV9281_MIN_FRAME_LENGTH		0x0001
 #define OV9281_MAX_FRAME_LENGTH		0xFFFF
+#define OV9281_FRAME_LENGTH_1SEC	(0x40d * 120) /* TODO: try to calc */
 
 #define OV9281_MIN_EXPOSURE_COARSE	0x00000001
 #define OV9281_MAX_EXPOSURE_COARSE	0x000FFFFF
@@ -124,6 +125,7 @@ struct ov9281 {
 
 	s32				group_hold_prev;
 	bool				group_hold_en;
+	int				frame_period_ms;
 	struct regmap			*regmap;
 	struct camera_common_data	*s_data;
 	struct camera_common_pdata	*pdata;
@@ -467,6 +469,11 @@ static int ov9281_set_frame_length(struct ov9281 *priv, s32 val)
 	if (err)
 		goto fail;
 
+	priv->frame_period_ms = (frame_length * 1000) /
+				OV9281_FRAME_LENGTH_1SEC;
+	dev_dbg(&priv->i2c_client->dev,
+		 "%s: frame_period_ms: %d\n", __func__, priv->frame_period_ms);
+
 	return 0;
 
 fail:
@@ -702,11 +709,11 @@ static int ov9281_s_stream(struct v4l2_subdev *sd, int enable)
 	 * camera host.  So, after starting streaming, we assume fsync
 	 * master has already been told to start streaming, and we wait some
 	 * amount of time in order to skip the possible short frame.  The
-	 * length of time to wait should be at least our sample period.
-	 * Assume worse case of 120fps (8.3ms), and add a bit more.
+	 * length of time to wait should be at least our frame period.
+	 * Add a little bit extra as a safety margin.
 	 */
 	if (priv->fsync == OV9281_FSYNC_SLAVE)
-		msleep_range(10);
+		msleep_range(priv->frame_period_ms + 10);
 
 	return 0;
 

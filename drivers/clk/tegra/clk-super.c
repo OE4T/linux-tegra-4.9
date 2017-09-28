@@ -118,6 +118,7 @@ out:
 	if (mux->lock)
 		spin_unlock_irqrestore(mux->lock, flags);
 
+	pr_debug("%s: done switching to %u (%d)\n", __func__, index, err);
 	return err;
 }
 

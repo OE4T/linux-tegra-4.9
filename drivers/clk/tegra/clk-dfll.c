@@ -360,6 +360,7 @@ struct tegra_dfll {
 	struct clk			*ref_clk;
 	struct clk			*i2c_clk;
 	struct clk			*dfll_clk;
+	struct clk			*cclk_g_clk;
 	struct reset_control		*dvco_rst;
 	unsigned long			ref_rate;
 	unsigned long			i2c_clk_rate;
@@ -436,6 +437,9 @@ struct tegra_dfll {
 	ktime_t				last_calibration;
 	unsigned long			calibration_range_min;
 	unsigned long			calibration_range_max;
+
+	/* Child cclk_g rate change notifier */
+	struct notifier_block		cclk_g_parent_nb;
 };
 
 enum dfll_monitor_mode {
@@ -446,6 +450,8 @@ enum dfll_monitor_mode {
 static struct tegra_dfll *tegra_dfll_dev;
 
 #define clk_hw_to_dfll(_hw) container_of(_hw, struct tegra_dfll, dfll_clk_hw)
+#define cclk_g_nb_to_dfll(_nb) \
+	container_of(_nb, struct tegra_dfll, cclk_g_parent_nb)
 
 /* mode_name: map numeric DFLL modes to names for friendly console messages */
 static const char * const mode_name[] = {
@@ -1946,6 +1952,7 @@ static int dfll_disable(struct tegra_dfll *td)
 
 	pm_runtime_put_sync(td->dev);
 
+	pr_debug("%s: done\n", __func__);
 	return 0;
 }
 
@@ -1965,6 +1972,7 @@ static int dfll_enable(struct tegra_dfll *td)
 	dfll_set_mode(td, DFLL_OPEN_LOOP);
 	spin_unlock_irqrestore(&td->lock, flags);
 
+	pr_debug("%s: done\n", __func__);
 	return 0;
 }
 
@@ -2058,6 +2066,8 @@ static int dfll_lock(struct tegra_dfll *td)
 
 	spin_unlock_irqrestore(&td->lock, flags);
 
+	if (!ret)
+		pr_debug("%s: done\n", __func__);
 	return ret;
 }
 
@@ -2079,6 +2089,8 @@ static int dfll_unlock(struct tegra_dfll *td)
 
 	spin_unlock_irqrestore(&td->lock, flags);
 
+	if (!ret)
+		pr_debug("%s: done\n", __func__);
 	return ret;
 }
 
@@ -2101,27 +2113,56 @@ static int dfll_clk_is_enabled(struct clk_hw *hw)
 static int dfll_clk_enable(struct clk_hw *hw)
 {
 	struct tegra_dfll *td = clk_hw_to_dfll(hw);
-	int ret;
 
-	ret = dfll_enable(td);
-	if (ret)
-		return ret;
-
-	ret = dfll_lock(td);
-	if (ret)
-		dfll_disable(td);
-
-	return ret;
+	return dfll_enable(td);
 }
 
 static void dfll_clk_disable(struct clk_hw *hw)
 {
 	struct tegra_dfll *td = clk_hw_to_dfll(hw);
-	int ret;
 
-	ret = dfll_unlock(td);
-	if (!ret)
-		dfll_disable(td);
+	dfll_disable(td);
+}
+
+static int cclk_g_parent_event(struct notifier_block *nb,
+			       unsigned long action, void *data)
+{
+	struct clk_notifier_data *cnd = data;
+	struct clk *cclk_g_parent = clk_get_parent(cnd->clk);
+	struct tegra_dfll *td = cclk_g_nb_to_dfll(nb);
+
+	switch (action) {
+	case PRE_PARENT_CHANGE:
+		if (cclk_g_parent == td->dfll_clk) {
+			/* Unlock DFLL before switching to PLL parent */
+			if(dfll_unlock(td))
+				return NOTIFY_BAD;
+			dev_info(td->dev, "exited closed loop mode\n");
+		} else if (!td->last_req.rate) {
+			dev_err(td->dev, "%s: Don't switch to DFLL at rate 0\n",
+				__func__);
+			return NOTIFY_BAD;
+			dev_info(td->dev, "entered closed loop mode\n");
+		}
+		break;
+
+	case ABORT_PARENT_CHANGE:
+		/* fall thru to re-lock DFLL if switch to PLL was aborted */
+
+	case POST_PARENT_CHANGE:
+		if (cclk_g_parent == td->dfll_clk) {
+			/*
+			 * DFLL is enabled (i.e. running in open loop) by CCF
+			 * set parent code before the parent switch. Now, after
+			 * the switch DFLL can be locked.
+			 */
+			if(dfll_lock(td))
+				return NOTIFY_BAD;
+		}
+		break;
+	}
+
+	return NOTIFY_DONE;
 }
 
 static unsigned long dfll_clk_recalc_rate(struct clk_hw *hw,
@@ -2493,6 +2534,8 @@ static void dfll_set_default_params(struct tegra_dfll *td)
  */
 static int dfll_init_clks(struct tegra_dfll *td)
 {
+	int ret;
+
 	td->ref_clk = devm_clk_get(td->dev, "ref");
 	if (IS_ERR(td->ref_clk)) {
 		dev_err(td->dev, "missing ref clock\n");
@@ -2511,6 +2554,18 @@ static int dfll_init_clks(struct tegra_dfll *td)
 		return PTR_ERR(td->i2c_clk);
 	}
 	td->i2c_clk_rate = clk_get_rate(td->i2c_clk);
+
+	td->cclk_g_clk = devm_clk_get(td->dev, "cclk_g");
+	if (IS_ERR(td->cclk_g_clk)) {
+		dev_err(td->dev, "missing cclk_g clock\n");
+		return PTR_ERR(td->cclk_g_clk);
+	}
+	td->cclk_g_parent_nb.notifier_call = cclk_g_parent_event;
+	ret = clk_notifier_register(td->cclk_g_clk, &td->cclk_g_parent_nb);
+	if (ret) {
+		dev_err(td->dev, "failed to register cclk_g notifier\n");
+		return ret;
+	}
 
 	return 0;
 }
@@ -3337,6 +3392,8 @@ static int dfll_debug_init(struct tegra_dfll *td)
 	debugfs_create_symlink("monitor", td->debugfs_dir, "rate");
 	debugfs_create_symlink("dvco_rate", td->debugfs_dir, "dvco_rate_min");
 
+	clk_register_clkdev(td->dfll_clk, td->output_clock_name,
+				"tegra-clk-debug");
 	return 0;
 
 err_out:

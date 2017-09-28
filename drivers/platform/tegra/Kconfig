@@ -107,17 +107,6 @@ config TEGRA_13x_SERROR
 	help
 	  The Tegra13 SError handler. This handles Denver SErrors.
 
-config TEGRA_MODS_OF
-	bool "Allow to dynamically change DTB at runtime to insert 'mods' node"
-	select OF_DYNAMIC
-	select OF_RESOLVE
-	default n
-	help
-	  In the Common Clock Framework (starting T18x), platform drivers can
-	  use DTB to acsess clocks. Mods clock driver needs to insert 'mods'
-	  node in live dtb at driver initialisation and add all clocks that it
-	  needs to that node. The 2 OF_ configs help to do that.
-
 config TEGRA_THERMAL_THROTTLE
        bool "Enable throttling of CPU speed on overtemp"
        depends on CPU_FREQ

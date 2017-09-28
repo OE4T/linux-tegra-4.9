@@ -69,7 +69,7 @@ void mc_gk20a_isr_stall(struct gk20a *g)
 	if (mc_intr_0 & mc_intr_0_pmu_pending_f())
 		gk20a_pmu_isr(g);
 	if (mc_intr_0 & mc_intr_0_priv_ring_pending_f())
-		gk20a_priv_ring_isr(g);
+		g->ops.priv_ring.isr(g);
 	if (mc_intr_0 & mc_intr_0_ltc_pending_f())
 		g->ops.ltc.isr(g);
 	if (mc_intr_0 & mc_intr_0_pbus_pending_f())

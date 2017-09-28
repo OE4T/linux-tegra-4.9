@@ -405,7 +405,7 @@ struct tegra_dfll {
 	u8				tune_high_out_start;
 	u8				tune_high_out_min;
 	u8				tune_out_last;
-	unsigned long			tune_high_dvco_rate_min;
+	unsigned long			*tune_high_dvco_rate_floors;
 	unsigned long 			tune_high_target_rate_min;
 	bool				tune_high_calibrated;
 
@@ -970,7 +970,12 @@ static void set_dvco_rate_min(struct tegra_dfll *td, struct dfll_rate_req *req)
 	}
 
 	if (dfll_tune_target(td, req->rate) > DFLL_TUNE_LOW) {
-		rate = max(rate, td->tune_high_dvco_rate_min);
+		unsigned int s = td->soc->thermal_floor_table_size;
+		unsigned long tune_floor =
+			td->tune_high_dvco_rate_floors[td->thermal_floor_index];
+
+		tune_floor = tune_floor ? : td->tune_high_dvco_rate_floors[s];
+		rate = max(rate, tune_floor);
 		tune_high_range_min = td->tune_high_target_rate_min;
 	}
 
@@ -1380,17 +1385,16 @@ static void dfll_calibrate(struct tegra_dfll *td)
 	else if (rate > (rate_min + step))
 		rate_min += step;
 	else {
-		int t_floor_out, t_floor_idx;
+		int t_floor_out, t_floor_idx = td->thermal_floor_index;
 		struct thermal_tv tv;
 
 		if ((td->tune_range == DFLL_TUNE_HIGH) &&
 		    (td->tune_high_out_min == out_min)) {
-			td->tune_high_dvco_rate_min = rate_min;
+			td->tune_high_dvco_rate_floors[t_floor_idx] = rate_min;
 			td->tune_high_calibrated = true;
 			return;
 		}
 
-		t_floor_idx = td->thermal_floor_index;
 		tv = td->soc->thermal_floor_table[t_floor_idx];
 		t_floor_out = find_mv_out_cap(td, tv.millivolts);
 		if (t_floor_out == out_min) {
@@ -1534,12 +1538,13 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 	}
 
 	/* Tune high Vmin if specified */
-	if (tune_mv && !td->tune_high_calibrated) {
+	if (tune_mv && (!td->tune_high_calibrated ||
+			!td->tune_high_dvco_rate_floors[i])) {
 		if (tune_mv >= therm_mv) {
 			rate = dfll_one_shot_calibrate_mv(
 				td, tune_mv, range == DFLL_TUNE_LOW);
 			if (!IS_ERR_VALUE(rate)) {
-				td->tune_high_dvco_rate_min =
+				td->tune_high_dvco_rate_floors[i] =
 					clamp((unsigned long)rate,
 					td->tune_high_target_rate_min,
 					td->out_rate_max);
@@ -2664,6 +2669,7 @@ static int dfll_init_clks(struct tegra_dfll *td)
 static void dfll_init_tuning_thresholds(struct tegra_dfll *td)
 {
 	u8 out_min, out_start, max_voltage_index;
+	unsigned int s = td->soc->thermal_floor_table_size;
 
 	max_voltage_index = td->lut_size - 1;
 
@@ -2675,7 +2681,7 @@ static void dfll_init_tuning_thresholds(struct tegra_dfll *td)
 	 */
 	td->tune_high_out_min = max_voltage_index;
 	td->tune_high_out_start = max_voltage_index;
-	td->tune_high_dvco_rate_min = ULONG_MAX;
+	td->tune_high_dvco_rate_floors[s] = ULONG_MAX;
 	td->tune_high_target_rate_min = ULONG_MAX;
 
 	if (td->soc->tune_high_min_millivolts < td->soc->min_millivolts)
@@ -2699,9 +2705,14 @@ static void dfll_init_tuning_thresholds(struct tegra_dfll *td)
 	if (out_start > max_voltage_index)
 		return;
 
+	/*
+	 * Store target rate tuning threshold, and estimated DVCO rate at high
+	 * tuning voltage threshold. DVCO rate tuning floors will be calibrated
+	 * separately for each thermal range.
+	 */
 	td->tune_high_out_min = out_min;
 	td->tune_high_out_start = out_start;
-	td->tune_high_dvco_rate_min = get_dvco_rate_above(td, out_start);
+	td->tune_high_dvco_rate_floors[s] = get_dvco_rate_above(td, out_start);
 	td->tune_high_target_rate_min = get_dvco_rate_above(td, out_min);
 }
 
@@ -3278,8 +3289,11 @@ static void dfll_invalidate_one_shot(struct tegra_dfll *td)
 {
 	int i;
 
-	for (i = 0; i <= td->soc->thermal_floor_table_size; i++)
+	for (i = 0; i < td->soc->thermal_floor_table_size; i++) {
 		td->dvco_rate_floors[i] = 0;
+		td->tune_high_dvco_rate_floors[i] = 0;
+	}
+	td->dvco_rate_floors[i] = 0;
 	td->tune_high_calibrated = false;
 }
 
@@ -3427,7 +3441,7 @@ static int profiles_show(struct seq_file *s, void *data)
 {
 	struct thermal_tv tv;
 	int i, size;
-	unsigned long r;
+	unsigned long r, r_default;
 	struct tegra_dfll *td = s->private;
 	u8 v;
 
@@ -3445,11 +3459,19 @@ static int profiles_show(struct seq_file *s, void *data)
 	if (td->tune_high_target_rate_min == ULONG_MAX) {
 		seq_puts(s, "TUNE HIGH: NONE\n");
 	} else {
+		size = td->soc->thermal_floor_table_size;
+		r_default = td->tune_high_dvco_rate_floors[size];
+
 		seq_puts(s, "TUNE HIGH:\n");
-		seq_printf(s, "min    %5dmV%9lukHz%s\n",
-			   td->lut_uv[td->tune_high_out_min] / 1000,
-			   td->tune_high_dvco_rate_min / 1000,
-			   td->tune_high_calibrated ? " (calibrated)"  : "");
+		for (i = 0; i < size; i++) {
+			tv = td->soc->thermal_floor_table[i];
+			r = td->tune_high_dvco_rate_floors[i];
+			v = td->tune_high_out_min;
+			seq_printf(s, " ..%3dC%5dmV%9lukHz%s\n",
+				   tv.temp, tegra_dfll_dev->lut_uv[v] / 1000,
+				   (r ? : r_default) / 1000,
+				   r ? " (calibrated)"  : "");
+		}
 		seq_printf(s, "%-14s%9lukHz\n", "rate threshold",
 			   td->tune_high_target_rate_min / 1000);
 	}
@@ -3848,6 +3870,12 @@ int tegra_dfll_register(struct platform_device *pdev,
 					    GFP_KERNEL);
 	if (!td->dvco_rate_floors)
 		return -ENOMEM;
+
+	td->tune_high_dvco_rate_floors = devm_kzalloc(&pdev->dev, t_floor_size,
+						      GFP_KERNEL);
+	if (!td->dvco_rate_floors)
+		return -ENOMEM;
+
 
 	td->dev = &pdev->dev;
 	platform_set_drvdata(pdev, td);

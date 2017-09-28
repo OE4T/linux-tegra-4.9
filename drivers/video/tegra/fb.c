@@ -108,6 +108,7 @@ static void *tegra_fb_check_and_alloc_framebuffer(struct fb_info *info)
 
 	info->screen_base = fb_base;
 	info->screen_size = fb_size;
+	info->fix.smem_len = fb_size;
 	tegra_fb->win.virt_addr = fb_base;
 	tegra_fb->win.phys_addr = tegra_fb->phys_start;
 	tegra_fb->fb_size = fb_size;

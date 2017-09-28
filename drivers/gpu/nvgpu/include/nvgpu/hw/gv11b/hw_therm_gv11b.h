@@ -240,6 +240,10 @@ static inline u32 therm_gate_ctrl_eng_idle_filt_exp_m(void)
 {
 	return 0x1f << 8;
 }
+static inline u32 therm_gate_ctrl_eng_idle_filt_exp__prod_f(void)
+{
+	return 0x200;
+}
 static inline u32 therm_gate_ctrl_eng_idle_filt_mant_f(u32 v)
 {
 	return (v & 0x7) << 13;
@@ -247,6 +251,10 @@ static inline u32 therm_gate_ctrl_eng_idle_filt_mant_f(u32 v)
 static inline u32 therm_gate_ctrl_eng_idle_filt_mant_m(void)
 {
 	return 0x7 << 13;
+}
+static inline u32 therm_gate_ctrl_eng_idle_filt_mant__prod_f(void)
+{
+	return 0x2000;
 }
 static inline u32 therm_gate_ctrl_eng_delay_before_f(u32 v)
 {
@@ -256,6 +264,10 @@ static inline u32 therm_gate_ctrl_eng_delay_before_m(void)
 {
 	return 0xf << 16;
 }
+static inline u32 therm_gate_ctrl_eng_delay_before__prod_f(void)
+{
+	return 0x40000;
+}
 static inline u32 therm_gate_ctrl_eng_delay_after_f(u32 v)
 {
 	return (v & 0xf) << 20;
@@ -263,6 +275,10 @@ static inline u32 therm_gate_ctrl_eng_delay_after_f(u32 v)
 static inline u32 therm_gate_ctrl_eng_delay_after_m(void)
 {
 	return 0xf << 20;
+}
+static inline u32 therm_gate_ctrl_eng_delay_after__prod_f(void)
+{
+	return 0x0;
 }
 static inline u32 therm_fecs_idle_filter_r(void)
 {
@@ -272,6 +288,10 @@ static inline u32 therm_fecs_idle_filter_value_m(void)
 {
 	return 0xffffffff << 0;
 }
+static inline u32 therm_fecs_idle_filter_value__prod_f(void)
+{
+	return 0x0;
+}
 static inline u32 therm_hubmmu_idle_filter_r(void)
 {
 	return 0x0002028c;
@@ -279,6 +299,10 @@ static inline u32 therm_hubmmu_idle_filter_r(void)
 static inline u32 therm_hubmmu_idle_filter_value_m(void)
 {
 	return 0xffffffff << 0;
+}
+static inline u32 therm_hubmmu_idle_filter_value__prod_f(void)
+{
+	return 0x0;
 }
 static inline u32 therm_clk_slowdown_r(u32 i)
 {

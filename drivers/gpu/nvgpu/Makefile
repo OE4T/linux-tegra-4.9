@@ -18,6 +18,7 @@ nvgpu-y += \
 	$(nvgpu-t19x)/gv11b/acr_gv11b.o \
 	$(nvgpu-t19x)/gv11b/subctx_gv11b.o \
 	$(nvgpu-t19x)/gv11b/regops_gv11b.o \
+	$(nvgpu-t19x)/gv11b/therm_gv11b.o \
 	$(nvgpu-t19x)/gv100/mm_gv100.o \
 	$(nvgpu-t19x)/gv100/gr_ctx_gv100.o \
 	$(nvgpu-t19x)/gv100/fb_gv100.o \

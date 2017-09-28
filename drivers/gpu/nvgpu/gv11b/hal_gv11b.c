@@ -81,6 +81,7 @@
 #include "gv11b_gating_reglist.h"
 #include "regops_gv11b.h"
 #include "subctx_gv11b.h"
+#include "therm_gv11b.h"
 
 #include <nvgpu/bus.h>
 #include <nvgpu/debug.h>
@@ -553,7 +554,7 @@ static const struct gpu_ops gv11b_ops = {
 	},
 	.therm = {
 		.init_therm_setup_hw = gp10b_init_therm_setup_hw,
-		.elcg_init_idle_filters = gp10b_elcg_init_idle_filters,
+		.elcg_init_idle_filters = gv11b_elcg_init_idle_filters,
 	},
 	.pmu = {
 		.pmu_setup_elpg = gp10b_pmu_setup_elpg,

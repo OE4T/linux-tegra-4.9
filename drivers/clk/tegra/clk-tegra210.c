@@ -2003,6 +2003,7 @@ static struct tegra_clk_pll_params pll_a1_params = {
 	.ext_misc_reg[3] = PLLA1_MISC3,
 	.freq_table = pll_cx_freq_table,
 	.flags = TEGRA_PLL_USE_LOCK,
+	.mdiv_default = 3,
 	.set_defaults = _plla1_set_defaults,
 	.calc_rate = tegra210_pll_fixed_mdiv_cfg,
 };
@@ -3346,6 +3347,11 @@ static __init void tegra210_shared_clk_init(char *sclk_high_clk)
 					0, "nvdec");
 	clks[TEGRA210_CLK_NVDEC_CBUS] = clk;
 
+	clk = tegra_clk_register_cbus("abus", "pll_a1",
+				      TEGRA_SHARED_BUS_RETENTION | TEGRA_SHARED_BUS_ROUND_PASS_THRU,
+				      "pll_p", 38400000, 1000000000);
+	clks[TEGRA210_CLK_ABUS] = clk;
+
 	if (clks[TEGRA210_CLK_SCLK_SKIPPER]) {
 		clk = clks[TEGRA210_CLK_SCLK_SKIPPER];
 		clk = tegra_clk_register_sbus_cmplx("sbus", __clk_get_name(clk),
@@ -3562,6 +3568,7 @@ static struct tegra_clk_init_table init_table[] __initdata = {
 	{ TEGRA210_CLK_MSELECT, TEGRA210_CLK_PLL_P, 102000000, 1 },
 	{ TEGRA210_CLK_APE, TEGRA210_CLK_PLL_P, 25500000, 1 },
 	{ TEGRA210_CLK_CSITE, TEGRA210_CLK_CLK_MAX, 0, 1 },
+	{ TEGRA210_CLK_ACLK, TEGRA210_CLK_PLL_A1, 0, 0 },
 	/* TODO find a way to enable this on-demand */
 	{ TEGRA210_CLK_DBGAPB, TEGRA210_CLK_CLK_MAX, 0, 1 },
 	{ TEGRA210_CLK_TSENSOR, TEGRA210_CLK_CLK_M, 400000, 0 },

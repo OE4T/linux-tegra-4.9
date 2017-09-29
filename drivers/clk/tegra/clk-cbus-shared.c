@@ -1302,13 +1302,14 @@ static int possible_rates_show(struct seq_file *s, void *data)
 	/* shared bus clock must round up, unless top of range reached */
 	while (rate < end_rate) {
 		unsigned long rounded_rate = clk_round_rate(c, rate);
-		if (IS_ERR_VALUE(rounded_rate) || (rounded_rate < rate)) {
+		if (IS_ERR_VALUE(rounded_rate) ||
+		    (rounded_rate > bus->min_rate && rounded_rate <= rate)) {
 			seq_printf(s, "...rates rounding broken\n");
 			return 0;
 		}
 
-		if ((rate == rounded_rate) && (rate > bus->min_rate)) {
-			seq_printf(s, "... %lu ", bus->max_rate / 1000);
+		if ((rounded_rate == bus->min_rate) && (rate > bus->min_rate)) {
+			seq_printf(s, "... %lu ", end_rate / 1000);
 			break;
 		}
 

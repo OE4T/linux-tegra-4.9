@@ -58,86 +58,86 @@
 
 static inline u32 xp_dl_mgr_r(u32 i)
 {
-	return 0x0008b8c0 + i*4;
+	return 0x0008b8c0U + i*4U;
 }
 static inline u32 xp_dl_mgr_safe_timing_f(u32 v)
 {
-	return (v & 0x1) << 2;
+	return (v & 0x1U) << 2U;
 }
 static inline u32 xp_pl_link_config_r(u32 i)
 {
-	return 0x0008c040 + i*4;
+	return 0x0008c040U + i*4U;
 }
 static inline u32 xp_pl_link_config_ltssm_status_f(u32 v)
 {
-	return (v & 0x1) << 4;
+	return (v & 0x1U) << 4U;
 }
 static inline u32 xp_pl_link_config_ltssm_status_idle_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 xp_pl_link_config_ltssm_directive_f(u32 v)
 {
-	return (v & 0xf) << 0;
+	return (v & 0xfU) << 0U;
 }
 static inline u32 xp_pl_link_config_ltssm_directive_m(void)
 {
-	return 0xf << 0;
+	return 0xfU << 0U;
 }
 static inline u32 xp_pl_link_config_ltssm_directive_normal_operations_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 xp_pl_link_config_ltssm_directive_change_speed_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 xp_pl_link_config_max_link_rate_f(u32 v)
 {
-	return (v & 0x3) << 18;
+	return (v & 0x3U) << 18U;
 }
 static inline u32 xp_pl_link_config_max_link_rate_m(void)
 {
-	return 0x3 << 18;
+	return 0x3U << 18U;
 }
 static inline u32 xp_pl_link_config_max_link_rate_2500_mtps_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 xp_pl_link_config_max_link_rate_5000_mtps_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 xp_pl_link_config_max_link_rate_8000_mtps_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 xp_pl_link_config_target_tx_width_f(u32 v)
 {
-	return (v & 0x7) << 20;
+	return (v & 0x7U) << 20U;
 }
 static inline u32 xp_pl_link_config_target_tx_width_m(void)
 {
-	return 0x7 << 20;
+	return 0x7U << 20U;
 }
 static inline u32 xp_pl_link_config_target_tx_width_x1_v(void)
 {
-	return 0x00000007;
+	return 0x00000007U;
 }
 static inline u32 xp_pl_link_config_target_tx_width_x2_v(void)
 {
-	return 0x00000006;
+	return 0x00000006U;
 }
 static inline u32 xp_pl_link_config_target_tx_width_x4_v(void)
 {
-	return 0x00000005;
+	return 0x00000005U;
 }
 static inline u32 xp_pl_link_config_target_tx_width_x8_v(void)
 {
-	return 0x00000004;
+	return 0x00000004U;
 }
 static inline u32 xp_pl_link_config_target_tx_width_x16_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 #endif

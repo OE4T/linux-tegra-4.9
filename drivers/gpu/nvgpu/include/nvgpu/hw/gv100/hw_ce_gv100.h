@@ -58,50 +58,50 @@
 
 static inline u32 ce_intr_status_r(u32 i)
 {
-	return 0x00104410 + i*128;
+	return 0x00104410U + i*128U;
 }
 static inline u32 ce_intr_status_blockpipe_pending_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ce_intr_status_blockpipe_reset_f(void)
 {
-	return 0x1;
+	return 0x1U;
 }
 static inline u32 ce_intr_status_nonblockpipe_pending_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 ce_intr_status_nonblockpipe_reset_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 ce_intr_status_launcherr_pending_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 ce_intr_status_launcherr_reset_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 ce_intr_status_invalid_config_pending_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 ce_intr_status_invalid_config_reset_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 ce_intr_status_mthd_buffer_fault_pending_f(void)
 {
-	return 0x10;
+	return 0x10U;
 }
 static inline u32 ce_intr_status_mthd_buffer_fault_reset_f(void)
 {
-	return 0x10;
+	return 0x10U;
 }
 static inline u32 ce_pce_map_r(void)
 {
-	return 0x00104028;
+	return 0x00104028U;
 }
 #endif

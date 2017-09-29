@@ -58,38 +58,38 @@
 
 static inline u32 usermode_cfg0_r(void)
 {
-	return 0x00810000;
+	return 0x00810000U;
 }
 static inline u32 usermode_cfg0_class_id_f(u32 v)
 {
-	return (v & 0xffff) << 0;
+	return (v & 0xffffU) << 0U;
 }
 static inline u32 usermode_cfg0_class_id_value_v(void)
 {
-	return 0x0000c361;
+	return 0x0000c361U;
 }
 static inline u32 usermode_time_0_r(void)
 {
-	return 0x00810080;
+	return 0x00810080U;
 }
 static inline u32 usermode_time_0_nsec_f(u32 v)
 {
-	return (v & 0x7ffffff) << 5;
+	return (v & 0x7ffffffU) << 5U;
 }
 static inline u32 usermode_time_1_r(void)
 {
-	return 0x00810084;
+	return 0x00810084U;
 }
 static inline u32 usermode_time_1_nsec_f(u32 v)
 {
-	return (v & 0x1fffffff) << 0;
+	return (v & 0x1fffffffU) << 0U;
 }
 static inline u32 usermode_notify_channel_pending_r(void)
 {
-	return 0x00810090;
+	return 0x00810090U;
 }
 static inline u32 usermode_notify_channel_pending_id_f(u32 v)
 {
-	return (v & 0xffffffff) << 0;
+	return (v & 0xffffffffU) << 0U;
 }
 #endif

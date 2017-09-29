@@ -58,6 +58,6 @@
 
 static inline u32 pram_data032_r(u32 i)
 {
-	return 0x00700000 + i*4;
+	return 0x00700000U + i*4U;
 }
 #endif

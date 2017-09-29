@@ -27,111 +27,100 @@
 
 #include <asm/smp_plat.h>
 
-#define SMC_SIP_INVOKE_MCE	0xC2FFFF00
-
-#define NR_SMC_REGS		6
-
-/* MCE command enums for SMC calls */
-enum {
-	MCE_SMC_ENTER_CSTATE = 0,
-	MCE_SMC_UPDATE_CSTATE_INFO = 1,
-	MCE_SMC_UPDATE_XOVER_TIME = 2,
-	MCE_SMC_READ_CSTATE_STATS = 3,
-	MCE_SMC_WRITE_CSTATE_STATS = 4,
-	MCE_SMC_IS_SC7_ALLOWED = 5,
-	MCE_SMC_ONLINE_CORE = 6,
-	MCE_SMC_CC3_CTRL = 7,
-	MCE_SMC_ECHO_DATA = 8,
-	MCE_SMC_READ_VERSIONS = 9,
-	MCE_SMC_ENUM_FEATURES = 10,
-	MCE_SMC_ROC_FLUSH_CACHE = 11,
-	MCE_SMC_ENUM_READ_MCA = 12,
-	MCE_SMC_ENUM_WRITE_MCA = 13,
-	MCE_SMC_ROC_FLUSH_CACHE_ONLY = 14,
-	MCE_SMC_ROC_CLEAN_CACHE_ONLY = 15,
-	MCE_SMC_ENABLE_LATIC = 16,
-	MCE_SMC_UNCORE_PERFMON_REQ = 17,
-	MCE_SMC_MISC_CCPLEX = 18,
-	MCE_SMC_ENUM_MAX = 0xFF,	/* enums cannot exceed this value */
-};
-
-struct mce_regs {
-	u64 args[NR_SMC_REGS];
-};
-
-static noinline notrace int __send_smc(u8 func, struct mce_regs *regs)
+/* Issue a NVG request with data */
+static noinline notrace uint64_t nvg_send_req_data(uint64_t req, uint64_t data)
 {
-	u32 ret = SMC_SIP_INVOKE_MCE | (func & MCE_SMC_ENUM_MAX);
+	uint64_t ret;
 
-	asm volatile (
-	"	mov	x0, %0\n"
-	"	ldp	x1, x2, [%1, #16 * 0]\n"
-	"	ldp	x3, x4, [%1, #16 * 1]\n"
-	"	ldp	x5, x6, [%1, #16 * 2]\n"
-	"	isb\n"
-	"	smc	#0\n"
-	"	mov	%0, x0\n"
-	"	stp	x0, x1, [%1, #16 * 0]\n"
-	"	stp	x2, x3, [%1, #16 * 1]\n"
-	: "+r" (ret)
-	: "r" (regs)
-	: "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
-	"x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17");
+	asm volatile ("msr s3_0_c15_c1_2, %0" :: "r" (req));
+	asm volatile ("msr s3_0_c15_c1_3, %0" :: "r" (data));
+	asm volatile ("mov %0, x0\n" : "=r" (ret));
+
 	return ret;
 }
 
-#define send_smc(func, regs) \
-({ \
-	int __ret = __send_smc(func, regs); \
-	if (__ret) { \
-		pr_err("%s: failed (ret=%d)\n", __func__, __ret); \
-		return __ret; \
-	} \
-	__ret; \
-})
+/* Issue a NVG request to read the command response */
+static noinline notrace uint64_t nvg_get_response(void)
+{
+	uint64_t ret;
+
+	asm volatile ("mrs %0, s3_0_c15_c1_3" : "=r" (ret));
+
+	return ret;
+}
 
 /**
  * Specify power state and wake time for entering upon STANDBYWFI
  *
- * @state:		requested core power state
- * @wake_time:	wake time in TSC ticks
+ * @state: requested core power state
+ * @wake_time: wake time in TSC ticks
  *
  * Returns 0 if success.
  */
 int t19x_mce_enter_cstate(u32 state, u32 wake_time)
 {
-	struct mce_regs regs;
-
-	regs.args[0] = state;
-	regs.args[1] = wake_time;
-	return send_smc(MCE_SMC_ENTER_CSTATE, &regs);
+	/* use PSCI interface instead */
+	return 0;
 }
-EXPORT_SYMBOL(t19x_mce_enter_cstate);
 
 /**
  * Specify deepest cluster/ccplex/system states allowed.
  *
- * @cluster:	deepest cluster-wide state
- * @ccplex:		deepest ccplex-wide state
- * @system:		deepest system-wide state
- * @force:		forced system state
- * @wake_mask:	wake mask to be updated
- * @valid:		is wake_mask applicable?
+ * @cluster: deepest cluster-wide state
+ * @ccplex: deepest ccplex-wide state
+ * @system: deepest system-wide state
+ * @force: forced system state
+ * @wake_mask: wake mask to be updated
+ * @valid: is wake_mask applicable?
  *
  * Returns 0 if success.
  */
 int t19x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 	u8 force, u32 wake_mask, bool valid)
 {
-	struct mce_regs regs;
+	nvg_cstate_info_channel_t cstate_info = { 0 };
+	uint64_t ret;
 
-	regs.args[0] = cluster;
-	regs.args[1] = ccplex;
-	regs.args[2] = system;
-	regs.args[3] = force;
-	regs.args[4] = wake_mask;
-	regs.args[5] = valid;
-	return send_smc(MCE_SMC_UPDATE_CSTATE_INFO, &regs);
+	/* disable preemption */
+	preempt_disable();
+
+	/* update CLUSTER_CSTATE? */
+	if (cluster) {
+		cstate_info.bits.cluster_state = cluster;
+		cstate_info.bits.update_cluster = 1;
+	}
+
+	/* update CCPLEX_CSTATE? */
+	if (ccplex) {
+		cstate_info.bits.cg_cstate = ccplex;
+		cstate_info.bits.update_cg = 1;
+	}
+
+	/* update SYSTEM_CSTATE? */
+	if (system) {
+		cstate_info.bits.system_cstate = system;
+		cstate_info.bits.update_system = 1;
+	}
+
+	/* update wake mask value? */
+	if (valid)
+		cstate_info.bits.update_wake_mask = 1;
+
+	/* set the wake mask */
+	cstate_info.bits.wake_mask = wake_mask;
+
+	/* set the updated cstate info */
+	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_INFO, cstate_info.flat);
+
+	/* enable preemption */
+	preempt_enable();
+
+	if (ret) {
+		pr_err("%s failed with error (%lld)\n", __func__, ret);
+		return -ENOMSG;
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL(t19x_mce_update_cstate_info);
 
@@ -145,11 +134,29 @@ EXPORT_SYMBOL(t19x_mce_update_cstate_info);
  */
 int t19x_mce_update_crossover_time(u32 type, u32 time)
 {
-	struct mce_regs regs;
+	uint64_t ret;
 
-	regs.args[0] = type;
-	regs.args[1] = time;
-	return send_smc(MCE_SMC_UPDATE_XOVER_TIME, &regs);
+	if ((type != TEGRA_NVG_CHANNEL_CROSSOVER_C6_LOWER_BOUND) &&
+	    (type != TEGRA_NVG_CHANNEL_CROSSOVER_CC6_LOWER_BOUND) &&
+	    (type != TEGRA_NVG_CHANNEL_CROSSOVER_CG7_LOWER_BOUND)) {
+		pr_err("%s: unknown crossover type (%d)\n", __func__, type);
+		return -EINVAL;
+	}
+
+	/* disable pre-emption*/
+	preempt_disable();
+
+	ret = nvg_send_req_data(type, (uint64_t)time);
+
+	/* enable pre-emption */
+	preempt_enable();
+
+	if (ret) {
+		pr_err("%s failed with error (%lld)\n", __func__, ret);
+		return -ENOMSG;
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL(t19x_mce_update_crossover_time);
 
@@ -163,31 +170,37 @@ EXPORT_SYMBOL(t19x_mce_update_crossover_time);
  */
 int t19x_mce_read_cstate_stats(u32 state, u32 *stats)
 {
-	struct mce_regs regs;
+	uint64_t ret;
 
-	regs.args[0] = state;
-	send_smc(MCE_SMC_WRITE_CSTATE_STATS, &regs);
-	send_smc(MCE_SMC_READ_CSTATE_STATS, &regs);
-	*stats = (u32)regs.args[2];
+	if (!stats)
+		return -EINVAL;
+
+	/* disable preemption */
+	preempt_disable();
+
+	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_REQUEST,
+				(uint64_t)state);
+	if (ret) {
+		pr_err("%s failed with error (%lld)\n", __func__, ret);
+		preempt_enable();
+		return -ENOMSG;
+	}
+
+	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_VALUE, 0);
+	if (ret) {
+		pr_err("%s failed with error (%lld)\n", __func__, ret);
+		preempt_enable();
+		return -ENOMSG;
+	}
+
+	*stats = (u32)nvg_get_response();
+
+	/* enable preemption */
+	preempt_enable();
+
 	return 0;
 }
 EXPORT_SYMBOL(t19x_mce_read_cstate_stats);
-
-/**
- * Bring another offlined core back online to C0 state.
- *
- * @cpu:		logical cpuid from smp_processor_id()
- *
- * Returns 0 if success.
- */
-int t19x_mce_online_core(int cpu)
-{
-	struct mce_regs regs;
-
-	regs.args[0] = cpu_logical_map(cpu);
-	return send_smc(MCE_SMC_ONLINE_CORE, &regs);
-}
-EXPORT_SYMBOL(t19x_mce_online_core);
 
 /**
  * Program Auto-CC3 feature.
@@ -199,11 +212,35 @@ EXPORT_SYMBOL(t19x_mce_online_core);
  */
 int t19x_mce_cc3_ctrl(u32 ndiv, u8 enable)
 {
-	struct mce_regs regs;
+	nvg_cc3_control_channel_t cc3_ctrl;
+	uint64_t ret;
 
-	regs.args[0] = ndiv;
-	regs.args[1] = enable;
-	return send_smc(MCE_SMC_CC3_CTRL, &regs);
+	/* disable preemption */
+	preempt_disable();
+
+	/*
+	 * If the enable bit is cleared, Auto-CC3 will be disabled by setting
+	 * the SW visible frequency request registers for all non
+	 * floorswept cores valid independent of StandbyWFI and disabling
+	 * the IDLE frequency request register. If set, Auto-CC3
+	 * will be enabled by setting the ARM SW visible frequency
+	 * request registers for all non floorswept cores to be enabled by
+	 * StandbyWFI or the equivalent signal, and always keeping the IDLE
+	 * frequency request register enabled.
+	 */
+	cc3_ctrl.bits.freq_req = ndiv;
+	cc3_ctrl.bits.enable = !!enable;
+
+	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CC3_CTRL, cc3_ctrl.flat);
+	if (ret) {
+		pr_err("%s failed with error (%lld)\n", __func__, ret);
+		ret = -ENOMSG;
+	}
+
+	/* enable preemption */
+	preempt_enable();
+
+	return ret;
 }
 EXPORT_SYMBOL(t19x_mce_cc3_ctrl);
 
@@ -217,31 +254,31 @@ EXPORT_SYMBOL(t19x_mce_cc3_ctrl);
  */
 int t19x_mce_read_versions(u32 *major, u32 *minor)
 {
-	struct mce_regs regs;
+	uint64_t version, ret;
 
-	send_smc(MCE_SMC_READ_VERSIONS, &regs);
-	*major = (u32)regs.args[1];
-	*minor = (u32)regs.args[2];
+	if (!major || !minor)
+		return -EINVAL;
+
+	/* disable preemption */
+	preempt_disable();
+
+	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_VERSION, 0);
+	if (ret != 0) {
+		pr_err("%s failed with error (%lld)\n", __func__, ret);
+		preempt_enable();
+		return -ENOMSG;
+	}
+
+	version = nvg_get_response();
+	*major = (u32)version;
+	*minor = (u32)(version >> 32);
+
+	/* enable preemption */
+	preempt_enable();
+
 	return 0;
 }
 EXPORT_SYMBOL(t19x_mce_read_versions);
-
-/**
- * Enumerate MCE API features
- *
- * @features: output feature vector (4bits each)
- *
- * Returns 0 if success.
- */
-int t19x_mce_enum_features(u64 *features)
-{
-	struct mce_regs regs;
-
-	send_smc(MCE_SMC_ENUM_FEATURES, &regs);
-	*features = (u32)regs.args[1];
-	return 0;
-}
-EXPORT_SYMBOL(t19x_mce_enum_features);
 
 #ifdef CONFIG_DEBUG_FS
 
@@ -268,11 +305,6 @@ static int mce_versions_get(void *data, u64 *val)
 	if (!ret)
 		*val = ((u64)major << 32) | minor;
 	return ret;
-}
-
-static int mce_features_get(void *data, u64 *val)
-{
-	return t19x_mce_enum_features(val);
 }
 
 static int mce_dbg_cstats_show(struct seq_file *s, void *data)
@@ -310,7 +342,6 @@ static const struct file_operations mce_cstats_fops = {
 };
 
 DEFINE_SIMPLE_ATTRIBUTE(mce_versions_fops, mce_versions_get, NULL, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(mce_features_fops, mce_features_get, NULL, "%llu\n");
 
 static struct dentry *mce_debugfs_root;
 
@@ -322,7 +353,6 @@ struct debugfs_entry {
 
 static struct debugfs_entry mce_dbg_attrs[] = {
 	{ "versions", &mce_versions_fops, S_IRUGO },
-	{ "features", &mce_features_fops, S_IRUGO },
 	{ "cstats", &mce_cstats_fops, S_IRUGO },
 	{ NULL, NULL, 0 }
 };

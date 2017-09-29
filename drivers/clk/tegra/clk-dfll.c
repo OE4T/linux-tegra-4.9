@@ -267,6 +267,9 @@
 /* DFLL_ONE_SHOT_DELIVERY_RETRY: number of retries for one-shot calibration */
 #define DFLL_ONE_SHOT_DELIVERY_RETRY	4
 
+/* DFLL_ONE_SHOT_INVALID_INTERVAL: seconds to invalidate one-shot calibration */
+#define DFLL_ONE_SHOT_INVALID_TIME	864000	/* 10 days */
+
 #define DVCO_RATE_TO_MULT(rate, ref_rate)	((rate) / ((ref_rate) / 2))
 #define MULT_TO_DVCO_RATE(mult, ref_rate)	((mult) * ((ref_rate) / 2))
 #define ROUND_DVCO_MIN_RATE(rate, ref_rate)	\
@@ -437,6 +440,8 @@ struct tegra_dfll {
 	unsigned long			calibration_range_min;
 	unsigned long			calibration_range_max;
 	u32				one_shot_settle_time;
+	ktime_t				one_shot_invalid_time_start;
+	int				one_shot_invalid_time;
 
 	/* Child cclk_g rate change notifier */
 	struct notifier_block		cclk_g_parent_nb;
@@ -1249,6 +1254,19 @@ static void dfll_invalidate_cold_floor(struct tegra_dfll *td)
 		td->dvco_rate_floors[0] = 0;
 		td->tune_high_dvco_rate_floors[0] = 0;
 	}
+}
+
+static void dfll_invalidate_one_shot(struct tegra_dfll *td)
+{
+	int i;
+
+	for (i = 0; i < td->soc->thermal_floor_table_size; i++) {
+		td->dvco_rate_floors[i] = 0;
+		td->tune_high_dvco_rate_floors[i] = 0;
+	}
+	td->dvco_rate_floors[i] = 0;
+	td->tune_high_calibrated = false;
+	td->dvco_cold_floor_done = false;
 }
 
 /*
@@ -3301,20 +3319,6 @@ static int tune_high_mv_set(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(tune_high_mv_fops, tune_high_mv_get, tune_high_mv_set,
                         "%llu\n");
 
-
-static void dfll_invalidate_one_shot(struct tegra_dfll *td)
-{
-	int i;
-
-	for (i = 0; i < td->soc->thermal_floor_table_size; i++) {
-		td->dvco_rate_floors[i] = 0;
-		td->tune_high_dvco_rate_floors[i] = 0;
-	}
-	td->dvco_rate_floors[i] = 0;
-	td->tune_high_calibrated = false;
-	td->dvco_cold_floor_done = false;
-}
-
 static void dfll_one_shot_log_time(struct tegra_dfll *td)
 {
 	ktime_t start, end;
@@ -3567,6 +3571,10 @@ static int dfll_debug_init(struct tegra_dfll *td)
 
 	if (!debugfs_create_x32("flags", S_IRUGO, td->debugfs_dir,
 				&td->cfg_flags))
+		goto err_out;
+
+	if (!debugfs_create_u32("one_shot_invalid_time", S_IRUGO | S_IWUSR,
+				td->debugfs_dir, &td->one_shot_invalid_time))
 		goto err_out;
 
 	debugfs_create_symlink("monitor", td->debugfs_dir, "rate");
@@ -3848,6 +3856,16 @@ int tegra_dfll_resume_tuning(struct device *dev)
 		hrtimer_start(&td->tune_timer, td->tune_delay,
 			      HRTIMER_MODE_REL);
 	}
+
+	if (td->cfg_flags & DFLL_ONE_SHOT_CALIBRATE) {
+		ktime_t now = ktime_get();
+
+		if (ktime_ms_delta(now, td->one_shot_invalid_time_start) >
+		    td->one_shot_invalid_time * 1000L) {
+			td->one_shot_invalid_time_start = now;
+			dfll_invalidate_one_shot(td);
+		}
+	}
 	spin_unlock_irqrestore(&td->lock, flags);
 
 	return 0;
@@ -4014,6 +4032,9 @@ int tegra_dfll_register(struct platform_device *pdev,
 	td->calibration_timer.function = calibration_timer_cb;
 	td->calibration_timer.data = (unsigned long)td;
 	td->calibration_delay = usecs_to_jiffies(DFLL_CALIBR_TIME);
+
+	td->one_shot_invalid_time_start = ktime_get();
+	td->one_shot_invalid_time = DFLL_ONE_SHOT_INVALID_TIME;
 
 #ifdef CONFIG_DEBUG_FS
 	dfll_debug_init(td);

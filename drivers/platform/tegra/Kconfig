@@ -6,3 +6,12 @@ config TEGRA_19X_RAS
 	help
 	  This driver adds RAS handlers for Carmel Correctable Errors,
 	  Uncorrectable Errors per core, per core cluster and per CCPLEX
+
+config TEGRA_CBB_NOC
+	tristate "Tegar19x CBB NOC Bridge Error handler"
+	depends on ARCH_TEGRA_19x_SOC
+	default y
+	select SERROR_HANDLER
+	help
+	  The Tegra Control Backbone(CBB)/Network-on-chip(NOC) error handler.
+	  This drivers handles SError from bridges due to failed transactions.

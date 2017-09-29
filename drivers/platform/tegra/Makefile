@@ -5,5 +5,6 @@ obj-y += t19x_mce.o
 obj-y += t19x_cache.o
 obj-y += cvnas.o
 obj-$(CONFIG_TEGRA_19X_RAS) += carmel_ras.o
+obj-$(CONFIG_TEGRA_CBB_NOC) += tegra_cbb.o
 
 endif

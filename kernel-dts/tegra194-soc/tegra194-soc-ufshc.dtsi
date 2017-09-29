@@ -30,12 +30,14 @@
 				<&bpmp_clks TEGRA194_CLK_UFSHC>,
 				<&bpmp_clks TEGRA194_CLK_UFSDEV_REF>,
 				<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
-				<&bpmp_clks TEGRA194_CLK_CLK_M>;
+				<&bpmp_clks TEGRA194_CLK_CLK_M>,
+				<&bpmp_clks TEGRA194_CLK_MPHY_FORCE_LS_MODE>;
 		clock-names = "mphy_core_pll_fixed", "mphy_l0_tx_symb",
 				"mphy_tx_1mhz_ref", "mphy_l0_rx_ana",
 				"mphy_l0_rx_symb", "mphy_l0_tx_ls_3xbit",
 				"mphy_l0_rx_ls_bit", "mphy_l1_rx_ana",
-				"ufshc", "ufsdev_ref", "pll_p", "clk_m";
+				"ufshc", "ufsdev_ref", "pll_p", "clk_m",
+				"mphy_force_ls_mode";
 		resets = <&bpmp_resets TEGRA194_RESET_MPHY_L0_RX>,
 				<&bpmp_resets TEGRA194_RESET_MPHY_L0_TX>,
 				<&bpmp_resets TEGRA194_RESET_MPHY_L1_RX>,

@@ -897,25 +897,12 @@ int vt_ioctl(struct tty_struct *tty,
 			if (!vc_cons[i].d)
 				continue;
 			console_lock();
-			vcp = vc_cons[i].d;
-			if (vcp) {
-				int ret;
-				int save_scan_lines = vcp->vc_scan_lines;
-				int save_cell_height = vcp->vc_cell_height;
-
-				if (v.v_vlin)
-					vcp->vc_scan_lines = v.v_vlin;
-				if (v.v_clin)
-					vcp->vc_cell_height = v.v_clin;
-				vcp->vc_resize_user = 1;
-				ret = vc_resize(vcp, v.v_cols, v.v_rows);
-				if (ret) {
-					vcp->vc_scan_lines = save_scan_lines;
-					vcp->vc_cell_height = save_cell_height;
-					console_unlock();
-					return ret;
-				}
-			}
+			if (v.v_vlin)
+				vc_cons[i].d->vc_scan_lines = v.v_vlin;
+			if (v.v_clin)
+				vc_cons[i].d->vc_font.height = v.v_clin;
+			vc_cons[i].d->vc_resize_user = 1;
+			vc_resize(vc_cons[i].d, v.v_cols, v.v_rows);
 			console_unlock();
 		}
 		break;

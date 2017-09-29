@@ -425,6 +425,7 @@ struct tegra_dfll {
 	unsigned int			thermal_cap_output;
 	unsigned int			thermal_cap_index;
 	unsigned long			*dvco_rate_floors;
+	bool				dvco_cold_floor_done;
 
 	/* PMIC undershoot */
 	int				pmu_undershoot_gb;
@@ -1209,10 +1210,6 @@ static int dfll_get_monitor_data(struct tegra_dfll *td, u32 *reg)
 	return -EINVAL;
 }
 
-/*
- * Calibrate DFLL minimum rate
- */
-
 /**
  * dfll_calc_monitored_rate - convert DFLL_MONITOR_DATA_VAL rate into real freq
  * @monitor_data: value read from the DFLL_MONITOR_DATA_VAL bitfield
@@ -1227,6 +1224,9 @@ static u64 dfll_calc_monitored_rate(u32 monitor_data,
 	return monitor_data * (ref_rate / REF_CLK_CYC_PER_DVCO_SAMPLE);
 }
 
+/*
+ * Calibrate DFLL minimum rate
+ */
 static inline void calibration_timer_update(struct tegra_dfll *td)
 {
 	/*
@@ -1238,6 +1238,16 @@ static inline void calibration_timer_update(struct tegra_dfll *td)
 		dfll_set_force_output_enabled(td, false);
 		mod_timer(&td->calibration_timer,
 			  jiffies + td->calibration_delay + 1);
+	}
+}
+
+static void dfll_invalidate_cold_floor(struct tegra_dfll *td)
+{
+	if (!td->dvco_cold_floor_done && !td->thermal_floor_index &&
+	    (td->mode == DFLL_CLOSED_LOOP)) {
+		td->dvco_cold_floor_done = true;
+		td->dvco_rate_floors[0] = 0;
+		td->tune_high_dvco_rate_floors[0] = 0;
 	}
 }
 
@@ -2393,6 +2403,13 @@ int tegra_dfll_update_thermal_index(struct tegra_dfll *td,
 		td->thermal_floor_output = find_mv_out_cap(td, mv);
 		td->thermal_floor_index = new_index;
 
+		/*
+		 * Cold floors may be calibrated during boot or SC7 exit, when
+		 * actual temperature is not known. Make sure cold floors are
+		 * re-calibrated after cooling device is engaged.
+		 */
+		dfll_invalidate_cold_floor(td);
+
 		dfll_one_shot_calibrate_floors(td);
 		set_dvco_rate_min(td, &td->last_req);
 		set_force_out_min(td);
@@ -3295,6 +3312,7 @@ static void dfll_invalidate_one_shot(struct tegra_dfll *td)
 	}
 	td->dvco_rate_floors[i] = 0;
 	td->tune_high_calibrated = false;
+	td->dvco_cold_floor_done = false;
 }
 
 static void dfll_one_shot_log_time(struct tegra_dfll *td)

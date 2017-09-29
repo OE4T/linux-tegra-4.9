@@ -58,619 +58,619 @@
 
 static inline u32 ram_in_ramfc_s(void)
 {
-	return 4096;
+	return 4096U;
 }
 static inline u32 ram_in_ramfc_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 ram_in_page_dir_base_target_f(u32 v)
 {
-	return (v & 0x3) << 0;
+	return (v & 0x3U) << 0U;
 }
 static inline u32 ram_in_page_dir_base_target_w(void)
 {
-	return 128;
+	return 128U;
 }
 static inline u32 ram_in_page_dir_base_target_vid_mem_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ram_in_page_dir_base_target_sys_mem_coh_f(void)
 {
-	return 0x2;
+	return 0x2U;
 }
 static inline u32 ram_in_page_dir_base_target_sys_mem_ncoh_f(void)
 {
-	return 0x3;
+	return 0x3U;
 }
 static inline u32 ram_in_page_dir_base_vol_w(void)
 {
-	return 128;
+	return 128U;
 }
 static inline u32 ram_in_page_dir_base_vol_true_f(void)
 {
-	return 0x4;
+	return 0x4U;
 }
 static inline u32 ram_in_page_dir_base_vol_false_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ram_in_page_dir_base_fault_replay_tex_f(u32 v)
 {
-	return (v & 0x1) << 4;
+	return (v & 0x1U) << 4U;
 }
 static inline u32 ram_in_page_dir_base_fault_replay_tex_m(void)
 {
-	return 0x1 << 4;
+	return 0x1U << 4U;
 }
 static inline u32 ram_in_page_dir_base_fault_replay_tex_w(void)
 {
-	return 128;
+	return 128U;
 }
 static inline u32 ram_in_page_dir_base_fault_replay_tex_true_f(void)
 {
-	return 0x10;
+	return 0x10U;
 }
 static inline u32 ram_in_page_dir_base_fault_replay_gcc_f(u32 v)
 {
-	return (v & 0x1) << 5;
+	return (v & 0x1U) << 5U;
 }
 static inline u32 ram_in_page_dir_base_fault_replay_gcc_m(void)
 {
-	return 0x1 << 5;
+	return 0x1U << 5U;
 }
 static inline u32 ram_in_page_dir_base_fault_replay_gcc_w(void)
 {
-	return 128;
+	return 128U;
 }
 static inline u32 ram_in_page_dir_base_fault_replay_gcc_true_f(void)
 {
-	return 0x20;
+	return 0x20U;
 }
 static inline u32 ram_in_big_page_size_f(u32 v)
 {
-	return (v & 0x1) << 11;
+	return (v & 0x1U) << 11U;
 }
 static inline u32 ram_in_big_page_size_m(void)
 {
-	return 0x1 << 11;
+	return 0x1U << 11U;
 }
 static inline u32 ram_in_big_page_size_w(void)
 {
-	return 128;
+	return 128U;
 }
 static inline u32 ram_in_big_page_size_128kb_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ram_in_big_page_size_64kb_f(void)
 {
-	return 0x800;
+	return 0x800U;
 }
 static inline u32 ram_in_page_dir_base_lo_f(u32 v)
 {
-	return (v & 0xfffff) << 12;
+	return (v & 0xfffffU) << 12U;
 }
 static inline u32 ram_in_page_dir_base_lo_w(void)
 {
-	return 128;
+	return 128U;
 }
 static inline u32 ram_in_page_dir_base_hi_f(u32 v)
 {
-	return (v & 0xffffffff) << 0;
+	return (v & 0xffffffffU) << 0U;
 }
 static inline u32 ram_in_page_dir_base_hi_w(void)
 {
-	return 129;
+	return 129U;
 }
 static inline u32 ram_in_engine_cs_w(void)
 {
-	return 132;
+	return 132U;
 }
 static inline u32 ram_in_engine_cs_wfi_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_in_engine_cs_wfi_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 ram_in_engine_cs_fg_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_in_engine_cs_fg_f(void)
 {
-	return 0x8;
+	return 0x8U;
 }
 static inline u32 ram_in_engine_wfi_mode_f(u32 v)
 {
-	return (v & 0x1) << 2;
+	return (v & 0x1U) << 2U;
 }
 static inline u32 ram_in_engine_wfi_mode_w(void)
 {
-	return 132;
+	return 132U;
 }
 static inline u32 ram_in_engine_wfi_mode_physical_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_in_engine_wfi_mode_virtual_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_in_engine_wfi_target_f(u32 v)
 {
-	return (v & 0x3) << 0;
+	return (v & 0x3U) << 0U;
 }
 static inline u32 ram_in_engine_wfi_target_w(void)
 {
-	return 132;
+	return 132U;
 }
 static inline u32 ram_in_engine_wfi_target_sys_mem_coh_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 ram_in_engine_wfi_target_sys_mem_ncoh_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 ram_in_engine_wfi_target_local_mem_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_in_engine_wfi_ptr_lo_f(u32 v)
 {
-	return (v & 0xfffff) << 12;
+	return (v & 0xfffffU) << 12U;
 }
 static inline u32 ram_in_engine_wfi_ptr_lo_w(void)
 {
-	return 132;
+	return 132U;
 }
 static inline u32 ram_in_engine_wfi_ptr_hi_f(u32 v)
 {
-	return (v & 0xff) << 0;
+	return (v & 0xffU) << 0U;
 }
 static inline u32 ram_in_engine_wfi_ptr_hi_w(void)
 {
-	return 133;
+	return 133U;
 }
 static inline u32 ram_in_engine_wfi_veid_f(u32 v)
 {
-	return (v & 0x3f) << 0;
+	return (v & 0x3fU) << 0U;
 }
 static inline u32 ram_in_engine_wfi_veid_w(void)
 {
-	return 134;
+	return 134U;
 }
 static inline u32 ram_in_eng_method_buffer_addr_lo_f(u32 v)
 {
-	return (v & 0xffffffff) << 0;
+	return (v & 0xffffffffU) << 0U;
 }
 static inline u32 ram_in_eng_method_buffer_addr_lo_w(void)
 {
-	return 136;
+	return 136U;
 }
 static inline u32 ram_in_eng_method_buffer_addr_hi_f(u32 v)
 {
-	return (v & 0x1ffff) << 0;
+	return (v & 0x1ffffU) << 0U;
 }
 static inline u32 ram_in_eng_method_buffer_addr_hi_w(void)
 {
-	return 137;
+	return 137U;
 }
 static inline u32 ram_in_sc_page_dir_base_target_f(u32 v, u32 i)
 {
-	return (v & 0x3) << (0 + i*0);
+	return (v & 0x3U) << (0U + i*0U);
 }
 static inline u32 ram_in_sc_page_dir_base_target__size_1_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 ram_in_sc_page_dir_base_target_vid_mem_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_in_sc_page_dir_base_target_invalid_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_in_sc_page_dir_base_target_sys_mem_coh_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 ram_in_sc_page_dir_base_target_sys_mem_ncoh_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 ram_in_sc_page_dir_base_vol_f(u32 v, u32 i)
 {
-	return (v & 0x1) << (2 + i*0);
+	return (v & 0x1U) << (2U + i*0U);
 }
 static inline u32 ram_in_sc_page_dir_base_vol__size_1_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 ram_in_sc_page_dir_base_vol_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_in_sc_page_dir_base_vol_false_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_f(u32 v, u32 i)
 {
-	return (v & 0x1) << (4 + i*0);
+	return (v & 0x1U) << (4U + i*0U);
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_tex__size_1_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_enabled_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_disabled_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_f(u32 v, u32 i)
 {
-	return (v & 0x1) << (5 + i*0);
+	return (v & 0x1U) << (5U + i*0U);
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc__size_1_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_enabled_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_disabled_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_in_sc_use_ver2_pt_format_f(u32 v, u32 i)
 {
-	return (v & 0x1) << (10 + i*0);
+	return (v & 0x1U) << (10U + i*0U);
 }
 static inline u32 ram_in_sc_use_ver2_pt_format__size_1_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 ram_in_sc_use_ver2_pt_format_false_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_in_sc_use_ver2_pt_format_true_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_in_sc_big_page_size_f(u32 v, u32 i)
 {
-	return (v & 0x1) << (11 + i*0);
+	return (v & 0x1U) << (11U + i*0U);
 }
 static inline u32 ram_in_sc_big_page_size__size_1_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 ram_in_sc_big_page_size_64kb_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_in_sc_page_dir_base_lo_f(u32 v, u32 i)
 {
-	return (v & 0xfffff) << (12 + i*0);
+	return (v & 0xfffffU) << (12U + i*0U);
 }
 static inline u32 ram_in_sc_page_dir_base_lo__size_1_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 ram_in_sc_page_dir_base_hi_f(u32 v, u32 i)
 {
-	return (v & 0xffffffff) << (0 + i*0);
+	return (v & 0xffffffffU) << (0U + i*0U);
 }
 static inline u32 ram_in_sc_page_dir_base_hi__size_1_v(void)
 {
-	return 0x00000040;
+	return 0x00000040U;
 }
 static inline u32 ram_in_sc_page_dir_base_target_0_f(u32 v)
 {
-	return (v & 0x3) << 0;
+	return (v & 0x3U) << 0U;
 }
 static inline u32 ram_in_sc_page_dir_base_target_0_w(void)
 {
-	return 168;
+	return 168U;
 }
 static inline u32 ram_in_sc_page_dir_base_vol_0_f(u32 v)
 {
-	return (v & 0x1) << 2;
+	return (v & 0x1U) << 2U;
 }
 static inline u32 ram_in_sc_page_dir_base_vol_0_w(void)
 {
-	return 168;
+	return 168U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_0_f(u32 v)
 {
-	return (v & 0x1) << 4;
+	return (v & 0x1U) << 4U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_0_w(void)
 {
-	return 168;
+	return 168U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_0_f(u32 v)
 {
-	return (v & 0x1) << 5;
+	return (v & 0x1U) << 5U;
 }
 static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_0_w(void)
 {
-	return 168;
+	return 168U;
 }
 static inline u32 ram_in_sc_use_ver2_pt_format_0_f(u32 v)
 {
-	return (v & 0x1) << 10;
+	return (v & 0x1U) << 10U;
 }
 static inline u32 ram_in_sc_use_ver2_pt_format_0_w(void)
 {
-	return 168;
+	return 168U;
 }
 static inline u32 ram_in_sc_big_page_size_0_f(u32 v)
 {
-	return (v & 0x1) << 11;
+	return (v & 0x1U) << 11U;
 }
 static inline u32 ram_in_sc_big_page_size_0_w(void)
 {
-	return 168;
+	return 168U;
 }
 static inline u32 ram_in_sc_page_dir_base_lo_0_f(u32 v)
 {
-	return (v & 0xfffff) << 12;
+	return (v & 0xfffffU) << 12U;
 }
 static inline u32 ram_in_sc_page_dir_base_lo_0_w(void)
 {
-	return 168;
+	return 168U;
 }
 static inline u32 ram_in_sc_page_dir_base_hi_0_f(u32 v)
 {
-	return (v & 0xffffffff) << 0;
+	return (v & 0xffffffffU) << 0U;
 }
 static inline u32 ram_in_sc_page_dir_base_hi_0_w(void)
 {
-	return 169;
+	return 169U;
 }
 static inline u32 ram_in_base_shift_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 static inline u32 ram_in_alloc_size_v(void)
 {
-	return 0x00001000;
+	return 0x00001000U;
 }
 static inline u32 ram_fc_size_val_v(void)
 {
-	return 0x00000200;
+	return 0x00000200U;
 }
 static inline u32 ram_fc_gp_put_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 ram_fc_userd_w(void)
 {
-	return 2;
+	return 2U;
 }
 static inline u32 ram_fc_userd_hi_w(void)
 {
-	return 3;
+	return 3U;
 }
 static inline u32 ram_fc_signature_w(void)
 {
-	return 4;
+	return 4U;
 }
 static inline u32 ram_fc_gp_get_w(void)
 {
-	return 5;
+	return 5U;
 }
 static inline u32 ram_fc_pb_get_w(void)
 {
-	return 6;
+	return 6U;
 }
 static inline u32 ram_fc_pb_get_hi_w(void)
 {
-	return 7;
+	return 7U;
 }
 static inline u32 ram_fc_pb_top_level_get_w(void)
 {
-	return 8;
+	return 8U;
 }
 static inline u32 ram_fc_pb_top_level_get_hi_w(void)
 {
-	return 9;
+	return 9U;
 }
 static inline u32 ram_fc_acquire_w(void)
 {
-	return 12;
+	return 12U;
 }
 static inline u32 ram_fc_sem_addr_hi_w(void)
 {
-	return 14;
+	return 14U;
 }
 static inline u32 ram_fc_sem_addr_lo_w(void)
 {
-	return 15;
+	return 15U;
 }
 static inline u32 ram_fc_sem_payload_lo_w(void)
 {
-	return 16;
+	return 16U;
 }
 static inline u32 ram_fc_sem_payload_hi_w(void)
 {
-	return 39;
+	return 39U;
 }
 static inline u32 ram_fc_sem_execute_w(void)
 {
-	return 17;
+	return 17U;
 }
 static inline u32 ram_fc_gp_base_w(void)
 {
-	return 18;
+	return 18U;
 }
 static inline u32 ram_fc_gp_base_hi_w(void)
 {
-	return 19;
+	return 19U;
 }
 static inline u32 ram_fc_gp_fetch_w(void)
 {
-	return 20;
+	return 20U;
 }
 static inline u32 ram_fc_pb_fetch_w(void)
 {
-	return 21;
+	return 21U;
 }
 static inline u32 ram_fc_pb_fetch_hi_w(void)
 {
-	return 22;
+	return 22U;
 }
 static inline u32 ram_fc_pb_put_w(void)
 {
-	return 23;
+	return 23U;
 }
 static inline u32 ram_fc_pb_put_hi_w(void)
 {
-	return 24;
+	return 24U;
 }
 static inline u32 ram_fc_pb_header_w(void)
 {
-	return 33;
+	return 33U;
 }
 static inline u32 ram_fc_pb_count_w(void)
 {
-	return 34;
+	return 34U;
 }
 static inline u32 ram_fc_subdevice_w(void)
 {
-	return 37;
+	return 37U;
 }
 static inline u32 ram_fc_target_w(void)
 {
-	return 43;
+	return 43U;
 }
 static inline u32 ram_fc_hce_ctrl_w(void)
 {
-	return 57;
+	return 57U;
 }
 static inline u32 ram_fc_chid_w(void)
 {
-	return 58;
+	return 58U;
 }
 static inline u32 ram_fc_chid_id_f(u32 v)
 {
-	return (v & 0xfff) << 0;
+	return (v & 0xfffU) << 0U;
 }
 static inline u32 ram_fc_chid_id_w(void)
 {
-	return 0;
+	return 0U;
 }
 static inline u32 ram_fc_config_w(void)
 {
-	return 61;
+	return 61U;
 }
 static inline u32 ram_fc_runlist_timeslice_w(void)
 {
-	return 62;
+	return 62U;
 }
 static inline u32 ram_fc_set_channel_info_w(void)
 {
-	return 63;
+	return 63U;
 }
 static inline u32 ram_userd_base_shift_v(void)
 {
-	return 0x00000009;
+	return 0x00000009U;
 }
 static inline u32 ram_userd_chan_size_v(void)
 {
-	return 0x00000200;
+	return 0x00000200U;
 }
 static inline u32 ram_userd_put_w(void)
 {
-	return 16;
+	return 16U;
 }
 static inline u32 ram_userd_get_w(void)
 {
-	return 17;
+	return 17U;
 }
 static inline u32 ram_userd_ref_w(void)
 {
-	return 18;
+	return 18U;
 }
 static inline u32 ram_userd_put_hi_w(void)
 {
-	return 19;
+	return 19U;
 }
 static inline u32 ram_userd_ref_threshold_w(void)
 {
-	return 20;
+	return 20U;
 }
 static inline u32 ram_userd_top_level_get_w(void)
 {
-	return 22;
+	return 22U;
 }
 static inline u32 ram_userd_top_level_get_hi_w(void)
 {
-	return 23;
+	return 23U;
 }
 static inline u32 ram_userd_get_hi_w(void)
 {
-	return 24;
+	return 24U;
 }
 static inline u32 ram_userd_gp_get_w(void)
 {
-	return 34;
+	return 34U;
 }
 static inline u32 ram_userd_gp_put_w(void)
 {
-	return 35;
+	return 35U;
 }
 static inline u32 ram_userd_gp_top_level_get_w(void)
 {
-	return 22;
+	return 22U;
 }
 static inline u32 ram_userd_gp_top_level_get_hi_w(void)
 {
-	return 23;
+	return 23U;
 }
 static inline u32 ram_rl_entry_size_v(void)
 {
-	return 0x00000010;
+	return 0x00000010U;
 }
 static inline u32 ram_rl_entry_type_f(u32 v)
 {
-	return (v & 0x1) << 0;
+	return (v & 0x1U) << 0U;
 }
 static inline u32 ram_rl_entry_type_channel_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_rl_entry_type_tsg_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_rl_entry_id_f(u32 v)
 {
-	return (v & 0xfff) << 0;
+	return (v & 0xfffU) << 0U;
 }
 static inline u32 ram_rl_entry_chan_runqueue_selector_f(u32 v)
 {
-	return (v & 0x1) << 1;
+	return (v & 0x1U) << 1U;
 }
 static inline u32 ram_rl_entry_chan_inst_target_f(u32 v)
 {
-	return (v & 0x3) << 4;
+	return (v & 0x3U) << 4U;
 }
 static inline u32 ram_rl_entry_chan_inst_target_sys_mem_ncoh_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 ram_rl_entry_chan_inst_target_sys_mem_coh_v(void)
 {
@@ -682,94 +682,94 @@ static inline u32 ram_rl_entry_chan_inst_target_vid_mem_v(void)
 }
 static inline u32 ram_rl_entry_chan_userd_target_f(u32 v)
 {
-	return (v & 0x3) << 6;
+	return (v & 0x3U) << 6U;
 }
 static inline u32 ram_rl_entry_chan_userd_target_vid_mem_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_rl_entry_chan_userd_target_vid_mem_nvlink_coh_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_rl_entry_chan_userd_target_sys_mem_coh_v(void)
 {
-	return 0x00000002;
+	return 0x00000002U;
 }
 static inline u32 ram_rl_entry_chan_userd_target_sys_mem_ncoh_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 ram_rl_entry_chan_userd_ptr_lo_f(u32 v)
 {
-	return (v & 0xffffff) << 8;
+	return (v & 0xffffffU) << 8U;
 }
 static inline u32 ram_rl_entry_chan_userd_ptr_hi_f(u32 v)
 {
-	return (v & 0xffffffff) << 0;
+	return (v & 0xffffffffU) << 0U;
 }
 static inline u32 ram_rl_entry_chid_f(u32 v)
 {
-	return (v & 0xfff) << 0;
+	return (v & 0xfffU) << 0U;
 }
 static inline u32 ram_rl_entry_chan_inst_ptr_lo_f(u32 v)
 {
-	return (v & 0xfffff) << 12;
+	return (v & 0xfffffU) << 12U;
 }
 static inline u32 ram_rl_entry_chan_inst_ptr_hi_f(u32 v)
 {
-	return (v & 0xffffffff) << 0;
+	return (v & 0xffffffffU) << 0U;
 }
 static inline u32 ram_rl_entry_tsg_timeslice_scale_f(u32 v)
 {
-	return (v & 0xf) << 16;
+	return (v & 0xfU) << 16U;
 }
 static inline u32 ram_rl_entry_tsg_timeslice_scale_3_v(void)
 {
-	return 0x00000003;
+	return 0x00000003U;
 }
 static inline u32 ram_rl_entry_tsg_timeslice_timeout_f(u32 v)
 {
-	return (v & 0xff) << 24;
+	return (v & 0xffU) << 24U;
 }
 static inline u32 ram_rl_entry_tsg_timeslice_timeout_128_v(void)
 {
-	return 0x00000080;
+	return 0x00000080U;
 }
 static inline u32 ram_rl_entry_tsg_timeslice_timeout_disable_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_rl_entry_tsg_length_f(u32 v)
 {
-	return (v & 0xff) << 0;
+	return (v & 0xffU) << 0U;
 }
 static inline u32 ram_rl_entry_tsg_length_init_v(void)
 {
-	return 0x00000000;
+	return 0x00000000U;
 }
 static inline u32 ram_rl_entry_tsg_length_min_v(void)
 {
-	return 0x00000001;
+	return 0x00000001U;
 }
 static inline u32 ram_rl_entry_tsg_length_max_v(void)
 {
-	return 0x00000080;
+	return 0x00000080U;
 }
 static inline u32 ram_rl_entry_tsg_tsgid_f(u32 v)
 {
-	return (v & 0xfff) << 0;
+	return (v & 0xfffU) << 0U;
 }
 static inline u32 ram_rl_entry_chan_userd_ptr_align_shift_v(void)
 {
-	return 0x00000008;
+	return 0x00000008U;
 }
 static inline u32 ram_rl_entry_chan_userd_align_shift_v(void)
 {
-	return 0x00000008;
+	return 0x00000008U;
 }
 static inline u32 ram_rl_entry_chan_inst_ptr_align_shift_v(void)
 {
-	return 0x0000000c;
+	return 0x0000000cU;
 }
 #endif

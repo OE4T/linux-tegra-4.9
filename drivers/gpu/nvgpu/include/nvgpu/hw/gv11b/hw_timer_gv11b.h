@@ -58,58 +58,58 @@
 
 static inline u32 timer_pri_timeout_r(void)
 {
-	return 0x00009080;
+	return 0x00009080U;
 }
 static inline u32 timer_pri_timeout_period_f(u32 v)
 {
-	return (v & 0xffffff) << 0;
+	return (v & 0xffffffU) << 0U;
 }
 static inline u32 timer_pri_timeout_period_m(void)
 {
-	return 0xffffff << 0;
+	return 0xffffffU << 0U;
 }
 static inline u32 timer_pri_timeout_period_v(u32 r)
 {
-	return (r >> 0) & 0xffffff;
+	return (r >> 0U) & 0xffffffU;
 }
 static inline u32 timer_pri_timeout_en_f(u32 v)
 {
-	return (v & 0x1) << 31;
+	return (v & 0x1U) << 31U;
 }
 static inline u32 timer_pri_timeout_en_m(void)
 {
-	return 0x1 << 31;
+	return 0x1U << 31U;
 }
 static inline u32 timer_pri_timeout_en_v(u32 r)
 {
-	return (r >> 31) & 0x1;
+	return (r >> 31U) & 0x1U;
 }
 static inline u32 timer_pri_timeout_en_en_enabled_f(void)
 {
-	return 0x80000000;
+	return 0x80000000U;
 }
 static inline u32 timer_pri_timeout_en_en_disabled_f(void)
 {
-	return 0x0;
+	return 0x0U;
 }
 static inline u32 timer_pri_timeout_save_0_r(void)
 {
-	return 0x00009084;
+	return 0x00009084U;
 }
 static inline u32 timer_pri_timeout_save_1_r(void)
 {
-	return 0x00009088;
+	return 0x00009088U;
 }
 static inline u32 timer_pri_timeout_fecs_errcode_r(void)
 {
-	return 0x0000908c;
+	return 0x0000908cU;
 }
 static inline u32 timer_time_0_r(void)
 {
-	return 0x00009400;
+	return 0x00009400U;
 }
 static inline u32 timer_time_1_r(void)
 {
-	return 0x00009410;
+	return 0x00009410U;
 }
 #endif

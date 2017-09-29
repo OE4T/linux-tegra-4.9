@@ -958,51 +958,6 @@ static int tegra_dp_panel_power_state(struct tegra_dc_dp_data *dp, u8 state)
 	return ret;
 }
 
-__maybe_unused
-static void tegra_dc_dp_dump_link_cfg(struct tegra_dc_dp_data *dp,
-	const struct tegra_dc_dp_link_config *cfg)
-{
-	if (!tegra_dp_debug)
-		return;
-
-	BUG_ON(!cfg);
-
-	dev_info(&dp->dc->ndev->dev, "DP config: cfg_name               "
-		"cfg_value\n");
-	dev_info(&dp->dc->ndev->dev, "           Max Lane Count         %d\n",
-		cfg->max_lane_count);
-	dev_info(&dp->dc->ndev->dev, "           SupportEnhancedFraming %s\n",
-		cfg->support_enhanced_framing ? "Y" : "N");
-	dev_info(&dp->dc->ndev->dev, "           SupportAltScrmbRstFffe %s\n",
-		cfg->alt_scramber_reset_cap ? "Y" : "N");
-	dev_info(&dp->dc->ndev->dev, "           Max Bandwidth          %d\n",
-		cfg->max_link_bw);
-	dev_info(&dp->dc->ndev->dev, "           bpp                    %d\n",
-		cfg->bits_per_pixel);
-	dev_info(&dp->dc->ndev->dev, "           EnhancedFraming        %s\n",
-		cfg->enhanced_framing ? "Y" : "N");
-	dev_info(&dp->dc->ndev->dev, "           Scramble_enabled       %s\n",
-		cfg->scramble_ena ? "Y" : "N");
-	dev_info(&dp->dc->ndev->dev, "           LinkBW                 %d\n",
-		cfg->link_bw);
-	dev_info(&dp->dc->ndev->dev, "           lane_count             %d\n",
-		cfg->lane_count);
-	dev_info(&dp->dc->ndev->dev, "           activespolarity        %d\n",
-		cfg->activepolarity);
-	dev_info(&dp->dc->ndev->dev, "           active_count           %d\n",
-		cfg->active_count);
-	dev_info(&dp->dc->ndev->dev, "           tu_size                %d\n",
-		cfg->tu_size);
-	dev_info(&dp->dc->ndev->dev, "           active_frac            %d\n",
-		cfg->active_frac);
-	dev_info(&dp->dc->ndev->dev, "           watermark              %d\n",
-		cfg->watermark);
-	dev_info(&dp->dc->ndev->dev, "           hblank_sym             %d\n",
-		cfg->hblank_sym);
-	dev_info(&dp->dc->ndev->dev, "           vblank_sym             %d\n",
-		cfg->vblank_sym);
-};
-
 /* Calcuate if given cfg can meet the mode request. */
 /* Return true if mode is possible, false otherwise. */
 bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,

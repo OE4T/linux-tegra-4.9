@@ -178,21 +178,6 @@ static bool get_lt_status(struct tegra_dp_lt_data *lt_data)
 	return ce_done;
 }
 
-bool tegra_dp_get_lt_status(struct tegra_dp_lt_data *lt_data)
-{
-	bool ret;
-
-	BUG_ON(!lt_data);
-
-	mutex_lock(&lt_data->lock);
-
-	ret = get_lt_status(lt_data);
-
-	mutex_unlock(&lt_data->lock);
-
-	return ret;
-}
-
 /*
  * get updated voltage swing, pre-emphasis and
  * post-cursor2 settings from panel
@@ -410,34 +395,6 @@ static int do_fast_lt_no_handshake(struct tegra_dp_lt_data *lt_data)
 	else
 		set_lt_tpg(lt_data, TRAINING_PATTERN_2);
 	usleep_range(500, 600);
-
-	return 0;
-}
-
-__maybe_unused
-static int do_fast_lt_handshake(struct tegra_dp_lt_data *lt_data)
-{
-	bool cr_done;
-	bool lt_done;
-
-	BUG_ON(!lt_data->lt_config_valid);
-
-	set_lt_tpg(lt_data, TRAINING_PATTERN_1);
-
-	set_lt_config(lt_data);
-	wait_aux_training(lt_data, true);
-	cr_done = get_clock_recovery_status(lt_data);
-	if (!cr_done)
-		return -EINVAL;
-
-	if (lt_data->tps3_supported)
-		set_lt_tpg(lt_data, TRAINING_PATTERN_3);
-	else
-		set_lt_tpg(lt_data, TRAINING_PATTERN_2);
-	wait_aux_training(lt_data, false);
-	lt_done = get_lt_status(lt_data);
-	if (!lt_done)
-		return -EINVAL;
 
 	return 0;
 }

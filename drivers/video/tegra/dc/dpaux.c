@@ -599,30 +599,6 @@ int tegra_dc_dpaux_write(struct tegra_dc_dpaux_data *dpaux, u32 cmd, u32 addr,
 	return ret;
 }
 
-static inline unsigned long
-tegra_dpaux_poll_register(struct tegra_dc_dpaux_data *dpaux,
-				u32 reg, u32 mask, u32 exp_val,
-				u32 poll_interval_us, u32 timeout_ms)
-{
-	unsigned long	timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
-	u32		reg_val	   = 0;
-
-	if (tegra_platform_is_vdk())
-		return 0;
-
-	do {
-		usleep_range(poll_interval_us, poll_interval_us << 1);
-		reg_val = tegra_dpaux_readl(dpaux, reg);
-	} while (((reg_val & mask) != exp_val) &&
-		time_after(timeout_jf, jiffies));
-
-	if ((reg_val & mask) == exp_val)
-		return 0;	/* success */
-	dev_dbg(&dpaux->dc->ndev->dev,
-		"dpaux_poll_register 0x%x: timeout\n", reg);
-	return jiffies - timeout_jf + 1;
-}
-
 static inline void _tegra_dpaux_pad_power(struct tegra_dc_dpaux_data *dpaux,
 					bool on)
 {

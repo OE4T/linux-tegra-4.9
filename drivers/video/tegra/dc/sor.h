@@ -41,11 +41,6 @@ enum {
 	TRAINING_PATTERN_HBR2_COMPLIANCE = 8,
 };
 
-enum tegra_dc_sor_protocol {
-	SOR_DP,
-	SOR_LVDS,
-};
-
 struct tegra_dc_dp_link_config {
 	bool	is_valid;	/*
 				 * True if link config adheres to dp spec.
@@ -157,26 +152,13 @@ void tegra_dc_sor_crc_en_dis(struct tegra_dc_sor_data *sor,
 			     struct tegra_dc_ext_crc_sor_params params,
 			     bool en);
 void tegra_dc_sor_toggle_crc(struct tegra_dc_sor_data *sor, u32 val);
-void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
-	bool balanced, bool conforming);
 void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds);
-
 void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor,
 	bool is_int);
-void tegra_dc_sor_read_link_config(struct tegra_dc_sor_data *sor,
-	u8 *link_bw, u8 *lane_count);
 void tegra_dc_sor_set_link_bandwidth(struct tegra_dc_sor_data *sor,
 	u8 link_bw);
 void tegra_dc_sor_set_lane_count(struct tegra_dc_sor_data *sor, u8 lane_count);
 void tegra_sor_pad_cal_power(struct tegra_dc_sor_data *sor, bool power_up);
-void tegra_dc_sor_set_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
-	u32 pwm_dutycycle, u32 pwm_clksrc);
-void tegra_dc_sor_set_dp_lanedata(struct tegra_dc_sor_data *sor,
-	u32 lane, u32 pre_emphasis, u32 drive_current, u32 tx_pu);
-void tegra_dc_sor_set_dp_linkctl(struct tegra_dc_sor_data *sor, bool ena,
-	u8 training_pattern, const struct tegra_dc_dp_link_config *cfg);
-void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
-	const struct tegra_dc_dp_link_config *cfg);
 void tegra_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	bool is_lvds);
 void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor);
@@ -190,11 +172,9 @@ int tegra_sor_power_lanes(struct tegra_dc_sor_data *sor,
 					u32 lane_count, bool pu);
 void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor);
 void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor);
-void tegra_sor_start_dc(struct tegra_dc_sor_data *sor);
 void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor);
 void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor);
 void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor);
-void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_termination_cal(struct tegra_dc_sor_data *sor);
 unsigned long tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 					u32 reg, u32 mask, u32 exp_val,
@@ -472,26 +452,6 @@ static inline void tegra_sor_safe_clk_disable(struct tegra_dc_sor_data *sor)
 		if (tegra_platform_is_silicon() || tegra_bpmp_running())
 			clk_disable_unprepare(sor->safe_clk);
 	}
-}
-
-static inline int lt_param_idx(int link_bw)
-{
-	int idx;
-	switch (link_bw) {
-	case SOR_LINK_SPEED_G1_62:
-		idx = 0;
-		break;
-	case SOR_LINK_SPEED_G2_7:
-		idx = 1;
-		break;
-	case SOR_LINK_SPEED_G5_4:
-		idx = 2;
-		break;
-	default:
-		/* Error BW */
-		BUG_ON(1);
-	}
-	return idx;
 }
 
 static inline int tegra_get_sor_reset_ctrl(struct tegra_dc_sor_data *sor,

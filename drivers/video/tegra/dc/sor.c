@@ -850,42 +850,6 @@ void tegra_sor_port_enable(struct tegra_dc_sor_data *sor, bool enb)
 			NV_SOR_DP_LINKCTL_ENABLE_NO));
 }
 
-void tegra_dc_sor_set_dp_linkctl(struct tegra_dc_sor_data *sor, bool ena,
-	u8 training_pattern, const struct tegra_dc_dp_link_config *cfg)
-{
-	u32 reg_val;
-
-	reg_val = tegra_sor_readl(sor, NV_SOR_DP_LINKCTL(sor->portnum));
-
-	if (ena)
-		reg_val |= NV_SOR_DP_LINKCTL_ENABLE_YES;
-	else
-		reg_val &= NV_SOR_DP_LINKCTL_ENABLE_NO;
-
-	reg_val &= ~NV_SOR_DP_LINKCTL_TUSIZE_MASK;
-	reg_val |= (cfg->tu_size << NV_SOR_DP_LINKCTL_TUSIZE_SHIFT);
-
-	if (cfg->enhanced_framing)
-		reg_val |= NV_SOR_DP_LINKCTL_ENHANCEDFRAME_ENABLE;
-
-	tegra_sor_writel(sor, NV_SOR_DP_LINKCTL(sor->portnum), reg_val);
-
-	switch (training_pattern) {
-	case TRAINING_PATTERN_1:
-		tegra_sor_writel(sor, NV_SOR_DP_TPG, 0x41414141);
-		break;
-	case TRAINING_PATTERN_2:
-	case TRAINING_PATTERN_3:
-		reg_val = (cfg->link_bw == SOR_LINK_SPEED_G5_4) ?
-			0x43434343 : 0x42424242;
-		tegra_sor_writel(sor, NV_SOR_DP_TPG, reg_val);
-		break;
-	default:
-		tegra_sor_writel(sor, NV_SOR_DP_TPG, 0x50505050);
-		break;
-	}
-}
-
 static int tegra_dc_sor_enable_lane_sequencer(struct tegra_dc_sor_data *sor,
 							bool pu, bool is_lvds)
 {
@@ -1034,42 +998,6 @@ static void tegra_dc_sor_config_pwm(struct tegra_dc_sor_data *sor, u32 pwm_div,
 	}
 }
 
-void tegra_dc_sor_set_dp_mode(struct tegra_dc_sor_data *sor,
-	const struct tegra_dc_dp_link_config *cfg)
-{
-	u32 reg_val;
-
-	BUG_ON(!cfg || !cfg->is_valid);
-
-	tegra_dc_sor_set_link_bandwidth(sor, cfg->link_bw);
-
-	tegra_dc_sor_set_dp_linkctl(sor, true, TRAINING_PATTERN_DISABLE, cfg);
-	reg_val = tegra_sor_readl(sor, NV_SOR_DP_CONFIG(sor->portnum));
-	reg_val &= ~NV_SOR_DP_CONFIG_WATERMARK_MASK;
-	reg_val |= cfg->watermark;
-	reg_val &= ~NV_SOR_DP_CONFIG_ACTIVESYM_COUNT_MASK;
-	reg_val |= (cfg->active_count <<
-		NV_SOR_DP_CONFIG_ACTIVESYM_COUNT_SHIFT);
-	reg_val &= ~NV_SOR_DP_CONFIG_ACTIVESYM_FRAC_MASK;
-	reg_val |= (cfg->active_frac <<
-		NV_SOR_DP_CONFIG_ACTIVESYM_FRAC_SHIFT);
-	if (cfg->activepolarity)
-		reg_val |= NV_SOR_DP_CONFIG_ACTIVESYM_POLARITY_POSITIVE;
-	else
-		reg_val &= ~NV_SOR_DP_CONFIG_ACTIVESYM_POLARITY_POSITIVE;
-	reg_val |= (NV_SOR_DP_CONFIG_ACTIVESYM_CNTL_ENABLE |
-		NV_SOR_DP_CONFIG_RD_RESET_VAL_NEGATIVE);
-
-	tegra_sor_writel(sor, NV_SOR_DP_CONFIG(sor->portnum), reg_val);
-
-	/* program h/vblank sym */
-	tegra_sor_write_field(sor, NV_SOR_DP_AUDIO_HBLANK_SYMBOLS,
-		NV_SOR_DP_AUDIO_HBLANK_SYMBOLS_MASK, cfg->hblank_sym);
-
-	tegra_sor_write_field(sor, NV_SOR_DP_AUDIO_VBLANK_SYMBOLS,
-		NV_SOR_DP_AUDIO_VBLANK_SYMBOLS_MASK, cfg->vblank_sym);
-}
-
 static inline void tegra_dc_sor_super_update(struct tegra_dc_sor_data *sor)
 {
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE0, 0);
@@ -1193,37 +1121,6 @@ void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
 			dev_err(&sor->dc->ndev->dev, "padctrl power down fail %d\n",
 				ret);
 	}
-}
-
-void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)
-{
-	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
-
-	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
-		return;
-
-	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK);
-	tegra_dc_sor_set_link_bandwidth(sor, SOR_LINK_SPEED_G2_7);
-
-	/*
-	 * HW bug 1425607
-	 * Disable clocks to avoid glitch when switching
-	 * between safe clock and macro pll clock
-	 */
-	if (flag)
-		tegra_sor_clk_disable(sor);
-
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-	if (tegra_platform_is_silicon())
-		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
-#endif
-
-	if (flag)
-		tegra_sor_clk_enable(sor);
-
-	sor->clk_type = TEGRA_SOR_MACRO_CLK;
 }
 
 /* The SOR power sequencer does not work for t124 so SW has to
@@ -1522,46 +1419,6 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 	tegra_dc_put(dc);
 }
 
-static void tegra_dc_sor_attach_lvds(struct tegra_dc_sor_data *sor)
-{
-	/* Set head owner */
-	tegra_sor_write_field(sor, NV_SOR_STATE1,
-		NV_SOR_STATE1_ASY_SUBOWNER_DEFAULT_MASK,
-		NV_SOR_STATE1_ASY_SUBOWNER_BOTH);
-
-	tegra_dc_sor_update(sor);
-
-	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
-		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
-		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
-		NV_SOR_SUPER_STATE1_ATTACHED_YES);
-	tegra_dc_sor_super_update(sor);
-
-	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
-			NV_SOR_TEST_ATTACHED_DEFAULT_MASK,
-			NV_SOR_TEST_ATTACHED_TRUE,
-			100, TEGRA_SOR_TIMEOUT_MS)) {
-		dev_err(&sor->dc->ndev->dev,
-			"dc timeout waiting for ATTACHED = TRUE\n");
-		return;
-	}
-
-	/* OR mode: normal */
-	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
-		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
-		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
-		NV_SOR_SUPER_STATE1_ATTACHED_YES);
-	tegra_dc_sor_super_update(sor);
-
-	/* then awake */
-	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
-		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
-		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
-		NV_SOR_SUPER_STATE1_ATTACHED_YES);
-	tegra_dc_sor_super_update(sor);
-
-}
-
 static int tegra_sor_config_dp_prods(struct tegra_dc_dp_data *dp)
 {
 	int err = 0;
@@ -1688,31 +1545,6 @@ static void tegra_dc_sor_enable_sor(struct tegra_dc_sor_data *sor, bool enable)
 		pr_err("%s: Unknown Tegra SOC\n", __func__);
 		return;
 	}
-}
-
-void tegra_sor_start_dc(struct tegra_dc_sor_data *sor)
-{
-	struct tegra_dc *dc = sor->dc;
-	u32 reg_val;
-
-	if (sor->sor_state == SOR_ATTACHED)
-		return;
-
-	tegra_dc_get(dc);
-	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
-
-	if (tegra_platform_is_vdk())
-		tegra_dc_writel(dc, reg_val | WRITE_MUX_ASSEMBLY,
-			DC_CMD_STATE_ACCESS);
-	else
-		tegra_dc_writel(dc, reg_val | WRITE_MUX_ACTIVE,
-			DC_CMD_STATE_ACCESS);
-
-	tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY, DC_CMD_DISPLAY_COMMAND);
-	tegra_dc_sor_enable_sor(sor, true);
-
-	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
-	tegra_dc_put(dc);
 }
 
 void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
@@ -1989,115 +1821,6 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 	tegra_dc_put(dc);
 }
 
-static void tegra_sor_config_lvds_clk(struct tegra_dc_sor_data *sor)
-{
-	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
-
-	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
-		return;
-
-	tegra_sor_writel(sor, NV_SOR_CLK_CNTRL,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK |
-		NV_SOR_CLK_CNTRL_DP_LINK_SPEED_LVDS);
-
-	tegra_dc_sor_set_link_bandwidth(sor, SOR_LINK_SPEED_LVDS);
-
-	/*
-	 * HW bug 1425607
-	 * Disable clocks to avoid glitch when switching
-	 * between safe clock and macro pll clock
-	 */
-	if (flag)
-		tegra_sor_clk_disable(sor);
-
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-	if (tegra_platform_is_silicon())
-		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
-#endif
-
-	if (flag)
-		tegra_sor_clk_enable(sor);
-
-	sor->clk_type = TEGRA_SOR_MACRO_CLK;
-}
-void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
-	bool balanced, bool conforming)
-{
-	u32 nv_sor_pll1_reg = nv_sor_pll1();
-	u32 nv_sor_pll2_reg = nv_sor_pll2();
-	u32 nv_sor_pll3_reg = nv_sor_pll3();
-	u32 reg_val;
-
-	tegra_dc_sor_enable_dc(sor);
-	tegra_dc_sor_config_panel(sor, true);
-	tegra_dc_writel(sor->dc, 0x9f00, DC_CMD_STATE_CONTROL);
-	tegra_dc_writel(sor->dc, 0x9f, DC_CMD_STATE_CONTROL);
-
-	tegra_dc_writel(sor->dc, SOR_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
-
-	tegra_sor_write_field(sor, nv_sor_pll3_reg,
-		NV_SOR_PLL3_PLLVDD_MODE_MASK,
-		NV_SOR_PLL3_PLLVDD_MODE_V1_8);
-
-	tegra_sor_writel(sor, nv_sor_pll1_reg,
-		NV_SOR_PLL1_TERM_COMPOUT_HIGH | NV_SOR_PLL1_TMDS_TERM_ENABLE);
-	tegra_sor_write_field(sor, nv_sor_pll2_reg,
-		NV_SOR_PLL2_AUX1_SEQ_MASK |
-		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
-		NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE |
-		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
-
-
-	reg_val = NV_SOR_LVDS_LINKACTB_DISABLE |
-		NV_SOR_LVDS_LINKACTA_ENABLE |
-		NV_SOR_LVDS_UPPER_TRUE |
-		NV_SOR_LVDS_PD_TXCB_DISABLE |
-		NV_SOR_LVDS_PD_TXDB_3_DISABLE |
-		NV_SOR_LVDS_PD_TXDB_2_DISABLE |
-		NV_SOR_LVDS_PD_TXDB_1_DISABLE |
-		NV_SOR_LVDS_PD_TXDB_0_DISABLE |
-		NV_SOR_LVDS_PD_TXDA_2_ENABLE |
-		NV_SOR_LVDS_PD_TXDA_1_ENABLE |
-		NV_SOR_LVDS_PD_TXDA_0_ENABLE;
-	if (!conforming && (sor->dc->pdata->default_out->depth == 18))
-		reg_val |= (NV_SOR_LVDS_PD_TXDA_3_DISABLE);
-
-	tegra_sor_writel(sor, NV_SOR_LVDS, reg_val);
-	tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(sor->portnum),
-		0x40404040);
-
-	tegra_sor_pad_power_up(sor, true);
-
-	tegra_sor_writel(sor, NV_SOR_SEQ_INST(0),
-		NV_SOR_SEQ_INST_LANE_SEQ_RUN |
-		NV_SOR_SEQ_INST_HALT_TRUE);
-	tegra_sor_writel(sor, NV_SOR_DP_SPARE(sor->portnum),
-		NV_SOR_DP_SPARE_SEQ_ENABLE_YES |
-		NV_SOR_DP_SPARE_PANEL_INTERNAL |
-		NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK);
-
-	tegra_dc_sor_enable_lane_sequencer(sor, true, true);
-
-	tegra_sor_config_lvds_clk(sor);
-
-	tegra_dc_sor_attach_lvds(sor);
-
-	if ((tegra_dc_sor_set_power_state(sor, 1))) {
-		dev_err(&sor->dc->ndev->dev,
-			"Failed to power up SOR sequencer for LVDS\n");
-		return;
-	}
-
-	if (tegra_dc_sor_poll_register(sor, NV_SOR_PWR,
-			NV_SOR_PWR_MODE_DEFAULT_MASK,
-			NV_SOR_PWR_MODE_NORMAL,
-			100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
-		dev_err(&sor->dc->ndev->dev,
-			"dc timeout waiting for ATTACHED = TRUE\n");
-		return;
-	}
-}
-
 void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 {
 	struct tegra_dc *dc = sor->dc;
@@ -2154,35 +1877,6 @@ void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)
 				NV_SOR_DP_SPARE(sor->portnum),
 				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_MASK,
 				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_ENABLE);
-	}
-}
-
-void tegra_dc_sor_read_link_config(struct tegra_dc_sor_data *sor, u8 *link_bw,
-				   u8 *lane_count)
-{
-	u32 reg_val;
-
-	reg_val = tegra_sor_readl(sor, NV_SOR_CLK_CNTRL);
-	*link_bw = (reg_val & NV_SOR_CLK_CNTRL_DP_LINK_SPEED_MASK)
-		>> NV_SOR_CLK_CNTRL_DP_LINK_SPEED_SHIFT;
-	reg_val = tegra_sor_readl(sor,
-		NV_SOR_DP_LINKCTL(sor->portnum));
-
-	switch (reg_val & NV_SOR_DP_LINKCTL_LANECOUNT_MASK) {
-	case NV_SOR_DP_LINKCTL_LANECOUNT_ZERO:
-		*lane_count = 0;
-		break;
-	case NV_SOR_DP_LINKCTL_LANECOUNT_ONE:
-		*lane_count = 1;
-		break;
-	case NV_SOR_DP_LINKCTL_LANECOUNT_TWO:
-		*lane_count = 2;
-		break;
-	case NV_SOR_DP_LINKCTL_LANECOUNT_FOUR:
-		*lane_count = 4;
-		break;
-	default:
-		dev_err(&sor->dc->ndev->dev, "Unknown lane count\n");
 	}
 }
 

@@ -1533,12 +1533,15 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 	enum dfll_tune_range range = td->tune_range;
 
 	if (!(td->cfg_flags & DFLL_ONE_SHOT_CALIBRATE) ||
-	    (td->mode != DFLL_CLOSED_LOOP) || timekeeping_suspended)
+	    (td->mode != DFLL_CLOSED_LOOP))
 		return ret;
 
 	/* Don't calibrate in range transition */
-	if ((range > DFLL_TUNE_LOW) && (range < DFLL_TUNE_HIGH))
+	if (((range > DFLL_TUNE_LOW) && (range < DFLL_TUNE_HIGH)) ||
+	    timekeeping_suspended) {
+		calibration_timer_update(td);
 		return ret;
+	}
 
 	if (td->soc->thermal_floor_table_size &&
 	    (i < td->soc->thermal_floor_table_size))
@@ -1557,6 +1560,8 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 						td->dvco_calibration_max);
 				ret = true;
 			}
+			calibration_timer_update(td);
+			return ret;
 		}
 	}
 
@@ -1574,6 +1579,8 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 				td->tune_high_calibrated = true;
 				ret = true;
 			}
+			calibration_timer_update(td);
+			return ret;
 		}
 	}
 
@@ -1590,6 +1597,8 @@ static bool dfll_one_shot_calibrate_floors(struct tegra_dfll *td)
 						td->dvco_calibration_max);
 				ret = true;
 			}
+			calibration_timer_update(td);
+			return ret;
 		}
 	}
 
@@ -1981,13 +1990,18 @@ static int dfll_request_rate(struct tegra_dfll *td, unsigned long rate)
 
 	/* Calibrate dfll minimum rate */
 	dfll_calibrate(td);
+	dvco_min_updated = dfll_one_shot_calibrate_floors(td);
 
 	/* Update minimum dvco rate if we are crossing tuning threshold */
-	dvco_min_updated = dfll_tune_target(td, rate) !=
-			   dfll_tune_target(td, td->last_req.rate);
+	if ((dfll_tune_target(td, rate) != td->tune_range) ||
+	    (dfll_tune_target(td, rate) !=
+	     dfll_tune_target(td, td->last_req.rate)))
+		dvco_min_updated = true;
+
 	if (dvco_min_updated)
 		set_dvco_rate_min(td, &req);
 
+	/* Calculate DVCO target and skipper settings */
 	ret = dfll_calculate_rate_request(td, &req, rate);
 	if (ret) {
 		set_dvco_rate_min(td, &td->last_req);
@@ -2003,8 +2017,7 @@ static int dfll_request_rate(struct tegra_dfll *td, unsigned long rate)
 	if (td->mode == DFLL_CLOSED_LOOP) {
 		dfll_set_close_loop_config(td, &td->last_req);
 		dfll_set_frequency_request(td, &td->last_req);
-		if (dvco_min_updated || dvco_min_crossed ||
-		    (td->cfg_flags & DFLL_ONE_SHOT_CALIBRATE))
+		if (dvco_min_updated || dvco_min_crossed)
 			calibration_timer_update(td);
 	}
 
@@ -2034,10 +2047,9 @@ static void calibration_timer_cb(unsigned long data)
 
 	rate_min = td->dvco_rate_min;
 	dfll_calibrate(td);
-	if (dfll_one_shot_calibrate_floors(td))
-		set_dvco_rate_min(td, &td->last_req);
 
-	if (rate_min != td->dvco_rate_min)
+	if ((rate_min != td->dvco_rate_min) ||
+	    (td->cfg_flags & DFLL_ONE_SHOT_CALIBRATE))
 		dfll_request_rate(td, dfll_request_get(td));
 
 	pr_debug("%s: dvco min in %lu / out %lu\n", __func__, rate_min,
@@ -2439,8 +2451,6 @@ int tegra_dfll_update_thermal_index(struct tegra_dfll *td,
 		 * re-calibrated after cooling device is engaged.
 		 */
 		dfll_invalidate_cold_floor(td);
-
-		dfll_one_shot_calibrate_floors(td);
 		set_dvco_rate_min(td, &td->last_req);
 		set_force_out_min(td);
 
@@ -3331,21 +3341,26 @@ static int tune_high_mv_set(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(tune_high_mv_fops, tune_high_mv_get, tune_high_mv_set,
                         "%llu\n");
 
-static void dfll_one_shot_log_time(struct tegra_dfll *td)
+#define DFLL_CALIBRATE_FLOOR_RETRY	10
+
+static bool dfll_one_shot_log_time(struct tegra_dfll *td)
 {
 	ktime_t start, end;
+	bool ret;
 
 	start = ktime_get();
-	dfll_one_shot_calibrate_floors(td);
+	ret = dfll_one_shot_calibrate_floors(td);
 	end = ktime_get();
 
 	pr_debug("%s: time_us: %lld\n", __func__, ktime_us_delta(end, start));
+	return ret;
 }
 
 static int calibrate_floors_set(void *data, u64 val)
 {
 	struct tegra_dfll *td = data;
 	unsigned long flags, rate;
+	int i, cnt;
 
 	if (!val)
 		return 0;
@@ -3356,11 +3371,14 @@ static int calibrate_floors_set(void *data, u64 val)
 	}
 
 	spin_lock_irqsave(&td->lock, flags);
-	dfll_invalidate_one_shot(td);
 
 	rate = dfll_request_get(td);
 	dfll_request_rate(td, td->out_rate_min);
-	dfll_one_shot_log_time(td);
+
+	dfll_invalidate_one_shot(td);
+	for (i = cnt = 0; i < DFLL_CALIBRATE_FLOOR_RETRY && cnt <= 1; i++)
+		cnt += dfll_one_shot_log_time(td) ? 1 : 0;
+
 	set_dvco_rate_min(td, &td->last_req);
 	dfll_request_rate(td, rate);
 

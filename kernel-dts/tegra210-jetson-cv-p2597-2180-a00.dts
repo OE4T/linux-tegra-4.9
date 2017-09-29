@@ -35,7 +35,11 @@
 	firmware {
 		android {
 			compatible = "android,firmware";
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+			hardware = "jetson_cv_k49";
+#else
 			hardware = "jetson_cv";
+#endif
 		};
 	};
 };

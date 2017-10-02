@@ -463,6 +463,12 @@ static int do_relocs(struct nvhost_job *job,
 			continue;
 		}
 
+		if (reloc->cmdbuf_offset & 3 ||
+		    reloc->cmdbuf_offset >= buf->size)
+		{
+			return -EINVAL;
+		}
+
 		if (last_page != reloc->cmdbuf_offset >> PAGE_SHIFT) {
 			if (cmdbuf_page_addr) {
 				dma_buf_kunmap(buf, last_page,
@@ -564,10 +570,20 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 
 		/* process each gather mem only once */
 		if (!g->buf) {
+			u64 end_offset;
+
 			g->buf = dma_buf_get(g->mem_id);
 			if (IS_ERR(g->buf)) {
 				err = PTR_ERR(g->buf);
 				g->buf = NULL;
+				break;
+			}
+
+			end_offset = (u64)g->offset + (u64)g->words * 4;
+			if (end_offset >= g->buf->size) {
+				dma_buf_put(g->buf);
+				g->buf = NULL;
+				err = -EINVAL;
 				break;
 			}
 

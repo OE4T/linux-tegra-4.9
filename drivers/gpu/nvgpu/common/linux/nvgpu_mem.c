@@ -472,6 +472,25 @@ int __nvgpu_mem_create_from_pages(struct gk20a *g, struct nvgpu_mem *dest,
 	return 0;
 }
 
+int __nvgpu_mem_create_from_phys(struct gk20a *g, struct nvgpu_mem *dest,
+				 u64 src_phys, int nr_pages)
+{
+	struct page **pages =
+		nvgpu_kmalloc(g, sizeof(struct page *) * nr_pages);
+	int i, ret = 0;
+
+	if (!pages)
+		return -ENOMEM;
+
+	for (i = 0; i < nr_pages; i++)
+		pages[i] = phys_to_page(src_phys + PAGE_SIZE * i);
+
+	ret = __nvgpu_mem_create_from_pages(g, dest, pages, nr_pages);
+	nvgpu_kfree(g, pages);
+
+	return ret;
+}
+
 static void *nvgpu_mem_linux_sgl_next(void *sgl)
 {
 	return sg_next((struct scatterlist *)sgl);

@@ -66,4 +66,24 @@ struct nvgpu_sgt *nvgpu_linux_sgt_create(struct gk20a *g,
 int __nvgpu_mem_create_from_pages(struct gk20a *g, struct nvgpu_mem *dest,
 				  struct page **pages, int nr_pages);
 
+/**
+ * __nvgpu_mem_create_from_phys - Create an nvgpu_mem from physical mem.
+ *
+ * @g        - The GPU.
+ * @dest     - nvgpu_mem to initialize.
+ * @src_phys - start address of physical mem
+ * @nr_pages - The number of pages in phys.
+ *
+ * Create a new nvgpu_mem struct from a physical memory aperure. The physical
+ * memory aperture needs to be contiguous for requested @nr_pages. This API
+ * only works for SYSMEM.
+ *
+ * The resulting nvgpu_mem should be released with the nvgpu_dma_free() or the
+ * nvgpu_dma_unmap_free() function depending on whether or not the resulting
+ * nvgpu_mem has been mapped.
+ *
+ * Returns 0 on success, or a relevant error otherwise.
+ */
+int __nvgpu_mem_create_from_phys(struct gk20a *g, struct nvgpu_mem *dest,
+				  u64 src_phys, int nr_pages);
 #endif

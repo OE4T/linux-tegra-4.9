@@ -746,6 +746,46 @@ static struct cpufreq_driver tegra_cpufreq_driver = {
 	.attr = cpufreq_generic_attr,
 };
 
+static int cpu_freq_notify(struct notifier_block *b,
+			unsigned long l, void *v)
+{
+	struct cpufreq_policy *policy;
+	u32 qmin, qmax, cpu;
+	enum cluster cl;
+
+	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CPU_FREQ_BOUNDS);
+	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CPU_FREQ_BOUNDS);
+
+	LOOP_FOR_EACH_CLUSTER(cl) {
+		if (!tfreq_data.pcluster[cl].configured)
+			continue;
+		for_each_cpu(cpu, &tfreq_data.pcluster[cl].cpu_mask) {
+			if (cpu_online(cpu)) {
+				policy = cpufreq_cpu_get(cpu);
+				if (!policy)
+					return -EINVAL;
+				policy->user_policy.min = qmin;
+				policy->user_policy.max = qmax;
+				cpufreq_update_policy(policy->cpu);
+				cpufreq_cpu_put(policy);
+			}
+		}
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block cpu_freq_nb = {
+	.notifier_call = cpu_freq_notify,
+};
+
+static void __init pm_qos_register_notifier(void)
+{
+	pm_qos_add_min_notifier(PM_QOS_CPU_FREQ_BOUNDS,
+		&cpu_freq_nb);
+	pm_qos_add_max_notifier(PM_QOS_CPU_FREQ_BOUNDS,
+		&cpu_freq_nb);
+}
+
 static void free_resources(void)
 {
 	enum cluster cl;
@@ -1039,6 +1079,8 @@ static int __init tegra_cpufreq_init(void)
 	ret = cpufreq_register_driver(&tegra_cpufreq_driver);
 	if (ret)
 		goto err_free_res;
+
+	pm_qos_register_notifier();
 
 	goto err_out;
 err_free_res:

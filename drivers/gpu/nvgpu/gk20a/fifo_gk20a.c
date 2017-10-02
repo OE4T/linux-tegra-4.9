@@ -56,6 +56,20 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					    bool wait_for_finish);
 static u32 gk20a_fifo_engines_on_id(struct gk20a *g, u32 id, bool is_tsg);
 
+static const char *const pbdma_intr_fault_type_desc[] = {
+	"MEMREQ timeout", "MEMACK_TIMEOUT", "MEMACK_EXTRA acks",
+	"MEMDAT_TIMEOUT", "MEMDAT_EXTRA acks", "MEMFLUSH noack",
+	"MEMOP noack", "LBCONNECT noack", "NONE - was LBREQ",
+	"LBACK_TIMEOUT", "LBACK_EXTRA acks", "LBDAT_TIMEOUT",
+	"LBDAT_EXTRA acks", "GPFIFO won't fit", "GPPTR invalid",
+	"GPENTRY invalid", "GPCRC mismatch", "PBPTR get>put",
+	"PBENTRY invld", "PBCRC mismatch", "NONE - was XBARC",
+	"METHOD invld", "METHODCRC mismat", "DEVICE sw method",
+	"[ENGINE]", "SEMAPHORE invlid", "ACQUIRE timeout",
+	"PRI forbidden", "ILLEGAL SYNCPT", "[NO_CTXSW_SEG]",
+	"PBSEG badsplit", "SIGNATURE bad"
+};
+
 u32 gk20a_fifo_get_engine_ids(struct gk20a *g,
 		u32 engine_id[], u32 engine_id_sz,
 		u32 engine_enum)
@@ -2314,21 +2328,33 @@ unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
 	struct fifo_gk20a *f = &g->fifo;
 	unsigned int rc_type = RC_TYPE_NO_RC;
 	int i;
+	unsigned long pbdma_intr_err;
+	u32 bit;
 
 	if ((f->intr.pbdma.device_fatal_0 |
 	     f->intr.pbdma.channel_fatal_0 |
 	     f->intr.pbdma.restartable_0) & pbdma_intr_0) {
+
+		pbdma_intr_err = (unsigned long)pbdma_intr_0;
+		for_each_set_bit(bit, &pbdma_intr_err, 32)
+			nvgpu_err(g, "PBDMA intr %s Error",
+				pbdma_intr_fault_type_desc[bit]);
+
 		nvgpu_err(g,
 			"pbdma_intr_0(%d):0x%08x PBH: %08x "
-			"SHADOW: %08x M0: %08x %08x %08x %08x ",
+			"SHADOW: %08x gp shadow0: %08x gp shadow1: %08x"
+			"M0: %08x %08x %08x %08x ",
 			pbdma_id, pbdma_intr_0,
 			gk20a_readl(g, pbdma_pb_header_r(pbdma_id)),
 			gk20a_readl(g, pbdma_hdr_shadow_r(pbdma_id)),
+			gk20a_readl(g, pbdma_gp_shadow_0_r(pbdma_id)),
+			gk20a_readl(g, pbdma_gp_shadow_1_r(pbdma_id)),
 			gk20a_readl(g, pbdma_method0_r(pbdma_id)),
 			gk20a_readl(g, pbdma_method1_r(pbdma_id)),
 			gk20a_readl(g, pbdma_method2_r(pbdma_id)),
 			gk20a_readl(g, pbdma_method3_r(pbdma_id))
 			);
+
 		rc_type = RC_TYPE_PBDMA_FAULT;
 		*handled |= ((f->intr.pbdma.device_fatal_0 |
 			     f->intr.pbdma.channel_fatal_0 |
@@ -3666,14 +3692,21 @@ void gk20a_dump_pbdma_status(struct gk20a *g,
 				fifo_pbdma_status_next_id_type_v(status) ?
 					"tsg" : "channel",
 			gk20a_decode_pbdma_chan_eng_ctx_status(chan_status));
-		gk20a_debug_output(o, "PUT: %016llx GET: %016llx "
-				"FETCH: %08x HEADER: %08x\n",
+		gk20a_debug_output(o, "PBDMA_PUT: %016llx PBDMA_GET: %016llx "
+				"GP_PUT: %08x GP_GET: %08x "
+				"FETCH: %08x HEADER: %08x\n"
+				"HDR: %08x SHADOW0: %08x SHADOW1: %08x",
 			(u64)gk20a_readl(g, pbdma_put_r(i)) +
 			((u64)gk20a_readl(g, pbdma_put_hi_r(i)) << 32ULL),
 			(u64)gk20a_readl(g, pbdma_get_r(i)) +
 			((u64)gk20a_readl(g, pbdma_get_hi_r(i)) << 32ULL),
+			gk20a_readl(g, pbdma_gp_put_r(i)),
+			gk20a_readl(g, pbdma_gp_get_r(i)),
 			gk20a_readl(g, pbdma_gp_fetch_r(i)),
-			gk20a_readl(g, pbdma_pb_header_r(i)));
+			gk20a_readl(g, pbdma_pb_header_r(i)),
+			gk20a_readl(g, pbdma_hdr_shadow_r(i)),
+			gk20a_readl(g, pbdma_gp_shadow_0_r(i)),
+			gk20a_readl(g, pbdma_gp_shadow_1_r(i)));
 	}
 	gk20a_debug_output(o, "\n");
 }

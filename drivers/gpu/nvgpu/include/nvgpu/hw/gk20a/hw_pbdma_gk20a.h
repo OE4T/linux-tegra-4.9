@@ -204,6 +204,14 @@ static inline u32 pbdma_hdr_shadow_r(u32 i)
 {
 	return 0x00040118U + i*8192U;
 }
+static inline u32 pbdma_gp_shadow_0_r(u32 i)
+{
+	return 0x00040110U + i*8192U;
+}
+static inline u32 pbdma_gp_shadow_1_r(u32 i)
+{
+	return 0x00040114U + i*8192U;
+}
 static inline u32 pbdma_subdevice_r(u32 i)
 {
 	return 0x00040094U + i*8192U;

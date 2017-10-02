@@ -470,7 +470,7 @@ static inline u32 dfll_readl(struct tegra_dfll *td, u32 offs)
 
 static inline void dfll_writel(struct tegra_dfll *td, u32 val, u32 offs)
 {
-	WARN_ON(offs >= DFLL_I2C_CFG);
+	WARN_ON(offs >= DFLL_I2C_CFG && offs <= DFLL_I2C_STS);
 	__raw_writel(val, td->base + offs);
 }
 

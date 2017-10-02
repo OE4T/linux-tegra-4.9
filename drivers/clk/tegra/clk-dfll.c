@@ -3410,8 +3410,16 @@ static int dfll_fetch_i2c_params(struct tegra_dfll *td)
 
 static int dfll_fetch_pwm_params(struct tegra_dfll *td)
 {
-	int ret, size, i;
+	int ret, i;
 	u32 pwm_period;
+
+	if (!td->soc->alignment.step_uv || !td->soc->alignment.offset_uv) {
+		dev_err(td->dev, "Missing step or alignment info for PWM regulator");
+		return -EINVAL;
+	}
+	for (i = 0; i < MAX_DFLL_VOLTAGES; i++)
+		td->lut_uv[i] = td->soc->alignment.offset_uv +
+				i * td->soc->alignment.step_uv;
 
 	ret = read_dt_param(td, "nvidia,init-uv", &td->reg_init_uV);
 	if (!ret) {
@@ -3425,18 +3433,6 @@ static int dfll_fetch_pwm_params(struct tegra_dfll *td)
 		return ret;
 	}
 	td->pwm_rate = (NSEC_PER_SEC / pwm_period) * (MAX_DFLL_VOLTAGES - 1);
-
-	if (!of_find_property(td->dev->of_node, "nvidia,voltage-table", &size))
-		return -EINVAL;
-
-	if (size != MAX_DFLL_VOLTAGES * 2 * sizeof(u32))
-		return -EINVAL;
-
-	for (i = 0; i < MAX_DFLL_VOLTAGES; i++) {
-		if (of_property_read_u32_index(td->dev->of_node,
-			"nvidia,voltage-table", i * 2, &td->lut_uv[i]) < 0)
-			return -EINVAL;
-	}
 
 	td->pwm_pin = devm_pinctrl_get(td->dev);
 	if (IS_ERR(td->pwm_pin)) {

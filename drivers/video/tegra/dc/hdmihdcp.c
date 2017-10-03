@@ -30,9 +30,8 @@
 #include <linux/tsec.h>
 
 #include <soc/tegra/kfuse.h>
-#if (defined(CONFIG_TRUSTY))
 #include <linux/trusty/trusty_ipc.h>
-#endif
+#include <linux/ote_protocol.h>
 
 #include <video/nvhdcp.h>
 
@@ -119,10 +118,14 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define nvhdcp_info(...)	\
 		pr_info("nvhdcp: " __VA_ARGS__)
 #define HDCP_PORT_NAME	"com.nvidia.tos.13f616f9-8572-4a6f-a1f104aa9b05f9ff"
-
+#define HDCP_SERVICE_UUID		{0x13F616F9, 0x4A6F8572,\
+				 0xAA04F1A1, 0xFFF9059B}
 static u8 g_seq_num_m_retries;
 static u8 g_fallback;
 void __iomem *g_misc_base;
+
+uint32_t hdcp_uuid[4] = HDCP_SERVICE_UUID;
+static uint32_t session_id;
 
 static struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
 {
@@ -816,9 +819,15 @@ static int get_srm_signature(struct hdcp_context_t *hdcp_context,
 		nvhdcp_err("Error generating nonce!\n");
 		return err;
 	}
+
 	/* pass the nonce to hdcp TA and get the signature back */
 	memcpy(pkt, nonce, HDCP_NONCE_SIZE);
-	err = te_launch_trusted_oper(pkt, PKT_SIZE, HDCP_CMD_GEN_CMAC, ta_ctx);
+	if (te_is_secos_dev_enabled())
+		err = te_launch_trusted_oper_tlk(pkt, PKT_SIZE, session_id,
+				hdcp_uuid, HDCP_CMD_GEN_CMAC, sizeof(hdcp_uuid));
+	else
+		err = te_launch_trusted_oper(pkt, PKT_SIZE,
+				HDCP_CMD_GEN_CMAC, ta_ctx);
 	if (err)
 		nvhdcp_err("te launch operation failed with error %d\n", err);
 	return err;
@@ -1205,9 +1214,15 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 		&hdcp_context->msg.rxcaps_capmask);
 	if (err)
 		goto exit;
-	nvhdcp->ta_ctx = NULL;
-	/* Open a trusted sesion with HDCP TA */
-	err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
+	/* differentiate between TLK and trusty */
+	if (te_is_secos_dev_enabled()) {
+		err = te_open_trusted_session_tlk(hdcp_uuid, sizeof(hdcp_uuid),
+					&session_id);
+	} else {
+		nvhdcp->ta_ctx = NULL;
+		/* Open a trusted sesion with HDCP TA */
+		err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
+	}
 	if (err) {
 		nvhdcp_err("Error opening trusted session\n");
 		goto exit;
@@ -1381,9 +1396,17 @@ exit:
 	if (err)
 		nvhdcp_err("HDCP authentication failed with err %d\n", err);
 	kfree(pkt);
-	if (nvhdcp->ta_ctx) {
-		te_close_trusted_session(nvhdcp->ta_ctx);
-		nvhdcp->ta_ctx = NULL;
+	if (te_is_secos_dev_enabled()) {
+		if (session_id) {
+			te_close_trusted_session_tlk(session_id, hdcp_uuid,
+			sizeof(hdcp_uuid));
+			session_id = 0;
+		}
+	} else {
+		if (nvhdcp->ta_ctx) {
+			te_close_trusted_session(nvhdcp->ta_ctx);
+			nvhdcp->ta_ctx = NULL;
+		}
 	}
 	return err;
 }

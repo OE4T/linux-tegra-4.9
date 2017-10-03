@@ -32,7 +32,7 @@
 #include "hda_dc.h"
 
 static struct tegra_hda_inst *hda_inst;
-DEFINE_MUTEX(global_hda_lock);
+static DEFINE_MUTEX(global_hda_lock);
 
 #define to_hdmi(DATA)	((struct tegra_hdmi *)DATA)
 #define to_dp(DATA)	((struct tegra_dc_dp_data *)DATA)

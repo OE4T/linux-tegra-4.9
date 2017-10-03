@@ -28,8 +28,6 @@
 
 #include "tegra210-emc-reg.h"
 
-void tegra210_emc_mr4_set_freq_thresh(unsigned long thresh);
-
 static struct device_node *tegra_emc_ramcode_devnode(
 	struct device_node *np)
 {

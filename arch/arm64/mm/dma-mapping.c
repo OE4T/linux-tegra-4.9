@@ -2723,12 +2723,11 @@ err_mapping:
 	return NULL;
 }
 
-static void __iommu_free_atomic(struct device *dev, struct page **pages,
+static void __iommu_free_atomic(struct device *dev, void *cpu_addr,
 				dma_addr_t handle, size_t size, unsigned long attrs)
 {
-	trace_dmadebug_free_attrs(dev, handle, size, pages[0]);
 	__iommu_remove_mapping(dev, handle, size, attrs);
-	__free_from_pool(page_address(pages[0]), size);
+	__free_from_pool(cpu_addr, size);
 	dev_dbg(dev, "%s() %16llx(%zx)\n", __func__, handle, size);
 }
 
@@ -2827,7 +2826,8 @@ void arm_iommu_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 	}
 
 	if (__in_atomic_pool(cpu_addr, size)) {
-		__iommu_free_atomic(dev, pages, handle, size, attrs);
+		trace_dmadebug_free_attrs(dev, handle, size, pages[0]);
+		__iommu_free_atomic(dev, cpu_addr, handle, size, attrs);
 		return;
 	}
 

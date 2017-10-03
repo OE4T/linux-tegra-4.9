@@ -1072,6 +1072,23 @@ static int tegra_channel_sensorprops_setup(struct tegra_channel *chan)
 	ctrl_modes->val = s_data->sensor_props.num_modes;
 	ctrl_modes->cur.val = s_data->sensor_props.num_modes;
 
+	/* Update the control sizes
+	 *
+	 * Note that the structs have size elems * sizeof(u32)
+	 * So to get the number of structs (elems * sizeof(u32)) / num_modes
+	 */
+	ctrl_signalprops->elems = s_data->sensor_props.num_modes *
+					SENSOR_SIGNAL_PROPERTIES_CID_SIZE;
+
+	ctrl_imageprops->elems = s_data->sensor_props.num_modes *
+					SENSOR_IMAGE_PROPERTIES_CID_SIZE;
+
+	ctrl_controlprops->elems = s_data->sensor_props.num_modes *
+					SENSOR_CONTROL_PROPERTIES_CID_SIZE;
+
+	ctrl_dvtimings->elems = s_data->sensor_props.num_modes *
+					SENSOR_DV_TIMINGS_CID_SIZE;
+
 	modes = s_data->sensor_props.sensor_modes;
 	for (i = 0; i < s_data->sensor_props.num_modes; i++) {
 		void *ptr = NULL;
@@ -1093,6 +1110,7 @@ static int tegra_channel_sensorprops_setup(struct tegra_channel *chan)
 		ptr = ctrl_dvtimings->p_new.p + (i * size);
 		memcpy(ptr, &modes[i].dv_timings, size);
 	}
+	/* Do not copy memory into p_cur block, reuse p_new */
 	ctrl_signalprops->p_cur.p = ctrl_signalprops->p_new.p;
 	ctrl_imageprops->p_cur.p = ctrl_imageprops->p_new.p;
 	ctrl_controlprops->p_cur.p = ctrl_controlprops->p_new.p;
@@ -1106,6 +1124,7 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 	int num_sd = 0;
 	struct v4l2_subdev *sd = NULL;
 	struct tegra_mc_vi *vi = chan->vi;
+	struct v4l2_ctrl *ctrl;
 	int i;
 	int ret = 0;
 
@@ -1131,14 +1150,21 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 		if (common_custom_ctrls[i].id ==
 			TEGRA_CAMERA_CID_OVERRIDE_ENABLE && chan->pg_mode)
 			continue;
-		v4l2_ctrl_new_custom(&chan->ctrl_handler,
+		ctrl = v4l2_ctrl_new_custom(&chan->ctrl_handler,
 			&common_custom_ctrls[i], NULL);
+
 		if (chan->ctrl_handler.error) {
 			dev_err(chan->vi->dev,
 				"Failed to add %s ctrl\n",
 				common_custom_ctrls[i].name);
 			return chan->ctrl_handler.error;
 		}
+		/* Initialize the sensor arrays to have zero elements
+		 * This should keep accesses to only the modes
+		 * later defined in the DT
+		 */
+		if (ctrl->is_array)
+			ctrl->elems = 0;
 	}
 
 	vi->fops->vi_add_ctrls(chan);

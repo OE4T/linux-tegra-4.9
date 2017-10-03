@@ -3040,12 +3040,13 @@ static int tegra_se_rsa_setkey(struct crypto_akcipher *tfm, const void *key,
 				SE_OPERATION_OP(OP_DUMMY);
 	cmdbuf_num_words = i;
 
+	mutex_lock(&se_dev->mtx);
 	err = tegra_se_channel_submit_gather(se_dev, cmdbuf_cpuvaddr,
 					     cmdbuf_iova, 0, cmdbuf_num_words,
 					     false);
+	mutex_unlock(&se_dev->mtx);
 	if (err)
 		tegra_se_rsa_free_key_slot(ctx->slot);
-
 	dma_free_attrs(se_dev->dev->parent, SZ_64K, cmdbuf_cpuvaddr,
 		       cmdbuf_iova, __DMA_ATTR(attrs));
 
@@ -3104,22 +3105,27 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 		return -EDOM;
 	}
 
+	mutex_lock(&se_dev->mtx);
 	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf);
 
 	if (req->src == req->dst) {
 		se_dev->dst_ll = se_dev->src_ll;
 		ret1 = tegra_map_sg(se_dev->dev, req->src, 1, DMA_BIDIRECTIONAL,
 				    se_dev->src_ll, req->src_len);
-		if (!ret1)
+		if (!ret1) {
+			mutex_unlock(&se_dev->mtx);
 			return -EINVAL;
+		}
 	} else {
 		se_dev->dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf);
 		ret1 = tegra_map_sg(se_dev->dev, req->src, 1, DMA_TO_DEVICE,
 				    se_dev->src_ll, req->src_len);
 		ret2 = tegra_map_sg(se_dev->dev, req->dst, 1, DMA_FROM_DEVICE,
 				    se_dev->dst_ll, req->dst_len);
-		if (!ret1 || !ret2)
+		if (!ret1 || !ret2) {
+			mutex_unlock(&se_dev->mtx);
 			return -EINVAL;
+		}
 	}
 
 	ret1 = tegra_se_send_rsa_data(se_dev, rsa_ctx);
@@ -3136,6 +3142,7 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 			       req->dst_len);
 	}
 
+	mutex_unlock(&se_dev->mtx);
 	return ret1;
 }
 

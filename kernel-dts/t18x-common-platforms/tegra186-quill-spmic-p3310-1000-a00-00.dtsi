@@ -110,14 +110,14 @@
 
 			fps {
 				fps0 {
-					maxim,shutdown-fps-time-period-us = <640>;
+					shutdown-fps-time-period-us = <640>;
 					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN0>;
 				};
 
 				fps1 {
-					maxim,shutdown-fps-time-period-us = <640>;
+					shutdown-fps-time-period-us = <640>;
 					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN1>;
-					maxim,device-state-on-disabled-event = <MAX77620_FPS_INACTIVE_STATE_SLEEP>;
+					device-state-on-disabled-event = <MAX77620_FPS_INACTIVE_STATE_SLEEP>;
 				};
 
 				fps2 {
@@ -127,9 +127,9 @@
 			};
 
 			backup-battery {
-				maxim,backup-battery-charging-current = <100>;
-				maxim,backup-battery-charging-voltage = <3000000>;
-				maxim,backup-battery-output-resister = <100>;
+				backup-battery-charging-current = <100>;
+				backup-battery-charging-voltage = <3000000>;
+				backup-battery-output-resister = <100>;
 				status = "disabled";
 			};
 

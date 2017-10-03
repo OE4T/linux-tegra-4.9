@@ -1515,7 +1515,7 @@ static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv,
 		dfll_tune_low(td);
 
 	/* Get average monitor rate rounded to request unit (=2*monitor unit) */
-	avg_data = DIV_ROUND_CLOSEST(avg_data, 2 * n);
+	avg_data = DIV_ROUND_CLOSEST(avg_data, n) / 2;
 	rate = MULT_TO_DVCO_RATE(avg_data, td->ref_rate);
 	pr_debug("%s: calibrated dvco_rate_min %lu at %d mV over %d samples\n",
 		 __func__,  rate, mv, n);

@@ -13,6 +13,7 @@
  * more details.
  */
 
+#include <dt-bindings/version.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/tegra210-car.h>
 #include <dt-bindings/reset/tegra210-car.h>

@@ -450,7 +450,6 @@ static int get_vprime(struct tegra_nvhdcp *nvhdcp, u8 *v_prime)
 	return 0;
 }
 
-#if (!defined(CONFIG_TEGRA_NVDISPLAY))
 /* set or clear RUN_YES */
 static void hdcp_ctrl_run(struct tegra_hdmi *hdmi, bool v)
 {
@@ -465,7 +464,6 @@ static void hdcp_ctrl_run(struct tegra_hdmi *hdmi, bool v)
 
 	tegra_sor_writel_ext(hdmi->sor, NV_SOR_TMDS_HDCP_CTRL, ctrl);
 }
-#endif
 
 /* wait for any bits in mask to be set in NV_SOR_TMDS_HDCP_CTRL
  * sleeps up to 120mS */
@@ -1359,22 +1357,22 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	int e;
 	int alloc_err = 0;
 	u8 b_caps;
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
 	int hdcp_ta_ret; /* track returns from TA */
 	uint32_t ta_cmd = HDCP_AUTH_CMD;
 	bool enc = false;
-
-	uint64_t *pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
-
-	if (!pkt) {
-		nvhdcp_err("Memory allocation failed\n");
-		alloc_err = -ENOMEM;
-		goto failure;
-	}
-#else
 	u32 tmp;
 	u32 res;
-#endif
+	uint64_t *pkt = NULL;
+
+	if (tegra_dc_is_nvdisplay()) {
+		pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
+
+		if (!pkt) {
+			nvhdcp_err("Memory allocation failed\n");
+			alloc_err = -ENOMEM;
+			goto failure;
+		}
+	}
 
 	g_fallback = 0;
 
@@ -1409,116 +1407,120 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	nvhdcp_vdbg("read Bcaps = 0x%02x\n", b_caps);
 
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
-	ta_ctx = NULL;
-	e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
-	if (e) {
-		nvhdcp_err("Error opening trusted session\n");
-		goto failure;
-	}
+	if (tegra_dc_is_nvdisplay()) {
+		ta_ctx = NULL;
+		e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+		if (e) {
+			nvhdcp_err("Error opening trusted session\n");
+			goto failure;
+		}
 
-	/* if session successfully opened, launch operations */
-	/* repeater flag in Bskv must be configured before loading fuses */
-	*pkt = HDCP_TA_CMD_REP;
-	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
-	*(pkt + 2*HDCP_CMD_OFFSET) = 0;
-	*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
-	*(pkt + 4*HDCP_CMD_OFFSET) = false;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-	if (e) {
-		nvhdcp_err("te launch operation failed with error %d\n", e);
-		goto failure;
+		/* if session successfully opened, launch operations
+		 * repeater flag in Bskv must be configured before loading fuses
+		 */
+		*pkt = HDCP_TA_CMD_REP;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+		*(pkt + 2*HDCP_CMD_OFFSET) = 0;
+		*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+		*(pkt + 4*HDCP_CMD_OFFSET) = false;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		if (e) {
+			nvhdcp_err("te launch operation failed with error %d\n",
+				    e);
+			goto failure;
+		} else {
+			nvhdcp_vdbg("Loading kfuse\n");
+			e = load_kfuse(hdmi);
+			if (e) {
+				nvhdcp_err("kfuse could not be loaded\n");
+				goto failure;
+			}
+		}
+		usleep_range(20000, 25000);
+		*pkt = HDCP_TA_CMD_CTRL;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+		*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
+		*(pkt + 3*HDCP_CMD_OFFSET) = false;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		if (e) {
+			nvhdcp_err("te launch operation failed with error %d\n",
+				    e);
+			goto failure;
+		} else {
+			nvhdcp_vdbg("wait AN_VALID ...\n");
+
+			hdcp_ta_ret = *pkt;
+			nvhdcp_vdbg("An returned %x\n", e);
+			if (hdcp_ta_ret) {
+				nvhdcp_err("An key generation timeout\n");
+				goto failure;
+			}
+
+			/* check SROM return */
+			hdcp_ta_ret = *(pkt + HDCP_CMD_BYTE_OFFSET);
+			if (hdcp_ta_ret) {
+				nvhdcp_err("SROM error\n");
+				goto failure;
+			}
+		}
+
+		msleep(25);
+		*pkt = HDCP_TA_CMD_AKSV;
+		*(pkt + 1) = TEGRA_NVHDCP_PORT_HDMI;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		if (e) {
+			nvhdcp_err("te launch operation failed with error %d\n",
+				    e);
+			goto failure;
+		} else {
+			hdcp_ta_ret = (u64)*pkt;
+			nvhdcp->a_ksv = (u64)*(pkt + 1*HDCP_CMD_BYTE_OFFSET);
+			nvhdcp->a_n = (u64)*(pkt + 2*HDCP_CMD_BYTE_OFFSET);
+			nvhdcp_vdbg("Aksv is 0x%016llx\n", nvhdcp->a_ksv);
+			nvhdcp_vdbg("An is 0x%016llx\n", nvhdcp->a_n);
+			/* check if verification of Aksv failed */
+			if (hdcp_ta_ret) {
+				nvhdcp_err("Aksv verify failure\n");
+				goto disable;
+			}
+		}
 	} else {
-		nvhdcp_vdbg("Loading kfuse\n");
+		set_bksv(hdmi, 0, (b_caps & BCAPS_REPEATER));
 		e = load_kfuse(hdmi);
 		if (e) {
 			nvhdcp_err("kfuse could not be loaded\n");
 			goto failure;
 		}
-	}
-	usleep_range(20000, 25000);
-	*pkt = HDCP_TA_CMD_CTRL;
-	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
-	*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
-	*(pkt + 3*HDCP_CMD_OFFSET) = false;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-	if (e) {
-		nvhdcp_err("te launch operation failed with error %d\n", e);
-		goto failure;
-	} else {
+
+		usleep_range(20000, 25000);
+		hdcp_ctrl_run(hdmi, 1);
+
 		nvhdcp_vdbg("wait AN_VALID ...\n");
 
-		hdcp_ta_ret = *pkt;
-		nvhdcp_vdbg("An returned %x\n", e);
-		if (hdcp_ta_ret) {
+		/* wait for hardware to generate HDCP values */
+		e = wait_hdcp_ctrl(hdmi, AN_VALID | SROM_ERR, &res);
+		if (e) {
 			nvhdcp_err("An key generation timeout\n");
 			goto failure;
 		}
-
-		/* check SROM return */
-		hdcp_ta_ret = *(pkt + HDCP_CMD_BYTE_OFFSET);
-		if (hdcp_ta_ret) {
+		if (res & SROM_ERR) {
 			nvhdcp_err("SROM error\n");
 			goto failure;
 		}
-	}
 
-	msleep(25);
-	*pkt = HDCP_TA_CMD_AKSV;
-	*(pkt + 1) = TEGRA_NVHDCP_PORT_HDMI;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-	if (e) {
-		nvhdcp_err("te launch operation failed with error %d\n", e);
-		goto failure;
-	} else {
-		hdcp_ta_ret = (u64)*pkt;
-		nvhdcp->a_ksv = (u64)*(pkt + 1*HDCP_CMD_BYTE_OFFSET);
-		nvhdcp->a_n = (u64)*(pkt + 2*HDCP_CMD_BYTE_OFFSET);
-		nvhdcp_vdbg("Aksv is 0x%016llx\n", nvhdcp->a_ksv);
+		msleep(25);
+
+		nvhdcp->a_ksv = get_aksv(hdmi);
+		nvhdcp->a_n = get_an(hdmi);
+		nvhdcp_vdbg("Aksv is %016llx\n", nvhdcp->a_ksv);
 		nvhdcp_vdbg("An is 0x%016llx\n", nvhdcp->a_n);
-		/* check if verification of Aksv failed */
-		if (hdcp_ta_ret) {
-			nvhdcp_err("Aksv verify failure\n");
+
+		if (verify_ksv(nvhdcp->a_ksv)) {
+			nvhdcp_err("Aksv verify failure! (0x%016llx)\n",
+				    nvhdcp->a_ksv);
 			goto disable;
 		}
 	}
-#else
-	set_bksv(hdmi, 0, (b_caps & BCAPS_REPEATER));
-	e = load_kfuse(hdmi);
-	if (e) {
-		nvhdcp_err("kfuse could not be loaded\n");
-		goto failure;
-	}
-
-	usleep_range(20000, 25000);
-	hdcp_ctrl_run(hdmi, 1);
-
-	nvhdcp_vdbg("wait AN_VALID ...\n");
-
-	/* wait for hardware to generate HDCP values */
-	e = wait_hdcp_ctrl(hdmi, AN_VALID | SROM_ERR, &res);
-	if (e) {
-		nvhdcp_err("An key generation timeout\n");
-		goto failure;
-	}
-	if (res & SROM_ERR) {
-		nvhdcp_err("SROM error\n");
-		goto failure;
-	}
-
-	msleep(25);
-
-	nvhdcp->a_ksv = get_aksv(hdmi);
-	nvhdcp->a_n = get_an(hdmi);
-	nvhdcp_vdbg("Aksv is %016llx\n", nvhdcp->a_ksv);
-	nvhdcp_vdbg("An is 0x%016llx\n", nvhdcp->a_n);
-
-	if (verify_ksv(nvhdcp->a_ksv)) {
-		nvhdcp_err("Aksv verify failure! (0x%016llx)\n", nvhdcp->a_ksv);
-		goto disable;
-	}
-#endif
-
 	mutex_unlock(&nvhdcp->lock);
 
 	/* write Ainfo to receiver - set 1.1 only if b_caps supports it */
@@ -1564,47 +1566,48 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	}
 	nvhdcp_vdbg("Bksv is 0x%016llx\n", nvhdcp->b_ksv);
 
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
-	*pkt = HDCP_TA_CMD_BKSV;
-	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
-	*(pkt + 2*HDCP_CMD_OFFSET) = nvhdcp->b_ksv;
-	*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
-	*(pkt + 4*HDCP_CMD_OFFSET) = false;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-	if (e) {
-		nvhdcp_err("te launch operation failed with error: %d\n", e);
-		goto failure;
-	} else {
-		/* check if Bksv verification was successful */
-		hdcp_ta_ret = (int)*pkt;
-		if (hdcp_ta_ret) {
-			nvhdcp_err("Bksv verify failure\n");
+	if (tegra_dc_is_nvdisplay()) {
+		*pkt = HDCP_TA_CMD_BKSV;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+		*(pkt + 2*HDCP_CMD_OFFSET) = nvhdcp->b_ksv;
+		*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+		*(pkt + 4*HDCP_CMD_OFFSET) = false;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		if (e) {
+			nvhdcp_err("te launch operation failed with error %d\n",
+				    e);
 			goto failure;
 		} else {
-			nvhdcp_vdbg("loaded Bksv into controller\n");
-			/* check if R0 read was successful */
+			/* check if Bksv verification was successful */
 			hdcp_ta_ret = (int)*pkt;
 			if (hdcp_ta_ret) {
-				nvhdcp_err("R0 read failure\n");
+				nvhdcp_err("Bksv verify failure\n");
 				goto failure;
+			} else {
+				nvhdcp_vdbg("loaded Bksv into controller\n");
+				/* check if R0 read was successful */
+				hdcp_ta_ret = (int)*pkt;
+				if (hdcp_ta_ret) {
+					nvhdcp_err("R0 read failure\n");
+					goto failure;
+				}
 			}
 		}
-	}
-#else
-	if (verify_ksv(nvhdcp->b_ksv)) {
-		nvhdcp_err("Bksv verify failure!\n");
-		goto failure;
-	}
+	} else {
+		if (verify_ksv(nvhdcp->b_ksv)) {
+			nvhdcp_err("Bksv verify failure!\n");
+			goto failure;
+		}
 
-	set_bksv(hdmi, nvhdcp->b_ksv, (b_caps & BCAPS_REPEATER));
-	nvhdcp_vdbg("loaded Bksv into controller\n");
-	e = wait_hdcp_ctrl(hdmi, R0_VALID, NULL);
-	if (e) {
-		nvhdcp_err("R0 read failure!\n");
-		goto failure;
+		set_bksv(hdmi, nvhdcp->b_ksv, (b_caps & BCAPS_REPEATER));
+		nvhdcp_vdbg("loaded Bksv into controller\n");
+		e = wait_hdcp_ctrl(hdmi, R0_VALID, NULL);
+		if (e) {
+			nvhdcp_err("R0 read failure!\n");
+			goto failure;
+		}
+		nvhdcp_vdbg("R0 valid\n");
 	}
-	nvhdcp_vdbg("R0 valid\n");
-#endif
 
 	msleep(100); /* can't read R0' within 100ms of writing Aksv */
 
@@ -1619,23 +1622,26 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	}
 
 	mutex_lock(&nvhdcp->lock);
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
-	*pkt = HDCP_TA_CMD_ENC;
-	*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
-	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE/4, ta_cmd, ta_ctx);
-	if (e) {
-		nvhdcp_err("te launch operation failed with error: %d\n", e);
-		goto failure;
+
+	if (tegra_dc_is_nvdisplay()) {
+		*pkt = HDCP_TA_CMD_ENC;
+		*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+		*(pkt + 2*HDCP_CMD_OFFSET) = b_caps;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE/4, ta_cmd, ta_ctx);
+		if (e) {
+			nvhdcp_err("te launch operation failed with error %d\n",
+				    e);
+			goto failure;
+		}
+		enc = true;
+	} else {
+		tmp = tegra_sor_readl_ext(hdmi->sor, NV_SOR_TMDS_HDCP_CTRL);
+		tmp |= CRYPT_ENABLED;
+		if (b_caps & BCAPS_11) /* HDCP 1.1 ? */
+			tmp |= ONEONE_ENABLED;
+		tegra_sor_writel_ext(hdmi->sor, NV_SOR_TMDS_HDCP_CTRL, tmp);
 	}
-	enc = true;
-#else
-	tmp = tegra_sor_readl_ext(hdmi->sor, NV_SOR_TMDS_HDCP_CTRL);
-	tmp |= CRYPT_ENABLED;
-	if (b_caps & BCAPS_11) /* HDCP 1.1 ? */
-		tmp |= ONEONE_ENABLED;
-	tegra_sor_writel_ext(hdmi->sor, NV_SOR_TMDS_HDCP_CTRL, tmp);
-#endif
+
 	nvhdcp_vdbg("CRYPT enabled\n");
 	mutex_unlock(&nvhdcp->lock);
 
@@ -1695,42 +1701,44 @@ failure:
 
 lost_hdmi:
 	nvhdcp->state = STATE_UNAUTHENTICATED;
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
-	*pkt = HDCP_TA_CMD_CTRL;
-	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
-	*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
-	*(pkt + 3*HDCP_CMD_OFFSET) = false;
-	if (enc) {
-		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-		if (e) {
-			nvhdcp_err("te launch operation failed with error: %d\n", e);
-			goto failure;
+	if (tegra_dc_is_nvdisplay()) {
+		*pkt = HDCP_TA_CMD_CTRL;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+		*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
+		*(pkt + 3*HDCP_CMD_OFFSET) = false;
+		if (enc) {
+			e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd,
+						   ta_ctx);
+			if (e) {
+				nvhdcp_err(
+				  "te launch operation failed with error: %d\n",
+				   e);
+				goto failure;
+			}
 		}
+	} else {
+		hdcp_ctrl_run(hdmi, 0);
 	}
-#else
-	hdcp_ctrl_run(hdmi, 0);
-#endif
-
 err:
 	mutex_unlock(&nvhdcp->lock);
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
-	kfree(pkt);
-	if (ta_ctx) {
-		te_close_trusted_session(ta_ctx);
-		ta_ctx = NULL;
+	if (tegra_dc_is_nvdisplay()) {
+		kfree(pkt);
+		if (ta_ctx) {
+			te_close_trusted_session(ta_ctx);
+			ta_ctx = NULL;
+		}
 	}
-#endif
 	tegra_dc_io_end(dc);
 	return;
 disable:
 	nvhdcp->state = STATE_OFF;
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
-	kfree(pkt);
-	if (ta_ctx) {
-		te_close_trusted_session(ta_ctx);
-		ta_ctx = NULL;
+	if (tegra_dc_is_nvdisplay()) {
+		kfree(pkt);
+		if (ta_ctx) {
+			te_close_trusted_session(ta_ctx);
+			ta_ctx = NULL;
+		}
 	}
-#endif
 	nvhdcp_set_plugged(nvhdcp, false);
 	mutex_unlock(&nvhdcp->lock);
 	tegra_dc_io_end(dc);

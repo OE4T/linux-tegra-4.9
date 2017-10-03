@@ -59,6 +59,9 @@
 #define FUSE_USB_CALIB_EXT_0		0x250
 #define TEGRA_FUSE_USB_CALIB_EXT_0	0x250
 
+#define FUSE_CP_REV                    0x90
+#define TEGRA_FUSE_CP_REV_0_3          (3)
+
 #ifndef __ASSEMBLY__
 
 u32 tegra_read_chipid(void);

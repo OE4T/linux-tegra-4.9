@@ -1061,8 +1061,13 @@ static struct tegra_clk_cbus_shared *tegra_clk_init_shared(const char *name,
 		return ERR_PTR(-EINVAL);
 
 	parent_clk = __clk_lookup(parent[0]);
-	if (IS_ERR(parent_clk))
-		return ERR_PTR(PTR_ERR(parent_clk));
+	if (IS_ERR_OR_NULL(parent_clk)) {
+		/* Warning as clocks might be registered in a wrong order */
+		WARN_ON(!parent_clk);
+		pr_err("%s: failed to lookup parent clock (%s): %ld\n",
+		       __func__, parent[0], PTR_ERR(parent_clk));
+		return ERR_PTR(-EINVAL);
+	}
 
 	parent_cbus = to_clk_cbus_shared(__clk_get_hw(parent_clk));
 

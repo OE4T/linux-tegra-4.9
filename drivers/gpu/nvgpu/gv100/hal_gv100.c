@@ -410,6 +410,7 @@ static const struct gpu_ops gv100_ops = {
 		.preempt_tsg = gv11b_fifo_preempt_tsg,
 		.enable_tsg = gv11b_fifo_enable_tsg,
 		.disable_tsg = gk20a_disable_tsg,
+		.tsg_verify_channel_status = gk20a_fifo_tsg_unbind_channel_verify_status,
 		.tsg_verify_status_ctx_reload = gm20b_fifo_tsg_verify_status_ctx_reload,
 		.tsg_verify_status_faulted = gv11b_fifo_tsg_verify_status_faulted,
 		.update_runlist = gk20a_fifo_update_runlist,

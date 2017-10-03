@@ -742,7 +742,7 @@ static long tegra_camrtc_wait_for_empty(struct device *dev,
 	if (timeout == 0)
 		timeout = 2 * HZ;
 
-	timeout = wait_event_interruptible_timeout(
+	timeout = wait_event_timeout(
 		rtcpu->cmd.empty_waitq,
 		/* Make sure IRQ has been handled */
 		atomic_read(&rtcpu->cmd.emptied) != 0 &&
@@ -775,7 +775,7 @@ static int tegra_camrtc_mbox_exchange(struct device *dev,
 
 	tegra_hsp_sm_pair_write(rtcpu->sm_pair, command);
 
-	*timeout = wait_event_interruptible_timeout(
+	*timeout = wait_event_timeout(
 		rtcpu->cmd.response_waitq,
 		atomic_read(&rtcpu->cmd.response) != INVALID_RESPONSE,
 		*timeout);

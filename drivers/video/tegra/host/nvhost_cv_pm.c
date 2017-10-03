@@ -32,6 +32,9 @@ static DEFINE_MUTEX(cv_cluster_lock);
 /* Must be called BEFORE CV modules power on (reset asserted) */
 void cv_cluster_unclamp(struct platform_device *pdev)
 {
+	if (pdev->dev.parent && pdev->dev.parent != &platform_bus)
+		pdev = to_platform_device(pdev->dev.parent);
+
 	mutex_lock(&cv_cluster_lock);
 
 	/* Unclamp */
@@ -45,6 +48,9 @@ void cv_cluster_unclamp(struct platform_device *pdev)
 /* Must be called AFTER CV modules power down */
 void cv_cluster_clamp(struct platform_device *pdev)
 {
+	if (pdev->dev.parent && pdev->dev.parent != &platform_bus)
+		pdev = to_platform_device(pdev->dev.parent);
+
 	mutex_lock(&cv_cluster_lock);
 
 	/* Clamp */

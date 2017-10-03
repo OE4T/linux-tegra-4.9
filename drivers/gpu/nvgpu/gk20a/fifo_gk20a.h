@@ -373,6 +373,7 @@ void gk20a_fifo_disable_channel(struct channel_gk20a *ch);
 
 bool gk20a_fifo_channel_status_is_next(struct gk20a *g, u32 chid);
 bool gk20a_fifo_channel_status_is_ctx_reload(struct gk20a *g, u32 chid);
+int gk20a_fifo_tsg_unbind_channel_verify_status(struct channel_gk20a *ch);
 
 struct channel_gk20a *gk20a_refch_from_inst_ptr(struct gk20a *g, u64 inst_ptr);
 void gk20a_fifo_channel_unbind(struct channel_gk20a *ch_gk20a);

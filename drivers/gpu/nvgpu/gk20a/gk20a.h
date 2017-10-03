@@ -491,6 +491,7 @@ struct gpu_ops {
 		int (*preempt_tsg)(struct gk20a *g, u32 tsgid);
 		int (*enable_tsg)(struct tsg_gk20a *tsg);
 		int (*disable_tsg)(struct tsg_gk20a *tsg);
+		int (*tsg_verify_channel_status)(struct channel_gk20a *ch);
 		void (*tsg_verify_status_ctx_reload)(struct channel_gk20a *ch);
 		void (*tsg_verify_status_faulted)(struct channel_gk20a *ch);
 		int (*reschedule_runlist)(struct gk20a *g, u32 runlist_id);

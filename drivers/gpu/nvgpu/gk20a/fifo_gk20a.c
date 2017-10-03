@@ -1908,7 +1908,7 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 	return 0;
 }
 
-static int gk20a_fifo_tsg_unbind_channel_verify_status(struct channel_gk20a *ch)
+int gk20a_fifo_tsg_unbind_channel_verify_status(struct channel_gk20a *ch)
 {
 	struct gk20a *g = ch->g;
 
@@ -1939,9 +1939,11 @@ int gk20a_fifo_tsg_unbind_channel(struct channel_gk20a *ch)
 	if (err)
 		goto fail_enable_tsg;
 
-	err = gk20a_fifo_tsg_unbind_channel_verify_status(ch);
-	if (err)
-		goto fail_enable_tsg;
+	if (g->ops.fifo.tsg_verify_channel_status) {
+		err = g->ops.fifo.tsg_verify_channel_status(ch);
+		if (err)
+			goto fail_enable_tsg;
+	}
 
 	/* Channel should be seen as TSG channel while updating runlist */
 	err = channel_gk20a_update_runlist(ch, false);

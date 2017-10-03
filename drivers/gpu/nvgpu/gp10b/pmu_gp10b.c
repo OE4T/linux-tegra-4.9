@@ -170,10 +170,8 @@ static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 		cmd.cmd.acr.boot_falcons.falconidmask =
 				falconidmask;
 		cmd.cmd.acr.boot_falcons.usevamask = 0;
-		cmd.cmd.acr.boot_falcons.wprvirtualbase.lo =
-				u64_lo32(g->pmu.wpr_buf.gpu_va);
-		cmd.cmd.acr.boot_falcons.wprvirtualbase.hi =
-				u64_hi32(g->pmu.wpr_buf.gpu_va);
+		cmd.cmd.acr.boot_falcons.wprvirtualbase.lo = 0x0;
+		cmd.cmd.acr.boot_falcons.wprvirtualbase.hi = 0x0;
 		gp10b_dbg_pmu("PMU_ACR_CMD_ID_BOOTSTRAP_MULTIPLE_FALCONS:%x\n",
 				falconidmask);
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,

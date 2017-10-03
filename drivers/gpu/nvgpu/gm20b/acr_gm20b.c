@@ -350,13 +350,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	int err;
 	struct ls_flcn_mgr lsfm_l, *plsfm;
 	struct nvgpu_pmu *pmu = &g->pmu;
-	phys_addr_t wpr_addr, wpr_page;
-	u32 wprsize;
-	int i;
-	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = mm->pmu.vm;
 	struct wpr_carveout_info wpr_inf;
-	struct page **pages;
 
 	if (g->acr.ucode_blob.cpu_va) {
 		/*Recovery case, we do not need to form
@@ -375,26 +369,8 @@ int prepare_ucode_blob(struct gk20a *g)
 	gr_gk20a_init_ctxsw_ucode(g);
 
 	g->ops.pmu.get_wpr(g, &wpr_inf);
-	wpr_addr = (phys_addr_t)wpr_inf.wpr_base;
-	wprsize = (u32)wpr_inf.size;
 	gm20b_dbg_pmu("wpr carveout base:%llx\n", wpr_inf.wpr_base);
-	gm20b_dbg_pmu("wpr carveout size :%x\n", wprsize);
-
-	pages = nvgpu_kmalloc(g, sizeof(struct page *) * (wprsize / PAGE_SIZE));
-	if (!pages)
-		return -ENOMEM;
-
-	wpr_page = wpr_addr;
-	for (i = 0; wpr_page < (wpr_addr + wprsize); i++, wpr_page += PAGE_SIZE)
-		pages[i] = phys_to_page(wpr_page);
-	__nvgpu_mem_create_from_pages(g, &g->pmu.wpr_buf, pages,
-				      wprsize / PAGE_SIZE);
-	nvgpu_kfree(g, pages);
-
-	g->pmu.wpr_buf.gpu_va = nvgpu_gmmu_map(vm, &g->pmu.wpr_buf,
-					       wprsize, 0, gk20a_mem_flag_none,
-					       false, APERTURE_SYSMEM);
-	gm20b_dbg_pmu("wpr mapped gpu va :%llx\n", g->pmu.wpr_buf.gpu_va);
+	gm20b_dbg_pmu("wpr carveout size :%llx\n", wpr_inf.size);
 
 	/* Discover all managed falcons*/
 	err = lsfm_discover_ucode_images(g, plsfm);
@@ -423,7 +399,6 @@ int prepare_ucode_blob(struct gk20a *g)
 	gm20b_dbg_pmu("prepare ucode blob return 0\n");
 	free_acr_resources(g, plsfm);
 free_sgt:
-	nvgpu_gmmu_unmap(vm, &g->pmu.wpr_buf, g->pmu.wpr_buf.gpu_va);
 	return err;
 }
 
@@ -618,10 +593,8 @@ int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	*/
 	addr_base = p_lsfm->lsb_header.ucode_off;
 	g->ops.pmu.get_wpr(g, &wpr_inf);
-	if (falconid == LSF_FALCON_ID_GPCCS)
-		addr_base += g->pmu.wpr_buf.gpu_va;
-	else
-		addr_base += wpr_inf.wpr_base;
+	addr_base += wpr_inf.wpr_base;
+
 	gm20b_dbg_pmu("gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
 			p_lsfm->wpr_header.falcon_id);
 	addr_code = u64_lo32((addr_base +

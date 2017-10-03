@@ -623,11 +623,7 @@ int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	*/
 	addr_base = p_lsfm->lsb_header.ucode_off;
 	g->ops.pmu.get_wpr(g, &wpr_inf);
-	if (falconid == LSF_FALCON_ID_GPCCS &&
-		g->pmu.wpr_buf.aperture == APERTURE_SYSMEM)
-		addr_base += g->pmu.wpr_buf.gpu_va;
-	else
-		addr_base += wpr_inf.wpr_base;
+	addr_base += wpr_inf.wpr_base;
 
 	gp106_dbg_pmu("falcon ID %x", p_lsfm->wpr_header.falcon_id);
 	gp106_dbg_pmu("gen loader cfg addrbase %llx ", addr_base);

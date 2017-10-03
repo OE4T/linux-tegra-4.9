@@ -287,7 +287,6 @@ struct nvgpu_pmu {
 	/* TBD: remove this if ZBC seq is fixed */
 	struct nvgpu_mem seq_buf;
 	struct nvgpu_mem trace_buf;
-	struct nvgpu_mem wpr_buf;
 	bool buf_loaded;
 
 	struct pmu_sha1_gid gid_info;

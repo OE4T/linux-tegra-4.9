@@ -976,13 +976,16 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 {
 	struct nvhost_device_data *pdata;
 	struct nvhost_master *host;
+	struct platform_device *pdev = to_platform_device(dev);
 
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
 		return -EINVAL;
 
-	if (!pdata->power_on)
+	if (!pdata->power_on) {
+		WARN_ON(1);
 		return 0;
+	}
 
 	host = nvhost_get_host(pdata->pdev);
 
@@ -1012,6 +1015,9 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
 
+	if (pdata->cluster_clamp)
+		pdata->cluster_clamp(pdev);
+
 	pdata->power_on = false;
 
 	return 0;
@@ -1028,8 +1034,8 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	if (!pdata)
 		return -EINVAL;
 
-	if (pdata->pre_poweron)
-		pdata->pre_poweron(pdev);
+	if (pdata->cluster_unclamp)
+		pdata->cluster_unclamp(pdev);
 
 	host = nvhost_get_host(pdata->pdev);
 	/* WAR to bug 1588951: Retry booting 3 times */
@@ -1070,8 +1076,11 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	}
 
 	/* Failed to start the device */
-	if (ret)
+	if (ret) {
+		if (pdata->cluster_clamp)
+			pdata->cluster_clamp(pdev);
 		goto out;
+	}
 
 	/* set default EMC rate to zero */
 	if (pdata->bwmgr_handle) {

@@ -265,8 +265,12 @@ struct nvhost_device_data {
 	struct rw_semaphore busy_lock;
 	bool forced_idle;
 
-	/* Used to run any device specific code before module poweron */
-	void (*pre_poweron)(struct platform_device *dev);
+	/*
+	 * Used to clamp/unclamp clusters across any cluster power sequences.
+	 * The clamp is applied after poweroff and unclamp prior to poweron.
+	 */
+	void (*cluster_unclamp)(struct platform_device *dev);
+	void (*cluster_clamp)(struct platform_device *dev);
 
 	/* Finalize power on. Can be used for context restore. */
 	int (*finalize_poweron)(struct platform_device *dev);

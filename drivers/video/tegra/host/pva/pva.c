@@ -460,8 +460,6 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 
 	pva_free_fw(pdev, pva);
 
-	cv_cluster_clamp(pdev);
-
 	return 0;
 }
 

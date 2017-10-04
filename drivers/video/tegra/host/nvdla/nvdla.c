@@ -521,8 +521,6 @@ int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)
 		goto out;
 	}
 
-	cv_cluster_clamp(pdev);
-
 out:
 	return ret;
 }

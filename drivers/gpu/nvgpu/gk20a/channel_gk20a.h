@@ -348,14 +348,6 @@ void gk20a_channel_deterministic_unidle(struct gk20a *g);
 int nvgpu_channel_worker_init(struct gk20a *g);
 void nvgpu_channel_worker_deinit(struct gk20a *g);
 
-/* Channel file operations */
-int gk20a_channel_open(struct inode *inode, struct file *filp);
-int gk20a_channel_open_ioctl(struct gk20a *g,
-		struct nvgpu_channel_open_args *args);
-long gk20a_channel_ioctl(struct file *filp,
-			 unsigned int cmd,
-			 unsigned long arg);
-int gk20a_channel_release(struct inode *inode, struct file *filp);
 struct channel_gk20a *gk20a_get_channel_from_file(int fd);
 void gk20a_channel_update(struct channel_gk20a *c);
 

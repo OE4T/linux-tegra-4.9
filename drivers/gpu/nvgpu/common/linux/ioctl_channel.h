@@ -17,6 +17,8 @@ int gk20a_channel_open(struct inode *inode, struct file *filp);
 int gk20a_channel_release(struct inode *inode, struct file *filp);
 long gk20a_channel_ioctl(struct file *filp,
 	unsigned int cmd, unsigned long arg);
+int gk20a_channel_open_ioctl(struct gk20a *g,
+		struct nvgpu_channel_open_args *args);
 
 extern const struct file_operations gk20a_event_id_ops;
 extern const struct file_operations gk20a_channel_ops;

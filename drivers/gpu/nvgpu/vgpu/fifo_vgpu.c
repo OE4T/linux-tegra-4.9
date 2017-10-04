@@ -832,6 +832,8 @@ void vgpu_init_fifo_ops(struct gpu_ops *gops)
 	gops->fifo.preempt_tsg = vgpu_fifo_preempt_tsg;
 	gops->fifo.enable_tsg = gk20a_enable_tsg;
 	gops->fifo.disable_tsg = gk20a_disable_tsg;
+	/* Not supported yet for vgpu */
+	gops->fifo.tsg_verify_channel_status = NULL;
 	gops->fifo.update_runlist = vgpu_fifo_update_runlist;
 	gops->fifo.wait_engine_idle = vgpu_fifo_wait_engine_idle;
 	gops->fifo.channel_set_priority = vgpu_channel_set_priority;

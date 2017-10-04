@@ -1,4 +1,4 @@
-From fe74b7d0905878dadb74cb0d0084b7db618aa6c4 Mon Sep 17 00:00:00 2001
+From 8bc7e500a15a04d149681423ff642a27d522e3c7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 20 Jun 2011 09:03:47 +0200
 Subject: [PATCH 083/336] rt: Add local irq locks

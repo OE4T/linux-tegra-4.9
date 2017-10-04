@@ -1,4 +1,4 @@
-From ec2597ec70e6a71d6c2ed28890350cc548330312 Mon Sep 17 00:00:00 2001
+From 39957083062106e0080a2f13a0298891abcbb370 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
 Subject: [PATCH 241/336] net: move xmit_recursion to per-task variable on -RT
@@ -23,7 +23,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 51 insertions(+), 8 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 2bb937c..c550f7d 100644
+index 17e39e7..cc281a9 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
 @@ -2464,14 +2464,53 @@ void netdev_freemem(struct net_device *dev);
@@ -96,7 +96,7 @@ index 87448af..aaf91f7 100644
  #ifdef CONFIG_MMU
  	struct task_struct *oom_reaper_list;
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 37c56cd..47c08c1 100644
+index ebeb227..cbb9430 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3173,8 +3173,10 @@ static void skb_update_prio(struct sk_buff *skb)

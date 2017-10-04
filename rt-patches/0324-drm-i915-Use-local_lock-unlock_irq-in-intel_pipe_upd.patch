@@ -1,4 +1,4 @@
-From 8b27607da2e8fcd350a84402ec07cf8e3173c5ad Mon Sep 17 00:00:00 2001
+From 121146f18fbed3896ebf1e51238a4f5f23fdc8c3 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sat, 27 Feb 2016 09:01:42 +0100
 Subject: [PATCH 324/336] drm,i915: Use local_lock/unlock_irq() in

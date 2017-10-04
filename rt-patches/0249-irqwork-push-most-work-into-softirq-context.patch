@@ -1,4 +1,4 @@
-From 6600b46f0b40e070405b32e72f0bf453e6d03a5e Mon Sep 17 00:00:00 2001
+From 27fbb1406d7aa97e5bb792986b2a206aac4d5849 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 23 Jun 2015 15:32:51 +0200
 Subject: [PATCH 249/336] irqwork: push most work into softirq context

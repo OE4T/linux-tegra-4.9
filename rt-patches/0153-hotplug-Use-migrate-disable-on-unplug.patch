@@ -1,4 +1,4 @@
-From 669cfef78b261e39247dc9f10474491707087059 Mon Sep 17 00:00:00 2001
+From 26776456898ecb2c7aab9fb38aa5e2e3000a0b2b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 19:35:29 +0200
 Subject: [PATCH 153/336] hotplug: Use migrate disable on unplug
@@ -12,7 +12,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 5296dd6..67d2b17 100644
+index c793881..7ce4939 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -1001,14 +1001,13 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,

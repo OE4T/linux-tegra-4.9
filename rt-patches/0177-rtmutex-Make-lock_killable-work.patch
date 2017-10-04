@@ -1,4 +1,4 @@
-From d02579a4f67a66d52a1087e6345389f789b8f869 Mon Sep 17 00:00:00 2001
+From a6318298f837933add1047e073ad9a946de0ef14 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:50:59 +0200
 Subject: [PATCH 177/336] rtmutex: Make lock_killable work

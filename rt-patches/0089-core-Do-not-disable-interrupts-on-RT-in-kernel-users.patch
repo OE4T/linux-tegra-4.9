@@ -1,4 +1,4 @@
-From 5321fa9659992add97bf0b68748cbc3dbccc4a95 Mon Sep 17 00:00:00 2001
+From 3291c217742da5dbc124e46e2b63f1744633ee1b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Jul 2009 23:06:05 +0200
 Subject: [PATCH 089/336] core: Do not disable interrupts on RT in

@@ -1,4 +1,4 @@
-From 3fc1e3e7417cb803a253abc839b6f3deea0600ed Mon Sep 17 00:00:00 2001
+From 7b1bb20035be765ff88a47567e7c55c52745aab0 Mon Sep 17 00:00:00 2001
 From: Grygorii Strashko <grygorii.strashko@ti.com>
 Date: Fri, 9 Oct 2015 09:25:49 -0500
 Subject: [PATCH 240/336] net/core/cpuhotplug: Drain input_pkt_queue lockless
@@ -35,10 +35,10 @@ Cc: stable-rt@vger.kernel.org
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/net/core/dev.c b/net/core/dev.c
-index aa19e87..37c56cd 100644
+index 3cf3baa..ebeb227 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -8064,7 +8064,7 @@ static int dev_cpu_callback(struct notifier_block *nfb,
+@@ -8065,7 +8065,7 @@ static int dev_cpu_callback(struct notifier_block *nfb,
  		netif_rx_ni(skb);
  		input_queue_head_incr(oldsd);
  	}

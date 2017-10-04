@@ -1,4 +1,4 @@
-From 2f34242c6cebc593b9b7b0e51a0d0b2a6b2c536b Mon Sep 17 00:00:00 2001
+From 32a8b0cc7bb84f89e99768566e0014ce4a4aaa76 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 6 Jun 2011 12:20:33 +0200
 Subject: [PATCH 135/336] sched: Move mmdrop to RCU on RT
@@ -59,10 +59,10 @@ index e24be4c..b7d4ba7 100644
  {
  	struct mm_struct *mm = container_of(work, struct mm_struct, async_put_work);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index bb2ddfe..eb4fdee 100644
+index 8022f06..a0bb52b 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -869,6 +869,19 @@ void __mmdrop(struct mm_struct *mm)
+@@ -877,6 +877,19 @@ void __mmdrop(struct mm_struct *mm)
  }
  EXPORT_SYMBOL_GPL(__mmdrop);
  

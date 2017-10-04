@@ -1,4 +1,4 @@
-From 758305f6aadf423b771844095babb8f345d6e09d Mon Sep 17 00:00:00 2001
+From dd9af1bb426aa99ae269dc9012d820292ebb4a81 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 14 Jun 2013 17:16:35 +0200
 Subject: [PATCH 289/336] kernel/hotplug: restore original cpu mask oncpu/down
@@ -14,7 +14,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 12 insertions(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index ce34ec3..d8dd4f3 100644
+index d5169ce..25f01edd 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -1179,6 +1179,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,

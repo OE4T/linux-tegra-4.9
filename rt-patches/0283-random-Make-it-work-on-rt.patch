@@ -1,4 +1,4 @@
-From 923b538933cbb8b7bdc069e5b417dfeaa0c3cbaf Mon Sep 17 00:00:00 2001
+From 791287d415aac35162f7ff094f144588c759b2af Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Aug 2012 20:38:50 +0200
 Subject: [PATCH 283/336] random: Make it work on rt
@@ -79,7 +79,7 @@ index 0276d2e..8868045 100644
  
  
 diff --git a/include/linux/irqdesc.h b/include/linux/irqdesc.h
-index c9be579..eeeb5409 100644
+index c9be579..eeeb540 100644
 --- a/include/linux/irqdesc.h
 +++ b/include/linux/irqdesc.h
 @@ -66,6 +66,7 @@ struct irq_desc {

@@ -1,4 +1,4 @@
-From adf73bf54ad6a5e53c54023d43f2ab9813cdfd40 Mon Sep 17 00:00:00 2001
+From cf5ba9cf04d7eb121c69324f7147a410f87b1bf6 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
 Subject: [PATCH 200/336] completion: Use simple wait queues
@@ -7,7 +7,6 @@ Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
 contention on the waitqueue lock.
 
-Change-Id: I99805aa50a276de34b8f0eed51359cc20653d656
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  .../net/wireless/intersil/orinoco/orinoco_usb.c    |  2 +-

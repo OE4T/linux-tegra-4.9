@@ -1,4 +1,4 @@
-From 13bdcb7c7bc3bd013af47168af00697fd5a5cfde Mon Sep 17 00:00:00 2001
+From 12ffa5e9fb30389b7ffc86c0be5d2d62e1699df6 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
 Subject: [PATCH 286/336] cpu/rt: Rework cpu down for PREEMPT_RT
@@ -80,7 +80,7 @@ index 3e549fb..ce18bed 100644
  
  #ifdef CONFIG_NO_HZ_COMMON
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index a44e19a..cd60daf 100644
+index 871dc03..44a4980 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -210,16 +210,10 @@ static int cpu_hotplug_disabled;

@@ -1,4 +1,4 @@
-From 18046a65542c6a982071673748b79fd3bc93bb16 Mon Sep 17 00:00:00 2001
+From c18967b535ac8dbe89bec16060594f04c839ad8e Mon Sep 17 00:00:00 2001
 From: Frank Rowand <frank.rowand@am.sony.com>
 Date: Mon, 19 Sep 2011 14:51:14 -0700
 Subject: [PATCH 053/336] arm: Convert arm boot_lock to raw

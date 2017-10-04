@@ -1,4 +1,4 @@
-From cecaf35fcc0307085e219127f6cf61eef2ecaba4 Mon Sep 17 00:00:00 2001
+From 6961b599d0b1c063d359162789f5602a71fbe317 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 20:51:03 +0100
 Subject: [PATCH 222/336] rt: Introduce cpu_chill()

@@ -1,4 +1,4 @@
-From 3e418004966293f0e8a56a0e5beea03c1b1aedd9 Mon Sep 17 00:00:00 2001
+From 1b87bd91eba9423cb2b33a3cb7bcb599fd004851 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 23 Jan 2014 14:45:59 +0100
 Subject: [PATCH 315/336] leds: trigger: disable CPU trigger on -RT

@@ -1,4 +1,4 @@
-From 54e56bfcfb8691b4d74a01968f96eac5f69fe40a Mon Sep 17 00:00:00 2001
+From a68f60728c8b416d5823246aa8a98fcd69173ee3 Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <daniel.wagner@bmw-carit.de>
 Date: Fri, 11 Jul 2014 15:26:11 +0200
 Subject: [PATCH 199/336] work-simple: Simple work queue implemenation
@@ -8,7 +8,6 @@ PREEMPT_RT_FULL safe. The callbacks are executed in kthread context.
 
 Bases on wait-simple.
 
-Change-Id: Iae545ffdcf45899086d0660d1d72b57cd0d6f388
 Cc: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Signed-off-by: Daniel Wagner <daniel.wagner@bmw-carit.de>
 ---

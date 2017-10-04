@@ -1,4 +1,4 @@
-From 2fb7f2e01cb223da24c38e6b23dd51e4d0efc492 Mon Sep 17 00:00:00 2001
+From 9cdbca3e0e13ac2a0111adbeb6872064c0fa3089 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 8 Jan 2017 09:32:25 +0100
 Subject: [PATCH 327/336] cpuset: Convert callback_lock to raw_spinlock_t
@@ -42,7 +42,6 @@ The callback_mutex is only used to synchronize reads/updates of cpusets'
 flags and cpu/node masks. These operations should always proceed fast so
 there's no reason why we can't use a spinlock instead of the mutex.
 
-Change-Id: Iac9e84b8408a521c296b00f1ed0a862504689cb0
 Cc: stable-rt@vger.kernel.org
 Signed-off-by: Mike Galbraith <efault@gmx.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
@@ -51,7 +50,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 33 insertions(+), 33 deletions(-)
 
 diff --git a/kernel/cpuset.c b/kernel/cpuset.c
-index ebb4524..504b70f 100644
+index 25ffaf0..bb8c969 100644
 --- a/kernel/cpuset.c
 +++ b/kernel/cpuset.c
 @@ -286,7 +286,7 @@ static struct cpuset top_cpuset = {
@@ -142,7 +141,7 @@ index ebb4524..504b70f 100644
  	return ret;
  }
  
-@@ -2004,12 +2004,12 @@ static int cpuset_css_online(struct cgroup_subsys_state *css)
+@@ -2005,12 +2005,12 @@ static int cpuset_css_online(struct cgroup_subsys_state *css)
  
  	cpuset_inc();
  
@@ -157,7 +156,7 @@ index ebb4524..504b70f 100644
  
  	if (!test_bit(CGRP_CPUSET_CLONE_CHILDREN, &css->cgroup->flags))
  		goto out_unlock;
-@@ -2036,13 +2036,13 @@ static int cpuset_css_online(struct cgroup_subsys_state *css)
+@@ -2037,13 +2037,13 @@ static int cpuset_css_online(struct cgroup_subsys_state *css)
  	}
  	rcu_read_unlock();
  
@@ -173,7 +172,7 @@ index ebb4524..504b70f 100644
  out_unlock:
  	mutex_unlock(&cpuset_mutex);
  	return 0;
-@@ -2082,7 +2082,7 @@ static void cpuset_css_free(struct cgroup_subsys_state *css)
+@@ -2083,7 +2083,7 @@ static void cpuset_css_free(struct cgroup_subsys_state *css)
  static void cpuset_bind(struct cgroup_subsys_state *root_css)
  {
  	mutex_lock(&cpuset_mutex);
@@ -182,7 +181,7 @@ index ebb4524..504b70f 100644
  
  	if (cgroup_subsys_on_dfl(cpuset_cgrp_subsys)) {
  		cpumask_copy(top_cpuset.cpus_allowed, cpu_possible_mask);
-@@ -2093,7 +2093,7 @@ static void cpuset_bind(struct cgroup_subsys_state *root_css)
+@@ -2094,7 +2094,7 @@ static void cpuset_bind(struct cgroup_subsys_state *root_css)
  		top_cpuset.mems_allowed = top_cpuset.effective_mems;
  	}
  
@@ -191,7 +190,7 @@ index ebb4524..504b70f 100644
  	mutex_unlock(&cpuset_mutex);
  }
  
-@@ -2197,12 +2197,12 @@ hotplug_update_tasks_legacy(struct cpuset *cs,
+@@ -2198,12 +2198,12 @@ hotplug_update_tasks_legacy(struct cpuset *cs,
  {
  	bool is_empty;
  
@@ -206,7 +205,7 @@ index ebb4524..504b70f 100644
  
  	/*
  	 * Don't call update_tasks_cpumask() if the cpuset becomes empty,
-@@ -2239,10 +2239,10 @@ hotplug_update_tasks(struct cpuset *cs,
+@@ -2240,10 +2240,10 @@ hotplug_update_tasks(struct cpuset *cs,
  	if (nodes_empty(*new_mems))
  		*new_mems = parent_cs(cs)->effective_mems;
  
@@ -219,7 +218,7 @@ index ebb4524..504b70f 100644
  
  	if (cpus_updated)
  		update_tasks_cpumask(cs);
-@@ -2328,21 +2328,21 @@ static void cpuset_hotplug_workfn(struct work_struct *work)
+@@ -2329,21 +2329,21 @@ static void cpuset_hotplug_workfn(struct work_struct *work)
  
  	/* synchronize cpus_allowed to cpu_active_mask */
  	if (cpus_updated) {
@@ -245,7 +244,7 @@ index ebb4524..504b70f 100644
  		update_tasks_nodemask(&top_cpuset);
  	}
  
-@@ -2440,11 +2440,11 @@ void cpuset_cpus_allowed(struct task_struct *tsk, struct cpumask *pmask)
+@@ -2441,11 +2441,11 @@ void cpuset_cpus_allowed(struct task_struct *tsk, struct cpumask *pmask)
  {
  	unsigned long flags;
  
@@ -259,7 +258,7 @@ index ebb4524..504b70f 100644
  }
  
  void cpuset_cpus_allowed_fallback(struct task_struct *tsk)
-@@ -2492,11 +2492,11 @@ nodemask_t cpuset_mems_allowed(struct task_struct *tsk)
+@@ -2493,11 +2493,11 @@ nodemask_t cpuset_mems_allowed(struct task_struct *tsk)
  	nodemask_t mask;
  	unsigned long flags;
  
@@ -273,7 +272,7 @@ index ebb4524..504b70f 100644
  
  	return mask;
  }
-@@ -2588,14 +2588,14 @@ bool __cpuset_node_allowed(int node, gfp_t gfp_mask)
+@@ -2589,14 +2589,14 @@ bool __cpuset_node_allowed(int node, gfp_t gfp_mask)
  		return true;
  
  	/* Not hardwall and node outside mems_allowed: scan up cpusets */

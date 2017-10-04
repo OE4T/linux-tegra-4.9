@@ -1,4 +1,4 @@
-From f9af3513d2156961c4e5e204aa826322661a898d Mon Sep 17 00:00:00 2001
+From fc9acdd5de83d6cecfaebb253ffb24f2e49828d7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 26 Jul 2009 19:39:56 +0200
 Subject: [PATCH 181/336] rt: Add the preempt-rt lock replacement APIs
@@ -2321,7 +2321,7 @@ index db3ccb1..9097796 100644
  
  void __lockfunc _raw_spin_lock_nested(raw_spinlock_t *lock, int subclass)
 diff --git a/kernel/locking/spinlock_debug.c b/kernel/locking/spinlock_debug.c
-index 0374a59..9497033 100644
+index 9aa0fcc..76d0b40 100644
 --- a/kernel/locking/spinlock_debug.c
 +++ b/kernel/locking/spinlock_debug.c
 @@ -31,6 +31,7 @@ void __raw_spin_lock_init(raw_spinlock_t *lock, const char *name,
@@ -2340,7 +2340,7 @@ index 0374a59..9497033 100644
  
  static void spin_dump(raw_spinlock_t *lock, const char *msg)
  {
-@@ -159,6 +161,7 @@ void do_raw_spin_unlock(raw_spinlock_t *lock)
+@@ -135,6 +137,7 @@ void do_raw_spin_unlock(raw_spinlock_t *lock)
  	arch_spin_unlock(&lock->raw_lock);
  }
  
@@ -2348,7 +2348,7 @@ index 0374a59..9497033 100644
  static void rwlock_bug(rwlock_t *lock, const char *msg)
  {
  	if (!debug_locks_off())
-@@ -300,3 +303,5 @@ void do_raw_write_unlock(rwlock_t *lock)
+@@ -224,3 +227,5 @@ void do_raw_write_unlock(rwlock_t *lock)
  	debug_write_unlock(lock);
  	arch_write_unlock(&lock->raw_lock);
  }

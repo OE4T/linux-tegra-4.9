@@ -1,4 +1,4 @@
-From 38c9085bdc171d741da91b5fe76ae76d3ac8fb43 Mon Sep 17 00:00:00 2001
+From 85c82c1699c043784939f9238dfca5b0edd7834c Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 7 Apr 2017 09:04:07 +0200
 Subject: [PATCH 028/336] futex: Fix small (and harmless looking)

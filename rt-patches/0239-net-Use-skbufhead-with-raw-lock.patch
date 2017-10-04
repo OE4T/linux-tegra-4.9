@@ -1,4 +1,4 @@
-From 52e073d1f7bbeebd65a601b5397dc0e5e458ac58 Mon Sep 17 00:00:00 2001
+From 41e83e1262636c4d23e251e384c9d9d45b00090f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 12 Jul 2011 15:38:34 +0200
 Subject: [PATCH 239/336] net: Use skbufhead with raw lock
@@ -15,7 +15,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 32 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 780e717..2bb937c 100644
+index 23db1ae..17e39e7 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
 @@ -2856,6 +2856,7 @@ struct softnet_data {
@@ -52,7 +52,7 @@ index 32810f2..0db6e31 100644
  		struct lock_class_key *class)
  {
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 1a66301..aa19e87 100644
+index 35a723d..3cf3baa 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -211,14 +211,14 @@ static inline struct hlist_head *dev_index_hash(struct net *net, int ifindex)
@@ -140,7 +140,7 @@ index 1a66301..aa19e87 100644
  	for (;;) {
  		struct napi_struct *n;
  
-@@ -8055,6 +8068,9 @@ static int dev_cpu_callback(struct notifier_block *nfb,
+@@ -8056,6 +8069,9 @@ static int dev_cpu_callback(struct notifier_block *nfb,
  		netif_rx_ni(skb);
  		input_queue_head_incr(oldsd);
  	}
@@ -150,7 +150,7 @@ index 1a66301..aa19e87 100644
  
  	return NOTIFY_OK;
  }
-@@ -8359,8 +8375,9 @@ static int __init net_dev_init(void)
+@@ -8360,8 +8376,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  

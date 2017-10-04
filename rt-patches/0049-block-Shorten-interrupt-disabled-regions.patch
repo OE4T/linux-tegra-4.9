@@ -1,4 +1,4 @@
-From 634833db522110324ca0b4b35bce039300ec1c3b Mon Sep 17 00:00:00 2001
+From e307f409600d9767542f10121ee77aafde73b204 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Jun 2011 19:47:02 +0200
 Subject: [PATCH 049/336] block: Shorten interrupt disabled regions
@@ -47,7 +47,7 @@ Link: http://lkml.kernel.org/r/20110622174919.025446432@linutronix.de
  1 file changed, 2 insertions(+), 10 deletions(-)
 
 diff --git a/block/blk-core.c b/block/blk-core.c
-index 710c93b..e66d25a 100644
+index b232290..f48fbd6 100644
 --- a/block/blk-core.c
 +++ b/block/blk-core.c
 @@ -3202,7 +3202,7 @@ static void queue_unplugged(struct request_queue *q, unsigned int depth,

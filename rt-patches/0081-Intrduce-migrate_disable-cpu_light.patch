@@ -1,4 +1,4 @@
-From 59964694f083f1a51326b23115602f07922154c8 Mon Sep 17 00:00:00 2001
+From ac054c6c79ae58ada9cfd2af5fd90e6d47a5c5aa Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Jun 2011 15:42:38 +0200
 Subject: [PATCH 081/336] Intrduce migrate_disable() + cpu_light()
@@ -29,7 +29,6 @@ it uses migrate_disable() instead of preempt_disable(). That means the user
 remains on the same CPU but the function using it may be preempted and
 invoked again from another caller on the same CPU.
 
-Change-Id: I2f4fdf31cc1fada01feeac273b757ea77ba4a95f
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  include/linux/cpu.h     |  3 +++

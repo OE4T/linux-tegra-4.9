@@ -1,4 +1,4 @@
-From 997567ae406460d82ef1e5ff8c108039283ca81b Mon Sep 17 00:00:00 2001
+From 3669a114c70a6abf36b9f412ff940b7554ba2fae Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 2 Nov 2014 08:31:37 +0100
 Subject: [PATCH 214/336] x86: UV: raw_spinlock conversion

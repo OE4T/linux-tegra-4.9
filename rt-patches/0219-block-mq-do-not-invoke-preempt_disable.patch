@@ -1,4 +1,4 @@
-From 617e1b03421338c0ead5609f795aaca3c89c48fb Mon Sep 17 00:00:00 2001
+From a62b5372855083786ac5c1a820bf0299824f12c6 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
 Subject: [PATCH 219/336] block/mq: do not invoke preempt_disable()

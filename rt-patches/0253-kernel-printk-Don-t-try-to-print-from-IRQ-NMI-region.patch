@@ -1,4 +1,4 @@
-From 98e6405103b32a28206f1f5b0421915228b0f855 Mon Sep 17 00:00:00 2001
+From 170d3ebf378b047a3b9aa9cf0b25d615087f231b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 19 May 2016 17:45:27 +0200
 Subject: [PATCH 253/336] kernel/printk: Don't try to print from IRQ/NMI region

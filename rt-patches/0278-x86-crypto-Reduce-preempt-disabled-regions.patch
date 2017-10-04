@@ -1,4 +1,4 @@
-From 7aae38ec1d320e6b432f16007ee2388a43898d5f Mon Sep 17 00:00:00 2001
+From 6cd92e4d8fda4beb82d46ed429fc7a55b2823f4e Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 14 Nov 2011 18:19:27 +0100
 Subject: [PATCH 278/336] x86: crypto: Reduce preempt disabled regions

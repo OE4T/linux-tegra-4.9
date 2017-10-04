@@ -1,4 +1,4 @@
-From ee6c357932d658f41624e076a9b04b95031373bd Mon Sep 17 00:00:00 2001
+From e7bf91b3983b6ebe4ef2a12d1606a2d2c2825776 Mon Sep 17 00:00:00 2001
 From: Clark Williams <williams@redhat.com>
 Date: Tue, 26 May 2015 10:43:43 -0500
 Subject: [PATCH 322/336] i915: bogus warning from i915 when running on

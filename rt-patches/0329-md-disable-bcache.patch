@@ -1,4 +1,4 @@
-From 871c1d4dd097f6cbbb0f8144b0f237938f8cf37d Mon Sep 17 00:00:00 2001
+From c66e42851b4504986d344f6f08ebf690098c3e3b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Aug 2013 11:48:57 +0200
 Subject: [PATCH 329/336] md: disable bcache

@@ -1,4 +1,4 @@
-From a5e38b57c795f7183a98e70cd426a133911109b0 Mon Sep 17 00:00:00 2001
+From 135e4ac78cd7e0d52b2635c8f55d7b72633389cb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Jun 2011 19:47:03 +0200
 Subject: [PATCH 232/336] sched: Distangle worker accounting from rqlock
@@ -16,7 +16,6 @@ woken immediately after switching away. There is also no harm from
 updating nr_running when the task returns from scheduling instead of
 accounting it in the wakeup code.
 
-Change-Id: Idb9d8533bbac7badd29a7d9533b2507c568e552e
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: Peter Zijlstra <peterz@infradead.org>
 Cc: Tejun Heo <tj@kernel.org>

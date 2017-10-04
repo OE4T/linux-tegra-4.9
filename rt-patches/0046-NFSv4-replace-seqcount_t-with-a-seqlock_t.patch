@@ -1,4 +1,4 @@
-From b4a594955b3f91785ff4c2f83d42a6a2e1f6deda Mon Sep 17 00:00:00 2001
+From 66d1a4d4f64550b69c750b6f0043589f7b6fc678 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 28 Oct 2016 23:05:11 +0200
 Subject: [PATCH 046/336] NFSv4: replace seqcount_t with a seqlock_t

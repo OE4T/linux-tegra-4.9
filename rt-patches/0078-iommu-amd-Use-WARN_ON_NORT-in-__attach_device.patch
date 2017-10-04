@@ -1,4 +1,4 @@
-From b0867ab8812b4b2f64b476e5a35a950b99103ee2 Mon Sep 17 00:00:00 2001
+From b0a6d3d85ea9506a4ebaf89038d4585436792196 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 27 Feb 2016 10:22:23 +0100
 Subject: [PATCH 078/336] iommu/amd: Use WARN_ON_NORT in __attach_device()

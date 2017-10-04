@@ -1,4 +1,4 @@
-From b8d18eea75f6e00ead16889906189f5a47311cf9 Mon Sep 17 00:00:00 2001
+From a413b35c5ab874e963438fb1757b029fd6ff26ea Mon Sep 17 00:00:00 2001
 From: dmitry pervushin <dpervushin@nvidia.com>
 Date: Thu, 17 Nov 2016 13:39:25 +0100
 Subject: [PATCH 336/336] mm: slub: reenabling interrupts in PREEMPT_RT
@@ -8,7 +8,6 @@ initialized and should allow our spinlocks to sleep
 
 Bug 1828392
 
-Change-Id: Ie0ce3c4f7457f5aa33d17ddf663919cabc10e7d5
 Signed-off-by: dmitry pervushin <dpervushin@nvidia.com>
 Reviewed-on: http://git-master/r/1255582
 Reviewed-by: Sumeet Gupta <sumeetg@nvidia.com>

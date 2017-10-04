@@ -1,4 +1,4 @@
-From 01092aaf0763cb79b6f462ffa2ff84dfda2ebcbc Mon Sep 17 00:00:00 2001
+From 7c447ba5814a028aaf0daef066b4812ac2788228 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:41:35 +0200
 Subject: [PATCH 235/336] debugobjects: Make RT aware

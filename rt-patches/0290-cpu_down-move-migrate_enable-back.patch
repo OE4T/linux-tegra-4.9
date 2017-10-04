@@ -1,4 +1,4 @@
-From e4fa00e2fd81a1e4d23e34d206636ad874a28f4f Mon Sep 17 00:00:00 2001
+From b595c69283f4f2c9c44d9d89869f42b75b71114c Mon Sep 17 00:00:00 2001
 From: Tiejun Chen <tiejun.chen@windriver.com>
 Date: Thu, 7 Nov 2013 10:06:07 +0800
 Subject: [PATCH 290/336] cpu_down: move migrate_enable() back
@@ -33,7 +33,7 @@ Signed-off-by: Tiejun Chen <tiejun.chen@windriver.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index d8dd4f3..1d1b2ec 100644
+index 25f01edd..85dfc83 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -1208,6 +1208,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,

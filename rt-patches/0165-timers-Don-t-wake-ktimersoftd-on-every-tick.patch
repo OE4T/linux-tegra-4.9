@@ -1,4 +1,4 @@
-From 3d7311a415c93baacd0bdef93bd13cadb290f174 Mon Sep 17 00:00:00 2001
+From 3187989ac3c3e1af7bc4c64023264422e2b2744a Mon Sep 17 00:00:00 2001
 From: Haris Okanovic <haris.okanovic@ni.com>
 Date: Fri, 3 Feb 2017 17:26:44 +0100
 Subject: [PATCH 165/336] timers: Don't wake ktimersoftd on every tick

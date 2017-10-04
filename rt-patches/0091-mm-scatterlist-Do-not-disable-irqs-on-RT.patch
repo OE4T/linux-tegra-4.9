@@ -1,4 +1,4 @@
-From ece15f54e2c0fd5f4f5cc9f699fa3ac92b27f3f0 Mon Sep 17 00:00:00 2001
+From f4aeba3db10bc78fede2e54ce7fe2b5ba8289e14 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:34 -0500
 Subject: [PATCH 091/336] mm/scatterlist: Do not disable irqs on RT

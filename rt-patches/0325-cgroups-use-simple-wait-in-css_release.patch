@@ -1,4 +1,4 @@
-From 83622527925e7c2fdc382c11874445f372c27c60 Mon Sep 17 00:00:00 2001
+From 70075a721bf987d609c273a215ad8037c25ad0ff Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 15:52:24 +0100
 Subject: [PATCH 325/336] cgroups: use simple wait in css_release()
@@ -27,7 +27,6 @@ To avoid:
 | [<ffffffff810948d8>] kthread+0xe8/0x100
 | [<ffffffff815b9c3c>] ret_from_fork+0x7c/0xb0
 
-Change-Id: I53df9309bac2f6a5601af2de8b268af59bea0a84
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/cgroup-defs.h | 2 ++

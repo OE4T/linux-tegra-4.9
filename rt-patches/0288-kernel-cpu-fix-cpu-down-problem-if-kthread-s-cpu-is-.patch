@@ -1,4 +1,4 @@
-From bc759ac7e1a1a7f57ccb710d642fdad26f38185f Mon Sep 17 00:00:00 2001
+From 2b027d5fcb765f3f0d0bfe99ffd9c330fc3b659f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 7 Jun 2013 22:37:06 +0200
 Subject: [PATCH 288/336] kernel/cpu: fix cpu down problem if kthread's cpu is
@@ -27,7 +27,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index bd343a8..ce34ec3 100644
+index 67986bd..d5169ce 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -259,6 +259,7 @@ struct hotplug_pcp {

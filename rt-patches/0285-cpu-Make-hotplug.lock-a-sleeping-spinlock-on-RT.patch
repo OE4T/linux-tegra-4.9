@@ -1,4 +1,4 @@
-From a2ce491c393b5a26ee13c1345d73912ec3ccf993 Mon Sep 17 00:00:00 2001
+From d3c637132d0d3f08c7c75ddb7148bf7b05340442 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 2 Mar 2012 10:36:57 -0500
 Subject: [PATCH 285/336] cpu: Make hotplug.lock a "sleeping" spinlock on RT
@@ -24,7 +24,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 25 insertions(+), 7 deletions(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 67d2b17..a44e19a 100644
+index 7ce4939..871dc03 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -210,10 +210,16 @@ static int cpu_hotplug_disabled;

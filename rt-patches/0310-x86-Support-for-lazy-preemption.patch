@@ -1,4 +1,4 @@
-From de0b706975fbe739d7da6a7f85c696c2f1af44b7 Mon Sep 17 00:00:00 2001
+From 95407348a46f2c03edea0df7fc15b1aebe0146f0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 11:03:47 +0100
 Subject: [PATCH 310/336] x86: Support for lazy preemption

@@ -1,4 +1,4 @@
-From d51444341204eddc78093ae2fad0d0abf81abd8c Mon Sep 17 00:00:00 2001
+From 01cc0de9d7b7655951a0954f27ddfb947549bc91 Mon Sep 17 00:00:00 2001
 From: "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
 Date: Mon, 4 Nov 2013 13:21:10 -0800
 Subject: [PATCH 305/336] rcu: Eliminate softirq processing from rcutree

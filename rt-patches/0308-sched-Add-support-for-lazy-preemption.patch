@@ -1,4 +1,4 @@
-From 3327f0dd516f9cf766583bbfde6ddc4aa6c24eec Mon Sep 17 00:00:00 2001
+From 9d9962e08da0c988840ccc29ede078e529db5b3d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 26 Oct 2012 18:50:54 +0100
 Subject: [PATCH 308/336] sched: Add support for lazy preemption
@@ -478,7 +478,7 @@ index c81cb16..a8058d7 100644
  extern void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime);
  
 diff --git a/kernel/trace/trace.c b/kernel/trace/trace.c
-index 2e3350c..a693180 100644
+index c7e1c08..580b6aa 100644
 --- a/kernel/trace/trace.c
 +++ b/kernel/trace/trace.c
 @@ -1918,6 +1918,7 @@ tracing_generic_entry_update(struct trace_entry *entry, unsigned long flags,
@@ -499,7 +499,7 @@ index 2e3350c..a693180 100644
  		(test_preempt_need_resched() ? TRACE_FLAG_PREEMPT_RESCHED : 0);
  
  	entry->migrate_disable = (tsk) ? __migrate_disabled(tsk) & 0xFF : 0;
-@@ -2915,15 +2917,17 @@ get_total_entries(struct trace_buffer *buf,
+@@ -2921,15 +2923,17 @@ get_total_entries(struct trace_buffer *buf,
  
  static void print_lat_help_header(struct seq_file *m)
  {
@@ -526,7 +526,7 @@ index 2e3350c..a693180 100644
  }
  
  static void print_event_info(struct trace_buffer *buf, struct seq_file *m)
-@@ -2956,11 +2960,14 @@ static void print_func_help_header_irq(struct trace_buffer *buf, struct seq_file
+@@ -2962,11 +2966,14 @@ static void print_func_help_header_irq(struct trace_buffer *buf, struct seq_file
  	print_event_info(buf, m);
  	seq_puts(m, "#                              _-----=> irqs-off\n"
  		    "#                             / _----=> need-resched\n"

@@ -1,4 +1,4 @@
-From 13e53e4cdeff2f4e1f5b4aff5a0239334c088956 Mon Sep 17 00:00:00 2001
+From 8b8e3772b658fe5bca684555bb06e187fd1c62ed Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 6 Apr 2010 16:51:31 +0200
 Subject: [PATCH 221/336] md: raid5: Make raid5_percpu handling RT aware
@@ -19,7 +19,7 @@ Tested-by: Udo van den Heuvel <udovdh@xs4all.nl>
  2 files changed, 6 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/md/raid5.c b/drivers/md/raid5.c
-index 383f19c..8223540 100644
+index 549b4af..1b9306d 100644
 --- a/drivers/md/raid5.c
 +++ b/drivers/md/raid5.c
 @@ -1928,8 +1928,9 @@ static void raid_run_ops(struct stripe_head *sh, unsigned long ops_request)
@@ -43,7 +43,7 @@ index 383f19c..8223540 100644
  }
  
  static struct stripe_head *alloc_stripe(struct kmem_cache *sc, gfp_t gfp,
-@@ -6398,6 +6400,7 @@ static int raid456_cpu_up_prepare(unsigned int cpu, struct hlist_node *node)
+@@ -6400,6 +6402,7 @@ static int raid456_cpu_up_prepare(unsigned int cpu, struct hlist_node *node)
  		       __func__, cpu);
  		return -ENOMEM;
  	}
@@ -51,7 +51,7 @@ index 383f19c..8223540 100644
  	return 0;
  }
  
-@@ -6408,7 +6411,6 @@ static int raid5_alloc_percpu(struct r5conf *conf)
+@@ -6410,7 +6413,6 @@ static int raid5_alloc_percpu(struct r5conf *conf)
  	conf->percpu = alloc_percpu(struct raid5_percpu);
  	if (!conf->percpu)
  		return -ENOMEM;

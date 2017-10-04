@@ -1,4 +1,4 @@
-From e6e3828c87f3a8c71ac5b3ee67f72f24ddb716e8 Mon Sep 17 00:00:00 2001
+From 6e56bac68118dc440746be7a7a51d099347c3bb1 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 22 Mar 2016 11:16:09 +0100
 Subject: [PATCH 120/336] mm/zsmalloc: copy with get_cpu_var() and locking

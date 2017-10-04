@@ -1,4 +1,4 @@
-From 17ab57223a78645f3af0e95963f470683bcd6e04 Mon Sep 17 00:00:00 2001
+From b35b02f57d54588eadccd35ae8235f6744fb5e63 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 6 Dec 2016 17:50:30 -0500
 Subject: [PATCH 247/336] net: Have __napi_schedule_irqoff() disable interrupts
@@ -28,7 +28,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 14 insertions(+)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index c550f7d..249cab6 100644
+index cc281a9..67af029 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
 @@ -396,7 +396,19 @@ typedef enum rx_handler_result rx_handler_result_t;
@@ -52,7 +52,7 @@ index c550f7d..249cab6 100644
  static inline bool napi_disable_pending(struct napi_struct *n)
  {
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 445ad0e..ea1af71 100644
+index 1c3b802..842db19 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -4956,6 +4956,7 @@ void __napi_schedule(struct napi_struct *n)

@@ -1,4 +1,4 @@
-From dccf3471693924f0734be2b2a33727fa64e2c723 Mon Sep 17 00:00:00 2001
+From 421f7498e26e9614869f89d4676f9ec3e89dee05 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 5 Jan 2016 10:21:59 +0100
 Subject: [PATCH 070/336] trace/latency-hist: Consider new argument when

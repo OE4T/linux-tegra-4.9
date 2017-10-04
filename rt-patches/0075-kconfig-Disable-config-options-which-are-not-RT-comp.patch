@@ -1,4 +1,4 @@
-From 5028f8cb9f2a51d8181f0f334aef12f007eaa05d Mon Sep 17 00:00:00 2001
+From 26512963222ff8c91787302a0a02e2ab9db1461e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 24 Jul 2011 12:11:43 +0200
 Subject: [PATCH 075/336] kconfig: Disable config options which are not RT
@@ -25,10 +25,10 @@ index daac7dc..099fc0f 100644
  	select RING_BUFFER_ALLOW_SWAP
  	help
 diff --git a/mm/Kconfig b/mm/Kconfig
-index 89268ee..8ea05e4 100644
+index 40f1ee8..17384f2 100644
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
-@@ -435,7 +435,7 @@ config NOMMU_INITIAL_TRIM_EXCESS
+@@ -434,7 +434,7 @@ config NOMMU_INITIAL_TRIM_EXCESS
  
  config TRANSPARENT_HUGEPAGE
  	bool "Transparent Hugepage Support"

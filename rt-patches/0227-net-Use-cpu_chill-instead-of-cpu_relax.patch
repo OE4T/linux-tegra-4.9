@@ -1,4 +1,4 @@
-From e181c4b9b156087d12db1a8f6f1f1a81004ee2c6 Mon Sep 17 00:00:00 2001
+From ba85bba9cdb9795d62ba27bc65eeb87cb919668c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:10:04 +0100
 Subject: [PATCH 227/336] net: Use cpu_chill() instead of cpu_relax()
@@ -14,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
-index ae7bfd2..c223bde 100644
+index 35ba4b6..4ecbccf 100644
 --- a/net/packet/af_packet.c
 +++ b/net/packet/af_packet.c
 @@ -63,6 +63,7 @@

@@ -1,4 +1,4 @@
-From 1aa1adf09e0ffed92fddb3792bc3a41c9b0c38b6 Mon Sep 17 00:00:00 2001
+From 9521b39cd913d97b0806a24a90679566d16c5e91 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sat, 21 Jun 2014 10:09:48 +0200
 Subject: [PATCH 326/336] memcontrol: Prevent scheduling while atomic in cgroup

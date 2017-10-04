@@ -1,4 +1,4 @@
-From cf686455560c0aa7b8c0b02299d77881227c8a34 Mon Sep 17 00:00:00 2001
+From 6ba96d40be7f27781dbfe45fe2b9b9ad4de1e807 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 20 Sep 2013 14:31:54 +0200
 Subject: [PATCH 259/336] arm/unwind: use a raw_spin_lock

@@ -50,8 +50,6 @@ typedef enum {
 	TEGRA_NVG_CHANNEL_CC3_CTRL = 45,
 	TEGRA_NVG_CHANNEL_CCPLEX_CACHE_CONTROL = 49,
 	TEGRA_NVG_CHANNEL_UPDATE_CCPLEX_GSC = 50,
-	TEGRA_NVG_CHANNEL_CCPLEX_CACHE_INVAL = 51,
-	/* Above needs to be removed - Not supported */
 	TEGRA_NVG_CHANNEL_HSM_ERROR_CTRL = 53,
 	TEGRA_NVG_CHANNEL_SECURITY_CONFIG = 54,
 	TEGRA_NVG_CHANNEL_DEBUG_CONFIG = 55,
@@ -99,8 +97,8 @@ typedef enum {
 } tegra_nvg_cluster_sleep_state_t;
 
 typedef enum {
-	TEGRA_NVG_CCPLEX_CG0 = 0,
-	TEGRA_NVG_CCPLEX_CG7 = 1,
+	TEGRA_NVG_CG_CG0 = 0,
+	TEGRA_NVG_CG_CG7 = 1,
 } tegra_nvg_cluster_group_sleep_state_t;
 
 typedef enum {
@@ -225,38 +223,6 @@ typedef union {
 } nvg_cc3_control_channel_t;
 
 typedef enum {
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_GSC_ALL = 0,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_GSC_1 = 1,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_GSC_31 = 31,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_TZ_DRAM = 32,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_NVLINK = 33,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_SBS = 34,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_VPR = 35,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_LAST_INDEX,
-} tegra_nvg_channel_update_gsc_gsc_enum_t;
-
-typedef union {
-	uint64_t flat;
-	struct nvg_update_gsc_channel_t {
-		uint32_t gsc_enum : 16;
-		uint32_t reserved_31_16 : 16;
-		uint32_t reserved_63_32 : 32;
-	} bits;
-} nvg_update_gsc_channel_t;
-
-typedef union {
-	uint64_t flat;
-	struct nvg_cache_inval_channel_t {
-		uint32_t cache_clean : 1;
-		uint32_t cache_clean_inval : 1;
-		uint32_t cache_clean_inval_tr : 1;
-		uint32_t reserved_31_3 : 29;
-		uint32_t reserved_63_32 : 32;
-	} bits;
-} nvg_cache_inval_channel_t;
-
-/* GSC type define */
-typedef enum {
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_ALL = 0,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_NVDEC = 1,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_WPR1 = 2,
@@ -269,28 +235,41 @@ typedef enum {
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_SCE = 9,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_APR = 10,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_TZRAM = 11,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_SE = 12,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_DMCE = 13,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_BPMP_TO_DMCE = 14,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_IPC_SE_TSEC = 12,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_BPMP_TO_RCE = 13,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_BPMP_TO_MCE = 14,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_SE_SC7 = 15,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_BPMP_TO_SPE = 16,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_RCE = 17,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_CPU_TZ_TO_BPMP = 18,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_VM_ENCR1 = 19,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_CPU_NS_TO_BPMP = 20,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_OEM_SC7 = 21,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_IPC_SE_SPE_SCE_BPMP = 22,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_SC7_RESUME_FW = 23,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_VPR_RESIZE = 24,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_RCE = 25,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_CAMERA_TASKLIST = 24,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_XUSB = 25,
 	TEGRA_NVG_CHANNEL_UPDATE_GSC_CV = 26,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_BO_MTS_PACKAGE = 28,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_BO_MCE_PREBOOT = 29,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_TZ_DRAM_IDX = 34,
-	TEGRA_NVG_CHANNEL_UPDATE_GSC_VPR_IDX = 35,
-} tegra_nvg_gsc_index_t;
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_VM_ENCR2 = 27,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_HYPERVISOR_SW = 28,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_SMMU_PAGETABLES = 29,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_30 = 30,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_31 = 31,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_TZ_DRAM = 32,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_NVLINK = 33,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_SBS = 34,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_VPR = 35,
+	TEGRA_NVG_CHANNEL_UPDATE_GSC_LAST_INDEX,
+} tegra_nvg_channel_update_gsc_gsc_enum_t;
 
-typedef enum {
-	TEGRA_NVG_CROSSOVER_C6 = 0,
-	TEGRA_NVG_CROSSOVER_CC6 = 1,
-	TEGRA_NVG_CROSSOVER_CG7 = 2,
-} tegra_nvg_crossover_index_t;
+typedef union {
+	uint64_t flat;
+	struct nvg_update_ccplex_gsc_channel_t {
+		uint32_t gsc_enum : 16;
+		uint32_t reserved_31_16 : 16;
+		uint32_t reserved_63_32 : 32;
+	} bits;
+} nvg_update_ccplex_gsc_channel_t;
 
 typedef union {
 	uint64_t flat;
@@ -302,5 +281,13 @@ typedef union {
 	} bits;
 } nvg_security_config_t;
 
-#endif
+typedef union {
+	uint64_t flat;
+	struct nvg_shutdown_channel_t {
+		uint32_t reboot : 1;
+		uint32_t reserved_31_1 : 31;
+		uint32_t reserved_63_32 : 32;
+	} bits;
+} nvg_shutdown_t;
 
+#endif

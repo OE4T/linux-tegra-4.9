@@ -91,7 +91,7 @@ static struct tegra_shared_clk shared_clks[] = {
 	SHARED_LIMIT("cap.vcore.sclk", "sbus", SHARED_CEILING, 0, NULL, tegra_clk_cap_vcore_sclk),
 	SHARED_CLK("qspi.sclk", "apb.sclk", 0, 0, NULL, tegra_clk_qspi_sclk),
 	SHARED_CLK("boot.apb.sclk", "apb.sclk", 0, 0, NULL, tegra_clk_boot_apb_sclk),
-	SHARED_CLK("gm20b.gbus", "gbus", SHARED_CEILING, 0, NULL, tegra_clk_gm20b_gbus),
+	SHARED_CLK("gm20b.gbus", "gbus", 0, 0, NULL, tegra_clk_gm20b_gbus),
 	SHARED_LIMIT("cap.gbus", "gbus", SHARED_CEILING, 0, NULL, tegra_clk_cap_gbus),
 	SHARED_LIMIT("edp.gbus", "gbus", SHARED_CEILING, 0, NULL, tegra_clk_edp_gbus),
 	SHARED_LIMIT("cap.vgpu.gbus", "gbus", SHARED_CEILING, 0, NULL, tegra_clk_cap_vgpu_gbus),

@@ -38,6 +38,8 @@ void gk20a_enable_priv_ring(struct gk20a *g)
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return;
 
+	nvgpu_log(g, gpu_dbg_info, "enabling priv ring");
+
 	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
 		g->ops.clock_gating.slcg_priring_load_gating_prod(g,
 				g->slcg_enabled);
@@ -47,9 +49,7 @@ void gk20a_enable_priv_ring(struct gk20a *g)
 
 	gk20a_writel(g, pri_ringstation_sys_decode_config_r(),
 			0x2);
-
 	gk20a_readl(g, pri_ringstation_sys_decode_config_r());
-
 }
 
 void gk20a_priv_ring_isr(struct gk20a *g)
@@ -86,18 +86,20 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_code_r() + gpc * gpc_stride));
 		}
 	}
-
+	/* clear interrupt */
 	cmd = gk20a_readl(g, pri_ringmaster_command_r());
 	cmd = set_field(cmd, pri_ringmaster_command_cmd_m(),
 		pri_ringmaster_command_cmd_ack_interrupt_f());
 	gk20a_writel(g, pri_ringmaster_command_r(), cmd);
-
-	do {
+	/* poll for clear interrupt done */
+	cmd = pri_ringmaster_command_cmd_v(
+		gk20a_readl(g, pri_ringmaster_command_r()));
+	while (cmd != pri_ringmaster_command_cmd_no_cmd_v() && retry) {
+		nvgpu_udelay(20);
+		retry--;
 		cmd = pri_ringmaster_command_cmd_v(
 			gk20a_readl(g, pri_ringmaster_command_r()));
-		nvgpu_usleep_range(20, 40);
-	} while (cmd != pri_ringmaster_command_cmd_no_cmd_v() && --retry);
-
-	if (retry <= 0)
-		nvgpu_warn(g, "priv ringmaster cmd ack too many retries");
+	}
+	if (retry == 0 && cmd != pri_ringmaster_command_cmd_no_cmd_v())
+		nvgpu_warn(g, "priv ringmaster intr ack too many retries");
 }

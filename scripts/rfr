@@ -13,7 +13,7 @@ import smtplib
 
 from email.mime.text import MIMEText
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 
 # Gerrit commit URL formats. These are regular expressions to match the
 # incoming URLs against.
@@ -65,10 +65,12 @@ Otherwise it's treated as a git commit ID.
     parser.add_argument('-t', '--to', action='append', default=[],
                         help='Specify an additional To: email address. '
                         'Can be repeated (-t a -t b).')
+    parser.add_argument('-F', '--file', action='store', default=None,
+                        help='File with commits, one per line')
 
     # Positionals: the gerrit URLs.
     parser.add_argument('commits', metavar='Commit-IDs',
-                        nargs='+',
+                        nargs='*',
                         help=help_msg)
 
     arg_parser = parser.parse_args()
@@ -88,6 +90,32 @@ def get_gerrit_url_id(cmt):
             return m.group(1)
 
     return None
+
+def read_commit_file(filp):
+    """
+    Read a file full of commits and return a list of those commits.
+    """
+
+    commits = [ ]
+
+    for line in filp:
+
+        line = line.strip()
+
+        # Skip empty lines and lines that start with a '#'.
+        if line.find('#') == 0 or line == '':
+            continue
+
+        # Otherwise append the line to the list of commits. This will append
+        # all the text, so in cases like:
+        #
+        #   http://git-master/r/1540705 - my commit
+        #
+        # Anything after the first space in the line is ignored. This lets you
+        # add some descriptive text after the commit.
+        commits.append(line.split()[0])
+
+    return commits
 
 def gerrit_query(change):
     """
@@ -303,6 +331,19 @@ def main():
         print('Version: %s' % VERSION)
         exit(0)
 
+    if arg_parser.file:
+        filp = open(arg_parser.file, 'r')
+
+        if arg_parser.commits:
+            arg_parser.commits.extend(read_commit_file(filp))
+        else:
+            arg_parser.commits = read_commit_file(filp)
+
+    # Oops: no commits?
+    if not arg_parser.commits or len(arg_parser.commits) == 0:
+        print 'No commits!'
+        exit(-1)
+
     # Builds a dictionary of Gerrit Change-Ids. From the Change-Ids we can then
     # get the commit message and URL.
     #
@@ -310,6 +351,7 @@ def main():
     # of the commits so that the user can choose the order of the patches based
     # on the order in which they pass the commits.
     for cmt in arg_parser.commits:
+
         if cmt[0] == 'I':
             info = commit_info_from_gerrit_change_id(cmt)
         elif get_gerrit_url_id(cmt):

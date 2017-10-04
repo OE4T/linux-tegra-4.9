@@ -142,7 +142,7 @@ static irqreturn_t adsp_wfi_handler(int irq, void *arg);
  * set by adsp audio driver through exported api nvadsp_set_adma_dump_reg
  * used to dump adma registers incase of failures for debug
  */
-void (*nvadsp_tegra_adma_dump_ch_reg)(void) = NULL;
+static void (*nvadsp_tegra_adma_dump_ch_reg)(void);
 
 #ifdef CONFIG_DEBUG_FS
 static int adsp_logger_open(struct inode *inode, struct file *file)

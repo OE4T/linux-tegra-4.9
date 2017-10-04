@@ -196,6 +196,14 @@ static inline u32 mc_enable_hub_enabled_f(void)
 {
 	return 0x20000000U;
 }
+static inline u32 mc_enable_nvdec_disabled_v(void)
+{
+	return 0x00000000U;
+}
+static inline u32 mc_enable_nvdec_enabled_f(void)
+{
+	return 0x8000U;
+}
 static inline u32 mc_intr_ltc_r(void)
 {
 	return 0x000001c0U;

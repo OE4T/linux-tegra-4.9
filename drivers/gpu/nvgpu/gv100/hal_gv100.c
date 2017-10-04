@@ -421,6 +421,7 @@ static const struct gpu_ops gv100_ops = {
 		.set_debug_mode = gm20b_fb_set_debug_mode,
 		.tlb_invalidate = gk20a_fb_tlb_invalidate,
 		.hub_isr = gv11b_fb_hub_isr,
+		.mem_unlock = gv100_fb_memory_unlock,
 	},
 	.fifo = {
 		.init_fifo_setup_hw = gv11b_init_fifo_setup_hw,

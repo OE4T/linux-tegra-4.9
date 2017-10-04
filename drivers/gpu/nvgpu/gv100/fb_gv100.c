@@ -28,14 +28,25 @@
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/gmmu.h>
+#include <nvgpu/nvgpu_common.h>
+#include <nvgpu/kmem.h>
+#include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/acr/nvgpu_acr.h>
+#include <nvgpu/firmware.h>
+#include <nvgpu/pmu.h>
+#include <nvgpu/falcon.h>
 
 #include "gk20a/gk20a.h"
 #include "gv100/fb_gv100.h"
+#include "gm20b/acr_gm20b.h"
 
 #include <nvgpu/hw/gv100/hw_fb_gv100.h>
+#include <nvgpu/hw/gv100/hw_falcon_gv100.h>
+#include <nvgpu/hw/gv100/hw_mc_gv100.h>
 
 #define HW_SCRUB_TIMEOUT_DEFAULT	100 /* usec */
 #define HW_SCRUB_TIMEOUT_MAX		2000000 /* usec */
+#define MEM_UNLOCK_TIMEOUT			3500 /* msec */
 
 void gv100_fb_reset(struct gk20a *g)
 {
@@ -57,4 +68,117 @@ void gv100_fb_reset(struct gk20a *g)
 	val = gk20a_readl(g, fb_mmu_priv_level_mask_r());
 	val &= ~fb_mmu_priv_level_mask_write_violation_m();
 	gk20a_writel(g, fb_mmu_priv_level_mask_r(), val);
+}
+
+int gv100_fb_memory_unlock(struct gk20a *g)
+{
+	struct nvgpu_firmware *mem_unlock_fw = NULL;
+	struct bin_hdr *hsbin_hdr = NULL;
+	struct acr_fw_header *fw_hdr = NULL;
+	u32 *mem_unlock_ucode = NULL;
+	u32 *mem_unlock_ucode_header = NULL;
+	u32 sec_imem_dest = 0;
+	u32 val = 0;
+	int err = 0;
+
+	nvgpu_log_fn(g, " ");
+
+	/* Check vpr enable status */
+	val = gk20a_readl(g, fb_mmu_vpr_info_r());
+	val &= ~fb_mmu_vpr_info_index_m();
+	val |= fb_mmu_vpr_info_index_cya_lo_v();
+	gk20a_writel(g, fb_mmu_vpr_info_r(), val);
+	val = gk20a_readl(g, fb_mmu_vpr_info_r());
+	if (!(val & fb_mmu_vpr_info_cya_lo_in_use_m())) {
+		nvgpu_log_info(g, "mem unlock not required on this SKU, skipping");
+		goto exit;
+	}
+
+	/* get mem unlock ucode binary */
+	mem_unlock_fw = nvgpu_request_firmware(g, "mem_unlock.bin", 0);
+	if (!mem_unlock_fw) {
+		nvgpu_err(g, "mem unlock ucode get fail");
+		err = -ENOENT;
+		goto exit;
+	}
+
+	/* Enable nvdec */
+	g->ops.mc.enable(g, mc_enable_nvdec_enabled_f());
+
+	/* nvdec falcon reset */
+	nvgpu_flcn_reset(&g->nvdec_flcn);
+
+	hsbin_hdr = (struct bin_hdr *)mem_unlock_fw->data;
+	fw_hdr = (struct acr_fw_header *)(mem_unlock_fw->data +
+			hsbin_hdr->header_offset);
+
+	mem_unlock_ucode_header = (u32 *)(mem_unlock_fw->data +
+		fw_hdr->hdr_offset);
+	mem_unlock_ucode = (u32 *)(mem_unlock_fw->data +
+		hsbin_hdr->data_offset);
+
+	/* Patch Ucode singnatures */
+	if (acr_ucode_patch_sig(g, mem_unlock_ucode,
+		(u32 *)(mem_unlock_fw->data + fw_hdr->sig_prod_offset),
+		(u32 *)(mem_unlock_fw->data + fw_hdr->sig_dbg_offset),
+		(u32 *)(mem_unlock_fw->data + fw_hdr->patch_loc),
+		(u32 *)(mem_unlock_fw->data + fw_hdr->patch_sig)) < 0) {
+		nvgpu_err(g, "mem unlock patch signatures fail");
+		err = -EPERM;
+		goto exit;
+	}
+
+	/* Clear interrupts */
+	nvgpu_flcn_set_irq(&g->nvdec_flcn, false, 0x0, 0x0);
+
+	/* Copy Non Secure IMEM code */
+	nvgpu_flcn_copy_to_imem(&g->nvdec_flcn, 0,
+		(u8 *)&mem_unlock_ucode[
+			mem_unlock_ucode_header[OS_CODE_OFFSET] >> 2],
+		mem_unlock_ucode_header[OS_CODE_SIZE], 0, false,
+		GET_IMEM_TAG(mem_unlock_ucode_header[OS_CODE_OFFSET]));
+
+	/* Put secure code after non-secure block */
+	sec_imem_dest = GET_NEXT_BLOCK(mem_unlock_ucode_header[OS_CODE_SIZE]);
+
+	nvgpu_flcn_copy_to_imem(&g->nvdec_flcn, sec_imem_dest,
+		(u8 *)&mem_unlock_ucode[
+			mem_unlock_ucode_header[APP_0_CODE_OFFSET] >> 2],
+		mem_unlock_ucode_header[APP_0_CODE_SIZE], 0, true,
+		GET_IMEM_TAG(mem_unlock_ucode_header[APP_0_CODE_OFFSET]));
+
+	/* load DMEM: ensure that signatures are patched */
+	nvgpu_flcn_copy_to_dmem(&g->nvdec_flcn, 0, (u8 *)&mem_unlock_ucode[
+		mem_unlock_ucode_header[OS_DATA_OFFSET] >> 2],
+		mem_unlock_ucode_header[OS_DATA_SIZE], 0);
+
+	nvgpu_log_info(g, "nvdec sctl reg %x\n",
+		gk20a_readl(g, g->nvdec_flcn.flcn_base +
+		falcon_falcon_sctl_r()));
+
+	/* set BOOTVEC to start of non-secure code */
+	nvgpu_flcn_bootstrap(&g->nvdec_flcn, 0);
+
+	/* wait for complete & halt */
+	nvgpu_flcn_wait_for_halt(&g->nvdec_flcn, MEM_UNLOCK_TIMEOUT);
+
+	/* check mem unlock status */
+	val = nvgpu_flcn_mailbox_read(&g->nvdec_flcn, 0);
+	if (val) {
+		nvgpu_err(g, "memory unlock failed, err %x", val);
+		err = -1;
+		goto exit;
+	}
+
+	nvgpu_log_info(g, "nvdec sctl reg %x\n",
+		gk20a_readl(g, g->nvdec_flcn.flcn_base +
+		falcon_falcon_sctl_r()));
+
+exit:
+	if (mem_unlock_fw)
+		nvgpu_release_firmware(g, mem_unlock_fw);
+
+	nvgpu_log_fn(g, "done, status - %d", err);
+
+	return err;
 }

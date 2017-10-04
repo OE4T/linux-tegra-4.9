@@ -6107,7 +6107,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		}
 		dc->emc_la_handle = emc_la_handle;
 		ret = tegra_bwmgr_set_emc(dc->emc_la_handle, 0,
-				TEGRA_BWMGR_SET_EMC_SHARED_BW);
+				TEGRA_BWMGR_SET_EMC_FLOOR);
 		if (ret) {
 			dev_err(&ndev->dev, "can't set emc clock: %d\n", ret);
 			return ret;

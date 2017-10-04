@@ -567,7 +567,7 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 
 		if (!err) {
 			tegra_bwmgr_set_emc(dc->emc_la_handle, emc_freq_hz,
-						TEGRA_BWMGR_SET_EMC_SHARED_BW);
+						TEGRA_BWMGR_SET_EMC_FLOOR);
 			break;
 		}
 

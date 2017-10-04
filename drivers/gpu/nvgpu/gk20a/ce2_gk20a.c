@@ -28,6 +28,7 @@
 #include "gk20a.h"
 
 #include <nvgpu/log.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/hw/gk20a/hw_ce2_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
@@ -37,6 +38,14 @@
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 #include <nvgpu/barrier.h>
+
+/*
+ * Copy engine defines line size in pixels
+ */
+#define MAX_CE_SHIFT	31	/* 4Gpixels -1 */
+#define MAX_CE_MASK	((u32) (~(~0 << MAX_CE_SHIFT)))
+#define MAX_CE_ALIGN(a)	(a & MAX_CE_MASK)
+
 
 static u32 ce2_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {
@@ -192,6 +201,10 @@ static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 		nvgpu_dma_unmap_free(ce_ctx->vm, &ce_ctx->cmd_buf_mem);
 	}
 
+	/* unbind tsg */
+	if (ce_ctx->tsg && ce_ctx->ch)
+		gk20a_tsg_unbind_channel(ce_ctx->ch);
+
 	/* free the channel */
 	if (ce_ctx->ch)
 		gk20a_channel_close(ce_ctx->ch);
@@ -206,15 +219,32 @@ static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 	nvgpu_kfree(ce_ctx->g, ce_ctx);
 }
 
-static inline unsigned int gk20a_ce_get_method_size(int request_operation)
+static inline unsigned int gk20a_ce_get_method_size(int request_operation,
+			u64 size)
 {
 	/* failure size */
 	unsigned int methodsize = UINT_MAX;
+	unsigned int iterations = 0;
+	u32 shift;
+	u64 chunk = size;
+	u32 height, width;
+
+	while (chunk) {
+		iterations++;
+
+		shift = MAX_CE_ALIGN(chunk) ? __ffs(MAX_CE_ALIGN(chunk)) :
+						MAX_CE_SHIFT;
+		width = chunk >> shift;
+		height = 1 << shift;
+		width = MAX_CE_ALIGN(width);
+
+		chunk -= (u64) height * width;
+	}
 
 	if (request_operation & NVGPU_CE_PHYS_MODE_TRANSFER)
-		methodsize = 10 * 2 * sizeof(u32);
+		methodsize = (2 + (16 * iterations)) * sizeof(u32);
 	else if (request_operation & NVGPU_CE_MEMSET)
-		methodsize = 9 * 2 * sizeof(u32);
+		methodsize = (2 + (15 * iterations)) * sizeof(u32);
 
 	return methodsize;
 }
@@ -243,10 +273,13 @@ static int gk20a_ce_prepare_submit(u64 src_buf,
 {
 	u32 launch = 0;
 	u32 methodSize = 0;
+	u64 offset = 0;
+	u64 chunk_size = 0;
+	u64 chunk = size;
 
 	/* failure case handling */
-	if ((gk20a_ce_get_method_size(request_operation) > max_cmd_buf_size) ||
-		(!size) ||
+	if ((gk20a_ce_get_method_size(request_operation, size) >
+		max_cmd_buf_size) || (!size) ||
 		(request_operation > NVGPU_CE_MEMSET))
 		return 0;
 
@@ -254,82 +287,115 @@ static int gk20a_ce_prepare_submit(u64 src_buf,
 	cmd_buf_cpu_va[methodSize++] = 0x20018000;
 	cmd_buf_cpu_va[methodSize++] = dma_copy_class;
 
-	if (request_operation & NVGPU_CE_PHYS_MODE_TRANSFER) {
-		/* setup the source */
-		cmd_buf_cpu_va[methodSize++] = 0x20018101;
-		cmd_buf_cpu_va[methodSize++] = (u64_lo32(src_buf) &
-					NVGPU_CE_LOWER_ADDRESS_OFFSET_MASK);
+	/*
+	 * The purpose clear the memory in 2D rectangles. We get the ffs to
+	 * determine the number of lines to copy. The only constraint is that
+	 * maximum number of pixels per line is 4Gpix - 1, which is awkward for
+	 * calculation, so we settle to 2Gpix per line to make calculatione
+	 * more agreable
+	 */
 
-		cmd_buf_cpu_va[methodSize++] = 0x20018100;
-		cmd_buf_cpu_va[methodSize++] = (u64_hi32(src_buf) &
-					NVGPU_CE_UPPER_ADDRESS_OFFSET_MASK);
+	/* The copy engine in 2D mode can have (2^32 - 1) x (2^32 - 1) pixels in
+	 * a single submit, we are going to try to clear a range of up to 2Gpix
+	 * multiple lines. Because we want to copy byte aligned we will be
+	 * setting 1 byte pixels */
 
-		cmd_buf_cpu_va[methodSize++] = 0x20018098;
-		if (launch_flags & NVGPU_CE_SRC_LOCATION_LOCAL_FB) {
-			cmd_buf_cpu_va[methodSize++] = 0x00000000;
-		} else if (launch_flags & NVGPU_CE_SRC_LOCATION_NONCOHERENT_SYSMEM) {
-			cmd_buf_cpu_va[methodSize++] = 0x00000002;
+	/*
+	 * per iteration
+	 * <------------------------- 40 bits ------------------------------>
+	 *                                             1 <------ ffs ------->
+	 *        <-----------up to 30 bits----------->
+	 */
+	while (chunk) {
+		u32 width, height, shift;
+
+		/*
+		 * We will be aligning to bytes, making the maximum number of
+		 * pix per line 2Gb
+		 */
+
+		shift = MAX_CE_ALIGN(chunk) ? __ffs(MAX_CE_ALIGN(chunk)) :
+						MAX_CE_SHIFT;
+		height = chunk >> shift;
+		width = 1 << shift;
+		height = MAX_CE_ALIGN(height);
+
+		chunk_size = (u64) height * width;
+
+		/* reset launch flag */
+		launch = 0;
+
+		if (request_operation & NVGPU_CE_PHYS_MODE_TRANSFER) {
+			/* setup the source */
+			cmd_buf_cpu_va[methodSize++] = 0x20028100;
+			cmd_buf_cpu_va[methodSize++] = (u64_hi32(src_buf +
+				offset) & NVGPU_CE_UPPER_ADDRESS_OFFSET_MASK);
+			cmd_buf_cpu_va[methodSize++] = (u64_lo32(src_buf +
+				offset) & NVGPU_CE_LOWER_ADDRESS_OFFSET_MASK);
+
+			cmd_buf_cpu_va[methodSize++] = 0x20018098;
+			if (launch_flags & NVGPU_CE_SRC_LOCATION_LOCAL_FB)
+				cmd_buf_cpu_va[methodSize++] = 0x00000000;
+			else if (launch_flags &
+				NVGPU_CE_SRC_LOCATION_NONCOHERENT_SYSMEM)
+				cmd_buf_cpu_va[methodSize++] = 0x00000002;
+			else
+				cmd_buf_cpu_va[methodSize++] = 0x00000001;
+
+			launch |= 0x00001000;
+		} else if (request_operation & NVGPU_CE_MEMSET) {
+			/* Remap from component A on 1 byte wide pixels */
+			cmd_buf_cpu_va[methodSize++] = 0x200181c2;
+			cmd_buf_cpu_va[methodSize++] = 0x00000004;
+
+			cmd_buf_cpu_va[methodSize++] = 0x200181c0;
+			cmd_buf_cpu_va[methodSize++] = payload;
+
+			launch |= 0x00000400;
 		} else {
-			cmd_buf_cpu_va[methodSize++] = 0x00000001;
+			/* Illegal size */
+			return 0;
 		}
 
-		launch |= 0x00001000;
-	} else if (request_operation & NVGPU_CE_MEMSET) {
-		cmd_buf_cpu_va[methodSize++] = 0x200181c2;
-		cmd_buf_cpu_va[methodSize++] = 0x00030004;
+		/* setup the destination/output */
+		cmd_buf_cpu_va[methodSize++] = 0x20068102;
+		cmd_buf_cpu_va[methodSize++] = (u64_hi32(dst_buf +
+			offset) & NVGPU_CE_UPPER_ADDRESS_OFFSET_MASK);
+		cmd_buf_cpu_va[methodSize++] = (u64_lo32(dst_buf +
+			offset) & NVGPU_CE_LOWER_ADDRESS_OFFSET_MASK);
+		/* Pitch in/out */
+		cmd_buf_cpu_va[methodSize++] = width;
+		cmd_buf_cpu_va[methodSize++] = width;
+		/* width and line count */
+		cmd_buf_cpu_va[methodSize++] = width;
+		cmd_buf_cpu_va[methodSize++] = height;
 
-		cmd_buf_cpu_va[methodSize++] = 0x200181c0;
-		cmd_buf_cpu_va[methodSize++] = payload;
+		cmd_buf_cpu_va[methodSize++] = 0x20018099;
+		if (launch_flags & NVGPU_CE_DST_LOCATION_LOCAL_FB)
+			cmd_buf_cpu_va[methodSize++] = 0x00000000;
+		else if (launch_flags &
+				NVGPU_CE_DST_LOCATION_NONCOHERENT_SYSMEM)
+			cmd_buf_cpu_va[methodSize++] = 0x00000002;
+		else
+			cmd_buf_cpu_va[methodSize++] = 0x00000001;
 
-		launch |= 0x00000400;
+		launch |= 0x00002005;
 
-		/* converted into number of words */
-		size /= sizeof(u32);
+		if (launch_flags & NVGPU_CE_SRC_MEMORY_LAYOUT_BLOCKLINEAR)
+			launch |= 0x00000000;
+		else
+			launch |= 0x00000080;
+
+		if (launch_flags & NVGPU_CE_DST_MEMORY_LAYOUT_BLOCKLINEAR)
+			launch |= 0x00000000;
+		else
+			launch |= 0x00000100;
+
+		cmd_buf_cpu_va[methodSize++] = 0x200180c0;
+		cmd_buf_cpu_va[methodSize++] = launch;
+		offset += chunk_size;
+		chunk -= chunk_size;
 	}
-
-	/* setup the destination/output */
-	cmd_buf_cpu_va[methodSize++] = 0x20018103;
-	cmd_buf_cpu_va[methodSize++] = (u64_lo32(dst_buf) & NVGPU_CE_LOWER_ADDRESS_OFFSET_MASK);
-
-	cmd_buf_cpu_va[methodSize++] = 0x20018102;
-	cmd_buf_cpu_va[methodSize++] = (u64_hi32(dst_buf) & NVGPU_CE_UPPER_ADDRESS_OFFSET_MASK);
-
-	cmd_buf_cpu_va[methodSize++] = 0x20018099;
-	if (launch_flags & NVGPU_CE_DST_LOCATION_LOCAL_FB) {
-		cmd_buf_cpu_va[methodSize++] = 0x00000000;
-	} else if (launch_flags & NVGPU_CE_DST_LOCATION_NONCOHERENT_SYSMEM) {
-		cmd_buf_cpu_va[methodSize++] = 0x00000002;
-	} else {
-		cmd_buf_cpu_va[methodSize++] = 0x00000001;
-	}
-
-	launch |= 0x00002000;
-
-	/* setup the format */
-	cmd_buf_cpu_va[methodSize++] = 0x20018107;
-	cmd_buf_cpu_va[methodSize++] = 1;
-	cmd_buf_cpu_va[methodSize++] = 0x20018106;
-	cmd_buf_cpu_va[methodSize++] =  u64_lo32(size);
-
-	launch |= 0x00000004;
-
-	if (launch_flags & NVGPU_CE_SRC_MEMORY_LAYOUT_BLOCKLINEAR)
-		launch |= 0x00000000;
-	else
-		launch |= 0x00000080;
-
-	if (launch_flags & NVGPU_CE_DST_MEMORY_LAYOUT_BLOCKLINEAR)
-		launch |= 0x00000000;
-	else
-		launch |= 0x00000100;
-
-	if (launch_flags & NVGPU_CE_DATA_TRANSFER_TYPE_NON_PIPELINED)
-		launch |= 0x00000002;
-	else
-		launch |= 0x00000001;
-
-	cmd_buf_cpu_va[methodSize++] = 0x200180c0;
-	cmd_buf_cpu_va[methodSize++] = launch;
 
 	return methodSize;
 }
@@ -457,6 +523,16 @@ u32 gk20a_ce_create_context_with_cb(struct gk20a *g,
 
 	ce_ctx->vm = g->mm.ce.vm;
 
+	if (nvgpu_is_enabled(g, NVGPU_MM_CE_TSG_REQUIRED)) {
+		/* allocate a tsg if needed */
+		ce_ctx->tsg = gk20a_tsg_open(g);
+
+		if (!ce_ctx->tsg) {
+			nvgpu_err(g, "ce: gk20a tsg not available");
+			goto end;
+		}
+	}
+
 	/* always kernel client needs privileged channel */
 	ce_ctx->ch = gk20a_open_new_channel_with_cb(g, gk20a_ce_finished_ctx_cb,
 					ce_ctx,
@@ -473,6 +549,14 @@ u32 gk20a_ce_create_context_with_cb(struct gk20a *g,
 	if (err) {
 		nvgpu_err(g, "ce: could not bind vm");
 		goto end;
+	}
+
+	if (nvgpu_is_enabled(g, NVGPU_MM_CE_TSG_REQUIRED)) {
+		err = gk20a_tsg_bind_channel(ce_ctx->tsg, ce_ctx->ch);
+		if (err) {
+			nvgpu_err(g, "ce: unable to bind to tsg");
+			goto end;
+		}
 	}
 
 	/* allocate gpfifo (1024 should be more than enough) */

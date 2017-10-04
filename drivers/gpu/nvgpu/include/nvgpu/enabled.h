@@ -42,6 +42,8 @@ struct gk20a;
 #define NVGPU_MM_HONORS_APERTURE		17
 /* unified or split memory with separate vidmem? */
 #define NVGPU_MM_UNIFIED_MEMORY			18
+/* kernel mode ce vidmem clearing channels need to be in a tsg */
+#define NVGPU_MM_CE_TSG_REQUIRED		19
 
 /*
  * Security flags

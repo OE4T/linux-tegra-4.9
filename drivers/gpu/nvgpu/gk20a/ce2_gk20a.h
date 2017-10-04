@@ -36,8 +36,8 @@ int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 #define NVGPU_CE_LOWER_ADDRESS_OFFSET_MASK 0xffffffff
 #define NVGPU_CE_UPPER_ADDRESS_OFFSET_MASK 0xff
 
-#define NVGPU_CE_COMMAND_BUF_SIZE     4096
-#define NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF 128
+#define NVGPU_CE_COMMAND_BUF_SIZE     8192
+#define NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF 256
 #define NVGPU_CE_MAX_COMMAND_BUFF_SIZE_FOR_TRACING 8
 
 typedef void (*ce_event_callback)(u32 ce_ctx_id, u32 ce_event_flag);
@@ -107,6 +107,9 @@ struct gk20a_gpu_ctx {
 	struct nvgpu_mutex gpu_ctx_mutex;
 	int gpu_ctx_state;
 	ce_event_callback user_event_callback;
+
+	/* tsg related data */
+	struct tsg_gk20a *tsg;
 
 	/* channel related data */
 	struct channel_gk20a *ch;

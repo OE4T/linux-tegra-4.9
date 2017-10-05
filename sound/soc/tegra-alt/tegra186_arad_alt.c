@@ -578,14 +578,6 @@ EXPORT_SYMBOL(tegra186_arad_send_ratio);
 static struct snd_soc_codec_driver tegra186_arad_codec = {
 	.probe = tegra186_arad_codec_probe,
 	.idle_bias_off = 1,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
-	.dapm_widgets = tegra186_arad_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra186_arad_widgets),
-	.dapm_routes = tegra186_arad_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra186_arad_routes),
-	.controls = tegra186_arad_controls,
-	.num_controls = ARRAY_SIZE(tegra186_arad_controls),
-#else
 	.component_driver = {
 		.dapm_widgets = tegra186_arad_widgets,
 		.num_dapm_widgets = ARRAY_SIZE(tegra186_arad_widgets),
@@ -594,7 +586,6 @@ static struct snd_soc_codec_driver tegra186_arad_codec = {
 		.controls = tegra186_arad_controls,
 		.num_controls = ARRAY_SIZE(tegra186_arad_controls),
 	},
-#endif
 };
 
 static bool tegra186_arad_wr_reg(struct device *dev, unsigned int reg)

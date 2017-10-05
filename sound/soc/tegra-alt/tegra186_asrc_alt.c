@@ -913,14 +913,6 @@ static const struct snd_kcontrol_new tegra186_asrc_controls[] = {
 static struct snd_soc_codec_driver tegra186_asrc_codec = {
 	.probe = tegra186_asrc_codec_probe,
 	.idle_bias_off = 1,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
-	.dapm_widgets = tegra186_asrc_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra186_asrc_widgets),
-	.dapm_routes = tegra186_asrc_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra186_asrc_routes),
-	.controls = tegra186_asrc_controls,
-	.num_controls = ARRAY_SIZE(tegra186_asrc_controls),
-#else
 	.component_driver = {
 		.dapm_widgets = tegra186_asrc_widgets,
 		.num_dapm_widgets = ARRAY_SIZE(tegra186_asrc_widgets),
@@ -929,7 +921,6 @@ static struct snd_soc_codec_driver tegra186_asrc_codec = {
 		.controls = tegra186_asrc_controls,
 		.num_controls = ARRAY_SIZE(tegra186_asrc_controls),
 	},
-#endif
 };
 
 static bool tegra186_asrc_wr_reg(struct device *dev, unsigned int reg)

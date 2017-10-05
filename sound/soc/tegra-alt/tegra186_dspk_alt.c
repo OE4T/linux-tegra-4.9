@@ -347,14 +347,6 @@ static const struct snd_kcontrol_new tegrat186_dspk_controls[] = {
 static struct snd_soc_codec_driver tegra186_dspk_codec = {
 	.probe = tegra186_dspk_codec_probe,
 	.idle_bias_off = 1,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
-	.dapm_widgets = tegra186_dspk_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra186_dspk_widgets),
-	.dapm_routes = tegra186_dspk_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra186_dspk_routes),
-	.controls = tegrat186_dspk_controls,
-	.num_controls = ARRAY_SIZE(tegrat186_dspk_controls),
-#else
 	.component_driver = {
 		.dapm_widgets = tegra186_dspk_widgets,
 		.num_dapm_widgets = ARRAY_SIZE(tegra186_dspk_widgets),
@@ -363,7 +355,6 @@ static struct snd_soc_codec_driver tegra186_dspk_codec = {
 		.controls = tegrat186_dspk_controls,
 		.num_controls = ARRAY_SIZE(tegrat186_dspk_controls),
 	},
-#endif
 };
 
 /* Regmap callback functions */

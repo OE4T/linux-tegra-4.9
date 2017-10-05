@@ -1498,7 +1498,7 @@
 		status = "disabled";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 
 	xusb_padctl: xusb_padctl@3520000 {
 		compatible = "nvidia,tegra19x-xusb-padctl";

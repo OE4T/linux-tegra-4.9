@@ -295,6 +295,8 @@ static void __iomem *pmc_base;
 static unsigned long osc_freq;
 static unsigned long pll_ref_freq;
 
+static bool t210b01;
+
 static DEFINE_SPINLOCK(pll_d_lock);
 static DEFINE_SPINLOCK(pll_e_lock);
 static DEFINE_SPINLOCK(pll_re_lock);
@@ -4077,6 +4079,9 @@ static void __init tegra210_clock_init(struct device_node *np)
 	char *sclk_high_clk;
 	u32 value, clk_m_div;
 
+	t210b01 = of_device_is_compatible(np, "nvidia,tegra210b01-car");
+	pr_info("t210%s clock and reset probe\n", t210b01 ? "b01" : "");
+
 	clk_base = of_iomap(np, 0);
 	if (!clk_base) {
 		pr_err("ioremap tegra210 CAR failed\n");
@@ -4153,3 +4158,5 @@ static void __init tegra210_clock_init(struct device_node *np)
 		register_syscore_ops(&tegra_clk_syscore_ops);
 }
 CLK_OF_DECLARE(tegra210, "nvidia,tegra210-car", tegra210_clock_init);
+CLK_OF_DECLARE(tegra210b01, "nvidia,tegra210b01-car", tegra210_clock_init);
+

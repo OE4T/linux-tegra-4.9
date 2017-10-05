@@ -1266,7 +1266,7 @@
 	ape_hsp: tegra-hsp@29a0000 {
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x029a0000 0x0 0x00090000>;
-#if !defined(LINUX_VERSION) || LINUX_VERSION < 409
+#if TEGRA_POWER_DOMAIN_DT_VERSION <= DT_VERSION_1
 		power-domains = <&ape_pd>;
 #endif
 		interrupt-parent = <&tegra_agic>;
@@ -1537,7 +1537,7 @@
 
 	tegra_pcie: pcie-controller@10003000 {
 		compatible = "nvidia,tegra186-pcie";
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_POWER_DOMAIN_DT_VERSION >= DT_VERSION_2
 		power-domains = <&bpmp TEGRA186_POWER_DOMAIN_PCX>;
 #else
 		power-domains = <&pcie_pd>;
@@ -1710,7 +1710,7 @@
 #endif
 	tegra_axbar: ahub {
 		compatible = "nvidia,tegra186-axbar";
-#if !(defined(LINUX_VERSION) && LINUX_VERSION >= 409)
+#if TEGRA_POWER_DOMAIN_DT_VERSION <= DT_VERSION_1
 		power-domains = <&ape_pd>;
 #endif
 		wakeup-disable;
@@ -2166,7 +2166,7 @@
 #endif
 	tegra_adsp_audio: adsp_audio {
 		compatible = "nvidia,tegra186-adsp-audio";
-#if !(defined(LINUX_VERSION) && LINUX_VERSION >= 409)
+#if TEGRA_POWER_DOMAIN_DT_VERSION <= DT_VERSION_1
 		power-domains = <&adsp_pd>;
 #endif
 		wakeup-disable;

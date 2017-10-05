@@ -168,7 +168,7 @@
 		compatible = "nvidia,tegra186-ape-ivc";
 		status = "disabled";
 
-#if !defined(LINUX_VERSION) || LINUX_VERSION < 409
+#if TEGRA_POWER_DOMAIN_DT_VERSION <= DT_VERSION_1
 		power-domains = <&ape_pd>;
 #endif
 		reg =	<0 0x02993000 0 0x1000>, /* APE EVP */

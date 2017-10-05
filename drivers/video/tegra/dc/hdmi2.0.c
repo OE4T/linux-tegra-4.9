@@ -292,16 +292,18 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 		return false;
 
 #if defined(CONFIG_TEGRA_YUV_BYPASS_MODE_FILTER)
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
-	/* No support for YUV modes on T210 hardware. Filter them out */
-	if (mode->vmode & FB_VMODE_YUV_MASK)
-		return false;
-#else
-	/* T186 hardware supports only YUV422. Filter out YUV420 modes */
-	if ((mode->vmode & FB_VMODE_Y420_ONLY) ||
-		(mode->vmode & FB_VMODE_Y420))
-		return false;
-#endif
+	if (tegra_dc_is_t21x()) {
+		/* No support for YUV modes on T210 hardware. Filter them out */
+		if (mode->vmode & FB_VMODE_YUV_MASK)
+			return false;
+	} else {
+		/* T186 hardware supports only YUV422.
+		 * Filter out YUV420 modes.
+		 */
+		if ((mode->vmode & FB_VMODE_Y420_ONLY) ||
+				(mode->vmode & FB_VMODE_Y420))
+			return false;
+	}
 #endif
 
 	/* some non-compliant edids list 420vdb modes in vdb */
@@ -1758,9 +1760,7 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	struct tegra_dc *dc = hdmi->dc;
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	u32 h_pulse_start, h_pulse_end;
-#endif
 	u32 hblank, max_ac, rekey;
 	unsigned long val;
 	u32 dispclk_div_8_2;
@@ -1802,19 +1802,20 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	val |= NV_SOR_HDMI_CTRL_AUDIO_LAYOUT_SELECT;
 	tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, val);
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	tegra_dc_writel(dc, 0x180, DC_DISP_H_PULSE2_CONTROL);
-	h_pulse_start = dc->mode.h_ref_to_sync +
-					dc->mode.h_sync_width +
-					dc->mode.h_back_porch - 10;
-	h_pulse_end = h_pulse_start + 8;
-	tegra_dc_writel(dc, PULSE_START(h_pulse_start) | PULSE_END(h_pulse_end),
-		  DC_DISP_H_PULSE2_POSITION_A);
+	if (tegra_dc_is_t21x()) {
+		tegra_dc_writel(dc, 0x180, DC_DISP_H_PULSE2_CONTROL);
+		h_pulse_start = dc->mode.h_ref_to_sync +
+			dc->mode.h_sync_width +
+			dc->mode.h_back_porch - 10;
+		h_pulse_end = h_pulse_start + 8;
+		tegra_dc_writel(dc, PULSE_START(h_pulse_start) |
+				PULSE_END(h_pulse_end),
+				DC_DISP_H_PULSE2_POSITION_A);
 
-	val = tegra_dc_readl(dc, DC_DISP_DISP_SIGNAL_OPTIONS0);
-	val |= H_PULSE_2_ENABLE;
-	tegra_dc_writel(dc, val, DC_DISP_DISP_SIGNAL_OPTIONS0);
-#endif
+		val = tegra_dc_readl(dc, DC_DISP_DISP_SIGNAL_OPTIONS0);
+		val |= H_PULSE_2_ENABLE;
+		tegra_dc_writel(dc, val, DC_DISP_DISP_SIGNAL_OPTIONS0);
+	}
 }
 
 void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
@@ -2611,9 +2612,8 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
 	tegra_dc_get(dc);
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	tegra_hdmi_get(dc);
-#endif
+	if (tegra_dc_is_t21x())
+		tegra_hdmi_get(dc);
 
 	if (tegra_platform_is_fpga())
 		tegra_sor_program_fpga_clk_mux(sor);
@@ -2648,10 +2648,11 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	if (hdmi->dpaux)
 		tegra_dpaux_prod_set(hdmi->dpaux);
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	tegra_dc_setup_clk(dc, dc->clk);
-	tegra_dc_hdmi_setup_clk(dc, hdmi->sor->sor_clk);
-#endif
+	if (tegra_dc_is_t21x()) {
+		tegra_dc_setup_clk(dc, dc->clk);
+		tegra_dc_hdmi_setup_clk(dc, hdmi->sor->sor_clk);
+	}
+
 	tegra_hdmi_config(hdmi);
 
 	tegra_sor_config_xbar(hdmi->sor);
@@ -2708,8 +2709,8 @@ tegra_hdmi_get_shift_clk_div(struct tegra_hdmi *hdmi)
 	return 0;
 }
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
+static void tegra_hdmi_config_clk_nvdisplay(struct tegra_hdmi *hdmi,
+					    u32 clk_type)
 {
 	if (clk_type == hdmi->clk_type)
 		return;
@@ -2746,8 +2747,8 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 				"hdmi: incorrect clk type configured\n");
 	}
 }
-#else
-static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
+
+static void tegra_hdmi_config_clk_t21x(struct tegra_hdmi *hdmi, u32 clk_type)
 {
 	if (clk_type == hdmi->clk_type)
 		return;
@@ -2820,7 +2821,14 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 		dev_err(&hdmi->dc->ndev->dev, "hdmi: incorrect clk type configured\n");
 	}
 }
-#endif
+
+static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
+{
+	if (tegra_dc_is_nvdisplay())
+		return tegra_hdmi_config_clk_nvdisplay(hdmi, clk_type);
+	else
+		return tegra_hdmi_config_clk_t21x(hdmi, clk_type);
+}
 
 /* returns exact pixel clock in Hz */
 static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
@@ -2865,11 +2873,10 @@ static inline void tegra_dc_hdmi_set_sor_clk_rate(struct tegra_dc_sor_data *sor)
 		tegra_sor_set_clk_rate(sor);
 }
 
-static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
+static long tegra_dc_hdmi_setup_clk_nvdisplay(struct tegra_dc *dc,
+					      struct clk *clk)
 {
 	struct clk *parent_clk;
-
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	long parent_clk_rate;
@@ -2927,14 +2934,13 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	tegra_disp_clk_prepare_enable(sor->brick_clk);
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
-#else
-	parent_clk = clk_get(NULL,
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
-				"pll_d2_out0");
-#else
-				"pll_d2");
-#endif
+}
 
+static long tegra_dc_hdmi_setup_clk_t21x(struct tegra_dc *dc, struct clk *clk)
+{
+	struct clk *parent_clk;
+
+	parent_clk = clk_get(NULL, "pll_d2_out0");
 
 	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
 
@@ -2993,7 +2999,14 @@ skip_setup:
 #endif
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
-#endif
+}
+
+static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
+{
+	if (tegra_dc_is_nvdisplay())
+		return tegra_dc_hdmi_setup_clk_nvdisplay(dc, clk);
+	else
+		return tegra_dc_hdmi_setup_clk_t21x(dc, clk);
 }
 
 static void tegra_dc_hdmi_shutdown(struct tegra_dc *dc)

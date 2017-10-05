@@ -192,7 +192,7 @@
 		};
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	aconnect@2a41000 {
 #endif
 	agic-controller@2a41000 {
@@ -215,7 +215,7 @@
 		status = "okay";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	};
 #endif
 	hsp_top {

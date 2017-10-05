@@ -269,8 +269,6 @@ void reg_dump(struct tegra_dc *dc, void *data,
 	void (*print)(void *data, const char *str));
 
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
-int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
-int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);
 int tegra_nvdisp_get_imp_user_info(struct tegra_dc_ext_imp_user_info *info);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);
 void tegra_nvdisp_stop_display(struct tegra_dc *dc);
@@ -371,6 +369,8 @@ int tegra_nvdisp_powergate_dc(struct tegra_dc *dc);
 int tegra_nvdisp_unpowergate_dc(struct tegra_dc *dc);
 int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
 int tegra_nvdisp_is_powered(struct tegra_dc *dc);
+int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
+int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);
 #else
 static inline int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 					  struct tegra_dc_ext_crc_conf *conf)
@@ -441,6 +441,14 @@ static inline int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
 	return -ENOTSUPP;
 }
 static inline int tegra_nvdisp_is_powered(struct tegra_dc *dc)
+{
+	return -ENOTSUPP;
+}
+static inline int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
+{
+	return -ENOTSUPP;
+}
+static inline int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc)
 {
 	return -ENOTSUPP;
 }

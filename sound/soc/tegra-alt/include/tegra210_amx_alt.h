@@ -49,6 +49,7 @@
 #define TEGRA210_AMX_DBG					0xb4
 #define TEGRA210_AMX_AHUBRAMCTL_AMX_CTRL	0xb8
 #define TEGRA210_AMX_AHUBRAMCTL_AMX_DATA	0xbc
+#define TEGRA194_AMX_RX1_CTRL_FRAME_PERIOD	0xc0
 
 /* Fields in TEGRA210_AMX_AXBAR_RX1_CIF_CTRL */
 /* Uses field from TEGRA210_AUDIOCIF_CTRL_* in tegra210_xbar_alt.h */
@@ -177,6 +178,7 @@ struct tegra210_amx_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,
 			struct tegra210_xbar_cif_conf *conf);
+	bool is_auto_disable_supported;
 };
 
 struct tegra210_amx {

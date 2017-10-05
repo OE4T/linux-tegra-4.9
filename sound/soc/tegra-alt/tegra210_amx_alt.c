@@ -369,6 +369,24 @@ static int tegra210_amx_in_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_soc_dai *dai)
 {
 	int ret;
+	struct tegra210_amx *amx = snd_soc_dai_get_drvdata(dai);
+
+
+	/* For T19x soc frame period disable counter can be programmed as:
+	 *	counter =		1	    * ahub_clk_rate
+	 *		  -------------------------
+	 *			sample_rate
+	 *
+	 * TODO: read actual sample_rate & ahub_clk_rate
+	 * For now using:
+	 * sample_rate = 8000
+	 * ahub_clk_rate = 49152000
+	 */
+	if (amx->soc_data->is_auto_disable_supported)
+		regmap_write(amx->regmap,
+			TEGRA194_AMX_RX1_CTRL_FRAME_PERIOD +
+			(dai->id * TEGRA210_AMX_AUDIOCIF_CH_STRIDE),
+			0x1800);
 
 	ret = tegra210_amx_set_audio_cif(dai, params,
 				TEGRA210_AMX_AXBAR_RX1_CIF_CTRL +
@@ -846,11 +864,18 @@ static const struct regmap_config tegra210_amx_regmap_config = {
 };
 
 static const struct tegra210_amx_soc_data soc_data_tegra210 = {
-	.set_audio_cif = tegra210_xbar_set_cif
+	.set_audio_cif = tegra210_xbar_set_cif,
+	.is_auto_disable_supported = false,
+};
+
+static const struct tegra210_amx_soc_data soc_data_tegra194 = {
+	.set_audio_cif = tegra210_xbar_set_cif,
+	.is_auto_disable_supported = true,
 };
 
 static const struct of_device_id tegra210_amx_of_match[] = {
 	{ .compatible = "nvidia,tegra210-amx", .data = &soc_data_tegra210 },
+	{ .compatible = "nvidia,tegra194-amx", .data = &soc_data_tegra194 },
 	{},
 };
 

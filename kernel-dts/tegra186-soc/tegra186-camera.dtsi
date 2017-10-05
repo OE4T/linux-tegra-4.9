@@ -223,7 +223,7 @@
 
 		hsp {
 			compatible = "nvidia,tegra186-hsp-mailbox";
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_HSP_DT_VERSION >= DT_VERSION_2
 			device = <&ape_hsp>;
 #endif
 			nvidia,hsp-shared-mailbox = <&ape_hsp 1 &ape_hsp 6>;

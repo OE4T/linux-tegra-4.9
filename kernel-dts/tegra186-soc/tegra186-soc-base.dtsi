@@ -354,7 +354,7 @@
 		status = "disabled";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 	xusb_padctl: xusb_padctl@3520000 {
 		compatible = "nvidia,tegra18x-xusb-padctl";
 		reg = <0x0 0x3520000 0x0 0x1000>, <0x0 0x03540000 0x0 0x1000>;
@@ -433,7 +433,7 @@
 		iommus = <&smmu TEGRA_SID_XUSB_HOST>;
 		status = "disabled";
 		otg-controller = <&tegra_xotg>;
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		interrupts = <0 163 0x4>, <0 164 0x4>, <0 167 0x4>;
 		clocks = <&tegra_car TEGRA186_CLK_XUSB_HOST>,
 			<&tegra_car TEGRA186_CLK_XUSB_FALCON>,
@@ -463,7 +463,7 @@
 		status = "disabled";
 		charger-detector = <&tegra_usb_cd>;
 		otg-controller = <&tegra_xotg>;
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		clocks = <&tegra_car TEGRA186_CLK_PLLU>,
 			<&tegra_car TEGRA186_CLK_XUSB_DEV>,
 			<&tegra_car TEGRA186_CLK_XUSB_SS>,

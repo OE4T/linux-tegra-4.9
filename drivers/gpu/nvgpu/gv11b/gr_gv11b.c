@@ -1688,12 +1688,7 @@ void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 void gr_gv11b_init_cyclestats(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
-#else
-	(void)g;
+	/* TODO: waiting for cycle stats to be implemented for gv11b */
 #endif
 }
 

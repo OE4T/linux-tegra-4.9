@@ -169,7 +169,7 @@
 		#size-cells = <2>;
 		ranges;
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_GENERIC_CARVEOUT_SUPPORT_ENABLE
 		generic_reserved: generic_carveout {
 			compatible = "nvidia,generic_carveout";
 			size = <0 0x10000000>; /* set size to 256MB */

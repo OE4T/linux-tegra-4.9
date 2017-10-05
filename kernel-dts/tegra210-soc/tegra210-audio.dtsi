@@ -17,7 +17,7 @@
  */
 
 / {
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
         aconnect@702c0000 {
                 status = "okay";
 #endif
@@ -192,7 +192,7 @@
 		status = "okay";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
         };
 #endif
 

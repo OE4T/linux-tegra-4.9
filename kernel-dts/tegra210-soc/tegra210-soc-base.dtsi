@@ -373,7 +373,7 @@
 		status = "disabled";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	aconnect@702c0000 {
 		compatible = "nvidia,tegra210-aconnect";
 		clocks = <&tegra_car TEGRA210_CLK_APE>,
@@ -1301,7 +1301,7 @@
 		status = "disabled";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
         aconnect@702c0000 {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -1683,7 +1683,7 @@
 		clock-names = "ahub", "ape";
 		status = "disabled";
 	};
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	};
 #else
 	adma@702e2000 {

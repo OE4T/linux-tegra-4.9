@@ -41,7 +41,7 @@
 #include <linux/switch.h>
 #endif
 
-#define DRV_NAME "tegra-snd-card-mobile"
+#define DRV_NAME "tegra-asoc:"
 
 #define GPIO_SPKR_EN    BIT(0)
 #define GPIO_HP_MUTE    BIT(1)
@@ -352,7 +352,6 @@ static const struct snd_kcontrol_new tegra_machine_controls[] = {
 };
 
 static struct snd_soc_card snd_soc_tegra_card = {
-	.name = "tegra-snd-card",
 	.owner = THIS_MODULE,
 	.suspend_pre = tegra_machine_suspend_pre,
 	.controls = tegra_machine_controls,
@@ -1146,6 +1145,19 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	struct snd_soc_pcm_runtime *rtd;
 	const struct of_device_id *match;
 
+	card->dev = &pdev->dev;
+	/* parse card name first to log errors with proper device name */
+	ret = snd_soc_of_parse_card_name(card, "nvidia,model");
+	if (ret)
+		goto err;
+
+	/* update device name with card name */
+	if (dev_set_name(&pdev->dev, "%s", card->name) < 0) {
+		dev_err(&pdev->dev, "error in setting machine driver device name\n");
+		ret = -ENODEV;
+		goto err;
+	}
+
 	match = of_match_device(tegra_machine_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");
@@ -1177,7 +1189,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	card->dev = &pdev->dev;
 	platform_set_drvdata(pdev, card);
 	snd_soc_card_set_drvdata(card, machine);
 	machine->is_codec_dummy = 0;
@@ -1187,10 +1198,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	if (machine->soc_data->write_idle_bias_off_state)
 		card->dapm.idle_bias_off = true;
-
-	ret = snd_soc_of_parse_card_name(card, "nvidia,model");
-	if (ret)
-		goto err;
 
 	ret = snd_soc_of_parse_audio_routing(card,
 				"nvidia,audio-routing");

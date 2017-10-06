@@ -633,8 +633,8 @@ static const struct gpu_ops gv11b_ops = {
 			nvgpu_check_and_set_context_reservation,
 		.release_profiler_reservation =
 			nvgpu_release_profiler_reservation,
-		.perfbuffer_enable = gk20a_perfbuf_enable_locked,
-		.perfbuffer_disable = gk20a_perfbuf_disable_locked,
+		.perfbuffer_enable = NULL,
+		.perfbuffer_disable = NULL,
 	},
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,

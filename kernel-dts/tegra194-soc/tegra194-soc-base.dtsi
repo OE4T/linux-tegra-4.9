@@ -204,8 +204,6 @@
 					    TEGRA_SID(NVDLA1)
 					    TEGRA_SID(NVDISPLAY)
 					    TEGRA_SID(NVENC1)
-					    TEGRA_SID(PVA0)
-					    TEGRA_SID(PVA1)
 					    TEGRA_SID(NVDEC1)
 					    TEGRA_SID(SE)
 					    TEGRA_SID(SE1)
@@ -245,6 +243,11 @@
 			host1x7_domain {
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
+			};
+			pva_domain {
+				address-space = <&pva_as>;
+				sid-list = <TEGRA_SID(PVA0)
+					    TEGRA_SID(PVA1)>;
 			};
 			vi_domain {
 				address-space = <&common_as>;
@@ -318,6 +321,13 @@
 			};
 			host1x_client_as: host1x_client {
 				iova-start = <0x0 0x1000>;
+				iova-size = <0x0 0xFFFFEFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			pva_as: pva0 {
+				iova-start = <0x0 0x80000000>;
 				iova-size = <0x0 0xFFFFEFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;

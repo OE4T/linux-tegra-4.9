@@ -35,11 +35,6 @@
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
 #include <nvgpu/kref.h>
-#include <nvgpu/atomic.h>
-#include <nvgpu/cond.h>
-#include <nvgpu/thread.h>
-
-struct nvgpu_pd_cache;
 
 #ifdef CONFIG_ARM64
 #define outer_flush_range(a, b)
@@ -138,218 +133,23 @@ struct priv_cmd_entry {
 struct gk20a;
 struct channel_gk20a;
 
-int gk20a_init_mm_support(struct gk20a *g);
-int gk20a_init_mm_setup_sw(struct gk20a *g);
-int gk20a_init_mm_setup_hw(struct gk20a *g);
-void gk20a_init_mm_ce_context(struct gk20a *g);
-
 int gk20a_mm_fb_flush(struct gk20a *g);
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate);
 void gk20a_mm_cbc_clean(struct gk20a *g);
 void gk20a_mm_l2_invalidate(struct gk20a *g);
 
-#define FAULT_TYPE_NUM		2	/* replay and nonreplay faults */
-
-struct mmu_fault_info {
-	u64	inst_ptr;
-	u32	inst_aperture;
-	u64	fault_addr;
-	u32	fault_addr_aperture;
-	u32	timestamp_lo;
-	u32	timestamp_hi;
-	u32	mmu_engine_id;
-	u32	gpc_id;
-	u32	client_type;
-	u32	client_id;
-	u32	fault_type;
-	u32	access_type;
-	u32	protected_mode;
-	u32	replayable_fault;
-	u32	replay_fault_en;
-	u32	valid;
-	u32	faulted_pbdma;
-	u32	faulted_engine;
-	u32	faulted_subid;
-	u32	chid;
-	struct channel_gk20a *refch;
-	const char *client_type_desc;
-	const char *fault_type_desc;
-	const char *client_id_desc;
-};
-
-struct mm_gk20a {
-	struct gk20a *g;
-
-	/* GPU VA default sizes address spaces for channels */
-	struct {
-		u64 user_size;   /* userspace-visible GPU VA region */
-		u64 kernel_size; /* kernel-only GPU VA region */
-	} channel;
-
-	struct {
-		u32 aperture_size;
-		struct vm_gk20a *vm;
-		struct nvgpu_mem inst_block;
-	} bar1;
-
-	struct {
-		u32 aperture_size;
-		struct vm_gk20a *vm;
-		struct nvgpu_mem inst_block;
-	} bar2;
-
-	struct {
-		u32 aperture_size;
-		struct vm_gk20a *vm;
-		struct nvgpu_mem inst_block;
-	} pmu;
-
-	struct {
-		/* using pmu vm currently */
-		struct nvgpu_mem inst_block;
-	} hwpm;
-
-	struct {
-		struct vm_gk20a *vm;
-		struct nvgpu_mem inst_block;
-	} perfbuf;
-
-	struct {
-		struct vm_gk20a *vm;
-	} cde;
-
-	struct {
-		struct vm_gk20a *vm;
-	} ce;
-
-	struct nvgpu_pd_cache *pd_cache;
-
-	struct nvgpu_mutex l2_op_lock;
-	struct nvgpu_mutex tlb_lock;
-	struct nvgpu_mutex priv_lock;
-
-	struct nvgpu_mem bar2_desc;
-
-#ifdef CONFIG_TEGRA_19x_GPU
-	struct nvgpu_mem hw_fault_buf[FAULT_TYPE_NUM];
-	unsigned int hw_fault_buf_status[FAULT_TYPE_NUM];
-	struct mmu_fault_info *fault_info[FAULT_TYPE_NUM];
-	struct nvgpu_mutex hub_isr_mutex;
-	u32    hub_intr_types;
-#endif
-	/*
-	 * Separate function to cleanup the CE since it requires a channel to
-	 * be closed which must happen before fifo cleanup.
-	 */
-	void (*remove_ce_support)(struct mm_gk20a *mm);
-	void (*remove_support)(struct mm_gk20a *mm);
-	bool sw_ready;
-	int physical_bits;
-	bool use_full_comp_tag_line;
-	bool ltc_enabled_current;
-	bool ltc_enabled_target;
-	bool bypass_smmu;
-	bool disable_bigpage;
-	bool has_physical_mode;
-
-	struct nvgpu_mem sysmem_flush;
-
-	u32 pramin_window;
-	struct nvgpu_spinlock pramin_window_lock;
-	bool force_pramin; /* via debugfs */
-
-	struct {
-		size_t size;
-		u64 base;
-		size_t bootstrap_size;
-		u64 bootstrap_base;
-
-		struct nvgpu_allocator allocator;
-		struct nvgpu_allocator bootstrap_allocator;
-
-		u32 ce_ctx_id;
-		volatile bool cleared;
-		struct nvgpu_mutex first_clear_mutex;
-
-		struct nvgpu_list_node clear_list_head;
-		struct nvgpu_mutex clear_list_mutex;
-
-		struct nvgpu_cond clearing_thread_cond;
-		struct nvgpu_thread clearing_thread;
-		struct nvgpu_mutex clearing_thread_lock;
-		nvgpu_atomic_t pause_count;
-
-		nvgpu_atomic64_t bytes_pending;
-	} vidmem;
-};
-
-int gk20a_mm_init(struct mm_gk20a *mm);
-
-#define gk20a_from_mm(mm) ((mm)->g)
-#define gk20a_from_vm(vm) ((vm)->mm->g)
-
 #define dev_from_vm(vm) dev_from_gk20a(vm->mm->g)
-
-#define DEFAULT_ALLOC_ALIGNMENT (4*1024)
-
-static inline int bar1_aperture_size_mb_gk20a(void)
-{
-	return 16; /* 16MB is more than enough atm. */
-}
-
-/* The maximum GPU VA range supported */
-#define NV_GMMU_VA_RANGE          38
-
-/* The default userspace-visible GPU VA size */
-#define NV_MM_DEFAULT_USER_SIZE   (1ULL << 37)
-
-/* The default kernel-reserved GPU VA size */
-#define NV_MM_DEFAULT_KERNEL_SIZE (1ULL << 32)
-
-/*
- * When not using unified address spaces, the bottom 56GB of the space are used
- * for small pages, and the remaining high memory is used for large pages.
- */
-static inline u64 __nv_gmmu_va_small_page_limit(void)
-{
-	return ((u64)SZ_1G * 56);
-}
-
-enum nvgpu_flush_op {
-	NVGPU_FLUSH_DEFAULT,
-	NVGPU_FLUSH_FB,
-	NVGPU_FLUSH_L2_INV,
-	NVGPU_FLUSH_L2_FLUSH,
-	NVGPU_FLUSH_CBC_CLEAN,
-};
-
-enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
-					      u64 base, u64 size);
-enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size);
-
-#if 0 /*related to addr bits above, concern below TBD on which is accurate */
-#define bar1_instance_block_shift_gk20a() (max_physaddr_bits_gk20a() -\
-					   bus_bar1_block_ptr_s())
-#else
-#define bar1_instance_block_shift_gk20a() bus_bar1_block_ptr_shift_v()
-#endif
-
-int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block);
-void gk20a_free_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block);
-void gk20a_init_inst_block(struct nvgpu_mem *inst_block, struct vm_gk20a *vm,
-		u32 big_page_size);
-u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct nvgpu_mem *mem);
-
-void gk20a_mm_dump_vm(struct vm_gk20a *vm,
-		u64 va_begin, u64 va_end, char *label);
-
-int gk20a_mm_suspend(struct gk20a *g);
 
 void gk20a_mm_ltc_isr(struct gk20a *g);
 
 bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g);
 
 int gk20a_mm_mmu_vpr_info_fetch(struct gk20a *g);
+
+int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block);
+void gk20a_init_inst_block(struct nvgpu_mem *inst_block, struct vm_gk20a *vm,
+		u32 big_page_size);
+int gk20a_init_mm_setup_hw(struct gk20a *g);
 
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			  u64 map_offset,

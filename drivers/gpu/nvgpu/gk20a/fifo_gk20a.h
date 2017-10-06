@@ -36,6 +36,7 @@
 #include <nvgpu/kref.h>
 
 struct gk20a_debug_output;
+struct mmu_fault_info;
 
 #define MAX_RUNLIST_BUFFERS		2
 

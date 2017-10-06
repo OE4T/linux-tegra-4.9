@@ -1372,7 +1372,7 @@ static int gk20a_perfbuf_release_locked(struct gk20a *g, u64 offset)
 	err = g->ops.dbg_session_ops.perfbuffer_disable(g);
 
 	nvgpu_vm_unmap_buffer(vm, offset, NULL);
-	gk20a_free_inst_block(g, &mm->perfbuf.inst_block);
+	nvgpu_free_inst_block(g, &mm->perfbuf.inst_block);
 	nvgpu_vm_put(vm);
 
 	g->perfbuf.owner = NULL;

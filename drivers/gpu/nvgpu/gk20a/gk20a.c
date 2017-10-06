@@ -34,6 +34,7 @@
 #include <nvgpu/gmmu.h>
 #include <nvgpu/ltc.h>
 #include <nvgpu/vidmem.h>
+#include <nvgpu/mm.h>
 
 #include <trace/events/gk20a.h>
 
@@ -107,7 +108,7 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 		ret |= nvgpu_pmu_destroy(g);
 
 	ret |= gk20a_gr_suspend(g);
-	ret |= gk20a_mm_suspend(g);
+	ret |= nvgpu_mm_suspend(g);
 	ret |= gk20a_fifo_suspend(g);
 
 	gk20a_ce_suspend(g);
@@ -213,7 +214,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		goto done;
 	}
 
-	err = gk20a_init_mm_support(g);
+	err = nvgpu_init_mm_support(g);
 	if (err) {
 		nvgpu_err(g, "failed to init gk20a mm");
 		goto done;
@@ -314,7 +315,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 
 	gk20a_init_ce_support(g);
 
-	gk20a_init_mm_ce_context(g);
+	nvgpu_init_mm_ce_context(g);
 
 	if (g->ops.xve.available_speeds) {
 		u32 speed;

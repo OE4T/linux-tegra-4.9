@@ -32,6 +32,7 @@
 #include <nvgpu/circ_buf.h>
 #include <nvgpu/thread.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/mm.h>
 
 #include "ctxsw_trace_gk20a.h"
 #include "fecs_trace_gk20a.h"
@@ -93,7 +94,7 @@ static inline u64 gk20a_fecs_trace_record_ts_timestamp_v(u64 ts)
 
 static u32 gk20a_fecs_trace_fecs_context_ptr(struct gk20a *g, struct channel_gk20a *ch)
 {
-	return (u32) (gk20a_mm_inst_block_addr(g, &ch->inst_block) >> 12LL);
+	return (u32) (nvgpu_inst_block_addr(g, &ch->inst_block) >> 12LL);
 }
 
 static inline int gk20a_fecs_trace_num_ts(void)
@@ -633,12 +634,12 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
 			"chid=%d context_ptr=%x inst_block=%llx",
 			ch->chid, context_ptr,
-			gk20a_mm_inst_block_addr(g, &ch->inst_block));
+			nvgpu_inst_block_addr(g, &ch->inst_block));
 
 	if (!trace)
 		return -ENOMEM;
 
-	pa = gk20a_mm_inst_block_addr(g, &trace->trace_buf);
+	pa = nvgpu_inst_block_addr(g, &trace->trace_buf);
 	if (!pa)
 		return -ENOMEM;
 	aperture = nvgpu_aperture_mask(g, &trace->trace_buf,

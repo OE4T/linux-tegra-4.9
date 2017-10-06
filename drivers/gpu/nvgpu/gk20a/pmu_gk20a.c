@@ -30,6 +30,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/firmware.h>
 #include <nvgpu/falcon.h>
+#include <nvgpu/mm.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -181,7 +182,7 @@ int pmu_bootstrap(struct nvgpu_pmu *pmu)
 		pwr_falcon_itfen_ctxen_enable_f());
 	gk20a_writel(g, pwr_pmu_new_instblk_r(),
 		pwr_pmu_new_instblk_ptr_f(
-			gk20a_mm_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
+			nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
 		pwr_pmu_new_instblk_valid_f(1) |
 		pwr_pmu_new_instblk_target_sys_coh_f());
 

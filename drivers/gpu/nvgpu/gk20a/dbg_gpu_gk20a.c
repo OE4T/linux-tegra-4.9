@@ -26,6 +26,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/vm.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/mm.h>
 
 #include "gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -305,7 +306,7 @@ int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
 		return err;
 	}
 
-	err = gk20a_alloc_inst_block(g, &mm->perfbuf.inst_block);
+	err = g->ops.mm.alloc_inst_block(g, &mm->perfbuf.inst_block);
 	if (err)
 		return err;
 
@@ -322,8 +323,7 @@ int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
 	gk20a_writel(g, perf_pmasys_outsize_r(), size);
 
 	/* this field is aligned to 4K */
-	inst_pa_page = gk20a_mm_inst_block_addr(g,
-						&mm->perfbuf.inst_block) >> 12;
+	inst_pa_page = nvgpu_inst_block_addr(g,	&mm->perfbuf.inst_block) >> 12;
 
 	/* A write to MEM_BLOCK triggers the block bind operation. MEM_BLOCK
 	 * should be written last */

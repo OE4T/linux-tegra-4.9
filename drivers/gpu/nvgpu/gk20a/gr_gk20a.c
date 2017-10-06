@@ -37,6 +37,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/mm.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
@@ -731,7 +732,7 @@ void gr_gk20a_ctx_patch_write(struct gk20a *g,
 
 static u32 fecs_current_ctx_data(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
-	u32 ptr = u64_lo32(gk20a_mm_inst_block_addr(g, inst_block)
+	u32 ptr = u64_lo32(nvgpu_inst_block_addr(g, inst_block)
 			>> ram_in_base_shift_v());
 	u32 aperture = nvgpu_aperture_mask(g, inst_block,
 			gr_fecs_current_ctx_target_sys_mem_ncoh_f(),
@@ -744,7 +745,7 @@ static u32 fecs_current_ctx_data(struct gk20a *g, struct nvgpu_mem *inst_block)
 static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 					struct channel_gk20a *c)
 {
-	u32 inst_base_ptr = u64_lo32(gk20a_mm_inst_block_addr(g, &c->inst_block)
+	u32 inst_base_ptr = u64_lo32(nvgpu_inst_block_addr(g, &c->inst_block)
 				     >> ram_in_base_shift_v());
 	u32 data = fecs_current_ctx_data(g, &c->inst_block);
 	u32 ret;
@@ -1980,7 +1981,7 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
 	int err;
 
-	err = gk20a_alloc_inst_block(g, &ucode_info->inst_blk_desc);
+	err = g->ops.mm.alloc_inst_block(g, &ucode_info->inst_blk_desc);
 	if (err)
 		return err;
 
@@ -2154,7 +2155,7 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 
 	gk20a_writel(g, gr_fecs_arb_ctx_adr_r(), 0x0);
 
-	inst_ptr = gk20a_mm_inst_block_addr(g, &ucode_info->inst_blk_desc);
+	inst_ptr = nvgpu_inst_block_addr(g, &ucode_info->inst_blk_desc);
 	gk20a_writel(g, gr_fecs_new_ctx_r(),
 			gr_fecs_new_ctx_ptr_f(inst_ptr >> 12) |
 			nvgpu_aperture_mask(g, &ucode_info->inst_blk_desc,
@@ -5455,7 +5456,7 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 		if (!gk20a_channel_get(ch))
 			continue;
 
-		if ((u32)(gk20a_mm_inst_block_addr(g, &ch->inst_block) >>
+		if ((u32)(nvgpu_inst_block_addr(g, &ch->inst_block) >>
 					ram_in_base_shift_v()) ==
 				gr_fecs_current_ctx_ptr_v(curr_ctx)) {
 			tsgid = ch->tsgid;

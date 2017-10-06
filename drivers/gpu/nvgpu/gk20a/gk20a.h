@@ -47,6 +47,7 @@ struct nvgpu_warpstate;
 #include <nvgpu/thread.h>
 #include <nvgpu/io.h>
 
+#include <nvgpu/mm.h>
 #include <nvgpu/as.h>
 #include <nvgpu/log.h>
 #include <nvgpu/pramin.h>
@@ -756,6 +757,8 @@ struct gpu_ops {
 		u64 (*gpu_phys_addr)(struct gk20a *g,
 				     struct nvgpu_gmmu_attrs *attrs, u64 phys);
 		size_t (*get_vidmem_size)(struct gk20a *g);
+		int (*alloc_inst_block)(struct gk20a *g,
+					struct nvgpu_mem *inst_block);
 		void (*init_inst_block)(struct nvgpu_mem *inst_block,
 				struct vm_gk20a *vm, u32 big_page_size);
 		bool (*mmu_fault_pending)(struct gk20a *g);

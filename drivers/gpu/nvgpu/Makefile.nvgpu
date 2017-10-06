@@ -65,6 +65,7 @@ nvgpu-y := \
 	common/mm/vm_area.o \
 	common/mm/nvgpu_mem.o \
 	common/mm/comptags.o \
+	common/mm/mm.o \
 	common/bus.o \
 	common/enabled.o \
 	common/pramin.o \

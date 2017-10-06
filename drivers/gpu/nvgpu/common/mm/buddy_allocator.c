@@ -25,8 +25,8 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>
 #include <nvgpu/barrier.h>
-
-#include "gk20a/mm_gk20a.h"
+#include <nvgpu/mm.h>
+#include <nvgpu/vm.h>
 
 #include "buddy_allocator_priv.h"
 

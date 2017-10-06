@@ -24,6 +24,7 @@
 
 #include <trace/events/gk20a.h>
 
+#include <nvgpu/mm.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/semaphore.h>
@@ -1058,7 +1059,7 @@ gk20a_refch_from_inst_ptr(struct gk20a *g, u64 inst_ptr)
 		if (!ch)
 			continue;
 
-		ch_inst_ptr = gk20a_mm_inst_block_addr(g, &ch->inst_block);
+		ch_inst_ptr = nvgpu_inst_block_addr(g, &ch->inst_block);
 		if (inst_ptr == ch_inst_ptr)
 			return ch;
 
@@ -1659,10 +1660,10 @@ static bool gk20a_fifo_handle_mmu_fault(
 						ch->chid);
 			}
 		} else if (mmfault_info.inst_ptr ==
-				gk20a_mm_inst_block_addr(g, &g->mm.bar1.inst_block)) {
+				nvgpu_inst_block_addr(g, &g->mm.bar1.inst_block)) {
 			nvgpu_err(g, "mmu fault from bar1");
 		} else if (mmfault_info.inst_ptr ==
-				gk20a_mm_inst_block_addr(g, &g->mm.pmu.inst_block)) {
+				nvgpu_inst_block_addr(g, &g->mm.pmu.inst_block)) {
 			nvgpu_err(g, "mmu fault from pmu");
 		} else
 			nvgpu_err(g, "couldn't locate channel for mmu fault");
@@ -3973,12 +3974,12 @@ int gk20a_fifo_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_alloc_inst_block(g, &ch->inst_block);
+	err = g->ops.mm.alloc_inst_block(g, &ch->inst_block);
 	if (err)
 		return err;
 
 	gk20a_dbg_info("channel %d inst block physical addr: 0x%16llx",
-		ch->chid, gk20a_mm_inst_block_addr(g, &ch->inst_block));
+		ch->chid, nvgpu_inst_block_addr(g, &ch->inst_block));
 
 	gk20a_dbg_fn("done");
 	return 0;
@@ -3986,7 +3987,7 @@ int gk20a_fifo_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 
 void gk20a_fifo_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
-	gk20a_free_inst_block(g, &ch->inst_block);
+	nvgpu_free_inst_block(g, &ch->inst_block);
 }
 
 u32 gk20a_fifo_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)

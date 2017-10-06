@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/mm.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/gmmu.h>
 
@@ -95,7 +96,7 @@ int gb10b_init_bar2_vm(struct gk20a *g)
 		return -ENOMEM;
 
 	/* allocate instance mem for bar2 */
-	err = gk20a_alloc_inst_block(g, inst_block);
+	err = g->ops.mm.alloc_inst_block(g, inst_block);
 	if (err)
 		goto clean_up_va;
 
@@ -112,7 +113,7 @@ int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
-	u64 inst_pa = gk20a_mm_inst_block_addr(g, inst_block);
+	u64 inst_pa = nvgpu_inst_block_addr(g, inst_block);
 
 	gk20a_dbg_fn("");
 
@@ -374,6 +375,6 @@ void gp10b_remove_bar2_vm(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 
 	gp10b_replayable_pagefault_buffer_deinit(g);
-	gk20a_free_inst_block(g, &mm->bar2.inst_block);
+	nvgpu_free_inst_block(g, &mm->bar2.inst_block);
 	nvgpu_vm_put(mm->bar2.vm);
 }

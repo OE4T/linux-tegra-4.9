@@ -524,6 +524,7 @@ static const struct gpu_ops gp106_ops = {
 		.init_pdb = gp10b_mm_init_pdb,
 		.init_mm_setup_hw = gp10b_init_mm_setup_hw,
 		.is_bar1_supported = gm20b_mm_is_bar1_supported,
+		.alloc_inst_block = gk20a_alloc_inst_block,
 		.init_inst_block = gk20a_init_inst_block,
 		.mmu_fault_pending = gk20a_fifo_mmu_fault_pending,
 		.init_bar2_vm = gb10b_init_bar2_vm,

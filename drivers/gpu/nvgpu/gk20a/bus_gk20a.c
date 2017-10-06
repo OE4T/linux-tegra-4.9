@@ -24,6 +24,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/bus.h>
+#include <nvgpu/mm.h>
 
 #include "gk20a.h"
 #include "bus_gk20a.h"
@@ -137,8 +138,8 @@ int gk20a_read_ptimer(struct gk20a *g, u64 *value)
 
 int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 {
-	u64 iova = gk20a_mm_inst_block_addr(g, bar1_inst);
-	u32 ptr_v = (u32)(iova >> bar1_instance_block_shift_gk20a());
+	u64 iova = nvgpu_inst_block_addr(g, bar1_inst);
+	u32 ptr_v = (u32)(iova >> bus_bar1_block_ptr_shift_v());
 
 	gk20a_dbg_info("bar1 inst block ptr: 0x%08x", ptr_v);
 

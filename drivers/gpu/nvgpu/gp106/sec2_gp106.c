@@ -22,6 +22,7 @@
 
 #include <nvgpu/pmu.h>
 #include <nvgpu/falcon.h>
+#include <nvgpu/mm.h>
 
 #include "gk20a/gk20a.h"
 #include "sec2_gp106.h"
@@ -88,7 +89,7 @@ int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 
 	gk20a_writel(g, psec_falcon_nxtctx_r(),
 			pwr_pmu_new_instblk_ptr_f(
-			gk20a_mm_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
+			nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
 			pwr_pmu_new_instblk_valid_f(1) |
 			nvgpu_aperture_mask(g, &mm->pmu.inst_block,
 				pwr_pmu_new_instblk_target_sys_coh_f(),
@@ -154,7 +155,7 @@ void init_pmu_setup_hw1(struct gk20a *g)
 				pwr_falcon_itfen_ctxen_enable_f());
 	gk20a_writel(g, pwr_pmu_new_instblk_r(),
 				pwr_pmu_new_instblk_ptr_f(
-					gk20a_mm_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
+					nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
 				pwr_pmu_new_instblk_valid_f(1) |
 				nvgpu_aperture_mask(g, &mm->pmu.inst_block,
 					pwr_pmu_new_instblk_target_sys_coh_f(),

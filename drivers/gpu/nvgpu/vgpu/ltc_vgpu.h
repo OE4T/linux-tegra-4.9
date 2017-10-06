@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,11 +20,14 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __VGPU_FIFO_GP10B_H__
-#define __VGPU_FIFO_GP10B_H__
+#ifndef _LTC_VGPU_H_
+#define _LTC_VGPU_H_
 
-#include "gk20a/gk20a.h"
+struct gk20a;
+struct gr_gk20a;
 
-void vgpu_gp10b_init_fifo_ops(struct gpu_ops *gops);
+int vgpu_determine_L2_size_bytes(struct gk20a *g);
+int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr);
+void vgpu_ltc_init_fs_state(struct gk20a *g);
 
 #endif

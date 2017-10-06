@@ -80,7 +80,7 @@
 #include <nvgpu/hw/gp10b/hw_pram_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_pwr_gp10b.h>
 
-static int gp10b_get_litter_value(struct gk20a *g, int value)
+int gp10b_get_litter_value(struct gk20a *g, int value)
 {
 	int ret = EINVAL;
 	switch (value) {

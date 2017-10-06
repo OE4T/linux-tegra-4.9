@@ -27,10 +27,11 @@
 #include "gk20a/channel_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "vgpu.h"
+#include "dbg_vgpu.h"
 
 #include <nvgpu/bug.h>
 
-static int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
+int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 		      struct nvgpu_dbg_gpu_reg_op *ops,
 		      u64 num_ops)
 {
@@ -76,7 +77,7 @@ fail:
 	return err;
 }
 
-static int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, __u32 mode)
+int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, __u32 mode)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_set_powergate_params *p = &msg.params.set_powergate;
@@ -124,7 +125,7 @@ static int vgpu_sendrecv_prof_cmd(struct dbg_session_gk20a *dbg_s, u32 mode)
 	return err;
 }
 
-static bool vgpu_check_and_set_global_reservation(
+bool vgpu_check_and_set_global_reservation(
 				struct dbg_session_gk20a *dbg_s,
 				struct dbg_profiler_object_data *prof_obj)
 {
@@ -144,7 +145,7 @@ static bool vgpu_check_and_set_global_reservation(
 	return false;
 }
 
-static bool vgpu_check_and_set_context_reservation(
+bool vgpu_check_and_set_context_reservation(
 				struct dbg_session_gk20a *dbg_s,
 				struct dbg_profiler_object_data *prof_obj)
 {
@@ -167,7 +168,7 @@ static bool vgpu_check_and_set_context_reservation(
 	return false;
 }
 
-static void vgpu_release_profiler_reservation(
+void vgpu_release_profiler_reservation(
 				struct dbg_session_gk20a *dbg_s,
 				struct dbg_profiler_object_data *prof_obj)
 {
@@ -205,26 +206,12 @@ static int vgpu_sendrecv_perfbuf_cmd(struct gk20a *g, u64 offset, u32 size)
 	return err;
 }
 
-static int vgpu_perfbuffer_enable(struct gk20a *g, u64 offset, u32 size)
+int vgpu_perfbuffer_enable(struct gk20a *g, u64 offset, u32 size)
 {
 	return vgpu_sendrecv_perfbuf_cmd(g, offset, size);
 }
 
-static int vgpu_perfbuffer_disable(struct gk20a *g)
+int vgpu_perfbuffer_disable(struct gk20a *g)
 {
 	return vgpu_sendrecv_perfbuf_cmd(g, 0, 0);
-}
-
-void vgpu_init_dbg_session_ops(struct gpu_ops *gops)
-{
-	gops->dbg_session_ops.exec_reg_ops = vgpu_exec_regops;
-	gops->dbg_session_ops.dbg_set_powergate = vgpu_dbg_set_powergate;
-	gops->dbg_session_ops.check_and_set_global_reservation =
-					vgpu_check_and_set_global_reservation;
-	gops->dbg_session_ops.check_and_set_context_reservation =
-					vgpu_check_and_set_context_reservation;
-	gops->dbg_session_ops.release_profiler_reservation =
-					vgpu_release_profiler_reservation;
-	gops->dbg_session_ops.perfbuffer_enable = vgpu_perfbuffer_enable;
-	gops->dbg_session_ops.perfbuffer_disable = vgpu_perfbuffer_disable;
 }

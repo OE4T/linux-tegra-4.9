@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,6 +25,21 @@
 
 #include "gk20a/gk20a.h"
 
-void vgpu_gp10b_init_gr_ops(struct gpu_ops *gops);
+void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
+				struct gr_ctx_desc *gr_ctx);
+int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
+				struct gr_ctx_desc **__gr_ctx,
+				struct vm_gk20a *vm,
+				u32 class,
+				u32 flags);
+int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
+				struct gr_ctx_desc *gr_ctx,
+				struct vm_gk20a *vm, u32 class,
+				u32 graphics_preempt_mode,
+				u32 compute_preempt_mode);
+int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
+					u32 graphics_preempt_mode,
+					u32 compute_preempt_mode);
+int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g);
 
 #endif

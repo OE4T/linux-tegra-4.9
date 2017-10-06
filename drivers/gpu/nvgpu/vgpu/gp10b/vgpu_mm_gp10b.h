@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,6 +25,21 @@
 
 #include "gk20a/gk20a.h"
 
-void vgpu_gp10b_init_mm_ops(struct gpu_ops *gops);
+u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
+				u64 map_offset,
+				struct nvgpu_sgt *sgt,
+				u64 buffer_offset,
+				u64 size,
+				int pgsz_idx,
+				u8 kind_v,
+				u32 ctag_offset,
+				u32 flags,
+				int rw_flag,
+				bool clear_ctags,
+				bool sparse,
+				bool priv,
+				struct vm_gk20a_mapping_batch *batch,
+				enum nvgpu_aperture aperture);
+int vgpu_gp10b_init_mm_setup_hw(struct gk20a *g);
 
 #endif

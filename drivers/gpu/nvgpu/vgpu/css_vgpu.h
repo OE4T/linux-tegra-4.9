@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,14 +20,21 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "vgpu/vgpu.h"
+#ifndef _CSS_VGPU_H_
+#define _CSS_VGPU_H_
 
-static void vgpu_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
-{
-	/* debug dump not supported */
-}
+#include <nvgpu/types.h>
 
-void vgpu_init_debug_ops(struct gpu_ops *gops)
-{
-	gops->debug.show_dump = vgpu_debug_show_dump;
-}
+struct gr_gk20a;
+struct channel_gk20a;
+struct gk20a_cs_snapshot_client;
+
+void vgpu_css_release_snapshot_buffer(struct gr_gk20a *gr);
+int vgpu_css_flush_snapshots(struct channel_gk20a *ch,
+			u32 *pending, bool *hw_overflow);
+int vgpu_css_detach(struct channel_gk20a *ch,
+		struct gk20a_cs_snapshot_client *cs_client);
+int vgpu_css_enable_snapshot_buffer(struct channel_gk20a *ch,
+				struct gk20a_cs_snapshot_client *cs_client);
+
+#endif

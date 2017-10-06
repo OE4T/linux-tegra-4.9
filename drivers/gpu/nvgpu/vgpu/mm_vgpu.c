@@ -35,6 +35,7 @@
 #include <nvgpu/linux/nvgpu_mem.h>
 
 #include "vgpu/vgpu.h"
+#include "vgpu/mm_vgpu.h"
 #include "gk20a/mm_gk20a.h"
 #include "gm20b/mm_gm20b.h"
 
@@ -85,7 +86,7 @@ int vgpu_init_mm_support(struct gk20a *g)
 	return err;
 }
 
-static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
+u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 				u64 map_offset,
 				struct nvgpu_sgt *sgt,
 				u64 buffer_offset,
@@ -171,7 +172,7 @@ fail:
 	return 0;
 }
 
-static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
+void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				u64 vaddr,
 				u64 size,
 				int pgsz_idx,
@@ -274,7 +275,7 @@ u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
 	return addr;
 }
 
-static int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
+int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
 				struct channel_gk20a *ch)
 {
 	struct vm_gk20a *vm = as_share->vm;
@@ -315,7 +316,7 @@ static void vgpu_cache_maint(u64 handle, u8 op)
 	WARN_ON(err || msg.ret);
 }
 
-static int vgpu_mm_fb_flush(struct gk20a *g)
+int vgpu_mm_fb_flush(struct gk20a *g)
 {
 
 	gk20a_dbg_fn("");
@@ -324,7 +325,7 @@ static int vgpu_mm_fb_flush(struct gk20a *g)
 	return 0;
 }
 
-static void vgpu_mm_l2_invalidate(struct gk20a *g)
+void vgpu_mm_l2_invalidate(struct gk20a *g)
 {
 
 	gk20a_dbg_fn("");
@@ -332,7 +333,7 @@ static void vgpu_mm_l2_invalidate(struct gk20a *g)
 	vgpu_cache_maint(vgpu_get_handle(g), TEGRA_VGPU_L2_MAINT_INV);
 }
 
-static void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
+void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 {
 	u8 op;
 
@@ -346,14 +347,14 @@ static void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 	vgpu_cache_maint(vgpu_get_handle(g), op);
 }
 
-static void vgpu_mm_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
+void vgpu_mm_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 {
 	gk20a_dbg_fn("");
 
 	nvgpu_err(g, "call to RM server not supported");
 }
 
-static void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
+void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_mmu_debug_mode *p = &msg.params.mmu_debug_mode;
@@ -366,20 +367,4 @@ static void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
 	p->enable = (u32)enable;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
-}
-
-void vgpu_init_mm_ops(struct gpu_ops *gops)
-{
-	gops->fb.is_debug_mode_enabled = NULL;
-	gops->fb.set_debug_mode = vgpu_mm_mmu_set_debug_mode;
-	gops->mm.gmmu_map = vgpu_locked_gmmu_map;
-	gops->mm.gmmu_unmap = vgpu_locked_gmmu_unmap;
-	gops->mm.vm_bind_channel = vgpu_vm_bind_channel;
-	gops->mm.fb_flush = vgpu_mm_fb_flush;
-	gops->mm.l2_invalidate = vgpu_mm_l2_invalidate;
-	gops->mm.l2_flush = vgpu_mm_l2_flush;
-	gops->fb.tlb_invalidate = vgpu_mm_tlb_invalidate;
-	gops->mm.get_iommu_bit = gk20a_mm_get_iommu_bit;
-	gops->mm.gpu_phys_addr = gm20b_gpu_phys_addr;
-	gops->mm.init_mm_setup_hw = NULL;
 }

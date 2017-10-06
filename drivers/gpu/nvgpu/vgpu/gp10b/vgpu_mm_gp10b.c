@@ -28,7 +28,7 @@
 
 #include <nvgpu/bug.h>
 
-static int vgpu_gp10b_init_mm_setup_hw(struct gk20a *g)
+int vgpu_gp10b_init_mm_setup_hw(struct gk20a *g)
 {
 	g->mm.bypass_smmu = true;
 	g->mm.disable_bigpage = true;
@@ -47,7 +47,7 @@ static inline int add_mem_desc(struct tegra_vgpu_mem_desc *mem_desc,
 	return 0;
 }
 
-static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
+u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 				u64 map_offset,
 				struct nvgpu_sgt *sgt,
 				u64 buffer_offset,
@@ -199,15 +199,4 @@ fail:
 			  mem_desc[i].addr, mem_desc[i].length);
 
 	return 0;
-}
-
-void vgpu_gp10b_init_mm_ops(struct gpu_ops *gops)
-{
-	gk20a_dbg_fn("");
-
-	gops->mm.gmmu_map = vgpu_gp10b_locked_gmmu_map;
-	gops->mm.init_mm_setup_hw = vgpu_gp10b_init_mm_setup_hw;
-
-	/* FIXME: add support for sparse mappings */
-	gops->mm.support_sparse = NULL;
 }

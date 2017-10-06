@@ -378,7 +378,7 @@ int vgpu_init_gpu_characteristics(struct gk20a *g)
 	return 0;
 }
 
-static int vgpu_read_ptimer(struct gk20a *g, u64 *value)
+int vgpu_read_ptimer(struct gk20a *g, u64 *value)
 {
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_read_ptimer_params *p = &msg.params.read_ptimer;
@@ -439,27 +439,6 @@ int vgpu_get_timestamps_zipper(struct gk20a *g,
 	}
 
 	return err;
-}
-
-void vgpu_init_hal_common(struct gk20a *g)
-{
-	struct gpu_ops *gops = &g->ops;
-
-	vgpu_init_fifo_ops(gops);
-	vgpu_init_gr_ops(gops);
-	vgpu_init_ltc_ops(gops);
-	vgpu_init_mm_ops(gops);
-	vgpu_init_debug_ops(gops);
-	vgpu_init_dbg_session_ops(gops);
-	vgpu_init_fecs_trace_ops(gops);
-	vgpu_init_tsg_ops(gops);
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	vgpu_init_css_ops(gops);
-#endif
-	vgpu_init_ce2_ops(gops);
-	gops->chip_init_gpu_characteristics = vgpu_init_gpu_characteristics;
-	gops->bus.read_ptimer = vgpu_read_ptimer;
-	gops->bus.get_timestamps_zipper = vgpu_get_timestamps_zipper;
 }
 
 static int vgpu_init_hal(struct gk20a *g)

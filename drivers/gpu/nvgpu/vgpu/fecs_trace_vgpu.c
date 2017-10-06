@@ -41,7 +41,7 @@ struct vgpu_fecs_trace {
 	void *buf;
 };
 
-static int vgpu_fecs_trace_init(struct gk20a *g)
+int vgpu_fecs_trace_init(struct gk20a *g)
 {
 	struct device *dev = dev_from_gk20a(g);
 	struct device_node *np = dev->of_node;
@@ -102,7 +102,7 @@ fail:
 	return err;
 }
 
-static int vgpu_fecs_trace_deinit(struct gk20a *g)
+int vgpu_fecs_trace_deinit(struct gk20a *g)
 {
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 
@@ -112,7 +112,7 @@ static int vgpu_fecs_trace_deinit(struct gk20a *g)
 	return 0;
 }
 
-static int vgpu_fecs_trace_enable(struct gk20a *g)
+int vgpu_fecs_trace_enable(struct gk20a *g)
 {
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 	struct tegra_vgpu_cmd_msg msg = {
@@ -128,7 +128,7 @@ static int vgpu_fecs_trace_enable(struct gk20a *g)
 	return err;
 }
 
-static int vgpu_fecs_trace_disable(struct gk20a *g)
+int vgpu_fecs_trace_disable(struct gk20a *g)
 {
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 	struct tegra_vgpu_cmd_msg msg = {
@@ -144,14 +144,14 @@ static int vgpu_fecs_trace_disable(struct gk20a *g)
 	return err;
 }
 
-static bool vpgpu_fecs_trace_is_enabled(struct gk20a *g)
+bool vgpu_fecs_trace_is_enabled(struct gk20a *g)
 {
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 
 	return (vcst && vcst->enabled);
 }
 
-static int vgpu_fecs_trace_poll(struct gk20a *g)
+int vgpu_fecs_trace_poll(struct gk20a *g)
 {
 	struct tegra_vgpu_cmd_msg msg = {
 		.cmd = TEGRA_VGPU_CMD_FECS_TRACE_POLL,
@@ -165,7 +165,7 @@ static int vgpu_fecs_trace_poll(struct gk20a *g)
 	return err;
 }
 
-static int vgpu_alloc_user_buffer(struct gk20a *g, void **buf, size_t *size)
+int vgpu_alloc_user_buffer(struct gk20a *g, void **buf, size_t *size)
 {
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 
@@ -174,12 +174,12 @@ static int vgpu_alloc_user_buffer(struct gk20a *g, void **buf, size_t *size)
 	return 0;
 }
 
-static int vgpu_free_user_buffer(struct gk20a *g)
+int vgpu_free_user_buffer(struct gk20a *g)
 {
 	return 0;
 }
 
-static int vgpu_mmap_user_buffer(struct gk20a *g, struct vm_area_struct *vma)
+int vgpu_mmap_user_buffer(struct gk20a *g, struct vm_area_struct *vma)
 {
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 	unsigned long size = vcst->cookie->size;
@@ -194,7 +194,7 @@ static int vgpu_mmap_user_buffer(struct gk20a *g, struct vm_area_struct *vma)
 			vma->vm_page_prot);
 }
 
-static int vgpu_fecs_trace_max_entries(struct gk20a *g,
+int vgpu_fecs_trace_max_entries(struct gk20a *g,
 			struct nvgpu_ctxsw_trace_filter *filter)
 {
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
@@ -206,7 +206,7 @@ static int vgpu_fecs_trace_max_entries(struct gk20a *g,
 #error "FECS trace filter size mismatch!"
 #endif
 
-static int vgpu_fecs_trace_set_filter(struct gk20a *g,
+int vgpu_fecs_trace_set_filter(struct gk20a *g,
 			struct nvgpu_ctxsw_trace_filter *filter)
 {
 	struct tegra_vgpu_cmd_msg msg = {
@@ -221,25 +221,6 @@ static int vgpu_fecs_trace_set_filter(struct gk20a *g,
 	err = err ? err : msg.ret;
 	WARN_ON(err);
 	return err;
-}
-
-void vgpu_init_fecs_trace_ops(struct gpu_ops *ops)
-{
-	ops->fecs_trace.init = vgpu_fecs_trace_init;
-	ops->fecs_trace.deinit = vgpu_fecs_trace_deinit;
-	ops->fecs_trace.enable = vgpu_fecs_trace_enable;
-	ops->fecs_trace.disable = vgpu_fecs_trace_disable;
-	ops->fecs_trace.is_enabled = vpgpu_fecs_trace_is_enabled;
-	ops->fecs_trace.reset = NULL;
-	ops->fecs_trace.flush = NULL;
-	ops->fecs_trace.poll = vgpu_fecs_trace_poll;
-	ops->fecs_trace.bind_channel = NULL;
-	ops->fecs_trace.unbind_channel = NULL;
-	ops->fecs_trace.max_entries = vgpu_fecs_trace_max_entries;
-	ops->fecs_trace.alloc_user_buffer = vgpu_alloc_user_buffer;
-	ops->fecs_trace.free_user_buffer = vgpu_free_user_buffer;
-	ops->fecs_trace.mmap_user_buffer = vgpu_mmap_user_buffer;
-	ops->fecs_trace.set_filter = vgpu_fecs_trace_set_filter;
 }
 
 void vgpu_fecs_trace_data_update(struct gk20a *g)

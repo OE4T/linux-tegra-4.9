@@ -27,10 +27,11 @@
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
 #include "vgpu.h"
+#include "fifo_vgpu.h"
 
 #include <nvgpu/bug.h>
 
-static int vgpu_tsg_open(struct tsg_gk20a *tsg)
+int vgpu_tsg_open(struct tsg_gk20a *tsg)
 {
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_tsg_open_params *p =
@@ -52,7 +53,7 @@ static int vgpu_tsg_open(struct tsg_gk20a *tsg)
 	return err;
 }
 
-static int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
+int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 			struct channel_gk20a *ch)
 {
 	struct tegra_vgpu_cmd_msg msg = {};
@@ -82,7 +83,7 @@ static int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 	return err;
 }
 
-static int vgpu_tsg_unbind_channel(struct channel_gk20a *ch)
+int vgpu_tsg_unbind_channel(struct channel_gk20a *ch)
 {
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_tsg_bind_unbind_channel_params *p =
@@ -105,7 +106,7 @@ static int vgpu_tsg_unbind_channel(struct channel_gk20a *ch)
 	return err;
 }
 
-static int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
+int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 {
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_tsg_timeslice_params *p =
@@ -125,12 +126,4 @@ static int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 		tsg->timeslice_us = timeslice;
 
 	return err;
-}
-
-void vgpu_init_tsg_ops(struct gpu_ops *gops)
-{
-	gops->fifo.tsg_bind_channel = vgpu_tsg_bind_channel;
-	gops->fifo.tsg_unbind_channel = vgpu_tsg_unbind_channel;
-	gops->fifo.tsg_set_timeslice = vgpu_tsg_set_timeslice;
-	gops->fifo.tsg_open = vgpu_tsg_open;
 }

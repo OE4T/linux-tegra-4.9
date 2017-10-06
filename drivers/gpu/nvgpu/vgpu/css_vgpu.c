@@ -29,6 +29,7 @@
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "vgpu.h"
+#include "css_vgpu.h"
 
 static struct tegra_hv_ivm_cookie *css_cookie;
 
@@ -93,7 +94,7 @@ fail:
 	return err;
 }
 
-static void vgpu_css_release_snapshot_buffer(struct gr_gk20a *gr)
+void vgpu_css_release_snapshot_buffer(struct gr_gk20a *gr)
 {
 	struct gk20a_cs_snapshot *data = gr->cs_data;
 
@@ -108,7 +109,7 @@ static void vgpu_css_release_snapshot_buffer(struct gr_gk20a *gr)
 	gk20a_dbg_info("cyclestats(vgpu): buffer for snapshots released\n");
 }
 
-static int vgpu_css_flush_snapshots(struct channel_gk20a *ch,
+int vgpu_css_flush_snapshots(struct channel_gk20a *ch,
 			u32 *pending, bool *hw_overflow)
 {
 	struct gk20a *g = ch->g;
@@ -164,7 +165,7 @@ static int vgpu_css_attach(struct channel_gk20a *ch,
 	return err;
 }
 
-static int vgpu_css_detach(struct channel_gk20a *ch,
+int vgpu_css_detach(struct channel_gk20a *ch,
 		struct gk20a_cs_snapshot_client *cs_client)
 {
 	struct gk20a *g = ch->g;
@@ -190,7 +191,7 @@ static int vgpu_css_detach(struct channel_gk20a *ch,
 	return err;
 }
 
-static int vgpu_css_enable_snapshot_buffer(struct channel_gk20a *ch,
+int vgpu_css_enable_snapshot_buffer(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *cs_client)
 {
 	int ret;
@@ -201,18 +202,5 @@ static int vgpu_css_enable_snapshot_buffer(struct channel_gk20a *ch,
 
 	ret = vgpu_css_init_snapshot_buffer(&ch->g->gr);
 	return ret;
-}
-
-void vgpu_init_css_ops(struct gpu_ops *gops)
-{
-	gops->css.enable_snapshot = vgpu_css_enable_snapshot_buffer;
-	gops->css.disable_snapshot = vgpu_css_release_snapshot_buffer;
-	gops->css.check_data_available = vgpu_css_flush_snapshots;
-	gops->css.detach_snapshot = vgpu_css_detach;
-
-	/* Following entries are not used when virtual, NULL them */
-	gops->css.set_handled_snapshots = NULL;
-	gops->css.allocate_perfmon_ids = NULL;
-	gops->css.release_perfmon_ids = NULL;
 }
 #endif /* CONFIG_GK20A_CYCLE_STATS */

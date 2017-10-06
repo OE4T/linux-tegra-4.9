@@ -31,7 +31,7 @@
 
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 
-static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
+void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 				struct gr_ctx_desc *gr_ctx)
 {
 	struct tegra_vgpu_cmd_msg msg = {0};
@@ -59,7 +59,7 @@ static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 	nvgpu_kfree(g, gr_ctx);
 }
 
-static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
+int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 				struct gr_ctx_desc **__gr_ctx,
 				struct vm_gk20a *vm,
 				u32 class,
@@ -115,7 +115,7 @@ fail:
 	return err;
 }
 
-static int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
+int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 				struct gr_ctx_desc *gr_ctx,
 				struct vm_gk20a *vm, u32 class,
 				u32 graphics_preempt_mode,
@@ -267,7 +267,7 @@ fail:
 	return err;
 }
 
-static int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
+int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 					u32 graphics_preempt_mode,
 					u32 compute_preempt_mode)
 {
@@ -316,7 +316,7 @@ static int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 	return err;
 }
 
-static int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g)
+int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int err;
@@ -333,15 +333,4 @@ static int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g)
 		return -EINVAL;
 
 	return 0;
-}
-
-void vgpu_gp10b_init_gr_ops(struct gpu_ops *gops)
-{
-	vgpu_gm20b_init_gr_ops(gops);
-	gops->gr.alloc_gr_ctx = vgpu_gr_gp10b_alloc_gr_ctx;
-	gops->gr.free_gr_ctx = vgpu_gr_gp10b_free_gr_ctx;
-	gops->gr.init_ctx_state = vgpu_gr_gp10b_init_ctx_state;
-	gops->gr.set_preemption_mode = vgpu_gr_gp10b_set_preemption_mode;
-	gops->gr.set_ctxsw_preemption_mode =
-			vgpu_gr_gp10b_set_ctxsw_preemption_mode;
 }

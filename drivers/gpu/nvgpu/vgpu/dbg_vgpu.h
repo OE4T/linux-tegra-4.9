@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,27 +20,28 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-#include "vgpu_gr_gm20b.h"
+#ifndef _DBG_VGPU_H_
+#define _DBG_VGPU_H_
 
-int vgpu_gm20b_init_fs_state(struct gk20a *g)
-{
-	struct gr_gk20a *gr = &g->gr;
-	u32 tpc_index, gpc_index;
-	u32 sm_id = 0;
+struct dbg_session_gk20a;
+struct nvgpu_dbg_gpu_reg_op;
+struct dbg_profiler_object_data;
+struct gk20a;
 
-	gk20a_dbg_fn("");
+int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
+		      struct nvgpu_dbg_gpu_reg_op *ops,
+		      u64 num_ops);
+int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, __u32 mode);
+bool vgpu_check_and_set_global_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj);
+bool vgpu_check_and_set_context_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj);
 
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		for (tpc_index = 0; tpc_index < gr->gpc_tpc_count[gpc_index];
-								tpc_index++) {
-			g->gr.sm_to_cluster[sm_id].tpc_index = tpc_index;
-			g->gr.sm_to_cluster[sm_id].gpc_index = gpc_index;
-
-			sm_id++;
-		}
-	}
-
-	gr->no_of_sm = sm_id;
-	return 0;
-}
+void vgpu_release_profiler_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj);
+int vgpu_perfbuffer_enable(struct gk20a *g, u64 offset, u32 size);
+int vgpu_perfbuffer_disable(struct gk20a *g);
+#endif

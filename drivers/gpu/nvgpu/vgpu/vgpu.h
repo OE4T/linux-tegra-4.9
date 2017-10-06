@@ -94,16 +94,7 @@ int vgpu_fifo_nonstall_isr(struct gk20a *g,
 			struct tegra_vgpu_fifo_nonstall_intr_info *info);
 int vgpu_ce2_nonstall_isr(struct gk20a *g,
 			struct tegra_vgpu_ce2_nonstall_intr_info *info);
-void vgpu_init_fifo_ops(struct gpu_ops *gops);
-void vgpu_init_gr_ops(struct gpu_ops *gops);
-void vgpu_init_ltc_ops(struct gpu_ops *gops);
-void vgpu_init_mm_ops(struct gpu_ops *gops);
-void vgpu_init_debug_ops(struct gpu_ops *gops);
-void vgpu_init_tsg_ops(struct gpu_ops *gops);
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-void vgpu_init_css_ops(struct gpu_ops *gops);
-#endif
-void vgpu_init_ce2_ops(struct gpu_ops *gops);
+u32 vgpu_ce_get_num_pce(struct gk20a *g);
 int vgpu_init_mm_support(struct gk20a *g);
 int vgpu_init_gr_support(struct gk20a *g);
 int vgpu_init_fifo_support(struct gk20a *g);
@@ -112,15 +103,17 @@ int vgpu_get_attribute(u64 handle, u32 attrib, u32 *value);
 int vgpu_comm_sendrecv(struct tegra_vgpu_cmd_msg *msg, size_t size_in,
 		size_t size_out);
 
-void vgpu_init_hal_common(struct gk20a *g);
 int vgpu_gm20b_init_hal(struct gk20a *g);
 int vgpu_gp10b_init_hal(struct gk20a *g);
 
-void vgpu_init_dbg_session_ops(struct gpu_ops *gops);
 int vgpu_init_gpu_characteristics(struct gk20a *g);
 
 void vgpu_create_sysfs(struct device *dev);
 void vgpu_remove_sysfs(struct device *dev);
+int vgpu_read_ptimer(struct gk20a *g, u64 *value);
+int vgpu_get_timestamps_zipper(struct gk20a *g,
+		u32 source_id, u32 count,
+		struct nvgpu_cpu_time_correlation_sample *samples);
 #else
 static inline int vgpu_pm_prepare_poweroff(struct device *dev)
 {
@@ -168,29 +161,6 @@ static inline int vgpu_fifo_isr(struct gk20a *g,
 			struct tegra_vgpu_fifo_intr_info *info)
 {
 	return 0;
-}
-static inline void vgpu_init_fifo_ops(struct gpu_ops *gops)
-{
-}
-static inline void vgpu_init_gr_ops(struct gpu_ops *gops)
-{
-}
-static inline void vgpu_init_ltc_ops(struct gpu_ops *gops)
-{
-}
-static inline void vgpu_init_mm_ops(struct gpu_ops *gops)
-{
-}
-static inline void vgpu_init_debug_ops(struct gpu_ops *gops)
-{
-}
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-static inline void vgpu_init_css_ops(struct gpu_ops *gops)
-{
-}
-#endif
-static inline void vgpu_init_ce2_ops(struct gpu_ops *gops)
-{
 }
 static inline int vgpu_init_mm_support(struct gk20a *g)
 {

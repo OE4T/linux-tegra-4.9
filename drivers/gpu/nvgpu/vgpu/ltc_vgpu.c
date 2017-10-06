@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU L2
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,8 +23,9 @@
  */
 
 #include "vgpu/vgpu.h"
+#include "vgpu/ltc_vgpu.h"
 
-static int vgpu_determine_L2_size_bytes(struct gk20a *g)
+int vgpu_determine_L2_size_bytes(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
@@ -33,7 +34,7 @@ static int vgpu_determine_L2_size_bytes(struct gk20a *g)
 	return priv->constants.l2_size;
 }
 
-static int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
+int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	u32 max_comptag_lines = 0;
@@ -56,19 +57,11 @@ static int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-static void vgpu_ltc_init_fs_state(struct gk20a *g)
+void vgpu_ltc_init_fs_state(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	gk20a_dbg_fn("");
 
 	g->ltc_count = priv->constants.ltc_count;
-}
-
-void vgpu_init_ltc_ops(struct gpu_ops *gops)
-{
-	gops->ltc.determine_L2_size_bytes = vgpu_determine_L2_size_bytes;
-	gops->ltc.init_comptags = vgpu_ltc_init_comptags;
-	gops->ltc.init_fs_state = vgpu_ltc_init_fs_state;
-	gops->ltc.cbc_ctrl = NULL;
 }

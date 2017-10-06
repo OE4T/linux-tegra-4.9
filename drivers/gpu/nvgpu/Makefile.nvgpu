@@ -153,7 +153,6 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/fifo_vgpu.o \
 	vgpu/ce2_vgpu.o \
 	vgpu/mm_vgpu.o \
-	vgpu/debug_vgpu.o \
 	vgpu/vgpu.o \
 	vgpu/dbg_vgpu.o \
 	vgpu/fecs_trace_vgpu.o \
@@ -245,8 +244,7 @@ nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gp10b_tegra.o
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/gp10b/vgpu_hal_gp10b.o  \
 	vgpu/gp10b/vgpu_gr_gp10b.o  \
-	vgpu/gp10b/vgpu_mm_gp10b.o \
-	vgpu/gp10b/vgpu_fifo_gp10b.o
+	vgpu/gp10b/vgpu_mm_gp10b.o
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)

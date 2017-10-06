@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,6 +25,6 @@
 
 #include "gk20a/gk20a.h"
 
-void vgpu_gm20b_init_gr_ops(struct gpu_ops *gops);
+int vgpu_gm20b_init_fs_state(struct gk20a *g);
 
 #endif

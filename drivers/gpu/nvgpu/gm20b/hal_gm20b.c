@@ -71,7 +71,7 @@
 
 #define PRIV_SECURITY_DISABLE 0x01
 
-static int gm20b_get_litter_value(struct gk20a *g, int value)
+int gm20b_get_litter_value(struct gk20a *g, int value)
 {
 	int ret = EINVAL;
 	switch (value) {

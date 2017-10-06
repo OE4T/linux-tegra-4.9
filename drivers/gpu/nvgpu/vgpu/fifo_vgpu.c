@@ -32,12 +32,13 @@
 #include <nvgpu/barrier.h>
 
 #include "vgpu/vgpu.h"
+#include "vgpu/fifo_vgpu.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 
-static void vgpu_channel_bind(struct channel_gk20a *ch)
+void vgpu_channel_bind(struct channel_gk20a *ch)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
@@ -56,7 +57,7 @@ static void vgpu_channel_bind(struct channel_gk20a *ch)
 	nvgpu_atomic_set(&ch->bound, true);
 }
 
-static void vgpu_channel_unbind(struct channel_gk20a *ch)
+void vgpu_channel_unbind(struct channel_gk20a *ch)
 {
 
 	gk20a_dbg_fn("");
@@ -76,7 +77,7 @@ static void vgpu_channel_unbind(struct channel_gk20a *ch)
 
 }
 
-static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
+int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_hwctx_params *p = &msg.params.channel_hwctx;
@@ -99,7 +100,7 @@ static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 	return 0;
 }
 
-static void vgpu_channel_free_inst(struct gk20a *g, struct channel_gk20a *ch)
+void vgpu_channel_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_hwctx_params *p = &msg.params.channel_hwctx;
@@ -114,7 +115,7 @@ static void vgpu_channel_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 	WARN_ON(err || msg.ret);
 }
 
-static void vgpu_channel_enable(struct channel_gk20a *ch)
+void vgpu_channel_enable(struct channel_gk20a *ch)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
@@ -130,7 +131,7 @@ static void vgpu_channel_enable(struct channel_gk20a *ch)
 	WARN_ON(err || msg.ret);
 }
 
-static void vgpu_channel_disable(struct channel_gk20a *ch)
+void vgpu_channel_disable(struct channel_gk20a *ch)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
@@ -146,7 +147,7 @@ static void vgpu_channel_disable(struct channel_gk20a *ch)
 	WARN_ON(err || msg.ret);
 }
 
-static int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
+int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 				u32 gpfifo_entries,
 				unsigned long acquire_timeout, u32 flags)
 {
@@ -170,7 +171,7 @@ static int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 	return (err || msg.ret) ? -ENOMEM : 0;
 }
 
-static int vgpu_fifo_init_engine_info(struct fifo_gk20a *f)
+int vgpu_fifo_init_engine_info(struct fifo_gk20a *f)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(f->g);
 	struct tegra_vgpu_engines_info *engines = &priv->constants.engines_info;
@@ -377,7 +378,7 @@ clean_up:
 	return err;
 }
 
-static int vgpu_init_fifo_setup_hw(struct gk20a *g)
+int vgpu_init_fifo_setup_hw(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
 
@@ -440,7 +441,7 @@ int vgpu_init_fifo_support(struct gk20a *g)
 	return err;
 }
 
-static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid)
+int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[chid];
@@ -468,7 +469,7 @@ static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	return err;
 }
 
-static int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
+int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_tsg_preempt_params *p =
@@ -579,7 +580,7 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
    special cases below: runlist->active_channels will NOT be changed.
    (chid == ~0 && !add) means remove all active channels from runlist.
    (chid == ~0 &&  add) means restore all active channels on runlist. */
-static int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
+int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 				u32 chid, bool add, bool wait_for_finish)
 {
 	struct fifo_runlist_info_gk20a *runlist = NULL;
@@ -599,14 +600,14 @@ static int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 	return ret;
 }
 
-static int vgpu_fifo_wait_engine_idle(struct gk20a *g)
+int vgpu_fifo_wait_engine_idle(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
 
 	return 0;
 }
 
-static int vgpu_channel_set_priority(struct channel_gk20a *ch, u32 priority)
+int vgpu_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_priority_params *p =
@@ -646,7 +647,7 @@ static int vgpu_fifo_tsg_set_runlist_interleave(struct gk20a *g,
 	return err ? err : msg.ret;
 }
 
-static int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
+int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 					u32 id,
 					bool is_tsg,
 					u32 runlist_id,
@@ -674,7 +675,7 @@ static int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 	return err ? err : msg.ret;
 }
 
-static int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
+int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_timeslice_params *p =
@@ -695,7 +696,7 @@ static int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 	return err;
 }
 
-static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
+int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 					u32 err_code, bool verbose)
 {
 	struct tsg_gk20a *tsg = NULL;
@@ -817,30 +818,4 @@ u32 vgpu_fifo_default_timeslice_us(struct gk20a *g)
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	return priv->constants.default_timeslice_us;
-}
-
-void vgpu_init_fifo_ops(struct gpu_ops *gops)
-{
-	gops->fifo.init_fifo_setup_hw = vgpu_init_fifo_setup_hw;
-	gops->fifo.bind_channel = vgpu_channel_bind;
-	gops->fifo.unbind_channel = vgpu_channel_unbind;
-	gops->fifo.enable_channel = vgpu_channel_enable;
-	gops->fifo.disable_channel = vgpu_channel_disable;
-	gops->fifo.alloc_inst = vgpu_channel_alloc_inst;
-	gops->fifo.free_inst = vgpu_channel_free_inst;
-	gops->fifo.setup_ramfc = vgpu_channel_setup_ramfc;
-	gops->fifo.preempt_channel = vgpu_fifo_preempt_channel;
-	gops->fifo.preempt_tsg = vgpu_fifo_preempt_tsg;
-	gops->fifo.enable_tsg = gk20a_enable_tsg;
-	gops->fifo.disable_tsg = gk20a_disable_tsg;
-	/* Not supported yet for vgpu */
-	gops->fifo.tsg_verify_channel_status = NULL;
-	gops->fifo.update_runlist = vgpu_fifo_update_runlist;
-	gops->fifo.wait_engine_idle = vgpu_fifo_wait_engine_idle;
-	gops->fifo.channel_set_priority = vgpu_channel_set_priority;
-	gops->fifo.set_runlist_interleave = vgpu_fifo_set_runlist_interleave;
-	gops->fifo.channel_set_timeslice = vgpu_channel_set_timeslice;
-	gops->fifo.force_reset_ch = vgpu_fifo_force_reset_ch;
-	gops->fifo.init_engine_info = vgpu_fifo_init_engine_info;
-	gops->fifo.default_timeslice_us = vgpu_fifo_default_timeslice_us;
 }

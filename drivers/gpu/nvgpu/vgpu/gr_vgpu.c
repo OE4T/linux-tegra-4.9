@@ -26,11 +26,12 @@
 #include <nvgpu/bug.h>
 
 #include "vgpu/vgpu.h"
+#include "vgpu/gr_vgpu.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
-static void vgpu_gr_detect_sm_arch(struct gk20a *g)
+void vgpu_gr_detect_sm_arch(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
@@ -427,7 +428,7 @@ static void vgpu_gr_free_channel_pm_ctx(struct channel_gk20a *c)
 	pm_ctx->mem.gpu_va = 0;
 }
 
-static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c, bool is_tsg)
+void vgpu_gr_free_channel_ctx(struct channel_gk20a *c, bool is_tsg)
 {
 	gk20a_dbg_fn("");
 
@@ -484,7 +485,7 @@ static int vgpu_gr_tsg_bind_gr_ctx(struct tsg_gk20a *tsg)
 	return err;
 }
 
-static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
+int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 				struct nvgpu_alloc_obj_ctx_args *args)
 {
 	struct gk20a *g = c->g;
@@ -666,7 +667,7 @@ cleanup:
 	return -ENOMEM;
 }
 
-static int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
+int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 				struct channel_gk20a *c, u64 zcull_va,
 				u32 mode)
 {
@@ -686,7 +687,7 @@ static int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 	return (err || msg.ret) ? -ENOMEM : 0;
 }
 
-static int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
+int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 				struct gr_zcull_info *zcull_params)
 {
 	struct tegra_vgpu_cmd_msg msg;
@@ -717,14 +718,14 @@ static int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 	return 0;
 }
 
-static u32 vgpu_gr_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+u32 vgpu_gr_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	return priv->constants.gpc_tpc_mask[gpc_index];
 }
 
-static u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)
+u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
@@ -733,7 +734,7 @@ static u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)
 	return priv->constants.num_fbps;
 }
 
-static u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
+u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
@@ -742,7 +743,7 @@ static u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
 	return priv->constants.fbp_en_mask;
 }
 
-static u32 vgpu_gr_get_max_ltc_per_fbp(struct gk20a *g)
+u32 vgpu_gr_get_max_ltc_per_fbp(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
@@ -751,7 +752,7 @@ static u32 vgpu_gr_get_max_ltc_per_fbp(struct gk20a *g)
 	return priv->constants.ltc_per_fbp;
 }
 
-static u32 vgpu_gr_get_max_lts_per_ltc(struct gk20a *g)
+u32 vgpu_gr_get_max_lts_per_ltc(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
@@ -760,13 +761,13 @@ static u32 vgpu_gr_get_max_lts_per_ltc(struct gk20a *g)
 	return priv->constants.max_lts_per_ltc;
 }
 
-static u32 *vgpu_gr_rop_l2_en_mask(struct gk20a *g)
+u32 *vgpu_gr_rop_l2_en_mask(struct gk20a *g)
 {
 	/* no one use it yet */
 	return NULL;
 }
 
-static int vgpu_gr_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
+int vgpu_gr_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			   struct zbc_entry *zbc_val)
 {
 	struct tegra_vgpu_cmd_msg msg = {0};
@@ -797,7 +798,7 @@ static int vgpu_gr_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	return (err || msg.ret) ? -ENOMEM : 0;
 }
 
-static int vgpu_gr_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
+int vgpu_gr_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_query_params *query_params)
 {
 	struct tegra_vgpu_cmd_msg msg = {0};
@@ -997,7 +998,7 @@ int vgpu_gr_nonstall_isr(struct gk20a *g,
 	return 0;
 }
 
-static int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
+int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable)
 {
 	struct tegra_vgpu_cmd_msg msg;
@@ -1017,7 +1018,7 @@ static int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
 	return err ? err : msg.ret;
 }
 
-static int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
+int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 	struct channel_gk20a *ch, bool enable)
 {
 	struct tegra_vgpu_cmd_msg msg;
@@ -1041,7 +1042,7 @@ static int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 	return err ? err : msg.ret;
 }
 
-static int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
+int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	struct channel_gk20a *ch, bool enable)
 {
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
@@ -1079,7 +1080,7 @@ static int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	return err ? err : msg.ret;
 }
 
-static int vgpu_gr_clear_sm_error_state(struct gk20a *g,
+int vgpu_gr_clear_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -1172,7 +1173,7 @@ done:
 	return err;
 }
 
-static int vgpu_gr_suspend_contexts(struct gk20a *g,
+int vgpu_gr_suspend_contexts(struct gk20a *g,
 		struct dbg_session_gk20a *dbg_s,
 		int *ctx_resident_ch_fd)
 {
@@ -1180,7 +1181,7 @@ static int vgpu_gr_suspend_contexts(struct gk20a *g,
 			ctx_resident_ch_fd, TEGRA_VGPU_CMD_SUSPEND_CONTEXTS);
 }
 
-static int vgpu_gr_resume_contexts(struct gk20a *g,
+int vgpu_gr_resume_contexts(struct gk20a *g,
 		struct dbg_session_gk20a *dbg_s,
 		int *ctx_resident_ch_fd)
 {
@@ -1212,34 +1213,4 @@ void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 				info->hww_warp_esr_report_mask;
 
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
-}
-
-void vgpu_init_gr_ops(struct gpu_ops *gops)
-{
-	gops->gr.detect_sm_arch = vgpu_gr_detect_sm_arch;
-	gops->gr.free_channel_ctx = vgpu_gr_free_channel_ctx;
-	gops->gr.alloc_obj_ctx = vgpu_gr_alloc_obj_ctx;
-	gops->gr.alloc_gr_ctx = vgpu_gr_alloc_gr_ctx;
-	gops->gr.free_gr_ctx = vgpu_gr_free_gr_ctx;
-	gops->gr.bind_ctxsw_zcull = vgpu_gr_bind_ctxsw_zcull;
-	gops->gr.get_zcull_info = vgpu_gr_get_zcull_info;
-	gops->gr.get_gpc_tpc_mask = vgpu_gr_get_gpc_tpc_mask;
-	gops->gr.get_max_fbps_count = vgpu_gr_get_max_fbps_count;
-	gops->gr.get_fbp_en_mask = vgpu_gr_get_fbp_en_mask;
-	gops->gr.get_max_ltc_per_fbp = vgpu_gr_get_max_ltc_per_fbp;
-	gops->gr.get_max_lts_per_ltc = vgpu_gr_get_max_lts_per_ltc;
-	gops->gr.get_rop_l2_en_mask = vgpu_gr_rop_l2_en_mask;
-	gops->gr.zbc_set_table = vgpu_gr_add_zbc;
-	gops->gr.zbc_query_table = vgpu_gr_query_zbc;
-	gops->gr.init_ctx_state = vgpu_gr_init_ctx_state;
-	gops->gr.set_sm_debug_mode = vgpu_gr_set_sm_debug_mode;
-	gops->gr.update_smpc_ctxsw_mode = vgpu_gr_update_smpc_ctxsw_mode;
-	gops->gr.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode;
-	gops->gr.clear_sm_error_state = vgpu_gr_clear_sm_error_state;
-	gops->gr.suspend_contexts = vgpu_gr_suspend_contexts;
-	gops->gr.resume_contexts = vgpu_gr_resume_contexts;
-	gops->gr.commit_inst = vgpu_gr_commit_inst;
-	gops->gr.dump_gr_regs = NULL;
-	gops->gr.set_boosted_ctx = NULL;
-	gops->gr.update_boosted_ctx = NULL;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,27 +20,37 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-#include "vgpu_gr_gm20b.h"
+#ifndef _MM_VGPU_H_
+#define _MM_VGPU_H_
 
-int vgpu_gm20b_init_fs_state(struct gk20a *g)
-{
-	struct gr_gk20a *gr = &g->gr;
-	u32 tpc_index, gpc_index;
-	u32 sm_id = 0;
-
-	gk20a_dbg_fn("");
-
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		for (tpc_index = 0; tpc_index < gr->gpc_tpc_count[gpc_index];
-								tpc_index++) {
-			g->gr.sm_to_cluster[sm_id].tpc_index = tpc_index;
-			g->gr.sm_to_cluster[sm_id].gpc_index = gpc_index;
-
-			sm_id++;
-		}
-	}
-
-	gr->no_of_sm = sm_id;
-	return 0;
-}
+u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
+				u64 map_offset,
+				struct nvgpu_sgt *sgt,
+				u64 buffer_offset,
+				u64 size,
+				int pgsz_idx,
+				u8 kind_v,
+				u32 ctag_offset,
+				u32 flags,
+				int rw_flag,
+				bool clear_ctags,
+				bool sparse,
+				bool priv,
+				struct vm_gk20a_mapping_batch *batch,
+				enum nvgpu_aperture aperture);
+void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
+				u64 vaddr,
+				u64 size,
+				int pgsz_idx,
+				bool va_allocated,
+				int rw_flag,
+				bool sparse,
+				struct vm_gk20a_mapping_batch *batch);
+int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
+				struct channel_gk20a *ch);
+int vgpu_mm_fb_flush(struct gk20a *g);
+void vgpu_mm_l2_invalidate(struct gk20a *g);
+void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate);
+void vgpu_mm_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb);
+void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable);
+#endif

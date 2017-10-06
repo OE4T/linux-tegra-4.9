@@ -618,7 +618,7 @@
 		status = "okay";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	aconnect@2a41000 {
 #endif
 	adsp_audio {
@@ -650,7 +650,7 @@
 			widget-name = "AEC";
 		};
 	};
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	};
 #endif
 
@@ -730,7 +730,7 @@
 		};
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	aconnect@2a41000 {
 #endif
 	ahub {
@@ -784,7 +784,7 @@
 						<32768>, <32768>, <32768>, <32768>;
 		};
 	};
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	};
 #endif
 	hda@3510000 {
@@ -1102,7 +1102,7 @@
 		#extcon-cells = <1>;
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_DT_VERSION >= DT_VERSION_2
 	xhci@3530000 {
 		extcon-cables = <&vbus_id_extcon 1>;
 		extcon-cable-names = "id";

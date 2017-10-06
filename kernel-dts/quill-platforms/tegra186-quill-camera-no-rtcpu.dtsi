@@ -28,7 +28,7 @@
 		status = "disabled";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	aconnect@2a41000 {
 #endif
 	tegra-hsp@29a0000 { /* Do not use APE HSP */
@@ -39,7 +39,7 @@
 		status = "disabled";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	};
 #endif
 };

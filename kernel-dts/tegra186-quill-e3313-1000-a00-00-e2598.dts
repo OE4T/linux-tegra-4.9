@@ -15,7 +15,7 @@
 
 #include "tegra186-quill-p3310-1000-c03-00-base.dts"
 / {
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		xhci@3530000 {
 			phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
 					<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
@@ -33,7 +33,7 @@
 		};
 #endif
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		xusb_padctl@3520000 {
 			ports {
 				usb2-0 {
@@ -75,7 +75,7 @@
 		};
 #endif
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		xudc@3550000 {
 			phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
 					<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>;
@@ -89,7 +89,7 @@
 		};
 #endif
 
-#if defined(LINUX_VERSION) && LINUX_VERSION < 409
+#if TEGRA_XUSB_PADCONTROL_VERSION <= DT_VERSION_1
 		xotg {
 			phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
 						<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(0)>;

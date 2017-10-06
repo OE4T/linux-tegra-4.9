@@ -88,7 +88,7 @@
 		phy-names = "otg-usb2";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 	xudc@3550000 {
 		status = "okay";
 		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
@@ -110,7 +110,7 @@
 	};
 #endif
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 	xhci@3530000 {
 		status = "okay";
 		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
@@ -129,7 +129,7 @@
 	};
 #endif
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 	xusb_padctl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&vbus_en0_default_state>;

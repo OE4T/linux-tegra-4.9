@@ -6,7 +6,7 @@
  *         Colin Cross <ccross@android.com>
  *         Travis Geiselbrecht <travis@palm.com>
  *
- * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2019, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1006,7 +1006,6 @@ void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
 	if (tegra_edid_support_yuv444(dc_edid))
 		fix->capabilities |= FB_CAP_Y444;
 	fix->capabilities |= tegra_edid_get_ex_hdr_cap(dc_edid);
-	fix->capabilities |= tegra_edid_get_quant_cap(dc_edid);
 
 	fix->max_clk_rate = tegra_edid_get_max_clk_rate(dc_edid);
 

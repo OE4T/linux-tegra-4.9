@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2019, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -607,27 +607,32 @@ int tegra_edid_get_ex_hdr_cap_info(struct tegra_edid *edid,
 
 	return ret;
 }
-u16 tegra_edid_get_quant_cap(struct tegra_edid *edid)
-{
-	u16 ret = 0;
 
+inline bool tegra_edid_is_rgb_quantization_selectable(struct tegra_edid *edid)
+{
+	return edid->data->rgb_quant_selectable;
+}
+
+inline bool tegra_edid_is_yuv_quantization_selectable(struct tegra_edid *edid)
+{
+	return edid->data->yuv_quant_selectable;
+}
+
+int tegra_edid_get_ex_quant_cap_info(struct tegra_edid *edid,
+			struct tegra_dc_ext_quant_caps *quant_cap_info)
+{
 	if (!edid || !edid->data) {
 		pr_warn("edid invalid\n");
-		return 0;
+		return -EINVAL;
 	}
 
-	/* Below code is dead until Bug 1774621 is fixed
-	 * Hence commenting out so that coverity does not complain
-	 */
-#if 0
-	if (edid->data->rgb_quant_selectable)
-		ret |= FB_CAP_RGB_QUANT_SELECTABLE;
+	quant_cap_info->rgb_quant_selectable
+		= edid->data->rgb_quant_selectable;
 
-	if (edid->data->yuv_quant_selectable)
-		ret |= FB_CAP_YUV_QUANT_SELECTABLE;
-#endif
+	quant_cap_info->yuv_quant_selectable
+		= edid->data->yuv_quant_selectable;
 
-	return ret;
+	return 0;
 }
 
 /* hdmi spec mandates sink to specify correct max_tmds_clk only for >165MHz */

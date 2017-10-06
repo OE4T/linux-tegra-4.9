@@ -1,7 +1,7 @@
 /*
  * tegra_dc_ext.h: tegra dc ext interface.
  *
- * Copyright (C) 2011-2018, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2019, NVIDIA Corporation. All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -633,6 +633,8 @@ struct tegra_dc_ext_set_vblank {
 enum tegra_dc_ext_cap_type {
 	TEGRA_DC_EXT_CAP_TYPE_NONE, /* dummy value - do not use */
 	TEGRA_DC_EXT_CAP_TYPE_HDR_SINK, /* struct tegra_dc_ext_hdr_caps */
+	TEGRA_DC_EXT_CAP_TYPE_QUANT_SELECTABLE,
+		/* struct tegra_dc_ext_quant_caps */
 	TEGRA_DC_EXT_CAP_TYPE_MAX,
 };
 
@@ -751,6 +753,19 @@ struct tegra_dc_ext_imp_caps {
 
 	__u64 reserved[8]; /* must be zero */
 } __attribute__((__packed__));
+
+/*
+ * tegra_dc_ext_quant_caps : Incorporates target display's quantization
+ * capabilities.
+ * rgb_quant_selectable : indicates whether rgb quantization range is
+ * selectable
+ * yuv_quant_selectable : indicates whether yuv quantization range is
+ * selectable
+ */
+struct tegra_dc_ext_quant_caps {
+	__u8 rgb_quant_selectable;
+	__u8 yuv_quant_selectable;
+};
 
 /*
  * tegra_dc_ext_caps : Incorporates target display capabilities.

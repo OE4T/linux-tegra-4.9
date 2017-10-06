@@ -35,6 +35,7 @@
 #include <linux/of_address.h>
 #include <linux/of_gpio.h>
 #include <soc/tegra/tegra_powergate.h>
+#include <video/tegra_dc_ext.h>
 
 #include "dc.h"
 #include "dc_reg.h"
@@ -2066,11 +2067,8 @@ static u32 tegra_hdmi_get_ex_colorimetry(struct tegra_hdmi *hdmi)
 
 static u32 tegra_hdmi_get_rgb_quant(struct tegra_hdmi *hdmi)
 {
-	/* Below code is dead until Bug 1774621 is fixed.
-	 * Hence commenting it out, to keep coverity happy
-	 */
-#if 0
 	u32 vmode = hdmi->dc->mode.vmode;
+	u32 hdmi_quant = HDMI_AVI_RGB_QUANT_DEFAULT;
 
 	/*
 	 * For seamless HDMI, read Q0/Q1 from bootloader
@@ -2079,6 +2077,7 @@ static u32 tegra_hdmi_get_rgb_quant(struct tegra_hdmi *hdmi)
 	if (hdmi->dc->initialized) {
 		u32 temp = 0;
 
+		dev_info(&hdmi->dc->ndev->dev, "hdmi: get RGB quant from REG programmed by BL.\n");
 		temp = tegra_sor_readl(hdmi->sor,
 			NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_LOW);
 		temp = (temp >> 26) & 0x3;
@@ -2094,26 +2093,20 @@ static u32 tegra_hdmi_get_rgb_quant(struct tegra_hdmi *hdmi)
 		}
 	}
 
-	if (tegra_edid_get_quant_cap(hdmi->edid) & FB_CAP_RGB_QUANT_SELECTABLE)
-		return vmode & FB_VMODE_LIMITED_RANGE ?
-			HDMI_AVI_RGB_QUANT_LIMITED : HDMI_AVI_RGB_QUANT_FULL;
-	else
-#endif
-		/*
-		 * The safest way to break the HDMI spec when forcing full range
-		 * on a limited system: send full data with the QUANT_DEFAULT
-		 * */
-		return HDMI_AVI_RGB_QUANT_DEFAULT;
+	dev_info(&hdmi->dc->ndev->dev, "hdmi: get RGB quant from EDID.\n");
+	if (tegra_edid_is_rgb_quantization_selectable(hdmi->edid)) {
+		if (vmode & FB_VMODE_LIMITED_RANGE)
+			hdmi_quant = HDMI_AVI_RGB_QUANT_LIMITED;
+		else
+			hdmi_quant = HDMI_AVI_RGB_QUANT_FULL;
+	}
+	return hdmi_quant;
 }
 
 static u32 tegra_hdmi_get_ycc_quant(struct tegra_hdmi *hdmi)
 {
-	/* Below code is dead until Bug 1774621 is fixed.
-	 * Hence commenting it out, to keep coverity happy
-	 */
-#if 0
-
 	u32 vmode = hdmi->dc->mode.vmode;
+	u32 hdmi_quant = HDMI_AVI_YCC_QUANT_NONE;
 
 	/*
 	 * For seamless HDMI, read YQ1/YQ1 from bootloader
@@ -2122,6 +2115,7 @@ static u32 tegra_hdmi_get_ycc_quant(struct tegra_hdmi *hdmi)
 	if (hdmi->dc->initialized) {
 		u32 temp = 0;
 
+		dev_info(&hdmi->dc->ndev->dev, "hdmi: get YCC quant from REG programmed by BL.\n");
 		temp = tegra_sor_readl(hdmi->sor,
 			NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_HIGH);
 		temp = (temp >> 14) & 0x3;
@@ -2136,16 +2130,14 @@ static u32 tegra_hdmi_get_ycc_quant(struct tegra_hdmi *hdmi)
 		}
 	}
 
-	if (tegra_edid_get_quant_cap(hdmi->edid) & FB_CAP_YUV_QUANT_SELECTABLE)
-		return vmode & FB_VMODE_LIMITED_RANGE ?
-			HDMI_AVI_YCC_QUANT_LIMITED : HDMI_AVI_YCC_QUANT_FULL;
-	else
-#endif
-		/*
-		 * The safest way to break the HDMI spec when forcing full range
-		 * on a limited system: send full data with the QUANT_DEFAULT
-		 * */
-		return HDMI_AVI_YCC_QUANT_NONE;
+	dev_info(&hdmi->dc->ndev->dev, "hdmi: get YCC quant from EDID.\n");
+	if (tegra_edid_is_yuv_quantization_selectable(hdmi->edid)) {
+		if (vmode & FB_VMODE_LIMITED_RANGE)
+			hdmi_quant = HDMI_AVI_YCC_QUANT_LIMITED;
+		else
+			hdmi_quant = HDMI_AVI_YCC_QUANT_FULL;
+	}
+	return hdmi_quant;
 }
 
 static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)

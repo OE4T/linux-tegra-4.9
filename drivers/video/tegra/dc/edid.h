@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -187,7 +187,10 @@ u16 tegra_edid_get_cd_flag(struct tegra_edid *edid);
 u16 tegra_edid_get_ex_hdr_cap(struct tegra_edid *edid);
 int tegra_edid_get_ex_hdr_cap_info(struct tegra_edid *edid,
 				struct tegra_dc_ext_hdr_caps *hdr_cap_info);
-u16 tegra_edid_get_quant_cap(struct tegra_edid *edid);
+bool tegra_edid_is_rgb_quantization_selectable(struct tegra_edid *edid);
+bool tegra_edid_is_yuv_quantization_selectable(struct tegra_edid *edid);
+int tegra_edid_get_ex_quant_cap_info(struct tegra_edid *edid,
+				struct tegra_dc_ext_quant_caps *hdr_quant_info);
 u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid);
 bool tegra_edid_is_scdc_present(struct tegra_edid *edid);
 bool tegra_edid_is_420db_present(struct tegra_edid *edid);

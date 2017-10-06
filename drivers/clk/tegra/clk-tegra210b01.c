@@ -58,6 +58,7 @@
 #define PLLM_MISC1 0x98
 #define PLLM_MISC2 0x9c
 #define PLLP_BASE 0xa0
+#define PLLP_OUTA 0xa4
 #define PLLP_OUTB 0xa8
 #define PLLP_MISC0 0xac
 #define PLLP_MISC1 0x680
@@ -1147,6 +1148,9 @@ static void tegra210b01_pllp_set_defaults(struct tegra_clk_pll *pllp)
 {
 	u32 mask;
 	u32 val = readl_relaxed(clk_base + pllp->params->base_reg);
+
+	/* Disable in h/w pll_p_out1 that is not routed to any module */
+	writel_relaxed(0, clk_base + PLLP_OUTA);
 
 	pllp->params->defaults_set = true;
 

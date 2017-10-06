@@ -33,6 +33,7 @@
 #include <nvgpu/pmu.h>
 #include <nvgpu/gmmu.h>
 #include <nvgpu/ltc.h>
+#include <nvgpu/vidmem.h>
 
 #include <trace/events/gk20a.h>
 
@@ -97,8 +98,6 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 	if (gk20a_fifo_is_engine_busy(g))
 		return -EBUSY;
 
-	gk20a_ce_suspend(g);
-
 	ret = gk20a_channel_suspend(g);
 	if (ret)
 		return ret;
@@ -110,6 +109,8 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 	ret |= gk20a_gr_suspend(g);
 	ret |= gk20a_mm_suspend(g);
 	ret |= gk20a_fifo_suspend(g);
+
+	gk20a_ce_suspend(g);
 
 	/* Disable GPCPLL */
 	if (g->ops.clk.suspend_clk_support)
@@ -322,6 +323,8 @@ int gk20a_finalize_poweron(struct gk20a *g)
 			goto done;
 		}
 	}
+
+	nvgpu_vidmem_thread_unpause(&g->mm);
 
 #if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
 	if (gk20a_platform_has_syncpoints(g) && g->syncpt_unit_size) {

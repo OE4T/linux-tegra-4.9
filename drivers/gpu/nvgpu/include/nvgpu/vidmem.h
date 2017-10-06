@@ -73,16 +73,18 @@ struct nvgpu_vidmem_buf *nvgpu_vidmem_user_alloc(struct gk20a *g, size_t bytes);
 
 void nvgpu_vidmem_buf_free(struct gk20a *g, struct nvgpu_vidmem_buf *buf);
 
+int nvgpu_vidmem_clear_list_enqueue(struct gk20a *g, struct nvgpu_mem *mem);
+
 bool nvgpu_addr_is_vidmem_page_alloc(u64 addr);
 int nvgpu_vidmem_get_space(struct gk20a *g, u64 *space);
-
-struct nvgpu_mem *nvgpu_vidmem_get_pending_alloc(struct mm_gk20a *mm);
 
 void nvgpu_vidmem_destroy(struct gk20a *g);
 int nvgpu_vidmem_init(struct mm_gk20a *mm);
 
-void nvgpu_vidmem_clear_mem_worker(struct work_struct *work);
 int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem);
+
+void nvgpu_vidmem_thread_pause_sync(struct mm_gk20a *mm);
+void nvgpu_vidmem_thread_unpause(struct mm_gk20a *mm);
 
 #else /* !defined(CONFIG_GK20A_VIDMEM) */
 
@@ -110,11 +112,6 @@ static inline int nvgpu_vidmem_get_space(struct gk20a *g, u64 *space)
 	return -ENOSYS;
 }
 
-static inline struct nvgpu_mem *nvgpu_vidmem_get_pending_alloc(struct mm_gk20a *mm)
-{
-	return NULL;
-}
-
 static inline void nvgpu_vidmem_destroy(struct gk20a *g)
 {
 }
@@ -133,6 +130,14 @@ static inline int nvgpu_vidmem_clear(struct gk20a *g,
 					      struct nvgpu_mem *mem)
 {
 	return -ENOSYS;
+}
+
+static inline void nvgpu_vidmem_thread_pause_sync(struct mm_gk20a *mm)
+{
+}
+
+static inline void nvgpu_vidmem_thread_unpause(struct mm_gk20a *mm)
+{
 }
 
 #endif /* !defined(CONFIG_GK20A_VIDMEM) */

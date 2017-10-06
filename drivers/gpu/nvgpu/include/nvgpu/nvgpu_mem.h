@@ -273,6 +273,16 @@ int nvgpu_mem_create_from_mem(struct gk20a *g,
 			      int start_page, int nr_pages);
 
 /*
+ * Really free a vidmem buffer. There's a fair amount of work involved in
+ * freeing vidmem buffers in the DMA API. This handles none of that - it only
+ * frees the underlying vidmem specific structures used in vidmem buffers.
+ *
+ * This is implemented in the OS specific code. If it's not necessary it can
+ * be a noop. But the symbol must at least be present.
+ */
+void __nvgpu_mem_free_vidmem_alloc(struct gk20a *g, struct nvgpu_mem *vidmem);
+
+/*
  * Buffer accessors - wrap between begin() and end() if there is no permanent
  * kernel mapping for this buffer.
  */

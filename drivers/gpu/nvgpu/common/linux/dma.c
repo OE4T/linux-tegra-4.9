@@ -514,7 +514,6 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
-	bool was_empty;
 	size_t mem_size = mem->size;
 
 	dma_dbg_free(g, mem->size, mem->priv.flags, "vidmem");
@@ -523,18 +522,19 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 	WARN_ON(mem->priv.flags != NVGPU_DMA_NO_KERNEL_MAPPING);
 
 	if (mem->mem_flags & NVGPU_MEM_FLAG_USER_MEM) {
-		nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
-		was_empty = nvgpu_list_empty(&g->mm.vidmem.clear_list_head);
-		nvgpu_list_add_tail(&mem->clear_list_entry,
-			      &g->mm.vidmem.clear_list_head);
-		atomic64_add(mem->aligned_size,
-			     &g->mm.vidmem.bytes_pending.atomic_var);
-		nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
+		int err = nvgpu_vidmem_clear_list_enqueue(g, mem);
 
-		if (was_empty) {
-			cancel_work_sync(&g->mm.vidmem.clear_mem_worker);
-			schedule_work(&g->mm.vidmem.clear_mem_worker);
-		}
+		/*
+		 * If there's an error here then that means we can't clear the
+		 * vidmem. That's too bad; however, we still own the nvgpu_mem
+		 * buf so we have to free that.
+		 *
+		 * We don't need to worry about the vidmem allocator itself
+		 * since when that gets cleaned up in the driver shutdown path
+		 * all the outstanding allocs are force freed.
+		 */
+		if (err)
+			nvgpu_kfree(g, mem);
 	} else {
 		nvgpu_memset(g, mem, 0, 0, mem->aligned_size);
 		nvgpu_free(mem->allocator,

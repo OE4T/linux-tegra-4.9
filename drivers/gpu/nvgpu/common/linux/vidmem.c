@@ -84,6 +84,8 @@ static void gk20a_vidbuf_release(struct dma_buf *dmabuf)
 
 	nvgpu_kfree(g, linux_buf);
 	nvgpu_vidmem_buf_free(g, buf);
+
+	gk20a_put(g);
 }
 
 static void *gk20a_vidbuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
@@ -160,13 +162,21 @@ struct gk20a *nvgpu_vidmem_buf_owner(struct dma_buf *dmabuf)
 
 int nvgpu_vidmem_export_linux(struct gk20a *g, size_t bytes)
 {
-	struct nvgpu_vidmem_buf *buf;
+	struct nvgpu_vidmem_buf *buf = NULL;
 	struct nvgpu_vidmem_linux *priv;
 	int err, fd;
 
+	/*
+	 * This ref is released when the dma_buf is closed.
+	 */
+	if (!gk20a_get(g))
+		return -ENODEV;
+
 	priv = nvgpu_kzalloc(g, sizeof(*priv));
-	if (!priv)
-		return -ENOMEM;
+	if (!priv) {
+		err = -ENOMEM;
+		goto fail;
+	}
 
 	buf = nvgpu_vidmem_user_alloc(g, bytes);
 	if (!buf) {
@@ -195,8 +205,10 @@ int nvgpu_vidmem_export_linux(struct gk20a *g, size_t bytes)
 	return fd;
 
 fail:
-	nvgpu_kfree(g, priv);
 	nvgpu_vidmem_buf_free(g, buf);
+	nvgpu_kfree(g, priv);
+	gk20a_put(g);
+
 	return err;
 }
 
@@ -229,24 +241,9 @@ int nvgpu_vidmem_buf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
 	return err;
 }
 
-void nvgpu_vidmem_clear_mem_worker(struct work_struct *work)
+void __nvgpu_mem_free_vidmem_alloc(struct gk20a *g, struct nvgpu_mem *vidmem)
 {
-	struct mm_gk20a *mm = container_of(work, struct mm_gk20a,
-					vidmem.clear_mem_worker);
-	struct gk20a *g = mm->g;
-	struct nvgpu_mem *mem;
-
-	while ((mem = nvgpu_vidmem_get_pending_alloc(mm)) != NULL) {
-		nvgpu_vidmem_clear(g, mem);
-		nvgpu_free(mem->allocator,
-			   (u64)nvgpu_vidmem_get_page_alloc(mem->priv.sgt->sgl));
-		nvgpu_free_sgtable(g, &mem->priv.sgt);
-
-		WARN_ON(nvgpu_atomic64_sub_return(mem->aligned_size,
-					&g->mm.vidmem.bytes_pending) < 0);
-		mem->size = 0;
-		mem->aperture = APERTURE_INVALID;
-
-		nvgpu_kfree(g, mem);
-	}
+	nvgpu_free(vidmem->allocator,
+		   (u64)nvgpu_vidmem_get_page_alloc(vidmem->priv.sgt->sgl));
+	nvgpu_free_sgtable(g, &vidmem->priv.sgt);
 }

@@ -22,15 +22,55 @@
 
 #include <linux/scatterlist.h>
 
+#include <nvgpu/timers.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/vidmem.h>
 #include <nvgpu/page_allocator.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
+/*
+ * This is expected to be called from the shutdown path (or the error path in
+ * the vidmem init code). As such we do not expect new vidmem frees to be
+ * enqueued.
+ */
 void nvgpu_vidmem_destroy(struct gk20a *g)
 {
+	struct nvgpu_timeout timeout;
+
+	nvgpu_timeout_init(g, &timeout, 100, NVGPU_TIMER_RETRY_TIMER);
+
+	/*
+	 * Ensure that the thread runs one last time to flush anything in the
+	 * queue.
+	 */
+	nvgpu_cond_signal_interruptible(&g->mm.vidmem.clearing_thread_cond);
+
+	/*
+	 * Wait for at most 1 second before just continuing on. It doesn't make
+	 * sense to hang the system over some potential memory leaks.
+	 */
+	do {
+		bool empty;
+
+		nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
+		empty = nvgpu_list_empty(&g->mm.vidmem.clear_list_head);
+		nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
+
+		if (empty)
+			break;
+
+		nvgpu_msleep(10);
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	/*
+	 * Kill the vidmem clearing thread now. This will wake the thread up
+	 * automatically and cause the wait_interruptible condition trigger.
+	 */
+	nvgpu_thread_stop(&g->mm.vidmem.clearing_thread);
+
 	if (nvgpu_alloc_initialized(&g->mm.vidmem.allocator))
 		nvgpu_alloc_destroy(&g->mm.vidmem.allocator);
 }
@@ -107,6 +147,139 @@ static int __nvgpu_vidmem_do_clear_all(struct gk20a *g)
 	return 0;
 }
 
+void nvgpu_vidmem_thread_pause_sync(struct mm_gk20a *mm)
+{
+	/*
+	 * On the first increment of the pause_count (0 -> 1) take the pause
+	 * lock and prevent the vidmem clearing thread from processing work
+	 * items.
+	 *
+	 * Otherwise the increment is all that's needed - it's essentially a
+	 * ref-count for the number of pause() calls.
+	 *
+	 * The sync component is implemented by waiting for the lock to be
+	 * released by the clearing thread in case the thread is currently
+	 * processing work items.
+	 */
+	if (nvgpu_atomic_inc_return(&mm->vidmem.pause_count) == 1)
+		nvgpu_mutex_acquire(&mm->vidmem.clearing_thread_lock);
+}
+
+void nvgpu_vidmem_thread_unpause(struct mm_gk20a *mm)
+{
+	/*
+	 * And on the last decrement (1 -> 0) release the pause lock and let
+	 * the vidmem clearing thread continue.
+	 */
+	if (nvgpu_atomic_dec_return(&mm->vidmem.pause_count) == 0)
+		nvgpu_mutex_release(&mm->vidmem.clearing_thread_lock);
+}
+
+int nvgpu_vidmem_clear_list_enqueue(struct gk20a *g, struct nvgpu_mem *mem)
+{
+	struct mm_gk20a *mm = &g->mm;
+
+	/*
+	 * Crap. Can't enqueue new vidmem bufs! CE may be gone!
+	 *
+	 * However, an errant app can hold a vidmem dma_buf FD open past when
+	 * the nvgpu driver has exited. Thus when the FD does get closed
+	 * eventually the dma_buf release function will try to call the vidmem
+	 * free function which will attempt to enqueue the vidmem into the
+	 * vidmem clearing thread.
+	 */
+	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
+		return -ENOSYS;
+
+	nvgpu_mutex_acquire(&mm->vidmem.clear_list_mutex);
+	nvgpu_list_add_tail(&mem->clear_list_entry,
+			    &mm->vidmem.clear_list_head);
+	nvgpu_atomic64_add(mem->aligned_size, &mm->vidmem.bytes_pending);
+	nvgpu_mutex_release(&mm->vidmem.clear_list_mutex);
+
+	nvgpu_cond_signal_interruptible(&mm->vidmem.clearing_thread_cond);
+
+	return 0;
+}
+
+static struct nvgpu_mem *nvgpu_vidmem_clear_list_dequeue(struct mm_gk20a *mm)
+{
+	struct nvgpu_mem *mem = NULL;
+
+	nvgpu_mutex_acquire(&mm->vidmem.clear_list_mutex);
+	if (!nvgpu_list_empty(&mm->vidmem.clear_list_head)) {
+		mem = nvgpu_list_first_entry(&mm->vidmem.clear_list_head,
+				nvgpu_mem, clear_list_entry);
+		nvgpu_list_del(&mem->clear_list_entry);
+	}
+	nvgpu_mutex_release(&mm->vidmem.clear_list_mutex);
+
+	return mem;
+}
+
+static void nvgpu_vidmem_clear_pending_allocs(struct mm_gk20a *mm)
+{
+	struct gk20a *g = mm->g;
+	struct nvgpu_mem *mem;
+
+	while ((mem = nvgpu_vidmem_clear_list_dequeue(mm)) != NULL) {
+		nvgpu_vidmem_clear(g, mem);
+
+		WARN_ON(nvgpu_atomic64_sub_return(mem->aligned_size,
+					&g->mm.vidmem.bytes_pending) < 0);
+		mem->size = 0;
+		mem->aperture = APERTURE_INVALID;
+
+		__nvgpu_mem_free_vidmem_alloc(g, mem);
+		nvgpu_kfree(g, mem);
+	}
+}
+
+static int nvgpu_vidmem_clear_pending_allocs_thr(void *mm_ptr)
+{
+	struct mm_gk20a *mm = mm_ptr;
+
+	/*
+	 * Simple thread who's sole job is to periodically clear userspace
+	 * vidmem allocations that have been recently freed.
+	 *
+	 * Since it doesn't make sense to run unless there's pending work a
+	 * condition field is used to wait for work. When the DMA API frees a
+	 * userspace vidmem buf it enqueues it into the clear list and alerts us
+	 * that we have some work to do.
+	 */
+
+	while (!nvgpu_thread_should_stop(&mm->vidmem.clearing_thread)) {
+		int ret;
+
+		/*
+		 * Wait for work but also make sure we should not be paused.
+		 */
+		ret = NVGPU_COND_WAIT_INTERRUPTIBLE(
+				&mm->vidmem.clearing_thread_cond,
+				nvgpu_thread_should_stop(
+					&mm->vidmem.clearing_thread) ||
+				!nvgpu_list_empty(&mm->vidmem.clear_list_head),
+				0);
+		if (ret == -ERESTARTSYS)
+			continue;
+
+		/*
+		 * Use this lock to implement a pause mechanism. By taking this
+		 * lock some other code can prevent this thread from processing
+		 * work items.
+		 */
+		if (!nvgpu_mutex_tryacquire(&mm->vidmem.clearing_thread_lock))
+			continue;
+
+		nvgpu_vidmem_clear_pending_allocs(mm);
+
+		nvgpu_mutex_release(&mm->vidmem.clearing_thread_lock);
+	}
+
+	return 0;
+}
+
 int nvgpu_vidmem_init(struct mm_gk20a *mm)
 {
 	struct gk20a *g = mm->g;
@@ -156,16 +329,39 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 	mm->vidmem.bootstrap_base = bootstrap_base;
 	mm->vidmem.bootstrap_size = bootstrap_size;
 
-	nvgpu_mutex_init(&mm->vidmem.first_clear_mutex);
+	err = nvgpu_cond_init(&mm->vidmem.clearing_thread_cond);
+	if (err)
+		goto fail;
 
-	INIT_WORK(&mm->vidmem.clear_mem_worker, nvgpu_vidmem_clear_mem_worker);
 	nvgpu_atomic64_set(&mm->vidmem.bytes_pending, 0);
 	nvgpu_init_list_node(&mm->vidmem.clear_list_head);
 	nvgpu_mutex_init(&mm->vidmem.clear_list_mutex);
+	nvgpu_mutex_init(&mm->vidmem.clearing_thread_lock);
+	nvgpu_atomic_set(&mm->vidmem.pause_count, 0);
+
+	/*
+	 * Start the thread off in the paused state. The thread doesn't have to
+	 * be running for this to work. It will be woken up later on in
+	 * finalize_poweron(). We won't necessarily have a CE context yet
+	 * either, so hypothetically one could cause a race where we try to
+	 * clear a vidmem struct before we have a CE context to do so.
+	 */
+	nvgpu_vidmem_thread_pause_sync(mm);
+
+	err = nvgpu_thread_create(&mm->vidmem.clearing_thread, mm,
+				  nvgpu_vidmem_clear_pending_allocs_thr,
+				  "vidmem-clear");
+	if (err)
+		goto fail;
 
 	gk20a_dbg_info("registered vidmem: %zu MB", size / SZ_1M);
 
 	return 0;
+
+fail:
+	nvgpu_cond_destroy(&mm->vidmem.clearing_thread_cond);
+	nvgpu_vidmem_destroy(g);
+	return err;
 }
 
 int nvgpu_vidmem_get_space(struct gk20a *g, u64 *space)
@@ -242,21 +438,6 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 	}
 
 	return err;
-}
-
-struct nvgpu_mem *nvgpu_vidmem_get_pending_alloc(struct mm_gk20a *mm)
-{
-	struct nvgpu_mem *mem = NULL;
-
-	nvgpu_mutex_acquire(&mm->vidmem.clear_list_mutex);
-	if (!nvgpu_list_empty(&mm->vidmem.clear_list_head)) {
-		mem = nvgpu_list_first_entry(&mm->vidmem.clear_list_head,
-				nvgpu_mem, clear_list_entry);
-		nvgpu_list_del(&mem->clear_list_entry);
-	}
-	nvgpu_mutex_release(&mm->vidmem.clear_list_mutex);
-
-	return mem;
 }
 
 static int nvgpu_vidmem_clear_all(struct gk20a *g)

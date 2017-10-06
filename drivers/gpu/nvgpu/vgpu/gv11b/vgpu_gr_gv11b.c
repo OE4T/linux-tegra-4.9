@@ -22,12 +22,10 @@
 
 #include <gk20a/gk20a.h>
 #include <vgpu/gr_vgpu.h>
-#include <vgpu/gp10b/vgpu_gr_gp10b.h>
 
-#include "vgpu_gr_gv11b.h"
 #include "vgpu_subctx_gv11b.h"
 
-static int vgpu_gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
+int vgpu_gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
 	int err;
 
@@ -40,10 +38,4 @@ static int vgpu_gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 		vgpu_gv11b_free_subctx_header(c);
 
 	return err;
-}
-
-void vgpu_gv11b_init_gr_ops(struct gpu_ops *gops)
-{
-	vgpu_gp10b_init_gr_ops(gops);
-	gops->gr.commit_inst = vgpu_gr_gv11b_commit_inst;
 }

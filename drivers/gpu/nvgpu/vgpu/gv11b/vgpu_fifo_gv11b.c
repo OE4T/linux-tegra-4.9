@@ -21,14 +21,10 @@
  */
 
 #include <gk20a/gk20a.h>
-#include <vgpu/gp10b/vgpu_fifo_gp10b.h>
 
 #include "vgpu/vgpu.h"
 
-#include "vgpu_fifo_gv11b.h"
-#include "vgpu_subctx_gv11b.h"
-
-static int vgpu_gv11b_init_fifo_setup_hw(struct gk20a *g)
+int vgpu_gv11b_init_fifo_setup_hw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	int err;
@@ -42,14 +38,4 @@ static int vgpu_gv11b_init_fifo_setup_hw(struct gk20a *g)
 	}
 
 	return 0;
-}
-
-void vgpu_gv11b_init_fifo_ops(struct gpu_ops *gops)
-{
-	vgpu_gp10b_init_fifo_ops(gops);
-
-	gops->fifo.init_fifo_setup_hw = vgpu_gv11b_init_fifo_setup_hw;
-	gops->fifo.free_channel_ctx_header = vgpu_gv11b_free_subctx_header;
-	/* TODO: implement it for CE fault */
-	gops->fifo.tsg_verify_status_faulted = NULL;
 }

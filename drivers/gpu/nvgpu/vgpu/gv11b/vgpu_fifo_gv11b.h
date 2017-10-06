@@ -23,8 +23,7 @@
 #ifndef _VGPU_FIFO_GV11B_H_
 #define _VGPU_FIFO_GV11B_H_
 
-struct gpu_ops;
+struct gk20a;
 
-void vgpu_gv11b_init_fifo_ops(struct gpu_ops *gops);
-
+int vgpu_gv11b_init_fifo_setup_hw(struct gk20a *g);
 #endif

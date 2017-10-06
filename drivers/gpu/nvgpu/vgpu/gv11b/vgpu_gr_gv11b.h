@@ -23,6 +23,8 @@
 #ifndef _VGPU_GR_GV11B_H_
 #define _VGPU_GR_GV11B_H_
 
-void vgpu_gv11b_init_gr_ops(struct gpu_ops *gops);
+struct channel_gk20a;
+
+int vgpu_gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 
 #endif

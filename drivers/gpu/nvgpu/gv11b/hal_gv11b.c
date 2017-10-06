@@ -94,7 +94,7 @@
 #include <nvgpu/hw/gv11b/hw_pwr_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fuse_gv11b.h>
 
-static int gv11b_get_litter_value(struct gk20a *g, int value)
+int gv11b_get_litter_value(struct gk20a *g, int value)
 {
 	int ret = EINVAL;
 	switch (value) {

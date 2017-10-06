@@ -836,13 +836,11 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
 			ret);
-		goto err_fini_utils;
+		goto err_alloc_dai_link;
 	}
 
 	return 0;
 
-err_fini_utils:
-	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 err_alloc_dai_link:
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();

@@ -328,11 +328,6 @@ int tegra_xbar_remove(struct platform_device *pdev)
 
 	tegra_pd_remove_device(&pdev->dev);
 
-	devm_clk_put(&pdev->dev, xbar->clk);
-	devm_clk_put(&pdev->dev, xbar->clk_parent);
-	devm_clk_put(&pdev->dev, xbar->clk_ape);
-	devm_clk_put(&pdev->dev, xbar->clk_apb2ape);
-
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_remove);
@@ -378,21 +373,21 @@ int tegra_xbar_probe(struct platform_device *pdev,
 		if (IS_ERR(xbar->clk_parent)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 			ret = PTR_ERR(xbar->clk_parent);
-			goto err_clk_put;
+			goto err;
 		}
 
 		xbar->clk_apb2ape = devm_clk_get(&pdev->dev, "apb2ape");
 		if (IS_ERR(xbar->clk_apb2ape)) {
 			dev_err(&pdev->dev, "Can't retrieve apb2ape clock\n");
 			ret = PTR_ERR(xbar->clk_apb2ape);
-			goto err_clk_put_parent;
+			goto err;
 		}
 
 		xbar->clk_ape = devm_clk_get(&pdev->dev, "xbar.ape");
 		if (IS_ERR(xbar->clk_ape)) {
 			dev_err(&pdev->dev, "Can't retrieve ape clock\n");
 			ret = PTR_ERR(xbar->clk_ape);
-			goto err_clk_put_apb2ape;
+			goto err;
 		}
 	}
 
@@ -400,14 +395,14 @@ int tegra_xbar_probe(struct platform_device *pdev,
 	if (IS_ERR(parent_clk)) {
 		dev_err(&pdev->dev, "Can't get parent clock for xbar\n");
 		ret = PTR_ERR(parent_clk);
-		goto err_clk_put_ape;
+		goto err;
 	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		ret = clk_set_parent(xbar->clk, xbar->clk_parent);
 		if (ret) {
 			dev_err(&pdev->dev, "Failed to set parent clock with pll_a_out0\n");
-			goto err_clk_put_ape;
+			goto err;
 		}
 	}
 
@@ -457,15 +452,6 @@ err_pm_disable:
 	tegra_pd_remove_device(&pdev->dev);
 err_clk_set_parent:
 	clk_set_parent(xbar->clk, parent_clk);
-err_clk_put_ape:
-	devm_clk_put(&pdev->dev, xbar->clk_ape);
-err_clk_put_apb2ape:
-	devm_clk_put(&pdev->dev, xbar->clk_apb2ape);
-err_clk_put_parent:
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
-		devm_clk_put(&pdev->dev, xbar->clk_parent);
-err_clk_put:
-	devm_clk_put(&pdev->dev, xbar->clk);
 err:
 	return ret;
 }

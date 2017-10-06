@@ -41,24 +41,6 @@
 static bool is_switch_registered;
 #endif
 
-struct clk *tegra_alt_asoc_utils_get_clk(struct device *dev,
-					 bool dev_id,
-					 const char *clk_name)
-{
-	struct clk *clk;
-
-	clk = devm_clk_get(dev, clk_name);
-
-	return clk;
-}
-EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_get_clk);
-
-void tegra_alt_asoc_utils_clk_put(struct device *dev, struct clk *clk)
-{
-	devm_clk_put(dev, clk);
-}
-EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_clk_put);
-
 int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 				int srate,
 				int mclk,
@@ -229,54 +211,40 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		/* DT boot, but unknown SoC */
 		return -EINVAL;
 
-	/* pll_p_out1 is not used for ahub for T210,T186 */
-	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210) {
-		data->clk_pll_p_out1 = clk_get_sys(NULL, "pll_p_out1");
-		if (IS_ERR(data->clk_pll_p_out1)) {
-			dev_err(data->dev, "Can't retrieve clk pll_p_out1\n");
-			ret = PTR_ERR(data->clk_pll_p_out1);
-			goto err;
-		}
-	}
-
-	data->clk_m = tegra_alt_asoc_utils_get_clk(dev, false, "clk_m");
+	data->clk_m = devm_clk_get(dev, "clk_m");
 	if (IS_ERR(data->clk_m)) {
 		dev_err(data->dev, "Can't retrieve clk clk_m\n");
 		ret = PTR_ERR(data->clk_m);
 		goto err;
 	}
 
-	data->clk_pll_a = tegra_alt_asoc_utils_get_clk(dev, false, "pll_a");
+	data->clk_pll_a = devm_clk_get(dev, "pll_a");
 	if (IS_ERR(data->clk_pll_a)) {
 		dev_err(data->dev, "Can't retrieve clk pll_a\n");
 		ret = PTR_ERR(data->clk_pll_a);
-		goto err_put_pll_p_out1;
+		goto err;
 	}
 
-	data->clk_pll_a_out0 = tegra_alt_asoc_utils_get_clk(dev, false,
-							"pll_a_out0");
+	data->clk_pll_a_out0 = devm_clk_get(dev, "pll_a_out0");
 	if (IS_ERR(data->clk_pll_a_out0)) {
 		dev_err(data->dev, "Can't retrieve clk pll_a_out0\n");
 		ret = PTR_ERR(data->clk_pll_a_out0);
-		goto err_put_pll_a;
+		goto err;
 	}
 
-	data->clk_cdev1 = tegra_alt_asoc_utils_get_clk(dev, true,
-					"extern1");
-
+	data->clk_cdev1 = devm_clk_get(dev, "extern1");
 	if (IS_ERR(data->clk_cdev1)) {
 		dev_err(data->dev, "Can't retrieve clk cdev1\n");
 		ret = PTR_ERR(data->clk_cdev1);
-		goto err_put_pll_a_out0;
+		goto err;
 	}
 
 	if (data->soc > TEGRA_ASOC_UTILS_SOC_TEGRA210) {
-		data->clk_ahub = tegra_alt_asoc_utils_get_clk(dev, false,
-								"ahub");
+		data->clk_ahub = devm_clk_get(dev, "ahub");
 		if (IS_ERR(data->clk_ahub)) {
 			dev_err(data->dev, "Can't retrieve clk ahub\n");
 			ret = PTR_ERR(data->clk_ahub);
-			goto err_put_cdev1;
+			goto err;
 		}
 
 #if defined(CONFIG_COMMON_CLK)
@@ -292,36 +260,8 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 #endif
 	}
 
-	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210) {
-		ret = tegra_alt_asoc_utils_set_rate(data, 48000,
-					256 * 48000, 256 * 48000);
-		if (ret)
-			goto err_put_ahub;
-	}
-
-	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA186) {
-		ret = clk_prepare_enable(data->clk_cdev1);
-		if (ret) {
-			dev_err(data->dev, "Can't enable clk cdev1/extern1");
-			goto err_put_ahub;
-		}
-		data->clk_cdev1_state = 1;
-	}
-
 	return 0;
 
-err_put_ahub:
-	if (data->soc > TEGRA_ASOC_UTILS_SOC_TEGRA210)
-		tegra_alt_asoc_utils_clk_put(dev, data->clk_ahub);
-err_put_cdev1:
-	tegra_alt_asoc_utils_clk_put(dev, data->clk_cdev1);
-err_put_pll_a_out0:
-	tegra_alt_asoc_utils_clk_put(dev, data->clk_pll_a_out0);
-err_put_pll_a:
-	tegra_alt_asoc_utils_clk_put(dev, data->clk_pll_a);
-err_put_pll_p_out1:
-	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210)
-		clk_put(data->clk_pll_p_out1);
 err:
 	return ret;
 }
@@ -386,27 +326,6 @@ int tegra_alt_asoc_utils_set_extern_parent(
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_set_extern_parent);
-
-void tegra_alt_asoc_utils_fini(struct tegra_asoc_audio_clock_info *data)
-{
-	if (data->clk_cdev1_state)
-		clk_disable_unprepare(data->clk_cdev1);
-
-	if (data->soc > TEGRA_ASOC_UTILS_SOC_TEGRA210)
-		if (!IS_ERR(data->clk_ahub))
-			tegra_alt_asoc_utils_clk_put(data->dev, data->clk_ahub);
-
-	if (!IS_ERR(data->clk_pll_a_out0))
-		tegra_alt_asoc_utils_clk_put(data->dev, data->clk_pll_a_out0);
-
-	if (!IS_ERR(data->clk_pll_a))
-		tegra_alt_asoc_utils_clk_put(data->dev, data->clk_pll_a);
-
-	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA210)
-		if (!IS_ERR(data->clk_pll_p_out1))
-			clk_put(data->clk_pll_p_out1);
-}
-EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_fini);
 
 #ifdef CONFIG_SWITCH
 int tegra_alt_asoc_switch_register(struct switch_dev *sdev)

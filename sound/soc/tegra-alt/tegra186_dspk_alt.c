@@ -479,13 +479,13 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 		if (IS_ERR_OR_NULL(dspk->clk_pll_a_out0)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 			ret = -ENOENT;
-		goto err_clk_put;
+		goto err;
 		}
 
 		ret = clk_set_parent(dspk->clk_dspk, dspk->clk_pll_a_out0);
 		if (ret) {
 			dev_err(&pdev->dev, "Can't set parent of dspk clock\n");
-			goto err_plla_clk_put;
+			goto err;
 		}
 	}
 
@@ -592,10 +592,6 @@ err_suspend:
 		tegra186_dspk_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_plla_clk_put:
-	devm_clk_put(&pdev->dev, dspk->clk_pll_a_out0);
-err_clk_put:
-	devm_clk_put(&pdev->dev, dspk->clk_dspk);
 err:
 	return ret;
 }
@@ -617,9 +613,6 @@ static int tegra186_dspk_platform_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra186_dspk_runtime_suspend(&pdev->dev);
-
-	devm_clk_put(&pdev->dev, dspk->clk_pll_a_out0);
-	devm_clk_put(&pdev->dev, dspk->clk_dspk);
 
 	return 0;
 }

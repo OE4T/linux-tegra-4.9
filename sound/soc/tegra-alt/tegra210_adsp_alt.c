@@ -5147,39 +5147,13 @@ err_unregister_platform:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err:
-	if (!adsp->soc_data->is_soc_t210)
-		if (!IS_ERR_OR_NULL(adsp->apb2ape_clk))
-			tegra_alt_asoc_utils_clk_put
-				(&pdev->dev, adsp->apb2ape_clk);
-
-	if (!IS_ERR_OR_NULL(adsp->ape_clk))
-		tegra_alt_asoc_utils_clk_put
-			(&pdev->dev, adsp->ape_clk);
-	if (!IS_ERR_OR_NULL(adsp->ahub_clk))
-		tegra_alt_asoc_utils_clk_put
-			(&pdev->dev, adsp->ahub_clk);
 	return ret;
 }
 
 static int __maybe_unused tegra210_adsp_audio_platform_remove(
 	struct platform_device *pdev)
 {
-	struct tegra210_adsp *adsp = dev_get_drvdata(&pdev->dev);
-
 	pm_runtime_disable(&pdev->dev);
-	if (!adsp->soc_data->is_soc_t210)
-		if (!IS_ERR_OR_NULL(adsp->apb2ape_clk))
-			tegra_alt_asoc_utils_clk_put
-				(&pdev->dev, adsp->apb2ape_clk);
-
-	if (!IS_ERR_OR_NULL(adsp->ape_clk))
-		tegra_alt_asoc_utils_clk_put
-			(&pdev->dev, adsp->ape_clk);
-
-	if (!IS_ERR_OR_NULL(adsp->ahub_clk))
-		tegra_alt_asoc_utils_clk_put
-			(&pdev->dev, adsp->ahub_clk);
-
 	tegra_pd_remove_device(&pdev->dev);
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;

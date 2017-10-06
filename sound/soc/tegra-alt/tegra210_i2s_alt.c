@@ -1061,28 +1061,28 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		if (IS_ERR(i2s->clk_i2s_sync)) {
 			dev_err(&pdev->dev, "Can't retrieve i2s_sync clock\n");
 			ret = PTR_ERR(i2s->clk_i2s_sync);
-			goto err_clk_put;
+			goto err;
 		}
 
 		i2s->clk_audio_sync = devm_clk_get(&pdev->dev, "audio_sync");
 		if (IS_ERR(i2s->clk_audio_sync)) {
 			dev_err(&pdev->dev, "Can't retrieve audio sync clock\n");
 			ret = PTR_ERR(i2s->clk_audio_sync);
-			goto err_i2s_sync_clk_put;
+			goto err;
 		}
 
 		i2s->clk_i2s_source = devm_clk_get(&pdev->dev, "pll_a_out0");
 		if (IS_ERR(i2s->clk_i2s_source)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 			ret = PTR_ERR(i2s->clk_i2s_source);
-			goto err_audio_sync_clk_put;
+			goto err;
 		}
 	}
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
 		ret = -ENODEV;
-		goto err_pll_a_out0_clk_put;
+		goto err;
 	}
 
 	memregion = devm_request_mem_region(&pdev->dev, mem->start,
@@ -1090,14 +1090,14 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	if (!memregion) {
 		dev_err(&pdev->dev, "Memory region already claimed\n");
 		ret = -EBUSY;
-		goto err_pll_a_out0_clk_put;
+		goto err;
 	}
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
-		goto err_pll_a_out0_clk_put;
+		goto err;
 	}
 
 	i2s->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -1105,7 +1105,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	if (IS_ERR(i2s->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(i2s->regmap);
-		goto err_pll_a_out0_clk_put;
+		goto err;
 	}
 
 	i2s->slgc_notifier.notifier_call = _tegra210_i2s_slcg_notifier;
@@ -1120,7 +1120,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-i2s-id\n");
 		ret = -ENODEV;
-		goto err_pll_a_out0_clk_put;
+		goto err;
 	}
 
 	if (of_property_read_u32(pdev->dev.of_node,
@@ -1152,7 +1152,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 					sizeof(*i2s->supplies), GFP_KERNEL);
 			if (!i2s->supplies) {
 				ret = -ENOMEM;
-				goto err_pll_a_out0_clk_put;
+				goto err;
 			}
 			of_property_for_each_string(np,
 				"regulator-supplies", prop, supply)
@@ -1219,15 +1219,6 @@ err_suspend:
 		tegra210_i2s_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_pll_a_out0_clk_put:
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
-		devm_clk_put(&pdev->dev, i2s->clk_i2s_source);
-err_audio_sync_clk_put:
-	devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
-err_i2s_sync_clk_put:
-	devm_clk_put(&pdev->dev, i2s->clk_i2s_sync);
-err_clk_put:
-	devm_clk_put(&pdev->dev, i2s->clk_i2s);
 err:
 	return ret;
 }
@@ -1241,20 +1232,11 @@ static void tegra210_i2s_platform_shutdown(struct platform_device *pdev)
 
 static int tegra210_i2s_platform_remove(struct platform_device *pdev)
 {
-	struct tegra210_i2s *i2s = dev_get_drvdata(&pdev->dev);
-
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_i2s_runtime_suspend(&pdev->dev);
-
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		devm_clk_put(&pdev->dev, i2s->clk_i2s);
-		devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
-		devm_clk_put(&pdev->dev, i2s->clk_i2s_sync);
-		clk_put(i2s->clk_i2s_source);
-	}
 
 	return 0;
 }

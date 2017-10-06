@@ -491,21 +491,21 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 		if (IS_ERR(spdif->clk_pll_p_out0)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_p_out0 clock\n");
 			ret = PTR_ERR(spdif->clk_pll_p_out0);
-			goto err_spdif_plla_clk_put;
+			goto err;
 		}
 
 		spdif->clk_spdif_out = devm_clk_get(&pdev->dev, "spdif_out");
 		if (IS_ERR(spdif->clk_spdif_out)) {
 			dev_err(&pdev->dev, "Can't retrieve spdif clock\n");
 			ret = PTR_ERR(spdif->clk_spdif_out);
-			goto err_spdif_pllp_clk_put;
+			goto err;
 		}
 
 		spdif->clk_spdif_in = devm_clk_get(&pdev->dev, "spdif_in");
 		if (IS_ERR(spdif->clk_spdif_in)) {
 			dev_err(&pdev->dev, "Can't retrieve spdif clock\n");
 			ret = PTR_ERR(spdif->clk_spdif_in);
-			goto err_spdif_out_clk_put;
+			goto err;
 		}
 	}
 
@@ -513,7 +513,7 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
 		ret = -ENODEV;
-		goto err_spdif_in_clk_put;
+		goto err;
 	}
 
 	memregion = devm_request_mem_region(&pdev->dev, mem->start,
@@ -521,14 +521,14 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	if (!memregion) {
 		dev_err(&pdev->dev, "Memory region already claimed\n");
 		ret = -EBUSY;
-		goto err_spdif_in_clk_put;
+		goto err;
 	}
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
-		goto err_spdif_in_clk_put;
+		goto err;
 	}
 
 	spdif->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -536,7 +536,7 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	if (IS_ERR(spdif->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(spdif->regmap);
-		goto err_spdif_in_clk_put;
+		goto err;
 	}
 	regcache_cache_only(spdif->regmap, true);
 
@@ -545,7 +545,7 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-spdif-id\n");
 		ret = -ENODEV;
-		goto err_spdif_in_clk_put;
+		goto err;
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -613,18 +613,6 @@ err_suspend:
 		tegra210_spdif_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_spdif_in_clk_put:
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
-		devm_clk_put(&pdev->dev, spdif->clk_spdif_in);
-err_spdif_out_clk_put:
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
-		devm_clk_put(&pdev->dev, spdif->clk_spdif_out);
-err_spdif_pllp_clk_put:
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
-		devm_clk_put(&pdev->dev, spdif->clk_pll_p_out0);
-err_spdif_plla_clk_put:
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
-		devm_clk_put(&pdev->dev, spdif->clk_pll_a_out0);
 err:
 	return ret;
 }
@@ -638,18 +626,11 @@ static void tegra210_spdif_platform_shutdown(struct platform_device *pdev)
 
 static int tegra210_spdif_platform_remove(struct platform_device *pdev)
 {
-	struct tegra210_spdif *spdif = dev_get_drvdata(&pdev->dev);
-
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_spdif_runtime_suspend(&pdev->dev);
-
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		devm_clk_put(&pdev->dev, spdif->clk_spdif_out);
-		devm_clk_put(&pdev->dev, spdif->clk_spdif_in);
-	}
 
 	return 0;
 }

@@ -77,10 +77,6 @@ struct tegra_asoc_audio_clock_info {
 	u32 clk_rates[MAX_NUM_RATES];
 };
 
-struct clk *tegra_alt_asoc_utils_get_clk(struct device *dev,
-					bool dev_id,
-					const char *clk_name);
-void tegra_alt_asoc_utils_clk_put(struct device *dev, struct clk *clk);
 int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 				int srate,
 				int mclk,
@@ -90,7 +86,6 @@ void tegra_alt_asoc_utils_lock_clk_rate(
 				int lock);
 int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 				struct device *dev, struct snd_soc_card *card);
-void tegra_alt_asoc_utils_fini(struct tegra_asoc_audio_clock_info *data);
 
 int tegra_alt_asoc_utils_set_extern_parent(
 	struct tegra_asoc_audio_clock_info *data, const char *parent);

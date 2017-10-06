@@ -1258,7 +1258,7 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
 			ret);
-		goto err_fini_utils;
+		goto err_alloc_dai_link;
 	}
 
 	rtd = snd_soc_get_pcm_runtime(card, "rt565x-playback");
@@ -1283,8 +1283,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	return 0;
 
-err_fini_utils:
-	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 err_alloc_dai_link:
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
@@ -1295,13 +1293,11 @@ err:
 static int tegra_machine_driver_remove(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
 
 	snd_soc_unregister_card(card);
 
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
-	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 
 	return 0;
 }

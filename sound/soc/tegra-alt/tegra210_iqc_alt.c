@@ -361,7 +361,7 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	memregion = devm_request_mem_region(&pdev->dev, mem->start,
@@ -369,14 +369,14 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 	if (!memregion) {
 		dev_err(&pdev->dev, "Memory region already claimed\n");
 		ret = -EBUSY;
-		goto err_clk_put;
+		goto err;
 	}
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
-		goto err_clk_put;
+		goto err;
 	}
 
 	iqc->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
@@ -384,7 +384,7 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 	if (IS_ERR(iqc->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(iqc->regmap);
-		goto err_clk_put;
+		goto err;
 	}
 	regcache_cache_only(iqc->regmap, true);
 
@@ -394,7 +394,7 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Missing property nvidia,ahub-iqc-id\n");
 		ret = -ENODEV;
-		goto err_clk_put;
+		goto err;
 	}
 
 	if (of_property_read_u32(pdev->dev.of_node,
@@ -437,8 +437,6 @@ err_suspend:
 		tegra210_iqc_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err_clk_put:
-	devm_clk_put(&pdev->dev, iqc->clk_iqc);
 err:
 	return ret;
 }
@@ -452,8 +450,6 @@ static int tegra210_iqc_platform_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_iqc_runtime_suspend(&pdev->dev);
-
-	devm_clk_put(&pdev->dev, iqc->clk_iqc);
 
 	return 0;
 }

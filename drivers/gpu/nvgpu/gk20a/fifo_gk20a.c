@@ -2341,6 +2341,7 @@ unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
 			rc_type = RC_TYPE_PBDMA_FAULT;
 			nvgpu_err(g,
 				"semaphore acquire timeout!");
+			*error_notifier = NVGPU_CHANNEL_GR_SEMAPHORE_TIMEOUT;
 		}
 		*handled |= pbdma_intr_0_acquire_pending_f();
 	}

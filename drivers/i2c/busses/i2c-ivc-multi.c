@@ -32,7 +32,7 @@
 
 #define I2C_CAMRTC_RPC_IVC_MULTI_TIMEOUT_MS	250
 
-struct tegra_i2c_ivc_dev {
+struct tegra_i2c_ivc_multi_dev {
 	/* IVC RPC */
 	struct tegra_ivc_channel *chan;
 	bool is_valid;
@@ -57,7 +57,8 @@ struct tegra_i2c_ivc_dev {
 	} stat;
 };
 
-static struct tegra_i2c_ivc_dev g_i2c_i2c_ivc_devs[TEGRA_I2C_MULTI_MAX_DEV];
+static struct tegra_i2c_ivc_multi_dev
+	g_i2c_i2c_ivc_devs[TEGRA_I2C_MULTI_MAX_DEV];
 
 /*
  * Per sensor data structure
@@ -65,7 +66,7 @@ static struct tegra_i2c_ivc_dev g_i2c_i2c_ivc_devs[TEGRA_I2C_MULTI_MAX_DEV];
 
 struct tegra_i2c_rtcpu_sensor {
 	struct list_head node;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev;
+	struct tegra_i2c_ivc_multi_dev *i2c_ivc_dev;
 	bool is_registered;
 	unsigned int sensor_id;
 	/* config */
@@ -91,7 +92,7 @@ struct tegra_i2c_rtcpu_sensor {
 /*
  * Sensor APIs
  */
-static int tegra_ivc_i2c_register_sensor(struct tegra_ivc_channel *chan,
+static int tegra_i2c_ivc_register_sensor(struct tegra_ivc_channel *chan,
 	struct tegra_i2c_rtcpu_sensor *sensor);
 
 struct tegra_i2c_rtcpu_sensor *tegra_i2c_rtcpu_register_sensor(
@@ -103,7 +104,7 @@ struct tegra_i2c_rtcpu_sensor *tegra_i2c_rtcpu_register_sensor(
 	struct tegra_i2c_rtcpu_sensor *sensor;
 	struct device_node *node = client->dev.of_node;
 	struct device_node *np_mux, *np_i2c;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev;
+	struct tegra_i2c_ivc_multi_dev *i2c_ivc_dev;
 
 	sensor = kzalloc(sizeof(*sensor), GFP_KERNEL);
 	if (sensor == NULL)
@@ -192,7 +193,7 @@ struct tegra_i2c_rtcpu_sensor *tegra_i2c_rtcpu_register_sensor(
 	sensor->i2c_ivc_dev = i2c_ivc_dev;
 
 	/* Add i2c device */
-	ret = tegra_ivc_i2c_register_sensor(i2c_ivc_dev->chan, sensor);
+	ret = tegra_i2c_ivc_register_sensor(i2c_ivc_dev->chan, sensor);
 	if (ret != 0)
 		goto fail;
 
@@ -223,7 +224,7 @@ EXPORT_SYMBOL(tegra_i2c_rtcpu_register_sensor);
  * I2C transfer
  */
 
-static int tegra_ivc_i2c_multi_xfer(
+static int tegra_i2c_ivc_multi_xfer(
 	struct tegra_i2c_rtcpu_sensor *sensor)
 {
 	int ret = 0;
@@ -238,7 +239,7 @@ static int tegra_ivc_i2c_multi_xfer(
 	if (!sensor->is_registered) {
 		unsigned int req_len = sensor->req_len;
 
-		ret = tegra_ivc_i2c_register_sensor(sensor->i2c_ivc_dev->chan,
+		ret = tegra_i2c_ivc_register_sensor(sensor->i2c_ivc_dev->chan,
 			sensor);
 
 		if (ret != 0)
@@ -291,7 +292,7 @@ int tegra_i2c_rtcpu_aggregate(
 	if (sensor->in_agg) {
 		if (!start) {
 			sensor->in_agg = false;
-			return tegra_ivc_i2c_multi_xfer(sensor);
+			return tegra_i2c_ivc_multi_xfer(sensor);
 		}
 	} else {
 		sensor->in_agg = start;
@@ -332,7 +333,7 @@ int tegra_i2c_rtcpu_read_reg8(
 
 	/* If there is no room, flush current transfer */
 	if (sensor->req_len + this_len > CAMRTC_I2C_REQUEST_MAX_LEN) {
-		ret = tegra_ivc_i2c_multi_xfer(sensor);
+		ret = tegra_i2c_ivc_multi_xfer(sensor);
 		if (ret != 0)
 			return ret;
 	}
@@ -356,7 +357,7 @@ int tegra_i2c_rtcpu_read_reg8(
 	sensor->req_len += CAMRTC_I2C_MULTI_DATA_OFFSET;
 
 	/* Read transaction always start a transaction */
-	ret = tegra_ivc_i2c_multi_xfer(sensor);
+	ret = tegra_i2c_ivc_multi_xfer(sensor);
 	if (ret == 0)
 		memcpy(data, sensor->rpc_i2c_rsp.read_data, count);
 
@@ -379,7 +380,7 @@ int tegra_i2c_rtcpu_write_reg8(
 
 	/* If there is no room, flush current transfer */
 	if (sensor->req_len + this_len > CAMRTC_I2C_REQUEST_MAX_LEN) {
-		ret = tegra_ivc_i2c_multi_xfer(sensor);
+		ret = tegra_i2c_ivc_multi_xfer(sensor);
 		if (ret != 0)
 			return ret;
 	}
@@ -427,7 +428,7 @@ int tegra_i2c_rtcpu_write_reg8(
 	sensor->last_addr = addr + count;
 
 	if (!sensor->in_agg)
-		return tegra_ivc_i2c_multi_xfer(sensor);
+		return tegra_i2c_ivc_multi_xfer(sensor);
 	else
 		return 0;
 }
@@ -490,11 +491,11 @@ EXPORT_SYMBOL(tegra_i2c_rtcpu_write_table_8);
 		.llseek = seq_lseek, \
 		.release = single_release }
 
-static int tegra_ivc_i2c_multi_stat_show(
+static int tegra_i2c_ivc_multi_stat_show(
 	struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *chan = file->private;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev =
+	struct tegra_i2c_ivc_multi_dev *i2c_ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
 
 	seq_printf(file, "Xfer requests: %u\n",
@@ -509,25 +510,25 @@ static int tegra_ivc_i2c_multi_stat_show(
 	return 0;
 }
 
-DEFINE_SEQ_FOPS(tegra_ivc_i2c_debugfs_stats,
-	tegra_ivc_i2c_multi_stat_show);
+DEFINE_SEQ_FOPS(tegra_i2c_ivc_debugfs_stats,
+	tegra_i2c_ivc_multi_stat_show);
 
-static void tegra_ivc_i2c_multi_create_debugfs(
+static void tegra_i2c_ivc_multi_create_debugfs(
 	struct tegra_ivc_channel *chan,
 	struct dentry *debugfs_root)
 {
 	debugfs_create_file("stats", 0444,
 		debugfs_root, chan,
-		&tegra_ivc_i2c_debugfs_stats);
+		&tegra_i2c_ivc_debugfs_stats);
 }
 
 /*
  * IVC channel driver interface
  */
-static int tegra_ivc_i2c_add_multi(struct tegra_ivc_channel *chan)
+static int tegra_i2c_ivc_add_multi(struct tegra_ivc_channel *chan)
 {
 
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev =
+	struct tegra_i2c_ivc_multi_dev *i2c_ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
 	struct camrtc_rpc_i2c_add_multi rpc_add_multi;
 	u32 bus_id;
@@ -565,12 +566,12 @@ fail_remove_chan:
 	return ret;
 }
 
-static int tegra_ivc_i2c_add_sensor(struct tegra_ivc_channel *chan,
+static int tegra_i2c_ivc_add_sensor(struct tegra_ivc_channel *chan,
 	struct tegra_i2c_rtcpu_sensor *sensor)
 {
 	int ret = 0;
 	u32 sensor_id;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev =
+	struct tegra_i2c_ivc_multi_dev *i2c_ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
 	struct camrtc_rpc_i2c_add_sensor rpc_add_sensor = {0};
 
@@ -625,17 +626,17 @@ fail:
 	return ret;
 }
 
-static int tegra_ivc_i2c_register_sensor(struct tegra_ivc_channel *chan,
+static int tegra_i2c_ivc_register_sensor(struct tegra_ivc_channel *chan,
 	struct tegra_i2c_rtcpu_sensor *sensor)
 {
 	int ret = 0;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev =
+	struct tegra_i2c_ivc_multi_dev *i2c_ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
 
 	WARN_ON(!i2c_ivc_dev->is_online);
 
 	if (!i2c_ivc_dev->is_added) {
-		ret = tegra_ivc_i2c_add_multi(chan);
+		ret = tegra_i2c_ivc_add_multi(chan);
 		if (ret != 0) {
 			dev_err(&chan->dev,
 				"I2C device not added\n");
@@ -644,7 +645,7 @@ static int tegra_ivc_i2c_register_sensor(struct tegra_ivc_channel *chan,
 	}
 
 	/* Add a sensor */
-	ret = tegra_ivc_i2c_add_sensor(chan,
+	ret = tegra_i2c_ivc_add_sensor(chan,
 		sensor);
 	if (ret != 0)
 		dev_err(&chan->dev,
@@ -654,11 +655,11 @@ fail:
 	return ret;
 }
 
-static void tegra_ivc_i2c_multi_ready(
+static void tegra_i2c_ivc_multi_ready(
 	struct tegra_ivc_channel *chan, bool online)
 {
 	struct tegra_i2c_rtcpu_sensor *sensor = NULL;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev =
+	struct tegra_i2c_ivc_multi_dev *i2c_ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
 
 	i2c_ivc_dev->is_online = online;
@@ -672,15 +673,15 @@ static void tegra_ivc_i2c_multi_ready(
 }
 
 static struct tegra_ivc_rpc_ops tegra_ivc_rpc_user_ops = {
-	.create_debugfs = tegra_ivc_i2c_multi_create_debugfs,
-	.ready = tegra_ivc_i2c_multi_ready,
+	.create_debugfs = tegra_i2c_ivc_multi_create_debugfs,
+	.ready = tegra_i2c_ivc_multi_ready,
 };
 
 static int tegra_ivc_rpc_i2c_multi_probe(struct tegra_ivc_channel *chan)
 {
 	int ret;
 	int i;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev;
+	struct tegra_i2c_ivc_multi_dev *i2c_ivc_dev;
 	struct device_node *i2c_node;
 
 	/* Find an empty slot */

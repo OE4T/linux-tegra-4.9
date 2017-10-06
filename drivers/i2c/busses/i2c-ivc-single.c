@@ -32,7 +32,7 @@
 
 #define I2C_CAMRTC_RPC_IVC_SINGLE_TIMEOUT_MS   250
 
-struct tegra_i2c_ivc_dev {
+struct tegra_i2c_ivc_single_dev {
 	/* IVC RPC */
 	const char *name;
 	struct tegra_ivc_channel *chan;
@@ -61,7 +61,7 @@ struct tegra_i2c_ivc_dev {
 	struct camrtc_rpc_i2c_response rpc_i2c_rsp;
 };
 
-static struct tegra_i2c_ivc_dev g_i2c_ivc_devs[TEGRA_I2C_SINGLE_MAX_DEV];
+static struct tegra_i2c_ivc_single_dev g_i2c_ivc_devs[TEGRA_I2C_SINGLE_MAX_DEV];
 
 u32 tegra_i2c_get_clk_freq(struct device_node *np)
 {
@@ -93,10 +93,10 @@ EXPORT_SYMBOL(tegra_i2c_get_reg_base);
 /*
  * I2C interface
  */
-struct tegra_i2c_ivc_dev *tegra_ivc_i2c_get_dev(u32 reg_base)
+struct tegra_i2c_ivc_single_dev *tegra_i2c_ivc_get_dev(u32 reg_base)
 {
 	int i;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev = ERR_PTR(-ENODEV);
+	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev = ERR_PTR(-ENODEV);
 
 	/* Find an IVC channel */
 	for (i = 0; i < TEGRA_I2C_SINGLE_MAX_DEV; ++i) {
@@ -118,11 +118,11 @@ struct tegra_i2c_ivc_dev *tegra_ivc_i2c_get_dev(u32 reg_base)
 
 	return i2c_ivc_dev;
 }
-EXPORT_SYMBOL(tegra_ivc_i2c_get_dev);
+EXPORT_SYMBOL(tegra_i2c_ivc_get_dev);
 
-static int tegra_ivc_i2c_add_single(struct tegra_ivc_channel *chan);
+static int tegra_i2c_ivc_add_single(struct tegra_ivc_channel *chan);
 
-static void tegra_ivc_i2c_single_call_callback(
+static void tegra_i2c_ivc_single_call_callback(
 	int ret,
 	const struct tegra_ivc_rpc_response_frame *rep,
 	void *param)
@@ -143,7 +143,7 @@ static void tegra_ivc_i2c_single_call_callback(
 	}
 }
 
-int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
+int tegra_i2c_ivc_single_xfer(struct tegra_i2c_ivc_single_dev *i2c_ivc_dev,
 	const struct i2c_msg *reqs, int num)
 {
 	u8 *pbuf = NULL, *pprev_len = NULL;
@@ -173,7 +173,7 @@ int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
 	}
 	if (!i2c_ivc_dev->is_added) {
 		BUG_ON(!i2c_ivc_dev->is_online);
-		ret = tegra_ivc_i2c_add_single(i2c_ivc_dev->chan);
+		ret = tegra_i2c_ivc_add_single(i2c_ivc_dev->chan);
 		if (ret != 0) {
 			dev_err(&i2c_ivc_dev->chan->dev,
 				"I2C device not ready\n");
@@ -201,7 +201,7 @@ int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
 
 			i2c_ivc_dev->rpc_i2c_req.request_len = len;
 			i2c_ivc_dev->rpc_i2c_req.callback = is_blocking ?
-				NULL : tegra_ivc_i2c_single_call_callback;
+				NULL : tegra_i2c_ivc_single_call_callback;
 			i2c_ivc_dev->rpc_i2c_req.callback_param =
 				&i2c_ivc_dev->chan->dev;
 			ret = tegra_ivc_rpc_call(i2c_ivc_dev->chan,
@@ -350,7 +350,7 @@ error:
 	tegra_ivc_channel_runtime_put(i2c_ivc_dev->chan);
 	return (ret < 0) ? -EIO : num;
 }
-EXPORT_SYMBOL(tegra_ivc_i2c_single_xfer);
+EXPORT_SYMBOL(tegra_i2c_ivc_single_xfer);
 
 /*
  * IVC channel Debugfs
@@ -367,11 +367,11 @@ EXPORT_SYMBOL(tegra_ivc_i2c_single_xfer);
 		.llseek = seq_lseek, \
 		.release = single_release }
 
-static int tegra_ivc_i2c_single_stat_show(
+static int tegra_i2c_ivc_single_stat_show(
 	struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *chan = file->private;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev =
+	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
 
 	seq_printf(file, "Xfer requests: %u\n",
@@ -386,25 +386,25 @@ static int tegra_ivc_i2c_single_stat_show(
 	return 0;
 }
 
-DEFINE_SEQ_FOPS(tegra_ivc_i2c_debugfs_stats,
-	tegra_ivc_i2c_single_stat_show);
+DEFINE_SEQ_FOPS(tegra_i2c_ivc_debugfs_stats,
+	tegra_i2c_ivc_single_stat_show);
 
-static void tegra_ivc_i2c_single_create_debugfs(
+static void tegra_i2c_ivc_single_create_debugfs(
 	struct tegra_ivc_channel *chan,
 	struct dentry *debugfs_root)
 {
 	debugfs_create_file("stats", S_IRUGO,
 		debugfs_root, chan,
-		&tegra_ivc_i2c_debugfs_stats);
+		&tegra_i2c_ivc_debugfs_stats);
 }
 
 /*
  * IVC channel driver interface
  */
 
-static int tegra_ivc_i2c_add_single(struct tegra_ivc_channel *chan)
+static int tegra_i2c_ivc_add_single(struct tegra_ivc_channel *chan)
 {
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev =
+	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
 	struct camrtc_rpc_i2c_add_single rpc_add_single;
 	u32 bus_id;
@@ -462,10 +462,10 @@ fail_remove_chan:
 	return ret;
 }
 
-static void tegra_ivc_i2c_single_ready(
+static void tegra_i2c_ivc_single_ready(
 	struct tegra_ivc_channel *chan, bool online)
 {
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev =
+	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
 
 	i2c_ivc_dev->is_online = online;
@@ -475,8 +475,8 @@ static void tegra_ivc_i2c_single_ready(
 }
 
 static struct tegra_ivc_rpc_ops tegra_ivc_rpc_user_ops = {
-	.create_debugfs = tegra_ivc_i2c_single_create_debugfs,
-	.ready = tegra_ivc_i2c_single_ready,
+	.create_debugfs = tegra_i2c_ivc_single_create_debugfs,
+	.ready = tegra_i2c_ivc_single_ready,
 };
 
 /* Platform device */
@@ -484,7 +484,7 @@ static int tegra_ivc_rpc_i2c_single_probe(struct tegra_ivc_channel *chan)
 {
 	int ret;
 	int i;
-	struct tegra_i2c_ivc_dev *i2c_ivc_dev;
+	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev;
 	struct device_node *i2c_node;
 
 	/* Find an empty slot */

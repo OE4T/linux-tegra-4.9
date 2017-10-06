@@ -252,6 +252,22 @@ static inline u32 gr_trapped_addr_subch_v(u32 r)
 {
 	return (r >> 16U) & 0x7U;
 }
+static inline u32 gr_trapped_addr_mme_generated_v(u32 r)
+{
+	return (r >> 20U) & 0x1U;
+}
+static inline u32 gr_trapped_addr_datahigh_v(u32 r)
+{
+	return (r >> 24U) & 0x1U;
+}
+static inline u32 gr_trapped_addr_priv_v(u32 r)
+{
+	return (r >> 28U) & 0x1U;
+}
+static inline u32 gr_trapped_addr_status_v(u32 r)
+{
+	return (r >> 31U) & 0x1U;
+}
 static inline u32 gr_trapped_data_lo_r(void)
 {
 	return 0x00400708U;
@@ -259,6 +275,14 @@ static inline u32 gr_trapped_data_lo_r(void)
 static inline u32 gr_trapped_data_hi_r(void)
 {
 	return 0x0040070cU;
+}
+static inline u32 gr_trapped_data_mme_r(void)
+{
+	return 0x00400710U;
+}
+static inline u32 gr_trapped_data_mme_pc_v(u32 r)
+{
+	return (r >> 0U) & 0xfffU;
 }
 static inline u32 gr_status_r(void)
 {

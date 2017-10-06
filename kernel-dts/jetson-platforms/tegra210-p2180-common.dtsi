@@ -75,7 +75,7 @@
 		reg = < 0x0 0x80000000 0x0 0x80000000 >;
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	aconnect@702c0000 {
 #endif
 	adma@702e2000  {
@@ -102,7 +102,7 @@
 			vddio-dmic-supply = <&max77620_sd3>;
 		};
 	};
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	};
 #endif
 

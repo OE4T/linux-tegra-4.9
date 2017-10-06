@@ -101,7 +101,7 @@
 		status = "okay";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	aconnect@702c0000 {
 #endif
 	adma@702e2000  {
@@ -137,7 +137,7 @@
 			fsync-width = <0>;
 		};
 	};
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	};
 #endif
 
@@ -425,7 +425,7 @@
 		};
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	aconnect@702c0000 {
 #endif
 	adsp_audio {
@@ -457,7 +457,7 @@
 			widget-name = "AEC";
 		};
 	};
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	};
 #endif
 
@@ -473,7 +473,7 @@
 
 	usb_cd {
 		status = "okay";
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		phys = <&{/xusb_padctl@7009f000/pads/usb2/lanes/usb2-0}>;
 #else
 		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
@@ -481,7 +481,7 @@
 		phy-names = "otg-phy";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 	xusb_padctl@7009f000 {
 		status = "okay";
 
@@ -663,7 +663,7 @@
 		extcon-cables = <&vbus_gpio_extcon 1>;
 		extcon-cable-names = "id";
 		#extcon-cells = <1>;
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		phys = <&{/xusb_padctl@7009f000/pads/usb2/lanes/usb2-0}>,
 		       <&{/xusb_padctl@7009f000/pads/usb2/lanes/usb2-1}>,
 		       <&{/xusb_padctl@7009f000/pads/usb2/lanes/usb2-2}>,
@@ -690,7 +690,7 @@
 	xudc@700d0000 {
 		#extcon-cells = <1>;
 		status = "okay";
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		phys = <&{/xusb_padctl@7009f000/pads/usb2/lanes/usb2-0}>;
 #else
 		phys =  <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;

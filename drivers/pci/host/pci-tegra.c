@@ -449,6 +449,8 @@ struct tegra_pcie {
 		resource_size_t io;
 	} offset;
 
+	void __iomem *cfg_va_base;
+
 	struct tegra_msi msi;
 
 	struct reset_control *afi_rst;
@@ -511,7 +513,6 @@ struct tegra_pcie_port {
 };
 
 struct tegra_pcie_bus {
-	struct vm_struct *area;
 	struct list_head list;
 	unsigned int nr;
 };
@@ -572,34 +573,16 @@ static inline unsigned int rp_readl(struct tegra_pcie_port *port,
  *
  * Mapping the whole extended configuration space would required 256 MiB of
  * virtual address space, only a small part of which will actually be used.
- * To work around this, a 1 MiB of virtual addresses are allocated per bus
- * when the bus is first accessed. When the physical range is mapped, the
- * the bus number bits are hidden so that the extended register number bits
- * appear as bits [19:16]. Therefore the virtual mapping looks like this:
- *
- *    [19:16] extended register number
- *    [15:11] device number
- *    [10: 8] function number
- *    [ 7: 0] register number
- *
- * This is achieved by stitching together 16 chunks of 64 KiB of physical
- * address space via the MMU.
+ * To work around this, a 4K of region is used to generate required
+ * configuration transaction with relevant B:D:F values. This is achieved by
+ * dynamically programming base address and size of AFI_AXI_BAR used for
+ * end point config space mapping to make sure that the address (access to
+ * which generates correct config transaction) falls in this 4K region
  */
-static unsigned long tegra_pcie_conf_offset(unsigned int devfn, int where)
-{
-
-	return ((where & 0xf00) << 8) | (PCI_SLOT(devfn) << 11) |
-	       (PCI_FUNC(devfn) << 8) | (where & 0xff);
-}
-
 static struct tegra_pcie_bus *tegra_pcie_bus_alloc(struct tegra_pcie *pcie,
 							unsigned int busnr)
 {
-	phys_addr_t cs = pcie->cs->start;
 	struct tegra_pcie_bus *bus;
-	unsigned int i;
-	int err;
-	pgprot_t prot = pgprot_device(PAGE_KERNEL);
 
 	PR_FUNC_LINE;
 	bus = kzalloc(sizeof(*bus), GFP_KERNEL);
@@ -609,51 +592,17 @@ static struct tegra_pcie_bus *tegra_pcie_bus_alloc(struct tegra_pcie *pcie,
 	INIT_LIST_HEAD(&bus->list);
 	bus->nr = busnr;
 
-	/* allocate 1 MiB of virtual addresses */
-	bus->area = get_vm_area(SZ_1M, VM_IOREMAP);
-	if (!bus->area) {
-		err = -ENOMEM;
-		goto free;
-	}
-
-	/* map each of the 16 chunks of 64 KiB each.
-	 *
-	 * Note that each chunk still needs to increment by 16 MiB in
-	 * physical space.
-	 */
-	for (i = 0; i < 16; i++) {
-		unsigned long virt = (unsigned long)bus->area->addr +
-				     i * SZ_64K;
-		phys_addr_t phys = cs + i * SZ_16M + busnr * SZ_64K;
-
-		err = ioremap_page_range(virt, virt + SZ_64K, phys, prot);
-		if (err < 0) {
-			dev_err(pcie->dev, "ioremap_page_range() failed: %d\n",
-				err);
-			goto unmap;
+	if (!pcie->cfg_va_base) {
+		pcie->cfg_va_base = ioremap(pcie->cs->start, SZ_4K);
+		if (!pcie->cfg_va_base) {
+			dev_err(pcie->dev, "failed to ioremap config space\n");
+			kfree(bus);
+			bus = (struct tegra_pcie_bus *)-ENOMEM;
 		}
 	}
 
 	return bus;
-unmap:
-	vunmap(bus->area->addr);
-free:
-	kfree(bus);
-	return ERR_PTR(err);
 }
-
-static void *tegra_pcie_bus_map(struct tegra_pcie *pcie,
-							unsigned int busnr)
-{
-	struct tegra_pcie_bus *bus;
-
-	list_for_each_entry(bus, &pcie->buses, list)
-		if (bus->nr == busnr)
-			return bus->area->addr;
-
-	return NULL;
-}
-
 
 static void __iomem *tegra_pcie_conf_address(struct pci_bus *bus,
 					     unsigned int devfn,
@@ -662,6 +611,7 @@ static void __iomem *tegra_pcie_conf_address(struct pci_bus *bus,
 	struct pci_host_bridge *host = pci_find_host_bridge(bus);
 	struct tegra_pcie *pcie = pci_host_bridge_priv(host);
 	void __iomem *addr = NULL;
+	u32 val = 0;
 
 	if (bus->number == 0) {
 		unsigned int slot = PCI_SLOT(devfn);
@@ -674,15 +624,14 @@ static void __iomem *tegra_pcie_conf_address(struct pci_bus *bus,
 			}
 		}
 	} else {
-		addr = (void __iomem *)tegra_pcie_bus_map(pcie, bus->number);
-		if (!addr) {
-			dev_err(pcie->dev,
-				"failed to map cfg. space for bus %u\n",
-				bus->number);
-			return NULL;
-		}
-
-		addr += tegra_pcie_conf_offset(devfn, where);
+		addr = pcie->cfg_va_base;
+		val = ((((u32)where & 0xf00) >> 8) << 24) |
+		      (bus->number << 16) | (PCI_SLOT(devfn) << 11) |
+		      (PCI_FUNC(devfn) << 8) | (where & 0xff);
+		addr = (val & (SZ_4K - 1)) + addr;
+		val = val & ~(SZ_4K - 1);
+		afi_writel(pcie, pcie->cs->start - val, AFI_AXI_BAR0_START);
+		afi_writel(pcie, (val + SZ_4K) >> 12, AFI_AXI_BAR0_SZ);
 	}
 
 	return addr;
@@ -4914,10 +4863,9 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 	pci_unmap_iospace(&pcie->pio);
 	pci_bus_remove_resources(pcie->host->bus);
 	pci_remove_root_bus(pcie->host->bus);
-	list_for_each_entry(bus, &pcie->buses, list) {
-		vunmap(bus->area->addr);
+	list_for_each_entry(bus, &pcie->buses, list)
 		kfree(bus);
-	}
+	iounmap(pcie->cfg_va_base);
 	if (IS_ENABLED(CONFIG_PCI_MSI))
 		tegra_pcie_disable_msi(pcie);
 	tegra_pcie_detach(pcie);

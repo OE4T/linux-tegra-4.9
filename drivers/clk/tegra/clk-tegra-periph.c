@@ -1079,7 +1079,7 @@ static void __init init_pllp(void __iomem *clk_base, void __iomem *pmc_base,
 		if (dt_clk) {
 			clk = tegra_clk_register_pll_out("pll_p_out4",
 					"pll_p_out4_div", clk_base + PLLP_OUTB,
-					17, 16, CLK_IGNORE_UNUSED |
+					17, 16,
 					CLK_SET_RATE_PARENT, 0,
 					&PLLP_OUTB_lock);
 			*dt_clk = clk;

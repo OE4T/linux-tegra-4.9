@@ -1911,9 +1911,14 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	struct mm_gk20a *mm = &g->mm;
 	int err;
 	u32 virt_size;
-	u32 big_page_size = g->ops.mm.get_default_big_page_size();
+	u32 big_page_size;
+
+	if (!g->ops.dbg_session_ops.perfbuffer_enable)
+		return -ENOSYS;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+
+	big_page_size = g->ops.mm.get_default_big_page_size();
 
 	if (g->perfbuf.owner) {
 		nvgpu_mutex_release(&g->dbg_sessions_lock);
@@ -2014,6 +2019,9 @@ static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
 {
 	struct gk20a *g = dbg_s->g;
 	int err;
+
+	if (!g->ops.dbg_session_ops.perfbuffer_disable)
+		return -ENOSYS;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	if ((g->perfbuf.owner != dbg_s) ||

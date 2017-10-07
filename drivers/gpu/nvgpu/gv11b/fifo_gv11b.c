@@ -34,6 +34,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/nvhost_t19x.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/mm.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -112,9 +113,9 @@ void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 	runlist[0] = runlist_entry | ram_rl_entry_chan_userd_ptr_lo_f(addr_lo);
 	runlist[1] = ram_rl_entry_chan_userd_ptr_hi_f(addr_hi);
 
-	addr_lo = u64_lo32(gk20a_mm_inst_block_addr(g, &c->inst_block)) >>
+	addr_lo = u64_lo32(nvgpu_inst_block_addr(g, &c->inst_block)) >>
 			ram_rl_entry_chan_inst_ptr_align_shift_v();
-	addr_hi = u64_hi32(gk20a_mm_inst_block_addr(g, &c->inst_block));
+	addr_hi = u64_hi32(nvgpu_inst_block_addr(g, &c->inst_block));
 
 	runlist[2] = ram_rl_entry_chan_inst_ptr_lo_f(addr_lo) |
 				ram_rl_entry_chid_f(c->chid);

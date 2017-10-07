@@ -30,6 +30,7 @@
 #include <nvgpu/pmu.h>
 #include <nvgpu/falcon.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/mm.h>
 
 #include "gk20a/gk20a.h"
 
@@ -104,7 +105,7 @@ int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu)
 
 	gk20a_writel(g, pwr_pmu_new_instblk_r(),
 		pwr_pmu_new_instblk_ptr_f(
-		gk20a_mm_inst_block_addr(g, &mm->pmu.inst_block) >> ALIGN_4KB)
+		nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> ALIGN_4KB)
 		| pwr_pmu_new_instblk_valid_f(1)
 		| pwr_pmu_new_instblk_target_sys_ncoh_f());
 

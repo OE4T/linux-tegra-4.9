@@ -27,6 +27,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
+#include <nvgpu/mm.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -54,7 +55,7 @@ void gv11b_init_inst_block(struct nvgpu_mem *inst_block,
 	struct gk20a *g = gk20a_from_vm(vm);
 
 	gk20a_dbg_info("inst block phys = 0x%llx, kv = 0x%p",
-		gk20a_mm_inst_block_addr(g, inst_block), inst_block->cpu_va);
+		nvgpu_inst_block_addr(g, inst_block), inst_block->cpu_va);
 
 	g->ops.mm.init_pdb(g, inst_block, vm);
 
@@ -191,7 +192,7 @@ void gv11b_mm_remove_bar2_vm(struct gk20a *g)
 
 	gv11b_mm_mmu_hw_fault_buf_deinit(g);
 
-	gk20a_free_inst_block(g, &mm->bar2.inst_block);
+	nvgpu_free_inst_block(g, &mm->bar2.inst_block);
 	nvgpu_vm_put(mm->bar2.vm);
 }
 
@@ -282,7 +283,7 @@ int gv11b_init_bar2_mm_hw_setup(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
-	u64 inst_pa = gk20a_mm_inst_block_addr(g, inst_block);
+	u64 inst_pa = nvgpu_inst_block_addr(g, inst_block);
 	u32 reg_val;
 	struct nvgpu_timeout timeout;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;

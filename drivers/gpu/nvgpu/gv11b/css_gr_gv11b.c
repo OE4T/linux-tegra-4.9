@@ -135,8 +135,7 @@ int gv11b_css_hw_enable_snapshot(struct channel_gk20a *ch,
 	gk20a_writel(g, perf_pmasys_outsize_r(), snapshot_size);
 
 	/* this field is aligned to 4K */
-	inst_pa_page = gk20a_mm_inst_block_addr(g,
-					&g->mm.hwpm.inst_block) >> 12;
+	inst_pa_page = nvgpu_inst_block_addr(g, &g->mm.hwpm.inst_block) >> 12;
 
 	gk20a_writel(g, perf_pmasys_mem_block_r(),
 			perf_pmasys_mem_block_base_f(inst_pa_page) |

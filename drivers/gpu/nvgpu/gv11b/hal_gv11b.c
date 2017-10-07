@@ -549,6 +549,7 @@ static const struct gpu_ops gv11b_ops = {
 		.init_pdb = gp10b_mm_init_pdb,
 		.init_mm_setup_hw = gv11b_init_mm_setup_hw,
 		.is_bar1_supported = gv11b_mm_is_bar1_supported,
+		.alloc_inst_block = gk20a_alloc_inst_block,
 		.init_inst_block = gv11b_init_inst_block,
 		.mmu_fault_pending = gv11b_mm_mmu_fault_pending,
 		.get_kind_invalid = gm20b_get_kind_invalid,

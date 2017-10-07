@@ -35,6 +35,7 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/firmware.h>
+#include <nvgpu/mm.h>
 
 #include "gk20a/gk20a.h"
 #include "acr_gv11b.h"
@@ -211,7 +212,7 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 			pwr_falcon_itfen_ctxen_enable_f());
 	gk20a_writel(g, pwr_pmu_new_instblk_r(),
 		pwr_pmu_new_instblk_ptr_f(
-		gk20a_mm_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
+		nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
 		pwr_pmu_new_instblk_valid_f(1) |
 		pwr_pmu_new_instblk_target_sys_ncoh_f());
 
@@ -291,4 +292,3 @@ int gv11b_init_pmu_setup_hw1(struct gk20a *g,
 		return err;
 	return 0;
 }
-

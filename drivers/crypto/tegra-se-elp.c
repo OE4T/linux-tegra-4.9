@@ -170,6 +170,20 @@ struct tegra_se_pka1_ecc_request {
 	bool pv_ok;
 };
 
+struct tegra_se_eddsa_vars {
+	u32 *r;
+	u32 *prefix_msg;
+	u32 *prefix_msg_hash;
+	u32 *RAM_hash;
+	u32 *R;
+	u32 *S;
+	u32 *k;
+	u32 *message;
+	u32 *RAM;
+	u32 *S8;
+	u32 *k8;
+};
+
 struct tegra_se_pka1_mod_request {
 	struct tegra_se_elp_dev *se_dev;
 	u32 *result;
@@ -2828,17 +2842,21 @@ static int tegra_se_eddsa_gen_pub_key(struct crypto_akcipher *tfm,
 	struct tegra_se_eddsa_ctx *ctx = akcipher_tfm_ctx(tfm);
 	const struct tegra_se_ecc_curve *curve = tegra_se_ecc_get_curve(
 							ctx->curve_id);
-	u32 secret_hash[SHA512_WORDS];
+	u32 *secret_hash = NULL;
 	int i, j;
 	unsigned int nbytes = curve->nbytes, nwords = ctx->nwords;
 	u32 h0[nwords], h1[nwords];
 	struct tegra_se_ecc_point *pk = NULL;
 	int ret = 0;
 
+	secret_hash = devm_kzalloc(ctx->se_dev->dev, SHA512_WORDS, GFP_KERNEL);
+	if (!secret_hash)
+		return -ENOMEM;
+
 	ret = tegra_se_hash_data(ctx->se_dev, ctx->private_key,
 				 secret_hash, nbytes, "sha512");
 	if (ret)
-		return ret;
+		goto free;
 
 	for (i = 0; i < nwords; i++)
 		h0[i] = secret_hash[i];
@@ -2856,21 +2874,140 @@ static int tegra_se_eddsa_gen_pub_key(struct crypto_akcipher *tfm,
 	memcpy((u8 *)ctx->prefix_0, (u8 *)h0, nbytes);
 
 	pk = tegra_se_ecc_alloc_point(ctx->se_dev, nwords);
-	if (!pk)
-		return -ENOMEM;
+	if (!pk) {
+		ret = -ENOMEM;
+		goto free;
+	}
 
 	ret = tegra_se_ed25519_point_mult(pk, &curve->g, h0, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Ed25519 point mult failed\n");
-		goto free_pt;
+		goto out;
 	}
 
 	tegra_se_point_encode(pk, (u32 *)key, nwords);
 	memcpy((u8 *)ctx->public_key, (u8 *)key, nbytes);
-free_pt:
+out:
 	tegra_se_ecc_free_point(ctx->se_dev, pk);
+free:
+	devm_kfree(ctx->se_dev->dev, secret_hash);
 
 	return ret;
+}
+
+static int tegra_se_eddsa_allocate_mem(struct tegra_se_elp_dev *se_dev,
+				       struct tegra_se_eddsa_vars *params,
+				       u32 nwords, u32 num_msg_words)
+{
+	int ret = 0;
+
+	params->r = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	if (!params->r)
+		return -ENOMEM;
+
+	params->prefix_msg = devm_kzalloc(se_dev->dev, nwords + num_msg_words,
+					  GFP_KERNEL);
+	if (!params->prefix_msg) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	params->prefix_msg_hash = devm_kzalloc(se_dev->dev, SHA512_WORDS,
+					       GFP_KERNEL);
+	if (!params->prefix_msg_hash) {
+		ret = -ENOMEM;
+		goto free_msg;
+	}
+
+	params->RAM_hash = devm_kzalloc(se_dev->dev, SHA512_WORDS, GFP_KERNEL);
+	if (!params->RAM_hash) {
+		ret = -ENOMEM;
+		goto free_msg_hash;
+	}
+
+	params->R = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	if (!params->R) {
+		ret = -ENOMEM;
+		goto free_RAM_hash;
+	}
+
+	params->S = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	if (!params->S) {
+		ret = -ENOMEM;
+		goto free_R;
+	}
+
+	params->k = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	if (!params->k) {
+		ret = -ENOMEM;
+		goto free_S;
+	}
+
+	params->message = devm_kzalloc(se_dev->dev, num_msg_words, GFP_KERNEL);
+	if (!params->message) {
+		ret = -ENOMEM;
+		goto free_k;
+	}
+
+	params->RAM = devm_kzalloc(se_dev->dev, 2 * nwords + num_msg_words,
+				   GFP_KERNEL);
+	if (!params->RAM) {
+		ret = -ENOMEM;
+		goto free_message;
+	}
+
+	params->S8 = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	if (!params->S8) {
+		ret = -ENOMEM;
+		goto free_RAM;
+	}
+
+	params->k8 = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	if (!params->k8) {
+		ret = -ENOMEM;
+		goto free_S8;
+	}
+
+	return 0;
+
+free_S8:
+	devm_kfree(se_dev->dev, params->S8);
+free_RAM:
+	devm_kfree(se_dev->dev, params->RAM);
+free_message:
+	devm_kfree(se_dev->dev, params->message);
+free_k:
+	devm_kfree(se_dev->dev, params->k);
+free_S:
+	devm_kfree(se_dev->dev, params->S);
+free_R:
+	devm_kfree(se_dev->dev, params->R);
+free_RAM_hash:
+	devm_kfree(se_dev->dev, params->RAM_hash);
+free_msg_hash:
+	devm_kfree(se_dev->dev, params->prefix_msg_hash);
+free_msg:
+	devm_kfree(se_dev->dev, params->prefix_msg);
+out:
+	devm_kfree(se_dev->dev, params->r);
+
+	return ret;
+}
+
+static void tegra_se_eddsa_free_mem(struct tegra_se_elp_dev *se_dev,
+				    struct tegra_se_eddsa_vars *params)
+{
+	devm_kfree(se_dev->dev, params->r);
+	devm_kfree(se_dev->dev, params->prefix_msg);
+	devm_kfree(se_dev->dev, params->prefix_msg_hash);
+	devm_kfree(se_dev->dev, params->RAM_hash);
+	devm_kfree(se_dev->dev, params->R);
+	devm_kfree(se_dev->dev, params->S);
+	devm_kfree(se_dev->dev, params->k);
+	devm_kfree(se_dev->dev, params->message);
+	devm_kfree(se_dev->dev, params->RAM);
+	devm_kfree(se_dev->dev, params->S8);
+	devm_kfree(se_dev->dev, params->k8);
 }
 
 static int tegra_se_eddsa_sign(struct akcipher_request *req)
@@ -2881,83 +3018,90 @@ static int tegra_se_eddsa_sign(struct akcipher_request *req)
 		tegra_se_ecc_get_curve(ctx->curve_id);
 	struct tegra_se_ecc_point *pk = NULL;
 	unsigned int nbytes = curve->nbytes, nwords = ctx->nwords;
-	u32 r[nwords];
 	u32 num_msg_words = req->src_len / 4;
-	u32 prefix_msg[nwords + num_msg_words];
-	u32 prefix_msg_hash[SHA512_WORDS];
-	u32 RAM_hash[SHA512_WORDS];
-	u32 R[nwords], S[nwords], k[nwords], message[num_msg_words];
-	u32 RAM[2 * nwords + num_msg_words];
 	int i, j, cnt, ret = 0;
 	u8 *r_ptr, *s_ptr;
+	struct tegra_se_eddsa_vars params;
 
-	cnt = sg_copy_to_buffer(req->src, 1, (u8 *)message, req->src_len);
-	if (cnt != req->src_len) {
-		dev_err(ctx->se_dev->dev, "sg_copy_to_buffer fail\n");
-		return -ENODATA;
-	}
-
-	for (i = 0; i < nwords; i++)
-		prefix_msg[i] = ctx->prefix_1[i];
-	for (i = nwords, j = 0; j < num_msg_words; i++, j++)
-		prefix_msg[i] = message[j];
-
-	ret = tegra_se_hash_data(ctx->se_dev, prefix_msg, prefix_msg_hash,
-				 (nwords + num_msg_words) * 4, "sha512");
+	ret = tegra_se_eddsa_allocate_mem(ctx->se_dev, &params,
+					  nwords, num_msg_words);
 	if (ret)
 		return ret;
 
+	cnt = sg_copy_to_buffer(req->src, 1, (u8 *)params.message,
+				req->src_len);
+	if (cnt != req->src_len) {
+		dev_err(ctx->se_dev->dev, "sg_copy_to_buffer fail\n");
+		ret = -ENODATA;
+		goto free_mem;
+	}
+
+	for (i = 0; i < nwords; i++)
+		params.prefix_msg[i] = ctx->prefix_1[i];
+	for (i = nwords, j = 0; j < num_msg_words; i++, j++)
+		params.prefix_msg[i] = params.message[j];
+
+	ret = tegra_se_hash_data(ctx->se_dev, params.prefix_msg,
+				 params.prefix_msg_hash,
+				 (nwords + num_msg_words) * 4, "sha512");
+	if (ret)
+		goto free_mem;
+
 	ret = tegra_se_bit_serial_dp_mod_red(
-		r, prefix_msg_hash, &prefix_msg_hash[nwords],
-		curve->n, curve);
+		params.r, params.prefix_msg_hash,
+		&params.prefix_msg_hash[nwords], curve->n, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Bit Serial mod reduction failed\n");
-		return ret;
+		goto free_mem;
 	}
 
 	pk = tegra_se_ecc_alloc_point(ctx->se_dev, nwords);
-	if (!pk)
-		return -ENOMEM;
+	if (!pk) {
+		ret = -ENOMEM;
+		goto free_mem;
+	}
 
-	ret = tegra_se_ed25519_point_mult(pk, &curve->g, r, curve);
+	ret = tegra_se_ed25519_point_mult(pk, &curve->g, params.r, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Ed25519 point mult failed\n");
 		goto free_pt;
 	}
 
 	/* Compute R */
-	tegra_se_point_encode(pk, R, nwords);
+	tegra_se_point_encode(pk, params.R, nwords);
 
 	for (i = 0; i < nwords; i++)
-		RAM[i] = R[i];
+		params.RAM[i] = params.R[i];
 	for (i = nwords, j = 0; j < nwords; i++, j++)
-		RAM[i] = ctx->public_key[j];
+		params.RAM[i] = ctx->public_key[j];
 	for (i = 2 * nwords, j = 0; j < num_msg_words; i++, j++)
-		RAM[i] = message[j];
+		params.RAM[i] = params.message[j];
 
-	ret = tegra_se_hash_data(ctx->se_dev, RAM, RAM_hash,
+	ret = tegra_se_hash_data(ctx->se_dev, params.RAM, params.RAM_hash,
 				 (2 * nwords + num_msg_words) * 4, "sha512");
 	if (ret)
 		goto free_pt;
 
-	ret = tegra_se_bit_serial_dp_mod_red(k, RAM_hash, &RAM_hash[nwords],
+	ret = tegra_se_bit_serial_dp_mod_red(params.k, params.RAM_hash,
+					     &params.RAM_hash[nwords],
 					     curve->n, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Bit Serial mod reduction failed\n");
 		goto free_pt;
 	}
 
-	memcpy((u8 *)ctx->k_param, (u8 *)k, nbytes);
+	memcpy((u8 *)ctx->k_param, (u8 *)params.k, nbytes);
 
 	/* Compute S */
-	ret = tegra_se_ed25519_mod_mult(ctx->se_dev, S, k,
+	ret = tegra_se_ed25519_mod_mult(ctx->se_dev, params.S, params.k,
 					ctx->prefix_0, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Ed25519 mod mult failed\n");
 		goto free_pt;
 	}
 
-	ret = tegra_se_ed25519_mod_add(ctx->se_dev, S, S, r, curve);
+	ret = tegra_se_ed25519_mod_add(ctx->se_dev, params.S, params.S,
+				       params.r, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Ed25519 mod add failed\n");
 		goto free_pt;
@@ -2967,12 +3111,14 @@ static int tegra_se_eddsa_sign(struct akcipher_request *req)
 	r_ptr = sg_virt(req->dst);
 	s_ptr = (u8 *)sg_virt(req->dst) + nbytes;
 
-	memcpy(r_ptr, (u8 *)R, nbytes);
-	memcpy(s_ptr, (u8 *)S, nbytes);
+	memcpy(r_ptr, (u8 *)params.R, nbytes);
+	memcpy(s_ptr, (u8 *)params.S, nbytes);
 
 	req->dst_len = 2 * nbytes;
 free_pt:
 	tegra_se_ecc_free_point(ctx->se_dev, pk);
+free_mem:
+	tegra_se_eddsa_free_mem(ctx->se_dev, &params);
 
 	return ret;
 }
@@ -2987,19 +3133,27 @@ static int tegra_se_eddsa_verify(struct akcipher_request *req)
 	struct tegra_se_ecc_point *lhs = NULL, *rhs = NULL;
 	struct tegra_se_ecc_point *pk = NULL, *rk = NULL;
 	u8 RX0, PX0;
-	u32 S8[nwords], k8[nwords];
-	u32 R[nwords], S[nwords];
+	u32 num_msg_words = req->src_len / 4;
 	int ret = 0;
+	struct tegra_se_eddsa_vars params;
+
+	ret = tegra_se_eddsa_allocate_mem(ctx->se_dev, &params,
+					  nwords, num_msg_words);
+	if (ret)
+		return ret;
 
 	/* Signature r,s */
-	memcpy((u8 *)R, (u8 *)sg_virt(&req->src[1]), nbytes);
-	memcpy((u8 *)S, (u8 *)sg_virt(&req->src[2]), nbytes);
+	memcpy((u8 *)params.R, (u8 *)sg_virt(&req->src[1]), nbytes);
+	memcpy((u8 *)params.S, (u8 *)sg_virt(&req->src[2]), nbytes);
 
 	pk = tegra_se_ecc_alloc_point(ctx->se_dev, nwords);
-	if (!pk)
-		return -ENOMEM;
+	if (!pk) {
+		ret = -ENOMEM;
+		goto free_mem;
+	}
 
 	tegra_se_point_decode(ctx->public_key, &PX0, pk->y, nwords);
+
 	ret = tegra_se_eddsa_recover_x(PX0, pk->y, pk->x, curve, ctx);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "eddsa_recover_x failed\n");
@@ -3012,14 +3166,16 @@ static int tegra_se_eddsa_verify(struct akcipher_request *req)
 		goto free_pt;
 	}
 
-	tegra_se_point_decode(R, &RX0, rk->y, nwords);
+	tegra_se_point_decode(params.R, &RX0, rk->y, nwords);
+
 	ret = tegra_se_eddsa_recover_x(RX0, rk->y, rk->x, curve, ctx);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "eddsa_recover_x failed\n");
 		goto free_pt;
 	}
 
-	ret = tegra_se_ed25519_mod_mult(ctx->se_dev, S8, S, curve->vec, curve);
+	ret = tegra_se_ed25519_mod_mult(ctx->se_dev, params.S8, params.S,
+					curve->vec, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Ed25519 mod mult failed\n");
 		goto free_pt;
@@ -3031,13 +3187,13 @@ static int tegra_se_eddsa_verify(struct akcipher_request *req)
 		goto free_pt;
 	}
 
-	ret = tegra_se_ed25519_point_mult(lhs, &curve->g, S8, curve);
+	ret = tegra_se_ed25519_point_mult(lhs, &curve->g, params.S8, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Ed25519 point mult failed\n");
 		goto free_pt;
 	}
 
-	ret = tegra_se_ed25519_mod_mult(ctx->se_dev, k8, ctx->k_param,
+	ret = tegra_se_ed25519_mod_mult(ctx->se_dev, params.k8, ctx->k_param,
 					curve->vec, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Ed25519 mod mult failed\n");
@@ -3050,7 +3206,8 @@ static int tegra_se_eddsa_verify(struct akcipher_request *req)
 		goto free_pt;
 	}
 
-	ret = tegra_se_ed25519_shamir(rhs, rk, pk, curve->vec, k8, curve);
+	ret = tegra_se_ed25519_shamir(rhs, rk, pk, curve->vec,
+				      params.k8, curve);
 	if (ret) {
 		dev_err(ctx->se_dev->dev, "Ed25519 Shamir failed\n");
 		goto free_pt;
@@ -3066,6 +3223,8 @@ static int tegra_se_eddsa_verify(struct akcipher_request *req)
 		dev_err(ctx->se_dev->dev, "Eddsa Verify failed\n");
 		ret = -EINVAL;
 	}
+free_mem:
+	tegra_se_eddsa_free_mem(ctx->se_dev, &params);
 free_pt:
 	tegra_se_ecc_free_point(ctx->se_dev, rhs);
 	tegra_se_ecc_free_point(ctx->se_dev, lhs);

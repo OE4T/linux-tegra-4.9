@@ -40,6 +40,9 @@
 
 #define CRYPTO_KEY_LEN_MASK	0x3FF
 
+#define TEGRA_CRYPTO_EDDSA_SIGN		0
+#define TEGRA_CRYPTO_EDDSA_VERIFY	1
+
 /* the seed consists of 16 bytes of key + 16 bytes of init vector */
 #define TEGRA_CRYPTO_RNG_SEED_SIZE	AES_KEYSIZE_128 + DEFAULT_RNG_BLK_SZ
 #define TEGRA_CRYPTO_RNG_SIZE	SZ_16
@@ -80,6 +83,20 @@ struct tegra_se_rng1_request {
 #define TEGRA_CRYPTO_IOCTL_RNG1_REQ	\
 		_IOWR(0x98, 108, struct tegra_se_rng1_request)
 
+struct tegra_pka1_eddsa_request {
+	struct tegra_se_elp_dev *se_dev;
+	char *message;
+	unsigned int msize;
+	char *key;
+	unsigned int keylen;
+	char *public_key;
+	unsigned int nbytes;
+	char *signature;
+	unsigned int type;
+};
+#define TEGRA_CRYPTO_IOCTL_PKA1_EDDSA_REQ	\
+		_IOWR(0x98, 109, struct tegra_pka1_eddsa_request)
+
 struct tegra_se_pka1_ecc_request {
 	struct tegra_se_elp_dev *se_dev;/* Security Engine device */
 	struct tegra_se_pka1_slot *slot;/* Security Engine rsa key slot */
@@ -102,6 +119,7 @@ struct tegra_se_pka1_ecc_request {
 	char *key;
 	bool pv_ok;
 };
+
 #define TEGRA_CRYPTO_IOCTL_PKA1_ECC_REQ	\
 		_IOWR(0x98, 107, struct tegra_se_pka1_ecc_request)
 

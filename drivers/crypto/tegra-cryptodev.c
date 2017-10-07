@@ -374,6 +374,16 @@ static int sha_async_hash_op(struct ahash_request *req,
 	return ret;
 }
 
+static int wait_async_op(struct tegra_crypto_completion *tr, int ret)
+{
+	if (ret == -EINPROGRESS || ret == -EBUSY) {
+		wait_for_completion(&tr->restart);
+		reinit_completion(&tr->restart);
+		ret = tr->req_err;
+	}
+	return ret;
+}
+
 static int sha_shash_hash_op(struct shash_desc *desc,
 				struct tegra_crypto_completion *tr,
 				int ret)
@@ -686,6 +696,203 @@ req_fail:
 out:
 	kfree(key_mem);
 	return ret;
+}
+
+static int tegra_crypt_pka1_eddsa(struct tegra_pka1_eddsa_request *eddsa_req)
+{
+	struct crypto_akcipher *tfm = NULL;
+	struct akcipher_request *req = NULL;
+	u8 *m_str = NULL;
+	struct scatterlist src, dst;
+	struct scatterlist src_tab[3];
+	struct tegra_crypto_completion result;
+	unsigned int outbuf_maxlen;
+	void *outbuf = NULL;
+	void *key = NULL;
+	u8 *key_buf = NULL;
+	unsigned int nbytes;
+	int err;
+	u8 *keymem = NULL;
+	u8 *output = NULL;
+	u8 *public_key = NULL;
+
+	tfm = crypto_alloc_akcipher("eddsa",
+				CRYPTO_ALG_TYPE_AKCIPHER, 0);
+	if (IS_ERR(tfm)) {
+		pr_err("Failed to load transform for eddsa: %ld\n",
+				PTR_ERR(tfm));
+		return PTR_ERR(tfm);
+	}
+
+	/* Alloc akcipher request */
+	req = akcipher_request_alloc(tfm, GFP_KERNEL);
+	if (!req) {
+		pr_err("Failed to allocate akcipher request\n");
+		err = -ENOMEM;
+		goto free_tfm;
+	}
+
+	keymem = kzalloc(eddsa_req->keylen, GFP_KERNEL);
+	if (!keymem) {
+		err = -ENOMEM;
+		goto free_req;
+	}
+
+	err = copy_from_user(keymem, (void __user *)eddsa_req->key,
+			     eddsa_req->keylen);
+	if (err) {
+		err = -EFAULT;
+		pr_err("copy_from_user failed (%d) for eddsa key\n", err);
+		goto free_mem;
+	}
+
+	/* Set private key */
+	err = crypto_akcipher_set_priv_key(tfm, keymem, eddsa_req->keylen);
+	if (err) {
+		pr_err("eddsa set priv key failed\n");
+		goto free_mem;
+	}
+
+	nbytes = eddsa_req->nbytes;
+
+	key = kzalloc(nbytes, GFP_KERNEL);
+	if (!key) {
+		err = -ENOMEM;
+		goto free_mem;
+	}
+
+	/* Set up result callback */
+	init_completion(&result.restart);
+	akcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+				      tegra_crypt_complete, &result);
+
+	/* Generate pub key */
+	err = wait_async_op(&result,
+			    crypto_akcipher_set_pub_key(tfm, key, nbytes));
+	if (err) {
+		pr_err("alg:eddsa set_pub_key test failed\n");
+		goto free_key;
+	}
+
+	key_buf = (u8 *)key;
+
+	public_key = kzalloc(nbytes, GFP_KERNEL);
+	if (!public_key) {
+		err = -ENOMEM;
+		goto free_key;
+	}
+
+	err = copy_from_user(public_key, (void __user *)eddsa_req->public_key,
+			     nbytes);
+	if (err) {
+		pr_err("copy_from_user failed (%d) for eddsa public key\n",
+		       err);
+		err = -EFAULT;
+		goto free_pub_key;
+	}
+
+	if (memcmp(key, public_key, nbytes)) {
+		err = -EINVAL;
+		pr_err("alg:eddsa set_pub_key test failed. Invalid Output\n");
+		goto free_pub_key;
+	}
+
+	m_str = kzalloc(eddsa_req->msize, GFP_KERNEL);
+	if (!m_str) {
+		err = -ENOMEM;
+		goto free_pub_key;
+	}
+
+	err = copy_from_user(m_str, (void __user *)eddsa_req->message,
+			     eddsa_req->msize);
+	if (err) {
+		pr_err("copy_from_user failed (%d) for eddsa message\n", err);
+		err = -EFAULT;
+		goto free_msg;
+	}
+
+	output = kzalloc(nbytes * 2, GFP_KERNEL);
+	if (!output) {
+		err = -ENOMEM;
+		goto free_msg;
+	}
+
+	sg_init_one(&src, m_str, eddsa_req->msize);
+	sg_init_one(&dst, output, nbytes * 2);
+
+	akcipher_request_set_crypt(req, &src, &dst,
+				   eddsa_req->msize, nbytes * 2);
+
+	/* Set up result callback */
+	init_completion(&result.restart);
+	akcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+				      tegra_crypt_complete, &result);
+
+	/* Run eddsa sign operation on message digest */
+	err = wait_async_op(&result, crypto_akcipher_sign(req));
+	if (err) {
+		pr_err("alg:eddsa sign test failed\n");
+		goto free_output;
+	}
+
+	/* verify that signature (r,s) is valid */
+	if (req->dst_len != 2 * nbytes) {
+		err = -EINVAL;
+		goto free_output;
+	}
+
+	err = copy_to_user((void __user *)eddsa_req->signature,
+			   output, 2 * nbytes);
+	if (err) {
+		err = -EFAULT;
+		pr_debug("%s: copy_to_user failed (%d)\n", __func__, err);
+		goto free_output;
+	}
+
+	outbuf_maxlen = crypto_akcipher_maxsize(tfm);
+	outbuf = kzalloc(outbuf_maxlen, GFP_KERNEL);
+	if (!outbuf) {
+		pr_err("Failed to allocate outbuf memory\n");
+		err = -ENOMEM;
+		goto free_output;
+	}
+
+	/* Set src and dst buffers */
+	sg_init_table(src_tab, 3);
+	sg_set_buf(&src_tab[0], m_str, eddsa_req->msize);
+	sg_set_buf(&src_tab[1], output, nbytes);
+	sg_set_buf(&src_tab[2], output + nbytes, nbytes);
+	sg_init_one(&dst, outbuf, outbuf_maxlen);
+
+	akcipher_request_set_crypt(req, src_tab, &dst,
+				   eddsa_req->msize + 2 * nbytes,
+				   outbuf_maxlen);
+
+	/* Set up result callback */
+	init_completion(&result.restart);
+	akcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+				      tegra_crypt_complete, &result);
+
+	/* Run eddsa verify operation on sig (r,s) */
+	err = wait_async_op(&result, crypto_akcipher_verify(req));
+
+	kfree(outbuf);
+free_output:
+	kfree(output);
+free_msg:
+	kfree(m_str);
+free_pub_key:
+	kfree(public_key);
+free_key:
+	kfree(key);
+free_mem:
+	kfree(keymem);
+free_req:
+	akcipher_request_free(req);
+free_tfm:
+	crypto_free_akcipher(tfm);
+
+	return err;
 }
 
 static int tegra_crypt_pka1_ecc(struct tegra_se_pka1_ecc_request *ecc_req)
@@ -1222,6 +1429,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 	struct crypto_rng *tfm = NULL;
 	struct tegra_pka1_rsa_request pka1_rsa_req;
 	struct tegra_se_pka1_ecc_request pka1_ecc_req;
+	struct tegra_pka1_eddsa_request pka1_eddsa_req;
 	struct tegra_crypt_req crypt_req;
 	struct tegra_rng_req rng_req;
 	struct tegra_sha_req sha_req;
@@ -1549,6 +1757,18 @@ rng_out:
 		}
 
 		ret = tegra_crypt_pka1_ecc(&pka1_ecc_req);
+		break;
+
+	case TEGRA_CRYPTO_IOCTL_PKA1_EDDSA_REQ:
+		if (copy_from_user(&pka1_eddsa_req, (void __user *)arg,
+				   sizeof(pka1_eddsa_req))) {
+			ret = -EFAULT;
+			pr_err("%s: copy_from_user fail(%d) for pka1_eddsa_req\n",
+				__func__, ret);
+			return ret;
+		}
+
+		ret = tegra_crypt_pka1_eddsa(&pka1_eddsa_req);
 		break;
 
 	case TEGRA_CRYPTO_IOCTL_RNG1_REQ:

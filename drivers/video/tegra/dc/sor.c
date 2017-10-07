@@ -38,6 +38,24 @@
 #include "dp.h"
 #include "dc_common.h"
 
+static const struct tegra_dc_sor_link_speed link_speed_table[] = {
+	[TEGRA_DC_SOR_LINK_SPEED_G1_62] = {
+		.prod_prop = "prod_c_rbr",
+		.max_link_bw = 1620,
+		.link_rate = 6,
+	},
+	[TEGRA_DC_SOR_LINK_SPEED_G2_7] = {
+		.prod_prop = "prod_c_hbr",
+		.max_link_bw = 2700,
+		.link_rate = 10,
+	},
+	[TEGRA_DC_SOR_LINK_SPEED_G5_4] = {
+		.prod_prop = "prod_c_hbr2",
+		.max_link_bw = 5400,
+		.link_rate = 20,
+	},
+};
+
 static struct of_device_id tegra_sor_pd[] = {
 	{ .compatible = "nvidia,tegra210-sor-pd", },
 	{ .compatible = "nvidia,tegra186-disa-pd", },
@@ -612,6 +630,9 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		err = -ENOMEM;
 		goto err_allocate;
 	}
+
+	sor->link_speeds = link_speed_table;
+	sor->num_link_speeds = ARRAY_SIZE(link_speed_table);
 
 	if (!of_property_read_u32(sor_np, "nvidia,sor-ctrlnum", &temp)) {
 		sor->ctrl_num = (unsigned long)temp;

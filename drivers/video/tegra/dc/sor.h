@@ -41,6 +41,35 @@ enum {
 	TRAINING_PATTERN_HBR2_COMPLIANCE = 8,
 };
 
+/*
+ * This enum defines the index values for array of link speeds supported by
+ * the SORs on tegra SOCs. This enum shall be used as a sole way of interfacing
+ * with the data structures requiring link speed member fields
+ *
+ * Note: The code makes assumptions about values being enumerated in increasing
+ * order of link speeds. Please maintain the ascending order
+ */
+enum tegra_dc_sor_link_speed_key {
+	TEGRA_DC_SOR_LINK_SPEED_G1_62,
+	TEGRA_DC_SOR_LINK_SPEED_G2_7,
+	TEGRA_DC_SOR_LINK_SPEED_G5_4,
+	TEGRA_DC_SOR_LINK_SPEED_MAX,
+};
+
+/*
+ * tegra_dc_sor_link_speed - Parameters related to SOR link speed
+ * @prod_prop   - Device Tree binding associated with a given speed
+ * @max_link_bw - Maximum supported bandwidth (in MHz) for the given speed
+ *                This can be derived by multiplying @link_rate by 270 MHz
+ * @link_rate   - The link clock multiplier that generates required clock
+ *                frequency from 270 MHz source clock
+ */
+struct tegra_dc_sor_link_speed {
+	char *prod_prop;
+	u32 max_link_bw;
+	u8 link_rate;
+};
+
 struct tegra_dc_dp_link_config {
 	bool	is_valid;	/*
 				 * True if link config adheres to dp spec.
@@ -116,6 +145,10 @@ struct tegra_dc_sor_data {
 		SOR_SLEEP,
 	} sor_state;
 
+	/* Table of link speeds supported by the source */
+	const struct tegra_dc_sor_link_speed *link_speeds;
+	unsigned int num_link_speeds;
+
 	u8	clk_type;
 	u32  xbar_ctrl[5];
 	bool audio_support;
@@ -135,7 +168,6 @@ struct tegra_dc_sor_data {
 		if (ret != 0)		\
 			return ret;	\
 	} while (0)
-
 
 struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	const struct tegra_dc_dp_link_config *cfg);

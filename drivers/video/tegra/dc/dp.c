@@ -1164,6 +1164,18 @@ static int tegra_dc_init_default_panel_link_cfg(struct tegra_dc_dp_link_config *
 	return 0;
 }
 
+static void tegra_dp_set_max_link_bw(struct tegra_dc_sor_data *sor,
+				     struct tegra_dc_dp_link_config *cfg)
+{
+	unsigned int key; /* Index into the link speed table */
+
+	for (key = sor->num_link_speeds - 1; key; key--)
+		if (cfg->max_link_bw >= sor->link_speeds[key].link_rate)
+			break;
+
+	cfg->max_link_bw = sor->link_speeds[key].link_rate;
+}
+
 static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 					struct tegra_dc_dp_link_config *cfg)
 {
@@ -1224,12 +1236,7 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 				NV_DPCD_MAX_LINK_BANDWIDTH,
 				&cfg->max_link_bw));
 
-		if (cfg->max_link_bw >= SOR_LINK_SPEED_G5_4)
-			cfg->max_link_bw = SOR_LINK_SPEED_G5_4;
-		else if (cfg->max_link_bw >= SOR_LINK_SPEED_G2_7)
-			cfg->max_link_bw = SOR_LINK_SPEED_G2_7;
-		else
-			cfg->max_link_bw = SOR_LINK_SPEED_G1_62;
+		tegra_dp_set_max_link_bw(dp->sor, cfg);
 
 		if (dp->pdata && dp->pdata->link_bw &&
 			dp->pdata->link_bw < cfg->max_link_bw)
@@ -1328,46 +1335,41 @@ static int tegra_dp_set_lane_count(struct tegra_dc_dp_data *dp, u8 lane_cnt)
 	return 0;
 }
 
+/*
+ * Get the index of a certain link speed in the link speed table that has a
+ * given link rate
+ */
+static inline unsigned int tegra_dp_link_speed_get(struct tegra_dc_dp_data *dp,
+						   u8 link_rate)
+{
+	unsigned int key;
+
+	for (key = 0; key < dp->sor->num_link_speeds; key++)
+		if (dp->sor->link_speeds[key].link_rate == link_rate)
+			break;
+
+	return key;
+}
+
 static void tegra_dp_link_cal(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
 	int err = 0;
+	char *prop = NULL;
+	unsigned int key; /* Index into the link speed table */
 
+	if (IS_ERR_OR_NULL(dp->prod_list))
+		return;
 
-	switch (cfg->link_bw) {
-	case SOR_LINK_SPEED_G1_62:  /* RBR */
-		if (!IS_ERR(dp->prod_list)) {
-			err = tegra_prod_set_by_name(&dp->sor->base,
-				"prod_c_rbr", dp->prod_list);
-			if (err) {
-				dev_warn(&dp->dc->ndev->dev, "DP : Prod set failed\n");
-				return;
-			}
-		}
-		break;
-	case SOR_LINK_SPEED_G2_7:   /* HBR */
-		if (!IS_ERR(dp->prod_list)) {
-			err = tegra_prod_set_by_name(&dp->sor->base,
-				"prod_c_hbr", dp->prod_list);
-			if (err) {
-				dev_warn(&dp->dc->ndev->dev, "DP : Prod set failed\n");
-				return;
-			}
-		}
-		break;
-	case SOR_LINK_SPEED_G5_4:  /* HBR2 */
-		if (!IS_ERR(dp->prod_list)) {
-			err = tegra_prod_set_by_name(&dp->sor->base,
-				"prod_c_hbr2", dp->prod_list);
-			if (err) {
-				dev_warn(&dp->dc->ndev->dev, "DP : Prod set failed\n");
-				return;
-			}
-		}
-		break;
-	default:
-		BUG();
-	}
+	key = tegra_dp_link_speed_get(dp, cfg->link_bw);
+	if (WARN_ON(key == dp->sor->num_link_speeds))
+		return;
+
+	prop = dp->sor->link_speeds[key].prod_prop;
+
+	err = tegra_prod_set_by_name(&dp->sor->base, prop, dp->prod_list);
+	if (err)
+		dev_warn(&dp->dc->ndev->dev, "DP : Prod set failed\n");
 }
 
 static void tegra_dp_irq_evt_worker(struct work_struct *work)
@@ -2694,7 +2696,8 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 				struct fb_videomode *mode)
 {
 	struct tegra_dc_dp_data *dp = dc->out_data;
-	u8 max_link_bw;
+	u8 link_rate;
+	unsigned int key; /* Index into the link speed table */
 	int capability = 1;
 
 	struct tegra_vrr *vrr;
@@ -2715,12 +2718,15 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 		}
 	}
 
-	if (tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
-			&max_link_bw))
+	/* Note: The multiplier when multiplied to 270MHz gives us the link
+	 * bandwidth. In other words, one is derived from the other, and the
+	 * spec ends up using the two terms interchangeably
+	 */
+	if (tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH, &link_rate))
 		return false;
 
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		max_link_bw = dp->link_cfg.max_link_bw;
+		link_rate = dp->link_cfg.max_link_bw;
 
 	if (dc->out->dp_out != NULL) {
 		u32 bits_per_pixel;
@@ -2730,20 +2736,13 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 
 		bits_per_pixel = (18 < dp->dc->out->depth) ? 24 : 18;
 
-		switch (max_link_bw) {
-		case SOR_LINK_SPEED_G1_62:
-			max_link_bw_rate = 1620;
-			break;
-		case SOR_LINK_SPEED_G2_7:
-			max_link_bw_rate = 2700;
-			break;
-		case SOR_LINK_SPEED_G5_4:
-			max_link_bw_rate = 5400;
-			break;
-		default:
+		key = tegra_dp_link_speed_get(dp, link_rate);
+		if (WARN_ON(key == dp->sor->num_link_speeds)) {
 			dev_info(&dc->ndev->dev, "invalid link bw\n");
-			break;
+			return false;
 		}
+
+		max_link_bw_rate = dp->sor->link_speeds[key].max_link_bw;
 
 		/* max link bandwidth = lane_freq * lanes * 8 / 10 */
 		total_max_link_bw = (unsigned long)max_link_bw_rate

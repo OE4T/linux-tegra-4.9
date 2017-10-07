@@ -42,6 +42,21 @@ static void set_lt_state(struct tegra_dp_lt_data *lt_data,
 			int target_state, int delay_ms);
 static void set_lt_tpg(struct tegra_dp_lt_data *lt_data, u32 tp);
 
+static struct {
+	unsigned int key; /* Index into the link speed table */
+	unsigned int num_lanes;
+} const tegra_dp_link_config_priority[] = {/* CTS approved list. Do not alter */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G5_4, .num_lanes = 4},  /* 21.6Gbps */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G2_7, .num_lanes = 4},  /* 10.8Gbps */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 4}, /* 6.48Gbps */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G5_4, .num_lanes = 2},  /* 10.8Gbps */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G2_7, .num_lanes = 2},  /* 5.4Gbps  */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 2}, /* 3.24Gbps */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G5_4, .num_lanes = 1},  /* 5.4Gbps  */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G2_7, .num_lanes = 1},  /* 2.7Gbps  */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 1}, /* 1.62Gbps */
+};
+
 /*
  * Wait period before reading link status.
  * If dpcd addr 0xe TRAINING_AUX_RD_INTERVAL absent or zero,
@@ -63,34 +78,34 @@ static inline u32 wait_aux_training(struct tegra_dp_lt_data *lt_data,
 static int get_next_lower_link_config(struct tegra_dc_dp_data *dp,
 				struct tegra_dc_dp_link_config *link_cfg)
 {
-	u8 cur_n_lanes = link_cfg->lane_count;
+	u8 cur_lanes = link_cfg->lane_count;
 	u8 cur_link_bw = link_cfg->link_bw;
-	u32 priority_index;
-	u32 priority_arr_size = ARRAY_SIZE(tegra_dp_link_config_priority);
+	u32 idx;
+	u32 size = ARRAY_SIZE(tegra_dp_link_config_priority);
+	unsigned int key; /* Index into the link speed table */
+	u8 link_rate, num_lanes; /* Per loop variables */
 
-	for (priority_index = 0;
-		priority_index < priority_arr_size;
-		priority_index++) {
-		if (tegra_dp_link_config_priority[priority_index][0] ==
-			cur_link_bw &&
-			tegra_dp_link_config_priority[priority_index][1] ==
-			cur_n_lanes)
+	for (idx = 0; idx < size; idx++) {
+		key = tegra_dp_link_config_priority[idx].key;
+		link_rate = dp->sor->link_speeds[key].link_rate;
+		num_lanes = tegra_dp_link_config_priority[idx].num_lanes;
+
+		if (link_rate == cur_link_bw && num_lanes == cur_lanes)
 			break;
 	}
 
-	BUG_ON(priority_index >= priority_arr_size);
-
 	/* already at lowest link config */
-	if (priority_index == priority_arr_size - 1)
+	if (idx == size - 1)
 		return -ENOENT;
 
-	for (priority_index++;
-		priority_index < priority_arr_size; priority_index++) {
-		if (tegra_dp_link_config_priority[priority_index][0] <=
-			link_cfg->max_link_bw &&
-			tegra_dp_link_config_priority[priority_index][1] <=
-			link_cfg->max_lane_count)
-				return priority_index;
+	for (idx++; idx < size; idx++) {
+		key = tegra_dp_link_config_priority[idx].key;
+		link_rate = dp->sor->link_speeds[key].link_rate;
+		num_lanes = tegra_dp_link_config_priority[idx].num_lanes;
+
+		if (link_rate <= link_cfg->max_link_bw &&
+		    num_lanes <= link_cfg->max_lane_count)
+			return idx;
 	}
 
 	/* we should never end up here */
@@ -621,6 +636,7 @@ static void lt_reduce_bit_rate_state(struct tegra_dp_lt_data *lt_data)
 	struct tegra_dc_dp_link_config tmp_cfg;
 	int next_link_index;
 	bool cur_hpd;
+	unsigned int key; /* Index into the link speed table */
 
 	cur_hpd = tegra_dc_hpd(dp->dc);
 	if (!cur_hpd) {
@@ -638,8 +654,10 @@ static void lt_reduce_bit_rate_state(struct tegra_dp_lt_data *lt_data)
 	if (next_link_index < 0)
 		goto fail;
 
-	tmp_cfg.link_bw = tegra_dp_link_config_priority[next_link_index][0];
-	tmp_cfg.lane_count = tegra_dp_link_config_priority[next_link_index][1];
+	key = tegra_dp_link_config_priority[next_link_index].key;
+	tmp_cfg.link_bw = dp->sor->link_speeds[key].link_rate;
+	tmp_cfg.lane_count =
+		tegra_dp_link_config_priority[next_link_index].num_lanes;
 
 	if (!tegra_dc_dp_calc_config(dp, dp->mode, &tmp_cfg))
 		goto fail;

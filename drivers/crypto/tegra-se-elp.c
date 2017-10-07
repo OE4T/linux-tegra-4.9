@@ -1569,6 +1569,8 @@ static void tegra_se_program_pka1_mod(struct tegra_se_pka1_mod_request *req)
 	u32 om = req->op_mode;
 	u32 val;
 
+	tegra_se_set_pka1_op_ready(se_dev);
+
 	if (req->type == MOD_MULT) {
 		se_elp_writel(se_dev, PKA1,
 			      TEGRA_SE_PKA1_ENTRY_MODMULT,

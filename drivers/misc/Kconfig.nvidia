@@ -54,7 +54,7 @@ config FAN_THERM_EST
 	zone devices for temperature updates.
 
 config EQOS_APE_HWDEP
-	tristate "EQOS APE HWDEO Driver"
+	tristate "EQOS APE HWDEP Driver"
 	default n
 	depends on TEGRA_NVADSP
 	help

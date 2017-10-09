@@ -866,13 +866,13 @@ int isp_capture_program_status(struct tegra_isp_channel *chan)
 
 	/* no timeout as an isp_program may get used for mutliple frames */
 	err = wait_for_completion_killable(&capture->capture_program_resp);
-	if (err <= 0) {
+	if (err < 0) {
 		dev_err(chan->isp_dev,
 			"no reply from camera processor\n");
 		return err;
 	}
 
-	return err;
+	return 0;
 }
 
 int isp_capture_request(struct tegra_isp_channel *chan,
@@ -997,5 +997,5 @@ int isp_capture_status(struct tegra_isp_channel *chan,
 		return -ETIMEDOUT;
 	}
 
-	return err;
+	return 0;
 }

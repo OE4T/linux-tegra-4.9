@@ -329,6 +329,7 @@ static int pva_read_ucode(struct platform_device *pdev,
 
 	trace->addr = (void *)((u8 *)fw_info->priv2_buffer.va +
 					trace->offset);
+	memset(trace->addr, 0, trace->size);
 
 	fw_info->priv2_buffer.pa =
 			(dma_addr_t)ALIGN((u64)pva->priv2_dma.pa, SZ_4K);
@@ -418,16 +419,16 @@ int pva_finalize_poweron(struct platform_device *pdev)
 	struct pva *pva = pdata->private_data;
 	int err = 0;
 
-	/* Enable LIC_INTERRUPT line for HSP1 and WDT*/
+	/* Enable LIC_INTERRUPT line for HSP1 and WDT */
 	host1x_writel(pva->pdev, sec_lic_intr_enable_r(),
 		sec_lic_intr_enable_hsp_f(SEC_LIC_INTR_HSP1) |
 		sec_lic_intr_enable_wdt_f(SEC_LIC_INTR_WDT));
 
-	enable_irq(pva->irq);
-
 	err = pva_load_fw(pdev);
 	if (err < 0)
 		goto err_poweron;
+
+	enable_irq(pva->irq);
 
 	err = pva_init_fw(pdev);
 	if (err < 0)
@@ -448,6 +449,8 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
+
+	flush_work(&pva->pva_restore_state_work);
 
 	/* Put PVA to reset to ensure that the firmware doesn't get accessed */
 	reset_control_assert(pdata->reset_control);

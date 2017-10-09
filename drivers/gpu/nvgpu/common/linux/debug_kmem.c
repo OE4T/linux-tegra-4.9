@@ -9,15 +9,14 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
  */
-
-#include "debug_kmem.h"
-#include "kmem_priv.h"
-#include "gk20a/platform_gk20a.h"
 
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+
+#include "os_linux.h"
+#include "debug_kmem.h"
+#include "kmem_priv.h"
 
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
 /**
@@ -295,21 +294,21 @@ static const struct file_operations __kmem_traces_fops = {
 
 void nvgpu_kmem_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *node;
 
-	g->debugfs_kmem = debugfs_create_dir("kmem_tracking", platform->debugfs);
-	if (IS_ERR_OR_NULL(g->debugfs_kmem))
+	l->debugfs_kmem = debugfs_create_dir("kmem_tracking", l->debugfs);
+	if (IS_ERR_OR_NULL(l->debugfs_kmem))
 		return;
 
 	node = debugfs_create_file(g->vmallocs->name, S_IRUGO,
-				   g->debugfs_kmem,
+				   l->debugfs_kmem,
 				   g->vmallocs, &__kmem_tracking_fops);
 	node = debugfs_create_file(g->kmallocs->name, S_IRUGO,
-				   g->debugfs_kmem,
+				   l->debugfs_kmem,
 				   g->kmallocs, &__kmem_tracking_fops);
 	node = debugfs_create_file("traces", S_IRUGO,
-				   g->debugfs_kmem,
+				   l->debugfs_kmem,
 				   g, &__kmem_traces_fops);
 }
 #endif

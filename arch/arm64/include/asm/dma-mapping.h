@@ -93,6 +93,14 @@ static inline bool is_device_dma_coherent(struct device *dev)
 }
 
 /* do not use this function in a driver */
+static inline bool is_device_dma_noncontig(struct device *dev)
+{
+	if (!dev)
+		return false;
+	return dev->archdata.dma_noncontig;
+}
+
+/* do not use this function in a driver */
 static inline bool skip_device_cache_sync(struct device *dev, unsigned long attrs)
 {
 	if (DMA_ATTR_SKIP_CPU_SYNC & attrs)

@@ -25,6 +25,7 @@ struct dev_archdata {
 	struct dma_iommu_mapping *mapping;
 #endif
 	bool dma_coherent;
+	bool dma_noncontig;
 };
 
 struct pdev_archdata {

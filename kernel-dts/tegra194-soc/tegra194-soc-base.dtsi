@@ -223,18 +223,14 @@
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
 			};
-			isp_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID_ISP>;
-			};
 			vi_domain {
-				/* Use camera_vm0_as for firmware tests */
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID(VI)>;
 			};
 			rce_rm_domain {
 				address-space = <&camera_vm0_as>;
 				sid-list = <TEGRA_SID(RCE_RM)
+					    TEGRA_SID(ISP)
 					    TEGRA_SID(ISPFALC)
 					    TEGRA_SID(VIFALC)>;
 			};

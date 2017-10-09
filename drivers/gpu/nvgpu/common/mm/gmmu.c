@@ -527,7 +527,6 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 		if (space_to_skip &&
 		    space_to_skip >= nvgpu_sgt_get_length(sgt, sgl)) {
 			space_to_skip -= nvgpu_sgt_get_length(sgt, sgl);
-			sgl = nvgpu_sgt_get_next(sgt, sgl);
 			continue;
 		}
 

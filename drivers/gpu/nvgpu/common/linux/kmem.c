@@ -301,6 +301,8 @@ static int __nvgpu_free_kmem_alloc(struct nvgpu_mem_alloc_tracker *tracker,
 		return -EINVAL;
 	}
 
+	memset((void *)alloc->addr, 0, alloc->size);
+
 	tracker->nr_frees++;
 	tracker->bytes_freed += alloc->size;
 	tracker->bytes_freed_real += alloc->real_size;
@@ -415,9 +417,9 @@ void __nvgpu_track_vfree(struct gk20a *g, void *addr)
 	if (!addr)
 		return;
 
-	vfree(addr);
-
 	__nvgpu_free_kmem_alloc(g->vmallocs, (u64)(uintptr_t)addr);
+
+	vfree(addr);
 }
 
 void __nvgpu_track_kfree(struct gk20a *g, void *addr)
@@ -425,9 +427,9 @@ void __nvgpu_track_kfree(struct gk20a *g, void *addr)
 	if (!addr)
 		return;
 
-	kfree(addr);
-
 	__nvgpu_free_kmem_alloc(g->kmallocs, (u64)(uintptr_t)addr);
+
+	kfree(addr);
 }
 
 static int __do_check_for_outstanding_allocs(

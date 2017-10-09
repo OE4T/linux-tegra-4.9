@@ -82,11 +82,11 @@ static void nvmap_gosmem_device_release(struct reserved_mem *rmem,
 static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 		struct device *dev)
 {
-	struct of_phandle_iter iter;
+	struct of_phandle_args outargs;
 	struct device_node *np;
 	DEFINE_DMA_ATTRS(attrs);
 	phys_addr_t pa;
-	int ret, i, idx, bytes;
+	int ret = 0, i, idx, bytes;
 	struct reserved_mem_ops *rmem_ops =
 		(struct reserved_mem_ops *)rmem->priv;
 	struct sg_table *sgt;
@@ -104,10 +104,7 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 		return -EBUSY;
 	}
 
-	of_property_for_each_phandle_with_args(iter, np, "cvdevs",
-			NULL, 0)
-		count++;
-
+	count = of_count_phandle_with_args(np, "cvdevs", NULL);
 	if (!count) {
 		pr_err("No cvdevs to use the gosmem!!\n");
 		return -EINVAL;
@@ -129,10 +126,19 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 		goto unmap_dma;
 	}
 
-	idx = 0;
-	of_property_for_each_phandle_with_args(iter, np, "cvdevs",
-			NULL, 0) {
-		struct device_node *temp = device_node_from_iter(iter);
+	for (idx = 0; idx < count; idx++) {
+		struct device_node *temp;
+
+		ret = of_parse_phandle_with_args(np, "cvdevs",
+			NULL, idx, &outargs);
+		if (ret < 0) {
+			/* skip empty (null) phandles */
+			if (ret == -ENOENT)
+				continue;
+			else
+				goto free_cvdev;
+		}
+		temp = outargs.np;
 
 		cvdev_info[idx].np = of_node_get(temp);
 		if (!cvdev_info[idx].np)
@@ -154,7 +160,6 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 			sg_set_buf(sgt->sgl,
 				phys_to_virt(pa + i * SZ_4K), SZ_4K);
 		}
-		idx++;
 	}
 	rmem->priv = &gosmem;
 	ret = rmem_ops->device_init(rmem, dev);
@@ -165,6 +170,7 @@ free:
 	sgt = (struct sg_table *)(cvdev_info + count);
 	for (i = 0; i < count * count; i++)
 		sg_free_table(sgt++);
+free_cvdev:
 	kfree(cvdev_info);
 unmap_dma:
 	dma_free_attrs(gosmem.dma_dev, count * SZ_4K, NULL, pa, __DMA_ATTR(attrs));
@@ -282,7 +288,7 @@ struct cv_dev_info *nvmap_fetch_cv_dev_info(struct device *dev)
 {
 	int i;
 
-	if (!dev || !cvdev_info)
+	if (!dev || !cvdev_info || !dev->of_node)
 		return NULL;
 
 	for (i = 0; i < count; i++)

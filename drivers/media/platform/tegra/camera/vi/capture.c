@@ -469,6 +469,8 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 
 	config->channel_flags = setup->channel_flags;
 	config->vi_channel_mask = setup->vi_channel_mask;
+	config->slvsec_stream_main = setup->slvsec_stream_main;
+	config->slvsec_stream_sub = setup->slvsec_stream_sub;
 
 	config->queue_depth = setup->queue_depth;
 	config->request_size = setup->request_size;

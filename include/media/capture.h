@@ -34,6 +34,10 @@ struct vi_capture_setup {
 	uint32_t request_size;
 	uint32_t mem;
 	uint32_t __pad_mem;
+	uint8_t slvsec_stream_main;
+	uint8_t slvsec_stream_sub;
+	uint16_t __pad_slvsec1;
+	uint32_t __pad_slvsec2;
 } __VI_CAPTURE_ALIGN;
 
 struct vi_capture_info {

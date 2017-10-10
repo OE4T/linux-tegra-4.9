@@ -2745,7 +2745,7 @@ static int dfll_build_lut_pwm(struct tegra_dfll *td, int v_max)
 	int i, reg_volt;
 	unsigned long rate;
 	u8 lut_bottom = MAX_DFLL_VOLTAGES;
-	int v_min = td->soc->cvb->min_millivolts * 1000;
+	int v_min = td->soc->min_millivolts * 1000;
 
 	for (i = 0; i < MAX_DFLL_VOLTAGES; i++) {
 		reg_volt = td->lut_uv[i];
@@ -2765,7 +2765,7 @@ static int dfll_build_lut_pwm(struct tegra_dfll *td, int v_max)
 	if ((lut_bottom == MAX_DFLL_VOLTAGES) ||
 	    (lut_bottom + 1 >= td->lut_size)) {
 		dev_err(td->dev, "no voltage above DFLL minimum %d mV\n",
-			td->soc->cvb->min_millivolts);
+			td->soc->min_millivolts);
 		return -EINVAL;
 	}
 	td->lut_bottom = lut_bottom;
@@ -2774,7 +2774,7 @@ static int dfll_build_lut_pwm(struct tegra_dfll *td, int v_max)
 	rate = get_dvco_rate_below(td, td->lut_bottom);
 	if (!rate) {
 		dev_err(td->dev, "no opp below DFLL minimum voltage %d mV\n",
-			td->soc->cvb->min_millivolts);
+			td->soc->min_millivolts);
 		return -EINVAL;
 	}
 	td->dvco_rate_min = td->out_rate_min = rate;
@@ -2804,7 +2804,7 @@ static int dfll_build_i2c_lut(struct tegra_dfll *td, int v_max)
 
 	rcu_read_lock();
 
-	v = td->soc->cvb->min_millivolts * 1000;
+	v = td->soc->min_millivolts * 1000;
 	lut = find_vdd_map_entry_exact(td, v);
 	if (lut < 0)
 		goto out;
@@ -2818,7 +2818,7 @@ static int dfll_build_i2c_lut(struct tegra_dfll *td, int v_max)
 		if (IS_ERR(opp))
 			break;
 		v_opp = dev_pm_opp_get_voltage(opp);
-		if (v_opp <= td->soc->cvb->min_millivolts * 1000)
+		if (v_opp <= td->soc->min_millivolts * 1000)
 			td->out_rate_min = dev_pm_opp_get_freq(opp);
 
 		if (rate > td->out_rate_max)
@@ -2850,7 +2850,7 @@ static int dfll_build_i2c_lut(struct tegra_dfll *td, int v_max)
 
 	if (!td->out_rate_min) {
 		dev_err(td->dev, "no opp above DFLL minimum voltage %d mV\n",
-			td->soc->cvb->min_millivolts);
+			td->soc->min_millivolts);
 	} else {
 		ret = 0;
 		for (j = 0; j < td->lut_size; j++)

@@ -680,6 +680,9 @@ static int tegra124_dfll_fcpu_probe(struct platform_device *pdev)
 		return PTR_ERR(soc->cvb);
 	}
 
+	soc->tune_high_min_millivolts =
+		soc->cvb->cpu_dfll_data.tune_high_min_millivolts;
+
 	thermal = fcpu_data->cpu_thermal_table;
 	err = tegra_cvb_build_thermal_table(thermal, speedo_value,
 						soc->min_millivolts);

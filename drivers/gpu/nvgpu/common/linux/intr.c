@@ -59,7 +59,7 @@ irqreturn_t nvgpu_intr_thread_stall(struct gk20a *g)
 	/* sync handled irq counter before re-enabling interrupts */
 	atomic_set(&l->sw_irq_stall_last_handled, hw_irq_count);
 
-	wake_up_all(&l->sw_irq_stall_last_handled_wq);
+	nvgpu_cond_broadcast(&l->sw_irq_stall_last_handled_wq);
 
 	trace_mc_gk20a_intr_thread_stall_done(g->name);
 
@@ -128,7 +128,7 @@ irqreturn_t nvgpu_intr_nonstall(struct gk20a *g)
 
 	g->ops.mc.intr_nonstall_resume(g);
 
-	wake_up_all(&l->sw_irq_nonstall_last_handled_wq);
+	nvgpu_cond_broadcast(&l->sw_irq_nonstall_last_handled_wq);
 
 	return IRQ_HANDLED;
 }

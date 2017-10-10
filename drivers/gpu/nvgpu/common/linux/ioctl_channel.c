@@ -575,7 +575,7 @@ static unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info, "");
 
-	poll_wait(filep, &event_id_data->event_id_wq, wait);
+	poll_wait(filep, &event_id_data->event_id_wq.wq, wait);
 
 	nvgpu_mutex_acquire(&event_id_data->lock);
 
@@ -683,7 +683,7 @@ void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
 		event_id, ch->chid);
 	event_id_data->event_posted = true;
 
-	wake_up_interruptible_all(&event_id_data->event_id_wq);
+	nvgpu_cond_broadcast_interruptible(&event_id_data->event_id_wq);
 
 	nvgpu_mutex_release(&event_id_data->lock);
 }
@@ -735,7 +735,7 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 	event_id_data->is_tsg = false;
 	event_id_data->event_id = event_id;
 
-	init_waitqueue_head(&event_id_data->event_id_wq);
+	nvgpu_cond_init(&event_id_data->event_id_wq);
 	err = nvgpu_mutex_init(&event_id_data->lock);
 	if (err)
 		goto clean_up_free;

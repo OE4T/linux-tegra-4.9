@@ -58,7 +58,7 @@ struct pstate {
 struct pstates {
 	struct boardobjgrp_e32 super;
 	u32  num_levels;
-	wait_queue_head_t pstate_notifier_wq;
+	struct nvgpu_cond pstate_notifier_wq;
 	u32 is_pstate_switch_on;
 	struct nvgpu_mutex pstate_mutex; /* protect is_pstate_switch_on */
 };

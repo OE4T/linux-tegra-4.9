@@ -53,7 +53,7 @@ struct gk20a_ctxsw_dev {
 	struct nvgpu_ctxsw_trace_entry *ents;
 	struct nvgpu_ctxsw_trace_filter filter;
 	bool write_enabled;
-	wait_queue_head_t readout_wq;
+	struct nvgpu_cond readout_wq;
 	size_t size;
 	u32 num_ents;
 
@@ -100,8 +100,8 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 		nvgpu_mutex_release(&dev->write_lock);
 		if (filp->f_flags & O_NONBLOCK)
 			return -EAGAIN;
-		err = wait_event_interruptible(dev->readout_wq,
-			!ring_is_empty(hdr));
+		err = NVGPU_COND_WAIT_INTERRUPTIBLE(&dev->readout_wq,
+			!ring_is_empty(hdr), 0);
 		if (err)
 			return err;
 		nvgpu_mutex_acquire(&dev->write_lock);
@@ -436,7 +436,7 @@ unsigned int gk20a_ctxsw_dev_poll(struct file *filp, poll_table *wait)
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "");
 
 	nvgpu_mutex_acquire(&dev->write_lock);
-	poll_wait(filp, &dev->readout_wq, wait);
+	poll_wait(filp, &dev->readout_wq.wq, wait);
 	if (!ring_is_empty(hdr))
 		mask |= POLLIN | POLLRDNORM;
 	nvgpu_mutex_release(&dev->write_lock);
@@ -503,7 +503,7 @@ static int gk20a_ctxsw_init_devs(struct gk20a *g)
 		dev->g = g;
 		dev->hdr = NULL;
 		dev->write_enabled = false;
-		init_waitqueue_head(&dev->readout_wq);
+		nvgpu_cond_init(&dev->readout_wq);
 		err = nvgpu_mutex_init(&dev->write_lock);
 		if (err)
 			return err;
@@ -683,7 +683,7 @@ void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid)
 		return;
 
 	dev = &g->ctxsw_trace->devs[vmid];
-	wake_up_interruptible(&dev->readout_wq);
+	nvgpu_cond_signal_interruptible(&dev->readout_wq);
 }
 
 void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch)

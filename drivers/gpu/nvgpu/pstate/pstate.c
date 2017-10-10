@@ -357,7 +357,7 @@ static int pstate_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	init_waitqueue_head(&g->perf_pmu.pstatesobjs.pstate_notifier_wq);
+	nvgpu_cond_init(&g->perf_pmu.pstatesobjs.pstate_notifier_wq);
 
 	err = nvgpu_mutex_init(&g->perf_pmu.pstatesobjs.pstate_mutex);
 	if (err)

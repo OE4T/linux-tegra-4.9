@@ -126,7 +126,7 @@ struct gk20a_event_id_data {
 
 	bool event_posted;
 
-	wait_queue_head_t event_id_wq;
+	struct nvgpu_cond event_id_wq;
 	struct nvgpu_mutex lock;
 	struct nvgpu_list_node event_id_node;
 };

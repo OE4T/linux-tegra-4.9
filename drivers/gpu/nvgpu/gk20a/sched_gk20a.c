@@ -58,8 +58,8 @@ ssize_t gk20a_sched_dev_read(struct file *filp, char __user *buf,
 		nvgpu_mutex_release(&sched->status_lock);
 		if (filp->f_flags & O_NONBLOCK)
 			return -EAGAIN;
-		err = wait_event_interruptible(sched->readout_wq,
-			sched->status);
+		err = NVGPU_COND_WAIT_INTERRUPTIBLE(&sched->readout_wq,
+			sched->status, 0);
 		if (err)
 			return err;
 		nvgpu_mutex_acquire(&sched->status_lock);
@@ -88,7 +88,7 @@ unsigned int gk20a_sched_dev_poll(struct file *filp, poll_table *wait)
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "");
 
 	nvgpu_mutex_acquire(&sched->status_lock);
-	poll_wait(filp, &sched->readout_wq, wait);
+	poll_wait(filp, &sched->readout_wq.wq, wait);
 	if (sched->status)
 		mask |= POLLIN | POLLRDNORM;
 	nvgpu_mutex_release(&sched->status_lock);
@@ -552,7 +552,7 @@ void gk20a_sched_ctrl_tsg_added(struct gk20a *g, struct tsg_gk20a *tsg)
 	NVGPU_SCHED_SET(tsg->tsgid, sched->recent_tsg_bitmap);
 	sched->status |= NVGPU_SCHED_STATUS_TSG_OPEN;
 	nvgpu_mutex_release(&sched->status_lock);
-	wake_up_interruptible(&sched->readout_wq);
+	nvgpu_cond_signal_interruptible(&sched->readout_wq);
 }
 
 void gk20a_sched_ctrl_tsg_removed(struct gk20a *g, struct tsg_gk20a *tsg)
@@ -609,7 +609,7 @@ int gk20a_sched_ctrl_init(struct gk20a *g)
 		goto free_recent;
 	}
 
-	init_waitqueue_head(&sched->readout_wq);
+	nvgpu_cond_init(&sched->readout_wq);
 
 	err = nvgpu_mutex_init(&sched->status_lock);
 	if (err)

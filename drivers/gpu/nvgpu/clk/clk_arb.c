@@ -40,6 +40,7 @@
 #include <nvgpu/kref.h>
 #include <nvgpu/log.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/cond.h>
 
 #include "gk20a/gk20a.h"
 #include "clk/clk_arb.h"
@@ -189,7 +190,7 @@ struct nvgpu_clk_arb {
 	struct work_struct vf_table_fn_work;
 	struct workqueue_struct *vf_table_work_queue;
 
-	wait_queue_head_t request_wq;
+	struct nvgpu_cond request_wq;
 
 	struct nvgpu_clk_vf_table *current_vf_table;
 	struct nvgpu_clk_vf_table vf_table_pool[2];
@@ -218,7 +219,7 @@ struct nvgpu_clk_dev {
 		struct list_head link;
 		struct llist_node node;
 	};
-	wait_queue_head_t readout_wq;
+	struct nvgpu_cond readout_wq;
 	nvgpu_atomic_t poll_mask;
 	u16 gpc2clk_target_mhz;
 	u16 mclk_target_mhz;
@@ -371,7 +372,7 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	INIT_LIST_HEAD_RCU(&arb->sessions);
 	init_llist_head(&arb->requests);
 
-	init_waitqueue_head(&arb->request_wq);
+	nvgpu_cond_init(&arb->request_wq);
 	arb->vf_table_work_queue = alloc_workqueue("%s", WQ_HIGHPRI, 1,
 		"vf_table_update");
 	arb->update_work_queue = alloc_workqueue("%s", WQ_HIGHPRI, 1,
@@ -400,8 +401,8 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	do {
 		/* Check that first run is completed */
 		nvgpu_smp_mb();
-		wait_event_interruptible(arb->request_wq,
-			nvgpu_atomic_read(&arb->req_nr));
+		NVGPU_COND_WAIT_INTERRUPTIBLE(&arb->request_wq,
+			nvgpu_atomic_read(&arb->req_nr), 0);
 	} while (!nvgpu_atomic_read(&arb->req_nr));
 
 
@@ -547,7 +548,7 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 
 	fd_install(fd, file);
 
-	init_waitqueue_head(&dev->readout_wq);
+	nvgpu_cond_init(&dev->readout_wq);
 
 	nvgpu_atomic_set(&dev->poll_mask, 0);
 
@@ -1269,7 +1270,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	/* VF Update complete */
 	nvgpu_clk_arb_set_global_alarm(g, EVENT(VF_UPDATE));
 
-	wake_up_interruptible(&arb->request_wq);
+	nvgpu_cond_signal_interruptible(&arb->request_wq);
 
 #ifdef CONFIG_DEBUG_FS
 	g->ops.bus.read_ptimer(g, &t1);
@@ -1317,7 +1318,7 @@ exit_arb:
 	head = llist_del_all(&arb->requests);
 	llist_for_each_entry_safe(dev, tmp, head, node) {
 		nvgpu_atomic_set(&dev->poll_mask, POLLIN | POLLRDNORM);
-		wake_up_interruptible(&dev->readout_wq);
+		nvgpu_cond_signal_interruptible(&dev->readout_wq);
 		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 	}
 
@@ -1444,7 +1445,7 @@ static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
 
 	if (poll_mask) {
 		nvgpu_atomic_set(&dev->poll_mask, poll_mask);
-		wake_up_interruptible_all(&dev->readout_wq);
+		nvgpu_cond_broadcast_interruptible(&dev->readout_wq);
 	}
 
 	return new_alarms_reported;
@@ -1587,8 +1588,8 @@ static ssize_t nvgpu_clk_arb_read_event_dev(struct file *filp, char __user *buf,
 	while (!__pending_event(dev, &info)) {
 		if (filp->f_flags & O_NONBLOCK)
 			return -EAGAIN;
-		err = wait_event_interruptible(dev->readout_wq,
-				__pending_event(dev, &info));
+		err = NVGPU_COND_WAIT_INTERRUPTIBLE(&dev->readout_wq,
+				__pending_event(dev, &info), 0);
 		if (err)
 			return err;
 		if (info.timestamp)
@@ -1607,7 +1608,7 @@ static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait)
 
 	gk20a_dbg_fn("");
 
-	poll_wait(filp, &dev->readout_wq, wait);
+	poll_wait(filp, &dev->readout_wq.wq, wait);
 	return nvgpu_atomic_xchg(&dev->poll_mask, 0);
 }
 

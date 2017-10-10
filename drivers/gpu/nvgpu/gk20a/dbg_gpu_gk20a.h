@@ -41,7 +41,7 @@ struct channel_gk20a *
 nvgpu_dbg_gpu_get_session_channel(struct dbg_session_gk20a *dbg_s);
 
 struct dbg_gpu_session_events {
-	wait_queue_head_t wait_queue;
+	struct nvgpu_cond wait_queue;
 	bool events_enabled;
 	int num_pending_events;
 };

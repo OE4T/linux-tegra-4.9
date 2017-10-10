@@ -158,7 +158,7 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	dbg_session->is_pg_disabled = false;
 	dbg_session->is_timeout_disabled = false;
 
-	init_waitqueue_head(&dbg_session->dbg_events.wait_queue);
+	nvgpu_cond_init(&dbg_session->dbg_events.wait_queue);
 	nvgpu_init_list_node(&dbg_session->ch_list);
 	err = nvgpu_mutex_init(&dbg_session->ch_list_lock);
 	if (err)
@@ -286,7 +286,7 @@ unsigned int gk20a_dbg_gpu_dev_poll(struct file *filep, poll_table *wait)
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
-	poll_wait(filep, &dbg_s->dbg_events.wait_queue, wait);
+	poll_wait(filep, &dbg_s->dbg_events.wait_queue.wq, wait);
 
 	gk20a_dbg_session_nvgpu_mutex_acquire(dbg_s);
 
@@ -337,7 +337,7 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 
 			dbg_s->dbg_events.num_pending_events++;
 
-			wake_up_interruptible_all(&dbg_s->dbg_events.wait_queue);
+			nvgpu_cond_broadcast_interruptible(&dbg_s->dbg_events.wait_queue);
 		}
 	}
 

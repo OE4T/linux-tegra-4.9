@@ -97,7 +97,7 @@ void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 		event_id, tsg->tsgid);
 	event_id_data->event_posted = true;
 
-	wake_up_interruptible_all(&event_id_data->event_id_wq);
+	nvgpu_cond_broadcast_interruptible(&event_id_data->event_id_wq);
 
 	nvgpu_mutex_release(&event_id_data->lock);
 }
@@ -150,7 +150,7 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 	event_id_data->is_tsg = true;
 	event_id_data->event_id = event_id;
 
-	init_waitqueue_head(&event_id_data->event_id_wq);
+	nvgpu_cond_init(&event_id_data->event_id_wq);
 	err = nvgpu_mutex_init(&event_id_data->lock);
 	if (err)
 		goto clean_up_free;

@@ -44,7 +44,7 @@ struct gk20a_sched_ctrl {
 	u64 *recent_tsg_bitmap;
 	u64 *ref_tsg_bitmap;
 
-	wait_queue_head_t readout_wq;
+	struct nvgpu_cond readout_wq;
 };
 
 int gk20a_sched_dev_release(struct inode *inode, struct file *filp);

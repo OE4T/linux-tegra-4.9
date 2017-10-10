@@ -77,7 +77,8 @@ static void gk20a_vidbuf_release(struct dma_buf *dmabuf)
 	struct nvgpu_vidmem_linux *linux_buf = buf->priv;
 	struct gk20a *g = buf->g;
 
-	gk20a_dbg_fn("");
+	vidmem_dbg(g, "Releasing Linux VIDMEM buf: dmabuf=0x%p size=%zuKB",
+		   dmabuf, buf->mem->size >> 10);
 
 	if (linux_buf && linux_buf->dmabuf_priv_delete)
 		linux_buf->dmabuf_priv_delete(linux_buf->dmabuf_priv);
@@ -202,6 +203,9 @@ int nvgpu_vidmem_export_linux(struct gk20a *g, size_t bytes)
 	/* fclose() on this drops one ref, freeing the dma buf */
 	fd_install(fd, priv->dmabuf->file);
 
+	vidmem_dbg(g, "Alloced Linux VIDMEM buf: dmabuf=0x%p size=%zuKB",
+		   priv->dmabuf, buf->mem->size >> 10);
+
 	return fd;
 
 fail:
@@ -209,6 +213,7 @@ fail:
 	nvgpu_kfree(g, priv);
 	gk20a_put(g);
 
+	vidmem_dbg(g, "Failed to alloc Linux VIDMEM buf: %d", err);
 	return err;
 }
 

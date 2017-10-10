@@ -142,4 +142,10 @@ static inline void nvgpu_vidmem_thread_unpause(struct mm_gk20a *mm)
 
 #endif /* !defined(CONFIG_GK20A_VIDMEM) */
 
+/*
+ * Simple macro for VIDMEM debugging.
+ */
+#define vidmem_dbg(g, fmt, args...)			\
+	nvgpu_log(g, gpu_dbg_vidmem, fmt, ##args);	\
+
 #endif /* __NVGPU_VIDMEM_H__ */

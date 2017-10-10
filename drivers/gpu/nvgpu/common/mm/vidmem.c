@@ -85,6 +85,8 @@ static int __nvgpu_vidmem_do_clear_all(struct gk20a *g)
 	if (mm->vidmem.ce_ctx_id == (u32)~0)
 		return -EINVAL;
 
+	vidmem_dbg(g, "Clearing all VIDMEM:");
+
 	err = gk20a_ce_execute_ops(g,
 			mm->vidmem.ce_ctx_id,
 			0,
@@ -144,6 +146,8 @@ static int __nvgpu_vidmem_do_clear_all(struct gk20a *g)
 
 	mm->vidmem.cleared = true;
 
+	vidmem_dbg(g, "Done!");
+
 	return 0;
 }
 
@@ -163,16 +167,24 @@ void nvgpu_vidmem_thread_pause_sync(struct mm_gk20a *mm)
 	 */
 	if (nvgpu_atomic_inc_return(&mm->vidmem.pause_count) == 1)
 		nvgpu_mutex_acquire(&mm->vidmem.clearing_thread_lock);
+
+	vidmem_dbg(mm->g, "Clearing thread paused; new count=%d",
+		   nvgpu_atomic_read(&mm->vidmem.pause_count));
 }
 
 void nvgpu_vidmem_thread_unpause(struct mm_gk20a *mm)
 {
+	vidmem_dbg(mm->g, "Unpausing clearing thread; current count=%d",
+		   nvgpu_atomic_read(&mm->vidmem.pause_count));
+
 	/*
 	 * And on the last decrement (1 -> 0) release the pause lock and let
 	 * the vidmem clearing thread continue.
 	 */
-	if (nvgpu_atomic_dec_return(&mm->vidmem.pause_count) == 0)
+	if (nvgpu_atomic_dec_return(&mm->vidmem.pause_count) == 0) {
 		nvgpu_mutex_release(&mm->vidmem.clearing_thread_lock);
+		vidmem_dbg(mm->g, "  > Clearing thread really unpaused!");
+	}
 }
 
 int nvgpu_vidmem_clear_list_enqueue(struct gk20a *g, struct nvgpu_mem *mem)
@@ -222,6 +234,8 @@ static void nvgpu_vidmem_clear_pending_allocs(struct mm_gk20a *mm)
 	struct gk20a *g = mm->g;
 	struct nvgpu_mem *mem;
 
+	vidmem_dbg(g, "Running VIDMEM clearing thread:");
+
 	while ((mem = nvgpu_vidmem_clear_list_dequeue(mm)) != NULL) {
 		nvgpu_vidmem_clear(g, mem);
 
@@ -233,6 +247,8 @@ static void nvgpu_vidmem_clear_pending_allocs(struct mm_gk20a *mm)
 		__nvgpu_mem_free_vidmem_alloc(g, mem);
 		nvgpu_kfree(g, mem);
 	}
+
+	vidmem_dbg(g, "Done!");
 }
 
 static int nvgpu_vidmem_clear_pending_allocs_thr(void *mm_ptr)
@@ -295,6 +311,8 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 	if (!size)
 		return 0;
 
+	vidmem_dbg(g, "init begin");
+
 	wpr_co.base = size - SZ_256M;
 	bootstrap_base = wpr_co.base;
 	bootstrap_size = SZ_16M;
@@ -354,7 +372,16 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 	if (err)
 		goto fail;
 
-	gk20a_dbg_info("registered vidmem: %zu MB", size / SZ_1M);
+	vidmem_dbg(g, "VIDMEM Total: %zu MB", size >> 20);
+	vidmem_dbg(g, "VIDMEM Ranges:");
+	vidmem_dbg(g, "  0x%-10llx -> 0x%-10llx Primary",
+		   mm->vidmem.base, mm->vidmem.base + mm->vidmem.size);
+	vidmem_dbg(g, "  0x%-10llx -> 0x%-10llx Bootstrap",
+		   mm->vidmem.bootstrap_base,
+		   mm->vidmem.bootstrap_base + mm->vidmem.bootstrap_size);
+	vidmem_dbg(g, "VIDMEM carveouts:");
+	vidmem_dbg(g, "  0x%-10llx -> 0x%-10llx %s",
+		   wpr_co.base, wpr_co.base + wpr_co.length, wpr_co.name);
 
 	return 0;
 
@@ -393,6 +420,8 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 
 	alloc = mem->vidmem_alloc;
 
+	vidmem_dbg(g, "Clearing VIDMEM buf:");
+
 	nvgpu_sgt_for_each_sgl(sgl, &alloc->sgt) {
 		if (gk20a_last_fence)
 			gk20a_fence_put(gk20a_last_fence);
@@ -415,6 +444,10 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 			return err;
 		}
 
+		vidmem_dbg(g, "  > [0x%llx  +0x%llx]",
+			   nvgpu_sgt_get_phys(&alloc->sgt, sgl),
+			   nvgpu_sgt_get_length(&alloc->sgt, sgl));
+
 		gk20a_last_fence = gk20a_fence_out;
 	}
 
@@ -436,6 +469,8 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 			nvgpu_err(g,
 				"fence wait failed for CE execute ops");
 	}
+
+	vidmem_dbg(g, "  Done");
 
 	return err;
 }

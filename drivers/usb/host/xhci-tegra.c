@@ -197,9 +197,6 @@
 #define XHCI_IS_T194(t) (t->soc ? \
         (t->soc->device_id == XHCI_DEVICE_ID_T194) : false)
 
-/* Number of PMQOS clusters */
-#define PM_QOS_CLUSTERS		2
-
 /* default parameters for boosting CPU freq */
 #define XHCI_BOOST_TIMEOUT		2000 /* 2 seconds */
 #define XHCI_BOOST_TRIGGER_SIZE		16384 /* 16KB */
@@ -466,7 +463,7 @@ struct tegra_xusb {
 
 	struct mutex boost_cpufreq_lock;
 	struct pm_qos_request core_req;
-	struct pm_qos_request boost_cpufreq_req[PM_QOS_CLUSTERS];
+	struct pm_qos_request boost_cpufreq_req;
 	struct work_struct boost_cpufreq_work;
 	unsigned int boost_cpu_freq;
 	unsigned int boost_cpu_trigger;
@@ -505,17 +502,11 @@ static void tegra_xusb_boost_cpu_freq_fn(struct work_struct *work)
 	dev_dbg(tegra->dev, "boost cpu freq %d kHz, with timeout %lu ms\n",
 							cpufreq, delay);
 
-	if (XHCI_IS_T210(tegra)) {
+	if (XHCI_IS_T210(tegra))
 		pm_qos_update_request_timeout(&tegra->core_req,
 			PM_QOS_MAX_ONLINE_CPUS_DEFAULT_VALUE, delay * 1000);
-		pm_qos_update_request_timeout(&tegra->boost_cpufreq_req[0],
-						cpufreq, delay * 1000);
-	} else {
-		pm_qos_update_request_timeout(&tegra->boost_cpufreq_req[0],
-						cpufreq, delay * 1000);
-		pm_qos_update_request_timeout(&tegra->boost_cpufreq_req[1],
-						cpufreq, delay * 1000);
-	}
+	pm_qos_update_request_timeout(&tegra->boost_cpufreq_req,
+					cpufreq, delay * 1000);
 
 	tegra->cpufreq_last_boosted = jiffies;
 	mutex_unlock(&tegra->boost_cpufreq_lock);
@@ -525,17 +516,11 @@ static void tegra_xusb_boost_cpu_init(struct tegra_xusb *tegra)
 {
 	INIT_WORK(&tegra->boost_cpufreq_work, tegra_xusb_boost_cpu_freq_fn);
 
-	if (XHCI_IS_T210(tegra)) {
+	if (XHCI_IS_T210(tegra))
 		pm_qos_add_request(&tegra->core_req, PM_QOS_MIN_ONLINE_CPUS,
 							PM_QOS_DEFAULT_VALUE);
-		pm_qos_add_request(&tegra->boost_cpufreq_req[0],
-				PM_QOS_CPU_FREQ_MIN, PM_QOS_DEFAULT_VALUE);
-	} else {
-		pm_qos_add_request(&tegra->boost_cpufreq_req[0],
-				PM_QOS_CLUSTER0_FREQ_MIN, PM_QOS_DEFAULT_VALUE);
-		pm_qos_add_request(&tegra->boost_cpufreq_req[1],
-				PM_QOS_CLUSTER1_FREQ_MIN, PM_QOS_DEFAULT_VALUE);
-	}
+	pm_qos_add_request(&tegra->boost_cpufreq_req,
+			PM_QOS_CPU_FREQ_MIN, PM_QOS_DEFAULT_VALUE);
 
 	mutex_init(&tegra->boost_cpufreq_lock);
 }
@@ -544,13 +529,9 @@ static void tegra_xusb_boost_cpu_deinit(struct tegra_xusb *tegra)
 {
 	cancel_work_sync(&tegra->boost_cpufreq_work);
 
-	if (XHCI_IS_T210(tegra)) {
+	if (XHCI_IS_T210(tegra))
 		pm_qos_remove_request(&tegra->core_req);
-		pm_qos_remove_request(&tegra->boost_cpufreq_req[0]);
-	} else {
-		pm_qos_remove_request(&tegra->boost_cpufreq_req[0]);
-		pm_qos_remove_request(&tegra->boost_cpufreq_req[1]);
-	}
+	pm_qos_remove_request(&tegra->boost_cpufreq_req);
 
 	mutex_destroy(&tegra->boost_cpufreq_lock);
 }

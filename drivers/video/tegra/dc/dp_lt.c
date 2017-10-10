@@ -57,6 +57,15 @@ static struct {
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 1}, /* 1.62Gbps */
 };
 
+/* Check if post-cursor2 programming is supported */
+static inline bool is_pc2_supported(struct tegra_dp_lt_data *lt_data)
+{
+	struct tegra_dc_dp_link_config *cfg = &lt_data->dp->link_cfg;
+	struct tegra_dp_out *dp_out = lt_data->dp->dc->out->dp_out;
+
+	return (!dp_out->pc2_disabled && cfg->tps3_supported);
+}
+
 /*
  * Wait period before reading link status.
  * If dpcd addr 0xe TRAINING_AUX_RD_INTERVAL absent or zero,
@@ -205,7 +214,7 @@ static void get_lt_new_config(struct tegra_dp_lt_data *lt_data)
 	u32 *vs = lt_data->drive_current;
 	u32 *pe = lt_data->pre_emphasis;
 	u32 *pc = lt_data->post_cursor2;
-	bool pc_supported = lt_data->tps3_supported;
+	bool pc2_supported = is_pc2_supported(lt_data);
 
 	/* support for 1 lane */
 	u32 loopcnt = (n_lanes == 1) ? 1 : n_lanes >> 1;
@@ -225,7 +234,7 @@ static void get_lt_new_config(struct tegra_dp_lt_data *lt_data)
 					NV_DPCD_ADJUST_REQ_LANEXPLUS1_DC_SHIFT;
 	}
 
-	if (pc_supported) {
+	if (pc2_supported) {
 		tegra_dc_dp_dpcd_read(lt_data->dp,
 				NV_DPCD_ADJUST_REQ_POST_CURSOR2, &data_ptr);
 		for (cnt = 0; cnt < n_lanes; cnt++) {
@@ -238,7 +247,7 @@ static void get_lt_new_config(struct tegra_dp_lt_data *lt_data)
 	for (cnt = 0; cnt < n_lanes; cnt++)
 		pr_info("dp lt: new config: lane %d: "
 			"vs level: %d, pe level: %d, pc2 level: %d\n",
-			cnt, vs[cnt], pe[cnt], pc_supported ? pc[cnt] : 0);
+			cnt, vs[cnt], pe[cnt], pc2_supported ? pc[cnt] : 0);
 }
 
 static void set_tx_pu(struct tegra_dp_lt_data *lt_data)
@@ -289,7 +298,7 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 	struct tegra_dc_dp_data *dp = lt_data->dp;
 	struct tegra_dc_sor_data *sor = dp->sor;
 	u32 n_lanes = lt_data->n_lanes;
-	bool pc_supported = lt_data->tps3_supported;
+	bool pc2_supported = is_pc2_supported(lt_data);
 	int i, cnt;
 	u32 val;
 	u32 *vs = lt_data->drive_current;
@@ -342,7 +351,7 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 						mask, (pe_reg << shift));
 		tegra_sor_write_field(sor, NV_SOR_DC(sor->portnum),
 						mask, (vs_reg << shift));
-		if (pc_supported) {
+		if (pc2_supported) {
 			tegra_sor_write_field(
 					sor, NV_SOR_POSTCURSOR(sor->portnum),
 					mask, (pc_reg << shift));
@@ -350,7 +359,7 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 
 		pr_info("dp lt: config: lane %d: "
 			"vs level: %d, pe level: %d, pc2 level: %d\n",
-			i, vs[i], pe[i], pc_supported ? pc[i] : 0);
+			i, vs[i], pe[i], pc2_supported ? pc[i] : 0);
 	}
 	set_tx_pu(lt_data);
 	usleep_range(15, 20); /* HW stabilization delay */
@@ -376,7 +385,7 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 			&training_lanex_set_size, &aux_stat);
 
 	/* apply postcursor2 levels to panel for each lane */
-	if (pc_supported) {
+	if (pc2_supported) {
 		for (cnt = 0; cnt < loopcnt; cnt++) {
 			u32 max_pc_flag0 = tegra_dp_is_max_pc(pc[cnt]);
 			u32 max_pc_flag1 = tegra_dp_is_max_pc(pc[cnt + 1]);
@@ -405,7 +414,7 @@ static int do_fast_lt_no_handshake(struct tegra_dp_lt_data *lt_data)
 	usleep_range(500, 600);
 
 	/* transmit link training pattern 2/3 for min of 500us */
-	if (lt_data->tps3_supported)
+	if (lt_data->dp->link_cfg.tps3_supported)
 		set_lt_tpg(lt_data, TRAINING_PATTERN_3);
 	else
 		set_lt_tpg(lt_data, TRAINING_PATTERN_2);
@@ -427,7 +436,6 @@ static void lt_data_sw_reset(struct tegra_dp_lt_data *lt_data)
 	lt_data->n_lanes = dp->link_cfg.lane_count;
 	lt_data->link_bw = dp->link_cfg.link_bw;
 	lt_data->no_aux_handshake = dp->link_cfg.support_fast_lt;
-	lt_data->tps3_supported = dp->link_cfg.tps3_supported;
 	lt_data->aux_rd_interval = dp->link_cfg.aux_rd_interval;
 
 	memset(lt_data->pre_emphasis, PRE_EMPHASIS_L0,
@@ -700,7 +708,7 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 		goto done;
 	}
 
-	if (lt_data->tps3_supported)
+	if (lt_data->dp->link_cfg.tps3_supported)
 		tp_src = TRAINING_PATTERN_3;
 
 	set_lt_tpg(lt_data, tp_src);

@@ -1212,6 +1212,7 @@ struct tegra_dp_out {
 	int n_lt_settings;
 	bool tx_pu_disable;
 	bool enhanced_framing_disable;
+	bool pc2_disabled;
 	int lanes;
 	u8 link_bw;
 	bool hdmi2fpd_bridge_enable;

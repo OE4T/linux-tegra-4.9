@@ -2213,6 +2213,9 @@ static int parse_dp_settings(struct platform_device *ndev,
 	struct tegra_dp_out *dpout = def_out->dp_out;
 	struct device_node *np_dp_panel = pdata->panel_np;
 
+	dpout->pc2_disabled = of_property_read_bool(np_dp_panel,
+						    "nvidia,pc2-disabled");
+
 	np_dp_lt_set = of_get_child_by_name(np_dp_panel, "dp-lt-settings");
 	if (!np_dp_lt_set) {
 		dev_info(&ndev->dev, "%s: No dp-lt-settings node\n", __func__);

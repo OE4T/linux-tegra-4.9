@@ -21,18 +21,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef DBG_GPU_GK20A_H
-#define DBG_GPU_GK20A_H
-#include <linux/poll.h>
+#ifndef DBG_GPU_H
+#define DBG_GPU_H
 
-/* module debug driver interface */
-int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp);
-int gk20a_dbg_gpu_dev_open(struct inode *inode, struct file *filp);
-long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
-unsigned int gk20a_dbg_gpu_dev_poll(struct file *filep, poll_table *wait);
-
-/* used by profiler driver interface */
-int gk20a_prof_gpu_dev_open(struct inode *inode, struct file *filp);
+#include <nvgpu/cond.h>
 
 /* used by the interrupt handler to post events */
 void gk20a_dbg_gpu_post_events(struct channel_gk20a *fault_ch);
@@ -70,8 +62,6 @@ struct dbg_session_gk20a {
 	struct regops_whitelist *global;
 	struct regops_whitelist *per_context;
 
-	/* gpu module vagaries */
-	struct device             *dev;
 	struct gk20a              *g;
 
 	/* list of bound channels, if any */
@@ -99,18 +89,12 @@ dbg_session_data_from_dbg_s_entry(struct nvgpu_list_node *node)
 };
 
 struct dbg_session_channel_data {
-	/*
-	 * We have to keep a ref to the _file_, not the channel, because
-	 * close(channel_fd) is synchronous and would deadlock if we had an
-	 * open debug session fd holding a channel ref at that time. Holding a
-	 * ref to the file makes close(channel_fd) just drop a kernel ref to
-	 * the file; the channel will close when the last file ref is dropped.
-	 */
-	struct file *ch_f;
 	int channel_fd;
 	int chid;
 	struct nvgpu_list_node ch_entry;
 	struct dbg_session_data *session_data;
+	int (*unbind_single_channel)(struct dbg_session_gk20a *dbg_s,
+			struct dbg_session_channel_data *ch_data);
 };
 
 static inline struct dbg_session_channel_data *
@@ -134,9 +118,6 @@ dbg_profiler_object_data_from_prof_obj_entry(struct nvgpu_list_node *node)
 	return (struct dbg_profiler_object_data *)
 	((uintptr_t)node - offsetof(struct dbg_profiler_object_data, prof_obj_entry));
 };
-
-int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
-			struct dbg_session_channel_data *ch_data);
 
 bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch);
 int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch);

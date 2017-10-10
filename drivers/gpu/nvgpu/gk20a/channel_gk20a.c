@@ -51,6 +51,13 @@
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 /*
+ * Note
+ * This is added for all the copy_from_user methods in this file which needs to
+ * be moved lated to reduce depenedency on Linux
+ */
+#include <linux/uaccess.h>
+
+/*
  * This is required for nvgpu_vm_find_buffer() which is used in the tracing
  * code. Once we can get and access userspace buffers without requiring
  * direct dma_buf usage this can be removed.
@@ -623,7 +630,7 @@ unbind:
 		list_for_each_entry_safe(ch_data, tmp,
 					&dbg_s->ch_list, ch_entry) {
 			if (ch_data->chid == ch->chid)
-				dbg_unbind_single_channel_gk20a(dbg_s, ch_data);
+				ch_data->unbind_single_channel(dbg_s, ch_data);
 		}
 		nvgpu_mutex_release(&dbg_s->ch_list_lock);
 	}

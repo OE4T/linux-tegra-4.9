@@ -20,6 +20,7 @@
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
 #include <linux/dma-buf.h>
+#include <linux/poll.h>
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>

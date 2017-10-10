@@ -28,6 +28,7 @@
 #include "ioctl_ctrl.h"
 #include "ioctl_as.h"
 #include "ioctl_tsg.h"
+#include "ioctl_dbg.h"
 #include "module.h"
 #include "os_linux.h"
 

@@ -506,8 +506,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 		err = gr_gk20a_exec_ctx_ops(ch, ops, num_ops,
 					    ctx_wr_count, ctx_rd_count);
 		if (err) {
-			dev_warn(dbg_s->dev,
-				 "failed to perform ctx ops\n");
+			nvgpu_warn(g, "failed to perform ctx ops\n");
 			goto clean_up;
 		}
 	}

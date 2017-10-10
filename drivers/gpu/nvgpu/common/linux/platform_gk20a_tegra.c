@@ -139,7 +139,8 @@ static void gk20a_tegra_secure_destroy(struct gk20a *g,
 	DEFINE_DMA_ATTRS(attrs);
 
 	if (desc->mem.priv.sgt) {
-		phys_addr_t pa = sg_phys(desc->mem.priv.sgt->sgl);
+		u64 pa = nvgpu_mem_get_phys_addr(g, &desc->mem);
+
 		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 		dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
 			(void *)(uintptr_t)pa,

@@ -1289,7 +1289,7 @@ struct gk20a {
 	u64 dma_memory_used;
 
 #if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
-	phys_addr_t	syncpt_unit_base;
+	u64		syncpt_unit_base;
 	size_t		syncpt_unit_size;
 	u32		syncpt_size;
 #endif

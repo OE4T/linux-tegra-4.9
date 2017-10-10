@@ -622,7 +622,7 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 
 	u32 lo;
 	u32 hi;
-	phys_addr_t pa;
+	u64 pa;
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 	struct nvgpu_mem *mem = &ch_ctx->gr_ctx->mem;

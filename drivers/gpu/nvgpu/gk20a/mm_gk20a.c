@@ -1227,13 +1227,10 @@ void gk20a_free_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 
 u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
-	u64 addr;
 	if (g->mm.has_physical_mode)
-		addr = gk20a_mem_phys(inst_block);
+		return nvgpu_mem_get_phys_addr(g, inst_block);
 	else
-		addr = nvgpu_mem_get_addr(g, inst_block);
-
-	return addr;
+		return nvgpu_mem_get_addr(g, inst_block);
 }
 
 static int gk20a_init_bar1_vm(struct mm_gk20a *mm)

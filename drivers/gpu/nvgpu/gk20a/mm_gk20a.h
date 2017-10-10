@@ -344,21 +344,6 @@ bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g);
 
 int gk20a_mm_mmu_vpr_info_fetch(struct gk20a *g);
 
-static inline phys_addr_t gk20a_mem_phys(struct nvgpu_mem *mem)
-{
-	/* FIXME: the sgt/sgl may get null if this is accessed e.g. in an isr
-	 * during channel deletion - attempt to fix at least null derefs */
-	struct sg_table *sgt = mem->priv.sgt;
-
-	if (sgt) {
-		struct scatterlist *sgl = sgt->sgl;
-		if (sgl)
-			return sg_phys(sgl);
-	}
-
-	return 0;
-}
-
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			  u64 map_offset,
 			  struct nvgpu_sgt *sgt,

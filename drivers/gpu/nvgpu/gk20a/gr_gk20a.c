@@ -2104,7 +2104,7 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 {
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
 	int retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
-	phys_addr_t inst_ptr;
+	u64 inst_ptr;
 	u32 val;
 
 	while ((gk20a_readl(g, gr_fecs_ctxsw_status_1_r()) &

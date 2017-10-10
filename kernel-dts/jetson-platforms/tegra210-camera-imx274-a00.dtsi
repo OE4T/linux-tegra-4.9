@@ -249,7 +249,7 @@
 							pixel_phase = "rggb";
 
 							active_w = "3844";
-							active_h = "4436";
+							active_h = "4448";
 							readout_orientation = "0";
 							line_length = "4208";
 							inherent_gain = "1";

@@ -2468,7 +2468,7 @@ static int dsi_pinctrl_state_active(struct tegra_dc_dsi_data *dsi)
 static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
-	int i;
+	int i, err;
 	struct clk *clk72mhz = NULL;
 	struct device_node *np_dsi = NULL;
 
@@ -2498,6 +2498,16 @@ static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 	tegra_dsi_writel(dsi, val, dsi->regs->preemphasis);
 
 	tegra_dsi_writel(dsi, 0, dsi->regs->bias);
+
+	if (dsi->prod_list && !tegra_dc_is_nvdisplay()) {
+		for (i = 0; i < dsi->max_instances; i++) {
+			err = tegra_prod_set_by_name(&dsi->base[i],
+					"dsi-padctrl-prod", dsi->prod_list);
+			if (err)
+				dev_err(&dsi->dc->ndev->dev, "prod fail %d\n",
+						err);
+		}
+	}
 
 	/* When switch to the 16ff pad brick in T210, the clock lane
 	 * termination control is separated from data lane termination.
@@ -4562,6 +4572,13 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			dev_info(&dc->ndev->dev, "missing pinctrl [%ld]\n",
 					PTR_ERR(dsi->pin));
 			dsi->pin = NULL;
+		}
+
+		dsi->prod_list = devm_tegra_prod_get_from_node(&dc->ndev->dev, np_dsi);
+		if (IS_ERR(dsi->prod_list)) {
+			dev_info(&dc->ndev->dev, "prod settings missing %ld\n",
+				PTR_ERR(dsi->prod_list));
+			dsi->prod_list = NULL;
 		}
 	}
 

@@ -154,6 +154,7 @@ struct tegra_dc_dsi_data {
 	struct padctrl *dsi_io_padctrl[MAX_DSI_INSTANCE];
 
 	struct tegra_dsi_padctrl *pad_ctrl;
+	struct tegra_prod *prod_list;
 	struct pinctrl *pin;
 	struct pinctrl_state *pin_state[PAD_INVALID];
 

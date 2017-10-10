@@ -452,6 +452,7 @@ static void select_mode(struct camera_common_data *s_data,
 		if (mf->width == frmfmt[i].size.width &&
 			mf->height == frmfmt[i].size.height) {
 			s_data->mode = frmfmt[i].mode;
+			s_data->mode_prop_idx = i;
 			break;
 		}
 	}
@@ -483,6 +484,7 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	mode_type |= switch_ctrl_qmenu[hdr_control.value] ? HDR_ENABLE : 0;
 
 	s_data->mode = s_data->def_mode;
+	s_data->mode_prop_idx = 0;
 	s_data->fmt_width = s_data->def_width;
 	s_data->fmt_height = s_data->def_height;
 
@@ -492,6 +494,7 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		dev_dbg(sd->dev, "%s: use_sensor_mode_id %d\n",
 				__func__, s_data->sensor_mode_id);
 		s_data->mode = frmfmt[s_data->sensor_mode_id].mode;
+		s_data->mode_prop_idx = s_data->sensor_mode_id;
 		s_data->fmt_width = mf->width;
 		s_data->fmt_height = mf->height;
 	} else {
@@ -500,6 +503,7 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 			if (mf->width == frmfmt[i].size.width &&
 				mf->height == frmfmt[i].size.height) {
 				s_data->mode = frmfmt[i].mode;
+				s_data->mode_prop_idx = i;
 				s_data->fmt_width = mf->width;
 				s_data->fmt_height = mf->height;
 				break;

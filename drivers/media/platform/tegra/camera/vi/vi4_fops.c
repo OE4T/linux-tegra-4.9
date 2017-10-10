@@ -792,17 +792,25 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 
 		/* get sensor properties from DT */
 		if (node != NULL) {
-			sensor_mode = &s_data->sensor_props.sensor_modes[s_data->mode];
+			int idx = s_data->mode_prop_idx;
 
-			chan->embedded_data_width =
-				sensor_mode->image_properties.width;
-			chan->embedded_data_height =
-				sensor_mode->image_properties.embedded_metadata_height;
-			/* rounding up to page size */
-			emb_buf_size =
-				round_up(
-					chan->embedded_data_width * chan->embedded_data_height * BPP_MEM,
-					PAGE_SIZE);
+			emb_buf_size = 0;
+			if (idx < s_data->sensor_props.num_modes) {
+				sensor_mode =
+					&s_data->sensor_props.sensor_modes[idx];
+
+				chan->embedded_data_width =
+					sensor_mode->image_properties.width;
+				chan->embedded_data_height =
+					sensor_mode->image_properties.\
+					embedded_metadata_height;
+				/* rounding up to page size */
+				emb_buf_size =
+					round_up(chan->embedded_data_width *
+						chan->embedded_data_height *
+						BPP_MEM,
+						PAGE_SIZE);
+			}
 		}
 
 		/* Allocate buffer for Embedded Data if need to*/

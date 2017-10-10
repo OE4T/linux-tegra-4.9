@@ -182,9 +182,16 @@ static void csi4_phy_config(
 
 	/* Attempt to find the cil_settingtime from the device tree */
 	if (s_data) {
+		int idx = s_data->mode_prop_idx;
+
 		dev_dbg(csi->dev, "cil_settingtime is pulled from device");
-		mode = &s_data->sensor_props.sensor_modes[s_data->mode];
-		cil_settletime = mode->signal_properties.cil_settletime;
+		if (idx < s_data->sensor_props.num_modes) {
+			mode = &s_data->sensor_props.sensor_modes[idx];
+			cil_settletime = mode->signal_properties.cil_settletime;
+		} else {
+			dev_dbg(csi->dev, "mode not listed in DT, use default");
+			cil_settletime = 0;
+		}
 	} else if (chan->of_node) {
 		int err = 0;
 		const char *str;

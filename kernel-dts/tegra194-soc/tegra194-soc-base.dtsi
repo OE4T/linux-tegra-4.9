@@ -112,6 +112,26 @@
 		status = "disabled";
 	};
 
+	timer@3010000 {
+		/* Do not enable this node (SOC Timer) as ARM Generic Timer
+		 * (DT node="timer") should be used instead
+		 */
+		compatible = "nvidia,tegra186-timer";
+		interrupts = <0 0 4>,
+			     <0 1 4>,
+			     <0 2 4>,
+			     <0 3 4>,
+			     <0 4 4>,
+			     <0 5 4>,
+			     <0 6 4>,
+			     <0 7 4>;
+		clock-frequency = <19200000>;
+		reg = <0x0 0x03010000 0x0 0x000e0000>;
+		tmr-count = <10>;
+		wdt-count = <3>;
+		status = "disabled";
+	};
+
 	bpmp_clks: clock@0 {
 		compatible = "nvidia,tegra-bpmp-staged-clks";
 		reg = <0x0 0x0 0x0 0x0>;

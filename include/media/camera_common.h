@@ -186,6 +186,7 @@ struct camera_common_data {
 	int	csi_port;
 	int	numlanes;
 	int	mode;
+	int 	mode_prop_idx;
 	int	numfmts;
 	int	num_color_fmts;
 	int	def_mode, def_width, def_height;

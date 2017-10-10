@@ -24,12 +24,13 @@
 #define __NVGPU_NVHOST_T19X_H__
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
+#include <nvgpu/types.h>
+
 struct nvgpu_nvhost_dev;
 
 int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
 		struct nvgpu_nvhost_dev *nvhost_dev,
-		phys_addr_t *base,
-		size_t *size);
+		u64 *base, size_t *size);
 u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id);
 
 #endif

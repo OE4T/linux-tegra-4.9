@@ -23,11 +23,10 @@
 
 int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
 		struct nvgpu_nvhost_dev *nvhost_dev,
-		phys_addr_t *base,
-		size_t *size)
+		u64 *base, size_t *size)
 {
 	return nvhost_syncpt_unit_interface_get_aperture(
-			nvhost_dev->host1x_pdev, base, size);
+		nvhost_dev->host1x_pdev, (phys_addr_t *)base, size);
 }
 
 u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id)

@@ -717,21 +717,6 @@ int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 	return 0;
 }
 
-dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
-{
-	struct nvgpu_mapped_buf *buffer;
-	dma_addr_t addr = 0;
-	struct gk20a *g = gk20a_from_vm(vm);
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-	buffer = __nvgpu_vm_find_mapped_buf(vm, gpu_vaddr);
-	if (buffer)
-		addr = nvgpu_mem_get_addr_sgl(g, buffer->sgt->sgl);
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-	return addr;
-}
-
 /* for gk20a the "video memory" apertures here are misnomers. */
 static inline u32 big_valid_pde0_bits(struct gk20a *g,
 				      struct nvgpu_gmmu_pd *pd, u64 addr)

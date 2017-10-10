@@ -57,6 +57,21 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct nvgpu_os_linux *l
 #define MAX_CTX_USE_COUNT 42
 #define MAX_CTX_RETRY_TIME 2000
 
+static dma_addr_t gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
+{
+	struct nvgpu_mapped_buf *buffer;
+	dma_addr_t addr = 0;
+	struct gk20a *g = gk20a_from_vm(vm);
+
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
+	buffer = __nvgpu_vm_find_mapped_buf(vm, gpu_vaddr);
+	if (buffer)
+		addr = nvgpu_mem_get_addr_sgl(g, buffer->sgt->sgl);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
+
+	return addr;
+}
+
 static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 {
 	unsigned int i;
@@ -419,8 +434,8 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 			new_data = g->gr.compbit_store.mem.size;
 			break;
 		case TYPE_PARAM_SOURCE_SMMU_ADDR:
-			new_data = gk20a_mm_gpuva_to_iova_base(cde_ctx->vm,
-							cde_ctx->surf_vaddr);
+			new_data = gpuva_to_iova_base(cde_ctx->vm,
+						      cde_ctx->surf_vaddr);
 			if (new_data == 0)
 				return -EINVAL;
 			break;
@@ -1100,7 +1115,7 @@ __releases(&l->cde_app->mutex)
 
 	/* store surface vaddr. This is actually compbit vaddr, but since
 	   compbits live in the same surface, and we can get the alloc base
-	   address by using gk20a_mm_gpuva_to_iova_base, this will do */
+	   address by using gpuva_to_iova_base, this will do */
 	cde_ctx->surf_vaddr = map_vaddr;
 
 	/* store information about destination */

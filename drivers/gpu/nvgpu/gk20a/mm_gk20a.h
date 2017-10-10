@@ -383,7 +383,6 @@ int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch);
 
 void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 			struct gk20a_comptags *comptags);
-dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr);
 
 int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
 

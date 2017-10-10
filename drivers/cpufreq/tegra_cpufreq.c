@@ -993,16 +993,14 @@ static int update_policy(const struct cpumask *cpus)
 	return notifier_from_errno(ret);
 }
 
-static int cluster0_freq_notify(struct notifier_block *b,
+static int cluster_freq_notify(struct notifier_block *b,
 			unsigned long l, void *v)
 {
-	return update_policy(&tfreq_data.pcluster[0].cpu_mask);
-}
-
-static int cluster1_freq_notify(struct notifier_block *b,
-			unsigned long l, void *v)
-{
-	return update_policy(&tfreq_data.pcluster[1].cpu_mask);
+	struct cpumask cpumask_combined;
+	cpumask_or(&cpumask_combined,
+			&tfreq_data.pcluster[0].cpu_mask,
+			&tfreq_data.pcluster[1].cpu_mask);
+	return update_policy(&cpumask_combined);
 }
 
 /* Clipping policy object's min/max to pmqos limits */
@@ -1016,13 +1014,8 @@ static int tegra_boundaries_policy_notifier(struct notifier_block *nb,
 	if (event != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
 
-	if (tegra18_is_cpu_arm(policy->cpu)) {
-		qmin = pm_qos_read_min_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
-		qmax = pm_qos_read_max_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
-	} else if (tegra18_is_cpu_denver(policy->cpu)) {
-		qmin = pm_qos_read_min_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
-		qmax = pm_qos_read_max_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
-	}
+	qmin = pm_qos_read_min_bound(PM_QOS_CPU_FREQ_BOUNDS);
+	qmax = pm_qos_read_max_bound(PM_QOS_CPU_FREQ_BOUNDS);
 
 	/*
 	 * Clamp pmqos to stay within sysfs upper boundary
@@ -1078,12 +1071,8 @@ static int tegra_cpu_pm_notifier(struct notifier_block *nb,
 }
 #endif
 
-static struct notifier_block cluster0_freq_nb = {
-	.notifier_call = cluster0_freq_notify,
-};
-
-static struct notifier_block cluster1_freq_nb = {
-	.notifier_call = cluster1_freq_notify,
+static struct notifier_block cluster_freq_nb = {
+	.notifier_call = cluster_freq_notify,
 };
 
 static struct notifier_block tegra_boundaries_cpufreq_nb = {
@@ -1098,15 +1087,10 @@ static struct notifier_block tegra_cpu_pm_nb = {
 
 static void pm_qos_register_notifier(void)
 {
-	pm_qos_add_min_notifier(PM_QOS_CLUSTER0_FREQ_BOUNDS,
-		&cluster0_freq_nb);
-	pm_qos_add_max_notifier(PM_QOS_CLUSTER0_FREQ_BOUNDS,
-		&cluster0_freq_nb);
-
-	pm_qos_add_min_notifier(PM_QOS_CLUSTER1_FREQ_BOUNDS,
-		&cluster1_freq_nb);
-	pm_qos_add_max_notifier(PM_QOS_CLUSTER1_FREQ_BOUNDS,
-		&cluster1_freq_nb);
+	pm_qos_add_min_notifier(PM_QOS_CPU_FREQ_BOUNDS,
+		&cluster_freq_nb);
+	pm_qos_add_max_notifier(PM_QOS_CPU_FREQ_BOUNDS,
+		&cluster_freq_nb);
 }
 
 /* Free lut space shared beteen CPU and BPMP */

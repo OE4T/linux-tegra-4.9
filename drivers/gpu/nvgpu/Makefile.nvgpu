@@ -137,9 +137,13 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 	common/linux/debug_mm.o \
 	common/linux/debug_allocator.o \
 	common/linux/debug_hal.o \
-	common/linux/debug_kmem.o \
 	common/linux/debug_clk.o \
 	common/linux/debug_xve.o
+
+ifeq ($(CONFIG_NVGPU_TRACK_MEM_USAGE),y)
+nvgpu-$(CONFIG_DEBUG_FS) += \
+	common/linux/debug_kmem.o
+endif
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o

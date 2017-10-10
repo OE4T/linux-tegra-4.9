@@ -18,7 +18,6 @@
 #include "debug_kmem.h"
 #include "kmem_priv.h"
 
-#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
 /**
  * to_human_readable_bytes - Determine  suffix for passed size.
  *
@@ -311,4 +310,3 @@ void nvgpu_kmem_debugfs_init(struct gk20a *g)
 				   l->debugfs_kmem,
 				   g, &__kmem_traces_fops);
 }
-#endif

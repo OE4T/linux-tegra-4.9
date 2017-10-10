@@ -557,13 +557,13 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 
 	if (chid != (u32)~0 || /* add/remove a valid channel */
 	    add /* resume to add all channels back */) {
-		u32 chid;
+		u32 cid;
 
 		runlist_entry = runlist->mem[0].cpu_va;
-		for_each_set_bit(chid,
+		for_each_set_bit(cid,
 			runlist->active_channels, f->num_channels) {
-			gk20a_dbg_info("add channel %d to runlist", chid);
-			runlist_entry[0] = chid;
+			gk20a_dbg_info("add channel %d to runlist", cid);
+			runlist_entry[0] = cid;
 			runlist_entry++;
 			count++;
 		}

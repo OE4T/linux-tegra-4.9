@@ -36,6 +36,11 @@
  *
  * TEGRA_GENERIC_CARVEOUT_SUPPORT_ENABLE
  *		Enable generic carveout.
+ *
+ * UART_CONSOLE_ON_TTYS0_ONLY: Uart console only on TTYS0. Some OS support
+ *			       console port in the ttyS0 only.
+ *		1 for those OS which support console only on ttyS0.
+ *		0 for those OS which can support console on any ttySx.
  */
 
 /* OS Linux */
@@ -49,6 +54,7 @@
 #define TEGRA_XUDC_DT_VERSION			DT_VERSION_2
 #define TEGRA_HSP_DT_VERSION			DT_VERSION_2
 #define TEGRA_GENERIC_CARVEOUT_SUPPORT_ENABLE	1
+#define UART_CONSOLE_ON_TTYS0_ONLY		0
 #else
 #define TEGRA_AUDIO_BUS_DT_VERSION		DT_VERSION_1
 #define TEGRA_POWER_DOMAIN_DT_VERSION		DT_VERSION_1
@@ -57,6 +63,7 @@
 #define TEGRA_XUDC_DT_VERSION			DT_VERSION_1
 #define TEGRA_HSP_DT_VERSION			DT_VERSION_1
 #define TEGRA_GENERIC_CARVEOUT_SUPPORT_ENABLE	0
+#define UART_CONSOLE_ON_TTYS0_ONLY		1
 #endif
 #endif
 
@@ -70,6 +77,7 @@
 #define TEGRA_XUDC_DT_VERSION			DT_VERSION_1
 #define TEGRA_HSP_DT_VERSION			DT_VERSION_1
 #define TEGRA_GENERIC_CARVEOUT_SUPPORT_ENABLE	0
+#define UART_CONSOLE_ON_TTYS0_ONLY		1
 #endif
 
 /* OS Integrity */
@@ -82,6 +90,7 @@
 #define TEGRA_XUDC_DT_VERSION			DT_VERSION_1
 #define TEGRA_HSP_DT_VERSION			DT_VERSION_1
 #define TEGRA_GENERIC_CARVEOUT_SUPPORT_ENABLE	0
+#define UART_CONSOLE_ON_TTYS0_ONLY		1
 #endif
 
 /**
@@ -97,6 +106,7 @@
 #define TEGRA_XUDC_DT_VERSION			DT_VERSION_1
 #define TEGRA_HSP_DT_VERSION			DT_VERSION_1
 #define TEGRA_GENERIC_CARVEOUT_SUPPORT_ENABLE	0
+#define UART_CONSOLE_ON_TTYS0_ONLY		1
 #endif
 
 #endif /* _DT_BINDINGS_VERSION_H_ */

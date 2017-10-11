@@ -161,6 +161,7 @@ enum channel_gk20a_ref_action_type {
 	channel_gk20a_ref_action_put
 };
 
+#if GK20A_CHANNEL_REFCOUNT_TRACKING
 struct channel_gk20a_ref_action {
 	enum channel_gk20a_ref_action_type type;
 	s64 timestamp_ms;
@@ -171,6 +172,7 @@ struct channel_gk20a_ref_action {
 	struct stack_trace trace;
 	unsigned long trace_entries[GK20A_CHANNEL_REFCOUNT_TRACKING_STACKLEN];
 };
+#endif
 
 /* this is the priv element of struct nvhost_channel */
 struct channel_gk20a {

@@ -36,7 +36,11 @@
 
 	chosen {
 		board-has-eeprom;
+#if TEGRA_BOOTARGUMENT_VERSION >= DT_VERSION_2
+		bootargs ="console=ttyS0,115200 androidboot.selinux=permissive androidboot.presilicon=true firmware_class.path=/etc/firmware";
+#else
 		bootargs ="console=ttyS0,115200";
+#endif
 		stdout-path = &uarta;
 	};
 
@@ -315,7 +319,3 @@
 		};
 	};
 };
-
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
-#include "quill-platforms/tegra186-quill-kernel-4.9.dtsi"
-#endif

@@ -1295,11 +1295,12 @@ static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
 		g->gr_idle_timeout_default : ULONG_MAX;
 }
 
+#define MULTICHAR_TAG(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))
 enum BAR0_DEBUG_OPERATION {
 	BARO_ZERO_NOP = 0,
-	OP_END = 'DONE',
-	BAR0_READ32 = '0R32',
-	BAR0_WRITE32 = '0W32',
+	OP_END = MULTICHAR_TAG('D', 'O', 'N', 'E'),
+	BAR0_READ32 = MULTICHAR_TAG('0', 'R', '3', '2'),
+	BAR0_WRITE32 = MULTICHAR_TAG('0', 'W', '3', '2'),
 };
 
 struct share_buffer_head {

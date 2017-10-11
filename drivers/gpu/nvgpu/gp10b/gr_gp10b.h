@@ -33,6 +33,7 @@ struct channel_ctx_gk20a;
 struct zbc_entry;
 struct gr_ctx_desc;
 struct nvgpu_preemption_modes_rec;
+struct gk20a_debug_output;
 
 enum {
 	PASCAL_CHANNEL_GPFIFO_A  = 0xC06F,

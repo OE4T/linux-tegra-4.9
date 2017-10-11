@@ -33,6 +33,8 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <media/isp_channel.h>
+#include <soc/tegra/camrtc-capture.h>
+#include <soc/tegra/chip-id.h>
 
 #include "isp5.h"
 #include "dev.h"
@@ -45,6 +47,8 @@ struct host_isp5 {
 	struct platform_device *pdev;
 	struct platform_device *rce_rm;
 	struct platform_device *isp_thi;
+	dma_addr_t *gos_table;
+	uint32_t gos_count;
 
 	/* Debugfs */
 	struct isp5_debug {
@@ -81,6 +85,77 @@ int isp5_prepare_poweroff(struct platform_device *pdev)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(isp5_prepare_poweroff);
+
+static int isp5_alloc_syncpt(struct platform_device *pdev,
+			const char *name,
+			uint32_t *syncpt_id,
+			dma_addr_t *syncpt_addr,
+			uint32_t *gos_index,
+			uint32_t *gos_offset)
+{
+	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
+	uint32_t id;
+	uint32_t index = GOS_INDEX_INVALID;
+	uint32_t offset = 0;
+	dma_addr_t addr;
+	int err = -ENODEV;
+
+	id = nvhost_get_syncpt_client_managed(isp5->isp_thi, name);
+	if (id == 0) {
+		dev_err(&pdev->dev, "%s: syncpt allocation failed\n", __func__);
+		return -ENODEV;
+	}
+
+	addr = nvhost_syncpt_address(isp5->isp_thi, id);
+
+	err = nvhost_syncpt_get_gos(isp5->isp_thi, id, &index, &offset);
+	if (err < 0) {
+		if (!tegra_platform_is_sim())
+			goto cleanup;
+
+		dev_warn(&pdev->dev, "%s: GoS not supported on VDK\n",
+			__func__);
+	}
+
+	*syncpt_id = id;
+	*syncpt_addr = addr;
+	*gos_index = index;
+	*gos_offset = offset;
+
+	dev_info(&pdev->dev, "%s: id=%u addr=0x%llx gos_index=%u gos_offset=%u\n",
+		__func__, id, addr, index, offset);
+
+	return 0;
+
+cleanup:
+	nvhost_syncpt_put_ref_ext(isp5->isp_thi, id);
+	return err;
+}
+
+static void isp5_release_syncpt(struct platform_device *pdev, uint32_t id)
+{
+	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
+
+	dev_info(&pdev->dev, "%s: id=%u\n", __func__, id);
+
+	nvhost_syncpt_put_ref_ext(isp5->isp_thi, id);
+}
+
+static uint32_t isp5_get_gos_table(struct platform_device *pdev,
+			const dma_addr_t **table)
+{
+	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
+
+	*table = isp5->gos_table;
+
+	return isp5->gos_count;
+}
+
+static struct isp_channel_drv_ops isp5_channel_drv_ops = {
+	.alloc_syncpt = isp5_alloc_syncpt,
+	.release_syncpt = isp5_release_syncpt,
+	.get_gos_table = isp5_get_gos_table,
+};
 
 static int isp5_probe(struct platform_device *pdev)
 {
@@ -167,7 +242,7 @@ static int isp5_probe(struct platform_device *pdev)
 		goto device_release;
 
 #if defined(CONFIG_TEGRA_CAMERA_RTCPU)
-	err = isp_channel_drv_register(pdev);
+	err = isp_channel_drv_register(pdev, &isp5_channel_drv_ops);
 	if (err)
 		goto device_release;
 #endif

@@ -210,23 +210,6 @@ struct fifo_gk20a {
 	u32 channel_base;
 };
 
-static inline const char *gk20a_fifo_interleave_level_name(u32 interleave_level)
-{
-	switch (interleave_level) {
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
-		return "LOW";
-
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
-		return "MEDIUM";
-
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
-		return "HIGH";
-
-	default:
-		return "?";
-	}
-}
-
 struct ch_state {
 	int pid;
 	int refs;

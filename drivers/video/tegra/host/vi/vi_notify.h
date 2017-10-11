@@ -43,15 +43,30 @@ struct vi_notify_msg {
  * the one declared in RTCPU vi-notifier FW driver.
  */
 struct vi_capture_status {
-	u8 st;
-	u8 vc;
-	u16 frame;
-	u32 status;
-	u64 sof_ts;
-	u64 eof_ts;
-	u32 data;
-	u32 capture_id;
+	u8 st;		/* source stream from CSI block */
+	u8 vc;		/* CSI virtual channel */
+	u16 frame;	/* frame id */
+	u32 status;	/* capture status */
+	u64 sof_ts;	/* timestamp of START_OF_FRAME */
+	u64 eof_ts;	/* timestamp of END_OF_FRAME */
+	u32 data;	/* error data from vi notify module in VI */
+	u32 capture_id; /* identifier of associated capture request */
 };
+
+#define CAPTURE_STATUS_UNKNOWN0
+#define CAPTURE_STATUS_SUCCESS1
+#define CAPTURE_STATUS_CSIMUX_FRAME2
+#define CAPTURE_STATUS_CSIMUX_STREAM3
+#define CAPTURE_STATUS_CHANSEL_FAULT4
+#define CAPTURE_STATUS_CHANSEL_FAULT_FE5
+#define CAPTURE_STATUS_CHANSEL_COLLISION6
+#define CAPTURE_STATUS_CHANSEL_SHORT_FRAME7
+#define CAPTURE_STATUS_ATOMP_PACKER_OVERFLOW8
+#define CAPTURE_STATUS_ATOMP_FRAME_TRUNCATED9
+#define CAPTURE_STATUS_ATOMP_FRAME_TOSSED10
+#define CAPTURE_STATUS_ISPBUF_FIFO_OVERFLOW11
+#define CAPTURE_STATUS_SYNC_FAILURE12
+#define CAPTURE_STATUS_NOTIFIER_BACKEND_DOWN13
 
 struct vi_notify_dev;
 

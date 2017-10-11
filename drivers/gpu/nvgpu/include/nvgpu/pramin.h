@@ -23,7 +23,7 @@
 #ifndef __NVGPU_PRAMIN_H__
 #define __NVGPU_PRAMIN_H__
 
-#include <linux/types.h>
+#include <nvgpu/types.h>
 
 struct gk20a;
 struct mm_gk20a;

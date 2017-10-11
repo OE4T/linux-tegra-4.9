@@ -37,6 +37,28 @@
 #include "ioctl_channel.h"
 #include "os_linux.h"
 
+static const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
+{
+	switch (graphics_preempt_mode) {
+	case NVGPU_GRAPHICS_PREEMPTION_MODE_WFI:
+		return "WFI";
+	default:
+		return "?";
+	}
+}
+
+static const char *gr_gk20a_compute_preempt_mode_name(u32 compute_preempt_mode)
+{
+	switch (compute_preempt_mode) {
+	case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
+		return "WFI";
+	case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
+		return "CTA";
+	default:
+		return "?";
+	}
+}
+
 static void gk20a_channel_trace_sched_param(
 	void (*trace)(int chid, int tsgid, pid_t pid, u32 timeslice,
 		u32 timeout, const char *interleave,

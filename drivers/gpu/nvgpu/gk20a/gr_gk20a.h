@@ -748,26 +748,4 @@ void gk20a_gr_get_ovr_perf_regs(struct gk20a *g, u32 *num_ovr_perf_regs,
 void gk20a_gr_init_ctxsw_hdr_data(struct gk20a *g,
 					struct nvgpu_mem *mem);
 
-static inline const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
-{
-	switch (graphics_preempt_mode) {
-	case NVGPU_GRAPHICS_PREEMPTION_MODE_WFI:
-		return "WFI";
-	default:
-		return "?";
-	}
-}
-
-static inline const char *gr_gk20a_compute_preempt_mode_name(u32 compute_preempt_mode)
-{
-	switch (compute_preempt_mode) {
-	case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
-		return "WFI";
-	case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
-		return "CTA";
-	default:
-		return "?";
-	}
-}
-
 #endif /*__GR_GK20A_H__*/

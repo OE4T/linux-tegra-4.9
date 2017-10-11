@@ -264,10 +264,10 @@
 #define DFLL_CALIBR_TIME		40000
 
 /*
- * DFLL_ONE_SHOT_CALIBR_DELAY: number of microseconds to wait after target
+ * DFLL_ONE_SHOT_SETTLE_TIME: number of microseconds to wait after target
  * voltage is set before starting one-shot calibration
  */
-#define DFLL_ONE_SHOT_CALIBR_DELAY	200
+#define DFLL_ONE_SHOT_SETTLE_TIME	500
 
 /* DFLL_ONE_SHOT_AVG_SAMPLES: number of samples for one-shot calibration */
 #define DFLL_ONE_SHOT_AVG_SAMPLES	5
@@ -437,6 +437,7 @@ struct tegra_dfll {
 	ktime_t				last_calibration;
 	unsigned long			calibration_range_min;
 	unsigned long			calibration_range_max;
+	u32				one_shot_settle_time;
 
 	/* Child cclk_g rate change notifier */
 	struct notifier_block		cclk_g_parent_nb;
@@ -1411,7 +1412,7 @@ static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv)
 	/* Switch to rate measurement, and synchronize with sample period */
 	dfll_set_monitor_mode(td, DFLL_FREQ);
 	dfll_get_monitor_data(td, &data);
-	udelay(DFLL_ONE_SHOT_CALIBR_DELAY);
+	udelay(td->one_shot_settle_time);
 
 	/* Average measurements. Take the last one "as is" if all unstable */
 	for (i = 0; i < DFLL_ONE_SHOT_AVG_SAMPLES; i++) {
@@ -3567,6 +3568,10 @@ static int dfll_fetch_common_params(struct tegra_dfll *td)
 
 	if (of_property_read_bool(dn, "nvidia,idle-override"))
 		td->cfg_flags |= DFLL_HAS_IDLE_OVERRIDE;
+
+	td->one_shot_settle_time = DFLL_ONE_SHOT_SETTLE_TIME;
+	of_property_read_u32(dn, "nvidia,one-shot-settle-time",
+			     &td->one_shot_settle_time);
 
 	if (of_property_read_string(dn, "clock-output-names",
 				    &td->output_clock_name)) {

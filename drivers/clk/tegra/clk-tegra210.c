@@ -3702,6 +3702,11 @@ static u32 periph_clks_on[] = {
 
 static inline unsigned long clk_get_rate_nolock(struct clk *clk)
 {
+	if (IS_ERR_OR_NULL(clk)) {
+		WARN_ON(1);
+		return 0;
+	}
+
 	return clk_hw_get_rate(__clk_get_hw(clk));
 }
 

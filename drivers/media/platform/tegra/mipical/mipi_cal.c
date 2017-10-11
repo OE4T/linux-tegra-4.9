@@ -776,6 +776,30 @@ static long mipi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 		return 0;
 	}
+	case _IOC_NR(TEGRA_MIPI_IOCTL_BIAS_PAD_CFG0): {
+		u32 bias_pad_config0 = 0;
+
+		regmap_read(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0),
+						&bias_pad_config0);
+		if (copy_to_user((void __user *)arg, &bias_pad_config0,
+							sizeof(u32))) {
+			dev_err(mipi->dev, "Fail to copy kernel data to user\n");
+			return -EFAULT;
+		}
+		return 0;
+	}
+	case _IOC_NR(TEGRA_MIPI_IOCTL_BIAS_PAD_CFG2): {
+		u32 bias_pad_config2 = 0;
+
+		regmap_read(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
+						&bias_pad_config2);
+		if (copy_to_user((void __user *)arg, &bias_pad_config2,
+							sizeof(u32))) {
+			dev_err(mipi->dev, "Fail to copy kernel data to user\n");
+			return -EFAULT;
+		}
+		return 0;
+	}
 	default:
 		dev_err(mipi->dev, "Unknown ioctl\n");
 		return -EINVAL;

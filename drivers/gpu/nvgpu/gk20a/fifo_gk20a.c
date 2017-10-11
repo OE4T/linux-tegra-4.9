@@ -1913,9 +1913,10 @@ int gk20a_fifo_tsg_unbind_channel_verify_status(struct channel_gk20a *ch)
 	struct gk20a *g = ch->g;
 
 	if (gk20a_fifo_channel_status_is_next(g, ch->chid)) {
-		nvgpu_err(g, "Channel %d to be removed from TSG %d has NEXT set!",
+		nvgpu_log(g, gpu_dbg_info,
+			"Channel %d to be removed from TSG %d has NEXT set!",
 			ch->chid, ch->tsgid);
-		return -EINVAL;
+		return 0;
 	}
 
 	if (g->ops.fifo.tsg_verify_status_ctx_reload)

@@ -81,18 +81,20 @@
 #define CP_FRAC		(2)
 #define MASK_CP1	(0x7F)
 #define SHIFT_CP1	(0)
-#define SHIFT_CP2	(7)
-#define MASK_CP2	(0x7F << 7)
-#define FIXED_TO_INT(val, cp) \
-	(((((val) & MASK_##cp) >> SHIFT_##cp) * 100) / (1 << CP_FRAC))
+#define SHIFT_CP2	(14)
+#define MASK_CP2	(0x7F << SHIFT_CP2)
+#define FIXED_TO_MILLI_C(val, cp) \
+	(((((val) & MASK_##cp) >> SHIFT_##cp) * 1000) / (1 << CP_FRAC))
 
 #define OFFSET_FRAC_BITS	(4)
 #define OFFSET_FRAC_MULT	(1 << OFFSET_FRAC_BITS)
 #define OFFSET_FRAC_MASK	(0xf)
 
 /* Temperatures at which offsets are captured in K*/
-#define T1 (273150 + 25000)
-#define T2 (273150 + 105000)
+#define TC1 (25000)
+#define TC2 (105000)
+#define TK1 (273150 + TC1)
+#define TK2 (273150 + TC2)
 /*
  * optimized nfactor for an ideal TMP451 sensor specified in datasheet is
  * 1.008, but since it changes in increments of 1/2088 steps we need 5 fraction
@@ -1337,67 +1339,78 @@ static void nct1008_setup_shutdown_warning(struct nct1008_data *data)
 }
 
 /*
- * CP2 = Tchuck - Tdiode at 105C in Q5.2 format
- * CP1 = Tchuck - Tdiode at 25C in Q5.2 format
- * use alpha beta to account for part to part variation
- * Terr @ T2 = TE2 = alpha * CP2 + beta
- * Terr @ T1 = TE1 = alpha * CP1 + beta
- * slope = (TE2 - TE1)/(TK2 - TK1) ...(1)
+ * CP2 = Tdiode - Tchuck at 105C in Q5.2 format
+ * CP1 = Tdiode - Tchuck at 25C in Q5.2 format
+ * TC1, TC2 are true physical temperatures 25C & 105C.
+ * Treported2 = TC2 + CP2
+ * to account for part to part variation use alpha beta and apply
+ * linear correction to the actual temperature
+ * Tr2 = alpha * (TC2 + CP2) + beta
+ * Terr = Treported - Tphysical
+ * Terr @ TC2 = TE2 = Tr2 - TC2
+ * Terr @ TC1 = TE1 = Tr1 - TC1
+ * slope = (TE2 - TE1)/(TC2 - TC1)
+ *       = alpha * ((cp2 - cp1)/(TC2 - T1)) + alpha  - 1
  *
  * per TMP451 datasheet:
- * Terr = (nf - 1.008)/1.008 * T ...(2)
- * So, Terr slope = (nf - 1.008)/1.008 ...(3)
+ * Terr = (nf - 1.008)/1.008 * Tk
+ * So, Terr_slope = (nf - 1.008)/1.008 ...(1)
  *
- * solving for nf from (1) & (3):
- * nf = (1.008 * (TE2 - TE1)/(TK2 - TK1)) + 1.008 ...(4)
- * alpha has 4 fraction digits; CP1\2 Q5.2 is scaled by 10^2; T2/T1 are in mK
- * nf is hence divided by 10^3
+ * Emperically TMP451 reports higher temperature when nFactor is reduced. This
+ * means the Terr in (2) is negative and is being subtracted when the sensor
+ * overestimates the temperature. Slope therefore has to be negative:
+ * slope = - alpha * ((cp2 - cp1)/(TC2 - T1)) - alpha  + 1...(2)
+ *
+ * solving for nf from (1) & (2):
+ * nf = -(1.008 * slope) + 1.008 ...(4)
  *
  * quantize and map nf to an signed int using the nfactor step size
  * nadj = (1.008 * 2088 / nFactor) - 2088
  *
- * Emperically TMP451 reports higher temperature when nFactor is reduced. This
- * means the Terr in (2) is negative when the sensor overestimates the
- * temperature. Calculating offset for overestimating sensor:
- * -TE1 = -Terr * TK1 + offset
- * Offset = -(TE1 - (Terr slope * TK1))
- * solve for offset using (3) & (4) and substituting for TE1 and TE2
- * Offset = -((alpha * (CP1 * T2 - CP2 * T1)/(T2 - T1)) + beta)
- * beta is in same units as alpha, scaled by 10^4, as this supports 0.0625C
- * resolution. Multiply by 100 to account for scaling on CP1\2.
+ * After applying the nFactor and Offset, Tdiode's reported temperature should
+ * be closer to the physical temperature. The adjusted temp is calculated as:
+ * Tadjusted = Offset - slope * Tk + Treported
+ * Assuming adjusted temp same as physical temp, calculate offset @ T2:
+ * Offset = Tadjusted - Treported + slope * Tk
+ *        = Tphysical - Treported + slope * Tk
+ *        = -TE2 + slope * TK2
+ *        = -alpha * (TC2 + CP2) - beta + TC2 + slope * TK1
 */
 static int nct1008_offsets_program(struct i2c_client *client)
 {
 	struct nct1008_platform_data *p = client->dev.platform_data;
-	int off = p->offset, r = 0, val, lo_b, hi_b;
-	s64 nf = 0, nadj = 0, cp2, cp1;
+	/* use DT based offset unless fuse_offset is present */
+	int64_t off = p->offset, slope, nf = 0, nadj = 0, cp2, cp1;
+	int r = 0, val, lo_b, hi_b;
 
 	if (p->fuse_offset) {
 		r = tegra_fuse_readl(FUSE_TDIODE_CALIB, &val);
 		if (r)
 			return r;
 
-		cp2 = FIXED_TO_INT(val, CP2);
-		cp1 = FIXED_TO_INT(val, CP1);
-		nf = ((TMP451_NFACTOR * p->alpha * (cp2 - cp1) / (T2 - T1)) /
-				1000) + TMP451_NFACTOR;
-		nadj = (TMP451_NFACTOR * TMP451_NFACTOR_STEP / nf) -
-				TMP451_NFACTOR_STEP;
-		off = -((p->alpha * ((T2 * cp1) - (T1 * cp2)) / (T2 - T1)) +
-				p->beta * 100);
+		cp2 = FIXED_TO_MILLI_C(val, CP2);
+		cp1 = FIXED_TO_MILLI_C(val, CP1);
 
-		/* TMP451 adds low byte of the offset to the high byte,
-		 * for -ve offsets, roundup high byte & take carry from low byte
+		/*
+		 * alpha and beta have 4 fraction digits and is scaled by 10^4.
+		 * nf is therefore scaled back by 10^4 in the end.
 		 */
 
-		off = off * OFFSET_FRAC_MULT / 1000000;
+		slope = ((p->alpha * (cp2 - cp1)) / (TC2 - TC1)) + p->alpha -
+				10000;
+		nf = -((TMP451_NFACTOR * slope) / 10000) + TMP451_NFACTOR;
+		nadj = (TMP451_NFACTOR * TMP451_NFACTOR_STEP / nf) -
+				TMP451_NFACTOR_STEP;
+		off = -p->alpha * (TC2 + cp2) - p->beta * 1000 + TC2 * 10000 -
+				slope * TK2;
+		off = off * OFFSET_FRAC_MULT / 10000000;
 		r = nct1008_write_reg(client, NFACTOR_CORRECTION, nadj);
-		dev_info(&client->dev, "nf:%lld, nadj:%lld, off:%d ", nf, nadj,
-				off);
+		dev_info(&client->dev,
+			"nf:%lld, nadj:%lld, off:%lld\n", nf, nadj, off);
 	}
+
 	lo_b = ((off & OFFSET_FRAC_MASK) << OFFSET_FRAC_BITS);
 	hi_b = off >> OFFSET_FRAC_BITS;
-
 	dev_info(&client->dev, "hi_b:%d, lo_b:%d\n", hi_b, lo_b);
 	r = r ? r : nct1008_write_reg(client, OFFSET_WR, hi_b);
 	r = r ? r : nct1008_write_reg(client, OFFSET_QUARTER_WR, lo_b);

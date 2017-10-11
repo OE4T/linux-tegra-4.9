@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra210-jetson-tx1-p2597-2180-a01-devkit.dts
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,12 +43,20 @@
 		};
 
 		sor {
+			status = "disabled";
 			panel-s-edp-uhdtv-15-6 {
 				status = "disabled";
+				smartdimmer {
+					status = "disabled";
+				};
 			};
 			prod-settings {
 				status = "disabled";
 			};
+		};
+
+		dpaux {
+			status = "disabled";
 		};
 	};
 
@@ -65,18 +73,6 @@
 		};
 		panel-s-edp-uhdtv-15-6-bl {
 			status = "disabled";
-		};
-	};
-
-	sor {
-		status = "disabled";
-		prod-settings {
-			status = "disabled";
-		};
-		panel-s-edp-uhdtv-15-6 {
-			smartdimmer {
-				status = "disabled";
-			};
 		};
 	};
 

@@ -13,6 +13,7 @@ obj-$(CONFIG_FAN_THERM_EST)	+= therm_fan_est.o
 obj-$(CONFIG_EQOS_APE_HWDEP) += eqos_ape/
 obj-$(CONFIG_TEGRA_SKIN)	+= tegra-skin.o
 obj-$(CONFIG_TEGRA186_AHC) += tegra186-ahc/
+obj-$(CONFIG_EVENTLIB)		+= eventlib/
 
 ifdef CONFIG_ARCH_TEGRA_19x_SOC
 

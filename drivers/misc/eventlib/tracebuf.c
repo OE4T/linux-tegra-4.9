@@ -20,11 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <stddef.h>
+#include <linux/errno.h>
+#include <linux/string.h>
+#include <linux/stddef.h>
 #include <stdbool.h>
-#include <string.h>
-#include <errno.h>
 
 #include "tracebuf.h"
 #include "utility.h"

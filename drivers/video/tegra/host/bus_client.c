@@ -1636,7 +1636,7 @@ int nvhost_client_device_init(struct platform_device *dev)
 
 #ifdef CONFIG_EVENTLIB
 	pdata->eventlib_id = keventlib_register(4 * PAGE_SIZE,
-					      dev_name(&dev->dev));
+						dev_name(&dev->dev), NULL, 0);
 	if (pdata->eventlib_id < 0) {
 		nvhost_warn(&dev->dev, "failed to register eventlib (err=%d)",
 			    pdata->eventlib_id);

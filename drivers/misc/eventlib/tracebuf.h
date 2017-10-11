@@ -23,8 +23,7 @@
 #ifndef TRACEBUF_H
 #define TRACEBUF_H
 
-#include <stdint.h>
-#include <stddef.h>
+#include <linux/stddef.h>
 #include <stdbool.h>
 
 struct tracectx {
@@ -41,14 +40,14 @@ struct tracebuf {
 	uint64_t seqid;
 	uint32_t length;
 	uint32_t maxsize;
-} __attribute__((packed));
+} __packed;
 
 struct tracehdr {
 	uint64_t params;
 	uint64_t seqid;
 	uint32_t length;
 	uint32_t reserved;
-} __attribute__((packed));
+} __packed;
 
 struct pullstate {
 	uint64_t wrapcnt;

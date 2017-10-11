@@ -23,15 +23,16 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
-#include <stdint.h>
+#include <linux/printk.h>
 #include <stdbool.h>
 
-#if (defined(CONFIG_HYP_DEBUG) || defined(CONFIG_HYP_RELEASE))
-# include <bug.h>
-# define assert(x) ASSERT(x)
-#else
-# include <assert.h>
-#endif
+#define assert(x)						\
+do {								\
+	if (!(x)) {						\
+		pr_err_once("assertion failed %s: %d: %s\n",	\
+			    __FILE__, __LINE__, #x);		\
+	}							\
+} while (0)
 
 #define GET_TOP32(x) ((x) >> 32ULL)
 #define SET_TOP32(x) ((x) << 32ULL)

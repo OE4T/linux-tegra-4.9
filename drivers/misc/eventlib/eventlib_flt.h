@@ -23,7 +23,6 @@
 #ifndef EVENTLIB_FLT_H
 #define EVENTLIB_FLT_H
 
-#include <stdint.h>
 #include <eventlib.h>
 
 /* Readers' connects/updates/disconnects and writer's checks for updates, are

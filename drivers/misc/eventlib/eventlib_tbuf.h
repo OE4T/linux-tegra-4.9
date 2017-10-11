@@ -23,7 +23,6 @@
 #ifndef EVENTLIB_TBUF_H
 #define EVENTLIB_TBUF_H
 
-#include <stdint.h>
 #include <eventlib.h>
 #include <tracebuf.h>
 

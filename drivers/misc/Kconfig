@@ -96,5 +96,6 @@ source "drivers/misc/nvs-dfsh/Kconfig"
 source "drivers/misc/nvs/Kconfig"
 source "drivers/misc/nvs-aonsh/Kconfig"
 source "drivers/misc/tegra-profiler/Kconfig"
+source "drivers/misc/eventlib/Kconfig"
 
 endmenu

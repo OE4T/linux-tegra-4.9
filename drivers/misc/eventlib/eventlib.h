@@ -23,9 +23,9 @@
 #ifndef EVENTLIB_H
 #define EVENTLIB_H
 
-#include <stdint.h>
-#include <stddef.h>
-#include <errno.h>
+#include <linux/types.h>
+#include <linux/errno.h>
+#include <linux/stddef.h>
 
 /* Possible init flags */
 #define EVENTLIB_FLAG_INIT_FILTERING (1 << 0)
@@ -74,7 +74,7 @@ struct eventlib_ctx {
 	/* Private storage space used for internal use; must not be touched.
 	 * Below value corresponds with size of struct eventlib_init.
 	 */
-	char local_mem[0x400] __attribute__((aligned(8)));
+	char local_mem[0x400] __aligned(8);
 
 	/* W2R shared memory. Mandatory. */
 	void *w2r_shm;
@@ -186,7 +186,7 @@ struct record {
 	uint32_t type;
 	uint64_t ts;
 	uint8_t  data[0];
-} __attribute__((packed));
+} __packed;
 
 int eventlib_read(struct eventlib_ctx *ctx, void *buffer, uint32_t *size,
 	uint64_t *lost);

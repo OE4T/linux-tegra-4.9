@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdint.h>
-#include <string.h>
+#include <linux/string.h>
+
 #include <eventlib.h>
 #include <tracebuf.h>
 #include "eventlib_init.h"

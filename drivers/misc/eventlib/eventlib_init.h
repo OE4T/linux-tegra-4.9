@@ -26,7 +26,6 @@
 /* All pointers targeted to shared memory are annotated with 'shmptr' */
 #define shmptr /* empty, pure annotation */
 
-#include <stdint.h>
 #include <eventlib.h>
 #include <utility.h>
 #include "eventlib_tbuf.h"

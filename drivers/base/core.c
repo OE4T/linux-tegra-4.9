@@ -706,12 +706,15 @@ void device_initialize(struct device *dev)
 	lockdep_set_novalidate_class(&dev->mutex);
 	spin_lock_init(&dev->devres_lock);
 	INIT_LIST_HEAD(&dev->devres_head);
+	INIT_LIST_HEAD(&dev->attachments);
+
 	device_pm_init(dev);
 	set_dev_node(dev, -1);
 #ifdef CONFIG_GENERIC_MSI_IRQ
 	INIT_LIST_HEAD(&dev->msi_list);
 #endif
 	dev->no_dmabuf_defer_unmap = 0;
+	dev->context_dev = false;
 }
 EXPORT_SYMBOL_GPL(device_initialize);
 

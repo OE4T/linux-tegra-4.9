@@ -35,6 +35,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/list.h>
+#include <nvgpu/types.h>
 
 /* #define ALLOCATOR_DEBUG */
 

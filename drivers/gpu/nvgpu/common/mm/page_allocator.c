@@ -38,6 +38,9 @@
  */
 #ifdef PAGE_SIZE
 #undef PAGE_SIZE
+#endif
+
+#ifdef PAGE_ALIGN
 #undef PAGE_ALIGN
 #endif
 

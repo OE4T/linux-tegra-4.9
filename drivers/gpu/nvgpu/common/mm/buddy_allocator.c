@@ -27,7 +27,6 @@
 #include <nvgpu/barrier.h>
 
 #include "gk20a/mm_gk20a.h"
-#include "gk20a/platform_gk20a.h"
 
 #include "buddy_allocator_priv.h"
 
@@ -304,17 +303,20 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 		}
 
 		if (a->buddy_list_len[i] != 0) {
-			pr_info("Excess buddies!!! (%d: %llu)\n",
+			nvgpu_info(__a->g,
+					"Excess buddies!!! (%d: %llu)\n",
 				i, a->buddy_list_len[i]);
 			BUG();
 		}
 		if (a->buddy_list_split[i] != 0) {
-			pr_info("Excess split nodes!!! (%d: %llu)\n",
+			nvgpu_info(__a->g,
+					"Excess split nodes!!! (%d: %llu)\n",
 				i, a->buddy_list_split[i]);
 			BUG();
 		}
 		if (a->buddy_list_alloced[i] != 0) {
-			pr_info("Excess alloced nodes!!! (%d: %llu)\n",
+			nvgpu_info(__a->g,
+					"Excess alloced nodes!!! (%d: %llu)\n",
 				i, a->buddy_list_alloced[i]);
 			BUG();
 		}
@@ -882,7 +884,8 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 
 	balloc_alloc_fixed(a, falloc);
 
-	list_for_each_entry(bud, &falloc->buddies, buddy_entry)
+	nvgpu_list_for_each_entry(bud, &falloc->buddies,
+				nvgpu_buddy, buddy_entry)
 		real_bytes += (bud->end - bud->start);
 
 	a->bytes_alloced += len;
@@ -1014,7 +1017,9 @@ static int nvgpu_buddy_reserve_co(struct nvgpu_allocator *__a,
 	addr = __nvgpu_balloc_fixed_buddy(__a, co->base, co->length, 0);
 	if (!addr) {
 		err = -ENOMEM;
-		pr_warn("%s: Failed to reserve a valid carveout!\n", __func__);
+		nvgpu_warn(__a->g,
+				"%s: Failed to reserve a valid carveout!\n",
+				__func__);
 		goto done;
 	}
 

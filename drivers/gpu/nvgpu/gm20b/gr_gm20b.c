@@ -1126,10 +1126,8 @@ u32 gr_gm20b_get_max_fbps_count(struct gk20a *g)
 void gr_gm20b_init_cyclestats(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_CYCLE_STATS, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_CYCLE_STATS_SNAPSHOT, true);
 	g->gpu_characteristics.max_css_buffer_size = 0xffffffff;
 #else
 	(void)g;

@@ -34,6 +34,18 @@ struct gk20a;
 #define NVGPU_IS_FMODEL				1
 #define NVGPU_DRIVER_IS_DYING			2
 #define NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP 3
+
+/*
+ * ECC flags
+ */
+/* SM LRF ECC is enabled */
+#define NVGPU_ECC_ENABLED_SM_LRF		8
+/* SM SHM ECC is enabled */
+#define NVGPU_ECC_ENABLED_SM_SHM		9
+/* TEX ECC is enabled */
+#define NVGPU_ECC_ENABLED_TEX			10
+/* L2 ECC is enabled */
+#define NVGPU_ECC_ENABLED_LTC			11
 /*
  * MM flags.
  */
@@ -44,13 +56,47 @@ struct gk20a;
 #define NVGPU_MM_UNIFIED_MEMORY			18
 /* kernel mode ce vidmem clearing channels need to be in a tsg */
 #define NVGPU_MM_CE_TSG_REQUIRED		19
+/* User-space managed address spaces support */
+#define NVGPU_SUPPORT_USERSPACE_MANAGED_AS	20
+/* IO coherence support is available */
+#define NVGPU_SUPPORT_IO_COHERENCE		21
+/* MAP_BUFFER_EX with partial mappings */
+#define NVGPU_SUPPORT_PARTIAL_MAPPINGS		22
+/* MAP_BUFFER_EX with sparse allocations */
+#define NVGPU_SUPPORT_SPARSE_ALLOCS		23
+/* Direct PTE kind control is supported (map_buffer_ex) */
+#define NVGPU_SUPPORT_MAP_DIRECT_KIND_CTRL	24
+
+/*
+ * Host flags
+ */
+#define NVGPU_HAS_SYNCPOINTS			30
+/* sync fence FDs are available in, e.g., submit_gpfifo */
+#define NVGPU_SUPPORT_SYNC_FENCE_FDS		31
+/* NVGPU_IOCTL_CHANNEL_CYCLE_STATS is available */
+#define NVGPU_SUPPORT_CYCLE_STATS		32
+/* NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT is available */
+#define NVGPU_SUPPORT_CYCLE_STATS_SNAPSHOT	33
+/* Both gpu driver and device support TSG */
+#define NVGPU_SUPPORT_TSG			33
+/* Fast deterministic submits with no job tracking are supported */
+#define NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING 34
+/* Deterministic submits are supported even with job tracking */
+#define NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_FULL	35
+/* NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST is available */
+#define NVGPU_SUPPORT_RESCHEDULE_RUNLIST	36
+
+/* NVGPU_GPU_IOCTL_GET_EVENT_FD is available */
+#define NVGPU_SUPPORT_DEVICE_EVENTS		37
+/* FECS context switch tracing is available */
+#define NVGPU_SUPPORT_FECS_CTXSW_TRACE		38
 
 /*
  * Security flags
  */
 
-#define NVGPU_SEC_SECUREGPCCS			32
-#define NVGPU_SEC_PRIVSECURITY			33
+#define NVGPU_SEC_SECUREGPCCS			40
+#define NVGPU_SEC_PRIVSECURITY			41
 
 /*
  * PMU flags.
@@ -63,9 +109,21 @@ struct gk20a;
 #define NVGPU_GPU_CAN_BLCG                              52
 #define NVGPU_GPU_CAN_SLCG                              53
 #define NVGPU_GPU_CAN_ELCG                              54
+/* Clock control support */
+#define NVGPU_SUPPORT_CLOCK_CONTROLS		55
+/* NVGPU_GPU_IOCTL_GET_VOLTAGE is available */
+#define NVGPU_SUPPORT_GET_VOLTAGE		56
+/* NVGPU_GPU_IOCTL_GET_CURRENT is available */
+#define NVGPU_SUPPORT_GET_CURRENT		57
+/* NVGPU_GPU_IOCTL_GET_POWER is available */
+#define NVGPU_SUPPORT_GET_POWER			58
+/* NVGPU_GPU_IOCTL_GET_TEMPERATURE is available */
+#define NVGPU_SUPPORT_GET_TEMPERATURE		59
+/* NVGPU_GPU_IOCTL_SET_THERM_ALERT_LIMIT is available */
+#define NVGPU_SUPPORT_SET_THERM_ALERT_LIMIT	60
 
 /* whether to run PREOS binary on dGPUs */
-#define NVGPU_PMU_RUN_PREOS			52
+#define NVGPU_PMU_RUN_PREOS			61
 
 /*
  * Must be greater than the largest bit offset in the above list.

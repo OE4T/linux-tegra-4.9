@@ -26,6 +26,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
@@ -63,8 +64,7 @@ int vgpu_fecs_trace_init(struct gk20a *g)
 		dev_info(dev_from_gk20a(g), "does not support fecs trace\n");
 		goto fail;
 	}
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE;
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_FECS_CTXSW_TRACE, true);
 
 	hv_np = args.np;
 	mempool = args.args[0];

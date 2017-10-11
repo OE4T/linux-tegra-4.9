@@ -417,24 +417,26 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 			gpu->available_big_page_sizes |= g->ops.mm.get_big_page_sizes();
 	}
 
-	gpu->flags = NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS |
-		NVGPU_GPU_FLAGS_SUPPORT_MAP_DIRECT_KIND_CTRL;
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_PARTIAL_MAPPINGS, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_DIRECT_KIND_CTRL, true);
 
 	if (IS_ENABLED(CONFIG_SYNC))
-		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS;
+		__nvgpu_set_enabled(g, NVGPU_SUPPORT_SYNC_FENCE_FDS, true);
 
 	if (g->ops.mm.support_sparse && g->ops.mm.support_sparse(g))
-		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS;
+		__nvgpu_set_enabled(g, NVGPU_SUPPORT_SPARSE_ALLOCS, true);
 
 	if (gk20a_platform_has_syncpoints(g))
-		gpu->flags |= NVGPU_GPU_FLAGS_HAS_SYNCPOINTS;
+		__nvgpu_set_enabled(g, NVGPU_HAS_SYNCPOINTS, true);
 
 	/*
 	 * Fast submits are supported as long as the user doesn't request
 	 * anything that depends on job tracking. (Here, fast means strictly no
 	 * metadata, just the gpfifo contents are copied and gp_put updated).
 	 */
-	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING;
+	__nvgpu_set_enabled(g,
+			NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING,
+			true);
 
 	/*
 	 * Sync framework requires deferred job cleanup, wrapping syncs in FDs,
@@ -443,13 +445,15 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	 * that depends on deferred cleanup.
 	 */
 	if (!gk20a_channel_sync_needs_sync_framework(g))
-		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL;
+		__nvgpu_set_enabled(g,
+				NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_FULL,
+				true);
 
-	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS;
-	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_TSG;
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_USERSPACE_MANAGED_AS, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG, true);
 
 	if (g->ops.clk_arb.get_arbiter_clk_domains)
-		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_CLOCK_CONTROLS;
+		__nvgpu_set_enabled(g, NVGPU_SUPPORT_CLOCK_CONTROLS, true);
 
 	gpu->gpc_mask = (1 << g->gr.gpc_count)-1;
 

@@ -189,26 +189,24 @@ static int gp106_get_litter_value(struct gk20a *g, int value)
 
 static int gp106_init_gpu_characteristics(struct gk20a *g)
 {
-	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
-
 	int err;
 
 	err = gk20a_init_gpu_characteristics(g);
 	if (err)
 		return err;
 
-	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_GET_VOLTAGE |
-			NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT |
-			NVGPU_GPU_FLAGS_SUPPORT_GET_POWER |
-			NVGPU_GPU_FLAGS_SUPPORT_GET_TEMPERATURE |
-			NVGPU_GPU_FLAGS_SUPPORT_DEVICE_EVENTS |
-			NVGPU_GPU_FLAGS_SUPPORT_SET_THERM_ALERT_LIMIT;
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_VOLTAGE, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_CURRENT, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_POWER, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_TEMPERATURE, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_DEVICE_EVENTS, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SET_THERM_ALERT_LIMIT, true);
 
 	/* WAR for missing INA3221 on HW2.5 RevA */
 	if (g->power_sensor_missing) {
-		gpu->flags &= ~(NVGPU_GPU_FLAGS_SUPPORT_GET_VOLTAGE |
-				NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT |
-				NVGPU_GPU_FLAGS_SUPPORT_GET_POWER);
+		__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_VOLTAGE, false);
+		__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_CURRENT, false);
+		__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_POWER, false);
 	}
 
 	return 0;

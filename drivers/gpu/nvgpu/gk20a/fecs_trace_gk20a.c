@@ -33,6 +33,7 @@
 #include <nvgpu/thread.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/mm.h>
+#include <nvgpu/enabled.h>
 
 #include "ctxsw_trace_gk20a.h"
 #include "fecs_trace_gk20a.h"
@@ -594,8 +595,7 @@ int gk20a_fecs_trace_init(struct gk20a *g)
 
 	hash_init(trace->pid_hash_table);
 
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE;
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_FECS_CTXSW_TRACE, true);
 
 	gk20a_fecs_trace_debugfs_init(g);
 

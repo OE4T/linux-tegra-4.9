@@ -20,6 +20,7 @@
 #include <linux/anon_inodes.h>
 #include <linux/fs.h>
 #include <uapi/linux/nvgpu.h>
+#include <uapi/linux/nvgpu-t18x.h>
 
 #include <nvgpu/bitops.h>
 #include <nvgpu/kmem.h>
@@ -27,10 +28,14 @@
 #include <nvgpu/bus.h>
 #include <nvgpu/vidmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/enabled.h>
 
 #include <nvgpu/linux/vidmem.h>
 
 #include "ioctl_ctrl.h"
+#ifdef CONFIG_TEGRA_19x_GPU
+#include "common/linux/ioctl_ctrl_t19x.h"
+#endif
 #include "ioctl_tsg.h"
 #include "ioctl_channel.h"
 #include "gk20a/gk20a.h"
@@ -113,6 +118,77 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
+struct nvgpu_flags_mapping {
+	u64 ioctl_flag;
+	int enabled_flag;
+};
+
+static struct nvgpu_flags_mapping flags_mapping[] = {
+	{NVGPU_GPU_FLAGS_HAS_SYNCPOINTS,
+		NVGPU_HAS_SYNCPOINTS},
+	{NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS,
+		NVGPU_SUPPORT_PARTIAL_MAPPINGS},
+	{NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS,
+		NVGPU_SUPPORT_SPARSE_ALLOCS},
+	{NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS,
+		NVGPU_SUPPORT_SYNC_FENCE_FDS},
+	{NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS,
+		NVGPU_SUPPORT_CYCLE_STATS},
+	{NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT,
+		NVGPU_SUPPORT_CYCLE_STATS_SNAPSHOT},
+	{NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS,
+		NVGPU_SUPPORT_USERSPACE_MANAGED_AS},
+	{NVGPU_GPU_FLAGS_SUPPORT_TSG,
+		NVGPU_SUPPORT_TSG},
+	{NVGPU_GPU_FLAGS_SUPPORT_CLOCK_CONTROLS,
+		NVGPU_SUPPORT_CLOCK_CONTROLS},
+	{NVGPU_GPU_FLAGS_SUPPORT_GET_VOLTAGE,
+		NVGPU_SUPPORT_GET_VOLTAGE},
+	{NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT,
+		NVGPU_SUPPORT_GET_CURRENT},
+	{NVGPU_GPU_FLAGS_SUPPORT_GET_POWER,
+		NVGPU_SUPPORT_GET_POWER},
+	{NVGPU_GPU_FLAGS_SUPPORT_GET_TEMPERATURE,
+		NVGPU_SUPPORT_GET_TEMPERATURE},
+	{NVGPU_GPU_FLAGS_SUPPORT_SET_THERM_ALERT_LIMIT,
+		NVGPU_SUPPORT_SET_THERM_ALERT_LIMIT},
+	{NVGPU_GPU_FLAGS_SUPPORT_DEVICE_EVENTS,
+		NVGPU_SUPPORT_DEVICE_EVENTS},
+	{NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE,
+		NVGPU_SUPPORT_FECS_CTXSW_TRACE},
+	{NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING,
+		NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING},
+	{NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL,
+		NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_FULL},
+	{NVGPU_GPU_FLAGS_SUPPORT_IO_COHERENCE,
+		NVGPU_SUPPORT_IO_COHERENCE},
+	{NVGPU_GPU_FLAGS_SUPPORT_RESCHEDULE_RUNLIST,
+		NVGPU_SUPPORT_RESCHEDULE_RUNLIST},
+	{NVGPU_GPU_FLAGS_SUPPORT_MAP_DIRECT_KIND_CTRL,
+		NVGPU_SUPPORT_MAP_DIRECT_KIND_CTRL},
+	{NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF,
+		NVGPU_ECC_ENABLED_SM_LRF},
+	{NVGPU_GPU_FLAGS_ECC_ENABLED_SM_SHM,
+		NVGPU_ECC_ENABLED_SM_SHM},
+	{NVGPU_GPU_FLAGS_ECC_ENABLED_TEX,
+		NVGPU_ECC_ENABLED_TEX},
+	{NVGPU_GPU_FLAGS_ECC_ENABLED_LTC,
+		NVGPU_ECC_ENABLED_LTC},
+};
+
+static u64 nvgpu_ctrl_ioctl_gpu_characteristics_flags(struct gk20a *g)
+{
+	unsigned int i;
+	u64 ioctl_flags = 0;
+
+	for (i = 0; i < sizeof(flags_mapping)/sizeof(*flags_mapping); i++) {
+		if (nvgpu_is_enabled(g, flags_mapping[i].enabled_flag))
+			ioctl_flags |= flags_mapping[i].ioctl_flag;
+	}
+
+	return ioctl_flags;
+}
+
 static long
 gk20a_ctrl_ioctl_gpu_characteristics(
 	struct gk20a *g,
@@ -120,6 +196,11 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 {
 	struct nvgpu_gpu_characteristics *pgpu = &g->gpu_characteristics;
 	long err = 0;
+
+	pgpu->flags = nvgpu_ctrl_ioctl_gpu_characteristics_flags(g);
+#ifdef CONFIG_TEGRA_19x_GPU
+	pgpu->flags |= nvgpu_ctrl_ioctl_gpu_characteristics_flags_t19x(g);
+#endif
 
 	if (request->gpu_characteristics_buf_size > 0) {
 		size_t write_size = sizeof(*pgpu);
@@ -1108,7 +1189,7 @@ static int nvgpu_gpu_get_voltage(struct gk20a *g,
 	if (args->reserved)
 		return -EINVAL;
 
-	if (!(g->gpu_characteristics.flags & NVGPU_GPU_FLAGS_SUPPORT_GET_VOLTAGE))
+	if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_GET_VOLTAGE))
 		return -EINVAL;
 
 	err = gk20a_busy(g);
@@ -1144,7 +1225,7 @@ static int nvgpu_gpu_get_current(struct gk20a *g,
 	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
 		return -EINVAL;
 
-	if (!(g->gpu_characteristics.flags & NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT))
+	if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_GET_CURRENT))
 		return -EINVAL;
 
 	err = gk20a_busy(g);
@@ -1168,7 +1249,7 @@ static int nvgpu_gpu_get_power(struct gk20a *g,
 	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
 		return -EINVAL;
 
-	if (!(g->gpu_characteristics.flags & NVGPU_GPU_FLAGS_SUPPORT_GET_POWER))
+	if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_GET_POWER))
 		return -EINVAL;
 
 	err = gk20a_busy(g);

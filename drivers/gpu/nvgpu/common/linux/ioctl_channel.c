@@ -28,6 +28,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/list.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
@@ -99,8 +100,7 @@ static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 	void *virtual_address;
 
 	/* is it allowed to handle calls for current GPU? */
-	if (0 == (ch->g->gpu_characteristics.flags &
-			NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS))
+	if (!nvgpu_is_enabled(ch->g, NVGPU_SUPPORT_CYCLE_STATS))
 		return -ENOSYS;
 
 	if (args->dmabuf_fd && !ch->cyclestate.cyclestate_buffer_handler) {
@@ -176,8 +176,7 @@ static int gk20a_channel_cycle_stats_snapshot(struct channel_gk20a *ch,
 	int ret;
 
 	/* is it allowed to handle calls for current GPU? */
-	if (0 == (ch->g->gpu_characteristics.flags &
-			NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT))
+	if (!nvgpu_is_enabled(ch->g, NVGPU_SUPPORT_CYCLE_STATS_SNAPSHOT))
 		return -ENOSYS;
 
 	if (!args->dmabuf_fd)

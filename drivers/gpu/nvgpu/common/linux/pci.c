@@ -443,9 +443,6 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 		return -EINVAL;
 	}
 
-	platform = &nvgpu_pci_device[pent->driver_data];
-	pci_set_drvdata(pdev, platform);
-
 	l = kzalloc(sizeof(*l), GFP_KERNEL);
 	if (!l) {
 		dev_err(&pdev->dev, "couldn't allocate gk20a support");
@@ -455,6 +452,20 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	g = &l->g;
 
 	nvgpu_kmem_init(g);
+
+	/* Allocate memory to hold platform data*/
+	platform = (struct gk20a_platform *)nvgpu_kzalloc( g,
+			sizeof(struct gk20a_platform));
+	if (!platform) {
+		dev_err(&pdev->dev, "couldn't allocate platform data");
+		return -ENOMEM;
+	}
+
+	/* copy detected device data to allocated platform space*/
+	memcpy((void *)platform, (void *)&nvgpu_pci_device[pent->driver_data],
+		sizeof(struct gk20a_platform));
+
+	pci_set_drvdata(pdev, platform);
 
 	err = nvgpu_init_enabled_flags(g);
 	if (err) {
@@ -563,6 +574,10 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 		enable_irq(g->irq_stall);
 	}
 #endif
+
+	/* free allocated platform data space */
+	nvgpu_kfree(g, gk20a_get_platform(&pdev->dev));
+
 	gk20a_get_platform(&pdev->dev)->g = NULL;
 	gk20a_put(g);
 }

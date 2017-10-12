@@ -3069,8 +3069,8 @@ static struct tegra_dc_nvdisp_cmu *tegra_dc_get_nvdisp_cmu(struct tegra_dc *dc)
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 {
 	dc->cmu_enabled = cmu_enable;
+	dc->pdata->cmu_enable = cmu_enable;
 	if (tegra_dc_is_nvdisplay()) {
-		dc->pdata->cmu_enable = cmu_enable;
 		tegra_dc_cache_nvdisp_cmu(dc, tegra_dc_get_nvdisp_cmu(dc));
 		tegra_nvdisp_update_cmu(dc, &dc->nvdisp_postcomp_lut);
 	} else if (tegra_dc_is_t21x()) {

@@ -80,6 +80,8 @@ module_param(cvnas_debug, int, 0644);
 #define ASSERT_CVNAS_RST		0x1
 #define DEASSERT_CVNAS_FCM_RST		0x1
 #define ASSERT_CVNAS_FCM_RST		0x1
+#define MEM_INIT_FCM			0x1
+#define DEV_CVNAS_CLR_RST		0x2
 
 #define HSM_CVSRAM_ECC_CORRECT_OFFSET	0x18A
 #define HSM_CVSRAM_ECC_DED_OFFSET_0	0x180
@@ -320,25 +322,24 @@ static int nvcvsram_ecc_setup(struct cvnas_device *dev)
 	/* enable clock if disabled */
 
 	for (i = 0; i < dev->nslices; i++) {
-		int retry = 10;
-
 		mem_init = nvcvsram_readl(dev, i, CVSRAM_MEM_INIT_OFFSET);
 		if (mem_init & CVSRAM_MEM_INIT_STATUS)
 			return 0;
-		mem_init |= CVSRAM_MEM_INIT_START;
-		nvcvsram_writel(dev, i, mem_init, CVSRAM_MEM_INIT_OFFSET);
+		nvcvsram_writel(dev, i, MEM_INIT_FCM, CVSRAM_MEM_INIT_OFFSET);
+	}
 
-		do {
+	for (i = 0; i < dev->nslices; i++) {
+		while (1) {
+			usleep_range(100, 200);
 			mem_init = nvcvsram_readl(dev, i,
 					CVSRAM_MEM_INIT_OFFSET);
 			/* FIXME: Use CCF to make sure clock runs
 			 * at fixed frequency and wait for just
 			 * that much time.
 			 */
-			usleep_range(1000, 2000);
-			if (!retry--)
+			if (((mem_init & CVSRAM_MEM_INIT_STATUS) >> 1) & 1)
 				break;
-		} while (!(mem_init & CVSRAM_MEM_INIT_STATUS));
+		}
 	}
 
 	if (mem_init & CVSRAM_MEM_INIT_STATUS)
@@ -357,27 +358,30 @@ static int nvcvnas_power_on(struct cvnas_device *cvnas_dev)
 
 	pr_info("initializing cvnas hardware\n");
 
-	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS);
-	if (val == 0) {
-		pr_err("cvnas is not in assert!!!\n");
-		return -ENODEV;
-	}
+	nvcvnas_car_writel(cvnas_dev, DEV_CVNAS_CLR_RST, RST_DEV_CVNAS_CLR);
 
 	/* skip changing clock source and divider */
 
-	nvcvnas_car_writel(cvnas_dev, SET_CLK_ENB_CVNAS, CLK_OUT_ENB_CVNAS_SET);
+	nvcvnas_car_writel(cvnas_dev, SET_CLK_ENB_CVNAS, CLK_OUT_ENB_CVNAS);
 	val = nvcvnas_car_readl(cvnas_dev, CLK_OUT_ENB_CVNAS);
-	if (val != 0) {
+	if (val == 0) {
 		pr_err("cvnas clock enable failed\n");
 		return -ENODEV;
 	}
 
 	nvcvnas_car_writel(cvnas_dev, DEASSERT_CVNAS_RST, RST_DEV_CVNAS_CLR);
-	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS);
+	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS_CLR);
 	if (val != 0) {
 		pr_err("cvnas deassert reset failed\n");
 		return -ENODEV;
 	}
+
+	/* Clear CVNAS_FCM reset */
+	nvcvnas_car_writel(cvnas_dev, 0x1, RST_DEV_CVNAS_FCM_CLR);
+
+	/* Set CVNAS_FCM reset */
+	nvcvnas_car_writel(cvnas_dev, 0x1, RST_DEV_CVNAS_FCM_SET);
+
 
 	pr_info("initializing cvsram FCMs\n");
 	for (i = 0; i < ARRAY_SIZE(fcm_upg_seq); i++) {
@@ -393,6 +397,7 @@ static int nvcvnas_power_on(struct cvnas_device *cvnas_dev)
 		}
 	}
 
+	/* Clearing FCM Reset */
 	nvcvnas_car_writel(cvnas_dev, DEASSERT_CVNAS_FCM_RST, RST_DEV_CVNAS_FCM_CLR);
 	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS_FCM);
 	if (val != 0) {
@@ -411,6 +416,9 @@ static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 	int val, i, j;
 	u32 fcm_pg_seq[] =
 		{0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE, 0xFF};
+
+	if (!tegra_platform_is_qt())
+		return 0;
 
 	nvcvnas_car_writel(cvnas_dev, ASSERT_CVNAS_FCM_RST, RST_DEV_CVNAS_FCM_SET);
 	val = nvcvnas_car_readl(cvnas_dev, RST_DEV_CVNAS_FCM);
@@ -442,7 +450,7 @@ static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 
 	nvcvnas_car_writel(cvnas_dev, CLR_CLK_ENB_CVNAS, CLK_OUT_ENB_CVNAS_CLR);
 	val = nvcvnas_car_readl(cvnas_dev, CLK_OUT_ENB_CVNAS);
-	if (val == 0) {
+	if (val != 0) {
 		pr_err("cvnas clock disable failed\n");
 		return -ENODEV;
 	}

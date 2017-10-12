@@ -552,7 +552,7 @@ static void set_force_out_min(struct tegra_dfll *td)
 		return;
 
 	lut_force_min = dfll_get_output_min(td);
-	force_mv_min += td->lut_uv[lut_force_min];
+	force_mv_min += td->lut_uv[lut_force_min] / 1000;
 	lut_force_min = find_mv_out_cap(td, force_mv_min);
 	if (lut_force_min == td->lut_safe)
 		lut_force_min++;
@@ -3336,7 +3336,7 @@ static int profiles_show(struct seq_file *s, void *data)
 	} else {
 		seq_puts(s, "TUNE HIGH:\n");
 		seq_printf(s, "min    %5dmV%9lukHz%s\n",
-			   td->lut_uv[td->tune_high_out_min],
+			   td->lut_uv[td->tune_high_out_min] / 1000,
 			   td->tune_high_dvco_rate_min / 1000,
 			   td->tune_high_calibrated ? " (calibrated)"  : "");
 		seq_printf(s, "%-14s%9lukHz\n", "rate threshold",

@@ -207,13 +207,11 @@ void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
 			  struct nvgpu_mapped_buf **mapped_buffers,
 			  int num_buffers);
 
-/* Note: batch may be NULL if unmap op is not part of a batch */
-int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
-			  struct vm_gk20a_mapping_batch *batch);
-
 void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
 			   struct vm_gk20a_mapping_batch *batch);
 void nvgpu_vm_unmap_locked_ref(struct nvgpu_ref *ref);
+
+void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset);
 
 /*
  * These all require the VM update lock to be held.

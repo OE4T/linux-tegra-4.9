@@ -25,6 +25,7 @@
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/vidmem.h>
 
+#include <nvgpu/linux/vm.h>
 #include <nvgpu/linux/vidmem.h>
 #include <nvgpu/linux/nvgpu_mem.h>
 
@@ -33,7 +34,6 @@
 #include "gk20a/kind_gk20a.h"
 #include "gk20a/platform_gk20a.h"
 
-#include "vm_priv.h"
 #include "os_linux.h"
 #include "dmabuf.h"
 
@@ -323,17 +323,17 @@ static int setup_bfr_kind_fields(struct buffer_attrs *bfr, s16 compr_kind,
 	return 0;
 }
 
-u64 nvgpu_vm_map(struct vm_gk20a *vm,
-		 struct dma_buf *dmabuf,
-		 u64 offset_align,
-		 u32 flags,
-		 s16 compr_kind,
-		 s16 incompr_kind,
-		 bool user_mapped,
-		 int rw_flag,
-		 u64 buffer_offset,
-		 u64 mapping_size,
-		 struct vm_gk20a_mapping_batch *batch)
+u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
+		       struct dma_buf *dmabuf,
+		       u64 offset_align,
+		       u32 flags,
+		       s16 compr_kind,
+		       s16 incompr_kind,
+		       bool user_mapped,
+		       int rw_flag,
+		       u64 buffer_offset,
+		       u64 mapping_size,
+		       struct vm_gk20a_mapping_batch *batch)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct device *dev = dev_from_gk20a(g);
@@ -625,12 +625,12 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 		return err;
 	}
 
-	ret_va = nvgpu_vm_map(vm, dmabuf, *offset_align,
-			flags, compr_kind, incompr_kind, true,
-			gk20a_mem_flag_none,
-			buffer_offset,
-			mapping_size,
-			batch);
+	ret_va = nvgpu_vm_map_linux(vm, dmabuf, *offset_align,
+				    flags, compr_kind, incompr_kind, true,
+				    gk20a_mem_flag_none,
+				    buffer_offset,
+				    mapping_size,
+				    batch);
 
 	*offset_align = ret_va;
 	if (!ret_va) {
@@ -641,21 +641,55 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	return err;
 }
 
-void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset)
+int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
+			  struct vm_gk20a_mapping_batch *batch)
 {
 	struct gk20a *g = vm->mm->g;
 	struct nvgpu_mapped_buf *mapped_buffer;
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
+
 	mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, offset);
 	if (!mapped_buffer) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		nvgpu_err(g, "invalid addr to unmap 0x%llx", offset);
-		return;
+		return 0;
 	}
 
+	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+		struct nvgpu_timeout timeout;
+
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
+
+		nvgpu_timeout_init(vm->mm->g, &timeout, 10000,
+				   NVGPU_TIMER_RETRY_TIMER);
+		do {
+			if (nvgpu_atomic_read(
+				&mapped_buffer->ref.refcount) == 1)
+					break;
+			nvgpu_udelay(5);
+		} while (!nvgpu_timeout_expired_msg(&timeout,
+					    "sync-unmap failed on 0x%llx"));
+
+		nvgpu_mutex_acquire(&vm->update_gmmu_lock);
+	}
+
+	if (mapped_buffer->user_mapped == 0) {
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
+		nvgpu_err(g, "addr already unmapped from user 0x%llx", offset);
+		return 0;
+	}
+
+	mapped_buffer->user_mapped--;
+	if (mapped_buffer->user_mapped == 0)
+		vm->num_user_mapped_buffers--;
+
+	vm->kref_put_batch = batch;
 	nvgpu_ref_put(&mapped_buffer->ref, nvgpu_vm_unmap_locked_ref);
+	vm->kref_put_batch = NULL;
+
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
+	return 0;
 }
 
 /* NOTE! mapped_buffers lock must be held */
@@ -691,6 +725,4 @@ void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
 		dma_buf_put(mapped_buffer->dmabuf);
 
 	nvgpu_kfree(g, mapped_buffer);
-
-	return;
 }

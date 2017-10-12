@@ -28,7 +28,9 @@
 #include <nvgpu/vm.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/cond.h>
+
 #include <nvgpu/linux/vidmem.h>
+#include <nvgpu/linux/vm.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -38,7 +40,6 @@
 #include "os_linux.h"
 #include "ioctl_dbg.h"
 
-#include "vm_priv.h"
 
 /* silly allocator - just increment id */
 static nvgpu_atomic_t unique_id = NVGPU_ATOMIC_INIT(0);

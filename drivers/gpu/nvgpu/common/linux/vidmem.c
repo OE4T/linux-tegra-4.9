@@ -24,13 +24,12 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/page_allocator.h>
 
+#include <nvgpu/linux/vm.h>
 #include <nvgpu/linux/dma.h>
 #include <nvgpu/linux/vidmem.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
-
-#include "vm_priv.h"
 
 bool nvgpu_addr_is_vidmem_page_alloc(u64 addr)
 {

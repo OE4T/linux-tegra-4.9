@@ -43,6 +43,13 @@
 #include <nvgpu/ltc.h>
 #include <nvgpu/barrier.h>
 
+/*
+ * This is required for nvgpu_vm_find_buf() which is used in the tracing
+ * code. Once we can get and access userspace buffers without requiring
+ * direct dma_buf usage this can be removed.
+ */
+#include <nvgpu/linux/vm.h>
+
 #include "gk20a.h"
 #include "ctxsw_trace_gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -56,13 +63,6 @@
  * be moved lated to reduce depenedency on Linux
  */
 #include <linux/uaccess.h>
-
-/*
- * This is required for nvgpu_vm_find_buffer() which is used in the tracing
- * code. Once we can get and access userspace buffers without requiring
- * direct dma_buf usage this can be removed.
- */
-#include "common/linux/vm_priv.h"
 
 /*
  * Although channels do have pointers back to the gk20a struct that they were

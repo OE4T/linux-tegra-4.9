@@ -17,19 +17,19 @@
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 
-#include <nvgpu/log2.h>
-
 #include <trace/events/gk20a.h>
 
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/gmmu.h>
 #include <nvgpu/vm_area.h>
+#include <nvgpu/log2.h>
+
+#include <nvgpu/linux/vm.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "ioctl_as.h"
-#include "vm_priv.h"
 #include "os_linux.h"
 
 static int gk20a_as_ioctl_bind_channel(

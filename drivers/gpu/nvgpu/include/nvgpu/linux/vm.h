@@ -24,6 +24,7 @@ struct dma_buf;
 
 struct vm_gk20a;
 struct vm_gk20a_mapping_batch;
+struct nvgpu_vm_area;
 
 struct buffer_attrs {
 	struct sg_table *sgt;
@@ -40,30 +41,30 @@ struct buffer_attrs {
 	bool ctag_user_mappable;
 };
 
-u64 nvgpu_vm_map(struct vm_gk20a *vm,
-		 struct dma_buf *dmabuf,
-		 u64 offset_align,
-		 u32 flags,
+u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
+		       struct dma_buf *dmabuf,
+		       u64 offset_align,
+		       u32 flags,
 
-		 /*
-		  * compressible kind if
-		  * NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is
-		  * specified, otherwise just the kind
-		  */
-		 s16 compr_kind,
+		       /*
+			* compressible kind if
+			* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is
+			* specified, otherwise just the kind
+			*/
+		       s16 compr_kind,
 
-		 /*
-		  * incompressible kind if
-		  * NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is
-		  * specified, otherwise ignored
-		  */
-		 s16 incompr_kind,
+		       /*
+			* incompressible kind if
+			* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is
+			* specified, otherwise ignored
+			*/
+		       s16 incompr_kind,
 
-		 bool user_mapped,
-		 int rw_flag,
-		 u64 buffer_offset,
-		 u64 mapping_size,
-		 struct vm_gk20a_mapping_batch *mapping_batch);
+		       bool user_mapped,
+		       int rw_flag,
+		       u64 buffer_offset,
+		       u64 mapping_size,
+		       struct vm_gk20a_mapping_batch *mapping_batch);
 
 /*
  * Notes:
@@ -85,7 +86,9 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 			u64 mapping_size,
 			struct vm_gk20a_mapping_batch *batch);
 
-void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset);
+/* Note: batch may be NULL if unmap op is not part of a batch */
+int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
+			  struct vm_gk20a_mapping_batch *batch);
 
 /* find buffer corresponding to va */
 int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,

@@ -31,6 +31,8 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/firmware.h>
 
+#include <nvgpu/linux/vm.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/channel_gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -43,12 +45,6 @@
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
-
-/*
- * Currently this code uses nvgpu_vm_map() since it takes dmabuf FDs from the
- * CDE ioctls. That has to change - instead this needs to take an nvgpu_mem.
- */
-#include "common/linux/vm_priv.h"
 
 static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx);
 static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct nvgpu_os_linux *l);
@@ -1052,8 +1048,8 @@ __releases(&l->cde_app->mutex)
 
 
 	/* map the destination buffer */
-	get_dma_buf(compbits_scatter_buf); /* a ref for nvgpu_vm_map */
-	map_vaddr = nvgpu_vm_map(cde_ctx->vm, compbits_scatter_buf, 0,
+	get_dma_buf(compbits_scatter_buf); /* a ref for nvgpu_vm_map_linux */
+	map_vaddr = nvgpu_vm_map_linux(cde_ctx->vm, compbits_scatter_buf, 0,
 				 NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE |
 				 NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL,
 				 NV_KIND_INVALID,

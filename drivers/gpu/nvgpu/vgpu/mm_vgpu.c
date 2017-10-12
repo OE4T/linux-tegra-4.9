@@ -32,14 +32,13 @@
 
 #include <nvgpu/vgpu/vm.h>
 
+#include <nvgpu/linux/vm.h>
 #include <nvgpu/linux/nvgpu_mem.h>
 
 #include "vgpu/vgpu.h"
 #include "vgpu/mm_vgpu.h"
 #include "gk20a/mm_gk20a.h"
 #include "gm20b/mm_gm20b.h"
-
-#include "common/linux/vm_priv.h"
 
 static int vgpu_init_mm_setup_sw(struct gk20a *g)
 {

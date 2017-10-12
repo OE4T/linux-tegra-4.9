@@ -25,15 +25,28 @@
 
 struct isp_channel_drv;
 
-int isp_channel_drv_register(struct platform_device *);
-void isp_channel_drv_unregister(struct device *);
+struct isp_channel_drv_ops {
+	int (*alloc_syncpt)(struct platform_device *pdev, const char *name,
+			uint32_t *syncpt_id, dma_addr_t *syncpt_addr,
+			uint32_t *gos_index, uint32_t *gos_offset);
+
+	void (*release_syncpt)(struct platform_device *pdev, uint32_t id);
+
+	uint32_t (*get_gos_table)(struct platform_device *pdev,
+			const dma_addr_t **table);
+};
+
+int isp_channel_drv_register(struct platform_device *pdev,
+				const struct isp_channel_drv_ops *ops);
+void isp_channel_drv_unregister(struct device *dev);
 
 struct tegra_isp_channel {
 	struct device *isp_dev;
 	struct platform_device *ndev;
 	struct isp_channel_drv *drv;
-	struct rcu_head rcu;
+	void *priv;
 	struct isp_capture *capture_data;
+	const struct isp_channel_drv_ops *ops;
 };
 
 #endif //__ISP_CHANNEL_H__

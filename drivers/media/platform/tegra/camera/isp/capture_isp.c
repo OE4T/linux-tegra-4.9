@@ -269,21 +269,23 @@ static int isp_capture_setup_syncpt(struct tegra_isp_channel *chan,
 				struct syncpoint_info *sp)
 {
 	struct platform_device *pdev = chan->ndev;
-	uint32_t id;
+	uint32_t gos_index = GOS_INDEX_INVALID;
+	uint32_t gos_offset = 0;
+	int err;
 
 	memset(sp, 0, sizeof(*sp));
-	sp->gos_index = GOS_INDEX_INVALID;
 
 	if (!enable)
 		return 0;
 
-	id = nvhost_get_syncpt_client_managed(pdev, name);
-	if (id == 0)
-		return -ENODEV;
 
-	sp->id = id;
+	err = chan->ops->alloc_syncpt(pdev, name, &sp->id, &sp->shim_addr,
+				&gos_index, &gos_offset);
+	if (err)
+		return err;
 
-	/* TODO: Add GOS and shim_addr support */
+	sp->gos_index = gos_index;
+	sp->gos_offset = gos_offset;
 
 	return 0;
 }
@@ -314,10 +316,8 @@ fail:
 static void isp_capture_release_syncpt(struct tegra_isp_channel *chan,
 				struct syncpoint_info *sp)
 {
-	struct platform_device *pdev = chan->ndev;
-
 	if (sp->id)
-		nvhost_syncpt_put_ref_ext(pdev, sp->id);
+		chan->ops->release_syncpt(chan->ndev, sp->id);
 
 	memset(sp, 0, sizeof(*sp));
 }
@@ -802,7 +802,7 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 	err = copy_from_user(relocs->reloc_relatives, reloc_relatives,
 			relocs->num_relocs * sizeof(uint32_t)) ? -EFAULT : 0;
 	if (err < 0) {
-		dev_err(chan->isp_dev, "failed copy program user-relocs\n");
+		dev_err(chan->isp_dev, "failed to copy program user-relocs\n");
 		goto reloc_fail;
 	}
 

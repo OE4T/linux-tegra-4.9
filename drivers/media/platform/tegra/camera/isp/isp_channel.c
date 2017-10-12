@@ -27,6 +27,7 @@
 #include <linux/nvhost.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/stddef.h>
 #include <linux/uaccess.h>
 
 #include <media/capture_isp.h>
@@ -59,7 +60,8 @@ struct isp_channel_drv {
 	u8 num_channels;
 	struct mutex lock;
 	struct platform_device *ndev;
-	struct tegra_isp_channel __rcu *channels[];
+	const struct isp_channel_drv_ops *ops;
+	struct tegra_isp_channel *channels[];
 };
 
 static long isp_channel_ioctl(struct file *file, unsigned int cmd,
@@ -166,7 +168,7 @@ static int isp_channel_power_on(struct tegra_isp_channel *chan)
 
 	dev_info(chan->isp_dev, "isp_channel_power_on\n");
 
-	ret = nvhost_module_add_client(chan->ndev, chan->capture_data);
+	ret = nvhost_module_add_client(chan->ndev, chan->priv);
 	if (ret < 0) {
 		dev_err(chan->isp_dev, "%s: failed to add isp client\n", __func__);
 		return ret;
@@ -186,7 +188,7 @@ static void isp_channel_power_off(struct tegra_isp_channel *chan)
 	dev_info(chan->isp_dev, "isp_channel_power_off\n");
 
 	nvhost_module_idle(chan->ndev);
-	nvhost_module_remove_client(chan->ndev, chan->capture_data);
+	nvhost_module_remove_client(chan->ndev, chan->priv);
 }
 
 static struct isp_channel_drv *chdrv_;
@@ -217,6 +219,8 @@ static int isp_channel_open(struct inode *inode, struct file *file)
 	chan->drv = chan_drv;
 	chan->isp_dev = chan_drv->dev;
 	chan->ndev = chan_drv->ndev;
+	chan->ops = chan_drv->ops;
+	chan->priv = file;
 
 	err = isp_channel_power_on(chan);
 	if (err < 0)
@@ -227,20 +231,20 @@ static int isp_channel_open(struct inode *inode, struct file *file)
 		goto init_err;
 
 	mutex_lock(&chan_drv->lock);
-	if (rcu_access_pointer(chan_drv->channels[channel]) != NULL) {
+	if (chan_drv->channels[channel] != NULL) {
 		mutex_unlock(&chan_drv->lock);
 		err = -EBUSY;
-		goto rcu_err;
+		goto chan_err;
 	}
 
-	rcu_assign_pointer(chan_drv->channels[channel], chan);
+	chan_drv->channels[channel] = chan;
 	mutex_unlock(&chan_drv->lock);
 
 	file->private_data = chan;
 
 	return nonseekable_open(inode, file);
 
-rcu_err:
+chan_err:
 	isp_capture_shutdown(chan);
 init_err:
 	isp_channel_power_off(chan);
@@ -260,11 +264,11 @@ static int isp_channel_release(struct inode *inode, struct file *file)
 
 	mutex_lock(&chan_drv->lock);
 
-	WARN_ON(rcu_access_pointer(chan_drv->channels[channel]) != chan);
-	RCU_INIT_POINTER(chan_drv->channels[channel], NULL);
+	WARN_ON(chan_drv->channels[channel] != chan);
+	chan_drv->channels[channel] = NULL;
 
 	mutex_unlock(&chan_drv->lock);
-	kfree_rcu(chan, rcu);
+	kfree(chan);
 
 	return 0;
 }
@@ -284,29 +288,28 @@ static const struct file_operations isp_channel_fops = {
 static struct class *isp_channel_class;
 static int isp_channel_major;
 
-int isp_channel_drv_register(struct platform_device *ndev)
+int isp_channel_drv_register(struct platform_device *ndev,
+		const struct isp_channel_drv_ops *ops)
 {
 	struct isp_channel_drv *chan_drv;
-	int err = 0;
 	unsigned i;
 
-	chan_drv = devm_kzalloc(&ndev->dev, sizeof(*chan_drv) +
-			MAX_ISP_CHANNELS * sizeof(struct vi_notify_channel *),
-			GFP_KERNEL);
+	chan_drv = kzalloc(offsetof(struct isp_channel_drv,
+			channels[MAX_ISP_CHANNELS]), GFP_KERNEL);
 	if (unlikely(chan_drv == NULL))
 		return -ENOMEM;
 
 	chan_drv->dev = &ndev->dev;
 	chan_drv->ndev = ndev;
+	chan_drv->ops = ops;
 	chan_drv->num_channels = MAX_ISP_CHANNELS;
 	mutex_init(&chan_drv->lock);
 
 	mutex_lock(&chdrv_lock);
-	if (chdrv_ != NULL) {
+	if (WARN_ON(chdrv_ != NULL)) {
 		mutex_unlock(&chdrv_lock);
-		WARN_ON(1);
-		err = -EBUSY;
-		goto error;
+		kfree(chan_drv);
+		return -EBUSY;
 	}
 	chdrv_ = chan_drv;
 	mutex_unlock(&chdrv_lock);
@@ -319,9 +322,6 @@ int isp_channel_drv_register(struct platform_device *ndev)
 	}
 
 	return 0;
-
-error:
-	return err;
 }
 EXPORT_SYMBOL(isp_channel_drv_register);
 
@@ -342,7 +342,7 @@ void isp_channel_drv_unregister(struct device *dev)
 		device_destroy(isp_channel_class, devt);
 	}
 
-	devm_kfree(chan_drv->dev, chan_drv);
+	kfree(chan_drv);
 }
 EXPORT_SYMBOL(isp_channel_drv_unregister);
 

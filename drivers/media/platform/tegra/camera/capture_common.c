@@ -84,7 +84,6 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 	uint32_t num_relocs = req->relocs->num_relocs;
 	void *reloc_page_addr = NULL;
 	int last_page = -1;
-	dma_addr_t surface_phys_addr = 0;
 	int i;
 	int err = 0;
 
@@ -98,7 +97,7 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 		struct surface_t *surface;
 		uint32_t mem;
 		uint32_t target_offset;
-		dma_addr_t target_phys_addr;
+		dma_addr_t target_phys_addr = 0;
 
 		dev_dbg(req->dev,
 			"%s: idx:%i reloc:%u reloc_offset:%u", __func__,
@@ -129,15 +128,14 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 		target_offset = surface->offset;
 		mem = surface->offset_hi;
 
-		dev_dbg(req->dev, "%s: hmem:0x%x offset:0x%x\n",
-				__func__,
-				mem, target_offset);
-
 		if (!mem) {
 			dev_err(req->dev,
 					"%s: invalid mem handle\n", __func__);
 			goto fail;
 		}
+
+		dev_dbg(req->dev, "%s: hmem:0x%x offset:0x%x\n", __func__,
+				mem, target_offset);
 
 		if (mem == req->requests_mem) {
 			target_phys_addr = req->requests_dev->iova +
@@ -151,16 +149,25 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 					__func__, req->unpins->num_unpins);
 				goto fail;
 			}
-			surface_phys_addr = req->unpins->data[i].iova;
-			target_phys_addr = surface_phys_addr + target_offset;
+			target_phys_addr =
+				req->unpins->data[req->unpins->num_unpins].iova
+					+ target_offset;
 
 			req->unpins->num_unpins++;
 		}
 
+		if (!target_phys_addr) {
+			dev_err(req->dev,
+				"%s: target addr is NULL for mem 0x%x\n",
+				__func__, mem);
+			err = -ENOMEM;
+			goto fail;
+		}
+
 		dev_dbg(req->dev,
-			"%s: surface addr 0x%lx at desc 0x%lx\n",
-			__func__, (unsigned long)target_phys_addr,
-			(unsigned long)reloc_page_addr +
+			"%s: target addr 0x%llx at desc loc 0x%llx\n",
+			__func__, (uint64_t)target_phys_addr,
+			(uint64_t)reloc_page_addr +
 			(reloc_offset & ~PAGE_MASK));
 
 		/* write relocated physical address to request descr */

@@ -301,4 +301,6 @@ config VMD
 	  To compile this driver as a module, choose M here: the
 	  module will be called vmd.
 
+trysource "../t19x/drivers/pci/host/Kconfig.t19x"
+
 endmenu

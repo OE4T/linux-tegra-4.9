@@ -296,6 +296,11 @@
 				address-space = <&pcie5_as>;
 				sid-list = <TEGRA_SID_PCIE5>;
 			};
+
+			sata2_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SATA2>;
+			};
 		};
 
 		address-space-prop {

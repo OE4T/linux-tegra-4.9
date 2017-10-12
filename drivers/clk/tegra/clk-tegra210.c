@@ -2657,7 +2657,6 @@ static struct tegra_devclk devclks[] __initdata = {
 	{ .con_id = "sata", .dt_id = TEGRA210_CLK_SATA },
 	{ .con_id = "sata_oob", .dt_id = TEGRA210_CLK_SATA_OOB },
 	{ .con_id = "nvenc", .dt_id = TEGRA210_CLK_NVENC },
-	{ .con_id = "sor0", .dt_id = TEGRA210_CLK_SOR0 },
 	{ .con_id = "dsia", .dt_id = TEGRA210_CLK_DSIA },
 	{ .con_id = "dsib", .dt_id = TEGRA210_CLK_DSIB },
 	{ .con_id = "sor1", .dt_id = TEGRA210_CLK_SOR1 },

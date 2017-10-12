@@ -57,7 +57,7 @@ int nvhost_push_buffer_alloc(struct push_buffer *pb)
 	pb->mapped = NULL;
 	pb->dma_addr = 0;
 
-	pb->mapped = dma_alloc_writecombine(&cdma_to_dev(cdma)->dev->dev,
+	pb->mapped = dma_alloc_coherent(&cdma_to_dev(cdma)->dev->dev,
 			PUSH_BUFFER_SIZE + 4,
 			&pb->dma_addr,
 			GFP_KERNEL);
@@ -80,7 +80,7 @@ void nvhost_push_buffer_destroy(struct push_buffer *pb)
 {
 	struct nvhost_cdma *cdma = pb_to_cdma(pb);
 	if (pb->mapped)
-		dma_free_writecombine(&cdma_to_dev(cdma)->dev->dev,
+		dma_free_coherent(&cdma_to_dev(cdma)->dev->dev,
 					PUSH_BUFFER_SIZE + 4,
 					pb->mapped,
 					pb->dma_addr);

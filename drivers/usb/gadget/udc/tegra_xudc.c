@@ -562,6 +562,9 @@ struct tegra_xudc {
 	unsigned long cpufreq_last_boosted;
 	bool cpu_boost_enabled;
 	bool cpu_boost_work_scheduled;
+
+	struct delayed_work port_reset_war_work;
+	bool wait_for_sec_prc;
 };
 
 #define XUDC_TRB_MAX_BUFFER_SIZE 65536
@@ -963,6 +966,36 @@ static void tegra_xudc_plc_reset_work(struct work_struct *work)
 			xudc->wait_csc = false;
 		}
 	}
+	spin_unlock_irqrestore(&xudc->lock, flags);
+}
+
+static void tegra_xudc_port_reset_war_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct tegra_xudc *xudc =
+		container_of(dwork, struct tegra_xudc, port_reset_war_work);
+	unsigned long flags;
+	u32 pls;
+	int ret;
+
+	dev_info(xudc->dev, "port_reset_war_work\n");
+	spin_lock_irqsave(&xudc->lock, flags);
+	if (extcon_get_cable_state_(xudc->data_role_extcon, EXTCON_USB) &&
+						xudc->wait_for_sec_prc) {
+		pls = (xudc_readl(xudc, PORTSC) >> PORTSC_PLS_SHIFT) &
+			PORTSC_PLS_MASK;
+		dev_info(xudc->dev, "pls = %x\n", pls);
+
+		if (pls == PORTSC_PLS_DISABLED) {
+			dev_info(xudc->dev, "toggle vbus\n");
+			/* PRC doesn't complete in 100ms, toggle the vbus */
+			ret =
+			tegra_phy_xusb_utmi_port_reset_quirk(xudc->utmi_phy);
+			if (ret == 1)
+				xudc->wait_for_sec_prc = 0;
+		}
+	}
+
 	spin_unlock_irqrestore(&xudc->lock, flags);
 }
 
@@ -2996,11 +3029,21 @@ static void __tegra_xudc_handle_port_status(struct tegra_xudc *xudc)
 	}
 
 	portsc = xudc_readl(xudc, PORTSC);
-	if (portsc & PORTSC_PRC) {
-		dev_dbg(xudc->dev, "PRC, PORTSC = %#x\n", portsc);
+	if ((portsc & PORTSC_PRC) && (portsc & PORTSC_PR)) {
+		dev_dbg(xudc->dev, "PRC, PR, PORTSC = %#x\n", portsc);
 		clear_port_change(xudc, PORTSC_PRC | PORTSC_PED);
-		if (!(xudc_readl(xudc, PORTSC) & PORTSC_PR))
-			tegra_xudc_port_reset(xudc);
+#define TOGGLE_VBUS_WAIT_MS 100
+		schedule_delayed_work(&xudc->port_reset_war_work,
+			msecs_to_jiffies(TOGGLE_VBUS_WAIT_MS));
+		xudc->wait_for_sec_prc = 1;
+	}
+
+	if ((portsc & PORTSC_PRC) && !(portsc & PORTSC_PR)) {
+		dev_dbg(xudc->dev, "PRC, Not PR, PORTSC = %#x\n", portsc);
+		clear_port_change(xudc, PORTSC_PRC | PORTSC_PED);
+		tegra_xudc_port_reset(xudc);
+		cancel_delayed_work(&xudc->port_reset_war_work);
+		xudc->wait_for_sec_prc = 0;
 	}
 
 	portsc = xudc_readl(xudc, PORTSC);
@@ -3876,6 +3919,9 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	tegra_xudc_update_data_role(xudc);
 	INIT_DELAYED_WORK(&xudc->restore_emc, tegra_xudc_restore_emc_work);
 	INIT_WORK(&xudc->boost_emc, tegra_xudc_boost_emc_work);
+	INIT_DELAYED_WORK(&xudc->port_reset_war_work,
+				tegra_xudc_port_reset_war_work);
+
 
 	tegra_pd_add_device(&pdev->dev);
 	pm_runtime_set_active(&pdev->dev);

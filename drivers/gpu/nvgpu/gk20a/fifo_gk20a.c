@@ -1603,11 +1603,14 @@ static bool gk20a_fifo_handle_mmu_fault(
 				}
 			}
 		}
-
-		if (ch)
-			gk20a_ctxsw_trace_channel_reset(g, ch);
-		else if (tsg)
+		/*
+		 * For non fake mmu fault, both tsg and ch pointers
+		 * could be valid. Check tsg first.
+		 */
+		if (tsg)
 			gk20a_ctxsw_trace_tsg_reset(g, tsg);
+		else if (ch)
+			gk20a_ctxsw_trace_channel_reset(g, ch);
 
 		/* disable the channel/TSG from hw and increment
 		 * syncpoints */

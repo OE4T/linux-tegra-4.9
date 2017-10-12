@@ -91,6 +91,8 @@
 #include "gv100/fb_gv100.h"
 #include "gv100/fifo_gv100.h"
 #include "gv11b/fifo_gv11b.h"
+#include "gv11b/regops_gv11b.h"
+
 #include "gv11b/gv11b_gating_reglist.h"
 #include "gv11b/regops_gv11b.h"
 #include "gv11b/subctx_gv11b.h"
@@ -100,6 +102,7 @@
 #include "gv100/fb_gv100.h"
 #include "gv100/mm_gv100.h"
 
+#include <nvgpu/bus.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
 
@@ -156,6 +159,9 @@ static int gv100_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_PPC_IN_GPC_STRIDE:
 		ret = proj_ppc_in_gpc_stride_v();
 		break;
+	case GPU_LIT_PPC_IN_GPC_SHARED_BASE:
+		ret = proj_ppc_in_gpc_shared_base_v();
+		break;
 	case GPU_LIT_ROP_BASE:
 		ret = proj_rop_base_v();
 		break;
@@ -180,13 +186,30 @@ static int gv100_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_NUM_FBPAS:
 		ret = proj_scal_litter_num_fbpas_v();
 		break;
+	case GPU_LIT_FBPA_SHARED_BASE:
+		ret = proj_fbpa_shared_base_v();
+		break;
+	case GPU_LIT_FBPA_BASE:
+		ret = proj_fbpa_base_v();
+		break;
 	case GPU_LIT_FBPA_STRIDE:
 		ret = proj_fbpa_stride_v();
 		break;
 	case GPU_LIT_SM_PRI_STRIDE:
 		ret = proj_sm_stride_v();
 		break;
-
+	case GPU_LIT_SMPC_PRI_BASE:
+		ret = proj_smpc_base_v();
+		break;
+	case GPU_LIT_SMPC_PRI_SHARED_BASE:
+		ret = proj_smpc_shared_base_v();
+		break;
+	case GPU_LIT_SMPC_PRI_UNIQUE_BASE:
+		ret = proj_smpc_unique_base_v();
+		break;
+	case GPU_LIT_SMPC_PRI_STRIDE:
+		ret = proj_smpc_stride_v();
+		break;
 	default:
 		break;
 	}
@@ -553,12 +576,10 @@ static const struct gpu_ops gv100_ops = {
 		.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v,
 		.pmu_pg_init_param = gp106_pg_param_init,
 		.reset_engine = gp106_pmu_engine_reset,
-		.pmu_lpwr_disable_pg = nvgpu_lpwr_disable_pg,
 		.write_dmatrfbase = gp10b_write_dmatrfbase,
 		.pmu_mutex_size = pwr_pmu_mutex__size_1_v,
 		.is_engine_in_reset = gp106_pmu_is_engine_in_reset,
 		.pmu_get_queue_tail = pwr_pmu_queue_tail_r,
-		.pmu_lpwr_enable_pg = nvgpu_lpwr_enable_pg,
 	},
 	.clk = {
 		.init_clk_support = gp106_init_clk_support,
@@ -571,6 +592,9 @@ static const struct gpu_ops gv100_ops = {
 		.get_arbiter_clk_range = gp106_get_arbiter_clk_range,
 		.get_arbiter_clk_default = gp106_get_arbiter_clk_default,
 		.get_current_pstate = nvgpu_clk_arb_get_current_pstate,
+	},
+	.regops = {
+		.apply_smpc_war = gv11b_apply_smpc_war,
 	},
 	.mc = {
 		.intr_enable = mc_gv11b_intr_enable,
@@ -601,13 +625,14 @@ static const struct gpu_ops gv100_ops = {
 			nvgpu_check_and_set_context_reservation,
 		.release_profiler_reservation =
 			nvgpu_release_profiler_reservation,
-		.perfbuffer_enable = gk20a_perfbuf_enable_locked,
-		.perfbuffer_disable = gk20a_perfbuf_disable_locked,
+		.perfbuffer_enable = NULL,
+		.perfbuffer_disable = NULL,
 	},
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
 		.read_ptimer = gk20a_read_ptimer,
+		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
 		.bar1_bind = NULL,
 	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
@@ -662,6 +687,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->pramin = gv100_ops.pramin;
 	gops->therm = gv100_ops.therm;
 	gops->pmu = gv100_ops.pmu;
+	gops->regops = gv100_ops.regops;
 	gops->mc = gv100_ops.mc;
 	gops->debug = gv100_ops.debug;
 	gops->dbg_session_ops = gv100_ops.dbg_session_ops;

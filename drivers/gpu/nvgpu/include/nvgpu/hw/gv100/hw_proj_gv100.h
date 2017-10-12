@@ -76,6 +76,14 @@ static inline u32 proj_lts_stride_v(void)
 {
 	return 0x00000200U;
 }
+static inline u32 proj_fbpa_base_v(void)
+{
+	return 0x00900000U;
+}
+static inline u32 proj_fbpa_shared_base_v(void)
+{
+	return 0x009a0000U;
+}
 static inline u32 proj_fbpa_stride_v(void)
 {
 	return 0x00004000U;
@@ -83,6 +91,10 @@ static inline u32 proj_fbpa_stride_v(void)
 static inline u32 proj_ppc_in_gpc_base_v(void)
 {
 	return 0x00003000U;
+}
+static inline u32 proj_ppc_in_gpc_shared_base_v(void)
+{
+	return 0x00003e00U;
 }
 static inline u32 proj_ppc_in_gpc_stride_v(void)
 {
@@ -111,6 +123,22 @@ static inline u32 proj_tpc_in_gpc_stride_v(void)
 static inline u32 proj_tpc_in_gpc_shared_base_v(void)
 {
 	return 0x00001800U;
+}
+static inline u32 proj_smpc_base_v(void)
+{
+	return 0x00000200U;
+}
+static inline u32 proj_smpc_shared_base_v(void)
+{
+	return 0x00000300U;
+}
+static inline u32 proj_smpc_unique_base_v(void)
+{
+	return 0x00000600U;
+}
+static inline u32 proj_smpc_stride_v(void)
+{
+	return 0x00000100U;
 }
 static inline u32 proj_host_num_engines_v(void)
 {

@@ -24,5 +24,6 @@
 
 void gk20a_falcon_ops(struct nvgpu_falcon *flcn);
 void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn);
+void gk20a_falcon_dump_stats(struct nvgpu_falcon *flcn);
 
 #endif /* __FLCN_GK20A_H__ */

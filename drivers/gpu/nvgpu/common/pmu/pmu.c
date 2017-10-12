@@ -26,6 +26,8 @@
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/timers.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a/gk20a.h"
 

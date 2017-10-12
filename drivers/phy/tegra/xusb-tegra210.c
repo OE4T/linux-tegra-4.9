@@ -2313,6 +2313,34 @@ tegra210_xusb_read_fuse_calibration(struct tegra210_xusb_fuse_calibration *fuse)
 	return 0;
 }
 
+static int
+tegra210_xusb_padctl_regulators_init(struct tegra_xusb_padctl *padctl)
+{
+	struct device *dev = padctl->dev;
+	size_t size;
+	int err;
+	int i;
+
+	size = padctl->soc->num_supplies * sizeof(struct regulator_bulk_data);
+	padctl->supplies = devm_kzalloc(dev, size, GFP_ATOMIC);
+	if (!padctl->supplies) {
+		dev_err(dev, "failed to alloc memory for regulators\n");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < padctl->soc->num_supplies; i++)
+		padctl->supplies[i].supply = padctl->soc->supply_names[i];
+
+	err = devm_regulator_bulk_get(dev, padctl->soc->num_supplies,
+					padctl->supplies);
+	if (err) {
+		dev_err(dev, "failed to request regulators %d\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
 static struct tegra_xusb_padctl *
 tegra210_xusb_padctl_probe(struct device *dev,
 			   const struct tegra_xusb_padctl_soc *soc)
@@ -2328,6 +2356,11 @@ tegra210_xusb_padctl_probe(struct device *dev,
 	padctl->base.soc = soc;
 
 	err = tegra210_xusb_read_fuse_calibration(&padctl->fuse);
+	if (err < 0)
+		return ERR_PTR(err);
+
+	/* init regulators */
+	err = tegra210_xusb_padctl_regulators_init(&padctl->base);
 	if (err < 0)
 		return ERR_PTR(err);
 
@@ -2349,6 +2382,7 @@ static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.remove = tegra210_xusb_padctl_remove,
 	.usb3_set_lfps_detect = tegra210_usb3_set_lfps_detect,
 	.hsic_set_idle = tegra210_hsic_set_idle,
+	.regulators_init = tegra210_xusb_padctl_regulators_init,
 	.has_otg_cap = tegra210_xusb_padctl_has_otg_cap,
 	.vbus_override = tegra210_xusb_padctl_vbus_override,
 	.id_override = tegra210_xusb_padctl_id_override,

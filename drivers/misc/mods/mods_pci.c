@@ -104,162 +104,140 @@ int mods_unregister_all_pci_res_mappings(struct file *fp)
  * PCI ESCAPE FUNCTIONS *
  ************************/
 
-int esc_mods_find_pci_dev_2(struct file *pfile,
+static int mods_find_pci_dev(struct file                   *pfile,
+			     struct MODS_FIND_PCI_DEVICE_2 *p,
+			     int                            enum_non_zero_dom)
+{
+	struct pci_dev *dev   = NULL;
+	int             index = -1;
+
+	mods_debug_printk(DEBUG_PCICFG,
+			  "find pci dev %04x:%04x, index %d\n",
+			  (int) p->vendor_id,
+			  (int) p->device_id,
+			  (int) p->index);
+
+	do {
+		dev = pci_get_device(p->vendor_id, p->device_id, dev);
+		if (!dev)
+			return -EINVAL;
+
+		if (enum_non_zero_dom || !pci_domain_nr(dev->bus))
+			++index;
+	} while (index < (int)(p->index));
+
+	p->pci_device.domain   = pci_domain_nr(dev->bus);
+	p->pci_device.bus      = dev->bus->number;
+	p->pci_device.device   = PCI_SLOT(dev->devfn);
+	p->pci_device.function = PCI_FUNC(dev->devfn);
+
+#if defined(CONFIG_PPC64)
+	/* Enable device on the PCI bus */
+	if (mods_enable_device(pfile->private_data, dev)) {
+		mods_error_printk(
+		    "unable to enable dev %04x:%02x:%02x.%x\n",
+		    (unsigned int)p->pci_device.domain,
+		    (unsigned int)p->pci_device.bus,
+		    (unsigned int)p->pci_device.device,
+		    (unsigned int)p->pci_device.function);
+		return -EINVAL;
+	}
+#endif
+
+	return OK;
+}
+
+int esc_mods_find_pci_dev_2(struct file                   *pfile,
 			    struct MODS_FIND_PCI_DEVICE_2 *p)
 {
-	MODS_PRIV private_data = pfile->private_data;
-	struct pci_dev *dev;
-	int index = 0;
-
-	mods_debug_printk(DEBUG_PCICFG,
-			  "find pci dev %04x:%04x, index %d\n",
-			  (int) p->vendor_id,
-			  (int) p->device_id,
-			  (int) p->index);
-
-	dev = pci_get_device(p->vendor_id, p->device_id, NULL);
-
-	while (dev) {
-		if (index == p->index) {
-			p->pci_device.domain	= pci_domain_nr(dev->bus);
-			p->pci_device.bus	= dev->bus->number;
-			p->pci_device.device	= PCI_SLOT(dev->devfn);
-			p->pci_device.function	= PCI_FUNC(dev->devfn);
-			/* Enable device on the PCI bus */
-			if (mods_enable_device(private_data, dev)) {
-				mods_error_printk(
-				    "unable to enable dev %04x:%02x:%02x.%x\n",
-				    (unsigned int)p->pci_device.domain,
-				    (unsigned int)p->pci_device.bus,
-				    (unsigned int)p->pci_device.device,
-				    (unsigned int)p->pci_device.function);
-				return -EINVAL;
-			}
-			return OK;
-		}
-		dev = pci_get_device(p->vendor_id, p->device_id, dev);
-		index++;
-	}
-
-	return -EINVAL;
+	return mods_find_pci_dev(pfile, p, 1);
 }
 
-int esc_mods_find_pci_dev(struct file *pfile,
+int esc_mods_find_pci_dev(struct file                 *pfile,
 			  struct MODS_FIND_PCI_DEVICE *p)
 {
-	MODS_PRIV private_data = pfile->private_data;
-	struct pci_dev *dev;
-	int index = 0;
+	struct MODS_FIND_PCI_DEVICE_2 p2;
+	int                           ret;
 
-	mods_debug_printk(DEBUG_PCICFG,
-			  "find pci dev %04x:%04x, index %d\n",
-			  (int) p->vendor_id,
-			  (int) p->device_id,
-			  (int) p->index);
+	p2.device_id = p->device_id;
+	p2.vendor_id = p->vendor_id;
+	p2.index     = p->index;
 
-	dev = pci_get_device(p->vendor_id, p->device_id, NULL);
+	ret = mods_find_pci_dev(pfile, &p2, 0);
 
-	while (dev) {
-		if (index == p->index && pci_domain_nr(dev->bus) == 0) {
-			p->bus_number		= dev->bus->number;
-			p->device_number	= PCI_SLOT(dev->devfn);
-			p->function_number	= PCI_FUNC(dev->devfn);
-			/* Enable device on the PCI bus */
-			if (mods_enable_device(private_data, dev)) {
-				mods_error_printk(
-				    "unable to enable dev %02x:%02x.%x\n",
-				    (unsigned int)p->bus_number,
-				    (unsigned int)p->device_number,
-				    (unsigned int)p->function_number);
-				return -EINVAL;
-			}
-			return OK;
-		}
-		/* Only return devices in the first domain, but don't assume
-		 * that they're the first devices in the list
-		 */
-		if (pci_domain_nr(dev->bus) == 0)
-			index++;
-		dev = pci_get_device(p->vendor_id, p->device_id, dev);
+	if (!ret) {
+		p->bus_number      = p2.pci_device.bus;
+		p->device_number   = p2.pci_device.device;
+		p->function_number = p2.pci_device.function;
 	}
 
-	return -EINVAL;
+	return ret;
 }
 
-int esc_mods_find_pci_class_code_2(struct file *pfile,
+static int mods_find_pci_class_code(struct file                       *pfile,
+				    struct MODS_FIND_PCI_CLASS_CODE_2 *p,
+				    int enum_non_zero_dom)
+{
+	struct pci_dev *dev   = NULL;
+	int             index = -1;
+
+	mods_debug_printk(DEBUG_PCICFG, "find pci class code %04x, index %d\n",
+			  (int) p->class_code, (int) p->index);
+
+	do {
+		dev = pci_get_class(p->class_code, dev);
+		if (!dev)
+			return -EINVAL;
+
+		if (enum_non_zero_dom || !pci_domain_nr(dev->bus))
+			++index;
+	} while (index < (int)(p->index));
+
+	p->pci_device.domain   = pci_domain_nr(dev->bus);
+	p->pci_device.bus      = dev->bus->number;
+	p->pci_device.device   = PCI_SLOT(dev->devfn);
+	p->pci_device.function = PCI_FUNC(dev->devfn);
+
+#if defined(CONFIG_PPC64)
+	/* Enable device on the PCI bus */
+	if (mods_enable_device(pfile->private_data, dev)) {
+		mods_error_printk(
+		    "unable to enable dev %04x:%02x:%02x.%x\n",
+		    (unsigned int)p->pci_device.domain,
+		    (unsigned int)p->pci_device.bus,
+		    (unsigned int)p->pci_device.device,
+		    (unsigned int)p->pci_device.function);
+		return -EINVAL;
+	}
+#endif
+
+	return OK;
+}
+
+int esc_mods_find_pci_class_code_2(struct file                       *pfile,
 				   struct MODS_FIND_PCI_CLASS_CODE_2 *p)
 {
-	MODS_PRIV private_data = pfile->private_data;
-	struct pci_dev *dev;
-	int index = 0;
-
-	mods_debug_printk(DEBUG_PCICFG, "find pci class code %04x, index %d\n",
-			  (int) p->class_code, (int) p->index);
-
-	dev = pci_get_class(p->class_code, NULL);
-
-	while (dev) {
-		if (index == p->index) {
-			p->pci_device.domain	= pci_domain_nr(dev->bus);
-			p->pci_device.bus	= dev->bus->number;
-			p->pci_device.device	= PCI_SLOT(dev->devfn);
-			p->pci_device.function	= PCI_FUNC(dev->devfn);
-			/* Enable device on the PCI bus */
-			if (mods_enable_device(private_data, dev)) {
-				mods_error_printk(
-				    "unable to enable dev %04x:%02x:%02x.%x\n",
-				    (unsigned int)p->pci_device.domain,
-				    (unsigned int)p->pci_device.bus,
-				    (unsigned int)p->pci_device.device,
-				    (unsigned int)p->pci_device.function);
-				return -EINVAL;
-			}
-			return OK;
-		}
-		dev = pci_get_class(p->class_code, dev);
-		index++;
-	}
-
-	return -EINVAL;
+	return mods_find_pci_class_code(pfile, p, 1);
 }
 
-int esc_mods_find_pci_class_code(struct file *pfile,
+int esc_mods_find_pci_class_code(struct file                     *pfile,
 				 struct MODS_FIND_PCI_CLASS_CODE *p)
 {
-	MODS_PRIV private_data = pfile->private_data;
-	struct pci_dev *dev;
-	int index = 0;
+	struct MODS_FIND_PCI_CLASS_CODE_2 p2;
+	int                               ret;
 
-	mods_debug_printk(DEBUG_PCICFG, "find pci class code %04x, index %d\n",
-			  (int) p->class_code, (int) p->index);
+	p2.class_code = p->class_code;
+	p2.index      = p->index;
 
-	dev = pci_get_class(p->class_code, NULL);
+	ret = mods_find_pci_class_code(pfile, &p2, 0);
 
-	while (dev) {
-		if (index == p->index && pci_domain_nr(dev->bus) == 0) {
-			p->bus_number		= dev->bus->number;
-			p->device_number	= PCI_SLOT(dev->devfn);
-			p->function_number	= PCI_FUNC(dev->devfn);
-			/* Enable device on the PCI bus */
-			if (mods_enable_device(private_data, dev)) {
-				mods_error_printk(
-				    "unable to enable dev %02x:%02x.%x\n",
-				    (unsigned int)p->bus_number,
-				    (unsigned int)p->device_number,
-				    (unsigned int)p->function_number);
-				return -EINVAL;
-			}
-			return OK;
-		}
-		/* Only return devices in the first domain, but don't assume
-		 * that they're the first devices in the list
-		 */
-		if (pci_domain_nr(dev->bus) == 0)
-			index++;
-		dev = pci_get_class(p->class_code, dev);
+	if (!ret) {
+		p->bus_number      = p2.pci_device.bus;
+		p->device_number   = p2.pci_device.device;
+		p->function_number = p2.pci_device.function;
 	}
 
-	return -EINVAL;
+	return ret;
 }
 
 int esc_mods_pci_get_bar_info_2(struct file *pfile,

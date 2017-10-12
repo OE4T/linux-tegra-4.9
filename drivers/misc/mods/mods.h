@@ -24,7 +24,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 3
-#define MODS_DRIVER_VERSION_MINOR 75
+#define MODS_DRIVER_VERSION_MINOR 78
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR/10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR%10))
@@ -964,6 +964,16 @@ struct MODS_SET_NVLINK_SYSMEM_TRAINED {
 	__u8		      trained;
 };
 
+/* MODS_ESC_GET_NVLINK_LINE_RATE */
+struct MODS_GET_NVLINK_LINE_RATE {
+	/* IN */
+	struct mods_pci_dev_2 pci_device;
+	__s32		      npu_index;
+
+	/* OUT */
+	__u32             speed;
+};
+
 #pragma pack(pop)
 
 /* ************************************************************************* */
@@ -1194,5 +1204,8 @@ struct MODS_SET_NVLINK_SYSMEM_TRAINED {
 #define MODS_ESC_SET_NVLINK_SYSMEM_TRAINED			\
 		   _IOW(MODS_IOC_MAGIC, 102,		\
 		   struct MODS_SET_NVLINK_SYSMEM_TRAINED)
+#define MODS_ESC_GET_NVLINK_LINE_RATE			\
+		   _IOWR(MODS_IOC_MAGIC, 103,		\
+		   struct MODS_GET_NVLINK_LINE_RATE)
 
 #endif /* _MODS_H_  */

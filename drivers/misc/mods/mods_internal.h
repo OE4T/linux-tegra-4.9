@@ -430,6 +430,8 @@ int esc_mods_get_ats_address_range(struct file *fp,
 				   struct MODS_GET_ATS_ADDRESS_RANGE *p);
 int esc_mods_set_nvlink_sysmem_trained(struct file *fp,
 				struct MODS_SET_NVLINK_SYSMEM_TRAINED *p);
+int esc_mods_get_nvlink_line_rate(struct file *fp,
+				  struct MODS_GET_NVLINK_LINE_RATE *p);
 #endif
 
 /* acpi */

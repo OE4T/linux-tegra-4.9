@@ -636,7 +636,7 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 
 	fp->private_data = private_data;
 
-	mods_info_printk("driver opened\n");
+	mods_info_printk("*** WARNING: DIAGNOSTIC DRIVER LOADED ***\n");
 	LOG_EXT();
 	return OK;
 }
@@ -1225,6 +1225,11 @@ static long mods_krnl_ioctl(struct file  *fp,
 		MODS_IOCTL(MODS_ESC_SET_NVLINK_SYSMEM_TRAINED,
 			   esc_mods_set_nvlink_sysmem_trained,
 			   MODS_SET_NVLINK_SYSMEM_TRAINED);
+		break;
+	case MODS_ESC_GET_NVLINK_LINE_RATE:
+		MODS_IOCTL(MODS_ESC_GET_NVLINK_LINE_RATE,
+			   esc_mods_get_nvlink_line_rate,
+			   MODS_GET_NVLINK_LINE_RATE);
 		break;
 #endif
 

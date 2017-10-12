@@ -707,8 +707,7 @@ int esc_mods_device_alloc_pages_2(struct file	*fp,
 		goto failed;
 	}
 
-	num_pages = (p->num_bytes >> PAGE_SHIFT) +
-		    ((p->num_bytes & ~PAGE_MASK) ? 1 : 0);
+	num_pages = (u32)(((u64)p->num_bytes + PAGE_SIZE - 1) >> PAGE_SHIFT);
 	if (p->contiguous)
 		max_chunks = 1;
 	else
@@ -1331,8 +1330,8 @@ static void clear_entry_cache_mappings
 		while (chunk_offs < chunk_offs_end) {
 			u32 i_page     = chunk_offs >> PAGE_SHIFT;
 			u32 page_offs  = chunk_offs - (i_page << PAGE_SHIFT);
-			u64 page_va    = (u64)(size_t)kmap_atomic(pt->p_page
-								  + i_page);
+			u64 page_va    =
+			    (u64)(size_t)kmap(pt->p_page + i_page);
 			u64 clear_va   = page_va + page_offs;
 			u64 clear_pa   = MODS_DMA_TO_PHYS(pt->dma_addr)
 							  + chunk_offs;
@@ -1348,7 +1347,7 @@ static void clear_entry_cache_mappings
 
 			clear_contiguous_cache(clear_va, clear_pa, clear_size);
 
-			kunmap_atomic((void *)(size_t)page_va);
+			kunmap((void *)(size_t)page_va);
 
 			chunk_offs += clear_size;
 		}
@@ -1434,7 +1433,7 @@ static int mods_post_alloc(struct MODS_PHYS_CHUNK *pt,
 			ptr = p_mem_info->logical_addr + (i << PAGE_SHIFT);
 		} else
 #endif
-			ptr = (u64)(size_t)kmap_atomic(pt->p_page + i);
+			ptr = (u64)(size_t)kmap(pt->p_page + i);
 		if (!ptr) {
 			mods_error_printk("kmap failed\n");
 			return -EINVAL;
@@ -1449,7 +1448,7 @@ static int mods_post_alloc(struct MODS_PHYS_CHUNK *pt,
 #ifdef CONFIG_BIGPHYS_AREA
 		if (p_mem_info->alloc_type != MODS_ALLOC_TYPE_BIGPHYS_AREA)
 #endif
-			kunmap_atomic((void *)(size_t)ptr);
+			kunmap((void *)(size_t)ptr);
 		if (ret) {
 			mods_error_printk("set cache type failed\n");
 			return -EINVAL;
@@ -1471,13 +1470,13 @@ static void mods_pre_free(struct MODS_PHYS_CHUNK *pt,
 			ptr = p_mem_info->logical_addr + (i << PAGE_SHIFT);
 		else
 #endif
-			ptr = (u64)(size_t)kmap_atomic(pt->p_page + i);
+			ptr = (u64)(size_t)kmap(pt->p_page + i);
 		if (ptr)
 			mods_restore_mem_type(ptr, 1, p_mem_info->cache_type);
 #ifdef CONFIG_BIGPHYS_AREA
 		if (p_mem_info->alloc_type != MODS_ALLOC_TYPE_BIGPHYS_AREA)
 #endif
-			kunmap_atomic((void *)(size_t)ptr);
+			kunmap((void *)(size_t)ptr);
 	}
 }
 

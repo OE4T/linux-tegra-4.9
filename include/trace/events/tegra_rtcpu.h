@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -213,6 +213,62 @@ TRACE_EVENT(rtcpu_vinotify_handle_msg,
 	),
 	TP_printk(
 		"tstamp:%llu tag:%s channel:0x%02x frame:%u vi_tstamp:%u data:0x%08x",
+		__entry->tstamp,
+		(__entry->tag < g_trace_vinotify_tag_str_count) ?
+			g_trace_vinotify_tag_strs[__entry->tag] :
+			__print_hex(&__entry->tag, 1),
+		(__entry->ch_frame >> 8) & 0xff,
+		(__entry->ch_frame >> 16) & 0xffff,
+		__entry->vi_tstamp, __entry->data)
+);
+
+TRACE_EVENT(rtcpu_vinotify_event,
+	TP_PROTO(u64 tstamp, u8 tag, u32 ch_frame, u64 vi_tstamp, u32 data),
+	TP_ARGS(tstamp, tag, ch_frame, vi_tstamp, data),
+	TP_STRUCT__entry(
+		__field(u64, tstamp)
+		__field(u8, tag)
+		__field(u32, ch_frame)
+		__field(u64, vi_tstamp)
+		__field(u32, data)
+	),
+	TP_fast_assign(
+		__entry->tstamp = tstamp;
+		__entry->tag = tag;
+		__entry->ch_frame = ch_frame;
+		__entry->vi_tstamp = vi_tstamp;
+		__entry->data = data;
+	),
+	TP_printk(
+		"tstamp:%llu tag:%s channel:0x%02x frame:%u vi_tstamp:%llu data:0x%08x",
+		__entry->tstamp,
+		(__entry->tag < g_trace_vinotify_tag_str_count) ?
+			g_trace_vinotify_tag_strs[__entry->tag] :
+			__print_hex(&__entry->tag, 1),
+		(__entry->ch_frame >> 8) & 0xff,
+		(__entry->ch_frame >> 16) & 0xffff,
+		__entry->vi_tstamp, __entry->data)
+);
+
+TRACE_EVENT(rtcpu_vinotify_error,
+	TP_PROTO(u64 tstamp, u8 tag, u32 ch_frame, u64 vi_tstamp, u32 data),
+	TP_ARGS(tstamp, tag, ch_frame, vi_tstamp, data),
+	TP_STRUCT__entry(
+		__field(u64, tstamp)
+		__field(u8, tag)
+		__field(u32, ch_frame)
+		__field(u64, vi_tstamp)
+		__field(u32, data)
+	),
+	TP_fast_assign(
+		__entry->tstamp = tstamp;
+		__entry->tag = tag;
+		__entry->ch_frame = ch_frame;
+		__entry->vi_tstamp = vi_tstamp;
+		__entry->data = data;
+	),
+	TP_printk(
+		"tstamp:%llu tag:%s channel:0x%02x frame:%u vi_tstamp:%llu data:0x%08x",
 		__entry->tstamp,
 		(__entry->tag < g_trace_vinotify_tag_str_count) ?
 			g_trace_vinotify_tag_strs[__entry->tag] :

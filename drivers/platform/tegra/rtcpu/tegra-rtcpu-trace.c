@@ -671,6 +671,14 @@ char *g_trace_vinotify_tag_strs[] = {
 unsigned int g_trace_vinotify_tag_str_count =
 	ARRAY_SIZE(g_trace_vinotify_tag_strs);
 
+#ifndef camrtc_trace_vinotify_event_ts64
+#define camrtc_trace_vinotify_event_ts64 (camrtc_trace_vinotify_handle_msg + 1)
+#endif
+
+#ifndef camrtc_trace_vinotify_error_ts64
+#define camrtc_trace_vinotify_error_ts64 (camrtc_trace_vinotify_handle_msg + 2)
+#endif
+
 static void rtcpu_trace_vinotify_event(struct camrtc_event_struct *event)
 {
 	switch (event->header.id) {
@@ -678,6 +686,18 @@ static void rtcpu_trace_vinotify_event(struct camrtc_event_struct *event)
 		trace_rtcpu_vinotify_handle_msg(event->header.tstamp,
 		(event->data.data32[0] >> 1) & 0x7f, event->data.data32[0],
 		event->data.data32[1], event->data.data32[2]);
+		break;
+	case camrtc_trace_vinotify_event_ts64:
+		trace_rtcpu_vinotify_event(event->header.tstamp,
+		(event->data.data32[0] >> 1) & 0x7f, event->data.data32[0],
+		event->data.data32[1],
+		((u64)event->data.data32[3] << 32) | event->data.data32[2]);
+		break;
+	case camrtc_trace_vinotify_error_ts64:
+		trace_rtcpu_vinotify_error(event->header.tstamp,
+		(event->data.data32[0] >> 1) & 0x7f, event->data.data32[0],
+		event->data.data32[1],
+		((u64)event->data.data32[3] << 32) | event->data.data32[2]);
 		break;
 	default:
 		trace_rtcpu_unknown(event->header.tstamp,

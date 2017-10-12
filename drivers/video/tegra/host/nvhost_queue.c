@@ -391,7 +391,7 @@ static void queue_task_update(void *priv, int nr_completed)
 	struct nvhost_queue_task *task = priv;
 	struct platform_device *host1x_pdev = task->host1x_pdev;
 
-	dma_free_writecombine(&host1x_pdev->dev,
+	dma_free_coherent(&host1x_pdev->dev,
 			      CMDBUF_SIZE,
 			      task->cpu_addr,
 			      task->dma_addr);
@@ -425,7 +425,7 @@ int nvhost_queue_submit_to_host1x(struct nvhost_queue *queue,
 	if (task == NULL)
 		goto err_alloc_task;
 
-	task->cpu_addr = dma_alloc_writecombine(&host1x_pdev->dev,
+	task->cpu_addr = dma_alloc_coherent(&host1x_pdev->dev,
 						CMDBUF_SIZE,
 						&task->dma_addr,
 						GFP_KERNEL);
@@ -496,7 +496,7 @@ err_register_notifier:
 err_submit_job:
 	nvhost_job_put(job);
 err_alloc_job:
-	dma_free_writecombine(&host1x_pdev->dev, CMDBUF_SIZE, task->cpu_addr,
+	dma_free_coherent(&host1x_pdev->dev, CMDBUF_SIZE, task->cpu_addr,
 			      task->dma_addr);
 err_alloc_cmdbuf:
 	kfree(task);

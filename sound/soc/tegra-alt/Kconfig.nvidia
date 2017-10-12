@@ -66,8 +66,8 @@ config TEGRA186_ASRC_INT_CLEAR_WAR
 config SND_SOC_TEGRA_ALT
 	tristate "Alternative DAPM-based SoC audio support for the Tegra System-on-Chip"
 	depends on ARCH_TEGRA
+        depends on SND_DMAENGINE_PCM
 	select REGMAP_MMIO
-	select SND_DMAENGINE_PCM
 	select SND_DYNAMIC_MINORS
 	help
 	  Say Y or M here if you want support for SoC audio on Tegra, using the

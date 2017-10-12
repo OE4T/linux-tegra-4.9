@@ -36,7 +36,7 @@ struct tegra_dp_test_settings default_dp_test_settings = {
 	PRE_EMPHASIS_L0,
 	4,
 	SOR_LINK_SPEED_G5_4,
-	TRAINING_PATTERN_DISABLE,
+	TEGRA_DC_DP_TRAINING_PATTERN_DISABLE,
 	NV_HEAD_STATE0_DYNRANGE_VESA,
 	0,
 	"hbr2",
@@ -90,23 +90,23 @@ static inline int parse_patt_setting(char *patt,
 	u8 tpg;
 
 	if (!strcmp(patt, "none"))
-		tpg = TRAINING_PATTERN_DISABLE;
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_DISABLE;
 	else if (!strcmp(patt, "t1"))
-		tpg = TRAINING_PATTERN_1;
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_1;
 	else if (!strcmp(patt, "t2"))
-		tpg = TRAINING_PATTERN_2;
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_2;
 	else if (!strcmp(patt, "t3"))
-		tpg = TRAINING_PATTERN_3;
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_3;
 	else if (!strcmp(patt, "d102"))
-		tpg = TRAINING_PATTERN_D102;
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_D102;
 	else if (!strcmp(patt, "sblerrrate"))
-		tpg = TRAINING_PATTERN_SBLERRRATE;
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_SBLERRRATE;
 	else if (!strcmp(patt, "prbs7"))
-		tpg = TRAINING_PATTERN_PRBS7;
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_PRBS7;
 	else if (!strcmp(patt, "pltpat") || !strcmp(patt, "pctpat"))
-		tpg = TRAINING_PATTERN_CSTM;
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_CSTM;
 	else if (!strcmp(patt, "hbr2compliance"))
-		tpg = TRAINING_PATTERN_HBR2_COMPLIANCE;
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_HBR2_COMPLIANCE;
 	else
 		return -EINVAL;
 
@@ -300,7 +300,7 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	}
 
 	/* send training pattern */
-	if (test_settings->tpg == TRAINING_PATTERN_CSTM) {
+	if (test_settings->tpg == TEGRA_DC_DP_TRAINING_PATTERN_CSTM) {
 		if (!strcmp(test_settings->patt, "pltpat")) {
 			tegra_sor_writel(sor, NV_SOR_DP_LQ_CSTM_0, 0x3e0f83e0);
 			tegra_sor_writel(sor, NV_SOR_DP_LQ_CSTM_1, 0x0f83e0f8);
@@ -316,7 +316,7 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 		tegra_sor_writel(sor, NV_SOR_DP_LQ_CSTM_2, 0);
 	}
 
-	if (test_settings->tpg == TRAINING_PATTERN_HBR2_COMPLIANCE)
+	if (test_settings->tpg == TEGRA_DC_DP_TRAINING_PATTERN_HBR2_COMPLIANCE)
 		tegra_sor_writel(sor, NV_SOR_DP_TPG_CONFIG, 0x00FC);
 	else
 		tegra_sor_writel(sor, NV_SOR_DP_TPG_CONFIG, 0);

@@ -410,14 +410,14 @@ static int do_fast_lt_no_handshake(struct tegra_dp_lt_data *lt_data)
 	BUG_ON(!lt_data->lt_config_valid);
 
 	/* transmit link training pattern 1 for min of 500us */
-	set_lt_tpg(lt_data, TRAINING_PATTERN_1);
+	set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_1);
 	usleep_range(500, 600);
 
 	/* transmit link training pattern 2/3 for min of 500us */
 	if (lt_data->dp->link_cfg.tps3_supported)
-		set_lt_tpg(lt_data, TRAINING_PATTERN_3);
+		set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_3);
 	else
-		set_lt_tpg(lt_data, TRAINING_PATTERN_2);
+		set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_2);
 	usleep_range(500, 600);
 
 	return 0;
@@ -491,7 +491,7 @@ static void lt_failed(struct tegra_dp_lt_data *lt_data)
 	mutex_lock(&lt_data->lock);
 
 	tegra_dc_sor_detach(dp->sor);
-	set_lt_tpg(lt_data, TRAINING_PATTERN_DISABLE);
+	set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_DISABLE);
 	lt_data_reset(lt_data);
 
 	mutex_unlock(&lt_data->lock);
@@ -504,7 +504,7 @@ static void lt_passed(struct tegra_dp_lt_data *lt_data)
 	mutex_lock(&lt_data->lock);
 
 	lt_data->lt_config_valid = true;
-	set_lt_tpg(lt_data, TRAINING_PATTERN_DISABLE);
+	set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_DISABLE);
 	tegra_dc_sor_attach(dp->sor);
 
 	mutex_unlock(&lt_data->lock);
@@ -570,8 +570,7 @@ static void lt_reset_state(struct tegra_dp_lt_data *lt_data)
 	tgt_state = STATE_CLOCK_RECOVERY;
 	timeout = 0;
 
-
-	WARN_ON(lt_data->tps != TRAINING_PATTERN_DISABLE);
+	WARN_ON(lt_data->tps != TEGRA_DC_DP_TRAINING_PATTERN_DISABLE);
 
 	/*
 	 * pre-charge main link for at
@@ -610,7 +609,7 @@ static void fast_lt_state(struct tegra_dp_lt_data *lt_data)
 		goto done;
 	}
 
-	WARN_ON(lt_data->tps != TRAINING_PATTERN_DISABLE);
+	WARN_ON(lt_data->tps != TEGRA_DC_DP_TRAINING_PATTERN_DISABLE);
 
 	mutex_lock(&lt_data->lock);
 
@@ -693,7 +692,7 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 {
 	int tgt_state;
 	int timeout;
-	u32 tp_src = TRAINING_PATTERN_2;
+	u32 tp_src = TEGRA_DC_DP_TRAINING_PATTERN_2;
 	bool cr_done = true;
 	bool ce_done = true;
 	bool cur_hpd;
@@ -709,7 +708,7 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 	}
 
 	if (lt_data->dp->link_cfg.tps3_supported)
-		tp_src = TRAINING_PATTERN_3;
+		tp_src = TEGRA_DC_DP_TRAINING_PATTERN_3;
 
 	set_lt_tpg(lt_data, tp_src);
 	wait_aux_training(lt_data, false);
@@ -807,7 +806,7 @@ static void lt_clock_recovery_state(struct tegra_dp_lt_data *lt_data)
 		goto done;
 	}
 
-	set_lt_tpg(lt_data, TRAINING_PATTERN_1);
+	set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_1);
 
 	set_lt_config(lt_data);
 	wait_aux_training(lt_data, true);

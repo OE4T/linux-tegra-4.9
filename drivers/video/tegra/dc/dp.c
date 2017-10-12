@@ -1888,14 +1888,16 @@ static void tegra_dp_dpcd_init(struct tegra_dc_dp_data *dp)
 
 void tegra_dp_tpg(struct tegra_dc_dp_data *dp, u32 tp, u32 n_lanes)
 {
+	u32 val = dp->sor->training_patterns[tp].dpcd_val;
+
 	tegra_sor_tpg(dp->sor, tp, n_lanes);
 
-	if (tp == TRAINING_PATTERN_DISABLE)
+	if (tp == TEGRA_DC_DP_TRAINING_PATTERN_DISABLE)
 		tegra_dc_dp_dpcd_write(dp, NV_DPCD_TRAINING_PATTERN_SET,
-			(tp | NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_F));
+			(val | NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_F));
 	else
 		tegra_dc_dp_dpcd_write(dp, NV_DPCD_TRAINING_PATTERN_SET,
-			(tp | NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_T));
+			(val | NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_T));
 }
 
 static void tegra_dp_tu_config(struct tegra_dc_dp_data *dp,
@@ -2311,7 +2313,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		tegra_dp_link_cal(dp);
 		tegra_dp_tu_config(dp, cfg);
 
-		tegra_dp_tpg(dp, TRAINING_PATTERN_DISABLE, cfg->lane_count);
+		tegra_dp_tpg(dp, TEGRA_DC_DP_TRAINING_PATTERN_DISABLE,
+			     cfg->lane_count);
 	}
 
 	tegra_sor_port_enable(sor, true);
@@ -2363,8 +2366,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		 * Fake panel. Just enable host.
 		 * No not engage with panel.
 		 */
-		tegra_sor_tpg(dp->sor, TRAINING_PATTERN_DISABLE,
-				dp->link_cfg.lane_count);
+		tegra_sor_tpg(dp->sor, TEGRA_DC_DP_TRAINING_PATTERN_DISABLE,
+			      dp->link_cfg.lane_count);
 		tegra_dc_sor_attach(dp->sor);
 	}
 #ifdef CONFIG_DPHDCP

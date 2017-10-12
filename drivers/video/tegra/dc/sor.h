@@ -29,16 +29,23 @@
 #include "dc_priv.h"
 #include "sor_regs.h"
 
-enum {
-	TRAINING_PATTERN_DISABLE = 0,
-	TRAINING_PATTERN_1 = 1,
-	TRAINING_PATTERN_2 = 2,
-	TRAINING_PATTERN_3 = 3,
-	TRAINING_PATTERN_D102 = 4,
-	TRAINING_PATTERN_SBLERRRATE = 5,
-	TRAINING_PATTERN_PRBS7 = 6,
-	TRAINING_PATTERN_CSTM = 7,
-	TRAINING_PATTERN_HBR2_COMPLIANCE = 8,
+enum tegra_dc_dp_training_pattern_key {
+	TEGRA_DC_DP_TRAINING_PATTERN_DISABLE,
+	TEGRA_DC_DP_TRAINING_PATTERN_1,
+	TEGRA_DC_DP_TRAINING_PATTERN_2,
+	TEGRA_DC_DP_TRAINING_PATTERN_3,
+	TEGRA_DC_DP_TRAINING_PATTERN_D102,
+	TEGRA_DC_DP_TRAINING_PATTERN_SBLERRRATE,
+	TEGRA_DC_DP_TRAINING_PATTERN_PRBS7,
+	TEGRA_DC_DP_TRAINING_PATTERN_CSTM,
+	TEGRA_DC_DP_TRAINING_PATTERN_HBR2_COMPLIANCE,
+};
+
+struct tegra_dc_dp_training_pattern {
+	u8 dpcd_val;
+	u8 sor_reg_val;
+	bool scrambling;
+	bool chan_coding;
 };
 
 /*
@@ -148,6 +155,10 @@ struct tegra_dc_sor_data {
 	/* Table of link speeds supported by the source */
 	const struct tegra_dc_sor_link_speed *link_speeds;
 	unsigned int num_link_speeds;
+
+	/* Table of training pattern sequences for DP link training */
+	const struct tegra_dc_dp_training_pattern *training_patterns;
+	unsigned int num_training_patterns;
 
 	u8	clk_type;
 	u32  xbar_ctrl[5];

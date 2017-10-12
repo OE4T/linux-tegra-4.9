@@ -56,6 +56,63 @@ static const struct tegra_dc_sor_link_speed link_speed_table[] = {
 	},
 };
 
+static const struct tegra_dc_dp_training_pattern training_pattern_table[] = {
+	[TEGRA_DC_DP_TRAINING_PATTERN_DISABLE] = {
+		.chan_coding = true,
+		.scrambling = true,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_NONE,
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_NOPATTERN
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_1] = {
+		.chan_coding = true,
+		.scrambling = false,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP1,
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING1
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_2] = {
+		.chan_coding = true,
+		.scrambling = false,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP2,
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING2
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_3] = {
+		.chan_coding = true,
+		.scrambling = false,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP3,
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING3
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_D102] = {
+		.chan_coding = true,
+		.scrambling = false,
+		.dpcd_val = 0, /* unused */
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_D102
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_SBLERRRATE] = {
+		.chan_coding = true,
+		.scrambling = true,
+		.dpcd_val = 0, /* unused */
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_SBLERRRATE
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_PRBS7] = {
+		.chan_coding = false,
+		.scrambling = false,
+		.dpcd_val = 0, /* unused */
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_PRBS7
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_CSTM] = {
+		.chan_coding = false,
+		.scrambling = false,
+		.dpcd_val = 0, /* unused */
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_CSTM
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_HBR2_COMPLIANCE] = {
+		.chan_coding = true,
+		.scrambling = true,
+		.dpcd_val = 0, /* unused */
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_HBR2_COMPLIANCE
+	}
+};
+
 static struct of_device_id tegra_sor_pd[] = {
 	{ .compatible = "nvidia,tegra210-sor-pd", },
 	{ .compatible = "nvidia,tegra186-disa-pd", },
@@ -634,6 +691,9 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	sor->link_speeds = link_speed_table;
 	sor->num_link_speeds = ARRAY_SIZE(link_speed_table);
 
+	sor->training_patterns = training_pattern_table;
+	sor->num_training_patterns = ARRAY_SIZE(training_pattern_table);
+
 	if (!of_property_read_u32(sor_np, "nvidia,sor-ctrlnum", &temp)) {
 		sor->ctrl_num = (unsigned long)temp;
 	} else {
@@ -815,7 +875,6 @@ int tegra_dc_sor_set_power_state(struct tegra_dc_sor_data *sor, int pu_pd)
 	return 0;
 }
 
-
 void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 {
 	struct device *dev;
@@ -834,30 +893,22 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	devm_kfree(dev, sor);
 }
 
-void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 n_lanes)
+void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 total_lanes)
 {
-	u32 const tbl[][2] = {
-		/* ansi8b/10b encoded, scrambled */
-		{1, 1}, /* no pattern, training not in progress */
-		{1, 0}, /* training pattern 1 */
-		{1, 0}, /* training pattern 2 */
-		{1, 0}, /* training pattern 3 */
-		{1, 0}, /* D102 */
-		{1, 1}, /* SBLERRRATE */
-		{0, 0}, /* PRBS7 */
-		{0, 0}, /* CSTM */
-		{1, 1}, /* HBR2_COMPLIANCE */
-	};
-	u32 cnt;
-	u32 val = 0;
+	bool chan_coding = sor->training_patterns[tp].chan_coding;
+	bool scrambling = sor->training_patterns[tp].scrambling;
+	u32 tps_sor_val = sor->training_patterns[tp].sor_reg_val;
+	u32 val = 0; /* The value written to the reg gets constructed here */
+	unsigned int lane;
 
-	for (cnt = 0; cnt < n_lanes; cnt++) {
-		u32 tp_shift = NV_SOR_DP_TPG_LANE1_PATTERN_SHIFT * cnt;
-		val |= tp << tp_shift |
-			tbl[tp][0] << (tp_shift +
-			NV_SOR_DP_TPG_LANE0_CHANNELCODING_SHIFT) |
-			tbl[tp][1] << (tp_shift +
-			NV_SOR_DP_TPG_LANE0_SCRAMBLEREN_SHIFT);
+	for (lane = 0; lane < total_lanes; lane++) {
+		u32 tp_shift = NV_SOR_DP_TPG_LANE1_PATTERN_SHIFT * lane;
+
+		val |= tps_sor_val << tp_shift;
+		val |= chan_coding << (tp_shift +
+				       NV_SOR_DP_TPG_LANE0_CHANNELCODING_SHIFT);
+		val |= scrambling << (tp_shift +
+				      NV_SOR_DP_TPG_LANE0_SCRAMBLEREN_SHIFT);
 	}
 
 	tegra_sor_writel(sor, NV_SOR_DP_TPG, val);

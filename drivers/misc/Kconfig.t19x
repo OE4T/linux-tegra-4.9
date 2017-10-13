@@ -1,0 +1,6 @@
+config TEGRA_PCIE_EP_MEM
+	tristate "Client driver for Tegra PCIe end point"
+	depends on PCI
+	help
+	 Say Y if Tegra is working in PCIe-End Point mode and a client
+	 driver is required

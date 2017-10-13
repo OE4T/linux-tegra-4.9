@@ -662,7 +662,6 @@ static int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	int ret = 0, i;
 	struct tegra_csi_channel *csi_chan = NULL;
 	struct tegra_csi_device *csi = chan->vi->csi;
-	struct v4l2_ctrl *override_ctrl;
 
 	vi_channel_syncpt_init(chan);
 
@@ -702,19 +701,6 @@ static int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	chan->sequence = 0;
 	tegra_channel_init_ring_buffer(chan);
 
-	/* disable override for vi mode */
-	override_ctrl = v4l2_ctrl_find(
-		&chan->ctrl_handler, TEGRA_CAMERA_CID_OVERRIDE_ENABLE);
-	if (!chan->pg_mode) {
-		if (override_ctrl) {
-			ret = v4l2_ctrl_s_ctrl(override_ctrl, false);
-			if (ret < 0)
-				dev_err(&chan->video.dev,
-					"failed to disable override control\n");
-		} else
-			dev_err(&chan->video.dev,
-				"No override control\n");
-	}
 	/* Update clock and bandwidth based on the format */
 	tegra_channel_update_clknbw(chan, 1);
 

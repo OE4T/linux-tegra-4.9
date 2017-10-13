@@ -967,15 +967,9 @@ void xhci_stop_endpoint_command_watchdog(unsigned long arg)
 	xhci_dbg_trace(xhci, trace_xhci_dbg_cancel_urb,
 			"xHCI host controller is dead.");
 
-	spin_lock_irqsave(&xhci->lock, flags);
-	if (xhci->recovery_in_progress == false) {
-		xhci->recovery_in_progress = true;
-		if ((xhci_to_hcd(xhci)->driver) &&
-			(xhci_to_hcd(xhci))->driver->hcd_reinit)
-			xhci_to_hcd(xhci)->driver->hcd_reinit(
-			xhci_to_hcd(xhci));
-	}
-	spin_unlock_irqrestore(&xhci->lock, flags);
+	if ((xhci_to_hcd(xhci)->driver) &&
+		(xhci_to_hcd(xhci))->driver->hcd_reinit)
+		xhci_to_hcd(xhci)->driver->hcd_reinit(xhci_to_hcd(xhci));
 }
 
 
@@ -1313,7 +1307,10 @@ void xhci_handle_command_timeout(struct work_struct *work)
 			spin_unlock_irqrestore(&xhci->lock, flags);
 			usb_hc_died(xhci_to_hcd(xhci)->primary_hcd);
 			xhci_dbg(xhci, "xHCI host controller is dead.\n");
-
+			if ((xhci_to_hcd(xhci)->driver) &&
+				(xhci_to_hcd(xhci))->driver->hcd_reinit)
+				xhci_to_hcd(xhci)->driver->hcd_reinit(
+					xhci_to_hcd(xhci));
 			return;
 		}
 
@@ -2781,22 +2778,19 @@ irqreturn_t xhci_irq(struct usb_hcd *hcd)
 	}
 	if (status & (STS_FATAL | STS_HCE)) {
 
-		if (xhci->recovery_in_progress == false) {
-			xhci->recovery_in_progress = true;
-			if (status & STS_FATAL)
-				xhci_warn(xhci, "WARNING: Host System Error\n");
-			else if (status & STS_HCE)
-				xhci_warn(xhci,
-					"WARNING: Host Controller Error\n");
-			xhci_halt(xhci);
-			if ((xhci_to_hcd(xhci)->driver) &&
-					(xhci_to_hcd(xhci))->driver->hcd_reinit)
-				xhci_to_hcd(xhci)->driver->hcd_reinit(
-					xhci_to_hcd(xhci));
-			else
-				xhci_warn(xhci,
-				"Couldn't Recover From Failure\n");
-		}
+		if (status & STS_FATAL)
+			xhci_warn(xhci, "WARNING: Host System Error\n");
+		else if (status & STS_HCE)
+			xhci_warn(xhci,
+				"WARNING: Host Controller Error\n");
+		xhci_halt(xhci);
+		if ((xhci_to_hcd(xhci)->driver) &&
+				(xhci_to_hcd(xhci))->driver->hcd_reinit)
+			xhci_to_hcd(xhci)->driver->hcd_reinit(
+				xhci_to_hcd(xhci));
+		else
+			xhci_warn(xhci,
+			"Couldn't Recover From Failure\n");
 hw_died:
 		spin_unlock(&xhci->lock);
 		return IRQ_HANDLED;

@@ -2010,4 +2010,8 @@ static inline struct xhci_ring *xhci_urb_to_transfer_ring(struct xhci_hcd *xhci,
 					urb->stream_id);
 }
 
+#ifdef CONFIG_USB_OTG_WAKELOCK
+extern void otgwl_acquire_temp_lock(void);
+#endif
+
 #endif /* __LINUX_XHCI_HCD_H */

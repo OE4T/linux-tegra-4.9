@@ -1090,6 +1090,7 @@ static int tegra186_utmi_phy_init(struct phy *phy)
 	 * defined (-1)
 	 */
 	if (port->supply && port->port_cap == USB_HOST_CAP &&
+		!regulator_is_enabled(port->supply) &&
 		(!padctl->oc_pinctrl || port->oc_pin < 0)) {
 		rc = regulator_enable(port->supply);
 		if (rc) {
@@ -1127,7 +1128,9 @@ static int tegra186_utmi_phy_exit(struct phy *phy)
 
 	mutex_lock(&padctl->lock);
 
-	if (port->supply && port->port_cap == USB_HOST_CAP) {
+
+	if (port->supply && regulator_is_enabled(port->supply) &&
+		port->port_cap == USB_HOST_CAP) {
 		rc = regulator_disable(port->supply);
 		if (rc) {
 			dev_err(padctl->dev, "disable port %d vbus failed %d\n",

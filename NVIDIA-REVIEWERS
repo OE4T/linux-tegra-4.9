@@ -10,6 +10,7 @@ Descriptions of section entries (copied from MAINTAINERS):
 	P: Person (obsolete)
 	M: Mail patches to: FullName <address@domain>
 	L: Mailing list that is relevant to this area
+	B: NvBugs Module Name
 	W: Web-page with status/info
 	Q: Patchwork web based patch tracking system site
 	T: SCM tree type and location.  Type is one of: git, hg, quilt, stgit, topgit.
@@ -50,37 +51,56 @@ so much easier [Ed]
 
 Maintainers List (try to look for most precise areas first)
 
-		-----------------------------------
-DEVICE-TREE
-M:      Laxman Dewangan <ldewangan@nvidia.com>
-M:      Alexander Van Brunt <avanbrunt@nvidia.com>
-L:      sw-mobile-platform@exchange.nvidia.com
-S:      Supported
-F:      arch/arm64/boot/dts/
+----------------------------------------------------------------------
 
+DLA
+M:	Prashant Gaikwad <pgaikwad@nvidia.com>
+M:	Shridhar Rasal <srasal@nvidia.com>
+M:	Mitch Harwell <mharwell@nvidia.com>
+L:	SW-Mobile-DLA-Dev <SW-Mobile-DLA-Dev@exchange.nvidia.com>
+B:	Tegra-DLA
+S:	Supported
+F:	drivers/video/tegra/host/nvdla/
+
+HOST
+M:	Arto Merilainen <amerilainen@nvidia.com>
+M:	Mikko Perttunen <mperttunen@nvidia.com>
+L:	sw-mobile-host1x@exchange.nvidia.com
+B:	Mobile_Android_Kernel
+S:	Supported
+F:	drivers/video/tegra/host/
 
 MEMORY
-M:      Krishna Reddy <vdumpa@nvidia.com>
-M:      Pritesh Raithatha <praithatha@nvidia.com>
-M:      Sri Krishna Chowdary <schowdary@nvidia.com>
-L:      sw-mobile-memory@exchange.nvidia.com
-S:      Supported
-F:      drivers/iommu/
-F:      drivers/platform/tegra/mc/
-F:      include/dt-bindings/memory/
+M:	Sachin Nikam <snikam@nvidia.com>
+M:	Krishna Reddy <vdumpa@nvidia.com>
+M:	Pritesh Raithatha <praithatha@nvidia.com>
+M:	Puneet Saxena <puneets@nvidia.com>
+L:	sw-mobile-memory@exchange.nvidia.com
+B:	Mobile_Android_Kernel
+S:	Supported
+F:	drivers/iommu/
+F:	drivers/video/tegra/nvmap/
+F:	drivers/platform/tegra/mc/
+F:	include/dt-bindings/memory/
+F:	include/linux/nvmap_t19x.h
 
 PVA
+M:	Colin Tracey <ctracey@nvidia.com>
 M:	Arto Merilainen <amerilainen@nvidia.com>
 M:	Vinod Gopalakrishnakurup <vinodg@nvidia.com>
 L:	SW-Mobile-PVA-Dev@exchange.nvidia.com
+B:	PVA-SW
 S:	Supported
 F:	drivers/video/tegra/host/pva/
 F:	include/uapi/linux/nvhost_pva_ioctl.h
 F:	drivers/video/tegra/host/nvhost_minimal_pm/
 
-DLA
-M:	Shridhar Rasal <srasal@nvidia.com>
-M:	Prashant Gaikwad <pgaikwad@nvidia.com>
-L:	SW-Mobile-DLA-Dev <SW-Mobile-DLA-Dev@exchange.nvidia.com>
+RTCPU
+M:	Mika Liljeberg <mlijeberg@nvidia.com>
+M:	Pekka Pessi <ppessi@nvidia.com>
+M:	Aki Niemi<aniemi@nvidia.com>
+M:	Jihoon Bang <jbang@nvidia.com>
+L:	sw-mobile-camRTC@exchange.nvidia.com
+B:	Camera_Core
 S:	Supported
-F:	drivers/video/tegra/host/nvdla/
+F:	drivers/platform/tegra/rtcpu/

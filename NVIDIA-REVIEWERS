@@ -10,6 +10,7 @@ Descriptions of section entries (copied from MAINTAINERS):
 	P: Person (obsolete)
 	M: Mail patches to: FullName <address@domain>
 	L: Mailing list that is relevant to this area
+	B: NvBugs Module Name
 	W: Web-page with status/info
 	Q: Patchwork web based patch tracking system site
 	T: SCM tree type and location.  Type is one of: git, hg, quilt, stgit, topgit.
@@ -50,10 +51,16 @@ so much easier [Ed]
 
 Maintainers List (try to look for most precise areas first)
 
-		-----------------------------------
+----------------------------------------------------------------------
 GPU
-M:      Terje Bergstrom <tbergstrom@nvidia.com>
-L:      sw-mobile-nvgpu-core@exchange.nvidia.com
-S:      Supported
-F:      drivers/*
-F:      include/*
+M:	Vijayakumar Subbu <vsubbu@nvidia.com>
+M:	Terje Bergstrom <tbergstrom@nvidia.com>
+L:	sw-mobile-nvgpu-core@exchange.nvidia.com
+B:	Mobile_Android_Kernel <keyword = nvgpu-tegra>
+B:	Mobile_Linux_Kernel <keyword = nvgpu-tegra>
+B:	Embedded Resource Manager - Linux <keyword = nvgpu-tegra>
+S:	Supported
+F:	drivers/gpu/nvgpu/*
+F:	include/*
+F:	../../gpu-firmware-private/
+

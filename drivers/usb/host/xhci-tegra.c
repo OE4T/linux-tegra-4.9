@@ -942,11 +942,11 @@ static int fw_log_init(struct tegra_xusb *tegra)
 		return 0; /* already done */
 
 	/* allocate buffer to be shared between driver and firmware */
-	tegra->log.virt_addr = dma_alloc_writecombine(dev,
+	tegra->log.virt_addr = dma_alloc_coherent(dev,
 			FW_LOG_RING_SIZE, &tegra->log.phys_addr, GFP_KERNEL);
 
 	if (!tegra->log.virt_addr) {
-		dev_err(dev, "dma_alloc_writecombine() size %d failed\n",
+		dev_err(dev, "dma_alloc_coherent() size %d failed\n",
 				FW_LOG_RING_SIZE);
 		return -ENOMEM;
 	}
@@ -997,7 +997,7 @@ error_remove_debugfs_file:
 error_free_mem:
 	vfree(tegra->log.circ.buf);
 error_free_dma:
-	dma_free_writecombine(dev, FW_LOG_RING_SIZE,
+	dma_free_coherent(dev, FW_LOG_RING_SIZE,
 			tegra->log.virt_addr, tegra->log.phys_addr);
 	memset(&tegra->log, 0, sizeof(tegra->log));
 	return rc;
@@ -1016,7 +1016,7 @@ static void fw_log_deinit(struct tegra_xusb *tegra)
 		kthread_stop(tegra->log.thread);
 
 		mutex_lock(&tegra->log.mutex);
-		dma_free_writecombine(dev, FW_LOG_RING_SIZE,
+		dma_free_coherent(dev, FW_LOG_RING_SIZE,
 			tegra->log.virt_addr, tegra->log.phys_addr);
 		vfree(tegra->log.circ.buf);
 		tegra->log.circ.head = tegra->log.circ.tail = 0;

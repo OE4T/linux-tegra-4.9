@@ -41,6 +41,7 @@ struct nvgpu_clk_pll_debug_data;
 struct nvgpu_nvhost_dev;
 struct nvgpu_cpu_time_correlation_sample;
 struct nvgpu_mem_sgt;
+struct nvgpu_warpstate;
 
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>
@@ -308,7 +309,7 @@ struct gpu_ops {
 		int (*set_sm_debug_mode)(struct gk20a *g, struct channel_gk20a *ch,
 					u64 sms, bool enable);
 		void (*bpt_reg_info)(struct gk20a *g,
-				struct warpstate *w_state);
+				struct nvgpu_warpstate *w_state);
 		void (*get_access_map)(struct gk20a *g,
 				      u32 **whitelist, int *num_entries);
 		int (*handle_fecs_error)(struct gk20a *g,
@@ -407,7 +408,7 @@ struct gpu_ops {
 		void (*load_tpc_mask)(struct gk20a *g);
 		int (*inval_icache)(struct gk20a *g, struct channel_gk20a *ch);
 		int (*trigger_suspend)(struct gk20a *g);
-		int (*wait_for_pause)(struct gk20a *g, struct warpstate *w_state);
+		int (*wait_for_pause)(struct gk20a *g, struct nvgpu_warpstate *w_state);
 		int (*resume_from_pause)(struct gk20a *g);
 		int (*clear_sm_errors)(struct gk20a *g);
 		u32 (*tpc_enabled_exceptions)(struct gk20a *g);

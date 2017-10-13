@@ -429,14 +429,23 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 		struct nvgpu_gpu_wait_pause_args *args)
 {
 	int err;
-	struct warpstate *w_state;
-	u32 sm_count, size;
+	struct warpstate *ioctl_w_state;
+	struct nvgpu_warpstate *w_state = NULL;
+	u32 sm_count, ioctl_size, size, sm_id;
 
 	sm_count = g->gr.gpc_count * g->gr.tpc_count;
-	size = sm_count * sizeof(struct warpstate);
-	w_state = nvgpu_kzalloc(g, size);
-	if (!w_state)
+
+	ioctl_size = sm_count * sizeof(struct warpstate);
+	ioctl_w_state = nvgpu_kzalloc(g, ioctl_size);
+	if (!ioctl_w_state)
 		return -ENOMEM;
+
+	size = sm_count * sizeof(struct nvgpu_warpstate);
+	w_state = nvgpu_kzalloc(g, size);
+	if (!w_state) {
+		err = -ENOMEM;
+		goto out_free;
+	}
 
 	err = gk20a_busy(g);
 	if (err)
@@ -445,8 +454,23 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	g->ops.gr.wait_for_pause(g, w_state);
 
+	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
+		ioctl_w_state[sm_id].valid_warps[0] =
+			w_state[sm_id].valid_warps[0];
+		ioctl_w_state[sm_id].valid_warps[1] =
+			w_state[sm_id].valid_warps[1];
+		ioctl_w_state[sm_id].trapped_warps[0] =
+			w_state[sm_id].trapped_warps[0];
+		ioctl_w_state[sm_id].trapped_warps[1] =
+			w_state[sm_id].trapped_warps[1];
+		ioctl_w_state[sm_id].paused_warps[0] =
+			w_state[sm_id].paused_warps[0];
+		ioctl_w_state[sm_id].paused_warps[1] =
+			w_state[sm_id].paused_warps[1];
+	}
 	/* Copy to user space - pointed by "args->pwarpstate" */
-	if (copy_to_user((void __user *)(uintptr_t)args->pwarpstate, w_state, size)) {
+	if (copy_to_user((void __user *)(uintptr_t)args->pwarpstate,
+	    w_state, ioctl_size)) {
 		gk20a_dbg_fn("copy_to_user failed!");
 		err = -EFAULT;
 	}
@@ -457,6 +481,7 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 
 out_free:
 	nvgpu_kfree(g, w_state);
+	nvgpu_kfree(g, ioctl_w_state);
 
 	return err;
 }

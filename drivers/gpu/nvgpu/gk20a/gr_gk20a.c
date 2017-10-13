@@ -8488,7 +8488,7 @@ int gr_gk20a_trigger_suspend(struct gk20a *g)
 	return err;
 }
 
-int gr_gk20a_wait_for_pause(struct gk20a *g, struct warpstate *w_state)
+int gr_gk20a_wait_for_pause(struct gk20a *g, struct nvgpu_warpstate *w_state)
 {
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;

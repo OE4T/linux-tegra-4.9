@@ -51,6 +51,7 @@
 #define GK20A_TIMEOUT_FPGA		100000 /* 100 sec */
 
 struct channel_gk20a;
+struct nvgpu_warpstate;
 
 enum /* global_ctx_buffer */ {
 	CIRCULAR		= 0,
@@ -488,6 +489,12 @@ struct fecs_method_op_gk20a {
 
 };
 
+struct nvgpu_warpstate {
+	u64 valid_warps[2];
+	u64 trapped_warps[2];
+	u64 paused_warps[2];
+};
+
 struct gpu_ops;
 int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 					struct channel_gk20a *c);
@@ -718,7 +725,7 @@ void gk20a_gr_enable_gpc_exceptions(struct gk20a *g);
 void gk20a_gr_enable_exceptions(struct gk20a *g);
 int gr_gk20a_inval_icache(struct gk20a *g, struct channel_gk20a *ch);
 int gr_gk20a_trigger_suspend(struct gk20a *g);
-int gr_gk20a_wait_for_pause(struct gk20a *g, struct warpstate *w_state);
+int gr_gk20a_wait_for_pause(struct gk20a *g, struct nvgpu_warpstate *w_state);
 int gr_gk20a_resume_from_pause(struct gk20a *g);
 int gr_gk20a_clear_sm_errors(struct gk20a *g);
 u32 gr_gk20a_tpc_enabled_exceptions(struct gk20a *g);

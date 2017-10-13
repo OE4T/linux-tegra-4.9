@@ -1140,7 +1140,7 @@ void gr_gm20b_enable_cde_in_fecs(struct gk20a *g, struct nvgpu_mem *mem)
 	nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_ctl_o(), cde_v);
 }
 
-void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
+void gr_gm20b_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state)
 {
 	/* Check if we have at least one valid warp */
 	/* get paused state on maxwell */

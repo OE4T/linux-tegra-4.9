@@ -649,16 +649,16 @@ static u32 tegra_se_get_config(struct tegra_se_dev *se_dev,
 		if (encrypt) {
 			val = SE_CONFIG_ENC_ALG(ALG_AES_ENC);
 			if ((key_len / 2) == TEGRA_SE_KEY_256_SIZE)
-				val |= SE_CONFIG_ENC_MODE(MODE_XTS_KEY256);
+				val |= SE_CONFIG_ENC_MODE(MODE_KEY256);
 			else
-				val |= SE_CONFIG_ENC_MODE(MODE_XTS_KEY128);
+				val |= SE_CONFIG_ENC_MODE(MODE_KEY128);
 			val |= SE_CONFIG_DEC_ALG(ALG_NOP);
 		} else {
 			val = SE_CONFIG_DEC_ALG(ALG_AES_DEC);
 			if (key_len / 2 == TEGRA_SE_KEY_256_SIZE)
-				val |= SE_CONFIG_DEC_MODE(MODE_XTS_KEY256);
+				val |= SE_CONFIG_DEC_MODE(MODE_KEY256);
 			else
-				val |= SE_CONFIG_DEC_MODE(MODE_XTS_KEY128);
+				val |= SE_CONFIG_DEC_MODE(MODE_KEY128);
 			val |= SE_CONFIG_ENC_ALG(ALG_NOP);
 		}
 			val |= SE_CONFIG_DST(DST_MEMORY);

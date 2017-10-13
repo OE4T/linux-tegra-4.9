@@ -1,1 +1,2 @@
 obj-y += host/
+obj-y += endpoint/

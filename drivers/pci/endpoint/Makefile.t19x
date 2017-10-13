@@ -1,0 +1,1 @@
+obj-$(CONFIG_PCIE_TEGRA_DW_EP) += pcie-tegra-dw-ep.o

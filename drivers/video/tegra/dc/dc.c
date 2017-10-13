@@ -6109,14 +6109,15 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			"No default output specified.  Leaving output disabled.\n");
 	}
 	dc->mode_dirty = false; /* ignore changes tegra_dc_set_out has done */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	nvdisp_register_backlight_notifier(dc);
-#endif
 
 	if (!dc->out) {
 		ret = -EINVAL;
 		goto err_put_clk;
 	}
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	nvdisp_register_backlight_notifier(dc);
+#endif
 
 	/* For HDMI|DP, hotplug always supported
 	 * For eDP, hotplug is never supported

@@ -461,7 +461,6 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 			DC_DISP_SYNC_WIDTH);
 	if ((dc->out->type == TEGRA_DC_OUT_DP) ||
 		(dc->out->type == TEGRA_DC_OUT_FAKE_DP) ||
-		(dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
 		(dc->out->type == TEGRA_DC_OUT_NULL) ||
 		(dc->out->type == TEGRA_DC_OUT_LVDS)) {
 		tegra_dc_writel(dc, mode->h_back_porch |

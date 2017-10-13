@@ -28,7 +28,6 @@
 #include "dc_priv.h"
 #include "nvsd.h"
 #include "nvsd2.h"
-#include "nvsr.h"
 #include "vrr.h"
 
 static ssize_t mode_show(struct device *device,
@@ -505,7 +504,6 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
-	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
 
 	device_remove_file(dev, &dev_attr_mode);
 	device_remove_file(dev, &dev_attr_enable);
@@ -538,9 +536,6 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	tegra_sd_remove_sysfs(dev);
 #endif
 
-	if (nvsr)
-		nvsr_remove_sysfs(dev);
-
 	if (dc->fb)
 		tegra_fb_remove_sysfs(dev);
 
@@ -558,7 +553,6 @@ void tegra_dc_create_sysfs(struct device *dev)
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
-	struct tegra_dc_nvsr_data *nvsr = dc->nvsr;
 	struct tegra_vrr *vrr  = dc->out->vrr;
 	int error = 0;
 
@@ -593,9 +587,6 @@ void tegra_dc_create_sysfs(struct device *dev)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		error |= tegra_sd_create_sysfs(dev);
 #endif
-
-	if (nvsr)
-		error |= nvsr_create_sysfs(dev);
 
 	if (vrr)
 #ifdef CONFIG_TEGRA_VRR

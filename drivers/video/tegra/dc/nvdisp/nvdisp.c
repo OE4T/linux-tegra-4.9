@@ -1575,7 +1575,6 @@ static int tegra_nvdisp_set_control_t18x(struct tegra_dc *dc)
 		protocol = nvdisp_sor1_control_protocol_tmdsa_f();
 		use_sor = true;
 	} else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
-		   (dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
 		   (dc->out->type == TEGRA_DC_OUT_FAKE_DP)) {
 
 		/* sor in the function name is irrelevant */
@@ -2907,8 +2906,7 @@ static void tegra_nvdisp_enable_common_channel_intr(struct tegra_dc *dc)
 	 * FRAME_END in C_DISPLAY mode. Be consistent and check COMMON_ACT_REQ
 	 * in the same spot.
 	 */
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE ||
-		dc->out->flags & TEGRA_DC_OUT_NVSR_MODE) {
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
 		mutex_lock(&dc->lock);
 
 		set_bit(V_BLANK_IMP, &dc->vblank_ref_count);

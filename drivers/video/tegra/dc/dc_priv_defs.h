@@ -149,8 +149,6 @@ struct tegra_dc_shift_clk_div {
 	unsigned long div; /* denominator */
 };
 
-struct tegra_dc_nvsr_data;
-
 enum tegra_dc_cursor_size {
 	TEGRA_DC_CURSOR_SIZE_32X32 = 0,
 	TEGRA_DC_CURSOR_SIZE_64X64 = 1,
@@ -577,8 +575,6 @@ struct tegra_dc {
 	struct tegra_dc_win		tmp_wins[DC_N_WINDOWS];
 
 	struct tegra_edid		*edid;
-
-	struct tegra_dc_nvsr_data *nvsr;
 
 	bool	disp_active_dirty;
 

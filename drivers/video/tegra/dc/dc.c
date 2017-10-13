@@ -78,7 +78,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "nvsd.h"
 #include "nvsd2.h"
 #include "dpaux.h"
-#include "nvsr.h"
+#include "lvds.h"
 #include "dc_common.h"
 
 #include "edid.h"
@@ -3605,11 +3605,6 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	case TEGRA_DC_OUT_DP:
 		dc->out_ops = &tegra_dc_dp_ops;
 		break;
-#ifdef CONFIG_TEGRA_NVSR
-	case TEGRA_DC_OUT_NVSR_DP:
-		dc->out_ops = &tegra_dc_nvsr_ops;
-		break;
-#endif
 #endif
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
 	case TEGRA_DC_OUT_NULL:
@@ -4652,14 +4647,10 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 			msecs_to_jiffies(1));
 	}
 
-	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE ||
-		dc->out->flags & TEGRA_DC_OUT_NVSR_MODE)
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		tegra_dc_one_shot_irq(dc, status);
 	else
 		tegra_dc_continuous_irq(dc, status);
-
-	if (dc->nvsr)
-		tegra_dc_nvsr_irq(dc->nvsr, status);
 
 	/* Trace scanlines before mode change takes effect below */
 	if (status & V_BLANK_INT) {
@@ -5255,7 +5246,6 @@ static int _tegra_dc_set_default_videomode(struct tegra_dc *dc)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 			break;
 #endif
-		case TEGRA_DC_OUT_NVSR_DP:
 		case TEGRA_DC_OUT_FAKE_DP:
 		case TEGRA_DC_OUT_NULL:
 			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, 0);
@@ -6278,8 +6268,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
 		/* WAR: BL is putting DC in bad state for EDP configuration */
 		if (!tegra_platform_is_vdk() &&
-			(dc->out->type == TEGRA_DC_OUT_DP ||
-				dc->out->type == TEGRA_DC_OUT_NVSR_DP)) {
+			(dc->out->type == TEGRA_DC_OUT_DP)) {
 			tegra_disp_clk_prepare_enable(dc->clk);
 #if defined CONFIG_ARCH_TEGRA_210_SOC && !defined(CONFIG_TEGRA_NVDISPLAY)
 			dc->rst = of_reset_control_get(np, "dc_rst");

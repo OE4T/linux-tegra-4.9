@@ -810,7 +810,7 @@ struct tegra_dc_out {
 #define TEGRA_DC_OUT_INITIALIZED_MODE		(1 << 6)
 /* Makes hotplug GPIO a LP0 wakeup source */
 #define TEGRA_DC_OUT_HOTPLUG_WAKE_LP0		(1 << 7)
-#define TEGRA_DC_OUT_NVSR_MODE			(1 << 8)
+#define TEGRA_DC_OUT_NVSR_MODE          (1 << 8)
 
 #define TEGRA_DC_HDCP_POLICY_ALWAYS_ON	0
 #define TEGRA_DC_HDCP_POLICY_ON_DEMAND	1

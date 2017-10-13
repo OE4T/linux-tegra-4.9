@@ -90,7 +90,7 @@ int tegra_dc_ddc_enable(struct tegra_dc *dc, bool enabled);
 void tegra_dc_clk_enable(struct tegra_dc *dc);
 void tegra_dc_clk_disable(struct tegra_dc *dc);
 
-/* defined in dc.c, used in nvsd.c and dsi.c */
+/* defined in dc.c, used in dsi.c */
 void tegra_dc_get(struct tegra_dc *dc);
 void tegra_dc_put(struct tegra_dc *dc);
 

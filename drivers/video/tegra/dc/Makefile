@@ -58,7 +58,6 @@ obj-$(CONFIG_TEGRA_DP) += dp.o
 obj-$(CONFIG_TEGRA_DP) += dp_lt.o
 obj-$(CONFIG_TEGRA_DP) += dp_auto.o
 obj-$(CONFIG_TEGRA_DP) += hpd.o
-obj-$(CONFIG_TEGRA_NVSR) += nvsr.o
 obj-$(CONFIG_TEGRA_DC) += ext/
 obj-$(CONFIG_TEGRA_HDMI2_0) += hdmi2.0.o
 obj-$(CONFIG_TEGRA_HDMI2GMSL_MAX929x) += max929x_hdmi2gmsl.o

@@ -1404,7 +1404,6 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	if (out_type == TEGRA_DC_OUT_HDMI)
 		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_SINGLE_TMDS_A;
 	else if ((out_type == TEGRA_DC_OUT_DP) ||
-		(out_type == TEGRA_DC_OUT_NVSR_DP) ||
 		(out_type == TEGRA_DC_OUT_FAKE_DP))
 		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_DP_A;
 	else
@@ -1496,10 +1495,7 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 	}
 
 	/* Enable DC */
-	if (dc->out->flags & TEGRA_DC_OUT_NVSR_MODE) {
-		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
-			DC_CMD_DISPLAY_COMMAND);
-	} else if (dc->out->vrr) {
+	if (dc->out->vrr) {
 		if (tegra_dc_is_nvdisplay())
 			tegra_nvdisp_set_vrr_mode(dc);
 	}

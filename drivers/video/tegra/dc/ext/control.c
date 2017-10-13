@@ -95,7 +95,6 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 		properties->type = TEGRA_DC_EXT_LVDS;
 		break;
 	case TEGRA_DC_OUT_DP:
-	case TEGRA_DC_OUT_NVSR_DP:
 	case TEGRA_DC_OUT_FAKE_DP:
 		properties->type = tegra_dc_is_ext_dp_panel(dc) ?
 					TEGRA_DC_EXT_DP : TEGRA_DC_EXT_EDP;

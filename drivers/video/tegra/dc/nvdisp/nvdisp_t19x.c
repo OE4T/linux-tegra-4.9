@@ -138,7 +138,6 @@ int tegra_nvdisp_set_control_t19x(struct tegra_dc *dc)
 		/* sor in the function name is irrelevant */
 		protocol = nvdisp_t19x_sor_control_protocol_tmdsa_f();
 	} else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
-		   (dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
 		   (dc->out->type == TEGRA_DC_OUT_FAKE_DP)) {
 
 		/* sor in the function name is irrelevant */

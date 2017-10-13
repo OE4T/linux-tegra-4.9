@@ -44,6 +44,7 @@ struct gk20a;
 struct zbc_entry;
 struct zbc_query_params;
 struct channel_ctx_gk20a;
+struct nvgpu_warpstate;
 
 enum {
 	VOLTA_CHANNEL_GPFIFO_A  = 0xC36F,
@@ -158,7 +159,7 @@ int gr_gv11b_init_fs_state(struct gk20a *g);
 void gv11b_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
 				u32 *esr_sm_sel);
 int gv11b_gr_sm_trigger_suspend(struct gk20a *g);
-void gv11b_gr_bpt_reg_info(struct gk20a *g, struct warpstate *w_state);
+void gv11b_gr_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state);
 int gv11b_gr_update_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id,
 		struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state);

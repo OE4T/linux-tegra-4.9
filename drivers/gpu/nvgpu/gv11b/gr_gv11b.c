@@ -2504,7 +2504,7 @@ int gv11b_gr_sm_trigger_suspend(struct gk20a *g)
 	return 0;
 }
 
-void gv11b_gr_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
+void gv11b_gr_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state)
 {
 	/* Check if we have at least one valid warp
 	 * get paused state on maxwell

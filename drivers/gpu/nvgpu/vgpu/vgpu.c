@@ -416,11 +416,6 @@ int vgpu_get_timestamps_zipper(struct gk20a *g,
 		return -EINVAL;
 	}
 
-	if (source_id != NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC) {
-		nvgpu_err(g, "source_id %u not supported", source_id);
-		return -EINVAL;
-	}
-
 	msg.cmd = TEGRA_VGPU_CMD_GET_TIMESTAMPS_ZIPPER;
 	msg.handle = vgpu_get_handle(g);
 	p->source_id = TEGRA_VGPU_GET_TIMESTAMPS_ZIPPER_SRC_ID_TSC;

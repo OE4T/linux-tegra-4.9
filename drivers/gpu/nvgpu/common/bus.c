@@ -31,11 +31,6 @@ int nvgpu_get_timestamps_zipper(struct gk20a *g,
 	int err = 0;
 	unsigned int i = 0;
 
-	if (source_id != NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC) {
-		nvgpu_err(g, "source_id %u not supported", source_id);
-		return -EINVAL;
-	}
-
 	if (gk20a_busy(g)) {
 		nvgpu_err(g, "GPU not powered on\n");
 		err = -EINVAL;

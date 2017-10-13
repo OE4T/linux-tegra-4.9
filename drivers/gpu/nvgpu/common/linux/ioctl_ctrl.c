@@ -558,7 +558,8 @@ static int nvgpu_gpu_get_cpu_time_correlation_info(
 	int err;
 	u32 i;
 
-	if (args->count > NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_MAX_COUNT)
+	if (args->count > NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_MAX_COUNT ||
+	    args->source_id != NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC)
 		return -EINVAL;
 
 	samples = nvgpu_kzalloc(g, args->count *

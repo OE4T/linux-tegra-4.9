@@ -36,5 +36,5 @@ int vgpu_css_detach(struct channel_gk20a *ch,
 		struct gk20a_cs_snapshot_client *cs_client);
 int vgpu_css_enable_snapshot_buffer(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *cs_client);
-
+u32 vgpu_css_get_buffer_size(struct gk20a *g);
 #endif

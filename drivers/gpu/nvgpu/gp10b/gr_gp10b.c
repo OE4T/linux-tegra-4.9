@@ -1615,18 +1615,6 @@ int gr_gp10b_init_fs_state(struct gk20a *g)
 	return gr_gm20b_init_fs_state(g);
 }
 
-void gr_gp10b_init_cyclestats(struct gk20a *g)
-{
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
-#else
-	(void)g;
-#endif
-}
-
 void gr_gp10b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 	nvgpu_tegra_fuse_write_bypass(g, 0x1);

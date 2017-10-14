@@ -1130,6 +1130,7 @@ void gr_gm20b_init_cyclestats(struct gk20a *g)
 		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
 	g->gpu_characteristics.flags |=
 		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
+	g->gpu_characteristics.max_css_buffer_size = 0xffffffff;
 #else
 	(void)g;
 #endif

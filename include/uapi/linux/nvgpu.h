@@ -245,7 +245,9 @@ struct nvgpu_gpu_characteristics {
 	__u32 reserved1;
 
 	__s16 event_ioctl_nr_last;
-	__u16 pad[3];
+	__u16 pad;
+
+	__u32 max_css_buffer_size;
 
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always

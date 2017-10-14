@@ -21,7 +21,21 @@
  */
 
 #include "gk20a/gk20a.h"
+#include "gk20a/css_gr_gk20a.h"
+#include "vgpu/css_vgpu.h"
 #include "vgpu_gr_gm20b.h"
+
+void vgpu_gr_gm20b_init_cyclestats(struct gk20a *g)
+{
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
+	g->gpu_characteristics.max_css_buffer_size =
+						vgpu_css_get_buffer_size(g);
+#endif
+}
 
 int vgpu_gm20b_init_fs_state(struct gk20a *g)
 {

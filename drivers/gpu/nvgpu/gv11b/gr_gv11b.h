@@ -124,7 +124,6 @@ int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 					     struct channel_ctx_gk20a *ch_ctx,
 					     u64 addr, bool patch);
-void gr_gv11b_init_cyclestats(struct gk20a *g);
 void gr_gv11b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index);
 void gr_gv11b_get_access_map(struct gk20a *g,
 				   u32 **whitelist, int *num_entries);

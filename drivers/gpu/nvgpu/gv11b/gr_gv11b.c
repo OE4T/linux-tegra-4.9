@@ -1684,19 +1684,6 @@ void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 		gr_gpcs_tpcs_tex_rm_cb_1_valid_true_f(), patch);
 }
 
-
-void gr_gv11b_init_cyclestats(struct gk20a *g)
-{
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
-#else
-	(void)g;
-#endif
-}
-
 void gr_gv11b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)

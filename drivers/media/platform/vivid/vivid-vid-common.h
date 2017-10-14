@@ -20,6 +20,8 @@
 #ifndef _VIVID_VID_COMMON_H_
 #define _VIVID_VID_COMMON_H_
 
+#include "vivid-trace.h"
+
 typedef int (*fmtfunc)(struct file *file, void *priv, struct v4l2_format *f);
 
 /*

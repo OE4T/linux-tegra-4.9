@@ -307,6 +307,10 @@ static int vivid_copy_buffer(struct vivid_dev *dev, unsigned p, u8 *vcapbuf,
 		return 0;
 	}
 
+	vivid_trace_dual_msg(dev->v4l2_dev.name, "capture",
+		vid_cap_buf->vb.vb2_buf.index, "output",
+		vid_out_buf->vb.vb2_buf.index);
+
 	if (p < dev->fmt_out->buffers)
 		voutbuf += vid_out_buf->vb.vb2_buf.planes[p].data_offset;
 	voutbuf += tpg_hdiv(tpg, p, dev->loop_vid_out.left) +
@@ -506,9 +510,13 @@ static void vivid_fillbuff(struct vivid_dev *dev, struct vivid_buffer *buf)
 
 		tpg_calc_text_basep(tpg, basep, p, vbuf);
 		if (!is_loop || vivid_copy_buffer(dev, p, vbuf, buf)) {
-			if (!dev->fmt_cap->is_metadata[p])
+			if (!dev->fmt_cap->is_metadata[p]) {
 				tpg_fill_plane_buffer(tpg, vivid_get_std_cap(dev),
 					p, vbuf);
+				vivid_trace_single_msg(dev->v4l2_dev.name,
+					"fillbuf-cap-noloop",
+					buf->vb.vb2_buf.index);
+			}
 		}
 	}
 	dev->must_blank[buf->vb.vb2_buf.index] = false;
@@ -859,6 +867,8 @@ static int vivid_thread_vid_cap(void *data)
 
 		wait_jiffies = next_jiffies_since_start - jiffies_since_start;
 		schedule_timeout_interruptible(wait_jiffies ? wait_jiffies : 1);
+		vivid_trace_double_index(dev->v4l2_dev.name, "capture",
+			wait_jiffies, next_jiffies_since_start);
 	}
 	dprintk(dev, 1, "Video Capture Thread End\n");
 	return 0;

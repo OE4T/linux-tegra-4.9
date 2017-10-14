@@ -164,6 +164,8 @@ static void vid_out_buf_queue(struct vb2_buffer *vb)
 	spin_lock(&dev->slock);
 	list_add_tail(&buf->list, &dev->vid_out_active);
 	spin_unlock(&dev->slock);
+	vivid_trace_single_msg(dev->v4l2_dev.name,
+		"buf_queue_output", vb->index);
 }
 
 static int vid_out_start_streaming(struct vb2_queue *vq, unsigned count)

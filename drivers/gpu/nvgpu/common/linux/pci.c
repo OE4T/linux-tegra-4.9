@@ -32,6 +32,9 @@
 #include "os_linux.h"
 
 #include "pci.h"
+#ifdef CONFIG_TEGRA_19x_GPU
+#include <nvgpu/linux/pci_t19x.h>
+#endif
 
 #include "os_linux.h"
 
@@ -365,6 +368,10 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 		err = PTR_ERR(l->bar1);
 		goto fail;
 	}
+
+#ifdef CONFIG_TEGRA_19x_GPU
+	t19x_nvgpu_pci_init_support(l);
+#endif
 
 	return 0;
 

@@ -101,6 +101,8 @@ static void vivid_thread_vid_out_tick(struct vivid_dev *dev)
 				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 		dprintk(dev, 2, "vid_out buffer %d done\n",
 			vid_out_buf->vb.vb2_buf.index);
+		vivid_trace_single_msg(dev->v4l2_dev.name, "buf_dequeue_output",
+			vid_out_buf->vb.vb2_buf.index);
 	}
 
 	if (vbi_out_buf) {
@@ -212,6 +214,8 @@ static int vivid_thread_vid_out(void *data)
 
 		wait_jiffies = next_jiffies_since_start - jiffies_since_start;
 		schedule_timeout_interruptible(wait_jiffies ? wait_jiffies : 1);
+		vivid_trace_double_index(dev->v4l2_dev.name, "output",
+			wait_jiffies, next_jiffies_since_start);
 	}
 	dprintk(dev, 1, "Video Output Thread End\n");
 	return 0;

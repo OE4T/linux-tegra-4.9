@@ -244,6 +244,9 @@ static void vid_cap_buf_finish(struct vb2_buffer *vb)
 		}
 	}
 
+	vivid_trace_single_msg(dev->v4l2_dev.name,
+		"buf_dequeue_capture", vb->index);
+
 	if (!vivid_is_sdtv_cap(dev))
 		return;
 
@@ -273,6 +276,8 @@ static void vid_cap_buf_queue(struct vb2_buffer *vb)
 	spin_lock(&dev->slock);
 	list_add_tail(&buf->list, &dev->vid_cap_active);
 	spin_unlock(&dev->slock);
+	vivid_trace_single_msg(dev->v4l2_dev.name,
+		"buf_queue_capture", vb->index);
 }
 
 static int vid_cap_start_streaming(struct vb2_queue *vq, unsigned count)

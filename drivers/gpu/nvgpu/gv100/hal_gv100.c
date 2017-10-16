@@ -78,7 +78,7 @@
 
 #include "gv11b/dbg_gpu_gv11b.h"
 #include "gv11b/hal_gv11b.h"
-#include "gv11b/gr_gv11b.h"
+#include "gv100/gr_gv100.h"
 #include "gv11b/mc_gv11b.h"
 #include "gv11b/ltc_gv11b.h"
 #include "gv11b/gv11b.h"
@@ -263,8 +263,8 @@ static const struct gpu_ops gv100_ops = {
 	},
 	.gr = {
 		.init_gpc_mmu = gr_gv11b_init_gpc_mmu,
-		.bundle_cb_defaults = gr_gv11b_bundle_cb_defaults,
-		.cb_size_default = gr_gv11b_cb_size_default,
+		.bundle_cb_defaults = gr_gv100_bundle_cb_defaults,
+		.cb_size_default = gr_gv100_cb_size_default,
 		.calc_global_ctx_buffer_size =
 			gr_gv11b_calc_global_ctx_buffer_size,
 		.commit_global_attrib_cb = gr_gv11b_commit_global_attrib_cb,
@@ -285,7 +285,7 @@ static const struct gpu_ops gv100_ops = {
 		.set_hww_esr_report_mask = gv11b_gr_set_hww_esr_report_mask,
 		.falcon_load_ucode = gr_gm20b_load_ctxsw_ucode_segments,
 		.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode,
-		.set_gpc_tpc_mask = gr_gv11b_set_gpc_tpc_mask,
+		.set_gpc_tpc_mask = gr_gv100_set_gpc_tpc_mask,
 		.get_gpc_tpc_mask = gr_gm20b_get_gpc_tpc_mask,
 		.free_channel_ctx = gk20a_free_channel_ctx,
 		.alloc_obj_ctx = gk20a_alloc_obj_ctx,
@@ -335,7 +335,7 @@ static const struct gpu_ops gv100_ops = {
 		.resume_contexts = gr_gk20a_resume_contexts,
 		.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags,
 		.fuse_override = gp10b_gr_fuse_override,
-		.init_sm_id_table = gr_gv11b_init_sm_id_table,
+		.init_sm_id_table = gr_gv100_init_sm_id_table,
 		.load_smid_config = gr_gv11b_load_smid_config,
 		.program_sm_id_numbering = gr_gv11b_program_sm_id_numbering,
 		.is_ltcs_ltss_addr = gr_gm20b_is_ltcs_ltss_addr,

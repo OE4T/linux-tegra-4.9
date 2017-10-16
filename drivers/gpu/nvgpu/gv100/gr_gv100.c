@@ -1,0 +1,289 @@
+/*
+ * GV100 GPU GR
+ *
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
+
+#include <nvgpu/log.h>
+#include <nvgpu/debug.h>
+#include <nvgpu/enabled.h>
+
+#include "gk20a/gk20a.h"
+#include "gk20a/gr_gk20a.h"
+
+#include "gv100/gr_gv100.h"
+#include "gv11b/subctx_gv11b.h"
+
+#include <nvgpu/hw/gv100/hw_gr_gv100.h>
+#include <nvgpu/hw/gv100/hw_proj_gv100.h>
+
+/*
+ *  Estimate performance if the given logical TPC in the given logical GPC were
+ * removed.
+ */
+static int gr_gv100_scg_estimate_perf(struct gk20a *g,
+					unsigned long *gpc_tpc_mask,
+					u32 disable_gpc_id, u32 disable_tpc_id,
+					int *perf)
+{
+	struct gr_gk20a *gr = &g->gr;
+	int err = 0;
+	u32 scale_factor = 512UL; /* Use fx23.9 */
+	u32 pix_scale = 1024*1024UL;	/* Pix perf in [29:20] */
+	u32 world_scale = 1024UL;	/* World performance in [19:10] */
+	u32 tpc_scale = 1;		/* TPC balancing in [9:0] */
+	u32 scg_num_pes = 0;
+	u32 min_scg_gpc_pix_perf = scale_factor; /* Init perf as maximum */
+	u32 average_tpcs = 0;		/* Average of # of TPCs per GPC */
+	u32 deviation;			/* absolute diff between TPC# and
+					 * average_tpcs, averaged across GPCs
+					 */
+	u32 norm_tpc_deviation;		/* deviation/max_tpc_per_gpc */
+	u32 tpc_balance;
+	u32 scg_gpc_pix_perf;
+	u32 scg_world_perf;
+	u32 gpc_id;
+	u32 pes_id;
+	int diff;
+	bool is_tpc_removed_gpc = false;
+	bool is_tpc_removed_pes = false;
+	u32 max_tpc_gpc = 0;
+	u32 num_tpc_mask;
+	u32 *num_tpc_gpc = nvgpu_kzalloc(g, sizeof(u32) *
+				nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS));
+
+	if (!num_tpc_gpc)
+		return -ENOMEM;
+
+	/* Calculate pix-perf-reduction-rate per GPC and find bottleneck TPC */
+	for (gpc_id = 0; gpc_id < gr->gpc_count; gpc_id++) {
+		num_tpc_mask = gpc_tpc_mask[gpc_id];
+
+		if ((gpc_id == disable_gpc_id) && num_tpc_mask &
+						(0x1 << disable_tpc_id)) {
+			/* Safety check if a TPC is removed twice */
+			if (is_tpc_removed_gpc) {
+				err = -EINVAL;
+				goto free_resources;
+			}
+			/* Remove logical TPC from set */
+			num_tpc_mask &= ~(0x1 << disable_tpc_id);
+			is_tpc_removed_gpc = true;
+		}
+
+		/* track balancing of tpcs across gpcs */
+		num_tpc_gpc[gpc_id] = hweight32(num_tpc_mask);
+		average_tpcs += num_tpc_gpc[gpc_id];
+
+		/* save the maximum numer of gpcs */
+		max_tpc_gpc = num_tpc_gpc[gpc_id] > max_tpc_gpc ?
+				num_tpc_gpc[gpc_id] : max_tpc_gpc;
+
+		/*
+		 * Calculate ratio between TPC count and post-FS and post-SCG
+		 *
+		 * ratio represents relative throughput of the GPC
+		 */
+		scg_gpc_pix_perf = scale_factor * num_tpc_gpc[gpc_id] /
+					gr->gpc_tpc_count[gpc_id];
+
+		if (min_scg_gpc_pix_perf > scg_gpc_pix_perf)
+			min_scg_gpc_pix_perf = scg_gpc_pix_perf;
+
+		/* Calculate # of surviving PES */
+		for (pes_id = 0; pes_id < gr->gpc_ppc_count[gpc_id]; pes_id++) {
+			/* Count the number of TPC on the set */
+			num_tpc_mask = gr->pes_tpc_mask[pes_id][gpc_id] &
+					gpc_tpc_mask[gpc_id];
+
+			if ((gpc_id == disable_gpc_id) && (num_tpc_mask &
+				(0x1 << disable_tpc_id))) {
+
+				if (is_tpc_removed_pes) {
+					err = -EINVAL;
+					goto free_resources;
+				}
+				num_tpc_mask &= ~(0x1 << disable_tpc_id);
+				is_tpc_removed_pes = true;
+			}
+			if (hweight32(num_tpc_mask))
+				scg_num_pes++;
+		}
+	}
+
+	if (!is_tpc_removed_gpc || !is_tpc_removed_pes) {
+		err = -EINVAL;
+		goto free_resources;
+	}
+
+	if (max_tpc_gpc == 0) {
+		*perf = 0;
+		goto free_resources;
+	}
+
+	/* Now calculate perf */
+	scg_world_perf = (scale_factor * scg_num_pes) / gr->ppc_count;
+	deviation = 0;
+	average_tpcs = scale_factor * average_tpcs / gr->gpc_count;
+	for (gpc_id =0; gpc_id < gr->gpc_count; gpc_id++) {
+		diff = average_tpcs - scale_factor * num_tpc_gpc[gpc_id];
+		if (diff < 0)
+			diff = -diff;
+		deviation += diff;
+	}
+
+	deviation /= gr->gpc_count;
+
+	norm_tpc_deviation = deviation / max_tpc_gpc;
+
+	tpc_balance = scale_factor - norm_tpc_deviation;
+
+	if ((tpc_balance > scale_factor)          ||
+	    (scg_world_perf > scale_factor)       ||
+	    (min_scg_gpc_pix_perf > scale_factor) ||
+	    (norm_tpc_deviation > scale_factor)) {
+		err = -EINVAL;
+		goto free_resources;
+	}
+
+	*perf = (pix_scale * min_scg_gpc_pix_perf) +
+		(world_scale * scg_world_perf) +
+		(tpc_scale * tpc_balance);
+free_resources:
+	nvgpu_kfree(g, num_tpc_gpc);
+	return err;
+}
+
+void gr_gv100_bundle_cb_defaults(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	gr->bundle_cb_default_size =
+		gr_scc_bundle_cb_size_div_256b__prod_v();
+	gr->min_gpm_fifo_depth =
+		gr_pd_ab_dist_cfg2_state_limit_min_gpm_fifo_depths_v();
+	gr->bundle_cb_token_limit =
+		gr_pd_ab_dist_cfg2_token_limit_init_v();
+}
+
+void gr_gv100_cb_size_default(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	if (!gr->attrib_cb_default_size)
+		gr->attrib_cb_default_size =
+			gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v();
+	gr->alpha_cb_default_size =
+		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
+}
+
+void gr_gv100_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
+{
+}
+
+void gr_gv100_init_sm_id_table(struct gk20a *g)
+{
+	u32 gpc, tpc, sm, pes, gtpc;
+	u32 sm_id = 0;
+	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
+	u32 num_sm = sm_per_tpc * g->gr.tpc_count;
+	int perf, maxperf;
+	int err;
+	unsigned long *gpc_tpc_mask;
+	u32 *tpc_table, *gpc_table;
+
+	gpc_table = nvgpu_kzalloc(g, g->gr.tpc_count * sizeof(u32));
+	tpc_table = nvgpu_kzalloc(g, g->gr.tpc_count * sizeof(u32));
+	gpc_tpc_mask = nvgpu_kzalloc(g, sizeof(unsigned long) *
+			nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS));
+
+	if (!gpc_table || !tpc_table || !gpc_tpc_mask) {
+		nvgpu_err(g, "Error allocating memory for sm tables");
+		goto exit_build_table;
+	}
+
+	for (gpc = 0; gpc < g->gr.gpc_count; gpc++)
+		for (pes = 0; pes < g->gr.gpc_ppc_count[gpc]; pes++)
+			gpc_tpc_mask[gpc] |= g->gr.pes_tpc_mask[pes][gpc];
+
+	for (gtpc = 0; gtpc < g->gr.tpc_count; gtpc++) {
+		maxperf = -1;
+		for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
+			for_each_set_bit(tpc, &gpc_tpc_mask[gpc],
+						g->gr.gpc_tpc_count[gpc]) {
+				perf = -1;
+				err = gr_gv100_scg_estimate_perf(g,
+						gpc_tpc_mask, gpc, tpc, &perf);
+
+				if (err) {
+					nvgpu_err(g,
+						"Error while estimating perf");
+					goto exit_build_table;
+				}
+
+				if (perf >= maxperf) {
+					maxperf = perf;
+					gpc_table[gtpc] = gpc;
+					tpc_table[gtpc] = tpc;
+				}
+			}
+		}
+		gpc_tpc_mask[gpc_table[gtpc]] &= ~(0x1 << tpc_table[gtpc]);
+	}
+
+	for (tpc = 0, sm_id = 0;  sm_id < num_sm; tpc++, sm_id += sm_per_tpc) {
+		for (sm = 0; sm < sm_per_tpc; sm++) {
+			g->gr.sm_to_cluster[sm_id + sm].gpc_index =
+								gpc_table[tpc];
+			g->gr.sm_to_cluster[sm_id + sm].tpc_index =
+								tpc_table[tpc];
+			g->gr.sm_to_cluster[sm_id + sm].sm_index = sm;
+			g->gr.sm_to_cluster[sm_id + sm].global_tpc_index = tpc;
+		}
+	}
+
+	g->gr.no_of_sm = num_sm;
+	nvgpu_log_info(g, " total number of sm = %d", g->gr.no_of_sm);
+exit_build_table:
+	nvgpu_kfree(g, gpc_table);
+	nvgpu_kfree(g, tpc_table);
+	nvgpu_kfree(g, gpc_tpc_mask);
+}
+
+void gr_gv100_load_tpc_mask(struct gk20a *g)
+{
+	u64 pes_tpc_mask = 0x0ULL;
+	u32 gpc, pes;
+	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g,
+				GPU_LIT_NUM_TPC_PER_GPC);
+
+	/* gv100 has 6 GPC and 7 TPC/GPC */
+	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
+		for (pes = 0; pes < g->gr.pe_count_per_gpc; pes++) {
+			pes_tpc_mask |= (u64) g->gr.pes_tpc_mask[pes][gpc] <<
+				(num_tpc_per_gpc * gpc);
+		}
+	}
+
+	nvgpu_log_info(g, "pes_tpc_mask: %016llx\n", pes_tpc_mask);
+	gk20a_writel(g, gr_fe_tpc_fs_r(0), u64_lo32(pes_tpc_mask));
+	gk20a_writel(g, gr_fe_tpc_fs_r(1), u64_hi32(pes_tpc_mask));
+}

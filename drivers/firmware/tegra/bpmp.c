@@ -24,7 +24,6 @@
 #include <linux/tegra-ivc.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
-#include <soc/tegra/tegra_pasr.h>
 #include <soc/tegra/tegra_powergate.h>
 #include "bpmp.h"
 
@@ -221,9 +220,6 @@ static int bpmp_clk_init(struct platform_device *pdev)
 	}
 
 	clk_prepare_enable(sclk);
-
-	if (tegra21_pasr_init(&pdev->dev))
-		dev_err(&pdev->dev, "PASR init failed\n");
 
 	return 0;
 }

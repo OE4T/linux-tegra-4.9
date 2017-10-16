@@ -545,11 +545,11 @@ static void gv11b_reset_eng_faulted_tsg(struct tsg_gk20a *tsg)
 	struct gk20a *g = tsg->g;
 	struct channel_gk20a *ch;
 
-	down_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 		gv11b_reset_eng_faulted_ch(g, ch->chid);
 	}
-	up_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 }
 
 static void gv11b_reset_pbdma_faulted_ch(struct gk20a *g, u32 chid)
@@ -566,11 +566,11 @@ static void gv11b_reset_pbdma_faulted_tsg(struct tsg_gk20a *tsg)
 	struct gk20a *g = tsg->g;
 	struct channel_gk20a *ch;
 
-	down_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 		gv11b_reset_pbdma_faulted_ch(g, ch->chid);
 	}
-	up_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 }
 
 void gv11b_fifo_reset_pbdma_and_eng_faulted(struct gk20a *g,
@@ -799,11 +799,11 @@ int gv11b_fifo_enable_tsg(struct tsg_gk20a *tsg)
 	struct gk20a *g = tsg->g;
 	struct channel_gk20a *ch;
 
-	down_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		g->ops.fifo.enable_channel(ch);
 	}
-	up_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 
 	return 0;
 }

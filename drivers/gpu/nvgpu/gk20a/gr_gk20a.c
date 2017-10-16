@@ -5091,7 +5091,7 @@ static void gk20a_gr_set_error_notifier(struct gk20a *g,
 
 		if (gk20a_is_channel_marked_as_tsg(ch)) {
 			tsg = &g->fifo.tsg[ch->tsgid];
-			down_read(&tsg->ch_list_lock);
+			nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 			list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
 				if (gk20a_channel_get(ch_tsg)) {
 					gk20a_set_error_notifier(ch_tsg,
@@ -5099,7 +5099,7 @@ static void gk20a_gr_set_error_notifier(struct gk20a *g,
 					gk20a_channel_put(ch_tsg);
 				}
 			}
-			up_read(&tsg->ch_list_lock);
+			nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 		} else {
 			gk20a_set_error_notifier(ch, error_notifier);
 		}

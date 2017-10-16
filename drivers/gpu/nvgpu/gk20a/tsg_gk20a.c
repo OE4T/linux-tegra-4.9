@@ -44,7 +44,7 @@ int gk20a_enable_tsg(struct tsg_gk20a *tsg)
 	 * we first need to enable all channels with NEXT and CTX_RELOAD set,
 	 * and then rest of the channels should be enabled
 	 */
-	down_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		is_next = gk20a_fifo_channel_status_is_next(g, ch->chid);
 		is_ctx_reload = gk20a_fifo_channel_status_is_ctx_reload(g, ch->chid);
@@ -62,7 +62,7 @@ int gk20a_enable_tsg(struct tsg_gk20a *tsg)
 
 		g->ops.fifo.enable_channel(ch);
 	}
-	up_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 
 	gk20a_fifo_enable_tsg_sched(g, tsg);
 
@@ -74,11 +74,11 @@ int gk20a_disable_tsg(struct tsg_gk20a *tsg)
 	struct gk20a *g = tsg->g;
 	struct channel_gk20a *ch;
 
-	down_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		g->ops.fifo.disable_channel(ch);
 	}
-	up_read(&tsg->ch_list_lock);
+	nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 
 	return 0;
 }
@@ -130,9 +130,9 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 		return -EINVAL;
 	}
 
-	down_write(&tsg->ch_list_lock);
+	nvgpu_rwsem_down_write(&tsg->ch_list_lock);
 	nvgpu_list_add_tail(&ch->ch_entry, &tsg->ch_list);
-	up_write(&tsg->ch_list_lock);
+	nvgpu_rwsem_up_write(&tsg->ch_list_lock);
 
 	nvgpu_ref_get(&tsg->refcount);
 
@@ -158,9 +158,9 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 		/* If channel unbind fails, channel is still part of runlist */
 		channel_gk20a_update_runlist(ch, false);
 
-		down_write(&tsg->ch_list_lock);
+		nvgpu_rwsem_down_write(&tsg->ch_list_lock);
 		nvgpu_list_del(&ch->ch_entry);
-		up_write(&tsg->ch_list_lock);
+		nvgpu_rwsem_up_write(&tsg->ch_list_lock);
 	}
 
 	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
@@ -186,7 +186,7 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 	tsg->tsgid = tsgid;
 
 	nvgpu_init_list_node(&tsg->ch_list);
-	init_rwsem(&tsg->ch_list_lock);
+	nvgpu_rwsem_init(&tsg->ch_list_lock);
 
 	nvgpu_init_list_node(&tsg->event_id_list);
 	err = nvgpu_mutex_init(&tsg->event_id_list_lock);

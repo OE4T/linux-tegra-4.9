@@ -24,6 +24,7 @@
 
 #include <nvgpu/lock.h>
 #include <nvgpu/kref.h>
+#include <nvgpu/rwsem.h>
 
 #define NVGPU_INVALID_TSG_ID (-1)
 
@@ -46,7 +47,7 @@ struct tsg_gk20a {
 
 	struct nvgpu_list_node ch_list;
 	int num_active_channels;
-	struct rw_semaphore ch_list_lock;
+	struct nvgpu_rwsem ch_list_lock;
 
 	unsigned int timeslice_us;
 	unsigned int timeslice_timeout;

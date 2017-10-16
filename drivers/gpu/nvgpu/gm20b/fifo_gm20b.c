@@ -210,13 +210,13 @@ void gm20b_fifo_tsg_verify_status_ctx_reload(struct channel_gk20a *ch)
 
 	/* If CTX_RELOAD is set on a channel, move it to some other channel */
 	if (gk20a_fifo_channel_status_is_ctx_reload(ch->g, ch->chid)) {
-		down_read(&tsg->ch_list_lock);
+		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 		nvgpu_list_for_each_entry(temp_ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 			if (temp_ch->chid != ch->chid) {
 				gm20b_fifo_set_ctx_reload(temp_ch);
 				break;
 			}
 		}
-		up_read(&tsg->ch_list_lock);
+		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 	}
 }

@@ -17,6 +17,7 @@
 #define TEGRA_VGPU_CMD_ALLOC_CTX_HEADER		100
 #define TEGRA_VGPU_CMD_FREE_CTX_HEADER		101
 #define TEGRA_VGPU_CMD_MAP_SYNCPT		102
+#define TEGRA_VGPU_CMD_TSG_BIND_CHANNEL_EX 	103
 
 struct tegra_vgpu_alloc_ctx_header_params {
 	u64 ch_handle;
@@ -35,10 +36,18 @@ struct tegra_vgpu_map_syncpt_params {
 	u8 prot;
 };
 
+struct tegra_vgpu_tsg_bind_channel_ex_params {
+	u32 tsg_id;
+	u64 ch_handle;
+	u32 subctx_id;
+	u32 runqueue_sel;
+};
+
 union tegra_vgpu_t19x_params {
 	struct tegra_vgpu_alloc_ctx_header_params alloc_ctx_header;
 	struct tegra_vgpu_free_ctx_header_params free_ctx_header;
 	struct tegra_vgpu_map_syncpt_params map_syncpt;
+	struct tegra_vgpu_tsg_bind_channel_ex_params tsg_bind_channel_ex;
 };
 
 #define TEGRA_VGPU_ATTRIB_MAX_SUBCTX_COUNT	100

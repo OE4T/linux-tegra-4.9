@@ -81,6 +81,7 @@
 #include "vgpu_gr_gv11b.h"
 #include "vgpu_fifo_gv11b.h"
 #include "vgpu_subctx_gv11b.h"
+#include "vgpu_tsg_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_fuse_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
@@ -377,7 +378,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.init_eng_method_buffers = gv11b_fifo_init_eng_method_buffers,
 		.deinit_eng_method_buffers =
 			gv11b_fifo_deinit_eng_method_buffers,
-		.tsg_bind_channel = vgpu_tsg_bind_channel,
+		.tsg_bind_channel = vgpu_gv11b_tsg_bind_channel,
 		.tsg_unbind_channel = vgpu_tsg_unbind_channel,
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		.alloc_syncpt_buf = vgpu_gv11b_fifo_alloc_syncpt_buf,

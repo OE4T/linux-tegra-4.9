@@ -41,5 +41,6 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/gv11b/vgpu_hal_gv11b.o \
 	vgpu/gv11b/vgpu_gr_gv11b.o \
 	vgpu/gv11b/vgpu_fifo_gv11b.o \
-	vgpu/gv11b/vgpu_subctx_gv11b.o
+	vgpu/gv11b/vgpu_subctx_gv11b.o \
+	vgpu/gv11b/vgpu_tsg_gv11b.o
 endif

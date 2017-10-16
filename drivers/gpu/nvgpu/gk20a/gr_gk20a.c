@@ -1164,8 +1164,12 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	if (g->ops.gr.init_sm_id_table)
+	if (g->ops.gr.init_sm_id_table) {
 		g->ops.gr.init_sm_id_table(g);
+		/* Is table empty ? */
+		if (g->gr.no_of_sm == 0)
+			return -EINVAL;
+	}
 
 	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
 		tpc_index = g->gr.sm_to_cluster[sm_id].tpc_index;
@@ -1459,7 +1463,9 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	g->ops.gr.commit_global_timeslice(g, c, false);
 
 	/* floorsweep anything left */
-	g->ops.gr.init_fs_state(g);
+	err = g->ops.gr.init_fs_state(g);
+	if (err)
+		goto clean_up;
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);

@@ -658,9 +658,13 @@ int gr_gm20b_load_smid_config(struct gk20a *g)
 
 int gr_gm20b_init_fs_state(struct gk20a *g)
 {
+	int err = 0;
+
 	gk20a_dbg_fn("");
 
-	gr_gk20a_init_fs_state(g);
+	err = gr_gk20a_init_fs_state(g);
+	if (err)
+		return err;
 
 	g->ops.gr.load_tpc_mask(g);
 
@@ -675,7 +679,7 @@ int gr_gm20b_init_fs_state(struct gk20a *g)
 
 	g->ops.gr.load_smid_config(g);
 
-	return 0;
+	return err;
 }
 
 int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,

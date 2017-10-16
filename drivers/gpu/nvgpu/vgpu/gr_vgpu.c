@@ -615,6 +615,7 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	u32 gpc_index;
+	int err = -ENOMEM;
 
 	gk20a_dbg_fn("");
 
@@ -653,7 +654,9 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	g->ops.gr.bundle_cb_defaults(g);
 	g->ops.gr.cb_size_default(g);
 	g->ops.gr.calc_global_ctx_buffer_size(g);
-	g->ops.gr.init_fs_state(g);
+	err = g->ops.gr.init_fs_state(g);
+	if (err)
+		goto cleanup;
 	return 0;
 cleanup:
 	nvgpu_err(g, "out of memory");
@@ -664,7 +667,7 @@ cleanup:
 	nvgpu_kfree(g, gr->gpc_tpc_mask);
 	gr->gpc_tpc_mask = NULL;
 
-	return -ENOMEM;
+	return err;
 }
 
 int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,

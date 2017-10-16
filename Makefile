@@ -1,3 +1,15 @@
+ifeq ($(KERNEL_OVERLAYS),)
+KERNEL_OVERLAYS :=
+KERNEL_OVERLAYS += $(CURDIR)/../nvidia
+KERNEL_OVERLAYS += $(CURDIR)/../t19x
+KERNEL_OVERLAYS += $(CURDIR)/../nvgpu
+KERNEL_OVERLAYS += $(CURDIR)/../nvgpu-t19x
+else
+override KERNEL_OVERLAYS := $(subst :, ,$(KERNEL_OVERLAYS))
+endif
+override KERNEL_OVERLAYS := $(abspath $(KERNEL_OVERLAYS))
+export KERNEL_OVERLAYS
+
 VERSION = 4
 PATCHLEVEL = 9
 SUBLEVEL = 52
@@ -216,6 +228,7 @@ src		:= $(srctree)
 obj		:= $(objtree)
 
 VPATH		:= $(srctree)$(if $(KBUILD_EXTMOD),:$(KBUILD_EXTMOD))
+VPATH		+= $(foreach overlay,$(KERNEL_OVERLAYS),:$(overlay))
 
 export srctree objtree VPATH
 

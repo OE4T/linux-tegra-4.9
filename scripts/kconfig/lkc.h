@@ -70,7 +70,7 @@ struct kconf_id {
 
 void zconfdump(FILE *out);
 void zconf_starthelp(void);
-FILE *zconf_fopen(const char *name);
+FILE *zconf_fopen(const char *name, int init_overlay_id, int *found_overlay_id, const char **found_name);
 void zconf_initscan(const char *name);
 void zconf_nextfile(const char *name);
 int zconf_lineno(void);
@@ -111,7 +111,7 @@ void menu_finalize(struct menu *parent);
 void menu_set_type(int type);
 
 /* util.c */
-struct file *file_lookup(const char *name);
+struct file *file_lookup(const char *name, int overlay_id, const char *logical_name);
 int file_write_dep(const char *name);
 void *xmalloc(size_t size);
 void *xcalloc(size_t nmemb, size_t size);

@@ -258,12 +258,12 @@ int conf_read_simple(const char *name, int def)
 	int i, def_flags;
 
 	if (name) {
-		in = zconf_fopen(name);
+		in = zconf_fopen(name, 0, NULL, NULL);
 	} else {
 		struct property *prop;
 
 		name = conf_get_configname();
-		in = zconf_fopen(name);
+		in = zconf_fopen(name, 0, NULL, NULL);
 		if (in)
 			goto load;
 		sym_add_change_count(1);
@@ -275,7 +275,7 @@ int conf_read_simple(const char *name, int def)
 			    prop->expr->type != E_SYMBOL)
 				continue;
 			name = conf_expand_value(prop->expr->left.sym->name);
-			in = zconf_fopen(name);
+			in = zconf_fopen(name, 0, NULL, NULL);
 			if (in) {
 				conf_message(_("using defaults found in %s"),
 					 name);

@@ -22,7 +22,6 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/errno.h>
-
 #include <linux/nvhost.h>
 
 #include <trace/events/nvhost.h>
@@ -955,7 +954,11 @@ static void pva_task_update(void *priv, int nr_completed)
 				    task->syncpt_thresh,
 				    *timestamp_start,
 				    *timestamp_end);
-
+	nvhost_eventlib_log_task(pdev,
+				 queue->syncpt_id,
+				 task->syncpt_thresh,
+				 *timestamp_start,
+				 *timestamp_end);
 	nvhost_dbg_info("Completed task %p (0x%llx), start_time=%llu, end_time=%llu",
 			task, (u64)task->dma_addr,
 			*timestamp_start,
@@ -1369,8 +1372,6 @@ static int pva_queue_abort(struct nvhost_queue *queue)
 
 	return 0;
 }
-
-
 
 struct nvhost_queue_ops pva_queue_ops = {
 	.abort = pva_queue_abort,

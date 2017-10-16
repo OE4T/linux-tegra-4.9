@@ -1146,10 +1146,18 @@ unsigned tegra_dc_out_flags_from_dev(struct device *dev);
 bool tegra_dc_initialized(struct device *dev);
 bool tegra_dc_is_ext_dp_panel(const struct tegra_dc *dc);
 
+struct spd_infoframe {
+	u8 vendor_name[8];
+	u8 prod_desc[16];
+	u8 source_information;
+};
+
 struct tegra_hdmi_out {
 	bool hdmi2fpd_bridge_enable;
 	bool hdmi2gmsl_bridge_enable;
 	bool hdmi2dsi_bridge_enable;
+	u8 generic_infoframe_type;
+	struct spd_infoframe *spd_infoframe;
 };
 
 enum {

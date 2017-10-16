@@ -267,6 +267,67 @@ struct hdmi_hdr_infoframe {
 } __packed;
 
 enum {
+	HDMI_SPD_SI_UNKNOWN = 0x0,
+	HDMI_SPD_SI_DIGITAL_STB = 0x1,
+	HDMI_SPD_SI_DVD_PLAYER = 0x2,
+	HDMI_SPD_SI_DVHS = 0x3,
+	HDMI_SPD_SI_HDD_VIDEORECORDER = 0x4,
+	HDMI_SPD_SI_DVD = 0x5,
+	HDMI_SPD_SI_DSC = 0x6,
+	HDMI_SPD_SI_VIDEO_CD = 0x7,
+	HDMI_SPD_SI_GAME = 0x8,
+	HDMI_SPD_SI_PC_GENERAL = 0x9,
+	HDMI_SPD_SI_BLUERAY_DISC = 0xa,
+	HDMI_SPD_SI_SUPER_AUDIO_CD = 0xb,
+	HDMI_SPD_SI_HD_DVD = 0xc,
+	HDMI_SPD_SI_PMP = 0xd,
+	HDMI_SPD_SI_RESERVED = 0xFF,
+};
+
+#define SPD_DEFAULT_VENDOR_NAME		"NVIDIA"
+#define SPD_DEFAULT_PRODUCT_DESC	"Tegra Family"
+#define SPD_DEFAULT_SOURCE_INFO		HDMI_SPD_SI_DIGITAL_STB
+
+struct hdmi_spd_infoframe {
+	/* PB0 */
+	u32 csum:8;	/* checksum */
+
+	/* PB1-8 : Vendor Name */
+	u32 vendor_name_char_1:8;
+	u32 vendor_name_char_2:8;
+	u32 vendor_name_char_3:8;
+	u32 vendor_name_char_4:8;
+	u32 vendor_name_char_5:8;
+	u32 vendor_name_char_6:8;
+	u32 reg_hole1:8;
+	u32 vendor_name_char_7:8;
+	u32 vendor_name_char_8:8;
+
+	/* PB9-24 : Product Description */
+	u32 prod_desc_char_1:8;
+	u32 prod_desc_char_2:8;
+	u32 prod_desc_char_3:8;
+	u32 prod_desc_char_4:8;
+	u32 prod_desc_char_5:8;
+	u32 reg_hole2:8;
+	u32 prod_desc_char_6:8;
+	u32 prod_desc_char_7:8;
+	u32 prod_desc_char_8:8;
+	u32 prod_desc_char_9:8;
+	u32 prod_desc_char_10:8;
+	u32 prod_desc_char_11:8;
+	u32 prod_desc_char_12:8;
+	u32 reg_hole3:8;
+	u32 prod_desc_char_13:8;
+	u32 prod_desc_char_14:8;
+	u32 prod_desc_char_15:8;
+	u32 prod_desc_char_16:8;
+
+	/* PB25 : Source Information */
+	u32 source_information:8;
+} __packed;
+
+enum {
 	HDMI_AUDIO_CHANNEL_CNT_STREAM,	/* refer to audio stream header */
 	HDMI_AUDIO_CHANNEL_CNT_2,
 	HDMI_AUDIO_CHANNEL_CNT_3,
@@ -365,6 +426,7 @@ struct tegra_hdmi {
 	struct tegra_hdmi_out *pdata;
 	struct hdmi_avi_infoframe avi;
 	struct hdmi_hdr_infoframe hdr;
+	struct hdmi_spd_infoframe spd;
 	bool enabled;
 	atomic_t clock_refcount;
 

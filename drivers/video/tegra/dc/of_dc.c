@@ -805,6 +805,52 @@ static int parse_vrr_settings(struct platform_device *ndev,
 	return 0;
 }
 
+static void parse_spd_infoframe(struct platform_device *ndev,
+	struct device_node *np, struct tegra_dc_out *default_out)
+{
+	struct device_node *spd_np = NULL;
+	struct spd_infoframe *spd;
+	const char *temp_str0;
+	u32 temp;
+
+	default_out->hdmi_out->spd_infoframe = devm_kzalloc(&ndev->dev,
+		sizeof(struct spd_infoframe), GFP_KERNEL);
+	spd = default_out->hdmi_out->spd_infoframe;
+
+	strlcpy(spd->vendor_name, SPD_DEFAULT_VENDOR_NAME,
+		sizeof(spd->vendor_name));
+	strlcpy(spd->prod_desc, SPD_DEFAULT_PRODUCT_DESC,
+		sizeof(spd->prod_desc));
+	spd->source_information = SPD_DEFAULT_SOURCE_INFO;
+
+	spd_np = of_get_child_by_name(np, "spd-infoframe");
+	if (spd_np) {
+		if (!of_property_read_string(spd_np, "vendor-name",
+					&temp_str0))
+			strlcpy(spd->vendor_name, temp_str0,
+					sizeof(spd->vendor_name));
+		else
+			OF_DC_LOG("spd vendor-name is not defined\n");
+
+		if (!of_property_read_string(spd_np, "product-description",
+					&temp_str0))
+			strlcpy(spd->prod_desc, temp_str0,
+					sizeof(spd->prod_desc));
+		else
+			OF_DC_LOG("spd product-description is not defined\n");
+
+		if (!of_property_read_u32(spd_np, "source-information", &temp))
+			spd->source_information = (u32)temp;
+		else
+			OF_DC_LOG("spd source-information is not defined\n");
+	} else
+		OF_DC_LOG("%s: No spd-infoframe node\n", __func__);
+
+	OF_DC_LOG("spd vendor-name %s\n", spd->vendor_name);
+	OF_DC_LOG("spd product-description %s\n", spd->prod_desc);
+	OF_DC_LOG("spd source-information %d\n", spd->source_information);
+}
+
 static int parse_sd_settings(struct device_node *np,
 	struct tegra_dc_sd_settings *sd_settings)
 {
@@ -3071,6 +3117,21 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 				pdata->default_out->hdmi_out->
 					hdmi2dsi_bridge_enable);
 		}
+		if (!of_property_read_u32(np_target_disp,
+					"generic-infoframe-type", &temp))
+			pdata->default_out->hdmi_out->
+				generic_infoframe_type = (u8)temp;
+		else
+			pdata->default_out->hdmi_out->
+				generic_infoframe_type =
+				HDMI_INFOFRAME_TYPE_HDR;
+		pr_info("generic_infoframe_type: 0x%02x\n",
+				pdata->default_out->hdmi_out->
+					generic_infoframe_type);
+		if (pdata->default_out->hdmi_out->generic_infoframe_type ==
+			HDMI_INFOFRAME_TYPE_SPD)
+			parse_spd_infoframe(ndev, np_target_disp,
+				pdata->default_out);
 		/* fixed panel ops is dominant. If fixed panel ops
 		 * is not defined, we set default hdmi panel ops */
 		if (!def_out->enable && !def_out->disable) {

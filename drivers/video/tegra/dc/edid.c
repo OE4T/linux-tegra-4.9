@@ -28,6 +28,7 @@
 
 #include "edid.h"
 #include "dc_priv.h"
+#include "hdmi2.0.h"
 
 struct tegra_edid_pvt {
 	struct kref			refcnt;
@@ -545,9 +546,21 @@ u16 tegra_edid_get_cd_flag(struct tegra_edid *edid)
 u16 tegra_edid_get_ex_hdr_cap(struct tegra_edid *edid)
 {
 	u16 ret = 0;
+	struct tegra_dc_out *default_out;
+
 	if (!edid || !edid->data) {
 		pr_warn("edid invalid\n");
 		return -EFAULT;
+	}
+
+	if (edid->dc && edid->dc->pdata && edid->dc->pdata->default_out) {
+		default_out = edid->dc->pdata->default_out;
+		if ((default_out->type == TEGRA_DC_OUT_HDMI) &&
+			(default_out->hdmi_out->generic_infoframe_type !=
+			HDMI_INFOFRAME_TYPE_HDR)) {
+			pr_debug("hdmi generic infoframe is not for hdr\n");
+			return ret;
+		}
 	}
 
 	if (edid->data->hdr_eotf_smpte2084)
@@ -560,9 +573,21 @@ int tegra_edid_get_ex_hdr_cap_info(struct tegra_edid *edid,
 			struct tegra_dc_ext_hdr_caps *hdr_cap_info)
 {
 	int ret = 0;
+	struct tegra_dc_out *default_out;
+
 	if (!edid || !edid->data) {
 		pr_warn("edid invalid\n");
 		return -EFAULT;
+	}
+
+	if (edid->dc && edid->dc->pdata && edid->dc->pdata->default_out) {
+		default_out = edid->dc->pdata->default_out;
+		if ((default_out->type == TEGRA_DC_OUT_HDMI) &&
+			(default_out->hdmi_out->generic_infoframe_type !=
+			HDMI_INFOFRAME_TYPE_HDR)) {
+			pr_debug("hdmi generic infoframe is not for hdr\n");
+			return ret;
+		}
 	}
 
 	if (!edid->data->hdr_pckt_len)

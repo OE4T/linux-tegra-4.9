@@ -379,12 +379,14 @@ static int intr_init(struct nvhost_intr *intr)
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intgmask_r(), 0);
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), 0);
 
-	err = request_threaded_irq(intr->general_irq, NULL,
-				intr_host1x_isr,
-				IRQF_ONESHOT, "host_status", intr);
-	if (err)
-		dev_warn(&dev->dev->dev,
-		         "general irq request failed, but continuing\n");
+	if (!dev->info.vmserver_owns_engines) {
+		err = request_threaded_irq(intr->general_irq, NULL,
+					intr_host1x_isr,
+					IRQF_ONESHOT, "host_status", intr);
+		if (err)
+			dev_warn(&dev->dev->dev,
+			         "general irq request failed, but continuing\n");
+	}
 
 	return 0;
 }
@@ -393,7 +395,9 @@ static void intr_deinit(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 
-	free_irq(intr->general_irq, intr);
+	if (!dev->info.vmserver_owns_engines) {
+		free_irq(intr->general_irq, intr);
+	}
 	free_irq(intr->syncpt_irq, dev);
 }
 

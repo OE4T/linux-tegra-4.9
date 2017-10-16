@@ -52,6 +52,9 @@
 
 #define GK20A_TIMEOUT_FPGA		100000 /* 100 sec */
 
+#define PATCH_CTX_SLOTS_MAX			128
+#define PATCH_CTX_SLOTS_REQUIRED_PER_ENTRY	2
+
 struct channel_gk20a;
 struct nvgpu_warpstate;
 

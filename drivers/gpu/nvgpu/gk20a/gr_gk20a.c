@@ -673,7 +673,21 @@ int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 					  struct channel_ctx_gk20a *ch_ctx)
 {
-	return nvgpu_mem_begin(g, &ch_ctx->patch_ctx.mem);
+	int err = 0;
+
+	err = nvgpu_mem_begin(g, &ch_ctx->patch_ctx.mem);
+	if (err)
+		return err;
+
+	if (ch_ctx->gr_ctx->mem.cpu_va) {
+		/* reset patch count if ucode has already processed it */
+		ch_ctx->patch_ctx.data_count = nvgpu_mem_rd(g,
+						&ch_ctx->gr_ctx->mem,
+					ctxsw_prog_main_image_patch_count_o());
+		nvgpu_log(g, gpu_dbg_info, "patch count reset to %d",
+					ch_ctx->patch_ctx.data_count);
+	}
+	return 0;
 }
 
 void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
@@ -686,6 +700,8 @@ void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 		nvgpu_mem_wr(g, &ch_ctx->gr_ctx->mem,
 			     ctxsw_prog_main_image_patch_count_o(),
 			     ch_ctx->patch_ctx.data_count);
+		nvgpu_log(g, gpu_dbg_info, "write patch count %d",
+			ch_ctx->patch_ctx.data_count);
 	}
 }
 
@@ -694,10 +710,20 @@ void gr_gk20a_ctx_patch_write(struct gk20a *g,
 				    u32 addr, u32 data, bool patch)
 {
 	if (patch) {
-		u32 patch_slot = ch_ctx->patch_ctx.data_count * 2;
+		u32 patch_slot = ch_ctx->patch_ctx.data_count *
+				PATCH_CTX_SLOTS_REQUIRED_PER_ENTRY;
+		if (patch_slot > (PATCH_CTX_SLOTS_MAX -
+				PATCH_CTX_SLOTS_REQUIRED_PER_ENTRY)) {
+			nvgpu_err(g, "failed to access patch_slot %d",
+				patch_slot);
+			return;
+		}
 		nvgpu_mem_wr32(g, &ch_ctx->patch_ctx.mem, patch_slot, addr);
 		nvgpu_mem_wr32(g, &ch_ctx->patch_ctx.mem, patch_slot + 1, data);
 		ch_ctx->patch_ctx.data_count++;
+		nvgpu_log(g, gpu_dbg_info,
+			"patch addr = 0x%x data = 0x%x data_count %d",
+			addr, data, ch_ctx->patch_ctx.data_count);
 	} else {
 		gk20a_writel(g, addr, data);
 	}
@@ -1875,6 +1901,8 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	virt_addr_lo = u64_lo32(ch_ctx->patch_ctx.mem.gpu_va);
 	virt_addr_hi = u64_hi32(ch_ctx->patch_ctx.mem.gpu_va);
 
+	nvgpu_log(g, gpu_dbg_info, "write patch count = %d",
+			ch_ctx->patch_ctx.data_count);
 	nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_patch_count_o(),
 		 ch_ctx->patch_ctx.data_count);
 
@@ -2793,7 +2821,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	err = nvgpu_dma_alloc_map_flags_sys(ch_vm, NVGPU_DMA_NO_KERNEL_MAPPING,
-					128 * sizeof(u32), &patch_ctx->mem);
+			PATCH_CTX_SLOTS_MAX * sizeof(u32), &patch_ctx->mem);
 	if (err)
 		return err;
 
@@ -2928,6 +2956,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 
 	/* allocate patch buffer */
 	if (ch_ctx->patch_ctx.mem.priv.sgt == NULL) {
+		ch_ctx->patch_ctx.data_count = 0;
 		err = gr_gk20a_alloc_channel_patch_ctx(g, c);
 		if (err) {
 			nvgpu_err(g,

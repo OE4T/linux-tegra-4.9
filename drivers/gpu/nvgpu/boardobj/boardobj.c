@@ -20,9 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/module.h>
-#include <linux/uaccess.h>
-
 #include <nvgpu/kmem.h>
 
 #include "gk20a/gk20a.h"

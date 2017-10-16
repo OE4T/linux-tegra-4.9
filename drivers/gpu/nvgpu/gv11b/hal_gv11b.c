@@ -66,6 +66,7 @@
 #include "gp106/pmu_gp106.h"
 #include "gp106/acr_gp106.h"
 
+#include "dbg_gpu_gv11b.h"
 #include "hal_gv11b.h"
 #include "gr_gv11b.h"
 #include "mc_gv11b.h"
@@ -633,8 +634,8 @@ static const struct gpu_ops gv11b_ops = {
 			nvgpu_check_and_set_context_reservation,
 		.release_profiler_reservation =
 			nvgpu_release_profiler_reservation,
-		.perfbuffer_enable = NULL,
-		.perfbuffer_disable = NULL,
+		.perfbuffer_enable = gv11b_perfbuf_enable_locked,
+		.perfbuffer_disable = gv11b_perfbuf_disable_locked,
 	},
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,

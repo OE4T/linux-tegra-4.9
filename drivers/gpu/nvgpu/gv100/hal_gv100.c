@@ -76,6 +76,7 @@
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 
+#include "gv11b/dbg_gpu_gv11b.h"
 #include "gv11b/hal_gv11b.h"
 #include "gv11b/gr_gv11b.h"
 #include "gv11b/mc_gv11b.h"
@@ -625,8 +626,8 @@ static const struct gpu_ops gv100_ops = {
 			nvgpu_check_and_set_context_reservation,
 		.release_profiler_reservation =
 			nvgpu_release_profiler_reservation,
-		.perfbuffer_enable = NULL,
-		.perfbuffer_disable = NULL,
+		.perfbuffer_enable = gv11b_perfbuf_enable_locked,
+		.perfbuffer_disable = gv11b_perfbuf_disable_locked,
 	},
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,

@@ -129,20 +129,6 @@ config TEGRA_DC_64BIT_SUPPORT
 	  not fit into 32-bits.
 	  Default is to enable it on 64-bit platforms.
 
-config TEGRA_NVSD
-	bool "Tegra SmartDimmer"
-	depends on TEGRA_DC && !TEGRA_NVDISPLAY
-	default y
-	help
-	  Smart Dimmer support for Tegra display controller.
-
-config TEGRA_SD_GEN2
-	bool "Tegra SD Gen2"
-	depends on TEGRA_DC && TEGRA_NVSD
-	default y
-	help
-	  Smart Dimmer Gen2 support for Tegra display controller.
-
 config TEGRA_DC_TEMPORAL_DITHER
 	bool
 	depends on TEGRA_DC

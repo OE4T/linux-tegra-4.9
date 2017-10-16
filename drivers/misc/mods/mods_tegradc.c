@@ -138,3 +138,9 @@ int esc_mods_tegra_dc_config_possible(struct file *fp,
 	LOG_EXT();
 	return 0;
 }
+
+int mods_init_tegradc(void)
+{
+	return 0;
+}
+

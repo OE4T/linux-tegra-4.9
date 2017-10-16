@@ -47,35 +47,8 @@ int tegra_is_clk_enabled(struct clk *c)
 }
 EXPORT_SYMBOL(tegra_is_clk_enabled);
 
-static int tegra_t210ref_i2c_notifier_call(struct notifier_block *nb,
-	unsigned long event, void *data)
-{
-	struct backlight_device_brightness_info *smartdim_info = data;
-	struct device *dev = smartdim_info->dev;
-	if (dev->of_node) {
-		if (of_device_is_compatible(dev->of_node,
-			"ti,lp8557")) {
-			smartdim_info->brightness = tegra_bl_notify(dev,
-				smartdim_info->brightness);
-		}
-	}
-	return NOTIFY_DONE;
-}
-
-static struct notifier_block i2c_nb = {
-	.notifier_call = tegra_t210ref_i2c_notifier_call,
-};
-
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc)
 {
-	if (dc->out->sd_settings && !dc->out->sd_settings->bl_device &&
-		dc->out->sd_settings->bl_device_name) {
-		char *bl_device_name = dc->out->sd_settings->bl_device_name;
-		struct backlight_device *bl_device =
-			get_backlight_device_by_name(bl_device_name);
-		if (bl_device)
-			backlight_device_register_notifier(bl_device, &i2c_nb);
-	}
 	return 0;
 }
 

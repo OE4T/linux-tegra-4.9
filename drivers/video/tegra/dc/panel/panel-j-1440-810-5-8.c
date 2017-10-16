@@ -1,7 +1,7 @@
 /*
  * panel-j-1440-810-5-8.c: Panel driver for j-1440-810-5-8 panel.
  *
- * Copyright (c) 2013-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,54 +48,6 @@ static struct regulator *dvdd_lcd_3v3;
 
 static u16 en_panel_rst;
 static u16 en_panel;
-
-static struct tegra_dc_sd_settings dsi_j_1440_810_5_8_sd_settings = {
-	.enable = 0, /* disabled by default. */
-	.use_auto_pwm = false,
-	.hw_update_delay = 0,
-	.bin_width = -1,
-	.aggressiveness = 1,
-	.use_vid_luma = false,
-	.phase_in_adjustments = 0,
-	.k_limit_enable = true,
-	.k_limit = 180,
-	.sd_window_enable = false,
-	.soft_clipping_enable = true,
-	/* Low soft clipping threshold to compensate for aggressive k_limit */
-	.soft_clipping_threshold = 128,
-	.smooth_k_enable = true,
-	.smooth_k_incr = 16,
-	/* Default video coefficients */
-	.coeff = {5, 9, 2},
-	.fc = {0, 0},
-	/* Immediate backlight changes */
-	.blp = {1024, 255},
-	/* Gammas: R: 2.2 G: 2.2 B: 2.2 */
-	/* Default BL TF */
-	.bltf = {
-			{
-				{57, 65, 73, 82},
-				{92, 103, 114, 125},
-				{138, 150, 164, 178},
-				{193, 208, 224, 241},
-			},
-		},
-	/* Default LUT */
-	.lut = {
-			{
-				{255, 255, 255},
-				{199, 199, 199},
-				{153, 153, 153},
-				{116, 116, 116},
-				{85, 85, 85},
-				{59, 59, 59},
-				{36, 36, 36},
-				{17, 17, 17},
-				{0, 0, 0},
-			},
-		},
-	.sd_brightness = &sd_brightness,
-};
 
 static struct tegra_dc_cmu dsi_j_1440_810_5_8_cmu = {
 	/* lut1 maps sRGB to linear space. */
@@ -306,12 +258,8 @@ static int dsi_j_1440_810_5_8_bl_notify(struct device *dev, int brightness)
 {
 	struct backlight_device *bl = NULL;
 	struct pwm_bl_data *pb = NULL;
-	int cur_sd_brightness = atomic_read(&sd_brightness);
 	bl = (struct backlight_device *)dev_get_drvdata(dev);
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
-
-	/* SD brightness is a percentage */
-	brightness = (brightness * cur_sd_brightness) / 255;
 
 	/* Apply any backlight response curve */
 	if (brightness > 255)
@@ -649,13 +597,6 @@ static void dsi_j_1440_810_5_8_fb_data_init(struct tegra_fb_data *fb)
 	fb->yres = dsi_j_1440_810_5_8_modes[0].v_active;
 }
 
-static void dsi_j_1440_810_5_8_sd_settings_init
-	(struct tegra_dc_sd_settings *settings)
-{
-	*settings = dsi_j_1440_810_5_8_sd_settings;
-	settings->bl_device_name = "pwm-backlight";
-}
-
 static void dsi_j_1440_810_5_8_cmu_init(struct tegra_dc_platform_data *pdata)
 {
 	pdata->cmu = &dsi_j_1440_810_5_8_cmu;
@@ -676,7 +617,6 @@ struct tegra_panel_ops dsi_j_1440_810_5_8_ops = {
 };
 
 struct tegra_panel __initdata dsi_j_1440_810_5_8 = {
-	.init_sd_settings = dsi_j_1440_810_5_8_sd_settings_init,
 	.init_dc_out = dsi_j_1440_810_5_8_dc_out_init,
 	.init_fb_data = dsi_j_1440_810_5_8_fb_data_init,
 	.set_disp_device = dsi_j_1440_810_5_8_set_disp_device,

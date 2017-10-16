@@ -58,7 +58,6 @@
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
-#include "nvsd.h"
 #include "dsi.h"
 #include "edid.h"
 #include "hdmi2.0.h"
@@ -852,267 +851,6 @@ static void parse_spd_infoframe(struct platform_device *ndev,
 	OF_DC_LOG("spd vendor-name %s\n", spd->vendor_name);
 	OF_DC_LOG("spd product-description %s\n", spd->prod_desc);
 	OF_DC_LOG("spd source-information %d\n", spd->source_information);
-}
-
-static int parse_sd_settings(struct device_node *np,
-	struct tegra_dc_sd_settings *sd_settings)
-{
-	struct property *prop;
-	const __be32 *p;
-	u32 u;
-	const char *sd_str1;
-	u8 coeff[3] = {0, };
-	u8 fc[2] = {0, };
-	u32 blp[2] = {0, };
-
-	int coeff_count = 0;
-	int fc_count = 0;
-	int blp_count = 0;
-	int bltf_count = 0;
-	u8 *addr;
-	int sd_lut[108] = {0, };
-	int sd_i = 0;
-	int  sd_j = 0;
-	int sd_index = 0;
-	u32 temp;
-
-	if (of_device_is_available(np)) {
-		sd_settings->enable = (unsigned) 1;
-		sd_settings->enable_int = (unsigned) 1;
-	} else {
-		sd_settings->enable = (unsigned) 0;
-		sd_settings->enable_int = (unsigned) 0;
-	}
-
-	OF_DC_LOG("nvidia,sd-enable %d\n", sd_settings->enable);
-	if (!of_property_read_u32(np, "nvidia,turn-off-brightness", &temp)) {
-		sd_settings->turn_off_brightness = (u8) temp;
-		OF_DC_LOG("nvidia,turn-off-brightness %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,turn-on-brightness", &temp)) {
-		sd_settings->turn_on_brightness = (u8) temp;
-		OF_DC_LOG("nvidia,turn-on-brightness %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,use-auto-pwm", &temp)) {
-		sd_settings->use_auto_pwm = (bool) temp;
-		OF_DC_LOG("nvidia,use-auto-pwm %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,hw-update-delay", &temp)) {
-		sd_settings->hw_update_delay = (u8) temp;
-		OF_DC_LOG("nvidia,hw-update-delay %d\n", temp);
-	}
-	if (tegra_dc_is_nvdisplay()) {
-		int gain_count;
-		int gain_array_count;
-		int backlight_count;
-
-		if (!of_property_read_u32(np, "nvidia,sw-update-delay",
-					&temp)) {
-			sd_settings->sw_update_delay = (u8) temp;
-			OF_DC_LOG("nvidia,sw-update-delay %d\n", temp);
-		}
-		gain_count = 0;
-		gain_array_count = 0;
-		sd_settings->gain_luts_parsed = 0;
-		of_property_for_each_u32(np, "nvidia,gain_table", prop, p, u)
-			gain_count++;
-		if (gain_count) {
-			gain_count = 0;
-			gain_array_count = 0;
-			of_property_for_each_u32(np, "nvidia,gain_table",
-						prop, p, u) {
-				sd_settings->pixel_gain_tables[gain_array_count]
-					[gain_count] = u;
-				if ((gain_count%32) == 31) {
-					gain_count = 0;
-					gain_array_count++;
-				} else
-					gain_count++;
-			}
-		}
-		backlight_count = 0;
-		of_property_for_each_u32(np, "nvidia,backlight_table",
-					prop, p, u)
-			backlight_count++;
-		if (backlight_count) {
-			backlight_count = 0;
-			of_property_for_each_u32(np, "nvidia,backlight_table",
-					prop, p, u) {
-				sd_settings->backlight_table[backlight_count] =
-									u;
-				backlight_count++;
-			}
-		}
-		if ((gain_count) && (backlight_count))
-			sd_settings->gain_luts_parsed = 1;
-	}
-	if (!of_property_read_u32(np, "nvidia,bin-width", &temp)) {
-		s32 s32_val;
-		s32_val = (s32)temp;
-		sd_settings->bin_width = (short)s32_val;
-		OF_DC_LOG("nvidia,bin-width %d\n", s32_val);
-	}
-	if (!of_property_read_u32(np, "nvidia,aggressiveness", &temp)) {
-		sd_settings->aggressiveness = (u8) temp;
-		OF_DC_LOG("nvidia,aggressiveness %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,use-vid-luma", &temp)) {
-		sd_settings->use_vid_luma = (bool) temp;
-		OF_DC_LOG("nvidia,use-vid-luma %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,phase-in-settings", &temp)) {
-		sd_settings->phase_in_settings = (u8) temp;
-		OF_DC_LOG("nvidia,phase-in-settings  %d\n", temp);
-	}
-	if (!of_property_read_u32(np,
-		"nvidia,phase-in-adjustments", &temp)) {
-		sd_settings->phase_in_adjustments = (u8) temp;
-		OF_DC_LOG("nvidia,phase-in-adjustments  %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,k-limit-enable", &temp)) {
-		sd_settings->k_limit_enable = (bool) temp;
-		OF_DC_LOG("nvidia,k-limit-enable  %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,k-limit", &temp)) {
-		sd_settings->k_limit = (u16) temp;
-		OF_DC_LOG("nvidia,k-limit  %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,sd-window-enable", &temp)) {
-		sd_settings->sd_window_enable = (bool) temp;
-		OF_DC_LOG("nvidia,sd-window-enable  %d\n", temp);
-	}
-	if (!of_property_read_u32(np,
-		"nvidia,soft-clipping-enable", &temp)) {
-		sd_settings->soft_clipping_enable = (bool) temp;
-		OF_DC_LOG("nvidia,soft-clipping-enable %d\n", temp);
-	}
-	if (!of_property_read_u32(np,
-		"nvidia,soft-clipping-threshold", &temp)) {
-		sd_settings->soft_clipping_threshold = (u8) temp;
-		OF_DC_LOG("nvidia,soft-clipping-threshold %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,smooth-k-enable", &temp)) {
-		sd_settings->smooth_k_enable = (bool) temp;
-		OF_DC_LOG("nvidia,smooth-k-enable %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "nvidia,smooth-k-incr", &temp)) {
-		sd_settings->smooth_k_incr = (u16) temp;
-		OF_DC_LOG("nvidia,smooth-k-incr %d\n", temp);
-	}
-
-	sd_settings->sd_brightness = &sd_brightness;
-
-	if (!of_property_read_u32(np, "nvidia,use-vpulse2", &temp)) {
-		sd_settings->use_vpulse2 = (bool) temp;
-		OF_DC_LOG("nvidia,use-vpulse2 %d\n", temp);
-	}
-
-	if (!of_property_read_string(np, "nvidia,bl-device-name",
-		&sd_str1)) {
-		sd_settings->bl_device_name = (char *)sd_str1;
-		OF_DC_LOG("nvidia,bl-device-name %s\n", sd_str1);
-	}
-
-	coeff_count = 0;
-	of_property_for_each_u32(np, "nvidia,coeff", prop, p, u)
-		coeff_count++;
-
-	if (coeff_count > (sizeof(coeff) / sizeof(coeff[0]))) {
-		pr_err("sd_coeff overflow\n");
-		return -EINVAL;
-	} else {
-		coeff_count = 0;
-		of_property_for_each_u32(np, "nvidia,coeff", prop, p, u)
-			coeff[coeff_count++] = (u8)u;
-		sd_settings->coeff.r = coeff[0];
-		sd_settings->coeff.g = coeff[1];
-		sd_settings->coeff.b = coeff[2];
-		OF_DC_LOG("nvidia,coeff %d %d %d\n",
-				coeff[0], coeff[1], coeff[2]);
-	}
-	fc_count = 0;
-	of_property_for_each_u32(np, "nvidia,fc", prop, p, u)
-		fc_count++;
-
-	if (fc_count > sizeof(fc) / sizeof(fc[0])) {
-		pr_err("sd fc overflow\n");
-		return -EINVAL;
-	} else {
-		fc_count = 0;
-		of_property_for_each_u32(np, "nvidia,fc", prop, p, u)
-		fc[fc_count++] = (u8)u;
-
-		sd_settings->fc.time_limit = fc[0];
-		sd_settings->fc.threshold = fc[1];
-		OF_DC_LOG("nvidia,fc %d %d\n", fc[0], fc[1]);
-	}
-
-	blp_count = 0;
-	of_property_for_each_u32(np, "nvidia,blp", prop, p, u)
-		blp_count++;
-
-	if (blp_count > sizeof(blp) / sizeof(blp[0])) {
-		pr_err("sd blp overflow\n");
-		return -EINVAL;
-	} else {
-		blp_count = 0;
-		of_property_for_each_u32(np, "nvidia,blp", prop, p, u)
-			blp[blp_count++] = (u32)u;
-		sd_settings->blp.time_constant = (u16)blp[0];
-		sd_settings->blp.step = (u8)blp[1];
-		OF_DC_LOG("nvidia,blp %d %d\n", blp[0], blp[1]);
-	}
-
-	bltf_count = 0;
-	of_property_for_each_u32(np, "nvidia,bltf", prop, p, u)
-		bltf_count++;
-
-	if (bltf_count > (sizeof(sd_settings->bltf) /
-			sizeof(sd_settings->bltf[0][0][0]))) {
-		pr_err("sd bltf overflow of sd_settings\n");
-		return -EINVAL;
-	} else {
-		addr = &(sd_settings->bltf[0][0][0]);
-		of_property_for_each_u32(np, "nvidia,bltf", prop, p, u)
-			*(addr++) = u;
-	}
-
-	sd_index = 0;
-	of_property_for_each_u32(np, "nvidia,lut", prop, p, u)
-		sd_index++;
-
-	if (sd_index > sizeof(sd_lut)/sizeof(sd_lut[0])) {
-		pr_err("sd lut size overflow of sd_settings\n");
-		return -EINVAL;
-	} else {
-		sd_index = 0;
-		of_property_for_each_u32(np, "nvidia,lut", prop, p, u)
-			sd_lut[sd_index++] = u;
-
-		sd_index = 0;
-
-		if (prop) {
-			for (sd_i = 0; sd_i < 4; sd_i++)
-				for (sd_j = 0; sd_j < 9; sd_j++) {
-					sd_settings->lut[sd_i][sd_j].r =
-						sd_lut[sd_index++];
-					sd_settings->lut[sd_i][sd_j].g =
-						sd_lut[sd_index++];
-					sd_settings->lut[sd_i][sd_j].b =
-						sd_lut[sd_index++];
-			}
-		}
-	}
-
-	if (!of_property_read_u32(np, "nvidia,bias0", &temp)) {
-		sd_settings->bias0 = (u8) temp;
-		OF_DC_LOG("nvidia,bias0 %d\n", temp);
-	} else {
-		sd_settings->bias0 = 3; /* BIAS_MSB */
-		OF_DC_LOG("nvidia,bias0 default\n");
-	}
-
-	return 0;
 }
 
 static int parse_modes(struct tegra_dc_out *default_out,
@@ -2928,7 +2666,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	struct device_node *timings_np = NULL;
 	struct device_node *vrr_np = NULL;
 	struct device_node *np_target_disp = NULL;
-	struct device_node *sd_np = NULL;
 	struct device_node *entry = NULL;
 	struct property *prop;
 	struct tegra_dc_out *def_out;
@@ -3343,22 +3080,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 
 	pdata->default_out->vrr_hotplug_state = TEGRA_HPD_STATE_NORMAL;
 
-	sd_np = of_get_child_by_name(np_target_disp,
-		"smartdimmer");
-	if (!sd_np) {
-		pr_debug("%s: could not find SD settings node\n",
-			__func__);
-	} else {
-		def_out->sd_settings =
-			devm_kzalloc(&ndev->dev,
-			sizeof(struct tegra_dc_sd_settings),
-			GFP_KERNEL);
-		if (!def_out->sd_settings) {
-			dev_err(&ndev->dev, "not enough memory\n");
-			goto fail_parse;
-		}
-	}
-
 	if (tegra_dc_is_t21x()) {
 		cmu_np = of_get_child_by_name(np_target_disp, "cmu");
 		if (!cmu_np) {
@@ -3410,14 +3131,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 			if (err)
 				goto fail_parse;
 		}
-	}
-	/*
-	 * parse sd_settings values
-	 */
-	if (def_out->sd_settings != NULL) {
-		err = parse_sd_settings(sd_np, def_out->sd_settings);
-		if (err)
-			goto fail_parse;
 	}
 
 	if (def_out->modes != NULL) {
@@ -3476,14 +3189,12 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 
 	dev_info(&ndev->dev, "DT parsed successfully\n");
 	of_node_put(timings_np);
-	of_node_put(sd_np);
 	of_node_put(cmu_np);
 	of_node_put(cmu_adbRGB_np);
 	of_node_put(np_target_disp);
 	return pdata;
 
 fail_parse:
-	of_node_put(sd_np);
 	of_node_put(cmu_np);
 	of_node_put(cmu_adbRGB_np);
 	return ERR_PTR(err);

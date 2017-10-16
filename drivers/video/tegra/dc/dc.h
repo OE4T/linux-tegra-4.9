@@ -37,13 +37,6 @@
 
 #define TEGRA_DC_EXT_FLIP_MAX_WINDOW 6
 
-/* Nvdisplay specific */
-#define GAIN_TABLE_MAX_ENTRIES	32
-#define ADAPTATION_FACTOR_MAX_LEVELS	51
-/* Nvdisplay specific ends here */
-
-extern atomic_t sd_brightness;
-
 extern struct fb_videomode tegra_dc_vga_mode;
 
 enum {
@@ -531,110 +524,6 @@ enum {
 typedef u8 tegra_dc_bl_output[256];
 typedef u8 *p_tegra_dc_bl_output;
 
-struct tegra_dc_sd_blp {
-	u16 time_constant;
-	u8 step;
-};
-
-struct tegra_dc_sd_fc {
-	u8 time_limit;
-	u8 threshold;
-};
-
-struct tegra_dc_sd_rgb {
-	u8 r;
-	u8 g;
-	u8 b;
-};
-
-struct tegra_dc_sd_agg_priorities {
-	u8 pri_lvl;
-	u8 agg[4];
-};
-
-struct tegra_dc_sd_window {
-	u16 h_position;
-	u16 v_position;
-	u16 h_size;
-	u16 v_size;
-};
-
-struct tegra_dc_sd_settings {
-	/* Specific to Nvdisplay */
-	bool update_sd;
-	unsigned upper_bound;
-	unsigned lower_bound;
-	unsigned num_over_saturated_pixels;
-	unsigned over_saturated_bin;
-	unsigned last_over_saturated_bin;
-	unsigned *gain_table;
-	unsigned gain_luts_parsed;
-	unsigned pixel_gain_tables[ADAPTATION_FACTOR_MAX_LEVELS]
-		[GAIN_TABLE_MAX_ENTRIES];
-	unsigned backlight_table[ADAPTATION_FACTOR_MAX_LEVELS];
-	unsigned *current_gain_table;
-	unsigned *phase_backlight_table;
-	unsigned new_backlight;
-	unsigned old_backlight;
-	unsigned last_phase_step;
-	unsigned phase_in_steps;
-	int backlight_adjust_steps;
-	u8 sw_update_delay;
-	int frame_runner;
-	/* Specific to Nvdisplay ends here */
-
-	/* Specific to T21x */
-	unsigned enable;
-	u8 turn_off_brightness;
-	u8 turn_on_brightness;
-	unsigned enable_int;
-	bool use_auto_pwm;
-	u8 hw_update_delay;
-	u8 aggressiveness;
-	short bin_width;
-	u8 phase_in_settings;
-	u8 phase_in_adjustments;
-	u8 cmd;
-	u8 final_agg;
-	u16 cur_agg_step;
-	u16 phase_settings_step;
-	u16 phase_adj_step;
-	u16 num_phase_in_steps;
-
-	struct tegra_dc_sd_agg_priorities agg_priorities;
-
-	bool k_limit_enable;
-	u16 k_limit;
-
-	bool soft_clipping_enable;
-	u8 soft_clipping_threshold;
-
-	bool smooth_k_enable;
-	u16 smooth_k_incr;
-
-	bool sd_proc_control;
-	bool soft_clipping_correction;
-	bool use_vpulse2;
-
-	struct tegra_dc_sd_fc fc;
-	struct tegra_dc_sd_blp blp;
-	u8 bltf[4][4][4];
-	struct tegra_dc_sd_rgb lut[4][9];
-	/* Specific to T21x ends here */
-
-	bool use_vid_luma;
-	struct tegra_dc_sd_rgb coeff;
-
-	bool sd_window_enable;
-	struct tegra_dc_sd_window sd_window;
-
-	atomic_t *sd_brightness;
-	char *bl_device_name;
-	struct backlight_device *bl_device;
-
-	u8 bias0;
-};
-
 enum {
 	NO_CMD = 0x0,
 	ENABLE = 0x1,
@@ -771,8 +660,6 @@ struct tegra_dc_out {
 	struct tegra_dc_out_pin		*out_pins;
 	unsigned			n_out_pins;
 
-	struct tegra_dc_sd_settings	*sd_settings;
-
 	/* DSI link compression parameters */
 	u32		slice_height;
 	u32		slice_width;
@@ -827,12 +714,10 @@ struct tegra_dc_out {
 
 /* Errands use the interrupts */
 #define V_BLANK_FLIP		0
-#define V_BLANK_NVSD		1
 #define V_BLANK_USER		2
 #define V_BLANK_IMP		3
 
 #define V_PULSE2_FLIP		0
-#define V_PULSE2_NVSD		1
 #define V_PULSE2_LATENCY_MSRMNT	2
 
 struct tegra_dc_cmu_csc {
@@ -1097,12 +982,6 @@ int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc);
 unsigned tegra_dc_get_out_height(const struct tegra_dc *dc);
 unsigned tegra_dc_get_out_width(const struct tegra_dc *dc);
 unsigned tegra_dc_get_out_max_pixclock(const struct tegra_dc *dc);
-
-void tegra_sd_check_prism_thresh(struct device *dev, int brightness);
-void tegra_sd_enbl_dsbl_prism(struct device *dev, bool status);
-
-void nvsd_check_prism_thresh(struct device *dev, int brightness);
-void nvsd_enbl_dsbl_prism(struct device *dev, bool status);
 
 #if defined(CONFIG_TEGRA_HDMIVRR) && (defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY))
 void tegra_hdmivrr_te_vrr_sec(struct tegra_vrr *vrr);

@@ -51,55 +51,6 @@ static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
 static struct regulator *vdd_ds_1v8;
 
-static struct tegra_dc_sd_settings dsi_a_1080p_11_6_sd_settings = {
-	.enable = 1, /* enabled by default. */
-	.use_auto_pwm = false,
-	.hw_update_delay = 0,
-	.bin_width = -1,
-	.aggressiveness = 5,
-	.use_vid_luma = false,
-	.phase_in_adjustments = 0,
-	.k_limit_enable = true,
-	.k_limit = 200,
-	.sd_window_enable = false,
-	.soft_clipping_enable = true,
-	/* Low soft clipping threshold to compensate for aggressive k_limit */
-	.soft_clipping_threshold = 128,
-	.smooth_k_enable = true,
-	.smooth_k_incr = 4,
-	/* Default video coefficients */
-	.coeff = {5, 9, 2},
-	.fc = {0, 0},
-	/* Immediate backlight changes */
-	.blp = {1024, 255},
-	/* Gammas: R: 2.2 G: 2.2 B: 2.2 */
-	/* Default BL TF */
-	.bltf = {
-			{
-				{57, 65, 73, 82},
-				{92, 103, 114, 125},
-				{138, 150, 164, 178},
-				{193, 208, 224, 241},
-			},
-		},
-	/* Default LUT */
-	.lut = {
-			{
-				{255, 255, 255},
-				{199, 199, 199},
-				{153, 153, 153},
-				{116, 116, 116},
-				{85, 85, 85},
-				{59, 59, 59},
-				{36, 36, 36},
-				{17, 17, 17},
-				{0, 0, 0},
-			},
-		},
-	.sd_brightness = &sd_brightness,
-	.use_vpulse2 = true,
-};
-
 static tegra_dc_bl_output dsi_a_1080p_11_6_bl_output_measured = {
 	0, 0, 1, 2, 3, 4, 5, 6,
 	7, 8, 9, 9, 10, 11, 12, 13,
@@ -400,12 +351,8 @@ static int dsi_a_1080p_11_6_bl_notify(struct device *dev, int brightness)
 {
 	struct backlight_device *bl = NULL;
 	struct pwm_bl_data *pb = NULL;
-	int cur_sd_brightness = atomic_read(&sd_brightness);
 	bl = (struct backlight_device *)dev_get_drvdata(dev);
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
-
-	/* SD brightness is a percentage */
-	brightness = (brightness * cur_sd_brightness) / 255;
 
 	/* Apply any backlight response curve */
 	if (brightness > 255)
@@ -486,13 +433,6 @@ static void dsi_a_1080p_11_6_fb_data_init(struct tegra_fb_data *fb)
 	fb->yres = dsi_a_1080p_11_6_modes[0].v_active;
 }
 
-static void
-dsi_a_1080p_11_6_sd_settings_init(struct tegra_dc_sd_settings *settings)
-{
-	*settings = dsi_a_1080p_11_6_sd_settings;
-	settings->bl_device_name = "pwm-backlight";
-}
-
 static struct i2c_board_info dalmore_tc358767_dsi2edp_board_info __initdata = {
 		I2C_BOARD_INFO("tc358767_dsi2edp", 0x0f),
 };
@@ -505,7 +445,6 @@ static int __init dsi_a_1080p_11_6_i2c_bridge_register(void)
 	return err;
 }
 struct tegra_panel __initdata dsi_a_1080p_11_6 = {
-	.init_sd_settings = dsi_a_1080p_11_6_sd_settings_init,
 	.init_dc_out = dsi_a_1080p_11_6_dc_out_init,
 	.init_fb_data = dsi_a_1080p_11_6_fb_data_init,
 	.register_bl_dev = dsi_a_1080p_11_6_register_bl_dev,

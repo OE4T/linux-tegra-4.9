@@ -155,17 +155,12 @@ int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 	dc_out->flags = DC_CTRL_MODE;
 	tegra_dc_reset_fakedsi_panel(dc, dc_outtype);
 
-	if (!dc->out->sd_settings)
-		return -EINVAL;
-	if (tegra_dc_is_t21x())
-		dc->out->sd_settings->enable = 1;
-	dc->out->sd_settings->enable_int = 1;
-
 	/* DrivePX2: DSI->sn65dsi85(LVDS)->ds90ub947(FPDLink) */
 	dsi = tegra_dc_get_outdata(dc);
 
 	if (dsi->info.dsi2lvds_bridge_enable)
 		dc->connected = true;
+
 	return 0;
 }
 

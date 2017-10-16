@@ -144,13 +144,9 @@ static int edp_p_3000_2000_13_5_bl_notify(struct device *dev, int brightness)
 {
 	struct backlight_device *bl = NULL;
 	struct pwm_bl_data *pb = NULL;
-	int cur_sd_brightness = atomic_read(&sd_brightness);
 
 	bl = (struct backlight_device *)dev_get_drvdata(dev);
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
-
-	/* SD brightness is a percentage */
-	brightness = (brightness * cur_sd_brightness) / 255;
 
 	/* Apply any backlight response curve */
 	if (brightness > 255)

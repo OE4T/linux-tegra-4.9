@@ -25,7 +25,6 @@
 #include "../dc.h"
 
 struct tegra_panel {
-	void (*init_sd_settings)(struct tegra_dc_sd_settings *);
 	void (*init_dc_out)(struct tegra_dc_out *);
 	void (*init_fb_data)(struct tegra_fb_data *);
 	void (*init_cmu_data)(struct tegra_dc_platform_data *);

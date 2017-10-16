@@ -1,7 +1,7 @@
 /*
  * panel-p-wuxga-10-1.c: Panel driver for p-wuxga-10-1 panel.
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -186,12 +186,8 @@ static int dsi_p_wuxga_10_1_bl_notify(struct device *dev, int brightness)
 {
 	struct backlight_device *bl = NULL;
 	struct pwm_bl_data *pb = NULL;
-	int cur_sd_brightness = atomic_read(&sd_brightness);
 	bl = (struct backlight_device *)dev_get_drvdata(dev);
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
-
-	/* SD brightness is a percentage */
-	brightness = (brightness * cur_sd_brightness) / 255;
 
 	/* Apply any backlight response curve */
 	if (brightness > 255)

@@ -274,20 +274,10 @@ static int dsi_s_wuxga_8_0_postsuspend(void)
 
 static int dsi_s_wuxga_8_0_bl_notify(struct device *dev, int brightness)
 {
-	int cur_sd_brightness;
 	struct backlight_device *bl = NULL;
 	struct pwm_bl_data *pb = NULL;
 	bl = (struct backlight_device *)dev_get_drvdata(dev);
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
-
-	if (tegra_dc_is_nvdisplay())
-		tegra_sd_check_prism_thresh(dc_dev, brightness);
-	else
-		nvsd_check_prism_thresh(dc_dev, brightness);
-
-	cur_sd_brightness = atomic_read(&sd_brightness);
-	/* SD brightness is a percentage */
-	brightness = (brightness * cur_sd_brightness) / 255;
 
 	/* Apply any backlight response curve */
 	if (brightness > 255)

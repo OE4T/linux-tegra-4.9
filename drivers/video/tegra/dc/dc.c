@@ -75,8 +75,6 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "dc_priv.h"
 #include "dc_shared_isr.h"
 #include "nvhost_sync.h"
-#include "nvsd.h"
-#include "nvsd2.h"
 #include "dpaux.h"
 #include "lvds.h"
 #include "dc_common.h"
@@ -4112,10 +4110,6 @@ void tegra_dc_out_destroy(struct tegra_dc *dc)
 		devm_kfree(&dc->ndev->dev, dc->out->out_pins);
 	dc->out->out_pins = NULL;
 
-	if (dc->out->sd_settings)
-		devm_kfree(&dc->ndev->dev, dc->out->sd_settings);
-	dc->out->sd_settings = NULL;
-
 	tegra_panel_unregister_ops(dc->out);
 }
 
@@ -4433,23 +4427,6 @@ int _tegra_dc_wait_for_frame_end(struct tegra_dc *dc,
 	return ret;
 }
 
-static void tegra_dc_prism_update_backlight(struct tegra_dc *dc)
-{
-	/* Do the actual brightness update outside of the mutex dc->lock */
-	if (dc->out->sd_settings && !dc->out->sd_settings->bl_device &&
-		dc->out->sd_settings->bl_device_name) {
-		char *bl_device_name =
-			dc->out->sd_settings->bl_device_name;
-		dc->out->sd_settings->bl_device =
-			get_backlight_device_by_name(bl_device_name);
-	}
-
-	if (dc->out->sd_settings && dc->out->sd_settings->bl_device) {
-		struct backlight_device *bl = dc->out->sd_settings->bl_device;
-		backlight_update_status(bl);
-	}
-}
-
 void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp)
 {
 	WARN_ON(!mutex_is_locked(&dc->lock));
@@ -4542,7 +4519,7 @@ static void tegra_dc_vrr_sec(struct tegra_dc *dc)
 static void tegra_dc_vblank(struct work_struct *work)
 {
 	struct tegra_dc *dc = container_of(work, struct tegra_dc, vblank_work);
-	bool nvsd_updated = false;
+
 	mutex_lock(&dc->lock);
 
 	if (!dc->enabled) {
@@ -4556,48 +4533,8 @@ static void tegra_dc_vblank(struct work_struct *work)
 	if (!tegra_dc_windows_are_dirty(dc, WIN_ALL_ACT_REQ))
 		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 
-	if (tegra_dc_is_nvdisplay()) {
-		if (dc->out->sd_settings) {
-			if (dc->out->sd_settings->enable) {
-				if ((dc->out->sd_settings->update_sd) ||
-				    (dc->out->sd_settings->phase_in_steps)) {
-					tegra_dc_mask_interrupt(dc,
-								SMARTDIM_INT);
-					nvsd_updated =
-						tegra_sd_update_brightness(dc);
-					dc->out->sd_settings->update_sd = false;
-					tegra_dc_unmask_interrupt(dc,
-								SMARTDIM_INT);
-				}
-			}
-		}
-	} else {
-		/* Update the SD brightness */
-		if (dc->out->sd_settings &&
-		    !dc->out->sd_settings->use_vpulse2) {
-			nvsd_updated = nvsd_update_brightness(dc);
-			/* Ref-count vblank if nvsd is on-going. Otherwise,
-			 * clean the V_BLANK_NVSD bit of vblank ref-count.
-			 */
-			if (nvsd_updated) {
-				set_bit(V_BLANK_NVSD, &dc->vblank_ref_count);
-				tegra_dc_unmask_interrupt(dc, V_BLANK_INT);
-			} else {
-				clear_bit(V_BLANK_NVSD, &dc->vblank_ref_count);
-			}
-		}
-	}
-
-	/* Mask vblank interrupt if ref-count is zero. */
-	if (!dc->vblank_ref_count)
-		tegra_dc_mask_interrupt(dc, V_BLANK_INT);
-
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
-
-	/* Do the actual brightness update outside of the mutex dc->lock */
-	if (nvsd_updated)
-		tegra_dc_prism_update_backlight(dc);
 }
 
 #define CSC_UPDATE_IF_CHANGED(entry, ENTRY) do { \
@@ -4793,9 +4730,6 @@ static void tegra_dc_underflow_handler(struct tegra_dc *dc)
 static void tegra_dc_vpulse2(struct work_struct *work)
 {
 	struct tegra_dc *dc = container_of(work, struct tegra_dc, vpulse2_work);
-#ifdef CONFIG_TEGRA_NVSD
-	bool nvsd_updated = false;
-#endif
 
 	mutex_lock(&dc->lock);
 
@@ -4810,32 +4744,8 @@ static void tegra_dc_vpulse2(struct work_struct *work)
 	if (!tegra_dc_windows_are_dirty(dc, WIN_ALL_ACT_REQ))
 		clear_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
 
-#ifdef CONFIG_TEGRA_NVSD
-	/* Update the SD brightness */
-	if (dc->out->sd_settings && dc->out->sd_settings->use_vpulse2) {
-		nvsd_updated = nvsd_update_brightness(dc);
-
-		if (nvsd_updated) {
-			set_bit(V_PULSE2_NVSD, &dc->vpulse2_ref_count);
-			tegra_dc_unmask_interrupt(dc, V_PULSE2_INT);
-		} else {
-			clear_bit(V_PULSE2_NVSD, &dc->vpulse2_ref_count);
-		}
-	}
-
-	/* Mask vpulse2 interrupt if ref-count is zero. */
-	if (!dc->vpulse2_ref_count)
-		tegra_dc_mask_interrupt(dc, V_PULSE2_INT);
-#endif /* CONFIG_TEGRA_NVSD */
-
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
-
-#ifdef CONFIG_TEGRA_NVSD
-	/* Do the actual brightness update outside of the mutex dc->lock */
-	if (nvsd_updated)
-		tegra_dc_prism_update_backlight(dc);
-#endif
 }
 
 static void tegra_dc_process_vblank(struct tegra_dc *dc)
@@ -4910,13 +4820,9 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 {
 	/* Schedule any additional bottom-half vblank actvities. */
-	if (status & V_BLANK_INT) {
-		if (tegra_dc_is_nvdisplay() && (status & SMARTDIM_INT)) {
-			if (dc->out->sd_settings)
-				dc->out->sd_settings->update_sd = true;
-		}
+	if (status & V_BLANK_INT)
 		queue_work(system_freezable_wq, &dc->vblank_work);
-	}
+
 	if (status & (V_BLANK_INT | MSF_INT)) {
 		if (dc->out->user_needs_vblank) {
 			dc->out->user_needs_vblank = false;
@@ -5600,12 +5506,6 @@ static int tegra_dc_init(struct tegra_dc *dc)
 					"skipping tegra_dc_program_mode.\n");
 		}
 	}
-
-#ifdef CONFIG_TEGRA_NVSD
-	/* Initialize SD AFTER the modeset.
-	   nvsd_init handles the sd_settings = NULL case. */
-	nvsd_init(dc, dc->out->sd_settings);
-#endif
 
 	tegra_dc_io_end(dc);
 
@@ -6834,15 +6734,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	 * boot. It should not apply for e.g. HDMI hotplug.
 	 */
 	dc->initialized = false;
-	if (tegra_dc_is_nvdisplay() && dc->out->sd_settings) {
-		if (dc->out->sd_settings->enable) {
-			mutex_lock(&dc->lock);
-			tegra_dc_unmask_interrupt(dc, SMARTDIM_INT);
-			tegra_sd_stop(dc);
-			tegra_sd_init(dc);
-			mutex_unlock(&dc->lock);
-		}
-	}
 
 	/*
 	 * Initialize vedid state. This is placed here

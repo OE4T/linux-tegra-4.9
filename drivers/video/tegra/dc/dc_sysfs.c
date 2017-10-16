@@ -26,8 +26,6 @@
 #include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
-#include "nvsd.h"
-#include "nvsd2.h"
 #include "vrr.h"
 
 static ssize_t mode_show(struct device *device,
@@ -501,7 +499,6 @@ void tegra_dc_remove_sysfs(struct device *dev)
 {
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
-	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
 
 	device_remove_file(dev, &dev_attr_mode);
 	device_remove_file(dev, &dev_attr_enable);
@@ -526,13 +523,6 @@ void tegra_dc_remove_sysfs(struct device *dev)
 		device_remove_file(dev, &dev_attr_stereo_mode);
 	}
 
-	if (sd_settings)
-#ifdef CONFIG_TEGRA_NVSD
-		nvsd_remove_sysfs(dev);
-#endif
-	if (tegra_dc_is_nvdisplay())
-		tegra_sd_remove_sysfs(dev);
-
 	if (dc->fb)
 		tegra_fb_remove_sysfs(dev);
 
@@ -547,7 +537,6 @@ void tegra_dc_create_sysfs(struct device *dev)
 {
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
-	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
 	struct tegra_vrr *vrr  = dc->out->vrr;
 	int error = 0;
 
@@ -573,13 +562,6 @@ void tegra_dc_create_sysfs(struct device *dev)
 	if (dc->out->stereo) {
 		error |= device_create_file(dev, &dev_attr_stereo_orientation);
 		error |= device_create_file(dev, &dev_attr_stereo_mode);
-	}
-
-	if (sd_settings) {
-		if (tegra_dc_is_nvdisplay())
-			error |= tegra_sd_create_sysfs(dev);
-		else
-			error |= nvsd_create_sysfs(dev);
 	}
 
 	if (vrr)

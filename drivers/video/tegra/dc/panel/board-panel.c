@@ -37,16 +37,8 @@
 #include "iomap.h"
 #include <linux/platform_data/lp855x.h>
 
-#define PRISM_THRESHOLD		50
-#define HYST_VAL		25
-
-atomic_t sd_brightness = ATOMIC_INIT(255);
-EXPORT_SYMBOL(sd_brightness);
-
 int tegra_bl_notify(struct device *dev, int brightness)
 {
-	int cur_sd_brightness;
-
 	struct lp855x *lp = NULL;
 	struct platform_device *pdev = NULL;
 	struct device *dc_dev;
@@ -56,13 +48,6 @@ int tegra_bl_notify(struct device *dev, int brightness)
 	pdev = to_platform_device(bus_find_device_by_name(
 		&platform_bus_type, NULL, "tegradc.0"));
 	dc_dev = &pdev->dev;
-
-	if (dc_dev) {
-		if (brightness <= PRISM_THRESHOLD)
-			nvsd_enbl_dsbl_prism(dc_dev, false);
-		else if (brightness > PRISM_THRESHOLD + HYST_VAL)
-			nvsd_enbl_dsbl_prism(dc_dev, true);
-	}
 
 	/* Apply any backlight response curve */
 	if (brightness > 255)
@@ -92,10 +77,6 @@ int tegra_bl_notify(struct device *dev, int brightness)
 
 	if (bl_curve)
 		brightness = bl_curve[brightness];
-
-	cur_sd_brightness = atomic_read(&sd_brightness);
-	/* SD brightness is a percentage */
-	brightness = (brightness * cur_sd_brightness) / 255;
 
 	if (bl_measured)
 		brightness = bl_measured[brightness];

@@ -25,7 +25,6 @@ ccflags-$(CONFIG_TEGRA_DPHDCP) += -DCONFIG_DPHDCP
 endif
 
 obj-y += edid.o edid_disp_id_ext.o edid_quirks.o
-obj-y += nvsd.o
 obj-y += dsi.o
 obj-$(CONFIG_DEBUG_FS) += dsi_debug.o
 obj-$(CONFIG_DEBUG_FS) += tegra_dsi_csi_test.o

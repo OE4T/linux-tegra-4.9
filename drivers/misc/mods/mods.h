@@ -785,37 +785,6 @@ struct MODS_TEGRA_DC_CONFIG_POSSIBLE {
 	__u8  possible;
 };
 
-
-#define MODS_TEGRA_DC_SETUP_SD_LUT_SIZE  9
-#define MODS_TEGRA_DC_SETUP_BLTF_SIZE   16
-/* MODS_ESC_TEGRA_DC_SETUP_SD */
-struct MODS_TEGRA_DC_SETUP_SD {
-	/* IN */
-	__u8 head;
-	__u8 enable;
-
-	__u8 use_vid_luma;
-	__u8 csc_r;
-	__u8 csc_g;
-	__u8 csc_b;
-	__u8 aggressiveness;
-	__u8 bin_width_log2;
-
-	__u32 lut[MODS_TEGRA_DC_SETUP_SD_LUT_SIZE];
-	__u32 bltf[MODS_TEGRA_DC_SETUP_BLTF_SIZE];
-
-	__u32 klimit;
-	__u32 soft_clipping_threshold;
-	__u32 smooth_k_inc;
-	__u8  k_init_bias;
-
-
-	__u32 win_x;
-	__u32 win_y;
-	__u32 win_w;
-	__u32 win_h;
-};
-
 /* MODS_ESC_DMABUF_GET_PHYSICAL_ADDRESS */
 struct MODS_DMABUF_GET_PHYSICAL_ADDRESS {
 	/* IN */
@@ -1163,8 +1132,6 @@ struct MODS_SET_NUM_VF {
 #define MODS_ESC_TEGRA_DC_CONFIG_POSSIBLE	\
 		   _IOWR(MODS_IOC_MAGIC, 47,	\
 			 struct MODS_TEGRA_DC_CONFIG_POSSIBLE)
-#define MODS_ESC_TEGRA_DC_SETUP_SD		\
-		    _IOW(MODS_IOC_MAGIC, 48, struct MODS_TEGRA_DC_SETUP_SD)
 #define MODS_ESC_DMABUF_GET_PHYSICAL_ADDRESS	\
 		   _IOWR(MODS_IOC_MAGIC, 49,    \
 			 struct MODS_DMABUF_GET_PHYSICAL_ADDRESS)

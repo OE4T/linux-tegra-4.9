@@ -45,9 +45,11 @@ static struct menu *current_menu, *current_entry;
 
 %token <id>T_MAINMENU
 %token <id>T_MENU
+%token <id>T_APPEND_MENU
 %token <id>T_ENDMENU
 %token <id>T_SOURCE
 %token <id>T_CHOICE
+%token <id>T_APPEND_CHOICE
 %token <id>T_ENDCHOICE
 %token <id>T_COMMENT
 %token <id>T_CONFIG
@@ -89,7 +91,7 @@ static struct menu *current_menu, *current_entry;
 %type <expr> if_expr
 %type <id> end
 %type <id> option_name
-%type <menu> if_entry menu_entry choice_entry
+%type <menu> if_entry menu_entry append_menu_entry choice_entry append_choice_entry
 %type <string> symbol_option_arg word_opt
 
 %destructor {
@@ -97,7 +99,7 @@ static struct menu *current_menu, *current_entry;
 		$$->file->name, $$->lineno);
 	if (current_menu == $$)
 		menu_end_menu();
-} if_entry menu_entry choice_entry
+} if_entry menu_entry append_menu_entry choice_entry append_choice_entry
 
 %{
 /* Include zconf.hash.c here so it can see the token constants. */
@@ -258,6 +260,12 @@ choice_entry: choice choice_option_list
 	$$ = menu_add_menu();
 };
 
+append_choice_entry: T_APPEND_CHOICE prompt T_EOL
+{
+	printd(DEBUG_PARSE, "%s:%d:append_choice\n", zconf_curname(), zconf_lineno());
+	$$ = menu_append_choice($2);
+}
+
 choice_end: end
 {
 	if (zconf_endtoken($1, T_CHOICE, T_ENDCHOICE)) {
@@ -266,7 +274,9 @@ choice_end: end
 	}
 };
 
-choice_stmt: choice_entry choice_block choice_end
+choice_stmt:
+	  choice_entry choice_block choice_end
+	| append_choice_entry choice_block choice_end
 ;
 
 choice_option_list:
@@ -365,6 +375,12 @@ menu_entry: menu visibility_list depends_list
 	$$ = menu_add_menu();
 };
 
+append_menu_entry: T_APPEND_MENU prompt T_EOL
+{
+	printd(DEBUG_PARSE, "%s:%d:append_menu\n", zconf_curname(), zconf_lineno());
+	$$ = menu_append_entry($2);
+}
+
 menu_end: end
 {
 	if (zconf_endtoken($1, T_MENU, T_ENDMENU)) {
@@ -373,7 +389,9 @@ menu_end: end
 	}
 };
 
-menu_stmt: menu_entry menu_block menu_end
+menu_stmt:
+	  menu_entry menu_block menu_end
+	| append_menu_entry menu_block menu_end
 ;
 
 menu_block:
@@ -529,8 +547,10 @@ static const char *zconf_tokenname(int token)
 {
 	switch (token) {
 	case T_MENU:		return "menu";
+	case T_APPEND_MENU:	return "append_menu";
 	case T_ENDMENU:		return "endmenu";
 	case T_CHOICE:		return "choice";
+	case T_APPEND_CHOICE:	return "append_choice";
 	case T_ENDCHOICE:	return "endchoice";
 	case T_IF:		return "if";
 	case T_ENDIF:		return "endif";
@@ -548,7 +568,7 @@ static bool zconf_endtoken(const struct kconf_id *id, int starttoken, int endtok
 		zconfnerrs++;
 		return false;
 	}
-	if (current_menu->file != current_file) {
+	if (strcmp(current_menu->file->logical_name, current_file->logical_name)) {
 		zconf_error("'%s' in different file than '%s'",
 			kconf_id_strings + id->name, zconf_tokenname(starttoken));
 		fprintf(stderr, "%s:%d: location of the '%s'\n",

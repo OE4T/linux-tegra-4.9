@@ -238,6 +238,8 @@ static int ufshcd_config_pwr_mode(struct ufs_hba *hba,
 		struct ufs_pa_layer_attr *desired_pwr_mode);
 static int ufshcd_change_power_mode(struct ufs_hba *hba,
 			     struct ufs_pa_layer_attr *pwr_mode);
+static int ufshcd_set_dev_pwr_mode(struct ufs_hba *hba,
+				     enum ufs_dev_pwr_mode pwr_mode);
 static inline bool ufshcd_valid_tag(struct ufs_hba *hba, int tag)
 {
 	return tag >= 0 && tag < hba->nutrs;
@@ -4959,10 +4961,11 @@ static int ufshcd_scsi_add_wlus(struct ufs_hba *hba)
 {
 	int ret = 0;
 	struct scsi_device *sdev_rpmb;
-	struct scsi_device *sdev_boot;
 
 	if (!(hba->quirks & UFSHCD_QUIRK_ENABLE_WLUNS))
 		return 0;
+
+	/* Note: boot WLU is not added currently*/
 
 	hba->sdev_ufs_device = __scsi_add_device(hba->host, 0, 0,
 		ufshcd_upiu_wlun_to_scsi_wlun(UFS_UPIU_UFS_DEVICE_WLUN), NULL);
@@ -4973,25 +4976,15 @@ static int ufshcd_scsi_add_wlus(struct ufs_hba *hba)
 	}
 	scsi_device_put(hba->sdev_ufs_device);
 
-	sdev_boot = __scsi_add_device(hba->host, 0, 0,
-		ufshcd_upiu_wlun_to_scsi_wlun(UFS_UPIU_BOOT_WLUN), NULL);
-	if (IS_ERR(sdev_boot)) {
-		ret = PTR_ERR(sdev_boot);
-		goto remove_sdev_ufs_device;
-	}
-	scsi_device_put(sdev_boot);
-
 	sdev_rpmb = __scsi_add_device(hba->host, 0, 0,
 		ufshcd_upiu_wlun_to_scsi_wlun(UFS_UPIU_RPMB_WLUN), NULL);
 	if (IS_ERR(sdev_rpmb)) {
 		ret = PTR_ERR(sdev_rpmb);
-		goto remove_sdev_boot;
+		goto remove_sdev_ufs_device;
 	}
 	scsi_device_put(sdev_rpmb);
 	goto out;
 
-remove_sdev_boot:
-	scsi_remove_device(sdev_boot);
 remove_sdev_ufs_device:
 	scsi_remove_device(hba->sdev_ufs_device);
 out:
@@ -5493,6 +5486,28 @@ out:
 	return err;
 }
 
+static int ufshcd_set_power_mode_ioctl(struct ufs_hba *hba, void __user *buf)
+{
+	int err = 0;
+	uint32_t pwr_mode;
+
+	/* Copy the user buffer to kernel buffer */
+	err = copy_from_user(&pwr_mode, buf, sizeof(uint32_t));
+	if (err) {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	if (pwr_mode > UFS_POWERDOWN_PWR_MODE) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	err = ufshcd_set_dev_pwr_mode(hba, (enum ufs_dev_pwr_mode)pwr_mode);
+
+out:
+	return err;
+}
 
 static int ufshcd_ioctl(struct scsi_device *dev, int cmd, void __user *buf)
 {
@@ -5503,6 +5518,12 @@ static int ufshcd_ioctl(struct scsi_device *dev, int cmd, void __user *buf)
 	case UFS_IOCTL_QUERY:
 		pm_runtime_get_sync(hba->dev);
 		err = ufshcd_query_ioctl(hba, buf);
+		pm_runtime_put_sync(hba->dev);
+		break;
+
+	case UFS_IOCTL_SET_POWER_MODE:
+		pm_runtime_get_sync(hba->dev);
+		err = ufshcd_set_power_mode_ioctl(hba, buf);
 		pm_runtime_put_sync(hba->dev);
 		break;
 

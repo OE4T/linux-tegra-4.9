@@ -7,7 +7,11 @@
  *  IOCTL opcode for ufs queries has the following opcode after
  *  SCSI_IOCTL_GET_PCI
  */
-#define UFS_IOCTL_QUERY			0x5388
+#define UFS_IOCTL_QUERY                 0x5388
+/*
+ *  IOCTL opcode to set UFS power mode
+ */
+#define UFS_IOCTL_SET_POWER_MODE        0x5389
 
 /**
  * struct ufs_ioc_query_cmd - used to transfer ufs query command/data to and

@@ -35,7 +35,7 @@ int pva_run_ucode_selftest(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
 	int err = 0;
-	u32 int_status;
+	u32 reg_status;
 	u32 ucode_mode;
 	void *selftest_cpuaddr;
 	dma_addr_t base_iova = PVA_SELF_TESTMODE_START_ADDR;
@@ -64,7 +64,7 @@ int pva_run_ucode_selftest(struct platform_device *pdev)
 	}
 
 	pva->mailbox_status = PVA_MBOX_STATUS_WFI;
-	host1x_writel(pdev, hsp_ss0_set_r(), (PVA_TEST_RUN  | PVA_TEST_WAIT));
+	host1x_writel(pdev, hsp_ss0_set_r(), PVA_TEST_RUN);
 
 	/* Wait till we get a AISR_ABORT interrupt */
 	err = pva_mailbox_wait_event(pva, 60000);
@@ -80,16 +80,24 @@ int pva_run_ucode_selftest(struct platform_device *pdev)
 		goto err_selftest;
 	}
 
-	int_status = host1x_readl(pdev, hsp_sm7_r());
+	reg_status = host1x_readl(pdev, hsp_sm7_r());
 
 	/* check test passed bit set and test status done*/
 	if ((ucode_mode & PVA_TESTS_PASSED) &&
-		(int_status == PVA_MBOX_VAL_TESTS_DONE))
+		(reg_status == PVA_MBOX_VAL_TESTS_DONE))
 		nvhost_dbg_info("uCode SELFTEST Passed");
 	else if (ucode_mode & PVA_TESTS_FAILED)
 		nvhost_dbg_info("uCode SELFTEST Failed");
 	else
 		nvhost_dbg_info("uCode SELFTEST UnKnown State");
+
+	/* Get CCQ8 register value */
+	reg_status = host1x_readl(pdev, cfg_ccq_status8_r());
+	nvhost_dbg_info("Major 0x%x, Minor 0x%x, Flags 0x%x, Trace Sequence 0x%x \n",
+			(reg_status & 0xFF000000) >> 24,
+			(reg_status & 0x00FF0000) >> 16,
+			(reg_status & 0xFF00) >> 8,
+			(reg_status & 0xFF));
 
 wait_timeout:
 err_selftest:

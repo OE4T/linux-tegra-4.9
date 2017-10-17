@@ -164,7 +164,7 @@ static int pva_init_fw(struct platform_device *pdev)
 
 	/* Indicate the OS is waiting for PVA ready Interrupt */
 	pva->mailbox_status = PVA_MBOX_STATUS_WFI;
-	host1x_writel(pdev, hsp_ss0_set_r(), PVA_BOOT_INT);
+	host1x_writel(pdev, hsp_ss0_set_r(), (PVA_BOOT_INT | PVA_TEST_WAIT));
 
 	/* Take R5 out of reset */
 	host1x_writel(pdev, proc_cpuhalt_r(),

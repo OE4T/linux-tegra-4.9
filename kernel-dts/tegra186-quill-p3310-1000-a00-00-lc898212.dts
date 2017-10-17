@@ -28,7 +28,7 @@
 					reg = <2>;
 					e3323_vi_in2: endpoint {
 						status = "okay";
-						csi-port = <0>;
+						port-index = <0>;
 						bus-width = <4>;
 						remote-endpoint = <&e3323_lc898212_out0>;
 					};
@@ -38,7 +38,7 @@
 					reg = <3>;
 					e3323_vi_in3: endpoint {
 						status = "okay";
-						csi-port = <2>;
+						port-index = <2>;
 						bus-width = <4>;
 						remote-endpoint = <&e3323_lc898212_out1>;
 					};

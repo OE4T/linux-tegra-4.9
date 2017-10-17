@@ -361,9 +361,9 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 				continue;
 
 			/* Get CSI port */
-			ret = of_property_read_u32(ep, "csi-port", &value);
+			ret = of_property_read_u32(ep, "port-index", &value);
 			if (ret < 0)
-				dev_err(&chan->video.dev, "csi port error\n");
+				dev_err(&chan->video.dev, "port index error\n");
 			chan->port[0] = value;
 
 			/* Get number of data lanes for the endpoint */

@@ -234,15 +234,15 @@ int camera_common_parse_ports(struct device *dev,
 	}
 	s_data->numlanes = bus_width;
 
-	err = of_property_read_u32(ep, "csi-port", &port);
+	err = of_property_read_u32(ep, "port-index", &port);
 	if (err) {
 		dev_err(dev,
-			"Failed to find CSI port\n");
+			"Failed to find port index\n");
 		return err;
 	}
 	s_data->csi_port = port;
 
-	dev_dbg(dev, "%s: csi port %d num of lanes %d\n",
+	dev_dbg(dev, "%s: port %d num of lanes %d\n",
 		__func__, s_data->csi_port, s_data->numlanes);
 
 	return 0;

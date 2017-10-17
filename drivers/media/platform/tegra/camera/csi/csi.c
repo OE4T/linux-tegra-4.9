@@ -569,9 +569,9 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 		for_each_child_of_node(port, ep) {
 			if (!ep->name || of_node_cmp(ep->name, "endpoint"))
 				continue;
-			ret = of_property_read_u32(ep, "csi-port", &value);
+			ret = of_property_read_u32(ep, "port-index", &value);
 			if (ret < 0)
-				dev_err(chan->csi->dev, "No csi port info\n");
+				dev_err(chan->csi->dev, "No port index info\n");
 			chan->port[0] = value;
 
 			ret = of_property_read_u32(ep, "bus-width", &value);

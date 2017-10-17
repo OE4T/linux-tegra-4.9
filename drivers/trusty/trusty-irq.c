@@ -163,7 +163,7 @@ irqreturn_t trusty_irq_handler(int irq, void *data)
 	struct trusty_irq_irqset *irqset;
 
 	dev_dbg(is->dev, "%s: irq %d, percpu %d, cpu %d, enable %d\n",
-		__func__, irq, trusty_irq->irq, smp_processor_id(),
+		__func__, irq, trusty_irq->percpu, smp_processor_id(),
 		trusty_irq->enable);
 
 	if (trusty_irq->percpu) {

@@ -20,11 +20,13 @@
 #include "gv11b/fifo_gv11b.h"
 #include "gv11b/subctx_gv11b.h"
 #include "ioctl_tsg_t19x.h"
+#include "common/linux/os_linux.h"
 
 static int gv11b_tsg_ioctl_bind_channel_ex(struct gk20a *g,
 	struct tsg_gk20a *tsg, struct nvgpu_tsg_bind_channel_ex_args *arg)
 {
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	struct channel_gk20a *ch;
 	int err = 0;
 

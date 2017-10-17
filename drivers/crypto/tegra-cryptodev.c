@@ -61,7 +61,7 @@ enum tegra_se_pka1_ecc_type {
 
 struct tegra_crypto_ctx {
 	/*ecb, cbc, ofb, ctr */
-	struct crypto_skcipher *aes_tfm[4];
+	struct crypto_skcipher *aes_tfm[TEGRA_CRYPTO_MAX];
 	/* rsa512, rsa1024, rsa1536, rsa2048 */
 	struct crypto_akcipher *rsa_tfm[4];
 	/* rsa512, rsa768, rsa1024, rsa1536, rsa2048, rsa3072, rsa4096 */
@@ -227,7 +227,8 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 	unsigned long total = 0;
 	const u8 *key = NULL;
 	struct tegra_crypto_completion tcrypt_complete;
-	char aes_algo[5][10] = {"ecb(aes)", "cbc(aes)", "ofb(aes)", "ctr(aes)"};
+	char aes_algo[5][10] = {"ecb(aes)", "cbc(aes)", "ofb(aes)", "ctr(aes)",
+				"xts(aes)"};
 
 	if (crypt_req->op != TEGRA_CRYPTO_CBC) {
 		if (crypt_req->op >= TEGRA_CRYPTO_MAX)
@@ -262,7 +263,9 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 		((crypt_req->keylen &
 		CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_192_SIZE) &&
 		((crypt_req->keylen &
-		CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_256_SIZE)) {
+		CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_256_SIZE) &&
+		((crypt_req->keylen &
+		CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_512_SIZE)) {
 		ret = -EINVAL;
 		pr_err("crypt_req keylen invalid");
 		goto process_req_out;

@@ -26,10 +26,11 @@
 /* ioctl arg = 1 if you want to use ssk. arg = 0 to use normal key */
 #define TEGRA_CRYPTO_IOCTL_NEED_SSK		_IOWR(0x98, 100, int)
 
-#define TEGRA_CRYPTO_MAX_KEY_SIZE	AES_MAX_KEY_SIZE
+#define TEGRA_CRYPTO_MAX_KEY_SIZE	TEGRA_CRYPTO_KEY_512_SIZE
 #define RSA_KEY_SIZE		512
 #define TEGRA_CRYPTO_IV_SIZE	AES_BLOCK_SIZE
 #define DEFAULT_RNG_BLK_SZ	16
+#define TEGRA_CRYPTO_KEY_512_SIZE	64
 #define TEGRA_CRYPTO_KEY_256_SIZE	32
 #define TEGRA_CRYPTO_KEY_192_SIZE	24
 #define TEGRA_CRYPTO_KEY_128_SIZE	16
@@ -56,6 +57,8 @@ enum tegra_se_crypto_dev_mode {
 	TEGRA_CRYPTO_OFB,
 	/* Counter (CTR) mode */
 	TEGRA_CRYPTO_CTR,
+	/* XEX with Ciphertext stealing (XTS) mode*/
+	TEGRA_CRYPTO_XTS,
 	/* max mode number */
 	TEGRA_CRYPTO_MAX
 };

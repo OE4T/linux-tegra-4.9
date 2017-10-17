@@ -2418,7 +2418,7 @@
 		compatible = "arm,coresight-stm", "arm,primecell";
 		reg = <0x0 0x08070000 0x0 0x1000>,
 		      <0x0 0x0A000000 0x0 0x180000>;
-		reg-names = "stm-base", "stm-channel-base";
+		reg-names = "stm-base", "stm-stimulus-base";
 
 		clocks = <&tegra_car TEGRA186_CLK_DBGAPB>;
 		clock-names = "apb_pclk";

@@ -641,88 +641,20 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	return err;
 }
 
-int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
-			  struct vm_gk20a_mapping_batch *batch)
-{
-	struct gk20a *g = vm->mm->g;
-	struct nvgpu_mapped_buf *mapped_buffer;
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-
-	mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, offset);
-	if (!mapped_buffer) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		nvgpu_err(g, "invalid addr to unmap 0x%llx", offset);
-		return 0;
-	}
-
-	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		struct nvgpu_timeout timeout;
-
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-		nvgpu_timeout_init(vm->mm->g, &timeout, 10000,
-				   NVGPU_TIMER_RETRY_TIMER);
-		do {
-			if (nvgpu_atomic_read(
-				&mapped_buffer->ref.refcount) == 1)
-					break;
-			nvgpu_udelay(5);
-		} while (!nvgpu_timeout_expired_msg(&timeout,
-					    "sync-unmap failed on 0x%llx"));
-
-		nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-	}
-
-	if (mapped_buffer->user_mapped == 0) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		nvgpu_err(g, "addr already unmapped from user 0x%llx", offset);
-		return 0;
-	}
-
-	mapped_buffer->user_mapped--;
-	if (mapped_buffer->user_mapped == 0)
-		vm->num_user_mapped_buffers--;
-
-	vm->kref_put_batch = batch;
-	nvgpu_ref_put(&mapped_buffer->ref, nvgpu_vm_unmap_locked_ref);
-	vm->kref_put_batch = NULL;
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-	return 0;
-}
-
-/* NOTE! mapped_buffers lock must be held */
-void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
-			   struct vm_gk20a_mapping_batch *batch)
+/*
+ * This is the function call-back for freeing OS specific components of an
+ * nvgpu_mapped_buf. This should most likely never be called outside of the
+ * core MM framework!
+ *
+ * Note: the VM lock will be held.
+ */
+void nvgpu_vm_unmap_system(struct nvgpu_mapped_buf *mapped_buffer)
 {
 	struct vm_gk20a *vm = mapped_buffer->vm;
-	struct gk20a *g = vm->mm->g;
-
-	g->ops.mm.gmmu_unmap(vm,
-		mapped_buffer->addr,
-		mapped_buffer->size,
-		mapped_buffer->pgsz_idx,
-		mapped_buffer->va_allocated,
-		gk20a_mem_flag_none,
-		mapped_buffer->vm_area ?
-		  mapped_buffer->vm_area->sparse : false,
-		batch);
 
 	gk20a_mm_unpin(dev_from_vm(vm), mapped_buffer->dmabuf,
 		       mapped_buffer->sgt);
 
-	/* remove from mapped buffer tree and remove list, free */
-	nvgpu_remove_mapped_buf(vm, mapped_buffer);
-	if (!nvgpu_list_empty(&mapped_buffer->buffer_list))
-		nvgpu_list_del(&mapped_buffer->buffer_list);
-
-	/* keep track of mapped buffers */
-	if (mapped_buffer->user_mapped)
-		vm->num_user_mapped_buffers--;
-
 	if (mapped_buffer->own_mem_ref)
 		dma_buf_put(mapped_buffer->dmabuf);
-
-	nvgpu_kfree(g, mapped_buffer);
 }

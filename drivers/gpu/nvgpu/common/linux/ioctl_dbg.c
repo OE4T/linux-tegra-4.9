@@ -1142,7 +1142,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	return 0;
 
 err_unmap:
-	nvgpu_vm_unmap_buffer(mm->perfbuf.vm, args->offset, NULL);
+	nvgpu_vm_unmap(mm->perfbuf.vm, args->offset, NULL);
 err_remove_vm:
 	nvgpu_vm_put(mm->perfbuf.vm);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
@@ -1386,7 +1386,7 @@ static int gk20a_perfbuf_release_locked(struct gk20a *g, u64 offset)
 
 	err = g->ops.dbg_session_ops.perfbuffer_disable(g);
 
-	nvgpu_vm_unmap_buffer(vm, offset, NULL);
+	nvgpu_vm_unmap(vm, offset, NULL);
 	nvgpu_free_inst_block(g, &mm->perfbuf.inst_block);
 	nvgpu_vm_put(vm);
 

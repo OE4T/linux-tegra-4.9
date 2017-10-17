@@ -98,10 +98,6 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 			u64 mapping_size,
 			struct vm_gk20a_mapping_batch *batch);
 
-/* Note: batch may be NULL if unmap op is not part of a batch */
-int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
-			  struct vm_gk20a_mapping_batch *batch);
-
 /* find buffer corresponding to va */
 int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
 		      struct dma_buf **dmabuf,

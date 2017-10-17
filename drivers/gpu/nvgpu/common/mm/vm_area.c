@@ -208,7 +208,7 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr)
 				       &vm_area->buffer_list_head,
 				       nvgpu_mapped_buf, buffer_list) {
 		nvgpu_list_del(&buffer->buffer_list);
-		nvgpu_ref_put(&buffer->ref, nvgpu_vm_unmap_locked_ref);
+		nvgpu_ref_put(&buffer->ref, __nvgpu_vm_unmap_ref);
 	}
 
 	/* if this was a sparse mapping, free the va */

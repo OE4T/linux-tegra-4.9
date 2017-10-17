@@ -118,7 +118,10 @@ static int gk20a_as_ioctl_unmap_buffer(
 		struct nvgpu_as_unmap_buffer_args *args)
 {
 	gk20a_dbg_fn("");
-	return nvgpu_vm_unmap_buffer(as_share->vm, args->offset, NULL);
+
+	nvgpu_vm_unmap(as_share->vm, args->offset, NULL);
+
+	return 0;
 }
 
 static int gk20a_as_ioctl_map_buffer_batch(
@@ -155,10 +158,7 @@ static int gk20a_as_ioctl_map_buffer_batch(
 			break;
 		}
 
-		err = nvgpu_vm_unmap_buffer(as_share->vm, unmap_args.offset,
-					    &batch);
-		if (err)
-			break;
+		nvgpu_vm_unmap(as_share->vm, unmap_args.offset, &batch);
 	}
 
 	if (err) {

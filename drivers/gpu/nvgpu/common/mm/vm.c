@@ -36,6 +36,9 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
+static void __nvgpu_vm_unmap(struct nvgpu_mapped_buf *mapped_buffer,
+			     struct vm_gk20a_mapping_batch *batch);
+
 int vm_aspace_id(struct vm_gk20a *vm)
 {
 	return vm->as_share ? vm->as_share->id : -1;
@@ -538,7 +541,7 @@ static void __nvgpu_vm_remove(struct vm_gk20a *vm)
 	nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	while (node) {
 		mapped_buffer = mapped_buffer_from_rbtree_node(node);
-		nvgpu_vm_unmap_locked(mapped_buffer, NULL);
+		__nvgpu_vm_unmap(mapped_buffer, NULL);
 		nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	}
 
@@ -702,8 +705,7 @@ void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
 	vm->kref_put_batch = &batch;
 
 	for (i = 0; i < num_buffers; ++i)
-		nvgpu_ref_put(&mapped_buffers[i]->ref,
-			 nvgpu_vm_unmap_locked_ref);
+		nvgpu_ref_put(&mapped_buffers[i]->ref, __nvgpu_vm_unmap_ref);
 
 	vm->kref_put_batch = NULL;
 	nvgpu_vm_mapping_batch_finish_locked(vm, &batch);
@@ -712,26 +714,118 @@ void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
 	nvgpu_big_free(vm->mm->g, mapped_buffers);
 }
 
-void nvgpu_vm_unmap_locked_ref(struct nvgpu_ref *ref)
+/*
+ * Really unmap. This does the real GMMU unmap and removes the mapping from the
+ * VM map tracking tree (and vm_area list if necessary).
+ */
+static void __nvgpu_vm_unmap(struct nvgpu_mapped_buf *mapped_buffer,
+			     struct vm_gk20a_mapping_batch *batch)
+{
+	struct vm_gk20a *vm = mapped_buffer->vm;
+	struct gk20a *g = vm->mm->g;
+
+	vm->num_user_mapped_buffers--;
+
+	g->ops.mm.gmmu_unmap(vm,
+			     mapped_buffer->addr,
+			     mapped_buffer->size,
+			     mapped_buffer->pgsz_idx,
+			     mapped_buffer->va_allocated,
+			     gk20a_mem_flag_none,
+			     mapped_buffer->vm_area ?
+			     mapped_buffer->vm_area->sparse : false,
+			     batch);
+
+	/*
+	 * Remove from mapped buffer tree. Then delete the buffer from the
+	 * linked list of mapped buffers; though note: not all mapped buffers
+	 * are part of a vm_area.
+	 */
+	nvgpu_remove_mapped_buf(vm, mapped_buffer);
+	nvgpu_list_del(&mapped_buffer->buffer_list);
+
+	/*
+	 * OS specific freeing. This is after the generic freeing incase the
+	 * generic freeing relies on some component of the OS specific
+	 * nvgpu_mapped_buf in some abstraction or the like.
+	 */
+	nvgpu_vm_unmap_system(mapped_buffer);
+
+	nvgpu_kfree(g, mapped_buffer);
+}
+
+void __nvgpu_vm_unmap_ref(struct nvgpu_ref *ref)
 {
 	struct nvgpu_mapped_buf *mapped_buffer =
 		container_of(ref, struct nvgpu_mapped_buf, ref);
-	nvgpu_vm_unmap_locked(mapped_buffer, mapped_buffer->vm->kref_put_batch);
+
+	__nvgpu_vm_unmap(mapped_buffer, mapped_buffer->vm->kref_put_batch);
 }
 
-void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset)
+/*
+ * For fixed-offset buffers we must sync the buffer. That means we wait for the
+ * buffer to hit a ref-count of 1 before proceeding.
+ *
+ * Note: this requires the update_gmmu_lock to be held since we release it and
+ * re-aquire it in this function.
+ */
+static int nvgpu_vm_unmap_sync_buffer(struct vm_gk20a *vm,
+				      struct nvgpu_mapped_buf *mapped_buffer)
 {
-	struct gk20a *g = vm->mm->g;
+	struct nvgpu_timeout timeout;
+	int ret = 0;
+
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
+
+	/*
+	 * 500ms second timer.
+	 */
+	nvgpu_timeout_init(vm->mm->g, &timeout, 50, NVGPU_TIMER_CPU_TIMER);
+
+	do {
+		if (nvgpu_atomic_read(&mapped_buffer->ref.refcount) == 1)
+			break;
+		nvgpu_msleep(10);
+	} while (!nvgpu_timeout_expired_msg(&timeout,
+					    "sync-unmap failed on 0x%llx"));
+
+	if (nvgpu_timeout_expired(&timeout))
+		ret = -ETIMEDOUT;
+
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
+
+	return ret;
+}
+
+void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset,
+		    struct vm_gk20a_mapping_batch *batch)
+{
 	struct nvgpu_mapped_buf *mapped_buffer;
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
+
 	mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, offset);
-	if (!mapped_buffer) {
-		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		nvgpu_err(g, "invalid addr to unmap 0x%llx", offset);
-		return;
+	if (!mapped_buffer)
+		goto done;
+
+	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+		if (nvgpu_vm_unmap_sync_buffer(vm, mapped_buffer))
+			/*
+			 * Looks like we have failed... Better not continue in
+			 * case the buffer is in use.
+			 */
+			goto done;
 	}
 
-	nvgpu_ref_put(&mapped_buffer->ref, nvgpu_vm_unmap_locked_ref);
+	/*
+	 * Make sure we have access to the batch if we end up calling through to
+	 * the unmap_ref function.
+	 */
+	vm->kref_put_batch = batch;
+	nvgpu_ref_put(&mapped_buffer->ref, __nvgpu_vm_unmap_ref);
+	vm->kref_put_batch = NULL;
+
+done:
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
+	return;
 }

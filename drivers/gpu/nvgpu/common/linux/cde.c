@@ -1167,7 +1167,7 @@ __releases(&l->cde_app->mutex)
 	cde_ctx->init_cmd_executed = true;
 
 	/* unmap the buffers - channel holds references to them now */
-	nvgpu_vm_unmap(cde_ctx->vm, map_vaddr);
+	nvgpu_vm_unmap(cde_ctx->vm, map_vaddr, NULL);
 
 	return err;
 
@@ -1175,7 +1175,7 @@ exit_unmap_surface:
 	if (surface)
 		dma_buf_vunmap(compbits_scatter_buf, surface);
 exit_unmap_vaddr:
-	nvgpu_vm_unmap(cde_ctx->vm, map_vaddr);
+	nvgpu_vm_unmap(cde_ctx->vm, map_vaddr, NULL);
 exit_idle:
 	gk20a_idle(g);
 	return err;

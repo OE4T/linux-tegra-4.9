@@ -207,11 +207,19 @@ void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
 			  struct nvgpu_mapped_buf **mapped_buffers,
 			  int num_buffers);
 
-void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
-			   struct vm_gk20a_mapping_batch *batch);
-void nvgpu_vm_unmap_locked_ref(struct nvgpu_ref *ref);
+void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset,
+		    struct vm_gk20a_mapping_batch *batch);
 
-void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset);
+/*
+ * Implemented by each OS. Called from within the core VM code to handle OS
+ * specific components of an nvgpu_mapped_buf.
+ */
+void nvgpu_vm_unmap_system(struct nvgpu_mapped_buf *mapped_buffer);
+
+/*
+ * Don't use this outside of the core VM code!
+ */
+void __nvgpu_vm_unmap_ref(struct nvgpu_ref *ref);
 
 /*
  * These all require the VM update lock to be held.

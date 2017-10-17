@@ -296,6 +296,37 @@ done:
 	return err;
 }
 
+static ssize_t force_idle_store(struct device *device,
+				struct device_attribute *attr, const char *buf,
+				size_t count)
+{
+	int err;
+	unsigned long val = 0;
+
+	if (kstrtoul(buf, 0, &val) < 0)
+		return -EINVAL;
+
+	if (val)
+		err = nvhost_module_do_idle(device);
+	else
+		err = nvhost_module_do_unidle(device);
+
+	if (err)
+		return err;
+
+	return count;
+}
+
+static ssize_t force_idle_read(struct device *device,
+				struct device_attribute *attr, char *buf)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(device);
+
+	return sprintf(buf, "%d\n", pdata->forced_idle ? 1 : 0);
+}
+
+static DEVICE_ATTR(force_idle, 0744, force_idle_read, force_idle_store);
+
 int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 		int index)
 {
@@ -753,7 +784,17 @@ int nvhost_module_init(struct platform_device *dev)
 		goto fail_forceon;
 	}
 
+	err = device_create_file(&dev->dev, &dev_attr_force_idle);
+	if (err) {
+		dev_err(&dev->dev, "Couldn't create device file force_idle\n");
+		goto fail_force_idle;
+	}
+
 	return 0;
+
+fail_force_idle:
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_FORCE_ON];
+	sysfs_remove_file(pdata->power_kobj, &attr->attr);
 
 fail_forceon:
 	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_AUTOSUSPEND_DELAY];
@@ -805,6 +846,8 @@ void nvhost_module_deinit(struct platform_device *dev)
 
 		kobject_put(pdata->power_kobj);
 	}
+
+	device_remove_file(&dev->dev, &dev_attr_force_idle);
 }
 EXPORT_SYMBOL(nvhost_module_deinit);
 

@@ -25,7 +25,7 @@
 				port@0 {
 					reg = <0>;
 					liimx274_vi_in0: endpoint {
-						csi-port = <0>;
+						port-index = <0>;
 						bus-width = <4>;
 						remote-endpoint = <&liimx274_csi_out0>;
 					};
@@ -45,7 +45,7 @@
 					port@0 {
 						reg = <0>;
 						liimx274_csi_in0: endpoint@0 {
-							csi-port = <0>;
+							port-index = <0>;
 							bus-width = <4>;
 							remote-endpoint = <&liimx274_imx274_out0>;
 						};
@@ -328,7 +328,7 @@
 					port@0 {
 						reg = <0>;
 						liimx274_imx274_out0: endpoint {
-							csi-port = <0>;
+							port-index = <0>;
 							bus-width = <4>;
 							remote-endpoint = <&liimx274_csi_in0>;
 							};

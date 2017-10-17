@@ -26,7 +26,7 @@
 				port@0 {
 					reg = <0>;
 					e3322_vi_in0: endpoint {
-						csi-port = <0>;
+						port-index = <0>;
 						bus-width = <2>;
 						remote-endpoint = <&e3322_csi_out0>;
 					};
@@ -34,7 +34,7 @@
 				port@1 {
 					reg = <1>;
 					e3322_vi_in1: endpoint {
-						csi-port = <1>;
+						port-index = <1>;
 						bus-width = <2>;
 						remote-endpoint = <&e3322_csi_out1>;
 					};
@@ -42,7 +42,7 @@
 				port@2 {
 					reg = <2>;
 					e3322_vi_in2: endpoint {
-						csi-port = <2>;
+						port-index = <2>;
 						bus-width = <2>;
 						remote-endpoint = <&e3322_csi_out2>;
 					};
@@ -50,7 +50,7 @@
 				port@3 {
 					reg = <3>;
 					e3322_vi_in3: endpoint {
-						csi-port = <3>;
+						port-index = <3>;
 						bus-width = <2>;
 						remote-endpoint = <&e3322_csi_out3>;
 					};
@@ -58,7 +58,7 @@
 				port@4 {
 					reg = <4>;
 					e3322_vi_in4: endpoint {
-						csi-port = <4>;
+						port-index = <4>;
 						bus-width = <2>;
 						remote-endpoint = <&e3322_csi_out4>;
 					};
@@ -66,7 +66,7 @@
 				port@5 {
 					reg = <5>;
 					e3322_vi_in5: endpoint {
-						csi-port = <5>;
+						port-index = <5>;
 						bus-width = <2>;
 						remote-endpoint = <&e3322_csi_out5>;
 					};
@@ -84,7 +84,7 @@
 					port@0 {
 						reg = <0>;
 						e3322_csi_in0: endpoint@0 {
-							csi-port = <0>;
+							port-index = <0>;
 							bus-width = <2>;
 							remote-endpoint = <&e3322_imx219_out0>;
 						};
@@ -105,7 +105,7 @@
 					port@0 {
 						reg = <0>;
 						e3322_csi_in1: endpoint@2 {
-							csi-port = <1>;
+							port-index = <1>;
 							bus-width = <2>;
 							remote-endpoint = <&e3322_imx219_out1>;
 						};
@@ -126,7 +126,7 @@
 					port@0 {
 						reg = <0>;
 						e3322_csi_in2: endpoint@4 {
-							csi-port = <2>;
+							port-index = <2>;
 							bus-width = <2>;
 							remote-endpoint = <&e3322_imx219_out2>;
 						};
@@ -147,7 +147,7 @@
 					port@0 {
 						reg = <0>;
 						e3322_csi_in3: endpoint@6 {
-							csi-port = <3>;
+							port-index = <3>;
 							bus-width = <2>;
 							remote-endpoint = <&e3322_imx219_out3>;
 						};
@@ -168,7 +168,7 @@
 					port@0 {
 						reg = <0>;
 						e3322_csi_in4: endpoint@8 {
-							csi-port = <4>;
+							port-index = <4>;
 							bus-width = <2>;
 							remote-endpoint = <&e3322_imx219_out4>;
 						};
@@ -189,7 +189,7 @@
 					port@0 {
 						reg = <0>;
 						e3322_csi_in5: endpoint@10 {
-							csi-port = <5>;
+							port-index = <5>;
 							bus-width = <2>;
 							remote-endpoint = <&e3322_imx219_out5>;
 						};
@@ -254,7 +254,7 @@
 						port@0 {
 							reg = <0>;
 							e3322_imx219_out0: endpoint {
-								csi-port = <0>;
+								port-index = <0>;
 								bus-width = <2>;
 								remote-endpoint = <&e3322_csi_in0>;
 							};
@@ -310,7 +310,7 @@
 						port@0 {
 							reg = <0>;
 							e3322_imx219_out1: endpoint {
-								csi-port = <1>;
+								port-index = <1>;
 								bus-width = <2>;
 								remote-endpoint = <&e3322_csi_in1>;
 							};
@@ -366,7 +366,7 @@
 						port@0 {
 							reg = <0>;
 							e3322_imx219_out2: endpoint {
-								csi-port = <2>;
+								port-index = <2>;
 								bus-width = <2>;
 								remote-endpoint = <&e3322_csi_in2>;
 							};
@@ -422,7 +422,7 @@
 						port@0 {
 							reg = <0>;
 							e3322_imx219_out3: endpoint {
-								csi-port = <3>;
+								port-index = <3>;
 								bus-width = <2>;
 								remote-endpoint = <&e3322_csi_in3>;
 							};
@@ -478,7 +478,7 @@
 						port@0 {
 							reg = <0>;
 							e3322_imx219_out4: endpoint {
-								csi-port = <4>;
+								port-index = <4>;
 								bus-width = <2>;
 								remote-endpoint = <&e3322_csi_in4>;
 							};
@@ -534,7 +534,7 @@
 						port@0 {
 							reg = <0>;
 							e3322_imx219_out5: endpoint {
-								csi-port = <5>;
+								port-index = <5>;
 								bus-width = <2>;
 								remote-endpoint = <&e3322_csi_in5>;
 							};

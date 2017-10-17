@@ -2076,22 +2076,6 @@
 			status = "disabled";
 		};
 
-		tegra_spdif: spdif@2906000 {
-			compatible = "nvidia,tegra210-spdif";
-			reg = <0x0 0x2906000 0x0 0x200>;
-			nvidia,ahub-spdif-id = <0>;
-			clocks = <&tegra_car TEGRA186_CLK_SPDIF_IN>,
-				<&tegra_car TEGRA186_CLK_SPDIF_OUT>,
-				<&tegra_car TEGRA186_CLK_SPDIF_DOUBLER>,
-				<&tegra_car TEGRA186_CLK_SYNC_SPDIF>,
-				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
-				<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-			clock-names = "spdif_in", "spdif_out",
-					"spdif_doubler", "sync_spdif",
-					"pll_a_out0", "pll_p_out0";
-			status = "disabled";
-		};
-
 		tegra_iqc1: iqc@290e000 {
 			compatible = "nvidia,tegra210-iqc";
 			reg = <0x0 0x290e000 0x0 0x200>;

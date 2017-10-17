@@ -156,13 +156,6 @@
 			status = "okay";
 		};
 
-		spdif@2906000 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <>;
-			pinctrl-1 = <>;
-			status = "okay";
-		};
-
 		iqc@290e000 {
 			status = "okay";
 		};

@@ -30,14 +30,20 @@
 #include <linux/dma-mapping.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/anon_inodes.h>
+#include <linux/crc32.h>
 
 #include <trace/events/nvhost.h>
+#include <uapi/linux/nvhost_events.h>
 
 #include <linux/io.h>
 #include <linux/string.h>
 
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
+
+#ifdef CONFIG_EVENTLIB
+#include <linux/keventlib.h>
+#endif
 
 #include "debug.h"
 #include "bus_client.h"
@@ -1628,6 +1634,16 @@ int nvhost_client_device_init(struct platform_device *dev)
 	if (pdata->scaling_init)
 		pdata->scaling_init(dev);
 
+#ifdef CONFIG_EVENTLIB
+	pdata->eventlib_id = keventlib_register(4 * PAGE_SIZE,
+					      dev_name(&dev->dev));
+	if (pdata->eventlib_id < 0) {
+		nvhost_warn(&dev->dev, "failed to register eventlib (err=%d)",
+			    pdata->eventlib_id);
+		pdata->eventlib_id = 0;
+	}
+#endif
+
 	/* reset syncpoint values for this unit */
 	err = nvhost_module_busy(nvhost_master->dev);
 	if (err)
@@ -1665,6 +1681,13 @@ EXPORT_SYMBOL(nvhost_client_device_init);
 
 int nvhost_client_device_release(struct platform_device *dev)
 {
+#ifdef CONFIG_EVENTLIB
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	if (pdata->eventlib_id)
+		keventlib_unregister(pdata->eventlib_id);
+#endif
+
 	/* Release nvhost module resources */
 	nvhost_module_deinit(dev);
 
@@ -1785,3 +1808,53 @@ struct nvhost_channel *nvhost_find_chan_by_clientid(
 
 	return ch;
 }
+
+#ifdef CONFIG_EVENTLIB
+void nvhost_eventlib_log_task(struct platform_device *pdev,
+			      u32 syncpt_id,
+			      u32 syncpt_thresh,
+			      u64 timestamp_start,
+			      u64 timestamp_end)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	union nvhost_event_union event;
+
+	if (!pdata->eventlib_id)
+		return;
+
+	/*
+	 * Write task start event
+	 */
+	event.task_start.syncpt_id = syncpt_id;
+	event.task_start.syncpt_thresh = syncpt_thresh;
+	event.task_start.class_id = pdata->class;
+
+	keventlib_write(pdata->eventlib_id,
+			&event,
+			sizeof(event),
+			NVHOST_TASK_START,
+			timestamp_start);
+
+	/*
+	 * Write task end event
+	 */
+	event.task_end.syncpt_id = syncpt_id;
+	event.task_end.syncpt_thresh = syncpt_thresh;
+	event.task_end.class_id = pdata->class;
+
+	keventlib_write(pdata->eventlib_id,
+			&event,
+			sizeof(event),
+			NVHOST_TASK_END,
+			timestamp_end);
+}
+#else
+void nvhost_eventlib_log_task(struct platform_device *pdev,
+			      u32 syncpt_id,
+			      u32 syncpt_thres,
+			      u64 timestamp_start,
+			      u64 timestamp_end)
+{
+}
+#endif
+EXPORT_SYMBOL(nvhost_eventlib_log_task);

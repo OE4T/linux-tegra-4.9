@@ -375,6 +375,9 @@ struct nvhost_device_data {
 
 	/* number of frames mlock can be locked for */
 	u32 mlock_timeout_factor;
+
+	/* eventlib id for the device */
+	int eventlib_id;
 };
 
 
@@ -634,6 +637,13 @@ static inline void nvhost_unregister_dump_device(struct platform_device *dev)
 {
 }
 
+static inline void nvhost_eventlib_log_task(struct platform_device *pdev,
+					    u32 syncpt_id,
+					    u32 syncpt_thres,
+					    u64 timestamp_start,
+					    u64 timestamp_end)
+{
+}
 #else
 
 #ifdef CONFIG_DEBUG_FS
@@ -735,6 +745,12 @@ u32 nvhost_syncpt_read_minval(struct platform_device *dev, u32 id);
 u32 nvhost_syncpt_read_maxval(struct platform_device *dev, u32 id);
 void nvhost_syncpt_set_minval(struct platform_device *dev, u32 id, u32 val);
 void nvhost_syncpt_set_maxval(struct platform_device *dev, u32 id, u32 val);
+
+void nvhost_eventlib_log_task(struct platform_device *pdev,
+			      u32 syncpt_id,
+			      u32 syncpt_thres,
+			      u64 timestamp_start,
+			      u64 timestamp_end);
 
 /* public host1x interrupt management APIs */
 int nvhost_intr_register_notifier(struct platform_device *pdev,

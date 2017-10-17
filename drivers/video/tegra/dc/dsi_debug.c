@@ -791,10 +791,11 @@ static int set_dsc_num_comp_pkts(void *data, u64 value)
 	case DSC_TWO_COMP_PKTS_PER_ROW:
 	case DSC_FOUR_COMP_PKTS_PER_ROW:
 		break;
-#if defined(CONFIG_TEGRA_NVDISPLAY)
 	case DSC_THREE_COMP_PKTS_PER_ROW:
-		break;
-#endif
+		if (tegra_dc_is_nvdisplay())
+			break;
+		dev_err(&dc->ndev->dev, "Invalid num of comp pkts per row\n");
+		return 0;
 	default:
 		dev_err(&dc->ndev->dev, "Invalid num of comp pkts per row\n");
 		return 0;

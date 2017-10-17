@@ -67,7 +67,7 @@
 				target = <&e3326_vi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <2>;
+					port-index = <2>;
 					bus-width = <2>;
 					remote-endpoint = <&e3326_csi_out0>;
 				};
@@ -95,7 +95,7 @@
 				target = <&e3326_csi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <2>;
+					port-index = <2>;
 					bus-width = <2>;
 					remote-endpoint = <&e3326_ov5693_out0>;
 				};
@@ -230,7 +230,7 @@
 				target = <&e3323_vi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <0>;
+					port-index = <0>;
 					bus-width = <4>;
 					remote-endpoint = <&e3323_csi_out0>;
 				};
@@ -245,7 +245,7 @@
 				target = <&e3323_vi_in1>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <2>;
+					port-index = <2>;
 					bus-width = <4>;
 					remote-endpoint = <&e3323_csi_out1>;
 				};
@@ -260,7 +260,7 @@
 				target = <&e3323_vi_in2>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <0>;
+					port-index = <0>;
 					bus-width = <4>;
 					remote-endpoint = <&e3323_lc898212_out0>;
 				};
@@ -275,7 +275,7 @@
 				target = <&e3323_vi_in3>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <2>;
+					port-index = <2>;
 					bus-width = <4>;
 					remote-endpoint = <&e3323_lc898212_out1>;
 				};
@@ -303,7 +303,7 @@
 				target = <&e3323_csi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <0>;
+					port-index = <0>;
 					bus-width = <4>;
 					remote-endpoint = <&e3323_ov23850_out0>;
 				};
@@ -337,7 +337,7 @@
 				target = <&e3323_csi_in1>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <2>;
+					port-index = <2>;
 					bus-width = <4>;
 					remote-endpoint = <&e3323_ov23850_out1>;
 				};
@@ -460,7 +460,7 @@
 				target = <&e3333_vi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <0>;
+					port-index = <0>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_csi_out0>;
 				};
@@ -482,7 +482,7 @@
 				target = <&e3333_csi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <0>;
+					port-index = <0>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_ov5693_out0>;
 				};
@@ -544,7 +544,7 @@
 				target = <&e3333_vi_in1>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <1>;
+					port-index = <1>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_csi_out1>;
 				};
@@ -566,7 +566,7 @@
 				target = <&e3333_csi_in1>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <1>;
+					port-index = <1>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_ov5693_out1>;
 				};
@@ -628,7 +628,7 @@
 				target = <&e3333_vi_in2>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <2>;
+					port-index = <2>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_csi_out2>;
 				};
@@ -650,7 +650,7 @@
 				target = <&e3333_csi_in2>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <2>;
+					port-index = <2>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_ov5693_out2>;
 				};
@@ -712,7 +712,7 @@
 				target = <&e3333_vi_in3>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <3>;
+					port-index = <3>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_csi_out3>;
 				};
@@ -734,7 +734,7 @@
 				target = <&e3333_csi_in3>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <3>;
+					port-index = <3>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_ov5693_out3>;
 				};
@@ -796,7 +796,7 @@
 				target = <&e3333_vi_in4>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <4>;
+					port-index = <4>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_csi_out4>;
 				};
@@ -818,7 +818,7 @@
 				target = <&e3333_csi_in4>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <4>;
+					port-index = <4>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_ov5693_out4>;
 				};
@@ -880,7 +880,7 @@
 				target = <&e3333_vi_in5>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <5>;
+					port-index = <5>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_csi_out5>;
 				};
@@ -902,7 +902,7 @@
 				target = <&e3333_csi_in5>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <5>;
+					port-index = <5>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_ov5693_out5>;
 				};
@@ -999,7 +999,7 @@
 				target = <&liimx185_vi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <0>;
+					port-index = <0>;
 					bus-width = <4>;
 					remote-endpoint = <&liimx185_csi_out0>;
 				};
@@ -1027,7 +1027,7 @@
 				target = <&liimx185_csi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <0>;
+					port-index = <0>;
 					bus-width = <4>;
 					remote-endpoint = <&liimx185_imx185_out0>;
 				};
@@ -1118,7 +1118,7 @@
 				target = <&liimx274_vi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <0>;
+					port-index = <0>;
 					bus-width = <4>;
 					remote-endpoint = <&liimx274_csi_out0>;
 				};
@@ -1146,7 +1146,7 @@
 				target = <&liimx274_csi_in0>;
 				_overlay_ {
 					status = "okay";
-					csi-port = <0>;
+					port-index = <0>;
 					bus-width = <4>;
 					remote-endpoint = <&liimx274_imx274_out0>;
 				};

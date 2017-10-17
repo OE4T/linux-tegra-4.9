@@ -67,7 +67,6 @@ struct nvgpu_warpstate;
 #include "pmu_gk20a.h"
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
-#include "sched_gk20a.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "clk/clk.h"
 #include "clk/clk_arb.h"
@@ -1219,8 +1218,6 @@ struct gk20a {
 
 	struct gk20a_ctxsw_trace *ctxsw_trace;
 	struct gk20a_fecs_trace *fecs_trace;
-
-	struct gk20a_sched_ctrl sched_ctrl;
 
 	bool mmu_debug_ctrl;
 

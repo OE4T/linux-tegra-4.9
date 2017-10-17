@@ -1,25 +1,18 @@
 /*
  * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #include <asm/barrier.h>
 #include <linux/wait.h>
 #include <linux/uaccess.h>
@@ -30,11 +23,11 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
 
-#include "ctxsw_trace_gk20a.h"
-#include "gk20a.h"
-#include "gr_gk20a.h"
-#include "sched_gk20a.h"
-#include "common/linux/os_linux.h"
+#include "gk20a/gk20a.h"
+#include "gk20a/gr_gk20a.h"
+#include "sched.h"
+#include "os_linux.h"
+#include "ioctl_tsg.h"
 
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
@@ -215,7 +208,7 @@ static int gk20a_sched_dev_ioctl_get_params(struct gk20a_sched_ctrl *sched,
 		arg->compute_preempt_mode = 0;
 	}
 
-	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, nvgpu_ioctl_tsg_release);
 
 	return 0;
 }
@@ -248,7 +241,7 @@ static int gk20a_sched_dev_ioctl_tsg_set_timeslice(
 	gk20a_idle(g);
 
 done:
-	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, nvgpu_ioctl_tsg_release);
 
 	return err;
 }
@@ -281,7 +274,7 @@ static int gk20a_sched_dev_ioctl_tsg_set_runlist_interleave(
 	gk20a_idle(g);
 
 done:
-	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, nvgpu_ioctl_tsg_release);
 
 	return err;
 }
@@ -335,9 +328,9 @@ static int gk20a_sched_dev_ioctl_get_tsg(struct gk20a_sched_ctrl *sched,
 	nvgpu_mutex_acquire(&sched->status_lock);
 	if (NVGPU_SCHED_ISSET(tsgid, sched->ref_tsg_bitmap)) {
 		nvgpu_warn(g, "tsgid=%d already referenced", tsgid);
-		/* unlock status_lock as gk20a_tsg_release locks it */
+		/* unlock status_lock as nvgpu_ioctl_tsg_release locks it */
 		nvgpu_mutex_release(&sched->status_lock);
-		nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
+		nvgpu_ref_put(&tsg->refcount, nvgpu_ioctl_tsg_release);
 		return -ENXIO;
 	}
 
@@ -373,7 +366,7 @@ static int gk20a_sched_dev_ioctl_put_tsg(struct gk20a_sched_ctrl *sched,
 	nvgpu_mutex_release(&sched->status_lock);
 
 	tsg = &f->tsg[tsgid];
-	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, nvgpu_ioctl_tsg_release);
 
 	return 0;
 }
@@ -389,7 +382,7 @@ int gk20a_sched_dev_open(struct inode *inode, struct file *filp)
 	g = gk20a_get(&l->g);
 	if (!g)
 		return -ENODEV;
-	sched = &g->sched_ctrl;
+	sched = &l->sched_ctrl;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "g=%p", g);
 
@@ -516,7 +509,7 @@ int gk20a_sched_dev_release(struct inode *inode, struct file *filp)
 	for (tsgid = 0; tsgid < f->num_channels; tsgid++) {
 		if (NVGPU_SCHED_ISSET(tsgid, sched->ref_tsg_bitmap)) {
 			tsg = &f->tsg[tsgid];
-			nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
+			nvgpu_ref_put(&tsg->refcount, nvgpu_ioctl_tsg_release);
 		}
 	}
 
@@ -532,7 +525,8 @@ int gk20a_sched_dev_release(struct inode *inode, struct file *filp)
 
 void gk20a_sched_ctrl_tsg_added(struct gk20a *g, struct tsg_gk20a *tsg)
 {
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	int err;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
@@ -557,7 +551,8 @@ void gk20a_sched_ctrl_tsg_added(struct gk20a *g, struct tsg_gk20a *tsg)
 
 void gk20a_sched_ctrl_tsg_removed(struct gk20a *g, struct tsg_gk20a *tsg)
 {
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
 
@@ -579,7 +574,8 @@ void gk20a_sched_ctrl_tsg_removed(struct gk20a *g, struct tsg_gk20a *tsg)
 
 int gk20a_sched_ctrl_init(struct gk20a *g)
 {
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	struct fifo_gk20a *f = &g->fifo;
 	int err;
 
@@ -643,7 +639,8 @@ free_active:
 
 void gk20a_sched_ctrl_cleanup(struct gk20a *g)
 {
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 
 	nvgpu_kfree(g, sched->active_tsg_bitmap);
 	nvgpu_kfree(g, sched->recent_tsg_bitmap);

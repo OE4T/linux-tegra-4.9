@@ -23,6 +23,7 @@
 #endif
 #include "gk20a/gk20a.h"
 #include "cde.h"
+#include "sched.h"
 
 struct nvgpu_os_linux_ops {
 	struct {
@@ -144,6 +145,8 @@ struct nvgpu_os_linux {
 	struct gk20a_cde_app cde_app;
 
 	struct rw_semaphore busy_lock;
+
+	struct gk20a_sched_ctrl sched_ctrl;
 };
 
 static inline struct nvgpu_os_linux *nvgpu_os_linux_from_gk20a(struct gk20a *g)

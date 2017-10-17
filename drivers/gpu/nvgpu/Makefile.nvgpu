@@ -53,6 +53,7 @@ nvgpu-y := \
 	common/linux/cde_gp10b.o \
 	common/linux/comptags.o \
 	common/linux/dmabuf.o \
+	common/linux/sched.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
@@ -82,7 +83,6 @@ nvgpu-y := \
 	gk20a/gk20a.o \
 	gk20a/bus_gk20a.o \
 	gk20a/pramin_gk20a.o \
-	gk20a/sched_gk20a.o \
 	gk20a/ce2_gk20a.o \
 	gk20a/fifo_gk20a.o \
 	gk20a/channel_gk20a.o \

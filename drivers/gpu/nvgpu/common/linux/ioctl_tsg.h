@@ -16,11 +16,13 @@
 struct inode;
 struct file;
 struct gk20a;
+struct nvgpu_ref;
 
 int nvgpu_ioctl_tsg_dev_release(struct inode *inode, struct file *filp);
 int nvgpu_ioctl_tsg_dev_open(struct inode *inode, struct file *filp);
 int nvgpu_ioctl_tsg_open(struct gk20a *g, struct file *filp);
 long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp,
 			       unsigned int cmd, unsigned long arg);
+void nvgpu_ioctl_tsg_release(struct nvgpu_ref *ref);
 
 #endif

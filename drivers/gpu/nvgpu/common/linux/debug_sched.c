@@ -21,7 +21,8 @@
 static int gk20a_sched_debugfs_show(struct seq_file *s, void *unused)
 {
 	struct gk20a *g = s->private;
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	bool sched_busy = true;
 
 	int n = sched->bitmap_size / sizeof(u64);

@@ -237,6 +237,8 @@ int nvgpu_ioctl_tsg_open(struct gk20a *g, struct file *filp)
 	priv->tsg = tsg;
 	filp->private_data = priv;
 
+	gk20a_sched_ctrl_tsg_added(g, tsg);
+
 	return 0;
 
 free_ref:
@@ -257,12 +259,22 @@ int nvgpu_ioctl_tsg_dev_open(struct inode *inode, struct file *filp)
 	return ret;
 }
 
+void nvgpu_ioctl_tsg_release(struct nvgpu_ref *ref)
+{
+	struct tsg_gk20a *tsg = container_of(ref, struct tsg_gk20a, refcount);
+	struct gk20a *g = tsg->g;
+
+	gk20a_sched_ctrl_tsg_removed(g, tsg);
+
+	gk20a_tsg_release(ref);
+}
+
 int nvgpu_ioctl_tsg_dev_release(struct inode *inode, struct file *filp)
 {
 	struct tsg_private *priv = filp->private_data;
 	struct tsg_gk20a *tsg = priv->tsg;
 
-	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
+	nvgpu_ref_put(&tsg->refcount, nvgpu_ioctl_tsg_release);
 	nvgpu_kfree(tsg->g, priv);
 	return 0;
 }
@@ -270,7 +282,8 @@ int nvgpu_ioctl_tsg_dev_release(struct inode *inode, struct file *filp)
 static int gk20a_tsg_ioctl_set_priority(struct gk20a *g,
 	struct tsg_gk20a *tsg, struct nvgpu_set_priority_args *arg)
 {
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	int err;
 
 	nvgpu_mutex_acquire(&sched->control_lock);
@@ -296,7 +309,8 @@ done:
 static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 	struct tsg_gk20a *tsg, struct nvgpu_runlist_interleave_args *arg)
 {
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	int err;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
@@ -323,7 +337,8 @@ done:
 static int gk20a_tsg_ioctl_set_timeslice(struct gk20a *g,
 	struct tsg_gk20a *tsg, struct nvgpu_timeslice_args *arg)
 {
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	int err;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);

@@ -325,8 +325,6 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_fn, "tsg opened %d\n", tsg->tsgid);
 
-	gk20a_sched_ctrl_tsg_added(g, tsg);
-
 	return tsg;
 
 clean_up:
@@ -352,8 +350,6 @@ void gk20a_tsg_release(struct nvgpu_ref *ref)
 		nvgpu_vm_put(tsg->vm);
 		tsg->vm = NULL;
 	}
-
-	gk20a_sched_ctrl_tsg_removed(g, tsg);
 
 	/* unhook all events created on this TSG */
 	nvgpu_mutex_acquire(&tsg->event_id_list_lock);

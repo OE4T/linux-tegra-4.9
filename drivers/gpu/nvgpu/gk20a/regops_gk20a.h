@@ -24,8 +24,6 @@
 #ifndef REGOPS_GK20A_H
 #define REGOPS_GK20A_H
 
-#include <uapi/linux/nvgpu.h>
-
 struct regop_offset_range {
 	u32 base:24;
 	u32 count:8;

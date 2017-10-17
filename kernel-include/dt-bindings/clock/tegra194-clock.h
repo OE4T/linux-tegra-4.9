@@ -120,7 +120,7 @@
 #define TEGRA194_CLK_HDA2HDMICODEC		45
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_HOST1X */
 #define TEGRA194_CLK_HOST1X			46
-/** @brief output of gate CLK_ENB_HSIC_TRK */
+/** @brief Obselete - maintained for ABI compatibility */
 #define TEGRA194_CLK_HSIC_TRK			47
 /** @clkdesc{i2c_clks, out, mux, CLK_RST_CONTROLLER_CLK_SOURCE_I2C1} */
 #define TEGRA194_CLK_I2C1			48
@@ -271,9 +271,8 @@
 #define TEGRA194_CLK_SCE_NIC			119
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC1 */
 #define TEGRA194_CLK_SDMMC1			120
-
-#define TEGRA194_CLK_RSVD_121			121
-
+/** @brief Logical clk for setting the UPHY PLL3 rate */
+#define TEGRA194_CLK_UPHY_PLL3			121
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC3 */
 #define TEGRA194_CLK_SDMMC3			122
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC4 */
@@ -302,18 +301,16 @@
 #define TEGRA194_CLK_IQC1_IN			132
 /** @brief Interface clock from IQC pad (2) */
 #define TEGRA194_CLK_IQC2_IN			133
-
-#define TEGRA194_CLK_RSVD_134			134
-
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DMIC5 */
+#define TEGRA194_CLK_DMIC5			134
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPI1 */
 #define TEGRA194_CLK_SPI1			135
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPI2 */
 #define TEGRA194_CLK_SPI2			136
 /**  @clkdesc{spi_clks, out, mux, CLK_RST_CONTROLLER_CLK_SOURCE_SPI3} */
 #define TEGRA194_CLK_SPI3			137
-
-#define TEGRA194_CLK_RSVD_138			138
-
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C_SLOW */
+#define TEGRA194_CLK_I2C_SLOW			138
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC1 */
 #define TEGRA194_CLK_SYNC_DMIC1			139
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC2 */
@@ -604,5 +601,11 @@
 #define TEGRA194_CLK_NAFLL_CLUSTER2		282
 /** @brief NAFLL clock source for CPU cluster 3 */
 #define TEGRA194_CLK_NAFLL_CLUSTER3		283
+/** @brief CLK_RST_CONTROLLER_CAN1_CORE_RATE divider output */
+#define TEGRA194_CLK_CAN1_CORE			284
+/** @brief CLK_RST_CONTROLLER_CAN2_CORE_RATE divider outputt */
+#define TEGRA194_CLK_CAN2_CORE			285
+/** @brief CLK_RST_CONTROLLER_PLLA1_OUT1 switch divider output */
+#define TEGRA194_CLK_PLLA1_OUT1			286
 
 #endif

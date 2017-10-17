@@ -507,7 +507,7 @@ static long clk_shared_round_rate(struct clk_hw *hw,
 	struct tegra_clk_cbus_shared *shared = to_clk_cbus_shared(hw);
 	struct tegra_clk_cbus_shared *parent_cbus;
 	struct clk *parent;
-	int ret;
+	long ret;
 
 	parent = clk_get_parent(hw->clk);
 	parent_cbus = to_clk_cbus_shared(__clk_get_hw(parent));
@@ -520,7 +520,7 @@ static long clk_shared_round_rate(struct clk_hw *hw,
 	if (shared->u.shared_bus_user.mode != SHARED_BW) {
 		if (!parent_cbus->max_rate) {
 			ret = clk_round_rate(parent, ULONG_MAX);
-			if (!ret)
+			if (ret > 0)
 				parent_cbus->max_rate = ret;
 		}
 
@@ -1365,7 +1365,7 @@ struct clk *tegra_clk_register_shared_connect(const char *name,
 	INIT_LIST_HEAD(&shared->shared_bus_list);
 
 	init.name = name;
-	init.ops = &tegra_clk_shared_master_ops;
+	init.ops = &tegra_clk_shared_connect_master_ops;
 	init.flags = CLK_SET_RATE_PARENT | CLK_GET_RATE_NOCACHE
 			| CLK_SET_RATE_NOCACHE;
 	init.parent_names = parent;
@@ -1513,6 +1513,8 @@ struct clk *tegra_clk_register_cascade_master(const char *name,
 	cascade_master->max_rate = parent_cbus->max_rate;
 	if (sbusclkname)
 		cascade_master->max_rate /= 2;
+
+	cascade_master->flags = flags;
 
 	/* Data in .init is copied by clk_register(), so stack variable OK */
 	cascade_master->hw.init = &init;

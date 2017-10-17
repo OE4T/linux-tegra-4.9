@@ -227,7 +227,6 @@ static u64 __nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 				   u64 offset_align,
 				   u32 flags,
 				   int kind,
-				   bool user_mapped,
 				   int rw_flag)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
@@ -251,22 +250,13 @@ static u64 __nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 	if (mapped_buffer->flags != flags)
 		return 0;
 
-	/* mark the buffer as used */
-	if (user_mapped) {
-		if (mapped_buffer->user_mapped == 0)
-			vm->num_user_mapped_buffers++;
-		mapped_buffer->user_mapped++;
+	/*
+	 * If we find the mapping here then that means we have mapped it already
+	 * and already have a dma_buf ref to the underlying buffer. As such
+	 * release the ref taken earlier in the map path.
+	 */
+	dma_buf_put(mapped_buffer->dmabuf);
 
-		/* If the mapping comes from user space, we own
-		 * the handle ref. Since we reuse an
-		 * existing mapping here, we need to give back those
-		 * refs once in order not to leak.
-		 */
-		if (mapped_buffer->own_mem_ref)
-			dma_buf_put(mapped_buffer->dmabuf);
-		else
-			mapped_buffer->own_mem_ref = true;
-	}
 	nvgpu_ref_get(&mapped_buffer->ref);
 
 	nvgpu_log(g, gpu_dbg_map,
@@ -329,7 +319,6 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       u32 flags,
 		       s16 compr_kind,
 		       s16 incompr_kind,
-		       bool user_mapped,
 		       int rw_flag,
 		       u64 buffer_offset,
 		       u64 mapping_size,
@@ -367,7 +356,7 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		map_key_kind = compr_kind;
 	}
 
-	if (user_mapped && vm->userspace_managed &&
+	if (vm->userspace_managed &&
 	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
 		nvgpu_err(g, "non-fixed-offset mapping not available on "
 			  "userspace managed address spaces");
@@ -380,8 +369,7 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	if (!vm->userspace_managed) {
 		map_offset = __nvgpu_vm_find_mapping(
 			vm, dmabuf, offset_align,
-			flags, map_key_kind,
-			user_mapped, rw_flag);
+			flags, map_key_kind, rw_flag);
 		if (map_offset) {
 			nvgpu_mutex_release(&vm->update_gmmu_lock);
 			return map_offset;
@@ -545,8 +533,6 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	mapped_buffer->flags       = flags;
 	mapped_buffer->kind        = map_key_kind;
 	mapped_buffer->va_allocated = va_allocated;
-	mapped_buffer->user_mapped = user_mapped ? 1 : 0;
-	mapped_buffer->own_mem_ref = user_mapped;
 	nvgpu_init_list_node(&mapped_buffer->buffer_list);
 	nvgpu_ref_init(&mapped_buffer->ref);
 
@@ -555,8 +541,8 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		nvgpu_err(g, "failed to insert into mapped buffer tree");
 		goto clean_up;
 	}
-	if (user_mapped)
-		vm->num_user_mapped_buffers++;
+
+	vm->num_user_mapped_buffers++;
 
 	if (vm_area) {
 		nvgpu_list_add_tail(&mapped_buffer->buffer_list,
@@ -626,7 +612,7 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	}
 
 	ret_va = nvgpu_vm_map_linux(vm, dmabuf, *offset_align,
-				    flags, compr_kind, incompr_kind, true,
+				    flags, compr_kind, incompr_kind,
 				    gk20a_mem_flag_none,
 				    buffer_offset,
 				    mapping_size,
@@ -655,6 +641,5 @@ void nvgpu_vm_unmap_system(struct nvgpu_mapped_buf *mapped_buffer)
 	gk20a_mm_unpin(dev_from_vm(vm), mapped_buffer->dmabuf,
 		       mapped_buffer->sgt);
 
-	if (mapped_buffer->own_mem_ref)
-		dma_buf_put(mapped_buffer->dmabuf);
+	dma_buf_put(mapped_buffer->dmabuf);
 }

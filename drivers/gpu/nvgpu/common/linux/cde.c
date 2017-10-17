@@ -1050,7 +1050,6 @@ __releases(&l->cde_app->mutex)
 				 NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL,
 				 NV_KIND_INVALID,
 				 compbits_kind, /* incompressible kind */
-				 true,
 				 gk20a_mem_flag_none,
 				 map_offset, map_size,
 				 NULL);

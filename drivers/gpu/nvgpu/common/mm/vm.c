@@ -672,11 +672,9 @@ int nvgpu_vm_get_buffers(struct vm_gk20a *vm,
 	nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	while (node) {
 		mapped_buffer = mapped_buffer_from_rbtree_node(node);
-		if (mapped_buffer->user_mapped) {
-			buffer_list[i] = mapped_buffer;
-			nvgpu_ref_get(&mapped_buffer->ref);
-			i++;
-		}
+		buffer_list[i] = mapped_buffer;
+		nvgpu_ref_get(&mapped_buffer->ref);
+		i++;
 		nvgpu_rbtree_enum_next(&node, node);
 	}
 

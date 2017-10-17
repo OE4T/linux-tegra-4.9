@@ -72,7 +72,6 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 			*/
 		       s16 incompr_kind,
 
-		       bool user_mapped,
 		       int rw_flag,
 		       u64 buffer_offset,
 		       u64 mapping_size,

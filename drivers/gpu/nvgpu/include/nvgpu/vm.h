@@ -96,8 +96,7 @@ struct nvgpu_mapped_buf {
 	struct dma_buf *dmabuf;
 	struct sg_table *sgt;
 	struct nvgpu_ref ref;
-	u32 user_mapped;
-	bool own_mem_ref;
+
 	u32 pgsz_idx;
 	u32 ctag_offset;
 	u32 ctag_lines;

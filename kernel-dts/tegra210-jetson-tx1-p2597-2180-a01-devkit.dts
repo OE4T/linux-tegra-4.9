@@ -25,9 +25,6 @@
 	#size-cells = <2>;
 
 	chosen {
-		bootloader {
-			nvidia,skip-display-init;
-		};
 	};
 
 	host1x {

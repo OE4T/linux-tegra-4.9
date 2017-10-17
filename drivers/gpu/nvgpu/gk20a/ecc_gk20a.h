@@ -24,8 +24,6 @@
 #ifndef ECC_GK20A_H
 #define ECC_GK20A_H
 
-#include <uapi/linux/nvgpu.h>
-
 struct gk20a_ecc_stat {
 	char **names;
 	u32 *counters;

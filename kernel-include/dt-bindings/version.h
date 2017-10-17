@@ -109,21 +109,10 @@
 #endif
 
 /**
- *  If no OS found then set as default.
- * This will be converted to error once all OS define OS
- * macro
+ * If no OS found then abort compilation.
  */
 #if !defined(_OS_FOUND_)
-#define TEGRA_AUDIO_BUS_DT_VERSION		DT_VERSION_1
-#define TEGRA_POWER_DOMAIN_DT_VERSION		DT_VERSION_1
-#define TEGRA_XUSB_PADCONTROL_VERSION		DT_VERSION_1
-#define TEGRA_XUSB_DT_VERSION			DT_VERSION_1
-#define TEGRA_XUDC_DT_VERSION			DT_VERSION_1
-#define TEGRA_HSP_DT_VERSION			DT_VERSION_1
-#define TEGRA_BOOTARGUMENT_VERSION		DT_VERSION_1
-#define TEGRA_CPUFREQ_DT_VERSION		DT_VERSION_1
-#define TEGRA_GENERIC_CARVEOUT_SUPPORT_ENABLE	0
-#define UART_CONSOLE_ON_TTYS0_ONLY		1
+#error "Valid OS not found"
 #endif
 
 #endif /* _DT_BINDINGS_VERSION_H_ */

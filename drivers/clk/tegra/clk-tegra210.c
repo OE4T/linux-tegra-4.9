@@ -2576,6 +2576,7 @@ static struct tegra_clk tegra210_clks[tegra_clk_max] __initdata = {
 	[tegra_clk_vic_floor_cbus] = { .dt_id = TEGRA210_CLK_VIC_FLOOR_CBUS, .present = true },
 	[tegra_clk_override_emc] = { .dt_id = TEGRA210_CLK_OVERRIDE_EMC, .present = true },
 	[tegra_clk_bwmgr_emc] = { .dt_id = TEGRA210_CLK_BWMGR_EMC, .present = true },
+	[tegra_clk_wifi_sclk] = { .dt_id = TEGRA210_CLK_WIFI_SCLK, .present = true },
 };
 
 static struct tegra_devclk devclks[] __initdata = {

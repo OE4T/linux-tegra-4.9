@@ -422,6 +422,7 @@ enum clk_id {
 	tegra_clk_sdmmc4_ahb_sclk,
 	tegra_clk_bwmgr_emc,
 	tegra_clk_utmipll_60m,
+	tegra_clk_wifi_sclk,
 	tegra_clk_max,
 };
 

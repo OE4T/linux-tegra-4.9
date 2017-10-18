@@ -396,7 +396,6 @@ struct gpu_ops {
 		int (*commit_global_timeslice)(struct gk20a *g,
 					struct channel_gk20a *c, bool patch);
 		int (*commit_inst)(struct channel_gk20a *c, u64 gpu_va);
-		void (*restore_context_header)(struct gk20a *g, struct nvgpu_mem *ctxheader);
 		void (*write_zcull_ptr)(struct gk20a *g,
 					struct nvgpu_mem *mem, u64 gpu_va);
 		void (*write_pm_ptr)(struct gk20a *g,

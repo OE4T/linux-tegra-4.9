@@ -107,7 +107,7 @@ u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 	struct dma_iommu_mapping *mapping = to_dma_iommu_mapping(d);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_map_params *p = &msg.params.as_map;
-	u64 addr = nvgpu_sgt_get_gpu_addr(sgt, g, sgt->sgl, NULL);
+	u64 addr = nvgpu_sgt_get_gpu_addr(g, sgt, sgt->sgl, NULL);
 	u8 prot;
 
 	gk20a_dbg_fn("");

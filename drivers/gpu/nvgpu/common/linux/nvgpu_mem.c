@@ -529,6 +529,12 @@ static u64 nvgpu_mem_linux_sgl_gpu_addr(struct gk20a *g, void *sgl,
 				sg_dma_address((struct scatterlist *)sgl));
 }
 
+static bool nvgpu_mem_linux_sgt_iommuable(struct gk20a *g,
+					  struct nvgpu_sgt *sgt)
+{
+	return true;
+}
+
 static void nvgpu_mem_linux_sgl_free(struct gk20a *g, struct nvgpu_sgt *sgt)
 {
 	/*
@@ -539,12 +545,13 @@ static void nvgpu_mem_linux_sgl_free(struct gk20a *g, struct nvgpu_sgt *sgt)
 }
 
 static const struct nvgpu_sgt_ops nvgpu_linux_sgt_ops = {
-	.sgl_next     = nvgpu_mem_linux_sgl_next,
-	.sgl_phys     = nvgpu_mem_linux_sgl_phys,
-	.sgl_dma      = nvgpu_mem_linux_sgl_dma,
-	.sgl_length   = nvgpu_mem_linux_sgl_length,
-	.sgl_gpu_addr = nvgpu_mem_linux_sgl_gpu_addr,
-	.sgt_free     = nvgpu_mem_linux_sgl_free,
+	.sgl_next      = nvgpu_mem_linux_sgl_next,
+	.sgl_phys      = nvgpu_mem_linux_sgl_phys,
+	.sgl_dma       = nvgpu_mem_linux_sgl_dma,
+	.sgl_length    = nvgpu_mem_linux_sgl_length,
+	.sgl_gpu_addr  = nvgpu_mem_linux_sgl_gpu_addr,
+	.sgt_iommuable = nvgpu_mem_linux_sgt_iommuable,
+	.sgt_free      = nvgpu_mem_linux_sgl_free,
 };
 
 static struct nvgpu_sgt *__nvgpu_mem_get_sgl_from_vidmem(

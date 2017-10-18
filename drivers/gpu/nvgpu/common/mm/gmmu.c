@@ -93,7 +93,7 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 				   aperture);
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
-	nvgpu_sgt_free(sgt, g);
+	nvgpu_sgt_free(g, sgt);
 
 	if (!vaddr) {
 		nvgpu_err(g, "failed to map buffer!");
@@ -500,7 +500,7 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 	 * IO address and will be contiguous.
 	 */
 	if (attrs->aperture == APERTURE_SYSMEM && !g->mm.bypass_smmu) {
-		u64 io_addr = nvgpu_sgt_get_gpu_addr(sgt, g, sgt->sgl, attrs);
+		u64 io_addr = nvgpu_sgt_get_gpu_addr(g, sgt, sgt->sgl, attrs);
 
 		io_addr += space_to_skip;
 

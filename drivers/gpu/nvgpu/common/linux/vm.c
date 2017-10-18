@@ -59,62 +59,6 @@ static struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_reverse(
 	return NULL;
 }
 
-/*
- * Determine alignment for a passed buffer. Necessary since the buffer may
- * appear big to map with large pages but the SGL may have chunks that are not
- * aligned on a 64/128kB large page boundary.
- */
-static u64 nvgpu_get_buffer_alignment(struct gk20a *g, struct scatterlist *sgl,
-				      enum nvgpu_aperture aperture)
-{
-	u64 align = 0, chunk_align = 0;
-	u64 buf_addr;
-
-	if (aperture == APERTURE_VIDMEM) {
-		struct nvgpu_page_alloc *alloc =
-			nvgpu_vidmem_get_page_alloc(sgl);
-		struct nvgpu_sgt *sgt = &alloc->sgt;
-		void *sgl_vid = sgt->sgl;
-
-		while (sgl_vid) {
-			chunk_align = 1ULL <<
-				__ffs(nvgpu_sgt_get_phys(sgt, sgl_vid)) |
-				nvgpu_sgt_get_length(sgt, sgl_vid);
-
-			if (align)
-				align = min(align, chunk_align);
-			else
-				align = chunk_align;
-
-			sgl_vid = nvgpu_sgt_get_next(sgt, sgl_vid);
-		}
-
-		return align;
-	}
-
-	buf_addr = (u64)sg_dma_address(sgl);
-
-	if (g->mm.bypass_smmu || buf_addr == DMA_ERROR_CODE || !buf_addr) {
-		while (sgl) {
-			buf_addr = (u64)sg_phys(sgl);
-			chunk_align = 1ULL << __ffs(buf_addr |
-						    (u64)sgl->length);
-
-			if (align)
-				align = min(align, chunk_align);
-			else
-				align = chunk_align;
-			sgl = sg_next(sgl);
-		}
-
-		return align;
-	}
-
-	align = 1ULL << __ffs(buf_addr);
-
-	return align;
-}
-
 int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
 		      struct dma_buf **dmabuf,
 		      u64 *offset)
@@ -218,7 +162,7 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	struct nvgpu_ctag_buffer_info binfo = { 0 };
 	struct gk20a_comptags comptags;
 	struct nvgpu_vm_area *vm_area = NULL;
-	struct nvgpu_sgt *nvgpu_sgt;
+	struct nvgpu_sgt *nvgpu_sgt = NULL;
 	struct sg_table *sgt;
 	struct nvgpu_mapped_buf *mapped_buffer = NULL;
 	enum nvgpu_aperture aperture;
@@ -279,6 +223,10 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
+	nvgpu_sgt = nvgpu_linux_sgt_create(g, sgt);
+	if (!nvgpu_sgt)
+		goto clean_up;
+
 	aperture = gk20a_dmabuf_aperture(g, dmabuf);
 	if (aperture == APERTURE_INVALID) {
 		err = -EINVAL;
@@ -288,7 +236,7 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)
 		map_offset = offset_align;
 
-	align = nvgpu_get_buffer_alignment(g, sgt->sgl, aperture);
+	align = nvgpu_sgt_alignment(g, nvgpu_sgt);
 	if (g->mm.disable_bigpage)
 		binfo.pgsz_idx = gmmu_page_size_small;
 	else
@@ -370,8 +318,6 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		ctag_offset += buffer_offset >>
 			       ilog2(g->ops.fb.compression_page_size(g));
 
-	nvgpu_sgt = nvgpu_linux_sgt_create(g, sgt);
-
 	/* update gmmu ptes */
 	map_offset = g->ops.mm.gmmu_map(vm,
 					map_offset,
@@ -391,7 +337,7 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	if (!map_offset)
 		goto clean_up;
 
-	nvgpu_sgt_free(nvgpu_sgt, g);
+	nvgpu_sgt_free(g, nvgpu_sgt);
 
 	mapped_buffer = nvgpu_kzalloc(g, sizeof(*mapped_buffer));
 	if (!mapped_buffer) {
@@ -434,6 +380,9 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 
 clean_up:
 	nvgpu_kfree(g, mapped_buffer);
+
+	if (nvgpu_sgt)
+		nvgpu_sgt_free(g, nvgpu_sgt);
 	if (va_allocated)
 		__nvgpu_vm_free_va(vm, map_offset, binfo.pgsz_idx);
 	if (!IS_ERR(sgt))

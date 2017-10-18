@@ -80,6 +80,7 @@
 #define PLLM_MISC1 0x98
 #define PLLM_MISC2 0x9c
 #define PLLP_BASE 0xa0
+#define PLLP_OUTA 0xa4
 #define PLLP_OUTB 0xa8
 #define PLLP_MISC0 0xac
 #define PLLP_MISC1 0x680
@@ -2573,12 +2574,12 @@ static struct tegra_clk tegra210_clks[tegra_clk_max] __initdata = {
 	[tegra_clk_override_host1x] = { .dt_id = TEGRA210_CLK_OVERRIDE_HOST1X, .present = true },
 	[tegra_clk_cpu_mselect] = { .dt_id = TEGRA210_CLK_CPU_MSELECT, .present = true },
 	[tegra_clk_pcie_mselect] = { .dt_id = TEGRA210_CLK_PCIE_MSELECT, .present = true },
-	[tegra_clk_cap_vcore_mselect] = { .dt_id = TEGRA210_CLK_CAP_VCORE_MSELECT, .present = true },
+	[tegra_clk_cap_vcore_mselect] = { .dt_id = TEGRA210_CLK_CAP_VCORE_MSELECT, .present = false },
 	[tegra_clk_override_mselect] = { .dt_id = TEGRA210_CLK_OVERRIDE_MSELECT, .present = true },
 	[tegra_clk_adma_ape] = { .dt_id = TEGRA210_CLK_ADMA_APE, .present = true },
 	[tegra_clk_adsp_ape] = { .dt_id = TEGRA210_CLK_ADSP_APE, .present = true },
 	[tegra_clk_xbar_ape] = { .dt_id = TEGRA210_CLK_XBAR_APE, .present = true },
-	[tegra_clk_cap_vcore_ape] = { .dt_id = TEGRA210_CLK_CAP_VCORE_APE, .present = true },
+	[tegra_clk_cap_vcore_ape] = { .dt_id = TEGRA210_CLK_CAP_VCORE_APE, .present = false },
 	[tegra_clk_override_ape] = { .dt_id = TEGRA210_CLK_OVERRIDE_APE, .present = true },
 	[tegra_clk_adsp_cpu_abus] = { .dt_id = TEGRA210_CLK_ADSP_CPU_ABUS, .present = true },
 	[tegra_clk_cap_vcore_abus] = { .dt_id = TEGRA210_CLK_CAP_VCORE_ABUS, .present = true },
@@ -2593,6 +2594,7 @@ static struct tegra_clk tegra210_clks[tegra_clk_max] __initdata = {
 	[tegra_clk_override_emc] = { .dt_id = TEGRA210_CLK_OVERRIDE_EMC, .present = true },
 	[tegra_clk_bwmgr_emc] = { .dt_id = TEGRA210_CLK_BWMGR_EMC, .present = true },
 	[tegra_clk_wifi_sclk] = { .dt_id = TEGRA210_CLK_WIFI_SCLK, .present = true },
+	[tegra_clk_override_cbus] = { .dt_id = TEGRA210_CLK_OVERRIDE_CBUS, .present = true },
 };
 
 static struct tegra_devclk devclks[] __initdata = {
@@ -3713,13 +3715,13 @@ static struct tegra_clk_init_table init_table[] __initdata = {
 static unsigned long pll_c_rate, pll_c2_rate, pll_c3_rate, pll_x_rate;
 static unsigned long pll_c4_rate, pll_d2_rate, pll_dp_rate;
 static unsigned long pll_re_vco_rate, pll_d_rate, pll_a_rate, pll_a1_rate;
-static unsigned long pll_m_out1_rate, pll_c_out1_rate;
+static unsigned long pll_c_out1_rate;
 static unsigned long pll_a_out0_rate, pll_c4_out3_rate;
 static unsigned long pll_p_out_rate[5];
 static unsigned long pll_u_out1_rate, pll_u_out2_rate;
 static unsigned long pll_mb_rate;
 static u32 pll_m_v;
-static u32 pll_p_outb;
+static u32 pll_p_outa, pll_p_outb;
 static u32 pll_re_out_div, pll_re_out_1;
 static u32 cpu_softrst_ctx[3];
 static u32 cclkg_burst_policy_ctx[2];
@@ -3832,7 +3834,6 @@ static int tegra210_clk_suspend(void)
 	pll_c3_rate = clk_get_rate_nolock(clks[TEGRA210_CLK_PLL_C3]);
 	pll_c_rate = clk_get_rate_nolock(clks[TEGRA210_CLK_PLL_C]);
 	pll_c_out1_rate = clk_get_rate_nolock(clks[TEGRA210_CLK_PLL_C_OUT1]);
-	pll_m_out1_rate = clk_get_rate_nolock(clks[TEGRA210_CLK_PLL_M_OUT1]);
 	pll_x_rate = clk_get_rate_nolock(clks[TEGRA210_CLK_PLL_X]);
 	pll_c4_rate = clk_get_rate_nolock(clks[TEGRA210_CLK_PLL_C4]);
 	pll_c4_out3_rate = clk_get_rate_nolock(clks[TEGRA210_CLK_PLL_C4_OUT3]);
@@ -3848,6 +3849,7 @@ static int tegra210_clk_suspend(void)
 		pll_mb_rate = clk_get_rate_nolock(clks[TEGRA210_CLK_PLL_MB]);
 		pll_m_v = car_readl(PLLM_BASE, 0);
 	}
+	pll_p_outa = car_readl(PLLP_OUTA, 0);
 	pll_p_outb = car_readl(PLLP_OUTB, 0);
 
 	for (i = 0; i < ARRAY_SIZE(cpu_softrst_ctx); i++)
@@ -4009,6 +4011,7 @@ static void tegra210_clk_resume(void)
 	tegra_clk_periph_resume(clk_base);
 
 	/* restore (sync) the actual PLL and secondary divider values */
+	car_writel(pll_p_outa, PLLP_OUTA, 0);
 	car_writel(pll_p_outb, PLLP_OUTB, 0);
 
 	tegra_clk_sync_state_pll_out(clks[TEGRA210_CLK_PLL_U_OUT1]);

@@ -38,21 +38,6 @@ struct vm_gk20a;
 struct vm_gk20a_mapping_batch;
 struct nvgpu_vm_area;
 
-struct buffer_attrs {
-	struct sg_table *sgt;
-	u64 size;
-	u64 align;
-	u32 ctag_offset;
-	u32 ctag_lines;
-	u32 ctag_allocated_lines;
-	int pgsz_idx;
-	u8 kind_v;
-	bool use_kind_v;
-	u8 uc_kind_v;
-	bool use_uc_kind_v;
-	bool ctag_user_mappable;
-};
-
 u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       struct dma_buf *dmabuf,
 		       u64 offset_align,
@@ -104,9 +89,5 @@ int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
 
 enum nvgpu_aperture gk20a_dmabuf_aperture(struct gk20a *g,
 					  struct dma_buf *dmabuf);
-int validate_fixed_buffer(struct vm_gk20a *vm,
-			  struct buffer_attrs *bfr,
-			  u64 map_offset, u64 map_size,
-			  struct nvgpu_vm_area **pva_node);
 
 #endif

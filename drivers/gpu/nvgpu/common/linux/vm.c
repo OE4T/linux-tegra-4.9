@@ -115,84 +115,6 @@ static u64 nvgpu_get_buffer_alignment(struct gk20a *g, struct scatterlist *sgl,
 	return align;
 }
 
-static int setup_kind_legacy(struct vm_gk20a *vm, struct buffer_attrs *bfr,
-			     bool *pkind_compressible)
-{
-	struct gk20a *g = gk20a_from_vm(vm);
-	bool kind_compressible;
-
-	if (unlikely(bfr->kind_v == g->ops.mm.get_kind_invalid()))
-		bfr->kind_v = g->ops.mm.get_kind_pitch();
-
-	if (unlikely(!gk20a_kind_is_supported(bfr->kind_v))) {
-		nvgpu_err(g, "kind 0x%x not supported", bfr->kind_v);
-		return -EINVAL;
-	}
-
-	bfr->uc_kind_v = g->ops.mm.get_kind_invalid();
-	/* find a suitable incompressible kind if it becomes necessary later */
-	kind_compressible = gk20a_kind_is_compressible(bfr->kind_v);
-	if (kind_compressible) {
-		bfr->uc_kind_v = gk20a_get_uncompressed_kind(bfr->kind_v);
-		if (unlikely(bfr->uc_kind_v == g->ops.mm.get_kind_invalid())) {
-			/* shouldn't happen, but it is worth cross-checking */
-			nvgpu_err(g, "comptag kind 0x%x can't be"
-				   " downgraded to uncompressed kind",
-				   bfr->kind_v);
-			return -EINVAL;
-		}
-	}
-
-	*pkind_compressible = kind_compressible;
-	return 0;
-}
-
-static int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
-					     u32 flags,
-					     struct buffer_attrs *bfr,
-					     enum gmmu_pgsz_gk20a pgsz_idx)
-{
-	bool kind_compressible;
-	struct gk20a *g = gk20a_from_vm(vm);
-	int ctag_granularity = g->ops.fb.compression_page_size(g);
-
-	if (!bfr->use_kind_v)
-		bfr->kind_v = g->ops.mm.get_kind_invalid();
-	if (!bfr->use_uc_kind_v)
-		bfr->uc_kind_v = g->ops.mm.get_kind_invalid();
-
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
-		kind_compressible = (bfr->kind_v !=
-				     g->ops.mm.get_kind_invalid());
-		if (!kind_compressible)
-			bfr->kind_v = bfr->uc_kind_v;
-	} else {
-		int err = setup_kind_legacy(vm, bfr, &kind_compressible);
-
-		if (err)
-			return err;
-	}
-
-	/* comptags only supported for suitable kinds, 128KB pagesize */
-	if (kind_compressible &&
-	    vm->gmmu_page_sizes[pgsz_idx] <
-	    g->ops.fb.compressible_page_size(g)) {
-		/* it is safe to fall back to uncompressed as
-		   functionality is not harmed */
-		bfr->kind_v = bfr->uc_kind_v;
-		kind_compressible = false;
-	}
-	if (kind_compressible)
-		bfr->ctag_lines = DIV_ROUND_UP_ULL(bfr->size, ctag_granularity);
-	else
-		bfr->ctag_lines = 0;
-
-	bfr->use_kind_v = (bfr->kind_v != g->ops.mm.get_kind_invalid());
-	bfr->use_uc_kind_v = (bfr->uc_kind_v != g->ops.mm.get_kind_invalid());
-
-	return 0;
-}
-
 int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
 		      struct dma_buf **dmabuf,
 		      u64 *offset)
@@ -279,40 +201,6 @@ static u64 __nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 	return mapped_buffer->addr;
 }
 
-static int setup_bfr_kind_fields(struct buffer_attrs *bfr, s16 compr_kind,
-				 s16 incompr_kind, u32 flags)
-{
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
-		/* were we supplied with a kind in either parameter? */
-		if ((compr_kind < 0 || compr_kind >= NV_KIND_ATTR_SIZE) &&
-		    (incompr_kind < 0 || incompr_kind >= NV_KIND_ATTR_SIZE))
-			return -EINVAL;
-
-		if (compr_kind != NV_KIND_INVALID) {
-			bfr->use_kind_v = true;
-			bfr->kind_v = (u8)compr_kind;
-		}
-
-		if (incompr_kind != NV_KIND_INVALID) {
-			bfr->use_uc_kind_v = true;
-			bfr->uc_kind_v = (u8)incompr_kind;
-		}
-	} else {
-		if (compr_kind < 0 || compr_kind >= NV_KIND_ATTR_SIZE)
-			return -EINVAL;
-
-		bfr->use_kind_v = true;
-		bfr->kind_v = (u8)compr_kind;
-
-		/*
-		 * Note: setup_buffer_kind_and_compression() will
-		 * figure out uc_kind_v or return an error
-		 */
-	}
-
-	return 0;
-}
-
 u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       struct dma_buf *dmabuf,
 		       u64 offset_align,
@@ -326,19 +214,19 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct device *dev = dev_from_gk20a(g);
-	struct gk20a_comptag_allocator *ctag_allocator = &g->gr.comp_tags;
-	struct nvgpu_mapped_buf *mapped_buffer = NULL;
-	bool va_allocated = false;
-	u64 map_offset = 0;
-	int err = 0;
-	struct buffer_attrs bfr = {NULL};
+	struct nvgpu_ctag_buffer_info binfo = { 0 };
 	struct gk20a_comptags comptags;
-	bool clear_ctags = false;
-	struct scatterlist *sgl;
 	struct nvgpu_vm_area *vm_area = NULL;
-	u32 ctag_offset;
-	enum nvgpu_aperture aperture;
 	struct nvgpu_sgt *nvgpu_sgt;
+	struct sg_table *sgt;
+	struct nvgpu_mapped_buf *mapped_buffer = NULL;
+	enum nvgpu_aperture aperture;
+	bool va_allocated = false;
+	bool clear_ctags = false;
+	u64 map_offset = 0;
+	u64 align;
+	u32 ctag_offset;
+	int err = 0;
 
 	/*
 	 * The kind used as part of the key for map caching. HW may
@@ -346,6 +234,9 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	 * key kind is compressible but we're out of comptags.
 	 */
 	s16 map_key_kind;
+
+	binfo.flags = flags;
+	binfo.size = dmabuf->size;
 
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
 		if (compr_kind != NV_KIND_INVALID)
@@ -376,27 +267,15 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		}
 	}
 
-	/* pin buffer to get phys/iovmm addr */
-	bfr.sgt = gk20a_mm_pin(dev, dmabuf);
-	if (IS_ERR(bfr.sgt)) {
-		/* Falling back to physical is actually possible
-		 * here in many cases if we use 4K phys pages in the
-		 * gmmu.  However we have some regions which require
-		 * contig regions to work properly (either phys-contig
-		 * or contig through smmu io_vaspace).  Until we can
-		 * track the difference between those two cases we have
-		 * to fail the mapping when we run out of SMMU space.
-		 */
+	sgt = gk20a_mm_pin(dev, dmabuf);
+	if (IS_ERR(sgt)) {
 		nvgpu_warn(g, "oom allocating tracking buffer");
 		goto clean_up;
 	}
 
-	err = setup_bfr_kind_fields(&bfr, compr_kind, incompr_kind, flags);
+	err = nvgpu_vm_init_kind_info(&binfo, compr_kind, incompr_kind);
 	if (err)
 		goto clean_up;
-
-	bfr.size = dmabuf->size;
-	sgl = bfr.sgt->sgl;
 
 	aperture = gk20a_dmabuf_aperture(g, dmabuf);
 	if (aperture == APERTURE_INVALID) {
@@ -407,60 +286,59 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)
 		map_offset = offset_align;
 
-	bfr.align = nvgpu_get_buffer_alignment(g, sgl, aperture);
+	align = nvgpu_get_buffer_alignment(g, sgt->sgl, aperture);
 	if (g->mm.disable_bigpage)
-		bfr.pgsz_idx = gmmu_page_size_small;
+		binfo.pgsz_idx = gmmu_page_size_small;
 	else
-		bfr.pgsz_idx = __get_pte_size(vm, map_offset,
-				      min_t(u64, bfr.size, bfr.align));
-	mapping_size = mapping_size ? mapping_size : bfr.size;
+		binfo.pgsz_idx = __get_pte_size(vm, map_offset,
+						min_t(u64, binfo.size, align));
+	mapping_size = mapping_size ? mapping_size : binfo.size;
 	mapping_size = ALIGN(mapping_size, SZ_4K);
 
-	if ((mapping_size > bfr.size) ||
-	    (buffer_offset > (bfr.size - mapping_size))) {
+	if ((mapping_size > binfo.size) ||
+	    (buffer_offset > (binfo.size - mapping_size))) {
 		err = -EINVAL;
 		goto clean_up;
 	}
 
 	/* Check if we should use a fixed offset for mapping this buffer */
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
-		err = nvgpu_vm_area_validate_buffer(vm, offset_align, mapping_size,
-						    bfr.pgsz_idx, &vm_area);
+		err = nvgpu_vm_area_validate_buffer(vm,
+						    offset_align,
+						    mapping_size,
+						    binfo.pgsz_idx,
+						    &vm_area);
 		if (err)
 			goto clean_up;
 
 		map_offset = offset_align;
 		va_allocated = false;
-	} else
+	} else {
 		va_allocated = true;
+	}
 
-	err = setup_buffer_kind_and_compression(vm, flags, &bfr, bfr.pgsz_idx);
-	if (unlikely(err)) {
+	err = nvgpu_vm_compute_kind_and_compression(vm, &binfo);
+	if (err) {
 		nvgpu_err(g, "failure setting up kind and compression");
 		goto clean_up;
 	}
 
 	/* bar1 and pmu vm don't need ctag */
 	if (!vm->enable_ctag)
-		bfr.ctag_lines = 0;
+		binfo.ctag_lines = 0;
 
 	gk20a_get_comptags(dev, dmabuf, &comptags);
 
-	/* ensure alignment to compression page size if compression enabled */
-	if (bfr.ctag_offset)
-		mapping_size = ALIGN(mapping_size,
-				     g->ops.fb.compression_page_size(g));
-
-	if (bfr.ctag_lines && !comptags.lines) {
+	if (binfo.ctag_lines && !comptags.lines) {
 		/* allocate compression resources if needed */
 		err = gk20a_alloc_comptags(g, dev, dmabuf,
-					   ctag_allocator,
-					   bfr.ctag_lines);
-		if (unlikely(err)) {
+					   &g->gr.comp_tags,
+					   binfo.ctag_lines);
+		if (err) {
 			/* TBD: we can partially alloc ctags as well... */
-			if (bfr.use_uc_kind_v) {
+			if (binfo.use_uc_kind_v) {
 				/* no comptags, but fallback kind available */
-				bfr.kind_v = bfr.uc_kind_v;
+				binfo.kind_v = binfo.uc_kind_v;
 			} else {
 				nvgpu_err(g, "comptag alloc failed and no fallback kind specified");
 				goto clean_up;
@@ -479,12 +357,6 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		}
 	}
 
-	/* store the comptag info */
-	bfr.ctag_offset = comptags.offset;
-	bfr.ctag_lines = comptags.lines;
-	bfr.ctag_allocated_lines = comptags.allocated_lines;
-	bfr.ctag_user_mappable = comptags.user_mappable;
-
 	/*
 	 * Calculate comptag index for this mapping. Differs in
 	 * case of partial mapping.
@@ -494,7 +366,7 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		ctag_offset += buffer_offset >>
 			       ilog2(g->ops.fb.compression_page_size(g));
 
-	nvgpu_sgt = nvgpu_linux_sgt_create(g, bfr.sgt);
+	nvgpu_sgt = nvgpu_linux_sgt_create(g, sgt);
 
 	/* update gmmu ptes */
 	map_offset = g->ops.mm.gmmu_map(vm,
@@ -502,8 +374,8 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 					nvgpu_sgt,
 					buffer_offset, /* sg offset */
 					mapping_size,
-					bfr.pgsz_idx,
-					bfr.kind_v,
+					binfo.pgsz_idx,
+					binfo.kind_v,
 					ctag_offset,
 					flags, rw_flag,
 					clear_ctags,
@@ -522,13 +394,13 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 	mapped_buffer->dmabuf      = dmabuf;
-	mapped_buffer->sgt         = bfr.sgt;
+	mapped_buffer->sgt         = sgt;
 	mapped_buffer->addr        = map_offset;
 	mapped_buffer->size        = mapping_size;
-	mapped_buffer->pgsz_idx    = bfr.pgsz_idx;
-	mapped_buffer->ctag_offset = bfr.ctag_offset;
-	mapped_buffer->ctag_lines  = bfr.ctag_lines;
-	mapped_buffer->ctag_allocated_lines = bfr.ctag_allocated_lines;
+	mapped_buffer->pgsz_idx    = binfo.pgsz_idx;
+	mapped_buffer->ctag_offset = ctag_offset;
+	mapped_buffer->ctag_lines  = binfo.ctag_lines;
+	mapped_buffer->ctag_allocated_lines = comptags.allocated_lines;
 	mapped_buffer->vm          = vm;
 	mapped_buffer->flags       = flags;
 	mapped_buffer->kind        = map_key_kind;
@@ -557,9 +429,9 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 clean_up:
 	nvgpu_kfree(g, mapped_buffer);
 	if (va_allocated)
-		__nvgpu_vm_free_va(vm, map_offset, bfr.pgsz_idx);
-	if (!IS_ERR(bfr.sgt))
-		gk20a_mm_unpin(dev, dmabuf, bfr.sgt);
+		__nvgpu_vm_free_va(vm, map_offset, binfo.pgsz_idx);
+	if (!IS_ERR(sgt))
+		gk20a_mm_unpin(dev, dmabuf, sgt);
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 	nvgpu_log_info(g, "err=%d", err);

@@ -444,29 +444,6 @@ static DEFINE_SPINLOCK(pll_p_uphy_lock);
 #define UTMIP_PLL_CFG0_WRITE_MASK	0x1fffffff
 #define UTMIP_PLL_CFG0_DEFAULT_VALUE	0x00190101
 
-
-#ifdef FIXME
-void tegra210b01_csi_source_from_brick(void)
-{
-	u32 val;
-
-	val = readl_relaxed(clk_base + PLLD_BASE);
-	val &= ~PLLD_BASE_CSI_CLKSOURCE;
-	writel_relaxed(val, clk_base + PLLD_BASE);
-}
-EXPORT_SYMBOL_GPL(tegra210b01_csi_source_from_brick);
-
-void tegra210b01_csi_source_from_plld(void)
-{
-	u32 val;
-
-	val = readl_relaxed(clk_base + PLLD_BASE);
-	val |= PLLD_BASE_CSI_CLKSOURCE;
-	writel_relaxed(val, clk_base + PLLD_BASE);
-}
-EXPORT_SYMBOL_GPL(tegra210b01_csi_source_from_plld);
-#endif
-
 /* PLLE */
 #define PLLE_SS_ENABLE	1
 #define PLLE_SS_MAX_VAL 0x25

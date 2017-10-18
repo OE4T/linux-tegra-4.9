@@ -287,8 +287,8 @@ static inline u32 compute_dda_inc(fixed20_12 in, unsigned out_int,
 				  bool v, unsigned Bpp)
 {
 	/*
-	 * min(round((prescaled_size_in_pixels - 1) * 0x1000 /
-	 *	     (post_scaled_size_in_pixels - 1)), MAX)
+	 * min(round((prescaled_size_in_pixels) * 0x1000 /
+	 *	     (post_scaled_size_in_pixels)), MAX)
 	 * Where the value of MAX is as follows:
 	 * For V_DDA_INCREMENT: 15.0 (0xF000)
 	 * For H_DDA_INCREMENT:  4.0 (0x4000) for 4 Bytes/pix formats.
@@ -315,8 +315,7 @@ static inline u32 compute_dda_inc(fixed20_12 in, unsigned out_int,
 		}
 	}
 
-	out.full = max_t(u32, out.full - dfixed_const(1), dfixed_const(1));
-	in.full -= dfixed_const(1);
+	out.full = max_t(u32, out.full, dfixed_const(1));
 
 	dda_inc = dfixed_div(in, out);
 

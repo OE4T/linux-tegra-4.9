@@ -29,6 +29,9 @@
 #include "dc_priv.h"
 #include "sor_regs.h"
 
+/* Handle to a training pattern data object. Serves as the sole interface of
+ * APIs and data structures to the training pattern data object
+ */
 enum tegra_dc_dp_training_pattern_key {
 	TEGRA_DC_DP_TRAINING_PATTERN_DISABLE,
 	TEGRA_DC_DP_TRAINING_PATTERN_1,
@@ -41,6 +44,16 @@ enum tegra_dc_dp_training_pattern_key {
 	TEGRA_DC_DP_TRAINING_PATTERN_HBR2_COMPLIANCE,
 };
 
+/*
+ * tegra_dc_dp_training_pattern - Training Pattern data object
+ * @dpcd_val    - DPCD value defined by DP spec, corresponding to the TPS
+ *                (Training Pattern Sequence). Used to hint the TPS to the sink
+ *                that the source intends to use for link training
+ * @sor_reg_val - SOR value corresponding to the TPS. Used to force the source
+ *                to use this TPS
+ * @scrambling  - Denotes whether the bit stream needs to be scrambled
+ * @chan_coding - Denotes whether the bit stream needs to be 8b/10b coded
+ */
 struct tegra_dc_dp_training_pattern {
 	u8 dpcd_val;
 	u8 sor_reg_val;
@@ -118,7 +131,12 @@ struct tegra_dc_dp_link_config {
 	u32	preemphasis[4];
 	u32	postcursor[4];
 
-	bool	tps3_supported;
+	/*
+	 * Training Pattern Sequence to start channel equalization with,
+	 * calculated based on an intersection of source and sink capabilities
+	 */
+	u32	tps;
+
 	u8	aux_rd_interval;
 };
 
@@ -249,6 +267,8 @@ u32 __attribute__((weak))
 	tegra_sor_get_pixel_depth_t19x(struct tegra_dc *dc);
 u32 __attribute__((weak))
 	tegra_sor_get_adjusted_hblank_t19x(struct tegra_dc *dc, u32 hblank_end);
+void __attribute__((weak)) tegra_sor_init_quirks_t19x(
+				struct tegra_dc_sor_data *sor);
 
 static inline u32 nv_sor_head_state0(u32 i)
 {

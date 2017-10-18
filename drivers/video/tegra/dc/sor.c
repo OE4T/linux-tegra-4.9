@@ -829,6 +829,9 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 
 	tegra_dc_populate_min_mode();
 
+	if (tegra_dc_is_t19x())
+		tegra_sor_init_quirks_t19x(sor);
+
 	return sor;
 
 err_rst: __maybe_unused

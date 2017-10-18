@@ -378,4 +378,10 @@ static inline void tegra_dp_set_outdata(struct tegra_dc_dp_data *dp,
 #define NV_DPCD_HDCP_RXSTATUS                           (0x00069493)
 #define NV_DPCD_HDCP_RSVD                               (0x00069494)
 #define NV_DPCD_HDCP_DBG                                (0x00069518)
+
+int __attribute__((weak)) tegra_dp_init_max_link_cfg_t19x(
+					struct tegra_dc_dp_data *dp,
+					struct tegra_dc_dp_link_config *cfg);
+void tegra_dp_set_max_link_bw(struct tegra_dc_sor_data *sor,
+			      struct tegra_dc_dp_link_config *cfg);
 #endif

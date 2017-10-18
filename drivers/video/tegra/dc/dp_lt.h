@@ -58,7 +58,6 @@ struct tegra_dp_lt_data {
 	struct completion lt_complete;
 
 	u8 no_aux_handshake;
-	u8 tps3_supported;
 	u8 aux_rd_interval;
 
 	bool lt_config_valid;

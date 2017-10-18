@@ -63,7 +63,8 @@ static inline bool is_pc2_supported(struct tegra_dp_lt_data *lt_data)
 	struct tegra_dc_dp_link_config *cfg = &lt_data->dp->link_cfg;
 	struct tegra_dp_out *dp_out = lt_data->dp->dc->out->dp_out;
 
-	return (!dp_out->pc2_disabled && cfg->tps3_supported);
+	return (!dp_out->pc2_disabled &&
+		cfg->tps == TEGRA_DC_DP_TRAINING_PATTERN_3);
 }
 
 /*
@@ -413,11 +414,8 @@ static int do_fast_lt_no_handshake(struct tegra_dp_lt_data *lt_data)
 	set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_1);
 	usleep_range(500, 600);
 
-	/* transmit link training pattern 2/3 for min of 500us */
-	if (lt_data->dp->link_cfg.tps3_supported)
-		set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_3);
-	else
-		set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_2);
+	/* transmit channel equalization training pattern for min of 500us */
+	set_lt_tpg(lt_data, lt_data->dp->link_cfg.tps);
 	usleep_range(500, 600);
 
 	return 0;
@@ -692,7 +690,6 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 {
 	int tgt_state;
 	int timeout;
-	u32 tp_src = TEGRA_DC_DP_TRAINING_PATTERN_2;
 	bool cr_done = true;
 	bool ce_done = true;
 	bool cur_hpd;
@@ -707,10 +704,7 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 		goto done;
 	}
 
-	if (lt_data->dp->link_cfg.tps3_supported)
-		tp_src = TEGRA_DC_DP_TRAINING_PATTERN_3;
-
-	set_lt_tpg(lt_data, tp_src);
+	set_lt_tpg(lt_data, lt_data->dp->link_cfg.tps);
 	wait_aux_training(lt_data, false);
 
 	cr_done = get_clock_recovery_status(lt_data);

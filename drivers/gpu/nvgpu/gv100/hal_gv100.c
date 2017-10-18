@@ -387,7 +387,6 @@ static const struct gpu_ops gv100_ops = {
 		.handle_tpc_mpc_exception = gr_gv11b_handle_tpc_mpc_exception,
 		.zbc_s_query_table = gr_gv11b_zbc_s_query_table,
 		.load_zbc_s_default_tbl = gr_gv11b_load_stencil_default_tbl,
-		.restore_context_header = gv11b_restore_context_header,
 		.handle_gpc_gpcmmu_exception =
 			gr_gv11b_handle_gpc_gpcmmu_exception,
 		.add_zbc_type_s = gr_gv11b_add_zbc_type_s,

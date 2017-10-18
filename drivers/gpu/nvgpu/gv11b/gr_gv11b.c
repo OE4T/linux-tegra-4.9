@@ -2306,24 +2306,6 @@ int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 	return 0;
 }
 
-void gv11b_restore_context_header(struct gk20a *g,
-					struct nvgpu_mem *ctxheader)
-{
-	u32 va_lo, va_hi;
-	struct gr_gk20a *gr = &g->gr;
-
-	va_hi = nvgpu_mem_rd(g, ctxheader,
-			ctxsw_prog_main_image_context_buffer_ptr_hi_o());
-	va_lo = nvgpu_mem_rd(g, ctxheader,
-			ctxsw_prog_main_image_context_buffer_ptr_o());
-	nvgpu_mem_wr_n(g, ctxheader, 0,
-                       gr->ctx_vars.local_golden_image,
-                       gr->ctx_vars.golden_image_size);
-	nvgpu_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_context_buffer_ptr_hi_o(), va_hi);
-	nvgpu_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_context_buffer_ptr_o(), va_lo);
-}
 void gr_gv11b_write_zcull_ptr(struct gk20a *g,
 				struct nvgpu_mem *mem, u64 gpu_va)
 {

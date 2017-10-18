@@ -145,8 +145,6 @@ int gr_gv11b_load_smid_config(struct gk20a *g);
 int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 					struct channel_gk20a *c, bool patch);
-void gv11b_restore_context_header(struct gk20a *g,
-					struct nvgpu_mem *ctxheader);
 void gr_gv11b_write_zcull_ptr(struct gk20a *g,
 				struct nvgpu_mem *mem, u64 gpu_va);
 void gr_gv11b_write_pm_ptr(struct gk20a *g,

@@ -4248,10 +4248,17 @@ static int eqos_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid)
 
 static int eqos_set_mac_address(struct net_device *dev, void *p)
 {
-	if (is_valid_ether_addr(dev->dev_addr))
-		return -EOPNOTSUPP;
-	else
-		return eth_mac_addr(dev, p);
+	struct eqos_prv_data *pdata = netdev_priv(dev);
+	struct hw_if_struct *hw_if = &pdata->hw_if;
+	int ret = 0;
+
+	ret = eth_mac_addr(dev, p);
+	if (ret)
+		return ret;
+
+	hw_if->configure_mac_addr0_reg(dev->dev_addr);
+
+	return ret;
 }
 
 /*!

@@ -175,11 +175,11 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u64 *offsets, u64 *sizes,
 {
 	int i, err;
 	bool is_32 = (op & NVMAP_ELEM_SIZE_U64) ? false : true;
+	u32 *offs_32 = (u32 *)offsets, *sizes_32 = (u32 *)sizes;
 
 	op &= ~NVMAP_ELEM_SIZE_U64;
 
 	for (i = 0; i < nr; i++) {
-		u32 *offs_32 = (u32 *)offsets, *sizes_32 = (u32 *)sizes;
 		u64 size = is_32 ? sizes_32[i] : sizes[i];
 		u64 offset = is_32 ? offs_32[i] : offsets[i];
 
@@ -235,8 +235,9 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u64 *offsets, u64 *sizes,
 		if (err)
 			return err;
 		for (i = 0; i < nr; i++)
-			nvmap_handle_mkclean(handles[i], offsets[i],
-					     sizes[i] ? sizes[i] : handles[i]->size);
+			nvmap_handle_mkclean(handles[i],
+					is_32 ? offs_32[i] : offsets[i],
+					is_32 ? sizes_32[i] : sizes[i]);
 	} else if ((op == NVMAP_PAGES_UNRESERVE) && handles[0]->heap_pgalloc) {
 		/* Do nothing */
 	} else {

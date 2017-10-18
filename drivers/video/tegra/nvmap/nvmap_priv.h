@@ -587,6 +587,8 @@ static inline void nvmap_handle_mkclean(struct nvmap_handle *h,
 
 	if (h->heap_pgalloc && !atomic_read(&h->pgalloc.ndirty))
 		return;
+	if (size == 0)
+		size = h->size;
 
 	nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkclean, false);
 	if (h->heap_pgalloc)

@@ -553,7 +553,7 @@ static u8 dfll_get_output_min(struct tegra_dfll *td)
 	u32 tune_min;
 
 	tune_min = td->tune_range == DFLL_TUNE_LOW ?
-			0 : td->tune_high_out_min;
+			td->lut_bottom : td->tune_high_out_min;
 	return max(tune_min, td->thermal_floor_output);
 }
 
@@ -715,10 +715,6 @@ static void dfll_tune_low(struct tegra_dfll *td)
 
 	if (td->soc->set_clock_trimmers_low)
 		td->soc->set_clock_trimmers_low();
-
-	if (td->lut_min != td->thermal_floor_output)
-		dfll_set_output_limits(td, td->thermal_floor_output,
-					td->lut_max);
 }
 
 /**
@@ -1519,9 +1515,6 @@ static long dfll_one_shot_calibrate_mv(struct tegra_dfll *td, int mv,
 	if (tune_high)
 		dfll_tune_low(td);
 
-	if (!n)
-		return -ETIMEDOUT;
-
 	/* Get average monitor rate rounded to request unit (=2*monitor unit) */
 	avg_data = DIV_ROUND_CLOSEST(avg_data, 2 * n);
 	rate = MULT_TO_DVCO_RATE(avg_data, td->ref_rate);
@@ -1681,10 +1674,6 @@ static void dfll_init_out_if(struct tegra_dfll *td)
 	u32 val;
 	int index, mv;
 
-	td->lut_min = 0;
-	td->lut_max = td->lut_size - 1;
-	td->lut_safe = td->lut_min + (td->lut_min < td->lut_max ? 1 : 0);
-
 	td->thermal_floor_output = 0;
 	if (td->soc->thermal_floor_table_size) {
 		index = 0;
@@ -1720,10 +1709,6 @@ static void dfll_init_out_if(struct tegra_dfll *td)
 		int vinit = td->reg_init_uV;
 		int vstep = td->soc->alignment.step_uv;
 		int vmin = td->lut_uv[0];
-
-		/* clear DFLL_OUTPUT_CFG before setting new value */
-		dfll_writel(td, 0, DFLL_OUTPUT_CFG);
-		dfll_wmb(td);
 
 		/* clear DFLL_OUTPUT_CFG before setting new value */
 		dfll_writel(td, 0, DFLL_OUTPUT_CFG);
@@ -2093,6 +2078,13 @@ static int dfll_disable(struct tegra_dfll *td)
 	return 0;
 }
 
+/**
+ * dfll_enable - switch a disabled DFLL to open-loop mode
+ * @td: DFLL instance
+ *
+ * Switch from DISABLED state to OPEN_LOOP state. Returns 0 upon success
+ * or -EPERM if the DFLL is not currently disabled.
+ */
 static int dfll_enable(struct tegra_dfll *td)
 {
 	unsigned long flags;

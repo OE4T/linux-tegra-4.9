@@ -48,19 +48,6 @@ struct gk20a_dmabuf_priv {
 	u64 buffer_id;
 };
 
-/*
- * These are implemented in common/linux/comptags.c - these are dmabuf related
- * functions though so they are defined here. They cannot be defined in
- * <nvgpu/comptags.h> since that file must be OS agnostic.
- */
-int gk20a_alloc_comptags(struct gk20a *g,
-			 struct device *dev,
-			 struct dma_buf *dmabuf,
-			 struct gk20a_comptag_allocator *allocator,
-			 u32 lines);
-void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
-			struct gk20a_comptags *comptags);
-
 struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf);
 void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
 		    struct sg_table *sgt);

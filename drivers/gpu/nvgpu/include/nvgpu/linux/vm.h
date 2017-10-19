@@ -33,10 +33,16 @@
 
 struct sg_table;
 struct dma_buf;
+struct device;
 
 struct vm_gk20a;
 struct vm_gk20a_mapping_batch;
 struct nvgpu_vm_area;
+
+struct nvgpu_os_buffer {
+	struct dma_buf *dmabuf;
+	struct device *dev;
+};
 
 /* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL must be set */
 int nvgpu_vm_map_linux(struct vm_gk20a *vm,

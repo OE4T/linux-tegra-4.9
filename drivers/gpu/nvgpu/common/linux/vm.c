@@ -165,6 +165,7 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	struct nvgpu_sgt *nvgpu_sgt = NULL;
 	struct sg_table *sgt;
 	struct nvgpu_mapped_buf *mapped_buffer = NULL;
+	struct nvgpu_os_buffer os_buf = { dmabuf, dev };
 	enum nvgpu_aperture aperture;
 	bool va_allocated = false;
 	bool clear_ctags = false;
@@ -277,11 +278,11 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	if (!vm->enable_ctag)
 		binfo.ctag_lines = 0;
 
-	gk20a_get_comptags(dev, dmabuf, &comptags);
+	gk20a_get_comptags(&os_buf, &comptags);
 
 	if (binfo.ctag_lines && !comptags.lines) {
 		/* allocate compression resources if needed */
-		err = gk20a_alloc_comptags(g, dev, dmabuf,
+		err = gk20a_alloc_comptags(g, &os_buf,
 					   &g->gr.comp_tags,
 					   binfo.ctag_lines);
 		if (err) {
@@ -296,8 +297,7 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 				goto clean_up;
 			}
 		} else {
-			gk20a_get_comptags(dev,
-					   dmabuf, &comptags);
+			gk20a_get_comptags(&os_buf, &comptags);
 
 			if (g->ops.ltc.cbc_ctrl)
 				g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,

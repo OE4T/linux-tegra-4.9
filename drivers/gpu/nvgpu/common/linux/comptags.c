@@ -18,12 +18,15 @@
 
 #include <nvgpu/comptags.h>
 
+#include <nvgpu/linux/vm.h>
+
 #include "dmabuf.h"
 
-void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
+void gk20a_get_comptags(struct nvgpu_os_buffer *buf,
 			struct gk20a_comptags *comptags)
 {
-	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
+	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(buf->dmabuf,
+							     buf->dev);
 
 	if (!comptags)
 		return;
@@ -37,12 +40,12 @@ void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 }
 
 int gk20a_alloc_comptags(struct gk20a *g,
-			 struct device *dev,
-			 struct dma_buf *dmabuf,
+			 struct nvgpu_os_buffer *buf,
 			 struct gk20a_comptag_allocator *allocator,
 			 u32 lines)
 {
-	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
+	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(buf->dmabuf,
+							     buf->dev);
 	u32 ctaglines_allocsize;
 	u32 offset;
 	int err;

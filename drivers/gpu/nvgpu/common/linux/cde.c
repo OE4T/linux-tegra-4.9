@@ -973,6 +973,10 @@ __releases(&l->cde_app->mutex)
 	struct gk20a *g = &l->g;
 	struct gk20a_cde_ctx *cde_ctx = NULL;
 	struct gk20a_comptags comptags;
+	struct nvgpu_os_buffer os_buf = {
+		compbits_scatter_buf,
+		dev_from_gk20a(g)
+	};
 	u64 mapped_compbits_offset = 0;
 	u64 compbits_size = 0;
 	u64 mapped_scatterbuffer_offset = 0;
@@ -1103,7 +1107,7 @@ __releases(&l->cde_app->mutex)
 	}
 
 	/* store source buffer compression tags */
-	gk20a_get_comptags(dev_from_gk20a(g), compbits_scatter_buf, &comptags);
+	gk20a_get_comptags(&os_buf, &comptags);
 	cde_ctx->surf_param_offset = comptags.offset;
 	cde_ctx->surf_param_lines = comptags.lines;
 

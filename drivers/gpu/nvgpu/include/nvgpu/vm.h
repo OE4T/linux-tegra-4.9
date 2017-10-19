@@ -107,6 +107,12 @@ struct nvgpu_mapped_buf {
 	bool va_allocated;
 };
 
+/*
+ * Defined by each OS. Allows the common VM code do things to the OS specific
+ * buffer structures.
+ */
+struct nvgpu_os_buffer;
+
 static inline struct nvgpu_mapped_buf *
 nvgpu_mapped_buf_from_buffer_list(struct nvgpu_list_node *node)
 {

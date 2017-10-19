@@ -191,13 +191,6 @@ struct tegra_dc_sor_data {
 #define TEGRA_SOR_SEQ_BUSY_TIMEOUT_MS	10000
 #define TEGRA_DC_POLL_TIMEOUT_MS       50
 
-#define CHECK_RET(x)			\
-	do {				\
-		ret = (x);		\
-		if (ret != 0)		\
-			return ret;	\
-	} while (0)
-
 struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	const struct tegra_dc_dp_link_config *cfg);
 void tegra_sor_config_xbar(struct tegra_dc_sor_data *sor);

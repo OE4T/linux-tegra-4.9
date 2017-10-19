@@ -240,10 +240,16 @@ int tegra_dp_dpcd_write_field(struct tegra_dc_dp_data *dp,
 
 	might_sleep();
 
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp, cmd, &dpcd_data));
+	ret = tegra_dc_dp_dpcd_read(dp, cmd, &dpcd_data);
+	if (ret)
+		return ret;
+
 	dpcd_data &= ~mask;
 	dpcd_data |= data;
-	CHECK_RET(tegra_dc_dp_dpcd_write(dp, cmd, dpcd_data));
+
+	ret = tegra_dc_dp_dpcd_write(dp, cmd, dpcd_data);
+	if (ret)
+		return ret;
 
 	return 0;
 }
@@ -1182,11 +1188,14 @@ static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	u8 dpcd_data;
 	int ret;
 
-	if (dp->sink_cap_valid)
+	if (dp->sink_cap_valid) {
 		dpcd_data = dp->sink_cap[NV_DPCD_MAX_LANE_COUNT];
-	else
-		CHECK_RET(tegra_dc_dp_dpcd_read(dp,
-			NV_DPCD_MAX_LANE_COUNT, &dpcd_data));
+	} else {
+		ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LANE_COUNT,
+					    &dpcd_data);
+		if (ret)
+			return ret;
+	}
 
 	cfg->max_lane_count = dpcd_data & NV_DPCD_MAX_LANE_COUNT_MASK;
 
@@ -1208,11 +1217,15 @@ static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	(dpcd_data & NV_DPCD_MAX_LANE_COUNT_ENHANCED_FRAMING_YES) ?
 	true : false;
 
-	if (dp->sink_cap_valid)
+	if (dp->sink_cap_valid) {
 		dpcd_data = dp->sink_cap[NV_DPCD_MAX_DOWNSPREAD];
-	else
-		CHECK_RET(tegra_dc_dp_dpcd_read(dp,
-				NV_DPCD_MAX_DOWNSPREAD, &dpcd_data));
+	} else {
+		ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_DOWNSPREAD,
+					    &dpcd_data);
+		if (ret)
+			return ret;
+	}
+
 	cfg->downspread =
 		(dpcd_data & NV_DPCD_MAX_DOWNSPREAD_VAL_0_5_PCT) ?
 		true : false;
@@ -1220,17 +1233,21 @@ static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 		NV_DPCD_MAX_DOWNSPREAD_NO_AUX_HANDSHAKE_LT_T) ?
 		true : false;
 
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp,
-		NV_DPCD_TRAINING_AUX_RD_INTERVAL, &dpcd_data));
+	ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_TRAINING_AUX_RD_INTERVAL,
+				    &dpcd_data);
+	if (ret)
+		return ret;
+
 	cfg->aux_rd_interval = dpcd_data;
 
-	if (dp->sink_cap_valid)
-		cfg->max_link_bw =
-			dp->sink_cap[NV_DPCD_MAX_LINK_BANDWIDTH];
-	else
-		CHECK_RET(tegra_dc_dp_dpcd_read(dp,
-			NV_DPCD_MAX_LINK_BANDWIDTH,
-			&cfg->max_link_bw));
+	if (dp->sink_cap_valid) {
+		cfg->max_link_bw = dp->sink_cap[NV_DPCD_MAX_LINK_BANDWIDTH];
+	} else {
+		ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
+					    &cfg->max_link_bw);
+		if (ret)
+			return ret;
+	}
 
 	tegra_dp_set_max_link_bw(dp->sor, cfg);
 
@@ -1238,8 +1255,10 @@ static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 		dp->pdata->link_bw < cfg->max_link_bw)
 		cfg->max_link_bw = dp->pdata->link_bw;
 
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP,
-		&dpcd_data));
+	ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP, &dpcd_data);
+	if (ret)
+		return ret;
+
 	cfg->alt_scramber_reset_cap =
 		(dpcd_data & NV_DPCD_EDP_CONFIG_CAP_ASC_RESET_YES) ?
 		true : false;
@@ -1250,8 +1269,10 @@ static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 		NV_DPCD_EDP_CONFIG_CAP_DISPLAY_CONTROL_CAP_YES) ?
 		true : false;
 
-	CHECK_RET(tegra_dc_dp_dpcd_read(dp, NV_DPCD_FEATURE_ENUM_LIST,
-		&dpcd_data));
+	ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_FEATURE_ENUM_LIST, &dpcd_data);
+	if (ret)
+		return ret;
+
 	cfg->support_vsc_ext_colorimetry = (dpcd_data &
 		NV_DPCD_FEATURE_ENUM_LIST_VSC_EXT_COLORIMETRY) ?
 		true : false;
@@ -1300,8 +1321,9 @@ static int tegra_dc_dp_set_assr(struct tegra_dc_dp_data *dp, bool ena)
 		NV_DPCD_EDP_CONFIG_SET_ASC_RESET_ENABLE :
 		NV_DPCD_EDP_CONFIG_SET_ASC_RESET_DISABLE;
 
-	CHECK_RET(tegra_dc_dp_dpcd_write(dp, NV_DPCD_EDP_CONFIG_SET,
-			dpcd_data));
+	ret = tegra_dc_dp_dpcd_write(dp, NV_DPCD_EDP_CONFIG_SET, dpcd_data);
+	if (ret)
+		return ret;
 
 	/* Also reset the scrambler to 0xfffe */
 	tegra_dc_sor_set_internal_panel(dp->sor, ena);
@@ -1327,9 +1349,11 @@ static int tegra_dp_set_enhanced_framing(struct tegra_dc_dp_data *dp,
 			NV_SOR_DP_LINKCTL_ENHANCEDFRAME_ENABLE,
 			NV_SOR_DP_LINKCTL_ENHANCEDFRAME_ENABLE);
 
-		CHECK_RET(tegra_dp_dpcd_write_field(dp, NV_DPCD_LANE_COUNT_SET,
+		ret = tegra_dp_dpcd_write_field(dp, NV_DPCD_LANE_COUNT_SET,
 				NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_T,
-				NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_T));
+				NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_T);
+		if (ret)
+			return ret;
 	}
 
 	return 0;
@@ -1341,9 +1365,11 @@ static int tegra_dp_set_lane_count(struct tegra_dc_dp_data *dp, u8 lane_cnt)
 
 	tegra_sor_power_lanes(dp->sor, lane_cnt, true);
 
-	CHECK_RET(tegra_dp_dpcd_write_field(dp, NV_DPCD_LANE_COUNT_SET,
-				NV_DPCD_LANE_COUNT_SET_MASK,
-				lane_cnt));
+	ret = tegra_dp_dpcd_write_field(dp, NV_DPCD_LANE_COUNT_SET,
+					NV_DPCD_LANE_COUNT_SET_MASK,
+					lane_cnt);
+	if (ret)
+		return ret;
 
 	return 0;
 }

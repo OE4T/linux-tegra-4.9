@@ -212,21 +212,6 @@ static void push_waits(struct nvhost_job *job)
 		add_sync_waits(job->ch, job->gathers[i].pre_fence);
 }
 
-static inline u32 gather_regnum(u32 word)
-{
-	return (word >> 16) & 0xfff;
-}
-
-static inline  u32 gather_type(u32 word)
-{
-	return (word >> 28) & 1;
-}
-
-static inline u32 gather_count(u32 word)
-{
-	return word & 0x3fff;
-}
-
 static void submit_work(struct nvhost_job *job)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
@@ -272,16 +257,7 @@ static void submit_work(struct nvhost_job *job)
 							  &job->ch->cdma);
 		}
 
-		/* If register is specified, add a gather with incr/nonincr.
-		 * This allows writing large amounts of data directly from
-		 * memory to a register. */
-		if (gather_regnum(g->words))
-			op1 = nvhost_opcode_gather_insert(
-					gather_regnum(g->words),
-					gather_type(g->words),
-					gather_count(g->words));
-		else
-			op1 = nvhost_opcode_gather(g->words);
+		op1 = nvhost_opcode_gather(g->words);
 		op2 = job->gathers[i].mem_base + g->offset;
 
 		if (nvhost_debug_trace_cmdbuf)

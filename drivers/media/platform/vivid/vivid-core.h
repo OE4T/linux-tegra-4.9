@@ -394,9 +394,11 @@ struct vivid_dev {
 	/* thread for generating video capture stream */
 	struct task_struct		*kthread_vid_cap;
 	unsigned long			jiffies_vid_cap;
+	unsigned long			next_jiffies_vid_cap;
 	u32				cap_seq_offset;
 	u32				cap_seq_count;
 	bool				cap_seq_resync;
+	bool				cap_thread_active;
 	u32				vid_cap_seq_start;
 	u32				vid_cap_seq_count;
 	bool				vid_cap_streaming;
@@ -453,9 +455,11 @@ struct vivid_dev {
 	/* thread for generating video output stream */
 	struct task_struct		*kthread_vid_out;
 	unsigned long			jiffies_vid_out;
+	unsigned long			next_jiffies_vid_out;
 	u32				out_seq_offset;
 	u32				out_seq_count;
 	bool				out_seq_resync;
+	bool				out_thread_active;
 	u32				vid_out_seq_start;
 	u32				vid_out_seq_count;
 	bool				vid_out_streaming;

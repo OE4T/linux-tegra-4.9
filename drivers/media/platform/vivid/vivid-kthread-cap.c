@@ -50,6 +50,7 @@
 #include "vivid-osd.h"
 #include "vivid-ctrls.h"
 #include "vivid-kthread-cap.h"
+#include "vivid-kthread-out.h"
 
 static inline v4l2_std_id vivid_get_std_cap(const struct vivid_dev *dev)
 {
@@ -786,16 +787,26 @@ static int vivid_thread_vid_cap(void *data)
 	unsigned numerator;
 	unsigned denominator;
 	int dropped_bufs;
+	bool is_loop = false;
 
 	dprintk(dev, 1, "Video Capture Thread Start\n");
 
 	set_freezable();
 
+	mutex_lock(&dev->mutex);
 	/* Resets frame counters */
-	dev->cap_seq_offset = 0;
+	if (dev->out_thread_active) {
+		dev->cap_seq_offset = dev->out_seq_count;
+		dev->jiffies_vid_cap = dev->jiffies_vid_out;
+	} else {
+		dev->cap_seq_offset = 0;
+		dev->jiffies_vid_cap = jiffies;
+	}
 	dev->cap_seq_count = 0;
 	dev->cap_seq_resync = false;
-	dev->jiffies_vid_cap = jiffies;
+	dev->next_jiffies_vid_cap = dev->jiffies_vid_cap;
+	dev->cap_thread_active = true;
+	mutex_unlock(&dev->mutex);
 
 	for (;;) {
 		try_to_freeze();
@@ -803,7 +814,6 @@ static int vivid_thread_vid_cap(void *data)
 			break;
 
 		mutex_lock(&dev->mutex);
-		mutex_lock(&dev->mutex_framerate);
 		cur_jiffies = jiffies;
 		if (dev->cap_seq_resync) {
 			dev->jiffies_vid_cap = cur_jiffies;
@@ -811,8 +821,14 @@ static int vivid_thread_vid_cap(void *data)
 			dev->cap_seq_count = 0;
 			dev->cap_seq_resync = false;
 		}
+		mutex_lock(&dev->mutex_framerate);
 		numerator = dev->timeperframe_vid_cap.numerator;
 		denominator = dev->timeperframe_vid_cap.denominator;
+		mutex_unlock(&dev->mutex_framerate);
+
+		if (dev->loop_video && dev->can_loop_video &&
+			(vivid_is_svid_cap(dev) || vivid_is_hdmi_cap(dev)))
+			is_loop = true;
 
 		if (dev->field_cap == V4L2_FIELD_ALTERNATE)
 			denominator *= 2;
@@ -841,6 +857,12 @@ static int vivid_thread_vid_cap(void *data)
 		dev->vbi_cap_seq_count = dev->cap_seq_count - dev->vbi_cap_seq_start;
 
 		vivid_thread_vid_cap_tick(dev, dropped_bufs);
+		/*
+		 * Release the output device buffers in loopback mode once
+		 * the output device is active.
+		 */
+		if (is_loop && dev->out_thread_active)
+			vivid_thread_vid_out_tick(dev);
 
 		/*
 		 * Calculate the number of 'numerators' streamed since we started,
@@ -850,9 +872,6 @@ static int vivid_thread_vid_cap(void *data)
 
 		/* And the number of jiffies since we started */
 		jiffies_since_start = jiffies - dev->jiffies_vid_cap;
-
-		mutex_unlock(&dev->mutex_framerate);
-		mutex_unlock(&dev->mutex);
 
 		/*
 		 * Calculate when that next buffer is supposed to start
@@ -864,6 +883,9 @@ static int vivid_thread_vid_cap(void *data)
 		/* If it is in the past, then just schedule asap */
 		if (next_jiffies_since_start < jiffies_since_start)
 			next_jiffies_since_start = jiffies_since_start;
+
+		dev->next_jiffies_vid_cap = next_jiffies_since_start;
+		mutex_unlock(&dev->mutex);
 
 		wait_jiffies = next_jiffies_since_start - jiffies_since_start;
 		schedule_timeout_interruptible(wait_jiffies ? wait_jiffies : 1);
@@ -959,5 +981,6 @@ void vivid_stop_generating_vid_cap(struct vivid_dev *dev, bool *pstreaming)
 	mutex_unlock(&dev->mutex);
 	kthread_stop(dev->kthread_vid_cap);
 	dev->kthread_vid_cap = NULL;
+	dev->cap_thread_active = false;
 	mutex_lock(&dev->mutex);
 }

@@ -90,12 +90,9 @@ inline void css_hw_set_handled_snapshots(struct gk20a *g, u32 done)
 static void css_hw_reset_streaming(struct gk20a *g)
 {
 	u32 engine_status;
-	u32 old_pmc = gk20a_readl(g, mc_enable_r());
 
 	/* reset the perfmon */
-	gk20a_writel(g, mc_enable_r(),
-				old_pmc & ~mc_enable_perfmon_enabled_f());
-	gk20a_writel(g, mc_enable_r(), old_pmc);
+	g->ops.mc.reset(g, mc_enable_perfmon_enabled_f());
 
 	/* RBUFEMPTY must be set -- otherwise we'll pick up */
 	/* snapshot that have been queued up from earlier   */

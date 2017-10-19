@@ -29,4 +29,5 @@
 struct gk20a;
 
 u32 gv100_fifo_get_num_fifos(struct gk20a *g);
+u32 gv100_fifo_get_preempt_timeout(struct gk20a *g);
 #endif

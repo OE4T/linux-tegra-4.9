@@ -372,6 +372,11 @@ u32 gv11b_fifo_intr_0_error_mask(struct gk20a *g)
 	return intr_0_error_mask;
 }
 
+u32 gv11b_fifo_get_preempt_timeout(struct gk20a *g)
+{
+	return gk20a_get_gr_idle_timeout(g);
+}
+
 static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 				 u32 pbdma_id, unsigned int timeout_rc_type)
 {
@@ -405,7 +410,7 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 			gk20a_writel(g, pbdma_intr_1_r(pbdma_id), pbdma_intr_1);
 	}
 
-	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 
 	/* Verify that ch/tsg is no longer on the pbdma */
@@ -465,7 +470,7 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 	u32 ctx_stat;
 	int ret = -EBUSY;
 
-	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 
 	/* Check if ch/tsg has saved off the engine or if ctxsw is hung */
@@ -686,7 +691,7 @@ static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	int ret = -EBUSY;
 
-	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		if (!((gk20a_readl(g, fifo_runlist_preempt_r())) &

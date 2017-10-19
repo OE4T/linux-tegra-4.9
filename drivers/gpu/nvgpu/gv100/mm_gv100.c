@@ -40,3 +40,16 @@ size_t gv100_mm_get_vidmem_size(struct gk20a *g)
 
 	return bytes;
 }
+
+u32 gv100_mm_get_flush_retries(struct gk20a *g, enum nvgpu_flush_op op)
+{
+	switch (op) {
+	/* GV100 has a large FB so it needs larger timeouts */
+	case NVGPU_FLUSH_FB:
+		return 2000;
+	case NVGPU_FLUSH_L2_FLUSH:
+		return 2000;
+	default:
+		return 200; /* Default retry timer */
+	}
+}

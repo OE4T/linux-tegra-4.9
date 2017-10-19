@@ -26,7 +26,15 @@
 
 #include <nvgpu/hw/gv100/hw_ccsr_gv100.h>
 
+#define DEFAULT_FIFO_PREEMPT_TIMEOUT 0x3FFFFFUL
+
 u32 gv100_fifo_get_num_fifos(struct gk20a *g)
 {
 	return ccsr_channel__size_1_v();
 }
+
+u32 gv100_fifo_get_preempt_timeout(struct gk20a *g)
+{
+	return DEFAULT_FIFO_PREEMPT_TIMEOUT;
+}
+

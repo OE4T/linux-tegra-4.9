@@ -987,7 +987,7 @@ int gk20a_init_fifo_setup_hw(struct gk20a *g)
 		v = gk20a_bar1_readl(g, bar1_vaddr);
 
 		*cpu_vaddr = v1;
-		nvgpu_smp_mb();
+		nvgpu_mb();
 
 		if (v1 != gk20a_bar1_readl(g, bar1_vaddr)) {
 			nvgpu_err(g, "bar1 broken @ gk20a: CPU wrote 0x%x, \

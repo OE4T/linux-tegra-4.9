@@ -440,16 +440,14 @@ void vivid_update_timeperframe(struct vivid_dev *dev, u32 frame_length)
 
 	mutex_lock(&dev->mutex_framerate);
 
-	dev->cap_seq_resync = true;
 	size = V4L2_DV_BT_FRAME_WIDTH(bt) * frame_length;
 	dev->timeperframe_vid_cap = (struct v4l2_fract) {
-		size / 100, (u32)bt->pixelclock / 100
+		size / 10000, (u32)bt->pixelclock / 10000
 	};
 
 	if (dev->loop_video) {
-		dev->out_seq_resync = true;
 		dev->timeperframe_vid_out = (struct v4l2_fract) {
-			size / 100, (u32)bt->pixelclock / 100
+			size / 10000, (u32)bt->pixelclock / 10000
 		};
 	}
 
@@ -502,7 +500,7 @@ void vivid_update_format_cap(struct vivid_dev *dev, bool keep_controls)
 			bt->flags &= ~V4L2_DV_FL_REDUCED_FPS;
 		}
 		dev->timeperframe_vid_cap = (struct v4l2_fract) {
-			size / 100, (u32)pixelclock / 100
+			size / 10000, (u32)bt->pixelclock / 10000
 		};
 		if (bt->interlaced)
 			dev->field_cap = V4L2_FIELD_ALTERNATE;

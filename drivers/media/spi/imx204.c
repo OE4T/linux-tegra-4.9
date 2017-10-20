@@ -1,7 +1,7 @@
 /*
  * imx204.c - imx204 sensor driver
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/regmap.h>
+#include <soc/tegra/chip-id.h>
 #include <media/camera_common.h>
 #include <media/imx204.h>
 #include "imx204_mode_tbls.h"
@@ -46,13 +47,10 @@
 #define IMX204_DEFAULT_EXPOSURE_COARSE	\
 	(IMX204_DEFAULT_FRAME_LENGTH-IMX204_MAX_COARSE_DIFF)
 #define	IMX204_DEFAULT_MODE	IMX204_MODE_5208x3924
-#ifdef T19x_uFPGA
-#define IMX204_DEFAULT_WIDTH	1784
-#define IMX204_DEFAULT_HEIGHT	1318
-#else
 #define IMX204_DEFAULT_WIDTH	5184
 #define IMX204_DEFAULT_HEIGHT	3924
-#endif
+#define IMX204_DEFAULT_WIDTH_FPGA	1784
+#define IMX204_DEFAULT_HEIGHT_FPGA	1318
 #define IMX204_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB12_1X12
 #define IMX204_DEFAULT_CLK_FREQ	72000000
 
@@ -68,9 +66,7 @@ struct imx204 {
 	struct device			*dev;
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
-#ifdef T19x_uFPGA
 	void __iomem *vi_base;
-#endif
 
 	s32				group_hold_prev;
 	bool				group_hold_en;
@@ -196,21 +192,6 @@ static inline void imx204_get_gain_short_reg(imx204_reg *regs,
 static int test_mode;
 module_param(test_mode, int, 0644);
 
-#ifndef T19x_uFPGA
-static void imx204_gpio_set(struct imx204 *priv,
-			    unsigned int gpio, int val)
-{
-	if (priv->pdata->use_cam_gpio)
-		cam_gpio_ctrl(priv->dev, gpio, val, 1);
-	else {
-		if (gpio_cansleep(gpio))
-			gpio_set_value_cansleep(gpio, val);
-		else
-			gpio_set_value(gpio, val);
-	}
-}
-#endif
-
 static inline int imx204_read_reg(struct camera_common_data *s_data,
 				u16 addr, u8 *val)
 {
@@ -259,6 +240,7 @@ static int imx204_write_reg32(struct camera_common_data *s_data,
 
 #else
 	unsigned char buffer[4];
+
 	buffer[0] = (addr>>16)&0xFF;
 	buffer[1] = (addr>>8)&0xFF;
 	buffer[2] = (addr)&0xFF;
@@ -284,12 +266,12 @@ static int imx204_write_table(struct imx204 *priv,
 	while (table[cnt].addr != IMX204_TABLE_END) {
 		if (table[cnt].addr == IMX204_TABLE_WAIT_MS) {
 			msleep_range(table[cnt].val);
-#ifdef T19x_uFPGA
 		} else if (table[cnt].addr == IMX204_TABLE_ENABLE_GTX) {
-			/* toggle VGP5 to enable GTX on uFPGA */
-			writel(0x10001, priv->vi_base + VGP5_OFFSET);
-			writel(0x0, priv->vi_base + VGP5_OFFSET);
-#endif
+			if (!tegra_platform_is_silicon()) {
+				/* toggle VGP5 to enable GTX on uFPGA */
+				writel(0x10001, priv->vi_base + VGP5_OFFSET);
+				writel(0x0, priv->vi_base + VGP5_OFFSET);
+			}
 		} else {
 			status = imx204_write_reg32(priv->s_data,
 					table[cnt].addr, table[cnt].val);
@@ -312,12 +294,13 @@ static int imx204_power_on(struct camera_common_data *s_data)
 	struct imx204 *priv = (struct imx204 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
-#ifdef T19x_uFPGA
-	/* VGP1 is used as reset GPIO on uFPGA */
-	writel(0x10001, priv->vi_base + VGP1_OFFSET);
-#else
-	// TODO
-#endif
+	if (!tegra_platform_is_silicon()) {
+		/* VGP1 is used as reset GPIO on uFPGA */
+		writel(0x10001, priv->vi_base + VGP1_OFFSET);
+	} else {
+		// TODO
+	}
+
 	pw->state = SWITCH_ON;
 	return 0;
 }
@@ -327,12 +310,13 @@ static int imx204_power_off(struct camera_common_data *s_data)
 	struct imx204 *priv = (struct imx204 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
-#ifdef T19x_uFPGA
-	/* VGP1 is used as reset GPIO on uFPGA */
-	writel(0, priv->vi_base + VGP1_OFFSET);
-#else
-	// TODO
-#endif
+	if (!tegra_platform_is_silicon()) {
+		/* VGP1 is used as reset GPIO on uFPGA */
+		writel(0, priv->vi_base + VGP1_OFFSET);
+	} else {
+		// TODO
+	}
+
 	pw->state = SWITCH_OFF;
 	return 0;
 }
@@ -381,16 +365,15 @@ static int imx204_s_stream(struct v4l2_subdev *sd, int enable)
 
 	dev_info(priv->dev, "%s++ enable = %d\n", __func__, enable);
 
-#ifdef T19x_uFPGA
-	sensor_mode = IMX204_MODE_1784x1318_FPGA;
-#endif
-
 	if (!enable) {
 		return imx204_write_table(priv,
 			mode_table[IMX204_MODE_STOP_STREAM]);
 	}
 
-	err = imx204_write_table(priv, mode_table[sensor_mode]);
+	if (!tegra_platform_is_silicon())
+		err = imx204_write_table(priv, mode_table_fpga[sensor_mode]);
+	else
+		err = imx204_write_table(priv, mode_table[sensor_mode]);
 	if (err)
 		goto exit;
 
@@ -432,11 +415,12 @@ static int imx204_s_stream(struct v4l2_subdev *sd, int enable)
 				__func__);
 	}
 
-#ifndef T19x_uFPGA
-	err = imx204_write_table(priv, mode_table[IMX204_MODE_START_STREAM]);
-	if (err)
-		goto exit;
-#endif
+	if (tegra_platform_is_silicon()) {
+		err = imx204_write_table(priv,
+				mode_table[IMX204_MODE_START_STREAM]);
+		if (err)
+			goto exit;
+	}
 
 	dev_info(priv->dev, "%s--\n", __func__);
 	return 0;
@@ -747,15 +731,9 @@ static int imx204_probe(struct spi_device *spi)
 	common_data->ops		= &imx204_common_ops;
 	common_data->ctrl_handler	= &priv->ctrl_handler;
 	common_data->dev		= &spi->dev;
-#ifdef T19x_uFPGA
-	common_data->frmfmt		= &imx204_frmfmt[3];
-	common_data->colorfmt		= camera_common_find_datafmt(
-					  IMX204_DEFAULT_DATAFMT);
-#else
 	common_data->frmfmt		= &imx204_frmfmt[0];
 	common_data->colorfmt		= camera_common_find_datafmt(
 					  IMX204_DEFAULT_DATAFMT);
-#endif
 	common_data->power		= &priv->power;
 	common_data->ctrls		= priv->ctrls;
 	common_data->priv		= (void *)priv;
@@ -767,6 +745,14 @@ static int imx204_probe(struct spi_device *spi)
 	common_data->fmt_width		= common_data->def_width;
 	common_data->fmt_height		= common_data->def_height;
 	common_data->def_clk_freq	= IMX204_DEFAULT_CLK_FREQ;
+
+	/* uFPGA specific settings */
+	if (!tegra_platform_is_silicon()) {
+		common_data->frmfmt		= &imx204_frmfmt_fpga[0];
+		common_data->numfmts	= ARRAY_SIZE(imx204_frmfmt_fpga);
+		common_data->def_width	= IMX204_DEFAULT_WIDTH_FPGA;
+		common_data->def_height	= IMX204_DEFAULT_HEIGHT_FPGA;
+	}
 
 	priv->dev				= &spi->dev;
 	priv->s_data			= common_data;
@@ -813,12 +799,12 @@ static int imx204_probe(struct spi_device *spi)
 	if (err)
 		return err;
 
-#ifdef T19x_uFPGA
-	/* VGP1 is used as reset GPIO on uFPGA */
-	priv->vi_base = ioremap(0x15f00000, 0x10000);
-	if (!priv->vi_base)
-		dev_err(priv->dev, "can't get vi base address\n");
-#endif
+	if (!tegra_platform_is_silicon()) {
+		/* VGP1 is used as reset GPIO on uFPGA */
+		priv->vi_base = ioremap(0x15f00000, 0x10000);
+		if (!priv->vi_base)
+			dev_err(priv->dev, "can't get vi base address\n");
+	}
 
 	return ret;
 }

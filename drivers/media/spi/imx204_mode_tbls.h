@@ -1,7 +1,7 @@
 /*
  * imx204.c - imx204 sensor driver
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -704,13 +704,13 @@ static const imx204_reg mode_3872x2178[] = {
 
 enum {
 	IMX204_MODE_5208x3924,
+	IMX204_MODE_1784x1318_FPGA = IMX204_MODE_5208x3924,
 	IMX204_MODE_5184x2916,
 	IMX204_MODE_3872x2178,
 	IMX204_MODE_COMMON,
 	IMX204_MODE_START_STREAM,
 	IMX204_MODE_STOP_STREAM,
 	IMX204_MODE_TEST_PATTERN,
-	IMX204_MODE_1784x1318_FPGA,
 };
 
 static const imx204_reg *mode_table[] = {
@@ -721,6 +721,9 @@ static const imx204_reg *mode_table[] = {
 	[IMX204_MODE_START_STREAM] = imx204_start,
 	[IMX204_MODE_STOP_STREAM] = imx204_stop,
 	[IMX204_MODE_TEST_PATTERN] = tp_colorbars,
+};
+
+static const imx204_reg *mode_table_fpga[] = {
 	[IMX204_MODE_1784x1318_FPGA] = mode_1784x1318_FPGA,
 };
 
@@ -736,6 +739,9 @@ static const struct camera_common_frmfmt imx204_frmfmt[] = {
 	{{5208, 3924}, imx204_30_fr, 1, 0, IMX204_MODE_5208x3924},
 	{{5184, 2916}, imx204_30_fr, 1, 0, IMX204_MODE_5184x2916},
 	{{3872, 2178}, imx204_60_fr, 1, 0, IMX204_MODE_3872x2178},
+};
+
+static const struct camera_common_frmfmt imx204_frmfmt_fpga[] = {
 	{{1784, 1318}, imx204_30_fr, 1, 0, IMX204_MODE_1784x1318_FPGA},
 };
 #endif  /* __IMX204_I2C_TABLES__ */

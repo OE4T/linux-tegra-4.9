@@ -1472,10 +1472,16 @@ static int ptr_to_user(struct v4l2_ext_control *c,
 		       union v4l2_ctrl_ptr ptr)
 {
 	u32 len;
+	long err = 0;
+	mm_segment_t old_fs = get_fs();
 
-	if (ctrl->is_ptr && !ctrl->is_string)
-		return copy_to_user(c->ptr, ptr.p, c->size) ?
-		       -EFAULT : 0;
+	if (ctrl->is_ptr && !ctrl->is_string) {
+		set_fs(USER_DS);
+		if (copy_to_user(c->ptr, ptr.p, c->size))
+			err = -EFAULT;
+		set_fs(old_fs);
+		return err;
+	}
 
 	switch (ctrl->type) {
 	case V4L2_CTRL_TYPE_STRING:
@@ -1484,8 +1490,11 @@ static int ptr_to_user(struct v4l2_ext_control *c,
 			c->size = ctrl->elem_size;
 			return -ENOSPC;
 		}
-		return copy_to_user(c->string, ptr.p_char, len + 1) ?
-		       -EFAULT : 0;
+		set_fs(USER_DS);
+		if (copy_to_user(c->string, ptr.p_char, len + 1))
+			err = -EFAULT;
+		set_fs(old_fs);
+		return err;
 	case V4L2_CTRL_TYPE_INTEGER64:
 		c->value64 = *ptr.p_s64;
 		break;

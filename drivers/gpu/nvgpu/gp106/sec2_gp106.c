@@ -52,19 +52,25 @@ int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 	completion = nvgpu_flcn_wait_for_halt(&g->sec2_flcn, timeout);
 	if (completion) {
 		nvgpu_err(g, "ACR boot timed out");
-		return completion;
+		goto exit;
 	}
 
 	g->acr.capabilities = gk20a_readl(g, psec_falcon_mailbox1_r());
 	gm20b_dbg_pmu("ACR capabilities %x\n", g->acr.capabilities);
 	data = gk20a_readl(g, psec_falcon_mailbox0_r());
 	if (data) {
-
 		nvgpu_err(g, "ACR boot failed, err %x", data);
 		completion = -EAGAIN;
+		goto exit;
 	}
 
 	init_pmu_setup_hw1(g);
+
+exit:
+	if (completion) {
+		nvgpu_kill_task_pg_init(g);
+		nvgpu_pmu_state_change(g, PMU_STATE_OFF, false);
+	}
 
 	return completion;
 }

@@ -155,6 +155,31 @@ static int nvgpu_init_task_pg_init(struct gk20a *g)
 	return err;
 }
 
+void nvgpu_kill_task_pg_init(struct gk20a *g)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
+	struct nvgpu_timeout timeout;
+
+	/* make sure the pending operations are finished before we continue */
+	if (nvgpu_thread_is_running(&pmu->pg_init.state_task)) {
+
+		/* post PMU_STATE_EXIT to exit PMU state machine loop */
+		nvgpu_pmu_state_change(g, PMU_STATE_EXIT, true);
+
+		/* Make thread stop*/
+		nvgpu_thread_stop(&pmu->pg_init.state_task);
+
+		/* wait to confirm thread stopped */
+		nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
+		do {
+			if (!nvgpu_thread_is_running(&pmu->pg_init.state_task))
+				break;
+			nvgpu_udelay(2);
+		} while (!nvgpu_timeout_expired_msg(&timeout,
+			"timeout - waiting PMU state machine thread stop"));
+	}
+}
+
 static int nvgpu_init_pmu_setup_sw(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
@@ -469,7 +494,6 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_pg_stats_data pg_stat_data = { 0 };
-	struct nvgpu_timeout timeout;
 	int i;
 
 	nvgpu_log_fn(g, " ");
@@ -477,24 +501,7 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 	if (!g->support_pmu)
 		return 0;
 
-	/* make sure the pending operations are finished before we continue */
-	if (nvgpu_thread_is_running(&pmu->pg_init.state_task)) {
-
-		/* post PMU_STATE_EXIT to exit PMU state machine loop */
-		nvgpu_pmu_state_change(g, PMU_STATE_EXIT, true);
-
-		/* Make thread stop*/
-		nvgpu_thread_stop(&pmu->pg_init.state_task);
-
-		/* wait to confirm thread stopped */
-		nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
-		do {
-			if (!nvgpu_thread_is_running(&pmu->pg_init.state_task))
-				break;
-			nvgpu_udelay(2);
-		} while (!nvgpu_timeout_expired_msg(&timeout,
-			"timeout - waiting PMU state machine thread stop"));
-	}
+	nvgpu_kill_task_pg_init(g);
 
 	nvgpu_pmu_get_pg_stats(g,
 		PMU_PG_ELPG_ENGINE_ID_GRAPHICS,	&pg_stat_data);

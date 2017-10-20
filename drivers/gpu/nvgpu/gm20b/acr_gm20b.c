@@ -1407,12 +1407,12 @@ int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 data = 0;
-	int ret = -EBUSY;
+	int ret = 0;
 
 	ret = nvgpu_flcn_wait_for_halt(pmu->flcn, timeout_ms);
 	if (ret) {
 		nvgpu_err(g, "ACR boot timed out");
-		return ret;
+		goto exit;
 	}
 
 	g->acr.capabilities = gk20a_readl(g, pwr_falcon_mailbox1_r());
@@ -1421,6 +1421,13 @@ int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 	if (data) {
 		nvgpu_err(g, "ACR boot failed, err %x", data);
 		ret = -EAGAIN;
+		goto exit;
+	}
+
+exit:
+	if (ret) {
+		nvgpu_kill_task_pg_init(g);
+		nvgpu_pmu_state_change(g, PMU_STATE_OFF, false);
 	}
 
 	return ret;

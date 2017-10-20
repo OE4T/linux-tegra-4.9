@@ -421,6 +421,7 @@ int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
 
 void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
 	bool post_change_event);
+void nvgpu_kill_task_pg_init(struct gk20a *g);
 
 /* NVGPU-PMU MEM alloc */
 void nvgpu_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem);

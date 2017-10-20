@@ -96,7 +96,7 @@
 #include "gv11b/regops_gv11b.h"
 
 #include "gv11b/gv11b_gating_reglist.h"
-#include "gv11b/regops_gv11b.h"
+#include "gv100/regops_gv100.h"
 #include "gv11b/subctx_gv11b.h"
 
 #include "gv100.h"
@@ -600,7 +600,27 @@ static const struct gpu_ops gv100_ops = {
 		.get_current_pstate = nvgpu_clk_arb_get_current_pstate,
 	},
 	.regops = {
-		.apply_smpc_war = gv11b_apply_smpc_war,
+		.get_global_whitelist_ranges =
+			gv100_get_global_whitelist_ranges,
+		.get_global_whitelist_ranges_count =
+			gv100_get_global_whitelist_ranges_count,
+		.get_context_whitelist_ranges =
+			gv100_get_context_whitelist_ranges,
+		.get_context_whitelist_ranges_count =
+			gv100_get_context_whitelist_ranges_count,
+		.get_runcontrol_whitelist = gv100_get_runcontrol_whitelist,
+		.get_runcontrol_whitelist_count =
+			gv100_get_runcontrol_whitelist_count,
+		.get_runcontrol_whitelist_ranges =
+			gv100_get_runcontrol_whitelist_ranges,
+		.get_runcontrol_whitelist_ranges_count =
+			gv100_get_runcontrol_whitelist_ranges_count,
+		.get_qctl_whitelist = gv100_get_qctl_whitelist,
+		.get_qctl_whitelist_count = gv100_get_qctl_whitelist_count,
+		.get_qctl_whitelist_ranges = gv100_get_qctl_whitelist_ranges,
+		.get_qctl_whitelist_ranges_count =
+			gv100_get_qctl_whitelist_ranges_count,
+		.apply_smpc_war = gv100_apply_smpc_war,
 	},
 	.mc = {
 		.intr_enable = mc_gv11b_intr_enable,

@@ -30,6 +30,7 @@ nvgpu-y += \
 	$(nvgpu-t19x)/gv100/bios_gv100.o \
 	$(nvgpu-t19x)/gv100/fifo_gv100.o \
 	$(nvgpu-t19x)/gv100/gr_gv100.o \
+	$(nvgpu-t19x)/gv100/regops_gv100.o \
 	$(nvgpu-t19x)/gv100/hal_gv100.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += $(nvgpu-t19x)/gv11b/platform_gv11b_tegra.o

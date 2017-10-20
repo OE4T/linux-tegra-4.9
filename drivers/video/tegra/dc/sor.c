@@ -207,6 +207,7 @@ void tegra_sor_config_dp_clk_t21x(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(sor->dc);
+	const int64_t pll_dp_rate = 270000000; /* fixed pll_dp@270MHz */
 
 	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
 		return;
@@ -245,6 +246,13 @@ void tegra_sor_config_dp_clk_t21x(struct tegra_dc_sor_data *sor)
 		tegra_sor_clk_enable(sor);
 
 	sor->clk_type = TEGRA_SOR_MACRO_CLK;
+
+	/*
+	 * Set the pad_clk so that clock rate and DVFS are upto date.
+	 * Divide link clock by 10 to get sor clock.
+	 */
+	clk_set_rate(sor->pad_clk, (pll_dp_rate * dp->link_cfg.link_bw / 10));
+
 }
 
 int tegra_dc_sor_crc_get(struct tegra_dc_sor_data *sor, u32 *crc)

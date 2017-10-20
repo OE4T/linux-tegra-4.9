@@ -469,10 +469,6 @@ static void fan_ramping_work_func(struct work_struct *work)
 						fan_dev_data, fan_ramp_work);
 
 	mutex_lock(&fan_data->fan_state_lock);
-	if (!fan_data->fan_temp_control_flag) {
-		mutex_unlock(&fan_data->fan_state_lock);
-		return;
-	}
 
 	cur_pwm = fan_data->fan_cur_pwm;
 	rru = fan_get_rru(cur_pwm, fan_data);

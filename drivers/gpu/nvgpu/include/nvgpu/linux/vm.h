@@ -44,6 +44,11 @@ struct nvgpu_os_buffer {
 	struct device *dev;
 };
 
+struct nvgpu_mapped_buf_priv {
+	struct dma_buf *dmabuf;
+	struct sg_table *sgt;
+};
+
 /* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL must be set */
 int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       struct dma_buf *dmabuf,

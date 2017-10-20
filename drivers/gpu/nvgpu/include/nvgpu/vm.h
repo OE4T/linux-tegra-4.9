@@ -37,6 +37,18 @@ struct vm_gk20a;
 struct nvgpu_vm_area;
 struct gk20a_comptag_allocator;
 
+/*
+ * Defined by each OS. Allows the common VM code do things to the OS specific
+ * buffer structures.
+ */
+struct nvgpu_os_buffer;
+
+#ifdef __KERNEL__
+#include <nvgpu/linux/vm.h>
+#else
+/* QNX include goes here. */
+#endif
+
 /**
  * This header contains the OS agnostic APIs for dealing with VMs. Most of the
  * VM implementation is system specific - it must translate from a platform's
@@ -89,13 +101,12 @@ struct nvgpu_mapped_buf {
 	struct vm_gk20a *vm;
 	struct nvgpu_vm_area *vm_area;
 
+	struct nvgpu_ref ref;
+
 	struct nvgpu_rbtree_node node;
 	struct nvgpu_list_node buffer_list;
 	u64 addr;
 	u64 size;
-	struct dma_buf *dmabuf;
-	struct sg_table *sgt;
-	struct nvgpu_ref ref;
 
 	u32 pgsz_idx;
 	u32 ctag_offset;
@@ -105,13 +116,16 @@ struct nvgpu_mapped_buf {
 	u32 flags;
 	u32 kind;
 	bool va_allocated;
-};
 
-/*
- * Defined by each OS. Allows the common VM code do things to the OS specific
- * buffer structures.
- */
-struct nvgpu_os_buffer;
+	/*
+	 * Separate from the nvgpu_os_buffer struct to clearly distinguish
+	 * lifetime. A nvgpu_mapped_buf_priv will _always_ be wrapped by a
+	 * struct nvgpu_mapped_buf; however, there are times when a struct
+	 * nvgpu_os_buffer would be separate. This aims to prevent dangerous
+	 * usage of container_of() or the like in OS code.
+	 */
+	struct nvgpu_mapped_buf_priv os_priv;
+};
 
 static inline struct nvgpu_mapped_buf *
 nvgpu_mapped_buf_from_buffer_list(struct nvgpu_list_node *node)
@@ -226,6 +240,25 @@ void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
 			  struct nvgpu_mapped_buf **mapped_buffers,
 			  int num_buffers);
 
+struct nvgpu_mapped_buf *nvgpu_vm_find_mapping(struct vm_gk20a *vm,
+					       struct nvgpu_os_buffer *os_buf,
+					       u64 map_addr,
+					       u32 flags,
+					       int kind);
+
+struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
+				      struct nvgpu_os_buffer *os_buf,
+				      struct nvgpu_sgt *sgt,
+				      u64 map_addr,
+				      u64 map_size,
+				      u64 phys_offset,
+				      int rw,
+				      u32 flags,
+				      s16 compr_kind,
+				      s16 incompr_kind,
+				      struct vm_gk20a_mapping_batch *batch,
+				      enum nvgpu_aperture aperture);
+
 void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset,
 		    struct vm_gk20a_mapping_batch *batch);
 
@@ -239,6 +272,8 @@ void nvgpu_vm_unmap_system(struct nvgpu_mapped_buf *mapped_buffer);
  * Don't use this outside of the core VM code!
  */
 void __nvgpu_vm_unmap_ref(struct nvgpu_ref *ref);
+
+u64 nvgpu_os_buf_get_size(struct nvgpu_os_buffer *os_buf);
 
 /*
  * These all require the VM update lock to be held.

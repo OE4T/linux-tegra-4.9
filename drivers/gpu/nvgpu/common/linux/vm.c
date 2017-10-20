@@ -49,8 +49,8 @@ static struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_reverse(
 		struct nvgpu_mapped_buf *mapped_buffer =
 				mapped_buffer_from_rbtree_node(node);
 
-		if (mapped_buffer->dmabuf == dmabuf &&
-		    kind == mapped_buffer->kind)
+		if (mapped_buffer->os_priv.dmabuf == dmabuf &&
+		    mapped_buffer->kind == kind)
 			return mapped_buffer;
 
 		nvgpu_rbtree_enum_next(&node, node);
@@ -75,7 +75,7 @@ int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
 		return -EINVAL;
 	}
 
-	*dmabuf = mapped_buffer->dmabuf;
+	*dmabuf = mapped_buffer->os_priv.dmabuf;
 	*offset = gpu_va - mapped_buffer->addr;
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
@@ -83,66 +83,68 @@ int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
 	return 0;
 }
 
+u64 nvgpu_os_buf_get_size(struct nvgpu_os_buffer *os_buf)
+{
+	return os_buf->dmabuf->size;
+}
+
 /*
  * vm->update_gmmu_lock must be held. This checks to see if we already have
  * mapped the passed buffer into this VM. If so, just return the existing
  * mapping address.
  */
-static u64 __nvgpu_vm_find_mapping(struct vm_gk20a *vm,
-				   struct dma_buf *dmabuf,
-				   u64 offset_align,
-				   u32 flags,
-				   int kind,
-				   int rw_flag)
+struct nvgpu_mapped_buf *nvgpu_vm_find_mapping(struct vm_gk20a *vm,
+					       struct nvgpu_os_buffer *os_buf,
+					       u64 map_addr,
+					       u32 flags,
+					       int kind)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct nvgpu_mapped_buf *mapped_buffer = NULL;
 
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, offset_align);
+		mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, map_addr);
 		if (!mapped_buffer)
-			return 0;
+			return NULL;
 
-		if (mapped_buffer->dmabuf != dmabuf ||
+		if (mapped_buffer->os_priv.dmabuf != os_buf->dmabuf ||
 		    mapped_buffer->kind != (u32)kind)
-			return 0;
+			return NULL;
 	} else {
 		mapped_buffer =
-			__nvgpu_vm_find_mapped_buf_reverse(vm, dmabuf, kind);
+			__nvgpu_vm_find_mapped_buf_reverse(vm,
+							   os_buf->dmabuf,
+							   kind);
 		if (!mapped_buffer)
-			return 0;
+			return NULL;
 	}
 
 	if (mapped_buffer->flags != flags)
-		return 0;
+		return NULL;
 
 	/*
 	 * If we find the mapping here then that means we have mapped it already
-	 * and already have a dma_buf ref to the underlying buffer. As such
-	 * release the ref taken earlier in the map path.
+	 * and the prior pin and get must be undone.
 	 */
-	dma_buf_put(mapped_buffer->dmabuf);
-
-	nvgpu_ref_get(&mapped_buffer->ref);
+	gk20a_mm_unpin(os_buf->dev, os_buf->dmabuf, mapped_buffer->os_priv.sgt);
+	dma_buf_put(os_buf->dmabuf);
 
 	nvgpu_log(g, gpu_dbg_map,
 		  "gv: 0x%04x_%08x + 0x%-7zu "
-		  "[dma: 0x%02x_%08x, pa: 0x%02x_%08x] "
+		  "[dma: 0x%010llx, pa: 0x%010llx] "
 		  "pgsz=%-3dKb as=%-2d ctags=%d start=%d "
 		  "flags=0x%x apt=%s (reused)",
 		  u64_hi32(mapped_buffer->addr), u64_lo32(mapped_buffer->addr),
-		  dmabuf->size,
-		  u64_hi32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
-		  u64_lo32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
-		  u64_hi32((u64)sg_phys(mapped_buffer->sgt->sgl)),
-		  u64_lo32((u64)sg_phys(mapped_buffer->sgt->sgl)),
+		  os_buf->dmabuf->size,
+		  (u64)sg_dma_address(mapped_buffer->os_priv.sgt->sgl),
+		  (u64)sg_phys(mapped_buffer->os_priv.sgt->sgl),
 		  vm->gmmu_page_sizes[mapped_buffer->pgsz_idx] >> 10,
 		  vm_aspace_id(vm),
 		  mapped_buffer->ctag_lines, mapped_buffer->ctag_offset,
 		  mapped_buffer->flags,
-		  nvgpu_aperture_str(gk20a_dmabuf_aperture(g, dmabuf)));
+		  nvgpu_aperture_str(gk20a_dmabuf_aperture(g, os_buf->dmabuf)));
 
-	return mapped_buffer->addr;
+	return mapped_buffer;
 }
 
 int nvgpu_vm_map_linux(struct vm_gk20a *vm,
@@ -159,237 +161,62 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct device *dev = dev_from_gk20a(g);
-	struct nvgpu_ctag_buffer_info binfo = { 0 };
-	struct gk20a_comptags comptags;
-	struct nvgpu_vm_area *vm_area = NULL;
-	struct nvgpu_sgt *nvgpu_sgt = NULL;
-	struct sg_table *sgt;
-	struct nvgpu_mapped_buf *mapped_buffer = NULL;
 	struct nvgpu_os_buffer os_buf = { dmabuf, dev };
-	enum nvgpu_aperture aperture;
-	bool va_allocated = false;
-	bool clear_ctags = false;
-	u64 map_offset = 0;
-	u64 align;
-	u32 ctag_offset;
+	struct sg_table *sgt;
+	struct nvgpu_sgt *nvgpu_sgt = NULL;
+	struct nvgpu_mapped_buf *mapped_buffer = NULL;
+	u64 map_addr = 0ULL;
 	int err = 0;
 
-	/*
-	 * The kind used as part of the key for map caching. HW may
-	 * actually be programmed with the fallback kind in case the
-	 * key kind is compressible but we're out of comptags.
-	 */
-	s16 map_key_kind;
-
-	binfo.flags = flags;
-	binfo.size = dmabuf->size;
-	binfo.compr_kind = compr_kind;
-	binfo.incompr_kind = incompr_kind;
-
-	if (compr_kind != NV_KIND_INVALID)
-		map_key_kind = compr_kind;
-	else
-		map_key_kind = incompr_kind;
-
-	if (map_key_kind == NV_KIND_INVALID) {
-		nvgpu_err(g, "Valid kind must be supplied");
-		return -EINVAL;
-	}
-
-	if (vm->userspace_managed &&
-	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
-		nvgpu_err(g, "non-fixed-offset mapping not available on "
-			  "userspace managed address spaces");
-		return -EFAULT;
-	}
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-
-	/* check if this buffer is already mapped */
-	if (!vm->userspace_managed) {
-		map_offset = __nvgpu_vm_find_mapping(
-			vm, dmabuf, offset_align,
-			flags, map_key_kind, rw_flag);
-		if (map_offset) {
-			nvgpu_mutex_release(&vm->update_gmmu_lock);
-			*gpu_va = map_offset;
-			return 0;
-		}
-	}
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)
+		map_addr = offset_align;
 
 	sgt = gk20a_mm_pin(dev, dmabuf);
 	if (IS_ERR(sgt)) {
-		err = PTR_ERR(sgt);
-		nvgpu_warn(g, "oom allocating tracking buffer");
+		nvgpu_warn(g, "Failed to pin dma_buf!");
+		return PTR_ERR(sgt);
+	}
+
+	if (gk20a_dmabuf_aperture(g, dmabuf) == APERTURE_INVALID) {
+		err = -EINVAL;
 		goto clean_up;
 	}
 
 	nvgpu_sgt = nvgpu_linux_sgt_create(g, sgt);
-	if (!nvgpu_sgt)
-		goto clean_up;
-
-	aperture = gk20a_dmabuf_aperture(g, dmabuf);
-	if (aperture == APERTURE_INVALID) {
-		err = -EINVAL;
+	if (!nvgpu_sgt) {
+		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)
-		map_offset = offset_align;
-
-	align = nvgpu_sgt_alignment(g, nvgpu_sgt);
-	if (g->mm.disable_bigpage)
-		binfo.pgsz_idx = gmmu_page_size_small;
-	else
-		binfo.pgsz_idx = __get_pte_size(vm, map_offset,
-						min_t(u64, binfo.size, align));
-	mapping_size = mapping_size ? mapping_size : binfo.size;
-	mapping_size = ALIGN(mapping_size, SZ_4K);
-
-	if ((mapping_size > binfo.size) ||
-	    (buffer_offset > (binfo.size - mapping_size))) {
-		err = -EINVAL;
-		goto clean_up;
-	}
-
-	/* Check if we should use a fixed offset for mapping this buffer */
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
-		err = nvgpu_vm_area_validate_buffer(vm,
-						    offset_align,
-						    mapping_size,
-						    binfo.pgsz_idx,
-						    &vm_area);
-		if (err)
-			goto clean_up;
-
-		map_offset = offset_align;
-		va_allocated = false;
-	} else {
-		va_allocated = true;
-	}
-
-	err = nvgpu_vm_compute_compression(vm, &binfo);
-	if (err) {
-		nvgpu_err(g, "failure setting up compression");
-		goto clean_up;
-	}
-
-	/* bar1 and pmu vm don't need ctag */
-	if (!vm->enable_ctag)
-		binfo.ctag_lines = 0;
-
-	gk20a_get_comptags(&os_buf, &comptags);
-
-	if (binfo.ctag_lines && !comptags.lines) {
-		/* allocate compression resources if needed */
-		err = gk20a_alloc_comptags(g, &os_buf,
-					   &g->gr.comp_tags,
-					   binfo.ctag_lines);
-		if (err) {
-			/* TBD: we can partially alloc ctags as well... */
-
-			/* prevent compression ... */
-			binfo.compr_kind = NV_KIND_INVALID;
-
-			/* ... and make sure we have the fallback */
-			if (binfo.incompr_kind == NV_KIND_INVALID) {
-				nvgpu_err(g, "comptag alloc failed and no fallback kind specified");
-				goto clean_up;
-			}
-		} else {
-			gk20a_get_comptags(&os_buf, &comptags);
-
-			if (g->ops.ltc.cbc_ctrl)
-				g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
-						    comptags.offset,
-						    comptags.offset +
-							comptags.allocated_lines - 1);
-			else
-				clear_ctags = true;
-		}
-	}
-
-	/*
-	 * Calculate comptag index for this mapping. Differs in
-	 * case of partial mapping.
-	 */
-	ctag_offset = comptags.offset;
-	if (ctag_offset)
-		ctag_offset += buffer_offset >>
-			       ilog2(g->ops.fb.compression_page_size(g));
-
-	/* update gmmu ptes */
-	map_offset = g->ops.mm.gmmu_map(vm,
-					map_offset,
-					nvgpu_sgt,
-					buffer_offset, /* sg offset */
-					mapping_size,
-					binfo.pgsz_idx,
-					(binfo.compr_kind != NV_KIND_INVALID ?
-					 binfo.compr_kind : binfo.incompr_kind),
-					ctag_offset,
-					flags, rw_flag,
-					clear_ctags,
-					false,
-					false,
-					batch,
-					aperture);
-	if (!map_offset)
-		goto clean_up;
+	mapped_buffer = nvgpu_vm_map(vm,
+				     &os_buf,
+				     nvgpu_sgt,
+				     map_addr,
+				     mapping_size,
+				     buffer_offset,
+				     rw_flag,
+				     flags,
+				     compr_kind,
+				     incompr_kind,
+				     batch,
+				     gk20a_dmabuf_aperture(g, dmabuf));
 
 	nvgpu_sgt_free(g, nvgpu_sgt);
 
-	mapped_buffer = nvgpu_kzalloc(g, sizeof(*mapped_buffer));
-	if (!mapped_buffer) {
-		nvgpu_warn(g, "oom allocating tracking buffer");
-		goto clean_up;
-	}
-	mapped_buffer->dmabuf      = dmabuf;
-	mapped_buffer->sgt         = sgt;
-	mapped_buffer->addr        = map_offset;
-	mapped_buffer->size        = mapping_size;
-	mapped_buffer->pgsz_idx    = binfo.pgsz_idx;
-	mapped_buffer->ctag_offset = ctag_offset;
-	mapped_buffer->ctag_lines  = binfo.ctag_lines;
-	mapped_buffer->ctag_allocated_lines = comptags.allocated_lines;
-	mapped_buffer->vm          = vm;
-	mapped_buffer->flags       = flags;
-	mapped_buffer->kind        = map_key_kind;
-	mapped_buffer->va_allocated = va_allocated;
-	nvgpu_init_list_node(&mapped_buffer->buffer_list);
-	nvgpu_ref_init(&mapped_buffer->ref);
-
-	err = nvgpu_insert_mapped_buf(vm, mapped_buffer);
-	if (err) {
-		nvgpu_err(g, "failed to insert into mapped buffer tree");
+	if (IS_ERR(mapped_buffer)) {
+		err = PTR_ERR(mapped_buffer);
 		goto clean_up;
 	}
 
-	vm->num_user_mapped_buffers++;
+	mapped_buffer->os_priv.dmabuf = dmabuf;
+	mapped_buffer->os_priv.sgt    = sgt;
 
-	if (vm_area) {
-		nvgpu_list_add_tail(&mapped_buffer->buffer_list,
-			      &vm_area->buffer_list_head);
-		mapped_buffer->vm_area = vm_area;
-	}
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-	*gpu_va = map_offset;
+	*gpu_va = mapped_buffer->addr;
 	return 0;
 
 clean_up:
-	nvgpu_kfree(g, mapped_buffer);
+	gk20a_mm_unpin(dev, dmabuf, sgt);
 
-	if (nvgpu_sgt)
-		nvgpu_sgt_free(g, nvgpu_sgt);
-	if (va_allocated)
-		__nvgpu_vm_free_va(vm, map_offset, binfo.pgsz_idx);
-	if (!IS_ERR(sgt))
-		gk20a_mm_unpin(dev, dmabuf, sgt);
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-	nvgpu_log_info(g, "err=%d", err);
 	return err;
 }
 
@@ -406,8 +233,6 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	int err = 0;
 	struct dma_buf *dmabuf;
 	u64 ret_va;
-
-	gk20a_dbg_fn("");
 
 	/* get ref to the mem handle (released on unmap_locked) */
 	dmabuf = dma_buf_get(dmabuf_fd);
@@ -465,8 +290,8 @@ void nvgpu_vm_unmap_system(struct nvgpu_mapped_buf *mapped_buffer)
 {
 	struct vm_gk20a *vm = mapped_buffer->vm;
 
-	gk20a_mm_unpin(dev_from_vm(vm), mapped_buffer->dmabuf,
-		       mapped_buffer->sgt);
+	gk20a_mm_unpin(dev_from_vm(vm), mapped_buffer->os_priv.dmabuf,
+		       mapped_buffer->os_priv.sgt);
 
-	dma_buf_put(mapped_buffer->dmabuf);
+	dma_buf_put(mapped_buffer->os_priv.dmabuf);
 }

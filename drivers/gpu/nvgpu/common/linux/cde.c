@@ -64,7 +64,7 @@ static dma_addr_t gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	buffer = __nvgpu_vm_find_mapped_buf(vm, gpu_vaddr);
 	if (buffer)
-		addr = nvgpu_mem_get_addr_sgl(g, buffer->sgt->sgl);
+		addr = nvgpu_mem_get_addr_sgl(g, buffer->os_priv.sgt->sgl);
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	return addr;

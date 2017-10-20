@@ -48,6 +48,8 @@
 #include <media/vi.h>
 #include <media/mc_common.h>
 #include "camera/vi/vi5_fops.h"
+#include <linux/nvhost_vi_ioctl.h>
+#include <linux/platform/tegra/latency_allowance.h>
 
 struct host_vi5 {
 	struct platform_device *pdev;
@@ -314,6 +316,107 @@ put_rm:
 		dev_err(dev, "probe failed: %d\n", err);
 	return err;
 }
+
+struct t194_vi5_file_private {
+	struct platform_device *pdev;
+	struct tegra_mc_vi mc_vi;
+	struct mutex update_la_lock;
+	unsigned int vi_bypass_bw;
+};
+
+static long nvhost_vi5_ioctl(struct file *file, unsigned int cmd,
+				unsigned long arg)
+{
+	struct t194_vi5_file_private *filepriv = file->private_data;
+	struct platform_device *pdev = filepriv->pdev;
+
+	switch (cmd) {
+	case NVHOST_VI_IOCTL_SET_VI_CLK: {
+		long rate;
+
+		if (!(file->f_mode & FMODE_WRITE))
+			return -EINVAL;
+		if (get_user(rate, (long __user *)arg))
+			return -EFAULT;
+
+		return nvhost_module_set_rate(pdev, filepriv, rate, 0,
+						NVHOST_CLOCK);
+	}
+	case _IOC_NR(NVHOST_VI_IOCTL_GET_VI_CLK): {
+		int ret;
+		u64 vi_clk_rate = 0;
+
+		ret = nvhost_module_get_rate(pdev,
+			(unsigned long *)&vi_clk_rate, 0);
+		if (ret) {
+			dev_err(&pdev->dev,
+			"%s: failed to get vi clk\n",
+			__func__);
+			return ret;
+		}
+
+		if (copy_to_user((void __user *)arg,
+			&vi_clk_rate, sizeof(vi_clk_rate))) {
+			dev_err(&pdev->dev,
+			"%s:Failed to copy vi clk rate to user\n",
+			__func__);
+			return -EFAULT;
+		}
+
+		return 0;
+	}
+	case NVHOST_VI_IOCTL_SET_VI_LA_BW: {
+		/* TODO add LA setting later. */
+		return 0;
+	}
+	}
+	return -ENOIOCTLCMD;
+}
+
+static int nvhost_vi5_open(struct inode *inode, struct file *file)
+{
+	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
+					struct nvhost_device_data, ctrl_cdev);
+	struct platform_device *pdev = pdata->pdev;
+	struct t194_vi5_file_private *filepriv;
+
+	filepriv = kzalloc(sizeof(*filepriv), GFP_KERNEL);
+	if (unlikely(filepriv == NULL))
+		return -ENOMEM;
+
+	filepriv->pdev = pdev;
+
+	if (nvhost_module_add_client(pdev, filepriv)) {
+		kfree(filepriv);
+		return -ENOMEM;
+	}
+
+	file->private_data = filepriv;
+
+	return nonseekable_open(inode, file);
+}
+
+static int nvhost_vi5_release(struct inode *inode, struct file *file)
+{
+	struct t194_vi5_file_private *filepriv = file->private_data;
+	struct platform_device *pdev = filepriv->pdev;
+
+	nvhost_module_remove_client(pdev, filepriv);
+	kfree(filepriv);
+
+	return 0;
+}
+
+const struct file_operations tegra194_vi5_ctrl_ops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.unlocked_ioctl = nvhost_vi5_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvhost_vi5_ioctl,
+#endif
+	.open = nvhost_vi5_open,
+	.release = nvhost_vi5_release,
+};
 
 static int __exit vi5_remove(struct platform_device *pdev)
 {

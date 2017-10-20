@@ -285,8 +285,15 @@ struct nvhost_device_data t19_vi5_info = {
 	.keepalive		= true,
 	.autosuspend_delay      = 500,
 	.moduleid		= NVHOST_MODULE_VI,
+	.clocks = {
+		{"vi", 408000000},
+		{"vi-const", 408000000},
+		{"nvcsi", 204000000},
+		{"nvcsilp", 204000000},
+	},
 	.finalize_poweron	= vi5_finalize_poweron,
 	.prepare_poweroff	= vi5_prepare_poweroff,
+	.ctrl_ops		= &tegra194_vi5_ctrl_ops,
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 };
 #endif

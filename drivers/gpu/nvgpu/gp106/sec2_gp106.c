@@ -70,6 +70,7 @@ exit:
 	if (completion) {
 		nvgpu_kill_task_pg_init(g);
 		nvgpu_pmu_state_change(g, PMU_STATE_OFF, false);
+		nvgpu_flcn_dump_stats(&g->sec2_flcn);
 	}
 
 	return completion;

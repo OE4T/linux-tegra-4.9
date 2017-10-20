@@ -175,8 +175,10 @@ release_sig:
 	nvgpu_release_firmware(g, pmu_sig);
 release_desc:
 	nvgpu_release_firmware(g, pmu_desc);
+	g->acr.pmu_desc = NULL;
 release_img_fw:
 	nvgpu_release_firmware(g, pmu_fw);
+	g->acr.pmu_fw = NULL;
 	return err;
 }
 

@@ -2235,6 +2235,18 @@ static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 	if (pmu->fw)
 		nvgpu_release_firmware(g, pmu->fw);
 
+	if (g->acr.pmu_fw)
+		nvgpu_release_firmware(g, g->acr.pmu_fw);
+
+	if (g->acr.pmu_desc)
+		nvgpu_release_firmware(g, g->acr.pmu_desc);
+
+	if (g->acr.acr_fw)
+		nvgpu_release_firmware(g, g->acr.acr_fw);
+
+	if (g->acr.hsbl_fw)
+		nvgpu_release_firmware(g, g->acr.hsbl_fw);
+
 	nvgpu_mutex_destroy(&pmu->elpg_mutex);
 	nvgpu_mutex_destroy(&pmu->pg_mutex);
 	nvgpu_mutex_destroy(&pmu->isr_mutex);

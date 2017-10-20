@@ -25,7 +25,6 @@
 
 #include "gk20a/gk20a.h"
 #include "perf.h"
-#include "clk/clk_arb.h"
 
 struct perfrpc_pmucmdhandler_params {
 	struct nv_pmu_perf_rpc *prpccall;

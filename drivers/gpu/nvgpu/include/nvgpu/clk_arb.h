@@ -20,8 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _CLK_ARB_H_
-#define _CLK_ARB_H_
+#ifndef __NVGPU_CLK_ARB_H__
+#define __NVGPU_CLK_ARB_H__
+
+#include <nvgpu/types.h>
 
 struct gk20a;
 struct nvgpu_clk_session;
@@ -76,5 +78,5 @@ int nvgpu_clk_arb_get_current_pstate(struct gk20a *g);
 void nvgpu_clk_arb_pstate_change_lock(struct gk20a *g, bool lock);
 
 void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm);
-#endif /* _CLK_ARB_H_ */
+#endif /* __NVGPU_CLK_ARB_H__ */
 

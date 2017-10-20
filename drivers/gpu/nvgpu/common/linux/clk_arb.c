@@ -41,9 +41,13 @@
 #include <nvgpu/log.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/cond.h>
+#include <nvgpu/clk_arb.h>
 
 #include "gk20a/gk20a.h"
-#include "clk/clk_arb.h"
+#include "clk/clk.h"
+#include "pstate/pstate.h"
+#include "lpwr/lpwr.h"
+#include "volt/volt.h"
 
 #ifdef CONFIG_DEBUG_FS
 #include "common/linux/os_linux.h"
@@ -499,7 +503,8 @@ void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g)
 		nvgpu_kfree(g, arb->mclk_f_points);
 
 		for (index = 0; index < 2; index++) {
-			nvgpu_kfree(g, arb->vf_table_pool[index].gpc2clk_points);
+			nvgpu_kfree(g,
+				arb->vf_table_pool[index].gpc2clk_points);
 			nvgpu_kfree(g, arb->vf_table_pool[index].mclk_points);
 		}
 		nvgpu_mutex_destroy(&g->clk_arb->pstate_lock);
@@ -590,7 +595,8 @@ int nvgpu_clk_arb_init_session(struct gk20a *g,
 	session->zombie = false;
 	session->target_pool[0].pstate = CTRL_PERF_PSTATE_P8;
 	/* make sure that the initialization of the pool is visible
-	 * before the update */
+	 * before the update
+	 */
 	nvgpu_smp_wmb();
 	session->target = &session->target_pool[0];
 
@@ -893,6 +899,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 	for (i = 0, j = 0; i < table->gpc2clk_num_points; i++) {
 
 		u16 alt_gpc2clk = table->gpc2clk_points[i].gpc_mhz;
+
 		gpc2clk_voltuv = gpc2clk_voltuv_sram = 0;
 
 		/* Check sysclk */
@@ -918,9 +925,9 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 					alt_gpc2clk = alt_gpc2clk <
 						table->gpc2clk_points[j].
-								gpc_mhz ?
+							gpc_mhz ?
 						table->gpc2clk_points[j].
-									gpc_mhz:
+							gpc_mhz :
 						alt_gpc2clk;
 					break;
 				}
@@ -954,9 +961,9 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 					alt_gpc2clk = alt_gpc2clk <
 						table->gpc2clk_points[j].
-								gpc_mhz ?
+							gpc_mhz ?
 						table->gpc2clk_points[j].
-									gpc_mhz:
+							gpc_mhz :
 						alt_gpc2clk;
 					break;
 				}
@@ -1010,6 +1017,7 @@ exit_vf_table:
 void nvgpu_clk_arb_schedule_vf_table_update(struct gk20a *g)
 {
 	struct nvgpu_clk_arb *arb = g->clk_arb;
+
 	if (arb->vf_table_work_queue)
 		queue_work(arb->vf_table_work_queue, &arb->vf_table_fn_work);
 }
@@ -1138,7 +1146,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	if (gpc2clk_target > arb->gpc2clk_max)
 		gpc2clk_target = arb->gpc2clk_max;
 
-	mclk_target = (mclk_target > 0) ? mclk_target:
+	mclk_target = (mclk_target > 0) ? mclk_target :
 			arb->mclk_default_mhz;
 
 	if (mclk_target < arb->mclk_min)
@@ -1438,7 +1446,8 @@ static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
 
 		poll_mask |= (POLLIN | POLLPRI);
 		/* On next run do not report global alarms that were already
-		 * reported, but report SHUTDOWN always */
+		 * reported, but report SHUTDOWN always
+		 */
 		dev->alarms_reported = new_alarms_reported & ~LOCAL_ALARM_MASK &
 							~EVENT(ALARM_GPU_LOST);
 	}
@@ -1753,15 +1762,15 @@ int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 int nvgpu_clk_arb_get_arbiter_effective_mhz(struct gk20a *g,
 		u32 api_domain, u16 *freq_mhz)
 {
-	switch(api_domain) {
+	switch (api_domain) {
 	case NVGPU_GPU_CLK_DOMAIN_MCLK:
 		*freq_mhz = g->ops.clk.measure_freq(g, CTRL_CLK_DOMAIN_MCLK) /
 			1000000ULL;
 		return 0;
 
 	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-		*freq_mhz = g->ops.clk.measure_freq(g, CTRL_CLK_DOMAIN_GPC2CLK) /
-			2000000ULL;
+		*freq_mhz = g->ops.clk.measure_freq(g,
+			CTRL_CLK_DOMAIN_GPC2CLK) / 2000000ULL;
 		return 0;
 
 	default:
@@ -1774,7 +1783,7 @@ int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 {
 	int ret;
 
-	switch(api_domain) {
+	switch (api_domain) {
 	case NVGPU_GPU_CLK_DOMAIN_MCLK:
 		ret = g->ops.clk_arb.get_arbiter_clk_range(g,
 				CTRL_CLK_DOMAIN_MCLK, min_mhz, max_mhz);
@@ -1812,7 +1821,7 @@ bool nvgpu_clk_arb_is_valid_domain(struct gk20a *g, u32 api_domain)
 {
 	u32 clk_domains = g->ops.clk_arb.get_arbiter_clk_domains(g);
 
-	switch(api_domain) {
+	switch (api_domain) {
 	case NVGPU_GPU_CLK_DOMAIN_MCLK:
 		return ((clk_domains & CTRL_CLK_DOMAIN_MCLK) != 0);
 
@@ -1903,7 +1912,7 @@ recalculate_vf_point:
 
 			if ((table->gpc2clk_points[index].gpc_mhz >=
 							gpc2clk_target) &&
-					(pstate != VF_POINT_INVALID_PSTATE)){
+					(pstate != VF_POINT_INVALID_PSTATE)) {
 				gpc2clk_target =
 					table->gpc2clk_points[index].gpc_mhz;
 				*sys2clk =
@@ -1972,7 +1981,8 @@ find_exit:
 }
 
 /* This function is inherently unsafe to call while arbiter is running
- * arbiter must be blocked before calling this function */
+ * arbiter must be blocked before calling this function
+ */
 int nvgpu_clk_arb_get_current_pstate(struct gk20a *g)
 {
 	return NV_ACCESS_ONCE(g->clk_arb->actual->pstate);

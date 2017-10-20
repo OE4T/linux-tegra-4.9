@@ -22,7 +22,6 @@
 
 #include "gk20a/gk20a.h"
 
-#include "clk/clk_arb.h"
 #include "clk_arb_gp106.h"
 
 u32 gp106_get_arbiter_clk_domains(struct gk20a *g)

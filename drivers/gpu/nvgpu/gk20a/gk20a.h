@@ -58,6 +58,7 @@ struct nvgpu_warpstate;
 #include <nvgpu/atomic.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/rwsem.h>
+#include <nvgpu/clk_arb.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -70,7 +71,6 @@ struct nvgpu_warpstate;
 #include "therm_gk20a.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "clk/clk.h"
-#include "clk/clk_arb.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
 #include "therm/thrm.h"

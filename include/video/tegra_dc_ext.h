@@ -1,7 +1,7 @@
 /*
  * tegra_dc_ext.h: tegra dc ext interface.
  *
- * Copyright (C) 2011-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2018, NVIDIA Corporation. All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -702,13 +702,31 @@ struct tegra_dc_ext_set_vblank {
 	__u8	reserved[3]; /* unused - must be 0 */
 };
 
-/* tegra_dc_ext_cap_type : Defines the diffrent types of capability info that
- * could be provided by the kernel to user space.
+/*
+ * tegra_dc_ext_cap_type : Defines the different types of per-display capability
+ * info that could be provided by the kernel to user space.
+ *
+ * These cap types are specific to the tegra_dc_ext device that they're queried
+ * from.
  */
 enum tegra_dc_ext_cap_type {
 	TEGRA_DC_EXT_CAP_TYPE_NONE, /* dummy value - do not use */
 	TEGRA_DC_EXT_CAP_TYPE_HDR_SINK, /* struct tegra_dc_ext_hdr_caps */
 	TEGRA_DC_EXT_CAP_TYPE_MAX,
+};
+
+/*
+ * tegra_dc_ext_control_cap_type : Defines the different types of
+ * SOC-level/common capability info that could be provided by the kernel to user
+ * space.
+ *
+ * These cap types are queried from the common tegra_dc_control device.
+ */
+enum tegra_dc_ext_control_cap_type {
+	TEGRA_DC_EXT_CONTROL_CAP_TYPE_NONE, /* dummy value - do not use */
+	/* struct tegra_dc_ext_imp_caps - only for NVDISPLAY */
+	TEGRA_DC_EXT_CONTROL_CAP_TYPE_IMP,
+	TEGRA_DC_EXT_CONTROL_CAP_TYPE_MAX,
 };
 
 /*
@@ -743,6 +761,75 @@ struct tegra_dc_ext_hdr_caps {
 	__u8 desired_content_max_frame_avg_lum;
 	__u8 desired_content_min_lum;
 };
+
+/*
+ * tegra_dc_ext_imp_thread_info: Encapsulates the thread group information for
+ * a given window
+ *
+ * win_id: The HW id of the window that the client is requesting info for
+ *
+ * thread_group: The thread group that's assigned to the given window.
+ * Each window can only be assigned one thread group, as long as that thread
+ * group isn't already assigned. A value of -1 indicates that no thread group is
+ * assigned to this window.
+ */
+struct tegra_dc_ext_imp_thread_info {
+	__u8 win_id; /* in - filled in by client */
+	__s8 thread_group;
+
+	__u64 reserved[4];
+} __attribute__((__packed__));
+
+/*
+ * tegra_dc_ext_imp_mc_caps: Encapsulates the system-level MC/IHUB configs that
+ * need to be exported from kernel to userspace for IMP
+ */
+struct tegra_dc_ext_imp_mc_caps {
+	__u64 peak_hubclk_hz;
+	__u32 num_dram_channels;
+	__u32 total_mempool_size_bytes;
+	__u32 request_batch_size;
+
+	__u64 reserved[8]; /* must be zero */
+} __attribute__((__packed__));
+
+/*
+ * tegra_dc_ext_imp_caps: Encapsulates the IMP caps that kernel needs to export
+ * to userspace
+ *
+ * mc_caps: The system-level MC/IHUB configs required for IMP
+ *
+ * num_dvfs_requested: The number of EMC DVFS pairs requested by the client.
+ * A safe number to use here is 14, since that's the max number of entries
+ * that's currently hardcoded in the bpmp ABI headers.
+ *
+ * num_dvfs_returned: The number of EMC DVFS pairs that kernel was able to copy
+ * back to the client. If the number of requested pairs is less than the number
+ * of available entries, the first lower num_dvfs_requested pairs will be
+ * returned.
+ *
+ * dvfs_pairs: The actual EMC DVFS pairs. The client is responsible for
+ * allocating enough memory for at least num_dvfs_requested pairs.
+ *
+ * num_thread_info: The number of thread info entries requested by the client.
+ * This cannot exceed the total number of windows that are supported on the
+ * underlying SOC.
+ *
+ * thread_info: The actual thread info entries. The client is responsible for
+ * allocating enough memory for at least num_thread_info entries.
+ */
+struct tegra_dc_ext_imp_caps {
+	struct tegra_dc_ext_imp_mc_caps mc_caps;
+
+	__u32 num_dvfs_requested; /* in - filled in by client */
+	__u32 num_dvfs_returned;
+	struct tegra_dc_ext_imp_emc_dvfs_pair __user *dvfs_pairs;
+
+	__u32 num_thread_info; /* in - filled in by client */
+	struct tegra_dc_ext_imp_thread_info __user *thread_info;
+
+	__u64 reserved[8]; /* must be zero */
+} __attribute__((__packed__));
 
 /*
  * tegra_dc_ext_caps : Incorporates target display capabilities.
@@ -1643,5 +1730,7 @@ struct tegra_dc_ext_crc_arg {
 	_IOW('C', 0x07, struct tegra_dc_ext_control_scrncapt_resume)
 #define TEGRA_DC_EXT_CONTROL_SET_FRAME_LOCK_PARAMS\
 	_IOW('C', 0x08, struct tegra_dc_ext_control_scrncapt_resume)
+#define TEGRA_DC_EXT_CONTROL_GET_CAP_INFO \
+	_IOWR('C', 0x09, struct tegra_dc_ext_get_cap_info)
 
 #endif /* __TEGRA_DC_EXT_H */

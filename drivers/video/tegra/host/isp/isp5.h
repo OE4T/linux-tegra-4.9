@@ -23,6 +23,12 @@
 
 #include <linux/platform_device.h>
 
+extern const struct file_operations tegra194_isp5_ctrl_ops;
+
+struct t194_isp5_file_private {
+	struct platform_device *pdev;
+};
+
 int isp5_finalize_poweron(struct platform_device *pdev);
 int isp5_prepare_poweroff(struct platform_device *pdev);
 

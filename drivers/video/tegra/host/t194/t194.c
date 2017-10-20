@@ -347,8 +347,12 @@ struct nvhost_device_data t19_isp5_info = {
 	.keepalive		= true,
 	.autosuspend_delay      = 500,
 	.moduleid		= NVHOST_MODULE_ISP,
+	.clocks			= {
+		{"isp", UINT_MAX},
+	},
 	.finalize_poweron	= isp5_finalize_poweron,
 	.prepare_poweroff	= isp5_prepare_poweroff,
+	.ctrl_ops		= &tegra194_isp5_ctrl_ops,
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 };
 #endif

@@ -118,7 +118,7 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
 	fb_size = (g->ops.fifo.get_num_fifos(g) + 1) *
 				 gmmu_fault_buf_size_v();
 
-	err = nvgpu_dma_alloc_map(vm, fb_size,
+	err = nvgpu_dma_alloc_map_sys(vm, fb_size,
 			&g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY]);
 	if (err) {
 		nvgpu_err(g,
@@ -131,7 +131,7 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
 			 HW_FAULT_BUF_STATUS_ALLOC_TRUE;
 	*hub_intr_types |= HUB_INTR_TYPE_NONREPLAY;
 
-	err = nvgpu_dma_alloc_map(vm, fb_size,
+	err = nvgpu_dma_alloc_map_sys(vm, fb_size,
 			&g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]);
 	if (err) {
 		nvgpu_err(g,

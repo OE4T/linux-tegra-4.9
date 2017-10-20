@@ -315,6 +315,14 @@ static inline u64 __nv_gmmu_va_small_page_limit(void)
 	return ((u64)SZ_1G * 56);
 }
 
+enum nvgpu_flush_op {
+	NVGPU_FLUSH_DEFAULT,
+	NVGPU_FLUSH_FB,
+	NVGPU_FLUSH_L2_INV,
+	NVGPU_FLUSH_L2_FLUSH,
+	NVGPU_FLUSH_CBC_CLEAN,
+};
+
 enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
 					      u64 base, u64 size);
 enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size);

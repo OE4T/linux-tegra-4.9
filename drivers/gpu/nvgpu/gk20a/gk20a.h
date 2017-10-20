@@ -137,6 +137,7 @@ enum gk20a_cbc_op {
 
 enum nvgpu_unit;
 
+enum nvgpu_flush_op;
 /*
  * gpu_ops should only contain function pointers! Non-function pointer members
  * should go in struct gk20a or be implemented with the boolean flag API defined
@@ -569,6 +570,7 @@ struct gpu_ops {
 						struct tsg_gk20a *tsg);
 		void (*deinit_eng_method_buffers)(struct gk20a *g,
 						struct tsg_gk20a *tsg);
+		u32 (*get_preempt_timeout)(struct gk20a *g);
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		int (*alloc_syncpt_buf)(struct channel_gk20a *c,
 				u32 syncpt_id, struct nvgpu_mem *syncpt_buf);
@@ -760,6 +762,8 @@ struct gpu_ops {
 		void (*fault_info_mem_destroy)(struct gk20a *g);
 		u32 (*get_kind_invalid)(void);
 		u32 (*get_kind_pitch)(void);
+		u32 (*get_flush_retries)(struct gk20a *g,
+							enum nvgpu_flush_op op);
 	} mm;
 	/*
 	 * This function is called to allocate secure memory (memory

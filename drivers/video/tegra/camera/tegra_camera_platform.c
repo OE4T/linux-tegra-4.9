@@ -377,8 +377,9 @@ int vi_v4l2_update_isobw(u32 vi_kbyteps, u32 is_ioctl)
 
 	/* Bug 200323801 consider iso bw of both vi mode and vi-bypass mode */
 	if (bw >= info->max_bw) {
-		dev_info(info->dev, "%s: requested iso bw is larger than max\n",
-		 __func__);
+		dev_info(info->dev,
+			"%s: Warning, Requested ISO BW %lu has been capped to VI's max BW %llu\n",
+			__func__, bw, info->max_bw);
 		bw = info->max_bw;
 	}
 

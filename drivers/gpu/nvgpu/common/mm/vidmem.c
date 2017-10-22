@@ -355,6 +355,7 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 	nvgpu_init_list_node(&mm->vidmem.clear_list_head);
 	nvgpu_mutex_init(&mm->vidmem.clear_list_mutex);
 	nvgpu_mutex_init(&mm->vidmem.clearing_thread_lock);
+	nvgpu_mutex_init(&mm->vidmem.first_clear_mutex);
 	nvgpu_atomic_set(&mm->vidmem.pause_count, 0);
 
 	/*

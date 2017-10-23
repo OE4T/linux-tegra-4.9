@@ -261,6 +261,7 @@ static const struct gpu_ops gv100_ops = {
 		.get_num_pce = gv11b_ce_get_num_pce,
 	},
 	.gr = {
+		.get_patch_slots = gr_gv100_get_patch_slots,
 		.init_gpc_mmu = gr_gv11b_init_gpc_mmu,
 		.bundle_cb_defaults = gr_gv100_bundle_cb_defaults,
 		.cb_size_default = gr_gv100_cb_size_default,

@@ -294,3 +294,56 @@ void gr_gv100_load_tpc_mask(struct gk20a *g)
 	gk20a_writel(g, gr_fe_tpc_fs_r(0), u64_lo32(pes_tpc_mask));
 	gk20a_writel(g, gr_fe_tpc_fs_r(1), u64_hi32(pes_tpc_mask));
 }
+
+u32 gr_gv100_get_patch_slots(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+	struct fifo_gk20a *f = &g->fifo;
+	u32 size = 0;
+
+	/*
+	 * CMD to update PE table
+	 */
+	size++;
+
+	/*
+	 * Update PE table contents
+	 * for PE table, each patch buffer update writes 32 TPCs
+	 */
+	size += DIV_ROUND_UP(gr->tpc_count, 32);
+
+	/*
+	 * Update the PL table contents
+	 * For PL table, each patch buffer update configures 4 TPCs
+	 */
+	size += DIV_ROUND_UP(gr->tpc_count, 4);
+
+	/*
+	 * We need this for all subcontexts
+	 */
+	size *= f->t19x.max_subctx_count;
+
+	/*
+	 * Add space for a partition mode change as well
+	 * reserve two slots since DYNAMIC -> STATIC requires
+	 * DYNAMIC -> NONE -> STATIC
+	 */
+	size += 2;
+
+	/*
+	 * Add current patch buffer size
+	 */
+	size += gr_gk20a_get_patch_slots(g);
+
+	/*
+	 * Align to 4K size
+	 */
+	size = ALIGN(size, PATCH_CTX_SLOTS_PER_PAGE);
+
+	/*
+	 * Increase the size to accommodate for additional TPC partition update
+	 */
+	size += 2 * PATCH_CTX_SLOTS_PER_PAGE;
+
+	return size;
+}

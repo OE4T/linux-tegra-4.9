@@ -32,5 +32,5 @@ void gr_gv100_init_sm_id_table(struct gk20a *g);
 void gr_gv100_program_sm_id_numbering(struct gk20a *g,
 					u32 gpc, u32 tpc, u32 smid);
 int gr_gv100_load_smid_config(struct gk20a *g);
-
+u32 gr_gv100_get_patch_slots(struct gk20a *g);
 #endif

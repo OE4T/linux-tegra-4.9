@@ -251,12 +251,19 @@ void gr_gv100_init_sm_id_table(struct gk20a *g)
 
 	for (tpc = 0, sm_id = 0;  sm_id < num_sm; tpc++, sm_id += sm_per_tpc) {
 		for (sm = 0; sm < sm_per_tpc; sm++) {
-			g->gr.sm_to_cluster[sm_id + sm].gpc_index =
-								gpc_table[tpc];
-			g->gr.sm_to_cluster[sm_id + sm].tpc_index =
-								tpc_table[tpc];
-			g->gr.sm_to_cluster[sm_id + sm].sm_index = sm;
-			g->gr.sm_to_cluster[sm_id + sm].global_tpc_index = tpc;
+			u32 index = sm_id + sm;
+
+			g->gr.sm_to_cluster[index].gpc_index = gpc_table[tpc];
+			g->gr.sm_to_cluster[index].tpc_index = tpc_table[tpc];
+			g->gr.sm_to_cluster[index].sm_index = sm;
+			g->gr.sm_to_cluster[index].global_tpc_index = tpc;
+			nvgpu_log_info(g,
+				"gpc : %d tpc %d sm_index %d global_index: %d",
+				g->gr.sm_to_cluster[index].gpc_index,
+				g->gr.sm_to_cluster[index].tpc_index,
+				g->gr.sm_to_cluster[index].sm_index,
+				g->gr.sm_to_cluster[index].global_tpc_index);
+
 		}
 	}
 

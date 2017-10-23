@@ -74,6 +74,8 @@
 #include <gv11b/ltc_gv11b.h>
 #include <gv11b/gv11b_gating_reglist.h>
 
+#include <gv100/gr_gv100.h>
+
 #include <nvgpu/enabled.h>
 
 #include "vgpu_gr_gv11b.h"
@@ -180,7 +182,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.resume_contexts = vgpu_gr_resume_contexts,
 		.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags,
 		.fuse_override = gp10b_gr_fuse_override,
-		.init_sm_id_table = gr_gv11b_init_sm_id_table,
+		.init_sm_id_table = gr_gv100_init_sm_id_table,
 		.load_smid_config = gr_gv11b_load_smid_config,
 		.program_sm_id_numbering = gr_gv11b_program_sm_id_numbering,
 		.is_ltcs_ltss_addr = gr_gm20b_is_ltcs_ltss_addr,

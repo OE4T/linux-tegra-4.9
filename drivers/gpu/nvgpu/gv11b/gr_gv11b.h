@@ -138,7 +138,6 @@ int gr_gv11b_handle_fecs_error(struct gk20a *g,
 int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr);
 int gr_gv11b_init_sw_veid_bundle(struct gk20a *g);
 void gr_gv11b_detect_sm_arch(struct gk20a *g);
-void gr_gv11b_init_sm_id_table(struct gk20a *g);
 void gr_gv11b_program_sm_id_numbering(struct gk20a *g,
 					u32 gpc, u32 tpc, u32 smid);
 int gr_gv11b_load_smid_config(struct gk20a *g);

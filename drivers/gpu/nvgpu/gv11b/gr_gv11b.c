@@ -2125,33 +2125,6 @@ void gr_gv11b_detect_sm_arch(struct gk20a *g)
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
 }
 
-void gr_gv11b_init_sm_id_table(struct gk20a *g)
-{
-	u32 gpc, tpc, sm;
-	u32 sm_id = 0;
-	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
-
-	/* TODO populate smids based on power efficiency */
-	for (tpc = 0; tpc < g->gr.max_tpc_per_gpc_count; tpc++) {
-		for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
-
-			if (tpc >= g->gr.gpc_tpc_count[gpc])
-				continue;
-
-			for (sm = 0; sm < sm_per_tpc; sm++) {
-				g->gr.sm_to_cluster[sm_id].tpc_index = tpc;
-				g->gr.sm_to_cluster[sm_id].gpc_index = gpc;
-				g->gr.sm_to_cluster[sm_id].sm_index = sm_id % 2;
-				g->gr.sm_to_cluster[sm_id].global_tpc_index =
-									tpc;
-				sm_id++;
-			}
-		}
-	}
-	g->gr.no_of_sm = sm_id;
-	nvgpu_log_info(g, " total number of sm = %d", g->gr.no_of_sm);
-}
-
 void gr_gv11b_program_sm_id_numbering(struct gk20a *g,
 					u32 gpc, u32 tpc, u32 smid)
 {

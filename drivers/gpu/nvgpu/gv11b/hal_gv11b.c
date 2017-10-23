@@ -66,6 +66,8 @@
 #include "gp106/pmu_gp106.h"
 #include "gp106/acr_gp106.h"
 
+#include "gv100/gr_gv100.h"
+
 #include "dbg_gpu_gv11b.h"
 #include "hal_gv11b.h"
 #include "css_gr_gv11b.h"
@@ -298,7 +300,7 @@ static const struct gpu_ops gv11b_ops = {
 		.resume_contexts = gr_gk20a_resume_contexts,
 		.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags,
 		.fuse_override = gp10b_gr_fuse_override,
-		.init_sm_id_table = gr_gv11b_init_sm_id_table,
+		.init_sm_id_table = gr_gv100_init_sm_id_table,
 		.load_smid_config = gr_gv11b_load_smid_config,
 		.program_sm_id_numbering = gr_gv11b_program_sm_id_numbering,
 		.is_ltcs_ltss_addr = gr_gm20b_is_ltcs_ltss_addr,

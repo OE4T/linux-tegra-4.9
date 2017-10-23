@@ -177,7 +177,7 @@ int gv11b_bootstrap_hs_flcn(struct gk20a *g)
 				acr_ucode_header_t210_load[2]);
 		bl_dmem_desc->data_size = acr_ucode_header_t210_load[3];
 	} else
-		acr->acr_dmem_desc->nonwpr_ucode_blob_size = 0;
+		acr->acr_dmem_desc_v1->nonwpr_ucode_blob_size = 0;
 	status = pmu_exec_gen_bl(g, bl_dmem_desc, 1);
 	if (status != 0) {
 		err = status;

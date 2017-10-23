@@ -24,6 +24,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/platform/tegra/common.h>
+#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>

@@ -19,6 +19,13 @@
 #ifndef _CDE_GK20A_H_
 #define _CDE_GK20A_H_
 
+#include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/list.h>
+#include <nvgpu/lock.h>
+
+#include <linux/kobject.h>
+#include <linux/workqueue.h>
+
 #define MAX_CDE_BUFS		10
 #define MAX_CDE_PARAMS		64
 #define MAX_CDE_USER_PARAMS	40
@@ -33,7 +40,14 @@
 #define NUM_CDE_CONTEXTS	4
 
 struct dma_buf;
+struct device;
+struct nvgpu_os_linux;
 struct gk20a;
+struct gk20a_fence;
+struct nvgpu_fence;
+struct channel_gk20a;
+struct vm_gk20a;
+struct nvgpu_gpfifo;
 
 /*
  * this element defines a buffer that is allocated and mapped into gpu address

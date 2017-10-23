@@ -13,6 +13,13 @@
 #ifndef __NVGPU_IOCTL_CHANNEL_H__
 #define __NVGPU_IOCTL_CHANNEL_H__
 
+#include <linux/fs.h>
+
+struct inode;
+struct file;
+struct gk20a;
+struct nvgpu_channel_open_args;
+
 int gk20a_channel_open(struct inode *inode, struct file *filp);
 int gk20a_channel_release(struct inode *inode, struct file *filp);
 long gk20a_channel_ioctl(struct file *filp,

@@ -44,7 +44,7 @@ struct boardobjgrp_pmucmdhandler_params {
 	u32 success;
 };
 
-u32 boardobjgrp_construct_super(struct boardobjgrp *pboardobjgrp)
+u32 boardobjgrp_construct_super(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 {
 	gk20a_dbg_info("");
 
@@ -57,6 +57,7 @@ u32 boardobjgrp_construct_super(struct boardobjgrp *pboardobjgrp)
 	if (pboardobjgrp->mask == NULL)
 		return -EINVAL;
 
+	pboardobjgrp->g = g;
 	pboardobjgrp->objmask = 0;
 
 	pboardobjgrp->classid = 0;
@@ -104,6 +105,7 @@ u32 boardobjgrp_destruct_impl(struct boardobjgrp *pboardobjgrp)
 u32 boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
 {
 	struct boardobj *pboardobj;
+	struct gk20a *g = pboardobjgrp->g;
 	u32 status = 0;
 	u32 stat;
 	u8  index;
@@ -134,11 +136,11 @@ u32 boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
 	}
 
 	/* Destroy the PMU CMD data */
-	stat = boardobjgrp_pmucmd_destroy_impl(&pboardobjgrp->pmu.set);
+	stat = boardobjgrp_pmucmd_destroy_impl(g, &pboardobjgrp->pmu.set);
 	if (status == 0)
 		status = stat;
 
-	stat = boardobjgrp_pmucmd_destroy_impl(&pboardobjgrp->pmu.getstatus);
+	stat = boardobjgrp_pmucmd_destroy_impl(g, &pboardobjgrp->pmu.getstatus);
 	if (status == 0)
 		status = stat;
 
@@ -163,9 +165,12 @@ u32 boardobjgrp_pmucmd_construct_impl(struct gk20a *g, struct boardobjgrp
 	return 0;
 }
 
-
-u32 boardobjgrp_pmucmd_destroy_impl(struct boardobjgrp_pmu_cmd *cmd)
+u32 boardobjgrp_pmucmd_destroy_impl(struct gk20a *g,
+	struct boardobjgrp_pmu_cmd *cmd)
 {
+	struct nvgpu_mem *mem = &cmd->surf.sysmem_desc;
+
+	nvgpu_pmu_surface_free(g, mem);
 	return 0;
 }
 

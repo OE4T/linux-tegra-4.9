@@ -153,7 +153,8 @@ typedef u32 boardobjgrp_pmucmd_construct(struct gk20a *g,
 /*
 * Destroys BOARDOBJGRP PMU SW state.  CMD.
 */
-typedef u32 boardobjgrp_pmucmd_destroy(struct boardobjgrp_pmu_cmd *cmd);
+typedef u32 boardobjgrp_pmucmd_destroy(struct gk20a *g,
+		struct boardobjgrp_pmu_cmd *cmd);
 
 /*
 * init handler for the BOARDOBJGRP PMU CMD.  Allocates and maps the
@@ -171,6 +172,7 @@ typedef u32 boardobjgrp_pmucmd_pmuinithandle(struct gk20a *g,
 * device group or device-type.
 */
 struct boardobjgrp {
+	struct gk20a *g;
 	u32  objmask;
 	bool bconstructed;
 	u8 type;
@@ -336,7 +338,7 @@ do {                                                                          \
 
 /* ------------------------ Function Prototypes ----------------------------- */
 /* Constructor and destructor */
-u32 boardobjgrp_construct_super(struct boardobjgrp *pboardobjgrp);
+u32 boardobjgrp_construct_super(struct gk20a *g, struct boardobjgrp *pboardobjgrp);
 boardobjgrp_destruct boardobjgrp_destruct_impl;
 boardobjgrp_destruct boardobjgrp_destruct_super;
 

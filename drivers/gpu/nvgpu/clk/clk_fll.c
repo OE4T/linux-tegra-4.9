@@ -124,7 +124,7 @@ u32 clk_fll_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	status = boardobjgrpconstruct_e32(&g->clk_pmu.avfs_fllobjs.super);
+	status = boardobjgrpconstruct_e32(g, &g->clk_pmu.avfs_fllobjs.super);
 	if (status) {
 		nvgpu_err(g,
 		"error creating boardobjgrp for fll, status - 0x%x", status);

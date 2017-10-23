@@ -93,7 +93,7 @@ u32 clk_prog_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	status = boardobjgrpconstruct_e255(&g->clk_pmu.clk_progobjs.super);
+	status = boardobjgrpconstruct_e255(g, &g->clk_pmu.clk_progobjs.super);
 	if (status) {
 		nvgpu_err(g,
 			  "error creating boardobjgrp for clk prog, status - 0x%x",

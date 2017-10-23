@@ -305,8 +305,8 @@ u32 pmgr_monitor_sw_setup(struct gk20a *g)
 	u8 indx = 0;
 
 	/* Construct the Super Class and override the Interfaces */
-	status = boardobjgrpconstruct_e32(
-		&g->pmgr_pmu.pmgr_monitorobjs.pwr_channels);
+	status = boardobjgrpconstruct_e32(g,
+			&g->pmgr_pmu.pmgr_monitorobjs.pwr_channels);
 	if (status) {
 		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr channel, status - 0x%x",
@@ -320,7 +320,7 @@ u32 pmgr_monitor_sw_setup(struct gk20a *g)
 	pboardobjgrp->pmudatainstget = _pwr_channel_pmudata_instget;
 
 	/* Construct the Super Class and override the Interfaces */
-	status = boardobjgrpconstruct_e32(
+	status = boardobjgrpconstruct_e32(g,
 			&g->pmgr_pmu.pmgr_monitorobjs.pwr_ch_rels);
 	if (status) {
 		nvgpu_err(g,

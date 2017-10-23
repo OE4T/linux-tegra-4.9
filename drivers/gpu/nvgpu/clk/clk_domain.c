@@ -149,7 +149,7 @@ u32 clk_domain_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	status = boardobjgrpconstruct_e32(&g->clk_pmu.clk_domainobjs.super);
+	status = boardobjgrpconstruct_e32(g, &g->clk_pmu.clk_domainobjs.super);
 	if (status) {
 		nvgpu_err(g,
 			  "error creating boardobjgrp for clk domain, status - 0x%x",

@@ -43,7 +43,7 @@ struct boardobjgrp_e255 {
 		boardobjgrp_pmudatainit_super(g, pboardpbjgrp, pboardobjgrppmu)
 
 /* Constructor and destructor */
-u32 boardobjgrpconstruct_e255(struct boardobjgrp_e255 *pboardobjgrp);
+u32 boardobjgrpconstruct_e255(struct gk20a *g, struct boardobjgrp_e255 *pboardobjgrp);
 boardobjgrp_destruct boardobjgrpdestruct_e255;
 boardobjgrp_pmuhdrdatainit  boardobjgrp_pmuhdrdatainit_e255;
 

@@ -398,7 +398,7 @@ u32 clk_freq_controller_sw_setup(struct gk20a *g)
 	gk20a_dbg_info("");
 
 	pclk_freq_controllers = &g->clk_pmu.clk_freq_controllers;
-	status = boardobjgrpconstruct_e32(&pclk_freq_controllers->super);
+	status = boardobjgrpconstruct_e32(g, &pclk_freq_controllers->super);
 	if (status) {
 		nvgpu_err(g,
 			"error creating boardobjgrp for clk FCT, status - 0x%x",

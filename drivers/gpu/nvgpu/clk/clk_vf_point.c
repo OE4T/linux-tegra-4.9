@@ -97,7 +97,7 @@ u32 clk_vf_point_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	status = boardobjgrpconstruct_e255(&g->clk_pmu.clk_vf_pointobjs.super);
+	status = boardobjgrpconstruct_e255(g, &g->clk_pmu.clk_vf_pointobjs.super);
 	if (status) {
 		nvgpu_err(g,
 		"error creating boardobjgrp for clk vfpoint, status - 0x%x",

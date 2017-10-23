@@ -718,8 +718,8 @@ u32 pmgr_policy_sw_setup(struct gk20a *g)
 	u8 indx = 0;
 
 	/* Construct the Super Class and override the Interfaces */
-	status = boardobjgrpconstruct_e32(
-		&g->pmgr_pmu.pmgr_policyobjs.pwr_policies);
+	status = boardobjgrpconstruct_e32(g,
+			&g->pmgr_pmu.pmgr_policyobjs.pwr_policies);
 	if (status) {
 		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr policy, status - 0x%x",
@@ -727,8 +727,8 @@ u32 pmgr_policy_sw_setup(struct gk20a *g)
 		goto done;
 	}
 
-	status = boardobjgrpconstruct_e32(
-		&g->pmgr_pmu.pmgr_policyobjs.pwr_policy_rels);
+	status = boardobjgrpconstruct_e32(g,
+			&g->pmgr_pmu.pmgr_policyobjs.pwr_policy_rels);
 	if (status) {
 		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr policy rels, status - 0x%x",
@@ -736,8 +736,8 @@ u32 pmgr_policy_sw_setup(struct gk20a *g)
 		goto done;
 	}
 
-	status = boardobjgrpconstruct_e32(
-		&g->pmgr_pmu.pmgr_policyobjs.pwr_violations);
+	status = boardobjgrpconstruct_e32(g,
+			&g->pmgr_pmu.pmgr_policyobjs.pwr_violations);
 	if (status) {
 		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr violations, status - 0x%x",

@@ -527,8 +527,8 @@ u32 volt_dev_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	status = boardobjgrpconstruct_e32(&g->perf_pmu.volt.volt_dev_metadata.
-			volt_devices);
+	status = boardobjgrpconstruct_e32(g,
+			&g->perf_pmu.volt.volt_dev_metadata.volt_devices);
 	if (status) {
 		nvgpu_err(g,
 			"error creating boardobjgrp for volt rail, status - 0x%x",

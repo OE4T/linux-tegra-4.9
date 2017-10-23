@@ -217,7 +217,8 @@ u32 therm_channel_sw_setup(struct gk20a *g)
 	struct therm_channels *pthermchannelobjs;
 
 	/* Construct the Super Class and override the Interfaces */
-	status = boardobjgrpconstruct_e32(&g->therm_pmu.therm_channelobjs.super);
+	status = boardobjgrpconstruct_e32(g,
+			&g->therm_pmu.therm_channelobjs.super);
 	if (status) {
 		nvgpu_err(g,
 			  "error creating boardobjgrp for therm devices, status - 0x%x",

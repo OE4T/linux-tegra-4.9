@@ -106,7 +106,7 @@ u32 vfe_var_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	status = boardobjgrpconstruct_e32(&g->perf_pmu.vfe_varobjs.super);
+	status = boardobjgrpconstruct_e32(g, &g->perf_pmu.vfe_varobjs.super);
 	if (status) {
 		nvgpu_err(g,
 			  "error creating boardobjgrp for clk domain, status - 0x%x",

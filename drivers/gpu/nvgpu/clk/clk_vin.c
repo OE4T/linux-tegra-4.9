@@ -257,7 +257,7 @@ u32 clk_vin_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	status = boardobjgrpconstruct_e32(&g->clk_pmu.avfs_vinobjs.super);
+	status = boardobjgrpconstruct_e32(g, &g->clk_pmu.avfs_vinobjs.super);
 	if (status) {
 		nvgpu_err(g,
 			"error creating boardobjgrp for clk vin, statu - 0x%x",

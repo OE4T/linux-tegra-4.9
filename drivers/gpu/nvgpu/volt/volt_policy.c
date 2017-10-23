@@ -312,7 +312,7 @@ u32 volt_policy_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	status = boardobjgrpconstruct_e32(
+	status = boardobjgrpconstruct_e32(g, 
 			&g->perf_pmu.volt.volt_policy_metadata.volt_policies);
 	if (status) {
 		nvgpu_err(g,

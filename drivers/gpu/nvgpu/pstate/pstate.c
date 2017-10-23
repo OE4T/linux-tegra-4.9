@@ -363,7 +363,7 @@ static int pstate_sw_setup(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = boardobjgrpconstruct_e32(&g->perf_pmu.pstatesobjs.super);
+	err = boardobjgrpconstruct_e32(g, &g->perf_pmu.pstatesobjs.super);
 	if (err) {
 		nvgpu_err(g,
 			  "error creating boardobjgrp for pstates, err=%d",

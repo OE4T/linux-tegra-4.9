@@ -28,7 +28,8 @@
 #include "boardobjgrpmask.h"
 
 
-u32  boardobjgrpconstruct_e32(struct boardobjgrp_e32 *pboardobjgrp_e32)
+u32  boardobjgrpconstruct_e32(struct gk20a *g,
+			      struct boardobjgrp_e32 *pboardobjgrp_e32)
 {
 	u32 status;
 	u8  objslots;
@@ -45,7 +46,7 @@ u32  boardobjgrpconstruct_e32(struct boardobjgrp_e32 *pboardobjgrp_e32)
 	pboardobjgrp_e32->super.objslots  = objslots;
 	pboardobjgrp_e32->super.mask     = &(pboardobjgrp_e32->mask.super);
 
-	status = boardobjgrp_construct_super(&pboardobjgrp_e32->super);
+	status = boardobjgrp_construct_super(g, &pboardobjgrp_e32->super);
 	if (status)
 		goto boardobjgrpconstruct_e32_exit;
 

@@ -27,7 +27,8 @@
 #include "boardobjgrp.h"
 #include "boardobjgrpmask.h"
 
-u32 boardobjgrpconstruct_e255(struct boardobjgrp_e255 *pboardobjgrp_e255)
+u32 boardobjgrpconstruct_e255(struct gk20a *g,
+			      struct boardobjgrp_e255 *pboardobjgrp_e255)
 {
 	u32 status = 0;
 	u8  objslots;
@@ -44,7 +45,7 @@ u32 boardobjgrpconstruct_e255(struct boardobjgrp_e255 *pboardobjgrp_e255)
 	pboardobjgrp_e255->super.objslots  = objslots;
 	pboardobjgrp_e255->super.mask     = &(pboardobjgrp_e255->mask.super);
 
-	status = boardobjgrp_construct_super(&pboardobjgrp_e255->super);
+	status = boardobjgrp_construct_super(g, &pboardobjgrp_e255->super);
 	if (status)
 		goto boardobjgrpconstruct_e255_exit;
 

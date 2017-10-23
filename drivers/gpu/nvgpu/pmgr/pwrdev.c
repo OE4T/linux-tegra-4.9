@@ -291,7 +291,7 @@ u32 pmgr_device_sw_setup(struct gk20a *g)
 	struct pwr_devices *ppwrdeviceobjs;
 
 	/* Construct the Super Class and override the Interfaces */
-	status = boardobjgrpconstruct_e32(&g->pmgr_pmu.pmgr_deviceobjs.super);
+	status = boardobjgrpconstruct_e32(g, &g->pmgr_pmu.pmgr_deviceobjs.super);
 	if (status) {
 		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr devices, status - 0x%x",

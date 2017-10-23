@@ -2227,7 +2227,6 @@ int tegra210b01_init_pllu(void)
 	/* skip initialization when pllu is in hw controlled mode */
 	if (reg & PLLU_BASE_OVERRIDE) {
 		if (!(reg & PLL_ENABLE)) {
-			WARN(1, "Disabled PLLU was put under h/w control\n");
 			err = tegra210b01_enable_pllu();
 			if (err < 0) {
 				WARN_ON(1);
@@ -2260,6 +2259,8 @@ int tegra210b01_init_pllu(void)
 		reg = readl_relaxed(clk_base + PLLU_BASE);
 		reg &= ~PLLU_BASE_CLKENABLE_USB;
 		writel_relaxed(reg, clk_base + PLLU_BASE);
+	} else if (!(reg & PLL_ENABLE)) {
+		WARN(1, "Disabled PLLU was put under h/w control\n");
 	}
 
 	/* enable UTMIPLL hw control if not yet done by the bootloader */

@@ -3106,7 +3106,7 @@ static void tegra_xhci_enable_phy_sleepwalk_wake(struct tegra_xusb *tegra)
 	}
 }
 
-static void tegra_xhci_disable_phy_sleepwalk_wake(struct tegra_xusb *tegra)
+static void tegra_xhci_disable_phy_wake(struct tegra_xusb *tegra)
 {
 	struct tegra_xusb_padctl *padctl = tegra->padctl;
 	struct phy *phy;
@@ -3127,6 +3127,23 @@ static void tegra_xhci_disable_phy_sleepwalk_wake(struct tegra_xusb *tegra)
 					tegra_phy_xusb_utmi_pad_power_on(phy);
 			}
 			tegra_xusb_padctl_disable_phy_wake(padctl, phy);
+		}
+	}
+}
+
+static void tegra_xhci_disable_phy_sleepwalk(struct tegra_xusb *tegra)
+{
+	struct tegra_xusb_padctl *padctl = tegra->padctl;
+	struct phy *phy;
+	int i, j;
+
+	for (i = 0; i < MAX_PHY_TYPES; i++) {
+		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
+			phy = tegra->typed_phys[i][j];
+
+			if (!phy)
+				continue;
+
 			tegra_xusb_padctl_disable_phy_sleepwalk(padctl, phy);
 		}
 	}
@@ -3339,7 +3356,7 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 	}
 
 	if (do_wakeup)
-		tegra_xhci_disable_phy_sleepwalk_wake(tegra);
+		tegra_xhci_disable_phy_wake(tegra);
 
 	for (i = 0; i < MAX_PHY_TYPES; i++) {
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
@@ -3380,6 +3397,9 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 			goto out;
 		}
 	}
+
+	if (do_wakeup)
+		tegra_xhci_disable_phy_sleepwalk(tegra);
 
 	ret = xhci_resume(xhci, 0);
 

@@ -367,7 +367,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	pmu->initialized = true;
-	nvgpu_pmu_state_change(g, PMU_STATE_STARTED, true);
+	nvgpu_pmu_state_change(g, PMU_STATE_STARTED, false);
 
 	if (nvgpu_is_enabled(g, NVGPU_PMU_ZBC_SAVE)) {
 		/* Save zbc table after PMU is initialized. */
@@ -448,8 +448,6 @@ static int nvgpu_pg_init_task(void *arg)
 		case PMU_STATE_LOADING_ZBC:
 			nvgpu_pmu_dbg(g, "loaded zbc");
 			pmu_setup_hw_enable_elpg(g);
-			break;
-		case PMU_STATE_STARTED:
 			nvgpu_pmu_dbg(g, "PMU booted, thread exiting");
 			return 0;
 		default:

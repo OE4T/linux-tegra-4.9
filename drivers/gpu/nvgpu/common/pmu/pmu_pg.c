@@ -370,8 +370,15 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
+	int err = 0;
 
 	nvgpu_log_fn(g, " ");
+
+	if (pmu->pmu_state == PMU_STATE_INIT_RECEIVED)
+		nvgpu_pmu_state_change(g,
+				PMU_STATE_ELPG_BOOTING, false);
+	else
+		nvgpu_err(g, "PMU INIT not received\n");
 
 	gk20a_pmu_pg_idle_counter_config(g, pg_engine_id);
 
@@ -387,8 +394,10 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_INIT;
 
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_ELPG_CMD_INIT");
-	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+	err = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
+	if (err)
+		nvgpu_err(g, "PMU_PG_ELPG_CMD_INIT cmd failed\n");
 
 	/* alloc dmem for powergating state log */
 	pmu->stat_dmem_offset[pg_engine_id] = 0;
@@ -401,8 +410,10 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 	cmd.cmd.pg.stat.data = 0;
 
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_STAT_CMD_ALLOC_DMEM");
-	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
+	err = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
 			pmu_handle_pg_stat_msg, pmu, &seq, ~0);
+	if (err)
+		nvgpu_err(g, "PMU_PG_STAT_CMD_ALLOC_DMEM cmd failed\n");
 
 	/* disallow ELPG initially
 	 * PMU ucode requires a disallow cmd before allow cmd
@@ -420,8 +431,10 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
 
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_ELPG_CMD_DISALLOW");
-	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+	err = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 		pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
+	if (err)
+		nvgpu_err(g, "PMU_PG_ELPG_CMD_DISALLOW cmd failed\n");
 
 	if (g->ops.pmu.pmu_pg_set_sub_feature_mask)
 		g->ops.pmu.pmu_pg_set_sub_feature_mask(g, pg_engine_id);
@@ -431,7 +444,6 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 
 int nvgpu_pmu_init_powergating(struct gk20a *g)
 {
-	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 pg_engine_id;
 	u32 pg_engine_id_list = 0;
 
@@ -448,9 +460,6 @@ int nvgpu_pmu_init_powergating(struct gk20a *g)
 
 		if (BIT(pg_engine_id) & pg_engine_id_list) {
 			pmu_pg_init_send(g, pg_engine_id);
-			if (pmu->pmu_state == PMU_STATE_INIT_RECEIVED)
-				nvgpu_pmu_state_change(g,
-					PMU_STATE_ELPG_BOOTING, false);
 		}
 	}
 
@@ -519,9 +528,12 @@ int nvgpu_pmu_init_bind_fecs(struct gk20a *g)
 
 	pmu->buf_loaded = false;
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_FECS");
-	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
-			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 	nvgpu_pmu_state_change(g, PMU_STATE_LOADING_PG_BUF, false);
+	err = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
+			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
+	if (err)
+		nvgpu_err(g, "cmd LOAD PMU_PGENG_GR_BUFFER_IDX_FECS failed\n");
+
 	return err;
 }
 
@@ -531,6 +543,7 @@ void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g)
 	struct pmu_cmd cmd;
 	u32 desc;
 	u32 gr_engine_id;
+	int err = 0;
 
 	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 
@@ -555,9 +568,11 @@ void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g)
 
 	pmu->buf_loaded = false;
 	nvgpu_pmu_dbg(g, "cmd post PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_ZBC");
-	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
-			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
 	nvgpu_pmu_state_change(g, PMU_STATE_LOADING_ZBC, false);
+	err = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
+			pmu_handle_pg_buf_config_msg, pmu, &desc, ~0);
+	if (err)
+		nvgpu_err(g, "CMD LOAD PMU_PGENG_GR_BUFFER_IDX_ZBC failed\n");
 }
 
 /* stats */

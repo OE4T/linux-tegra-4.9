@@ -640,7 +640,7 @@ int nvgpu_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 	nvgpu_log_fn(g, "done");
 
-	return 0;
+	return err;
 
 clean_up:
 	nvgpu_log_fn(g, "fail");

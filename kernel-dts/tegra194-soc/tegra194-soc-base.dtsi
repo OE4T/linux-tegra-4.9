@@ -33,6 +33,7 @@
 #include "tegra194-trusty.dtsi"
 #include "tegra194-soc-pcie.dtsi"
 #include "tegra194-soc-uart.dtsi"
+#include "tegra194-soc-sdhci.dtsi"
 #include "tegra194-soc-ufshc.dtsi"
 #include "tegra194-soc-spi.dtsi"
 #include "tegra194-soc-pwm.dtsi"

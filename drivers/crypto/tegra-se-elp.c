@@ -1774,11 +1774,25 @@ static u32 tegra_se_acquire_rng1_mutex(struct tegra_se_elp_dev *se_dev)
 	return 0;
 }
 
-static u32 tegra_se_check_rng1_status(struct tegra_se_elp_dev *se_dev)
+static int tegra_se_check_rng1_alarms(void)
+{
+	u32 val;
+	struct tegra_se_elp_dev *se_dev = elp_dev;
+
+	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_RNG1_ALARMS_OFFSET);
+	if (val) {
+		dev_err(se_dev->dev, "RNG1 Alarms not cleared (0x%x)\n", val);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static int tegra_se_check_rng1_status(struct tegra_se_elp_dev *se_dev)
 {
 	static bool rng1_first = true;
-	bool secure_mode;
 	u32 val, i = 0;
+	int ret = 0;
 
 	/*Wait until RNG is Idle */
 	do {
@@ -1793,25 +1807,20 @@ static u32 tegra_se_check_rng1_status(struct tegra_se_elp_dev *se_dev)
 	} while (val & TEGRA_SE_RNG1_STATUS_BUSY(ELP_TRUE));
 
 	if (rng1_first) {
-		val = se_elp_readl(se_dev, RNG1, TEGRA_SE_RNG1_STATUS_OFFSET);
-		if (val & TEGRA_SE_RNG1_STATUS_SECURE(STATUS_SECURE))
-			secure_mode = true;
-		else
-			secure_mode = false;
-
 		/*Check health test is ok*/
 		val = se_elp_readl(se_dev, RNG1,
 				   TEGRA_SE_RNG1_ISTATUS_OFFSET);
-		if (secure_mode)
-			val &= TEGRA_SE_RNG1_ISTATUS_DONE(ISTATUS_ACTIVE);
-		else
-			val &= TEGRA_SE_RNG1_ISTATUS_DONE(ISTATUS_ACTIVE) |
-			TEGRA_SE_RNG1_ISTATUS_NOISE_RDY(ISTATUS_ACTIVE);
+		val &= TEGRA_SE_RNG1_ISTATUS_NOISE_RDY(ISTATUS_ACTIVE);
 		if (!val) {
 			dev_err(se_dev->dev,
-				"Wrong Startup value in RNG1_ISTATUS Reg\n");
+				"NOISE_RDY not active in RNG1_ISTATUS Reg\n");
 			return -EFAULT;
 		}
+
+		ret = tegra_se_check_rng1_alarms();
+		if (ret)
+			return ret;
+
 		rng1_first = false;
 	}
 
@@ -1930,20 +1939,6 @@ static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
 		dev_err(se_dev->dev, "RNG1 Command Failure: %s\n",
 			((cmd == RNG1_CMD_ZEROIZE) ? rng1_cmd[9] :
 			rng1_cmd[cmd]));
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
-static int tegra_se_check_rng1_alarms(void)
-{
-	u32 val;
-	struct tegra_se_elp_dev *se_dev = elp_dev;
-
-	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_RNG1_ALARMS_OFFSET);
-	if (val) {
-		dev_err(se_dev->dev, "RNG1 Alarms not cleared (0x%x)\n", val);
 		return -EFAULT;
 	}
 
@@ -3861,7 +3856,10 @@ static int tegra_se_elp_rng_get(struct crypto_rng *tfm,
 
 	memcpy(rdata, temp_rand, dlen);
 
-	tegra_se_check_rng1_alarms();
+	ret = tegra_se_check_rng1_alarms();
+	if (ret)
+		goto ret;
+
 	tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ZEROIZE);
 	ret = dlen;
 ret:

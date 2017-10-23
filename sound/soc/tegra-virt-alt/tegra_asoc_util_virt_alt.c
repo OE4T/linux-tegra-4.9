@@ -56,6 +56,37 @@ const char * const tegra210_mvc_curve_type_text[] = {
 int tegra_virt_t210mixer_get_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_GET_RX_GAIN;
+	msg.params.amixer_info.id = 0;
+	msg.params.amixer_info.rx_idx = (int) reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0)
+		pr_err("%s: error on ivc_receive\n", __func__);
+
+	ucontrol->value.integer.value[0] =
+		msg.params.amixer_info.gain;
+
 	return 0;
 }
 EXPORT_SYMBOL(tegra_virt_t210mixer_get_gain);
@@ -78,6 +109,7 @@ int tegra_virt_t210mixer_set_gain(struct snd_kcontrol *kcontrol,
 	msg.params.amixer_info.rx_idx = (int) reg;
 	msg.params.amixer_info.gain =
 		ucontrol->value.integer.value[0];
+	msg.params.amixer_info.is_instant_gain = 0;
 
 	err = nvaudio_ivc_send_retry(hivc_client,
 			&msg,
@@ -90,6 +122,108 @@ int tegra_virt_t210mixer_set_gain(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 EXPORT_SYMBOL(tegra_virt_t210mixer_set_gain);
+
+int tegra_virt_t210mixer_set_gain_instant(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_SET_RX_GAIN;
+	msg.params.amixer_info.id = 0;
+	msg.params.amixer_info.rx_idx = (int) reg;
+	msg.params.amixer_info.gain =
+		ucontrol->value.integer.value[0];
+	msg.params.amixer_info.is_instant_gain = 1;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mixer_set_gain_instant);
+
+int tegra_virt_t210mixer_get_duration(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_GET_RX_DURATION;
+	msg.params.amixer_info.id = 0;
+	msg.params.amixer_info.rx_idx = (int) reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0)
+		pr_err("%s: error on ivc_receive\n", __func__);
+
+	ucontrol->value.integer.value[0] =
+		msg.params.amixer_info.duration_n3;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mixer_get_duration);
+
+int tegra_virt_t210mixer_set_duration(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_SET_RX_DURATION;
+	msg.params.amixer_info.id = 0;
+	msg.params.amixer_info.rx_idx = (int) reg;
+	msg.params.amixer_info.duration_n3 =
+		ucontrol->value.integer.value[0];
+	msg.params.amixer_info.is_instant_gain = 0;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mixer_set_duration);
 
 int tegra_virt_t210mixer_get_adder_config(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)

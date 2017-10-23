@@ -84,6 +84,9 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_MVC_GET_TAR_VOL,
 	NVAUDIO_MVC_SET_MUTE,
 	NVAUDIO_MVC_GET_MUTE,
+	NVAUDIO_AMIXER_GET_RX_GAIN,
+	NVAUDIO_AMIXER_SET_RX_DURATION,
+	NVAUDIO_AMIXER_GET_RX_DURATION,
 	NVAUDIO_CMD_MAX,
 };
 
@@ -105,6 +108,8 @@ struct nvaudio_ivc_t210_amixer_info {
 	uint32_t	adder_idx;
 	uint32_t	adder_rx_idx;
 	uint32_t	adder_rx_idx_enable;
+	uint32_t	is_instant_gain;
+	uint32_t	duration_n3;
 	uint32_t	enable;
 };
 

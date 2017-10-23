@@ -23,6 +23,7 @@
 #include "tegra_asoc_metadata_util_alt.h"
 
 #define MIXER_CONFIG_SHIFT_VALUE 16
+#define MIXER_MAX_RX_GAIN        0x7FFFFFFF
 #define TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK		0x1F
 #define TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK		0xFFFFFFFF
 #define TEGRA186_ASRC_STREAM_RATIO_MASK				0x1FFFFFFFFF
@@ -34,9 +35,21 @@
 
 #define MIXER_GAIN_CTRL_DECL(ename, reg) \
 	SOC_SINGLE_EXT(ename, reg,	\
-	0, 0x20000, 0,	\
+	0, MIXER_MAX_RX_GAIN, 0,	\
 	tegra_virt_t210mixer_get_gain,	\
 	tegra_virt_t210mixer_set_gain)
+
+#define MIXER_GAIN_INSTANT_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, MIXER_MAX_RX_GAIN, 0,	\
+	tegra_virt_t210mixer_get_gain,	\
+	tegra_virt_t210mixer_set_gain_instant)
+
+#define MIXER_DURATION_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	64, 0x7FFFFFFF, 0,	\
+	tegra_virt_t210mixer_get_duration,	\
+	tegra_virt_t210mixer_set_duration)
 
 #define REG_PACK(id1, id2) ((id1 << MIXER_CONFIG_SHIFT_VALUE) | id2)
 #define MIXER_ADDER_CTRL_DECL(ename, reg1, reg2) \
@@ -206,6 +219,14 @@ int tegra_virt_t210mixer_get_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int tegra_virt_t210mixer_set_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210mixer_set_gain_instant(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
+int tegra_virt_t210mixer_get_duration(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210mixer_set_duration(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
 int tegra_virt_t210mixer_get_adder_config(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 

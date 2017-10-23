@@ -2792,43 +2792,32 @@ v_taps_free_and_ret:
 	return ret;
 }
 
-static int tegra_nvdisp_get_emc_dvfs_user_info(
-					struct tegra_dc_ext_imp_user_info *info)
+static int cpy_dvfs_pairs_to_user(void __user *ext_dvfs_ptr,
+			u32 num_pairs_requested, u32 *num_pairs_returned)
 {
-	struct mrq_emc_dvfs_latency_response *dvfs_table;
-	struct tegra_dc_ext_imp_emc_dvfs_pair *pairs;
-	u32 num_pairs = 0;
+	struct mrq_emc_dvfs_latency_response *dvfs_table =
+							&g_imp.emc_dvfs_table;
+	struct tegra_dc_ext_imp_emc_dvfs_pair ext_pairs[dvfs_table->num_pairs];
+	u32 num_pairs_to_cpy = 0;
 	size_t i;
-	int emc_to_dram_factor;
+	int emc_to_dram_factor = bwmgr_get_emc_to_dram_freq_factor();
 	int ret = 0;
 
-	dvfs_table = &g_imp.emc_dvfs_table;
-	emc_to_dram_factor = bwmgr_get_emc_to_dram_freq_factor();
-
-	num_pairs = min(dvfs_table->num_pairs, info->emc_dvfs_pairs_requested);
-	pairs = kzalloc(num_pairs * sizeof(*pairs), GFP_KERNEL);
-	if (!pairs) {
-		ret = -ENOMEM;
-		goto free_and_ret;
-	}
-
-	for (i = 0; i < num_pairs; i++) {
-		/* DRAM to EMC */
-		pairs[i].freq = dvfs_table->pairs[i].freq /
+	num_pairs_to_cpy = min(dvfs_table->num_pairs, num_pairs_requested);
+	for (i = 0; i < num_pairs_to_cpy; i++) {
+		ext_pairs[i].freq = dvfs_table->pairs[i].freq /
 					emc_to_dram_factor;
-		pairs[i].latency = dvfs_table->pairs[i].latency;
+		ext_pairs[i].latency = dvfs_table->pairs[i].latency;
 	}
 
-	if (copy_to_user(info->emc_dvfs_pairs, pairs,
-						num_pairs * sizeof(*pairs))) {
+	if (copy_to_user(ext_dvfs_ptr, ext_pairs,
+			num_pairs_to_cpy * sizeof(*ext_pairs))) {
+		pr_err("%s: Can't copy DVFS pairs to user\n", __func__);
 		ret = -EFAULT;
-		goto free_and_ret;
+	} else {
+		*num_pairs_returned = num_pairs_to_cpy;
 	}
 
-	info->emc_dvfs_pairs_returned = num_pairs;
-
-free_and_ret:
-	kfree(pairs);
 	return ret;
 }
 
@@ -2842,9 +2831,107 @@ int tegra_nvdisp_get_imp_user_info(struct tegra_dc_ext_imp_user_info *info)
 	if (ret)
 		return ret;
 
-	return tegra_nvdisp_get_emc_dvfs_user_info(info);
+	return cpy_dvfs_pairs_to_user(info->emc_dvfs_pairs,
+				info->emc_dvfs_pairs_requested,
+				&info->emc_dvfs_pairs_returned);
 }
 EXPORT_SYMBOL(tegra_nvdisp_get_imp_user_info);
+
+static int cpy_thread_info_to_user(struct tegra_dc_ext_imp_caps *imp_caps)
+{
+	int max_wins = tegra_dc_get_numof_dispwindows();
+	struct tegra_dc_ext_imp_thread_info *ext_info_arr;
+	struct tegra_dc_ext_imp_thread_info *ext_info;
+	struct tegra_dc_ext_imp_thread_info *thread_info_map[max_wins];
+	u32 num_info = imp_caps->num_thread_info;
+	struct nvdisp_imp_table *imp_table;
+	struct tegra_nvdisp_imp_settings *boot_setting;
+	int i, ret = 0;
+
+	imp_table = tegra_dc_common_get_imp_table();
+	if (!imp_table || !imp_table->boot_setting) {
+		pr_err("%s: No IMP boot setting found\n", __func__);
+		return -ENODEV;
+	}
+	boot_setting = imp_table->boot_setting;
+
+	if (num_info > max_wins) {
+		pr_err("%s: Num thread info (%u) > max wins (%d)\n",
+			__func__, num_info, max_wins);
+		return -E2BIG;
+	}
+
+	ext_info_arr = kcalloc(num_info, sizeof(*ext_info_arr), GFP_KERNEL);
+	if (!ext_info_arr)
+		return -ENOMEM;
+
+	if (copy_from_user(ext_info_arr, imp_caps->thread_info,
+			num_info * sizeof(*ext_info_arr))) {
+		pr_err("%s: Can't copy thread info from user\n", __func__);
+		ret = -EFAULT;
+
+		goto free_thread_info_ret;
+	}
+
+	for (i = 0; i < max_wins; i++)
+		thread_info_map[i] = NULL;
+
+	for (i = 0; i < num_info; i++) {
+		ext_info = &ext_info_arr[i];
+		if (ext_info->win_id >= max_wins) {
+			pr_err("%s: Win id (%u) >= max wins (%d)\n",
+				__func__, ext_info->win_id, max_wins);
+			ret = -EINVAL;
+
+			goto free_thread_info_ret;
+		}
+
+		thread_info_map[ext_info->win_id] = ext_info;
+	}
+
+	for (i = 0; i < boot_setting->num_heads; i++) {
+		struct tegra_nvdisp_imp_head_settings *head_settings;
+		int j;
+
+		head_settings = &boot_setting->head_settings[i];
+		for (j = 0; j < head_settings->num_wins; j++) {
+			struct tegra_dc_ext_nvdisp_imp_win_entries *win_entries;
+
+			win_entries = &head_settings->win_entries[j];
+			ext_info = thread_info_map[win_entries->id];
+			if (!ext_info)
+				continue;
+
+			ext_info->thread_group = win_entries->thread_group;
+		}
+	}
+
+	if (copy_to_user(imp_caps->thread_info, ext_info_arr,
+			num_info * sizeof(*ext_info_arr))) {
+		pr_err("%s: Failed to copy thread info to user\n", __func__);
+		ret = -EFAULT;
+	}
+
+free_thread_info_ret:
+	kfree(ext_info_arr);
+	return ret;
+}
+
+int tegra_nvdisp_get_imp_caps(struct tegra_dc_ext_imp_caps *imp_caps)
+{
+	int ret = 0;
+
+	imp_caps->mc_caps = g_imp.mc_caps;
+
+	ret = cpy_dvfs_pairs_to_user(imp_caps->dvfs_pairs,
+				imp_caps->num_dvfs_requested,
+				&imp_caps->num_dvfs_returned);
+	if (ret)
+		return ret;
+
+	return cpy_thread_info_to_user(imp_caps);
+}
+EXPORT_SYMBOL(tegra_nvdisp_get_imp_caps);
 
 struct tegra_nvdisp_imp_settings *tegra_nvdisp_get_current_imp_settings(void)
 {

@@ -1,7 +1,7 @@
 /*
  * util.c: Utility functions for tegradc ext interface.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -80,4 +80,40 @@ attach_fail:
 buf_fail:
 	kfree(dc_dmabuf);
 	return -ENOMEM;
+}
+
+int tegra_dc_ext_cpy_caps_from_user(void __user *user_arg,
+				struct tegra_dc_ext_caps **caps_ptr,
+				u32 *nr_elements_ptr)
+{
+	unsigned int nr_elements = 0;
+	struct tegra_dc_ext_get_cap_info args;
+	struct tegra_dc_ext_caps *caps = NULL;
+
+	if (copy_from_user(&args, user_arg, sizeof(args))) {
+		pr_err("%s: Failed to copy cap info from user\n", __func__);
+		return -EFAULT;
+	}
+
+	nr_elements = args.nr_elements;
+	if (nr_elements > 0) {
+		caps = kzalloc(sizeof(*caps)
+				* nr_elements, GFP_KERNEL);
+		if (!caps)
+			return -ENOMEM;
+
+		if (copy_from_user(caps,
+			(void __user *) (uintptr_t)args.data,
+			sizeof(*caps) * nr_elements)) {
+			pr_err("%s: Failed to copy caps from user\n", __func__);
+			kfree(caps);
+
+			return -EFAULT;
+		}
+	}
+
+	*caps_ptr = caps;
+	*nr_elements_ptr = nr_elements;
+
+	return 0;
 }

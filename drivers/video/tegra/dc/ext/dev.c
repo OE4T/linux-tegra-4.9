@@ -1,7 +1,7 @@
 /*
  * dev.c: Device interface for tegradc ext.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -2563,14 +2563,14 @@ static int tegra_dc_get_cap_hdr_info(struct tegra_dc_ext_user *user,
 
 }
 
-static int tegra_dc_get_cap_info(struct tegra_dc_ext_user *user,
-				struct tegra_dc_ext_caps *cap_info,
+static int tegra_dc_get_caps(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_caps *caps,
 				int nr_elements)
 {
 	int i, ret = 0;
 	for (i = 0; i < nr_elements; i++) {
 
-		switch (cap_info[i].data_type) {
+		switch (caps[i].data_type) {
 
 		case TEGRA_DC_EXT_CAP_TYPE_HDR_SINK:
 		{
@@ -2582,7 +2582,7 @@ static int tegra_dc_get_cap_info(struct tegra_dc_ext_user *user,
 			ret = tegra_dc_get_cap_hdr_info(user, hdr_cap_info);
 
 			if (copy_to_user((void __user *)(uintptr_t)
-				cap_info[i].data, hdr_cap_info,
+				caps[i].data, hdr_cap_info,
 				sizeof(*hdr_cap_info))) {
 				kfree(hdr_cap_info);
 				return -EFAULT;
@@ -3341,36 +3341,17 @@ free_and_ret:
 	}
 	case TEGRA_DC_EXT_GET_CAP_INFO:
 	{
-#define NR_ELEMENTS_UPPER_BOUND 16
 		int ret = 0;
-		unsigned int nr_elements = 0;
-		struct tegra_dc_ext_get_cap_info args;
-		struct tegra_dc_ext_caps *cap_info = NULL;
+		struct tegra_dc_ext_caps *caps = NULL;
+		u32 nr_elements = 0;
 
-		if (copy_from_user(&args, user_arg, sizeof(args)))
-			return -EFAULT;
+		ret = tegra_dc_ext_cpy_caps_from_user(user_arg, &caps,
+							&nr_elements);
+		if (ret)
+			return ret;
 
-		nr_elements = args.nr_elements;
-
-		if (nr_elements > NR_ELEMENTS_UPPER_BOUND)
-			return -EINVAL;
-
-		if (nr_elements > 0) {
-			cap_info = kzalloc(sizeof(*cap_info)
-					* nr_elements, GFP_KERNEL);
-			if (!cap_info)
-				return -ENOMEM;
-			if (copy_from_user(cap_info,
-				(void __user *) (uintptr_t)args.data,
-				sizeof(*cap_info) * nr_elements)) {
-				kfree(cap_info);
-				return -EFAULT;
-			}
-			ret = tegra_dc_get_cap_info(user, cap_info,
-						    nr_elements);
-
-			kfree(cap_info);
-		}
+		ret = tegra_dc_get_caps(user, caps, nr_elements);
+		kfree(caps);
 
 		return ret;
 	}

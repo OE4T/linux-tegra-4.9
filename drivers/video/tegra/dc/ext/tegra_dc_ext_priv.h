@@ -1,7 +1,7 @@
 /*
  * tegra_dc_ext_priv.h: Declarations for tegradc ext interface.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -149,6 +149,10 @@ extern struct class *tegra_dc_ext_class;
 extern int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 				   struct tegra_dc_dmabuf **handle,
 				   dma_addr_t *phys_addr);
+
+extern int tegra_dc_ext_cpy_caps_from_user(void __user *user_arg,
+				struct tegra_dc_ext_caps **caps_ptr,
+				u32 *nr_elements_ptr);
 
 extern int tegra_dc_ext_get_cursor(struct tegra_dc_ext_user *user);
 extern int tegra_dc_ext_put_cursor(struct tegra_dc_ext_user *user);

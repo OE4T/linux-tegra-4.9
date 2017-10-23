@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -382,6 +382,7 @@ int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);
 int tegra_nvdisp_set_degamma_user_config(struct tegra_dc_win *win,
 				    long degamma_flag);
 int tegra_nvdisp_get_degamma_user_config(struct tegra_dc_win *win);
+int tegra_nvdisp_get_imp_caps(struct tegra_dc_ext_imp_caps *imp_caps);
 #else
 static inline int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 					  struct tegra_dc_ext_crc_conf *conf)
@@ -472,6 +473,11 @@ static inline int tegra_nvdisp_set_degamma_user_config(struct tegra_dc_win *win,
 	return -ENOTSUPP;
 }
 static inline int tegra_nvdisp_get_degamma_user_config(struct tegra_dc_win *win)
+{
+	return -ENOTSUPP;
+}
+static inline int tegra_nvdisp_get_imp_caps(
+					struct tegra_dc_ext_imp_caps *imp_caps)
 {
 	return -ENOTSUPP;
 }

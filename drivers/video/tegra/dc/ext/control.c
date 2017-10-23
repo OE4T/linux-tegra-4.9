@@ -1,7 +1,7 @@
 /*
  * control.c: tegradc ext control interface.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -29,6 +29,7 @@
 
 #include "tegra_dc_ext_priv.h"
 #include "../dc_common.h"
+#include "../dc_priv.h"
 
 #ifdef CONFIG_COMPAT
 struct tegra_dc_ext_control_output_edid32 {
@@ -188,6 +189,56 @@ static int get_capabilities(struct tegra_dc_ext_control_capabilities *caps)
 	return 0;
 }
 
+static int tegra_dc_control_get_caps(struct tegra_dc_ext_caps *caps,
+				u32 nr_elements)
+{
+	int i, ret = 0;
+
+	for (i = 0; i < nr_elements; i++) {
+
+		switch (caps[i].data_type) {
+		case TEGRA_DC_EXT_CONTROL_CAP_TYPE_IMP:
+		{
+			struct tegra_dc_ext_imp_caps imp_caps;
+
+			if (!tegra_dc_is_nvdisplay()) {
+				pr_err("%s: IMP caps only valid for nvdisp\n",
+					__func__);
+				return -EPERM;
+			}
+
+			if (copy_from_user(&imp_caps,
+				(void __user *)(uintptr_t)caps[i].data,
+				sizeof(imp_caps))) {
+				pr_err("%s: Can't copy IMP caps from user\n",
+					__func__);
+				return -EFAULT;
+			}
+
+			ret = tegra_nvdisp_get_imp_caps(&imp_caps);
+			if (ret) {
+				pr_err("%s: Can't get IMP caps\n", __func__);
+				return ret;
+			}
+
+			if (copy_to_user((void __user *)(uintptr_t)
+				caps[i].data, &imp_caps,
+				sizeof(imp_caps))) {
+				pr_err("%s: Can't copy IMP caps to user\n",
+					__func__);
+				return -EFAULT;
+			}
+
+			break;
+		}
+		default:
+			return -EINVAL;
+		}
+	}
+
+	return ret;
+}
+
 static long tegra_dc_ext_control_ioctl(struct file *filp, unsigned int cmd,
 				       unsigned long arg)
 {
@@ -337,6 +388,22 @@ static long tegra_dc_ext_control_ioctl(struct file *filp, unsigned int cmd,
 			return ret;
 
 		return 0;
+	}
+	case TEGRA_DC_EXT_CONTROL_GET_CAP_INFO:
+	{
+		int ret = 0;
+		struct tegra_dc_ext_caps *caps = NULL;
+		u32 nr_elements = 0;
+
+		ret = tegra_dc_ext_cpy_caps_from_user(user_arg, &caps,
+							&nr_elements);
+		if (ret)
+			return ret;
+
+		ret = tegra_dc_control_get_caps(caps, nr_elements);
+		kfree(caps);
+
+		return ret;
 	}
 
 	default:

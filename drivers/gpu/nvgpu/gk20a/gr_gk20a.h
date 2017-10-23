@@ -52,8 +52,14 @@
 
 #define GK20A_TIMEOUT_FPGA		100000 /* 100 sec */
 
-#define PATCH_CTX_SLOTS_MAX			128
+/*
+ * allocate a minimum of 1 page (4KB) worth of patch space, this is 512 entries
+ * of address and data pairs
+ */
 #define PATCH_CTX_SLOTS_REQUIRED_PER_ENTRY	2
+#define PATCH_CTX_SLOTS_PER_PAGE \
+	(PAGE_SIZE/(PATCH_CTX_SLOTS_REQUIRED_PER_ENTRY * sizeof(u32)))
+#define PATCH_CTX_ENTRIES_FROM_SIZE(size) (size/sizeof(u32))
 
 struct channel_gk20a;
 struct nvgpu_warpstate;
@@ -756,5 +762,6 @@ void gk20a_gr_get_ovr_perf_regs(struct gk20a *g, u32 *num_ovr_perf_regs,
 					       u32 **ovr_perf_regs);
 void gk20a_gr_init_ctxsw_hdr_data(struct gk20a *g,
 					struct nvgpu_mem *mem);
+u32 gr_gk20a_get_patch_slots(struct gk20a *g);
 
 #endif /*__GR_GK20A_H__*/

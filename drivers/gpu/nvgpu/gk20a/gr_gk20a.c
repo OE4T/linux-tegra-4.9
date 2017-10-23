@@ -714,7 +714,8 @@ void gr_gk20a_ctx_patch_write(struct gk20a *g,
 	if (patch) {
 		u32 patch_slot = ch_ctx->patch_ctx.data_count *
 				PATCH_CTX_SLOTS_REQUIRED_PER_ENTRY;
-		if (patch_slot > (PATCH_CTX_SLOTS_MAX -
+		if (patch_slot > (PATCH_CTX_ENTRIES_FROM_SIZE(
+					ch_ctx->patch_ctx.mem.size) -
 				PATCH_CTX_SLOTS_REQUIRED_PER_ENTRY)) {
 			nvgpu_err(g, "failed to access patch_slot %d",
 				patch_slot);
@@ -2813,17 +2814,29 @@ static void gr_gk20a_free_channel_gr_ctx(struct channel_gk20a *c)
 	c->ch_ctx.gr_ctx = NULL;
 }
 
+u32 gr_gk20a_get_patch_slots(struct gk20a *g)
+{
+	return PATCH_CTX_SLOTS_PER_PAGE;
+}
+
 static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 				struct channel_gk20a *c)
 {
 	struct patch_desc *patch_ctx = &c->ch_ctx.patch_ctx;
 	struct vm_gk20a *ch_vm = c->vm;
+	u32 alloc_size;
 	int err = 0;
 
 	gk20a_dbg_fn("");
 
+	alloc_size = g->ops.gr.get_patch_slots(g) *
+		PATCH_CTX_SLOTS_REQUIRED_PER_ENTRY;
+
+	nvgpu_log(g, gpu_dbg_info, "patch buffer size in entries: %d",
+		alloc_size);
+
 	err = nvgpu_dma_alloc_map_flags_sys(ch_vm, NVGPU_DMA_NO_KERNEL_MAPPING,
-			PATCH_CTX_SLOTS_MAX * sizeof(u32), &patch_ctx->mem);
+			alloc_size * sizeof(u32), &patch_ctx->mem);
 	if (err)
 		return err;
 

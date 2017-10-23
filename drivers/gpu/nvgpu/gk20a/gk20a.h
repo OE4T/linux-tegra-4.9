@@ -172,6 +172,7 @@ struct gpu_ops {
 		u32 (*get_num_pce)(struct gk20a *g);
 	} ce2;
 	struct {
+		u32 (*get_patch_slots)(struct gk20a *g);
 		int (*init_fs_state)(struct gk20a *g);
 		int (*init_preemption_state)(struct gk20a *g);
 		void (*access_smpc_reg)(struct gk20a *g, u32 quad, u32 offset);

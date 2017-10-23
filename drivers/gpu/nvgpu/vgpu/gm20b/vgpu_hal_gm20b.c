@@ -77,6 +77,7 @@ static const struct gpu_ops vgpu_gm20b_ops = {
 		.get_num_pce = vgpu_ce_get_num_pce,
 	},
 	.gr = {
+		.get_patch_slots = gr_gk20a_get_patch_slots,
 		.init_gpc_mmu = gr_gm20b_init_gpc_mmu,
 		.bundle_cb_defaults = gr_gm20b_bundle_cb_defaults,
 		.cb_size_default = gr_gm20b_cb_size_default,

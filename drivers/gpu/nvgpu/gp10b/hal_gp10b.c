@@ -190,6 +190,7 @@ static const struct gpu_ops gp10b_ops = {
 		.isr_nonstall = gp10b_ce_nonstall_isr,
 	},
 	.gr = {
+		.get_patch_slots = gr_gk20a_get_patch_slots,
 		.init_gpc_mmu = gr_gm20b_init_gpc_mmu,
 		.bundle_cb_defaults = gr_gm20b_bundle_cb_defaults,
 		.cb_size_default = gr_gp10b_cb_size_default,

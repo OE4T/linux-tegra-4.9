@@ -25,6 +25,7 @@
 #include <linux/cpufreq.h>
 #include <linux/slab.h>
 #include <linux/of.h>
+#include <linux/platform_device.h>
 #include <linux/of_address.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
@@ -175,7 +176,7 @@ static void tegra_read_counters(void *arg)
 	 * It will take = 2 ^ 32 / 2000 MHz to overflow core clk counter
 	 *              = 2 sec to overflow
 	 *
-	 * Unsigned susbstraction of core clock counter(32 bit) and ref clk
+	 * Unsigned subtraction of core clock counter(32 bit) and ref clk
 	 * counter(28 bit) with modulo of 2^28 avoids single overflow.
 	*/
 
@@ -381,7 +382,6 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
  */
 static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 {
-	struct cpufreq_frequency_table *ftbl;
 	struct cpufreq_freqs freqs;
 	struct mutex *mlock;
 	uint32_t tgt_freq;
@@ -399,8 +399,7 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 	mlock = &per_cpu(pcpu_mlock, policy->cpu);
 	mutex_lock(mlock);
 
-	ftbl = get_freqtable(policy->cpu);
-	tgt_freq = ftbl[index].frequency;
+	tgt_freq = policy->freq_table[index].frequency;
 	freqs.old = tfreq_data.cpu_freq[policy->cpu];
 
 	if (policy->cur == tgt_freq)
@@ -873,7 +872,7 @@ err_out:
 	return -ENOMEM;
 }
 
-static void __exit tegra_cpufreq_debug_exit(void)
+static void tegra_cpufreq_debug_exit(void)
 {
 	debugfs_remove_recursive(tegra_cpufreq_debugfs_root);
 }
@@ -936,15 +935,13 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 
 static int tegra_cpu_exit(struct cpufreq_policy *policy)
 {
-	struct cpufreq_frequency_table *ftbl;
 	struct mutex *mlock;
 	int cl;
 
 	mlock = &per_cpu(pcpu_mlock, policy->cpu);
 	mutex_lock(mlock);
 
-	ftbl = get_freqtable(policy->cpu);
-	cpufreq_frequency_table_cpuinfo(policy, ftbl);
+	cpufreq_frequency_table_cpuinfo(policy, policy->freq_table);
 
 	cl = tegra18_logical_to_cluster(policy->cpu);
 	if (tfreq_data.pcluster[cl].bwmgr)
@@ -1388,31 +1385,16 @@ err_out:
 	return ret;
 }
 
-static int __init tegra_cpufreq_init(void)
+static int tegra186_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device_node *dn = NULL;
 	uint32_t cpu;
 	int ret = 0;
 
-	dn = of_find_compatible_node(NULL, NULL, "nvidia,tegra18x-cpufreq-hv");
-	if (dn) {
+	dn = pdev->dev.of_node;
+	if (of_device_is_compatible(dn, "nvidia,tegra18x-cpufreq-hv")) {
 		tegra_cpufreq_hv_mode = true;
 		pr_info("tegra18x-cpufreq: Using hv path\n");
-	} else {
-		tegra_cpufreq_hv_mode = false;
-		dn = of_find_compatible_node(NULL, NULL,
-						"nvidia,tegra18x-cpufreq");
-	}
-	if (dn == NULL) {
-		pr_err("tegra18x-cpufreq: dt node not found\n");
-		ret = -ENODEV;
-		goto err_out;
-	}
-
-	if (!of_device_is_available(dn)) {
-		ret = -ENODEV;
-		pr_err("tegra18x-cpufreq: device is disabled\n");
-		goto err_out;
 	}
 
 	ret = mem_map_device(dn);
@@ -1491,7 +1473,7 @@ err_out:
 	return ret;
 }
 
-static void __exit tegra_cpufreq_exit(void)
+static int tegra186_cpufreq_remove(struct platform_device *pdev)
 {
 	cpufreq_unregister_notifier(&tegra_boundaries_cpufreq_nb,
 					CPUFREQ_POLICY_NOTIFIER);
@@ -1500,10 +1482,26 @@ static void __exit tegra_cpufreq_exit(void)
 #endif
 	cpufreq_unregister_driver(&tegra_cpufreq_driver);
 	free_resources();
+	return 0;
 }
 
+static const struct of_device_id tegra186_cpufreq_of_match[] = {
+	{ .compatible = "nvidia,tegra18x-cpufreq", },
+	{ .compatible = "nvidia,tegra18x-cpufreq-hv", },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, tegra186_cpufreq_of_match);
+
+static struct platform_driver tegra186_cpufreq_platform_driver = {
+	.driver = {
+		.name = "tegra186-cpufreq",
+		.of_match_table = tegra186_cpufreq_of_match,
+	},
+	.probe = tegra186_cpufreq_probe,
+	.remove = tegra186_cpufreq_remove,
+};
+module_platform_driver(tegra186_cpufreq_platform_driver);
+
 MODULE_AUTHOR("Puneet Saxena <puneets@nvidia.com>");
-MODULE_DESCRIPTION("cpufreq platform driver for Nvidia Tegra18x");
-MODULE_LICENSE("GPL");
-module_init(tegra_cpufreq_init);
-module_exit(tegra_cpufreq_exit);
+MODULE_DESCRIPTION("NVIDIA Tegra186 cpufreq driver");
+MODULE_LICENSE("GPL v2");

@@ -662,7 +662,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	u32 active_engine_id, pbdma_id, engine_id;
 	struct fifo_engine_info_gk20a *engine_info;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	f->max_runlists = g->ops.fifo.eng_runlist_base_size();
 	f->runlist_info = nvgpu_kzalloc(g,
@@ -690,8 +690,9 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 			goto clean_up_runlist;
 
 		runlist_size  = f->runlist_entry_size * f->num_runlist_entries;
-		gk20a_dbg_info("runlist_entries %d runlist size %zu\n",
-					f->num_runlist_entries, runlist_size);
+		nvgpu_log(g, gpu_dbg_info,
+				"runlist_entries %d runlist size %zu",
+				f->num_runlist_entries, runlist_size);
 
 		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
 			int err = nvgpu_dma_alloc_sys(g, runlist_size,
@@ -711,7 +712,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 			if (f->pbdma_map[pbdma_id] & BIT(runlist_id))
 				runlist->pbdma_bitmask |= BIT(pbdma_id);
 		}
-		gk20a_dbg_info("runlist %d : pbdma bitmask %x",
+		nvgpu_log(g, gpu_dbg_info, "runlist %d : pbdma bitmask 0x%x",
 				 runlist_id, runlist->pbdma_bitmask);
 
 		for (engine_id = 0; engine_id < f->num_engines; ++engine_id) {
@@ -719,14 +720,13 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 			engine_info = &f->engine_info[active_engine_id];
 
 			if (engine_info && engine_info->runlist_id == runlist_id)
-				runlist->eng_bitmask |= BIT(engine_id);
+				runlist->eng_bitmask |= BIT(active_engine_id);
 		}
-		gk20a_dbg_info("runlist %d : eng bitmask %x",
+		nvgpu_log(g, gpu_dbg_info, "runlist %d : act eng bitmask 0x%x",
 				 runlist_id, runlist->eng_bitmask);
 	}
 
-
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 
 clean_up_runlist:

@@ -80,6 +80,12 @@
 #define logical_to_phys_cluster(cl)	(cl == 1 ? \
 					ARM_CPU_IMP_ARM : \
 					ARM_CPU_IMP_NVIDIA)
+
+#define is_cluster_present(cl)		(cl >= MAX_CLUSTERS ? \
+					false : \
+				tfreq_data.pcluster[cl].cluster_present)
+#define M_CLUSTER			0
+#define B_CLUSTER			1
 #define MAX_CLUSTERS			2
 
 /**
@@ -118,6 +124,7 @@ struct per_cluster_data {
 	struct tegra_bwmgr_client *bwmgr;
 	struct cpumask cpu_mask;
 	struct cc3_params cc3;
+	bool cluster_present;
 };
 
 struct tegra_cpufreq_data {
@@ -1290,35 +1297,42 @@ static int __init get_lut_from_bpmp(void)
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
-		virt = (struct cpu_vhint_data *)tegra_bpmp_alloc_coherent(size,
-			&phys, GFP_KERNEL);
-		if (!virt) {
-			ret = -ENOMEM;
-			while (cl--) {
-				vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
-				tegra_bpmp_free_coherent(size,
-						vhtbl->lut, vhtbl->phys);
+		if (is_cluster_present(cl)) {
+			virt = (struct cpu_vhint_data *)
+				tegra_bpmp_alloc_coherent(size,
+				&phys, GFP_KERNEL);
+			if (!virt) {
+				ret = -ENOMEM;
+				while (cl--) {
+					vhtbl =
+					&tfreq_data.pcluster[cl].dvfs_tbl;
+					tegra_bpmp_free_coherent(size,
+							vhtbl->lut,
+							vhtbl->phys);
+				}
+				ok = false;
+				goto err_out;
 			}
-			ok = false;
-			goto err_out;
-		}
-		vhtbl->lut = virt;
-		vhtbl->phys = phys;
-
-		md.addr = cpu_to_le32(phys);
-		md.cluster_id = cpu_to_le32(cl);
-
-		ret = tegra_bpmp_send_receive(MRQ_CPU_VHINT, &md,
-				sizeof(struct mrq_cpu_vhint_request), NULL, 0);
-		if (ret) {
-			pr_warn("%s: cluster %d: vhint query failed: %d\n",
-				__func__, cl, ret);
-			tegra_bpmp_free_coherent(size, vhtbl->lut,
-					vhtbl->phys);
+			vhtbl->lut = virt;
+			vhtbl->phys = phys;
+			md.addr = cpu_to_le32(phys);
+			md.cluster_id = cpu_to_le32(cl);
+			ret = tegra_bpmp_send_receive(MRQ_CPU_VHINT, &md,
+					sizeof(struct mrq_cpu_vhint_request),
+							 NULL, 0);
+			if (ret) {
+				pr_err("%s: cluster %d: vhint query failed: %d\n",
+					__func__, cl, ret);
+				tegra_bpmp_free_coherent(size, vhtbl->lut,
+						vhtbl->phys);
+				vhtbl->lut = NULL;
+				vhtbl->phys = 0;
+			} else
+				ok = true;
+		} else {
 			vhtbl->lut = NULL;
 			vhtbl->phys = 0;
-		} else
-			ok = true;
+		}
 	}
 err_out:
 	return ok ? 0 : ret;
@@ -1433,6 +1447,14 @@ static int __init tegra_cpufreq_init(void)
 		ret = parse_hv_dt_data(dn);
 		if (ret)
 			goto err_free_res;
+	}
+	tfreq_data.pcluster[B_CLUSTER].cluster_present = false;
+	tfreq_data.pcluster[M_CLUSTER].cluster_present = false;
+	for_each_possible_cpu(cpu) {
+		if (tegra18_logical_to_cluster(cpu) == B_CLUSTER)
+			tfreq_data.pcluster[B_CLUSTER].cluster_present = true;
+		else if (tegra18_logical_to_cluster(cpu) == M_CLUSTER)
+			tfreq_data.pcluster[M_CLUSTER].cluster_present = true;
 	}
 
 #ifdef CONFIG_DEBUG_FS

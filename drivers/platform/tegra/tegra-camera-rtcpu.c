@@ -227,6 +227,7 @@ static const struct tegra_cam_rtcpu_pdata ape_pdata = {
 struct tegra_cam_rtcpu {
 	const char *name;
 	struct tegra_ivc_bus *ivc;
+	struct device_dma_parameters dma_parms;
 	struct device *hsp_device;
 	struct tegra_hsp_sm_pair *sm_pair;
 	struct tegra_rtcpu_trace *tracer;
@@ -1159,6 +1160,8 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 	tegra_cam_rtcpu_mon_destroy(rtcpu->monitor);
 	tegra_ivc_bus_destroy(rtcpu->ivc);
 
+	pdev->dev.dma_parms = NULL;
+
 	return 0;
 }
 
@@ -1204,6 +1207,9 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		pm_runtime_use_autosuspend(dev);
 		pm_runtime_set_autosuspend_delay(&pdev->dev, timeout);
 	}
+
+	dev->dma_parms = &rtcpu->dma_parms;
+	dma_set_max_seg_size(dev, UINT_MAX);
 
 	rtcpu->tracer = tegra_rtcpu_trace_create(dev);
 

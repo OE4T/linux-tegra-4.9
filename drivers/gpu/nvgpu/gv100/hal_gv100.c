@@ -107,6 +107,7 @@
 #include <nvgpu/bus.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/enabled_t19x.h>
 
 #include <nvgpu/hw/gv100/hw_proj_gv100.h>
 #include <nvgpu/hw/gv100/hw_fifo_gv100.h>
@@ -221,16 +222,13 @@ static int gv100_get_litter_value(struct gk20a *g, int value)
 
 int gv100_init_gpu_characteristics(struct gk20a *g)
 {
-	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
-
 	int err;
 
 	err = gk20a_init_gpu_characteristics(g);
 	if (err)
 		return err;
 
-	gpu->flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_TSG_SUBCONTEXTS;
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG_SUBCONTEXTS, true);
 
 	return 0;
 }

@@ -3,6 +3,7 @@ nvgpu-t19x := ../../../../nvgpu-t19x/drivers/gpu/nvgpu
 nvgpu-y += \
 	$(nvgpu-t19x)/common/mm/gmmu_t19x.o \
 	$(nvgpu-t19x)/common/linux/ioctl_tsg_t19x.o \
+	$(nvgpu-t19x)/common/linux/ioctl_ctrl_t19x.o \
 	$(nvgpu-t19x)/common/linux/io_t19x.o \
 	$(nvgpu-t19x)/common/linux/module_t19x.o \
 	$(nvgpu-t19x)/common/linux/pci_t19x.o \

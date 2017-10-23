@@ -1,7 +1,5 @@
 /*
- * GV11B Graphics
- *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,17 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <nvgpu/enabled.h>
-#include <nvgpu/enabled_t19x.h>
+#ifndef __NVGPU_ENABLED_T19X_H__
+#define __NVGPU_ENABLED_T19X_H__
 
-#include "gk20a/gk20a.h"
+/* subcontexts are available */
+#define NVGPU_SUPPORT_TSG_SUBCONTEXTS			63
 
-#include "gv11b/gv11b.h"
-
-int gv11b_init_gpu_characteristics(struct gk20a *g)
-{
-	gk20a_init_gpu_characteristics(g);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG_SUBCONTEXTS, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_IO_COHERENCE, true);
-	return 0;
-}
+#endif

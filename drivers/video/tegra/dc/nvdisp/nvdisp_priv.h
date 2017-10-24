@@ -79,6 +79,13 @@ static u32 BASE_ADDRESS_DC_WIN_WINBUF[] = {
 		BASE_ADDRESS_DC_F_WINBUF,
 };
 
+enum {
+	NVDISP_DEGAMMA_NONE,
+	NVDISP_DEGAMMA_SRGB,
+	NVDISP_DEGAMMA_YUV_8_10,
+	NVDISP_DEGAMMA_YUV_12,
+};
+
 #define NVDISP_WIN_ADDR(head, win, word_offset) \
 		nvdisp_win_offset(win, word_offset) << 2
 

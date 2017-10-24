@@ -1725,6 +1725,108 @@ static const struct file_operations dbg_color_expand_enable_fops = {
 	.release = single_release,
 };
 
+static int dbg_degamma_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc_win *win = m->private;
+	long degamma_setting = 0;
+
+	if (!win)
+		return -EINVAL;
+
+	degamma_setting = tegra_nvdisp_get_degamma_user_config(win);
+	seq_printf(m, "%ld\n", degamma_setting);
+
+	return 0;
+}
+
+static int dbg_degamma_open(struct inode *inode,
+	struct file *file)
+{
+	return single_open(file, dbg_degamma_show,
+		inode->i_private);
+}
+
+/* Note that degamma programmed here will not be persistent across
+ * window attach/detach.
+ */
+static ssize_t dbg_degamma_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_dc_win *win = m->private;
+	long degamma_setting;
+	int ret;
+
+	if (!win)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &degamma_setting);
+	if (ret < 0)
+		return ret;
+
+	tegra_nvdisp_set_degamma_user_config(win, degamma_setting);
+
+	return len;
+}
+
+static int dbg_force_user_degamma_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc_win *win = m->private;
+
+	if (!win)
+		return -EINVAL;
+
+	seq_printf(m, "%d\n", win->force_user_degamma);
+
+	return 0;
+}
+
+static int dbg_force_user_degamma_open(struct inode *inode,
+	struct file *file)
+{
+	return single_open(file, dbg_force_user_degamma_show,
+		inode->i_private);
+}
+
+static ssize_t dbg_force_user_degamma_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_dc_win *win = m->private;
+	long   new_state;
+	int    ret;
+
+	if (!win)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &new_state);
+	if (ret < 0)
+		return ret;
+
+	if (new_state == 1)
+		win->force_user_degamma = true;
+	else if (new_state == 0)
+		win->force_user_degamma = false;
+
+	return len;
+}
+
+static const struct file_operations dbg_force_user_degamma_fops = {
+	.open = dbg_force_user_degamma_open,
+	.read = seq_read,
+	.write = dbg_force_user_degamma_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static const struct file_operations dbg_degamma_fops = {
+	.open = dbg_degamma_open,
+	.read = seq_read,
+	.write = dbg_degamma_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static int dbg_vrr_enable_show(struct seq_file *m, void *unused)
 {
 	struct tegra_vrr *vrr = m->private;
@@ -2524,7 +2626,7 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 {
 	struct dentry *retval, *vrrdir;
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	struct dentry *windir, *wincscdir;
+	struct dentry *windir, *wincscdir, *windegammadir;
 	char   winname[50];
 	u32 i;
 #endif
@@ -2676,6 +2778,20 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 			retval = debugfs_create_file("color_expand_enable",
 					0444, windir, win,
 					&dbg_color_expand_enable_fops);
+			if (!retval)
+				goto remove_out;
+
+			windegammadir = debugfs_create_dir("degamma", windir);
+			if (!windegammadir)
+				goto remove_out;
+
+			retval = debugfs_create_file("degamma",
+					0444, windegammadir, win,
+					&dbg_degamma_fops);
+
+			retval = debugfs_create_file("force_user_degamma",
+					0444, windegammadir, win,
+					&dbg_force_user_degamma_fops);
 			if (!retval)
 				goto remove_out;
 
@@ -6056,6 +6172,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			}
 			if (tegra_dc_is_nvdisplay()) {
 				win->force_user_csc = false;
+				win->force_user_degamma = false;
 				tegra_dc_init_nvdisp_lut_defaults(
 							&win->nvdisp_lut);
 			}

@@ -456,6 +456,101 @@ int tegra_nvdisp_get_degamma_config(struct tegra_dc *dc,
 	return ret;
 }
 
+/* Degamma is programmed out-of-order here (input from debugfs).
+ * In-order degamma programming is done in tegra_nvdisp_win_attribute.
+ */
+int tegra_nvdisp_set_degamma_user_config(struct tegra_dc_win *win,
+				     long degamma_flag)
+{
+	u32 reg_val = 0;
+	u32 mask = 0;
+	u32 act_req_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
+	int ret = 0;
+
+	struct tegra_dc *dc = win->dc;
+
+	if (!WIN_IS_ENABLED(win))
+		return 0;
+
+	mutex_lock(&dc->lock);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return 0;
+	}
+
+	tegra_dc_get(win->dc);
+
+	reg_val = nvdisp_win_read(win, win_win_set_params_r());
+	mask = win_win_set_params_degamma_range_mask_f();
+	reg_val &= ~mask;
+
+	switch (degamma_flag) {
+	case NVDISP_DEGAMMA_NONE:
+		reg_val |= win_win_set_params_degamma_range_none_f();
+		break;
+	case NVDISP_DEGAMMA_SRGB:
+		reg_val |= win_win_set_params_degamma_range_srgb_f();
+		break;
+	case NVDISP_DEGAMMA_YUV_8_10:
+		reg_val |= win_win_set_params_degamma_range_yuv8_10_f();
+		break;
+	case NVDISP_DEGAMMA_YUV_12:
+		reg_val |= win_win_set_params_degamma_range_yuv12_f();
+		break;
+	default:
+		dev_err(&win->dc->ndev->dev,
+			"Invalid degamma setting.\n");
+		ret = -EINVAL;
+		goto err;
+	}
+	nvdisp_win_write(win, reg_val, win_win_set_params_r());
+
+	act_req_mask |= nvdisp_cmd_state_ctrl_a_act_req_enable_f() << win->idx;
+	tegra_dc_writel(win->dc, act_req_mask, nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r());
+
+	if (dc->out->flags == TEGRA_DC_OUT_CONTINUOUS_MODE) {
+		/* wait for ACT_REQ to complete or time out */
+		if (tegra_dc_poll_register(dc, nvdisp_cmd_state_ctrl_r(),
+					   act_req_mask, 0, 1,
+					   NVDISP_TEGRA_POLL_TIMEOUT_MS))
+			dev_err(&dc->ndev->dev,
+				"dc timeout waiting to clear ACT_REQ");
+	}
+err:
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+
+	return ret;
+}
+
+int tegra_nvdisp_get_degamma_user_config(struct tegra_dc_win *win)
+{
+	u32 reg_val = 0;
+	u32 mask = 0;
+	long degamma_flag = 0;
+
+	if (!WIN_IS_ENABLED(win))
+		return 0;
+
+	reg_val = nvdisp_win_read(win, win_win_set_params_r());
+	mask = win_win_set_params_degamma_range_mask_f();
+	reg_val &= mask;
+
+	if (reg_val == win_win_set_params_degamma_range_none_f())
+		degamma_flag = NVDISP_DEGAMMA_NONE;
+	else if (reg_val == win_win_set_params_degamma_range_srgb_f())
+		degamma_flag = NVDISP_DEGAMMA_SRGB;
+	else if (reg_val == win_win_set_params_degamma_range_yuv8_10_f())
+		degamma_flag = NVDISP_DEGAMMA_YUV_8_10;
+	else if (reg_val == win_win_set_params_degamma_range_yuv12_f())
+		degamma_flag = NVDISP_DEGAMMA_YUV_12;
+	else
+		degamma_flag = -EINVAL;
+
+	return degamma_flag;
+}
+
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 				      bool wait_for_vblank)
 {
@@ -596,7 +691,8 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 	else if (win->flags & TEGRA_WIN_FLAG_INPUT_RANGE_LIMITED)
 		win_params = win_win_set_params_in_range_limited_f();
 
-	win_params |= tegra_nvdisp_get_degamma_config(dc, win);
+	if (!win->force_user_degamma)
+		win_params |= tegra_nvdisp_get_degamma_config(dc, win);
 
 	/* color_space settings */
 	if (yuv) {
@@ -1016,8 +1112,10 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 		win->is_scaler_coeff_set = true;
 	}
 
-	win->nvdisp_win_csc = dc->default_csc;
-	win->csc_dirty = true;
+	if (!win->force_user_csc) {
+		win->nvdisp_win_csc = dc->default_csc;
+		win->csc_dirty = true;
+	}
 
 	return 0;
 }

@@ -136,6 +136,7 @@ struct tegra_dc_win {
 
 	struct tegra_dc_nvdisp_win_csc	nvdisp_win_csc;
 	bool force_user_csc;
+	bool force_user_degamma;
 	struct tegra_dc_win_csc	win_csc;
 	bool			csc_dirty;
 

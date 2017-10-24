@@ -369,6 +369,9 @@ int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
 int tegra_nvdisp_is_powered(struct tegra_dc *dc);
 int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y);
 int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc);
+int tegra_nvdisp_set_degamma_user_config(struct tegra_dc_win *win,
+				    long degamma_flag);
+int tegra_nvdisp_get_degamma_user_config(struct tegra_dc_win *win);
 #else
 static inline int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 					  struct tegra_dc_ext_crc_conf *conf)
@@ -450,6 +453,15 @@ static inline int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 	return -ENOTSUPP;
 }
 static inline int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc)
+{
+	return -ENOTSUPP;
+}
+static inline int tegra_nvdisp_set_degamma_user_config(struct tegra_dc_win *win,
+						   long degamma_flag)
+{
+	return -ENOTSUPP;
+}
+static inline int tegra_nvdisp_get_degamma_user_config(struct tegra_dc_win *win)
 {
 	return -ENOTSUPP;
 }

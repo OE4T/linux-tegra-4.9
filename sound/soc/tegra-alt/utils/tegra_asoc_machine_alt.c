@@ -1185,10 +1185,6 @@ static struct snd_soc_codec_conf
 		.dev_name = "tegra210-dmic.2",
 		.name_prefix = "DMIC3",
 	},
-	[TEGRA210_CODEC_SPDIF_CONF] = {
-		.dev_name = "tegra210-spdif",
-		.name_prefix = "SPDIF",
-	},
 };
 
 static struct snd_soc_dai_link
@@ -2966,10 +2962,6 @@ static struct snd_soc_codec_conf
 	[TEGRA186_CODEC_DMIC4_CONF] = {
 		.dev_name = "tegra210-dmic.3",
 		.name_prefix = "DMIC4",
-	},
-	[TEGRA186_CODEC_SPDIF_CONF] = {
-		.dev_name = "tegra210-spdif",
-		.name_prefix = "SPDIF",
 	},
 	[TEGRA186_CODEC_DSPK1_CONF] = {
 		.dev_name = "tegra186-dspk.0",

@@ -290,7 +290,6 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("m Headphone", NULL),
 	SND_SOC_DAPM_HP("n Headphone", NULL),
 	SND_SOC_DAPM_HP("o Headphone", NULL),
-	SND_SOC_DAPM_HP("e Headphone", NULL),
 	SND_SOC_DAPM_HP("s Headphone", NULL),
 
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
@@ -304,7 +303,6 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("b Mic", NULL),
 	SND_SOC_DAPM_MIC("c Mic", NULL),
 	SND_SOC_DAPM_MIC("d Mic", NULL),
-	SND_SOC_DAPM_MIC("e Mic", NULL),
 	SND_SOC_DAPM_MIC("s Mic", NULL),
 };
 
@@ -793,28 +791,6 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 				SND_SOC_CLOCK_IN);
 			if (err < 0) {
 				dev_err(card->dev, "codec_dai clock not set\n");
-				return err;
-			}
-		}
-	}
-
-	rtd = snd_soc_get_pcm_runtime(card, "spdif-playback");
-	if (rtd && (clk_rate >= 32000)) {
-		dai_params =
-		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
-
-		if (is_playback) {
-			err = snd_soc_dai_set_sysclk(rtd->cpu_dai, 0,
-						clk_rate, SND_SOC_CLOCK_OUT);
-			if (err < 0) {
-				dev_err(card->dev, "cpu_dai out clock not set\n");
-				return err;
-			}
-		} else {
-			err = snd_soc_dai_set_sysclk(rtd->cpu_dai, 0,
-						clk_rate, SND_SOC_CLOCK_IN);
-			if (err < 0) {
-				dev_err(card->dev, "cpu_dai in clock not set\n");
 				return err;
 			}
 		}

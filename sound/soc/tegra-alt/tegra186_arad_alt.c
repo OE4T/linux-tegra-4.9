@@ -179,7 +179,6 @@ static const int tegra186_arad_mux_value[] = {
 	12, 13, 14, 15,	/* DMIC1~4 */
 	24, 25,	/* DSPK1~2 */
 	26, 27,	/* IQC1~2 */
-	28, 29, 30, 31,	/* SPDIF_RX1,2 & SPDIF_TX1,2 */
 };
 
 static const char * const tegra186_arad_mux_text[] = {
@@ -198,10 +197,6 @@ static const char * const tegra186_arad_mux_text[] = {
 	"DSPK2",
 	"IQC1",
 	"IQC2",
-	"SPDIF1_RX1",
-	"SPDIF1_RX2",
-	"SPDIF1_TX1",
-	"SPDIF1_TX2",
 };
 
 static int tegra186_arad_mux_get(struct snd_kcontrol *kcontrol,

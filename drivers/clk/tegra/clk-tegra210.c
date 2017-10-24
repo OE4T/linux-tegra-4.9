@@ -3447,7 +3447,7 @@ static __init void tegra210_shared_clk_init(char *sclk_high_clk)
 
 	clk = tegra_clk_register_cbus("abus", "pll_a1",
 				      TEGRA_SHARED_BUS_RETENTION | TEGRA_SHARED_BUS_ROUND_PASS_THRU,
-				      "pll_p", 38400000, t210b01 ? 1200000000 : 844800000);
+				      "pll_p_out_adsp", 38400000, t210b01 ? 1200000000 : 844800000);
 	clks[TEGRA210_CLK_ABUS] = clk;
 
 	if (clks[TEGRA210_CLK_SCLK_SKIPPER]) {
@@ -3958,11 +3958,6 @@ static void tegra210_clk_resume(void)
 				pll_u_out1_rate);
 	tegra_clk_pll_out_resume(clks[TEGRA210_CLK_PLL_U_OUT2],
 				pll_u_out2_rate);
-
-	/* reprogram PLLE post divider */
-	val = car_readl(PLLRE_BASE, 0);
-	val &= ~(0xf << 16);
-	car_writel(val | pll_re_out_div, PLLRE_BASE, 0);
 
 	tegra_clk_pll_out_resume(clks[TEGRA210_CLK_PLL_C_OUT1],
 					pll_c_out1_rate);

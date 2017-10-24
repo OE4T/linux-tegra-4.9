@@ -33,6 +33,7 @@ struct tegra_rce_rm {
 		void *base;
 		dma_addr_t dma;
 	} scratch;
+	struct device_dma_parameters dma_parms;
 };
 
 static int tegra_rce_rm_remove(struct platform_device *pdev)
@@ -57,6 +58,10 @@ static int tegra_rce_rm_probe(struct platform_device *pdev)
 	rm = devm_kzalloc(dev, sizeof(*rm), GFP_KERNEL);
 	if (rm == NULL)
 		return -ENOMEM;
+
+	dev->dma_parms = &rm->dma_parms;
+	dma_set_max_seg_size(dev, UINT_MAX);
+
 	ret = of_property_read_u32_array(dev->of_node, NV(scratch-area),
 					scratch_area, ARRAY_SIZE(scratch_area));
 	if (ret) {
@@ -108,6 +113,8 @@ int rce_rm_map_carveout_for_device(struct platform_device *pdev,
 		sg_free_table(sgt);
 		return -ENXIO;
 	}
+
+	pdev->dev.dma_parms = NULL;
 
 	return 0;
 }

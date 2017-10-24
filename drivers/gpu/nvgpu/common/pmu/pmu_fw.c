@@ -2226,6 +2226,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 
 	nvgpu_log_fn(g, " ");
 
@@ -2246,6 +2248,11 @@ static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 
 	if (g->acr.hsbl_fw)
 		nvgpu_release_firmware(g, g->acr.hsbl_fw);
+
+	nvgpu_dma_unmap_free(vm, &g->acr.acr_ucode);
+	nvgpu_dma_unmap_free(vm, &g->acr.hsbl_ucode);
+
+	nvgpu_dma_unmap_free(vm, &pmu->seq_buf);
 
 	nvgpu_mutex_destroy(&pmu->elpg_mutex);
 	nvgpu_mutex_destroy(&pmu->pg_mutex);

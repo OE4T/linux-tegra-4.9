@@ -180,12 +180,6 @@
 			status = "okay";
 		};
 
-		spdif@702d6000 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <>;
-			pinctrl-1 = <>;
-			status = "okay";
-		};
 	};
 
 	adsp_audio {

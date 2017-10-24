@@ -418,10 +418,6 @@
 			status = "disabled";
 		};
 
-		spdif@702d6000 {
-			status = "disabled";
-		};
-
 		iqc@702de000 {
 			status = "disabled";
 		};

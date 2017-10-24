@@ -285,6 +285,11 @@ int camera_common_g_mbus_config(struct v4l2_subdev *sd,
 int camera_common_get_framesync(struct v4l2_subdev *sd,
 		struct camera_common_framesync *vshs);
 
+/* Common initialize and cleanup for camera */
+int camera_common_initialize(struct camera_common_data *s_data,
+		const char *dev_name);
+void camera_common_cleanup(struct camera_common_data *s_data);
+
 /* Focuser */
 int camera_common_focuser_init(struct camera_common_focuser_data *s_data);
 int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on);

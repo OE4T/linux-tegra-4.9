@@ -818,6 +818,46 @@ int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on)
 
 EXPORT_SYMBOL_GPL(camera_common_focuser_s_power);
 
+int camera_common_initialize(struct camera_common_data *s_data,
+		const char *dev_name)
+{
+	int err = 0;
+	char debugfs_name[10];
+
+	if (s_data->dev == NULL)
+		return -EINVAL;
+
+	err = camera_common_parse_ports(s_data->dev, s_data);
+	if (err) {
+		dev_err(s_data->dev, "Failed to find port info.\n");
+		return err;
+	}
+
+
+	err = sensor_common_init_sensor_properties(s_data->dev,
+						s_data->dev->of_node,
+						&s_data->sensor_props);
+	if (err) {
+		dev_err(s_data->dev,
+			"Could not initialize sensor properties.\n");
+		return err;
+	}
+
+	sprintf(debugfs_name, "%s_%c", dev_name, s_data->csi_port + 'a');
+	dev_dbg(s_data->dev, "%s_probe: name %s\n", dev_name, debugfs_name);
+
+	camera_common_create_debugfs(s_data, debugfs_name);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(camera_common_initialize);
+
+void camera_common_cleanup(struct camera_common_data *s_data)
+{
+	camera_common_remove_debugfs(s_data);
+}
+EXPORT_SYMBOL_GPL(camera_common_cleanup);
+
 int camera_common_focuser_init(struct camera_common_focuser_data *s_data)
 {
 	int err = 0;

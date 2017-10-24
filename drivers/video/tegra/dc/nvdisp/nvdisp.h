@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdisp.h
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -33,10 +33,6 @@ struct nvdisp_request_wq {
 	int			timeout_per_entry;
 };
 
-struct nvdisp_common_imp_caps {
-	u32 total_mempool_size_bytes;
-};
-
 struct nvdisp_common_imp_data {
 	struct list_head imp_settings_queue;
 
@@ -45,8 +41,8 @@ struct nvdisp_common_imp_data {
 
 	struct mrq_emc_dvfs_latency_response emc_dvfs_table;
 
-	struct nvdisp_common_imp_caps caps;
-	bool caps_initialized;
+	struct tegra_dc_ext_imp_mc_caps mc_caps;
+	bool reg_caps_initialized;
 };
 
 void tegra_nvdisp_set_background_color(struct tegra_dc *dc);

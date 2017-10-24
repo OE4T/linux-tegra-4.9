@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdisp.c
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1132,6 +1132,19 @@ static void tegra_nvdisp_init_imp_wqs(void)
 	reservation_wq->timeout_per_entry = timeout;
 }
 
+static void tegra_nvdisp_init_imp_mc_caps(void)
+{
+	struct tegra_dc_ext_imp_mc_caps *mc_caps = &g_imp.mc_caps;
+
+	mc_caps->peak_hubclk_hz = clk_round_rate(hubclk, ULONG_MAX);
+	mc_caps->num_dram_channels = tegra_bwmgr_get_dram_num_channels();
+
+	if (tegra_dc_is_t19x())
+		mc_caps->request_batch_size = 8;
+	else
+		mc_caps->request_batch_size = 32;
+}
+
 static void tegra_nvdisp_init_common_imp_data(void)
 {
 	INIT_LIST_HEAD(&g_imp.imp_settings_queue);
@@ -1141,6 +1154,8 @@ static void tegra_nvdisp_init_common_imp_data(void)
 	tegra_bpmp_send_receive(MRQ_EMC_DVFS_LATENCY, NULL, 0,
 			&g_imp.emc_dvfs_table,
 			sizeof(g_imp.emc_dvfs_table));
+
+	tegra_nvdisp_init_imp_mc_caps();
 }
 
 static u32 _tegra_nvdisp_get_total_mempool_size(struct tegra_dc *dc)
@@ -1160,14 +1175,14 @@ static u32 _tegra_nvdisp_get_total_mempool_size(struct tegra_dc *dc)
 #undef MEMPOOL_WIDTH
 }
 
-static void tegra_nvdisp_init_common_imp_caps(struct tegra_dc *dc)
+static void tegra_nvdisp_init_common_imp_reg_caps(struct tegra_dc *dc)
 {
 	mutex_lock(&tegra_nvdisp_lock);
 
-	if (unlikely(!g_imp.caps_initialized)) {
-		g_imp.caps.total_mempool_size_bytes =
+	if (unlikely(!g_imp.reg_caps_initialized)) {
+		g_imp.mc_caps.total_mempool_size_bytes =
 				_tegra_nvdisp_get_total_mempool_size(dc);
-		g_imp.caps_initialized = true;
+		g_imp.reg_caps_initialized = true;
 	}
 
 	mutex_unlock(&tegra_nvdisp_lock);
@@ -2111,7 +2126,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	 * putting this function call here during head enable in order to avoid
 	 * separate powergate/rst handling during init.
 	 */
-	tegra_nvdisp_init_common_imp_caps(dc);
+	tegra_nvdisp_init_common_imp_reg_caps(dc);
 
 	res = tegra_nvdisp_head_init(dc);
 	res |= tegra_nvdisp_postcomp_init(dc);
@@ -2821,7 +2836,7 @@ int tegra_nvdisp_get_imp_user_info(struct tegra_dc_ext_imp_user_info *info)
 {
 	int ret = 0;
 
-	info->mempool_size = g_imp.caps.total_mempool_size_bytes;
+	info->mempool_size = g_imp.mc_caps.total_mempool_size_bytes;
 
 	ret = tegra_nvdisp_get_v_taps_user_info(info);
 	if (ret)

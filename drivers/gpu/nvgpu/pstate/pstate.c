@@ -307,7 +307,7 @@ static int parse_pstate_entry_5x(struct gk20a *g,
 static int parse_pstate_table_5x(struct gk20a *g,
 		struct vbios_pstate_header_5x *hdr)
 {
-	struct pstate _pstate, *pstate = &_pstate;
+	struct pstate _pstate, *pstate;
 	struct vbios_pstate_entry_5x *entry;
 	u32 entry_size;
 	u8 i;
@@ -333,11 +333,11 @@ static int parse_pstate_table_5x(struct gk20a *g,
 		if (entry->pstate_level == VBIOS_PERFLEVEL_SKIP_ENTRY)
 			continue;
 
-		err = parse_pstate_entry_5x(g, hdr, entry, pstate);
+		err = parse_pstate_entry_5x(g, hdr, entry, &_pstate);
 		if (err)
 			goto done;
 
-		pstate = pstate_construct(g, pstate);
+		pstate = pstate_construct(g, &_pstate);
 		if (!pstate)
 			goto done;
 

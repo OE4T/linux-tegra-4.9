@@ -463,6 +463,17 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 	return 0;
 }
 
+u32 gk20a_fifo_act_eng_interrupt_mask(struct gk20a *g, u32 act_eng_id)
+{
+	struct fifo_engine_info_gk20a *engine_info = NULL;
+
+	engine_info = gk20a_fifo_get_engine_info(g, act_eng_id);
+	if (engine_info)
+		return engine_info->intr_mask;
+
+	return 0;
+}
+
 u32 gk20a_fifo_engine_interrupt_mask(struct gk20a *g)
 {
 	u32 eng_intr_mask = 0;

@@ -276,6 +276,7 @@ void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 int gk20a_fifo_wait_engine_idle(struct gk20a *g);
 bool gk20a_fifo_is_engine_busy(struct gk20a *g);
 u32 gk20a_fifo_engine_interrupt_mask(struct gk20a *g);
+u32 gk20a_fifo_act_eng_interrupt_mask(struct gk20a *g, u32 act_eng_id);
 u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g);
 u32 gk20a_fifo_get_failing_engine_data(struct gk20a *g,
 		int *__id, bool *__is_tsg);

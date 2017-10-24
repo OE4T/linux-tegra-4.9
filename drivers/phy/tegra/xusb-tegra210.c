@@ -201,6 +201,12 @@
 #define XUSB_PADCTL_UPHY_MISC_PAD_CTL1_AUX_RX_TERM_EN BIT(18)
 #define XUSB_PADCTL_UPHY_MISC_PAD_CTL1_AUX_RX_MODE_OVRD BIT(13)
 
+#define XUSB_PADCTL_UPHY_MISC_PAD_PX_CTL8(x) (0x460 + (x) * (0x1c))
+#define CFG_ADDR(x) (((x) & 0xff) << 16)
+#define CFG_WDATA(x) (((x) & 0xffff) << 0)
+#define CFG_RESET (1 << 27)
+#define CFG_WS (1 << 24)
+
 #define XUSB_PADCTL_UPHY_PLL_S0_CTL1 0x860
 
 #define XUSB_PADCTL_UPHY_PLL_S0_CTL2 0x864
@@ -210,6 +216,8 @@
 #define XUSB_PADCTL_UPHY_PLL_S0_CTL5 0x870
 
 #define XUSB_PADCTL_UPHY_PLL_S0_CTL8 0x87c
+
+#define XUSB_PADCTL_UPHY_PLL_S0_CTL10 0x384
 
 #define XUSB_PADCTL_UPHY_MISC_PAD_S0_CTL1 0x960
 
@@ -240,6 +248,18 @@
 #define		ID_OVERRIDE_GROUNDED	ID_OVERRIDE(0)
 #define		ID_OVERRIDE_FLOATING	ID_OVERRIDE(8)
 
+struct init_data {
+	u8 cfg_addr;
+	u16 cfg_wdata;
+};
+
+static struct init_data usb3_pll_g1_init_data[] = {
+	{.cfg_addr = 0x2,  .cfg_wdata = 0x0000},
+	{.cfg_addr = 0x3,  .cfg_wdata = 0x7051},
+	{.cfg_addr = 0x25, .cfg_wdata = 0x0130},
+	{.cfg_addr = 0x1E, .cfg_wdata = 0x0017},
+};
+
 static unsigned int
 tegra210_usb3_lane_map(struct tegra_xusb_lane *lane);
 
@@ -261,13 +281,31 @@ to_tegra210_xusb_padctl(struct tegra_xusb_padctl *padctl)
 	return container_of(padctl, struct tegra210_xusb_padctl, base);
 }
 
+static int t210b01_compatible(struct tegra_xusb_padctl *padctl)
+{
+	struct device_node *np;
+	const char *compatible;
+
+	np = padctl->dev->of_node;
+	compatible = of_get_property(np, "compatible", NULL);
+
+	if (!compatible) {
+		dev_err(padctl->dev, "Failed to get compatible property\n");
+		return -ENODEV;
+	}
+
+	if (strstr(compatible, "tegra210b01") != NULL)
+		return 1;
+	return 0;
+}
+
 /* must be called under padctl->lock */
 static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 {
 	struct tegra_xusb_pcie_pad *pcie = to_pcie_pad(padctl->pcie);
 	unsigned long timeout;
 	u32 value;
-	int err;
+	int err, i;
 
 	if (pcie->enable > 0) {
 		pcie->enable++;
@@ -278,9 +316,27 @@ static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 	if (err < 0)
 		return err;
 
+	if (t210b01_compatible(padctl) == 1) {
+		err = clk_prepare_enable(pcie->uphy_mgmt_clk);
+		if (err < 0)
+			return err;
+	}
+
 	err = reset_control_deassert(pcie->rst);
 	if (err < 0)
 		goto disable;
+
+	if (t210b01_compatible(padctl) == 1) {
+		for (i = 0; i < ARRAY_SIZE(usb3_pll_g1_init_data); i++) {
+			value = 0;
+			value |= CFG_ADDR(usb3_pll_g1_init_data[i].cfg_addr);
+			value |= CFG_WDATA(usb3_pll_g1_init_data[i].cfg_wdata);
+			value |= CFG_RESET;
+			value |= CFG_WS;
+			padctl_writel(padctl, value,
+					XUSB_PADCTL_UPHY_PLL_S0_CTL10);
+		}
+	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_P0_CTL2);
 	value &= ~(XUSB_PADCTL_UPHY_PLL_CTL2_CAL_CTRL_MASK <<
@@ -468,6 +524,8 @@ reset:
 	reset_control_assert(pcie->rst);
 disable:
 	clk_disable_unprepare(pcie->pll);
+	if (t210b01_compatible(padctl) == 1)
+		clk_disable_unprepare(pcie->uphy_mgmt_clk);
 	return err;
 }
 
@@ -485,6 +543,8 @@ static void tegra210_pex_uphy_disable(struct tegra_xusb_padctl *padctl)
 
 	reset_control_assert(pcie->rst);
 	clk_disable_unprepare(pcie->pll);
+	if (t210b01_compatible(padctl) == 1)
+		clk_disable_unprepare(pcie->uphy_mgmt_clk);
 
 unlock:
 	mutex_unlock(&padctl->lock);
@@ -1563,6 +1623,15 @@ static const struct tegra_xusb_lane_soc tegra210_pcie_lanes[] = {
 	TEGRA210_LANE("pcie-6", 0x028, 24, 0x3, pcie),
 };
 
+static const struct tegra_xusb_lane_soc tegra210b01_pcie_lanes[] = {
+	TEGRA210_LANE("pcie-0", 0x28, 12, 0x3, pcie),
+	TEGRA210_LANE("pcie-1", 0x28, 14, 0x3, pcie),
+	TEGRA210_LANE("pcie-2", 0x28, 16, 0x3, pcie),
+	TEGRA210_LANE("pcie-3", 0x28, 18, 0x3, pcie),
+	TEGRA210_LANE("pcie-4", 0x28, 20, 0x3, pcie),
+	TEGRA210_LANE("pcie-5", 0x28, 22, 0x3, pcie),
+};
+
 static struct tegra_xusb_lane *
 tegra210_pcie_lane_probe(struct tegra_xusb_pad *pad, struct device_node *np,
 			 unsigned int index)
@@ -1712,6 +1781,15 @@ tegra210_pcie_pad_probe(struct tegra_xusb_padctl *padctl,
 		goto unregister;
 	}
 
+	if (t210b01_compatible(padctl) == 1) {
+		pcie->uphy_mgmt_clk = devm_clk_get(&pad->dev, "uphy_mgmt");
+		if (IS_ERR(pcie->uphy_mgmt_clk)) {
+			err = PTR_ERR(pcie->uphy_mgmt_clk);
+			dev_err(&pad->dev,
+				"failed to get uphy_mgmt_clk clock: %d\n", err);
+		}
+	}
+
 	pcie->rst = devm_reset_control_get(&pad->dev, "phy");
 	if (IS_ERR(pcie->rst)) {
 		err = PTR_ERR(pcie->rst);
@@ -1749,6 +1827,13 @@ static const struct tegra_xusb_pad_soc tegra210_pcie_pad = {
 	.name = "pcie",
 	.num_lanes = ARRAY_SIZE(tegra210_pcie_lanes),
 	.lanes = tegra210_pcie_lanes,
+	.ops = &tegra210_pcie_ops,
+};
+
+static const struct tegra_xusb_pad_soc tegra210b01_pcie_pad = {
+	.name = "pcie",
+	.num_lanes = ARRAY_SIZE(tegra210b01_pcie_lanes),
+	.lanes = tegra210b01_pcie_lanes,
 	.ops = &tegra210_pcie_ops,
 };
 
@@ -1923,6 +2008,11 @@ static const struct tegra_xusb_pad_soc * const tegra210_pads[] = {
 	&tegra210_sata_pad,
 };
 
+static const struct tegra_xusb_pad_soc * const tegra210b01_pads[] = {
+	&tegra210_usb2_pad,
+	&tegra210b01_pcie_pad,
+};
+
 static int tegra210_usb2_port_enable(struct tegra_xusb_port *port)
 {
 	return 0;
@@ -2086,10 +2176,26 @@ static const struct tegra_xusb_lane_map tegra210_usb3_map[] = {
 	{ 0, NULL,   0 }
 };
 
+static const struct tegra_xusb_lane_map tegra210b01_usb3_map[] = {
+	{ 0, "pcie", 5 },
+	{ 1, "pcie", 4 },
+	{ 2, "pcie", 1 },
+	{ 0, NULL,   0 }
+};
+
 static struct tegra_xusb_lane *
 tegra210_usb3_port_map(struct tegra_xusb_port *port)
 {
-	return tegra_xusb_port_find_lane(port, tegra210_usb3_map, "xusb");
+	int err = t210b01_compatible(port->padctl);
+
+	if (err == 1)
+		return tegra_xusb_port_find_lane(port,
+						tegra210b01_usb3_map, "xusb");
+	else if (err == 0)
+		return tegra_xusb_port_find_lane(port,
+						tegra210_usb3_map, "xusb");
+	else
+		return NULL;
 }
 
 static const struct tegra_xusb_port_ops tegra210_usb3_port_ops = {
@@ -2117,8 +2223,16 @@ tegra210_usb3_lane_find_port_index(struct tegra_xusb_lane *lane,
 static unsigned int
 tegra210_usb3_lane_map(struct tegra_xusb_lane *lane)
 {
-	return tegra210_usb3_lane_find_port_index(lane,
-				tegra210_usb3_map, "xusb");
+	int err = t210b01_compatible(lane->pad->padctl);
+
+	if (err == 1)
+		return tegra210_usb3_lane_find_port_index(lane,
+					tegra210b01_usb3_map, "xusb");
+	else if (err == 0)
+		return tegra210_usb3_lane_find_port_index(lane,
+					tegra210_usb3_map, "xusb");
+	else
+		return err;
 }
 
 static inline bool is_usb3_phy(struct phy *phy)
@@ -2368,6 +2482,14 @@ static const char * const tegra210_supply_names[] = {
 	"dvddio_sata",
 };
 
+static const char * const tegra210b01_supply_names[] = {
+	"avdd_pll_uerefe",
+	"hvdd_pex_pll_e",
+	"dvdd_pex_pll",
+	"hvddio_pex",
+	"dvddio_pex",
+};
+
 const struct tegra_xusb_padctl_soc tegra210_xusb_padctl_soc = {
 	.num_pads = ARRAY_SIZE(tegra210_pads),
 	.pads = tegra210_pads,
@@ -2390,6 +2512,25 @@ const struct tegra_xusb_padctl_soc tegra210_xusb_padctl_soc = {
 	.num_supplies = ARRAY_SIZE(tegra210_supply_names),
 };
 EXPORT_SYMBOL_GPL(tegra210_xusb_padctl_soc);
+
+const struct tegra_xusb_padctl_soc tegra210b01_xusb_padctl_soc = {
+	.num_pads = ARRAY_SIZE(tegra210b01_pads),
+	.pads = tegra210b01_pads,
+	.ports = {
+		.usb2 = {
+			.ops = &tegra210_usb2_port_ops,
+			.count = 4,
+		},
+		.usb3 = {
+			.ops = &tegra210_usb3_port_ops,
+			.count = 4,
+		},
+	},
+	.ops = &tegra210_xusb_padctl_ops,
+	.supply_names = tegra210b01_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra210b01_supply_names),
+};
+EXPORT_SYMBOL_GPL(tegra210b01_xusb_padctl_soc);
 
 MODULE_AUTHOR("Andrew Bresticker <abrestic@chromium.org>");
 MODULE_DESCRIPTION("NVIDIA Tegra 210 XUSB Pad Controller driver");

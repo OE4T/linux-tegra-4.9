@@ -3505,6 +3505,16 @@ static struct tegra_xudc_soc_data tegra210_xudc_soc_data = {
 	.invalid_seq_num = true,
 };
 
+static struct tegra_xudc_soc_data tegra210b01_xudc_soc_data = {
+	.device_id = XUDC_DEVICE_ID_T210,
+	.supply_names = tegra210_xudc_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra210_xudc_supply_names),
+	.u1_enable = false,
+	.u2_enable = true,
+	.lpm_enable = false,
+	.invalid_seq_num = false,
+};
+
 static struct tegra_xudc_soc_data tegra186_xudc_soc_data = {
 	.device_id = XUDC_DEVICE_ID_T186,
 	.supply_names = tegra186_xudc_supply_names,
@@ -3529,6 +3539,10 @@ static struct of_device_id tegra_xudc_of_match[] = {
 	{
 		.compatible = "nvidia,tegra210-xudc",
 		.data = &tegra210_xudc_soc_data
+	},
+	{
+		.compatible = "nvidia,tegra210b01-xudc",
+		.data = &tegra210b01_xudc_soc_data
 	},
 	{
 		.compatible = "nvidia,tegra186-xudc",

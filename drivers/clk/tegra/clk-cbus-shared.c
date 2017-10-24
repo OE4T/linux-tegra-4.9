@@ -292,7 +292,6 @@ static void clk_cbus_unprepare(struct clk_hw *hw)
 static bool bus_user_is_slower(struct tegra_clk_cbus_shared *a,
 			       struct tegra_clk_cbus_shared *b)
 {
-#ifdef CONFIG_TEGRA_DVFS
 	if (!a->max_rate)
 		a->max_rate = tegra_dvfs_get_maxrate(a->hw.clk);
 
@@ -300,9 +299,6 @@ static bool bus_user_is_slower(struct tegra_clk_cbus_shared *a,
 		b->max_rate = tegra_dvfs_get_maxrate(b->hw.clk);
 
 	return a->max_rate < b->max_rate;
-#else
-	return false;
-#endif
 }
 
 static unsigned long _clk_shared_bus_update(struct tegra_clk_cbus_shared *cbus,
@@ -805,11 +801,7 @@ static void sbus_build_round_table(struct clk_hw *hw)
 	 * If no dvfs specified, just add maximum rate entry. Othrwise, add
 	 * entries for all dvfs rates.
 	 */
-#ifdef CONFIG_TEGRA_DVFS
 	err = tegra_dvfs_get_freqs(hw->clk, &freqs, &num_freqs);
-#else
-	num_freqs = 0;
-#endif
 	if (err < 0 || num_freqs == 0) {
 		if (sbus->u.system.fallback)
 			return;

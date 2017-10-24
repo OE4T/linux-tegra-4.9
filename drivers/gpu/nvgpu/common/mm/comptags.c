@@ -91,5 +91,5 @@ void gk20a_comptag_allocator_destroy(struct gk20a *g,
 	 * unnecessary here.
 	 */
 	allocator->size = 0;
-	nvgpu_vfree(allocator->g, allocator->bitmap);
+	nvgpu_vfree(g, allocator->bitmap);
 }

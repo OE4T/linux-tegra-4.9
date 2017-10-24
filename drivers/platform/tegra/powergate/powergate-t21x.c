@@ -84,7 +84,6 @@ enum mc_client_type {
 	MC_CLIENT_SDMMC3	= 31,
 	MC_CLIENT_SDMMC4	= 32,
 	MC_CLIENT_ISP2B		= 33,
-	MC_CLIENT_GPU		= 34,
 	MC_CLIENT_NVDEC		= 37,
 	MC_CLIENT_APE		= 38,
 	MC_CLIENT_SE		= 39,
@@ -193,12 +192,6 @@ static struct tegra210_mc_client_info tegra210_pg_mc_info[] = {
 	[TEGRA210_POWER_DOMAIN_VE2] = {
 		.hot_reset_clients = {
 			[0] = MC_CLIENT_ISP2B,
-			[1] = MC_CLIENT_LAST,
-		},
-	},
-	[TEGRA210_POWER_DOMAIN_GPU] = {
-		.hot_reset_clients = {
-			[0] = MC_CLIENT_GPU,
 			[1] = MC_CLIENT_LAST,
 		},
 	},
@@ -493,14 +486,6 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 		.reset_id = { TEGRA210_CLK_ISPB },
 		.reset_id_num = 1,
 	},
-	[TEGRA210_POWER_DOMAIN_GPU] = {
-		.name = "gpu",
-		.clk_info = {
-			[0] = { .clk_name = "gpu_gate", .clk_type = CLK_AND_RST },
-			[1] = { .clk_name = "gpu_ref", .clk_type = CLK_ONLY },
-			[2] = { .clk_name = "pll_p_out5", .clk_type = CLK_ONLY },
-		},
-	},
 };
 
 struct mc_client_hotreset_reg {
@@ -527,7 +512,7 @@ struct tegra210_powergate_info {
 
 static struct tegra210_powergate_info t210_pg_info[TEGRA210_POWER_DOMAIN_MAX] = {
 	T210_POWERGATE_INFO(CRAIL, 0, CRAIL, CRAIL),
-	T210_POWERGATE_INFO(GPU, 1, GPU, GPU),
+	[1] = { .valid = false },
 	T210_POWERGATE_INFO(VENC, 2, VENC, VENC),
 	T210_POWERGATE_INFO(PCIE, 3, PCIE, PCIE),
 	T210_POWERGATE_INFO(VDEC, 4, VDEC, VDEC),
@@ -566,7 +551,6 @@ static struct tegra210_powergate_info t210_pg_info[TEGRA210_POWER_DOMAIN_MAX] = 
 
 static DEFINE_SPINLOCK(tegra210_pg_lock);
 
-static struct dvfs_rail *gpu_rail;
 static void __iomem *tegra_mc;
 static void __iomem *tegra_pmc;
 
@@ -612,8 +596,6 @@ static bool tegra210_pg_skip(int id)
 	major = tegra_hidrev_get_majorrev(hid);
 
 	switch (t210_pg_info[id].part_id) {
-	case TEGRA210_POWER_DOMAIN_GPU:
-		return true;
 	case TEGRA210_POWER_DOMAIN_VENC:
 	case TEGRA210_POWER_DOMAIN_VE2:
 		/* T214 has SE2 in place of ISP2 and powergate
@@ -630,12 +612,7 @@ static bool tegra210_pg_is_powered(int id)
 {
 	u32 status = 0;
 
-	if (id == TEGRA210_POWER_DOMAIN_GPU) {
-		if (gpu_rail)
-			status = tegra_dvfs_is_rail_up(gpu_rail);
-	} else {
-		status = pmc_read(PWRGATE_STATUS) & t210_pg_info[id].mask;
-	}
+	status = pmc_read(PWRGATE_STATUS) & t210_pg_info[id].mask;
 
 	return !!status;
 }
@@ -1192,147 +1169,6 @@ exit_unlock:
 	return ret;
 }
 
-static int tegra210_pg_gpu_powergate(int id)
-{
-	int ret = 0;
-	struct powergate_partition_info *partition = t210_pg_info[id].part_info;
-
-	trace_powergate(__func__, tegra210_pg_get_name(id), id, 1, 0);
-	mutex_lock(&partition->pg_mutex);
-
-	if (--partition->refcount > 0)
-		goto exit_unlock;
-
-	if (!tegra210_pg_is_powered(id)) {
-		WARN(1, "GPU rail is already off, refcount and status mismatch\n");
-		goto exit_unlock;
-	}
-
-	if (!partition->clk_info[0].clk_ptr)
-		get_clk_info(partition);
-
-	tegra210_pg_mc_flush(id);
-
-	udelay(10);
-
-	powergate_partition_assert_reset(partition);
-
-	udelay(10);
-
-	pmc_write(0x1, PMC_GPU_RG_CONTROL);
-	pmc_read(PMC_GPU_RG_CONTROL);
-
-	udelay(10);
-
-	partition_clk_disable(partition);
-
-	udelay(10);
-
-	tegra_soctherm_gpu_tsens_invalidate(1);
-
-	if (gpu_rail) {
-		ret = tegra_dvfs_rail_power_down(gpu_rail);
-		if (ret) {
-			WARN(1, "Could not power down GPU rail\n");
-			goto exit_unlock;
-		}
-	} else {
-		pr_info("No GPU regulator?\n");
-	}
-
-exit_unlock:
-	mutex_unlock(&partition->pg_mutex);
-	trace_powergate(__func__, tegra210_pg_get_name(id), id, 0, ret);
-	return ret;
-}
-
-static int tegra210_pg_gpu_unpowergate(int id)
-{
-	int ret = 0;
-	bool first = false;
-	struct powergate_partition_info *partition = t210_pg_info[id].part_info;
-
-	trace_powergate(__func__, tegra210_pg_get_name(id), id, 1, 0);
-	mutex_lock(&partition->pg_mutex);
-
-	if (partition->refcount++ > 0)
-		goto exit_unlock;
-
-	if (!gpu_rail) {
-		gpu_rail = tegra_dvfs_get_rail_by_name("vdd_gpu");
-		if (IS_ERR_OR_NULL(gpu_rail)) {
-			WARN(1, "No GPU regulator?\n");
-			goto err_power;
-		}
-		first = true;
-	}
-
-	if (tegra210_pg_is_powered(id)) {
-		WARN(1, "GPU rail is already on, refcount and status mismatch\n");
-		goto exit_unlock;
-	}
-
-	ret = tegra_dvfs_rail_power_up(gpu_rail);
-	if (ret) {
-		WARN(1, "Could not turn on GPU rail\n");
-		goto err_power;
-	}
-
-	tegra_soctherm_gpu_tsens_invalidate(0);
-
-	if (!partition->clk_info[0].clk_ptr)
-		get_clk_info(partition);
-
-	if (!first) {
-		ret = partition_clk_enable(partition);
-		if (ret) {
-			WARN(1, "Could not turn on partition clocks\n");
-			goto err_clk_on;
-		}
-	}
-
-	udelay(10);
-
-	powergate_partition_assert_reset(partition);
-
-	udelay(10);
-
-	pmc_write(0, PMC_GPU_RG_CONTROL);
-	pmc_read(PMC_GPU_RG_CONTROL);
-
-	udelay(10);
-
-	/*
-	 * Make sure all clok branches into GPU, except reference clock are
-	 * gated across resert de-assertion.
-	 */
-	clk_disable_unprepare(partition->clk_info[0].clk_ptr);
-	powergate_partition_deassert_reset(partition);
-	clk_prepare_enable(partition->clk_info[0].clk_ptr);
-
-	/* Flush MC after boot/railgate/SC7 */
-	tegra210_pg_mc_flush(id);
-
-	udelay(10);
-
-	tegra210_pg_mc_flush_done(id);
-
-	udelay(10);
-
-exit_unlock:
-	mutex_unlock(&partition->pg_mutex);
-	trace_powergate(__func__, tegra210_pg_get_name(id), id, 0, ret);
-	return ret;
-
-err_clk_on:
-	powergate_module(id);
-err_power:
-	mutex_unlock(&partition->pg_mutex);
-
-	trace_powergate(__func__, tegra210_pg_get_name(id), id, 0, ret);
-	return ret;
-}
-
 static int tegra210_pg_powergate_sor(int id)
 {
 	int ret;
@@ -1402,9 +1238,6 @@ static int tegra210_pg_powergate_partition(int id)
 	int ret;
 
 	switch (t210_pg_info[id].part_id) {
-		case TEGRA210_POWER_DOMAIN_GPU:
-			ret = tegra210_pg_gpu_powergate(id);
-			break;
 		case TEGRA210_POWER_DOMAIN_DISA:
 		case TEGRA210_POWER_DOMAIN_DISB:
 		case TEGRA210_POWER_DOMAIN_VENC:
@@ -1428,9 +1261,6 @@ static int tegra210_pg_unpowergate_partition(int id)
 	int ret;
 
 	switch (t210_pg_info[id].part_id) {
-		case TEGRA210_POWER_DOMAIN_GPU:
-			ret = tegra210_pg_gpu_unpowergate(id);
-			break;
 		case TEGRA210_POWER_DOMAIN_DISA:
 		case TEGRA210_POWER_DOMAIN_DISB:
 		case TEGRA210_POWER_DOMAIN_VENC:
@@ -1453,8 +1283,6 @@ static int tegra210_pg_powergate_clk_off(int id)
 {
 	int ret = 0;
 	struct powergate_partition_info *partition = t210_pg_info[id].part_info;
-
-	BUG_ON(id == TEGRA210_POWER_DOMAIN_GPU);
 
 	trace_powergate(__func__, tegra210_pg_get_name(id), id, 1, 0);
 	mutex_lock(&partition->pg_mutex);
@@ -1486,7 +1314,6 @@ static int tegra210_pg_unpowergate_clk_on(int id)
 	int ret = 0;
 	struct powergate_partition_info *partition = t210_pg_info[id].part_info;
 
-	BUG_ON(id == TEGRA210_POWER_DOMAIN_GPU);
 	trace_powergate(__func__, tegra210_pg_get_name(id), id, 1, 0);
 	mutex_lock(&partition->pg_mutex);
 
@@ -1621,8 +1448,7 @@ static int __init tegra210_disable_boot_partitions(void)
 		if (i != t210_pg_info[i].part_id)
 			continue;
 
-		if (t210_pg_info[i].part_info->disable_after_boot &&
-			(t210_pg_info[i].part_id != TEGRA210_POWER_DOMAIN_GPU)) {
+		if (t210_pg_info[i].part_info->disable_after_boot) {
 			pr_info("  %s\n", t210_pg_info[i].part_info->name);
 			tegra210_pg_powergate_partition(i);
 		}

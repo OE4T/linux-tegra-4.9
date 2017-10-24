@@ -50,24 +50,9 @@ u32  boardobjgrpconstruct_e32(struct gk20a *g,
 	if (status)
 		goto boardobjgrpconstruct_e32_exit;
 
-	pboardobjgrp_e32->super.destruct = boardobjgrpdestruct_e32;
-
 	pboardobjgrp_e32->super.pmuhdrdatainit = boardobjgrp_pmuhdrdatainit_e32;
 
 boardobjgrpconstruct_e32_exit:
-	return status;
-}
-
-u32 boardobjgrpdestruct_e32(struct boardobjgrp *pboardobjgrp)
-{
-	u32 status = 0;
-
-	gk20a_dbg_info("");
-
-	pboardobjgrp->mask     = NULL;
-	pboardobjgrp->objslots  = 0;
-	pboardobjgrp->ppobjects = NULL;
-
 	return status;
 }
 

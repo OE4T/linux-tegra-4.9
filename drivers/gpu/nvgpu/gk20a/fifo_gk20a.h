@@ -58,6 +58,9 @@ enum {
 #define PREEMPT_TIMEOUT_RC		1
 #define PREEMPT_TIMEOUT_NORC		0
 
+#define RC_YES				1
+#define RC_NO				0
+
 #define GRFIFO_TIMEOUT_CHECK_PERIOD_US 100000
 
 #define RC_TYPE_NORMAL			0
@@ -407,6 +410,8 @@ unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
 			u32 pbdma_intr_0, u32 *handled, u32 *error_notifier);
 unsigned int gk20a_fifo_handle_pbdma_intr_1(struct gk20a *g, u32 pbdma_id,
 			u32 pbdma_intr_1, u32 *handled, u32 *error_notifier);
+u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g, struct fifo_gk20a *f,
+			u32 pbdma_id, unsigned int rc);
 
 u32 gk20a_fifo_default_timeslice_us(struct gk20a *g);
 

@@ -2467,63 +2467,76 @@ unsigned int gk20a_fifo_handle_pbdma_intr_1(struct gk20a *g,
 
 	return rc_type;
 }
-static u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g,
-					struct fifo_gk20a *f,
-					u32 pbdma_id)
+
+static void gk20a_fifo_pbdma_fault_rc(struct gk20a *g,
+			struct fifo_gk20a *f, u32 pbdma_id,
+			u32 error_notifier)
+{
+	u32 status;
+	u32 id;
+
+	nvgpu_log(g, gpu_dbg_info, "pbdma id %d error notifier %d",
+			pbdma_id, error_notifier);
+	status = gk20a_readl(g, fifo_pbdma_status_r(pbdma_id));
+	/* Remove channel from runlist */
+	id = fifo_pbdma_status_id_v(status);
+	if (fifo_pbdma_status_id_type_v(status)
+			== fifo_pbdma_status_id_type_chid_v()) {
+		struct channel_gk20a *ch = &f->channel[id];
+
+		if (gk20a_channel_get(ch)) {
+			gk20a_set_error_notifier(ch, error_notifier);
+			gk20a_fifo_recover_ch(g, id, true);
+			gk20a_channel_put(ch);
+		}
+	} else if (fifo_pbdma_status_id_type_v(status)
+			== fifo_pbdma_status_id_type_tsgid_v()) {
+		struct tsg_gk20a *tsg = &f->tsg[id];
+		struct channel_gk20a *ch = NULL;
+
+		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
+		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+			if (gk20a_channel_get(ch)) {
+				gk20a_set_error_notifier(ch,
+					error_notifier);
+				gk20a_channel_put(ch);
+			}
+		}
+		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
+		gk20a_fifo_recover_tsg(g, id, true);
+	}
+}
+
+u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g, struct fifo_gk20a *f,
+			u32 pbdma_id, unsigned int rc)
 {
 	u32 pbdma_intr_0 = gk20a_readl(g, pbdma_intr_0_r(pbdma_id));
 	u32 pbdma_intr_1 = gk20a_readl(g, pbdma_intr_1_r(pbdma_id));
-	u32 status = gk20a_readl(g, fifo_pbdma_status_r(pbdma_id));
 
 	u32 handled = 0;
 	u32 error_notifier = NVGPU_CHANNEL_PBDMA_ERROR;
 	unsigned int rc_type = RC_TYPE_NO_RC;
 
-	gk20a_dbg_fn("");
-
-	gk20a_dbg(gpu_dbg_intr, "pbdma id intr pending %d %08x %08x", pbdma_id,
-			pbdma_intr_0, pbdma_intr_1);
 	if (pbdma_intr_0) {
+		nvgpu_log(g, gpu_dbg_info | gpu_dbg_intr,
+			"pbdma id %d intr_0 0x%08x pending",
+			pbdma_id, pbdma_intr_0);
 		rc_type = g->ops.fifo.handle_pbdma_intr_0(g, pbdma_id,
 				 pbdma_intr_0, &handled, &error_notifier);
 		gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
 	}
 
 	if (pbdma_intr_1) {
+		nvgpu_log(g, gpu_dbg_info | gpu_dbg_intr,
+			"pbdma id %d intr_1 0x%08x pending",
+			pbdma_id, pbdma_intr_1);
 		rc_type = g->ops.fifo.handle_pbdma_intr_1(g, pbdma_id,
 				 pbdma_intr_1, &handled, &error_notifier);
 		gk20a_writel(g, pbdma_intr_1_r(pbdma_id), pbdma_intr_1);
 	}
 
-	if (rc_type == RC_TYPE_PBDMA_FAULT) {
-		/* Remove the channel from runlist */
-		u32 id = fifo_pbdma_status_id_v(status);
-		if (fifo_pbdma_status_id_type_v(status)
-				== fifo_pbdma_status_id_type_chid_v()) {
-			struct channel_gk20a *ch = &f->channel[id];
-
-			if (gk20a_channel_get(ch)) {
-				gk20a_set_error_notifier(ch, error_notifier);
-				gk20a_fifo_recover_ch(g, id, true);
-				gk20a_channel_put(ch);
-			}
-		} else if (fifo_pbdma_status_id_type_v(status)
-				== fifo_pbdma_status_id_type_tsgid_v()) {
-			struct tsg_gk20a *tsg = &f->tsg[id];
-			struct channel_gk20a *ch = NULL;
-
-			nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
-				if (gk20a_channel_get(ch)) {
-					gk20a_set_error_notifier(ch,
-						error_notifier);
-					gk20a_channel_put(ch);
-				}
-			}
-			nvgpu_rwsem_up_read(&tsg->ch_list_lock);
-			gk20a_fifo_recover_tsg(g, id, true);
-		}
-	}
+	if (rc == RC_YES && rc_type == RC_TYPE_PBDMA_FAULT)
+		gk20a_fifo_pbdma_fault_rc(g, f, pbdma_id, error_notifier);
 
 	return handled;
 }
@@ -2539,7 +2552,7 @@ static u32 fifo_pbdma_isr(struct gk20a *g, u32 fifo_intr)
 		if (fifo_intr_pbdma_id_status_v(pbdma_pending, i)) {
 			gk20a_dbg(gpu_dbg_intr, "pbdma id %d intr pending", i);
 			clear_intr |=
-				gk20a_fifo_handle_pbdma_intr(g, f, i);
+				gk20a_fifo_handle_pbdma_intr(g, f, i, RC_YES);
 		}
 	}
 	return fifo_intr_0_pbdma_intr_pending_f();

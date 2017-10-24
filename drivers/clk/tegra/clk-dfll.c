@@ -2959,7 +2959,7 @@ static int dfll_build_i2c_lut(struct tegra_dfll *td, int v_max)
 {
 	unsigned long rate;
 	int ret = -EINVAL;
-	int j, v, v_opp;
+	int j, v, v_opp, v_min_align;
 	int selector;
 	int lut;
 
@@ -2972,6 +2972,9 @@ static int dfll_build_i2c_lut(struct tegra_dfll *td, int v_max)
 	td->lut[0] = lut;
 	td->lut_bottom = 0;
 
+	v_min_align = DIV_ROUND_UP(td->soc->min_millivolts * 1000,
+		td->soc->alignment.step_uv) * td->soc->alignment.step_uv;
+
 	for (j = 1, rate = 0; ; rate++) {
 		struct dev_pm_opp *opp;
 
@@ -2979,7 +2982,7 @@ static int dfll_build_i2c_lut(struct tegra_dfll *td, int v_max)
 		if (IS_ERR(opp))
 			break;
 		v_opp = dev_pm_opp_get_voltage(opp);
-		if (v_opp <= td->soc->min_millivolts * 1000)
+		if (v_opp <= v_min_align)
 			td->out_rate_min = dev_pm_opp_get_freq(opp);
 
 		if (rate > td->out_rate_max)

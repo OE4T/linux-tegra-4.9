@@ -2547,6 +2547,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (c->has_timedout)
 		return -ETIMEDOUT;
 
+	if (!nvgpu_mem_is_valid(&c->gpfifo.mem))
+		return -ENOMEM;
+
 	/* fifo not large enough for request. Return error immediately.
 	 * Kernel can insert gpfifo entries before and after user gpfifos.
 	 * So, add extra_entries in user request. Also, HW with fifo size N

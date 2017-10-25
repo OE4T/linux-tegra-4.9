@@ -899,7 +899,7 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 	nvgpu_mutex_init(&gr->ctx_mutex);
 
 	gr->sm_error_states = nvgpu_kzalloc(g,
-			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record) *
+			sizeof(struct nvgpu_gr_sm_error_state) *
 			gr->no_of_sm);
 	if (!gr->sm_error_states) {
 		err = -ENOMEM;
@@ -1195,7 +1195,7 @@ int vgpu_gr_resume_contexts(struct gk20a *g,
 void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 			struct tegra_vgpu_sm_esr_info *info)
 {
-	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_states;
+	struct nvgpu_gr_sm_error_state *sm_error_states;
 
 	if (info->sm_id >= g->gr.no_of_sm) {
 		nvgpu_err(g, "invalid smd_id %d / %d",

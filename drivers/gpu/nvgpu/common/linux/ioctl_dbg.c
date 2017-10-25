@@ -239,7 +239,8 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 	struct gr_gk20a *gr = &g->gr;
 	u32 sm_id;
 	struct channel_gk20a *ch;
-	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state;
+	struct nvgpu_dbg_gpu_sm_error_state_record sm_error_state_record;
+	struct nvgpu_gr_sm_error_state sm_error_state;
 	int err = 0;
 
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
@@ -250,40 +251,42 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 	if (sm_id >= gr->no_of_sm)
 		return -EINVAL;
 
-	sm_error_state = nvgpu_kzalloc(g, sizeof(*sm_error_state));
-	if (!sm_error_state)
-		return -ENOMEM;
-
 	if (args->sm_error_state_record_size > 0) {
-		size_t read_size = sizeof(*sm_error_state);
+		size_t read_size = sizeof(sm_error_state_record);
 
 		if (read_size > args->sm_error_state_record_size)
 			read_size = args->sm_error_state_record_size;
 
 		nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-		err = copy_from_user(sm_error_state,
+		err = copy_from_user(&sm_error_state_record,
 			  (void __user *)(uintptr_t)
 				args->sm_error_state_record_mem,
 			  read_size);
 		nvgpu_mutex_release(&g->dbg_sessions_lock);
-		if (err) {
-			err = -ENOMEM;
-			goto err_free;
-		}
+		if (err)
+			return -ENOMEM;
 	}
 
 	err = gk20a_busy(g);
 	if (err)
-		goto err_free;
+		return err;
+
+	sm_error_state.hww_global_esr =
+		sm_error_state_record.hww_global_esr;
+	sm_error_state.hww_warp_esr =
+		sm_error_state_record.hww_warp_esr;
+	sm_error_state.hww_warp_esr_pc =
+		sm_error_state_record.hww_warp_esr_pc;
+	sm_error_state.hww_global_esr_report_mask =
+		sm_error_state_record.hww_global_esr_report_mask;
+	sm_error_state.hww_warp_esr_report_mask =
+		sm_error_state_record.hww_warp_esr_report_mask;
 
 	err = gr_gk20a_elpg_protected_call(g,
 			g->ops.gr.update_sm_error_state(g, ch,
-					sm_id, sm_error_state));
+					sm_id, &sm_error_state));
 
 	gk20a_idle(g);
-
-err_free:
-	nvgpu_kfree(g, sm_error_state);
 
 	return err;
 }
@@ -295,7 +298,8 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 {
 	struct gk20a *g = dbg_s->g;
 	struct gr_gk20a *gr = &g->gr;
-	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state;
+	struct nvgpu_gr_sm_error_state *sm_error_state;
+	struct nvgpu_dbg_gpu_sm_error_state_record sm_error_state_record;
 	u32 sm_id;
 	int err = 0;
 
@@ -304,6 +308,16 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 		return -EINVAL;
 
 	sm_error_state = gr->sm_error_states + sm_id;
+	sm_error_state_record.hww_global_esr =
+		sm_error_state->hww_global_esr;
+	sm_error_state_record.hww_warp_esr =
+		sm_error_state->hww_warp_esr;
+	sm_error_state_record.hww_warp_esr_pc =
+		sm_error_state->hww_warp_esr_pc;
+	sm_error_state_record.hww_global_esr_report_mask =
+		sm_error_state->hww_global_esr_report_mask;
+	sm_error_state_record.hww_warp_esr_report_mask =
+		sm_error_state->hww_warp_esr_report_mask;
 
 	if (args->sm_error_state_record_size > 0) {
 		size_t write_size = sizeof(*sm_error_state);
@@ -314,7 +328,7 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 		nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 		err = copy_to_user((void __user *)(uintptr_t)
 						args->sm_error_state_record_mem,
-				   sm_error_state,
+				   &sm_error_state_record,
 				   write_size);
 		nvgpu_mutex_release(&g->dbg_sessions_lock);
 		if (err) {

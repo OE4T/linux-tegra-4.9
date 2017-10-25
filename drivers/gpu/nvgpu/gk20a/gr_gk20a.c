@@ -1543,7 +1543,7 @@ restore_fe_go_idle:
 	 * we initialize gr->no_of_sm in this function
 	 */
 	gr->sm_error_states = nvgpu_kzalloc(g,
-			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record)
+			sizeof(struct nvgpu_gr_sm_error_state)
 			* gr->no_of_sm);
 	if (!gr->sm_error_states) {
 		err = -ENOMEM;
@@ -4566,7 +4566,7 @@ restore_fe_go_idle:
 	 * we initialize gr->no_of_sm in this function
 	 */
 	gr->sm_error_states = nvgpu_kzalloc(g,
-			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record) *
+			sizeof(struct nvgpu_gr_sm_error_state) *
 			gr->no_of_sm);
 	if (!gr->sm_error_states) {
 		err = -ENOMEM;

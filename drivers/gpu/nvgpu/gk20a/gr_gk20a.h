@@ -231,6 +231,14 @@ struct nvgpu_preemption_modes_rec {
 	u32 default_compute_preempt_mode; /* default mode */
 };
 
+struct nvgpu_gr_sm_error_state {
+	u32 hww_global_esr;
+	u32 hww_warp_esr;
+	u64 hww_warp_esr_pc;
+	u32 hww_global_esr_report_mask;
+	u32 hww_warp_esr_report_mask;
+};
+
 struct gr_gk20a {
 	struct gk20a *g;
 	struct {
@@ -387,7 +395,7 @@ struct gr_gk20a {
 	u32 *fbp_rop_l2_en_mask;
 	u32 no_of_sm;
 	struct sm_info *sm_to_cluster;
-	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_states;
+	struct nvgpu_gr_sm_error_state *sm_error_states;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct nvgpu_mutex			cs_lock;
 	struct gk20a_cs_snapshot	*cs_data;

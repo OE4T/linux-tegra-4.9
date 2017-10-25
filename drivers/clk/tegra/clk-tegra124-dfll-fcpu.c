@@ -682,6 +682,7 @@ static const struct thermal_table tegra210_cpu_thermal_table = {
 
 static struct thermal_tv tegra210b01_thermal_floor_table[] = {
 	{TEGRA210B01_DFLL_THERMAL_FLOOR_0 / 1000, 800},
+	{TEGRA210B01_DFLL_THERMAL_FLOOR_1 / 1000, 0},
 	{DFLL_THERMAL_FLOOR_NOFLOOR / 1000,       0},
 };
 

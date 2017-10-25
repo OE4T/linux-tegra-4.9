@@ -102,14 +102,14 @@ enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
 
 int nvgpu_mm_suspend(struct gk20a *g)
 {
-	nvgpu_info(g, "MM suspend running...");
+	nvgpu_log_info(g, "MM suspend running...");
 
 	nvgpu_vidmem_thread_pause_sync(&g->mm);
 
 	g->ops.mm.cbc_clean(g);
 	g->ops.mm.l2_flush(g, false);
 
-	nvgpu_info(g, "MM suspend done!");
+	nvgpu_log_info(g, "MM suspend done!");
 
 	return 0;
 }
@@ -186,7 +186,7 @@ static int nvgpu_init_system_vm(struct mm_gk20a *mm)
 	aperture_size = GK20A_PMU_VA_SIZE * 2;
 
 	mm->pmu.aperture_size = GK20A_PMU_VA_SIZE;
-	nvgpu_info(g, "pmu vm size = 0x%x", mm->pmu.aperture_size);
+	nvgpu_log_info(g, "pmu vm size = 0x%x", mm->pmu.aperture_size);
 
 	mm->pmu.vm = nvgpu_vm_init(g, big_page_size,
 				   low_hole,
@@ -305,7 +305,7 @@ static int nvgpu_init_bar1_vm(struct mm_gk20a *mm)
 	u32 big_page_size = g->ops.mm.get_default_big_page_size();
 
 	mm->bar1.aperture_size = bar1_aperture_size_mb_gk20a() << 20;
-	nvgpu_info(g, "bar1 vm size = 0x%x", mm->bar1.aperture_size);
+	nvgpu_log_info(g, "bar1 vm size = 0x%x", mm->bar1.aperture_size);
 	mm->bar1.vm = nvgpu_vm_init(g,
 				    big_page_size,
 				    SZ_4K,
@@ -334,7 +334,7 @@ static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 	int err;
 
 	if (mm->sw_ready) {
-		nvgpu_info(g, "skip init");
+		nvgpu_log_info(g, "skip init");
 		return 0;
 	}
 
@@ -346,7 +346,7 @@ static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 		NV_MM_DEFAULT_KERNEL_SIZE;
 	mm->channel.kernel_size = NV_MM_DEFAULT_KERNEL_SIZE;
 
-	nvgpu_info(g, "channel vm size: user %dMB  kernel %dMB",
+	nvgpu_log_info(g, "channel vm size: user %dMB  kernel %dMB",
 		   (int)(mm->channel.user_size >> 20),
 		   (int)(mm->channel.kernel_size >> 20));
 

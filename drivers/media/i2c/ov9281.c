@@ -637,6 +637,16 @@ static int ov9281_s_stream(struct v4l2_subdev *sd, int enable)
 			goto exit;
 	}
 
+	if ((priv->fsync == OV9281_FSYNC_SLAVE) &&
+	    ov9281_fsync_slave_mode_table[s_data->mode]) {
+		dev_dbg(&client->dev, "%s: write fsync slave mode table %d\n",
+			__func__, s_data->mode);
+		err = ov9281_write_table(
+			priv, ov9281_fsync_slave_mode_table[s_data->mode]);
+		if (err)
+			goto exit;
+	}
+
 	if (s_data->override_enable) {
 		/* write list of override regs for the asking frame length, */
 		/* coarse integration time, and gain. Failures to write */

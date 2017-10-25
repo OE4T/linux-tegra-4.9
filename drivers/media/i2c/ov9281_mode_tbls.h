@@ -51,17 +51,27 @@ static const ov9281_reg ov9281_stop[] = {
 };
 
 static const ov9281_reg ov9281_fsync_master[] = {
-	{0x3006, 0x02}, /* fsin pin out */
-	{0x3823, 0x00},
-	{OV9281_TABLE_WAIT_MS, 66},
-	{OV9281_TABLE_END, 0x00}
+	{ 0x3006, 0x02 }, /* fsin pin out */
+	{ 0x3823, 0x00 },
+	{ OV9281_TABLE_WAIT_MS, 66 },
+	{ OV9281_TABLE_END, 0x00 }
 };
 
 static const ov9281_reg ov9281_fsync_slave[] = {
-	{0x3006, 0x00}, /* fsin pin in */
-	{0x3823, 0x30}, /* ext_vs_en, r_init_man */
-	{OV9281_TABLE_WAIT_MS, 66},
-	{OV9281_TABLE_END, 0x00}
+	{ 0x3006, 0x00 }, /* fsin pin in */
+	{ 0x3007, 0x02 },
+	{ 0x38b3, 0x07 },
+	{ 0x3885, 0x07 },
+	{ 0x382b, 0x5a },
+	{ 0x3670, 0x68 },
+	{ 0x3740, 0x01 },
+	{ 0x3741, 0x00 },
+	{ 0x3742, 0x08 },
+	{ 0x3823, 0x30 }, /* ext_vs_en, r_init_man */
+	{ 0x3824, 0x00 }, /* CS reset value on fsin */
+	{ 0x3825, 0x08 },
+	{ OV9281_TABLE_WAIT_MS, 66 },
+	{ OV9281_TABLE_END, 0x00 }
 };
 
 static const ov9281_reg ov9281_mode_1280x800_26MhzMCLK[] = {
@@ -77,6 +87,7 @@ static const ov9281_reg ov9281_mode_1280x800_26MhzMCLK[] = {
 	{ 0x3006, 0x04 },
 	{ 0x3011, 0x0a },
 	{ 0x3013, 0x18 },
+	{ 0x301c, 0xf0 },
 	{ 0x3022, 0x01 },
 	{ 0x3030, 0x10 },
 	{ 0x3039, 0x32 },
@@ -141,10 +152,17 @@ static const ov9281_reg ov9281_mode_1280x800_26MhzMCLK[] = {
 	{ 0x3815, 0x11 },
 	{ 0x3820, 0x00 },
 	{ 0x3821, 0x00 },
+	{ 0x382c, 0x05 },
+	{ 0x382d, 0xb0 },
+	{ 0x389d, 0x00 },
 	{ 0x3881, 0x42 },
+	{ 0x3882, 0x01 },
+	{ 0x3883, 0x00 },
+	{ 0x3885, 0x02 },
 	{ 0x38a8, 0x02 },
 	{ 0x38a9, 0x80 },
 	{ 0x38b1, 0x00 },
+	{ 0x38b3, 0x02 },
 	{ 0x38c4, 0x00 },
 	{ 0x38c5, 0xc0 },
 	{ 0x38c6, 0x04 },
@@ -192,7 +210,20 @@ static const ov9281_reg ov9281_mode_1280x800_26MhzMCLK[] = {
 	/* ???? */
 	{ 0x5d00, 0x07 },
 	{ 0x5d01, 0x00 },
-	{ OV9281_TABLE_END, 0x00}
+
+	/* low power mode control */
+	{ 0x4f00, 0x04 },
+	{ 0x4f10, 0x00 },
+	{ 0x4f11, 0x98 },
+	{ 0x4f12, 0x0f },
+	{ 0x4f13, 0xc4 },
+	{ OV9281_TABLE_END, 0x00 }
+};
+
+static const ov9281_reg ov9281_mode_1280x800_26MhzMCLK_fsync_slave[] = {
+	{ 0x3826, 0x03 }, /* R reset value on fsin.  VTS - 4 */
+	{ 0x3827, 0x8a },
+	{ OV9281_TABLE_END, 0x00 }
 };
 
 static const ov9281_reg ov9281_mode_1280x720_26MhzMCLK[] = {
@@ -292,7 +323,13 @@ static const ov9281_reg ov9281_mode_1280x720_26MhzMCLK[] = {
 	{ 0x5e00, 0x00 },
 	{ 0x5d00, 0x07 },
 	{ 0x5d01, 0x00 },
-	{ OV9281_TABLE_END, 0x00}
+	{ OV9281_TABLE_END, 0x00 }
+};
+
+static const ov9281_reg ov9281_mode_1280x720_26MhzMCLK_fsync_slave[] = {
+	{ 0x3826, 0x03 }, /* R reset value on fsin.  VTS - 4 */
+	{ 0x3827, 0x8a },
+	{ OV9281_TABLE_END, 0x00 }
 };
 
 static const ov9281_reg ov9281_mode_640x400_26MhzMCLK[] = {
@@ -395,12 +432,24 @@ static const ov9281_reg ov9281_mode_640x400_26MhzMCLK[] = {
 	{ OV9281_TABLE_END, 0x00 }
 };
 
+static const ov9281_reg ov9281_mode_640x400_26MhzMCLK_fsync_slave[] = {
+	{ 0x3826, 0x02 }, /* R reset value on fsin.  VTS - 4 */
+	{ 0x3827, 0x04 },
+	{ OV9281_TABLE_END, 0x00 }
+};
+
 static const ov9281_reg *ov9281_mode_table[] = {
 	[OV9281_MODE_1280X800] = ov9281_mode_1280x800_26MhzMCLK,
 	[OV9281_MODE_1280X720] = ov9281_mode_1280x720_26MhzMCLK,
 	[OV9281_MODE_640X400] = ov9281_mode_640x400_26MhzMCLK,
 	[OV9281_MODE_START_STREAM] = ov9281_start,
 	[OV9281_MODE_STOP_STREAM] = ov9281_stop,
+};
+
+static const ov9281_reg *ov9281_fsync_slave_mode_table[] = {
+	[OV9281_MODE_1280X800] = ov9281_mode_1280x800_26MhzMCLK_fsync_slave,
+	[OV9281_MODE_1280X720] = ov9281_mode_1280x720_26MhzMCLK_fsync_slave,
+	[OV9281_MODE_640X400] = ov9281_mode_640x400_26MhzMCLK_fsync_slave,
 };
 
 static const ov9281_reg *ov9281_fsync_table[] = {

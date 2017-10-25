@@ -430,6 +430,51 @@ static int pva_get_characteristics(struct pva_private *priv,
 	return err;
 }
 
+static int pva_copy_function_table(struct pva_private *priv,
+		void *arg)
+{
+	struct pva_ioctl_vpu_func_table *ioctl_fn_table = arg;
+	struct pva_func_table fn_table;
+	struct pva *pva = priv->pva;
+	uint32_t table_size;
+	int err;
+
+	err = nvhost_module_busy(pva->pdev);
+	if (err) {
+		nvhost_dbg_info("error in powering up pva\n");
+		goto err_poweron;
+	}
+
+	err = pva_alloc_and_populate_function_table(pva, &fn_table);
+	if (err) {
+		nvhost_dbg_info("unable to populate function table\n");
+		goto err_vpu_alloc;
+	}
+
+	table_size = ioctl_fn_table->size;
+
+	if (fn_table.size > table_size) {
+		err = -ENOMEM;
+		goto err_table_copy;
+	}
+
+	err = copy_to_user((void __user *)ioctl_fn_table->addr,
+			fn_table.addr,
+			fn_table.size);
+	if (err < 0)
+		goto err_table_copy;
+
+	ioctl_fn_table->size = fn_table.size;
+	ioctl_fn_table->entries = fn_table.entries;
+
+err_table_copy:
+	pva_dealloc_vpu_function_table(pva, &fn_table);
+err_vpu_alloc:
+	nvhost_module_idle(pva->pdev);
+err_poweron:
+	return err;
+}
+
 static long pva_ioctl(struct file *file, unsigned int cmd,
 			unsigned long arg)
 {
@@ -475,6 +520,11 @@ static long pva_ioctl(struct file *file, unsigned int cmd,
 	case PVA_IOCTL_SET_QUEUE_ATTRIBUTES:
 	{
 		err = pva_queue_set_attr(priv, buf);
+		break;
+	}
+	case PVA_IOCTL_COPY_VPU_FUNCTION_TABLE:
+	{
+		err = pva_copy_function_table(priv, buf);
 		break;
 	}
 	default:

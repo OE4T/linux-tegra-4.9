@@ -1169,13 +1169,9 @@ struct vpu_func {
 	uint32_t	next;
 	uint32_t	cur_version;
 	uint32_t	compat_version;
-	uint32_t	input_args_offset;
-	uint32_t	input_args_length;
-	uint32_t	output_args_offset;
-	uint32_t	output_args_length;
-	uint16_t	id;
+	uint32_t	id;
 	uint16_t	name_len;
-	char		name[1];		/* place holder */
+	uint8_t		name;		/* place holder */
 };
 
 static inline uint32_t

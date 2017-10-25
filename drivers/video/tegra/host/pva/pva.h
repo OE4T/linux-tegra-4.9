@@ -131,6 +131,23 @@ struct pva_trace_log {
 	u32 offset;
 };
 
+
+/*
+ * @brief	stores address and other attributes of the vpu function table
+ *
+ * addr		The pointer to start of the VPU function table
+ * size		Table size of the function table
+ * handle	The IOVA address of the function table
+ * entries	The total number of entries in the function table
+ *
+ */
+struct pva_func_table {
+	struct vpu_func *addr;
+	uint32_t size;
+	dma_addr_t handle;
+	uint32_t entries;
+};
+
 /**
  * @brief		Driver private data, shared with all applications
  *
@@ -270,4 +287,34 @@ void pva_abort(struct pva *pva);
  *
  */
 int pva_run_ucode_selftest(struct platform_device *pdev);
+
+/**
+ * @brief	Allocate and populate the function table to the memory
+ *
+ * This function is called when the vpu table needs to be populated.
+ * The function also allocates the memory required for the vpu table.
+ *
+ * @param pva			Pointer to PVA device
+ * @param pva_func_table	Pointer to the function table which contains
+ *				the address, table size and number of entries
+ * @return			0 on Success or negative error code
+ *
+ */
+int pva_alloc_and_populate_function_table(struct pva *pva,
+					  struct pva_func_table *fn_table);
+
+/**
+ * @brief	Deallocate the memory of the function table
+ *
+ * This function is called once the allocated memory for vpu table needs to
+ * be freed.
+ *
+ * @param pva			Pointer to PVA device
+ * @param pva_func_table	Pointer to the function table which contains
+ *				the address, table size and number of entries
+ *
+ */
+void pva_dealloc_vpu_function_table(struct pva *pva,
+				    struct pva_func_table *fn_table);
+
 #endif

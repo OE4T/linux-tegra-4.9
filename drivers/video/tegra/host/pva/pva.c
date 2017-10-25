@@ -409,6 +409,108 @@ load_fw_err:
 	return err;
 }
 
+static int pva_alloc_vpu_function_table(struct pva *pva,
+					struct pva_func_table *fn_table)
+{
+	uint32_t flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
+	struct pva_mailbox_status_regs status;
+	dma_addr_t dma_handle;
+	uint32_t table_size;
+	struct pva_cmd cmd;
+	uint32_t entries;
+	void *va;
+	int err = 0;
+	u32 nregs;
+
+	nregs = pva_cmd_get_vpu_func_table(&cmd, 0, 0, flags);
+
+	err = pva_mailbox_send_cmd_sync(pva, &cmd, nregs, &status);
+	if (err < 0) {
+		nvhost_warn(&pva->pdev->dev,
+			"mbox function table cmd failed: %d\n", err);
+		goto end;
+	}
+
+	table_size = status.status[PVA_CCQ_STATUS4_INDEX];
+	entries = status.status[PVA_CCQ_STATUS5_INDEX];
+
+	va = dma_alloc_coherent(&pva->pdev->dev, table_size,
+				&dma_handle, GFP_KERNEL);
+	if (va == NULL) {
+		nvhost_warn(&pva->pdev->dev, "Unable to allocate the virtual address\n");
+		err =  -ENOMEM;
+		goto end;
+	}
+
+	fn_table->addr = va;
+	fn_table->size = table_size;
+	fn_table->handle = dma_handle;
+	fn_table->entries = entries;
+
+end:
+	return err;
+}
+
+static int pva_get_vpu_function_table(struct pva *pva,
+					struct pva_func_table *fn_table)
+{
+	uint32_t flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
+	struct pva_mailbox_status_regs status;
+	dma_addr_t dma_handle;
+	uint32_t table_size;
+	struct pva_cmd cmd;
+	int err = 0;
+	u32 nregs;
+
+	dma_handle = fn_table->handle;
+	table_size = fn_table->size;
+
+	nregs = pva_cmd_get_vpu_func_table(&cmd, table_size, dma_handle, flags);
+
+	/* Submit request to PVA and wait for response */
+	err = pva_mailbox_send_cmd_sync(pva, &cmd, nregs, &status);
+	if (err < 0)
+		nvhost_warn(&pva->pdev->dev,
+			"mbox function table cmd failed: %d\n", err);
+
+	return err;
+
+}
+
+void pva_dealloc_vpu_function_table(struct pva *pva,
+					struct pva_func_table *fn_table)
+{
+	dma_addr_t dma_handle = fn_table->handle;
+	uint32_t table_size = fn_table->size;
+	void *va = fn_table->addr;
+
+	if (va)
+		dma_free_coherent(&pva->pdev->dev,
+				table_size, va, dma_handle);
+}
+
+int pva_alloc_and_populate_function_table(struct pva *pva,
+					struct pva_func_table *fn_table)
+{
+	int ret = 0;
+
+	ret = pva_alloc_vpu_function_table(pva, fn_table);
+	if (ret < 0)
+		goto err_alloc_vpu_function_table;
+
+	ret = pva_get_vpu_function_table(pva, fn_table);
+	if (ret < 0)
+		goto err_get_vpu_function_table;
+
+	return 0;
+
+err_get_vpu_function_table:
+	pva_dealloc_vpu_function_table(pva, fn_table);
+err_alloc_vpu_function_table:
+	return ret;
+
+}
+
 static void pva_restore_state_handler(struct work_struct *work)
 {
 	struct pva *pva = container_of(work, struct pva,

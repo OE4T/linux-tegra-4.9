@@ -276,6 +276,25 @@ struct pva_ioctl_queue_attr {
 	__u32 val;
 };
 
+/**
+ * struct pva_ioctl_vpu_func_table - ioctl vpu function table entries
+ *
+ * @addr: Userspace address space to which the function table needs to be copied
+ * @entries: The number of entries in the vpu table
+ * @size: Size of the user buffer passed/ Size of the function table
+ *
+ * This ioctl is used to fetch the VPU function table available on a PVA, which
+ * is copied to user space buffer starting at "addr" with size "size". Once the
+ * function table is copied the the number of entries is updated along with the
+ * size of the vpu function table.
+ *
+ */
+struct pva_ioctl_vpu_func_table {
+	__u64 addr;
+	__u32 entries;
+	__u32 size;
+};
+
 #define PVA_IOCTL_CHARACTERISTICS	\
 	_IOWR(NVHOST_PVA_IOCTL_MAGIC, 1, struct pva_characteristics_req)
 #define PVA_IOCTL_PIN	\
@@ -286,9 +305,11 @@ struct pva_ioctl_queue_attr {
 	_IOW(NVHOST_PVA_IOCTL_MAGIC, 4, struct pva_ioctl_submit_args)
 #define PVA_IOCTL_SET_QUEUE_ATTRIBUTES	\
 	_IOW(NVHOST_PVA_IOCTL_MAGIC, 5, struct pva_ioctl_queue_attr)
+#define PVA_IOCTL_COPY_VPU_FUNCTION_TABLE	\
+	_IOWR(NVHOST_PVA_IOCTL_MAGIC, 6, struct pva_ioctl_vpu_func_table)
 
 
-#define NVHOST_PVA_IOCTL_LAST _IOC_NR(PVA_IOCTL_SET_QUEUE_ATTRIBUTES)
+#define NVHOST_PVA_IOCTL_LAST _IOC_NR(PVA_IOCTL_COPY_VPU_FUNCTION_TABLE)
 #define NVHOST_PVA_IOCTL_MAX_ARG_SIZE sizeof(struct pva_characteristics_req)
 
 #endif /* __LINUX_NVHOST_PVA_IOCTL_H */

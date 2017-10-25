@@ -71,6 +71,61 @@ static const struct file_operations pva_crashdump_fops = {
 	.release = single_release,
 };
 
+static int pva_print_function_table(struct seq_file *s, void *data)
+{
+	struct pva_func_table fn_table;
+	struct pva *pva = s->private;
+	struct vpu_func *fn;
+	uint32_t entries;
+	int ret = 0;
+	int i;
+
+	ret = nvhost_module_busy(pva->pdev);
+	if (ret) {
+		nvhost_dbg_info("error in powering up pva\n");
+		goto err_poweron;
+	}
+
+	ret = pva_alloc_and_populate_function_table(pva, &fn_table);
+	if (ret) {
+		nvhost_dbg_info("unable to populate function table\n");
+		goto err_vpu_alloc;
+	}
+
+	fn = fn_table.addr;
+	entries = fn_table.entries;
+
+	seq_puts(s, "NAME  ID\n");
+	for (i = 0; i < entries; i++) {
+		char *name = (char *)&fn->name;
+
+		seq_printf(s, "%s  %d\n",
+			   name, fn->id);
+		fn = (struct vpu_func *)(((u8 *)fn) + fn->next);
+	}
+
+	pva_dealloc_vpu_function_table(pva, &fn_table);
+
+	nvhost_module_idle(pva->pdev);
+	return 0;
+
+err_vpu_alloc:
+	nvhost_module_idle(pva->pdev);
+err_poweron:
+	return ret;
+}
+
+static int vpu_func_table_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, pva_print_function_table, inode->i_private);
+}
+
+static const struct file_operations pva_vpu_function_table_fops = {
+	.open = vpu_func_table_open,
+	.read = seq_read,
+	.release = single_release,
+};
+
 void pva_debugfs_init(struct platform_device *pdev)
 {
 	struct dentry *ret;
@@ -105,4 +160,9 @@ void pva_debugfs_init(struct platform_device *pdev)
 				 &pva->submit_mode);
 	if (!ret)
 		nvhost_dbg_info("Failed to create submit mode selection file");
+
+	ret = debugfs_create_file("vpu_function_table", S_IRUGO, de,
+				pva, &pva_vpu_function_table_fops);
+	if (!ret)
+		nvhost_dbg_info("Failed to create vpu function table file");
 }

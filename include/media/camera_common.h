@@ -174,7 +174,6 @@ struct camera_common_data {
 	struct device				*dev;
 	const struct camera_common_frmfmt	*frmfmt;
 	const struct camera_common_colorfmt	*colorfmt;
-	const struct camera_common_colorfmt	*color_fmts;
 	struct dentry				*debugdir;
 	struct camera_common_power_rail		*power;
 
@@ -190,7 +189,6 @@ struct camera_common_data {
 	int	mode;
 	int 	mode_prop_idx;
 	int	numfmts;
-	int	num_color_fmts;
 	int	def_mode, def_width, def_height;
 	int	def_clk_freq;
 	int	fmt_width, fmt_height;

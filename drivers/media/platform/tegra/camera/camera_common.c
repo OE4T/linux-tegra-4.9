@@ -392,27 +392,63 @@ const struct camera_common_colorfmt *camera_common_find_datafmt(
 }
 EXPORT_SYMBOL_GPL(camera_common_find_datafmt);
 
+/* Filters for the sensor's supported colors */
+static const struct camera_common_colorfmt *find_matching_color_fmt(
+		const struct camera_common_data *s_data,
+		size_t index)
+{
+	const struct sensor_properties *sensor_props = &s_data->sensor_props;
+	const size_t num_modes = sensor_props->num_modes;
+	const size_t common_fmts_size = ARRAY_SIZE(camera_common_color_fmts);
+
+	struct sensor_image_properties *cur_props;
+	bool matched[common_fmts_size];
+	int match_num = -1;
+	int match_index = -1;
+	size_t i, j;
+
+	// Clear matched array so no format has been matched
+	memset(matched, 0, sizeof(matched[0]) * ARRAY_SIZE(matched));
+
+	// Find and count matching color formats
+	for (i = 0; i < common_fmts_size; i++) {
+		for (j = 0; j < num_modes; j++) {
+			cur_props = &sensor_props->sensor_modes[j].
+							image_properties;
+			if (cur_props->pixel_format ==
+					camera_common_color_fmts[i].pix_fmt &&
+					!matched[i]) {
+				match_num++;
+				match_index = i;
+				// Found index
+				if (match_num == index)
+					goto break_loops;
+			}
+		}
+	}
+break_loops:
+	if (match_num < index)
+		return NULL;
+	return &camera_common_color_fmts[match_index];
+}
+
 int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
 				struct v4l2_subdev_pad_config *cfg,
 				struct v4l2_subdev_mbus_code_enum *code)
 {
 	struct camera_common_data *s_data = to_camera_common_data(sd->dev);
 	struct tegra_channel *chan = v4l2_get_subdev_hostdata(sd);
-	unsigned int mbus_code;
+	const struct camera_common_colorfmt *sensor_fmt;
 
-	if (s_data->num_color_fmts < 1 || !s_data->color_fmts) {
-		s_data->color_fmts = camera_common_color_fmts;
-		s_data->num_color_fmts = ARRAY_SIZE(camera_common_color_fmts);
-	}
+	sensor_fmt = find_matching_color_fmt(s_data, code->index);
 
-	if ((unsigned int)code->index >= s_data->num_color_fmts)
+	if (sensor_fmt == NULL)
 		return -EINVAL;
 
-	mbus_code = s_data->color_fmts[code->index].code;
-	if (!camera_common_verify_code(chan, mbus_code))
+	if (!camera_common_verify_code(chan, sensor_fmt->code))
 		return -EINVAL;
 
-	code->code = mbus_code;
+	code->code = sensor_fmt->code;
 	return 0;
 }
 EXPORT_SYMBOL_GPL(camera_common_enum_mbus_code);
@@ -421,15 +457,13 @@ int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 			unsigned int *code)
 {
 	struct camera_common_data *s_data = to_camera_common_data(sd->dev);
+	const struct camera_common_colorfmt *sensor_fmt;
 
-	if (s_data->num_color_fmts < 1 || !s_data->color_fmts) {
-		s_data->color_fmts = camera_common_color_fmts;
-		s_data->num_color_fmts = ARRAY_SIZE(camera_common_color_fmts);
-	}
+	sensor_fmt = find_matching_color_fmt(s_data, index);
 
-	if ((unsigned int)index >= s_data->num_color_fmts)
+	if (sensor_fmt == NULL)
 		return -EINVAL;
-	*code = s_data->color_fmts[index].code;
+	*code = sensor_fmt->code;
 	return 0;
 }
 EXPORT_SYMBOL_GPL(camera_common_enum_fmt);
@@ -582,22 +616,18 @@ static int camera_common_evaluate_color_format(struct v4l2_subdev *sd,
 {
 	struct camera_common_data *s_data = to_camera_common_data(sd->dev);
 	int i;
+	const struct camera_common_colorfmt *sensor_fmt;
 
 	if (!s_data)
 		return -EINVAL;
 
-	if (s_data->num_color_fmts < 1 || !s_data->color_fmts) {
-		s_data->color_fmts = camera_common_color_fmts;
-		s_data->num_color_fmts = ARRAY_SIZE(camera_common_color_fmts);
-	}
-
-	for (i = 0; i < s_data->num_color_fmts; i++) {
-		if (s_data->color_fmts[i].pix_fmt == pixelformat)
+	for (i = 0; ; i++) {
+		sensor_fmt = find_matching_color_fmt(s_data, i);
+		if (sensor_fmt == NULL)
+			return -EINVAL;
+		if (sensor_fmt->pix_fmt == pixelformat)
 			break;
 	}
-
-	if (i >= s_data->num_color_fmts)
-		return -EINVAL;
 
 	return 0;
 }

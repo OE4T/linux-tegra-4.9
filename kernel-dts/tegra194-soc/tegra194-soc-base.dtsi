@@ -713,6 +713,7 @@
 
 		nvdec1@15140000 {
 			compatible = "nvidia,tegra194-nvdec";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_NVDECB>;
 			reg = <0x0 0x15140000 0x0 0x00040000>;
 			resets = <&bpmp_resets TEGRA194_RESET_NVDEC1>;
 			clocks = <&bpmp_clks TEGRA194_CLK_NVDEC1>,

@@ -414,6 +414,7 @@ struct gpu_ops {
 		u32 (*tpc_enabled_exceptions)(struct gk20a *g);
 		int (*set_czf_bypass)(struct gk20a *g,
 				      struct channel_gk20a *ch);
+		void (*init_czf_bypass)(struct gk20a *g);
 		bool (*sm_debugger_attached)(struct gk20a *g);
 		void (*suspend_single_sm)(struct gk20a *g,
 				u32 gpc, u32 tpc, u32 sm,

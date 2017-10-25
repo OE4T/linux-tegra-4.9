@@ -4838,6 +4838,9 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 
 	gr_gk20a_load_zbc_default_table(g, gr);
 
+	if (g->ops.gr.init_czf_bypass)
+		g->ops.gr.init_czf_bypass(g);
+
 	nvgpu_mutex_init(&gr->ctx_mutex);
 	nvgpu_spinlock_init(&gr->ch_tlb_lock);
 

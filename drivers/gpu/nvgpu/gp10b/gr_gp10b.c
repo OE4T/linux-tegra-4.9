@@ -2361,8 +2361,6 @@ int gr_gp10b_init_preemption_state(struct gk20a *g)
 			gr_debug_2_gfxp_wfi_always_injects_wfi_enabled_f());
 	gk20a_writel(g, gr_debug_2_r(), debug_2);
 
-	g->gr.czf_bypass = gr_gpc0_prop_debug1_czf_bypass_init_v();
-
 	return 0;
 }
 
@@ -2374,6 +2372,11 @@ void gr_gp10b_set_preemption_buffer_va(struct gk20a *g,
 	nvgpu_mem_wr(g, mem,
 			ctxsw_prog_main_image_full_preemption_ptr_o(), va);
 
+}
+
+void gr_gp10b_init_czf_bypass(struct gk20a *g)
+{
+	g->gr.czf_bypass = gr_gpc0_prop_debug1_czf_bypass_init_v();
 }
 
 int gr_gp10b_set_czf_bypass(struct gk20a *g, struct channel_gk20a *ch)

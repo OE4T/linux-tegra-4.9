@@ -349,6 +349,7 @@ static const struct gpu_ops gp106_ops = {
 		.set_boosted_ctx = NULL,
 		.set_preemption_mode = gr_gp10b_set_preemption_mode,
 		.set_czf_bypass = gr_gp10b_set_czf_bypass,
+		.init_czf_bypass = gr_gp10b_init_czf_bypass,
 		.pre_process_sm_exception = gr_gp10b_pre_process_sm_exception,
 		.set_preemption_buffer_va = gr_gp10b_set_preemption_buffer_va,
 		.init_preemption_state = NULL,

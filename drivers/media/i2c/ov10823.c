@@ -1072,7 +1072,6 @@ static int ov10823_probe(struct i2c_client *client,
 {
 	struct camera_common_data *common_data;
 	struct ov10823 *priv;
-	char dev_name[10];
 	int err;
 
 	pr_info("[OV10823]: probing v4l2 sensor.\n");
@@ -1150,14 +1149,11 @@ static int ov10823_probe(struct i2c_client *client,
 		gpio_set_value(priv->mcu_reset_gpio, 1);
 	}
 
-	err = camera_common_parse_ports(&client->dev, common_data);
+	err = camera_common_initialize(common_data, "ov10823");
 	if (err) {
-		dev_err(&client->dev, "Failed to find port info\n");
+		dev_err(&client->dev, "Failed to initialize ov10823\n");
 		return err;
 	}
-	sprintf(dev_name, "ov10823_%c", common_data->csi_port + 'a');
-	dev_dbg(&client->dev, "%s: name %s\n", __func__, dev_name);
-	camera_common_create_debugfs(common_data, dev_name);
 
 	v4l2_i2c_subdev_init(&common_data->subdev, client,
 			     &ov10823_subdev_ops);
@@ -1224,7 +1220,7 @@ ov10823_remove(struct i2c_client *client)
 #endif
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	ov10823_power_put(priv);
-	camera_common_remove_debugfs(s_data);
+	camera_common_cleanup(s_data);
 
 	return 0;
 }

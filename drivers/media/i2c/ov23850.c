@@ -1280,7 +1280,6 @@ static int ov23850_probe(struct i2c_client *client,
 {
 	struct camera_common_data *common_data;
 	struct ov23850 *priv;
-	char debugfs_name[10];
 	int err;
 
 	pr_info("[OV23850]: probing v4l2 sensor at addr 0x%0x.\n",
@@ -1336,14 +1335,11 @@ static int ov23850_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	err = camera_common_parse_ports(&client->dev, common_data);
+	err = camera_common_initialize(common_data, "ov23850");
 	if (err) {
-		dev_err(&client->dev, "Failed to find port info\n");
+		dev_err(&client->dev, "Failed to initialize ov23850\n");
 		return err;
 	}
-	sprintf(debugfs_name, "ov23850_%c", common_data->csi_port + 'a');
-	dev_dbg(&client->dev, "%s: dt node name %s\n", __func__, debugfs_name);
-	camera_common_create_debugfs(common_data, debugfs_name);
 
 	v4l2_i2c_subdev_init(&common_data->subdev, client,
 			     &ov23850_subdev_ops);
@@ -1395,7 +1391,7 @@ ov23850_remove(struct i2c_client *client)
 	media_entity_cleanup(&priv->subdev->entity);
 #endif
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
-	camera_common_remove_debugfs(s_data);
+	camera_common_cleanup(s_data);
 
 	return 0;
 }

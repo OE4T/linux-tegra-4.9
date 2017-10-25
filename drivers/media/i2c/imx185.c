@@ -967,9 +967,6 @@ static struct camera_common_pdata *imx185_parse_dt(struct i2c_client *client,
 	}
 	board_priv_pdata->reset_gpio = (unsigned int)gpio;
 
-	if (s_data->sensor_props.num_modes == 0)
-		dev_err(&client->dev, "Failed to load mode info\n");
-
 	return board_priv_pdata;
 }
 
@@ -995,7 +992,6 @@ static int imx185_probe(struct i2c_client *client,
 {
 	struct camera_common_data *common_data;
 	struct imx185 *priv;
-	char debugfs_name[10];
 	int err;
 
 	dev_info(&client->dev, "[IMX185]: probing v4l2 sensor at addr 0x%0x.\n",
@@ -1059,15 +1055,11 @@ static int imx185_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	err = camera_common_parse_ports(&client->dev, common_data);
+	err = camera_common_initialize(common_data, "imx185");
 	if (err) {
-		dev_err(&client->dev, "Failed to find port info\n");
+		dev_err(&client->dev, "Failed to initialize imx185.\n");
 		return err;
 	}
-	sprintf(debugfs_name, "imx185_%c", common_data->csi_port + 'a');
-	dev_dbg(&client->dev, "%s: name %s\n", __func__, debugfs_name);
-
-	camera_common_create_debugfs(common_data, debugfs_name);
 
 	v4l2_i2c_subdev_init(priv->subdev, client, &imx185_subdev_ops);
 
@@ -1111,7 +1103,7 @@ imx185_remove(struct i2c_client *client)
 #endif
 
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
-	camera_common_remove_debugfs(s_data);
+	camera_common_cleanup(s_data);
 	return 0;
 }
 

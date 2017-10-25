@@ -681,7 +681,6 @@ static int imx204_probe(struct spi_device *spi)
 	struct camera_common_data *common_data;
 	struct imx204 *priv;
 	struct device_node *node = spi->dev.of_node;
-	char debugfs_name[10];
 	int err;
 	int ret = 0;
 
@@ -765,15 +764,9 @@ static int imx204_probe(struct spi_device *spi)
 	if (err)
 		return err;
 
-	err = camera_common_parse_ports(&spi->dev, common_data);
-	if (err) {
-		dev_err(&spi->dev, "Failed to find port info\n");
+	err = camera_common_initialize(common_data, "imx204");
+	if (err)
 		return err;
-	}
-
-	sprintf(debugfs_name, "imx204_%c", common_data->csi_port + 'a');
-	dev_dbg(&spi->dev, "%s: name %s\n", __func__, debugfs_name);
-	camera_common_create_debugfs(common_data, "imx204");
 
 	v4l2_spi_subdev_init(&common_data->subdev, spi, &imx204_subdev_ops);
 
@@ -821,7 +814,7 @@ imx204_remove(struct spi_device *spi)
 #endif
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	imx204_power_put(priv);
-	camera_common_remove_debugfs(s_data);
+	camera_common_cleanup(s_data);
 
 	return 0;
 }

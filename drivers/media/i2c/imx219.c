@@ -706,7 +706,6 @@ static int imx219_probe(struct i2c_client *client,
 	struct device_node *node = client->dev.of_node;
 	struct imx219 *priv;
 	int err;
-	char debugfs_name[32];
 
 	if (!IS_ENABLED(CONFIG_OF) || !node)
 		return -EINVAL;
@@ -771,9 +770,9 @@ static int imx219_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	snprintf(debugfs_name, sizeof(debugfs_name), "%s.%s",
-		dev_driver_string(&client->dev), dev_name(&client->dev));
-	camera_common_create_debugfs(common_data, debugfs_name);
+	err = camera_common_initialize(common_data, "imx219");
+	if (err)
+		return err;
 
 	v4l2_i2c_subdev_init(&common_data->subdev, client, &imx219_subdev_ops);
 
@@ -821,7 +820,7 @@ imx219_remove(struct i2c_client *client)
 #endif
 
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
-	camera_common_remove_debugfs(s_data);
+	camera_common_cleanup(s_data);
 
 	return 0;
 }

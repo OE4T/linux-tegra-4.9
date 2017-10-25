@@ -113,6 +113,13 @@ def commit_info_from_gerrit_change_id(change_id):
 
     return gerrit_query(change_id)
 
+def commit_info_from_git_sha1(rev):
+    """
+    Return a dict with all the gerrit info from a git sha1 rev.
+    """
+
+    return gerrit_query(rev)
+
 def commit_info_from_gerrit_cl(cmt):
     """
     Return a dict with all the gerrit info from a Gerrit URL.
@@ -124,28 +131,21 @@ def commit_info_from_gerrit_cl(cmt):
 
     return gerrit_query(cl)
 
-def gerrit_change_id_from_git_commit(cmt_id):
+def git_sha1_from_commit(commit_ish):
     """
-    Return the gerrit Change-Id from the passed git cmt_id. Returns None if
-    this doesn't appear to be a cmt_id or doesn't have a Change-Id line.
+    Return sha1 revision from a commit-ish string, or None if this doesn't
+    appear to be a commit.
     """
 
-    cid_re = re.compile(r'Change-Id: (I[a-z0-9]{40})')
-
-    # First obtain the commit message itself.
-    prog = subprocess.Popen('git show --stat %s' % cmt_id, shell=True,
+    prog = subprocess.Popen('git rev-parse %s' % commit_ish, shell=True,
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     stdout_data, stderr_data = prog.communicate()
     if prog.returncode != 0:
-        print('`git show %s\' failed?!' % cmt_id)
+        print('`git rev-parse %s\' failed?!' % commit_ish)
         return None
 
-    m = cid_re.search(stdout_data.decode('utf-8'))
-    if m:
-        return m.group(1)
-
-    return None
+    return stdout_data.decode('utf-8')
 
 def indent_lines(text, ind):
     """
@@ -220,7 +220,7 @@ def main():
         elif get_gerrit_url_id(cmt):
             info = commit_info_from_gerrit_cl(cmt)
         else:
-            info = commit_info_from_gerrit_change_id(gerrit_change_id_from_git_commit(cmt))
+            info = commit_info_from_git_sha1(git_sha1_from_commit(cmt))
 
         if info:
             commits_info.append(info)

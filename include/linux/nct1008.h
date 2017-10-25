@@ -43,8 +43,6 @@ enum nct1008_sensors {
 
 struct nct1008_sensor_platform_data {
 	int shutdown_limit;
-	long suspend_limit_hi;
-	long suspend_limit_lo;
 };
 
 struct nct1008_platform_data {
@@ -54,7 +52,6 @@ struct nct1008_platform_data {
 	int alpha;
 	int beta;
 	struct nct1008_sensor_platform_data sensors[SENSORS_COUNT];
-	int (*suspend_with_wakeup)(void);
 	bool extended_range;
 	bool fuse_offset;
 };

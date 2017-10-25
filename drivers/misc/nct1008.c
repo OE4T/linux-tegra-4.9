@@ -1386,12 +1386,6 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 		if (of_property_read_u32(child_sensor, "shutdown-limit", &proc))
 			goto err_parse_dt;
 		pdata->sensors[index].shutdown_limit = proc;
-
-		proc = 0;
-		of_property_read_u32(child_sensor, "suspend_limit_hi", &proc);
-		pdata->sensors[index].suspend_limit_hi = proc;
-		of_property_read_u32(child_sensor, "suspend_limit_lo", &proc);
-		pdata->sensors[index].suspend_limit_lo = proc;
 		index++;
 	}
 
@@ -1602,8 +1596,7 @@ static void nct1008_shutdown(struct i2c_client *client)
 	mutex_unlock(&data->mutex);
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int nct1008_suspend_powerdown(struct device *dev)
+static int nct1008_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	int err;
@@ -1616,100 +1609,6 @@ static int nct1008_suspend_powerdown(struct device *dev)
 	disable_irq(client->irq);
 	err = nct1008_disable(client);
 	nct1008_power_control(data, false);
-	return err;
-}
-
-static int nct1008_suspend_wakeup(struct device *dev)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	int err;
-	struct nct1008_data *data = i2c_get_clientdata(client);
-	int temp;
-	int sensor_nr;
-	struct nct1008_sensor_platform_data *sensor_data;
-
-	for (sensor_nr = 0; sensor_nr < SENSORS_COUNT; sensor_nr++) {
-		sensor_data = &data->plat_data.sensors[sensor_nr];
-
-		err = nct1008_get_temp_common(sensor_nr, data, &temp);
-
-		if (err)
-			goto error;
-
-		if (temp > sensor_data->suspend_limit_lo)
-			err = nct1008_thermal_set_limits(sensor_nr, data,
-				sensor_data->suspend_limit_lo,
-				NCT1008_MAX_TEMP * 1000);
-		else
-			err = nct1008_thermal_set_limits(sensor_nr, data,
-				NCT1008_MIN_TEMP * 1000,
-				sensor_data->suspend_limit_hi);
-
-		if (err)
-			goto error;
-	}
-
-	/* Enable NCT wake. */
-	err = enable_irq_wake(client->irq);
-	if (err)
-		dev_err(&client->dev, "Error: %s, error=%d. failed to enable NCT wakeup\n",
-			__func__, err);
-	return err;
-
-error:
-	dev_err(&client->dev, "\n error in file=: %s %s() line=%d: "
-		"error=%d. Can't set correct LP1 alarm limits or set wakeup irq, "
-		"shutting down device", __FILE__, __func__, __LINE__, err);
-
-	return nct1008_suspend_powerdown(dev);
-}
-
-static int nct1008_suspend(struct device *dev)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	struct nct1008_data *data = i2c_get_clientdata(client);
-
-	if (data->plat_data.suspend_with_wakeup &&
-		data->plat_data.suspend_with_wakeup())
-		return nct1008_suspend_wakeup(dev);
-	else
-		return nct1008_suspend_powerdown(dev);
-}
-
-
-static int nct1008_resume_wakeup(struct device *dev)
-{
-	int err = 0;
-	struct i2c_client *client = to_i2c_client(dev);
-
-	err = disable_irq_wake(client->irq);
-	if (err) {
-		dev_err(&client->dev, "Error: %s, error=%d. failed to disable NCT "
-				"wakeup\n", __func__, err);
-		return err;
-	}
-
-	/* NCT wasn't powered down, so IRQ is still enabled. */
-	/* Disable it before calling update */
-	disable_irq(client->irq);
-
-	return err;
-}
-
-static int nct1008_resume_powerdown(struct device *dev)
-{
-	struct i2c_client *client = to_i2c_client(dev);
-	int err = 0;
-	struct nct1008_data *data = i2c_get_clientdata(client);
-
-	nct1008_power_control(data, true);
-	nct1008_configure_sensor(data);
-	err = nct1008_enable(client);
-	if (err < 0) {
-		dev_err(&client->dev, "Error: %s, error=%d\n",
-			__func__, err);
-		return err;
-	}
 
 	return err;
 }
@@ -1720,14 +1619,13 @@ static int nct1008_resume(struct device *dev)
 	int err;
 	struct nct1008_data *data = i2c_get_clientdata(client);
 
-	if (data->plat_data.suspend_with_wakeup &&
-		data->plat_data.suspend_with_wakeup())
-		err = nct1008_resume_wakeup(dev);
-	else
-		err = nct1008_resume_powerdown(dev);
-
-	if (err)
+	nct1008_power_control(data, true);
+	nct1008_configure_sensor(data);
+	err = nct1008_enable(client);
+	if (err < 0) {
+		dev_err(&client->dev, "Error: %s, error=%d\n", __func__, err);
 		return err;
+	}
 
 	mutex_lock(&data->mutex);
 	data->stop_workqueue = 0;
@@ -1741,8 +1639,6 @@ static const struct dev_pm_ops nct1008_pm_ops = {
 	.suspend	= nct1008_suspend,
 	.resume		= nct1008_resume,
 };
-
-#endif
 
 static const struct i2c_device_id nct1008_id[] = {
 	{ "nct1008", NCT1008 },
@@ -1763,9 +1659,7 @@ static const struct of_device_id nct1008_of_match[] = {
 static struct i2c_driver nct1008_driver = {
 	.driver = {
 		.name	= "nct1008_nct72",
-#ifdef CONFIG_PM_SLEEP
 		.pm = &nct1008_pm_ops,
-#endif
 		.of_match_table = nct1008_of_match,
 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},

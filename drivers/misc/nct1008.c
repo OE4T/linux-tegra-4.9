@@ -1669,47 +1669,7 @@ static struct i2c_driver nct1008_driver = {
 	.shutdown	= nct1008_shutdown,
 };
 
-#ifndef MODULE
-static int __init nct1008_sync_thz(struct device *dev, void *unused)
-{
-	struct nct1008_data *data = dev_get_drvdata(dev);
-	if (data->sensors[LOC].thz)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
-		thermal_zone_device_update(data->sensors[LOC].thz,
-					   THERMAL_EVENT_UNSPECIFIED);
-#else
-		thermal_zone_device_update(data->sensors[LOC].thz);
-#endif
-	if (data->sensors[EXT].thz)
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
-		thermal_zone_device_update(data->sensors[EXT].thz,
-					   THERMAL_EVENT_UNSPECIFIED);
-#else
-		thermal_zone_device_update(data->sensors[EXT].thz);
-#endif
-	return 0;
-}
-
-static int __init nct1008_sync(void)
-{
-	return driver_for_each_device(
-		&nct1008_driver.driver, NULL, NULL, nct1008_sync_thz);
-}
-late_initcall_sync(nct1008_sync);
-#endif
-
-static int __init nct1008_init(void)
-{
-	return i2c_add_driver(&nct1008_driver);
-}
-
-static void __exit nct1008_exit(void)
-{
-	i2c_del_driver(&nct1008_driver);
-}
-
+module_i2c_driver(nct1008_driver);
+MODULE_AUTHOR("Srikar Srimath Tirumala <srikars@nvidia.com>");
 MODULE_DESCRIPTION("Temperature sensor driver for NCT1008/NCT72/TMP451");
 MODULE_LICENSE("GPL");
-
-module_init(nct1008_init);
-module_exit(nct1008_exit);

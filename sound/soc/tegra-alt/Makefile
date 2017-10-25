@@ -23,12 +23,6 @@ obj-$(CONFIG_SND_SOC_TEGRA_ALT)			+= snd-soc-tegra-alt-utils.o
 #----------------------------- platform drivers -------------------------------------
 snd-soc-tegra210-alt-admaif-objs 		:= tegra210_admaif_alt.o
 snd-soc-tegra210-alt-xbar-objs 			:= tegra210_xbar_alt.o
-
-# required to fool lkm loader (can be removed later)
-ifeq ($(CONFIG_SND_SOC_TEGRA210_XBAR_ALT),m)
-	snd-soc-tegra186-alt-xbar-objs		:= tegra210_xbar_alt.o
-endif
-
 snd-soc-tegra210-alt-i2s-objs 			:= tegra210_i2s_alt.o
 snd-soc-tegra210-alt-dmic-objs 			:= tegra210_dmic_alt.o
 snd-soc-tegra210-alt-amx-objs 			:= tegra210_amx_alt.o
@@ -49,11 +43,6 @@ snd-soc-tegra210-alt-ope-objs 			:= tegra210_ope_alt.o		\
 
 obj-$(CONFIG_SND_SOC_TEGRA210_ADMAIF_ALT)	+= snd-soc-tegra210-alt-admaif.o
 obj-$(CONFIG_SND_SOC_TEGRA210_XBAR_ALT)		+= snd-soc-tegra210-alt-xbar.o
-
-ifeq ($(CONFIG_SND_SOC_TEGRA210_XBAR_ALT),m)
-	obj-$(CONFIG_SND_SOC_TEGRA210_XBAR_ALT) += snd-soc-tegra186-alt-xbar.o
-endif
-
 obj-$(CONFIG_SND_SOC_TEGRA210_I2S_ALT)		+= snd-soc-tegra210-alt-i2s.o
 obj-$(CONFIG_SND_SOC_TEGRA210_DMIC_ALT)		+= snd-soc-tegra210-alt-dmic.o
 obj-$(CONFIG_SND_SOC_TEGRA210_AMX_ALT)		+= snd-soc-tegra210-alt-amx.o

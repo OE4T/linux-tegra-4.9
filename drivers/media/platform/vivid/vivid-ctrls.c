@@ -117,6 +117,7 @@
  * better approaches to resolve this
  */
 #define VIVID_CID_SENSOR_MODES		(VIVID_CID_VIVID_BASE + 129)
+#define VIVID_CID_FOCUS_ABSOLUTE	(VIVID_CID_VIVID_BASE + 130)
 
 /* General User Controls */
 
@@ -664,6 +665,18 @@ static const struct v4l2_ctrl_config vivid_ctrl_dvtimings = {
 	.step = 1,
 	.def = 0,
 	.dims = { MAX_NUM_SENSOR_MODES, SENSOR_DV_TIMINGS_CID_SIZE },
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_focus_absolute = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_FOCUS_ABSOLUTE,
+	.name = "Focus Absolute",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_SLIDER,
+	.min = 0,
+	.max = 1024,
+	.def = 0,
+	.step = 1,
 };
 
 static const char * const vivid_ctrl_hor_movement_strings[] = {
@@ -1646,6 +1659,7 @@ int vivid_create_controls(struct vivid_dev *dev, bool show_ccs_cap,
 			&vivid_ctrl_coarsetime_short, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_grouphold, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_hdrenable, NULL);
+		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_focus_absolute, NULL);
 		dev->ctrl_signalprops = v4l2_ctrl_new_custom(hdl_vid_cap,
 			&vivid_ctrl_signalprops, NULL);
 		dev->ctrl_imageprops = v4l2_ctrl_new_custom(hdl_vid_cap,

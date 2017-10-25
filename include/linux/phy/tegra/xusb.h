@@ -67,6 +67,7 @@ int tegra_xusb_padctl_remote_wake_detected(struct tegra_xusb_padctl *padctl,
 					struct phy *phy);
 void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy);
 void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy);
+int tegra_phy_xusb_utmi_port_reset_quirk(struct phy *phy);
 int tegra_xusb_padctl_set_dcd_debounce_time(struct tegra_xusb_padctl *padctl,
 					struct phy *phy, u32 val);
 int tegra_xusb_padctl_utmi_pad_charger_detect_on(struct tegra_xusb_padctl

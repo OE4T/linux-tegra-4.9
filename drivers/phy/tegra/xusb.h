@@ -439,6 +439,7 @@ struct tegra_xusb_padctl_ops {
 	void (*handle_overcurrent)(struct tegra_xusb_padctl *padctl);
 	void (*utmi_pad_power_on)(struct phy *phy);
 	void (*utmi_pad_power_down)(struct phy *phy);
+	int (*utmi_port_reset_quirk)(struct phy *phy);
 };
 
 struct tegra_xusb_padctl_soc {

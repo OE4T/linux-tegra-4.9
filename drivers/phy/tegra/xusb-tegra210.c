@@ -74,6 +74,10 @@
 #define XUSB_PADCTL_USB3_PAD_MUX_PCIE_IDDQ_DISABLE(x) (1 << (1 + (x)))
 #define XUSB_PADCTL_USB3_PAD_MUX_SATA_IDDQ_DISABLE(x) (1 << (8 + (x)))
 
+#define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL0(x) (0x080 + (x) * 0x40)
+#define ZIP (1 << 18)
+#define ZIN (1 << 22)
+
 #define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(x) (0x084 + (x) * 0x40)
 #define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_LEV_SHIFT 7
 #define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_LEV_MASK 0x3
@@ -2395,6 +2399,33 @@ void tegra210_utmi_pad_power_down(struct phy *phy)
 	usb2->powered_on = false;
 }
 
+static int tegra210_utmi_port_reset_quirk(struct phy *phy)
+{
+	struct tegra_xusb_padctl *padctl;
+	struct tegra_xusb_lane *lane;
+	struct device *dev;
+	u32 reg;
+
+	if (!phy)
+		return -ENODEV;
+
+	lane = phy_get_drvdata(phy);
+	padctl = lane->pad->padctl;
+	dev = padctl->dev;
+
+	reg = padctl_readl(padctl,
+				XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL0(0));
+	dev_dbg(dev, "BATTERY_CHRG_OTGPADX_CTL0(0): 0x%x\n", reg);
+
+	if ((reg & ZIP) || (reg & ZIN)) {
+		dev_dbg(dev, "Toggle vbus\n");
+		tegra210_xusb_padctl_vbus_override(padctl, false);
+		tegra210_xusb_padctl_vbus_override(padctl, true);
+		return 1;
+	}
+	return 0;
+}
+
 static int
 tegra210_xusb_read_fuse_calibration(struct tegra210_xusb_fuse_calibration *fuse)
 {
@@ -2468,6 +2499,7 @@ static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.id_override = tegra210_xusb_padctl_id_override,
 	.utmi_pad_power_on = tegra210_utmi_pad_power_on,
 	.utmi_pad_power_down = tegra210_utmi_pad_power_down,
+	.utmi_port_reset_quirk = tegra210_utmi_port_reset_quirk,
 };
 
 static const char * const tegra210_supply_names[] = {

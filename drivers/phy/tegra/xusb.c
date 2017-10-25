@@ -1686,6 +1686,18 @@ void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy)
 }
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_power_down);
 
+int tegra_phy_xusb_utmi_port_reset_quirk(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+
+	if (padctl->soc->ops->utmi_port_reset_quirk)
+		return padctl->soc->ops->utmi_port_reset_quirk(phy);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_port_reset_quirk);
+
 MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
 MODULE_DESCRIPTION("Tegra XUSB Pad Controller driver");
 MODULE_LICENSE("GPL v2");

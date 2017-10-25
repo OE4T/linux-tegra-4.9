@@ -1368,8 +1368,8 @@ static void tegra210_pllu_set_defaults(struct tegra_clk_pll_params *pllu)
 #define divp_mask_shifted(p) (divp_mask(p) << divp_shift(p))
 
 #define PLL_LOCKDET_DELAY 2	/* Lock detection safety delays */
-static int tegra210_wait_for_mask(struct tegra_clk_pll *pll,
-				  u32 reg, u32 mask)
+static int tegra210_wait_for_pll_stable(struct tegra_clk_pll *pll,
+					u32 reg, u32 mask)
 {
 	int i;
 	u32 val = 0;
@@ -1404,8 +1404,8 @@ static int tegra210_pllx_dyn_ramp(struct tegra_clk_pll *pllx,
 	writel_relaxed(val, clk_base + pllx->params->ext_misc_reg[2]);
 	fence_udelay(1, clk_base);
 
-	tegra210_wait_for_mask(pllx, pllx->params->ext_misc_reg[2],
-			       PLLX_MISC2_DYNRAMP_DONE);
+	tegra210_wait_for_pll_stable(pllx, pllx->params->ext_misc_reg[2],
+				     PLLX_MISC2_DYNRAMP_DONE);
 
 	base = readl_relaxed(clk_base + pllx->params->base_reg) &
 		(~divn_mask_shifted(pllx));

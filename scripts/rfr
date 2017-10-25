@@ -113,20 +113,16 @@ def commit_info_from_gerrit_change_id(change_id):
 
     return gerrit_query(change_id)
 
-def gerrit_change_id_from_gerrit_cl(cmt):
+def commit_info_from_gerrit_cl(cmt):
     """
-    Return the gerrit Change-Id from the passed Gerrit URL.
+    Return a dict with all the gerrit info from a Gerrit URL.
     """
 
     cl = get_gerrit_url_id(cmt)
     if not cl:
         return None
 
-    commit = gerrit_query(cl)
-    if not commit:
-        return None
-
-    return commit['id']
+    return gerrit_query(cl)
 
 def gerrit_change_id_from_git_commit(cmt_id):
     """
@@ -157,9 +153,9 @@ def indent_lines(text, ind):
     """
     return ''.join(ind + l + '\n' for l in text.splitlines())
 
-def display_commits(commits, extra_message):
+def display_commits(commits_info, extra_message):
     """
-    Takes a list of the commits to print.
+    Takes a list of the commit info objects to print.
     """
 
     whole_template = """
@@ -177,10 +173,6 @@ Thanks!
 | Author: {author}
 
 {cmtmsg}"""
-
-    commits_info = [ ]
-    for cmt in commits:
-        commits_info.append(commit_info_from_gerrit_change_id(cmt))
 
     cmt_descriptions = ''
     for c in commits_info:
@@ -210,7 +202,7 @@ def main():
     """
 
     arg_parser = parse_args()
-    commits = [ ]
+    commits_info = [ ]
 
     if arg_parser.version:
         print('Version: %s' % VERSION)
@@ -224,18 +216,18 @@ def main():
     # on the order in which they pass the commits.
     for cmt in arg_parser.commits:
         if cmt[0] == 'I':
-            cid = cmt
+            info = commit_info_from_gerrit_change_id(cmt)
         elif get_gerrit_url_id(cmt):
-            cid = gerrit_change_id_from_gerrit_cl(cmt)
+            info = commit_info_from_gerrit_cl(cmt)
         else:
-            cid = gerrit_change_id_from_git_commit(cmt)
+            info = commit_info_from_gerrit_change_id(gerrit_change_id_from_git_commit(cmt))
 
-        if cid:
-            commits.append(cid)
+        if info:
+            commits_info.append(info)
         else:
             print('Warning: \'%s\' doesn\'t appear to be a commit!' % cmt)
 
-    display_commits(commits, arg_parser.msg)
+    display_commits(commits_info, arg_parser.msg)
 
 if __name__ == '__main__':
     main()

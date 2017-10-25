@@ -295,9 +295,11 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		goto done;
 	}
 
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	err = gk20a_ctxsw_trace_init(g);
 	if (err)
 		nvgpu_warn(g, "could not initialize ctxsw tracing");
+#endif
 
 	err = gk20a_sched_ctrl_init(g);
 	if (err) {

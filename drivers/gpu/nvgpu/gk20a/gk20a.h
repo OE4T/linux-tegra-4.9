@@ -689,18 +689,25 @@ struct gpu_ops {
 		int (*get_netlist_name)(struct gk20a *g, int index, char *name);
 		bool (*is_fw_defined)(void);
 	} gr_ctx;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	/*
+	 * Currently only supported on Linux due to the extremely tight
+	 * integration with Linux device driver structure (in particular
+	 * mmap).
+	 */
 	struct {
 		int (*init)(struct gk20a *g);
 		int (*max_entries)(struct gk20a *,
-			struct nvgpu_ctxsw_trace_filter *);
+			struct nvgpu_ctxsw_trace_filter *filter);
 		int (*flush)(struct gk20a *g);
 		int (*poll)(struct gk20a *g);
 		int (*enable)(struct gk20a *g);
 		int (*disable)(struct gk20a *g);
 		bool (*is_enabled)(struct gk20a *g);
 		int (*reset)(struct gk20a *g);
-		int (*bind_channel)(struct gk20a *, struct channel_gk20a *);
-		int (*unbind_channel)(struct gk20a *, struct channel_gk20a *);
+		int (*bind_channel)(struct gk20a *g, struct channel_gk20a *ch);
+		int (*unbind_channel)(struct gk20a *g,
+					struct channel_gk20a *ch);
 		int (*deinit)(struct gk20a *g);
 		int (*alloc_user_buffer)(struct gk20a *g,
 					void **buf, size_t *size);
@@ -710,6 +717,7 @@ struct gpu_ops {
 		int (*set_filter)(struct gk20a *g,
 			struct nvgpu_ctxsw_trace_filter *filter);
 	} fecs_trace;
+#endif
 	struct {
 		bool (*support_sparse)(struct gk20a *g);
 		u64 (*gmmu_map)(struct vm_gk20a *vm,

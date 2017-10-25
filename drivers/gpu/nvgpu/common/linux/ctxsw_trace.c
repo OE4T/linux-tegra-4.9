@@ -28,17 +28,17 @@
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
 
+#include "gk20a/gk20a.h"
+#include "gk20a/gr_gk20a.h"
+#include "gk20a/ctxsw_trace_gk20a.h"
+#include "gk20a/platform_gk20a.h"
+
 #include <nvgpu/kmem.h>
-
-#include "ctxsw_trace_gk20a.h"
-#include "gk20a.h"
-#include "platform_gk20a.h"
-#include "gr_gk20a.h"
-#include "common/linux/os_linux.h"
-
 #include <nvgpu/log.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/barrier.h>
+
+#include "os_linux.h"
 
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>

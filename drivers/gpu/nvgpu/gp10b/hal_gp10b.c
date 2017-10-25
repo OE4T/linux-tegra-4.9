@@ -619,7 +619,9 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->clock_gating = gp10b_ops.clock_gating;
 	gops->fifo = gp10b_ops.fifo;
 	gops->gr_ctx = gp10b_ops.gr_ctx;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	gops->fecs_trace = gp10b_ops.fecs_trace;
+#endif
 	gops->mm = gp10b_ops.mm;
 	gops->pramin = gp10b_ops.pramin;
 	gops->therm = gp10b_ops.therm;

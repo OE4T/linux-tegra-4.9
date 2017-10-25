@@ -714,7 +714,9 @@ int gp106_init_hal(struct gk20a *g)
 	gops->clock_gating = gp106_ops.clock_gating;
 	gops->fifo = gp106_ops.fifo;
 	gops->gr_ctx = gp106_ops.gr_ctx;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	gops->fecs_trace = gp106_ops.fecs_trace;
+#endif
 	gops->mm = gp106_ops.mm;
 	gops->pramin = gp106_ops.pramin;
 	gops->therm = gp106_ops.therm;

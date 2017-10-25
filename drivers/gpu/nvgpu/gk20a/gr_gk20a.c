@@ -3070,13 +3070,14 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 				"fail to load golden ctx image");
 			goto out;
 		}
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 		if (g->ops.fecs_trace.bind_channel && !c->vpr) {
 			err = g->ops.fecs_trace.bind_channel(g, c);
-			if (err) {
+			if (err)
 				nvgpu_warn(g,
 					"fail to bind channel for ctxsw trace");
-			}
 		}
+#endif
 		c->first_init = true;
 	}
 

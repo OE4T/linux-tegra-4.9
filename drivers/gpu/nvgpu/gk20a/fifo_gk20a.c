@@ -1228,16 +1228,24 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 			if (nvgpu_pmu_disable_elpg(g))
 				nvgpu_err(g, "failed to set disable elpg");
 		}
-		/* resetting engine will alter read/write index.
-		 * need to flush circular buffer before re-enabling FECS.
+
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+		/*
+		 * Resetting engine will alter read/write index. Need to flush
+		 * circular buffer before re-enabling FECS.
 		 */
 		if (g->ops.fecs_trace.reset)
 			g->ops.fecs_trace.reset(g);
-		/*HALT_PIPELINE method, halt GR engine*/
+#endif
+
+		/* HALT_PIPELINE method, halt GR engine. */
 		if (gr_gk20a_halt_pipe(g))
 			nvgpu_err(g, "failed to HALT gr pipe");
-		/* resetting engine using mc_enable_r() is not
-		enough, we do full init sequence */
+
+		/*
+		 * Resetting engine using mc_enable_r() is not enough; we must
+		 * do full init sequence.
+		 */
 		gk20a_gr_reset(g);
 		if (g->support_pmu && g->can_elpg)
 			nvgpu_pmu_enable_elpg(g);
@@ -1618,6 +1626,8 @@ static bool gk20a_fifo_handle_mmu_fault(
 				}
 			}
 		}
+
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 		/*
 		 * For non fake mmu fault, both tsg and ch pointers
 		 * could be valid. Check tsg first.
@@ -1626,10 +1636,11 @@ static bool gk20a_fifo_handle_mmu_fault(
 			gk20a_ctxsw_trace_tsg_reset(g, tsg);
 		else if (ch)
 			gk20a_ctxsw_trace_channel_reset(g, ch);
+#endif
 
-		/* disable the channel/TSG from hw and increment
-		 * syncpoints */
-
+		/*
+		 * Disable the channel/TSG from hw and increment syncpoints.
+		 */
 		if (tsg) {
 			if (!g->fifo.deferred_reset_pending) {
 				if (!fake_fault)

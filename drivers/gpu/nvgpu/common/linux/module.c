@@ -1104,7 +1104,9 @@ int nvgpu_remove(struct device *dev, struct class *class)
 	if (platform->has_cde)
 		gk20a_cde_destroy(l);
 
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	gk20a_ctxsw_trace_cleanup(g);
+#endif
 
 	gk20a_sched_ctrl_cleanup(g);
 

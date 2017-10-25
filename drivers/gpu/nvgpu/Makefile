@@ -105,7 +105,6 @@ nvgpu-y := \
 	gk20a/fb_gk20a.o \
 	gk20a/hal.o \
 	gk20a/tsg_gk20a.o \
-	gk20a/ctxsw_trace_gk20a.o \
 	gk20a/fecs_trace_gk20a.o \
 	gk20a/mc_gk20a.o \
 	gk20a/sim_gk20a.o \
@@ -151,6 +150,9 @@ ifeq ($(CONFIG_NVGPU_TRACK_MEM_USAGE),y)
 nvgpu-$(CONFIG_DEBUG_FS) += \
 	common/linux/debug_kmem.o
 endif
+
+nvgpu-$(CONFIG_GK20A_CTXSW_TRACE) += \
+	common/linux/ctxsw_trace.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o

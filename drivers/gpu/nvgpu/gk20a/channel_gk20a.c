@@ -553,8 +553,10 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	gk20a_dbg_info("freeing bound channel context, timeout=%ld",
 			timeout);
 
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	if (g->ops.fecs_trace.unbind_channel && !ch->vpr)
 		g->ops.fecs_trace.unbind_channel(g, ch);
+#endif
 
 	/* release channel ctx */
 	g->ops.gr.free_channel_ctx(ch, was_tsg);

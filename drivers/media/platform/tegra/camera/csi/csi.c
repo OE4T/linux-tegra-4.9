@@ -352,7 +352,7 @@ static int tegra_csi_try_mbus_fmt(struct v4l2_subdev *sd,
 {
 	int i, j;
 	struct tegra_csi_channel *chan = to_csi_chan(sd);
-	static struct v4l2_frmsize_discrete *sizes;
+	const struct v4l2_frmsize_discrete *sizes;
 
 	if (!chan->pg_mode)
 		return -ENOIOCTLCMD;
@@ -360,8 +360,7 @@ static int tegra_csi_try_mbus_fmt(struct v4l2_subdev *sd,
 	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
 		struct v4l2_mbus_framefmt *fmt = &tegra_csi_tpg_fmts[i];
 
-		if (mf->code == fmt->code && mf->field == fmt->field &&
-		    mf->colorspace == fmt->colorspace) {
+		if (mf->code == fmt->code) {
 			for (j = 0; j < ARRAY_SIZE(tegra_csi_tpg_sizes); j++) {
 				sizes = &tegra_csi_tpg_sizes[j];
 				if (mf->width == sizes->width &&
@@ -371,6 +370,7 @@ static int tegra_csi_try_mbus_fmt(struct v4l2_subdev *sd,
 		}
 	}
 
+	dev_info(chan->csi->dev, "use TEGRA_DEF_WIDTH x TEGRA_DEF_HEIGHT (1920x1080)\n");
 	memcpy(mf, tegra_csi_tpg_fmts, sizeof(struct v4l2_mbus_framefmt));
 
 	return 0;

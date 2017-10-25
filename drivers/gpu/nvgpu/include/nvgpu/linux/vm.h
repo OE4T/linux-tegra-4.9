@@ -19,6 +19,18 @@
 
 #include <nvgpu/types.h>
 
+#include <asm/cacheflush.h>
+
+/*
+ * Couple of places explicitly flush caches still. Any DMA buffer we allocate
+ * from within the GPU is writecombine and as a result does not need this but
+ * there seem to be exceptions.
+ */
+#ifdef CONFIG_ARM64
+#define outer_flush_range(a, b)
+#define __cpuc_flush_dcache_area __flush_dcache_area
+#endif
+
 struct sg_table;
 struct dma_buf;
 

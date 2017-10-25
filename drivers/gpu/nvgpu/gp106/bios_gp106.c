@@ -20,6 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <linux/pci_ids.h>
+
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
@@ -248,4 +250,3 @@ free_firmware:
 		nvgpu_vfree(g, g->bios.data);
 	return err;
 }
-

@@ -43,6 +43,7 @@
 #include "gk20a/fence_gk20a.h"
 
 #include "os_linux.h"
+#include "dmabuf.h"
 
 #define HZ_TO_MHZ(a) ((a > 0xF414F9CD7ULL) ? 0xffff : (a >> 32) ? \
 	(u32) ((a * 0x10C8ULL) >> 32) : (u16) ((u32) a/MHZ))

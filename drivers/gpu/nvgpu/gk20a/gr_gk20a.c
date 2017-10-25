@@ -7980,14 +7980,6 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			ctx_op_nr++;
 		}
 	}
-#if 0
-	/* flush cpu caches for the ctx buffer? only if cpu cached, of course.
-	 * they aren't, yet */
-	if (cached) {
-		FLUSH_CPU_DCACHE(ctx_ptr,
-			 sg_phys(ch_ctx->gr_ctx.mem.ref), size);
-	}
-#endif
 
  cleanup:
 	if (offsets)

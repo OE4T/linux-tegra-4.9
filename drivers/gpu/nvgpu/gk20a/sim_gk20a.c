@@ -24,10 +24,11 @@
 #include <linux/highmem.h>
 #include <linux/platform_device.h>
 
+#include <nvgpu/log.h>
+#include <nvgpu/linux/vm.h>
+
 #include "gk20a.h"
 #include "platform_gk20a.h"
-
-#include <nvgpu/log.h>
 
 #include <nvgpu/hw/gk20a/hw_sim_gk20a.h>
 

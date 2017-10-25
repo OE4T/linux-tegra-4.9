@@ -21,6 +21,7 @@
  */
 
 #include <linux/delay.h>
+#include <linux/pci_ids.h>
 
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>

@@ -13,10 +13,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef NVGPU_OS_LINUX_H
 #define NVGPU_OS_LINUX_H
 
 #include <linux/cdev.h>
+#include <linux/iommu.h>
 
 #ifdef CONFIG_TEGRA_19x_GPU
 #include <nvgpu/linux/os_linux_t19x.h>

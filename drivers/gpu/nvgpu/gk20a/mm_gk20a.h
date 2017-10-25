@@ -21,13 +21,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
 #ifndef MM_GK20A_H
 #define MM_GK20A_H
-
-#include <linux/scatterlist.h>
-#include <linux/iommu.h>
-#include <asm/dma-iommu.h>
-#include <asm/cacheflush.h>
 
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/allocator.h>
@@ -35,17 +31,6 @@
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
 #include <nvgpu/kref.h>
-
-#ifdef CONFIG_ARM64
-#define outer_flush_range(a, b)
-#define __cpuc_flush_dcache_area __flush_dcache_area
-#endif
-
-#define FLUSH_CPU_DCACHE(va, pa, size)	\
-	do {	\
-		__cpuc_flush_dcache_area((void *)(va), (size_t)(size));	\
-		outer_flush_range(pa, pa + (size_t)(size));		\
-	} while (0)
 
 struct gpfifo_desc {
 	struct nvgpu_mem mem;
@@ -197,8 +182,5 @@ void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *mem,
 
 extern const struct gk20a_mmu_level gk20a_mm_levels_64k[];
 extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
-
-int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
-			     u64 *buffer_id, u64 *buffer_len);
 
 #endif /* MM_GK20A_H */

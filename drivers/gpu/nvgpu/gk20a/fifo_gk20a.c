@@ -1952,6 +1952,12 @@ int gk20a_fifo_tsg_unbind_channel(struct channel_gk20a *ch)
 	struct fifo_gk20a *f = &g->fifo;
 	struct tsg_gk20a *tsg = &f->tsg[ch->tsgid];
 	int err;
+	bool tsg_timedout = false;
+
+	/* If one channel in TSG times out, we disable all channels */
+	nvgpu_rwsem_down_write(&tsg->ch_list_lock);
+	tsg_timedout = ch->has_timedout;
+	nvgpu_rwsem_up_write(&tsg->ch_list_lock);
 
 	/* Disable TSG and examine status before unbinding channel */
 	g->ops.fifo.disable_tsg(tsg);
@@ -1976,14 +1982,22 @@ int gk20a_fifo_tsg_unbind_channel(struct channel_gk20a *ch)
 	nvgpu_list_del(&ch->ch_entry);
 	nvgpu_rwsem_up_write(&tsg->ch_list_lock);
 
-	g->ops.fifo.enable_tsg(tsg);
+	/*
+	 * Don't re-enable all channels if TSG has timed out already
+	 *
+	 * Note that we can skip disabling and preempting TSG too in case of
+	 * time out, but we keep that to ensure TSG is kicked out
+	 */
+	if (!tsg_timedout)
+		g->ops.fifo.enable_tsg(tsg);
 
 	gk20a_channel_abort_clean_up(ch);
 
 	return 0;
 
 fail_enable_tsg:
-	g->ops.fifo.enable_tsg(tsg);
+	if (!tsg_timedout)
+		g->ops.fifo.enable_tsg(tsg);
 	return err;
 }
 

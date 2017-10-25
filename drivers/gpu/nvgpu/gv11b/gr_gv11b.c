@@ -2516,7 +2516,7 @@ void gv11b_gr_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state)
 
 int gv11b_gr_update_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id,
-		struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state)
+		struct nvgpu_gr_sm_error_state *sm_error_state)
 {
 	u32 gpc, tpc, sm, offset;
 	struct gr_gk20a *gr = &g->gr;

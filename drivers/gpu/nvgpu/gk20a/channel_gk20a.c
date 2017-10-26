@@ -44,44 +44,12 @@
 #include <nvgpu/barrier.h>
 #include <nvgpu/ctxsw_trace.h>
 
-/*
- * This is required for nvgpu_vm_find_buf() which is used in the tracing
- * code. Once we can get and access userspace buffers without requiring
- * direct dma_buf usage this can be removed.
- */
-#include <nvgpu/linux/vm.h>
-
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "fence_gk20a.h"
 
-#include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
-
-/*
- * Note
- * This is added for all the copy_from_user methods in this file which needs to
- * be moved lated to reduce depenedency on Linux
- */
-#include <linux/uaccess.h>
-
-/*
- * Although channels do have pointers back to the gk20a struct that they were
- * created under in cases where the driver is killed that pointer can be bad.
- * The channel memory can be freed before the release() function for a given
- * channel is called. This happens when the driver dies and userspace doesn't
- * get a chance to call release() until after the entire gk20a driver data is
- * unloaded and freed.
- */
-struct channel_priv {
-	struct gk20a *g;
-	struct channel_gk20a *c;
-};
-
 static void free_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
 static void gk20a_channel_dump_ref_actions(struct channel_gk20a *c);
-
-static void free_priv_cmdbuf(struct channel_gk20a *c,
-			     struct priv_cmd_entry *e);
 
 static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c);
 static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c);
@@ -96,9 +64,6 @@ static struct channel_gk20a_job *channel_gk20a_joblist_peek(
 		struct channel_gk20a *c);
 
 static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch);
-
-static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
-					bool clean_all);
 
 /* allocate GPU channel */
 static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
@@ -1038,7 +1003,7 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 
 /* Don't call this to free an explict cmd entry.
  * It doesn't update priv_cmd_queue get/put */
-static void free_priv_cmdbuf(struct channel_gk20a *c,
+void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e)
 {
 	if (channel_gk20a_is_prealloc_enabled(c))
@@ -1047,7 +1012,7 @@ static void free_priv_cmdbuf(struct channel_gk20a *c,
 		nvgpu_kfree(c->g, e);
 }
 
-static int channel_gk20a_alloc_job(struct channel_gk20a *c,
+int channel_gk20a_alloc_job(struct channel_gk20a *c,
 		struct channel_gk20a_job **job_out)
 {
 	int err = 0;
@@ -1080,7 +1045,7 @@ static int channel_gk20a_alloc_job(struct channel_gk20a *c,
 	return err;
 }
 
-static void channel_gk20a_free_job(struct channel_gk20a *c,
+void channel_gk20a_free_job(struct channel_gk20a *c,
 		struct channel_gk20a_job *job)
 {
 	/*
@@ -1267,11 +1232,12 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 {
 	struct gk20a *g = c->g;
 	struct vm_gk20a *ch_vm;
-	u32 gpfifo_size;
+	u32 gpfifo_size, gpfifo_entry_size;
 	int err = 0;
 	unsigned long acquire_timeout;
 
 	gpfifo_size = num_entries;
+	gpfifo_entry_size = nvgpu_get_gpfifo_entry_size();
 
 	if (flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_VPR_ENABLED)
 		c->vpr = true;
@@ -1315,7 +1281,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	}
 
 	err = nvgpu_dma_alloc_map_sys(ch_vm,
-			gpfifo_size * sizeof(struct nvgpu_gpfifo),
+			gpfifo_size * gpfifo_entry_size,
 			&c->gpfifo.mem);
 	if (err) {
 		nvgpu_err(g, "%s: memory allocation failed", __func__);
@@ -1324,7 +1290,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	if (c->gpfifo.mem.aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
 		c->gpfifo.pipe = nvgpu_big_malloc(g,
-				gpfifo_size * sizeof(struct nvgpu_gpfifo));
+				gpfifo_size * gpfifo_entry_size);
 		if (!c->gpfifo.pipe) {
 			err = -ENOMEM;
 			goto clean_up_unmap;
@@ -1427,7 +1393,7 @@ static inline u32 update_gp_get(struct gk20a *g,
 	return new_get;
 }
 
-static inline u32 gp_free_count(struct channel_gk20a *c)
+u32 nvgpu_gp_free_count(struct channel_gk20a *c)
 {
 	return (c->gpfifo.entry_num - (c->gpfifo.put - c->gpfifo.get) - 1) %
 		c->gpfifo.entry_num;
@@ -1460,91 +1426,10 @@ static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch)
 	return ch->g->ch_wdt_timeout_ms;
 }
 
-static u32 get_gp_free_count(struct channel_gk20a *c)
+u32 nvgpu_get_gp_free_count(struct channel_gk20a *c)
 {
 	update_gp_get(c->g, c);
-	return gp_free_count(c);
-}
-
-#ifdef CONFIG_DEBUG_FS
-static void trace_write_pushbuffer(struct channel_gk20a *c,
-				   struct nvgpu_gpfifo *g)
-{
-	void *mem = NULL;
-	unsigned int words;
-	u64 offset;
-	struct dma_buf *dmabuf = NULL;
-
-	if (gk20a_debug_trace_cmdbuf) {
-		u64 gpu_va = (u64)g->entry0 |
-			(u64)((u64)pbdma_gp_entry1_get_hi_v(g->entry1) << 32);
-		int err;
-
-		words = pbdma_gp_entry1_length_v(g->entry1);
-		err = nvgpu_vm_find_buf(c->vm, gpu_va, &dmabuf, &offset);
-		if (!err)
-			mem = dma_buf_vmap(dmabuf);
-	}
-
-	if (mem) {
-		u32 i;
-		/*
-		 * Write in batches of 128 as there seems to be a limit
-		 * of how much you can output to ftrace at once.
-		 */
-		for (i = 0; i < words; i += 128U) {
-			trace_gk20a_push_cmdbuf(
-				c->g->name,
-				0,
-				min(words - i, 128U),
-				offset + i * sizeof(u32),
-				mem);
-		}
-		dma_buf_vunmap(dmabuf, mem);
-	}
-}
-#endif
-
-static void trace_write_pushbuffer_range(struct channel_gk20a *c,
-					 struct nvgpu_gpfifo *g,
-					 struct nvgpu_gpfifo __user *user_gpfifo,
-					 int offset,
-					 int count)
-{
-#ifdef CONFIG_DEBUG_FS
-	u32 size;
-	int i;
-	struct nvgpu_gpfifo *gp;
-	bool gpfifo_allocated = false;
-
-	if (!gk20a_debug_trace_cmdbuf)
-		return;
-
-	if (!g && !user_gpfifo)
-		return;
-
-	if (!g) {
-		size = count * sizeof(struct nvgpu_gpfifo);
-		if (size) {
-			g = nvgpu_big_malloc(c->g, size);
-			if (!g)
-				return;
-
-			if (copy_from_user(g, user_gpfifo, size)) {
-				nvgpu_big_free(c->g, g);
-				return;
-			}
-		}
-		gpfifo_allocated = true;
-	}
-
-	gp = g + offset;
-	for (i = 0; i < count; i++, gp++)
-		trace_write_pushbuffer(c, gp);
-
-	if (gpfifo_allocated)
-		nvgpu_big_free(c->g, g);
-#endif
+	return nvgpu_gp_free_count(c);
 }
 
 static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
@@ -2032,7 +1917,7 @@ int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 	return 0;
 }
 
-static int gk20a_channel_add_job(struct channel_gk20a *c,
+int gk20a_channel_add_job(struct channel_gk20a *c,
 				 struct channel_gk20a_job *job,
 				 bool skip_buffer_refcounting)
 {
@@ -2097,7 +1982,7 @@ err_put_buffers:
  * per-job memory for completed jobs; in case of preallocated resources, this
  * opens up slots for new jobs to be submitted.
  */
-static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
+void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 					bool clean_all)
 {
 	struct vm_gk20a *vm;
@@ -2255,533 +2140,6 @@ void gk20a_channel_update(struct channel_gk20a *c)
 	trace_gk20a_channel_update(c->chid);
 	/* A queued channel is always checked for job cleanup. */
 	gk20a_channel_worker_enqueue(c);
-}
-
-static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
-		struct priv_cmd_entry *cmd)
-{
-	struct gk20a *g = c->g;
-	struct nvgpu_mem *gpfifo_mem = &c->gpfifo.mem;
-	struct nvgpu_gpfifo x = {
-		.entry0 = u64_lo32(cmd->gva),
-		.entry1 = u64_hi32(cmd->gva) |
-			pbdma_gp_entry1_length_f(cmd->size)
-	};
-
-	nvgpu_mem_wr_n(g, gpfifo_mem, c->gpfifo.put * sizeof(x),
-			&x, sizeof(x));
-
-	if (cmd->mem->aperture == APERTURE_SYSMEM)
-		trace_gk20a_push_cmdbuf(g->name, 0, cmd->size, 0,
-				cmd->mem->cpu_va + cmd->off * sizeof(u32));
-
-	c->gpfifo.put = (c->gpfifo.put + 1) & (c->gpfifo.entry_num - 1);
-}
-
-/*
- * Copy source gpfifo entries into the gpfifo ring buffer, potentially
- * splitting into two memcpys to handle wrap-around.
- */
-static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
-		struct nvgpu_gpfifo *kern_gpfifo,
-		struct nvgpu_gpfifo __user *user_gpfifo,
-		u32 num_entries)
-{
-	/* byte offsets */
-	u32 gpfifo_size = c->gpfifo.entry_num * sizeof(struct nvgpu_gpfifo);
-	u32 len = num_entries * sizeof(struct nvgpu_gpfifo);
-	u32 start = c->gpfifo.put * sizeof(struct nvgpu_gpfifo);
-	u32 end = start + len; /* exclusive */
-	struct nvgpu_mem *gpfifo_mem = &c->gpfifo.mem;
-	struct nvgpu_gpfifo *cpu_src;
-	int err;
-
-	if (user_gpfifo && !c->gpfifo.pipe) {
-		/*
-		 * This path (from userspace to sysmem) is special in order to
-		 * avoid two copies unnecessarily (from user to pipe, then from
-		 * pipe to gpu sysmem buffer).
-		 *
-		 * As a special case, the pipe buffer exists if PRAMIN writes
-		 * are forced, although the buffers may not be in vidmem in
-		 * that case.
-		 */
-		if (end > gpfifo_size) {
-			/* wrap-around */
-			int length0 = gpfifo_size - start;
-			int length1 = len - length0;
-			void __user *user2 = (u8 __user *)user_gpfifo + length0;
-
-			err = copy_from_user(gpfifo_mem->cpu_va + start,
-					user_gpfifo, length0);
-			if (err)
-				return err;
-
-			err = copy_from_user(gpfifo_mem->cpu_va,
-					user2, length1);
-			if (err)
-				return err;
-		} else {
-			err = copy_from_user(gpfifo_mem->cpu_va + start,
-					user_gpfifo, len);
-			if (err)
-				return err;
-		}
-
-		trace_write_pushbuffer_range(c, NULL, user_gpfifo,
-				0, num_entries);
-		goto out;
-	} else if (user_gpfifo) {
-		/* from userspace to vidmem or sysmem when pramin forced, use
-		 * the common copy path below */
-		err = copy_from_user(c->gpfifo.pipe, user_gpfifo, len);
-		if (err)
-			return err;
-
-		cpu_src = c->gpfifo.pipe;
-	} else {
-		/* from kernel to either sysmem or vidmem, don't need
-		 * copy_from_user so use the common path below */
-		cpu_src = kern_gpfifo;
-	}
-
-	if (end > gpfifo_size) {
-		/* wrap-around */
-		int length0 = gpfifo_size - start;
-		int length1 = len - length0;
-		void *src2 = (u8 *)cpu_src + length0;
-
-		nvgpu_mem_wr_n(c->g, gpfifo_mem, start, cpu_src, length0);
-		nvgpu_mem_wr_n(c->g, gpfifo_mem, 0, src2, length1);
-	} else {
-		nvgpu_mem_wr_n(c->g, gpfifo_mem, start, cpu_src, len);
-
-	}
-
-	trace_write_pushbuffer_range(c, cpu_src, NULL, 0, num_entries);
-
-out:
-	c->gpfifo.put = (c->gpfifo.put + num_entries) &
-		(c->gpfifo.entry_num - 1);
-
-	return 0;
-}
-
-/*
- * Handle the submit synchronization - pre-fences and post-fences.
- */
-static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
-				      struct nvgpu_fence *fence,
-				      struct channel_gk20a_job *job,
-				      struct priv_cmd_entry **wait_cmd,
-				      struct priv_cmd_entry **incr_cmd,
-				      struct gk20a_fence **pre_fence,
-				      struct gk20a_fence **post_fence,
-				      bool force_need_sync_fence,
-				      bool register_irq,
-				      u32 flags)
-{
-	struct gk20a *g = c->g;
-	bool need_sync_fence = false;
-	bool new_sync_created = false;
-	int wait_fence_fd = -1;
-	int err = 0;
-	bool need_wfi = !(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI);
-	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(c);
-
-	/*
-	 * If user wants to always allocate sync_fence_fds then respect that;
-	 * otherwise, allocate sync_fence_fd based on user flags.
-	 */
-	if (force_need_sync_fence)
-		need_sync_fence = true;
-
-	if (g->aggressive_sync_destroy_thresh) {
-		nvgpu_mutex_acquire(&c->sync_lock);
-		if (!c->sync) {
-			c->sync = gk20a_channel_sync_create(c);
-			if (!c->sync) {
-				err = -ENOMEM;
-				nvgpu_mutex_release(&c->sync_lock);
-				goto fail;
-			}
-			new_sync_created = true;
-		}
-		nvgpu_atomic_inc(&c->sync->refcount);
-		nvgpu_mutex_release(&c->sync_lock);
-	}
-
-	if (g->ops.fifo.resetup_ramfc && new_sync_created) {
-		err = g->ops.fifo.resetup_ramfc(c);
-		if (err)
-			goto fail;
-	}
-
-	/*
-	 * Optionally insert syncpt wait in the beginning of gpfifo submission
-	 * when user requested and the wait hasn't expired. Validate that the id
-	 * makes sense, elide if not. The only reason this isn't being
-	 * unceremoniously killed is to keep running some tests which trigger
-	 * this condition.
-	 */
-	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
-		job->pre_fence = gk20a_alloc_fence(c);
-		if (!job->pre_fence) {
-			err = -ENOMEM;
-			goto fail;
-		}
-
-		if (!pre_alloc_enabled)
-			job->wait_cmd = nvgpu_kzalloc(g,
-				sizeof(struct priv_cmd_entry));
-
-		if (!job->wait_cmd) {
-			err = -ENOMEM;
-			goto clean_up_pre_fence;
-		}
-
-		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
-			wait_fence_fd = fence->id;
-			err = c->sync->wait_fd(c->sync, wait_fence_fd,
-					       job->wait_cmd, job->pre_fence);
-		} else {
-			err = c->sync->wait_syncpt(c->sync, fence->id,
-						   fence->value, job->wait_cmd,
-						   job->pre_fence);
-		}
-
-		if (!err) {
-			if (job->wait_cmd->valid)
-				*wait_cmd = job->wait_cmd;
-			*pre_fence = job->pre_fence;
-		} else
-			goto clean_up_wait_cmd;
-	}
-
-	if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) &&
-	    (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE))
-		need_sync_fence = true;
-
-	/*
-	 * Always generate an increment at the end of a GPFIFO submission. This
-	 * is used to keep track of method completion for idle railgating. The
-	 * sync_pt/semaphore PB is added to the GPFIFO later on in submit.
-	 */
-	job->post_fence = gk20a_alloc_fence(c);
-	if (!job->post_fence) {
-		err = -ENOMEM;
-		goto clean_up_wait_cmd;
-	}
-	if (!pre_alloc_enabled)
-		job->incr_cmd = nvgpu_kzalloc(g, sizeof(struct priv_cmd_entry));
-
-	if (!job->incr_cmd) {
-		err = -ENOMEM;
-		goto clean_up_post_fence;
-	}
-
-	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
-		err = c->sync->incr_user(c->sync, wait_fence_fd, job->incr_cmd,
-				 job->post_fence, need_wfi, need_sync_fence,
-				 register_irq);
-	else
-		err = c->sync->incr(c->sync, job->incr_cmd,
-				    job->post_fence, need_sync_fence,
-				    register_irq);
-	if (!err) {
-		*incr_cmd = job->incr_cmd;
-		*post_fence = job->post_fence;
-	} else
-		goto clean_up_incr_cmd;
-
-	return 0;
-
-clean_up_incr_cmd:
-	free_priv_cmdbuf(c, job->incr_cmd);
-	if (!pre_alloc_enabled)
-		job->incr_cmd = NULL;
-clean_up_post_fence:
-	gk20a_fence_put(job->post_fence);
-	job->post_fence = NULL;
-clean_up_wait_cmd:
-	free_priv_cmdbuf(c, job->wait_cmd);
-	if (!pre_alloc_enabled)
-		job->wait_cmd = NULL;
-clean_up_pre_fence:
-	gk20a_fence_put(job->pre_fence);
-	job->pre_fence = NULL;
-fail:
-	*wait_cmd = NULL;
-	*pre_fence = NULL;
-	return err;
-}
-
-int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
-				struct nvgpu_gpfifo *gpfifo,
-				struct nvgpu_submit_gpfifo_args *args,
-				u32 num_entries,
-				u32 flags,
-				struct nvgpu_fence *fence,
-				struct gk20a_fence **fence_out,
-				bool force_need_sync_fence,
-				struct fifo_profile_gk20a *profile)
-{
-	struct gk20a *g = c->g;
-	struct priv_cmd_entry *wait_cmd = NULL;
-	struct priv_cmd_entry *incr_cmd = NULL;
-	struct gk20a_fence *pre_fence = NULL;
-	struct gk20a_fence *post_fence = NULL;
-	struct channel_gk20a_job *job = NULL;
-	/* we might need two extra gpfifo entries - one for pre fence
-	 * and one for post fence. */
-	const int extra_entries = 2;
-	bool skip_buffer_refcounting = (flags &
-			NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING);
-	int err = 0;
-	bool need_job_tracking;
-	bool need_deferred_cleanup = false;
-	struct nvgpu_gpfifo __user *user_gpfifo = args ?
-		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : NULL;
-
-	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
-		return -ENODEV;
-
-	if (c->has_timedout)
-		return -ETIMEDOUT;
-
-	if (!nvgpu_mem_is_valid(&c->gpfifo.mem))
-		return -ENOMEM;
-
-	/* fifo not large enough for request. Return error immediately.
-	 * Kernel can insert gpfifo entries before and after user gpfifos.
-	 * So, add extra_entries in user request. Also, HW with fifo size N
-	 * can accept only N-1 entreis and so the below condition */
-	if (c->gpfifo.entry_num - 1 < num_entries + extra_entries) {
-		nvgpu_err(g, "not enough gpfifo space allocated");
-		return -ENOMEM;
-	}
-
-	if (!gpfifo && !args)
-		return -EINVAL;
-
-	if ((flags & (NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT |
-		      NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
-	    !fence)
-		return -EINVAL;
-
-	/* an address space needs to have been bound at this point. */
-	if (!gk20a_channel_as_bound(c)) {
-		nvgpu_err(g,
-			    "not bound to an address space at time of gpfifo"
-			    " submission.");
-		return -EINVAL;
-	}
-
-	if (profile)
-		profile->timestamp[PROFILE_ENTRY] = sched_clock();
-
-	/* update debug settings */
-	nvgpu_ltc_sync_enabled(g);
-
-	gk20a_dbg_info("channel %d", c->chid);
-
-	/*
-	 * Job tracking is necessary for any of the following conditions:
-	 *  - pre- or post-fence functionality
-	 *  - channel wdt
-	 *  - GPU rail-gating with non-deterministic channels
-	 *  - buffer refcounting
-	 *
-	 * If none of the conditions are met, then job tracking is not
-	 * required and a fast submit can be done (ie. only need to write
-	 * out userspace GPFIFO entries and update GP_PUT).
-	 */
-	need_job_tracking = (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) ||
-			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) ||
-			c->wdt_enabled ||
-			(g->can_railgate && !c->deterministic) ||
-			!skip_buffer_refcounting;
-
-	if (need_job_tracking) {
-		bool need_sync_framework = false;
-
-		/*
-		 * If the channel is to have deterministic latency and
-		 * job tracking is required, the channel must have
-		 * pre-allocated resources. Otherwise, we fail the submit here
-		 */
-		if (c->deterministic && !channel_gk20a_is_prealloc_enabled(c))
-			return -EINVAL;
-
-		need_sync_framework = force_need_sync_fence ||
-			gk20a_channel_sync_needs_sync_framework(g) ||
-			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE &&
-			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT ||
-			 flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET));
-
-		/*
-		 * Deferred clean-up is necessary for any of the following
-		 * conditions:
-		 * - channel's deterministic flag is not set
-		 * - dependency on sync framework, which could make the
-		 *   behavior of the clean-up operation non-deterministic
-		 *   (should not be performed in the submit path)
-		 * - channel wdt
-		 * - GPU rail-gating with non-deterministic channels
-		 * - buffer refcounting
-		 *
-		 * If none of the conditions are met, then deferred clean-up
-		 * is not required, and we clean-up one job-tracking
-		 * resource in the submit path.
-		 */
-		need_deferred_cleanup = !c->deterministic ||
-					need_sync_framework ||
-					c->wdt_enabled ||
-					(g->can_railgate &&
-					 !c->deterministic) ||
-					!skip_buffer_refcounting;
-
-		/*
-		 * For deterministic channels, we don't allow deferred clean_up
-		 * processing to occur. In cases we hit this, we fail the submit
-		 */
-		if (c->deterministic && need_deferred_cleanup)
-			return -EINVAL;
-
-		if (!c->deterministic) {
-			/*
-			 * Get a power ref unless this is a deterministic
-			 * channel that holds them during the channel lifetime.
-			 * This one is released by gk20a_channel_clean_up_jobs,
-			 * via syncpt or sema interrupt, whichever is used.
-			 */
-			err = gk20a_busy(g);
-			if (err) {
-				nvgpu_err(g,
-					"failed to host gk20a to submit gpfifo, process %s",
-					current->comm);
-				return err;
-			}
-		}
-
-		if (!need_deferred_cleanup) {
-			/* clean up a single job */
-			gk20a_channel_clean_up_jobs(c, false);
-		}
-	}
-
-
-	/* Grab access to HW to deal with do_idle */
-	if (c->deterministic)
-		nvgpu_rwsem_down_read(&g->deterministic_busy);
-
-	trace_gk20a_channel_submit_gpfifo(g->name,
-					  c->chid,
-					  num_entries,
-					  flags,
-					  fence ? fence->id : 0,
-					  fence ? fence->value : 0);
-
-	gk20a_dbg_info("pre-submit put %d, get %d, size %d",
-		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
-
-	/*
-	 * Make sure we have enough space for gpfifo entries. Check cached
-	 * values first and then read from HW. If no space, return EAGAIN
-	 * and let userpace decide to re-try request or not.
-	 */
-	if (gp_free_count(c) < num_entries + extra_entries) {
-		if (get_gp_free_count(c) < num_entries + extra_entries) {
-			err = -EAGAIN;
-			goto clean_up;
-		}
-	}
-
-	if (c->has_timedout) {
-		err = -ETIMEDOUT;
-		goto clean_up;
-	}
-
-	if (need_job_tracking) {
-		err = channel_gk20a_alloc_job(c, &job);
-		if (err)
-			goto clean_up;
-
-		err = gk20a_submit_prepare_syncs(c, fence, job,
-						 &wait_cmd, &incr_cmd,
-						 &pre_fence, &post_fence,
-						 force_need_sync_fence,
-						 need_deferred_cleanup,
-						 flags);
-		if (err)
-			goto clean_up_job;
-	}
-
-	if (profile)
-		profile->timestamp[PROFILE_JOB_TRACKING] = sched_clock();
-
-	if (wait_cmd)
-		gk20a_submit_append_priv_cmdbuf(c, wait_cmd);
-
-	if (gpfifo || user_gpfifo)
-		err = gk20a_submit_append_gpfifo(c, gpfifo, user_gpfifo,
-				num_entries);
-	if (err)
-		goto clean_up_job;
-
-	/*
-	 * And here's where we add the incr_cmd we generated earlier. It should
-	 * always run!
-	 */
-	if (incr_cmd)
-		gk20a_submit_append_priv_cmdbuf(c, incr_cmd);
-
-	if (fence_out)
-		*fence_out = gk20a_fence_get(post_fence);
-
-	if (need_job_tracking)
-		/* TODO! Check for errors... */
-		gk20a_channel_add_job(c, job, skip_buffer_refcounting);
-	if (profile)
-		profile->timestamp[PROFILE_APPEND] = sched_clock();
-
-	g->ops.fifo.userd_gp_put(g, c);
-
-	if ((NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST & flags) &&
-		g->ops.fifo.reschedule_runlist)
-		g->ops.fifo.reschedule_runlist(g, c->runlist_id);
-
-	/* No hw access beyond this point */
-	if (c->deterministic)
-		nvgpu_rwsem_up_read(&g->deterministic_busy);
-
-	trace_gk20a_channel_submitted_gpfifo(g->name,
-				c->chid,
-				num_entries,
-				flags,
-				post_fence ? post_fence->syncpt_id : 0,
-				post_fence ? post_fence->syncpt_value : 0);
-
-	gk20a_dbg_info("post-submit put %d, get %d, size %d",
-		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
-
-	if (profile)
-		profile->timestamp[PROFILE_END] = sched_clock();
-	gk20a_dbg_fn("done");
-	return err;
-
-clean_up_job:
-	channel_gk20a_free_job(c, job);
-clean_up:
-	gk20a_dbg_fn("fail");
-	gk20a_fence_put(pre_fence);
-	gk20a_fence_put(post_fence);
-	if (c->deterministic)
-		nvgpu_rwsem_up_read(&g->deterministic_busy);
-	else if (need_deferred_cleanup)
-		gk20a_idle(g);
-
-	return err;
 }
 
 /*

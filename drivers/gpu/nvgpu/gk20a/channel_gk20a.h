@@ -24,6 +24,9 @@
 #ifndef CHANNEL_GK20A_H
 #define CHANNEL_GK20A_H
 
+/* TODO: To be removed when work_struct update_fn_work is moved out of common code */
+#include <linux/workqueue.h>
+
 #include <linux/stacktrace.h>
 #include <nvgpu/list.h>
 
@@ -374,16 +377,6 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		int runlist_id,
 		bool is_privileged_channel);
 
-int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
-				struct nvgpu_gpfifo *gpfifo,
-				struct nvgpu_submit_gpfifo_args *args,
-				u32 num_entries,
-				u32 flags,
-				struct nvgpu_fence *fence,
-				struct gk20a_fence **fence_out,
-				bool force_need_sync_fence,
-				struct fifo_profile_gk20a *profile);
-
 int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		unsigned int num_entries,
 		unsigned int num_inflight_jobs,
@@ -407,5 +400,21 @@ int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 		u32 level);
 void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
 				       u32 event_id);
+
+int channel_gk20a_alloc_job(struct channel_gk20a *c,
+		struct channel_gk20a_job **job_out);
+void channel_gk20a_free_job(struct channel_gk20a *c,
+		struct channel_gk20a_job *job);
+u32 nvgpu_get_gp_free_count(struct channel_gk20a *c);
+u32 nvgpu_gp_free_count(struct channel_gk20a *c);
+int gk20a_channel_add_job(struct channel_gk20a *c,
+				 struct channel_gk20a_job *job,
+				 bool skip_buffer_refcounting);
+void free_priv_cmdbuf(struct channel_gk20a *c,
+			     struct priv_cmd_entry *e);
+void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
+					bool clean_all);
+
+u32 nvgpu_get_gpfifo_entry_size(void);
 
 #endif /* CHANNEL_GK20A_H */

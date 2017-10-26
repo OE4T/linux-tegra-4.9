@@ -161,5 +161,15 @@ void gk20a_ce_delete_context_priv(struct gk20a *g,
 		u32 ce_ctx_id);
 void gk20a_ce_delete_context(struct gk20a *g,
 		u32 ce_ctx_id);
+int gk20a_ce_prepare_submit(u64 src_buf,
+		u64 dst_buf,
+		u64 size,
+		u32 *cmd_buf_cpu_va,
+		u32 max_cmd_buf_size,
+		unsigned int payload,
+		int launch_flags,
+		int request_operation,
+		u32 dma_copy_class,
+		struct gk20a_fence *gk20a_fence_in);
 
 #endif /*__CE2_GK20A_H__*/

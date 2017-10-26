@@ -36,6 +36,7 @@
 #include "gk20a/platform_gk20a.h"
 
 #include "ioctl_channel.h"
+#include "channel.h"
 #include "os_linux.h"
 #include "ctxsw_trace.h"
 

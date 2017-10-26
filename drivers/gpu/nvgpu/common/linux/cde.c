@@ -42,6 +42,7 @@
 #include "cde.h"
 #include "os_linux.h"
 #include "dmabuf.h"
+#include "channel.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

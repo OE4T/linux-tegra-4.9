@@ -1966,7 +1966,7 @@ int gk20a_fifo_tsg_unbind_channel(struct channel_gk20a *ch)
 	if (err)
 		goto fail_enable_tsg;
 
-	if (g->ops.fifo.tsg_verify_channel_status) {
+	if (g->ops.fifo.tsg_verify_channel_status && !tsg_timedout) {
 		err = g->ops.fifo.tsg_verify_channel_status(ch);
 		if (err)
 			goto fail_enable_tsg;

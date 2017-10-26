@@ -268,6 +268,9 @@
 
 #define MISC_CLK_ENB 0x48
 
+#define LVL2_CLK_GATE_OVRA 0xf8
+#define LVL2_CLK_GATE_OVRE 0x554
+
 /*
  * SDM fractional divisor is 16-bit 2's complement signed number within
  * (-2^12 ... 2^12-1) range. Represented in PLL data structure as unsigned
@@ -697,6 +700,43 @@ void tegra210_csi_source_from_plld(void)
 				       flags);
 }
 EXPORT_SYMBOL_GPL(tegra210_csi_source_from_plld);
+
+void tegra210_venc_mbist_war(void)
+{
+	u32 csi_src, ovra, ovre;
+	unsigned long flags = 0;
+	struct clk *plld = clks[TEGRA210_CLK_PLL_D];
+
+	/* this WAR is only needed for Tegra210 silicon */
+	if (t210b01)
+		return;
+
+	clk_prepare_enable(clks[TEGRA210_CLK_PLL_D_DSI_OUT]);
+
+	if (!IS_ERR_OR_NULL(plld))
+		spin_lock_irqsave(to_clk_pll(__clk_get_hw(plld))->lock, flags);
+
+	csi_src = readl_relaxed(clk_base + PLLD_BASE);
+	writel_relaxed(csi_src | PLLD_BASE_CSI_CLKSOURCE, clk_base + PLLD_BASE);
+	fence_udelay(1, clk_base);
+
+	ovra = readl_relaxed(clk_base + LVL2_CLK_GATE_OVRA);
+	writel_relaxed(ovra | BIT(15), clk_base + LVL2_CLK_GATE_OVRA);
+	ovre = readl_relaxed(clk_base + LVL2_CLK_GATE_OVRE);
+	writel_relaxed(ovre | BIT(3), clk_base + LVL2_CLK_GATE_OVRE);
+	fence_udelay(1, clk_base);
+
+	writel_relaxed(ovra, clk_base + LVL2_CLK_GATE_OVRA);
+	writel_relaxed(ovre, clk_base + LVL2_CLK_GATE_OVRE);
+	writel_relaxed(csi_src, clk_base + PLLD_BASE);
+	fence_udelay(1, clk_base);
+
+	if (!IS_ERR_OR_NULL(plld))
+		spin_unlock_irqrestore(to_clk_pll(__clk_get_hw(plld))->lock,
+				       flags);
+
+	clk_disable_unprepare(clks[TEGRA210_CLK_PLL_D_DSI_OUT]);
+}
 
 static inline void _pll_misc_chk_default(void __iomem *base,
 					struct tegra_clk_pll_params *params,

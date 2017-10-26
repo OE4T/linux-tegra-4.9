@@ -132,6 +132,7 @@ extern void tegra210_put_utmipll_in_iddq(void);
 extern void tegra210_put_utmipll_out_iddq(void);
 extern bool tegra210_plle_hw_sequence_is_enabled(void);
 extern void tegra210_plle_hw_sequence_start(void);
+extern void tegra210_venc_mbist_war(void);
 
 #ifdef CONFIG_COMMON_CLK
 /* To be implemented for COMMON CLK framework */

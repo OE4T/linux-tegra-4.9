@@ -63,9 +63,6 @@ struct emc_clk_ops {
 	struct clk *	(*emc_predict_parent)(unsigned long, unsigned long *);
 	void		(*emc_get_backup_parent)(struct clk **,
 							unsigned long *);
-	unsigned long (*emc_apply_efficiency)(unsigned long total_bw,
-		unsigned long iso_bw, unsigned long max_rate, u32 usage_flags,
-		unsigned long *iso_bw_min);
 };
 
 struct emc_iso_usage {

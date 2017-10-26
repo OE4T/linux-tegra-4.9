@@ -1646,65 +1646,11 @@ static u8 iso_share_calc_tegra210_general(unsigned long iso_bw)
 	return ret;
 }
 
-static u8 tegra210_emc_get_iso_share(u32 usage_flags, unsigned long iso_bw)
-{
-	int i;
-	u8 iso_share = 100;
-
-	if (usage_flags) {
-		for (i = 0; i < ARRAY_SIZE(tegra210_emc_iso_usage); i++) {
-			u8 share;
-			u32 flags = tegra210_emc_iso_usage[i].emc_usage_flags;
-
-			if (!flags)
-				continue;
-
-			share = tegra210_emc_iso_usage[i].iso_share_calculator(
-						iso_bw);
-			if (!share) {
-				WARN(1, "%s: entry %d: iso_share 0\n",
-				     __func__, i);
-				continue;
-			}
-
-			if ((flags & usage_flags) == flags)
-				iso_share = min(iso_share, share);
-		}
-	}
-	last_iso_bw = iso_bw;
-	tegra210_emc_iso_share = iso_share;
-	return iso_share;
-}
-
-unsigned long tegra210_emc_apply_efficiency(unsigned long total_bw,
-	unsigned long iso_bw, unsigned long max_rate, u32 usage_flags,
-	unsigned long *iso_bw_min)
-{
-	u8 efficiency = tegra210_emc_get_iso_share(usage_flags, iso_bw);
-
-	if (iso_bw && efficiency && (efficiency < 100)) {
-		iso_bw /= efficiency;
-		iso_bw = (iso_bw < max_rate / 100) ?
-				(iso_bw * 100) : max_rate;
-	}
-	if (iso_bw_min)
-		*iso_bw_min = iso_bw;
-
-	efficiency = tegra210_emc_bw_efficiency;
-	if (total_bw && efficiency && (efficiency < 100)) {
-		total_bw = total_bw / efficiency;
-		total_bw = (total_bw < max_rate / 100) ?
-				(total_bw * 100) : max_rate;
-	}
-	return max(total_bw, iso_bw);
-}
-
 static const struct emc_clk_ops tegra210_emc_clk_ops = {
 	.emc_get_rate = tegra210_emc_get_rate,
 	.emc_set_rate = tegra210_emc_set_rate,
 	.emc_round_rate = tegra210_emc_round_rate,
 	.emc_predict_parent = tegra210_emc_predict_parent,
-	.emc_apply_efficiency = tegra210_emc_apply_efficiency,
 };
 
 const struct emc_clk_ops *tegra210_emc_get_ops(void)

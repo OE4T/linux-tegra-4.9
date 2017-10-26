@@ -709,7 +709,9 @@ int gv100_init_hal(struct gk20a *g)
 	gops->fifo = gv100_ops.fifo;
 	gops->gr_ctx = gv100_ops.gr_ctx;
 	gops->mm = gv100_ops.mm;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	gops->fecs_trace = gv100_ops.fecs_trace;
+#endif
 	gops->pramin = gv100_ops.pramin;
 	gops->therm = gv100_ops.therm;
 	gops->pmu = gv100_ops.pmu;

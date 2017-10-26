@@ -687,7 +687,9 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->fifo = gv11b_ops.fifo;
 	gops->gr_ctx = gv11b_ops.gr_ctx;
 	gops->mm = gv11b_ops.mm;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	gops->fecs_trace = gv11b_ops.fecs_trace;
+#endif
 	gops->therm = gv11b_ops.therm;
 	gops->pmu = gv11b_ops.pmu;
 	gops->regops = gv11b_ops.regops;

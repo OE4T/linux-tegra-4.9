@@ -1075,10 +1075,12 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 		}
 	}
 
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	if (refch)
 		gk20a_ctxsw_trace_channel_reset(g, refch);
 	else if (tsg)
 		gk20a_ctxsw_trace_tsg_reset(g, tsg);
+#endif
 
 	gk20a_fifo_set_runlist_state(g, runlists_mask, RUNLIST_ENABLED,
 					 !RUNLIST_INFO_MUTEX_LOCKED);

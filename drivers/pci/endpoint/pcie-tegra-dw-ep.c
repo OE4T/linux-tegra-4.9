@@ -57,6 +57,24 @@
 #define APPL_INTR_STATUS_L1_LINK_REQ_RST_CHGED	BIT(1)
 #define APPL_INTR_STATUS_L1_HOT_RESET_DONE	BIT(30)
 
+#define APPL_INTR_STATUS_L1_1			0x2C
+#define APPL_INTR_STATUS_L1_2			0x30
+#define APPL_INTR_STATUS_L1_3			0x34
+#define APPL_INTR_STATUS_L1_6			0x3C
+#define APPL_INTR_STATUS_L1_7			0x40
+#define APPL_INTR_STATUS_L1_8			0x4C
+#define APPL_INTR_STATUS_L1_9			0x54
+#define APPL_INTR_STATUS_L1_10			0x58
+#define APPL_INTR_STATUS_L1_11			0x64
+#define APPL_INTR_STATUS_L1_13			0x74
+#define APPL_INTR_STATUS_L1_14			0x78
+#define APPL_INTR_STATUS_L1_15			0x7C
+#define APPL_INTR_STATUS_L1_17			0x88
+
+#define APPL_MSI_CTRL_2				0xB0
+
+#define APPL_PM_STATUS				0xFC
+
 #define APPL_DM_TYPE				0x100
 #define APPL_DM_TYPE_MASK			0xF
 #define APPL_DM_TYPE_EP				0x0
@@ -156,11 +174,10 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 		schedule_work(&pcie->pcie_ep_work);
 	} else if (val & APPL_INTR_STATUS_L0_LINK_STATE_INT) {
 		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1);
+		writel(val, pcie->appl_base + APPL_INTR_STATUS_L1);
 		dev_dbg(pcie->dev, "APPL_INTR_STATUS_L1 = 0x%08X\n", val);
 		if (val & APPL_INTR_STATUS_L1_HOT_RESET_DONE) {
 			/* clear any stale PEX_RST interrupt */
-			writel(APPL_INTR_STATUS_L1_HOT_RESET_DONE,
-			       pcie->appl_base + APPL_INTR_STATUS_L1);
 			pcie->event = EP_PEX_HOT_RST_DONE;
 			schedule_work(&pcie->pcie_ep_work);
 		}
@@ -222,6 +239,25 @@ void pcie_ep_work_fn(struct work_struct *work)
 		pcie->event = EP_EVENT_INVALID;
 	}
 	if (pcie->event == EP_PEX_HOT_RST_DONE) {
+		/* SW FixUp required during hot reset */
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L0);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_1);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_2);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_3);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_6);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_7);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_8);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_9);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_10);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_11);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_13);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_14);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_15);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_17);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_MSI_CTRL_2);
+		writel(0xFFFFFFFF, pcie->appl_base + APPL_PM_STATUS);
+
 		val = readl(pcie->appl_base + APPL_CTRL);
 		val |= APPL_CTRL_LTSSM_EN;
 		writel(val, pcie->appl_base + APPL_CTRL);

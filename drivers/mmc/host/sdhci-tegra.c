@@ -47,7 +47,7 @@
 
 /* Tegra SDHOST controller vendor register definitions */
 #define SDHCI_TEGRA_VENDOR_CLOCK_CTRL			0x100
-#define SDHCI_CLOCK_CTRL_TAP_MASK			0x00ff0000
+#define SDHCI_CLOCK_CTRL_TAP_MASK			0xFF
 #define SDHCI_CLOCK_CTRL_TAP_SHIFT			16
 #define SDHCI_CLOCK_CTRL_TRIM_SHIFT			24
 #define SDHCI_CLOCK_CTRL_TRIM_MASK			0x1F
@@ -511,8 +511,8 @@ static void tegra_sdhci_post_tuning(struct sdhci_host *host)
 	u32 reg;
 
 	reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
-	tegra_host->tuned_tap_delay = ((reg & SDHCI_CLOCK_CTRL_TAP_MASK) >>
-		SDHCI_CLOCK_CTRL_TAP_SHIFT);
+	tegra_host->tuned_tap_delay = ((reg >> SDHCI_CLOCK_CTRL_TAP_SHIFT) &
+		SDHCI_CLOCK_CTRL_TAP_MASK);
 	tegra_host->tuning_status = TUNING_STATUS_DONE;
 
 	pr_info("%s: hw tuning done ...\n", mmc_hostname(host->mmc));
@@ -1118,7 +1118,8 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 				__func__, err, host->mmc->ios.timing);
 	} else {
 		reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
-		reg &= ~SDHCI_CLOCK_CTRL_TAP_MASK;
+		reg &= ~(SDHCI_CLOCK_CTRL_TAP_MASK <<
+				SDHCI_CLOCK_CTRL_TAP_SHIFT);
 		reg |= tap << SDHCI_CLOCK_CTRL_TAP_SHIFT;
 		sdhci_writel(host, reg, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
 	}

@@ -30,14 +30,14 @@
 #define ov10823_reg struct reg_8
 
 static ov10823_reg ov10823_start[] = {
-	{ 0x0100, 0x01 },
+	{0x0100, 0x01},
 	{OV10823_TABLE_WAIT_MS, 66},
-	{ OV10823_TABLE_END, 0x00 }
+	{OV10823_TABLE_END, 0x00}
 };
 
 static ov10823_reg ov10823_stop[] = {
-	{ 0x0100, 0x00 },
-	{ OV10823_TABLE_END, 0x00 }
+	{0x0100, 0x00},
+	{OV10823_TABLE_END, 0x00}
 };
 
 static ov10823_reg fsync_master[] = {
@@ -52,6 +52,8 @@ static ov10823_reg fsync_slave[] = {
 	{0x3002, 0x80},
 	{0x3009, 0x02},
 	{0x3823, 0x30},
+	{0x3824, 0x00}, /* CS reset value on fsin */
+	{0x3825, 0x08},
 
 	{OV10823_TABLE_END, 0x00}
 };
@@ -251,6 +253,13 @@ static ov10823_reg mode_4336x2440_24MhzMCLK[] = {
 	{OV10823_TABLE_END, 0x00}
 };
 
+static ov10823_reg mode_4336x2440_24MhzMCLK_fsync_slave[] = {
+	{0x3826, 0x09}, /* R reset value on fsin.  VTS - 4 */
+	{0x3827, 0xdc},
+
+	{OV10823_TABLE_END, 0x00}
+};
+
 static ov10823_reg mode_3000x2440_24MhzMCLK[] = {
 
 	/* PLL */
@@ -444,6 +453,13 @@ static ov10823_reg mode_3000x2440_24MhzMCLK[] = {
 	{OV10823_TABLE_END, 0x00}
 };
 
+static ov10823_reg mode_3000x2440_24MhzMCLK_fsync_slave[] = {
+	{0x3826, 0x09}, /* R reset value on fsin.  VTS - 4 */
+	{0x3827, 0xdc},
+
+	{OV10823_TABLE_END, 0x00}
+};
+
 static ov10823_reg mode_2168x1220_24MhzMCLK[] = {
 
 	/* PLL */
@@ -627,6 +643,13 @@ static ov10823_reg mode_2168x1220_24MhzMCLK[] = {
 	{0x3827, 0x00},
 	{0x3830, 0x00},
 	{0x3831, 0x00},
+
+	{OV10823_TABLE_END, 0x00}
+};
+
+static ov10823_reg mode_2168x1220_24MhzMCLK_fsync_slave[] = {
+	{0x3826, 0x09}, /* R reset value on fsin.  VTS - 4 */
+	{0x3827, 0xdc},
 
 	{OV10823_TABLE_END, 0x00}
 };
@@ -818,6 +841,13 @@ static ov10823_reg mode_4336x2440_26MhzMCLK[] = {
 	{0x3827, 0x00},
 	{0x3830, 0x00},
 	{0x3831, 0x00},
+
+	{OV10823_TABLE_END, 0x00}
+};
+
+static ov10823_reg mode_4336x2440_26MhzMCLK_fsync_slave[] = {
+	{0x3826, 0x09}, /* R reset value on fsin.  VTS - 4 */
+	{0x3827, 0xdc},
 
 	{OV10823_TABLE_END, 0x00}
 };
@@ -1014,6 +1044,13 @@ static ov10823_reg mode_3000x2440_26MhzMCLK[] = {
 	{OV10823_TABLE_END, 0x00}
 };
 
+static ov10823_reg mode_3000x2440_26MhzMCLK_fsync_slave[] = {
+	{0x3826, 0x09}, /* R reset value on fsin.  VTS - 4 */
+	{0x3827, 0xdc},
+
+	{OV10823_TABLE_END, 0x00}
+};
+
 static ov10823_reg mode_2168x1220_26MhzMCLK[] = {
 
 	/* PLL */
@@ -1201,6 +1238,13 @@ static ov10823_reg mode_2168x1220_26MhzMCLK[] = {
 	{OV10823_TABLE_END, 0x00}
 };
 
+static ov10823_reg mode_2168x1220_26MhzMCLK_fsync_slave[] = {
+	{0x3826, 0x09}, /* R reset value on fsin.  VTS - 4 */
+	{0x3827, 0xdc},
+
+	{OV10823_TABLE_END, 0x00}
+};
+
 static ov10823_reg mode_4336x1220_60fps_26MhzMCLK[] = {
 
 	/* PLL */
@@ -1384,6 +1428,13 @@ static ov10823_reg mode_4336x1220_60fps_26MhzMCLK[] = {
 	{0x3827, 0x00},
 	{0x3830, 0x00},
 	{0x3831, 0x00},
+
+	{OV10823_TABLE_END, 0x00}
+};
+
+static ov10823_reg mode_4336x1220_60fps_26MhzMCLK_fsync_slave[] = {
+	{0x3826, 0x04}, /* R reset value on fsin.  VTS - 4 */
+	{0x3827, 0xec},
 
 	{OV10823_TABLE_END, 0x00}
 };
@@ -1577,6 +1628,13 @@ static ov10823_reg mode_2168x1220_60fps_26MhzMCLK[] = {
 	{OV10823_TABLE_END, 0x00}
 };
 
+static ov10823_reg mode_2168x1220_60fps_26MhzMCLK_fsync_slave[] = {
+	{0x3826, 0x04}, /* R reset value on fsin.  VTS - 4 */
+	{0x3827, 0xec},
+
+	{OV10823_TABLE_END, 0x00}
+};
+
 enum {
 #ifdef OV10823_UNUSED_MODES
 	OV10823_MODE_4336X2440,
@@ -1598,6 +1656,16 @@ static ov10823_reg *mode_table[] = {
 
 	[OV10823_MODE_START_STREAM] = ov10823_start,
 	[OV10823_MODE_STOP_STREAM] = ov10823_stop,
+};
+
+static ov10823_reg *fsync_slave_mode_table[] = {
+#ifdef OV10823_UNUSED_MODES
+	[OV10823_MODE_4336X2440] = mode_4336x2440_26MhzMCLK_fsync_slave,
+	[OV10823_MODE_3000X2440] = mode_3000x2440_26MhzMCLK_fsync_slave,
+	[OV10823_MODE_2168X1220] = mode_2168x1220_26MhzMCLK_fsync_slave,
+#endif
+	[OV10823_MODE_2168X1220_60FPS] =
+		mode_2168x1220_60fps_26MhzMCLK_fsync_slave,
 };
 
 enum {

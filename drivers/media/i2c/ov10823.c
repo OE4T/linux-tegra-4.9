@@ -429,6 +429,16 @@ static int ov10823_s_stream(struct v4l2_subdev *sd, int enable)
 			goto exit;
 	}
 
+	if ((priv->fsync == OV10823_FSYNC_SLAVE) &&
+	    fsync_slave_mode_table[s_data->mode]) {
+		dev_dbg(&client->dev, "%s: write fsync slave mode table %d\n",
+			__func__, s_data->mode);
+		err = ov10823_write_table(
+			priv, fsync_slave_mode_table[s_data->mode]);
+		if (err)
+			goto exit;
+	}
+
 	if (s_data->override_enable) {
 		/* write list of override regs for the asking frame length, */
 		/* coarse integration time, and gain. Failures to write */

@@ -287,15 +287,35 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 	pd_write(g, pd, pd_offset + 1, pte_w[1]);
 }
 
+enum gmmu_pgsz_gk20a gk20a_get_pde_pgsz(struct gk20a *g,
+					struct nvgpu_gmmu_pd *pd, u32 pd_idx)
+{
+	/*
+	 * big and small page sizes are the same
+	 */
+	return gmmu_page_size_small;
+}
+
+enum gmmu_pgsz_gk20a gk20a_get_pte_pgsz(struct gk20a *g,
+					struct nvgpu_gmmu_pd *pd, u32 pd_idx)
+{
+	/*
+	 * return invalid
+	 */
+	return gmmu_nr_page_sizes;
+}
+
 const struct gk20a_mmu_level gk20a_mm_levels_64k[] = {
 	{.hi_bit = {NV_GMMU_VA_RANGE-1, NV_GMMU_VA_RANGE-1},
 	 .lo_bit = {26, 26},
 	 .update_entry = update_gmmu_pde_locked,
-	 .entry_size = 8},
+	 .entry_size = 8,
+	 .get_pgsz = gk20a_get_pde_pgsz},
 	{.hi_bit = {25, 25},
 	 .lo_bit = {12, 16},
 	 .update_entry = update_gmmu_pte_locked,
-	 .entry_size = 8},
+	 .entry_size = 8,
+	 .get_pgsz = gk20a_get_pte_pgsz},
 	{.update_entry = NULL}
 };
 
@@ -303,11 +323,13 @@ const struct gk20a_mmu_level gk20a_mm_levels_128k[] = {
 	{.hi_bit = {NV_GMMU_VA_RANGE-1, NV_GMMU_VA_RANGE-1},
 	 .lo_bit = {27, 27},
 	 .update_entry = update_gmmu_pde_locked,
-	 .entry_size = 8},
+	 .entry_size = 8,
+	 .get_pgsz = gk20a_get_pde_pgsz},
 	{.hi_bit = {26, 26},
 	 .lo_bit = {12, 17},
 	 .update_entry = update_gmmu_pte_locked,
-	 .entry_size = 8},
+	 .entry_size = 8,
+	 .get_pgsz = gk20a_get_pte_pgsz},
 	{.update_entry = NULL}
 };
 

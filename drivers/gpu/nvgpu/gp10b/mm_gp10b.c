@@ -319,27 +319,94 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 	pd_write(g, pd, pd_offset + 1, pte_w[1]);
 }
 
+#define GP10B_PDE0_ENTRY_SIZE 16
+
+/*
+ * Calculate the pgsz of the pde level
+ * Pascal+ implements a 5 level page table structure with only the last
+ * level having a different number of entries depending on whether it holds
+ * big pages or small pages.
+ */
+static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
+					struct nvgpu_gmmu_pd *pd, u32 pd_idx)
+{
+	u32 pde_base = pd->mem_offs / sizeof(u32);
+	u32 pde_v[GP10B_PDE0_ENTRY_SIZE >> 2];
+	u32 i;
+	enum gmmu_pgsz_gk20a pgsz = gmmu_nr_page_sizes;
+
+	if (!pd->mem)
+		return pgsz;
+
+	nvgpu_mem_begin(g, pd->mem);
+	for (i = 0; i < GP10B_PDE0_ENTRY_SIZE >> 2; i++)
+		pde_v[i] = nvgpu_mem_rd32(g, pd->mem, pde_base + i);
+	nvgpu_mem_end(g, pd->mem);
+
+	/*
+	 * Check if the aperture AND address are set
+	 */
+	if (pde_v[2] & (gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f() ||
+			gmmu_new_dual_pde_aperture_small_video_memory_f())) {
+		u64 addr = ((u64) (pde_v[2] &
+			gmmu_new_dual_pde_address_small_sys_f(~0)) <<
+			gmmu_new_dual_pde_address_shift_v()) |
+			((u64) pde_v[3] << 32);
+
+		if (addr)
+			pgsz = gmmu_page_size_small;
+	}
+
+	if (pde_v[0] & (gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f() |
+			gmmu_new_dual_pde_aperture_big_video_memory_f())) {
+		u64 addr = ((u64) (pde_v[0] &
+			gmmu_new_dual_pde_address_big_sys_f(~0)) <<
+			gmmu_new_dual_pde_address_big_shift_v()) |
+			((u64) pde_v[1] << 32);
+		if (addr) {
+			/*
+			 * If small is set that means that somehow MM allowed
+			 * both small and big to be set, the PDE is not valid
+			 * and may be corrupted
+			 */
+			if (pgsz == gmmu_page_size_small) {
+				nvgpu_err(g,
+					"both small and big apertures enabled");
+				return gmmu_nr_page_sizes;
+			}
+		}
+		pgsz = gmmu_page_size_big;
+	}
+
+	return pgsz;
+}
+
 static const struct gk20a_mmu_level gp10b_mm_levels[] = {
 	{.hi_bit = {48, 48},
 	 .lo_bit = {47, 47},
 	 .update_entry = update_gmmu_pde3_locked,
-	 .entry_size = 8},
+	 .entry_size = 8,
+	 .get_pgsz = gk20a_get_pde_pgsz},
 	{.hi_bit = {46, 46},
 	 .lo_bit = {38, 38},
 	 .update_entry = update_gmmu_pde3_locked,
-	 .entry_size = 8},
+	 .entry_size = 8,
+	 .get_pgsz = gk20a_get_pde_pgsz},
 	{.hi_bit = {37, 37},
 	 .lo_bit = {29, 29},
 	 .update_entry = update_gmmu_pde3_locked,
-	 .entry_size = 8},
+	 .entry_size = 8,
+	 .get_pgsz = gk20a_get_pde_pgsz},
 	{.hi_bit = {28, 28},
 	 .lo_bit = {21, 21},
 	 .update_entry = update_gmmu_pde0_locked,
-	 .entry_size = 16},
+	 .entry_size = GP10B_PDE0_ENTRY_SIZE,
+	 .get_pgsz = gp10b_get_pde0_pgsz},
 	{.hi_bit = {20, 20},
 	 .lo_bit = {12, 16},
 	 .update_entry = update_gmmu_pte_locked,
-	 .entry_size = 8},
+	 .entry_size = 8,
+	 .get_pgsz = gk20a_get_pte_pgsz},
 	{.update_entry = NULL}
 };
 

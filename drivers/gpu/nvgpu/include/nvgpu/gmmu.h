@@ -200,6 +200,11 @@ struct gk20a_mmu_level {
 			     u64 virt_addr,
 			     struct nvgpu_gmmu_attrs *attrs);
 	u32 entry_size;
+	/*
+	 * Get pde page size
+	 */
+	enum gmmu_pgsz_gk20a (*get_pgsz)(struct gk20a *g,
+					 struct nvgpu_gmmu_pd *pd, u32 pd_idx);
 };
 
 static inline const char *nvgpu_gmmu_perm_str(enum gk20a_mem_rw_flag p)

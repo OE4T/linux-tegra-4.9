@@ -13,6 +13,7 @@
  */
 
 #include <dt-bindings/clock/tegra210-car.h>
+#include <dt-bindings/reset/tegra210-car.h>
 #include <linux/err.h>
 #include <linux/spinlock.h>
 #include <linux/delay.h>
@@ -218,7 +219,7 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			[5] = { .clk_name = "vi_slcg_ovr" },
 			[6] = { .clk_name = "ispa_slcg_ovr" },
 		},
-		.reset_id = { TEGRA210_CLK_ISPA, TEGRA210_CLK_VI,
+		.reset_id = { TEGRA210_CLK_ISPA, TEGRA210_RST_VI,
 			      TEGRA210_CLK_CSI, TEGRA210_CLK_VI_I2C },
 		.reset_id_num = 4,
 	},

@@ -3118,18 +3118,6 @@ static __init void tegra210_periph_clk_init(
 
 	tegra210_emc_clk_init(clk_base);
 
-	/* cml0 */
-	clk = clk_register_gate(NULL, "cml0", "pll_e", 0, clk_base + PLLE_AUX,
-				0, 0, &pll_e_lock);
-	clk_register_clkdev(clk, "cml0", NULL);
-	clks[TEGRA210_CLK_CML0] = clk;
-
-	/* cml1 */
-	clk = clk_register_gate(NULL, "cml1", "pll_e", 0, clk_base + PLLE_AUX,
-				1, 0, &pll_e_lock);
-	clk_register_clkdev(clk, "cml1", NULL);
-	clks[TEGRA210_CLK_CML1] = clk;
-
 	clk = tegra_clk_register_super_clk("aclk", aclk_parents,
 				ARRAY_SIZE(aclk_parents), 0, clk_base + 0x6e0,
 				0, NULL);
@@ -3292,11 +3280,6 @@ skip_pllms:
 					CLK_SET_RATE_PARENT, 1, 2);
 	clk_register_clkdev(clk, "pll_d_out0", NULL);
 	clks[TEGRA210_CLK_PLL_D_OUT0] = clk;
-
-	/* PLL_D_DSI_OUT */
-	clk = clk_register_gate(NULL, "pll_d_dsi_out", "pll_d_out0", 0,
-				clk_base + PLLD_MISC0, 21, 0, &pll_d_lock);
-	clks[TEGRA210_CLK_PLL_D_DSI_OUT] = clk;
 
 	/* PLLRE */
 	clk = tegra_clk_register_pllre_tegra210("pll_re_vco", "pll_ref",

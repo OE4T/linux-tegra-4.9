@@ -48,13 +48,40 @@ struct partition_clk_info {
 	struct clk *clk_ptr;
 };
 
+#define LVL2_CLK_GATE_OVRA 0xf8
+#define LVL2_CLK_GATE_OVRC 0x3a0
+#define LVL2_CLK_GATE_OVRD 0x3a4
+#define LVL2_CLK_GATE_OVRE 0x554
+/* sentinel for lvl2_ovr_info array */
+#define LVL2_END	   0x1000
+
+/* I2S registers to handle during APE power ungating */
+#define TEGRA210_I2S_BASE  0x11000
+#define TEGRA210_I2S_SIZE  0x100
+#define TEGRA210_I2S_CTRLS 5
+#define TEGRA210_I2S_CG	   0x88
+#define TEGRA210_I2S_CTRL  0xa0
+
+/* registers to control DISPA SLCG during power ungating */
+#define DC_CMD_DISPLAY_COMMAND 0x32
+#define DC_COM_DSC_TOP_CTL 0x33e
+
+/* register to control VIC SLCG during power ungating */
+#define NV_PVIC_THI_SLCG_OVERRIDE_LOW 0x8c
+
+struct lvl2_ovr_info {
+	u32 offset;
+	u32 mask;
+};
+
 struct powergate_partition_info {
 	const char *name;
 	struct partition_clk_info clk_info[MAX_CLK_EN_NUM];
 	struct partition_clk_info slcg_info[MAX_CLK_EN_NUM];
+	struct lvl2_ovr_info lvl2_ovr_info[MAX_CLK_EN_NUM];
+	void (*handle_lvl2_ovr)(void);
 	unsigned long reset_id[MAX_CLK_EN_NUM];
 	int reset_id_num;
-	struct raw_notifier_head slcg_notifier;
 	int refcount;
 	bool disable_after_boot;
 	struct mutex pg_mutex;
@@ -198,6 +225,10 @@ static struct tegra210_mc_client_info tegra210_pg_mc_info[] = {
 	},
 };
 
+static void handle_lvl2_ovr_ape(void);
+static void handle_lvl2_ovr_disp(void);
+static void handle_lvl2_ovr_vic(void);
+
 static struct powergate_partition_info tegra210_pg_partition_info[] = {
 	[TEGRA210_POWER_DOMAIN_VENC] = {
 		.name = "ve",
@@ -217,6 +248,10 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "mc_cdpa" },
 			{ .clk_name = "host1x" },
 		},
+		/* all lv2lovr functionality for this domain is handled by
+		 * tegra210_venc_mbist_war
+		 */
+		.handle_lvl2_ovr = tegra210_venc_mbist_war,
 		.reset_id = { TEGRA210_CLK_ISPA, TEGRA210_RST_VI,
 			      TEGRA210_CLK_CSI, TEGRA210_CLK_VI_I2C },
 		.reset_id_num = 4,
@@ -250,6 +285,11 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "mc_ccpa" },
 			{ .clk_name = "mc_cdpa" },
 		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRC,
+			   .mask = BIT(0) | BIT(17) | BIT(19) },
+			{ .offset = LVL2_END },
+		},
 		.reset_id = { TEGRA210_CLK_SATA_OOB, TEGRA210_CLK_SATA_COLD,
 			      TEGRA210_CLK_SATA },
 		.reset_id_num = 3,
@@ -265,6 +305,10 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "mc_cbpa" },
 			{ .clk_name = "mc_ccpa" },
 			{ .clk_name = "mc_cdpa" },
+		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRE, .mask = BIT(29) },
+			{ .offset = LVL2_END },
 		},
 		.reset_id = { TEGRA210_CLK_NVENC },
 		.reset_id_num = 1,
@@ -290,6 +334,11 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "disp1" },
 			{ .clk_name = "disp2" },
 		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRA,
+			   .mask = BIT(1) | BIT(2) },
+			{ .offset = LVL2_END },
+		},
 		.reset_id = { TEGRA210_CLK_SOR0, TEGRA210_CLK_DISP1,
 			      TEGRA210_CLK_DSIB, TEGRA210_CLK_SOR1,
 			      TEGRA210_CLK_MIPI_CAL },
@@ -308,6 +357,11 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "la" },
 			{ .clk_name = "host1x" },
 		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRA, .mask = BIT(1) },
+			{ .offset = LVL2_END },
+		},
+		.handle_lvl2_ovr = handle_lvl2_ovr_disp,
 		.reset_id = { TEGRA210_CLK_DISP1 },
 		.reset_id_num = 1,
 	},
@@ -324,6 +378,10 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "mc_cdpa" },
 			{ .clk_name = "la" },
 			{ .clk_name = "host1x" },
+		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRA, .mask = BIT(2) },
+			{ .offset = LVL2_END },
 		},
 		.reset_id = { TEGRA210_CLK_DISP2 },
 		.reset_id_num = 1,
@@ -345,6 +403,11 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "xusb_host" },
 			{ .clk_name = "xusb_dev" },
 		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRC,
+			   .mask = BIT(30) | BIT(31) },
+			{ .offset = LVL2_END },
+		},
 		.reset_id = { TEGRA210_CLK_XUSB_SS },
 		.reset_id_num = 1,
 	},
@@ -360,6 +423,11 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "mc_cdpa" },
 			{ .clk_name = "xusb_ss" },
 			{ .clk_name = "xusb_host" },
+		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRC,
+			   .mask = BIT(30) | BIT(31) },
+			{ .offset = LVL2_END },
 		},
 		.reset_id = { 95 },
 		.reset_id_num = 1,
@@ -377,6 +445,11 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "xusb_ss" },
 			{ .clk_name = "xusb_dev" },
 		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRC,
+			   .mask = BIT(30) | BIT(31) },
+			{ .offset = LVL2_END },
+		},
 		.reset_id = { TEGRA210_CLK_XUSB_HOST },
 		.reset_id_num = 1,
 	},
@@ -392,6 +465,11 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "mc_cdpa" },
 			{ .clk_name = "host1x" },
 		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRE, .mask = BIT(5) },
+			{ .offset = LVL2_END },
+		},
+		.handle_lvl2_ovr = handle_lvl2_ovr_vic,
 		.reset_id = { TEGRA210_CLK_VIC03 },
 		.reset_id_num = 1,
 	},
@@ -407,6 +485,11 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "mc_cdpa" },
 			{ .clk_name = "nvjpg" },
 		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRE,
+			  .mask = BIT(9) | BIT(31) },
+			{ .offset = LVL2_END },
+		},
 		.reset_id = { TEGRA210_CLK_NVDEC },
 		.reset_id_num = 1,
 	},
@@ -421,6 +504,11 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "mc_ccpa" },
 			{ .clk_name = "mc_cdpa" },
 			{ .clk_name = "nvdec" },
+		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRE,
+			  .mask = BIT(9) | BIT(31) },
+			{ .offset = LVL2_END },
 		},
 		.reset_id = { TEGRA210_CLK_NVJPG },
 		.reset_id_num = 1,
@@ -443,8 +531,14 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "i2s4" },
 			{ .clk_name = "spdif_out" },
 			{ .clk_name = "d_audio" },
-
 		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRC, .mask = BIT(1) },
+			{ .offset = LVL2_CLK_GATE_OVRE,
+			  .mask = BIT(10) | BIT(11) },
+			{ .offset = LVL2_END },
+		},
+		.handle_lvl2_ovr = handle_lvl2_ovr_ape,
 		.reset_id = { TEGRA210_CLK_APE },
 		.reset_id_num = 1,
 	},
@@ -458,6 +552,10 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			{ .clk_name = "mc_cbpa" },
 			{ .clk_name = "mc_ccpa" },
 			{ .clk_name = "mc_cdpa" },
+		},
+		.lvl2_ovr_info = {
+			{ .offset = LVL2_CLK_GATE_OVRD, .mask = BIT(22) },
+			{ .offset = LVL2_END },
 		},
 		.reset_id = { TEGRA210_CLK_ISPB },
 		.reset_id_num = 1,
@@ -529,11 +627,17 @@ static DEFINE_SPINLOCK(tegra210_pg_lock);
 
 static void __iomem *tegra_mc;
 static void __iomem *tegra_pmc;
+static void __iomem *tegra_car;
+static void __iomem *tegra_ape;
+static void __iomem *tegra_dispa;
+static void __iomem *tegra_vic;
 
 static int tegra210_pg_powergate_partition(int id);
 static int tegra210_pg_unpowergate_partition(int id);
 static int tegra210_pg_mc_flush(int id);
 static int tegra210_pg_mc_flush_done(int id);
+
+static bool tegra210b01;
 
 static u32  __maybe_unused mc_read(unsigned long reg)
 {
@@ -565,19 +669,13 @@ static spinlock_t *tegra210_pg_get_lock(void)
 
 static bool tegra210_pg_skip(int id)
 {
-	u32 hid, chipid, major;
-
-	hid = tegra_read_chipid();
-	chipid = tegra_hidrev_get_chipid(hid);
-	major = tegra_hidrev_get_majorrev(hid);
-
 	switch (t210_pg_info[id].part_id) {
 	case TEGRA210_POWER_DOMAIN_VENC:
 	case TEGRA210_POWER_DOMAIN_VE2:
 		/* T210b01 has SE2 in place of ISP2 and powergate
 		 * is not supported for SE2.
 		 */
-		if (chipid == TEGRA210B01 && major >= 2)
+		if (tegra210b01)
 			return true;
 	default:
 		return false;
@@ -800,6 +898,18 @@ static int slcg_clk_enable(struct powergate_partition_info *pg_info)
 			goto err_clk_en;
 	}
 
+	for (idx = 0; idx < MAX_CLK_EN_NUM; idx++) {
+		u32 val;
+		struct lvl2_ovr_info *lvl2;
+
+		lvl2 = &pg_info->lvl2_ovr_info[idx];
+		if (lvl2->offset == LVL2_END)
+			break;
+		val = readl_relaxed(tegra_car + lvl2->offset);
+		val |= lvl2->mask;
+		writel(val, tegra_car + lvl2->offset);
+	}
+
 	return 0;
 
 err_clk_en:
@@ -827,6 +937,19 @@ static void slcg_clk_disable(struct powergate_partition_info *pg_info)
 
 		clk_disable_unprepare(clk);
 	}
+
+	for (idx = 0; idx < MAX_CLK_EN_NUM; idx++) {
+		u32 val;
+		struct lvl2_ovr_info *lvl2;
+
+		lvl2 = &pg_info->lvl2_ovr_info[idx];
+		lvl2 = &pg_info->lvl2_ovr_info[idx];
+		if (lvl2->offset == LVL2_END)
+			break;
+		val = readl_relaxed(tegra_car + lvl2->offset);
+		val &= ~lvl2->mask;
+		writel(val, tegra_car + lvl2->offset);
+	}
 }
 
 static void get_slcg_info(struct powergate_partition_info *pg_info)
@@ -847,24 +970,68 @@ static void get_slcg_info(struct powergate_partition_info *pg_info)
 	}
 }
 
-static int tegra210_slcg_register_notifier(int id, struct notifier_block *nb)
+static void handle_lvl2_ovr_ape(void)
 {
-	struct powergate_partition_info *pg_info = t210_pg_info[id].part_info;
+	unsigned long flags;
+	u32 i2s_ctrl;
+	spinlock_t *lock;
+	int i;
+	void __iomem *i2s_base;
 
-	if (!pg_info || !nb)
-		return -EINVAL;
+	lock = tegra210_pg_get_lock();
+	spin_lock_irqsave(lock, flags);
 
-	return raw_notifier_chain_register(&pg_info->slcg_notifier, nb);
+	for (i = 0; i < TEGRA210_I2S_CTRLS; i++) {
+		i2s_base = tegra_ape + TEGRA210_I2S_BASE
+				+ i * TEGRA210_I2S_SIZE;
+		i2s_ctrl = readl_relaxed(i2s_base + TEGRA210_I2S_CTRL);
+		writel(i2s_ctrl | BIT(10), i2s_base + TEGRA210_I2S_CTRL);
+
+		writel(0, i2s_base + TEGRA210_I2S_CG);
+		readl_relaxed(i2s_base + TEGRA210_I2S_CG);
+		udelay(1);
+		writel(1, i2s_base + TEGRA210_I2S_CG);
+
+		writel(i2s_ctrl, i2s_base + TEGRA210_I2S_CTRL);
+	}
+
+	spin_unlock_irqrestore(lock, flags);
 }
 
-static int tegra210_slcg_unregister_notifier(int id, struct notifier_block *nb)
+static void handle_lvl2_ovr_disp(void)
 {
-	struct powergate_partition_info *pg_info = t210_pg_info[id].part_info;
+	unsigned long flags;
+	spinlock_t *lock;
+	u32 val;
 
-	if (!pg_info || !nb)
-		return -EINVAL;
+	lock = tegra210_pg_get_lock();
+	spin_lock_irqsave(lock, flags);
 
-	return raw_notifier_chain_unregister(&pg_info->slcg_notifier, nb);
+	val = readl_relaxed(tegra_dispa + DC_COM_DSC_TOP_CTL);
+	writel(val | BIT(2), tegra_dispa + DC_COM_DSC_TOP_CTL);
+	readl_relaxed(tegra_dispa + DC_CMD_DISPLAY_COMMAND);
+	writel(val, tegra_dispa + DC_COM_DSC_TOP_CTL);
+
+	spin_unlock_irqrestore(lock, flags);
+}
+
+static void handle_lvl2_ovr_vic(void)
+{
+	unsigned long flags;
+	spinlock_t *lock;
+	u32 val;
+
+	lock = tegra210_pg_get_lock();
+	spin_lock_irqsave(lock, flags);
+
+	val = readl_relaxed(tegra_vic + NV_PVIC_THI_SLCG_OVERRIDE_LOW);
+	writel(val | BIT(0) | GENMASK(7,2) | BIT(24),
+		tegra_vic + NV_PVIC_THI_SLCG_OVERRIDE_LOW);
+	readl_relaxed(tegra_vic + NV_PVIC_THI_SLCG_OVERRIDE_LOW);
+	udelay(1);
+	writel(val, tegra_vic + NV_PVIC_THI_SLCG_OVERRIDE_LOW);
+
+	spin_unlock_irqrestore(lock, flags);
 }
 
 static int tegra210_powergate_remove_clamping(int id)
@@ -1005,11 +1172,14 @@ static int __tegra1xx_unpowergate(int id, struct powergate_partition_info *pg_in
 
 	udelay(10);
 
-	slcg_clk_enable(pg_info);
+	if (!tegra210b01) {
+		slcg_clk_enable(pg_info);
 
-	raw_notifier_call_chain(&pg_info->slcg_notifier, 0, NULL);
+		if (pg_info->handle_lvl2_ovr)
+			(pg_info->handle_lvl2_ovr)();
 
-	slcg_clk_disable(pg_info);
+		slcg_clk_disable(pg_info);
+	}
 
 	/* Disable all clks enabled earlier. Drivers should enable clks */
 	if (clk_disable)
@@ -1394,16 +1564,42 @@ static struct tegra_powergate_driver_ops tegra210_pg_ops = {
 
 	.powergate_init_refcount = tegra210_pg_init_refcount,
 	.powergate_remove_clamping = tegra210_powergate_remove_clamping,
-	.slcg_register_notifier = tegra210_slcg_register_notifier,
-	.slcg_unregister_notifier = tegra210_slcg_unregister_notifier,
 };
 
 #define TEGRA_PMC_BASE  0x7000E400
 #define TEGRA_MC_BASE   0x70019000
+#define TEGRA_CAR_BASE	0x60006000
+#define TEGRA_APE_BASE	0x702c0000
+#define TEGRA_DISPA_BASE 0x54200000
+#define TEGRA_VIC_BASE	0x54340000
+#define TEGRA_VI_BASE	0x54080000
 struct tegra_powergate_driver_ops *tegra210_powergate_init_chip_support(void)
 {
+	u32 hid, chipid, major;
+
 	tegra_pmc = ioremap(TEGRA_PMC_BASE, 4096);
+	if (!tegra_pmc)
+		return NULL;
 	tegra_mc = ioremap(TEGRA_MC_BASE, 4096);
+	if (!tegra_mc)
+		return NULL;
+	tegra_car = ioremap(TEGRA_CAR_BASE, 4096);
+	if (!tegra_car)
+		return NULL;
+	tegra_ape = ioremap(TEGRA_APE_BASE, 256*1024);
+	if (!tegra_ape)
+		return NULL;
+	tegra_dispa = ioremap(TEGRA_DISPA_BASE, 256*1024);
+	if (!tegra_dispa)
+		return NULL;
+	tegra_vic = ioremap(TEGRA_VIC_BASE, 256*1024);
+	if (!tegra_vic)
+		return NULL;
+
+	hid = tegra_read_chipid();
+	chipid = tegra_hidrev_get_chipid(hid);
+	major = tegra_hidrev_get_majorrev(hid);
+	tegra210b01 = chipid == TEGRA210B01 && major >= 2;
 
 	return &tegra210_pg_ops;
 }

@@ -910,7 +910,8 @@ static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
 	struct v4l2_control control;
 	int hdr_en;
 	imx274_reg reg_list[2];
-	u16 shr_dol1, min_shr, rhs1, hmax;
+	u16 rhs1, hmax;
+	s32 shr_dol1, min_shr;
 	int err;
 	int i = 0;
 	u64 et_short;
@@ -974,7 +975,7 @@ static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
 		mode->image_properties.line_length,
 		hmax);
 
-	imx274_get_shr_dol1_regs(reg_list, shr_dol1);
+	imx274_get_shr_dol1_regs(reg_list, (u16)shr_dol1);
 	imx274_set_group_hold(priv);
 
 	for (i = 0; i < 2; i++) {
@@ -997,7 +998,8 @@ static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode];
 	imx274_reg reg_list[2];
-	u16 shr_dol2, min_shr, hmax, rhs1;
+	u16 hmax, rhs1;
+	s32 shr_dol2, min_shr;
 	u64 et_long;
 	int err;
 	int i = 0;
@@ -1045,7 +1047,7 @@ static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
 		mode->image_properties.line_length,
 		hmax);
 
-	imx274_get_shr_dol2_regs(reg_list, shr_dol2);
+	imx274_get_shr_dol2_regs(reg_list, (u16)shr_dol2);
 	imx274_set_group_hold(priv);
 
 	for (i = 0; i < 2; i++) {

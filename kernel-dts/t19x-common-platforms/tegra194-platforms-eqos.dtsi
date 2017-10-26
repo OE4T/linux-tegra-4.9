@@ -1,6 +1,6 @@
 /*
- * tegra194-stardust-eqos.dtsi: Ethernet QOS DTSI file.  Common for all
- * stardust boards.
+ * tegra194-platforms-eqos.dtsi: Ethernet QOS DTSI file.  Common for all
+ * t194 platforms boards.
  *
  * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *

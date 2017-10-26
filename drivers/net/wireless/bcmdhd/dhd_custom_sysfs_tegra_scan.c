@@ -3,7 +3,7 @@
  *
  * NVIDIA Tegra Sysfs for BCMDHD driver
  *
- * Copyright (C) 2014-2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -814,6 +814,9 @@ wifi_scan_request(wl_cfg80211_scan_funcptr_t scan_func,
 	struct wifi_scan_policy *scan_policy;
 	struct wifi_scan_rule *scan_rule;
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+        struct cfg80211_scan_info info = {0};
+#endif
 	WIFI_SCAN_DEBUG("%s\n", __func__);
 
 	/* check input */
@@ -1124,7 +1127,12 @@ wifi_scan_request(wl_cfg80211_scan_funcptr_t scan_func,
 			" for original request %p\n",
 			__func__,
 			request);
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+		info.aborted = false;
+		cfg80211_scan_done(request, &info);
+#else
 		cfg80211_scan_done(request, false);
+#endif
 		/* return non-zero value to tell caller to not execute
 		 * original scan request
 		 */
@@ -1150,6 +1158,9 @@ wifi_scan_request_done(struct cfg80211_scan_request *request)
 			scan_arg.request_and_channels.request);
 	struct wifi_scan_work *next_scan_work = NULL;
 	int err = -1;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+        struct cfg80211_scan_info info = {0};
+#endif
 
 	WIFI_SCAN_DEBUG("%s {\n", __func__);
 
@@ -1170,8 +1181,13 @@ wifi_scan_request_done(struct cfg80211_scan_request *request)
 				" for original request %p\n",
 				__func__,
 				scan_work->original_scan_request);
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+			info.aborted = false;
+			cfg80211_scan_done(scan_work->original_scan_request, &info);
+#else
 			cfg80211_scan_done(scan_work->original_scan_request,
 				false);
+#endif
 		}
 		/* get next wifi scan work to be scheduled */
 		next_scan_work = scan_work + 1;

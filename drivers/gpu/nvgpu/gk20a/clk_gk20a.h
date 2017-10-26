@@ -91,8 +91,8 @@ struct namemap_cfg;
 
 struct clk_gk20a {
 	struct gk20a *g;
-	struct clk *tegra_clk;
 #if defined(CONFIG_COMMON_CLK)
+	struct clk *tegra_clk;
 	struct clk_hw hw;
 #endif
 	struct pll gpc_pll;

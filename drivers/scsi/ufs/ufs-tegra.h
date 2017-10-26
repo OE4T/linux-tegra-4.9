@@ -88,8 +88,8 @@
 #define UFS_AUX_ADDR_RANGE	0x18
 
 /*UFS Clock Defines*/
-#define UFSHC_CLK_FREQ		51000000
-#define UFSDEV_CLK_FREQ		38400000
+#define UFSHC_CLK_FREQ		204000000
+#define UFSDEV_CLK_FREQ		19200000
 
 enum ufs_state {
 	UFSHC_INIT,

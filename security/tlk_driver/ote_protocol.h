@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,7 +54,7 @@ extern struct mutex smc_lock;
 extern struct tlk_device tlk_dev;
 extern void tlk_fiq_glue_aarch64(void);
 
-uint32_t send_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2);
+uint32_t tlk_send_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2);
 uint32_t _tlk_generic_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2);
 void tlk_irq_handler(void);
 struct te_oper_param *te_get_free_params(struct tlk_device *dev,

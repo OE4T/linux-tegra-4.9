@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -181,7 +181,7 @@ static int ote_logger_probe(struct platform_device *pdev)
 		return -1;
 
 	/* enable logging only if secure firmware supports it */
-	if (!send_smc(TE_SMC_INIT_LOGGER, (uintptr_t)cb, 0))
+	if (!tlk_send_smc(TE_SMC_INIT_LOGGER, (uintptr_t)cb, 0))
 		ote_logging_enabled = 1;
 
 	ote_print_logs();

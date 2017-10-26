@@ -114,7 +114,7 @@ static long tlk_generic_smc_on_cpu0(void *args)
  * it's running on a non-CPU0, use work_on_cpu() to schedule the SMC
  * on CPU0.
  */
-uint32_t send_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2)
+uint32_t tlk_send_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2)
 {
 	long ret;
 	struct tlk_smc_work_args work_args;
@@ -165,7 +165,7 @@ static void do_smc(struct te_request *request, struct tlk_device *dev)
 			(uintptr_t)request->params - (uintptr_t)dev->req_addr;
 	}
 
-	(void)send_smc(request->type, smc_args, smc_params);
+	(void)tlk_send_smc(request->type, smc_args, smc_params);
 }
 
 void tlk_restore_keyslots(void)
@@ -175,7 +175,7 @@ void tlk_restore_keyslots(void)
 	/* Share the same lock used when request is send from user side */
 	mutex_lock(&smc_lock);
 
-	retval = send_smc(TE_SMC_TA_EVENT, TA_EVENT_RESTORE_KEYS, 0);
+	retval = tlk_send_smc(TE_SMC_TA_EVENT, TA_EVENT_RESTORE_KEYS, 0);
 
 	mutex_unlock(&smc_lock);
 

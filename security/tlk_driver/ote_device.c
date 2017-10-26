@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,7 +86,7 @@ static int te_create_free_cmd_list(struct tlk_device *dev)
 		goto error;
 	}
 
-	send_smc(TE_SMC_REGISTER_REQ_BUF,
+	tlk_send_smc(TE_SMC_REGISTER_REQ_BUF,
 			(uintptr_t)dev->req_addr, req_buf_size);
 
 	if (!dev->req_addr || !dev->param_addr || !dev->plist_addr) {

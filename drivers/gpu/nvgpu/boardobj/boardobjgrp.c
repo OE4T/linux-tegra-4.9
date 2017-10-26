@@ -86,6 +86,8 @@ u32 boardobjgrp_construct_super(struct gk20a *g, struct boardobjgrp *pboardobjgr
 	pboardobjgrp->objmaxidx = CTRL_BOARDOBJ_IDX_INVALID;
 	pboardobjgrp->bconstructed = true;
 
+	nvgpu_list_add(&pboardobjgrp->node, &g->boardobjgrp_head);
+
 	return 0;
 }
 
@@ -143,6 +145,8 @@ u32 boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
 	stat = boardobjgrp_pmucmd_destroy_impl(g, &pboardobjgrp->pmu.getstatus);
 	if (status == 0)
 		status = stat;
+
+	nvgpu_list_del(&pboardobjgrp->node);
 
 	pboardobjgrp->bconstructed = false;
 

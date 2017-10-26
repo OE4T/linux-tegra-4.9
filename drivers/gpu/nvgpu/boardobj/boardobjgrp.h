@@ -199,6 +199,7 @@ struct boardobjgrp {
 
 	boardobjgrp_pmudatainstget *pmudatainstget;
 	boardobjgrp_pmustatusinstget *pmustatusinstget;
+	struct nvgpu_list_node node;
 };
 
 /*
@@ -404,4 +405,12 @@ void boardobjgrpe32hdrset(struct nv_pmu_boardobjgrp *hdr, u32 objmask);
 		idx += 1;                   \
 	(n32) = idx;                        \
 }
+
+static inline struct boardobjgrp *
+boardobjgrp_from_node(struct nvgpu_list_node *node)
+{
+	return (struct boardobjgrp *)
+		((uintptr_t)node - offsetof(struct boardobjgrp, node));
+};
+
 #endif

@@ -71,6 +71,8 @@ struct boardobj {
 
 	u8 type; /*type of the device*/
 	u8 idx;  /*index of boardobj within in its group*/
+	/* true if allocated in constructor. destructor should free */
+	u8 allocated;
 	u32 type_mask; /*mask of types this boardobjimplements*/
 	boardobj_implements  *implements;
 	boardobj_destruct    *destruct;
@@ -79,6 +81,7 @@ struct boardobj {
 	* that inherit from BOARDOBJ
 	*/
 	boardobj_pmudatainit *pmudatainit;
+	struct nvgpu_list_node node;
 };
 
 boardobj_construct   boardobj_construct_super;
@@ -88,5 +91,12 @@ boardobj_pmudatainit boardobj_pmudatainit_super;
 
 #define BOARDOBJ_GET_TYPE(pobj) (((struct boardobj *)(pobj))->type)
 #define BOARDOBJ_GET_IDX(pobj) (((struct boardobj *)(pobj))->idx)
+
+static inline struct boardobj *
+boardobj_from_node(struct nvgpu_list_node *node)
+{
+	return (struct boardobj *)
+		((uintptr_t)node - offsetof(struct boardobj, node));
+};
 
 #endif

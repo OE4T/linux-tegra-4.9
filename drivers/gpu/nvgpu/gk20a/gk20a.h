@@ -1295,6 +1295,9 @@ struct gk20a {
 	u32		syncpt_size;
 #endif
 	struct nvgpu_mem syncpt_mem;
+
+	struct nvgpu_list_node boardobj_head;
+	struct nvgpu_list_node boardobjgrp_head;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

@@ -41,6 +41,7 @@ u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 		*ppboardobj = nvgpu_kzalloc(g, size);
 		if (*ppboardobj == NULL)
 			return -ENOMEM;
+		(*ppboardobj)->allocated = true;
 	}
 
 	pboardobj = *ppboardobj;
@@ -53,6 +54,8 @@ u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 	pboardobj->destruct    = boardobj_destruct_super;
 	pboardobj->pmudatainit = boardobj_pmudatainit_super;
 
+	nvgpu_list_add(&pboardobj->node, &g->boardobj_head);
+
 	return 0;
 }
 
@@ -61,7 +64,11 @@ u32 boardobj_destruct_super(struct boardobj *pboardobj)
 	gk20a_dbg_info("");
 	if (pboardobj == NULL)
 		return -EINVAL;
-	nvgpu_kfree(pboardobj->g, pboardobj);
+
+	nvgpu_list_del(&pboardobj->node);
+	if (pboardobj->allocated)
+		nvgpu_kfree(pboardobj->g, pboardobj);
+
 	return 0;
 }
 

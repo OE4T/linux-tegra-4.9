@@ -29,6 +29,9 @@
 
 #include "gk20a/gk20a.h"
 
+#include "boardobj/boardobj.h"
+#include "boardobj/boardobjgrp.h"
+
 /* PMU NS UCODE IMG */
 #define NVGPU_PMU_NS_UCODE_IMAGE	"gpmu_ucode.bin"
 
@@ -2228,11 +2231,23 @@ static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = mm->pmu.vm;
+	struct boardobj *pboardobj, *pboardobj_tmp;
+	struct boardobjgrp *pboardobjgrp, *pboardobjgrp_tmp;
 
 	nvgpu_log_fn(g, " ");
 
 	if (nvgpu_alloc_initialized(&pmu->dmem))
 		nvgpu_alloc_destroy(&pmu->dmem);
+
+	nvgpu_list_for_each_entry_safe(pboardobjgrp, pboardobjgrp_tmp,
+		&g->boardobjgrp_head, boardobjgrp, node) {
+		pboardobjgrp->destruct(pboardobjgrp);
+	}
+
+	nvgpu_list_for_each_entry_safe(pboardobj, pboardobj_tmp,
+			&g->boardobj_head, boardobj, node) {
+		pboardobj->destruct(pboardobj);
+	}
 
 	if (pmu->fw)
 		nvgpu_release_firmware(g, pmu->fw);

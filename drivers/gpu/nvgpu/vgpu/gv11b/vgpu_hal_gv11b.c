@@ -342,7 +342,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.enable_tsg = gk20a_enable_tsg,
 		.disable_tsg = gk20a_disable_tsg,
 		.tsg_verify_channel_status = NULL,
-		.tsg_verify_status_ctx_reload = gm20b_fifo_tsg_verify_status_ctx_reload,
+		.tsg_verify_status_ctx_reload = NULL,
 		/* TODO: implement it for CE fault */
 		.tsg_verify_status_faulted = NULL,
 		.update_runlist = vgpu_fifo_update_runlist,

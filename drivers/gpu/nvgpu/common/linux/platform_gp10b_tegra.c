@@ -71,12 +71,8 @@ static void gr_gp10b_remove_sysfs(struct device *dev);
 
 int gp10b_tegra_get_clocks(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	unsigned int i;
-
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
-		return 0;
 
 	platform->num_clks = 0;
 	for (i = 0; i < ARRAY_SIZE(tegra_gp10b_clocks); i++) {

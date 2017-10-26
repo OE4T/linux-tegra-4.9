@@ -485,8 +485,7 @@ static int vgpu_gr_tsg_bind_gr_ctx(struct tsg_gk20a *tsg)
 	return err;
 }
 
-int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
-				struct nvgpu_alloc_obj_ctx_args *args)
+int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 {
 	struct gk20a *g = c->g;
 	struct fifo_gk20a *f = &g->fifo;
@@ -503,12 +502,12 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 		return -EINVAL;
 	}
 
-	if (!g->ops.gr.is_valid_class(g, args->class_num)) {
-		nvgpu_err(g, "invalid obj class 0x%x", args->class_num);
+	if (!g->ops.gr.is_valid_class(g, class_num)) {
+		nvgpu_err(g, "invalid obj class 0x%x", class_num);
 		err = -EINVAL;
 		goto out;
 	}
-	c->obj_class = args->class_num;
+	c->obj_class = class_num;
 
 	if (gk20a_is_channel_marked_as_tsg(c))
 		tsg = &f->tsg[c->tsgid];
@@ -518,8 +517,8 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 		if (!ch_ctx->gr_ctx) {
 			err = g->ops.gr.alloc_gr_ctx(g, &c->ch_ctx.gr_ctx,
 						c->vm,
-						args->class_num,
-						args->flags);
+						class_num,
+						flags);
 			if (!err)
 				err = vgpu_gr_ch_bind_gr_ctx(c);
 			if (err) {
@@ -541,8 +540,8 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 			nvgpu_vm_get(tsg->vm);
 			err = g->ops.gr.alloc_gr_ctx(g, &tsg->tsg_gr_ctx,
 						c->vm,
-						args->class_num,
-						args->flags);
+						class_num,
+						flags);
 			if (!err)
 				err = vgpu_gr_tsg_bind_gr_ctx(tsg);
 			if (err) {

@@ -2890,8 +2890,7 @@ void gk20a_free_channel_ctx(struct channel_gk20a *c, bool is_tsg)
 	c->first_init = false;
 }
 
-int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
-			struct nvgpu_alloc_obj_ctx_args *args)
+int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 {
 	struct gk20a *g = c->g;
 	struct fifo_gk20a *f = &g->fifo;
@@ -2909,13 +2908,13 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		return -EINVAL;
 	}
 
-	if (!g->ops.gr.is_valid_class(g, args->class_num)) {
+	if (!g->ops.gr.is_valid_class(g, class_num)) {
 		nvgpu_err(g,
-			   "invalid obj class 0x%x", args->class_num);
+			   "invalid obj class 0x%x", class_num);
 		err = -EINVAL;
 		goto out;
 	}
-	c->obj_class = args->class_num;
+	c->obj_class = class_num;
 
 	if (gk20a_is_channel_marked_as_tsg(c))
 		tsg = &f->tsg[c->tsgid];
@@ -2924,8 +2923,8 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	if (!tsg) {
 		if (!ch_ctx->gr_ctx) {
 			err = gr_gk20a_alloc_channel_gr_ctx(g, c,
-							    args->class_num,
-							    args->flags);
+							    class_num,
+							    flags);
 			if (err) {
 				nvgpu_err(g,
 					"fail to allocate gr ctx buffer");
@@ -2945,8 +2944,8 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			tsg->vm = c->vm;
 			nvgpu_vm_get(tsg->vm);
 			err = gr_gk20a_alloc_tsg_gr_ctx(g, tsg,
-							args->class_num,
-							args->flags);
+							class_num,
+							flags);
 			if (err) {
 				nvgpu_err(g,
 					"fail to allocate TSG gr ctx buffer");
@@ -2993,7 +2992,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	}
 
 	/* tweak any perf parameters per-context here */
-	if (args->class_num == KEPLER_COMPUTE_A) {
+	if (class_num == KEPLER_COMPUTE_A) {
 		u32 tex_lock_disable_mask;
 		u32 texlock;
 		u32 lockboost_mask;
@@ -3047,7 +3046,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 				   "failed to set texlock for compute class");
 		}
 
-		args->flags |= NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO;
+		flags |= NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO;
 
 		if (g->support_pmu && g->can_elpg)
 			nvgpu_pmu_enable_elpg(g);

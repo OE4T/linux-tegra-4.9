@@ -923,6 +923,10 @@ long gk20a_channel_ioctl(struct file *filp,
 	case NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD:
 		break;
 	case NVGPU_IOCTL_CHANNEL_ALLOC_OBJ_CTX:
+	{
+		struct nvgpu_alloc_obj_ctx_args *args =
+				(struct nvgpu_alloc_obj_ctx_args *)buf;
+
 		err = gk20a_busy(ch->g);
 		if (err) {
 			dev_err(dev,
@@ -930,10 +934,10 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			break;
 		}
-		err = ch->g->ops.gr.alloc_obj_ctx(ch,
-				(struct nvgpu_alloc_obj_ctx_args *)buf);
+		err = ch->g->ops.gr.alloc_obj_ctx(ch, args->class_num, args->flags);
 		gk20a_idle(ch->g);
 		break;
+	}
 	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX:
 	{
 		struct nvgpu_alloc_gpfifo_ex_args *alloc_gpfifo_ex_args =

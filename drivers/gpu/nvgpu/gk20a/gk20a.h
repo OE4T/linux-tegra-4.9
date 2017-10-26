@@ -225,7 +225,7 @@ struct gpu_ops {
 		void (*set_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
 		void (*free_channel_ctx)(struct channel_gk20a *c, bool is_tsg);
 		int (*alloc_obj_ctx)(struct channel_gk20a  *c,
-				struct nvgpu_alloc_obj_ctx_args *args);
+				     u32 class_num, u32 flags);
 		int (*bind_ctxsw_zcull)(struct gk20a *g, struct gr_gk20a *gr,
 				struct channel_gk20a *c, u64 zcull_va,
 				u32 mode);

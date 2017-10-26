@@ -386,6 +386,8 @@ enum {
 	MC_SBS_INT_FILL_FIFO_ISO_OF = (1<<0),
 	MC_SBS_INT_FILL_FIFO_SISO_OF = (1<<1),
 	MC_SBS_INT_FILL_FIFO_NISO_OF = (1<<2),
+
+	MC_ERR_STATUS_ADR_HI_BITS = (0xFF << 20)
 };
 
 /* reported in MC_INTSTATUS_0 */
@@ -531,7 +533,7 @@ static void log_fault(int src_chan, const struct mc_error *fault)
 	if (fault->flags & E_ADR_HI_REG)
 		addr |= ((phys_addr_t)__mc_readl(src_chan, fault->addr_hi_reg) << 32);
 	else
-		addr |= (((phys_addr_t)(status & MC_ERR_STATUS_ADR_HI)) << 12);
+		addr |= (((phys_addr_t)(status & MC_ERR_STATUS_ADR_HI_BITS)) << 12);
 
 	mcerr_pr("(%d) %s: %s\n", client->swgid, client->name, fault->msg);
 	mcerr_pr("  status = 0x%08x; addr = 0x%08llx\n", status,
@@ -570,11 +572,11 @@ static void log_mcerr_fault(unsigned int irq)
 	if (g_intstatus & GIS_CH_MASK) {
 		mc_channel = __ffs(g_intstatus & GIS_CH_MASK);
 	} else if (g_intstatus & GIS_SLICE_MASK){
-		mc_channel = __ffs(g_intstatus & GIS_SLICE_MASK);
+		mc_channel = __ffs((g_intstatus & GIS_SLICE_MASK) >> GIS_SLICE0);
 	} else if (g_intstatus & GIS_HUB_MASK) {
-		mc_channel = __ffs(g_intstatus & GIS_HUB_MASK);
+		mc_channel = __ffs((g_intstatus & GIS_HUB_MASK) >> GIS_HUB0);
 	} else if (g_intstatus & GIS_NVLINK_MASK) {
-		mc_channel = __ffs(g_intstatus & GIS_NVLINK_MASK);
+		mc_channel = __ffs((g_intstatus & GIS_NVLINK_MASK) >> GIS_nvlink0);
 	} else if (g_intstatus & BIT(GIS_HUBC)) {
 		mc_channel = MC_BROADCAST_CHANNEL;
 	} else if (g_intstatus & BIT(GIS_SBS)) {

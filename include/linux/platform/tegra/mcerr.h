@@ -140,8 +140,9 @@ struct mcerr_ops {
 			.stat_reg = _stat_reg, .addr_reg = _addr_reg }
 
 #define MC_ERR_HI(_sig, _msg, _flags, _stat_reg, _addr_reg, _addr_hi_reg) \
-	{ .sig = _sig, .msg = _msg, .flags = _flags, .stat_reg = _stat_reg, \
-	  .addr_reg = _addr_reg, .addr_hi_reg = _addr_hi_reg}
+	{ .sig = _sig, .msg = _msg, .flags = (_flags | E_ADR_HI_REG), \
+	  .stat_reg = _stat_reg, .addr_reg = _addr_reg, \
+	  .addr_hi_reg = _addr_hi_reg}
 
 #define mcerr_pr(fmt, ...)					\
 	do {							\

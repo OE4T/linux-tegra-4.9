@@ -70,6 +70,7 @@ struct tegra_dphdcp {
 	u8				max_retries;
 	u8				hpd;
 	u8				repeater;
+	void				*ta_ctx;
 };
 
 #ifdef CONFIG_DPHDCP

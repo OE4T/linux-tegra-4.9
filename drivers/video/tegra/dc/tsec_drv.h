@@ -238,7 +238,8 @@ struct hdcp_create_session_param {
 	unsigned char   session_type;		           /* <<in */
 	/* 0 - WFD, 1 - HDMI, 2 - DP */
 	unsigned char   display_type;		           /* <<in: */
-	unsigned char   reserved1[2];
+	unsigned char   sor_num;                           /* <<in: */
+	unsigned char   reserved[1];                       /* <<in: */
 	unsigned long long  rrx;                           /* >>out */
 };
 #define HDCP_CREATE_SESSION_ERROR_NONE            HDCP_ERROR_NONE
@@ -246,6 +247,7 @@ struct hdcp_create_session_param {
 #define HDCP_CREATE_SESSION_ERROR_SB_NOT_SET      HDCP_ERROR_SB_NOT_SET
 #define HDCP_CREATE_SESSION_ERROR_NOT_INIT        HDCP_ERROR_NOT_INIT
 #define HDCP_CREATE_SESSION_ERROR_INVALID_STREAMS (0x00000004)
+#define HDCP_CREATE_SESSION_ERROR_INVALID_PARAMS  (0x00000005)
 #define HDCP_CREATE_SESSION_TYPE_TMTR             (0x00)
 #define HDCP_CREATE_SESSION_TYPE_RCVR             (0x01)
 /*

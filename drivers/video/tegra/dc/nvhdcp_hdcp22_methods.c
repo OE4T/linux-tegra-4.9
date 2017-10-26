@@ -66,7 +66,8 @@ int tsec_hdcp_readcaps(struct hdcp_context_t *hdcp_context)
 	return err;
 }
 
-int tsec_hdcp_create_session(struct hdcp_context_t *hdcp_context)
+int tsec_hdcp_create_session(struct hdcp_context_t *hdcp_context,
+		int display_type, int sor_num)
 {
 	int err = 0;
 	struct hdcp_create_session_param create_session_param;
@@ -76,7 +77,8 @@ int tsec_hdcp_create_session(struct hdcp_context_t *hdcp_context)
 			sizeof(struct hdcp_create_session_param));
 	create_session_param.no_of_streams = 1;
 	create_session_param.session_type = 0;
-	create_session_param.display_type = 1;
+	create_session_param.display_type = display_type;
+	create_session_param.sor_num = sor_num;
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
@@ -126,6 +128,79 @@ int tsec_hdcp_init(struct hdcp_context_t *hdcp_context)
 	}
 	err = init_param.ret_code;
 	return err;
+}
+
+int tsec_hdcp_context_creation(struct hdcp_context_t *hdcp_context,
+			int display_type, int sor_instance)
+{
+	int e = 0;
+
+	e = tsec_hdcp_create_context(hdcp_context);
+	if (e) {
+		hdcp_err("Error creating hdcp context\n");
+		goto exit;
+	}
+	e = tsec_hdcp_init(hdcp_context);
+	if (e) {
+		hdcp_err("error in tsec init\n");
+		goto exit;
+	}
+	e =  tsec_hdcp_create_session(hdcp_context, display_type,
+				sor_instance);
+	if (e)
+		hdcp_err("error in session creation\n");
+exit:
+	return e;
+}
+
+/* vprime verification for repeater/srm revocation check for rx */
+int tsec_hdcp1x_verify_vprime(struct hdcp_verify_vprime_param
+		verify_vprime_param,
+		struct hdcp_context_t *hdcp_context,
+		u8 *buf, u8 num_bksv_list, u64 *pkt)
+{
+	unsigned int *tsec_addr;
+	int e = 0;
+
+	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
+		HDCP_MTHD_RPLY_BUF_SIZE);
+	verify_vprime_param.srm_size = tsec_hdcp_srm_read(hdcp_context,
+							HDCP_1x);
+
+	if (!verify_vprime_param.srm_size) {
+		hdcp_err("Error reading SRM file!\n");
+		goto exit;
+	}
+
+	memcpy(hdcp_context->cpuvaddr_rcvr_id_list, buf,
+			num_bksv_list*5);
+	verify_vprime_param.trans_id.session_id = hdcp_context->session_id;
+	verify_vprime_param.is_ver_hdcp2x = 0; /* hdcp 1.x */
+	verify_vprime_param.depth = 0; /* depth not used */
+	verify_vprime_param.device_count = num_bksv_list;
+	verify_vprime_param.has_hdcp2_repeater = 0;
+	tsec_addr = (unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET);
+	verify_vprime_param.tsec_gsc_address = *tsec_addr;
+	memcpy(verify_vprime_param.srm_cmac,
+		(unsigned char *)(pkt + HDCP_CMAC_OFFSET),
+		HDCP_CMAC_SIZE);
+	verify_vprime_param.has_hdcp1_device = 0;
+	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
+		&verify_vprime_param,
+		sizeof(struct hdcp_verify_vprime_param));
+	tsec_send_method(hdcp_context,
+	HDCP_VERIFY_VPRIME,
+	HDCP_MTHD_FLAGS_SB|HDCP_MTHD_FLAGS_RECV_ID_LIST|HDCP_MTHD_FLAGS_SRM);
+	memcpy(&verify_vprime_param,
+		hdcp_context->cpuvaddr_mthd_buf_aligned,
+		sizeof(struct hdcp_verify_vprime_param));
+	if (verify_vprime_param.ret_code) {
+		hdcp_err("tsec_hdcp_verify_vprime: failed with error:%x\n",
+		verify_vprime_param.ret_code);
+	}
+	e = verify_vprime_param.ret_code;
+exit:
+	return e;
 }
 
 int tsec_hdcp_verify_cert(struct hdcp_context_t *hdcp_context)

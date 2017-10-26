@@ -93,9 +93,7 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_CMD_OFFSET			1
 #define HDCP_CMD_BYTE_OFFSET		8
 #define HDCP_AUTH_CMD			0x5
-#define HDCP_CMD_GEN_CMAC		0xB
-#define HDCP_CMAC_OFFSET		6
-#define HDCP_TSEC_ADDR_OFFSET		22
+
 #ifdef VERBOSE_DEBUG
 #define nvhdcp_vdbg(...)	\
 		pr_debug("nvhdcp: " __VA_ARGS__)
@@ -117,8 +115,6 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 
 static u8 g_seq_num_m_retries;
 static u8 g_fallback;
-
-static void *ta_ctx;
 
 static struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
 {
@@ -801,6 +797,25 @@ static int load_kfuse(struct tegra_hdmi *hdmi)
 	return 0;
 }
 
+/* validate srm signature for hdcp 2.2 */
+static int get_srm_signature(struct hdcp_context_t *hdcp_context,
+			char *nonce, uint64_t *pkt, void *ta_ctx)
+{
+	int err = 0;
+	/* generate nonce in the ucode */
+	err = tsec_hdcp_generate_nonce(hdcp_context, nonce);
+	if (err) {
+		nvhdcp_err("Error generating nonce!\n");
+		return err;
+	}
+	/* pass the nonce to hdcp TA and get the signature back */
+	memcpy(pkt, nonce, HDCP_NONCE_SIZE);
+	err = te_launch_trusted_oper(pkt, PKT_SIZE, HDCP_CMD_GEN_CMAC, ta_ctx);
+	if (err)
+		nvhdcp_err("te launch operation failed with error %d\n", err);
+	return err;
+}
+
 static int verify_link(struct tegra_nvhdcp *nvhdcp, bool wait_ri)
 {
 	struct tegra_hdmi *hdmi = nvhdcp->hdmi;
@@ -845,6 +860,66 @@ static int verify_link(struct tegra_nvhdcp *nvhdcp, bool wait_ri)
 		return -EINVAL;
 
 	return 0;
+}
+
+static int verify_vprime(struct tegra_nvhdcp *nvhdcp, u8 repeater)
+{
+	int i;
+	u8 *p;
+	u8 buf[RCVR_ID_LIST_SIZE];
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
+	unsigned char nonce[HDCP_NONCE_SIZE];
+#endif
+	struct hdcp_verify_vprime_param verify_vprime_param;
+	int e = 0;
+	uint64_t *pkt = NULL;
+	struct hdcp_context_t *hdcp_context =
+		kmalloc(sizeof(struct hdcp_context_t), GFP_KERNEL);
+
+	e = tsec_hdcp_context_creation(hdcp_context,
+			DISPLAY_TYPE_HDMI, nvhdcp->hdmi->sor->ctrl_num);
+	if (e) {
+		nvhdcp_err("hdcp context create/init failed\n");
+		goto exit;
+	}
+	pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
+
+	if (!pkt || !hdcp_context)
+		goto exit;
+
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
+	e = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx);
+	if (e) {
+		nvhdcp_err("Error getting srm signature!\n");
+		goto exit;
+	}
+#endif
+	memset(&verify_vprime_param, 0x0,
+		sizeof(struct hdcp_verify_vprime_param));
+	if (!repeater) {
+		nvhdcp->num_bksv_list = 1;
+		nvhdcp->bksv_list[0] = nvhdcp->b_ksv;
+		verify_vprime_param.reserved1[0] = TSEC_SRM_REVOCATION_CHECK;
+	}
+	p = buf;
+	for (i = 0; i < nvhdcp->num_bksv_list; i++) {
+		p[0] = (u8)(nvhdcp->bksv_list[i] & 0xff);
+		p[1] = (u8)((nvhdcp->bksv_list[i]>>8) & 0xff);
+		p[2] = (u8)((nvhdcp->bksv_list[i]>>16) & 0xff);
+		p[3] = (u8)((nvhdcp->bksv_list[i]>>24) & 0xff);
+		p[4] = (u8)((nvhdcp->bksv_list[i]>>32) & 0xff);
+		p += 5;
+	}
+	memcpy((void *)verify_vprime_param.vprime, nvhdcp->v_prime,
+			HDCP_SIZE_VPRIME_1X_8);
+	verify_vprime_param.bstatus = nvhdcp->b_status;
+	verify_vprime_param.port = TEGRA_NVHDCP_PORT_HDMI; /* hdcp 1.x */
+	e = tsec_hdcp1x_verify_vprime(verify_vprime_param, hdcp_context,
+			buf, nvhdcp->num_bksv_list, pkt);
+exit:
+	tsec_hdcp_free_context(hdcp_context);
+	kfree(pkt);
+	return e;
 }
 
 static int get_repeater_info(struct tegra_nvhdcp *nvhdcp)
@@ -1045,24 +1120,6 @@ static int nvhdcp_poll_ready(struct tegra_nvhdcp *nvhdcp, int timeout)
 	return e;
 }
 
-/* validate srm signature for hdcp 2.2 */
-static int get_srm_signature(struct hdcp_context_t *hdcp_context,
-			char *nonce, uint64_t *pkt, void *ta_ctx)
-{
-	int err = 0;
-	/* generate nonce in the ucode */
-	err = tsec_hdcp_generate_nonce(hdcp_context, nonce);
-	if (err) {
-		nvhdcp_err("Error generating nonce!\n");
-		return err;
-	}
-	/* pass the nonce to hdcp TA and get the signature back */
-	memcpy(pkt, nonce, HDCP_NONCE_SIZE);
-	err = te_launch_trusted_oper(pkt, PKT_SIZE, HDCP_CMD_GEN_CMAC, ta_ctx);
-	if (err)
-		nvhdcp_err("te launch operation failed with error %d\n", err);
-	return err;
-}
 
 static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 				struct hdcp_context_t *hdcp_context)
@@ -1085,7 +1142,8 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 	err =  tsec_hdcp_init(hdcp_context);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_create_session(hdcp_context);
+	err =  tsec_hdcp_create_session(hdcp_context, DISPLAY_TYPE_HDMI,
+				nvhdcp->hdmi->sor->ctrl_num);
 	if (err)
 		goto exit;
 	err =  tsec_hdcp_exchange_info(hdcp_context,
@@ -1136,14 +1194,14 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 		&hdcp_context->msg.rxcaps_capmask);
 	if (err)
 		goto exit;
-	ta_ctx = NULL;
+	nvhdcp->ta_ctx = NULL;
 	/* Open a trusted sesion with HDCP TA */
-	err = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+	err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
 	if (err) {
 		nvhdcp_err("Error opening trusted session\n");
 		goto exit;
 	}
-	err = get_srm_signature(hdcp_context, nonce, pkt, ta_ctx);
+	err = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx);
 	if (err) {
 		nvhdcp_err("Error getting srm signature!\n");
 		goto exit;
@@ -1240,8 +1298,8 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 			g_fallback = 1;
 			goto exit;
 		}
-		err = get_srm_signature(hdcp_context, nonce,
-				pkt, ta_ctx);
+		err = get_srm_signature(hdcp_context, nonce, pkt,
+				nvhdcp->ta_ctx);
 		if (err) {
 			nvhdcp_err("Error getting srm signature!\n");
 			goto exit;
@@ -1312,9 +1370,9 @@ exit:
 	if (err)
 		nvhdcp_err("HDCP authentication failed with err %d\n", err);
 	kfree(pkt);
-	if (ta_ctx) {
-		te_close_trusted_session(ta_ctx);
-		ta_ctx = NULL;
+	if (nvhdcp->ta_ctx) {
+		te_close_trusted_session(nvhdcp->ta_ctx);
+		nvhdcp->ta_ctx = NULL;
 	}
 	return err;
 }
@@ -1376,7 +1434,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	g_fallback = 0;
 
-	nvhdcp_vdbg("%s():started thread %s\n", __func__, nvhdcp->name);
+	nvhdcp_vdbg("%s():started thread %s for sor: %x\n", __func__,
+			nvhdcp->name, nvhdcp->hdmi->sor->ctrl_num);
 	tegra_dc_io_start(dc);
 
 	mutex_lock(&nvhdcp->lock);
@@ -1408,8 +1467,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	nvhdcp_vdbg("read Bcaps = 0x%02x\n", b_caps);
 
 	if (tegra_dc_is_nvdisplay()) {
-		ta_ctx = NULL;
-		e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+		nvhdcp->ta_ctx = NULL;
+		e = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
 		if (e) {
 			nvhdcp_err("Error opening trusted session\n");
 			goto failure;
@@ -1423,7 +1482,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		*(pkt + 2*HDCP_CMD_OFFSET) = 0;
 		*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
 		*(pkt + 4*HDCP_CMD_OFFSET) = false;
-		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		*(pkt + 5*HDCP_CMD_OFFSET) = nvhdcp->hdmi->sor->ctrl_num;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, nvhdcp->ta_ctx);
 		if (e) {
 			nvhdcp_err("te launch operation failed with error %d\n",
 				    e);
@@ -1441,7 +1501,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 		*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
 		*(pkt + 3*HDCP_CMD_OFFSET) = false;
-		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		*(pkt + 4*HDCP_CMD_OFFSET) = nvhdcp->hdmi->sor->ctrl_num;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, nvhdcp->ta_ctx);
 		if (e) {
 			nvhdcp_err("te launch operation failed with error %d\n",
 				    e);
@@ -1467,7 +1528,9 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		msleep(25);
 		*pkt = HDCP_TA_CMD_AKSV;
 		*(pkt + 1) = TEGRA_NVHDCP_PORT_HDMI;
-		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		*(pkt + 2) = false;
+		*(pkt + 3) = nvhdcp->hdmi->sor->ctrl_num;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, nvhdcp->ta_ctx);
 		if (e) {
 			nvhdcp_err("te launch operation failed with error %d\n",
 				    e);
@@ -1572,11 +1635,11 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		*(pkt + 2*HDCP_CMD_OFFSET) = nvhdcp->b_ksv;
 		*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
 		*(pkt + 4*HDCP_CMD_OFFSET) = false;
-		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		*(pkt + 5*HDCP_CMD_OFFSET) =  nvhdcp->hdmi->sor->ctrl_num;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, nvhdcp->ta_ctx);
 		if (e) {
 			nvhdcp_err("te launch operation failed with error %d\n",
-				    e);
-			goto failure;
+					e);
 		} else {
 			/* check if Bksv verification was successful */
 			hdcp_ta_ret = (int)*pkt;
@@ -1627,10 +1690,11 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		*pkt = HDCP_TA_CMD_ENC;
 		*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 		*(pkt + 2*HDCP_CMD_OFFSET) = b_caps;
-		e = te_launch_trusted_oper(pkt, PKT_SIZE/4, ta_cmd, ta_ctx);
+		*(pkt + 3*HDCP_CMD_OFFSET) = nvhdcp->hdmi->sor->ctrl_num;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE/4, ta_cmd, nvhdcp->ta_ctx);
 		if (e) {
 			nvhdcp_err("te launch operation failed with error %d\n",
-				    e);
+					e);
 			goto failure;
 		}
 		enc = true;
@@ -1654,6 +1718,15 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 			goto failure;
 		}
 	}
+	/* peform vprime verification for repeater or srm revocation check
+	   for receiver */
+	e = verify_vprime(nvhdcp, b_caps & BCAPS_REPEATER);
+	if (e) {
+		nvhdcp_err("get vprime params failed\n");
+		goto failure;
+	} else
+		nvhdcp_vdbg("vprime verification passed\n");
+
 	mutex_lock(&nvhdcp->lock);
 	nvhdcp->state = STATE_LINK_VERIFY;
 	nvhdcp_info("link verified!\n");
@@ -1674,7 +1747,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		}
 		tegra_dc_io_end(dc);
 		wait_event_interruptible_timeout(wq_worker,
-			!nvhdcp_is_plugged(nvhdcp), msecs_to_jiffies(1500));
+				!nvhdcp_is_plugged(nvhdcp), msecs_to_jiffies(1500));
 		tegra_dc_io_start(dc);
 		mutex_lock(&nvhdcp->lock);
 	}
@@ -1687,7 +1760,7 @@ failure:
 		if (!nvhdcp_is_plugged(nvhdcp))
 			goto lost_hdmi;
 		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
-						msecs_to_jiffies(1000));
+				msecs_to_jiffies(1000));
 	}
 
 	/* Failed because of lack of memory */
@@ -1706,9 +1779,10 @@ lost_hdmi:
 		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 		*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
 		*(pkt + 3*HDCP_CMD_OFFSET) = false;
+		*(pkt + 4*HDCP_CMD_OFFSET) = nvhdcp->hdmi->sor->ctrl_num;
 		if (enc) {
 			e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd,
-						   ta_ctx);
+						   nvhdcp->ta_ctx);
 			if (e) {
 				nvhdcp_err(
 				  "te launch operation failed with error: %d\n",
@@ -1723,9 +1797,9 @@ err:
 	mutex_unlock(&nvhdcp->lock);
 	if (tegra_dc_is_nvdisplay()) {
 		kfree(pkt);
-		if (ta_ctx) {
-			te_close_trusted_session(ta_ctx);
-			ta_ctx = NULL;
+		if (nvhdcp->ta_ctx) {
+			te_close_trusted_session(nvhdcp->ta_ctx);
+			nvhdcp->ta_ctx = NULL;
 		}
 	}
 	tegra_dc_io_end(dc);
@@ -1734,9 +1808,9 @@ disable:
 	nvhdcp->state = STATE_OFF;
 	if (tegra_dc_is_nvdisplay()) {
 		kfree(pkt);
-		if (ta_ctx) {
-			te_close_trusted_session(ta_ctx);
-			ta_ctx = NULL;
+		if (nvhdcp->ta_ctx) {
+			te_close_trusted_session(nvhdcp->ta_ctx);
+			nvhdcp->ta_ctx = NULL;
 		}
 	}
 	nvhdcp_set_plugged(nvhdcp, false);
@@ -1783,15 +1857,15 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 							msecs_to_jiffies(10));
 			goto exit;
 		}
-		ta_ctx = NULL;
+		nvhdcp->ta_ctx = NULL;
 		/* Open a trusted sesion with HDCP TA */
-		err = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+		err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
 		if (err) {
 			nvhdcp_err("Error opening trusted session\n");
 			goto exit;
 		}
-		err = get_srm_signature(hdcp_context, nonce,
-				pkt, ta_ctx);
+		err = get_srm_signature(hdcp_context, nonce, pkt,
+					nvhdcp->ta_ctx);
 		if (err) {
 			nvhdcp_err("Error getting srm signature!\n");
 			goto exit;
@@ -1811,9 +1885,9 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 		err = (rx_status & HDCP_RX_STATUS_MSG_REAUTH_REQ);
 exit:
 		kfree(pkt);
-		if (ta_ctx) {
-			te_close_trusted_session(ta_ctx);
-			ta_ctx = NULL;
+		if (nvhdcp->ta_ctx) {
+			te_close_trusted_session(nvhdcp->ta_ctx);
+			nvhdcp->ta_ctx = NULL;
 		}
 		return err;
 }
@@ -1842,7 +1916,7 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 		goto err;
 	}
 
-	nvhdcp_vdbg("%s():started thread %s\n", __func__, nvhdcp->name);
+	nvhdcp_vdbg("%s():started thread for sor:%s\n", __func__, nvhdcp->name);
 	tegra_dc_io_start(dc);
 
 	mutex_lock(&nvhdcp->lock);

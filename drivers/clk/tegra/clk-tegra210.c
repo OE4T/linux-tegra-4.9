@@ -2748,6 +2748,10 @@ static struct tegra_devclk devclks[] __initdata = {
 	{ .con_id = "abus", .dt_id = TEGRA210_CLK_ABUS },
 	{ .con_id = "gbus", .dt_id = TEGRA210_CLK_GBUS },
 	{ .con_id = "spdif_in", .dt_id = TEGRA210_CLK_SPDIF_IN },
+	{ .con_id = "gpu_ref", .dt_id = TEGRA210_CLK_PLL_G_REF },
+	{ .con_id = "pll_p_out5", .dt_id = TEGRA210_CLK_PLL_P_OUT5 },
+	{ .con_id = "gpu", .dt_id = TEGRA210_CLK_GM20B_GBUS },
+	{ .con_id = "gpu_gate", .dt_id = TEGRA210_CLK_GPU },
 };
 
 static struct tegra_audio_clk_info tegra210_audio_plls[] = {

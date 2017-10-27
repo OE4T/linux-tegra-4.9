@@ -31,7 +31,7 @@
 #include "ioctl_channel.h"
 #include "os_linux.h"
 #ifdef CONFIG_TEGRA_19x_GPU
-#include "tsg_t19x.h"
+#include "common/linux/ioctl_tsg_t19x.h"
 #endif
 
 struct tsg_private {

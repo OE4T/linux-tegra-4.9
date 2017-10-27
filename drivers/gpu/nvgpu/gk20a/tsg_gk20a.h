@@ -26,6 +26,9 @@
 #include <nvgpu/kref.h>
 #include <nvgpu/rwsem.h>
 
+#ifdef CONFIG_TEGRA_19x_GPU
+#include "tsg_t19x.h"
+#endif
 #define NVGPU_INVALID_TSG_ID (-1)
 
 struct channel_gk20a;
@@ -65,6 +68,9 @@ struct tsg_gk20a {
 	u32 runlist_id;
 	pid_t tgid;
 	struct nvgpu_mem *eng_method_buffers;
+#ifdef CONFIG_TEGRA_19x_GPU
+	struct tsg_t19x t19x;
+#endif
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);

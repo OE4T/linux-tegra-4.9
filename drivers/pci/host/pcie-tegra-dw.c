@@ -131,6 +131,9 @@
 #define CAP_PL16G_STATUS_REG		0x164
 #define CAP_PL16G_STATUS_REG_EQ_16G_CPL	BIT(0)
 
+#define CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF	0x718
+#define CFG_TIMER_CTRL_ACK_NAK_SHIFT	(19)
+
 #define EVENT_COUNTER_CONTROL_REG	0x168
 #define EVENT_COUNTER_ALL_CLEAR		0x3
 #define EVENT_COUNTER_ENABLE_ALL	0x7
@@ -1327,6 +1330,14 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 			disable_aspm_l11(pcie); /* Disable L1.1 */
 		if (val & 0x8)
 			disable_aspm_l12(pcie); /* Disable L1.2 */
+	}
+
+	if (of_property_read_bool(np, "nvidia,update_fc_fixup")) {
+		dw_pcie_cfg_read(pp->dbi_base +
+				 CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF, 4, &tmp);
+		tmp |= 0x1 << CFG_TIMER_CTRL_ACK_NAK_SHIFT;
+		dw_pcie_cfg_write(pp->dbi_base +
+				  CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF, 4, tmp);
 	}
 
 	/* FPGA specific PHY initialization */

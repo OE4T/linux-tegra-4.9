@@ -87,6 +87,11 @@
  */
 #define DEBUG_BUFFER_SIZE		SZ_256
 
+/**
+ * Firmware GCOV Buffer Size
+ */
+#define GCOV_BUFFER_SIZE		SZ_64K
+
 /*
  * CMD submission timeout in msec
  */
@@ -167,6 +172,9 @@ struct nvdla_cmd_data {
  * @debug_dump_va	virtual address of print buffer
  * @trace_dump_pa	physical address of trace buffer
  * @trace_dump_va	virtual address of trace buffer
+ * @en_fw_gcov		flag to enable firmware gcov
+ * @gcov_dump_pa	physical address of fw gcov buffer
+ * @gcov_dump_va	virtual address of fw gcovbuffer
  */
 struct nvdla_device {
 	struct platform_device *pdev;
@@ -186,6 +194,9 @@ struct nvdla_device {
 	u32 *debug_dump_va;
 	dma_addr_t trace_dump_pa;
 	u32 *trace_dump_va;
+	u32 en_fw_gcov;
+	dma_addr_t gcov_dump_pa;
+	u32 *gcov_dump_va;
 };
 
 /**
@@ -350,5 +361,7 @@ int nvdla_get_task_mem(struct nvhost_queue *queue,
 				struct nvdla_task **task);
 void nvdla_put_task_mem(struct nvdla_task *task);
 size_t nvdla_get_max_task_size(void);
+int nvdla_alloc_gcov_region(struct platform_device *pdev);
+int nvdla_free_gcov_region(struct platform_device *pdev, bool update_region);
 
 #endif /* End of __NVHOST_NVDLA_H__ */

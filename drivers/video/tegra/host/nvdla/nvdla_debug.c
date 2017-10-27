@@ -208,6 +208,87 @@ static int debug_dla_bintracedump_show(struct seq_file *s, void *data)
 	return 0;
 }
 
+static int debug_dla_en_fw_gcov_show(struct seq_file *s, void *data)
+{
+	struct nvdla_device *nvdla_dev = (struct nvdla_device *)s->private;
+
+	seq_printf(s, "%u\n", nvdla_dev->en_fw_gcov);
+	return 0;
+}
+
+static ssize_t debug_dla_en_fw_gcov_alloc(struct file *file,
+	const char __user *buffer, size_t count, loff_t *off)
+{
+	int ret;
+	u32 val;
+	struct nvdla_device *nvdla_dev;
+	struct platform_device *pdev;
+	struct seq_file *p = file->private_data;
+	char str[] = "0123456789abcdef";
+
+	nvdla_dev = (struct nvdla_device *)p->private;
+	pdev = nvdla_dev->pdev;
+	count = min_t(size_t, strlen(str), count);
+	if (copy_from_user(str, buffer, count))
+		return -EFAULT;
+
+	mutex_lock(&p->lock);
+	/* get value entered by user in variable val */
+	ret = sscanf(str, "%u", &val);
+	mutex_unlock(&p->lock);
+
+	if (ret != 1) {
+		nvdla_dbg_err(pdev, "Incorrect input!");
+		goto invalid_input;
+	}
+
+	/*  alloc gcov region */
+	if (val == 1) {
+		ret = nvdla_alloc_gcov_region(pdev);
+		if (ret) {
+			nvdla_dbg_err(pdev, "failed to allocate gcov region.");
+			goto op_failed;
+		}
+		nvdla_dev->en_fw_gcov = 1;
+	} else if (val == 0) {
+		if (nvdla_dev->en_fw_gcov == 0)
+			return count;
+		ret = nvdla_free_gcov_region(pdev, true);
+		if (ret) {
+			nvdla_dbg_err(pdev, "failed to free gcov region.");
+			goto op_failed;
+		}
+		nvdla_dev->en_fw_gcov = 0;
+	} else {
+		nvdla_dbg_err(pdev, "inval i/p. Valid i/p: 0 and 1");
+		ret = -EINVAL;
+		goto op_failed;
+	}
+
+	return count;
+
+op_failed:
+invalid_input:
+	return ret;
+}
+
+static int debug_dla_fw_gcov_gcda_show(struct seq_file *s, void *data)
+{
+	char *bufptr;
+	uint32_t datasize;
+	struct nvdla_device *nvdla_dev;
+
+	nvdla_dev = (struct nvdla_device *)s->private;
+	if (nvdla_dev->gcov_dump_va && nvdla_dev->en_fw_gcov) {
+		bufptr = (char *)nvdla_dev->gcov_dump_va;
+
+		datasize = (uint32_t)GCOV_BUFFER_SIZE;
+		seq_write(s, bufptr, datasize);
+	}
+
+	return 0;
+}
+
 static int debug_dla_enable_trace_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, debug_dla_enable_trace_show, inode->i_private);
@@ -231,6 +312,16 @@ static int debug_dla_trace_open(struct inode *inode, struct file *file)
 static int debug_dla_bintrace_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, debug_dla_bintracedump_show, inode->i_private);
+}
+
+static int debug_dla_en_fw_gcov_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_en_fw_gcov_show, inode->i_private);
+}
+
+static int debug_dla_fw_gcov_gcda_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_fw_gcov_gcda_show, inode->i_private);
 }
 
 static int debug_set_trace_event_config(struct platform_device *pdev,
@@ -430,9 +521,24 @@ static const struct file_operations debug_dla_bin_event_trace_fops = {
 		.release	= single_release,
 };
 
+static const struct file_operations debug_dla_en_fw_gcov_fops = {
+		.open		= debug_dla_en_fw_gcov_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_en_fw_gcov_alloc,
+};
+
+static const struct file_operations debug_dla_fw_gcov_gcda_fops = {
+		.open		= debug_dla_fw_gcov_gcda_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+};
+
 static void dla_fw_debugfs_init(struct platform_device *pdev)
 {
-	struct dentry *fw_dir, *fw_trace, *events;
+	struct dentry *fw_dir, *fw_trace, *events, *fw_gcov;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct dentry *dla_debugfs_root = pdata->debugfs;
@@ -478,8 +584,22 @@ static void dla_fw_debugfs_init(struct platform_device *pdev)
 		goto event_failed;
 	}
 
+	fw_gcov = debugfs_create_dir("gcov", fw_dir);
+	if (!fw_gcov)
+		goto gcov_failed;
+
+	if (!debugfs_create_file("enable", S_IRUGO | S_IWUSR, fw_gcov,
+			nvdla_dev, &debug_dla_en_fw_gcov_fops))
+		goto gcov_failed;
+
+	if (!debugfs_create_file("gcda", S_IRUGO, fw_gcov,
+			nvdla_dev, &debug_dla_fw_gcov_gcda_fops))
+		goto gcov_failed;
+
 	return;
 
+gcov_failed:
+	debugfs_remove_recursive(fw_gcov);
 event_failed:
 	debugfs_remove_recursive(events);
 	return;

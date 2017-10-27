@@ -224,6 +224,118 @@ int nvdla_send_cmd(struct platform_device *pdev,
 	return ret;
 }
 
+static int nvdla_set_gcov_region(struct platform_device *pdev, bool unset_region)
+{
+	int err = 0;
+	struct nvdla_cmd_mem_info gcov_cmd_mem_info;
+	struct nvdla_cmd_data cmd_data;
+	struct dla_region_printf *gcov_region = NULL;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+
+	if (!pdata->flcn_isr)
+		return 0;
+
+	err = nvhost_module_busy(pdev);
+	if (err) {
+		nvdla_dbg_err(pdev, "failed to power on\n");
+		err = -ENODEV;
+		goto fail_to_power_on;
+	}
+
+	/* assign memory for gcov command */
+	err = nvdla_get_cmd_memory(pdev, &gcov_cmd_mem_info);
+	if (err) {
+		nvdla_dbg_err(pdev,
+			"dma allocation failed for gcov command.");
+		goto alloc_gcov_cmd_failed;
+	}
+
+	gcov_region = (struct dla_region_printf *)(gcov_cmd_mem_info.va);
+	gcov_region->region = DLA_REGION_GCOV;
+	if (unset_region)
+		gcov_region->address = 0;
+	else
+		gcov_region->address = nvdla_dev->gcov_dump_pa;
+	gcov_region->size = GCOV_BUFFER_SIZE;
+
+	cmd_data.method_id = DLA_CMD_SET_REGIONS;
+	cmd_data.method_data = ALIGNED_DMA(gcov_cmd_mem_info.pa);
+	cmd_data.wait = true;
+
+	err = nvdla_send_cmd(pdev, &cmd_data);
+
+	/* release memory allocated for gcov command */
+	nvdla_put_cmd_memory(pdev, gcov_cmd_mem_info.index);
+
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "failed to send gcov command");
+		goto gcov_send_cmd_failed;
+	}
+
+	nvhost_module_idle(pdev);
+
+	return err;
+
+gcov_send_cmd_failed:
+alloc_gcov_cmd_failed:
+	nvhost_module_idle(pdev);
+fail_to_power_on:
+	return err;
+}
+
+int nvdla_free_gcov_region(struct platform_device *pdev, bool update_region)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+	int ret = 0;
+
+	if (update_region) {
+		ret = nvdla_set_gcov_region(pdev, true);
+		if (ret)
+			return ret;
+	}
+
+	if (nvdla_dev->gcov_dump_pa) {
+		dma_free_attrs(&pdev->dev, GCOV_BUFFER_SIZE,
+			       nvdla_dev->gcov_dump_va,
+			       nvdla_dev->gcov_dump_pa,
+			       __DMA_ATTR(attrs));
+		nvdla_dev->gcov_dump_va = NULL;
+		nvdla_dev->gcov_dump_pa = 0;
+	}
+
+	return 0;
+}
+
+int nvdla_alloc_gcov_region(struct platform_device *pdev)
+{
+	int err = 0;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+
+	/* Gcov buffer allocation must be done at once only. */
+	if (!nvdla_dev->gcov_dump_va) {
+		/* allocate gcov region */
+		nvdla_dev->gcov_dump_va = dma_alloc_attrs(&pdev->dev,
+				   GCOV_BUFFER_SIZE, &nvdla_dev->gcov_dump_pa,
+				   GFP_KERNEL, __DMA_ATTR(attrs));
+
+		if (!nvdla_dev->gcov_dump_va) {
+			nvdla_dbg_err(pdev,
+				"dma gcov memory allocation failed");
+			err = -ENOMEM;
+			goto fail_alloc_gcov_dma;
+		}
+	}
+	err = nvdla_set_gcov_region(pdev, false);
+	if (err)
+		nvdla_free_gcov_region(pdev, false);
+
+fail_alloc_gcov_dma:
+	return err;
+}
+
 static int nvdla_alloc_trace_region(struct platform_device *pdev)
 {
 	int err = 0;
@@ -643,6 +755,8 @@ static int __exit nvdla_remove(struct platform_device *pdev)
 
 	nvhost_queue_deinit(nvdla_dev->pool);
 	nvhost_client_device_release(pdev);
+
+	nvdla_free_gcov_region(pdev, false);
 
 	if (nvdla_dev->trace_dump_pa) {
 		dma_free_attrs(&pdev->dev, TRACE_BUFFER_SIZE,

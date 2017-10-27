@@ -122,6 +122,7 @@ struct nvgpu_mem {
 	size_t					 aligned_size;
 	u64					 gpu_va;
 	bool					 skip_wmb;
+	bool					 cpu_accessible;
 
 	/*
 	 * Set when a nvgpu_mem struct is not a "real" nvgpu_mem struct. Instead
@@ -208,6 +209,15 @@ static inline bool nvgpu_mem_is_valid(struct nvgpu_mem *mem)
 	 */
 	return mem->aperture != APERTURE_INVALID;
 
+}
+
+/*
+ * Returns true if the passed nvgpu_mem can be accessed by the CPU by virtue
+ * of having called nvgpu_mem_begin successfully.
+ */
+static inline bool nvgpu_mem_cpu_accessible(struct nvgpu_mem *mem)
+{
+	return mem->cpu_accessible;
 }
 
 /*

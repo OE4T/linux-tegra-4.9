@@ -60,6 +60,14 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	void *cpu_va;
 
+	if (WARN_ON(mem->cpu_accessible)) {
+		nvgpu_warn(g, "nested");
+		return -EBUSY;
+	}
+
+	/* flag that the intent is to allow CPU access to the memory. */
+	mem->cpu_accessible = true;
+
 	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
 		return 0;
 
@@ -71,17 +79,14 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 	if (!(mem->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING))
 		return 0;
 
-	if (WARN_ON(mem->cpu_va)) {
-		nvgpu_warn(g, "nested");
-		return -EBUSY;
-	}
-
 	cpu_va = vmap(mem->priv.pages,
 			PAGE_ALIGN(mem->size) >> PAGE_SHIFT,
 			0, pgprot_writecombine(PAGE_KERNEL));
 
-	if (WARN_ON(!cpu_va))
+	if (WARN_ON(!cpu_va)) {
+		mem->cpu_accessible = false;
 		return -ENOMEM;
+	}
 
 	mem->cpu_va = cpu_va;
 	return 0;
@@ -89,6 +94,8 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 
 void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem)
 {
+	mem->cpu_accessible = false;
+
 	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
 		return;
 

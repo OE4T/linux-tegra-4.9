@@ -2346,7 +2346,9 @@
 	eqos_ape@2990000 {
 		status = "disabled";
 		compatible = "nvidia,tegra18x-eqos-ape";
+#if TEGRA_AUDIO_BUS_DT_VERSION < DT_VERSION_2
 		power-domains = <&ape_pd>;
+#endif
 		wakeup-disable;
 		reg = <0x0 0x02990054 0x0 0x4>, /* AMISC IDLE*/
 			<0x0 0x029900c0 0x0 0x28>;  /* AMISC EAVB*/

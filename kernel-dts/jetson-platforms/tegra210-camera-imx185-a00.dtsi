@@ -223,10 +223,10 @@
 						active_w = "1920";
 						active_h = "1080";
 						readout_orientation = "0";
-						line_length = "2200";
+						line_length = "2640";
 						inherent_gain = "1";
-						mclk_multiplier = "2";
-						pix_clk_hz = "74250000";
+						mclk_multiplier = "2.4";
+						pix_clk_hz = "89100000";
 
 						min_gain_val = "0";
 						max_gain_val = "48";
@@ -287,10 +287,10 @@
 						active_w = "1920";
 						active_h = "1080";
 						readout_orientation = "0";
-						line_length = "2200";
+						line_length = "2640";
 						inherent_gain = "1";
-						mclk_multiplier = "4";
-						pix_clk_hz = "148500000";
+						mclk_multiplier = "4.8";
+						pix_clk_hz = "178200000";
 
 						min_gain_val = "0";
 						max_gain_val = "48";

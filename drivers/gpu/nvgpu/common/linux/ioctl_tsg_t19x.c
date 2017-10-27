@@ -28,6 +28,7 @@ static int gv11b_tsg_ioctl_bind_channel_ex(struct gk20a *g,
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	struct channel_gk20a *ch;
+	struct gr_gk20a *gr = &g->gr;
 	int err = 0;
 
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
@@ -48,6 +49,22 @@ static int gv11b_tsg_ioctl_bind_channel_ex(struct gk20a *g,
 		err = -EINVAL;
 		goto idle;
 	}
+
+	if (arg->tpc_pg_enabled && (!tsg->t19x.tpc_num_initialized)) {
+		if ((arg->num_active_tpcs > gr->max_tpc_count) ||
+				!(arg->num_active_tpcs)) {
+			nvgpu_err(g, "Invalid num of active TPCs");
+			err = -EINVAL;
+			goto ch_put;
+		}
+		tsg->t19x.tpc_num_initialized = true;
+		tsg->t19x.num_active_tpcs = arg->num_active_tpcs;
+		tsg->t19x.tpc_pg_enabled = true;
+	} else {
+		tsg->t19x.tpc_pg_enabled = false;
+		nvgpu_log(g, gpu_dbg_info, "dynamic TPC-PG not enabled");
+	}
+
 	if (arg->subcontext_id < g->fifo.t19x.max_subctx_count) {
 		ch->t19x.subctx_id = arg->subcontext_id;
 	} else {

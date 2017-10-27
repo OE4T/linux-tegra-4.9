@@ -44,8 +44,9 @@ struct nvgpu_tsg_bind_channel_ex_args {
 
 	/* in: VEID in Volta */
 	__u32 subcontext_id;
-
-	__u64 reserved[2];
+	__u32 num_active_tpcs;
+	__u8 tpc_pg_enabled;
+	__u8 reserved[11];
 };
 
 #define NVGPU_TSG_IOCTL_BIND_CHANNEL_EX \

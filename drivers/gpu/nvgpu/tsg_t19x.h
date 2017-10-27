@@ -22,9 +22,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_TSG_T19X_H_
-#define _NVGPU_TSG_T19X_H_
+#ifndef __NVGPU_TSG_T19X_H__
+#define __NVGPU_TSG_T19X_H__
 
-#include "common/linux/ioctl_tsg_t19x.h"
+#include <nvgpu/types.h>
+
+struct tsg_t19x {
+	u32  num_active_tpcs;
+	u8   tpc_pg_enabled;
+	bool tpc_num_initialized;
+};
 
 #endif

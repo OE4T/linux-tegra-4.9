@@ -65,6 +65,7 @@
 #include "chip_support.h"
 
 #include "streamid_regs.c"
+#include "cg_regs.c"
 #include "nvhost_cv_pm.h"
 
 #define HOST_EMC_FLOOR 204000000
@@ -373,6 +374,8 @@ struct nvhost_device_data t19_msenc_info = {
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(18),
+	.engine_cg_regs		= t19x_nvenc_gating_registers,
+	.engine_can_cg		= true,
 };
 
 struct nvhost_device_data t19_nvenc1_info = {
@@ -403,6 +406,8 @@ struct nvhost_device_data t19_nvenc1_info = {
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(29),
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVENC1,
+	.engine_cg_regs		= t19x_nvenc_gating_registers,
+	.engine_can_cg		= true,
 };
 #endif
 
@@ -436,6 +441,8 @@ struct nvhost_device_data t19_nvdec_info = {
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(19),
+	.engine_cg_regs		= t19x_nvdec_gating_registers,
+	.engine_can_cg		= true,
 };
 
 struct nvhost_device_data t19_nvdec1_info = {
@@ -467,6 +474,8 @@ struct nvhost_device_data t19_nvdec1_info = {
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(31),
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC1,
+	.engine_cg_regs		= t19x_nvdec_gating_registers,
+	.engine_can_cg		= true,
 };
 #endif
 
@@ -496,6 +505,8 @@ struct nvhost_device_data t19_nvjpg_info = {
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVJPG,
 	.reset_clamp_mask	= BIT(20),
+	.engine_cg_regs		= t19x_nvjpg_gating_registers,
+	.engine_can_cg		= true,
 };
 #endif
 
@@ -524,6 +535,8 @@ struct nvhost_device_data t19_tsec_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSEC,
 	.reset_clamp_mask	= BIT(21),
+	.engine_cg_regs		= t19x_tsec_gating_registers,
+	.engine_can_cg		= true,
 };
 
 struct nvhost_device_data t19_tsecb_info = {
@@ -550,6 +563,8 @@ struct nvhost_device_data t19_tsecb_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSECB,
 	.reset_clamp_mask	= BIT(22),
+	.engine_cg_regs		= t19x_tsec_gating_registers,
+	.engine_can_cg		= true,
 };
 #endif
 
@@ -582,6 +597,8 @@ struct nvhost_device_data t19_vic_info = {
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(17),
+	.engine_cg_regs		= t19x_vic_gating_registers,
+	.engine_can_cg		= true,
 };
 #endif
 
@@ -759,6 +776,7 @@ static void t194_remove_support(struct nvhost_chip_support *op)
 
 static void t194_init_regs(struct platform_device *pdev, bool prod)
 {
+	struct nvhost_gating_register *cg_regs = t19x_host1x_gating_registers;
 	struct nvhost_streamid_mapping *map_regs = t19x_host1x_streamid_mapping;
 	ktime_t now, start = ktime_get();
 	u32 ram_init;
@@ -808,6 +826,13 @@ static void t194_init_regs(struct platform_device *pdev, bool prod)
 					 map_regs->host1x_offset + sizeof(u32),
 					 map_regs->client_limit);
 		map_regs++;
+	}
+
+	while (cg_regs->addr) {
+		u32 val = prod ? cg_regs->prod : cg_regs->disable;
+
+		host1x_hypervisor_writel(pdev, cg_regs->addr, val);
+		cg_regs++;
 	}
 }
 

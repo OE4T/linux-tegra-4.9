@@ -23,6 +23,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_pci.h>
 #include <linux/pci.h>
+#include <linux/pci_regs.h>
 #include <linux/platform_device.h>
 #include <linux/phy/phy.h>
 #include <linux/resource.h>
@@ -47,6 +48,7 @@
 #define APPL_INTR_STATUS_L0			0xC
 #define APPL_INTR_STATUS_L0_PEX_RST_INT_SHIFT	16
 #define APPL_INTR_STATUS_L0_PEX_RST_INT		BIT(16)
+#define APPL_INTR_STATUS_L0_PCI_CMD_EN_INT	BIT(15)
 #define APPL_INTR_STATUS_L0_LINK_STATE_INT	BIT(0)
 
 #define APPL_INTR_EN_L1_0			0x1C
@@ -69,9 +71,17 @@
 #define APPL_INTR_STATUS_L1_13			0x74
 #define APPL_INTR_STATUS_L1_14			0x78
 #define APPL_INTR_STATUS_L1_15			0x7C
+#define APPL_INTR_STATUS_L1_15_CFG_BME_CHGED	BIT(1)
 #define APPL_INTR_STATUS_L1_17			0x88
 
 #define APPL_MSI_CTRL_2				0xB0
+
+#define APPL_LTR_MSG_1				0xC4
+#define APPL_LTR_MSG_2				0xC8
+#define APPL_LTR_MSG_2_LTR_MSG_REQ_STATE	BIT(3)
+
+#define LTR_MSG_REQ				BIT(15)
+#define LTR_MST_NO_SNOOP_SHIFT			16
 
 #define APPL_PM_STATUS				0xFC
 
@@ -87,6 +97,9 @@
 
 #define APPL_GTH_PHY				0x138
 #define APPL_GTH_PHY_RST			0x1
+
+#define EP_CS_STATUS_COMMAND			0x4
+#define EP_CS_STATUS_COMMAND_BME		BIT(2)
 
 #define AUX_CLK_FREQ				0xB40
 
@@ -114,10 +127,13 @@
 
 #define MB_1	(1 * 1024 * 1024)
 
+#define LTR_MSG_TIMEOUT (100*1000)
+
 enum ep_event {
 	EP_EVENT_NONE = 0,
 	EP_PEX_RST_DE_ASSERT,
 	EP_PEX_HOT_RST_DONE,
+	EP_PEX_BME_CHANGE,
 	EP_EVENT_INVALID,
 };
 
@@ -179,6 +195,14 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 		if (val & APPL_INTR_STATUS_L1_HOT_RESET_DONE) {
 			/* clear any stale PEX_RST interrupt */
 			pcie->event = EP_PEX_HOT_RST_DONE;
+			schedule_work(&pcie->pcie_ep_work);
+		}
+	} else if (val & APPL_INTR_STATUS_L0_PCI_CMD_EN_INT) {
+		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_15);
+		writel(val, pcie->appl_base + APPL_INTR_STATUS_L1_15);
+		dev_dbg(pcie->dev, "APPL_INTR_STATUS_L1_15 = 0x%08X\n", val);
+		if (val & APPL_INTR_STATUS_L1_15_CFG_BME_CHGED) {
+			pcie->event = EP_PEX_BME_CHANGE;
 			schedule_work(&pcie->pcie_ep_work);
 		}
 	} else {
@@ -261,6 +285,36 @@ void pcie_ep_work_fn(struct work_struct *work)
 		val = readl(pcie->appl_base + APPL_CTRL);
 		val |= APPL_CTRL_LTSSM_EN;
 		writel(val, pcie->appl_base + APPL_CTRL);
+		pcie->event = EP_EVENT_INVALID;
+	}
+	if (pcie->event == EP_PEX_BME_CHANGE) {
+		/* Check if BME is set to '1' */
+		val = readl(pcie->dbi_base + EP_CS_STATUS_COMMAND);
+		if (val & EP_CS_STATUS_COMMAND_BME) {
+			ktime_t timeout;
+
+			/* 100us for both snoop and no-snoop */
+			/* TODO : Value should be updated for Silicon*/
+			val = 100 | (2 << PCI_LTR_SCALE_SHIFT) | LTR_MSG_REQ;
+			val |= (val << LTR_MST_NO_SNOOP_SHIFT);
+			writel(val, pcie->appl_base + APPL_LTR_MSG_1);
+			/* Send LTR upstream */
+			val = readl(pcie->appl_base + APPL_LTR_MSG_2);
+			val |= APPL_LTR_MSG_2_LTR_MSG_REQ_STATE;
+			writel(val, pcie->appl_base + APPL_LTR_MSG_2);
+
+			timeout = ktime_add_us(ktime_get(), LTR_MSG_TIMEOUT);
+			for (;;) {
+				val = readl(pcie->appl_base + APPL_LTR_MSG_2);
+				if (!(val & APPL_LTR_MSG_2_LTR_MSG_REQ_STATE))
+					break;
+				if (ktime_after(ktime_get(), timeout))
+					break;
+				usleep_range(1000, 1100);
+			}
+			if (val & APPL_LTR_MSG_2_LTR_MSG_REQ_STATE)
+				dev_err(pcie->dev, "LTR_MSG sending failed\n");
+		}
 		pcie->event = EP_EVENT_INVALID;
 	}
 }
@@ -359,6 +413,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	val |= APPL_INTR_EN_L0_0_SYS_INTR_EN;
 	val |= APPL_INTR_EN_L0_0_PEX_RST_INT_EN;
 	val |= APPL_INTR_EN_L0_0_LINK_STATE_INT_EN;
+	val |= APPL_INTR_EN_L0_0_PCI_CMD_EN_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L0_0);
 
 	val = readl(pcie->appl_base + APPL_INTR_EN_L1_0);

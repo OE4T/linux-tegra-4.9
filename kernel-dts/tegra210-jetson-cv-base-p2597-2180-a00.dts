@@ -367,7 +367,7 @@
 			bitclock-slave;
 			frame-slave;
 			bitclock-inversion;
-			frame-inversion;
+			frame-noninversion;
 			bit-format = "s16_le";
 			bclk_ratio = <4>;
 			srate = <8000>;

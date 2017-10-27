@@ -192,6 +192,7 @@ static int __init mods_init_module(void)
 	mods_tegra_prod_init(&mods_dev);
 #endif
 
+	mods_info_printk("*** WARNING: DIAGNOSTIC DRIVER LOADED ***\n");
 	mods_info_printk("driver loaded, version %x.%02x\n",
 			 (MODS_DRIVER_VERSION>>8),
 			 (MODS_DRIVER_VERSION&0xFF));
@@ -636,7 +637,7 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 
 	fp->private_data = private_data;
 
-	mods_info_printk("*** WARNING: DIAGNOSTIC DRIVER LOADED ***\n");
+	mods_info_printk("driver opened\n");
 	LOG_EXT();
 	return OK;
 }

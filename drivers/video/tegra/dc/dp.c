@@ -1212,6 +1212,8 @@ static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 
 	if (dpcd_data & NV_DPCD_MAX_LANE_COUNT_TPS3_SUPPORTED_YES)
 		cfg->tps = TEGRA_DC_DP_TRAINING_PATTERN_3;
+	else
+		cfg->tps = TEGRA_DC_DP_TRAINING_PATTERN_2;
 
 	cfg->support_enhanced_framing =
 	(dpcd_data & NV_DPCD_MAX_LANE_COUNT_ENHANCED_FRAMING_YES) ?

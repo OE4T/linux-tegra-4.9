@@ -75,7 +75,7 @@
 /**
  * Maximum number of buffers per task
  */
-#define MAX_NUM_NVDLA_BUFFERS_PER_TASK	256
+#define MAX_NUM_NVDLA_BUFFERS_PER_TASK	512
 
 /**
  * Trace Buffer Size

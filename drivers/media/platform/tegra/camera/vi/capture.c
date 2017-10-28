@@ -982,7 +982,7 @@ int vi_capture_status(struct tegra_vi_channel *chan,
 
 	ret = wait_for_completion_killable_timeout(
 			&capture->capture_resp,
-			(unsigned long)(timeout_ms/1000*HZ));
+			msecs_to_jiffies(timeout_ms));
 	/* Possible return values:
 	 * -ERESTARTSYS if interrupted, 0 if timed out, positive (at least 1,
 	 * or number of jiffies left till timeout) if completed */

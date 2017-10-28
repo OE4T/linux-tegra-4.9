@@ -991,7 +991,7 @@ int isp_capture_status(struct tegra_isp_channel *chan,
 
 	err = wait_for_completion_killable_timeout(
 			&capture->capture_resp,
-			(unsigned long)(timeout_ms/1000*HZ));
+			msecs_to_jiffies(timeout_ms));
 	if (err <= 0) {
 		dev_err(chan->isp_dev, "no reply from camera processor\n");
 		return -ETIMEDOUT;

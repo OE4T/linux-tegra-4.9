@@ -37,7 +37,9 @@ struct trusty_work {
 
 struct trusty_state {
 	struct mutex smc_lock;
+	struct mutex panic_lock;
 	struct atomic_notifier_head notifier;
+	struct raw_notifier_head panic_notifier;
 	struct completion cpu_idle_completion;
 	char *version_str;
 	u32 api_version;
@@ -181,6 +183,13 @@ static ulong trusty_std_call_helper(struct device *dev, ulong smcnr,
 					   NULL);
 		local_irq_enable();
 
+		if (ret == SM_ERR_PANIC) {
+			mutex_lock(&s->panic_lock);
+			raw_notifier_call_chain(&s->panic_notifier, 0, NULL);
+			mutex_unlock(&s->panic_lock);
+			break;
+		}
+
 		if ((int)ret != SM_ERR_BUSY)
 			break;
 
@@ -279,6 +288,29 @@ int trusty_call_notifier_unregister(struct device *dev,
 	return atomic_notifier_chain_unregister(&s->notifier, n);
 }
 EXPORT_SYMBOL(trusty_call_notifier_unregister);
+
+int trusty_panic_notifier_register(struct device *dev, struct notifier_block *n)
+{
+	struct trusty_state *s = platform_get_drvdata(to_platform_device(dev));
+
+	if (!is_trusty_dev_enabled())
+		return -ENODEV;
+
+	return raw_notifier_chain_register(&s->panic_notifier, n);
+}
+EXPORT_SYMBOL(trusty_panic_notifier_register);
+
+int trusty_panic_notifier_unregister(struct device *dev,
+				    struct notifier_block *n)
+{
+	struct trusty_state *s = platform_get_drvdata(to_platform_device(dev));
+
+	if (!is_trusty_dev_enabled())
+		return -ENODEV;
+
+	return raw_notifier_chain_unregister(&s->panic_notifier, n);
+}
+EXPORT_SYMBOL(trusty_panic_notifier_unregister);
 
 static int trusty_remove_child(struct device *dev, void *data)
 {
@@ -548,7 +580,9 @@ static int trusty_probe(struct platform_device *pdev)
 	spin_lock_init(&s->nop_lock);
 	INIT_LIST_HEAD(&s->nop_queue);
 	mutex_init(&s->smc_lock);
+	mutex_init(&s->panic_lock);
 	ATOMIC_INIT_NOTIFIER_HEAD(&s->notifier);
+	RAW_INIT_NOTIFIER_HEAD(&s->panic_notifier);
 	init_completion(&s->cpu_idle_completion);
 	platform_set_drvdata(pdev, s);
 
@@ -609,6 +643,7 @@ err_api_version:
 	}
 	device_for_each_child(&pdev->dev, NULL, trusty_remove_child);
 	mutex_destroy(&s->smc_lock);
+	mutex_destroy(&s->panic_lock);
 	kfree(s);
 err_allocate_state:
 	return ret;
@@ -632,6 +667,7 @@ static int trusty_remove(struct platform_device *pdev)
 	destroy_workqueue(s->nop_wq);
 
 	mutex_destroy(&s->smc_lock);
+	mutex_destroy(&s->panic_lock);
 	if (s->version_str) {
 		device_remove_file(&pdev->dev, &dev_attr_trusty_version);
 		kfree(s->version_str);

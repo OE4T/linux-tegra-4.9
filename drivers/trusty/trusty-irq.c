@@ -51,6 +51,7 @@ struct trusty_irq_state {
 	raw_spinlock_t normal_irqs_lock;
 	struct trusty_irq_irqset __percpu *percpu_irqs;
 	struct notifier_block trusty_call_notifier;
+	struct notifier_block trusty_panic_notifier;
 	struct hlist_node cpuhp_node;
 };
 
@@ -465,6 +466,31 @@ static void trusty_irq_free_irqs(struct trusty_irq_state *is)
 	}
 }
 
+static int trusty_panic_notify(struct notifier_block *nb,
+				  unsigned long action, void *data)
+{
+	struct trusty_irq_state *is;
+	unsigned long irq_flags;
+
+	is = container_of(nb, struct trusty_irq_state, trusty_panic_notifier);
+
+	dev_err(is->dev, "%s: trusty crashed, disabling trusty irqs\n",
+		__func__);
+
+	raw_spin_lock_irqsave(&is->normal_irqs_lock, irq_flags);
+	trusty_irq_disable_irqset(is, &is->normal_irqs);
+	raw_spin_unlock_irqrestore(&is->normal_irqs_lock, irq_flags);
+
+	trusty_irq_free_irqs(is);
+
+	trusty_panic_notifier_unregister(is->trusty_dev,
+					&is->trusty_panic_notifier);
+	trusty_call_notifier_unregister(is->trusty_dev,
+					&is->trusty_call_notifier);
+
+	return NOTIFY_OK;
+}
+
 static int trusty_irq_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -500,6 +526,15 @@ static int trusty_irq_probe(struct platform_device *pdev)
 		goto err_trusty_call_notifier_register;
 	}
 
+	is->trusty_panic_notifier.notifier_call = trusty_panic_notify;
+	ret = trusty_panic_notifier_register(is->trusty_dev,
+					    &is->trusty_panic_notifier);
+	if (ret) {
+		dev_err(&pdev->dev,
+			"failed to register trusty panic notifier\n");
+		goto err_trusty_panic_notifier_register;
+	}
+
 	for (irq = 0; irq >= 0;)
 		irq = trusty_irq_init_one(is, irq, true);
 	for (irq = 0; irq >= 0;)
@@ -519,6 +554,9 @@ err_add_cpuhp_instance:
 	trusty_irq_disable_irqset(is, &is->normal_irqs);
 	raw_spin_unlock_irqrestore(&is->normal_irqs_lock, irq_flags);
 	trusty_irq_free_irqs(is);
+	trusty_panic_notifier_unregister(is->trusty_dev,
+					&is->trusty_panic_notifier);
+err_trusty_panic_notifier_register:
 	trusty_call_notifier_unregister(is->trusty_dev,
 					&is->trusty_call_notifier);
 err_trusty_call_notifier_register:
@@ -548,6 +586,8 @@ static int trusty_irq_remove(struct platform_device *pdev)
 
 	trusty_irq_free_irqs(is);
 
+	trusty_panic_notifier_unregister(is->trusty_dev,
+					&is->trusty_panic_notifier);
 	trusty_call_notifier_unregister(is->trusty_dev,
 					&is->trusty_call_notifier);
 	free_percpu(is->percpu_irqs);

@@ -31,6 +31,8 @@
 #include <nvgpu/hashtable.h>
 #include <nvgpu/nvhost.h>
 
+#include "os_linux.h"
+
 #include "clk.h"
 
 #include "gk20a/platform_gk20a.h"
@@ -610,10 +612,10 @@ void gp10b_ecc_stat_remove(struct device *dev,
 	nvgpu_kfree(g, dev_attr_array);
 }
 
-void gr_gp10b_create_sysfs(struct device *dev)
+void gr_gp10b_create_sysfs(struct gk20a *g)
 {
 	int error = 0;
-	struct gk20a *g = get_gk20a(dev);
+	struct device *dev = dev_from_gk20a(g);
 
 	/* This stat creation function is called on GR init. GR can get
 	   initialized multiple times but we only need to create the ECC

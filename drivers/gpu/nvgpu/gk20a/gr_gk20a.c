@@ -4865,7 +4865,7 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	gr->sw_ready = true;
 
 	if (g->ops.gr.create_gr_sysfs)
-		g->ops.gr.create_gr_sysfs(dev_from_gk20a(g));
+		g->ops.gr.create_gr_sysfs(g);
 
 	gk20a_dbg_fn("done");
 	return 0;

@@ -56,7 +56,7 @@ enum {
 int gr_gp10b_init_fs_state(struct gk20a *g);
 int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 			struct nvgpu_mem *mem);
-void gr_gp10b_create_sysfs(struct device *dev);
+void gr_gp10b_create_sysfs(struct gk20a *g);
 int gr_gp10b_handle_fecs_error(struct gk20a *g,
 			struct channel_gk20a *__ch,
 			struct gr_gk20a_isr_data *isr_data);

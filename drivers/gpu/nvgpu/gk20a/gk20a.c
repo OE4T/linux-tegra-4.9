@@ -300,12 +300,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		nvgpu_warn(g, "could not initialize ctxsw tracing");
 #endif
 
-	err = gk20a_sched_ctrl_init(g);
-	if (err) {
-		nvgpu_err(g, "failed to init sched control");
-		goto done;
-	}
-
 	/* Restore the debug setting */
 	g->ops.fb.set_debug_mode(g, g->mmu_debug_ctrl);
 

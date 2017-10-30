@@ -237,6 +237,12 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (platform->has_cde)
 		gk20a_init_cde_support(l);
 
+	err = gk20a_sched_ctrl_init(g);
+	if (err) {
+		nvgpu_err(g, "failed to init sched control");
+		return err;
+	}
+
 done:
 	if (err)
 		g->power_on = false;

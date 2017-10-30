@@ -249,12 +249,24 @@ free_ref:
 int nvgpu_ioctl_tsg_dev_open(struct inode *inode, struct file *filp)
 {
 	struct nvgpu_os_linux *l;
+	struct gk20a *g;
 	int ret;
+
+	gk20a_dbg_fn("");
 
 	l = container_of(inode->i_cdev,
 			 struct nvgpu_os_linux, tsg.cdev);
-	gk20a_dbg_fn("");
+	g = &l->g;
+
+	ret = gk20a_busy(g);
+	if (ret) {
+		nvgpu_err(g, "failed to power on, %d", ret);
+		return ret;
+	}
+
 	ret = nvgpu_ioctl_tsg_open(&l->g, filp);
+
+	gk20a_idle(g);
 	gk20a_dbg_fn("done");
 	return ret;
 }

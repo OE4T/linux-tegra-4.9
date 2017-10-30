@@ -47,6 +47,7 @@ struct nvgpu_os_buffer;
 #include <nvgpu/linux/vm.h>
 #else
 /* QNX include goes here. */
+#include <nvgpu_rmos/include/vm.h>
 #endif
 
 /**

@@ -450,12 +450,17 @@ static ssize_t camrtc_dbgfs_write_test_case(struct file *file,
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
 	char *test_case = crd->parameters.test_case;
 	size_t max_size = camrtc_dbgfs_get_max_test_size(ch);
+	int i;
 	ssize_t ret;
 
 	ret = simple_write_to_buffer(test_case, max_size, f_pos, buf, count);
 
 	if (ret >= 0)
 		crd->parameters.test_case_size = *f_pos;
+
+	/* Mark input buffers empty */
+	for (i = 0; i < ARRAY_SIZE(crd->mem); i++)
+		crd->mem[i].used = 0;
 
 	return ret;
 }
@@ -580,33 +585,6 @@ static int camrtc_test_run_and_show_result(struct seq_file *file,
 	return ret;
 }
 
-static int camrtc_run_test(struct seq_file *file,
-			struct camrtc_dbg_request *req,
-			struct camrtc_dbg_response *resp)
-{
-	req->req_type = CAMRTC_REQ_RUN_TEST;
-
-	BUILD_BUG_ON_MISMATCH(
-		struct camrtc_dbg_request, run_test_data.data,
-		struct camrtc_dbg_response, run_test_data.data);
-
-	return camrtc_test_run_and_show_result(file, req, resp,
-				offsetof(struct camrtc_dbg_response,
-					data.run_test_data.data));
-}
-
-static inline bool camrtc_dbgfs_is_mem_test(struct tegra_ivc_channel *ch)
-{
-	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
-	size_t i;
-
-	for (i = 0; i < ARRAY_SIZE(crd->mem); i++)
-		if (crd->mem[i].used > 0)
-			return true;
-
-	return false;
-}
-
 static int camrtc_run_mem_map(struct tegra_ivc_channel *ch,
 			struct device *dev,
 			struct sg_table *sgt,
@@ -643,16 +621,39 @@ static int camrtc_run_mem_test(struct seq_file *file,
 	struct camrtc_dbg_test_mem *testmem;
 	size_t i;
 	int ret;
+	struct device *dev = crd->mem_devices[0];
 	struct device *vi_dev = crd->mem_devices[1];
 	struct sg_table vi_sgt[ARRAY_SIZE(crd->mem)];
 	struct device *isp_dev = crd->mem_devices[2];
 	struct sg_table isp_sgt[ARRAY_SIZE(crd->mem)];
+	struct camrtc_test_mem *mem0 = &crd->mem[0];
 
 	memset(vi_sgt, 0, sizeof(vi_sgt));
 	memset(isp_sgt, 0, sizeof(isp_sgt));
 
 	req->req_type = CAMRTC_REQ_RUN_MEM_TEST;
 	req->data.run_mem_test_data.streamids = crd->streamids;
+
+	/* Allocate 6MB scratch memory in mem0 by default */
+	if (!mem0->used) {
+		const size_t size = 6U << 20U; /* 6 MB */
+		dma_addr_t iova;
+		void *ptr;
+
+		if (mem0->ptr) {
+			dma_free_coherent(dev, mem0->size, mem0->ptr,
+					mem0->iova);
+			memset(mem0, 0, sizeof(*mem0));
+		}
+		ptr = dma_alloc_coherent(dev, size, &iova,
+					GFP_KERNEL | __GFP_ZERO);
+		if (ptr == NULL)
+			return -ENOMEM;
+		mem0->ptr = ptr;
+		mem0->size = size;
+		mem0->iova = iova;
+		mem0->used = size;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(crd->mem); i++) {
 		struct camrtc_test_mem *mem = &crd->mem[i];
@@ -678,6 +679,9 @@ static int camrtc_run_mem_test(struct seq_file *file,
 
 		if (isp_sgt[i].sgl)
 			testmem->isp_iova = isp_sgt[i].sgl->dma_address;
+
+		dma_sync_single_for_device(dev, mem->iova, mem->used,
+						DMA_TO_DEVICE);
 	}
 
 	BUILD_BUG_ON_MISMATCH(
@@ -695,9 +699,13 @@ static int camrtc_run_mem_test(struct seq_file *file,
 
 		if (mem->size == 0)
 			continue;
+
 		testmem = &resp->data.run_mem_test_data.mem[i];
 		if (!WARN_ON(testmem->size > mem->size))
 			mem->used = testmem->size;
+
+		dma_sync_single_for_device(dev, mem->iova, mem->used,
+					DMA_FROM_DEVICE);
 	}
 
 unmap:
@@ -728,11 +736,7 @@ static int camrtc_dbgfs_show_test_result(struct seq_file *file, void *data)
 	if (mem == NULL)
 		return -ENOMEM;
 
-	if (camrtc_dbgfs_is_mem_test(ch))
-		ret = camrtc_run_mem_test(file, req, resp);
-	else
-		ret = camrtc_run_test(file, req, resp);
-
+	ret = camrtc_run_mem_test(file, req, resp);
 	kfree(mem);
 
 	return ret;

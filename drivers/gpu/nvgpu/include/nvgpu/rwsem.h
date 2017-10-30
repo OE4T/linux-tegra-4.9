@@ -24,6 +24,8 @@
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/rwsem.h>
+#else
+#include <nvgpu_rmos/include/rwsem.h>
 #endif
 
 /*

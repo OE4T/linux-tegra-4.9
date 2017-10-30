@@ -202,13 +202,6 @@ static int gp106_init_gpu_characteristics(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_DEVICE_EVENTS, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SET_THERM_ALERT_LIMIT, true);
 
-	/* WAR for missing INA3221 on HW2.5 RevA */
-	if (g->power_sensor_missing) {
-		__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_VOLTAGE, false);
-		__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_CURRENT, false);
-		__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_POWER, false);
-	}
-
 	return 0;
 }
 

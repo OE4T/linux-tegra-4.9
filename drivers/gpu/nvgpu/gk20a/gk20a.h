@@ -1280,10 +1280,6 @@ struct gk20a {
 	struct nvgpu_mem_alloc_tracker *kmallocs;
 #endif
 
-	/* Some boards might be missing power sensor, preventing
-	 * from monitoring power, current and voltage */
-	bool power_sensor_missing;
-
 	/* The minimum VBIOS version supported */
 	u32 vbios_min_version;
 

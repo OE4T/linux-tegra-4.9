@@ -20,8 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/pci_ids.h>
-
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
@@ -218,13 +216,6 @@ int gp106_bios_init(struct gk20a *g)
 				g->gpu_characteristics.vbios_version);
 		err = -EINVAL;
 		goto free_firmware;
-	}
-
-	/* WAR for HW2.5 RevA (INA3221 is missing) */
-	if ((g->pci_vendor_id == PCI_VENDOR_ID_NVIDIA) &&
-		(g->pci_device_id == 0x1c75) &&
-		(g->gpu_characteristics.vbios_version == 0x86065300)) {
-			g->power_sensor_missing = true;
 	}
 
 	gk20a_dbg_fn("done");

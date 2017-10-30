@@ -35,7 +35,7 @@
 static u8 get_perfmon_id(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
 	u8 unit_id;
 
 	switch (ver) {

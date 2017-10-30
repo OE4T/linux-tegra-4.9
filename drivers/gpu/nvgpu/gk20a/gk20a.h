@@ -1060,6 +1060,15 @@ struct nvgpu_bios {
 	u32 expansion_rom_offset;
 };
 
+struct nvgpu_gpu_params {
+	/* GPU architecture ID */
+	u32 gpu_arch;
+	/* GPU implementation ID */
+	u32 gpu_impl;
+	/* GPU revision ID */
+	u32 gpu_rev;
+};
+
 struct gk20a {
 	struct nvgpu_nvhost_dev *nvhost_dev;
 
@@ -1080,6 +1089,8 @@ struct gk20a {
 
 	u32 log_mask;
 	u32 log_trace;
+
+	struct nvgpu_gpu_params params;
 
 	/*
 	 * Guards access to hardware when usual gk20a_{busy,idle} are skipped

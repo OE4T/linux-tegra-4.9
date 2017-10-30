@@ -342,17 +342,17 @@ int vgpu_pm_prepare_poweroff(struct device *dev)
 
 static void vgpu_detect_chip(struct gk20a *g)
 {
-	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
+	struct nvgpu_gpu_params *p = &g->params;
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	gpu->arch = priv->constants.arch;
-	gpu->impl = priv->constants.impl;
-	gpu->rev = priv->constants.rev;
+	p->gpu_arch = priv->constants.arch;
+	p->gpu_impl = priv->constants.impl;
+	p->gpu_rev = priv->constants.rev;
 
 	gk20a_dbg_info("arch: %x, impl: %x, rev: %x\n",
-			g->gpu_characteristics.arch,
-			g->gpu_characteristics.impl,
-			g->gpu_characteristics.rev);
+			p->gpu_arch,
+			p->gpu_impl,
+			p->gpu_rev);
 }
 
 int vgpu_init_gpu_characteristics(struct gk20a *g)
@@ -436,7 +436,7 @@ int vgpu_get_timestamps_zipper(struct gk20a *g,
 
 static int vgpu_init_hal(struct gk20a *g)
 {
-	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
 	int err;
 
 	switch (ver) {

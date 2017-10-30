@@ -27,7 +27,7 @@
 
 int gr_gp106_get_netlist_name(struct gk20a *g, int index, char *name)
 {
-	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
 
 	switch (ver) {
 		case NVGPU_GPUID_GP104:

@@ -74,18 +74,18 @@ void __gk20a_warn_on_no_regs(void)
 
 static int gk20a_detect_chip(struct gk20a *g)
 {
-	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
+	struct nvgpu_gpu_params *p = &g->params;
 	u32 val;
 
-	if (gpu->arch)
+	if (p->gpu_arch)
 		return 0;
 
-	val = gk20a_mc_boot_0(g, &gpu->arch, &gpu->impl, &gpu->rev);
+	val = gk20a_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
 
 	gk20a_dbg_info("arch: %x, impl: %x, rev: %x\n",
-			g->gpu_characteristics.arch,
-			g->gpu_characteristics.impl,
-			g->gpu_characteristics.rev);
+			g->params.gpu_arch,
+			g->params.gpu_impl,
+			g->params.gpu_rev);
 
 	return gpu_init_hal(g);
 }

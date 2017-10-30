@@ -36,7 +36,7 @@
 
 int gpu_init_hal(struct gk20a *g)
 {
-	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
 	switch (ver) {
 	case GK20A_GPUID_GM20B:
 	case GK20A_GPUID_GM20B_B:

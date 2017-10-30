@@ -182,7 +182,7 @@ release_img_fw:
 
 int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
-	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
 	struct lsf_ucode_desc_v1 *lsf_desc;
 	struct nvgpu_firmware *fecs_sig = NULL;
 	int err;
@@ -276,7 +276,7 @@ rel_sig:
 
 int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
-	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
 	struct lsf_ucode_desc_v1 *lsf_desc;
 	struct nvgpu_firmware *gpccs_sig = NULL;
 	int err;

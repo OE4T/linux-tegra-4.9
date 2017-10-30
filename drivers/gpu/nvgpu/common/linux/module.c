@@ -156,9 +156,10 @@ static int gk20a_restore_registers(struct gk20a *g)
 	return 0;
 }
 
-static int nvgpu_init_os_linux_ops(struct nvgpu_os_linux *l) {
+static int nvgpu_init_os_linux_ops(struct nvgpu_os_linux *l)
+{
 	struct gk20a *g = &l->g;
-	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
 
 	switch (ver) {
 	case GK20A_GPUID_GM20B:

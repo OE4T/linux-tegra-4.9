@@ -741,6 +741,23 @@ static void save_mdc(struct eqos_prv_data *pdata)
 	pdata->mdc_cr = EQOS_CSR_20_35M;
 }
 
+static inline u32 eqos_get_mac_version(void)
+{
+	u32 hwid;
+
+	/* read MAC version */
+	MAC_VR_RD(hwid);
+	if (likely(hwid)) {
+		u32 uid = ((hwid & 0x0000ff00) >> 8);
+		u32 synid = (hwid & 0x000000ff);
+
+		pr_debug("mac - user ID: 0x%x, Synopsys ID: 0x%x\n",
+			 uid, synid);
+
+		return synid;
+	}
+	return 0;
+}
 /*!
 * \brief API to initialize the device.
 *
@@ -1024,6 +1041,8 @@ int eqos_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "setting tx_tristate_enable \
 			state failed with %d\n",ret);
 #endif
+	/* Get synopsys chip ID */
+	pdata->mac_ver = eqos_get_mac_version();
 	pdata->num_chans = num_chans;
 	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
 	pdata->rx_max_frame_size = EQOS_MAX_ETH_FRAME_LEN_DEFAULT;

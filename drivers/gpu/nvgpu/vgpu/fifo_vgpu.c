@@ -736,7 +736,7 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 	return err ? err : msg.ret;
 }
 
-static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
+static void vgpu_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
 	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
@@ -759,6 +759,30 @@ static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 	/* unblock pending waits */
 	nvgpu_cond_broadcast_interruptible(&ch->semaphore_wq);
 	nvgpu_cond_broadcast_interruptible(&ch->notifier_wq);
+}
+
+static void vgpu_fifo_set_ctx_mmu_error_ch_tsg(struct gk20a *g,
+		struct channel_gk20a *ch)
+{
+	struct tsg_gk20a *tsg = NULL;
+	struct channel_gk20a *ch_tsg = NULL;
+
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		tsg = &g->fifo.tsg[ch->tsgid];
+
+		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
+
+		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
+			if (gk20a_channel_get(ch_tsg)) {
+				vgpu_fifo_set_ctx_mmu_error_ch(g, ch_tsg);
+				gk20a_channel_put(ch_tsg);
+			}
+		}
+
+		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
+	} else {
+		vgpu_fifo_set_ctx_mmu_error_ch(g, ch);
+	}
 }
 
 int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
@@ -784,7 +808,7 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
 		break;
 	case TEGRA_VGPU_FIFO_INTR_MMU_FAULT:
-		vgpu_fifo_set_ctx_mmu_error(g, ch);
+		vgpu_fifo_set_ctx_mmu_error_ch_tsg(g, ch);
 		gk20a_channel_abort(ch, false);
 		break;
 	default:

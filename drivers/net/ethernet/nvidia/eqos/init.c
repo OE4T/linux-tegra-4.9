@@ -709,28 +709,36 @@ ssize_t eqos_mac_loopback_store(struct device *dev,
  */
 static void save_mdc(struct eqos_prv_data *pdata)
 {
+	if (pdata->csr_clock_speed > 500) {
+		pdata->mdc_cr = EQOS_CSR_500_800M;
+		return;
+	}
+	if (pdata->csr_clock_speed > 300) {
+		pdata->mdc_cr = EQOS_CSR_300_500M;
+		return;
+	}
 	if (pdata->csr_clock_speed > 250) {
-		pdata->mdc_cr = 5;
+		pdata->mdc_cr = EQOS_CSR_250_300M;
 		return;
 	}
 	if (pdata->csr_clock_speed > 150) {
-		pdata->mdc_cr = 4;
+		pdata->mdc_cr = EQOS_CSR_150_250M;
 		return;
 	}
 	if (pdata->csr_clock_speed > 100) {
-		pdata->mdc_cr = 1;
+		pdata->mdc_cr = EQOS_CSR_100_150M;
 		return;
 	}
 	if (pdata->csr_clock_speed > 60) {
-		pdata->mdc_cr = 0;
+		pdata->mdc_cr = EQOS_CSR_60_100M;
 		return;
 	}
 	if (pdata->csr_clock_speed > 35) {
-		pdata->mdc_cr = 3;
+		pdata->mdc_cr = EQOS_CSR_35_60M;
 		return;
 	}
 	/* for CSR < 35mhz */
-	pdata->mdc_cr = 2;
+	pdata->mdc_cr = EQOS_CSR_20_35M;
 }
 
 /*!

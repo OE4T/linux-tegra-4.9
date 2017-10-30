@@ -23,7 +23,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
 
-#include "gk20a/gk20a_scale.h"
+#include "scale.h"
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "module.h"

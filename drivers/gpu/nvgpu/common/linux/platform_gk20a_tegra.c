@@ -48,9 +48,9 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
-#include "gk20a/gk20a_scale.h"
 #include "gm20b/clk_gm20b.h"
 
+#include "scale.h"
 #include "clk.h"
 #include "os_linux.h"
 

@@ -180,7 +180,7 @@ nvgpu-$(CONFIG_COMMON_CLK) += \
 	common/linux/clk.o
 
 nvgpu-$(CONFIG_GK20A_DEVFREQ) += \
-	gk20a/gk20a_scale.o
+	common/linux/scale.o
 
 nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 	gk20a/css_gr_gk20a.o

@@ -40,13 +40,13 @@
 #include "vgpu/clk_vgpu.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
-#include "gk20a/gk20a_scale.h"
 #include "gk20a/channel_gk20a.h"
 #include "gm20b/hal_gm20b.h"
 
 #include "common/linux/module.h"
 #include "common/linux/os_linux.h"
 #include "common/linux/ioctl.h"
+#include "common/linux/scale.h"
 
 #ifdef CONFIG_TEGRA_19x_GPU
 #include <vgpu/vgpu_t19x.h>

@@ -35,7 +35,7 @@
 #include "gk20a/platform_gk20a.h"
 #include "sysfs.h"
 #include "vgpu/vgpu.h"
-#include "gk20a/gk20a_scale.h"
+#include "scale.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "pci.h"
 #include "module.h"

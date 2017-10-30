@@ -35,11 +35,11 @@
 
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
-#include "gk20a/gk20a_scale.h"
 
 #include "platform_gk20a_tegra.h"
 #include "gp10b/platform_gp10b.h"
 #include "platform_gp10b_tegra.h"
+#include "scale.h"
 
 /* Select every GP10B_FREQ_SELECT_STEP'th frequency from h/w table */
 #define GP10B_FREQ_SELECT_STEP	8

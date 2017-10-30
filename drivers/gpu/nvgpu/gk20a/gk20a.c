@@ -390,7 +390,6 @@ int gk20a_wait_for_idle(struct gk20a *g)
 int gk20a_init_gpu_characteristics(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
-	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
 	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
@@ -485,9 +484,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 
 	gpu->map_buffer_batch_limit = 256;
 
-	if (platform->clk_round_rate)
-		gpu->max_freq = platform->clk_round_rate(dev_from_gk20a(g),
-							 UINT_MAX);
+	if (g->ops.clk.get_maxrate)
+		gpu->max_freq = g->ops.clk.get_maxrate(&g->clk);
 
 	g->ops.gr.get_preemption_mode_flags(g, &g->gr.preemption_mode_rec);
 	gpu->graphics_preemption_mode_flags =

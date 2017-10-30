@@ -23,8 +23,10 @@
 #define CLK_GK20A_H
 
 #include <nvgpu/lock.h>
-#include <linux/clkdev.h>
+
+#if defined(CONFIG_COMMON_CLK)
 #include <linux/clk-provider.h>
+#endif
 
 #define GPUFREQ_TABLE_END     ~(u32)1
 enum {

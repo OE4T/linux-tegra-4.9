@@ -13,6 +13,7 @@
  * more details.
  */
 
+#include <linux/clkdev.h>
 #include <linux/of_platform.h>
 #include <linux/debugfs.h>
 #include <linux/platform_data/tegra_edp.h>

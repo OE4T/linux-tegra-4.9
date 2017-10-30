@@ -2382,13 +2382,14 @@ static INT set_mii_speed_100(struct eqos_prv_data *pdata)
 * \retval -1 Failure
 */
 
-static INT set_half_duplex(void)
+static INT set_half_duplex(struct eqos_prv_data *pdata)
 {
 
 	MAC_MCR_DM_WR(0);
 
-	/* Need to do WAR to flush tx q when going to hd */
-	MTL_Q0TOMR_FTQ_WR(1);
+	if (pdata->mac_ver < EQOS_MAC_CORE_5_00)
+		/* Need to do WAR to flush tx q when going to hd */
+		MTL_Q0TOMR_FTQ_WR(1);
 
 	return Y_SUCCESS;
 }

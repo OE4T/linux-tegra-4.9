@@ -357,7 +357,7 @@ static void eqos_adjust_link(struct net_device *dev)
 			if (phydev->duplex)
 				hw_if->set_full_duplex();
 			else
-				hw_if->set_half_duplex();
+				hw_if->set_half_duplex(pdata);
 			pdata->oldduplex = phydev->duplex;
 		}
 

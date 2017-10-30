@@ -424,7 +424,8 @@ int vgpu_probe(struct platform_device *pdev)
 	dma_set_max_seg_size(dev, UINT_MAX);
 
 	gk20a->gr_idle_timeout_default = NVGPU_DEFAULT_GR_IDLE_TIMEOUT;
-	gk20a->timeouts_enabled = true;
+	gk20a->timeouts_disabled_by_user = false;
+	nvgpu_atomic_set(&gk20a->timeouts_disabled_refcount, 0);
 
 	vgpu_create_sysfs(dev);
 	gk20a_init_gr(gk20a);

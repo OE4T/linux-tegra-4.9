@@ -96,12 +96,15 @@ static void nvgpu_init_timeout(struct gk20a *g)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
-	g->gr_idle_timeout_default = NVGPU_DEFAULT_GR_IDLE_TIMEOUT;
-	if (nvgpu_platform_is_silicon(g))
-		g->timeouts_enabled = true;
-	else if (nvgpu_platform_is_fpga(g)) {
+	g->timeouts_disabled_by_user = false;
+	nvgpu_atomic_set(&g->timeouts_disabled_refcount, 0);
+
+	if (nvgpu_platform_is_silicon(g)) {
+		g->gr_idle_timeout_default = NVGPU_DEFAULT_GR_IDLE_TIMEOUT;
+	} else if (nvgpu_platform_is_fpga(g)) {
 		g->gr_idle_timeout_default = GK20A_TIMEOUT_FPGA;
-		g->timeouts_enabled = true;
+	} else {
+		g->gr_idle_timeout_default = (u32)ULONG_MAX;
 	}
 	g->ch_wdt_timeout_ms = platform->ch_wdt_timeout_ms;
 }

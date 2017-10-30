@@ -279,6 +279,59 @@ static int gk20a_railgating_debugfs_init(struct gk20a *g)
 
 	return 0;
 }
+static ssize_t timeouts_enabled_read(struct file *file,
+			char __user *user_buf, size_t count, loff_t *ppos)
+{
+	char buf[3];
+	struct gk20a *g = file->private_data;
+
+	if (nvgpu_is_timeouts_enabled(g))
+		buf[0] = 'Y';
+	else
+		buf[0] = 'N';
+	buf[1] = '\n';
+	buf[2] = 0x00;
+	return simple_read_from_buffer(user_buf, count, ppos, buf, 2);
+}
+
+static ssize_t timeouts_enabled_write(struct file *file,
+			const char __user *user_buf, size_t count, loff_t *ppos)
+{
+	char buf[3];
+	int buf_size;
+	bool timeouts_enabled;
+	struct gk20a *g = file->private_data;
+
+	buf_size = min(count, (sizeof(buf)-1));
+	if (copy_from_user(buf, user_buf, buf_size))
+		return -EFAULT;
+
+	if (strtobool(buf, &timeouts_enabled) == 0) {
+		nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+		if (timeouts_enabled == false) {
+			/* requesting to disable timeouts */
+			if (g->timeouts_disabled_by_user == false) {
+				nvgpu_atomic_inc(&g->timeouts_disabled_refcount);
+				g->timeouts_disabled_by_user = true;
+			}
+		} else {
+			/* requesting to enable timeouts */
+			if (g->timeouts_disabled_by_user == true) {
+				nvgpu_atomic_dec(&g->timeouts_disabled_refcount);
+				g->timeouts_disabled_by_user = false;
+			}
+		}
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
+	}
+
+	return count;
+}
+
+static const struct file_operations timeouts_enabled_fops = {
+	.open =		simple_open,
+	.read =		timeouts_enabled_read,
+	.write =	timeouts_enabled_write,
+};
 
 void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 {
@@ -323,10 +376,11 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 					S_IRUGO|S_IWUSR, l->debugfs,
 					 &g->gr_idle_timeout_default);
 	l->debugfs_timeouts_enabled =
-			debugfs_create_bool("timeouts_enabled",
+			debugfs_create_file("timeouts_enabled",
 					S_IRUGO|S_IWUSR,
 					l->debugfs,
-					&g->timeouts_enabled);
+					g,
+					&timeouts_enabled_fops);
 
 	l->debugfs_disable_bigpage =
 			debugfs_create_file("disable_bigpage",

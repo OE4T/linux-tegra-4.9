@@ -228,7 +228,7 @@ static int nvgpu_dbg_gpu_ioctl_timeout(struct dbg_session_gk20a *dbg_s,
 	int err;
 	struct gk20a *g = dbg_s->g;
 
-	nvgpu_log_fn(g, "powergate mode = %d", args->enable);
+	nvgpu_log(g, gpu_dbg_fn, "timeout enable/disable = %d", args->enable);
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	err = nvgpu_dbg_timeout_enable(dbg_s, args->enable);
@@ -385,18 +385,14 @@ static int nvgpu_dbg_timeout_enable(struct dbg_session_gk20a *dbg_s,
 
 	switch (timeout_mode) {
 	case NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE:
-		if (dbg_s->is_timeout_disabled &&
-		    --g->dbg_timeout_disabled_refcount == 0) {
-			g->timeouts_enabled = true;
-		}
+		if (dbg_s->is_timeout_disabled == true)
+			nvgpu_atomic_dec(&g->timeouts_disabled_refcount);
 		dbg_s->is_timeout_disabled = false;
 		break;
 
 	case NVGPU_DBG_GPU_IOCTL_TIMEOUT_DISABLE:
-		if ((dbg_s->is_timeout_disabled == false) &&
-		    (g->dbg_timeout_disabled_refcount++ == 0)) {
-			g->timeouts_enabled = false;
-		}
+		if (dbg_s->is_timeout_disabled == false)
+			nvgpu_atomic_inc(&g->timeouts_disabled_refcount);
 		dbg_s->is_timeout_disabled = true;
 		break;
 
@@ -408,9 +404,11 @@ static int nvgpu_dbg_timeout_enable(struct dbg_session_gk20a *dbg_s,
 		break;
 	}
 
-	nvgpu_log(g, gpu_dbg_gpu_dbg, "Timeouts enabled : %s",
-			g->timeouts_enabled ? "Yes" : "No");
-
+	if (!err)
+		nvgpu_log(g, gpu_dbg_gpu_dbg, "dbg is timeout disabled %s, "
+				"timeouts disabled refcount %d",
+			dbg_s->is_timeout_disabled ? "true" : "false",
+			nvgpu_atomic_read(&g->timeouts_disabled_refcount));
 	return err;
 }
 
@@ -1598,11 +1596,11 @@ static int nvgpu_ioctl_profiler_reserve(struct dbg_session_gk20a *dbg_s,
 static void nvgpu_dbg_gpu_ioctl_get_timeout(struct dbg_session_gk20a *dbg_s,
 			 struct nvgpu_dbg_gpu_timeout_args *args)
 {
-	int status;
+	bool status;
 	struct gk20a *g = dbg_s->g;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	status = g->timeouts_enabled;
+	status = nvgpu_is_timeouts_enabled(g);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	if (status)

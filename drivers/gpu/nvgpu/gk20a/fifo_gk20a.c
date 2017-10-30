@@ -2482,7 +2482,7 @@ unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
 
 		val &= ~pbdma_acquire_timeout_en_enable_f();
 		gk20a_writel(g, pbdma_acquire_r(pbdma_id), val);
-		if (g->timeouts_enabled) {
+		if (nvgpu_is_timeouts_enabled(g)) {
 			rc_type = RC_TYPE_PBDMA_FAULT;
 			nvgpu_err(g,
 				"semaphore acquire timeout!");

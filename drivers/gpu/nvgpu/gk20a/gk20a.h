@@ -1314,7 +1314,7 @@ struct gk20a {
 	struct railgate_stats pstats;
 #endif
 	u32 gr_idle_timeout_default;
-	bool timeouts_enabled;
+	bool timeouts_disabled_by_user;
 	unsigned int ch_wdt_timeout_ms;
 
 	struct nvgpu_mutex poweron_lock;
@@ -1376,7 +1376,8 @@ struct gk20a {
 	/* also prevents debug sessions from attaching until released */
 	struct nvgpu_mutex dbg_sessions_lock;
 	int dbg_powergating_disabled_refcount; /*refcount for pg disable */
-	int dbg_timeout_disabled_refcount; /*refcount for timeout disable */
+	/*refcount for timeout disable */
+	nvgpu_atomic_t timeouts_disabled_refcount;
 
 	/* must have dbg_sessions_lock before use */
 	struct nvgpu_dbg_reg_op *dbg_regops_tmp_buf;
@@ -1508,9 +1509,14 @@ struct gk20a {
 	struct nvgpu_list_node boardobjgrp_head;
 };
 
+static inline bool nvgpu_is_timeouts_enabled(struct gk20a *g)
+{
+	return nvgpu_atomic_read(&g->timeouts_disabled_refcount) == 0;
+}
+
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
 {
-	return g->timeouts_enabled ?
+	return nvgpu_is_timeouts_enabled(g) ?
 		g->gr_idle_timeout_default : ULONG_MAX;
 }
 

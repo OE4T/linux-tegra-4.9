@@ -1158,7 +1158,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		}
 	}
 
-	if (!c->g->timeouts_enabled || !c->timeout.enabled)
+	if (!nvgpu_is_timeouts_enabled(c->g) || !c->timeout.enabled)
 		acquire_timeout = 0;
 	else
 		acquire_timeout = c->timeout.limit_ms;
@@ -1266,7 +1266,7 @@ bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 
 	ch->timeout_gpfifo_get = gpfifo_get;
 
-	return ch->g->timeouts_enabled &&
+	return nvgpu_is_timeouts_enabled(ch->g) &&
 		ch->timeout_accumulated_ms > ch->timeout_ms_max;
 }
 
@@ -1303,7 +1303,7 @@ static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
  */
 static void gk20a_channel_timeout_start(struct channel_gk20a *ch)
 {
-	if (!ch->g->timeouts_enabled)
+	if (!nvgpu_is_timeouts_enabled(ch->g))
 		return;
 
 	if (!ch->timeout.enabled)

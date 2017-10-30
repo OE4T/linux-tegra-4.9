@@ -25,6 +25,13 @@
 #ifndef _VIRT_H_
 #define _VIRT_H_
 
+struct device;
+struct tegra_vgpu_gr_intr_info;
+struct tegra_vgpu_fifo_intr_info;
+struct tegra_vgpu_cmd_msg;
+struct gk20a_platform;
+
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 #include <linux/tegra_gr_comm.h>
 #include <linux/tegra_vgpu.h>
 #include "gk20a/gk20a.h"
@@ -32,8 +39,6 @@
 #include "common/linux/os_linux.h"
 
 #include <nvgpu/thread.h>
-
-#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 
 struct vgpu_priv_data {
 	u64 virt_handle;

@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24087,6 +24087,22 @@ extern ULONG eqos_base_addr;
 #define DMA_BMR_SWR_RD(data) do {\
 	DMA_BMR_RD(data);\
 	data = ((data >> 0) & DMA_BMR_SWR_MASK);\
+} while (0)
+
+#define DMA_BMR_DSPW_MASK (ULONG)(0x1)
+
+#define DMA_BMR_DSPW_WR_MASK (ULONG)(0xfffffeff)
+
+#define DMA_BMR_DSPW_WR(data) do {\
+	ULONG v;\
+	DMA_BMR_RD(v);\
+	v = (v & (DMA_BMR_RES_WR_MASK_15))\
+	| (((0) & (DMA_BMR_MASK_15)) << 15);\
+	v = (v & (DMA_BMR_RES_WR_MASK_6))\
+	| (((0) & (DMA_BMR_MASK_6)) << 6);\
+	v = ((v & DMA_BMR_DSPW_WR_MASK)\
+	| (((data) & DMA_BMR_DSPW_MASK) << 8));\
+	DMA_BMR_WR(v);\
 } while (0)
 
 #define MTL_Q0RCR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd3c))

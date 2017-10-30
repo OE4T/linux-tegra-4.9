@@ -438,7 +438,7 @@ void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
 					hw_if->set_full_duplex();
 				} else {
 					pdata->pcs_duplex = 0;
-					hw_if->set_half_duplex();
+					hw_if->set_half_duplex(pdata);
 				}
 
 				if ((mac_pcs & 0x60000) == 0x0) {

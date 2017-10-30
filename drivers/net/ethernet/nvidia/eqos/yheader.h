@@ -729,7 +729,7 @@ struct hw_if_struct {
 	INT(*read_phy_regs) (INT, INT, INT*, INT);
 	INT(*write_phy_regs) (INT, INT, INT, INT);
 	INT(*set_full_duplex) (VOID);
-	INT(*set_half_duplex) (VOID);
+	INT(*set_half_duplex) (struct eqos_prv_data *);
 	INT(*set_mii_speed_100) (struct eqos_prv_data *);
 	INT(*set_mii_speed_10) (struct eqos_prv_data *);
 	INT(*set_gmii_speed) (struct eqos_prv_data *);

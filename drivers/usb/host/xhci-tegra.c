@@ -3715,6 +3715,43 @@ static const struct tegra_xusb_soc tegra210_soc = {
 };
 MODULE_FIRMWARE("tegra21x_xusb_firmware");
 
+static const char * const tegra210b01_supply_names[] = {
+	"hvdd_usb",
+	"avdd_pll_utmip",
+	"avddio_usb",
+	"avddio_pll_uerefe",
+};
+
+static const struct tegra_xusb_soc tegra210b01_soc = {
+	.device_id = XHCI_DEVICE_ID_T210,
+	.firmware = "tegra210b01_xusb_firmware",
+	.supply_names = tegra210b01_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra210b01_supply_names),
+
+	.num_typed_phys[USB3_PHY] = 4,
+	.num_typed_phys[USB2_PHY] = 4,
+	.num_typed_phys[HSIC_PHY] = 1,
+
+	.ports = {
+		.usb2 = { .offset = 4, .count = 4, },
+		.hsic = { .offset = 8, .count = 1, },
+		.usb3 = { .offset = 0, .count = 4, },
+	},
+
+	.cfg_4_addr_shift = XUSB_BASE_ADDR_SHIFT,
+	.cfg_4_addr_mask = XUSB_BASE_ADDR_MASK,
+	.cfg_aru_mbox_cmd = XUSB_CFG_ARU_MBOX_CMD,
+	.cfg_aru_mbox_data_in = XUSB_CFG_ARU_MBOX_DATA_IN,
+	.cfg_aru_mbox_data_out = XUSB_CFG_ARU_MBOX_DATA_OUT,
+	.cfg_aru_mbox_owner = XUSB_CFG_ARU_MBOX_OWNER,
+
+	.scale_ss_clock = false,
+	.has_ipfs = true,
+	.ss_lfps_detector_war = true,
+	.handle_oc = false,
+};
+MODULE_FIRMWARE("tegra210b01_xusb_firmware");
+
 static const char * const tegra186_supply_names[] = {
 };
 
@@ -3841,6 +3878,7 @@ MODULE_FIRMWARE("tegra19x_xusb_firmware");
 static const struct of_device_id tegra_xusb_of_match[] = {
 	{ .compatible = "nvidia,tegra124-xusb", .data = &tegra124_soc },
 	{ .compatible = "nvidia,tegra210-xhci", .data = &tegra210_soc },
+	{ .compatible = "nvidia,tegra210b01-xhci", .data = &tegra210b01_soc },
 	{ .compatible = "nvidia,tegra186-xhci", .data = &tegra186_soc },
 	{ .compatible = "nvidia,tegra194-xhci", .data = &tegra194_soc },
 	{ .compatible = "nvidia,tegra194-xhci-vf1", .data = &tegra194_vf1_soc },

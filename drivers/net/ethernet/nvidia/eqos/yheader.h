@@ -230,6 +230,8 @@
 #define TX_DESC_CNT 256
 #define RX_DESC_CNT 256
 
+#define EQOS_MAC_CORE_4_10 0x41
+#define EQOS_MAC_CORE_5_00 0x50
 
 #define MIN_RX_DESC_CNT 16
 #define TX_BUF_SIZE 1536
@@ -1529,6 +1531,7 @@ struct eqos_prv_data {
 
 	u32 csr_clock_speed;
 	u32 mdc_cr;
+	u32 mac_ver;
 
 	struct workqueue_struct *fbe_wq;
 	struct work_struct fbe_work;

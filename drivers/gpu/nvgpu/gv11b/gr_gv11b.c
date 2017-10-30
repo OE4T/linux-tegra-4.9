@@ -2138,7 +2138,7 @@ int gr_gv11b_load_smid_config(struct gk20a *g)
 	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
 	int num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
 
-	tpc_sm_id = kcalloc(gr_cwd_sm_id__size_1_v(), sizeof(u32), GFP_KERNEL);
+	tpc_sm_id = nvgpu_kcalloc(g, gr_cwd_sm_id__size_1_v(), sizeof(u32));
 	if (!tpc_sm_id)
 		return -ENOMEM;
 
@@ -2173,7 +2173,7 @@ int gr_gv11b_load_smid_config(struct gk20a *g)
 
 	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++)
 		gk20a_writel(g, gr_cwd_sm_id_r(i), tpc_sm_id[i]);
-	kfree(tpc_sm_id);
+	nvgpu_kfree(g, tpc_sm_id);
 
 	return 0;
 }

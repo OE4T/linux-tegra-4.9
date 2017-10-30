@@ -806,6 +806,30 @@ void tegra_fb_pan_display_reset(struct tegra_fb_info *fb_info)
 	fb_info->curr_xoffset = -1;
 }
 
+/* Should be invoked by holding console lock */
+void tegra_fbcon_set_fb_mode(struct tegra_fb_info *fb_info,
+					struct fb_videomode *fb_mode)
+{
+	struct fb_var_screeninfo var;
+	struct tegra_dc *dc = fb_info->win.dc;
+
+	/* Disable DC and blank console */
+	fb_blank(fb_info->info, FB_BLANK_POWERDOWN);
+
+	fb_videomode_to_var(&var, fb_mode);
+	var.bits_per_pixel = dc->pdata->fb->bits_per_pixel;
+	/* Set MISC_USEREVENT flag to update consoles in fb_set_var() */
+	fb_info->info->flags |= FBINFO_MISC_USEREVENT;
+	/* Set flags to update all available TTYs immediately */
+	var.activate = FB_ACTIVATE_NOW | FB_ACTIVATE_ALL;
+
+	/* Set var_screeninfo */
+	fb_set_var(fb_info->info, &var);
+
+	/* Enable DC and unblank console */
+	fb_blank(fb_info->info, FB_BLANK_UNBLANK);
+}
+
 void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 			      struct fb_monspecs *specs,
 			      bool (*mode_filter)(const struct tegra_dc *dc,
@@ -814,7 +838,6 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 {
 	struct fb_event event;
 	int i, b_locked_fb_info = 0;
-	int blank = FB_BLANK_NORMAL;
 	struct tegra_dc *dc = fb_info->win.dc;
 	struct fb_videomode fb_mode;
 
@@ -843,12 +866,17 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		fb_info->info->mode = (struct fb_videomode*) NULL;
 
 		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
-			fb_add_videomode(&tegra_dc_vga_mode, &fb_info->info->modelist);
-			fb_videomode_to_var(&fb_info->info->var, &tegra_dc_vga_mode);
-			fb_info->info->var.bits_per_pixel = dc->pdata->fb->bits_per_pixel;
-			blank = FB_BLANK_POWERDOWN;
-			event.data = &blank;
-			fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+			/* Disable DC and blank console */
+			fb_blank(fb_info->info, FB_BLANK_POWERDOWN);
+			/*
+			 * fbconsole needs at least one mode in modelist. Add
+			 * the existing fb videomode to modelist since it is
+			 * already programmed as fb mode and variable screen
+			 * info. Mode shall be updated as part of modeset in
+			 * next hotplug.
+			 */
+			fb_add_videomode(&fb_info->mode,
+						&fb_info->info->modelist);
 		} else {
 			/* For L4T - After the next hotplug, framebuffer console will
 			 * use the old variable screeninfo by default, only video-mode
@@ -893,18 +921,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) &&
 		!(dc->pdata->flags & TEGRA_DC_FLAG_FBCON_DISABLED)) {
 		fb_info->info->state = FBINFO_STATE_RUNNING;
-		blank = FB_BLANK_POWERDOWN;
-		event.data = &blank;
-		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
-		tegra_dc_set_fb_mode(fb_info->win.dc, &fb_mode, false);
-		fb_videomode_to_var(&fb_info->info->var, &fb_mode);
-		fb_info->info->var.bits_per_pixel = dc->pdata->fb->bits_per_pixel;
-		/* event.data not used for FB_EVENT_MODE_CHANGE */
-		fb_notifier_call_chain(FB_EVENT_MODE_CHANGE_ALL, &event);
-		/* event.data not used for FB_EVENT_NEW_MODELIST */
-		fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
-		blank = FB_BLANK_UNBLANK;
-		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+		tegra_fbcon_set_fb_mode(fb_info, &fb_mode);
 	} else {
 		fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
 	}

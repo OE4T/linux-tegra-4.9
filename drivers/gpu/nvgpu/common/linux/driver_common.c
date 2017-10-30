@@ -141,6 +141,8 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	g->pmu.aelpg_param[2] = APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US;
 	g->pmu.aelpg_param[3] = APCTRL_POWER_BREAKEVEN_DEFAULT_US;
 	g->pmu.aelpg_param[4] = APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
+
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_ASPM, !platform->disable_aspm);
 }
 
 static void nvgpu_init_vbios_vars(struct gk20a *g)

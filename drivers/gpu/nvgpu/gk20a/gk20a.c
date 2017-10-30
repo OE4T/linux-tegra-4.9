@@ -124,7 +124,6 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 
 int gk20a_finalize_poweron(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
 	int err;
 #if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
 	u32 nr_pages;
@@ -312,7 +311,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	if (g->ops.xve.available_speeds) {
 		u32 speed;
 
-		if (platform->disable_aspm && g->ops.xve.disable_aspm)
+		if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_ASPM) && g->ops.xve.disable_aspm)
 			g->ops.xve.disable_aspm(g);
 
 		g->ops.xve.available_speeds(g, &speed);

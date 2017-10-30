@@ -125,6 +125,8 @@ struct gk20a;
 /* whether to run PREOS binary on dGPUs */
 #define NVGPU_PMU_RUN_PREOS			61
 
+/* set if ASPM is enabled; only makes sense for PCI */
+#define NVGPU_SUPPORT_ASPM			62
 /*
  * Must be greater than the largest bit offset in the above list.
  */

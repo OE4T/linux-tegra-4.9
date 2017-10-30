@@ -40,6 +40,7 @@
 #include "gp10b/platform_gp10b.h"
 #include "common/linux/platform_gp10b_tegra.h"
 
+#include "common/linux/os_linux.h"
 #include "common/linux/platform_gk20a_tegra.h"
 #include "gr_gv11b.h"
 #include "nvgpu_gpuid_t19x.h"
@@ -188,9 +189,9 @@ static struct device_attribute *dev_attr_mmu_hubtlb_ecc_uncorrected_err_count_ar
 static struct device_attribute *dev_attr_mmu_fillunit_ecc_corrected_err_count_array;
 static struct device_attribute *dev_attr_mmu_fillunit_ecc_uncorrected_err_count_array;
 
-void gr_gv11b_create_sysfs(struct device *dev)
+void gr_gv11b_create_sysfs(struct gk20a *g)
 {
-	struct gk20a *g = get_gk20a(dev);
+	struct device *dev = dev_from_gk20a(g);
 	int error = 0;
 	/* This stat creation function is called on GR init. GR can get
        initialized multiple times but we only need to create the ECC
@@ -199,7 +200,7 @@ void gr_gv11b_create_sysfs(struct device *dev)
 	if (g->ecc.gr.t19x.sm_l1_tag_corrected_err_count.counters != NULL)
 		return;
 
-	gr_gp10b_create_sysfs(dev);
+	gr_gp10b_create_sysfs(g);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,

@@ -80,7 +80,7 @@ int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 /*zcull*/
 void gr_gv11b_program_zcull_mapping(struct gk20a *g, u32 zcull_num_entries,
 					u32 *zcull_map_tiles);
-void gr_gv11b_create_sysfs(struct device *dev);
+void gr_gv11b_create_sysfs(struct gk20a *g);
 
 bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num);
 bool gr_gv11b_is_valid_gfx_class(struct gk20a *g, u32 class_num);

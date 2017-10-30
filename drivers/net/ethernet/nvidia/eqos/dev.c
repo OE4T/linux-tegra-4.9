@@ -3695,6 +3695,22 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	return Y_SUCCESS;
 }
 
+static void configure_dma(struct eqos_prv_data *pdata)
+{
+	/* Setting INCRx */
+	DMA_SBUS_WR(0x0);
+
+	/* To get Best Performance */
+	DMA_SBUS_BLEN16_WR(1);
+	DMA_SBUS_BLEN8_WR(1);
+	DMA_SBUS_BLEN4_WR(1);
+	DMA_SBUS_RD_OSR_LMT_WR(2);
+	DMA_SBUS_EAME_WR(1);
+
+	if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+		DMA_BMR_DSPW_WR(0x1);
+}
+
 static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 {
 	struct rx_ring *prx_ring =
@@ -3735,12 +3751,6 @@ static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 				     EQOS_RX_QUEUE_CNT);
 	DMA_RCR_PBL_WR(qinx, min(RXPBL, MAX_RXPBL));
 
-	/* To get Best Performance */
-	DMA_SBUS_BLEN16_WR(1);
-	DMA_SBUS_BLEN8_WR(1);
-	DMA_SBUS_BLEN4_WR(1);
-	DMA_SBUS_RD_OSR_LMT_WR(2);
-	DMA_SBUS_EAME_WR(1);
 
 	/* enable TSO if HW supports */
 	if (pdata->hw_feat.tso_en)
@@ -3946,8 +3956,8 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 	}
 	configure_mac(pdata);
 
-	/* Setting INCRx */
-	DMA_SBUS_WR(0x0);
+	configure_dma(pdata);
+
 	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 		configure_dma_channel(qinx, pdata);
 	}

@@ -61,5 +61,6 @@ int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 			struct channel_gk20a *ch);
 int vgpu_tsg_unbind_channel(struct channel_gk20a *ch);
 int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice);
+int vgpu_enable_tsg(struct tsg_gk20a *tsg);
 
 #endif

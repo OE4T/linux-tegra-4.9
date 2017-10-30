@@ -53,6 +53,19 @@ int vgpu_tsg_open(struct tsg_gk20a *tsg)
 	return err;
 }
 
+int vgpu_enable_tsg(struct tsg_gk20a *tsg)
+{
+	struct gk20a *g = tsg->g;
+	struct channel_gk20a *ch;
+
+	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry)
+		g->ops.fifo.enable_channel(ch);
+	nvgpu_rwsem_up_read(&tsg->ch_list_lock);
+
+	return 0;
+}
+
 int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 			struct channel_gk20a *ch)
 {

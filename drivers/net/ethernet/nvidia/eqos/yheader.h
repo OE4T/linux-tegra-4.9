@@ -333,6 +333,16 @@
 #define EQOS_Q_DCB 			0x2
 #define EQOS_Q_GENERIC 	0x3
 
+/* MDC Clock Selection define*/
+#define EQOS_CSR_60_100M	0x0	/* MDC = clk_csr/42 */
+#define EQOS_CSR_100_150M	0x1	/* MDC = clk_csr/62 */
+#define EQOS_CSR_20_35M		0x2	/* MDC = clk_csr/16 */
+#define EQOS_CSR_35_60M		0x3	/* MDC = clk_csr/26 */
+#define EQOS_CSR_150_250M	0x4	/* MDC = clk_csr/102 */
+#define EQOS_CSR_250_300M	0x5	/* MDC = clk_csr/124 */
+#define EQOS_CSR_300_500M	0x6	/* MDC = clk_csr/124 */
+#define EQOS_CSR_500_800M	0x7	/* MDC = clk_csr/124 */
+
 /* Driver PMT macros */
 #define EQOS_DRIVER_CONTEXT 1
 #define EQOS_IOCTL_CONTEXT 2

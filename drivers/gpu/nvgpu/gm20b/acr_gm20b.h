@@ -47,6 +47,8 @@ int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms);
 int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout);
 int gm20b_init_pmu_setup_hw1(struct gk20a *g, void *desc, u32 bl_sz);
+void gm20b_update_lspmu_cmdline_args(struct gk20a *g);
+void gm20b_setup_apertures(struct gk20a *g);
 
 int gm20b_pmu_setup_sw(struct gk20a *g);
 int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt);

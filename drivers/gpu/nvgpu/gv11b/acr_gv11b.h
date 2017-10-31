@@ -27,4 +27,5 @@
 int gv11b_bootstrap_hs_flcn(struct gk20a *g);
 int gv11b_init_pmu_setup_hw1(struct gk20a *g,
 		void *desc, u32 bl_sz);
+void gv11b_setup_apertures(struct gk20a *g);
 #endif /*__PMU_GP106_H_*/

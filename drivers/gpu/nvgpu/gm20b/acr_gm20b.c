@@ -1233,20 +1233,8 @@ int gm20b_init_nspmu_setup_hw1(struct gk20a *g)
 	return err;
 }
 
-int gm20b_init_pmu_setup_hw1(struct gk20a *g,
-		void *desc, u32 bl_sz)
+void gm20b_setup_apertures(struct gk20a *g)
 {
-
-	struct nvgpu_pmu *pmu = &g->pmu;
-	int err;
-
-	gk20a_dbg_fn("");
-
-	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	nvgpu_flcn_reset(pmu->flcn);
-	pmu->isr_enabled = true;
-	nvgpu_mutex_release(&pmu->isr_mutex);
-
 	/* setup apertures - virtual */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
 			pwr_fbif_transcfg_mem_type_physical_f() |
@@ -1263,10 +1251,14 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_NCOH),
 			pwr_fbif_transcfg_mem_type_physical_f() |
 			pwr_fbif_transcfg_target_noncoherent_sysmem_f());
+}
 
+void gm20b_update_lspmu_cmdline_args(struct gk20a *g)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
 	/*Copying pmu cmdline args*/
 	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
-				g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_PWRCLK));
+		g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_PWRCLK));
 	g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode(pmu, 1);
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(
 		pmu, GK20A_PMU_TRACE_BUFSIZE);
@@ -1274,8 +1266,29 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
 		pmu, GK20A_PMU_DMAIDX_VIRT);
 	nvgpu_flcn_copy_to_dmem(pmu->flcn, g->acr.pmu_args,
-			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
-			g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
+		(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
+		g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
+}
+
+int gm20b_init_pmu_setup_hw1(struct gk20a *g,
+		void *desc, u32 bl_sz)
+{
+
+	struct nvgpu_pmu *pmu = &g->pmu;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
+	nvgpu_flcn_reset(pmu->flcn);
+	pmu->isr_enabled = true;
+	nvgpu_mutex_release(&pmu->isr_mutex);
+
+	if (g->ops.pmu.setup_apertures)
+		g->ops.pmu.setup_apertures(g);
+	if (g->ops.pmu.update_lspmu_cmdline_args)
+		g->ops.pmu.update_lspmu_cmdline_args(g);
+
 	/*disable irqs for hs falcon booting as we will poll for halt*/
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	pmu_enable_irq(pmu, false);

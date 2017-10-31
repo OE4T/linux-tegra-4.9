@@ -660,6 +660,9 @@ int gm20b_init_hal(struct gk20a *g)
 		gops->pmu.falcon_clear_halt_interrupt_status =
 			clear_halt_interrupt_status;
 		gops->pmu.init_falcon_setup_hw = gm20b_init_pmu_setup_hw1;
+		gops->pmu.update_lspmu_cmdline_args =
+			gm20b_update_lspmu_cmdline_args;
+		gops->pmu.setup_apertures = gm20b_setup_apertures;
 
 		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
 		gops->pmu.load_lsfalcon_ucode = gm20b_load_falcon_ucode;

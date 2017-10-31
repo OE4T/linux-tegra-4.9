@@ -866,6 +866,8 @@ struct gpu_ops {
 			void *lsfm,	u32 *p_bl_gen_desc_size, u32 falconid);
 		void (*handle_ext_irq)(struct gk20a *g, u32 intr);
 		void (*set_irqmask)(struct gk20a *g);
+		void (*update_lspmu_cmdline_args)(struct gk20a *g);
+		void (*setup_apertures)(struct gk20a *g);
 	} pmu;
 	struct {
 		int (*init_debugfs)(struct gk20a *g);

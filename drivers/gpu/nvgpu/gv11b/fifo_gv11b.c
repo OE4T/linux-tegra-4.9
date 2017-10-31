@@ -35,10 +35,10 @@
 #include <nvgpu/nvhost_t19x.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/mm.h>
+#include <nvgpu/ctxsw_trace.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
-#include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/channel_gk20a.h"
 
 #include "gp10b/fifo_gp10b.h"

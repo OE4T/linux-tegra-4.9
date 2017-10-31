@@ -30,7 +30,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
-#include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/mc_gk20a.h"
@@ -108,6 +107,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/enabled_t19x.h>
+#include <nvgpu/ctxsw_trace.h>
 
 #include <nvgpu/hw/gv100/hw_proj_gv100.h>
 #include <nvgpu/hw/gv100/hw_fifo_gv100.h>

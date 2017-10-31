@@ -7,6 +7,10 @@
 
 subdir-ccflags-y += -Werror
 
+ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
+KBUILD_CFLAGS += -I$(tegra-dtstree)/soc/t19x/kernel-include
+endif
+
 obj-y				+= irqchip/
 obj-y				+= bus/
 

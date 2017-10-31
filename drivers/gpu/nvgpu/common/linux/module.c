@@ -33,7 +33,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/ctxsw_trace.h>
 
-#include "gk20a/platform_gk20a.h"
+#include "platform_gk20a.h"
 #include "sysfs.h"
 #include "vgpu/vgpu.h"
 #include "scale.h"
@@ -661,7 +661,7 @@ static int gk20a_init_support(struct platform_device *dev)
 			goto fail;
 		}
 
-		err = gk20a_init_sim_support(dev);
+		err = gk20a_init_sim_support(g);
 		if (err)
 			goto fail;
 	}

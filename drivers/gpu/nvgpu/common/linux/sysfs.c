@@ -23,7 +23,7 @@
 #include <nvgpu/nvhost.h>
 
 #include "sysfs.h"
-#include "gk20a/platform_gk20a.h"
+#include "platform_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/gr_gk20a.h"
 

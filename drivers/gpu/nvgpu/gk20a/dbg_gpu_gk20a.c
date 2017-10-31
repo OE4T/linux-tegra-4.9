@@ -29,7 +29,6 @@
 #include <nvgpu/mm.h>
 
 #include "gk20a.h"
-#include "gk20a/platform_gk20a.h"
 #include "gr_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "regops_gk20a.h"

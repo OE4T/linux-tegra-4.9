@@ -32,8 +32,8 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/kind_gk20a.h"
-#include "gk20a/platform_gk20a.h"
 
+#include "platform_gk20a.h"
 #include "os_linux.h"
 #include "dmabuf.h"
 

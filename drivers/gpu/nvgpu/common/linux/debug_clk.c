@@ -16,9 +16,9 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
-#include "gk20a/platform_gk20a.h"
 #include "gm20b/clk_gm20b.h"
 #include "os_linux.h"
+#include "platform_gk20a.h"
 
 static int rate_get(void *data, u64 *val)
 {

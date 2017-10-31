@@ -28,7 +28,6 @@
 #include <nvgpu/linux/vm.h>
 
 #include "gk20a.h"
-#include "platform_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_sim_gk20a.h>
 
@@ -104,11 +103,9 @@ static int alloc_and_kmap_iopage(struct gk20a *g,
 
 }
 
-int gk20a_init_sim_support(struct platform_device *pdev)
+int gk20a_init_sim_support(struct gk20a *g)
 {
 	int err = 0;
-	struct device *dev = &pdev->dev;
-	struct gk20a *g = get_gk20a(dev);
 	u64 phys;
 
 	/* allocate sim event/msg buffers */

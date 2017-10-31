@@ -26,6 +26,9 @@
 
 #include <nvgpu/lock.h>
 
+struct gk20a;
+struct clk_gk20a;
+
 struct nvgpu_clk_pll_debug_data {
 	u32 trim_sys_sel_vco_reg;
 	u32 trim_sys_sel_vco_val;

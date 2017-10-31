@@ -35,9 +35,9 @@
 
 #include "clk.h"
 
-#include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
 
+#include "platform_gk20a.h"
 #include "platform_gk20a_tegra.h"
 #include "gp10b/platform_gp10b.h"
 #include "platform_gp10b_tegra.h"

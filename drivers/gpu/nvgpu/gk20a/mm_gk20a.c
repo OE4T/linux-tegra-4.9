@@ -41,7 +41,6 @@
 #include <nvgpu/vidmem.h>
 
 #include "gk20a.h"
-#include "platform_gk20a.h"
 #include "mm_gk20a.h"
 #include "fence_gk20a.h"
 #include "kind_gk20a.h"

@@ -23,13 +23,13 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
-#include "gk20a/platform_gk20a.h"
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/barrier.h>
 
+#include "platform_gk20a.h"
 #include "os_linux.h"
 #include "ctxsw_trace.h"
 

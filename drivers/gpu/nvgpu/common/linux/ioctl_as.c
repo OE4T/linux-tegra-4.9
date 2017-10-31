@@ -28,7 +28,7 @@
 #include <nvgpu/linux/vm.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/platform_gk20a.h"
+#include "platform_gk20a.h"
 #include "ioctl_as.h"
 #include "os_linux.h"
 

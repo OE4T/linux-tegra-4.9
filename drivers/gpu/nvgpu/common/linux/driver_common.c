@@ -25,7 +25,7 @@
 
 #include "scale.h"
 #include "gk20a/gk20a.h"
-#include "gk20a/platform_gk20a.h"
+#include "platform_gk20a.h"
 #include "module.h"
 #include "os_linux.h"
 #include "sysfs.h"

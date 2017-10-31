@@ -22,7 +22,6 @@
 #include <nvgpu/ctxsw_trace.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/platform_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 
 #include "ioctl_channel.h"
@@ -33,6 +32,7 @@
 #include "module.h"
 #include "os_linux.h"
 #include "ctxsw_trace.h"
+#include "platform_gk20a.h"
 
 #define GK20A_NUM_CDEVS 7
 

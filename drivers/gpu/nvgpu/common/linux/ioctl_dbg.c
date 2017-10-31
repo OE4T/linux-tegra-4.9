@@ -33,11 +33,11 @@
 #include <nvgpu/linux/vm.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/platform_gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "os_linux.h"
+#include "platform_gk20a.h"
 #include "ioctl_dbg.h"
 
 

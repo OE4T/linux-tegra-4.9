@@ -45,7 +45,7 @@ struct sim_gk20a {
 	void (*remove_support)(struct sim_gk20a *);
 };
 
-int gk20a_init_sim_support(struct platform_device *pdev);
+int gk20a_init_sim_support(struct gk20a *g);
 int gk20a_sim_esc_readl(struct gk20a *g, char *path, u32 index, u32 *data);
 
 #endif /*__SIM_GK20A_H__*/

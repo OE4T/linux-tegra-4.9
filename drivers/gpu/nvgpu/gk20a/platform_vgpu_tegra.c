@@ -23,7 +23,7 @@
  */
 
 #include "gk20a.h"
-#include "platform_gk20a.h"
+#include "common/linux/platform_gk20a.h"
 #include "vgpu/clk_vgpu.h"
 
 #include <nvgpu/nvhost.h>

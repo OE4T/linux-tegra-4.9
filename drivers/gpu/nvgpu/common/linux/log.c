@@ -20,7 +20,7 @@
 #include <nvgpu/log.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/platform_gk20a.h"
+#include "platform_gk20a.h"
 #include "os_linux.h"
 
 /*

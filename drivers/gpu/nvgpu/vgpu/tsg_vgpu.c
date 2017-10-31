@@ -24,8 +24,8 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/channel_gk20a.h"
-#include "gk20a/platform_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
+#include "common/linux/platform_gk20a.h"
 #include "vgpu.h"
 #include "fifo_vgpu.h"
 

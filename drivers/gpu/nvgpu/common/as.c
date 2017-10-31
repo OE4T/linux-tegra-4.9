@@ -28,7 +28,6 @@
 #include <nvgpu/vm.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/platform_gk20a.h"
 
 /* dumb allocator... */
 static int generate_as_share_id(struct gk20a_as *as)

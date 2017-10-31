@@ -23,13 +23,13 @@
 #include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/platform_gk20a.h"
 #include "clk/clk.h"
 #include "clk/clk_mclk.h"
 #include "module.h"
 #include "intr.h"
 #include "sysfs.h"
 #include "os_linux.h"
+#include "platform_gk20a.h"
 
 #include "pci.h"
 #ifdef CONFIG_TEGRA_19x_GPU

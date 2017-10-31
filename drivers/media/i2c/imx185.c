@@ -106,7 +106,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.min = 0 * FIXED_POINT_SCALING_FACTOR,
 		.max = 48 * FIXED_POINT_SCALING_FACTOR,
 		.def = 0 * FIXED_POINT_SCALING_FACTOR,
-		.step = 1,
+		.step = 3 * FIXED_POINT_SCALING_FACTOR / 10, /* 0.3 db */
 	},
 	{
 		.ops = &imx185_ctrl_ops,
@@ -117,7 +117,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.min = 30 * FIXED_POINT_SCALING_FACTOR / 1000000,
 		.max = 1000000LL * FIXED_POINT_SCALING_FACTOR / 1000000,
 		.def = 30 * FIXED_POINT_SCALING_FACTOR / 1000000,
-		.step = 1,
+		.step = 1 * FIXED_POINT_SCALING_FACTOR / 1000000,
 	},
 	{
 		.ops = &imx185_ctrl_ops,
@@ -128,7 +128,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.min = 1 * FIXED_POINT_SCALING_FACTOR,
 		.max = 60 * FIXED_POINT_SCALING_FACTOR,
 		.def = 30 * FIXED_POINT_SCALING_FACTOR,
-		.step = 1,
+		.step = 1 * FIXED_POINT_SCALING_FACTOR,
 	},
 	{
 		.ops = &imx185_ctrl_ops,

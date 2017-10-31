@@ -33,8 +33,8 @@
 
 #include <uapi/linux/nvgpu.h>
 
-#include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
+#include "common/linux/platform_gk20a.h"
 #include "common/linux/clk.h"
 
 #include "gp10b/platform_gp10b.h"

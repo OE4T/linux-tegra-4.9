@@ -60,7 +60,7 @@
 #define OV10823_MAX_WIDTH		4336
 #define OV10823_MAX_HEIGHT		2440
 
-#define OV10823_DEFAULT_DATAFMT		MEDIA_BUS_FMT_SRGGB10_1X10
+#define OV10823_DEFAULT_DATAFMT		MEDIA_BUS_FMT_SBGGR10_1X10
 #define OV10823_DEFAULT_CLK_FREQ	26000000
 
 #define OV10823_DEFAULT_I2C_ADDRESS_20	(0x20 >> 1)
@@ -1213,7 +1213,7 @@ static int ov10823_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	dev_info(&client->dev, "Detected OV10823 sensor\n");
+	dev_info(&client->dev, "Probed v4l2 sensor.\n");
 
 	return 0;
 }

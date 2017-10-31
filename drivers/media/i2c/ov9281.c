@@ -102,7 +102,7 @@
 #define OV9281_DEFAULT_MODE		OV9281_MODE_1280X800
 #define OV9281_DEFAULT_WIDTH		OV9281_MAX_WIDTH
 #define OV9281_DEFAULT_HEIGHT		OV9281_MAX_HEIGHT
-#define OV9281_DEFAULT_DATAFMT		MEDIA_BUS_FMT_SRGGB10_1X10
+#define OV9281_DEFAULT_DATAFMT		MEDIA_BUS_FMT_SBGGR10_1X10
 #define OV9281_DEFAULT_CLK_FREQ		26000000
 
 #define OV9281_DEFAULT_I2C_ADDRESS_C0		(0xc0 >> 1)
@@ -1093,7 +1093,7 @@ static int ov9281_probe(struct i2c_client *client,
 	struct ov9281 *priv;
 	int err;
 
-	dev_info(&client->dev, "Probing v4l2 sensor.\n");
+	pr_info("[OV9281]: probing v4l2 sensor.\n");
 
 	common_data = devm_kzalloc(&client->dev,
 				   sizeof(struct camera_common_data),

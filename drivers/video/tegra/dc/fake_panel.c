@@ -59,7 +59,10 @@ static struct tegra_dsi_out dsi_fake_panel_pdata = {
 
 static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 	{
-#ifdef CONFIG_TEGRA_NVDISPLAY
+		/* This mode defined here is for Nvdisplay.
+		 * tegra_dc_populate_fake_panel_modes overrides the mode
+		 * based on the chip.
+		 */
 		.pclk = 193224000, /* @60Hz*/
 		.h_ref_to_sync = 1,
 		.v_ref_to_sync = 11,
@@ -71,21 +74,40 @@ static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 		.v_active = 1920,
 		.h_front_porch = 107,
 		.v_front_porch = 497,
-#else
-		.pclk = 155774400, /* @60Hz*/
-		.h_ref_to_sync = 1,
-		.v_ref_to_sync = 2,
-		.h_sync_width = 10,
-		.v_sync_width = 2,
-		.h_back_porch = 54,
-		.v_back_porch = 30,
-		.h_active = 1200,
-		.v_active = 1920,
-		.h_front_porch = 64,
-		.v_front_porch = 3,
-#endif
 	},
 };
+
+static void tegra_dc_populate_fake_panel_modes(void)
+{
+	struct tegra_dc_mode fake_panel_mode;
+
+	if (tegra_dc_is_nvdisplay()) {
+		fake_panel_mode.pclk = 193224000; /* @60Hz*/
+		fake_panel_mode.h_ref_to_sync = 1;
+		fake_panel_mode.v_ref_to_sync = 11;
+		fake_panel_mode.h_sync_width = 1;
+		fake_panel_mode.v_sync_width = 1;
+		fake_panel_mode.h_back_porch = 20;
+		fake_panel_mode.v_back_porch = 7;
+		fake_panel_mode.h_active = 1200;
+		fake_panel_mode.v_active = 1920;
+		fake_panel_mode.h_front_porch = 107;
+		fake_panel_mode.v_front_porch = 497;
+	} else {
+		fake_panel_mode.pclk = 155774400; /* @60Hz*/
+		fake_panel_mode.h_ref_to_sync = 1;
+		fake_panel_mode.v_ref_to_sync = 2;
+		fake_panel_mode.h_sync_width = 10;
+		fake_panel_mode.v_sync_width = 2;
+		fake_panel_mode.h_back_porch = 54;
+		fake_panel_mode.v_back_porch = 30;
+		fake_panel_mode.h_active = 1200;
+		fake_panel_mode.v_active = 1920;
+		fake_panel_mode.h_front_porch = 64;
+		fake_panel_mode.v_front_porch = 3;
+	}
+	dsi_fake_panel_modes[0] = fake_panel_mode;
+}
 
 static int tegra_dc_reset_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 {
@@ -115,13 +137,15 @@ int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 	/* Set the needed resources */
 
 	dc_out->dsi = &dsi_fake_panel_pdata;
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	dc_out->parent_clk = "pll_d_out1";
-#else
-	dc_out->parent_clk = "pll_d_out0";
-#endif
+	if (tegra_dc_is_nvdisplay())
+		dc_out->parent_clk = "pll_d_out1";
+	else
+		dc_out->parent_clk = "pll_d_out0";
+
+	tegra_dc_populate_fake_panel_modes();
 	dc_out->modes = dsi_fake_panel_modes;
 	dc_out->n_modes = ARRAY_SIZE(dsi_fake_panel_modes);
+
 	dc_out->enable = NULL;
 	dc_out->postpoweron = NULL;
 	dc_out->disable = NULL;
@@ -133,9 +157,8 @@ int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 
 	if (!dc->out->sd_settings)
 		return -EINVAL;
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	dc->out->sd_settings->enable = 1;
-#endif
+	if (tegra_dc_is_t21x())
+		dc->out->sd_settings->enable = 1;
 	dc->out->sd_settings->enable_int = 1;
 
 	/* DrivePX2: DSI->sn65dsi85(LVDS)->ds90ub947(FPDLink) */
@@ -173,10 +196,8 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		dsi->avdd_dsi_csi = NULL;
 	}
 
-#if defined (CONFIG_TEGRA_NVDISPLAY)
-	if (dsi->pad_ctrl)
+	if (tegra_dc_is_nvdisplay() && dsi->pad_ctrl)
 		tegra_dsi_padctrl_shutdown(dc);
-#endif
 
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);
@@ -226,15 +247,15 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		err = -ENODEV;
 		goto err_release_regs;
 	}
-#if defined (CONFIG_TEGRA_NVDISPLAY)
-	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
-	if (IS_ERR(dsi->pad_ctrl)) {
-		dev_err(&dc->ndev->dev, "dsi: Padctrl sw init failed\n");
-		err = PTR_ERR(dsi->pad_ctrl);
-		goto err_release_regs;
+	if (tegra_dc_is_nvdisplay()) {
+		dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
+		if (IS_ERR(dsi->pad_ctrl)) {
+			dev_err(&dc->ndev->dev, "dsi: Padctrl sw init failed\n");
+			err = PTR_ERR(dsi->pad_ctrl);
+			goto err_release_regs;
+		}
+		dsi->info.enable_hs_clock_on_lp_cmd_mode = true;
 	}
-	dsi->info.enable_hs_clock_on_lp_cmd_mode = true;
-#endif
 	/* Need to always reinitialize clocks to ensure proper functionality */
 	tegra_dsi_init_clock_param(dc);
 #ifdef CONFIG_DEBUG_FS

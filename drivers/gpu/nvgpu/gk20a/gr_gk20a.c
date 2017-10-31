@@ -5057,16 +5057,22 @@ int gk20a_gr_reset(struct gk20a *g)
 	nvgpu_mutex_acquire(&g->gr.fecs_mutex);
 
 	err = gk20a_enable_gr_hw(g);
-	if (err)
+	if (err) {
+		nvgpu_mutex_release(&g->gr.fecs_mutex);
 		return err;
+	}
 
 	err = gk20a_init_gr_setup_hw(g);
-	if (err)
+	if (err) {
+		nvgpu_mutex_release(&g->gr.fecs_mutex);
 		return err;
+	}
 
 	err = gr_gk20a_init_ctxsw(g);
-	if (err)
+	if (err) {
+		nvgpu_mutex_release(&g->gr.fecs_mutex);
 		return err;
+	}
 
 	nvgpu_mutex_release(&g->gr.fecs_mutex);
 

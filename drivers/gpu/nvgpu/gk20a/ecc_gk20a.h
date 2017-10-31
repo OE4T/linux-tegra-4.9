@@ -27,7 +27,9 @@
 struct gk20a_ecc_stat {
 	char **names;
 	u32 *counters;
+#ifdef CONFIG_SYSFS
 	struct hlist_node hash_node;
+#endif
 };
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC

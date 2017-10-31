@@ -34,11 +34,11 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/bus.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/ctxsw_trace.h>
 
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
 #include "vgpu/clk_vgpu.h"
-#include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
 #include "gk20a/channel_gk20a.h"
 #include "gm20b/hal_gm20b.h"

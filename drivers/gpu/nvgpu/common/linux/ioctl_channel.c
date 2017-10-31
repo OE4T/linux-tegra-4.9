@@ -31,12 +31,13 @@
 #include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"
 #include "gk20a/platform_gk20a.h"
+
 #include "ioctl_channel.h"
 #include "os_linux.h"
+#include "ctxsw_trace.h"
 
 static const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
 {

@@ -31,12 +31,12 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/ctxsw_trace.h>
 
 #include "gk20a/platform_gk20a.h"
 #include "sysfs.h"
 #include "vgpu/vgpu.h"
 #include "scale.h"
-#include "gk20a/ctxsw_trace_gk20a.h"
 #include "pci.h"
 #include "module.h"
 #include "intr.h"
@@ -48,9 +48,11 @@
 #include "vgpu/vgpu_t19x.h"
 #endif
 #endif
+
 #include "os_linux.h"
 #include "cde_gm20b.h"
 #include "cde_gp10b.h"
+#include "ctxsw_trace.h"
 
 #define CLASS_NAME "nvidia-gpu"
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */

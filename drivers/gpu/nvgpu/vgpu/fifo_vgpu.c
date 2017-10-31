@@ -33,7 +33,6 @@
 
 #include "vgpu/vgpu.h"
 #include "vgpu/fifo_vgpu.h"
-#include "gk20a/ctxsw_trace_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>

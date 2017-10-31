@@ -42,6 +42,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/ltc.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/ctxsw_trace.h>
 
 /*
  * This is required for nvgpu_vm_find_buf() which is used in the tracing
@@ -51,7 +52,6 @@
 #include <nvgpu/linux/vm.h>
 
 #include "gk20a.h"
-#include "ctxsw_trace_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "fence_gk20a.h"
 

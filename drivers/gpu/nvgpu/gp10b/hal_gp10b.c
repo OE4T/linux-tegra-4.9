@@ -24,7 +24,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
-#include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -70,6 +69,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/bus.h>
+#include <nvgpu/ctxsw_trace.h>
 
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>

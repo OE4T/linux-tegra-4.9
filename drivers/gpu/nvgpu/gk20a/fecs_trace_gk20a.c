@@ -34,8 +34,8 @@
 #include <nvgpu/barrier.h>
 #include <nvgpu/mm.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/ctxsw_trace.h>
 
-#include "ctxsw_trace_gk20a.h"
 #include "fecs_trace_gk20a.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"

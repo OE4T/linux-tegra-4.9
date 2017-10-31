@@ -24,12 +24,14 @@
 #include <linux/tegra-ivc.h>
 #include <linux/tegra_vgpu.h>
 
+#include <uapi/linux/nvgpu.h>
+
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/ctxsw_trace.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/ctxsw_trace_gk20a.h"
 #include "vgpu.h"
 #include "fecs_trace_vgpu.h"
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,45 +20,34 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __CTXSW_TRACE_GK20A_H
-#define __CTXSW_TRACE_GK20A_H
+#ifndef __NVGPU_CTXSW_TRACE_H__
+#define __NVGPU_CTXSW_TRACE_H__
 
 #include <nvgpu/types.h>
 
-#define GK20A_CTXSW_TRACE_NUM_DEVS			1
-
-struct file;
-struct inode;
 struct gk20a;
-struct gpu_ops;
-struct nvgpu_ctxsw_trace_entry;
-struct channel_gk20a;
-struct channel_ctx_gk20a;
-struct gk20a_ctxsw_dev;
-struct gk20a_fecs_trace;
 struct tsg_gk20a;
-struct poll_table_struct;
-
-int gk20a_ctxsw_dev_release(struct inode *inode, struct file *filp);
-int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp);
-long gk20a_ctxsw_dev_ioctl(struct file *filp,
-			 unsigned int cmd, unsigned long arg);
-ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf,
-			     size_t size, loff_t *offs);
-unsigned int gk20a_ctxsw_dev_poll(struct file *filp,
-				  struct poll_table_struct *pts);
-int gk20a_ctxsw_dev_mmap(struct file *filp, struct vm_area_struct *vma);
-int gk20a_ctxsw_dev_ring_alloc(struct gk20a *g, void **buf, size_t *size);
-int gk20a_ctxsw_dev_ring_free(struct gk20a *g);
-int gk20a_ctxsw_dev_mmap_buffer(struct gk20a *g, struct vm_area_struct *vma);
+struct channel_gk20a;
+struct nvgpu_ctxsw_trace_entry;
 
 int gk20a_ctxsw_trace_init(struct gk20a *g);
+
+void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch);
+void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg);
+
 void gk20a_ctxsw_trace_cleanup(struct gk20a *g);
 int gk20a_ctxsw_trace_write(struct gk20a *g,
 			    struct nvgpu_ctxsw_trace_entry *entry);
 void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid);
 
-void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch);
-void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg);
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+struct file;
+struct vm_area_struct;
 
-#endif /* __CTXSW_TRACE_GK20A_H */
+int gk20a_ctxsw_dev_mmap(struct file *filp, struct vm_area_struct *vma);
+int gk20a_ctxsw_dev_ring_alloc(struct gk20a *g, void **buf, size_t *size);
+int gk20a_ctxsw_dev_ring_free(struct gk20a *g);
+int gk20a_ctxsw_dev_mmap_buffer(struct gk20a *g, struct vm_area_struct *vma);
+#endif
+
+#endif

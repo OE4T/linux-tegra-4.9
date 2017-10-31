@@ -35,13 +35,13 @@
 #include <nvgpu/ltc.h>
 #include <nvgpu/vidmem.h>
 #include <nvgpu/mm.h>
+#include <nvgpu/ctxsw_trace.h>
 
 #include <trace/events/gk20a.h>
 
 #include "gk20a.h"
 #include "channel_sync_gk20a.h"
 
-#include "ctxsw_trace_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "mc_gk20a.h"
 #include "hal.h"

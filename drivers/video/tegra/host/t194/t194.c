@@ -387,7 +387,7 @@ struct nvhost_device_data t19_msenc_info = {
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(18),
 	.engine_cg_regs		= t19x_nvenc_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 };
 
 struct nvhost_device_data t19_nvenc1_info = {
@@ -419,7 +419,7 @@ struct nvhost_device_data t19_nvenc1_info = {
 	.reset_clamp_mask	= BIT(29),
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVENC1,
 	.engine_cg_regs		= t19x_nvenc_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 };
 #endif
 
@@ -454,7 +454,7 @@ struct nvhost_device_data t19_nvdec_info = {
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(19),
 	.engine_cg_regs		= t19x_nvdec_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 };
 
 struct nvhost_device_data t19_nvdec1_info = {
@@ -487,7 +487,7 @@ struct nvhost_device_data t19_nvdec1_info = {
 	.reset_clamp_mask	= BIT(31),
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC1,
 	.engine_cg_regs		= t19x_nvdec_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 };
 #endif
 
@@ -518,7 +518,7 @@ struct nvhost_device_data t19_nvjpg_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVJPG,
 	.reset_clamp_mask	= BIT(20),
 	.engine_cg_regs		= t19x_nvjpg_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 };
 #endif
 
@@ -548,7 +548,7 @@ struct nvhost_device_data t19_tsec_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSEC,
 	.reset_clamp_mask	= BIT(21),
 	.engine_cg_regs		= t19x_tsec_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 };
 
 struct nvhost_device_data t19_tsecb_info = {
@@ -576,7 +576,7 @@ struct nvhost_device_data t19_tsecb_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSECB,
 	.reset_clamp_mask	= BIT(22),
 	.engine_cg_regs		= t19x_tsec_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 };
 #endif
 
@@ -610,7 +610,7 @@ struct nvhost_device_data t19_vic_info = {
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(17),
 	.engine_cg_regs		= t19x_vic_gating_registers,
-	.engine_can_cg		= true,
+	.engine_can_cg		= false,
 };
 #endif
 

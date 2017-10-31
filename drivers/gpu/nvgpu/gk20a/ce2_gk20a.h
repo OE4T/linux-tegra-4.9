@@ -40,8 +40,6 @@ int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 #define NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF 256
 #define NVGPU_CE_MAX_COMMAND_BUFF_SIZE_FOR_TRACING 8
 
-typedef void (*ce_event_callback)(u32 ce_ctx_id, u32 ce_event_flag);
-
 /* dma launch_flags */
 enum {
 	/* location */
@@ -67,14 +65,6 @@ enum {
 enum {
 	NVGPU_CE_PHYS_MODE_TRANSFER        = (1 << 0),
 	NVGPU_CE_MEMSET                    = (1 << 1),
-};
-
-/* CE event flags */
-enum {
-	NVGPU_CE_CONTEXT_JOB_COMPLETED               = (1 << 0),
-	NVGPU_CE_CONTEXT_JOB_TIMEDOUT                = (1 << 1),
-	NVGPU_CE_CONTEXT_SUSPEND                     = (1 << 2),
-	NVGPU_CE_CONTEXT_RESUME                      = (1 << 3),
 };
 
 /* CE app state machine flags */
@@ -106,7 +96,6 @@ struct gk20a_gpu_ctx {
 	u32 ctx_id;
 	struct nvgpu_mutex gpu_ctx_mutex;
 	int gpu_ctx_state;
-	ce_event_callback user_event_callback;
 
 	/* tsg related data */
 	struct tsg_gk20a *tsg;
@@ -119,9 +108,6 @@ struct gk20a_gpu_ctx {
 	struct nvgpu_mem cmd_buf_mem;
 
 	struct nvgpu_list_node list;
-
-	u64 submitted_seq_number;
-	u64 completed_seq_number;
 
 	u32 cmd_buf_read_queue_offset;
 	u32 cmd_buf_end_queue_offset;
@@ -140,12 +126,11 @@ void gk20a_ce_suspend(struct gk20a *g);
 void gk20a_ce_destroy(struct gk20a *g);
 
 /* CE app utility functions */
-u32 gk20a_ce_create_context_with_cb(struct gk20a *g,
+u32 gk20a_ce_create_context(struct gk20a *g,
 		int runlist_id,
 		int priority,
 		int timeslice,
-		int runlist_level,
-		ce_event_callback user_event_callback);
+		int runlist_level);
 int gk20a_ce_execute_ops(struct gk20a *g,
 		u32 ce_ctx_id,
 		u64 src_buf,

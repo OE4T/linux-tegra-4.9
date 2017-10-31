@@ -103,54 +103,6 @@ int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 }
 
 /* static CE app api */
-static void gk20a_ce_notify_all_user(struct gk20a *g, u32 event)
-{
-	struct gk20a_ce_app *ce_app = &g->ce_app;
-	struct gk20a_gpu_ctx *ce_ctx, *ce_ctx_save;
-
-	if (!ce_app->initialised)
-		return;
-
-	nvgpu_mutex_acquire(&ce_app->app_mutex);
-
-	nvgpu_list_for_each_entry_safe(ce_ctx, ce_ctx_save,
-			&ce_app->allocated_contexts, gk20a_gpu_ctx, list) {
-		if (ce_ctx->user_event_callback) {
-			ce_ctx->user_event_callback(ce_ctx->ctx_id,
-				event);
-		}
-	}
-
-	nvgpu_mutex_release(&ce_app->app_mutex);
-}
-
-static void gk20a_ce_finished_ctx_cb(struct channel_gk20a *ch, void *data)
-{
-	struct gk20a_gpu_ctx *ce_ctx = data;
-	bool channel_idle;
-	u32 event;
-
-	channel_gk20a_joblist_lock(ch);
-	channel_idle = channel_gk20a_joblist_is_empty(ch);
-	channel_gk20a_joblist_unlock(ch);
-
-	if (!channel_idle)
-		return;
-
-	gk20a_dbg(gpu_dbg_fn, "ce: finished %p", ce_ctx);
-
-	if (ch->has_timedout)
-		event = NVGPU_CE_CONTEXT_JOB_TIMEDOUT;
-	else
-		event = NVGPU_CE_CONTEXT_JOB_COMPLETED;
-
-	if (ce_ctx->user_event_callback)
-		ce_ctx->user_event_callback(ce_ctx->ctx_id,
-			event);
-
-	++ce_ctx->completed_seq_number;
-}
-
 static void gk20a_ce_free_command_buffer_stored_fence(struct gk20a_gpu_ctx *ce_ctx)
 {
 	u32 cmd_buf_index;
@@ -410,7 +362,6 @@ int gk20a_init_ce_support(struct gk20a *g)
 	if (ce_app->initialised) {
 		/* assume this happen during poweron/poweroff GPU sequence */
 		ce_app->app_state = NVGPU_CE_ACTIVE;
-		gk20a_ce_notify_all_user(g, NVGPU_CE_CONTEXT_RESUME);
 		return 0;
 	}
 
@@ -469,18 +420,16 @@ void gk20a_ce_suspend(struct gk20a *g)
 		return;
 
 	ce_app->app_state = NVGPU_CE_SUSPEND;
-	gk20a_ce_notify_all_user(g, NVGPU_CE_CONTEXT_SUSPEND);
 
 	return;
 }
 
 /* CE app utility functions */
-u32 gk20a_ce_create_context_with_cb(struct gk20a *g,
+u32 gk20a_ce_create_context(struct gk20a *g,
 		int runlist_id,
 		int priority,
 		int timeslice,
-		int runlist_level,
-		ce_event_callback user_event_callback)
+		int runlist_level)
 {
 	struct gk20a_gpu_ctx *ce_ctx;
 	struct gk20a_ce_app *ce_app = &g->ce_app;
@@ -501,14 +450,10 @@ u32 gk20a_ce_create_context_with_cb(struct gk20a *g,
 	}
 
 	ce_ctx->g = g;
-	ce_ctx->user_event_callback = user_event_callback;
 
 	ce_ctx->cmd_buf_read_queue_offset = 0;
 	ce_ctx->cmd_buf_end_queue_offset =
 		(NVGPU_CE_COMMAND_BUF_SIZE / NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF);
-
-	ce_ctx->submitted_seq_number = 0;
-	ce_ctx->completed_seq_number = 0;
 
 	ce_ctx->vm = g->mm.ce.vm;
 
@@ -523,10 +468,7 @@ u32 gk20a_ce_create_context_with_cb(struct gk20a *g,
 	}
 
 	/* always kernel client needs privileged channel */
-	ce_ctx->ch = gk20a_open_new_channel_with_cb(g, gk20a_ce_finished_ctx_cb,
-					ce_ctx,
-					runlist_id,
-					true);
+	ce_ctx->ch = gk20a_open_new_channel(g, runlist_id, true);
 	if (!ce_ctx->ch) {
 		nvgpu_err(g, "ce: gk20a channel not available");
 		goto end;
@@ -613,7 +555,7 @@ end:
 	return ctx_id;
 
 }
-EXPORT_SYMBOL(gk20a_ce_create_context_with_cb);
+EXPORT_SYMBOL(gk20a_ce_create_context);
 
 void gk20a_ce_delete_context(struct gk20a *g,
 		u32 ce_ctx_id)

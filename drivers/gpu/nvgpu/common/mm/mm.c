@@ -259,12 +259,11 @@ void nvgpu_init_mm_ce_context(struct gk20a *g)
 #if defined(CONFIG_GK20A_VIDMEM)
 	if (g->mm.vidmem.size && (g->mm.vidmem.ce_ctx_id == (u32)~0)) {
 		g->mm.vidmem.ce_ctx_id =
-			gk20a_ce_create_context_with_cb(g,
+			gk20a_ce_create_context(g,
 				gk20a_fifo_get_fast_ce_runlist_id(g),
 				-1,
 				-1,
-				-1,
-				NULL);
+				-1);
 
 		if (g->mm.vidmem.ce_ctx_id == (u32)~0)
 			nvgpu_err(g,

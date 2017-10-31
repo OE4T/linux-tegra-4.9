@@ -173,7 +173,6 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 
 			/* Next available command buffer queue Index */
 			++ce_ctx->cmd_buf_read_queue_offset;
-			++ce_ctx->submitted_seq_number;
 		}
 	} else {
 		ret = -ENOMEM;

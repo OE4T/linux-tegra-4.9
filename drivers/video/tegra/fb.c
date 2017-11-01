@@ -98,7 +98,7 @@ static void *tegra_fb_check_and_alloc_framebuffer(struct fb_info *info)
 		return tegra_fb->win.virt_addr;
 
 	fb_size = fb_data->fbmem_size ? : DEFAULT_FBMEM_SIZE;
-	fb_base = dma_alloc_writecombine(&tegra_fb->ndev->dev,
+	fb_base = dma_alloc_coherent(&tegra_fb->ndev->dev,
 			fb_size, &tegra_fb->phys_start, GFP_KERNEL);
 	if (!fb_base) {
 		dev_err(&tegra_fb->ndev->dev,
@@ -127,7 +127,7 @@ int tegra_fb_release_fbmem(struct tegra_fb_info *info)
 		if (info->kuse_count || info->mmap_count)
 			return -EBUSY;
 
-		dma_free_writecombine(&info->ndev->dev,
+		dma_free_coherent(&info->ndev->dev,
 				info->fb_size,
 				info->win.virt_addr,
 				info->phys_start);

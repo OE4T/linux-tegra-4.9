@@ -2939,6 +2939,8 @@ static int dfll_build_lut_pwm(struct tegra_dfll *td, int v_max)
 		return -EINVAL;
 	}
 	td->dvco_rate_min = td->out_rate_min = rate;
+	rate = get_dvco_rate_below(td, td->lut_size - 1);
+	td->out_rate_max = rate;
 
 	return 0;
 }

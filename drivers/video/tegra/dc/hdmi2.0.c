@@ -1779,8 +1779,8 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 			NV_SOR_INPUT_CONTROL_HDMI_SRC_SELECT_DISPLAYB);
 
 	if (tegra_bpmp_running()) {
-		dispclk_div_8_2 =
-				clk_get_rate(hdmi->sor->sor_clk) / 1000000 * 4;
+		dispclk_div_8_2 = clk_get_rate(hdmi->sor->ref_clk) /
+					1000000 * 4;
 		tegra_sor_writel(sor, NV_SOR_REFCLK,
 				NV_SOR_REFCLK_DIV_INT(dispclk_div_8_2 >> 2) |
 				NV_SOR_REFCLK_DIV_FRAC(dispclk_div_8_2));
@@ -2803,25 +2803,22 @@ static void tegra_hdmi_config_clk_nvdisplay(struct tegra_hdmi *hdmi,
 		int val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7;
 
 		if (hdmi->dc->mode.pclk > 340000000) {
-			long rate = clk_get_rate(sor->sor_clk);
+			long rate = clk_get_rate(sor->ref_clk);
 
-			/*half rate and double vco*/
+			/* half rate and double vco */
 			val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4;
-			/* Set Rate to SOR_CLK*/
-			clk_set_rate(sor->sor_clk, (rate >> 1));
+			clk_set_rate(sor->ref_clk, (rate >> 1));
 		}
 
 		val |= NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
 		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
 		usleep_range(250, 300); /* sor brick pll stabilization delay */
 
-		clk_set_parent(sor->src_switch_clk, sor->brick_clk);
-
+		clk_set_parent(sor->sor_clk, sor->pad_clk);
 		hdmi->clk_type = TEGRA_HDMI_BRICK_CLK;
 	} else if (clk_type == TEGRA_HDMI_SAFE_CLK) {
 		if (!hdmi->dc->initialized) {
-			clk_set_parent(hdmi->sor->src_switch_clk,
-					hdmi->sor->safe_clk);
+			clk_set_parent(hdmi->sor->sor_clk, hdmi->sor->safe_clk);
 			hdmi->clk_type = TEGRA_HDMI_SAFE_CLK;
 		}
 	} else {
@@ -2839,14 +2836,14 @@ static void tegra_hdmi_config_clk_t21x(struct tegra_hdmi *hdmi, u32 clk_type)
 		u32 val;
 		struct tegra_dc_sor_data *sor = hdmi->sor;
 		int div = hdmi->dc->mode.pclk < 340000000 ? 1 : 2;
-		unsigned long rate = clk_get_rate(sor->src_switch_clk);
+		unsigned long rate = clk_get_rate(sor->ref_clk);
 		unsigned long parent_rate =
-			clk_get_rate(clk_get_parent(sor->src_switch_clk));
+			clk_get_rate(clk_get_parent(sor->ref_clk));
 
 		/* Set sor divider */
 		if (rate != DIV_ROUND_UP(parent_rate, div)) {
 			rate = DIV_ROUND_UP(parent_rate, div);
-			clk_set_rate(sor->src_switch_clk, rate);
+			clk_set_rate(sor->ref_clk, rate);
 		}
 
 		/* Select brick muxes */
@@ -2864,9 +2861,9 @@ static void tegra_hdmi_config_clk_t21x(struct tegra_hdmi *hdmi, u32 clk_type)
 		 * just sync s/w state with brick h/w.
 		 */
 		rate = rate/NV_SOR_HDMI_BRICK_DIV*NV_SOR_HDMI_BRICK_MUL(val);
-		if (clk_get_parent(sor->brick_clk) != sor->src_switch_clk)
-			clk_set_parent(sor->brick_clk, sor->src_switch_clk);
-		clk_set_rate(sor->brick_clk, rate);
+		if (clk_get_parent(sor->pad_clk) != sor->ref_clk)
+			clk_set_parent(sor->pad_clk, sor->ref_clk);
+		clk_set_rate(sor->pad_clk, rate);
 
 #ifdef CONFIG_TEGRA_CORE_DVFS
 		/*
@@ -2880,7 +2877,7 @@ static void tegra_hdmi_config_clk_t21x(struct tegra_hdmi *hdmi, u32 clk_type)
 #ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
 #else
-		clk_set_parent(sor->sor_clk, sor->brick_clk);
+		clk_set_parent(sor->sor_clk, sor->pad_clk);
 #endif
 
 		tegra_dc_writel(hdmi->dc, PIXEL_CLK_DIVIDER_PCD1 |
@@ -2944,10 +2941,10 @@ static inline void tegra_sor_set_clk_rate(struct tegra_dc_sor_data *sor)
 		rate = rate * 3;
 	}
 
-	clk_set_rate(sor->sor_clk, rate);
+	clk_set_rate(sor->ref_clk, rate);
 }
 
-static inline void tegra_dc_hdmi_set_sor_clk_rate(struct tegra_dc_sor_data *sor)
+static inline void tegra_dc_hdmi_set_sor_ref_rate(struct tegra_dc_sor_data *sor)
 {
 	if (tegra_dc_is_t19x())
 		tegra_sor_set_clk_rate_t19x(sor);
@@ -2994,26 +2991,20 @@ static long tegra_dc_hdmi_setup_clk_nvdisplay(struct tegra_dc *dc,
 			clk_set_rate(clk, dc->mode.pclk);
 	}
 
-	/* Enable safe sor clock */
 	tegra_sor_safe_clk_enable(sor);
-	/* Set Parent to SOR_CLK*/
-	clk_set_parent(sor->sor_clk, parent_clk);
+	clk_set_parent(sor->ref_clk, parent_clk);
 
-	/* Set Rate to SOR_CLK*/
 	if (!dc->initialized)
-		tegra_dc_hdmi_set_sor_clk_rate(sor);
+		tegra_dc_hdmi_set_sor_ref_rate(sor);
 
-	/* Enable SOR_CLK*/
 	if (atomic_inc_return(&hdmi->clock_refcount) == 1)
 		tegra_sor_clk_enable(sor);
 
-	/* Select the sor_out parent as SAFE_CLK*/
 	if (!dc->initialized)
-		clk_set_parent(sor->src_switch_clk, sor->safe_clk);
-	/* Enable sor_out Clock */
-	tegra_disp_clk_prepare_enable(sor->src_switch_clk);
-	/* Enable brick Clock */
-	tegra_disp_clk_prepare_enable(sor->brick_clk);
+		clk_set_parent(sor->sor_clk, sor->safe_clk);
+
+	tegra_disp_clk_prepare_enable(sor->pad_clk);
+	tegra_disp_clk_prepare_enable(sor->sor_clk);
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
@@ -3046,8 +3037,8 @@ static long tegra_dc_hdmi_setup_clk_t21x(struct tegra_dc *dc, struct clk *clk)
 		struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 		struct tegra_dc_sor_data *sor = hdmi->sor;
 
-		if (clk_get_parent(sor->src_switch_clk) != parent_clk) {
-			if (clk_set_parent(sor->src_switch_clk, parent_clk)) {
+		if (clk_get_parent(sor->ref_clk) != parent_clk) {
+			if (clk_set_parent(sor->ref_clk, parent_clk)) {
 				dev_err(&dc->ndev->dev,
 					"hdmi: set src switch parent failed\n");
 				return 0;

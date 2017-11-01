@@ -150,11 +150,11 @@ struct tegra_dc_sor_data {
 	struct tegra_dc *dc;
 	struct device_node *np; /* dc->pdata->conn_np */
 
-	void __iomem	*base;
-	struct clk	*sor_clk;
-	struct clk *safe_clk;
-	struct clk *brick_clk;
-	struct clk *src_switch_clk;
+	void __iomem *base;
+	struct clk *sor_clk; /* output of SORX_CLK_SEL0 MUX */
+	struct clk *safe_clk; /* SOR safe clk */
+	struct clk *pad_clk; /* output of SORX pad brick */
+	struct clk *ref_clk; /* output of SORX_CLK_SRC MUX sourced from PLLD* */
 	struct reset_control *rst;
 
 	u8					 portnum;	/* 0 or 1 */
@@ -224,7 +224,7 @@ void tegra_sor_tpg(struct tegra_dc_sor_data *sor, u32 tp, u32 n_lanes);
 void tegra_sor_port_enable(struct tegra_dc_sor_data *sor, bool enb);
 int tegra_sor_power_lanes(struct tegra_dc_sor_data *sor,
 					u32 lane_count, bool pu);
-void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor);
+void tegra_sor_config_dp_clk_t21x(struct tegra_dc_sor_data *sor);
 void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor);
 void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor);
 void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor);
@@ -432,14 +432,23 @@ static inline int tegra_sor_get_ctrl_num(struct tegra_dc_sor_data *sor)
 	return (!sor || !sor->base) ? -ENODEV : sor->ctrl_num;
 }
 
+/*
+ * For nvdisplay, sor->sor_clk was previously being used as the SOR reference
+ * clk instead of the orclk. In order to be consistent with the previous naming
+ * scheme, I'm using sor->ref_clk here to avoid breaking existing drivers. This
+ * needs to be cleaned up later.
+ */
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {
+	struct clk *clk;
 	u32 reg_val;
+
+	clk = (tegra_dc_is_nvdisplay()) ? sor->ref_clk : sor->sor_clk;
 	if (likely(tegra_platform_is_silicon())) {
-		if (WARN(!tegra_dc_is_clk_enabled(sor->sor_clk),
-		"SOR is clock gated!"))
+		if (WARN(!tegra_dc_is_clk_enabled(clk), "SOR is clock gated!"))
 			return 0;
 	}
+
 	reg_val = readl(sor->base + reg * 4);
 	trace_display_readl(sor->dc, reg_val, (char *)sor->base + reg * 4);
 	return reg_val;
@@ -448,11 +457,14 @@ static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 static inline void tegra_sor_writel(struct tegra_dc_sor_data *sor,
 	u32 reg, u32 val)
 {
+	struct clk *clk;
+
+	clk = (tegra_dc_is_nvdisplay()) ? sor->ref_clk : sor->sor_clk;
 	if (likely(tegra_platform_is_silicon())) {
-		if (WARN(!tegra_dc_is_clk_enabled(sor->sor_clk),
-		"SOR is clock gated!"))
+		if (WARN(!tegra_dc_is_clk_enabled(clk), "SOR is clock gated!"))
 			return;
 	}
+
 	writel(val, sor->base + reg * 4);
 	trace_display_writel(sor->dc, val, (char *)sor->base + reg * 4);
 }
@@ -466,11 +478,17 @@ static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,
 	tegra_sor_writel(sor, reg, reg_val);
 }
 
+/*
+ * For nvdisplay, sor->sor_clk was previously being used as the SOR reference
+ * clk instead of the orclk. In order to be consistent with the previous naming
+ * scheme, I'm using sor->ref_clk here to avoid breaking drivers who are using
+ * these APIs to actually toggle the ref clk. This needs to be cleaned up later.
+ */
 static inline void tegra_sor_clk_enable(struct tegra_dc_sor_data *sor)
 {
 	if (tegra_dc_is_nvdisplay()) {
 		if (tegra_platform_is_silicon() && tegra_bpmp_running())
-			clk_prepare_enable(sor->sor_clk);
+			clk_prepare_enable(sor->ref_clk);
 	} else {
 		if (tegra_platform_is_silicon() || tegra_bpmp_running())
 			clk_prepare_enable(sor->sor_clk);
@@ -481,7 +499,7 @@ static inline void tegra_sor_clk_disable(struct tegra_dc_sor_data *sor)
 {
 	if (tegra_dc_is_nvdisplay()) {
 		if (tegra_platform_is_silicon() && tegra_bpmp_running())
-			clk_disable_unprepare(sor->sor_clk);
+			clk_disable_unprepare(sor->ref_clk);
 	} else {
 		if (tegra_platform_is_silicon() || tegra_bpmp_running())
 			clk_disable_unprepare(sor->sor_clk);

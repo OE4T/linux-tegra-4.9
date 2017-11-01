@@ -170,7 +170,18 @@ tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 
 void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 {
-	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
+	struct clk *clk;
+	int flag;
+
+	/*
+	 * For nvdisplay, sor->sor_clk was previously being used as the SOR
+	 * reference clk instead of the orclk. In order to be consistent with
+	 * the previous naming scheme, I'm using sor->ref_clk here to avoid
+	 * breaking existing drivers. This needs to be cleaned up later.
+	 */
+	clk = (tegra_dc_is_nvdisplay()) ? sor->ref_clk : sor->sor_clk;
+	flag = tegra_dc_is_clk_enabled(clk);
+
 	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
 		return;
 
@@ -182,12 +193,8 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 	if (flag)
 		tegra_sor_clk_disable(sor);
 
-	if (tegra_platform_is_silicon()) {
-		if (tegra_dc_is_nvdisplay())
-			clk_set_parent(sor->src_switch_clk, sor->safe_clk);
-		else
-			clk_set_parent(sor->sor_clk, sor->safe_clk);
-	}
+	if (tegra_platform_is_silicon())
+		clk_set_parent(sor->sor_clk, sor->safe_clk);
 
 	if (flag)
 		tegra_sor_clk_enable(sor);
@@ -195,7 +202,7 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 	sor->clk_type = TEGRA_SOR_SAFE_CLK;
 }
 
-void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
+void tegra_sor_config_dp_clk_t21x(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(sor->dc);
@@ -228,10 +235,9 @@ void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 	if (tegra_platform_is_silicon())
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
 #else
-	clk_set_parent(sor->sor_clk, dp->parent_clk);
-	/* For DP on sor1, set sor1 brick clk to be the parent */
-	if (sor->ctrl_num)
-		clk_set_parent(sor->sor_clk, sor->brick_clk);
+	/* For DP on sor1, set sor1 pad output clk to be the parent */
+	if (sor->ctrl_num == 1)
+		clk_set_parent(sor->sor_clk, sor->pad_clk);
 #endif
 
 	if (flag)
@@ -662,10 +668,10 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	int err, i;
 	char res_name[CHAR_BUF_SIZE_MAX] = {0};
 	char io_padctrl_name[CHAR_BUF_SIZE_MAX] = {0};
-	struct clk *clk;
+	struct clk *sor_clk = NULL;
 	struct clk *safe_clk = NULL;
-	struct clk *brick_clk = NULL;
-	struct clk *src_clk = NULL;
+	struct clk *pad_clk = NULL;
+	struct clk *ref_clk = NULL;
 	struct tegra_dc_sor_data *sor;
 	struct device_node *sor_np;
 
@@ -714,11 +720,11 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_free_sor;
 	}
 
-	clk = tegra_disp_of_clk_get_by_name(sor_np, res_name);
-	if (IS_ERR_OR_NULL(clk)) {
+	sor_clk = tegra_disp_of_clk_get_by_name(sor_np, res_name);
+	if (IS_ERR_OR_NULL(sor_clk)) {
 		dev_err(&dc->ndev->dev, "%s: can't get clock %s\n",
 				__func__, res_name);
-		err = IS_ERR(clk) ? PTR_ERR(clk) : -ENOENT;
+		err = IS_ERR(sor_clk) ? PTR_ERR(sor_clk) : -ENOENT;
 		goto err_iounmap_reg;
 	}
 
@@ -729,48 +735,27 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_safe;
 	}
 
-	if (tegra_dc_is_t21x()) {
-		if (!strcmp(res_name, "sor1")) {
-			brick_clk = tegra_disp_of_clk_get_by_name(sor_np,
-								"sor1_brick");
-			if (IS_ERR_OR_NULL(brick_clk)) {
-				dev_err(&dc->ndev->dev,
-						"sor: can't get brick clock\n");
-				err = IS_ERR(brick_clk) ? PTR_ERR(brick_clk) :
-							-ENOENT;
-				goto err_brick;
-			}
-			src_clk = tegra_disp_of_clk_get_by_name(sor_np,
-								"sor1_src");
-			if (IS_ERR_OR_NULL(src_clk)) {
-				dev_err(&dc->ndev->dev,
-						"sor: can't get src clock\n");
-				err = IS_ERR(src_clk) ? PTR_ERR(src_clk) :
-							-ENOENT;
-				goto err_src;
-			}
-		}
-	} else {
+	if (!(tegra_dc_is_t21x() && sor->ctrl_num == 0)) {
 		snprintf(res_name, CHAR_BUF_SIZE_MAX, "sor%d_pad_clkout",
-				sor->ctrl_num);
-		brick_clk = tegra_disp_of_clk_get_by_name(sor_np, res_name);
-		if (IS_ERR_OR_NULL(brick_clk)) {
+			sor->ctrl_num);
+		pad_clk = tegra_disp_of_clk_get_by_name(sor_np, res_name);
+		if (IS_ERR_OR_NULL(pad_clk)) {
 			dev_err(&dc->ndev->dev, "sor: can't get %s\n",
-						res_name);
-			err = IS_ERR(brick_clk) ? PTR_ERR(brick_clk) : -ENOENT;
-			goto err_brick;
+				res_name);
+			err = IS_ERR(pad_clk) ? PTR_ERR(pad_clk) : -ENOENT;
+			goto err_pad;
 		}
 
-		/* sor_pad_clk */
-		snprintf(res_name, CHAR_BUF_SIZE_MAX, "sor%d_out",
-							sor->ctrl_num);
-		src_clk = tegra_disp_of_clk_get_by_name(sor_np, res_name);
-		if (IS_ERR_OR_NULL(src_clk)) {
-			dev_err(&dc->ndev->dev, "sor: can't get %s clock\n",
-							res_name);
-			err = IS_ERR(src_clk) ? PTR_ERR(src_clk) : -ENOENT;
-			goto err_src;
+		snprintf(res_name, CHAR_BUF_SIZE_MAX, "sor%d_ref",
+			sor->ctrl_num);
+		ref_clk = tegra_disp_of_clk_get_by_name(sor_np, res_name);
+		if (IS_ERR_OR_NULL(ref_clk)) {
+			dev_err(&dc->ndev->dev, "sor: can't get %s\n",
+				res_name);
+			err = IS_ERR(ref_clk) ? PTR_ERR(ref_clk) : -ENOENT;
+			goto err_ref;
 		}
+
 		/* change res_name back to sor%d */
 		snprintf(res_name, CHAR_BUF_SIZE_MAX, "sor%d", sor->ctrl_num);
 	}
@@ -812,10 +797,10 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 
 	sor->dc = dc;
 	sor->np = sor_np;
-	sor->sor_clk = clk;
+	sor->sor_clk = sor_clk;
 	sor->safe_clk = safe_clk;
-	sor->brick_clk = brick_clk;
-	sor->src_switch_clk = src_clk;
+	sor->pad_clk = pad_clk;
+	sor->ref_clk = ref_clk;
 	sor->link_cfg = cfg;
 	sor->portnum = 0;
 	sor->powergate_id = tegra_pd_get_powergate_id(tegra_sor_pd);
@@ -835,13 +820,13 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	return sor;
 
 err_rst: __maybe_unused
-	clk_put(src_clk);
-err_src: __maybe_unused
-	clk_put(brick_clk);
-err_brick: __maybe_unused
+	clk_put(ref_clk);
+err_ref: __maybe_unused
+	clk_put(pad_clk);
+err_pad: __maybe_unused
 	clk_put(safe_clk);
 err_safe: __maybe_unused
-	clk_put(clk);
+	clk_put(sor_clk);
 err_iounmap_reg:
 	iounmap(sor->base);
 err_free_sor:
@@ -888,8 +873,8 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	}
 	dev = &sor->dc->ndev->dev;
 
-	clk_put(sor->src_switch_clk);
-	clk_put(sor->brick_clk);
+	clk_put(sor->ref_clk);
+	clk_put(sor->pad_clk);
 	clk_put(sor->safe_clk);
 	clk_put(sor->sor_clk);
 	iounmap(sor->base);

@@ -1725,7 +1725,6 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 
 	parent_clk = tegra_disp_of_clk_get_by_name(sor_np, "pll_dp");
-
 	if (IS_ERR_OR_NULL(parent_clk)) {
 		dev_err(&dc->ndev->dev, "dp: clock pll_dp unavailable\n");
 		err = -EFAULT;
@@ -2367,7 +2366,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 			tegra_sor_clk_switch_setup(sor, true);
 
 			/* switch to macro feedback clock */
-			clk_set_parent(sor->src_switch_clk, sor->brick_clk);
+			clk_set_parent(sor->sor_clk, sor->pad_clk);
 
 			tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
 				NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
@@ -2378,7 +2377,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		}
 	} else {
 		tegra_dp_clk_enable(dp);
-		tegra_sor_config_dp_clk(dp->sor);
+		tegra_sor_config_dp_clk_t21x(dp->sor);
 		tegra_dc_setup_clk(dc, dc->clk);
 	}
 
@@ -2518,9 +2517,7 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	if (tegra_dc_is_nvdisplay()) {
 		tegra_sor_clk_switch_setup(dp->sor, false);
-
-		/* switch back to SOR safe clock */
-		clk_set_parent(dp->sor->src_switch_clk, dp->sor->safe_clk);
+		clk_set_parent(dp->sor->sor_clk, dp->sor->safe_clk);
 	}
 
 	tegra_dc_sor_disable(dp->sor, false);
@@ -2596,30 +2593,20 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		clk_set_rate(dp->parent_clk, 270000000);
 	}
 
-	/* BRINGUP HACK: NEED TO CLEAN UP CLK PROGRAMMING SEQUENCE */
-
 	if (tegra_dc_is_nvdisplay()) {
 		sor = dp->sor;
 
 		/* enable pll_dp */
 		tegra_dp_clk_enable(dp);
 
-		/* enable SOR safe clock */
 		tegra_sor_safe_clk_enable(sor);
 
 		/* Change for seamless */
-		if (!dc->initialized) {
-			/* switch sor_pad_clk to use SOR safe clock for now */
-			clk_set_parent(sor->src_switch_clk, sor->safe_clk);
+		if (!dc->initialized)
+			clk_set_parent(sor->sor_clk, sor->safe_clk);
 
-			/* set parent of SOR brick clock to pll_dp */
-			clk_set_parent(sor->brick_clk, dp->parent_clk);
-		}
-
-		/* enable sor_pad_clk */
-		tegra_disp_clk_prepare_enable(sor->src_switch_clk);
-		/* enable SOR brick clock */
-		tegra_disp_clk_prepare_enable(sor->brick_clk);
+		tegra_disp_clk_prepare_enable(sor->pad_clk);
+		tegra_disp_clk_prepare_enable(sor->sor_clk);
 	}
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);

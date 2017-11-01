@@ -1233,10 +1233,10 @@
 			nvidia,sor-ctrlnum = <0>;
 			nvidia,dpaux = <&dpaux0>;
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
-			clocks = <&tegra_car TEGRA210_CLK_SOR0>,
-				<&tegra_car TEGRA210_CLK_SOR_SAFE>,
+			clocks = <&tegra_car TEGRA210_CLK_SOR_SAFE>,
+				<&tegra_car TEGRA210_CLK_SOR0>,
 				<&tegra_car TEGRA210_CLK_PLL_DP>;
-			clock-names = "sor0", "sor_safe", "pll_dp";
+			clock-names = "sor_safe", "sor0", "pll_dp";
 			resets = <&tegra_car TEGRA210_CLK_SOR0>;
 			reset-names = "sor0";
 			nvidia,sor-audio-not-supported;
@@ -1259,18 +1259,19 @@
 			nvidia,sor-ctrlnum = <1>;
 			nvidia,dpaux = <&dpaux1>;
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
-			clocks = <&tegra_car TEGRA210_CLK_SOR1>,
+			clocks = <&tegra_car TEGRA210_CLK_SOR1_MUX>,
 				<&tegra_car TEGRA210_CLK_SOR_SAFE>,
-				<&tegra_car TEGRA210_CLK_PLL_DP>,
 				<&tegra_car TEGRA210_CLK_SOR1_BRICK>,
-				<&tegra_car TEGRA210_CLK_SOR1_MUX>,
+				<&tegra_car TEGRA210_CLK_SOR1>,
+				<&tegra_car TEGRA210_CLK_PLL_DP>,
 				<&tegra_car TEGRA210_CLK_PLL_P>,
 				<&tegra_car TEGRA210_CLK_MAUD>,
-			    <&tegra_car TEGRA210_CLK_HDA>,
-			    <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
-			    <&tegra_car TEGRA210_CLK_HDA2HDMI>;
-			clock-names = "sor1", "sor_safe", "pll_dp", "sor1_brick",
-			"sor1_src", "pll_p", "maud", "hda", "hda2codec_2x", "hda2hdmi";
+				<&tegra_car TEGRA210_CLK_HDA>,
+				<&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
+				<&tegra_car TEGRA210_CLK_HDA2HDMI>;
+			clock-names = "sor1_ref", "sor_safe", "sor1_pad_clkout",
+				      "sor1", "pll_dp", "pll_p", "maud", "hda",
+				      "hda2codec_2x", "hda2hdmi";
 			resets = <&tegra_car TEGRA210_CLK_SOR1>,
 			       <&tegra_car TEGRA210_CLK_HDA>,
 			       <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,

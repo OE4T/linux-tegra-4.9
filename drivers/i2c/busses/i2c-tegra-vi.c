@@ -361,6 +361,9 @@ static void i2c_writel(struct tegra_i2c_dev *i2c_dev, u32 val,
 	if (i2c_dev->hw->has_reg_write_buffering) {
 		if (reg != I2C_TX_FIFO)
 			readl(i2c_dev->base + tegra_i2c_reg_addr(i2c_dev, reg));
+		else
+			readl(i2c_dev->base + tegra_i2c_reg_addr(i2c_dev,
+						I2C_PACKET_TRANSFER_STATUS));
 	}
 }
 
@@ -369,10 +372,11 @@ static u32 i2c_readl(struct tegra_i2c_dev *i2c_dev, unsigned long reg)
 	return readl(i2c_dev->base + tegra_i2c_reg_addr(i2c_dev, reg));
 }
 
-static void i2c_writesl(struct tegra_i2c_dev *i2c_dev, void *data,
+static void i2c_writesl(struct tegra_i2c_dev *i2c_dev, u32 *data,
 	unsigned long reg, int len)
 {
-	writesl(i2c_dev->base + tegra_i2c_reg_addr(i2c_dev, reg), data, len);
+	while (len--)
+		i2c_writel(i2c_dev, *data++, reg);
 }
 
 static void i2c_readsl(struct tegra_i2c_dev *i2c_dev, void *data,
@@ -735,7 +739,8 @@ static int tegra_i2c_fill_tx_fifo(struct tegra_i2c_dev *i2c_dev)
 			words_to_transfer * BYTES_PER_FIFO_WORD;
 		barrier();
 
-		i2c_writesl(i2c_dev, buf, I2C_TX_FIFO, words_to_transfer);
+		i2c_writesl(i2c_dev, (u32 *)buf, I2C_TX_FIFO,
+			    words_to_transfer);
 
 		buf += words_to_transfer * BYTES_PER_FIFO_WORD;
 	}

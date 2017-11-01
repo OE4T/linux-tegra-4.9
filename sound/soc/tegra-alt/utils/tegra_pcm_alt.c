@@ -194,7 +194,7 @@ static int tegra_alt_pcm_preallocate_dma_buffer(struct snd_pcm *pcm,
 {
 	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
 	struct snd_dma_buffer *buf = &substream->dma_buffer;
-	buf->area = dma_alloc_writecombine(pcm->card->dev, size,
+	buf->area = dma_alloc_coherent(pcm->card->dev, size,
 						&buf->addr, GFP_KERNEL);
 	if (!buf->area)
 		return -ENOMEM;
@@ -219,7 +219,7 @@ static void tegra_alt_pcm_deallocate_dma_buffer(struct snd_pcm *pcm, int stream)
 	if (!buf->area)
 		return;
 
-	dma_free_writecombine(pcm->card->dev, buf->bytes,
+	dma_free_coherent(pcm->card->dev, buf->bytes,
 				buf->area, buf->addr);
 	buf->area = NULL;
 }

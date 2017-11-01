@@ -44,9 +44,9 @@ static int calc_h_ref_to_sync(const struct tegra_dc_mode *mode, int *href)
 	/* Constraint 6: H_FRONT_PORT >= (H_REF_TO_SYNC + 1) */
 	b = mode->h_front_porch - 1;
 
-	/* Constraint 1: H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH > 11 */
-	if (a + mode->h_sync_width + mode->h_back_porch <= 11)
-		a = 1 + 11 - mode->h_sync_width - mode->h_back_porch;
+	/* Constraint 1: H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH > 20 */
+	if (a + mode->h_sync_width + mode->h_back_porch <= 20)
+		a = 1 + 20 - mode->h_sync_width - mode->h_back_porch;
 	/* check Constraint 1 and 6 */
 	if (a > b)
 		return 1;
@@ -120,10 +120,10 @@ static bool check_ref_to_sync(struct tegra_dc_mode *mode, bool verbose)
 		}				\
 	} while (0)
 
-	/* Constraint 1: H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH > 11. */
+	/* Constraint 1: H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH > 20. */
 	CHK(mode->h_ref_to_sync + mode->h_sync_width +
-	    mode->h_back_porch <= 11,
-	    "H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH <= 11\n");
+	    mode->h_back_porch <= 20,
+	    "H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH <= 20\n");
 
 	/* Constraint 2: V_REF_TO_SYNC + V_SYNC_WIDTH + V_BACK_PORCH > 1. */
 	CHK(mode->v_ref_to_sync + mode->v_sync_width + mode->v_back_porch <= 1,

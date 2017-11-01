@@ -928,18 +928,17 @@
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&tegra_car TEGRA186_CLK_SOR0>,
 				 <&tegra_car TEGRA186_CLK_SOR_SAFE>,
-				 <&tegra_car TEGRA186_CLK_PLLDP>,
 				 <&tegra_car TEGRA186_CLK_SOR0_PAD_CLKOUT>,
 				 <&tegra_car TEGRA186_CLK_SOR0_OUT>,
+				 <&tegra_car TEGRA186_CLK_PLLDP>,
 				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 				 <&tegra_car TEGRA186_CLK_MAUD>,
 				 <&tegra_car TEGRA186_CLK_HDA>,
 				 <&tegra_car TEGRA186_CLK_HDA2CODEC_2X>,
 				 <&tegra_car TEGRA186_CLK_HDA2HDMICODEC>;
-			clock-names = "sor0", "sor_safe", "pll_dp",
-				      "sor0_pad_clkout", "sor0_out",
-				      "pllp_out0", "maud", "hda",
-				      "hda2codec_2x", "hda2hdmi";
+			clock-names = "sor0_ref", "sor_safe", "sor0_pad_clkout",
+				      "sor0", "pll_dp", "pllp_out0", "maud",
+				      "hda", "hda2codec_2x", "hda2hdmi";
 			resets = <&tegra_car TEGRA186_RESET_SOR0>,
 				 <&tegra_car TEGRA186_RESET_HDA>,
 				 <&tegra_car TEGRA186_RESET_HDA2CODEC_2X>,
@@ -968,18 +967,17 @@
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&tegra_car TEGRA186_CLK_SOR1>,
 				 <&tegra_car TEGRA186_CLK_SOR_SAFE>,
-				 <&tegra_car TEGRA186_CLK_PLLDP>,
 				 <&tegra_car TEGRA186_CLK_SOR1_PAD_CLKOUT>,
 				 <&tegra_car TEGRA186_CLK_SOR1_OUT>,
+				 <&tegra_car TEGRA186_CLK_PLLDP>,
 				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 				 <&tegra_car TEGRA186_CLK_MAUD>,
 				 <&tegra_car TEGRA186_CLK_HDA>,
 				 <&tegra_car TEGRA186_CLK_HDA2CODEC_2X>,
 				 <&tegra_car TEGRA186_CLK_HDA2HDMICODEC>;
-			clock-names = "sor1", "sor_safe", "pll_dp",
-				      "sor1_pad_clkout", "sor1_out",
-				      "pllp_out0", "maud", "hda",
-				      "hda2codec_2x", "hda2hdmi";
+			clock-names = "sor1_ref", "sor_safe", "sor1_pad_clkout",
+				      "sor1", "pll_dp", "pllp_out0", "maud",
+				      "hda", "hda2codec_2x", "hda2hdmi";
 			resets = <&tegra_car TEGRA186_RESET_SOR1>,
 				 <&tegra_car TEGRA186_RESET_HDA>,
 				 <&tegra_car TEGRA186_RESET_HDA2CODEC_2X>,

@@ -1121,7 +1121,7 @@ static int tegra_dc_common_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev, "dc_common syncpt # %d allocated\n",
 			dc_common->syncpt_id);
 
-	dc_common->cpuvaddr = dma_alloc_writecombine(
+	dc_common->cpuvaddr = dma_alloc_coherent(
 				dc_common->pdev->dev.parent, CMDBUF_SIZE,
 				&dc_common->dma_handle, GFP_KERNEL);
 	if (!dc_common->cpuvaddr) {
@@ -1186,7 +1186,7 @@ static int tegra_dc_common_remove(struct platform_device *pdev)
 	mutex_lock(&dc_common->lock);
 	_tegra_dc_common_disable_frame_lock(dc_common);
 	mutex_unlock(&dc_common->lock);
-	dma_free_writecombine(pdev->dev.parent, CMDBUF_SIZE,
+	dma_free_coherent(pdev->dev.parent, CMDBUF_SIZE,
 			dc_common->cpuvaddr, dc_common->dma_handle);
 	nvhost_syncpt_put_ref_ext(pdev, dc_common->syncpt_id);
 	nvhost_putchannel(dc_common->channel, 1);

@@ -1857,13 +1857,99 @@ struct nvgpu_as_bind_channel_args {
 #define NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL  (1 << 8)
 
 /*
- * Mapping dmabuf fds into an address space:
+ * VM map buffer IOCTL
  *
- * The caller requests a mapping to a particular page 'kind'.
+ * This ioctl maps a buffer - generally a dma_buf FD - into the VM's address
+ * space. Usage of this API is as follows.
  *
- * If 'page_size' is set to 0 the dmabuf's alignment/sizing will be used to
- * determine the page size (largest possible).  The page size chosen will be
- * returned back to the caller in the 'page_size' parameter in that case.
+ * @flags  [IN]
+ *
+ *   These are the flags passed to the IOCTL to modify the IOCTL behavior. The
+ *   following flags are supported:
+ *
+ *   %NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET
+ *
+ *     Specify that the mapping already has an address. The mapping address
+ *     must reside in an area already reserved with the as_alloc_space IOCTL.
+ *     If this flag is set then the @offset field must be populated with the
+ *     address to map to.
+ *
+ *   %NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE
+ *
+ *     Specify that a mapping shall be GPU cachable.
+ *
+ *   %NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT
+ *
+ *     Specify that a mapping shall be IO coherent.
+ *
+ *   %NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE
+ *
+ *     Specify that a mapping shall be marked as invalid but otherwise
+ *     populated. This flag doesn't actually make a lot of sense. The
+ *     only reason to specify it is for testing replayable faults but
+ *     an actual useful implementation of such a feature would likely
+ *     not use this.
+ *
+ *     DEPRECATED: do not use! This will be removed in a future update.
+ *
+ *   %NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS
+ *
+ *     Deprecated.
+ *
+ *   %NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL
+ *
+ *     Set when userspace plans to pass in @compr_kind and @incompr_kind
+ *     instead of letting the kernel work out kind fields.
+ *
+ * @kind  [IN]
+ *
+ *   Specify the kind to use for the mapping.
+ *
+ * @compr_kind  [IN]
+ * @incompr_kind  [IN]
+ *
+ *   Specify the compressible and incompressible kinds to be used for the
+ *   mapping. Requires that %NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is
+ *   set in @flags. The kernel will attempt to use @comp_kind and if for
+ *   some reason that is not possible will then fall back to using the
+ *   @incompr_kind.
+ *
+ * @dmabuf_fd  [IN]
+ *
+ *   FD pointing to the dmabuf that will be mapped into the GMMU.
+ *
+ * @page_size  [IN]
+ *
+ *   Specify the page size for the mapping. Must be set to a valid, supported
+ *   page size. If left unset this IOCTL will return -EINVAL. In general, a
+ *   small page size mapping will always be supported, but in certain cases of
+ *   compression this will not be the case.
+ *
+ * @buffer_offset  [IN]
+ *
+ *   Specify an offset into the physical buffer to being the mapping at. For
+ *   example imagine a DMA buffer 32KB long. However, you wish to only  this
+ *   buffer starting at 8KB. In such a case you would pass 8KB as the
+ *   @buffer_offset. This is only available with fixed address mappings. All
+ *   regular (non-fixed) mappings require this field to be set to 0. This field
+ *   is in bytes.
+ *
+ * @mapping_size  [IN]
+ *
+ *   The size of the mapping in bytes. This is from the @buffer_offset position.
+ *   So for example, assuming you have a 32KB physical buffer and you want to
+ *   map only 8KB of it, starting at some offset, then you would specify 8192 in
+ *   this field. Of course this size + the buffer_offset must be less than the
+ *   length of the physical buffer; otherwise -EINVAL is returned. This is only
+ *   supported for fixed mappings.
+ *
+ * @offset  [IN, OUT]
+ *
+ *   The offset of the buffer in the GPU virtual address space. In other words
+ *   the virtual address of the buffer. If the
+ *   %NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET flag is set then this field must be
+ *   populated by userspace. In all cases the ultimate mapped address is
+ *   returned in this field. The field is in bytes.
  */
 struct nvgpu_as_map_buffer_ex_args {
 	/* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL must be set */

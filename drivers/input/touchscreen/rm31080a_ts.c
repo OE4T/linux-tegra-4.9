@@ -3662,7 +3662,11 @@ dev_read(struct file *filp, char __user *buf, size_t count, loff_t *pos)
 	if (p_u8_my_buf == NULL)
 		return -ENOMEM;
 
-	p_u8_my_buf[0] = buf[0];
+	if (copy_from_user(p_u8_my_buf, buf, 1)) {
+		status = -EFAULT;
+		goto exit_dev_read_free;
+	}
+
 	ret = rm_tch_spi_read(p_u8_my_buf[0], p_u8_my_buf, count);
 
 	if (ret) {
@@ -3680,6 +3684,7 @@ dev_read(struct file *filp, char __user *buf, size_t count, loff_t *pos)
 		}
 	}
 
+exit_dev_read_free:
 	kfree(p_u8_my_buf);
 	return status;
 }

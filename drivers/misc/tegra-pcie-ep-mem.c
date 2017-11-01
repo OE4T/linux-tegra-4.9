@@ -95,7 +95,7 @@ static unsigned long alloc_size = 0xA00000;
 module_param(alloc_size, ulong, 0660);
 MODULE_PARM_DESC(alloc_size, "Allocation Size");
 
-dma_addr_t dma_addr;
+static dma_addr_t dma_addr;
 static void *p_cpu_addr;
 
 struct ep_pvt {
@@ -211,7 +211,7 @@ static irqreturn_t ep_isr(int irq, struct ep_pvt *ep)
 	return IRQ_RETVAL(handled);
 }
 
-int dma_write(struct ep_pvt *ep, struct dma_tx *tx)
+static int dma_write(struct ep_pvt *ep, struct dma_tx *tx)
 {
 	u32 val = 0;
 	u16 val_16 = 0;
@@ -312,7 +312,7 @@ exit:
 	return ret;
 }
 
-int dma_read(struct ep_pvt *ep, struct dma_tx *tx)
+static int dma_read(struct ep_pvt *ep, struct dma_tx *tx)
 {
 	u32 val = 0;
 	u16 val_16 = 0;

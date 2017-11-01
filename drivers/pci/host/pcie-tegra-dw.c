@@ -401,9 +401,9 @@ static void outbound_atu(struct pcie_port *pp, int i, int type, u64 cpu_addr,
 	prog_atu(pp, i, PCIE_ATU_ENABLE, PCIE_ATU_CR2);
 }
 
-int tegra_pcie_dw_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
-				unsigned int devfn, int where, int size,
-				u32 *val)
+static int tegra_pcie_dw_rd_other_conf(struct pcie_port *pp,
+				       struct pci_bus *bus, unsigned int devfn,
+				       int where, int size, u32 *val)
 {
 	int ret, type;
 	u32 busdev, cfg_size;
@@ -1077,9 +1077,9 @@ static int init_debugfs(struct tegra_pcie_dw *pcie)
 	return 0;
 }
 
-int tegra_pcie_dw_wr_other_conf(struct pcie_port *pp, struct pci_bus *bus,
-				unsigned int devfn, int where, int size,
-				u32 val)
+static int tegra_pcie_dw_wr_other_conf(struct pcie_port *pp,
+				       struct pci_bus *bus, unsigned int devfn,
+				       int where, int size, u32 val)
 {
 	int ret, type;
 	u32 busdev, cfg_size;
@@ -1366,7 +1366,7 @@ static int tegra_pcie_dw_link_up(struct pcie_port *pp)
 	return 1;
 }
 
-void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
+static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 {
 	struct pci_dev *pdev = NULL;
 	u16 val = 0;

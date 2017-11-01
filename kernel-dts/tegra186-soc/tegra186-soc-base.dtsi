@@ -2723,8 +2723,12 @@
 
 	cpufreq@e070000 {
 		compatible = "nvidia,tegra18x-cpufreq";
+#if TEGRA_CPUFREQ_DT_VERSION > DT_VERSION_1
+		reg = <0x0 0x0e000000 0x0 0x80000>;
+#else
 		reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
 		      <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
+#endif
 		status = "disabled";
 	};
 

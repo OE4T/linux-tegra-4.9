@@ -461,7 +461,7 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 							fence->syncpoint_index);
 			if (!syncpt_addr)
 				syncpt_addr = nvhost_syncpt_address(
-							task->pva->pdev,
+							task->queue->vm_pdev,
 							fence->syncpoint_index);
 
 			ptr += pva_task_write_ptr_op(&hw_preactions[ptr],
@@ -518,7 +518,7 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 							task->pva->pdev, id);
 				if (!syncpt_addr)
 					syncpt_addr = nvhost_syncpt_address(
-							task->pva->pdev, id);
+							task->queue->vm_pdev, id);
 
 				ptr += pva_task_write_ptr_op(
 						&hw_preactions[ptr],
@@ -567,7 +567,7 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 static void pva_task_write_postactions(struct pva_submit_task *task,
 				       struct pva_hw_task *hw_task)
 {
-	dma_addr_t syncpt_addr = nvhost_syncpt_address(task->pva->pdev,
+	dma_addr_t syncpt_addr = nvhost_syncpt_address(task->queue->vm_pdev,
 				task->queue->syncpt_id);
 	dma_addr_t syncpt_gos_addr = nvhost_syncpt_gos_address(task->pva->pdev,
 				task->queue->syncpt_id);

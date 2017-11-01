@@ -534,12 +534,6 @@ static int pva_open(struct inode *inode, struct file *file)
 	if (err < 0)
 		goto err_add_client;
 
-	priv->buffers = nvhost_buffer_init(pdev);
-	if (IS_ERR(priv->buffers)) {
-		err = PTR_ERR(priv->buffers);
-		goto err_alloc_buffer;
-	}
-
 	priv->queue = nvhost_queue_alloc(pva->pool, MAX_PVA_TASK_COUNT,
 		pva->submit_mode == PVA_SUBMIT_MODE_CHANNEL_CCQ);
 	if (IS_ERR(priv->queue)) {
@@ -547,6 +541,12 @@ static int pva_open(struct inode *inode, struct file *file)
 		goto err_alloc_queue;
 	}
 
+
+	priv->buffers = nvhost_buffer_init(priv->queue->vm_pdev);
+	if (IS_ERR(priv->buffers)) {
+		err = PTR_ERR(priv->buffers);
+		goto err_alloc_buffer;
+	}
 
 	priv->queue->attr = attr;
 
@@ -556,9 +556,9 @@ static int pva_open(struct inode *inode, struct file *file)
 
 	return nonseekable_open(inode, file);
 
-err_alloc_queue:
-	kfree(priv->buffers);
 err_alloc_buffer:
+	nvhost_queue_put(priv->queue);
+err_alloc_queue:
 	nvhost_module_remove_client(pdev, priv);
 err_add_client:
 	kfree(attr);

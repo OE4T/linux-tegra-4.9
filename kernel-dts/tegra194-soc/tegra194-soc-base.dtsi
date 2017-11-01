@@ -1204,11 +1204,16 @@
 			compatible = "nvidia,tegra194-vi";
 			/* cfg page is used by slvsec as well as ch35 */
 			reg = <0x0 0x15c10000 0x0 0x00230000>;
+
+			resets = <&bpmp_resets TEGRA194_RESET_VI>,
+				 <&bpmp_resets TEGRA194_RESET_TSCTNVI>;
+			reset-names = "vi", "tsctnvi";
 			clocks = <&bpmp_clks TEGRA194_CLK_VI>,
 				 <&bpmp_clks TEGRA194_CLK_VI_CONST>,
 				 <&bpmp_clks TEGRA194_CLK_NVCSI>,
 				 <&bpmp_clks TEGRA194_CLK_NVCSILP>;
 			clock-names = "vi", "vi-const", "nvcsi", "nvcsilp";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VE>;
 
 			nvidia,vi-falcon-device = <&vi_thi>;
 			nvidia,rce-rm-device = <&rce_rm>;
@@ -1228,6 +1233,7 @@
 				 <&bpmp_clks TEGRA194_CLK_NVCSI>,
 				 <&bpmp_clks TEGRA194_CLK_NVCSILP>;
 			clock-names = "vi", "vi-const", "nvcsi", "nvcsilp";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VE>;
 
 			iommus = <&smmu TEGRA_SID_VIFALC>;
 		};
@@ -1235,6 +1241,13 @@
 		isp: isp@14800000 {
 			compatible = "nvidia,tegra194-isp";
 			reg = <0x0 0x14800000 0x0 0x00010000>;
+
+			resets = <&bpmp_resets TEGRA194_RESET_ISP>;
+			reset-names = "isp";
+			clocks = <&bpmp_clks TEGRA194_CLK_ISP>;
+			clock-names = "isp";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_ISPA>;
+
 			nvidia,isp-falcon-device = <&isp_thi>;
 			nvidia,rce-rm-device = <&rce_rm>;
 			iommus = <&smmu TEGRA_SID_ISP>;
@@ -1249,6 +1262,7 @@
 			reset-names = "isp";
 			clocks = <&bpmp_clks TEGRA194_CLK_ISP>;
 			clock-names = "isp";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_ISPA>;
 
 			iommus = <&smmu TEGRA_SID_ISPFALC>;
 			dma-coherent;

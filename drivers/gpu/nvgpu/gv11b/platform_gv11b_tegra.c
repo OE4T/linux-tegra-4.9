@@ -28,10 +28,14 @@
 #include <linux/nvmap.h>
 #include <linux/reset.h>
 #include <linux/hashtable.h>
+#include <linux/clk.h>
 #include <nvgpu/nvhost.h>
 #include <nvgpu/nvhost_t19x.h>
 
 #include <uapi/linux/nvgpu.h>
+
+#include <soc/tegra/tegra_bpmp.h>
+#include <soc/tegra/tegra_powergate.h>
 
 #include "gk20a/gk20a.h"
 #include "common/linux/platform_gk20a.h"
@@ -103,18 +107,73 @@ static int gv11b_tegra_remove(struct device *dev)
 static bool gv11b_tegra_is_railgated(struct device *dev)
 {
 	bool ret = false;
+#ifdef TEGRA194_POWER_DOMAIN_GPU
+	struct gk20a *g = get_gk20a(dev);
 
+	if (tegra_bpmp_running()) {
+		nvgpu_log(g, gpu_dbg_info, "bpmp running");
+		ret = !tegra_powergate_is_powered(TEGRA194_POWER_DOMAIN_GPU);
+
+		nvgpu_log(g, gpu_dbg_info, "railgated? %s", ret ? "yes" : "no");
+	} else {
+		nvgpu_log(g, gpu_dbg_info, "bpmp not running");
+	}
+#endif
 	return ret;
 }
 
 static int gv11b_tegra_railgate(struct device *dev)
 {
+#ifdef TEGRA194_POWER_DOMAIN_GPU
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = get_gk20a(dev);
+	int i;
+
+	if (tegra_bpmp_running()) {
+		nvgpu_log(g, gpu_dbg_info, "bpmp running");
+		if (!tegra_powergate_is_powered(TEGRA194_POWER_DOMAIN_GPU)) {
+			nvgpu_log(g, gpu_dbg_info, "powergate is not powered");
+			return 0;
+		}
+		nvgpu_log(g, gpu_dbg_info, "clk_disable_unprepare");
+		for (i = 0; i < platform->num_clks; i++) {
+			if (platform->clk[i])
+				clk_disable_unprepare(platform->clk[i]);
+		}
+		nvgpu_log(g, gpu_dbg_info, "powergate_partition");
+		tegra_powergate_partition(TEGRA194_POWER_DOMAIN_GPU);
+	} else {
+		nvgpu_log(g, gpu_dbg_info, "bpmp not running");
+	}
+#endif
 	return 0;
 }
 
 static int gv11b_tegra_unrailgate(struct device *dev)
 {
 	int ret = 0;
+#ifdef TEGRA194_POWER_DOMAIN_GPU
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = get_gk20a(dev);
+	int i;
+
+	if (tegra_bpmp_running()) {
+		nvgpu_log(g, gpu_dbg_info, "bpmp running");
+		ret = tegra_unpowergate_partition(TEGRA194_POWER_DOMAIN_GPU);
+		if (ret) {
+			nvgpu_log(g, gpu_dbg_info,
+				"unpowergate partition failed");
+			return ret;
+		}
+		nvgpu_log(g, gpu_dbg_info, "clk_prepare_enable");
+		for (i = 0; i < platform->num_clks; i++) {
+			if (platform->clk[i])
+				clk_prepare_enable(platform->clk[i]);
+		}
+	} else {
+		nvgpu_log(g, gpu_dbg_info, "bpmp not running");
+	}
+#endif
 	return ret;
 }
 

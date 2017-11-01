@@ -3006,7 +3006,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	UINT vartso_enable = 0;
 	UINT varmss = 0;
 	UINT varpay_len = 0;
-	UINT vartcp_hdr_len = 0;
+	UINT vartcp_udp_hdr_len = 0;
 	UINT varptp_enable = 0;
 	uint desc_cnt = tx_pkt_features->desc_cnt;
 
@@ -3101,12 +3101,12 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		TX_NORMAL_DESC_TDES3_TSE_WR(ptx_desc->tdes3, 0x1);
 
 		/* update tcp data offset or tcp hdr len */
-		TX_PKT_FEATURES_TCP_HDR_LEN_RD(tx_pkt_features->tcp_hdr_len,
-					       vartcp_hdr_len);
+		TX_PKT_FEATURES_TCP_HDR_LEN_RD(tx_pkt_features->tcp_udp_hdr_len,
+					       vartcp_udp_hdr_len);
 		/* convert to bit value */
-		vartcp_hdr_len = vartcp_hdr_len / 4;
+		vartcp_udp_hdr_len = vartcp_udp_hdr_len / 4;
 		TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_WR(ptx_desc->tdes3,
-							  vartcp_hdr_len);
+							  vartcp_udp_hdr_len);
 	}
 
 	/* enable timestamping */

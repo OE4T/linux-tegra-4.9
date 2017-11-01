@@ -666,6 +666,27 @@ static void eqos_rx_buf_free_mem(struct eqos_prv_data *pdata,
 }
 
 /*!
+ * \brief api to tcp_udp_hdrlen
+ *
+ * \details This function is invoked by eqos_handle_tso.
+ * This function will get the header type and return the header length.
+ *
+ * \param[in] skb – pointer to socket buffer structure.
+ *
+ * \return integer
+ *
+ * \retval tcp or udp header length
+ */
+
+static unsigned int tcp_udp_hdrlen(struct sk_buff *skb)
+{
+	if (skb_shinfo(skb)->gso_type & (SKB_GSO_UDP))
+		return sizeof(struct udphdr);
+	else
+		return tcp_hdrlen(skb);
+}
+
+/*!
  * \brief api to handle tso
  *
  * \details This function is invoked by start_xmit functions. This function
@@ -682,7 +703,7 @@ static void eqos_rx_buf_free_mem(struct eqos_prv_data *pdata,
  * */
 
 static int eqos_handle_tso(struct net_device *dev,
-	struct sk_buff *skb)
+			   struct sk_buff *skb)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	UINT qinx = skb_get_queue_mapping(skb);
@@ -704,16 +725,24 @@ static int eqos_handle_tso(struct net_device *dev,
 			return ret;
 	}
 
-	/* get TSO details */
-	tx_pkt_features->mss = skb_shinfo(skb)->gso_size;
-	tx_pkt_features->hdr_len = skb_transport_offset(skb) + tcp_hdrlen(skb);
-	tx_pkt_features->pay_len = (skb->len - tx_pkt_features->hdr_len);
-	tx_pkt_features->tcp_hdr_len = tcp_hdrlen(skb);
+	/* get TSO or UFO details */
+	tx_pkt_features->hdr_len = skb_transport_offset(skb) +
+				   tcp_udp_hdrlen(skb);
+	tx_pkt_features->tcp_udp_hdr_len = tcp_udp_hdrlen(skb);
 
-	pr_debug("mss         = %lu\n", tx_pkt_features->mss);
-	pr_debug("hdr_len     = %lu\n", tx_pkt_features->hdr_len);
-	pr_debug("pay_len     = %lu\n", tx_pkt_features->pay_len);
-	pr_debug("tcp_hdr_len = %lu\n", tx_pkt_features->tcp_hdr_len);
+	if (skb_shinfo(skb)->gso_type & (SKB_GSO_UDP))
+		tx_pkt_features->mss = skb_shinfo(skb)->gso_size -
+				       sizeof(struct udphdr);
+	else
+		tx_pkt_features->mss = skb_shinfo(skb)->gso_size;
+
+	tx_pkt_features->pay_len = (skb->len - tx_pkt_features->hdr_len);
+
+	pr_debug("mss			= %lu\n", tx_pkt_features->mss);
+	pr_debug("hdr_len		= %lu\n", tx_pkt_features->hdr_len);
+	pr_debug("pay_len		= %lu\n", tx_pkt_features->pay_len);
+	pr_debug("tcp_udp_hdr_len	= %lu\n",
+		 tx_pkt_features->tcp_udp_hdr_len);
 
 	pr_debug("<--eqos_handle_tso\n");
 

@@ -671,7 +671,7 @@ struct s_tx_pkt_features {
 	UCHAR tucso;
 	USHORT tucse;
 	UINT pkt_type;
-	ULONG tcp_hdr_len;
+	ULONG tcp_udp_hdr_len;
 	uint desc_cnt;
 };
 

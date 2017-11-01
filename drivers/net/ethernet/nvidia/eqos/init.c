@@ -1128,6 +1128,8 @@ int eqos_probe(struct platform_device *pdev)
 		ndev->hw_features |= NETIF_F_SG;
 		ndev->hw_features |= NETIF_F_IP_CSUM;
 		ndev->hw_features |= NETIF_F_IPV6_CSUM;
+		if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+			ndev->hw_features |= NETIF_F_UFO;
 	} else if (pdata->hw_feat.tx_coe_sel) {
 		ndev->hw_features = NETIF_F_IP_CSUM;
 		ndev->hw_features |= NETIF_F_IPV6_CSUM;

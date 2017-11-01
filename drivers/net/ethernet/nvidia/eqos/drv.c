@@ -4099,7 +4099,7 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 	dev_err(&pdev->dev, "jumbo frames not supported with PG test\n");
 	return -EOPNOTSUPP;
 #endif
-	if (pdata->dt_cfg.use_multi_q) {
+	if (pdata->dt_cfg.use_multi_q && (pdata->mac_ver < EQOS_MAC_CORE_5_00)) {
 		dev_err(&pdev->dev,
 			"mtu cannot be modified in multi queue mode\n");
 		return -EOPNOTSUPP;

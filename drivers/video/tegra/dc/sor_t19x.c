@@ -247,7 +247,7 @@ inline void tegra_sor_set_clk_rate_t19x(struct tegra_dc_sor_data *sor)
 		}
 	}
 
-	clk_set_rate(sor->sor_clk, rate);
+	clk_set_rate(sor->ref_clk, rate);
 }
 
 u32 tegra_sor_get_pixel_depth_t19x(struct tegra_dc *dc)

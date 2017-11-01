@@ -815,13 +815,8 @@
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				 /* todo: fix TEGRA194_CLK_PLLD3 VDK crash */
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				/*
-				 * todo: TEGRA194_CLK_PLLD4 not defined
-				 *       yet so use TEGRA194_CLK_PLLD3
-				 */
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD4>,
 				 <&bpmp_clks TEGRA194_CLK_EMC>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head0";
@@ -862,13 +857,8 @@
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				 /* todo: fix TEGRA194_CLK_PLLD3 VDK crash */
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				/*
-				 * todo: TEGRA194_CLK_PLLD4 not defined
-				 *       yet so use TEGRA194_CLK_PLLD3
-				 */
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD4>,
 				 <&bpmp_clks TEGRA194_CLK_EMC>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head1";
@@ -909,13 +899,8 @@
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				 /* todo: fix TEGRA194_CLK_PLLD3 VDK crash */
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				/*
-				 * todo: TEGRA194_CLK_PLLD4 not defined
-				 *       yet so use TEGRA194_CLK_PLLD3
-				 */
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD4>,
 				 <&bpmp_clks TEGRA194_CLK_EMC>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head2";
@@ -956,13 +941,8 @@
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				 /* todo: fix TEGRA194_CLK_PLLD3 VDK crash */
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				/*
-				 * todo: TEGRA194_CLK_PLLD4 not defined
-				 *       yet so use TEGRA194_CLK_PLLD3
-				 */
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD4>,
 				 <&bpmp_clks TEGRA194_CLK_EMC>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head3";
@@ -985,20 +965,20 @@
 			nvidia,dpaux = <&dpaux0>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
-			clocks = <&bpmp_clks TEGRA194_CLK_SOR0>,
+			clocks = <&bpmp_clks TEGRA194_CLK_SOR0_REF>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
-				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
 				 <&bpmp_clks TEGRA194_CLK_SOR0_PAD_CLKOUT>,
-				 <&bpmp_clks TEGRA194_CLK_SOR0_OUT>,
+				 <&bpmp_clks TEGRA194_CLK_SOR0>,
+				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_MAUD>,
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "sor0", "sor_safe", "pll_dp",
-				      "sor0_pad_clkout", "sor0_out",
-				      "pllp_out0", "maud", "hda",
-				      "hda2codec_2x", "hda2hdmi";
+			clock-names = "sor0_ref", "sor_safe", "sor0_pad_clkout",
+				      "sor0", "pll_dp", "pllp_out0",
+				      "maud", "hda", "hda2codec_2x",
+				      "hda2hdmi";
 			resets = <&bpmp_resets TEGRA194_RESET_SOR0>,
 				 <&bpmp_resets TEGRA194_RESET_HDA>,
 				 <&bpmp_resets TEGRA194_RESET_HDA2CODEC_2X>,
@@ -1025,20 +1005,20 @@
 			nvidia,dpaux = <&dpaux1>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
-			clocks = <&bpmp_clks TEGRA194_CLK_SOR1>,
+			clocks = <&bpmp_clks TEGRA194_CLK_SOR1_REF>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
-				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
 				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
-				 <&bpmp_clks TEGRA194_CLK_SOR1_OUT>,
+				 <&bpmp_clks TEGRA194_CLK_SOR1>,
+				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_MAUD>,
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "sor1", "sor_safe", "pll_dp",
-				      "sor1_pad_clkout", "sor1_out",
-				      "pllp_out0", "maud", "hda",
-				      "hda2codec_2x", "hda2hdmi";
+			clock-names = "sor1_ref", "sor_safe", "sor1_pad_clkout",
+				      "sor1", "pll_dp", "pllp_out0",
+				      "maud", "hda", "hda2codec_2x",
+				      "hda2hdmi";
 			resets = <&bpmp_resets TEGRA194_RESET_SOR1>,
 				 <&bpmp_resets TEGRA194_RESET_HDA>,
 				 <&bpmp_resets TEGRA194_RESET_HDA2CODEC_2X>,
@@ -1065,24 +1045,20 @@
 			nvidia,dpaux = <&dpaux2>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
-			clocks = /*
-				  * todo: TEGRA194_CLK_SOR2* not defined yet
-				  *       so use TEGRA194_CLK_SOR1*
-				  */
-				 <&bpmp_clks TEGRA194_CLK_SOR1>,
+			clocks = <&bpmp_clks TEGRA194_CLK_SOR2_REF>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
+				 <&bpmp_clks TEGRA194_CLK_SOR2_PAD_CLKOUT>,
+				 <&bpmp_clks TEGRA194_CLK_SOR2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
-				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
-				 <&bpmp_clks TEGRA194_CLK_SOR1_OUT>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_MAUD>,
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "sor2", "sor_safe", "pll_dp",
-				      "sor2_pad_clkout", "sor2_out",
-				      "pllp_out0", "maud", "hda",
-				      "hda2codec_2x", "hda2hdmi";
+			clock-names = "sor2_ref", "sor_safe", "sor2_pad_clkout",
+				      "sor2", "pll_dp", "pllp_out0",
+				      "maud", "hda", "hda2codec_2x",
+				      "hda2hdmi";
 			resets = <&bpmp_resets TEGRA194_RESET_SOR2>,
 				 <&bpmp_resets TEGRA194_RESET_HDA>,
 				 <&bpmp_resets TEGRA194_RESET_HDA2CODEC_2X>,
@@ -1109,24 +1085,20 @@
 			nvidia,dpaux = <&dpaux3>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
-			clocks = /*
-				  * todo: TEGRA194_CLK_SOR3* not defined yet
-				  *       so use TEGRA194_CLK_SOR1*
-				  */
-				 <&bpmp_clks TEGRA194_CLK_SOR1>,
+			clocks = <&bpmp_clks TEGRA194_CLK_SOR3_REF>,
 				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
+				 <&bpmp_clks TEGRA194_CLK_SOR3_PAD_CLKOUT>,
+				 <&bpmp_clks TEGRA194_CLK_SOR3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLDP>,
-				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
-				 <&bpmp_clks TEGRA194_CLK_SOR1_OUT>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_MAUD>,
 				 <&bpmp_clks TEGRA194_CLK_HDA>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
 				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
-			clock-names = "sor3", "sor_safe", "pll_dp",
-				      "sor3_pad_clkout", "sor3_out",
-				      "pllp_out0", "maud", "hda",
-				      "hda2codec_2x", "hda2hdmi";
+			clock-names = "sor3_ref", "sor_safe", "sor3_pad_clkout",
+				      "sor3", "pll_dp", "pllp_out0",
+				      "maud", "hda", "hda2codec_2x",
+				      "hda2hdmi";
 			resets = <&bpmp_resets TEGRA194_RESET_SOR3>,
 				 <&bpmp_resets TEGRA194_RESET_HDA>,
 				 <&bpmp_resets TEGRA194_RESET_HDA2CODEC_2X>,

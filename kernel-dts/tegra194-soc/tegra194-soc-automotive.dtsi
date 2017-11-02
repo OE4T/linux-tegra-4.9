@@ -1,6 +1,6 @@
 /*
- * tegra194-soc-vcm.dtsi: VCM based platform common SoC specific DTSI file
- *			  with required node enabled.
+ * tegra194-soc-automotive.dtsi: Automotive based platform common SoC specific
+ *				 DTSI file with required node enabled.
  *
  * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *

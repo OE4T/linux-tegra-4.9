@@ -626,9 +626,6 @@ int vgpu_gp10b_init_hal(struct gk20a *g)
 	g->pmu_lsf_pmu_wpr_init_done = 0;
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 
-	gp10b_init_uncompressed_kind_map();
-	gp10b_init_kind_attr();
-
 	g->name = "gp10b";
 
 	c->twod_class = FERMI_TWOD_A;

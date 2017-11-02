@@ -93,7 +93,6 @@ nvgpu-y := \
 	gk20a/dbg_gpu_gk20a.o \
 	gk20a/regops_gk20a.o \
 	gk20a/gr_gk20a.o \
-	gk20a/kind_gk20a.o \
 	gk20a/mm_gk20a.o \
 	gk20a/pmu_gk20a.o \
 	gk20a/flcn_gk20a.o \

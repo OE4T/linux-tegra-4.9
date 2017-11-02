@@ -35,7 +35,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
-#include "gk20a/kind_gk20a.h"
 
 static void __nvgpu_vm_unmap(struct nvgpu_mapped_buf *mapped_buffer,
 			     struct vm_gk20a_mapping_batch *batch);
@@ -829,123 +828,36 @@ done:
 	return;
 }
 
-int nvgpu_vm_init_kind_info(struct nvgpu_ctag_buffer_info *binfo,
-			    s16 compr_kind, s16 incompr_kind)
+int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
+				 struct nvgpu_ctag_buffer_info *binfo)
 {
-	if (binfo->flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
-		/* were we supplied with a kind in either parameter? */
-		if ((compr_kind < 0 || compr_kind >= NV_KIND_ATTR_SIZE) &&
-		    (incompr_kind < 0 || incompr_kind >= NV_KIND_ATTR_SIZE))
-			return -EINVAL;
-
-		if (compr_kind != NV_KIND_INVALID) {
-			binfo->use_kind_v = true;
-			binfo->kind_v = (u8)compr_kind;
-		}
-
-		if (incompr_kind != NV_KIND_INVALID) {
-			binfo->use_uc_kind_v = true;
-			binfo->uc_kind_v = (u8)incompr_kind;
-		}
-	} else {
-		if (compr_kind < 0 || compr_kind >= NV_KIND_ATTR_SIZE)
-			return -EINVAL;
-
-		binfo->use_kind_v = true;
-		binfo->kind_v = (u8)compr_kind;
-
-		/*
-		 * Note: nvgpu_vm_kind_and_compression() will figure out
-		 * uc_kind_v or return an error.
-		 */
-	}
-
-	return 0;
-}
-
-static int nvgpu_vm_setup_kind_legacy(struct vm_gk20a *vm,
-				      struct nvgpu_ctag_buffer_info *binfo,
-				      bool *pkind_compressible)
-{
-	struct gk20a *g = gk20a_from_vm(vm);
-	bool kind_compressible;
-
-	if (unlikely(binfo->kind_v == g->ops.mm.get_kind_invalid()))
-		binfo->kind_v = g->ops.mm.get_kind_pitch();
-
-	if (unlikely(!gk20a_kind_is_supported(binfo->kind_v))) {
-		nvgpu_err(g, "kind 0x%x not supported", binfo->kind_v);
-		return -EINVAL;
-	}
-
-	binfo->uc_kind_v = g->ops.mm.get_kind_invalid();
-
-	/*
-	 * Find a suitable incompressible kind if it becomes necessary later.
-	 */
-	kind_compressible = gk20a_kind_is_compressible(binfo->kind_v);
-	if (kind_compressible) {
-		binfo->uc_kind_v = gk20a_get_uncompressed_kind(binfo->kind_v);
-		if (binfo->uc_kind_v == g->ops.mm.get_kind_invalid()) {
-			/*
-			 * Shouldn't happen, but it is worth cross-checking.
-			 */
-			nvgpu_err(g, "comptag kind 0x%x can't be"
-				  " downgraded to uncompressed kind",
-				  binfo->kind_v);
-			return -EINVAL;
-		}
-	}
-
-	*pkind_compressible = kind_compressible;
-
-	return 0;
-}
-
-int nvgpu_vm_compute_kind_and_compression(struct vm_gk20a *vm,
-					  struct nvgpu_ctag_buffer_info *binfo)
-{
-	bool kind_compressible;
+	bool kind_compressible = (binfo->compr_kind != NV_KIND_INVALID);
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
 
-	if (!binfo->use_kind_v)
-		binfo->kind_v = g->ops.mm.get_kind_invalid();
-	if (!binfo->use_uc_kind_v)
-		binfo->uc_kind_v = g->ops.mm.get_kind_invalid();
-
-	if (binfo->flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
-		kind_compressible = (binfo->kind_v !=
-				     g->ops.mm.get_kind_invalid());
-		if (!kind_compressible)
-			binfo->kind_v = binfo->uc_kind_v;
-	} else {
-		int err = nvgpu_vm_setup_kind_legacy(vm, binfo,
-						     &kind_compressible);
-
-		if (err)
-			return err;
-	}
-
-	/* comptags only supported for suitable kinds, 128KB pagesize */
 	if (kind_compressible &&
 	    vm->gmmu_page_sizes[binfo->pgsz_idx] <
 	    g->ops.fb.compressible_page_size(g)) {
-		/* it is safe to fall back to uncompressed as
-		   functionality is not harmed */
-		binfo->kind_v = binfo->uc_kind_v;
-		kind_compressible = false;
+		/*
+		 * Let's double check that there is a fallback kind
+		 */
+		if (binfo->incompr_kind == NV_KIND_INVALID) {
+			nvgpu_err(g,
+				  "Unsupported page size for compressible "
+				  "kind, but no fallback kind");
+			return -EINVAL;
+		} else {
+			nvgpu_log(g, gpu_dbg_map,
+				  "Unsupported page size for compressible "
+				  "kind, demoting to incompressible");
+			binfo->compr_kind = NV_KIND_INVALID;
+			kind_compressible = false;
+		}
 	}
 
 	if (kind_compressible)
 		binfo->ctag_lines = DIV_ROUND_UP_ULL(binfo->size,
 						     ctag_granularity);
-	else
-		binfo->ctag_lines = 0;
-
-	binfo->use_kind_v = (binfo->kind_v != g->ops.mm.get_kind_invalid());
-	binfo->use_uc_kind_v = (binfo->uc_kind_v !=
-				g->ops.mm.get_kind_invalid());
 
 	return 0;
 }

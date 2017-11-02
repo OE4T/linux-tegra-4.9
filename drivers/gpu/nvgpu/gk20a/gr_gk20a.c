@@ -41,7 +41,6 @@
 #include <nvgpu/ctxsw_trace.h>
 
 #include "gk20a.h"
-#include "kind_gk20a.h"
 #include "gr_ctx_gk20a.h"
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"

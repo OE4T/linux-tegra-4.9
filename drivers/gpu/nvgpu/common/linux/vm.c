@@ -32,7 +32,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
-#include "gk20a/kind_gk20a.h"
 
 #include "platform_gk20a.h"
 #include "os_linux.h"
@@ -239,14 +238,17 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 
 	binfo.flags = flags;
 	binfo.size = dmabuf->size;
+	binfo.compr_kind = compr_kind;
+	binfo.incompr_kind = incompr_kind;
 
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
-		if (compr_kind != NV_KIND_INVALID)
-			map_key_kind = compr_kind;
-		else
-			map_key_kind = incompr_kind;
-	} else {
+	if (compr_kind != NV_KIND_INVALID)
 		map_key_kind = compr_kind;
+	else
+		map_key_kind = incompr_kind;
+
+	if (map_key_kind == NV_KIND_INVALID) {
+		nvgpu_err(g, "Valid kind must be supplied");
+		return -EINVAL;
 	}
 
 	if (vm->userspace_managed &&
@@ -276,10 +278,6 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		nvgpu_warn(g, "oom allocating tracking buffer");
 		goto clean_up;
 	}
-
-	err = nvgpu_vm_init_kind_info(&binfo, compr_kind, incompr_kind);
-	if (err)
-		goto clean_up;
 
 	aperture = gk20a_dmabuf_aperture(g, dmabuf);
 	if (aperture == APERTURE_INVALID) {
@@ -321,9 +319,9 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		va_allocated = true;
 	}
 
-	err = nvgpu_vm_compute_kind_and_compression(vm, &binfo);
+	err = nvgpu_vm_compute_compression(vm, &binfo);
 	if (err) {
-		nvgpu_err(g, "failure setting up kind and compression");
+		nvgpu_err(g, "failure setting up compression");
 		goto clean_up;
 	}
 
@@ -340,10 +338,12 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 					   binfo.ctag_lines);
 		if (err) {
 			/* TBD: we can partially alloc ctags as well... */
-			if (binfo.use_uc_kind_v) {
-				/* no comptags, but fallback kind available */
-				binfo.kind_v = binfo.uc_kind_v;
-			} else {
+
+			/* prevent compression ... */
+			binfo.compr_kind = NV_KIND_INVALID;
+
+			/* ... and make sure we have the fallback */
+			if (binfo.incompr_kind == NV_KIND_INVALID) {
 				nvgpu_err(g, "comptag alloc failed and no fallback kind specified");
 				goto clean_up;
 			}
@@ -379,7 +379,8 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 					buffer_offset, /* sg offset */
 					mapping_size,
 					binfo.pgsz_idx,
-					binfo.kind_v,
+					(binfo.compr_kind != NV_KIND_INVALID ?
+					 binfo.compr_kind : binfo.incompr_kind),
 					ctag_offset,
 					flags, rw_flag,
 					clear_ctags,

@@ -38,25 +38,13 @@ struct vm_gk20a;
 struct vm_gk20a_mapping_batch;
 struct nvgpu_vm_area;
 
+/* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL must be set */
 int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       struct dma_buf *dmabuf,
 		       u64 offset_align,
 		       u32 flags,
-
-		       /*
-			* compressible kind if
-			* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is
-			* specified, otherwise just the kind
-			*/
 		       s16 compr_kind,
-
-		       /*
-			* incompressible kind if
-			* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is
-			* specified, otherwise ignored
-			*/
 		       s16 incompr_kind,
-
 		       int rw_flag,
 		       u64 buffer_offset,
 		       u64 mapping_size,
@@ -66,12 +54,7 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 /*
  * Notes:
  * - Batch may be NULL if map op is not part of a batch.
- * - If NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is set,
- *   compr_kind and incompr_kind work as explained in nvgpu.h.
- * - If NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is NOT set,
- *   compr_kind holds the kind and kernel will figure out whether
- *   it is a compressible or incompressible kind. If compressible, kernel will
- *   also figure out the incompressible counterpart or return an error.
+ * - NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL must be set
  */
 int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,

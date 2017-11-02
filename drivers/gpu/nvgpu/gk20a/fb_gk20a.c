@@ -25,7 +25,6 @@
 #include <trace/events/gk20a.h>
 
 #include "gk20a.h"
-#include "kind_gk20a.h"
 #include "fb_gk20a.h"
 
 #include <nvgpu/timers.h>

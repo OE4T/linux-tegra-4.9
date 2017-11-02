@@ -79,22 +79,19 @@ static int gk20a_as_ioctl_map_buffer_ex(
 		struct gk20a_as_share *as_share,
 		struct nvgpu_as_map_buffer_ex_args *args)
 {
-	s16 compressible_kind;
-	s16 incompressible_kind;
-
 	gk20a_dbg_fn("");
 
-	if (args->flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL) {
-		compressible_kind = args->compr_kind;
-		incompressible_kind = args->incompr_kind;
-	} else {
-		/* unsupported, direct kind control must be used */
+	/* unsupported, direct kind control must be used */
+	if (!(args->flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL)) {
+		struct gk20a *g = as_share->vm->mm->g;
+		nvgpu_log_info(g, "Direct kind control must be requested");
 		return -EINVAL;
 	}
 
 	return nvgpu_vm_map_buffer(as_share->vm, args->dmabuf_fd,
 				   &args->offset, args->flags,
-				   compressible_kind, incompressible_kind,
+				   args->compr_kind,
+				   args->incompr_kind,
 				   args->buffer_offset,
 				   args->mapping_size,
 				   NULL);

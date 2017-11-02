@@ -26,8 +26,6 @@
 #define _NVGPU_GP10B_FB
 struct gk20a;
 
-noinline_for_stack void gp10b_init_uncompressed_kind_map(void);
-void gp10b_init_kind_attr(void);
 unsigned int gp10b_fb_compression_page_size(struct gk20a *g);
 unsigned int gp10b_fb_compressible_page_size(struct gk20a *g);
 

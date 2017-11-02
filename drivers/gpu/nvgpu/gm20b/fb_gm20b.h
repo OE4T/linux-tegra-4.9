@@ -37,6 +37,4 @@ int gm20b_fb_vpr_info_fetch(struct gk20a *g);
 bool gm20b_fb_debug_mode_enabled(struct gk20a *g);
 void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable);
 
-void gm20b_init_uncompressed_kind_map(void);
-void gm20b_init_kind_attr(void);
 #endif

@@ -1232,7 +1232,7 @@ static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 		goto remove;
 	}
 
-	if (tegra_platform_is_silicon() && !padctl->is_xhci_iov) {
+	if (!padctl->is_xhci_iov) {
 		padctl->rst = devm_reset_control_get(&pdev->dev, NULL);
 		if (IS_ERR(padctl->rst)) {
 			err = PTR_ERR(padctl->rst);
@@ -1287,7 +1287,7 @@ static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 remove_pads:
 	tegra_xusb_remove_pads(padctl);
 reset:
-	if (tegra_platform_is_silicon() && !padctl->is_xhci_iov)
+	if (!padctl->is_xhci_iov)
 		reset_control_assert(padctl->rst);
 remove:
 	soc->ops->remove(padctl);
@@ -1302,7 +1302,7 @@ static int tegra_xusb_padctl_remove(struct platform_device *pdev)
 	tegra_xusb_remove_ports(padctl);
 	tegra_xusb_remove_pads(padctl);
 
-	if (tegra_platform_is_silicon() && !padctl->is_xhci_iov) {
+	if (!padctl->is_xhci_iov) {
 		err = reset_control_assert(padctl->rst);
 		if (err < 0)
 			dev_err(&pdev->dev, "failed to assert reset: %d\n",

@@ -64,23 +64,22 @@ typedef struct syncpoint_info {
 #define ISP5_STATS_OR_MAX_SIZE       (64UL)
 #define ISP5_STATS_LTM_MAX_SIZE      (1056UL)
 
-#define ISP5_STATS_FB_OFFSET         (0)
-#define ISP5_STATS_FM_OFFSET         (ISP5_STATS_FB_OFFSET + ISP5_STATS_FB_MAX_SIZE)
-#define ISP5_STATS_AFM_OFFSET        (ISP5_STATS_FM_OFFSET + ISP5_STATS_FM_MAX_SIZE)
-#define ISP5_STATS_LAC0_OFFSET       (ISP5_STATS_AFM_OFFSET + ISP5_STATS_AFM_ROI_MAX_SIZE * 8)
-#define ISP5_STATS_LAC1_OFFSET       (ISP5_STATS_LAC0_OFFSET + ISP5_STATS_LAC_ROI_MAX_SIZE * 4)
-#define ISP5_STATS_HIST0_OFFSET      (ISP5_STATS_LAC1_OFFSET + ISP5_STATS_LAC_ROI_MAX_SIZE * 4)
-#define ISP5_STATS_HIST1_OFFSET      (ISP5_STATS_HIST0_OFFSET + ISP5_STATS_HIST_MAX_SIZE)
-#define ISP5_STATS_OR_OFFSET         (ISP5_STATS_HIST1_OFFSET + ISP5_STATS_HIST_MAX_SIZE)
-#define ISP5_STATS_LTM_OFFSET        (ISP5_STATS_OR_OFFSET + ISP5_STATS_OR_MAX_SIZE)
+/* Stats buffer addresses muse be aligned to 64 byte (ATOM) boundaries */
 
-#define ISP5_STATS_TOTAL_SIZE        (ISP5_STATS_FB_MAX_SIZE + \
-                                     ISP5_STATS_FM_MAX_SIZE + \
-                                     (ISP5_STATS_AFM_ROI_MAX_SIZE * 8) + \
-                                     (ISP5_STATS_LAC_ROI_MAX_SIZE * 8) + \
-                                     (ISP5_STATS_HIST_MAX_SIZE * 2) + \
-                                     ISP5_STATS_OR_MAX_SIZE + \
-                                     ISP5_STATS_LTM_MAX_SIZE) // Total = 305984 Bytes
+#define ISP5_ALIGN_STAT_OFFSET(_offset) (((uint32_t)(_offset) + 63UL) & ~(63UL))
+
+
+#define ISP5_STATS_FB_OFFSET         (0)
+#define ISP5_STATS_FM_OFFSET         (ISP5_STATS_FB_OFFSET + ISP5_ALIGN_STAT_OFFSET(ISP5_STATS_FB_MAX_SIZE))
+#define ISP5_STATS_AFM_OFFSET        (ISP5_STATS_FM_OFFSET + ISP5_ALIGN_STAT_OFFSET(ISP5_STATS_FM_MAX_SIZE))
+#define ISP5_STATS_LAC0_OFFSET       (ISP5_STATS_AFM_OFFSET + ISP5_ALIGN_STAT_OFFSET(ISP5_STATS_AFM_ROI_MAX_SIZE) * 8)
+#define ISP5_STATS_LAC1_OFFSET       (ISP5_STATS_LAC0_OFFSET + ISP5_ALIGN_STAT_OFFSET(ISP5_STATS_LAC_ROI_MAX_SIZE) * 4)
+#define ISP5_STATS_HIST0_OFFSET      (ISP5_STATS_LAC1_OFFSET + ISP5_ALIGN_STAT_OFFSET(ISP5_STATS_LAC_ROI_MAX_SIZE) * 4)
+#define ISP5_STATS_HIST1_OFFSET      (ISP5_STATS_HIST0_OFFSET + ISP5_ALIGN_STAT_OFFSET(ISP5_STATS_HIST_MAX_SIZE))
+#define ISP5_STATS_OR_OFFSET         (ISP5_STATS_HIST1_OFFSET + ISP5_ALIGN_STAT_OFFSET(ISP5_STATS_HIST_MAX_SIZE))
+#define ISP5_STATS_LTM_OFFSET        (ISP5_STATS_OR_OFFSET + ISP5_ALIGN_STAT_OFFSET(ISP5_STATS_OR_MAX_SIZE))
+
+#define ISP5_STATS_TOTAL_SIZE        (ISP5_STATS_LTM_OFFSET + ISP5_STATS_LTM_MAX_SIZE)
 
 #define VI_NUM_ATOMP_SURFACES	4
 
@@ -276,8 +275,10 @@ struct vi_channel_config {
 		/* Not for T186 or earlier */
 		uint16_t chunk_first;
 		uint16_t chunk_body;
+		uint16_t chunk_body_count;
 		uint16_t chunk_penultimate;
 		uint16_t chunk_last;
+		uint16_t __pad;
 		uint32_t clamp_high;
 		uint32_t clamp_low;
 	} dpcm;
@@ -289,8 +290,10 @@ struct vi_channel_config {
 			uint32_t offset_hi;
 		} surface[VI_NUM_ATOMP_SURFACES];
 		uint32_t surface_stride[VI_NUM_ATOMP_SURFACES];
-		uint32_t dpcm_chunk_offset;
+		uint32_t dpcm_chunk_stride;
 	} atomp;
+
+	uint16_t __pad[2];
 
 } __CAPTURE_IVC_ALIGN;
 
@@ -314,6 +317,7 @@ struct capture_status {
 #define CAPTURE_STATUS_ISPBUF_FIFO_OVERFLOW	U32_C(11)
 #define CAPTURE_STATUS_SYNC_FAILURE		U32_C(12)
 #define CAPTURE_STATUS_NOTIFIER_BACKEND_DOWN	U32_C(13)
+#define CAPTURE_STATUS_FALCON_ERROR		U32_C(14)
 
 	uint64_t sof_timestamp;
 	uint64_t eof_timestamp;
@@ -437,6 +441,7 @@ struct capture_descriptor {
 	struct capture_status status;
 	/* FMLITE result – written by RTCPU */
 	struct vi_fmlite_result fm_result;
+	uint32_t __pad[14];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 
@@ -613,7 +618,7 @@ struct capture_channel_isp_config {
 	uint8_t __pad_chan[3];
 	uint32_t channel_flags;
 
-#define CAPTURE_ISP_CHANNEL_FLAG_RESET_ON_ERROR	U32_C(0x0001U)
+#define CAPTURE_ISP_CHANNEL_FLAG_RESET_ON_ERROR	U32_C(0x0001)
 
 	/** ISP capture descriptor ring buffer */
 	iova_t requests;
@@ -647,8 +652,8 @@ struct capture_isp_program_status {
 	uint16_t __pad_id;
 	uint32_t status;
 
-#define CAPTURE_ISP_PROGRAM_STATUS_UNKNOWN	U32_C(2)
-#define CAPTURE_ISP_PROGRAM_STATUS_SUCCESS	U32_C(3)
+#define CAPTURE_ISP_PROGRAM_STATUS_UNKNOWN	U32_C(0)
+#define CAPTURE_ISP_PROGRAM_STATUS_SUCCESS	U32_C(1)
 /** Add error codes and data if any */
 } __CAPTURE_IVC_ALIGN;
 
@@ -691,8 +696,8 @@ struct isp_program_descriptor {
 	struct capture_isp_program_status isp_program_status;
 
 	uint32_t activate_flags;
-#define CAPTURE_ACTIVATE_FLAG_ON_SEQUENCE_ID	U32_C(0)
-#define CAPTURE_ACTIVATE_FLAG_ON_SETTINGS_ID	U32_C(1)
+#define CAPTURE_ACTIVATE_FLAG_ON_SEQUENCE_ID	U32_C(1)
+#define CAPTURE_ACTIVATE_FLAG_ON_SETTINGS_ID	U32_C(2)
 
 	/** Pad to aligned size */
 	uint32_t __pad[7];
@@ -707,11 +712,16 @@ struct isp_program_descriptor {
  */
 #define ISP_PROGRAM_MAX_SIZE 16512
 
-struct surface_rec {
+struct image_surface {
 	uint32_t offset;
 	uint32_t offset_hi;
 	uint32_t surface_stride;
 	uint32_t __pad_surf;
+}__CAPTURE_IVC_ALIGN;
+
+struct stats_surface {
+	uint32_t offset;
+	uint32_t offset_hi;
 }__CAPTURE_IVC_ALIGN;
 
 /**
@@ -735,7 +745,7 @@ struct surface_rec {
  * @param h0_surface, @param h1_surface:
  *                  Surface details of Histogram stat units.
  *
- * @param bad_surface: Surface details of Bad pixel detection block,
+ * @param pru_bad_surface: Surface details of Bad pixel detection block,
  *                  part of PRU stat unit.
  *
  * @param ltm_surface: Surface details of Local Tone Mapping stat unit.
@@ -795,17 +805,17 @@ struct isp_capture_descriptor {
 #define ISP_MAX_INPUT_SURFACES 3
 
 	/** input surfaces */
-	struct surface_rec input_mr_surfaces[ISP_MAX_INPUT_SURFACES];
+	struct image_surface input_mr_surfaces[ISP_MAX_INPUT_SURFACES];
 
 	/**
-	 * 3 MW ports, max 3 surfaces (multiplanar) per port.
+	 * 3 MW ports, max 2 surfaces (multiplanar) per port.
 	 */
 #define ISP_MAX_OUTPUTS 3
-#define ISP_MAX_OUTPUT_SURFACES 3
+#define ISP_MAX_OUTPUT_SURFACES 2
 
 	/** output surfaces */
 	struct {
-		struct surface_rec surfaces[ISP_MAX_OUTPUT_SURFACES];
+		struct image_surface surfaces[ISP_MAX_OUTPUT_SURFACES];
 	} outputs_mw[ISP_MAX_OUTPUTS];
 
 	/**
@@ -815,34 +825,30 @@ struct isp_capture_descriptor {
 	 * RCE knows the offsets to all ROIs' addresses for each of these
          * stats units.
 	 */
-	struct surface_rec fb_surface;
-	struct surface_rec fm_surface;
-	struct surface_rec afm_surface;
-	struct surface_rec lac0_surface;
-	struct surface_rec lac1_surface;
-	struct surface_rec h0_surface;
-	struct surface_rec h1_surface;
-	struct surface_rec bad_surface;
-	struct surface_rec ltm_surface;
+	struct stats_surface fb_surface;
+	struct stats_surface fm_surface;
+	struct stats_surface afm_surface;
+	struct stats_surface lac0_surface;
+	struct stats_surface lac1_surface;
+	struct stats_surface h0_surface;
+	struct stats_surface h1_surface;
+	struct stats_surface pru_bad_surface;
+	struct stats_surface ltm_surface;
 
 	/** surfaces related configuration */
 	struct {
-		/**
-		 * TODO: this field should contain values for 4 fields,
-		 * 8 bits reserved for each but the corresponding register
-		 * fields are 9 bits each. Check implementation details
-		 * (the register values must all be even,
-		 * maybe the least significant bit is left out???)
-		 */
-		uint32_t tile_of_config_h;
-		/**
-		 * TODO: this field should contain values for 2 fields,
-		 * 8 bits reserved for each but the corresponding register
-		 * fields are 9 bits each. Checkimplementation details
-		 * (the register values must all be even, maybe the least
-		 * significant bit is left out???)
-		 */
-		uint32_t tile_of_config_v;
+		struct {
+			uint8_t l_adj_of;
+			uint8_t l_of;
+			uint8_t r_adj_of;
+			uint8_t r_of;
+		} tile_of_config_h;
+
+		struct {
+			uint16_t t_of;
+			uint16_t b_of;
+		} tile_of_config_v;
+
 		uint32_t mr_image_def;
 		/** TODO: Is this provided from nvisp? */
 		uint32_t mr_image_def1;
@@ -850,7 +856,7 @@ struct isp_capture_descriptor {
 		uint32_t surf_ctrl;
 		uint32_t surf_stride_line;
 		uint32_t surf_stride_chunk;
-		uint32_t __pad;
+		uint32_t __pad2;
 	} surface_configs;
 
 	/** Base address of ISP PB2 memory */
@@ -862,13 +868,16 @@ struct isp_capture_descriptor {
 	uint32_t frame_timeout;	 /**< Timeout in microseconds */
 
 	uint32_t prefence_count;
+	// TODO
+	// Do we need syncpt increment at slice boundaries? TBD.
+	// If we do, then change this array to 2D array.
 	struct syncpoint_info progress_prefence[ISP_MAX_INPUT_SURFACES];
 
 	/** Result record – written by RTCPU */
 	struct capture_isp_status status;
 
 	/** Pad to aligned size */
-	uint32_t __pad[8];
+	uint32_t __pad[6];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 /**
@@ -881,9 +890,9 @@ struct isp_capture_descriptor {
 #define ISP_PB2_MAX_SIZE 512
 
 /**
-* Size allocated for the ISP program push buffer. Final value TBD
-*/
-#define NVISP5_ISP_PROGRAM_PB_SIZE 65536
+ * Size allocated for the ISP program push buffer
+ */
+#define NVISP5_ISP_PROGRAM_PB_SIZE 16384
 
 /**
 * Size allocated for the push buffer containing output & stats
@@ -956,9 +965,6 @@ enum isp5_block_enabled {
 	ISP5BLOCK_ENABLED_LAC1_REGION3 = 1U << 27
 };
 
-// Note : This is going to change as per upcoming fw which is implemented as per latest uCode IAS.
-#define MAX_TILES_IN_SLICE		10
-
 struct isp5_program
 {
 	/**
@@ -966,6 +972,13 @@ struct isp5_program
 	* No relocations will be done for this push buffer; all registers
 	* that contain memory addresses that require relocation must be
 	* specified in the capture descriptor ISP payload.
+	*
+	* NOTE : DO NOT move the pushbuffer[] array from the beginning of struct.
+	* 	pushbuffer has to be ATOM aligned. Memory layout in isp_program_descriptor queue is,
+	* 	isp5_program struct begins after every corresponding isp_program_descriptor entry.
+	* 	isp_program_descriptor is guaranteed to be 64Byte aligned. So keeping this at beginning
+	* 	ensures the alignement. Keeping pushbuffer else where in this array means, we have to
+	* 	keep an eye on 64B alignment for pushbuffer.
 	*/
 	uint32_t pushbuffer[NVISP5_ISP_PROGRAM_PB_SIZE / sizeof(uint32_t)];
 
@@ -974,11 +987,16 @@ struct isp5_program
 	uint16_t frame_height;
 
 	/**
-	* Array holding Width of each tile in a slice (i.e., row of tiles).
+	* Tiles are now divided to 3 groups. First, Middle and last
+	*
+	* tile_width_first   : This holds width of very first tile.
+	* tiles_width_middle : This holds width of all middle tiles. Can be more than 1.
+	*
+	* Falcon fw automatically calculates last tile width based on above 2 values.
 	*/
-	uint16_t tile_width_arr[MAX_TILES_IN_SLICE];
+	uint16_t tile_width_first;
 
-	uint16_t _pad0;
+	uint16_t tiles_width_middle;
 
 	uint16_t tile_height;
 
@@ -992,7 +1010,7 @@ struct isp5_program
 	* Settings ID for this ISP program
 	*/
 	uint8_t settings_id;
-
+	uint8_t _pad0[2];
 	/*
 	* Settings needed by RCE ISP driver to generate config buffer.
 	* Content and format of these fields is the same as corresponding
@@ -1051,7 +1069,9 @@ struct isp5_program
 	struct isp5_downscaler_configbuf ds0;
 	struct isp5_downscaler_configbuf ds1;
 	struct isp5_downscaler_configbuf ds2;
-} __CAPTURE_IVC_ALIGN;
+
+	uint32_t _pad1[8];
+}__CAPTURE_DESCRIPTOR_ALIGN;
 
 #pragma GCC diagnostic ignored "-Wpadded"
 

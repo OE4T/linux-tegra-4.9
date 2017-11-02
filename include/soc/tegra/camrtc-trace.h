@@ -367,5 +367,9 @@ struct camrtc_event_struct {
 			CAMRTC_EVENT_MODULE_VINOTIFY, U32_C(0))
 #define	camrtc_trace_vinotify_handle_msg \
 		camrtc_trace_vinotify_ids_begin + U32_C(1)
+#define	camrtc_trace_vinotify_event_ts64 \
+		camrtc_trace_vinotify_ids_begin + U32_C(2)
+#define	camrtc_trace_vinotify_error_ts64 \
+		camrtc_trace_vinotify_ids_begin + U32_C(3)
 
 #endif /* INCLUDE_CAMRTC_TRACE_H */

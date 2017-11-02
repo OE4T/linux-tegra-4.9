@@ -425,6 +425,13 @@ struct tegra_xusb {
 	struct clk *pll_u_480m;
 	struct clk *clk_m;
 	struct clk *pll_e;
+	struct clk *core_dev_clk;
+	struct clk *core_superspeed_clk;
+	struct clk *falcon_host_clk;
+	struct clk *falcon_superspeed_clk;
+	struct clk *fs_host_clk;
+	struct clk *fs_dev_clk;
+	struct clk *ss_dev_clk;
 	bool clk_enabled;
 
 	struct phy **phys;
@@ -1601,15 +1608,60 @@ static int tegra_xusb_clk_enable(struct tegra_xusb *tegra)
 	if (err < 0)
 		goto disable_fs_src;
 
+	if (XHCI_IS_T194(tegra)) {
+
+		err = clk_prepare_enable(tegra->core_dev_clk);
+		if (err < 0)
+			goto disable_hs_src;
+
+		err = clk_prepare_enable(tegra->core_superspeed_clk);
+		if (err < 0)
+			goto disable_core_dev;
+
+		err = clk_prepare_enable(tegra->falcon_host_clk);
+		if (err < 0)
+			goto disable_core_superspeed;
+
+		err = clk_prepare_enable(tegra->falcon_superspeed_clk);
+		if (err < 0)
+			goto disable_falcon_host;
+
+		err = clk_prepare_enable(tegra->fs_host_clk);
+		if (err < 0)
+			goto disable_falcon_superspeed;
+
+		err = clk_prepare_enable(tegra->fs_dev_clk);
+		if (err < 0)
+			goto disable_fs_host;
+
+		err = clk_prepare_enable(tegra->ss_dev_clk);
+		if (err < 0)
+			goto disable_fs_dev;
+	}
+
 	if (tegra->soc->scale_ss_clock) {
 		err = tegra_xusb_set_ss_clk(tegra, TEGRA_XHCI_SS_HIGH_SPEED);
 		if (err < 0)
-			goto disable_hs_src;
+			goto disable_ss_dev;
 	}
 	tegra->clk_enabled = true;
 
 	return 0;
 
+disable_ss_dev:
+	clk_disable_unprepare(tegra->ss_dev_clk);
+disable_fs_dev:
+	clk_disable_unprepare(tegra->fs_dev_clk);
+disable_fs_host:
+	clk_disable_unprepare(tegra->fs_host_clk);
+disable_falcon_superspeed:
+	clk_disable_unprepare(tegra->falcon_superspeed_clk);
+disable_falcon_host:
+	clk_disable_unprepare(tegra->falcon_host_clk);
+disable_core_superspeed:
+	clk_disable_unprepare(tegra->core_superspeed_clk);
+disable_core_dev:
+	clk_disable_unprepare(tegra->core_dev_clk);
 disable_hs_src:
 	clk_disable_unprepare(tegra->hs_src_clk);
 disable_fs_src:
@@ -1628,6 +1680,15 @@ disable_plle:
 static void tegra_xusb_clk_disable(struct tegra_xusb *tegra)
 {
 	if (tegra->clk_enabled) {
+		if (XHCI_IS_T194(tegra)) {
+			clk_disable_unprepare(tegra->core_dev_clk);
+			clk_disable_unprepare(tegra->core_superspeed_clk);
+			clk_disable_unprepare(tegra->falcon_host_clk);
+			clk_disable_unprepare(tegra->falcon_superspeed_clk);
+			clk_disable_unprepare(tegra->fs_host_clk);
+			clk_disable_unprepare(tegra->fs_dev_clk);
+			clk_disable_unprepare(tegra->ss_dev_clk);
+		}
 		clk_disable_unprepare(tegra->pll_e);
 		clk_disable_unprepare(tegra->host_clk);
 		clk_disable_unprepare(tegra->ss_clk);
@@ -2641,7 +2702,71 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	if (IS_ERR(tegra->padctl))
 		return PTR_ERR(tegra->padctl);
 
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
+	if (XHCI_IS_T194(tegra) && !tegra->soc->is_xhci_vf) {
+
+		tegra->core_dev_clk = devm_clk_get(&pdev->dev,
+						"xusb_core_dev_clk");
+		if (IS_ERR(tegra->core_dev_clk)) {
+			err = PTR_ERR(tegra->core_dev_clk);
+			dev_err(&pdev->dev, "failed to get xusb_core_dev: %d\n",
+					err);
+			goto put_padctl;
+		}
+
+		tegra->core_superspeed_clk = devm_clk_get(&pdev->dev,
+						"xusb_core_superspeed_clk");
+		if (IS_ERR(tegra->core_superspeed_clk)) {
+			err = PTR_ERR(tegra->core_superspeed_clk);
+			dev_err(&pdev->dev, "failed to get xusb_core_superspeed: %d\n",
+					err);
+			goto put_padctl;
+		}
+
+		tegra->falcon_host_clk = devm_clk_get(&pdev->dev,
+						"xusb_falcon_host_clk");
+		if (IS_ERR(tegra->falcon_host_clk)) {
+			err = PTR_ERR(tegra->falcon_host_clk);
+			dev_err(&pdev->dev, "failed to get xusb_falcon_host: %d\n",
+					err);
+			goto put_padctl;
+		}
+
+		tegra->falcon_superspeed_clk = devm_clk_get(&pdev->dev,
+						"xusb_falcon_superspeed_clk");
+		if (IS_ERR(tegra->falcon_superspeed_clk)) {
+			err = PTR_ERR(tegra->falcon_superspeed_clk);
+			dev_err(&pdev->dev, "failed to get xusb_falcon_superspeed: %d\n",
+					err);
+			goto put_padctl;
+		}
+
+		tegra->fs_host_clk = devm_clk_get(&pdev->dev,
+						"xusb_fs_host_clk");
+		if (IS_ERR(tegra->fs_host_clk)) {
+			err = PTR_ERR(tegra->fs_host_clk);
+			dev_err(&pdev->dev, "failed to get xusb_fs_host: %d\n",
+					err);
+			goto put_padctl;
+		}
+
+		tegra->fs_dev_clk = devm_clk_get(&pdev->dev, "xusb_fs_dev_clk");
+		if (IS_ERR(tegra->fs_dev_clk)) {
+			err = PTR_ERR(tegra->fs_dev_clk);
+			dev_err(&pdev->dev, "failed to get xusb_fs_dev: %d\n",
+					err);
+			goto put_padctl;
+		}
+
+		tegra->ss_dev_clk = devm_clk_get(&pdev->dev, "xusb_ss_dev_clk");
+		if (IS_ERR(tegra->ss_dev_clk)) {
+			err = PTR_ERR(tegra->ss_dev_clk);
+			dev_err(&pdev->dev, "failed to get xusb_ss_dev: %d\n",
+					err);
+			goto put_padctl;
+		}
+	}
+
+	if (!tegra->soc->is_xhci_vf) {
 		tegra->host_clk = devm_clk_get(&pdev->dev, "xusb_host");
 		if (IS_ERR(tegra->host_clk)) {
 			err = PTR_ERR(tegra->host_clk);
@@ -2741,7 +2866,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	if (err)
 		goto put_padctl;
 
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
+	if (!tegra->soc->is_xhci_vf) {
 		err = tegra_xusb_clk_enable(tegra);
 		if (err) {
 			dev_err(&pdev->dev, "failed to enable clocks: %d\n",
@@ -2845,11 +2970,11 @@ disable_phy:
 	tegra_xusb_debugfs_deinit(tegra);
 	tegra_xusb_phy_disable(tegra);
 disable_regulator:
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf)
+	if (!tegra->soc->is_xhci_vf)
 		regulator_bulk_disable(tegra->soc->num_supplies,
 				tegra->supplies);
 disable_clk:
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf)
+	if (!tegra->soc->is_xhci_vf)
 		tegra_xusb_clk_disable(tegra);
 put_padctl:
 	tegra_xusb_padctl_put(tegra->padctl);
@@ -2914,14 +3039,14 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	}
 
 	tegra_xusb_phy_disable(tegra);
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
+	if (!tegra->soc->is_xhci_vf) {
 		regulator_bulk_disable(tegra->soc->num_supplies,
 				tegra->supplies);
-		tegra_xusb_clk_disable(tegra);
-	}
 
-	if (!tegra->soc->is_xhci_vf)
+		tegra_xusb_clk_disable(tegra);
+
 		tegra_xhci_powergate_partitions(tegra);
+	}
 
 	tegra_xusb_padctl_put(tegra->padctl);
 
@@ -3309,7 +3434,7 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 			phy_exit(tegra->phys[i]);
 	}
 
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf)
+	if (!tegra->soc->is_xhci_vf)
 		tegra_xusb_clk_disable(tegra);
 
 out:
@@ -3341,7 +3466,7 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 
 	dev_info(dev, "exiting ELPG\n");
 
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
+	if (!tegra->soc->is_xhci_vf) {
 		ret = tegra_xusb_clk_enable(tegra);
 		if (ret) {
 			dev_warn(dev, "failed to enable xhci clocks %d\n", ret);

@@ -1983,6 +1983,7 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	struct arm_smmu_device *smmu, *dom_smmu;
 	struct arm_smmu_master_cfg *cfg;
 	struct device_node *dev_node;
+	bool iso_smmu_client = false;
 
 	smmu = find_smmu_for_device(dev);
 	if (!smmu) {
@@ -1993,6 +1994,18 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	if (dev->archdata.iommu) {
 		dev_err(dev, "already attached to IOMMU domain\n");
 		return -EEXIST;
+	}
+
+	dev_node = dev_get_dev_node(dev);
+	if (of_property_read_bool(dev_node, "iso-smmu")) {
+		if (smmu->iso_smmu_id == -1) {
+			dev_err(dev,
+			    "iso smmu not present so can't enable it for %s\n",
+			    dev_name(dev));
+			BUG();
+			return -EINVAL;
+		}
+		iso_smmu_client = true;
 	}
 
 	/*
@@ -2045,8 +2058,7 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	for (i = 0; i < cfg->num_streamids; i++)
 		platform_override_streamid(cfg->streamids[i]);
 
-	dev_node = dev_get_dev_node(dev);
-	if (of_property_read_bool(dev_node, "iso-smmu")) {
+	if (iso_smmu_client) {
 		pr_info("Adding %s to ISO SMMU client\n", dev_name(dev));
 		arm_smmu_cfg->iso_client_count++;
 	} else {

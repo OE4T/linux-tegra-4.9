@@ -201,7 +201,7 @@ static u64 __nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 	return mapped_buffer->addr;
 }
 
-u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
+int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       struct dma_buf *dmabuf,
 		       u64 offset_align,
 		       u32 flags,
@@ -210,7 +210,8 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       int rw_flag,
 		       u64 buffer_offset,
 		       u64 mapping_size,
-		       struct vm_gk20a_mapping_batch *batch)
+		       struct vm_gk20a_mapping_batch *batch,
+		       u64 *gpu_va)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct device *dev = dev_from_gk20a(g);
@@ -263,12 +264,14 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 			flags, map_key_kind, rw_flag);
 		if (map_offset) {
 			nvgpu_mutex_release(&vm->update_gmmu_lock);
-			return map_offset;
+			*gpu_va = map_offset;
+			return 0;
 		}
 	}
 
 	sgt = gk20a_mm_pin(dev, dmabuf);
 	if (IS_ERR(sgt)) {
+		err = PTR_ERR(sgt);
 		nvgpu_warn(g, "oom allocating tracking buffer");
 		goto clean_up;
 	}
@@ -424,7 +427,8 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
-	return map_offset;
+	*gpu_va = map_offset;
+	return 0;
 
 clean_up:
 	nvgpu_kfree(g, mapped_buffer);
@@ -435,7 +439,7 @@ clean_up:
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 	nvgpu_log_info(g, "err=%d", err);
-	return 0;
+	return err;
 }
 
 int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
@@ -483,18 +487,18 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 		return err;
 	}
 
-	ret_va = nvgpu_vm_map_linux(vm, dmabuf, *offset_align,
-				    flags, compr_kind, incompr_kind,
-				    gk20a_mem_flag_none,
-				    buffer_offset,
-				    mapping_size,
-				    batch);
+	err = nvgpu_vm_map_linux(vm, dmabuf, *offset_align,
+				 flags, compr_kind, incompr_kind,
+				 gk20a_mem_flag_none,
+				 buffer_offset,
+				 mapping_size,
+				 batch,
+				 &ret_va);
 
-	*offset_align = ret_va;
-	if (!ret_va) {
+	if (!err)
+		*offset_align = ret_va;
+	else
 		dma_buf_put(dmabuf);
-		err = -EINVAL;
-	}
 
 	return err;
 }

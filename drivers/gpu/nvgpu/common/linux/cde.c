@@ -1046,15 +1046,16 @@ __releases(&l->cde_app->mutex)
 
 	/* map the destination buffer */
 	get_dma_buf(compbits_scatter_buf); /* a ref for nvgpu_vm_map_linux */
-	map_vaddr = nvgpu_vm_map_linux(cde_ctx->vm, compbits_scatter_buf, 0,
+	err = nvgpu_vm_map_linux(cde_ctx->vm, compbits_scatter_buf, 0,
 				 NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE |
 				 NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL,
 				 NV_KIND_INVALID,
 				 compbits_kind, /* incompressible kind */
 				 gk20a_mem_flag_none,
 				 map_offset, map_size,
-				 NULL);
-	if (!map_vaddr) {
+				 NULL,
+				 &map_vaddr);
+	if (err) {
 		dma_buf_put(compbits_scatter_buf);
 		err = -EINVAL;
 		goto exit_idle;

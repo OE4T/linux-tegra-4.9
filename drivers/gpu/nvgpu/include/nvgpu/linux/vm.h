@@ -38,7 +38,7 @@ struct vm_gk20a;
 struct vm_gk20a_mapping_batch;
 struct nvgpu_vm_area;
 
-u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
+int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       struct dma_buf *dmabuf,
 		       u64 offset_align,
 		       u32 flags,
@@ -60,7 +60,8 @@ u64 nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       int rw_flag,
 		       u64 buffer_offset,
 		       u64 mapping_size,
-		       struct vm_gk20a_mapping_batch *mapping_batch);
+		       struct vm_gk20a_mapping_batch *mapping_batch,
+		       u64 *gpu_va);
 
 /*
  * Notes:

@@ -37,6 +37,7 @@
 #endif
 
 #include "os_linux.h"
+#include "driver_common.h"
 
 #define PCI_INTERFACE_NAME "card-%s%%s"
 
@@ -457,6 +458,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	}
 
 	g = &l->g;
+	nvgpu_init_gk20a(g);
 
 	nvgpu_kmem_init(g);
 

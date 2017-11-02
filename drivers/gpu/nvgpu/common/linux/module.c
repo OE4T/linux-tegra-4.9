@@ -53,6 +53,7 @@
 #include "cde_gm20b.h"
 #include "cde_gp10b.h"
 #include "ctxsw_trace.h"
+#include "driver_common.h"
 
 #define CLASS_NAME "nvidia-gpu"
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
@@ -1027,6 +1028,7 @@ static int gk20a_probe(struct platform_device *dev)
 	}
 
 	gk20a = &l->g;
+	nvgpu_init_gk20a(gk20a);
 	set_gk20a(dev, gk20a);
 	l->dev = &dev->dev;
 	gk20a->log_mask = NVGPU_DEFAULT_DBG_MASK;

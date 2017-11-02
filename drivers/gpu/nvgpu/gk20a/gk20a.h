@@ -1070,6 +1070,7 @@ struct nvgpu_gpu_params {
 };
 
 struct gk20a {
+	void (*free)(struct gk20a *g);
 	struct nvgpu_nvhost_dev *nvhost_dev;
 
 	/*

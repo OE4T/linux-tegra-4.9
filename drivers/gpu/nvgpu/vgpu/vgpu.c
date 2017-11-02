@@ -47,6 +47,7 @@
 #include "common/linux/os_linux.h"
 #include "common/linux/ioctl.h"
 #include "common/linux/scale.h"
+#include "common/linux/driver_common.h"
 
 #ifdef CONFIG_TEGRA_19x_GPU
 #include <vgpu/vgpu_t19x.h>
@@ -657,6 +658,7 @@ int vgpu_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	gk20a = &l->g;
+	nvgpu_init_gk20a(gk20a);
 
 	nvgpu_kmem_init(gk20a);
 

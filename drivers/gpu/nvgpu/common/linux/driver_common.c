@@ -274,3 +274,15 @@ void nvgpu_wait_for_deferred_interrupts(struct gk20a *g)
 				atomic_read(&l->sw_irq_nonstall_last_handled))
 		   <= 0, 0);
 }
+
+static void nvgpu_free_gk20a(struct gk20a *g)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
+	kfree(l);
+}
+
+void nvgpu_init_gk20a(struct gk20a *g)
+{
+	g->free = nvgpu_free_gk20a;
+}

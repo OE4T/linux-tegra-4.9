@@ -2174,7 +2174,7 @@ out_unlock:
 	if (arm_smmu_tlb_inv_at_map) {
 		if (arm_smmu_tlb_inv_by_addr)
 			arm_smmu_tlb_inv_range(smmu_domain,
-					       iova, iova - iova_orig);
+					       iova_orig, size);
 		else
 			arm_smmu_tlb_inv_context(smmu_domain);
 	}

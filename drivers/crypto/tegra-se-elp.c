@@ -1790,9 +1790,7 @@ static int tegra_se_check_rng1_alarms(void)
 
 static int tegra_se_check_rng1_status(struct tegra_se_elp_dev *se_dev)
 {
-	static bool rng1_first = true;
 	u32 val, i = 0;
-	int ret = 0;
 
 	/*Wait until RNG is Idle */
 	do {
@@ -1805,24 +1803,6 @@ static int tegra_se_check_rng1_status(struct tegra_se_elp_dev *se_dev)
 				   TEGRA_SE_RNG1_STATUS_OFFSET);
 		i++;
 	} while (val & TEGRA_SE_RNG1_STATUS_BUSY(ELP_TRUE));
-
-	if (rng1_first) {
-		/*Check health test is ok*/
-		val = se_elp_readl(se_dev, RNG1,
-				   TEGRA_SE_RNG1_ISTATUS_OFFSET);
-		val &= TEGRA_SE_RNG1_ISTATUS_NOISE_RDY(ISTATUS_ACTIVE);
-		if (!val) {
-			dev_err(se_dev->dev,
-				"NOISE_RDY not active in RNG1_ISTATUS Reg\n");
-			return -EFAULT;
-		}
-
-		ret = tegra_se_check_rng1_alarms();
-		if (ret)
-			return ret;
-
-		rng1_first = false;
-	}
 
 	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_RNG1_ISTATUS_OFFSET);
 	se_elp_writel(se_dev, RNG1, val, TEGRA_SE_RNG1_ISTATUS_OFFSET);

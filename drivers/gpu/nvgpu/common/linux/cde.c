@@ -1279,7 +1279,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	/* map backing store to gpu virtual space */
 	vaddr = nvgpu_gmmu_map(ch->vm, &gr->compbit_store.mem,
 			       g->gr.compbit_store.mem.size,
-			       NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+			       NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE,
 			       gk20a_mem_flag_read_only,
 			       false,
 			       gr->compbit_store.mem.aperture);

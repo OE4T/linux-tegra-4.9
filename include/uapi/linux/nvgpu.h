@@ -1461,27 +1461,6 @@ struct nvgpu_submit_gpfifo_args {
 	struct nvgpu_fence fence;
 };
 
-struct nvgpu_map_buffer_args {
-	__u32 flags;
-#define NVGPU_MAP_BUFFER_FLAGS_ALIGN		0x0
-#define NVGPU_MAP_BUFFER_FLAGS_OFFSET		(1 << 0)
-#define NVGPU_MAP_BUFFER_FLAGS_KIND_PITCH	0x0
-#define NVGPU_MAP_BUFFER_FLAGS_KIND_SPECIFIED	(1 << 1)
-#define NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_FALSE	0x0
-#define NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE	(1 << 2)
-	__u32 nvmap_handle;
-	union {
-		__u64 offset; /* valid if _offset flag given (in|out) */
-		__u64 align;  /* alignment multiple (0:={1 or n/a})   */
-	} offset_alignment;
-	__u32 kind;
-#define NVGPU_MAP_BUFFER_KIND_GENERIC_16BX2 0xfe
-};
-
-struct nvgpu_unmap_buffer_args {
-	__u64 offset;
-};
-
 struct nvgpu_wait_args {
 #define NVGPU_WAIT_TYPE_NOTIFIER	0x0
 #define NVGPU_WAIT_TYPE_SEMAPHORE	0x1
@@ -1789,22 +1768,12 @@ struct nvgpu_as_bind_channel_args {
  * chosen will be returned back to the caller in the 'page_size' parameter in
  * that case.
  */
-struct nvgpu_as_map_buffer_args {
-	__u32 flags;		/* in/out */
 #define NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET	    (1 << 0)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE	    (1 << 2)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT	    (1 << 4)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE	    (1 << 5)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS (1 << 6)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL  (1 << 8)
-	__u32 reserved;		/* in */
-	__u32 dmabuf_fd;	/* in */
-	__u32 page_size;	/* inout, 0:= best fit to buffer */
-	union {
-		__u64 offset; /* inout, byte address valid iff _FIXED_OFFSET */
-		__u64 align;  /* in, alignment multiple (0:={1 or n/a})   */
-	} o_a;
-};
 
 /*
  * Mapping dmabuf fds into an address space:
@@ -1816,39 +1785,29 @@ struct nvgpu_as_map_buffer_args {
  * returned back to the caller in the 'page_size' parameter in that case.
  */
 struct nvgpu_as_map_buffer_ex_args {
+	/* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL must be set */
 	__u32 flags;		/* in/out */
-#define NV_KIND_DEFAULT -1
-	union {
-		/*
-		 * Used if NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL
-		 * is not set.
-		 */
-		__s32 kind;	/* in (-1 represents default) */
 
-		/*
-		 * If NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL is
-		 * set, this is used, instead. The rules are:
-		 *
-		 * - If both compr_kind and incompr_kind are set
-		 *   (i.e., value is other than NV_KIND_INVALID),
-		 *   kernel attempts to use compr_kind first.
-		 *
-		 * - If compr_kind is set, kernel attempts to allocate
-		 *   comptags for the buffer. If successful,
-		 *   compr_kind is used as the PTE kind.
-		 *
-		 * - If incompr_kind is set, kernel uses incompr_kind
-		 *   as the PTE kind. Comptags are not allocated.
-		 *
-		 * - If neither compr_kind or incompr_kind is set, the
-		 *   map call will fail.
-		 */
+	/*
+	 * - If both compr_kind and incompr_kind are set
+	 *   (i.e., value is other than NV_KIND_INVALID),
+	 *   kernel attempts to use compr_kind first.
+	 *
+	 * - If compr_kind is set, kernel attempts to allocate
+	 *   comptags for the buffer. If successful,
+	 *   compr_kind is used as the PTE kind.
+	 *
+	 * - If incompr_kind is set, kernel uses incompr_kind as the
+	 *   PTE kind, if compr_kind cannot be used. Comptags are not
+	 *   allocated.
+	 *
+	 * - If neither compr_kind or incompr_kind is set, the
+	 *   map call will fail.
+	 */
 #define NV_KIND_INVALID -1
-		struct {
-		       __s16 compr_kind;
-		       __s16 incompr_kind;
-	       };
-	};
+	__s16 compr_kind;
+	__s16 incompr_kind;
+
 	__u32 dmabuf_fd;	/* in */
 	__u32 page_size;	/* inout, 0:= best fit to buffer */
 
@@ -1975,7 +1934,7 @@ struct nvgpu_as_get_va_regions_args {
 };
 
 struct nvgpu_as_map_buffer_batch_args {
-	__u64 unmaps; /* ptr to array of nvgpu_unmap_buffer_args */
+	__u64 unmaps; /* ptr to array of nvgpu_as_unmap_buffer_args */
 	__u64 maps;   /* ptr to array of nvgpu_as_map_buffer_ex_args */
 	__u32 num_unmaps; /* in: number of unmaps
 			   * out: on error, number of successful unmaps */

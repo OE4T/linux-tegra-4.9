@@ -88,8 +88,8 @@ static int gk20a_as_ioctl_map_buffer_ex(
 		compressible_kind = args->compr_kind;
 		incompressible_kind = args->incompr_kind;
 	} else {
-		compressible_kind = args->kind;
-		incompressible_kind = NV_KIND_INVALID;
+		/* unsupported, direct kind control must be used */
+		return -EINVAL;
 	}
 
 	return nvgpu_vm_map_buffer(as_share->vm, args->dmabuf_fd,
@@ -98,19 +98,6 @@ static int gk20a_as_ioctl_map_buffer_ex(
 				   args->buffer_offset,
 				   args->mapping_size,
 				   NULL);
-}
-
-static int gk20a_as_ioctl_map_buffer(
-		struct gk20a_as_share *as_share,
-		struct nvgpu_as_map_buffer_args *args)
-{
-	gk20a_dbg_fn("");
-	return nvgpu_vm_map_buffer(as_share->vm, args->dmabuf_fd,
-				   &args->o_a.offset,
-				   args->flags, NV_KIND_DEFAULT,
-				   NV_KIND_DEFAULT,
-				   0, 0, NULL);
-	/* args->o_a.offset will be set if !err */
 }
 
 static int gk20a_as_ioctl_unmap_buffer(
@@ -187,8 +174,9 @@ static int gk20a_as_ioctl_map_buffer_batch(
 			compressible_kind = map_args.compr_kind;
 			incompressible_kind = map_args.incompr_kind;
 		} else {
-			compressible_kind = map_args.kind;
-			incompressible_kind = NV_KIND_INVALID;
+			/* direct kind control must be used */
+			err = -EINVAL;
+			break;
 		}
 
 		err = nvgpu_vm_map_buffer(
@@ -347,11 +335,6 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		trace_gk20a_as_ioctl_free_space(g->name);
 		err = gk20a_as_ioctl_free_space(as_share,
 				(struct nvgpu_as_free_space_args *)buf);
-		break;
-	case NVGPU_AS_IOCTL_MAP_BUFFER:
-		trace_gk20a_as_ioctl_map_buffer(g->name);
-		err = gk20a_as_ioctl_map_buffer(as_share,
-				(struct nvgpu_as_map_buffer_args *)buf);
 		break;
 	case NVGPU_AS_IOCTL_MAP_BUFFER_EX:
 		trace_gk20a_as_ioctl_map_buffer(g->name);

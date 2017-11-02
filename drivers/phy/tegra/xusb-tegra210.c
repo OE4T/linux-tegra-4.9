@@ -740,27 +740,89 @@ static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl)
 
 static int tegra210_xusb_padctl_enable(struct tegra_xusb_padctl *padctl)
 {
+	return 0;
+}
+
+static int tegra210_xusb_padctl_disable(struct tegra_xusb_padctl *padctl)
+{
+	return 0;
+}
+
+/* must be called under padctl->lock */
+static inline void aux_mux_lp0_clamp(struct tegra_xusb_padctl *padctl,
+			bool enable)
+{
+	u32 value;
+
+	dev_dbg(padctl->dev, "%s AUX_MUX_LP0_CLAMP\n",
+			enable ? "enable" : "disable");
+
+	if (enable) {
+		value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+		value |= AUX_MUX_LP0_VCORE_DOWN;
+		padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+		usleep_range(100, 200);
+
+		value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+		value |= AUX_MUX_LP0_CLAMP_EN_EARLY;
+		padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+		usleep_range(100, 200);
+
+		value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+		value |= AUX_MUX_LP0_CLAMP_EN;
+		padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
+	} else {
+		value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+		value &= ~AUX_MUX_LP0_CLAMP_EN;
+		padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+		usleep_range(100, 200);
+
+		value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+		value &= ~AUX_MUX_LP0_CLAMP_EN_EARLY;
+		padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+		usleep_range(100, 200);
+
+		value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+		value &= ~AUX_MUX_LP0_VCORE_DOWN;
+		padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
+	}
+}
+
+#define aux_mux_lp0_clamp_enable(u) aux_mux_lp0_clamp(u, true)
+#define aux_mux_lp0_clamp_disable(u) aux_mux_lp0_clamp(u, false)
+
+static int tegra210_uphy_init(struct tegra_xusb_padctl *padctl)
+{
 	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
 	u32 value;
 	int err, i;
 
+	if (tegra210_plle_hw_sequence_is_enabled()) {
+		dev_dbg(padctl->dev, "PLLE already in HW\n");
+		return 0;
+	}
+
 	mutex_lock(&padctl->lock);
 
-	if (padctl->enable++ > 0)
-		goto out;
-
-	if (tegra210_plle_hw_sequence_is_enabled())
-		dev_err(padctl->dev, "PLLE was in HW before init!\n");
+	dev_dbg(padctl->dev, "start UPHY init\n");
 
 	/* enable PLLE in SW */
 	err = clk_prepare_enable(priv->plle);
-	if (err < 0)
+	if (err < 0) {
+		mutex_unlock(&padctl->lock);
 		return err;
+	}
 
 	if (t210b01_compatible(padctl) == 1) {
 		err = clk_prepare_enable(priv->uphy_mgmt_clk);
-		if (err < 0)
+		if (err < 0) {
+			mutex_unlock(&padctl->lock);
 			return err;
+		}
 	}
 
 	/* enable PCIE & SATA PLL in HW */
@@ -789,58 +851,10 @@ static int tegra210_xusb_padctl_enable(struct tegra_xusb_padctl *padctl)
 		}
 	}
 
-	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
-	value &= ~AUX_MUX_LP0_CLAMP_EN;
-	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
+	aux_mux_lp0_clamp_disable(padctl);
 
-	usleep_range(100, 200);
-
-	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
-	value &= ~AUX_MUX_LP0_CLAMP_EN_EARLY;
-	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
-
-	usleep_range(100, 200);
-
-	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
-	value &= ~AUX_MUX_LP0_VCORE_DOWN;
-	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
-
-out:
 	mutex_unlock(&padctl->lock);
-	return 0;
-}
-
-static int tegra210_xusb_padctl_disable(struct tegra_xusb_padctl *padctl)
-{
-	u32 value;
-
-	mutex_lock(&padctl->lock);
-
-	if (WARN_ON(padctl->enable == 0))
-		goto out;
-
-	if (--padctl->enable > 0)
-		goto out;
-
-	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
-	value |= AUX_MUX_LP0_VCORE_DOWN;
-	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
-
-	usleep_range(100, 200);
-
-	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
-	value |= AUX_MUX_LP0_CLAMP_EN_EARLY;
-	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
-
-	usleep_range(100, 200);
-
-	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
-	value |= AUX_MUX_LP0_CLAMP_EN;
-	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
-
-out:
-	mutex_unlock(&padctl->lock);
-	return 0;
+	return tegra210_xusb_padctl_enable(padctl);
 }
 
 static int tegra210_hsic_set_idle(struct tegra_xusb_padctl *padctl,
@@ -1896,7 +1910,7 @@ static int tegra210_pcie_phy_init(struct phy *phy)
 	dev_dbg(lane->pad->padctl->dev, "phy init lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
-	return tegra210_xusb_padctl_enable(lane->pad->padctl);
+	return tegra210_uphy_init(lane->pad->padctl);
 }
 
 static int tegra210_pcie_phy_exit(struct phy *phy)
@@ -2342,7 +2356,7 @@ static int tegra210_sata_phy_init(struct phy *phy)
 	dev_dbg(lane->pad->padctl->dev, "phy init lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
-	return tegra210_xusb_padctl_enable(lane->pad->padctl);
+	return tegra210_uphy_init(lane->pad->padctl);
 }
 
 static int tegra210_sata_phy_exit(struct phy *phy)

@@ -73,7 +73,7 @@ u32 vgpu_css_get_buffer_size(struct gk20a *g)
 	}
 
 	cookie = vgpu_css_reserve_mempool(g);
-	if (IS_ERR(css_cookie))
+	if (IS_ERR(cookie))
 		return 0;
 
 	size = cookie->size;

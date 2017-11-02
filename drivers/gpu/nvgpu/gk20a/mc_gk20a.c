@@ -200,7 +200,10 @@ void gk20a_mc_reset(struct gk20a *g, u32 units)
 
 u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev)
 {
-	u32 val = gk20a_readl(g, mc_boot_0_r());
+	u32 val = __nvgpu_readl(g, mc_boot_0_r());
+
+	if (val == 0xffffffff)
+		return val;
 
 	if (arch)
 		*arch = mc_boot_0_architecture_v(val) <<

@@ -40,6 +40,7 @@ struct gk20a;
 
 void nvgpu_writel(struct gk20a *g, u32 r, u32 v);
 u32 nvgpu_readl(struct gk20a *g, u32 r);
+u32 __nvgpu_readl(struct gk20a *g, u32 r);
 void nvgpu_writel_check(struct gk20a *g, u32 r, u32 v);
 void nvgpu_bar1_writel(struct gk20a *g, u32 b, u32 v);
 u32 nvgpu_bar1_readl(struct gk20a *g, u32 b);

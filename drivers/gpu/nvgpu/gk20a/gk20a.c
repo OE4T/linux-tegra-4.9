@@ -54,11 +54,17 @@
 
 void __nvgpu_check_gpu_state(struct gk20a *g)
 {
-	u32 boot_0 = g->ops.mc.boot_0(g, NULL, NULL, NULL);
+	u32 boot_0 = 0xffffffff;
 
+	if (!g->ops.mc.boot_0) {
+		nvgpu_err(g, "Can't determine GPU state, mc.boot_0 unset");
+		return;
+	}
+
+	boot_0 = g->ops.mc.boot_0(g, NULL, NULL, NULL);
 	if (boot_0 == 0xffffffff) {
-		pr_err("nvgpu: GPU has disappeared from bus!!\n");
-		pr_err("nvgpu: Rebooting system!!\n");
+		nvgpu_err(g, "GPU has disappeared from bus!!");
+		nvgpu_err(g, "Rebooting system!!");
 		kernel_restart(NULL);
 	}
 }

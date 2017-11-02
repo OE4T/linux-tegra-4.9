@@ -380,6 +380,7 @@
 		clocks = <&tegra_car TEGRA210_CLK_APE>,
 			 <&tegra_car TEGRA210_CLK_APB2APE>;
 		clock-names = "ape", "apb2ape";
+		power-domains = <&ape_pd>;
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;

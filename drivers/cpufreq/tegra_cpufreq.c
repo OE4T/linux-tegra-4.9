@@ -145,7 +145,6 @@ static struct freq_attr *tegra_cpufreq_attr[] = {
 static DEFINE_PER_CPU(struct mutex, pcpu_mlock);
 static DEFINE_PER_CPU(spinlock_t, pcpu_slock);
 
-static bool debug_fs_only;
 static bool tegra_cpufreq_hv_mode;
 
 struct tegra_cpu_ctr {
@@ -1124,9 +1123,6 @@ static void free_resources(void)
 		if (tfreq_data.pcluster[cl].edvd_pub)
 			iounmap(tfreq_data.pcluster[cl].edvd_pub);
 
-		if (debug_fs_only == true)
-			continue;
-
 		/* free ndiv_to_vindex mem */
 		kfree(tfreq_data.pcluster[cl].dvfs_tbl.vindx);
 
@@ -1137,16 +1133,6 @@ static void free_resources(void)
 		tegra_bwmgr_unregister(tfreq_data.pcluster[cl].bwmgr);
 
 	}
-}
-
-static void __init free_allocated_res_init(void)
-{
-	free_resources();
-}
-
-static void __exit free_allocated_res_exit(void)
-{
-	free_resources();
 }
 
 static int __init init_freqtbls(struct device_node *dn)
@@ -1461,12 +1447,6 @@ static int __init tegra_cpufreq_init(void)
 	tegra_cpufreq_debug_init();
 #endif
 
-	if (of_property_read_bool(dn, "nvidia,debugfs-only")) {
-		debug_fs_only = true;
-		goto err_free_res;
-	} else
-		debug_fs_only = false;
-
 	ret = register_with_emc_bwmgr();
 	if (ret) {
 		pr_err("tegra18x-cpufreq: unable to register with emc bw manager\n");
@@ -1502,7 +1482,7 @@ static int __init tegra_cpufreq_init(void)
 
 	goto exit_out;
 err_free_res:
-	free_allocated_res_init();
+	free_resources();
 exit_out:
 	free_shared_lut();
 err_out:
@@ -1518,9 +1498,8 @@ static void __exit tegra_cpufreq_exit(void)
 #ifdef CONFIG_DEBUG_FS
 	tegra_cpufreq_debug_exit();
 #endif
-	if (debug_fs_only != true)
-		cpufreq_unregister_driver(&tegra_cpufreq_driver);
-	free_allocated_res_exit();
+	cpufreq_unregister_driver(&tegra_cpufreq_driver);
+	free_resources();
 }
 
 MODULE_AUTHOR("Puneet Saxena <puneets@nvidia.com>");

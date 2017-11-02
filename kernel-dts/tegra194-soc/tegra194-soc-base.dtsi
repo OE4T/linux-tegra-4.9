@@ -70,7 +70,7 @@
 			alignment = <0 0x1000>;
 			no-map;
 			status = "okay";
-			cvdevs = <&nvdla0 &nvdla1 &pva0 &pva1 &vi_thi &isp_thi>;
+			cvdevs = <&nvdla0 &nvdla1 &pva0 &pva1>;
 		};
 
 	};

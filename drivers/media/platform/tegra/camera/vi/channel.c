@@ -52,6 +52,21 @@
 
 static s64 queue_init_ts;
 
+static bool tegra_channel_verify_focuser(struct tegra_channel *chan)
+{
+	char *str;
+
+	/*
+	 * WAR - to avoid power on/off during open/close for sensor
+	 * nodes but not focuser nodes.
+	 * add an array when more focusers are available, this logic is
+	 * not needed once the focuser is bound to sensor channel
+	 */
+	str = strnstr(chan->video.name, "lc898212", sizeof(chan->video.name));
+
+	return (str != NULL);
+}
+
 static void gang_buffer_offsets(struct tegra_channel *chan)
 {
 	int i;
@@ -858,6 +873,15 @@ int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 	int err = 0;
 	struct v4l2_subdev *sd;
 
+	/* First power on and last power off will turn on/off the subdevices */
+	if (on) {
+		if (atomic_add_return(1, &chan->power_on_refcnt) != 1)
+			return 0;
+	} else {
+		if (!atomic_dec_and_test(&chan->power_on_refcnt))
+			return 0;
+	}
+
 	/* Power on CSI at the last to complete calibration of mipi lanes */
 	for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
 		sd = chan->subdev[num_sd];
@@ -876,8 +900,16 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	struct tegra_mc_vi *vi = chan->vi;
 
-	if (vi->fops)
+	if (vi->fops) {
+		int ret = 0;
+
+		/* power on hw at the start of streaming */
+		ret = vi->fops->vi_power_on(chan);
+		if (ret < 0)
+			return ret;
+
 		return vi->fops->vi_start_streaming(vq, count);
+	}
 	return 0;
 }
 
@@ -886,8 +918,10 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	struct tegra_mc_vi *vi = chan->vi;
 
-	if (vi->fops)
+	if (vi->fops) {
 		vi->fops->vi_stop_streaming(vq);
+		vi->fops->vi_power_off(chan);
+	}
 
 	/* Clean-up recorded videobuf2 queue initial timestamp */
 	queue_init_ts = 0;
@@ -2041,14 +2075,14 @@ static int tegra_channel_open(struct file *fp)
 	vi = chan->vi;
 	csi = vi->csi;
 
-	/* The first open then turn on power */
-	if (vi->fops) {
-		ret = vi->fops->vi_power_on(chan);
+	chan->fh = (struct v4l2_fh *)fp->private_data;
+
+	if (tegra_channel_verify_focuser(chan)) {
+		ret = tegra_channel_set_power(chan, true);
 		if (ret < 0)
-			goto fail;
+			return ret;
 	}
 
-	chan->fh = (struct v4l2_fh *)fp->private_data;
 
 	mutex_unlock(&chan->video_lock);
 	return 0;
@@ -2076,7 +2110,12 @@ static int tegra_channel_close(struct file *fp)
 		mutex_unlock(&chan->video_lock);
 		return ret;
 	}
-	vi->fops->vi_power_off(chan);
+
+	if (tegra_channel_verify_focuser(chan)) {
+		ret = tegra_channel_set_power(chan, false);
+		if (ret < 0)
+			dev_err(vi->dev, "Failed to power off subdevices\n");
+	}
 
 	mutex_unlock(&chan->video_lock);
 	return ret;

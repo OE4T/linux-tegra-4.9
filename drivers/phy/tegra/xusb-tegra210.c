@@ -291,6 +291,13 @@ struct tegra210_xusb_fuse_calibration {
 	u32 rpd_ctrl;
 };
 
+struct tegra210_xusb_padctl_context {
+	u32 vbus_id;
+	u32 usb2_pad_mux;
+	u32 usb2_port_cap;
+	u32 ss_port_map;
+};
+
 struct tegra210_xusb_padctl {
 	struct tegra_xusb_padctl base;
 	struct tegra210_xusb_fuse_calibration fuse;
@@ -299,6 +306,7 @@ struct tegra210_xusb_padctl {
 	struct clk *plle;
 	struct clk *uphy_mgmt_clk;
 	bool sata_used_by_xusb;
+	struct tegra210_xusb_padctl_context context;
 };
 
 static inline struct tegra210_xusb_padctl *
@@ -2982,6 +2990,138 @@ static void tegra210_xusb_padctl_remove(struct tegra_xusb_padctl *padctl)
 {
 }
 
+/* must be called under padctl->lock */
+static void tegra210_xusb_padctl_save(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
+
+	priv->context.vbus_id = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID);
+	priv->context.usb2_pad_mux =
+				padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
+	priv->context.usb2_port_cap =
+				padctl_readl(padctl, XUSB_PADCTL_USB2_PORT_CAP);
+	priv->context.ss_port_map =
+				padctl_readl(padctl, XUSB_PADCTL_SS_PORT_MAP);
+}
+
+/* must be called under padctl->lock */
+static void tegra210_xusb_padctl_restore(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
+
+	padctl_writel(padctl, priv->context.usb2_pad_mux,
+			XUSB_PADCTL_USB2_PAD_MUX);
+	padctl_writel(padctl, priv->context.usb2_port_cap,
+			XUSB_PADCTL_USB2_PORT_CAP);
+	padctl_writel(padctl, priv->context.ss_port_map,
+			XUSB_PADCTL_SS_PORT_MAP);
+	padctl_writel(padctl, priv->context.vbus_id, XUSB_PADCTL_USB2_VBUS_ID);
+}
+
+static int tegra210_xusb_padctl_suspend_noirq(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
+	u32 value;
+	int i;
+
+	mutex_lock(&padctl->lock);
+
+	tegra210_xusb_padctl_save(padctl);
+	aux_mux_lp0_clamp_enable(padctl);
+
+	/* put all PCIE PADs into IDDQ */
+	for (i = 0; i < padctl->pcie->soc->num_lanes; i++) {
+		value = padctl_readl(padctl, XUSB_PADCTL_USB3_PAD_MUX_0);
+		value &= ~FORCE_PCIE_PAD_IDDQ_DISABLE(i);
+		padctl_writel(padctl, value, XUSB_PADCTL_USB3_PAD_MUX_0);
+	}
+
+	if (t210b01_compatible(padctl) == 0) {
+		/* put all SATA PADs into IDDQ */
+		for (i = 0; i < padctl->sata->soc->num_lanes; i++) {
+			value = padctl_readl(padctl,
+					XUSB_PADCTL_USB3_PAD_MUX_0);
+			value &= ~FORCE_SATA_PAD_IDDQ_DISABLE(i);
+			padctl_writel(padctl, value,
+					XUSB_PADCTL_USB3_PAD_MUX_0);
+		}
+	}
+
+	clk_disable_unprepare(priv->plle);
+
+	if (t210b01_compatible(padctl) == 1)
+		clk_disable_unprepare(priv->uphy_mgmt_clk);
+
+	mutex_unlock(&padctl->lock);
+	return 0;
+}
+
+static int tegra210_xusb_padctl_resume_noirq(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
+	u32 value;
+	int err, i;
+
+	mutex_lock(&padctl->lock);
+
+	tegra210_xusb_padctl_restore(padctl);
+
+	if (tegra210_plle_hw_sequence_is_enabled()) {
+		/* PLLE in HW when .resume_noirq being called indicated system
+		 * didn't reach SC7. Hence skip PLL init and invoke
+		 * clk_prepare_enable(priv->plle) to update PLLE enable_count.
+		 * Please note that clk_plle_tegra210_enable won't update PLLE
+		 * regs if PLLE is in HW.
+		 */
+
+		dev_dbg(padctl->dev, "skip PLL init as PLLE in HW");
+
+		err = clk_prepare_enable(priv->plle);
+		if (err) {
+			dev_err(padctl->dev, "failed to enable PLLE clock %d\n",
+					err);
+			mutex_unlock(&padctl->lock);
+			return err;
+		}
+
+		if (t210b01_compatible(padctl) == 1) {
+			err = clk_prepare_enable(priv->uphy_mgmt_clk);
+			if (err) {
+				dev_err(padctl->dev, "failed to get mgmt clock, err: %d\n",
+						err);
+				mutex_unlock(&padctl->lock);
+				return err;
+			}
+		}
+
+		/* bring all PCIE PADs out of IDDQ */
+		for (i = 0; i < padctl->pcie->soc->num_lanes; i++) {
+			value = padctl_readl(padctl,
+						XUSB_PADCTL_USB3_PAD_MUX_0);
+			value |= FORCE_PCIE_PAD_IDDQ_DISABLE(i);
+			padctl_writel(padctl, value,
+						XUSB_PADCTL_USB3_PAD_MUX_0);
+		}
+
+		if (t210b01_compatible(padctl) == 0) {
+			/* bring all SATA PADs out of IDDQ */
+			for (i = 0; i < padctl->sata->soc->num_lanes; i++) {
+				value = padctl_readl(padctl,
+						XUSB_PADCTL_USB3_PAD_MUX_0);
+				value |= FORCE_SATA_PAD_IDDQ_DISABLE(i);
+				padctl_writel(padctl, value,
+						XUSB_PADCTL_USB3_PAD_MUX_0);
+			}
+		}
+
+		aux_mux_lp0_clamp_disable(padctl);
+	} else
+		tegra210_uphy_init(padctl);
+
+	mutex_unlock(&padctl->lock);
+	return 0;
+}
+
 static int tegra210_xusb_padctl_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
 					      struct phy *phy, bool enable,
 					      enum usb_device_speed speed)
@@ -3269,6 +3409,8 @@ static void tegra210_xusb_padctl_otg_vbus_handle
 static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.probe = tegra210_xusb_padctl_probe,
 	.remove = tegra210_xusb_padctl_remove,
+	.suspend_noirq = tegra210_xusb_padctl_suspend_noirq,
+	.resume_noirq = tegra210_xusb_padctl_resume_noirq,
 	.phy_sleepwalk = tegra210_xusb_padctl_phy_sleepwalk,
 	.phy_wake = tegra210_xusb_padctl_phy_wake,
 	.remote_wake_detected = tegra210_xusb_padctl_remote_wake_detected,

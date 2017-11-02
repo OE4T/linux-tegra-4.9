@@ -30,7 +30,6 @@
 #include "gm20b/mm_gm20b.h"
 #include "mm_gp10b.h"
 #include "rpfb_gp10b.h"
-#include "common/linux/os_linux.h"
 
 #include <nvgpu/hw/gp10b/hw_fb_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ram_gp10b.h>

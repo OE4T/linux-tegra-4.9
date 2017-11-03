@@ -93,10 +93,9 @@
 #define ZIP (1 << 18)
 #define ZIN (1 << 22)
 
-#define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(x) (0x084 + (x) * 0x40)
-#define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_LEV_SHIFT 7
-#define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_LEV_MASK 0x3
-#define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_FIX18 (1 << 6)
+#define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL_1(x) (0x084 + (x) * 0x40)
+#define   VREG_FIX18                                   BIT(6)
+#define   VREG_LEV(x)                                  (((x) & 0x3) << 7)
 
 #define XUSB_PADCTL_USB2_OTG_PADX_CTL_0(x) (0x088 + (x) * 0x40)
 #define   HS_CURR_LEVEL(x)                 ((x) & 0x3f)
@@ -1360,12 +1359,14 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
 
 	value = padctl_readl(padctl,
-			     XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(index));
-	value &= ~(XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_LEV_MASK <<
-		   XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_LEV_SHIFT);
-	value |= XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_FIX18;
+			XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL_1(index));
+	value &= ~(VREG_LEV(~0));
+	if (port->port_cap == USB_HOST_CAP)
+		value |= VREG_FIX18;
+	else
+		value |= VREG_LEV(0x1);
 	padctl_writel(padctl, value,
-		      XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(index));
+			XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL_1(index));
 
 	mutex_unlock(&padctl->lock);
 
@@ -3038,6 +3039,50 @@ static int tegra210_utmi_port_reset_quirk(struct phy *phy)
 	return 0;
 }
 
+/* ignoring dir since T210 doesn't support VREG_DIR bits */
+static int tegra210_xusb_padctl_utmi_pad_set_protection_level(
+				struct tegra_xusb_padctl *padctl,
+				struct phy *phy,
+				int level,
+				enum tegra_vbus_dir dir)
+{
+	u32 reg;
+	unsigned int index;
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_port *xusb;
+	char name[7];
+
+	if (!phy)
+		return -EINVAL;
+
+	lane = phy_get_drvdata(phy);
+	index = lane->index;
+	snprintf(name, ARRAY_SIZE(name), "usb2-%d", index);
+
+	mutex_lock(&padctl->lock);
+
+	reg = padctl_readl(padctl,
+			XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL_1(index));
+	if (level < 0) {
+		/* disable pad protection */
+		reg |= VREG_FIX18;
+		reg &= ~VREG_LEV(~0);
+	} else {
+		list_for_each_entry(xusb, &padctl->ports, list) {
+			if (strcmp(dev_name(&xusb->dev), name) == 0)
+				break;
+		}
+		reg &= ~VREG_FIX18;
+		reg &= ~VREG_LEV(~0);
+		reg |= VREG_LEV(level);
+	}
+	padctl_writel(padctl, reg,
+			XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL_1(index));
+
+	mutex_unlock(&padctl->lock);
+	return 0;
+}
+
 static int
 tegra210_xusb_read_fuse_calibration(struct tegra210_xusb_fuse_calibration *fuse)
 {
@@ -3550,6 +3595,8 @@ static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.utmi_pad_power_on = tegra210_utmi_pad_power_on,
 	.utmi_pad_power_down = tegra210_utmi_pad_power_down,
 	.utmi_port_reset_quirk = tegra210_utmi_port_reset_quirk,
+	.utmi_pad_set_protection_level =
+		tegra210_xusb_padctl_utmi_pad_set_protection_level,
 };
 
 static const char * const tegra210_supply_names[] = {

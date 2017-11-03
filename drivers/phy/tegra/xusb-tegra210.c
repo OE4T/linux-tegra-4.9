@@ -31,14 +31,18 @@
 
 #include "xusb.h"
 
-#define FUSE_SKU_CALIB_HS_CURR_LEVEL_PADX_SHIFT(x) \
+/* FUSE USB_CALIB registers */
+/* FUSE_USB_CALIB_0 */
+#define   HS_CURR_LEVEL_PADX_SHIFT(x) \
 					((x) ? (11 + ((x) - 1) * 6) : 0)
-#define FUSE_SKU_CALIB_HS_CURR_LEVEL_PAD_MASK 0x3f
-#define FUSE_SKU_CALIB_HS_TERM_RANGE_ADJ_SHIFT 7
-#define FUSE_SKU_CALIB_HS_TERM_RANGE_ADJ_MASK 0xf
-
-#define FUSE_USB_CALIB_EXT_RPD_CTRL_SHIFT 0
-#define FUSE_USB_CALIB_EXT_RPD_CTRL_MASK 0x1f
+#define   HS_CURR_LEVEL_PAD_MASK  (0x3f)
+#define   HS_TERM_RANGE_ADJ_SHIFT (7)
+#define   HS_TERM_RANGE_ADJ_MASK  (0xf)
+#define   HS_SQUELCH_SHIFT        (29)
+#define   HS_SQUELCH_MASK         (0x7)
+/* FUSE_USB_CALIB_EXT_0 */
+#define   RPD_CTRL_SHIFT          (0)
+#define   RPD_CTRL_MASK           (0x1f)
 
 #define XUSB_PADCTL_USB2_PAD_MUX 0x004
 #define XUSB_PADCTL_USB2_PAD_MUX_HSIC_PAD_TRK_SHIFT 16
@@ -94,12 +98,13 @@
 #define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_LEV_MASK 0x3
 #define XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_FIX18 (1 << 6)
 
-#define XUSB_PADCTL_USB2_OTG_PADX_CTL0(x) (0x088 + (x) * 0x40)
-#define XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD_ZI (1 << 29)
-#define XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD2 (1 << 27)
-#define XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD (1 << 26)
-#define XUSB_PADCTL_USB2_OTG_PAD_CTL0_HS_CURR_LEVEL_SHIFT 0
-#define XUSB_PADCTL_USB2_OTG_PAD_CTL0_HS_CURR_LEVEL_MASK 0x3f
+#define XUSB_PADCTL_USB2_OTG_PADX_CTL_0(x) (0x088 + (x) * 0x40)
+#define   HS_CURR_LEVEL(x)                 ((x) & 0x3f)
+#define   TERM_SEL                         BIT(25)
+#define   USB2_OTG_PD                      BIT(26)
+#define   USB2_OTG_PD2                     BIT(27)
+#define   USB2_OTG_PD2_OVRD_EN             BIT(28)
+#define   USB2_OTG_PD_ZI                   BIT(29)
 
 #define XUSB_PADCTL_USB2_OTG_PADX_CTL_1(x) (0x8c + (x) * 0x40)
 #define   USB2_OTG_PD_DR                   BIT(2)
@@ -107,14 +112,10 @@
 #define   RPD_CTRL(x)                      (((x) & 0x1f) << 26)
 #define   RPD_CTRL_VALUE(x)                (((x) << 26) & 0x1f)
 
-#define XUSB_PADCTL_USB2_BIAS_PAD_CTL0 0x284
-#define XUSB_PADCTL_USB2_BIAS_PAD_CTL0_PD (1 << 11)
-#define XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_DISCON_LEVEL_SHIFT 3
-#define XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_DISCON_LEVEL_MASK 0x7
-#define XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_DISCON_LEVEL_VAL 0x7
-#define XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_SQUELCH_LEVEL_SHIFT 0
-#define XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_SQUELCH_LEVEL_MASK 0x7
-#define XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_SQUELCH_LEVEL_VAL 0x2
+#define XUSB_PADCTL_USB2_BIAS_PAD_CTL_0 (0x284)
+#define   BIAS_PAD_PD                   BIT(11)
+#define   HS_DISCON_LEVEL(x)            (((x) & 0x7) << 3)
+#define   HS_SQUELCH_LEVEL(x)           (((x) & 0x7) << 0)
 
 #define XUSB_PADCTL_USB2_BIAS_PAD_CTL_1 (0x288)
 #define   TCTRL_VALUE(x)                (((x) & 0x3f) >> 0)
@@ -288,6 +289,7 @@ tegra210_usb3_lane_map(struct tegra_xusb_lane *lane);
 struct tegra210_xusb_fuse_calibration {
 	u32 hs_curr_level[4];
 	u32 hs_term_range_adj;
+	u32 hs_squelch;
 	u32 rpd_ctrl;
 };
 
@@ -1030,6 +1032,160 @@ static const struct tegra_xusb_lane_ops tegra210_usb2_lane_ops = {
 	.remove = tegra210_usb2_lane_remove,
 };
 
+/* must be called under padctl->lock */
+static void tegra210_utmi_bias_pad_power_on(struct tegra_xusb_padctl *padctl,
+				struct tegra_xusb_usb2_pad *pad)
+{
+	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
+	u32 reg;
+
+
+	if (pad->enable++ > 0)
+		return;
+
+	dev_dbg(padctl->dev, "power on BIAS PAD & USB2 tracking\n");
+
+	if (clk_prepare_enable(pad->clk))
+		dev_warn(padctl->dev, "failed to enable BIAS PAD & USB2 tracking\n");
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
+	reg &= ~USB2_TRK_START_TIMER(~0);
+	reg |= USB2_TRK_START_TIMER(0x1e);
+	reg &= ~USB2_TRK_DONE_RESET_TIMER(~0);
+	reg |= USB2_TRK_DONE_RESET_TIMER(0xa);
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL_0);
+	reg &= ~BIAS_PAD_PD;
+	reg &= ~HS_DISCON_LEVEL(~0);
+	reg |= HS_DISCON_LEVEL(0x7);
+	reg &= ~HS_SQUELCH_LEVEL(~0);
+	reg |= HS_SQUELCH_LEVEL(priv->fuse.hs_squelch);
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL_0);
+
+	udelay(1);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
+	reg &= ~USB2_PD_TRK;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
+}
+
+/* must be called under padctl->lock */
+static void tegra210_utmi_bias_pad_power_off(struct tegra_xusb_padctl *padctl,
+				struct tegra_xusb_usb2_pad *pad)
+{
+	u32 reg;
+
+
+	if (WARN_ON(pad->enable == 0))
+		return;
+
+	if (--pad->enable > 0)
+		return;
+
+	if (!padctl->cdp_used) {
+		dev_dbg(padctl->dev, "power off BIAS PAD\n");
+		/* only turn BIAS pad off when host CDP isn't enabled */
+		reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL_0);
+		reg |= BIAS_PAD_PD;
+		padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL_0);
+	}
+
+	dev_dbg(padctl->dev, "power off USB2 tracking\n");
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
+	reg |= USB2_PD_TRK;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
+
+	clk_disable_unprepare(pad->clk);
+}
+
+void tegra210_utmi_pad_power_on(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_usb2_lane *usb2;
+	struct tegra_xusb_usb2_pad *pad;
+	struct tegra_xusb_padctl *padctl;
+	unsigned int index;
+	struct device *dev;
+	u32 reg;
+
+	if (!phy)
+		return;
+
+	lane = phy_get_drvdata(phy);
+	usb2 = to_usb2_lane(lane);
+	pad = to_usb2_pad(lane->pad);
+	padctl = lane->pad->padctl;
+	index = lane->index;
+	dev = padctl->dev;
+
+	if (usb2->powered_on)
+		return;
+
+	mutex_lock(&padctl->lock);
+
+	dev_info(dev, "power on UTMI pads %d\n", index);
+
+	tegra210_utmi_bias_pad_power_on(padctl, pad);
+
+	udelay(2);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_0(index));
+	reg &= ~USB2_OTG_PD;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL_0(index));
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
+	reg &= ~USB2_OTG_PD_DR;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
+
+	usb2->powered_on = true;
+
+	mutex_unlock(&padctl->lock);
+}
+
+void tegra210_utmi_pad_power_down(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_usb2_lane *usb2;
+	struct tegra_xusb_usb2_pad *pad;
+	struct tegra_xusb_padctl *padctl;
+	unsigned int index;
+	struct device *dev;
+	u32 reg;
+
+	if (!phy)
+		return;
+
+	lane = phy_get_drvdata(phy);
+	usb2 = to_usb2_lane(lane);
+	pad = to_usb2_pad(lane->pad);
+	padctl = lane->pad->padctl;
+	index = lane->index;
+	dev = padctl->dev;
+
+	if (!usb2->powered_on)
+		return;
+
+	mutex_lock(&padctl->lock);
+
+	dev_info(dev, "power down UTMI pad %d\n", index);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_0(index));
+	reg |= USB2_OTG_PD;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL_0(index));
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
+	reg |= USB2_OTG_PD_DR;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
+
+	udelay(2);
+
+	tegra210_utmi_bias_pad_power_off(padctl, pad);
+	usb2->powered_on = false;
+
+	mutex_unlock(&padctl->lock);
+}
+
 static int tegra210_usb2_phy_init(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
@@ -1114,7 +1270,6 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_usb2_lane *usb2 = to_usb2_lane(lane);
-	struct tegra_xusb_usb2_pad *pad = to_usb2_pad(lane->pad);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	struct tegra210_xusb_padctl *priv;
 	struct tegra_xusb_usb2_port *port;
@@ -1178,21 +1333,6 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 		padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
 	}
 
-	value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
-	value &= ~((XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_SQUELCH_LEVEL_MASK <<
-		    XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_SQUELCH_LEVEL_SHIFT) |
-		   (XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_DISCON_LEVEL_MASK <<
-		    XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_DISCON_LEVEL_SHIFT));
-	value |= (XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_DISCON_LEVEL_VAL <<
-		  XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_DISCON_LEVEL_SHIFT);
-
-	if (tegra_sku_info.revision < TEGRA_REVISION_A02)
-		value |=
-			(XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_SQUELCH_LEVEL_VAL <<
-			XUSB_PADCTL_USB2_BIAS_PAD_CTL0_HS_SQUELCH_LEVEL_SHIFT);
-
-	padctl_writel(padctl, value, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
-
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_PORT_CAP);
 	value &= ~XUSB_PADCTL_USB2_PORT_CAP_PORTX_CAP_MASK(index);
 	if (port->port_cap == USB_PORT_DISABLED)
@@ -1205,16 +1345,12 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 		value |= XUSB_PADCTL_USB2_PORT_CAP_PORTX_CAP_OTG(index);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_PORT_CAP);
 
-	value = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
-	value &= ~((XUSB_PADCTL_USB2_OTG_PAD_CTL0_HS_CURR_LEVEL_MASK <<
-		    XUSB_PADCTL_USB2_OTG_PAD_CTL0_HS_CURR_LEVEL_SHIFT) |
-		   XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD |
-		   XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD2 |
-		   XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD_ZI);
-	value |= (priv->fuse.hs_curr_level[index] +
-		  usb2->hs_curr_level_offset) <<
-		 XUSB_PADCTL_USB2_OTG_PAD_CTL0_HS_CURR_LEVEL_SHIFT;
-	padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+	value = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_0(index));
+	value &= ~USB2_OTG_PD_ZI;
+	value &= ~HS_CURR_LEVEL(~0);
+	value |= HS_CURR_LEVEL(priv->fuse.hs_curr_level[index] +
+				usb2->hs_curr_level_offset);
+	padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL_0(index));
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
 	value &= ~TERM_RANGE_ADJ(~0);
@@ -1231,51 +1367,14 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 	padctl_writel(padctl, value,
 		      XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(index));
 
-	if (pad->enable > 0) {
-		pad->enable++;
-		mutex_unlock(&padctl->lock);
-		return 0;
-	}
-
-	err = clk_prepare_enable(pad->clk);
-	if (err)
-		goto out;
-
-	value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
-	value &= ~USB2_TRK_START_TIMER(~0);
-	value &= ~USB2_TRK_DONE_RESET_TIMER(~0);
-	value |= USB2_TRK_START_TIMER(0x1e);
-	value |= USB2_TRK_DONE_RESET_TIMER(0xa);
-	padctl_writel(padctl, value, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
-
-	value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
-	value &= ~XUSB_PADCTL_USB2_BIAS_PAD_CTL0_PD;
-	padctl_writel(padctl, value, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
-
-	udelay(1);
-
-	value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
-	value &= ~USB2_PD_TRK;
-	padctl_writel(padctl, value, XUSB_PADCTL_USB2_BIAS_PAD_CTL_1);
-
-	udelay(50);
-
-	clk_disable_unprepare(pad->clk);
-
-	pad->enable++;
 	mutex_unlock(&padctl->lock);
 
 	return 0;
-
-out:
-	mutex_unlock(&padctl->lock);
-	return err;
 }
 
 static int tegra210_usb2_phy_power_off(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
-	struct tegra_xusb_usb2_pad *pad = to_usb2_pad(lane->pad);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	struct tegra_xusb_usb2_port *port;
 	u32 value;
@@ -1292,12 +1391,6 @@ static int tegra210_usb2_phy_power_off(struct phy *phy)
 		dev_name(&port->base.dev));
 
 	mutex_lock(&padctl->lock);
-
-	if (WARN_ON(pad->enable == 0))
-		goto out;
-
-	if (--pad->enable > 0)
-		goto out;
 
 	if (port->usb3_port_fake != -1) {
 		value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
@@ -1322,12 +1415,8 @@ static int tegra210_usb2_phy_power_off(struct phy *phy)
 		padctl_writel(padctl, value, XUSB_PADCTL_SS_PORT_MAP);
 	}
 
-	value = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
-	value |= XUSB_PADCTL_USB2_BIAS_PAD_CTL0_PD;
-	padctl_writel(padctl, value, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
-
-out:
 	mutex_unlock(&padctl->lock);
+
 	return 0;
 }
 
@@ -2922,81 +3011,6 @@ static int tegra210_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
 	return 0;
 }
 
-void tegra210_utmi_pad_power_on(struct phy *phy)
-{
-	struct tegra_xusb_lane *lane;
-	struct tegra_xusb_usb2_lane *usb2;
-	struct tegra_xusb_padctl *padctl;
-	unsigned int index;
-	struct device *dev;
-	u32 reg;
-
-	if (!phy)
-		return;
-
-	lane = phy_get_drvdata(phy);
-	usb2 = to_usb2_lane(lane);
-	padctl = lane->pad->padctl;
-	index = lane->index;
-	dev = padctl->dev;
-
-	dev_info(dev, "power on UTMI pads %d\n", index);
-
-	if (usb2->powered_on)
-		return;
-
-	//tegra210_utmi_bias_pad_power_on(padctl);
-
-	udelay(2);
-
-	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
-	reg &= ~XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD;
-	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
-
-	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
-	reg &= ~USB2_OTG_PD_DR;
-	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
-
-	usb2->powered_on = true;
-}
-
-void tegra210_utmi_pad_power_down(struct phy *phy)
-{
-	struct tegra_xusb_lane *lane;
-	struct tegra_xusb_usb2_lane *usb2;
-	struct tegra_xusb_padctl *padctl;
-	unsigned int index;
-	struct device *dev;
-	u32 reg;
-
-	if (!phy)
-		return;
-
-	lane = phy_get_drvdata(phy);
-	usb2 = to_usb2_lane(lane);
-	padctl = lane->pad->padctl;
-	index = lane->index;
-	dev = padctl->dev;
-
-	dev_info(dev, "power down UTMI pad %d\n", index);
-
-	if (!usb2->powered_on)
-		return;
-
-	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
-	reg |= XUSB_PADCTL_USB2_OTG_PAD_CTL0_PD;
-	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
-
-	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
-	reg |= USB2_OTG_PD_DR;
-	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));
-
-	udelay(2);
-
-	//tegra210_utmi_bias_pad_power_off(padctl);
-	usb2->powered_on = false;
-}
-
 static int tegra210_utmi_port_reset_quirk(struct phy *phy)
 {
 	struct tegra_xusb_padctl *padctl;
@@ -3027,6 +3041,8 @@ static int tegra210_utmi_port_reset_quirk(struct phy *phy)
 static int
 tegra210_xusb_read_fuse_calibration(struct tegra210_xusb_fuse_calibration *fuse)
 {
+	struct tegra210_xusb_padctl *priv =
+			container_of(fuse, struct tegra210_xusb_padctl, fuse);
 	unsigned int i;
 	u32 value;
 	int err;
@@ -3035,23 +3051,28 @@ tegra210_xusb_read_fuse_calibration(struct tegra210_xusb_fuse_calibration *fuse)
 	if (err < 0)
 		return err;
 
+	dev_info(priv->base.dev, "TEGRA_FUSE_SKU_CALIB_0 = 0x%x\n", value);
+
 	for (i = 0; i < ARRAY_SIZE(fuse->hs_curr_level); i++) {
 		fuse->hs_curr_level[i] =
-			(value >> FUSE_SKU_CALIB_HS_CURR_LEVEL_PADX_SHIFT(i)) &
-			FUSE_SKU_CALIB_HS_CURR_LEVEL_PAD_MASK;
+			(value >> HS_CURR_LEVEL_PADX_SHIFT(i)) &
+			HS_CURR_LEVEL_PAD_MASK;
 	}
 
+	fuse->hs_squelch =
+		(value >> HS_SQUELCH_SHIFT) & HS_SQUELCH_MASK;
+
 	fuse->hs_term_range_adj =
-		(value >> FUSE_SKU_CALIB_HS_TERM_RANGE_ADJ_SHIFT) &
-		FUSE_SKU_CALIB_HS_TERM_RANGE_ADJ_MASK;
+		(value >> HS_TERM_RANGE_ADJ_SHIFT) & HS_TERM_RANGE_ADJ_MASK;
 
 	err = tegra_fuse_readl(TEGRA_FUSE_USB_CALIB_EXT_0, &value);
 	if (err < 0)
 		return err;
 
+	dev_info(priv->base.dev, "TEGRA_FUSE_USB_CALIB_EXT_0 = 0x%x\n", value);
+
 	fuse->rpd_ctrl =
-		(value >> FUSE_USB_CALIB_EXT_RPD_CTRL_SHIFT) &
-		FUSE_USB_CALIB_EXT_RPD_CTRL_MASK;
+		(value >> RPD_CTRL_SHIFT) & RPD_CTRL_MASK;
 
 	return 0;
 }

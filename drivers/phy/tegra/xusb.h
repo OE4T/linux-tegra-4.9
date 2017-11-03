@@ -238,7 +238,6 @@ struct tegra_xusb_pcie_pad {
 
 	struct reset_control *rst;
 	struct clk *pll;
-	struct clk *uphy_mgmt_clk;
 
 	unsigned int enable;
 };

@@ -305,6 +305,9 @@ struct tegra210_xusb_padctl {
 	struct tegra210_xusb_fuse_calibration fuse;
 	struct tegra_prod *prod_list;
 	struct tegra_utmi_pad_config utmi_pad_cfg;
+	struct clk *plle;
+	struct clk *uphy_mgmt_clk;
+	bool sata_used_by_xusb;
 };
 
 static inline struct tegra210_xusb_padctl *
@@ -339,24 +342,9 @@ static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 	u32 value;
 	int err, i;
 
-	if (pcie->enable > 0) {
-		pcie->enable++;
-		return 0;
-	}
-
-	err = clk_prepare_enable(pcie->pll);
-	if (err < 0)
-		return err;
-
-	if (t210b01_compatible(padctl) == 1) {
-		err = clk_prepare_enable(pcie->uphy_mgmt_clk);
-		if (err < 0)
-			return err;
-	}
-
 	err = reset_control_deassert(pcie->rst);
 	if (err < 0)
-		goto disable;
+		dev_err(padctl->dev, "failed to deassert UPHY PEX PLL reset\n");
 
 	if (t210b01_compatible(padctl) == 1) {
 		for (i = 0; i < ARRAY_SIZE(usb3_pll_g1_init_data); i++) {
@@ -446,7 +434,6 @@ static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_P0_CTL2);
@@ -465,7 +452,6 @@ static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_P0_CTL1);
@@ -484,7 +470,6 @@ static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_P0_CTL8);
@@ -504,7 +489,6 @@ static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_P0_CTL8);
@@ -523,13 +507,16 @@ static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_P0_CTL8);
 	value &= ~XUSB_PADCTL_UPHY_PLL_CTL8_RCAL_CLK_EN;
 	padctl_writel(padctl, value, XUSB_PADCTL_UPHY_PLL_P0_CTL8);
 
+	if (err == -ETIMEDOUT)
+		dev_err(padctl->dev, "UPHY PEX PLL calibration timeout\n");
+
+	/* enable PCIE PLL in HW */
 	tegra210_xusb_pll_hw_control_enable();
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_P0_CTL1);
@@ -548,56 +535,21 @@ static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 
 	tegra210_xusb_pll_hw_sequence_start();
 
-	pcie->enable++;
-
 	return 0;
-
-reset:
-	reset_control_assert(pcie->rst);
-disable:
-	clk_disable_unprepare(pcie->pll);
-	if (t210b01_compatible(padctl) == 1)
-		clk_disable_unprepare(pcie->uphy_mgmt_clk);
-	return err;
 }
 
 /* must be called under padctl->lock */
-static void tegra210_pex_uphy_disable(struct tegra_xusb_padctl *padctl)
+static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl)
 {
-	struct tegra_xusb_pcie_pad *pcie = to_pcie_pad(padctl->pcie);
-
-	if (WARN_ON(pcie->enable == 0))
-		return;
-
-	if (--pcie->enable > 0)
-		return;
-
-	reset_control_assert(pcie->rst);
-	clk_disable_unprepare(pcie->pll);
-	if (t210b01_compatible(padctl) == 1)
-		clk_disable_unprepare(pcie->uphy_mgmt_clk);
-}
-
-/* must be called under padctl->lock */
-static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl, bool usb)
-{
+	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
 	struct tegra_xusb_sata_pad *sata = to_sata_pad(padctl->sata);
 	unsigned long timeout;
 	u32 value;
 	int err;
 
-	if (sata->enable > 0) {
-		sata->enable++;
-		return 0;
-	}
-
-	err = clk_prepare_enable(sata->pll);
-	if (err < 0)
-		return err;
-
 	err = reset_control_deassert(sata->rst);
 	if (err < 0)
-		goto disable;
+		dev_err(padctl->dev, "failed to deassert UPHY SATA PLL reset\n");
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_S0_CTL2);
 	value &= ~(XUSB_PADCTL_UPHY_PLL_CTL2_CAL_CTRL_MASK <<
@@ -632,7 +584,7 @@ static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl, bool usb)
 		    XUSB_PADCTL_UPHY_PLL_CTL4_REFCLK_SEL_SHIFT));
 	value |= XUSB_PADCTL_UPHY_PLL_CTL4_TXCLKREF_EN;
 
-	if (usb)
+	if (priv->sata_used_by_xusb)
 		value |= (XUSB_PADCTL_UPHY_PLL_CTL4_TXCLKREF_SEL_USB_VAL <<
 			  XUSB_PADCTL_UPHY_PLL_CTL4_TXCLKREF_SEL_SHIFT);
 	else
@@ -651,7 +603,7 @@ static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl, bool usb)
 		   (XUSB_PADCTL_UPHY_PLL_CTL1_FREQ_NDIV_MASK <<
 		    XUSB_PADCTL_UPHY_PLL_CTL1_FREQ_NDIV_SHIFT));
 
-	if (usb)
+	if (priv->sata_used_by_xusb)
 		value |= XUSB_PADCTL_UPHY_PLL_CTL1_FREQ_NDIV_USB_VAL <<
 			 XUSB_PADCTL_UPHY_PLL_CTL1_FREQ_NDIV_SHIFT;
 	else
@@ -691,7 +643,6 @@ static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl, bool usb)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_S0_CTL2);
@@ -710,7 +661,6 @@ static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl, bool usb)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_S0_CTL1);
@@ -729,7 +679,6 @@ static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl, bool usb)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_S0_CTL8);
@@ -749,7 +698,6 @@ static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl, bool usb)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_S0_CTL8);
@@ -768,13 +716,16 @@ static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl, bool usb)
 
 	if (time_after_eq(jiffies, timeout)) {
 		err = -ETIMEDOUT;
-		goto reset;
 	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_S0_CTL8);
 	value &= ~XUSB_PADCTL_UPHY_PLL_CTL8_RCAL_CLK_EN;
 	padctl_writel(padctl, value, XUSB_PADCTL_UPHY_PLL_S0_CTL8);
 
+	if (err == -ETIMEDOUT)
+		dev_err(padctl->dev, "UPHY SATA PLL calibration timeout\n");
+
+	/* enable SATA PLL in HW */
 	tegra210_sata_pll_hw_control_enable();
 
 	value = padctl_readl(padctl, XUSB_PADCTL_UPHY_PLL_S0_CTL1);
@@ -793,40 +744,41 @@ static int tegra210_sata_uphy_enable(struct tegra_xusb_padctl *padctl, bool usb)
 
 	tegra210_sata_pll_hw_sequence_start();
 
-	sata->enable++;
-
 	return 0;
-
-reset:
-	reset_control_assert(sata->rst);
-disable:
-	clk_disable_unprepare(sata->pll);
-	return err;
-}
-
-/* must be called under padctl->lock */
-static void tegra210_sata_uphy_disable(struct tegra_xusb_padctl *padctl)
-{
-	struct tegra_xusb_sata_pad *sata = to_sata_pad(padctl->sata);
-
-	if (WARN_ON(sata->enable == 0))
-		return;
-
-	if (--sata->enable > 0)
-		return;
-
-	reset_control_assert(sata->rst);
-	clk_disable_unprepare(sata->pll);
 }
 
 static int tegra210_xusb_padctl_enable(struct tegra_xusb_padctl *padctl)
 {
+	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
 	u32 value;
+	int err;
 
 	mutex_lock(&padctl->lock);
 
 	if (padctl->enable++ > 0)
 		goto out;
+
+	if (tegra210_plle_hw_sequence_is_enabled())
+		dev_err(padctl->dev, "PLLE was in HW before init!\n");
+
+	/* enable PLLE in SW */
+	err = clk_prepare_enable(priv->plle);
+	if (err < 0)
+		return err;
+
+	if (t210b01_compatible(padctl) == 1) {
+		err = clk_prepare_enable(priv->uphy_mgmt_clk);
+		if (err < 0)
+			return err;
+	}
+
+	/* enable PCIE & SATA PLL in HW */
+	tegra210_pex_uphy_enable(padctl);
+	if (t210b01_compatible(padctl) == 0)
+		tegra210_sata_uphy_enable(padctl);
+
+	/* enable PLLE in HW */
+	tegra210_plle_hw_sequence_start();
 
 	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
 	value &= ~AUX_MUX_LP0_CLAMP_EN;
@@ -1959,7 +1911,7 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
 	u32 value;
-	int err;
+	int err = 0;
 	struct tegra_xusb_usb3_port *port;
 
 	dev_dbg(padctl->dev, "phy power on lane = %s\n",
@@ -1988,10 +1940,6 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 							port->base.index);
 	}
 
-	err = tegra210_pex_uphy_enable(padctl);
-	if (err < 0)
-		goto unlock;
-
 	if (t210b01_compatible(padctl) == 1)
 		tegra210_pcie_lane_defaults(lane);
 
@@ -1999,7 +1947,6 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 	value |= XUSB_PADCTL_USB3_PAD_MUX_PCIE_IDDQ_DISABLE(lane->index);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB3_PAD_MUX);
 
-unlock:
 	mutex_unlock(&padctl->lock);
 	return err;
 }
@@ -2018,8 +1965,6 @@ static int tegra210_pcie_phy_power_off(struct phy *phy)
 	value = padctl_readl(padctl, XUSB_PADCTL_USB3_PAD_MUX);
 	value &= ~XUSB_PADCTL_USB3_PAD_MUX_PCIE_IDDQ_DISABLE(lane->index);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB3_PAD_MUX);
-
-	tegra210_pex_uphy_disable(padctl);
 
 	mutex_unlock(&padctl->lock);
 	return 0;
@@ -2152,6 +2097,7 @@ tegra210_pcie_pad_probe(struct tegra_xusb_padctl *padctl,
 			const struct tegra_xusb_pad_soc *soc,
 			struct device_node *np)
 {
+	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
 	struct tegra_xusb_pcie_pad *pcie;
 	struct tegra_xusb_pad *pad;
 	int err;
@@ -2170,17 +2116,17 @@ tegra210_pcie_pad_probe(struct tegra_xusb_padctl *padctl,
 		goto out;
 	}
 
-	pcie->pll = devm_clk_get(&pad->dev, "pll");
-	if (IS_ERR(pcie->pll)) {
-		err = PTR_ERR(pcie->pll);
-		dev_err(&pad->dev, "failed to get PLL: %d\n", err);
+	priv->plle = devm_clk_get(&pad->dev, "pll");
+	if (IS_ERR(priv->plle)) {
+		err = PTR_ERR(priv->plle);
+		dev_err(&pad->dev, "failed to get PLLE: %d\n", err);
 		goto unregister;
 	}
 
 	if (t210b01_compatible(padctl) == 1) {
-		pcie->uphy_mgmt_clk = devm_clk_get(&pad->dev, "uphy_mgmt");
-		if (IS_ERR(pcie->uphy_mgmt_clk)) {
-			err = PTR_ERR(pcie->uphy_mgmt_clk);
+		priv->uphy_mgmt_clk = devm_clk_get(&pad->dev, "uphy_mgmt");
+		if (IS_ERR(priv->uphy_mgmt_clk)) {
+			err = PTR_ERR(priv->uphy_mgmt_clk);
 			dev_err(&pad->dev,
 				"failed to get uphy_mgmt_clk clock: %d\n", err);
 		}
@@ -2241,6 +2187,8 @@ static struct tegra_xusb_lane *
 tegra210_sata_lane_probe(struct tegra_xusb_pad *pad, struct device_node *np,
 			 unsigned int index)
 {
+	struct tegra210_xusb_padctl *priv =
+				to_tegra210_xusb_padctl(pad->padctl);
 	struct tegra_xusb_sata_lane *sata;
 	int err;
 
@@ -2259,6 +2207,11 @@ tegra210_sata_lane_probe(struct tegra_xusb_pad *pad, struct device_node *np,
 		kfree(sata);
 		return ERR_PTR(err);
 	}
+
+	if (tegra_xusb_lane_check(&sata->base, "xusb"))
+		priv->sata_used_by_xusb = true;
+	else
+		priv->sata_used_by_xusb = false;
 
 	dev_info(pad->padctl->dev, "dev = %s, lane = %s, function = %s\n",
 		dev_name(&pad->lanes[index]->dev), pad->soc->lanes[index].name,
@@ -2301,24 +2254,18 @@ static int tegra210_sata_phy_power_on(struct phy *phy)
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	u32 value;
-	int err;
 
 	dev_dbg(padctl->dev, "phy power on lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
 	mutex_lock(&padctl->lock);
 
-	err = tegra210_sata_uphy_enable(padctl, false);
-	if (err < 0)
-		goto unlock;
-
 	value = padctl_readl(padctl, XUSB_PADCTL_USB3_PAD_MUX);
 	value |= XUSB_PADCTL_USB3_PAD_MUX_SATA_IDDQ_DISABLE(lane->index);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB3_PAD_MUX);
 
-unlock:
 	mutex_unlock(&padctl->lock);
-	return err;
+	return 0;
 }
 
 static int tegra210_sata_phy_power_off(struct phy *phy)
@@ -2335,8 +2282,6 @@ static int tegra210_sata_phy_power_off(struct phy *phy)
 	value = padctl_readl(padctl, XUSB_PADCTL_USB3_PAD_MUX);
 	value &= ~XUSB_PADCTL_USB3_PAD_MUX_SATA_IDDQ_DISABLE(lane->index);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB3_PAD_MUX);
-
-	tegra210_sata_uphy_disable(lane->pad->padctl);
 
 	mutex_unlock(&padctl->lock);
 	return 0;
@@ -2482,7 +2427,6 @@ static int tegra210_usb3_port_enable(struct tegra_xusb_port *port)
 	struct tegra_xusb_lane *lane = usb3->base.lane;
 	unsigned int index = port->index;
 	u32 value;
-	int err;
 
 	dev_dbg(padctl->dev, "enable usb3 port = %s\n",
 		dev_name(&tegra_xusb_find_usb3_port(lane->pad->padctl,
@@ -2525,17 +2469,6 @@ static int tegra210_usb3_port_enable(struct tegra_xusb_port *port)
 
 	padctl_writel(padctl, XUSB_PADCTL_UPHY_USB3_PAD_ECTL6_RX_EQ_CTRL_H_VAL,
 		      XUSB_PADCTL_UPHY_USB3_PADX_ECTL6(index));
-
-	if (lane->pad == padctl->sata)
-		err = tegra210_sata_uphy_enable(padctl, true);
-	else
-		err = tegra210_pex_uphy_enable(padctl);
-
-	if (err) {
-		dev_err(&port->dev, "%s: failed to enable UPHY: %d\n",
-			__func__, err);
-		return err;
-	}
 
 	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
 	value &= ~SSPX_ELPG_VCORE_DOWN(index);
@@ -2583,11 +2516,6 @@ static void tegra210_usb3_port_disable(struct tegra_xusb_port *port)
 	value = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
 	value |= SSPX_ELPG_VCORE_DOWN(index);
 	padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
-
-	if (lane->pad == padctl->sata)
-		tegra210_sata_uphy_disable(padctl);
-	else
-		tegra210_pex_uphy_disable(padctl);
 
 	value = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_MAP);
 	value &= ~XUSB_PADCTL_SS_PORT_MAP_PORTX_MAP_MASK(index);

@@ -27,9 +27,7 @@
 /* TODO: To be removed when work_struct update_fn_work is moved out of common code */
 #include <linux/workqueue.h>
 
-#include <linux/stacktrace.h>
 #include <nvgpu/list.h>
-
 #include <nvgpu/lock.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/cond.h>
@@ -165,6 +163,9 @@ enum channel_gk20a_ref_action_type {
 };
 
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
+
+#include <linux/stacktrace.h>
+
 struct channel_gk20a_ref_action {
 	enum channel_gk20a_ref_action_type type;
 	s64 timestamp_ms;

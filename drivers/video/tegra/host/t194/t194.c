@@ -779,6 +779,9 @@ static void t194_set_nvhost_chanops(struct nvhost_channel *ch)
 	/* Disable gather filter in simulator */
 	if (tegra_platform_is_vdk())
 		ch->ops.init_gather_filter = NULL;
+
+	/* Disable gather filter in safe config */
+	ch->ops.init_gather_filter = NULL;
 }
 
 int nvhost_init_t194_channel_support(struct nvhost_master *host,
@@ -913,15 +916,10 @@ int nvhost_init_t194_support(struct nvhost_master *host,
 	op->syncpt.alloc = nvhost_syncpt_alloc_gos_backing;
 	op->syncpt.release = nvhost_syncpt_release_gos_backing;
 
-	/* WAR to bugs 200094901 and 200082771: enable protection
-	 * only on silicon/emulation */
-
-	if (!tegra_platform_is_vdk()) {
-		op->syncpt.reset = t186_syncpt_reset;
-		op->syncpt.mark_used = t186_syncpt_mark_used;
-		op->syncpt.mark_unused = t186_syncpt_mark_unused;
-	}
 	op->syncpt.mutex_owner = t186_syncpt_mutex_owner;
+	(void)t186_syncpt_reset;
+	(void)t186_syncpt_mark_used;
+	(void)t186_syncpt_mark_unused;
 
 	op->remove_support = t194_remove_support;
 

@@ -252,10 +252,13 @@
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
 			};
-			pva_domain {
+			pva0_domain {
 				address-space = <&pva_as>;
-				sid-list = <TEGRA_SID(PVA0)
-					    TEGRA_SID(PVA1)>;
+				sid-list = <TEGRA_SID(PVA0)>;
+			};
+			pva1_domain {
+				address-space = <&pva_as>;
+				sid-list = <TEGRA_SID(PVA1)>;
 			};
 			vi_domain {
 				address-space = <&common_as>;
@@ -334,9 +337,10 @@
 				num-pf-page = <0>;
 				gap-page = <1>;
 			};
+			/* Modify pva kernel code for any iova-start change*/
 			pva_as: pva0 {
 				iova-start = <0x0 0x80000000>;
-				iova-size = <0x0 0xFFFFEFFF>;
+				iova-size = <0x0 0x7FFFFFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

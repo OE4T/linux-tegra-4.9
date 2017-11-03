@@ -260,7 +260,7 @@ static int ov9281_i2c_addr_assign(struct ov9281 *priv, u8 i2c_addr)
 	struct device *dev = &priv->i2c_client->dev;
 	struct i2c_msg msg;
 	unsigned char data[3];
-	int err;
+	int err = 0;
 
 	/*
 	 * I wish i2c_check_addr_validity() was available.  Oh well.
@@ -346,16 +346,9 @@ static int ov9281_i2c_addr_assign(struct ov9281 *priv, u8 i2c_addr)
 	msg.len = 3;
 	msg.buf = data;
 
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		goto done;
-
 	if (i2c_transfer(priv->i2c_client->adapter, &msg, 1) != 1)
 		err = -EIO;
 
-	camera_common_s_power(priv->subdev, false);
-
-done:
 	gpio_set_value(priv->cam_sid_gpio, 1);
 	msleep_range(1);
 
@@ -544,10 +537,6 @@ static int ov9281_otp_setup(struct ov9281 *priv)
 	int i;
 	int err;
 
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return -ENODEV;
-
 	err = ov9281_read_otp(priv, otp_buf, OV9281_OTP_BUFFER_ADDR,
 			      OV9281_OTP_BUFFER_SIZE);
 	if (err)
@@ -563,10 +552,6 @@ static int ov9281_otp_setup(struct ov9281 *priv)
 		sprintf(&ctrl->p_new.p_char[i*2], "%02x", otp_buf[i]);
 	ctrl->p_cur.p_char = ctrl->p_new.p_char;
 
-	err = camera_common_s_power(priv->subdev, false);
-	if (err)
-		return -ENODEV;
-
 	return 0;
 }
 
@@ -577,10 +562,6 @@ static int ov9281_fuse_id_setup(struct ov9281 *priv)
 	u8 fuse_id[OV9281_FUSE_ID_OTP_BUFFER_SIZE];
 	int i;
 	int err;
-
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return -ENODEV;
 
 	err = ov9281_read_otp(priv, fuse_id, OV9281_FUSE_ID_OTP_BUFFER_ADDR,
 			      OV9281_FUSE_ID_OTP_BUFFER_SIZE);
@@ -596,10 +577,6 @@ static int ov9281_fuse_id_setup(struct ov9281 *priv)
 	for (i = 0; i < OV9281_FUSE_ID_OTP_BUFFER_SIZE; i++)
 		sprintf(&ctrl->p_new.p_char[i*2], "%02x", fuse_id[i]);
 	ctrl->p_cur.p_char = ctrl->p_new.p_char;
-
-	err = camera_common_s_power(priv->subdev, false);
-	if (err)
-		return -ENODEV;
 
 	return 0;
 }
@@ -1046,10 +1023,6 @@ static int ov9281_verify_chip_id(struct ov9281 *priv)
 	u16 chip_id;
 	int err;
 
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return -ENODEV;
-
 	err = ov9281_read_reg(s_data, OV9281_SC_CHIP_ID_HIGH_ADDR, &chip_id_hi);
 	if (err) {
 		dev_err(&client->dev, "Failed to read chip ID\n");
@@ -1066,10 +1039,6 @@ static int ov9281_verify_chip_id(struct ov9281 *priv)
 		dev_err(&client->dev, "Read unknown chip ID 0x%04x\n", chip_id);
 		return -EINVAL;
 	}
-
-	err = camera_common_s_power(priv->subdev, false);
-	if (err)
-		return -ENODEV;
 
 	return 0;
 }
@@ -1174,13 +1143,17 @@ static int ov9281_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
+	err = camera_common_s_power(priv->subdev, true);
+	if (err)
+		return -ENODEV;
+
 	err = ov9281_i2c_addr_assign(priv, client->addr);
 	if (err)
-		return err;
+		goto error;
 
 	err = ov9281_verify_chip_id(priv);
 	if (err)
-		return err;
+		goto error;
 
 	err = ov9281_otp_setup(priv);
 	if (err) {
@@ -1214,7 +1187,12 @@ static int ov9281_probe(struct i2c_client *client,
 
 	dev_info(dev, "Probed v4l2 sensor.\n");
 
+	camera_common_s_power(priv->subdev, false);
 	return 0;
+error:
+	camera_common_s_power(priv->subdev, false);
+	return err;
+
 }
 
 static int

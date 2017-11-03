@@ -2395,10 +2395,10 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 							&g->fifo.tsg[c->tsgid];
 
 						gk20a_tsg_event_id_post_event(tsg,
-						    NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC);
+						    NVGPU_EVENT_ID_BLOCKING_SYNC);
 					} else {
 						gk20a_channel_event_id_post_event(c,
-						    NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC);
+						    NVGPU_EVENT_ID_BLOCKING_SYNC);
 					}
 				}
 				/*

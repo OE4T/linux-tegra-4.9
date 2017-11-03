@@ -80,10 +80,15 @@ static int gk20a_tsg_get_event_data_from_id(struct tsg_gk20a *tsg,
 }
 
 void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
-				       int event_id)
+				       int __event_id)
 {
 	struct gk20a_event_id_data *event_id_data;
+	u32 event_id;
 	int err = 0;
+
+	event_id = nvgpu_event_id_to_ioctl_channel_event_id(__event_id);
+	if (event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX)
+		return;
 
 	err = gk20a_tsg_get_event_data_from_id(tsg, event_id,
 						&event_id_data);

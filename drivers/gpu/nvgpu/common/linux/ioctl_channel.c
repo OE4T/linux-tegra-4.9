@@ -21,6 +21,8 @@
 #include <linux/anon_inodes.h>
 #include <linux/dma-buf.h>
 #include <linux/poll.h>
+#include <uapi/linux/nvgpu.h>
+#include <uapi/linux/nvgpu-t18x.h>
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
@@ -689,11 +691,40 @@ static int gk20a_channel_get_event_data_from_id(struct channel_gk20a *ch,
 	}
 }
 
+/*
+ * Convert common event_id of the form NVGPU_EVENT_ID_* to Linux specific
+ * event_id of the form NVGPU_IOCTL_CHANNEL_EVENT_ID_* which is used in IOCTLs
+ */
+u32 nvgpu_event_id_to_ioctl_channel_event_id(u32 event_id)
+{
+	switch (event_id) {
+	case NVGPU_EVENT_ID_BPT_INT:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT;
+	case NVGPU_EVENT_ID_BPT_PAUSE:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE;
+	case NVGPU_EVENT_ID_BLOCKING_SYNC:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC;
+	case NVGPU_EVENT_ID_CILP_PREEMPTION_STARTED:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_STARTED;
+	case NVGPU_EVENT_ID_CILP_PREEMPTION_COMPLETE:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE;
+	case NVGPU_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN;
+	}
+
+	return NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX;
+}
+
 void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
-				       u32 event_id)
+				       u32 __event_id)
 {
 	struct gk20a_event_id_data *event_id_data;
+	u32 event_id;
 	int err = 0;
+
+	event_id = nvgpu_event_id_to_ioctl_channel_event_id(__event_id);
+	if (event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX)
+		return;
 
 	err = gk20a_channel_get_event_data_from_id(ch, event_id,
 						&event_id_data);

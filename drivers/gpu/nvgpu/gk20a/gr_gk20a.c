@@ -5275,10 +5275,10 @@ static int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
 		struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
 		gk20a_tsg_event_id_post_event(tsg,
-			NVGPU_IOCTL_CHANNEL_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
+			NVGPU_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
 	} else {
 		gk20a_channel_event_id_post_event(ch,
-			NVGPU_IOCTL_CHANNEL_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
+			NVGPU_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
 	}
 
 	nvgpu_cond_broadcast(&ch->semaphore_wq);
@@ -5824,10 +5824,10 @@ static int gk20a_gr_post_bpt_events(struct gk20a *g, struct channel_gk20a *ch,
 			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
 			gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT);
+				NVGPU_EVENT_ID_BPT_INT);
 		} else {
 			gk20a_channel_event_id_post_event(ch,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT);
+				NVGPU_EVENT_ID_BPT_INT);
 		}
 	}
 	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f()) {
@@ -5835,10 +5835,10 @@ static int gk20a_gr_post_bpt_events(struct gk20a *g, struct channel_gk20a *ch,
 			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
 			gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE);
+				NVGPU_EVENT_ID_BPT_PAUSE);
 		} else {
 			gk20a_channel_event_id_post_event(ch,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE);
+				NVGPU_EVENT_ID_BPT_PAUSE);
 		}
 	}
 

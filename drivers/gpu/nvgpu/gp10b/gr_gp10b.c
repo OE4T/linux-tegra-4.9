@@ -1779,10 +1779,10 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 		struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
 
 		gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_STARTED);
+				NVGPU_EVENT_ID_CILP_PREEMPTION_STARTED);
 	} else {
 		gk20a_channel_event_id_post_event(fault_ch,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_STARTED);
+				NVGPU_EVENT_ID_CILP_PREEMPTION_STARTED);
 	}
 
 	return 0;
@@ -1990,10 +1990,10 @@ int gr_gp10b_handle_fecs_error(struct gk20a *g,
 			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
 			gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
+				NVGPU_EVENT_ID_CILP_PREEMPTION_COMPLETE);
 		} else {
 			gk20a_channel_event_id_post_event(ch,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
+				NVGPU_EVENT_ID_CILP_PREEMPTION_COMPLETE);
 		}
 
 		gk20a_channel_put(ch);

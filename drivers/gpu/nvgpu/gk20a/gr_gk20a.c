@@ -682,7 +682,7 @@ int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 	if (err)
 		return err;
 
-	if (nvgpu_mem_cpu_accessible(&ch_ctx->gr_ctx->mem)) {
+	if (ch_ctx->gr_ctx->mem.cpu_va) {
 		/* reset patch count if ucode has already processed it */
 		ch_ctx->patch_ctx.data_count = nvgpu_mem_rd(g,
 						&ch_ctx->gr_ctx->mem,
@@ -699,7 +699,7 @@ void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 	nvgpu_mem_end(g, &ch_ctx->patch_ctx.mem);
 
 	/* Write context count to context image if it is mapped */
-	if (nvgpu_mem_cpu_accessible(&ch_ctx->gr_ctx->mem)) {
+	if (ch_ctx->gr_ctx->mem.cpu_va) {
 		nvgpu_mem_wr(g, &ch_ctx->gr_ctx->mem,
 			     ctxsw_prog_main_image_patch_count_o(),
 			     ch_ctx->patch_ctx.data_count);

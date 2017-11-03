@@ -1271,9 +1271,11 @@ static int eqos_open(struct net_device *dev)
 
 	if (!pdata->use_fixed_phy) {
 		/* Reset the PHY */
-		gpio_set_value(pdata->phy_reset_gpio, 0);
-		usleep_range(10, 11);
-		gpio_set_value(pdata->phy_reset_gpio, 1);
+		if (gpio_is_valid(pdata->phy_reset_gpio)) {
+			gpio_set_value(pdata->phy_reset_gpio, 0);
+			usleep_range(10, 11);
+			gpio_set_value(pdata->phy_reset_gpio, 1);
+		}
 
 		/* PHY initialisation */
 		ret = eqos_init_phy(dev);
@@ -1336,7 +1338,10 @@ static int eqos_close(struct net_device *dev)
 	if (pdata->phydev) {
 		phy_stop(pdata->phydev);
 		phy_disconnect(pdata->phydev);
-		gpio_set_value(pdata->phy_reset_gpio, 0);
+
+		if (gpio_is_valid(pdata->phy_reset_gpio))
+			gpio_set_value(pdata->phy_reset_gpio, 0);
+
 		pdata->phydev = NULL;
 	}
 

@@ -479,10 +479,9 @@ static int eqos_get_phyreset_from_gpio(struct eqos_prv_data *pdata)
 
 	pdata->phy_reset_gpio =
 		of_get_named_gpio(node, "nvidia,phy-reset-gpio", 0);
-	if (pdata->phy_reset_gpio < 0) {
-		dev_err(&pdev->dev, "failed to read phy_reset_gpio\n");
+	if (pdata->phy_reset_gpio < 0)
 		return -ENODEV;
-	}
+
 	if (gpio_is_valid(pdata->phy_reset_gpio)) {
 		ret = devm_gpio_request_one(&pdev->dev, pdata->phy_reset_gpio,
 				GPIOF_OUT_INIT_HIGH, "eqos_phy_reset");
@@ -505,10 +504,9 @@ static int eqos_get_phyirq_from_gpio(struct eqos_prv_data *pdata)
 
 	pdata->phy_intr_gpio =
 			of_get_named_gpio(node, "nvidia,phy-intr-gpio", 0);
-	if (pdata->phy_intr_gpio < 0) {
-		dev_err(&pdev->dev, "failed to read phy_intr_gpio\n");
+	if (pdata->phy_intr_gpio < 0)
 		return -ENODEV;
-	}
+
 	if (gpio_is_valid(pdata->phy_intr_gpio)) {
 		ret = devm_gpio_request_one(&pdev->dev, pdata->phy_intr_gpio,
 				GPIOF_IN, "eqos_phy_intr");
@@ -916,21 +914,21 @@ int eqos_probe(struct platform_device *pdev)
 		 */
 		phyirq = eqos_get_phyirq_from_gpio(pdata);
 		if (phyirq < 0) {
-			dev_err(&pdev->dev, "get_phyirq_from_gpio failed\n");
-			goto err_out_phyirq_failed;
+			dev_info(&pdev->dev, "no PHY interrupt found\n");
+			phyirq = PHY_POLL;
 		}
 
 		/* setup PHY reset gpio */
 		ret = eqos_get_phyreset_from_gpio(pdata);
-		if (ret < 0) {
-			dev_err(&pdev->dev, "get_phyreset_from_gpio failed\n");
-			goto err_out_phyreset_failed;
-		}
+		if (ret < 0)
+			dev_info(&pdev->dev, "no PHY reset gpio found\n");
 
-		/* reset the PHY Broadcom PHY needs minimum of 2us delay */
-		gpio_set_value(pdata->phy_reset_gpio, 0);
-		usleep_range(10, 11);
-		gpio_set_value(pdata->phy_reset_gpio, 1);
+		if (gpio_is_valid(pdata->phy_reset_gpio)) {
+			/* reset Broadcom PHY needs minimum of 2us delay */
+			gpio_set_value(pdata->phy_reset_gpio, 0);
+			usleep_range(10, 11);
+			gpio_set_value(pdata->phy_reset_gpio, 1);
+		}
 
 		/* CAR reset */
 		pdata->eqos_rst =
@@ -1265,12 +1263,6 @@ int eqos_probe(struct platform_device *pdev)
 	}
  err_out_reset_get_failed:
 	if (!tegra_platform_is_unit_fpga())
-		devm_gpio_free(&pdev->dev, pdata->phy_reset_gpio);
- err_out_phyreset_failed:
-	if (!tegra_platform_is_unit_fpga())
-		devm_gpio_free(&pdev->dev, pdata->phy_intr_gpio);
- err_out_phyirq_failed:
-	if (!tegra_platform_is_unit_fpga())
 		eqos_regulator_deinit(pdata);
  err_out_regulator_en_failed:
 	free_netdev(ndev);
@@ -1447,7 +1439,9 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 		if (pdata->phydev) {
 			phy_stop_interrupts(pdata->phydev);
 			phy_stop(pdata->phydev);
-			gpio_set_value(pdata->phy_reset_gpio, 0);
+
+			if (gpio_is_valid(pdata->phy_reset_gpio))
+				gpio_set_value(pdata->phy_reset_gpio, 0);
 		}
 
 		eqos_stop_dev(pdata);
@@ -1500,9 +1494,11 @@ static INT eqos_resume(struct platform_device *pdev)
 		if (pdata->phydev->drv->low_power_mode) {
 			/* reset the PHY Broadcom PHY needs minimum of 2us delay */
 			pr_info("%s(): exit from iddq-lp mode\n", __func__);
-			gpio_set_value(pdata->phy_reset_gpio, 0);
-			usleep_range(10, 11);
-			gpio_set_value(pdata->phy_reset_gpio, 1);
+			if (gpio_is_valid(pdata->phy_reset_gpio)) {
+				gpio_set_value(pdata->phy_reset_gpio, 0);
+				usleep_range(10, 11);
+				gpio_set_value(pdata->phy_reset_gpio, 1);
+			}
 			pdata->phydev->drv->low_power_mode(pdata->phydev, false);
 		} else if (!gpio_get_value(pdata->phy_reset_gpio)) {
 			/* deassert phy reset */

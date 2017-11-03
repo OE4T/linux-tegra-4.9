@@ -108,12 +108,10 @@ static struct tegra_i2c_rtcpu_config ov5693_i2c_rtcpu_config = {
 	.reg_bytes = 2,
 };
 
-static int ov5693_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
 static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl);
 static void ov5693_update_ctrl_range(struct ov5693 *priv, s32 frame_length);
 
 static const struct v4l2_ctrl_ops ov5693_ctrl_ops = {
-	.g_volatile_ctrl = ov5693_g_volatile_ctrl,
 	.s_ctrl		= ov5693_s_ctrl,
 };
 
@@ -190,7 +188,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.id = TEGRA_CAMERA_CID_EEPROM_DATA,
 		.name = "EEPROM Data",
 		.type = V4L2_CTRL_TYPE_STRING,
-		.flags = V4L2_CTRL_FLAG_VOLATILE,
+		.flags = V4L2_CTRL_FLAG_READ_ONLY,
 		.min = 0,
 		.max = OV5693_EEPROM_STR_SIZE,
 		.step = 2,
@@ -1005,10 +1003,18 @@ static int ov5693_eeprom_device_init(struct ov5693 *priv)
 	return 0;
 }
 
-static int ov5693_read_eeprom(struct ov5693 *priv,
-				struct v4l2_ctrl *ctrl)
+static int ov5693_read_eeprom(struct ov5693 *priv)
 {
 	int err, i;
+	struct v4l2_ctrl *ctrl;
+
+	ctrl = v4l2_ctrl_find(&priv->ctrl_handler,
+			TEGRA_CAMERA_CID_EEPROM_DATA);
+	if (!ctrl) {
+		dev_err(&priv->i2c_client->dev,
+			"could not find device ctrl.\n");
+		return -EINVAL;
+	}
 
 	for (i = 0; i < OV5693_EEPROM_NUM_BLOCKS; i++) {
 		err = regmap_bulk_read(priv->eeprom[i].regmap, 0,
@@ -1021,36 +1027,6 @@ static int ov5693_read_eeprom(struct ov5693 *priv,
 	for (i = 0; i < OV5693_EEPROM_SIZE; i++)
 		sprintf(&ctrl->p_new.p_char[i*2], "%02x",
 			priv->eeprom_buf[i]);
-	return 0;
-}
-
-static int ov5693_write_eeprom(struct ov5693 *priv,
-				char *string)
-{
-	struct device *dev = &priv->i2c_client->dev;
-	int err;
-	int i;
-	u8 curr[3];
-	unsigned long data;
-
-	for (i = 0; i < OV5693_EEPROM_SIZE; i++) {
-		curr[0] = string[i*2];
-		curr[1] = string[i*2+1];
-		curr[2] = '\0';
-
-		err = kstrtol(curr, 16, &data);
-		if (err) {
-			dev_err(dev, "invalid eeprom string\n");
-			return -EINVAL;
-		}
-
-		priv->eeprom_buf[i] = (u8)data;
-		err = regmap_write(priv->eeprom[i >> 8].regmap,
-				   i & 0xFF, (u8)data);
-		if (err)
-			return err;
-		msleep(20);
-	}
 	return 0;
 }
 
@@ -1099,10 +1075,6 @@ static int ov5693_otp_setup(struct ov5693 *priv)
 	struct v4l2_ctrl *ctrl;
 	u8 otp_buf[OV5693_OTP_SIZE];
 
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return -ENODEV;
-
 	for (i = 0; i < OV5693_OTP_NUM_BANKS; i++) {
 		err = ov5693_read_otp_bank(priv,
 					&otp_buf[i * OV5693_OTP_BANK_SIZE],
@@ -1128,8 +1100,6 @@ static int ov5693_otp_setup(struct ov5693 *priv)
 	ctrl->p_cur.p_char = ctrl->p_new.p_char;
 
 ret:
-	camera_common_s_power(priv->subdev, false);
-
 	return err;
 }
 
@@ -1140,10 +1110,6 @@ static int ov5693_fuse_id_setup(struct ov5693 *priv)
 	int i;
 	struct v4l2_ctrl *ctrl;
 	u8 fuse_id[OV5693_FUSE_ID_SIZE];
-
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return -ENODEV;
 
 	err = ov5693_read_otp_bank(priv,
 				&fuse_id[0],
@@ -1168,32 +1134,6 @@ static int ov5693_fuse_id_setup(struct ov5693 *priv)
 	ctrl->p_cur.p_char = ctrl->p_new.p_char;
 
 ret:
-	camera_common_s_power(priv->subdev, false);
-
-	return err;
-}
-
-static int ov5693_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
-{
-	struct ov5693 *priv =
-		container_of(ctrl->handler, struct ov5693, ctrl_handler);
-	struct device *dev = &priv->i2c_client->dev;
-	int err = 0;
-
-	if (priv->power.state == SWITCH_OFF)
-		return 0;
-
-	switch (ctrl->id) {
-	case TEGRA_CAMERA_CID_EEPROM_DATA:
-		err = ov5693_read_eeprom(priv, ctrl);
-		if (err)
-			return err;
-		break;
-	default:
-			dev_err(dev, "%s: unknown ctrl id.\n", __func__);
-			return -EINVAL;
-	}
-
 	return err;
 }
 
@@ -1228,13 +1168,6 @@ static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl)
 			err = ov5693_set_group_hold(priv);
 		}
 		break;
-	case TEGRA_CAMERA_CID_EEPROM_DATA:
-		if (!ctrl->p_new.p_char[0])
-			break;
-		err = ov5693_write_eeprom(priv, ctrl->p_new.p_char);
-		if (err)
-			return err;
-		break;
 	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
 	default:
@@ -1248,7 +1181,6 @@ static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl)
 static int ov5693_ctrls_init(struct ov5693 *priv, bool eeprom_ctrl)
 {
 	struct i2c_client *client = priv->i2c_client;
-	struct camera_common_data *common_data = priv->s_data;
 	struct v4l2_ctrl *ctrl;
 	int numctrls;
 	int err;
@@ -1260,17 +1192,6 @@ static int ov5693_ctrls_init(struct ov5693 *priv, bool eeprom_ctrl)
 	v4l2_ctrl_handler_init(&priv->ctrl_handler, numctrls);
 
 	for (i = 0; i < numctrls; i++) {
-		/*
-		 * Skip control 'TEGRA_CAMERA_CID_EEPROM_DATA'
-		 * if eeprom inint err
-		 */
-		if (ctrl_config_list[i].id == TEGRA_CAMERA_CID_EEPROM_DATA) {
-			if (!eeprom_ctrl) {
-				common_data->numctrls -= 1;
-				continue;
-			}
-		}
-
 		ctrl = v4l2_ctrl_new_custom(&priv->ctrl_handler,
 			&ctrl_config_list[i], NULL);
 		if (ctrl == NULL) {
@@ -1305,21 +1226,42 @@ static int ov5693_ctrls_init(struct ov5693 *priv, bool eeprom_ctrl)
 		goto error;
 	}
 
+	err = camera_common_s_power(priv->subdev, true);
+	if (err) {
+		dev_err(&client->dev,
+			"Error %d during power on\n", err);
+		err = -ENODEV;
+		goto error;
+	}
+
+	if (eeprom_ctrl) {
+		err = ov5693_read_eeprom(priv);
+		if (err) {
+			dev_err(&client->dev,
+				"Error %d reading eeprom\n", err);
+			goto error_hw;
+		}
+	}
+
 	err = ov5693_otp_setup(priv);
 	if (err) {
 		dev_err(&client->dev,
 			"Error %d reading otp data\n", err);
-		goto error;
+		goto error_hw;
 	}
 
 	err = ov5693_fuse_id_setup(priv);
 	if (err) {
 		dev_err(&client->dev,
 			"Error %d reading fuse id data\n", err);
-		goto error;
+		goto error_hw;
 	}
+
+	camera_common_s_power(priv->subdev, false);
 	return 0;
 
+error_hw:
+	camera_common_s_power(priv->subdev, false);
 error:
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	return err;

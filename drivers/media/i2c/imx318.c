@@ -93,11 +93,9 @@ static const struct regmap_config sensor_regmap_config = {
 	.use_single_rw = true,
 };
 
-static int imx318_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
 static int imx318_s_ctrl(struct v4l2_ctrl *ctrl);
 
 static const struct v4l2_ctrl_ops imx318_ctrl_ops = {
-	.g_volatile_ctrl = imx318_g_volatile_ctrl,
 	.s_ctrl = imx318_s_ctrl,
 };
 
@@ -152,7 +150,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.id = TEGRA_CAMERA_CID_EEPROM_DATA,
 		.name = "EEPROM Data",
 		.type = V4L2_CTRL_TYPE_STRING,
-		.flags = V4L2_CTRL_FLAG_VOLATILE,
+		.flags = V4L2_CTRL_FLAG_READ_ONLY,
 		.min = 0,
 		.max = IMX318_EEPROM_STR_SIZE,
 		.step = 2,
@@ -726,10 +724,18 @@ static int imx318_eeprom_device_init(struct imx318 *priv)
 	return 0;
 }
 
-static int imx318_read_eeprom(struct imx318 *priv,
-				struct v4l2_ctrl *ctrl)
+static int imx318_read_eeprom(struct imx318 *priv)
 {
 	int err, i;
+	struct v4l2_ctrl *ctrl;
+
+	ctrl = v4l2_ctrl_find(&priv->ctrl_handler,
+			TEGRA_CAMERA_CID_EEPROM_DATA);
+	if (!ctrl) {
+		dev_err(&priv->i2c_client->dev,
+			"could not find device ctrl.\n");
+		return -EINVAL;
+	}
 
 	for (i = 0; i < IMX318_EEPROM_NUM_BLOCKS; i++) {
 		err = regmap_bulk_read(priv->eeprom[i].regmap, 0,
@@ -745,36 +751,6 @@ static int imx318_read_eeprom(struct imx318 *priv,
 	return 0;
 }
 
-static int imx318_write_eeprom(struct imx318 *priv,
-				char *string)
-{
-	struct device *dev = &priv->i2c_client->dev;
-	int err;
-	int i;
-	u8 curr[3];
-	unsigned long data;
-
-	for (i = 0; i < IMX318_EEPROM_SIZE; i++) {
-		curr[0] = string[i*2];
-		curr[1] = string[i*2+1];
-		curr[2] = '\0';
-
-		err = kstrtol(curr, 16, &data);
-		if (err) {
-			dev_err(dev, "invalid eeprom string\n");
-			return -EINVAL;
-		}
-
-		priv->eeprom_buf[i] = (u8)data;
-		err = regmap_write(priv->eeprom[i >> 8].regmap,
-						i & 0xFF, (u8)data);
-		if (err)
-			return err;
-		msleep(20);
-	}
-	return 0;
-}
-
 /* TODO Validate id from sensor */
 static int imx318_fuse_id_setup(struct imx318 *priv)
 {
@@ -786,10 +762,6 @@ static int imx318_fuse_id_setup(struct imx318 *priv)
 	struct v4l2_ctrl *ctrl;
 	u8 fuse_id[IMX318_FUSE_ID_SIZE];
 	u8 bak = 0;
-
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return -ENODEV;
 
 	for (i = 0; i < IMX318_FUSE_ID_SIZE; i++) {
 		err |= imx318_read_reg(s_data,
@@ -815,35 +787,7 @@ static int imx318_fuse_id_setup(struct imx318 *priv)
 	dev_info(&client->dev, "%s, fuse id: %s\n", __func__,
 		ctrl->p_cur.p_char);
 
-	err = camera_common_s_power(priv->subdev, false);
-	if (err)
-		return -ENODEV;
-
 	return 0;
-}
-
-static int imx318_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
-{
-	struct imx318 *priv =
-		container_of(ctrl->handler, struct imx318, ctrl_handler);
-	struct device *dev = &priv->i2c_client->dev;
-	int err = 0;
-
-	if (priv->power.state == SWITCH_OFF)
-		return 0;
-
-	switch (ctrl->id) {
-	case TEGRA_CAMERA_CID_EEPROM_DATA:
-		err = imx318_read_eeprom(priv, ctrl);
-		if (err)
-			return err;
-		break;
-	default:
-			dev_err(dev, "%s: unknown ctrl id.\n", __func__);
-			return -EINVAL;
-	}
-
-	return err;
 }
 
 static int imx318_s_ctrl(struct v4l2_ctrl *ctrl)
@@ -866,13 +810,6 @@ static int imx318_s_ctrl(struct v4l2_ctrl *ctrl)
 	case TEGRA_CAMERA_CID_COARSE_TIME:
 		err = imx318_set_coarse_time(priv, ctrl->val);
 		break;
-	case TEGRA_CAMERA_CID_EEPROM_DATA:
-		if (!ctrl->p_new.p_char[0])
-			break;
-		err = imx318_write_eeprom(priv, ctrl->p_new.p_char);
-		if (err)
-			return err;
-		break;
 	case TEGRA_CAMERA_CID_GROUP_HOLD:
 		err = imx318_set_group_hold(priv, ctrl->val);
 		break;
@@ -889,7 +826,6 @@ static int imx318_s_ctrl(struct v4l2_ctrl *ctrl)
 static int imx318_ctrls_init(struct imx318 *priv, bool eeprom_ctrl)
 {
 	struct i2c_client *client = priv->i2c_client;
-	struct camera_common_data *common_data = priv->s_data;
 	struct v4l2_ctrl *ctrl;
 	int num_ctrls;
 	int err;
@@ -901,16 +837,6 @@ static int imx318_ctrls_init(struct imx318 *priv, bool eeprom_ctrl)
 	v4l2_ctrl_handler_init(&priv->ctrl_handler, num_ctrls);
 
 	for (i = 0; i < num_ctrls; i++) {
-		/*
-		 * Skip control 'TEGRA_CAMERA_CID_EEPROM_DATA'
-		 * if eeprom inint err
-		 */
-		if (ctrl_config_list[i].id == TEGRA_CAMERA_CID_EEPROM_DATA) {
-			if (!eeprom_ctrl) {
-				common_data->numctrls -= 1;
-				continue;
-			}
-		}
 		ctrl = v4l2_ctrl_new_custom(&priv->ctrl_handler,
 			&ctrl_config_list[i], NULL);
 		if (ctrl == NULL) {
@@ -943,15 +869,35 @@ static int imx318_ctrls_init(struct imx318 *priv, bool eeprom_ctrl)
 		goto error;
 	}
 
+	err = camera_common_s_power(priv->subdev, true);
+	if (err) {
+		dev_err(&client->dev,
+			"Error %d during power on sensor\n", err);
+		err = -ENODEV;
+		goto error;
+	}
+
+	if (eeprom_ctrl) {
+		err = imx318_read_eeprom(priv);
+		if (err) {
+			dev_err(&client->dev,
+				"Error %d reading eeprom data\n", err);
+			goto error_hw;
+		}
+	}
+
 	err = imx318_fuse_id_setup(priv);
 	if (err) {
 		dev_err(&client->dev,
 			"Error %d reading fuse id data\n", err);
-		goto error;
+		goto error_hw;
 	}
 
+	camera_common_s_power(priv->subdev, false);
 	return 0;
 
+error_hw:
+	camera_common_s_power(priv->subdev, false);
 error:
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	return err;

@@ -114,11 +114,9 @@ static u16 ov23850_to_gain(u32 rep, int shift)
 	return gain;
 }
 
-static int ov23850_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
 static int ov23850_s_ctrl(struct v4l2_ctrl *ctrl);
 
 static const struct v4l2_ctrl_ops ov23850_ctrl_ops = {
-	.g_volatile_ctrl = ov23850_g_volatile_ctrl,
 	.s_ctrl		= ov23850_s_ctrl,
 };
 
@@ -830,10 +828,18 @@ static int ov23850_eeprom_device_init(struct ov23850 *priv)
 	return 0;
 }
 
-static int ov23850_read_eeprom(struct ov23850 *priv,
-				struct v4l2_ctrl *ctrl)
+static int ov23850_read_eeprom(struct ov23850 *priv)
 {
 	int err, i;
+	struct v4l2_ctrl *ctrl;
+
+	ctrl = v4l2_ctrl_find(&priv->ctrl_handler,
+			TEGRA_CAMERA_CID_EEPROM_DATA);
+	if (!ctrl) {
+		dev_err(&priv->i2c_client->dev,
+			"could not find device ctrl.\n");
+		return -EINVAL;
+	}
 
 	for (i = 0; i < OV23850_EEPROM_NUM_BLOCKS; i++) {
 		err = regmap_bulk_read(priv->eeprom[i].regmap, 0,
@@ -978,10 +984,6 @@ static int ov23850_otp_setup(struct ov23850 *priv)
 	struct v4l2_ctrl *ctrl;
 	u8 otp_buf[OV23850_OTP_SIZE];
 
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return -ENODEV;
-
 	err = ov23850_read_otp_manual(priv,
 				otp_buf,
 				OV23850_OTP_START_ADDR,
@@ -1000,10 +1002,6 @@ static int ov23850_otp_setup(struct ov23850 *priv)
 			otp_buf[i]);
 	ctrl->p_cur.p_char = ctrl->p_new.p_char;
 
-	err = camera_common_s_power(priv->subdev, false);
-	if (err)
-		return -ENODEV;
-
 	return 0;
 }
 
@@ -1014,10 +1012,6 @@ static int ov23850_fuse_id_setup(struct ov23850 *priv)
 	int i;
 	struct v4l2_ctrl *ctrl;
 	u8 fuse_id[OV23850_FUSE_ID_SIZE];
-
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return -ENODEV;
 
 	err = ov23850_read_otp_manual(priv,
 				fuse_id,
@@ -1037,37 +1031,7 @@ static int ov23850_fuse_id_setup(struct ov23850 *priv)
 			fuse_id[i]);
 	ctrl->p_cur.p_char = ctrl->p_new.p_char;
 
-	err = camera_common_s_power(priv->subdev, false);
-	if (err)
-		return -ENODEV;
-
 	return 0;
-}
-
-static int ov23850_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
-{
-	struct ov23850 *priv =
-		container_of(ctrl->handler, struct ov23850, ctrl_handler);
-	struct device *dev = &priv->i2c_client->dev;
-	int err = 0;
-
-	if (priv->power.state == SWITCH_OFF)
-		return 0;
-
-	switch (ctrl->id) {
-	case TEGRA_CAMERA_CID_EEPROM_DATA:
-#if 0
-		err = ov23850_read_eeprom(priv, ctrl);
-		if (err)
-			return err;
-#endif
-		break;
-	default:
-			dev_err(dev, "%s: unknown ctrl id.\n", __func__);
-			return -EINVAL;
-	}
-
-	return err;
 }
 
 static int ov23850_s_ctrl(struct v4l2_ctrl *ctrl)
@@ -1100,15 +1064,6 @@ static int ov23850_s_ctrl(struct v4l2_ctrl *ctrl)
 			priv->group_hold_en = false;
 			err = ov23850_set_group_hold(priv);
 		}
-		break;
-	case TEGRA_CAMERA_CID_EEPROM_DATA:
-#if 0
-		if (!ctrl->p_new.p_char[0])
-			break;
-		err = ov23850_write_eeprom(priv, ctrl->p_new.p_char);
-		if (err)
-			return err;
-#endif
 		break;
 	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
@@ -1166,22 +1121,33 @@ static int ov23850_ctrls_init(struct ov23850 *priv)
 		goto error;
 	}
 
+	err = camera_common_s_power(priv->subdev, true);
+	if (err) {
+		dev_err(&client->dev,
+			"Error %d during power on\n", err);
+		err = -ENODEV;
+		goto error;
+	}
+
 	err = ov23850_otp_setup(priv);
 	if (err) {
 		dev_err(&client->dev,
 			"Error %d reading otp data\n", err);
-		goto error;
+		goto error_hw;
 	}
 
 	err = ov23850_fuse_id_setup(priv);
 	if (err) {
 		dev_err(&client->dev,
 			"Error %d reading fuse id data\n", err);
-		goto error;
+		goto error_hw;
 	}
 
+	camera_common_s_power(priv->subdev, false);
 	return 0;
 
+error_hw:
+	camera_common_s_power(priv->subdev, false);
 error:
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	return err;

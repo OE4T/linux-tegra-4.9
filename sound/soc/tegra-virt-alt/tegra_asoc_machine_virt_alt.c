@@ -56,6 +56,7 @@ static const struct snd_soc_pcm_stream adsp_default_params = {
 	.channels_max = 2,
 };
 
+static struct snd_soc_pcm_stream adsp_admaif_params[MAX_ADMAIF_IDS];
 
 static struct snd_soc_dai_link tegra_virt_t186ref_pcm_links[] = {
 	{
@@ -866,6 +867,27 @@ struct snd_soc_dai_link *tegra_virt_machine_get_dai_link(void)
 	return link;
 }
 EXPORT_SYMBOL(tegra_virt_machine_get_dai_link);
+
+void tegra_virt_machine_set_adsp_admaif_dai_params(
+		uint32_t id, struct snd_soc_pcm_stream *params)
+{
+	struct snd_soc_dai_link *link = tegra_virt_t186ref_pcm_links;
+
+	/* Check for valid ADSP ADMAIF ID */
+	if (id >= MAX_ADMAIF_IDS) {
+		pr_err("Invalid ADSP ADMAIF ID: %d\n", id);
+		return;
+	}
+
+	/* Find DAI link corresponding to ADSP ADMAIF */
+	link += id + MAX_ADMAIF_IDS;
+
+	memcpy(&adsp_admaif_params[id], params,
+		sizeof(struct snd_soc_pcm_stream));
+
+	link->params = &adsp_admaif_params[id];
+}
+EXPORT_SYMBOL(tegra_virt_machine_set_adsp_admaif_dai_params);
 
 MODULE_AUTHOR("Dipesh Gandhi <dipeshg@nvidia.com>");
 MODULE_DESCRIPTION("Tegra Virt ASoC machine code");

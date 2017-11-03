@@ -90,6 +90,10 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 	unsigned int admaif_ch_list[MAX_ADMAIF_IDS];
 	const struct of_device_id *match;
 	struct tegra_virt_admaif_soc_data *soc_data;
+	char buffer[30];
+	int32_t adsp_admaif_bits, adsp_admaif_format;
+	int32_t adsp_admaif_channels;
+	struct snd_soc_pcm_stream adsp_admaif_dt_params;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
 	struct snd_soc_pcm_runtime *rtd;
 #endif
@@ -124,6 +128,55 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 
 	if (adsp_enabled) {
 		dev_info(&pdev->dev, "virt-alt-pcm: adsp config is set\n");
+
+		/* Get ADSP ADMAIF default param info */
+		for (i = 0; i < MAX_ADMAIF_IDS; i++) {
+			sprintf(buffer, "adsp-admaif%d-channels", i + 1);
+			if (of_property_read_u32(pdev->dev.of_node,
+					buffer, &adsp_admaif_channels))
+				adsp_admaif_channels = 2;
+
+
+			sprintf(buffer, "adsp-admaif%d-bits", i + 1);
+			if (of_property_read_u32(pdev->dev.of_node,
+					buffer, &adsp_admaif_bits))
+				adsp_admaif_bits = 16;
+
+			if (adsp_admaif_channels > 16 || adsp_admaif_channels < 1) {
+				dev_err(&pdev->dev,
+					"unsupported channels %d for adsp admaif %d, setting default 2 channel\n",
+					adsp_admaif_channels, i + 1);
+				adsp_admaif_channels = 2;
+			}
+
+			switch (adsp_admaif_bits) {
+
+			case 8:
+				adsp_admaif_format = SNDRV_PCM_FMTBIT_S8;
+				break;
+			case 16:
+				adsp_admaif_format = SNDRV_PCM_FMTBIT_S16_LE;
+				break;
+			case 32:
+				adsp_admaif_format = SNDRV_PCM_FMTBIT_S32_LE;
+				break;
+			default:
+				adsp_admaif_format = SNDRV_PCM_FMTBIT_S16_LE;
+				dev_err(&pdev->dev,
+					"unsupported bits %d for adsp admaif %d, setting default 16 bit\n",
+					adsp_admaif_bits, i + 1);
+				adsp_admaif_bits = 16;
+				break;
+			}
+			adsp_admaif_dt_params.formats = adsp_admaif_format;
+			adsp_admaif_dt_params.rate_min = 48000;
+			adsp_admaif_dt_params.rate_max = 48000;
+			adsp_admaif_dt_params.channels_min = adsp_admaif_channels;
+			adsp_admaif_dt_params.channels_max = adsp_admaif_channels;
+
+			tegra_virt_machine_set_adsp_admaif_dai_params(
+					i, &adsp_admaif_dt_params);
+		}
 	} else {
 		dev_info(&pdev->dev, "virt-alt-pcm: adsp config is not set\n");
 		card->num_links = soc_data->num_ch;

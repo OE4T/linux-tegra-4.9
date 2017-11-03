@@ -214,7 +214,7 @@ static void tegra_read_counters(void *arg)
  * @cpu - logical cpu whose freq to be updated
  * Returns freq in KHz on success, 0 if cpu is offline
  */
-static unsigned int tegra_get_speed(uint32_t cpu)
+static unsigned int tegra186_get_speed(uint32_t cpu)
 {
 	uint32_t delta_ccnt = 0;
 	uint32_t delta_refcnt = 0;
@@ -241,21 +241,7 @@ err_out:
 	return (unsigned int) (rate_mhz * 1000); /* in KHz */
 }
 
-/* Denver cluster cpu_to_emc freq */
-static unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
-{
-	if (cpu_rate >= 1400000)
-		return tfreq_data.emc_max_rate;	/* cpu >= 1.4GHz, emc max */
-	else if (cpu_rate >= 800000)
-		return 660000000;	/* cpu >= 800 MHz, emc 660 MHz */
-	else if (cpu_rate >= 450000)
-		return  408000000;	/* cpu >= 450 MHz, emc 408 MHz */
-	else
-		return  0;		/* no freq request */
-}
-
-/* Arm cluster cpu_to_emc freq */
-static unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
+static unsigned long cpu_to_emc_freq(uint32_t cpu_rate)
 {
 	if (cpu_rate >= 1400000)
 		return tfreq_data.emc_max_rate;	/* cpu >= 1.4GHz, emc max */
@@ -276,37 +262,33 @@ static unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
  *         cluster freq as max freq among all the cpu's freq in
  *         a cluster
  */
-static uint32_t get_cluster_freq(int cl, uint32_t cpu_freq)
+static uint32_t get_cluster_freq(struct cpufreq_policy *policy)
 {
-	struct cpuinfo_arm64 *cpuinfo;
-	uint32_t i, phy_cl;
+	uint32_t i, cpu_freq;
+	struct cpumask mask;
 
-	phy_cl = logical_to_phys_cluster(cl);
-	for_each_online_cpu(i) {
-		cpuinfo = &per_cpu(cpu_data, i);
-		if (MIDR_IMPLEMENTOR(cpuinfo->reg_midr) == phy_cl)
-			cpu_freq = max(cpu_freq,
-					tfreq_data.cpu_freq[i]);
+	cpumask_and(&mask, policy->cpus, cpu_online_mask);
+	cpu_freq = policy->cur;
+	for_each_cpu(i, &mask) {
+		cpu_freq = max(cpu_freq, tfreq_data.cpu_freq[i]);
 	}
 
 	return cpu_freq;
 }
 
 /* Set emc clock by referring cpu_to_emc freq mapping */
-static void set_cpufreq_to_emcfreq(int cl,
-	struct cpufreq_policy *policy)
+static void set_cpufreq_to_emcfreq(struct cpufreq_policy *policy)
 {
 	unsigned long emc_freq;
 	uint32_t cluster_freq;
+	int cl;
 
 	tfreq_data.emc_max_rate = tegra_bwmgr_get_max_emc_rate();
-	cluster_freq = get_cluster_freq(cl, policy->cur);
+	cluster_freq = get_cluster_freq(policy);
 
-	if (cl == 0)
-		emc_freq = m_cluster_cpu_to_emc_freq(cluster_freq);
-	else
-		emc_freq = b_cluster_cpu_to_emc_freq(cluster_freq);
+	emc_freq = cpu_to_emc_freq(cluster_freq);
 
+	cl = tegra18_logical_to_cluster(policy->cpu);
 	tegra_bwmgr_set_emc(tfreq_data.pcluster[cl].bwmgr, emc_freq,
 		TEGRA_BWMGR_SET_EMC_FLOOR);
 	pr_debug("cpu: %d, cluster %s, emc freq(KHz): %lu cluster_freq(kHz): %u\n",
@@ -375,17 +357,17 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	spin_unlock(slock);
 }
 /**
- * tegra_setspeed - Request freq to be set for policy->cpu
+ * tegra186_cpufreq_set_target - Request freq to be set for policy->cpu
  * @policy - cpufreq policy per cpu
  * @index - freq table index
  * Returns 0 on success, -ve on failure
  */
-static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
+static int tegra186_cpufreq_set_target(struct cpufreq_policy *policy,
+				       unsigned int index)
 {
 	struct cpufreq_freqs freqs;
 	struct mutex *mlock;
 	uint32_t tgt_freq;
-	int cl;
 	int cpu, ret = 0;
 
 	if (is_tegra_hypervisor_mode() && hv_is_set_speed_supported() == false) {
@@ -409,8 +391,6 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 
 	cpufreq_freq_transition_begin(policy, &freqs);
 
-	cl = tegra18_logical_to_cluster(policy->cpu);
-
 	if (freqs.old != tgt_freq) {
 		/*
 		 * In hypervisor case cpufreq server will take care of
@@ -420,7 +400,7 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 		if (tegra_cpufreq_hv_mode)
 			tegra_update_cpu_speed_hv(tgt_freq, policy->cpu);
 
-		for_each_cpu(cpu, &tfreq_data.pcluster[cl].cpu_mask) {
+		for_each_cpu(cpu, policy->cpus) {
 			if (!tegra_cpufreq_hv_mode)
 				tegra_update_cpu_speed(tgt_freq, cpu);
 			/*
@@ -434,7 +414,7 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 	freqs.new = policy->cur;
 
 	if (freqs.old != tgt_freq)
-		set_cpufreq_to_emcfreq(cl, policy);
+		set_cpufreq_to_emcfreq(policy);
 
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 out:
@@ -560,7 +540,7 @@ static int freq_get(void *data, u64 *val)
 	mlock = &per_cpu(pcpu_mlock, cpu);
 	mutex_lock(mlock);
 
-	*val = tegra_get_speed(cpu);
+	*val = tegra186_get_speed(cpu);
 
 	mutex_unlock(mlock);
 	return 0;
@@ -878,11 +858,10 @@ static void tegra_cpufreq_debug_exit(void)
 }
 #endif
 
-static int tegra_cpu_init(struct cpufreq_policy *policy)
+static int tegra186_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
 	struct mutex *mlock;
-	int cl;
 	uint32_t freq;
 	int ret = 0;
 	int idx;
@@ -893,7 +872,7 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	mlock = &per_cpu(pcpu_mlock, policy->cpu);
 	mutex_lock(mlock);
 
-	freq = tegra_get_speed(policy->cpu); /* boot freq */
+	freq = tegra186_get_speed(policy->cpu); /* boot freq */
 
 	ftbl = get_freqtable(policy->cpu);
 
@@ -915,25 +894,23 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 			tegra_update_cpu_speed(freq, policy->cpu);
 	}
 
-	policy->cur = tegra_get_speed(policy->cpu);
+	policy->cur = tegra186_get_speed(policy->cpu);
 
 	tfreq_data.cpu_freq[policy->cpu] = policy->cur;
 
-	cl = tegra18_logical_to_cluster(policy->cpu);
-	if (tfreq_data.pcluster[cl].bwmgr)
-		set_cpufreq_to_emcfreq(cl, policy);
+	set_cpufreq_to_emcfreq(policy);
 
 	policy->cpuinfo.transition_latency =
 	TEGRA_CPUFREQ_TRANSITION_LATENCY;
 
-	cpumask_copy(policy->cpus, &tfreq_data.pcluster[cl].cpu_mask);
+	cpumask_copy(policy->cpus, topology_core_cpumask(policy->cpu));
 
 	mutex_unlock(mlock);
 
 	return ret;
 }
 
-static int tegra_cpu_exit(struct cpufreq_policy *policy)
+static int tegra186_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	struct mutex *mlock;
 	int cl;
@@ -957,10 +934,10 @@ static struct cpufreq_driver tegra_cpufreq_driver = {
 	.flags		= CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_STICKY |
 				CPUFREQ_CONST_LOOPS,
 	.verify		= cpufreq_generic_frequency_table_verify,
-	.target_index	= tegra_setspeed,
-	.get		= tegra_get_speed,
-	.init		= tegra_cpu_init,
-	.exit		= tegra_cpu_exit,
+	.target_index	= tegra186_cpufreq_set_target,
+	.get		= tegra186_get_speed,
+	.init		= tegra186_cpufreq_init,
+	.exit		= tegra186_cpufreq_exit,
 	.attr		= tegra_cpufreq_attr,
 };
 
@@ -1347,11 +1324,6 @@ err_out:
 static void set_cpu_mask(void)
 {
 	int cpu_num;
-	int cl;
-
-	LOOP_FOR_EACH_CLUSTER(cl) {
-		cpumask_clear(&tfreq_data.pcluster[cl].cpu_mask);
-	}
 
 	for_each_possible_cpu(cpu_num) {
 		cpumask_set_cpu(cpu_num,

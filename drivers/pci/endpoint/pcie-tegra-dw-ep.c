@@ -101,6 +101,9 @@
 #define EP_CS_STATUS_COMMAND			0x4
 #define EP_CS_STATUS_COMMAND_BME		BIT(2)
 
+#define CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF		0x718
+#define CFG_TIMER_CTRL_ACK_NAK_SHIFT		(19)
+
 #define AUX_CLK_FREQ				0xB40
 
 #define PCIE_ATU_REGION_INDEX0	0 /* used for BAR-0 translations */
@@ -152,6 +155,7 @@ struct tegra_pcie_dw_ep {
 	struct work_struct pcie_ep_work;
 	dma_addr_t dma_handle;
 	void *cpu_virt;
+	bool update_fc_fixup;
 	enum ep_event event;
 };
 
@@ -255,6 +259,14 @@ void pcie_ep_work_fn(struct work_struct *work)
 		inbound_atu(pcie, PCIE_ATU_REGION_INDEX0, PCIE_ATU_TYPE_MEM,
 			    0x0, pcie->dma_handle, MB_1,
 			    PCIE_ATU_CR2_MATCH_MODE_BAR, 0);
+
+		if (pcie->update_fc_fixup) {
+			val = readl(pcie->dbi_base +
+				    CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
+			val |= 0x1 << CFG_TIMER_CTRL_ACK_NAK_SHIFT;
+			writel(val, pcie->dbi_base +
+			       CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
+		}
 
 		/* enable LTSSM */
 		val = readl(pcie->appl_base + APPL_CTRL);
@@ -442,6 +454,9 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "failed to request \"intr\" irq\n");
 		goto fail_dbi_res;
 	}
+
+	if (of_property_read_bool(pdev->dev.of_node, "nvidia,update_fc_fixup"))
+		pcie->update_fc_fixup = true;
 
 	INIT_WORK(&pcie->pcie_ep_work, pcie_ep_work_fn);
 

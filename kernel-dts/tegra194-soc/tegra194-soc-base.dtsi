@@ -41,6 +41,7 @@
 #include "tegra194-soc-i2c.dtsi"
 #include "tegra194-soc-can.dtsi"
 #include "tegra194-soc-audio.dtsi"
+#include "tegra194-safety-sce.dtsi"
 #include "tegra194-camera.dtsi"
 #include "tegra194-soc/tegra194-soc-actmon.dtsi"
 #include "tegra194-soc/tegra194-soc-disp-imp.dtsi"
@@ -327,6 +328,10 @@
 			pva1_domain {
 				address-space = <&pva_as>;
 				sid-list = <TEGRA_SID(PVA1)>;
+			};
+			sce_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SCE>;
 			};
 			rce_domain {
 				address-space = <&camera_vm1_as>;
@@ -616,6 +621,18 @@
 		interrupt-names = "doorbell",
 				"shared0", "shared1", "shared2", "shared3",
 				"shared4", "shared5", "shared6", "shared7";
+		nvidia,mbox-ie;
+		status = "disabled";
+	};
+
+	sce_hsp: tegra-hsp@b150000 {
+		compatible = "nvidia,tegra186-hsp";
+		reg = <0x0 0x0b150000 0x0 0x00090000>;
+		interrupts =	<0 TEGRA194_IRQ_SCE_HSP_SHARED_1 0x4>,
+				<0 TEGRA194_IRQ_SCE_HSP_SHARED_2 0x4>,
+				<0 TEGRA194_IRQ_SCE_HSP_SHARED_3 0x4>,
+				<0 TEGRA194_IRQ_SCE_HSP_SHARED_4 0x4>;
+		interrupt-names = "shared1", "shared2", "shared3", "shared4";
 		nvidia,mbox-ie;
 		status = "disabled";
 	};

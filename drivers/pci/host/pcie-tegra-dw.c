@@ -124,8 +124,12 @@
 #define CFG_LINK_CONTROL_LT		BIT(5)
 
 #define CFG_LINK_STATUS_CONTROL_2	0xA0
+#define CFG_LINK_STATUS_CONTROL_2_PCIE_CAP_EQ_CPL	BIT(17)
 
 #define CFG_LINK_CAP_L1SUB		0x154
+
+#define CAP_PL16G_STATUS_REG		0x164
+#define CAP_PL16G_STATUS_REG_EQ_16G_CPL	BIT(0)
 
 #define EVENT_COUNTER_CONTROL_REG	0x168
 #define EVENT_COUNTER_ALL_CLEAR		0x3
@@ -846,6 +850,25 @@ static int apply_speed_change(struct seq_file *s, void *data)
 	if (((val >> 16) & PCI_EXP_LNKSTA_CLS) == pcie->target_speed) {
 		seq_puts(s, "Link speed is already the target speed...!\n");
 		return 0;
+	}
+
+	if (pcie->target_speed == 4) {
+		u32 temp1 = 0, temp2 = 0;
+
+		dw_pcie_cfg_read(pcie->pp.dbi_base + CAP_PL16G_STATUS_REG, 4,
+				 &val);
+		dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL,
+				 4, &temp1);
+		dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL_2,
+				 4, &temp2);
+
+		if (!((val & CAP_PL16G_STATUS_REG_EQ_16G_CPL) ||
+		      (((temp1 & (PCI_EXP_LNKSTA_CLS << 16)) ==
+			 (PCI_EXP_LNKSTA_CLS_8_0GB << 16)) &&
+			 temp2 & CFG_LINK_STATUS_CONTROL_2_PCIE_CAP_EQ_CPL))) {
+			seq_puts(s, "Gen-3/4 Equalization is not complete\n");
+			return 0;
+		}
 	}
 
 	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL_2, 4,

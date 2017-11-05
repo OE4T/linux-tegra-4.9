@@ -19,6 +19,47 @@
 
 / {
 
+	pcie_c0_rp {
+		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
+		reg = <0x00 0x14180000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x38000000 0x0 0x00040000   /* configuration space (256K) */
+		       0x00 0x38040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
+		reg-names = "appl", "config", "atu_dma";
+
+		status = "disabled";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		num-lanes = <1>;
+
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_0>;
+		clock-names = "core_clk";
+
+		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_0_APB>,
+			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_0>;
+		reset-names = "core_apb_rst", "core_rst";
+
+		interrupts = <0 72 0x04>,	/* controller interrupt */
+					 <0 73 0x04>;	/* MSI interrupt */
+		interrupt-names = "intr", "msi";
+
+		iommus = <&smmu TEGRA_SID_PCIE0>;
+		dma-coherent;
+
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &intc 0 72 0x04>;
+
+		nvidia,max-speed = <2>;
+		nvidia,disable-aspm-states = <0x0>;
+
+		bus-range = <0x0 0xff>;
+		ranges = <0x81000000 0x0 0x38100000 0x0 0x38100000 0x0 0x00100000      /* downstream I/O (1MB) */
+			  0x82000000 0x0 0x38200000 0x0 0x38200000 0x0 0x01E00000      /* non-prefetchable memory (30MB) */
+			  0xc2000000 0x18 0x00000000 0x18 0x00000000 0x4 0x00000000>;  /* prefetchable memory (16GB) */
+	};
+
 	pcie_c1_rp {
 		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
 		reg = <0x00 0x14100000 0x0 0x00020000   /* appl registers (128K)      */
@@ -60,6 +101,196 @@
 			  0xc2000000 0x12 0x00000000 0x12 0x00000000 0x0 0x40000000>;  /* prefetchable memory (1GB) */
 	};
 
+	pcie_c2_rp {
+		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
+		reg = <0x00 0x14120000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x32000000 0x0 0x00040000   /* configuration space (256K) */
+		       0x00 0x32040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
+		reg-names = "appl", "config", "atu_dma";
+
+		status = "disabled";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		num-lanes = <1>;
+
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_2>;
+		clock-names = "core_clk";
+
+		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_2_APB>,
+			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_2>;
+		reset-names = "core_apb_rst", "core_rst";
+
+		interrupts = <0 47 0x04>,	/* controller interrupt */
+					 <0 48 0x04>;	/* MSI interrupt */
+		interrupt-names = "intr", "msi";
+
+		iommus = <&smmu TEGRA_SID_PCIE2>;
+		dma-coherent;
+
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &intc 0 47 0x04>;
+
+		nvidia,max-speed = <2>;
+		nvidia,disable-aspm-states = <0x0>;
+
+		bus-range = <0x0 0xff>;
+		ranges = <0x81000000 0x0 0x32100000 0x0 0x32100000 0x0 0x00100000      /* downstream I/O (1MB) */
+			  0x82000000 0x0 0x32200000 0x0 0x32200000 0x0 0x01E00000      /* non-prefetchable memory (30MB) */
+			  0xc2000000 0x12 0x40000000 0x12 0x40000000 0x0 0x40000000>;  /* prefetchable memory (1GB) */
+	};
+
+	pcie_c3_rp {
+		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
+		reg = <0x00 0x14140000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x34000000 0x0 0x00040000   /* configuration space (256K) */
+		       0x00 0x34040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
+		reg-names = "appl", "config", "atu_dma";
+
+		status = "disabled";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		num-lanes = <1>;
+
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_3>;
+		clock-names = "core_clk";
+
+		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_3_APB>,
+			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_3>;
+		reset-names = "core_apb_rst", "core_rst";
+
+		interrupts = <0 49 0x04>,	/* controller interrupt */
+					 <0 50 0x04>;	/* MSI interrupt */
+		interrupt-names = "intr", "msi";
+
+		iommus = <&smmu TEGRA_SID_PCIE3>;
+		dma-coherent;
+
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &intc 0 49 0x04>;
+
+		nvidia,max-speed = <2>;
+		nvidia,disable-aspm-states = <0x0>;
+
+		bus-range = <0x0 0xff>;
+		ranges = <0x81000000 0x0 0x34100000 0x0 0x34100000 0x0 0x00100000      /* downstream I/O (1MB) */
+			  0x82000000 0x0 0x34200000 0x0 0x34200000 0x0 0x01E00000      /* non-prefetchable memory (30MB) */
+			  0xc2000000 0x12 0x80000000 0x12 0x80000000 0x0 0x40000000>;  /* prefetchable memory (1GB) */
+	};
+
+	pcie_c4_rp {
+		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
+		reg = <0x00 0x14160000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x36000000 0x0 0x00040000   /* configuration space (256K) */
+		       0x00 0x36040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
+		reg-names = "appl", "config", "atu_dma";
+
+		status = "disabled";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		num-lanes = <1>;
+
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_4>;
+		clock-names = "core_clk";
+
+		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_4_APB>,
+			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_4>;
+		reset-names = "core_apb_rst", "core_rst";
+
+		interrupts = <0 51 0x04>,	/* controller interrupt */
+					 <0 52 0x04>;	/* MSI interrupt */
+		interrupt-names = "intr", "msi";
+
+		iommus = <&smmu TEGRA_SID_PCIE4>;
+		dma-coherent;
+
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &intc 0 51 0x04>;
+
+		nvidia,max-speed = <2>;
+		nvidia,disable-aspm-states = <0x0>;
+
+		bus-range = <0x0 0xff>;
+		ranges = <0x81000000 0x0 0x36100000 0x0 0x36100000 0x0 0x00100000      /* downstream I/O (1MB) */
+			  0x82000000 0x0 0x36200000 0x0 0x36200000 0x0 0x01E00000      /* non-prefetchable memory (30MB) */
+			  0xc2000000 0x14 0x00000000 0x14 0x00000000 0x4 0x00000000>;  /* prefetchable memory (16GB) */
+	};
+
+	pcie_c5_rp {
+		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
+		reg = <0x00 0x141a0000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x3a000000 0x0 0x00040000   /* configuration space (256K) */
+		       0x00 0x3a040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
+		reg-names = "appl", "config", "atu_dma";
+
+		status = "disabled";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		num-lanes = <1>;
+
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX1_CORE_5>;
+		clock-names = "core_clk";
+
+		resets = <&bpmp_resets TEGRA194_RESET_PEX1_CORE_5_APB>,
+			 <&bpmp_resets TEGRA194_RESET_PEX1_CORE_5>;
+		reset-names = "core_apb_rst", "core_rst";
+
+		interrupts = <0 53 0x04>,	/* controller interrupt */
+					 <0 54 0x04>;	/* MSI interrupt */
+		interrupt-names = "intr", "msi";
+
+		iommus = <&smmu TEGRA_SID_PCIE5>;
+		dma-coherent;
+
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &intc 0 53 0x04>;
+
+		nvidia,max-speed = <2>;
+		nvidia,disable-aspm-states = <0x0>;
+
+		bus-range = <0x0 0xff>;
+		ranges = <0x81000000 0x0 0x3a100000 0x0 0x3a100000 0x0 0x00100000      /* downstream I/O (1MB) */
+			  0x82000000 0x0 0x3a200000 0x0 0x3a200000 0x0 0x01E00000      /* non-prefetchable memory (30MB) */
+			  0xc2000000 0x1c 0x00000000 0x1c 0x00000000 0x4 0x00000000>;  /* prefetchable memory (16GB) */
+	};
+
+	pcie_c0_ep {
+		compatible = "nvidia,tegra194-pcie-ep";
+		reg = <0x00 0x14180000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x38000000 0x0 0x00040000   /* configuration space (256K) */
+		       0x00 0x38040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
+		reg-names = "appl", "config", "atu_dma";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		status = "disabled";
+
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_0>;
+		clock-names = "core_clk";
+
+		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_0_APB>,
+			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_0>;
+		reset-names = "core_apb_rst", "core_rst";
+
+		interrupts = <0 72 0x04>;	/* controller interrupt */
+		interrupt-names = "intr";
+
+		iommus = <&smmu TEGRA_SID_PCIE0>;
+		dma-coherent;
+	};
+
 	pcie_c1_ep {
 		compatible = "nvidia,tegra194-pcie-ep";
 		reg = <0x00 0x14100000 0x0 0x00020000   /* appl registers (128K)      */
@@ -83,6 +314,57 @@
 		interrupt-names = "intr";
 
 		iommus = <&smmu TEGRA_SID_PCIE1>;
+		dma-coherent;
+	};
+	pcie_c4_ep {
+		compatible = "nvidia,tegra194-pcie-ep";
+		reg = <0x00 0x14160000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x36000000 0x0 0x00040000   /* configuration space (256K) */
+		       0x00 0x36040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
+		reg-names = "appl", "config", "atu_dma";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		status = "disabled";
+
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_4>;
+		clock-names = "core_clk";
+
+		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_4_APB>,
+			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_4>;
+		reset-names = "core_apb_rst", "core_rst";
+
+		interrupts = <0 51 0x04>;	/* controller interrupt */
+		interrupt-names = "intr";
+
+		iommus = <&smmu TEGRA_SID_PCIE4>;
+		dma-coherent;
+	};
+
+	pcie_c5_ep {
+		compatible = "nvidia,tegra194-pcie-ep";
+		reg = <0x00 0x141a0000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x3a000000 0x0 0x00040000   /* configuration space (256K) */
+		       0x00 0x3a040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
+		reg-names = "appl", "config", "atu_dma";
+
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		status = "disabled";
+
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX1_CORE_5>;
+		clock-names = "core_clk";
+
+		resets = <&bpmp_resets TEGRA194_RESET_PEX1_CORE_5_APB>,
+			 <&bpmp_resets TEGRA194_RESET_PEX1_CORE_5>;
+		reset-names = "core_apb_rst", "core_rst";
+
+		interrupts = <0 53 0x04>;	/* controller interrupt */
+		interrupt-names = "intr";
+
+		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;
 	};
 };

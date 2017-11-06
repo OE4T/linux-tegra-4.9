@@ -1600,11 +1600,11 @@ static void *__dma_alloc(struct device *dev, size_t size, dma_addr_t *handle,
 
 	size = PAGE_ALIGN(size);
 
-	if (is_coherent || nommu())
+	if (nommu())
 		addr = __alloc_simple_buffer(dev, size, gfp, &page);
 	else if (!gfpflags_allow_blocking(gfp))
 		addr = __alloc_from_pool(size, &page, gfp);
-	else if (!IS_ENABLED(CONFIG_CMA))
+	else if (size == PAGE_SIZE || !IS_ENABLED(CONFIG_CMA))
 		addr = __alloc_remap_buffer(dev, size, gfp, prot,
 						&page, caller);
 	else
@@ -1720,11 +1720,11 @@ static void __arm_dma_free(struct device *dev, size_t size, void *cpu_addr,
 
 	size = PAGE_ALIGN(size);
 
-	if (is_coherent || nommu()) {
+	if (nommu()) {
 		__dma_free_buffer(page, size);
 	} else if (__free_from_pool(cpu_addr, size)) {
 		return;
-	} else if (!IS_ENABLED(CONFIG_CMA)) {
+	} else if (size == PAGE_SIZE || !IS_ENABLED(CONFIG_CMA)) {
 		__dma_free_remap(cpu_addr, size);
 		__dma_free_buffer(page, size);
 	} else {

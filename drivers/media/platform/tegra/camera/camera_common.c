@@ -475,14 +475,10 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	/* check hdr enable ctrl */
 	hdr_control.id = TEGRA_CAMERA_CID_HDR_EN;
 
-	err = v4l2_g_ctrl(s_data->ctrl_handler, &hdr_control);
-	if (err < 0) {
-		dev_err(sd->dev, "could not find device ctrl.\n");
-		return err;
-	}
-
 	/* mode_type can be filled in sensor driver */
-	mode_type |= switch_ctrl_qmenu[hdr_control.value] ? HDR_ENABLE : 0;
+	if (!(v4l2_g_ctrl(s_data->ctrl_handler, &hdr_control)))
+		mode_type |=
+			switch_ctrl_qmenu[hdr_control.value] ? HDR_ENABLE : 0;
 
 	s_data->mode = s_data->def_mode;
 	s_data->mode_prop_idx = 0;

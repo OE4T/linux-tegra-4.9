@@ -2,12 +2,12 @@ ifdef CONFIG_TEGRA_T19X_GRHOST
 
 GCOV_PROFILE := y
 
-ccflags-y += -I$(srctree)/../t19x/drivers/video/tegra/host
-ccflags-y += -I$(srctree)/../t19x/drivers/media/platform/tegra
-ccflags-y += -I$(srctree)/../t19x/include
-ccflags-y += -I$(srctree)/../nvidia/drivers/video/tegra/host
-ccflags-y += -I$(srctree)/../nvidia/drivers/media/platform/tegra
-ccflags-y += -I$(srctree)/../nvidia/include
+ccflags-y += -I$(srctree.t19x)/drivers/video/tegra/host
+ccflags-y += -I$(srctree.t19x)/drivers/media/platform/tegra
+ccflags-y += -I$(srctree.t19x)/include
+ccflags-y += -I$(srctree.nvidia)/drivers/video/tegra/host
+ccflags-y += -I$(srctree.nvidia)/drivers/media/platform/tegra
+ccflags-y += -I$(srctree.nvidia)/include
 ccflags-y += -Werror
 
 nvhost-isp5-objs = isp5.o

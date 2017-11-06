@@ -180,9 +180,10 @@ enum pva_region_ids {
  * Queue Attribute ID's
  */
 enum pva_queue_attr_id {
-	QUEUE_ATTR_PRIORITY = 1,
-	QUEUE_ATTR_VPU = 2,
-	QUEUE_ATTR_MAX = 3,
+	QUEUE_ATTR_PRIORITY		= 1,
+	QUEUE_ATTR_VPU			= 2,
+	QUEUE_ATTR_MISR_TO		= 3,
+	QUEUE_ATTR_MAX			= 4,
 };
 
 #define PVA_QUEUE_DEFAULT_PRIORITY	2U

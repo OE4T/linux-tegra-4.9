@@ -537,20 +537,24 @@ static long pva_ioctl(struct file *file, unsigned int cmd,
 	return err;
 }
 
-static void pva_queue_set_default_prior_attr(struct pva_private *priv,
-		struct pva_queue_attribute *attr)
-{
-	attr->pva = priv->pva;
-	attr->id = QUEUE_ATTR_PRIORITY;
-	attr->value = PVA_QUEUE_DEFAULT_PRIORITY;
-}
+static struct pva_queue_attribute default_queue_attr[QUEUE_ATTR_MAX] = {
+	{NULL, 0, 0},
+	{NULL, QUEUE_ATTR_PRIORITY, PVA_QUEUE_DEFAULT_PRIORITY},
+	{NULL, QUEUE_ATTR_VPU, PVA_QUEUE_DEFAULT_VPU_MASK},
+	{NULL, QUEUE_ATTR_MISR_TO, 0}
+};
 
-static void pva_queue_set_default_vpu_mask_attr(struct pva_private *priv,
-		struct pva_queue_attribute *attr)
+static void pva_queue_set_default_attr(struct pva_private *priv)
 {
-	attr->pva = priv->pva;
-	attr->id = QUEUE_ATTR_VPU;
-	attr->value = PVA_QUEUE_DEFAULT_VPU_MASK;
+	u32 id;
+	struct pva_queue_attribute *attr;
+
+	attr = priv->queue->attr;
+	for (id = 1; id < QUEUE_ATTR_MAX; id++) {
+		attr[id].pva = priv->pva;
+		attr[id].id = default_queue_attr[id].id;
+		attr[id].value = default_queue_attr[id].value;
+	}
 }
 
 static int pva_open(struct inode *inode, struct file *file)
@@ -569,7 +573,7 @@ static int pva_open(struct inode *inode, struct file *file)
 		goto err_alloc_priv;
 	}
 
-	attr = kzalloc(sizeof(*attr) * (QUEUE_ATTR_MAX - 1), GFP_KERNEL);
+	attr = kzalloc((sizeof(*attr) * QUEUE_ATTR_MAX), GFP_KERNEL);
 	if (!attr) {
 		err = -ENOMEM;
 		dev_info(&pdev->dev, "unable to allocate memory for attributes\n");
@@ -600,9 +604,7 @@ static int pva_open(struct inode *inode, struct file *file)
 
 	priv->queue->attr = attr;
 
-	pva_queue_set_default_prior_attr(priv, &attr[QUEUE_ATTR_PRIORITY]);
-
-	pva_queue_set_default_vpu_mask_attr(priv, &attr[QUEUE_ATTR_VPU]);
+	pva_queue_set_default_attr(priv);
 
 	return nonseekable_open(inode, file);
 

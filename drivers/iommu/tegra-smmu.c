@@ -1382,16 +1382,12 @@ static int smmu_iommu_attach_dev(struct iommu_domain *domain,
 	as = dom->as[idx];
 	smmu = as->smmu;
 
-#if ENABLE_IOMMU_DMA_OPS
-	if (!iommu_get_dma_cookie(domain)) {
-		if (iommu_dma_init_domain(domain,
-					  domain->geometry.aperture_start,
-					  domain->geometry.aperture_end -
-					  domain->geometry.aperture_start))
-			pr_err("iommu_dma_init_domain failed, %s\n",
+	if (iommu_dma_init_domain(domain,
+				domain->geometry.aperture_start,
+				domain->geometry.aperture_end -
+				domain->geometry.aperture_start, dev))
+		pr_err("iommu_dma_init_domain failed, %s\n",
 				dev_name(dev));
-	}
-#endif
 
 	area = client->prop->area;
 	while (area && area->size) {
@@ -1492,6 +1488,8 @@ static struct iommu_domain *smmu_iommu_domain_alloc(unsigned type)
 	if (!smmu_domain)
 		return NULL;
 
+	iommu_get_dma_cookie(&smmu_domain->domain);
+
 	domain = &smmu_domain->domain;
 	domain->geometry.aperture_start = smmu->iovmm_base;
 	domain->geometry.aperture_end   = smmu->iovmm_base +
@@ -1534,6 +1532,8 @@ static void smmu_iommu_domain_free(struct iommu_domain *domain)
 	if (!as)
 		return;
 	smmu = as->smmu;
+
+	iommu_put_dma_cookie(domain);
 
 	spin_lock_irqsave(&as->lock, flags);
 

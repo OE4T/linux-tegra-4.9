@@ -24,6 +24,8 @@
 #include <linux/msi.h>
 
 int iommu_dma_init(void);
+int iommu_dma_init_domain(struct iommu_domain *domain, dma_addr_t base,
+		u64 size, struct device *dev);
 
 /* Domain management interface for IOMMU drivers */
 int iommu_get_dma_cookie(struct iommu_domain *domain);

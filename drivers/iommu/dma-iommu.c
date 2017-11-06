@@ -204,7 +204,7 @@ int dma_direction_to_prot(enum dma_data_direction dir, bool coherent)
 	}
 }
 
-static struct iova *__alloc_iova(struct iommu_domain *domain, size_t size,
+struct iova *__alloc_iova(struct iommu_domain *domain, size_t size,
 		dma_addr_t dma_limit, bool size_aligned)
 {
 	struct iova_domain *iovad = cookie_iovad(domain);

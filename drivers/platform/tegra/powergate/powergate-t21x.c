@@ -63,8 +63,8 @@ struct partition_clk_info {
 #define TEGRA210_I2S_CTRL  0xa0
 
 /* registers to control DISPA SLCG during power ungating */
-#define DC_CMD_DISPLAY_COMMAND 0x32
-#define DC_COM_DSC_TOP_CTL 0x33e
+#define DC_CMD_DISPLAY_COMMAND 0xc8
+#define DC_COM_DSC_TOP_CTL 0xcf8
 
 /* register to control VIC SLCG during power ungating */
 #define NV_PVIC_THI_SLCG_OVERRIDE_LOW 0x8c
@@ -1011,6 +1011,7 @@ static void handle_lvl2_ovr_disp(void)
 	writel(val | BIT(2), tegra_dispa + DC_COM_DSC_TOP_CTL);
 	readl_relaxed(tegra_dispa + DC_CMD_DISPLAY_COMMAND);
 	writel(val, tegra_dispa + DC_COM_DSC_TOP_CTL);
+	readl_relaxed(tegra_dispa + DC_CMD_DISPLAY_COMMAND);
 
 	spin_unlock_irqrestore(lock, flags);
 }

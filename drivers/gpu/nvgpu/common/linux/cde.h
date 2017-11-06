@@ -160,7 +160,8 @@ struct gk20a_cde_hdr_command {
 
 enum {
 	TYPE_BUF_COMMAND_INIT = 0,
-	TYPE_BUF_COMMAND_CONVERT
+	TYPE_BUF_COMMAND_CONVERT,
+	TYPE_BUF_COMMAND_NOOP
 };
 
 /*

@@ -759,12 +759,16 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 	} else if (op == TYPE_BUF_COMMAND_CONVERT) {
 		gpfifo = cde_ctx->convert_cmd;
 		num_entries = cde_ctx->convert_cmd_num_entries;
+	} else if (op == TYPE_BUF_COMMAND_NOOP) {
+		/* Any non-null gpfifo will suffice with 0 num_entries */
+		gpfifo = cde_ctx->init_convert_cmd;
+		num_entries = 0;
 	} else {
 		nvgpu_warn(g, "cde: unknown buffer");
 		return -EINVAL;
 	}
 
-	if (gpfifo == NULL || num_entries == 0) {
+	if (gpfifo == NULL) {
 		nvgpu_warn(g, "cde: buffer not available");
 		return -ENOSYS;
 	}
@@ -990,6 +994,7 @@ __releases(&l->cde_app->mutex)
 	u32 flags;
 	int err, i;
 	const s16 compbits_kind = 0;
+	u32 submit_op;
 
 	gk20a_dbg(gpu_dbg_cde, "compbits_byte_offset=%llu scatterbuffer_byte_offset=%llu",
 		  compbits_byte_offset, scatterbuffer_byte_offset);
@@ -1162,15 +1167,29 @@ __releases(&l->cde_app->mutex)
 	/* gk20a_cde_execute_buffer() will grab a power reference of it's own */
 	gk20a_idle(g);
 
-	/* execute the conversion buffer, combined with init first if it's the
-	 * first time */
-	err = gk20a_cde_execute_buffer(cde_ctx,
-			cde_ctx->init_cmd_executed
-				? TYPE_BUF_COMMAND_CONVERT
-				: TYPE_BUF_COMMAND_INIT,
+	if (comptags.lines == 0) {
+		/*
+		 * Nothing to do on the buffer, but do a null kickoff for
+		 * managing the pre and post fences.
+		 */
+		submit_op = TYPE_BUF_COMMAND_NOOP;
+	} else if (!cde_ctx->init_cmd_executed) {
+		/*
+		 * First time, so include the init pushbuf too in addition to
+		 * the conversion code.
+		 */
+		submit_op = TYPE_BUF_COMMAND_INIT;
+	} else {
+		/*
+		 * The usual condition: execute just the conversion.
+		 */
+		submit_op = TYPE_BUF_COMMAND_CONVERT;
+	}
+	err = gk20a_cde_execute_buffer(cde_ctx, submit_op,
 			fence, flags, fence_out);
 
-	cde_ctx->init_cmd_executed = true;
+	if (comptags.lines != 0 && !err)
+		cde_ctx->init_cmd_executed = true;
 
 	/* unmap the buffers - channel holds references to them now */
 	nvgpu_vm_unmap(cde_ctx->vm, map_vaddr, NULL);

@@ -30,6 +30,7 @@
 #include <nvgpu/list.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/error_notifier.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -227,15 +228,17 @@ static int gk20a_channel_set_wdt_status(struct channel_gk20a *ch,
 
 static void gk20a_channel_free_error_notifiers(struct channel_gk20a *ch)
 {
-	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
-	if (ch->error_notifier_ref) {
-		dma_buf_vunmap(ch->error_notifier_ref, ch->error_notifier_va);
-		dma_buf_put(ch->error_notifier_ref);
-		ch->error_notifier_ref = NULL;
-		ch->error_notifier = NULL;
-		ch->error_notifier_va = NULL;
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+
+	nvgpu_mutex_acquire(&priv->error_notifier.mutex);
+	if (priv->error_notifier.dmabuf) {
+		dma_buf_vunmap(priv->error_notifier.dmabuf, priv->error_notifier.vaddr);
+		dma_buf_put(priv->error_notifier.dmabuf);
+		priv->error_notifier.dmabuf = NULL;
+		priv->error_notifier.notification = NULL;
+		priv->error_notifier.vaddr = NULL;
 	}
-	nvgpu_mutex_release(&ch->error_notifier_mutex);
+	nvgpu_mutex_release(&priv->error_notifier.mutex);
 }
 
 static int gk20a_init_error_notifier(struct channel_gk20a *ch,
@@ -244,6 +247,7 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 	struct dma_buf *dmabuf;
 	void *va;
 	u64 end = args->offset + sizeof(struct nvgpu_notification);
+	struct nvgpu_channel_linux *priv = ch->os_priv;
 
 	if (!args->mem) {
 		pr_err("gk20a_init_error_notifier: invalid memory handle\n");
@@ -273,14 +277,15 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 		return -ENOMEM;
 	}
 
-	ch->error_notifier = va + args->offset;
-	ch->error_notifier_va = va;
-	memset(ch->error_notifier, 0, sizeof(struct nvgpu_notification));
+	priv->error_notifier.notification = va + args->offset;
+	priv->error_notifier.vaddr = va;
+	memset(priv->error_notifier.notification, 0,
+		sizeof(struct nvgpu_notification));
 
 	/* set channel notifiers pointer */
-	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
-	ch->error_notifier_ref = dmabuf;
-	nvgpu_mutex_release(&ch->error_notifier_mutex);
+	nvgpu_mutex_acquire(&priv->error_notifier.mutex);
+	priv->error_notifier.dmabuf = dmabuf;
+	nvgpu_mutex_release(&priv->error_notifier.mutex);
 
 	return 0;
 }
@@ -1361,7 +1366,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			break;
 		}
 		err = ch->g->ops.fifo.force_reset_ch(ch,
-				NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR, true);
+				NVGPU_ERR_NOTIFIER_RESETCHANNEL_VERIF_ERROR, true);
 		gk20a_idle(ch->g);
 		break;
 	case NVGPU_IOCTL_CHANNEL_EVENT_ID_CTRL:

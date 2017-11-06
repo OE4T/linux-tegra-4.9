@@ -44,6 +44,7 @@
 #include <nvgpu/ltc.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/error_notifier.h>
 
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -337,37 +338,6 @@ int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 	gk20a_dbg(gpu_dbg_sched, "chid=%u interleave=%u", ch->chid, level);
 
 	return ret ? ret : g->ops.fifo.update_runlist(g, ch->runlist_id, ~0, true, true);
-}
-
-/**
- * gk20a_set_error_notifier_locked()
- * Should be called with ch->error_notifier_mutex held
- */
-void gk20a_set_error_notifier_locked(struct channel_gk20a *ch, __u32 error)
-{
-	if (ch->error_notifier_ref) {
-		struct timespec time_data;
-		u64 nsec;
-		getnstimeofday(&time_data);
-		nsec = ((u64)time_data.tv_sec) * 1000000000u +
-				(u64)time_data.tv_nsec;
-		ch->error_notifier->time_stamp.nanoseconds[0] =
-				(u32)nsec;
-		ch->error_notifier->time_stamp.nanoseconds[1] =
-				(u32)(nsec >> 32);
-		ch->error_notifier->info32 = error;
-		ch->error_notifier->status = 0xffff;
-
-		nvgpu_err(ch->g,
-		    "error notifier set to %d for ch %d", error, ch->chid);
-	}
-}
-
-void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
-{
-	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
-	gk20a_set_error_notifier_locked(ch, error);
-	nvgpu_mutex_release(&ch->error_notifier_mutex);
 }
 
 static void gk20a_wait_until_counter_is_N(
@@ -1550,7 +1520,7 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 	gk20a_gr_debug_dump(g);
 
 	g->ops.fifo.force_reset_ch(ch,
-		NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT, true);
+		NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT, true);
 }
 
 /**
@@ -2210,53 +2180,48 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	err = nvgpu_mutex_init(&c->ioctl_lock);
 	if (err)
 		return err;
-	err = nvgpu_mutex_init(&c->error_notifier_mutex);
-	if (err)
-		goto fail_1;
 	err = nvgpu_mutex_init(&c->joblist.cleanup_lock);
 	if (err)
-		goto fail_2;
+		goto fail_1;
 	err = nvgpu_mutex_init(&c->joblist.pre_alloc.read_lock);
 	if (err)
-		goto fail_3;
+		goto fail_2;
 	err = nvgpu_mutex_init(&c->sync_lock);
 	if (err)
-		goto fail_4;
+		goto fail_3;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	err = nvgpu_mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
 	if (err)
-		goto fail_5;
+		goto fail_4;
 	err = nvgpu_mutex_init(&c->cs_client_mutex);
 	if (err)
-		goto fail_6;
+		goto fail_5;
 #endif
 	err = nvgpu_mutex_init(&c->event_id_list_lock);
 	if (err)
-		goto fail_7;
+		goto fail_6;
 	err = nvgpu_mutex_init(&c->dbg_s_lock);
 	if (err)
-		goto fail_8;
+		goto fail_7;
 
 	nvgpu_list_add(&c->free_chs, &g->fifo.free_chs);
 
 	return 0;
 
-fail_8:
-	nvgpu_mutex_destroy(&c->event_id_list_lock);
 fail_7:
+	nvgpu_mutex_destroy(&c->event_id_list_lock);
+fail_6:
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	nvgpu_mutex_destroy(&c->cs_client_mutex);
-fail_6:
-	nvgpu_mutex_destroy(&c->cyclestate.cyclestate_buffer_mutex);
 fail_5:
+	nvgpu_mutex_destroy(&c->cyclestate.cyclestate_buffer_mutex);
+fail_4:
 #endif
 	nvgpu_mutex_destroy(&c->sync_lock);
-fail_4:
-	nvgpu_mutex_destroy(&c->joblist.pre_alloc.read_lock);
 fail_3:
-	nvgpu_mutex_destroy(&c->joblist.cleanup_lock);
+	nvgpu_mutex_destroy(&c->joblist.pre_alloc.read_lock);
 fail_2:
-	nvgpu_mutex_destroy(&c->error_notifier_mutex);
+	nvgpu_mutex_destroy(&c->joblist.cleanup_lock);
 fail_1:
 	nvgpu_mutex_destroy(&c->ioctl_lock);
 

@@ -25,9 +25,12 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/error_notifier.h>
 
 #include "vgpu.h"
 #include "fifo_vgpu.h"
+
+#include "common/linux/channel.h"
 
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
@@ -691,7 +694,7 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 
 		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
-				gk20a_set_error_notifier(ch_tsg, err_code);
+				nvgpu_set_error_notifier(ch_tsg, err_code);
 				ch_tsg->has_timedout = true;
 				gk20a_channel_put(ch_tsg);
 			}
@@ -699,7 +702,7 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 	} else {
-		gk20a_set_error_notifier(ch, err_code);
+		nvgpu_set_error_notifier(ch, err_code);
 		ch->has_timedout = true;
 	}
 
@@ -716,19 +719,14 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 static void vgpu_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
-	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
-	if (ch->error_notifier_ref) {
-		if (ch->error_notifier->status == 0xffff) {
-			/* If error code is already set, this mmu fault
-			 * was triggered as part of recovery from other
-			 * error condition.
-			 * Don't overwrite error flag. */
-		} else {
-			gk20a_set_error_notifier_locked(ch,
-				NVGPU_CHANNEL_FIFO_ERROR_MMU_ERR_FLT);
-		}
-	}
-	nvgpu_mutex_release(&ch->error_notifier_mutex);
+	/*
+	 * If error code is already set, this mmu fault
+	 * was triggered as part of recovery from other
+	 * error condition.
+	 * Don't overwrite error flag.
+	 */
+	nvgpu_set_error_notifier_if_empty(ch,
+		NVGPU_ERR_NOTIFIER_FIFO_ERROR_MMU_ERR_FLT);
 
 	/* mark channel as faulted */
 	ch->has_timedout = true;
@@ -778,11 +776,11 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 
 	switch (info->type) {
 	case TEGRA_VGPU_FIFO_INTR_PBDMA:
-		gk20a_set_error_notifier(ch, NVGPU_CHANNEL_PBDMA_ERROR);
+		nvgpu_set_error_notifier(ch, NVGPU_ERR_NOTIFIER_PBDMA_ERROR);
 		break;
 	case TEGRA_VGPU_FIFO_INTR_CTXSW_TIMEOUT:
-		gk20a_set_error_notifier(ch,
-					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+		nvgpu_set_error_notifier(ch,
+					NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
 		break;
 	case TEGRA_VGPU_FIFO_INTR_MMU_FAULT:
 		vgpu_fifo_set_ctx_mmu_error_ch_tsg(g, ch);

@@ -40,6 +40,7 @@
 #include <nvgpu/barrier.h>
 #include <nvgpu/mm.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/error_notifier.h>
 
 #include "gk20a.h"
 #include "gr_ctx_gk20a.h"
@@ -5113,14 +5114,14 @@ static void gk20a_gr_set_error_notifier(struct gk20a *g,
 			nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 			list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
 				if (gk20a_channel_get(ch_tsg)) {
-					gk20a_set_error_notifier(ch_tsg,
+					nvgpu_set_error_notifier(ch_tsg,
 							 error_notifier);
 					gk20a_channel_put(ch_tsg);
 				}
 			}
 			nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 		} else {
-			gk20a_set_error_notifier(ch, error_notifier);
+			nvgpu_set_error_notifier(ch, error_notifier);
 		}
 	}
 }
@@ -5130,7 +5131,7 @@ static int gk20a_gr_handle_semaphore_timeout_pending(struct gk20a *g,
 {
 	gk20a_dbg_fn("");
 	gk20a_gr_set_error_notifier(g, isr_data,
-			 NVGPU_CHANNEL_GR_SEMAPHORE_TIMEOUT);
+			 NVGPU_ERR_NOTIFIER_GR_SEMAPHORE_TIMEOUT);
 	nvgpu_err(g,
 		   "gr semaphore timeout");
 	return -EINVAL;
@@ -5141,7 +5142,7 @@ static int gk20a_gr_intr_illegal_notify_pending(struct gk20a *g,
 {
 	gk20a_dbg_fn("");
 	gk20a_gr_set_error_notifier(g, isr_data,
-			 NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY);
+			 NVGPU_ERR_NOTIFIER_GR_ILLEGAL_NOTIFY);
 	/* This is an unrecoverable error, reset is needed */
 	nvgpu_err(g,
 		   "gr semaphore timeout");
@@ -5156,7 +5157,7 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 			isr_data->data_lo);
 	if (ret) {
 		gk20a_gr_set_error_notifier(g, isr_data,
-			 NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY);
+			 NVGPU_ERR_NOTIFIER_GR_ILLEGAL_NOTIFY);
 		nvgpu_err(g, "invalid method class 0x%08x"
 			", offset 0x%08x address 0x%08x",
 			isr_data->class_num, isr_data->offset, isr_data->addr);
@@ -5169,7 +5170,7 @@ static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 {
 	gk20a_dbg_fn("");
 	gk20a_gr_set_error_notifier(g, isr_data,
-			 NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+			 NVGPU_ERR_NOTIFIER_GR_ERROR_SW_NOTIFY);
 	nvgpu_err(g,
 		   "invalid class 0x%08x, offset 0x%08x",
 		   isr_data->class_num, isr_data->offset);
@@ -5193,7 +5194,7 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 
 	if (gr_fecs_intr & gr_fecs_host_int_status_umimp_firmware_method_f(1)) {
 		gk20a_gr_set_error_notifier(g, isr_data,
-			 NVGPU_CHANNEL_FECS_ERR_UNIMP_FIRMWARE_METHOD);
+			 NVGPU_ERR_NOTIFIER_FECS_ERR_UNIMP_FIRMWARE_METHOD);
 		nvgpu_err(g,
 			  "firmware method error 0x%08x for offset 0x%04x",
 			  gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(6)),
@@ -5215,7 +5216,7 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 	gr_class_error =
 		gr_class_error_code_v(gk20a_readl(g, gr_class_error_r()));
 	gk20a_gr_set_error_notifier(g, isr_data,
-			 NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+			 NVGPU_ERR_NOTIFIER_GR_ERROR_SW_NOTIFY);
 	nvgpu_err(g, "class error 0x%08x, offset 0x%08x,"
 		"sub channel 0x%08x mme generated %d,"
 		" mme pc 0x%08xdata high %d priv status %d"
@@ -5244,7 +5245,7 @@ static int gk20a_gr_handle_firmware_method(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	gk20a_gr_set_error_notifier(g, isr_data,
-			 NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+			 NVGPU_ERR_NOTIFIER_GR_ERROR_SW_NOTIFY);
 	nvgpu_err(g,
 		   "firmware method 0x%08x, offset 0x%08x for channel %u",
 		   isr_data->class_num, isr_data->offset,
@@ -6024,7 +6025,7 @@ int gk20a_gr_isr(struct gk20a *g)
 		if (need_reset) {
 			nvgpu_err(g, "set gr exception notifier");
 			gk20a_gr_set_error_notifier(g, &isr_data,
-					 NVGPU_CHANNEL_GR_EXCEPTION);
+					 NVGPU_ERR_NOTIFIER_GR_EXCEPTION);
 		}
 	}
 

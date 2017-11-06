@@ -42,10 +42,20 @@ struct nvgpu_channel_completion_cb {
 	struct work_struct work;
 };
 
+struct nvgpu_error_notifier {
+	struct dma_buf *dmabuf;
+	void *vaddr;
+
+	struct nvgpu_notification *notification;
+
+	struct nvgpu_mutex mutex;
+};
+
 struct nvgpu_channel_linux {
 	struct channel_gk20a *ch;
 
 	struct nvgpu_channel_completion_cb completion_cb;
+	struct nvgpu_error_notifier error_notifier;
 };
 
 int nvgpu_init_channel_support_linux(struct nvgpu_os_linux *l);

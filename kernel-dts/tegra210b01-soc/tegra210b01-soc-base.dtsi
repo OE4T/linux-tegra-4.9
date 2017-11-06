@@ -261,7 +261,7 @@
 		compatible = "nvidia,tegra210b01-soctherm";
 		hw-pllx-offsets = <TEGRA124_SOCTHERM_SENSOR_CPU 0 0
 				TEGRA124_SOCTHERM_SENSOR_GPU 0 0>;
-		nvidia,thermtrips = <TEGRA124_SOCTHERM_SENSOR_PLLX 96500>;
+		nvidia,thermtrips = <TEGRA124_SOCTHERM_SENSOR_PLLX 96000>;
 
 		throttle-cfgs {
 			throttle_heavy: heavy {

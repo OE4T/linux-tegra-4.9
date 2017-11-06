@@ -1,6 +1,6 @@
 obj-$(CONFIG_I2C_TEGRA_VI)      += i2c-tegra-vi.o
 #CFLAGS_i2c-bpmp-tegra.o                 = -Werror
-ccflags-y += -I$(srctree)/../nvidia/include
+ccflags-y += -I$(srctree.nvidia)/include
 obj-$(CONFIG_I2C_BPMP_TEGRA)     += i2c-bpmp-tegra.o
 obj-$(CONFIG_TEGRA_I2CSLV_T186)  += i2c-t18x-slave.o i2c-t18x-client.o
 obj-$(CONFIG_I2C_TEGRA_CAMRTC) += i2c-ivc-single.o i2c-ivc-multi.o i2c-rtcpu.o i2c-rtcpu-clk-config.o

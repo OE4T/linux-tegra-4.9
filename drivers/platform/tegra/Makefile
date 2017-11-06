@@ -1,9 +1,9 @@
 KBUILD_CFLAGS += -I$(srctree)/arch/arm/mach-tegra \
 		 -I$(srctree)/arch/arm/mach-tegra/include/ \
 		 -I$(srctree)/drivers/platform/tegra/ \
-		 -I$(srctree)/../nvidia/drivers/platform/tegra/rtcpu \
-		 -I$(srctree)/../nvidia/drivers/video/tegra/dc/ \
-		 -I$(srctree)/../nvidia/drivers/video/tegra/dc/panel/
+		 -I$(srctree.nvidia)/drivers/platform/tegra/rtcpu \
+		 -I$(srctree.nvidia)/drivers/video/tegra/dc/ \
+		 -I$(srctree.nvidia)/drivers/video/tegra/dc/panel/
 
 ccflags-y += -Werror
 obj-$(CONFIG_TEGRA_MC) += mc/

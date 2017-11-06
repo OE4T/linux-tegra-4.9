@@ -4,9 +4,9 @@ subdir-ccflags-y := -Werror
 
 subdir-ccflags-y += -I$(srctree)
 subdir-ccflags-y += -I$(srctree)/sound/soc/codecs/
-subdir-ccflags-y += -I$(srctree)/../nvidia
-subdir-ccflags-y += -I$(srctree)/../nvidia/sound/soc/tegra-virt-alt/
-subdir-ccflags-y += -I$(srctree)/../nvidia/sound/soc/tegra-alt/include/
+subdir-ccflags-y += -I$(srctree.nvidia)
+subdir-ccflags-y += -I$(srctree.nvidia)/sound/soc/tegra-virt-alt/
+subdir-ccflags-y += -I$(srctree.nvidia)/sound/soc/tegra-alt/include/
 
 #----------------------------- utility drivers --------------------------------------
 CFLAGS_tegra_pcm_alt.o 				+= -Wno-shift-count-overflow

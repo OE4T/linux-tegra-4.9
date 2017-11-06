@@ -2999,7 +2999,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 		u32 lockboost_mask;
 		u32 lockboost;
 
-		if (g->support_pmu) {
+		if (g->support_pmu && g->can_elpg) {
 			err = nvgpu_pmu_disable_elpg(g);
 			if (err) {
 				nvgpu_err(g,

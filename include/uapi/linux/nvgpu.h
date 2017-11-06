@@ -148,7 +148,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_RESCHEDULE_RUNLIST	(1ULL << 21)
 /* Direct PTE kind control is supported (map_buffer_ex) */
 #define NVGPU_GPU_FLAGS_SUPPORT_MAP_DIRECT_KIND_CTRL	(1ULL << 23)
-
+/* NVGPU_GPU_IOCTL_SET_DETERMINISTIC_OPTS is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_OPTS	(1ULL << 24)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;
@@ -801,6 +802,42 @@ struct nvgpu_gpu_set_therm_alert_limit_args {
 	__s32 temp_f24_8;
 };
 
+/*
+ * Adjust options of deterministic channels in channel batches.
+ *
+ * This supports only one option currently: relax railgate blocking by
+ * "disabling" the channel.
+ *
+ * Open deterministic channels do not allow the GPU to railgate by default. It
+ * may be preferable to hold preopened channel contexts open and idle and still
+ * railgate the GPU, taking the channels back into use dynamically in userspace
+ * as an optimization. This ioctl allows to drop or reacquire the requirement
+ * to hold GPU power on for individual channels. If allow_railgate is set on a
+ * channel, no work can be submitted to it.
+ *
+ * num_channels is updated to signify how many channels were updated
+ * successfully. It can be used to test which was the first update to fail.
+ */
+struct nvgpu_gpu_set_deterministic_opts_args {
+	__u32 num_channels; /* in/out */
+/*
+ * Set or unset the railgating reference held by deterministic channels. If
+ * the channel status is already the same as the flag, this is a no-op. Both
+ * of these flags cannot be set at the same time. If none are set, the state
+ * is left as is.
+ */
+#define NVGPU_GPU_SET_DETERMINISTIC_OPTS_FLAGS_ALLOW_RAILGATING    (1 << 0)
+#define NVGPU_GPU_SET_DETERMINISTIC_OPTS_FLAGS_DISALLOW_RAILGATING (1 << 1)
+	__u32 flags;        /* in */
+	/*
+	 * This is a pointer to an array of size num_channels.
+	 *
+	 * The channels have to be valid fds and be previously set as
+	 * deterministic.
+	 */
+	__u64 channels; /* in */
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -885,8 +922,11 @@ struct nvgpu_gpu_set_therm_alert_limit_args {
 #define NVGPU_GPU_IOCTL_SET_THERM_ALERT_LIMIT \
 		_IOWR(NVGPU_GPU_IOCTL_MAGIC, 39, \
 			struct nvgpu_gpu_set_therm_alert_limit_args)
+#define NVGPU_GPU_IOCTL_SET_DETERMINISTIC_OPTS \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 40, \
+			struct nvgpu_gpu_set_deterministic_opts_args)
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_SET_THERM_ALERT_LIMIT)
+	_IOC_NR(NVGPU_GPU_IOCTL_SET_DETERMINISTIC_OPTS)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_get_cpu_time_correlation_info_args)
 

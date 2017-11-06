@@ -578,7 +578,10 @@ unbind:
 	if (ch->deterministic) {
 		nvgpu_rwsem_down_read(&g->deterministic_busy);
 		ch->deterministic = false;
-		gk20a_idle(g);
+		if (!ch->deterministic_railgate_allowed)
+			gk20a_idle(g);
+		ch->deterministic_railgate_allowed = false;
+
 		nvgpu_rwsem_up_read(&g->deterministic_busy);
 	}
 

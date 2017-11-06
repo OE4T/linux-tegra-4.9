@@ -91,6 +91,9 @@ struct gk20a;
 /* FECS context switch tracing is available */
 #define NVGPU_SUPPORT_FECS_CTXSW_TRACE		38
 
+/* NVGPU_GPU_IOCTL_SET_DETERMINISTIC_OPTS is available */
+#define NVGPU_SUPPORT_DETERMINISTIC_OPTS	39
+
 /*
  * Security flags
  */

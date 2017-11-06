@@ -208,6 +208,8 @@ struct channel_gk20a {
 	bool first_init;
 	bool vpr;
 	bool deterministic;
+	/* deterministic, but explicitly idle and submits disallowed */
+	bool deterministic_railgate_allowed;
 	bool cde;
 	pid_t pid;
 	pid_t tgid;

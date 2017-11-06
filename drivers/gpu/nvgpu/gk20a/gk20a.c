@@ -439,6 +439,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 				NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_FULL,
 				true);
 
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_DETERMINISTIC_OPTS, true);
+
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_USERSPACE_MANAGED_AS, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG, true);
 

@@ -161,6 +161,8 @@ static struct nvgpu_flags_mapping flags_mapping[] = {
 		NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING},
 	{NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL,
 		NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_FULL},
+	{NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_OPTS,
+		NVGPU_SUPPORT_DETERMINISTIC_OPTS},
 	{NVGPU_GPU_FLAGS_SUPPORT_IO_COHERENCE,
 		NVGPU_SUPPORT_IO_COHERENCE},
 	{NVGPU_GPU_FLAGS_SUPPORT_RESCHEDULE_RUNLIST,
@@ -1319,6 +1321,114 @@ static int nvgpu_gpu_set_therm_alert_limit(struct gk20a *g,
 	return err;
 }
 
+static int nvgpu_gpu_set_deterministic_ch_railgate(struct channel_gk20a *ch,
+		u32 flags)
+{
+	int err = 0;
+	bool allow;
+	bool disallow;
+
+	allow = flags &
+		NVGPU_GPU_SET_DETERMINISTIC_OPTS_FLAGS_ALLOW_RAILGATING;
+
+	disallow = flags &
+		NVGPU_GPU_SET_DETERMINISTIC_OPTS_FLAGS_DISALLOW_RAILGATING;
+
+	/* Can't be both at the same time */
+	if (allow && disallow)
+		return -EINVAL;
+
+	/* Nothing to do */
+	if (!allow && !disallow)
+		return 0;
+
+	/*
+	 * Moving into explicit idle or back from it? A call that doesn't
+	 * change the status is a no-op.
+	 */
+	if (!ch->deterministic_railgate_allowed &&
+			allow) {
+		gk20a_idle(ch->g);
+	} else if (ch->deterministic_railgate_allowed &&
+			!allow) {
+		err = gk20a_busy(ch->g);
+		if (err) {
+			nvgpu_warn(ch->g,
+				"cannot busy to restore deterministic ch");
+			return err;
+		}
+	}
+	ch->deterministic_railgate_allowed = allow;
+
+	return err;
+}
+
+static int nvgpu_gpu_set_deterministic_ch(struct channel_gk20a *ch, u32 flags)
+{
+	if (!ch->deterministic)
+		return -EINVAL;
+
+	return nvgpu_gpu_set_deterministic_ch_railgate(ch, flags);
+}
+
+static int nvgpu_gpu_set_deterministic_opts(struct gk20a *g,
+		struct nvgpu_gpu_set_deterministic_opts_args *args)
+{
+	int __user *user_channels;
+	u32 i = 0;
+	int err = 0;
+
+	gk20a_dbg_fn("");
+
+	user_channels = (int __user *)(uintptr_t)args->channels;
+
+	/* Upper limit; prevent holding deterministic_busy for long */
+	if (args->num_channels > g->fifo.num_channels) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	/* Trivial sanity check first */
+	if (!access_ok(VERIFY_READ, user_channels,
+				args->num_channels * sizeof(int))) {
+		err = -EFAULT;
+		goto out;
+	}
+
+	nvgpu_rwsem_down_read(&g->deterministic_busy);
+
+	/* note: we exit at the first failure */
+	for (; i < args->num_channels; i++) {
+		int ch_fd = 0;
+		struct channel_gk20a *ch;
+
+		if (copy_from_user(&ch_fd, &user_channels[i], sizeof(int))) {
+			/* User raced with above access_ok */
+			err = -EFAULT;
+			break;
+		}
+
+		ch = gk20a_get_channel_from_file(ch_fd);
+		if (!ch) {
+			err = -EINVAL;
+			break;
+		}
+
+		err = nvgpu_gpu_set_deterministic_ch(ch, args->flags);
+
+		gk20a_channel_put(ch);
+
+		if (err)
+			break;
+	}
+
+	nvgpu_rwsem_up_read(&g->deterministic_busy);
+
+out:
+	args->num_channels = i;
+	return err;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct gk20a_ctrl_priv *priv = filp->private_data;
@@ -1631,6 +1741,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_SET_THERM_ALERT_LIMIT:
 		err = nvgpu_gpu_set_therm_alert_limit(g,
 			(struct nvgpu_gpu_set_therm_alert_limit_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_SET_DETERMINISTIC_OPTS:
+		err = nvgpu_gpu_set_deterministic_opts(g,
+			(struct nvgpu_gpu_set_deterministic_opts_args *)buf);
 		break;
 
 	default:

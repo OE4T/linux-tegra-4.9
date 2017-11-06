@@ -537,6 +537,17 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (c->deterministic)
 		nvgpu_rwsem_down_read(&g->deterministic_busy);
 
+	if (c->deterministic && c->deterministic_railgate_allowed) {
+		/*
+		 * Nope - this channel has dropped its own power ref. As
+		 * deterministic submits don't hold power on per each submitted
+		 * job like normal ones do, the GPU might railgate any time now
+		 * and thus submit is disallowed.
+		 */
+		err = -EINVAL;
+		goto clean_up;
+	}
+
 	trace_gk20a_channel_submit_gpfifo(g->name,
 					  c->chid,
 					  num_entries,

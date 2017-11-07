@@ -1382,8 +1382,8 @@ static void unlock_windows_for_flip(struct tegra_dc_ext_user *user,
 }
 
 static int sanitize_flip_args(struct tegra_dc_ext_user *user,
-				struct tegra_dc_ext_flip_windowattr_v2 *win,
-				int win_num, __u16 **dirty_rect)
+			      struct tegra_dc_ext_flip_windowattr_v2 *win_list,
+			      int win_num, __u16 **dirty_rect)
 {
 	int i, used_windows = 0;
 	struct tegra_dc *dc = user->ext->dc;
@@ -1392,7 +1392,8 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 		return -EINVAL;
 
 	for (i = 0; i < win_num; i++) {
-		int index = win[i].index;
+		struct tegra_dc_ext_flip_windowattr_v2 *win = &win_list[i];
+		int index = win->index;
 		fixed20_12 input_w, input_h;
 		u32 w, h;
 

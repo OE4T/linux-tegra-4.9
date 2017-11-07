@@ -73,6 +73,12 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 		complete(&nvdla_dev->cmd_completion);
 	}
 
+	/* logic to clear the interrupt */
+	host1x_writel(pdev, flcn_irqmclr_r(), flcn_irqmclr_swgen1_set_f());
+	host1x_writel(pdev, flcn_thi_int_stat_r(), flcn_thi_int_stat_clr_f());
+	host1x_readl(pdev, flcn_thi_int_stat_r());
+	host1x_writel(pdev, flcn_irqsclr_r(), flcn_irqsclr_swgen1_set_f());
+
 	return 0;
 }
 

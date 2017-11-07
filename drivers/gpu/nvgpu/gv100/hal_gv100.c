@@ -213,6 +213,24 @@ static int gv100_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_SMPC_PRI_STRIDE:
 		ret = proj_smpc_stride_v();
 		break;
+	case GPU_LIT_TWOD_CLASS:
+		ret = FERMI_TWOD_A;
+		break;
+	case GPU_LIT_THREED_CLASS:
+		ret = VOLTA_A;
+		break;
+	case GPU_LIT_COMPUTE_CLASS:
+		ret = VOLTA_COMPUTE_A;
+		break;
+	case GPU_LIT_GPFIFO_CLASS:
+		ret = VOLTA_CHANNEL_GPFIFO_A;
+		break;
+	case GPU_LIT_I2M_CLASS:
+		ret = KEPLER_INLINE_TO_MEMORY_B;
+		break;
+	case GPU_LIT_DMA_COPY_CLASS:
+		ret = VOLTA_DMA_COPY_A;
+		break;
 	default:
 		break;
 	}
@@ -697,7 +715,6 @@ static const struct gpu_ops gv100_ops = {
 int gv100_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
-	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
 	gops->bios = gv100_ops.bios;
 	gops->ltc = gv100_ops.ltc;
@@ -753,13 +770,6 @@ int gv100_init_hal(struct gk20a *g)
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 
 	g->name = "gv10x";
-
-	c->twod_class = FERMI_TWOD_A;
-	c->threed_class = VOLTA_A;
-	c->compute_class = VOLTA_COMPUTE_A;
-	c->gpfifo_class = VOLTA_CHANNEL_GPFIFO_A;
-	c->inline_to_memory_class = KEPLER_INLINE_TO_MEMORY_B;
-	c->dma_copy_class = VOLTA_DMA_COPY_A;
 
 	return 0;
 }

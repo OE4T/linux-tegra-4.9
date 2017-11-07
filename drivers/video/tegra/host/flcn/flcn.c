@@ -69,11 +69,6 @@ static irqreturn_t flcn_isr(int irq, void *dev_id)
 	if (pdata->flcn_isr)
 		pdata->flcn_isr(pdev);
 
-	host1x_writel(pdev, flcn_irqmclr_r(), flcn_irqmclr_swgen1_set_f());
-	host1x_writel(pdev, flcn_thi_int_stat_r(), flcn_thi_int_stat_clr_f());
-	host1x_readl(pdev, flcn_thi_int_stat_r());
-	host1x_writel(pdev, flcn_irqsclr_r(), flcn_irqsclr_swgen1_set_f());
-
 	spin_unlock_irqrestore(&pdata->mirq_lock, flags);
 
 	return IRQ_HANDLED;

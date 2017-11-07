@@ -143,6 +143,7 @@ int __nvgpu_pd_cache_alloc_direct(struct gk20a *g,
 				  struct nvgpu_gmmu_pd *pd, u32 bytes)
 {
 	int err;
+	unsigned long flags = 0;
 
 	pd_dbg(g, "PD-Alloc [D] %u bytes", bytes);
 
@@ -152,7 +153,20 @@ int __nvgpu_pd_cache_alloc_direct(struct gk20a *g,
 		return -ENOMEM;
 	}
 
-	err = nvgpu_dma_alloc(g, bytes, pd->mem);
+	/*
+	 * If bytes == PAGE_SIZE then it's impossible to get a discontiguous DMA
+	 * allocation. Some DMA implementations may, despite this fact, still
+	 * use the contiguous pool for page sized allocations. As such only
+	 * request explicitly contiguous allocs if the page directory is larger
+	 * than the page size. Also, of course, this is all only revelant for
+	 * GPUs not using an IOMMU. If there is an IOMMU DMA allocs are always
+	 * going to be virtually contiguous and we don't have to force the
+	 * underlying allocations to be physically contiguous as well.
+	 */
+	if (!nvgpu_iommuable(g) && bytes > PAGE_SIZE)
+		flags = NVGPU_DMA_FORCE_CONTIGUOUS;
+
+	err = nvgpu_dma_alloc_flags(g, flags, bytes, pd->mem);
 	if (err) {
 		nvgpu_err(g, "OOM allocating page directory!");
 		nvgpu_kfree(g, pd->mem);

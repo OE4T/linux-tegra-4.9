@@ -18,6 +18,10 @@
 struct inode;
 struct file;
 
+/* MAP_BUFFER_BATCH_LIMIT: the upper limit for num_unmaps and
+ * num_maps */
+#define NVGPU_IOCTL_AS_MAP_BUFFER_BATCH_LIMIT	256
+
 /* struct file_operations driver interface */
 int gk20a_as_dev_open(struct inode *inode, struct file *filp);
 int gk20a_as_dev_release(struct inode *inode, struct file *filp);

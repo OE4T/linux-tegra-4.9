@@ -34,6 +34,7 @@
 
 #include "ioctl_ctrl.h"
 #include "ioctl_dbg.h"
+#include "ioctl_as.h"
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "common/linux/ioctl_ctrl_t19x.h"
 #endif
@@ -209,6 +210,8 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	pgpu->impl = g->params.gpu_impl;
 	pgpu->rev = g->params.gpu_rev;
 	pgpu->reg_ops_limit = NVGPU_IOCTL_DBG_REG_OPS_LIMIT;
+	pgpu->map_buffer_batch_limit = nvgpu_is_enabled(g, NVGPU_SUPPORT_MAP_BUFFER_BATCH) ?
+		NVGPU_IOCTL_AS_MAP_BUFFER_BATCH_LIMIT : 0;
 	pgpu->twod_class = g->ops.get_litter_value(g, GPU_LIT_TWOD_CLASS);
 	pgpu->threed_class = g->ops.get_litter_value(g, GPU_LIT_THREED_CLASS);
 	pgpu->compute_class = g->ops.get_litter_value(g, GPU_LIT_COMPUTE_CLASS);

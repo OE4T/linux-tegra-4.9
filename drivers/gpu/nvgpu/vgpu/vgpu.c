@@ -368,7 +368,7 @@ int vgpu_init_gpu_characteristics(struct gk20a *g)
 		return err;
 
 	g->gpu_characteristics.max_freq = priv->constants.max_freq;
-	g->gpu_characteristics.map_buffer_batch_limit = 0;
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_BUFFER_BATCH, false);
 
 	/* features vgpu does not support */
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_RESCHEDULE_RUNLIST, false);

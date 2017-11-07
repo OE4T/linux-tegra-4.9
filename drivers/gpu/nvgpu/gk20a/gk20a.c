@@ -397,6 +397,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_PARTIAL_MAPPINGS, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_DIRECT_KIND_CTRL, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_BUFFER_BATCH, true);
 
 	if (IS_ENABLED(CONFIG_SYNC))
 		__nvgpu_set_enabled(g, NVGPU_SUPPORT_SYNC_FENCE_FDS, true);
@@ -463,8 +464,6 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->lts_per_ltc = g->gr.slices_per_ltc;
 	gpu->cbc_cache_line_size = g->gr.cacheline_size;
 	gpu->cbc_comptags_per_line = g->gr.comptags_per_cacheline;
-
-	gpu->map_buffer_batch_limit = 256;
 
 	if (g->ops.clk.get_maxrate)
 		gpu->max_freq = g->ops.clk.get_maxrate(&g->clk);

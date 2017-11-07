@@ -66,6 +66,8 @@ struct gk20a;
 #define NVGPU_SUPPORT_SPARSE_ALLOCS		23
 /* Direct PTE kind control is supported (map_buffer_ex) */
 #define NVGPU_SUPPORT_MAP_DIRECT_KIND_CTRL	24
+/* Support batch mapping */
+#define NVGPU_SUPPORT_MAP_BUFFER_BATCH		25
 
 /*
  * Host flags

@@ -112,7 +112,6 @@ static int gk20a_as_ioctl_map_buffer_batch(
 	struct gk20a_as_share *as_share,
 	struct nvgpu_as_map_buffer_batch_args *args)
 {
-	struct gk20a *g = as_share->vm->mm->g;
 	u32 i;
 	int err = 0;
 
@@ -127,8 +126,8 @@ static int gk20a_as_ioctl_map_buffer_batch(
 
 	gk20a_dbg_fn("");
 
-	if (args->num_unmaps > g->gpu_characteristics.map_buffer_batch_limit ||
-	    args->num_maps > g->gpu_characteristics.map_buffer_batch_limit)
+	if (args->num_unmaps > NVGPU_IOCTL_AS_MAP_BUFFER_BATCH_LIMIT ||
+	    args->num_maps > NVGPU_IOCTL_AS_MAP_BUFFER_BATCH_LIMIT)
 		return -EINVAL;
 
 	nvgpu_vm_mapping_batch_start(&batch);

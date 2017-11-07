@@ -205,7 +205,7 @@ void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 
 	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
 		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_DIFF_DPCLK);
 	tegra_dc_sor_set_link_bandwidth(sor, dp->link_cfg.link_bw ? :
 			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
 

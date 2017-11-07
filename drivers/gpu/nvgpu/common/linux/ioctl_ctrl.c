@@ -208,6 +208,9 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	pgpu->impl = g->params.gpu_impl;
 	pgpu->rev = g->params.gpu_rev;
 
+	pgpu->vbios_version = g->bios.vbios_version;
+	pgpu->vbios_oem_version = g->bios.vbios_oem_version;
+
 	if (request->gpu_characteristics_buf_size > 0) {
 		size_t write_size = sizeof(*pgpu);
 

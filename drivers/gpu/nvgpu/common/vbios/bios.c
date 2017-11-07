@@ -350,8 +350,8 @@ static void nvgpu_bios_parse_biosdata(struct gk20a *g, int offset)
 			biosdata.version,
 			biosdata.oem_version);
 
-	g->gpu_characteristics.vbios_version = biosdata.version;
-	g->gpu_characteristics.vbios_oem_version = biosdata.oem_version;
+	g->bios.vbios_version = biosdata.version;
+	g->bios.vbios_oem_version = biosdata.oem_version;
 }
 
 static void nvgpu_bios_parse_nvinit_ptrs(struct gk20a *g, int offset)

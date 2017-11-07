@@ -1035,6 +1035,9 @@ struct nvgpu_bios_ucode {
 };
 
 struct nvgpu_bios {
+	u32 vbios_version;
+	u8 vbios_oem_version;
+
 	u8 *data;
 	size_t size;
 

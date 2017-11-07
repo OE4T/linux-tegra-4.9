@@ -211,9 +211,9 @@ int gp106_bios_init(struct gk20a *g)
 	if (err)
 		goto free_firmware;
 
-	if (g->gpu_characteristics.vbios_version < g->vbios_min_version) {
+	if (g->bios.vbios_version < g->vbios_min_version) {
 		nvgpu_err(g, "unsupported VBIOS version %08x",
-				g->gpu_characteristics.vbios_version);
+				g->bios.vbios_version);
 		err = -EINVAL;
 		goto free_firmware;
 	}

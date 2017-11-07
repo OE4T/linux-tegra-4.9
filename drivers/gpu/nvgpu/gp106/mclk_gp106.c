@@ -3235,10 +3235,10 @@ int gp106_mclk_init(struct gk20a *g)
 	g->mem_config_idx = GP106_MEM_CONFIG_GDDR5_PG418;
 	if ((g->pci_vendor_id == PCI_VENDOR_ID_NVIDIA) &&
 		(g->pci_device_id == 0x1c75) &&
-		(g->gpu_characteristics.vbios_version == 0x86065800)) {
+		(g->bios.vbios_version == 0x86065800)) {
 
 		g->mem_config_idx =
-			(g->gpu_characteristics.vbios_oem_version == 0x12) ?
+			(g->bios.vbios_oem_version == 0x12) ?
 				GP106_MEM_CONFIG_GDDR5_PG419_8606580012 :
 				GP106_MEM_CONFIG_GDDR5_PG419;
 	}

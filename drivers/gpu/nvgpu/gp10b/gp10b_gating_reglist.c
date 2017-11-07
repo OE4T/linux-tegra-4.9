@@ -68,7 +68,7 @@ static const struct gating_desc gp10b_slcg_gr[] = {
 	{.addr = 0x0040917c, .prod = 0x00020008, .disable = 0x0003fffe},
 	{.addr = 0x00409894, .prod = 0x00000040, .disable = 0x03fffffe},
 	{.addr = 0x004078c4, .prod = 0x00000000, .disable = 0x000001fe},
-	{.addr = 0x00406004, .prod = 0x00000000, .disable = 0x0001fffe},
+	{.addr = 0x00406004, .prod = 0x00000200, .disable = 0x0001fffe},
 	{.addr = 0x00405864, .prod = 0x00000000, .disable = 0x000001fe},
 	{.addr = 0x00405910, .prod = 0xfffffff0, .disable = 0xfffffffe},
 	{.addr = 0x00408044, .prod = 0x00000000, .disable = 0x000007fe},

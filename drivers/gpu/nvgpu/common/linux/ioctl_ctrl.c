@@ -230,6 +230,8 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	pgpu->sm_arch_spa_version = g->params.sm_arch_spa_version;
 	pgpu->sm_arch_warp_count = g->params.sm_arch_warp_count;
 
+	pgpu->max_css_buffer_size = g->gr.max_css_buffer_size;
+
 	if (request->gpu_characteristics_buf_size > 0) {
 		size_t write_size = sizeof(*pgpu);
 

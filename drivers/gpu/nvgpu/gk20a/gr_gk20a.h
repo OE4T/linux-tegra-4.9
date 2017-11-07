@@ -417,6 +417,7 @@ struct gr_gk20a {
 	struct nvgpu_mutex			cs_lock;
 	struct gk20a_cs_snapshot	*cs_data;
 #endif
+	u32 max_css_buffer_size;
 };
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);

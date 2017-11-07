@@ -1305,7 +1305,8 @@ typedef enum {
 #define CHAN_NAPI_QUOTA_DEFAULT	64
 #define CHAN_NAPI_QUOTA_MAX	CHAN_NAPI_QUOTA_DEFAULT
 #define ISO_BW_DEFAULT (80 * 1024)
-
+#define SLOT_INTVL_DEFAULT 124
+#define SLOT_INTVL_MAX 4095
 /* PHY max frame size in kb */
 #define PHY_MAX_FRAME_SIZE_DEFAULT 10
 #define PHY_MAX_FRAME_SIZE_MAX 10
@@ -1319,6 +1320,7 @@ struct eqos_cfg {
 	uint		eth_iso_enable;
 	u32		phy_max_frame_size; /* max size jumbo frames allowed */
 	bool		phy_apd_mode;	/* Represents PHY AUTO POWER DOWN mode */
+	u32		slot_intvl_val; /* Slot Interval Value*/
 };
 
 struct chan_data {

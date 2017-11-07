@@ -3751,6 +3751,8 @@ static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 				     EQOS_RX_QUEUE_CNT);
 	DMA_RCR_PBL_WR(qinx, min(RXPBL, MAX_RXPBL));
 
+	if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+		DMA_SFCSR_SIV_WR(qinx, pdata->dt_cfg.slot_intvl_val);
 
 	/* enable TSO if HW supports */
 	if (pdata->hw_feat.tso_en)

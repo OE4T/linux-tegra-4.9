@@ -988,6 +988,9 @@ int eqos_probe(struct platform_device *pdev)
 	pdata->tx_queue_cnt = num_chans;
 	pdata->rx_queue_cnt = num_chans;
 
+	/* Get synopsys chip ID */
+	pdata->mac_ver = eqos_get_mac_version();
+
 	eqos_get_all_hw_features(pdata);
 
 #ifdef YDEBUG
@@ -1029,6 +1032,10 @@ int eqos_probe(struct platform_device *pdev)
 		ISO_BW_DEFAULT);
 	get_dt_u32(pdata, "nvidia,eth_iso_enable", &pdt_cfg->eth_iso_enable, 0,
 		1);
+	if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+		get_dt_u32(pdata, "nvidia,slot_intvl_val",
+			   &pdt_cfg->slot_intvl_val,
+			   SLOT_INTVL_DEFAULT, SLOT_INTVL_MAX);
 	pdata->dt_cfg.phy_apd_mode = of_property_read_bool(node,
 							   "nvidia,brcm_phy_apd_mode");
 
@@ -1039,8 +1046,6 @@ int eqos_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "setting tx_tristate_enable \
 			state failed with %d\n",ret);
 #endif
-	/* Get synopsys chip ID */
-	pdata->mac_ver = eqos_get_mac_version();
 	pdata->num_chans = num_chans;
 	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
 	pdata->rx_max_frame_size = EQOS_MAX_ETH_FRAME_LEN_DEFAULT;

@@ -1,7 +1,7 @@
 /*
  * of_dc.c: tegra dc of interface.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -182,6 +182,8 @@ struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np)
 		p_ops = &dsi_s_4kuhd_5_46_ops;
 	else if (of_device_is_compatible(panel_np, "b,1440-1600-3-5"))
 		p_ops = &dsi_b_1440_1600_3_5_ops;
+	else if (of_device_is_compatible(panel_np, "p-edp,3000-2000-13-5"))
+		p_ops = &edp_p_3000_2000_13_5_ops;
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	else if (of_device_is_compatible(panel_np, "nvidia,sim-panel"))
 		p_ops = &panel_sim_ops;

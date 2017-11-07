@@ -1,7 +1,7 @@
 /*
  * board-panel.h: General tegra api declarations for board panels.
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -98,6 +98,7 @@ extern struct tegra_panel_ops dsi_o_720p_6_0_ops;
 extern struct tegra_panel_ops dsi_n_wqxga_6_0_ops;
 extern struct tegra_panel_ops dsi_s_4kuhd_5_46_ops;
 extern struct tegra_panel_ops dsi_b_1440_1600_3_5_ops;
+extern struct tegra_panel_ops edp_p_3000_2000_13_5_ops;
 #ifdef CONFIG_TEGRA_NVDISPLAY
 extern struct tegra_panel_ops panel_sim_ops;
 #endif

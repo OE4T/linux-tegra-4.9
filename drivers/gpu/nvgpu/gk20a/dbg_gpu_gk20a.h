@@ -25,6 +25,12 @@
 #define DBG_GPU_H
 
 #include <nvgpu/cond.h>
+#include <nvgpu/lock.h>
+#include <nvgpu/list.h>
+
+struct gk20a;
+struct channel_gk20a;
+struct dbg_session_gk20a;
 
 /* used by the interrupt handler to post events */
 void gk20a_dbg_gpu_post_events(struct channel_gk20a *fault_ch);
@@ -53,14 +59,6 @@ struct dbg_session_gk20a {
 
 	/* timeouts enabled or disabled */
 	bool is_timeout_disabled;
-
-	/*
-	 * There can be different versions of the whitelists
-	 * between both global and per-context sets; as well
-	 * as between debugger and profiler interfaces.
-	 */
-	struct regops_whitelist *global;
-	struct regops_whitelist *per_context;
 
 	struct gk20a              *g;
 

@@ -21,8 +21,10 @@
  */
 
 #include <nvgpu/ltc.h>
+#include <nvgpu/dma.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/gr_gk20a.h"
 
 int nvgpu_init_ltc_support(struct gk20a *g)
 {
@@ -45,4 +47,18 @@ void nvgpu_ltc_sync_enabled(struct gk20a *g)
 		g->mm.ltc_enabled_current = g->mm.ltc_enabled_target;
 	}
 	nvgpu_spinlock_release(&g->ltc_enabled_lock);
+}
+
+int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size)
+{
+	struct gr_gk20a *gr = &g->gr;
+	unsigned long flags = 0;
+
+	if (!nvgpu_iommuable(g))
+		flags = NVGPU_DMA_FORCE_CONTIGUOUS;
+
+	return nvgpu_dma_alloc_flags_sys(g,
+					 flags,
+					 compbit_backing_size,
+					 &gr->compbit_store.mem);
 }

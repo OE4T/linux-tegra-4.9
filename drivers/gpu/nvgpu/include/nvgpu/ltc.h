@@ -19,12 +19,16 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
 #ifndef __NVGPU_LTC_H__
 #define __NVGPU_LTC_H__
+
+#include <nvgpu/types.h>
 
 struct gk20a;
 
 int nvgpu_init_ltc_support(struct gk20a *g);
 void nvgpu_ltc_sync_enabled(struct gk20a *g);
+int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size);
 
 #endif

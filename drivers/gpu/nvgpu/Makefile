@@ -103,7 +103,6 @@ nvgpu-y := \
 	gk20a/gr_ctx_gk20a_sim.o \
 	gk20a/gr_ctx_gk20a.o \
 	gk20a/gk20a_gating_reglist.o \
-	gk20a/ltc_gk20a.o \
 	gk20a/fb_gk20a.o \
 	gk20a/hal.o \
 	gk20a/tsg_gk20a.o \

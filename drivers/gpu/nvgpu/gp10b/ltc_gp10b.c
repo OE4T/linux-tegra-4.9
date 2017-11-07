@@ -24,16 +24,16 @@
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 
-#include "gk20a/gk20a.h"
-#include "gm20b/ltc_gm20b.h"
-
+#include <nvgpu/ltc.h>
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
 
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>
 
-#include "gk20a/ltc_gk20a.h"
+#include "gk20a/gk20a.h"
+#include "gm20b/ltc_gm20b.h"
+
 #include "ltc_gp10b.h"
 
 int gp10b_determine_L2_size_bytes(struct gk20a *g)
@@ -112,11 +112,7 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_dbg_info("gobs_per_comptagline_per_slice: %d",
 		gobs_per_comptagline_per_slice);
 
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
-		err = gk20a_ltc_alloc_phys_cbc(g, compbit_backing_size);
-	else
-		err = gk20a_ltc_alloc_virt_cbc(g, compbit_backing_size);
-
+	err = nvgpu_ltc_alloc_cbc(g, compbit_backing_size);
 	if (err)
 		return err;
 

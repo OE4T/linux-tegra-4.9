@@ -2104,11 +2104,11 @@ void gr_gv11b_detect_sm_arch(struct gk20a *g)
 {
 	u32 v = gk20a_readl(g, gr_gpc0_tpc0_sm_arch_r());
 
-	g->gpu_characteristics.sm_arch_spa_version =
+	g->params.sm_arch_spa_version =
 		gr_gpc0_tpc0_sm_arch_spa_version_v(v);
-	g->gpu_characteristics.sm_arch_sm_version =
+	g->params.sm_arch_sm_version =
 		gr_gpc0_tpc0_sm_arch_sm_version_v(v);
-	g->gpu_characteristics.sm_arch_warp_count =
+	g->params.sm_arch_warp_count =
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
 }
 

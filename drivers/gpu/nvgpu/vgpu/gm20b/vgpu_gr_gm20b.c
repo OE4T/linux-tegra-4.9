@@ -20,6 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/enabled.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "vgpu/css_vgpu.h"
@@ -28,10 +30,8 @@
 void vgpu_gr_gm20b_init_cyclestats(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
-	g->gpu_characteristics.flags |=
-		NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT;
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_CYCLE_STATS, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_CYCLE_STATS_SNAPSHOT, true);
 	g->gpu_characteristics.max_css_buffer_size =
 						vgpu_css_get_buffer_size(g);
 #endif

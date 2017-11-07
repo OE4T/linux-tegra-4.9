@@ -210,9 +210,11 @@ static int pva_free_fw(struct platform_device *pdev, struct pva *pva)
 }
 
 /*
- * IOVA is set to start from 2GB address.
+ * NO IOMMU set 0x60000000 as start address.
+ * With IOMMU set 0x80000000(>2GB) as startaddress
  */
-#define DRAM_IOVA_START_ADDRESS 0x80000000
+#define DRAM_PVA_IOVA_START_ADDRESS 0x80000000
+#define DRAM_PVA_NO_IOMMU_START_ADDRESS 0x60000000
 
 static int pva_read_ucode(struct platform_device *pdev,
 		const char *fw_name, struct pva *pva)
@@ -293,7 +295,10 @@ static int pva_read_ucode(struct platform_device *pdev,
 			/* Total 2GB of contiguous memory for cache
 			 * Set the DRAM CACHE physical addr as iova start
 			 */
-			useg->phys_addr = DRAM_IOVA_START_ADDRESS;
+			if (pdev->dev.archdata.iommu)
+				useg->phys_addr = DRAM_PVA_IOVA_START_ADDRESS;
+			else
+				useg->phys_addr = DRAM_PVA_NO_IOMMU_START_ADDRESS;
 			break;
 		case PVA_UCODE_SEG_DRAM_UNCACHED:
 			/* Set the Uncache size as Zero */

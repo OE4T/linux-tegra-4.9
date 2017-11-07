@@ -1075,6 +1075,11 @@ struct nvgpu_gpu_params {
 	u32 gpu_impl;
 	/* GPU revision ID */
 	u32 gpu_rev;
+	/* sm version */
+	u32 sm_arch_sm_version;
+	/* sm instruction set */
+	u32 sm_arch_spa_version;
+	u32 sm_arch_warp_count;
 };
 
 struct gk20a {

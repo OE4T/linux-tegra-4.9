@@ -37,11 +37,11 @@ void vgpu_gr_detect_sm_arch(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	g->gpu_characteristics.sm_arch_sm_version =
+	g->params.sm_arch_sm_version =
 			priv->constants.sm_arch_sm_version;
-	g->gpu_characteristics.sm_arch_spa_version =
+	g->params.sm_arch_spa_version =
 			priv->constants.sm_arch_spa_version;
-	g->gpu_characteristics.sm_arch_warp_count =
+	g->params.sm_arch_warp_count =
 			priv->constants.sm_arch_warp_count;
 }
 

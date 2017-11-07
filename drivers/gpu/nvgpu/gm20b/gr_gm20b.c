@@ -841,11 +841,11 @@ void gr_gm20b_detect_sm_arch(struct gk20a *g)
 {
 	u32 v = gk20a_readl(g, gr_gpc0_tpc0_sm_arch_r());
 
-	g->gpu_characteristics.sm_arch_spa_version =
+	g->params.sm_arch_spa_version =
 		gr_gpc0_tpc0_sm_arch_spa_version_v(v);
-	g->gpu_characteristics.sm_arch_sm_version =
+	g->params.sm_arch_sm_version =
 		gr_gpc0_tpc0_sm_arch_sm_version_v(v);
-	g->gpu_characteristics.sm_arch_warp_count =
+	g->params.sm_arch_warp_count =
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
 }
 
@@ -1154,7 +1154,7 @@ void gr_gm20b_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state)
 
 	/* for maxwell & kepler */
 	u32 numSmPerTpc = 1;
-	u32 numWarpPerTpc = g->gpu_characteristics.sm_arch_warp_count * numSmPerTpc;
+	u32 numWarpPerTpc = g->params.sm_arch_warp_count * numSmPerTpc;
 
 	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
 		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;

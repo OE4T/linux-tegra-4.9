@@ -226,6 +226,10 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 		g->ops.mm.get_mmu_levels(g, pgpu->big_page_size)[0].lo_bit[0];
 	pgpu->available_big_page_sizes = nvgpu_mm_get_available_big_page_sizes(g);
 
+	pgpu->sm_arch_sm_version = g->params.sm_arch_sm_version;
+	pgpu->sm_arch_spa_version = g->params.sm_arch_spa_version;
+	pgpu->sm_arch_warp_count = g->params.sm_arch_warp_count;
+
 	if (request->gpu_characteristics_buf_size > 0) {
 		size_t write_size = sizeof(*pgpu);
 

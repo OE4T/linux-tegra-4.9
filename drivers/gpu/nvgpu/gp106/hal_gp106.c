@@ -179,6 +179,24 @@ static int gp106_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_FBPA_STRIDE:
 		ret = proj_fbpa_stride_v();
 		break;
+	case GPU_LIT_TWOD_CLASS:
+		ret = FERMI_TWOD_A;
+		break;
+	case GPU_LIT_THREED_CLASS:
+		ret = PASCAL_B;
+		break;
+	case GPU_LIT_COMPUTE_CLASS:
+		ret = PASCAL_COMPUTE_B;
+		break;
+	case GPU_LIT_GPFIFO_CLASS:
+		ret = PASCAL_CHANNEL_GPFIFO_A;
+		break;
+	case GPU_LIT_I2M_CLASS:
+		ret = KEPLER_INLINE_TO_MEMORY_B;
+		break;
+	case GPU_LIT_DMA_COPY_CLASS:
+		ret = PASCAL_DMA_COPY_A;
+		break;
 	default:
 		BUG();
 		break;
@@ -694,7 +712,6 @@ static const struct gpu_ops gp106_ops = {
 int gp106_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
-	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
 	gk20a_dbg_fn("");
 
@@ -756,13 +773,6 @@ int gp106_init_hal(struct gk20a *g)
 	gp10b_init_kind_attr();
 
 	g->name = "gp10x";
-
-	c->twod_class = FERMI_TWOD_A;
-	c->threed_class = PASCAL_B;
-	c->compute_class = PASCAL_COMPUTE_B;
-	c->gpfifo_class = PASCAL_CHANNEL_GPFIFO_A;
-	c->inline_to_memory_class = KEPLER_INLINE_TO_MEMORY_B;
-	c->dma_copy_class = PASCAL_DMA_COPY_A;
 
 	gk20a_dbg_fn("done");
 

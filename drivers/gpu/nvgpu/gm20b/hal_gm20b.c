@@ -153,6 +153,24 @@ int gm20b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_FBPA_SHARED_BASE:
 		ret = 0;
 		break;
+	case GPU_LIT_TWOD_CLASS:
+		ret = FERMI_TWOD_A;
+		break;
+	case GPU_LIT_THREED_CLASS:
+		ret = MAXWELL_B;
+		break;
+	case GPU_LIT_COMPUTE_CLASS:
+		ret = MAXWELL_COMPUTE_B;
+		break;
+	case GPU_LIT_GPFIFO_CLASS:
+		ret = MAXWELL_CHANNEL_GPFIFO_A;
+		break;
+	case GPU_LIT_I2M_CLASS:
+		ret = KEPLER_INLINE_TO_MEMORY_B;
+		break;
+	case GPU_LIT_DMA_COPY_CLASS:
+		ret = MAXWELL_DMA_COPY_A;
+		break;
 	default:
 		nvgpu_err(g, "Missing definition %d", value);
 		BUG();
@@ -572,7 +590,6 @@ static const struct gpu_ops gm20b_ops = {
 int gm20b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
-	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 	u32 val;
 
 	gops->ltc = gm20b_ops.ltc;
@@ -690,13 +707,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_kind_attr();
 
 	g->name = "gm20b";
-
-	c->twod_class = FERMI_TWOD_A;
-	c->threed_class = MAXWELL_B;
-	c->compute_class = MAXWELL_COMPUTE_B;
-	c->gpfifo_class = MAXWELL_CHANNEL_GPFIFO_A;
-	c->inline_to_memory_class = KEPLER_INLINE_TO_MEMORY_B;
-	c->dma_copy_class = MAXWELL_DMA_COPY_A;
 
 	return 0;
 }

@@ -133,6 +133,12 @@ enum gk20a_cbc_op {
 #define GPU_LIT_SMPC_PRI_SHARED_BASE	28
 #define GPU_LIT_SMPC_PRI_UNIQUE_BASE	29
 #define GPU_LIT_SMPC_PRI_STRIDE		30
+#define GPU_LIT_TWOD_CLASS	31
+#define GPU_LIT_THREED_CLASS	32
+#define GPU_LIT_COMPUTE_CLASS	33
+#define GPU_LIT_GPFIFO_CLASS	34
+#define GPU_LIT_I2M_CLASS	35
+#define GPU_LIT_DMA_COPY_CLASS	36
 
 #define nvgpu_get_litter_value(g, v) (g)->ops.get_litter_value((g), v)
 

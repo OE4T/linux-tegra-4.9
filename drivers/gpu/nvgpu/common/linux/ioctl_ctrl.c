@@ -209,6 +209,14 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	pgpu->impl = g->params.gpu_impl;
 	pgpu->rev = g->params.gpu_rev;
 	pgpu->reg_ops_limit = NVGPU_IOCTL_DBG_REG_OPS_LIMIT;
+	pgpu->twod_class = g->ops.get_litter_value(g, GPU_LIT_TWOD_CLASS);
+	pgpu->threed_class = g->ops.get_litter_value(g, GPU_LIT_THREED_CLASS);
+	pgpu->compute_class = g->ops.get_litter_value(g, GPU_LIT_COMPUTE_CLASS);
+	pgpu->gpfifo_class = g->ops.get_litter_value(g, GPU_LIT_GPFIFO_CLASS);
+	pgpu->inline_to_memory_class =
+		g->ops.get_litter_value(g, GPU_LIT_I2M_CLASS);
+	pgpu->dma_copy_class =
+		g->ops.get_litter_value(g, GPU_LIT_DMA_COPY_CLASS);
 
 	pgpu->vbios_version = g->bios.vbios_version;
 	pgpu->vbios_oem_version = g->bios.vbios_oem_version;

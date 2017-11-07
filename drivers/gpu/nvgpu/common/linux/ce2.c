@@ -54,10 +54,10 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 	u32 methodSize;
 	u32 cmd_buf_read_offset;
 	u32 fence_index;
+	u32 dma_copy_class;
 	struct nvgpu_gpfifo gpfifo;
 	struct nvgpu_fence fence = {0,0};
 	struct gk20a_fence *ce_cmd_buf_fence_out = NULL;
-	struct nvgpu_gpu_characteristics *gpu_capability = &g->gpu_characteristics;
 
 	if (!ce_app->initialised ||ce_app->app_state != NVGPU_CE_ACTIVE)
 		goto end;
@@ -124,6 +124,7 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 
 	cmd_buf_gpu_va = (ce_ctx->cmd_buf_mem.gpu_va + (u64)(cmd_buf_read_offset *sizeof(u32)));
 
+	dma_copy_class = g->ops.get_litter_value(g, GPU_LIT_DMA_COPY_CLASS);
 	methodSize = gk20a_ce_prepare_submit(src_buf,
 					dst_buf,
 					size,
@@ -132,7 +133,7 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 					payload,
 					gk20a_get_valid_launch_flags(g, launch_flags),
 					request_operation,
-					gpu_capability->dma_copy_class,
+					dma_copy_class,
 					gk20a_fence_in);
 
 	if (methodSize) {

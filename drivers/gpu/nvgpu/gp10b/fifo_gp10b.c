@@ -158,7 +158,7 @@ int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 
 u32 gp10b_fifo_get_pbdma_signature(struct gk20a *g)
 {
-	return g->gpu_characteristics.gpfifo_class
+	return g->ops.get_litter_value(g, GPU_LIT_GPFIFO_CLASS)
 		| pbdma_signature_sw_zero_f();
 }
 

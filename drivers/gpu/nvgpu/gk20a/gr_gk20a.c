@@ -4813,9 +4813,6 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 		return 0;
 	}
 
-	if (g->ops.gr.fuse_override)
-		g->ops.gr.fuse_override(g);
-
 	gr->g = g;
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)

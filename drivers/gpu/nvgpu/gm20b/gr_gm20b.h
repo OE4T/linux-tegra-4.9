@@ -124,7 +124,6 @@ int gm20b_gr_clear_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id);
 int gr_gm20b_get_preemption_mode_flags(struct gk20a *g,
 		struct nvgpu_preemption_modes_rec *preemption_modes_rec);
-int gm20b_gr_fuse_override(struct gk20a *g);
 bool gr_gm20b_is_ltcs_ltss_addr(struct gk20a *g, u32 addr);
 bool gr_gm20b_is_ltcn_ltss_addr(struct gk20a *g, u32 addr);
 void gr_gm20b_split_lts_broadcast_addr(struct gk20a *g, u32 addr,

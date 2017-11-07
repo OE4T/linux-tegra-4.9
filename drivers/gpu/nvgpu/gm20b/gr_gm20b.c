@@ -22,8 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <dt-bindings/soc/gm20b-fuse.h>
-
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
@@ -1420,52 +1418,6 @@ int gr_gm20b_get_preemption_mode_flags(struct gk20a *g,
 	preemption_modes_rec->default_compute_preempt_mode =
 			NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
 
-	return 0;
-}
-
-int gm20b_gr_tpc_disable_override(struct gk20a *g, u32 mask)
-{
-	if (!mask)
-		return 0;
-
-	g->tpc_fs_mask_user = ~mask;
-
-	return 0;
-}
-
-int gm20b_gr_fuse_override(struct gk20a *g)
-{
-	struct device_node *np = dev_from_gk20a(g)->of_node;
-	u32 *fuses;
-	int count, i;
-
-	if (!np) /* may be pcie device */
-		return 0;
-
-	count = of_property_count_elems_of_size(np, "fuse-overrides", 8);
-	if (count <= 0)
-		return count;
-
-	fuses = nvgpu_kmalloc(g, sizeof(u32) * count * 2);
-	if (!fuses)
-		return -ENOMEM;
-	of_property_read_u32_array(np, "fuse-overrides", fuses, count * 2);
-	for (i = 0; i < count; i++) {
-		u32 fuse, value;
-
-		fuse = fuses[2 * i];
-		value = fuses[2 * i + 1];
-		switch (fuse) {
-		case GM20B_FUSE_OPT_TPC_DISABLE:
-			gm20b_gr_tpc_disable_override(g, value);
-			break;
-		default:
-			nvgpu_err(g, "ignore unknown fuse override %08x", fuse);
-			break;
-		}
-	}
-
-	nvgpu_kfree(g, fuses);
 	return 0;
 }
 

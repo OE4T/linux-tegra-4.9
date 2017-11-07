@@ -385,7 +385,6 @@ struct gpu_ops {
 		void (*update_boosted_ctx)(struct gk20a *g,
 					   struct nvgpu_mem *mem,
 					   struct gr_ctx_desc *gr_ctx);
-		int (*fuse_override)(struct gk20a *g);
 		void (*init_sm_id_table)(struct gk20a *g);
 		int (*load_smid_config)(struct gk20a *g);
 		void (*program_sm_id_numbering)(struct gk20a *g,

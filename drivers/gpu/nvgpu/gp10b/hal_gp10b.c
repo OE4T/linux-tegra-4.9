@@ -263,7 +263,6 @@ static const struct gpu_ops gp10b_ops = {
 		.suspend_contexts = gr_gp10b_suspend_contexts,
 		.resume_contexts = gr_gk20a_resume_contexts,
 		.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags,
-		.fuse_override = gp10b_gr_fuse_override,
 		.init_sm_id_table = gr_gk20a_init_sm_id_table,
 		.load_smid_config = gr_gp10b_load_smid_config,
 		.program_sm_id_numbering = gr_gm20b_program_sm_id_numbering,

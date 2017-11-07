@@ -25,6 +25,8 @@
 #include <linux/reset.h>
 #include <linux/platform/tegra/common.h>
 #include <uapi/linux/nvgpu.h>
+#include <dt-bindings/soc/gm20b-fuse.h>
+#include <dt-bindings/soc/gp10b-fuse.h>
 
 #include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>
@@ -994,6 +996,48 @@ static inline void set_gk20a(struct platform_device *pdev, struct gk20a *gk20a)
 	gk20a_get_platform(&pdev->dev)->g = gk20a;
 }
 
+static int nvgpu_read_fuse_overrides(struct gk20a *g)
+{
+	struct device_node *np = dev_from_gk20a(g)->of_node;
+	u32 *fuses;
+	int count, i;
+
+	if (!np) /* may be pcie device */
+		return 0;
+
+	count = of_property_count_elems_of_size(np, "fuse-overrides", 8);
+	if (count <= 0)
+		return count;
+
+	fuses = nvgpu_kmalloc(g, sizeof(u32) * count * 2);
+	if (!fuses)
+		return -ENOMEM;
+	of_property_read_u32_array(np, "fuse-overrides", fuses, count * 2);
+	for (i = 0; i < count; i++) {
+		u32 fuse, value;
+
+		fuse = fuses[2 * i];
+		value = fuses[2 * i + 1];
+		switch (fuse) {
+		case GM20B_FUSE_OPT_TPC_DISABLE:
+			g->tpc_fs_mask_user = ~value;
+			break;
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+		case GP10B_FUSE_OPT_ECC_EN:
+			g->gr.t18x.fecs_feature_override_ecc_val = value;
+			break;
+#endif
+		default:
+			nvgpu_err(g, "ignore unknown fuse override %08x", fuse);
+			break;
+		}
+	}
+
+	nvgpu_kfree(g, fuses);
+
+	return 0;
+}
+
 static int gk20a_probe(struct platform_device *dev)
 {
 	struct nvgpu_os_linux *l;
@@ -1076,6 +1120,8 @@ static int gk20a_probe(struct platform_device *dev)
 	err = gk20a_init_support(dev);
 	if (err)
 		return err;
+
+	err = nvgpu_read_fuse_overrides(gk20a);
 
 #ifdef CONFIG_RESET_CONTROLLER
 	platform->reset_control = devm_reset_control_get(&dev->dev, NULL);

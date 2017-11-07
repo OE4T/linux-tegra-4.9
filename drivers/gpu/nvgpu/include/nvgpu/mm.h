@@ -216,5 +216,7 @@ u64 nvgpu_inst_block_addr(struct gk20a *g, struct nvgpu_mem *mem);
 void nvgpu_free_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block);
 
 int nvgpu_mm_suspend(struct gk20a *g);
+u32 nvgpu_mm_get_default_big_page_size(struct gk20a *g);
+u32 nvgpu_mm_get_available_big_page_sizes(struct gk20a *g);
 
 #endif

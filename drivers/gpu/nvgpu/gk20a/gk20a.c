@@ -394,18 +394,6 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->bus_type = NVGPU_GPU_BUS_TYPE_AXI; /* always AXI for now */
 
 	gpu->compression_page_size = g->ops.fb.compression_page_size(g);
-	gpu->big_page_size = g->ops.mm.get_default_big_page_size();
-	gpu->pde_coverage_bit_count =
-		g->ops.mm.get_mmu_levels(g, gpu->big_page_size)[0].lo_bit[0];
-
-	if (g->mm.disable_bigpage) {
-		gpu->big_page_size = 0;
-		gpu->available_big_page_sizes = 0;
-	} else {
-		gpu->available_big_page_sizes = gpu->big_page_size;
-		if (g->ops.mm.get_big_page_sizes)
-			gpu->available_big_page_sizes |= g->ops.mm.get_big_page_sizes();
-	}
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_PARTIAL_MAPPINGS, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_DIRECT_KIND_CTRL, true);

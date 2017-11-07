@@ -62,7 +62,7 @@ static int gk20a_vm_alloc_share(struct gk20a_as_share *as_share,
 		if (!is_power_of_2(big_page_size))
 			return -EINVAL;
 
-		if (!(big_page_size & g->gpu_characteristics.available_big_page_sizes))
+		if (!(big_page_size & nvgpu_mm_get_available_big_page_sizes(g)))
 			return -EINVAL;
 	}
 

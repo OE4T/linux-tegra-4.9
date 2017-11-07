@@ -211,6 +211,11 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	pgpu->vbios_version = g->bios.vbios_version;
 	pgpu->vbios_oem_version = g->bios.vbios_oem_version;
 
+	pgpu->big_page_size = nvgpu_mm_get_default_big_page_size(g);
+	pgpu->pde_coverage_bit_count =
+		g->ops.mm.get_mmu_levels(g, pgpu->big_page_size)[0].lo_bit[0];
+	pgpu->available_big_page_sizes = nvgpu_mm_get_available_big_page_sizes(g);
+
 	if (request->gpu_characteristics_buf_size > 0) {
 		size_t write_size = sizeof(*pgpu);
 

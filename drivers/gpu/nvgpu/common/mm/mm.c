@@ -423,3 +423,29 @@ int nvgpu_init_mm_support(struct gk20a *g)
 
 	return err;
 }
+
+u32 nvgpu_mm_get_default_big_page_size(struct gk20a *g)
+{
+	u32 big_page_size;
+
+	big_page_size = g->ops.mm.get_default_big_page_size();
+
+	if (g->mm.disable_bigpage)
+		big_page_size = 0;
+
+	return big_page_size;
+}
+
+u32 nvgpu_mm_get_available_big_page_sizes(struct gk20a *g)
+{
+	u32 available_big_page_sizes = 0;
+
+	if (!g->mm.disable_bigpage) {
+		available_big_page_sizes =
+			g->ops.mm.get_default_big_page_size();
+		if (g->ops.mm.get_big_page_sizes)
+			available_big_page_sizes |= g->ops.mm.get_big_page_sizes();
+	}
+
+	return available_big_page_sizes;
+}

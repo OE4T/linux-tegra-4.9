@@ -607,7 +607,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 	gk20a_dbg_fn("%d ops, max fragment %d", args->num_ops, g->dbg_regops_tmp_buf_ops);
 
-	if (args->num_ops > g->gpu_characteristics.reg_ops_limit) {
+	if (args->num_ops > NVGPU_IOCTL_DBG_REG_OPS_LIMIT) {
 		nvgpu_err(g, "regops limit exceeded");
 		return -EINVAL;
 	}

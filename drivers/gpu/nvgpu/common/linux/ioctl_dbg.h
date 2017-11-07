@@ -21,6 +21,10 @@
 
 #include "gk20a/dbg_gpu_gk20a.h"
 
+/* NVGPU_DBG_GPU_IOCTL_REG_OPS: the upper limit for the number
+ * of regops */
+#define NVGPU_IOCTL_DBG_REG_OPS_LIMIT 1024
+
 struct dbg_session_gk20a_linux {
 	struct device	*dev;
 	struct dbg_session_gk20a dbg_s;

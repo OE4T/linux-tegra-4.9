@@ -33,6 +33,7 @@
 #include <nvgpu/linux/vidmem.h>
 
 #include "ioctl_ctrl.h"
+#include "ioctl_dbg.h"
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "common/linux/ioctl_ctrl_t19x.h"
 #endif
@@ -207,6 +208,7 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	pgpu->arch = g->params.gpu_arch;
 	pgpu->impl = g->params.gpu_impl;
 	pgpu->rev = g->params.gpu_rev;
+	pgpu->reg_ops_limit = NVGPU_IOCTL_DBG_REG_OPS_LIMIT;
 
 	pgpu->vbios_version = g->bios.vbios_version;
 	pgpu->vbios_oem_version = g->bios.vbios_oem_version;

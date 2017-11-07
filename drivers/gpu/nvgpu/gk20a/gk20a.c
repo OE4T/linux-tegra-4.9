@@ -488,8 +488,6 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->pci_class = g->pci_class;
 	gpu->pci_revision = g->pci_revision;
 
-	gpu->reg_ops_limit = 1024;
-
 	return 0;
 }
 

@@ -983,7 +983,10 @@ static unsigned int acipher_speed(const char *algo, int enc,
 	struct crypto_skcipher *tfm;
 	u8 keysize = CUSTOMIZED_ACIPHER_SPEED_TEST_KEY_SIZE;
 	u32 blocksize = customized_blocks[bsize];
-	char key[32] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa,
+	char key[64] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa,
+		0xb, 0xc, 0xd, 0xe, 0xf, 0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8,
+		0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0,
+			 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa,
 		0xb, 0xc, 0xd, 0xe, 0xf, 0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8,
 		0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0 };
 	struct timespec before, after;
@@ -998,6 +1001,9 @@ static unsigned int acipher_speed(const char *algo, int enc,
 	u32 nalloc = MAX_PAGE_ALLOC / npages_per_block;
 	int index = 0;
 	unsigned long aes_buf_addr[nalloc];
+
+	if (!strcmp(algo, "xts(aes)"))
+		keysize = keysize * 2;
 
 	pages = __get_free_pages(GFP_KERNEL, MAX_PAGE_ORDER);
 	if (!pages) {
@@ -1167,10 +1173,10 @@ static int customized_test_acipher_speed(const char *algo, unsigned int bsize,
 	target_dec_speed = CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED;
 
 	for (i = 0; i < no_runs; i++) {
-		speed = acipher_speed("cbc(aes)", ENCRYPT, bsize, bcnt);
+		speed = acipher_speed(algo, ENCRYPT, bsize, bcnt);
 		if (max_enc_speed < speed)
 			max_enc_speed = speed;
-		speed = acipher_speed("cbc(aes)", DECRYPT, bsize, bcnt);
+		speed = acipher_speed(algo, DECRYPT, bsize, bcnt);
 		if (max_dec_speed < speed)
 			max_dec_speed = speed;
 	}
@@ -2632,6 +2638,11 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 
 	case 555:
 		if (customized_test_acipher_speed("cbc(aes)", bsize, bcnt))
+			return -EIO;
+		break;
+
+	case 556:
+		if (customized_test_acipher_speed("xts(aes)", bsize, bcnt))
 			return -EIO;
 		break;
 

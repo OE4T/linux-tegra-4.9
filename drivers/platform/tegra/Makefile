@@ -45,3 +45,8 @@ obj-$(CONFIG_TEGRA_SAFETY_SCE) += tegra-safety.o
 tegra-safety-objs += tegra-safety-ivc.o tegra-safety-dev.o
 
 obj-$(CONFIG_TEGRA_NVADSP) += nvadsp/
+
+ifeq ($(CONFIG_CPU_FREQ),y)
+obj-$(CONFIG_ARCH_TEGRA_210_SOC) += cpu_emc.o
+endif
+

@@ -36727,6 +36727,22 @@ extern ULONG eqos_base_addr;
 	DMA_SFCSR_WR(i, v);\
 } while (0)
 
+#define DMA_SFCSR_SIV_WR_MASK (ULONG)(0xffff000f)
+#define DMA_SFCSR_RES_WR_MASK_2_V5 (ULONG)(0xfffffff3)
+#define DMA_SFCSR_SIV_MASK (ULONG)(0xfff)
+
+#define DMA_SFCSR_SIV_WR(i, data) do {\
+	ULONG v;\
+	DMA_SFCSR_RD(i, v);\
+	v = (v & (DMA_SFCSR_RES_WR_MASK_20))\
+	| (((0) & (DMA_SFCSR_MASK_20)) << 20);\
+	v = (v & (DMA_SFCSR_RES_WR_MASK_2_V5))\
+	| (((0) & (DMA_SFCSR_MASK_2)) << 2);\
+	v = ((v & DMA_SFCSR_SIV_WR_MASK)\
+	| (((data) & DMA_SFCSR_SIV_MASK) << 4));\
+	DMA_SFCSR_WR(i, v);\
+} while (0)
+
 #define DMA_SFCSR_ESC_RD(i, data) do {\
 	DMA_SFCSR_RD(i, data);\
 	data = ((data >> 0) & DMA_SFCSR_ESC_MASK);\

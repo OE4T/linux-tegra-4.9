@@ -91,6 +91,10 @@
 #define UFSHC_CLK_FREQ		204000000
 #define UFSDEV_CLK_FREQ		19200000
 
+/*Uphy pll clock defines*/
+#define UFS_CLK_UPHY_PLL3_RATEA 4992000000
+#define UFS_CLK_UPHY_PLL3_RATEB 5840000000
+
 enum ufs_state {
 	UFSHC_INIT,
 	UFSHC_SUSPEND,
@@ -249,6 +253,7 @@ struct ufs_tegra_host {
 	u32 max_hs_gear;
 	bool mask_fast_auto_mode;
 	bool mask_hs_mode_b;
+	bool configure_uphy_pll3;
 	u32 max_pwm_gear;
 	enum ufs_state ufshc_state;
 	void *mphy_context;
@@ -276,6 +281,7 @@ struct ufs_tegra_host {
 	struct clk *ufsdev_parent;
 	struct clk *ufshc_clk;
 	struct clk *ufsdev_ref_clk;
+	struct clk *ufs_uphy_pll3;
 	struct regulator *vddio_ufs;
 	struct regulator *vddio_ufs_ap;
 	struct padctrl *ufs_padctrl;

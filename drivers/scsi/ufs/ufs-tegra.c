@@ -328,6 +328,48 @@ out:
 	return err;
 }
 
+static int ufs_tegra_enable_ufs_uphy_pll3(struct ufs_tegra_host *ufs_tegra,
+			bool is_rate_b)
+{
+	int err = 0;
+	struct device *dev = ufs_tegra->hba->dev;
+
+	if (!ufs_tegra->configure_uphy_pll3)
+		return 0;
+
+	err = ufs_tegra_host_clk_enable(dev, "uphy_pll3",
+		ufs_tegra->ufs_uphy_pll3);
+	if (err)
+		return err;
+
+	if (is_rate_b) {
+		if (ufs_tegra->ufs_uphy_pll3)
+			err = clk_set_rate(ufs_tegra->ufs_uphy_pll3,
+				UFS_CLK_UPHY_PLL3_RATEB);
+	} else {
+		if (ufs_tegra->ufs_uphy_pll3)
+			err = clk_set_rate(ufs_tegra->ufs_uphy_pll3,
+					UFS_CLK_UPHY_PLL3_RATEA);
+	}
+	if (err)
+		dev_err(dev, "%s: failed to set ufs_uphy_pll3 freq err %d",
+				__func__, err);
+	return err;
+}
+
+static int ufs_tegra_init_uphy_pll3(struct ufs_tegra_host *ufs_tegra)
+{
+	int err = 0;
+	struct device *dev = ufs_tegra->hba->dev;
+
+	if (!ufs_tegra->configure_uphy_pll3)
+		return 0;
+
+	err = ufs_tegra_host_clk_get(dev,
+		"uphy_pll3", &ufs_tegra->ufs_uphy_pll3);
+	return err;
+}
+
 static int ufs_tegra_init_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 {
 	int err = 0;
@@ -980,8 +1022,13 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 				dev_req_params->pwr_rx = FAST_MODE;
 				dev_req_params->pwr_tx = FAST_MODE;
 			}
-			if (ufs_tegra->mask_hs_mode_b)
+			if (ufs_tegra->mask_hs_mode_b) {
 				dev_req_params->hs_rate = PA_HS_MODE_A;
+				ufs_tegra_enable_ufs_uphy_pll3(ufs_tegra,
+								false);
+			} else {
+				ufs_tegra_enable_ufs_uphy_pll3(ufs_tegra, true);
+			}
 		} else {
 			if (ufs_tegra->max_pwm_gear) {
 				ufshcd_dme_get(hba,
@@ -1182,6 +1229,8 @@ static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 
 	ufs_tegra->enable_ufs_provisioning =
 		of_property_read_bool(np, "nvidia,enable-ufs-provisioning");
+	ufs_tegra->configure_uphy_pll3 =
+		of_property_read_bool(np, "nvidia,configure-uphy-pll3");
 
 
 	of_property_read_u32(np, "nvidia,max-hs-gear", &ufs_tegra->max_hs_gear);
@@ -1266,7 +1315,9 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 		err = ufs_tegra_init_mphy_lane_clks(ufs_tegra);
 		if (err)
 			goto out_host_free;
-
+		err = ufs_tegra_init_uphy_pll3(ufs_tegra);
+		if (err)
+			goto out_host_free;
 		err = ufs_tegra_host_clk_enable(dev, "mphy_force_ls_mode",
 				ufs_tegra->mphy_force_ls_mode);
 		if (err)

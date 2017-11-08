@@ -260,9 +260,20 @@ void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 
 void channel_gv11b_unbind(struct channel_gk20a *ch)
 {
+	struct gk20a *g = ch->g;
+
 	gk20a_dbg_fn("");
 
-	gk20a_fifo_channel_unbind(ch);
+	if (nvgpu_atomic_cmpxchg(&ch->bound, true, false)) {
+		gk20a_writel(g, ccsr_channel_inst_r(ch->chid),
+			ccsr_channel_inst_ptr_f(0) |
+			ccsr_channel_inst_bind_false_f());
+
+		gk20a_writel(g, ccsr_channel_r(ch->chid),
+			ccsr_channel_enable_clr_true_f() |
+			ccsr_channel_pbdma_faulted_reset_f() |
+			ccsr_channel_eng_faulted_reset_f());
+	}
 }
 
 u32 gv11b_fifo_get_num_fifos(struct gk20a *g)

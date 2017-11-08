@@ -3048,7 +3048,7 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 				bool prev_empty,
 				u32 *entries_left)
 {
-	bool last_level = cur_level == NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH;
+	bool last_level = cur_level == NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_HIGH;
 	struct channel_gk20a *ch;
 	bool skip_next = false;
 	u32 chid, tsgid, count = 0;
@@ -4081,13 +4081,13 @@ u32 gk20a_fifo_pbdma_acquire_val(u64 timeout)
 const char *gk20a_fifo_interleave_level_name(u32 interleave_level)
 {
 	switch (interleave_level) {
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
+	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW:
 		return "LOW";
 
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
+	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
 		return "MEDIUM";
 
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
+	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_HIGH:
 		return "HIGH";
 
 	default:

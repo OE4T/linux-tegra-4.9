@@ -322,9 +322,9 @@ int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 	}
 
 	switch (level) {
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
+	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW:
+	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
+	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_HIGH:
 		ret = g->ops.fifo.set_runlist_interleave(g, ch->chid,
 							false, 0, level);
 		break;
@@ -858,7 +858,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	ch->has_timedout = false;
 	ch->wdt_enabled = true;
 	ch->obj_class = 0;
-	ch->interleave_level = NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW;
+	ch->interleave_level = NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW;
 	ch->timeslice_us = g->timeslice_low_priority_us;
 #ifdef CONFIG_TEGRA_19x_GPU
 	memset(&ch->t19x, 0, sizeof(struct channel_t19x));

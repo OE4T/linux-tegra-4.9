@@ -229,9 +229,9 @@ int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 	gk20a_dbg(gpu_dbg_sched, "tsgid=%u interleave=%u", tsg->tsgid, level);
 
 	switch (level) {
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
-	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
+	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW:
+	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
+	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_HIGH:
 		ret = g->ops.fifo.set_runlist_interleave(g, tsg->tsgid,
 							true, 0, level);
 		if (!ret)
@@ -304,7 +304,7 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 
 	tsg->tsg_gr_ctx = NULL;
 	tsg->vm = NULL;
-	tsg->interleave_level = NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW;
+	tsg->interleave_level = NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW;
 	tsg->timeslice_us = 0;
 	tsg->timeslice_timeout = 0;
 	tsg->timeslice_scale = 0;

@@ -914,6 +914,48 @@ clean_up:
 	return ret;
 }
 
+/*
+ * Convert linux specific runlist level of the form NVGPU_RUNLIST_INTERLEAVE_LEVEL_*
+ * to common runlist level of the form NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_*
+ */
+u32 nvgpu_get_common_runlist_level(u32 level)
+{
+	switch (level) {
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
+		return NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW;
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
+		return NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_MEDIUM;
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
+		return NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_HIGH;
+	default:
+		pr_err("%s: incorrect runlist level\n", __func__);
+	}
+
+	return level;
+}
+
+static int gk20a_ioctl_channel_set_runlist_interleave(struct channel_gk20a *ch,
+						      u32 level)
+{
+	int err = 0;
+
+	err = gk20a_busy(ch->g);
+	if (err) {
+		nvgpu_err(ch->g, "failed to power on, %d", err);
+		goto fail;
+	}
+
+	level = nvgpu_get_common_runlist_level(level);
+	err = gk20a_channel_set_runlist_interleave(ch, level);
+
+	gk20a_idle(ch->g);
+	gk20a_channel_trace_sched_param(
+		trace_gk20a_channel_set_runlist_interleave, ch);
+
+fail:
+	return err;
+}
+
 long gk20a_channel_ioctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -1202,19 +1244,8 @@ long gk20a_channel_ioctl(struct file *filp,
 				(struct nvgpu_channel_wdt_args *)buf);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_RUNLIST_INTERLEAVE:
-		err = gk20a_busy(ch->g);
-		if (err) {
-			dev_err(dev,
-				"%s: failed to host gk20a for ioctl cmd: 0x%x",
-				__func__, cmd);
-			break;
-		}
-		err = gk20a_channel_set_runlist_interleave(ch,
+		err = gk20a_ioctl_channel_set_runlist_interleave(ch,
 			((struct nvgpu_runlist_interleave_args *)buf)->level);
-
-		gk20a_idle(ch->g);
-		gk20a_channel_trace_sched_param(
-			trace_gk20a_channel_set_runlist_interleave, ch);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_TIMESLICE:
 		err = gk20a_busy(ch->g);

@@ -31,4 +31,5 @@ extern const struct file_operations gk20a_event_id_ops;
 extern const struct file_operations gk20a_channel_ops;
 
 u32 nvgpu_event_id_to_ioctl_channel_event_id(u32 event_id);
+u32 nvgpu_get_common_runlist_level(u32 level);
 #endif

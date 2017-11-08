@@ -328,6 +328,7 @@ static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
+	u32 level = arg->level;
 	int err;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
@@ -343,7 +344,8 @@ static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 		goto done;
 	}
 
-	err = gk20a_tsg_set_runlist_interleave(tsg, arg->level);
+	level = nvgpu_get_common_runlist_level(level);
+	err = gk20a_tsg_set_runlist_interleave(tsg, level);
 
 	gk20a_idle(g);
 done:

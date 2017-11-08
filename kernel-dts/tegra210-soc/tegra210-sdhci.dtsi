@@ -19,7 +19,14 @@
 #include "tegra210-pin-drive-sdmmc-common.dtsi"
 
 / {
-	sdhci@700b0600 {
+        aliases {
+                sdhci0 = &sdmmc1;
+                sdhci1 = &sdmmc2;
+                sdhci2 = &sdmmc3;
+                sdhci3 = &sdmmc4;
+        };
+
+	sdmmc4: sdhci@700b0600 {
 		tap-delay = <4>;
 		trim-delay = <8>;
 		nvidia,is-ddr-tap-delay;
@@ -54,7 +61,7 @@
 		clock-names = "sdmmc", "pll_p", "pll_c4_out0", "sdmmc_legacy_tm";
 	};
 
-	sdhci@700b0400 {
+	sdmmc3: sdhci@700b0400 {
 		tap-delay = <1>;
 		trim-delay = <3>;
 		mmc-ocr-mask = <0>;
@@ -94,7 +101,7 @@
 		pinctrl-7 = <&sdmmc3_e_33V_disable>;
 	};
 
-	sdhci@700b0200 {
+	sdmmc2: sdhci@700b0200 {
 		tap-delay = <4>;
 		trim-delay = <8>;
 		mmc-ocr-mask = <0>;
@@ -121,7 +128,7 @@
 		nvidia,en-io-trim-volt;
 	};
 
-	sdhci@700b0000 {
+	sdmmc1: sdhci@700b0000 {
 		tap-delay = <4>;
 		trim-delay = <2>;
 		max-clk-limit = <204000000>;

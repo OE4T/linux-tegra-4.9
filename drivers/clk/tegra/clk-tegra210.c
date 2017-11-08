@@ -3131,10 +3131,10 @@ static __init void tegra210_periph_clk_init(
 
 	clks[TEGRA210_CLK_SOR1_MUX] = clk;
 
-	clk = tegra_clk_register_sync_source("sor1_brick", 0, ULONG_MAX);
+	clk = tegra_clk_register_sync_source("sor1_brick", ULONG_MAX);
 	clks[TEGRA210_CLK_SOR1_BRICK] = clk;
 
-	clk = tegra_clk_register_sync_source("pd2vi", 0, ULONG_MAX);
+	clk = tegra_clk_register_sync_source("pd2vi", ULONG_MAX);
 	clks[TEGRA210_CLK_PD2VI] = clk;
 
 	clk = clk_register_mux_table(NULL, "vi_output", mux_vi_visensor_pd2vi,
@@ -3734,6 +3734,13 @@ static struct tegra_clk_init_table init_table[] __initdata = {
 	{ TEGRA210_CLK_MC_CDPA, TEGRA210_CLK_CLK_MAX, 0, 1},
 	{ TEGRA210_CLK_SDMMC1, TEGRA210_CLK_PLL_P, 204000000, 0},
 	{ TEGRA210_CLK_SDMMC2, TEGRA210_CLK_PLL_P, 204000000, 0},
+	{ TEGRA210_CLK_SPDIF_IN_SYNC, TEGRA210_CLK_CLK_MAX, 24576000, 0 },
+	{ TEGRA210_CLK_I2S0_SYNC, TEGRA210_CLK_CLK_MAX, 24576000, 0 },
+	{ TEGRA210_CLK_I2S1_SYNC, TEGRA210_CLK_CLK_MAX, 24576000, 0 },
+	{ TEGRA210_CLK_I2S2_SYNC, TEGRA210_CLK_CLK_MAX, 24576000, 0 },
+	{ TEGRA210_CLK_I2S3_SYNC, TEGRA210_CLK_CLK_MAX, 24576000, 0 },
+	{ TEGRA210_CLK_I2S4_SYNC, TEGRA210_CLK_CLK_MAX, 24576000, 0 },
+	{ TEGRA210_CLK_VIMCLK_SYNC, TEGRA210_CLK_CLK_MAX, 24576000, 0 },
 	/* This MUST be the last entry. */
 	{ TEGRA210_CLK_CLK_MAX, TEGRA210_CLK_CLK_MAX, 0, 0 },
 };
@@ -4294,7 +4301,7 @@ static void __init tegra210_clock_init(struct device_node *np)
 		tegra210_periph_clk_init(clk_base, pmc_base, &pll_p_params);
 		tegra_audio_clk_init(clk_base, pmc_base, tegra210_clks,
 				     tegra210_audio_plls,
-				     ARRAY_SIZE(tegra210_audio_plls));
+				     ARRAY_SIZE(tegra210_audio_plls), 24576000);
 	}
 
 	tegra_pmc_clk_init(pmc_base, tegra210_clks);

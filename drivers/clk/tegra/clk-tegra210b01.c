@@ -2523,7 +2523,7 @@ void __init tegra210b01_audio_clk_init(void __iomem *clk_base,
 {
 	tegra_audio_clk_init(clk_base, pmc_base, tegra_clks,
 			     tegra210b01_audio_plls,
-			     ARRAY_SIZE(tegra210b01_audio_plls));
+			     ARRAY_SIZE(tegra210b01_audio_plls), 24576000);
 }
 
 void __init tegra210b01_super_clk_init(void __iomem *clk_base,

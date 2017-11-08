@@ -52,6 +52,10 @@ struct fifo_profile_gk20a;
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_VPR			(1 << 0)
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC	(1 << 1)
 
+/* Flags to be passed to g->ops.gr.alloc_obj_ctx() */
+#define NVGPU_OBJ_CTX_FLAGS_SUPPORT_GFXP		(1 << 1)
+#define NVGPU_OBJ_CTX_FLAGS_SUPPORT_CILP		(1 << 2)
+
 struct notification {
 	struct {
 		u32 nanoseconds[2];

@@ -79,9 +79,9 @@ int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 
 	gr_ctx = *__gr_ctx;
 
-	if (flags & NVGPU_ALLOC_OBJ_FLAGS_GFXP)
+	if (flags & NVGPU_OBJ_CTX_FLAGS_SUPPORT_GFXP)
 		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
-	if (flags & NVGPU_ALLOC_OBJ_FLAGS_CILP)
+	if (flags & NVGPU_OBJ_CTX_FLAGS_SUPPORT_CILP)
 		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
 
 	if (priv->constants.force_preempt_mode && !graphics_preempt_mode &&

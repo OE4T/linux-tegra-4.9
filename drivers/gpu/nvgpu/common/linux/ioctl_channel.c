@@ -971,6 +971,26 @@ fail:
 	return err;
 }
 
+static u32 nvgpu_obj_ctx_user_flags_to_common_flags(u32 user_flags)
+{
+	u32 flags = 0;
+
+	if (user_flags & NVGPU_ALLOC_OBJ_FLAGS_GFXP)
+		flags |= NVGPU_OBJ_CTX_FLAGS_SUPPORT_GFXP;
+
+	if (user_flags & NVGPU_ALLOC_OBJ_FLAGS_CILP)
+		flags |= NVGPU_OBJ_CTX_FLAGS_SUPPORT_CILP;
+
+	return flags;
+}
+
+static int nvgpu_ioctl_channel_alloc_obj_ctx(struct channel_gk20a *ch,
+	u32 class_num, u32 user_flags)
+{
+	return ch->g->ops.gr.alloc_obj_ctx(ch, class_num,
+			nvgpu_obj_ctx_user_flags_to_common_flags(user_flags));
+}
+
 long gk20a_channel_ioctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -1024,7 +1044,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			break;
 		}
-		err = ch->g->ops.gr.alloc_obj_ctx(ch, args->class_num, args->flags);
+		err = nvgpu_ioctl_channel_alloc_obj_ctx(ch, args->class_num, args->flags);
 		gk20a_idle(ch->g);
 		break;
 	}

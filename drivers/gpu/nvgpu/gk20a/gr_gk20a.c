@@ -3046,8 +3046,6 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 				   "failed to set texlock for compute class");
 		}
 
-		flags |= NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO;
-
 		if (g->support_pmu && g->can_elpg)
 			nvgpu_pmu_enable_elpg(g);
 	}

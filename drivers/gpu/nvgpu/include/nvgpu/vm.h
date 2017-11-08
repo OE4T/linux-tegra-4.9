@@ -110,9 +110,6 @@ struct nvgpu_mapped_buf {
 	u64 size;
 
 	u32 pgsz_idx;
-	u32 ctag_offset;
-	u32 ctag_lines;
-	u32 ctag_allocated_lines;
 
 	u32 flags;
 	u32 kind;
@@ -142,17 +139,6 @@ mapped_buffer_from_rbtree_node(struct nvgpu_rbtree_node *node)
 	return (struct nvgpu_mapped_buf *)
 		  ((uintptr_t)node - offsetof(struct nvgpu_mapped_buf, node));
 }
-
-struct nvgpu_ctag_buffer_info {
-	u64			size;
-	enum gmmu_pgsz_gk20a	pgsz_idx;
-	u32			flags;
-
-	s16			compr_kind;
-	s16			incompr_kind;
-
-	u32			ctag_lines;
-};
 
 struct vm_gk20a {
 	struct mm_gk20a *mm;
@@ -220,9 +206,6 @@ void nvgpu_vm_put(struct vm_gk20a *vm);
 
 int vm_aspace_id(struct vm_gk20a *vm);
 int nvgpu_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size);
-
-int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
-				 struct nvgpu_ctag_buffer_info *binfo);
 
 /* batching eliminates redundant cache flushes and invalidates */
 void nvgpu_vm_mapping_batch_start(struct vm_gk20a_mapping_batch *batch);

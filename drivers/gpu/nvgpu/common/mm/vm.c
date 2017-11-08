@@ -39,6 +39,20 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
+struct nvgpu_ctag_buffer_info {
+	u64			size;
+	enum gmmu_pgsz_gk20a	pgsz_idx;
+	u32			flags;
+
+	s16			compr_kind;
+	s16			incompr_kind;
+
+	u32			ctag_lines;
+};
+
+static int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
+					struct nvgpu_ctag_buffer_info *binfo);
+
 static void __nvgpu_vm_unmap(struct nvgpu_mapped_buf *mapped_buffer,
 			     struct vm_gk20a_mapping_batch *batch);
 
@@ -731,11 +745,10 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct nvgpu_mapped_buf *mapped_buffer = NULL;
 	struct nvgpu_ctag_buffer_info binfo = { 0 };
-	struct gk20a_comptags comptags;
 	struct nvgpu_vm_area *vm_area = NULL;
 	int err = 0;
 	u64 align;
-	u32 ctag_offset;
+	u32 ctag_offset = 0;
 	bool clear_ctags = false;
 	bool va_allocated = true;
 
@@ -745,6 +758,11 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	 * key kind is compressible but we're out of comptags.
 	 */
 	s16 map_key_kind;
+
+	/*
+	 * The actual GMMU PTE kind
+	 */
+	u8 pte_kind;
 
 	if (vm->userspace_managed &&
 	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
@@ -835,57 +853,91 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	if (!vm->enable_ctag)
 		binfo.ctag_lines = 0;
 
-	gk20a_get_comptags(os_buf, &comptags);
+	if (binfo.ctag_lines) {
+		struct gk20a_comptags comptags = { 0 };
 
-	if (binfo.ctag_lines && !comptags.lines) {
 		/*
-		 * Allocate compression resources if needed.
+		 * Get the comptags state
 		 */
-		if (gk20a_alloc_comptags(g,
-					 os_buf,
-					 &g->gr.comp_tags,
-					 binfo.ctag_lines)) {
+		gk20a_get_comptags(os_buf, &comptags);
 
-			/*
-			 * Prevent compression...
-			 */
-			binfo.compr_kind = NV_KIND_INVALID;
-
-			/*
-			 * ... And make sure we have a fallback.
-			 */
-			if (binfo.incompr_kind == NV_KIND_INVALID) {
-				nvgpu_err(g, "comptag alloc failed and no "
-					     "fallback kind specified");
-				err = -ENOMEM;
-
+		/*
+		 * Allocate if not yet allocated
+		 */
+		if (!comptags.allocated) {
+			err = gk20a_alloc_comptags(g, os_buf,
+						   &g->gr.comp_tags,
+						   binfo.ctag_lines);
+			if (err) {
 				/*
-				 * Any alloced comptags are cleaned up when the
-				 * dmabuf is freed.
+				 * This is an irrecoverable failure and we need
+				 * to abort. In particular, it is not safe to
+				 * proceed with incompressible fallback, since
+				 * we could not mark our alloc failure
+				 * anywere. Later we would retry allocation and
+				 * break compressible map aliasing.
 				 */
+				nvgpu_err(g,
+					  "Error %d setting up comptags", err);
 				goto clean_up;
 			}
-		} else {
+
+			/*
+			 * Refresh comptags state after alloc. Field
+			 * comptags.lines will be 0 if alloc failed.
+			 */
 			gk20a_get_comptags(os_buf, &comptags);
 
-			if (g->ops.ltc.cbc_ctrl)
-				g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
-					      comptags.offset,
-					      comptags.offset +
-					          comptags.allocated_lines - 1);
-			else
-				clear_ctags = true;
+			/*
+			 * Newly allocated comptags needs to be cleared
+			 */
+			if (comptags.lines) {
+				if (g->ops.ltc.cbc_ctrl)
+					g->ops.ltc.cbc_ctrl(
+						g, gk20a_cbc_op_clear,
+						comptags.offset,
+						(comptags.offset +
+						 comptags.lines - 1));
+				else
+					/*
+					 * The comptags will be cleared as part
+					 * of mapping (vgpu)
+					 */
+					clear_ctags = true;
+			}
 		}
+
+		/*
+		 * Store the ctag offset for later use if we got the comptags
+		 */
+		if (comptags.lines)
+			ctag_offset = comptags.offset;
 	}
 
 	/*
-	 * Calculate comptag index for this mapping. Differs in case of partial
-	 * mapping.
+	 * Figure out the kind and ctag offset for the GMMU page tables
 	 */
-	ctag_offset = comptags.offset;
-	if (ctag_offset)
+	if (binfo.compr_kind != NV_KIND_INVALID && ctag_offset) {
+		/*
+		 * Adjust the ctag_offset as per the buffer map offset
+		 */
 		ctag_offset += phys_offset >>
-			       ilog2(g->ops.fb.compression_page_size(g));
+			ilog2(g->ops.fb.compression_page_size(g));
+		pte_kind = binfo.compr_kind;
+	} else if (binfo.incompr_kind != NV_KIND_INVALID) {
+		/*
+		 * Incompressible kind, ctag offset will not be programmed
+		 */
+		ctag_offset = 0;
+		pte_kind = binfo.incompr_kind;
+	} else {
+		/*
+		 * Caller required compression, but we cannot provide it
+		 */
+		nvgpu_err(g, "No comptags and no incompressible fallback kind");
+		err = -ENOMEM;
+		goto clean_up;
+	}
 
 	map_addr = g->ops.mm.gmmu_map(vm,
 				      map_addr,
@@ -893,8 +945,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 				      phys_offset,
 				      map_size,
 				      binfo.pgsz_idx,
-				      binfo.compr_kind != NV_KIND_INVALID ?
-					  binfo.compr_kind : binfo.incompr_kind,
+				      pte_kind,
 				      ctag_offset,
 				      flags,
 				      rw,
@@ -913,9 +964,6 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->addr         = map_addr;
 	mapped_buffer->size         = map_size;
 	mapped_buffer->pgsz_idx     = binfo.pgsz_idx;
-	mapped_buffer->ctag_offset  = ctag_offset;
-	mapped_buffer->ctag_lines   = binfo.ctag_lines;
-	mapped_buffer->ctag_allocated_lines = comptags.allocated_lines;
 	mapped_buffer->vm           = vm;
 	mapped_buffer->flags        = flags;
 	mapped_buffer->kind         = map_key_kind;
@@ -1074,8 +1122,8 @@ done:
 	return;
 }
 
-int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
-				 struct nvgpu_ctag_buffer_info *binfo)
+static int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
+					struct nvgpu_ctag_buffer_info *binfo)
 {
 	bool kind_compressible = (binfo->compr_kind != NV_KIND_INVALID);
 	struct gk20a *g = gk20a_from_vm(vm);

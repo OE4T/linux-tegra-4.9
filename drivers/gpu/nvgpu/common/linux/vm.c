@@ -132,7 +132,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 	nvgpu_log(g, gpu_dbg_map,
 		  "gv: 0x%04x_%08x + 0x%-7zu "
 		  "[dma: 0x%010llx, pa: 0x%010llx] "
-		  "pgsz=%-3dKb as=%-2d ctags=%d start=%d "
+		  "pgsz=%-3dKb as=%-2d "
 		  "flags=0x%x apt=%s (reused)",
 		  u64_hi32(mapped_buffer->addr), u64_lo32(mapped_buffer->addr),
 		  os_buf->dmabuf->size,
@@ -140,7 +140,6 @@ struct nvgpu_mapped_buf *nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 		  (u64)sg_phys(mapped_buffer->os_priv.sgt->sgl),
 		  vm->gmmu_page_sizes[mapped_buffer->pgsz_idx] >> 10,
 		  vm_aspace_id(vm),
-		  mapped_buffer->ctag_lines, mapped_buffer->ctag_offset,
 		  mapped_buffer->flags,
 		  nvgpu_aperture_str(gk20a_dmabuf_aperture(g, os_buf->dmabuf)));
 

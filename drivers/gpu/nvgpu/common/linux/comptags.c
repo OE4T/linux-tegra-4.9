@@ -46,7 +46,6 @@ int gk20a_alloc_comptags(struct gk20a *g,
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(buf->dmabuf,
 							     buf->dev);
-	u32 ctaglines_allocsize;
 	u32 offset;
 	int err;
 
@@ -56,18 +55,24 @@ int gk20a_alloc_comptags(struct gk20a *g,
 	if (!lines)
 		return -EINVAL;
 
-	ctaglines_allocsize = lines;
-
 	/* store the allocator so we can use it when we free the ctags */
 	priv->comptag_allocator = allocator;
-	err = gk20a_comptaglines_alloc(allocator, &offset,
-			       ctaglines_allocsize);
-	if (err)
-		return err;
+	err = gk20a_comptaglines_alloc(allocator, &offset, lines);
+	if (!err) {
+		priv->comptags.offset = offset;
+		priv->comptags.lines = lines;
+	} else {
+		priv->comptags.offset = 0;
+		priv->comptags.lines = 0;
+	}
 
-	priv->comptags.offset = offset;
-	priv->comptags.lines = lines;
-	priv->comptags.allocated_lines = ctaglines_allocsize;
+	/*
+	 * We don't report an error here if comptag alloc failed. The
+	 * caller will simply fallback to incompressible kinds. It
+	 * would not be safe to re-allocate comptags anyways on
+	 * successive calls, as that would break map aliasing.
+	 */
+	priv->comptags.allocated = true;
 
 	return 0;
 }

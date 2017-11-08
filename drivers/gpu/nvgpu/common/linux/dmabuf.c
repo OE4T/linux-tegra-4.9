@@ -41,11 +41,11 @@ static void gk20a_mm_delete_priv(void *_priv)
 
 	g = priv->g;
 
-	if (priv->comptags.lines) {
+	if (priv->comptags.allocated && priv->comptags.lines) {
 		BUG_ON(!priv->comptag_allocator);
 		gk20a_comptaglines_free(priv->comptag_allocator,
 				priv->comptags.offset,
-				priv->comptags.allocated_lines);
+				priv->comptags.lines);
 	}
 
 	/* Free buffer states */

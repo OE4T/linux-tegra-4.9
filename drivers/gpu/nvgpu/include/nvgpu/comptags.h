@@ -25,8 +25,14 @@ struct nvgpu_os_buffer;
 struct gk20a_comptags {
 	u32 offset;
 	u32 lines;
-	u32 allocated_lines;
-	bool user_mappable;
+
+	/*
+	 * This signals whether allocation has been attempted. Observe
+	 * 'lines' to see whether comptags were actually allocated. We
+	 * try alloc only once per buffer in order not to break
+	 * multiple compressible-kind mappings.
+	 */
+	bool allocated;
 };
 
 struct gk20a_comptag_allocator {

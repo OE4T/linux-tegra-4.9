@@ -29,6 +29,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/gmmu.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/soc.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -41,7 +42,6 @@
 
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
 
@@ -53,35 +53,41 @@ static int gv11b_fb_mmu_invalidate_replay(struct gk20a *g,
 
 static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 {
-	void __iomem *soc1 = ioremap(0x01f20010, 4096); //MSS_NVLINK_1_BASE
-	void __iomem *soc2 = ioremap(0x01f40010, 4096); //MSS_NVLINK_2_BASE
-	void __iomem *soc3 = ioremap(0x01f60010, 4096); //MSS_NVLINK_3_BASE
-	void __iomem *soc4 = ioremap(0x01f80010, 4096); //MSS_NVLINK_4_BASE
-	u32 val;
+	if (nvgpu_is_bpmp_running(g) && (!nvgpu_platform_is_simulation(g))) {
+		nvgpu_info(g, "nvlink soc credits init done by bpmp");
+	} else {
+		/* MSS_NVLINK_1_BASE */
+		void __iomem *soc1 = ioremap(0x01f20010, 4096);
+		/* MSS_NVLINK_2_BASE */
+		void __iomem *soc2 = ioremap(0x01f40010, 4096);
+		/* MSS_NVLINK_3_BASE */
+		void __iomem *soc3 = ioremap(0x01f60010, 4096);
+		/* MSS_NVLINK_4_BASE */
+		void __iomem *soc4 = ioremap(0x01f80010, 4096);
+		u32 val;
 
-	/* TODO : replace this code with proper nvlink API */
-	nvgpu_info(g, "init nvlink soc credits");
+		nvgpu_info(g, "init nvlink soc credits");
 
-	val = readl_relaxed(soc1);
-	writel_relaxed(val, soc1);
-	val = readl_relaxed(soc1 + 4);
-	writel_relaxed(val, soc1 + 4);
+		val = readl_relaxed(soc1);
+		writel_relaxed(val, soc1);
+		val = readl_relaxed(soc1 + 4);
+		writel_relaxed(val, soc1 + 4);
 
-	val = readl_relaxed(soc2);
-	writel_relaxed(val, soc2);
-	val = readl_relaxed(soc2 + 4);
-	writel_relaxed(val, soc2 + 4);
+		val = readl_relaxed(soc2);
+		writel_relaxed(val, soc2);
+		val = readl_relaxed(soc2 + 4);
+		writel_relaxed(val, soc2 + 4);
 
-	val = readl_relaxed(soc3);
-	writel_relaxed(val, soc3);
-	val = readl_relaxed(soc3 + 4);
-	writel_relaxed(val, soc3 + 4);
+		val = readl_relaxed(soc3);
+		writel_relaxed(val, soc3);
+		val = readl_relaxed(soc3 + 4);
+		writel_relaxed(val, soc3 + 4);
 
-	val = readl_relaxed(soc4);
-	writel_relaxed(val, soc4);
-	val = readl_relaxed(soc4 + 4);
-	writel_relaxed(val, soc4 + 4);
-
+		val = readl_relaxed(soc4);
+		writel_relaxed(val, soc4);
+		val = readl_relaxed(soc4 + 4);
+		writel_relaxed(val, soc4 + 4);
+	}
 }
 
 void gv11b_fb_init_fs_state(struct gk20a *g)
@@ -149,33 +155,21 @@ void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 
 void gv11b_fb_reset(struct gk20a *g)
 {
-	u32 val;
+	if (nvgpu_is_bpmp_running(g) && (!nvgpu_platform_is_simulation(g))) {
+		nvgpu_log(g, gpu_dbg_info, "mc_elpg_enable set by bpmp");
+	} else {
+		u32 mc_elpg_enable_val;
 
-	nvgpu_info(g, "reset gv11b fb");
+		nvgpu_log(g, gpu_dbg_info, "enable xbar, pfb and hub");
+		mc_elpg_enable_val = mc_elpg_enable_xbar_enabled_f() |
+					mc_elpg_enable_pfb_enabled_f() |
+					mc_elpg_enable_hub_enabled_f();
+		mc_elpg_enable_val |= gk20a_readl(g, mc_elpg_enable_r());
+		gk20a_writel(g, mc_elpg_enable_r(), mc_elpg_enable_val);
 
-	g->ops.mc.reset(g, mc_enable_pfb_enabled_f() |
-				mc_enable_xbar_enabled_f() |
-				mc_enable_hub_enabled_f());
-
-	val = gk20a_readl(g, mc_elpg_enable_r());
-	val |= mc_elpg_enable_xbar_enabled_f() |
-		mc_elpg_enable_pfb_enabled_f() |
-		mc_elpg_enable_hub_enabled_f();
-	gk20a_writel(g, mc_elpg_enable_r(), val);
-
+	}
 	/* fs hub should be out of reset by now */
 	gv11b_init_nvlink_soc_credits(g);
-
-	val = gk20a_readl(g, fifo_fb_iface_r());
-	nvgpu_info(g, "fifo_fb_iface val = 0x%x", val);
-	if (!(val & fifo_fb_iface_control_enable_f() &&
-		val & fifo_fb_iface_status_enabled_f())) {
-		nvgpu_info(g, "fifo_fb_iface set control enable");
-		gk20a_writel(g, fifo_fb_iface_r(),
-				fifo_fb_iface_control_enable_f());
-		val = gk20a_readl(g, fifo_fb_iface_r());
-		nvgpu_info(g, "fifo_fb_iface val = 0x%x", val);
-	}
 }
 
 static const char * const invalid_str = "invalid";

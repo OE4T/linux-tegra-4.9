@@ -120,7 +120,7 @@ dbg_profiler_object_data_from_prof_obj_entry(struct nvgpu_list_node *node)
 bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch);
 int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch);
 
-int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode);
+int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powergate);
 bool nvgpu_check_and_set_global_reservation(
 				struct dbg_session_gk20a *dbg_s,
 				struct dbg_profiler_object_data *prof_obj);

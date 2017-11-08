@@ -144,17 +144,16 @@ int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch)
 	return 0;
 }
 
-int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
+int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powergate)
 {
 	int err = 0;
 	struct gk20a *g = dbg_s->g;
 
 	 /* This function must be called with g->dbg_sessions_lock held */
 
-	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %d",
-		   g->name, powermode);
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %s",
+		   g->name, disable_powergate ? "disable" : "enable");
 
-	switch (powermode) {
 	/*
 	 * Powergate mode here refers to railgate+powergate+clockgate
 	 * so in case slcg/blcg/elcg are disabled and railgating is enabled,
@@ -162,7 +161,7 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 	 * Similarly re-enable railgating and not other features if they are not
 	 * enabled when powermode=MODE_ENABLE
 	 */
-	case NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE:
+	if (disable_powergate) {
 		/* save off current powergate, clk state.
 		 * set gpu module's can_powergate = 0.
 		 * set gpu module's clk to max.
@@ -202,9 +201,7 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 		}
 
 		dbg_s->is_pg_disabled = true;
-		break;
-
-	case NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE:
+	} else {
 		/* restore (can) powergate, clk state */
 		/* release pending exceptions to fault/be handled as usual */
 		/*TBD: ordering of these? */
@@ -247,18 +244,10 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 		}
 
 		dbg_s->is_pg_disabled = false;
-		break;
-
-	default:
-		nvgpu_err(g,
-			   "unrecognized dbg gpu powergate mode: 0x%x",
-			   powermode);
-		err = -ENOTTY;
-		break;
 	}
 
-	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %d done",
-		   g->name, powermode);
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %s done",
+		   g->name, disable_powergate ? "disable" : "enable");
 	return err;
 }
 

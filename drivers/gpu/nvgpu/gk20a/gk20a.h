@@ -947,7 +947,7 @@ struct gpu_ops {
 			    struct nvgpu_dbg_gpu_reg_op *ops,
 			    u64 num_ops);
 		int (*dbg_set_powergate)(struct dbg_session_gk20a *dbg_s,
-					u32 mode);
+					bool disable_powergate);
 		bool (*check_and_set_global_reservation)(
 				struct dbg_session_gk20a *dbg_s,
 				struct dbg_profiler_object_data *prof_obj);

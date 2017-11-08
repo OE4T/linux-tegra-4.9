@@ -77,28 +77,26 @@ fail:
 	return err;
 }
 
-int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, __u32 mode)
+int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powergate)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_set_powergate_params *p = &msg.params.set_powergate;
 	int err = 0;
+	u32 mode;
 
 	gk20a_dbg_fn("");
 
 	/* Just return if requested mode is the same as the session's mode */
-	switch (mode) {
-	case NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE:
+	if (disable_powergate) {
 		if (dbg_s->is_pg_disabled)
 			return 0;
 		dbg_s->is_pg_disabled = true;
-		break;
-	case NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE:
+		mode = NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE;
+	} else {
 		if (!dbg_s->is_pg_disabled)
 			return 0;
 		dbg_s->is_pg_disabled = false;
-		break;
-	default:
-		return -EINVAL;
+		mode = NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE;
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_SET_POWERGATE;

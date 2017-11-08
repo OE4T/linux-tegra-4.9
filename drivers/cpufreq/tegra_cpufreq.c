@@ -1357,7 +1357,7 @@ err_out:
 	return ret;
 }
 
-static int tegra186_cpufreq_probe(struct platform_device *pdev)
+static int __init tegra186_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device_node *dn = NULL;
 	uint32_t cpu;
@@ -1464,7 +1464,7 @@ static const struct of_device_id tegra186_cpufreq_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra186_cpufreq_of_match);
 
-static struct platform_driver tegra186_cpufreq_platform_driver = {
+static struct platform_driver tegra186_cpufreq_platform_driver __refdata = {
 	.driver = {
 		.name = "tegra186-cpufreq",
 		.of_match_table = tegra186_cpufreq_of_match,

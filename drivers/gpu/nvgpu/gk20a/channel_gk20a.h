@@ -48,6 +48,10 @@ struct fifo_profile_gk20a;
 #include "channel_t19x.h"
 #endif
 
+/* Flags to be passed to gk20a_channel_alloc_gpfifo() */
+#define NVGPU_GPFIFO_FLAGS_SUPPORT_VPR			(1 << 0)
+#define NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC	(1 << 1)
+
 struct notification {
 	struct {
 		u32 nanoseconds[2];

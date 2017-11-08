@@ -1242,10 +1242,10 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	gpfifo_size = num_entries;
 	gpfifo_entry_size = nvgpu_get_gpfifo_entry_size();
 
-	if (flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_VPR_ENABLED)
+	if (flags & NVGPU_GPFIFO_FLAGS_SUPPORT_VPR)
 		c->vpr = true;
 
-	if (flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC) {
+	if (flags & NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC) {
 		nvgpu_rwsem_down_read(&g->deterministic_busy);
 		/*
 		 * Railgating isn't deterministic; instead of disallowing

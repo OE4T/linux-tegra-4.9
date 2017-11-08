@@ -455,12 +455,27 @@ clean_up:
 	return err;
 }
 
-int nvgpu_channel_ioctl_alloc_gpfifo(struct channel_gk20a *c,
-		struct nvgpu_alloc_gpfifo_ex_args *args)
+static u32 nvgpu_gpfifo_user_flags_to_common_flags(u32 user_flags)
 {
-	return gk20a_channel_alloc_gpfifo(c, args->num_entries,
-			args->num_inflight_jobs,
-			args->flags);
+	u32 flags = 0;
+
+	if (user_flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_VPR_ENABLED)
+		flags |= NVGPU_GPFIFO_FLAGS_SUPPORT_VPR;
+
+	if (user_flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC)
+		flags |= NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC;
+
+	return flags;
+}
+
+static int nvgpu_channel_ioctl_alloc_gpfifo(struct channel_gk20a *c,
+		unsigned int num_entries,
+		unsigned int num_inflight_jobs,
+		u32 user_flags)
+{
+	return gk20a_channel_alloc_gpfifo(c, num_entries,
+			num_inflight_jobs,
+			nvgpu_gpfifo_user_flags_to_common_flags(user_flags));
 }
 
 
@@ -1031,7 +1046,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			gk20a_idle(ch->g);
 			break;
 		}
-		err = gk20a_channel_alloc_gpfifo(ch,
+		err = nvgpu_channel_ioctl_alloc_gpfifo(ch,
 				alloc_gpfifo_ex_args->num_entries,
 				alloc_gpfifo_ex_args->num_inflight_jobs,
 				alloc_gpfifo_ex_args->flags);
@@ -1056,7 +1071,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		 * submitted gpfifos and another one after, for internal usage.
 		 * Triple the requested size.
 		 */
-		err = gk20a_channel_alloc_gpfifo(ch,
+		err = nvgpu_channel_ioctl_alloc_gpfifo(ch,
 				alloc_gpfifo_args->num_entries * 3,
 				0,
 				alloc_gpfifo_args->flags);

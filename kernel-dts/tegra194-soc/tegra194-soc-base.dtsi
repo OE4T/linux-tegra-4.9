@@ -1209,9 +1209,6 @@
 			/* cfg page is used by slvsec as well as ch35 */
 			reg = <0x0 0x15c10000 0x0 0x00230000>;
 
-			resets = <&bpmp_resets TEGRA194_RESET_VI>,
-				 <&bpmp_resets TEGRA194_RESET_TSCTNVI>;
-			reset-names = "vi", "tsctnvi";
 			clocks = <&bpmp_clks TEGRA194_CLK_VI>,
 				 <&bpmp_clks TEGRA194_CLK_VI_CONST>,
 				 <&bpmp_clks TEGRA194_CLK_NVCSI>,
@@ -1246,8 +1243,6 @@
 			compatible = "nvidia,tegra194-isp";
 			reg = <0x0 0x14800000 0x0 0x00010000>;
 
-			resets = <&bpmp_resets TEGRA194_RESET_ISP>;
-			reset-names = "isp";
 			clocks = <&bpmp_clks TEGRA194_CLK_ISP>;
 			clock-names = "isp";
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_ISPA>;
@@ -1267,14 +1262,14 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_ISP>;
 			clock-names = "isp";
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_ISPA>;
-
 			iommus = <&smmu TEGRA_SID_ISPFALC>;
 			dma-coherent;
 		};
 
-		nvcsi@15a00000 {
+		nvcsi: nvcsi@15a00000 {
 			compatible = "nvidia,tegra194-nvcsi";
 			reg = <0x0 0x15a00000 0x0 0x00050000>;
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VE>;
 			resets = <&bpmp_resets TEGRA194_RESET_NVCSI>;
 			clocks = <&bpmp_clks TEGRA194_CLK_NVCSI>,
 				 <&bpmp_clks TEGRA194_CLK_NVCSILP>,
@@ -1285,24 +1280,20 @@
 			num-ports = <6>;
 		};
 
-		slvs-ec@15ac0000 {
+		slvs_ec: slvs-ec@15ac0000 {
 			compatible = "nvidia,tegra-slvs-ec";
+			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VE>;
 			reg = <0x0 0x15ac0000 0x0 0x00040000>,
 				/* Aperture for VI CFG page */
 				<0x0 0x15c00000 0x0 0x00010000>,
 				/* Aperture for VI channel #35 */
 				<0x0 0x15e40000 0x0 0x00010000>;
-#if defined(TEGRA194_RESET_SLVSEC)
 			resets = <&bpmp_resets TEGRA194_RESET_SLVSEC>;
 			reset-names = "slvs-ec";
-#endif
-#if defined(TEGRA194_CLK_SLVSEC) && defined(TEGRA194_CLK_SLVSECLP) \
-    && defined(TEGRA194_CLK_PLLP_OUT0)
 			clocks = <&bpmp_clks TEGRA194_CLK_SLVSEC>,
-				 <&bpmp_clks TEGRA194_CLK_SLVSECLP>,
+				 <&bpmp_clks TEGRA194_CLK_SLVSEC_PADCTRL>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
 			clock-names = "slvs-ec", "slvs-ec-lp", "slvs-ec-parent";
-#endif
 			interrupts = <0 74 0x04>,
 				/* syncgen uses VI VM8 interrupt (255) */
 				<0 255 0x04>;

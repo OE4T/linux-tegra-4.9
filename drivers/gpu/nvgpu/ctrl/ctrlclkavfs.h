@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -79,7 +79,7 @@
 					       BIT(CTRL_CLK_FLL_ID_GPC4) | \
 					       BIT(CTRL_CLK_FLL_ID_GPC5))
 /*!
- * Mask of all FLL IDs supported by RM
+ * Mask of all FLL IDs supported by Nvgpu driver
  */
 #define    CTRL_CLK_FLL_ID_ALL_MASK         (BIT(CTRL_CLK_FLL_ID_SYS)  | \
 					       BIT(CTRL_CLK_FLL_ID_LTC)  | \
@@ -96,4 +96,7 @@
 #define CTRL_CLK_FLL_REGIME_ID_FFR                         (0x00000001)
 #define CTRL_CLK_FLL_REGIME_ID_FR                          (0x00000002)
 
+#define CTRL_CLK_FLL_LUT_VSELECT_LOGIC  		   (0x00000000)
+#define CTRL_CLK_FLL_LUT_VSELECT_MIN  	  		   (0x00000001)
+#define CTRL_CLK_FLL_LUT_VSELECT_SRAM   		   (0x00000002)
 #endif

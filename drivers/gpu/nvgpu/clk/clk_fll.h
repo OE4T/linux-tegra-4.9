@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -61,9 +61,14 @@ struct fll_device {
 	u8 min_freq_vfe_idx;
 	u8 freq_ctrl_idx;
 	u8 target_regime_id_override;
+	bool b_skip_pldiv_below_dvco_min;
+	bool b_dvco_1x;
 	struct boardobjgrpmask_e32 lut_prog_broadcast_slave_mask;
 	fll_lut_broadcast_slave_register *lut_broadcast_slave_register;
 };
+
+u32 nvgpu_clk_get_vbios_clk_domain_gv10x( u32 vbios_domain);
+u32 nvgpu_clk_get_vbios_clk_domain_gp10x( u32 vbios_domain);
 
 #define CLK_FLL_LUT_VF_NUM_ENTRIES(pclk) \
 	(pclk->avfs_fllobjs.lut_num_entries)

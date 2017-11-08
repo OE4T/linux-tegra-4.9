@@ -788,6 +788,9 @@ struct gpu_ops {
 				u8 volt_domain, u32 *pvoltage_uv);
 			u32 (*volt_send_load_cmd_to_pmu)(struct gk20a *g);
 		} volt;
+		struct {
+			u32 (*get_vbios_clk_domain)(u32 vbios_domain);
+		}clk;
 	} pmu_ver;
 	struct {
 		int (*get_netlist_name)(struct gk20a *g, int index, char *name);

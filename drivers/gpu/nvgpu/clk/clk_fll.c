@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,6 +25,7 @@
 #include "gk20a/gk20a.h"
 #include "clk.h"
 #include "clk_fll.h"
+#include "clk_domain.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "ctrl/ctrlclk.h"
@@ -277,19 +278,35 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 
 		fll_id = fll_desc_table_entry.fll_device_id;
 
-		pvin_dev = CLK_GET_VIN_DEVICE(pvinobjs,
-				(u8)fll_desc_table_entry.vin_idx_logic);
-		if (pvin_dev == NULL)
+		if ( (u8)fll_desc_table_entry.vin_idx_logic != CTRL_CLK_VIN_ID_UNDEFINED) {
+			pvin_dev = CLK_GET_VIN_DEVICE(pvinobjs,
+					(u8)fll_desc_table_entry.vin_idx_logic);
+			if (pvin_dev == NULL)
+				return -EINVAL;
+			else
+				pvin_dev->flls_shared_mask |= BIT(fll_id);
+		} else {
+			/* Return if Logic ADC device index is invalid*/
+			nvgpu_err(g, "Invalid Logic ADC specified for Nafll ID");
 			return -EINVAL;
+		}
 
-		pvin_dev->flls_shared_mask |= BIT(fll_id);
+		fll_dev_data.lut_device.vselect_mode =
+			(u8)BIOS_GET_FIELD(fll_desc_table_entry.lut_params,
+			NV_FLL_DESC_LUT_PARAMS_VSELECT);
 
-		pvin_dev = CLK_GET_VIN_DEVICE(pvinobjs,
-				(u8)fll_desc_table_entry.vin_idx_sram);
-		if (pvin_dev == NULL)
-			return -EINVAL;
-
-		pvin_dev->flls_shared_mask |= BIT(fll_id);
+		if ( (u8)fll_desc_table_entry.vin_idx_sram != CTRL_CLK_VIN_ID_UNDEFINED) {
+			pvin_dev = CLK_GET_VIN_DEVICE(pvinobjs,
+					(u8)fll_desc_table_entry.vin_idx_sram);
+			if (pvin_dev == NULL)
+				return -EINVAL;
+			else
+				pvin_dev->flls_shared_mask |= BIT(fll_id);
+		} else {
+			/* Make sure VSELECT mode is set correctly to _LOGIC*/
+			if (fll_dev_data.lut_device.vselect_mode != CTRL_CLK_FLL_LUT_VSELECT_LOGIC)
+				return -EINVAL;
+		}
 
 		fll_dev_data.super.type =
 			(u8)fll_desc_table_entry.fll_device_type;
@@ -305,24 +322,17 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 
 		vbios_domain = (u32)(fll_desc_table_entry.clk_domain &
 					NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_MASK);
-		if (vbios_domain == 0)
-			fll_dev_data.clk_domain = CTRL_CLK_DOMAIN_GPC2CLK;
-		else if (vbios_domain == 1)
-			fll_dev_data.clk_domain = CTRL_CLK_DOMAIN_XBAR2CLK;
-		else if (vbios_domain == 3)
-			fll_dev_data.clk_domain = CTRL_CLK_DOMAIN_SYS2CLK;
-		else
-			continue;
+		fll_dev_data.clk_domain =
+			g->ops.pmu_ver.clk.get_vbios_clk_domain(vbios_domain);
 
 		fll_dev_data.rail_idx_for_lut = 0;
-
 		fll_dev_data.vin_idx_logic =
 			(u8)fll_desc_table_entry.vin_idx_logic;
 		fll_dev_data.vin_idx_sram =
 			(u8)fll_desc_table_entry.vin_idx_sram;
-		fll_dev_data.lut_device.vselect_mode =
-			(u8)BIOS_GET_FIELD(fll_desc_table_entry.lut_params,
-					   NV_FLL_DESC_LUT_PARAMS_VSELECT);
+		fll_dev_data.b_skip_pldiv_below_dvco_min =
+			(bool)BIOS_GET_FIELD(fll_desc_table_entry.fll_params,
+			NV_FLL_DESC_FLL_PARAMS_SKIP_PLDIV_BELOW_DVCO_MIN);
 		fll_dev_data.lut_device.hysteresis_threshold =
 			(u8)BIOS_GET_FIELD(fll_desc_table_entry.lut_params,
 					   NV_FLL_DESC_LUT_PARAMS_HYSTERISIS_THRESHOLD);
@@ -336,13 +346,34 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 
 		status = boardobjgrp_objinsert(&pfllobjs->super.super,
 				(struct boardobj *)pfll_dev, index);
-
 		fll_tbl_entry_ptr += fll_desc_table_header.entry_size;
 	}
 
 done:
 	gk20a_dbg_info(" done status %x", status);
 	return status;
+}
+
+u32 nvgpu_clk_get_vbios_clk_domain_gv10x( u32 vbios_domain)
+{
+	if (vbios_domain == 0)
+		return CTRL_CLK_DOMAIN_GPCCLK;
+	else if (vbios_domain == 1)
+		return CTRL_CLK_DOMAIN_XBARCLK;
+	else if (vbios_domain == 3)
+		return CTRL_CLK_DOMAIN_SYSCLK;
+	return 0;
+}
+
+u32 nvgpu_clk_get_vbios_clk_domain_gp10x( u32 vbios_domain)
+{
+	if (vbios_domain == 0)
+		return CTRL_CLK_DOMAIN_GPC2CLK;
+	else if (vbios_domain == 1)
+		return CTRL_CLK_DOMAIN_XBAR2CLK;
+	else if (vbios_domain == 3)
+		return CTRL_CLK_DOMAIN_SYS2CLK;
+	return 0;
 }
 
 static u32 lutbroadcastslaveregister(struct gk20a *g,
@@ -387,6 +418,8 @@ static struct fll_device *construct_fll_device(struct gk20a *g,
 	board_obj_fll_ptr->min_freq_vfe_idx =
 		pfll_dev->min_freq_vfe_idx;
 	board_obj_fll_ptr->freq_ctrl_idx = pfll_dev->freq_ctrl_idx;
+	board_obj_fll_ptr->b_skip_pldiv_below_dvco_min =
+		pfll_dev->b_skip_pldiv_below_dvco_min;
 	memcpy(&board_obj_fll_ptr->lut_device, &pfll_dev->lut_device,
 		sizeof(struct nv_pmu_clk_lut_device_desc));
 	memcpy(&board_obj_fll_ptr->regime_desc, &pfll_dev->regime_desc,
@@ -427,7 +460,7 @@ static u32 fll_device_init_pmudata_super(struct gk20a *g,
 	perf_pmu_data->min_freq_vfe_idx =
 		pfll_dev->min_freq_vfe_idx;
 	perf_pmu_data->freq_ctrl_idx = pfll_dev->freq_ctrl_idx;
-
+	perf_pmu_data->b_skip_pldiv_below_dvco_min = pfll_dev->b_skip_pldiv_below_dvco_min;
 	memcpy(&perf_pmu_data->lut_device, &pfll_dev->lut_device,
 		sizeof(struct nv_pmu_clk_lut_device_desc));
 	memcpy(&perf_pmu_data->regime_desc, &pfll_dev->regime_desc,

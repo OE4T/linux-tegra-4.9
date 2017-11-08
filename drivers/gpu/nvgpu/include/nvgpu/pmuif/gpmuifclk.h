@@ -230,6 +230,8 @@ struct nv_pmu_clk_clk_fll_device_boardobj_set {
 	struct nv_pmu_clk_regime_desc regime_desc;
 	u8 min_freq_vfe_idx;
 	u8 freq_ctrl_idx;
+	bool b_skip_pldiv_below_dvco_min;
+	bool b_dvco_1x;
 	struct ctrl_boardobjgrp_mask_e32 lut_prog_broadcast_slave_mask;
 };
 

@@ -1305,6 +1305,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 				nvgpu_volt_rail_get_voltage_gv10x;
 			g->ops.pmu_ver.volt.volt_send_load_cmd_to_pmu =
 				nvgpu_volt_send_load_cmd_to_pmu_gv10x;
+			g->ops.pmu_ver.clk.get_vbios_clk_domain =
+				nvgpu_clk_get_vbios_clk_domain_gv10x;
 		} else {
 			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
 				get_pmu_init_msg_pmu_queue_params_v4;
@@ -1470,6 +1472,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 			nvgpu_volt_rail_get_voltage_gp10x;
 		g->ops.pmu_ver.volt.volt_send_load_cmd_to_pmu =
 			nvgpu_volt_send_load_cmd_to_pmu_gp10x;
+		g->ops.pmu_ver.clk.get_vbios_clk_domain =
+			nvgpu_clk_get_vbios_clk_domain_gp10x;
 		break;
 	case APP_VERSION_GM20B:
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =

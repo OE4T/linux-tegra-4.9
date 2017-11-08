@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 ARM Ltd.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,7 +18,13 @@
 #define __ASM_SPARSEMEM_H
 
 #ifdef CONFIG_SPARSEMEM
+
+#ifdef CONFIG_ARM64_VA_BITS
+#define MAX_PHYSMEM_BITS	CONFIG_ARM64_VA_BITS
+#else
 #define MAX_PHYSMEM_BITS	48
+#endif
+
 #define SECTION_SIZE_BITS	30
 #endif
 

@@ -16,6 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#include "dt-bindings/interrupt-controller/tegra-t19x-agic.h"
+
 / {
 	sound {
 		iommus = <&smmu TEGRA_SID_APE>;
@@ -37,6 +39,97 @@
 		#size-cells = <2>;
 		ranges;
 		status = "disabled";
+
+		tegra_agic: agic-controller@2a41000 {
+			compatible = "nvidia,tegra186-agic";
+			#interrupt-cells = <4>;
+			interrupt-controller;
+			reg = <0x0 0x02a41000 0x0 0x1000>,
+				<0x0 0x02a42000 0x0 0x1000>;
+			interrupts = <GIC_SPI 145 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+			clocks = <&bpmp_clks TEGRA194_CLK_APE>;
+			clock-names = "clk";
+			status = "disabled";
+		};
+
+		tegra_agic_1: agic-controller@2a51000 {
+			compatible = "nvidia,tegra186-agic";
+			interrupt-controller;
+			#interrupt-cells = <4>;
+			reg = <0x0 0x02a51000 0x0 0x1000>,
+				<0x0 0x02a52000 0x0 0x1000>;
+			interrupts = <GIC_SPI 146 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+			clocks = <&bpmp_clks TEGRA194_CLK_APE>;
+			clock-names = "clk";
+			status = "disabled";
+		};
+
+		tegra_agic_2: agic-controller@2a61000 {
+			compatible = "nvidia,tegra186-agic";
+			interrupt-controller;
+			#interrupt-cells = <4>;
+			reg = <0x0 0x02a61000 0x0 0x1000>,
+				<0x0 0x02a62000 0x0 0x1000>;
+			interrupts = <GIC_SPI 147 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+			clocks = <&bpmp_clks TEGRA194_CLK_APE>;
+			clock-names = "clk";
+			status = "disabled";
+		};
+
+		adsp@2993000 {
+			compatible = "nvidia,tegra18x-adsp";
+			nvidia,adsp_os_secload;
+			reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
+				<0x0 0x02990000 0x0 0x2000>, /* AMISC */
+				<0x0 0x0 0x0 0x1>, /* ABRIDGE */
+				<0x0 0x0290C800 0x0 0x1>, /* FPGA RESET REG */
+				<0x0 0x029B0000 0x0 0x90000>, /* AHSP */
+				<0x0 0x40000000 0x0 0xC0000000>, /* DRAM MAP1 */
+				<0x0 0x0 0x0 0x1>; /* DRAM MAP2 */
+			nvidia,adsp_mem = <0x5EF00000 0x01000000>, /* ADSP OS */
+				<0x5F700000 0x00800000>, /* ADSP APP */
+				<0x3F813000 0x5000>, /* ARAM ALIAS 0 */
+				<0x5FD00000 0x200000>; /* ACSR */
+			nvidia,adsp-evp-base = <0x02993700 0x00000040>;
+			interrupts = <GIC_SPI INT_AMISC_MBOX_EMPTY1 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* MBOX SEND */
+				     <GIC_SPI INT_AMISC_MBOX_FULL0 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>,  /* MBOX RECV */
+				     <GIC_SPI INT_ATKE_WDT_IRQ IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* ATKE Watchdog */
+				     <GIC_SPI INT_WFI IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* WFI */
+				     <GIC_SPI INT_AMC_ERR IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* AMC ERR IRQ */
+				     <GIC_SPI INT_ADSP_ACTMON IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* ADSP ACTMON IRQ */
+				     <GIC_SPI INT_AMISC_MBOX_EMPTY0 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ADSP MBOX SEND */
+				     <GIC_SPI INT_AMISC_MBOX_FULL1 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ADSP MBOX RECV */
+				     <GIC_SPI INT_AMISC_MBOX_FULL2 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ADSP FIQ HANDLER */
+				     <GIC_SPI INT_ATKE_TMR0 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ATKE TIMER 0 */
+				     <GIC_SPI INT_ATKE_TMR1 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ATKE TIMER 1 */
+				     <GIC_SPI INT_ATKE_TMR2 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ATKE TIMER 2 */
+				     <GIC_SPI INT_SHSP2APE_DB IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>; /* SHSP2APE */
+			clocks = <&bpmp_clks TEGRA194_CLK_APE>,
+				<&bpmp_clks TEGRA194_CLK_APB2APE>,
+				<&bpmp_clks TEGRA194_CLK_ADSPNEON>,
+				<&bpmp_clks TEGRA194_CLK_ADSP>,
+				<&bpmp_clks TEGRA194_CLK_ACLK>;
+			clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
+					"adsp", "aclk";
+			resets = <&bpmp_resets TEGRA194_RESET_ADSP_ALL>;
+			reset-names = "adspall";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_APE>;
+			status = "disabled";
+		};
 
 		adma: adma@2930000 {
 			compatible = "nvidia,tegra194-adma";

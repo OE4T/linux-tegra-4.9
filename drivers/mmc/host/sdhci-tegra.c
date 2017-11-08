@@ -1622,7 +1622,7 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 			host->ocr_mask &= (MMC_VDD_33_34 | MMC_VDD_165_195);
 	}
 	tegra_host->rate_change_needs_clk = of_property_read_bool(np,
-		"nvidia,rate-change-needs-clock-enabled");
+		"nvidia,clk-en-before-freq-update");
 	tegra_host->volt_switch_gpio = of_get_named_gpio(np,
 			"nvidia,voltage-switch-gpio", 0);
 

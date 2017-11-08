@@ -30,10 +30,20 @@
 void vgpu_gr_gm20b_init_cyclestats(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_CYCLE_STATS, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_CYCLE_STATS_SNAPSHOT, true);
+	bool snapshots_supported = true;
+
+	/* cyclestats not supported on vgpu */
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_CYCLE_STATS, false);
+
 	g->gpu_characteristics.max_css_buffer_size =
 						vgpu_css_get_buffer_size(g);
+
+	/* snapshots not supported if the buffer size is 0 */
+	if (g->gpu_characteristics.max_css_buffer_size == 0)
+		snapshots_supported = false;
+
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_CYCLE_STATS_SNAPSHOT,
+							snapshots_supported);
 #endif
 }
 

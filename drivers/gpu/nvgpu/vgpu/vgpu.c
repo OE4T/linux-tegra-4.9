@@ -371,7 +371,6 @@ int vgpu_init_gpu_characteristics(struct gk20a *g)
 	g->gpu_characteristics.map_buffer_batch_limit = 0;
 
 	/* features vgpu does not support */
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_CYCLE_STATS, false);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_RESCHEDULE_RUNLIST, false);
 
 	return 0;

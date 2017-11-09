@@ -565,9 +565,6 @@
 			};
 			dp-display {
 				status = "disabled";
-				disp-default-out {
-					nvidia,out-parent-clk = "plld3";
-				};
 			};
 		};
 		sor1 {

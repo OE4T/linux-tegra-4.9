@@ -24,6 +24,8 @@
 #include <linux/platform_device.h>
 #include <linux/tegra-ivc-bus.h>
 #include <linux/tegra-rce-rm.h>
+#include <linux/dma-mapping.h>
+#include <linux/dma-attrs.h>
 
 #define NV(p) "nvidia," #p
 
@@ -71,8 +73,10 @@ static int tegra_rce_rm_probe(struct platform_device *pdev)
 		scratch_area[1] = 0x00600000;
 	}
 
-	base = dma_alloc_coherent(dev, scratch_area[1], &dma,
-				GFP_KERNEL | __GFP_ZERO);
+	dma = scratch_area[0];
+	base = get_dma_ops(dev)->alloc(dev, scratch_area[1], &dma,
+				GFP_KERNEL | __GFP_ZERO, 0);
+
 	if (IS_ERR(base)) {
 		kfree(rm);
 		return PTR_ERR(base);
@@ -100,6 +104,14 @@ int rce_rm_map_carveout_for_device(struct platform_device *pdev,
 {
 	struct tegra_rce_rm *rm = platform_get_drvdata(pdev);
 	int err = 0;
+	dma_addr_t map_addr;
+	struct scatterlist *s = sgt->sgl;
+	int i = 0;
+	int mapped_count = 0;
+	unsigned int size = 0;
+	DEFINE_DMA_ATTRS(attrs);
+
+	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
 
 	if (!rm->scratch.base)
 		return -ENOMEM;
@@ -109,14 +121,35 @@ int rce_rm_map_carveout_for_device(struct platform_device *pdev,
 	if (err < 0)
 		return err;
 
-	if (!dma_map_sg(dev, sgt->sgl, sgt->orig_nents, DMA_FROM_DEVICE)) {
-		sg_free_table(sgt);
-		return -ENXIO;
+	/* Map the pages in the sg to the scratch IOVA */
+	map_addr = rm->scratch.dma;
+	for_each_sg(sgt->sgl, s, sgt->nents, i) {
+		dma_addr_t ret;
+		phys_addr_t phys = page_to_phys(sg_page(s)) + s->offset;
+		ret = get_dma_ops(dev)->map_at(dev, map_addr, phys, s->length,
+				DMA_FROM_DEVICE, __DMA_ATTR(attrs));
+		if (ret == DMA_ERROR_CODE) {
+			mapped_count = i;
+			goto unmap;
+		}
+
+		s->dma_address = DMA_ERROR_CODE;
+		s->dma_length  = 0;
+
+		size     += s->length;
+		map_addr += s->length;
 	}
+	sgt->sgl->dma_address = rm->scratch.dma;
+	sgt->sgl->dma_length  = size;
 
 	pdev->dev.dma_parms = NULL;
 
 	return 0;
+
+unmap:
+	/* Unmap all of the pages we mapped so far */
+	dma_unmap_page(dev, rm->scratch.dma, size, DMA_FROM_DEVICE);
+	return -ENOMEM;
 }
 
 static const struct of_device_id tegra_rce_rm_of_match[] = {

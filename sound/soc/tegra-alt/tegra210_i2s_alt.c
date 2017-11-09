@@ -823,6 +823,35 @@ static int tegra210_i2s_loopback_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra210_i2s_fsync_width_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = i2s->fsync_width;
+
+	return 0;
+}
+
+static int tegra210_i2s_fsync_width_put(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
+
+	i2s->fsync_width = ucontrol->value.integer.value[0];
+
+	pm_runtime_get_sync(codec->dev);
+	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL,
+			   TEGRA210_I2S_CTRL_FSYNC_WIDTH_MASK,
+			   i2s->fsync_width <<
+			   TEGRA210_I2S_CTRL_FSYNC_WIDTH_SHIFT);
+	pm_runtime_put(codec->dev);
+
+	return 0;
+}
+
 static const char * const tegra210_i2s_stereo_conv_text[] = {
 	"None", "CH0", "CH1", "AVG",
 };
@@ -855,6 +884,8 @@ static const struct snd_kcontrol_new tegra210_i2s_controls[] = {
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
 	SOC_ENUM_EXT("codec bit format", tegra210_i2s_format_enum,
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
+	SOC_SINGLE_EXT("fsync width", SND_SOC_NOPM, 0, 255, 0,
+		tegra210_i2s_fsync_width_get, tegra210_i2s_fsync_width_put),
 	SOC_SINGLE_EXT("Sample Rate", 0, 0, 192000, 0,
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
 	SOC_SINGLE_EXT("Channels", 0, 0, 16, 0,

@@ -23,6 +23,7 @@
 / {
 	mdio {
 		phy0: ethernet-phy@0 {
+				reg = <0>;
 				marvell,copper-mode;
 		};
 	};

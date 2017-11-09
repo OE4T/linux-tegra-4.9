@@ -28,6 +28,8 @@
 #include <dt-bindings/soc/gm20b-fuse.h>
 #include <dt-bindings/soc/gp10b-fuse.h>
 
+#include <soc/tegra/fuse.h>
+
 #include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
@@ -684,9 +686,8 @@ static int gk20a_pm_railgate(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
-#ifdef CONFIG_DEBUG_FS
 	struct gk20a *g = get_gk20a(dev);
-
+#ifdef CONFIG_DEBUG_FS
 	g->pstats.last_rail_gate_start = jiffies;
 
 	if (g->pstats.railgating_cycle_count >= 1)
@@ -698,10 +699,17 @@ static int gk20a_pm_railgate(struct device *dev)
 
 	if (platform->railgate)
 		ret = platform->railgate(dev);
+	if (ret) {
+		nvgpu_err(g, "failed to railgate platform, err=%d", ret);
+		return ret;
+	}
 
 #ifdef CONFIG_DEBUG_FS
 	g->pstats.last_rail_gate_complete = jiffies;
 #endif
+	ret = tegra_fuse_clock_disable();
+	if (ret)
+		nvgpu_err(g, "failed to disable tegra fuse clock, err=%d", ret);
 
 	return ret;
 }
@@ -710,9 +718,14 @@ static int gk20a_pm_unrailgate(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
-#ifdef CONFIG_DEBUG_FS
 	struct gk20a *g = get_gk20a(dev);
 
+	ret = tegra_fuse_clock_enable();
+	if (ret) {
+		nvgpu_err(g, "failed to enable tegra fuse clock, err=%d", ret);
+		return ret;
+	}
+#ifdef CONFIG_DEBUG_FS
 	g->pstats.last_rail_ungate_start = jiffies;
 	if (g->pstats.railgating_cycle_count >= 1)
 		g->pstats.total_rail_gate_time_ms =

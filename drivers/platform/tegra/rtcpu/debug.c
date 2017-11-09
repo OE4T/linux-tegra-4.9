@@ -692,7 +692,7 @@ static int camrtc_run_mem_test(struct seq_file *file,
 					offsetof(struct camrtc_dbg_response,
 						data.run_mem_test_data.data));
 	if (ret < 0)
-		return ret;
+		goto unmap;
 
 	for (i = 0; i < ARRAY_SIZE(crd->mem); i++) {
 		struct camrtc_test_mem *mem = &crd->mem[i];

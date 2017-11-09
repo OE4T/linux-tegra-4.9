@@ -30,6 +30,7 @@
 #include <linux/delay.h>
 #include <linux/pstore.h>
 #include <linux/ptrace.h>
+#include <linux/platform_device.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/t19x_mce.h>
 #include <linux/version.h>
@@ -1006,23 +1007,13 @@ static void tegra_cpufreq_cpu_emc_map_init(struct device_node *dn)
 	}
 }
 
-static int __init tegra_cpufreq_init(void)
+static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device_node *dn;
 	uint32_t cpu;
 	int ret = 0, cl = 0;
 
-	dn = of_find_compatible_node(NULL, NULL, "nvidia,tegra19x-cpufreq");
-	if (dn == NULL) {
-		ret = -ENODEV;
-		goto err_out;
-	}
-
-	if (!of_device_is_available(dn)) {
-		ret = -ENODEV;
-		goto err_out;
-	}
-
+	dn = pdev->dev.of_node;
 	tegra_cpufreq_cpu_emc_map_init(dn);
 
 	mutex_init(&tfreq_data.mlock);
@@ -1086,23 +1077,37 @@ static int __init tegra_cpufreq_init(void)
 err_free_res:
 	free_allocated_res_init();
 err_out:
-	pr_info("cpufreq: platform driver Initialization: %s\n",
-		(ret ? "fail" : "pass"));
+	pr_info("%s: platform driver Initialization: %s\n",
+		__func__, (ret ? "fail" : "pass"));
 	return ret;
 }
 
-static void __exit tegra_cpufreq_exit(void)
+static int __exit tegra194_cpufreq_remove(struct platform_device *pdev)
 {
 #ifdef CONFIG_DEBUG_FS
 	tegra_cpufreq_debug_exit();
 #endif
-	if (debug_fs_only != true)
-		cpufreq_unregister_driver(&tegra_cpufreq_driver);
+	cpufreq_unregister_driver(&tegra_cpufreq_driver);
 	free_allocated_res_exit();
+	return 0;
 }
 
+static const struct of_device_id tegra194_cpufreq_of_match[] = {
+	{. compatible = "nvidia,tegra194-cpufreq", },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, tegra194_cpufreq_of_match);
+static struct platform_driver tegra194_cpufreq_platform_driver __refdata = {
+	.driver = {
+		.name = "tegra194-cpufreq",
+		.of_match_table = tegra194_cpufreq_of_match,
+	},
+	.probe = tegra194_cpufreq_probe,
+	.remove = tegra194_cpufreq_remove,
+};
+module_platform_driver(tegra194_cpufreq_platform_driver);
+
 MODULE_AUTHOR("Hoang Pham <hopham@nvidia.com>");
-MODULE_DESCRIPTION("cpufreq platform driver for Nvidia Tegra19x");
-MODULE_LICENSE("GPL");
-module_init(tegra_cpufreq_init);
-module_exit(tegra_cpufreq_exit);
+MODULE_AUTHOR("Bo Yan <byan@nvidia.com>");
+MODULE_DESCRIPTION("NVIDIA Tegra194 cpufreq driver");
+MODULE_LICENSE("GPL v2");

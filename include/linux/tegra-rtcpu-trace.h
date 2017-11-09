@@ -17,8 +17,11 @@
 #include <linux/types.h>
 
 struct tegra_rtcpu_trace;
+struct camrtc_device_group;
 
-struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev);
+struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(
+	struct device *dev,
+	struct camrtc_device_group *camera_devices);
 int tegra_rtcpu_trace_boot_sync(struct tegra_rtcpu_trace *tracer);
 void tegra_rtcpu_trace_destroy(struct tegra_rtcpu_trace *tracer);
 

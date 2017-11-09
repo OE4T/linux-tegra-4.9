@@ -1119,7 +1119,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	dev->dma_parms = &rtcpu->dma_parms;
 	dma_set_max_seg_size(dev, UINT_MAX);
 
-	rtcpu->tracer = tegra_rtcpu_trace_create(dev);
+	rtcpu->tracer = tegra_rtcpu_trace_create(dev, rtcpu->camera_devices);
 
 	ret = tegra_camrtc_mbox_init(dev);
 	if (ret)
@@ -1203,7 +1203,7 @@ int tegra_camrtc_reboot(struct device *dev)
 	tegra_camrtc_set_online(dev, false);
 
 	tegra_camrtc_assert_resets(dev);
-	
+
 	rtcpu->powered = false;
 
 	return tegra_camrtc_boot(dev);

@@ -865,19 +865,15 @@ static void t194_init_regs(struct platform_device *pdev, bool prod)
 static void t194_module_reset_clamp(struct platform_device *pdev, bool enable)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct nvhost_master *master = nvhost_get_host(pdev);
-	u32 val;
+	u32 reg;
 
 	if (!pdata->reset_clamp_mask)
 		return;
 
-	/* we need to write 1 to module bit to both clamp and unclamp */
-	val = host1x_hypervisor_readl(master->dev,
-			host1x_sync_scr_prot_common_mod_clamp_en_0_r());
-	val |= pdata->reset_clamp_mask;
-	host1x_hypervisor_writel(pdev,
-				 host1x_sync_scr_prot_common_mod_clamp_en_0_r(),
-				 val);
+	reg = enable ? host1x_sync_scr_prot_common_mod_clamp_en_set_0_r()
+	             : host1x_sync_scr_prot_common_mod_clamp_en_clr_0_r();
+
+	host1x_hypervisor_writel(pdev, reg, pdata->reset_clamp_mask);
 }
 
 #include "host1x/host1x_cdma_t186.c"

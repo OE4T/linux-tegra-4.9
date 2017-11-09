@@ -123,6 +123,28 @@ static const struct of_device_id tegra_fuse_match[] = {
 	{ /* sentinel */ }
 };
 
+int tegra_fuse_clock_enable(void)
+{
+	int err;
+
+	err = clk_prepare_enable(fuse->clk);
+	if (err < 0) {
+		dev_err(fuse->dev, "failed to enable FUSE clock: %d\n", err);
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_fuse_clock_enable);
+
+int tegra_fuse_clock_disable(void)
+{
+	clk_disable_unprepare(fuse->clk);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_fuse_clock_disable);
+
 static int tegra_fuse_probe(struct platform_device *pdev)
 {
 	void __iomem *base = fuse->base;

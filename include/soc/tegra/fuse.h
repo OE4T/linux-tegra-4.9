@@ -76,6 +76,8 @@ void tegra_fuse_control_write(u32 value, unsigned long offset);
 int tegra_fuse_readl(unsigned long offset, u32 *value);
 void tegra_fuse_writel(u32 val, unsigned long offset);
 enum tegra_revision tegra_chip_get_revision(void);
+int tegra_fuse_clock_enable(void);
+int tegra_fuse_clock_disable(void);
 
 /* TODO: Dummy implementation till upstream fuse driver implements these*/
 static inline bool tegra_spare_fuse(int bit)

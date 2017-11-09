@@ -61,8 +61,8 @@
 #define LC898212_ADOFFSET	0x3C
 #define LC898212_EQENBL		0x87
 
-#define V4L2_CID_CAMERA_LC898212_BASE	(V4L2_CID_CAMERA_CLASS_BASE + 0x1000)
-#define V4L2_CID_FOCUS_SYNC_EXTERNAL	V4L2_CID_CAMERA_LC898212_BASE
+#define TEGRA_CAMERA_CID_CAMERA_LC898212_BASE	(TEGRA_CAMERA_CID_BASE + 0x1000)
+#define TEGRA_CAMERA_CID_FOCUS_SYNC_EXTERNAL	TEGRA_CAMERA_CID_CAMERA_LC898212_BASE
 
 static int lc898212_s_ctrl(struct v4l2_ctrl *ctrl);
 
@@ -98,7 +98,7 @@ static const struct v4l2_ctrl_config ctrl_config_list[] = {
 /* Do not change the name field for the controls! */
 	{
 		.ops = &lc898212_ctrl_ops,
-		.id = V4L2_CID_FOCUS_SYNC_EXTERNAL,
+		.id = TEGRA_CAMERA_CID_FOCUS_SYNC_EXTERNAL,
 		.name = "Focus Sync External",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.max = 1,
@@ -267,7 +267,7 @@ static int lc898212_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_FOCUS_ABSOLUTE:
 		err = lc898212_set_position(priv, ctrl->val);
 		break;
-	case V4L2_CID_FOCUS_SYNC_EXTERNAL:
+	case TEGRA_CAMERA_CID_FOCUS_SYNC_EXTERNAL:
 		priv->sync_external = ctrl->val;
 		break;
 	default:

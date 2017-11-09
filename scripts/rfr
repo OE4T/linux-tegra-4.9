@@ -5,9 +5,14 @@
 
 import os
 import re
+import sys
 import json
 import argparse
+import tempfile
 import subprocess
+import smtplib
+
+from email.mime.text import MIMEText
 
 VERSION = '1.0.0'
 
@@ -50,6 +55,14 @@ Otherwise it's treated as a git commit ID.
                         help='print the program version')
     parser.add_argument('-m', '--msg', action='store', default=None,
                         help='Custom message to add to the RFR email')
+    parser.add_argument('-N', '--no-msg', action='store_true', default=False,
+                        help='Force no message in output.')
+    parser.add_argument('-e', '--email', action='store_true', default=False,
+                        help='Use direct email to post the RFR.')
+    parser.add_argument('-s', '--subject', action='store', default=None,
+                        help='Specify the email\'s subject.')
+    parser.add_argument('-R', '--sender', action='store', default=None,
+                        help='Specify a special from: email address.')
 
     # Positionals: the gerrit URLs.
     parser.add_argument('commits', metavar='Commit-IDs',
@@ -148,15 +161,39 @@ def git_sha1_from_commit(commit_ish):
 
     return stdout_data.decode('utf-8')
 
+def get_user_message(start_msg):
+    """
+    Get a user message from the user. This is done with the default text
+    editor.
+    """
+
+    editor = os.environ.get('EDITOR', 'vim')
+
+    with tempfile.NamedTemporaryFile(suffix=".tmp") as filp:
+        filp.write(start_msg)
+        filp.flush()
+
+        edit_cmd = editor + ' ' + filp.name
+
+        try:
+            subprocess.call(edit_cmd.split())
+        except:
+            print('Failed to run editor: `%s\'' % edit_cmd)
+            return None
+
+        filp.seek(0)
+        return filp.read()
+
 def indent_lines(text, ind):
     """
     Prepend each new line in the passed text with ind.
     """
     return ''.join(ind + l + '\n' for l in text.splitlines())
 
-def display_commits(commits_info, extra_message):
+def format_commits(commits_info, extra_message):
     """
-    Takes a list of the commit info objects to print.
+    Takes a list of the commit info objects and returns a string with the
+    text to print. This can either be directly printed or emailed.
     """
 
     whole_template = """
@@ -193,9 +230,62 @@ Thanks!
                                            cmtmsg=indent_lines(
                                                c['commitMessage'], '  '))
 
-    print(whole_template.format(cmt_descriptions=cmt_descriptions,
-                                extra_message=extra_message,
-                                cmt_verbose=cmt_verbose))
+    return whole_template.format(cmt_descriptions=cmt_descriptions,
+                                 extra_message=extra_message,
+                                 cmt_verbose=cmt_verbose)
+
+def display_commits(commits_info, extra_message):
+    """
+    Print the list of commits to the directly to the terminal.
+    """
+
+    print(format_commits(commits_info, extra_message))
+
+def email_commits(commits_info, sender, subject, args):
+    """
+    Directly email commits to the nvgpu-core mailing list for review!
+    """
+
+    to_addr = 'SW-Mobile-nvgpu-core <SW-Mobile-nvgpu-core@exchange.nvidia.com>'
+
+    if args.no_msg:
+        args.msg = None
+
+    body = format_commits(commits_info, args.msg)
+
+    # Most people like to write a little description of their patch series
+    # in the email body. This aims to take care of that.
+    #
+    # If arg_parser.msg is set then we can just use that. If there's no
+    # args.msg field then we will try to fire up a text editor and let the
+    # user write something we will copy into the email the same way as
+    # args.msg. This makes it easier to a write paragraph - passing that much
+    # text on the CLI is annoying!
+    #
+    # However, if the user decides no message is a must then they can use
+    # the '--no-msg' argument to supress this message. This arg will also
+    # supress a message supplied with '--msg'.
+
+    if not args.msg and not args.no_msg:
+        text = get_user_message(body)
+
+        if not text or text.strip() == '':
+            print 'Empty user message: aborting!'
+            return
+
+        msg = MIMEText(text)
+    else:
+        msg = MIMEText(body)
+
+    msg['To'] = to_addr
+    msg['From'] = sender
+    msg['Subject'] = subject
+
+    s = smtplib.SMTP('mail.nvidia.com')
+    s.sendmail(sender,
+               [to_addr],
+               msg.as_string())
+    s.quit()
 
 def main():
     """
@@ -228,7 +318,24 @@ def main():
         else:
             print('Warning: \'%s\' doesn\'t appear to be a commit!' % cmt)
 
-    display_commits(commits_info, arg_parser.msg)
+    if arg_parser.email:
+        # If no subject was specified then use the first commit subject as
+        # the subject.
+        subject = arg_parser.subject
+        if not subject:
+            subject = '[RFR] %s' % commits_info[0]['subject']
+
+        # If no specified sender then use the name from the environment as
+        # the sender (plus @nvidia.com). This arg is primarily useful for
+        # people who do not have a username for the Linux machine that matches
+        # their SSO ID.
+        sender = arg_parser.sender
+        if not sender:
+            sender = '%s@nvidia.com' % user
+
+        email_commits(commits_info, sender, subject, arg_parser)
+    else:
+        display_commits(commits_info, arg_parser.msg)
 
 if __name__ == '__main__':
     main()

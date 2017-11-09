@@ -12,6 +12,7 @@
  */
 
 #include <soc/tegra/chip-id.h>
+#include <soc/tegra/tegra_bpmp.h>
 
 #include <nvgpu/soc.h>
 
@@ -33,4 +34,9 @@ bool nvgpu_platform_is_fpga(struct gk20a *g)
 bool nvgpu_is_hypervisor_mode(struct gk20a *g)
 {
 	return is_tegra_hypervisor_mode();
+}
+
+bool nvgpu_is_bpmp_running(struct gk20a *g)
+{
+	return tegra_bpmp_running();
 }

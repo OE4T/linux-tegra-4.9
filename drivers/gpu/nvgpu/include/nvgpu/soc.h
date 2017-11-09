@@ -28,5 +28,6 @@ bool nvgpu_platform_is_silicon(struct gk20a *g);
 bool nvgpu_platform_is_simulation(struct gk20a *g);
 bool nvgpu_platform_is_fpga(struct gk20a *g);
 bool nvgpu_is_hypervisor_mode(struct gk20a *g);
+bool nvgpu_is_bpmp_running(struct gk20a *g);
 
 #endif

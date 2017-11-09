@@ -1092,6 +1092,14 @@ int eqos_probe(struct platform_device *pdev)
 		pr_debug("%s(): phy handle not found\n", __func__);
 
 	pdata->use_fixed_phy = false;
+
+	/* If nvidia,eqos-mdio is passed from DT, always register the MDIO */
+	for_each_child_of_node(node, pdata->mdio_node) {
+		if (of_device_is_compatible(pdata->mdio_node,
+					    "nvidia,eqos-mdio"))
+			break;
+	}
+
 	if (of_phy_is_fixed_link(node)) {
 		ret = eqos_fixed_phy_register(ndev);
 		if (ret) {
@@ -1100,7 +1108,7 @@ int eqos_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (!pdata->use_fixed_phy) {
+	if (pdata->mdio_node) {
 		ret = eqos_mdio_register(ndev);
 		if (ret < 0) {
 			pr_err("MDIO bus (id %d) registration failed\n",

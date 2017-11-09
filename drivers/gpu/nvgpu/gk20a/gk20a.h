@@ -1024,6 +1024,10 @@ struct gpu_ops {
 	struct {
 		void (*isr)(struct gk20a *g);
 	} priv_ring;
+	struct {
+		int (*check_priv_security)(struct gk20a *g);
+	} fuse;
+
 };
 
 struct nvgpu_bios_ucode {

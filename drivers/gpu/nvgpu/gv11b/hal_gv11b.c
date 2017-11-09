@@ -61,6 +61,7 @@
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_gp10b.h"
+#include "gp10b/fuse_gp10b.h"
 
 #include "gp106/pmu_gp106.h"
 #include "gp106/acr_gp106.h"
@@ -684,6 +685,9 @@ static const struct gpu_ops gv11b_ops = {
 	.priv_ring = {
 		.isr = gp10b_priv_ring_isr,
 	},
+	.fuse = {
+		.check_priv_security = gp10b_fuse_check_priv_security,
+	},
 	.chip_init_gpu_characteristics = gv11b_init_gpu_characteristics,
 	.get_litter_value = gv11b_get_litter_value,
 };
@@ -691,8 +695,6 @@ static const struct gpu_ops gv11b_ops = {
 int gv11b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
-	u32 val;
-	bool priv_security;
 
 	gops->ltc = gv11b_ops.ltc;
 	gops->ce2 = gv11b_ops.ce2;
@@ -717,23 +719,18 @@ int gv11b_init_hal(struct gk20a *g)
 #endif
 	gops->falcon = gv11b_ops.falcon;
 	gops->priv_ring = gv11b_ops.priv_ring;
+	gops->fuse = gv11b_ops.fuse;
 
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =
 		gv11b_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = gv11b_ops.get_litter_value;
 
-	val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
-	if (val) {
-		priv_security = true;
-		pr_err("priv security is enabled\n");
-	} else {
-		priv_security = false;
-		pr_err("priv security is disabled\n");
-	}
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, false);
-	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, priv_security);
-	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, priv_security);
+
+	/* Read fuses to check if gpu needs to boot in secure/non-secure mode */
+	if (gops->fuse.check_priv_security(g))
+		return -EINVAL; /* Do not boot gpu */
 
 	/* priv security dependent ops */
 	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {

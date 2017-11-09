@@ -79,6 +79,7 @@
 #include "gp106/fb_gp106.h"
 #include "gp106/gp106_gating_reglist.h"
 #include "gp106/flcn_gp106.h"
+#include "gp106/fuse_gp106.h"
 
 #include "hal_gp106.h"
 
@@ -704,6 +705,9 @@ static const struct gpu_ops gp106_ops = {
 	.priv_ring = {
 		.isr = gp10b_priv_ring_isr,
 	},
+	.fuse = {
+		.check_priv_security = gp106_fuse_check_priv_security,
+	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,
 };
@@ -753,6 +757,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->xve = gp106_ops.xve;
 	gops->falcon = gp106_ops.falcon;
 	gops->priv_ring = gp106_ops.priv_ring;
+	gops->fuse = gp106_ops.fuse;
 
 	/* Lone functions */
 	gops->get_litter_value = gp106_ops.get_litter_value;
@@ -760,10 +765,12 @@ int gp106_init_hal(struct gk20a *g)
 		gp106_ops.chip_init_gpu_characteristics;
 
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
-	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
-	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
+
+	/* Read fuses to check if gpu needs to boot in secure/non-secure mode */
+	if (gops->fuse.check_priv_security(g))
+		return -EINVAL; /* Do not boot gpu */
 
 	g->pmu_lsf_pmu_wpr_init_done = 0;
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;

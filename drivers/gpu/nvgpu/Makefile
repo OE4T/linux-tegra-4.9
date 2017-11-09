@@ -114,6 +114,7 @@ nvgpu-y := \
 	gm20b/mm_gm20b.o \
 	gm20b/regops_gm20b.o \
 	gm20b/therm_gm20b.o \
+	gm20b/fuse_gm20b.o \
 	boardobj/boardobj.o \
 	boardobj/boardobjgrp.o \
 	boardobj/boardobjgrpmask.o \
@@ -166,6 +167,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/css_vgpu.o \
 	common/linux/vgpu/gm20b/vgpu_hal_gm20b.o \
 	common/linux/vgpu/gm20b/vgpu_gr_gm20b.o \
+	common/linux/vgpu/gm20b/vgpu_fuse_gm20b.o \
 	common/linux/vgpu/sysfs_vgpu.o
 
 nvgpu-$(CONFIG_COMMON_CLK) += \
@@ -195,6 +197,7 @@ nvgpu-y += \
 	gp10b/fecs_trace_gp10b.o \
 	gp10b/priv_ring_gp10b.o \
 	gp10b/gp10b.o \
+	gp10b/fuse_gp10b.o \
 	gp106/hal_gp106.o \
 	gp106/mm_gp106.o \
 	gp106/flcn_gp106.o \
@@ -208,6 +211,7 @@ nvgpu-y += \
 	gp106/fb_gp106.o \
 	gp106/regops_gp106.o \
 	gp106/bios_gp106.o \
+	gp106/fuse_gp106.o \
 	pstate/pstate.o \
 	clk/clk_vin.o \
 	clk/clk_fll.o \
@@ -247,6 +251,7 @@ nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gp10b_tegra.o
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/gp10b/vgpu_hal_gp10b.o  \
 	common/linux/vgpu/gp10b/vgpu_gr_gp10b.o  \
+	common/linux/vgpu/gp10b/vgpu_fuse_gp10b.o  \
 	common/linux/vgpu/gp10b/vgpu_mm_gp10b.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)

@@ -64,6 +64,7 @@
 
 #include "gp10b.h"
 #include "hal_gp10b.h"
+#include "fuse_gp10b.h"
 
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
@@ -619,6 +620,9 @@ static const struct gpu_ops gp10b_ops = {
 	.priv_ring = {
 		.isr = gp10b_priv_ring_isr,
 	},
+	.fuse = {
+		.check_priv_security = gp10b_fuse_check_priv_security,
+	},
 	.chip_init_gpu_characteristics = gp10b_init_gpu_characteristics,
 	.get_litter_value = gp10b_get_litter_value,
 };
@@ -626,7 +630,6 @@ static const struct gpu_ops gp10b_ops = {
 int gp10b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
-	u32 val;
 
 	gops->ltc = gp10b_ops.ltc;
 	gops->ce2 = gp10b_ops.ce2;
@@ -654,6 +657,8 @@ int gp10b_init_hal(struct gk20a *g)
 
 	gops->priv_ring = gp10b_ops.priv_ring;
 
+	gops->fuse = gp10b_ops.fuse;
+
 	/* Lone Functions */
 	gops->chip_init_gpu_characteristics =
 		gp10b_ops.chip_init_gpu_characteristics;
@@ -662,23 +667,9 @@ int gp10b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
-		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
-		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
-	} else if (g->is_virtual) {
-		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
-		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
-	} else {
-		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
-		if (val) {
-			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
-			__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
-		} else {
-			gk20a_dbg_info("priv security is disabled in HW");
-			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
-			__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
-		}
-	}
+	/* Read fuses to check if gpu needs to boot in secure/non-secure mode */
+	if (gops->fuse.check_priv_security(g))
+		return -EINVAL; /* Do not boot gpu */
 
 	/* priv security dependent ops */
 	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {

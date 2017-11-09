@@ -24,6 +24,7 @@
 #include "common/linux/vgpu/fecs_trace_vgpu.h"
 #include "common/linux/vgpu/css_vgpu.h"
 #include "vgpu_gr_gm20b.h"
+#include "vgpu_fuse_gm20b.h"
 
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
@@ -456,6 +457,9 @@ static const struct gpu_ops vgpu_gm20b_ops = {
 	.priv_ring = {
 		.isr = gk20a_priv_ring_isr,
 	},
+	.fuse = {
+		.check_priv_security = vgpu_gm20b_fuse_check_priv_security,
+	},
 	.chip_init_gpu_characteristics = vgpu_init_gpu_characteristics,
 	.get_litter_value = gm20b_get_litter_value,
 };
@@ -463,7 +467,6 @@ static const struct gpu_ops vgpu_gm20b_ops = {
 int vgpu_gm20b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
-	u32 val;
 
 	gops->ltc = vgpu_gm20b_ops.ltc;
 	gops->ce2 = vgpu_gm20b_ops.ce2;
@@ -499,26 +502,19 @@ int vgpu_gm20b_init_hal(struct gk20a *g)
 
 	gops->priv_ring = vgpu_gm20b_ops.priv_ring;
 
+	gops->fuse = vgpu_gm20b_ops.fuse;
+
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =
 		vgpu_gm20b_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = vgpu_gm20b_ops.get_litter_value;
 
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
-	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
-		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
-	} else {
-		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
-		if (!val) {
-			gk20a_dbg_info("priv security is disabled in HW");
-			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
-		} else {
-			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
-		}
-	}
+	/* Read fuses to check if gpu needs to boot in secure/non-secure mode */
+	if (gops->fuse.check_priv_security(g))
+		return -EINVAL; /* Do not boot gpu */
 
 	/* priv security dependent ops */
 	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {

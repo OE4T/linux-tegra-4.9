@@ -87,7 +87,6 @@ struct tegra_cpufreq_data {
 };
 
 static struct tegra_cpufreq_data tfreq_data;
-static bool debug_fs_only;
 struct tegra_cpu_ctr {
 	uint32_t cpu;
 	uint32_t coreclk_cnt, last_coreclk_cnt;
@@ -794,8 +793,6 @@ static void free_resources(void)
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		if (!tfreq_data.pcluster[cl].configured)
 			continue;
-		if (debug_fs_only == true)
-			continue;
 
 		/* free table */
 		kfree(tfreq_data.pcluster[cl].clft);
@@ -1034,12 +1031,6 @@ static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 		goto err_out;
 	}
 #endif
-
-	if (of_property_read_bool(dn, "nvidia,debugfs-only")) {
-		debug_fs_only = true;
-		goto err_out;
-	} else
-		debug_fs_only = false;
 
 	ret = register_with_emc_bwmgr();
 	if (ret) {

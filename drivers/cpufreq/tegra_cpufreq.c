@@ -84,6 +84,9 @@
 #define B_CLUSTER			1
 #define MAX_CLUSTERS			2
 
+#define M_CL_OFFSET		 (SZ_64K * 7)
+#define B_CL_OFFSET		 (SZ_64K * 6)
+
 /**
  * Cpu side dvfs table
  * This table needs to be constructed at boot up time
@@ -130,6 +133,7 @@ struct tegra_cpufreq_data {
 	uint32_t cpu_freq[CONFIG_NR_CPUS];
 	uint32_t last_hint[CONFIG_NR_CPUS];
 	unsigned long emc_max_rate; /* Hz */
+	void *__iomem *regs;
 };
 
 static struct tegra_cpufreq_data tfreq_data;
@@ -1068,15 +1072,15 @@ static void __init free_shared_lut(void)
 				vhtbl->phys);
 	}
 }
-static void free_resources(void)
+static void free_resources(struct device *dev)
 {
 	int cl;
 
-	LOOP_FOR_EACH_CLUSTER(cl) {
-		/* unmap iova space */
-		if (tfreq_data.pcluster[cl].edvd_pub)
-			iounmap(tfreq_data.pcluster[cl].edvd_pub);
+	/* unmap iova space */
+	if (tfreq_data.regs)
+		devm_iounmap(dev, tfreq_data.regs);
 
+	LOOP_FOR_EACH_CLUSTER(cl) {
 		/* free ndiv_to_vindex mem */
 		kfree(tfreq_data.pcluster[cl].dvfs_tbl.vindx);
 
@@ -1085,7 +1089,6 @@ static void free_resources(void)
 
 		/* unregister from emc bw manager */
 		tegra_bwmgr_unregister(tfreq_data.pcluster[cl].bwmgr);
-
 	}
 }
 
@@ -1278,29 +1281,6 @@ err_out:
 	return ok ? 0 : ret;
 }
 
-static int __init mem_map_device(struct device_node *dn)
-{
-	void __iomem *base = NULL;
-	int cl;
-	int ret = 0;
-
-	LOOP_FOR_EACH_CLUSTER(cl) {
-		base = of_iomap(dn, cl);
-		if (IS_ERR_OR_NULL(base)) {
-			pr_warn("Failed to iomap memory for %s\n",
-			CLUSTER_STR(cl));
-			ret = -EINVAL;
-			while (cl--)
-				iounmap(tfreq_data.pcluster[cl].edvd_pub);
-			goto err_out;
-		}
-
-		tfreq_data.pcluster[cl].edvd_pub = base;
-	}
-err_out:
-	return ret;
-}
-
 static void set_cpu_mask(void)
 {
 	int cpu_num;
@@ -1339,6 +1319,8 @@ err_out:
 static int __init tegra186_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device_node *dn = NULL;
+	struct resource *res;
+	void __iomem *regs;
 	uint32_t cpu;
 	int ret = 0;
 
@@ -1346,10 +1328,15 @@ static int __init tegra186_cpufreq_probe(struct platform_device *pdev)
 	if (of_device_is_compatible(dn, "nvidia,tegra18x-cpufreq-hv")) {
 		tegra_cpufreq_hv_mode = true;
 		pr_info("tegra18x-cpufreq: Using hv path\n");
-	} else
-		ret = mem_map_device(dn);
-	if (ret)
-		goto err_out;
+	} else {
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		regs = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(regs))
+			goto err_out;
+		tfreq_data.pcluster[B_CLUSTER].edvd_pub = regs + B_CL_OFFSET;
+		tfreq_data.pcluster[M_CLUSTER].edvd_pub = regs + M_CL_OFFSET;
+		tfreq_data.regs = regs;
+	}
 
 	set_cpu_mask();
 
@@ -1414,7 +1401,7 @@ static int __init tegra186_cpufreq_probe(struct platform_device *pdev)
 
 	goto exit_out;
 err_free_res:
-	free_resources();
+	free_resources(&pdev->dev);
 exit_out:
 	free_shared_lut();
 err_out:
@@ -1431,7 +1418,7 @@ static int tegra186_cpufreq_remove(struct platform_device *pdev)
 	tegra_cpufreq_debug_exit();
 #endif
 	cpufreq_unregister_driver(&tegra_cpufreq_driver);
-	free_resources();
+	free_resources(&pdev->dev);
 	return 0;
 }
 

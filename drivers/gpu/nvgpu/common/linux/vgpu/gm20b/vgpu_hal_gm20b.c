@@ -508,7 +508,6 @@ int vgpu_gm20b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 
-#ifdef CONFIG_TEGRA_ACR
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
 	} else {
@@ -520,21 +519,6 @@ int vgpu_gm20b_init_hal(struct gk20a *g)
 			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
 		}
 	}
-#else
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
-		gk20a_dbg_info("running ASIM with PRIV security disabled");
-		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
-	} else {
-		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
-		if (!val) {
-			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
-		} else {
-			gk20a_dbg_info("priv security is not supported but enabled");
-			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
-			return -EPERM;
-		}
-	}
-#endif
 
 	/* priv security dependent ops */
 	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {

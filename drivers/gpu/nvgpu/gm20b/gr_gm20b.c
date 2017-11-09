@@ -737,7 +737,6 @@ u32 gr_gm20b_get_tpc_num(struct gk20a *g, u32 addr)
 	return 0;
 }
 
-#ifdef CONFIG_TEGRA_ACR
 static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
 {
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
@@ -830,14 +829,6 @@ int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 
 	return 0;
 }
-#else
-
-int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
-{
-	return -EPERM;
-}
-
-#endif
 
 void gr_gm20b_detect_sm_arch(struct gk20a *g)
 {

@@ -539,7 +539,6 @@ int vgpu_gp10b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 
-#ifdef CONFIG_TEGRA_ACR
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
 		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
@@ -557,24 +556,6 @@ int vgpu_gp10b_init_hal(struct gk20a *g)
 			__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 		}
 	}
-#else
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
-		gk20a_dbg_info("running simulator with PRIV security disabled");
-		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
-		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
-	} else {
-		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
-		if (val) {
-			gk20a_dbg_info("priv security is not supported but enabled");
-			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
-			__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
-			return -EPERM;
-		} else {
-			__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
-			__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
-		}
-	}
-#endif
 
 	/* priv security dependent ops */
 	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {

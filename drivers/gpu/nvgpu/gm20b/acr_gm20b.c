@@ -652,10 +652,12 @@ static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 	struct nvgpu_mem *ucode)
 {
 	struct lsfm_managed_ucode_img *pnode = plsfm->ucode_img_list;
+	struct lsf_wpr_header last_wpr_hdr;
 	u32 i;
 
 	/* The WPR array is at the base of the WPR */
 	pnode = plsfm->ucode_img_list;
+	memset(&last_wpr_hdr, 0, sizeof(struct lsf_wpr_header));
 	i = 0;
 
 	/*
@@ -729,10 +731,11 @@ static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 	}
 
 	/* Tag the terminator WPR header with an invalid falcon ID. */
-	nvgpu_mem_wr32(g, ucode,
-			plsfm->managed_flcn_cnt * sizeof(struct lsf_wpr_header) +
-			offsetof(struct lsf_wpr_header, falcon_id),
-			LSF_FALCON_ID_INVALID);
+	last_wpr_hdr.falcon_id = LSF_FALCON_ID_INVALID;
+	nvgpu_mem_wr_n(g, ucode,
+			plsfm->managed_flcn_cnt * sizeof(struct lsf_wpr_header),
+			&last_wpr_hdr,
+			sizeof(struct lsf_wpr_header));
 }
 
 /*!

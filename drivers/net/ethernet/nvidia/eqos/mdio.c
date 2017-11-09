@@ -570,7 +570,6 @@ int eqos_mdio_register(struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct mii_bus *new_bus = NULL;
-	struct device_node *mdio_node = NULL;
 	int phyaddr = 0;
 	unsigned short phy_detected = 0;
 	int ret = Y_SUCCESS, i;
@@ -626,11 +625,8 @@ int eqos_mdio_register(struct net_device *dev)
 			new_bus->irq[i] = PHY_POLL;
 	}
 
-	if (pdata->phy_node)
-		mdio_node = of_get_parent(pdata->phy_node);
-
-	if (mdio_node)
-		ret = of_mdiobus_register(new_bus, mdio_node);
+	if (pdata->mdio_node)
+		ret = of_mdiobus_register(new_bus, pdata->mdio_node);
 	else
 		ret = mdiobus_register(new_bus);
 
@@ -639,6 +635,7 @@ int eqos_mdio_register(struct net_device *dev)
 		mdiobus_free(new_bus);
 		return ret;
 	}
+
 	pdata->mii = new_bus;
 
 	DBGPR_MDIO("<--eqos_mdio_register\n");

@@ -1056,7 +1056,6 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 	}
 
 	win->dc = dc;
-	dc->tmp_wins[idx].dc = dc;
 
 	/* attach window idx */
 	nvdisp_win_write(win, dc->ctrl_num, win_set_control_r());

@@ -1224,7 +1224,7 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va);
 		}
 
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, true);
 		if (err) {
 			nvgpu_err(g, "can't map patch context");
 			goto out;
@@ -1277,7 +1277,7 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 					cbes_reserve),
 				true);
 
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx, true);
 	}
 
 out:
@@ -2254,13 +2254,13 @@ int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 		g->ops.gr.update_ctxsw_preemption_mode(ch->g,
 						ch_ctx, mem);
 
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, true);
 		if (err) {
 			nvgpu_err(g, "can't map patch context");
 			goto enable_ch;
 		}
 		g->ops.gr.commit_global_cb_manager(g, ch, true);
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx, true);
 	}
 
 enable_ch:

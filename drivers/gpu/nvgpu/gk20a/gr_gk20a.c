@@ -673,7 +673,8 @@ int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
  */
 
 int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
-					  struct channel_ctx_gk20a *ch_ctx)
+					  struct channel_ctx_gk20a *ch_ctx,
+					  bool update_patch_count)
 {
 	int err = 0;
 
@@ -681,7 +682,7 @@ int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 	if (err)
 		return err;
 
-	if (ch_ctx->gr_ctx->mem.cpu_va) {
+	if (update_patch_count) {
 		/* reset patch count if ucode has already processed it */
 		ch_ctx->patch_ctx.data_count = nvgpu_mem_rd(g,
 						&ch_ctx->gr_ctx->mem,
@@ -693,12 +694,13 @@ int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 }
 
 void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
-					struct channel_ctx_gk20a *ch_ctx)
+					struct channel_ctx_gk20a *ch_ctx,
+					bool update_patch_count)
 {
 	nvgpu_mem_end(g, &ch_ctx->patch_ctx.mem);
 
 	/* Write context count to context image if it is mapped */
-	if (ch_ctx->gr_ctx->mem.cpu_va) {
+	if (update_patch_count) {
 		nvgpu_mem_wr(g, &ch_ctx->gr_ctx->mem,
 			     ctxsw_prog_main_image_patch_count_o(),
 			     ch_ctx->patch_ctx.data_count);
@@ -876,7 +878,7 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	gk20a_dbg_fn("");
 	if (patch) {
 		int err;
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, false);
 		if (err)
 			return err;
 	}
@@ -922,13 +924,12 @@ static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	g->ops.gr.commit_global_cb_manager(g, c, patch);
 
 	if (patch)
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx, false);
 
 	return 0;
 }
 
-int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c,
-								bool patch)
+int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct gr_gk20a *gr = &g->gr;
 	struct channel_ctx_gk20a *ch_ctx = NULL;
@@ -946,14 +947,6 @@ int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c,
 	ds_debug = gk20a_readl(g, gr_ds_debug_r());
 	mpc_vtg_debug = gk20a_readl(g, gr_gpcs_tpcs_mpc_vtg_debug_r());
 
-	if (patch) {
-		int err;
-		ch_ctx = &c->ch_ctx;
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
-		if (err)
-			return err;
-	}
-
 	if (gr->timeslice_mode == gr_gpcs_ppcs_cbm_cfg_timeslice_mode_enable_v()) {
 		pe_vaf = gk20a_readl(g, gr_gpcs_tpcs_pe_vaf_r());
 		pe_vsc_vpc = gk20a_readl(g, gr_gpcs_tpcs_pes_vsc_vpc_r());
@@ -965,26 +958,23 @@ int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c,
 		ds_debug = gr_ds_debug_timeslice_mode_enable_f() | ds_debug;
 		mpc_vtg_debug = gr_gpcs_tpcs_mpc_vtg_debug_timeslice_mode_enabled_f() | mpc_vtg_debug;
 
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gpm_pd_cfg_r(), gpm_pd_cfg, patch);
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pe_vaf_r(), pe_vaf, patch);
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pes_vsc_vpc_r(), pe_vsc_vpc, patch);
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg0_r(), pd_ab_dist_cfg0, patch);
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_debug_r(), ds_debug, patch);
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_debug_r(), mpc_vtg_debug, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gpm_pd_cfg_r(), gpm_pd_cfg, false);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pe_vaf_r(), pe_vaf, false);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pes_vsc_vpc_r(), pe_vsc_vpc, false);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg0_r(), pd_ab_dist_cfg0, false);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_debug_r(), ds_debug, false);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_debug_r(), mpc_vtg_debug, false);
 	} else {
 		gpm_pd_cfg = gr_gpcs_gpm_pd_cfg_timeslice_mode_disable_f() | gpm_pd_cfg;
 		pd_ab_dist_cfg0 = gr_pd_ab_dist_cfg0_timeslice_enable_dis_f() | pd_ab_dist_cfg0;
 		ds_debug = gr_ds_debug_timeslice_mode_disable_f() | ds_debug;
 		mpc_vtg_debug = gr_gpcs_tpcs_mpc_vtg_debug_timeslice_mode_disabled_f() | mpc_vtg_debug;
 
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gpm_pd_cfg_r(), gpm_pd_cfg, patch);
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg0_r(), pd_ab_dist_cfg0, patch);
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_debug_r(), ds_debug, patch);
-		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_debug_r(), mpc_vtg_debug, patch);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gpm_pd_cfg_r(), gpm_pd_cfg, false);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg0_r(), pd_ab_dist_cfg0, false);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_debug_r(), ds_debug, false);
+		gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_debug_r(), mpc_vtg_debug, false);
 	}
-
-	if (patch)
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
 
 	return 0;
 }
@@ -1489,7 +1479,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 		goto clean_up;
 
 	/* override a few ctx state registers */
-	g->ops.gr.commit_global_timeslice(g, c, false);
+	g->ops.gr.commit_global_timeslice(g, c);
 
 	/* floorsweep anything left */
 	err = g->ops.gr.init_fs_state(g);
@@ -3031,7 +3021,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 		lockboost = (lockboost & ~lockboost_mask) |
 			gr_gpcs_tpcs_sm_sch_macro_sched_lockboost_size_f(0);
 
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, false);
 
 		if (!err) {
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
@@ -3040,7 +3030,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpcs_tpcs_sm_sch_macro_sched_r(),
 				lockboost, true);
-			gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+			gr_gk20a_ctx_patch_write_end(g, ch_ctx, false);
 		} else {
 			nvgpu_err(g,
 				   "failed to set texlock for compute class");
@@ -4528,7 +4518,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		gr_fe_go_idle_timeout_count_disabled_f());
 
 	/* override a few ctx state registers */
-	g->ops.gr.commit_global_timeslice(g, NULL, false);
+	g->ops.gr.commit_global_timeslice(g, NULL);
 
 	/* floorsweep anything left */
 	err = g->ops.gr.init_fs_state(g);
@@ -7851,7 +7841,7 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	}
 	offset_addrs = offsets + max_offsets;
 
-	err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+	err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, false);
 	if (err)
 		goto cleanup;
 
@@ -7989,7 +7979,7 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 		nvgpu_kfree(g, offsets);
 
 	if (ch_ctx->patch_ctx.mem.cpu_va)
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx, gr_ctx_ready);
 	if (gr_ctx_ready)
 		nvgpu_mem_end(g, &ch_ctx->gr_ctx->mem);
 	if (pm_ctx_ready)

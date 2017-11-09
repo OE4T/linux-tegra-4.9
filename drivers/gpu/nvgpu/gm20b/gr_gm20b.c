@@ -1339,7 +1339,7 @@ int gm20b_gr_update_sm_error_state(struct gk20a *g,
 		gk20a_writel(g, gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r() + offset,
 				gr->sm_error_states[sm_id].hww_warp_esr_report_mask);
 	} else {
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, false);
 		if (err)
 			goto enable_ctxsw;
 
@@ -1352,7 +1352,7 @@ int gm20b_gr_update_sm_error_state(struct gk20a *g,
 				gr->sm_error_states[sm_id].hww_warp_esr_report_mask,
 				true);
 
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx, false);
 	}
 
 enable_ctxsw:

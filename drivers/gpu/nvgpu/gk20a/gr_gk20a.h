@@ -619,9 +619,11 @@ struct channel_ctx_gk20a;
 void gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_ctx_gk20a *ch_ctx,
 				    u32 addr, u32 data, bool patch);
 int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
-					  struct channel_ctx_gk20a *ch_ctx);
+					  struct channel_ctx_gk20a *ch_ctx,
+					  bool update_patch_count);
 void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
-					struct channel_ctx_gk20a *ch_ctx);
+					struct channel_ctx_gk20a *ch_ctx,
+					bool update_patch_count);
 void gr_gk20a_commit_global_pagepool(struct gk20a *g,
 				     struct channel_ctx_gk20a *ch_ctx,
 				     u64 addr, u32 size, bool patch);
@@ -745,8 +747,7 @@ int gr_gk20a_resume_from_pause(struct gk20a *g);
 int gr_gk20a_clear_sm_errors(struct gk20a *g);
 u32 gr_gk20a_tpc_enabled_exceptions(struct gk20a *g);
 
-int gr_gk20a_commit_global_timeslice(struct gk20a *g,
-					struct channel_gk20a *c, bool patch);
+int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c);
 
 void gr_gk20a_init_sm_id_table(struct gk20a *g);
 

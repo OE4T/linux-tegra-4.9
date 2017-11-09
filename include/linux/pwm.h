@@ -77,6 +77,8 @@ struct pwm_state {
  * @chip_data: chip-private data associated with the PWM device
  * @args: PWM arguments
  * @state: curent PWM channel state
+ * @double_period: Doble pulse period
+ * @ramp_time: Ramp up/down time
  */
 struct pwm_device {
 	const char *label;
@@ -88,6 +90,8 @@ struct pwm_device {
 
 	struct pwm_args args;
 	struct pwm_state state;
+	unsigned int double_period;
+	unsigned int ramp_time;
 };
 
 /**

@@ -280,7 +280,7 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		lrf_corrected_err_count_delta +=
 			(is_lrf_ecc_corrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_total_s());
-		g->ecc.gr.t18x.sm_lrf_single_err_count.counters[tpc] +=
+		g->ecc.gr.sm_lrf_single_err_count.counters[tpc] +=
 							lrf_corrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_r() + offset,
@@ -295,7 +295,7 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		lrf_uncorrected_err_count_delta +=
 			(is_lrf_ecc_uncorrected_total_err_overflow <<
 			 gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_total_s());
-		g->ecc.gr.t18x.sm_lrf_double_err_count.counters[tpc] +=
+		g->ecc.gr.sm_lrf_double_err_count.counters[tpc] +=
 							lrf_uncorrected_err_count_delta;
 		gk20a_writel(g,
 			gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_r() + offset,
@@ -1664,8 +1664,8 @@ void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
 	int attrBufferSize;
 
-	if (gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va)
-		attrBufferSize = gr_ctx->t18x.betacb_ctxsw_buffer.size;
+	if (gr_ctx->preempt_ctxsw_buffer.gpu_va)
+		attrBufferSize = gr_ctx->betacb_ctxsw_buffer.size;
 	else
 		attrBufferSize = g->ops.gr.calc_global_ctx_buffer_size(g);
 
@@ -2385,10 +2385,10 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_disp_ctrl_r(), data);
 
-	if (g->gr.t18x.fecs_feature_override_ecc_val != 0) {
+	if (g->gr.fecs_feature_override_ecc_val != 0) {
 		gk20a_writel(g,
 			gr_fecs_feature_override_ecc_r(),
-			g->gr.t18x.fecs_feature_override_ecc_val);
+			g->gr.fecs_feature_override_ecc_val);
 	}
 
 	return gr_gm20b_init_fs_state(g);

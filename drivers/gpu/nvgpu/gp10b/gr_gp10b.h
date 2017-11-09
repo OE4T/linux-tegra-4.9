@@ -145,27 +145,4 @@ int gr_gp10b_set_czf_bypass(struct gk20a *g, struct channel_gk20a *ch);
 void gr_gp10b_init_czf_bypass(struct gk20a *g);
 void gr_gp10b_init_ctxsw_hdr_data(struct gk20a *g, struct nvgpu_mem *mem);
 
-struct gr_t18x {
-	struct {
-		u32 preempt_image_size;
-		bool force_preemption_gfxp;
-		bool force_preemption_cilp;
-		bool dump_ctxsw_stats_on_channel_close;
-	} ctx_vars;
-
-	u32 fecs_feature_override_ecc_val;
-
-	int cilp_preempt_pending_chid;
-};
-
-struct gr_ctx_desc_t18x {
-	struct nvgpu_mem preempt_ctxsw_buffer;
-	struct nvgpu_mem spill_ctxsw_buffer;
-	struct nvgpu_mem betacb_ctxsw_buffer;
-	struct nvgpu_mem pagepool_ctxsw_buffer;
-	u32 ctx_id;
-	bool ctx_id_valid;
-	bool cilp_preempt_pending;
-};
-
 #endif

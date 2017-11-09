@@ -21,6 +21,7 @@
 #include "common/linux/vgpu/vgpu.h"
 #include "common/linux/vgpu/gm20b/vgpu_gr_gm20b.h"
 
+#include "gp10b/gr_gp10b.h"
 #include "vgpu_gr_gp10b.h"
 
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
@@ -45,10 +46,10 @@ void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 
 	__nvgpu_vm_free_va(vm, gr_ctx->mem.gpu_va, gmmu_page_size_kernel);
 
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.pagepool_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->pagepool_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->betacb_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->spill_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->preempt_ctxsw_buffer);
 
 	nvgpu_kfree(g, gr_ctx);
 }
@@ -122,11 +123,11 @@ int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 	int err = 0;
 
 	if (g->ops.gr.is_valid_gfx_class(g, class) &&
-			g->gr.t18x.ctx_vars.force_preemption_gfxp)
+			g->gr.ctx_vars.force_preemption_gfxp)
 		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
 
 	if (g->ops.gr.is_valid_compute_class(g, class) &&
-			g->gr.t18x.ctx_vars.force_preemption_cilp)
+			g->gr.ctx_vars.force_preemption_cilp)
 		compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
 
 	/* check for invalid combinations */
@@ -157,54 +158,54 @@ int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 		attrib_cb_size = ALIGN(attrib_cb_size, 128);
 
 		gk20a_dbg_info("gfxp context preempt size=%d",
-			g->gr.t18x.ctx_vars.preempt_image_size);
+			g->gr.ctx_vars.preempt_image_size);
 		gk20a_dbg_info("gfxp context spill size=%d", spill_size);
 		gk20a_dbg_info("gfxp context pagepool size=%d", pagepool_size);
 		gk20a_dbg_info("gfxp context attrib cb size=%d",
 			attrib_cb_size);
 
 		err = gr_gp10b_alloc_buffer(vm,
-					g->gr.t18x.ctx_vars.preempt_image_size,
-					&gr_ctx->t18x.preempt_ctxsw_buffer);
+					g->gr.ctx_vars.preempt_image_size,
+					&gr_ctx->preempt_ctxsw_buffer);
 		if (err) {
 			err = -ENOMEM;
 			goto fail;
 		}
-		desc = &gr_ctx->t18x.preempt_ctxsw_buffer;
+		desc = &gr_ctx->preempt_ctxsw_buffer;
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAIN] = desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAIN] = desc->size;
 
 		err = gr_gp10b_alloc_buffer(vm,
 					spill_size,
-					&gr_ctx->t18x.spill_ctxsw_buffer);
+					&gr_ctx->spill_ctxsw_buffer);
 		if (err) {
 			err = -ENOMEM;
 			goto fail;
 		}
-		desc = &gr_ctx->t18x.spill_ctxsw_buffer;
+		desc = &gr_ctx->spill_ctxsw_buffer;
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_SPILL] = desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_SPILL] = desc->size;
 
 		err = gr_gp10b_alloc_buffer(vm,
 					pagepool_size,
-					&gr_ctx->t18x.pagepool_ctxsw_buffer);
+					&gr_ctx->pagepool_ctxsw_buffer);
 		if (err) {
 			err = -ENOMEM;
 			goto fail;
 		}
-		desc = &gr_ctx->t18x.pagepool_ctxsw_buffer;
+		desc = &gr_ctx->pagepool_ctxsw_buffer;
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_PAGEPOOL] =
 			desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_PAGEPOOL] = desc->size;
 
 		err = gr_gp10b_alloc_buffer(vm,
 					attrib_cb_size,
-					&gr_ctx->t18x.betacb_ctxsw_buffer);
+					&gr_ctx->betacb_ctxsw_buffer);
 		if (err) {
 			err = -ENOMEM;
 			goto fail;
 		}
-		desc = &gr_ctx->t18x.betacb_ctxsw_buffer;
+		desc = &gr_ctx->betacb_ctxsw_buffer;
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_BETACB] =
 			desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_BETACB] = desc->size;
@@ -323,9 +324,9 @@ int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g)
 	if (err)
 		return err;
 
-	g->gr.t18x.ctx_vars.preempt_image_size =
+	g->gr.ctx_vars.preempt_image_size =
 			priv->constants.preempt_ctx_size;
-	if (!g->gr.t18x.ctx_vars.preempt_image_size)
+	if (!g->gr.ctx_vars.preempt_image_size)
 		return -EINVAL;
 
 	return 0;

@@ -44,7 +44,6 @@ int gpu_init_hal(struct gk20a *g)
 		if (gm20b_init_hal(g))
 			return -ENODEV;
 		break;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	case NVGPU_GPUID_GP10B:
 		if (gp10b_init_hal(g))
 			return -ENODEV;
@@ -54,7 +53,6 @@ int gpu_init_hal(struct gk20a *g)
 		if (gp106_init_hal(g))
 			return -ENODEV;
 		break;
-#endif
 #ifdef CONFIG_TEGRA_19x_GPU
 	case TEGRA_19x_GPUID:
 		if (TEGRA_19x_GPUID_HAL(g))

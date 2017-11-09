@@ -177,7 +177,6 @@ nvgpu-$(CONFIG_GK20A_DEVFREQ) += \
 nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 	gk20a/css_gr_gk20a.o
 
-ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 nvgpu-y += \
 	gp10b/gr_gp10b.o  \
 	gp10b/gr_ctx_gp10b.o  \
@@ -249,7 +248,6 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/gp10b/vgpu_hal_gp10b.o  \
 	common/linux/vgpu/gp10b/vgpu_gr_gp10b.o  \
 	common/linux/vgpu/gp10b/vgpu_mm_gp10b.o
-endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
 nvgpu-y += \

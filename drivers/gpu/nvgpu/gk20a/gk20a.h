@@ -72,12 +72,10 @@ struct nvgpu_ctxsw_trace_filter;
 #include "pmu_gk20a.h"
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "clk/clk.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
 #include "therm/thrm.h"
-#endif
 #include "ecc_gk20a.h"
 
 /* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
@@ -1128,12 +1126,10 @@ struct gk20a {
 	struct nvgpu_pmu pmu;
 	struct acr_desc acr;
 	struct ecc_gk20a ecc;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct clk_pmupstate clk_pmu;
 	struct perf_pmupstate perf_pmu;
 	struct pmgr_pmupstate pmgr_pmu;
 	struct therm_pmupstate therm_pmu;
-#endif
 
 #ifdef CONFIG_DEBUG_FS
 	struct railgate_stats pstats;

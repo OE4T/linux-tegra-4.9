@@ -32,9 +32,6 @@ struct gk20a_ecc_stat {
 #endif
 };
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include "ecc_t18x.h"
-#endif
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "ecc_t19x.h"
 #endif
@@ -42,15 +39,30 @@ struct gk20a_ecc_stat {
 struct ecc_gk20a {
 	/* Stats per engine */
 	struct {
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-		struct ecc_gr_t18x t18x;
-#endif
+		struct gk20a_ecc_stat sm_lrf_single_err_count;
+		struct gk20a_ecc_stat sm_lrf_double_err_count;
+
+		struct gk20a_ecc_stat sm_shm_sec_count;
+		struct gk20a_ecc_stat sm_shm_sed_count;
+		struct gk20a_ecc_stat sm_shm_ded_count;
+
+		struct gk20a_ecc_stat tex_total_sec_pipe0_count;
+		struct gk20a_ecc_stat tex_total_ded_pipe0_count;
+		struct gk20a_ecc_stat tex_unique_sec_pipe0_count;
+		struct gk20a_ecc_stat tex_unique_ded_pipe0_count;
+		struct gk20a_ecc_stat tex_total_sec_pipe1_count;
+		struct gk20a_ecc_stat tex_total_ded_pipe1_count;
+		struct gk20a_ecc_stat tex_unique_sec_pipe1_count;
+		struct gk20a_ecc_stat tex_unique_ded_pipe1_count;
+
 #ifdef CONFIG_TEGRA_19x_GPU
 		struct ecc_gr_t19x t19x;
 #endif
 	} gr;
 
 	struct {
+		struct gk20a_ecc_stat l2_sec_count;
+		struct gk20a_ecc_stat l2_ded_count;
 #ifdef CONFIG_TEGRA_19x_GPU
 		struct ecc_ltc_t19x t19x;
 #endif

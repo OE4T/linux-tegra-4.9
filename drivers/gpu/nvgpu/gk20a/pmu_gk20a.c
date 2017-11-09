@@ -589,12 +589,10 @@ int nvgpu_pmu_handle_therm_event(struct nvgpu_pmu *pmu,
 
 	switch (msg->msg_type) {
 	case NV_PMU_THERM_MSG_ID_EVENT_HW_SLOWDOWN_NOTIFICATION:
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 		if (msg->hw_slct_msg.mask == BIT(NV_PMU_THERM_EVENT_THERMAL_1))
 			nvgpu_clk_arb_schedule_alarm(gk20a_from_pmu(pmu),
 				(0x1UL << NVGPU_GPU_EVENT_ALARM_THERMAL_ABOVE_THRESHOLD));
 		else
-#endif
 			gk20a_dbg_pmu("Unwanted/Unregistered thermal event received %d",
 				msg->hw_slct_msg.mask);
 		break;

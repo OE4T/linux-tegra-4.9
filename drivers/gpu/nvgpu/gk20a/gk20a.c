@@ -46,9 +46,7 @@
 #include "mc_gk20a.h"
 #include "hal.h"
 #include "bus_gk20a.h"
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "pstate/pstate.h"
-#endif
 
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
@@ -112,10 +110,9 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 	if (g->ops.clk.suspend_clk_support)
 		ret |= g->ops.clk.suspend_clk_support(g);
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE))
 		gk20a_deinit_pstate_support(g);
-#endif
+
 	g->power_on = false;
 
 	return ret;
@@ -240,7 +237,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE)) {
 		err = gk20a_init_pstate_support(g);
 		if (err) {
@@ -248,7 +244,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 			goto done;
 		}
 	}
-#endif
 
 	if (g->ops.pmu.is_pmu_supported(g)) {
 		err = nvgpu_init_pmu_support(g);
@@ -264,7 +259,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		goto done;
 	}
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE)) {
 		err = gk20a_init_pstate_pmu_support(g);
 		if (err) {
@@ -278,7 +272,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		nvgpu_err(g, "failed to init clk arb");
 		goto done;
 	}
-#endif
 
 	err = gk20a_init_therm_support(g);
 	if (err) {

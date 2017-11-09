@@ -94,10 +94,6 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_IMPL_GP106	0x00000006
 #define NVGPU_GPU_IMPL_GP10B	0x0000000B
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include <linux/nvgpu-t18x.h>
-#endif
-
 #ifdef CONFIG_TEGRA_19x_GPU
 #include <linux/nvgpu-t19x.h>
 #endif
@@ -150,6 +146,20 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_MAP_DIRECT_KIND_CTRL	(1ULL << 23)
 /* NVGPU_GPU_IOCTL_SET_DETERMINISTIC_OPTS is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_OPTS	(1ULL << 24)
+/* SM LRF ECC is enabled */
+#define NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF	(1ULL << 60)
+/* SM SHM ECC is enabled */
+#define NVGPU_GPU_FLAGS_ECC_ENABLED_SM_SHM	(1ULL << 61)
+/* TEX ECC is enabled */
+#define NVGPU_GPU_FLAGS_ECC_ENABLED_TEX		(1ULL << 62)
+/* L2 ECC is enabled */
+#define NVGPU_GPU_FLAGS_ECC_ENABLED_LTC		(1ULL << 63)
+/* All types of ECC are enabled */
+#define NVGPU_GPU_FLAGS_ALL_ECC_ENABLED	\
+				(NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF |	\
+				NVGPU_GPU_FLAGS_ECC_ENABLED_SM_SHM |	\
+				NVGPU_GPU_FLAGS_ECC_ENABLED_TEX    |	\
+				NVGPU_GPU_FLAGS_ECC_ENABLED_LTC)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;
@@ -1388,6 +1398,9 @@ struct nvgpu_set_nvmap_fd_args {
 } __packed;
 
 #define NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO	(1 << 0)
+/* Flags in nvgpu_alloc_obj_ctx_args.flags */
+#define NVGPU_ALLOC_OBJ_FLAGS_GFXP		(1 << 1)
+#define NVGPU_ALLOC_OBJ_FLAGS_CILP		(1 << 2)
 
 struct nvgpu_alloc_obj_ctx_args {
 	__u32 class_num; /* kepler3d, 2d, compute, etc       */
@@ -1398,6 +1411,11 @@ struct nvgpu_alloc_obj_ctx_args {
 struct nvgpu_alloc_gpfifo_args {
 	__u32 num_entries;
 #define NVGPU_ALLOC_GPFIFO_FLAGS_VPR_ENABLED	(1 << 0) /* set owner channel of this gpfifo as a vpr channel */
+/*
+ * this flag is used in struct nvgpu_alloc_gpfifo_args
+ * to enable re-playable faults for that channel
+ */
+#define NVGPU_ALLOC_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE   (1 << 2)
 	__u32 flags;
 };
 
@@ -1592,6 +1610,8 @@ struct nvgpu_event_id_ctrl_args {
 #define NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT		0
 #define NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE		1
 #define NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC	2
+#define NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_STARTED	3
+#define NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE	4
 #define NVGPU_IOCTL_CHANNEL_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN	5
 #define NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX		6
 
@@ -1600,11 +1620,14 @@ struct nvgpu_event_id_ctrl_args {
 struct nvgpu_preemption_mode_args {
 /* only one should be enabled at a time */
 #define NVGPU_GRAPHICS_PREEMPTION_MODE_WFI              (1 << 0)
+#define NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP		(1 << 1)
 	__u32 graphics_preempt_mode; /* in */
 
 /* only one should be enabled at a time */
 #define NVGPU_COMPUTE_PREEMPTION_MODE_WFI               (1 << 0)
 #define NVGPU_COMPUTE_PREEMPTION_MODE_CTA               (1 << 1)
+#define NVGPU_COMPUTE_PREEMPTION_MODE_CILP		(1 << 2)
+
 	__u32 compute_preempt_mode; /* in */
 };
 

@@ -24,9 +24,6 @@
 #ifndef GR_GK20A_H
 #define GR_GK20A_H
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include "gr_t18x.h"
-#endif
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "gr_t19x.h"
 #endif
@@ -316,6 +313,11 @@ struct gr_gk20a {
 		} ctxsw_regs;
 		int regs_base_index;
 		bool valid;
+
+		u32 preempt_image_size;
+		bool force_preemption_gfxp;
+		bool force_preemption_cilp;
+		bool dump_ctxsw_stats_on_channel_close;
 	} ctx_vars;
 
 	struct nvgpu_mutex ctx_mutex; /* protect golden ctx init */
@@ -409,9 +411,11 @@ struct gr_gk20a {
 	bool sw_ready;
 	bool skip_ucode_init;
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	struct gr_t18x t18x;
-#endif
+	struct nvgpu_preemption_modes_rec preemption_mode_rec;
+
+	u32 fecs_feature_override_ecc_val;
+
+	int cilp_preempt_pending_chid;
 
 	u32 fbp_en_mask;
 	u32 *fbp_rop_l2_en_mask;
@@ -433,9 +437,15 @@ struct gr_ctx_desc {
 	u32 graphics_preempt_mode;
 	u32 compute_preempt_mode;
 	bool boosted_ctx;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	struct gr_ctx_desc_t18x t18x;
-#endif
+
+	struct nvgpu_mem preempt_ctxsw_buffer;
+	struct nvgpu_mem spill_ctxsw_buffer;
+	struct nvgpu_mem betacb_ctxsw_buffer;
+	struct nvgpu_mem pagepool_ctxsw_buffer;
+	u32 ctx_id;
+	bool ctx_id_valid;
+	bool cilp_preempt_pending;
+
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;
 #endif

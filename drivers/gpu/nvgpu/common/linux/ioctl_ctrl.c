@@ -20,7 +20,6 @@
 #include <linux/anon_inodes.h>
 #include <linux/fs.h>
 #include <uapi/linux/nvgpu.h>
-#include <uapi/linux/nvgpu-t18x.h>
 
 #include <nvgpu/bitops.h>
 #include <nvgpu/kmem.h>
@@ -54,9 +53,7 @@
 struct gk20a_ctrl_priv {
 	struct device *dev;
 	struct gk20a *g;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct nvgpu_clk_session *clk_session;
-#endif
 };
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
@@ -95,9 +92,7 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 		gk20a_idle(g);
 	}
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	err = nvgpu_clk_arb_init_session(g, &priv->clk_session);
-#endif
 free_ref:
 	if (err)
 		gk20a_put(g);
@@ -110,10 +105,8 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 
 	gk20a_dbg_fn("");
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	if (priv->clk_session)
 		nvgpu_clk_arb_release_session(g, priv->clk_session);
-#endif
 
 	gk20a_put(g);
 	nvgpu_kfree(g, priv);
@@ -944,7 +937,6 @@ static int nvgpu_gpu_get_memory_state(struct gk20a *g,
 	return err;
 }
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 		struct gk20a_ctrl_priv *priv,
 		struct nvgpu_gpu_clk_vf_points_args *args)
@@ -1402,7 +1394,6 @@ static int nvgpu_gpu_get_temperature(struct gk20a *g,
 
 	return err;
 }
-#endif
 
 static int nvgpu_gpu_set_therm_alert_limit(struct gk20a *g,
 		struct nvgpu_gpu_set_therm_alert_limit_args *args)
@@ -1798,7 +1789,6 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			(struct nvgpu_gpu_get_memory_state_args *)buf);
 		break;
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	case NVGPU_GPU_IOCTL_CLK_GET_RANGE:
 		err = nvgpu_gpu_clk_get_range(g, priv,
 			(struct nvgpu_gpu_clk_range_args *)buf);
@@ -1843,7 +1833,6 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		err = nvgpu_gpu_get_temperature(g,
 			(struct nvgpu_gpu_get_temperature_args *)buf);
 		break;
-#endif
 
 	case NVGPU_GPU_IOCTL_SET_THERM_ALERT_LIMIT:
 		err = nvgpu_gpu_set_therm_alert_limit(g,

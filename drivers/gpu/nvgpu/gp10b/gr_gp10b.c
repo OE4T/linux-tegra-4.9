@@ -180,7 +180,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 						lrf_ecc_ded_status,
 						&lrf_single_count_delta,
 						lrf_double_count_delta);
-		g->ecc.gr.t18x.sm_lrf_single_err_count.counters[tpc] +=
+		g->ecc.gr.sm_lrf_single_err_count.counters[tpc] +=
 							lrf_single_count_delta;
 	}
 	if (lrf_ecc_ded_status) {
@@ -192,7 +192,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 						lrf_ecc_ded_status,
 						&lrf_double_count_delta,
 						lrf_single_count_delta);
-		g->ecc.gr.t18x.sm_lrf_double_err_count.counters[tpc] +=
+		g->ecc.gr.sm_lrf_double_err_count.counters[tpc] +=
 							lrf_double_count_delta;
 	}
 	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset,
@@ -217,9 +217,9 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 		ecc_stats_reg_val =
 			gk20a_readl(g,
 				gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r() + offset);
-		g->ecc.gr.t18x.sm_shm_sec_count.counters[tpc] +=
+		g->ecc.gr.sm_shm_sec_count.counters[tpc] +=
 			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_corrected_v(ecc_stats_reg_val);
-		g->ecc.gr.t18x.sm_shm_sed_count.counters[tpc] +=
+		g->ecc.gr.sm_shm_sed_count.counters[tpc] +=
 			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_detected_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~(gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_corrected_m() |
 					gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_detected_m());
@@ -239,7 +239,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 		ecc_stats_reg_val =
 			gk20a_readl(g,
 				gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r() + offset);
-		g->ecc.gr.t18x.sm_shm_ded_count.counters[tpc] +=
+		g->ecc.gr.sm_shm_ded_count.counters[tpc] +=
 			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_double_detected_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~(gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_double_detected_m());
 		gk20a_writel(g,
@@ -280,7 +280,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->ecc.gr.t18x.tex_total_sec_pipe0_count.counters[tpc] +=
+		g->ecc.gr.tex_total_sec_pipe0_count.counters[tpc] +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_m();
 		gk20a_writel(g,
@@ -289,7 +289,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->ecc.gr.t18x.tex_unique_sec_pipe0_count.counters[tpc] +=
+		g->ecc.gr.tex_unique_sec_pipe0_count.counters[tpc] +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_m();
 		gk20a_writel(g,
@@ -304,7 +304,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->ecc.gr.t18x.tex_total_sec_pipe1_count.counters[tpc] +=
+		g->ecc.gr.tex_total_sec_pipe1_count.counters[tpc] +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_m();
 		gk20a_writel(g,
@@ -313,7 +313,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->ecc.gr.t18x.tex_unique_sec_pipe1_count.counters[tpc] +=
+		g->ecc.gr.tex_unique_sec_pipe1_count.counters[tpc] +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_m();
 		gk20a_writel(g,
@@ -336,7 +336,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->ecc.gr.t18x.tex_total_ded_pipe0_count.counters[tpc] +=
+		g->ecc.gr.tex_total_ded_pipe0_count.counters[tpc] +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_m();
 		gk20a_writel(g,
@@ -345,7 +345,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->ecc.gr.t18x.tex_unique_ded_pipe0_count.counters[tpc] +=
+		g->ecc.gr.tex_unique_ded_pipe0_count.counters[tpc] +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_m();
 		gk20a_writel(g,
@@ -360,7 +360,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->ecc.gr.t18x.tex_total_ded_pipe1_count.counters[tpc] +=
+		g->ecc.gr.tex_total_ded_pipe1_count.counters[tpc] +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_m();
 		gk20a_writel(g,
@@ -369,7 +369,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->ecc.gr.t18x.tex_unique_ded_pipe1_count.counters[tpc] +=
+		g->ecc.gr.tex_unique_ded_pipe1_count.counters[tpc] +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_m();
 		gk20a_writel(g,
@@ -881,10 +881,10 @@ int gr_gp10b_init_ctx_state(struct gk20a *g)
 	if (err)
 		return err;
 
-	if (!g->gr.t18x.ctx_vars.preempt_image_size) {
+	if (!g->gr.ctx_vars.preempt_image_size) {
 		op.method.addr =
 			gr_fecs_method_push_adr_discover_preemption_image_size_v();
-		op.mailbox.ret = &g->gr.t18x.ctx_vars.preempt_image_size;
+		op.mailbox.ret = &g->gr.ctx_vars.preempt_image_size;
 		err = gr_gk20a_submit_fecs_method_op(g, op, false);
 		if (err) {
 			nvgpu_err(g, "query preempt image size failed");
@@ -893,7 +893,7 @@ int gr_gp10b_init_ctx_state(struct gk20a *g)
 	}
 
 	gk20a_dbg_info("preempt image size: %u",
-		g->gr.t18x.ctx_vars.preempt_image_size);
+		g->gr.ctx_vars.preempt_image_size);
 
 	gk20a_dbg_fn("done");
 
@@ -940,11 +940,11 @@ int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 	int err = 0;
 
 	if (g->ops.gr.is_valid_gfx_class(g, class) &&
-				g->gr.t18x.ctx_vars.force_preemption_gfxp)
+				g->gr.ctx_vars.force_preemption_gfxp)
 		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
 
 	if (g->ops.gr.is_valid_compute_class(g, class) &&
-			g->gr.t18x.ctx_vars.force_preemption_cilp)
+			g->gr.ctx_vars.force_preemption_cilp)
 		compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
 
 	/* check for invalid combinations */
@@ -987,8 +987,8 @@ int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 				attrib_cb_size);
 
 		err = gr_gp10b_alloc_buffer(vm,
-					g->gr.t18x.ctx_vars.preempt_image_size,
-					&gr_ctx->t18x.preempt_ctxsw_buffer);
+					g->gr.ctx_vars.preempt_image_size,
+					&gr_ctx->preempt_ctxsw_buffer);
 		if (err) {
 			nvgpu_err(g, "cannot allocate preempt buffer");
 			goto fail;
@@ -996,7 +996,7 @@ int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 
 		err = gr_gp10b_alloc_buffer(vm,
 					spill_size,
-					&gr_ctx->t18x.spill_ctxsw_buffer);
+					&gr_ctx->spill_ctxsw_buffer);
 		if (err) {
 			nvgpu_err(g, "cannot allocate spill buffer");
 			goto fail_free_preempt;
@@ -1004,7 +1004,7 @@ int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 
 		err = gr_gp10b_alloc_buffer(vm,
 					attrib_cb_size,
-					&gr_ctx->t18x.betacb_ctxsw_buffer);
+					&gr_ctx->betacb_ctxsw_buffer);
 		if (err) {
 			nvgpu_err(g, "cannot allocate beta buffer");
 			goto fail_free_spill;
@@ -1012,7 +1012,7 @@ int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 
 		err = gr_gp10b_alloc_buffer(vm,
 					pagepool_size,
-					&gr_ctx->t18x.pagepool_ctxsw_buffer);
+					&gr_ctx->pagepool_ctxsw_buffer);
 		if (err) {
 			nvgpu_err(g, "cannot allocate page pool");
 			goto fail_free_betacb;
@@ -1046,11 +1046,11 @@ int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 	return 0;
 
 fail_free_betacb:
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->betacb_ctxsw_buffer);
 fail_free_spill:
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->spill_ctxsw_buffer);
 fail_free_preempt:
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->preempt_ctxsw_buffer);
 fail:
 	return err;
 }
@@ -1070,7 +1070,7 @@ int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	if (err)
 		return err;
 
-	(*gr_ctx)->t18x.ctx_id_valid = false;
+	(*gr_ctx)->ctx_id_valid = false;
 
 	if (flags & NVGPU_OBJ_CTX_FLAGS_SUPPORT_GFXP)
 		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
@@ -1160,13 +1160,13 @@ void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 	if (!gr_ctx)
 		return;
 
-	if (g->gr.t18x.ctx_vars.dump_ctxsw_stats_on_channel_close)
+	if (g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close)
 		dump_ctx_switch_stats(g, vm, gr_ctx);
 
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.pagepool_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->pagepool_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->betacb_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->spill_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->preempt_ctxsw_buffer);
 	gr_gk20a_free_gr_ctx(g, vm, gr_ctx);
 	gk20a_dbg_fn("done");
 }
@@ -1211,7 +1211,7 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 				cta_preempt_option);
 	}
 
-	if (gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va) {
+	if (gr_ctx->preempt_ctxsw_buffer.gpu_va) {
 		u32 addr;
 		u32 size;
 		u32 cbes_reserve;
@@ -1219,10 +1219,10 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		if (g->ops.gr.set_preemption_buffer_va) {
 			if (ctxheader->gpu_va)
 				g->ops.gr.set_preemption_buffer_va(g, ctxheader,
-				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va);
+				gr_ctx->preempt_ctxsw_buffer.gpu_va);
 			else
 				g->ops.gr.set_preemption_buffer_va(g, mem,
-				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va);
+				gr_ctx->preempt_ctxsw_buffer.gpu_va);
 		}
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, true);
@@ -1231,30 +1231,30 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 			goto out;
 		}
 
-		addr = (u64_lo32(gr_ctx->t18x.betacb_ctxsw_buffer.gpu_va) >>
+		addr = (u64_lo32(gr_ctx->betacb_ctxsw_buffer.gpu_va) >>
 			gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()) |
-			(u64_hi32(gr_ctx->t18x.betacb_ctxsw_buffer.gpu_va) <<
+			(u64_hi32(gr_ctx->betacb_ctxsw_buffer.gpu_va) <<
 			 (32 - gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()));
 
 		gk20a_dbg_info("attrib cb addr : 0x%016x", addr);
 		g->ops.gr.commit_global_attrib_cb(g, ch_ctx, addr, true);
 
-		addr = (u64_lo32(gr_ctx->t18x.pagepool_ctxsw_buffer.gpu_va) >>
+		addr = (u64_lo32(gr_ctx->pagepool_ctxsw_buffer.gpu_va) >>
 			gr_scc_pagepool_base_addr_39_8_align_bits_v()) |
-			(u64_hi32(gr_ctx->t18x.pagepool_ctxsw_buffer.gpu_va) <<
+			(u64_hi32(gr_ctx->pagepool_ctxsw_buffer.gpu_va) <<
 			 (32 - gr_scc_pagepool_base_addr_39_8_align_bits_v()));
-		size = gr_ctx->t18x.pagepool_ctxsw_buffer.size;
+		size = gr_ctx->pagepool_ctxsw_buffer.size;
 
 		if (size == g->ops.gr.pagepool_default_size(g))
 			size = gr_scc_pagepool_total_pages_hwmax_v();
 
 		g->ops.gr.commit_global_pagepool(g, ch_ctx, addr, size, true);
 
-		addr = (u64_lo32(gr_ctx->t18x.spill_ctxsw_buffer.gpu_va) >>
+		addr = (u64_lo32(gr_ctx->spill_ctxsw_buffer.gpu_va) >>
 			gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v()) |
-			(u64_hi32(gr_ctx->t18x.spill_ctxsw_buffer.gpu_va) <<
+			(u64_hi32(gr_ctx->spill_ctxsw_buffer.gpu_va) <<
 			 (32 - gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v()));
-		size = gr_ctx->t18x.spill_ctxsw_buffer.size /
+		size = gr_ctx->spill_ctxsw_buffer.size /
 			gr_gpc0_swdx_rm_spill_buffer_size_256b_byte_granularity_v();
 
 		gr_gk20a_ctx_patch_write(g, ch_ctx,
@@ -1489,8 +1489,8 @@ void gr_gp10b_commit_global_attrib_cb(struct gk20a *g,
 	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
 	int attrBufferSize;
 
-	if (gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va)
-		attrBufferSize = gr_ctx->t18x.betacb_ctxsw_buffer.size;
+	if (gr_ctx->preempt_ctxsw_buffer.gpu_va)
+		attrBufferSize = gr_ctx->betacb_ctxsw_buffer.size;
 	else
 		attrBufferSize = g->ops.gr.calc_global_ctx_buffer_size(g);
 
@@ -1606,10 +1606,10 @@ int gr_gp10b_init_fs_state(struct gk20a *g)
 			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_disp_ctrl_r(), data);
 
-	if (g->gr.t18x.fecs_feature_override_ecc_val != 0) {
+	if (g->gr.fecs_feature_override_ecc_val != 0) {
 		gk20a_writel(g,
 			gr_fecs_feature_override_ecc_r(),
-			g->gr.t18x.fecs_feature_override_ecc_val);
+			g->gr.fecs_feature_override_ecc_val);
 	}
 
 	return gr_gm20b_init_fs_state(g);
@@ -1718,7 +1718,7 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 	if (!gr_ctx)
 		return -EINVAL;
 
-	if (gr_ctx->t18x.cilp_preempt_pending) {
+	if (gr_ctx->cilp_preempt_pending) {
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP is already pending for chid %d",
 				fault_ch->chid);
@@ -1726,24 +1726,24 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 	}
 
 	/* get ctx_id from the ucode image */
-	if (!gr_ctx->t18x.ctx_id_valid) {
+	if (!gr_ctx->ctx_id_valid) {
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP: looking up ctx id");
-		ret = gr_gk20a_get_ctx_id(g, fault_ch, &gr_ctx->t18x.ctx_id);
+		ret = gr_gk20a_get_ctx_id(g, fault_ch, &gr_ctx->ctx_id);
 		if (ret) {
 			nvgpu_err(g, "CILP: error looking up ctx id!");
 			return ret;
 		}
-		gr_ctx->t18x.ctx_id_valid = true;
+		gr_ctx->ctx_id_valid = true;
 	}
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-			"CILP: ctx id is 0x%x", gr_ctx->t18x.ctx_id);
+			"CILP: ctx id is 0x%x", gr_ctx->ctx_id);
 
 	/* send ucode method to set ctxsw interrupt */
 	ret = gr_gk20a_submit_fecs_sideband_method_op(g,
 			(struct fecs_method_op_gk20a) {
-			.method.data = gr_ctx->t18x.ctx_id,
+			.method.data = gr_ctx->ctx_id,
 			.method.addr =
 			gr_fecs_method_push_adr_configure_interrupt_completion_option_v(),
 			.mailbox = {
@@ -1773,8 +1773,8 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 	}
 
 	/* set cilp_preempt_pending = true and record the channel */
-	gr_ctx->t18x.cilp_preempt_pending = true;
-	g->gr.t18x.cilp_preempt_pending_chid = fault_ch->chid;
+	gr_ctx->cilp_preempt_pending = true;
+	g->gr.cilp_preempt_pending_chid = fault_ch->chid;
 
 	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
 		struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
@@ -1801,15 +1801,15 @@ static int gr_gp10b_clear_cilp_preempt_pending(struct gk20a *g,
 
 	/* The ucode is self-clearing, so all we need to do here is
 	   to clear cilp_preempt_pending. */
-	if (!gr_ctx->t18x.cilp_preempt_pending) {
+	if (!gr_ctx->cilp_preempt_pending) {
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP is already cleared for chid %d\n",
 				fault_ch->chid);
 		return 0;
 	}
 
-	gr_ctx->t18x.cilp_preempt_pending = false;
-	g->gr.t18x.cilp_preempt_pending_chid = -1;
+	gr_ctx->cilp_preempt_pending = false;
+	g->gr.cilp_preempt_pending_chid = -1;
 
 	return 0;
 }
@@ -1925,7 +1925,7 @@ static int gr_gp10b_get_cilp_preempt_pending_chid(struct gk20a *g, int *__chid)
 	int chid;
 	int ret = -EINVAL;
 
-	chid = g->gr.t18x.cilp_preempt_pending_chid;
+	chid = g->gr.cilp_preempt_pending_chid;
 
 	ch = gk20a_channel_get(gk20a_fifo_channel_from_chid(g, chid));
 	if (!ch)
@@ -1933,7 +1933,7 @@ static int gr_gp10b_get_cilp_preempt_pending_chid(struct gk20a *g, int *__chid)
 
 	gr_ctx = ch->ch_ctx.gr_ctx;
 
-	if (gr_ctx->t18x.cilp_preempt_pending) {
+	if (gr_ctx->cilp_preempt_pending) {
 		*__chid = chid;
 		ret = 0;
 	}
@@ -2121,7 +2121,7 @@ int gr_gp10b_suspend_contexts(struct gk20a *g,
 		nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
 				   NVGPU_TIMER_CPU_TIMER);
 		do {
-			if (!gr_ctx->t18x.cilp_preempt_pending)
+			if (!gr_ctx->cilp_preempt_pending)
 				break;
 
 			nvgpu_usleep_range(delay, delay * 2);
@@ -2129,7 +2129,7 @@ int gr_gp10b_suspend_contexts(struct gk20a *g,
 		} while (!nvgpu_timeout_expired(&timeout));
 
 		/* If cilp is still pending at this point, timeout */
-		if (gr_ctx->t18x.cilp_preempt_pending)
+		if (gr_ctx->cilp_preempt_pending)
 			err = -ETIMEDOUT;
 	}
 

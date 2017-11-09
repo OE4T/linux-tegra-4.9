@@ -339,10 +339,8 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 #ifdef CONFIG_TEGRA_GK20A
 	{ .compatible = "nvidia,tegra210-gm20b",
 		.data = &gm20b_tegra_platform },
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	{ .compatible = "nvidia,tegra186-gp10b",
 		.data = &gp10b_tegra_platform },
-#endif
 #ifdef CONFIG_TEGRA_19x_GPU
 	{ .compatible = TEGRA_19x_GPU_COMPAT_TEGRA,
 		.data = &t19x_gpu_tegra_platform },
@@ -1035,11 +1033,9 @@ static int nvgpu_read_fuse_overrides(struct gk20a *g)
 		case GM20B_FUSE_OPT_TPC_DISABLE:
 			g->tpc_fs_mask_user = ~value;
 			break;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 		case GP10B_FUSE_OPT_ECC_EN:
-			g->gr.t18x.fecs_feature_override_ecc_val = value;
+			g->gr.fecs_feature_override_ecc_val = value;
 			break;
-#endif
 		default:
 			nvgpu_err(g, "ignore unknown fuse override %08x", fuse);
 			break;
@@ -1184,9 +1180,7 @@ int nvgpu_remove(struct device *dev, struct class *class)
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_exit(dev);
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	nvgpu_clk_arb_cleanup_arbiter(g);
-#endif
 
 	gk20a_user_deinit(dev, class);
 

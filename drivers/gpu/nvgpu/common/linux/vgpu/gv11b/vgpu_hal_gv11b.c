@@ -48,6 +48,7 @@
 #include <gp10b/mm_gp10b.h>
 #include <gp10b/mc_gp10b.h>
 #include <gp10b/ce_gp10b.h>
+#include "gp10b/gr_gp10b.h"
 #include <gp10b/fifo_gp10b.h>
 #include <gp10b/therm_gp10b.h>
 #include <gp10b/priv_ring_gp10b.h>

@@ -40,6 +40,7 @@
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/fb_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
+#include "gp10b/gr_gp10b.h"
 #include "gp10b/gr_ctx_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/gp10b_gating_reglist.h"

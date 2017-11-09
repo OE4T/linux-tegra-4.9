@@ -22,7 +22,6 @@
 #include <linux/dma-buf.h>
 #include <linux/poll.h>
 #include <uapi/linux/nvgpu.h>
-#include <uapi/linux/nvgpu-t18x.h>
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>

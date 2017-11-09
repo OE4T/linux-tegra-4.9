@@ -46,6 +46,8 @@ struct zbc_query_params;
 struct channel_ctx_gk20a;
 struct nvgpu_warpstate;
 struct nvgpu_gr_sm_error_state;
+struct gr_gk20a_isr_data;
+struct gk20a_debug_output;
 
 enum {
 	VOLTA_CHANNEL_GPFIFO_A  = 0xC36F,

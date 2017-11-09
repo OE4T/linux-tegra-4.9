@@ -2214,8 +2214,7 @@ int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 
 
 
-int gr_gv11b_commit_global_timeslice(struct gk20a *g,
-					struct channel_gk20a *c, bool patch)
+int gr_gv11b_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct channel_ctx_gk20a *ch_ctx = NULL;
 	u32 pd_ab_dist_cfg0;
@@ -2230,15 +2229,6 @@ int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 	ds_debug = gk20a_readl(g, gr_ds_debug_r());
 	mpc_vtg_debug = gk20a_readl(g, gr_gpcs_tpcs_mpc_vtg_debug_r());
 
-	if (patch) {
-		int err;
-
-		ch_ctx = &c->ch_ctx;
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
-		if (err)
-			return err;
-	}
-
 	pe_vaf = gk20a_readl(g, gr_gpcs_tpcs_pe_vaf_r());
 	pe_vsc_vpc = gk20a_readl(g, gr_gpcs_tpcs_pes_vsc_vpc_r());
 
@@ -2252,17 +2242,14 @@ int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 							mpc_vtg_debug;
 
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pe_vaf_r(), pe_vaf,
-									patch);
+									false);
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pes_vsc_vpc_r(),
-							pe_vsc_vpc, patch);
+							pe_vsc_vpc, false);
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg0_r(),
-							pd_ab_dist_cfg0, patch);
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_debug_r(), ds_debug, patch);
+							pd_ab_dist_cfg0, false);
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_debug_r(), ds_debug, false);
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_debug_r(),
-							mpc_vtg_debug, patch);
-
-	if (patch)
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+							mpc_vtg_debug, false);
 
 	return 0;
 }
@@ -2568,7 +2555,7 @@ int gv11b_gr_update_sm_error_state(struct gk20a *g,
 			gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_r() + offset,
 			gr->sm_error_states[sm_id].hww_warp_esr_report_mask);
 	} else {
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, false);
 		if (err)
 			goto enable_ctxsw;
 
@@ -2583,7 +2570,7 @@ int gv11b_gr_update_sm_error_state(struct gk20a *g,
 			gr->sm_error_states[sm_id].hww_warp_esr_report_mask,
 			true);
 
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx, false);
 	}
 
 enable_ctxsw:

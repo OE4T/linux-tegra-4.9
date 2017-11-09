@@ -716,14 +716,12 @@ static void isp_capture_request_unpin(struct tegra_isp_channel *chan,
 
 	mutex_lock(&capture->capture_desc_ctx.unpins_list_lock);
 	unpins = capture->capture_desc_ctx.unpins_list[buffer_index];
-	if (unpins == NULL) {
-		mutex_unlock(&capture->capture_desc_ctx.unpins_list_lock);
-		return;
+	if (unpins != NULL) {
+		for (i = 0; i < unpins->num_unpins; i++)
+			capture_common_unpin_memory(&unpins->data[i]);
+		devm_kfree(chan->isp_dev, unpins);
+		capture->capture_desc_ctx.unpins_list[buffer_index] = NULL;
 	}
-	for (i = 0; i < unpins->num_unpins; i++)
-		capture_common_unpin_memory(&unpins->data[i]);
-	devm_kfree(chan->isp_dev, unpins);
-	capture->capture_desc_ctx.unpins_list[buffer_index] = NULL;
 	mutex_unlock(&capture->capture_desc_ctx.unpins_list_lock);
 }
 
@@ -736,14 +734,12 @@ static void isp_capture_program_request_unpin(struct tegra_isp_channel *chan,
 
 	mutex_lock(&capture->program_desc_ctx.unpins_list_lock);
 	unpins = capture->program_desc_ctx.unpins_list[buffer_index];
-	if (unpins == NULL) {
-		mutex_unlock(&capture->program_desc_ctx.unpins_list_lock);
-		return;
+	if (unpins != NULL) {
+		for (i = 0; i < unpins->num_unpins; i++)
+			capture_common_unpin_memory(&unpins->data[i]);
+		devm_kfree(chan->isp_dev, unpins);
+		capture->program_desc_ctx.unpins_list[buffer_index] = NULL;
 	}
-	for (i = 0; i < unpins->num_unpins; i++)
-		capture_common_unpin_memory(&unpins->data[i]);
-	devm_kfree(chan->isp_dev, unpins);
-	capture->program_desc_ctx.unpins_list[buffer_index] = NULL;
 	mutex_unlock(&capture->program_desc_ctx.unpins_list_lock);
 }
 
@@ -753,10 +749,8 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 	struct isp_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_msg;
 	int err = 0;
-	struct capture_common_unpins *unpins;
+	struct capture_common_unpins *unpins = NULL;
 	struct capture_common_pin_req cap_common_req;
-	struct capture_common_relocs *relocs;
-	uint32_t __user *reloc_relatives;
 
 	if (capture == NULL) {
 		dev_err(chan->isp_dev,
@@ -777,35 +771,6 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 				req->buffer_index;
 
 	/* memory pin and reloc */
-	unpins = devm_kzalloc(chan->isp_dev,
-			sizeof(struct capture_common_unpins) +
-				(sizeof(struct capture_common_buf) *
-				req->isp_program_relocs.num_relocs),
-			GFP_KERNEL);
-	if (unpins == NULL)
-		return -ENOMEM;
-
-	relocs = devm_kzalloc(chan->isp_dev,
-			sizeof(struct capture_common_relocs) +
-			(sizeof(uint32_t) * req->isp_program_relocs.num_relocs),
-			GFP_KERNEL);
-	if (unlikely(relocs == NULL)) {
-		dev_err(chan->isp_dev, "failed to allocate relocs\n");
-		goto fail;
-	}
-
-	relocs->num_relocs = req->isp_program_relocs.num_relocs;
-
-	reloc_relatives = (uint32_t __user *)
-			(uintptr_t)req->isp_program_relocs.reloc_relatives;
-
-	err = copy_from_user(relocs->reloc_relatives, reloc_relatives,
-			relocs->num_relocs * sizeof(uint32_t)) ? -EFAULT : 0;
-	if (err < 0) {
-		dev_err(chan->isp_dev, "failed to copy program user-relocs\n");
-		goto reloc_fail;
-	}
-
 	cap_common_req.dev = chan->isp_dev;
 	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
 	cap_common_req.unpins = unpins;
@@ -814,10 +779,16 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 	cap_common_req.request_size = capture->program_desc_ctx.request_size;
 	cap_common_req.request_offset = req->buffer_index *
 					capture->program_desc_ctx.request_size;
-	cap_common_req.relocs = relocs;
 	cap_common_req.requests_mem = capture->program_desc_ctx.desc_mem;
+	cap_common_req.num_relocs = req->isp_program_relocs.num_relocs;
+	cap_common_req.reloc_user = (uint32_t __user *)
+			(uintptr_t)req->isp_program_relocs.reloc_relatives;
 
-	capture_common_request_pin_and_reloc(&cap_common_req);
+	err = capture_common_request_pin_and_reloc(&cap_common_req);
+	if (err < 0) {
+		dev_err(chan->isp_dev, "request pin and reloc failed\n");
+		goto fail;
+	}
 
 	/* add pinned memory ctx to unpins_list */
 	mutex_lock(&capture->program_desc_ctx.unpins_list_lock);
@@ -832,13 +803,11 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 			sizeof(capture_msg));
 	if (err < 0) {
 		dev_err(chan->isp_dev, "IVC program submit failed\n");
-		goto reloc_fail;
+		goto fail;
 	}
 
 	return 0;
 
-reloc_fail:
-	devm_kfree(chan->isp_dev, relocs);
 fail:
 	isp_capture_program_request_unpin(chan, req->buffer_index);
 	return err;
@@ -880,10 +849,8 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 {
 	struct isp_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_msg;
-	struct capture_common_unpins *unpins;
+	struct capture_common_unpins *unpins = NULL;
 	struct capture_common_pin_req cap_common_req;
-	struct capture_common_relocs *relocs;
-	uint32_t __user *reloc_relatives;
 	int err = 0;
 
 	if (capture == NULL) {
@@ -903,35 +870,6 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 	capture_msg.header.channel_id = capture->channel_id;
 	capture_msg.capture_isp_request_req.buffer_index = req->buffer_index;
 
-	unpins = devm_kzalloc(chan->isp_dev,
-				sizeof(struct capture_common_unpins) +
-					(sizeof(struct capture_common_buf) *
-					req->isp_relocs.num_relocs),
-				GFP_KERNEL);
-	if (unpins == NULL)
-		return -ENOMEM;
-
-	relocs = devm_kzalloc(chan->isp_dev,
-			sizeof(struct capture_common_relocs) +
-				(sizeof(uint32_t) * req->isp_relocs.num_relocs),
-				GFP_KERNEL);
-	if (unlikely(relocs == NULL)) {
-		dev_err(chan->isp_dev, "failed to allocate relocs\n");
-		goto fail;
-	}
-
-	relocs->num_relocs = req->isp_relocs.num_relocs;
-
-	reloc_relatives = (uint32_t __user *)
-				(uintptr_t)req->isp_relocs.reloc_relatives;
-
-	err = copy_from_user(relocs->reloc_relatives, reloc_relatives,
-			relocs->num_relocs * sizeof(uint32_t)) ? -EFAULT : 0;
-	if (err < 0) {
-		dev_err(chan->isp_dev, "failed to copy request user relocs\n");
-		goto reloc_fail;
-	}
-
 	/* pin and reloc */
 	cap_common_req.dev = chan->isp_dev;
 	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
@@ -941,10 +879,16 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 	cap_common_req.request_size = capture->capture_desc_ctx.request_size;
 	cap_common_req.request_offset = req->buffer_index *
 					capture->capture_desc_ctx.request_size;
-	cap_common_req.relocs = relocs;
 	cap_common_req.requests_mem = capture->capture_desc_ctx.desc_mem;
+	cap_common_req.num_relocs = req->isp_relocs.num_relocs;
+	cap_common_req.reloc_user = (uint32_t __user *)
+			(uintptr_t)req->isp_relocs.reloc_relatives;
 
-	capture_common_request_pin_and_reloc(&cap_common_req);
+	err = capture_common_request_pin_and_reloc(&cap_common_req);
+	if (err < 0) {
+		dev_err(chan->isp_dev, "request pin and reloc failed\n");
+		goto fail;
+	}
 
 	/* add pinned memory ctx to unpins_list */
 	mutex_lock(&capture->capture_desc_ctx.unpins_list_lock);
@@ -959,13 +903,11 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 			sizeof(capture_msg));
 	if (err < 0) {
 		dev_err(chan->isp_dev, "IVC capture submit failed\n");
-		goto reloc_fail;
+		goto fail;
 	}
 
 	return 0;
 
-reloc_fail:
-	devm_kfree(chan->isp_dev, relocs);
 fail:
 	isp_capture_request_unpin(chan, req->buffer_index);
 	return err;

@@ -13,7 +13,7 @@
 #include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
 #include <linux/nvhost.h>
-#include <linux/scatterlist.h>
+#include <linux/slab.h>
 #include <media/capture_common.h>
 #include <media/mc_common.h>
 
@@ -81,16 +81,51 @@ void capture_common_unpin_memory(struct capture_common_buf *unpin_data)
 
 int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 {
-	uint32_t num_relocs = req->relocs->num_relocs;
+	uint32_t *reloc_relatives;
 	void *reloc_page_addr = NULL;
 	int last_page = -1;
 	int i;
 	int err = 0;
 
-	dev_dbg(req->dev, "%s: relocating %u addresses", __func__, num_relocs);
+	if (!req) {
+		pr_err("%s: NULL pin request", __func__);
+		return -EINVAL;
+	}
 
-	for (i = 0; i < num_relocs; i++) {
-		uint32_t reloc_relative = req->relocs->reloc_relatives[i];
+	if (req->unpins) {
+		dev_err(req->dev, "%s: request unpins already exist", __func__);
+		return -EEXIST;
+	}
+
+	req->unpins = devm_kzalloc(req->dev,
+		sizeof(struct capture_common_unpins) +
+			(sizeof(struct capture_common_buf) * req->num_relocs),
+		GFP_KERNEL);
+	if (req->unpins == NULL) {
+		dev_err(req->dev, "failed to allocate request unpins\n");
+		return -ENOMEM;
+	}
+
+	reloc_relatives = kcalloc(req->num_relocs, sizeof(uint32_t),
+		GFP_KERNEL);
+	if (reloc_relatives == NULL) {
+		dev_err(req->dev, "failed to allocate request reloc array\n");
+		err = -ENOMEM;
+		goto reloc_fail;
+	}
+
+	err = copy_from_user(reloc_relatives, req->reloc_user,
+			req->num_relocs * sizeof(uint32_t)) ? -EFAULT : 0;
+	if (err < 0) {
+		dev_err(req->dev, "failed to copy request user relocs\n");
+		goto cp_fail;
+	}
+
+	dev_dbg(req->dev, "%s: relocating %u addresses", __func__,
+			req->num_relocs);
+
+	for (i = 0; i < req->num_relocs; i++) {
+		uint32_t reloc_relative = reloc_relatives[i];
 		uint32_t reloc_offset = req->request_offset + reloc_relative;
 
 		uint64_t surface_raw;
@@ -181,6 +216,7 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 			    req->request_size, DMA_TO_DEVICE);
 	}
 
+	kfree(reloc_relatives);
 	return 0;
 
 fail:
@@ -191,5 +227,10 @@ fail:
 	for (i = 0; i < req->unpins->num_unpins; i++)
 		capture_common_unpin_memory(&req->unpins->data[i]);
 
+cp_fail:
+	kfree(reloc_relatives);
+
+reloc_fail:
+	devm_kfree(req->dev, req->unpins);
 	return err;
 }

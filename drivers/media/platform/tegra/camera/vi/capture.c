@@ -11,16 +11,14 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#include <linux/uaccess.h>
+
 #include <linux/completion.h>
-#include <linux/dma-buf.h>
-#include <linux/dma-mapping.h>
 #include <linux/nvhost.h>
 #include <linux/of_platform.h>
 #include <linux/printk.h>
-#include <linux/scatterlist.h>
 #include <linux/tegra-capture-ivc.h>
 #include <media/capture.h>
+#include <media/capture_common.h>
 #include <media/capture_vi_channel.h>
 
 #include "soc/tegra/camrtc-capture.h"
@@ -40,23 +38,11 @@
 #define CAPTURE_CHANNEL_INVALID_ID 0xFFFF
 #define CAPTURE_CHANNEL_INVALID_MASK 0llu
 
-struct vi_capture_buf {
-	struct dma_buf *buf;
-	struct dma_buf_attachment *attach;
-	struct sg_table *sgt;
-	dma_addr_t iova;
-};
-
-struct vi_capture_unpins {
-	uint32_t num_unpins;
-	struct vi_capture_buf data[];
-};
-
 struct vi_capture {
 	uint16_t channel_id;
 	struct device *rtcpu_dev;
 	struct tegra_vi_channel *vi_channel;
-	struct vi_capture_buf requests;
+	struct capture_common_buf requests;
 	size_t request_buf_size;
 	uint32_t queue_depth;
 	uint32_t request_size;
@@ -71,7 +57,7 @@ struct vi_capture {
 	struct CAPTURE_CONTROL_MSG control_resp_msg;
 
 	struct mutex unpins_list_lock;
-	struct vi_capture_unpins **unpins_list;
+	struct capture_common_unpins **unpins_list;
 };
 
 static void vi_capture_ivc_control_callback(const void *ivc_resp,
@@ -258,67 +244,6 @@ fail:
 	return err;
 }
 
-static int pin_memory(struct device *dev,
-		uint32_t mem, struct vi_capture_buf *unpin_data);
-static void unpin_memory(struct vi_capture_buf *unpin_data);
-
-static int pin_memory(struct device *dev,
-		uint32_t mem, struct vi_capture_buf *unpin_data)
-{
-	struct dma_buf *buf;
-	struct dma_buf_attachment *attach;
-	struct sg_table *sgt;
-	int err = 0;
-
-	buf = dma_buf_get(mem);
-	if (IS_ERR(buf)) {
-		err = PTR_ERR(buf);
-		goto fail;
-	}
-
-	attach = dma_buf_attach(buf, dev);
-	if (IS_ERR(attach)) {
-		err = PTR_ERR(attach);
-		goto fail;
-	}
-
-	sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
-	if (IS_ERR(sgt)) {
-		err = PTR_ERR(sgt);
-		goto fail;
-	}
-
-	if (sg_dma_address(sgt->sgl) == 0)
-		sg_dma_address(sgt->sgl) = sg_phys(sgt->sgl);
-
-	unpin_data->iova = sg_dma_address(sgt->sgl);
-	unpin_data->buf = buf;
-	unpin_data->attach = attach;
-	unpin_data->sgt = sgt;
-
-	return 0;
-
-fail:
-	unpin_memory(unpin_data);
-	return err;
-}
-
-static void unpin_memory(struct vi_capture_buf *unpin_data)
-{
-	if (unpin_data->sgt != NULL)
-		dma_buf_unmap_attachment(unpin_data->attach, unpin_data->sgt,
-				DMA_BIDIRECTIONAL);
-	if (unpin_data->attach != NULL)
-		dma_buf_detach(unpin_data->buf, unpin_data->attach);
-	if (unpin_data->buf != NULL)
-		dma_buf_put(unpin_data->buf);
-
-	unpin_data->sgt = NULL;
-	unpin_data->attach = NULL;
-	unpin_data->buf = NULL;
-	unpin_data->iova = 0;
-}
-
 static int vi_capture_setup_syncpts(struct tegra_vi_channel *chan,
 				uint32_t flags);
 static void vi_capture_release_syncpts(struct tegra_vi_channel *chan);
@@ -433,7 +358,8 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	/* pin the capture descriptor ring buffer */
 	dev_dbg(chan->dev, "%s: descr buffer handle %u\n",
 			__func__, setup->mem);
-	err = pin_memory(capture->rtcpu_dev, setup->mem, &capture->requests);
+	err = capture_common_pin_memory(capture->rtcpu_dev,
+			setup->mem, &capture->requests);
 	if (err < 0) {
 		dev_err(chan->dev, "%s: memory setup failed\n", __func__);
 		return -EFAULT;
@@ -444,7 +370,8 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 
 	/* allocate for unpin list based on queue depth */
 	capture->unpins_list = devm_kzalloc(chan->dev,
-			sizeof(struct vi_capture_unpins *) * capture->queue_depth,
+			sizeof(struct capture_common_unpins *) *
+				capture->queue_depth,
 			GFP_KERNEL);
 	if (unlikely(capture->unpins_list == NULL)) {
 		dev_err(chan->dev, "failed to allocate unpins array\n");
@@ -521,7 +448,7 @@ control_cb_fail:
 syncpt_fail:
 	devm_kfree(chan->dev, capture->unpins_list);
 unpins_list_fail:
-	unpin_memory(&capture->requests);
+	capture_common_unpin_memory(&capture->requests);
 	return err;
 }
 
@@ -675,7 +602,7 @@ int vi_capture_release(struct tegra_vi_channel *chan,
 		vi_capture_request_unpin(chan, i);
 
 	vi_capture_release_syncpts(chan);
-	unpin_memory(&capture->requests);
+	capture_common_unpin_memory(&capture->requests);
 
 	capture->channel_id = CAPTURE_CHANNEL_INVALID_ID;
 
@@ -825,136 +752,18 @@ struct surface_t {
 	uint32_t offset_hi;
 };
 
-static int vi_capture_request_pin_and_reloc(struct tegra_vi_channel *chan,
-		struct vi_capture_req *req)
-{
-	struct vi_capture *capture = chan->capture_data;
-	uint32_t num_relocs = req->num_relocs;
-	uint32_t __user *reloc_relatives =
-			(uint32_t __user *)(uintptr_t)req->reloc_relatives;
-	uint32_t local_reloc_relatives[VI_NUM_ATOMP_SURFACES];
-	struct vi_capture_unpins *unpins;
-	uint32_t request_offset = req->buffer_index * capture->request_size;
-	void *reloc_page_addr = NULL;
-	uint32_t prev_mem = 0;
-	int last_page = -1;
-	dma_addr_t surface_phys_addr = 0;
-	int i = 0;
-	int err = 0;
-
-	err = copy_from_user(local_reloc_relatives, reloc_relatives,
-		num_relocs * sizeof(uint32_t)) ? -EFAULT : 0;
-	if (err < 0)
-		return err;
-
-	unpins = devm_kzalloc(chan->dev,
-			sizeof(struct vi_capture_unpins) +
-			sizeof(struct vi_capture_buf) * num_relocs,
-			GFP_KERNEL);
-	if (unpins == NULL)
-		return -ENOMEM;
-
-	dev_dbg(chan->dev, "%s: relocating %u surfaces\n",
-			__func__, num_relocs);
-	for (i = 0; i < num_relocs; i++) {
-		uint32_t reloc_offset =
-				request_offset + local_reloc_relatives[i];
-		uint64_t surface_raw;
-		struct surface_t *surface;
-		uint32_t mem;
-		uint32_t target_offset;
-		dma_addr_t target_phys_addr;
-
-		dev_dbg(chan->dev,
-			"%s: idx:%i reloc:%u reloc_offset:%u", __func__,
-			i, local_reloc_relatives[i], reloc_offset);
-
-		/* locate page of the request descr buffer relocation is on */
-		if (last_page != reloc_offset >> PAGE_SHIFT) {
-			if (reloc_page_addr != NULL)
-				dma_buf_kunmap(capture->requests.buf, last_page,
-						reloc_page_addr);
-
-			reloc_page_addr = dma_buf_kmap(capture->requests.buf,
-					reloc_offset >> PAGE_SHIFT);
-			last_page = reloc_offset >> PAGE_SHIFT;
-
-			if (unlikely(reloc_page_addr == NULL)) {
-				dev_err(chan->dev,
-					"%s: couldn't map request\n", __func__);
-				goto fail;
-			}
-		}
-
-		/* read surface offset and memory handle from request descr */
-		surface_raw = __raw_readq(
-				(void __iomem *)(reloc_page_addr +
-				(reloc_offset & ~PAGE_MASK)));
-		surface = (struct surface_t *)&surface_raw;
-		target_offset = surface->offset;
-		mem = surface->offset_hi;
-		dev_dbg(chan->dev, "%s: hmem:%u offset:%u\n", __func__,
-				mem, target_offset);
-
-		if (mem != prev_mem) {
-			err = pin_memory(chan->dev,
-					 mem, &unpins->data[unpins->num_unpins]);
-			if (err < 0) {
-				goto fail;
-			}
-			unpins->num_unpins++;
-			surface_phys_addr = unpins->data[i].iova;
-		}
-
-		target_phys_addr = surface_phys_addr + target_offset;
-		dev_dbg(chan->dev, "%s: surface addr %lx at desc %lx\n",
-		    __func__, (unsigned long)target_phys_addr,
-		    (unsigned long)reloc_page_addr +
-		    (reloc_offset & ~PAGE_MASK));
-
-		/* write relocated physical address to request descr */
-		__raw_writeq(
-			target_phys_addr,
-			(void __iomem *)(reloc_page_addr +
-				(reloc_offset & ~PAGE_MASK)));
-
-		dma_sync_single_range_for_device(capture->rtcpu_dev,
-		    capture->requests.iova, request_offset,
-		    capture->request_size, DMA_TO_DEVICE);
-	}
-
-	/* assign the unpins list to the capture to be unpinned and */
-	/* freed at capture completion (vi_capture_request_unpin) */
-	mutex_lock(&capture->unpins_list_lock);
-	capture->unpins_list[req->buffer_index] = unpins;
-	mutex_unlock(&capture->unpins_list_lock);
-
-	return 0;
-
-fail:
-	if (reloc_page_addr != NULL)
-		dma_buf_kunmap(capture->requests.buf, last_page,
-			reloc_page_addr);
-
-	for (i = 0; i < unpins->num_unpins; i++)
-		unpin_memory(&unpins->data[i]);
-	devm_kfree(chan->dev, unpins);
-
-	return err;
-}
-
 static void vi_capture_request_unpin(struct tegra_vi_channel *chan,
 		uint32_t buffer_index)
 {
 	struct vi_capture *capture = chan->capture_data;
-	struct vi_capture_unpins *unpins;
+	struct capture_common_unpins *unpins;
 	int i = 0;
 
 	mutex_lock(&capture->unpins_list_lock);
 	unpins = capture->unpins_list[buffer_index];
 	if (unpins != NULL) {
 		for (i = 0; i < unpins->num_unpins; i++)
-			unpin_memory(&unpins->data[i]);
+			capture_common_unpin_memory(&unpins->data[i]);
 		capture->unpins_list[buffer_index] = NULL;
 		devm_kfree(chan->dev, unpins);
 	}
@@ -966,6 +775,8 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 {
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_desc;
+	struct capture_common_unpins *unpins = NULL;
+	struct capture_common_pin_req cap_common_req = {0};
 	int err = 0;
 
 	if (capture == NULL) {
@@ -985,12 +796,30 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 	capture_desc.header.channel_id = capture->channel_id;
 	capture_desc.capture_request_req.buffer_index = req->buffer_index;
 
-	/* perform surface pinning and relocation */
-	err = vi_capture_request_pin_and_reloc(chan, req);
+	/* pin and reloc */
+	cap_common_req.dev = chan->dev;
+	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
+	cap_common_req.unpins = unpins;
+	cap_common_req.requests = &capture->requests;
+	cap_common_req.requests_dev = NULL;
+	cap_common_req.request_size = capture->request_size;
+	cap_common_req.request_offset = req->buffer_index *
+			capture->request_size;
+	cap_common_req.num_relocs = req->num_relocs;
+	cap_common_req.reloc_user = (uint32_t __user *)
+			(uintptr_t)req->reloc_relatives;
+
+	err = capture_common_request_pin_and_reloc(&cap_common_req);
 	if (err < 0) {
-		dev_err(chan->dev, "relocation failed\n");
+		dev_err(chan->dev, "request relocation failed\n");
 		return err;
 	}
+
+	/* assign the unpins list to the capture to be unpinned and */
+	/* freed at capture completion (vi_capture_request_unpin) */
+	mutex_lock(&capture->unpins_list_lock);
+	capture->unpins_list[req->buffer_index] = unpins;
+	mutex_unlock(&capture->unpins_list_lock);
 
 	dev_dbg(chan->dev, "%s: sending chan_id %u msg_id %u buf:%u\n",
 			__func__, capture_desc.header.channel_id,

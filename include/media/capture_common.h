@@ -26,11 +26,6 @@ struct capture_common_unpins {
 	struct capture_common_buf data[];
 };
 
-struct capture_common_relocs {
-	uint32_t num_relocs;
-	uint32_t reloc_relatives[];
-};
-
 struct capture_common_pin_req {
 	struct device *dev;
 	struct device *rtcpu_dev;
@@ -40,7 +35,8 @@ struct capture_common_pin_req {
 	uint32_t request_size;
 	uint32_t request_offset;
 	uint32_t requests_mem;
-	struct capture_common_relocs *relocs;
+	uint32_t num_relocs;
+	uint32_t __user *reloc_user;
 };
 
 int capture_common_pin_memory(struct device *dev,

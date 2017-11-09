@@ -261,9 +261,15 @@ static int of_tegra_skin_power_feature_parse(
 			}
 
 			node = of_find_node_by_phandle(out_args.args[0]);
-			if (node)
+			if (node) {
 				back_f->back_dev =
 					of_find_backlight_by_node(node);
+				if (!back_f->back_dev) {
+					of_err = -EPROBE_DEFER;
+					pr_err("tegra-skin: of_find_backlight_by_node failed\n");
+					goto out;
+				}
+			}
 
 			pf->feature_data = (void *)back_f;
 			break;

@@ -447,6 +447,7 @@ int nvhost_module_set_rate(struct platform_device *dev, void *priv,
 	mutex_unlock(&client_list_lock);
 	return ret;
 }
+EXPORT_SYMBOL(nvhost_module_set_rate);
 
 int nvhost_module_add_client(struct platform_device *dev, void *priv)
 {
@@ -469,6 +470,7 @@ int nvhost_module_add_client(struct platform_device *dev, void *priv)
 
 	return 0;
 }
+EXPORT_SYMBOL(nvhost_module_add_client);
 
 void nvhost_module_remove_client(struct platform_device *dev, void *priv)
 {
@@ -494,6 +496,7 @@ void nvhost_module_remove_client(struct platform_device *dev, void *priv)
 	}
 	mutex_unlock(&client_list_lock);
 }
+EXPORT_SYMBOL(nvhost_module_remove_client);
 
 static ssize_t force_on_store(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count)

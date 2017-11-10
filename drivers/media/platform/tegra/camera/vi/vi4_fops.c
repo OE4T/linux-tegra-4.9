@@ -666,7 +666,7 @@ static void tegra_channel_stop_kthreads(struct tegra_channel *chan)
 	mutex_unlock(&chan->stop_kthread_lock);
 }
 
-static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
+static int vi4_update_clknbw(struct tegra_channel *chan, u8 on)
 {
 	int ret = 0;
 	unsigned long request_pixelrate;
@@ -771,6 +771,7 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 		"WAR:Calculation not precise.Ignore LA failure\n");
 	return 0;
 }
+EXPORT_SYMBOL(vi4_update_clknbw);
 
 static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
@@ -878,7 +879,7 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	tegra_channel_init_ring_buffer(chan);
 
 	/* Update clock and bandwidth based on the format */
-	ret = tegra_channel_update_clknbw(chan, 1);
+	ret = vi4_update_clknbw(chan, 1);
 	if (ret)
 		goto error_capture_setup;
 
@@ -945,7 +946,7 @@ static int vi4_channel_stop_streaming(struct vb2_queue *vq)
 #endif
 
 	if (!chan->bypass)
-		tegra_channel_update_clknbw(chan, 0);
+		vi4_update_clknbw(chan, 0);
 
 	return 0;
 }

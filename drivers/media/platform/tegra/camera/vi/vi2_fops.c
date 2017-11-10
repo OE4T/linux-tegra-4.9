@@ -557,9 +557,9 @@ static void tegra_channel_stop_kthreads(struct tegra_channel *chan)
 	mutex_unlock(&chan->stop_kthread_lock);
 }
 
-static int tegra_channel_update_clknbw(
+static int vi2_update_clknbw(
 	struct tegra_channel *chan, u8 on) __maybe_unused;
-static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
+static int vi2_update_clknbw(struct tegra_channel *chan, u8 on)
 {
 	int ret = 0;
 	unsigned long request_pixelrate;
@@ -650,6 +650,7 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 #endif
 	return 0;
 }
+EXPORT_SYMBOL(vi2_update_clknbw);
 
 static int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
@@ -702,7 +703,7 @@ static int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	tegra_channel_init_ring_buffer(chan);
 
 	/* Update clock and bandwidth based on the format */
-	tegra_channel_update_clknbw(chan, 1);
+	vi2_update_clknbw(chan, 1);
 
 	/* Start kthread to capture data to buffer */
 	chan->kthread_capture_start = kthread_run(
@@ -770,7 +771,7 @@ static int vi2_channel_stop_streaming(struct vb2_queue *vq)
 	media_entity_pipeline_stop(&chan->video.entity);
 
 	if (!chan->bypass)
-		tegra_channel_update_clknbw(chan, 0);
+		vi2_update_clknbw(chan, 0);
 
 	vi_channel_syncpt_free(chan);
 	return 0;

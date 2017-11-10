@@ -79,6 +79,7 @@
 /* tegra_dc_platform_data.flags */
 #define TEGRA_DC_FLAG_ENABLED		(1 << 0)
 #define TEGRA_DC_FLAG_SET_EARLY_MODE		(1 << 1)
+#define TEGRA_DC_FLAG_FBCON_DISABLED	(1 << 2)
 
 /* tegra_dc_out_pin.name */
 #define TEGRA_DC_OUT_PIN_DATA_ENABLE	0

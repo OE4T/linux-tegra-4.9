@@ -891,9 +891,9 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 				sizeof(struct fb_videomode));
 	}
 
-	/* Restoring to state running. */
-	fb_info->info->state = FBINFO_STATE_RUNNING;
-	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
+	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) &&
+		!(dc->pdata->flags & TEGRA_DC_FLAG_FBCON_DISABLED)) {
+		fb_info->info->state = FBINFO_STATE_RUNNING;
 		blank = FB_BLANK_POWERDOWN;
 		event.data = &blank;
 		fb_notifier_call_chain(FB_EVENT_BLANK, &event);

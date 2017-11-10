@@ -2549,9 +2549,11 @@ static int dc_hdmi_postsuspend(void)
 
 static bool is_dc_default_flag(u32 flag)
 {
-	if ((flag == 0) ||
-		(flag & TEGRA_DC_FLAG_ENABLED) ||
-		(flag & TEGRA_DC_FLAG_SET_EARLY_MODE))
+	if (flag == (flag &
+		(TEGRA_DC_FLAG_ENABLED |
+		TEGRA_DC_FLAG_SET_EARLY_MODE |
+		TEGRA_DC_FLAG_FBCON_DISABLED)
+	))
 		return true;
 	else
 		return false;

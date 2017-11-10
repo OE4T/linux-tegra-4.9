@@ -920,6 +920,7 @@ struct tegra_dc_bw_data {
 
 #define TEGRA_DC_FLAG_ENABLED		(1 << 0)
 #define TEGRA_DC_FLAG_SET_EARLY_MODE		(1 << 1)
+#define TEGRA_DC_FLAG_FBCON_DISABLED		(1 << 2)
 
 int tegra_dc_get_stride(struct tegra_dc *dc, unsigned win);
 struct tegra_dc_win *tegra_dc_get_window(struct tegra_dc *dc, unsigned win);

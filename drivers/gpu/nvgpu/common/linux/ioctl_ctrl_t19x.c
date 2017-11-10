@@ -11,6 +11,8 @@
  * more details.
  */
 
+#include <uapi/linux/nvgpu.h>
+
 #include <nvgpu/types.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/enabled_t19x.h>

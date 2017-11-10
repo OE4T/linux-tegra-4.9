@@ -14,6 +14,7 @@
  */
 
 #include <linux/types.h>
+#include <uapi/linux/nvgpu.h>
 
 #include "gk20a/gk20a.h"
 

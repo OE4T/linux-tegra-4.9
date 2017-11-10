@@ -26,6 +26,7 @@
 #include <linux/version.h>
 #include <linux/vmalloc.h>
 #include <linux/tegra_gpu_t19x.h>
+#include <uapi/linux/nvgpu.h>
 
 #include <soc/tegra/fuse.h>
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -92,6 +92,13 @@ static inline void wk_clr_bit(int nr, u32 *addr)
 	addr[nr / 32] &= ~mask;
 }
 
+static inline int wk_test_bit(int nr, u32 *addr)
+{
+	u32 mask = BIT(nr % 32);
+
+	return !!(addr[nr / 32] & mask);
+}
+
 /* ensures that sufficient time is passed for a register write to
  * serialize into the 32KHz domain */
 static void wke_32kwritel(u32 val, u32 reg)
@@ -114,7 +121,7 @@ static void wke_write_wake_masks(u32 *enb)
 	u32 val;
 	int i;
 	for (i = 0; i < WAKE_NR_EVENTS; i++, reg += 4) {
-		val = test_bit(i, (ulong *)enb);
+		val = wk_test_bit(i, enb);
 		tegra_aowake_write(val, reg);
 	}
 	print_vals("enable", enb);
@@ -148,7 +155,7 @@ static void wke_write_wake_levels(u32 *lvl)
 	int i;
 
 	for (i = 0; i < WAKE_NR_EVENTS; i++) {
-		wke_write_wake_level(i, test_bit(i, (ulong *)lvl));
+		wke_write_wake_level(i, wk_test_bit(i, lvl));
 	}
 	print_vals("level", lvl);
 }

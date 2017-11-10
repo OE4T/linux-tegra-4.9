@@ -15,7 +15,7 @@ obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-aowake.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-system-config.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += tegra-camera-rtcpu.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += rtcpu/
-obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += pm-irq-t18x.o
+obj-$(CONFIG_TEGRA_PM_IRQ) += pm-irq-t18x.o
 ifeq ($(CONFIG_PM_SLEEP),y)
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += wakeups-t18x.o
 endif

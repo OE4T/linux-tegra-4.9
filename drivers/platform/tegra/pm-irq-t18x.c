@@ -558,4 +558,5 @@ static int __init tegra_pm_irq_init(struct device_node *node,
 	return 0;
 }
 IRQCHIP_DECLARE(tegra_pm_irq, "nvidia,tegra186-pm-irq", tegra_pm_irq_init);
+IRQCHIP_DECLARE(tegra19x_pm_irq, "nvidia,tegra194-pm-irq", tegra_pm_irq_init);
 #endif /* CONFIG_IRQ_DOMAIN_HIERARCHY */

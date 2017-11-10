@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <uapi/linux/nvgpu.h>
+
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>

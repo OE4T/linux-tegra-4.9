@@ -23,6 +23,7 @@
  */
 
 #include <linux/dma-mapping.h>
+#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>

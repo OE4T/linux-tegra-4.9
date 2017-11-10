@@ -23,6 +23,7 @@
 
 #include <linux/tegra-ivc.h>
 #include <linux/tegra_vgpu.h>
+#include <uapi/linux/nvgpu.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/channel_gk20a.h"

@@ -32,6 +32,7 @@
 #include <linux/uaccess.h>
 #include <linux/dma-buf.h>
 #include <trace/events/gk20a.h>
+#include <uapi/linux/nvgpu.h>
 
 u32 nvgpu_get_gpfifo_entry_size(void)
 {

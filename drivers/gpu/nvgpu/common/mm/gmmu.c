@@ -20,6 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <uapi/linux/nvgpu.h>
+
 #include <nvgpu/log.h>
 #include <nvgpu/list.h>
 #include <nvgpu/dma.h>

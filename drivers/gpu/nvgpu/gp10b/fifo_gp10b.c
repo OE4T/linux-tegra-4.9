@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <uapi/linux/nvgpu.h>
+
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>

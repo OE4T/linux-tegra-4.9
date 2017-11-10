@@ -31,6 +31,7 @@
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
+#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/bitops.h>
 #include <nvgpu/lock.h>

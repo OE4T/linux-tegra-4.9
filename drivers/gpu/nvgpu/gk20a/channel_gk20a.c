@@ -23,6 +23,7 @@
  */
 
 #include <trace/events/gk20a.h>
+#include <uapi/linux/nvgpu.h>
 
 #if defined(CONFIG_DEBUG_FS) || defined(CONFIG_GK20A_CYCLE_STATS)
 #include <linux/dma-buf.h>

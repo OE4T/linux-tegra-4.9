@@ -21,6 +21,8 @@
  */
 
 #include <nvgpu/bug.h>
+#include <uapi/linux/nvgpu.h>
+
 #include <nvgpu/log.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/vm.h>

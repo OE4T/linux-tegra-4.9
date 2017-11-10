@@ -19,6 +19,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/fs.h>
 #include <linux/dma-buf.h>
+#include <uapi/linux/nvgpu.h>
 
 #include <trace/events/gk20a.h>
 

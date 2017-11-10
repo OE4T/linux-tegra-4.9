@@ -15,6 +15,7 @@
  */
 
 #include <linux/dma-buf.h>
+#include <uapi/linux/nvgpu.h>
 
 #include <linux/platform/tegra/tegra_fd.h>
 

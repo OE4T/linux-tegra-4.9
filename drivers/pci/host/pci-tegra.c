@@ -499,6 +499,7 @@ struct tegra_pcie_port {
 	void __iomem *base;
 	unsigned int index;
 	unsigned int lanes;
+	unsigned int num_lanes;
 	unsigned int loopback_stat;
 	int gpio_presence_detection;
 	bool disable_clock_request;
@@ -508,7 +509,7 @@ struct tegra_pcie_port {
 	bool has_mxm_port;
 	int pwr_gd_gpio;
 	struct dentry *port_debugfs;
-	struct phy *phy;
+	struct phy **phy;
 	struct device_node *np;
 };
 
@@ -1327,24 +1328,38 @@ static int tegra_pcie_port_get_phy(struct tegra_pcie_port *port)
 {
 	struct device *dev = port->pcie->dev;
 	struct phy *phy;
-	int err;
+	int err, i;
+	char *name;
 
-	phy = devm_of_phy_get(dev, port->np, "pcie-phy");
-	if (IS_ERR(phy)) {
-		if (PTR_ERR(phy) == -EPROBE_DEFER)
-			dev_info(dev, "failed to get PHY: %ld\n", PTR_ERR(phy));
-		else
-			dev_err(dev, "failed to get PHY: %ld\n", PTR_ERR(phy));
-		return PTR_ERR(phy);
+	port->phy = devm_kcalloc(dev, sizeof(phy), port->num_lanes, GFP_KERNEL);
+	if (!port->phy)
+		return -ENOMEM;
+
+	for (i = 0; i < port->num_lanes; i++) {
+		name = kasprintf(GFP_KERNEL, "pcie-%u", i);
+		if (!name)
+			return -ENOMEM;
+
+		phy = devm_of_phy_get(dev, port->np, name);
+		kfree(name);
+		if (IS_ERR(phy)) {
+			if (PTR_ERR(phy) == -EPROBE_DEFER)
+				dev_info(dev, "PHY get deferred: %ld\n",
+					 PTR_ERR(phy));
+			else
+				dev_err(dev, "failed to get PHY: %ld\n",
+					PTR_ERR(phy));
+			return PTR_ERR(phy);
+		}
+
+		err = phy_init(phy);
+		if (err < 0) {
+			dev_err(dev, "failed to initialize PHY: %d\n", err);
+			return err;
+		}
+
+		port->phy[i] = phy;
 	}
-
-	err = phy_init(phy);
-	if (err < 0) {
-		dev_err(dev, "failed to initialize PHY: %d\n", err);
-		return err;
-	}
-
-	port->phy = phy;
 
 	return 0;
 }
@@ -1366,12 +1381,14 @@ static int tegra_pcie_phys_get(struct tegra_pcie *pcie)
 static int tegra_pcie_phy_power_on(struct tegra_pcie *pcie)
 {
 	struct tegra_pcie_port *port;
-	int err;
+	int err, i;
 
 	list_for_each_entry(port, &pcie->ports, list) {
-		err = phy_power_on(port->phy);
-		if (err < 0)
-			return err;
+		for (i = 0; i < port->num_lanes; i++) {
+			err = phy_power_on(port->phy[i]);
+			if (err < 0)
+				return err;
+		}
 	}
 
 	return 0;
@@ -1380,12 +1397,14 @@ static int tegra_pcie_phy_power_on(struct tegra_pcie *pcie)
 static int tegra_pcie_phy_power_off(struct tegra_pcie *pcie)
 {
 	struct tegra_pcie_port *port;
-	int err;
+	int err, i;
 
 	list_for_each_entry(port, &pcie->ports, list) {
-		err = phy_power_off(port->phy);
-		if (err < 0)
-			return err;
+		for (i = 0; i < port->num_lanes; i++) {
+			err = phy_power_off(port->phy[i]);
+			if (err < 0)
+				return err;
+		}
 	}
 
 	return 0;
@@ -1394,12 +1413,15 @@ static int tegra_pcie_phy_power_off(struct tegra_pcie *pcie)
 static int tegra_pcie_phy_exit(struct tegra_pcie *pcie)
 {
 	struct tegra_pcie_port *port;
-	int err;
+	int err = 0, i;
 
 	list_for_each_entry(port, &pcie->ports, list) {
-		err = phy_exit(port->phy);
-		if (err < 0)
-			return err;
+		for (i = 0; i < port->num_lanes; i++) {
+			if (port->phy && !IS_ERR_OR_NULL(port->phy[i]))
+				err = phy_exit(port->phy[i]);
+			if (err < 0)
+				return err;
+		}
 	}
 
 	return 0;
@@ -3446,7 +3468,7 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 
 		INIT_LIST_HEAD(&rp->list);
 		rp->index = index;
-		rp->lanes = value;
+		rp->lanes = rp->num_lanes = value;
 		rp->pcie = pcie;
 		rp->np = port;
 		rp->base = devm_ioremap_resource(pcie->dev, &rp->regs);

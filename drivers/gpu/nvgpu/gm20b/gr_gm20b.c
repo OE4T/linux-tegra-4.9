@@ -870,7 +870,7 @@ int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
 		return err;
 
 	if (class == MAXWELL_COMPUTE_B)
-		(*gr_ctx)->compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
+		(*gr_ctx)->compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CTA;
 
 	gk20a_dbg_fn("done");
 
@@ -887,7 +887,7 @@ void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	if (gr_ctx->compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CTA) {
+	if (gr_ctx->compute_preempt_mode == NVGPU_PREEMPTION_MODE_COMPUTE_CTA) {
 		gk20a_dbg_info("CTA: %x", cta_preempt_option);
 		nvgpu_mem_wr(g, mem,
 				ctxsw_prog_main_image_preemption_options_o(),
@@ -1410,15 +1410,15 @@ int gr_gm20b_get_preemption_mode_flags(struct gk20a *g,
 		struct nvgpu_preemption_modes_rec *preemption_modes_rec)
 {
 	preemption_modes_rec->graphics_preemption_mode_flags =
-			NVGPU_GRAPHICS_PREEMPTION_MODE_WFI;
+			NVGPU_PREEMPTION_MODE_GRAPHICS_WFI;
 	preemption_modes_rec->compute_preemption_mode_flags = (
-			NVGPU_COMPUTE_PREEMPTION_MODE_WFI |
-			NVGPU_COMPUTE_PREEMPTION_MODE_CTA);
+			NVGPU_PREEMPTION_MODE_COMPUTE_WFI |
+			NVGPU_PREEMPTION_MODE_COMPUTE_CTA);
 
 	preemption_modes_rec->default_graphics_preempt_mode =
-			NVGPU_GRAPHICS_PREEMPTION_MODE_WFI;
+			NVGPU_PREEMPTION_MODE_GRAPHICS_WFI;
 	preemption_modes_rec->default_compute_preempt_mode =
-			NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
+			NVGPU_PREEMPTION_MODE_COMPUTE_CTA;
 
 	return 0;
 }

@@ -468,16 +468,6 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	if (g->ops.clk.get_maxrate)
 		gpu->max_freq = g->ops.clk.get_maxrate(&g->clk);
 
-	g->ops.gr.get_preemption_mode_flags(g, &g->gr.preemption_mode_rec);
-	gpu->graphics_preemption_mode_flags =
-		g->gr.preemption_mode_rec.graphics_preemption_mode_flags;
-	gpu->compute_preemption_mode_flags =
-		g->gr.preemption_mode_rec.compute_preemption_mode_flags;
-	gpu->default_graphics_preempt_mode =
-		g->gr.preemption_mode_rec.default_graphics_preempt_mode;
-	gpu->default_compute_preempt_mode =
-		g->gr.preemption_mode_rec.default_compute_preempt_mode;
-
 	gpu->local_video_memory_size = g->mm.vidmem.size;
 
 	gpu->pci_vendor_id = g->pci_vendor_id;

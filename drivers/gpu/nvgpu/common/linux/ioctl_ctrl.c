@@ -194,6 +194,28 @@ static u64 nvgpu_ctrl_ioctl_gpu_characteristics_flags(struct gk20a *g)
 	return ioctl_flags;
 }
 
+static void nvgpu_set_preemption_mode_flags(struct gk20a *g,
+	struct nvgpu_gpu_characteristics *gpu)
+{
+	struct nvgpu_preemption_modes_rec preemption_mode_rec;
+
+	g->ops.gr.get_preemption_mode_flags(g, &preemption_mode_rec);
+
+	gpu->graphics_preemption_mode_flags =
+		nvgpu_get_ioctl_graphics_preempt_mode_flags(
+			preemption_mode_rec.graphics_preemption_mode_flags);
+	gpu->compute_preemption_mode_flags =
+		nvgpu_get_ioctl_compute_preempt_mode_flags(
+			preemption_mode_rec.compute_preemption_mode_flags);
+
+	gpu->default_graphics_preempt_mode =
+		nvgpu_get_ioctl_graphics_preempt_mode(
+			preemption_mode_rec.default_graphics_preempt_mode);
+	gpu->default_compute_preempt_mode =
+		nvgpu_get_ioctl_compute_preempt_mode(
+			preemption_mode_rec.default_compute_preempt_mode);
+}
+
 static long
 gk20a_ctrl_ioctl_gpu_characteristics(
 	struct gk20a *g,
@@ -234,6 +256,8 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	pgpu->sm_arch_warp_count = g->params.sm_arch_warp_count;
 
 	pgpu->max_css_buffer_size = g->gr.max_css_buffer_size;
+
+	nvgpu_set_preemption_mode_flags(g, pgpu);
 
 	if (request->gpu_characteristics_buf_size > 0) {
 		size_t write_size = sizeof(*pgpu);

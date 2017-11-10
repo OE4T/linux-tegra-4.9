@@ -45,7 +45,7 @@
 static const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
 {
 	switch (graphics_preempt_mode) {
-	case NVGPU_GRAPHICS_PREEMPTION_MODE_WFI:
+	case NVGPU_PREEMPTION_MODE_GRAPHICS_WFI:
 		return "WFI";
 	default:
 		return "?";
@@ -55,9 +55,9 @@ static const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode
 static const char *gr_gk20a_compute_preempt_mode_name(u32 compute_preempt_mode)
 {
 	switch (compute_preempt_mode) {
-	case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
+	case NVGPU_PREEMPTION_MODE_COMPUTE_WFI:
 		return "WFI";
-	case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
+	case NVGPU_PREEMPTION_MODE_COMPUTE_CTA:
 		return "CTA";
 	default:
 		return "?";
@@ -991,6 +991,130 @@ static int nvgpu_ioctl_channel_alloc_obj_ctx(struct channel_gk20a *ch,
 			nvgpu_obj_ctx_user_flags_to_common_flags(user_flags));
 }
 
+/*
+ * Convert common preemption mode flags of the form NVGPU_PREEMPTION_MODE_GRAPHICS_*
+ * into linux preemption mode flags of the form NVGPU_GRAPHICS_PREEMPTION_MODE_*
+ */
+u32 nvgpu_get_ioctl_graphics_preempt_mode_flags(u32 graphics_preempt_mode_flags)
+{
+	u32 flags = 0;
+
+	if (graphics_preempt_mode_flags & NVGPU_PREEMPTION_MODE_GRAPHICS_WFI)
+		flags |= NVGPU_GRAPHICS_PREEMPTION_MODE_WFI;
+	if (graphics_preempt_mode_flags & NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP)
+		flags |= NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
+
+	return flags;
+}
+
+/*
+ * Convert common preemption mode flags of the form NVGPU_PREEMPTION_MODE_COMPUTE_*
+ * into linux preemption mode flags of the form NVGPU_COMPUTE_PREEMPTION_MODE_*
+ */
+u32 nvgpu_get_ioctl_compute_preempt_mode_flags(u32 compute_preempt_mode_flags)
+{
+	u32 flags = 0;
+
+	if (compute_preempt_mode_flags & NVGPU_PREEMPTION_MODE_COMPUTE_WFI)
+		flags |= NVGPU_COMPUTE_PREEMPTION_MODE_WFI;
+	if (compute_preempt_mode_flags & NVGPU_PREEMPTION_MODE_COMPUTE_CTA)
+		flags |= NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
+	if (compute_preempt_mode_flags & NVGPU_PREEMPTION_MODE_COMPUTE_CILP)
+		flags |= NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+
+	return flags;
+}
+
+/*
+ * Convert common preemption modes of the form NVGPU_PREEMPTION_MODE_GRAPHICS_*
+ * into linux preemption modes of the form NVGPU_GRAPHICS_PREEMPTION_MODE_*
+ */
+u32 nvgpu_get_ioctl_graphics_preempt_mode(u32 graphics_preempt_mode)
+{
+	switch (graphics_preempt_mode) {
+	case NVGPU_PREEMPTION_MODE_GRAPHICS_WFI:
+		return NVGPU_GRAPHICS_PREEMPTION_MODE_WFI;
+	case NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP:
+		return NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
+	}
+
+	return graphics_preempt_mode;
+}
+
+/*
+ * Convert common preemption modes of the form NVGPU_PREEMPTION_MODE_COMPUTE_*
+ * into linux preemption modes of the form NVGPU_COMPUTE_PREEMPTION_MODE_*
+ */
+u32 nvgpu_get_ioctl_compute_preempt_mode(u32 compute_preempt_mode)
+{
+	switch (compute_preempt_mode) {
+	case NVGPU_PREEMPTION_MODE_COMPUTE_WFI:
+		return NVGPU_COMPUTE_PREEMPTION_MODE_WFI;
+	case NVGPU_PREEMPTION_MODE_COMPUTE_CTA:
+		return NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
+	case NVGPU_PREEMPTION_MODE_COMPUTE_CILP:
+		return NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+	}
+
+	return compute_preempt_mode;
+}
+
+/*
+ * Convert linux preemption modes of the form NVGPU_GRAPHICS_PREEMPTION_MODE_*
+ * into common preemption modes of the form NVGPU_PREEMPTION_MODE_GRAPHICS_*
+ */
+static u32 nvgpu_get_common_graphics_preempt_mode(u32 graphics_preempt_mode)
+{
+	switch (graphics_preempt_mode) {
+	case NVGPU_GRAPHICS_PREEMPTION_MODE_WFI:
+		return NVGPU_PREEMPTION_MODE_GRAPHICS_WFI;
+	case NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP:
+		return NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
+	}
+
+	return graphics_preempt_mode;
+}
+
+/*
+ * Convert linux preemption modes of the form NVGPU_COMPUTE_PREEMPTION_MODE_*
+ * into common preemption modes of the form NVGPU_PREEMPTION_MODE_COMPUTE_*
+ */
+static u32 nvgpu_get_common_compute_preempt_mode(u32 compute_preempt_mode)
+{
+	switch (compute_preempt_mode) {
+	case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
+		return NVGPU_PREEMPTION_MODE_COMPUTE_WFI;
+	case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
+		return NVGPU_PREEMPTION_MODE_COMPUTE_CTA;
+	case NVGPU_COMPUTE_PREEMPTION_MODE_CILP:
+		return NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
+	}
+
+	return compute_preempt_mode;
+}
+
+static int nvgpu_ioctl_channel_set_preemption_mode(struct channel_gk20a *ch,
+	u32 graphics_preempt_mode, u32 compute_preempt_mode)
+{
+	int err;
+
+	if (ch->g->ops.gr.set_preemption_mode) {
+		err = gk20a_busy(ch->g);
+		if (err) {
+			nvgpu_err(ch->g, "failed to power on, %d", err);
+			return err;
+		}
+		err = ch->g->ops.gr.set_preemption_mode(ch,
+			nvgpu_get_common_graphics_preempt_mode(graphics_preempt_mode),
+			nvgpu_get_common_compute_preempt_mode(compute_preempt_mode));
+		gk20a_idle(ch->g);
+	} else {
+		err = -EINVAL;
+	}
+
+	return err;
+}
+
 long gk20a_channel_ioctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -1302,21 +1426,9 @@ long gk20a_channel_ioctl(struct file *filp,
 			gk20a_channel_get_timeslice(ch);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE:
-		if (ch->g->ops.gr.set_preemption_mode) {
-			err = gk20a_busy(ch->g);
-			if (err) {
-				dev_err(dev,
-					"%s: failed to host gk20a for ioctl cmd: 0x%x",
-					__func__, cmd);
-				break;
-			}
-			err = ch->g->ops.gr.set_preemption_mode(ch,
-			     ((struct nvgpu_preemption_mode_args *)buf)->graphics_preempt_mode,
-			     ((struct nvgpu_preemption_mode_args *)buf)->compute_preempt_mode);
-			gk20a_idle(ch->g);
-		} else {
-			err = -EINVAL;
-		}
+		err = nvgpu_ioctl_channel_set_preemption_mode(ch,
+		     ((struct nvgpu_preemption_mode_args *)buf)->graphics_preempt_mode,
+		     ((struct nvgpu_preemption_mode_args *)buf)->compute_preempt_mode);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_BOOSTED_CTX:
 		if (ch->g->ops.gr.set_boosted_ctx) {

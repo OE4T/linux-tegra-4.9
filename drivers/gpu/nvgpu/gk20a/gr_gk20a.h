@@ -61,6 +61,13 @@
 	(PAGE_SIZE/(PATCH_CTX_SLOTS_REQUIRED_PER_ENTRY * sizeof(u32)))
 #define PATCH_CTX_ENTRIES_FROM_SIZE(size) (size/sizeof(u32))
 
+#define NVGPU_PREEMPTION_MODE_GRAPHICS_WFI	(1 << 0)
+#define NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP	(1 << 1)
+
+#define NVGPU_PREEMPTION_MODE_COMPUTE_WFI	(1 << 0)
+#define NVGPU_PREEMPTION_MODE_COMPUTE_CTA	(1 << 1)
+#define NVGPU_PREEMPTION_MODE_COMPUTE_CILP	(1 << 2)
+
 struct channel_gk20a;
 struct nvgpu_warpstate;
 
@@ -403,7 +410,6 @@ struct gr_gk20a {
 	bool sw_ready;
 	bool skip_ucode_init;
 
-	struct nvgpu_preemption_modes_rec preemption_mode_rec;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_t18x t18x;
 #endif

@@ -141,23 +141,23 @@ int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 	int err = 0;
 
 	if (class == PASCAL_B && g->gr.t18x.ctx_vars.force_preemption_gfxp)
-		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
+		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
 
 	if (class == PASCAL_COMPUTE_B &&
 			g->gr.t18x.ctx_vars.force_preemption_cilp)
-		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+		compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
 
 	/* check for invalid combinations */
 	if ((graphics_preempt_mode == 0) && (compute_preempt_mode == 0))
 		return -EINVAL;
 
-	if ((graphics_preempt_mode == NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP) &&
-		   (compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP))
+	if ((graphics_preempt_mode == NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP) &&
+		   (compute_preempt_mode == NVGPU_PREEMPTION_MODE_COMPUTE_CILP))
 		return -EINVAL;
 
 	/* set preemption modes */
 	switch (graphics_preempt_mode) {
-	case NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP:
+	case NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP:
 		{
 		u32 spill_size =
 			gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v() *
@@ -213,7 +213,7 @@ int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 		break;
 		}
 
-	case NVGPU_GRAPHICS_PREEMPTION_MODE_WFI:
+	case NVGPU_PREEMPTION_MODE_GRAPHICS_WFI:
 		gr_ctx->graphics_preempt_mode = graphics_preempt_mode;
 		break;
 
@@ -223,9 +223,9 @@ int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 
 	if (class == PASCAL_COMPUTE_B) {
 		switch (compute_preempt_mode) {
-		case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
-		case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
-		case NVGPU_COMPUTE_PREEMPTION_MODE_CILP:
+		case NVGPU_PREEMPTION_MODE_COMPUTE_WFI:
+		case NVGPU_PREEMPTION_MODE_COMPUTE_CTA:
+		case NVGPU_PREEMPTION_MODE_COMPUTE_CILP:
 			gr_ctx->compute_preempt_mode = compute_preempt_mode;
 			break;
 		default:

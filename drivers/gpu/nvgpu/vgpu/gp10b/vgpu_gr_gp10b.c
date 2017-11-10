@@ -80,16 +80,16 @@ int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	gr_ctx = *__gr_ctx;
 
 	if (flags & NVGPU_OBJ_CTX_FLAGS_SUPPORT_GFXP)
-		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
+		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
 	if (flags & NVGPU_OBJ_CTX_FLAGS_SUPPORT_CILP)
-		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+		compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
 
 	if (priv->constants.force_preempt_mode && !graphics_preempt_mode &&
 		!compute_preempt_mode) {
 		graphics_preempt_mode = PASCAL_A == class ?
-					NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP : 0;
+					NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP : 0;
 		compute_preempt_mode = PASCAL_COMPUTE_A == class ?
-					NVGPU_COMPUTE_PREEMPTION_MODE_CTA : 0;
+					NVGPU_PREEMPTION_MODE_COMPUTE_CTA : 0;
 	}
 
 	if (graphics_preempt_mode || compute_preempt_mode) {
@@ -127,23 +127,23 @@ int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 	int err = 0;
 
 	if (class == PASCAL_A && g->gr.t18x.ctx_vars.force_preemption_gfxp)
-		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
+		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
 
 	if (class == PASCAL_COMPUTE_A &&
 			g->gr.t18x.ctx_vars.force_preemption_cilp)
-		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+		compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
 
 	/* check for invalid combinations */
 	if ((graphics_preempt_mode == 0) && (compute_preempt_mode == 0))
 		return -EINVAL;
 
-	if ((graphics_preempt_mode == NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP) &&
-		   (compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP))
+	if ((graphics_preempt_mode == NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP) &&
+		   (compute_preempt_mode == NVGPU_PREEMPTION_MODE_COMPUTE_CILP))
 		return -EINVAL;
 
 	/* set preemption modes */
 	switch (graphics_preempt_mode) {
-	case NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP:
+	case NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP:
 	{
 		u32 spill_size =
 			gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v() *
@@ -213,11 +213,11 @@ int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 			desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_BETACB] = desc->size;
 
-		gr_ctx->graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
+		gr_ctx->graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
 		p->mode = TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_GFX_GFXP;
 		break;
 	}
-	case NVGPU_GRAPHICS_PREEMPTION_MODE_WFI:
+	case NVGPU_PREEMPTION_MODE_GRAPHICS_WFI:
 		gr_ctx->graphics_preempt_mode = graphics_preempt_mode;
 		break;
 
@@ -227,20 +227,20 @@ int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 
 	if (class == PASCAL_COMPUTE_A) {
 		switch (compute_preempt_mode) {
-		case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
+		case NVGPU_PREEMPTION_MODE_COMPUTE_WFI:
 			gr_ctx->compute_preempt_mode =
-				NVGPU_COMPUTE_PREEMPTION_MODE_WFI;
+				NVGPU_PREEMPTION_MODE_COMPUTE_WFI;
 			p->mode = TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_WFI;
 			break;
-		case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
+		case NVGPU_PREEMPTION_MODE_COMPUTE_CTA:
 			gr_ctx->compute_preempt_mode =
-				NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
+				NVGPU_PREEMPTION_MODE_COMPUTE_CTA;
 			p->mode =
 				TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CTA;
 			break;
-		case NVGPU_COMPUTE_PREEMPTION_MODE_CILP:
+		case NVGPU_PREEMPTION_MODE_COMPUTE_CILP:
 			gr_ctx->compute_preempt_mode =
-				NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+				NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
 			p->mode =
 				TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CILP;
 			break;

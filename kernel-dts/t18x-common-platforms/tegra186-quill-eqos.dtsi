@@ -41,6 +41,18 @@
 		nvidia,phy-max-frame-size = <10>;	/* size in kbytes */
 		nvidia,eth_iso_enable = <1>; /*0=enable, 1=disable */
 		nvidia,brcm_phy_apd_mode;
+		phy-handle = <&phy0>;
+
+		mdio {
+			compatible = "nvidia,eqos-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			phy0: ethernet-phy@0 {
+				/* BRCM PHY */
+				reg = <0>;
+			};
+		};
         };
 
 	thermal-zones {

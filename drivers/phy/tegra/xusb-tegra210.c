@@ -348,6 +348,30 @@ static void tegra210_xusb_padctl_disable_pad_protection(
 	}
 }
 
+/* This API must be used to init unused SS ports */
+static void tegra210_xusb_padctl_init_usb3_port(int port,
+					struct tegra_xusb_padctl *padctl)
+{
+	u32 reg;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_MAP);
+	reg &= ~SS_PORT_MAP(port, SS_PORT_MAP_PORT_DISABLED);
+	reg |= SS_PORT_MAP(port, port);
+	padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_MAP);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+	reg &= ~SSPX_ELPG_VCORE_DOWN(port);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+	reg &= ~SSPX_ELPG_CLAMP_EN_EARLY(port);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+	reg &= ~SSPX_ELPG_CLAMP_EN(port);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM_1);
+}
+
 /* must be called under padctl->lock */
 static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 {
@@ -853,6 +877,10 @@ static int tegra210_uphy_init(struct tegra_xusb_padctl *padctl)
 
 	if (t210b01_compatible(padctl) == 1)
 		tegra210_xusb_padctl_disable_pad_protection(padctl);
+
+	/* Initialize Unused USB3 port on T210b01 for power saving */
+	if (t210b01_compatible(padctl) == 1)
+		tegra210_xusb_padctl_init_usb3_port(3, padctl);
 
 	/* bring all PCIE PADs out of IDDQ */
 	for (i = 0; i < padctl->pcie->soc->num_lanes; i++) {
@@ -3135,6 +3163,10 @@ static int tegra210_xusb_padctl_resume_noirq(struct tegra_xusb_padctl *padctl)
 
 	if (t210b01_compatible(padctl) == 1)
 		tegra210_xusb_padctl_disable_pad_protection(padctl);
+
+	/* Initialize Unused USB3 port on T210b01 for power saving */
+	if (t210b01_compatible(padctl) == 1)
+		tegra210_xusb_padctl_init_usb3_port(3, padctl);
 
 	tegra210_xusb_padctl_restore(padctl);
 

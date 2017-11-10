@@ -347,7 +347,7 @@ static void vi4_release_syncpt(struct platform_device *pdev, uint32_t id)
 static void vi4_get_gos_table(struct platform_device *pdev, int *count,
 			const dma_addr_t **table)
 {
-	*table = 0;
+	*table = NULL;
 	*count = 0;
 }
 

@@ -142,6 +142,13 @@
 		status = "disabled";
 	};
 
+	tegra_pm_irq: tegra194-pm-irq {
+		compatible = "nvidia,tegra194-pm-irq";
+		interrupt-controller;
+		#interrupt-cells = <3>;
+		interrupt-parent = <&intc>;
+	};
+
 	bpmp_clks: clock@0 {
 		compatible = "nvidia,tegra-bpmp-staged-clks";
 		reg = <0x0 0x0 0x0 0x0>;

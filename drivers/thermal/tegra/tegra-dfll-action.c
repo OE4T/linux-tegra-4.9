@@ -236,7 +236,7 @@ static const struct of_device_id tegra_dfll_cdev_match[] = {
 };
 
 #ifdef CONFIG_PM_SLEEP
-int tegra_dfll_cdev_resume(struct device *dev)
+static int tegra_dfll_cdev_resume(struct device *dev)
 {
 	struct tegra_dfll_cdev_data *dfll_cdev_data = dev_get_drvdata(dev);
 	dfll_cdev_data->cdev->updated = false;

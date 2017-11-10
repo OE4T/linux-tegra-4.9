@@ -6,4 +6,5 @@ PRODUCT_COPY_FILES += \
     $(BCT_FILES_PATH)/uphy-lane/tegra194-mb1-bct-uphy-lane-ufs-x1-lane11.cfg:tegra194-mb1-bct-uphy-lane-ufs-x1-lane11.cfg    \
     $(BCT_FILES_PATH)/uphy-lane/tegra194-mb1-bct-uphy-lane-ufs-x2.cfg:tegra194-mb1-bct-uphy-lane-ufs-x2.cfg  \
     $(BCT_FILES_PATH)/uphy-lane/tegra194-mb1-bct-uphy-lane-sata.cfg:tegra194-mb1-bct-uphy-lane-sata.cfg      \
-    $(BCT_FILES_PATH)/uphy-lane/tegra194-mb1-bct-uphy-lane-ufs-x1-sata.cfg:tegra194-mb1-bct-uphy-lane-ufs-x1-sata.cfg
+    $(BCT_FILES_PATH)/uphy-lane/tegra194-mb1-bct-uphy-lane-ufs-x1-sata.cfg:tegra194-mb1-bct-uphy-lane-ufs-x1-sata.cfg \
+    $(BCT_FILES_PATH)/scr/tegra194-mb1-bct-scr-cbb-mini.cfg:tegra194-mb1-bct-scr-cbb-mini.cfg

@@ -20,4 +20,19 @@
 #include <tegra194-soc/tegra194-soc-prod.dtsi>
 
 / {
+	dma@2600000 {
+		status = "okay";
+	};
+
+	pinmux@2430000 {
+		status = "okay";
+	};
+
+	gpio@2200000 {
+		status = "okay";
+	};
+
+	gpio@c2f0000 {
+		status = "okay";
+	};
 };

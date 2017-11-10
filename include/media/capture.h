@@ -49,6 +49,8 @@ struct vi_capture_info {
 		uint32_t line_timer_syncpt;
 		uint32_t line_timer_syncpt_val;
 	} syncpts;
+	uint32_t hw_channel_id;
+	uint32_t __pad;
 } __VI_CAPTURE_ALIGN;
 
 struct vi_capture_control_msg {

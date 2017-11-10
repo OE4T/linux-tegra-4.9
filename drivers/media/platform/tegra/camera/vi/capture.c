@@ -669,6 +669,8 @@ int vi_capture_get_info(struct tegra_vi_channel *chan,
 	if (err < 0)
 		return err;
 
+	info->hw_channel_id = capture->channel_id;
+
 	return 0;
 }
 

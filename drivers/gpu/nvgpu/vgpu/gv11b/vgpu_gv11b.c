@@ -25,9 +25,6 @@ int vgpu_gv11b_init_gpu_characteristics(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-
-	nvgpu_err(g, "g->gpu_characteristics.flags=%llx",
-		g->gpu_characteristics.flags);
 	err = vgpu_init_gpu_characteristics(g);
 	if (err) {
 		nvgpu_err(g, "vgpu_init_gpu_characteristics failed, err %d\n", err);

@@ -333,6 +333,21 @@ static int t210b01_compatible(struct tegra_xusb_padctl *padctl)
 	return 0;
 }
 
+static void tegra210_xusb_padctl_disable_pad_protection(
+					struct tegra_xusb_padctl *padctl)
+{
+	int i;
+	u32 reg;
+
+	for (i = 0; i < padctl->soc->ports.usb2.count; i++) {
+		reg = padctl_readl(padctl,
+				XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(i));
+		reg |= XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_FIX18;
+		padctl_writel(padctl, reg,
+				XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(i));
+	}
+}
+
 /* must be called under padctl->lock */
 static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 {
@@ -835,6 +850,9 @@ static int tegra210_uphy_init(struct tegra_xusb_padctl *padctl)
 
 	/* enable PLLE in HW */
 	tegra210_plle_hw_sequence_start();
+
+	if (t210b01_compatible(padctl) == 1)
+		tegra210_xusb_padctl_disable_pad_protection(padctl);
 
 	/* bring all PCIE PADs out of IDDQ */
 	for (i = 0; i < padctl->pcie->soc->num_lanes; i++) {
@@ -3114,6 +3132,9 @@ static int tegra210_xusb_padctl_resume_noirq(struct tegra_xusb_padctl *padctl)
 	int err, i;
 
 	mutex_lock(&padctl->lock);
+
+	if (t210b01_compatible(padctl) == 1)
+		tegra210_xusb_padctl_disable_pad_protection(padctl);
 
 	tegra210_xusb_padctl_restore(padctl);
 

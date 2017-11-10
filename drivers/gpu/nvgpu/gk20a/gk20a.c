@@ -381,20 +381,6 @@ int gk20a_wait_for_idle(struct gk20a *g)
 
 int gk20a_init_gpu_characteristics(struct gk20a *g)
 {
-	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
-
-	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
-	gpu->on_board_video_memory_size = 0; /* integrated GPU */
-
-	gpu->num_gpc = g->gr.gpc_count;
-	gpu->max_gpc_count = g->gr.max_gpc_count;
-
-	gpu->num_tpc_per_gpc = g->gr.max_tpc_per_gpc_count;
-
-	gpu->bus_type = NVGPU_GPU_BUS_TYPE_AXI; /* always AXI for now */
-
-	gpu->compression_page_size = g->ops.fb.compression_page_size(g);
-
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_PARTIAL_MAPPINGS, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_DIRECT_KIND_CTRL, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_BUFFER_BATCH, true);
@@ -436,46 +422,12 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	if (g->ops.clk_arb.get_arbiter_clk_domains)
 		__nvgpu_set_enabled(g, NVGPU_SUPPORT_CLOCK_CONTROLS, true);
 
-	gpu->gpc_mask = (1 << g->gr.gpc_count)-1;
-
 	g->ops.gr.detect_sm_arch(g);
 
 	if (g->ops.gr.init_cyclestats)
 		g->ops.gr.init_cyclestats(g);
 
-	gpu->gpu_ioctl_nr_last = NVGPU_GPU_IOCTL_LAST;
-	gpu->tsg_ioctl_nr_last = NVGPU_TSG_IOCTL_LAST;
-	gpu->dbg_gpu_ioctl_nr_last = NVGPU_DBG_GPU_IOCTL_LAST;
-	gpu->ioctl_channel_nr_last = NVGPU_IOCTL_CHANNEL_LAST;
-	gpu->as_ioctl_nr_last = NVGPU_AS_IOCTL_LAST;
-	gpu->event_ioctl_nr_last = NVGPU_EVENT_IOCTL_LAST;
-	gpu->gpu_va_bit_count = 40;
-
-	strlcpy(gpu->chipname, g->name, sizeof(gpu->chipname));
-	gpu->max_fbps_count = g->ops.gr.get_max_fbps_count(g);
-	gpu->fbp_en_mask = g->ops.gr.get_fbp_en_mask(g);
-	gpu->max_ltc_per_fbp =  g->ops.gr.get_max_ltc_per_fbp(g);
-	gpu->max_lts_per_ltc = g->ops.gr.get_max_lts_per_ltc(g);
 	g->ops.gr.get_rop_l2_en_mask(g);
-	gpu->gr_compbit_store_base_hw = g->gr.compbit_store.base_hw;
-	gpu->gr_gobs_per_comptagline_per_slice =
-		g->gr.gobs_per_comptagline_per_slice;
-	gpu->num_ltc = g->ltc_count;
-	gpu->lts_per_ltc = g->gr.slices_per_ltc;
-	gpu->cbc_cache_line_size = g->gr.cacheline_size;
-	gpu->cbc_comptags_per_line = g->gr.comptags_per_cacheline;
-
-	if (g->ops.clk.get_maxrate)
-		gpu->max_freq = g->ops.clk.get_maxrate(g, CTRL_CLK_DOMAIN_GPCCLK);
-
-	gpu->local_video_memory_size = g->mm.vidmem.size;
-
-	gpu->pci_vendor_id = g->pci_vendor_id;
-	gpu->pci_device_id = g->pci_device_id;
-	gpu->pci_subsystem_vendor_id = g->pci_subsystem_vendor_id;
-	gpu->pci_subsystem_device_id = g->pci_subsystem_device_id;
-	gpu->pci_class = g->pci_class;
-	gpu->pci_revision = g->pci_revision;
 
 	return 0;
 }

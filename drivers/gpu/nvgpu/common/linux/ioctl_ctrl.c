@@ -221,57 +221,113 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	struct gk20a *g,
 	struct nvgpu_gpu_get_characteristics *request)
 {
-	struct nvgpu_gpu_characteristics *pgpu = &g->gpu_characteristics;
+	struct nvgpu_gpu_characteristics gpu;
 	long err = 0;
 
-	pgpu->flags = nvgpu_ctrl_ioctl_gpu_characteristics_flags(g);
+	if (gk20a_busy(g)) {
+		nvgpu_err(g, "failed to power on gpu");
+		return -EINVAL;
+	}
+
+	memset(&gpu, 0, sizeof(gpu));
+
+	gpu.L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
+	gpu.on_board_video_memory_size = 0; /* integrated GPU */
+
+	gpu.num_gpc = g->gr.gpc_count;
+	gpu.max_gpc_count = g->gr.max_gpc_count;
+
+	gpu.num_tpc_per_gpc = g->gr.max_tpc_per_gpc_count;
+
+	gpu.bus_type = NVGPU_GPU_BUS_TYPE_AXI; /* always AXI for now */
+
+	gpu.compression_page_size = g->ops.fb.compression_page_size(g);
+
+	gpu.gpc_mask = (1 << g->gr.gpc_count)-1;
+
+	gpu.flags = nvgpu_ctrl_ioctl_gpu_characteristics_flags(g);
 #ifdef CONFIG_TEGRA_19x_GPU
-	pgpu->flags |= nvgpu_ctrl_ioctl_gpu_characteristics_flags_t19x(g);
+	gpu.flags |= nvgpu_ctrl_ioctl_gpu_characteristics_flags_t19x(g);
 #endif
-	pgpu->arch = g->params.gpu_arch;
-	pgpu->impl = g->params.gpu_impl;
-	pgpu->rev = g->params.gpu_rev;
-	pgpu->reg_ops_limit = NVGPU_IOCTL_DBG_REG_OPS_LIMIT;
-	pgpu->map_buffer_batch_limit = nvgpu_is_enabled(g, NVGPU_SUPPORT_MAP_BUFFER_BATCH) ?
+	gpu.arch = g->params.gpu_arch;
+	gpu.impl = g->params.gpu_impl;
+	gpu.rev = g->params.gpu_rev;
+	gpu.reg_ops_limit = NVGPU_IOCTL_DBG_REG_OPS_LIMIT;
+	gpu.map_buffer_batch_limit = nvgpu_is_enabled(g, NVGPU_SUPPORT_MAP_BUFFER_BATCH) ?
 		NVGPU_IOCTL_AS_MAP_BUFFER_BATCH_LIMIT : 0;
-	pgpu->twod_class = g->ops.get_litter_value(g, GPU_LIT_TWOD_CLASS);
-	pgpu->threed_class = g->ops.get_litter_value(g, GPU_LIT_THREED_CLASS);
-	pgpu->compute_class = g->ops.get_litter_value(g, GPU_LIT_COMPUTE_CLASS);
-	pgpu->gpfifo_class = g->ops.get_litter_value(g, GPU_LIT_GPFIFO_CLASS);
-	pgpu->inline_to_memory_class =
+	gpu.twod_class = g->ops.get_litter_value(g, GPU_LIT_TWOD_CLASS);
+	gpu.threed_class = g->ops.get_litter_value(g, GPU_LIT_THREED_CLASS);
+	gpu.compute_class = g->ops.get_litter_value(g, GPU_LIT_COMPUTE_CLASS);
+	gpu.gpfifo_class = g->ops.get_litter_value(g, GPU_LIT_GPFIFO_CLASS);
+	gpu.inline_to_memory_class =
 		g->ops.get_litter_value(g, GPU_LIT_I2M_CLASS);
-	pgpu->dma_copy_class =
+	gpu.dma_copy_class =
 		g->ops.get_litter_value(g, GPU_LIT_DMA_COPY_CLASS);
 
-	pgpu->vbios_version = g->bios.vbios_version;
-	pgpu->vbios_oem_version = g->bios.vbios_oem_version;
+	gpu.vbios_version = g->bios.vbios_version;
+	gpu.vbios_oem_version = g->bios.vbios_oem_version;
 
-	pgpu->big_page_size = nvgpu_mm_get_default_big_page_size(g);
-	pgpu->pde_coverage_bit_count =
-		g->ops.mm.get_mmu_levels(g, pgpu->big_page_size)[0].lo_bit[0];
-	pgpu->available_big_page_sizes = nvgpu_mm_get_available_big_page_sizes(g);
+	gpu.big_page_size = nvgpu_mm_get_default_big_page_size(g);
+	gpu.pde_coverage_bit_count =
+		g->ops.mm.get_mmu_levels(g, gpu.big_page_size)[0].lo_bit[0];
+	gpu.available_big_page_sizes = nvgpu_mm_get_available_big_page_sizes(g);
 
-	pgpu->sm_arch_sm_version = g->params.sm_arch_sm_version;
-	pgpu->sm_arch_spa_version = g->params.sm_arch_spa_version;
-	pgpu->sm_arch_warp_count = g->params.sm_arch_warp_count;
+	gpu.sm_arch_sm_version = g->params.sm_arch_sm_version;
+	gpu.sm_arch_spa_version = g->params.sm_arch_spa_version;
+	gpu.sm_arch_warp_count = g->params.sm_arch_warp_count;
 
-	pgpu->max_css_buffer_size = g->gr.max_css_buffer_size;
+	gpu.max_css_buffer_size = g->gr.max_css_buffer_size;
 
-	nvgpu_set_preemption_mode_flags(g, pgpu);
+	gpu.gpu_ioctl_nr_last = NVGPU_GPU_IOCTL_LAST;
+	gpu.tsg_ioctl_nr_last = NVGPU_TSG_IOCTL_LAST;
+	gpu.dbg_gpu_ioctl_nr_last = NVGPU_DBG_GPU_IOCTL_LAST;
+	gpu.ioctl_channel_nr_last = NVGPU_IOCTL_CHANNEL_LAST;
+	gpu.as_ioctl_nr_last = NVGPU_AS_IOCTL_LAST;
+	gpu.event_ioctl_nr_last = NVGPU_EVENT_IOCTL_LAST;
+	gpu.gpu_va_bit_count = 40;
+
+	strlcpy(gpu.chipname, g->name, sizeof(gpu.chipname));
+	gpu.max_fbps_count = g->ops.gr.get_max_fbps_count(g);
+	gpu.fbp_en_mask = g->ops.gr.get_fbp_en_mask(g);
+	gpu.max_ltc_per_fbp =  g->ops.gr.get_max_ltc_per_fbp(g);
+	gpu.max_lts_per_ltc = g->ops.gr.get_max_lts_per_ltc(g);
+	gpu.gr_compbit_store_base_hw = g->gr.compbit_store.base_hw;
+	gpu.gr_gobs_per_comptagline_per_slice =
+		g->gr.gobs_per_comptagline_per_slice;
+	gpu.num_ltc = g->ltc_count;
+	gpu.lts_per_ltc = g->gr.slices_per_ltc;
+	gpu.cbc_cache_line_size = g->gr.cacheline_size;
+	gpu.cbc_comptags_per_line = g->gr.comptags_per_cacheline;
+
+	if (g->ops.clk.get_maxrate)
+		gpu.max_freq = g->ops.clk.get_maxrate(g, CTRL_CLK_DOMAIN_GPCCLK);
+
+	gpu.local_video_memory_size = g->mm.vidmem.size;
+
+	gpu.pci_vendor_id = g->pci_vendor_id;
+	gpu.pci_device_id = g->pci_device_id;
+	gpu.pci_subsystem_vendor_id = g->pci_subsystem_vendor_id;
+	gpu.pci_subsystem_device_id = g->pci_subsystem_device_id;
+	gpu.pci_class = g->pci_class;
+	gpu.pci_revision = g->pci_revision;
+
+	nvgpu_set_preemption_mode_flags(g, &gpu);
 
 	if (request->gpu_characteristics_buf_size > 0) {
-		size_t write_size = sizeof(*pgpu);
+		size_t write_size = sizeof(gpu);
 
 		if (write_size > request->gpu_characteristics_buf_size)
 			write_size = request->gpu_characteristics_buf_size;
 
 		err = copy_to_user((void __user *)(uintptr_t)
 				   request->gpu_characteristics_buf_addr,
-				   pgpu, write_size);
+				   &gpu, write_size);
 	}
 
 	if (err == 0)
-		request->gpu_characteristics_buf_size = sizeof(*pgpu);
+		request->gpu_characteristics_buf_size = sizeof(gpu);
+
+	gk20a_idle(g);
 
 	return err;
 }

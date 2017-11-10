@@ -1225,8 +1225,6 @@ struct gk20a {
 
 	struct nvgpu_spinlock mc_enable_lock;
 
-	struct nvgpu_gpu_characteristics gpu_characteristics;
-
 	struct gk20a_as as;
 
 	struct nvgpu_mutex client_lock;

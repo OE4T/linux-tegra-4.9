@@ -359,7 +359,6 @@ static void vgpu_detect_chip(struct gk20a *g)
 
 int vgpu_init_gpu_characteristics(struct gk20a *g)
 {
-	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -368,7 +367,6 @@ int vgpu_init_gpu_characteristics(struct gk20a *g)
 	if (err)
 		return err;
 
-	g->gpu_characteristics.max_freq = priv->constants.max_freq;
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_BUFFER_BATCH, false);
 
 	/* features vgpu does not support */

@@ -880,7 +880,7 @@ struct gpu_ops {
 		u32 (*get_ref_clock_rate)(struct gk20a *g);
 		int (*predict_mv_at_hz_cur_tfloor)(struct clk_gk20a *clk,
 			unsigned long rate);
-		unsigned long (*get_maxrate)(struct clk_gk20a *clk);
+		unsigned long (*get_maxrate)(struct gk20a *g, u32 api_domain);
 		int (*prepare_enable)(struct clk_gk20a *clk);
 		void (*disable_unprepare)(struct clk_gk20a *clk);
 		int (*get_voltage)(struct clk_gk20a *clk, u64 *val);

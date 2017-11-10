@@ -466,7 +466,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->cbc_comptags_per_line = g->gr.comptags_per_cacheline;
 
 	if (g->ops.clk.get_maxrate)
-		gpu->max_freq = g->ops.clk.get_maxrate(&g->clk);
+		gpu->max_freq = g->ops.clk.get_maxrate(g, CTRL_CLK_DOMAIN_GPCCLK);
 
 	gpu->local_video_memory_size = g->mm.vidmem.size;
 

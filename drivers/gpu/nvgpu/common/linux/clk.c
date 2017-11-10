@@ -106,9 +106,21 @@ static int nvgpu_linux_predict_mv_at_hz_cur_tfloor(struct clk_gk20a *clk,
 				clk_get_parent(clk->tegra_clk), rate);
 }
 
-static unsigned long nvgpu_linux_get_maxrate(struct clk_gk20a *clk)
+static unsigned long nvgpu_linux_get_maxrate(struct gk20a *g, u32 api_domain)
 {
-	return tegra_dvfs_get_maxrate(clk_get_parent(clk->tegra_clk));
+	int ret;
+
+	switch (api_domain) {
+	case CTRL_CLK_DOMAIN_GPCCLK:
+		ret = tegra_dvfs_get_maxrate(clk_get_parent(g->clk.tegra_clk));
+		break;
+	default:
+		nvgpu_err(g, "unknown clock: %u", api_domain);
+		ret = 0;
+		break;
+	}
+
+	return ret;
 }
 
 static int nvgpu_linux_prepare_enable(struct clk_gk20a *clk)

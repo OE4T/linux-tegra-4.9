@@ -1273,7 +1273,7 @@ long gm20b_round_rate(struct clk_gk20a *clk, unsigned long rate,
 	unsigned long maxrate;
 	struct gk20a *g = clk->g;
 
-	maxrate = g->ops.clk.get_maxrate(clk);
+	maxrate = g->ops.clk.get_maxrate(g, CTRL_CLK_DOMAIN_GPCCLK);
 	if (rate > maxrate)
 		rate = maxrate;
 

@@ -92,10 +92,18 @@ static int vgpu_clk_set_rate(struct gk20a *g,
 	return err;
 }
 
+static unsigned long vgpu_clk_get_maxrate(struct gk20a *g, u32 api_domain)
+{
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
+
+	return priv->constants.max_freq;
+}
+
 void vgpu_init_clk_support(struct gk20a *g)
 {
 	g->ops.clk.get_rate = vgpu_clk_get_rate;
 	g->ops.clk.set_rate = vgpu_clk_set_rate;
+	g->ops.clk.get_maxrate = vgpu_clk_get_maxrate;
 }
 
 long vgpu_clk_round_rate(struct device *dev, unsigned long rate)

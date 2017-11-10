@@ -587,6 +587,7 @@ struct tegra_xudc_soc_data {
 	bool u2_enable;
 	bool lpm_enable;
 	bool invalid_seq_num;
+	bool pls_quirk;
 };
 
 static bool u1_enable;
@@ -779,7 +780,7 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 		PORTSC_PLS_MASK;
 
 	/* Direct link to U0 if disconnected in RESUME or U2. */
-	if (XUDC_IS_T210(xudc) && xudc->gadget.speed == USB_SPEED_SUPER &&
+	if (xudc->soc->pls_quirk && xudc->gadget.speed == USB_SPEED_SUPER &&
 	    (pls == PORTSC_PLS_RESUME || pls == PORTSC_PLS_U2)) {
 		val = xudc_readl(xudc, PORTPM);
 		val |= PORTPM_FRWE;
@@ -3611,6 +3612,7 @@ static struct tegra_xudc_soc_data tegra210_xudc_soc_data = {
 	.u2_enable = true,
 	.lpm_enable = false,
 	.invalid_seq_num = true,
+	.pls_quirk = true,
 };
 
 static struct tegra_xudc_soc_data tegra210b01_xudc_soc_data = {
@@ -3621,6 +3623,7 @@ static struct tegra_xudc_soc_data tegra210b01_xudc_soc_data = {
 	.u2_enable = true,
 	.lpm_enable = false,
 	.invalid_seq_num = false,
+	.pls_quirk = false,
 };
 
 static struct tegra_xudc_soc_data tegra186_xudc_soc_data = {
@@ -3631,6 +3634,7 @@ static struct tegra_xudc_soc_data tegra186_xudc_soc_data = {
 	.u2_enable = true,
 	.lpm_enable = false,
 	.invalid_seq_num = false,
+	.pls_quirk = false,
 };
 
 static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
@@ -3641,6 +3645,7 @@ static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
 	.u2_enable = true,
 	.lpm_enable = true,
 	.invalid_seq_num = false,
+	.pls_quirk = false,
 };
 
 static struct of_device_id tegra_xudc_of_match[] = {

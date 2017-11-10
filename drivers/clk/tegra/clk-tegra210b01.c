@@ -2611,8 +2611,12 @@ void tegra210b01_adjust_clks(struct tegra_clk *tegra_clks)
 	tegra_clks[tegra_clk_cap_vcore_mselect].present = false;
 	tegra_clks[tegra_clk_cap_vcore_abus].present = false;
 
+	tegra_clks[tegra_clk_cap_vcore_ape].dt_id =
+		TEGRA210_CLK_CAP_VCORE_APE;
 	tegra_clks[tegra_clk_cap_vcore_ape].present = true;
 
+	tegra_clks[tegra_clk_cap_vcore_cbus].dt_id =
+		TEGRA210_CLK_CAP_VCORE_CBUS;
 	tegra_clks[tegra_clk_cap_vcore_cbus].present = true;
 
 	/* Remove CPU_LP claster clocks */

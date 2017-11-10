@@ -274,8 +274,11 @@ static long isp_ioctl(struct file *file,
 	struct t194_isp5_file_private *filepriv = file->private_data;
 	struct platform_device *pdev = filepriv->pdev;
 
-	switch (cmd) {
-	case NVHOST_ISP_IOCTL_GET_ISP_CLK: {
+	if (_IOC_TYPE(cmd) != NVHOST_ISP_IOCTL_MAGIC)
+		return -EFAULT;
+
+	switch (_IOC_NR(cmd)) {
+	case _IOC_NR(NVHOST_ISP_IOCTL_GET_ISP_CLK): {
 		int ret;
 		u64 isp_clk_rate = 0;
 
@@ -298,7 +301,7 @@ static long isp_ioctl(struct file *file,
 
 		return 0;
 	}
-	case NVHOST_ISP_IOCTL_SET_ISP_CLK: {
+	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_CLK): {
 		long isp_clk_rate = 0;
 
 		if (copy_from_user(&isp_clk_rate,
@@ -311,7 +314,7 @@ static long isp_ioctl(struct file *file,
 		return nvhost_module_set_rate(pdev,
 				filepriv, isp_clk_rate, 0, NVHOST_CLOCK);
 	}
-	case NVHOST_ISP_IOCTL_SET_ISP_LA_BW: {
+	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_LA_BW): {
 		/* No BW control needed. Return without error. */
 		return 0;
 	}

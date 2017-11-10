@@ -558,7 +558,6 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 int vgpu_gv11b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
-	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 	u32 val;
 	bool priv_security;
 
@@ -639,13 +638,6 @@ int vgpu_gv11b_init_hal(struct gk20a *g)
 	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 
 	g->name = "gv11b";
-
-	c->twod_class = FERMI_TWOD_A;
-	c->threed_class = VOLTA_A;
-	c->compute_class = VOLTA_COMPUTE_A;
-	c->gpfifo_class = VOLTA_CHANNEL_GPFIFO_A;
-	c->inline_to_memory_class = KEPLER_INLINE_TO_MEMORY_B;
-	c->dma_copy_class = VOLTA_DMA_COPY_A;
 
 	return 0;
 }

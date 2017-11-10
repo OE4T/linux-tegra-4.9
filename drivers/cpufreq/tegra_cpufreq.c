@@ -933,7 +933,8 @@ static struct cpufreq_driver tegra_cpufreq_driver = {
 	.attr		= tegra_cpufreq_attr,
 };
 
-static int update_policy(const struct cpumask *cpus)
+static int cluster_freq_notify(struct notifier_block *b,
+			unsigned long l, void *v)
 {
 	struct cpufreq_policy *policy;
 	struct cpumask updated_cpus;
@@ -941,10 +942,7 @@ static int update_policy(const struct cpumask *cpus)
 
 	cpumask_clear(&updated_cpus);
 
-	for_each_cpu(cpu, cpus) {
-		if (!cpu_online(cpu))
-			continue;
-
+	for_each_online_cpu(cpu) {
 		/* Skip CPUs already covered by a previous update */
 		if (cpumask_test_cpu(cpu, &updated_cpus))
 			continue;
@@ -963,16 +961,6 @@ static int update_policy(const struct cpumask *cpus)
 	}
 
 	return notifier_from_errno(ret);
-}
-
-static int cluster_freq_notify(struct notifier_block *b,
-			unsigned long l, void *v)
-{
-	struct cpumask cpumask_combined;
-	cpumask_or(&cpumask_combined,
-			&tfreq_data.pcluster[0].cpu_mask,
-			&tfreq_data.pcluster[1].cpu_mask);
-	return update_policy(&cpumask_combined);
 }
 
 /* Clipping policy object's min/max to pmqos limits */
@@ -1358,9 +1346,8 @@ static int __init tegra186_cpufreq_probe(struct platform_device *pdev)
 	if (of_device_is_compatible(dn, "nvidia,tegra18x-cpufreq-hv")) {
 		tegra_cpufreq_hv_mode = true;
 		pr_info("tegra18x-cpufreq: Using hv path\n");
-	}
-
-	ret = mem_map_device(dn);
+	} else
+		ret = mem_map_device(dn);
 	if (ret)
 		goto err_out;
 

@@ -734,3 +734,19 @@ bool is_bar0_global_offset_whitelisted_gk20a(struct gk20a *g, u32 offset)
 			regop_bsearch_range_cmp);
 	return valid;
 }
+
+bool reg_op_is_gr_ctx(u8 type)
+{
+	return  type == REGOP(TYPE_GR_CTX) ||
+		type == REGOP(TYPE_GR_CTX_TPC) ||
+		type == REGOP(TYPE_GR_CTX_SM) ||
+		type == REGOP(TYPE_GR_CTX_CROP) ||
+		type == REGOP(TYPE_GR_CTX_ZROP) ||
+		type == REGOP(TYPE_GR_CTX_QUAD);
+}
+
+bool reg_op_is_read(u8 op)
+{
+	return  op == REGOP(READ_32) ||
+		op == REGOP(READ_64);
+}

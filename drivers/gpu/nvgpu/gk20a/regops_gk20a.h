@@ -36,21 +36,8 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 /* turn seriously unwieldy names -> something shorter */
 #define REGOP(x) NVGPU_DBG_GPU_REG_OP_##x
 
-static inline bool reg_op_is_gr_ctx(u8 type)
-{
-	return  type == REGOP(TYPE_GR_CTX) ||
-		type == REGOP(TYPE_GR_CTX_TPC) ||
-		type == REGOP(TYPE_GR_CTX_SM) ||
-		type == REGOP(TYPE_GR_CTX_CROP) ||
-		type == REGOP(TYPE_GR_CTX_ZROP) ||
-		type == REGOP(TYPE_GR_CTX_QUAD);
-}
-static inline bool reg_op_is_read(u8 op)
-{
-	return  op == REGOP(READ_32) ||
-		op == REGOP(READ_64) ;
-}
-
+bool reg_op_is_gr_ctx(u8 type);
+bool reg_op_is_read(u8 op);
 bool is_bar0_global_offset_whitelisted_gk20a(struct gk20a *g, u32 offset);
 
 #endif /* REGOPS_GK20A_H */

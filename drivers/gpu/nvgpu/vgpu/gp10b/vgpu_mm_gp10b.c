@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <uapi/linux/nvgpu.h>
+
 #include "vgpu/vgpu.h"
 #include "vgpu_mm_gp10b.h"
 #include "gk20a/mm_gk20a.h"

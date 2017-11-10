@@ -24,7 +24,6 @@
 #ifndef GR_GK20A_H
 #define GR_GK20A_H
 
-#include <uapi/linux/nvgpu.h>
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "gr_t18x.h"
 #endif

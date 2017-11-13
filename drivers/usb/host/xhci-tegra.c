@@ -3796,6 +3796,7 @@ static const char * const tegra210b01_supply_names[] = {
 static const struct tegra_xusb_soc tegra210b01_soc = {
 	.device_id = XHCI_DEVICE_ID_T210,
 	.firmware = "tegra210b01_xusb_firmware",
+	.lpm_support = false,
 	.supply_names = tegra210b01_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra210b01_supply_names),
 

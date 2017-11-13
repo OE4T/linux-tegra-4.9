@@ -1765,7 +1765,7 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 
 	if (fault_ch)
 		cilp_enabled = (fault_ch->ch_ctx.gr_ctx->compute_preempt_mode ==
-			NVGPU_COMPUTE_PREEMPTION_MODE_CILP);
+			NVGPU_PREEMPTION_MODE_COMPUTE_CILP);
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 			"SM Exception received on gpc %d tpc %d sm %d = 0x%08x",

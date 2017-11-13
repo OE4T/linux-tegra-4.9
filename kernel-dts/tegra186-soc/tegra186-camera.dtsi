@@ -39,9 +39,13 @@
 
 		clocks =
 			<&tegra_car TEGRA186_CLK_SCE_APB>,
-			<&tegra_car TEGRA186_CLK_SCE_CPU_NIC>,
-			<&tegra_car TEGRA186_CLK_SCE_NIC>;
-		clock-names = "sce-apb", "sce-cpu-nic", "sce-nic";
+			<&tegra_car TEGRA186_CLK_SCE_CPU_NIC>;
+		clock-names = "sce-apb", "sce-cpu-nic";
+
+		nvidia,clock-rates =
+			<102000000 102000000>,
+			<115200000 473600000>;
+
 		resets =
 			<&tegra_car TEGRA186_RESET_TSCTNSCE>,
 			<&tegra_car TEGRA186_RESET_SCE_PM>,
@@ -65,6 +69,21 @@
 			"sce-tke",
 			"sce-gte",
 			"sce-cfg",
+			"sce-nreset",
+			"sce-nsysporeset";
+
+		nvidia,reset-group-1 =
+			"tsctnsce",
+			"sce-pm",
+			"sce-dbgresetn",
+			"sce-presetdbgn",
+			"sce-actmon",
+			"sce-dma",
+			"sce-tke",
+			"sce-gte",
+			"sce-cfg";
+
+		nvidia,reset-group-2 =
 			"sce-nreset",
 			"sce-nsysporeset";
 

@@ -978,24 +978,17 @@ err_out:
 static void tegra_cpufreq_cpu_emc_map_init(struct device_node *dn)
 {
 	struct property *prop;
-	int i, len, j = 0;
-	uint32_t values[64];
+	int len;
 
 	prop = of_find_property(dn, "cpu_emc_map", &len);
 	if (prop) {
-		cpu_emc_map_num = len / sizeof(struct cpu_emc_map);
-		cpu_emc_map_ptr = kzalloc(sizeof(struct cpu_emc_map) *
-					cpu_emc_map_num, GFP_KERNEL);
+		len = rounddown(len, sizeof(struct cpu_emc_map));
+		cpu_emc_map_ptr = kzalloc(len, GFP_KERNEL);
 		if (cpu_emc_map_ptr) {
-			of_property_read_u32_array(dn, "cpu_emc_map", values,
-							cpu_emc_map_num * 2);
-			for (i = 0; i < cpu_emc_map_num; i++) {
-				cpu_emc_map_ptr[i].cpufreq = values[j];
-				cpu_emc_map_ptr[i].emcfreq = values[j+1];
-				j += 2;
-			}
-		} else
-			cpu_emc_map_num = 0;
+			of_property_read_u32_array(dn, "cpu_emc_map",
+				(u32 *)cpu_emc_map_ptr, len / sizeof(uint32_t));
+			cpu_emc_map_num = len / sizeof(struct cpu_emc_map);
+		}
 	}
 }
 

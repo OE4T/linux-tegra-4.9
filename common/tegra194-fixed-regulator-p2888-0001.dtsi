@@ -1,0 +1,141 @@
+/*
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include <dt-bindings/gpio/tegra194-gpio.h>
+#include <t19x-common-platforms/tegra194-platforms-simple-bus.dtsi>
+
+
+/ {
+	fixed-regulators {
+		battery_reg: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "vdd-ac-bat";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+		};
+
+		p2888_vdd_sc8_1v8: regulator@1 {
+			compatible = "regulator-fixed-sync";
+			reg = <1>;
+			regulator-name = "vdd-sc8-1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+			gpio = <&p2888_spmic 6 0>;
+			enable-active-high;
+		};
+
+		p2888_vdd_sc8_3v3: regulator@2 {
+			compatible = "regulator-fixed-sync";
+			reg = <2>;
+			regulator-name = "vdd-sc8-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+			gpio = <&p2888_spmic 6 0>;
+			enable-active-high;
+		};
+
+		p2888_vdd_slt_3v3: regulator@3 {
+			compatible = "regulator-fixed";
+			reg = <3>;
+			regulator-name = "vdd-slt-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-boot-on;
+			enable-active-high;
+		};
+
+		p2888_vdd_slt_1v8: regulator@4 {
+			compatible = "regulator-fixed";
+			reg = <4>;
+			regulator-name = "vdd-slt-1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-boot-on;
+			enable-active-high;
+		};
+
+		p2888_vdd_3v3_hv: regulator@5 {
+			compatible = "regulator-fixed";
+			reg = <5>;
+			regulator-name = "vdd-3v3-hv";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-boot-on;
+			/* TBD gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(FF, 3) 0>; */
+			enable-active-high;
+			vin-supply = <&p2888_vdd_slt_3v3>;
+		};
+
+		p2888_vdd_hdmi0_1_5v: regulator@6 {
+			compatible = "regulator-fixed";
+			reg = <6>;
+			regulator-name = "vdd-hdmi01-5v0";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-boot-on;
+			/* TBD gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(FF, 3) 0>; */
+			enable-active-high;
+		};
+
+		p2888_vdd_hdmi2_3_5v: regulator@7 {
+			compatible = "regulator-fixed";
+			reg = <7>;
+			regulator-name = "vdd-hdmi23-5v0";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-boot-on;
+			/*TBD  gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(FF, 3) 0>; */
+			enable-active-high;
+		};
+
+		p2888_sys_5v0_sw: regulator@8 {
+			compatible = "regulator-fixed";
+			reg = <8>;
+			regulator-name = "sys-5v0-sw";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+		};
+
+		p2888_usb0_vbus: regulator@9 {
+			compatible = "regulator-fixed";
+			reg = <9>;
+			regulator-name = "usb0-vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		/* TBD 
+			gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 4) 0>; */
+			enable-active-high;
+			vin-supply = <&p2888_sys_5v0_sw>;
+			gpio-open-drain;
+		};
+
+		p2888_usb1_vbus: regulator@10 {
+			compatible = "regulator-fixed";
+			reg = <10>;
+			regulator-name = "usb1-vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+	/* TBD 
+			gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 5) 0>; */
+			enable-active-high;
+			vin-supply = <&p2888_sys_5v0_sw>;
+			gpio-open-drain;
+		};
+	};
+};

@@ -1,11 +1,10 @@
 /*
- * Top level DTS file for CVM:P2888-0001 and CVB:P2822-0000.
- *
  * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 2 of the License.
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -13,8 +12,9 @@
  * more details.
  */
 
-#include "common/tegra194-p2888-0000-a00.dtsi"
-#include "common/tegra194-p2822-0000-a00.dtsi"
-#include "common/tegra194-power-tree-p2888-0001-p2822-1000.dtsi"
+#include "tegra194-spmic-p2888-0001.dtsi"
+#include "tegra194-fixed-regulator-p2822-1000.dtsi"
+#include "tegra194-fixed-regulator-p2888-0001.dtsi"
+
 / {
 };

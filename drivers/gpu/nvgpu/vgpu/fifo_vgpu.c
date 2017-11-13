@@ -714,6 +714,8 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 	p->handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
+	if (!err)
+		gk20a_channel_abort(ch, false);
 	return err ? err : msg.ret;
 }
 

@@ -49,7 +49,6 @@
 		only-1-8-v;
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
-		uhs-mask = <0x60>;
 		nvidia,is-emmc;
 		nvidia,set-parent-clk;
 		calib-3v3-offsets = <0x0505>;
@@ -90,7 +89,6 @@
 		pinctrl-1 = <&sdmmc3_e_33V_disable>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
-		uhs-mask = <0x1C>;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC3>;
 		reset-names = "sdmmc";
@@ -129,7 +127,6 @@
 		pinctrl-1 = <&sdmmc2_e_33V_disable>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
-		uhs-mask = <0x60>;
 		nvidia,is-emmc;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC2>;
@@ -164,7 +161,6 @@
 		pinctrl-1 = <&sdmmc1_e_33V_disable>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
-		uhs-mask = <0x1C>;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC1>;
 		reset-names = "sdmmc";

@@ -214,4 +214,9 @@
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x04 0x0 0x0>;
 	};
+
+	spdif_dit5: spdif-dit.5@5 {
+		compatible = "linux,spdif-dit";
+		reg = <0x0 0x05 0x0 0x0>;
+	};
 };

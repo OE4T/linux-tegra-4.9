@@ -86,10 +86,11 @@ int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 
 	if (priv->constants.force_preempt_mode && !graphics_preempt_mode &&
 		!compute_preempt_mode) {
-		graphics_preempt_mode = PASCAL_A == class ?
+		graphics_preempt_mode = g->ops.gr.is_valid_gfx_class(g, class) ?
 					NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP : 0;
-		compute_preempt_mode = PASCAL_COMPUTE_A == class ?
-					NVGPU_PREEMPTION_MODE_COMPUTE_CTA : 0;
+		compute_preempt_mode =
+			g->ops.gr.is_valid_compute_class(g, class) ?
+			NVGPU_PREEMPTION_MODE_COMPUTE_CTA : 0;
 	}
 
 	if (graphics_preempt_mode || compute_preempt_mode) {
@@ -126,10 +127,11 @@ int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 				&msg.params.gr_bind_ctxsw_buffers;
 	int err = 0;
 
-	if (class == PASCAL_A && g->gr.t18x.ctx_vars.force_preemption_gfxp)
+	if (g->ops.gr.is_valid_gfx_class(g, class) &&
+			g->gr.t18x.ctx_vars.force_preemption_gfxp)
 		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
 
-	if (class == PASCAL_COMPUTE_A &&
+	if (g->ops.gr.is_valid_compute_class(g, class) &&
 			g->gr.t18x.ctx_vars.force_preemption_cilp)
 		compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
 
@@ -225,7 +227,7 @@ int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 		break;
 	}
 
-	if (class == PASCAL_COMPUTE_A) {
+	if (g->ops.gr.is_valid_compute_class(g, class)) {
 		switch (compute_preempt_mode) {
 		case NVGPU_PREEMPTION_MODE_COMPUTE_WFI:
 			gr_ctx->compute_preempt_mode =

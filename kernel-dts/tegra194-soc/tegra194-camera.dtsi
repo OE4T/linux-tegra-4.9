@@ -46,6 +46,8 @@
 		resets = <&bpmp_resets TEGRA194_RESET_RCE_ALL>;
 		reset-names = "rce-all";
 
+		nvidia,camera-devices = <&isp &vi &nvcsi &slvs_ec>;
+
 		iommus = <&smmu TEGRA_SID_RCE>;
 		dma-coherent;
 

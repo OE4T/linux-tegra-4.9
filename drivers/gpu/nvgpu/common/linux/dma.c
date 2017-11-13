@@ -211,6 +211,8 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	struct device *d = dev_from_gk20a(g);
 	int err;
 	dma_addr_t iova;
+	DEFINE_DMA_ATTRS(dma_attrs);
+	void *alloc_ret;
 
 	/*
 	 * Before the debug print so we see this in the total. But during
@@ -227,37 +229,22 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	mem->size = size;
 	size = PAGE_ALIGN(size);
 
-	if (flags) {
-		DEFINE_DMA_ATTRS(dma_attrs);
+	nvgpu_dma_flags_to_attrs(&dma_attrs, flags);
 
-		nvgpu_dma_flags_to_attrs(&dma_attrs, flags);
-
-		if (flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
-			mem->priv.pages = dma_alloc_attrs(d,
-					size, &iova, GFP_KERNEL,
+	alloc_ret = dma_alloc_attrs(d, size, &iova, GFP_KERNEL,
 					__DMA_ATTR(dma_attrs));
-			if (!mem->priv.pages)
-				return -ENOMEM;
-		} else {
-			mem->cpu_va = dma_alloc_attrs(d,
-					size, &iova, GFP_KERNEL,
-					__DMA_ATTR(dma_attrs));
-			if (!mem->cpu_va)
-				return -ENOMEM;
-		}
-	} else {
-		mem->cpu_va = dma_alloc_coherent(d, size, &iova, GFP_KERNEL);
-		if (!mem->cpu_va)
-			return -ENOMEM;
-	}
+	if (!alloc_ret)
+		return -ENOMEM;
 
-	if (flags & NVGPU_DMA_NO_KERNEL_MAPPING)
+	if (flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
+		mem->priv.pages = alloc_ret;
 		err = nvgpu_get_sgtable_from_pages(g, &mem->priv.sgt,
 						   mem->priv.pages,
 						   iova, size);
-	else {
-		err = nvgpu_get_sgtable(g, &mem->priv.sgt, mem->cpu_va,
-					iova, size);
+	} else {
+		mem->cpu_va = alloc_ret;
+		err = nvgpu_get_sgtable_attrs(g, &mem->priv.sgt, mem->cpu_va,
+					iova, size, flags);
 		memset(mem->cpu_va, 0, size);
 	}
 	if (err)
@@ -273,7 +260,7 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 
 fail_free:
 	g->dma_memory_used -= mem->aligned_size;
-	dma_free_coherent(d, size, mem->cpu_va, iova);
+	dma_free_attrs(d, size, alloc_ret, iova, __DMA_ATTR(dma_attrs));
 	mem->cpu_va = NULL;
 	mem->priv.sgt = NULL;
 	mem->size = 0;
@@ -571,11 +558,12 @@ void nvgpu_dma_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem)
 	nvgpu_dma_free(vm->mm->g, mem);
 }
 
-int nvgpu_get_sgtable(struct gk20a *g, struct sg_table **sgt,
-		      void *cpuva, u64 iova, size_t size)
+int nvgpu_get_sgtable_attrs(struct gk20a *g, struct sg_table **sgt,
+		      void *cpuva, u64 iova, size_t size, unsigned long flags)
 {
 	int err = 0;
 	struct sg_table *tbl;
+	DEFINE_DMA_ATTRS(dma_attrs);
 
 	tbl = nvgpu_kzalloc(g, sizeof(struct sg_table));
 	if (!tbl) {
@@ -583,7 +571,9 @@ int nvgpu_get_sgtable(struct gk20a *g, struct sg_table **sgt,
 		goto fail;
 	}
 
-	err = dma_get_sgtable(dev_from_gk20a(g), tbl, cpuva, iova, size);
+	nvgpu_dma_flags_to_attrs(&dma_attrs, flags);
+	err = dma_get_sgtable_attrs(dev_from_gk20a(g), tbl, cpuva, iova,
+					size, __DMA_ATTR(dma_attrs));
 	if (err)
 		goto fail;
 
@@ -597,6 +587,12 @@ fail:
 		nvgpu_kfree(g, tbl);
 
 	return err;
+}
+
+int nvgpu_get_sgtable(struct gk20a *g, struct sg_table **sgt,
+		      void *cpuva, u64 iova, size_t size)
+{
+	return nvgpu_get_sgtable_attrs(g, sgt, cpuva, iova, size, 0);
 }
 
 int nvgpu_get_sgtable_from_pages(struct gk20a *g, struct sg_table **sgt,

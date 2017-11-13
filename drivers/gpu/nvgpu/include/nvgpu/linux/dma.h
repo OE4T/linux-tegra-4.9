@@ -21,9 +21,13 @@
  * Functions used internally for building the backing SGTs for nvgpu_mems.
  */
 
-int nvgpu_get_sgtable(struct gk20a *g, struct sg_table **sgt,
+
+int nvgpu_get_sgtable_attrs(struct gk20a *g, struct sg_table **sgt,
 		      void *cpuva, u64 iova,
-		      size_t size);
+		      size_t size, unsigned long flags);
+
+int nvgpu_get_sgtable(struct gk20a *g, struct sg_table **sgt,
+		      void *cpuva, u64 iova, size_t size);
 
 int nvgpu_get_sgtable_from_pages(struct gk20a *g, struct sg_table **sgt,
 				 struct page **pages, u64 iova,

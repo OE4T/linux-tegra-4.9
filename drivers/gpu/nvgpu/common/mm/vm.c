@@ -857,53 +857,39 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		struct gk20a_comptags comptags = { 0 };
 
 		/*
-		 * Get the comptags state
+		 * Get the comptags state, alloc if necessary
 		 */
-		gk20a_get_comptags(os_buf, &comptags);
+		err = gk20a_alloc_or_get_comptags(g, os_buf,
+						  &g->gr.comp_tags,
+						  binfo.ctag_lines, &comptags);
+		if (err) {
+			/*
+			 * This is an irrecoverable failure and we need to
+			 * abort. In particular, it is not safe to proceed with
+			 * the incompressible fallback, since we cannot not mark
+			 * our alloc failure anywere. Later we would retry
+			 * allocation and break compressible map aliasing.
+			 */
+			nvgpu_err(g, "Error %d setting up comptags", err);
+			goto clean_up;
+		}
 
 		/*
-		 * Allocate if not yet allocated
+		 * Newly allocated comptags needs to be cleared
 		 */
-		if (!comptags.allocated) {
-			err = gk20a_alloc_comptags(g, os_buf,
-						   &g->gr.comp_tags,
-						   binfo.ctag_lines);
-			if (err) {
+		if (comptags.needs_clear) {
+			if (g->ops.ltc.cbc_ctrl) {
+				g->ops.ltc.cbc_ctrl(
+					g, gk20a_cbc_op_clear,
+					comptags.offset,
+					(comptags.offset +
+					 comptags.lines - 1));
+				gk20a_mark_comptags_cleared(os_buf);
+			} else {
 				/*
-				 * This is an irrecoverable failure and we need
-				 * to abort. In particular, it is not safe to
-				 * proceed with incompressible fallback, since
-				 * we could not mark our alloc failure
-				 * anywere. Later we would retry allocation and
-				 * break compressible map aliasing.
+				 * Cleared as part of gmmu map
 				 */
-				nvgpu_err(g,
-					  "Error %d setting up comptags", err);
-				goto clean_up;
-			}
-
-			/*
-			 * Refresh comptags state after alloc. Field
-			 * comptags.lines will be 0 if alloc failed.
-			 */
-			gk20a_get_comptags(os_buf, &comptags);
-
-			/*
-			 * Newly allocated comptags needs to be cleared
-			 */
-			if (comptags.lines) {
-				if (g->ops.ltc.cbc_ctrl)
-					g->ops.ltc.cbc_ctrl(
-						g, gk20a_cbc_op_clear,
-						comptags.offset,
-						(comptags.offset +
-						 comptags.lines - 1));
-				else
-					/*
-					 * The comptags will be cleared as part
-					 * of mapping (vgpu)
-					 */
-					clear_ctags = true;
+				clear_ctags = true;
 			}
 		}
 
@@ -958,6 +944,9 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		err = -ENOMEM;
 		goto clean_up;
 	}
+
+	if (clear_ctags)
+		gk20a_mark_comptags_cleared(os_buf);
 
 	nvgpu_init_list_node(&mapped_buffer->buffer_list);
 	nvgpu_ref_init(&mapped_buffer->ref);

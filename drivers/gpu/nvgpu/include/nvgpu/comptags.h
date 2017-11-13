@@ -27,12 +27,17 @@ struct gk20a_comptags {
 	u32 lines;
 
 	/*
-	 * This signals whether allocation has been attempted. Observe
-	 * 'lines' to see whether comptags were actually allocated. We
-	 * try alloc only once per buffer in order not to break
-	 * multiple compressible-kind mappings.
+	 * This signals whether allocation has been attempted. Observe 'lines'
+	 * to see whether the comptags were actually allocated. We try alloc
+	 * only once per buffer in order not to break multiple compressible-kind
+	 * mappings.
 	 */
 	bool allocated;
+
+	/*
+	 * Do comptags need to be cleared before mapping?
+	 */
+	bool needs_clear;
 };
 
 struct gk20a_comptag_allocator {
@@ -63,13 +68,13 @@ void gk20a_comptaglines_free(struct gk20a_comptag_allocator *allocator,
  * Defined by OS specific code since comptags are stored in a highly OS specific
  * way.
  */
-int gk20a_alloc_comptags(struct gk20a *g,
-			 struct nvgpu_os_buffer *buf,
-			 struct gk20a_comptag_allocator *allocator,
-			 u32 lines);
+int gk20a_alloc_or_get_comptags(struct gk20a *g,
+				struct nvgpu_os_buffer *buf,
+				struct gk20a_comptag_allocator *allocator,
+				u32 lines,
+				struct gk20a_comptags *comptags);
 void gk20a_get_comptags(struct nvgpu_os_buffer *buf,
 			struct gk20a_comptags *comptags);
-
-
+void gk20a_mark_comptags_cleared(struct nvgpu_os_buffer *buf);
 
 #endif

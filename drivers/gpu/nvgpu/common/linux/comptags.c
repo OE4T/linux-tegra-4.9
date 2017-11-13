@@ -39,10 +39,11 @@ void gk20a_get_comptags(struct nvgpu_os_buffer *buf,
 	*comptags = priv->comptags;
 }
 
-int gk20a_alloc_comptags(struct gk20a *g,
-			 struct nvgpu_os_buffer *buf,
-			 struct gk20a_comptag_allocator *allocator,
-			 u32 lines)
+int gk20a_alloc_or_get_comptags(struct gk20a *g,
+				struct nvgpu_os_buffer *buf,
+				struct gk20a_comptag_allocator *allocator,
+				u32 lines,
+				struct gk20a_comptags *comptags)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(buf->dmabuf,
 							     buf->dev);
@@ -55,15 +56,23 @@ int gk20a_alloc_comptags(struct gk20a *g,
 	if (!lines)
 		return -EINVAL;
 
+	if (priv->comptags.allocated) {
+		/* already allocated */
+		*comptags = priv->comptags;
+		return 0;
+	}
+
 	/* store the allocator so we can use it when we free the ctags */
 	priv->comptag_allocator = allocator;
 	err = gk20a_comptaglines_alloc(allocator, &offset, lines);
 	if (!err) {
 		priv->comptags.offset = offset;
 		priv->comptags.lines = lines;
+		priv->comptags.needs_clear = true;
 	} else {
 		priv->comptags.offset = 0;
 		priv->comptags.lines = 0;
+		priv->comptags.needs_clear = false;
 	}
 
 	/*
@@ -74,5 +83,14 @@ int gk20a_alloc_comptags(struct gk20a *g,
 	 */
 	priv->comptags.allocated = true;
 
+	*comptags = priv->comptags;
 	return 0;
+}
+
+void gk20a_mark_comptags_cleared(struct nvgpu_os_buffer *buf)
+{
+	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(buf->dmabuf,
+							     buf->dev);
+	if (priv)
+		priv->comptags.needs_clear = false;
 }

@@ -284,6 +284,7 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("d1 Headphone", NULL),
 	SND_SOC_DAPM_SPK("d2 Headphone", NULL),
 
+	SND_SOC_DAPM_HP("w Headphone", NULL),
 	SND_SOC_DAPM_HP("x Headphone", NULL),
 	SND_SOC_DAPM_HP("y Headphone", NULL),
 	SND_SOC_DAPM_HP("z Headphone", NULL),
@@ -293,6 +294,7 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("s Headphone", NULL),
 
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
+	SND_SOC_DAPM_MIC("w Mic", NULL),
 	SND_SOC_DAPM_MIC("x Mic", NULL),
 	SND_SOC_DAPM_MIC("y Mic", NULL),
 	SND_SOC_DAPM_MIC("z Mic", NULL),
@@ -762,6 +764,17 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
 		dai_params->rate_min = clk_rate;
+	}
+
+	rtd = snd_soc_get_pcm_runtime(card, "spdif-dit-5");
+	if (rtd) {
+		dai_params =
+		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+
+		/* update link_param to update hw_param for DAPM */
+		dai_params->rate_min = clk_rate;
+		dai_params->channels_min = channels;
+		dai_params->formats = formats;
 	}
 
 	rtd = snd_soc_get_pcm_runtime(card, "dspk-playback-r");

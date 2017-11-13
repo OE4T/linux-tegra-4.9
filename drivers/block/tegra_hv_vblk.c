@@ -805,8 +805,9 @@ static int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 	uint32_t sbp_offset;
 	void *sbp;
 	uint32_t data_buf_offset;
+	uint32_t data_buf_offset_aligned;
 	void *data_buf;
-	uint32_t data_buf_size;
+	uint32_t data_buf_size_aligned;
 	uint32_t ioctl_len;
 	uint32_t *ioctl_id;
 	void *ioctl_buf = NULL;
@@ -851,13 +852,23 @@ static int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 		err = -EMSGSIZE;
 		goto free_hp;
 	}
-	data_buf_offset = ALIGN(data_buf_offset,
-			vblkdev->config.hardblk_size);
-	data_buf_size = ALIGN(hp->dxfer_len,
-			vblkdev->config.hardblk_size);
 
-	ioctl_len = data_buf_offset + data_buf_size;
-	if (ioctl_len < data_buf_offset) {
+	data_buf_offset_aligned = ALIGN(data_buf_offset,
+			vblkdev->config.hardblk_size);
+	if (data_buf_offset_aligned < data_buf_offset) {
+		err = -EMSGSIZE;
+		goto free_hp;
+	}
+
+	data_buf_size_aligned = ALIGN(hp->dxfer_len,
+			vblkdev->config.hardblk_size);
+	if (data_buf_size_aligned < hp->dxfer_len) {
+		err = -EMSGSIZE;
+		goto free_hp;
+	}
+
+	ioctl_len = data_buf_offset_aligned + data_buf_size_aligned;
+	if (ioctl_len < data_buf_offset_aligned) {
 		err = -EMSGSIZE;
 		goto free_hp;
 	}
@@ -879,7 +890,7 @@ static int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 		goto free_ioctl_buf;
 	}
 
-	data_buf = (ioctl_buf + data_buf_offset);
+	data_buf = (ioctl_buf + data_buf_offset_aligned);
 
 	switch (hp->dxfer_direction) {
 	case SG_DXFER_NONE:
@@ -910,7 +921,7 @@ static int vblk_prep_sg_io(struct vblk_dev *vblkdev,
 	vblk_hp->cmd_len = hp->cmd_len;
 	vblk_hp->mx_sb_len = hp->mx_sb_len;
 	vblk_hp->dxfer_len = hp->dxfer_len;
-	vblk_hp->xfer_arg_offset = data_buf_offset;
+	vblk_hp->xfer_arg_offset = data_buf_offset_aligned;
 	vblk_hp->cmdp_arg_offset = cmnd_offset;
 	vblk_hp->sbp_arg_offset = sbp_offset;
 

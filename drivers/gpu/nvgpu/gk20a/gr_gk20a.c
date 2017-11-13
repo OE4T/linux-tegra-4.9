@@ -7749,7 +7749,7 @@ bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 }
 
 int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
-			    struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			    struct nvgpu_dbg_reg_op *ctx_ops, u32 num_ops,
 			    u32 num_ctx_wr_ops, u32 num_ctx_rd_ops,
 			    bool ch_is_curr_ctx)
 {
@@ -7990,7 +7990,7 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 }
 
 int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
-			  struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			  struct nvgpu_dbg_reg_op *ctx_ops, u32 num_ops,
 			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops)
 {
 	struct gk20a *g = ch->g;
@@ -8279,7 +8279,7 @@ void gk20a_gr_resume_all_sms(struct gk20a *g)
 int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable)
 {
-	struct nvgpu_dbg_gpu_reg_op *ops;
+	struct nvgpu_dbg_reg_op *ops;
 	unsigned int i = 0, sm_id;
 	int err;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
@@ -8453,7 +8453,7 @@ int gr_gk20a_inval_icache(struct gk20a *g, struct channel_gk20a *ch)
 {
 	int err = 0;
 	u32	cache_ctrl, regval;
-	struct nvgpu_dbg_gpu_reg_op ops;
+	struct nvgpu_dbg_reg_op ops;
 
 	ops.op	   = REGOP(READ_32);
 	ops.type   = REGOP(TYPE_GR_CTX);

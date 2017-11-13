@@ -40,6 +40,8 @@
 #include "platform_gk20a.h"
 #include "ioctl_dbg.h"
 
+/* turn seriously unwieldy names -> something shorter */
+#define REGOP_LINUX(x) NVGPU_DBG_GPU_REG_OP_##x
 
 /* silly allocator - just increment id */
 static nvgpu_atomic_t unique_id = NVGPU_ATOMIC_INIT(0);
@@ -596,6 +598,204 @@ static int dbg_unbind_all_channels_gk20a(struct dbg_session_gk20a *dbg_s)
 	return 0;
 }
 
+/*
+ * Convert common regops op values of the form of NVGPU_DBG_REG_OP_*
+ * into linux regops op values of the form of NVGPU_DBG_GPU_REG_OP_*
+ */
+static u32 nvgpu_get_regops_op_values_linux(u32 regops_op)
+{
+	switch (regops_op) {
+	case REGOP(READ_32):
+		return REGOP_LINUX(READ_32);
+	case REGOP(WRITE_32):
+		return REGOP_LINUX(WRITE_32);
+	case REGOP(READ_64):
+		return REGOP_LINUX(READ_64);
+	case REGOP(WRITE_64):
+		return REGOP_LINUX(WRITE_64);
+	case REGOP(READ_08):
+		return REGOP_LINUX(READ_08);
+	case REGOP(WRITE_08):
+		return REGOP_LINUX(WRITE_08);
+	}
+
+	return regops_op;
+}
+
+/*
+ * Convert linux regops op values of the form of NVGPU_DBG_GPU_REG_OP_*
+ * into common regops op values of the form of NVGPU_DBG_REG_OP_*
+ */
+static u32 nvgpu_get_regops_op_values_common(u32 regops_op)
+{
+	switch (regops_op) {
+	case REGOP_LINUX(READ_32):
+		return REGOP(READ_32);
+	case REGOP_LINUX(WRITE_32):
+		return REGOP(WRITE_32);
+	case REGOP_LINUX(READ_64):
+		return REGOP(READ_64);
+	case REGOP_LINUX(WRITE_64):
+		return REGOP(WRITE_64);
+	case REGOP_LINUX(READ_08):
+		return REGOP(READ_08);
+	case REGOP_LINUX(WRITE_08):
+		return REGOP(WRITE_08);
+	}
+
+	return regops_op;
+}
+
+/*
+ * Convert common regops type values of the form of NVGPU_DBG_REG_OP_TYPE_*
+ * into linux regops type values of the form of NVGPU_DBG_GPU_REG_OP_TYPE_*
+ */
+static u32 nvgpu_get_regops_type_values_linux(u32 regops_type)
+{
+	switch (regops_type) {
+	case REGOP(TYPE_GLOBAL):
+		return REGOP_LINUX(TYPE_GLOBAL);
+	case REGOP(TYPE_GR_CTX):
+		return REGOP_LINUX(TYPE_GR_CTX);
+	case REGOP(TYPE_GR_CTX_TPC):
+		return REGOP_LINUX(TYPE_GR_CTX_TPC);
+	case REGOP(TYPE_GR_CTX_SM):
+		return REGOP_LINUX(TYPE_GR_CTX_SM);
+	case REGOP(TYPE_GR_CTX_CROP):
+		return REGOP_LINUX(TYPE_GR_CTX_CROP);
+	case REGOP(TYPE_GR_CTX_ZROP):
+		return REGOP_LINUX(TYPE_GR_CTX_ZROP);
+	case REGOP(TYPE_GR_CTX_QUAD):
+		return REGOP_LINUX(TYPE_GR_CTX_QUAD);
+	}
+
+	return regops_type;
+}
+
+/*
+ * Convert linux regops type values of the form of NVGPU_DBG_GPU_REG_OP_TYPE_*
+ * into common regops type values of the form of NVGPU_DBG_REG_OP_TYPE_*
+ */
+static u32 nvgpu_get_regops_type_values_common(u32 regops_type)
+{
+	switch (regops_type) {
+	case REGOP_LINUX(TYPE_GLOBAL):
+		return REGOP(TYPE_GLOBAL);
+	case REGOP_LINUX(TYPE_GR_CTX):
+		return REGOP(TYPE_GR_CTX);
+	case REGOP_LINUX(TYPE_GR_CTX_TPC):
+		return REGOP(TYPE_GR_CTX_TPC);
+	case REGOP_LINUX(TYPE_GR_CTX_SM):
+		return REGOP(TYPE_GR_CTX_SM);
+	case REGOP_LINUX(TYPE_GR_CTX_CROP):
+		return REGOP(TYPE_GR_CTX_CROP);
+	case REGOP_LINUX(TYPE_GR_CTX_ZROP):
+		return REGOP(TYPE_GR_CTX_ZROP);
+	case REGOP_LINUX(TYPE_GR_CTX_QUAD):
+		return REGOP(TYPE_GR_CTX_QUAD);
+	}
+
+	return regops_type;
+}
+
+/*
+ * Convert common regops status values of the form of NVGPU_DBG_REG_OP_STATUS_*
+ * into linux regops type values of the form of NVGPU_DBG_GPU_REG_OP_STATUS_*
+ */
+static u32 nvgpu_get_regops_status_values_linux(u32 regops_status)
+{
+	switch (regops_status) {
+	case REGOP(STATUS_SUCCESS):
+		return REGOP_LINUX(STATUS_SUCCESS);
+	case REGOP(STATUS_INVALID_OP):
+		return REGOP_LINUX(STATUS_INVALID_OP);
+	case REGOP(STATUS_INVALID_TYPE):
+		return REGOP_LINUX(STATUS_INVALID_TYPE);
+	case REGOP(STATUS_INVALID_OFFSET):
+		return REGOP_LINUX(STATUS_INVALID_OFFSET);
+	case REGOP(STATUS_UNSUPPORTED_OP):
+		return REGOP_LINUX(STATUS_UNSUPPORTED_OP);
+	case REGOP(STATUS_INVALID_MASK ):
+		return REGOP_LINUX(STATUS_INVALID_MASK);
+	}
+
+	return regops_status;
+}
+
+/*
+ * Convert linux regops status values of the form of NVGPU_DBG_GPU_REG_OP_STATUS_*
+ * into common regops type values of the form of NVGPU_DBG_REG_OP_STATUS_*
+ */
+static u32 nvgpu_get_regops_status_values_common(u32 regops_status)
+{
+	switch (regops_status) {
+	case REGOP_LINUX(STATUS_SUCCESS):
+		return REGOP(STATUS_SUCCESS);
+	case REGOP_LINUX(STATUS_INVALID_OP):
+		return REGOP(STATUS_INVALID_OP);
+	case REGOP_LINUX(STATUS_INVALID_TYPE):
+		return REGOP(STATUS_INVALID_TYPE);
+	case REGOP_LINUX(STATUS_INVALID_OFFSET):
+		return REGOP(STATUS_INVALID_OFFSET);
+	case REGOP_LINUX(STATUS_UNSUPPORTED_OP):
+		return REGOP(STATUS_UNSUPPORTED_OP);
+	case REGOP_LINUX(STATUS_INVALID_MASK ):
+		return REGOP(STATUS_INVALID_MASK);
+	}
+
+	return regops_status;
+}
+
+static int nvgpu_get_regops_data_common(struct nvgpu_dbg_gpu_reg_op *in,
+		struct nvgpu_dbg_reg_op *out, u32 num_ops)
+{
+	u32 i;
+
+	if(in == NULL || out == NULL)
+		return -ENOMEM;
+
+	for (i = 0; i < num_ops; i++) {
+		out[i].op = nvgpu_get_regops_op_values_common(in[i].op);
+		out[i].type = nvgpu_get_regops_type_values_common(in[i].type);
+		out[i].status = nvgpu_get_regops_status_values_common(in[i].status);
+		out[i].quad = in[i].quad;
+		out[i].group_mask = in[i].group_mask;
+		out[i].sub_group_mask = in[i].sub_group_mask;
+		out[i].offset = in[i].offset;
+		out[i].value_lo = in[i].value_lo;
+		out[i].value_hi = in[i].value_hi;
+		out[i].and_n_mask_lo = in[i].and_n_mask_lo;
+		out[i].and_n_mask_hi = in[i].and_n_mask_hi;
+	}
+
+	return 0;
+}
+
+static int nvgpu_get_regops_data_linux(struct nvgpu_dbg_reg_op *in,
+		struct nvgpu_dbg_gpu_reg_op *out, u32 num_ops)
+{
+	u32 i;
+
+	if(in == NULL || out == NULL)
+		return -ENOMEM;
+
+	for (i = 0; i < num_ops; i++) {
+		out[i].op = nvgpu_get_regops_op_values_linux(in[i].op);
+		out[i].type = nvgpu_get_regops_type_values_linux(in[i].type);
+		out[i].status = nvgpu_get_regops_status_values_linux(in[i].status);
+		out[i].quad = in[i].quad;
+		out[i].group_mask = in[i].group_mask;
+		out[i].sub_group_mask = in[i].sub_group_mask;
+		out[i].offset = in[i].offset;
+		out[i].value_lo = in[i].value_lo;
+		out[i].value_hi = in[i].value_hi;
+		out[i].and_n_mask_lo = in[i].and_n_mask_lo;
+		out[i].and_n_mask_hi = in[i].and_n_mask_hi;
+	}
+
+	return 0;
+}
+
 static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 				struct nvgpu_dbg_gpu_exec_reg_ops_args *args)
 {
@@ -657,36 +857,56 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	if (!powergate_err) {
 		u64 ops_offset = 0; /* index offset */
 
+		struct nvgpu_dbg_gpu_reg_op *linux_fragment = NULL;
+
+		linux_fragment = nvgpu_kzalloc(g, g->dbg_regops_tmp_buf_ops *
+				sizeof(struct nvgpu_dbg_gpu_reg_op));
+
+		if (!linux_fragment)
+			return -ENOMEM;
+
 		while (ops_offset < args->num_ops && !err) {
 			const u64 num_ops =
 				min(args->num_ops - ops_offset,
 				    (u64)(g->dbg_regops_tmp_buf_ops));
 			const u64 fragment_size =
-				num_ops * sizeof(g->dbg_regops_tmp_buf[0]);
+				num_ops * sizeof(struct nvgpu_dbg_gpu_reg_op);
 
 			void __user *const fragment =
 				(void __user *)(uintptr_t)
 				(args->ops +
-				 ops_offset * sizeof(g->dbg_regops_tmp_buf[0]));
+				 ops_offset * sizeof(struct nvgpu_dbg_gpu_reg_op));
 
 			gk20a_dbg_fn("Regops fragment: start_op=%llu ops=%llu",
 				     ops_offset, num_ops);
 
 			gk20a_dbg_fn("Copying regops from userspace");
 
-			if (copy_from_user(g->dbg_regops_tmp_buf,
+			if (copy_from_user(linux_fragment,
 					   fragment, fragment_size)) {
 				nvgpu_err(g, "copy_from_user failed!");
 				err = -EFAULT;
 				break;
 			}
 
+			err = nvgpu_get_regops_data_common(linux_fragment,
+					g->dbg_regops_tmp_buf, num_ops);
+
+			if (err)
+				break;
+
 			err = g->ops.dbg_session_ops.exec_reg_ops(
 				dbg_s, g->dbg_regops_tmp_buf, num_ops);
 
+			err = nvgpu_get_regops_data_linux(g->dbg_regops_tmp_buf,
+					linux_fragment, num_ops);
+
+			if (err)
+				break;
+
 			gk20a_dbg_fn("Copying result to userspace");
 
-			if (copy_to_user(fragment, g->dbg_regops_tmp_buf,
+			if (copy_to_user(fragment, linux_fragment,
 					 fragment_size)) {
 				nvgpu_err(g, "copy_to_user failed!");
 				err = -EFAULT;
@@ -695,6 +915,8 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 			ops_offset += num_ops;
 		}
+
+		nvgpu_kfree(g, linux_fragment);
 
 		/* enable powergate, if previously disabled */
 		if (is_pg_disabled) {

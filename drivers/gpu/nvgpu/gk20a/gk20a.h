@@ -949,7 +949,7 @@ struct gpu_ops {
 	} debug;
 	struct {
 		int (*exec_reg_ops)(struct dbg_session_gk20a *dbg_s,
-			    struct nvgpu_dbg_gpu_reg_op *ops,
+			    struct nvgpu_dbg_reg_op *ops,
 			    u64 num_ops);
 		int (*dbg_set_powergate)(struct dbg_session_gk20a *dbg_s,
 					bool disable_powergate);
@@ -1206,7 +1206,7 @@ struct gk20a {
 	int dbg_timeout_disabled_refcount; /*refcount for timeout disable */
 
 	/* must have dbg_sessions_lock before use */
-	struct nvgpu_dbg_gpu_reg_op *dbg_regops_tmp_buf;
+	struct nvgpu_dbg_reg_op *dbg_regops_tmp_buf;
 	u32 dbg_regops_tmp_buf_ops;
 
 	/* For perfbuf mapping */

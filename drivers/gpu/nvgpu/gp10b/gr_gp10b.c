@@ -2327,7 +2327,7 @@ void gr_gp10b_init_czf_bypass(struct gk20a *g)
 
 int gr_gp10b_set_czf_bypass(struct gk20a *g, struct channel_gk20a *ch)
 {
-	struct nvgpu_dbg_gpu_reg_op ops;
+	struct nvgpu_dbg_reg_op ops;
 
 	ops.op     = REGOP(WRITE_32);
 	ops.type   = REGOP(TYPE_GR_CTX);

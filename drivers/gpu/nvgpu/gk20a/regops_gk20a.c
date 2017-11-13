@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/err.h>
-#include <uapi/linux/nvgpu.h>
-
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -377,12 +374,12 @@ static const u32 gk20a_qctl_whitelist_ranges_count =
 
 static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 			     u32 *ctx_rd_count, u32 *ctx_wr_count,
-			     struct nvgpu_dbg_gpu_reg_op *ops,
+			     struct nvgpu_dbg_reg_op *ops,
 			     u32 op_count);
 
 
 int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
-		      struct nvgpu_dbg_gpu_reg_op *ops,
+		      struct nvgpu_dbg_reg_op *ops,
 		      u64 num_ops)
 {
 	int err = 0;
@@ -519,7 +516,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 
 
 static int validate_reg_op_info(struct dbg_session_gk20a *dbg_s,
-				struct nvgpu_dbg_gpu_reg_op *op)
+				struct nvgpu_dbg_reg_op *op)
 {
 	int err = 0;
 
@@ -559,7 +556,7 @@ static int validate_reg_op_info(struct dbg_session_gk20a *dbg_s,
 }
 
 static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
-			  struct nvgpu_dbg_gpu_reg_op *op, u32 offset)
+			  struct nvgpu_dbg_reg_op *op, u32 offset)
 {
 	struct gk20a *g = dbg_s->g;
 	bool valid = false;
@@ -630,7 +627,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 
 /* note: the op here has already been through validate_reg_op_info */
 static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
-				  struct nvgpu_dbg_gpu_reg_op *op)
+				  struct nvgpu_dbg_reg_op *op)
 {
 	int err;
 	u32 buf_offset_lo, buf_offset_addr, num_offsets, offset;
@@ -689,7 +686,7 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 
 static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 			    u32 *ctx_rd_count, u32 *ctx_wr_count,
-			    struct nvgpu_dbg_gpu_reg_op *ops,
+			    struct nvgpu_dbg_reg_op *ops,
 			    u32 op_count)
 {
 	u32 i;

@@ -604,12 +604,12 @@ u32 gk20a_gr_get_sm_no_lock_down_hww_global_esr_mask(struct gk20a *g);
 
 int gk20a_gr_suspend(struct gk20a *g);
 
-struct nvgpu_dbg_gpu_reg_op;
+struct nvgpu_dbg_reg_op;
 int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
-			  struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			  struct nvgpu_dbg_reg_op *ctx_ops, u32 num_ops,
 			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops);
 int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
-			    struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			    struct nvgpu_dbg_reg_op *ctx_ops, u32 num_ops,
 			    u32 num_ctx_wr_ops, u32 num_ctx_rd_ops,
 			    bool ch_is_curr_ctx);
 int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,

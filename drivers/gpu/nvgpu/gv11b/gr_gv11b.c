@@ -2584,7 +2584,7 @@ fail:
 int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable)
 {
-	struct nvgpu_dbg_gpu_reg_op *ops;
+	struct nvgpu_dbg_reg_op *ops;
 	unsigned int i = 0, sm_id;
 	int err;
 

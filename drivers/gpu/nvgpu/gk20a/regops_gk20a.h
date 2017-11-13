@@ -24,17 +24,63 @@
 #ifndef REGOPS_GK20A_H
 #define REGOPS_GK20A_H
 
+/*
+ * Register operations
+ * All operations are targeted towards first channel
+ * attached to debug session
+ */
+/* valid op values */
+#define NVGPU_DBG_REG_OP_READ_32                             (0x00000000)
+#define NVGPU_DBG_REG_OP_WRITE_32                            (0x00000001)
+#define NVGPU_DBG_REG_OP_READ_64                             (0x00000002)
+#define NVGPU_DBG_REG_OP_WRITE_64                            (0x00000003)
+/* note: 8b ops are unsupported */
+#define NVGPU_DBG_REG_OP_READ_08                             (0x00000004)
+#define NVGPU_DBG_REG_OP_WRITE_08                            (0x00000005)
+
+/* valid type values */
+#define NVGPU_DBG_REG_OP_TYPE_GLOBAL                         (0x00000000)
+#define NVGPU_DBG_REG_OP_TYPE_GR_CTX                         (0x00000001)
+#define NVGPU_DBG_REG_OP_TYPE_GR_CTX_TPC                     (0x00000002)
+#define NVGPU_DBG_REG_OP_TYPE_GR_CTX_SM                      (0x00000004)
+#define NVGPU_DBG_REG_OP_TYPE_GR_CTX_CROP                    (0x00000008)
+#define NVGPU_DBG_REG_OP_TYPE_GR_CTX_ZROP                    (0x00000010)
+/*#define NVGPU_DBG_REG_OP_TYPE_FB                           (0x00000020)*/
+#define NVGPU_DBG_REG_OP_TYPE_GR_CTX_QUAD                    (0x00000040)
+
+/* valid status values */
+#define NVGPU_DBG_REG_OP_STATUS_SUCCESS                      (0x00000000)
+#define NVGPU_DBG_REG_OP_STATUS_INVALID_OP                   (0x00000001)
+#define NVGPU_DBG_REG_OP_STATUS_INVALID_TYPE                 (0x00000002)
+#define NVGPU_DBG_REG_OP_STATUS_INVALID_OFFSET               (0x00000004)
+#define NVGPU_DBG_REG_OP_STATUS_UNSUPPORTED_OP               (0x00000008)
+#define NVGPU_DBG_REG_OP_STATUS_INVALID_MASK                 (0x00000010)
+
+struct nvgpu_dbg_reg_op {
+	__u8    op;
+	__u8    type;
+	__u8    status;
+	__u8    quad;
+	__u32   group_mask;
+	__u32   sub_group_mask;
+	__u32   offset;
+	__u32   value_lo;
+	__u32   value_hi;
+	__u32   and_n_mask_lo;
+	__u32   and_n_mask_hi;
+};
+
 struct regop_offset_range {
 	u32 base:24;
 	u32 count:8;
 };
 
 int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
-		      struct nvgpu_dbg_gpu_reg_op *ops,
+		      struct nvgpu_dbg_reg_op *ops,
 		      u64 num_ops);
 
 /* turn seriously unwieldy names -> something shorter */
-#define REGOP(x) NVGPU_DBG_GPU_REG_OP_##x
+#define REGOP(x) NVGPU_DBG_REG_OP_##x
 
 bool reg_op_is_gr_ctx(u8 type);
 bool reg_op_is_read(u8 op);

@@ -31,6 +31,7 @@
 #include "os_linux.h"
 #include "sysfs.h"
 #include "ioctl.h"
+#include "gk20a/regops_gk20a.h"
 
 #define EMC3D_DEFAULT_RATIO 750
 

@@ -18,12 +18,12 @@
 #define _DBG_VGPU_H_
 
 struct dbg_session_gk20a;
-struct nvgpu_dbg_gpu_reg_op;
+struct nvgpu_dbg_reg_op;
 struct dbg_profiler_object_data;
 struct gk20a;
 
 int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
-		      struct nvgpu_dbg_gpu_reg_op *ops,
+		      struct nvgpu_dbg_reg_op *ops,
 		      u64 num_ops);
 int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powergate);
 bool vgpu_check_and_set_global_reservation(

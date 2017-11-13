@@ -36,6 +36,7 @@
 #include "clk_vgpu.h"
 #include "gk20a/tsg_gk20a.h"
 #include "gk20a/channel_gk20a.h"
+#include "gk20a/regops_gk20a.h"
 #include "gm20b/hal_gm20b.h"
 
 #include "common/linux/module.h"

@@ -20,6 +20,7 @@
 
 #include <nvgpu/linux/vm.h>
 
+#include "gk20a/gk20a.h"
 #include "dmabuf.h"
 
 void gk20a_get_comptags(struct nvgpu_os_buffer *buf,
@@ -42,25 +43,32 @@ void gk20a_get_comptags(struct nvgpu_os_buffer *buf,
 int gk20a_alloc_or_get_comptags(struct gk20a *g,
 				struct nvgpu_os_buffer *buf,
 				struct gk20a_comptag_allocator *allocator,
-				u32 lines,
 				struct gk20a_comptags *comptags)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(buf->dmabuf,
 							     buf->dev);
 	u32 offset;
 	int err;
+	unsigned int ctag_granularity;
+	u32 lines;
 
 	if (!priv)
 		return -ENOSYS;
 
-	if (!lines)
-		return -EINVAL;
-
 	if (priv->comptags.allocated) {
-		/* already allocated */
+		/*
+		 * already allocated
+		 */
 		*comptags = priv->comptags;
 		return 0;
 	}
+
+	ctag_granularity = g->ops.fb.compression_page_size(g);
+	lines = DIV_ROUND_UP_ULL(buf->dmabuf->size, ctag_granularity);
+
+	/* 0-sized buffer? Shouldn't occur, but let's check anyways. */
+	if (lines < 1)
+		return -EINVAL;
 
 	/* store the allocator so we can use it when we free the ctags */
 	priv->comptag_allocator = allocator;

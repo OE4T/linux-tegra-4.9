@@ -774,7 +774,8 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 
 	binfo.flags = flags;
 	binfo.size = nvgpu_os_buf_get_size(os_buf);
-	binfo.compr_kind = compr_kind;
+	binfo.compr_kind = (vm->enable_ctag && compr_kind != NV_KIND_INVALID ?
+			    compr_kind : NV_KIND_INVALID);
 	binfo.incompr_kind = incompr_kind;
 
 	if (compr_kind != NV_KIND_INVALID)
@@ -847,13 +848,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
-	/*
-	 * bar1 and pmu VMs don't need ctags.
-	 */
-	if (!vm->enable_ctag)
-		binfo.ctag_lines = 0;
-
-	if (binfo.ctag_lines) {
+	if (binfo.compr_kind != NV_KIND_INVALID) {
 		struct gk20a_comptags comptags = { 0 };
 
 		/*
@@ -861,7 +856,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		 */
 		err = gk20a_alloc_or_get_comptags(g, os_buf,
 						  &g->gr.comp_tags,
-						  binfo.ctag_lines, &comptags);
+						  &comptags);
 		if (err) {
 			/*
 			 * This is an irrecoverable failure and we need to
@@ -1116,7 +1111,6 @@ static int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
 {
 	bool kind_compressible = (binfo->compr_kind != NV_KIND_INVALID);
 	struct gk20a *g = gk20a_from_vm(vm);
-	int ctag_granularity = g->ops.fb.compression_page_size(g);
 
 	if (kind_compressible &&
 	    vm->gmmu_page_sizes[binfo->pgsz_idx] <
@@ -1137,10 +1131,6 @@ static int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
 			kind_compressible = false;
 		}
 	}
-
-	if (kind_compressible)
-		binfo->ctag_lines = DIV_ROUND_UP_ULL(binfo->size,
-						     ctag_granularity);
 
 	return 0;
 }

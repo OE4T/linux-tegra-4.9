@@ -71,7 +71,6 @@ void gk20a_comptaglines_free(struct gk20a_comptag_allocator *allocator,
 int gk20a_alloc_or_get_comptags(struct gk20a *g,
 				struct nvgpu_os_buffer *buf,
 				struct gk20a_comptag_allocator *allocator,
-				u32 lines,
 				struct gk20a_comptags *comptags);
 void gk20a_get_comptags(struct nvgpu_os_buffer *buf,
 			struct gk20a_comptags *comptags);

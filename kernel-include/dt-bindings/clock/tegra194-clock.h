@@ -607,5 +607,14 @@
 #define TEGRA194_CLK_CAN2_CORE			285
 /** @brief CLK_RST_CONTROLLER_PLLA1_OUT1 switch divider output */
 #define TEGRA194_CLK_PLLA1_OUT1			286
+/** @brief NVHS PLL hardware power sequencer (overrides 'manual' programming of PLL) */
+#define TEGRA194_CLK_PLLNVHS_HPS		287
+/** @brief PLL controlled by CLK_RST_CONTROLLER_PLLREFE_BASE */
+#define TEGRA194_CLK_PLLREFE_VCOOUT		288
+
+#define TEGRA194_CLK_CLK_32K			289
+#define TEGRA194_CLK_SPDIFIN_SYNC_INPUT		290
+#define TEGRA194_CLK_UTMIPLL_CLKOUT48		291
+#define TEGRA194_CLK_UTMIPLL_CLKOUT480		292
 
 #endif

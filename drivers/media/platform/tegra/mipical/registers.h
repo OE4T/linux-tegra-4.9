@@ -16,11 +16,19 @@
 
 /* New register on T186 that starts
  * at offset 0
+ * Use a virtual offset, and let the
+ * ADDR(x) macro handle this case
  */
-#define MIPI_CAL_MODE		0x00
+/* virtual offset */
+#define MIPI_CAL_MODE		0xFF
+/* physical offset */
+#define MIPI_CAL_MODE_PHYS  0x0
 #define SEL_DPHY_CPHY		(1 << 0)
 
-/* T210 register offset*/
+/* T210 register offset
+ * physical addresses for t186 and above
+ * start at 0x04, not 0x00
+ */
 #define MIPI_CAL_CTRL		0x00
 #define		NOISE_FLT	(0xf << 26)
 #define		PRESCALE	(0x3 << 24)

@@ -108,7 +108,31 @@ static const struct regmap_config t210_mipi_cal_regmap_config = {
 	.fast_io = 1,
 };
 
-#define ADDR(x) (x + mipi->soc->addr_offset)
+/* Planned future code, where offset_acc is the accumulation of offsets:
+ * #define ADDR(x) HANDLE_OFFSETS(x)
+ * #define HANDLE_OFFSETS(x) HANDLE_CAL_MODE(x,0)
+ * #define HANDLE_CAL_MODE(x, offset_acc) \
+	((x == MIPI_CAL_MODE) ? MIPI_CAL_MODE_PHYS : \
+		HANDLE_CILG(x, (offset_acc + 4)))
+ * #define HANDLE_CILG(x, offset_acc) \
+	((x == CILG_MIPI_CAL_CONFIG) ? CILG_MIPI_CAL_CONFIG_PHYS : \
+		HANDLE_CILH(x, offset_acc))
+ * #define HANDLE_CILH(x, offset_acc) \
+	((x == CILH_MIPI_CAL_CONFIG) ? CILH_MIPI_CAL_CONFIG_PHYS : \
+		HANDLE_CILGH_OFFSET((x + offset_acc)))
+ * #define HANDLE_CILGH_OFFSET (x) ((x > CILH_MIPI_CAL_CONFIG) ?\
+	 (x + mipi->soc->t194_addr_offset): x)
+ */
+
+/* a bit of unnecessary aliases, but will help in the future for clear,
+ * readable handling of special registers (see above)
+ */
+#define HANDLE_CAL_MODE(x) \
+	((x == MIPI_CAL_MODE) ? MIPI_CAL_MODE_PHYS : \
+		(x + mipi->soc->addr_offset))
+#define HANDLE_OFFSETS(x) HANDLE_CAL_MODE(x)
+#define ADDR(x) HANDLE_OFFSETS(x)
+
 #define dump_register(nm)	\
 {				\
 	.name = #nm,		\
@@ -118,6 +142,7 @@ struct tegra_mipi_soc {
 	int powergate_id;
 	unsigned int total_dsilanes;
 	unsigned int total_cillanes;
+	/* for t186 and beyond where a new register was added at 0x0 */
 	char addr_offset;
 	char ppsb_war;
 	int (*pad_enable)(struct tegra_mipi *mipi);

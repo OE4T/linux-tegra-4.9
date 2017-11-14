@@ -330,17 +330,12 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 	if (ret)
 		goto err;
 
-#ifdef CONFIG_TEGRA_EMC_APE_DFS
-	ret = emc_dfs_init(pdev);
-	if (ret)
-		goto err;
-#endif
-
 #ifdef CONFIG_TEGRA_ADSP_ACTMON
 	ret = ape_actmon_probe(pdev);
 	if (ret)
 		goto err;
 #endif
+
 	ret = nvadsp_os_probe(pdev);
 	if (ret)
 		goto err;
@@ -360,6 +355,11 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 	ret = nvadsp_aram_init(aram_addr, aram_size);
 	if (ret)
 		dev_err(dev, "Failed to init aram\n");
+
+	drv_data->bwmgr = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_APE_ADSP);
+	ret = IS_ERR_OR_NULL(drv_data->bwmgr);
+	if (ret)
+		dev_err(&pdev->dev, "unable to register bwmgr\n");
 err:
 #ifdef CONFIG_PM
 	ret = pm_runtime_put_sync(dev);
@@ -372,9 +372,18 @@ out:
 
 static int nvadsp_remove(struct platform_device *pdev)
 {
-#ifdef CONFIG_TEGRA_EMC_APE_DFS
-	emc_dfs_exit();
-#endif
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	int err;
+
+	if (drv_data->bwmgr) {
+		err = tegra_bwmgr_set_emc(drv_data->bwmgr, 0,
+					  TEGRA_BWMGR_SET_EMC_FLOOR);
+		if (err) {
+			dev_err(&pdev->dev, "failed to set emc freq rate:%d\n",
+				err);
+		}
+		tegra_bwmgr_unregister(drv_data->bwmgr);
+	}
 	nvadsp_aram_exit();
 
 	pm_runtime_disable(&pdev->dev);

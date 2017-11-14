@@ -770,6 +770,40 @@ u32 adsp_to_emc_freq(u32 adspfreq)
 		return 0;		/* emc min */
 }
 
+static int nvadsp_set_ape_emc_freq(struct nvadsp_drv_data *drv_data)
+{
+	unsigned long ape_emc_freq;
+	struct device *dev = &priv.pdev->dev;
+	int ret;
+
+#ifdef CONFIG_TEGRA_ADSP_DFS
+	 /* pass adsp freq in KHz. adsp_emc_freq in Hz */
+	ape_emc_freq = adsp_to_emc_freq(drv_data->adsp_freq / 1000) * 1000;
+#else
+	ape_emc_freq = drv_data->ape_emc_freq * 1000; /* in Hz */
+#endif
+	dev_dbg(dev, "requested adsp cpu freq %luKHz",
+		 drv_data->adsp_freq / 1000);
+	dev_dbg(dev, "emc freq %luHz\n", ape_emc_freq / 1000);
+
+	/*
+	 * ape_emc_freq is not required to set if adsp_freq
+	 * is lesser than 204.8 MHz
+	 */
+
+	if (!ape_emc_freq)
+		return 0;
+
+	ret = tegra_bwmgr_set_emc(drv_data->bwmgr, ape_emc_freq * 1000,
+				  TEGRA_BWMGR_SET_EMC_FLOOR);
+	if (ret)
+		dev_err(dev, "failed to set emc freq rate:%d\n", ret);
+	dev_dbg(dev, "ape.emc freq %luKHz\n",
+		tegra_bwmgr_get_emc_rate() / 1000);
+
+	return ret;
+}
+
 static int nvadsp_set_ape_freq(struct nvadsp_drv_data *drv_data)
 {
 	unsigned long ape_freq = drv_data->ape_freq * 1000; /* in Hz*/
@@ -983,7 +1017,11 @@ static int nvadsp_set_boot_freqs(struct nvadsp_drv_data *drv_data)
 		if (ret)
 			goto end;
 	}
-
+	if (drv_data->bwmgr) {
+		ret = nvadsp_set_ape_emc_freq(drv_data);
+		if (ret)
+			goto end;
+	}
 end:
 	return ret;
 }

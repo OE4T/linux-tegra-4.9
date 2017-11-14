@@ -58,11 +58,6 @@ static int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 		drv_data->apb2ape_clk = NULL;
 	}
 
-	if (drv_data->ape_emc_clk) {
-		clk_disable_unprepare(drv_data->ape_emc_clk);
-		dev_dbg(dev, "ape.emc clock disabled\n");
-		drv_data->ape_emc_clk = NULL;
-	}
 	return 0;
 }
 
@@ -121,19 +116,6 @@ static int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 		goto end;
 	}
 	dev_dbg(dev, "adsp neon clock enabled\n");
-
-	drv_data->ape_emc_clk = devm_clk_get(dev, "adsp.emc");
-	if (IS_ERR_OR_NULL(drv_data->ape_emc_clk)) {
-		dev_err(dev, "unable to find adsp.emc clock\n");
-		ret = PTR_ERR(drv_data->ape_emc_clk);
-		goto end;
-	}
-	ret = clk_prepare_enable(drv_data->ape_emc_clk);
-	if (ret) {
-		dev_err(dev, "unable to enable adsp.emc clock\n");
-		goto end;
-	}
-	dev_dbg(dev, "ape.emc is enabled\n");
 
 	drv_data->apb2ape_clk = devm_clk_get(dev, "adsp.apb2ape");
 	if (IS_ERR_OR_NULL(drv_data->apb2ape_clk)) {

@@ -100,7 +100,6 @@ struct adsp_dfs_policy {
 	struct clk *adsp_clk;
 	struct clk *aclk_clk;
 	struct clk *adsp_cpu_abus_clk;
-	struct notifier_block rate_change_nb;
 	struct nvadsp_mbox mbox;
 
 #ifdef CONFIG_DEBUG_FS
@@ -126,7 +125,6 @@ struct adsp_freq_stats {
 static struct adsp_dfs_policy *policy;
 static struct adsp_freq_stats freq_stats;
 static struct device *device;
-static struct clk *ape_emc_clk;
 
 
 static DEFINE_MUTEX(policy_mutex);
@@ -265,37 +263,9 @@ static void adspfreq_stats_update(void)
 	freq_stats.last_time = cur_time;
 }
 
-/* adsp clock rate change notifier callback */
-static int adsp_dfs_rc_callback(
-	struct notifier_block *nb, unsigned long rate, void *v)
-{
-	unsigned long freq = rate / 1000;
-	int old_index, new_index = 0;
-
-	/* update states */
-	adspfreq_stats_update();
-
-	old_index = freq_stats.last_index;
-	adsp_get_target_freq(rate, &new_index);
-	if (old_index != new_index)
-		freq_stats.last_index = new_index;
-
-	if (policy->ovr_freq && freq == policy->ovr_freq) {
-		/* Re-init ACTMON when user requested override freq is met */
-		actmon_rate_change(freq, true);
-		policy->ovr_freq = 0;
-	} else
-		actmon_rate_change(freq, false);
-
-	return NOTIFY_OK;
-};
-
 static struct adsp_dfs_policy dfs_policy =  {
 	.enable = 1,
 	.clk_name = "adsp_cpu",
-	.rate_change_nb = {
-		.notifier_call = adsp_dfs_rc_callback,
-	},
 };
 
 static int adsp_update_freq_handshake(unsigned long tfreq_hz, int index)
@@ -396,16 +366,12 @@ static unsigned long update_freq(unsigned long freq_khz)
 
 	efreq = adsp_to_emc_freq(tfreq_hz / 1000);
 
-	if (IS_ENABLED(CONFIG_COMMON_CLK)) {
-		tegra_bwmgr_set_emc(drv->bwmgr, efreq * 1000,
-				    TEGRA_BWMGR_SET_EMC_FLOOR);
-	} else {
-		ret = clk_set_rate(ape_emc_clk, efreq * 1000);
-		if (ret) {
-			dev_err(device, "failed to set ape.emc clk:%d\n", ret);
-			policy->update_freq_flag = false;
-			goto err_out;
-		}
+	ret = tegra_bwmgr_set_emc(drv->bwmgr, efreq * 1000,
+				  TEGRA_BWMGR_SET_EMC_FLOOR);
+	if (ret) {
+		dev_err(device, "failed to set emc freq rate:%d\n", ret);
+		policy->update_freq_flag = false;
+		goto err_out;
 	}
 
 	/*
@@ -439,18 +405,14 @@ err_out:
 		}
 
 		efreq = adsp_to_emc_freq(old_freq_khz);
-		if (IS_ENABLED(CONFIG_COMMON_CLK)) {
-			tegra_bwmgr_set_emc(drv->bwmgr, efreq * 1000,
-					    TEGRA_BWMGR_SET_EMC_FLOOR);
-		} else {
-			ret = clk_set_rate(ape_emc_clk, efreq * 1000);
-			if (ret) {
-				dev_err(device,
-					"failed to set ape.emc clk:%d\n", ret);
-				policy->update_freq_flag = false;
-			}
-		}
 
+		ret = tegra_bwmgr_set_emc(drv->bwmgr, efreq * 1000,
+					  TEGRA_BWMGR_SET_EMC_FLOOR);
+		if (ret) {
+			dev_err(device, "failed to set emc freq rate:%d\n",
+				ret);
+			policy->update_freq_flag = false;
+		}
 		tfreq_hz = old_freq_khz * 1000;
 	}
 	return tfreq_hz / 1000;
@@ -853,29 +815,6 @@ int adsp_dfs_core_init(struct platform_device *pdev)
 	if (ret)
 		goto end;
 
-	if (IS_ENABLED(CONFIG_COMMON_CLK)) {
-		drv->bwmgr = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_APE_ADSP);
-		if (IS_ERR_OR_NULL(drv->bwmgr)) {
-			dev_err(&pdev->dev, "unable to register bwmgr\n");
-			ret = PTR_ERR(drv->bwmgr);
-			goto end;
-		}
-	} else {
-		/* Change emc freq as per the adsp to emc lookup table */
-		ape_emc_clk = clk_get_sys("ape", "emc");
-		if (IS_ERR_OR_NULL(ape_emc_clk)) {
-			dev_err(device, "unable to find ape.emc clock\n");
-			ret = PTR_ERR(ape_emc_clk);
-			goto end;
-		}
-
-		ret = clk_prepare_enable(ape_emc_clk);
-		if (ret) {
-			dev_err(device, "unable to enable ape.emc clock\n");
-			goto end;
-		}
-	}
-
 	policy->max = policy->cpu_max = drv->adsp_freq; /* adsp_freq in KHz */
 
 	policy->min = policy->cpu_min = adsp_cpu_freq_table[0] / 1000;
@@ -884,15 +823,11 @@ int adsp_dfs_core_init(struct platform_device *pdev)
 
 	efreq = adsp_to_emc_freq(policy->cur);
 
-	if (IS_ENABLED(CONFIG_COMMON_CLK)) {
-		tegra_bwmgr_set_emc(drv->bwmgr, efreq * 1000,
-				    TEGRA_BWMGR_SET_EMC_FLOOR);
-	} else {
-		ret = clk_set_rate(ape_emc_clk, efreq * 1000);
-		if (ret) {
-			dev_err(device, "failed to set ape.emc clk:%d\n", ret);
-			goto end;
-		}
+	ret = tegra_bwmgr_set_emc(drv->bwmgr, efreq * 1000,
+				  TEGRA_BWMGR_SET_EMC_FLOOR);
+	if (ret) {
+		dev_err(device, "failed to set emc freq rate:%d\n", ret);
+		goto end;
 	}
 
 	adsp_get_target_freq(policy->cur * 1000, &freq_stats.last_index);
@@ -907,30 +842,6 @@ int adsp_dfs_core_init(struct platform_device *pdev)
 		goto end;
 	}
 
-#if !defined(CONFIG_COMMON_CLK)
-	if (policy->rate_change_nb.notifier_call) {
-		/*
-		 * "adsp_cpu" clk is a shared user of parent adsp_cpu_bus clk;
-		 * rate change notification should come from bus clock itself.
-		 */
-		struct clk *p = clk_get_parent(policy->adsp_clk);
-		if (!p) {
-			dev_err(&pdev->dev, "Failed to find adsp cpu parent clock\n");
-			ret = -EINVAL;
-			goto end;
-		}
-
-		ret = tegra_register_clk_rate_notifier(p,
-			&policy->rate_change_nb);
-		if (ret) {
-			dev_err(&pdev->dev, "rate change notifier err: %s\n",
-			policy->clk_name);
-			nvadsp_mbox_close(&policy->mbox);
-			goto end;
-		}
-	}
-#endif
-
 #ifdef CONFIG_DEBUG_FS
 	adsp_dfs_debugfs_init(pdev);
 #endif
@@ -941,15 +852,6 @@ int adsp_dfs_core_init(struct platform_device *pdev)
 end:
 
 	adsp_clk_put(policy);
-
-	if (IS_ENABLED(CONFIG_COMMON_CLK) && drv->bwmgr) {
-		tegra_bwmgr_set_emc(drv->bwmgr, 0,
-				    TEGRA_BWMGR_SET_EMC_FLOOR);
-		tegra_bwmgr_unregister(drv->bwmgr);
-	} else if (ape_emc_clk) {
-		clk_disable_unprepare(ape_emc_clk);
-		clk_put(ape_emc_clk);
-	}
 
 	return ret;
 }
@@ -968,20 +870,7 @@ int adsp_dfs_core_exit(struct platform_device *pdev)
 		dev_info(&pdev->dev,
 		"adsp dfs exit failed: mbox close error. ret:%d\n", ret);
 
-#if !defined(CONFIG_COMMON_CLK)
-	tegra_unregister_clk_rate_notifier(clk_get_parent(policy->adsp_clk),
-					   &policy->rate_change_nb);
-#endif
 	adsp_clk_put(policy);
-
-	if (IS_ENABLED(CONFIG_COMMON_CLK) && drv->bwmgr) {
-		tegra_bwmgr_set_emc(drv->bwmgr, 0,
-				    TEGRA_BWMGR_SET_EMC_FLOOR);
-		tegra_bwmgr_unregister(drv->bwmgr);
-	} else if (ape_emc_clk) {
-		clk_disable_unprepare(ape_emc_clk);
-		clk_put(ape_emc_clk);
-	}
 
 	drv->dfs_initialized = false;
 	dev_dbg(&pdev->dev, "adsp dfs has exited ....\n");

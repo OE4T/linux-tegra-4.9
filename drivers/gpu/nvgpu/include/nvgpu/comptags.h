@@ -74,6 +74,24 @@ int gk20a_alloc_or_get_comptags(struct gk20a *g,
 				struct gk20a_comptags *comptags);
 void gk20a_get_comptags(struct nvgpu_os_buffer *buf,
 			struct gk20a_comptags *comptags);
-void gk20a_mark_comptags_cleared(struct nvgpu_os_buffer *buf);
+
+/*
+ * These functions must be used to synchronize comptags clear. The usage:
+ *
+ *   if (gk20a_comptags_start_clear(os_buf)) {
+ *           // we now hold the buffer lock for clearing
+ *
+ *           bool successful = hw_clear_comptags();
+ *
+ *           // mark the buf cleared (or not) and release the buffer lock
+ *           gk20a_comptags_finish_clear(os_buf, successful);
+ *   }
+ *
+ *  If gk20a_start_comptags_clear() returns false, another caller has
+ *  already cleared the comptags.
+ */
+bool gk20a_comptags_start_clear(struct nvgpu_os_buffer *buf);
+void gk20a_comptags_finish_clear(struct nvgpu_os_buffer *buf,
+				 bool clear_successful);
 
 #endif

@@ -37,7 +37,9 @@ void gk20a_get_comptags(struct nvgpu_os_buffer *buf,
 		return;
 	}
 
+	nvgpu_mutex_acquire(&priv->lock);
 	*comptags = priv->comptags;
+	nvgpu_mutex_release(&priv->lock);
 }
 
 int gk20a_alloc_or_get_comptags(struct gk20a *g,
@@ -55,20 +57,26 @@ int gk20a_alloc_or_get_comptags(struct gk20a *g,
 	if (!priv)
 		return -ENOSYS;
 
+	nvgpu_mutex_acquire(&priv->lock);
+
 	if (priv->comptags.allocated) {
 		/*
 		 * already allocated
 		 */
 		*comptags = priv->comptags;
-		return 0;
+
+		err = 0;
+		goto exit_locked;
 	}
 
 	ctag_granularity = g->ops.fb.compression_page_size(g);
 	lines = DIV_ROUND_UP_ULL(buf->dmabuf->size, ctag_granularity);
 
 	/* 0-sized buffer? Shouldn't occur, but let's check anyways. */
-	if (lines < 1)
-		return -EINVAL;
+	if (lines < 1) {
+		err = -EINVAL;
+		goto exit_locked;
+	}
 
 	/* store the allocator so we can use it when we free the ctags */
 	priv->comptag_allocator = allocator;
@@ -89,16 +97,44 @@ int gk20a_alloc_or_get_comptags(struct gk20a *g,
 	 * would not be safe to re-allocate comptags anyways on
 	 * successive calls, as that would break map aliasing.
 	 */
+	err = 0;
 	priv->comptags.allocated = true;
 
 	*comptags = priv->comptags;
-	return 0;
+
+exit_locked:
+	nvgpu_mutex_release(&priv->lock);
+
+	return err;
 }
 
-void gk20a_mark_comptags_cleared(struct nvgpu_os_buffer *buf)
+bool gk20a_comptags_start_clear(struct nvgpu_os_buffer *buf)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(buf->dmabuf,
 							     buf->dev);
-	if (priv)
-		priv->comptags.needs_clear = false;
+	bool clear_started = false;
+
+	if (priv) {
+		nvgpu_mutex_acquire(&priv->lock);
+
+		clear_started = priv->comptags.needs_clear;
+
+		if (!clear_started)
+			nvgpu_mutex_release(&priv->lock);
+	}
+
+	return clear_started;
+}
+
+void gk20a_comptags_finish_clear(struct nvgpu_os_buffer *buf,
+				 bool clear_successful)
+{
+	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(buf->dmabuf,
+							     buf->dev);
+	if (priv) {
+		if (clear_successful)
+			priv->comptags.needs_clear = false;
+
+		nvgpu_mutex_release(&priv->lock);
+	}
 }

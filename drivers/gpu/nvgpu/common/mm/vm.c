@@ -874,12 +874,17 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		 */
 		if (comptags.needs_clear) {
 			if (g->ops.ltc.cbc_ctrl) {
-				g->ops.ltc.cbc_ctrl(
-					g, gk20a_cbc_op_clear,
-					comptags.offset,
-					(comptags.offset +
-					 comptags.lines - 1));
-				gk20a_mark_comptags_cleared(os_buf);
+				if (gk20a_comptags_start_clear(os_buf)) {
+					err = g->ops.ltc.cbc_ctrl(
+						g, gk20a_cbc_op_clear,
+						comptags.offset,
+						(comptags.offset +
+						 comptags.lines - 1));
+					gk20a_comptags_finish_clear(
+						os_buf, err == 0);
+					if (err)
+						goto clean_up;
+				}
 			} else {
 				/*
 				 * Cleared as part of gmmu map
@@ -920,6 +925,9 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
+	if (clear_ctags)
+		clear_ctags = gk20a_comptags_start_clear(os_buf);
+
 	map_addr = g->ops.mm.gmmu_map(vm,
 				      map_addr,
 				      sgt,
@@ -935,13 +943,14 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 				      false,
 				      batch,
 				      aperture);
+
+	if (clear_ctags)
+		gk20a_comptags_finish_clear(os_buf, map_addr != 0);
+
 	if (!map_addr) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
-
-	if (clear_ctags)
-		gk20a_mark_comptags_cleared(os_buf);
 
 	nvgpu_init_list_node(&mapped_buffer->buffer_list);
 	nvgpu_ref_init(&mapped_buffer->ref);

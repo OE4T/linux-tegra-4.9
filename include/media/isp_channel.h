@@ -27,13 +27,16 @@ struct isp_channel_drv;
 
 struct isp_channel_drv_ops {
 	int (*alloc_syncpt)(struct platform_device *pdev, const char *name,
-			uint32_t *syncpt_id, dma_addr_t *syncpt_addr,
-			uint32_t *gos_index, uint32_t *gos_offset);
+			uint32_t *syncpt_id);
 
 	void (*release_syncpt)(struct platform_device *pdev, uint32_t id);
 
 	uint32_t (*get_gos_table)(struct platform_device *pdev,
 			const dma_addr_t **table);
+
+	int (*get_syncpt_gos_backing)(struct platform_device *pdev, uint32_t id,
+			dma_addr_t *syncpt_addr, uint32_t *gos_index,
+			uint32_t *gos_offset);
 };
 
 int isp_channel_drv_register(struct platform_device *pdev,

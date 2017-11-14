@@ -16,6 +16,7 @@
 #include <linux/nvhost.h>
 #include <linux/of_platform.h>
 #include <linux/printk.h>
+#include <linux/slab.h>
 #include <linux/tegra-capture-ivc.h>
 #include <media/capture_common.h>
 #include <media/capture_isp.h>
@@ -279,15 +280,25 @@ static int isp_capture_setup_syncpt(struct tegra_isp_channel *chan,
 		return 0;
 
 
-	err = chan->ops->alloc_syncpt(pdev, name, &sp->id, &sp->shim_addr,
-				&gos_index, &gos_offset);
+	err = chan->ops->alloc_syncpt(pdev, name, &sp->id);
 	if (err)
 		return err;
+
+	err = chan->ops->get_syncpt_gos_backing(pdev, sp->id, &sp->shim_addr,
+				&gos_index, &gos_offset);
+	if (err)
+		goto cleanup;
 
 	sp->gos_index = gos_index;
 	sp->gos_offset = gos_offset;
 
 	return 0;
+
+cleanup:
+	chan->ops->release_syncpt(pdev, sp->id);
+	memset(sp, 0, sizeof(*sp));
+
+	return err;
 }
 
 static int isp_capture_setup_syncpts(struct tegra_isp_channel *chan)
@@ -666,6 +677,107 @@ static int isp_capture_read_syncpt(struct tegra_isp_channel *chan,
 	return 0;
 }
 
+static int isp_capture_fill_in_prefence_info(struct tegra_isp_channel *chan,
+		int prefence_offset, uint32_t gos_relative,
+		uint32_t sp_relative)
+{
+	struct isp_capture *capture = chan->capture_data;
+	void *reloc_page_addr = NULL;
+	int err = 0;
+	uint64_t sp_raw;
+	uint32_t sp_id;
+	dma_addr_t syncpt_addr;
+	uint32_t gos_index;
+	uint32_t gos_offset;
+	uint64_t gos_info = 0;
+
+	reloc_page_addr = dma_buf_kmap(capture->capture_desc_ctx.requests.buf,
+				prefence_offset >> PAGE_SHIFT);
+
+	if (unlikely(reloc_page_addr == NULL)) {
+		dev_err(chan->isp_dev, "%s: couldn't map request\n", __func__);
+		return -ENOMEM;
+	}
+
+	sp_raw = __raw_readq(
+			(void __iomem *)(reloc_page_addr +
+			(prefence_offset & ~PAGE_MASK)));
+	sp_id = sp_raw & 0xFFFFFFFF;
+
+	err = chan->ops->get_syncpt_gos_backing(chan->ndev, sp_id, &syncpt_addr,
+			&gos_index, &gos_offset);
+	if (err) {
+		dev_err(chan->isp_dev,
+			"%s: get prefence GoS failed\n", __func__);
+		goto ret;
+	}
+
+	gos_info = ((((uint16_t)gos_offset << 16) | ((uint8_t)gos_index) << 8)
+			& 0xFFFFFFFF);
+
+	__raw_writeq(gos_info, (void __iomem *)(reloc_page_addr +
+			((prefence_offset + gos_relative) & ~PAGE_MASK)));
+
+	__raw_writeq((uint64_t)syncpt_addr, (void __iomem *)(reloc_page_addr +
+			((prefence_offset + sp_relative) & ~PAGE_MASK)));
+
+ret:
+	dma_buf_kunmap(capture->capture_desc_ctx.requests.buf,
+			prefence_offset >> PAGE_SHIFT, reloc_page_addr);
+	return err;
+}
+
+static int isp_capture_setup_prefences(struct tegra_isp_channel *chan,
+		struct isp_capture_req *req, int request_offset)
+{
+	uint32_t __user *prefence_reloc_user;
+	uint32_t *prefence_relocs = NULL;
+	uint32_t prefence_offset;
+	int i = 0;
+	int err = 0;
+
+	/* It is valid not to have prefences for given frame capture */
+	if (!req->prog_prefence_relocs.num_relocs) {
+		dev_info(chan->isp_dev,
+			"no prefences available, skip setup\n");
+		return 0;
+	}
+
+	prefence_reloc_user = (uint32_t __user *)
+			(uintptr_t)req->prog_prefence_relocs.reloc_relatives;
+
+	prefence_relocs = kcalloc(req->prog_prefence_relocs.num_relocs,
+		sizeof(uint32_t), GFP_KERNEL);
+	if (prefence_relocs == NULL) {
+		dev_err(chan->isp_dev,
+			"failed to allocate prefence reloc array\n");
+		return -ENOMEM;
+	}
+
+	err = copy_from_user(prefence_relocs, prefence_reloc_user,
+		req->prog_prefence_relocs.num_relocs * sizeof(uint32_t)) ?
+			-EFAULT : 0;
+	if (err < 0) {
+		dev_err(chan->isp_dev, "failed to copy prefence relocs\n");
+		goto fail;
+	}
+
+	for (i = 0; i < req->prog_prefence_relocs.num_relocs; i++) {
+		prefence_offset = request_offset +
+					prefence_relocs[i];
+		err = isp_capture_fill_in_prefence_info(chan, prefence_offset,
+				req->gos_relative, req->sp_relative);
+		if (err < 0) {
+			dev_err(chan->isp_dev, "Fill prefence info failed\n");
+			goto fail;
+		}
+	}
+
+fail:
+	kfree(prefence_relocs);
+	return err;
+}
+
 int isp_capture_get_info(struct tegra_isp_channel *chan,
 		struct isp_capture_info *info)
 {
@@ -863,6 +975,7 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 	struct CAPTURE_MSG capture_msg;
 	struct capture_common_unpins *unpins = NULL;
 	struct capture_common_pin_req cap_common_req;
+	uint32_t request_offset;
 	int err = 0;
 
 	if (capture == NULL) {
@@ -894,6 +1007,15 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 	capture_msg.header.channel_id = capture->channel_id;
 	capture_msg.capture_isp_request_req.buffer_index = req->buffer_index;
 
+	request_offset = req->buffer_index *
+			capture->capture_desc_ctx.request_size;
+
+	err = isp_capture_setup_prefences(chan, req, request_offset);
+	if (err < 0) {
+		dev_err(chan->isp_dev, "failed to setup prefences\n");
+		goto fail;
+	}
+
 	/* pin and reloc */
 	cap_common_req.dev = chan->isp_dev;
 	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
@@ -901,8 +1023,7 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 	cap_common_req.requests = &capture->capture_desc_ctx.requests;
 	cap_common_req.requests_dev = &capture->capture_desc_ctx.requests_isp;
 	cap_common_req.request_size = capture->capture_desc_ctx.request_size;
-	cap_common_req.request_offset = req->buffer_index *
-					capture->capture_desc_ctx.request_size;
+	cap_common_req.request_offset = request_offset;
 	cap_common_req.requests_mem = capture->capture_desc_ctx.desc_mem;
 	cap_common_req.num_relocs = req->isp_relocs.num_relocs;
 	cap_common_req.reloc_user = (uint32_t __user *)
@@ -922,6 +1043,7 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 	dev_dbg(chan->isp_dev, "%s: sending chan_id %u msg_id %u buf:%u\n",
 			__func__, capture_msg.header.channel_id,
 			capture_msg.header.msg_id, req->buffer_index);
+
 
 	err = tegra_capture_ivc_capture_submit(&capture_msg,
 			sizeof(capture_msg));

@@ -262,15 +262,25 @@ static int vi_capture_setup_syncpt(struct tegra_vi_channel *chan,
 	if (!enable)
 		return 0;
 
-	err = chan->ops->alloc_syncpt(pdev, name, &sp->id, &sp->shim_addr,
-				&gos_index, &gos_offset);
+	err = chan->ops->alloc_syncpt(pdev, name, &sp->id);
 	if (err)
 		return err;
+
+	err = chan->ops->get_syncpt_gos_backing(pdev, sp->id, &sp->shim_addr,
+				&gos_index, &gos_offset);
+	if (err)
+		goto cleanup;
 
 	sp->gos_index = gos_index;
 	sp->gos_offset = gos_offset;
 
 	return 0;
+
+cleanup:
+	chan->ops->release_syncpt(pdev, sp->id);
+	memset(sp, 0, sizeof(*sp));
+
+	return err;
 }
 
 static int vi_capture_setup_syncpts(struct tegra_vi_channel *chan,

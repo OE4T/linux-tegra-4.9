@@ -61,6 +61,9 @@ struct isp_capture_req {
 	uint32_t __pad;
 	/* relocation relatives */
 	struct capture_isp_reloc isp_relocs;
+	struct capture_isp_reloc prog_prefence_relocs;
+	uint32_t gos_relative;
+	uint32_t sp_relative;
 } __ISP_CAPTURE_ALIGN;
 
 struct isp_program_req {

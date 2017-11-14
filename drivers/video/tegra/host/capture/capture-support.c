@@ -37,16 +37,14 @@
 
 int t194_capture_alloc_syncpt(struct platform_device *pdev,
 			const char *name,
-			uint32_t *syncpt_id,
-			dma_addr_t *syncpt_addr,
-			uint32_t *gos_index,
-			uint32_t *gos_offset)
+			uint32_t *syncpt_id)
 {
 	uint32_t id;
-	uint32_t index = GOS_INDEX_INVALID;
-	uint32_t offset = 0;
-	dma_addr_t addr;
-	int err = -ENODEV;
+
+	if (syncpt_id == NULL) {
+		dev_err(&pdev->dev, "%s: null argument\n", __func__);
+		return -EINVAL;
+	}
 
 	id = nvhost_get_syncpt_client_managed(pdev, name);
 	if (id == 0) {
@@ -54,31 +52,9 @@ int t194_capture_alloc_syncpt(struct platform_device *pdev,
 		return -ENODEV;
 	}
 
-	addr = nvhost_syncpt_address(pdev, id);
-
-	err = nvhost_syncpt_get_gos(pdev, id, &index, &offset);
-	if (err < 0) {
-		if (!tegra_platform_is_sim())
-			goto cleanup;
-
-		dev_warn(&pdev->dev, "%s: GoS not supported on VDK\n",
-			__func__);
-	}
-
 	*syncpt_id = id;
-	*syncpt_addr = addr;
-	*gos_index = index;
-	*gos_offset = offset;
-
-	dev_dbg(&pdev->dev,
-		"%s: id=%u addr=0x%llx gos_index=%u gos_offset=%u\n",
-		__func__, id, addr, index, offset);
 
 	return 0;
-
-cleanup:
-	nvhost_syncpt_put_ref_ext(pdev, id);
-	return err;
 }
 EXPORT_SYMBOL_GPL(t194_capture_alloc_syncpt);
 
@@ -103,6 +79,53 @@ void t194_capture_get_gos_table(struct platform_device *pdev,
 	*gos_table = table;
 }
 EXPORT_SYMBOL_GPL(t194_capture_get_gos_table);
+
+int t194_capture_get_syncpt_gos_backing(struct platform_device *pdev,
+			uint32_t id,
+			dma_addr_t *syncpt_addr,
+			uint32_t *gos_index,
+			uint32_t *gos_offset)
+{
+	uint32_t index = GOS_INDEX_INVALID;
+	uint32_t offset = 0;
+	dma_addr_t addr;
+	int err = 0;
+
+	if (id == 0) {
+		dev_err(&pdev->dev, "%s: syncpt id is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (syncpt_addr == NULL || gos_index == NULL || gos_offset == NULL) {
+		dev_err(&pdev->dev, "%s: null arguments\n", __func__);
+		return -EINVAL;
+	}
+
+	addr = nvhost_syncpt_address(pdev, id);
+
+	err = nvhost_syncpt_get_gos(pdev, id, &index, &offset);
+	if (err < 0) {
+		if (!tegra_platform_is_sim()) {
+			dev_err(&pdev->dev,
+				"%s: get GoS failed for syncpoint id %d\n",
+				__func__, id);
+			return err;
+		}
+
+		dev_warn(&pdev->dev, "%s: GoS not supported on VDK\n",
+			__func__);
+	}
+
+	*syncpt_addr = addr;
+	*gos_index = index;
+	*gos_offset = offset;
+
+	dev_info(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
+		__func__, id, addr, index, offset);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(t194_capture_get_syncpt_gos_backing);
 
 static int check_rce_rm(struct device *dev)
 {

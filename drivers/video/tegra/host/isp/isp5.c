@@ -52,16 +52,11 @@ struct host_isp5 {
 
 static int isp5_alloc_syncpt(struct platform_device *pdev,
 			const char *name,
-			uint32_t *syncpt_id,
-			dma_addr_t *syncpt_addr,
-			uint32_t *gos_index,
-			uint32_t *gos_offset)
+			uint32_t *syncpt_id)
 {
 	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
 
-	return t194_capture_alloc_syncpt(isp5->isp_thi, name,
-					syncpt_id, syncpt_addr,
-					gos_index, gos_offset);
+	return t194_capture_alloc_syncpt(isp5->isp_thi, name, syncpt_id);
 }
 
 static void isp5_release_syncpt(struct platform_device *pdev, uint32_t id)
@@ -69,6 +64,19 @@ static void isp5_release_syncpt(struct platform_device *pdev, uint32_t id)
 	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
 
 	t194_capture_release_syncpt(isp5->isp_thi, id);
+}
+
+static int isp5_get_syncpt_gos_backing(struct platform_device *pdev,
+			uint32_t id,
+			dma_addr_t *syncpt_addr,
+			uint32_t *gos_index,
+			uint32_t *gos_offset)
+{
+	struct host_isp5 *isp5 = nvhost_get_private_data(pdev);
+
+	return t194_capture_get_syncpt_gos_backing(isp5->isp_thi, id,
+				syncpt_addr, gos_index, gos_offset);
+
 }
 
 static uint32_t isp5_get_gos_table(struct platform_device *pdev,
@@ -86,6 +94,7 @@ static struct isp_channel_drv_ops isp5_channel_drv_ops = {
 	.alloc_syncpt = isp5_alloc_syncpt,
 	.release_syncpt = isp5_release_syncpt,
 	.get_gos_table = isp5_get_gos_table,
+	.get_syncpt_gos_backing = isp5_get_syncpt_gos_backing,
 };
 
 static int isp5_probe(struct platform_device *pdev)

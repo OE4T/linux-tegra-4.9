@@ -71,16 +71,11 @@ static void vi5_remove_debugfs(struct host_vi5 *vi5);
 
 static int vi5_alloc_syncpt(struct platform_device *pdev,
 			const char *name,
-			uint32_t *syncpt_id,
-			dma_addr_t *syncpt_addr,
-			uint32_t *gos_index,
-			uint32_t *gos_offset)
+			uint32_t *syncpt_id)
 {
 	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
 
-	return t194_capture_alloc_syncpt(vi5->vi_thi, name,
-					syncpt_id, syncpt_addr,
-					gos_index, gos_offset);
+	return t194_capture_alloc_syncpt(vi5->vi_thi, name, syncpt_id);
 }
 
 static void vi5_release_syncpt(struct platform_device *pdev, uint32_t id)
@@ -98,10 +93,23 @@ static void vi5_get_gos_table(struct platform_device *pdev, int *count,
 	t194_capture_get_gos_table(vi5->vi_thi, count, table);
 }
 
+static int vi5_get_syncpt_gos_backing(struct platform_device *pdev,
+			uint32_t id,
+			dma_addr_t *syncpt_addr,
+			uint32_t *gos_index,
+			uint32_t *gos_offset)
+{
+	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
+
+	return t194_capture_get_syncpt_gos_backing(vi5->vi_thi, id,
+				syncpt_addr, gos_index, gos_offset);
+}
+
 static struct vi_channel_drv_ops vi5_channel_drv_ops = {
 	.alloc_syncpt = vi5_alloc_syncpt,
 	.release_syncpt = vi5_release_syncpt,
 	.get_gos_table = vi5_get_gos_table,
+	.get_syncpt_gos_backing = vi5_get_syncpt_gos_backing,
 };
 
 static int vi5_probe(struct platform_device *pdev)

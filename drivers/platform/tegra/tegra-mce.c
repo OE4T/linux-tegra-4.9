@@ -295,6 +295,12 @@ EXPORT_SYMBOL(tegra_mce_enum_features);
 __always_inline int tegra_roc_flush_cache(void)
 {
 	struct mce_regs regs;
+
+	/* Ignore T21x platforms */
+	if (tegra_get_chip_id() == TEGRA210 ||
+	    tegra_get_chip_id() == TEGRA210B01)
+		return 0;
+
 	return send_smc(MCE_SMC_ROC_FLUSH_CACHE, &regs);
 }
 EXPORT_SYMBOL(tegra_roc_flush_cache);
@@ -302,6 +308,12 @@ EXPORT_SYMBOL(tegra_roc_flush_cache);
 __always_inline int tegra_roc_flush_cache_only(void)
 {
 	struct mce_regs regs;
+
+	/* Ignore T21x platforms */
+	if (tegra_get_chip_id() == TEGRA210 ||
+	    tegra_get_chip_id() == TEGRA210B01)
+		return 0;
+
 	return send_smc(MCE_SMC_ROC_FLUSH_CACHE_ONLY, &regs);
 }
 EXPORT_SYMBOL(tegra_roc_flush_cache_only);
@@ -309,6 +321,12 @@ EXPORT_SYMBOL(tegra_roc_flush_cache_only);
 __always_inline int tegra_roc_clean_cache(void)
 {
 	struct mce_regs regs;
+
+	/* Ignore T21x platforms */
+	if (tegra_get_chip_id() == TEGRA210 ||
+	    tegra_get_chip_id() == TEGRA210B01)
+		return 0;
+
 	return send_smc(MCE_SMC_ROC_CLEAN_CACHE_ONLY, &regs);
 }
 EXPORT_SYMBOL(tegra_roc_clean_cache);
@@ -652,6 +670,11 @@ static const struct file_operations sregdump_fops = {
 static __init int debugfs_create_sregdump(void)
 {
 	struct dentry *root;
+
+	/* Ignore T21x platforms */
+	if (tegra_get_chip_id() == TEGRA210 ||
+	    tegra_get_chip_id() == TEGRA210B01)
+		return 0;
 
 	root = debugfs_create_dir("sregdump", NULL);
 	if (!root)

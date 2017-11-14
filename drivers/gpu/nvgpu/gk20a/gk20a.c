@@ -45,7 +45,6 @@
 #include "dbg_gpu_gk20a.h"
 #include "mc_gk20a.h"
 #include "hal.h"
-#include "vgpu/vgpu.h"
 #include "bus_gk20a.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "pstate/pstate.h"

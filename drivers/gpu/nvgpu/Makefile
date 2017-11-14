@@ -152,21 +152,21 @@ nvgpu-$(CONFIG_GK20A_PCI) += common/linux/pci.o
 nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += common/linux/nvhost.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
-	gk20a/platform_vgpu_tegra.o \
-	vgpu/ltc_vgpu.o \
-	vgpu/gr_vgpu.o \
-	vgpu/fifo_vgpu.o \
-	vgpu/ce2_vgpu.o \
-	vgpu/mm_vgpu.o \
-	vgpu/vgpu.o \
-	vgpu/dbg_vgpu.o \
-	vgpu/fecs_trace_vgpu.o \
-	vgpu/tsg_vgpu.o \
-	vgpu/clk_vgpu.o \
-	vgpu/css_vgpu.o \
-	vgpu/gm20b/vgpu_hal_gm20b.o \
-	vgpu/gm20b/vgpu_gr_gm20b.o \
-	vgpu/sysfs_vgpu.o
+	common/linux/vgpu/platform_vgpu_tegra.o \
+	common/linux/vgpu/ltc_vgpu.o \
+	common/linux/vgpu/gr_vgpu.o \
+	common/linux/vgpu/fifo_vgpu.o \
+	common/linux/vgpu/ce2_vgpu.o \
+	common/linux/vgpu/mm_vgpu.o \
+	common/linux/vgpu/vgpu.o \
+	common/linux/vgpu/dbg_vgpu.o \
+	common/linux/vgpu/fecs_trace_vgpu.o \
+	common/linux/vgpu/tsg_vgpu.o \
+	common/linux/vgpu/clk_vgpu.o \
+	common/linux/vgpu/css_vgpu.o \
+	common/linux/vgpu/gm20b/vgpu_hal_gm20b.o \
+	common/linux/vgpu/gm20b/vgpu_gr_gm20b.o \
+	common/linux/vgpu/sysfs_vgpu.o
 
 nvgpu-$(CONFIG_COMMON_CLK) += \
 	common/linux/clk.o
@@ -246,9 +246,9 @@ nvgpu-y += \
 nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gp10b_tegra.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
-	vgpu/gp10b/vgpu_hal_gp10b.o  \
-	vgpu/gp10b/vgpu_gr_gp10b.o  \
-	vgpu/gp10b/vgpu_mm_gp10b.o
+	common/linux/vgpu/gp10b/vgpu_hal_gp10b.o  \
+	common/linux/vgpu/gp10b/vgpu_gr_gp10b.o  \
+	common/linux/vgpu/gp10b/vgpu_mm_gp10b.o
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
@@ -290,11 +290,11 @@ nvgpu-$(CONFIG_TEGRA_GK20A) += gv11b/platform_gv11b_tegra.o
 nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += common/linux/nvhost_t19x.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
-	vgpu/gv11b/platform_gv11b_vgpu_tegra.o \
-	vgpu/gv11b/vgpu_gv11b.o \
-	vgpu/gv11b/vgpu_hal_gv11b.o \
-	vgpu/gv11b/vgpu_gr_gv11b.o \
-	vgpu/gv11b/vgpu_fifo_gv11b.o \
-	vgpu/gv11b/vgpu_subctx_gv11b.o \
-	vgpu/gv11b/vgpu_tsg_gv11b.o
+	common/linux/vgpu/gv11b/platform_gv11b_vgpu_tegra.o \
+	common/linux/vgpu/gv11b/vgpu_gv11b.o \
+	common/linux/vgpu/gv11b/vgpu_hal_gv11b.o \
+	common/linux/vgpu/gv11b/vgpu_gr_gv11b.o \
+	common/linux/vgpu/gv11b/vgpu_fifo_gv11b.o \
+	common/linux/vgpu/gv11b/vgpu_subctx_gv11b.o \
+	common/linux/vgpu/gv11b/vgpu_tsg_gv11b.o
 endif

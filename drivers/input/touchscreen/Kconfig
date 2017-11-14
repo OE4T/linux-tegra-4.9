@@ -41,4 +41,17 @@ config TOUCHSCREEN_RM31080A
 	  To compile this driver as a module, choose M here: the
 	  module will be called RAYDIUM_31080A.
 
+config TOUCHSCREEN_EXC80
+	tristate "EGALAX_EXC80 based touchscreens"
+	depends on I2C
+	help
+	  Say Y here if you have a touchscreen interface using the
+	  EGALAX controller, and your board-specific initialization
+	  code includes that in its table of I2C devices.
+
+	  If unsure, say N (but it's safe to say "Y").
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called EGALAX.
+
 endif

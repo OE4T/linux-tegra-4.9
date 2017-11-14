@@ -11,6 +11,7 @@ obj-y += hsp-mbox.o
 obj-y += tegra-rtcpu-trace.o
 obj-y += camchar.o
 obj-y += clk-group.o
+obj-y += device-group.o
 obj-y += reset-group.o
 obj-y += rtcpu-monitor.o
 obj-y += tegra-ivc-rpc.o tegra-ivc-rpc-test.o

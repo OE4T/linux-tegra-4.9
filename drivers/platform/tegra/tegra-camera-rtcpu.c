@@ -47,6 +47,7 @@
 #include <dt-bindings/memory/tegra-swgroup.h>
 
 #include "rtcpu/clk-group.h"
+#include "rtcpu/device-group.h"
 #include "rtcpu/reset-group.h"
 
 #include "soc/tegra/camrtc-commands.h"
@@ -197,6 +198,7 @@ struct tegra_cam_rtcpu {
 		};
 	};
 	const struct tegra_cam_rtcpu_pdata *pdata;
+	struct camrtc_device_group *camera_devices;
 	struct tegra_camrtc_mon *monitor;
 	bool powered;
 	bool boot_sync_done;
@@ -230,6 +232,7 @@ static int tegra_camrtc_get_resources(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 	const struct tegra_cam_rtcpu_pdata *pdata = rtcpu->pdata;
+	struct camrtc_device_group *devgrp;
 	int i, err;
 
 	rtcpu->clocks = camrtc_clk_group_get(dev);
@@ -241,6 +244,18 @@ static int tegra_camrtc_get_resources(struct device *dev)
 		else
 			dev_warn(dev, "clocks not available: %d\n", err);
 		return err;
+	}
+
+	devgrp = camrtc_device_group_get(dev, "nvidia,camera-devices");
+	if (!IS_ERR(devgrp)) {
+		rtcpu->camera_devices = devgrp;
+	} else {
+		err = PTR_ERR(devgrp);
+		if (err == -EPROBE_DEFER)
+			return err;
+		if (err != -ENODATA && err != -ENOENT)
+			dev_warn(dev, "get %s: failed: %d\n",
+				"nvidia,camera-devices", err);
 	}
 
 #define GET_RESOURCES(_res_, _get_, _null_, _toerr)	\
@@ -573,6 +588,9 @@ static int tegra_ape_cam_suspend_core(struct device *dev)
 static int tegra_camrtc_suspend_core(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+
+	if (!rtcpu->boot_sync_done || !rtcpu->sm_pair)
+		return 0;
 
 	rtcpu->boot_sync_done = false;
 
@@ -910,9 +928,12 @@ static int tegra_cam_rtcpu_runtime_suspend(struct device *dev)
 	if (WARN(err < 0, "RTCPU suspend failed, resetting it")) {
 		/* runtime_resume() powers RTCPU back on */
 		tegra_camrtc_poweroff(dev);
+		tegra_camrtc_set_online(dev, false);
 	}
 
 	camrtc_clk_group_adjust_slow(rtcpu->clocks);
+
+	camrtc_device_group_idle(rtcpu->camera_devices);
 
 	return 0;
 }
@@ -922,19 +943,26 @@ static int tegra_cam_rtcpu_runtime_resume(struct device *dev)
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 	int ret;
 
+	ret = camrtc_device_group_busy(rtcpu->camera_devices);
+	if (ret < 0)
+		return ret;
+
 	ret = tegra_camrtc_poweron(dev);
 	if (ret)
-		return ret;
+		goto error;
 
 	camrtc_clk_group_adjust_fast(rtcpu->clocks);
 
 	ret = tegra_camrtc_boot_sync(dev);
 	if (ret)
-		return ret;
+		goto error;
 
 	tegra_camrtc_set_online(dev, true);
 
 	return 0;
+error:
+	camrtc_device_group_idle(rtcpu->camera_devices);
+	return ret;
 }
 
 static struct device *tegra_camrtc_get_hsp_device(struct device_node *hsp_node)
@@ -1018,7 +1046,7 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 
 	if (rtcpu->sm_pair) {
 		if (pm_is_active)
-			tegra_camrtc_suspend_core(&pdev->dev);
+			tegra_cam_rtcpu_runtime_suspend(&pdev->dev);
 		tegra_hsp_sm_pair_free(rtcpu->sm_pair);
 		rtcpu->sm_pair = NULL;
 	}
@@ -1067,6 +1095,9 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	rtcpu->name = name;
 	platform_set_drvdata(pdev, rtcpu);
 
+	/* Enable runtime power management */
+	pm_runtime_enable(dev);
+
 	ret = tegra_camrtc_get_resources(dev);
 	if (ret)
 		goto fail;
@@ -1091,11 +1122,9 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	if (ret)
 		goto fail;
 
-	/* Enable runtime power management */
-	pm_runtime_enable(dev);
-
 	/* Power on device */
-	pm_runtime_get_sync(dev);
+	if (pm_runtime_get_sync(dev) < 0)
+		goto fail;
 
 	/* Clocks are on, resets are deasserted, we can touch the hardware */
 	ret = pdata->check_fw ? pdata->check_fw(dev) : 0;
@@ -1145,7 +1174,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	return 0;
 
 put_and_fail:
-	pm_runtime_put(dev);
+	pm_runtime_dont_use_autosuspend(dev);
+	pm_runtime_put_sync_suspend(dev);
 fail:
 	tegra_cam_rtcpu_remove(pdev);
 	return ret;

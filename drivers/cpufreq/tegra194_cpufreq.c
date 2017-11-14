@@ -189,7 +189,7 @@ static void tegra_read_counters(struct work_struct *work)
  * @cpu - logical cpu whose freq to be updated
  * Returns freq in KHz on success, 0 if cpu is offline
  */
-static unsigned int tegra_get_speed(uint32_t cpu)
+static unsigned int tegra194_get_speed(uint32_t cpu)
 {
 	uint32_t delta_ccnt = 0;
 	uint64_t delta_refcnt = 0;
@@ -297,12 +297,12 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 }
 
 /**
- * tegra_setspeed - Request freq to be set for policy->cpu
+ * tegra194_set_speed - Request freq to be set for policy->cpu
  * @policy - cpufreq policy per cpu
  * @index - freq table index
  * Returns 0 on success, -ve on failure
  */
-static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
+static int tegra194_set_speed(struct cpufreq_policy *policy, unsigned int index)
 {
 	struct cpufreq_frequency_table *ftbl;
 	struct cpufreq_freqs freqs;
@@ -417,7 +417,7 @@ static int freq_get(void *data, u64 *val)
 
 	get_online_cpus();
 	if (cpu_online(cpu))
-		*val = tegra_get_speed(cpu);
+		*val = tegra194_get_speed(cpu);
 	put_online_cpus();
 
 	return 0;
@@ -670,7 +670,7 @@ static void __exit tegra_cpufreq_debug_exit(void)
 }
 #endif
 
-static int tegra_cpu_init(struct cpufreq_policy *policy)
+static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
 	enum cluster cl;
@@ -681,7 +681,7 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	if (policy->cpu >= CONFIG_NR_CPUS)
 		return -EINVAL;
 
-	freq = tegra_get_speed(policy->cpu); /* boot freq */
+	freq = tegra194_get_speed(policy->cpu); /* boot freq */
 
 	ftbl = get_freqtable(policy->cpu);
 
@@ -700,7 +700,7 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 		tegra_update_cpu_speed(freq, policy->cpu);
 	}
 
-	policy->cur = tegra_get_speed(policy->cpu);
+	policy->cur = tegra194_get_speed(policy->cpu);
 
 	cl = topology_physical_package_id(policy->cpu);
 	if (tfreq_data.pcluster[cl].bwmgr)
@@ -714,7 +714,7 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	return ret;
 }
 
-static int tegra_cpu_exit(struct cpufreq_policy *policy)
+static int tegra194_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
 	enum cluster cl;
@@ -734,10 +734,10 @@ static struct cpufreq_driver tegra_cpufreq_driver = {
 	.flags = CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_STICKY |
 				CPUFREQ_CONST_LOOPS,
 	.verify = cpufreq_generic_frequency_table_verify,
-	.target_index = tegra_setspeed,
-	.get = tegra_get_speed,
-	.init = tegra_cpu_init,
-	.exit = tegra_cpu_exit,
+	.target_index = tegra194_set_speed,
+	.get = tegra194_get_speed,
+	.init = tegra194_cpufreq_init,
+	.exit = tegra194_cpufreq_exit,
 	.attr = cpufreq_generic_attr,
 };
 

@@ -27,6 +27,7 @@
 #include <linux/of_address.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/delay.h>
 #include <linux/pstore.h>
 #include <linux/ptrace.h>
@@ -102,8 +103,16 @@ struct read_counters_work {
 static uint64_t read_freq_feedback(void)
 {
 	uint64_t val;
+	static bool s_val;
 
-	asm volatile("mrs %0, s3_0_c15_c0_5" : "=r" (val) : );
+	if (tegra_platform_is_sim()) {
+		if (!s_val)
+			val = (0x1L << 32) | 1;
+		else
+			val = (0x5L << 32) | 2;
+		s_val = !s_val;
+	} else
+		asm volatile("mrs %0, s3_0_c15_c0_5" : "=r" (val) : );
 
 	return val;
 }
@@ -254,20 +263,24 @@ static struct cpufreq_frequency_table *get_freqtable(uint8_t cpu)
 	return tfreq_data.pcluster[cur_cl].clft;
 }
 
-/* Write freq request for a cpu */
-static void write_freq_request(void *val)
+/* Write freq request in ndiv for a cpu */
+static void write_ndiv_request(void *val)
 {
 	uint64_t regval = *((uint64_t *) val);
 
-	asm volatile("msr s3_0_c15_c0_4, %0" : : "r" (regval));
+	if (!tegra_platform_is_sim())
+		asm volatile("msr s3_0_c15_c0_4, %0" : : "r" (regval));
 }
 
-/* Read freq request for a cpu */
-static void read_freq_request(void *ret)
+/* Read freq request in ndiv for a cpu */
+static void read_ndiv_request(void *ret)
 {
 	uint64_t val = 0;
 
-	asm volatile("mrs %0, s3_0_c15_c0_4" : "=r" (val) : );
+	if (!tegra_platform_is_sim())
+		asm volatile("mrs %0, s3_0_c15_c0_4" : "=r" (val) : );
+	else
+		val = 4;
 	*((uint64_t *) ret) = val;
 }
 
@@ -293,7 +306,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	ndiv = clamp_ndiv(nltbl, ndiv);
 
 	val = (uint64_t)ndiv;
-	smp_call_function_single(cpu, write_freq_request, &val, 1);
+	smp_call_function_single(cpu, write_ndiv_request, &val, 1);
 }
 
 /**
@@ -447,7 +460,7 @@ static int set_ndiv(void *data, u64 val)
 
 	get_online_cpus();
 	if (cpu_online(cpu))
-		smp_call_function_single(cpu, write_freq_request, &ndiv, 1);
+		smp_call_function_single(cpu, write_ndiv_request, &ndiv, 1);
 
 	put_online_cpus();
 	return 0;
@@ -460,7 +473,7 @@ static int get_ndiv(void *data, u64 *ndiv)
 
 	get_online_cpus();
 	if (cpu_online(cpu)) {
-		smp_call_function_single(cpu, read_freq_request, ndiv, 1);
+		smp_call_function_single(cpu, read_ndiv_request, ndiv, 1);
 		*ndiv = *ndiv & 0xffff;
 	}
 

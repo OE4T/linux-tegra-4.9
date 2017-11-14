@@ -71,4 +71,11 @@
 	i2c@31e0000 {
 		status = "okay";
 	};
+
+	efuse@3820000 {
+		status = "okay";
+		efuse-burn {
+			status = "okay";
+		};
+	};
 };

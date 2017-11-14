@@ -15,4 +15,25 @@
 
 #include <t19x-common-modules/tegra194-cvm-p2888-0000-a00.dtsi>
 / {
+	serial@3100000 {
+		compatible = "nvidia,tegra186-hsuart";
+		status = "okay";
+	};
+
+	serial@3110000 {
+		compatible = "nvidia,tegra186-hsuart";
+		status = "okay";
+	};
+
+	serial@c280000 {
+		compatible = "nvidia,tegra20-uart";
+		status = "okay";
+		/delete-property/ resets;
+		/delete-property/ reset-names;
+	};
+
+	serial@3140000 {
+		compatible = "nvidia,tegra186-hsuart";
+		status = "okay";
+	};
 };

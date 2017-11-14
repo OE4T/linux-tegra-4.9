@@ -377,23 +377,21 @@ static int tegra_wdt_probe(struct platform_device *pdev)
 
 	/* Init and enable watchdog on WDT0 during probe */
 	if (enable_on_init) {
-		if (of_machine_is_compatible("nvidia,tegra210")) {
-			tegra_wdt->irq = platform_get_irq(pdev, 0);
-			if (tegra_wdt->irq <= 0) {
-				dev_err(&pdev->dev, "failed to get WDT IRQ\n");
-				return -ENXIO;
-			}
+		tegra_wdt->irq = platform_get_irq(pdev, 0);
+		if (tegra_wdt->irq <= 0) {
+			dev_err(&pdev->dev, "failed to get WDT IRQ\n");
+			return -ENXIO;
+		}
 
-			ret = devm_request_threaded_irq(&pdev->dev,
-					tegra_wdt->irq,	NULL, tegra_wdt_irq,
-					IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
-					dev_name(&pdev->dev), tegra_wdt);
-			if (ret < 0) {
-				dev_err(&pdev->dev,
-					"failed to register irq %d err %d\n",
-					tegra_wdt->irq, ret);
-				return ret;
-			}
+		ret = devm_request_threaded_irq(&pdev->dev,
+				tegra_wdt->irq,	NULL, tegra_wdt_irq,
+				IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
+				dev_name(&pdev->dev), tegra_wdt);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"failed to register irq %d err %d\n",
+				tegra_wdt->irq, ret);
+			return ret;
 		}
 
 		tegra_wdt_enable(&tegra_wdt->wdt);

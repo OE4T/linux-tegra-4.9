@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/isp/isp5.h
+ * Capture support for T194
  *
- * Tegra ISP5
- *
- * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,15 +16,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVHOST_ISP5_H__
-#define __NVHOST_ISP5_H__
+#ifndef _CAPTURE_SUPPORT_H_
+#define _CAPTURE_SUPPORT_H_
 
+#include <linux/types.h>
 #include <linux/platform_device.h>
 
-extern const struct file_operations tegra194_isp5_ctrl_ops;
+int t194_capture_alloc_syncpt(struct platform_device *pdev,
+			const char *name,
+			uint32_t *syncpt_id,
+			dma_addr_t *syncpt_addr,
+			uint32_t *gos_index,
+			uint32_t *gos_offset);
 
-struct t194_isp5_file_private {
-	struct platform_device *pdev;
-};
+void t194_capture_release_syncpt(struct platform_device *pdev, uint32_t id);
 
-#endif
+void t194_capture_get_gos_table(struct platform_device *pdev,
+			int *gos_count,
+			const dma_addr_t **gos_table);
+
+#endif /* _CAPTURE_SUPPORT_H_ */

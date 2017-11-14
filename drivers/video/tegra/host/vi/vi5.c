@@ -41,8 +41,8 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
+#include "capture/capture-support.h"
 
-#include "nvhost_syncpt_unit_interface.h"
 #include "t194/t194.h"
 
 #include <media/vi.h>
@@ -56,8 +56,6 @@ struct host_vi5 {
 	struct platform_device *rce_rm;
 	struct platform_device *vi_thi;
 	struct vi vi_common;
-	dma_addr_t *gos_table;
-	uint32_t gos_count;
 
 	/* RCE RM area */
 	struct sg_table rm_sgt;
@@ -71,33 +69,6 @@ struct host_vi5 {
 static int vi5_init_debugfs(struct host_vi5 *vi5);
 static void vi5_remove_debugfs(struct host_vi5 *vi5);
 
-int vi5_finalize_poweron(struct platform_device *pdev)
-{
-	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
-	int ret;
-
-	if (vi5->vi_thi) {
-		ret = nvhost_module_busy(vi5->vi_thi);
-		if (ret != 0)
-			return ret;
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(vi5_finalize_poweron);
-
-int vi5_prepare_poweroff(struct platform_device *pdev)
-{
-	struct host_vi5 *vi5 = (struct host_vi5*) nvhost_get_private_data(pdev);
-
-	if (vi5->vi_thi) {
-		nvhost_module_idle(vi5->vi_thi);
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(vi5_prepare_poweroff);
-
 static int vi5_alloc_syncpt(struct platform_device *pdev,
 			const char *name,
 			uint32_t *syncpt_id,
@@ -105,65 +76,26 @@ static int vi5_alloc_syncpt(struct platform_device *pdev,
 			uint32_t *gos_index,
 			uint32_t *gos_offset)
 {
-	struct host_vi5 *vi5 = (struct host_vi5 *) nvhost_get_private_data(pdev);
-	uint32_t id;
-	uint32_t index = GOS_INDEX_INVALID;
-	uint32_t offset = 0;
-	dma_addr_t addr;
-	int err = -ENODEV;
+	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
 
-	id = nvhost_get_syncpt_client_managed(vi5->vi_thi, name);
-	if (id == 0) {
-		dev_err(&pdev->dev, "%s: syncpt allocation failed\n", __func__);
-		return -ENODEV;
-	}
-
-	addr = nvhost_syncpt_address(vi5->vi_thi, id);
-	if (!addr) {
-		dev_err(&pdev->dev, "%s: syncpt address not found\n", __func__);
-		goto cleanup;
-	}
-
-	err = nvhost_syncpt_get_gos(vi5->vi_thi, id, &index, &offset);
-	if (err < 0) {
-		if (!tegra_platform_is_sim())
-			goto cleanup;
-
-		dev_warn(&pdev->dev, "%s: GoS not supported on VDK\n",
-			__func__);
-	}
-
-	*syncpt_id = id;
-	*syncpt_addr = addr;
-	*gos_index = index;
-	*gos_offset = offset;
-
-	dev_info(&pdev->dev, "%s: id=%u addr=0x%llx gos_index=%u gos_offset=%u\n",
-		__func__, id, addr, index, offset);
-
-	return 0;
-
-cleanup:
-	nvhost_syncpt_put_ref_ext(vi5->vi_thi, id);
-	return err;
+	return t194_capture_alloc_syncpt(vi5->vi_thi, name,
+					syncpt_id, syncpt_addr,
+					gos_index, gos_offset);
 }
 
 static void vi5_release_syncpt(struct platform_device *pdev, uint32_t id)
 {
-	struct host_vi5 *vi5 = (struct host_vi5 *) nvhost_get_private_data(pdev);
+	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
 
-	dev_info(&pdev->dev, "%s: id=%u\n", __func__, id);
-
-	nvhost_syncpt_put_ref_ext(vi5->vi_thi, id);
+	t194_capture_release_syncpt(vi5->vi_thi, id);
 }
 
 static void vi5_get_gos_table(struct platform_device *pdev, int *count,
 			const dma_addr_t **table)
 {
-	struct host_vi5 *vi5 = (struct host_vi5 *) nvhost_get_private_data(pdev);
+	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);
 
-	*table = vi5->gos_table;
-	*count = vi5->gos_count;
+	t194_capture_get_gos_table(vi5->vi_thi, count, table);
 }
 
 static struct vi_channel_drv_ops vi5_channel_drv_ops = {
@@ -180,7 +112,6 @@ static int vi5_probe(struct platform_device *pdev)
 	struct device_node *rm_np;
 	struct platform_device *rm = NULL;
 	struct platform_device *thi = NULL;
-	struct nvhost_device_data *thi_info;
 	struct host_vi5 *vi5;
 	int err = 0;
 
@@ -253,25 +184,6 @@ static int vi5_probe(struct platform_device *pdev)
 	if (err)
 		goto deinit;
 
-	err = nvhost_syncpt_unit_interface_init(thi);
-	if (err)
-		goto device_release;
-
-	err = nvhost_syncpt_get_cv_dev_address_table(vi5->vi_thi,
-						&vi5->gos_count,
-						&vi5->gos_table);
-	if (err) {
-		if (!tegra_platform_is_sim()) {
-			dev_err(&pdev->dev,
-				"%s: failed to get GoS table: err=%d\n",
-				__func__, err);
-			goto device_release;
-		}
-
-		dev_warn(&pdev->dev, "%s: GoS not supported on VDK\n",
-			__func__);
-	}
-
 	err = rce_rm_map_carveout_for_device(rm, dev, &vi5->rm_sgt);
 	if (err < 0)
 		goto device_release;
@@ -282,10 +194,6 @@ static int vi5_probe(struct platform_device *pdev)
 	err = vi_channel_drv_register(pdev, &vi5_channel_drv_ops);
 	if (err)
 		goto unmap;
-
-	/* Steal vi-thi HW aperture */
-	thi_info = platform_get_drvdata(thi);
-	info->aperture[1] = thi_info->aperture[0];
 
 	vi5_init_debugfs(vi5);
 
@@ -418,10 +326,10 @@ const struct file_operations tegra194_vi5_ctrl_ops = {
 	.release = nvhost_vi5_release,
 };
 
-static int __exit vi5_remove(struct platform_device *pdev)
+static int vi5_remove(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct host_vi5 *vi5 = (struct host_vi5 *)pdata->private_data;
+	struct host_vi5 *vi5 = pdata->private_data;
 
 	vi_channel_drv_unregister(&pdev->dev);
 	tegra_vi_media_controller_cleanup(&vi5->vi_common.mc_vi);
@@ -449,7 +357,7 @@ static const struct of_device_id tegra_vi5_of_match[] = {
 
 static struct platform_driver vi5_driver = {
 	.probe = vi5_probe,
-	.remove = __exit_p(vi5_remove),
+	.remove = vi5_remove,
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "tegra194-vi5",

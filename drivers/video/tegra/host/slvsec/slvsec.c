@@ -32,7 +32,6 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <soc/tegra/chip-id.h>
@@ -83,8 +82,6 @@
 
 struct slvsec {
 	struct platform_device *pdev;
-	struct platform_device *vi_thi;
-	struct regulator *regulator;
 	struct tegra_mc_slvs *mc_slvs;
 	int irq;
 	int vi_irq;
@@ -98,9 +95,6 @@ struct slvsec {
 		struct debugfs_regset32 vi_syncgen0;
 		struct debugfs_regset32 vi_syncgen1;
 		struct debugfs_regset32 vi_syncgen2;
-		struct debugfs_regset32 hw_syncgen0;
-		struct debugfs_regset32 hw_syncgen1;
-		struct debugfs_regset32 hw_syncgen2;
 		struct slvsec_debug_counter {
 			struct dentry *dir;
 			uint8_t number;
@@ -234,23 +228,7 @@ static int slvsec_get_irq(struct platform_device *pdev,
 int slvsec_finalize_poweron(struct platform_device *pdev)
 {
 	struct slvsec *slvsec = nvhost_get_private_data(pdev);
-	int ret;
 	int i;
-
-	if (slvsec->vi_thi) {
-		ret = nvhost_module_busy(slvsec->vi_thi);
-		if (ret != 0)
-			return ret;
-	}
-
-	if (slvsec->regulator) {
-		ret = regulator_enable(slvsec->regulator);
-		if (ret) {
-			dev_err(&pdev->dev, "failed to enable "
-				"slvs-ec regulator.");
-			return ret;
-		}
-	}
 
 	for (i = 0; i < ARRAY_SIZE(slvsec->debug.counters); i++) {
 		struct slvsec_debug_counter *counter;
@@ -275,54 +253,19 @@ int slvsec_finalize_poweron(struct platform_device *pdev)
 
 	return 0;
 }
+EXPORT_SYMBOL(slvsec_finalize_poweron);
 
 int slvsec_prepare_poweroff(struct platform_device *pdev)
 {
-	struct slvsec *slvsec = nvhost_get_private_data(pdev);
-	int ret;
-
-	if (slvsec->regulator) {
-		ret = regulator_disable(slvsec->regulator);
-		if (ret)
-			dev_err(&pdev->dev, "failed to disable "
-				"slvs-ec regulator.");
-	}
-
-	if (slvsec->vi_thi) {
-		nvhost_module_idle(slvsec->vi_thi);
-	}
-
 	return 0;
 }
-
-static int slvsec_probe_regulator(struct slvsec *slvsec)
-{
-	struct device *dev = &slvsec->pdev->dev;
-	const char *name;
-	struct regulator *regulator;
-	int err;
-
-	err = of_property_read_string(dev->of_node, "nvidia,regulator", &name);
-	if (err == -EINVAL)
-		return 0;
-	if (err)
-		return err;
-
-	regulator = devm_regulator_get(dev, name);
-	if (IS_ERR(regulator))
-		return PTR_ERR(regulator);
-
-	slvsec->regulator = regulator;
-
-	return 0;
-}
+EXPORT_SYMBOL(slvsec_prepare_poweroff);
 
 static int slvsec_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
 	struct device_node *vi_np;
-	struct platform_device *vi_thi = NULL;
 	struct slvsec *slvsec;
 	int err = 0;
 
@@ -342,27 +285,11 @@ static int slvsec_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	vi_thi = of_find_device_by_node(vi_np);
-	of_node_put(vi_np);
-
-	if (vi_thi == NULL)
-		return -EPROBE_DEFER;
-
-	if (&vi_thi->dev.driver == NULL) {
-		platform_device_put(vi_thi);
-		return -EPROBE_DEFER;
-	}
-
-	slvsec->vi_thi = vi_thi;
 	slvsec->pdev = pdev;
 	info->pdev = pdev;
 	mutex_init(&info->lock);
 	platform_set_drvdata(pdev, info);
 	info->private_data = slvsec;
-
-	err = slvsec_probe_regulator(slvsec);
-	if (err)
-		dev_info(dev, "failed to get regulator (%d)\n", err);
 
 	if (tegra_platform_is_silicon()) {
 		slvsec_get_irq(pdev, "slvs-ec", &slvsec->irq, slvsec_isr);
@@ -371,11 +298,11 @@ static int slvsec_probe(struct platform_device *pdev)
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
-		goto put_vi;
+		goto error;
 
 	err = nvhost_module_init(pdev);
 	if (err)
-		goto put_vi;
+		goto error;
 
 	err = nvhost_client_device_init(pdev);
 	if (err)
@@ -399,8 +326,7 @@ static int slvsec_probe(struct platform_device *pdev)
 
 deinit:
 	nvhost_module_deinit(pdev);
-put_vi:
-	platform_device_put(vi_thi);
+error:
 	dev_err(dev, "probe failed: %d\n", err);
 	return err;
 }
@@ -410,7 +336,6 @@ static int __exit slvsec_remove(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct slvsec *slvsec = (struct slvsec *)pdata->private_data;
 
-	platform_device_put(slvsec->vi_thi);
 	slvsec_remove_debugfs(slvsec);
 
 	return 0;
@@ -698,7 +623,7 @@ static int slvsec_init_debugfs(struct slvsec *slvsec)
 				&slvsec_core_debug_cnt_value_fops);
 	}
 
-	debug->counters[0].event = 0; /* pakcet num */
+	debug->counters[0].event = 0; /* packet num */
 	debug->counters[1].event = 4; /* sof */
 	debug->counters[2].event = 5; /* eof */
 	debug->counters[3].event = 6; /* valid lines */
@@ -740,28 +665,6 @@ static int slvsec_init_debugfs(struct slvsec *slvsec)
 	debug->vi_syncgen2.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
 	debugfs_create_regset32("fw-syncgen2", S_IRUGO, dir,
 				&debug->vi_syncgen2);
-
-	if (slvsec->vi_thi) {
-		pdata = platform_get_drvdata(slvsec->vi_thi);
-
-		debug->hw_syncgen0.base = pdata->aperture[0] + 0xd800;
-		debug->hw_syncgen0.regs = slvsec_vi_syncgen_regs;
-		debug->hw_syncgen0.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
-		debugfs_create_regset32("hw-syncgen0", S_IRUGO, dir,
-					&debug->hw_syncgen0);
-
-		debug->hw_syncgen1.base = pdata->aperture[0] + 0xdc00;
-		debug->hw_syncgen1.regs = slvsec_vi_syncgen_regs;
-		debug->hw_syncgen1.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
-		debugfs_create_regset32("hw-syncgen1", S_IRUGO, dir,
-					&debug->hw_syncgen1);
-
-		debug->hw_syncgen2.base = pdata->aperture[0] + 0xe000;
-		debug->hw_syncgen2.regs = slvsec_vi_syncgen_regs;
-		debug->hw_syncgen2.nregs = ARRAY_SIZE(slvsec_vi_syncgen_regs);
-		debugfs_create_regset32("hw-syncgen2", S_IRUGO, dir,
-					&debug->hw_syncgen2);
-	}
 
 	return 0;
 }

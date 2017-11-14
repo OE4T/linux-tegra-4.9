@@ -26,7 +26,4 @@
 
 extern const struct file_operations tegra194_vi5_ctrl_ops;
 
-int vi5_finalize_poweron(struct platform_device *pdev);
-int vi5_prepare_poweroff(struct platform_device *pdev);
-
 #endif

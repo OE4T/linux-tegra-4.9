@@ -67,33 +67,32 @@ static int tegra_rce_rm_probe(struct platform_device *pdev)
 	ret = of_property_read_u32_array(dev->of_node, NV(scratch-area),
 					scratch_area, ARRAY_SIZE(scratch_area));
 	if (ret) {
-		dev_warn(dev, "%s: scratch-area property not defined",
-			__func__);
 		scratch_area[0] = 0x80000000;
 		scratch_area[1] = 0x00600000;
+		dev_warn(dev, "using default %s = <0x%08x 0x%08x>\n",
+			NV(scratch-area), scratch_area[0], scratch_area[1]);
 	}
 
 	dma = scratch_area[0];
 	base = get_dma_ops(dev)->alloc(dev, scratch_area[1], &dma,
 				GFP_KERNEL | __GFP_ZERO, 0);
+	if (base == NULL)
+		return -ENOMEM;
 
-	if (IS_ERR(base)) {
-		kfree(rm);
-		return PTR_ERR(base);
-	}
+	dev_info(dev, "allocated scratch at 0x%llx..0x%llx\n",
+		(u64)dma, (u64)dma + scratch_area[1]);
+
 	if (dma != scratch_area[0]) {
-		dev_err(dev, "%s: incorrect scratch area mapping", __func__);
+		dev_WARN(dev, "incorrect scratch area mapping "
+			"at 0x%llx, expected 0x%x\n",
+			(u64)dma, (u32)scratch_area[0]);
 		dma_free_coherent(dev, scratch_area[1], base, dma);
-		kfree(rm);
 		return -ENOMEM;
 	}
 
 	rm->scratch.base = base;
 	rm->scratch.size = scratch_area[1];
 	rm->scratch.dma = dma;
-
-	dev_info(dev, "allocated scratch at 0x%llx..0x%llx\n",
-		(u64)dma, (u64)dma + scratch_area[1]);
 
 	platform_set_drvdata(pdev, rm);
 	return 0;

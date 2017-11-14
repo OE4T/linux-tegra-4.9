@@ -50,6 +50,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/wakeup_reason.h>
 #include <soc/tegra/chip-id.h>
+#include <linux/tegra_prod.h>
 #include <linux/power/reset/system-pmic.h>
 #include <linux/notifier.h>
 #include <linux/regulator/consumer.h>
@@ -577,6 +578,7 @@ struct tegra_pmc {
 	struct pinctrl_desc pinctrl_desc;
 	bool *allow_dynamic_switch;
 	bool voltage_switch_restriction_enabled;
+	struct tegra_prod *tprod;
 };
 
 #ifdef CONFIG_PM_SLEEP
@@ -3615,6 +3617,8 @@ static void tegra_pmc_reset_debugfs_init(struct device *dev)
 static int tegra_pmc_probe(struct platform_device *pdev)
 {
 	void __iomem *base;
+	void __iomem *io_map_base[5] = {NULL};
+	int mem_count = 0;
 	struct resource *res;
 	int err;
 
@@ -3628,6 +3632,8 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 	if (IS_ERR(pmc->base))
 		return PTR_ERR(pmc->base);
 
+	io_map_base[mem_count++] = pmc->base;
+
 	/* unmap the base address from the early init, then mark it to NULL */
 	iounmap(pmc->early_base);
 	pmc->early_base = NULL;
@@ -3639,9 +3645,22 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 		if (IS_ERR(pmc->reboot_base))
 			return PTR_ERR(pmc->reboot_base);
 
+		io_map_base[mem_count++] = pmc->reboot_base;
 		iounmap(base);
 	} else {
 		pmc->reboot_base = pmc->base;
+	}
+
+	while (mem_count < 5) {
+		res = platform_get_resource(pdev, IORESOURCE_MEM, mem_count);
+		if (!res)
+			break;
+
+		base = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(base))
+			return PTR_ERR(base);
+
+		io_map_base[mem_count++] = base;
 	}
 
 	if (pmc->soc->has_pclk_clock) {
@@ -3670,6 +3689,19 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 		err = tegra_powergate_debugfs_init();
 		if (err < 0)
 			return err;
+	}
+
+	pmc->tprod = devm_tegra_prod_get(&pdev->dev);
+	if (IS_ERR_OR_NULL(pmc->tprod)) {
+		pmc->tprod = NULL;
+	}
+
+	if (pmc->tprod) {
+		err = tegra_prod_set_by_name(io_map_base, "prod", pmc->tprod);
+		if (!err)
+			pr_info("PMC Prod config success\n");
+		else
+			pr_info("Failed to configure PMC prod: %d\n", err);
 	}
 
 	if (!pmc->soc->skip_restart_register) {

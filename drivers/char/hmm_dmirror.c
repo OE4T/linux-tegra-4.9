@@ -1,5 +1,6 @@
 /*
  * Copyright 2013 Red Hat Inc.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -74,6 +75,7 @@ struct dmirror {
 struct dmirror_device {
 	dev_t			dev;
 	struct cdev		cdevice;
+	struct class *cl;
 	struct hmm_devmem	*devmem;
 	struct platform_device	*pdevice;
 	struct hmm_device	*hmm_device;
@@ -1096,12 +1098,14 @@ static const struct hmm_devmem_ops dmirror_devmem_ops = {
 static int dmirror_probe(struct platform_device *pdev)
 {
 	struct dmirror_device *mdevice = platform_get_drvdata(pdev);
+	struct device *dev;
 	unsigned long pfn;
 	int ret;
 
 	mdevice->hmm_device = hmm_device_new(mdevice);
 	if (IS_ERR(mdevice->hmm_device))
 		return PTR_ERR(mdevice->hmm_device);
+
 	mdevice->devmem = hmm_devmem_add(&dmirror_devmem_ops,
 					 &mdevice->hmm_device->device,
 					 64 << 20);
@@ -1117,9 +1121,29 @@ static int dmirror_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	mdevice->cl = class_create(THIS_MODULE, "chardrv");
+	if (IS_ERR_OR_NULL(mdevice->cl)) {
+		unregister_chrdev_region(mdevice->dev, 1);
+		hmm_devmem_remove(mdevice->devmem);
+		hmm_device_put(mdevice->hmm_device);
+		return PTR_ERR(mdevice->cl);
+	}
+
+	dev = device_create(mdevice->cl, NULL, mdevice->dev, NULL,
+			"hmm_dummy_device");
+	if (IS_ERR_OR_NULL(dev)) {
+		class_destroy(mdevice->cl);
+		unregister_chrdev_region(mdevice->dev, 1);
+		hmm_devmem_remove(mdevice->devmem);
+		hmm_device_put(mdevice->hmm_device);
+		return PTR_ERR(dev);
+	}
+
 	cdev_init(&mdevice->cdevice, &dmirror_fops);
 	ret = cdev_add(&mdevice->cdevice, mdevice->dev, 1);
 	if (ret) {
+		class_destroy(mdevice->cl);
+		device_destroy(mdevice->cl, mdevice->dev);
 		unregister_chrdev_region(mdevice->dev, 1);
 		hmm_devmem_remove(mdevice->devmem);
 		hmm_device_put(mdevice->hmm_device);
@@ -1129,6 +1153,7 @@ static int dmirror_probe(struct platform_device *pdev)
 	/* Build list of free struct page */
 	spin_lock_init(&mdevice->lock);
 	mdevice->frees = NULL;
+
 	for (pfn = mdevice->devmem->pfn_first; pfn < mdevice->devmem->pfn_last; pfn++) {
 		struct page *page = pfn_to_page(pfn);
 
@@ -1150,6 +1175,8 @@ static int dmirror_remove(struct platform_device *pdev)
 	hmm_device_put(mdevice->hmm_device);
 	cdev_del(&mdevice->cdevice);
 	unregister_chrdev_region(mdevice->dev, 1);
+	device_destroy(mdevice->cl, mdevice->dev);
+	class_destroy(mdevice->cl);
 	return 0;
 }
 

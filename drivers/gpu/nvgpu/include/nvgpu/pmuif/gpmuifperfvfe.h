@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,11 +24,11 @@
 
 #include "gpmuifbios.h"
 #include "gpmuifboardobj.h"
+#include "ctrl/ctrlperf.h"
 
 #define CTRL_PERF_VFE_EQU_QUADRATIC_COEFF_COUNT                      0x03
 #define NV_PMU_PERF_RPC_VFE_EQU_EVAL_VAR_COUNT_MAX                             2
 #define NV_PMU_PERF_RPC_VFE_EQU_MONITOR_COUNT_MAX                             16
-#define NV_PMU_VFE_VAR_SINGLE_SENSED_FUSE_SEGMENTS_MAX                        1
 
 struct nv_pmu_perf_vfe_var_value {
 	u8 var_type;
@@ -66,8 +66,8 @@ struct nv_pmu_perf_vfe_var_get_status_super {
 
 struct nv_pmu_perf_vfe_var_single_sensed_fuse_get_status {
 	struct nv_pmu_perf_vfe_var_get_status_super super;
-	u32 fuse_value_integer;
-	u32 fuse_value_hw_integer;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_value fuse_value_integer;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_value fuse_value_hw_integer;
 	u8 fuse_version;
 	bool b_version_check_failed;
 };
@@ -84,6 +84,8 @@ struct nv_pmu_vfe_var {
 	struct nv_pmu_boardobj super;
 	u32 out_range_min;
 	u32 out_range_max;
+	struct ctrl_boardobjgrp_mask_e32 mask_dependent_vars;
+	struct ctrl_boardobjgrp_mask_e255 mask_dependent_equs;
 };
 
 struct nv_pmu_vfe_var_derived {
@@ -116,38 +118,13 @@ struct nv_pmu_vfe_var_single_sensed {
 	struct nv_pmu_vfe_var_single super;
 };
 
-struct nv_pmu_vfe_var_single_sensed_fuse_info {
-	u8 segment_count;
-	union nv_pmu_bios_vfield_register_segment segments[
-		NV_PMU_VFE_VAR_SINGLE_SENSED_FUSE_SEGMENTS_MAX];
-};
-
-struct nv_pmu_vfe_var_single_sensed_fuse_vfield_info {
-	struct nv_pmu_vfe_var_single_sensed_fuse_info fuse;
-	u32 fuse_val_default;
-	int hw_correction_scale;
-	int hw_correction_offset;
-	u8 v_field_id;
-};
-
-struct nv_pmu_vfe_var_single_sensed_fuse_ver_vfield_info {
-	struct nv_pmu_vfe_var_single_sensed_fuse_info fuse;
-	u8 ver_expected;
-	bool b_ver_check;
-	bool b_use_default_on_ver_check_fail;
-	u8 v_field_id_ver;
-};
-
-struct nv_pmu_vfe_var_single_sensed_fuse_override_info {
-	u32 fuse_val_override;
-	bool b_fuse_regkey_override;
-};
-
 struct nv_pmu_vfe_var_single_sensed_fuse {
 	struct nv_pmu_vfe_var_single_sensed super;
-	struct nv_pmu_vfe_var_single_sensed_fuse_override_info override_info;
-	struct nv_pmu_vfe_var_single_sensed_fuse_vfield_info vfield_info;
-	struct nv_pmu_vfe_var_single_sensed_fuse_ver_vfield_info vfield_ver_info;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_override_info override_info;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_vfield_info vfield_info;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_ver_vfield_info vfield_ver_info;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_value fuse_val_default;
+	bool b_fuse_value_signed;
 };
 
 struct nv_pmu_vfe_var_single_sensed_temp {

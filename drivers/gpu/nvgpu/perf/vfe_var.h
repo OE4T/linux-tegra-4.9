@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -40,6 +40,8 @@ struct vfe_var {
 	struct boardobj super;
 	u32 out_range_min;
 	u32 out_range_max;
+	struct boardobjgrpmask_e32 mask_dependent_vars;
+	struct boardobjgrpmask_e255 mask_dependent_equs;
 	bool b_is_dynamic_valid;
 	bool b_is_dynamic;
 };
@@ -85,9 +87,11 @@ struct vfe_var_single_sensed {
 
 struct vfe_var_single_sensed_fuse {
 	struct vfe_var_single_sensed super;
-	struct nv_pmu_vfe_var_single_sensed_fuse_override_info	override_info;
-	struct nv_pmu_vfe_var_single_sensed_fuse_vfield_info vfield_info;
-	struct nv_pmu_vfe_var_single_sensed_fuse_ver_vfield_info vfield_ver_info;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_override_info	override_info;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_vfield_info vfield_info;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_ver_vfield_info vfield_ver_info;
+	struct ctrl_perf_vfe_var_single_sensed_fuse_value fuse_val_default;
+	bool b_fuse_value_signed;
 	u32 fuse_value_integer;
 	u32 fuse_value_hw_integer;
 	u8 fuse_version;

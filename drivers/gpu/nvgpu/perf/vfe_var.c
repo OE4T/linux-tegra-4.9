@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -29,6 +29,7 @@
 #include "boardobj/boardobjgrp_e32.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
+#include "ctrl/ctrlperf.h"
 
 static u32 devinit_get_vfe_var_table(struct gk20a *g,
 				     struct vfe_vars *pvarobjs);
@@ -183,7 +184,7 @@ static u32 dev_init_get_vfield_info(struct gk20a *g,
 	struct vfield_reg_entry vregentry;
 	struct vfield_header vheader;
 	struct vfield_entry ventry;
-	union nv_pmu_bios_vfield_register_segment *psegment = NULL;
+	struct ctrl_bios_vfield_register_segment *psegment = NULL;
 	u8 *psegmentcount = NULL;
 	u32 status = 0;
 
@@ -254,32 +255,34 @@ static u32 dev_init_get_vfield_info(struct gk20a *g,
 			continue;
 		}
 
-		psegment->super.high_bit = (u8)(VFIELD_BIT_STOP(ventry));
-		psegment->super.low_bit = (u8)(VFIELD_BIT_START(ventry));
 		switch (VFIELD_CODE((&vregentry))) {
 		case NV_VFIELD_DESC_CODE_REG:
-			psegment->reg.super.type =
+			psegment->type =
 				NV_PMU_BIOS_VFIELD_DESC_CODE_REG;
-			psegment->reg.addr = vregentry.reg;
+			psegment->data.reg.addr = vregentry.reg;
+			psegment->data.reg.super.high_bit = (u8)(VFIELD_BIT_STOP(ventry));
+			psegment->data.reg.super.low_bit = (u8)(VFIELD_BIT_START(ventry));
 			break;
 
 		case NV_VFIELD_DESC_CODE_INDEX_REG:
-			psegment->index_reg.super.type =
+			psegment->type =
 				NV_PMU_BIOS_VFIELD_DESC_CODE_INDEX_REG;
-			psegment->index_reg.addr = vregentry.reg;
-			psegment->index_reg.index = vregentry.index;
-			psegment->index_reg.reg_index = vregentry.reg_index;
+			psegment->data.index_reg.addr = vregentry.reg;
+			psegment->data.index_reg.index = vregentry.index;
+			psegment->data.index_reg.reg_index = vregentry.reg_index;
+			psegment->data.index_reg.super.high_bit = (u8)(VFIELD_BIT_STOP(ventry));
+			psegment->data.index_reg.super.low_bit = (u8)(VFIELD_BIT_START(ventry));
 			break;
 
 		default:
-			psegment->super.type =
+			psegment->type =
 				NV_PMU_BIOS_VFIELD_DESC_CODE_INVALID;
 			status = -EINVAL;
 			goto done;
 		}
 
 		if (VFIELD_SIZE((&vregentry)) != NV_VFIELD_DESC_SIZE_DWORD) {
-			psegment->super.type =
+			psegment->type =
 				NV_PMU_BIOS_VFIELD_DESC_CODE_INVALID;
 			return -EINVAL;
 		}
@@ -287,7 +290,6 @@ static u32 dev_init_get_vfield_info(struct gk20a *g,
 	}
 
 done:
-
 	return status;
 }
 
@@ -310,7 +312,12 @@ static u32 _vfe_var_pmudatainit_super(struct gk20a *g,
 
 	pset->out_range_min = pvfe_var->out_range_min;
 	pset->out_range_max = pvfe_var->out_range_max;
-
+	status = boardobjgrpmask_export(&pvfe_var->mask_dependent_vars.super,
+					pvfe_var->mask_dependent_vars.super.bitcount,
+					&pset->mask_dependent_vars.super);
+	status = boardobjgrpmask_export(&pvfe_var->mask_dependent_equs.super,
+					pvfe_var->mask_dependent_equs.super.bitcount,
+					&pset->mask_dependent_equs.super);
 	return status;
 }
 
@@ -336,7 +343,8 @@ static u32 vfe_var_construct_super(struct gk20a *g,
 	pvfevar->out_range_min = ptmpvar->out_range_min;
 	pvfevar->out_range_max = ptmpvar->out_range_max;
 	pvfevar->b_is_dynamic_valid = false;
-
+	status = boardobjgrpmask_e32_init(&pvfevar->mask_dependent_vars, NULL);
+	status = boardobjgrpmask_e255_init(&pvfevar->mask_dependent_equs, NULL);
 	gk20a_dbg_info("");
 
 	return status;
@@ -583,16 +591,17 @@ static u32 _vfe_var_pmudatainit_single_sensed_fuse(struct gk20a *g,
 		ppmudata;
 
 	memcpy(&pset->vfield_info, &pvfe_var_single_sensed_fuse->vfield_info,
-		sizeof(struct nv_pmu_vfe_var_single_sensed_fuse_vfield_info));
+		sizeof(struct ctrl_perf_vfe_var_single_sensed_fuse_vfield_info));
 
 	memcpy(&pset->vfield_ver_info,
 		&pvfe_var_single_sensed_fuse->vfield_ver_info,
-		sizeof(struct nv_pmu_vfe_var_single_sensed_fuse_ver_vfield_info));
+		sizeof(struct ctrl_perf_vfe_var_single_sensed_fuse_ver_vfield_info));
 
 	memcpy(&pset->override_info,
 		&pvfe_var_single_sensed_fuse->override_info,
-		sizeof(struct nv_pmu_vfe_var_single_sensed_fuse_override_info));
+		sizeof(struct ctrl_perf_vfe_var_single_sensed_fuse_override_info));
 
+	pset->b_fuse_value_signed = pvfe_var_single_sensed_fuse->b_fuse_value_signed;
 	return status;
 }
 
@@ -661,7 +670,8 @@ static u32 vfe_var_construct_single_sensed_fuse(struct gk20a *g,
 	pvfevar->vfield_ver_info.b_use_default_on_ver_check_fail =
 		ptmpvar->vfield_ver_info.b_use_default_on_ver_check_fail;
 	pvfevar->b_version_check_done = false;
-
+	pvfevar->b_fuse_value_signed =
+		ptmpvar->b_fuse_value_signed;
 	pvfevar->super.super.super.b_is_dynamic = false;
 	pvfevar->super.super.super.b_is_dynamic_valid = true;
 
@@ -899,16 +909,12 @@ static u32 devinit_get_vfe_var_table(struct gk20a *g,
 	/* Read table entries*/
 	vfevars_tbl_entry_ptr = vfevars_tbl_ptr +
 		vfevars_tbl_header.header_size;
-
 	for (index = 0;
 	     index < vfevars_tbl_header.vfe_var_entry_count;
 	     index++) {
 		rd_offset_ptr = vfevars_tbl_entry_ptr +
 				(index * vfevars_tbl_header.vfe_var_entry_size);
 		memcpy(&var, rd_offset_ptr, szfmt);
-
-		var_data.super.out_range_min = var.out_range_min;
-		var_data.super.out_range_max = var.out_range_max;
 
 		var_data.super.out_range_min = var.out_range_min;
 		var_data.super.out_range_max = var.out_range_max;
@@ -955,6 +961,9 @@ static u32 devinit_get_vfe_var_table(struct gk20a *g,
 				(BIOS_GET_FIELD(var.param0,
 					VBIOS_VFE_3X_VAR_ENTRY_PAR0_SSFUSE_USE_DEFAULT_ON_VER_CHECK_FAIL) &&
 					VBIOS_VFE_3X_VAR_ENTRY_PAR0_SSFUSE_USE_DEFAULT_ON_VER_CHECK_FAIL_YES);
+			var_data.single_sensed_fuse.b_fuse_value_signed =
+				(u8)BIOS_GET_FIELD(var.param0,
+					VBIOS_VFE_3X_VAR_ENTRY_PAR0_SSFUSE_VALUE_SIGNED_INTEGER);
 			var_data.single_sensed_fuse.vfield_info.fuse_val_default =
 				var.param1;
 			if (szfmt >= VBIOS_VFE_3X_VAR_ENTRY_SIZE_19) {

@@ -746,24 +746,17 @@ static int cpu_freq_notify(struct notifier_block *b,
 {
 	struct cpufreq_policy *policy;
 	u32 qmin, qmax, cpu;
-	enum cluster cl;
 
 	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CPU_FREQ_BOUNDS);
 	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CPU_FREQ_BOUNDS);
 
-	LOOP_FOR_EACH_CLUSTER(cl) {
-		if (!tfreq_data.pcluster[cl].configured)
-			continue;
-		for_each_cpu(cpu, &tfreq_data.pcluster[cl].cpu_mask) {
-			if (cpu_online(cpu)) {
-				policy = cpufreq_cpu_get(cpu);
-				if (!policy)
-					return -EINVAL;
-				policy->user_policy.min = qmin;
-				policy->user_policy.max = qmax;
-				cpufreq_update_policy(policy->cpu);
-				cpufreq_cpu_put(policy);
-			}
+	for_each_online_cpu(cpu) {
+		policy = cpufreq_cpu_get(cpu);
+		if (policy) {
+			policy->user_policy.min = qmin;
+			policy->user_policy.max = qmax;
+			cpufreq_update_policy(policy->cpu);
+			cpufreq_cpu_put(policy);
 		}
 	}
 	return NOTIFY_OK;

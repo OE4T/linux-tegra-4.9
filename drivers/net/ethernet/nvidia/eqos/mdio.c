@@ -575,40 +575,16 @@ int eqos_mdio_register(struct net_device *dev)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct mii_bus *new_bus = NULL;
 	int phyaddr = 0;
-	unsigned short phy_detected = 0;
 	int ret = Y_SUCCESS, i;
 
 	DBGPR_MDIO("-->eqos_mdio_register\n");
 
-	/* find the phy ID or phy address which is connected to our MAC */
-	for (phyaddr = 0; phyaddr < 32; phyaddr++) {
-		int phy_reg_read_status, mii_status;
-
-		phy_reg_read_status =
-		    eqos_mdio_read_direct(pdata, phyaddr, MII_BMSR,
-					  &mii_status);
-		if (phy_reg_read_status == 0) {
-			if (mii_status != 0x0000 && mii_status != 0xffff) {
-				phy_detected = 1;
-				break;
-			}
-		} else if (phy_reg_read_status < 0) {
-			pr_err("%s: Error reading phy ID/ADDR %d\n",
-			       DEV_NAME, phyaddr);
-		}
-	}
-	if (!phy_detected) {
-		pr_err("%s: No phy could be detected\n", DEV_NAME);
-		return -ENOLINK;
-	}
 	pdata->phyaddr = phyaddr;
 	pdata->bus_id = 0x1;
 
-	DBGPHY_REGS(pdata);
-
-	new_bus = mdiobus_alloc();
-	if (new_bus == NULL) {
-		pr_err("Unable to allocate mdio bus\n");
+	new_bus = devm_mdiobus_alloc(&pdata->pdev->dev);
+	if (!new_bus) {
+		netdev_err(dev, "failed to allocate MDIO bus\n");
 		return -ENOMEM;
 	}
 
@@ -635,8 +611,7 @@ int eqos_mdio_register(struct net_device *dev)
 		ret = mdiobus_register(new_bus);
 
 	if (ret) {
-		pr_err("%s: Cannot register as MDIO bus\n", new_bus->name);
-		mdiobus_free(new_bus);
+		netdev_err(dev, "%s: failed to register MDIO bus\n", new_bus->name);
 		return ret;
 	}
 
@@ -672,7 +647,6 @@ void eqos_mdio_unregister(struct net_device *dev)
 
 	mdiobus_unregister(pdata->mii);
 	pdata->mii->priv = NULL;
-	mdiobus_free(pdata->mii);
 	pdata->mii = NULL;
 
 	DBGPR_MDIO("<--eqos_mdio_unregister\n");

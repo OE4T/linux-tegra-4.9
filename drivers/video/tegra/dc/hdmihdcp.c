@@ -79,6 +79,13 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_FALLBACK_1X                0xdeadbeef
 #define HDCP_NON_22_RX                  0x0300
 
+#define HDCP_EESS_ENABLE		(0x1)
+#define HDCP22_EESS_START		(0x201)
+#define HDCP22_EESS_END			(0x211)
+#define HDCP1X_EESS_START		(0x200)
+#define HDCP1X_EESS_END			(0x210)
+#define HDMI_VSYNC_WINDOW		(0xc2)
+
 #define HDCP_TA_CMD_CTRL		0
 #define HDCP_TA_CMD_AKSV		1
 #define HDCP_TA_CMD_ENC			2
@@ -2029,6 +2036,7 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 {
 	u8 hdcp2version = 0;
 	int e;
+	int val;
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 	if (nvhdcp_is_plugged(nvhdcp) &&
 		atomic_read(&nvhdcp->policy) !=
@@ -2041,15 +2049,30 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 		/* HDCP 1.x test 1A-04 expects reading HDCP regs */
 		if (hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES) {
 			if (g_fallback) {
+				val = HDCP_EESS_ENABLE<<31|
+					HDCP1X_EESS_START<<16|
+					HDCP1X_EESS_END;
+				tegra_sor_writel_ext(nvhdcp->hdmi->sor,
+					HDMI_VSYNC_WINDOW, val);
 				INIT_DELAYED_WORK(&nvhdcp->work,
 				nvhdcp_downstream_worker);
 				nvhdcp->hdcp22 = HDCP1X_PROTOCOL;
 			} else {
+				val = HDCP_EESS_ENABLE<<31|
+					HDCP22_EESS_START<<16|
+					HDCP22_EESS_END;
+				tegra_sor_writel_ext(nvhdcp->hdmi->sor,
+					HDMI_VSYNC_WINDOW, val);
 				INIT_DELAYED_WORK(&nvhdcp->work,
 					nvhdcp2_downstream_worker);
 				nvhdcp->hdcp22 = HDCP22_PROTOCOL;
 			}
 		} else {
+			val = HDCP_EESS_ENABLE<<31|
+				HDCP1X_EESS_START<<16|
+				HDCP1X_EESS_END;
+			tegra_sor_writel_ext(nvhdcp->hdmi->sor, HDMI_VSYNC_WINDOW,
+						val);
 			INIT_DELAYED_WORK(&nvhdcp->work,
 				nvhdcp_downstream_worker);
 			nvhdcp->hdcp22 = HDCP1X_PROTOCOL;

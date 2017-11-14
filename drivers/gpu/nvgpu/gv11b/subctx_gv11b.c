@@ -65,7 +65,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 
 	if (ctx->mem.gpu_va == 0) {
 		ret = nvgpu_dma_alloc_flags_sys(g,
-				NVGPU_DMA_NO_KERNEL_MAPPING,
+				0, /* No Special flags */
 				ctxsw_prog_fecs_header_v(),
 				&ctx->mem);
 		if (ret) {

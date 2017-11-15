@@ -219,6 +219,8 @@ struct gk20a_platform gv11b_tegra_platform = {
 	.probe = gv11b_tegra_probe,
 	.late_probe = gv11b_tegra_late_probe,
 	.remove = gv11b_tegra_remove,
+	.railgate_delay_init    = 500,
+	.can_railgate_init      = true,
 
 	.can_slcg               = true,
 	.can_blcg               = true,

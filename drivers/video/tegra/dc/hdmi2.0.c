@@ -550,6 +550,7 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	struct tegra_dc *dc = hdmi->dc;
+	int ret = 0;
 
 	tegra_dc_get(dc);
 	/* disable hdcp */
@@ -570,10 +571,16 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	tegra_sor_hdmi_pad_power_down(sor);
 	tegra_sor_reset(hdmi->sor);
 	tegra_hdmi_put(dc);
+
+	ret = clk_set_parent(sor->ref_clk, dc->parent_clk_safe);
+	if (ret)
+		dev_err(&dc->ndev->dev,
+			"can't set parent_clk_safe for sor->ref_clk\n");
+
 	cancel_delayed_work_sync(&hdmi->hdr_worker);
 	tegra_dc_put(dc);
 
-	return 0;
+	return ret;
 }
 
 static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)

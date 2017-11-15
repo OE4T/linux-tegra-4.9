@@ -430,6 +430,7 @@ struct tegra_dc {
 	int				irq;
 
 	struct clk			*clk;
+	struct clk			*parent_clk_safe;
 	struct reset_control		*rst;
 
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_ISOMGR)

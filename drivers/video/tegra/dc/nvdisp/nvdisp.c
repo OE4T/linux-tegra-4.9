@@ -1554,6 +1554,13 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 		}
 	}
 
+	dc->parent_clk_safe = tegra_disp_clk_get(&dc->ndev->dev,
+						"pllp_display");
+	if (IS_ERR_OR_NULL(dc->parent_clk_safe)) {
+		dev_err(&dc->ndev->dev, "can't get pllp_display\n");
+		err = -ENOENT;
+	}
+
 	return err;
 }
 
@@ -1972,7 +1979,7 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 
 int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 {
-	int idx;
+	int idx, ret = 0;
 	struct tegra_dc *dc_other = NULL;
 	/* Detach windows from the head */
 	for_each_set_bit(idx, &dc->pdata->win_mask,
@@ -1997,6 +2004,10 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 
 	/* Disable DC clock */
 	tegra_disp_clk_disable_unprepare(dc->clk);
+	ret = clk_set_parent(dc->clk, dc->parent_clk_safe);
+	if (ret)
+		dev_err(&dc->ndev->dev,
+			"can't set parent_clk_safe for dc->clk\n");
 
 	/* check if any of head is using hub clock */
 	mutex_lock(&tegra_nvdisp_lock);
@@ -2014,7 +2025,7 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 	}
 	mutex_unlock(&tegra_nvdisp_lock);
 
-	return 0;
+	return ret;
 }
 
 int tegra_nvdisp_head_enable(struct tegra_dc *dc)

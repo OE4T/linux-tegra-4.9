@@ -601,4 +601,20 @@
 			status = "disabled";
 		};
 	};
+
+	hda@3510000 {
+		compatible = "nvidia,tegra30-hda";
+		iommus = <&smmu TEGRA_SID_HDA>;
+		reg = <0x0 0x3510000 0x0 0x10000>;
+		nvidia,max-codec-slot = <8>;
+		clocks = <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+			 <&bpmp_clks TEGRA194_CLK_MAUD>,
+			 <&bpmp_clks TEGRA194_CLK_HDA>,
+			 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
+			 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
+		clock-names = "pllp_out0", "maud", "hda",
+				"hda2codec_2x",	"hda2hdmi";
+		interrupts = <0 161 0x04>;
+		status = "disabled";
+	};
 };

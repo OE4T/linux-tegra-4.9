@@ -214,6 +214,10 @@
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_GPCDMA_0>;
 			};
+			hda_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_HDA>;
+			};
 			ape_domain {
 				address-space = <&ape_as>;
 				sid-list = <TEGRA_SID(APE) TEGRA_SID(EQOS)>;

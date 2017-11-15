@@ -3962,32 +3962,6 @@ int gk20a_fifo_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 	return channel_gk20a_set_schedule_params(ch);
 }
 
-int gk20a_fifo_set_priority(struct channel_gk20a *ch, u32 priority)
-{
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		nvgpu_err(ch->g, "invalid operation for TSG!");
-		return -EINVAL;
-	}
-
-	/* set priority of graphics channel */
-	switch (priority) {
-	case NVGPU_PRIORITY_LOW:
-		ch->timeslice_us = ch->g->timeslice_low_priority_us;
-		break;
-	case NVGPU_PRIORITY_MEDIUM:
-		ch->timeslice_us = ch->g->timeslice_medium_priority_us;
-		break;
-	case NVGPU_PRIORITY_HIGH:
-		ch->timeslice_us = ch->g->timeslice_high_priority_us;
-		break;
-	default:
-		pr_err("Unsupported priority");
-		return -EINVAL;
-	}
-
-	return channel_gk20a_set_schedule_params(ch);
-}
-
 void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c)
 {
 	struct gk20a *g = c->g;

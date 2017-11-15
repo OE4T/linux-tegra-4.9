@@ -46,7 +46,6 @@ int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid);
 int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 				u32 chid, bool add, bool wait_for_finish);
 int vgpu_fifo_wait_engine_idle(struct gk20a *g);
-int vgpu_channel_set_priority(struct channel_gk20a *ch, u32 priority);
 int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 					u32 id,
 					bool is_tsg,

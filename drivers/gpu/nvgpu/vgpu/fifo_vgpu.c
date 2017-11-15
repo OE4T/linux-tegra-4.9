@@ -607,25 +607,6 @@ int vgpu_fifo_wait_engine_idle(struct gk20a *g)
 	return 0;
 }
 
-int vgpu_channel_set_priority(struct channel_gk20a *ch, u32 priority)
-{
-	struct tegra_vgpu_cmd_msg msg;
-	struct tegra_vgpu_channel_priority_params *p =
-			&msg.params.channel_priority;
-	int err;
-
-	gk20a_dbg_info("channel %d set priority %u", ch->chid, priority);
-
-	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY;
-	msg.handle = vgpu_get_handle(ch->g);
-	p->handle = ch->virt_ctx;
-	p->priority = priority;
-	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	WARN_ON(err || msg.ret);
-
-	return err ? err : msg.ret;
-}
-
 static int vgpu_fifo_tsg_set_runlist_interleave(struct gk20a *g,
 					u32 tsgid,
 					u32 runlist_id,

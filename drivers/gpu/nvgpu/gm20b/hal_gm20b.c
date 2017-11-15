@@ -385,7 +385,6 @@ static const struct gpu_ops gm20b_ops = {
 		.alloc_inst = gk20a_fifo_alloc_inst,
 		.free_inst = gk20a_fifo_free_inst,
 		.setup_ramfc = gk20a_fifo_setup_ramfc,
-		.channel_set_priority = gk20a_fifo_set_priority,
 		.channel_set_timeslice = gk20a_fifo_set_timeslice,
 		.default_timeslice_us = gk20a_fifo_default_timeslice_us,
 		.setup_userd = gk20a_fifo_setup_userd,

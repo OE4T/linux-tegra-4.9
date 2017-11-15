@@ -200,29 +200,6 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 	return 0;
 }
 
-int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
-				u32 priority)
-{
-	u32 timeslice_us;
-
-	switch (priority) {
-	case NVGPU_PRIORITY_LOW:
-		timeslice_us = g->timeslice_low_priority_us;
-		break;
-	case NVGPU_PRIORITY_MEDIUM:
-		timeslice_us = g->timeslice_medium_priority_us;
-		break;
-	case NVGPU_PRIORITY_HIGH:
-		timeslice_us = g->timeslice_high_priority_us;
-		break;
-	default:
-		pr_err("Unsupported priority");
-		return -EINVAL;
-	}
-
-	return gk20a_tsg_set_timeslice(tsg, timeslice_us);
-}
-
 int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 {
 	struct gk20a *g = tsg->g;

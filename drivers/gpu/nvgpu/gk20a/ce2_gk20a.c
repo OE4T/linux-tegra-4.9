@@ -427,7 +427,6 @@ void gk20a_ce_suspend(struct gk20a *g)
 /* CE app utility functions */
 u32 gk20a_ce_create_context(struct gk20a *g,
 		int runlist_id,
-		int priority,
 		int timeslice,
 		int runlist_level)
 {
@@ -506,16 +505,6 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 	}
 
 	memset(ce_ctx->cmd_buf_mem.cpu_va, 0x00, ce_ctx->cmd_buf_mem.size);
-
-	/* -1 means default channel priority */
-	if (priority != -1) {
-		err = gk20a_fifo_set_priority(ce_ctx->ch, priority);
-		if (err) {
-			nvgpu_err(g,
-				"ce: could not set the channel priority for CE context");
-			goto end;
-		}
-	}
 
 	/* -1 means default channel timeslice value */
 	if (timeslice != -1) {

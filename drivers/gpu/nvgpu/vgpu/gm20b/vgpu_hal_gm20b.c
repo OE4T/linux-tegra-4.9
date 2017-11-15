@@ -264,7 +264,6 @@ static const struct gpu_ops vgpu_gm20b_ops = {
 		.alloc_inst = vgpu_channel_alloc_inst,
 		.free_inst = vgpu_channel_free_inst,
 		.setup_ramfc = vgpu_channel_setup_ramfc,
-		.channel_set_priority = vgpu_channel_set_priority,
 		.channel_set_timeslice = vgpu_channel_set_timeslice,
 		.default_timeslice_us = vgpu_fifo_default_timeslice_us,
 		.setup_userd = gk20a_fifo_setup_userd,

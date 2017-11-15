@@ -296,33 +296,6 @@ int nvgpu_ioctl_tsg_dev_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static int gk20a_tsg_ioctl_set_priority(struct gk20a *g,
-	struct tsg_gk20a *tsg, struct nvgpu_set_priority_args *arg)
-{
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
-	int err;
-
-	nvgpu_mutex_acquire(&sched->control_lock);
-	if (sched->control_locked) {
-		err = -EPERM;
-		goto done;
-	}
-
-	err = gk20a_busy(g);
-	if (err) {
-		nvgpu_err(g, "failed to power on gpu");
-		goto done;
-	}
-
-	err = gk20a_tsg_set_priority(g, tsg, arg->priority);
-
-	gk20a_idle(g);
-done:
-	nvgpu_mutex_release(&sched->control_lock);
-	return err;
-}
-
 static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 	struct tsg_gk20a *tsg, struct nvgpu_runlist_interleave_args *arg)
 {
@@ -472,13 +445,6 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		/* preempt TSG */
 		err = g->ops.fifo.preempt_tsg(g, tsg->tsgid);
 		gk20a_idle(g);
-		break;
-		}
-
-	case NVGPU_IOCTL_TSG_SET_PRIORITY:
-		{
-		err = gk20a_tsg_ioctl_set_priority(g, tsg,
-			(struct nvgpu_set_priority_args *)buf);
 		break;
 		}
 

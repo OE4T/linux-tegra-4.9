@@ -1008,8 +1008,6 @@ struct nvgpu_gpu_set_event_filter_args {
 	_IO(NVGPU_TSG_IOCTL_MAGIC, 4)
 #define NVGPU_IOCTL_TSG_PREEMPT \
 	_IO(NVGPU_TSG_IOCTL_MAGIC, 5)
-#define NVGPU_IOCTL_TSG_SET_PRIORITY \
-	_IOW(NVGPU_TSG_IOCTL_MAGIC, 6, struct nvgpu_set_priority_args)
 #define NVGPU_IOCTL_TSG_EVENT_ID_CTRL \
 	_IOWR(NVGPU_TSG_IOCTL_MAGIC, 7, struct nvgpu_event_id_ctrl_args)
 #define NVGPU_IOCTL_TSG_SET_RUNLIST_INTERLEAVE \
@@ -1356,9 +1354,6 @@ struct nvgpu_dbg_gpu_profiler_reserve_args {
 
 #define NVGPU_IOCTL_MAGIC 'H'
 #define NVGPU_NO_TIMEOUT ((u32)~0)
-#define NVGPU_PRIORITY_LOW 50
-#define NVGPU_PRIORITY_MEDIUM 100
-#define NVGPU_PRIORITY_HIGH 150
 #define NVGPU_TIMEOUT_FLAG_DISABLE_DUMP		0
 
 /* this is also the hardware memory format */
@@ -1499,10 +1494,6 @@ struct nvgpu_set_timeout_ex_args {
 	__u32 flags;
 };
 
-struct nvgpu_set_priority_args {
-	__u32 priority;
-} __packed;
-
 #define NVGPU_ZCULL_MODE_GLOBAL		0
 #define NVGPU_ZCULL_MODE_NO_CTXSW		1
 #define NVGPU_ZCULL_MODE_SEPARATE_BUFFER	2
@@ -1630,8 +1621,6 @@ struct nvgpu_boosted_ctx_args {
 	_IOW(NVGPU_IOCTL_MAGIC, 11, struct nvgpu_set_timeout_args)
 #define NVGPU_IOCTL_CHANNEL_GET_TIMEDOUT	\
 	_IOR(NVGPU_IOCTL_MAGIC, 12, struct nvgpu_get_param_args)
-#define NVGPU_IOCTL_CHANNEL_SET_PRIORITY	\
-	_IOW(NVGPU_IOCTL_MAGIC, 13, struct nvgpu_set_priority_args)
 #define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT_EX	\
 	_IOWR(NVGPU_IOCTL_MAGIC, 18, struct nvgpu_set_timeout_ex_args)
 #define NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO	\

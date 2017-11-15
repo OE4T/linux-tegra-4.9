@@ -383,7 +383,6 @@ void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries,
 			unsigned long timeout, u32 flags);
-int gk20a_fifo_set_priority(struct channel_gk20a *ch, u32 priority);
 int gk20a_fifo_set_timeslice(struct channel_gk20a *ch, unsigned int timeslice);
 void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c);
 int gk20a_fifo_alloc_inst(struct gk20a *g, struct channel_gk20a *ch);

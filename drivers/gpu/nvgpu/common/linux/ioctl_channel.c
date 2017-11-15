@@ -1314,21 +1314,6 @@ long gk20a_channel_ioctl(struct file *filp,
 		((struct nvgpu_get_param_args *)buf)->value =
 			ch->has_timedout;
 		break;
-	case NVGPU_IOCTL_CHANNEL_SET_PRIORITY:
-		err = gk20a_busy(ch->g);
-		if (err) {
-			dev_err(dev,
-				"%s: failed to host gk20a for ioctl cmd: 0x%x",
-				__func__, cmd);
-			break;
-		}
-		err = ch->g->ops.fifo.channel_set_priority(ch,
-			((struct nvgpu_set_priority_args *)buf)->priority);
-
-		gk20a_idle(ch->g);
-		gk20a_channel_trace_sched_param(
-			trace_gk20a_channel_set_priority, ch);
-		break;
 	case NVGPU_IOCTL_CHANNEL_ENABLE:
 		err = gk20a_busy(ch->g);
 		if (err) {

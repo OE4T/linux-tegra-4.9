@@ -513,7 +513,6 @@ struct gpu_ops {
 		int (*wait_engine_idle)(struct gk20a *g);
 		u32 (*get_num_fifos)(struct gk20a *g);
 		u32 (*get_pbdma_signature)(struct gk20a *g);
-		int (*channel_set_priority)(struct channel_gk20a *ch, u32 priority);
 		int (*set_runlist_interleave)(struct gk20a *g, u32 id,
 					bool is_tsg, u32 runlist_id,
 					u32 new_level);

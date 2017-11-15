@@ -3143,11 +3143,6 @@ static __init void tegra210_periph_clk_init(
 				mux_vi_visensor_pd2vi_idx, &vi_lock);
 	clks[TEGRA210_CLK_VI_OUTPUT] = clk;
 
-	/* pll_d_dsi_out */
-	clk = clk_register_gate(NULL, "pll_d_dsi_out", "pll_d_out0", 0,
-				clk_base + PLLD_MISC0, 21, 0, &pll_d_lock);
-	clks[TEGRA210_CLK_PLL_D_DSI_OUT] = clk;
-
 	/* dsia */
 	clk = tegra_clk_register_periph_gate("dsia", "pll_d_dsi_out", 0,
 					     clk_base, 0, 48,
@@ -3324,6 +3319,11 @@ skip_pllms:
 					CLK_SET_RATE_PARENT, 1, 2);
 	clk_register_clkdev(clk, "pll_d_out0", NULL);
 	clks[TEGRA210_CLK_PLL_D_OUT0] = clk;
+
+	/* PLL_D_DSI_OUT */
+	clk = clk_register_gate(NULL, "pll_d_dsi_out", "pll_d_out0", 0,
+				clk_base + PLLD_MISC0, 21, 0, &pll_d_lock);
+	clks[TEGRA210_CLK_PLL_D_DSI_OUT] = clk;
 
 	/* PLLRE */
 	clk = tegra_clk_register_pllre_tegra210("pll_re_vco", "pll_ref",

@@ -21,6 +21,8 @@
 #define DSIC	(1 << 30)
 #define DSIB	(1 << 29)
 #define DSIA	(1 << 28)
+#define CSIH	(1 << 27)
+#define CSIG	(1 << 26)
 #define CSIF	(1 << 25)
 #define CSIE	(1 << 24)
 #define CSID	(1 << 23)

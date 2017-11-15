@@ -433,7 +433,9 @@ struct gpu_ops {
 		void (*disable_rd_coalesce)(struct gk20a *g);
 		void (*init_ctxsw_hdr_data)(struct gk20a *g,
 					struct nvgpu_mem *mem);
-
+		void (*init_gfxp_wfi_timeout_count)(struct gk20a *g);
+		unsigned long (*get_max_gfxp_wfi_timeout_count)
+					(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

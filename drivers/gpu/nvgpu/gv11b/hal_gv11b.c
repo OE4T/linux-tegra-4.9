@@ -361,7 +361,7 @@ static const struct gpu_ops gv11b_ops = {
 		.set_czf_bypass = NULL,
 		.pre_process_sm_exception = gr_gv11b_pre_process_sm_exception,
 		.set_preemption_buffer_va = gr_gv11b_set_preemption_buffer_va,
-		.init_preemption_state = NULL,
+		.init_preemption_state = gr_gv11b_init_preemption_state,
 		.update_boosted_ctx = gr_gp10b_update_boosted_ctx,
 		.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3,
 		.create_gr_sysfs = gr_gv11b_create_sysfs,
@@ -388,6 +388,10 @@ static const struct gpu_ops gv11b_ops = {
 			gr_gv11b_handle_tpc_sm_ecc_exception,
 		.decode_egpc_addr = gv11b_gr_decode_egpc_addr,
 		.init_ctxsw_hdr_data = gr_gp10b_init_ctxsw_hdr_data,
+		.init_gfxp_wfi_timeout_count =
+				gr_gv11b_init_gfxp_wfi_timeout_count,
+		.get_max_gfxp_wfi_timeout_count =
+			gr_gv11b_get_max_gfxp_wfi_timeout_count,
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,

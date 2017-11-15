@@ -54,6 +54,8 @@
 #include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 
+#define GFXP_WFI_TIMEOUT_COUNT_IN_USEC_DEFAULT 1000
+
 bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
@@ -3624,4 +3626,36 @@ void gr_gv11b_init_gpc_mmu(struct gk20a *g)
 			gk20a_readl(g, fb_mmu_debug_wr_r()));
 	gk20a_writel(g, gr_gpcs_pri_mmu_debug_rd_r(),
 			gk20a_readl(g, fb_mmu_debug_rd_r()));
+}
+
+int gr_gv11b_init_preemption_state(struct gk20a *g)
+{
+	u32 debug_2;
+	struct gr_gk20a *gr = &g->gr;
+
+	nvgpu_log_fn(g, " ");
+
+	gk20a_writel(g, gr_fe_gfxp_wfi_timeout_r(),
+			gr_fe_gfxp_wfi_timeout_count_f(
+			gr->gfxp_wfi_timeout_count));
+
+	debug_2 = gk20a_readl(g, gr_debug_2_r());
+	debug_2 = set_field(debug_2,
+			gr_debug_2_gfxp_wfi_timeout_unit_m(),
+			gr_debug_2_gfxp_wfi_timeout_unit_usec_f());
+	gk20a_writel(g, gr_debug_2_r(), debug_2);
+
+	return 0;
+}
+void gr_gv11b_init_gfxp_wfi_timeout_count(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	gr->gfxp_wfi_timeout_count = GFXP_WFI_TIMEOUT_COUNT_IN_USEC_DEFAULT;
+}
+
+unsigned long gr_gv11b_get_max_gfxp_wfi_timeout_count(struct gk20a *g)
+{
+	/* 100 msec in usec count */
+	return (100 * 1000UL);
 }

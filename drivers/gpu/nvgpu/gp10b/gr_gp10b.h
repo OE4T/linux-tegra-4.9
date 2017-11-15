@@ -144,5 +144,7 @@ void gr_gp10b_set_preemption_buffer_va(struct gk20a *g,
 int gr_gp10b_set_czf_bypass(struct gk20a *g, struct channel_gk20a *ch);
 void gr_gp10b_init_czf_bypass(struct gk20a *g);
 void gr_gp10b_init_ctxsw_hdr_data(struct gk20a *g, struct nvgpu_mem *mem);
+void gr_gp10b_init_gfxp_wfi_timeout_count(struct gk20a *g);
+unsigned long gr_gp10b_get_max_gfxp_wfi_timeout_count(struct gk20a *g);
 
 #endif

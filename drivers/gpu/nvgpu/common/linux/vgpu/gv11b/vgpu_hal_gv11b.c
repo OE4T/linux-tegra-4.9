@@ -248,6 +248,10 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 			gr_gv11b_handle_tpc_sm_ecc_exception,
 		.decode_egpc_addr = gv11b_gr_decode_egpc_addr,
 		.init_ctxsw_hdr_data = gr_gp10b_init_ctxsw_hdr_data,
+		.init_gfxp_wfi_timeout_count =
+			gr_gv11b_init_gfxp_wfi_timeout_count,
+		.get_max_gfxp_wfi_timeout_count =
+			gr_gv11b_get_max_gfxp_wfi_timeout_count,
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,

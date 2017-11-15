@@ -213,5 +213,8 @@ void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 		 u32 gpc, u32 broadcast_flags, u32 *priv_addr_table, u32 *t);
 u32 gv11b_gr_get_egpc_base(struct gk20a *g);
 void gr_gv11b_init_gpc_mmu(struct gk20a *g);
+int gr_gv11b_init_preemption_state(struct gk20a *g);
+void gr_gv11b_init_gfxp_wfi_timeout_count(struct gk20a *g);
+unsigned long gr_gv11b_get_max_gfxp_wfi_timeout_count(struct gk20a *g);
 
 #endif

@@ -4292,6 +4292,10 @@ static inline u32 gr_fe_gfxp_wfi_timeout_count_disabled_f(void)
 {
 	return 0x0U;
 }
+static inline u32 gr_fe_gfxp_wfi_timeout_count_init_f(void)
+{
+	return 0x800U;
+}
 static inline u32 gr_gpcs_tpcs_sm_texio_control_r(void)
 {
 	return 0x00419bd8U;
@@ -4935,5 +4939,21 @@ static inline u32 gr_fecs_falcon_ecc_uncorrected_err_count_unique_total_m(void)
 static inline u32 gr_fecs_falcon_ecc_uncorrected_err_count_unique_total_v(u32 r)
 {
 	return (r >> 16U) & 0xffffU;
+}
+static inline u32 gr_debug_2_r(void)
+{
+	return 0x00400088U;
+}
+static inline u32 gr_debug_2_gfxp_wfi_timeout_unit_m(void)
+{
+	return 0x1U << 27U;
+}
+static inline u32 gr_debug_2_gfxp_wfi_timeout_unit_usec_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_debug_2_gfxp_wfi_timeout_unit_sysclk_f(void)
+{
+	return 0x8000000U;
 }
 #endif

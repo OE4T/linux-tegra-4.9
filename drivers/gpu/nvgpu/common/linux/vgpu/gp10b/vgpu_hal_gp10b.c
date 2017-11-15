@@ -209,6 +209,10 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.set_ctxsw_preemption_mode =
 					vgpu_gr_gp10b_set_ctxsw_preemption_mode,
 		.init_ctxsw_hdr_data = gr_gp10b_init_ctxsw_hdr_data,
+		.init_gfxp_wfi_timeout_count =
+			gr_gp10b_init_gfxp_wfi_timeout_count,
+		.get_max_gfxp_wfi_timeout_count =
+			gr_gp10b_get_max_gfxp_wfi_timeout_count,
 	},
 	.fb = {
 		.reset = fb_gk20a_reset,

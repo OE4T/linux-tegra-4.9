@@ -965,8 +965,10 @@ static ssize_t gfxp_wfi_timeout_count_store(struct device *dev,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	if (val >= 100*1000*1000) /* 100ms @ 1Ghz */
-		return -EINVAL;
+	if (g->ops.gr.get_max_gfxp_wfi_timeout_count) {
+		if (val >= g->ops.gr.get_max_gfxp_wfi_timeout_count(g))
+			return -EINVAL;
+	}
 
 	gr->gfxp_wfi_timeout_count = val;
 

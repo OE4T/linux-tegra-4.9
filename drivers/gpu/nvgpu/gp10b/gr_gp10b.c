@@ -46,6 +46,8 @@
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
+#define GFXP_WFI_TIMEOUT_COUNT_DEFAULT 100000
+
 bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
@@ -2350,4 +2352,17 @@ void gr_gp10b_init_ctxsw_hdr_data(struct gk20a *g, struct nvgpu_mem *mem)
 			ctxsw_prog_main_image_num_gfxp_save_ops_o(), 0);
 	nvgpu_mem_wr(g, mem,
 			ctxsw_prog_main_image_num_cilp_save_ops_o(), 0);
+}
+
+void gr_gp10b_init_gfxp_wfi_timeout_count(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	gr->gfxp_wfi_timeout_count = GFXP_WFI_TIMEOUT_COUNT_DEFAULT;
+}
+
+unsigned long gr_gp10b_get_max_gfxp_wfi_timeout_count(struct gk20a *g)
+{
+	/* 100msec @ 1GHZ */
+	return (100 * 1000 * 1000UL);
 }

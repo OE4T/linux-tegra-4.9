@@ -210,7 +210,7 @@ static void unmap_gmmu_pages(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 /*
  * Return the _physical_ address of a page directory.
  */
-u64 nvgpu_pde_phys_addr(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
+static u64 nvgpu_pde_phys_addr(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 {
 	u64 page_addr;
 

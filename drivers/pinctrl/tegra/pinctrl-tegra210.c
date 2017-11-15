@@ -1,7 +1,7 @@
 /*
  * Pinctrl data for the NVIDIA Tegra210 pinmux
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -203,6 +203,8 @@ struct tegra210_pinctrl_soc {
 #define TEGRA_DRV_PAD_QSPI_COMP			_PIN(8)
 #define TEGRA_DRV_PAD_QSPI_COMP_CONTROL		_PIN(9)
 #define TEGRA_DRV_PAD_QSPI_LPBK_CONTROL		_PIN(10)
+#define TEGRA_PAD_DSI_AB_CONTROL		_PIN(11)
+#define TEGRA_PAD_DSI_CD_CONTROL		_PIN(12)
 
 static const struct pinctrl_pin_desc tegra210_pins[] = {
 	PINCTRL_PIN(TEGRA_PIN_PEX_L0_RST_N_PA0, "PEX_L0_RST_N PA0"),
@@ -367,6 +369,8 @@ static const struct pinctrl_pin_desc tegra210_pins[] = {
 	PINCTRL_PIN(TEGRA_PIN_BATT_BCL, "BATT_BCL"),
 	PINCTRL_PIN(TEGRA_PIN_CLK_REQ, "CLK_REQ"),
 	PINCTRL_PIN(TEGRA_PIN_SHUTDOWN, "SHUTDOWN"),
+	PINCTRL_PIN(TEGRA_PAD_DSI_AB_CONTROL, "PAD_DSI_AB_CONTROL"),
+	PINCTRL_PIN(TEGRA_PAD_DSI_CD_CONTROL, "PAD_DSI_CD_CONTROL"),
 };
 
 static const unsigned pex_l0_rst_n_pa0_pins[] = {
@@ -1105,6 +1109,14 @@ static const unsigned drive_pz5_pins[] = {
 	TEGRA_PIN_PZ5,
 };
 
+static const unsigned pad_dsi_ab_pins[] = {
+	TEGRA_PAD_DSI_AB_CONTROL,
+};
+
+static const unsigned pad_dsi_cd_pins[] = {
+	TEGRA_PAD_DSI_CD_CONTROL,
+};
+
 static const unsigned drive_sdmmc1_pins[] = {
 	TEGRA_PIN_SDMMC1_CLK_PM0,
 	TEGRA_PIN_SDMMC1_CMD_PM1,
@@ -1390,6 +1402,45 @@ static struct tegra_function tegra210_functions[] = {
 		.lpbk_bit = -1,						\
 	}
 
+#define PAD_PINGROUP(pg_name, r, pad_b)					\
+	{								\
+		.name = "pad_" #pg_name,				\
+		.pins = pad_##pg_name##_pins,				\
+		.npins = ARRAY_SIZE(pad_##pg_name##_pins),		\
+		.mux_reg = -1,						\
+		.pupd_reg = -1,						\
+		.tri_reg = -1,						\
+		.einput_bit = -1,					\
+		.odrain_bit = -1,					\
+		.lock_bit = -1,						\
+		.ioreset_bit = -1,					\
+		.rcv_sel_bit = -1,					\
+		.e_io_hv_bit = -1,					\
+		.parked_bit = -1,					\
+		.hsm_bit = -1,						\
+		.schmitt_bit = -1,					\
+		.lpdr_bit = -1,						\
+		.pbias_buf_bit = -1,					\
+		.preemp_bit = -1,					\
+		.rfu_in_bit = -1,					\
+		.drv_reg =  -1,						\
+		.drv_bank = 0,						\
+		.lpmd_bit = -1,						\
+		.drvdn_bit = -1,					\
+		.drvdn_width = -1,					\
+		.drvup_bit = -1,					\
+		.drvup_width = -1,					\
+		.slwr_bit = -1,						\
+		.slwr_width = -1,					\
+		.slwf_bit = -1,						\
+		.slwf_width = -1,					\
+		.drvtype_bit = -1,					\
+		.pad_bit = pad_b,					\
+		.pad_bank = 0,						\
+		.pad_reg =DRV_PINGROUP_REG(r),				\
+		.lpbk_bit = -1,						\
+	}
+
 static struct tegra_pingroup tegra210_groups[] = {
 	/*       pg_name,              f0,         f1,     f2,    f3,    r,      hsm, drvtype, e_io_hv, lpdr, rdrv,  drvdn_b, drvdn_w, drvup_b, drvup_w, slwr_b, slwr_w, slwf_b, slwf_w, lpbk */
 	PINGROUP(sdmmc1_clk_pm0,       SDMMC1,     RSVD1,  RSVD2, RSVD3, 0x3000, Y,   Y,       N,       N,	0x8d4,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1, 0),
@@ -1585,6 +1636,8 @@ static struct tegra_pingroup tegra210_groups[] = {
 	DRV_PINGROUP(qspi_comp_control, 0xb70, -1, -1, -1, -1, -1, -1, -1, -1),
 	DRV_PINGROUP(qspi_lpbk_control, 0xb78, -1, -1, -1, -1, -1, -1, -1, -1),
 	DRV_PINGROUP(qspi_comp, 0xa78, 12, 5, 20, 5, -1, -1, -1, -1),
+	PAD_PINGROUP(dsi_ab, 0xac0, 22),
+	PAD_PINGROUP(dsi_cd, 0xac0, 21),
 };
 
 static const struct tegra_pinctrl_soc_data tegra210_pinctrl = {

@@ -31,8 +31,6 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/allocator.h>
 
-struct dma_buf;
-
 struct vm_gk20a;
 struct nvgpu_vm_area;
 struct gk20a_comptag_allocator;

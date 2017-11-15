@@ -231,8 +231,9 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 
 	nvgpu_dma_flags_to_attrs(&dma_attrs, flags);
 
-	alloc_ret = dma_alloc_attrs(d, size, &iova, GFP_KERNEL,
-					__DMA_ATTR(dma_attrs));
+	alloc_ret = dma_alloc_attrs(d, size, &iova,
+				    GFP_KERNEL|__GFP_ZERO,
+				    __DMA_ATTR(dma_attrs));
 	if (!alloc_ret)
 		return -ENOMEM;
 
@@ -245,7 +246,6 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 		mem->cpu_va = alloc_ret;
 		err = nvgpu_get_sgtable_attrs(g, &mem->priv.sgt, mem->cpu_va,
 					iova, size, flags);
-		memset(mem->cpu_va, 0, size);
 	}
 	if (err)
 		goto fail_free;

@@ -24,8 +24,8 @@
 			compatible = "maxim,max20024";
 			reg = <0x3c>;
 
-// TBD:			interrupt-parent = <&pm_irq>;
-			interrupts = <0 209 IRQ_TYPE_NONE>;
+			interrupt-parent = <&tegra_pm_irq>;
+			interrupts = <0 TEGRA194_IRQ_PMIC_EXT_INTR IRQ_TYPE_NONE>;
 
 			#interrupt-cells = <2>;
                         interrupt-controller;

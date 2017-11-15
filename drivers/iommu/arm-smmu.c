@@ -2013,10 +2013,11 @@ static int arm_smmu_alloc_init_pmd(struct arm_smmu_domain *domain, pud_t *pud,
 	int ret;
 	pmd_t *pmd;
 	unsigned long next, pfn = __phys_to_pfn(phys);
-	struct arm_smmu_device *smmu = domain->smmu;
 
 #ifndef __PAGETABLE_PMD_FOLDED
 	if (pud_none(*pud)) {
+		struct arm_smmu_device *smmu = domain->smmu;
+
 		pmd = (pmd_t *)get_zeroed_page(GFP_ATOMIC);
 		if (!pmd)
 			return -ENOMEM;

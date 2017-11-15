@@ -222,6 +222,7 @@ int nvgpu_flcn_reset(struct nvgpu_falcon *flcn);
 void nvgpu_flcn_set_irq(struct nvgpu_falcon *flcn, bool enable,
 	u32 intr_mask, u32 intr_dest);
 bool nvgpu_flcn_get_mem_scrubbing_status(struct nvgpu_falcon *flcn);
+int nvgpu_flcn_mem_scrub_wait(struct nvgpu_falcon *flcn);
 bool nvgpu_flcn_get_cpu_halted_status(struct nvgpu_falcon *flcn);
 bool nvgpu_flcn_get_idle_status(struct nvgpu_falcon *flcn);
 int nvgpu_flcn_copy_from_dmem(struct nvgpu_falcon *flcn,

@@ -31,15 +31,11 @@
 
 #include "gk20a/gk20a.h"
 
-#define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
-#define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
-
 static int nvgpu_pg_init_task(void *arg);
 
 static int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = pmu->g;
-	struct nvgpu_timeout timeout;
 	int err = 0;
 
 	nvgpu_log_fn(g, " %s ", g->name);
@@ -56,29 +52,19 @@ static int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
 			g->ops.clock_gating.blcg_pmu_load_gating_prod(g,
 				g->blcg_enabled);
 
-		/* check for PMU IMEM/DMEM scrubbing complete status */
-		nvgpu_timeout_init(g, &timeout,
-			PMU_MEM_SCRUBBING_TIMEOUT_MAX /
-			PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT,
-			NVGPU_TIMER_RETRY_TIMER);
-		do {
-			if (nvgpu_flcn_get_mem_scrubbing_status(pmu->flcn))
-				goto exit;
-
-			nvgpu_udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
-		} while (!nvgpu_timeout_expired(&timeout));
-
-		/* keep PMU falcon/engine in reset
-		*  if IMEM/DMEM scrubbing fails
-		*/
-		g->ops.pmu.reset_engine(g, false);
-		nvgpu_err(g, "Falcon mem scrubbing timeout");
-		err = -ETIMEDOUT;
-	} else
+		if (nvgpu_flcn_mem_scrub_wait(pmu->flcn)) {
+			/* keep PMU falcon/engine in reset
+			 * if IMEM/DMEM scrubbing fails
+			 */
+			g->ops.pmu.reset_engine(g, false);
+			nvgpu_err(g, "Falcon mem scrubbing timeout");
+			err = -ETIMEDOUT;
+		}
+	} else {
 		/* keep PMU falcon/engine in reset */
 		g->ops.pmu.reset_engine(g, false);
+	}
 
-exit:
 	nvgpu_log_fn(g, "%s Done, status - %d ", g->name, err);
 	return err;
 }

@@ -2161,7 +2161,10 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	BUILD_BUG_ON(PAGE_SHIFT != SMMU_PAGE_SHIFT);
+	if (PAGE_SHIFT != SMMU_PAGE_SHIFT) {
+		err = -EINVAL;
+		goto exit_probe;
+	}
 
 	save_smmu_device = dev;
 

@@ -4478,7 +4478,10 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	if (g->ops.gr.enable_gpc_exceptions)
 		g->ops.gr.enable_gpc_exceptions(g);
 
-	/* TBD: ECC for L1/SM */
+	/* enable ECC for L1/SM */
+	if (g->ops.gr.ecc_init_scrub_reg)
+		g->ops.gr.ecc_init_scrub_reg(g);
+
 	/* TBD: enable per BE exceptions */
 
 	/* reset and enable exceptions */

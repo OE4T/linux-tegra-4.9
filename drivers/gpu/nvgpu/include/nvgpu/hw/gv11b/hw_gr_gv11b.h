@@ -916,6 +916,366 @@ static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_uncorrected_err_count_total_v(u32 
 {
 	return (r >> 0U) & 0xffffU;
 }
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_r(void)
+{
+	return 0x00419b54U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp0_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp0_task_f(void)
+{
+	return 0x1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp1_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp1_task_f(void)
+{
+	return 0x2U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp2_f(u32 v)
+{
+	return (v & 0x1U) << 2U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp2_task_f(void)
+{
+	return 0x4U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp3_f(u32 v)
+{
+	return (v & 0x1U) << 3U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp3_task_f(void)
+{
+	return 0x8U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp4_f(u32 v)
+{
+	return (v & 0x1U) << 4U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp4_task_f(void)
+{
+	return 0x10U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp5_f(u32 v)
+{
+	return (v & 0x1U) << 5U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp5_task_f(void)
+{
+	return 0x20U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp6_f(u32 v)
+{
+	return (v & 0x1U) << 6U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp6_task_f(void)
+{
+	return 0x40U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp7_f(u32 v)
+{
+	return (v & 0x1U) << 7U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp7_task_f(void)
+{
+	return 0x80U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_r(void)
+{
+	return 0x00504354U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp0_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp0_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp1_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp1_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp2_f(u32 v)
+{
+	return (v & 0x1U) << 2U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp2_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp3_f(u32 v)
+{
+	return (v & 0x1U) << 3U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp3_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp4_f(u32 v)
+{
+	return (v & 0x1U) << 4U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp4_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp5_f(u32 v)
+{
+	return (v & 0x1U) << 5U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp5_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp6_f(u32 v)
+{
+	return (v & 0x1U) << 6U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp6_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp7_f(u32 v)
+{
+	return (v & 0x1U) << 7U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp7_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_data_ecc_control_r(void)
+{
+	return 0x00419b68U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_data_ecc_control_scrub_el1_0_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_data_ecc_control_scrub_el1_0_task_f(void)
+{
+	return 0x1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_data_ecc_control_scrub_el1_1_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_data_ecc_control_scrub_el1_1_task_f(void)
+{
+	return 0x2U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_control_r(void)
+{
+	return 0x00504368U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_control_scrub_el1_0_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_control_scrub_el1_0_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_control_scrub_el1_1_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_control_scrub_el1_1_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_r(void)
+{
+	return 0x00419e20U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_0_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_0_task_f(void)
+{
+	return 0x1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_1_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_1_task_f(void)
+{
+	return 0x2U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_r(void)
+{
+	return 0x00504620U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_0_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_0_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_1_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_1_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cbu_ecc_control_r(void)
+{
+	return 0x00419e34U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_warp_sm0_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_warp_sm0_task_f(void)
+{
+	return 0x1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_warp_sm1_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_warp_sm1_task_f(void)
+{
+	return 0x2U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_barrier_sm0_f(u32 v)
+{
+	return (v & 0x1U) << 2U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_barrier_sm0_task_f(void)
+{
+	return 0x4U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_barrier_sm1_f(u32 v)
+{
+	return (v & 0x1U) << 3U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_barrier_sm1_task_f(void)
+{
+	return 0x8U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_control_r(void)
+{
+	return 0x00504634U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_warp_sm0_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_warp_sm0_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_warp_sm1_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_warp_sm1_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_barrier_sm0_f(u32 v)
+{
+	return (v & 0x1U) << 2U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_barrier_sm0_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_barrier_sm1_f(u32 v)
+{
+	return (v & 0x1U) << 3U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_barrier_sm1_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_icache_ecc_control_r(void)
+{
+	return 0x00419e48U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l0_data_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l0_data_task_f(void)
+{
+	return 0x1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l0_predecode_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l0_predecode_task_f(void)
+{
+	return 0x2U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l1_data_f(u32 v)
+{
+	return (v & 0x1U) << 2U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l1_data_task_f(void)
+{
+	return 0x4U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l1_predecode_f(u32 v)
+{
+	return (v & 0x1U) << 3U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l1_predecode_task_f(void)
+{
+	return 0x8U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_control_r(void)
+{
+	return 0x00504648U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l0_data_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l0_data_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l0_predecode_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l0_predecode_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l1_data_f(u32 v)
+{
+	return (v & 0x1U) << 2U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l1_data_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l1_predecode_f(u32 v)
+{
+	return (v & 0x1U) << 3U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l1_predecode_init_f(void)
+{
+	return 0x0U;
+}
 static inline u32 gr_pri_gpc0_tpc0_tex_m_routing_r(void)
 {
 	return 0x005042c4U;
@@ -1920,21 +2280,65 @@ static inline u32 gr_fecs_feature_override_ecc_r(void)
 {
 	return 0x00409658U;
 }
+static inline u32 gr_fecs_feature_override_ecc_sm_lrf_v(u32 r)
+{
+	return (r >> 0U) & 0x1U;
+}
 static inline u32 gr_fecs_feature_override_ecc_sm_lrf_override_v(u32 r)
 {
 	return (r >> 3U) & 0x1U;
+}
+static inline u32 gr_fecs_feature_override_ecc_sm_l1_data_v(u32 r)
+{
+	return (r >> 4U) & 0x1U;
+}
+static inline u32 gr_fecs_feature_override_ecc_sm_l1_data_override_v(u32 r)
+{
+	return (r >> 7U) & 0x1U;
+}
+static inline u32 gr_fecs_feature_override_ecc_sm_l1_tag_v(u32 r)
+{
+	return (r >> 8U) & 0x1U;
+}
+static inline u32 gr_fecs_feature_override_ecc_sm_l1_tag_override_v(u32 r)
+{
+	return (r >> 11U) & 0x1U;
+}
+static inline u32 gr_fecs_feature_override_ecc_ltc_v(u32 r)
+{
+	return (r >> 12U) & 0x1U;
 }
 static inline u32 gr_fecs_feature_override_ecc_ltc_override_v(u32 r)
 {
 	return (r >> 15U) & 0x1U;
 }
-static inline u32 gr_fecs_feature_override_ecc_sm_lrf_v(u32 r)
+static inline u32 gr_fecs_feature_override_ecc_sm_cbu_v(u32 r)
+{
+	return (r >> 20U) & 0x1U;
+}
+static inline u32 gr_fecs_feature_override_ecc_sm_cbu_override_v(u32 r)
+{
+	return (r >> 23U) & 0x1U;
+}
+static inline u32 gr_fecs_feature_override_ecc_1_r(void)
+{
+	return 0x0040965cU;
+}
+static inline u32 gr_fecs_feature_override_ecc_1_sm_l0_icache_v(u32 r)
 {
 	return (r >> 0U) & 0x1U;
 }
-static inline u32 gr_fecs_feature_override_ecc_ltc_v(u32 r)
+static inline u32 gr_fecs_feature_override_ecc_1_sm_l0_icache_override_v(u32 r)
 {
-	return (r >> 12U) & 0x1U;
+	return (r >> 1U) & 0x1U;
+}
+static inline u32 gr_fecs_feature_override_ecc_1_sm_l1_icache_v(u32 r)
+{
+	return (r >> 2U) & 0x1U;
+}
+static inline u32 gr_fecs_feature_override_ecc_1_sm_l1_icache_override_v(u32 r)
+{
+	return (r >> 3U) & 0x1U;
 }
 static inline u32 gr_gpc0_gpccs_ctxsw_idlestate_r(void)
 {

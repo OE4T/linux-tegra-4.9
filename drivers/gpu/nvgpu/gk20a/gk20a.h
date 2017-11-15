@@ -436,6 +436,7 @@ struct gpu_ops {
 		void (*init_gfxp_wfi_timeout_count)(struct gk20a *g);
 		unsigned long (*get_max_gfxp_wfi_timeout_count)
 					(struct gk20a *g);
+		void (*ecc_init_scrub_reg)(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

@@ -216,5 +216,6 @@ void gr_gv11b_init_gpc_mmu(struct gk20a *g);
 int gr_gv11b_init_preemption_state(struct gk20a *g);
 void gr_gv11b_init_gfxp_wfi_timeout_count(struct gk20a *g);
 unsigned long gr_gv11b_get_max_gfxp_wfi_timeout_count(struct gk20a *g);
+void gr_gv11b_ecc_init_scrub_reg(struct gk20a *g);
 
 #endif

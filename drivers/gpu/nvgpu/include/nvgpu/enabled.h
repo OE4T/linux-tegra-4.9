@@ -46,6 +46,15 @@ struct gk20a;
 #define NVGPU_ECC_ENABLED_TEX			10
 /* L2 ECC is enabled */
 #define NVGPU_ECC_ENABLED_LTC			11
+/* SM L1 DATA ECC is enabled */
+#define NVGPU_ECC_ENABLED_SM_L1_DATA		12
+/* SM L1 TAG ECC is enabled */
+#define NVGPU_ECC_ENABLED_SM_L1_TAG		13
+/* SM CBU ECC is enabled */
+#define NVGPU_ECC_ENABLED_SM_CBU		14
+/* SM ICAHE ECC is enabled */
+#define NVGPU_ECC_ENABLED_SM_ICACHE		15
+
 /*
  * MM flags.
  */

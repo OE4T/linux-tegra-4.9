@@ -44,6 +44,7 @@
 #include "gv11b/gr_gv11b.h"
 #include "gv11b/mm_gv11b.h"
 #include "gv11b/subctx_gv11b.h"
+#include "gv11b/gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
@@ -56,6 +57,10 @@
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 
 #define GFXP_WFI_TIMEOUT_COUNT_IN_USEC_DEFAULT 1000
+
+/* ecc scrubbing will done in 1 pri read cycle,but for safety used 10 retries */
+#define ECC_SCRUBBING_TIMEOUT_MAX 1000
+#define ECC_SCRUBBING_TIMEOUT_DEFAULT 10
 
 bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 {
@@ -3673,4 +3678,184 @@ unsigned long gr_gv11b_get_max_gfxp_wfi_timeout_count(struct gk20a *g)
 {
 	/* 100 msec in usec count */
 	return (100 * 1000UL);
+}
+
+static int gr_gv11b_ecc_scrub_is_done(struct gk20a *g,
+			u32 scrub_reg, u32 scrub_mask, u32 scrub_done)
+{
+	struct nvgpu_timeout timeout;
+	int status = 0;
+	u32 val;
+
+	nvgpu_timeout_init(g, &timeout,
+		ECC_SCRUBBING_TIMEOUT_MAX /
+		ECC_SCRUBBING_TIMEOUT_DEFAULT,
+		NVGPU_TIMER_RETRY_TIMER);
+	do {
+		val = gk20a_readl(g, scrub_reg);
+		if ((val & scrub_mask) == scrub_done)
+			goto exit;
+		nvgpu_udelay(ECC_SCRUBBING_TIMEOUT_DEFAULT);
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	if (nvgpu_timeout_peek_expired(&timeout))
+		status = -ETIMEDOUT;
+exit:
+	return status;
+
+}
+
+static int gr_gv11b_ecc_scrub_sm_lrf(struct gk20a *g)
+{
+	u32 scrub_mask, scrub_done;
+
+	if (!nvgpu_is_enabled(g, NVGPU_ECC_ENABLED_SM_LRF)) {
+		nvgpu_log_info(g, "ECC SM LRF is disabled");
+		return 0;
+	}
+
+	nvgpu_log_info(g, "gr_gv11b_ecc_scrub_sm_lrf");
+	scrub_mask =
+		(gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp0_task_f() |
+		gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp1_task_f() |
+		gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp2_task_f() |
+		gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp3_task_f() |
+		gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp4_task_f() |
+		gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp5_task_f() |
+		gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp6_task_f() |
+		gr_pri_gpcs_tpcs_sm_lrf_ecc_control_scrub_qrfdp7_task_f());
+
+	/* Issue scrub lrf regions with single write command */
+	gk20a_writel(g, gr_pri_gpcs_tpcs_sm_lrf_ecc_control_r(), scrub_mask);
+
+	scrub_done =
+		(gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp0_init_f() |
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp1_init_f() |
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp2_init_f() |
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp3_init_f() |
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp4_init_f() |
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp5_init_f() |
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp6_init_f() |
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_control_scrub_qrfdp7_init_f());
+
+	return gr_gv11b_ecc_scrub_is_done(g,
+				gr_pri_gpc0_tpc0_sm_lrf_ecc_control_r(),
+				scrub_mask, scrub_done);
+}
+
+static int gr_gv11b_ecc_scrub_sm_l1_data(struct gk20a *g)
+{
+	u32 scrub_mask, scrub_done;
+
+	if (!nvgpu_is_enabled(g, NVGPU_ECC_ENABLED_SM_L1_DATA)) {
+		nvgpu_log_info(g, "ECC L1DATA is disabled");
+		return 0;
+	}
+	nvgpu_log_info(g, "gr_gv11b_ecc_scrub_sm_l1_data");
+	scrub_mask =
+		(gr_pri_gpcs_tpcs_sm_l1_data_ecc_control_scrub_el1_0_task_f() |
+		gr_pri_gpcs_tpcs_sm_l1_data_ecc_control_scrub_el1_1_task_f());
+
+	gk20a_writel(g, gr_pri_gpcs_tpcs_sm_l1_data_ecc_control_r(),
+				scrub_mask);
+
+	scrub_done =
+		(gr_pri_gpc0_tpc0_sm_l1_data_ecc_control_scrub_el1_0_init_f() |
+		gr_pri_gpc0_tpc0_sm_l1_data_ecc_control_scrub_el1_1_init_f());
+	return gr_gv11b_ecc_scrub_is_done(g,
+				gr_pri_gpc0_tpc0_sm_l1_data_ecc_control_r(),
+				scrub_mask, scrub_done);
+}
+
+static int gr_gv11b_ecc_scrub_sm_l1_tag(struct gk20a *g)
+{
+	u32 scrub_mask, scrub_done;
+
+	if (!nvgpu_is_enabled(g, NVGPU_ECC_ENABLED_SM_L1_TAG)) {
+		nvgpu_log_info(g, "ECC L1TAG is disabled");
+		return 0;
+	}
+	nvgpu_log_info(g, "gr_gv11b_ecc_scrub_sm_l1_tag");
+	scrub_mask =
+		(gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_0_task_f() |
+		gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_1_task_f());
+	gk20a_writel(g, gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_r(), scrub_mask);
+
+	scrub_done =
+		(gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_0_init_f() |
+		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_1_init_f());
+	return gr_gv11b_ecc_scrub_is_done(g,
+				gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_r(),
+				scrub_mask, scrub_done);
+}
+
+static int gr_gv11b_ecc_scrub_sm_cbu(struct gk20a *g)
+{
+	u32 scrub_mask, scrub_done;
+
+	if (!nvgpu_is_enabled(g, NVGPU_ECC_ENABLED_SM_CBU)) {
+		nvgpu_log_info(g, "ECC CBU is disabled");
+		return 0;
+	}
+	nvgpu_log_info(g, "gr_gv11b_ecc_scrub_sm_cbu");
+	scrub_mask =
+		(gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_warp_sm0_task_f() |
+		gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_warp_sm1_task_f() |
+		gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_barrier_sm0_task_f() |
+		gr_pri_gpcs_tpcs_sm_cbu_ecc_control_scrub_barrier_sm1_task_f());
+	gk20a_writel(g, gr_pri_gpcs_tpcs_sm_cbu_ecc_control_r(), scrub_mask);
+
+	scrub_done =
+		(gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_warp_sm0_init_f() |
+		gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_warp_sm1_init_f() |
+		gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_barrier_sm0_init_f() |
+		gr_pri_gpc0_tpc0_sm_cbu_ecc_control_scrub_barrier_sm1_init_f());
+	return gr_gv11b_ecc_scrub_is_done(g,
+				gr_pri_gpc0_tpc0_sm_cbu_ecc_control_r(),
+				scrub_mask, scrub_done);
+}
+
+static int gr_gv11b_ecc_scrub_sm_icahe(struct gk20a *g)
+{
+	u32 scrub_mask, scrub_done;
+
+	if (!nvgpu_is_enabled(g, NVGPU_ECC_ENABLED_SM_ICACHE)) {
+		nvgpu_log_info(g, "ECC ICAHE is disabled");
+		return 0;
+	}
+	nvgpu_log_info(g, "gr_gv11b_ecc_scrub_sm_icahe");
+	scrub_mask =
+		(gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l0_data_task_f() |
+		gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l0_predecode_task_f() |
+		gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l1_data_task_f() |
+		gr_pri_gpcs_tpcs_sm_icache_ecc_control_scrub_l1_predecode_task_f());
+	gk20a_writel(g, gr_pri_gpcs_tpcs_sm_icache_ecc_control_r(), scrub_mask);
+
+	scrub_done =
+		(gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l0_data_init_f() |
+		gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l0_predecode_init_f() |
+		gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l1_data_init_f() |
+		gr_pri_gpc0_tpc0_sm_icache_ecc_control_scrub_l1_predecode_init_f());
+	return gr_gv11b_ecc_scrub_is_done(g,
+				gr_pri_gpc0_tpc0_sm_icache_ecc_control_r(),
+				scrub_mask, scrub_done);
+}
+
+void gr_gv11b_ecc_init_scrub_reg(struct gk20a *g)
+{
+	nvgpu_log_fn(g, "ecc srub start ");
+
+	gv11b_detect_ecc_enabled_units(g);
+
+	if (gr_gv11b_ecc_scrub_sm_lrf(g))
+		nvgpu_warn(g, "ECC SCRUB SM LRF Failed");
+	if (gr_gv11b_ecc_scrub_sm_l1_data(g))
+		nvgpu_warn(g, "ECC SCRUB SM L1 DATA Failed");
+	if (gr_gv11b_ecc_scrub_sm_l1_tag(g))
+		nvgpu_warn(g, "ECC SCRUB SM L1 TAG Failed");
+	if (gr_gv11b_ecc_scrub_sm_cbu(g))
+		nvgpu_warn(g, "ECC SCRUB SM CBU Failed");
+	if (gr_gv11b_ecc_scrub_sm_icahe(g))
+		nvgpu_warn(g, "ECC SCRUB SM ICACHE Failed");
+
 }

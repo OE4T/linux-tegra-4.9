@@ -166,6 +166,7 @@ struct pva_func_table {
  * priv2_dma		struct pva_dma_alloc_info for priv2_dma
  * pva_trace		struct for pva_trace_log
  * submit_mode		Select the task submit mode
+ * dbg_vpu_app_id	Set the vpu_app id to debug
  *
  */
 struct pva {
@@ -191,6 +192,8 @@ struct pva {
 
 	struct pva_trace_log pva_trace;
 	u32 submit_mode;
+
+	u32 dbg_vpu_app_id;
 
 	struct work_struct pva_abort_handler_work;
 	struct work_struct pva_restore_state_work;

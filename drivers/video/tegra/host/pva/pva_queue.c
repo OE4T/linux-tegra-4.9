@@ -871,6 +871,10 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	hw_task->task.operation = task->operation;
 	hw_task->task.timeout = task->timeout;
 
+	/* Set flags to debug the vpu application if debugfs node is set for vpu id */
+	if (task->pva->dbg_vpu_app_id == task->operation)
+			hw_task->task.flags |= PVA_TASK_FL_VPU_DEBUG;
+
 	/* This should be delivered from userspace - hard-code
 	 * until the mechanism is in place.
 	 */

@@ -165,4 +165,9 @@ void pva_debugfs_init(struct platform_device *pdev)
 				pva, &pva_vpu_function_table_fops);
 	if (!ret)
 		nvhost_dbg_info("Failed to create vpu function table file");
+
+	ret = debugfs_create_u32("vpu_app_id", S_IRUGO | S_IWUSR, de,
+				 &pva->dbg_vpu_app_id);
+	if (!ret)
+		nvhost_dbg_info("Failed to create vpu_app id debug file");
 }

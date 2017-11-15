@@ -125,6 +125,7 @@ struct pva_task_statistics {
 #define PVA_TASK_FL_CV_RD_SCALARS	(1 << 1)
 #define PVA_TASK_FL_CV_WR_SCALARS	(1 << 2)
 #define PVA_TASK_FL_CV_WR_ROI		(1 << 3)
+#define PVA_TASK_FL_VPU_DEBUG		(1 << 4)
 
 struct pva_task {
 	struct pva_gen_task	gen_task;

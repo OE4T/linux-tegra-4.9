@@ -164,6 +164,10 @@
 			status = "okay";
 		};
 
+		arad@290e400 {
+			status = "okay";
+		};
+
 		ahc@290b900 {
 			status = "okay";
 		};

@@ -173,10 +173,11 @@ static int imx219_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
 {
 	int err;
 	struct imx219 *priv = (struct imx219 *)s_data->priv;
+	struct device *dev = &priv->i2c_client->dev;
 
 	err = regmap_write(priv->regmap, addr, val);
 	if (err)
-		pr_err("%s:i2c write failed, %x = %x\n",
+		dev_err(dev, "%s: i2c write failed, %x = %x\n",
 			__func__, addr, val);
 
 	return err;
@@ -288,26 +289,26 @@ static int imx219_power_get(struct imx219 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
 	struct camera_common_pdata *pdata = priv->pdata;
+	struct device *dev = &priv->i2c_client->dev;
 	const char *mclk_name;
 	int err = 0;
 
 	mclk_name = priv->pdata->mclk_name ?
 		    priv->pdata->mclk_name : "cam_mclk1";
-	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
+	pw->mclk = devm_clk_get(dev, mclk_name);
 	if (IS_ERR(pw->mclk)) {
-		dev_err(&priv->i2c_client->dev,
-			"unable to get clock %s\n", mclk_name);
+		dev_err(dev, "unable to get clock %s\n", mclk_name);
 		return PTR_ERR(pw->mclk);
 	}
 
 	/* ananlog 2.7v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->avdd, pdata->regulators.avdd);
 	/* digital 1.2v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->dvdd, pdata->regulators.dvdd);
 	/* IO 1.8v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->iovdd, pdata->regulators.iovdd);
 
 	if (!err)
@@ -419,14 +420,14 @@ static int imx219_set_group_hold(struct imx219 *priv, s32 val)
 
 static int imx219_set_gain(struct imx219 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	struct reg_8 reg;
 	int err;
 	u8 gain;
 
 	/* translate value */
 	gain = 256 - (256 * (1 << IMX219_GAIN_SHIFT) / val);
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, gain);
+	dev_dbg(dev, "%s: val: %d\n", __func__, gain);
 
 	imx219_get_gain_reg(&reg, gain);
 
@@ -437,18 +438,17 @@ static int imx219_set_gain(struct imx219 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: GAIN control error\n", __func__);
+	dev_dbg(dev, "%s: GAIN control error\n", __func__);
 	return err;
 }
 
 static int imx219_set_frame_length(struct imx219 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	u8 data[2];
 	int err;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, val);
+	dev_dbg(dev, "%s: val: %d\n", __func__, val);
 
 	data[0] = (val >> 8) & 0xff;
 	data[1] = val & 0xff;
@@ -460,18 +460,17 @@ static int imx219_set_frame_length(struct imx219 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: FRAME_LENGTH control error\n", __func__);
+	dev_dbg(dev, "%s: FRAME_LENGTH control error\n", __func__);
 	return err;
 }
 
 static int imx219_set_coarse_time(struct imx219 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	u8 data[2];
 	int err;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, val);
+	dev_dbg(dev, "%s: val: %d\n", __func__, val);
 
 	data[0] = (val >> 8) & 0xff;
 	data[1] = val & 0xff;
@@ -483,8 +482,7 @@ static int imx219_set_coarse_time(struct imx219 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME control error\n", __func__);
+	dev_dbg(dev, "%s: COARSE_TIME control error\n", __func__);
 	return err;
 }
 
@@ -511,6 +509,7 @@ static int imx219_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct imx219 *priv =
 		container_of(ctrl->handler, struct imx219, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -518,7 +517,7 @@ static int imx219_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	default:
-		pr_err("%s: unknown ctrl id.\n", __func__);
+		dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 		return -EINVAL;
 	}
 
@@ -529,6 +528,7 @@ static int imx219_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct imx219 *priv =
 		container_of(ctrl->handler, struct imx219, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -552,7 +552,7 @@ static int imx219_s_ctrl(struct v4l2_ctrl *ctrl)
 	case TEGRA_CAMERA_CID_FUSE_ID:
 		break;
 	default:
-		pr_err("%s: unknown ctrl id.\n", __func__);
+		dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 		return -EINVAL;
 	}
 
@@ -562,12 +562,13 @@ static int imx219_s_ctrl(struct v4l2_ctrl *ctrl)
 static int imx219_ctrls_init(struct imx219 *priv)
 {
 	struct i2c_client *client = priv->i2c_client;
+	struct device *dev = &client->dev;
 	struct v4l2_ctrl *ctrl;
 	int num_ctrls;
 	int err;
 	int i;
 
-	dev_info(&client->dev, "%s++\n", __func__);
+	dev_info(dev, "%s++\n", __func__);
 
 	num_ctrls = ARRAY_SIZE(ctrl_config_list);
 	v4l2_ctrl_handler_init(&priv->ctrl_handler, num_ctrls);
@@ -576,18 +577,17 @@ static int imx219_ctrls_init(struct imx219 *priv)
 		ctrl = v4l2_ctrl_new_custom(&priv->ctrl_handler,
 			&ctrl_config_list[i], NULL);
 		if (ctrl == NULL) {
-			dev_err(&client->dev, "Failed to init %s ctrl\n",
+			dev_err(dev, "Failed to init %s ctrl\n",
 				ctrl_config_list[i].name);
 			continue;
 		}
 
 		if (ctrl_config_list[i].type == V4L2_CTRL_TYPE_STRING &&
 			ctrl_config_list[i].flags & V4L2_CTRL_FLAG_READ_ONLY) {
-			ctrl->p_new.p_char = devm_kzalloc(&client->dev,
+			ctrl->p_new.p_char = devm_kzalloc(dev,
 				ctrl_config_list[i].max + 1, GFP_KERNEL);
 			if (!ctrl->p_new.p_char) {
-				dev_err(&client->dev,
-					"Failed to allocate otp data\n");
+				dev_err(dev, "Failed to allocate otp data\n");
 				return -ENOMEM;
 			}
 		}
@@ -597,7 +597,7 @@ static int imx219_ctrls_init(struct imx219 *priv)
 	priv->num_ctrls = num_ctrls;
 	priv->subdev->ctrl_handler = &priv->ctrl_handler;
 	if (priv->ctrl_handler.error) {
-		dev_err(&client->dev, "Error %d adding controls\n",
+		dev_err(dev, "Error %d adding controls\n",
 			priv->ctrl_handler.error);
 		err = priv->ctrl_handler.error;
 		goto error;
@@ -605,8 +605,7 @@ static int imx219_ctrls_init(struct imx219 *priv)
 
 	err = v4l2_ctrl_handler_setup(&priv->ctrl_handler);
 	if (err) {
-		dev_err(&client->dev,
-			"Error %d setting default controls\n", err);
+		dev_err(dev, "Error %d setting default controls\n", err);
 		goto error;
 	}
 

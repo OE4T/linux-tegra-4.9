@@ -261,4 +261,16 @@
 			};
 		};
 	};
+
+	plugin-manager {
+		fragement-pmic-wdt-en {
+			odm-data = "enable-pmic-wdt";
+			override@0 {
+				target = <&p2888_spmic_wdt>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+	};
 };

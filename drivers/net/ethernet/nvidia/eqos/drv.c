@@ -4088,8 +4088,9 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 			"mtu cannot be modified in multi queue mode\n");
 		return -EOPNOTSUPP;
 	}
-	if ((new_mtu != 1500) && (new_mtu != 4074) && (new_mtu != 9000)) {
-		dev_err(&pdev->dev, "valid mtus are 1500, 4074, or 9000\n");
+	if (new_mtu > 9000) {
+		dev_err(&pdev->dev, "Got unsupported MTU size %d, \
+			MAX supported MTU size is 9000 bytes\n", new_mtu);
 		return -EINVAL;
 	}
 	if (max_frame > (pdata->dt_cfg.phy_max_frame_size)) {

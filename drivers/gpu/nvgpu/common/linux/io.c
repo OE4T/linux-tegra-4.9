@@ -26,7 +26,7 @@ void nvgpu_writel(struct gk20a *g, u32 r, u32 v)
 		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
 	} else {
 		writel_relaxed(v, l->regs + r);
-		nvgpu_smp_wmb();
+		nvgpu_wmb();
 		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x", r, v);
 	}
 }
@@ -57,7 +57,7 @@ void nvgpu_writel_check(struct gk20a *g, u32 r, u32 v)
 		__gk20a_warn_on_no_regs();
 		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
 	} else {
-		nvgpu_smp_wmb();
+		nvgpu_wmb();
 		do {
 			writel_relaxed(v, l->regs + r);
 		} while (readl(l->regs + r) != v);
@@ -73,7 +73,7 @@ void nvgpu_bar1_writel(struct gk20a *g, u32 b, u32 v)
 		__gk20a_warn_on_no_regs();
 		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x (failed)", b, v);
 	} else {
-		nvgpu_smp_wmb();
+		nvgpu_wmb();
 		writel_relaxed(v, l->bar1 + b);
 		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x", b, v);
 	}

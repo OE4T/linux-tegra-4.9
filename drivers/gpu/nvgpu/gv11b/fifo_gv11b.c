@@ -253,8 +253,8 @@ void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 
 	nvgpu_mem_wr32(g, userd_mem, offset + ram_userd_gp_put_w(),
 							c->gpfifo.put);
-	/* commit everything to cpu */
-	nvgpu_smp_mb();
+	/* Commit everything to GPU. */
+	nvgpu_mb();
 
 	gv11b_ring_channel_doorbell(c);
 }

@@ -7,8 +7,6 @@ subdir-ccflags-y += -Werror
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC)		+= tegra_cpufreq.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC)		+= tegra_cluster_clk.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC)		+= tegra_cpufreq_hv.o
+obj-$(CONFIG_ARCH_TEGRA_19x_SOC)		+= tegra194_cpufreq.o
 obj-$(CONFIG_ARCH_TEGRA_210_SOC)		+= tegra210-cpufreq.o
-ifdef CONFIG_ARCH_TEGRA_19x_SOC
-obj-$(CONFIG_CPU_FREQ)	+= tegra194_cpufreq.o
-endif
 ################################################################################

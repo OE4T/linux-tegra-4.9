@@ -244,10 +244,11 @@ static int imx185_write_reg(struct camera_common_data *s_data,
 {
 	int err;
 	struct imx185 *priv = (struct imx185 *)s_data->priv;
+	struct device *dev = &priv->i2c_client->dev;
 
 	err = regmap_write(priv->regmap, addr, val);
 	if (err)
-		pr_err("%s:i2c write failed, 0x%x = %x\n",
+		dev_err(dev, "%s: i2c write failed, 0x%x = %x\n",
 			__func__, addr, val);
 
 	return err;
@@ -268,12 +269,13 @@ static int imx185_power_on(struct camera_common_data *s_data)
 	int err = 0;
 	struct imx185 *priv = (struct imx185 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power on\n", __func__);
+	dev_dbg(dev, "%s: power on\n", __func__);
 	if (priv->pdata && priv->pdata->power_on) {
 		err = priv->pdata->power_on(pw);
 		if (err)
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 		else
 			pw->state = SWITCH_ON;
 		return err;
@@ -297,15 +299,16 @@ static int imx185_power_off(struct camera_common_data *s_data)
 	int err = 0;
 	struct imx185 *priv = (struct imx185 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power off\n", __func__);
+	dev_dbg(dev, "%s: power off\n", __func__);
 
 	if (priv->pdata && priv->pdata->power_off) {
 		err = priv->pdata->power_off(pw);
 		if (!err)
 			goto power_off_done;
 		else
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 		return err;
 	}
 	/* enter reset mode: XCLR */
@@ -323,22 +326,22 @@ static int imx185_power_get(struct imx185 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
 	struct camera_common_pdata *pdata = priv->pdata;
+	struct device *dev = dev;
 	const char *mclk_name;
 	struct clk *parent;
 	int err = 0;
 
 	mclk_name = priv->pdata->mclk_name ?
 		    priv->pdata->mclk_name : "extperiph1";
-	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
+	pw->mclk = devm_clk_get(dev, mclk_name);
 	if (IS_ERR(pw->mclk)) {
-		dev_err(&priv->i2c_client->dev,
-			"unable to get clock %s\n", mclk_name);
+		dev_err(dev, "unable to get clock %s\n", mclk_name);
 		return PTR_ERR(pw->mclk);
 	}
 
-	parent = devm_clk_get(&priv->i2c_client->dev, "pllp_grtba");
+	parent = devm_clk_get(dev, "pllp_grtba");
 	if (IS_ERR(parent))
-		dev_err(&priv->i2c_client->dev, "devm_clk_get failed for pllp_grtba");
+		dev_err(dev, "devm_clk_get failed for pllp_grtba");
 	else
 		clk_set_parent(pw->mclk, parent);
 
@@ -357,13 +360,14 @@ static int imx185_set_exposure(struct imx185 *priv, s64 val);
 static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
+	struct device *dev = &client->dev;
+	struct camera_common_data *s_data = to_camera_common_data(dev);
 	struct imx185 *priv = (struct imx185 *)s_data->priv;
 	struct v4l2_ext_controls ctrls;
 	struct v4l2_ext_control control[3];
 	int err;
 
-	dev_dbg(&client->dev, "%s++ enable %d\n", __func__, enable);
+	dev_dbg(dev, "%s++ enable %d\n", __func__, enable);
 
 	trace_imx185_s_stream(sd->name, enable, s_data->mode);
 	if (!enable) {
@@ -409,24 +413,22 @@ static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 		if (err == 0) {
 			err |= imx185_set_gain(priv, control[0].value64);
 			if (err)
-				dev_err(&client->dev,
-					"%s: error gain override\n", __func__);
+				dev_err(dev, "%s: error gain override\n",
+					__func__);
 
 			err |= imx185_set_frame_rate(priv, control[1].value64);
 			if (err)
-				dev_err(&client->dev,
+				dev_err(dev,
 					"%s: error frame length override\n",
 					__func__);
 
 			err |= imx185_set_exposure(priv, control[2].value64);
 			if (err)
-				dev_err(&client->dev,
-					"%s: error exposure override\n",
+				dev_err(dev, "%s: error exposure override\n",
 					__func__);
 
 		} else {
-			dev_err(&client->dev, "%s: faile to get overrides\n",
-				__func__);
+			dev_err(dev, "%s: faile to get overrides\n", __func__);
 		}
 	}
 
@@ -443,7 +445,7 @@ static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 
 	return 0;
 exit:
-	dev_err(&client->dev, "%s: error setting stream\n", __func__);
+	dev_err(dev, "%s: error setting stream\n", __func__);
 	return err;
 }
 
@@ -517,6 +519,7 @@ static struct camera_common_sensor_ops imx185_common_ops = {
 
 static int imx185_set_group_hold(struct imx185 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int gh_en = switch_ctrl_qmenu[val];
 
@@ -535,21 +538,20 @@ static int imx185_set_group_hold(struct imx185 *priv, s32 val)
 	}
 	return 0;
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: Group hold control error\n", __func__);
+	dev_dbg(dev, "%s: Group hold control error\n", __func__);
 	return err;
 }
 
 static int imx185_set_gain(struct imx185 *priv, s64 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	imx185_reg reg_list[1];
 	int err;
 	u8 gain;
 
 	/* translate value */
 	gain = (u8) (val * 160 / (48 * FIXED_POINT_SCALING_FACTOR));
-	dev_dbg(&priv->i2c_client->dev,
-		"%s:  gain reg: %d\n",  __func__, gain);
+	dev_dbg(dev, "%s:  gain reg: %d\n",  __func__, gain);
 
 	imx185_get_gain_reg(reg_list, gain);
 
@@ -561,13 +563,13 @@ static int imx185_set_gain(struct imx185 *priv, s64 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: GAIN control error\n", __func__);
+	dev_dbg(dev, "%s: GAIN control error\n", __func__);
 	return err;
 }
 
 static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	imx185_reg reg_list[3];
 	int err;
 	u32 frame_length;
@@ -586,8 +588,7 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 	if (priv->frame_length > IMX185_MAX_FRAME_LENGTH)
 		priv->frame_length = IMX185_MAX_FRAME_LENGTH;
 
-	dev_dbg(&priv->i2c_client->dev,
-		"%s: val: %lld, , frame_length: %d\n", __func__,
+	dev_dbg(dev, "%s: val: %lld, , frame_length: %d\n", __func__,
 		val, priv->frame_length);
 
 	imx185_get_frame_length_regs(reg_list, priv->frame_length);
@@ -603,8 +604,7 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 	control.id = TEGRA_CAMERA_CID_HDR_EN;
 	err = camera_common_g_ctrl(priv->s_data, &control);
 	if (err < 0) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return err;
 	}
 
@@ -612,33 +612,31 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 	if ((hdr_en == SWITCH_ON) && (priv->last_wdr_et_val != 0)) {
 		err = imx185_set_coarse_time_hdr(priv, priv->last_wdr_et_val);
 		if (err)
-			dev_dbg(&priv->i2c_client->dev,
+			dev_dbg(dev,
 			"%s: error coarse time SHS1 SHS2 override\n", __func__);
 	}
 
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: FRAME_LENGTH control error\n", __func__);
+	dev_dbg(dev, "%s: FRAME_LENGTH control error\n", __func__);
 	return err;
 }
 
 static int imx185_set_exposure(struct imx185 *priv, s64 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	struct v4l2_control control;
 	int hdr_en;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %lld\n", __func__, val);
+	dev_dbg(dev, "%s: val: %lld\n", __func__, val);
 
 	/* check hdr enable ctrl */
 	control.id = TEGRA_CAMERA_CID_HDR_EN;
 	err = camera_common_g_ctrl(priv->s_data, &control);
 	if (err < 0) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return err;
 	}
 
@@ -646,12 +644,12 @@ static int imx185_set_exposure(struct imx185 *priv, s64 val)
 	if (hdr_en == SWITCH_ON) {
 		err = imx185_set_coarse_time_hdr(priv, val);
 		if (err)
-			dev_dbg(&priv->i2c_client->dev,
+			dev_dbg(dev,
 			"%s: error coarse time SHS1 SHS2 override\n", __func__);
 	} else {
 		err = imx185_set_coarse_time(priv, val);
 		if (err)
-			dev_dbg(&priv->i2c_client->dev,
+			dev_dbg(dev,
 			"%s: error coarse time SHS1 override\n", __func__);
 	}
 	return err;
@@ -662,6 +660,7 @@ static int imx185_set_coarse_time(struct imx185 *priv, s64 val)
 	struct camera_common_data *s_data = priv->s_data;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode];
+	struct device *dev = &priv->i2c_client->dev;
 	imx185_reg reg_list[3];
 	int err;
 	u32 coarse_time_shs1;
@@ -677,8 +676,7 @@ static int imx185_set_coarse_time(struct imx185 *priv, s64 val)
 
 	reg_shs1 = priv->frame_length - coarse_time_shs1 - 1;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: coarse1:%d, shs1:%d, FL:%d\n", __func__,
+	dev_dbg(dev, "%s: coarse1:%d, shs1:%d, FL:%d\n", __func__,
 		 coarse_time_shs1, reg_shs1, priv->frame_length);
 
 	imx185_get_coarse_time_regs_shs1(reg_list, reg_shs1);
@@ -693,13 +691,13 @@ static int imx185_set_coarse_time(struct imx185 *priv, s64 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: set coarse time error\n", __func__);
+	dev_dbg(dev, "%s: set coarse time error\n", __func__);
 	return err;
 }
 
 static int imx185_set_coarse_time_hdr(struct imx185 *priv, s64 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	struct camera_common_data *s_data = priv->s_data;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode];
@@ -735,8 +733,7 @@ static int imx185_set_coarse_time_hdr(struct imx185 *priv, s64 val)
 	imx185_get_coarse_time_regs_shs1(reg_list_shs1, reg_shs1);
 	imx185_get_coarse_time_regs_shs2(reg_list_shs2, reg_shs2);
 
-	dev_dbg(&priv->i2c_client->dev,
-		"%s: coarse1:%d, shs1:%d, coarse2:%d, shs2: %d, FL:%d\n",
+	dev_dbg(dev, "%s: coarse1:%d, shs1:%d, coarse2:%d, shs2: %d, FL:%d\n",
 		__func__,
 		 coarse_time_shs1, reg_shs1,
 		 coarse_time_shs2, reg_shs2,
@@ -757,8 +754,7 @@ static int imx185_set_coarse_time_hdr(struct imx185 *priv, s64 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: set WDR coarse time error\n", __func__);
+	dev_dbg(dev, "%s: set WDR coarse time error\n", __func__);
 	return err;
 }
 
@@ -767,8 +763,8 @@ static int imx185_fuse_id_setup(struct imx185 *priv)
 	int err;
 	int i;
 	struct i2c_client *client = v4l2_get_subdevdata(priv->subdev);
-	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
-
+	struct device *dev = &client->dev;
+	struct camera_common_data *s_data = to_camera_common_data(dev);
 	struct v4l2_ctrl *ctrl;
 	u8 fuse_id[IMX185_FUSE_ID_SIZE];
 	u8 bak = 0;
@@ -783,15 +779,14 @@ static int imx185_fuse_id_setup(struct imx185 *priv)
 		if (!err)
 			fuse_id[i] = bak;
 		else {
-			pr_err("%s: can not read fuse id\n", __func__);
+			dev_err(dev, "%s: can not read fuse id\n", __func__);
 			return -EINVAL;
 		}
 	}
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_FUSE_ID);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return -EINVAL;
 	}
 
@@ -799,8 +794,7 @@ static int imx185_fuse_id_setup(struct imx185 *priv)
 		sprintf(&ctrl->p_new.p_char[i*2], "%02x",
 			fuse_id[i]);
 	ctrl->p_cur.p_char = ctrl->p_new.p_char;
-	dev_info(&client->dev, "%s,  fuse id: %s\n", __func__,
-		ctrl->p_cur.p_char);
+	dev_info(dev, "%s, fuse id: %s\n", __func__, ctrl->p_cur.p_char);
 
 	err = camera_common_s_power(priv->subdev, false);
 	if (err)
@@ -813,6 +807,7 @@ static int imx185_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct imx185 *priv =
 		container_of(ctrl->handler, struct imx185, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -821,7 +816,7 @@ static int imx185_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 	switch (ctrl->id) {
 
 	default:
-			pr_err("%s: unknown ctrl id.\n", __func__);
+			dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 			return -EINVAL;
 	}
 
@@ -833,6 +828,7 @@ static int imx185_s_ctrl(struct v4l2_ctrl *ctrl)
 	struct imx185 *priv =
 		container_of(ctrl->handler, struct imx185, ctrl_handler);
 	struct camera_common_data	*s_data = priv->s_data;
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -857,7 +853,7 @@ static int imx185_s_ctrl(struct v4l2_ctrl *ctrl)
 		s_data->sensor_mode_id = (int) (*ctrl->p_new.p_s64);
 		break;
 	default:
-		pr_err("%s: unknown ctrl id.\n", __func__);
+		dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 		return -EINVAL;
 	}
 
@@ -994,8 +990,7 @@ static int imx185_probe(struct i2c_client *client,
 	struct imx185 *priv;
 	int err;
 
-	dev_info(&client->dev, "[IMX185]: probing v4l2 sensor at addr 0x%0x.\n",
-		client->addr);
+	dev_info(&client->dev, "probing v4l2 sensor\n");
 
 	if (!IS_ENABLED(CONFIG_OF) || !client->dev.of_node)
 		return -EINVAL;

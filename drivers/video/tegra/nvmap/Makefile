@@ -8,6 +8,7 @@ endif
 
 ccflags-y += -Iarch/arm/mach-tegra
 ccflags-y += -I$(srctree.nvidia)/drivers/video/tegra/nvmap/
+ccflags-y += -I$(srctree.nvidia)/include/
 
 obj-y += nvmap.o
 obj-y += nvmap_alloc.o
@@ -26,4 +27,12 @@ obj-$(CONFIG_NVMAP_PAGE_POOLS) += nvmap_pp.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 obj-y += nvmap_cache_nvmap_t18x.o
+endif
+
+ifdef CONFIG_ARCH_TEGRA_19x_SOC
+
+obj-y += nvmap_init_t19x.o
+obj-y += nvmap_dmabuf_t19x.o
+obj-y += nvmap_cache_t19x.o
+
 endif

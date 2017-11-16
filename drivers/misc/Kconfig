@@ -77,6 +77,13 @@ config TEGRA_SKIN
 	  features like rail power, rail current, backlight brightness. The
 	  driver estimates multiple hotspot temperatures based on OF configuration.
 
+config TEGRA_PCIE_EP_MEM
+	tristate "Client driver for Tegra PCIe end point"
+	depends on PCI
+	help
+	 Say Y if Tegra is working in PCIe-End Point mode and a client
+	 driver is required
+
 source "drivers/misc/nvs-dfsh/Kconfig"
 source "drivers/misc/nvs/Kconfig"
 source "drivers/misc/nvs-aonsh/Kconfig"

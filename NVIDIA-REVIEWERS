@@ -147,6 +147,15 @@ X:	drivers/video/tegra/dc/hdmihdcp.*
 X:	drivers/video/tegra/dc/nvhdcp.*
 X:	drivers/video/tegra/dc/nvhdcp_hdcp22_methods.*
 
+DLA
+M:	Prashant Gaikwad <pgaikwad@nvidia.com>
+M:	Shridhar Rasal <srasal@nvidia.com>
+M:	Mitch Harwell <mharwell@nvidia.com>
+L:	SW-Mobile-DLA-Dev <SW-Mobile-DLA-Dev@exchange.nvidia.com>
+B:	Tegra-DLA
+S:	Supported
+F:	drivers/video/tegra/host/nvdla/
+
 HDCP
 M:	Hyung Taek Ryoo <hryoo@nvidia.com>
 M:	Sharath Sarangpur <ssarangpur@nvidia.com>
@@ -165,6 +174,7 @@ B:	Mobile_Android_Kernel
 S:	Supported
 F:	drivers/gpu/drm/*
 F:	drivers/gpu/host1x/*
+F:	drivers/video/tegra/host/
 F:	drivers/video/tegra/host/nvdla/
 
 HV_SECCAN
@@ -191,6 +201,11 @@ F:	drivers/dma/*
 F:	drivers/video/tegra/nvmap/*
 F:	drivers/platform/tegra/iomap_t18x.h
 F:	drivers/platform/tegra/mc/*
+F:	drivers/iommu/
+F:	drivers/video/tegra/nvmap/
+F:	drivers/platform/tegra/mc/
+F:	include/dt-bindings/memory/
+F:	include/linux/nvmap_t19x.h
 
 MTTCAN
 M:	Abhijit . <abhijit@nvidia.com>
@@ -260,6 +275,17 @@ F:	drivers/platform/tegra/tegra186-aondbg.c
 F:	drivers/platform/tegra/tegra186-platform-common.c
 F:	drivers/platform/tegra/tegra186-pmc*.c
 F:	drivers/platform/tegra/wakeups-t18x.c
+
+PVA
+M:	Colin Tracey <ctracey@nvidia.com>
+M:	Arto Merilainen <amerilainen@nvidia.com>
+M:	Vinod Gopalakrishnakurup <vinodg@nvidia.com>
+L:	SW-Mobile-PVA-Dev@exchange.nvidia.com
+B:	PVA-SW
+S:	Supported
+F:	drivers/video/tegra/host/pva/
+F:	include/uapi/linux/nvhost_pva_ioctl.h
+F:	drivers/video/tegra/host/nvhost_minimal_pm/
 
 RTCPU
 M:	Mika Liljeberg <mlijeberg@nvidia.com>

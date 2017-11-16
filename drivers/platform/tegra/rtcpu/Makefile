@@ -14,3 +14,7 @@ obj-y += rtcpu-monitor.o
 obj-y += tegra-ivc-rpc.o tegra-ivc-rpc-test.o
 obj-y += capture-ivc.o
 obj-y += syncpt-display-channel.o
+
+ifdef CONFIG_ARCH_TEGRA_19x_SOC
+obj-y += tegra-rce-rm.o
+endif

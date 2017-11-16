@@ -42,3 +42,18 @@ obj-$(CONFIG_TEGRA_GRHOST_NVCSI) += nvcsi/
 obj-$(CONFIG_TEGRA_GRHOST_SYNC) += nvhost_sync.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += vi/
 obj-$(CONFIG_TEGRA_GRHOST_VHOST) += vhost/
+
+ifdef CONFIG_TEGRA_T19X_GRHOST
+
+obj-y  += nvhost_queue.o \
+	  nvhost_buffer.o \
+	  nvhost_syncpt_unit_interface.o \
+	  nvhost_cv_pm.o
+
+obj-$(CONFIG_TEGRA_GRHOST) += t194/
+obj-$(CONFIG_TEGRA_GRHOST_PVA) += pva/
+obj-$(CONFIG_TEGRA_GRHOST_NVDLA) += nvdla/
+obj-$(CONFIG_TEGRA_GRHOST_SLVSEC) += slvsec/
+obj-$(CONFIG_TEGRA_GRHOST) += nvhost_minimal_pm/
+
+endif

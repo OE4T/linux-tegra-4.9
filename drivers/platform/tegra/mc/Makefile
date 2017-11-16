@@ -27,3 +27,13 @@ obj-y                                   += mcerr-t18x.o
 obj-y                                   += tegra18_emc.o
 obj-y                                   += tegra18x_la.o
 obj-y                                   += tegra186-mc-sid.o
+
+ifdef CONFIG_ARCH_TEGRA_19x_SOC
+
+ccflags-y += -Werror
+
+obj-y += tegra194-mc-sid.o
+obj-y += mc-t19x.o
+obj-y += mcerr-t19x.o
+
+endif

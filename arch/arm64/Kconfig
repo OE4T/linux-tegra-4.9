@@ -16,3 +16,11 @@ config ARCH_TEGRA_18x_SOC_PRIVATE
 	default n
 	help
 	  Support for NVIDIA Tegra 18x family of SoCs
+
+config ARCH_TEGRA_19x_SOC_PRIVATE
+	bool "Tegra 19x family SOC"
+	select PINCTRL
+	select PINCTRL_TEGRA194
+	default n
+	help
+	  Support for NVIDIA Tegra 19x family of SoCs

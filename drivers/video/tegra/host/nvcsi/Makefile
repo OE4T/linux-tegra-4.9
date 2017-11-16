@@ -9,3 +9,11 @@ nvhost-nvcsi-objs  = \
 		nvcsi.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-nvcsi.o
+
+ifdef CONFIG_TEGRA_T19X_GRHOST
+
+nvhost-nvcsi-t194-objs = nvcsi-t194.o
+
+obj-$(CONFIG_TEGRA_GRHOST_NVCSI) += nvhost-nvcsi-t194.o
+
+endif

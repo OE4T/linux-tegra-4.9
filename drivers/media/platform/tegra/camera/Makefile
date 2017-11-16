@@ -11,3 +11,10 @@ obj-y += camera_common.o camera_gpio.o sensor_common.o camera_version_utils.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += capture_common.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += isp/isp_channel.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += isp/capture_isp.o
+
+ifdef CONFIG_ARCH_TEGRA_19x_SOC
+
+obj-y += slvs/
+obj-y += nvcsi/
+
+endif

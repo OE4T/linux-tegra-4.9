@@ -12,4 +12,41 @@
  */
 
 / {
+	soft_wdt:soft_watchdog {
+		compatible = "softdog-platform";
+		status = "okay";
+	};
+
+	plugin-manager {
+		fragement-tegra-wdt-en {
+			odm-data = "enable-denver-wdt";
+			override@0 {
+				target = <&tegra_wdt>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+
+		fragemen-tegra-wdt-dis {
+			odm-data = "disable-denver-wdt";
+			override@0 {
+				target = <&tegra_pmc>;
+				_overlay_ {
+					nvidia,enable-halt-in-fiq;
+				};
+			};
+		};
+
+		fragement-soft-wdt {
+			odm-data = "enable-pmic-wdt",
+				   "enable-denver-wdt";
+			override@0 {
+				target = <&soft_wdt>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+		};
+	};
 };

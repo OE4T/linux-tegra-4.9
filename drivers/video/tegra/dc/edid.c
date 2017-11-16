@@ -17,7 +17,6 @@
  *
  */
 
-
 #include <linux/debugfs.h>
 #include <linux/fb.h>
 #include <linux/i2c.h>
@@ -836,6 +835,10 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 						FB_VMODE_STEREO_FRAME_PACK;
 				}
 			}
+		} else if (data[i * EDID_BYTES_PER_BLOCK] == 0x70) {
+			tegra_edid_disp_id_ext_block_parse(
+				data + i * EDID_BYTES_PER_BLOCK, specs,
+				new_data);
 		}
 	}
 

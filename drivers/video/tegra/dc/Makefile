@@ -42,7 +42,7 @@ ccflags-$(CONFIG_TEGRA_HDMIHDCP) += -DCONFIG_HDCP
 ccflags-$(CONFIG_TEGRA_DPHDCP) += -DCONFIG_DPHDCP
 endif
 endif
-obj-y += edid.o edid_quirks.o
+obj-y += edid.o edid_disp_id_ext.o edid_quirks.o
 ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 obj-$(CONFIG_TEGRA_NVSD) += nvsd.o
 endif

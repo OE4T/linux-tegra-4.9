@@ -20,6 +20,7 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_EDID_H
 #define __DRIVERS_VIDEO_TEGRA_DC_EDID_H
 
+#include "edid_disp_id_ext.h"
 #include <linux/i2c.h>
 #include <linux/wait.h>
 #include "dc.h"
@@ -197,4 +198,7 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data);
 int tegra_edid_audio_supported(struct tegra_edid *edid);
 bool tegra_edid_is_vrr_capable(struct tegra_edid *edid);
 int tegra_edid_get_source_physical_address(struct tegra_edid *edid, u8 *phy_address);
+int tegra_edid_disp_id_ext_block_parse(const u8 *section,
+				       struct fb_monspecs *specs,
+				       struct tegra_edid_pvt *edid_pvt);
 #endif

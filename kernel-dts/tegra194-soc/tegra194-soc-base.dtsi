@@ -1849,4 +1849,16 @@
 		reg = <0x0 0x02300000 0x0 0x1000>;
 		status = "disabled";
 	};
+
+	mipical@3990000{
+		compatible = "nvidia, tegra194-mipical";
+		reg = <0x0 0x03990000 0x0 0x10000>;
+		clocks = <&bpmp_clks TEGRA194_CLK_MIPI_CAL>,
+			<&bpmp_clks TEGRA194_CLK_UART_FST_MIPI_CAL>;
+		clock-names = "mipi_cal", "uart_fs_mipi_cal";
+		resets = <&bpmp_resets TEGRA194_RESET_MIPI_CAL>;
+		reset-names = "mipi_cal";
+		status = "disabled";
+	};
+
 };

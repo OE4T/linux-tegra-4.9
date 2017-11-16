@@ -216,12 +216,12 @@ static int lc898212_set_position(struct lc898212 *priv, u32 position)
 	s16 new_pos = 0;
 	struct camera_common_focuser_data *s_data = priv->s_data;
 	struct nv_focuser_config *cfg = &s_data->config;
+	struct device *dev = &priv->i2c_client->dev;
 
 	dev_dbg(s_data->dev, "%s++\n", __func__);
 	if (position < cfg->pos_actual_low ||
 		position > cfg->pos_actual_high) {
-		dev_dbg(&priv->i2c_client->dev,
-			"%s: position(%d) out of bound([%d, %d])\n",
+		dev_dbg(dev, "%s: position(%d) out of bound([%d, %d])\n",
 			__func__, position, cfg->pos_actual_low,
 			cfg->pos_actual_high);
 		if (position < cfg->pos_actual_low)
@@ -235,8 +235,7 @@ static int lc898212_set_position(struct lc898212 *priv, u32 position)
 	/* store the new position and wait for sync call to write */
 	mutex_lock(&priv->pos_lock);
 	if (priv->curr_pos != priv->position)
-		dev_err(&priv->i2c_client->dev,
-			"%s:clear previous position %d, set new value %d\n",
+		dev_err(dev, "%s: clear prev position %d, set new value %d\n",
 			 __func__, priv->position, new_pos);
 	priv->position = new_pos;
 	mutex_unlock(&priv->pos_lock);
@@ -256,9 +255,10 @@ static int lc898212_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct lc898212 *priv =
 		container_of(ctrl->handler, struct lc898212, ctrl_handler);
+	struct device *dev = priv->s_data->dev;
 	int err = 0;
 
-	dev_dbg(priv->s_data->dev, "%s++\n", __func__);
+	dev_dbg(dev, "%s++\n", __func__);
 	/* check for power state */
 	if (priv->s_data->pwr_dev == LC898212_PWR_DEV_OFF)
 		return -ENODEV;
@@ -271,7 +271,7 @@ static int lc898212_s_ctrl(struct v4l2_ctrl *ctrl)
 		priv->sync_external = ctrl->val;
 		break;
 	default:
-		pr_err("%s: unknown v4l2 ctlr id\n", __func__);
+		dev_err(dev, "%s: unknown v4l2 ctlr id\n", __func__);
 		return -EINVAL;
 	}
 
@@ -333,6 +333,7 @@ error:
 static int lc898212_write_table(struct lc898212 *priv,
 				 const struct lc898212_reg table[])
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	const struct lc898212_reg *next;
 	u16 val;
@@ -346,19 +347,21 @@ static int lc898212_write_table(struct lc898212 *priv,
 
 			err = regmap_read(priv->regmap8, val, &data);
 			if (err) {
-				pr_err("%s: regmap_read: %d\n", __func__, err);
+				dev_err(dev, "%s: regmap_read: %d\n", __func__,
+					err);
 				return err;
 			}
 			while (data != 0) {
 				if (count >= 10) {
-					pr_err("%s: Exceed max retry\n", __func__);
+					dev_err(dev, "%s: Exceed max retry\n",
+						__func__);
 					return -EFAULT; /* focuser not ready */
 				}
 
 				usleep_range(10, 20);
 				err = regmap_read(priv->regmap8, val, &data);
 				if (err) {
-					pr_err("%s: regmap_read: %d\n",
+					dev_err(dev, "%s: regmap_read: %d\n",
 						__func__, err);
 					return err;
 				}
@@ -372,7 +375,8 @@ static int lc898212_write_table(struct lc898212 *priv,
 		else
 			err = regmap_write(priv->regmap8, next->addr, val);
 		if (err) {
-			pr_err("%s: %d addr = 0x%x, val = 0x%x\n", __func__, err, next->addr, val);
+			dev_err(dev, "%s: %d addr = 0x%x, val = 0x%x\n",
+				__func__, err, next->addr, val);
 			return err;
 		}
 	}
@@ -444,13 +448,13 @@ static int lc898212_power_on(struct camera_common_focuser_data *s_data)
 {
 	int err = 0;
 	struct lc898212 *priv = (struct lc898212 *)s_data->priv;
+	struct device *dev = s_data->dev;
 
-	dev_dbg(s_data->dev, "%s++\n", __func__);
+	dev_dbg(dev, "%s++\n", __func__);
 	if (priv->regulator) {
 		err = regulator_enable(priv->regulator);
 		if (err) {
-			dev_err(s_data->dev,
-				"%s:regulator enabled failed\n", __func__);
+			dev_err(dev, "%s:regulator enabled failed\n", __func__);
 			return err;
 		}
 	}
@@ -548,7 +552,7 @@ static int lc898212_probe(struct i2c_client *client,
 		.name = "16bit",
 	};
 
-	pr_info("[lc898212]: probing sensor\n");
+	dev_info(&client->dev, "probing sensor\n");
 
 	common_data = devm_kzalloc(&client->dev,
 		sizeof(struct camera_common_focuser_data), GFP_KERNEL);

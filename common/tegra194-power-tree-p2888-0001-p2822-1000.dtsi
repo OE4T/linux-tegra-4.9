@@ -13,8 +13,8 @@
  */
 
 #include "tegra194-spmic-p2888-0001.dtsi"
-#include "tegra194-fixed-regulator-p2822-1000.dtsi"
 #include "tegra194-fixed-regulator-p2888-0001.dtsi"
+#include "tegra194-fixed-regulator-p2822-1000.dtsi"
 
 / {
 };

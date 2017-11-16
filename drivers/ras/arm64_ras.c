@@ -444,7 +444,7 @@ static void __exit ras_exit(void)
 	platform_driver_unregister(&ras_driver);
 }
 
-module_init(ras_init);
+arch_initcall(ras_init);
 module_exit(ras_exit);
 
 MODULE_LICENSE("GPL v2");

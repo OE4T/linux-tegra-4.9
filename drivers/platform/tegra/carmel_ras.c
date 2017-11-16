@@ -1000,7 +1000,7 @@ static void __exit ras_carmel_exit(void)
 	platform_driver_unregister(&ras_carmel_driver);
 }
 
-module_init(ras_carmel_init);
+arch_initcall(ras_carmel_init);
 module_exit(ras_carmel_exit);
 
 MODULE_LICENSE("GPL v2");

@@ -275,11 +275,12 @@ static int ov5693_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
 {
 	int err;
 	struct ov5693 *priv = (struct ov5693 *)s_data->priv;
+	struct device *dev = &priv->i2c_client->dev;
 
 	err = camera_common_i2c_write_reg8(&priv->i2c_dev,
 		addr, &val, 1);
 	if (err)
-		pr_err("%s:i2c write failed, %x = %x\n",
+		dev_err(dev, "%s: i2c write failed, %x = %x\n",
 			__func__, addr, val);
 
 	return err;
@@ -311,14 +312,15 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 	int err = 0;
 	struct ov5693 *priv = (struct ov5693 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 	u32 frame_time;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power on\n", __func__);
+	dev_dbg(dev, "%s: power on\n", __func__);
 
 	if (priv->pdata && priv->pdata->power_on) {
 		err = priv->pdata->power_on(pw);
 		if (err)
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 		else
 			pw->state = SWITCH_ON;
 		return err;
@@ -378,7 +380,7 @@ ov5693_iovdd_fail:
 	regulator_disable(pw->avdd);
 
 ov5693_avdd_fail:
-	pr_err("%s failed.\n", __func__);
+	dev_err(dev, "%s failed.\n", __func__);
 	return -ENODEV;
 }
 
@@ -387,15 +389,16 @@ static int ov5693_power_off(struct camera_common_data *s_data)
 	int err = 0;
 	struct ov5693 *priv = (struct ov5693 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power off\n", __func__);
+	dev_dbg(dev, "%s: power off\n", __func__);
 
 	if (priv->pdata && priv->pdata->power_off) {
 		err = priv->pdata->power_off(pw);
 		if (!err) {
 			goto power_off_done;
 		} else {
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 			return err;
 		}
 	}
@@ -447,36 +450,34 @@ static int ov5693_power_get(struct ov5693 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
 	struct camera_common_pdata *pdata = priv->pdata;
+	struct device *dev = &priv->i2c_client->dev;
 	const char *mclk_name;
 	const char *parentclk_name;
 	struct clk *parent;
 	int err = 0, ret = 0;
 
 	if (!pdata) {
-		dev_err(&priv->i2c_client->dev, "pdata missing\n");
+		dev_err(dev, "pdata missing\n");
 		return -EFAULT;
 	}
 
 	if (!priv->soc->is_silicon) {
-		dev_info(&priv->i2c_client->dev,
-			 "Skip getting mclk,regulator\n");
+		dev_info(dev, "Skip getting mclk,regulator\n");
 		goto skip_clkvdd;
 	}
 	mclk_name = pdata->mclk_name ?
 		    pdata->mclk_name : "cam_mclk1";
-	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
+	pw->mclk = devm_clk_get(dev, mclk_name);
 	if (IS_ERR(pw->mclk)) {
-		dev_err(&priv->i2c_client->dev,
-			"unable to get clock %s\n", mclk_name);
+		dev_err(dev, "unable to get clock %s\n", mclk_name);
 		return PTR_ERR(pw->mclk);
 	}
 
 	parentclk_name = pdata->parentclk_name;
 	if (parentclk_name) {
-		parent = devm_clk_get(&priv->i2c_client->dev, parentclk_name);
+		parent = devm_clk_get(dev, parentclk_name);
 		if (IS_ERR(parent)) {
-			dev_err(&priv->i2c_client->dev,
-				"unable to get parent clcok %s",
+			dev_err(dev, "unable to get parent clcok %s",
 				parentclk_name);
 		} else
 			clk_set_parent(pw->mclk, parent);
@@ -484,10 +485,10 @@ static int ov5693_power_get(struct ov5693 *priv)
 
 
 	/* analog 2.8v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->avdd, pdata->regulators.avdd);
 	/* IO 1.8v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->iovdd, pdata->regulators.iovdd);
 
 skip_clkvdd:
@@ -496,25 +497,22 @@ skip_clkvdd:
 		pw->pwdn_gpio = pdata->pwdn_gpio;
 	}
 	if (pdata->use_cam_gpio) {
-		err = cam_gpio_register(&priv->i2c_client->dev, pw->pwdn_gpio);
+		err = cam_gpio_register(dev, pw->pwdn_gpio);
 		if (err)
-			dev_err(&priv->i2c_client->dev,
-				"%s ERR can't register cam gpio %u!\n",
+			dev_err(dev, "%s ERR can't register cam gpio %u!\n",
 				 __func__, pw->pwdn_gpio);
 	} else {
 		if (gpio_is_valid(pw->pwdn_gpio)) {
 			ret = gpio_request(pw->pwdn_gpio, "cam_pwdn_gpio");
 			if (ret < 0) {
-				dev_dbg(&priv->i2c_client->dev,
-					"%s can't request pwdn_gpio %d\n",
+				dev_dbg(dev, "%s can't request pwdn_gpio %d\n",
 					__func__, ret);
 			}
 		}
 		if (gpio_is_valid(pw->reset_gpio)) {
 			ret = gpio_request(pw->reset_gpio, "cam_reset_gpio");
 			if (ret < 0) {
-				dev_dbg(&priv->i2c_client->dev,
-					"%s can't request reset_gpio %d\n",
+				dev_dbg(dev, "%s can't request reset_gpio %d\n",
 					__func__, ret);
 			}
 		}
@@ -710,6 +708,7 @@ static int ov5693_set_group_hold(struct ov5693 *priv)
 {
 	int err;
 	int gh_prev = switch_ctrl_qmenu[priv->group_hold_prev];
+	struct device *dev = &priv->i2c_client->dev;
 
 	if (priv->group_hold_en == true && gh_prev == SWITCH_OFF) {
 		camera_common_i2c_aggregate(&priv->i2c_dev, true);
@@ -721,8 +720,7 @@ static int ov5693_set_group_hold(struct ov5693 *priv)
 
 		priv->group_hold_prev = 1;
 
-		dev_dbg(&priv->i2c_client->dev,
-			 "%s: enter group hold\n", __func__);
+		dev_dbg(dev, "%s: enter group hold\n", __func__);
 	} else if (priv->group_hold_en == false && gh_prev == SWITCH_ON) {
 		/* leave group hold */
 		err = ov5693_write_reg(priv->s_data,
@@ -739,15 +737,13 @@ static int ov5693_set_group_hold(struct ov5693 *priv)
 
 		priv->group_hold_prev = 0;
 
-		dev_dbg(&priv->i2c_client->dev,
-			 "%s: leave group hold\n", __func__);
+		dev_dbg(dev, "%s: leave group hold\n", __func__);
 	}
 
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: Group hold control error\n", __func__);
+	dev_dbg(dev, "%s: Group hold control error\n", __func__);
 	return err;
 }
 
@@ -774,6 +770,7 @@ static u16 ov5693_to_real_gain(u32 rep, int shift)
 
 static int ov5693_set_gain(struct ov5693 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov5693_reg reg_list[2];
 	int err;
 	u16 gain;
@@ -786,8 +783,7 @@ static int ov5693_set_gain(struct ov5693 *priv, s32 val)
 	gain = ov5693_to_real_gain((u32)val, OV5693_GAIN_SHIFT);
 
 	ov5693_get_gain_regs(reg_list, gain);
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: gain %04x val: %04x\n", __func__, val, gain);
+	dev_dbg(dev, "%s: gain %04x val: %04x\n", __func__, val, gain);
 
 	for (i = 0; i < 2; i++) {
 		err = ov5693_write_reg(priv->s_data, reg_list[i].addr,
@@ -799,13 +795,13 @@ static int ov5693_set_gain(struct ov5693 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: GAIN control error\n", __func__);
+	dev_dbg(dev, "%s: GAIN control error\n", __func__);
 	return err;
 }
 
 static void ov5693_update_ctrl_range(struct ov5693 *priv, s32 frame_length)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	struct v4l2_ctrl *ctrl = NULL;
 	int ctrl_ids[2] = {TEGRA_CAMERA_CID_COARSE_TIME,
 			TEGRA_CAMERA_CID_COARSE_TIME_SHORT};
@@ -821,9 +817,7 @@ static void ov5693_update_ctrl_range(struct ov5693 *priv, s32 frame_length)
 		}
 
 		if (j == priv->numctrls) {
-			dev_err(&priv->i2c_client->dev,
-				"could not find ctrl %x\n",
-				ctrl_ids[i]);
+			dev_err(dev, "could not find ctrl %x\n", ctrl_ids[i]);
 			continue;
 		}
 
@@ -834,8 +828,7 @@ static void ov5693_update_ctrl_range(struct ov5693 *priv, s32 frame_length)
 		min = OV5693_MIN_EXPOSURE_COARSE;
 		def = clamp_val(OV5693_DEFAULT_EXPOSURE_COARSE, min, max);
 		if (__v4l2_ctrl_modify_range(ctrl, min, max, 1, def))
-			dev_err(&priv->i2c_client->dev,
-				"ctrl %x: range update failed\n",
+			dev_err(dev, "ctrl %x: range update failed\n",
 				ctrl_ids[i]);
 	}
 
@@ -843,6 +836,7 @@ static void ov5693_update_ctrl_range(struct ov5693 *priv, s32 frame_length)
 
 static int ov5693_set_frame_length(struct ov5693 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov5693_reg reg_list[2];
 	int err;
 	u32 frame_length;
@@ -854,8 +848,7 @@ static int ov5693_set_frame_length(struct ov5693 *priv, s32 val)
 	frame_length = (u32)val;
 
 	ov5693_get_frame_length_regs(reg_list, frame_length);
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, frame_length);
+	dev_dbg(dev, "%s: val: %d\n", __func__, frame_length);
 
 	for (i = 0; i < 2; i++) {
 		err = ov5693_write_reg(priv->s_data, reg_list[i].addr,
@@ -870,13 +863,13 @@ static int ov5693_set_frame_length(struct ov5693 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: FRAME_LENGTH control error\n", __func__);
+	dev_dbg(dev, "%s: FRAME_LENGTH control error\n", __func__);
 	return err;
 }
 
 static int ov5693_set_coarse_time(struct ov5693 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov5693_reg reg_list[3];
 	int err;
 	u32 coarse_time;
@@ -888,8 +881,7 @@ static int ov5693_set_coarse_time(struct ov5693 *priv, s32 val)
 	coarse_time = (u32)val;
 
 	ov5693_get_coarse_time_regs(reg_list, coarse_time);
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, coarse_time);
+	dev_dbg(dev, "%s: val: %d\n", __func__, coarse_time);
 
 	for (i = 0; i < 3; i++) {
 		err = ov5693_write_reg(priv->s_data, reg_list[i].addr,
@@ -901,13 +893,13 @@ static int ov5693_set_coarse_time(struct ov5693 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME control error\n", __func__);
+	dev_dbg(dev, "%s: COARSE_TIME control error\n", __func__);
 	return err;
 }
 
 static int ov5693_set_coarse_time_short(struct ov5693 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov5693_reg reg_list[3];
 	int err;
 	struct v4l2_control hdr_control;
@@ -923,8 +915,7 @@ static int ov5693_set_coarse_time_short(struct ov5693 *priv, s32 val)
 
 	err = camera_common_g_ctrl(priv->s_data, &hdr_control);
 	if (err < 0) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return err;
 	}
 
@@ -935,8 +926,7 @@ static int ov5693_set_coarse_time_short(struct ov5693 *priv, s32 val)
 	coarse_time_short = (u32)val;
 
 	ov5693_get_coarse_time_short_regs(reg_list, coarse_time_short);
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, coarse_time_short);
+	dev_dbg(dev, "%s: val: %d\n", __func__, coarse_time_short);
 
 	for (i = 0; i < 3; i++) {
 		err = ov5693_write_reg(priv->s_data, reg_list[i].addr,
@@ -948,8 +938,7 @@ static int ov5693_set_coarse_time_short(struct ov5693 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME_SHORT control error\n", __func__);
+	dev_dbg(dev, "%s: COARSE_TIME_SHORT control error\n", __func__);
 	return err;
 }
 
@@ -1024,6 +1013,7 @@ static int ov5693_read_eeprom(struct ov5693 *priv,
 static int ov5693_write_eeprom(struct ov5693 *priv,
 				char *string)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	u8 curr[3];
@@ -1036,8 +1026,7 @@ static int ov5693_write_eeprom(struct ov5693 *priv,
 
 		err = kstrtol(curr, 16, &data);
 		if (err) {
-			dev_err(&priv->i2c_client->dev,
-				"invalid eeprom string\n");
+			dev_err(dev, "invalid eeprom string\n");
 			return -EINVAL;
 		}
 
@@ -1090,6 +1079,7 @@ static int ov5693_read_otp_bank(struct ov5693 *priv,
 
 static int ov5693_otp_setup(struct ov5693 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	struct v4l2_ctrl *ctrl;
@@ -1106,16 +1096,14 @@ static int ov5693_otp_setup(struct ov5693 *priv)
 					OV5693_OTP_BANK_START_ADDR,
 					OV5693_OTP_BANK_SIZE);
 		if (err) {
-			dev_err(&priv->i2c_client->dev,
-				"could not read otp bank\n");
+			dev_err(dev, "could not read otp bank\n");
 			goto ret;
 		}
 	}
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_OTP_DATA);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		err = -EINVAL;
 		goto ret;
 	}
@@ -1133,6 +1121,7 @@ ret:
 
 static int ov5693_fuse_id_setup(struct ov5693 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	struct v4l2_ctrl *ctrl;
@@ -1148,15 +1137,13 @@ static int ov5693_fuse_id_setup(struct ov5693 *priv)
 				OV5693_FUSE_ID_OTP_START_ADDR,
 				OV5693_FUSE_ID_SIZE);
 	if (err) {
-		dev_err(&priv->i2c_client->dev,
-			"could not read otp bank\n");
+		dev_err(dev, "could not read otp bank\n");
 		goto ret;
 	}
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_FUSE_ID);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		err = -EINVAL;
 		goto ret;
 	}
@@ -1176,6 +1163,7 @@ static int ov5693_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct ov5693 *priv =
 		container_of(ctrl->handler, struct ov5693, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -1188,7 +1176,7 @@ static int ov5693_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 			return err;
 		break;
 	default:
-			pr_err("%s: unknown ctrl id.\n", __func__);
+			dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 			return -EINVAL;
 	}
 
@@ -1199,6 +1187,7 @@ static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct ov5693 *priv =
 		container_of(ctrl->handler, struct ov5693, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -1235,7 +1224,7 @@ static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl)
 	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
 	default:
-		pr_err("%s: unknown ctrl id.\n", __func__);
+		dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1440,7 +1429,7 @@ static int ov5693_probe(struct i2c_client *client,
 	const struct ov5693_soc *soc_data;
 	const struct of_device_id *match;
 
-	pr_info("[OV5693]: probing v4l2 sensor.\n");
+	dev_info(&client->dev, "probing v4l2 sensor.\n");
 
 	match = of_match_device(ov5693_of_match, &client->dev);
 	if (!match) {

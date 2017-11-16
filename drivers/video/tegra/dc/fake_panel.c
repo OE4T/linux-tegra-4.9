@@ -72,17 +72,17 @@ static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 		.h_front_porch = 107,
 		.v_front_porch = 497,
 #else
-		.pclk = 154700000, /* @60Hz*/
-		.h_ref_to_sync = 4,
-		.v_ref_to_sync = 1,
-		.h_sync_width = 16,
+		.pclk = 155774400, /* @60Hz*/
+		.h_ref_to_sync = 1,
+		.v_ref_to_sync = 2,
+		.h_sync_width = 10,
 		.v_sync_width = 2,
-		.h_back_porch = 32,
-		.v_back_porch = 16,
-		.h_active = 1920,
-		.v_active = 1200,
-		.h_front_porch = 120,
-		.v_front_porch = 17,
+		.h_back_porch = 54,
+		.v_back_porch = 30,
+		.h_active = 1200,
+		.v_active = 1920,
+		.h_front_porch = 64,
+		.v_front_porch = 3,
 #endif
 	},
 };

@@ -484,6 +484,57 @@ invalid_input:
 	return ret;
 }
 
+static ssize_t debug_dla_fw_reload_set(struct file *file,
+	const char __user *buffer, size_t count, loff_t *off)
+{
+	int err;
+	struct seq_file *p = file->private_data;
+	struct nvdla_device *nvdla_dev;
+	struct platform_device *pdev;
+	long val;
+
+	if (!p)
+		return -EFAULT;
+	nvdla_dev = (struct nvdla_device *)p->private;
+	if (!nvdla_dev)
+		return -EFAULT;
+	pdev = nvdla_dev->pdev;
+	if (!pdev)
+		return -EFAULT;
+
+	err = kstrtol_from_user(buffer, count, 10, &val);
+	if (err < 0)
+		return err;
+
+	if (!val)
+		return count; /* "0" does nothing */
+
+	nvdla_dbg_info(pdev, "firmware reload requested.\n");
+
+	nvhost_module_idle(pdev); /* hack around ref counting */
+
+	err = flcn_reload_fw(pdev);
+	if (err)
+		return err; /* propagate firmware reload errors */
+
+	err = nvhost_module_busy(pdev);
+	if (err)
+		return err;
+
+	return count;
+}
+
+static int debug_dla_fw_reload_show(struct seq_file *s, void *data)
+{
+	seq_puts(s, "0\n");
+	return 0;
+}
+
+static int debug_dla_fw_reload_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, debug_dla_fw_reload_show, inode->i_private);
+}
+
 static const struct file_operations debug_dla_enable_trace_fops = {
 		.open		= debug_dla_enable_trace_open,
 		.read		= seq_read,
@@ -536,6 +587,14 @@ static const struct file_operations debug_dla_fw_gcov_gcda_fops = {
 		.release	= single_release,
 };
 
+static const struct file_operations nvdla_fw_reload_fops = {
+		.open		= debug_dla_fw_reload_open,
+		.read		= seq_read,
+		.llseek		= seq_lseek,
+		.release	= single_release,
+		.write		= debug_dla_fw_reload_set,
+};
+
 static void dla_fw_debugfs_init(struct platform_device *pdev)
 {
 	struct dentry *fw_dir, *fw_trace, *events, *fw_gcov;
@@ -552,6 +611,10 @@ static void dla_fw_debugfs_init(struct platform_device *pdev)
 
 	if (!debugfs_create_file("version", S_IRUGO, fw_dir,
 			nvdla_dev, &nvdla_fw_ver_fops))
+		goto trace_failed;
+
+	if (!debugfs_create_file("reload", 0600, fw_dir,
+			nvdla_dev, &nvdla_fw_reload_fops))
 		goto trace_failed;
 
 	fw_trace = debugfs_create_dir("trace", fw_dir);

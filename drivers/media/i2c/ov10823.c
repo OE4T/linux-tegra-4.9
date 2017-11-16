@@ -272,10 +272,11 @@ static int ov10823_write_reg(struct camera_common_data *s_data,
 {
 	int err;
 	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
+	struct device *dev = &priv->i2c_client->dev;
 
 	err = regmap_write(priv->regmap, addr, val);
 	if (err)
-		pr_err("%s:i2c write failed, %x = %x\n",
+		dev_err(dev, "%s: i2c write failed, %x = %x\n",
 			__func__, addr, val);
 
 	return err;
@@ -296,13 +297,14 @@ static int ov10823_power_on(struct camera_common_data *s_data)
 	int err = 0;
 	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power on\n", __func__);
+	dev_dbg(dev, "%s: power on\n", __func__);
 
 	if (priv->pdata->power_on) {
 		err = priv->pdata->power_on(pw);
 		if (err)
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 		else
 			pw->state = SWITCH_ON;
 		return err;
@@ -318,14 +320,15 @@ static int ov10823_power_off(struct camera_common_data *s_data)
 	int err = 0;
 	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power off\n", __func__);
+	dev_dbg(dev, "%s: power off\n", __func__);
 	ov10823_write_table(priv, mode_table[OV10823_MODE_STOP_STREAM]);
 
 	if (priv->pdata->power_off) {
 		err = priv->pdata->power_off(pw);
 		if (err)
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 		else
 			goto power_off_done;
 	}
@@ -345,15 +348,15 @@ static int ov10823_power_put(struct ov10823 *priv)
 static int ov10823_power_get(struct ov10823 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 	const char *mclk_name;
 	int err = 0;
 
 	mclk_name = priv->pdata->mclk_name ?
 		    priv->pdata->mclk_name : "cam_mclk1";
-	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
+	pw->mclk = devm_clk_get(dev, mclk_name);
 	if (IS_ERR(pw->mclk)) {
-		dev_err(&priv->i2c_client->dev,
-			"unable to get clock %s\n", mclk_name);
+		dev_err(dev, "unable to get clock %s\n", mclk_name);
 		return PTR_ERR(pw->mclk);
 	}
 
@@ -580,6 +583,7 @@ static struct camera_common_sensor_ops ov10823_common_ops = {
 
 static int ov10823_set_group_hold(struct ov10823 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int gh_prev = switch_ctrl_qmenu[priv->group_hold_prev];
 
@@ -605,13 +609,13 @@ static int ov10823_set_group_hold(struct ov10823 *priv)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: Group hold control error\n", __func__);
+	dev_dbg(dev, "%s: Group hold control error\n", __func__);
 	return err;
 }
 
 static int ov10823_set_gain(struct ov10823 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov10823_reg reg_list[3];
 	int err;
 	u16 gain;
@@ -621,8 +625,7 @@ static int ov10823_set_gain(struct ov10823 *priv, s32 val)
 	/* translate value */
 	gain = ov10823_to_gain((u32)val, OV10823_GAIN_SHIFT);
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: gain: %d\n", __func__, gain);
+	dev_dbg(dev, "%s: gain: %d\n", __func__, gain);
 
 	ov10823_get_gain_reg(reg_list, gain);
 	ov10823_set_group_hold(priv);
@@ -633,21 +636,20 @@ static int ov10823_set_gain(struct ov10823 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: GAIN control error\n", __func__);
+	dev_dbg(dev, "%s: GAIN control error\n", __func__);
 	return err;
 }
 
 static int ov10823_set_frame_length(struct ov10823 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov10823_reg reg_list[5];
 	int err;
 	u16 frame_length;
 
 	frame_length = (u16)val;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: frame_length: %d\n", __func__, frame_length);
+	dev_dbg(dev, "%s: frame_length: %d\n", __func__, frame_length);
 
 	ov10823_get_frame_length_regs(reg_list, frame_length, priv->fsync);
 	ov10823_set_group_hold(priv);
@@ -658,21 +660,20 @@ static int ov10823_set_frame_length(struct ov10823 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: FRAME_LENGTH control error\n", __func__);
+	dev_dbg(dev, "%s: FRAME_LENGTH control error\n", __func__);
 	return err;
 }
 
 static int ov10823_set_coarse_time(struct ov10823 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov10823_reg reg_list[4];
 	int err;
 	u16 coarse_time;
 
 	coarse_time = (u16)val;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: coarse_time: %d\n", __func__, coarse_time);
+	dev_dbg(dev, "%s: coarse_time: %d\n", __func__, coarse_time);
 
 	ov10823_get_coarse_time_regs(reg_list, coarse_time);
 	ov10823_set_group_hold(priv);
@@ -683,8 +684,7 @@ static int ov10823_set_coarse_time(struct ov10823 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME control error\n", __func__);
+	dev_dbg(dev, "%s: COARSE_TIME control error\n", __func__);
 	return err;
 }
 
@@ -724,6 +724,7 @@ static int ov10823_read_otp(struct ov10823 *priv, u8 *buf,
 
 static int ov10823_otp_setup(struct ov10823 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	struct v4l2_ctrl *ctrl;
@@ -739,8 +740,7 @@ static int ov10823_otp_setup(struct ov10823 *priv)
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_OTP_DATA);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return -EINVAL;
 	}
 
@@ -758,6 +758,7 @@ static int ov10823_otp_setup(struct ov10823 *priv)
 
 static int ov10823_fuse_id_setup(struct ov10823 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	struct v4l2_ctrl *ctrl;
@@ -773,8 +774,7 @@ static int ov10823_fuse_id_setup(struct ov10823 *priv)
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_FUSE_ID);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return -EINVAL;
 	}
 
@@ -794,6 +794,7 @@ static int ov10823_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct ov10823 *priv =
 		container_of(ctrl->handler, struct ov10823, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -801,7 +802,7 @@ static int ov10823_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	default:
-			pr_err("%s: unknown ctrl id.\n", __func__);
+			dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 			return -EINVAL;
 	}
 
@@ -812,6 +813,7 @@ static int ov10823_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct ov10823 *priv =
 		container_of(ctrl->handler, struct ov10823, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -845,7 +847,7 @@ static int ov10823_s_ctrl(struct v4l2_ctrl *ctrl)
 	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
 	default:
-		pr_err("%s: unknown ctrl id.\n", __func__);
+		dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 		return -EINVAL;
 	}
 
@@ -957,6 +959,7 @@ static int ov10823_parse_dt(struct i2c_client *client, struct ov10823 *priv)
 
 static int ov10823_i2c_addr_assign(struct ov10823 *priv, u8 i2c_addr)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	struct i2c_msg msg;
 	unsigned char data[3];
 	int err;
@@ -992,16 +995,14 @@ static int ov10823_i2c_addr_assign(struct ov10823 *priv, u8 i2c_addr)
 	 */
 
 	if (i2c_addr == OV10823_DEFAULT_I2C_ADDRESS_20) {
-		dev_info(&priv->i2c_client->dev,
-			 "Using default I2C address 0x%02x\n", i2c_addr);
+		dev_info(dev, "Using default I2C address 0x%02x\n", i2c_addr);
 		if (gpio_is_valid(priv->cam_sid_gpio)) {
 			gpio_set_value(priv->cam_sid_gpio, 0);
 			msleep_range(1);
 		}
 		return 0;
 	} else if (i2c_addr == OV10823_DEFAULT_I2C_ADDRESS_6C) {
-		dev_info(&priv->i2c_client->dev,
-			 "Using default I2C address 0x%02x\n", i2c_addr);
+		dev_info(dev, "Using default I2C address 0x%02x\n", i2c_addr);
 		if (gpio_is_valid(priv->cam_sid_gpio)) {
 			gpio_set_value(priv->cam_sid_gpio, 1);
 			msleep_range(1);
@@ -1014,16 +1015,14 @@ static int ov10823_i2c_addr_assign(struct ov10823 *priv, u8 i2c_addr)
 	 * slave address.  We necessarily need to have a cam-sid-gpio for this.
 	 */
 	if (!gpio_is_valid(priv->cam_sid_gpio)) {
-		dev_err(&priv->i2c_client->dev,
-			"Missing cam-sid-gpio, cannot program I2C address\n");
+		dev_err(dev, "Missing cam-sid-gpio, cannot program I2C addr\n");
 		return -EINVAL;
 	}
 
 	gpio_set_value(priv->cam_sid_gpio, 1);
 	msleep_range(1);
 
-	dev_info(&priv->i2c_client->dev, "Changing I2C address to 0x%02x\n",
-		 i2c_addr);
+	dev_info(dev, "Changing I2C address to 0x%02x\n", i2c_addr);
 
 	/*
 	 * Have to make the I2C message manually because we are using a
@@ -1084,7 +1083,7 @@ static int ov10823_probe(struct i2c_client *client,
 	struct ov10823 *priv;
 	int err;
 
-	pr_info("[OV10823]: probing v4l2 sensor.\n");
+	dev_info(&client->dev, "probing v4l2 sensor.\n");
 
 	common_data = devm_kzalloc(&client->dev,
 			    sizeof(struct camera_common_data), GFP_KERNEL);

@@ -247,10 +247,11 @@ static int imx214_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
 {
 	int err;
 	struct imx214 *priv = (struct imx214 *)s_data->priv;
+	struct device *dev = &priv->i2c_client->dev;
 
 	err = regmap_write(priv->regmap, addr, val);
 	if (err)
-		pr_err("%s:i2c write failed, %x = %x\n",
+		dev_err(dev, "%s: i2c write failed, %x = %x\n",
 			__func__, addr, val);
 
 	return err;
@@ -268,16 +269,17 @@ static int imx214_write_table(struct imx214 *priv,
 
 static int imx214_power_on(struct camera_common_data *s_data)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 	struct imx214 *priv = (struct imx214 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power on\n", __func__);
+	dev_dbg(dev, "%s: power on\n", __func__);
 
 	if (priv->pdata && priv->pdata->power_on) {
 		err = priv->pdata->power_on(pw);
 		if (err)
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 		else
 			pw->state = SWITCH_ON;
 		return err;
@@ -322,7 +324,7 @@ imx214_avdd_fail:
 	if (pw->af_gpio)
 		gpio_set_value(pw->af_gpio, 0);
 
-	pr_err("%s failed.\n", __func__);
+	dev_err(dev, "%s failed.\n", __func__);
 	return -ENODEV;
 }
 
@@ -331,13 +333,14 @@ static int imx214_power_off(struct camera_common_data *s_data)
 	int err = 0;
 	struct imx214 *priv = (struct imx214 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power off\n", __func__);
+	dev_dbg(dev, "%s: power off\n", __func__);
 
 	if (priv->pdata && priv->pdata->power_on) {
 		err = priv->pdata->power_off(pw);
 		if (err) {
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 			return err;
 		} else {
 			goto power_off_done;
@@ -370,15 +373,15 @@ static int imx214_power_get(struct imx214 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
 	struct camera_common_pdata *pdata = priv->pdata;
+	struct device *dev = &priv->i2c_client->dev;
 	const char *mclk_name;
 	int err = 0;
 
 	mclk_name = priv->pdata->mclk_name ?
 		    priv->pdata->mclk_name : "cam_mclk1";
-	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
+	pw->mclk = devm_clk_get(dev, mclk_name);
 	if (IS_ERR(pw->mclk)) {
-		dev_err(&priv->i2c_client->dev,
-			"unable to get clock %s\n", mclk_name);
+		dev_err(dev, "unable to get clock %s\n", mclk_name);
 		return PTR_ERR(pw->mclk);
 	}
 
@@ -514,6 +517,7 @@ static struct camera_common_sensor_ops imx214_common_ops = {
 
 static int imx214_set_group_hold(struct imx214 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int gh_prev = switch_ctrl_qmenu[priv->group_hold_prev];
 
@@ -534,8 +538,7 @@ static int imx214_set_group_hold(struct imx214 *priv)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: Group hold control error\n", __func__);
+	dev_dbg(dev, "%s: Group hold control error\n", __func__);
 	return err;
 }
 
@@ -560,6 +563,7 @@ static int imx214_calculate_gain(u32 rep, int shift)
 
 static int imx214_set_gain(struct imx214 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	imx214_reg reg_list[2];
 	imx214_reg reg_list_short[2];
 	int err;
@@ -569,8 +573,7 @@ static int imx214_set_gain(struct imx214 *priv, s32 val)
 	/* translate value */
 	gain = (u16)imx214_calculate_gain(val, IMX214_GAIN_SHIFT);
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, gain);
+	dev_dbg(dev, "%s: val: %d\n", __func__, gain);
 
 	imx214_get_gain_regs(reg_list, gain);
 	imx214_get_gain_short_reg(reg_list_short, gain);
@@ -594,13 +597,13 @@ static int imx214_set_gain(struct imx214 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: GAIN control error\n", __func__);
+	dev_dbg(dev, "%s: GAIN control error\n", __func__);
 	return err;
 }
 
 static int imx214_set_frame_length(struct imx214 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	imx214_reg reg_list[2];
 	int err;
 	u16 frame_length;
@@ -608,8 +611,7 @@ static int imx214_set_frame_length(struct imx214 *priv, s32 val)
 
 	frame_length = (u16)val;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, frame_length);
+	dev_dbg(dev, "%s: val: %d\n", __func__, frame_length);
 
 	imx214_get_frame_length_regs(reg_list, frame_length);
 	imx214_set_group_hold(priv);
@@ -624,13 +626,13 @@ static int imx214_set_frame_length(struct imx214 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: FRAME_LENGTH control error\n", __func__);
+	dev_dbg(dev, "%s: FRAME_LENGTH control error\n", __func__);
 	return err;
 }
 
 static int imx214_set_coarse_time(struct imx214 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	imx214_reg reg_list[2];
 	int err;
 	u16 coarse_time;
@@ -638,8 +640,7 @@ static int imx214_set_coarse_time(struct imx214 *priv, s32 val)
 
 	coarse_time = (u16)val;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, coarse_time);
+	dev_dbg(dev, "%s: val: %d\n", __func__, coarse_time);
 
 	imx214_get_coarse_time_regs(reg_list, coarse_time);
 	imx214_set_group_hold(priv);
@@ -654,13 +655,13 @@ static int imx214_set_coarse_time(struct imx214 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME control error\n", __func__);
+	dev_dbg(dev, "%s: COARSE_TIME control error\n", __func__);
 	return err;
 }
 
 static int imx214_set_coarse_time_short(struct imx214 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	imx214_reg reg_list[2];
 	int err;
 	struct v4l2_control hdr_control;
@@ -673,8 +674,7 @@ static int imx214_set_coarse_time_short(struct imx214 *priv, s32 val)
 
 	err = camera_common_g_ctrl(priv->s_data, &hdr_control);
 	if (err < 0) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return err;
 	}
 
@@ -684,8 +684,7 @@ static int imx214_set_coarse_time_short(struct imx214 *priv, s32 val)
 
 	coarse_time_short = (u16)val;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, coarse_time_short);
+	dev_dbg(dev, "%s: val: %d\n", __func__, coarse_time_short);
 
 	imx214_get_coarse_time_short_regs(reg_list, coarse_time_short);
 	imx214_set_group_hold(priv);
@@ -700,8 +699,7 @@ static int imx214_set_coarse_time_short(struct imx214 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME_SHORT control error\n", __func__);
+	dev_dbg(dev, "%s: COARSE_TIME_SHORT control error\n", __func__);
 	return err;
 }
 
@@ -721,6 +719,7 @@ static int imx214_eeprom_device_release(struct imx214 *priv)
 
 static int imx214_eeprom_device_init(struct imx214 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	char *dev_name = "eeprom_imx214";
 	static struct regmap_config eeprom_regmap_config = {
 		.reg_bits = 8,
@@ -733,8 +732,7 @@ static int imx214_eeprom_device_init(struct imx214 *priv)
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler,
 			TEGRA_CAMERA_CID_EEPROM_DATA);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return -EINVAL;
 	}
 
@@ -783,6 +781,7 @@ static int imx214_read_eeprom(struct imx214 *priv,
 static int imx214_write_eeprom(struct imx214 *priv,
 				char *string)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	u8 curr[3];
@@ -795,8 +794,7 @@ static int imx214_write_eeprom(struct imx214 *priv,
 
 		err = kstrtol(curr, 16, &data);
 		if (err) {
-			dev_err(&priv->i2c_client->dev,
-				"invalid eeprom string\n");
+			dev_err(dev, "invalid eeprom string\n");
 			return -EINVAL;
 		}
 
@@ -813,6 +811,7 @@ static int imx214_write_eeprom(struct imx214 *priv,
 static int imx214_read_otp_page(struct imx214 *priv,
 				u8 *buf, int page, u16 addr, int size)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	u8 status;
 	int err;
 
@@ -826,8 +825,7 @@ static int imx214_read_otp_page(struct imx214 *priv,
 	if (err)
 		return err;
 	if (status == IMX214_OTP_STATUS_IN_PROGRESS) {
-		dev_err(&priv->i2c_client->dev,
-			"another OTP read in progress\n");
+		dev_err(dev, "another OTP read in progress\n");
 		return err;
 	}
 
@@ -839,7 +837,7 @@ static int imx214_read_otp_page(struct imx214 *priv,
 	if (err)
 		return err;
 	if (status == IMX214_OTP_STATUS_READ_FAIL) {
-		dev_err(&priv->i2c_client->dev, "fuse id read error\n");
+		dev_err(dev, "fuse id read error\n");
 		return err;
 	}
 
@@ -848,6 +846,7 @@ static int imx214_read_otp_page(struct imx214 *priv,
 
 static int imx214_otp_setup(struct imx214 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	struct v4l2_ctrl *ctrl;
@@ -867,8 +866,7 @@ static int imx214_otp_setup(struct imx214 *priv)
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_OTP_DATA);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return -EINVAL;
 	}
 
@@ -886,6 +884,7 @@ static int imx214_otp_setup(struct imx214 *priv)
 
 static int imx214_fuse_id_setup(struct imx214 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	struct v4l2_ctrl *ctrl;
@@ -903,8 +902,7 @@ static int imx214_fuse_id_setup(struct imx214 *priv)
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_FUSE_ID);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return -EINVAL;
 	}
 
@@ -924,6 +922,7 @@ static int imx214_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct imx214 *priv =
 		container_of(ctrl->handler, struct imx214, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -936,7 +935,7 @@ static int imx214_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 			return err;
 		break;
 	default:
-			pr_err("%s: unknown ctrl id.\n", __func__);
+			dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 			return -EINVAL;
 	}
 
@@ -947,6 +946,7 @@ static int imx214_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct imx214 *priv =
 		container_of(ctrl->handler, struct imx214, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -983,7 +983,7 @@ static int imx214_s_ctrl(struct v4l2_ctrl *ctrl)
 	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
 	default:
-		pr_err("%s: unknown ctrl id.\n", __func__);
+		dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 		return -EINVAL;
 	}
 
@@ -993,12 +993,13 @@ static int imx214_s_ctrl(struct v4l2_ctrl *ctrl)
 static int imx214_ctrls_init(struct imx214 *priv)
 {
 	struct i2c_client *client = priv->i2c_client;
+	struct device *dev = &client->dev;
 	struct v4l2_ctrl *ctrl;
 	int numctrls;
 	int err;
 	int i;
 
-	dev_dbg(&client->dev, "%s++\n", __func__);
+	dev_dbg(dev, "%s++\n", __func__);
 
 	numctrls = ARRAY_SIZE(ctrl_config_list);
 	v4l2_ctrl_handler_init(&priv->ctrl_handler, numctrls);
@@ -1007,7 +1008,7 @@ static int imx214_ctrls_init(struct imx214 *priv)
 		ctrl = v4l2_ctrl_new_custom(&priv->ctrl_handler,
 			&ctrl_config_list[i], NULL);
 		if (ctrl == NULL) {
-			dev_err(&client->dev, "Failed to init %s ctrl\n",
+			dev_err(dev, "Failed to init %s ctrl\n",
 				ctrl_config_list[i].name);
 			continue;
 		}
@@ -1017,8 +1018,7 @@ static int imx214_ctrls_init(struct imx214 *priv)
 			ctrl->string = devm_kzalloc(&client->dev,
 				ctrl_config_list[i].max + 1, GFP_KERNEL);
 			if (!ctrl->string) {
-				dev_err(&client->dev,
-					"Failed to allocate otp data\n");
+				dev_err(dev, "Failed to allocate otp data\n");
 				return -ENOMEM;
 			}
 		}
@@ -1028,7 +1028,7 @@ static int imx214_ctrls_init(struct imx214 *priv)
 	priv->numctrls = numctrls;
 	priv->subdev->ctrl_handler = &priv->ctrl_handler;
 	if (priv->ctrl_handler.error) {
-		dev_err(&client->dev, "Error %d adding controls\n",
+		dev_err(dev, "Error %d adding controls\n",
 			priv->ctrl_handler.error);
 		err = priv->ctrl_handler.error;
 		goto error;
@@ -1036,22 +1036,19 @@ static int imx214_ctrls_init(struct imx214 *priv)
 
 	err = v4l2_ctrl_handler_setup(&priv->ctrl_handler);
 	if (err) {
-		dev_err(&client->dev,
-			"Error %d setting default controls\n", err);
+		dev_err(dev, "Error %d setting default controls\n", err);
 		goto error;
 	}
 
 	err = imx214_otp_setup(priv);
 	if (err) {
-		dev_err(&client->dev,
-			"Error %d reading otp data\n", err);
+		dev_err(dev, "Error %d reading otp data\n", err);
 		goto error;
 	}
 
 	err = imx214_fuse_id_setup(priv);
 	if (err) {
-		dev_err(&client->dev,
-			"Error %d reading fuse id data\n", err);
+		dev_err(dev, "Error %d reading fuse id data\n", err);
 		goto error;
 	}
 
@@ -1120,40 +1117,37 @@ static int imx214_probe(struct i2c_client *client,
 {
 	struct camera_common_data *common_data;
 	struct device_node *node = client->dev.of_node;
+	struct device *dev = &client->dev;
 	struct imx214 *priv;
 	int err;
 
-	pr_info("[IMX214]: probing v4l2 sensor.\n");
+	dev_info(dev, "probing v4l2 sensor.\n");
 
 	if (!IS_ENABLED(CONFIG_OF) || !node)
 		return -EINVAL;
 
-	common_data = devm_kzalloc(&client->dev,
-			    sizeof(struct camera_common_data), GFP_KERNEL);
-	if (!common_data) {
-		dev_err(&client->dev, "unable to allocate memory!\n");
+	common_data = devm_kzalloc(dev, sizeof(*common_data), GFP_KERNEL);
+	if (!common_data)
 		return -ENOMEM;
-	}
 
 	priv = devm_kzalloc(&client->dev,
 			    sizeof(struct imx214) + sizeof(struct v4l2_ctrl *) *
 			    ARRAY_SIZE(ctrl_config_list),
 			    GFP_KERNEL);
 	if (!priv) {
-		dev_err(&client->dev, "unable to allocate memory!\n");
+		dev_err(dev, "unable to allocate memory!\n");
 		return -ENOMEM;
 	}
 
 	priv->regmap = devm_regmap_init_i2c(client, &sensor_regmap_config);
 	if (IS_ERR(priv->regmap)) {
-		dev_err(&client->dev,
-			"regmap init failed: %ld\n", PTR_ERR(priv->regmap));
+		dev_err(dev, "regmap init failed %ld\n", PTR_ERR(priv->regmap));
 		return -ENODEV;
 	}
 
 	priv->pdata = imx214_parse_dt(client);
 	if (!priv->pdata) {
-		dev_err(&client->dev, "unable to get platform data\n");
+		dev_err(dev, "unable to get platform data\n");
 		return -EFAULT;
 	}
 
@@ -1187,7 +1181,7 @@ static int imx214_probe(struct i2c_client *client,
 
 	err = camera_common_initialize(common_data, "imx214");
 	if (err) {
-		dev_err(&client->dev, "Failed to initialize imx214.\n");
+		dev_err(dev, "Failed to initialize imx214.\n");
 		return err;
 	}
 
@@ -1200,8 +1194,7 @@ static int imx214_probe(struct i2c_client *client,
 	/* eeprom interface */
 	err = imx214_eeprom_device_init(priv);
 	if (err)
-		dev_err(&client->dev,
-			"Failed to allocate eeprom register map: %d\n", err);
+		dev_err(dev, "Failed to alloc eeprom register map: %d\n", err);
 
 	priv->subdev->internal_ops = &imx214_subdev_internal_ops;
 	priv->subdev->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |

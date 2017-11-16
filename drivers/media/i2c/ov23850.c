@@ -288,10 +288,11 @@ static int ov23850_write_reg(struct camera_common_data *s_data,
 {
 	int err;
 	struct ov23850 *priv = (struct ov23850 *)s_data->priv;
+	struct device *dev = &priv->i2c_client->dev;
 
 	err = regmap_write(priv->regmap, addr, val);
 	if (err)
-		pr_err("%s:i2c write failed, %x = %x\n",
+		dev_err(dev, "%s: i2c write failed, %x = %x\n",
 			__func__, addr, val);
 
 	return err;
@@ -312,13 +313,14 @@ static int ov23850_power_on(struct camera_common_data *s_data)
 	int err = 0;
 	struct ov23850 *priv = (struct ov23850 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power on\n", __func__);
+	dev_dbg(dev, "%s: power on\n", __func__);
 
 	if (priv->pdata->power_on) {
 		err = priv->pdata->power_on(pw);
 		if (err)
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 		else
 			pw->state = SWITCH_ON;
 		return err;
@@ -370,7 +372,7 @@ ov23850_dvdd_fail:
 	regulator_disable(pw->avdd);
 
 ov23850_avdd_fail:
-	pr_err("%s failed.\n", __func__);
+	dev_err(dev, "%s failed.\n", __func__);
 	return -ENODEV;
 }
 
@@ -379,15 +381,16 @@ static int ov23850_power_off(struct camera_common_data *s_data)
 	int err = 0;
 	struct ov23850 *priv = (struct ov23850 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power off\n", __func__);
+	dev_dbg(dev, "%s: power off\n", __func__);
 
 	if (priv->pdata->power_off) {
 		err = priv->pdata->power_off(pw);
 		if (!err)
 			goto power_off_done;
 		else
-			pr_err("%s failed.\n", __func__);
+			dev_err(dev, "%s failed.\n", __func__);
 		return err;
 	}
 
@@ -416,33 +419,33 @@ static int ov23850_power_get(struct ov23850 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
 	struct camera_common_pdata *pdata = priv->pdata;
+	struct device *dev = &priv->i2c_client->dev;
 	const char *mclk_name;
 	struct clk *parent;
 	int err = 0;
 
 	mclk_name = priv->pdata->mclk_name ?
 		    priv->pdata->mclk_name : "cam_mclk1";
-	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
+	pw->mclk = devm_clk_get(dev, mclk_name);
 	if (IS_ERR(pw->mclk)) {
-		dev_err(&priv->i2c_client->dev,
-			"unable to get clock %s\n", mclk_name);
+		dev_err(dev, "unable to get clock %s\n", mclk_name);
 		return PTR_ERR(pw->mclk);
 	}
 
-	parent = devm_clk_get(&priv->i2c_client->dev, "pllp_grtba");
+	parent = devm_clk_get(dev, "pllp_grtba");
 	if (IS_ERR(parent))
-		dev_err(&priv->i2c_client->dev, "devm_clk_get failed for pllp_grtba");
+		dev_err(dev, "devm_clk_get failed for pllp_grtba");
 	else
 		clk_set_parent(pw->mclk, parent);
 
 	/* ananlog 2.7v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->avdd, pdata->regulators.avdd);
 	/* digital 1.2v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->dvdd, pdata->regulators.dvdd);
 	/* IO 1.8v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->iovdd, pdata->regulators.iovdd);
 
 	if (!err) {
@@ -609,6 +612,7 @@ static struct camera_common_sensor_ops ov23850_common_ops = {
 
 static int ov23850_set_group_hold(struct ov23850 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int gh_prev = switch_ctrl_qmenu[priv->group_hold_prev];
 
@@ -631,13 +635,13 @@ static int ov23850_set_group_hold(struct ov23850 *priv)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: Group hold control error\n", __func__);
+	dev_dbg(dev, "%s: Group hold control error\n", __func__);
 	return err;
 }
 
 static int ov23850_set_gain(struct ov23850 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov23850_reg reg_list[2];
 	ov23850_reg reg_list_short[2];
 	int err;
@@ -647,8 +651,7 @@ static int ov23850_set_gain(struct ov23850 *priv, s32 val)
 	/* translate value */
 	gain = ov23850_to_gain((u32)val, OV23850_GAIN_SHIFT);
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, gain);
+	dev_dbg(dev, "%s: val: %d\n", __func__, gain);
 
 	ov23850_get_gain_reg(reg_list, gain);
 	ov23850_get_gain_short_reg(reg_list_short, gain);
@@ -672,13 +675,13 @@ static int ov23850_set_gain(struct ov23850 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: GAIN control error\n", __func__);
+	dev_dbg(dev, "%s: GAIN control error\n", __func__);
 	return err;
 }
 
 static int ov23850_set_frame_length(struct ov23850 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov23850_reg reg_list[2];
 	int err;
 	u32 frame_length;
@@ -686,8 +689,7 @@ static int ov23850_set_frame_length(struct ov23850 *priv, s32 val)
 
 	frame_length = val;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, frame_length);
+	dev_dbg(dev, "%s: val: %d\n", __func__, frame_length);
 
 	ov23850_get_frame_length_regs(reg_list, frame_length);
 	ov23850_set_group_hold(priv);
@@ -704,13 +706,13 @@ static int ov23850_set_frame_length(struct ov23850 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: FRAME_LENGTH control error\n", __func__);
+	dev_dbg(dev, "%s: FRAME_LENGTH control error\n", __func__);
 	return err;
 }
 
 static int ov23850_set_coarse_time(struct ov23850 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov23850_reg reg_list[2];
 	int err;
 	u32 coarse_time;
@@ -718,8 +720,7 @@ static int ov23850_set_coarse_time(struct ov23850 *priv, s32 val)
 
 	coarse_time = val;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, coarse_time);
+	dev_dbg(dev, "%s: val: %d\n", __func__, coarse_time);
 
 	ov23850_get_coarse_time_regs(reg_list, coarse_time);
 	ov23850_set_group_hold(priv);
@@ -734,13 +735,13 @@ static int ov23850_set_coarse_time(struct ov23850 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME control error\n", __func__);
+	dev_dbg(dev, "%s: COARSE_TIME control error\n", __func__);
 	return err;
 }
 
 static int ov23850_set_coarse_time_short(struct ov23850 *priv, s32 val)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	ov23850_reg reg_list[2];
 	int err;
 	struct v4l2_control hdr_control;
@@ -753,8 +754,7 @@ static int ov23850_set_coarse_time_short(struct ov23850 *priv, s32 val)
 
 	err = camera_common_g_ctrl(priv->s_data, &hdr_control);
 	if (err < 0) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return err;
 	}
 
@@ -764,8 +764,7 @@ static int ov23850_set_coarse_time_short(struct ov23850 *priv, s32 val)
 
 	coarse_time_short = val;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, coarse_time_short);
+	dev_dbg(dev, "%s: val: %d\n", __func__, coarse_time_short);
 
 	ov23850_get_coarse_time_short_regs(reg_list, coarse_time_short);
 	ov23850_set_group_hold(priv);
@@ -780,8 +779,7 @@ static int ov23850_set_coarse_time_short(struct ov23850 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME_SHORT control error\n", __func__);
+	dev_dbg(dev, "%s: COARSE_TIME_SHORT control error\n", __func__);
 	return err;
 }
 
@@ -854,6 +852,7 @@ static int ov23850_read_eeprom(struct ov23850 *priv,
 static int ov23850_write_eeprom(struct ov23850 *priv,
 				char *string)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	u8 curr[3];
@@ -866,8 +865,7 @@ static int ov23850_write_eeprom(struct ov23850 *priv,
 
 		err = kstrtol(curr, 16, &data);
 		if (err) {
-			dev_err(&priv->i2c_client->dev,
-				"invalid eeprom string\n");
+			dev_err(dev, "invalid eeprom string\n");
 			return -EINVAL;
 		}
 
@@ -885,6 +883,7 @@ static int ov23850_write_eeprom(struct ov23850 *priv,
 static int ov23850_read_otp_manual(struct ov23850 *priv,
 				u8 *buf, u16 addr_start, u16 addr_end)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	u8 status;
 	int i;
 	int err;
@@ -947,11 +946,10 @@ static int ov23850_read_otp_manual(struct ov23850 *priv,
 			return err;
 
 		if (status & OV23850_OTP_RD_BUSY_MASK) {
-			dev_err(&priv->i2c_client->dev,
-				"another OTP read in progress\n");
+			dev_err(dev, "another OTP read in progress\n");
 			return err;
 		} else if (status & OV23850_OTP_BIST_ERROR_MASK) {
-			dev_err(&priv->i2c_client->dev, "fuse id read error\n");
+			dev_err(dev, "fuse id read error\n");
 			return err;
 		}
 	}
@@ -974,6 +972,7 @@ static int ov23850_read_otp_manual(struct ov23850 *priv,
 
 static int ov23850_otp_setup(struct ov23850 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	struct v4l2_ctrl *ctrl;
@@ -992,8 +991,7 @@ static int ov23850_otp_setup(struct ov23850 *priv)
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_OTP_DATA);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return -EINVAL;
 	}
 
@@ -1011,6 +1009,7 @@ static int ov23850_otp_setup(struct ov23850 *priv)
 
 static int ov23850_fuse_id_setup(struct ov23850 *priv)
 {
+	struct device *dev = &priv->i2c_client->dev;
 	int err;
 	int i;
 	struct v4l2_ctrl *ctrl;
@@ -1029,8 +1028,7 @@ static int ov23850_fuse_id_setup(struct ov23850 *priv)
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_FUSE_ID);
 	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+		dev_err(dev, "could not find device ctrl.\n");
 		return -EINVAL;
 	}
 
@@ -1050,6 +1048,7 @@ static int ov23850_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct ov23850 *priv =
 		container_of(ctrl->handler, struct ov23850, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -1064,7 +1063,7 @@ static int ov23850_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 #endif
 		break;
 	default:
-			pr_err("%s: unknown ctrl id.\n", __func__);
+			dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 			return -EINVAL;
 	}
 
@@ -1075,6 +1074,7 @@ static int ov23850_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct ov23850 *priv =
 		container_of(ctrl->handler, struct ov23850, ctrl_handler);
+	struct device *dev = &priv->i2c_client->dev;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -1113,7 +1113,7 @@ static int ov23850_s_ctrl(struct v4l2_ctrl *ctrl)
 	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
 	default:
-		pr_err("%s: unknown ctrl id.\n", __func__);
+		dev_err(dev, "%s: unknown ctrl id.\n", __func__);
 		return -EINVAL;
 	}
 
@@ -1282,8 +1282,7 @@ static int ov23850_probe(struct i2c_client *client,
 	struct ov23850 *priv;
 	int err;
 
-	pr_info("[OV23850]: probing v4l2 sensor at addr 0x%0x.\n",
-		client->addr);
+	dev_info(&client->dev, "probing v4l2 sensor\n");
 
 	common_data = devm_kzalloc(&client->dev,
 			    sizeof(struct camera_common_data), GFP_KERNEL);

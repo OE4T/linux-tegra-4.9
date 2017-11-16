@@ -188,6 +188,11 @@ struct tegra_dc_platform_data
 	*of_dc_parse_platform_data(struct platform_device *ndev);
 
 struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np);
+void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
+				struct tegra_panel_ops *p_ops);
+void tegra_panel_unregister_ops(struct tegra_dc_out *dc_out);
+void tegra_dc_out_destroy(struct tegra_dc *dc);
+
 int tegra_panel_get_panel_id(const char *comp_str, struct device_node *dnode,
 				int *panel_id);
 int tegra_panel_regulator_get_dt(struct device *dev,

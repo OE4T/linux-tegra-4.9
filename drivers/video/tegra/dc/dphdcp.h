@@ -77,6 +77,7 @@ void tegra_dphdcp_set_plug(struct tegra_dphdcp *dphdcp, bool hpd);
 struct tegra_dphdcp *tegra_dphdcp_create(struct tegra_dc_dp_data *dp,
 						int id, int bus);
 void tegra_dphdcp_debugfs_init(struct tegra_dphdcp *dphdcp);
+void tegra_dphdcp_destroy(struct tegra_dphdcp *dphdcp);
 #else
 static inline void tegra_dphdcp_set_plug(struct tegra_dphdcp *dphdcp, bool hpd)
 {
@@ -92,5 +93,8 @@ static inline struct tegra_dphdcp *tegra_dphdcp_create(
 		struct tegra_dc_dp_data *dp, int id, int bus)
 {
 	return NULL;
+}
+static inline void tegra_dphdcp_destroy(struct tegra_dphdcp *dphdcp)
+{
 }
 #endif

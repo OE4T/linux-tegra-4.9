@@ -2187,12 +2187,13 @@ static const struct file_operations nvhdcp_fops = {
 #endif
 };
 
+static struct tegra_nvhdcp **nvhdcp_head;
+
 /* we only support one AP right now, so should only call this once. */
 struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 			int id, int bus)
 {
 	struct tegra_nvhdcp *nvhdcp;
-	static struct tegra_nvhdcp **nvhdcp_head;
 	struct i2c_adapter *adapter;
 	int e;
 	int num_heads;
@@ -2284,7 +2285,8 @@ void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp)
 	tegra_nvhdcp_off(nvhdcp);
 	destroy_workqueue(nvhdcp->downstream_wq);
 	destroy_workqueue(nvhdcp->fallback_wq);
-	i2c_release_client(nvhdcp->client);
+	i2c_unregister_device(nvhdcp->client);
+	nvhdcp_head[nvhdcp->id] = NULL;
 	kfree(nvhdcp);
 }
 

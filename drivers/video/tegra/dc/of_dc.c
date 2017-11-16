@@ -255,7 +255,7 @@ fail:
 	return err;
 }
 
-static void tegra_panel_unregister_ops(struct tegra_dc_out *dc_out)
+void tegra_panel_unregister_ops(struct tegra_dc_out *dc_out)
 {
 	dc_out->enable		= NULL;
 	dc_out->postpoweron	= NULL;
@@ -266,7 +266,7 @@ static void tegra_panel_unregister_ops(struct tegra_dc_out *dc_out)
 	dc_out->hotplug_report	= NULL;
 }
 
-static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
+void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 				struct tegra_panel_ops *p_ops)
 {
 	dc_out->enable		= p_ops->enable;

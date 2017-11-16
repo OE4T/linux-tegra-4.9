@@ -951,6 +951,17 @@ static void tegra_dp_dpaux_enable(struct tegra_dc_dp_data *dp)
 	}
 }
 
+static void tegra_dp_dpaux_disable(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
+
+	tegra_dpaux_pad_power(dpaux, false);
+	tegra_dpaux_put(dpaux);
+
+	if (dp->sor->safe_clk)
+		tegra_sor_safe_clk_disable(dp->sor);
+}
+
 static int tegra_dp_panel_power_state(struct tegra_dc_dp_data *dp, u8 state)
 {
 	u32 retry = 0;
@@ -2442,40 +2453,52 @@ void tegra_dc_dp_enable_link(struct tegra_dc_dp_data *dp)
 
 static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 {
-	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+	struct tegra_dc_dp_data *dp = NULL;
+
+	dp = tegra_dc_get_outdata(dc);
+
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		tegra_dp_disable_irq(dp->irq);
+		tegra_dp_default_int(dp, false);
+	}
+
+	if (dp->pdata->hdmi2fpd_bridge_enable)
+		hdmi2fpd_destroy(dc);
 
 #ifdef CONFIG_TEGRA_HDA_DC
 	if (tegra_dc_is_ext_dp_panel(dc) && dp->sor->audio_support)
 		tegra_hda_destroy(dp->hda_handle);
 #endif
 
-	tegra_dc_dp_debugfs_remove(dp);
+	tegra_dphdcp_destroy(dp->dphdcp);
 
-	if (dp->pdata->hdmi2fpd_bridge_enable)
-		hdmi2fpd_destroy(dc);
+	tegra_dp_dpaux_disable(dp);
+	if (dp->dpaux)
+		tegra_dpaux_destroy_data(dp->dpaux);
 
 	if (dp->sor)
 		tegra_dc_sor_destroy(dp->sor);
 
-	if (dp->dpaux)
-		tegra_dpaux_destroy_data(dp->dpaux);
-
 	tegra_hpd_shutdown(&dp->hpd_data);
 
-	if (tegra_dc_is_t21x())
-		clk_put(dp->parent_clk);
+	clk_put(dp->parent_clk);
 
 	dp->prod_list = NULL;
 
+	tegra_dc_out_destroy(dc);
+
+	tegra_dc_dp_debugfs_remove(dp);
+
 #ifdef CONFIG_SWITCH
 	if (tegra_dc_is_ext_dp_panel(dc) &&
-		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+			dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		switch_dev_unregister(&dp->audio_switch);
 	}
 #endif
 
-	kfree(dp->hpd_switch_name);
-	kfree(dp->audio_switch_name);
+	devm_kfree(&dc->ndev->dev, dp->hpd_switch_name);
+	devm_kfree(&dc->ndev->dev, dp->audio_switch_name);
+	free_irq(dp->irq, dp);
 	devm_kfree(&dc->ndev->dev, dp);
 }
 
@@ -2661,17 +2684,13 @@ static void tegra_dc_dp_suspend(struct tegra_dc *dc)
 
 	tegra_dp_lt_invalidate(&dp->lt_data);
 
-	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
+	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		tegra_dp_disable_irq(dp->irq);
-
-	if (dp->sor->safe_clk)
-		tegra_sor_safe_clk_disable(dp->sor);
+		tegra_dp_default_int(dp, false);
+	}
 
 	tegra_dp_hpd_suspend(dp);
-
-	/* do not process hpd in suspend. Disable dpaux clocks. */
-	tegra_dpaux_pad_power(dp->dpaux, false);
-	tegra_dpaux_put(dp->dpaux);
+	tegra_dp_dpaux_disable(dp);
 }
 
 static void tegra_dc_dp_resume(struct tegra_dc *dc)

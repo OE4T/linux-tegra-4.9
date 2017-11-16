@@ -141,6 +141,7 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 static void *ta_ctx;
 static bool repeater_flag;
 static bool vprime_check_done;
+static struct tegra_dphdcp **dphdcp_head;
 
 static int tegra_dphdcp_read(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 *data_ptr, u32 size, u32 *aux_status)
@@ -2201,7 +2202,6 @@ struct tegra_dphdcp *tegra_dphdcp_create(struct tegra_dc_dp_data *dp,
 			int id, int bus)
 {
 	struct tegra_dphdcp *dphdcp;
-	static struct tegra_dphdcp **dphdcp_head;
 	int e;
 	int num_heads;
 
@@ -2263,6 +2263,15 @@ struct tegra_dphdcp *tegra_dphdcp_create(struct tegra_dc_dp_data *dp,
 free_workqueue:
 	destroy_workqueue(dphdcp->downstream_wq);
 	return ERR_PTR(e);
+}
+
+void tegra_dphdcp_destroy(struct tegra_dphdcp *dphdcp)
+{
+	misc_deregister(&dphdcp->miscdev);
+	tegra_dphdcp_off(dphdcp);
+	destroy_workqueue(dphdcp->downstream_wq);
+	dphdcp_head[dphdcp->id] = NULL;
+	kfree(dphdcp);
 }
 
 #ifdef CONFIG_TEGRA_DEBUG_DP_HDCP

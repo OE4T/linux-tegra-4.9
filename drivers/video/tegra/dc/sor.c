@@ -580,8 +580,6 @@ static const struct file_operations crc_fops = {
 	.release	= single_release,
 };
 
-static struct dentry *sordir;
-
 static void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,
 	const char *res_name)
 {
@@ -589,29 +587,40 @@ static void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,
 	char sor_path[16];
 
 	BUG_ON(!res_name);
+
 	snprintf(sor_path, sizeof(sor_path), "tegra_%s", res_name ? : "sor");
-	sordir = debugfs_create_dir(sor_path, NULL);
-	if (!sordir)
+	sor->debugdir = debugfs_create_dir(sor_path, NULL);
+	if (!sor->debugdir)
 		return;
-	retval = debugfs_create_file("regs", S_IRUGO, sordir, sor, &dbg_fops);
+
+	retval = debugfs_create_file("regs", S_IRUGO, sor->debugdir, sor,
+		&dbg_fops);
 	if (!retval)
 		goto free_out;
 
-	retval = debugfs_create_file("crc", S_IWUGO|S_IRUGO, sordir,
+	retval = debugfs_create_file("crc", S_IWUGO|S_IRUGO, sor->debugdir,
 		sor, &crc_fops);
 	if (!retval)
 		goto free_out;
 
 	return;
 free_out:
-	debugfs_remove_recursive(sordir);
-	sordir = NULL;
+	debugfs_remove_recursive(sor->debugdir);
+	sor->debugdir = NULL;
 	return;
 }
 EXPORT_SYMBOL(tegra_dc_sor_debug_create);
+
+static void tegra_dc_sor_debug_destroy(struct tegra_dc_sor_data *sor)
+{
+	debugfs_remove_recursive(sor->debugdir);
+	sor->debugdir = NULL;
+}
 #else
 static inline void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,
 	const char *res_name)
+{ }
+static inline void tegra_dc_sor_debug_destroy(struct tegra_dc_sor_data *sor)
 { }
 #endif
 
@@ -877,6 +886,9 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	clk_put(sor->pad_clk);
 	clk_put(sor->safe_clk);
 	clk_put(sor->sor_clk);
+
+	tegra_dc_sor_debug_destroy(sor);
+
 	iounmap(sor->base);
 	devm_kfree(dev, sor);
 }

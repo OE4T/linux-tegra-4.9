@@ -3751,6 +3751,30 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	return err;
 }
 
+void tegra_dc_out_destroy(struct tegra_dc *dc)
+{
+	if (dc->out->hdmi_out) {
+		if (dc->out->hdmi_out->spd_infoframe)
+			devm_kfree(&dc->ndev->dev,
+				dc->out->hdmi_out->spd_infoframe);
+		devm_kfree(&dc->ndev->dev, dc->out->hdmi_out);
+	}
+
+	if (dc->out->dp_out)
+		devm_kfree(&dc->ndev->dev, dc->out->dp_out);
+
+	if (dc->out->modes)
+		devm_kfree(&dc->ndev->dev, dc->out->modes);
+	if (dc->out->vrr)
+		devm_kfree(&dc->ndev->dev, dc->out->vrr);
+	if (dc->out->out_pins)
+		devm_kfree(&dc->ndev->dev, dc->out->out_pins);
+	if (dc->out->sd_settings)
+		devm_kfree(&dc->ndev->dev, dc->out->sd_settings);
+
+	tegra_panel_unregister_ops(dc->out);
+}
+
 int tegra_dc_get_head(const struct tegra_dc *dc)
 {
 	if (dc)

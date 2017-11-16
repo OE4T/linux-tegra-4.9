@@ -1501,6 +1501,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	hdmi->dc = dc;
 	hdmi->edid_src = EDID_SRC_PANEL;
+	hdmi->plug_state = TEGRA_HDMI_MONITOR_DISABLE;
 
 	if (of_property_read_bool(panel_np, "nvidia,edid"))
 		hdmi->edid_src = EDID_SRC_DT;
@@ -1722,37 +1723,54 @@ fail_sor_np:
 
 static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 {
-	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+	struct tegra_hdmi *hdmi = NULL;
+
+	hdmi = tegra_dc_get_outdata(dc);
+
+	if (hdmi->pdata->hdmi2fpd_bridge_enable)
+		hdmi2fpd_destroy(dc);
+
+	if (hdmi->out_ops && hdmi->out_ops->destroy)
+		hdmi->out_ops->destroy(hdmi);
 
 #ifdef CONFIG_TEGRA_HDA_DC
 	tegra_hda_destroy(hdmi->hda_handle);
 #endif
 
-	tegra_hdmi_debugfs_remove(hdmi);
-	if (hdmi->pdata->hdmi2fpd_bridge_enable)
-		hdmi2fpd_destroy(dc);
-	if (NULL != hdmi->out_ops && NULL != hdmi->out_ops->destroy)
-		hdmi->out_ops->destroy(hdmi);
-	tegra_dc_sor_destroy(hdmi->sor);
-
-	if (hdmi->dpaux)
-		tegra_dpaux_destroy_data(hdmi->dpaux);
-
-	tegra_edid_destroy(hdmi->edid);
 #ifdef CONFIG_HDCP
 	tegra_nvhdcp_destroy(hdmi->nvhdcp);
 #endif
-	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
-	gpio_free(dc->out->hotplug_gpio);
+
+	if (hdmi->dpaux)
+		tegra_dpaux_destroy_data(hdmi->dpaux);
+	if (hdmi->ddc_i2c_client)
+		i2c_unregister_device(hdmi->ddc_i2c_client);
+	if (hdmi->scdc_i2c_client)
+		i2c_unregister_device(hdmi->scdc_i2c_client);
+	if (hdmi->ddcci_i2c_client)
+		i2c_unregister_device(hdmi->ddcci_i2c_client);
+
+	tegra_dc_sor_destroy(hdmi->sor);
+
+	tegra_edid_destroy(hdmi->edid);
+
 	kfree(hdmi->tmds_range);
 	hdmi->tmds_range = NULL;
 	hdmi->prod_list = NULL;
+
+	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
+	gpio_free(dc->out->hotplug_gpio);
+
+	tegra_dc_out_destroy(dc);
+
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->hpd_switch);
 	switch_dev_unregister(&hdmi->audio_switch);
 #endif
+
 	devm_kfree(&dc->ndev->dev, hdmi->hpd_switch_name);
 	devm_kfree(&dc->ndev->dev, hdmi->audio_switch_name);
+	tegra_hdmi_debugfs_remove(hdmi);
 	devm_kfree(&dc->ndev->dev, hdmi);
 }
 
@@ -2563,6 +2581,7 @@ static void _tegra_hdmi_clock_disable(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	tegra_sor_clk_disable(sor);
+	tegra_disp_clk_disable_unprepare(sor->safe_clk);
 }
 
 void tegra_hdmi_get(struct tegra_dc *dc)

@@ -54,6 +54,7 @@
 #endif
 
 static int nvhost_flcn_init_sw(struct platform_device *dev);
+static int nvhost_flcn_deinit_sw(struct platform_device *dev);
 
 #define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define FLCN_IDLE_CHECK_PERIOD		10	/* 10 usec */
@@ -280,6 +281,24 @@ int flcn_setup_ucode_image(struct platform_device *dev,
 	v->os.data_size   = ucode.os_header->os_data_size;
 	v->os.code_size = ucode.os_header->os_code_size;
 	v->os.bin_magic = ucode.bin_header->bin_magic;
+
+	return 0;
+}
+
+int flcn_reload_fw(struct platform_device *pdev)
+{
+	int err;
+	struct device *device = &pdev->dev;
+
+	err = nvhost_module_do_idle(device);
+	if (err)
+		return err;
+
+	nvhost_flcn_deinit_sw(pdev);
+
+	err = nvhost_module_do_unidle(device);
+	if (err)
+		return err;
 
 	return 0;
 }
@@ -702,13 +721,7 @@ static ssize_t reload_fw_write(struct device *device,
 	if (!val)
 		return -EINVAL;
 
-	err = nvhost_module_do_idle(device);
-	if (err)
-		return err;
-
-	nvhost_flcn_deinit_sw(pdev);
-
-	err = nvhost_module_do_unidle(device);
+	err = flcn_reload_fw(pdev);
 	if (err)
 		return err;
 

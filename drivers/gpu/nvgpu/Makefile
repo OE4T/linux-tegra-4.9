@@ -14,14 +14,6 @@ ifeq ($(VERSION),4)
 ccflags-y += -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
 endif
 
-ifeq ($(CONFIG_TEGRA_19x_GPU),y)
-ccflags-y += -I$(srctree.nvgpu-t19x)/drivers/gpu/nvgpu
-ccflags-y += -I$(srctree.nvgpu-t19x)/drivers/gpu/nvgpu/include
-ccflags-y += -I$(srctree.nvgpu-t19x)/include
-ccflags-y += -I$(srctree.nvgpu-t19x)/include/uapi
-ccflags-y += -I$(srctree.t19x)/include
-endif
-
 obj-$(CONFIG_GK20A) := nvgpu.o
 
 nvgpu-y := \

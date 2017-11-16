@@ -638,10 +638,11 @@ static int imx318_set_frame_length(struct imx318 *priv, s32 val)
 	for (i = 0; i < 2; i++) {
 		err = imx318_write_reg(priv->s_data, reg_list[i].addr,
 				reg_list[i].val);
-		if (err)
+		if (err) {
 			dev_dbg(&priv->i2c_client->dev,
 				"%s: FRAME_LENGTH control error\n", __func__);
 			return err;
+		}
 	}
 
 	priv->frame_length = frame_length;

@@ -780,6 +780,14 @@ static void *__iommu_alloc_attrs(struct device *dev, size_t size,
 	size_t iosize = size;
 	void *addr;
 
+	/* Following is a work-around (a.k.a. hack) to prevent pages
+	 * with __GFP_COMP being passed to split_page() which cannot
+	 * handle them.  The real problem is that this flag probably
+	 * should be 0 on ARM as it is not supported on this
+	 * platform--see CONFIG_HUGETLB_PAGE.
+	 */
+	gfp &= ~(__GFP_COMP);
+
 	if (WARN(!dev, "cannot create IOMMU mapping for unknown device\n"))
 		return NULL;
 
@@ -945,6 +953,10 @@ static dma_addr_t __iommu_map_page(struct device *dev, struct page *page,
 	return dev_addr;
 }
 
+static dma_addr_t arm_iommu_map_at(struct device *dev, dma_addr_t dma_addr,
+				       phys_addr_t phys, size_t size,
+				       enum dma_data_direction dir,
+				       unsigned long attrs);
 
 static dma_addr_t __iommu_map_at(struct device *dev, dma_addr_t dma_addr,
 				 phys_addr_t phys, size_t size,
@@ -1036,7 +1048,7 @@ static struct dma_map_ops iommu_dma_ops = {
 	.dma_supported = iommu_dma_supported,
 	.mapping_error = iommu_dma_mapping_error,
 
-	.map_at = __iommu_map_at,
+	.map_at = arm_iommu_map_at,
 };
 
 /*
@@ -3336,9 +3348,7 @@ struct dma_map_ops iommu_coherent_ops = {
 bool device_is_iommuable(struct device *dev)
 {
 	return (dev->archdata.dma_ops == &iommu_ops) ||
-#if ENABLE_IOMMU_DMA_OPS
 		(dev->archdata.dma_ops == &iommu_dma_ops) ||
-#endif
 		(dev->archdata.dma_ops == &iommu_coherent_ops);
 }
 EXPORT_SYMBOL(device_is_iommuable);
@@ -3493,14 +3503,7 @@ int arm_iommu_attach_device(struct device *dev,
 #endif
 
 	org_ops = get_dma_ops(dev);
-#if ENABLE_IOMMU_DMA_OPS
 	set_dma_ops(dev, &iommu_dma_ops);
-#else
-	if (is_device_dma_coherent(dev))
-		set_dma_ops(dev, &iommu_coherent_ops);
-	else
-		set_dma_ops(dev, &iommu_ops);
-#endif
 
 	org_map = dev->archdata.mapping;
 	dev->archdata.mapping = mapping;

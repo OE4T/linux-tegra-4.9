@@ -32,6 +32,7 @@
 #include <linux/pci.h>
 #include <linux/scatterlist.h>
 #include <linux/vmalloc.h>
+#include <linux/dma-contiguous.h>
 
 struct iommu_dma_msi_page {
 	struct list_head	list;
@@ -246,6 +247,40 @@ static void __iommu_dma_free_pages(struct page **pages, int count)
 	kvfree(pages);
 }
 
+static struct page **__iommu_dma_alloc_cont_pages(struct device *dev,
+							size_t size, gfp_t gfp)
+{
+	unsigned long order = get_order(size);
+	unsigned int count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+	int array_size = count * sizeof(struct page *);
+	int i = 0;
+	struct page *page;
+	struct page **pages;
+
+	if (array_size <= PAGE_SIZE)
+		pages = kzalloc(array_size, GFP_KERNEL);
+	else
+		pages = vzalloc(array_size);
+	if (!pages)
+		return NULL;
+
+	page = dma_alloc_from_contiguous(dev, count, order);
+	if (!page)
+		goto error;
+
+	for (i = 0; i < count; i++)
+		pages[i] = page + i;
+	return pages;
+
+error:
+	if (array_size <= PAGE_SIZE)
+		kfree(pages);
+	else
+		vfree(pages);
+	return NULL;
+
+}
+
 static struct page **__iommu_dma_alloc_pages(unsigned int count,
 		unsigned long order_mask, gfp_t gfp)
 {
@@ -265,6 +300,7 @@ static struct page **__iommu_dma_alloc_pages(unsigned int count,
 
 	/* IOMMU can map any pages, so himem can also be used here */
 	gfp |= __GFP_NOWARN | __GFP_HIGHMEM;
+	gfp &= ~__GFP_DMA;
 
 	while (count) {
 		struct page *page = NULL;
@@ -364,7 +400,13 @@ struct page **iommu_dma_alloc(struct device *dev, size_t size, gfp_t gfp,
 		alloc_sizes = min_size;
 
 	count = PAGE_ALIGN(size) >> PAGE_SHIFT;
-	pages = __iommu_dma_alloc_pages(count, alloc_sizes >> PAGE_SHIFT, gfp);
+
+	if (dma_get_attr(DMA_ATTR_FORCE_CONTIGUOUS, attrs))
+		pages = __iommu_dma_alloc_cont_pages(dev, size, gfp);
+	else
+		pages = __iommu_dma_alloc_pages(count,
+					alloc_sizes >> PAGE_SHIFT, gfp);
+
 	if (!pages)
 		return NULL;
 

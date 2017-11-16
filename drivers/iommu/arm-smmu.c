@@ -2191,34 +2191,6 @@ out_unlock:
 	return ret;
 }
 
-#if !ENABLE_IOMMU_DMA_OPS
-static size_t arm_smmu_map_sg(struct iommu_domain *domain, unsigned long iova,
-			struct scatterlist *sgl, unsigned int npages,
-			unsigned long prot)
-{
-	int i;
-	struct scatterlist *sg;
-	struct arm_smmu_domain *smmu_domain = to_smmu_domain(domain);
-
-	for (i = 0, sg = sgl; i < npages; sg = sg_next(sg)) {
-		int err;
-		phys_addr_t pa = sg_phys(sg) & PAGE_MASK;
-		unsigned int len = PAGE_ALIGN(sg->offset + sg->length);
-
-		pr_debug("%s() iova=%pad pa=%pap size=%x\n",
-			__func__, &iova, &pa, len);
-		err = arm_smmu_handle_mapping(smmu_domain, iova, pa, len, prot);
-		if (err)
-			return err;
-
-		i += len >> PAGE_SHIFT;
-		iova += len;
-	}
-
-	return 0;
-}
-#endif
-
 static int arm_smmu_map(struct iommu_domain *domain, unsigned long iova,
 			phys_addr_t paddr, size_t size, unsigned long prot)
 {
@@ -2426,11 +2398,7 @@ static const struct iommu_ops arm_smmu_ops = {
 	.attach_dev	= arm_smmu_attach_dev,
 	.detach_dev	= arm_smmu_detach_dev,
 	.get_hwid	= arm_smmu_get_hwid,
-#if ENABLE_IOMMU_DMA_OPS
-	.map_sg		= default_iommu_map_sg,
-#else
-	.map_sg		= arm_smmu_map_sg,
-#endif
+	.map_sg         = default_iommu_map_sg,
 	.map		= arm_smmu_map,
 	.unmap		= arm_smmu_unmap,
 	.iova_to_phys	= arm_smmu_iova_to_phys,

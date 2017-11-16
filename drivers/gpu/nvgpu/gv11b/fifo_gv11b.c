@@ -660,7 +660,7 @@ static u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
 			}
 		}
 	}
-	gk20a_dbg_info("runlists_mask =  %08x", runlists_mask);
+	nvgpu_log(g, gpu_dbg_info, "runlists_mask = 0x%08x", runlists_mask);
 	return runlists_mask;
 }
 
@@ -873,9 +873,14 @@ static int gv11b_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	for (runlist_id = 0; runlist_id < g->fifo.max_runlists; runlist_id++) {
-		if (runlists_mask & fifo_runlist_preempt_runlist_m(runlist_id))
+		if (runlists_mask &
+				fifo_runlist_preempt_runlist_m(runlist_id)) {
+			/* during recovery reset engs served by this runlist */
+			g->fifo.runlist_info[runlist_id].reset_eng_bitmask =
+				 g->fifo.runlist_info[runlist_id].eng_bitmask;
 			nvgpu_mutex_release(&g->fifo.
 				runlist_info[runlist_id].mutex);
+		}
 	}
 
 	return ret;
@@ -955,11 +960,9 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	struct fifo_runlist_info_gk20a *runlist = NULL;
 	u32 engine_id, client_type = ~0;
 
-	gk20a_dbg_info("active engine ids bitmask =0x%x", act_eng_bitmask);
-	gk20a_dbg_info("hw id     =%d", id);
-	gk20a_dbg_info("id_type   =%d", id_type);
-	gk20a_dbg_info("rc_type   =%d", rc_type);
-	gk20a_dbg_info("mmu_fault =0x%p", mmfault);
+	nvgpu_log(g, gpu_dbg_info, "id = %d, id_type = %d, rc_type = %d, "
+			"act_eng_bitmask = 0x%x, mmfault ptr = 0x%p",
+			 id, id_type, rc_type, act_eng_bitmask, mmfault);
 
 	runlists_mask =  gv11b_fifo_get_runlists_mask(g, act_eng_bitmask, id,
 					 id_type, rc_type, mmfault);
@@ -986,31 +989,86 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 
 	gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 
-	if (rc_type == RC_TYPE_MMU_FAULT)
+	/* Get tsg/ch */
+	if (rc_type == RC_TYPE_MMU_FAULT) {
 		gk20a_debug_dump(g);
-
-	/* get the channel/TSG */
-	if (rc_type == RC_TYPE_MMU_FAULT && mmfault && mmfault->refch) {
 		refch = mmfault->refch;
 		client_type = mmfault->client_type;
-		if (gk20a_is_channel_marked_as_tsg(refch))
-			tsg = &g->fifo.tsg[refch->tsgid];
 		gv11b_fifo_reset_pbdma_and_eng_faulted(g, refch,
 			mmfault->faulted_pbdma,
 			mmfault->faulted_engine);
-	} else {
-		if (id_type == ID_TYPE_TSG)
-			tsg = &g->fifo.tsg[id];
-		else if (id_type == ID_TYPE_CHANNEL)
-			refch = gk20a_channel_get(&g->fifo.channel[id]);
 	}
 
+	if (id_type == ID_TYPE_TSG) {
+		tsg = &g->fifo.tsg[id];
+	} else if (id_type == ID_TYPE_CHANNEL) {
+		if (refch == NULL)
+			refch = gk20a_channel_get(&g->fifo.channel[id]);
+	}
+	/* Disable tsg/ch */
+	if (tsg)
+		gk20a_disable_tsg(tsg);
+	else if (refch)
+		g->ops.fifo.disable_channel(refch);
+
+	/* Preempt tsg/ch */
 	if (id_type == ID_TYPE_TSG || id_type == ID_TYPE_CHANNEL) {
 		g->ops.fifo.preempt_ch_tsg(g, id, id_type,
 					 PREEMPT_TIMEOUT_NORC);
 	} else {
 		gv11b_fifo_preempt_runlists(g, runlists_mask);
 	}
+
+	/* check if engine reset should be deferred */
+	for (runlist_id = 0; runlist_id < g->fifo.max_runlists; runlist_id++) {
+
+		runlist = &g->fifo.runlist_info[runlist_id];
+		if ((runlists_mask & BIT(runlist_id)) &&
+					runlist->reset_eng_bitmask) {
+
+			unsigned long __reset_eng_bitmask =
+				 runlist->reset_eng_bitmask;
+
+			for_each_set_bit(engine_id, &__reset_eng_bitmask,
+							g->fifo.max_engines) {
+				if ((refch || tsg) &&
+					 gk20a_fifo_should_defer_engine_reset(g,
+					engine_id, client_type, false)) {
+
+				g->fifo.deferred_fault_engines |=
+							 BIT(engine_id);
+
+				/* handled during channel free */
+				g->fifo.deferred_reset_pending = true;
+				nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
+				   "sm debugger attached,"
+				   " deferring channel recovery to channel free");
+				} else {
+					/*
+					 * if lock is already taken, a reset is
+					 * taking place so no need to repeat
+					 */
+					if (nvgpu_mutex_tryacquire(
+						&g->fifo.gr_reset_mutex)) {
+
+						gk20a_fifo_reset_engine(g,
+								 engine_id);
+
+						nvgpu_mutex_release(
+						 &g->fifo.gr_reset_mutex);
+					}
+				}
+			}
+		}
+	}
+
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	/* tsg and refch both could be valid for mmu fault. Check tsg first */
+	if (tsg)
+		gk20a_ctxsw_trace_tsg_reset(g, tsg);
+	else if (refch)
+		gk20a_ctxsw_trace_channel_reset(g, refch);
+#endif
 
 	if (tsg) {
 		if (!g->fifo.deferred_reset_pending) {
@@ -1040,55 +1098,6 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 					 FIFO_INVAL_CHANNEL_ID, false, true);
 		}
 	}
-
-	/* check if engine reset should be deferred */
-	for (runlist_id = 0; runlist_id < g->fifo.max_runlists; runlist_id++) {
-
-		runlist = &g->fifo.runlist_info[runlist_id];
-		if ((runlists_mask & BIT(runlist_id)) &&
-					runlist->reset_eng_bitmask) {
-
-			unsigned long __reset_eng_bitmask =
-				 runlist->reset_eng_bitmask;
-
-			for_each_set_bit(engine_id, &__reset_eng_bitmask, 32) {
-				if ((refch || tsg) &&
-					 gk20a_fifo_should_defer_engine_reset(g,
-					engine_id, client_type, false)) {
-
-				g->fifo.deferred_fault_engines |=
-							 BIT(engine_id);
-
-				/* handled during channel free */
-				g->fifo.deferred_reset_pending = true;
-				gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
-				   "sm debugger attached,"
-				   " deferring channel recovery to channel free");
-				} else {
-					/*
-					 * if lock is already taken, a reset is
-					 * taking place so no need to repeat
-					 */
-					if (nvgpu_mutex_tryacquire(
-						&g->fifo.gr_reset_mutex)) {
-
-						gk20a_fifo_reset_engine(g,
-								 engine_id);
-
-						nvgpu_mutex_release(
-						 &g->fifo.gr_reset_mutex);
-					}
-				}
-			}
-		}
-	}
-
-#ifdef CONFIG_GK20A_CTXSW_TRACE
-	if (refch)
-		gk20a_ctxsw_trace_channel_reset(g, refch);
-	else if (tsg)
-		gk20a_ctxsw_trace_tsg_reset(g, tsg);
-#endif
 
 	gk20a_fifo_set_runlist_state(g, runlists_mask, RUNLIST_ENABLED,
 					 !RUNLIST_INFO_MUTEX_LOCKED);

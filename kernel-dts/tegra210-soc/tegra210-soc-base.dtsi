@@ -170,16 +170,6 @@
 		#size-cells = <2>;
 		ranges;
 
-#if TEGRA_GENERIC_CARVEOUT_SUPPORT_ENABLE
-		generic_reserved: generic_carveout {
-			compatible = "nvidia,generic_carveout";
-			size = <0 0x10000000>; /* set size to 256MB */
-			alignment = <0 0x100000>;
-			alloc-ranges = <0 0 0x1 0>;
-			no-map;
-		};
-#endif
-
 		iram: iram-carveout {
 			compatible = "nvidia,iram-carveout";
 			reg = <0x0 0x40001000 0x0 0x3F000>;

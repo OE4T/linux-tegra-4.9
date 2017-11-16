@@ -37,6 +37,30 @@
 #include "os_linux.h"
 #include "dmabuf.h"
 
+static u32 nvgpu_vm_translate_linux_flags(struct gk20a *g, u32 flags)
+{
+	u32 core_flags = 0;
+
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)
+		core_flags |= NVGPU_VM_MAP_FIXED_OFFSET;
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE)
+		core_flags |= NVGPU_VM_MAP_CACHEABLE;
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT)
+		core_flags |= NVGPU_VM_MAP_IO_COHERENT;
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE)
+		core_flags |= NVGPU_VM_MAP_UNMAPPED_PTE;
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_L3_ALLOC)
+		core_flags |= NVGPU_VM_MAP_L3_ALLOC;
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL)
+		core_flags |= NVGPU_VM_MAP_DIRECT_KIND_CTRL;
+
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS)
+		nvgpu_warn(g, "Ignoring deprecated flag: "
+			   "NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS");
+
+	return core_flags;
+}
+
 static struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_reverse(
 	struct vm_gk20a *vm, struct dma_buf *dmabuf, u32 kind)
 {
@@ -102,7 +126,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct nvgpu_mapped_buf *mapped_buffer = NULL;
 
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+	if (flags & NVGPU_VM_MAP_FIXED_OFFSET) {
 		mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, map_addr);
 		if (!mapped_buffer)
 			return NULL;
@@ -167,7 +191,7 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	u64 map_addr = 0ULL;
 	int err = 0;
 
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)
+	if (flags & NVGPU_VM_MAP_FIXED_OFFSET)
 		map_addr = offset_align;
 
 	sgt = gk20a_mm_pin(dev, dmabuf);
@@ -229,15 +253,16 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 			u64 mapping_size,
 			struct vm_gk20a_mapping_batch *batch)
 {
-	int err = 0;
+	struct gk20a *g = gk20a_from_vm(vm);
 	struct dma_buf *dmabuf;
 	u64 ret_va;
+	int err = 0;
 
 	/* get ref to the mem handle (released on unmap_locked) */
 	dmabuf = dma_buf_get(dmabuf_fd);
 	if (IS_ERR(dmabuf)) {
-		nvgpu_warn(gk20a_from_vm(vm), "%s: fd %d is not a dmabuf",
-			 __func__, dmabuf_fd);
+		nvgpu_warn(g, "%s: fd %d is not a dmabuf",
+			   __func__, dmabuf_fd);
 		return PTR_ERR(dmabuf);
 	}
 
@@ -250,9 +275,9 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	 */
 	if ((mapping_size > dmabuf->size) ||
 			(buffer_offset > (dmabuf->size - mapping_size))) {
-		nvgpu_err(gk20a_from_vm(vm),
-			"buf size %llx < (offset(%llx) + map_size(%llx))\n",
-			(u64)dmabuf->size, buffer_offset, mapping_size);
+		nvgpu_err(g,
+			  "buf size %llx < (offset(%llx) + map_size(%llx))\n",
+			  (u64)dmabuf->size, buffer_offset, mapping_size);
 		return -EINVAL;
 	}
 
@@ -263,7 +288,8 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	}
 
 	err = nvgpu_vm_map_linux(vm, dmabuf, *offset_align,
-				 flags, compr_kind, incompr_kind,
+				 nvgpu_vm_translate_linux_flags(g, flags),
+				 compr_kind, incompr_kind,
 				 gk20a_mem_flag_none,
 				 buffer_offset,
 				 mapping_size,

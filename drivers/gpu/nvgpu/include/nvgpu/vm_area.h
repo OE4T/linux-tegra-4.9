@@ -57,6 +57,12 @@ nvgpu_vm_area_from_vm_area_list(struct nvgpu_list_node *node)
 					    vm_area_list));
 };
 
+/*
+ * Alloc space flags.
+ */
+#define NVGPU_VM_AREA_ALLOC_FIXED_OFFSET		(1 << 0)
+#define NVGPU_VM_AREA_ALLOC_SPARSE			(1 << 1)
+
 int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 			u64 *addr, u32 flags);
 int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr);

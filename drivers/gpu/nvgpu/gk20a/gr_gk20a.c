@@ -1728,7 +1728,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 			pm_ctx->mem.gpu_va = nvgpu_gmmu_map(c->vm,
 							&pm_ctx->mem,
 							pm_ctx->mem.size,
-							NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE,
+							NVGPU_VM_MAP_CACHEABLE,
 							gk20a_mem_flag_none, true,
 							pm_ctx->mem.aperture);
 			if (!pm_ctx->mem.gpu_va) {
@@ -2623,7 +2623,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	}
 
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
-				NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE,
+				NVGPU_VM_MAP_CACHEABLE,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
@@ -2641,7 +2641,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	}
 
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
-				NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE,
+				NVGPU_VM_MAP_CACHEABLE,
 				gk20a_mem_flag_none, false, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
@@ -2659,7 +2659,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	}
 
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
-				NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE,
+				NVGPU_VM_MAP_CACHEABLE,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;

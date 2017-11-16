@@ -20,8 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <uapi/linux/nvgpu.h>
-
 #include <nvgpu/vm.h>
 #include <nvgpu/vm_area.h>
 
@@ -121,7 +119,7 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 		goto clean_up_err;
 
 	vma = vm->vma[pgsz_idx];
-	if (flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
+	if (flags & NVGPU_VM_AREA_ALLOC_FIXED_OFFSET)
 		vaddr_start = nvgpu_alloc_fixed(vma, *addr,
 						(u64)pages *
 						(u64)page_size,
@@ -143,7 +141,7 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
-	if (flags & NVGPU_AS_ALLOC_SPACE_FLAGS_SPARSE) {
+	if (flags & NVGPU_VM_AREA_ALLOC_SPARSE) {
 		u64 map_addr = g->ops.mm.gmmu_map(vm, vaddr_start,
 					 NULL,
 					 0,

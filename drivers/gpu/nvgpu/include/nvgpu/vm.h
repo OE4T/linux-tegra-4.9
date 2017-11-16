@@ -199,6 +199,18 @@ struct vm_gk20a {
 	u64 syncpt_ro_map_gpu_va;
 };
 
+/*
+ * Mapping flags.
+ */
+#define NVGPU_VM_MAP_FIXED_OFFSET			(1 << 0)
+#define NVGPU_VM_MAP_CACHEABLE				(1 << 1)
+#define NVGPU_VM_MAP_IO_COHERENT			(1 << 2)
+#define NVGPU_VM_MAP_UNMAPPED_PTE			(1 << 3)
+#define NVGPU_VM_MAP_DIRECT_KIND_CTRL			(1 << 4)
+#define NVGPU_VM_MAP_L3_ALLOC				(1 << 5)
+
+#define NVGPU_KIND_INVALID				-1
+
 void nvgpu_vm_get(struct vm_gk20a *vm);
 void nvgpu_vm_put(struct vm_gk20a *vm);
 

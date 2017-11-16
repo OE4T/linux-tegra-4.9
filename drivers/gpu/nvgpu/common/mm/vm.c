@@ -21,8 +21,6 @@
  */
 
 #include <nvgpu/bug.h>
-#include <uapi/linux/nvgpu.h>
-
 #include <nvgpu/log.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/vm.h>
@@ -765,7 +763,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	u8 pte_kind;
 
 	if (vm->userspace_managed &&
-	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
+	    !(flags & NVGPU_VM_MAP_FIXED_OFFSET)) {
 		nvgpu_err(g,
 			  "non-fixed-offset mapping not available on "
 			  "userspace managed address spaces");
@@ -774,11 +772,12 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 
 	binfo.flags = flags;
 	binfo.size = nvgpu_os_buf_get_size(os_buf);
-	binfo.compr_kind = (vm->enable_ctag && compr_kind != NV_KIND_INVALID ?
-			    compr_kind : NV_KIND_INVALID);
+	binfo.compr_kind =
+		(vm->enable_ctag && compr_kind != NVGPU_KIND_INVALID ?
+		 compr_kind : NVGPU_KIND_INVALID);
 	binfo.incompr_kind = incompr_kind;
 
-	if (compr_kind != NV_KIND_INVALID)
+	if (compr_kind != NVGPU_KIND_INVALID)
 		map_key_kind = compr_kind;
 	else
 		map_key_kind = incompr_kind;
@@ -830,7 +829,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	/*
 	 * Check if we should use a fixed offset for mapping this buffer.
 	 */
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
+	if (flags & NVGPU_VM_MAP_FIXED_OFFSET)  {
 		err = nvgpu_vm_area_validate_buffer(vm,
 						    map_addr,
 						    map_size,
@@ -848,7 +847,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
-	if (binfo.compr_kind != NV_KIND_INVALID) {
+	if (binfo.compr_kind != NVGPU_KIND_INVALID) {
 		struct gk20a_comptags comptags = { 0 };
 
 		/*
@@ -903,14 +902,14 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	/*
 	 * Figure out the kind and ctag offset for the GMMU page tables
 	 */
-	if (binfo.compr_kind != NV_KIND_INVALID && ctag_offset) {
+	if (binfo.compr_kind != NVGPU_KIND_INVALID && ctag_offset) {
 		/*
 		 * Adjust the ctag_offset as per the buffer map offset
 		 */
 		ctag_offset += phys_offset >>
 			ilog2(g->ops.fb.compression_page_size(g));
 		pte_kind = binfo.compr_kind;
-	} else if (binfo.incompr_kind != NV_KIND_INVALID) {
+	} else if (binfo.incompr_kind != NVGPU_KIND_INVALID) {
 		/*
 		 * Incompressible kind, ctag offset will not be programmed
 		 */
@@ -1093,7 +1092,7 @@ void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset,
 	if (!mapped_buffer)
 		goto done;
 
-	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+	if (mapped_buffer->flags & NVGPU_VM_MAP_FIXED_OFFSET) {
 		if (nvgpu_vm_unmap_sync_buffer(vm, mapped_buffer))
 			/*
 			 * Looks like we have failed... Better not continue in
@@ -1118,7 +1117,7 @@ done:
 static int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
 					struct nvgpu_ctag_buffer_info *binfo)
 {
-	bool kind_compressible = (binfo->compr_kind != NV_KIND_INVALID);
+	bool kind_compressible = (binfo->compr_kind != NVGPU_KIND_INVALID);
 	struct gk20a *g = gk20a_from_vm(vm);
 
 	if (kind_compressible &&
@@ -1127,7 +1126,7 @@ static int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
 		/*
 		 * Let's double check that there is a fallback kind
 		 */
-		if (binfo->incompr_kind == NV_KIND_INVALID) {
+		if (binfo->incompr_kind == NVGPU_KIND_INVALID) {
 			nvgpu_err(g,
 				  "Unsupported page size for compressible "
 				  "kind, but no fallback kind");
@@ -1136,7 +1135,7 @@ static int nvgpu_vm_compute_compression(struct vm_gk20a *vm,
 			nvgpu_log(g, gpu_dbg_map,
 				  "Unsupported page size for compressible "
 				  "kind, demoting to incompressible");
-			binfo->compr_kind = NV_KIND_INVALID;
+			binfo->compr_kind = NVGPU_KIND_INVALID;
 			kind_compressible = false;
 		}
 	}

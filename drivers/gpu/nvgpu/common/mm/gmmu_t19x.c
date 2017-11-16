@@ -20,12 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <uapi/linux/nvgpu.h>
-
 #include <nvgpu/gmmu.h>
+#include <nvgpu/vm.h>
 
 void nvgpu_gmmu_add_t19x_attrs(struct nvgpu_gmmu_attrs *attrs, u32 flags)
 {
-	attrs->t19x_attrs.l3_alloc = (bool)(flags &
-					    NVGPU_AS_MAP_BUFFER_FLAGS_L3_ALLOC);
+	attrs->t19x_attrs.l3_alloc = (bool)(flags & NVGPU_VM_MAP_L3_ALLOC);
 }

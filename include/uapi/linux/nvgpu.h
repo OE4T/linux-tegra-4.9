@@ -1762,6 +1762,7 @@ struct nvgpu_as_bind_channel_args {
 #define NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT	    (1 << 4)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE	    (1 << 5)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_MAPPABLE_COMPBITS (1 << 6)
+#define NVGPU_AS_MAP_BUFFER_FLAGS_L3_ALLOC          (1 << 7)
 #define NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL  (1 << 8)
 
 /*

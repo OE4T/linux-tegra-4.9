@@ -1052,9 +1052,9 @@ __releases(&l->cde_app->mutex)
 	/* map the destination buffer */
 	get_dma_buf(compbits_scatter_buf); /* a ref for nvgpu_vm_map_linux */
 	err = nvgpu_vm_map_linux(cde_ctx->vm, compbits_scatter_buf, 0,
-				 NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE |
-				 NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL,
-				 NV_KIND_INVALID,
+				 NVGPU_VM_MAP_CACHEABLE |
+				 NVGPU_VM_MAP_DIRECT_KIND_CTRL,
+				 NVGPU_KIND_INVALID,
 				 compbits_kind, /* incompressible kind */
 				 gk20a_mem_flag_none,
 				 map_offset, map_size,
@@ -1284,7 +1284,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	/* map backing store to gpu virtual space */
 	vaddr = nvgpu_gmmu_map(ch->vm, &gr->compbit_store.mem,
 			       g->gr.compbit_store.mem.size,
-			       NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE,
+			       NVGPU_VM_MAP_CACHEABLE,
 			       gk20a_mem_flag_read_only,
 			       false,
 			       gr->compbit_store.mem.aperture);

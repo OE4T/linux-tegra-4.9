@@ -20,8 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <uapi/linux/nvgpu.h>
-
 #include <nvgpu/log.h>
 #include <nvgpu/list.h>
 #include <nvgpu/dma.h>
@@ -682,12 +680,12 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		.pgsz      = pgsz_idx,
 		.kind_v    = kind_v,
 		.ctag      = (u64)ctag_offset * (u64)ctag_granularity,
-		.cacheable = flags & NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE,
+		.cacheable = flags & NVGPU_VM_MAP_CACHEABLE,
 		.rw_flag   = rw_flag,
 		.sparse    = sparse,
 		.priv      = priv,
-		.coherent  = flags & NVGPU_AS_MAP_BUFFER_FLAGS_IO_COHERENT,
-		.valid     = !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE),
+		.coherent  = flags & NVGPU_VM_MAP_IO_COHERENT,
+		.valid     = !(flags & NVGPU_VM_MAP_UNMAPPED_PTE),
 		.aperture  = aperture
 	};
 

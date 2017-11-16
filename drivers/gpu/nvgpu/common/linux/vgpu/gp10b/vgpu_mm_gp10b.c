@@ -165,7 +165,7 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	p->pgsz_idx = pgsz_idx;
 	p->iova = 0;
 	p->kind = kind_v;
-	p->cacheable = (flags & NVGPU_AS_MAP_BUFFER_FLAGS_CACHEABLE) ? 1 : 0;
+	p->cacheable = (flags & NVGPU_VM_MAP_CACHEABLE) ? 1 : 0;
 	p->prot = prot;
 	p->ctag_offset = ctag_offset;
 	p->clear_ctags = clear_ctags;

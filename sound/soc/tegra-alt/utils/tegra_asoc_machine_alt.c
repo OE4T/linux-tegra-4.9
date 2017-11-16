@@ -50,6 +50,14 @@ static struct snd_soc_pcm_stream tdm_link_params = {
 	.channels_max = 8,
 };
 
+__maybe_unused static struct snd_soc_pcm_stream arad_link_params = {
+	.formats = SNDRV_PCM_FMTBIT_S24_LE,
+	.rate_min = 48000,
+	.rate_max = 48000,
+	.channels_min = 2,
+	.channels_max = 2,
+};
+
 static const char * const bit_format[] = {
 	"s8", "u8", "s16_le", "s16_be",
 	"u16_le", "u16_be", "s24_le", "s24_be",
@@ -2526,7 +2534,7 @@ static struct snd_soc_dai_link
 		.codec_dai_name = "RX7",
 		.cpu_name = "tegra210-axbar",
 		.codec_name = "tegra186-asrc",
-		.params = &default_link_params,
+		.params = &arad_link_params,
 		.ignore_suspend = 1,
 	},
 	[TEGRA186_DAI_LINK_ASRC1_TX1] = {
@@ -2831,6 +2839,17 @@ static struct snd_soc_dai_link
 		.cpu_name = "tegra210-adsp",
 		.codec_name = "tegra210-adsp",
 		.platform_name = "tegra210-adsp",
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ARAD] = {
+		.name = "ARAD",
+		.stream_name = "ARAD ratio info",
+		.cpu_dai_name = "ARAD OUT",
+		.codec_dai_name = "ARAD1",
+		.cpu_name = "tegra186-arad",
+		.codec_name = "tegra210-axbar",
+		.params = &arad_link_params,
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},

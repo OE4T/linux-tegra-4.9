@@ -313,6 +313,8 @@ enum tegra186_xbar_dai_link {
 	TEGRA186_DAI_LINK_ADSP_COMPR1,
 	TEGRA186_DAI_LINK_ADSP_COMPR2,
 #endif
+
+	TEGRA186_DAI_LINK_ARAD,
 	TEGRA186_XBAR_DAI_LINKS, /* Total number of xbar dai links */
 };
 

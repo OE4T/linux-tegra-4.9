@@ -203,22 +203,6 @@ static const struct snd_soc_pcm_stream tegra_t186ref_asrc_link_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 3),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
 };
-static const struct snd_soc_pcm_stream tegra_t186ref_arad_link_params[] = {
-	PARAMS(SNDRV_PCM_FMTBIT_S24_LE, 2),
-};
-
-static struct snd_soc_dai_link
-	tegra186_arad_dai_links[1] = {
-	[0] = {
-		.name = "ARAD1 TX",
-		.stream_name = "ARAD1 TX",
-		.cpu_dai_name = "ARAD OUT",
-		.codec_dai_name = "ARAD1",
-		.cpu_name = "tegra186-arad",
-		.codec_name = "tegra210-axbar",
-		.params = &tegra_t186ref_arad_link_params[0],
-	},
-};
 
 static const struct snd_soc_pcm_stream
 		tegra_t186ref_bali_sse_admaif_params[] = {
@@ -776,11 +760,6 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 #endif
 	}
 
-	/* The packet from ARAD to ASRC for the ratio update is 24 bit */
-	tegra_machine_set_dai_params(TEGRA186_DAI_LINK_ASRC1_RX7,
-				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_arad_link_params[0]);
-
 	/* set ADMAIF dai ops */
 	for (i = TEGRA186_DAI_LINK_ADMAIF1;
 			i <= TEGRA186_DAI_LINK_ADMAIF20; i++)
@@ -810,10 +789,6 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 		tegra_machine_append_dai_link_t18x
 			(tegra_t186ref_bali_codec_links,
 			2 * machine->num_codec_links);
-	card->num_links =
-		tegra_machine_append_dai_link_t18x
-			(tegra186_arad_dai_links,
-			1);
 	tegra_machine_dai_links = tegra_machine_get_dai_link_t18x();
 	card->dai_link = tegra_machine_dai_links;
 

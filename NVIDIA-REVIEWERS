@@ -63,5 +63,3 @@ S:	Supported
 F:	drivers/gpu/nvgpu/*
 F:	include/*
 F:	../../gpu-firmware-private/
-
-

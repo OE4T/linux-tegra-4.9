@@ -272,6 +272,7 @@ static void write_ndiv_request(void *val)
 		asm volatile("msr s3_0_c15_c0_4, %0" : : "r" (regval));
 }
 
+#ifdef CONFIG_DEBUG_FS
 /* Read freq request in ndiv for a cpu */
 static void read_ndiv_request(void *ret)
 {
@@ -283,6 +284,7 @@ static void read_ndiv_request(void *ret)
 		val = 4;
 	*((uint64_t *) ret) = val;
 }
+#endif
 
 /**
  * tegra_update_cpu_speed - update cpu freq

@@ -736,6 +736,7 @@ static const struct tegra_wdt_t18x_soc t18x_wdt_sim = {
 };
 
 static const struct of_device_id tegra_wdt_t18x_match[] = {
+	{ .compatible = "nvidia,tegra-wdt-t19x", .data = &t18x_wdt_silicon},
 	{ .compatible = "nvidia,tegra-wdt-t18x", .data = &t18x_wdt_silicon},
 	{ .compatible = "nvidia,tegra-wdt-t18x-linsim", .data = &t18x_wdt_sim},
 	{}

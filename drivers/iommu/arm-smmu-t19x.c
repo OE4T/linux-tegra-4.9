@@ -2408,7 +2408,7 @@ out_unlock:
 	return ret;
 }
 
-#if !ENABLE_IOMMU_DMA_OPS
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 static size_t arm_smmu_map_sg(struct iommu_domain *domain, unsigned long iova,
 			struct scatterlist *sgl, unsigned int npages,
 			unsigned long prot)
@@ -2643,7 +2643,7 @@ static const struct iommu_ops arm_smmu_ops = {
 	.attach_dev	= arm_smmu_attach_dev,
 	.detach_dev	= arm_smmu_detach_dev,
 	.get_hwid	= arm_smmu_get_hwid,
-#if ENABLE_IOMMU_DMA_OPS
+#if LINUX_VERSION_CODE  > KERNEL_VERSION(4, 9, 0)
 	.map_sg		= default_iommu_map_sg,
 #else
 	.map_sg		= arm_smmu_map_sg,

@@ -696,6 +696,7 @@ typedef enum {
 	EQOS_2K = 0x7,
 	EQOS_4K = 0xf,
 	EQOS_8K = 0x1f,
+	EQOS_9K = 0x23,
 	EQOS_16K = 0x3f,
 	EQOS_32K = 0x7f
 } eqos_mtl_fifo_size;

@@ -810,7 +810,8 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 		str = "32 kBytes";
 		break;
 	case 9:
-		str = "64 KBytes";
+		/* EQOS_IP_V5  and above supports 36KB FIFO size */
+		str = "36 KBytes";
 		break;
 	case 10:
 		str = "128 KBytes";
@@ -852,7 +853,8 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 		str = "32 kBytes";
 		break;
 	case 9:
-		str = "64 KBytes";
+		/* EQOS_IP_V5  and above supports 36KB FIFO size */
+		str = "36 KBytes";
 		break;
 	case 10:
 		str = "128 KBytes";

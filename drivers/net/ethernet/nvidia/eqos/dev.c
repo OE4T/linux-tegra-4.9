@@ -3469,13 +3469,14 @@ static UINT calculate_dma_pbl(ULONG p_fifo)
 
 	/* given fifo size, need to ensure burst is never larger than half
 	 * fifo size.
-	 * ex: for fifo of 4kb, plb=16 and pblx8=1 results in 2kb burst (16*8*16)
+	 * ex:for fifo of 4kb, pbl=16 and pblx8=1 results in 2kb burst (16*8*16)
 	 * pbl is in granulatiries of 16 bytes
 	 */
 	switch (p_fifo) {
 	case EQOS_32K:
 	case EQOS_16K:
 	case EQOS_8K:
+	case EQOS_9K:
 		/* this is max which can be specified */
 		pbl = 32;
 		break;
@@ -3547,7 +3548,7 @@ static UINT calculate_per_queue_fifo(ULONG fifo_size, UCHAR queue_count)
 		q_fifo_size = FIFO_SIZE_KB(32);
 		break;
 	case 9:
-		q_fifo_size = FIFO_SIZE_KB(64);
+		q_fifo_size = FIFO_SIZE_KB(36);
 		break;
 	case 10:
 		q_fifo_size = FIFO_SIZE_KB(128);
@@ -3563,6 +3564,8 @@ static UINT calculate_per_queue_fifo(ULONG fifo_size, UCHAR queue_count)
 		p_fifo = EQOS_32K;
 	} else if (q_fifo_size >= FIFO_SIZE_KB(16)) {
 		p_fifo = EQOS_16K;
+	} else if (q_fifo_size == FIFO_SIZE_KB(9)) {
+		p_fifo = EQOS_9K;
 	} else if (q_fifo_size >= FIFO_SIZE_KB(8)) {
 		p_fifo = EQOS_8K;
 	} else if (q_fifo_size >= FIFO_SIZE_KB(4)) {
@@ -3679,6 +3682,9 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 			} else if (p_rx_fifo == EQOS_8K) {
 				MTL_QROMR_RFD_WR(qinx, 0x6);	/* Full-4K */
 				MTL_QROMR_RFA_WR(qinx, 0xA);	/* Full-6K */
+			} else if (p_rx_fifo == EQOS_9K) {
+				MTL_QROMR_RFD_WR(qinx, 0x4);	/* Full-3K */
+				MTL_QROMR_RFA_WR(qinx, 0x2);	/* Full-2K */
 			} else if (p_rx_fifo == EQOS_16K) {
 				MTL_QROMR_RFD_WR(qinx, 0x6);	/* Full-4K */
 				MTL_QROMR_RFA_WR(qinx, 0x12);	/* Full-10K */

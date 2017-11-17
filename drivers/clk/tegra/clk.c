@@ -493,7 +493,6 @@ static struct reset_controller_dev rst_ctlr = {
 	.of_reset_n_cells = 1,
 };
 
-#ifdef CONFIG_TEGRA_CLK_DEBUG
 void tegra_rst_assertv(unsigned long *id, int num)
 {
 	int i;
@@ -510,6 +509,7 @@ void tegra_rst_deassertv(unsigned long *id, int num)
 		tegra_clk_rst_deassert(&rst_ctlr, *id);
 }
 
+#ifdef CONFIG_TEGRA_CLK_DEBUG
 static int rate_write_op(void *data, u64 rate)
 {
 	struct clk *clk = data;

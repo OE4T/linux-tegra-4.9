@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/bug.h>
 #include <nvgpu/bitops.h>
 #include <nvgpu/comptags.h>
 

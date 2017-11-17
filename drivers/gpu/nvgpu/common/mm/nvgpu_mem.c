@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/bug.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/dma.h>

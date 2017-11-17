@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/bug.h>
 #include <nvgpu/log.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/gmmu.h>

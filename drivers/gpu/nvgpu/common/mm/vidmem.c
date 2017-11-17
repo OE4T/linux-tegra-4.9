@@ -22,6 +22,7 @@
 
 #include <linux/scatterlist.h>
 
+#include <nvgpu/bug.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/vidmem.h>

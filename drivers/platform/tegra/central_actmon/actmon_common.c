@@ -1035,11 +1035,10 @@ int tegra_actmon_register(struct actmon_drv_data *actmon_data)
 	}
 #ifdef CONFIG_DEBUG_FS
 	ret = actmon_debugfs_init();
-	if (ret)
-		goto err_debugfs;
 #endif
-	return 0;
-err_debugfs:
+	if (ret == 0)
+		return 0;
+
 	for (i = 0; i < MAX_DEVICES; i++) {
 		if (actmon->devices[i].dn)
 			sysfs_remove_file(actmon->actmon_kobj,

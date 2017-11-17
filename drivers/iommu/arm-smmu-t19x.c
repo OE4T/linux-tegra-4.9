@@ -56,6 +56,7 @@
 #include <linux/dma-override.h>
 
 #include <linux/amba/bus.h>
+#include <linux/version.h>
 
 
 #include <asm/pgalloc.h>
@@ -1522,6 +1523,12 @@ static struct iommu_domain *arm_smmu_domain_alloc(unsigned type)
 
 	smmu_domain->domain.pgsize_bitmap = SECTION_SIZE |
 					    ARM_SMMU_PTE_CONT_SIZE | PAGE_SIZE;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+	if (iommu_get_dma_cookie(&smmu_domain->domain))
+		goto out_free_domain;
+#endif
+
 	return &smmu_domain->domain;
 
 out_free_domain:
@@ -1600,6 +1607,9 @@ static void arm_smmu_domain_free(struct iommu_domain *domain)
 	 * Free the domain resources. We assume that all devices have
 	 * already been detached.
 	 */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+	iommu_put_dma_cookie(domain);
+#endif
 	arm_smmu_destroy_domain_context(domain);
 	arm_smmu_free_pgtables(smmu_domain);
 	kfree(smmu_domain);
@@ -2041,15 +2051,13 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 				find_smmu_master(smmu, dev_get_dev_node(dev)));
 	}
 
-#if ENABLE_IOMMU_DMA_OPS
-	if (!iommu_get_dma_cookie(domain)) {
-		if (iommu_dma_init_domain(domain,
-					  domain->geometry.aperture_start,
-					  domain->geometry.aperture_end -
-					  domain->geometry.aperture_start))
-			pr_err("iommu_dma_init_domain failed, %s\n",
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+	if (iommu_dma_init_domain(domain,
+				domain->geometry.aperture_start,
+				domain->geometry.aperture_end -
+				domain->geometry.aperture_start, dev))
+		pr_err("iommu_dma_init_domain failed, %s\n",
 				dev_name(dev));
-	}
 #endif
 
 	arm_smmu_do_linear_map(dev);

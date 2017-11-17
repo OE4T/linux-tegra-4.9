@@ -676,10 +676,8 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 		struct vi_capture_control_msg *msg)
 {
 	struct vi_capture *capture = chan->capture_data;
-	const void __user *msg_ptr =
-			(const void __user *)(uintptr_t)msg->ptr;
-	void __user *response =
-			(void __user *)(uintptr_t)msg->response;
+	const void __user *msg_ptr;
+	void __user *response;
 	void *msg_cpy;
 	struct CAPTURE_MSG_HEADER *header;
 	uint32_t resp_id;
@@ -694,6 +692,9 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 
 	if (msg->ptr == 0ull || msg->response == 0ull || msg->size == 0)
 		return -EINVAL;
+
+	msg_ptr = (const void __user *)(uintptr_t)msg->ptr;
+	response = (void __user *)(uintptr_t)msg->response;
 
 	msg_cpy = devm_kzalloc(chan->dev, msg->size, GFP_KERNEL);
 	if (unlikely(msg_cpy == NULL))
@@ -789,6 +790,18 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 		dev_err(chan->dev,
 			"%s: setup channel first\n", __func__);
 		return -ENODEV;
+	}
+
+	if (req == NULL) {
+		dev_err(chan->dev,
+			"%s: Invalid req\n", __func__);
+		return -EINVAL;
+	}
+
+	if (req->num_relocs == 0) {
+		dev_err(chan->dev,
+			"%s: request must have non-zero relocs\n", __func__);
+		return -EINVAL;
 	}
 
 	memset(&capture_desc, 0, sizeof(capture_desc));

@@ -764,6 +764,18 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 		return -ENODEV;
 	}
 
+	if (req == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: Invalid program req\n", __func__);
+		return -EINVAL;
+	}
+
+	if (req->isp_program_relocs.num_relocs == 0) {
+		dev_err(chan->isp_dev,
+			"%s: req must have non-zero relocs\n", __func__);
+		return -EINVAL;
+	}
+
 	memset(&capture_msg, 0, sizeof(capture_msg));
 	capture_msg.header.msg_id = CAPTURE_ISP_PROGRAM_REQUEST_REQ;
 	capture_msg.header.channel_id = capture->channel_id;
@@ -863,6 +875,18 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 		dev_err(chan->isp_dev,
 			"%s: setup channel first\n", __func__);
 		return -ENODEV;
+	}
+
+	if (req == NULL) {
+		dev_err(chan->isp_dev,
+			"%s: Invalid req\n", __func__);
+		return -EINVAL;
+	}
+
+	if (req->isp_relocs.num_relocs == 0) {
+		dev_err(chan->isp_dev,
+			"%s: req must have non-zero relocs\n", __func__);
+		return -EINVAL;
 	}
 
 	memset(&capture_msg, 0, sizeof(capture_msg));

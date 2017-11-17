@@ -68,6 +68,7 @@ struct tegra_machine {
 	int rate_via_kcontrol;
 	bool is_hs_supported;
 	int fmt_via_kcontrol;
+	unsigned int bclk_ratio_override;
 	struct tegra_machine_soc_data *soc_data;
 	struct regulator *digital_reg;
 	struct regulator *spk_reg;
@@ -135,6 +136,10 @@ static int tegra_machine_codec_put_rate(struct snd_kcontrol *,
 static int tegra_machine_codec_get_format(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
 static int tegra_machine_codec_put_format(struct snd_kcontrol *,
+		struct snd_ctl_elem_value *);
+static int tegra_machine_codec_get_bclk_ratio(struct snd_kcontrol *,
+		struct snd_ctl_elem_value *);
+static int tegra_machine_codec_put_bclk_ratio(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
 static int tegra_machine_codec_get_jack_state(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
@@ -368,6 +373,9 @@ static const struct snd_kcontrol_new tegra_machine_controls[] = {
 		tegra_machine_codec_get_rate, tegra_machine_codec_put_rate),
 	SOC_ENUM_EXT("codec-x format", tegra_machine_codec_format,
 		tegra_machine_codec_get_format, tegra_machine_codec_put_format),
+	SOC_SINGLE_EXT("bclk ratio override", SND_SOC_NOPM, 0, INT_MAX, 0,
+		tegra_machine_codec_get_bclk_ratio,
+		tegra_machine_codec_put_bclk_ratio),
 #ifdef CONFIG_SWITCH
 	SOC_ENUM_EXT("Jack-state", tegra_machine_jack_state,
 		tegra_machine_codec_get_jack_state,
@@ -528,6 +536,28 @@ static int tegra_machine_codec_put_format(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra_machine_codec_get_bclk_ratio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = machine->bclk_ratio_override;
+
+	return 0;
+}
+
+static int tegra_machine_codec_put_bclk_ratio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
+
+	machine->bclk_ratio_override = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
 #ifdef CONFIG_SWITCH
 static int tegra_machine_codec_get_jack_state(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
@@ -621,6 +651,23 @@ end:
 	return rtd;
 }
 
+static int tegra_machine_set_bclk_ratio(struct tegra_machine *machine,
+					struct snd_soc_pcm_runtime *rtd)
+{
+	unsigned int bclk_ratio;
+	int err;
+
+	if (machine->bclk_ratio_override) {
+		bclk_ratio = machine->bclk_ratio_override;
+	} else {
+		err = machine->soc_data->get_bclk_ratio(rtd, &bclk_ratio);
+		if (err < 0)
+			return err;
+	}
+
+	return snd_soc_dai_set_bclk_ratio(rtd->cpu_dai, bclk_ratio);
+}
+
 static int tegra_machine_set_params(struct snd_soc_card *card,
 					struct tegra_machine *machine,
 					int rate,
@@ -661,7 +708,6 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 			if ((idx >= machine->soc_data->num_xbar_dai_links)
 				&& (idx < num_of_dai_links)) {
 				unsigned int fmt;
-				int bclk_ratio;
 
 				err = 0;
 				/* TODO: why below overrite is needed */
@@ -669,17 +715,8 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 
 				fmt = rtd->dai_link->dai_fmt;
 
-				err = machine->soc_data->get_bclk_ratio(rtd,
-								&bclk_ratio);
-				if (err < 0) {
-					dev_err(card->dev,
-					"Failed to get bclk ratio for %s\n",
-					rtd->dai_link->name);
-					return err;
-				}
-
-				err = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai,
-								 bclk_ratio);
+				err = tegra_machine_set_bclk_ratio(machine,
+								   rtd);
 				if (err < 0) {
 					dev_err(card->dev,
 					"Failed to set cpu dai bclk ratio for %s\n",

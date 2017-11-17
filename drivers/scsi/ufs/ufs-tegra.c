@@ -1261,6 +1261,8 @@ static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 	of_property_read_u32(np, "nvidia,max-pwm-gear",
 					&ufs_tegra->max_pwm_gear);
 
+	if(of_property_read_bool(np, "nvidia,enable-wlu-scsi-device-add"))
+		ufs_tegra->hba->quirks |= UFSHCD_QUIRK_ENABLE_WLUNS;
 }
 
 /**

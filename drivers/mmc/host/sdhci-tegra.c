@@ -898,7 +898,7 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 		dev_dbg(mmc_dev(host->mmc), "Enabling clk %u, clk enabled %d\n",
 			clock, host->mmc->is_host_clk_enabled);
 		if (!tegra_host->rate_change_needs_clk)
-			tegra_sdhci_set_clk_rate(host, clock);
+			tegra_sdhci_set_clk_rate(host, host_clk);
 		/* Enable SDMMC host CAR clock */
 		if (!host->mmc->is_host_clk_enabled) {
 			rc = clk_prepare_enable(pltfm_host->clk);

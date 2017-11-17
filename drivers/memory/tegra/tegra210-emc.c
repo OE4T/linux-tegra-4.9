@@ -201,15 +201,18 @@ static void emc_train(unsigned long nothing);
 static struct timer_list emc_timer_training =
 	TIMER_INITIALIZER(emc_train, 0, 0);
 
+#ifdef CONFIG_DEBUG_FS
 static u8 tegra210_emc_bw_efficiency = 80;
 static u8 tegra210_emc_iso_share = 100;
 static unsigned long last_iso_bw;
+#endif
 
 static u32 bw_calc_freqs[] = {
 	5, 10, 20, 30, 40, 60, 80, 100, 120, 140, 160, 180,
 	200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700
 };
 
+#ifdef CONFIG_DEBUG_FS
 static u32 tegra210_lpddr3_iso_efficiency_os_idle[] = {
 	64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
 	64, 63, 60, 54, 45, 45, 45, 45, 45, 45, 45
@@ -262,6 +265,7 @@ static struct emc_iso_usage tegra210_emc_iso_usage[] = {
 		50, iso_share_calc_tegra210_general
 	},
 };
+#endif
 
 inline void emc_writel(u32 val, unsigned long offset)
 {
@@ -1606,6 +1610,7 @@ static inline int bw_calc_get_freq_idx(unsigned long bw)
 	return idx;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static u8 iso_share_calc_tegra210_os_idle(unsigned long iso_bw)
 {
 	int freq_idx = bw_calc_get_freq_idx(iso_bw);
@@ -1645,6 +1650,7 @@ static u8 iso_share_calc_tegra210_general(unsigned long iso_bw)
 
 	return ret;
 }
+#endif
 
 static const struct emc_clk_ops tegra210_emc_clk_ops = {
 	.emc_get_rate = tegra210_emc_get_rate,

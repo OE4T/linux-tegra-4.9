@@ -34,7 +34,9 @@
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mc-regs-t19x.h>
 
-#define T19X_MAX_NVLINK_SUPPORTED 1
+#define T19X_MAX_NVLINK_SUPPORTED	1
+#define MINION_BYTES_PER_BLOCK		256
+#define MINION_WORD_SIZE		4
 
 struct nvlink_link;
 struct nvlink_device;
@@ -141,6 +143,22 @@ struct tegra_nvlink_link {
 	void __iomem *mssnvlink_0_base;
 };
 
+/* Structure representing the MINION ucode header */
+struct minion_hdr {
+	u32 os_code_offset;
+	u32 os_code_size;
+	u32 os_data_offset;
+	u32 os_data_size;
+	u32 num_apps;
+	u32 *app_code_offsets;
+	u32 *app_code_sizes;
+	u32 *app_data_offsets;
+	u32 *app_data_sizes;
+	u32 ovl_offset;
+	u32 ovl_size;
+	u32 ucode_img_size;
+};
+
 struct nvlink_device {
 	/* device_id */
 	enum nvlink_endpt device_id;
@@ -169,6 +187,12 @@ struct nvlink_device {
 	*/
 	struct device_operations dev_ops;
 	/* pointer to private data of this device */
+	/* MINION FW - contains both the ucode header and image */
+	const struct firmware *minion_fw;
+	/* MINION ucode header */
+	struct minion_hdr minion_hdr;
+	/* MINION ucode image */
+	const u8 *minion_img;
 	void *priv;
 };
 

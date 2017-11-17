@@ -2143,6 +2143,7 @@ DEFINE_SIMPLE_ATTRIBUTE(sdhci_tegra_card_insert_fops, get_card_insert,
 	set_card_insert, "%llu\n");
 static void sdhci_tegra_debugfs_init(struct sdhci_host *host)
 {
+#ifdef CONFIG_DEBUG_FS
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	struct sdhci_tegra_clk_src_data *clk_src_data;
@@ -2191,6 +2192,7 @@ err:
 	dev_err(mmc_dev(host->mmc), "%s %s\n"
 		, __func__, mmc_hostname(host->mmc));
 	return;
+#endif
 }
 
 static struct platform_driver sdhci_tegra_driver = {

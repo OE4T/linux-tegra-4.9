@@ -379,7 +379,7 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 		__napi_schedule(&rx_queue->napi);
 	} else {
 		/* Do nothing here. */
-		pr_alert("Ethernet Interrupt while in poll!\n");
+		pr_debug("Ethernet Interrupt while in poll!\n");
 	}
 	pr_debug("<--%s()\n", __func__);
 }
@@ -1170,11 +1170,9 @@ void free_txrx_irqs(struct eqos_prv_data *pdata)
 
 	for (i = 0; i < pdata->num_chans; i++) {
 		if (pdata->rx_irq_alloc_mask & (1 << i)) {
-			irq_set_affinity_hint(pdata->rx_irqs[i], NULL);
 			free_irq(pdata->rx_irqs[i], pdata);
 		}
 		if (pdata->tx_irq_alloc_mask & (1 << i)) {
-			irq_set_affinity_hint(pdata->tx_irqs[i], NULL);
 			free_irq(pdata->tx_irqs[i], pdata);
 		}
 	}
@@ -1221,12 +1219,8 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 		}
 		pchinfo = &pdata->chinfo[i];
 
-		irq_set_affinity_hint(pdata->rx_irqs[i],
-				      cpumask_of(pchinfo->cpu));
 		pdata->rx_irq_alloc_mask |= (1 << i);
 
-		irq_set_affinity_hint(pdata->tx_irqs[i],
-				      cpumask_of(pchinfo->cpu));
 		pdata->tx_irq_alloc_mask |= (1 << i);
 	}
 	pr_debug("<--%s()\n", __func__);

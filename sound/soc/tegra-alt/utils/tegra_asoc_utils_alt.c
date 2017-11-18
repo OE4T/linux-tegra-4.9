@@ -169,10 +169,9 @@ int tegra_alt_asoc_utils_clk_enable(struct tegra_asoc_audio_clock_info *data)
 {
 	int err;
 
-#if defined(CONFIG_COMMON_CLK)
-	if (data->soc > TEGRA_ASOC_UTILS_SOC_TEGRA210)
+	if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA186)
 		reset_control_reset(data->clk_cdev1_rst);
-#endif
+
 	err = clk_prepare_enable(data->clk_cdev1);
 	if (err) {
 		dev_err(data->dev, "Can't enable cdev1: %d\n", err);
@@ -207,6 +206,8 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA210;
 	else if (of_machine_is_compatible("nvidia,tegra186"))
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA186;
+	else if (of_machine_is_compatible("nvidia,tegra194"))
+		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA194;
 	else
 		/* DT boot, but unknown SoC */
 		return -EINVAL;
@@ -247,17 +248,17 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 			goto err;
 		}
 
-#if defined(CONFIG_COMMON_CLK)
-		data->clk_cdev1_rst = devm_reset_control_get(dev,
-						"extern1_rst");
-		if (IS_ERR(data->clk_cdev1_rst)) {
-			dev_err(dev, "Reset control is not found, err: %ld\n",
-					PTR_ERR(data->clk_cdev1_rst));
-			return PTR_ERR(data->clk_cdev1_rst);
+		if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA186) {
+			data->clk_cdev1_rst = devm_reset_control_get(dev,
+							"extern1_rst");
+			if (IS_ERR(data->clk_cdev1_rst)) {
+				dev_err(dev,
+				"Reset control is not found, err: %ld\n",
+				PTR_ERR(data->clk_cdev1_rst));
+				return PTR_ERR(data->clk_cdev1_rst);
+			}
+			reset_control_reset(data->clk_cdev1_rst);
 		}
-
-		reset_control_reset(data->clk_cdev1_rst);
-#endif
 	}
 
 	return 0;

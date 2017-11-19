@@ -3,10 +3,6 @@ ccflags-y += -I$(srctree.nvidia)/drivers/video/tegra/host
 ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Werror
 
-ifeq ($(CONFIG_TEGRA_T19X_GRHOST),y)
-ccflags-y += -I$(srctree.t19x)/drivers/video/tegra/host/
-endif
-
 nvhost-host1x-objs  = \
 	host1x.o
 

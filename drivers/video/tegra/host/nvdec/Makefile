@@ -3,10 +3,6 @@ ccflags-y += -I$(srctree.nvidia)/drivers/video/tegra/host
 ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Iarch/arm/mach-tegra
 
-ifeq ($(CONFIG_TEGRA_T19X_GRHOST),y)
-ccflags-y += -I$(srctree.t19x)/drivers/video/tegra/host/
-endif
-
 nvhost-nvdec-objs  = \
 	nvdec.o
 

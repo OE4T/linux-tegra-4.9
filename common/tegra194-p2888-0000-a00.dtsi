@@ -44,4 +44,10 @@
 	tachometer@39c0000 {
 		status = "okay";
 	};
+
+	sdhci@3460000 {
+		uhs-mask = <0x60>;
+		nvidia,disable-rtpm;
+		status = "okay";
+	};
 };

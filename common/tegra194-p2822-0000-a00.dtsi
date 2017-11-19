@@ -12,5 +12,14 @@
  */
 
 #include <t19x-common-modules/tegra194-cvb-p2822-0000-a00.dtsi>
+#include <dt-bindings/gpio/tegra194-gpio.h>
+
 / {
+	sdhci@3400000 {
+		uhs-mask = <0x1F>;
+		mmc-ocr-mask = <0x0>;
+		nvidia,disable-rtpm;
+		cd-gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(G, 7) 0>;
+		status = "okay";
+	};
 };

@@ -15,6 +15,15 @@
 #include "tegra194-spmic-p2888-0001.dtsi"
 #include "tegra194-fixed-regulator-p2888-0001.dtsi"
 #include "tegra194-fixed-regulator-p2822-1000.dtsi"
+#include "dt-bindings/gpio/tegra194-gpio.h"
 
 / {
+	sdhci@3460000 {
+		vmmc-supply = <&p2888_spmic_ldo3>;
+		vqmmc-supply = <&p2888_spmic_sd2>;
+	};
+
+	sdhci@3400000 {
+		/* vmmc-supply = <&tegra_main_gpio TEGRA_MAIN_GPIO(A, 0) 1>; */
+	};
 };

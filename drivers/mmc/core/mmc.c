@@ -31,6 +31,7 @@
 
 static int mmc_select_hs400es(struct mmc_card *card);
 static int mmc_hs200_tuning(struct mmc_card *card);
+static void mmc_select_driver_type(struct mmc_card *card);
 
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
@@ -1531,6 +1532,8 @@ static int mmc_select_hs400es(struct mmc_card *card)
 	if (err && card->mmc_avail_type & EXT_CSD_CARD_TYPE_HS400_1_8V)
 		err = __mmc_set_signal_voltage(host, MMC_SIGNAL_VOLTAGE_180);
 
+	mmc_select_driver_type(card);
+
 	/* If fails try again during next card power cycle */
 	if (err)
 		goto out_err;
@@ -1971,6 +1974,10 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	 */
 	mmc_select_powerclass(card);
 
+	/* Execute post init if exists */
+	if (mmc_card_hs400(card) && host->ops->post_init)
+		host->ops->post_init(host);
+
 	/*
 	 * Enable HPI feature (if supported)
 	 */
@@ -2035,10 +2042,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			card->ext_csd.packed_event_en = 1;
 		}
 	}
-
-	/* Execute post init if exists */
-	if (mmc_card_hs400(card) && host->ops->post_init)
-		host->ops->post_init(host);
 
 	if (!oldcard)
 		host->card = card;

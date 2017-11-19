@@ -1168,7 +1168,7 @@ void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	if (!cmd->data && cmd->busy_timeout > 9000)
 		timeout += DIV_ROUND_UP(cmd->busy_timeout, 1000) * HZ + HZ;
 	else
-		timeout += 10 * HZ;
+		timeout += 12 * HZ;
 	sdhci_mod_timer(host, cmd->mrq, timeout);
 
 	host->cmd = cmd;

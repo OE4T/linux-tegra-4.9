@@ -619,17 +619,17 @@ struct tegra_gpio_soc_info {
 	int nports;
 	const int *wake_table;
 	int nwakes;
-	int interrupt_out_count;
+	int num_irq_line;
 	int num_banks;
-	int interrupt_valid_offset;
+	int start_irq_line;
 };
 
 struct tegra_gpio_controller {
-	int controller;
+	int bank;
 	int irq[MAX_IRQS];
 	struct tegra_gpio_info *tgi;
-	int route_map[MAX_IRQS][MAX_GPIO_PORTS];
-	int ports_in_controller;
+	int irq_map[MAX_IRQS][MAX_GPIO_PORTS];
+	int num_ports;
 };
 
 struct tegra_gpio_saved_register {
@@ -1001,23 +1001,23 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 	unsigned long val;
 	u32 addr;
 	int port_map[MAX_GPIO_PORTS];
-	int route_map_read;
+	int irq_map_read;
 
 	for (i = 0; i < MAX_GPIO_PORTS; ++i)
 		port_map[i] = -1;
 
 	for (i = 0; i < tgi->soc->nports; ++i) {
-		if (tgi->soc->port[i].cont_id == tg_cont->controller)
+		if (tgi->soc->port[i].cont_id == tg_cont->bank)
 			port_map[tgi->soc->port[i].port_index] = i;
 	}
 
 	chained_irq_enter(chip, desc);
-	if (tgi->soc->interrupt_out_count > 1) {
+	if (tgi->soc->num_irq_line > 1) {
 		for (i = 0; i < MAX_GPIO_PORTS; i++) {
 			for (j = 0; j < 8; j++) {
-				route_map_read = tg_cont->route_map[i +
-					tgi->soc->interrupt_valid_offset][j];
-				if (route_map_read & 0xFF) {
+				irq_map_read = tg_cont->irq_map[i +
+					tgi->soc->start_irq_line][j];
+				if (irq_map_read & 0xFF) {
 					port = port_map[j];
 					addr = tgi->soc->port[port].reg_offset;
 					val = __raw_readl(
@@ -1103,8 +1103,7 @@ static inline int tegra_gpio_debuginit(struct tegra_gpio_info *tgi)
 }
 #endif
 
-static int tegra_update_ports_in_controller(struct tegra_gpio_info *tgi,
-					     int bank)
+static int tegra_gpio_get_num_ports(struct tegra_gpio_info *tgi, int bank)
 {
 	int i;
 	int count = 0;
@@ -1116,23 +1115,25 @@ static int tegra_update_ports_in_controller(struct tegra_gpio_info *tgi,
 	return count;
 }
 
-static void tegra_read_routemap(struct tegra_gpio_info *tgi, int bank,
-			 int interrupt_count)
+static void tegra_gpio_read_irq_routemap(struct tegra_gpio_info *tgi, int bank,
+					 int irq_count)
 {
+	struct tegra_gpio_controller *tgcont;
 	int j;
 
-	for (j = 0; j < tgi->tg_contrlr[bank].ports_in_controller; j++) {
-		tgi->tg_contrlr[bank].route_map[interrupt_count +
-					 tgi->soc->interrupt_valid_offset][j] =
+	for (j = 0; j < tgi->tg_contrlr[bank].num_ports; j++) {
+		tgcont = &tgi->tg_contrlr[bank];
+		tgcont->irq_map[irq_count + tgi->soc->start_irq_line][j] =
 			 __raw_readl(tgi->scr_regs + (bank * 0x1000) + 0x800 +
 				     (j * GPIO_REG_DIFF) + ROUTE_MAP_OFFSET +
-				     (interrupt_count * 4));
+				     (irq_count * 4));
 	}
 }
 
 static int tegra_gpio_probe(struct platform_device *pdev)
 {
 	struct tegra_gpio_info *tgi;
+	struct tegra_gpio_controller *tgcont;
 	struct resource *res;
 	int bank;
 	int gpio;
@@ -1223,23 +1224,22 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 
 	for (bank = 0; bank < tgi->nbanks; bank++) {
-		tgi->tg_contrlr[bank].ports_in_controller =
-				tegra_update_ports_in_controller(tgi, bank);
-		for (i = 0; i < tgi->soc->interrupt_out_count; i++) {
+		tgcont = &tgi->tg_contrlr[bank];
+		tgcont->num_ports = tegra_gpio_get_num_ports(tgi, bank);
+		for (i = 0; i < tgi->soc->num_irq_line; i++) {
 			res = platform_get_resource(pdev, IORESOURCE_IRQ, i +
-				    (bank * tgi->soc->interrupt_out_count));
+				    (bank * tgi->soc->num_irq_line));
 			if (!res) {
 				dev_err(&pdev->dev, "Missing IRQ resource\n");
 				return -ENODEV;
 			}
-			tgi->tg_contrlr[bank].irq[i +
-				 tgi->soc->interrupt_valid_offset] = res->start;
-			/* read each port routemap */
-			if (tgi->soc->interrupt_out_count > 1)
-				tegra_read_routemap(tgi, bank, i);
+			tgcont->irq[i + tgi->soc->start_irq_line] = res->start;
+			/* read each port IRQ routemap */
+			if (tgi->soc->num_irq_line > 1)
+				tegra_gpio_read_irq_routemap(tgi, bank, i);
 		}
-		tgi->tg_contrlr[bank].controller = bank;
-		tgi->tg_contrlr[bank].tgi = tgi;
+		tgcont->bank = bank;
+		tgcont->tgi = tgi;
 	}
 
 	ret = gpiochip_add_data(&tgi->gc, tgi);
@@ -1268,7 +1268,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 
 	for (bank = 0; bank < tgi->nbanks; bank++) {
-		for (i = 0; i < tgi->soc->interrupt_out_count; i++) {
+		for (i = 0; i < tgi->soc->num_irq_line; i++) {
 			irq_set_chained_handler_and_data(
 						 tgi->tg_contrlr[bank].irq[i],
 						 tegra_gpio_irq_handler_desc,
@@ -1331,9 +1331,9 @@ static const struct tegra_gpio_soc_info t186_gpio_soc = {
 	.nports = ARRAY_SIZE(tegra186_gpio_cinfo),
 	.wake_table = tegra186_gpio_wakes,
 	.nwakes = ARRAY_SIZE(tegra186_gpio_wakes),
-	.interrupt_out_count = 1,
+	.num_irq_line = 1,
 	.num_banks = 0,
-	.interrupt_valid_offset = 0,
+	.start_irq_line = 0,
 };
 
 static const struct tegra_gpio_soc_info t186_aon_gpio_soc = {
@@ -1343,9 +1343,9 @@ static const struct tegra_gpio_soc_info t186_aon_gpio_soc = {
 	.nports = ARRAY_SIZE(tegra186_aon_gpio_cinfo),
 	.wake_table = tegra186_aon_gpio_wakes,
 	.nwakes = ARRAY_SIZE(tegra186_aon_gpio_wakes),
-	.interrupt_out_count = 1,
+	.num_irq_line = 1,
 	.num_banks = 0,
-	.interrupt_valid_offset = 0,
+	.start_irq_line = 0,
 };
 
 static const struct tegra_gpio_soc_info t194_gpio_soc = {
@@ -1355,9 +1355,9 @@ static const struct tegra_gpio_soc_info t194_gpio_soc = {
 	.nports = ARRAY_SIZE(tegra194_gpio_cinfo),
 	.wake_table = tegra194_gpio_wakes,
 	.nwakes = ARRAY_SIZE(tegra194_gpio_wakes),
-	.interrupt_out_count = 8,
+	.num_irq_line = 8,
 	.num_banks = 6,
-	.interrupt_valid_offset = 0,
+	.start_irq_line = 0,
 };
 
 static const struct tegra_gpio_soc_info t194_aon_gpio_soc = {
@@ -1367,9 +1367,9 @@ static const struct tegra_gpio_soc_info t194_aon_gpio_soc = {
 	.nports = ARRAY_SIZE(tegra194_aon_gpio_cinfo),
 	.wake_table = tegra194_aon_gpio_wakes,
 	.nwakes = ARRAY_SIZE(tegra194_aon_gpio_wakes),
-	.interrupt_out_count = 4,
+	.num_irq_line = 4,
 	.num_banks = 1,
-	.interrupt_valid_offset = 4,
+	.start_irq_line = 4,
 };
 
 static struct of_device_id tegra_gpio_of_match[] = {

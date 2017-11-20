@@ -46,7 +46,9 @@ enum aon_shub_request_type {
 	AON_SHUB_REQUEST_SNSR_CHIPS = 9,
 	AON_SHUB_REQUEST_RANGE = 10,
 	AON_SHUB_REQUEST_BATCH_RD = 11,
-	AON_SHUB_REQUEST_MAX = 11,
+	AON_SHUB_REQUEST_THRESH_LO = 12,
+	AON_SHUB_REQUEST_THRESH_HI = 13,
+	AON_SHUB_REQUEST_MAX = 13,
 };
 
 /* This enum represents the types of init requests to sensor hub associated
@@ -84,13 +86,13 @@ enum aon_shub_status {
 	AON_SHUB_STATUS_ERROR = 1,
 };
 
-/* This enum represents the types of errors in a sensors range setting */
-enum aon_shub_range_err_status {
-	AON_SHUB_RANGE_NO_ERR = 0,
-	AON_SHUB_RANGE_ENODEV = 1,
-	AON_SHUB_RANGE_EPERM = 2,
-	AON_SHUB_RANGE_EINVAL = 3,
-	AON_SHUB_RANGE_EACCES = 4,
+/* This enum represents the types of errors in a sensors attribute setting */
+enum aon_shub_err_status {
+	AON_SHUB_NO_ERR = 0,
+	AON_SHUB_ENODEV = 1,
+	AON_SHUB_EPERM = 2,
+	AON_SHUB_EINVAL = 3,
+	AON_SHUB_EACCES = 4,
 };
 
 /* This struct is used to represent sensor payload from the SHUB.
@@ -396,6 +398,26 @@ struct aon_shub_chip_cfg_ids_response {
 	s8 ids[];
 };
 
+/* This struct represents the threshold_hi/lo setting for a given sensor.
+ * Fields:
+ * snsr_id:	Sensor handle to identify the sensor
+ * setting:	Dpending on the request type i.e. thresh_hi or thresh_lo,
+ *		this value holds the respective threshold.
+ */
+struct aon_shub_thresh_request {
+	s32 snsr_id;
+	s32 setting;
+};
+
+/* This struct is used to represent data in response to a sensor threshold
+ * request to the SHUB.
+ * Fields:
+ * err:		error status of the setting.
+ */
+struct aon_shub_thresh_response {
+	u32 err;
+};
+
 /* This struct is used to represent data in response to a system specific
  * request.
  * Fields:
@@ -461,6 +483,7 @@ struct aon_shub_request {
 		struct aon_shub_batch_rd_request batch_rd;
 		struct aon_shub_flush_request flush;
 		struct aon_shub_range_request range;
+		struct aon_shub_thresh_request thresh;
 	} data;
 };
 
@@ -486,6 +509,7 @@ struct aon_shub_response {
 		struct aon_shub_batch_rd_response batch_rd;
 		struct aon_shub_range_response range;
 		struct aon_shub_payload_response payload;
+		struct aon_shub_thresh_response thresh;
 	} data;
 };
 

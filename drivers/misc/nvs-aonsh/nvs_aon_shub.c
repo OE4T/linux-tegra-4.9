@@ -358,7 +358,7 @@ static int tegra_aon_shub_max_range(void *client, int snsr_id, int max_range)
 	}
 	ret = shub->shub_resp->data.range.err;
 	switch (ret) {
-	case AON_SHUB_RANGE_NO_ERR:
+	case AON_SHUB_NO_ERR:
 		memcpy(&shub->snsrs[snsr_id]->cfg.max_range,
 				&shub->shub_resp->data.range.max_range,
 				sizeof(struct nvs_float));
@@ -375,21 +375,21 @@ static int tegra_aon_shub_max_range(void *client, int snsr_id, int max_range)
 			}
 		}
 		break;
-	case AON_SHUB_RANGE_ENODEV:
+	case AON_SHUB_ENODEV:
 		/* Invalid snsr_id passed for range setting */
 		ret = -ENODEV;
 		break;
-	case AON_SHUB_RANGE_EACCES:
+	case AON_SHUB_EACCES:
 		/* can't change the setting on the fly while the device is
 		 * active. Disable the device first.
 		 */
 		ret = -EACCES;
 		break;
-	case AON_SHUB_RANGE_EINVAL:
+	case AON_SHUB_EINVAL:
 		/* Range setting exceeds max setting */
 		ret = -EINVAL;
 		break;
-	case AON_SHUB_RANGE_EPERM:
+	case AON_SHUB_EPERM:
 		/* No provision to modify the range for this device */
 		ret = -EPERM;
 		break;
@@ -406,11 +406,85 @@ exit:
 	return ret;
 }
 
+static int tegra_aon_shub_thresh(struct tegra_aon_shub *shub, int snsr_id,
+				 int thresh, bool high)
+{
+	int ret;
+
+	mutex_lock(&shub->shub_mutex);
+	shub->shub_req->req_type = high ? AON_SHUB_REQUEST_THRESH_HI :
+					AON_SHUB_REQUEST_THRESH_LO;
+	shub->shub_req->data.thresh.snsr_id = snsr_id;
+	shub->shub_req->data.thresh.setting = thresh;
+	ret = tegra_aon_shub_ivc_msg_send(shub,
+					  sizeof(struct aon_shub_request),
+					  IVC_TIMEOUT);
+	if (ret) {
+		dev_err(shub->dev,
+			"thresh_%s ERR: snsr_id: %d setting: %d!\n",
+			high ? "hi" : "lo", snsr_id, thresh);
+		goto exit;
+	}
+	ret = shub->shub_resp->data.thresh.err;
+	switch (ret) {
+	case AON_SHUB_NO_ERR:
+		if (high)
+			shub->snsrs[snsr_id]->cfg.thresh_hi = thresh;
+		else
+			shub->snsrs[snsr_id]->cfg.thresh_lo = thresh;
+		break;
+	case AON_SHUB_ENODEV:
+		/* Invalid snsr_id passed for threshold setting */
+		ret = -ENODEV;
+		break;
+	case AON_SHUB_EACCES:
+		/* can't change the setting on the fly while the device is
+		 * active. Disable the device first.
+		 */
+		ret = -EACCES;
+		break;
+	case AON_SHUB_EINVAL:
+		/* Invalid threshold passed */
+		ret = -EINVAL;
+		break;
+	case AON_SHUB_EPERM:
+		/* No provision to modify the thresh for this device */
+		ret = -EPERM;
+		break;
+	default:
+		break;
+	}
+
+	if (ret)
+		dev_err(shub->dev, "thresh_%s ERR: %d\n",
+					high ? "hi" : "lo", ret);
+
+exit:
+	mutex_unlock(&shub->shub_mutex);
+	return ret;
+}
+
+static int tegra_aon_shub_thresh_lo(void *client, int snsr_id, int thresh_lo)
+{
+	struct tegra_aon_shub *shub = (struct tegra_aon_shub *)client;
+
+	return tegra_aon_shub_thresh(shub, snsr_id, thresh_lo, false);
+}
+
+static int tegra_aon_shub_thresh_hi(void *client, int snsr_id, int thresh_hi)
+{
+	struct tegra_aon_shub *shub = (struct tegra_aon_shub *)client;
+
+	return tegra_aon_shub_thresh(shub, snsr_id, thresh_hi, true);
+}
+
 static struct nvs_fn_dev aon_shub_nvs_fn = {
 	.enable	= tegra_aon_shub_enable,
 	.batch	= tegra_aon_shub_batch,
 	.batch_read = tegra_aon_shub_batch_read,
 	.max_range = tegra_aon_shub_max_range,
+	.thresh_lo = tegra_aon_shub_thresh_lo,
+	.thresh_hi = tegra_aon_shub_thresh_hi,
 };
 
 #ifdef TEGRA_AON_SHUB_DBG_ENABLE

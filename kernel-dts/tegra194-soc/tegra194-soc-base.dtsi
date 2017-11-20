@@ -338,6 +338,22 @@
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SATA2>;
 			};
+			sdmmc1a_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SDMMC1A>;
+			};
+			sdmmc3a_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SDMMC3A>;
+			};
+			sdmmc4a_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SDMMC4A>;
+			};
+			ufshci_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_UFSHC>;
+			};
 		};
 
 		address-space-prop {

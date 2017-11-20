@@ -803,6 +803,7 @@ static inline void aux_mux_lp0_clamp(struct tegra_xusb_padctl *padctl,
 #define aux_mux_lp0_clamp_enable(u) aux_mux_lp0_clamp(u, true)
 #define aux_mux_lp0_clamp_disable(u) aux_mux_lp0_clamp(u, false)
 
+/* must be called under padctl->lock */
 static int tegra210_uphy_init(struct tegra_xusb_padctl *padctl)
 {
 	struct tegra210_xusb_padctl *priv = to_tegra210_xusb_padctl(padctl);
@@ -814,23 +815,17 @@ static int tegra210_uphy_init(struct tegra_xusb_padctl *padctl)
 		return 0;
 	}
 
-	mutex_lock(&padctl->lock);
-
 	dev_dbg(padctl->dev, "start UPHY init\n");
 
 	/* enable PLLE in SW */
 	err = clk_prepare_enable(priv->plle);
-	if (err < 0) {
-		mutex_unlock(&padctl->lock);
+	if (err < 0)
 		return err;
-	}
 
 	if (t210b01_compatible(padctl) == 1) {
 		err = clk_prepare_enable(priv->uphy_mgmt_clk);
-		if (err < 0) {
-			mutex_unlock(&padctl->lock);
+		if (err < 0)
 			return err;
-		}
 	}
 
 	/* enable PCIE & SATA PLL in HW */
@@ -861,7 +856,6 @@ static int tegra210_uphy_init(struct tegra_xusb_padctl *padctl)
 
 	aux_mux_lp0_clamp_disable(padctl);
 
-	mutex_unlock(&padctl->lock);
 	return tegra210_xusb_padctl_enable(padctl);
 }
 
@@ -1914,11 +1908,18 @@ static const struct tegra_xusb_lane_ops tegra210_pcie_lane_ops = {
 static int tegra210_pcie_phy_init(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	int ret;
 
-	dev_dbg(lane->pad->padctl->dev, "phy init lane = %s\n",
+	dev_dbg(padctl->dev, "phy init lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
-	return tegra210_uphy_init(lane->pad->padctl);
+	mutex_lock(&padctl->lock);
+
+	ret = tegra210_uphy_init(padctl);
+
+	mutex_unlock(&padctl->lock);
+	return ret;
 }
 
 static int tegra210_pcie_phy_exit(struct phy *phy)
@@ -2360,11 +2361,18 @@ static inline void tegra210_sata_phy_idle_detector(
 static int tegra210_sata_phy_init(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	int ret;
 
-	dev_dbg(lane->pad->padctl->dev, "phy init lane = %s\n",
+	dev_dbg(padctl->dev, "phy init lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
-	return tegra210_uphy_init(lane->pad->padctl);
+	mutex_lock(&padctl->lock);
+
+	ret = tegra210_uphy_init(padctl);
+
+	mutex_unlock(&padctl->lock);
+	return ret;
 }
 
 static int tegra210_sata_phy_exit(struct phy *phy)

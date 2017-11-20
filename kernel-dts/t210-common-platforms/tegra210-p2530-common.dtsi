@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra210-platforms/tegra210-p2530-common.dtsi
  *
- * Copyright (c) 2014 - 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014 - 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,8 +32,90 @@
 		fastboot-instructions = "Tap on power button to navigate menu options.\nHold down power button for 2 sec and release for selecting an option\n";
 	};
 
+	cpus {
+		cpu@0 {
+			clocks = <&tegra_car TEGRA210_CLK_CCLK_G>,
+				 <&tegra_car TEGRA210_CLK_CCLK_LP>,
+				 <&tegra_car TEGRA210_CLK_PLL_X>,
+				 <&tegra_car TEGRA210_CLK_PLL_P_OUT4>,
+				 <&tegra_clk_dfll>;
+			clock-names = "cpu_g", "cpu_lp", "pll_x", "pll_p", "dfll";
+			clock-latency = <300000>;
+		};
+	};
+
+
+	memory-controller@70019000 {
+		status = "okay";
+	};
+
+	clock@70110000 {
+		status = "okay";
+		nvidia,pwm-to-pmic;
+		nvidia,init-uv = <1000000>;
+		nvidia,sample-rate = <25000>;
+		nvidia,droop-ctrl = <0x00000f00>;
+		nvidia,force-mode = <1>;
+		nvidia,cf = <6>;
+		nvidia,ci = <0>;
+		nvidia,cg = <2>;
+		nvidia,idle-override;
+		nvidia,one-shot-calibrate;
+		nvidia,pwm-period = <2500>; /* 2.5us */
+		pinctrl-names = "dvfs_pwm_enable", "dvfs_pwm_disable";
+		pinctrl-0 = <&dvfs_pwm_active_state>;
+		pinctrl-1 = <&dvfs_pwm_inactive_state>;
+		nvidia,align-offset-uv = <708000>;
+		nvidia,align-step-uv = <19200>;
+	};
+
 	pmc@7000e400 {
+		#nvidia,wake-cells = <3>;
 		nvidia,invert-interrupt;
+		nvidia,suspend-mode = <0>;
+		nvidia,cpu-pwr-good-time = <0>;
+		nvidia,cpu-pwr-off-time = <0>;
+		nvidia,core-pwr-good-time = <4587 3876>;
+		nvidia,core-pwr-off-time = <39065>;
+		nvidia,core-power-req-active-high;
+		nvidia,sys-clock-req-active-high;
+		pinctrl_iopad_default:iopad-defaults {
+			sdmmc-io-pads {
+				pins = "sdmmc1", "sdmmc3";
+				nvidia,enable-voltage-switching;
+			};
+			sdmmc-dpd-enable {
+				pins = "emmc2";
+				low-power-enable;
+			};
+		};
+	};
+
+	host1x {
+		/* tegradc.0 */
+		dc@54200000 {
+			nvidia,dc-connector = <&sor1>;
+		};
+
+		dpaux1 {
+			status = "okay";
+		};
+	};
+	dvfs {
+		compatible = "nvidia,tegra210-dvfs";
+	};
+
+	gpu-dvfs-rework {
+		status = "okay";
+	};
+
+	mailbox@70098000 {
+		status = "okay";
+	};
+
+	serial@70006000 {
+		compatible = "nvidia,tegra210-uart", "nvidia,tegra114-hsuart", "nvidia,tegra20-uart";
+		status = "okay";
 	};
 
 	sdhci@700b0600 {
@@ -271,6 +353,29 @@
 		Tdiode_tegra {
 			status = "okay";
 		};
+	};
+
+	pinmux@700008d4 {
+		dvfs_pwm_active_state: dvfs_pwm_active {
+			dvfs_pwm_pbb1 {
+				nvidia,pins = "dvfs_pwm_pbb1";
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+			};
+		};
+
+		dvfs_pwm_inactive_state: dvfs_pwm_inactive {
+			dvfs_pwm_pbb1 {
+				nvidia,pins = "dvfs_pwm_pbb1";
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+			};
+		};
+	};
+
+	pwm@70110000 {
+		pinctrl-0 = <&dvfs_pwm_active_state>;
+		pinctrl-1 = <&dvfs_pwm_inactive_state>;
+		pwm-regulator = <&cpu_ovr_reg>;
+		status = "okay";
 	};
 };
 

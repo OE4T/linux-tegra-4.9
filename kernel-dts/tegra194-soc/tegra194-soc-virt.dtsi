@@ -1,0 +1,99 @@
+/*
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+
+/ {
+	/* IVC and mempool driver */
+	tegra_hv: hyp {
+		compatible = "nvidia,tegra-hv";
+		status = "okay";
+	};
+	/* Property to be used by VM to determine if it is
+	 * running as VM under Hypervisor */
+	chosen {
+		nvidia,tegra-hypervisor-mode;
+	};
+
+	/* Use 64-bit GICC alias region which is mapped
+	 * to GICV interface underneath by Hypervisor */
+	interrupt-controller@3881000 {
+		reg = <0x0 0x03881000 0x0 0x00001000
+		       0x0 0x03892000 0x0 0x00002000>;
+	};
+
+	/* Paravirtualized BPMP driver */
+	bpmp {
+		compatible = "nvidia,tegra186-bpmp-hv";
+	};
+	/* Paravirtualized PM driver */
+	tegra_hv_pm_ctl {
+		compatible = "nvidia,tegra-hv-pm-ctl";
+	};
+
+	/* Paravirtualized watchdog driver */
+	tegra_hv_wdt {
+		compatible = "nvidia,tegra-hv-wdt";
+	};
+
+	/* Disable physical watchdog driver */
+	watchdog@30c0000 {
+		status = "disabled";
+	};
+
+	generic-system-config {
+		status = "dislabled";
+	};
+
+	mipical {
+		status = "disabled";
+	};
+
+	/* ISO-clients cannot have stage-1 translation and hence
+	 * iommus node are deleted for ISO-Clients which are
+	 * nvdisplay and vi */
+	host1x {
+		nvdisplay@15200000 {
+			/delete-property/ iommus;
+			/delete-property/ iso-smmu;
+		};
+
+		nvdisplay@15210000 {
+			/delete-property/ iommus;
+			/delete-property/ iso-smmu;
+		};
+
+		nvdisplay@15220000 {
+			/delete-property/ iommus;
+			/delete-property/ iso-smmu;
+		};
+
+		nvdisplay@15230000 {
+			/delete-property/ iommus;
+			/delete-property/ iso-smmu;
+		};
+
+		vi: vi@15c10000 {
+                        /delete-property/ iommus;
+                        /delete-property/ iso-smmu;
+		};
+	};
+
+	/* ISO-SMMU is not available for a VM and hence
+	 * all the properties related to ISO-SMMU are deleted. */
+	iommu@12000000 {
+		reg = <0x0 0x12000000 0x0 0x01000000>, /* SMMU0 16MB */
+		      <0x0 0x11000000 0x0 0x01000000>; /* SMMU1 16MB */
+		/delete-property/ iso-smmu-id;
+	};
+};
+

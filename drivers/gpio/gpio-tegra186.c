@@ -1013,24 +1013,24 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 
 	chained_irq_enter(chip, desc);
 	if (tgi->soc->num_irq_line > 1) {
-		for (i = 0; i < MAX_GPIO_PORTS; i++) {
-			for (j = 0; j < 8; j++) {
+		for (i = 0; i < tgi->soc->num_irq_line; i++) {
+			for (j = 0; j < MAX_GPIO_PORTS; j++) {
+				port = port_map[j];
+				if (port == -1)
+					continue;
+
 				irq_map_read = tg_cont->irq_map[i +
 					tgi->soc->start_irq_line][j];
-				if (irq_map_read & 0xFF) {
-					port = port_map[j];
-					addr = tgi->soc->port[port].reg_offset;
-					val = __raw_readl(
-						tg_cont->tgi->gpio_regs +
-						addr +
-						GPIO_INT_STATUS_OFFSET +
+				if (!(irq_map_read & 0xFF))
+					continue;
+
+				addr = tgi->soc->port[port].reg_offset;
+				val = __raw_readl(tg_cont->tgi->gpio_regs +
+						addr + GPIO_INT_STATUS_OFFSET +
 						GPIO_STATUS_G1);
-					for_each_set_bit(pin, &val, 8)
-						generic_handle_irq(
-							tegra_gpio_to_irq(
-							&tgi->gc, (port * 8) +
-							pin));
-				}
+				for_each_set_bit(pin, &val, 8)
+					generic_handle_irq(tegra_gpio_to_irq(
+						&tgi->gc, (port * 8) + pin));
 			}
 		}
 	} else {

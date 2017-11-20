@@ -126,6 +126,59 @@ static const struct file_operations pva_vpu_function_table_fops = {
 	.release = single_release,
 };
 
+static inline void print_version(struct seq_file *s,
+				 const char *version_str,
+				 const u32 version)
+{
+	const char type = PVA_EXTRACT(version, 31, 24, u8);
+	const u32 major = PVA_EXTRACT(version, 23, 16, u32);
+	const u32 minor = PVA_EXTRACT(version, 15, 8, u32);
+	const u32 subminor = PVA_EXTRACT(version, 7, 0, u32);
+
+	seq_printf(s, "%s: %c.%02u.%02u.%02u\n", version_str,
+		   type, major, minor, subminor);
+}
+
+static int print_firmware_versions(struct seq_file *s, void *data)
+{
+	struct pva *pva = s->private;
+	struct pva_version_info info;
+	int ret = 0;
+
+	ret = nvhost_module_busy(pva->pdev);
+	if (ret < 0)
+		goto err_poweron;
+
+	ret = pva_get_firmware_version(pva, &info);
+	if (ret < 0)
+		goto err_get_firmware_version;
+
+	nvhost_module_idle(pva->pdev);
+
+	print_version(s, "pva_r5_version", info.pva_r5_version);
+	print_version(s, "pva_compat_version", info.pva_compat_version);
+	seq_printf(s, "pva_revision: %x\n", info.pva_revision);
+	seq_printf(s, "pva_built_on: %u\n", info.pva_built_on);
+
+	return 0;
+
+err_get_firmware_version:
+	nvhost_module_idle(pva->pdev);
+err_poweron:
+	return ret;
+}
+
+static int print_version_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, print_firmware_versions, inode->i_private);
+}
+
+static const struct file_operations print_version_fops = {
+	.open = print_version_open,
+	.read = seq_read,
+	.release = single_release,
+};
+
 void pva_debugfs_init(struct platform_device *pdev)
 {
 	struct dentry *ret;
@@ -170,4 +223,9 @@ void pva_debugfs_init(struct platform_device *pdev)
 				 &pva->dbg_vpu_app_id);
 	if (!ret)
 		nvhost_dbg_info("Failed to create vpu_app id debug file");
+
+	ret = debugfs_create_file("firmware_version", S_IRUGO, de,
+				pva, &print_version_fops);
+	if (!ret)
+		nvhost_dbg_info("Failed to create PVA version file");
 }

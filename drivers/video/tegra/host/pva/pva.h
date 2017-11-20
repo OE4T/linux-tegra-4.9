@@ -36,6 +36,13 @@ enum pva_submit_mode {
 	PVA_SUBMIT_MODE_CHANNEL_CCQ	= 2
 };
 
+struct pva_version_info {
+	u32 pva_r5_version;
+	u32 pva_compat_version;
+	u32 pva_revision;
+	u32 pva_built_on;
+};
+
 /**
  * Queue count of 8 is maintained per PVA.
  */
@@ -320,4 +327,14 @@ int pva_alloc_and_populate_function_table(struct pva *pva,
 void pva_dealloc_vpu_function_table(struct pva *pva,
 				    struct pva_func_table *fn_table);
 
+/**
+ * @brief	Get PVA version information
+ *
+ * @param pva	Pointer to a PVA device node
+ * @param info	Pointer to an information structure to be filled
+ *
+ * @return	0 on success, otherwise a negative error code
+ */
+int pva_get_firmware_version(struct pva *pva,
+			     struct pva_version_info *info);
 #endif

@@ -477,6 +477,34 @@ static int pva_get_vpu_function_table(struct pva *pva,
 
 }
 
+int pva_get_firmware_version(struct pva *pva,
+			     struct pva_version_info *info)
+{
+	uint32_t flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
+	struct pva_mailbox_status_regs status;
+	struct pva_cmd cmd;
+	int err = 0;
+	u32 nregs;
+
+	nregs = pva_cmd_R5_version(&cmd, flags);
+
+	/* Submit request to PVA and wait for response */
+	err = pva_mailbox_send_cmd_sync(pva, &cmd, nregs, &status);
+	if (err < 0) {
+		nvhost_warn(&pva->pdev->dev,
+			"mbox get firmware version cmd failed: %d\n", err);
+
+		return err;
+	}
+
+	info->pva_r5_version = status.status[PVA_CCQ_STATUS4_INDEX];
+	info->pva_compat_version = status.status[PVA_CCQ_STATUS5_INDEX];
+	info->pva_revision = status.status[PVA_CCQ_STATUS6_INDEX];
+	info->pva_built_on = status.status[PVA_CCQ_STATUS7_INDEX];
+
+	return err;
+}
+
 void pva_dealloc_vpu_function_table(struct pva *pva,
 					struct pva_func_table *fn_table)
 {

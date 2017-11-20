@@ -624,11 +624,18 @@ struct tegra_gpio_soc_info {
 	int start_irq_line;
 };
 
+struct tegra_gpio_irq_info {
+	int hw_irq;
+	int sw_irq;
+	bool valid;
+	u32 irq_map[MAX_GPIO_PORTS];;
+};
+
 struct tegra_gpio_controller {
 	int bank;
 	int irq[MAX_IRQS];
 	struct tegra_gpio_info *tgi;
-	int irq_map[MAX_IRQS][MAX_GPIO_PORTS];
+	struct tegra_gpio_irq_info irq_info[MAX_IRQS];
 	int num_ports;
 };
 
@@ -995,13 +1002,14 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	struct tegra_gpio_controller *tg_cont = irq_desc_get_handler_data(desc);
 	struct tegra_gpio_info *tgi = tg_cont->tgi;
+	unsigned int irq = irq_desc_get_irq(desc);
 	int pin;
 	int port;
-	int i, j;
+	int i;
 	unsigned long val;
 	u32 addr;
 	int port_map[MAX_GPIO_PORTS];
-	int irq_map_read;
+	unsigned int irq_offset, irq_index;
 
 	for (i = 0; i < MAX_GPIO_PORTS; ++i)
 		port_map[i] = -1;
@@ -1011,43 +1019,45 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 			port_map[tgi->soc->port[i].port_index] = i;
 	}
 
+	irq_index = 0;
 	chained_irq_enter(chip, desc);
-	if (tgi->soc->num_irq_line > 1) {
-		for (i = 0; i < tgi->soc->num_irq_line; i++) {
-			for (j = 0; j < MAX_GPIO_PORTS; j++) {
-				port = port_map[j];
-				if (port == -1)
-					continue;
+	if (tgi->soc->num_irq_line <= 1)
+		goto single_line_irq;
 
-				irq_map_read = tg_cont->irq_map[i +
-					tgi->soc->start_irq_line][j];
-				if (!(irq_map_read & 0xFF))
-					continue;
+	for (i = 0; i < tgi->soc->num_irq_line; i++) {
+		irq_offset = i + tgi->soc->start_irq_line;
+		if (!tg_cont->irq_info[irq_offset].valid)
+			continue;
 
-				addr = tgi->soc->port[port].reg_offset;
-				val = __raw_readl(tg_cont->tgi->gpio_regs +
-						addr + GPIO_INT_STATUS_OFFSET +
-						GPIO_STATUS_G1);
-				for_each_set_bit(pin, &val, 8)
-					generic_handle_irq(tegra_gpio_to_irq(
-						&tgi->gc, (port * 8) + pin));
-			}
-		}
-	} else {
-		for (i = 0; i < MAX_GPIO_PORTS; i++) {
-			port = port_map[i];
-			if (port == -1)
-				continue;
-
-			addr = tgi->soc->port[port].reg_offset;
-			val = __raw_readl(tg_cont->tgi->gpio_regs + addr +
-				GPIO_INT_STATUS_OFFSET + GPIO_STATUS_G1);
-			for_each_set_bit(pin, &val, 8)
-				generic_handle_irq(tegra_gpio_to_irq(&tgi->gc,
-						   port * 8 + pin));
+		if (tg_cont->irq_info[irq_offset].sw_irq == irq) {
+			irq_index = irq_offset;
+			break;
 		}
 	}
 
+	if (i == tgi->soc->num_irq_line) {
+		dev_err(tgi->dev, "IRQ %u is not mapped\n", irq);
+		goto done;
+	}
+
+single_line_irq:
+	for (i = 0; i < MAX_GPIO_PORTS; i++) {
+		port = port_map[i];
+		if (port == -1)
+			continue;
+
+		if (!(tg_cont->irq_info[irq_index].irq_map[i] & 0xFF))
+			continue;
+
+		addr = tgi->soc->port[port].reg_offset;
+		val = __raw_readl(tg_cont->tgi->gpio_regs + addr +
+				GPIO_INT_STATUS_OFFSET + GPIO_STATUS_G1);
+		for_each_set_bit(pin, &val, 8)
+			generic_handle_irq(tegra_gpio_to_irq(&tgi->gc,
+						   port * 8 + pin));
+	}
+
+done:
 	chained_irq_exit(chip, desc);
 }
 
@@ -1118,16 +1128,53 @@ static int tegra_gpio_get_num_ports(struct tegra_gpio_info *tgi, int bank)
 static void tegra_gpio_read_irq_routemap(struct tegra_gpio_info *tgi, int bank,
 					 int irq_count)
 {
-	struct tegra_gpio_controller *tgcont;
+	struct tegra_gpio_controller *tgcont = &tgi->tg_contrlr[bank];
+	int irq_offset = irq_count + tgi->soc->start_irq_line;
 	int j;
 
-	for (j = 0; j < tgi->tg_contrlr[bank].num_ports; j++) {
-		tgcont = &tgi->tg_contrlr[bank];
-		tgcont->irq_map[irq_count + tgi->soc->start_irq_line][j] =
+	for (j = 0; j < tgcont->num_ports; j++) {
+		tgcont->irq_info[irq_offset].irq_map[j] =
 			 __raw_readl(tgi->scr_regs + (bank * 0x1000) + 0x800 +
 				     (j * GPIO_REG_DIFF) + ROUTE_MAP_OFFSET +
 				     (irq_count * 4));
 	}
+}
+
+static int tegra_gpio_to_hw_irq(unsigned int sw_irq)
+{
+        struct irq_data *d = irq_get_irq_data(sw_irq);
+
+        if (!d)
+                return -ENODEV;
+
+        return (int)irqd_to_hwirq(d) - 0x20;
+}
+
+static bool tegra_gpio_irq_is_protected(struct device *dev, u32 hw_irq)
+{
+	struct device_node *np = dev->of_node;
+	int count;
+	int i;
+	int ret;
+	u32 pval;
+
+	count = of_property_count_elems_of_size(np, "nvidia,protected-gpio-irqs",
+					      sizeof(u32));
+	if (count <= 0)
+		return false;
+
+	for (i = 0; i < count; ++i) {
+		ret = of_property_read_u32_index(np,
+				"nvidia,protected-gpio-irqs", i, &pval);
+
+		if (ret < 0)
+			return false;
+
+		if (pval == hw_irq)
+			return true;
+	}
+
+	return false;
 }
 
 static int tegra_gpio_probe(struct platform_device *pdev)
@@ -1135,10 +1182,13 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	struct tegra_gpio_info *tgi;
 	struct tegra_gpio_controller *tgcont;
 	struct resource *res;
+	u32 valid_map;
+	int irq_offset;
+	int hw_irq;
 	int bank;
 	int gpio;
 	int ret;
-	int i;
+	int i, j;
 
 	tgi = devm_kzalloc(&pdev->dev, sizeof(*tgi), GFP_KERNEL);
 	if (!tgi)
@@ -1233,10 +1283,47 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 				dev_err(&pdev->dev, "Missing IRQ resource\n");
 				return -ENODEV;
 			}
-			tgcont->irq[i + tgi->soc->start_irq_line] = res->start;
+
+			irq_offset = i + tgi->soc->start_irq_line;
+
+			hw_irq = tegra_gpio_to_hw_irq(res->start);
+			if (hw_irq < 0) {
+				dev_err(&pdev->dev,
+					"Failed to get HW IRQ of SW IRQ(%llu) :%d\n",
+					res->start, hw_irq);
+				return hw_irq;
+			}
+
+			tgcont->irq[irq_offset] = res->start;
+			tgcont->irq_info[irq_offset].sw_irq = res->start;
+			tgcont->irq_info[irq_offset].hw_irq = hw_irq;
+
+			if (tegra_gpio_irq_is_protected(&pdev->dev, hw_irq)) {
+				tgcont->irq_info[irq_offset].valid = false;
+				continue;
+			}
+
 			/* read each port IRQ routemap */
-			if (tgi->soc->num_irq_line > 1)
+			if (tgi->soc->num_irq_line > 1) {
 				tegra_gpio_read_irq_routemap(tgi, bank, i);
+			} else {
+				for (j = 0; j < MAX_GPIO_PORTS; ++j)
+					tgcont->irq_info[i].irq_map[j] = 0xFF;
+			}
+
+			/* If no interrupt mapping then do not register IRQ */
+			valid_map = 0;
+			for (j = 0; j < tgcont->num_ports; ++j) {
+				valid_map |=
+					tgcont->irq_info[irq_offset].irq_map[j];
+				valid_map &= 0xFF;
+			}
+			if (!valid_map) {
+				tgcont->irq_info[irq_offset].valid = false;
+				continue;
+			}
+
+			tgcont->irq_info[irq_offset].valid = true;
 		}
 		tgcont->bank = bank;
 		tgcont->tgi = tgi;
@@ -1268,11 +1355,16 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 
 	for (bank = 0; bank < tgi->nbanks; bank++) {
+		tgcont = &tgi->tg_contrlr[bank];
 		for (i = 0; i < tgi->soc->num_irq_line; i++) {
+			irq_offset = i + tgi->soc->start_irq_line;
+			if (!tgcont->irq_info[irq_offset].valid)
+				continue;
+
 			irq_set_chained_handler_and_data(
-						 tgi->tg_contrlr[bank].irq[i],
-						 tegra_gpio_irq_handler_desc,
-						 &tgi->tg_contrlr[bank]);
+					tgcont->irq_info[irq_offset].sw_irq,
+					tegra_gpio_irq_handler_desc,
+					tgcont);
 		}
 	}
 

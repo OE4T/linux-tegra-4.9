@@ -208,48 +208,6 @@ static INT eqos_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	return ret;
 }
 
-/*!
-* \brief API to reset PHY
-*
-* \details This API is issue soft reset to PHY core and waits
-* until soft reset completes.
-*
-* \param[in] bus - points to the mii_bus structure
-*
-* \return 0 on success and -ve number on failure.
-*/
-
-static INT eqos_mdio_reset(struct mii_bus *bus)
-{
-	struct net_device *dev = bus->priv;
-	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	INT phydata;
-
-	DBGPR_MDIO("-->eqos_mdio_reset: phyaddr : %d\n", pdata->phyaddr);
-
-	hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata,
-		pdata->mdc_cr);
-
-	if (phydata < 0)
-		return 0;
-
-	/* issue soft reset to PHY */
-	phydata |= BMCR_RESET;
-	hw_if->write_phy_regs(pdata->phyaddr, MII_BMCR, phydata,
-		pdata->mdc_cr);
-
-	/* wait until software reset completes */
-	do {
-		hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata,
-			pdata->mdc_cr);
-	} while ((phydata >= 0) && (phydata & BMCR_RESET));
-
-	DBGPR_MDIO("<--eqos_mdio_reset\n");
-
-	return 0;
-}
-
 #ifdef YDEBUG
 /*!
  * \details This function is invoked by other functions to get the PHY register
@@ -591,7 +549,6 @@ int eqos_mdio_register(struct net_device *dev)
 	new_bus->name = "dwc_phy";
 	new_bus->read = eqos_mdio_read;
 	new_bus->write = eqos_mdio_write;
-	new_bus->reset = eqos_mdio_reset;
 	snprintf(new_bus->id, MII_BUS_ID_SIZE, "%s-%x", new_bus->name,
 		 pdata->bus_id);
 	new_bus->priv = dev;

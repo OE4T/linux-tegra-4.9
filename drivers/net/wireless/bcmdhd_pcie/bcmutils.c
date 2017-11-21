@@ -2047,7 +2047,7 @@ prhex(const char *msg, uchar *buf, uint nbytes)
 	uint i;
 
 	if (msg && (msg[0] != '\0'))
-		printf("%s:\n", msg);
+		printf(KERN_INFO "%s:\n", msg);
 
 	p = line;
 	for (i = 0; i < nbytes; i++) {
@@ -2063,7 +2063,7 @@ prhex(const char *msg, uchar *buf, uint nbytes)
 		}
 
 		if (i % 16 == 15) {
-			printf("%s\n", line);		/* flush line */
+			printf(KERN_INFO "%s\n", line);		/* flush line */
 			p = line;
 			len = sizeof(line);
 		}
@@ -2071,7 +2071,7 @@ prhex(const char *msg, uchar *buf, uint nbytes)
 
 	/* flush last partial line */
 	if (p != line)
-		printf("%s\n", line);
+		printf(KERN_INFO "%s\n", line);
 }
 
 static const char *crypto_algo_names[] = {
@@ -2398,16 +2398,16 @@ bcm_print_bytes(const char *name, const uchar *data, int len)
 	int i;
 	int per_line = 0;
 
-	printf("%s: %d \n", name ? name : "", len);
+	printf(KERN_INFO "%s: %d \n", name ? name : "", len);
 	for (i = 0; i < len; i++) {
-		printf("%02x ", *data++);
+		printf(KERN_INFO "%02x ", *data++);
 		per_line++;
 		if (per_line == 16) {
 			per_line = 0;
 			printf("\n");
 		}
 	}
-	printf("\n");
+	printf(KERN_INFO "\n");
 }
 
 /* Look for vendor-specific IE with specified OUI and optional type */

@@ -5149,7 +5149,7 @@ dhd_dpc_kill(dhd_pub_t *dhdp)
 	if (dhd->thr_dpc_ctl.thr_pid < 0) {
 		tasklet_disable(&dhd->tasklet);
 		tasklet_kill(&dhd->tasklet);
-		DHD_ERROR(("%s: tasklet disabled\n", __FUNCTION__));
+		DHD_INFO(("%s: tasklet disabled\n", __FUNCTION__));
 	}
 #if defined(DHD_LB)
 #ifdef DHD_LB_RXP
@@ -6074,7 +6074,7 @@ static int dhd_interworking_enable(dhd_pub_t *dhd)
 	bcm_mkiovar("interworking", (char *)&enable, sizeof(enable), iovbuf, sizeof(iovbuf));
 	ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 	if (ret < 0) {
-		DHD_ERROR(("%s: enableing interworking failed, ret=%d\n", __FUNCTION__, ret));
+		DHD_INFO(("%s: enableing interworking failed, ret=%d\n", __FUNCTION__, ret));
 	}
 
 	if (ret == BCME_OK) {
@@ -6083,7 +6083,7 @@ static int dhd_interworking_enable(dhd_pub_t *dhd)
 		bcm_mkiovar("wnm", (char *)&cap, sizeof(cap), iovbuf, sizeof(iovbuf));
 		ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 		if (ret < 0) {
-			DHD_ERROR(("%s: set wnm returned (%d)\n", __FUNCTION__, ret));
+			DHD_INFO(("%s: set wnm returned (%d)\n", __FUNCTION__, ret));
 		}
 	}
 
@@ -7337,7 +7337,7 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 #endif /* DHD_DEBUG_PAGEALLOC */
 
 #if defined(DHD_LB)
-	DHD_ERROR(("DHD LOAD BALANCING Enabled\n"));
+	DHD_INFO(("DHD LOAD BALANCING Enabled\n"));
 
 	dhd_lb_set_default_cpus(dhd);
 
@@ -7698,7 +7698,7 @@ dhd_bus_start(dhd_pub_t *dhdp)
 		/* max_h2d_rings includes H2D common rings */
 		uint32 max_h2d_rings = dhd_bus_max_h2d_queues(dhd->pub.bus);
 
-		DHD_ERROR(("%s: Initializing %u h2drings\n", __FUNCTION__,
+		DHD_INFO(("%s: Initializing %u h2drings\n", __FUNCTION__,
 			max_h2d_rings));
 		if ((ret = dhd_flow_rings_init(&dhd->pub, max_h2d_rings)) != BCME_OK) {
 			dhd_os_sdunlock(dhdp);
@@ -8446,7 +8446,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	}
 #endif /* DISABLE_PRUNED_SCAN */
 
-	DHD_ERROR(("Firmware up: op_mode=0x%04x, MAC="MACDBG"\n",
+	DHD_INFO(("Firmware up: op_mode=0x%04x, MAC="MACDBG"\n",
 		dhd->op_mode, MAC2STRDBG(dhd->mac.octet)));
 	#if defined(RXFRAME_THREAD) && defined(RXTHREAD_ONLYSTA)
 	if (dhd->op_mode == DHD_FLAG_HOSTAP_MODE)
@@ -8605,7 +8605,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	bcm_mkiovar("txbf", (char *)&txbf, 4, iovbuf, sizeof(iovbuf));
 	if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf,
 		sizeof(iovbuf), TRUE, 0)) < 0) {
-		DHD_ERROR(("%s Set txbf returned (%d)\n", __FUNCTION__, ret));
+		DHD_INFO(("%s Set txbf returned (%d)\n", __FUNCTION__, ret));
 	}
 #endif /* USE_WL_TXBF */
 
@@ -8958,7 +8958,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 				memset(clm_version, 0, CLM_VER_STR_LEN);
 				strncpy(clm_version, clmver_temp_buf,
 					MIN(strlen(clmver_temp_buf), CLM_VER_STR_LEN - 1));
-				DHD_ERROR(("clm version = %s\n", clm_version));
+				DHD_INFO(("clm version = %s\n", clm_version));
 			}
 		}
 	}
@@ -8972,7 +8972,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	else {
 		bcmstrtok(&ptr, "\n", 0);
 		/* Print fw version info */
-		DHD_ERROR(("Firmware version = %s\n", buf));
+		DHD_INFO(("Firmware version = %s\n", buf));
 		strncpy(fw_version, buf, FW_VER_STR_LEN);
 		fw_version[FW_VER_STR_LEN-1] = '\0';
 #if defined(BCMSDIO)
@@ -9080,7 +9080,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		iovbuf, sizeof(iovbuf));
 	if ((dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf),
 		FALSE, 0)) < 0) {
-		DHD_ERROR(("%s failed to set ShubHub disable\n",
+		DHD_INFO(("%s failed to set ShubHub disable\n",
 			__FUNCTION__));
 	}
 #endif /* SUPPORT_SENSORHUB */
@@ -9091,7 +9091,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	bcm_mkiovar("csa_count", (char *)&csa_count,
 		sizeof(csa_count), iovbuf, sizeof(iovbuf));
 	if (dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0) != BCME_OK) {
-		DHD_ERROR(("%s Could not set csa_count\n", __FUNCTION__));
+		DHD_INFO(("%s Could not set csa_count\n", __FUNCTION__));
 	}
 done:
 
@@ -10368,7 +10368,7 @@ dhd_os_open_image(char *filename)
 		 goto err;
 	 }
 
-	 DHD_ERROR(("%s: %s (%d bytes) open success\n", __FUNCTION__, filename, size));
+	 DHD_INFO(("%s: %s (%d bytes) open success\n", __FUNCTION__, filename, size));
 
 err:
 	 return fp;
@@ -13382,7 +13382,7 @@ void dhd_get_memdump_info(dhd_pub_t *dhd)
 	/* Read memdump info from the file */
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
-		DHD_ERROR(("%s: File [%s] doesn't exist\n", __FUNCTION__, filepath));
+		DHD_INFO(("%s: File [%s] doesn't exist\n", __FUNCTION__, filepath));
 		goto done;
 	} else {
 		ret = kernel_read(fp, 0, (char *)&mem_val, 4);

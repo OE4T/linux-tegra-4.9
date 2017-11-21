@@ -450,6 +450,8 @@ extern int osl_error(int bcmerror);
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0)) && defined(TSQ_MULTIPLIER)
 #define PKTORPHAN(skb)          osl_pkt_orphan_partial(skb)
 extern void osl_pkt_orphan_partial(struct sk_buff *skb);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+#define PKTORPHAN(skb)          skb_orphan(skb)
 #else
 #define PKTORPHAN(skb)          ({BCM_REFERENCE(skb); 0;})
 #endif /* LINUX VERSION >= 3.6 */

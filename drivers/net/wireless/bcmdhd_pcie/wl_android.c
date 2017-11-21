@@ -1797,7 +1797,7 @@ int wl_android_wifi_on(struct net_device *dev)
 	int ret = 0;
 	int retry = POWERUP_MAX_RETRY;
 
-	DHD_ERROR(("%s in\n", __FUNCTION__));
+	DHD_INFO(("%s in\n", __FUNCTION__));
 	if (!dev) {
 		DHD_ERROR(("%s: dev is null\n", __FUNCTION__));
 		return -EINVAL;
@@ -1852,7 +1852,7 @@ int wl_android_wifi_off(struct net_device *dev, bool on_failure)
 {
 	int ret = 0;
 
-	DHD_ERROR(("%s in\n", __FUNCTION__));
+	DHD_INFO(("%s in\n", __FUNCTION__));
 	if (!dev) {
 		DHD_TRACE(("%s: dev is null\n", __FUNCTION__));
 		return -EINVAL;

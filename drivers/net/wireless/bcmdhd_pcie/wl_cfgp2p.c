@@ -349,7 +349,7 @@ wl_cfgp2p_init_priv(struct bcm_cfg80211 *cfg)
 void
 wl_cfgp2p_deinit_priv(struct bcm_cfg80211 *cfg)
 {
-	CFGP2P_ERR(("In\n"));
+	CFGP2P_INFO(("In\n"));
 	if (cfg->p2p) {
 		kfree(cfg->p2p);
 		cfg->p2p = NULL;
@@ -740,7 +740,7 @@ wl_cfgp2p_deinit_discovery(struct bcm_cfg80211 *cfg)
 	CFGP2P_DBG(("enter\n"));
 	bssidx = wl_to_p2p_bss_bssidx(cfg, P2PAPI_BSSCFG_DEVICE);
 	if (bssidx <= 0) {
-		CFGP2P_ERR(("do nothing, not initialized\n"));
+		CFGP2P_INFO(("do nothing, not initialized\n"));
 		return -1;
 	}
 
@@ -844,7 +844,7 @@ wl_cfgp2p_disable_discovery(struct bcm_cfg80211 *cfg)
 #endif
 	bssidx = wl_to_p2p_bss_bssidx(cfg, P2PAPI_BSSCFG_DEVICE);
 	if (bssidx <= 0) {
-		CFGP2P_ERR((" do nothing, not initialized\n"));
+		CFGP2P_INFO((" do nothing, not initialized\n"));
 		return 0;
 	}
 

@@ -1415,7 +1415,7 @@ dhd_pktid_map_init(dhd_pub_t *dhd, uint32 num_items, uint32 index)
 		DHD_ERROR(("%s:%d: pktid_audit init failed\r\n", __FUNCTION__, __LINE__));
 		goto error;
 	} else {
-		DHD_ERROR(("%s:%d: pktid_audit init succeeded %d\n",
+		DHD_INFO(("%s:%d: pktid_audit init succeeded %d\n",
 			__FUNCTION__, __LINE__, map_items + 1));
 	}
 
@@ -2569,7 +2569,7 @@ dhd_sync_with_dongle(dhd_pub_t *dhd)
 		DHD_ERROR(("%s: GET revinfo FAILED\n", __FUNCTION__));
 		goto done;
 	}
-	DHD_ERROR(("%s: GET_REVINFO device 0x%x, vendor 0x%x, chipnum 0x%x\n", __FUNCTION__,
+	DHD_INFO(("%s: GET_REVINFO device 0x%x, vendor 0x%x, chipnum 0x%x\n", __FUNCTION__,
 		revinfo.deviceid, revinfo.vendorid, revinfo.chipnum));
 
 	dhd_process_cid_mac(dhd, TRUE);
@@ -4442,7 +4442,7 @@ int dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void * buf, int 
 	if (ret >= 0) {
 		ret = 0;
 	} else {
-		DHD_ERROR(("%s: status ret value is %d \n", __FUNCTION__, ret));
+		DHD_INFO(("%s: status ret value is %d \n", __FUNCTION__, ret));
 		dhd->dongle_error = ret;
 	}
 
@@ -5324,7 +5324,7 @@ dhd_prot_flowrings_pool_attach(dhd_pub_t *dhd)
 	/* Subtract number of H2D common rings, to determine number of flowrings */
 	h2d_flowrings_total = DHD_FLOWRINGS_POOL_TOTAL(prot->h2d_rings_total);
 
-	DHD_ERROR(("Attach flowrings pool for %d rings\n", h2d_flowrings_total));
+	DHD_INFO(("Attach flowrings pool for %d rings\n", h2d_flowrings_total));
 
 	/* Allocate pool of msgbuf_ring_t objects for all flowrings */
 	prot->h2d_flowrings_pool = (msgbuf_ring_t *)MALLOCZ(prot->osh,

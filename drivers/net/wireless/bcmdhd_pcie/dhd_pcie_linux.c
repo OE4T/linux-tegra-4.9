@@ -606,7 +606,7 @@ dhdpcie_request_irq(dhdpcie_info_t *dhdpcie_info)
 			bus->irq_registered = TRUE;
 		}
 	} else {
-		DHD_ERROR(("%s: PCI IRQ is already registered\n", __FUNCTION__));
+		DHD_INFO(("%s: PCI IRQ is already registered\n", __FUNCTION__));
 	}
 
 	DHD_TRACE(("%s %s\n", __FUNCTION__, dhdpcie_info->pciname));

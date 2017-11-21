@@ -1145,7 +1145,7 @@ dhd_get_memcheck_info(void)
 
 	fp = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
-		DHD_ERROR(("[WIFI_SEC] %s: File [%s] doesn't exist\n", __FUNCTION__, filepath));
+		DHD_INFO(("[WIFI_SEC] %s: File [%s] doesn't exist\n", __FUNCTION__, filepath));
 		goto done;
 	} else {
 		ret = kernel_read(fp, 0, (char *)&mem_val, 4);
@@ -1157,7 +1157,7 @@ dhd_get_memcheck_info(void)
 
 		mem_val = bcm_atoi((char *)&mem_val);
 
-		DHD_ERROR(("[WIFI_SEC]%s: MEMCHECK ENABLED = %d\n", __FUNCTION__, mem_val));
+		DHD_INFO(("[WIFI_SEC]%s: MEMCHECK ENABLED = %d\n", __FUNCTION__, mem_val));
 		filp_close(fp, NULL);
 	}
 done:
@@ -1182,7 +1182,7 @@ dhdpcie_mem_check(struct dhd_bus *bus)
 
 	memcheck_enabled = dhd_get_memcheck_info();
 
-	DHD_ERROR(("%s: memcheck_enabled: %d \n", __FUNCTION__, memcheck_enabled));
+	DHD_INFO(("%s: memcheck_enabled: %d \n", __FUNCTION__, memcheck_enabled));
 
 	if (memcheck_enabled == 0) {
 		return bcmerror;
@@ -1262,7 +1262,7 @@ dhd_bus_download_firmware(struct dhd_bus *bus, osl_t *osh,
 	bus->fw_path = pfw_path;
 	bus->nv_path = pnv_path;
 
-	DHD_ERROR(("%s: firmware path=%s, nvram path=%s\n",
+	DHD_INFO(("%s: firmware path=%s, nvram path=%s\n",
 		__FUNCTION__, bus->fw_path, bus->nv_path));
 
 	dhdpcie_mem_check(bus);
@@ -1329,7 +1329,7 @@ dhdpcie_download_code_file(struct dhd_bus *bus, char *pfw_path)
 
 	int offset_end = bus->ramsize;
 
-	DHD_ERROR(("%s: download firmware %s\n", __FUNCTION__, pfw_path));
+	DHD_INFO(("%s: download firmware %s\n", __FUNCTION__, pfw_path));
 	memptr = memblock = MALLOC(bus->dhd->osh, MEMBLOCK + DHD_SDALIGN);
 	if (memblock == NULL) {
 		DHD_ERROR(("%s: Failed to allocate memory %d bytes\n", __FUNCTION__, MEMBLOCK));
@@ -1442,7 +1442,7 @@ dhdpcie_download_nvram(struct dhd_bus *bus)
 		nvram_uefi_exists = TRUE;
 	}
 
-	DHD_ERROR(("%s: dhd_get_download_buffer len %d\n", __FUNCTION__, len));
+	DHD_INFO(("%s: dhd_get_download_buffer len %d\n", __FUNCTION__, len));
 
 	if (len > 0 && len <= MAX_NVRAMBUF_SIZE) {
 		bufp = (char *) memblock;
@@ -1468,7 +1468,7 @@ dhdpcie_download_nvram(struct dhd_bus *bus)
 		}
 #endif /* CACHE_FW_IMAGES */
 
-		DHD_ERROR(("%s: process_nvram_vars len %d\n", __FUNCTION__, len));
+		DHD_INFO(("%s: process_nvram_vars len %d\n", __FUNCTION__, len));
 #ifdef CUSTOMER_HW4_DEBUG
 		if (len < MIN_NVRAMVARS_SIZE) {
 			DHD_ERROR(("%s: invalid nvram size in process_nvram_vars \n",
@@ -3099,7 +3099,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 	} else {
 		if (flag == TRUE) { /* Turn off WLAN */
 			/* Removing Power */
-			DHD_ERROR(("%s: == Power OFF ==\n", __FUNCTION__));
+			DHD_INFO(("%s: == Power OFF ==\n", __FUNCTION__));
 
 			bus->dhd->up = FALSE;
 
@@ -3167,12 +3167,12 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 			}
 
 			bus->dhd->dongle_reset = TRUE;
-			DHD_ERROR(("%s:  WLAN OFF Done\n", __FUNCTION__));
+			DHD_INFO(("%s:  WLAN OFF Done\n", __FUNCTION__));
 
 		} else { /* Turn on WLAN */
 			if (bus->dhd->busstate == DHD_BUS_DOWN) {
 				/* Powering On */
-				DHD_ERROR(("%s: == Power ON ==\n", __FUNCTION__));
+				DHD_INFO(("%s: == Power ON ==\n", __FUNCTION__));
 #ifdef CONFIG_ARCH_MSM
 				while (--retry) {
 					bcmerror = dhdpcie_bus_clock_start(bus);
@@ -3231,7 +3231,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 				}
 
 				bus->dhd->up = TRUE;
-				DHD_ERROR(("%s: WLAN Power On Done\n", __FUNCTION__));
+				DHD_INFO(("%s: WLAN Power On Done\n", __FUNCTION__));
 			} else {
 				DHD_ERROR(("%s: what should we do here\n", __FUNCTION__));
 				goto done;
@@ -4301,7 +4301,7 @@ dhdpcie_bus_write_vars(dhd_bus_t *bus)
 		if (memcmp(vbuffer, nvram_ularray, varsize)) {
 			DHD_ERROR(("%s: Downloaded NVRAM image is corrupted.\n", __FUNCTION__));
 		} else
-			DHD_ERROR(("%s: Download, Upload and compare of NVRAM succeeded.\n",
+			DHD_INFO(("%s: Download, Upload and compare of NVRAM succeeded.\n",
 			__FUNCTION__));
 
 		MFREE(bus->dhd->osh, nvram_ularray, varsize);
@@ -4997,7 +4997,7 @@ dhdpcie_readshared(dhd_bus_t *bus)
 		return BCME_ERROR;
 	} else {
 		bus->shared_addr = (ulong)addr;
-		DHD_ERROR(("PCIe shared addr (0x%08x) read took %u usec "
+		DHD_INFO(("PCIe shared addr (0x%08x) read took %u usec "
 			"before dongle is ready\n", addr, tmo.elapsed));
 	}
 
@@ -5028,7 +5028,7 @@ dhdpcie_readshared(dhd_bus_t *bus)
 	bus->dma_rxoffset = bus->pcie_sh->dma_rxoffset;
 	dhd_prot_rx_dataoffset(bus->dhd, bus->dma_rxoffset);
 
-	DHD_ERROR(("DMA RX offset from shared Area %d\n", bus->dma_rxoffset));
+	DHD_INFO(("DMA RX offset from shared Area %d\n", bus->dma_rxoffset));
 
 	if (!(dhdpcie_check_firmware_compatible(sh->flags & PCIE_SHARED_VERSION_MASK,
 		PCIE_SHARED_VERSION)))
@@ -5042,7 +5042,7 @@ dhdpcie_readshared(dhd_bus_t *bus)
 
 	bus->rw_index_sz = (sh->flags & PCIE_SHARED_2BYTE_INDICES) ?
 		sizeof(uint16) : sizeof(uint32);
-	DHD_ERROR(("%s: Dongle advertizes %d size indices\n",
+	DHD_INFO(("%s: Dongle advertizes %d size indices\n",
 		__FUNCTION__, bus->rw_index_sz));
 
 	/* Does the FW support DMA'ing r/w indices */
@@ -5120,7 +5120,7 @@ dhdpcie_readshared(dhd_bus_t *bus)
 		bcm_print_bytes("ring_info_raw", (uchar *)&ring_info, sizeof(ring_info_t));
 		DHD_INFO(("ring_info\n"));
 
-		DHD_ERROR(("%s: max H2D queues %d\n",
+		DHD_INFO(("%s: max H2D queues %d\n",
 			__FUNCTION__, ltoh16(ring_info.max_sub_queues)));
 
 		DHD_INFO(("mail box address\n"));

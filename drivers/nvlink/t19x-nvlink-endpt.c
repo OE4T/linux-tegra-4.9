@@ -278,60 +278,6 @@ fail:
 	return ret;
 }
 
-static int switch_to_tx_ref_clk(struct nvlink_device *ndev)
-{
-	int ret = 0;
-	struct tegra_nvlink_device *tnvlink_dev = ndev->priv;
-
-	nvlink_dbg("NVLIPT - Switching to TXREFCLK");
-
-	ret = clk_prepare_enable(tnvlink_dev->clk_txclk_ctrl);
-	if (ret < 0)
-		nvlink_err("nvlink txclk_control enable failed : %d\n", ret);
-	return ret;
-}
-
-static int init_nvhs(struct nvlink_device *ndev)
-{
-	int ret = 0;
-
-	nvlink_dbg("Initializing NVHS");
-
-	ret = switch_to_tx_ref_clk(ndev);
-	if (ret < 0)
-		goto fail;
-
-	goto success;
-
-fail:
-	nvlink_err("NVHS init failed!");
-success:
-	return ret;
-}
-
-static void init_dlpl(struct nvlink_device *ndev)
-{
-	u32 reg_val = 0;
-
-	nvlink_dbg("Initializing DLPL");
-
-	/* Enable link */
-	reg_val = nvlw_nvl_readl(ndev, NVL_LINK_CONFIG) |
-			BIT(NVL_LINK_CONFIG_LINK_EN) | BIT(3);
-	nvlw_nvl_writel(ndev, NVL_LINK_CONFIG, reg_val);
-
-	nvlw_nvl_writel(ndev, NVL_SL0_TRAIN0_TX, 0x63);
-	nvlw_nvl_writel(ndev, NVL_SL0_TRAIN1_TX, 0xf0);
-
-	nvlw_nvl_writel(ndev, NVL_SL0_SAFE_CTRL2_TX, 0x2f53);
-
-	nvlw_nvl_writel(ndev, NVL_SL1_CONFIG_RX, 0x70001000);
-
-	nvlw_nvl_writel(ndev, NVL_SUBLINK_CHANGE, 0x200000);
-
-	nvlw_nvl_writel(ndev, NVL_SL1_RXSLSM_TIMEOUT_2, 0xfa0);
-}
-
 static void init_tlc_buffers(struct nvlink_device *ndev)
 {
 	nvlink_dbg("Initializing TLC buffers");
@@ -446,12 +392,9 @@ int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 	if (ret < 0)
 		goto fail;
 	nvlink_config_common_intr(ndev);
-	ret = init_nvhs(ndev);
+	ret = init_nvhs_phy(ndev);
 	if (ret < 0)
 		goto fail;
-	udelay(1);
-
-	init_dlpl(ndev);
 	ret = go_to_safe_mode(ndev);
 	if (ret < 0)
 		goto fail;

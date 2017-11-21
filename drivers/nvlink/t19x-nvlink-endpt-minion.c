@@ -19,6 +19,7 @@
  */
 
 #include <linux/firmware.h>
+#include <linux/clk.h>
 
 #include "t19x-nvlink-endpt.h"
 #include "nvlink-hw.h"
@@ -546,9 +547,22 @@ int minion_boot(struct nvlink_device *ndev)
 		minion_service_falcon_intr(ndev);
 	}
 
+	/* Wait until MINION is ready to accept commands */
+	ret = wait_for_reg_cond_nvlink(ndev,
+					MINION_NVLINK_DL_CMD,
+					MINION_NVLINK_DL_CMD_READY,
+					1,
+					"MINION_NVLINK_DL_CMD_READY",
+					nvlw_minion_readl,
+					&reg_val);
+	if (ret < 0) {
+		nvlink_err("MINION booted but its not accepting commands");
+		goto cleanup;
+	}
+
 	/*
-	 * Now that MINION has booted, send a SWINTR DLCMD to MINION to test if
-	 * it’s functioning properly
+	 * Send a SWINTR DLCMD to MINION to test if it’s functioning
+	 * properly
 	 */
 	ret = minion_send_cmd(ndev, MINION_NVLINK_DL_CMD_COMMAND_SWINTR, 0);
 	if (ret < 0) {
@@ -581,5 +595,127 @@ cleanup:
 exit:
 	ndev->minion_fw = NULL;
 	ndev->minion_img = NULL;
+	return ret;
+}
+
+/*
+ * init_nvhs_phy:
+ * Initialize the NVHS PHY. This encompasses the following:
+ *    - Sending MINION DLCMDs for various PHY init steps
+ *    - Switching the TX clock from OSC to brick PLL
+ *    - RX calibration of lanes
+ */
+int init_nvhs_phy(struct nvlink_device *ndev)
+{
+	int ret = 0;
+	u32 reg_val = 0;
+	u32 link_state = 0;
+	struct tegra_nvlink_device *tdev =
+				(struct tegra_nvlink_device *)ndev->priv;
+
+	ret = minion_send_cmd(ndev,
+			MINION_NVLINK_DL_CMD_COMMAND_XAVIER_PLLOVERRIDE_ON,
+			0);
+	if (ret < 0) {
+		nvlink_err("Error sending XAVIER_PLLOVERRIDE_ON command to"
+			" MINION");
+		goto fail;
+	}
+
+	ret = minion_send_cmd(ndev,
+				MINION_NVLINK_DL_CMD_COMMAND_SETNEA,
+				0);
+	if (ret < 0) {
+		nvlink_err("Error sending SETNEA command to MINION");
+		goto fail;
+	}
+
+	reg_val = nvlw_nvl_readl(ndev, NVL_LINK_STATE);
+	link_state = (reg_val & NVL_LINK_STATE_STATE_MASK) >>
+					NVL_LINK_STATE_STATE_SHIFT;
+	if (link_state != NVL_LINK_STATE_STATE_INIT) {
+		nvlink_err("Link is not in INIT state."
+				" INITPLL can only be executed in INIT state.");
+		ret = -1;
+		goto fail;
+	}
+
+	ret = minion_send_cmd(ndev,
+				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_3,
+				0);
+	if (ret < 0) {
+		nvlink_err("Error sending INITPLL_3 command to MINION");
+		goto fail;
+	}
+
+	ret = minion_send_cmd(ndev,
+			MINION_NVLINK_DL_CMD_COMMAND_XAVIER_CALIBRATEPLL,
+			0);
+	if (ret < 0) {
+		nvlink_err("Error sending XAVIER_CALIBRATEPLL command to"
+								" MINION");
+		goto fail;
+	}
+
+	/* Switch the TX clock from OSC to brick PLL */
+	ret = clk_prepare_enable(tdev->clk_txclk_ctrl);
+	if (ret < 0) {
+		nvlink_err("txclk_ctrl's clk_prepare_enable() call failed");
+		goto fail;
+	}
+
+	/* TODO: Enable the CAR PLL sequencer FSM for NVHS brick PLL */
+
+	ret = minion_send_cmd(ndev,
+				MINION_NVLINK_DL_CMD_COMMAND_INITPHY,
+				0);
+	if (ret < 0) {
+		nvlink_err("Error sending INITPHY command to MINION");
+		goto undo_clk;
+	}
+
+	/* RX calibration */
+	reg_val = BIT(NVL_BR0_CFG_CTL_CAL_RXCAL) |
+			BIT(NVL_BR0_CFG_CTL_CAL_INIT_TRAIN_DONE) |
+			BIT(NVL_BR0_CFG_CTL_CAL_EOM_DIS);
+	nvlw_nvl_writel(ndev, NVL_BR0_CFG_CTL_CAL, reg_val);
+
+	/* Wait for RXCAL_DONE bit to be set */
+	ret = wait_for_reg_cond_nvlink(ndev,
+					NVL_BR0_CFG_STATUS_CAL,
+					NVL_BR0_CFG_STATUS_CAL_RXCAL_DONE,
+					1,
+					"NVL_BR0_CFG_STATUS_CAL_RXCAL_DONE",
+					nvlw_nvl_readl,
+					&reg_val);
+	if (ret < 0) {
+		nvlink_err("RX calibration failed!");
+		goto undo_clk;
+	}
+
+	ret = minion_send_cmd(ndev,
+				MINION_NVLINK_DL_CMD_COMMAND_INITLANEENABLE,
+				0);
+	if (ret < 0) {
+		nvlink_err("Error sending INITLANEENABLE command to MINION");
+		goto undo_clk;
+	}
+
+	ret = minion_send_cmd(ndev,
+				MINION_NVLINK_DL_CMD_COMMAND_INITDLPL,
+				0);
+	if (ret < 0) {
+		nvlink_err("Error sending INITDLPL command to MINION");
+		goto undo_clk;
+	}
+
+	nvlink_dbg("NVHS PHY init succeeded!");
+	goto success;
+
+undo_clk:
+	clk_disable_unprepare(tdev->clk_txclk_ctrl);
+fail:
+	nvlink_err("NVHS PHY init failed!");
+success:
 	return ret;
 }

@@ -91,6 +91,7 @@ int wait_for_reg_cond_nvlink(
 			u32 *reg_val);
 
 int minion_boot(struct nvlink_device *ndev);
+int init_nvhs_phy(struct nvlink_device *ndev);
 
 void nvlink_config_common_intr(struct nvlink_device *ndev);
 void nvlink_enable_link_interrupts(struct nvlink_device *ndev);

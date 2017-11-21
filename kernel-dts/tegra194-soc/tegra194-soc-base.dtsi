@@ -1184,11 +1184,7 @@
 			interrupts = <0 245 4>;
 			nvidia,dpaux-ctrlnum = <2>;
 
-			clocks = /*
-				  * todo: TEGRA194_CLK_DPAUX2* not defined yet
-				  *       so use TEGRA194_CLK_DPAUX1*
-				  */
-				 <&bpmp_clks TEGRA194_CLK_DPAUX1>;
+			clocks = <&bpmp_clks TEGRA194_CLK_DPAUX2>;
 			clock-names = "dpaux2";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX2>;
 			reset-names = "dpaux2";
@@ -1201,11 +1197,7 @@
 			interrupts = <0 246 4>;
 			nvidia,dpaux-ctrlnum = <3>;
 
-			clocks = /*
-				  * todo: TEGRA194_CLK_DPAUX3* not defined yet
-				  *       so use TEGRA194_CLK_DPAUX1*
-				  */
-				 <&bpmp_clks TEGRA194_CLK_DPAUX1>;
+			clocks = <&bpmp_clks TEGRA194_CLK_DPAUX3>;
 			clock-names = "dpaux3";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX3>;
 			reset-names = "dpaux3";

@@ -611,13 +611,15 @@
 #define TEGRA194_CLK_PLLNVHS_HPS		287
 /** @brief PLL controlled by CLK_RST_CONTROLLER_PLLREFE_BASE */
 #define TEGRA194_CLK_PLLREFE_VCOOUT		288
-
+/** @brief 32K input clock provided by PMIC */
 #define TEGRA194_CLK_CLK_32K			289
+/** @brief Clock recovered from SPDIFIN input */
 #define TEGRA194_CLK_SPDIFIN_SYNC_INPUT		290
+/** @brief Fixed 48MHz clock divided down from utmipll */
 #define TEGRA194_CLK_UTMIPLL_CLKOUT48		291
+/** @brief Fixed 480MHz clock divided down from utmipll */
 #define TEGRA194_CLK_UTMIPLL_CLKOUT480		292
-
-/** @brief cvnas_clk is the core clock to CVNAS */
-#define TEGRA194_CLK_CVNAS                      367
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_CVNAS switch divider output */
+#define TEGRA194_CLK_CVNAS			293
 
 #endif

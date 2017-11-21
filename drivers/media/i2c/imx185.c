@@ -326,7 +326,7 @@ static int imx185_power_get(struct imx185 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
 	struct camera_common_pdata *pdata = priv->pdata;
-	struct device *dev = dev;
+	struct device *dev = &priv->i2c_client->dev;
 	const char *mclk_name;
 	struct clk *parent;
 	int err = 0;

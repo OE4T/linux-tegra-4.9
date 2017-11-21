@@ -156,7 +156,7 @@
 	};
 
 	bpmp_clks: clock@0 {
-		compatible = "nvidia,tegra-bpmp-staged-clks";
+		compatible = "nvidia,tegra-bpmp-clks";
 		reg = <0x0 0x0 0x0 0x0>;
 		#clock-cells = <1>;
 		status = "okay";

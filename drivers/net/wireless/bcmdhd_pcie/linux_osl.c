@@ -1,7 +1,9 @@
 /*
  * Linux OS Independent Layer
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
+ * 
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +26,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: linux_osl.c 602478 2015-11-26 04:46:12Z $
+ * $Id: linux_osl.c 665648 2017-06-29 05:51:44Z $
  */
 
 #define LINUX_PORT
@@ -564,7 +566,7 @@ static struct sk_buff *osl_alloc_skb(osl_t *osh, unsigned int len)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 25)
 	gfp_t flags = (in_atomic() || irqs_disabled()) ? GFP_ATOMIC : GFP_KERNEL;
 #if defined(CONFIG_SPARSEMEM) && defined(CONFIG_ZONE_DMA)
-	flags |= GFP_DMA;
+	flags |= GFP_ATOMIC;
 #endif
 #ifdef DHD_USE_ATOMIC_PKTGET
 	flags = GFP_ATOMIC;
@@ -900,30 +902,42 @@ void * BCMFASTPATH
 osl_pkt_frmnative(osl_t *osh, void *pkt)
 #endif /* BCMDBG_CTRACE */
 {
+	struct sk_buff *cskb;
 	struct sk_buff *nskb;
-#ifdef BCMDBG_CTRACE
-	struct sk_buff *nskb1, *nskb2;
-#endif
+	unsigned long pktalloced = 0;
+
 
 	if (osh->pub.pkttag)
 		OSL_PKTTAG_CLEAR(pkt);
 
-	/* Increment the packet counter */
-	for (nskb = (struct sk_buff *)pkt; nskb; nskb = nskb->next) {
-		atomic_add(PKTISCHAINED(nskb) ? PKTCCNT(nskb) : 1, &osh->cmn->pktalloced);
+	/* walk the PKTCLINK() list */
+	for (cskb = (struct sk_buff *)pkt;
+		cskb != NULL;
+		cskb = PKTISCHAINED(cskb) ? PKTCLINK(cskb) : NULL) {
+
+		/* walk the pkt buffer list */
+		for (nskb = cskb; nskb; nskb = nskb->next) {
+
+			/* Increment the packet counter */
+			pktalloced++;
+
+			/* clean the 'prev' pointer
+			 * Kernel 3.18 is leaving skb->prev pointer set to skb
+			 * to indicate a non-fragmented skb
+			 */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
+			nskb->prev = NULL;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0) */
+
 
 #ifdef BCMDBG_CTRACE
-		for (nskb1 = nskb; nskb1 != NULL; nskb1 = nskb2) {
-			if (PKTISCHAINED(nskb1)) {
-				nskb2 = PKTCLINK(nskb1);
-			}
-			else
-				nskb2 = NULL;
-
-			ADD_CTRACE(osh, nskb1, file, line);
-		}
+		ADD_CTRACE(osh, nskb, file, line);
 #endif /* BCMDBG_CTRACE */
+		}
 	}
+	/* Increment the packet counter */
+	atomic_add(pktalloced, &osh->cmn->pktalloced);
+
 	return (void *)pkt;
 }
 
@@ -1609,10 +1623,9 @@ dmaaddr_t BCMFASTPATH
 osl_dma_map(osl_t *osh, void *va, uint size, int direction, void *p, hnddma_seg_map_t *dmah)
 {
 	int dir;
-#ifdef BCMDMA64OSL
-	dmaaddr_t ret;
+	dmaaddr_t ret_addr;
 	dma_addr_t  map_addr;
-#endif /* BCMDMA64OSL */
+	int ret;
 
 	ASSERT((osh && (osh->magic == OS_HANDLE_MAGIC)));
 	dir = (direction == DMA_TX)? PCI_DMA_TODEVICE: PCI_DMA_FROMDEVICE;
@@ -1620,14 +1633,24 @@ osl_dma_map(osl_t *osh, void *va, uint size, int direction, void *p, hnddma_seg_
 
 
 
-#ifdef BCMDMA64OSL
 	map_addr = pci_map_single(osh->pdev, va, size, dir);
-	PHYSADDRLOSET(ret, map_addr & 0xffffffff);
-	PHYSADDRHISET(ret, (map_addr >> 32) & 0xffffffff);
-	return ret;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
+	ret = pci_dma_mapping_error(osh->pdev, map_addr);
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 5))
+	ret = pci_dma_mapping_error(map_addr);
 #else
-	return (pci_map_single(osh->pdev, va, size, dir));
-#endif /* BCMDMA64OSL */
+	ret = 0;
+#endif
+	if (ret) {
+		printk("%s: Failed to map memory\n", __FUNCTION__);
+		PHYSADDRLOSET(ret_addr, 0);
+		PHYSADDRHISET(ret_addr, 0);
+	} else {
+		PHYSADDRLOSET(ret_addr, map_addr & 0xffffffff);
+		PHYSADDRHISET(ret_addr, (map_addr >> 32) & 0xffffffff);
+	}
+
+	return ret_addr;
 }
 
 void BCMFASTPATH
@@ -1678,25 +1701,18 @@ osl_cpu_relax(void)
 inline void BCMFASTPATH
 osl_cache_flush(void *va, uint size)
 {
-	/*
-	 * using long for address arithmatic is OK, in linux
-	 * 32 bit its 4 bytes and 64 bit its 8 bytes
-	 */
-	unsigned long end_cache_line_start;
 	unsigned long end_addr;
-	unsigned long next_cache_line_start;
 
-	end_addr = (unsigned long)va + size;
+	if (size == 0)
+		return;
 
-	/* Start address beyond the cache line we plan to operate */
-	end_cache_line_start = (end_addr & ~(L1_CACHE_BYTES - 1));
-	next_cache_line_start = end_cache_line_start + L1_CACHE_BYTES;
+	end_addr = ROUNDUP((unsigned long)(va+size), L1_CACHE_BYTES);
 
-	/* Align the start address to cache line boundary */
-	va = (void *)((unsigned long)va & ~(L1_CACHE_BYTES - 1));
+	/* align start address */
+	va = (void *)ROUNDDN((unsigned long)va, L1_CACHE_BYTES);
 
-	/* Ensure that size is also aligned and extends partial line to full */
-	size = next_cache_line_start - (unsigned long)va;
+	/* align size, taking cache-line boundary into account */
+	size = end_addr - (unsigned long)va;
 
 #ifndef BCM_SECURE_DMA
 
@@ -1711,42 +1727,32 @@ osl_cache_flush(void *va, uint size)
 		dma_addr_t dma_addr;
 		pa = virt_to_phys(va);
 		dma_addr = phys_to_dma(NULL, pa);
-		if (size > 0)
-			dma_sync_single_for_device(OSH_NULL, dma_addr, size, DMA_TX);
+		dma_sync_single_for_device(OSH_NULL, dma_addr, size, DMA_TX);
 	}
 #else
-	if (size > 0)
-		dma_sync_single_for_device(OSH_NULL, virt_to_dma(OSH_NULL, va), size, DMA_TX);
+	dma_sync_single_for_device(OSH_NULL, virt_to_dma(OSH_NULL, va), size, DMA_TX);
 #endif /* !CONFIG_ARM64 */
 #else
 	phys_addr_t orig_pa = (phys_addr_t)(va - g_contig_delta_va_pa);
-	if (size > 0)
-		dma_sync_single_for_device(OSH_NULL, orig_pa, size, DMA_TX);
+	dma_sync_single_for_device(OSH_NULL, orig_pa, size, DMA_TX);
 #endif /* defined BCM_SECURE_DMA */
 }
 
 inline void BCMFASTPATH
 osl_cache_inv(void *va, uint size)
 {
-	/*
-	 * using long for address arithmatic is OK, in linux
-	 * 32 bit its 4 bytes and 64 bit its 8 bytes
-	 */
-	unsigned long end_cache_line_start;
 	unsigned long end_addr;
-	unsigned long next_cache_line_start;
 
-	end_addr = (unsigned long)va + size;
+	if (size == 0)
+		return;
 
-	/* Start address beyond the cache line we plan to operate */
-	end_cache_line_start = (end_addr & ~(L1_CACHE_BYTES - 1));
-	next_cache_line_start = end_cache_line_start + L1_CACHE_BYTES;
+	end_addr = ROUNDUP((unsigned long)(va+size), L1_CACHE_BYTES);
 
-	/* Align the start address to cache line boundary */
-	va = (void *)((unsigned long)va & ~(L1_CACHE_BYTES - 1));
+	/* align start address */
+	va = (void *)ROUNDDN((unsigned long)va, L1_CACHE_BYTES);
 
-	/* Ensure that size is also aligned and extends partial line to full */
-	size = next_cache_line_start - (unsigned long)va;
+	/* align size, taking cache-line boundary into account */
+	size = end_addr - (unsigned long)va;
 
 #ifndef BCM_SECURE_DMA
 

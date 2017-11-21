@@ -1,7 +1,9 @@
 /*
  * Misc useful os-independent macros and functions.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
+ * 
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +26,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: bcmutils.h 563776 2015-06-15 15:51:15Z $
+ * $Id: bcmutils.h 665091 2017-05-19 06:11:53Z $
  */
 
 #ifndef	_bcmutils_h_
@@ -241,6 +243,8 @@ extern char *bcmstrnstr(const char *s, uint s_len, const char *substr, uint subs
 extern char *bcmstrcat(char *dest, const char *src);
 extern char *bcmstrncat(char *dest, const char *src, uint size);
 extern ulong wchar2ascii(char *abuf, ushort *wbuf, ushort wbuflen, ulong abuflen);
+extern int bcm_atoicrc(const char *p, int *crc);
+extern void wipedates(const char *cp, int size);
 char* bcmstrtok(char **string, const char *delimiters, char *tokdelim);
 int bcmstricmp(const char *s1, const char *s2);
 int bcmstrnicmp(const char* s1, const char* s2, int cnt);

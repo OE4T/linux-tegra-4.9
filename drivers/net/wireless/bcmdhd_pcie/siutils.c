@@ -2,7 +2,9 @@
  * Misc utility routines for accessing chip-specific features
  * of the SiliconBackplane-based Broadcom chips.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
+ * 
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -25,7 +27,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: siutils.c 552034 2015-04-24 19:00:35Z $
+ * $Id: siutils.c 663718 2017-01-30 12:10:57Z $
  */
 
 #include <bcm_cfg.h>
@@ -281,6 +283,11 @@ si_buscore_setup(si_info_t *sii, chipcregs_t *cc, uint bustype, uint32 savewin,
 			uint pmucoreidx;
 			pmuregs_t *pmu;
 			pmucoreidx = si_findcoreidx(&sii->pub, PMU_CORE_ID, 0);
+			if (!GOODIDX(pmucoreidx)) {
+				SI_ERROR(("si_buscore_setup: si_findcoreidx failed\n"));
+				return FALSE;
+			}
+
 			pmu = si_setcoreidx(&sii->pub, pmucoreidx);
 			sii->pub.pmucaps = R_REG(sii->osh, &pmu->pmucapabilities);
 			si_setcoreidx(&sii->pub, SI_CC_IDX);
@@ -512,13 +519,12 @@ si_doattach(si_info_t *sii, uint devid, osl_t *osh, void *regs,
 	}
 
 	sih->bustype = bustype;
-#ifdef BCMBUSTYPE
 	if (bustype != BUSTYPE(bustype)) {
 		SI_ERROR(("si_doattach: bus type %d does not match configured bus type %d\n",
 			bustype, BUSTYPE(bustype)));
 		return NULL;
 	}
-#endif
+
 	/* bus/core/clk setup for register access */
 	if (!si_buscore_prep(sii, bustype, devid, sdh)) {
 		SI_ERROR(("si_doattach: si_core_clk_prep failed %d\n", bustype));
@@ -805,6 +811,26 @@ si_setint(si_t *sih, int siflag)
 	else
 		ASSERT(0);
 }
+
+#ifdef CUSTOMER_HW2
+uint32
+si_corebase(si_t *sih, uint cid)
+{
+	si_info_t *sii = SI_INFO(sih);
+	si_cores_info_t *cores_info = (si_cores_info_t *)sii->cores_info;
+	uint16 idx;
+
+	for (idx = 0; idx < SI_MAXCORES; idx++) {
+		SI_VMSG(("si_corebase cid %d idx %d core-id %d\n", cid, idx,
+			cores_info->coreid[idx]));
+		if (cid == cores_info->coreid[idx]) {
+			return cores_info->coresba[idx];
+		}
+	}
+
+	return 0;
+}
+#endif /* CUSTOMER_HW2 */
 
 uint
 si_coreid(si_t *sih)

@@ -1,7 +1,9 @@
 /*
  * DHD PROP_TXSTATUS Module.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
+ * 
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +26,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_wlfc.c 579277 2015-08-14 04:49:50Z $
+ * $Id: dhd_wlfc.c 674497 2017-10-24 10:43:17Z $
  *
  */
 
@@ -125,8 +127,7 @@ _dhd_wlfc_prec_enque(struct pktq *pq, int prec, void* p, bool qHead,
 		return;
 
 	ASSERT(prec >= 0 && prec < pq->num_prec);
-	/* queueing chains not allowed and no segmented SKB (Kernel-3.18.y) */
-	ASSERT(!((PKTLINK(p) != NULL) && (PKTLINK(p) != p)));
+	ASSERT(PKTLINK(p) == NULL);		/* queueing chains not allowed */
 
 	ASSERT(!pktq_full(pq));
 	ASSERT(!pktq_pfull(pq, prec));
@@ -692,7 +693,7 @@ _dhd_wlfc_prec_drop(dhd_pub_t *dhdp, int prec, void* p, bool bPktInQ)
 	void *pout = NULL;
 
 	ASSERT(dhdp && p);
-	ASSERT(prec >= 0 && prec < WLFC_PSQ_PREC_COUNT);
+	ASSERT(prec >= 0 && prec <= WLFC_PSQ_PREC_COUNT);
 
 	ctx = (athost_wl_status_info_t*)dhdp->wlfc_state;
 
@@ -933,8 +934,14 @@ _dhd_wlfc_flow_control_check(athost_wl_status_info_t* ctx, struct pktq* pq, uint
 	dhdp = (dhd_pub_t *)ctx->dhdp;
 	ASSERT(dhdp);
 
-	if (dhdp->skip_fc && dhdp->skip_fc())
+	if (dhdp->skip_fc && dhdp->skip_fc(dhdp))
 		return;
+
+	if (if_id >= WLFC_MAX_IFNUM) {
+		DHD_ERROR(("%s: invalid if_id %d\n",
+		           __FUNCTION__, if_id));
+		return;
+	}
 
 	if ((ctx->hostif_flow_state[if_id] == OFF) && !_dhd_wlfc_allow_fc(ctx, if_id))
 		return;
@@ -1293,7 +1300,7 @@ _dhd_wlfc_is_destination_open(athost_wl_status_info_t* ctx,
 static void*
 _dhd_wlfc_deque_delayedq(athost_wl_status_info_t* ctx, int prec,
 	uint8* ac_credit_spent, uint8* needs_hdr, wlfc_mac_descriptor_t** entry_out,
-	bool only_no_credit)
+	bool only_no_credit, int credit_grp)
 {
 	wlfc_mac_descriptor_t* entry;
 	int total_entries;
@@ -1309,16 +1316,17 @@ _dhd_wlfc_deque_delayedq(athost_wl_status_info_t* ctx, int prec,
 	if (only_no_credit) {
 		total_entries = ctx->requested_entry_count;
 	} else {
-		total_entries = ctx->active_entry_count;
+		total_entries = ctx->active_entry_count[credit_grp];
 	}
 
 	for (i = 0; i < total_entries; i++) {
 		if (only_no_credit) {
 			entry = ctx->requested_entry[i];
 		} else {
-			entry = ctx->active_entry_head;
+			entry = ctx->active_entry_head[credit_grp];
 			/* move head to ensure fair round-robin */
-			ctx->active_entry_head = ctx->active_entry_head->next;
+			ctx->active_entry_head[credit_grp] =
+				ctx->active_entry_head[credit_grp]->next;
 		}
 		ASSERT(entry);
 
@@ -1425,7 +1433,7 @@ static bool _dhd_wlfc_entrypkt_fn(void* p, void *entry)
 }
 
 static void
-_dhd_wlfc_return_implied_credit(athost_wl_status_info_t* wlfc, void* pkt)
+_dhd_wlfc_return_implied_credit(athost_wl_status_info_t* wlfc, void* pkt, int credit_grp)
 {
 	dhd_pub_t *dhdp;
 	bool credit_return = FALSE;
@@ -1442,19 +1450,20 @@ _dhd_wlfc_return_implied_credit(athost_wl_status_info_t* wlfc, void* pkt)
 
 		credit_return = TRUE;
 
+		WLFC_DBGMESG(("_dhd_wlfc_return_implied_credit : Implied credit return\n"));
 		/* Note that borrower is fifo_id */
 		/* Return credits to highest priority lender first */
 		for (lender = AC_COUNT; lender >= 0; lender--) {
-			if (wlfc->credits_borrowed[fifo_id][lender] > 0) {
-				wlfc->FIFO_credit[lender]++;
-				wlfc->credits_borrowed[fifo_id][lender]--;
+			if (wlfc->credits_borrowed[credit_grp][fifo_id][lender] > 0) {
+				wlfc->FIFO_credit[credit_grp][lender]++;
+				wlfc->credits_borrowed[credit_grp][fifo_id][lender]--;
 				credit_returned = 1;
 				break;
 			}
 		}
 
 		if (!credit_returned) {
-			wlfc->FIFO_credit[fifo_id]++;
+			wlfc->FIFO_credit[credit_grp][fifo_id]++;
 		}
 	}
 
@@ -1588,7 +1597,7 @@ _dhd_wlfc_pktq_flush(athost_wl_status_info_t* ctx, struct pktq *pq,
 							(!entry->suppr_transit_count))
 							entry->suppressed = FALSE;
 					}
-					_dhd_wlfc_return_implied_credit(ctx, p);
+					_dhd_wlfc_return_implied_credit(ctx, p, entry->grp_idx);
 					ctx->stats.cleanup_fw_cnt++;
 				}
 				PKTSETLINK(p, NULL);
@@ -1717,7 +1726,7 @@ _dhd_wlfc_cleanup_txq(dhd_pub_t *dhd, f_processpkt_t fn, void *arg)
 				(!entry->suppr_transit_count))
 				entry->suppressed = FALSE;
 		}
-		_dhd_wlfc_return_implied_credit(wlfc, pkt);
+		_dhd_wlfc_return_implied_credit(wlfc, pkt, entry->grp_idx);
 		wlfc->pkt_cnt_in_drv[DHD_PKTTAG_IF(PKTTAG(pkt))][DHD_PKTTAG_FIFO(PKTTAG(pkt))]--;
 		wlfc->stats.pktout++;
 		wlfc->stats.cleanup_txq_cnt++;
@@ -1801,10 +1810,33 @@ _dhd_wlfc_cleanup(dhd_pub_t *dhd, f_processpkt_t fn, void *arg)
 static int
 _dhd_wlfc_mac_entry_update(athost_wl_status_info_t* ctx, wlfc_mac_descriptor_t* entry,
 	uint8 action, uint8 ifid, uint8 iftype, uint8* ea,
-	f_processpkt_t fn, void *arg)
+	f_processpkt_t fn, void *arg, bool isif)
 {
 	int rc = BCME_OK;
+	wlfc_mac_descriptor_t* ientry = NULL;
+	wlfc_mac_descriptor_t *active_entry_head = NULL;
+	int credit_grp = 0;
 
+
+	if (!isif) {
+		if (ifid < WLFC_MAX_IFNUM) {
+			ientry = &ctx->destination_entries.interfaces[ifid];
+			if (ientry) {
+				active_entry_head = ctx->active_entry_head[ientry->grp_idx];
+				credit_grp = ientry->grp_idx;
+				WLFC_DBGMESG(("%s():%d, entry belongs to credit group %d\n",
+					__FUNCTION__, __LINE__, credit_grp));
+			} else {
+				DHD_ERROR(("%s():%d, interface entry not found for ifid %d\n",
+					__FUNCTION__, __LINE__, ifid));
+				return -1;
+			}
+		} else if (ifid == 0xFF) {
+			/* other interface is added in group-0 by default for now */
+			active_entry_head = ctx->active_entry_head[0];
+			credit_grp = 0;
+		}
+	}
 
 	if ((action == eWLFC_MAC_ENTRY_ACTION_ADD) || (action == eWLFC_MAC_ENTRY_ACTION_UPDATE)) {
 		entry->occupied = 1;
@@ -1813,6 +1845,7 @@ _dhd_wlfc_mac_entry_update(athost_wl_status_info_t* ctx, wlfc_mac_descriptor_t* 
 		entry->interface_id = ifid;
 		entry->iftype = iftype;
 		entry->ac_bitmap = 0xff; /* update this when handling APSD */
+		entry->grp_idx = credit_grp;
 
 		/* for an interface entry we may not care about the MAC address */
 		if (ea != NULL)
@@ -1834,22 +1867,31 @@ _dhd_wlfc_mac_entry_update(athost_wl_status_info_t* ctx, wlfc_mac_descriptor_t* 
 				pktq_init(&entry->afq, WLFC_AFQ_PREC_COUNT, WLFC_PSQ_LEN);
 			}
 
-			if (entry->next == NULL) {
-				/* not linked to anywhere, add to tail */
-				if (ctx->active_entry_head) {
-					entry->prev = ctx->active_entry_head->prev;
-					ctx->active_entry_head->prev->next = entry;
-					ctx->active_entry_head->prev = entry;
-					entry->next = ctx->active_entry_head;
+			if (!isif) {
+				if (entry->next == NULL) {
+					/* not linked to anywhere, add to tail */
+					if (active_entry_head) {
+						entry->prev = active_entry_head->prev;
+						active_entry_head->prev->next = entry;
+						active_entry_head->prev = entry;
+						entry->next = active_entry_head;
+					} else {
+						ASSERT(ctx->active_entry_count[credit_grp] == 0);
+						entry->prev = entry->next = entry;
+						ctx->active_entry_head[credit_grp] = entry;
+					}
+					ctx->active_entry_count[credit_grp]++;
+					WLFC_DBGMESG(("%s():%d, added entry "
+						"to credit grp:%d cnt:%d\n",
+						__FUNCTION__, __LINE__, credit_grp,
+						ctx->active_entry_count[credit_grp]));
 				} else {
-					ASSERT(ctx->active_entry_count == 0);
-					entry->prev = entry->next = entry;
-					ctx->active_entry_head = entry;
+					DHD_ERROR(("%s():%d, entry(%d)\n", __FUNCTION__, __LINE__,
+						(int)(entry - &ctx->destination_entries.nodes[0])));
 				}
-				ctx->active_entry_count++;
 			} else {
-				DHD_ERROR(("%s():%d, entry(%d)\n", __FUNCTION__, __LINE__,
-					(int)(entry - &ctx->destination_entries.nodes[0])));
+				DHD_ERROR(("%s():%d, ifid:%d iftype:%d intf add in wlc_e_link\n",
+					__FUNCTION__, __LINE__, ifid, iftype));
 			}
 		}
 	} else if (action == eWLFC_MAC_ENTRY_ACTION_DEL) {
@@ -1862,21 +1904,25 @@ _dhd_wlfc_mac_entry_update(athost_wl_status_info_t* ctx, wlfc_mac_descriptor_t* 
 		entry->occupied = 0;
 		entry->state = WLFC_STATE_CLOSE;
 		memset(&entry->ea[0], 0, ETHER_ADDR_LEN);
+		entry->grp_idx = 0;
 
 		if (entry->next) {
 			/* not floating, remove from Q */
-			if (ctx->active_entry_count <= 1) {
+			if (ctx->active_entry_count[credit_grp] <= 1) {
 				/* last item */
-				ctx->active_entry_head = NULL;
-				ctx->active_entry_count = 0;
+				ctx->active_entry_head[credit_grp] = NULL;
+				ctx->active_entry_count[credit_grp] = 0;
 			} else {
 				entry->prev->next = entry->next;
 				entry->next->prev = entry->prev;
-				if (entry == ctx->active_entry_head) {
-					ctx->active_entry_head = entry->next;
+				if (entry == active_entry_head) {
+					ctx->active_entry_head[credit_grp] = entry->next;
 				}
-				ctx->active_entry_count--;
+				ctx->active_entry_count[credit_grp]--;
 			}
+			WLFC_DBGMESG(("%s():%d, del entry belongs to credit grp:%d cnt:%d\n",
+				__FUNCTION__, __LINE__, credit_grp,
+				ctx->active_entry_count[credit_grp]));
 			entry->next = entry->prev = NULL;
 		} else {
 			DHD_ERROR(("Error: %s():%d\n", __FUNCTION__, __LINE__));
@@ -1891,7 +1937,7 @@ _dhd_wlfc_mac_entry_update(athost_wl_status_info_t* ctx, wlfc_mac_descriptor_t* 
 /** LIMIT_BORROW specific function */
 static int
 _dhd_wlfc_borrow_credit(athost_wl_status_info_t* ctx, int highest_lender_ac, int borrower_ac,
-	bool bBorrowAll)
+	bool bBorrowAll, int credit_grp)
 {
 	int lender_ac, borrow_limit = 0;
 	int rc = -1;
@@ -1904,14 +1950,15 @@ _dhd_wlfc_borrow_credit(athost_wl_status_info_t* ctx, int highest_lender_ac, int
 	/* Borrow from lowest priority available AC (including BC/MC credits) */
 	for (lender_ac = 0; lender_ac <= highest_lender_ac; lender_ac++) {
 		if (!bBorrowAll) {
-			borrow_limit = ctx->Init_FIFO_credit[lender_ac]/WLFC_BORROW_LIMIT_RATIO;
+			borrow_limit = ctx->Init_FIFO_group_credit[credit_grp][lender_ac] /
+				WLFC_BORROW_LIMIT_RATIO;
 		} else {
 			borrow_limit = 0;
 		}
 
-		if (ctx->FIFO_credit[lender_ac] > borrow_limit) {
-			ctx->credits_borrowed[borrower_ac][lender_ac]++;
-			ctx->FIFO_credit[lender_ac]--;
+		if (ctx->FIFO_credit[credit_grp][lender_ac] > borrow_limit) {
+			ctx->credits_borrowed[credit_grp][borrower_ac][lender_ac]++;
+			ctx->FIFO_credit[credit_grp][lender_ac]--;
 			rc = lender_ac;
 			break;
 		}
@@ -1921,7 +1968,8 @@ _dhd_wlfc_borrow_credit(athost_wl_status_info_t* ctx, int highest_lender_ac, int
 }
 
 /** LIMIT_BORROW specific function */
-static int _dhd_wlfc_return_credit(athost_wl_status_info_t* ctx, int lender_ac, int borrower_ac)
+static int _dhd_wlfc_return_credit(athost_wl_status_info_t* ctx, int lender_ac,
+	int borrower_ac, int credit_grp)
 {
 	if ((ctx == NULL) || (lender_ac < 0) || (lender_ac > AC_COUNT) ||
 		(borrower_ac < 0) || (borrower_ac > AC_COUNT)) {
@@ -1931,8 +1979,8 @@ static int _dhd_wlfc_return_credit(athost_wl_status_info_t* ctx, int lender_ac, 
 		return BCME_BADARG;
 	}
 
-	ctx->credits_borrowed[borrower_ac][lender_ac]--;
-	ctx->FIFO_credit[lender_ac]++;
+	ctx->credits_borrowed[credit_grp][borrower_ac][lender_ac]--;
+	ctx->FIFO_credit[credit_grp][lender_ac]++;
 
 	return BCME_OK;
 }
@@ -1956,7 +2004,7 @@ _dhd_wlfc_interface_entry_update(void* state,
 	entry = &ctx->destination_entries.interfaces[ifid];
 
 	return _dhd_wlfc_mac_entry_update(ctx, entry, action, ifid, iftype, ea,
-		_dhd_wlfc_ifpkt_fn, &ifid);
+		_dhd_wlfc_ifpkt_fn, &ifid, TRUE);
 }
 
 /**
@@ -1974,35 +2022,187 @@ _dhd_wlfc_BCMCCredit_support_update(void* state)
 
 /** Called eg on receiving a WLC_E_FIFO_CREDIT_MAP event from the dongle */
 static int
-_dhd_wlfc_FIFOcreditmap_update(void* state, uint8* credits)
+_dhd_wlfc_FIFOcreditmap_update(void* state, uint8* credits, uint32 datalen)
 {
 	athost_wl_status_info_t* ctx = (athost_wl_status_info_t*)state;
 	int i;
+	int grp;
 
-	for (i = 0; i <= 4; i++) {
-		if (ctx->Init_FIFO_credit[i] != ctx->FIFO_credit[i]) {
-			DHD_ERROR(("%s: credit[i] is not returned, (%d %d)\n",
-				__FUNCTION__, ctx->Init_FIFO_credit[i], ctx->FIFO_credit[i]));
+	if (datalen > (AC_COUNT + 2)) {
+		/* for rsdb dongles */
+		ctx->total_credit_groups = WLFC_MAX_GROUPS;
+		WLFC_DBGMESG(("FIFO-credit map update "
+			"(AC0[%d,%d],AC1[%d,%d],AC2[%d,%d],"
+			"AC3[%d,%d],BC_MC[%d,%d])\n",
+			credits[0], credits[6], credits[1], credits[7],
+			credits[2], credits[8], credits[3], credits[9],
+			credits[4], credits[10]));
+	} else {
+		/* for mimo dongles */
+		ctx->total_credit_groups = 1;
+		WLFC_DBGMESG(("FIFO-credit map update "
+			"(AC0[%d],AC1[%d],AC2[%d],AC3[%d],BC_MC[%d])\n",
+			credits[0], credits[1], credits[2], credits[3],
+			credits[4]));
+	}
+
+	for (grp = 0; grp < WLFC_MAX_GROUPS; grp++) {
+		for (i = 0; i <= 4; i++) {
+			if (ctx->Init_FIFO_group_credit[grp][i] != ctx->FIFO_credit[grp][i]) {
+				DHD_ERROR(("%s: credit[i] is not returned, (%d %d)\n",
+					__FUNCTION__, ctx->Init_FIFO_group_credit[grp][i],
+					ctx->FIFO_credit[grp][i]));
+			}
 		}
 	}
 
-	/* update the AC FIFO credit map */
-	ctx->FIFO_credit[0] += (credits[0] - ctx->Init_FIFO_credit[0]);
-	ctx->FIFO_credit[1] += (credits[1] - ctx->Init_FIFO_credit[1]);
-	ctx->FIFO_credit[2] += (credits[2] - ctx->Init_FIFO_credit[2]);
-	ctx->FIFO_credit[3] += (credits[3] - ctx->Init_FIFO_credit[3]);
-	ctx->FIFO_credit[4] += (credits[4] - ctx->Init_FIFO_credit[4]);
+	if (datalen > (AC_COUNT + 2)) {
+		/* update credit-groups AC FIFO credit map */
+		ctx->FIFO_credit[0][0] += (credits[0] - credits[6]) -
+			ctx->Init_FIFO_group_credit[0][0];
+		ctx->FIFO_credit[0][1] += (credits[1] - credits[7]) -
+			ctx->Init_FIFO_group_credit[0][1];
+		ctx->FIFO_credit[0][2] += (credits[2] - credits[8]) -
+			ctx->Init_FIFO_group_credit[0][2];
+		ctx->FIFO_credit[0][3] += (credits[3] - credits[9]) -
+			ctx->Init_FIFO_group_credit[0][3];
+		ctx->FIFO_credit[0][4] += (credits[4] - credits[10]) -
+			ctx->Init_FIFO_group_credit[0][4];
+		ctx->FIFO_credit[1][0] += (credits[6] - ctx->Init_FIFO_group_credit[1][0]);
+		ctx->FIFO_credit[1][1] += (credits[7] - ctx->Init_FIFO_group_credit[1][1]);
+		ctx->FIFO_credit[1][2] += (credits[8] - ctx->Init_FIFO_group_credit[1][2]);
+		ctx->FIFO_credit[1][3] += (credits[9] - ctx->Init_FIFO_group_credit[1][3]);
+		ctx->FIFO_credit[1][4] += (credits[10] - ctx->Init_FIFO_group_credit[1][4]);
+	} else {
+		ctx->FIFO_credit[0][0] += (credits[0] - ctx->Init_FIFO_group_credit[0][0]);
+		ctx->FIFO_credit[0][1] += (credits[1] - ctx->Init_FIFO_group_credit[0][1]);
+		ctx->FIFO_credit[0][2] += (credits[2] - ctx->Init_FIFO_group_credit[0][2]);
+		ctx->FIFO_credit[0][3] += (credits[3] - ctx->Init_FIFO_group_credit[0][3]);
+		ctx->FIFO_credit[0][4] += (credits[4] - ctx->Init_FIFO_group_credit[0][4]);
+	}
 
+	/* total credits of each ac */
 	ctx->Init_FIFO_credit[0] = credits[0];
 	ctx->Init_FIFO_credit[1] = credits[1];
 	ctx->Init_FIFO_credit[2] = credits[2];
 	ctx->Init_FIFO_credit[3] = credits[3];
 	ctx->Init_FIFO_credit[4] = credits[4];
 
+	if (datalen > (AC_COUNT + 2)) {
+		/* remaining credits for other group
+		 * TODO: currently, using group-0 for 5G and group-1 for 2.4G
+		 */
+		ctx->Init_FIFO_group_credit[0][0] = credits[0] - credits[6];
+		ctx->Init_FIFO_group_credit[0][1] = credits[1] - credits[7];
+		ctx->Init_FIFO_group_credit[0][2] = credits[2] - credits[8];
+		ctx->Init_FIFO_group_credit[0][3] = credits[3] - credits[9];
+		ctx->Init_FIFO_group_credit[0][4] = credits[4] - credits[10];
+		/* credits for WLFC_GROUP_LIMITED */
+		ctx->Init_FIFO_group_credit[1][0] = credits[6];
+		ctx->Init_FIFO_group_credit[1][1] = credits[7];
+		ctx->Init_FIFO_group_credit[1][2] = credits[8];
+		ctx->Init_FIFO_group_credit[1][3] = credits[9];
+		ctx->Init_FIFO_group_credit[1][4] = credits[10];
+	} else {
+		ctx->Init_FIFO_group_credit[0][0] = credits[0];
+		ctx->Init_FIFO_group_credit[0][1] = credits[1];
+		ctx->Init_FIFO_group_credit[0][2] = credits[2];
+		ctx->Init_FIFO_group_credit[0][3] = credits[3];
+		ctx->Init_FIFO_group_credit[0][4] = credits[4];
+	}
+
 	/* credit for ATIM FIFO is not used yet. */
-	ctx->Init_FIFO_credit[5] = ctx->FIFO_credit[5] = 0;
+	ctx->Init_FIFO_credit[5] = 0;
+	ctx->Init_FIFO_group_credit[0][5] = ctx->Init_FIFO_group_credit[1][5] = 0;
+	ctx->FIFO_credit[0][5] = ctx->FIFO_credit[1][5] = 0;
+
+	for (grp = 0; grp < WLFC_MAX_GROUPS; grp++) {
+		WLFC_DBGMESG(("FIFO-credit map for group %d (init_credit,credit) "
+			"(AC0[%d,%d],AC1[%d,%d],AC2[%d,%d],"
+			"AC3[%d,%d],BC_MC[%d,%d])\n", grp,
+			ctx->Init_FIFO_group_credit[grp][0], ctx->FIFO_credit[grp][0],
+			ctx->Init_FIFO_group_credit[grp][1], ctx->FIFO_credit[grp][1],
+			ctx->Init_FIFO_group_credit[grp][2], ctx->FIFO_credit[grp][2],
+			ctx->Init_FIFO_group_credit[grp][3], ctx->FIFO_credit[grp][3],
+			ctx->Init_FIFO_group_credit[grp][4], ctx->FIFO_credit[grp][4]));
+	}
 
 	return BCME_OK;
+}
+
+/**
+ * Called when link is updated to update interface credit group
+ *     @param[in] dhdp - pointer to public DHD structure
+ *     @param[in] ifid - interface index
+ *     @param[in] action - eWLFC_MAC_ENTRY_ACTION_ADD or eWLFC_MAC_ENTRY_ACTION_DEL
+ *     @param[in] credit_grp - WLFC_GROUP_NONE or WLFC_GROUP_LIMITED
+ */
+int dhd_wlfc_update_interface_credit_group(dhd_pub_t *dhdp, uint8 ifid,
+	uint8 action, uint8 credit_grp)
+{
+	athost_wl_status_info_t* ctx = (athost_wl_status_info_t*)dhdp->wlfc_state;
+	wlfc_mac_descriptor_t* entry;
+	wlfc_mac_descriptor_t *active_entry_head;
+
+	WLFC_DBGMESG(("WLC_E_LINK: ifidx:%d group:%d\n", ifid, credit_grp));
+	if (ifid >= WLFC_MAX_IFNUM)
+		return BCME_BADARG;
+
+	entry = &ctx->destination_entries.interfaces[ifid];
+	if (ctx->total_credit_groups < WLFC_MAX_GROUPS) {
+		/* In MIMO the credit group will always be WLFC_GROUP_NONE
+		 * irrespective of its band of operation
+		 */
+		credit_grp = WLFC_GROUP_NONE;
+	}
+	entry->grp_idx = credit_grp;
+	active_entry_head = ctx->active_entry_head[credit_grp];
+
+	if (action == eWLFC_MAC_ENTRY_ACTION_ADD) {
+		if (entry->next == NULL) {
+			/* not linked to anywhere, add to tail */
+			if (active_entry_head) {
+				entry->prev = active_entry_head->prev;
+				active_entry_head->prev->next = entry;
+				active_entry_head->prev = entry;
+				entry->next = active_entry_head;
+			} else {
+				ASSERT(ctx->active_entry_count[credit_grp] == 0);
+				entry->prev = entry->next = entry;
+				ctx->active_entry_head[credit_grp] = entry;
+			}
+			ctx->active_entry_count[credit_grp]++;
+			WLFC_DBGMESG(("%s():%d, add entry belongs to credit grp:%d cnt:%d\n",
+				__FUNCTION__, __LINE__, credit_grp,
+				ctx->active_entry_count[credit_grp]));
+		} else {
+			DHD_ERROR(("%s():%d ifid %d linked\n", __FUNCTION__, __LINE__, ifid));
+		}
+	} else if (action == eWLFC_MAC_ENTRY_ACTION_DEL) {
+		if (entry->next) {
+			/* not floating, remove from Q */
+			if (ctx->active_entry_count[credit_grp] <= 1) {
+				/* last item */
+				ctx->active_entry_head[credit_grp] = NULL;
+				ctx->active_entry_count[credit_grp] = 0;
+			} else {
+				entry->prev->next = entry->next;
+				entry->next->prev = entry->prev;
+				if (entry == active_entry_head) {
+					ctx->active_entry_head[credit_grp] = entry->next;
+				}
+				ctx->active_entry_count[credit_grp]--;
+			}
+			entry->next = entry->prev = NULL;
+			printk("%s():%d, del entry belongs to credit grp:%d cnt:%d\n",
+				__FUNCTION__, __LINE__, credit_grp,
+				ctx->active_entry_count[credit_grp]);
+		} else {
+			DHD_ERROR(("%s():%d ifid %d not linked\n", __FUNCTION__, __LINE__, ifid));
+		}
+	}
+
+	return 0;
 }
 
 /**
@@ -2329,7 +2529,7 @@ _dhd_wlfc_compressed_txstatus_update(dhd_pub_t *dhd, uint8* pkt_info, uint8 len,
 
 		/* pick up the implicit credit from this packet */
 		if (DHD_PKTTAG_CREDITCHECK(PKTTAG(pktbuf))) {
-			_dhd_wlfc_return_implied_credit(wlfc, pktbuf);
+			_dhd_wlfc_return_implied_credit(wlfc, pktbuf, entry->grp_idx);
 		} else {
 			/*
 			if this packet did not count against FIFO credit, it must have
@@ -2417,7 +2617,7 @@ cont:
  *    @param[in] credits caller supplied credit that will be added to the host credit.
  */
 static int
-_dhd_wlfc_fifocreditback_indicate(dhd_pub_t *dhd, uint8* credits)
+_dhd_wlfc_fifocreditback_indicate(dhd_pub_t *dhd, uint8* credits, int grp)
 {
 	int i;
 	athost_wl_status_info_t* wlfc = (athost_wl_status_info_t*)dhd->wlfc_state;
@@ -2433,16 +2633,17 @@ _dhd_wlfc_fifocreditback_indicate(dhd_pub_t *dhd, uint8* credits)
 
 			/* Return credits to highest priority lender first */
 			for (lender = AC_COUNT; (lender >= 0) && (credits[i] > 0); lender--) {
-				if (wlfc->credits_borrowed[i][lender] > 0) {
-					if (credits[i] >= wlfc->credits_borrowed[i][lender]) {
+				if (wlfc->credits_borrowed[grp][i][lender] > 0) {
+					if (credits[i] >= wlfc->credits_borrowed[grp][i][lender]) {
 						credits[i] -=
-							(uint8)wlfc->credits_borrowed[i][lender];
-						wlfc->FIFO_credit[lender] +=
-						    wlfc->credits_borrowed[i][lender];
-						wlfc->credits_borrowed[i][lender] = 0;
+						(uint8)wlfc->credits_borrowed[grp][i][lender];
+						wlfc->FIFO_credit[grp][lender] +=
+						    wlfc->credits_borrowed[grp][i][lender];
+						wlfc->credits_borrowed[grp][i][lender] = 0;
 					} else {
-						wlfc->credits_borrowed[i][lender] -= credits[i];
-						wlfc->FIFO_credit[lender] += credits[i];
+						wlfc->credits_borrowed[grp][i][lender] -=
+							credits[i];
+						wlfc->FIFO_credit[grp][lender] += credits[i];
 						credits[i] = 0;
 					}
 				}
@@ -2450,11 +2651,11 @@ _dhd_wlfc_fifocreditback_indicate(dhd_pub_t *dhd, uint8* credits)
 
 			/* If we have more credits left over, these must belong to the AC */
 			if (credits[i] > 0) {
-				wlfc->FIFO_credit[i] += credits[i];
+				wlfc->FIFO_credit[grp][i] += credits[i];
 			}
 
-			if (wlfc->FIFO_credit[i] > wlfc->Init_FIFO_credit[i]) {
-				wlfc->FIFO_credit[i] = wlfc->Init_FIFO_credit[i];
+			if (wlfc->FIFO_credit[grp][i] > wlfc->Init_FIFO_credit[i]) {
+				wlfc->FIFO_credit[grp][i] = wlfc->Init_FIFO_credit[i];
 			}
 		}
 	}
@@ -2539,7 +2740,7 @@ _dhd_wlfc_suppress_txq(dhd_pub_t *dhd, f_processpkt_t fn, void *arg)
 	}
 
 	if (bCreditUpdate) {
-		_dhd_wlfc_fifocreditback_indicate(dhd, credits);
+		_dhd_wlfc_fifocreditback_indicate(dhd, credits, 0);
 	}
 } /* _dhd_wlfc_suppress_txq */
 
@@ -2648,7 +2849,7 @@ _dhd_wlfc_mac_table_update(dhd_pub_t *dhd, uint8* value, uint8 type)
 			rc = _dhd_wlfc_mac_entry_update(wlfc, &table[existing_index],
 				eWLFC_MAC_ENTRY_ACTION_DEL, table[existing_index].interface_id,
 				table[existing_index].iftype, NULL, _dhd_wlfc_entrypkt_fn,
-				&table[existing_index]);
+				&table[existing_index], FALSE);
 		}
 
 		if (!table[table_index].occupied) {
@@ -2657,7 +2858,7 @@ _dhd_wlfc_mac_table_update(dhd_pub_t *dhd, uint8* value, uint8 type)
 			rc = _dhd_wlfc_mac_entry_update(wlfc, &table[table_index],
 				eWLFC_MAC_ENTRY_ACTION_ADD, ifid,
 				wlfc->destination_entries.interfaces[ifid].iftype,
-				ea, NULL, NULL);
+				ea, NULL, NULL, FALSE);
 		} else {
 			/* the space should have been empty, but it's not */
 			wlfc->stats.mac_update_failed++;
@@ -2669,7 +2870,7 @@ _dhd_wlfc_mac_table_update(dhd_pub_t *dhd, uint8* value, uint8 type)
 				rc = _dhd_wlfc_mac_entry_update(wlfc, &table[table_index],
 					eWLFC_MAC_ENTRY_ACTION_DEL, ifid,
 					wlfc->destination_entries.interfaces[ifid].iftype,
-					ea, _dhd_wlfc_entrypkt_fn, &table[table_index]);
+					ea, _dhd_wlfc_entrypkt_fn, &table[table_index], FALSE);
 		} else {
 			/* the space should have been occupied, but it's not */
 			wlfc->stats.mac_update_failed++;
@@ -2811,7 +3012,11 @@ static void
 _dhd_wlfc_reorderinfo_indicate(uint8 *val, uint8 len, uchar *info_buf, uint *info_len)
 {
 	if (info_len) {
-		if (info_buf) {
+		/* Check copy length to avoid buffer overrun. In case of length exceeding
+		 *  WLHOST_REORDERDATA_TOTLEN, return failure instead sending incomplete result
+		 *  of length WLHOST_REORDERDATA_TOTLEN
+		 */
+		if ((info_buf) && (len <= WLHOST_REORDERDATA_TOTLEN)) {
 			bcopy(val, info_buf, len);
 			*info_len = len;
 		} else {
@@ -2888,7 +3093,8 @@ int dhd_wlfc_enable(dhd_pub_t *dhd)
 		}
 	}
 
-	dhd->proptxstatus_mode = WLFC_FCMODE_EXPLICIT_CREDIT;
+	dhd->proptxstatus_mode = WLFC_FCMODE_IMPLIED_CREDIT;
+
 	/* default to check rx pkt */
 	dhd->wlfc_rxpkt_chk = TRUE;
 	if (dhd->op_mode & DHD_FLAG_IBSS_MODE) {
@@ -2901,11 +3107,13 @@ int dhd_wlfc_enable(dhd_pub_t *dhd)
 	}
 
 	_dhd_wlfc_mac_entry_update(wlfc, &wlfc->destination_entries.other,
-		eWLFC_MAC_ENTRY_ACTION_ADD, 0xff, 0, NULL, NULL, NULL);
+		eWLFC_MAC_ENTRY_ACTION_ADD, 0xff, 0, NULL, NULL, NULL, FALSE);
 
-	wlfc->allow_credit_borrow = 0;
-	wlfc->single_ac = 0;
-	wlfc->single_ac_timestamp = 0;
+	for (i = 0; i < WLFC_MAX_GROUPS; i++) {
+		wlfc->allow_credit_borrow[i] = 0;
+		wlfc->single_ac[i] = 0;
+		wlfc->single_ac_timestamp[i] = 0;
+	}
 
 
 exit:
@@ -3045,7 +3253,7 @@ dhd_wlfc_parse_header_info(dhd_pub_t *dhd, void* pktbuf, int tlv_hdr_len, uchar 
 				_dhd_wlfc_compressed_txstatus_update(dhd, value,
 					value[compcnt_offset], &entry);
 			} else if (type == WLFC_CTL_TYPE_FIFO_CREDITBACK) {
-				_dhd_wlfc_fifocreditback_indicate(dhd, value);
+				_dhd_wlfc_fifocreditback_indicate(dhd, value, 0);
 			} else if (type == WLFC_CTL_TYPE_RSSI) {
 				_dhd_wlfc_rssi_indicate(dhd, value);
 			} else if (type == WLFC_CTL_TYPE_MAC_REQUEST_CREDIT) {
@@ -3100,6 +3308,7 @@ dhd_wlfc_transfer_packets(void *data)
 	bool no_credit = FALSE;
 
 	int lender;
+	int credit_grp;
 
 #if defined(DHD_WLFC_THREAD)
 	/* wait till someone wakeup me up, will change it at running time */
@@ -3128,7 +3337,15 @@ dhd_wlfc_transfer_packets(void *data)
 			goto exit;
 #endif /* defined(DHD_WLFC_THREAD) */
 
+	for (credit_grp = 0; credit_grp < WLFC_MAX_GROUPS; credit_grp++) {
+
 	memset(&commit_info, 0, sizeof(commit_info));
+	tx_map = rx_map = 0;
+	single_ac = 0;
+	bus_retry_count = 0;
+	pkt_send = 0;
+	packets_map = 0;
+	no_credit = FALSE;
 
 	/*
 	Commit packets for regular AC traffic. Higher priority first.
@@ -3158,18 +3375,13 @@ dhd_wlfc_transfer_packets(void *data)
 			continue;
 		}
 
-		if (ctx->FIFO_credit[ac] < 3) {
-			DHD_EVENT(("Avoid pkt processing if credit is low (<3)\n"));
-			continue;
-		}
-
 		tx_map |= (1 << ac);
 		single_ac = ac + 1;
 		while (FALSE == dhdp->proptxstatus_txoff) {
 			/* packets from delayQ with less priority are fresh and
 			 * they'd need header and have no MAC entry
 			 */
-			no_credit = (ctx->FIFO_credit[ac] < 1);
+			no_credit = (ctx->FIFO_credit[credit_grp][ac] < 1);
 			if (dhdp->proptxstatus_credit_ignore ||
 				((ac == AC_COUNT) && !ctx->bcmc_credit_supported)) {
 				no_credit = FALSE;
@@ -3179,7 +3391,8 @@ dhd_wlfc_transfer_packets(void *data)
 #ifdef LIMIT_BORROW
 			if (no_credit && (ac < AC_COUNT) && (tx_map >= rx_map)) {
 				/* try borrow from lower priority */
-				lender = _dhd_wlfc_borrow_credit(ctx, ac - 1, ac, FALSE);
+				lender = _dhd_wlfc_borrow_credit(ctx, ac - 1, ac, FALSE,
+						credit_grp);
 				if (lender != -1) {
 					no_credit = FALSE;
 				}
@@ -3191,21 +3404,23 @@ dhd_wlfc_transfer_packets(void *data)
 				&(commit_info.ac_fifo_credit_spent),
 				&(commit_info.needs_hdr),
 				&(commit_info.mac_entry),
-				no_credit);
+				no_credit,
+				credit_grp);
 			commit_info.pkt_type = (commit_info.needs_hdr) ? eWLFC_PKTTYPE_DELAYED :
 				eWLFC_PKTTYPE_SUPPRESSED;
 
 			if (commit_info.p == NULL) {
 #ifdef LIMIT_BORROW
 				if (lender != -1) {
-					_dhd_wlfc_return_credit(ctx, lender, ac);
+					_dhd_wlfc_return_credit(ctx, lender, ac, credit_grp);
 				}
 #endif
 				break;
 			}
 
 			if (!dhdp->proptxstatus_credit_ignore && (lender == -1)) {
-				ASSERT(ctx->FIFO_credit[ac] >= commit_info.ac_fifo_credit_spent);
+				ASSERT(ctx->FIFO_credit[credit_grp][ac] >=
+					commit_info.ac_fifo_credit_spent);
 			}
 			/* here we can ensure have credit or no credit needed */
 			rc = _dhd_wlfc_handle_packet_commit(ctx, ac, &commit_info,
@@ -3215,17 +3430,17 @@ dhd_wlfc_transfer_packets(void *data)
 			if (rc == BCME_OK) {
 				pkt_send++;
 				if (commit_info.ac_fifo_credit_spent && (lender == -1)) {
-					ctx->FIFO_credit[ac]--;
+					ctx->FIFO_credit[credit_grp][ac]--;
 				}
 #ifdef LIMIT_BORROW
 				else if (!commit_info.ac_fifo_credit_spent && (lender != -1)) {
-					_dhd_wlfc_return_credit(ctx, lender, ac);
+					_dhd_wlfc_return_credit(ctx, lender, ac, credit_grp);
 				}
 #endif
 			} else {
 #ifdef LIMIT_BORROW
 				if (lender != -1) {
-					_dhd_wlfc_return_credit(ctx, lender, ac);
+					_dhd_wlfc_return_credit(ctx, lender, ac, credit_grp);
 				}
 #endif
 				bus_retry_count++;
@@ -3249,39 +3464,43 @@ dhd_wlfc_transfer_packets(void *data)
 
 	if (((tx_map & (tx_map - 1)) == 0) && (tx_map >= rx_map)) {
 		/* only one tx ac exist and no higher rx ac */
-		if ((single_ac == ctx->single_ac) && ctx->allow_credit_borrow) {
+		if ((single_ac == ctx->single_ac[credit_grp]) &&
+			ctx->allow_credit_borrow[credit_grp]) {
 			ac = single_ac - 1;
 		} else {
 			uint32 delta;
 			uint32 curr_t = OSL_SYSUPTIME();
 
-			if (single_ac != ctx->single_ac) {
+			if (single_ac != ctx->single_ac[credit_grp]) {
 				/* new single ac traffic (first single ac or different single ac) */
-				ctx->allow_credit_borrow = 0;
-				ctx->single_ac_timestamp = curr_t;
-				ctx->single_ac = (uint8)single_ac;
+				ctx->allow_credit_borrow[credit_grp] = 0;
+				ctx->single_ac_timestamp[credit_grp] = curr_t;
+				ctx->single_ac[credit_grp] = (uint8)single_ac;
 				rc = BCME_OK;
-				goto exit;
+				/* continue to other credit-group */
+				continue;
 			}
 			/* same ac traffic, check if it lasts enough time */
-			delta = curr_t - ctx->single_ac_timestamp;
+			delta = curr_t - ctx->single_ac_timestamp[credit_grp];
 
 			if (delta >= WLFC_BORROW_DEFER_PERIOD_MS) {
 				/* wait enough time, can borrow now */
-				ctx->allow_credit_borrow = 1;
+				ctx->allow_credit_borrow[credit_grp] = 1;
 				ac = single_ac - 1;
 			} else {
 				rc = BCME_OK;
-				goto exit;
+				/* continue to other credit-group */
+				continue;
 			}
 		}
 	} else {
 		/* If we have multiple AC traffic, turn off borrowing, mark time and bail out */
-		ctx->allow_credit_borrow = 0;
-		ctx->single_ac_timestamp = 0;
-		ctx->single_ac = 0;
+		ctx->allow_credit_borrow[credit_grp] = 0;
+		ctx->single_ac_timestamp[credit_grp] = 0;
+		ctx->single_ac[credit_grp] = 0;
 		rc = BCME_OK;
-		goto exit;
+		/* continue to other credit-group */
+		continue;
 	}
 
 	if (packets_map == 0) {
@@ -3293,7 +3512,8 @@ dhd_wlfc_transfer_packets(void *data)
 	/* At this point, borrow all credits only for ac */
 	while (FALSE == dhdp->proptxstatus_txoff) {
 #ifdef LIMIT_BORROW
-		if ((lender = _dhd_wlfc_borrow_credit(ctx, AC_COUNT, ac, TRUE)) == -1) {
+		if ((lender = _dhd_wlfc_borrow_credit(ctx, AC_COUNT, ac, TRUE,
+			credit_grp)) == -1) {
 			break;
 		}
 #endif
@@ -3301,11 +3521,12 @@ dhd_wlfc_transfer_packets(void *data)
 			&(commit_info.ac_fifo_credit_spent),
 			&(commit_info.needs_hdr),
 			&(commit_info.mac_entry),
-			FALSE);
+			FALSE,
+			credit_grp);
 		if (commit_info.p == NULL) {
 			/* before borrow only one ac exists and now this only ac is empty */
 #ifdef LIMIT_BORROW
-			_dhd_wlfc_return_credit(ctx, lender, ac);
+			_dhd_wlfc_return_credit(ctx, lender, ac, credit_grp);
 #endif
 			break;
 		}
@@ -3321,16 +3542,16 @@ dhd_wlfc_transfer_packets(void *data)
 			pkt_send++;
 			if (commit_info.ac_fifo_credit_spent) {
 #ifndef LIMIT_BORROW
-				ctx->FIFO_credit[ac]--;
+				ctx->FIFO_credit[credit_grp][ac]--;
 #endif
 			} else {
 #ifdef LIMIT_BORROW
-				_dhd_wlfc_return_credit(ctx, lender, ac);
+				_dhd_wlfc_return_credit(ctx, lender, ac, credit_grp);
 #endif
 			}
 		} else {
 #ifdef LIMIT_BORROW
-			_dhd_wlfc_return_credit(ctx, lender, ac);
+			_dhd_wlfc_return_credit(ctx, lender, ac, credit_grp);
 #endif
 			bus_retry_count++;
 			if (bus_retry_count >= BUS_RETRIES) {
@@ -3339,6 +3560,8 @@ dhd_wlfc_transfer_packets(void *data)
 			}
 		}
 	}
+
+	} /* iteration for two groups */
 
 	BCM_REFERENCE(pkt_send);
 
@@ -3351,6 +3574,7 @@ exit:
 			wait_msec = msecs_to_jiffies(WLFC_THREAD_RETRY_WAIT_MS);
 		}
 	}
+
 	return 0;
 #else
 	return rc;
@@ -3497,7 +3721,7 @@ dhd_wlfc_txcomplete(dhd_pub_t *dhd, void *txp, bool success)
 		dhd_txcomplete(dhd, txp, success);
 
 		/* return the credit, if necessary */
-		_dhd_wlfc_return_implied_credit(wlfc, txp);
+		_dhd_wlfc_return_implied_credit(wlfc, txp, entry->grp_idx);
 
 		if (entry->transit_count)
 			entry->transit_count--;
@@ -3602,7 +3826,9 @@ dhd_wlfc_init(dhd_pub_t *dhd)
 		}
 	}
 
-	DHD_INFO(("dhd_wlfc_init(): wlfc_mode=0x%x, ret=%d\n", dhd->wlfc_mode, ret));
+	DHD_INFO(("dhd_wlfc_init(): wlfc_mode=0x%x, proptxstatus_mode=0x%x,"
+			" fw_caps=0x%x, ret=%d\n", dhd->proptxstatus_mode,
+			fw_caps, dhd->wlfc_mode, ret));
 
 	dhd_os_wlfc_unblock(dhd);
 
@@ -3645,6 +3871,7 @@ dhd_wlfc_hostreorder_init(dhd_pub_t *dhd)
 	dhd->proptxstatus_mode = WLFC_ONLY_AMPDU_HOSTREORDER;
 	dhd_os_wlfc_unblock(dhd);
 
+	printk("%s: proptxstatus_mode=0x%x\n", __FUNCTION__, dhd->proptxstatus_mode);
 	return BCME_OK;
 }
 
@@ -3797,7 +4024,7 @@ int dhd_wlfc_interface_event(dhd_pub_t *dhdp, uint8 action, uint8 ifid, uint8 if
 }
 
 /** Called eg on receiving a WLC_E_FIFO_CREDIT_MAP event from the dongle */
-int dhd_wlfc_FIFOcreditmap_event(dhd_pub_t *dhdp, uint8* event_data)
+int dhd_wlfc_FIFOcreditmap_event(dhd_pub_t *dhdp, uint8* event_data, uint32 datalen)
 {
 	int rc;
 
@@ -3813,7 +4040,7 @@ int dhd_wlfc_FIFOcreditmap_event(dhd_pub_t *dhdp, uint8* event_data)
 		return WLFC_UNSUPPORTED;
 	}
 
-	rc = _dhd_wlfc_FIFOcreditmap_update(dhdp->wlfc_state, event_data);
+	rc = _dhd_wlfc_FIFOcreditmap_update(dhdp->wlfc_state, event_data, datalen);
 
 	dhd_os_wlfc_unblock(dhdp);
 
@@ -3857,6 +4084,7 @@ dhd_wlfc_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf)
 	wlfc_mac_descriptor_t* mac_table;
 	wlfc_mac_descriptor_t* interfaces;
 	char* iftypes[] = {"STA", "AP", "WDS", "p2pGO", "p2pCL"};
+	int grp = 0;
 
 	if (!dhdp || !strbuf) {
 		DHD_ERROR(("Error: %s():%d\n", __FUNCTION__, __LINE__));
@@ -3906,19 +4134,32 @@ dhd_wlfc_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf)
 		wlfc->stats.delayq_full_error,
 		wlfc->stats.rollback_failed);
 
-	bcm_bprintf(strbuf, "PKTS (init_credit,credit,sent,drop_d,drop_s,outoforder) "
-		"(AC0[%d,%d,%d,%d,%d,%d],AC1[%d,%d,%d,%d,%d,%d],AC2[%d,%d,%d,%d,%d,%d],"
-		"AC3[%d,%d,%d,%d,%d,%d],BC_MC[%d,%d,%d,%d,%d,%d])\n",
-		wlfc->Init_FIFO_credit[0], wlfc->FIFO_credit[0], wlfc->stats.send_pkts[0],
-		wlfc->stats.drop_pkts[0], wlfc->stats.drop_pkts[1], wlfc->stats.ooo_pkts[0],
-		wlfc->Init_FIFO_credit[1], wlfc->FIFO_credit[1], wlfc->stats.send_pkts[1],
-		wlfc->stats.drop_pkts[2], wlfc->stats.drop_pkts[3], wlfc->stats.ooo_pkts[1],
-		wlfc->Init_FIFO_credit[2], wlfc->FIFO_credit[2], wlfc->stats.send_pkts[2],
-		wlfc->stats.drop_pkts[4], wlfc->stats.drop_pkts[5], wlfc->stats.ooo_pkts[2],
-		wlfc->Init_FIFO_credit[3], wlfc->FIFO_credit[3], wlfc->stats.send_pkts[3],
-		wlfc->stats.drop_pkts[6], wlfc->stats.drop_pkts[7], wlfc->stats.ooo_pkts[3],
-		wlfc->Init_FIFO_credit[4], wlfc->FIFO_credit[4], wlfc->stats.send_pkts[4],
-		wlfc->stats.drop_pkts[8], wlfc->stats.drop_pkts[9], wlfc->stats.ooo_pkts[4]);
+	for (grp = 0; grp < WLFC_MAX_GROUPS; grp++) {
+		bcm_bprintf(strbuf, "PKTS grp-%d "
+			"(init_credit,credit,sent,drop_d,drop_s,outoforder) "
+			"(AC0[%d,%d,%d,%d,%d,%d],AC1[%d,%d,%d,%d,%d,%d],AC2[%d,%d,%d,%d,%d,%d],"
+			"AC3[%d,%d,%d,%d,%d,%d],BC_MC[%d,%d,%d,%d,%d,%d])\n", grp,
+			wlfc->Init_FIFO_group_credit[grp][0], wlfc->FIFO_credit[grp][0],
+			wlfc->stats.send_pkts[0],
+			wlfc->stats.drop_pkts[0], wlfc->stats.drop_pkts[1],
+			wlfc->stats.ooo_pkts[0],
+			wlfc->Init_FIFO_group_credit[grp][1], wlfc->FIFO_credit[grp][1],
+			wlfc->stats.send_pkts[1],
+			wlfc->stats.drop_pkts[2], wlfc->stats.drop_pkts[3],
+			wlfc->stats.ooo_pkts[1],
+			wlfc->Init_FIFO_group_credit[grp][2], wlfc->FIFO_credit[grp][2],
+			wlfc->stats.send_pkts[2],
+			wlfc->stats.drop_pkts[4], wlfc->stats.drop_pkts[5],
+			wlfc->stats.ooo_pkts[2],
+			wlfc->Init_FIFO_group_credit[grp][3], wlfc->FIFO_credit[grp][3],
+			wlfc->stats.send_pkts[3],
+			wlfc->stats.drop_pkts[6], wlfc->stats.drop_pkts[7],
+			wlfc->stats.ooo_pkts[3],
+			wlfc->Init_FIFO_group_credit[grp][4], wlfc->FIFO_credit[grp][4],
+			wlfc->stats.send_pkts[4],
+			wlfc->stats.drop_pkts[8], wlfc->stats.drop_pkts[9],
+			wlfc->stats.ooo_pkts[4]);
+	}
 
 	bcm_bprintf(strbuf, "\n");
 	for (i = 0; i < WLFC_MAX_IFNUM; i++) {

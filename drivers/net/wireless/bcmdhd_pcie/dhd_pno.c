@@ -2,14 +2,16 @@
  * Broadcom Dongle Host Driver (DHD)
  * Prefered Network Offload and Wi-Fi Location Service(WLS) code.
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
+ * 
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -17,7 +19,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -25,7 +27,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_pno.c 606280 2015-12-15 05:28:25Z $
+ * $Id: dhd_pno.c 664799 2017-04-24 09:48:40Z $
  */
 
 #if defined(GSCAN_SUPPORT) && !defined(PNO_SUPPORT)
@@ -52,11 +54,6 @@
 #include <dhd.h>
 #include <dhd_pno.h>
 #include <dhd_dbg.h>
-#include <wl_cfg80211.h>
-#include <wldev_common.h>
-
-#define IS_CHANNEL_RADAR(channel)	(((channel & WL_CHAN_RADAR) || \
-	(channel & WL_CHAN_PASSIVE)) ? true : false)
 #ifdef GSCAN_SUPPORT
 #include <linux/gcd.h>
 #endif /* GSCAN_SUPPORT */
@@ -606,15 +603,12 @@ _dhd_pno_chan_merge(uint16 *d_chan_list, int *nchan,
 	*nchan = k;
 	return err;
 }
-struct net_device *dhd_pno_netdev;
 static int
 _dhd_pno_get_channels(dhd_pub_t *dhd, uint16 *d_chan_list,
 	int *nchan, uint8 band, bool skip_dfs)
 {
 	int err = BCME_OK;
 	int i, j;
-	u32 channel = 0;
-	bool skip_passive;
 	uint32 chan_buf[WL_NUMCHANNELS + 1];
 	wl_uint32_list_t *list;
 	NULL_CHECK(dhd, "dhd is NULL", err);
@@ -628,8 +622,6 @@ _dhd_pno_get_channels(dhd_pub_t *dhd, uint16 *d_chan_list,
 		DHD_ERROR(("failed to get channel list (err: %d)\n", err));
 		goto exit;
 	}
-	skip_passive = (band & WLC_BAND_ACTIVE);
-	band &= ~WLC_BAND_ACTIVE;
 	for (i = 0, j = 0; i < dtoh32(list->count) && i < *nchan; i++) {
 		if (band == WLC_BAND_2G) {
 			if (dtoh32(list->element[i]) > CHANNEL_2G_MAX)
@@ -639,26 +631,16 @@ _dhd_pno_get_channels(dhd_pub_t *dhd, uint16 *d_chan_list,
 				continue;
 			if (skip_dfs && is_dfs(dtoh32(list->element[i])))
 				continue;
-		} else if (band == WLC_BAND_AUTO) {
-			if (skip_dfs || !is_dfs(dtoh32(list->element[i])))
+
+
+	} else if (band == WLC_BAND_AUTO) {
+		if (skip_dfs || !is_dfs(dtoh32(list->element[i])))
 				continue;
-		} else { /* All channels */
-			if (skip_dfs && is_dfs(dtoh32(list->element[i])))
+		 } else { /* All channels */
+		if (skip_dfs && is_dfs(dtoh32(list->element[i])))
 				continue;
 		}
-		if (dhd_pno_netdev && skip_passive) {
-			channel = dtoh32(list->element[i]);
-			err = wldev_iovar_getint(dhd_pno_netdev, "per_chan_info", &channel);
-			if (err < 0) {
-				DHD_ERROR(("%s get 'per_chan_info' failed, error = %d\n", __FUNCTION__, err));
-				goto exit;
-			}
-			if (IS_CHANNEL_RADAR(channel)) {
-				DHD_ERROR(("%s: channel %d is passive - skip\n", __FUNCTION__, dtoh32(list->element[i])));
-				continue;
-			}
-		}
-		if (dtoh32(list->element[i]) <= CHANNEL_5G_MAX) {
+			if (dtoh32(list->element[i]) <= CHANNEL_5G_MAX) {
 			d_chan_list[j++] = (uint16) dtoh32(list->element[i]);
 		} else {
 			err = BCME_BADCHAN;
@@ -1105,7 +1087,6 @@ dhd_pno_enable(dhd_pub_t *dhd, int enable)
 static wlc_ssid_ext_t *
 dhd_pno_get_legacy_pno_ssid(dhd_pub_t *dhd, dhd_pno_status_info_t *pno_state)
 {
-	int err = BCME_OK;
 	int i;
 	struct dhd_pno_ssid *iter, *next;
 	dhd_pno_params_t	*_params1 = &pno_state->pno_params_arr[INDEX_OF_LEGACY_PARAMS];
@@ -1116,7 +1097,6 @@ dhd_pno_get_legacy_pno_ssid(dhd_pub_t *dhd, dhd_pno_status_info_t *pno_state)
 	if (p_ssid_list == NULL) {
 		DHD_ERROR(("%s : failed to allocate wlc_ssid_ext_t array (count: %d)",
 			__FUNCTION__, _params1->params_legacy.nssid));
-		err = BCME_ERROR;
 		pno_state->pno_mode &= ~DHD_PNO_LEGACY_MODE;
 		goto exit;
 	}
@@ -1683,13 +1663,9 @@ dhd_pno_get_gscan(dhd_pub_t *dhd, dhd_pno_gscan_cmd_cfg_t type,
 				if (*gscan_band & GSCAN_A_BAND_MASK) {
 					band |= WLC_BAND_5G;
 				}
-				if (*gscan_band & GSCAN_ACTIVE_CHAN_MASK) {
-					band |= WLC_BAND_ACTIVE;
-				}
 
 				err = _dhd_pno_get_channels(dhd, ch_list, &nchan,
-				                          (band & GSCAN_ABG_BAND_MASK) |
-				                          (band & GSCAN_ACTIVE_CHAN_MASK),
+				                          (band & GSCAN_ABG_BAND_MASK),
 				                          !(*gscan_band & GSCAN_DFS_MASK));
 
 				if (err < 0) {
@@ -1961,7 +1937,7 @@ dhd_pno_set_for_gscan(dhd_pub_t *dhd, struct dhd_pno_gscan_params *gscan_params)
 	int mode, i = 0, k;
 	uint16 _chan_list[WL_NUMCHANNELS];
 	int tot_nchan = 0;
-	int num_buckets_to_fw, tot_num_buckets, gscan_param_size;
+	int num_buckets_to_fw, tot_num_buckets, gscan_param_size = 0;
 	dhd_pno_status_info_t *_pno_state = PNO_GET_PNOSTATE(dhd);
 	wl_pfn_gscan_channel_bucket_t *ch_bucket = NULL;
 	wl_pfn_gscan_cfg_t *pfn_gscan_cfg_t = NULL;
@@ -2834,12 +2810,12 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
 	bool allocate_header = FALSE;
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
-	_pno_state = PNO_GET_PNOSTATE(dhd);
 	if (!dhd_support_sta_mode(dhd)) {
 		err = BCME_BADOPTION;
 		goto exit_no_unlock;
 	}
 	DHD_PNO(("%s enter\n", __FUNCTION__));
+	_pno_state = PNO_GET_PNOSTATE(dhd);
 
 	if (!WLS_SUPPORTED(_pno_state)) {
 		DHD_ERROR(("%s : wifi location service is not supported\n", __FUNCTION__));
@@ -3587,8 +3563,15 @@ dhd_handle_swc_evt(dhd_pub_t *dhd, const void *event_data, int *send_evt_bytes)
 	}
 
 	change_array = &params->change_array[params->results_rxed_so_far];
-	memcpy(change_array, results->list, sizeof(wl_pfn_significant_net_t) * results->pkt_count);
-	params->results_rxed_so_far += results->pkt_count;
+	if ((params->results_rxed_so_far + results->pkt_count) <= results->total_count) {
+		memcpy(change_array, results->list,
+			sizeof(wl_pfn_significant_net_t) * results->pkt_count);
+		params->results_rxed_so_far += results->pkt_count;
+	} else {
+		/* In case of spurious event or invalid data send hang event */
+		dhd->hang_reason = HANG_REASON_INVALID_EVENT_OR_DATA;
+		dhd_os_send_hang_message(dhd);
+	}
 
 	if (params->results_rxed_so_far == results->total_count) {
 		params->results_rxed_so_far = 0;
@@ -3795,7 +3778,7 @@ int
 dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 {
 	int err = BCME_OK;
-	uint status, event_type, flags, datalen;
+	uint event_type;
 	dhd_pno_status_info_t *_pno_state;
 	NULL_CHECK(dhd, "dhd is NULL", err);
 	NULL_CHECK(dhd->pno_state, "pno_state is NULL", err);
@@ -3806,9 +3789,6 @@ dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
 		goto exit;
 	}
 	event_type = ntoh32(event->event_type);
-	flags = ntoh16(event->flags);
-	status = ntoh32(event->status);
-	datalen = ntoh32(event->datalen);
 	DHD_PNO(("%s enter : event_type :%d\n", __FUNCTION__, event_type));
 	switch (event_type) {
 	case WLC_E_PFN_BSSID_NET_FOUND:

@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
+ * 
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -22,7 +24,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: dhd_wlfc.h 557035 2015-05-15 18:48:57Z $
+ * $Id: dhd_wlfc.h 674206 2017-10-12 07:09:16Z $
  *
  */
 #ifndef __wlfc_host_driver_definitions_h__
@@ -163,6 +165,8 @@ typedef struct wlfc_mac_descriptor {
 	uint32 opened_ct;
 	uint32 closed_ct;
 #endif
+
+	int grp_idx;
 	struct wlfc_mac_descriptor* prev;
 	struct wlfc_mac_descriptor* next;
 } wlfc_mac_descriptor_t;
@@ -268,6 +272,13 @@ typedef struct athost_wl_stat_counters {
 /** Mask to represent available ACs (note: BC/MC is ignored) */
 #define WLFC_AC_MASK 0xF
 
+/** Maximum groups for splitting credits among */
+#define WLFC_MAX_GROUPS 2
+
+/** credit groups characteristic */
+#define WLFC_GROUP_NONE 0
+#define WLFC_GROUP_LIMITED 1
+
 /** flow control specific information, only 1 instance during driver lifetime */
 typedef struct athost_wl_status_info {
 	uint8	last_seqid_to_wlc;
@@ -285,10 +296,11 @@ typedef struct athost_wl_status_info {
 
 	/** incremented on eg receiving a credit map event from the dongle */
 	int		Init_FIFO_credit[AC_COUNT + 2];
+	int		Init_FIFO_group_credit[WLFC_MAX_GROUPS][AC_COUNT + 2];
 	/** the additional ones are for bc/mc and ATIM FIFO */
-	int		FIFO_credit[AC_COUNT + 2];
+	int		FIFO_credit[WLFC_MAX_GROUPS][AC_COUNT + 2];
 	/** Credit borrow counts for each FIFO from each of the other FIFOs */
-	int		credits_borrowed[AC_COUNT + 2][AC_COUNT + 2];
+	int		credits_borrowed[WLFC_MAX_GROUPS][AC_COUNT + 2][AC_COUNT + 2];
 
 	/** packet hanger and MAC->handle lookup table */
 	void *hanger;
@@ -303,8 +315,13 @@ typedef struct athost_wl_status_info {
 		wlfc_mac_descriptor_t	other;
 	} destination_entries;
 
-	wlfc_mac_descriptor_t *active_entry_head; /**< a chain of MAC descriptors */
-	int active_entry_count;
+	/**< a chain of MAC descriptors */
+	wlfc_mac_descriptor_t *active_entry_head[WLFC_MAX_GROUPS];
+
+	int active_entry_count[WLFC_MAX_GROUPS];
+
+	/* count of active groups */
+	int total_credit_groups;
 
 	wlfc_mac_descriptor_t *requested_entry[WLFC_MAC_DESC_TABLE_SIZE];
 	int requested_entry_count;
@@ -326,13 +343,13 @@ typedef struct athost_wl_status_info {
 	uint8	toggle_host_if;
 
 	/** To borrow credits */
-	uint8   allow_credit_borrow;
+	uint8   allow_credit_borrow[WLFC_MAX_GROUPS];
 
 	/** ac number for the first single ac traffic */
-	uint8	single_ac;
+	uint8	single_ac[WLFC_MAX_GROUPS];
 
 	/** Timestamp for the first single ac traffic */
-	uint32  single_ac_timestamp;
+	uint32  single_ac_timestamp[WLFC_MAX_GROUPS];
 
 	bool	bcmc_credit_supported;
 
@@ -528,7 +545,9 @@ int dhd_wlfc_cleanup_txq(dhd_pub_t *dhd, f_processpkt_t fn, void *arg);
 int dhd_wlfc_cleanup(dhd_pub_t *dhd, f_processpkt_t fn, void* arg);
 int dhd_wlfc_deinit(dhd_pub_t *dhd);
 int dhd_wlfc_interface_event(dhd_pub_t *dhdp, uint8 action, uint8 ifid, uint8 iftype, uint8* ea);
-int dhd_wlfc_FIFOcreditmap_event(dhd_pub_t *dhdp, uint8* event_data);
+int dhd_wlfc_update_interface_credit_group(dhd_pub_t *dhdp, uint8 ifid, uint8 action,
+	uint8 credit_group);
+int dhd_wlfc_FIFOcreditmap_event(dhd_pub_t *dhdp, uint8* event_data, uint32 evt_datalen);
 int dhd_wlfc_BCMCCredit_support_event(dhd_pub_t *dhdp);
 int dhd_wlfc_enable(dhd_pub_t *dhdp);
 int dhd_wlfc_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf);

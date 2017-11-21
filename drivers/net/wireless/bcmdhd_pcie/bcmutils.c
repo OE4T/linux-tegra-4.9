@@ -1,7 +1,9 @@
 /*
  * Driver O/S-independent utility routines
  *
- * Copyright (C) 1999-2015, Broadcom Corporation
+ * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
+ * 
+ * Copyright (C) 1999-2017, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +26,7 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: bcmutils.c 591286 2015-10-07 11:59:26Z $
+ * $Id: bcmutils.c 665091 2017-05-19 06:11:53Z $
  */
 
 #include <bcm_cfg.h>
@@ -347,10 +349,8 @@ bcm_strtoul(const char *cp, char **endp, uint base)
 
 	if (endp)
 		*endp = DISCARD_QUAL(cp, char);
-
 	return (result);
 }
-
 int
 bcm_atoi(const char *s)
 {
@@ -582,6 +582,40 @@ bcm_ether_atoe(const char *p, struct ether_addr *ea)
 	}
 
 	return (i == 6);
+}
+
+int
+bcm_atoicrc(const char *p, int *crc)
+{
+	char *ep;
+
+	*crc = bcm_strtoul(p, &ep, 16);
+	p = ep;
+	if (!*p++)
+		return 0;
+	else
+		return -1;
+}
+
+char *Dates[] = { "Jan ", "Feb ", "Mar ", "Apr ", "May ", "Jun ", "Jul ", "Aug ",
+	"Sep ", "Oct ", "Nov ", "Dec ", 0 };
+
+void
+wipedates(const char *cp, int size)
+{
+	char **dp;
+	char *np;
+	char *ep;
+	for (dp = Dates; *dp; dp++) {
+		np = (void *)bcmstrnstr(cp, size, *dp, strlen(*dp));
+		if (np) {
+			ep = np + strlen(np) + 1;
+			ep += strlen(np);
+			while (np < ep) {
+				*np++ = 0;
+			}
+		}
+	}
 }
 
 int
@@ -2052,7 +2086,11 @@ static const char *crypto_algo_names[] = {
 	"UNDEF",
 	"UNDEF",
 	"UNDEF",
+#ifdef BCMWAPI_WAI
+	"WAPI",
+#else
 	"UNDEF"
+#endif
 	"PMK",
 	"BIP",
 	"AES_GCM",
@@ -2292,7 +2330,7 @@ bcm_bprintf(struct bcmstrbuf *b, const char *fmt, ...)
 
 	r = vsnprintf(b->buf, b->size, fmt, ap);
 	if (bcm_bprintf_bypass == TRUE) {
-		printf("%s\n", b->buf);
+		printf(b->buf);
 		goto exit;
 	}
 
@@ -2359,18 +2397,17 @@ bcm_print_bytes(const char *name, const uchar *data, int len)
 {
 	int i;
 	int per_line = 0;
-	uchar buf[50];
 
 	printf("%s: %d \n", name ? name : "", len);
 	for (i = 0; i < len; i++) {
-		snprintf(buf + 3 * per_line, 4, "%02x ", *data++);
+		printf("%02x ", *data++);
 		per_line++;
 		if (per_line == 16) {
 			per_line = 0;
-			printf("%s\n", buf);
+			printf("\n");
 		}
 	}
-	printf("%s\n", buf);
+	printf("\n");
 }
 
 /* Look for vendor-specific IE with specified OUI and optional type */

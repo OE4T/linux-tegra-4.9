@@ -1,5 +1,5 @@
 /*
- * HND SiliconBackplane PMU support.
+ * Fundamental constants relating to UDP Protocol
  *
  * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
  * 
@@ -26,22 +26,38 @@
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id: hndpmu.h 530150 2015-01-29 08:43:40Z $
+ * $Id: bcmudp.h 597933 2015-11-06 18:52:06Z $
  */
 
-#ifndef _hndpmu_h_
-#define _hndpmu_h_
+#ifndef _bcmudp_h_
+#define _bcmudp_h_
 
+#ifndef _TYPEDEFS_H_
 #include <typedefs.h>
-#include <osl_decl.h>
-#include <siutils.h>
+#endif
+
+/* This marks the start of a packed structure section. */
+#include <packed_section_start.h>
 
 
-extern void si_pmu_otp_power(si_t *sih, osl_t *osh, bool on, uint32* min_res_mask);
-extern void si_sdiod_drive_strength_init(si_t *sih, osl_t *osh, uint32 drivestrength);
+/* UDP header */
+#define UDP_DEST_PORT_OFFSET	2	/* UDP dest port offset */
+#define UDP_LEN_OFFSET		4	/* UDP length offset */
+#define UDP_CHKSUM_OFFSET	6	/* UDP body checksum offset */
 
-extern void si_pmu_minresmask_htavail_set(si_t *sih, osl_t *osh, bool set_clear);
-extern void si_pmu_slow_clk_reinit(si_t *sih, osl_t *osh);
-extern void si_pmu_avbtimer_enable(si_t *sih, osl_t *osh, bool set_flag);
+#define UDP_HDR_LEN	8	/* UDP header length */
+#define UDP_PORT_LEN	2	/* UDP port length */
 
-#endif /* _hndpmu_h_ */
+/* These fields are stored in network order */
+BWL_PRE_PACKED_STRUCT struct bcmudp_hdr
+{
+	uint16	src_port;	/* Source Port Address */
+	uint16	dst_port;	/* Destination Port Address */
+	uint16	len;		/* Number of bytes in datagram including header */
+	uint16	chksum;		/* entire datagram checksum with pseudoheader */
+} BWL_POST_PACKED_STRUCT;
+
+/* This marks the end of a packed structure section. */
+#include <packed_section_end.h>
+
+#endif	/* #ifndef _bcmudp_h_ */

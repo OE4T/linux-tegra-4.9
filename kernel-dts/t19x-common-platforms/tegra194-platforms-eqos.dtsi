@@ -21,13 +21,6 @@
 #include <dt-bindings/gpio/tegra194-gpio.h>
 
 / {
-	mdio {
-		phy0: ethernet-phy@0 {
-				reg = <0>;
-				marvell,copper-mode;
-		};
-	};
-
         ether_qos@2490000 {
 		/* PTP_ref clock speed in MHz */
 		nvidia,ptp_ref_clock_speed = <125>;
@@ -49,6 +42,17 @@
 		nvidia,eth_iso_enable = <1>; /*0=enable, 1=disable */
 		phy-mode = "rgmii-id";
 		phy-handle = <&phy0>;
+
+		mdio {
+			compatible = "nvidia,eqos-mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			phy0: ethernet-phy@0 {
+				reg = <0>;
+				marvell,copper-mode;
+			};
+		};
         };
 
 	thermal-zones {

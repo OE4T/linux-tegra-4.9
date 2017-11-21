@@ -7,19 +7,11 @@ DHDCFLAGS += -Wall -Wstrict-prototypes -Dlinux -DLINUX -DBCMDRIVER            \
 	-DBCMDONGLEHOST -DUNRELEASEDCHIP -DBCMDMA32 -DBCMFILEIMAGE            \
 	-DDHDTHREAD -DSHOW_EVENTS -DBCMDBG -DWLP2P                            \
 	-DWIFI_ACT_FRAME -DKEEP_ALIVE -DCSCAN -DPKT_FILTER_SUPPORT            \
-	-DEMBEDDED_PLATFORM -DPNO_SUPPORT                                     \
+	-DEMBEDDED_PLATFORM -DPNO_SUPPORT -DARP_OFFLOAD_SUPPORT                                     \
 	-DDHD_DONOT_FORWARD_BCMEVENT_AS_NETWORK_PKT                           \
-	-DCUSTOMER_HW2 -DGET_CUSTOM_MAC_ENABLE			              \
-	-DSHOW_LOGTRACE -DSEC_ENHANCEMENT
-
-# ARP offload feature
-#DHDCFLAGS += -DARP_OFFLOAD_SUPPORT
-
-# FW_COREDUMP
-#DHDCFLAGS += -DDHD_FW_COREDUMP
-
-# Enable below macro if __DATE__ & __TIME__ are deprecated by compiler
-DHDCFLAGS += -DDHD_VERSION_NO_DATE_TIME
+	-DCUSTOMER_HW2 -DGET_CUSTOM_MAC_ENABLE -DDHD_FW_COREDUMP              \
+	-DSEC_ENHANCEMENT -DDHD_VERSION_NO_DATE_TIME                          \
+	-DENABLE_INSMOD_NO_FW_LOAD -DCONFIG_DTS
 
 #################
 # Common feature
@@ -32,7 +24,7 @@ DHDCFLAGS += -DWL_VIRTUAL_APSTA
 
 DHDCFLAGS += -DWL_CFG80211
 # Print out kernel panic point of file and line info when assertion happened
-DHDCFLAGS += -DBCMASSERT_LOG
+#DHDCFLAGS += -DBCMASSERT_LOG
 
 # ARCH specific flags
 # In case of x86 architechture, pls enable below flag
@@ -150,6 +142,7 @@ DRIVERX_TYPE ?= $(CONFIG_BCMDHDX)
 #########################
 
 ifneq ($(filter y, $(CONFIG_BCM4359)),)
+  DHDCFLAGS += -DBCMPCIE_OOB_HOST_WAKE -DHW_OOB -DBCM4359_CHIP
   DHDCFLAGS += -DUSE_WL_TXBF
   DHDCFLAGS += -DUSE_WL_FRAMEBURST
   DHDCFLAGS += -DCUSTOM_DPC_CPUCORE=0
@@ -182,31 +175,6 @@ ifneq ($(CONFIG_BCMDHD_PCIE),)
   DHDCFLAGS += -DDHD_LB
   DHDCFLAGS += -DDHD_LB_RXP
   DHDCFLAGS += -DDHD_LB_STATS
-endif
-
-ifneq ($(CONFIG_BCMDHD_SDIO),)
-  DHDCFLAGS += -DBDC -DDHD_BCMEVENTS -DMMC_SDIO_ABORT
-# Macros for HW-OOB
-  DHDCFLAGS += -DOOB_INTR_ONLY -DHW_OOB
-# Enable Below macro for In-Band interrupt
-#  DHDCFLAGS += -DSDIO_ISR_THREAD
-  DHDCFLAGS += -DBCMSDIO -DBCMLXSDMMC -DUSE_SDIOFIFO_IOVAR
-  DHDCFLAGS += -DPROP_TXSTATUS
-  DHDCFLAGS += -DCUSTOM_AMPDU_MPDU=16
-  DHDCFLAGS += -DCUSTOM_AMPDU_BA_WSIZE=64
-# tput enhancement
-  DHDCFLAGS += -DCUSTOM_GLOM_SETTING=8 -DCUSTOM_RXCHAIN=1
-  DHDCFLAGS += -DUSE_DYNAMIC_F2_BLKSIZE -DDYNAMIC_F2_BLKSIZE_FOR_NONLEGACY=256
-  DHDCFLAGS += -DBCMSDIOH_TXGLOM -DCUSTOM_TXGLOM=1 -DBCMSDIOH_TXGLOM_HIGHSPEED
-  DHDCFLAGS += -DDHDTCPACK_SUPPRESS
-  DHDCFLAGS += -DRXFRAME_THREAD
-  DHDCFLAGS += -DREPEAT_READFRAME
-  DHDCFLAGS += -DCUSTOM_MAX_TXGLOM_SIZE=40
-  DHDCFLAGS += -DMAX_HDR_READ=128
-  DHDCFLAGS += -DDHD_FIRSTREAD=128
-  # bcn_timeout
-  DHDCFLAGS += -DCUSTOM_BCN_TIMEOUT=5
-  DHDCFLAGS += -DWLFC_STATE_PREALLOC
 endif
 
 ifeq ($(CONFIG_DHD_USE_STATIC_BUF),y)
@@ -284,16 +252,9 @@ ifneq ($(CONFIG_BCMDHD_PCIE),)
   DHDOFILES += pcie_core.o
 endif
 
-
-ifneq ($(CONFIG_BCMDHD_SDIO),)
-  DHDOFILES += bcmsdh.o bcmsdh_linux.o bcmsdh_sdmmc.o bcmsdh_sdmmc_linux.o
-  DHDOFILES += dhd_cdc.o dhd_wlfc.o dhd_sdio.o
-endif
-
-
-ifneq ($(CONFIG_BCMDHD),)
-  bcmdhd-objs := $(DHDOFILES)
-  obj-$(DRIVER_TYPE)   += bcmdhd.o
+ifneq ($(CONFIG_BCMDHD),n)
+  bcmdhd_pcie-objs := $(DHDOFILES)
+  obj-$(DRIVER_TYPE)   += bcmdhd_pcie.o
 endif
 
 ifneq ($(CONFIG_BCMDHDX),)

@@ -149,6 +149,8 @@ u32 wl_dbg_level = WL_DBG_ERR | WL_DBG_P2P_ACTION;
 u32 wl_dbg_level = WL_DBG_ERR;
 #endif /* CUSTOMER_HW4_DEBUG */
 
+extern int op_mode;
+
 #define MAX_WAIT_TIME 1500
 #ifdef WLAIBSS_MCHAN
 #define IBSS_IF_NAME "ibss%d"
@@ -8778,6 +8780,7 @@ wl_cfg80211_stop_ap(
 	u32 dev_role = 0;
 	int ap = 0;
 	s32 bssidx = 0;
+	int infra = 0;
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 	s32 is_rsdb_supported = BCME_ERROR;
 	dhd_pub_t *dhd = (dhd_pub_t *)(cfg->pub);
@@ -8862,11 +8865,25 @@ wl_cfg80211_stop_ap(
 		 * Don't do a down or "WLC_SET_AP 0" since the shared
 		 * interface may be still running
 		 */
-		if ((err = wl_cfg80211_add_del_bss(cfg, dev,
-			bssidx, NL80211_IFTYPE_STATION, 0, NULL)) < 0) {
-			if ((err = wldev_ioctl(dev, WLC_SET_AP, &ap, sizeof(s32),
-				true)) < 0) {
+		if (is_rsdb_supported) {
+			if ((err = wl_cfg80211_add_del_bss(cfg, dev,
+				bssidx, NL80211_IFTYPE_STATION, 0, NULL)) < 0) {
+				if ((err = wldev_ioctl(dev, WLC_SET_AP, &ap, sizeof(s32),
+					true)) < 0) {
+					WL_ERR(("setting AP mode failed %d \n", err));
+					err = -ENOTSUPP;
+					goto exit;
+				}
+			}
+		} else if (is_rsdb_supported == 0) {
+			if ((err = wldev_ioctl(dev, WLC_SET_AP, &ap, sizeof(s32), true)) < 0) {
 				WL_ERR(("setting AP mode failed %d \n", err));
+				err = -ENOTSUPP;
+				goto exit;
+			}
+			err = wldev_ioctl(dev, WLC_SET_INFRA, &infra, sizeof(s32), true);
+			if (err < 0) {
+				WL_ERR(("SET INFRA error %d\n", err));
 				err = -ENOTSUPP;
 				goto exit;
 			}
@@ -9658,20 +9675,14 @@ static const struct wiphy_wowlan_support brcm_wowlan_support = {
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0) */
 };
 #endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0) */
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
-static struct cfg80211_wowlan brcm_wowlan_config = {
-	.disconnect = true,
-	.gtk_rekey_failure = true,
-	.eap_identity_req = true,
-	.four_way_handshake = true,
-};
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0) */
 #endif /* CONFIG_PM */
 
 static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev, void *context)
 {
 	s32 err = 0;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
+	struct cfg80211_wowlan *brcm_wowlan_config;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0) */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 4, 0) || defined(WL_COMPAT_WIRELESS))
 	dhd_pub_t *dhd = (dhd_pub_t *)context;
 	BCM_REFERENCE(dhd);
@@ -9783,7 +9794,8 @@ static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev
 	 * probe response frame in case of SoftAP mode,
 	 * AP_PROBE_RESP_OFFLOAD flag is set to wiphy->flags variable.
 	 */
-	if (dhd_get_fw_mode(dhd->info) == DHD_FLAG_HOSTAP_MODE) {
+	if ((!op_mode && dhd_get_fw_mode(dhd->info) == DHD_FLAG_HOSTAP_MODE) ||
+	    (op_mode == DHD_FLAG_HOSTAP_MODE)) {
 		wdev->wiphy->flags |= WIPHY_FLAG_AP_PROBE_RESP_OFFLOAD;
 		wdev->wiphy->probe_resp_offload = 0;
 	}
@@ -9806,7 +9818,13 @@ static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev
 	/* If this is not provided cfg stack will get disconnect
 	 * during suspend.
 	 */
-	wdev->wiphy->wowlan_config = &brcm_wowlan_config;
+	brcm_wowlan_config = kzalloc(sizeof(struct cfg80211_wowlan), GFP_KERNEL);
+	brcm_wowlan_config->disconnect = true;
+	brcm_wowlan_config->gtk_rekey_failure = true;
+	brcm_wowlan_config->eap_identity_req = true;
+	brcm_wowlan_config->four_way_handshake = true;
+	wdev->wiphy->wowlan_config = brcm_wowlan_config;
+
 #else
 	wdev->wiphy->wowlan.flags = WIPHY_WOWLAN_ANY;
 	wdev->wiphy->wowlan.n_patterns = WL_WOWLAN_MAX_PATTERNS;

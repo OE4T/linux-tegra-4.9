@@ -92,6 +92,7 @@ int bpmp_create_attrs(const struct fops_entry *fent, struct dentry *parent,
 int bpmp_mailman_init(void);
 void bpmp_handle_mail(int mrq, int ch);
 void tegra_bpmp_resume(void);
+int tegra_bpmp_suspend(void);
 void bpmp_handle_irq(unsigned int chidx);
 
 #endif

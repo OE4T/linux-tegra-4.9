@@ -409,6 +409,18 @@ void tegra_bpmp_resume(void)
 {
 	if (mail_ops->resume)
 		mail_ops->resume();
+
+}
+
+int tegra_bpmp_suspend(void)
+{
+	if (to_complete) {
+		pr_err("%s() channels waiting (to_complete 0x%x)\n",
+				__func__, to_complete);
+		return -EBUSY;
+	}
+
+	return 0;
 }
 
 static int bpmp_init_completion(int cnt)

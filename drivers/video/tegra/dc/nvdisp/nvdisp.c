@@ -1344,7 +1344,7 @@ void tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 		goto update_cache;
 	}
 
-	if (mode->vmode & FB_VMODE_YUV_MASK) {
+	if (!IS_RGB(mode->vmode)) {
 		u32 ec = mode->vmode & (FB_VMODE_EC_MASK & ~FB_VMODE_EC_ENABLE);
 
 		switch (ec) {

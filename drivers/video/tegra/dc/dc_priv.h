@@ -48,6 +48,10 @@
 #define RGB_TO_YUV422_10BPC_BLACK_PIX 0x00001080
 #define RGB_TO_YUV444_8BPC_BLACK_PIX 0x00801080
 
+#define YUV_MASK (FB_VMODE_Y420 | FB_VMODE_Y420_ONLY | \
+				FB_VMODE_Y422 | FB_VMODE_Y444)
+#define IS_RGB(yuv_flag) (!(yuv_flag & YUV_MASK))
+
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;
 extern struct tegra_dc_out_ops tegra_dc_dsi_ops;
 

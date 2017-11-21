@@ -717,8 +717,10 @@ static void pva_task_write_non_surfaces(struct pva_submit_task *task,
 #define COPY_PARAMETER(target, name, name_ext, param_type, count)	\
 	do {								\
 		if ((name).handle) {					\
-			target[(count)].address = (name_ext).dma_addr;	\
-			target[(count)].size = (name_ext).size;		\
+			target[(count)].address = (name_ext).dma_addr + \
+						  (name).offset;	\
+			target[(count)].size = (name_ext).size -	\
+					       (name).offset;		\
 			target[(count)].type = (param_type);		\
 			(count)++;					\
 		}							\

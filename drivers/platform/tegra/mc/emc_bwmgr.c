@@ -20,6 +20,9 @@
 #include <linux/debugfs.h>
 #include <soc/tegra/chip-id.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/bwmgr.h>
+
 u8 bwmgr_dram_efficiency;
 u8 bwmgr_dram_num_channels;
 u32 *bwmgr_dram_iso_eff_table;
@@ -71,6 +74,82 @@ static struct {
 } debug_info;
 
 static void bwmgr_debugfs_init(void);
+
+#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_TRACEPOINTS)
+/* keep in sync with tegra_bwmgr_client_id */
+static const char * const tegra_bwmgr_client_names[] = {
+	"cpu_cluster_0",
+	"cpu_cluster_1",
+	"cpu_cluster_2",
+	"cpu_cluster_3",
+	"disp_0",
+	"disp_1",
+	"disp_2",
+	"disp1_la_emc",
+	"disp2_la_emc",
+	"usbd",
+	"xhci",
+	"sdmmc1",
+	"sdmmc2",
+	"sdmmc3",
+	"sdmmc4",
+	"mon",
+	"gpu",
+	"msenc",
+	"nvenc1",
+	"nvjpg",
+	"nvdec",
+	"nvdec1",
+	"tsec",
+	"tsecb",
+	"vi",
+	"ispa",
+	"ispb",
+	"camera",
+	"camera_non_iso",
+	"isomgr",
+	"thermal",
+	"vic",
+	"adsp",
+	"adma",
+	"pcie",
+	"pcie_1",
+	"pcie_2",
+	"pcie_3",
+	"pcie_4",
+	"pcie_5",
+	"bbc_0",
+	"eqos",
+	"se0",
+	"se1",
+	"se2",
+	"se3",
+	"se4",
+	"pmqos",
+	"nvpmodel",
+	"debug",
+	"null",
+};
+
+static const char *bwmgr_req_to_name(enum tegra_bwmgr_request_type req)
+{
+	/* Keep in sync with enum tegra_bwmgr_request_type. */
+	switch (req) {
+	case TEGRA_BWMGR_SET_EMC_FLOOR:
+		return "TEGRA_BWMGR_SET_EMC_FLOOR";
+	case TEGRA_BWMGR_SET_EMC_CAP:
+		return "TEGRA_BWMGR_SET_EMC_CAP";
+	case TEGRA_BWMGR_SET_EMC_ISO_CAP:
+		return "TEGRA_BWMGR_SET_EMC_ISO_CAP";
+	case TEGRA_BWMGR_SET_EMC_SHARED_BW:
+		return "TEGRA_BWMGR_SET_EMC_SHARED_BW";
+	case TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO:
+		return "TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO";
+	default:
+		return "INVALID_REQUEST";
+	}
+}
+#endif /* defined(CONFIG_DEBUG_FS) || defined(CONFIG_TRACEPOINTS) */
 
 static inline void bwmgr_lock(void)
 {
@@ -294,6 +373,12 @@ int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle, unsigned long val,
 	}
 
 	bwmgr_lock();
+
+#ifdef CONFIG_TRACEPOINTS
+	trace_tegra_bwmgr_set_emc(
+			tegra_bwmgr_client_names[handle - bwmgr.bwmgr_client],
+			val, bwmgr_req_to_name(req));
+#endif /* CONFIG_TRACEPOINTS */
 
 	switch (req) {
 	case TEGRA_BWMGR_SET_EMC_FLOOR:
@@ -586,61 +671,6 @@ static struct dentry *debugfs_node_emc_min;
 static struct dentry *debugfs_node_emc_max;
 static struct dentry *debugfs_node_core_emc_rate;
 static struct dentry *debugfs_node_clients_info;
-
-/* keep in sync with tegra_bwmgr_client_id */
-static const char * const tegra_bwmgr_client_names[] = {
-	"cpu_cluster_0",
-	"cpu_cluster_1",
-	"cpu_cluster_2",
-	"cpu_cluster_3",
-	"disp_0",
-	"disp_1",
-	"disp_2",
-	"disp1_la_emc",
-	"disp2_la_emc",
-	"usbd",
-	"xhci",
-	"sdmmc1",
-	"sdmmc2",
-	"sdmmc3",
-	"sdmmc4",
-	"mon",
-	"gpu",
-	"msenc",
-	"nvenc1",
-	"nvjpg",
-	"nvdec",
-	"nvdec1",
-	"tsec",
-	"tsecb",
-	"vi",
-	"ispa",
-	"ispb",
-	"camera",
-	"camera_non_iso",
-	"isomgr",
-	"thermal",
-	"vic",
-	"adsp",
-	"adma",
-	"pcie",
-	"pcie_1",
-	"pcie_2",
-	"pcie_3",
-	"pcie_4",
-	"pcie_5",
-	"bbc_0",
-	"eqos",
-	"se0",
-	"se1",
-	"se2",
-	"se3",
-	"se4",
-	"pmqos",
-	"nvpmodel",
-	"debug",
-	"null",
-};
 
 static int bwmgr_debugfs_emc_rate_set(void *data, u64 val)
 {

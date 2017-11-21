@@ -206,6 +206,7 @@ F:	drivers/video/tegra/nvmap/
 F:	drivers/platform/tegra/mc/
 F:	include/dt-bindings/memory/
 F:	include/linux/nvmap_t19x.h
+F:	include/trace/events/bwmgr.h
 
 MTTCAN
 M:	Abhijit . <abhijit@nvidia.com>

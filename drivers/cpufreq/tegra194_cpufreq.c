@@ -201,7 +201,7 @@ static void tegra_read_counters(struct work_struct *work)
 static unsigned int tegra194_get_speed(uint32_t cpu)
 {
 	uint32_t delta_ccnt = 0;
-	uint64_t delta_refcnt = 0;
+	uint32_t delta_refcnt = 0;
 	unsigned long rate_mhz = 0;
 	struct tegra_cpu_ctr c;
 	struct read_counters_work read_counters_work;

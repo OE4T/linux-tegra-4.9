@@ -2044,6 +2044,7 @@ static int tegra210_pcie_phy_power_off(struct phy *phy)
 		if (!port) {
 			dev_err(&phy->dev, "no port found for USB3 lane %u\n",
 						lane->index);
+			mutex_unlock(&padctl->lock);
 			return -ENODEV;
 		}
 
@@ -2497,6 +2498,7 @@ static int tegra210_sata_phy_power_off(struct phy *phy)
 		if (!port) {
 			dev_err(&phy->dev, "no port found for USB3 lane %u\n",
 						lane->index);
+			mutex_unlock(&padctl->lock);
 			return -ENODEV;
 		}
 

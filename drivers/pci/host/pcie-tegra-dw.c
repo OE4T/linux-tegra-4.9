@@ -1605,21 +1605,35 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
 	}
 
+	pcie->core_clk = devm_clk_get(&pdev->dev, "core_clk");
+	if (IS_ERR(pcie->core_clk)) {
+		dev_err(&pdev->dev, "Failed to get core clock\n");
+		return PTR_ERR(pcie->core_clk);
+	}
+	ret = clk_prepare_enable(pcie->core_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to enable core clock\n");
+		return ret;
+	}
+
 	appl_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "appl");
 	if (!appl_res) {
 		dev_err(&pdev->dev, "missing appl space\n");
-		return PTR_ERR(appl_res);
+		ret = PTR_ERR(appl_res);
+		goto fail_appl_res;
 	}
 	pcie->appl_base = devm_ioremap_resource(&pdev->dev, appl_res);
 	if (IS_ERR(pcie->appl_base)) {
 		dev_err(&pdev->dev, "mapping appl space failed\n");
-		return PTR_ERR(pcie->appl_base);
+		ret = PTR_ERR(pcie->appl_base);
+		goto fail_appl_res;
 	}
 
 	pcie->core_apb_rst = devm_reset_control_get(pcie->dev, "core_apb_rst");
 	if (IS_ERR(pcie->core_apb_rst)) {
 		dev_err(pcie->dev, "PCIE : core_apb_rst reset is missing\n");
-		return PTR_ERR(pcie->core_apb_rst);
+		ret = PTR_ERR(pcie->core_apb_rst);
+		goto fail_appl_res;
 	}
 
 	reset_control_deassert(pcie->core_apb_rst);
@@ -1711,21 +1725,11 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	writel(atu_dma_res->start & APPL_CFG_IATU_DMA_BASE_ADDR_MASK,
 	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
 
-	pcie->core_clk = devm_clk_get(&pdev->dev, "core_clk");
-	if (IS_ERR(pcie->core_clk)) {
-		dev_err(&pdev->dev, "Failed to get core clock\n");
-		ret = PTR_ERR(pcie->core_clk);
-		goto fail_dbi_res;
-	}
-	ret = clk_prepare_enable(pcie->core_clk);
-	if (ret)
-		goto fail_dbi_res;
-
 	pcie->core_rst = devm_reset_control_get(pcie->dev, "core_rst");
 	if (IS_ERR(pcie->core_rst)) {
 		dev_err(pcie->dev, "PCIE : core_rst reset is missing\n");
 		ret = PTR_ERR(pcie->core_rst);
-		goto fail_core_rst;
+		goto fail_dbi_res;
 	}
 
 	reset_control_deassert(pcie->core_rst);
@@ -1762,12 +1766,12 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 
 fail_add_port:
 	reset_control_assert(pcie->core_rst);
-fail_core_rst:
-	clk_disable_unprepare(pcie->core_clk);
 fail_dbi_res:
 	tegra_pcie_disable_phy(pcie);
 fail_phy:
 	reset_control_assert(pcie->core_apb_rst);
+fail_appl_res:
+	clk_disable_unprepare(pcie->core_clk);
 	return ret;
 }
 

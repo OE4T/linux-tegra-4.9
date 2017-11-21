@@ -36,4 +36,12 @@
 		compatible = "nvidia,tegra186-hsuart";
 		status = "okay";
 	};
+
+	pwm@c340000 {
+		status = "okay";
+	};
+
+	tachometer@39c0000 {
+		status = "okay";
+	};
 };

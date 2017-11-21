@@ -118,7 +118,7 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 			req->num_relocs * sizeof(uint32_t)) ? -EFAULT : 0;
 	if (err < 0) {
 		dev_err(req->dev, "failed to copy request user relocs\n");
-		goto cp_fail;
+		goto reloc_fail;
 	}
 
 	dev_dbg(req->dev, "%s: relocating %u addresses", __func__,
@@ -151,7 +151,8 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 			if (unlikely(reloc_page_addr == NULL)) {
 				dev_err(req->dev,
 					"%s: couldn't map request\n", __func__);
-				goto fail;
+				err = -ENOMEM;
+				goto pin_fail;
 			}
 		}
 
@@ -166,7 +167,8 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 		if (!mem) {
 			dev_err(req->dev,
 					"%s: invalid mem handle\n", __func__);
-			goto fail;
+			err = -EINVAL;
+			goto pin_fail;
 		}
 
 		dev_dbg(req->dev, "%s: hmem:0x%x offset:0x%x\n", __func__,
@@ -182,7 +184,7 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 				dev_info(req->dev,
 					"%s: pin memory failed pin count %d\n",
 					__func__, req->unpins->num_unpins);
-				goto fail;
+				goto pin_fail;
 			}
 			target_phys_addr =
 				req->unpins->data[req->unpins->num_unpins].iova
@@ -195,8 +197,8 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 			dev_err(req->dev,
 				"%s: target addr is NULL for mem 0x%x\n",
 				__func__, mem);
-			err = -ENOMEM;
-			goto fail;
+			err = -EINVAL;
+			goto pin_fail;
 		}
 
 		dev_dbg(req->dev,
@@ -216,21 +218,21 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 			    req->request_size, DMA_TO_DEVICE);
 	}
 
-	kfree(reloc_relatives);
-	return 0;
+pin_fail:
+	if (err) {
+		for (i = 0; i < req->unpins->num_unpins; i++)
+			capture_common_unpin_memory(&req->unpins->data[i]);
+	}
 
-fail:
+reloc_fail:
+	if (err)
+		devm_kfree(req->dev, req->unpins);
+
 	if (reloc_page_addr != NULL)
 		dma_buf_kunmap(req->requests->buf, last_page,
 			reloc_page_addr);
 
-	for (i = 0; i < req->unpins->num_unpins; i++)
-		capture_common_unpin_memory(&req->unpins->data[i]);
-
-cp_fail:
 	kfree(reloc_relatives);
 
-reloc_fail:
-	devm_kfree(req->dev, req->unpins);
 	return err;
 }

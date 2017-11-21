@@ -2618,7 +2618,10 @@ static inline u32 tegra_hdmi_get_bpp(struct tegra_hdmi *hdmi)
 {
 	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_YUV_MASK;
 
-	if (yuv_flag == (FB_VMODE_Y422 | FB_VMODE_Y36))
+	/* Special case for YUV422 modes. For all  pixel depths, YUV422
+	 * is packed as 24 BPP HDMI video stream
+	 */
+	if (yuv_flag & FB_VMODE_Y422)
 		return 24;
 	else if (yuv_flag & FB_VMODE_Y24)
 		return 24;

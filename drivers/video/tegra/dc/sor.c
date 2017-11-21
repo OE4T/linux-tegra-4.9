@@ -116,6 +116,7 @@ static const struct tegra_dc_dp_training_pattern training_pattern_table[] = {
 static struct of_device_id tegra_sor_pd[] = {
 	{ .compatible = "nvidia,tegra210-sor-pd", },
 	{ .compatible = "nvidia,tegra186-disa-pd", },
+	{ .compatible = "nvidia,tegra194-disa-pd", },
 	{},
 };
 

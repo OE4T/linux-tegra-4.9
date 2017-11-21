@@ -31,6 +31,7 @@
 static struct of_device_id tegra_dpaux_pd[] = {
 	{ .compatible = "nvidia,tegra210-sor-pd", },
 	{ .compatible = "nvidia,tegra186-disa-pd", },
+	{ .compatible = "nvidia,tegra194-disa-pd", },
 	{},
 };
 

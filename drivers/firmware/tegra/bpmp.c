@@ -113,6 +113,7 @@ void tegra_bpmp_free_coherent(size_t size, void *vaddr,
 EXPORT_SYMBOL(tegra_bpmp_free_coherent);
 
 static struct syscore_ops bpmp_syscore_ops = {
+	.suspend = tegra_bpmp_suspend,
 	.resume = tegra_bpmp_resume,
 };
 

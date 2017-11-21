@@ -2,6 +2,24 @@
        power-domain {
                compatible = "tegra-power-domains";
 
+               disa_pd: disa-pd {
+                       compatible = "nvidia,tegra194-disa-pd";
+                       #power-domain-cells = <0>;
+                       partition-id = <TEGRA194_POWER_DOMAIN_DISP>;
+               };
+
+               disb_pd: disb-pd {
+                       compatible = "nvidia,tegra194-disb-pd";
+                       #power-domain-cells = <0>;
+                       partition-id = <TEGRA194_POWER_DOMAIN_DISPB>;
+               };
+
+               disc_pd: disc-pd {
+                       compatible = "nvidia,tegra194-disc-pd";
+                       #power-domain-cells = <0>;
+                       partition-id = <TEGRA194_POWER_DOMAIN_DISPC>;
+               };
+
                xusba_pd: xusba-pd {
                        compatible = "nvidia,tegra194-xusba-pd";
                        #power-domain-cells = <0>;

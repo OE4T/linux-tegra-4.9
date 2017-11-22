@@ -77,7 +77,7 @@ static int pwm_tach_probe(struct platform_device *pdev)
 	}
 
 	ptt->hwmon = devm_hwmon_device_register_with_groups(&pdev->dev,
-					 "pwm-tach", ptt, pwm_tach_groups);
+					 "pwm_tach", ptt, pwm_tach_groups);
 	if (IS_ERR(ptt->hwmon)) {
 		dev_err(&pdev->dev, "Failed to register hwmon device: %d\n",
 			PTR_ERR_OR_ZERO(ptt->hwmon));

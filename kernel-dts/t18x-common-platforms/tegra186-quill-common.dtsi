@@ -234,6 +234,11 @@
 		status = "okay";
 	};
 
+	generic_pwm_tachometer {
+		pwms = <&tegra_tachometer 0 1000000>;
+		status = "okay";
+	};
+
 	tegra_cec {
 		status = "okay";
 		compatible = "nvidia,tegra186-cec";

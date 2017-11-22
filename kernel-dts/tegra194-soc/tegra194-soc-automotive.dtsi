@@ -20,4 +20,15 @@
 #include <tegra194-soc/tegra194-soc-prod.dtsi>
 
 / {
+	clock@0 {
+	        status = "okay";
+	};
+
+	bpmp_reset@0 {
+	        status = "okay";
+	};
+
+	bpmp {
+	        status = "okay";
+	};
 };

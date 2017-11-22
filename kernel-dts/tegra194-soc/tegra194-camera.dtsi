@@ -38,10 +38,21 @@
 		reg-names = "sce-evp", "sce-pm", "sce-fw",
 				"ast-cpu", "ast-dma";
 
+		clocks =
+			<&bpmp_clks TEGRA194_CLK_RCE_CPU_NIC>,
+			<&bpmp_clks TEGRA194_CLK_RCE_NIC>;
+		clock-names = "rce-cpu-nic", "rce-nic";
+
+		resets = <&bpmp_resets TEGRA194_RESET_RCE_ALL>;
+		reset-names = "rce-all";
+
 		iommus = <&smmu TEGRA_SID_RCE>;
+		dma-coherent;
 
 		nvidia,trace = <&{/tegra-rtcpu-trace} 4 0x70100000 0x100000>;
 		nvidia,ivc-channels = <&{/camera-ivc-channels} 2 0x90000000 0x10000>;
+
+		nvidia,autosuspend-delay-ms = <5000>;
 
 		hsp {
 			compatible = "nvidia,tegra186-hsp-mailbox";
@@ -109,6 +120,7 @@
 		reg = <0 0xbc00000 0 0x1000>;
 
 		iommus = <&smmu TEGRA_SID_RCE_RM>;
+		dma-coherent;
 
 		nvidia,scratch-area = <0x80000000 0x600000>; /* 6M */
 	};

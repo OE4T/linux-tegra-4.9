@@ -133,14 +133,14 @@
 
 		adma: adma@2930000 {
 			compatible = "nvidia,tegra194-adma";
-		/*	interrupt-parent = <&tegra_agic>; */
+			interrupt-parent = <&tegra_agic>;
 			reg = <0x0 0x02930000 0x0 0x50000>,	/* ADMA Reg */
 			      <0x0 0x02996000 0x0 0x2000>,	/* ADAST */
 			      <0x0 0x029f0000 0x0 0x10>;	/* HSP SS */
 			nvidia,adast =  <0x0 0x2 0x0 0x00008008 0x0 0x40000000 0x0 0x20000000 0x0 0x40000000>;
 			clocks = <&bpmp_clks TEGRA194_CLK_AHUB>;
 			clock-names = "d_audio";
-		/*	interrupts =  <GIC_SPI INT_ADMA_EOT0 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			interrupts =  <GIC_SPI INT_ADMA_EOT0 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
 					  <GIC_SPI INT_ADMA_EOT1 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
 					  <GIC_SPI INT_ADMA_EOT2 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
 					  <GIC_SPI INT_ADMA_EOT3 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
@@ -156,7 +156,6 @@
 					  <GIC_SPI INT_ADMA_EOT13 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
 					  <GIC_SPI INT_ADMA_EOT14 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
 					  <GIC_SPI INT_ADMA_EOT15 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>;
-		*/
 			#dma-cells = <1>;
 			dma-channels = <16>;
 			status = "disabled";
@@ -517,9 +516,8 @@
 			tegra_ahc: ahc@290b900 {
 				compatible = "nvidia,tegra186-ahc";
 				reg = <0x0 0x290b900 0x0 0x200>;
-			/*	interrupt-parent = <&tegra_agic>;
+				interrupt-parent = <&tegra_agic>;
 				interrupts =  <GIC_SPI INT_AHUB_ERR IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>;
-			*/
 				status = "disabled";
 			};
 
@@ -567,11 +565,11 @@
 			nvidia,adma_ch_cnt = <16>;
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_APE>;
-	/*		interrupt-parent = <&tegra_agic>;
+			interrupt-parent = <&tegra_agic>;
 			interrupts = <GIC_SPI INT_ADMA_EOT16 IRQ_TYPE_LEVEL_HIGH
 					ROUTE_TO_ADSP>,
 				     <GIC_SPI INT_ADMA_EOT17 IRQ_TYPE_LEVEL_HIGH
-					ROUTE_TO_ADSP>
+					ROUTE_TO_ADSP>,
 				     <GIC_SPI INT_ADMA_EOT18 IRQ_TYPE_LEVEL_HIGH
 					ROUTE_TO_ADSP>,
 				     <GIC_SPI INT_ADMA_EOT19 IRQ_TYPE_LEVEL_HIGH
@@ -600,7 +598,6 @@
 					ROUTE_TO_ADSP>,
 				     <GIC_SPI INT_ADMA_EOT31 IRQ_TYPE_LEVEL_HIGH
 					ROUTE_TO_ADSP>;
-		*/
 			status = "disabled";
 		};
 	};

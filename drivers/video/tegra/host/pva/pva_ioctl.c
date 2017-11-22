@@ -541,7 +541,7 @@ static struct pva_queue_attribute default_queue_attr[QUEUE_ATTR_MAX] = {
 	{NULL, 0, 0},
 	{NULL, QUEUE_ATTR_PRIORITY, PVA_QUEUE_DEFAULT_PRIORITY},
 	{NULL, QUEUE_ATTR_VPU, PVA_QUEUE_DEFAULT_VPU_MASK},
-	{NULL, QUEUE_ATTR_MISR_TO, 0}
+	{NULL, QUEUE_ATTR_MISR_TO, 0xFFFFFFFF}
 };
 
 static void pva_queue_set_default_attr(struct pva_private *priv)

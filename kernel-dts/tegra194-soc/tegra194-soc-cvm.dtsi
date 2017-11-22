@@ -95,4 +95,16 @@
 	tegra194-pm-irq {
 		status = "okay";
 	};
+
+	pwm@c340000 {
+		status = "okay";
+	};
+
+	tachometer@39c0000 {
+		status = "okay";
+	};
+
+	generic_pwm_tachometer  {
+		status = "okay";
+	};
 };

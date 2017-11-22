@@ -830,7 +830,7 @@ static int tegra210_uphy_init(struct tegra_xusb_padctl *padctl)
 
 	/* enable PCIE & SATA PLL in HW */
 	tegra210_pex_uphy_enable(padctl);
-	if (t210b01_compatible(padctl) == 0)
+	if (padctl->sata)
 		tegra210_sata_uphy_enable(padctl);
 
 	/* enable PLLE in HW */
@@ -843,7 +843,7 @@ static int tegra210_uphy_init(struct tegra_xusb_padctl *padctl)
 		padctl_writel(padctl, value, XUSB_PADCTL_USB3_PAD_MUX_0);
 	}
 
-	if (t210b01_compatible(padctl) == 0) {
+	if (padctl->sata) {
 		/* bring all SATA PADs out of IDDQ */
 		for (i = 0; i < padctl->sata->soc->num_lanes; i++) {
 			value = padctl_readl(padctl,
@@ -3046,7 +3046,7 @@ static int tegra210_xusb_padctl_suspend_noirq(struct tegra_xusb_padctl *padctl)
 		padctl_writel(padctl, value, XUSB_PADCTL_USB3_PAD_MUX_0);
 	}
 
-	if (t210b01_compatible(padctl) == 0) {
+	if (padctl->sata) {
 		/* put all SATA PADs into IDDQ */
 		for (i = 0; i < padctl->sata->soc->num_lanes; i++) {
 			value = padctl_readl(padctl,
@@ -3113,7 +3113,7 @@ static int tegra210_xusb_padctl_resume_noirq(struct tegra_xusb_padctl *padctl)
 						XUSB_PADCTL_USB3_PAD_MUX_0);
 		}
 
-		if (t210b01_compatible(padctl) == 0) {
+		if (padctl->sata) {
 			/* bring all SATA PADs out of IDDQ */
 			for (i = 0; i < padctl->sata->soc->num_lanes; i++) {
 				value = padctl_readl(padctl,

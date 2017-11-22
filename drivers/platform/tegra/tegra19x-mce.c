@@ -11,21 +11,15 @@
  * more details.
  */
 
-#include <linux/of.h>
-#include <linux/of_address.h>
-#include <linux/init.h>
-#include <linux/io.h>
-#include <linux/platform_device.h>
 #include <linux/debugfs.h>
-#include <linux/cpu.h>
-#include <linux/notifier.h>
-#include <linux/t19x_mce.h>
-#include <soc/tegra/chip-id.h>
-#include <linux/t194_nvg.h>
+#include <linux/init.h>
 #include <linux/module.h>
-#include <linux/platform/tegra/tegra-cpu.h>
+#include <linux/t194_nvg.h>
+#include <linux/tegra-mce.h>
 
 #include <asm/smp_plat.h>
+#include <soc/tegra/chip-id.h>
+#include "tegra19x-mce.h"
 
 /* Issue a NVG request with data */
 static noinline notrace uint64_t nvg_send_req_data(uint64_t req, uint64_t data)
@@ -49,34 +43,14 @@ static noinline notrace uint64_t nvg_get_response(void)
 	return ret;
 }
 
-/**
- * Specify power state and wake time for entering upon STANDBYWFI
- *
- * @state: requested core power state
- * @wake_time: wake time in TSC ticks
- *
- * Returns 0 if success.
- */
-int t19x_mce_enter_cstate(u32 state, u32 wake_time)
+int tegra19x_mce_enter_cstate(u32 state, u32 wake_time)
 {
 	/* use PSCI interface instead */
 	return 0;
 }
 
-/**
- * Specify deepest cluster/ccplex/system states allowed.
- *
- * @cluster: deepest cluster-wide state
- * @ccplex: deepest ccplex-wide state
- * @system: deepest system-wide state
- * @force: forced system state
- * @wake_mask: wake mask to be updated
- * @valid: is wake_mask applicable?
- *
- * Returns 0 if success.
- */
-int t19x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
-	u8 force, u32 wake_mask, bool valid)
+int tegra19x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
+				    u8 force, u32 wake_mask, bool valid)
 {
 	nvg_cstate_info_channel_t cstate_info = { 0 };
 	uint64_t ret;
@@ -110,7 +84,8 @@ int t19x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 	cstate_info.bits.wake_mask = wake_mask;
 
 	/* set the updated cstate info */
-	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_INFO, cstate_info.flat);
+	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_INFO,
+				cstate_info.flat);
 
 	/* enable preemption */
 	preempt_enable();
@@ -122,17 +97,8 @@ int t19x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 
 	return 0;
 }
-EXPORT_SYMBOL(t19x_mce_update_cstate_info);
 
-/**
- * Update threshold for one specific c-state crossover
- *
- * @type: type of state crossover.
- * @time: idle time threshold.
- *
- * Returns 0 if success.
- */
-int t19x_mce_update_crossover_time(u32 type, u32 time)
+int tegra19x_mce_update_crossover_time(u32 type, u32 time)
 {
 	uint64_t ret;
 
@@ -158,17 +124,8 @@ int t19x_mce_update_crossover_time(u32 type, u32 time)
 
 	return 0;
 }
-EXPORT_SYMBOL(t19x_mce_update_crossover_time);
 
-/**
- * Query the runtime stats of a specific cstate
- *
- * @state: c-state of the stats.
- * @stats: output integer to hold the stats.
- *
- * Returns 0 if success.
- */
-int t19x_mce_read_cstate_stats(u32 state, u32 *stats)
+int tegra19x_mce_read_cstate_stats(u32 state, u32 *stats)
 {
 	uint64_t ret;
 
@@ -200,17 +157,8 @@ int t19x_mce_read_cstate_stats(u32 state, u32 *stats)
 
 	return 0;
 }
-EXPORT_SYMBOL(t19x_mce_read_cstate_stats);
 
-/**
- * Program Auto-CC3 feature.
- *
- * @ndiv:		ndiv of IDLE freq register
- * @enable:		enable bit for Auto-CC3
- *
- * Returns 0 if success.
- */
-int t19x_mce_cc3_ctrl(u32 ndiv, u8 enable)
+int tegra19x_mce_cc3_ctrl(u32 ndiv, u32 vindex, u8 enable)
 {
 	nvg_cc3_control_channel_t cc3_ctrl;
 	uint64_t ret;
@@ -242,17 +190,8 @@ int t19x_mce_cc3_ctrl(u32 ndiv, u8 enable)
 
 	return ret;
 }
-EXPORT_SYMBOL(t19x_mce_cc3_ctrl);
 
-/**
- * Read out MCE API major/minor versions
- *
- * @major: output for major number.
- * @minor: output for minor number.
- *
- * Returns 0 if success.
- */
-int t19x_mce_read_versions(u32 *major, u32 *minor)
+int tegra19x_mce_read_versions(u32 *major, u32 *minor)
 {
 	uint64_t version, ret;
 
@@ -278,11 +217,24 @@ int t19x_mce_read_versions(u32 *major, u32 *minor)
 
 	return 0;
 }
-EXPORT_SYMBOL(t19x_mce_read_versions);
 
 #ifdef CONFIG_DEBUG_FS
+/* Dummy functions below */
+int tegra19x_mce_features_get(void *data, u64 *val) { return -ENOTSUPP; }
+int tegra19x_mce_enable_latic_set(void *data, u64 val) { return -ENOTSUPP; }
+int tegra19x_mce_coresight_cg_set(void *data, u64 val) { return -ENOTSUPP; }
+int tegra19x_mce_edbgreq_set(void *data, u64 val) { return -ENOTSUPP; }
+
+#define NVG_STAT_MAX_ENTRIES	10
+#define MCE_STAT_ID_SHIFT	16UL
 
 #define CSTAT_ENTRY(stat) NVG_STAT_QUERY_##stat
+
+struct cstats_info {
+	char	*name; /* name of the cstats */
+	int	id;   /* NVG id */
+	int	units;/* No of cores/clusters/cluster groups */
+};
 
 static struct cstats_info cstats_table[] = {
 	{ "SC7_ENTRIES", CSTAT_ENTRY(SC7_ENTRIES), 1},
@@ -297,28 +249,18 @@ static struct cstats_info cstats_table[] = {
 	{ "C6_RESIDENCY_SUM", CSTAT_ENTRY(C6_RESIDENCY_SUM), 8},
 };
 
-static int mce_versions_get(void *data, u64 *val)
-{
-	u32 major, minor;
-	int ret = t19x_mce_read_versions(&major, &minor);
-
-	if (!ret)
-		*val = ((u64)major << 32) | minor;
-	return ret;
-}
-
-static int mce_dbg_cstats_show(struct seq_file *s, void *data)
+int tegra19x_mce_dbg_cstats_show(struct seq_file *s, void *data)
 {
 	int st, unit;
 	u32 val, mce_index;
 
 	seq_printf(s, "%-25s%-15s%-10s\n", "name", "unit-id", "count/time");
-	seq_printf(s, "---------------------------------------------------\n");
+	seq_puts(s, "---------------------------------------------------\n");
 	for (st = 0; st < NVG_STAT_MAX_ENTRIES; st++) {
 		for (unit = 0; unit < cstats_table[st].units; unit++) {
 			mce_index = ((u32)cstats_table[st].id <<
 					MCE_STAT_ID_SHIFT) + (u32)unit;
-			if (t19x_mce_read_cstate_stats(mce_index, &val))
+			if (tegra19x_mce_read_cstate_stats(mce_index, &val))
 				pr_err("mce: failed to read cstat: %s, %x\n",
 					cstats_table[st].name, mce_index);
 			else
@@ -328,63 +270,4 @@ static int mce_dbg_cstats_show(struct seq_file *s, void *data)
 	}
 	return 0;
 }
-
-static int mce_dbg_cstats_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, mce_dbg_cstats_show, inode->i_private);
-}
-
-static const struct file_operations mce_cstats_fops = {
-	.open = mce_dbg_cstats_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
-DEFINE_SIMPLE_ATTRIBUTE(mce_versions_fops, mce_versions_get, NULL, "%llu\n");
-
-static struct dentry *mce_debugfs_root;
-
-struct debugfs_entry {
-	const char *name;
-	const struct file_operations *fops;
-	mode_t mode;
-};
-
-static struct debugfs_entry mce_dbg_attrs[] = {
-	{ "versions", &mce_versions_fops, S_IRUGO },
-	{ "cstats", &mce_cstats_fops, S_IRUGO },
-	{ NULL, NULL, 0 }
-};
-
-static __init int t19x_mce_debugfs_init(void)
-{
-	struct dentry *dent;
-	struct debugfs_entry *fent;
-
-	if (!tegra_is_cpu_carmel(smp_processor_id()))
-		return -ENODEV;
-
-	mce_debugfs_root = debugfs_create_dir("tegra_mce", NULL);
-	if (!mce_debugfs_root)
-		return -ENOMEM;
-
-	fent = mce_dbg_attrs;
-	while (fent->name) {
-		dent = debugfs_create_file(fent->name, fent->mode,
-			mce_debugfs_root, NULL, fent->fops);
-		if (IS_ERR_OR_NULL(dent))
-			goto abort;
-		fent++;
-	}
-
-	return 0;
-
-abort:
-	debugfs_remove_recursive(mce_debugfs_root);
-	return -EFAULT;
-}
-
-fs_initcall(t19x_mce_debugfs_init);
-
-#endif
+#endif /* CONFIG_DEBUG_FS */

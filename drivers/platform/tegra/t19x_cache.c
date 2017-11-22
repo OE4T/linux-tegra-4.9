@@ -42,7 +42,7 @@ struct cache_drv_data {
 
 static struct cache_drv_data *cache_data;
 
-static void t19x_flush_cache_all(void)
+int t19x_flush_cache_all(void)
 {
 	u64 id_afr0;
 	u64 ret;
@@ -50,59 +50,77 @@ static void t19x_flush_cache_all(void)
 
 	asm volatile ("mrs %0, ID_AFR0_EL1" : "=r"(id_afr0));
 	/* check if cache flush through mts is supported */
-	if (likely(id_afr0 & MASK)) {
-		do {
-			asm volatile ("mrs %0, s3_0_c15_c3_7" : "=r" (ret));
-			WARN_ONCE(retry-- == 0, "%s failed\n", __func__);
-			if (!retry)
-				break;
-		} while (!ret);
-		asm volatile ("dsb sy");
-	} else {
-		tegra_roc_flush_cache();
+	if (!likely(id_afr0 & MASK)) {
+		pr_warn("SCF cache flush all is not supported in MTS\n");
+		return -ENOTSUPP;
 	}
+
+	do {
+		asm volatile ("mrs %0, s3_0_c15_c3_7" : "=r" (ret));
+	} while (!ret && retry--);
+	asm volatile ("dsb sy");
+
+	if (!ret) {
+		WARN_ONCE(!ret, "%s failed\n", __func__);
+		pr_err("SCF cache flush all: instruction error\n");
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
-static void t19x_flush_dcache_all(void)
+int t19x_flush_dcache_all(void)
 {
 	u64 id_afr0;
 	u64 ret;
 	u64 retry = 10;
 
 	asm volatile ("mrs %0, ID_AFR0_EL1" : "=r"(id_afr0));
-	/* check if cache flush through mts is supported */
-	if (likely(id_afr0 & MASK)) {
-		do {
-			asm volatile ("mrs %0, s3_0_c15_c3_6" : "=r" (ret));
-			WARN_ONCE(retry-- == 0, "%s failed\n", __func__);
-			if (!retry)
-				break;
-		} while (!ret);
-		asm volatile ("dsb sy");
-	} else {
-		tegra_roc_flush_cache_only();
+	/* check if dcache flush through mts is supported */
+	if (!likely(id_afr0 & MASK)) {
+		pr_warn("SCF dcache flush is not supported in MTS\n");
+		return -ENOTSUPP;
 	}
+
+	do {
+		asm volatile ("mrs %0, s3_0_c15_c3_6" : "=r" (ret));
+	} while (!ret && retry--);
+	asm volatile ("dsb sy");
+
+	if (!ret) {
+		WARN_ONCE(!ret, "%s failed\n", __func__);
+		pr_err("SCF dcache flush: instruction error\n");
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
-static void t19x_clean_dcache_all(void)
+int t19x_clean_dcache_all(void)
 {
 	u64 id_afr0;
 	u64 ret;
 	u64 retry = 10;
 
 	asm volatile ("mrs %0, ID_AFR0_EL1" : "=r"(id_afr0));
-	/* check if cache flush through mts is supported */
-	if (likely(id_afr0 & MASK)) {
-		do {
-			asm volatile ("mrs %0, s3_0_c15_c3_5" : "=r" (ret));
-			WARN_ONCE(retry-- == 0, "%s failed\n", __func__);
-			if (!retry)
-				break;
-		} while (!ret);
-		asm volatile ("dsb sy");
-	} else {
-		tegra_roc_clean_cache();
+	/* check if dcache clean through mts is supported */
+	if (!likely(id_afr0 & MASK)) {
+		pr_err("SCF dcache clean is not supported in MTS\n");
+		return -ENOTSUPP;
 	}
+
+	do {
+		asm volatile ("mrs %0, s3_0_c15_c3_5" : "=r" (ret));
+	} while (!ret && retry--);
+	asm volatile ("dsb sy");
+
+	if (!ret) {
+		WARN_ONCE(!ret, "%s failed\n", __func__);
+		pr_err("SCF dcache clean: instruction error\n");
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 static int t19x_set_l3_cache_ways(u32 gpu_cpu_ways, u32 gpu_only_ways)
@@ -187,13 +205,6 @@ static int t19x_parse_dt(void)
 	}
 
 	return ret;
-}
-
-static void cache_op_init(void)
-{
-	tegra_flush_cache_all = t19x_flush_cache_all;
-	tegra_flush_dcache_all = t19x_flush_dcache_all;
-	tegra_clean_dcache_all = t19x_clean_dcache_all;
 }
 
 static int t19x_cache_open(struct inode *inode, struct file *filp)
@@ -405,8 +416,6 @@ static int __init t19x_cache_probe(struct platform_device *pdev)
 			drv_data->dev_user.name);
 		goto err_out;
 	}
-
-	cache_op_init();
 
 	ret = t19x_parse_dt();
 	if (ret)

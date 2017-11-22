@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -96,28 +96,27 @@ typedef union {
 	u64 data;
 } mca_cmd_t;
 
-int t18x_mce_enter_cstate(u32 state, u32 wake_time);
-int t18x_mce_update_cstate_info(u32 cluster, u32 ccplex,
-	u32 system, u8 force, u32 wake_mask, bool valid);
-int t18x_mce_update_crossover_time(u32 type, u32 time);
-int t18x_mce_read_cstate_stats(u32 state, u32 *stats);
-int t18x_mce_write_cstate_stats(u32 state, u32 stats);
-int t18x_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed);
-int t18x_mce_online_core(int cpu);
-int tegra_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable);
-int t18x_mce_echo_data(u32 data, int *matched);
-int t18x_mce_read_versions(u32 *major, u32 *minor);
+/* NOTE: These functions will return -ENOTSUPP if no implementation */
+int tegra_mce_enter_cstate(u32 state, u32 wake_time);
+int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
+				 u8 force, u32 wake_mask, bool valid);
+int tegra_mce_update_crossover_time(u32 type, u32 time);
+int tegra_mce_read_cstate_stats(u32 state, u32 *stats);
+int tegra_mce_write_cstate_stats(u32 state, u32 stats);
+int tegra_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed);
+int tegra_mce_online_core(int cpu);
+int tegra_mce_cc3_ctrl(u32 ndiv, u32 vindex, u8 enable);
+int tegra_mce_echo_data(u32 data, int *matched);
+int tegra_mce_read_versions(u32 *major, u32 *minor);
 int tegra_mce_enum_features(u64 *features);
-int tegra_roc_flush_cache(void);
 int tegra_mce_read_uncore_mca(mca_cmd_t cmd, u64 *data, u32 *error);
 int tegra_mce_write_uncore_mca(mca_cmd_t cmd, u64 data, u32 *error);
-int tegra_roc_flush_cache_only(void);
-int tegra_roc_clean_cache(void);
-int tegra_mce_enable_latic(void);
 int tegra_mce_read_uncore_perfmon(u32 req, u32 *data);
 int tegra_mce_write_uncore_perfmon(u32 req, u32 data);
-extern void (*tegra_flush_cache_all)(void);
-extern void (*tegra_flush_dcache_all)(void);
-extern void (*tegra_clean_dcache_all)(void);
+int tegra_mce_enable_latic(void);
 
-#endif
+/* Tegra cache functions */
+int tegra_flush_cache_all(void);
+int tegra_flush_dcache_all(void *__maybe_unused unused);
+int tegra_clean_dcache_all(void *__maybe_unused unused);
+#endif /* _LINUX_TEGRA_MCE_H */

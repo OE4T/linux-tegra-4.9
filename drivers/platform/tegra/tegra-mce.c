@@ -11,83 +11,46 @@
  * more details.
  */
 
-#include <linux/of.h>
-#include <linux/of_address.h>
-#include <linux/init.h>
-#include <linux/io.h>
-#include <linux/platform_device.h>
 #include <linux/debugfs.h>
-#include <linux/cpu.h>
-#include <linux/notifier.h>
-#include <linux/tegra-mce.h>
-#include <soc/tegra/chip-id.h>
-#include <soc/tegra/fuse.h>
-#include <linux/t18x_ari.h>
+#include <linux/init.h>
 #include <linux/module.h>
+#include <linux/tegra-mce.h>
 
+#include <asm/cacheflush.h>
 #include <asm/smp_plat.h>
+#include <soc/tegra/chip-id.h>
+
+#include "tegra18x-mce.h"
+#include "tegra19x-mce.h"
 
 #define SMC_SIP_INVOKE_MCE	0xC2FFFF00
 
 #define NR_SMC_REGS		6
 
-/* MCE command enums for SMC calls */
 enum {
-	MCE_SMC_ENTER_CSTATE = 0,
-	MCE_SMC_UPDATE_CSTATE_INFO = 1,
-	MCE_SMC_UPDATE_XOVER_TIME = 2,
-	MCE_SMC_READ_CSTATE_STATS = 3,
-	MCE_SMC_WRITE_CSTATE_STATS = 4,
-	MCE_SMC_IS_SC7_ALLOWED = 5,
-	MCE_SMC_ONLINE_CORE = 6,
-	MCE_SMC_CC3_CTRL = 7,
-	MCE_SMC_ECHO_DATA = 8,
-	MCE_SMC_READ_VERSIONS = 9,
-	MCE_SMC_ENUM_FEATURES = 10,
-	MCE_SMC_ROC_FLUSH_CACHE = 11,
-	MCE_SMC_ENUM_READ_MCA = 12,
-	MCE_SMC_ENUM_WRITE_MCA = 13,
-	MCE_SMC_ROC_FLUSH_CACHE_ONLY = 14,
-	MCE_SMC_ROC_CLEAN_CACHE_ONLY = 15,
-	MCE_SMC_ENABLE_LATIC = 16,
-	MCE_SMC_UNCORE_PERFMON_REQ = 17,
-	MCE_SMC_MISC_CCPLEX = 18,
-	MCE_SMC_ENUM_MAX = 0xFF,	/* enums cannot exceed this value */
+	TEGRA_MCE_ID_186,
+	TEGRA_MCE_ID_194,
+	TEGRA_MCE_ID_MAX,
 };
 
-struct mce_regs {
-	u64 args[NR_SMC_REGS];
-};
+static int tegra_mce_id = TEGRA_MCE_ID_MAX;
 
-static noinline notrace int __send_smc(u8 func, struct mce_regs *regs)
-{
-	u32 ret = SMC_SIP_INVOKE_MCE | (func & MCE_SMC_ENUM_MAX);
-	asm volatile (
-	"	mov	x0, %0 \n"
-	"	ldp	x1, x2, [%1, #16 * 0] \n"
-	"	ldp	x3, x4, [%1, #16 * 1] \n"
-	"	ldp	x5, x6, [%1, #16 * 2] \n"
-	"	isb \n"
-	"	smc	#0 \n"
-	"	mov	%0, x0 \n"
-	"	stp	x0, x1, [%1, #16 * 0] \n"
-	"	stp	x2, x3, [%1, #16 * 1] \n"
-	: "+r" (ret)
-	: "r" (regs)
-	: "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
-	"x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17");
-	return ret;
-}
-
-#define send_smc(func, regs) \
-({ \
-	int __ret = __send_smc(func, regs); \
-	if (__ret) { \
-		pr_err("%s: failed (ret=%d)\n", __func__, __ret); \
-		return __ret; \
-	} \
-	__ret; \
-})
+int (*_tegra_mce_enter_cstate)(u32, u32);
+int (*_tegra_mce_update_cstate_info)(u32, u32, u32, u8, u32, bool);
+int (*_tegra_mce_update_crossover_time)(u32, u32);
+int (*_tegra_mce_read_cstate_stats)(u32, u32 *);
+int (*_tegra_mce_write_cstate_stats)(u32, u32);
+int (*_tegra_mce_is_sc7_allowed)(u32, u32, u32 *);
+int (*_tegra_mce_online_core)(int);
+int (*_tegra_mce_cc3_ctrl)(u32, u32, u8);
+int (*_tegra_mce_echo_data)(u32, int *);
+int (*_tegra_mce_read_versions)(u32 *, u32 *);
+int (*_tegra_mce_enum_features)(u64 *);
+int (*_tegra_mce_read_uncore_mca)(mca_cmd_t, u64 *, u32 *);
+int (*_tegra_mce_write_uncore_mca)(mca_cmd_t, u64, u32 *);
+int (*_tegra_mce_read_uncore_perfmon)(u32, u32 *);
+int (*_tegra_mce_write_uncore_perfmon)(u32, u32);
+int (*_tegra_mce_enable_latic)(void);
 
 /**
  * Specify power state and wake time for entering upon STANDBYWFI
@@ -97,14 +60,13 @@ static noinline notrace int __send_smc(u8 func, struct mce_regs *regs)
  *
  * Returns 0 if success.
  */
-int t18x_mce_enter_cstate(u32 state, u32 wake_time)
+int tegra_mce_enter_cstate(u32 state, u32 wake_time)
 {
-	struct mce_regs regs;
-	regs.args[0] = state;
-	regs.args[1] = wake_time;
-	return send_smc(MCE_SMC_ENTER_CSTATE, &regs);
+	if (!_tegra_mce_enter_cstate)
+		return -ENOTSUPP;
+	return _tegra_mce_enter_cstate(state, wake_time);
 }
-EXPORT_SYMBOL(t18x_mce_enter_cstate);
+EXPORT_SYMBOL_GPL(tegra_mce_enter_cstate);
 
 /**
  * Specify deepest cluster/ccplex/system states allowed.
@@ -118,19 +80,15 @@ EXPORT_SYMBOL(t18x_mce_enter_cstate);
  *
  * Returns 0 if success.
  */
-int t18x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
-	u8 force, u32 wake_mask, bool valid)
+int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
+				 u8 force, u32 wake_mask, bool valid)
 {
-	struct mce_regs regs;
-	regs.args[0] = cluster;
-	regs.args[1] = ccplex;
-	regs.args[2] = system;
-	regs.args[3] = force;
-	regs.args[4] = wake_mask;
-	regs.args[5] = valid;
-	return send_smc(MCE_SMC_UPDATE_CSTATE_INFO, &regs);
+	if (!_tegra_mce_update_cstate_info)
+		return -ENOTSUPP;
+	return _tegra_mce_update_cstate_info(cluster, ccplex, system,
+					     force, wake_mask, valid);
 }
-EXPORT_SYMBOL(t18x_mce_update_cstate_info);
+EXPORT_SYMBOL_GPL(tegra_mce_update_cstate_info);
 
 /**
  * Update threshold for one specific c-state crossover
@@ -140,14 +98,13 @@ EXPORT_SYMBOL(t18x_mce_update_cstate_info);
  *
  * Returns 0 if success.
  */
-int t18x_mce_update_crossover_time(u32 type, u32 time)
+int tegra_mce_update_crossover_time(u32 type, u32 time)
 {
-	struct mce_regs regs;
-	regs.args[0] = type;
-	regs.args[1] = time;
-	return send_smc(MCE_SMC_UPDATE_XOVER_TIME, &regs);
+	if (!_tegra_mce_update_crossover_time)
+		return -ENOTSUPP;
+	return _tegra_mce_update_crossover_time(type, time);
 }
-EXPORT_SYMBOL(t18x_mce_update_crossover_time);
+EXPORT_SYMBOL_GPL(tegra_mce_update_crossover_time);
 
 /**
  * Query the runtime stats of a specific cstate
@@ -157,15 +114,13 @@ EXPORT_SYMBOL(t18x_mce_update_crossover_time);
  *
  * Returns 0 if success.
  */
-int t18x_mce_read_cstate_stats(u32 state, u32 *stats)
+int tegra_mce_read_cstate_stats(u32 state, u32 *stats)
 {
-	struct mce_regs regs;
-	regs.args[0] = state;
-	send_smc(MCE_SMC_READ_CSTATE_STATS, &regs);
-	*stats = (u32)regs.args[2];
-	return 0;
+	if (!_tegra_mce_read_cstate_stats)
+		return -ENOTSUPP;
+	return _tegra_mce_read_cstate_stats(state, stats);
 }
-EXPORT_SYMBOL(t18x_mce_read_cstate_stats);
+EXPORT_SYMBOL_GPL(tegra_mce_read_cstate_stats);
 
 /**
  * Overwrite the runtime stats of a specific c-state
@@ -175,14 +130,13 @@ EXPORT_SYMBOL(t18x_mce_read_cstate_stats);
  *
  * Returns 0 if success.
  */
-int t18x_mce_write_cstate_stats(u32 state, u32 stats)
+int tegra_mce_write_cstate_stats(u32 state, u32 stats)
 {
-	struct mce_regs regs;
-	regs.args[0] = state;
-	regs.args[1] = stats;
-	return send_smc(MCE_SMC_WRITE_CSTATE_STATS, &regs);
+	if (!_tegra_mce_write_cstate_stats)
+		return -ENOTSUPP;
+	return _tegra_mce_write_cstate_stats(state, stats);
 }
-EXPORT_SYMBOL(t18x_mce_write_cstate_stats);
+EXPORT_SYMBOL_GPL(tegra_mce_write_cstate_stats);
 
 /**
  * Query MCE to determine if SC7 is allowed
@@ -194,50 +148,46 @@ EXPORT_SYMBOL(t18x_mce_write_cstate_stats);
  *
  * Returns 0 if success.
  */
-int t18x_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
+int tegra_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
 {
-	struct mce_regs regs;
-	regs.args[0] = state;
-	regs.args[1] = wake;
-	send_smc(MCE_SMC_IS_SC7_ALLOWED, &regs);
-	*allowed = (u32)regs.args[3];
-	return 0;
+	if (!_tegra_mce_is_sc7_allowed)
+		return -ENOTSUPP;
+	return _tegra_mce_is_sc7_allowed(state, wake, allowed);
 }
-EXPORT_SYMBOL(t18x_mce_is_sc7_allowed);
+EXPORT_SYMBOL_GPL(tegra_mce_is_sc7_allowed);
 
 /**
  * Bring another offlined core back online to C0 state.
  *
- * @cpu:		logical cpuid from smp_processor_id()
+ * @cpu: logical cpuid from smp_processor_id()
  *
  * Returns 0 if success.
  */
-int t18x_mce_online_core(int cpu)
+int tegra_mce_online_core(int cpu)
 {
-	struct mce_regs regs;
-	regs.args[0] = cpu_logical_map(cpu);
-	return send_smc(MCE_SMC_ONLINE_CORE, &regs);
+	if (!_tegra_mce_online_core)
+		return -ENOTSUPP;
+	return _tegra_mce_online_core(cpu);
 }
-EXPORT_SYMBOL(t18x_mce_online_core);
+EXPORT_SYMBOL_GPL(tegra_mce_online_core);
 
 /**
  * Program Auto-CC3 feature.
  *
- * @freq:		freq of IDLE voltage/freq register
- * @volt:		volt of IDLE voltage/freq register
+ * @ndiv:		ndiv of IDLE voltage/freq register
+ * @vindex:		vindex of IDLE voltage/freq register
+ *			(Not used on tegra19x)
  * @enable:		enable bit for Auto-CC3
  *
  * Returns 0 if success.
  */
-int tegra_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable)
+int tegra_mce_cc3_ctrl(u32 ndiv, u32 vindex, u8 enable)
 {
-	struct mce_regs regs;
-	regs.args[0] = freq;
-	regs.args[1] = volt;
-	regs.args[2] = enable;
-	return send_smc(MCE_SMC_CC3_CTRL, &regs);
+	if (!_tegra_mce_cc3_ctrl)
+		return -ENOTSUPP;
+	return _tegra_mce_cc3_ctrl(ndiv, vindex, enable);
 }
-EXPORT_SYMBOL(tegra_mce_cc3_ctrl);
+EXPORT_SYMBOL_GPL(tegra_mce_cc3_ctrl);
 
 /**
  * Send data to MCE which echoes it back.
@@ -248,15 +198,13 @@ EXPORT_SYMBOL(tegra_mce_cc3_ctrl);
  *
  * Returns 0 if success.
  */
-int t18x_mce_echo_data(u32 data, int *matched)
+int tegra_mce_echo_data(u32 data, int *matched)
 {
-	struct mce_regs regs;
-	regs.args[0] = data;
-	send_smc(MCE_SMC_ECHO_DATA, &regs);
-	*matched = (u32)regs.args[2];
-	return 0;
+	if (!_tegra_mce_echo_data)
+		return -ENOTSUPP;
+	return _tegra_mce_echo_data(data, matched);
 }
-EXPORT_SYMBOL(t18x_mce_echo_data);
+EXPORT_SYMBOL_GPL(tegra_mce_echo_data);
 
 /**
  * Read out MCE API major/minor versions
@@ -266,15 +214,13 @@ EXPORT_SYMBOL(t18x_mce_echo_data);
  *
  * Returns 0 if success.
  */
-int t18x_mce_read_versions(u32 *major, u32 *minor)
+int tegra_mce_read_versions(u32 *major, u32 *minor)
 {
-	struct mce_regs regs;
-	send_smc(MCE_SMC_READ_VERSIONS, &regs);
-	*major = (u32)regs.args[1];
-	*minor = (u32)regs.args[2];
-	return 0;
+	if (!_tegra_mce_read_versions)
+		return -ENOTSUPP;
+	return _tegra_mce_read_versions(major, minor);
 }
-EXPORT_SYMBOL(t18x_mce_read_versions);
+EXPORT_SYMBOL_GPL(tegra_mce_read_versions);
 
 /**
  * Enumerate MCE API features
@@ -285,85 +231,11 @@ EXPORT_SYMBOL(t18x_mce_read_versions);
  */
 int tegra_mce_enum_features(u64 *features)
 {
-	struct mce_regs regs;
-	send_smc(MCE_SMC_ENUM_FEATURES, &regs);
-	*features = (u32)regs.args[1];
-	return 0;
+	if (!_tegra_mce_enum_features)
+		return -ENOTSUPP;
+	return _tegra_mce_enum_features(features);
 }
-EXPORT_SYMBOL(tegra_mce_enum_features);
-
-__always_inline int tegra_roc_flush_cache(void)
-{
-	struct mce_regs regs;
-
-	/* Ignore T21x platforms */
-	if (tegra_get_chip_id() == TEGRA210 ||
-	    tegra_get_chip_id() == TEGRA210B01)
-		return 0;
-
-	return send_smc(MCE_SMC_ROC_FLUSH_CACHE, &regs);
-}
-EXPORT_SYMBOL(tegra_roc_flush_cache);
-
-__always_inline int tegra_roc_flush_cache_only(void)
-{
-	struct mce_regs regs;
-
-	/* Ignore T21x platforms */
-	if (tegra_get_chip_id() == TEGRA210 ||
-	    tegra_get_chip_id() == TEGRA210B01)
-		return 0;
-
-	return send_smc(MCE_SMC_ROC_FLUSH_CACHE_ONLY, &regs);
-}
-EXPORT_SYMBOL(tegra_roc_flush_cache_only);
-
-__always_inline int tegra_roc_clean_cache(void)
-{
-	struct mce_regs regs;
-
-	/* Ignore T21x platforms */
-	if (tegra_get_chip_id() == TEGRA210 ||
-	    tegra_get_chip_id() == TEGRA210B01)
-		return 0;
-
-	return send_smc(MCE_SMC_ROC_CLEAN_CACHE_ONLY, &regs);
-}
-EXPORT_SYMBOL(tegra_roc_clean_cache);
-
-void (*tegra_flush_cache_all)(void);
-void (*tegra_flush_dcache_all)(void);
-void (*tegra_clean_dcache_all)(void);
-
-void flush_cache_all(void)
-{
-	if (tegra_flush_cache_all) {
-		tegra_flush_cache_all();
-		return;
-	}
-
-	tegra_roc_flush_cache();
-}
-
-void __flush_dcache_all(void *__maybe_unused unused)
-{
-	if (tegra_flush_dcache_all) {
-		tegra_flush_dcache_all();
-		return;
-	}
-
-	tegra_roc_flush_cache_only();
-}
-
-void __clean_dcache_all(void *__maybe_unused unused)
-{
-	if (tegra_clean_dcache_all) {
-		tegra_clean_dcache_all();
-		return;
-	}
-
-	tegra_roc_clean_cache();
-}
+EXPORT_SYMBOL_GPL(tegra_mce_enum_features);
 
 /**
  * Read uncore MCA errors.
@@ -376,15 +248,11 @@ void __clean_dcache_all(void *__maybe_unused unused)
  */
 int tegra_mce_read_uncore_mca(mca_cmd_t cmd, u64 *data, u32 *error)
 {
-	struct mce_regs regs;
-	regs.args[0] = cmd.data;
-	regs.args[1] = 0;
-	send_smc(MCE_SMC_ENUM_READ_MCA, &regs);
-	*data = regs.args[2];
-	*error = (u32)regs.args[3];
-	return 0;
+	if (!_tegra_mce_read_uncore_mca)
+		return -ENOTSUPP;
+	return _tegra_mce_read_uncore_mca(cmd, data, error);
 }
-EXPORT_SYMBOL(tegra_mce_read_uncore_mca);
+EXPORT_SYMBOL_GPL(tegra_mce_read_uncore_mca);
 
 /**
  * Write uncore MCA errors.
@@ -397,21 +265,11 @@ EXPORT_SYMBOL(tegra_mce_read_uncore_mca);
  */
 int tegra_mce_write_uncore_mca(mca_cmd_t cmd, u64 data, u32 *error)
 {
-	struct mce_regs regs;
-	regs.args[0] = cmd.data;
-	regs.args[1] = data;
-	send_smc(MCE_SMC_ENUM_WRITE_MCA, &regs);
-	*error = (u32)regs.args[3];
-	return 0;
+	if (!_tegra_mce_write_uncore_mca)
+		return -ENOTSUPP;
+	return _tegra_mce_write_uncore_mca(cmd, data, error);
 }
-EXPORT_SYMBOL(tegra_mce_write_uncore_mca);
-
-int tegra_mce_enable_latic(void)
-{
-	struct mce_regs regs;
-	return send_smc(MCE_SMC_ENABLE_LATIC, &regs);
-}
-EXPORT_SYMBOL(tegra_mce_enable_latic);
+EXPORT_SYMBOL_GPL(tegra_mce_write_uncore_mca);
 
 /**
  * Query PMU for uncore perfmon counter
@@ -423,18 +281,11 @@ EXPORT_SYMBOL(tegra_mce_enable_latic);
  */
 int tegra_mce_read_uncore_perfmon(u32 req, u32 *data)
 {
-	struct mce_regs regs;
-	u32 status;
-
-	if (data == NULL)
-		return -EINVAL;
-
-	regs.args[0] = req;
-	status = send_smc(MCE_SMC_UNCORE_PERFMON_REQ, &regs);
-	*data = (u32)regs.args[1];
-	return status;
+	if (!_tegra_mce_read_uncore_perfmon)
+		return -ENOTSUPP;
+	return _tegra_mce_read_uncore_perfmon(req, data);
 }
-EXPORT_SYMBOL(tegra_mce_read_uncore_perfmon);
+EXPORT_SYMBOL_GPL(tegra_mce_read_uncore_perfmon);
 
 /**
  * Write PMU reg for uncore perfmon counter
@@ -446,134 +297,105 @@ EXPORT_SYMBOL(tegra_mce_read_uncore_perfmon);
  */
 int tegra_mce_write_uncore_perfmon(u32 req, u32 data)
 {
-	struct mce_regs regs;
-	u32 status = 0;
-	regs.args[0] = req;
-	regs.args[1] = data;
-	status = send_smc(MCE_SMC_UNCORE_PERFMON_REQ, &regs);
-	return status;
+	if (!_tegra_mce_write_uncore_perfmon)
+		return -ENOTSUPP;
+	return _tegra_mce_write_uncore_perfmon(req, data);
 }
-EXPORT_SYMBOL(tegra_mce_write_uncore_perfmon);
+EXPORT_SYMBOL_GPL(tegra_mce_write_uncore_perfmon);
+
+int tegra_mce_enable_latic(void)
+{
+	if (!_tegra_mce_enable_latic)
+		return -ENOTSUPP;
+	return _tegra_mce_enable_latic();
+}
+EXPORT_SYMBOL_GPL(tegra_mce_enable_latic);
 
 #ifdef CONFIG_DEBUG_FS
+static struct dentry *mce_debugfs;
 
-#define CSTAT_ENTRY(stat) [TEGRA_ARI_CSTATE_STATS_##stat] = #stat
-
-static const char * const cstats_table[] = {
-	CSTAT_ENTRY(SC7_ENTRIES),
-	CSTAT_ENTRY(A57_CC6_ENTRIES),
-	CSTAT_ENTRY(A57_CC7_ENTRIES),
-	CSTAT_ENTRY(D15_CC6_ENTRIES),
-	CSTAT_ENTRY(D15_CC7_ENTRIES),
-	CSTAT_ENTRY(D15_0_C6_ENTRIES),
-	CSTAT_ENTRY(D15_1_C6_ENTRIES),
-	CSTAT_ENTRY(D15_0_C7_ENTRIES),
-	CSTAT_ENTRY(D15_1_C7_ENTRIES),
-	CSTAT_ENTRY(A57_0_C7_ENTRIES),
-	CSTAT_ENTRY(A57_1_C7_ENTRIES),
-	CSTAT_ENTRY(A57_2_C7_ENTRIES),
-	CSTAT_ENTRY(A57_3_C7_ENTRIES),
-	CSTAT_ENTRY(LAST_CSTATE_ENTRY_D15_0),
-	CSTAT_ENTRY(LAST_CSTATE_ENTRY_D15_1),
-	CSTAT_ENTRY(LAST_CSTATE_ENTRY_A57_0),
-	CSTAT_ENTRY(LAST_CSTATE_ENTRY_A57_1),
-	CSTAT_ENTRY(LAST_CSTATE_ENTRY_A57_2),
-	CSTAT_ENTRY(LAST_CSTATE_ENTRY_A57_3),
-};
-
-static int mce_echo_set(void *data, u64 val)
+static int tegra_mce_echo_set(void *data, u64 val)
 {
 	u32 matched;
-	if (t18x_mce_echo_data((u32)val, &matched))
+	int ret;
+
+	ret = tegra_mce_echo_data((u32)val, &matched);
+	if (ret && ret != -ENOTSUPP)
 		return -EINVAL;
 	return 0;
 }
 
-static int mce_versions_get(void *data, u64 *val)
+static int tegra_mce_versions_get(void *data, u64 *val)
 {
 	u32 major, minor;
-	int ret = t18x_mce_read_versions(&major, &minor);
+	int ret;
+
+	ret = tegra_mce_read_versions(&major, &minor);
 	if (!ret)
 		*val = ((u64)major << 32) | minor;
 	return ret;
 }
 
-static int mce_features_get(void *data, u64 *val)
-{
-	return tegra_mce_enum_features(val);
+#define TEGRA_MCE_DBGFS_FUNC(name, type1, param1, type2, param2)	\
+static int tegra_##name(type1 param1, type2 param2)			\
+{									\
+	int (*f)(type1, type2) = NULL;					\
+									\
+	switch (tegra_mce_id) {						\
+	case TEGRA_MCE_ID_186:						\
+		f = tegra18x_##name;					\
+		break;							\
+	case TEGRA_MCE_ID_194:						\
+		f = tegra19x_##name;					\
+		break;							\
+	default:							\
+		return -ENOTSUPP;					\
+	}								\
+	return f ? f(param1, param2) : -ENOTSUPP;			\
 }
 
-static int mce_dbg_cstats_show(struct seq_file *s, void *data)
-{
-	int st;
-	u32 val;
-	seq_printf(s, "%-30s%-10s\n", "name", "count");
-	seq_printf(s, "----------------------------------------\n");
-	for (st = 1; st <= TEGRA_ARI_CSTATE_STATS_MAX; st++) {
-		if (!cstats_table[st])
-			continue;
-		if (t18x_mce_read_cstate_stats(st, &val))
-			pr_err("mce: failed to read cstat: %d\n", st);
-		else
-			seq_printf(s, "%-30s%-10d\n", cstats_table[st], val);
-	}
-	return 0;
-}
+TEGRA_MCE_DBGFS_FUNC(mce_features_get, void *, data, u64 *, val);
+TEGRA_MCE_DBGFS_FUNC(mce_enable_latic_set, void *, data, u64, val);
+TEGRA_MCE_DBGFS_FUNC(mce_coresight_cg_set, void *, data, u64, val);
+TEGRA_MCE_DBGFS_FUNC(mce_edbgreq_set, void *, data, u64, val);
 
-static int mce_enable_latic_set(void *data, u64 val)
+static int tegra_mce_dbg_cstats_open(struct inode *inode, struct file *file)
 {
-	if (tegra_mce_enable_latic())
+	int (*f)(struct seq_file *, void *);
+
+	switch (tegra_mce_id) {
+	case TEGRA_MCE_ID_186:
+		f = tegra18x_mce_dbg_cstats_show;
+		break;
+	case TEGRA_MCE_ID_194:
+		f = tegra19x_mce_dbg_cstats_show;
+		break;
+	default:
 		return -EINVAL;
-	return 0;
-}
-
-/* Enable/disable coresight clock gating */
-static int mce_coresight_cg_set(void *data, u64 val)
-{
-	struct mce_regs regs;
-	/* Enable - 1, disable - 0 are the only valid values */
-	if (val > 1) {
-		pr_err("mce: invalid enable value.\n");
-		return -EINVAL;
 	}
-	regs.args[0] = TEGRA_ARI_MISC_CCPLEX_CORESIGHT_CG_CTRL;
-	regs.args[1] = (u32)val;
-	send_smc(MCE_SMC_MISC_CCPLEX, &regs);
-	return 0;
+
+	return single_open(file, f, inode->i_private);
 }
 
-/* Enable external debug on MCA */
-static int mce_edbgreq_set(void *data, u64 val)
-{
-	struct mce_regs regs;
-	regs.args[0] = TEGRA_ARI_MISC_CCPLEX_EDBGREQ;
-	send_smc(MCE_SMC_MISC_CCPLEX, &regs);
-	return 0;
-}
-
-static int mce_dbg_cstats_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, mce_dbg_cstats_show, inode->i_private);
-}
-
-static const struct file_operations mce_cstats_fops = {
-	.open = mce_dbg_cstats_open,
+static const struct file_operations tegra_mce_cstats_fops = {
+	.open = tegra_mce_dbg_cstats_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
 
-DEFINE_SIMPLE_ATTRIBUTE(mce_echo_fops, NULL, mce_echo_set, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(mce_versions_fops, mce_versions_get, NULL, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(mce_features_fops, mce_features_get, NULL, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(mce_enable_latic_fops,
-			NULL, mce_enable_latic_set, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(mce_coresight_cg_fops,
-			NULL, mce_coresight_cg_set, "%llu\n");
-DEFINE_SIMPLE_ATTRIBUTE(mce_edbgreq_fops,
-			NULL, mce_edbgreq_set, "%llu\n");
-
-static struct dentry *mce_debugfs_root;
+DEFINE_SIMPLE_ATTRIBUTE(tegra_mce_echo_fops, NULL,
+			tegra_mce_echo_set, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(tegra_mce_versions_fops, tegra_mce_versions_get,
+			NULL, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(tegra_mce_features_fops, tegra_mce_features_get,
+			NULL, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(tegra_mce_enable_latic_fops, NULL,
+			tegra_mce_enable_latic_set, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(tegra_mce_coresight_cg_fops, NULL,
+			tegra_mce_coresight_cg_set, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(tegra_mce_edbgreq_fops, NULL,
+			tegra_mce_edbgreq_set, "%llu\n");
 
 struct debugfs_entry {
 	const char *name;
@@ -581,106 +403,200 @@ struct debugfs_entry {
 	mode_t mode;
 };
 
-static struct debugfs_entry mce_dbg_attrs[] = {
-	{ "echo", &mce_echo_fops, S_IWUSR },
-	{ "versions", &mce_versions_fops, S_IRUGO },
-	{ "features", &mce_features_fops, S_IRUGO },
-	{ "cstats", &mce_cstats_fops, S_IRUGO },
-	{ "enable-latic", &mce_enable_latic_fops, S_IWUSR },
-	{ "coresight_cg_enable", &mce_coresight_cg_fops, S_IWUSR },
-	{ "edbgreq", &mce_edbgreq_fops, S_IWUSR },
+/* Make sure to put an NULL entry at the end of each group */
+static struct debugfs_entry tegra18x_mce_attrs[] = {
+	{ "echo", &tegra_mce_echo_fops, 0200 },
+	{ "versions", &tegra_mce_versions_fops, 0444 },
+	{ "features", &tegra_mce_features_fops, 0444 },
+	{ "cstats", &tegra_mce_cstats_fops, 0444 },
+	{ "enable-latic", &tegra_mce_enable_latic_fops, 0200 },
+	{ "coresight_cg_enable", &tegra_mce_coresight_cg_fops, 0200 },
+	{ "edbgreq", &tegra_mce_edbgreq_fops, 0200 },
+	{ NULL, NULL, 0 },
+};
+
+static struct debugfs_entry tegra19x_mce_attrs[] = {
+	{ "versions", &tegra_mce_versions_fops, 0444 },
+	{ "cstats", &tegra_mce_cstats_fops, 0444 },
 	{ NULL, NULL, 0 }
 };
 
-static __init int t18x_mce_debugfs_init(void)
+static struct debugfs_entry *tegra_mce_attrs[TEGRA_MCE_ID_MAX] = {
+	tegra18x_mce_attrs,
+	tegra19x_mce_attrs,
+};
+
+static __init int tegra_mce_init(void)
 {
-	struct dentry *dent;
 	struct debugfs_entry *fent;
+	struct dentry *dent;
+	int ret;
 
-	if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA18)
-		return -ENODEV;
+	if (tegra_mce_id >= TEGRA_MCE_ID_MAX)
+		return -ENOTSUPP;
 
-	mce_debugfs_root = debugfs_create_dir("tegra_mce", NULL);
-	if (!mce_debugfs_root)
+	mce_debugfs = debugfs_create_dir("tegra_mce", NULL);
+	if (!mce_debugfs)
 		return -ENOMEM;
 
-	fent = mce_dbg_attrs;
-	while (fent->name) {
+	for (fent = tegra_mce_attrs[tegra_mce_id]; fent->name; fent++) {
 		dent = debugfs_create_file(fent->name, fent->mode,
-			mce_debugfs_root, NULL, fent->fops);
-		if (IS_ERR_OR_NULL(dent))
-			goto abort;
-		fent++;
+					   mce_debugfs, NULL, fent->fops);
+		if (IS_ERR_OR_NULL(dent)) {
+			ret = dent ? PTR_ERR(dent) : -EINVAL;
+			pr_err("%s: failed to create debugfs (%s): %d\n",
+			       __func__, fent->name, ret);
+			goto err;
+		}
+	}
+
+	pr_debug("%s: init finished\n", __func__);
+
+	return 0;
+
+err:
+	debugfs_remove_recursive(mce_debugfs);
+
+	return ret;
+}
+
+static void __exit tegra_mce_exit(void)
+{
+	if (tegra_mce_id >= TEGRA_MCE_ID_MAX)
+		return;
+
+	debugfs_remove_recursive(mce_debugfs);
+}
+module_init(tegra_mce_init);
+module_exit(tegra_mce_exit);
+#endif /* CONFIG_DEBUG_FS */
+
+/*
+ * Tegra cache functions
+ *
+ * Return 0 if success or -ENOTSUPP.
+ *
+ */
+int tegra_flush_cache_all(void)
+{
+	int ret = 0;
+
+	switch (tegra_get_chip_id()) {
+	case TEGRA186:
+		ret = tegra18x_roc_flush_cache();
+		break;
+	case TEGRA194:
+		ret = t19x_flush_cache_all();
+		/* Fallback to VA flush cache all if not support or failed */
+		if (ret)
+			flush_cache_all();
+		break;
+	default:
+		flush_cache_all();
+		break;
+	}
+
+	/* CRITICAL: failed to flush all cache */
+	WARN_ON(ret && ret != -ENOTSUPP);
+
+	return ret;
+}
+
+int tegra_flush_dcache_all(void *__maybe_unused unused)
+{
+	int ret = 0;
+
+	switch (tegra_get_chip_id()) {
+	case TEGRA186:
+		ret = tegra18x_roc_flush_cache_only();
+		break;
+	case TEGRA194:
+		ret = t19x_flush_dcache_all();
+		/* Fallback to VA flush dcache if not support or failed */
+		if (ret)
+			__flush_dcache_all(unused);
+		break;
+	default:
+		__flush_dcache_all(unused);
+		break;
+	}
+
+	/* CRITICAL: failed to flush dcache */
+	WARN_ON(ret && ret != -ENOTSUPP);
+
+	return ret;
+}
+
+int tegra_clean_dcache_all(void *__maybe_unused unused)
+{
+	int ret = 0;
+
+	switch (tegra_get_chip_id()) {
+	case TEGRA186:
+		ret = tegra18x_roc_clean_cache();
+		break;
+	case TEGRA194:
+		ret = t19x_clean_dcache_all();
+		/* Fallback to VA clean if not support or failed */
+		if (ret)
+			__clean_dcache_all(unused);
+		break;
+	default:
+		__clean_dcache_all(unused);
+		break;
+	}
+
+	/* CRITICAL: failed to clean dcache */
+	WARN_ON(ret && ret != -ENOTSUPP);
+
+	return ret;
+}
+
+/* Make sure functions will be available for other drivers */
+static __init int tegra_mce_early_init(void)
+{
+	switch (tegra_get_chip_id()) {
+	case TEGRA186:
+		tegra_mce_id = TEGRA_MCE_ID_186;
+		_tegra_mce_enter_cstate = tegra18x_mce_enter_cstate;
+		_tegra_mce_update_cstate_info = tegra18x_mce_update_cstate_info;
+		_tegra_mce_update_crossover_time =
+			tegra18x_mce_update_crossover_time;
+		_tegra_mce_read_cstate_stats = tegra18x_mce_read_cstate_stats;
+		_tegra_mce_write_cstate_stats = tegra18x_mce_write_cstate_stats;
+		_tegra_mce_is_sc7_allowed = tegra18x_mce_is_sc7_allowed;
+		_tegra_mce_online_core = tegra18x_mce_online_core;
+		_tegra_mce_cc3_ctrl = tegra18x_mce_cc3_ctrl;
+		_tegra_mce_echo_data = tegra18x_mce_echo_data;
+		_tegra_mce_read_versions = tegra18x_mce_read_versions;
+		_tegra_mce_enum_features = tegra18x_mce_enum_features;
+		_tegra_mce_read_uncore_mca = tegra18x_mce_read_uncore_mca;
+		_tegra_mce_write_uncore_mca = tegra18x_mce_write_uncore_mca;
+		_tegra_mce_read_uncore_perfmon =
+			tegra18x_mce_read_uncore_perfmon;
+		_tegra_mce_write_uncore_perfmon =
+			tegra18x_mce_write_uncore_perfmon;
+		_tegra_mce_enable_latic = tegra18x_mce_enable_latic;
+		break;
+	case TEGRA194:
+		tegra_mce_id = TEGRA_MCE_ID_194;
+		_tegra_mce_enter_cstate = tegra19x_mce_enter_cstate;
+		_tegra_mce_update_cstate_info = tegra19x_mce_update_cstate_info;
+		_tegra_mce_update_crossover_time =
+			tegra19x_mce_update_crossover_time;
+		_tegra_mce_read_cstate_stats = tegra19x_mce_read_cstate_stats;
+		_tegra_mce_cc3_ctrl = tegra19x_mce_cc3_ctrl;
+		_tegra_mce_read_versions = tegra19x_mce_read_versions;
+		break;
+	default:
+		/* Do not support any other platform */
+		return -ENOTSUPP;
 	}
 
 	return 0;
-
-abort:
-	debugfs_remove_recursive(mce_debugfs_root);
-	return -EFAULT;
 }
+early_initcall(tegra_mce_early_init);
 
-module_init(t18x_mce_debugfs_init);
-#endif
-
-static phys_addr_t sregdump_phys; /* secure register addr to access */
-
-u32 __weak secure_readl(u32 addr)
-{
-	pr_info("%s() Not implemented\n", __func__);
-	return 0;
-}
-void __weak secure_writel(u32 val, u32 addr)
-{
-	pr_info("%s() Not implemented\n", __func__);
-}
-
-static ssize_t sregdump_write(struct file *file,
-			      const char __user *user_buf,
-			      size_t count, loff_t *ppos)
-{
-	u32 val;
-
-	if (kstrtou32_from_user(user_buf, count, 16, &val))
-		return -EINVAL;
-	pr_debug("%s() val=%x pa=%pa\n", __func__, val, &sregdump_phys);
-	secure_writel(val, sregdump_phys);
-	return count;
-}
-
-static int sregdump_show(struct seq_file *s, void *unused)
-{
-	seq_printf(s, "%x\n", secure_readl(sregdump_phys));
-	return 0;
-}
-
-static int sregdump_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, sregdump_show, inode->i_private);
-}
-
-static const struct file_operations sregdump_fops = {
-	.open		= sregdump_open,
-	.read		= seq_read,
-	.write		= sregdump_write,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static __init int debugfs_create_sregdump(void)
-{
-	struct dentry *root;
-
-	/* Ignore T21x platforms */
-	if (tegra_get_chip_id() == TEGRA210 ||
-	    tegra_get_chip_id() == TEGRA210B01)
-		return 0;
-
-	root = debugfs_create_dir("sregdump", NULL);
-	if (!root)
-		return -ENOMEM;
-	debugfs_create_x64("addr", 0666, root, &sregdump_phys);
-	debugfs_create_file("data", 0666, root, NULL, &sregdump_fops);
-	return 0;
-}
-late_initcall(debugfs_create_sregdump);
+MODULE_DESCRIPTION("NVIDIA Tegra MCE driver");
+MODULE_AUTHOR("NVIDIA Corporation");
+MODULE_LICENSE("GPL v2");

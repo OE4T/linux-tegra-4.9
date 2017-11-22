@@ -16,6 +16,8 @@
 #ifndef __NVGPU_CHANNEL_H__
 #define __NVGPU_CHANNEL_H__
 
+#include <linux/workqueue.h>
+
 #include <nvgpu/types.h>
 
 struct channel_gk20a;
@@ -24,6 +26,36 @@ struct nvgpu_submit_gpfifo_args;
 struct nvgpu_fence;
 struct gk20a_fence;
 struct fifo_profile_gk20a;
+struct nvgpu_os_linux;
+
+struct nvgpu_channel_completion_cb {
+	/*
+	 * Signal channel owner via a callback, if set, in job cleanup with
+	 * schedule_work. Means that something finished on the channel (perhaps
+	 * more than one job).
+	 */
+	void (*fn)(struct channel_gk20a *, void *);
+	void *user_data;
+	/* Make access to the two above atomic */
+	struct nvgpu_spinlock lock;
+	/* Per-channel async work task, cannot reschedule itself */
+	struct work_struct work;
+};
+
+struct nvgpu_channel_linux {
+	struct channel_gk20a *ch;
+
+	struct nvgpu_channel_completion_cb completion_cb;
+};
+
+int nvgpu_init_channel_support_linux(struct nvgpu_os_linux *l);
+void nvgpu_remove_channel_support_linux(struct nvgpu_os_linux *l);
+
+struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
+		void (*update_fn)(struct channel_gk20a *, void *),
+		void *update_fn_data,
+		int runlist_id,
+		bool is_privileged_channel);
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_gpfifo *gpfifo,

@@ -149,6 +149,8 @@ struct nvgpu_os_linux {
 	struct rw_semaphore busy_lock;
 
 	struct gk20a_sched_ctrl sched_ctrl;
+
+	bool init_done;
 };
 
 static inline struct nvgpu_os_linux *nvgpu_os_linux_from_gk20a(struct gk20a *g)

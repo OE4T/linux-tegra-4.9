@@ -1255,6 +1255,13 @@ struct gk20a {
 		struct nvgpu_mutex start_lock;
 	} channel_worker;
 
+	struct {
+		void (*open)(struct channel_gk20a *ch);
+		void (*close)(struct channel_gk20a *ch);
+		void (*work_completion_signal)(struct channel_gk20a *ch);
+		void (*work_completion_cancel_sync)(struct channel_gk20a *ch);
+	} os_channel;
+
 	struct gk20a_scale_profile *scale_profile;
 	unsigned long last_freq;
 

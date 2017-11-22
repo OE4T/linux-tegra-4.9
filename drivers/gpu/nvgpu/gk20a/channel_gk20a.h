@@ -24,9 +24,6 @@
 #ifndef CHANNEL_GK20A_H
 #define CHANNEL_GK20A_H
 
-/* TODO: To be removed when work_struct update_fn_work is moved out of common code */
-#include <linux/workqueue.h>
-
 #include <nvgpu/list.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/timers.h>
@@ -288,16 +285,6 @@ struct channel_gk20a {
 	u64 virt_ctx;
 #endif
 
-	/*
-	 * Signal channel owner via a callback, if set, in job cleanup with
-	 * schedule_work. Means that something finished on the channel (perhaps
-	 * more than one job).
-	 */
-	void (*update_fn)(struct channel_gk20a *, void *);
-	void *update_fn_data;
-	struct nvgpu_spinlock update_fn_lock; /* make access to the two above atomic */
-	struct work_struct update_fn_work;
-
 	u32 interleave_level;
 
 	u32 runlist_id;
@@ -306,6 +293,9 @@ struct channel_gk20a {
 #ifdef CONFIG_TEGRA_19x_GPU
 	struct channel_t19x t19x;
 #endif
+
+	/* Any operating system specific data. */
+	void *os_priv;
 };
 
 static inline struct channel_gk20a *
@@ -381,11 +371,6 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch);
 /* runlist_id -1 is synonym for ENGINE_GR_GK20A runlist id */
 struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 		s32 runlist_id,
-		bool is_privileged_channel);
-struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
-		void (*update_fn)(struct channel_gk20a *, void *),
-		void *update_fn_data,
-		int runlist_id,
 		bool is_privileged_channel);
 
 int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,

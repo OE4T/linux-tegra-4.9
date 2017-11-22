@@ -59,6 +59,7 @@
 #include "cde_gp10b.h"
 #include "ctxsw_trace.h"
 #include "driver_common.h"
+#include "channel.h"
 
 #define CLASS_NAME "nvidia-gpu"
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
@@ -185,6 +186,25 @@ static int nvgpu_init_os_linux_ops(struct nvgpu_os_linux *l)
 	return 0;
 }
 
+static int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l)
+{
+	struct gk20a *g = &l->g;
+	int err;
+
+	if (l->init_done)
+		return 0;
+
+	err = nvgpu_init_channel_support_linux(l);
+	if (err) {
+		nvgpu_err(g, "failed to init linux channel support");
+		return err;
+	}
+
+	l->init_done = true;
+
+	return 0;
+}
+
 int gk20a_pm_finalize_poweron(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -224,6 +244,10 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 
 	err = gk20a_finalize_poweron(g);
 	set_user_nice(current, nice_value);
+	if (err)
+		goto done;
+
+	err = nvgpu_finalize_poweron_linux(l);
 	if (err)
 		goto done;
 
@@ -595,6 +619,8 @@ void gk20a_remove_support(struct gk20a *g)
 	tegra_unregister_idle_unidle(gk20a_do_idle);
 
 	nvgpu_kfree(g, g->dbg_regops_tmp_buf);
+
+	nvgpu_remove_channel_support_linux(l);
 
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);

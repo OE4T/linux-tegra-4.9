@@ -444,6 +444,9 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 	trace_gk20a_free_channel(ch->chid);
 
+	if (g->os_channel.close)
+		g->os_channel.close(ch);
+
 	/*
 	 * Disable channel/TSG and unbind here. This should not be executed if
 	 * HW access is not available during shutdown/removal path as it will
@@ -560,12 +563,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	 * When releasing the channel we unbind the VM - so release the ref.
 	 */
 	nvgpu_vm_put(ch_vm);
-
-	nvgpu_spinlock_acquire(&ch->update_fn_lock);
-	ch->update_fn = NULL;
-	ch->update_fn_data = NULL;
-	nvgpu_spinlock_release(&ch->update_fn_lock);
-	cancel_work_sync(&ch->update_fn_work);
 
 	/* make sure we don't have deferred interrupts pending that
 	 * could still touch the channel */
@@ -756,40 +753,6 @@ void __gk20a_channel_kill(struct channel_gk20a *ch)
 	gk20a_free_channel(ch, true);
 }
 
-static void gk20a_channel_update_runcb_fn(struct work_struct *work)
-{
-	struct channel_gk20a *ch =
-		container_of(work, struct channel_gk20a, update_fn_work);
-	void (*update_fn)(struct channel_gk20a *, void *);
-	void *update_fn_data;
-
-	nvgpu_spinlock_acquire(&ch->update_fn_lock);
-	update_fn = ch->update_fn;
-	update_fn_data = ch->update_fn_data;
-	nvgpu_spinlock_release(&ch->update_fn_lock);
-
-	if (update_fn)
-		update_fn(ch, update_fn_data);
-}
-
-struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
-		void (*update_fn)(struct channel_gk20a *, void *),
-		void *update_fn_data,
-		int runlist_id,
-		bool is_privileged_channel)
-{
-	struct channel_gk20a *ch = gk20a_open_new_channel(g, runlist_id, is_privileged_channel);
-
-	if (ch) {
-		nvgpu_spinlock_acquire(&ch->update_fn_lock);
-		ch->update_fn = update_fn;
-		ch->update_fn_data = update_fn_data;
-		nvgpu_spinlock_release(&ch->update_fn_lock);
-	}
-
-	return ch;
-}
-
 struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 		s32 runlist_id,
 		bool is_privileged_channel)
@@ -872,10 +835,8 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	nvgpu_cond_init(&ch->notifier_wq);
 	nvgpu_cond_init(&ch->semaphore_wq);
 
-	ch->update_fn = NULL;
-	ch->update_fn_data = NULL;
-	nvgpu_spinlock_init(&ch->update_fn_lock);
-	INIT_WORK(&ch->update_fn_work, gk20a_channel_update_runcb_fn);
+	if (g->os_channel.open)
+		g->os_channel.open(ch);
 
 	/* Mark the channel alive, get-able, with 1 initial use
 	 * references. The initial reference will be decreased in
@@ -2120,8 +2081,8 @@ void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 	nvgpu_mutex_release(&c->joblist.cleanup_lock);
 
-	if (job_finished && c->update_fn)
-		schedule_work(&c->update_fn_work);
+	if (job_finished && g->os_channel.work_completion_signal)
+		g->os_channel.work_completion_signal(c);
 
 	gk20a_channel_put(c);
 }
@@ -2322,8 +2283,8 @@ int gk20a_channel_suspend(struct gk20a *g)
 			/* preempt the channel */
 			gk20a_fifo_preempt(g, ch);
 			/* wait for channel update notifiers */
-			if (ch->update_fn)
-				cancel_work_sync(&ch->update_fn_work);
+			if (g->os_channel.work_completion_cancel_sync)
+				g->os_channel.work_completion_cancel_sync(ch);
 
 			channels_in_use = true;
 

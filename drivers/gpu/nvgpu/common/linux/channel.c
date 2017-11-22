@@ -27,12 +27,169 @@
 
 #include "gk20a/gk20a.h"
 
+#include "channel.h"
+#include "os_linux.h"
+
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 #include <linux/uaccess.h>
 #include <linux/dma-buf.h>
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
+
+static void gk20a_channel_update_runcb_fn(struct work_struct *work)
+{
+	struct nvgpu_channel_completion_cb *completion_cb =
+		container_of(work, struct nvgpu_channel_completion_cb, work);
+	struct nvgpu_channel_linux *priv =
+		container_of(completion_cb,
+				struct nvgpu_channel_linux, completion_cb);
+	struct channel_gk20a *ch = priv->ch;
+	void (*fn)(struct channel_gk20a *, void *);
+	void *user_data;
+
+	nvgpu_spinlock_acquire(&completion_cb->lock);
+	fn = completion_cb->fn;
+	user_data = completion_cb->user_data;
+	nvgpu_spinlock_release(&completion_cb->lock);
+
+	if (fn)
+		fn(ch, user_data);
+}
+
+static void nvgpu_channel_work_completion_init(struct channel_gk20a *ch)
+{
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+
+	priv->completion_cb.fn = NULL;
+	priv->completion_cb.user_data = NULL;
+	nvgpu_spinlock_init(&priv->completion_cb.lock);
+	INIT_WORK(&priv->completion_cb.work, gk20a_channel_update_runcb_fn);
+}
+
+static void nvgpu_channel_work_completion_clear(struct channel_gk20a *ch)
+{
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+
+	nvgpu_spinlock_acquire(&priv->completion_cb.lock);
+	priv->completion_cb.fn = NULL;
+	priv->completion_cb.user_data = NULL;
+	nvgpu_spinlock_release(&priv->completion_cb.lock);
+	cancel_work_sync(&priv->completion_cb.work);
+}
+
+static void nvgpu_channel_work_completion_signal(struct channel_gk20a *ch)
+{
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+
+	if (priv->completion_cb.fn)
+		schedule_work(&priv->completion_cb.work);
+}
+
+static void nvgpu_channel_work_completion_cancel_sync(struct channel_gk20a *ch)
+{
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+
+	if (priv->completion_cb.fn)
+		cancel_work_sync(&priv->completion_cb.work);
+}
+
+struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
+		void (*update_fn)(struct channel_gk20a *, void *),
+		void *update_fn_data,
+		int runlist_id,
+		bool is_privileged_channel)
+{
+	struct channel_gk20a *ch;
+	struct nvgpu_channel_linux *priv;
+
+	ch = gk20a_open_new_channel(g, runlist_id, is_privileged_channel);
+
+	if (ch) {
+		priv = ch->os_priv;
+		nvgpu_spinlock_acquire(&priv->completion_cb.lock);
+		priv->completion_cb.fn = update_fn;
+		priv->completion_cb.user_data = update_fn_data;
+		nvgpu_spinlock_release(&priv->completion_cb.lock);
+	}
+
+	return ch;
+}
+
+static void nvgpu_channel_open_linux(struct channel_gk20a *ch)
+{
+}
+
+static void nvgpu_channel_close_linux(struct channel_gk20a *ch)
+{
+	nvgpu_channel_work_completion_clear(ch);
+}
+
+static int nvgpu_channel_alloc_linux(struct gk20a *g, struct channel_gk20a *ch)
+{
+	struct nvgpu_channel_linux *priv;
+
+	priv = nvgpu_kzalloc(g, sizeof(*priv));
+	if (!priv)
+		return -ENOMEM;
+
+	ch->os_priv = priv;
+	priv->ch = ch;
+
+	nvgpu_channel_work_completion_init(ch);
+
+	return 0;
+}
+
+static void nvgpu_channel_free_linux(struct gk20a *g, struct channel_gk20a *ch)
+{
+	nvgpu_kfree(g, ch->os_priv);
+}
+
+int nvgpu_init_channel_support_linux(struct nvgpu_os_linux *l)
+{
+	struct gk20a *g = &l->g;
+	struct fifo_gk20a *f = &g->fifo;
+	int chid;
+	int err;
+
+	for (chid = 0; chid < (int)f->num_channels; chid++) {
+		struct channel_gk20a *ch = &f->channel[chid];
+
+		err = nvgpu_channel_alloc_linux(g, ch);
+		if (err)
+			goto err_clean;
+	}
+
+	g->os_channel.open = nvgpu_channel_open_linux;
+	g->os_channel.close = nvgpu_channel_close_linux;
+	g->os_channel.work_completion_signal =
+		nvgpu_channel_work_completion_signal;
+	g->os_channel.work_completion_cancel_sync =
+		nvgpu_channel_work_completion_cancel_sync;
+	return 0;
+
+err_clean:
+	for (; chid >= 0; chid--) {
+		struct channel_gk20a *ch = &f->channel[chid];
+
+		nvgpu_channel_free_linux(g, ch);
+	}
+	return err;
+}
+
+void nvgpu_remove_channel_support_linux(struct nvgpu_os_linux *l)
+{
+	struct gk20a *g = &l->g;
+	struct fifo_gk20a *f = &g->fifo;
+	unsigned int chid;
+
+	for (chid = 0; chid < f->num_channels; chid++) {
+		struct channel_gk20a *ch = &f->channel[chid];
+
+		nvgpu_channel_free_linux(g, ch);
+	}
+}
 
 u32 nvgpu_get_gpfifo_entry_size(void)
 {

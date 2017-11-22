@@ -537,6 +537,11 @@
 		status = "disabled";
 	};
 
+	generic_pwm_tachometer {
+		compatible = "generic-pwm-tachometer";
+		status = "disabled";
+	};
+
 	tegra_pmc: pmc@c360000 {
 		compatible = "nvidia,tegra186-pmc";
 		reg = <0x0 0xC360000 0x0 0x400

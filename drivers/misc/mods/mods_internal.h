@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 #include <linux/miscdevice.h>
 #include <linux/mutex.h>
+#include <linux/fb.h>
 
 #include "mods_config.h"
 #include "mods.h"
@@ -76,6 +77,7 @@ struct mods_file_private_data {
 	int                  mods_id;
 	struct mem_type      mem_type;
 	struct mutex         mtx;
+	int                  mods_fb_suspended[FB_MAX];
 };
 
 typedef struct mods_file_private_data *MODS_PRIV;

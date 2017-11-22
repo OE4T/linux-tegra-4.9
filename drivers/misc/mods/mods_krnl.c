@@ -27,6 +27,10 @@
 #include <linux/uaccess.h>
 #ifdef MODS_HAS_CONSOLE_LOCK
 #   include <linux/console.h>
+#   include <linux/kd.h>
+#   include <linux/tty.h>
+#   include <linux/console_struct.h>
+#   include <linux/vt_kern.h>
 #endif
 
 /***********************************************************************
@@ -278,6 +282,8 @@ static void mods_disable_all_devices(struct mods_file_private_data *priv)
 	WARN_ON(priv->enabled_devices != 0);
 #endif
 }
+
+static int mods_resume_console(struct file *pfile);
 
 /*********************
  * MAPPING FUNCTIONS *
@@ -531,6 +537,7 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 #endif
 	struct mods_file_private_data *private_data;
 	int id = 0;
+	int i = 0;
 
 	LOG_ENT();
 
@@ -633,6 +640,9 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 
 	mutex_init(&private_data->mtx);
 
+	for (i = 0; i < FB_MAX; i++)
+		private_data->mods_fb_suspended[i] = 0;
+
 	init_waitqueue_head(&private_data->interrupt_event);
 
 	fp->private_data = private_data;
@@ -655,6 +665,8 @@ static int mods_krnl_close(struct inode *ip, struct file *fp)
 		LOG_EXT();
 		return -EINVAL;
 	}
+
+	mods_resume_console(fp);
 
 	mods_free_channel(id);
 	mods_irq_dev_clr_pri(id);
@@ -948,6 +960,92 @@ int esc_mods_unlock_console(struct file *pfile)
 #else
 	return -EINVAL;
 #endif
+}
+
+int esc_mods_suspend_console(struct file *pfile)
+{
+	int ret = -EINVAL;
+
+	LOG_ENT();
+
+#if defined(CONFIG_FB) && defined(MODS_HAS_CONSOLE_LOCK)
+	if (num_registered_fb) {
+		/* tell the os to block fb accesses */
+		MODS_PRIV private_data = pfile->private_data;
+		int i = 0;
+
+		for (i = 0; i < num_registered_fb; i++) {
+			console_lock();
+			if (registered_fb[i]->state != FBINFO_STATE_SUSPENDED) {
+				fb_set_suspend(registered_fb[i], 1);
+				private_data->mods_fb_suspended[i] = 1;
+			}
+			console_unlock();
+		}
+		ret = OK;
+	}
+#endif
+
+#if defined(MODS_HAS_CONSOLE_BINDING) && defined(MODS_HAS_CONSOLE_LOCK)
+	if (&vga_con == vc_cons[fg_console].d->vc_sw) {
+		/* if the current console is the vga console driver,
+		 * have the dummy driver take over.
+		 */
+		console_lock();
+		do_take_over_console(&dummy_con, 0, 0, 0);
+		console_unlock();
+		ret = OK;
+	}
+#endif
+
+	LOG_EXT();
+
+	return ret;
+}
+
+int esc_mods_resume_console(struct file *pfile)
+{
+	return mods_resume_console(pfile);
+}
+
+static int mods_resume_console(struct file *pfile)
+{
+	int ret = -EINVAL;
+
+	LOG_ENT();
+
+#if defined(CONFIG_FB) && defined(MODS_HAS_CONSOLE_LOCK)
+	if (num_registered_fb) {
+		MODS_PRIV private_data = pfile->private_data;
+		int i = 0;
+
+		for (i = 0; i < num_registered_fb; i++) {
+			console_lock();
+			if (private_data->mods_fb_suspended[i]) {
+				fb_set_suspend(registered_fb[i], 0);
+				private_data->mods_fb_suspended[i] = 0;
+			}
+			console_unlock();
+		}
+		ret = OK;
+	}
+#endif
+
+#if defined(MODS_HAS_CONSOLE_BINDING) && defined(MODS_HAS_CONSOLE_LOCK)
+	if (&dummy_con == vc_cons[fg_console].d->vc_sw) {
+		/* try to unbind the dummy driver,
+		 * the system driver should take over.
+		 */
+		console_lock();
+		do_unbind_con_driver(vc_cons[fg_console].d->vc_sw, 0, 0, 0);
+		console_unlock();
+		ret = OK;
+	}
+#endif
+
+	LOG_EXT();
+
+	return ret;
 }
 
 /**************
@@ -1561,6 +1659,14 @@ static long mods_krnl_ioctl(struct file  *fp,
 	case MODS_ESC_UNLOCK_CONSOLE:
 		MODS_IOCTL_VOID(MODS_ESC_UNLOCK_CONSOLE,
 			   esc_mods_unlock_console);
+		break;
+	case MODS_ESC_SUSPEND_CONSOLE:
+		MODS_IOCTL_VOID(MODS_ESC_SUSPEND_CONSOLE,
+			   esc_mods_suspend_console);
+		break;
+	case MODS_ESC_RESUME_CONSOLE:
+		MODS_IOCTL_VOID(MODS_ESC_RESUME_CONSOLE,
+			   esc_mods_resume_console);
 		break;
 
 #if defined(MODS_TEGRA)

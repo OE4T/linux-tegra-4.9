@@ -1220,8 +1220,9 @@
 			clock-names = "vi", "vi-const", "nvcsi", "nvcsilp";
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VE>;
 
-			nvidia,vi-falcon-device = <&vi_thi>;
 			nvidia,rce-rm-device = <&rce_rm>;
+			nvidia,vi-falcon-device = <&vi_thi>;
+
 			iommus = <&smmu TEGRA_SID_VI>;
 			iso-smmu;
 		};
@@ -1240,6 +1241,8 @@
 			clock-names = "vi", "vi-const", "nvcsi", "nvcsilp";
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VE>;
 
+			nvidia,rce-rm-device = <&rce_rm>;
+
 			iommus = <&smmu TEGRA_SID_VIFALC>;
 		};
 
@@ -1252,7 +1255,7 @@
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_ISPA>;
 
 			nvidia,isp-falcon-device = <&isp_thi>;
-			nvidia,rce-rm-device = <&rce_rm>;
+
 			iommus = <&smmu TEGRA_SID_ISP>;
 			dma-coherent;
 		};
@@ -1266,6 +1269,9 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_ISP>;
 			clock-names = "isp";
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_ISPA>;
+
+			nvidia,rce-rm-device = <&rce_rm>;
+
 			iommus = <&smmu TEGRA_SID_ISPFALC>;
 			dma-coherent;
 		};

@@ -48,6 +48,7 @@ nvgpu-y := \
 	common/linux/sched.o \
 	common/linux/channel.o \
 	common/linux/ce2.o \
+	common/linux/sim_gk20a.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
@@ -99,7 +100,6 @@ nvgpu-y := \
 	gk20a/tsg_gk20a.o \
 	gk20a/fecs_trace_gk20a.o \
 	gk20a/mc_gk20a.o \
-	gk20a/sim_gk20a.o \
 	gm20b/hal_gm20b.o \
 	gm20b/bus_gm20b.o \
 	gm20b/ltc_gm20b.o \

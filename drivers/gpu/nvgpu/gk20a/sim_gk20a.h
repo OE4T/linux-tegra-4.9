@@ -3,7 +3,7 @@
  *
  * GK20A sim support
  *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -27,25 +27,16 @@
 #define __SIM_GK20A_H__
 
 struct gk20a;
-struct platform_device;
 
 struct sim_gk20a {
 	struct gk20a *g;
-	struct resource *reg_mem;
-	void __iomem *regs;
-	struct {
-		struct page *page;
-		void *kvaddr;
-		u64 phys;
-	} send_bfr, recv_bfr, msg_bfr;
 	u32 send_ring_put;
 	u32 recv_ring_get;
 	u32 recv_ring_put;
 	u32 sequence_base;
 	void (*remove_support)(struct sim_gk20a *);
+	int (*esc_readl)(
+		struct gk20a *g, char *path, u32 index, u32 *data);
 };
-
-int gk20a_init_sim_support(struct gk20a *g);
-int gk20a_sim_esc_readl(struct gk20a *g, char *path, u32 index, u32 *data);
 
 #endif /*__SIM_GK20A_H__*/

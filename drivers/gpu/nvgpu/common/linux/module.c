@@ -47,6 +47,7 @@
 #include "intr.h"
 #include "cde.h"
 #include "ioctl.h"
+#include "sim_gk20a.h"
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
@@ -637,11 +638,10 @@ void gk20a_remove_support(struct gk20a *g)
 	if (g->mm.remove_support)
 		g->mm.remove_support(&g->mm);
 
-	if (g->sim.remove_support)
-		g->sim.remove_support(&g->sim);
+	if (g->sim->remove_support)
+		g->sim->remove_support(g->sim);
 
 	/* free mappings to registers, etc */
-
 	if (l->regs) {
 		iounmap(l->regs);
 		l->regs = NULL;
@@ -661,6 +661,11 @@ static int gk20a_init_support(struct platform_device *dev)
 	int err = 0;
 	struct gk20a *g = get_gk20a(&dev->dev);
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct sim_gk20a_linux *sim_linux = nvgpu_kzalloc(g, sizeof(*sim_linux));
+	if (!sim_linux)
+		goto fail;
+
+	g->sim = &sim_linux->sim;
 
 	tegra_register_idle_unidle(gk20a_do_idle, gk20a_do_unidle, g);
 
@@ -681,13 +686,13 @@ static int gk20a_init_support(struct platform_device *dev)
 	}
 
 	if (nvgpu_platform_is_simulation(g)) {
-		g->sim.g = g;
-		g->sim.regs = gk20a_ioremap_resource(dev,
+		g->sim->g = g;
+		sim_linux->regs = gk20a_ioremap_resource(dev,
 						     GK20A_SIM_IORESOURCE_MEM,
-						     &g->sim.reg_mem);
-		if (IS_ERR(g->sim.regs)) {
+						     &sim_linux->reg_mem);
+		if (IS_ERR(sim_linux->regs)) {
 			nvgpu_err(g, "failed to remap gk20a sim regs");
-			err = PTR_ERR(g->sim.regs);
+			err = PTR_ERR(sim_linux->regs);
 			goto fail;
 		}
 
@@ -703,6 +708,8 @@ static int gk20a_init_support(struct platform_device *dev)
 	return 0;
 
 fail:
+	nvgpu_kfree(g, sim_linux);
+	g->sim = NULL;
 	return err;
 }
 

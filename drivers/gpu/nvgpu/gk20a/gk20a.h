@@ -1127,7 +1127,7 @@ struct gk20a {
 	struct clk_gk20a clk;
 	struct fifo_gk20a fifo;
 	struct gr_gk20a gr;
-	struct sim_gk20a sim;
+	struct sim_gk20a *sim;
 	struct mm_gk20a mm;
 	struct nvgpu_pmu pmu;
 	struct acr_desc acr;

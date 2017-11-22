@@ -581,6 +581,30 @@ static const struct file_operations crc_fops = {
 	.release	= single_release,
 };
 
+static int dbg_hw_index_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc_sor_data *sor = m->private;
+
+	if (WARN_ON(!sor))
+		return -EINVAL;
+
+	seq_printf(m, "Hardware index: %d\n", sor->ctrl_num);
+
+	return 0;
+}
+
+static int dbg_hw_index_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_hw_index_show, inode->i_private);
+}
+
+static const struct file_operations dbg_hw_index_ops = {
+	.open = dbg_hw_index_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,
 	const char *res_name)
 {
@@ -601,6 +625,11 @@ static void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,
 
 	retval = debugfs_create_file("crc", 0644, sor->debugdir,
 		sor, &crc_fops);
+	if (!retval)
+		goto free_out;
+
+	retval = debugfs_create_file("hw_index", 0444, sor->debugdir,
+				sor, &dbg_hw_index_ops);
 	if (!retval)
 		goto free_out;
 

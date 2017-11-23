@@ -17,6 +17,8 @@
 #include "common/tegra194-p2822-0000-a00.dtsi"
 #include "common/tegra194-power-tree-p2888-0001-p2822-1000.dtsi"
 / {
+	nvidia,dtsfilename = __FILE__;
+
 	chosen {
 		bootargs ="console=ttyS2,115200 earlycon=uart8250,mmio32,0x0c280000";
 		stdout-path = &uartc;

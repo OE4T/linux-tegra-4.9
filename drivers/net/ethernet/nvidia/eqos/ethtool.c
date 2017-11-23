@@ -340,6 +340,9 @@ static void eqos_get_pauseparam(struct net_device *dev,
 
 	pr_debug("-->eqos_get_pauseparam\n");
 
+	if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_DISABLED)
+		return;
+
 	pause->rx_pause = 0;
 	pause->tx_pause = 0;
 
@@ -387,6 +390,9 @@ static int eqos_set_pauseparam(struct net_device *dev,
 	int new_pause = EQOS_FLOW_CTRL_OFF;
 	unsigned int data;
 	int ret = 0;
+
+	if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_DISABLED)
+		return -EOPNOTSUPP;
 
 	pr_debug("-->eqos_set_pauseparam: "
 	      "autoneg = %d tx_pause = %d rx_pause = %d\n",

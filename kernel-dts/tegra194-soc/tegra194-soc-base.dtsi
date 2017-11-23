@@ -602,7 +602,7 @@
 		clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 		clock-names = "se";
 		pka1-rsa-priority = <300>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	host1x: host1x {
@@ -1351,7 +1351,7 @@
 			iommus = <&smmu TEGRA_SID_SE>;
 			dma-coherent;
 
-			status = "okay";
+			status = "disabled";
 		};
 
 		se@15820000 {
@@ -1366,7 +1366,7 @@
 			iommus = <&smmu TEGRA_SID_SE1>;
 			dma-coherent;
 
-			status = "okay";
+			status = "disabled";
 		};
 
 		se@15830000 {
@@ -1381,7 +1381,7 @@
 			iommus = <&smmu TEGRA_SID_SE2>;
 			dma-coherent;
 
-			status = "okay";
+			status = "disabled";
 		};
 
 		se@15840000 {
@@ -1396,7 +1396,7 @@
 			iommus = <&smmu TEGRA_SID_SE3>;
 			dma-coherent;
 
-			status = "okay";
+			status = "disabled";
 		};
 	}; // host1x
 

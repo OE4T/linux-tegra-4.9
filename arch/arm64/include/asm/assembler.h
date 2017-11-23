@@ -443,8 +443,11 @@ alternative_else_nop_endif
 #ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
 alternative_if ARM64_IC_IALLU_ON_CTX_CHANGE
 	/*ic	iallu*/
-	/*bl invalidate_btb*/
-	smc	#0
+	sub	sp, sp, #S_FRAME_SIZE
+	str	lr, [sp, #S_LR]
+	bl invalidate_btb
+	ldr	lr, [sp, #S_LR]
+	add	sp, sp, #S_FRAME_SIZE		// restore sp
 	/* DSB in __switch_to */
 alternative_else_nop_endif
 #endif

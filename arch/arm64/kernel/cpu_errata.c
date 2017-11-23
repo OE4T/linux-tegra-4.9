@@ -16,10 +16,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/moduleparam.h>
 #include <linux/types.h>
 #include <asm/cpu.h>
 #include <asm/cputype.h>
 #include <asm/cpufeature.h>
+
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
+static bool btb_inv_enable = 1;
+
+static int btb_inv_set(const char *arg, const struct kernel_param *kp)
+{
+	param_set_int(arg, kp);
+
+	if (btb_inv_enable)
+		pr_info("btb inv war enabled\n");
+	else
+		pr_info("btb inv war disabled\n");
+	return 0;
+}
+
+static int btb_inv_get(char *buff, const struct kernel_param *kp)
+{
+	return param_get_int(buff, kp);
+}
+
+static struct kernel_param_ops btb_inv_ops = {
+	.get = btb_inv_get,
+	.set = btb_inv_set,
+};
+
+module_param_cb(btb_inv_enable, &btb_inv_ops, &btb_inv_enable, 0644);
+
+#endif
 
 static bool __maybe_unused
 is_affected_midr_range(const struct arm64_cpu_capabilities *entry, int scope)
@@ -52,6 +81,13 @@ static int cpu_enable_trap_ctr_access(void *__unused)
 	.midr_model = model, \
 	.midr_range_min = min, \
 	.midr_range_max = max
+
+#define MIDR_ALL_VERSIONS(model) \
+	.def_scope = SCOPE_LOCAL_CPU, \
+	.matches = is_affected_midr_range, \
+	.midr_model = model, \
+	.midr_range_min = 0, \
+	.midr_range_max = (MIDR_VARIANT_MASK | MIDR_REVISION_MASK)
 
 const struct arm64_cpu_capabilities arm64_errata[] = {
 #if	defined(CONFIG_ARM64_ERRATUM_826319) || \
@@ -130,6 +166,16 @@ const struct arm64_cpu_capabilities arm64_errata[] = {
 		.def_scope = SCOPE_LOCAL_CPU,
 		.enable = cpu_enable_trap_ctr_access,
 	},
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
+	{
+		.capability = ARM64_IC_IALLU_ON_CTX_CHANGE,
+		MIDR_ALL_VERSIONS(MIDR_CORTEX_A57),
+	},
+	{
+		.capability = ARM64_IC_IALLU_ON_CTX_CHANGE,
+		MIDR_ALL_VERSIONS(MIDR_CORTEX_A72),
+	},
+#endif
 	{
 	}
 };
@@ -162,4 +208,23 @@ void update_cpu_errata_workarounds(void)
 void __init enable_errata_workarounds(void)
 {
 	enable_cpu_capabilities(arm64_errata);
+}
+
+#define ARM_STD_SVC_VERSION		0x8400ff03
+uint32_t invoke_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3);
+
+void invalidate_btb(void)
+{
+	if (btb_inv_enable) {
+		int retval = -EINVAL;
+
+		pr_info_once("btb inv war enabled\n");
+		retval = invoke_smc(ARM_STD_SVC_VERSION,
+					0, 0, 0);
+
+		if (retval < 0) {
+			pr_err_once("%s: smc failed, err (0x%x)\n",
+				__func__, retval);
+		}
+	}
 }

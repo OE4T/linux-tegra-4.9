@@ -223,6 +223,8 @@ static void show_map(struct task_struct *tsk, u64 addr)
 		return;
 	pr_alert("Library at 0x%llx: 0x%lx %s\n", addr, vma->vm_start, p);
 }
+
+void invalidate_btb(void);
 /*
  * Something tried to access memory that isn't in our memory map. User mode
  * accesses just cause a SIGSEGV
@@ -255,6 +257,11 @@ static void __do_user_fault(struct task_struct *tsk, unsigned long addr,
 	si.si_errno = 0;
 	si.si_code = code;
 	si.si_addr = (void __user *)addr;
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
+	asm(ALTERNATIVE("nop; nop", "bl invalidate_btb; dsb nsh",
+			ARM64_IC_IALLU_ON_CTX_CHANGE));
+#endif
+
 	force_sig_info(sig, &si, tsk);
 }
 

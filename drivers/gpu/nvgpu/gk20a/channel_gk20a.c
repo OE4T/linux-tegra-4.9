@@ -360,24 +360,6 @@ static void gk20a_wait_until_counter_is_N(
 	}
 }
 
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-void gk20a_channel_free_cycle_stats_buffer(struct channel_gk20a *ch)
-{
-	/* disable existing cyclestats buffer */
-	nvgpu_mutex_acquire(&ch->cyclestate.cyclestate_buffer_mutex);
-	if (ch->cyclestate.cyclestate_buffer_handler) {
-		dma_buf_vunmap(ch->cyclestate.cyclestate_buffer_handler,
-				ch->cyclestate.cyclestate_buffer);
-		dma_buf_put(ch->cyclestate.cyclestate_buffer_handler);
-		ch->cyclestate.cyclestate_buffer_handler = NULL;
-		ch->cyclestate.cyclestate_buffer = NULL;
-		ch->cyclestate.cyclestate_buffer_size = 0;
-	}
-	nvgpu_mutex_release(&ch->cyclestate.cyclestate_buffer_mutex);
-}
-
-#endif
-
 /* call ONLY when no references to the channel exist: after the last put */
 static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 {
@@ -489,10 +471,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	nvgpu_dma_unmap_free(ch_vm, &ch->gpfifo.mem);
 	nvgpu_big_free(g, ch->gpfifo.pipe);
 	memset(&ch->gpfifo, 0, sizeof(struct gpfifo_desc));
-
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	gk20a_channel_free_cycle_stats_buffer(ch);
-#endif
 
 	channel_gk20a_free_priv_cmdbuf(ch);
 

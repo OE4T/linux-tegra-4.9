@@ -102,17 +102,35 @@ struct channel_priv {
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 
+void gk20a_channel_free_cycle_stats_buffer(struct channel_gk20a *ch)
+{
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+
+	/* disable existing cyclestats buffer */
+	nvgpu_mutex_acquire(&ch->cyclestate.cyclestate_buffer_mutex);
+	if (priv->cyclestate_buffer_handler) {
+		dma_buf_vunmap(priv->cyclestate_buffer_handler,
+				ch->cyclestate.cyclestate_buffer);
+		dma_buf_put(priv->cyclestate_buffer_handler);
+		priv->cyclestate_buffer_handler = NULL;
+		ch->cyclestate.cyclestate_buffer = NULL;
+		ch->cyclestate.cyclestate_buffer_size = 0;
+	}
+	nvgpu_mutex_release(&ch->cyclestate.cyclestate_buffer_mutex);
+}
+
 static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 		       struct nvgpu_cycle_stats_args *args)
 {
 	struct dma_buf *dmabuf;
 	void *virtual_address;
+	struct nvgpu_channel_linux *priv = ch->os_priv;
 
 	/* is it allowed to handle calls for current GPU? */
 	if (!nvgpu_is_enabled(ch->g, NVGPU_SUPPORT_CYCLE_STATS))
 		return -ENOSYS;
 
-	if (args->dmabuf_fd && !ch->cyclestate.cyclestate_buffer_handler) {
+	if (args->dmabuf_fd && !priv->cyclestate_buffer_handler) {
 
 		/* set up new cyclestats buffer */
 		dmabuf = dma_buf_get(args->dmabuf_fd);
@@ -122,18 +140,16 @@ static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 		if (!virtual_address)
 			return -ENOMEM;
 
-		ch->cyclestate.cyclestate_buffer_handler = dmabuf;
+		priv->cyclestate_buffer_handler = dmabuf;
 		ch->cyclestate.cyclestate_buffer = virtual_address;
 		ch->cyclestate.cyclestate_buffer_size = dmabuf->size;
 		return 0;
 
-	} else if (!args->dmabuf_fd &&
-			ch->cyclestate.cyclestate_buffer_handler) {
+	} else if (!args->dmabuf_fd && priv->cyclestate_buffer_handler) {
 		gk20a_channel_free_cycle_stats_buffer(ch);
 		return 0;
 
-	} else if (!args->dmabuf_fd &&
-			!ch->cyclestate.cyclestate_buffer_handler) {
+	} else if (!args->dmabuf_fd && !priv->cyclestate_buffer_handler) {
 		/* no requst from GL */
 		return 0;
 

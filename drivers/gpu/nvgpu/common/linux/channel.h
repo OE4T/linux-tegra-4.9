@@ -17,6 +17,7 @@
 #define __NVGPU_CHANNEL_H__
 
 #include <linux/workqueue.h>
+#include <linux/dma-buf.h>
 
 #include <nvgpu/types.h>
 
@@ -56,6 +57,8 @@ struct nvgpu_channel_linux {
 
 	struct nvgpu_channel_completion_cb completion_cb;
 	struct nvgpu_error_notifier error_notifier;
+
+	struct dma_buf *cyclestate_buffer_handler;
 };
 
 int nvgpu_init_channel_support_linux(struct nvgpu_os_linux *l);

@@ -37,6 +37,7 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 		struct nvgpu_channel_open_args *args);
 
 int gk20a_channel_free_cycle_stats_snapshot(struct channel_gk20a *ch);
+void gk20a_channel_free_cycle_stats_buffer(struct channel_gk20a *ch);
 
 extern const struct file_operations gk20a_event_id_ops;
 extern const struct file_operations gk20a_channel_ops;

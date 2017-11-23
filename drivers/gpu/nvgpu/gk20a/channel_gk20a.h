@@ -253,10 +253,9 @@ struct channel_gk20a {
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {
-	void *cyclestate_buffer;
-	u32 cyclestate_buffer_size;
-	struct dma_buf *cyclestate_buffer_handler;
-	struct nvgpu_mutex cyclestate_buffer_mutex;
+		void *cyclestate_buffer;
+		u32 cyclestate_buffer_size;
+		struct nvgpu_mutex cyclestate_buffer_mutex;
 	} cyclestate;
 
 	struct nvgpu_mutex cs_client_mutex;
@@ -370,7 +369,6 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		unsigned int num_entries,
 		unsigned int num_inflight_jobs,
 		u32 flags);
-void gk20a_channel_free_cycle_stats_buffer(struct channel_gk20a *ch);
 
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g);
 

@@ -20,7 +20,7 @@
 #include <linux/of_platform.h>
 #include <linux/debugfs.h>
 #include <soc/tegra/chip-id.h>
-#include <linux/t19x_mce.h>
+#include <linux/tegra-mce.h>
 #include <linux/t194_nvg.h>
 #include <linux/suspend.h>
 #include <linux/ktime.h>
@@ -76,7 +76,7 @@ static bool check_mce_version(void)
 	u32 mce_version_major, mce_version_minor;
 	int err;
 
-	err = t19x_mce_read_versions(&mce_version_major, &mce_version_minor);
+	err = tegra_mce_read_versions(&mce_version_major, &mce_version_minor);
 	if (!err && (mce_version_major >= TEGRA_NVG_VERSION_MAJOR))
 		return true;
 	else
@@ -86,8 +86,8 @@ static bool check_mce_version(void)
 static void t19x_cpu_enter_c6(u32 wake_time)
 {
 	cpu_pm_enter();
-	t19x_mce_update_cstate_info(0, 0, 0, 0, CORE_WAKE_MASK, 1);
-	t19x_mce_enter_cstate(TEGRA_NVG_CORE_C6, wake_time);
+	tegra_mce_update_cstate_info(0, 0, 0, 0, CORE_WAKE_MASK, 1);
+	tegra_mce_enter_cstate(TEGRA_NVG_CORE_C6, wake_time);
 	asm volatile("wfi\n");
 	cpu_pm_exit();
 }
@@ -116,7 +116,7 @@ static int t19x_cpu_enter_state(
 	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	if (testmode) {
-		t19x_mce_update_cstate_info(forced_cluster_idle_state,
+		tegra_mce_update_cstate_info(forced_cluster_idle_state,
 				0, 0, 0, 0, 0);
 		if (forced_idle_state >= t19x_cpu_idle_driver.state_count) {
 			pr_err("%s: Requested invalid forced idle state\n",
@@ -257,7 +257,7 @@ static int forced_idle_write(void *data, u64 val)
 	tick_program_event(sleep, true);
 
 	pmstate = forced_idle_state;
-	t19x_mce_update_cstate_info(forced_cluster_idle_state, 0, 0, 0, 0, 0);
+	tegra_mce_update_cstate_info(forced_cluster_idle_state, 0, 0, 0, 0, 0);
 
 	if (pmstate == T19x_CPUIDLE_C7_STATE)
 		t19x_cpu_enter_c7(wake_time);
@@ -289,7 +289,7 @@ static void program_single_crossover(void *data)
 {
 	struct xover_smp_call_data *xover_data =
 		(struct xover_smp_call_data *)data;
-	t19x_mce_update_crossover_time(xover_data->index,
+	tegra_mce_update_crossover_time(xover_data->index,
 					xover_data->value * tsc_per_usec);
 }
 
@@ -503,7 +503,7 @@ static void send_crossover(void *data)
 		for (i = 0; i < sizeof(table1)/sizeof(table1[0]); i++) {
 			if (of_property_read_u32(child,
 				table1[i].name, &value) == 0)
-				t19x_mce_update_crossover_time
+				tegra_mce_update_crossover_time
 					(table1[i].index, value * tsc_per_usec);
 	}
 }
@@ -531,14 +531,14 @@ static void program_cc_state(void *data)
 {
 	u32 *cc_state = (u32 *)data;
 
-	t19x_mce_update_cstate_info(*cc_state, 0, 0, 0, 0, 0);
+	tegra_mce_update_cstate_info(*cc_state, 0, 0, 0, 0, 0);
 }
 
 static void program_cg_state(void *data)
 {
 	u32 *cg_state = (u32 *)data;
 
-	t19x_mce_update_cstate_info(0, *cg_state, 0, 0, 0, 0);
+	tegra_mce_update_cstate_info(0, *cg_state, 0, 0, 0, 0);
 }
 
 static int tegra_suspend_notify_callback(struct notifier_block *nb,

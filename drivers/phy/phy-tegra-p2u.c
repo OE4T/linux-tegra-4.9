@@ -19,6 +19,11 @@
 #include <linux/io.h>
 #include <linux/of_platform.h>
 
+#define P2U_PERIODIC_EQ_CTRL_GEN3	0xc0
+#define P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN	BIT(1)
+#define P2U_PERIODIC_EQ_CTRL_GEN4	0xc4
+#define P2U_PERIODIC_EQ_CTRL_GEN4_INIT_PRESET_EQ_TRAIN_EN	BIT(1)
+
 struct tegra_p2u {
 	void __iomem		*base;
 	struct device		*dev;
@@ -31,6 +36,17 @@ static int tegra_p2u_power_off(struct phy *x)
 
 static int tegra_p2u_power_on(struct phy *x)
 {
+	u32 val;
+	struct tegra_p2u *phy = phy_get_drvdata(x);
+
+	val = readl(phy->base + P2U_PERIODIC_EQ_CTRL_GEN3);
+	val |= P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN;
+	writel(val, phy->base + P2U_PERIODIC_EQ_CTRL_GEN3);
+
+	val = readl(phy->base + P2U_PERIODIC_EQ_CTRL_GEN4);
+	val |= P2U_PERIODIC_EQ_CTRL_GEN4_INIT_PRESET_EQ_TRAIN_EN;
+	writel(val, phy->base + P2U_PERIODIC_EQ_CTRL_GEN4);
+
 	return 0;
 }
 

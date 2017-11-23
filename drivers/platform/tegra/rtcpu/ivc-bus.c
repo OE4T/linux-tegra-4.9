@@ -230,6 +230,12 @@ static void tegra_ivc_channel_notify(struct tegra_ivc_channel *chan)
 {
 	const struct tegra_ivc_channel_ops *ops;
 
+	if (tegra_ivc_channel_notified(&chan->ivc) != 0)
+		return;
+
+	if (!chan->is_ready)
+		return;
+
 	rcu_read_lock();
 	ops = rcu_dereference(chan->ops);
 
@@ -444,9 +450,11 @@ static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
 		chan->is_ready = is_ready;
 
 		if (drv != NULL) {
-			ops = drv->ops.channel;
+			rcu_read_lock();
+			ops = rcu_dereference(chan->ops);
 			if (ops->ready != NULL)
 				ops->ready(chan, is_ready);
+			rcu_read_unlock();
 		} else {
 			dev_warn(dev, "ivc channel driver missing\n");
 		}
@@ -489,7 +497,7 @@ static int tegra_ivc_bus_parse_regions(struct tegra_ivc_bus *bus,
 		struct device_node *ch_node;
 		struct tegra_ivc_region *region = &bus->regions[i];
 		u32 nframes, frame_size, size = CAMRTC_IVC_CONFIG_SIZE;
-		int ret;
+		int ret = -ENODEV;
 
 		if (reg_spec.args_count < 3) {
 			of_node_put(reg_spec.np);
@@ -606,6 +614,9 @@ void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus, bool online)
 		return;
 
 	device_for_each_child(&bus->dev, &online, tegra_ivc_bus_ready_child);
+
+	if (online)
+		tegra_hsp_notify(&bus->dev);
 }
 EXPORT_SYMBOL(tegra_ivc_bus_ready);
 

@@ -51,8 +51,8 @@
 #include "soc/tegra/camrtc-commands.h"
 #include "soc/tegra/camrtc-ctrl-commands.h"
 
-#ifndef RTCPU_FW_SM3_VERSION
-#define RTCPU_FW_SM3_VERSION (3)
+#ifndef RTCPU_DRIVER_SM5_VERSION
+#define RTCPU_DRIVER_SM5_VERSION U32_C(5)
 #endif
 
 enum tegra_cam_rtcpu_id {
@@ -892,7 +892,7 @@ static int tegra_camrtc_boot_sync(struct device *dev)
 		return -EIO;
 	}
 
-	command = RTCPU_COMMAND(FW_VERSION, RTCPU_FW_SM3_VERSION);
+	command = RTCPU_COMMAND(FW_VERSION, RTCPU_DRIVER_SM5_VERSION);
 	ret = tegra_camrtc_command(dev, command, 0);
 	if (ret < 0)
 		return ret;
@@ -1198,7 +1198,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		goto fail;
 
 	timeout = 2000;
-	of_property_read_u32(dev->of_node, NV(cmd-timeout), &timeout);
+	(void)of_property_read_u32(dev->of_node, NV(cmd-timeout), &timeout);
 	rtcpu->cmd.timeout = msecs_to_jiffies(timeout);
 
 	timeout = 60000;

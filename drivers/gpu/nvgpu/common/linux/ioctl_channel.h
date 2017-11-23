@@ -15,10 +15,19 @@
 
 #include <linux/fs.h>
 
+#include "gk20a/css_gr_gk20a.h"
+
 struct inode;
 struct file;
 struct gk20a;
 struct nvgpu_channel_open_args;
+
+struct gk20a_cs_snapshot_client_linux {
+	struct gk20a_cs_snapshot_client cs_client;
+
+	u32			dmabuf_fd;
+	struct dma_buf		*dma_handler;
+};
 
 int gk20a_channel_open(struct inode *inode, struct file *filp);
 int gk20a_channel_release(struct inode *inode, struct file *filp);
@@ -26,6 +35,8 @@ long gk20a_channel_ioctl(struct file *filp,
 	unsigned int cmd, unsigned long arg);
 int gk20a_channel_open_ioctl(struct gk20a *g,
 		struct nvgpu_channel_open_args *args);
+
+int gk20a_channel_free_cycle_stats_snapshot(struct channel_gk20a *ch);
 
 extern const struct file_operations gk20a_event_id_ops;
 extern const struct file_operations gk20a_channel_ops;

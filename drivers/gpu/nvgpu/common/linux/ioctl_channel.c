@@ -42,6 +42,11 @@
 #include "os_linux.h"
 #include "ctxsw_trace.h"
 
+/* the minimal size of client buffer */
+#define CSS_MIN_CLIENT_SNAPSHOT_SIZE				\
+		(sizeof(struct gk20a_cs_snapshot_fifo) +	\
+		sizeof(struct gk20a_cs_snapshot_fifo_entry) * 256)
+
 static const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
 {
 	switch (graphics_preempt_mode) {
@@ -157,18 +162,92 @@ static int gk20a_attach_cycle_stats_snapshot(struct channel_gk20a *ch,
 				u32 perfmon_id_count,
 				u32 *perfmon_id_start)
 {
-	int ret;
+	int ret = 0;
+	struct gk20a *g = ch->g;
+	struct gk20a_cs_snapshot_client_linux *client_linux;
+	struct gk20a_cs_snapshot_client *client;
 
 	nvgpu_mutex_acquire(&ch->cs_client_mutex);
 	if (ch->cs_client) {
-		ret = -EEXIST;
-	} else {
-		ret = gr_gk20a_css_attach(ch,
-					dmabuf_fd,
-					perfmon_id_count,
-					perfmon_id_start,
-					&ch->cs_client);
+		nvgpu_mutex_release(&ch->cs_client_mutex);
+		return -EEXIST;
 	}
+
+	client_linux = nvgpu_kzalloc(g, sizeof(*client_linux));
+	if (!client_linux) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	client_linux->dmabuf_fd   = dmabuf_fd;
+	client_linux->dma_handler = dma_buf_get(client_linux->dmabuf_fd);
+	if (IS_ERR(client_linux->dma_handler)) {
+		ret = PTR_ERR(client_linux->dma_handler);
+		client_linux->dma_handler = NULL;
+		goto err_free;
+	}
+
+	client = &client_linux->cs_client;
+	client->snapshot_size = client_linux->dma_handler->size;
+	if (client->snapshot_size < CSS_MIN_CLIENT_SNAPSHOT_SIZE) {
+		ret = -ENOMEM;
+		goto err_put;
+	}
+
+	client->snapshot = (struct gk20a_cs_snapshot_fifo *)
+					dma_buf_vmap(client_linux->dma_handler);
+	if (!client->snapshot) {
+		ret = -ENOMEM;
+		goto err_put;
+	}
+
+	ch->cs_client = client;
+
+	ret = gr_gk20a_css_attach(ch,
+				perfmon_id_count,
+				perfmon_id_start,
+				ch->cs_client);
+
+	nvgpu_mutex_release(&ch->cs_client_mutex);
+
+	return ret;
+
+err_put:
+	dma_buf_put(client_linux->dma_handler);
+err_free:
+	nvgpu_kfree(g, client_linux);
+err:
+	nvgpu_mutex_release(&ch->cs_client_mutex);
+	return ret;
+}
+
+int gk20a_channel_free_cycle_stats_snapshot(struct channel_gk20a *ch)
+{
+	int ret;
+	struct gk20a_cs_snapshot_client_linux *client_linux;
+
+	nvgpu_mutex_acquire(&ch->cs_client_mutex);
+	if (!ch->cs_client) {
+		nvgpu_mutex_release(&ch->cs_client_mutex);
+		return 0;
+	}
+
+	client_linux = container_of(ch->cs_client,
+				struct gk20a_cs_snapshot_client_linux,
+				cs_client);
+
+	ret = gr_gk20a_css_detach(ch, ch->cs_client);
+
+	if (client_linux->dma_handler) {
+		if (ch->cs_client->snapshot)
+			dma_buf_vunmap(client_linux->dma_handler,
+					ch->cs_client->snapshot);
+		dma_buf_put(client_linux->dma_handler);
+	}
+
+	ch->cs_client = NULL;
+	nvgpu_kfree(ch->g, client_linux);
+
 	nvgpu_mutex_release(&ch->cs_client_mutex);
 
 	return ret;

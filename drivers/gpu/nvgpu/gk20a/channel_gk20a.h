@@ -371,7 +371,6 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		unsigned int num_inflight_jobs,
 		u32 flags);
 void gk20a_channel_free_cycle_stats_buffer(struct channel_gk20a *ch);
-int gk20a_channel_free_cycle_stats_snapshot(struct channel_gk20a *ch);
 
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g);
 

@@ -376,22 +376,6 @@ void gk20a_channel_free_cycle_stats_buffer(struct channel_gk20a *ch)
 	nvgpu_mutex_release(&ch->cyclestate.cyclestate_buffer_mutex);
 }
 
-int gk20a_channel_free_cycle_stats_snapshot(struct channel_gk20a *ch)
-{
-	int ret;
-
-	nvgpu_mutex_acquire(&ch->cs_client_mutex);
-	if (ch->cs_client) {
-		ret = gr_gk20a_css_detach(ch, ch->cs_client);
-		ch->cs_client = NULL;
-	} else {
-		ret = 0;
-	}
-	nvgpu_mutex_release(&ch->cs_client_mutex);
-
-	return ret;
-}
-
 #endif
 
 /* call ONLY when no references to the channel exist: after the last put */
@@ -508,7 +492,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gk20a_channel_free_cycle_stats_buffer(ch);
-	gk20a_channel_free_cycle_stats_snapshot(ch);
 #endif
 
 	channel_gk20a_free_priv_cmdbuf(ch);

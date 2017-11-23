@@ -29,6 +29,7 @@
 #include "gk20a/gk20a.h"
 
 #include "channel.h"
+#include "ioctl_channel.h"
 #include "os_linux.h"
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
@@ -242,6 +243,10 @@ static void nvgpu_channel_open_linux(struct channel_gk20a *ch)
 static void nvgpu_channel_close_linux(struct channel_gk20a *ch)
 {
 	nvgpu_channel_work_completion_clear(ch);
+
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	gk20a_channel_free_cycle_stats_snapshot(ch);
+#endif
 }
 
 static int nvgpu_channel_alloc_linux(struct gk20a *g, struct channel_gk20a *ch)

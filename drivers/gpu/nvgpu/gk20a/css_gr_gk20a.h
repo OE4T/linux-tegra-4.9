@@ -28,6 +28,10 @@
 /* the minimal size of HW buffer - should be enough to avoid HW overflows */
 #define CSS_MIN_HW_SNAPSHOT_SIZE	(8 * 1024 * 1024)
 
+struct gk20a;
+struct gr_gk20a;
+struct channel_gk20a;
+
 /* cycle stats fifo header (must match NvSnapshotBufferFifo) */
 struct gk20a_cs_snapshot_fifo {
 	/* layout description of the buffer */
@@ -95,8 +99,6 @@ struct gk20a_cs_snapshot_fifo_entry {
 /* cycle stats snapshot client data (e.g. associated with channel) */
 struct gk20a_cs_snapshot_client {
 	struct nvgpu_list_node	list;
-	u32			dmabuf_fd;
-	struct dma_buf		*dma_handler;
 	struct gk20a_cs_snapshot_fifo	*snapshot;
 	u32			snapshot_size;
 	u32			perfmon_start;

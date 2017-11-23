@@ -45,11 +45,6 @@
 		((cl)->perfmon_start <= (pm) &&			\
 		((pm) - (cl)->perfmon_start) < (cl)->perfmon_count)
 
-/* the minimal size of client buffer */
-#define CSS_MIN_CLIENT_SNAPSHOT_SIZE				\
-		(sizeof(struct gk20a_cs_snapshot_fifo) +	\
-		sizeof(struct gk20a_cs_snapshot_fifo_entry) * 256)
-
 /* address of fifo entry by offset */
 #define CSS_FIFO_ENTRY(fifo, offs)				\
 	((struct gk20a_cs_snapshot_fifo_entry *)(((char *)(fifo)) + (offs)))
@@ -452,51 +447,15 @@ static int css_gr_free_client_data(struct gk20a *g,
 			ret = -EINVAL;
 	}
 
-	if (client->dma_handler) {
-		if (client->snapshot)
-			dma_buf_vunmap(client->dma_handler, client->snapshot);
-		dma_buf_put(client->dma_handler);
-	}
-
-	nvgpu_kfree(g, client);
-
 	return ret;
 }
 
 static int css_gr_create_client_data(struct gk20a *g,
 			struct gk20a_cs_snapshot *data,
-			u32 dmabuf_fd, u32 perfmon_count,
-			struct gk20a_cs_snapshot_client **client)
+			u32 perfmon_count,
+			struct gk20a_cs_snapshot_client *cur)
 {
-	struct gk20a_cs_snapshot_client *cur;
 	int ret = 0;
-
-	cur = nvgpu_kzalloc(g, sizeof(*cur));
-	if (!cur) {
-		ret = -ENOMEM;
-		goto failed;
-	}
-
-	cur->dmabuf_fd   = dmabuf_fd;
-	cur->dma_handler = dma_buf_get(cur->dmabuf_fd);
-	if (IS_ERR(cur->dma_handler)) {
-		ret = PTR_ERR(cur->dma_handler);
-		cur->dma_handler = NULL;
-		goto failed;
-	}
-
-	cur->snapshot = (struct gk20a_cs_snapshot_fifo *)
-					dma_buf_vmap(cur->dma_handler);
-	if (!cur->snapshot) {
-		ret = -ENOMEM;
-		goto failed;
-	}
-
-	cur->snapshot_size = cur->dma_handler->size;
-	if (cur->snapshot_size < CSS_MIN_CLIENT_SNAPSHOT_SIZE) {
-		ret = -ENOMEM;
-		goto failed;
-	}
 
 	memset(cur->snapshot, 0, sizeof(*cur->snapshot));
 	cur->snapshot->start = sizeof(*cur->snapshot);
@@ -523,12 +482,10 @@ static int css_gr_create_client_data(struct gk20a *g,
 	}
 
 	nvgpu_list_add_tail(&cur->list, &data->clients);
-	*client = cur;
 
 	return 0;
 
 failed:
-	*client = NULL;
 	if (cur)
 		css_gr_free_client_data(g, data, cur);
 
@@ -537,10 +494,9 @@ failed:
 
 
 int gr_gk20a_css_attach(struct channel_gk20a *ch,
-			u32 dmabuf_fd,
 			u32 perfmon_count,
 			u32 *perfmon_start,
-			struct gk20a_cs_snapshot_client **cs_client)
+			struct gk20a_cs_snapshot_client *cs_client)
 {
 	int ret = 0;
 	struct gk20a *g = ch->g;
@@ -555,7 +511,6 @@ int gr_gk20a_css_attach(struct channel_gk20a *ch,
 		return -EINVAL;
 
 	gr = &g->gr;
-	*cs_client = NULL;
 
 	nvgpu_mutex_acquire(&gr->cs_lock);
 
@@ -564,18 +519,17 @@ int gr_gk20a_css_attach(struct channel_gk20a *ch,
 		goto failed;
 
 	ret = css_gr_create_client_data(g, gr->cs_data,
-				     dmabuf_fd,
 				     perfmon_count,
 				     cs_client);
 	if (ret)
 		goto failed;
 
-	ret = g->ops.css.enable_snapshot(ch, *cs_client);
+	ret = g->ops.css.enable_snapshot(ch, cs_client);
 	if (ret)
 		goto failed;
 
 	if (perfmon_start)
-		*perfmon_start = (*cs_client)->perfmon_start;
+		*perfmon_start = cs_client->perfmon_start;
 
 	nvgpu_mutex_release(&gr->cs_lock);
 
@@ -583,9 +537,9 @@ int gr_gk20a_css_attach(struct channel_gk20a *ch,
 
 failed:
 	if (gr->cs_data) {
-		if (*cs_client) {
-			css_gr_free_client_data(g, gr->cs_data, *cs_client);
-			*cs_client = NULL;
+		if (cs_client) {
+			css_gr_free_client_data(g, gr->cs_data, cs_client);
+			cs_client = NULL;
 		}
 
 		if (nvgpu_list_empty(&gr->cs_data->clients))

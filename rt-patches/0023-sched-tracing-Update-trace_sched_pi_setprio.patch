@@ -1,4 +1,4 @@
-From d4a7842d54c5a9974971954aa6ab9012d2187dbb Mon Sep 17 00:00:00 2001
+From 7d53f9f1b7b3fc9ec175fc2e9e4f7bfdd9545392 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:12 +0100
 Subject: [PATCH 023/336] sched,tracing: Update trace_sched_pi_setprio()
@@ -99,10 +99,10 @@ index 3412605..360b762 100644
  
  	TP_printk("comm=%s pid=%d oldprio=%d newprio=%d",
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 02a1d5d..2d694d7 100644
+index 9b951fc..870b7a9 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3879,7 +3879,7 @@ void rt_mutex_setprio(struct task_struct *p, struct task_struct *pi_task)
+@@ -3880,7 +3880,7 @@ void rt_mutex_setprio(struct task_struct *p, struct task_struct *pi_task)
  		goto out_unlock;
  	}
  

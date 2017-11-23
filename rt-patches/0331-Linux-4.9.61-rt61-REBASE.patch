@@ -1,0 +1,20 @@
+From 8a15ece8b0b1cdd46a6fe6f96895ae5fd7fca257 Mon Sep 17 00:00:00 2001
+From: Steven Rostedt <rostedt@goodmis.org>
+Date: Wed, 5 Jul 2017 13:15:02 -0400
+Subject: [PATCH 331/336] Linux 4.9.61-rt61 REBASE
+
+Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 9a218ca..7549346 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt23
++-rt51
+-- 
+2.1.4
+

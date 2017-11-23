@@ -1,4 +1,4 @@
-From 51e24f658e8334dccea728fcb700f5998857ce38 Mon Sep 17 00:00:00 2001
+From fc717fb7203c7c4cf6fde53f1500daf287636032 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
 Subject: [PATCH 019/336] sched/rtmutex/deadline: Fix a PI crash for deadline
@@ -168,10 +168,10 @@ index 440469b..3c4e5bf 100644
  
  /*
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 10df45b..b25172c 100644
+index 0248523..feb784b 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3840,6 +3840,8 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
+@@ -3841,6 +3841,8 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
  		goto out_unlock;
  	}
  

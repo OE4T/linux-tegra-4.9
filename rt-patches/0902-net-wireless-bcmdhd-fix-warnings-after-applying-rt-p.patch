@@ -1,7 +1,7 @@
-From 31a1e804bbd90cd8945e4093a5648233c6cffafc Mon Sep 17 00:00:00 2001
+From 47668001f7032a4f698d538d43c99730b30192b5 Mon Sep 17 00:00:00 2001
 From: Manikanta <mmaddireddy@nvidia.com>
 Date: Tue, 27 Jun 2017 14:57:52 +0530
-Subject: [PATCH 335/336] net: wireless: bcmdhd: fix warnings after applying
+Subject: [PATCH 334/336] net: wireless: bcmdhd: fix warnings after applying
  rt-patches
 
 Issue: Member type in struct completion is changed from

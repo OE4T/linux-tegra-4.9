@@ -1,4 +1,4 @@
-From e1c91960559745927136c90bd7464d45f8415324 Mon Sep 17 00:00:00 2001
+From 171b2857cda0b1ced0d3d417d6b26a53d097d6cc Mon Sep 17 00:00:00 2001
 From: "Darren Hart (VMware)" <dvhart@infradead.org>
 Date: Fri, 14 Apr 2017 15:31:38 -0700
 Subject: [PATCH 029/336] futex: Clarify mark_wake_futex memory barrier usage

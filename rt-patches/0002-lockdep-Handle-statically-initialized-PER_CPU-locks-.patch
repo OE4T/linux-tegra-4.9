@@ -1,4 +1,4 @@
-From 239d6ad108a570115cc8cbaec1b13ffd19de67a1 Mon Sep 17 00:00:00 2001
+From fbe05786aaa0300a8e936a01cd7917a76397e1db Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Feb 2017 19:44:39 +0100
 Subject: [PATCH 002/336] lockdep: Handle statically initialized PER_CPU locks
@@ -69,7 +69,7 @@ index 56939d3..491b3f5 100644
  
  #if !defined(CONFIG_SMP) || !defined(CONFIG_HAVE_SETUP_PER_CPU_AREA)
 diff --git a/kernel/locking/lockdep.c b/kernel/locking/lockdep.c
-index 4d7ffc0..8b95ab1 100644
+index 6599c7f..43f06ed 100644
 --- a/kernel/locking/lockdep.c
 +++ b/kernel/locking/lockdep.c
 @@ -658,6 +658,7 @@ look_up_lock_class(struct lockdep_map *lock, unsigned int subclass)
@@ -139,7 +139,7 @@ index 4d7ffc0..8b95ab1 100644
  		return NULL;
  	}
  
-@@ -3410,7 +3423,7 @@ static int match_held_lock(struct held_lock *hlock, struct lockdep_map *lock)
+@@ -3417,7 +3430,7 @@ static int match_held_lock(struct held_lock *hlock, struct lockdep_map *lock)
  		 * Clearly if the lock hasn't been acquired _ever_, we're not
  		 * holding it either, so report failure.
  		 */
@@ -148,7 +148,7 @@ index 4d7ffc0..8b95ab1 100644
  			return 0;
  
  		/*
-@@ -4159,7 +4172,7 @@ void lockdep_reset_lock(struct lockdep_map *lock)
+@@ -4166,7 +4179,7 @@ void lockdep_reset_lock(struct lockdep_map *lock)
  		 * If the class exists we look it up and zap it:
  		 */
  		class = look_up_lock_class(lock, j);

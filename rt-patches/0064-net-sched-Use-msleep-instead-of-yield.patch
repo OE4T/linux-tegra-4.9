@@ -1,4 +1,4 @@
-From f510a1c5a76166c667437a1b58f211091e3d2629 Mon Sep 17 00:00:00 2001
+From facf17f90e7666a53532603fc6f9bc6c6ab5378b Mon Sep 17 00:00:00 2001
 From: Marc Kleine-Budde <mkl@pengutronix.de>
 Date: Wed, 5 Mar 2014 00:49:47 +0100
 Subject: [PATCH 064/336] net: sched: Use msleep() instead of yield()
@@ -45,10 +45,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/net/sched/sch_generic.c b/net/sched/sch_generic.c
-index 6cfb6e9..e57aa72 100644
+index 4718809..2cff9e4 100644
 --- a/net/sched/sch_generic.c
 +++ b/net/sched/sch_generic.c
-@@ -925,7 +925,7 @@ void dev_deactivate_many(struct list_head *head)
+@@ -933,7 +933,7 @@ void dev_deactivate_many(struct list_head *head)
  	/* Wait for outstanding qdisc_run calls. */
  	list_for_each_entry(dev, head, close_list)
  		while (some_qdisc_is_busy(dev))

@@ -1,4 +1,4 @@
-From b6e1606574f19a4d60fc03ffc9cb62a73ed3b4b8 Mon Sep 17 00:00:00 2001
+From 96ec296cf79baa857e8e192c6bf09d989e8a52ec Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:58 +0100
 Subject: [PATCH 015/336] futex: Rework futex_lock_pi() to use

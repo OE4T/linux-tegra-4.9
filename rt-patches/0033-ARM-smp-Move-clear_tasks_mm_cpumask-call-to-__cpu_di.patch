@@ -1,4 +1,4 @@
-From 05c13c10ebaa00d6aef5e298e818eb56fa6cd0b0 Mon Sep 17 00:00:00 2001
+From e13d4580c1fd58ca31b5118ff5771a3dd93c5ed8 Mon Sep 17 00:00:00 2001
 From: Grygorii Strashko <grygorii.strashko@ti.com>
 Date: Fri, 11 Sep 2015 21:21:23 +0300
 Subject: [PATCH 033/336] ARM: smp: Move clear_tasks_mm_cpumask() call to

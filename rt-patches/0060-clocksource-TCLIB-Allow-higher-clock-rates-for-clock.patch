@@ -1,4 +1,4 @@
-From 196bc564e885d5fc0b2ed21bb8b22840cf1b1276 Mon Sep 17 00:00:00 2001
+From 026d5705510017255e3ebb084ac308ea2d54731a Mon Sep 17 00:00:00 2001
 From: Benedikt Spranger <b.spranger@linutronix.de>
 Date: Mon, 8 Mar 2010 18:57:04 +0100
 Subject: [PATCH 060/336] clocksource: TCLIB: Allow higher clock rates for
@@ -135,7 +135,7 @@ index ed1ae44..5b6f57f 100644
  		goto err_unregister_clksrc;
  
 diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
-index c32114e..9ec13d0 100644
+index 25bd3cc..f9d6f87 100644
 --- a/drivers/misc/Kconfig
 +++ b/drivers/misc/Kconfig
 @@ -69,8 +69,7 @@ config ATMEL_TCB_CLKSRC

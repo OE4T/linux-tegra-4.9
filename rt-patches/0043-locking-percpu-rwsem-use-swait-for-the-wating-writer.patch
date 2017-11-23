@@ -1,4 +1,4 @@
-From f5b2bcc70aacaeee939825d39c5d10bad784af08 Mon Sep 17 00:00:00 2001
+From 0abe7361887f54fca6c603fdd0f67aeb8ff2095a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Nov 2016 19:26:15 +0100
 Subject: [PATCH 043/336] locking/percpu-rwsem: use swait for the wating writer

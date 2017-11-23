@@ -1,4 +1,4 @@
-From e0efe9ab32e00610380d01386daa4771038e777c Mon Sep 17 00:00:00 2001
+From e55c26a4786fcdb9b82fee76748ce5bd6f8bfc8c Mon Sep 17 00:00:00 2001
 From: Benedikt Spranger <b.spranger@linutronix.de>
 Date: Sat, 6 Mar 2010 17:47:10 +0100
 Subject: [PATCH 058/336] ARM: AT91: PIT: Remove irq handler when clock event

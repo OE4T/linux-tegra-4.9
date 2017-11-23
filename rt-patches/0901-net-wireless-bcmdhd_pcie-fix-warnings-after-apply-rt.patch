@@ -1,7 +1,7 @@
-From 7ed675b9bf252addcbbc19287f6f298082ae4d97 Mon Sep 17 00:00:00 2001
+From 777f01a091d12df11fc03456a0f3cf408db6432b Mon Sep 17 00:00:00 2001
 From: Manikanta <mmaddireddy@nvidia.com>
 Date: Tue, 27 Jun 2017 01:16:30 +0530
-Subject: [PATCH 334/336] net: wireless: bcmdhd_pcie: fix warnings after apply
+Subject: [PATCH 333/336] net: wireless: bcmdhd_pcie: fix warnings after apply
  rt-patches
 
 Issue: Member type in struct completion is changed from

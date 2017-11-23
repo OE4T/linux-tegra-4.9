@@ -33,7 +33,7 @@
 #include <linux/ptrace.h>
 #include <linux/platform_device.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
-#include <linux/t19x_mce.h>
+#include <linux/tegra-mce.h>
 #include <linux/version.h>
 #include <linux/pm_qos.h>
 #include <linux/workqueue.h>
@@ -358,7 +358,7 @@ static void __tegra_mce_cc3_ctrl(void *data)
 {
 	struct cc3_params *param = (struct cc3_params *)data;
 
-	t19x_mce_cc3_ctrl(param->ndiv, param->enable);
+	tegra_mce_cc3_ctrl(param->ndiv, 0, param->enable);
 }
 
 static void enable_cc3(struct device_node *dn)

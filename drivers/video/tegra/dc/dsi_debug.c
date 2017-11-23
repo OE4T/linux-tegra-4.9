@@ -826,35 +826,35 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 	dsidir = debugfs_create_dir("tegra_dsi", NULL);
 	if (!dsidir)
 		return;
-	retval = debugfs_create_file("regs", S_IRUGO, dsidir, dsi,
+	retval = debugfs_create_file("regs", 0444, dsidir, dsi,
 		&dbg_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("read_panel", S_IRUGO|S_IWUSR, dsidir,
+	retval = debugfs_create_file("read_panel", 0644, dsidir,
 				dsi, &read_panel_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("panel_sanity", S_IRUGO, dsidir,
+	retval = debugfs_create_file("panel_sanity", 0444, dsidir,
 				dsi, &sanity_panel_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("host_cmd_v_blank_dcs", S_IRUGO|S_IWUSR,
+	retval = debugfs_create_file("host_cmd_v_blank_dcs", 0644,
 				 dsidir, dsi, &host_cmd_v_blank_dcs_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("remove_host_cmd_dcs", S_IRUGO|S_IWUSR,
+	retval = debugfs_create_file("remove_host_cmd_dcs", 0644,
 				 dsidir, dsi, &remove_host_cmd_dcs_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("write_data", S_IRUGO|S_IWUSR,
+	retval = debugfs_create_file("write_data", 0644,
 				 dsidir, dsi, &write_data_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("write_long_data", S_IRUGO|S_IWUSR,
+	retval = debugfs_create_file("write_long_data", 0644,
 				 dsidir, dsi, &write_long_data_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("crc", S_IRUGO, dsidir, dsi,
+	retval = debugfs_create_file("crc", 0444, dsidir, dsi,
 				&crc_fops);
 	if (!retval)
 		goto free_out;
@@ -863,17 +863,17 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 	if (!dscdir)
 		goto free_out;
 
-	retval = debugfs_create_file("dsc_enable", S_IRUGO | S_IWUSR, dscdir,
+	retval = debugfs_create_file("dsc_enable", 0644, dscdir,
 			(void *)dsi, &dsi_dsc_control_override_fops);
 	if (!retval)
 		goto free_out;
 
-	retval = debugfs_create_file("comp_rate", S_IRUGO | S_IWUSR, dscdir,
+	retval = debugfs_create_file("comp_rate", 0644, dscdir,
 			(void *)dsi, &dsi_dsc_comp_rate_override_fops);
 	if (!retval)
 		goto free_out;
 
-	retval = debugfs_create_file("num_comp_pkts", S_IRUGO | S_IWUSR, dscdir,
+	retval = debugfs_create_file("num_comp_pkts", 0644, dscdir,
 			(void *)dsi, &dsi_dsc_num_comp_pkts_override_fops);
 	if (!retval)
 		goto free_out;

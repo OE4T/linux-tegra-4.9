@@ -2920,7 +2920,7 @@ static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 /*Create file for all elements of nvdc_nvdisp_cmu per window*/
 #define CREATE_NVDISP_WIN_CSC_SYSFS(name)                               \
 do {                                                                    \
-	retval = debugfs_create_file(#name, S_IRUGO, wincscdir, win,    \
+	retval = debugfs_create_file(#name, 0444, wincscdir, win,    \
 		&dbg_nvdisp_win_csc_##name##_fops);                     \
 	if (!retval)                                                    \
 		goto remove_out;                                        \
@@ -2942,44 +2942,44 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 	if (!dc->debugdir)
 		goto remove_out;
 
-	retval = debugfs_create_file("timestamp", S_IRUGO, dc->debugdir, dc,
+	retval = debugfs_create_file("timestamp", 0444, dc->debugdir, dc,
 		&timestamp_fops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("regs", S_IRUGO, dc->debugdir, dc,
+	retval = debugfs_create_file("regs", 0444, dc->debugdir, dc,
 		&regs_fops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("mode", S_IRUGO, dc->debugdir, dc,
+	retval = debugfs_create_file("mode", 0444, dc->debugdir, dc,
 		&mode_fops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("stats", S_IRUGO, dc->debugdir, dc,
+	retval = debugfs_create_file("stats", 0444, dc->debugdir, dc,
 		&stats_fops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("event_inject", S_IRUGO, dc->debugdir, dc,
+	retval = debugfs_create_file("event_inject", 0444, dc->debugdir, dc,
 		&event_inject_fops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("out_type", S_IRUGO, dc->debugdir, dc,
+	retval = debugfs_create_file("out_type", 0444, dc->debugdir, dc,
 		&outtype_fops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("edid", S_IRUGO, dc->debugdir, dc,
+	retval = debugfs_create_file("edid", 0444, dc->debugdir, dc,
 		&edid_fops);
 	if (!retval)
 		goto remove_out;
 
 	if (dc->out_ops->detect) {
 		/* only create the file if hotplug is supported */
-		retval = debugfs_create_file("hotplug", S_IRUGO, dc->debugdir,
+		retval = debugfs_create_file("hotplug", 0444, dc->debugdir,
 			dc, &dbg_hotplug_fops);
 		if (!retval)
 			goto remove_out;
@@ -2989,62 +2989,62 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 	if (!vrrdir)
 		goto remove_out;
 
-	retval = debugfs_create_file("enable", S_IRUGO, vrrdir,
+	retval = debugfs_create_file("enable", 0444, vrrdir,
 				dc->out->vrr, &dbg_vrr_enable_ops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("dcb", S_IRUGO, vrrdir,
+	retval = debugfs_create_file("dcb", 0444, vrrdir,
 				dc->out->vrr, &dbg_vrr_dcb_ops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("frame_avg_pct", S_IRUGO, vrrdir,
+	retval = debugfs_create_file("frame_avg_pct", 0444, vrrdir,
 				dc->out->vrr, &dbg_vrr_frame_avg_pct_ops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("fluct_avg_pct", S_IRUGO, vrrdir,
+	retval = debugfs_create_file("fluct_avg_pct", 0444, vrrdir,
 				dc->out->vrr, &dbg_vrr_fluct_avg_pct_ops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("tegrahw_type", S_IRUGO, dc->debugdir,
+	retval = debugfs_create_file("tegrahw_type", 0444, dc->debugdir,
 				dc, &dbg_tegrahw_type_ops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("background", S_IRUGO, dc->debugdir,
+	retval = debugfs_create_file("background", 0444, dc->debugdir,
 				dc, &dbg_background_ops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("window_toggle", S_IRUGO, dc->debugdir,
+	retval = debugfs_create_file("window_toggle", 0444, dc->debugdir,
 				dc, &dbg_window_toggle_ops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("cmu_lut1", S_IRUGO, dc->debugdir, dc,
+	retval = debugfs_create_file("cmu_lut1", 0444, dc->debugdir, dc,
 		&cmu_lut1_fops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("cmu_lut2", S_IRUGO, dc->debugdir, dc,
+	retval = debugfs_create_file("cmu_lut2", 0444, dc->debugdir, dc,
 		&cmu_lut2_fops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("measure_refresh", S_IRUGO, dc->debugdir,
+	retval = debugfs_create_file("measure_refresh", 0444, dc->debugdir,
 				dc, &dbg_measure_refresh_ops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("hw_index", S_IRUGO, dc->debugdir,
+	retval = debugfs_create_file("hw_index", 0444, dc->debugdir,
 				dc, &dbg_hw_index_ops);
 	if (!retval)
 		goto remove_out;
 
-	retval = debugfs_create_file("flip_stats", S_IRUGO, dc->debugdir,
+	retval = debugfs_create_file("flip_stats", 0444, dc->debugdir,
 				dc, &dbg_flip_stats_ops);
 	if (!retval)
 		goto remove_out;

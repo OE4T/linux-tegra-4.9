@@ -3530,15 +3530,15 @@ static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 			hdmi_instance);
 		return;
 	}
-	ret = debugfs_create_file("hotplug", S_IRUGO, hdmi->debugdir,
+	ret = debugfs_create_file("hotplug", 0444, hdmi->debugdir,
 				hdmi, &tegra_hdmi_hotplug_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;
-	ret = debugfs_create_file("hdmi_status", S_IRUGO, hdmi->debugdir,
+	ret = debugfs_create_file("hdmi_status", 0444, hdmi->debugdir,
 				hdmi, &tegra_hdmi_status_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;
-	ret = debugfs_create_file("ddc_power_toggle", S_IRUGO, hdmi->debugdir,
+	ret = debugfs_create_file("ddc_power_toggle", 0444, hdmi->debugdir,
 				hdmi, &tegra_hdmi_ddc_power_toggle_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;

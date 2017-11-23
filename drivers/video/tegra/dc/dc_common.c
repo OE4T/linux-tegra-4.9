@@ -1003,12 +1003,12 @@ static void tegra_dc_common_create_debugfs(struct tegra_dc_common *dc_common)
 	if (!dc_common->debugdir)
 		goto err_handle;
 
-	retval = debugfs_create_file("frame_lock_enable", S_IRUGO,
+	retval = debugfs_create_file("frame_lock_enable", 0444,
 		dc_common->debugdir, dc_common,	&frame_lock_enable_fops);
 	if (!retval)
 		goto err_handle;
 
-	retval = debugfs_create_file("frame_lock_head_mask", S_IRUGO,
+	retval = debugfs_create_file("frame_lock_head_mask", 0444,
 		dc_common->debugdir, dc_common,	&frame_lock_head_mask_fops);
 	if (!retval)
 		goto err_handle;

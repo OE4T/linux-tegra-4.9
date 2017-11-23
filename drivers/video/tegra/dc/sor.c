@@ -594,12 +594,12 @@ static void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,
 	if (!sor->debugdir)
 		return;
 
-	retval = debugfs_create_file("regs", S_IRUGO, sor->debugdir, sor,
+	retval = debugfs_create_file("regs", 0444, sor->debugdir, sor,
 		&dbg_fops);
 	if (!retval)
 		goto free_out;
 
-	retval = debugfs_create_file("crc", S_IWUGO|S_IRUGO, sor->debugdir,
+	retval = debugfs_create_file("crc", 0644, sor->debugdir,
 		sor, &crc_fops);
 	if (!retval)
 		goto free_out;

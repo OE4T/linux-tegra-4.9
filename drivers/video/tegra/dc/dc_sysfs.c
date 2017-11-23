@@ -64,7 +64,7 @@ static ssize_t mode_show(struct device *device,
 	return res;
 }
 
-static DEVICE_ATTR(mode, S_IRUGO, mode_show, NULL);
+static DEVICE_ATTR(mode, 0444, mode_show, NULL);
 
 static ssize_t stats_enable_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -99,7 +99,7 @@ static ssize_t stats_enable_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(stats_enable, S_IRUGO|S_IWUSR,
+static DEVICE_ATTR(stats_enable, 0644,
 	stats_enable_show, stats_enable_store);
 
 static ssize_t enable_show(struct device *device,
@@ -133,7 +133,7 @@ static ssize_t enable_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(enable, S_IRUSR | S_IWUSR, enable_show, enable_store);
+static DEVICE_ATTR(enable, 0600, enable_show, enable_store);
 
 static ssize_t crc_checksum_latched_show(struct device *device,
 	struct device_attribute *attr, char *buf)
@@ -197,7 +197,7 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 
 	return count;
 }
-static DEVICE_ATTR(crc_checksum_latched, S_IRUGO|S_IWUSR,
+static DEVICE_ATTR(crc_checksum_latched, 0644,
 		crc_checksum_latched_show, crc_checksum_latched_store);
 
 static ssize_t out_crc_show(struct device *device,
@@ -249,7 +249,7 @@ static ssize_t out_crc_store(struct device *dev,
 
 	return count;
 }
-static DEVICE_ATTR(out_crc, S_IRUGO | S_IWUSR, out_crc_show, out_crc_store);
+static DEVICE_ATTR(out_crc, 0644, out_crc_show, out_crc_store);
 
 static ssize_t scanline_show(struct device *device,
 	struct device_attribute *attr, char *buf)
@@ -278,7 +278,7 @@ static ssize_t scanline_show(struct device *device,
 	return scnprintf(buf, PAGE_SIZE, "%u %u %u %u\n",
 		v_count, v_blank, h_count, h_blank);
 }
-static DEVICE_ATTR(scanline, S_IRUGO, scanline_show, NULL);
+static DEVICE_ATTR(scanline, 0444, scanline_show, NULL);
 
 #define ORIENTATION_PORTRAIT	"portrait"
 #define ORIENTATION_LANDSCAPE	"landscape"
@@ -330,7 +330,7 @@ static ssize_t orientation_3d_store(struct device *dev,
 }
 
 static DEVICE_ATTR(stereo_orientation,
-	S_IRUGO|S_IWUSR, orientation_3d_show, orientation_3d_store);
+	0644, orientation_3d_show, orientation_3d_store);
 
 #define MODE_2D		"2d"
 #define MODE_3D		"3d"
@@ -381,7 +381,7 @@ static ssize_t mode_3d_store(struct device *dev,
 }
 
 static DEVICE_ATTR(stereo_mode,
-	S_IRUGO|S_IWUSR, mode_3d_show, mode_3d_store);
+	0644, mode_3d_show, mode_3d_store);
 
 static ssize_t cmu_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -410,7 +410,7 @@ static ssize_t cmu_enable_show(struct device *dev,
 }
 
 static DEVICE_ATTR(cmu_enable,
-		S_IRUGO|S_IWUSR, cmu_enable_show, cmu_enable_store);
+		0644, cmu_enable_show, cmu_enable_store);
 
 #ifdef CONFIG_TEGRA_ISOMGR
 static ssize_t reserved_bw_show(struct device *dev,
@@ -431,7 +431,7 @@ static ssize_t reserved_bw_show(struct device *dev,
 }
 
 static DEVICE_ATTR(reserved_bw,
-		S_IRUGO, reserved_bw_show, NULL);
+		0444, reserved_bw_show, NULL);
 #endif
 
 static ssize_t smart_panel_show(struct device *device,
@@ -440,7 +440,7 @@ static ssize_t smart_panel_show(struct device *device,
 	return snprintf(buf, PAGE_SIZE, "1\n");
 }
 
-static DEVICE_ATTR(smart_panel, S_IRUGO, smart_panel_show, NULL);
+static DEVICE_ATTR(smart_panel, 0444, smart_panel_show, NULL);
 
 static ssize_t panel_rotate_show(struct device *device,
 	struct device_attribute *attr, char *buf)
@@ -451,7 +451,7 @@ static ssize_t panel_rotate_show(struct device *device,
 	return snprintf(buf, PAGE_SIZE, "%d\n", dc->out->rotation);
 }
 
-static DEVICE_ATTR(panel_rotation, S_IRUGO, panel_rotate_show, NULL);
+static DEVICE_ATTR(panel_rotation, 0444, panel_rotate_show, NULL);
 
 /* display current window assignment bitmask in
  * hexadecimal for the given dc device->dev */
@@ -497,7 +497,7 @@ static ssize_t win_mask_store(struct device *dev,
 	return ret;
 }
 
-static DEVICE_ATTR(win_mask, S_IRUSR | S_IWUSR, win_mask_show, win_mask_store);
+static DEVICE_ATTR(win_mask, 0600, win_mask_show, win_mask_store);
 
 void tegra_dc_remove_sysfs(struct device *dev)
 {

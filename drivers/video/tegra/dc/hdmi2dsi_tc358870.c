@@ -1304,17 +1304,17 @@ static int tc358870_hdmi2dsi_create_debugfs(struct tc358870_state *state)
 		ret = -ENOTDIR;
 		goto err;
 	}
-	pentry = debugfs_create_u16("bridge-id", S_IRUGO | S_IWUSR,
+	pentry = debugfs_create_u16("bridge-id", 0644,
 			state->debugdir, &d_bridge_id);
-	pentry = debugfs_create_u16("addr", S_IRUGO | S_IWUSR,
+	pentry = debugfs_create_u16("addr", 0644,
 			state->debugdir, &d_reg_addr);
-	pentry = debugfs_create_u16("read_size", S_IRUGO | S_IWUSR,
+	pentry = debugfs_create_u16("read_size", 0644,
 			state->debugdir, &read_size);
-	pentry = debugfs_create_u32("value", S_IRUGO | S_IWUSR,
+	pentry = debugfs_create_u32("value", 0644,
 			state->debugdir, &d_reg_value);
-	pentry = debugfs_create_file("show", S_IRUGO | S_IWUSR,
+	pentry = debugfs_create_file("show", 0644,
 			state->debugdir, state, &reg_read_fops);
-	pentry = debugfs_create_file("set", S_IRUGO | S_IWUSR,
+	pentry = debugfs_create_file("set", 0644,
 			state->debugdir, state, &reg_write_fops);
 
 	if (pentry == NULL) {

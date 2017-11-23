@@ -2406,12 +2406,12 @@ void tegra_dphdcp_debugfs_init(struct tegra_dphdcp *dphdcp)
 
 	dir = debugfs_create_dir("tegra_dphdcp",  NULL);
 
-	ret = debugfs_create_file("max_retries", S_IRUGO, dir,
+	ret = debugfs_create_file("max_retries", 0444, dir,
 				dphdcp, &tegra_dp_max_retries_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;
 
-	ret = debugfs_create_file("hotplug", S_IRUGO, dir,
+	ret = debugfs_create_file("hotplug", 0444, dir,
 				dphdcp, &tegra_dp_hotplug_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;

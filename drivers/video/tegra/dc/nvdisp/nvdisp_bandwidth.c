@@ -28,7 +28,7 @@
 /* Elements for sysfs access */
 #define BW_ATTR(__name, __show, __store) \
 	static struct kobj_attribute bw_attr_##__name = \
-	__ATTR(__name, S_IRUGO|S_IWUSR, __show, __store)
+	__ATTR(__name, 0644, __show, __store)
 #define CORE_BW_ATTR(__name) \
 	BW_ATTR(__name, core_bw_settings_show, core_bw_settings_store)
 #define COMMON_BW_ATTR(__name) \

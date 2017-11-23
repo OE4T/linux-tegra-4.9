@@ -2357,7 +2357,7 @@ void tegra_nvhdcp_debugfs_init(struct tegra_nvhdcp *nvhdcp)
 	if (IS_ERR_OR_NULL(dir))
 		return;
 
-	ret = debugfs_create_file("max_retries", S_IRUGO, dir,
+	ret = debugfs_create_file("max_retries", 0444, dir,
 				nvhdcp, &tegra_nvhdcp_max_retries_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;

@@ -822,15 +822,15 @@ static struct dentry *tegra_dpaux_i2c_dir_create(struct tegra_dc_dp_data *dp,
 	dpaux_i2c_dir = debugfs_create_dir("dpaux_i2c", parent);
 	if (!dpaux_i2c_dir)
 		return retval;
-	retval = debugfs_create_u16("addr", S_IRUGO | S_IWUGO, dpaux_i2c_dir,
+	retval = debugfs_create_u16("addr", 0644, dpaux_i2c_dir,
 			&dp->dpaux_i2c_dbg_addr);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_u32("num_bytes", S_IRUGO | S_IWUGO,
+	retval = debugfs_create_u32("num_bytes", 0644,
 			dpaux_i2c_dir, &dp->dpaux_i2c_dbg_num_bytes);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("data", S_IRUGO, dpaux_i2c_dir, dp,
+	retval = debugfs_create_file("data", 0444, dpaux_i2c_dir, dp,
 			&dpaux_i2c_data_fops);
 	if (!retval)
 		goto free_out;
@@ -850,15 +850,15 @@ static struct dentry *tegra_dpaux_dpcd_dir_create(struct tegra_dc_dp_data *dp,
 	dpaux_dir = debugfs_create_dir("dpaux_dpcd", parent);
 	if (!dpaux_dir)
 		return retval;
-	retval = debugfs_create_u16("addr", S_IRUGO | S_IWUGO, dpaux_dir,
+	retval = debugfs_create_u16("addr", 0644, dpaux_dir,
 			&dp->dpaux_dpcd_dbg_addr);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_u32("num_bytes", S_IRUGO | S_IWUGO,
+	retval = debugfs_create_u32("num_bytes", 0644,
 			dpaux_dir, &dp->dpaux_dpcd_dbg_num_bytes);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("data", S_IRUGO, dpaux_dir, dp,
+	retval = debugfs_create_file("data", 0444, dpaux_dir, dp,
 			&dpaux_dpcd_data_fops);
 	if (!retval)
 		goto free_out;
@@ -883,23 +883,23 @@ static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
 			debug_dirname);
 		return;
 	}
-	retval = debugfs_create_file("dpaux_regs", S_IRUGO, dp->debugdir, dp,
+	retval = debugfs_create_file("dpaux_regs", 0444, dp->debugdir, dp,
 		&dbg_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("lanes", S_IRUGO, dp->debugdir, dp,
+	retval = debugfs_create_file("lanes", 0444, dp->debugdir, dp,
 		&lane_count_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("linkspeed", S_IRUGO, dp->debugdir, dp,
+	retval = debugfs_create_file("linkspeed", 0444, dp->debugdir, dp,
 		&link_speed_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("bitsperpixel", S_IRUGO, dp->debugdir, dp,
+	retval = debugfs_create_file("bitsperpixel", 0444, dp->debugdir, dp,
 		&bits_per_pixel_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("test_settings", S_IRUGO, dp->debugdir, dp,
+	retval = debugfs_create_file("test_settings", 0444, dp->debugdir, dp,
 		&test_settings_fops);
 	if (!retval)
 		goto free_out;
@@ -912,7 +912,7 @@ static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
 
 	/* hotplug not allowed for eDP */
 	if (is_hotplug_supported(dp)) {
-		retval = debugfs_create_file("hotplug", S_IRUGO, dp->debugdir,
+		retval = debugfs_create_file("hotplug", 0444, dp->debugdir,
 			dp, &dbg_hotplug_fops);
 		if (!retval)
 			goto free_out;

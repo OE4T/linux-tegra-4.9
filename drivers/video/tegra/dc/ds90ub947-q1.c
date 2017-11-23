@@ -216,7 +216,7 @@ static void ds90ub947_panel_create_debugfs(struct ds90ub947_data *data)
 	if (!data->debugdir)
 		goto err;
 
-	pEntry = debugfs_create_file("init_regs", S_IRUGO | S_IWUSR,
+	pEntry = debugfs_create_file("init_regs", 0644,
 		data->debugdir, data, &init_regs_fops);
 	pr_debug("%s: debugfs_create_file returned %p\n", __func__, pEntry);
 	if (NULL == pEntry)

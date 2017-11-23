@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisp_sd.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -35,7 +35,7 @@
 
 /* Elements for sysfs access */
 #define NVSD_ATTR(__name) static struct kobj_attribute nvsd_attr_##__name = \
-	__ATTR(__name, S_IRUGO|S_IWUSR, nvsd_settings_show, nvsd_settings_store)
+	__ATTR(__name, 0644, nvsd_settings_show, nvsd_settings_store)
 #define NVSD_ATTRS_ENTRY(__name) (&nvsd_attr_##__name.attr)
 #define IS_NVSD_ATTR(__name) (attr == &nvsd_attr_##__name)
 
@@ -402,7 +402,7 @@ static ssize_t nvsd_registers_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf);
 
 static struct kobj_attribute nvsd_attr_registers =
-	__ATTR(registers, S_IRUGO, nvsd_registers_show, NULL);
+	__ATTR(registers, 0444, nvsd_registers_show, NULL);
 
 NVSD_ATTR(enable);
 NVSD_ATTR(aggressiveness);

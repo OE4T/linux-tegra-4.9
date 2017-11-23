@@ -33,7 +33,7 @@
 
 int no_vsync;
 
-module_param_named(no_vsync, no_vsync, int, S_IRUGO | S_IWUSR);
+module_param_named(no_vsync, no_vsync, int, 0644);
 
 static bool tegra_dc_windows_are_clean(struct tegra_dc_win *windows[],
 					     int n)

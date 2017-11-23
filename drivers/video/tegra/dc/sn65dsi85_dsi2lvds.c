@@ -394,7 +394,7 @@ static int sn65dsi85_dsi2lvds_panel_create_debugfs(
 		goto err;
 	}
 
-	pEntry = debugfs_create_file("regs", S_IRUGO | S_IWUSR,
+	pEntry = debugfs_create_file("regs", 0644,
 		dsi2lvds->debugdir, dsi2lvds, &regs_fops);
 	pr_info("%s: debugfs_create_file returned %p\n", __func__, pEntry);
 	if (NULL == pEntry) {

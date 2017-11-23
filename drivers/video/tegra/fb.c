@@ -967,7 +967,7 @@ static ssize_t nvdps_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(nvdps, S_IRUGO|S_IWUSR, nvdps_show, nvdps_store);
+static DEVICE_ATTR(nvdps, 0644, nvdps_show, nvdps_store);
 
 
 int tegra_fb_create_sysfs(struct device *dev)

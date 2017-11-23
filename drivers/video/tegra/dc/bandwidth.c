@@ -38,7 +38,7 @@
 
 static int use_dynamic_emc = 1;
 
-module_param_named(use_dynamic_emc, use_dynamic_emc, int, S_IRUGO | S_IWUSR);
+module_param_named(use_dynamic_emc, use_dynamic_emc, int, 0644);
 
 DEFINE_MUTEX(tegra_dcs_total_bw_lock);
 

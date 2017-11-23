@@ -752,7 +752,7 @@ static void mmap_close(struct vm_area_struct *vma)
 	else if (mmap->type == QUADD_MMAP_TYPE_RB)
 		rb_reset(mmap->rb);
 	else
-		pr_err("error: mmap area is uninitialized\n");
+		pr_warn("warning: mmap area is uninitialized\n");
 
 	delete_mmap(mmap);
 
@@ -814,6 +814,10 @@ device_mmap(struct file *filp, struct vm_area_struct *vma)
 		return -ENOMEM;
 
 	entry->mmap_vma = vma;
+
+	atomic_set(&entry->state, QUADD_MMAP_STATE_ACTIVE);
+	atomic_set(&entry->ref_count, 0);
+	spin_lock_init(&entry->state_lock);
 
 	INIT_LIST_HEAD(&entry->list);
 	INIT_LIST_HEAD(&entry->ex_entries);

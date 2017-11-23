@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/comm.h
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,6 +39,12 @@ enum {
 	QUADD_MMAP_TYPE_RB,
 };
 
+enum {
+	QUADD_MMAP_STATE_ACTIVE = 0,
+	QUADD_MMAP_STATE_CLOSING,
+	QUADD_MMAP_STATE_CLOSED,
+};
+
 struct quadd_mmap_area {
 	int type;
 
@@ -49,6 +55,10 @@ struct quadd_mmap_area {
 	struct list_head ex_entries;
 
 	struct quadd_ring_buffer *rb;
+
+	atomic_t state;
+	atomic_t ref_count;
+	spinlock_t state_lock;
 };
 
 struct quadd_comm_control_interface {

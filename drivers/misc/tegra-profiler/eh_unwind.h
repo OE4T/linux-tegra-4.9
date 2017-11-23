@@ -73,5 +73,6 @@ struct ex_region_info {
 
 long
 quadd_get_dw_frames(unsigned long key, struct ex_region_info *ri);
+void quadd_put_dw_frames(struct ex_region_info *ri);
 
 #endif	/* __QUADD_EH_UNWIND_H__ */

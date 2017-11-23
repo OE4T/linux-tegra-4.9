@@ -96,9 +96,15 @@ static inline int
 validate_mmap_addr(struct quadd_mmap_area *mmap,
 		   unsigned long addr, unsigned long nbytes)
 {
-	struct vm_area_struct *vma = mmap->mmap_vma;
-	unsigned long size = vma->vm_end - vma->vm_start;
-	unsigned long data = (unsigned long)mmap->data;
+	struct vm_area_struct *vma;
+	unsigned long data, size;
+
+	if (atomic_read(&mmap->state) != QUADD_MMAP_STATE_ACTIVE)
+		return 0;
+
+	vma = mmap->mmap_vma;
+	size = vma->vm_end - vma->vm_start;
+	data = (unsigned long)mmap->data;
 
 	if (addr & 0x03) {
 		pr_err_once("%s: error: unaligned address: %#lx, data: %#lx-%#lx, vma: %#lx-%#lx\n",
@@ -351,37 +357,106 @@ out:
 static long
 get_extabs_ehabi(unsigned long key, struct ex_region_info *ri)
 {
-	long err;
+	long err = 0;
 	struct extab_info *ti_exidx;
+	struct quadd_mmap_area *mmap;
 
 	err = search_ex_region(key, ri);
 	if (err < 0)
 		return err;
 
+	mmap = ri->mmap;
+
+	spin_lock(&mmap->state_lock);
+
+	if (atomic_read(&mmap->state) != QUADD_MMAP_STATE_ACTIVE) {
+		err = -ENOENT;
+		goto out;
+	}
+
 	ti_exidx = &ri->ex_sec[QUADD_SEC_TYPE_EXIDX];
-	return ti_exidx->length ? 0 : -ENOENT;
+
+	if (ti_exidx->length)
+		atomic_inc(&mmap->ref_count);
+	else
+		err = -ENOENT;
+
+out:
+	spin_unlock(&mmap->state_lock);
+	return err;
+}
+
+static void put_extabs_ehabi(struct ex_region_info *ri)
+{
+	struct quadd_mmap_area *mmap = ri->mmap;
+
+	spin_lock(&mmap->state_lock);
+
+	if (atomic_dec_and_test(&mmap->ref_count) &&
+	    atomic_read(&mmap->state) == QUADD_MMAP_STATE_CLOSING)
+		atomic_set(&mmap->state, QUADD_MMAP_STATE_CLOSED);
+
+	spin_unlock(&mmap->state_lock);
+
+	if (atomic_read(&mmap->ref_count) < 0)
+		pr_err_once("%s: error: mmap ref_count\n", __func__);
 }
 
 long
 quadd_get_dw_frames(unsigned long key, struct ex_region_info *ri)
 {
-	long err;
+	long err = 0;
 	struct extab_info *ti, *ti_hdr;
+	struct quadd_mmap_area *mmap;
 
 	err = search_ex_region(key, ri);
 	if (err < 0)
 		return err;
 
+	mmap = ri->mmap;
+
+	spin_lock(&mmap->state_lock);
+
+	if (atomic_read(&mmap->state) != QUADD_MMAP_STATE_ACTIVE) {
+		err = -ENOENT;
+		goto out;
+	}
+
 	ti = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME];
 	ti_hdr = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
 
-	if (ti->length && ti_hdr->length)
-		return 0;
+	if (ti->length && ti_hdr->length) {
+		atomic_inc(&mmap->ref_count);
+		goto out;
+	}
 
 	ti = &ri->ex_sec[QUADD_SEC_TYPE_DEBUG_FRAME];
 	ti_hdr = &ri->ex_sec[QUADD_SEC_TYPE_DEBUG_FRAME_HDR];
 
-	return (ti->length && ti_hdr->length) ? 0 : -ENOENT;
+	if (ti->length && ti_hdr->length)
+		atomic_inc(&mmap->ref_count);
+	else
+		err = -ENOENT;
+
+out:
+	spin_unlock(&mmap->state_lock);
+	return err;
+}
+
+void quadd_put_dw_frames(struct ex_region_info *ri)
+{
+	struct quadd_mmap_area *mmap = ri->mmap;
+
+	spin_lock(&mmap->state_lock);
+
+	if (atomic_dec_and_test(&mmap->ref_count) &&
+	    atomic_read(&mmap->state) == QUADD_MMAP_STATE_CLOSING)
+		atomic_set(&mmap->state, QUADD_MMAP_STATE_CLOSED);
+
+	spin_unlock(&mmap->state_lock);
+
+	if (atomic_read(&mmap->ref_count) < 0)
+		pr_err_once("%s: error: mmap ref_count\n", __func__);
 }
 
 static struct regions_data *rd_alloc(unsigned long size)
@@ -593,7 +668,8 @@ clean_mmap(struct regions_data *rd, struct quadd_mmap_area *mmap, int rm_ext)
 	return nr_removed;
 }
 
-void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
+static void
+__quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
 {
 	unsigned long nr_entries, nr_removed, new_size;
 	struct regions_data *rd, *rd_new;
@@ -629,6 +705,24 @@ void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
 
 error_out:
 	spin_unlock(&ctx.lock);
+}
+
+void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
+{
+	int state;
+
+	spin_lock(&mmap->state_lock);
+
+	state = atomic_read(&mmap->ref_count) > 0 ?
+		QUADD_MMAP_STATE_CLOSING : QUADD_MMAP_STATE_CLOSED;
+	atomic_set(&mmap->state, state);
+
+	spin_unlock(&mmap->state_lock);
+
+	while (atomic_read(&mmap->state) != QUADD_MMAP_STATE_CLOSED)
+		cpu_relax();
+
+	__quadd_unwind_delete_mmap(mmap);
 }
 
 static const struct unwind_idx *
@@ -1095,7 +1189,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		 struct task_struct *task,
 		 int thumbflag)
 {
-	struct ex_region_info ri_new;
+	struct ex_region_info ri_new, *prev_ri = NULL;
 
 	cc->urc_ut = QUADD_URC_FAILURE;
 
@@ -1129,13 +1223,18 @@ unwind_backtrace(struct quadd_callchain *cc,
 		ti = &ri->ex_sec[QUADD_SEC_TYPE_EXIDX];
 
 		if (!is_vma_addr(ti->addr, vma_pc, sizeof(u32))) {
+			if (prev_ri) {
+				put_extabs_ehabi(prev_ri);
+				prev_ri = NULL;
+			}
+
 			err = get_extabs_ehabi(vma_pc->vm_start, &ri_new);
 			if (err) {
 				cc->urc_ut = QUADD_URC_TBL_NOT_EXIST;
 				break;
 			}
 
-			ri = &ri_new;
+			prev_ri = ri = &ri_new;
 		}
 
 		err = unwind_frame(cc->um, ri, frame, vma_sp, thumbflag);
@@ -1162,6 +1261,9 @@ unwind_backtrace(struct quadd_callchain *cc,
 		if (nr_added == 0)
 			break;
 	}
+
+	if (prev_ri)
+		put_extabs_ehabi(prev_ri);
 }
 
 unsigned int
@@ -1238,6 +1340,8 @@ quadd_get_user_cc_arm32_ehabi(struct quadd_event_context *event_ctx,
 
 	unwind_backtrace(cc, &ri, &frame, vma_sp, task, thumbflag);
 
+	put_extabs_ehabi(&ri);
+
 	pr_debug("%s: exit, cc->nr: %d --> %d\n",
 		 __func__, nr_prev, cc->nr);
 
@@ -1248,6 +1352,7 @@ int
 quadd_is_ex_entry_exist_arm32_ehabi(struct quadd_event_context *event_ctx,
 				    unsigned long addr)
 {
+	int ret;
 	long err;
 	u32 value;
 	const struct unwind_idx *idx;
@@ -1268,18 +1373,27 @@ quadd_is_ex_entry_exist_arm32_ehabi(struct quadd_event_context *event_ctx,
 		return 0;
 
 	idx = unwind_find_idx(&ri, addr, NULL);
-	if (IS_ERR_OR_NULL(idx))
-		return 0;
+	if (IS_ERR_OR_NULL(idx)) {
+		ret = 0;
+		goto out;
+	}
 
 	err = read_mmap_data(ri.mmap, &idx->insn, &value);
-	if (err < 0)
-		return 0;
+	if (err < 0) {
+		ret = 0;
+		goto out;
+	}
 
 	/* EXIDX_CANTUNWIND */
-	if (value == 1)
-		return 0;
+	if (value == 1) {
+		ret = 0;
+		goto out;
+	}
 
-	return 1;
+	ret = 1;
+out:
+	put_extabs_ehabi(&ri);
+	return ret;
 }
 
 int quadd_unwind_start(struct task_struct *task)

@@ -176,7 +176,6 @@ struct dw_fde {
 	unsigned char *data;
 };
 
-
 struct eh_sec_data {
 	size_t length;
 	unsigned char *data;
@@ -247,6 +246,9 @@ validate_addr(struct ex_region_info *ri,
 	unsigned long start, end;
 
 	mmap = ri->mmap;
+
+	if (atomic_read(&mmap->state) != QUADD_MMAP_STATE_ACTIVE)
+		return 0;
 
 	ti = &ri->ex_sec[st];
 
@@ -1943,7 +1945,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		 struct task_struct *task)
 {
 	unsigned long user_reg_size;
-	struct ex_region_info ri_new;
+	struct ex_region_info ri_new, *prev_ri = NULL;
 	unsigned int unw_type;
 	int is_eh = 1, mode = sf->mode;
 
@@ -1975,16 +1977,21 @@ unwind_backtrace(struct quadd_callchain *cc,
 		addr = ri->vm_start;
 
 		if (!is_vma_addr(addr, vma_pc, user_reg_size)) {
+			if (prev_ri) {
+				quadd_put_dw_frames(prev_ri);
+				prev_ri = NULL;
+			}
+
 			err = quadd_get_dw_frames(vma_pc->vm_start, &ri_new);
 			if (err) {
 				cc->urc_dwarf = QUADD_URC_TBL_NOT_EXIST;
 				break;
 			}
 
-			pr_debug("ri: %#lx ---> %#lx",
+			pr_debug("ri: %#lx ---> %#lx\n",
 				 ri->vm_start, ri_new.vm_start);
 
-			ri = &ri_new;
+			prev_ri = ri = &ri_new;
 		}
 
 		if (!is_fde_entry_exist(ri, sf->pc, &__is_eh, &__is_debug)) {
@@ -2045,6 +2052,9 @@ unwind_backtrace(struct quadd_callchain *cc,
 		if (nr_added == 0)
 			break;
 	}
+
+	if (prev_ri)
+		quadd_put_dw_frames(prev_ri);
 }
 
 int
@@ -2052,7 +2062,7 @@ quadd_is_ex_entry_exist_dwarf(struct quadd_event_context *event_ctx,
 			      unsigned long addr)
 {
 	long err;
-	int is_eh, is_debug;
+	int is_eh, is_debug, res;
 	struct ex_region_info ri;
 	struct vm_area_struct *vma;
 	struct pt_regs *regs = event_ctx->regs;
@@ -2069,7 +2079,10 @@ quadd_is_ex_entry_exist_dwarf(struct quadd_event_context *event_ctx,
 	if (err)
 		return 0;
 
-	return is_fde_entry_exist(&ri, addr, &is_eh, &is_debug);
+	res = is_fde_entry_exist(&ri, addr, &is_eh, &is_debug);
+	quadd_put_dw_frames(&ri);
+
+	return res;
 }
 
 unsigned int
@@ -2164,6 +2177,7 @@ quadd_get_user_cc_dwarf(struct quadd_event_context *event_ctx,
 	}
 
 	unwind_backtrace(cc, &ri, sf, vma_sp, task);
+	quadd_put_dw_frames(&ri);
 
 	pr_debug("%s: mode: %s, cc->nr: %d --> %d\n", __func__,
 		 (mode == DW_MODE_ARM32) ? "arm32" : "arm64",

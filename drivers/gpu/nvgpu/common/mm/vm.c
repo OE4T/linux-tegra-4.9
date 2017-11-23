@@ -109,6 +109,11 @@ u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
 
 	vma = vm->vma[pgsz_idx];
 
+	if (vm->guest_managed) {
+		nvgpu_err(g, "Illegal GPU allocation on behalf of guest OS");
+		return 0;
+	}
+
 	if (pgsz_idx >= gmmu_nr_page_sizes) {
 		nvgpu_err(g, "(%s) invalid page size requested", vma->name);
 		return 0;
@@ -237,7 +242,10 @@ static int nvgpu_init_sema_pool(struct vm_gk20a *vm)
 	return 0;
 }
 
-static int __nvgpu_vm_init(struct mm_gk20a *mm,
+/*
+ * Initialize a preallocated vm
+ */
+int __nvgpu_vm_init(struct mm_gk20a *mm,
 			   struct vm_gk20a *vm,
 			   u32 big_page_size,
 			   u64 low_hole,
@@ -257,6 +265,9 @@ static int __nvgpu_vm_init(struct mm_gk20a *mm,
 
 	if (WARN_ON(kernel_reserved + low_hole > aperture_size))
 		return -ENOMEM;
+
+	if (WARN_ON(vm->guest_managed && kernel_reserved != 0))
+		return -EINVAL;
 
 	nvgpu_log_info(g, "Init space for %s: valimit=0x%llx, "
 		       "LP size=0x%x lowhole=0x%llx",
@@ -337,7 +348,7 @@ static int __nvgpu_vm_init(struct mm_gk20a *mm,
 
 	if (WARN_ON(user_vma_start > user_vma_limit) ||
 	    WARN_ON(user_lp_vma_start > user_lp_vma_limit) ||
-	    WARN_ON(kernel_vma_start >= kernel_vma_limit)) {
+		WARN_ON(!vm->guest_managed && kernel_vma_start >= kernel_vma_limit)) {
 		err = -EINVAL;
 		goto clean_up_page_tables;
 	}

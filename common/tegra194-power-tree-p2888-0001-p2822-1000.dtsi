@@ -26,4 +26,10 @@
 	sdhci@3400000 {
 		/* vmmc-supply = <&tegra_main_gpio TEGRA_MAIN_GPIO(A, 0) 1>; */
 	};
+
+	ufshci@2450000 {
+		vcc-supply = <&p2888_spmic_ldo2>;
+		vccq-supply = <&p2888_spmic_ldo7>;
+		vccq2-supply = <&p2888_spmic_sd2>;
+	};
 };

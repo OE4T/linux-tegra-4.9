@@ -39,6 +39,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/dma-direction.h>
 #include <linux/platform_device.h>
+#include <linux/tegra-mce.h>
 #include <linux/of.h>
 #include <linux/of_reserved_mem.h>
 
@@ -478,8 +479,6 @@ extern int nvmap_cache_maint_by_set_ways;
 
 extern void v7_flush_kern_cache_all(void);
 extern void v7_clean_kern_cache_all(void *);
-extern void __flush_dcache_all(void *arg);
-extern void __clean_dcache_all(void *arg);
 
 extern void (*inner_flush_cache_all)(void);
 extern void (*inner_clean_cache_all)(void);

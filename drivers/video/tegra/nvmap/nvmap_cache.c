@@ -75,7 +75,7 @@ inline static void nvmap_flush_dcache_all(void *dummy)
 		}
 	}
 #endif
-	__flush_dcache_all(NULL);
+	tegra_flush_dcache_all(NULL);
 }
 
 static void nvmap_inner_flush_cache_all(void)
@@ -101,9 +101,9 @@ static void nvmap_inner_clean_cache_all(void)
 #if defined(CONFIG_ARM64)
 	if (nvmap_cache_maint_by_set_ways_on_one_cpu) {
 		on_each_cpu(__clean_dcache_louis, NULL, 1);
-		__clean_dcache_all(NULL);
+		tegra_clean_dcache_all(NULL);
 	} else {
-		on_each_cpu(__clean_dcache_all, NULL, 1);
+		on_each_cpu((void *)tegra_clean_dcache_all, NULL, 1);
 	}
 #else
 	if (nvmap_cache_maint_by_set_ways_on_one_cpu) {

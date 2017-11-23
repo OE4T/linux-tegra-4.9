@@ -52,14 +52,14 @@ static void nvmap_t19x_flush_cache(void)
 {
 	void *unused = NULL;
 
-	__flush_dcache_all(unused);
+	tegra_flush_dcache_all(unused);
 }
 
 static void nvmap_t19x_clean_cache(void)
 {
 	void *unused = NULL;
 
-	__clean_dcache_all(unused);
+	tegra_clean_dcache_all(unused);
 }
 
 void nvmap_setup_t19x_cache_ops(struct nvmap_chip_cache_op *op)

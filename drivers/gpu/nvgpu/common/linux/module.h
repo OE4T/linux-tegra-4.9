@@ -19,8 +19,10 @@
 
 struct gk20a;
 struct device;
+struct nvgpu_os_linux;
 
 int gk20a_pm_finalize_poweron(struct device *dev);
+int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l);
 void gk20a_remove_support(struct gk20a *g);
 void gk20a_driver_start_unload(struct gk20a *g);
 int nvgpu_quiesce(struct gk20a *g);

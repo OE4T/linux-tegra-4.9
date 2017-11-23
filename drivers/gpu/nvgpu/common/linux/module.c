@@ -186,7 +186,7 @@ static int nvgpu_init_os_linux_ops(struct nvgpu_os_linux *l)
 	return 0;
 }
 
-static int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l)
+int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l)
 {
 	struct gk20a *g = &l->g;
 	int err;

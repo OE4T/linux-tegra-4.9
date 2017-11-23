@@ -460,6 +460,7 @@ static int vgpu_init_hal(struct gk20a *g)
 int vgpu_pm_finalize_poweron(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -500,6 +501,10 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 		nvgpu_err(g, "failed to init gk20a gpu characteristics");
 		goto done;
 	}
+
+	err = nvgpu_finalize_poweron_linux(l);
+	if (err)
+		goto done;
 
 	gk20a_ctxsw_trace_init(g);
 	gk20a_sched_ctrl_init(g);

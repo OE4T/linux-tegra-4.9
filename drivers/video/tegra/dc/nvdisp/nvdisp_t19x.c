@@ -200,20 +200,9 @@ void tegra_dc_enable_sor_t19x(struct tegra_dc *dc, int sor_num, bool enable)
 	tegra_dc_writel(dc, reg_val, nvdisp_t19x_win_options_r());
 }
 
-inline bool tegra_nvdisp_is_lpf_required_t19x(struct tegra_dc *dc)
-{
-	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
-
-	if (dc->yuv_bypass)
-		return false;
-
-	return ((yuv_flag & FB_VMODE_Y422) ||
-		tegra_dc_is_yuv420_8bpc(&dc->mode));
-}
-
 inline void tegra_nvdisp_set_rg_unstall_t19x(struct tegra_dc *dc)
 {
-	if (dc->yuv_bypass)
+	if (dc->mode.vmode & FB_VMODE_BYPASS)
 		return;
 
 	if (tegra_dc_is_yuv420_8bpc(&dc->mode))

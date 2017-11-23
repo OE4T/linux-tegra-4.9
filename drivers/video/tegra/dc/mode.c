@@ -33,6 +33,14 @@
 #include "dsi.h"
 #include "edid.h"
 
+#define CHK(c, s, ...) do {					\
+		if (unlikely(c)) {				\
+			if (verbose)				\
+				pr_err(s, ## __VA_ARGS__);	\
+			return false;				\
+		}						\
+	} while (0)
+
 /* return non-zero if constraint is violated */
 static int calc_h_ref_to_sync(const struct tegra_dc_mode *mode, int *href)
 {
@@ -112,14 +120,6 @@ static int calc_ref_to_sync(struct tegra_dc_mode *mode)
 
 static bool check_ref_to_sync(struct tegra_dc_mode *mode, bool verbose)
 {
-#define CHK(c, s) do {				\
-		if (unlikely(c)) {		\
-			if (verbose)		\
-				pr_err(s);	\
-			return false;		\
-		}				\
-	} while (0)
-
 	/* Constraint 1: H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH > 20. */
 	CHK(mode->h_ref_to_sync + mode->h_sync_width +
 	    mode->h_back_porch <= 20,
@@ -156,8 +156,6 @@ static bool check_ref_to_sync(struct tegra_dc_mode *mode, bool verbose)
 
 	/* Constraint 9: V_DISP_ACTIVE >= 16 */
 	CHK(mode->v_active < 16, "V_DISP_ACTIVE < 16\n");
-
-#undef CHK
 
 	return true;
 }
@@ -326,6 +324,50 @@ u32 tegra_dc_get_aspect_ratio(struct tegra_dc *dc)
 	return aspect_ratio;
 }
 
+static bool check_yuv_timings(struct tegra_dc_mode *mode, bool verbose)
+{
+	if (mode->vmode & FB_VMODE_BYPASS)
+		return true;
+
+	/*
+	 * For YUV420/422, the following timing constraints must be enforced:
+	 * 1) H_ACTIVE should be even
+	 * 2) H_SYNC_WIDTH should be even
+	 * 3) H_BACK_PORCH should be even
+	 * 4) H_FRONT_PORCH should be even
+	 *
+	 * For YUV420 only, the following timing constraints must be enforced:
+	 * 5) V_ACTIVE should be even
+	 */
+	if ((mode->vmode & FB_VMODE_Y422) ||
+		tegra_dc_is_yuv420_8bpc(mode)) {
+		/* Constraint 1 */
+		CHK(mode->h_active & 0x1, "H_ACTIVE not even for vmode: 0x%x\n",
+			mode->vmode);
+
+		/* Constraint 2 */
+		CHK(mode->h_sync_width & 0x1,
+			"H_SYNC_WIDTH not even for vmode: 0x%x\n", mode->vmode);
+
+		/* Constraint 3 */
+		CHK(mode->h_back_porch & 0x1,
+			"H_BACK_PORCH not even for vmode: 0x%x\n", mode->vmode);
+
+		/* Constraint 4 */
+		CHK(mode->h_front_porch & 0x1,
+			"H_FRONT_PORCH not even for vmode: 0x%x\n",
+			mode->vmode);
+
+		/* Constraint 5 */
+		if (tegra_dc_is_yuv420_8bpc(mode))
+			CHK(mode->v_active & 0x1,
+				"V_ACTIVE not even for vmode: 0x%x\n",
+				mode->vmode);
+	}
+
+	return true;
+}
+
 static bool check_mode_timings(const struct tegra_dc *dc,
 			       struct tegra_dc_mode *mode, bool verbose)
 {
@@ -365,6 +407,10 @@ static bool check_mode_timings(const struct tegra_dc *dc,
 				"Display timing doesn't meet restrictions.\n");
 		return false;
 	}
+
+	if (!check_yuv_timings(mode, verbose))
+		return false;
+
 	if (verbose)
 		dev_dbg(&dc->ndev->dev,
 			"Using mode %dx%d pclk=%d href=%d vref=%d\n",

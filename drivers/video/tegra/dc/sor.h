@@ -255,12 +255,7 @@ void __attribute__((weak)) tegra_sor_clk_switch_setup_t19x(
 				struct tegra_dc_sor_data *sor, bool unblock);
 void __attribute__((weak)) tegra_sor_program_fpga_clk_mux_t19x(
 				struct tegra_dc_sor_data *sor);
-void __attribute__((weak))
-	tegra_sor_set_clk_rate_t19x(struct tegra_dc_sor_data *sor);
-u32 __attribute__((weak))
-	tegra_sor_get_pixel_depth_t19x(struct tegra_dc *dc);
-u32 __attribute__((weak))
-	tegra_sor_get_adjusted_hblank_t19x(struct tegra_dc *dc, u32 hblank_end);
+u32 __attribute__((weak)) tegra_sor_yuv420_8bpc_pixel_depth_t19x(void);
 void __attribute__((weak)) tegra_sor_init_quirks_t19x(
 				struct tegra_dc_sor_data *sor);
 

@@ -1271,20 +1271,13 @@ INIT_EXIT:
 
 }
 
-static inline bool tegra_nvdisp_is_lpf_required_t18x(struct tegra_dc *dc)
-{
-	if (dc->yuv_bypass)
-		return false;
-
-	return (dc->mode.vmode & FB_VMODE_Y422);
-}
-
 static inline bool tegra_nvdisp_is_lpf_required(struct tegra_dc *dc)
 {
-	if (tegra_dc_is_t19x())
-		return tegra_nvdisp_is_lpf_required_t19x(dc);
-	else
-		return tegra_nvdisp_is_lpf_required_t18x(dc);
+	if (dc->mode.vmode & FB_VMODE_BYPASS)
+		return false;
+
+	return ((dc->mode.vmode & FB_VMODE_Y422) ||
+		tegra_dc_is_yuv420_8bpc(&dc->mode));
 }
 
 void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)

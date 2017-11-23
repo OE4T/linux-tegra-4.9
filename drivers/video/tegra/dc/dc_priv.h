@@ -320,8 +320,6 @@ void __attribute__((weak)) tegra_dc_enable_sor_t18x(struct tegra_dc *dc,
 void __attribute__((weak)) tegra_dc_enable_sor_t19x(struct tegra_dc *dc,
 			int sor_num, bool enable);
 
-bool __attribute__((weak))
-	tegra_nvdisp_is_lpf_required_t19x(struct tegra_dc *dc);
 void __attribute__((weak))
 	tegra_nvdisp_set_rg_unstall_t19x(struct tegra_dc *dc);
 

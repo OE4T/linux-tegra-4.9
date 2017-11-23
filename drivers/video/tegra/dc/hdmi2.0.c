@@ -119,6 +119,30 @@ tegra_hdmi_hpd_asserted(struct tegra_hdmi *hdmi)
 	return tegra_dc_hpd(hdmi->dc);
 }
 
+/*
+ * Calculates the effective SOR link rate based on the DC pclk and the selected
+ * output mode:
+ * - RGB444/YUV444 12bpc requires a 2:3 pclk:orclk ratio
+ * - YUV420 8bpc requires a 2:1 pclk:orclk ratio
+ */
+static inline unsigned long tegra_sor_get_link_rate(struct tegra_dc *dc)
+{
+	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
+	unsigned long rate = dc->mode.pclk;
+
+	if (!(dc->mode.vmode & FB_VMODE_BYPASS)) {
+		if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
+			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
+			rate = rate >> 1;
+			rate = rate * 3;
+		} else if (tegra_dc_is_yuv420_8bpc(&dc->mode)) {
+			rate = rate >> 1;
+		}
+	}
+
+	return rate;
+}
+
 static inline void _tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
 {
 	mutex_lock(&hdmi->ddc_refcount_lock);
@@ -559,7 +583,7 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 		tegra_nvhdcp_set_plug(hdmi->nvhdcp, false);
 
 	cancel_delayed_work_sync(&hdmi->scdc_work);
-	if (dc->mode.pclk > 340000000) {
+	if (tegra_sor_get_link_rate(dc) > 340000000) {
 		tegra_hdmi_v2_x_mon_config(hdmi, false);
 		tegra_hdmi_v2_x_host_config(hdmi, false);
 	}
@@ -1429,19 +1453,20 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 	int i;
 	int err = 0;
 	struct tmds_prod_pair  *ranges;
+	unsigned long tmds_rate = tegra_sor_get_link_rate(hdmi->dc);
 
 	if (tegra_platform_is_sim())
 		return 0;
 
-	/* Apply the range where pclk belongs to */
+	/* Apply the range where tmds rate belongs to */
 	ranges = hdmi->tmds_range ? : tmds_config_modes;
 	for (i = 0; ranges[i].clk; i++) {
-		if (ranges[i].clk < hdmi->dc->mode.pclk)
+		if (ranges[i].clk < tmds_rate)
 			continue;
 
 		dev_info(&hdmi->dc->ndev->dev,
-			"hdmi: pclk:%dK prod-setting:%s\n",
-			hdmi->dc->mode.pclk / 1000, ranges[i].name);
+			"hdmi: tmds rate:%luK prod-setting:%s\n",
+			tmds_rate / 1000, ranges[i].name);
 		err = tegra_prod_set_by_name(&hdmi->sor->base,
 			ranges[i].name, hdmi->prod_list);
 		/* Return if matching range found */
@@ -1454,8 +1479,8 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 			ranges[i - 1].name, hdmi->prod_list);
 
 	dev_warn(&hdmi->dc->ndev->dev,
-		"hdmi: tmds prod set for pclk:%d failed\n",
-		hdmi->dc->mode.pclk);
+		"hdmi: tmds prod set for tmds rate:%lu failed\n",
+		tmds_rate);
 	return -EINVAL;
 }
 
@@ -2544,8 +2569,9 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 	u8 rd_status_flags[][2] = {
 		{HDMI_SCDC_STATUS_FLAGS, 0x0}
 	};
+	unsigned long tmds_rate = tegra_sor_get_link_rate(hdmi->dc);
 
-	if (!hdmi->enabled || hdmi->dc->mode.pclk <= 340000000)
+	if (!hdmi->enabled || tmds_rate <= 340000000)
 		return;
 
 	if (hdmi->dc->vedid)
@@ -2555,7 +2581,7 @@ static void tegra_hdmi_scdc_worker(struct work_struct *work)
 		return;
 
 	tegra_hdmi_scdc_read(hdmi, rd_status_flags, ARRAY_SIZE(rd_status_flags));
-	if (!rd_status_flags[0][1]  && (hdmi->dc->mode.pclk > 340000000)) {
+	if (!rd_status_flags[0][1]  && (tmds_rate > 340000000)) {
 		dev_info(&hdmi->dc->ndev->dev, "hdmi: scdc scrambling status is reset, "
 						"trying to reconfigure.\n");
 		_tegra_hdmi_v2_x_config(hdmi);
@@ -2770,7 +2796,7 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_sor_writel(sor,  NV_SOR_SEQ_INST(0), 0x8080);
 	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000001);
 
-	if (hdmi->dc->mode.pclk > 340000000) {
+	if (tegra_sor_get_link_rate(hdmi->dc) > 340000000) {
 		tegra_hdmi_v2_x_config(hdmi);
 		schedule_delayed_work(&hdmi->scdc_work,
 			msecs_to_jiffies(HDMI_SCDC_MONITOR_TIMEOUT_MS));
@@ -2828,7 +2854,7 @@ static void tegra_hdmi_config_clk_nvdisplay(struct tegra_hdmi *hdmi,
 		struct tegra_dc_sor_data *sor = hdmi->sor;
 		int val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7;
 
-		if (hdmi->dc->mode.pclk > 340000000) {
+		if (tegra_sor_get_link_rate(hdmi->dc) > 340000000) {
 			long rate = clk_get_rate(sor->ref_clk);
 
 			/* half rate and double vco */
@@ -2955,27 +2981,11 @@ static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
 	return pclk;
 }
 
-static inline void tegra_sor_set_clk_rate(struct tegra_dc_sor_data *sor)
+static inline void tegra_sor_set_ref_clk_rate(struct tegra_dc_sor_data *sor)
 {
-	struct tegra_dc *dc = sor->dc;
-	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
-	long rate = dc->mode.pclk;
-
-	if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
-		(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
-		rate = rate >> 1;
-		rate = rate * 3;
-	}
+	unsigned long rate = tegra_sor_get_link_rate(sor->dc);
 
 	clk_set_rate(sor->ref_clk, rate);
-}
-
-static inline void tegra_dc_hdmi_set_sor_ref_rate(struct tegra_dc_sor_data *sor)
-{
-	if (tegra_dc_is_t19x())
-		tegra_sor_set_clk_rate_t19x(sor);
-	else
-		tegra_sor_set_clk_rate(sor);
 }
 
 static long tegra_dc_hdmi_setup_clk_nvdisplay(struct tegra_dc *dc,
@@ -3021,7 +3031,7 @@ static long tegra_dc_hdmi_setup_clk_nvdisplay(struct tegra_dc *dc,
 	clk_set_parent(sor->ref_clk, parent_clk);
 
 	if (!dc->initialized)
-		tegra_dc_hdmi_set_sor_ref_rate(sor);
+		tegra_sor_set_ref_clk_rate(sor);
 
 	if (atomic_inc_return(&hdmi->clock_refcount) == 1)
 		tegra_sor_clk_enable(sor);
@@ -3293,7 +3303,7 @@ static void tegra_dc_hdmi_modeset_notifier(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 
 	/* disable hdmi2.x config on host and monitor */
-	if (dc->mode.pclk > 340000000) {
+	if (tegra_sor_get_link_rate(dc) > 340000000) {
 		if (tegra_edid_is_scdc_present(dc->edid))
 			tegra_hdmi_v2_x_mon_config(hdmi, true);
 		tegra_hdmi_v2_x_host_config(hdmi, true);

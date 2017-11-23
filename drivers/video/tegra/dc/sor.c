@@ -1340,7 +1340,11 @@ static u32 tegra_sor_get_pixel_depth(struct tegra_dc *dc)
 	u32 pixel_depth = 0;
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI && !yuv_bypass_mode) {
-		if (yuv_flag & FB_VMODE_Y422) {
+		if (tegra_dc_is_yuv420_8bpc(&dc->mode)) {
+			if (tegra_dc_is_t19x())
+				pixel_depth =
+				tegra_sor_yuv420_8bpc_pixel_depth_t19x();
+		} else if (yuv_flag & FB_VMODE_Y422) {
 			if (yuv_flag & FB_VMODE_Y24)
 				pixel_depth =
 					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_16_422;
@@ -1370,21 +1374,17 @@ static u32 tegra_sor_get_pixel_depth(struct tegra_dc *dc)
 	return pixel_depth;
 }
 
-static inline u32 tegra_dc_sor_get_pixel_depth(struct tegra_dc *dc)
+static inline u32 tegra_sor_get_adjusted_hblank(struct tegra_dc *dc,
+						u32 hblank_end)
 {
-	if (tegra_dc_is_t19x())
-		return tegra_sor_get_pixel_depth_t19x(dc);
-	else
-		return tegra_sor_get_pixel_depth(dc);
-}
+	/* For native HDMI420 8bpc, HBLANK_END needs to be halved. */
+	if (tegra_dc_is_t19x() &&
+		tegra_dc_is_yuv420_8bpc(&dc->mode) &&
+		!(dc->mode.vmode & FB_VMODE_BYPASS)
+		&& dc->out->type == TEGRA_DC_OUT_HDMI)
+		hblank_end = hblank_end / 2;
 
-static inline u32 tegra_dc_sor_get_adjusted_hblank(struct tegra_dc *dc,
-							u32 hblank_end)
-{
-	if (tegra_dc_is_t19x())
-		return tegra_sor_get_adjusted_hblank_t19x(dc, hblank_end);
-	else
-		return hblank_end;
+	return hblank_end;
 }
 
 static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
@@ -1421,7 +1421,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	else
 		reg_val |= NV_SOR_STATE1_ASY_VSYNCPOL_POSITIVE_TRUE;
 
-	reg_val |= tegra_dc_sor_get_pixel_depth(dc);
+	reg_val |= tegra_sor_get_pixel_depth(dc);
 	tegra_sor_writel(sor, NV_SOR_STATE1, reg_val);
 
 	BUG_ON(!dc_mode);
@@ -1441,7 +1441,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 
 	vblank_end = vsync_end + dc_mode->v_back_porch;
 	hblank_end = hsync_end + dc_mode->h_back_porch;
-	hblank_end = tegra_dc_sor_get_adjusted_hblank(dc, hblank_end);
+	hblank_end = tegra_sor_get_adjusted_hblank(dc, hblank_end);
 	tegra_sor_writel(sor, nv_sor_head_state3(head_num),
 		vblank_end << NV_HEAD_STATE3_VBLANK_END_SHIFT |
 		hblank_end << NV_HEAD_STATE3_HBLANK_END_SHIFT);

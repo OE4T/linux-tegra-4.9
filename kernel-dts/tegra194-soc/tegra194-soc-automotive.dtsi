@@ -31,4 +31,35 @@
 	bpmp {
 	        status = "okay";
 	};
+
+	pinmux@2430000 {
+		status = "okay";
+	};
+
+	/* Tegra main GPIO */
+	gpio@2200000 {
+		status = "okay";
+	};
+
+	/* Tegra AON GPIO */
+	gpio@c2f0000 {
+		status = "okay";
+	};
+
+	/* BPMP I2c for PMIC acess */
+	bpmp_i2c {
+		status = "okay";
+	};
+
+	efuse@3820000 {
+		status = "okay";
+		efuse-burn {
+			status = "okay";
+		};
+	};
+
+	/* Wake irq support */
+	tegra194-pm-irq {
+		status = "okay";
+	};
 };

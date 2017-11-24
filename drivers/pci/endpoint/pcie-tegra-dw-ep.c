@@ -374,6 +374,15 @@ err_phy_init:
 	return ret;
 }
 
+static irqreturn_t pex_rst_isr(int irq, void *arg)
+{
+	struct tegra_pcie_dw_ep *pcie = arg;
+
+	pcie->event = EP_PEX_RST_DE_ASSERT;
+	schedule_work(&pcie->pcie_ep_work);
+	return IRQ_HANDLED;
+}
+
 static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 {
 	struct tegra_pcie_dw_ep *pcie;
@@ -382,6 +391,8 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	char name[10];
 	int phy_count;
 	u32 i = 0;
+	int pex_rst_gpio;
+	int irq;
 	int ret = 0;
 	u32 val = 0;
 
@@ -516,7 +527,8 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	/* enable PEX_RST interrupt generation */
 	val = readl(pcie->appl_base + APPL_INTR_EN_L0_0);
 	val |= APPL_INTR_EN_L0_0_SYS_INTR_EN;
-	val |= APPL_INTR_EN_L0_0_PEX_RST_INT_EN;
+	if (tegra_platform_is_fpga())
+		val |= APPL_INTR_EN_L0_0_PEX_RST_INT_EN;
 	val |= APPL_INTR_EN_L0_0_LINK_STATE_INT_EN;
 	val |= APPL_INTR_EN_L0_0_PCI_CMD_EN_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L0_0);
@@ -562,8 +574,38 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 
 	reset_control_deassert(pcie->core_rst);
 
+	pex_rst_gpio = of_get_named_gpio(np, "nvidia,pex-rst-gpio", 0);
+	if (!gpio_is_valid(pex_rst_gpio)) {
+		dev_err(pcie->dev, "pex-rst-gpio is missing\n");
+		ret = pex_rst_gpio;
+		goto fail_pex_rst_gpio;
+	}
+	ret = devm_gpio_request(pcie->dev, pex_rst_gpio, "pex_rst_gpio");
+	if (ret < 0) {
+		dev_err(pcie->dev, "pex_rst_gpio request failed\n");
+		goto fail_pex_rst_gpio;
+	}
+	ret = gpio_direction_input(pex_rst_gpio);
+	if (ret < 0) {
+		dev_err(pcie->dev, "pex_rst_gpio direction input failed\n");
+		goto fail_pex_rst_gpio;
+	}
+	irq = gpio_to_irq(pex_rst_gpio);
+	if (irq < 0) {
+		dev_err(pcie->dev, "Unable to get irq for pex_rst_gpio\n");
+		goto fail_pex_rst_gpio;
+	}
+	ret = devm_request_irq(pcie->dev, (unsigned int)irq, pex_rst_isr,
+			       IRQF_TRIGGER_RISING, "pex_rst", (void *)pcie);
+	if (ret < 0) {
+		dev_err(pcie->dev, "Unable to request irq for pex_rst\n");
+		goto fail_pex_rst_gpio;
+	}
+
 	return ret;
 
+fail_pex_rst_gpio:
+	reset_control_assert(pcie->core_rst);
 fail_dbi_res:
 	tegra_pcie_disable_phy(pcie);
 fail_phy:

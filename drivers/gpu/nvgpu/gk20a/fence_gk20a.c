@@ -317,7 +317,7 @@ int gk20a_fence_from_syncpt(
 #ifdef CONFIG_SYNC
 	if (need_sync_fence) {
 		sync_fence = nvgpu_nvhost_sync_create_fence(nvhost_dev,
-					id, value, 1, "fence");
+					id, value, "fence");
 		if (IS_ERR(sync_fence))
 			return -1;
 	}

@@ -75,7 +75,7 @@ int nvgpu_nvhost_sync_num_pts(struct sync_fence *fence);
 struct sync_fence *nvgpu_nvhost_sync_fdget(int fd);
 struct sync_fence *nvgpu_nvhost_sync_create_fence(
 	struct nvgpu_nvhost_dev *nvhost_dev,
-	u32 id, u32 thresh, u32 num_pts, const char *name);
+	u32 id, u32 thresh, const char *name);
 #endif /* CONFIG_SYNC */
 #endif /* CONFIG_TEGRA_GK20A_NVHOST */
 #endif /* __NVGPU_NVHOST_H__ */

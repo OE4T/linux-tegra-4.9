@@ -103,6 +103,7 @@
 #define PCIE_ATU_TYPE_IO		(0x2 << 0)
 #define PCIE_ATU_TYPE_CFG0		(0x4 << 0)
 #define PCIE_ATU_TYPE_CFG1		(0x5 << 0)
+#define PCIE_ATU_INCREASE_REGION_SIZE	BIT(13)
 #define PCIE_ATU_CR2			0x4
 #define PCIE_ATU_ENABLE			(0x1 << 31)
 #define PCIE_ATU_LOWER_BASE		0x8
@@ -110,6 +111,7 @@
 #define PCIE_ATU_LIMIT			0x10
 #define PCIE_ATU_LOWER_TARGET		0x14
 #define PCIE_ATU_UPPER_TARGET		0x18
+#define PCIE_ATU_UPPER_LIMIT		0x20
 
 #define PCIE_ATU_BUS(x)			(((x) & 0xff) << 24)
 #define PCIE_ATU_DEV(x)			(((x) & 0x1f) << 19)
@@ -397,14 +399,16 @@ static inline void prog_atu(struct pcie_port *pp, int i, u32 val, u32 reg)
 }
 
 static void outbound_atu(struct pcie_port *pp, int i, int type, u64 cpu_addr,
-			 u64 pci_addr, u32 size)
+			 u64 pci_addr, u64 size)
 {
 	prog_atu(pp, i, lower_32_bits(cpu_addr), PCIE_ATU_LOWER_BASE);
 	prog_atu(pp, i, upper_32_bits(cpu_addr), PCIE_ATU_UPPER_BASE);
 	prog_atu(pp, i, lower_32_bits(cpu_addr + size - 1), PCIE_ATU_LIMIT);
+	prog_atu(pp, i, upper_32_bits(cpu_addr + size - 1),
+		 PCIE_ATU_UPPER_LIMIT);
 	prog_atu(pp, i, lower_32_bits(pci_addr), PCIE_ATU_LOWER_TARGET);
 	prog_atu(pp, i, upper_32_bits(pci_addr), PCIE_ATU_UPPER_TARGET);
-	prog_atu(pp, i, type, PCIE_ATU_CR1);
+	prog_atu(pp, i, type | PCIE_ATU_INCREASE_REGION_SIZE, PCIE_ATU_CR1);
 	prog_atu(pp, i, PCIE_ATU_ENABLE, PCIE_ATU_CR2);
 }
 

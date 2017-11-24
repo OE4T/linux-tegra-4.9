@@ -2613,13 +2613,13 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	/* Circular Buffer */
-	if (!c->vpr ||
-	    (gr->global_ctx_buffer[CIRCULAR_VPR].mem.priv.sgt == NULL)) {
-		mem = &gr->global_ctx_buffer[CIRCULAR].mem;
-		g_bfr_index[CIRCULAR_VA] = CIRCULAR;
-	} else {
+	if (c->vpr &&
+	    nvgpu_mem_is_valid(&gr->global_ctx_buffer[CIRCULAR_VPR].mem)) {
 		mem = &gr->global_ctx_buffer[CIRCULAR_VPR].mem;
 		g_bfr_index[CIRCULAR_VA] = CIRCULAR_VPR;
+	} else {
+		mem = &gr->global_ctx_buffer[CIRCULAR].mem;
+		g_bfr_index[CIRCULAR_VA] = CIRCULAR;
 	}
 
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
@@ -2631,13 +2631,13 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	g_bfr_size[CIRCULAR_VA] = mem->size;
 
 	/* Attribute Buffer */
-	if (!c->vpr ||
-	    (gr->global_ctx_buffer[ATTRIBUTE_VPR].mem.priv.sgt == NULL)) {
-		mem = &gr->global_ctx_buffer[ATTRIBUTE].mem;
-		g_bfr_index[ATTRIBUTE_VA] = ATTRIBUTE;
-	} else {
+	if (c->vpr &&
+	    nvgpu_mem_is_valid(&gr->global_ctx_buffer[ATTRIBUTE_VPR].mem)) {
 		mem = &gr->global_ctx_buffer[ATTRIBUTE_VPR].mem;
 		g_bfr_index[ATTRIBUTE_VA] = ATTRIBUTE_VPR;
+	} else {
+		mem = &gr->global_ctx_buffer[ATTRIBUTE].mem;
+		g_bfr_index[ATTRIBUTE_VA] = ATTRIBUTE;
 	}
 
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
@@ -2649,13 +2649,13 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	g_bfr_size[ATTRIBUTE_VA] = mem->size;
 
 	/* Page Pool */
-	if (!c->vpr ||
-	    (gr->global_ctx_buffer[PAGEPOOL_VPR].mem.priv.sgt == NULL)) {
-		mem = &gr->global_ctx_buffer[PAGEPOOL].mem;
-		g_bfr_index[PAGEPOOL_VA] = PAGEPOOL;
-	} else {
+	if (c->vpr &&
+	    nvgpu_mem_is_valid(&gr->global_ctx_buffer[PAGEPOOL_VPR].mem)) {
 		mem = &gr->global_ctx_buffer[PAGEPOOL_VPR].mem;
 		g_bfr_index[PAGEPOOL_VA] = PAGEPOOL_VPR;
+	} else {
+		mem = &gr->global_ctx_buffer[PAGEPOOL].mem;
+		g_bfr_index[PAGEPOOL_VA] = PAGEPOOL;
 	}
 
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
@@ -2960,7 +2960,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 	}
 
 	/* allocate patch buffer */
-	if (ch_ctx->patch_ctx.mem.priv.sgt == NULL) {
+	if (!nvgpu_mem_is_valid(&ch_ctx->patch_ctx.mem)) {
 		ch_ctx->patch_ctx.data_count = 0;
 		err = gr_gk20a_alloc_channel_patch_ctx(g, c);
 		if (err) {

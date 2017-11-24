@@ -448,6 +448,8 @@ struct sdhci_host {
 #define SDHCI_QUIRK2_USE_64BIT_ADDR		(1<<16)
 /* Issue CMD and DATA reset together */
 #define SDHCI_QUIRK2_ISSUE_CMD_DAT_RESET_TOGETHER	(1<<17)
+/* Select SDR104 UHS mode for SDR50 */
+#define SDHCI_QUIRK2_SEL_SDR104_UHS_MODE_IN_SDR50	(1<<18)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */

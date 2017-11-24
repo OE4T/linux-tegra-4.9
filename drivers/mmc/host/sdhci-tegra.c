@@ -1466,7 +1466,8 @@ static const struct sdhci_pltfm_data sdhci_tegra114_pdata = {
 		  SDHCI_QUIRK_NO_HISPD_BIT |
 		  SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC |
 		  SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
-	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
+	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
+		SDHCI_QUIRK2_SEL_SDR104_UHS_MODE_IN_SDR50,
 	.ops  = &tegra114_sdhci_ops,
 };
 
@@ -1491,7 +1492,8 @@ static const struct sdhci_pltfm_data sdhci_tegra124_pdata = {
 		    * what sequence is required. Mark 64-bit DMA broken for
 		    * now to fix this for existing users (e.g. Nyan boards).
 		    */
-		   SDHCI_QUIRK2_BROKEN_64_BIT_DMA,
+		   SDHCI_QUIRK2_BROKEN_64_BIT_DMA |
+		   SDHCI_QUIRK2_SEL_SDR104_UHS_MODE_IN_SDR50,
 	.ops  = &tegra114_sdhci_ops,
 };
 
@@ -1507,7 +1509,8 @@ static const struct sdhci_pltfm_data sdhci_tegra210_pdata = {
 		  SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
 	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
 		SDHCI_QUIRK2_USE_64BIT_ADDR |
-		SDHCI_QUIRK2_ISSUE_CMD_DAT_RESET_TOGETHER,
+		SDHCI_QUIRK2_ISSUE_CMD_DAT_RESET_TOGETHER |
+		SDHCI_QUIRK2_SEL_SDR104_UHS_MODE_IN_SDR50,
 	.ops  = &tegra_sdhci_ops,
 };
 
@@ -1531,7 +1534,8 @@ static const struct sdhci_pltfm_data sdhci_tegra186_pdata = {
 		SDHCI_QUIRK_NO_ENDATTR_IN_NOPDESC,
 	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
 		SDHCI_QUIRK2_USE_64BIT_ADDR |
-		SDHCI_QUIRK2_HOST_OFF_CARD_ON,
+		SDHCI_QUIRK2_HOST_OFF_CARD_ON |
+		SDHCI_QUIRK2_SEL_SDR104_UHS_MODE_IN_SDR50,
 	.ops  = &tegra_sdhci_ops,
 };
 

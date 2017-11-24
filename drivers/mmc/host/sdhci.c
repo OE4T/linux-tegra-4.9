@@ -1699,9 +1699,12 @@ void sdhci_set_uhs_signaling(struct sdhci_host *host, unsigned timing)
 		ctrl_2 |= SDHCI_CTRL_UHS_SDR12;
 	else if (timing == MMC_TIMING_UHS_SDR25)
 		ctrl_2 |= SDHCI_CTRL_UHS_SDR25;
-	else if (timing == MMC_TIMING_UHS_SDR50)
-		ctrl_2 |= SDHCI_CTRL_UHS_SDR50;
-	else if ((timing == MMC_TIMING_UHS_DDR50) ||
+	else if (timing == MMC_TIMING_UHS_SDR50) {
+		if (host->quirks2 & SDHCI_QUIRK2_SEL_SDR104_UHS_MODE_IN_SDR50)
+			ctrl_2 |= SDHCI_CTRL_UHS_SDR104;
+		else
+			ctrl_2 |= SDHCI_CTRL_UHS_SDR50;
+	} else if ((timing == MMC_TIMING_UHS_DDR50) ||
 		 (timing == MMC_TIMING_MMC_DDR52))
 		ctrl_2 |= SDHCI_CTRL_UHS_DDR50;
 	else if (timing == MMC_TIMING_MMC_HS400)

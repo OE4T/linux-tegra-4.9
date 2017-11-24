@@ -9790,6 +9790,7 @@ dhd_module_init(void)
 
 	do {
 		err = dhd_wifi_platform_register_drv();
+		msleep(10); // wait for registering dhd wifi platform driver
 		if (!err) {
 			register_reboot_notifier(&dhd_reboot_notifier);
 			break;
@@ -9810,6 +9811,10 @@ dhd_module_init(void)
 		if (!dhd_download_fw_on_driverload) {
 			dhd_driver_init_done = TRUE;
 		}
+		if (dhd_driver_init_done)
+			DHD_ERROR(("%s: dhd_driver_init_done is set\n", __FUNCTION__));
+		else
+			DHD_ERROR(("%s: dhd_driver_init_done is NOT set\n", __FUNCTION__));
 	}
 
 	DHD_ERROR(("%s out\n", __FUNCTION__));

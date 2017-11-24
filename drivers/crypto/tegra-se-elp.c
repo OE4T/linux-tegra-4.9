@@ -3605,14 +3605,13 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	memset((u8 *)ctx->exponent, 0x0, explen);
 	memset((u8 *)ctx->modulus, 0x0, modlen);
 
-	mutex_unlock(&se_dev->hw_lock);
 	return ret;
 rel_mutex:
 	tegra_se_release_pka1_mutex(se_dev);
 clk_dis:
 	clk_disable_unprepare(se_dev->c);
-	mutex_unlock(&se_dev->hw_lock);
 
+	mutex_unlock(&se_dev->hw_lock);
 	return ret;
 }
 
@@ -3704,7 +3703,6 @@ static void tegra_se_pka1_rsa_exit(struct crypto_akcipher *tfm)
 	devm_kfree(se_dev->dev, ctx->exponent);
 	devm_kfree(se_dev->dev, ctx->modulus);
 
-	mutex_lock(&se_dev->hw_lock);
 	clk_prepare_enable(se_dev->c);
 
 	tegra_se_release_pka1_mutex(se_dev);

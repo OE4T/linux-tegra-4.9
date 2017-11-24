@@ -111,12 +111,29 @@ static int sensor_common_parse_signal_props(
 	else
 		signal->dpcm_enable = 0;
 
+	/* initialize default if this prop not available */
+	err = of_property_read_string(node,
+					"deskew_initial_enable", &temp_str);
+	if (!err)
+		signal->deskew_initial_enable =
+				!strncmp(temp_str, "true", sizeof("true"));
+	else
+		signal->deskew_initial_enable = 0;
+	err = of_property_read_string(node,
+					"deskew_periodic_enable", &temp_str);
+	if (!err)
+		signal->deskew_periodic_enable =
+				!strncmp(temp_str, "true", sizeof("true"));
+	else
+		signal->deskew_periodic_enable = 0;
+
 	err = of_property_read_string(node, "tegra_sinterface", &temp_str);
 	if (err) {
 		dev_err(dev,
 			"%s: tegra_sinterface property missing\n", __func__);
 		return err;
 	}
+
 	if (strcmp(temp_str, "serial_a") == 0)
 		signal->tegra_sinterface = 0;
 	else if (strcmp(temp_str, "serial_b") == 0)

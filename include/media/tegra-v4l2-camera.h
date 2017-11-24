@@ -95,7 +95,9 @@ struct sensor_signal_properties {
 	__u32 dpcm_enable;
 	__u32 tegra_sinterface;
 	__u32 phy_mode;
-	__u32 reserved[6];
+	__u32 deskew_initial_enable;
+	__u32 deskew_periodic_enable;
+	__u32 reserved[4];
 };
 
 struct sensor_image_properties {

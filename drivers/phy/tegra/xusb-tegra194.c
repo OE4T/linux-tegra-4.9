@@ -1316,6 +1316,15 @@ static const struct tegra_xusb_padctl_ops tegra194_xusb_padctl_ops = {
 	.phy_wake = tegra194_xusb_padctl_phy_wake,
 };
 
+static const char * const tegra194_supply_names[] = {
+	"pex_dvdd",
+	"pex_hvdd",
+	"pex_pll_hvdd",
+	"vclamp_usb",
+	"avdd_usb",
+	"avdd_pll_nvhs_eutmip",
+};
+
 const struct tegra_xusb_padctl_soc tegra194_xusb_padctl_soc = {
 	.num_pads = ARRAY_SIZE(tegra194_pads),
 	.pads = tegra194_pads,
@@ -1330,6 +1339,8 @@ const struct tegra_xusb_padctl_soc tegra194_xusb_padctl_soc = {
 		},
 	},
 	.ops = &tegra194_xusb_padctl_ops,
+	.supply_names = tegra194_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
 };
 EXPORT_SYMBOL_GPL(tegra194_xusb_padctl_soc);
 

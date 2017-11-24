@@ -62,8 +62,6 @@
 #define SDHCI_TEGRA_VENDOR_ERR_INTR_STATUS	0x108
 
 #define SDHCI_TEGRA_VENDOR_CAP_OVERRIDES	0x10C
-#define SDHCI_VENDOR_CAP_DQS_TRIM_SHIFT		0x8
-#define SDHCI_VENDOR_CAP_DQS_TRIM_MASK		0x3F
 
 #define SDHCI_TEGRA_VENDOR_MISC_CTRL		0x120
 #define SDHCI_MISC_CTRL_ENABLE_SDR104		0x8
@@ -122,7 +120,6 @@
 #define MAX_CLK_PARENTS	5
 #define MAX_DIVISOR_VALUE	128
 #define MAX_TAP_VALUE	256
-#define MAX_DQS_TRIM_VALUES	0x3F
 
 #define SET_REQ_TAP	0x0
 #define SET_DDR_TAP	0x1
@@ -200,7 +197,6 @@ struct sdhci_tegra {
 	#define TUNING_STATUS_DONE	1
 	#define TUNING_STATUS_RETUNE	2
 	bool disable_auto_cal;
-	int dqs_trim_delay;
 	int timing;
 	bool set_1v8_calib_offsets;
 	int current_voltage;
@@ -984,25 +980,6 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	}
 }
 
-static inline int tegra_sdhci_set_dqs_trim_delay(struct sdhci_host *host,
-	int dqs_trim_delay)
-{
-	u32 reg;
-
-	if ((dqs_trim_delay > MAX_DQS_TRIM_VALUES) || (dqs_trim_delay < 0)) {
-		dev_err(mmc_dev(host->mmc), "Invalid dqs trim value\n");
-		return -1;
-	}
-
-	reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CAP_OVERRIDES);
-	reg &= ~(SDHCI_VENDOR_CAP_DQS_TRIM_MASK <<
-		SDHCI_VENDOR_CAP_DQS_TRIM_SHIFT);
-	reg |= (dqs_trim_delay << SDHCI_VENDOR_CAP_DQS_TRIM_SHIFT);
-	sdhci_writel(host, reg, SDHCI_TEGRA_VENDOR_CAP_OVERRIDES);
-
-	return 0;
-}
-
 static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 					  unsigned timing)
 {
@@ -1025,12 +1002,6 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 		tuning_mode = true;
 
 	sdhci_set_uhs_signaling(host, timing);
-
-	/* Set DQS trim delay */
-	if (timing == MMC_TIMING_MMC_HS400) {
-		tegra_sdhci_set_dqs_trim_delay(host,
-			tegra_host->dqs_trim_delay);
-	}
 
 	/* Set trim delay */
 	if (tegra_host->ddr_signaling || (timing == MMC_TIMING_MMC_HS200)) {
@@ -1621,8 +1592,6 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	of_property_read_u32(np, "max-clk-limit", (u32 *)&tegra_host->max_clk_limit);
 	of_property_read_u32(np, "ddr-clk-limit",
 		(u32 *)&tegra_host->max_ddr_clk_limit);
-	of_property_read_u32(np, "dqs-trim-delay",
-		(u32 *)&tegra_host->dqs_trim_delay);
 	tegra_host->pwrdet_support = of_property_read_bool(np,
 		"pwrdet-support");
 	tegra_host->cd_gpio = of_get_named_gpio(np, "cd-gpios", 0);

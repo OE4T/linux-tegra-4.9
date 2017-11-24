@@ -52,13 +52,6 @@ config TEGRA_BOOTLOADER_DEBUG_INIT
 	bool
 	depends on TEGRA_BOOTLOADER_DEBUG
 
-config TEGRA_BPMP_SCLK_SKIP
-	bool "Let bpmp firmware own the sclk skipper h/w"
-	depends on TEGRA_BPMP && ARCH_TEGRA_21x_SOC
-	default n
-	help
-	  When enabled, sclk skipper set rate will be delegated to bpmp firmware
-
 config TEGRA_CBUS_CAN_USE_SKIPPERS
 	bool "Allow to use clock skippers on cbus users"
 	depends on ARCH_TEGRA_21x_SOC
@@ -128,9 +121,6 @@ config TEGRA_FIRMWARES_INVENTORY
 config TEGRA_HSP
 	bool "Enable Tegra Hardware Synchronization Primitives driver"
 	default y
-
-config POWERGATE_TEGRA_BPMP
-	def_bool TEGRA_BPMP
 
 config TEGRA_HV_XHCI_DEBUG
 	bool "Enable Tegra Hypervisor XHCI Server Debug"

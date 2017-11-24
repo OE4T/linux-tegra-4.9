@@ -289,7 +289,7 @@ nvgpu-y += \
 	gv100/regops_gv100.o \
 	gv100/hal_gv100.o
 
-nvgpu-$(CONFIG_TEGRA_GK20A) += gv11b/platform_gv11b_tegra.o
+nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gv11b_tegra.o
 nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += common/linux/nvhost_t19x.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \

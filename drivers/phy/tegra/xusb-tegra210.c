@@ -1916,6 +1916,31 @@ static int tegra210_pcie_phy_init(struct phy *phy)
 
 	mutex_lock(&padctl->lock);
 
+	if (tegra_xusb_lane_check(lane, "xusb")) {
+		unsigned int ssp = tegra210_usb3_lane_map(lane);
+		struct tegra_xusb_usb3_port *port =
+				tegra_xusb_find_usb3_port(padctl, ssp);
+		struct tegra_xusb_usb2_port *companion_usb2_port =
+				tegra_xusb_find_usb2_port(padctl, port->port);
+
+		if (!companion_usb2_port) {
+			dev_err(padctl->dev,
+				"no companion port found for USB3 lane %u\n",
+				ssp);
+			mutex_unlock(&padctl->lock);
+			return -ENODEV;
+		}
+
+		port->port_cap = companion_usb2_port->port_cap;
+
+		if (port->port_cap == USB_OTG_CAP) {
+			if (padctl->usb3_otg_port_base_1)
+				dev_warn(padctl->dev,
+					"enabling OTG on multiple USB3 ports\n");
+			padctl->usb3_otg_port_base_1 = ssp + 1;
+		}
+	}
+
 	ret = tegra210_uphy_init(padctl);
 
 	mutex_unlock(&padctl->lock);
@@ -1925,6 +1950,17 @@ static int tegra210_pcie_phy_init(struct phy *phy)
 static int tegra210_pcie_phy_exit(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+
+	mutex_lock(&padctl->lock);
+
+	if (tegra_xusb_lane_check(lane, "xusb")) {
+		if (index == padctl->usb3_otg_port_base_1 - 1)
+			padctl->usb3_otg_port_base_1 = 0;
+	}
+
+	mutex_unlock(&padctl->lock);
 
 	return tegra210_xusb_padctl_disable(lane->pad->padctl);
 }
@@ -2754,24 +2790,29 @@ static inline bool is_usb3_phy(struct phy *phy)
 static bool is_usb3_phy_has_otg_cap(struct tegra_xusb_padctl *padctl,
 				struct phy *phy)
 {
-		struct tegra_xusb_lane *lane;
-		unsigned int index;
-		struct tegra_xusb_usb3_port *port;
+	struct tegra_xusb_lane *lane;
+	unsigned int index;
+	struct tegra_xusb_usb3_port *port;
+	struct tegra_xusb_usb2_port *companion_usb2_port;
 
-		if (!phy)
-			return false;
+	if (!phy)
+		return false;
 
-		lane = phy_get_drvdata(phy);
-		index = tegra210_usb3_lane_map(lane);
+	lane = phy_get_drvdata(phy);
+	index = tegra210_usb3_lane_map(lane);
 
-		port = tegra_xusb_find_usb3_port(padctl, index);
-		if (!port) {
-			dev_err(padctl->dev, "no port found for USB3 lane %u\n",
-					index);
-			return false;
-		}
+	port = tegra_xusb_find_usb3_port(padctl, index);
+	if (!port) {
+		dev_err(padctl->dev, "no port found for USB3 lane %u\n",
+				index);
+		return false;
+	}
 
-	return port->port_cap == USB_OTG_CAP;
+	companion_usb2_port = tegra_xusb_find_usb2_port(padctl, port->port);
+	if (!companion_usb2_port)
+		return false;
+
+	return companion_usb2_port->port_cap == USB_OTG_CAP;
 }
 
 static bool tegra210_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,

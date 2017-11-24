@@ -19,7 +19,7 @@
 #include <linux/notifier.h>
 #include <linux/sched.h>
 #include <linux/dma-mapping.h>
-#include <asm/cacheflush.h>
+#include <linux/tegra-mce.h>
 #include "nvdumper.h"
 
 #define DEBUG_REGDUMP 1
@@ -45,7 +45,7 @@ static int nvdumper_panic_handler(struct notifier_block *this,
 #if DEBUG_REGDUMP
 	nvdumper_print_data();
 #endif
-	flush_cache_all();
+	tegra_flush_cache_all();
 
 	return NOTIFY_OK;
 }

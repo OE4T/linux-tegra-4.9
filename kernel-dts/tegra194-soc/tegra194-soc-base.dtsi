@@ -184,7 +184,6 @@
 		status = "disabled";
 	};
 
-	/* HACK: Populate earlier than other device */
 	smmu: iommu@12000000{
 		compatible = "t19x,arm,mmu-500";
 		reg = <0x0 0x12000000 0x0 0x01000000>, /* SMMU0 16MB */
@@ -205,7 +204,17 @@
 
 		#iommu-cells = <1>;
 
+		/* Note: Keep domain and address space in alphabetical order */
 		domains {
+			aon_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_AON>;
+			};
+			ape_domain {
+				address-space = <&ape_as>;
+				sid-list = <TEGRA_SID(APE)
+					    TEGRA_SID(EQOS)>;
+			};
 			bpmp_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_BPMP>;
@@ -217,10 +226,6 @@
 			hda_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_HDA>;
-			};
-			ape_domain {
-				address-space = <&ape_as>;
-				sid-list = <TEGRA_SID(APE) TEGRA_SID(EQOS)>;
 			};
 			host1x_domain {
 				address-space = <&host1x_as>;
@@ -276,45 +281,6 @@
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
 			};
-			pva0_domain {
-				address-space = <&pva_as>;
-				sid-list = <TEGRA_SID(PVA0)>;
-			};
-			pva1_domain {
-				address-space = <&pva_as>;
-				sid-list = <TEGRA_SID(PVA1)>;
-			};
-			vi_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID(VI)>;
-			};
-			rce_rm_domain {
-				address-space = <&camera_vm0_as>;
-				sid-list = <TEGRA_SID(RCE_RM)
-					    TEGRA_SID(ISP)
-					    TEGRA_SID(ISPFALC)
-					    TEGRA_SID(VIFALC)>;
-			};
-			rce_domain {
-				address-space = <&camera_vm1_as>;
-				sid-list = <TEGRA_SID(RCE)>;
-			};
-			xusb_host_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID_XUSB_HOST>;
-			};
-			xusb_host_vf0_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID_XUSB_VF0>;
-			};
-			xusb_dev_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID_XUSB_DEV>;
-			};
-			aon_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID_AON>;
-			};
 			pcie0_domain {
 				address-space = <&pcie0_as>;
 				sid-list = <TEGRA_SID_PCIE0>;
@@ -339,7 +305,25 @@
 				address-space = <&pcie5_as>;
 				sid-list = <TEGRA_SID_PCIE5>;
 			};
-
+			pva0_domain {
+				address-space = <&pva_as>;
+				sid-list = <TEGRA_SID(PVA0)>;
+			};
+			pva1_domain {
+				address-space = <&pva_as>;
+				sid-list = <TEGRA_SID(PVA1)>;
+			};
+			rce_domain {
+				address-space = <&camera_vm1_as>;
+				sid-list = <TEGRA_SID(RCE)>;
+			};
+			rce_rm_domain {
+				address-space = <&camera_vm0_as>;
+				sid-list = <TEGRA_SID(RCE_RM)
+					    TEGRA_SID(ISP)
+					    TEGRA_SID(ISPFALC)
+					    TEGRA_SID(VIFALC)>;
+			};
 			sata2_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SATA2>;
@@ -360,9 +344,53 @@
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_UFSHC>;
 			};
+			vi_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID(VI)>;
+			};
+			xusb_dev_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_DEV>;
+			};
+			xusb_host_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_HOST>;
+			};
+			xusb_host_vf0_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_VF0>;
+			};
 		};
 
 		address-space-prop {
+			ape_as: ape {
+				iova-start = <0x0 0x40000000>;
+				iova-size = <0x0 0x20000000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			camera_vm0_as: camera_vm0 {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0x20000000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			camera_vm1_as: camera_vm1 {
+				iova-start = <0x0 0xA0000000>;
+				iova-size = <0x0 0x20000000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			common_as: common {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0x7FF00000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
 			host1x_as: host1x {
 				iova-start = <0x0 0x1000>;
 				iova-size = <0x0 0xFFFFEFFF>;
@@ -373,21 +401,6 @@
 			host1x_client_as: host1x_client {
 				iova-start = <0x0 0x1000>;
 				iova-size = <0x0 0xFFFFEFFF>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			/* Modify pva kernel code for any iova-start change*/
-			pva_as: pva0 {
-				iova-start = <0x0 0x80000000>;
-				iova-size = <0x0 0x7FFFFFFF>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			common_as: common {
-				iova-start = <0x0 0x80000000>;
-				iova-size = <0x0 0x7FF00000>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;
@@ -434,23 +447,10 @@
 				num-pf-page = <0>;
 				gap-page = <1>;
 			};
-			ape_as: ape {
-				iova-start = <0x0 0x40000000>;
-				iova-size = <0x0 0x20000000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			camera_vm0_as: camera_vm0 {
+			/* Modify pva kernel code for any iova-start change*/
+			pva_as: pva0 {
 				iova-start = <0x0 0x80000000>;
-				iova-size = <0x0 0x20000000>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <1>;
-			};
-			camera_vm1_as: camera_vm1 {
-				iova-start = <0x0 0xA0000000>;
-				iova-size = <0x0 0x20000000>;
+				iova-size = <0x0 0x7FFFFFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

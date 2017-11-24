@@ -152,6 +152,8 @@ struct tegra_pcie_dw_ep {
 	struct reset_control	*core_apb_rst;
 	struct reset_control	*core_rst;
 	int			irq;
+	int			phy_count;
+	struct phy		**phy;
 	struct work_struct pcie_ep_work;
 	dma_addr_t dma_handle;
 	void *cpu_virt;
@@ -331,9 +333,55 @@ void pcie_ep_work_fn(struct work_struct *work)
 	}
 }
 
+static void tegra_pcie_disable_phy(struct tegra_pcie_dw_ep *pcie)
+{
+	int phy_count = pcie->phy_count;
+
+	while (phy_count--) {
+		phy_power_off(pcie->phy[phy_count]);
+		phy_exit(pcie->phy[phy_count]);
+	}
+}
+
+static int tegra_pcie_enable_phy(struct tegra_pcie_dw_ep *pcie)
+{
+	int phy_count = pcie->phy_count;
+	int ret;
+	int i;
+
+	for (i = 0; i < phy_count; i++) {
+		ret = phy_init(pcie->phy[i]);
+		if (ret < 0)
+			goto err_phy_init;
+
+		ret = phy_power_on(pcie->phy[i]);
+		if (ret < 0) {
+			phy_exit(pcie->phy[i]);
+			goto err_phy_power_on;
+		}
+	}
+
+	return 0;
+
+	while (i >= 0) {
+		phy_power_off(pcie->phy[i]);
+err_phy_power_on:
+		phy_exit(pcie->phy[i]);
+err_phy_init:
+		i--;
+	}
+
+	return ret;
+}
+
 static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 {
 	struct tegra_pcie_dw_ep *pcie;
+	struct device_node *np = pdev->dev.of_node;
+	struct phy **phy;
+	char name[10];
+	int phy_count;
+	u32 i = 0;
 	int ret = 0;
 	u32 val = 0;
 
@@ -362,6 +410,37 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	}
 
 	reset_control_deassert(pcie->core_apb_rst);
+
+	phy_count = of_property_count_strings(np, "phy-names");
+	if (phy_count < 0) {
+		dev_err(pcie->dev, "unable to find phy entries\n");
+		ret = phy_count;
+		goto fail_phy;
+	}
+
+	phy = devm_kcalloc(pcie->dev, phy_count, sizeof(*phy), GFP_KERNEL);
+	if (!phy) {
+		ret = PTR_ERR(phy);
+		goto fail_phy;
+	}
+
+	for (i = 0; i < phy_count; i++) {
+		snprintf(name, sizeof(name), "pcie-p2u-%d", i);
+		phy[i] = devm_phy_get(pcie->dev, name);
+		if (IS_ERR(phy[i])) {
+			ret = PTR_ERR(phy[i]);
+			goto fail_phy;
+		}
+	}
+
+	pcie->phy_count = phy_count;
+	pcie->phy = phy;
+
+	ret = tegra_pcie_enable_phy(pcie);
+	if (ret) {
+		dev_err(pcie->dev, "failed to enable phy\n");
+		goto fail_phy;
+	}
 
 	/* clear any stale PEX_RST interrupt */
 	writel(1 << APPL_INTR_STATUS_L0_PEX_RST_INT_SHIFT,
@@ -484,6 +563,8 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 fail_core_rst_get:
 	clk_disable_unprepare(pcie->core_clk);
 fail_dbi_res:
+	tegra_pcie_disable_phy(pcie);
+fail_phy:
 	reset_control_assert(pcie->core_apb_rst);
 	return ret;
 }

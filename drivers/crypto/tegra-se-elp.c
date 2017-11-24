@@ -149,7 +149,6 @@ static struct tegra_se_elp_dev *elp_dev;
 
 struct tegra_se_pka1_ecc_request {
 	struct tegra_se_elp_dev *se_dev;
-	struct tegra_se_pka1_slot *slot;
 	u32 *message;
 	u32 *result;
 	u32 *modulus;
@@ -1169,10 +1168,10 @@ static void tegra_se_set_pka1_rsa_key(struct tegra_se_pka1_rsa_context *ctx)
 				    ctx->op_mode, ECC_INVALID);
 }
 
-static void tegra_se_set_pka1_ecc_key(struct tegra_se_pka1_ecc_request *req)
+static void tegra_se_set_pka1_ecc_key(struct tegra_se_pka1_ecc_request *req,
+					u32 slot_num)
 {
 	u32 key_words = req->size / WORD_SIZE_BYTES;
-	u32 slot_num = req->slot->slot_num;
 	u32 *MOD = req->modulus;
 	u32 *M = req->m;
 	u32 *R2 = req->r2;
@@ -1334,8 +1333,8 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 static int tegra_se_pka1_ecc_do(struct tegra_se_pka1_ecc_request *req)
 {
 	int ret;
-	u32 val, slot_num;
-	struct tegra_se_pka1_slot *pslot;
+	u32 val;
+	struct tegra_se_pka1_slot *pslot = NULL;
 	struct tegra_se_elp_dev *se_dev = req->se_dev;
 	u32 i = 0;
 
@@ -1345,12 +1344,14 @@ static int tegra_se_pka1_ecc_do(struct tegra_se_pka1_ecc_request *req)
 			dev_err(se_dev->dev, "no free key slot\n");
 			return -ENOMEM;
 		}
-		req->slot = pslot;
-		slot_num = req->slot->slot_num;
 
-		tegra_se_set_pka1_ecc_key(req);
+		if (pslot->slot_num >= TEGRA_SE_PKA1_KEYSLOT_COUNT) {
+			dev_err(se_dev->dev, "Invalid PKA1 key slot number\n");
+			return -EINVAL;
+		}
+		tegra_se_set_pka1_ecc_key(req, pslot->slot_num);
 
-		val = TEGRA_SE_PKA1_CTRL_CONTROL_KEYSLOT(slot_num) |
+		val = TEGRA_SE_PKA1_CTRL_CONTROL_KEYSLOT(pslot->slot_num) |
 			TEGRA_SE_PKA1_CTRL_CONTROL_LOAD_KEY(ELP_ENABLE);
 
 		se_elp_writel(se_dev, PKA1, val,
@@ -1381,7 +1382,7 @@ static int tegra_se_pka1_ecc_do(struct tegra_se_pka1_ecc_request *req)
 	tegra_se_read_pka1_ecc_result(req);
 out:
 	if (se_dev->chipdata->use_key_slot)
-		tegra_se_pka1_free_key_slot(req->slot);
+		tegra_se_pka1_free_key_slot(pslot);
 
 	return ret;
 }

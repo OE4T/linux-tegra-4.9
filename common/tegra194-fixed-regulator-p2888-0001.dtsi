@@ -24,5 +24,17 @@
 			regulator-max-microvolt = <5000000>;
 			regulator-always-on;
 		};
+
+		p2888_usb3_vbus: regulator@1 {
+			compatible = "regulator-fixed";
+			reg = <1>;
+			regulator-name = "usb3-vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(Z, 1) 0>;
+			enable-active-high;
+			vin-supply = <&battery_reg>;
+			gpio-open-drain;
+		};
 	};
 };

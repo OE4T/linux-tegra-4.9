@@ -41,4 +41,32 @@
 		phy_pllvdd-supply = <&battery_reg>;
 	};
 
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+	xusb_padctl@3520000 {
+		pex_dvdd-supply = <&p2888_spmic_sd0>;
+		pex_hvdd-supply = <&p2888_spmic_sd1>;
+		pex_pll_hvdd-supply = <&p2888_spmic_sd1>;
+		vclamp_usb-supply = <&p2888_spmic_sd3>;
+		avdd_usb-supply = <&p2888_spmic_ldo5>;
+		avdd_pll_nvhs_eutmip-supply = <&p2888_spmic_sd1>;
+		ports {
+			usb2-0 {
+				vbus-supply = <&battery_reg>;
+			};
+			usb2-1 {
+				vbus-supply = <&battery_reg>;
+			};
+			usb2-2 {
+				vbus-supply = <&battery_reg>;
+			};
+			usb2-3 {
+				vbus-supply = <&p2888_usb3_vbus>;
+			};
+		};
+	};
+#endif
+
+	xudc@3550000 {
+		avdd-usb-supply = <&p2888_spmic_ldo5>;
+	};
 };

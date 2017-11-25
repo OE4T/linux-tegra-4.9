@@ -10,8 +10,8 @@ config I2C_TEGRA_VI
           I2C controller embedded in NVIDIA Tegra SOCs
 
 config I2C_BPMP_TEGRA
-        tristate "NVIDIA Tegra internal BPMP I2C controller"
-        depends on TEGRA_BPMP
+        tristate "NVIDIA Tegra internal BPMP I2C controller (Downstream version)"
+        depends on NV_TEGRA_BPMP
         default y
         select I2C_ALGO_BUSCLEAR
         select I2C_ALGOBIT
@@ -21,6 +21,10 @@ config I2C_BPMP_TEGRA
           This I2C driver is a 'virtual' I2C driver. The real driver is
           embedded in the BPMP firmware, and this driver merely communicates
           with that real driver.
+
+	  This driver is a downstream version and there is a newer variant
+	  available in modern kernels.
+
 config TEGRA_I2CSLV_T186
         bool "Tegra i2c slave controller driver"
         default y

@@ -21,7 +21,7 @@
 
 typedef void (*bpmp_mrq_handler)(int mrq, void *data, int ch);
 
-#ifdef CONFIG_TEGRA_BPMP
+#ifdef CONFIG_NV_TEGRA_BPMP
 int tegra_bpmp_running(void);
 int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 		void *ib_data, int ib_sz);

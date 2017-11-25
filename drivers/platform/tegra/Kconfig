@@ -161,4 +161,7 @@ config TEGRA_CBB_NOC
 	  The Tegra Control Backbone(CBB)/Network-on-chip(NOC) error handler.
 	  This drivers handles SError from bridges due to failed transactions.
 
+config POWERGATE_TEGRA_BPMP
+        def_bool NV_TEGRA_BPMP
+
 source "drivers/platform/tegra/nvadsp/Kconfig"

@@ -519,6 +519,16 @@ struct tegra_xudc {
 
 	struct regulator_bulk_data *supplies;
 
+	struct clk *xusb_core_dev_clk;
+	struct clk *xusb_core_superspeed_clk;
+	struct clk *xusb_fs_dev_clk;
+	struct clk *xusb_ss_dev_clk;
+	struct clk *xusb_ss;
+	struct clk *pll_u_480m;
+	struct clk *clk_m;
+	struct clk *pll_e;
+	bool clk_enabled;
+
 	bool device_mode;
 	struct extcon_dev *data_role_extcon;
 	struct notifier_block data_role_nb;
@@ -588,6 +598,7 @@ struct tegra_xudc_soc_data {
 	bool lpm_enable;
 	bool invalid_seq_num;
 	bool pls_quirk;
+	bool init_clks;
 };
 
 static bool u1_enable;
@@ -682,29 +693,6 @@ static void tegra_fpga_hack_init(struct tegra_xudc *xudc)
 	xudc_writel(xudc, 0x21, 0x18c);
 	xudc_writel(xudc, 0x5b, 0x190);
 	xudc_writel(xudc, 0x0, 0x19c);
-}
-
-static void fpga_hack_setup_car(const struct tegra_xudc *xudc)
-{
-	struct device *dev = xudc->dev;
-	void __iomem *xusb_car_base;
-	u32 val;
-
-	xusb_car_base = devm_ioremap(dev, 0x20470000, 0x10);
-	if (!xusb_car_base) {
-		dev_err(dev, "failed to map XUSB CAR mmio\n");
-		return;
-	}
-#define   SWR_XUSB_HOST_RST			(1 << 0)
-#define   SWR_XUSB_DEV_RST			(1 << 1)
-#define   SWR_XUSB_PADCTL_RST			(1 << 2)
-#define   SWR_XUSB_SS_RST			(1 << 3)
-
-	val = ioread32(xusb_car_base);
-	val &= ~(SWR_XUSB_HOST_RST | SWR_XUSB_DEV_RST | SWR_XUSB_PADCTL_RST |
-			SWR_XUSB_SS_RST);
-	iowrite32(val, xusb_car_base);
-	devm_iounmap(dev, xusb_car_base);
 }
 
 static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc)
@@ -3564,6 +3552,157 @@ static void tegra_xudc_phy_exit(struct tegra_xudc *xudc)
 	phy_exit(xudc->utmi_phy);
 }
 
+static int tegra_xudc_clk_init(struct tegra_xudc *xudc)
+{
+	int err;
+
+	xudc->pll_e = devm_clk_get(xudc->dev, "pll_e");
+	if (IS_ERR(xudc->pll_e)) {
+		err = PTR_ERR(xudc->pll_e);
+		dev_err(xudc->dev, "failed to get pll_e: %d\n",
+				err);
+		return err;
+	}
+
+	xudc->clk_m = devm_clk_get(xudc->dev, "clk_m");
+	if (IS_ERR(xudc->clk_m)) {
+		err = PTR_ERR(xudc->clk_m);
+		dev_err(xudc->dev, "failed to get clk_m: %d\n",
+				err);
+		return err;
+	}
+
+	xudc->pll_u_480m = devm_clk_get(xudc->dev, "pll_u_480m");
+	if (IS_ERR(xudc->pll_u_480m)) {
+		err = PTR_ERR(xudc->pll_u_480m);
+		dev_err(xudc->dev, "failed to get pll_u_480m: %d\n",
+				err);
+		return err;
+	}
+
+	xudc->xusb_ss = devm_clk_get(xudc->dev, "xusb_ss");
+	if (IS_ERR(xudc->xusb_ss)) {
+		err = PTR_ERR(xudc->xusb_ss);
+		dev_err(xudc->dev, "failed to get xusb_ss: %d\n",
+				err);
+		return err;
+	}
+
+	xudc->xusb_ss_dev_clk = devm_clk_get(xudc->dev, "xusb_ss_dev_clk");
+	if (IS_ERR(xudc->xusb_ss_dev_clk)) {
+		err = PTR_ERR(xudc->xusb_ss_dev_clk);
+		dev_err(xudc->dev, "failed to get xusb_ss_dev_clk: %d\n",
+				err);
+		return err;
+	}
+
+	xudc->xusb_fs_dev_clk = devm_clk_get(xudc->dev, "xusb_fs_dev_clk");
+	if (IS_ERR(xudc->xusb_fs_dev_clk)) {
+		err = PTR_ERR(xudc->xusb_fs_dev_clk);
+		dev_err(xudc->dev, "failed to get xusb_fs_dev_clk: %d\n",
+				err);
+		return err;
+	}
+
+	xudc->xusb_core_superspeed_clk = devm_clk_get(xudc->dev,
+					"xusb_core_superspeed_clk");
+	if (IS_ERR(xudc->xusb_core_superspeed_clk)) {
+		err = PTR_ERR(xudc->xusb_core_superspeed_clk);
+		dev_err(xudc->dev,
+			"failed to get xusb_core_superspeed_clk: %d\n", err);
+		return err;
+	}
+
+	xudc->xusb_core_dev_clk = devm_clk_get(xudc->dev, "xusb_core_dev_clk");
+	if (IS_ERR(xudc->xusb_core_dev_clk)) {
+		err = PTR_ERR(xudc->xusb_core_dev_clk);
+		dev_err(xudc->dev, "failed to get xusb_core_dev_clk: %d\n",
+				err);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_xudc_clk_enable(struct tegra_xudc *xudc)
+{
+	int err;
+
+	if (xudc->clk_enabled)
+		return 0;
+
+	err = clk_prepare_enable(xudc->pll_e);
+	if (err < 0)
+		return err;
+
+	err = clk_prepare_enable(xudc->clk_m);
+	if (err < 0)
+		goto disable_pll_e;
+
+	err = clk_prepare_enable(xudc->pll_u_480m);
+	if (err < 0)
+		goto disable_clk_m;
+
+	err = clk_prepare_enable(xudc->xusb_ss);
+	if (err < 0)
+		goto disable_pll_u_480m;
+
+	err = clk_prepare_enable(xudc->xusb_ss_dev_clk);
+	if (err < 0)
+		goto disable_xusb_ss;
+
+	err = clk_prepare_enable(xudc->xusb_fs_dev_clk);
+	if (err < 0)
+		goto disable_xusb_ss_dev_clk;
+
+	err = clk_prepare_enable(xudc->xusb_core_superspeed_clk);
+	if (err < 0)
+		goto disable_xusb_fs_dev_clk;
+
+	err = clk_prepare_enable(xudc->xusb_core_dev_clk);
+	if (err < 0)
+		goto disable_xusb_core_superspeed_clk;
+
+	xudc->clk_enabled = true;
+
+	return 0;
+
+disable_xusb_core_superspeed_clk:
+	clk_disable_unprepare(xudc->xusb_core_superspeed_clk);
+disable_xusb_fs_dev_clk:
+	clk_disable_unprepare(xudc->xusb_fs_dev_clk);
+disable_xusb_ss_dev_clk:
+	clk_disable_unprepare(xudc->xusb_ss_dev_clk);
+disable_xusb_ss:
+	clk_disable_unprepare(xudc->xusb_ss);
+disable_pll_u_480m:
+	clk_disable_unprepare(xudc->pll_u_480m);
+disable_clk_m:
+	clk_disable_unprepare(xudc->clk_m);
+disable_pll_e:
+	clk_disable_unprepare(xudc->pll_e);
+
+	return err;
+}
+
+static int tegra_xudc_clk_disable(struct tegra_xudc *xudc)
+{
+	if (!xudc->clk_enabled)
+		return 0;
+
+	clk_disable_unprepare(xudc->xusb_core_dev_clk);
+	clk_disable_unprepare(xudc->xusb_core_superspeed_clk);
+	clk_disable_unprepare(xudc->xusb_fs_dev_clk);
+	clk_disable_unprepare(xudc->xusb_ss_dev_clk);
+	clk_disable_unprepare(xudc->xusb_ss);
+	clk_disable_unprepare(xudc->pll_u_480m);
+	clk_disable_unprepare(xudc->clk_m);
+	clk_disable_unprepare(xudc->pll_e);
+	xudc->clk_enabled = false;
+
+	return 0;
+}
+
 static void tegra_xudc_non_std_charger_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
@@ -3646,6 +3785,7 @@ static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
 	.lpm_enable = true,
 	.invalid_seq_num = false,
 	.pls_quirk = false,
+	.init_clks = true,
 };
 
 static struct of_device_id tegra_xudc_of_match[] = {
@@ -3739,8 +3879,13 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	if (tegra_platform_is_fpga())
-		fpga_hack_setup_car(xudc);
+	if (xudc->soc->init_clks) {
+		err = tegra_xudc_clk_init(xudc);
+		if (err < 0) {
+			dev_err(xudc->dev, "failed to init clocks %d\n", err);
+			return err;
+		}
+	}
 
 	if (tegra_platform_is_silicon()) {
 		xudc->supplies = devm_kcalloc(&pdev->dev,
@@ -3834,6 +3979,12 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 				  err);
 			goto disable_regulator;
 		}
+	}
+
+	if (xudc->soc->init_clks) {
+		err = tegra_xudc_clk_enable(xudc);
+		if (err < 0)
+			goto disable_regulator;
 	}
 
 	if (partition_id_xusba < 0) {
@@ -4033,6 +4184,9 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 	xudc_writel(xudc, 0, CTRL);
 	spin_unlock_irqrestore(&xudc->lock, flags);
 
+	if (xudc->soc->init_clks)
+		tegra_xudc_clk_disable(xudc);
+
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusba_pd);
 #else
@@ -4071,6 +4225,9 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 		if (err < 0)
 			return err;
 	}
+
+	if (xudc->soc->init_clks)
+		tegra_xudc_clk_enable(xudc);
 
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusbb_pd);

@@ -534,7 +534,6 @@
 
 	apbdma: dma@60020000 {
 		compatible = "nvidia,tegra148-apbdma";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x60020000 0x0 0x1400>;
 		clocks = <&tegra_car TEGRA210_CLK_APBDMA>;
 		clock-names = "dma";
@@ -1076,7 +1075,6 @@
 		head0: dc@54200000 {
 			compatible = "nvidia,tegra210-dc";
 			aux-device-name = "tegradc.0";
-			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x54200000 0x0 0x00040000>;
 			interrupts = <0 73 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_DC>,
@@ -1102,7 +1100,6 @@
 		head1: dc@54240000 {
 			compatible = "nvidia,tegra210-dc";
 			aux-device-name = "tegradc.1";
-			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x54240000 0x0 0x00040000>;
 			interrupts = <0 74 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_DCB>;
@@ -1380,7 +1377,6 @@
 
 	se: se@70012000 {
 		compatible = "nvidia,tegra210-se";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x70012000 0x0 0x2000>; /* SE base */
 		iommus = <&smmu TEGRA_SWGROUP_SE>,
 			 <&smmu TEGRA_SWGROUP_SE1>;
@@ -2141,7 +2137,6 @@
 
 	xudc@700d0000 {
 		compatible = "nvidia,tegra210-xudc";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x700d0000 0x0 0x8000>,
 			<0x0 0x700d8000 0x0 0x1000>,
 			<0x0 0x700d9000 0x0 0x1000>;

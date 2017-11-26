@@ -21,68 +21,13 @@
 #include <linux/pm_domain.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-powergate.h>
-#include <soc/tegra/bpmp_t210_abi.h>
-#include <soc/tegra/tegra_bpmp.h>
 #ifdef CONFIG_TEGRA_APE_AGIC
 #include <linux/irqchip/tegra-agic.h>
 #endif
 #include <linux/slab.h>
 #include <linux/wakelock.h>
 
-#define TEGRA_PD_DEV_CALLBACK(callback, dev)			\
-({								\
-	int (*__routine)(struct device *__d);			\
-	int __ret = 0;						\
-								\
-	if (dev->type && dev->type->pm)				\
-		__routine = dev->type->pm->callback;		\
-	else if (dev->class && dev->class->pm)			\
-		__routine = dev->class->pm->callback;		\
-	else if (dev->bus && dev->bus->pm)			\
-		__routine = dev->bus->pm->callback;		\
-	else							\
-		__routine = NULL;				\
-								\
-	if (!__routine && dev->driver && dev->driver->pm)	\
-		__routine = dev->driver->pm->callback;		\
-								\
-	if (__routine)						\
-		__ret = __routine(dev);				\
-	__ret;							\
-})
-
-static int tegra_mc_clk_power_off(struct generic_pm_domain *genpd)
-{
-	int32_t val = cpu_to_le32(true);
-	struct tegra_pm_domain *pd = to_tegra_pd(genpd);
-
-	if (!pd)
-		return -EINVAL;
-
-	return tegra_bpmp_send_receive(MRQ_SCX_ENABLE,
-			&val, sizeof(val), NULL, 0);
-}
-
-static int tegra_mc_clk_power_on(struct generic_pm_domain *genpd)
-{
-	int val = cpu_to_le32(false);
-	struct tegra_pm_domain *pd = to_tegra_pd(genpd);
-
-	if (!pd)
-		return -EINVAL;
-
-	return tegra_bpmp_send_receive(MRQ_SCX_ENABLE,
-			&val, sizeof(val), NULL, 0);
-}
-
 typedef int (*of_tegra_pd_init_cb_t)(struct generic_pm_domain *);
-
-static int __init tegra210_init_mc_clk(struct generic_pm_domain *pd)
-{
-	pd->power_off = tegra_mc_clk_power_off;
-	pd->power_on = tegra_mc_clk_power_on;
-	return 0;
-}
 
 static int tegra_legacy_power_off(struct generic_pm_domain *genpd)
 {
@@ -112,7 +57,6 @@ static int __init tegra_init_legacy_ops(struct generic_pm_domain *pd)
 
 /* Do not add to this list */
 static const struct of_device_id tegra_pd_match[] __initconst = {
-	{.compatible = "nvidia,tegra210-mc-clk-pd", .data = tegra210_init_mc_clk},
 	{.compatible = "nvidia,tegra210-ape-pd", .data = NULL},
 	{.compatible = "nvidia,tegra210-pcie-pd", .data = tegra_init_legacy_ops},
 	{},

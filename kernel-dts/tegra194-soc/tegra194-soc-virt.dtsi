@@ -60,7 +60,7 @@
 
 	/* ISO-clients cannot have stage-1 translation and hence
 	 * iommus node are deleted for ISO-Clients which are
-	 * nvdisplay and vi */
+	 * nvdisplay, vi and vi-thi */
 	host1x {
 		nvdisplay@15200000 {
 			/delete-property/ iommus;
@@ -83,6 +83,11 @@
 		};
 
 		vi: vi@15c10000 {
+                        /delete-property/ iommus;
+                        /delete-property/ iso-smmu;
+		};
+
+		vi_thi: vi-thi@15f00000 {
                         /delete-property/ iommus;
                         /delete-property/ iso-smmu;
 		};

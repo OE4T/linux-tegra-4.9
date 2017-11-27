@@ -13,4 +13,89 @@
 
 #include <t19x-common-modules/tegra194-cvb-e3366-0000-a00.dtsi>
 / {
+	i2c@3160000 {
+		e3366_gpio_u1401: gpio@20 {
+			compatible = "ti,tca9539";
+			reg = <0x20>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			vcc-supply = <&e3366_vdd_1v8_slt>;
+		};
+
+		e3366_gpio_u1402: gpio@21 {
+			compatible = "ti,tca9539";
+			reg = <0x21>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			vcc-supply = <&e3366_vdd_1v8_slt>;
+		};
+
+		e3366_gpio_u1403: gpio@22 {
+			compatible = "ti,tca9539";
+			reg = <0x22>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			vcc-supply = <&e3366_vdd_1v8_slt>;
+		};
+
+		e3366_gpio_u1404: gpio@23 {
+			compatible = "ti,tca9539";
+			reg = <0x23>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			vcc-supply = <&e3366_vdd_1v8_slt>;
+		};
+
+		e3366_gpio_u1405: gpio@24 {
+			compatible = "ti,tca9539";
+			reg = <0x24>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			vcc-supply = <&e3366_vdd_1v8_slt>;
+
+		};
+
+		e3366_gpio_u1406: gpio@25 {
+			compatible = "ti,tca9539";
+			reg = <0x25>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			vcc-supply = <&e3366_vdd_1v8_slt>;
+		};
+
+		e3366_gpio_u1407: gpio@26 {
+			compatible = "ti,tca9539";
+			reg = <0x26>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			vcc-supply = <&e3366_vdd_1v8_slt>;
+
+			/* DAP2 to codec */
+			dap_lb_cb {
+				gpio-hog;
+				output-low;
+				gpios = <3 0>;
+				label = "dap_lb_cb";
+				status = "okay";
+			};
+		};
+
+		e3366_gpio_u1408: gpio@27 {
+			compatible = "ti,tca9539";
+			reg = <0x27>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			vcc-supply = <&e3366_vdd_1v8_slt>;
+		};
+	};
+
+	i2c@c240000 {
+		e3366_gpio_u1409: gpio@25 {
+			compatible = "ti,tca9539";
+			reg = <0x25>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			vcc-supply = <&e3366_vdd_1v8_slt>;
+		};
+	};
 };

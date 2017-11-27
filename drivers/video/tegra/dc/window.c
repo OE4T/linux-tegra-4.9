@@ -1014,7 +1014,7 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		struct tegra_dc_win *win = windows[i];
 		struct tegra_dc_win *dc_win =
 			win ? tegra_dc_get_window(dc, win->idx) : NULL;
-		if (WARN_ONCE(!dc_win, "ignoring invalid windows in request"))
+		if (WARN_ONCE(!dc_win, "ignoring invalid window %d request", i))
 			return -EINVAL;
 	}
 

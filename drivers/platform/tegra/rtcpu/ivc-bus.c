@@ -448,6 +448,9 @@ static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
 		const struct tegra_ivc_channel_ops *ops;
 
 		chan->is_ready = is_ready;
+		if (!is_ready)
+			atomic_inc(&chan->bus_resets);
+		smp_wmb();
 
 		if (drv != NULL) {
 			rcu_read_lock();

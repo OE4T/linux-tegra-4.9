@@ -185,8 +185,8 @@ static int camrtc_ivc_dbg_full_frame_xact(
 	if (ret < 0)
 		goto unlock;
 
-	if (WARN_ON(!ch->is_ready)) {
-		ret = -EIO;
+	if (WARN_ON(!tegra_ivc_channel_online_check(ch))) {
+		ret = -ECONNRESET;
 		goto out;
 	}
 
@@ -196,9 +196,14 @@ static int camrtc_ivc_dbg_full_frame_xact(
 	}
 
 	timeout = wait_event_interruptible_timeout(crd->waitq,
-				tegra_ivc_can_write(&ch->ivc), timeout);
+			tegra_ivc_channel_has_been_reset(ch) ||
+			tegra_ivc_can_write(&ch->ivc), timeout);
 	if (timeout <= 0) {
 		ret = timeout ?: -ETIMEDOUT;
+		goto out;
+	}
+	if (tegra_ivc_channel_has_been_reset(ch)) {
+		ret = -ECONNRESET;
 		goto out;
 	}
 
@@ -210,9 +215,15 @@ static int camrtc_ivc_dbg_full_frame_xact(
 
 	for (;;) {
 		timeout = wait_event_interruptible_timeout(crd->waitq,
-			tegra_ivc_can_read(&ch->ivc), timeout);
+				tegra_ivc_channel_has_been_reset(ch) ||
+				tegra_ivc_can_read(&ch->ivc),
+				timeout);
 		if (timeout <= 0) {
 			ret = timeout ?: -ETIMEDOUT;
+			goto out;
+		}
+		if (tegra_ivc_channel_has_been_reset(ch)) {
+			ret = -ECONNRESET;
 			goto out;
 		}
 

@@ -93,8 +93,27 @@ struct tegra_ivc_channel {
 	struct tegra_ivc_channel *next;
 	struct mutex ivc_wr_lock;
 	struct tegra_ivc_rpc_data *rpc_priv;
+	atomic_t bus_resets;
 	bool is_ready;
 };
+
+static inline bool tegra_ivc_channel_online_check(
+		struct tegra_ivc_channel *chan)
+{
+	atomic_set(&chan->bus_resets, 0);
+
+	smp_wmb();
+	smp_rmb();
+
+	return chan->is_ready;
+}
+
+static inline bool tegra_ivc_channel_has_been_reset(
+		struct tegra_ivc_channel *chan)
+{
+	smp_rmb();
+	return atomic_read(&chan->bus_resets) != 0;
+}
 
 static inline void *tegra_ivc_channel_get_drvdata(
 		struct tegra_ivc_channel *chan)

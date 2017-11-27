@@ -503,6 +503,7 @@ struct tegra_xusb {
 	char ivc_rx[128]; /* Buffer to receive pad ivc message */
 	struct work_struct ivc_work;
 	bool hsic_power_on;
+	bool hsic_set_idle;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -1616,6 +1617,8 @@ static void tegra_xusb_parse_dt(struct platform_device *pdev,
 					&tegra->boost_cpu_freq);
 	of_property_read_u32(node, "nvidia,boost_cpu_trigger",
 					&tegra->boost_cpu_trigger);
+	tegra->hsic_set_idle = of_property_read_bool(node,
+				   "nvidia,hsic-set-idle");
 }
 
 static int tegra_xusb_clk_enable(struct tegra_xusb *tegra)
@@ -2321,6 +2324,42 @@ static ssize_t store_reload_hcd(struct device *dev,
 }
 static DEVICE_ATTR(reload_hcd, 0200, NULL, store_reload_hcd);
 
+static int tegra_xusb_power(struct tegra_xusb *tegra, bool on)
+{
+	struct tegra_xusb_mbox_msg msg;
+	int rc;
+
+	if (on == tegra->hsic_power_on)
+		return 0;
+
+	if (on)
+		msg.cmd = MBOX_CMD_AIRPLANE_MODE_DISABLED;
+	else
+		msg.cmd = MBOX_CMD_AIRPLANE_MODE_ENABLED;
+
+	msg.data = BIT(tegra->soc->ports.hsic.offset + 1);
+
+	rc = tegra_xusb_mbox_send(tegra, &msg);
+	if (rc < 0) {
+		dev_err(tegra->dev,
+			"failed to send message to firmware %d\n", rc);
+		return rc;
+	}
+
+	if (on)
+		rc = tegra_xusb_padctl_hsic_set_idle(tegra->padctl, 0, true);
+	else
+		rc = tegra_xusb_padctl_hsic_reset(tegra->padctl, 0);
+
+	if (rc != 0) {
+		dev_err(tegra->dev, "failed to set padctl %d\n", rc);
+		return rc;
+	}
+
+	tegra->hsic_power_on = on;
+	return 0;
+}
+
 static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 {
 	struct tegra_xusb *tegra = context;
@@ -2467,6 +2506,12 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 	}
 
 	tegra_xhci_update_otg_role(tegra);
+
+	if (tegra->hsic_set_idle) {
+		ret = tegra_xusb_power(tegra, true);
+		if (ret)
+			dev_dbg(dev, "failed to power-on on startup");
+	}
 
 	pm_runtime_use_autosuspend(dev);
 	pm_runtime_set_autosuspend_delay(dev, 2000);
@@ -2668,35 +2713,15 @@ static ssize_t hsic_power_store(struct device *dev,
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
-	struct tegra_xusb_mbox_msg msg;
-	unsigned int on;
-	int port;
+	bool on;
 	int rc;
 
-	if (kstrtouint(buf, 10, &on))
-		return -EINVAL;
-
-	if ((bool)on == tegra->hsic_power_on)
-		return n;
-
-	if (on)
-		msg.cmd = MBOX_CMD_AIRPLANE_MODE_DISABLED;
-	else
-		msg.cmd = MBOX_CMD_AIRPLANE_MODE_ENABLED;
-
-	port = tegra->soc->ports.hsic.offset;
-	msg.data = BIT(port + 1);
-
-	rc = tegra_xusb_mbox_send(tegra, &msg);
-	if (rc < 0)
-		dev_err(dev, "failed to send message to firmware %d\n", rc);
-
-	if (on)
-		rc = tegra_xusb_padctl_hsic_set_idle(tegra->padctl, 0, true);
-	else
-		rc = tegra_xusb_padctl_hsic_reset(tegra->padctl, 0);
-
-	tegra->hsic_power_on = (bool)on;
+	rc = kstrtobool(buf, &on);
+	if (rc)
+		return rc;
+	rc = tegra_xusb_power(tegra, on);
+	if (rc)
+		return rc;
 	return n;
 }
 static DEVICE_ATTR(hsic_power, 0644, hsic_power_show, hsic_power_store);

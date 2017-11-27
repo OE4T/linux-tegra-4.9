@@ -1,7 +1,7 @@
 /*
  * NVCSI driver for T186
  *
- * Copyright (c) 2014-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,8 +41,9 @@
 #include "nvcsi.h"
 #include "camera/csi/csi4_fops.h"
 
-#define DESKEW_TIMEOUT_USEC 300
+#define DESKEW_TIMEOUT_MSEC 100
 
+static struct nvcsi *s_nvcsi;
 static struct tegra_csi_device *mc_csi;
 static struct tegra_csi_data t18_nvcsi_data = {
 	.info = (struct nvhost_device_data *)&t18_nvcsi_info,
@@ -59,8 +60,12 @@ static const struct of_device_id tegra_nvcsi_of_match[] = {
 
 struct nvcsi_private {
 	struct platform_device *pdev;
-	unsigned int active_lanes;
+	struct nvcsi_deskew_context deskew_ctx;
 };
+
+static unsigned int enabled_deskew_lanes;
+static unsigned int done_deskew_lanes;
+
 /* debugfs variables */
 static unsigned int debugfs_deskew_clk_stats_low[NVCSI_PHY_CIL_NUM_LANE];
 static unsigned int debugfs_deskew_clk_stats_high[NVCSI_PHY_CIL_NUM_LANE];
@@ -69,127 +74,30 @@ static unsigned int debugfs_deskew_data_stats_high[NVCSI_PHY_CIL_NUM_LANE];
 static unsigned long long input_stats;
 static int nvcsi_deskew_debugfs_init(struct nvcsi *nvcsi);
 static void nvcsi_deskew_debugfs_remove(struct nvcsi *nvcsi);
-/* interrupt variables */
-static int deskew_active;
-static unsigned int int_lanes;
 
 static int nvcsi_deskew_apply_helper(unsigned int active_lanes);
 
-static inline void enable_int_mask(unsigned int active_lanes,
-				   unsigned int enable)
+static inline void set_enabled_with_lock(unsigned int active_lanes)
 {
-	unsigned int phy_num = 0;
-	unsigned int cil_lanes = 0, cila_io_lanes = 0, cilb_io_lanes = 0;
-	unsigned int remaining_lanes = active_lanes;
-	unsigned int val = 0, newval = 0;
-
-	while (remaining_lanes) {
-		cil_lanes = (active_lanes & (0x000f << (phy_num * 4)))
-				>> (phy_num * 4);
-		cila_io_lanes =  cil_lanes & (NVCSI_PHY_0_NVCSI_CIL_A_IO0
-			| NVCSI_PHY_0_NVCSI_CIL_A_IO1);
-		cilb_io_lanes = cil_lanes & (NVCSI_PHY_0_NVCSI_CIL_B_IO0
-			| NVCSI_PHY_0_NVCSI_CIL_B_IO1);
-		remaining_lanes &= ~(0xf << (phy_num * 4));
-		if (cila_io_lanes) {
-			newval = ((cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO0)
-				!= 0 ?
-				intr_dphy_cil_deskew_calib_done_lane0 : 0) |
-				((cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO1)
-				!= 0 ?
-				intr_dphy_cil_deskew_calib_done_lane1 : 0) |
-				intr_dphy_cil_deskew_calib_done_ctrl;
-			newval = enable ? newval : enable;
-			/* ONLY handles deskew done interrupt, also
-			 * turn off any other interrupt for NVCSI
-			 * because ISR does not handle them*/
-			host1x_writel(mc_csi->pdev,
-				     NVCSI_PHY_0_CILA_INTR_MASK +
-				     NVCSI_PHY_OFFSET * phy_num,
-				     ~newval);
-			dev_dbg(mc_csi->dev, "addr %x prev %x mask %x new %x\n",
-				NVCSI_PHY_0_CILA_INTR_MASK +
-				NVCSI_PHY_OFFSET * phy_num, val, newval,
-				~newval);
-			/* Disable single bit err when detecting leader
-			 * pattern
-			 */
-			newval = CFG_ERR_STATUS2VI_MASK_VC3 |
-			         CFG_ERR_STATUS2VI_MASK_VC2 |
-			         CFG_ERR_STATUS2VI_MASK_VC1 |
-			         CFG_ERR_STATUS2VI_MASK_VC0;
-			newval = enable ? newval : enable;
-			host1x_writel(mc_csi->pdev,
-				      NVCSI_STREAM_0_ERROR_STATUS2VI_MASK +
-				      NVCSI_PHY_OFFSET * phy_num,
-				      newval);
-		}
-		if (cilb_io_lanes) {
-			newval = ((cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO0)
-				!= 0 ?
-				intr_dphy_cil_deskew_calib_done_lane0 : 0) |
-				((cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO1)
-				!= 0 ?
-				intr_dphy_cil_deskew_calib_done_lane1 : 0) |
-				intr_dphy_cil_deskew_calib_done_ctrl;
-			newval = enable ? newval : enable;
-			/* ONLY handles deskew done interrupt, also
-			 * turn off any other interrupt for NVCSI
-			 * because ISR does not handle them*/
-			host1x_writel(mc_csi->pdev,
-				     NVCSI_PHY_0_CILB_INTR_MASK +
-				     NVCSI_PHY_OFFSET * phy_num,
-				     ~newval);
-			dev_dbg(mc_csi->dev, "addr %x prev %x mask %x new %x\n",
-				NVCSI_PHY_0_CILB_INTR_MASK +
-				NVCSI_PHY_OFFSET * phy_num, val, newval,
-				~newval);
-			/* Disable single bit err when detecting leader
-			 * pattern
-			 */
-			newval = CFG_ERR_STATUS2VI_MASK_VC3 |
-			         CFG_ERR_STATUS2VI_MASK_VC2 |
-			         CFG_ERR_STATUS2VI_MASK_VC1 |
-			         CFG_ERR_STATUS2VI_MASK_VC0;
-			newval = enable ? newval : enable;
-			host1x_writel(mc_csi->pdev,
-				      NVCSI_STREAM_1_ERROR_STATUS2VI_MASK +
-				      NVCSI_PHY_OFFSET * phy_num,
-				      newval);
-		}
-		phy_num++;
-	}
-}
-static irqreturn_t nvcsi_thread_isr(int irq, void *arg)
-{
-	unsigned int i, vala, valb;
-
-	for (i = 0; i < NVCSI_PHY_NUM_BRICKS; i++) {
-		vala = host1x_readl(mc_csi->pdev,
-			NVCSI_PHY_0_CILA_INTR_STATUS + NVCSI_PHY_OFFSET * i);
-		host1x_writel(mc_csi->pdev,
-			NVCSI_PHY_0_CILA_INTR_STATUS + NVCSI_PHY_OFFSET * i,
-			vala);
-		valb = host1x_readl(mc_csi->pdev,
-			NVCSI_PHY_0_CILB_INTR_STATUS + NVCSI_PHY_OFFSET * i);
-		host1x_writel(mc_csi->pdev,
-			NVCSI_PHY_0_CILB_INTR_STATUS + NVCSI_PHY_OFFSET * i,
-			valb);
-
-		int_lanes |= (vala & intr_dphy_cil_deskew_calib_done_lane0) ?
-			    NVCSI_PHY_0_NVCSI_CIL_A_IO0 << (i * 4) : 0;
-		int_lanes |= (vala & intr_dphy_cil_deskew_calib_done_lane1) ?
-			    NVCSI_PHY_0_NVCSI_CIL_A_IO1 << (i * 4) : 0;
-		int_lanes |= (valb & intr_dphy_cil_deskew_calib_done_lane0) ?
-			    NVCSI_PHY_0_NVCSI_CIL_B_IO0 << (i * 4) : 0;
-		int_lanes |= (valb & intr_dphy_cil_deskew_calib_done_lane1) ?
-			    NVCSI_PHY_0_NVCSI_CIL_B_IO1 << (i * 4) : 0;
-		dev_dbg(mc_csi->dev, "inta %x intb %x", vala, valb);
-	}
-	deskew_active = nvcsi_deskew_apply_helper(int_lanes);
-	return IRQ_HANDLED;
+	mutex_lock(&s_nvcsi->deskew_lock);
+	enabled_deskew_lanes |= active_lanes;
+	mutex_unlock(&s_nvcsi->deskew_lock);
 }
 
+static inline void unset_enabled_with_lock(unsigned int active_lanes)
+{
+	mutex_lock(&s_nvcsi->deskew_lock);
+	enabled_deskew_lanes &= ~active_lanes;
+	mutex_unlock(&s_nvcsi->deskew_lock);
+}
+
+static inline void set_done_with_lock(unsigned int done_lanes)
+{
+	mutex_lock(&s_nvcsi->deskew_lock);
+	done_deskew_lanes |= done_lanes;
+	enabled_deskew_lanes &= ~done_lanes;
+	mutex_unlock(&s_nvcsi->deskew_lock);
+}
 
 int nvcsi_finalize_poweron(struct platform_device *pdev)
 {
@@ -203,7 +111,6 @@ int nvcsi_finalize_poweron(struct platform_device *pdev)
 			return ret;
 		}
 	}
-
 	return tegra_csi_mipi_calibrate(&nvcsi->csi, true);
 }
 
@@ -278,6 +185,8 @@ static int nvcsi_probe(struct platform_device *dev)
 		goto err_alloc_nvcsi;
 	}
 
+	enabled_deskew_lanes = 0;
+	done_deskew_lanes = 0;
 	nvcsi->pdev = dev;
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
@@ -288,22 +197,6 @@ static int nvcsi_probe(struct platform_device *dev)
 	err = nvcsi_probe_regulator(nvcsi);
 	if (err)
 		dev_info(&dev->dev, "failed to get regulator (%d)\n", err);
-
-	nvcsi->irq = platform_get_irq(dev, 0);
-	if (nvcsi->irq < 0) {
-		dev_err(&dev->dev, "No IRQ available\n");
-		goto err_get_resources;
-	} else {
-		err = devm_request_threaded_irq(&dev->dev, nvcsi->irq,
-				NULL, nvcsi_thread_isr, IRQF_ONESHOT,
-				dev_name(&dev->dev), dev);
-		if (err) {
-			dev_err(&dev->dev, "Cannot setup irq\n");
-			nvcsi->irq = -ENXIO;
-			goto err_get_resources;
-		} else
-			disable_irq(nvcsi->irq);
-	}
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
@@ -325,6 +218,7 @@ static int nvcsi_probe(struct platform_device *dev)
 		goto err_mediacontroller_init;
 
 	nvcsi_deskew_debugfs_init(nvcsi);
+	s_nvcsi = nvcsi;
 	return 0;
 
 err_mediacontroller_init:
@@ -396,17 +290,13 @@ static inline unsigned int nvcsi_phy_readl(unsigned int phy_num,
 			val);
 	return val;
 }
-int nvcsi_deskew_setup(unsigned int active_lanes)
+
+static void nvcsi_deskew_setup_start(unsigned int active_lanes)
 {
 	unsigned int phy_num = 0;
 	unsigned int cil_lanes = 0, cila_io_lanes = 0, cilb_io_lanes = 0;
 	unsigned int remaining_lanes = active_lanes;
 	unsigned int val = 0, newval = 0;
-
-	if (active_lanes >> NVCSI_PHY_CIL_NUM_LANE) {
-		dev_err(mc_csi->dev, "%s Invalid active lanes\n", __func__);
-		return -EINVAL;
-	}
 
 	dev_dbg(mc_csi->dev, "%s: active_lanes: %x\n", __func__, active_lanes);
 	while (remaining_lanes) {
@@ -418,6 +308,21 @@ int nvcsi_deskew_setup(unsigned int active_lanes)
 			| NVCSI_PHY_0_NVCSI_CIL_B_IO1);
 		remaining_lanes &= ~(0xf << (phy_num * 4));
 		if (cila_io_lanes) {
+			/*
+			 * Disable single bit err when detecting leader
+			 * pattern
+			 */
+			newval = CFG_ERR_STATUS2VI_MASK_VC3 |
+					CFG_ERR_STATUS2VI_MASK_VC2 |
+					CFG_ERR_STATUS2VI_MASK_VC1 |
+					CFG_ERR_STATUS2VI_MASK_VC0;
+			host1x_writel(mc_csi->pdev,
+				      NVCSI_STREAM_0_ERROR_STATUS2VI_MASK +
+				      NVCSI_PHY_OFFSET * phy_num,
+				      newval);
+
+			nvcsi_phy_write(phy_num,
+				NVCSI_CIL_A_DPHY_DESKEW_STATUS_0_OFFSET, 0);
 			val = nvcsi_phy_readl(phy_num,
 				NVCSI_CIL_A_CONTROL_0_OFFSET);
 			val = (val & (~(DESKEW_COMPARE | DESKEW_SETTLE |
@@ -428,17 +333,20 @@ int nvcsi_deskew_setup(unsigned int active_lanes)
 				| (0x16 << THS_SETTLE_SHIFT);
 			nvcsi_phy_write(phy_num, NVCSI_CIL_A_CONTROL_0_OFFSET,
 					val);
-			val = nvcsi_phy_readl(phy_num,
-				NVCSI_CIL_A_CLK_DESKEW_CTRL_0_OFFSET);
+			val = CLK_INADJ_LIMIT_HIGH;
 			nvcsi_phy_write(phy_num,
 					NVCSI_CIL_A_CLK_DESKEW_CTRL_0_OFFSET,
-					val | CLK_INADJ_SWEEP_CTRL);
+					val | CLK_INADJ_SWEEP_CTRL
+					);
 			val = nvcsi_phy_readl(phy_num,
 					NVCSI_CIL_A_DATA_DESKEW_CTRL_0_OFFSET);
-			newval = ((cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO0)
-				!= 0 ? DATA_INADJ_SWEEP_CTRL0 : 0) |
-				((cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO1)
-				!= 0 ? DATA_INADJ_SWEEP_CTRL1 : 0);
+			newval =
+			((cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO0) != 0 ?
+			(DATA_INADJ_SWEEP_CTRL0 | DATA_INADJ_LIMIT_HIGH0) : 0)
+			|
+			((cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO1) != 0 ?
+			(DATA_INADJ_SWEEP_CTRL1 | DATA_INADJ_LIMIT_HIGH1) : 0);
+
 			nvcsi_phy_write(phy_num,
 					NVCSI_CIL_A_DATA_DESKEW_CTRL_0_OFFSET,
 					((val & ~(DATA_INADJ_SWEEP_CTRL0 |
@@ -446,6 +354,21 @@ int nvcsi_deskew_setup(unsigned int active_lanes)
 					newval));
 		}
 		if (cilb_io_lanes) {
+			/*
+			 * Disable single bit err when detecting leader
+			 * pattern
+			 */
+			newval = CFG_ERR_STATUS2VI_MASK_VC3 |
+					CFG_ERR_STATUS2VI_MASK_VC2 |
+					CFG_ERR_STATUS2VI_MASK_VC1 |
+					CFG_ERR_STATUS2VI_MASK_VC0;
+			host1x_writel(mc_csi->pdev,
+				      NVCSI_STREAM_1_ERROR_STATUS2VI_MASK +
+				      NVCSI_PHY_OFFSET * phy_num,
+				      newval);
+
+			nvcsi_phy_write(phy_num,
+				NVCSI_CIL_B_DPHY_DESKEW_STATUS_0_OFFSET, 0);
 			val = nvcsi_phy_readl(phy_num,
 				NVCSI_CIL_B_CONTROL_0_OFFSET);
 			val = (val & (~(DESKEW_COMPARE | DESKEW_SETTLE |
@@ -456,17 +379,20 @@ int nvcsi_deskew_setup(unsigned int active_lanes)
 				| (0x16 << THS_SETTLE_SHIFT);
 			nvcsi_phy_write(phy_num, NVCSI_CIL_B_CONTROL_0_OFFSET,
 					val);
-			val = nvcsi_phy_readl(phy_num,
-				NVCSI_CIL_B_CLK_DESKEW_CTRL_0_OFFSET);
+			val = CLK_INADJ_LIMIT_HIGH;
 			nvcsi_phy_write(phy_num,
 					NVCSI_CIL_B_CLK_DESKEW_CTRL_0_OFFSET,
-					val | CLK_INADJ_SWEEP_CTRL);
+					val |  CLK_INADJ_SWEEP_CTRL
+					);
 			val = nvcsi_phy_readl(phy_num,
 					NVCSI_CIL_B_DATA_DESKEW_CTRL_0_OFFSET);
-			newval = ((cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO0)
-				!= 0 ? DATA_INADJ_SWEEP_CTRL0 : 0) |
-				((cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO1)
-				!= 0 ? DATA_INADJ_SWEEP_CTRL1 : 0);
+			newval =
+			((cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO0) != 0 ?
+			(DATA_INADJ_SWEEP_CTRL0 | DATA_INADJ_LIMIT_HIGH0) : 0)
+			|
+			((cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO1) != 0 ?
+			(DATA_INADJ_SWEEP_CTRL1 | DATA_INADJ_LIMIT_HIGH1) : 0);
+
 			nvcsi_phy_write(phy_num,
 					NVCSI_CIL_B_DATA_DESKEW_CTRL_0_OFFSET,
 					((val & ~(DATA_INADJ_SWEEP_CTRL0 |
@@ -475,7 +401,143 @@ int nvcsi_deskew_setup(unsigned int active_lanes)
 		}
 		phy_num++;
 	}
+}
+
+static int wait_cila_done(unsigned int phy_num, unsigned int cila_io_lanes,
+			unsigned long timeout)
+{
+	bool done;
+	unsigned int val;
+
+	while (time_before(jiffies, timeout)) {
+		done = true;
+		val = nvcsi_phy_readl(phy_num,
+	NVCSI_CIL_A_DPHY_DESKEW_STATUS_0_OFFSET);
+		if (cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO0)
+			done &= !!(val & DPHY_CALIB_DONE_IO0);
+		if (cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO1)
+			done &= !!(val & DPHY_CALIB_DONE_IO1);
+		if (val & DPHY_CALIB_ERR_IO1 || val & DPHY_CALIB_ERR_IO0)
+			return -EINVAL;
+		if (done)
+			return 0;
+		usleep_range(5, 10);
+	}
+	return -ETIMEDOUT;
+}
+
+static int wait_cilb_done(unsigned int phy_num, unsigned int cilb_io_lanes,
+			unsigned long timeout)
+{
+	bool done;
+	unsigned int val;
+
+	while (time_before(jiffies, timeout)) {
+		done = true;
+		val = nvcsi_phy_readl(phy_num,
+	NVCSI_CIL_B_DPHY_DESKEW_STATUS_0_OFFSET);
+		if (cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO0)
+			done &= !!(val & DPHY_CALIB_DONE_IO0);
+		if (cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO1)
+			done &= !!(val & DPHY_CALIB_DONE_IO1);
+		if (val & DPHY_CALIB_ERR_IO1 || val & DPHY_CALIB_ERR_IO0)
+			return -EINVAL;
+		if (done)
+			return 0;
+		usleep_range(5, 10);
+	}
+	return -ETIMEDOUT;
+}
+
+static int nvcsi_deskew_thread(void *data)
+{
+	int ret = 0;
+	unsigned int phy_num = 0;
+	unsigned int cil_lanes = 0, cila_io_lanes = 0, cilb_io_lanes = 0;
+	struct nvcsi_deskew_context *ctx = data;
+	unsigned int remaining_lanes = ctx->deskew_lanes;
+	unsigned long timeout = 0;
+
+	timeout = jiffies + msecs_to_jiffies(DESKEW_TIMEOUT_MSEC);
+
+	while (remaining_lanes) {
+		cil_lanes = (ctx->deskew_lanes & (0x000f << (phy_num * 4)))
+				>> (phy_num * 4);
+		cila_io_lanes =  cil_lanes & (NVCSI_PHY_0_NVCSI_CIL_A_IO0
+			| NVCSI_PHY_0_NVCSI_CIL_A_IO1);
+		cilb_io_lanes = cil_lanes & (NVCSI_PHY_0_NVCSI_CIL_B_IO0
+			| NVCSI_PHY_0_NVCSI_CIL_B_IO1);
+		remaining_lanes &= ~(0xf << (phy_num * 4));
+		if (cila_io_lanes) {
+			ret = wait_cila_done(phy_num, cila_io_lanes, timeout);
+			if (ret)
+				goto err;
+		}
+		if (cilb_io_lanes) {
+			ret = wait_cilb_done(phy_num, cilb_io_lanes, timeout);
+			if (ret)
+				goto err;
+		}
+		phy_num++;
+	}
+
+	ret = nvcsi_deskew_apply_helper(ctx->deskew_lanes);
+	if (!ret) {
+		dev_info(mc_csi->dev, "deskew finished for lanes 0x%04x",
+							ctx->deskew_lanes);
+		set_done_with_lock(ctx->deskew_lanes);
+	} else {
+		dev_info(mc_csi->dev,
+			"deskew apply helper failed for lanes 0x%04x",
+							ctx->deskew_lanes);
+		goto err;
+	}
+
+
+	complete(&ctx->thread_done);
 	return 0;
+
+err:
+	if (ret == -ETIMEDOUT)
+		dev_info(mc_csi->dev, "deskew timed out for lanes 0x%04x",
+					ctx->deskew_lanes);
+	else if (ret == -EINVAL)
+		dev_info(mc_csi->dev, "deskew calib err for lanes 0x%04x",
+					ctx->deskew_lanes);
+	unset_enabled_with_lock(ctx->deskew_lanes);
+	complete(&ctx->thread_done);
+
+	return ret;
+}
+
+int nvcsi_deskew_setup(struct nvcsi_deskew_context *ctx)
+{
+	int ret = 0;
+	unsigned int new_lanes;
+
+	if (!ctx || !ctx->deskew_lanes)
+		return -EINVAL;
+
+	if (ctx->deskew_lanes >> NVCSI_PHY_CIL_NUM_LANE) {
+		dev_err(mc_csi->dev, "%s Invalid lanes for deskew\n",
+								__func__);
+		return -EINVAL;
+	}
+
+	new_lanes = ctx->deskew_lanes &
+				~(enabled_deskew_lanes | done_deskew_lanes);
+	if (new_lanes) {
+		set_enabled_with_lock(new_lanes);
+		nvcsi_deskew_setup_start(new_lanes);
+		init_completion(&ctx->thread_done);
+		ctx->deskew_kthread = kthread_run(nvcsi_deskew_thread,
+							ctx, "deskew");
+		if (IS_ERR(ctx->deskew_kthread)) {
+			ret = PTR_ERR(ctx->deskew_kthread);
+			complete(&ctx->thread_done);
+		}
+	}
+	return ret;
 }
 EXPORT_SYMBOL(nvcsi_deskew_setup);
 
@@ -559,6 +621,8 @@ static unsigned int error_boundary(unsigned int phy_num, unsigned int cil_bit,
 
 	is_cilb = (cil_bit > 1);
 	is_io1 = (cil_bit % 2);
+	dev_dbg(mc_csi->dev, "boundary for cilb?:%d io1?:%d\n",
+							is_cilb, is_io1);
 	stats_offset = is_cilb * NVCSI_CIL_B_OFFSET + is_io1 * 8;
 	/* step #1 clk lane */
 	stats_low = nvcsi_phy_readl(phy_num, stats_offset +
@@ -569,6 +633,8 @@ static unsigned int error_boundary(unsigned int phy_num, unsigned int cil_bit,
 
 	debugfs_deskew_clk_stats_low[cil_bit + phy_num * 4] = stats_low;
 	debugfs_deskew_clk_stats_high[cil_bit + phy_num * 4] = stats_high;
+
+	dev_dbg(mc_csi->dev, "clk boundary: 0x%016llx\n", result);
 
 	if (compute_boundary(result, x, w))
 		return -EINVAL;
@@ -582,6 +648,7 @@ static unsigned int error_boundary(unsigned int phy_num, unsigned int cil_bit,
 	debugfs_deskew_data_stats_low[cil_bit + phy_num * 4] = stats_low;
 	debugfs_deskew_data_stats_high[cil_bit + phy_num * 4] = stats_high;
 
+	dev_dbg(mc_csi->dev, "data boundary: 0x%016llx\n", result);
 	if (compute_boundary(result, y, z))
 		return -EINVAL;
 
@@ -688,35 +755,27 @@ static void set_trimmer(unsigned int phy_num, unsigned int cila,
 		dev_dbg(mc_csi->dev, "cilb %x\n", val | val1);
 	}
 }
-int nvcsi_deskew_apply_check(unsigned int active_lanes)
-{
-	unsigned long timeout;
-	struct nvcsi *nvcsi = nvhost_get_private_data(mc_csi->pdev);
 
-	dev_dbg(mc_csi->dev, "%s: active_lanes: %x\n", __func__, active_lanes);
-	mutex_lock(&nvcsi->deskew_lock);
-	deskew_active = 1;
-	enable_int_mask(active_lanes, 1);
-	enable_irq(nvcsi->irq);
-	timeout = jiffies + usecs_to_jiffies(DESKEW_TIMEOUT_USEC);
-	while (time_before(jiffies, timeout)) {
-		if (deskew_active != 1) {
-			disable_irq(nvcsi->irq);
-			enable_int_mask(active_lanes, 0);
-			dev_dbg(mc_csi->dev, "%s:deskew applied on %x ret %d\n",
-					__func__, int_lanes, deskew_active);
-			mutex_unlock(&nvcsi->deskew_lock);
-			return ((int_lanes & active_lanes) == active_lanes) ?
-				deskew_active : -EINVAL;
-		}
-		usleep_range(10, 50);
+int nvcsi_deskew_apply_check(struct nvcsi_deskew_context *ctx)
+{
+	unsigned long timeout = 0, timeleft = 1;
+
+	if (!completion_done(&ctx->thread_done)) {
+		timeout = msecs_to_jiffies(DESKEW_TIMEOUT_MSEC);
+		timeleft = wait_for_completion_timeout(&ctx->thread_done,
+								timeout);
 	}
-	disable_irq(nvcsi->irq);
-	enable_int_mask(active_lanes, 0);
-	mutex_unlock(&nvcsi->deskew_lock);
-	dev_info(mc_csi->dev, "Deskew timeout\n");
-	return -ETIMEDOUT;
+	if (!timeleft)
+		return -ETIMEDOUT;
+	if (ctx->deskew_lanes ==
+			(done_deskew_lanes & ctx->deskew_lanes)) {
+		// sleep for a frame to make sure deskew result is reflected
+		usleep_range(35*1000, 36*1000);
+		return 0;
+	} else
+		return -EINVAL;
 }
+
 EXPORT_SYMBOL(nvcsi_deskew_apply_check);
 
 static int nvcsi_deskew_apply_helper(unsigned int active_lanes)
@@ -724,7 +783,6 @@ static int nvcsi_deskew_apply_helper(unsigned int active_lanes)
 	unsigned int phy_num = -1;
 	unsigned int cil_lanes = 0, cila_io_lanes = 0, cilb_io_lanes = 0;
 	unsigned int remaining_lanes = active_lanes;
-	unsigned int val = 0;
 	unsigned int i, j;
 
 	dev_dbg(mc_csi->dev, "%s: interrupt lane: %x\n",
@@ -747,45 +805,6 @@ static int nvcsi_deskew_apply_helper(unsigned int active_lanes)
 			| NVCSI_PHY_0_NVCSI_CIL_A_IO1);
 		cilb_io_lanes = cil_lanes & (NVCSI_PHY_0_NVCSI_CIL_B_IO0
 			| NVCSI_PHY_0_NVCSI_CIL_B_IO1);
-		if (cila_io_lanes) {
-			/* Step 0 : check if deskew has error */
-			val = nvcsi_phy_readl(phy_num,
-				NVCSI_CIL_A_DPHY_DESKEW_STATUS_0_OFFSET);
-			/* If there is error in DESKEW_STATUS, user
-			 * should request sensor to re-send deskew sequence
-			 */
-			if (val & DPHY_CALIB_ERR_IO1 ||
-			    val & DPHY_CALIB_ERR_IO0) {
-				dev_err(mc_csi->dev, "deskew calib status err");
-				return -EINVAL;
-			}
-
-			if (!((cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO0) &&
-			    (val & DPHY_CALIB_DONE_IO0)))
-				return -EINVAL;
-			if (!((cila_io_lanes & NVCSI_PHY_0_NVCSI_CIL_A_IO1) &&
-			    (val & DPHY_CALIB_DONE_IO1)))
-				return -EINVAL;
-		}
-		if (cilb_io_lanes) {
-			val = nvcsi_phy_readl(phy_num,
-				NVCSI_CIL_B_DPHY_DESKEW_STATUS_0_OFFSET);
-			/* If there is error in DESKEW_STATUS, user
-			 * should request sensor to re-send deskew sequence
-			 */
-			if (val & DPHY_CALIB_ERR_IO1 ||
-			    val & DPHY_CALIB_ERR_IO0) {
-				dev_err(mc_csi->dev, "deskew calib status err");
-				return -EINVAL;
-			}
-
-			if (!((cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO0) &&
-			    (val & DPHY_CALIB_DONE_IO0)))
-				return -EINVAL;
-			if (!((cilb_io_lanes & NVCSI_PHY_0_NVCSI_CIL_B_IO1) &&
-			    (val & DPHY_CALIB_DONE_IO1)))
-				return -EINVAL;
-		}
 		/* Step 1: Read status registers and compute error boundaries */
 		for (i = NVCSI_PHY_0_NVCSI_CIL_A_IO0, j = 0;
 		     i <= NVCSI_PHY_0_NVCSI_CIL_B_IO1;
@@ -812,13 +831,13 @@ static int dbgfs_deskew_stats(struct seq_file *s, void *data)
 
 	seq_puts(s, "clk stats\n");
 	for (i = 0; i < NVCSI_PHY_CIL_NUM_LANE; i++) {
-		seq_printf(s, "%08x %08x\n",
+		seq_printf(s, "0x%08x 0x%08x\n",
 			debugfs_deskew_clk_stats_high[i],
 			debugfs_deskew_clk_stats_low[i]);
 	}
 	seq_puts(s, "data stats\n");
 	for (i = 0; i < NVCSI_PHY_CIL_NUM_LANE; i++) {
-		seq_printf(s, "%08x %08x\n",
+		seq_printf(s, "0x%08x 0x%08x\n",
 				debugfs_deskew_data_stats_high[i],
 				debugfs_deskew_data_stats_low[i]);
 	}
@@ -910,14 +929,14 @@ static long nvcsi_ioctl(struct file *file, unsigned int cmd,
 		unsigned int active_lanes;
 
 		dev_dbg(mc_csi->dev, "ioctl: deskew_setup\n");
-		priv->active_lanes = get_user(active_lanes,
+		priv->deskew_ctx.deskew_lanes = get_user(active_lanes,
 				(long __user *)arg);
-		ret = nvcsi_deskew_setup(priv->active_lanes);
+		ret = nvcsi_deskew_setup(&priv->deskew_ctx);
 		return ret;
 		}
 	case NVHOST_NVCSI_IOCTL_DESKEW_APPLY: {
 		dev_dbg(mc_csi->dev, "ioctl: deskew_apply\n");
-		ret = nvcsi_deskew_apply_check(priv->active_lanes);
+		ret = nvcsi_deskew_apply_check(&priv->deskew_ctx);
 		return ret;
 		}
 	}
@@ -942,7 +961,6 @@ static int nvcsi_open(struct inode *inode, struct file *file)
 		return -ENOMEM;
 	}
 	file->private_data = priv;
-	priv->active_lanes = 0;
 	return nonseekable_open(inode, file);
 }
 

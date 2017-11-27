@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host NVCSI
  *
- * Copyright (c) 2015-2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #define __NVHOST_NVCSI_H__
 
 #include <media/csi.h>
+#include <linux/completion.h>
 
 /* STREAM REGISTERS */
 #define NVCSI_STREAM_0_ERROR_STATUS2VI_MASK		0x10090
@@ -66,9 +67,13 @@
 #define DPHY_INADJ_IO0					0x3f
 #define DPHY_INADJ_IO0_SHIFT				0
 #define CLK_INADJ_SWEEP_CTRL				(0x1 << 15)
+#define CLK_INADJ_LIMIT_HIGH				(0x3f << 8)
+#define CLK_INADJ_LIMIT_LOW				0x3f
 #define NVCSI_CIL_A_DATA_DESKEW_CTRL_0_OFFSET		0x30
 #define DATA_INADJ_SWEEP_CTRL1				(0x1 << 31)
 #define DATA_INADJ_SWEEP_CTRL0				(0x1 << 15)
+#define DATA_INADJ_LIMIT_HIGH1				(0x3f << 23)
+#define DATA_INADJ_LIMIT_HIGH0				(0x3f << 8)
 #define NVCSI_CIL_A_DPHY_DESKEW_STATUS_0_OFFSET		0x34
 #define DPHY_CALIB_ERR_IO1				(0x1 << 15)
 #define DPHY_CALIB_DONE_IO1				(0x1 << 14)
@@ -109,13 +114,17 @@ struct nvcsi {
 	struct tegra_csi_device csi;
 	struct dentry *dir;
 	struct mutex deskew_lock;
-	int irq;
+};
+struct nvcsi_deskew_context {
+	unsigned int deskew_lanes;
+	struct task_struct *deskew_kthread;
+	struct completion thread_done;
 };
 
 int nvcsi_finalize_poweron(struct platform_device *pdev);
 int nvcsi_prepare_poweroff(struct platform_device *pdev);
-int nvcsi_deskew_apply_check(unsigned int active_lanes);
-int nvcsi_deskew_setup(unsigned int active_lanes);
+int nvcsi_deskew_apply_check(struct nvcsi_deskew_context *ctx);
+int nvcsi_deskew_setup(struct nvcsi_deskew_context *ctx);
 
 struct tegra_csi_device *tegra_get_mc_csi(void);
 #endif

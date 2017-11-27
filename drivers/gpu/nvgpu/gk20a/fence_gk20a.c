@@ -244,7 +244,7 @@ int gk20a_fence_from_semaphore(
 					"f-gk20a-0x%04x",
 					nvgpu_semaphore_gpu_ro_va(semaphore));
 		if (!sync_fence)
-			return -1;
+			return -ENOMEM;
 	}
 #endif
 
@@ -319,7 +319,7 @@ int gk20a_fence_from_syncpt(
 		sync_fence = nvgpu_nvhost_sync_create_fence(nvhost_dev,
 					id, value, "fence");
 		if (IS_ERR(sync_fence))
-			return -1;
+			return PTR_ERR(sync_fence);
 	}
 #endif
 

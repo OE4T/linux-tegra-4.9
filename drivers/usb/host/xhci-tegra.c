@@ -502,6 +502,7 @@ struct tegra_xusb {
 	struct tegra_hv_ivc_cookie *ivck;
 	char ivc_rx[128]; /* Buffer to receive pad ivc message */
 	struct work_struct ivc_work;
+	bool hsic_power_on;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -2653,11 +2654,13 @@ static int tegra_sysfs_register(struct platform_device *pdev)
 	return ret;
 }
 
-static bool hsic_power_on;
 static ssize_t hsic_power_show(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", hsic_power_on);
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+
+	return sprintf(buf, "%d\n", tegra->hsic_power_on);
 }
 
 static ssize_t hsic_power_store(struct device *dev,
@@ -2673,7 +2676,7 @@ static ssize_t hsic_power_store(struct device *dev,
 	if (kstrtouint(buf, 10, &on))
 		return -EINVAL;
 
-	if (!!on == !!hsic_power_on)
+	if ((bool)on == tegra->hsic_power_on)
 		return n;
 
 	if (on)
@@ -2693,7 +2696,7 @@ static ssize_t hsic_power_store(struct device *dev,
 	else
 		rc = tegra_xusb_padctl_hsic_reset(tegra->padctl, 0);
 
-	hsic_power_on = on;
+	tegra->hsic_power_on = (bool)on;
 	return n;
 }
 static DEVICE_ATTR(hsic_power, 0644, hsic_power_show, hsic_power_store);

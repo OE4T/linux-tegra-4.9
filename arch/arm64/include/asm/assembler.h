@@ -440,6 +440,14 @@ alternative_if ARM64_WORKAROUND_CAVIUM_27456
 	isb
 alternative_else_nop_endif
 #endif
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
+alternative_if ARM64_IC_IALLU_ON_CTX_CHANGE
+	/*ic	iallu*/
+	/*bl invalidate_btb*/
+	smc	#0
+	/* DSB in __switch_to */
+alternative_else_nop_endif
+#endif
 	.endm
 
 #endif	/* __ASM_ASSEMBLER_H */

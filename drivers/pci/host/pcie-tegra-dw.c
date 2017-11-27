@@ -255,6 +255,11 @@ struct tegra_pcie_dw {
 	struct completion rd_cpl[DMA_RD_CHNL_NUM];
 	unsigned long wr_busy;
 	unsigned long rd_busy;
+
+	u32 cfg_link_cap_l1sub;
+	u32 cap_pl16g_status;
+	u32 event_cntr_ctrl;
+	u32 event_cntr_data;
 };
 
 struct dma_tx {
@@ -862,11 +867,11 @@ static int apply_speed_change(struct seq_file *s, void *data)
 		return 0;
 	}
 
-	if (pcie->target_speed == 4) {
+	if (!tegra_platform_is_fpga() && (pcie->target_speed == 4)) {
 		u32 temp1 = 0, temp2 = 0;
 
-		dw_pcie_cfg_read(pcie->pp.dbi_base + CAP_PL16G_STATUS_REG, 4,
-				 &val);
+		dw_pcie_cfg_read(pcie->pp.dbi_base + pcie->cap_pl16g_status,
+				 4, &val);
 		dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL,
 				 4, &temp1);
 		dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL_2,
@@ -964,15 +969,13 @@ static inline u32 event_counter_prog(struct tegra_pcie_dw *pcie, u32 event)
 {
 	u32 val = 0;
 
-	dw_pcie_cfg_read(pcie->pp.dbi_base + EVENT_COUNTER_CONTROL_REG, 4,
-			 &val);
+	dw_pcie_cfg_read(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4, &val);
 	val &= ~(EVENT_COUNTER_EVENT_SEL_MASK << EVENT_COUNTER_EVENT_SEL_SHIFT);
 	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
 	val |= event << EVENT_COUNTER_EVENT_SEL_SHIFT;
 	val |= EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
-	dw_pcie_cfg_write(pcie->pp.dbi_base + EVENT_COUNTER_CONTROL_REG, 4,
-			  val);
-	dw_pcie_cfg_read(pcie->pp.dbi_base + EVENT_COUNTER_DATA_REG, 4, &val);
+	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4, val);
+	dw_pcie_cfg_read(pcie->pp.dbi_base + pcie->event_cntr_data, 4, &val);
 	return val;
 }
 
@@ -997,14 +1000,13 @@ static int aspm_state_cnt(struct seq_file *s, void *data)
 		   event_counter_prog(pcie, EVENT_COUNTER_EVENT_L1_2));
 
 	/* Clear all counters */
-	dw_pcie_cfg_write(pcie->pp.dbi_base + EVENT_COUNTER_CONTROL_REG, 4,
+	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4,
 			  EVENT_COUNTER_ALL_CLEAR);
 
 	/* Re-enable counting */
 	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
 	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
-	dw_pcie_cfg_write(pcie->pp.dbi_base + EVENT_COUNTER_CONTROL_REG, 4,
-			  val);
+	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4, val);
 
 	return 0;
 }
@@ -1219,18 +1221,22 @@ static void disable_aspm_l11(struct tegra_pcie_dw *pcie)
 {
 	u32 val = 0;
 
-	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_CAP_L1SUB, 4, &val);
+	dw_pcie_cfg_read(pcie->pp.dbi_base + pcie->cfg_link_cap_l1sub,
+			 4, &val);
 	val &= ~PCI_L1SS_CAP_ASPM_L11S;
-	dw_pcie_cfg_write(pcie->pp.dbi_base + CFG_LINK_CAP_L1SUB, 4, val);
+	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->cfg_link_cap_l1sub,
+			  4, val);
 }
 
 static void disable_aspm_l12(struct tegra_pcie_dw *pcie)
 {
 	u32 val = 0;
 
-	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_CAP_L1SUB, 4, &val);
+	dw_pcie_cfg_read(pcie->pp.dbi_base + pcie->cfg_link_cap_l1sub,
+			 4, &val);
 	val &= ~PCI_L1SS_CAP_ASPM_L12S;
-	dw_pcie_cfg_write(pcie->pp.dbi_base + CFG_LINK_CAP_L1SUB, 4, val);
+	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->cfg_link_cap_l1sub,
+			  4, val);
 }
 
 static void tegra_pcie_dw_host_init(struct pcie_port *pp)
@@ -1567,6 +1573,38 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	pp->dev = &pdev->dev;
 	pcie->dev = &pdev->dev;
 
+	ret = of_property_read_u32(np, "nvidia,cfg-link-cap-l1sub",
+				   &pcie->cfg_link_cap_l1sub);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read cfg-link-cap-l1sub: %d\n",
+			ret);
+		pcie->cfg_link_cap_l1sub = CFG_LINK_CAP_L1SUB;
+	}
+	of_property_read_u32(np, "nvidia,cap-pl16g-status",
+			     &pcie->cap_pl16g_status);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read cap-pl16g-status: %d\n", ret);
+		pcie->cap_pl16g_status = CAP_PL16G_STATUS_REG;
+	}
+	of_property_read_u32(np, "nvidia,event-cntr-ctrl",
+			     &pcie->event_cntr_ctrl);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read event-cntr-ctrl: %d\n", ret);
+		pcie->event_cntr_ctrl = EVENT_COUNTER_CONTROL_REG;
+	}
+	of_property_read_u32(np, "nvidia,event-cntr-data",
+			     &pcie->event_cntr_data);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read event-cntr-data: %d\n", ret);
+		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
+	}
+
+	if (tegra_platform_is_fpga()) {
+		pcie->cfg_link_cap_l1sub = CFG_LINK_CAP_L1SUB;
+		pcie->event_cntr_ctrl = EVENT_COUNTER_CONTROL_REG;
+		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
+	}
+
 	appl_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "appl");
 	if (!appl_res) {
 		dev_err(&pdev->dev, "missing appl space\n");
@@ -1712,8 +1750,7 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	/* Enable ASPM counters */
 	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
 	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
-	dw_pcie_cfg_write(pcie->pp.dbi_base + EVENT_COUNTER_CONTROL_REG, 4,
-			  val);
+	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4, val);
 
 	pcie->debugfs = debugfs_create_dir(pdev->dev.of_node->name, NULL);
 	if (!pcie->debugfs)

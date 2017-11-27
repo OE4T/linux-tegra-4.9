@@ -57,6 +57,26 @@ Required properties:
   of entries does not have to (though usually will) be equal to the specified
   number of lanes in XBAR configuration. Entries are of the form
   "pcie-p2u-N": where N ranges from 0 to the value specified in xbar config
+- Controller dependent register offsets
+  - nvidia,cfg-link-cap-l1sub: L1SUB_CAP_L1SUB reg offset
+      0x154 - FPGA
+      0x194 - C2, C3 and C4
+      0x1b0 - C4
+      0x1c4 - C0 and C5
+  - nvidia,cap-pl16g-status: PL16G_CAP_PL16G_STATUS reg offset
+      0x164 - C2, C3 and C4
+      0x174 - C4
+      0x174 - C0 and C5
+  - nvidia,event-cntr-ctrl: EVENT_COUNTER_CONTROL reg offset
+      0x168 - FPGA
+      0x1a8 - C2, C3 and C4
+      0x1c4 - C4
+      0x1d8 - C0 and C5
+  - nvidia,event-cntr-data: EVENT_COUNTER_DATA reg offset
+      0x16c - FPGA
+      0x1ac - C2, C3 and C4
+      0x1c8 - C4
+      0x1dc - C0 and C5
 
 Optional properties:
 - iommus: A reference to the IOMMU. See ../iommu/iommu.txt for details.
@@ -134,6 +154,11 @@ SoC DTSI:
 		ranges = <0x81000000 0x0 0x30100000 0x0 0x30100000 0x0 0x00100000      /* downstream I/O (1MB) */
 			  0x82000000 0x0 0x30200000 0x0 0x30200000 0x0 0x01E00000      /* non-prefetchable memory (30MB) */
 			  0xc2000000 0x12 0x00000000 0x12 0x00000000 0x0 0x40000000>;  /* prefetchable memory (1GB) */
+
+		nvidia,cfg-link-cap-l1sub = <0x1c4>;
+		nvidia,cap-pl16g-status = <0x174>;
+		nvidia,event-cntr-ctrl = <0x1d8>;
+		nvidia,event-cntr-data = <0x1dc>;
 	};
 
 Board DTS:

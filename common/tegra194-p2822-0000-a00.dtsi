@@ -14,6 +14,7 @@
 #include <t19x-common-modules/tegra194-cvb-p2822-0000-a00.dtsi>
 #include <dt-bindings/gpio/tegra194-gpio.h>
 #include "tegra194-audio-p2822-0000.dtsi"
+#include "tegra194-p2822-disp.dtsi"
 
 / {
 	sdhci@3400000 {

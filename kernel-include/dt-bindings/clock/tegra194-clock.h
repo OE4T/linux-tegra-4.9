@@ -279,18 +279,18 @@
 #define TEGRA194_CLK_SDMMC4			123
 /** @brief gated version of SE_FREE clk */
 #define TEGRA194_CLK_SE				124
-/** @brief output of mux controlled by SOR0_CLK_SEL0 */
-#define TEGRA194_CLK_SOR0			125
-/** @brief Alias to TEGRA194_CLK_SOR0_REF (do not use - to be removed)  */
-#define TEGRA194_CLK_SOR0_OUT			126
+/** @deprecated do not use */
+#define TEGRA194_CLK_SOR0			TEGRA194_CLK_SOR0_OUT
+/** @brief output of mux controlled by SOR0_CLK_SEL1 and SOR0_CLK_SEL0 */
+#define TEGRA194_CLK_SOR0_OUT			125
 /** @brief output of mux controlled by SOR0_CLK_SRC */
 #define TEGRA194_CLK_SOR0_REF			126
 /** @brief SOR0 brick output which feeds into SOR0_CLK_SEL0 mux */
 #define TEGRA194_CLK_SOR0_PAD_CLKOUT		127
-/** @brief output of mux controlled by SOR1_CLK_SEL0 */
-#define TEGRA194_CLK_SOR1			128
-/** @brief Alias to TEGRA194_CLK_SOR1_REF (do not use - to be removed)  */
-#define TEGRA194_CLK_SOR1_OUT			129
+/** @deprecated do not use */
+#define TEGRA194_CLK_SOR1			TEGRA194_CLK_SOR1_OUT
+/** @brief output of mux controlled by SOR1_CLK_SEL1 and SOR1_CLK_SEL0 */
+#define TEGRA194_CLK_SOR1_OUT			128
 /** @brief output of mux controlled by SOR1_CLK_SRC */
 #define TEGRA194_CLK_SOR1_REF			129
 /** @brief SOR1 brick output which feeds into SOR1_CLK_SEL0 mux */
@@ -389,14 +389,18 @@
 #define TEGRA194_CLK_DLA1_FALCON		176
 /** @brief DLA1_core_clk */
 #define TEGRA194_CLK_DLA1_CORE			177
-/** @brief output of mux controlled by SOR2_CLK_SEL0 */
-#define TEGRA194_CLK_SOR2			178
+/** @deprecated do not use */
+#define TEGRA194_CLK_SOR2			TEGRA194_CLK_SOR2_OUT
+/** @brief output of mux controlled by SOR2_CLK_SEL1 and SOR2_CLK_SEL0 */
+#define TEGRA194_CLK_SOR2_OUT			178
 /** @brief output of mux controlled by SOR2_CLK_SRC */
 #define TEGRA194_CLK_SOR2_REF			179
 /** @brief SOR2 brick output which feeds into SOR2_CLK_SEL0 mux */
 #define TEGRA194_CLK_SOR2_PAD_CLKOUT		180
-/** @brief output of mux controlled by SOR3_CLK_SEL0 */
-#define TEGRA194_CLK_SOR3			181
+/** @deprecated do not use */
+#define TEGRA194_CLK_SOR3			TEGRA194_CLK_SOR3_OUT
+/** @brief output of mux controlled by SOR3_CLK_SEL1 and SOR3_CLK_SEL0 */
+#define TEGRA194_CLK_SOR3_OUT			181
 /** @brief output of mux controlled by SOR3_CLK_SRC */
 #define TEGRA194_CLK_SOR3_REF			182
 /** @brief SOR3 brick output which feeds into SOR3_CLK_SEL0 mux */

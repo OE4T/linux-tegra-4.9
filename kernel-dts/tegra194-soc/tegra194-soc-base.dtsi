@@ -838,6 +838,7 @@
 			iso-smmu;
 
 			nvidia,dc-ctrlnum = <0>;
+			nvidia,cmu-enable = <0x1>;
 
 			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
@@ -880,6 +881,7 @@
 			iso-smmu;
 
 			nvidia,dc-ctrlnum = <1>;
+			nvidia,cmu-enable = <0x1>;
 
 			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
@@ -922,6 +924,7 @@
 			iso-smmu;
 
 			nvidia,dc-ctrlnum = <2>;
+			nvidia,cmu-enable = <0x1>;
 
 			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
@@ -964,6 +967,7 @@
 			iso-smmu;
 
 			nvidia,dc-ctrlnum = <3>;
+			nvidia,cmu-enable = <0x1>;
 
 			clock-names = "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",

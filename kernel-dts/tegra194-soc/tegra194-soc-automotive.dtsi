@@ -62,4 +62,36 @@
 	tegra194-pm-irq {
 		status = "okay";
 	};
+
+	i2c@3160000 { /* GEN1_I2C */
+		status = "okay";
+	};
+
+	i2c@c240000 { /* GEN2_I2C */
+		status = "okay";
+	};
+
+	i2c@3180000 { /* CAM_I2C */
+		status = "okay";
+	};
+
+	i2c@3190000 { /* DP_AUX_CH1_I2C */
+		status = "okay";
+	};
+
+	i2c@31b0000 { /* DP_AUX_CH0_I2C */
+		status = "okay";
+	};
+
+	i2c@31c0000 { /* DP_AUX_CH2_I2C */
+		status = "okay";
+	};
+
+	i2c@c250000 { /* GEN8_I2C */
+		status = "okay";
+	};
+
+	i2c@31e0000 { /* DP_AUX_CH3_I2C */
+		status = "okay";
+	};
 };

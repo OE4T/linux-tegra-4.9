@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/tegra-firmwares.h>
 #include <linux/tegra-ivc.h>
+#include <linux/version.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_powergate.h>
@@ -228,10 +229,14 @@ static int bpmp_clk_init(struct platform_device *pdev)
 static int bpmp_linear_map_init(struct platform_device *pdev)
 {
 	struct device_node *node;
-	unsigned long attrs;
 	uint32_t of_start;
 	uint32_t of_size;
 	int ret;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	DEFINE_DMA_ATTRS(attrs);
+#else
+	unsigned long attrs;
+#endif
 
 	node = pdev->dev.of_node;
 
@@ -243,8 +248,14 @@ static int bpmp_linear_map_init(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	ret = dma_map_linear_attrs(&pdev->dev, of_start, of_size, 0, &attrs);
+#else
 	attrs = DMA_ATTR_SKIP_IOVA_GAP | DMA_ATTR_SKIP_CPU_SYNC;
 	ret = dma_map_linear_attrs(&pdev->dev, of_start, of_size, 0, attrs);
+#endif
 	if (ret == DMA_ERROR_CODE)
 		return -ENOMEM;
 

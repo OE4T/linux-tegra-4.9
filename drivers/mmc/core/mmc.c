@@ -1977,7 +1977,7 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	mmc_select_powerclass(card);
 
 	/* Execute post init if exists */
-	if (mmc_card_hs400(card) && host->ops->post_init)
+	if (host->ops->post_init)
 		host->ops->post_init(host);
 
 	/*

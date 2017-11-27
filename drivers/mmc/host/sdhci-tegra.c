@@ -239,6 +239,7 @@ static void tegra_sdhci_complete(struct sdhci_host *host);
 static int tegra_sdhci_runtime_suspend(struct sdhci_host *host);
 static int tegra_sdhci_runtime_resume(struct sdhci_host *host);
 static void tegra_sdhci_post_resume(struct sdhci_host *host);
+static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock);
 
 static bool tegra_sdhci_is_clk_enabled(struct sdhci_host *host, int reg)
 {
@@ -435,25 +436,37 @@ static unsigned int tegra_sdhci_get_ro(struct sdhci_host *host)
 
 static void tegra_sdhci_post_init(struct sdhci_host *host)
 {
+	struct mmc_host *mmc = host->mmc;
 	int reg, timeout = 5;
 
-	reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_DLLCAL_CFG);
-	reg |= SDHCI_DLLCAL_CFG_EN_CALIBRATE;
-	sdhci_writel(host, reg, SDHCI_TEGRA_VENDOR_DLLCAL_CFG);
+	if ((mmc->ios.timing == MMC_TIMING_MMC_DDR52) ||
+		(mmc->ios.timing == MMC_TIMING_UHS_DDR50)) {
+		/*
+		 * Tegra SDMMC controllers support DDR mode with only clock
+		 * divisor 1. Set the clock frequency here again to ensure
+		 * host and device clocks are correctly configured.
+		 */
+		tegra_sdhci_set_clock(host, host->max_clk);
+	} else if (mmc->ios.timing == MMC_TIMING_MMC_HS400) {
+		reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_DLLCAL_CFG);
+		reg |= SDHCI_DLLCAL_CFG_EN_CALIBRATE;
+		sdhci_writel(host, reg, SDHCI_TEGRA_VENDOR_DLLCAL_CFG);
 
-	mdelay(1);
-
-	/* Wait until DLL calibration is done */
-	do {
-		if (!(sdhci_readl(host, SDHCI_DLLCAL_CFG_STATUS) &
-			SDHCI_DLLCAL_CFG_STATUS_DLL_ACTIVE))
-			break;
 		mdelay(1);
-		timeout--;
-	} while (timeout);
 
-	if (!timeout)
-		dev_err(mmc_dev(host->mmc), "DLL calibration timed out\n");
+		/* Wait until DLL calibration is done */
+		do {
+			if (!(sdhci_readl(host, SDHCI_DLLCAL_CFG_STATUS) &
+				SDHCI_DLLCAL_CFG_STATUS_DLL_ACTIVE))
+				break;
+			mdelay(1);
+			timeout--;
+		} while (timeout);
+
+		if (!timeout)
+			dev_err(mmc_dev(host->mmc),
+				"DLL calibration timed out\n");
+	}
 }
 
 static void tegra_sdhci_hs400_enhanced_strobe(struct sdhci_host *host, bool enable)

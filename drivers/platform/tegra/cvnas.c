@@ -1,7 +1,7 @@
 /*
  * drivers/platform/tegra/cvnas.c
  *
- * Copyright (C) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -440,6 +440,29 @@ static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 
 int nvmap_register_cvsram_carveout(struct device *dma_dev,
 		phys_addr_t base, size_t size);
+/* Call at the time we allocate something from CVNAS */
+int nvcvnas_busy(void)
+{
+	if (!cvnas_plat_dev) {
+		pr_err("CVNAS Platform Device not found\n");
+		return -ENODEV;
+	}
+
+	return pm_runtime_get_sync(&cvnas_plat_dev->dev);
+}
+EXPORT_SYMBOL(nvcvnas_busy);
+
+/* Call after we release a buffer */
+int nvcvnas_idle(void)
+{
+	if (!cvnas_plat_dev) {
+		pr_err("CVNAS Platform Device not found\n");
+		return -ENODEV;
+	}
+
+	return pm_runtime_put(&cvnas_plat_dev->dev);
+}
+EXPORT_SYMBOL(nvcvnas_idle);
 
 static int nvcvnas_probe(struct platform_device *pdev)
 {
@@ -535,6 +558,9 @@ static int nvcvnas_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(&pdev->dev, cvnas_dev);
 
+	/* Fix me: call busy until correct place holder is not found */
+	nvcvnas_busy();
+
 	/* TODO: Add interrupt handler */
 
 	return 0;
@@ -564,6 +590,8 @@ static int nvcvnas_remove(struct platform_device *pdev)
 	cvnas_dev = dev_get_drvdata(&pdev->dev);
 	if (!cvnas_dev)
 		return -ENODEV;
+	/* Fix me: call idle until find correct place holder */
+	nvcvnas_idle();
 
 	ret = nvcvnas_power_off(cvnas_dev);
 	if (ret)
@@ -623,30 +651,6 @@ static int nvcvnas_resume(struct device *dev)
 	}
 	return 0;
 }
-
-/* Call at the time we allocate something from CVNAS */
-int nvcvnas_busy(void)
-{
-	if (!cvnas_plat_dev) {
-		pr_err("CVNAS Platform Device not found\n");
-		return -ENODEV;
-	}
-
-	return pm_runtime_get_sync(&cvnas_plat_dev->dev);
-}
-EXPORT_SYMBOL(nvcvnas_busy);
-
-/* Call after we release a buffer */
-int nvcvnas_idle(void)
-{
-	if (!cvnas_plat_dev) {
-		pr_err("CVNAS Platform Device not found\n");
-		return -ENODEV;
-	}
-
-	return pm_runtime_put(&cvnas_plat_dev->dev);
-}
-EXPORT_SYMBOL(nvcvnas_idle);
 
 static int nvcvnas_runtime_suspend(struct device *dev)
 {

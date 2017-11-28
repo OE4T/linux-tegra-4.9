@@ -22,11 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/delay.h>	/* for udelay */
-#include <linux/clk.h>
-
-#include <soc/tegra/fuse.h>
-
 #include <nvgpu/pmu.h>
 #include <nvgpu/falcon.h>
 #include <nvgpu/enabled.h>

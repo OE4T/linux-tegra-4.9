@@ -27,6 +27,8 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 
+#include <soc/tegra/chip-id.h>
+
 struct register_info {
 	u32 index;
 	u32 value;
@@ -276,6 +278,11 @@ static int __init nvhost_minimal_pm_dev_init(void)
 {
 	struct device_node *bpmp_device;
 	int err = 0;
+
+	if (!tegra_platform_is_qt()) {
+		/* This hack is only intended for VSP */
+		return -ENODEV;
+	}
 
 	/* Check for bpmp device status in DT */
 	bpmp_device = of_find_node_by_name(NULL, "bpmp");

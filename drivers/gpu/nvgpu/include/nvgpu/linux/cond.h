@@ -18,6 +18,7 @@
 #define __NVGPU_COND_LINUX_H__
 
 #include <linux/wait.h>
+#include <linux/sched.h>
 
 struct nvgpu_cond {
 	bool initialized;

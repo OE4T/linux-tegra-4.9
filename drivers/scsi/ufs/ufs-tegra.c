@@ -44,6 +44,14 @@ static int ufs_tegra_show_configuration(struct seq_file *s, void *data)
 	struct ufs_hba *hba = s->private;
 	u32 major_version;
 	u32 minor_version;
+	u32 rx_gear;
+	u32 tx_gear;
+	const char *freq_series = "";
+	struct ufs_pa_layer_attr *configured_params;
+
+	configured_params = &hba->pwr_info;
+	rx_gear = configured_params->gear_rx;
+	tx_gear = configured_params->gear_tx;
 
 	seq_puts(s, "UFS Configuration:\n");
 	if ((hba->ufs_version == UFSHCI_VERSION_10) ||
@@ -67,6 +75,22 @@ static int ufs_tegra_show_configuration(struct seq_file *s, void *data)
 	seq_puts(s, "\n");
 	seq_puts(s, "UTP Task Management Request Slots:\n");
 	seq_printf(s, "NUTMRS: %u\n", hba->nutmrs);
+
+	seq_puts(s, "\n");
+	seq_puts(s, "UTP Power Info:\n");
+	if (configured_params->hs_rate) {
+		if (configured_params->hs_rate == PA_HS_MODE_A)
+			freq_series = "RATE_A";
+		else if (configured_params->hs_rate == PA_HS_MODE_B)
+			freq_series = "RATE_B";
+		seq_printf(s,
+			"HS Mode RX_Gear:gear_%u TX_Gear:gear_%u %s series\n",
+				rx_gear, tx_gear, freq_series);
+	} else {
+		seq_printf(s,
+			"PWM Mode RX_Gear:gear_%u TX_Gear:gear_%u\n",
+				rx_gear, tx_gear);
+	}
 
 	return 0;
 }

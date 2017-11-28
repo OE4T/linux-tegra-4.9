@@ -22,19 +22,13 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/delay.h>
-#include <linux/version.h>
-#include <linux/vmalloc.h>
-#include <linux/tegra_gpu_t19x.h>
-
-#include <soc/tegra/fuse.h>
-
 #include <nvgpu/timers.h>
 #include <nvgpu/gmmu.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -1644,7 +1638,7 @@ int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			return 0;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
 	} while (!nvgpu_timeout_expired(&timeout));
@@ -1686,20 +1680,15 @@ void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 
 void gr_gv11b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
-	tegra_fuse_writel(0x1, FUSE_FUSEBYPASS_0);
-	tegra_fuse_writel(0x0, FUSE_WRITE_ACCESS_SW_0);
-#else
-	tegra_fuse_control_write(0x1, FUSE_FUSEBYPASS_0);
-	tegra_fuse_control_write(0x0, FUSE_WRITE_ACCESS_SW_0);
-#endif
+	nvgpu_tegra_fuse_write_bypass(g, 0x1);
+	nvgpu_tegra_fuse_write_access_sw(g, 0x0);
 
 	if (g->gr.gpc_tpc_mask[gpc_index] == 0x1)
-		tegra_fuse_writel(0x2, FUSE_OPT_GPU_TPC0_DISABLE_0);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(g, 0x2);
 	else if (g->gr.gpc_tpc_mask[gpc_index] == 0x2)
-		tegra_fuse_writel(0x1, FUSE_OPT_GPU_TPC0_DISABLE_0);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(g, 0x1);
 	else
-		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
+		nvgpu_tegra_fuse_write_opt_gpu_tpc0_disable(g, 0x0);
 }
 
 void gr_gv11b_get_access_map(struct gk20a *g,

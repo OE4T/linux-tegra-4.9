@@ -1040,11 +1040,13 @@ int eqos_probe(struct platform_device *pdev)
 							   "nvidia,brcm_phy_apd_mode");
 
 #ifndef DISABLE_TRISTATE
-	/* enable tx tri state to save power during init */
-	ret = pinctrl_pm_select_idle_state(&pdev->dev);
-	if (ret < 0)
-		dev_err(&pdev->dev, "setting tx_tristate_enable \
-			state failed with %d\n",ret);
+	if (pdata->mac_ver == EQOS_MAC_CORE_4_10) {
+		/* enable tx tri state to save power during init */
+		ret = pinctrl_pm_select_idle_state(&pdev->dev);
+		if (ret < 0)
+			dev_err(&pdev->dev, "setting tx_tristate_enable \
+					state failed with %d\n", ret);
+	}
 #endif
 	pdata->num_chans = num_chans;
 	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;

@@ -30,7 +30,7 @@ static unsigned int timeout_mul = 1;
 struct channel_data channel_area[NR_MAX_CHANNELS];
 static struct completion *completion;
 static DEFINE_SPINLOCK(lock);
-static DEFINE_SPINLOCK(ach_lock);
+static DEFINE_RAW_SPINLOCK(ach_lock);
 static const struct channel_cfg *channel_cfg;
 static const struct mail_ops *mail_ops;
 
@@ -331,7 +331,7 @@ int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 		return -ENODEV;
 
 	if (channel_cfg->per_cpu_ch_cnt == 1) {
-		spin_lock(&ach_lock);
+		raw_spin_lock(&ach_lock);
 		ch = channel_cfg->per_cpu_ch_0;
 	} else {
 		cpu = smp_processor_id();
@@ -343,7 +343,7 @@ int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 	r = bpmp_send_receive_atomic(ch, mrq, ob_data, ob_sz, ib_data, ib_sz);
 
 	if (channel_cfg->per_cpu_ch_cnt == 1)
-		spin_unlock(&ach_lock);
+		raw_spin_unlock(&ach_lock);
 
 	return r;
 }

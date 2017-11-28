@@ -392,12 +392,14 @@ static void eqos_adjust_link(struct net_device *dev)
 			pdata->oldlink = 1;
 			pdata->xstats.link_connect_count++;
 #ifndef DISABLE_TRISTATE
-			ret = pinctrl_pm_select_default_state(&pdata->pdev->dev);
-			if (ret < 0) {
-				dev_err(&pdata->pdev->dev,
-					"setting tx_tristate_disable state failed\n");
+			if (pdata->mac_ver == EQOS_MAC_CORE_4_10) {
+				ret = pinctrl_pm_select_default_state(&pdata->pdev->dev);
+				if (ret < 0) {
+					dev_err(&pdata->pdev->dev,
+						"setting tx_tristate_disable state failed\n");
+				}
+				tx_tristate_disable = 1;
 			}
-			tx_tristate_disable = 1;
 #endif
 			schedule_work(&pdata->iso_work);
 		}
@@ -408,10 +410,12 @@ static void eqos_adjust_link(struct net_device *dev)
 		pdata->oldduplex = -1;
 		pdata->xstats.link_disconnect_count++;
 #ifndef DISABLE_TRISTATE
-		ret = pinctrl_pm_select_idle_state(&pdata->pdev->dev);
-		if (ret < 0) {
-			dev_err(&pdata->pdev->dev,
-				"setting tx_tristate_enable state failed\n");
+		if (pdata->mac_ver == EQOS_MAC_CORE_4_10) {
+			ret = pinctrl_pm_select_idle_state(&pdata->pdev->dev);
+			if (ret < 0) {
+				dev_err(&pdata->pdev->dev,
+					"setting tx_tristate_enable state failed\n");
+			}
 		}
 #endif
 		schedule_work(&pdata->iso_work);

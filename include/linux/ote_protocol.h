@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 int tegra_set_vpr_params(void *vpr_base, size_t vpr_size);
 
-void te_restore_keyslots(void);
+void trusty_restore_keyslots(void);
+void tlk_restore_keyslots(void);
 
 #endif

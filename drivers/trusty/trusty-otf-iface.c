@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 #define OTF_PORT_NAME		"com.nvidia.tos.74629d40-1378-4d17-94d0e0af5d861d88"
 #define OTF_REPROGRAM_KEYS	5
 
-void te_restore_keyslots(void)
+void trusty_restore_keyslots(void)
 {
 	void *opaque_channel_context = NULL;
 	int ret = 0;
@@ -50,4 +50,4 @@ void te_restore_keyslots(void)
 
 	te_close_trusted_session(opaque_channel_context);
 }
-EXPORT_SYMBOL(te_restore_keyslots);
+EXPORT_SYMBOL(trusty_restore_keyslots);

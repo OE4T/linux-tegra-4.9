@@ -88,8 +88,8 @@ enum tegra_la_id {
 	TEGRA_LA_PPCS_AHBDMAW,
 	TEGRA_LA_PPCS_AHBSLVW,
 	TEGRA_LA_PTCR,
-	TEGRA_LA_SATAR,				/* T30 specific */
-	TEGRA_LA_SATAW,				/* T30 specific */
+	TEGRA_LA_SATAR,				/* T30, T19x */
+	TEGRA_LA_SATAW,				/* T30, T19x */
 	TEGRA_LA_VDE_BSEVR,
 	TEGRA_LA_VDE_MBER,
 	TEGRA_LA_VDE_MCER,
@@ -106,18 +106,18 @@ enum tegra_la_id {
 
 	TEGRA_LA_MSENCSRD,			/* T11x, T14x specific */
 	TEGRA_LA_MSENCSWR,			/* T11x, T14x specific */
-	TEGRA_LA_XUSB_HOSTR,			/* T11x specific */
-	TEGRA_LA_XUSB_HOSTW,			/* T11x specific */
-	TEGRA_LA_XUSB_DEVR,			/* T11x specific */
-	TEGRA_LA_XUSB_DEVW,			/* T11x specific */
+	TEGRA_LA_XUSB_HOSTR,			/* T11x, T19x */
+	TEGRA_LA_XUSB_HOSTW,			/* T11x, T19x */
+	TEGRA_LA_XUSB_DEVR,			/* T11x, T19x */
+	TEGRA_LA_XUSB_DEVW,			/* T11x, T19x */
 	TEGRA_LA_FDCDRD3,			/* T11x specific */
 	TEGRA_LA_FDCDRD4,			/* T11x specific */
 	TEGRA_LA_FDCDWR3,			/* T11x specific */
 	TEGRA_LA_FDCDWR4,			/* T11x specific */
 	TEGRA_LA_EMUCIFR,			/* T11x, T14x specific */
 	TEGRA_LA_EMUCIFW,			/* T11x, T14x specific */
-	TEGRA_LA_TSECSRD,			/* T11x, T14x specific */
-	TEGRA_LA_TSECSWR,			/* T11x, T14x specific */
+	TEGRA_LA_TSECSRD,			/* T11x, T14x, T19x */
+	TEGRA_LA_TSECSWR,			/* T11x, T14x, T19x */
 
 	TEGRA_LA_VI_W,				/* T14x specific */
 	TEGRA_LA_ISP_RA,			/* T14x specific */
@@ -129,16 +129,16 @@ enum tegra_la_id {
 	TEGRA_LA_BBCR,				/* T14x specific */
 	TEGRA_LA_BBCW,				/* T14x specific */
 	TEGRA_LA_BBCLLR,			/* T14x specific */
-	TEGRA_LA_SDMMCR,			/* T12x specific */
-	TEGRA_LA_SDMMCRA,			/* T12x specific */
+	TEGRA_LA_SDMMCR,			/* T12x, T19x */
+	TEGRA_LA_SDMMCRA,			/* T12x, T19x */
 	TEGRA_LA_SDMMCRAA,			/* T12x specific */
-	TEGRA_LA_SDMMCRAB,			/* T12x specific */
-	TEGRA_LA_SDMMCW,			/* T12x specific */
-	TEGRA_LA_SDMMCWA,			/* T12x specific */
+	TEGRA_LA_SDMMCRAB,			/* T12x, T19x */
+	TEGRA_LA_SDMMCW,			/* T12x, T19x */
+	TEGRA_LA_SDMMCWA,			/* T12x, T19x */
 	TEGRA_LA_SDMMCWAA,			/* T12x specific */
-	TEGRA_LA_SDMMCWAB,			/* T12x specific */
-	TEGRA_LA_VICSRD,			/* T12x specific */
-	TEGRA_LA_VICSWR,			/* T12x specific */
+	TEGRA_LA_SDMMCWAB,			/* T12x, T19x */
+	TEGRA_LA_VICSRD,			/* T12x, T19x */
+	TEGRA_LA_VICSWR,			/* T12x, T19x */
 
 	TEGRA_LA_TSECBSRD,			/* T21x specific */
 	TEGRA_LA_TSECBSWR,			/* T21x specific */
@@ -146,39 +146,130 @@ enum tegra_la_id {
 	TEGRA_LA_NVDECR,			/* T21x specific */
 	TEGRA_LA_NVDECW,			/* T21x specific */
 
-	TEGRA_LA_AONR,				/* T18x specific */
-	TEGRA_LA_AONW,				/* T18x specific */
-	TEGRA_LA_AONDMAR,			/* T18x specific */
-	TEGRA_LA_AONDMAW,			/* T18x specific */
-	TEGRA_LA_APEDMAR,			/* T18x specific */
-	TEGRA_LA_APEDMAW,			/* T18x specific */
-	TEGRA_LA_APER,				/* T18x specific */
-	TEGRA_LA_APEW,				/* T18x specific */
-	TEGRA_LA_AXISR,				/* T18x specific */
-	TEGRA_LA_AXISW,				/* T18x specific */
-	TEGRA_LA_BPMPR,				/* T18x specific */
-	TEGRA_LA_BPMPW,				/* T18x specific */
-	TEGRA_LA_BPMPDMAR,			/* T18x specific */
-	TEGRA_LA_BPMPDMAW,			/* T18x specific */
-	TEGRA_LA_EQOSR,				/* T18x specific */
-	TEGRA_LA_EQOSW,				/* T18x specific */
-	TEGRA_LA_ETRR,				/* T18x specific */
-	TEGRA_LA_ETRW,				/* T18x specific */
+	TEGRA_LA_AONR,				/* T18x, T19x */
+	TEGRA_LA_AONW,				/* T18x, T19x */
+	TEGRA_LA_AONDMAR,			/* T18x, T19x */
+	TEGRA_LA_AONDMAW,			/* T18x, T19x */
+	TEGRA_LA_APEDMAR,			/* T18x, T19x */
+	TEGRA_LA_APEDMAW,			/* T18x, T19x */
+	TEGRA_LA_APER,				/* T18x, T19x */
+	TEGRA_LA_APEW,				/* T18x, T19x */
+	TEGRA_LA_AXISR,				/* T18x, T19x */
+	TEGRA_LA_AXISW,				/* T18x, T19x */
+	TEGRA_LA_BPMPR,				/* T18x, T19x */
+	TEGRA_LA_BPMPW,				/* T18x, T19x */
+	TEGRA_LA_BPMPDMAR,			/* T18x, T19x */
+	TEGRA_LA_BPMPDMAW,			/* T18x, T19x */
+	TEGRA_LA_EQOSR,				/* T18x, T19x */
+	TEGRA_LA_EQOSW,				/* T18x, T19x */
+	TEGRA_LA_ETRR,				/* T18x, T19x */
+	TEGRA_LA_ETRW,				/* T18x, T19x */
 	TEGRA_LA_GPUSRD2,			/* T18x specific */
 	TEGRA_LA_GPUSWR2,			/* T18x specific */
-	TEGRA_LA_NVDISPLAYR,			/* T18x specific */
-	TEGRA_LA_NVENCSRD,			/* T18x specific */
-	TEGRA_LA_NVENCSWR,			/* T18x specific */
-	TEGRA_LA_NVJPGSRD,			/* T18x specific */
-	TEGRA_LA_NVJPGSWR,			/* T18x specific */
-	TEGRA_LA_SCER,				/* T18x specific */
-	TEGRA_LA_SCEW,				/* T18x specific */
-	TEGRA_LA_SCEDMAR,			/* T18x specific */
-	TEGRA_LA_SCEDMAW,			/* T18x specific */
-	TEGRA_LA_SESRD,				/* T18x specific */
-	TEGRA_LA_SESWR,				/* T18x specific */
-	TEGRA_LA_UFSHCR,			/* T18x specific */
-	TEGRA_LA_UFSHCW,			/* T18x specific */
+	TEGRA_LA_NVDISPLAYR,			/* T18x, T19x */
+	TEGRA_LA_NVENCSRD,			/* T18x, T19x */
+	TEGRA_LA_NVENCSWR,			/* T18x, T19x */
+	TEGRA_LA_NVJPGSRD,			/* T18x, T19x */
+	TEGRA_LA_NVJPGSWR,			/* T18x, T19x */
+	TEGRA_LA_SCER,				/* T18x, T19x */
+	TEGRA_LA_SCEW,				/* T18x, T19x */
+	TEGRA_LA_SCEDMAR,			/* T18x, T19x */
+	TEGRA_LA_SCEDMAW,			/* T18x, T19x */
+	TEGRA_LA_SESRD,				/* T18x, T19x */
+	TEGRA_LA_SESWR,				/* T18x, T19x */
+	TEGRA_LA_UFSHCR,			/* T18x, T19x */
+	TEGRA_LA_UFSHCW,			/* T18x, T19x */
+
+	TEGRA_LA_AXIAPR,			/* T19x specific */
+	TEGRA_LA_AXIAPW,			/* T19x specific */
+	TEGRA_LA_CIFLL_WR,			/* T19x specific */
+	TEGRA_LA_DLA0FALRDB,			/* T19x specific */
+	TEGRA_LA_DLA0RDA,			/* T19x specific */
+	TEGRA_LA_DLA0FALWRB,			/* T19x specific */
+	TEGRA_LA_DLA0WRA,			/* T19x specific */
+	TEGRA_LA_DLA0RDA1,			/* T19x specific */
+	TEGRA_LA_DLA1RDA1,			/* T19x specific */
+	TEGRA_LA_DLA1FALRDB,			/* T19x specific */
+	TEGRA_LA_DLA1RDA,			/* T19x specific */
+	TEGRA_LA_DLA1FALWRB,			/* T19x specific */
+	TEGRA_LA_DLA1WRA,			/* T19x specific */
+	TEGRA_LA_HOST1XDMAR,			/* T19x specific */
+	TEGRA_LA_ISPFALR,			/* T19x specific */
+	TEGRA_LA_ISPRA,				/* T19x specific */
+	TEGRA_LA_ISPWA,				/* T19x specific */
+	TEGRA_LA_ISPWB,				/* T19x specific */
+	TEGRA_LA_ISPFALW,			/* T19x specific */
+	TEGRA_LA_ISPRA1,			/* T19x specific */
+	TEGRA_LA_MIU0R,				/* T19x specific */
+	TEGRA_LA_MIU0W,				/* T19x specific */
+	TEGRA_LA_MIU1R,				/* T19x specific */
+	TEGRA_LA_MIU1W,				/* T19x specific */
+	TEGRA_LA_MIU2R,				/* T19x specific */
+	TEGRA_LA_MIU2W,				/* T19x specific */
+	TEGRA_LA_MIU3R,				/* T19x specific */
+	TEGRA_LA_MIU3W,				/* T19x specific */
+	TEGRA_LA_MIU4R,				/* T19x specific */
+	TEGRA_LA_MIU4W,				/* T19x specific */
+	TEGRA_LA_MIU5R,				/* T19x specific */
+	TEGRA_LA_MIU5W,				/* T19x specific */
+	TEGRA_LA_MIU6R,				/* T19x specific */
+	TEGRA_LA_MIU6W,				/* T19x specific */
+	TEGRA_LA_MIU7R,				/* T19x specific */
+	TEGRA_LA_MIU7W,				/* T19x specific */
+	TEGRA_LA_NVDECSRD,			/* T19x specific */
+	TEGRA_LA_NVDECSWR,			/* T19x specific */
+	TEGRA_LA_NVDEC1SRD,			/* T19x specific */
+	TEGRA_LA_NVDECSRD1,			/* T19x specific */
+	TEGRA_LA_NVDEC1SRD1,			/* T19x specific */
+	TEGRA_LA_NVDEC1SWR,			/* T19x specific */
+	TEGRA_LA_NVENC1SRD,			/* T19x specific */
+	TEGRA_LA_NVENC1SWR,			/* T19x specific */
+	TEGRA_LA_NVENC1SRD1,			/* T19x specific */
+	TEGRA_LA_NVENCSRD1,			/* T19x specific */
+	TEGRA_LA_PCIE0R,			/* T19x specific */
+	TEGRA_LA_PCIE0W,			/* T19x specific */
+	TEGRA_LA_PCIE1R,			/* T19x specific */
+	TEGRA_LA_PCIE1W,			/* T19x specific */
+	TEGRA_LA_PCIE2AR,			/* T19x specific */
+	TEGRA_LA_PCIE2AW,			/* T19x specific */
+	TEGRA_LA_PCIE3R,			/* T19x specific */
+	TEGRA_LA_PCIE3W,			/* T19x specific */
+	TEGRA_LA_PCIE4R,			/* T19x specific */
+	TEGRA_LA_PCIE4W,			/* T19x specific */
+	TEGRA_LA_PCIE5R,			/* T19x specific */
+	TEGRA_LA_PCIE5W,			/* T19x specific */
+	TEGRA_LA_PCIE0R1,			/* T19x specific */
+	TEGRA_LA_PCIE5R1,			/* T19x specific */
+	TEGRA_LA_PVA0RDA,			/* T19x specific */
+	TEGRA_LA_PVA0RDB,			/* T19x specific */
+	TEGRA_LA_PVA0RDC,			/* T19x specific */
+	TEGRA_LA_PVA0WRA,			/* T19x specific */
+	TEGRA_LA_PVA0WRB,			/* T19x specific */
+	TEGRA_LA_PVA0WRC,			/* T19x specific */
+	TEGRA_LA_PVA0RDA1,			/* T19x specific */
+	TEGRA_LA_PVA0RDB1,			/* T19x specific */
+	TEGRA_LA_PVA1RDA,			/* T19x specific */
+	TEGRA_LA_PVA1RDB,			/* T19x specific */
+	TEGRA_LA_PVA1RDC,			/* T19x specific */
+	TEGRA_LA_PVA1WRA,			/* T19x specific */
+	TEGRA_LA_PVA1WRB,			/* T19x specific */
+	TEGRA_LA_PVA1WRC,			/* T19x specific */
+	TEGRA_LA_PVA1RDA1,			/* T19x specific */
+	TEGRA_LA_PVA1RDB1,			/* T19x specific */
+	TEGRA_LA_RCEDMAR,			/* T19x specific */
+	TEGRA_LA_RCEDMAW,			/* T19x specific */
+	TEGRA_LA_RCER,				/* T19x specific */
+	TEGRA_LA_RCEW,				/* T19x specific */
+	TEGRA_LA_TSECSRDB,			/* T19x specific */
+	TEGRA_LA_TSECSWRB,			/* T19x specific */
+	TEGRA_LA_VIW,				/* T19x specific */
+	TEGRA_LA_VICSRD1,			/* T19x specific */
+	TEGRA_LA_VIFALR,			/* T19x specific */
+	TEGRA_LA_VIFALW,			/* T19x specific */
+	TEGRA_LA_WCAM,				/* T19x specific */
+	TEGRA_LA_NVLRHP,			/* T19x specific */
+	TEGRA_LA_DGPU,				/* T19x specific */
+	TEGRA_LA_IGPU,				/* T19x specific */
 
 	TEGRA_LA_MAX_ID
 };
@@ -240,6 +331,8 @@ int tegra_enable_latency_scaling(enum tegra_la_id id,
 				    unsigned int threshold_high);
 
 void tegra_disable_latency_scaling(enum tegra_la_id id);
+
+void mc_pcie_init(void);
 
 struct la_to_dc_params tegra_get_la_to_dc_params(void);
 

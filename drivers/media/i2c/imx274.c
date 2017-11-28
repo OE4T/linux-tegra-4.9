@@ -57,13 +57,11 @@
 #define IMX274_DEFAULT_HEIGHT	2160
 #define IMX274_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define IMX274_DEFAULT_CLK_FREQ	24000000
-#define IMX274_VMAX				4550
-#define IMX274_HMAX				263
-#define IMX274_MODE1_OFFSET		112
-#define IMX274_MODE1_SHR_MIN	12
-#define IMX274_ET_FACTOR		400
 
 #define IMX274_SENSOR_INTERNAL_CLK_FREQ	72000000
+#define IMX274_4K_MODE_HMAX			263
+#define IMX274_4K_MODE_MIN_VMAX		4550
+#define IMX274_4K_MODE_OFFSET		112
 #define IMX274_DOL_MODE_CLOCKS_OFFSET	112
 #define IMX274_DOL_4K_MODE_HMAX	1052
 #define IMX274_DOL_4K_MODE_MIN_VMAX	2284
@@ -736,8 +734,10 @@ static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 			priv->vmax = IMX274_1080P_MODE_MIN_VMAX;
 	} else {
 		priv->vmax = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
-				(u32)(frame_rate *
-				IMX274_HMAX * (svr + 1))) - 12;
+				(frame_rate *
+				IMX274_4K_MODE_HMAX));
+		if (priv->vmax < IMX274_4K_MODE_MIN_VMAX)
+			priv->vmax = IMX274_4K_MODE_MIN_VMAX;
 	}
 
 	imx274_get_vmax_regs(reg_list, priv->vmax);
@@ -795,8 +795,6 @@ static u16 imx274_calculate_coarse_time_shr(struct imx274 *priv, u32 rep)
 	struct device *dev = &priv->i2c_client->dev;
 	u8 svr;
 	u16 shr;
-	int min;
-	int max;
 	u64 et_long;
 
 	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
@@ -817,18 +815,21 @@ static u16 imx274_calculate_coarse_time_shr(struct imx274 *priv, u32 rep)
 		if (shr < 8)
 			shr = 8;
 	} else {
-		min = IMX274_MODE1_SHR_MIN;
-		max = ((svr + 1) * IMX274_VMAX) - 4;
+		et_long = mode->image_properties.line_length * rep *
+			FIXED_POINT_SCALING_FACTOR /
+			mode->signal_properties.pixel_clock.val;
 
-		shr = priv->vmax * (svr + 1) -
-				(rep * IMX274_ET_FACTOR - IMX274_MODE1_OFFSET) /
-				IMX274_HMAX;
+		shr = priv->vmax  -
+			(et_long * IMX274_SENSOR_INTERNAL_CLK_FREQ /
+			FIXED_POINT_SCALING_FACTOR  -
+			IMX274_4K_MODE_OFFSET) /
+			IMX274_4K_MODE_HMAX;
 
-		if (shr < min)
-			shr = min;
+		if (shr < 12)
+			shr = 12;
 
-		if (shr > max)
-			shr = max;
+		if (shr > priv->vmax - 4)
+			shr = priv->vmax - 4;
 	}
 
 	dev_dbg(dev, "%s: shr: %u vmax: %d\n", __func__, shr, priv->vmax);

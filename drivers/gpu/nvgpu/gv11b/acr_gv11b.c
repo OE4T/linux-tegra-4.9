@@ -20,13 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#endif
-
 #include <nvgpu/types.h>
-#include <linux/platform/tegra/mc.h>
-
 #include <nvgpu/dma.h>
 #include <nvgpu/gmmu.h>
 #include <nvgpu/timers.h>

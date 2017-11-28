@@ -342,10 +342,10 @@ static void tegra210_xusb_padctl_disable_pad_protection(
 
 	for (i = 0; i < padctl->soc->ports.usb2.count; i++) {
 		reg = padctl_readl(padctl,
-				XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(i));
-		reg |= XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPAD_CTL1_VREG_FIX18;
+				XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL_1(i));
+		reg |= VREG_FIX18;
 		padctl_writel(padctl, reg,
-				XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL1(i));
+				XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL_1(i));
 	}
 }
 

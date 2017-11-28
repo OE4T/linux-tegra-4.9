@@ -30,6 +30,7 @@
 		compatible = "nvidia,tegra194-sdhci";
 		reg = <0x0 0x3460000 0x0 0x00020000>;
 		interrupts = < 0 TEGRA194_IRQ_SDMMC4 0x04>;
+		iommus = <&smmu TEGRA_SID_SDMMC4A>;
 		max-clk-limit = <200000000>;
 		ddr-clk-limit = <51000000>;
 		bus-width = <8>;
@@ -62,6 +63,7 @@
 		compatible = "nvidia,tegra194-sdhci";
 		reg = <0x0 0x3440000 0x0 0x00020000>;
 		interrupts = < 0 TEGRA194_IRQ_SDMMC3 0x04>;
+		iommus = <&smmu TEGRA_SID_SDMMC3A>;
 		max-clk-limit = <208000000>;
 		bus-width = <4>;
 		cap-mmc-highspeed;
@@ -94,6 +96,7 @@
 		compatible = "nvidia,tegra194-sdhci";
 		reg = <0x0 0x3400000 0x0 0x00020000>;
 		interrupts = < 0 TEGRA194_IRQ_SDMMC1 0x04>;
+		iommus = <&smmu TEGRA_SID_SDMMC1A>;
 		max-clk-limit = <208000000>;
 		bus-width = <4>;
 		cap-mmc-highspeed;

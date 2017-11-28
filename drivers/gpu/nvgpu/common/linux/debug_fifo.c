@@ -154,12 +154,12 @@ static int gk20a_fifo_profile_enable(void *data, u64 val)
 			 * we enable/disable/enable while kickoff is happening
 			 */
 			if (!nvgpu_ref_get_unless_zero(&f->profile.ref)) {
-				f->profile.data = vzalloc(
-							FIFO_PROFILING_ENTRIES *
+				f->profile.data = nvgpu_vzalloc(g,
+					FIFO_PROFILING_ENTRIES *
 					sizeof(struct fifo_profile_gk20a));
-				f->profile.sorted  = vzalloc(
-							FIFO_PROFILING_ENTRIES *
-							sizeof(u64));
+				f->profile.sorted  = nvgpu_vzalloc(g,
+					FIFO_PROFILING_ENTRIES *
+					sizeof(u64));
 				if (!(f->profile.data && f->profile.sorted)) {
 					nvgpu_vfree(g, f->profile.data);
 					nvgpu_vfree(g, f->profile.sorted);

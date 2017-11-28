@@ -847,6 +847,29 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
+	if ((binfo.compr_kind != NVGPU_KIND_INVALID) &&
+	    (flags & NVGPU_VM_MAP_FIXED_OFFSET)) {
+		/*
+		 * Fixed-address compressible mapping is
+		 * requested. Make sure we're respecting the alignment
+		 * requirement for virtual addresses and buffer
+		 * offsets.
+		 *
+		 * This check must be done before we may fall back to
+		 * the incompressible kind.
+		 */
+
+		const u64 offset_mask = g->ops.fb.compression_align_mask(g);
+
+		if ((map_addr & offset_mask) != (phys_offset & offset_mask)) {
+			nvgpu_log(g, gpu_dbg_map,
+				  "Misaligned compressible-kind fixed-address "
+				  "mapping");
+			err = -EINVAL;
+			goto clean_up;
+		}
+	}
+
 	if (binfo.compr_kind != NVGPU_KIND_INVALID) {
 		struct gk20a_comptags comptags = { 0 };
 

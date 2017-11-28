@@ -70,6 +70,11 @@ unsigned int gm20b_fb_compressible_page_size(struct gk20a *g)
 	return SZ_64K;
 }
 
+u32 gm20b_fb_compression_align_mask(struct gk20a *g)
+{
+	return SZ_64K - 1;
+}
+
 void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
 {
 	u32 val;

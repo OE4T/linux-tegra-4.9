@@ -446,8 +446,25 @@ struct gpu_ops {
 		void (*init_kind_attr)(struct gk20a *g);
 		void (*set_mmu_page_size)(struct gk20a *g);
 		bool (*set_use_full_comp_tag_line)(struct gk20a *g);
+
+		/*
+		 * Compression tag line coverage. When mapping a compressible
+		 * buffer, ctagline is increased when the virtual address
+		 * crosses over the compression page boundary.
+		 */
 		unsigned int (*compression_page_size)(struct gk20a *g);
+
+		/*
+		 * Minimum page size that can be used for compressible kinds.
+		 */
 		unsigned int (*compressible_page_size)(struct gk20a *g);
+
+		/*
+		 * Compressible kind mappings: Mask for the virtual and physical
+		 * address bits that must match.
+		 */
+		u32 (*compression_align_mask)(struct gk20a *g);
+
 		void (*dump_vpr_wpr_info)(struct gk20a *g);
 		int (*vpr_info_fetch)(struct gk20a *g);
 		void (*read_wpr_info)(struct gk20a *g,

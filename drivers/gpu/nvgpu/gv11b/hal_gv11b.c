@@ -403,6 +403,7 @@ static const struct gpu_ops gv11b_ops = {
 			gm20b_fb_set_use_full_comp_tag_line,
 		.compression_page_size = gp10b_fb_compression_page_size,
 		.compressible_page_size = gp10b_fb_compressible_page_size,
+		.compression_align_mask = gm20b_fb_compression_align_mask,
 		.vpr_info_fetch = gm20b_fb_vpr_info_fetch,
 		.dump_vpr_wpr_info = gm20b_fb_dump_vpr_wpr_info,
 		.read_wpr_info = gm20b_fb_read_wpr_info,

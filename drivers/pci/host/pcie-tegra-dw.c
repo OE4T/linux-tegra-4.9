@@ -68,9 +68,11 @@
 #define APPL_INTR_EN_L1_8_AER_INT_EN		BIT(15)
 #define APPL_INTR_EN_L1_8_INTX_EN		BIT(11)
 #define APPL_INTR_EN_L1_8_EDMA_INT_EN		BIT(6)
+#define APPL_INTR_EN_L1_8_AUTO_BW_INT_EN		BIT(3)
 
 #define APPL_INTR_STATUS_L1_8_0			0x4C
 #define APPL_INTR_STATUS_L1_8_0_EDMA_INT_MASK	0xFC0
+#define APPL_INTR_STATUS_L1_8_0_AUTO_BW_INT_STS	BIT(3)
 
 #define APPL_APPL_DEBUG				0xD0
 #define APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT	BIT(21)
@@ -244,6 +246,7 @@ struct tegra_pcie_dw {
 	dma_addr_t dma_addr;
 	void *cpu_virt_addr;
 	bool disable_clock_request;
+	u8 init_link_width;
 
 	/* DMA operation */
 	u64 src;
@@ -323,6 +326,37 @@ static inline u32 dma_channel_rd(void __iomem *p, u8 channel, u32 offset)
 	return readl(0x20000 + (0x200 * (channel + 1)) + offset + p);
 }
 
+static void check_apply_link_bad_war(struct pcie_port *pp)
+{
+	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
+	u32 val;
+
+	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL, 4, &val);
+	if ((val >> 16) & PCI_EXP_LNKSTA_LBMS) {
+		if (pcie->init_link_width >
+		    ((val >> 16) & PCI_EXP_LNKSTA_NLW) >>
+		    PCI_EXP_LNKSTA_NLW_SHIFT) {
+			dev_warn(pp->dev, "PCIe link is bad, width reduced\n");
+			dw_pcie_cfg_read(pcie->pp.dbi_base +
+					 CFG_LINK_STATUS_CONTROL_2, 4, &val);
+			val &= ~PCI_EXP_LNKSTA_CLS;
+			val |= PCI_EXP_LNKSTA_CLS_2_5GB;
+			dw_pcie_cfg_write(pcie->pp.dbi_base +
+					  CFG_LINK_STATUS_CONTROL_2, 4, val);
+
+			dw_pcie_cfg_read(pcie->pp.dbi_base +
+					 CFG_LINK_STATUS_CONTROL, 4, &val);
+			val |= CFG_LINK_CONTROL_LT;
+			dw_pcie_cfg_write(pcie->pp.dbi_base +
+					  CFG_LINK_STATUS_CONTROL, 4, val);
+			/* NOTE:- Since this scenario is uncommon and link as
+			 * such is not stable anyway, not waiting to confirm
+			 * if link is really transiting to Gen-2 speed
+			 */
+		}
+	}
+}
+
 static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 {
 	u32 val = 0, bit = 0;
@@ -369,6 +403,11 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 					pcie->rd_busy &= ~(BIT(bit));
 				}
 			}
+		}
+		if (val & APPL_INTR_STATUS_L1_8_0_AUTO_BW_INT_STS) {
+			writel(APPL_INTR_STATUS_L1_8_0_AUTO_BW_INT_STS,
+			       pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
+			check_apply_link_bad_war(pp);
 		}
 	} else if (val & APPL_INTR_STATUS_L0_LINK_STATE_INT) {
 		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_0_0);
@@ -1157,6 +1196,12 @@ static void tegra_pcie_enable_system_interrupts(struct pcie_port *pp)
 	val = readl(pcie->appl_base + APPL_INTR_EN_L1_0_0);
 	val |= APPL_INTR_EN_L1_0_0_LINK_REQ_RST_NOT_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_0_0);
+
+	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL, 4, &val);
+	pcie->init_link_width = ((val >> 16) & PCI_EXP_LNKSTA_NLW) >>
+				PCI_EXP_LNKSTA_NLW_SHIFT;
+	val |= PCI_EXP_LNKCTL_LBMIE;
+	dw_pcie_cfg_write(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL, 2, val);
 }
 
 static void tegra_pcie_enable_legacy_interrupts(struct pcie_port *pp)
@@ -1172,6 +1217,7 @@ static void tegra_pcie_enable_legacy_interrupts(struct pcie_port *pp)
 
 	val = readl(pcie->appl_base + APPL_INTR_EN_L1_8_0);
 	val |= APPL_INTR_EN_L1_8_INTX_EN;
+	val |= APPL_INTR_EN_L1_8_AUTO_BW_INT_EN;
 	if (IS_ENABLED(CONFIG_PCIEAER))
 		val |= APPL_INTR_EN_L1_8_AER_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_8_0);

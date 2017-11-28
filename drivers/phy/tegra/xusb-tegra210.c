@@ -212,6 +212,11 @@
 #define   AUX_RX_TERM_EN                      BIT(18)
 #define   AUX_RX_IDLE_MODE(x)                 (((x) & 0x3) << 20)
 #define   AUX_RX_IDLE_EN                      BIT(22)
+#define   AUX_RX_IDLE_TH(x)                   (((x) & 0x3) << 24)
+
+#define XUSB_PADCTL_UPHY_MISC_PAD_S0_CTL_4    0x96c
+#define   RX_TERM_EN                          BIT(21)
+#define   RX_TERM_OVRD                        BIT(23)
 
 #define XUSB_PADCTL_UPHY_MISC_PAD_PX_CTL8(x) (0x47c + (x) * 0x40)
 #define CFG_ADDR(x) (((x) & 0xff) << 16)
@@ -2008,6 +2013,7 @@ static void tegra210_pcie_lane_remove(struct tegra_xusb_lane *lane)
 	kfree(pcie);
 }
 
+/* must be called under padctl->lock */
 static void tegra210_pcie_lane_defaults(struct tegra_xusb_lane *lane)
 {
 	u32 reg;
@@ -2046,11 +2052,25 @@ static int tegra210_pcie_phy_init(struct phy *phy)
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	int ret;
+	u32 value;
 
 	dev_dbg(padctl->dev, "phy init lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
 	mutex_lock(&padctl->lock);
+
+	if (!tegra_xusb_lane_check(lane, "xusb")) {
+		/* reduce idle detect threshold for compliance purpose */
+		value = padctl_readl(padctl,
+			XUSB_PADCTL_UPHY_MISC_PAD_PX_CTL_1(lane->index));
+		value &= ~AUX_RX_IDLE_TH(~0);
+		value |= AUX_RX_IDLE_TH(1);
+		padctl_writel(padctl, value,
+			XUSB_PADCTL_UPHY_MISC_PAD_PX_CTL_1(lane->index));
+	}
+
+	if (t210b01_compatible(padctl) == 1)
+		tegra210_pcie_lane_defaults(lane);
 
 	if (tegra_xusb_lane_check(lane, "xusb")) {
 		unsigned int ssp = tegra210_usb3_lane_map(lane);
@@ -2190,9 +2210,6 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 		value &= ~SSPX_ELPG_CLAMP_EN(port_index);
 		padctl_writel(padctl, value, XUSB_PADCTL_ELPG_PROGRAM_1);
 	}
-
-	if (t210b01_compatible(padctl) == 1)
-		tegra210_pcie_lane_defaults(lane);
 
 	mutex_unlock(&padctl->lock);
 	return 0;
@@ -2536,11 +2553,30 @@ static int tegra210_sata_phy_init(struct phy *phy)
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	int ret;
+	u32 value;
 
 	dev_dbg(padctl->dev, "phy init lane = %s\n",
 		lane->pad->soc->lanes[lane->index].name);
 
 	mutex_lock(&padctl->lock);
+
+	if (tegra_xusb_lane_check(lane, "sata")) {
+		value = padctl_readl(padctl,
+			XUSB_PADCTL_UPHY_MISC_PAD_S0_CTL_1);
+		value &= ~AUX_RX_IDLE_TH(~0);
+		value |= (AUX_RX_IDLE_TH(1) | AUX_RX_MODE_OVRD |
+				AUX_RX_IDLE_EN);
+		padctl_writel(padctl, value,
+			XUSB_PADCTL_UPHY_MISC_PAD_S0_CTL_1);
+
+		udelay(200);
+
+		value = padctl_readl(padctl,
+			XUSB_PADCTL_UPHY_MISC_PAD_S0_CTL_4);
+		value |= (RX_TERM_EN | RX_TERM_OVRD);
+		padctl_writel(padctl, value,
+			XUSB_PADCTL_UPHY_MISC_PAD_S0_CTL_4);
+	}
 
 	ret = tegra210_uphy_init(padctl);
 

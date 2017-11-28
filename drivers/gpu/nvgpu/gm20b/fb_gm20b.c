@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/sizes.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/fb_gk20a.h"
 #include "gm20b/fb_gm20b.h"

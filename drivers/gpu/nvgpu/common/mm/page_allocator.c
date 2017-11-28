@@ -26,6 +26,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>
+#include <nvgpu/sizes.h>
 
 #include "buddy_allocator_priv.h"
 

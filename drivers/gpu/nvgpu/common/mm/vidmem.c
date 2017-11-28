@@ -28,6 +28,7 @@
 #include <nvgpu/vidmem.h>
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/sizes.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"

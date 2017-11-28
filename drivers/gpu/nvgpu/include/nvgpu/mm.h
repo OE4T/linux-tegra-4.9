@@ -29,6 +29,7 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/list.h>
+#include <nvgpu/sizes.h>
 
 struct gk20a;
 struct vm_gk20a;

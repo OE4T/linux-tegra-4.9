@@ -30,6 +30,7 @@
 #include <nvgpu/lock.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/mm.h>
+#include <nvgpu/sizes.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/css_gr_gk20a.h"

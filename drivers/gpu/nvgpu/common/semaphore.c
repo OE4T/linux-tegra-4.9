@@ -27,6 +27,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/sizes.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"

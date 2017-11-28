@@ -28,6 +28,7 @@
 #include <nvgpu/vidmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/sizes.h>
 
 #include <nvgpu/linux/vidmem.h>
 

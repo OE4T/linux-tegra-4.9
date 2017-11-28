@@ -31,6 +31,7 @@
 #include <nvgpu/rbtree.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/sizes.h>
 
 #include <nvgpu/vgpu/vm.h>
 

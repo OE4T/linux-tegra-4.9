@@ -24,6 +24,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
+#include <nvgpu/sizes.h>
 
 #include "scale.h"
 #include "gk20a/gk20a.h"

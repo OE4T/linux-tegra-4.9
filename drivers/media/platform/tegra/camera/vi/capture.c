@@ -47,6 +47,9 @@ struct vi_capture {
 	uint32_t queue_depth;
 	uint32_t request_size;
 
+	uint32_t num_gos_tables;
+	const dma_addr_t *gos_tables;
+
 	struct syncpoint_info progress_sp;
 	struct syncpoint_info embdata_sp;
 	struct syncpoint_info linetimer_sp;
@@ -289,6 +292,10 @@ static int vi_capture_setup_syncpts(struct tegra_vi_channel *chan,
 	struct vi_capture *capture = chan->capture_data;
 	int err = 0;
 
+	chan->ops->get_gos_table(chan->ndev,
+				&capture->num_gos_tables,
+				&capture->gos_tables);
+
 	err = vi_capture_setup_syncpt(chan, "progress", true,
 			&capture->progress_sp);
 	if (err < 0)
@@ -341,6 +348,9 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	struct capture_channel_config *config =
 		&control_desc.channel_setup_req.channel_config;
 	int err = 0;
+#ifdef HAVE_VI_GOS_TABLES
+	int i;
+#endif
 
 	if (capture == NULL) {
 		dev_err(chan->dev,
@@ -412,6 +422,17 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	config->queue_depth = setup->queue_depth;
 	config->request_size = setup->request_size;
 	config->requests = capture->requests.iova;
+
+#ifdef HAVE_VI_GOS_TABLES
+	dev_info(chan->dev, "%u GoS tables configured.\n",
+		capture->num_gos_tables);
+	for (i = 0; i < capture->num_gos_tables; i++) {
+		config->vi_gos_tables[i] = (iova_t)capture->gos_tables[i];
+		dev_info(chan->dev, "gos[%d] = 0x%08llx\n",
+			i, (u64)capture->gos_tables[i]);
+	}
+	config->num_vi_gos_tables = capture->num_gos_tables;
+#endif
 
 	config->progress_sp = capture->progress_sp;
 	config->embdata_sp = capture->embdata_sp;

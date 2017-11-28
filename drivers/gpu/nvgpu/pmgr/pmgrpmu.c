@@ -180,12 +180,16 @@ static u32 pmgr_send_i2c_device_topology_to_pmu(struct gk20a *g)
 
 static u32 pmgr_send_pwr_device_topology_to_pmu(struct gk20a *g)
 {
-	struct nv_pmu_pmgr_pwr_device_desc_table pwr_desc_table;
+	struct nv_pmu_pmgr_pwr_device_desc_table *pwr_desc_table;
 	struct nv_pmu_pmgr_pwr_device_desc_table_header *ppwr_desc_header;
 	u32 status = 0;
 
 	/* Set the BA-device-independent HW information */
-	ppwr_desc_header = &(pwr_desc_table.hdr.data);
+	pwr_desc_table = nvgpu_kzalloc(g, sizeof(*pwr_desc_table));
+	if (!pwr_desc_table)
+		return -ENOMEM;
+
+	ppwr_desc_header = &(pwr_desc_table->hdr.data);
 	ppwr_desc_header->ba_info.b_initialized_and_used = false;
 
 	/* populate the table */
@@ -194,7 +198,7 @@ static u32 pmgr_send_pwr_device_topology_to_pmu(struct gk20a *g)
 
 	status = boardobjgrp_pmudatainit_legacy(g,
 			&g->pmgr_pmu.pmgr_deviceobjs.super.super,
-			(struct nv_pmu_boardobjgrp_super *)&pwr_desc_table);
+			(struct nv_pmu_boardobjgrp_super *)pwr_desc_table);
 
 	if (status) {
 		nvgpu_err(g, "boardobjgrp_pmudatainit_legacy failed %x",
@@ -209,27 +213,32 @@ static u32 pmgr_send_pwr_device_topology_to_pmu(struct gk20a *g)
 				(u16)sizeof(
 				union nv_pmu_pmgr_pwr_device_dmem_size),
 				(u16)sizeof(struct nv_pmu_pmgr_pwr_device_desc_table),
-				&pwr_desc_table);
+				pwr_desc_table);
 
 	if (status)
 		nvgpu_err(g, "pmgr_pmu_set_object failed %x",
 			status);
 
 exit:
+	kfree(pwr_desc_table);
 	return status;
 }
 
 static u32 pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
 {
-	struct nv_pmu_pmgr_pwr_monitor_pack pwr_monitor_pack;
+	struct nv_pmu_pmgr_pwr_monitor_pack *pwr_monitor_pack = NULL;
 	struct nv_pmu_pmgr_pwr_channel_header *pwr_channel_hdr;
 	struct nv_pmu_pmgr_pwr_chrelationship_header *pwr_chrelationship_header;
 	u32 max_dmem_size;
 	u32 status = 0;
 
+	pwr_monitor_pack = nvgpu_kzalloc(g, sizeof(*pwr_monitor_pack));
+	if (!pwr_monitor_pack)
+		return -ENOMEM;
+
 	/* Copy all the global settings from the RM copy */
-	pwr_channel_hdr = &(pwr_monitor_pack.channels.hdr.data);
-	pwr_monitor_pack = g->pmgr_pmu.pmgr_monitorobjs.pmu_data;
+	pwr_channel_hdr = &(pwr_monitor_pack->channels.hdr.data);
+	*pwr_monitor_pack = g->pmgr_pmu.pmgr_monitorobjs.pmu_data;
 
 	boardobjgrpe32hdrset((struct nv_pmu_boardobjgrp *)&pwr_channel_hdr->super,
 			g->pmgr_pmu.pmgr_monitorobjs.pwr_channels.super.objmask);
@@ -237,7 +246,7 @@ static u32 pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
 	/* Copy in each channel */
 	status = boardobjgrp_pmudatainit_legacy(g,
 			&g->pmgr_pmu.pmgr_monitorobjs.pwr_channels.super,
-			(struct nv_pmu_boardobjgrp_super *)&(pwr_monitor_pack.channels));
+			(struct nv_pmu_boardobjgrp_super *)&(pwr_monitor_pack->channels));
 
 	if (status) {
 		nvgpu_err(g, "boardobjgrp_pmudatainit_legacy failed %x",
@@ -246,7 +255,7 @@ static u32 pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
 	}
 
 	/* Copy in each channel relationship */
-	pwr_chrelationship_header =  &(pwr_monitor_pack.ch_rels.hdr.data);
+	pwr_chrelationship_header =  &(pwr_monitor_pack->ch_rels.hdr.data);
 
 	boardobjgrpe32hdrset((struct nv_pmu_boardobjgrp *)&pwr_chrelationship_header->super,
 			g->pmgr_pmu.pmgr_monitorobjs.pwr_ch_rels.super.objmask);
@@ -256,7 +265,7 @@ static u32 pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
 
 	status = boardobjgrp_pmudatainit_legacy(g,
 		&g->pmgr_pmu.pmgr_monitorobjs.pwr_ch_rels.super,
-		(struct nv_pmu_boardobjgrp_super *)&(pwr_monitor_pack.ch_rels));
+		(struct nv_pmu_boardobjgrp_super *)&(pwr_monitor_pack->ch_rels));
 
 	if (status) {
 		nvgpu_err(g, "boardobjgrp_pmudatainit_legacy failed %x",
@@ -273,13 +282,14 @@ static u32 pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
 				NV_PMU_PMGR_OBJECT_PWR_MONITOR,
 				(u16)max_dmem_size,
 				(u16)sizeof(struct nv_pmu_pmgr_pwr_monitor_pack),
-				&pwr_monitor_pack);
+				pwr_monitor_pack);
 
 	if (status)
 		nvgpu_err(g, "pmgr_pmu_set_object failed %x",
 			status);
 
 exit:
+	kfree(pwr_monitor_pack);
 	return status;
 }
 

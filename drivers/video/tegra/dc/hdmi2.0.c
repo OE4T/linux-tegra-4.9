@@ -553,11 +553,11 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	int ret = 0;
 
 	tegra_dc_get(dc);
+
 	/* disable hdcp */
-#ifdef CONFIG_HDCP
 	if (hdmi->edid_src == EDID_SRC_PANEL && !hdmi->dc->vedid)
 		tegra_nvhdcp_set_plug(hdmi->nvhdcp, false);
-#endif
+
 	cancel_delayed_work_sync(&hdmi->scdc_work);
 	if (dc->mode.pclk > 340000000) {
 		tegra_hdmi_v2_x_mon_config(hdmi, false);
@@ -630,13 +630,12 @@ static int hdmi_hpd_process_edid_match(struct tegra_hdmi *hdmi, int match)
 			hdmi->dc->use_cached_mode = true;
 			hdmi->plug_state = TEGRA_HDMI_MONITOR_ENABLE;
 		} else {
-#ifdef CONFIG_HDCP
 			if ((hdmi->edid_src == EDID_SRC_PANEL)
 					&& !hdmi->dc->vedid) {
 				tegra_nvhdcp_set_plug(hdmi->nvhdcp, false);
 				tegra_nvhdcp_set_plug(hdmi->nvhdcp, true);
 			}
-#endif
+
 			/*
 			 * Userspace is active. No EDID change. Userspace will
 			 * issue unblank call to enable DC later.
@@ -1564,11 +1563,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		atomic_set(&hdmi->clock_refcount, 0);
 	}
 	atomic_set(&hdmi->suspended, 0);
-#ifdef CONFIG_HDCP
 	if (!tegra_platform_is_sim()) {
 		hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
 			dc->out->ddc_bus);
-		if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
+		if (IS_ERR(hdmi->nvhdcp)) {
 			err = PTR_ERR(hdmi->nvhdcp);
 			dev_err(&dc->ndev->dev,
 				"hdmi hdcp creation failed with err %d\n", err);
@@ -1576,7 +1574,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			tegra_nvhdcp_debugfs_init(hdmi->nvhdcp);
 		}
 	}
-#endif
 
 	tegra_hdmi_ddc_init(hdmi);
 
@@ -1747,9 +1744,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	tegra_hda_destroy(hdmi->hda_handle);
 #endif
 
-#ifdef CONFIG_HDCP
 	tegra_nvhdcp_destroy(hdmi->nvhdcp);
-#endif
 
 	if (hdmi->dpaux)
 		tegra_dpaux_destroy_data(hdmi->dpaux);
@@ -2755,10 +2750,8 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
 	tegra_dc_sor_attach(sor);
 	/* enable hdcp */
-#ifdef CONFIG_HDCP
 	if (hdmi->edid_src == EDID_SRC_PANEL && !hdmi->dc->vedid)
 		tegra_nvhdcp_set_plug(hdmi->nvhdcp, true);
-#endif
 
 	if (hdmi->dpaux)
 		tegra_dpaux_prod_set(hdmi->dpaux);
@@ -3121,9 +3114,7 @@ static void tegra_dc_hdmi_shutdown(struct tegra_dc *dc)
 
 	_tegra_hdmivrr_activate(hdmi, false);
 	hdmi->device_shutdown = true;
-#ifdef CONFIG_HDCP
 	tegra_nvhdcp_shutdown(hdmi->nvhdcp);
-#endif
 
 	return;
 }

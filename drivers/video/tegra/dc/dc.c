@@ -1859,21 +1859,22 @@ static int dbg_nvdisp_topology_show(struct seq_file *m, void *unused)
 	int i;
 	struct tegra_dc *dc;
 
-	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+	for (i = 0; i < tegra_dc_get_numof_reg_disps(); i++) {
 		dc = tegra_dc_get_dc(i);
-		if (dc == NULL)
-			continue;
 
 		if (!dc->current_topology.valid) {
-			seq_printf(m, "DISPLAY ID:%d DANGLING TOPOLOGY\n", i);
+			seq_printf(m, "DISPLAY ID:%d HEAD:%d DANGLING TOPOLOGY\n",
+				i, tegra_dc_get_head(dc));
 			continue;
 		}
 
 		if (tegra_dc_or_is_dsi(dc))
-			seq_printf(m, "DISPLAY ID:%d OUT_TYPE:%d DSI\n", i,
+			seq_printf(m, "DISPLAY ID:%d HEAD:%d OUT_TYPE:%d DSI\n",
+				i, tegra_dc_get_head(dc),
 				dc->current_topology.protocol);
 		else
-			seq_printf(m, "DISPLAY ID:%d OUT_TYPE:%d SOR%d\n", i,
+			seq_printf(m, "DISPLAY ID:%d HEAD:%d OUT_TYPE:%d SOR%d\n",
+				i, tegra_dc_get_head(dc),
 				dc->current_topology.protocol,
 				dc->current_topology.conn_inst);
 	}
@@ -1920,7 +1921,7 @@ static bool is_topology_possible(struct tegra_dc_topology topology)
 	if (is_topology_reset(topology))
 		return true;
 
-	if (topology.disp_id >= tegra_dc_get_numof_dispheads())
+	if (topology.disp_id >= tegra_dc_get_numof_reg_disps())
 		return false;
 
 	if (topology.conn_inst >= tegra_dc_get_numof_dispsors())
@@ -1928,7 +1929,7 @@ static bool is_topology_possible(struct tegra_dc_topology topology)
 
 	/* Prevent crossbar on DSI display until support is added in sw */
 	dc = tegra_dc_get_dc(topology.disp_id);
-	if (dc->out->type == TEGRA_DC_OUT_DSI)
+	if (tegra_dc_or_is_dsi(dc))
 		return false;
 
 	/* Currently supports only DP,FAKE_DP and HDMI in SW */
@@ -2032,13 +2033,10 @@ static ssize_t dbg_nvdisp_topology_write(struct file *file,
 		return -EINVAL;
 	}
 
-	/* Check to see if all displays allocated and disabled */
-	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+	/* Check to see if all registered displays are disabled */
+	for (i = 0; i < tegra_dc_get_numof_reg_disps(); i++) {
 		curr = tegra_dc_get_dc(i);
-		if (!curr) {
-			pr_warn("crossbar: all displays are not registered\n");
-			return -EINVAL;
-		}
+
 		if (curr->enabled) {
 			pr_warn("crossbar: all displays are not disabled\n");
 			return -EINVAL;
@@ -2057,7 +2055,7 @@ static ssize_t dbg_nvdisp_topology_write(struct file *file,
 	if (is_topology_reset(topology)) {
 		/* Reset topology */
 		/* Destroy out_type and sor for reconfigured displays */
-		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		for (i = 0; i < tegra_dc_get_numof_reg_disps(); i++) {
 			curr = tegra_dc_get_dc(i);
 			if (!is_topology_same(curr->current_topology,
 					curr->boot_topology)) {
@@ -2069,7 +2067,7 @@ static ssize_t dbg_nvdisp_topology_write(struct file *file,
 		}
 
 		/* Reinitialize only reconfigured displays */
-		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		for (i = 0; i < tegra_dc_get_numof_reg_disps(); i++) {
 			curr = tegra_dc_get_dc(i);
 			if (!is_topology_same(curr->current_topology,
 					curr->boot_topology)) {
@@ -2082,11 +2080,9 @@ static ssize_t dbg_nvdisp_topology_write(struct file *file,
 	} else {
 		/* Single display workflow */
 		primary = tegra_dc_get_dc(topology.disp_id);
-		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		for (i = 0; i < tegra_dc_get_numof_reg_disps(); i++) {
 			curr = tegra_dc_get_dc(i);
-			if (!curr) {
-				continue;
-			} else if (tegra_dc_or_is_dsi(curr)) {
+			if (tegra_dc_or_is_dsi(curr)) {
 				continue;
 			} else {
 				if (curr->out_ops &&
@@ -2100,7 +2096,7 @@ static ssize_t dbg_nvdisp_topology_write(struct file *file,
 		}
 
 		tegra_dc_shutdown(primary->ndev);
-		if (primary && primary->out_ops && primary->out_ops->destroy)
+		if (primary->out_ops && primary->out_ops->destroy)
 			primary->out_ops->destroy(primary);
 		if (dangling) {
 			tegra_dc_shutdown(curr->ndev);
@@ -3321,6 +3317,20 @@ static void tegra_dc_clear(struct tegra_dc *dc)
 	mutex_unlock(&tegra_dc_lock);
 }
 
+unsigned int tegra_dc_get_numof_reg_disps(void)
+{
+	unsigned int idx;
+	unsigned int cnt = 0;
+	struct tegra_dc *dc;
+
+	mutex_lock(&tegra_dc_lock);
+	for (idx = 0; idx < tegra_dc_get_numof_dispheads(); idx++)
+		cnt += ((dc = tegra_dcs[idx]) != NULL) ? 1 : 0;
+	mutex_unlock(&tegra_dc_lock);
+
+	return cnt;
+}
+
 unsigned int tegra_dc_has_multiple_dc(void)
 {
 	unsigned int idx;
@@ -4073,20 +4083,31 @@ void tegra_dc_out_destroy(struct tegra_dc *dc)
 		if (dc->out->hdmi_out->spd_infoframe)
 			devm_kfree(&dc->ndev->dev,
 				dc->out->hdmi_out->spd_infoframe);
+		dc->out->hdmi_out->spd_infoframe = NULL;
 		devm_kfree(&dc->ndev->dev, dc->out->hdmi_out);
 	}
+	dc->out->hdmi_out = NULL;
 
 	if (dc->out->dp_out)
 		devm_kfree(&dc->ndev->dev, dc->out->dp_out);
+	dc->out->dp_out = NULL;
 
 	if (dc->out->modes)
 		devm_kfree(&dc->ndev->dev, dc->out->modes);
+	dc->out->modes = NULL;
+	dc->out->n_modes = 0;
+
 	if (dc->out->vrr)
 		devm_kfree(&dc->ndev->dev, dc->out->vrr);
+	dc->out->vrr = NULL;
+
 	if (dc->out->out_pins)
 		devm_kfree(&dc->ndev->dev, dc->out->out_pins);
+	dc->out->out_pins = NULL;
+
 	if (dc->out->sd_settings)
 		devm_kfree(&dc->ndev->dev, dc->out->sd_settings);
+	dc->out->sd_settings = NULL;
 
 	tegra_panel_unregister_ops(dc->out);
 }

@@ -100,5 +100,6 @@ static inline struct tegra_nvhdcp *tegra_nvhdcp_create(
 	return NULL;
 }
 static inline void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp) { }
+static inline void tegra_nvhdcp_debugfs_init(struct tegra_nvhdcp *nvhdcp) {}
 #endif
 #endif

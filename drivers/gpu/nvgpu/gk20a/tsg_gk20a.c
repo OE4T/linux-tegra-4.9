@@ -20,8 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <uapi/linux/nvgpu.h>
-
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 

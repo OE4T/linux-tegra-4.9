@@ -24,7 +24,6 @@
 
 #include <dt-bindings/soc/gm20b-fuse.h>
 #include <dt-bindings/soc/gp10b-fuse.h>
-#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>

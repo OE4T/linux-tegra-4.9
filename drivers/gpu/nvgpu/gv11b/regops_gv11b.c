@@ -25,7 +25,6 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/bsearch.h>
-#include <uapi/linux/nvgpu.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"

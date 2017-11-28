@@ -23,7 +23,6 @@
  */
 
 #include <trace/events/gk20a.h>
-#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/mm.h>
 #include <nvgpu/dma.h>

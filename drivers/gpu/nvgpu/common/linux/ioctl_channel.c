@@ -564,6 +564,9 @@ static u32 nvgpu_gpfifo_user_flags_to_common_flags(u32 user_flags)
 	if (user_flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC)
 		flags |= NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC;
 
+	if (user_flags & NVGPU_ALLOC_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE)
+		flags |= NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE;
+
 	return flags;
 }
 

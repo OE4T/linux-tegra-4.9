@@ -27,7 +27,6 @@
 #include <linux/hrtimer.h>
 #include <linux/module.h>
 #include <nvgpu/lock.h>
-#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/semaphore.h>

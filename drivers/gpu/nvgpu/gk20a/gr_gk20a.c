@@ -23,7 +23,6 @@
  */
 
 #include <trace/events/gk20a.h>
-#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>
@@ -7892,7 +7891,7 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 					   "ctx op invalid offset: offset=0x%x",
 					   ctx_ops[i].offset);
 					ctx_ops[i].status =
-						NVGPU_DBG_GPU_REG_OP_STATUS_INVALID_OFFSET;
+						REGOP(STATUS_INVALID_OFFSET);
 					continue;
 				}
 				if (!pm_ctx_ready) {

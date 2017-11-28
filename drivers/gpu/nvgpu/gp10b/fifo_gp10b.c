@@ -22,8 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <uapi/linux/nvgpu.h>
-
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>
@@ -141,9 +139,8 @@ int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 		pbdma_runlist_timeslice_timescale_3_f() |
 		pbdma_runlist_timeslice_enable_true_f());
 
-	if ( flags & NVGPU_ALLOC_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE)
+	if (flags & NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE)
 		gp10b_set_pdb_fault_replay_flags(c->g, mem);
-
 
 	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->chid));
 

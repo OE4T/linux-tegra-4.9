@@ -22,8 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <uapi/linux/nvgpu.h>
-
 #include <nvgpu/log.h>
 #include "gk20a/gk20a.h"
 #include <nvgpu/hw/gv11b/hw_perf_gv11b.h>

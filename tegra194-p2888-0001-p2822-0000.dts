@@ -30,6 +30,14 @@
 		board-has-eeprom;
 	};
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "galen";
+			bootmode = "shell";
+		};
+	};
+
 	spi@3210000 {
 		status = "okay";
 	};

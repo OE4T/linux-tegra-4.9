@@ -27,6 +27,8 @@
 #include <linux/platform_device.h>
 #include <linux/device.h>
 #include <linux/io.h>
+#include <linux/of_irq.h>
+#include <linux/interrupt.h>
 #include <linux/ioport.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/platform/tegra/tegra_cbb.h>
@@ -230,11 +232,13 @@ static int get_init_localaddress(
 static void print_cache(struct seq_file *file, u32 cache)
 {
 	if ((cache & 0x3) == 0x0) {
-		print_cbbnoc_err(file, "\t  Cache\t\t\t: 0x%x -- Non-cacheable/Non-Bufferable(Strongly Ordered)\n", cache);
+		print_cbbnoc_err(file, "\t  Cache\t\t\t: 0x%x -- "
+				"Non-cacheable/Non-Bufferable)\n", cache);
 		return;
 	}
 	if ((cache & 0x3) == 0x1) {
-		print_cbbnoc_err(file, "\t  Cache\t\t\t: 0x%x -- Device\n", cache);
+		print_cbbnoc_err(file, "\t  Cache\t\t\t: 0x%x -- Device\n",
+				cache);
 		return;
 	}
 
@@ -248,7 +252,8 @@ static void print_cache(struct seq_file *file, u32 cache)
 		"\t  Cache\t\t\t: 0x%x -- Cacheable/Bufferable\n", cache);
 		break;
 	default:
-		print_cbbnoc_err(file, "\t  Cache\t\t\t: 0x%x -- Cacheable\n", cache);
+		print_cbbnoc_err(file, "\t  Cache\t\t\t: 0x%x -- Cacheable\n",
+				cache);
 	}
 }
 
@@ -302,7 +307,8 @@ static void print_errlog5(struct seq_file *file, u32 errlog5)
  */
 static void print_errlog3_4(struct seq_file *file, u32 errlog3, u32 errlog4,
 		struct tegra_lookup_noc_aperture *noc_trans_info,
-		struct tegra_lookup_noc_aperture *noc_aperture, int max_noc_aperture)
+		struct tegra_lookup_noc_aperture *noc_aperture,
+		int max_noc_aperture)
 {
 	struct resource *res = NULL;
 	u64 addr = 0;
@@ -316,16 +322,20 @@ static void print_errlog3_4(struct seq_file *file, u32 errlog3, u32 errlog4,
 	 * debug should be done using the routeid information alone.
 	 */
 	if (errlog3 & 0x80)
-		print_cbbnoc_err(file, "\t  debug using routeid alone as below address is a joker entry and not-reliable.");
+		print_cbbnoc_err(file, "\t  debug using routeid alone as below"
+				" address is a joker entry and not-reliable.");
 
-	addr += get_init_localaddress(noc_trans_info, noc_aperture, max_noc_aperture);
+	addr += get_init_localaddress(noc_trans_info, noc_aperture,
+							max_noc_aperture);
 
 	res = locate_resource(&iomem_resource, addr);
 	if (res == NULL)
-		print_cbbnoc_err(file, "\t  address\t\t: 0x%llx (unknown device)\n", addr);
+		print_cbbnoc_err(file, "\t  Address\t\t: 0x%llx"
+					" (unknown device)\n", addr);
 	else
-		print_cbbnoc_err(file, "\t  Address\t\t: 0x%llx -- %s + 0x%llx\n",
-				addr, res->name, addr - res->start);
+		print_cbbnoc_err(file, "\t  Address\t\t: "
+				"0x%llx -- %s + 0x%llx\n", addr, res->name,
+				addr - res->start);
 }
 
 
@@ -352,12 +362,14 @@ static void print_errlog1_2(struct seq_file *file, u32 errlog1, u32 errlog2,
 			tegra_cbb_routeid_initflow[noc_trans_info->initflow]);
 	print_cbbnoc_err(file, "\t  Targflow\t\t: %s\n",
 			tegra_cbb_routeid_targflow[noc_trans_info->targflow]);
-	print_cbbnoc_err(file, "\t  TargSubRange\t\t: %d\n", noc_trans_info->targ_subrange);
+	print_cbbnoc_err(file, "\t  TargSubRange\t\t: %d\n",
+			noc_trans_info->targ_subrange);
 	print_cbbnoc_err(file, "\t  SeqId\t\t\t: %d\n", seqid);
 }
 
 
-static void print_errlog0(struct seq_file *file, u32 errlog0, struct tegra_cbbnoc_errors *cbb_errors)
+static void print_errlog0(struct seq_file *file, u32 errlog0,
+				struct tegra_cbbnoc_errors *cbb_errors)
 {
 	struct tegra_noc_packet_header hdr;
 
@@ -378,9 +390,11 @@ static void print_errlog0(struct seq_file *file, u32 errlog0, struct tegra_cbbno
 	print_cbbnoc_err(file, "\t  Packet header Lock\t: %d\n", hdr.lock);
 	print_cbbnoc_err(file, "\t  Packet header Len1\t: %d\n", hdr.len1);
 	if (hdr.format)
-		print_cbbnoc_err(file, "\t  NOC protocol version\t: %s\n", "version >= 2.7");
+		print_cbbnoc_err(file, "\t  NOC protocol version\t: %s\n",
+					"version >= 2.7");
 	else
-		print_cbbnoc_err(file, "\t  NOC protocol version\t: %s\n", "version < 2.7");
+		print_cbbnoc_err(file, "\t  NOC protocol version\t: %s\n",
+					"version < 2.7");
 }
 
 
@@ -466,8 +480,7 @@ static int cbb_serr_callback(struct pt_regs *regs, int reason,
 	if (errvld_status) {
 		print_errlog(NULL, errlog, errvld_status);
 		retval = 0;
-	} else
-		print_cbbnoc_err(NULL, "\tNo Errors\n");
+	}
 
 	return retval;
 }
@@ -503,30 +516,16 @@ static int cbbnoc_err_show(struct seq_file *file, void *data)
 {
 	struct tegra_cbb_errlog_record *errlog;
 	unsigned int errvld_status = 0;
-	unsigned long daif  = 0;
-	unsigned long mpidr = 0;
-	unsigned long esr   = 0;
-
-	asm volatile("mrs %0, daif" : "=r"(daif));
-	asm volatile("mrs %0, mpidr_el1" : "=r"(mpidr));
-	asm volatile("mrs %0, esr_el1" : "=r"(esr));
-
-	pr_crit("CPU%d: daif=0x%lx, mpidr=0x%lx, esr=0x%lx\n",
-			smp_processor_id(), daif, mpidr, esr);
 
 	mutex_lock(&cbbnoc_err_mutex);
 
 	list_for_each_entry(errlog, &cbb_bridge_list, node) {
-		print_cbbnoc_err(file, "Bridge %s@0x%llx:\n",
-				errlog->name, errlog->start);
 
 		errvld_status = errlog->errvld(errlog->vaddr);
 
-		if (!errvld_status) {
-			print_cbbnoc_err(file, "\tNo Errors\n");
-			continue;
-		} else
+		if (errvld_status) {
 			print_errlog(file, errlog, errvld_status);
+		}
 	}
 
 	mutex_unlock(&cbbnoc_err_mutex);
@@ -568,6 +567,76 @@ static int cbb_noc_dbgfs_init(void)
 static int cbb_noc_dbgfs_init(void) { return 0; }
 #endif
 
+/*
+ * Handler for CBB errors from masters other than CCPLEX
+ */
+static irqreturn_t tegra_cbb_error_isr(int irq, void *dev_id)
+{
+	struct tegra_cbb_errlog_record *errlog;
+	unsigned int errvld_status = 0;
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&cbb_bridge_lock, flags);
+
+	list_for_each_entry(errlog, &cbb_bridge_list, node) {
+		print_cbbnoc_err(NULL, "Bridge=%s@0x%llx, irq=%d\n",
+				errlog->name, errlog->start, irq);
+
+		errvld_status = errlog->errvld(errlog->vaddr);
+
+		if (errvld_status) {
+			print_errlog(NULL, errlog, errvld_status);
+		}
+	}
+	raw_spin_unlock_irqrestore(&cbb_bridge_lock, flags);
+
+	return IRQ_HANDLED;
+}
+
+/*
+ * Register handler for CBB_NONSECURE & CBB_SECURE interrupts due to
+ * CBB errors from masters other than CCPLEX
+ */
+static int cbb_register_isr(struct platform_device *pdev,
+				struct tegra_cbb_errlog_record *errlog)
+{
+	int err = 0;
+
+	errlog->cbb_nonsecure_irq = platform_get_irq(pdev, 0);
+	if (errlog->cbb_nonsecure_irq <= 0) {
+		dev_err(&pdev->dev, "can't get irq (%d)\n", errlog->cbb_nonsecure_irq);
+		err = -ENOENT;
+		goto isr_err;
+	}
+
+	errlog->cbb_secure_irq = platform_get_irq(pdev, 1);
+	if (errlog->cbb_secure_irq <= 0) {
+		dev_err(&pdev->dev, "can't get irq (%d)\n", errlog->cbb_secure_irq);
+		err = -ENOENT;
+		goto isr_err;
+	}
+	dev_info(&pdev->dev, "cbb_secure_irq = %d, cbb_nonsecure_irq = %d>\n",
+			errlog->cbb_secure_irq, errlog->cbb_nonsecure_irq);
+
+	if (request_irq(errlog->cbb_nonsecure_irq, tegra_cbb_error_isr, 0,
+				"cbb_nonsecure_irq", pdev)) {
+		dev_err(&pdev->dev, "%s: Unable to register (%d) interrupt\n",
+				__func__, errlog->cbb_nonsecure_irq);
+		goto isr_err;
+	}
+	if (request_irq(errlog->cbb_secure_irq, tegra_cbb_error_isr, 0,
+				"cbb_secure_irq", pdev)) {
+		dev_err(&pdev->dev, "%s: Unable to register (%d) interrupt\n",
+				__func__, errlog->cbb_secure_irq);
+		goto isr_err_free_irq;
+	}
+	return 0;
+
+isr_err_free_irq:
+	free_irq(errlog->cbb_nonsecure_irq, pdev);
+isr_err:
+	return err;
+}
 
 static int tegra_cbb_probe(struct platform_device *pdev)
 {
@@ -576,7 +645,7 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	const struct tegra_cbb_bridge_data *bdata;
 	struct serr_hook *callback;
 	unsigned long flags;
-	int rc;
+	int err = 0;
 
 	/*
 	 * CBB don't exist on the simulator
@@ -596,12 +665,14 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
-
-	rc = cbb_noc_dbgfs_init();
-	if (rc)
-		return rc;
+	err = cbb_noc_dbgfs_init();
+	if (err)
+		return err;
 
 	errlog = devm_kzalloc(&pdev->dev, sizeof(*errlog), GFP_KERNEL);
+	if (!errlog)
+		return -ENOMEM;
+
 	errlog->start = res_base->start;
 	errlog->vaddr = devm_ioremap_resource(&pdev->dev, res_base);
 	if (IS_ERR(errlog->vaddr))
@@ -625,15 +696,23 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	list_add(&errlog->node, &cbb_bridge_list);
 	raw_spin_unlock_irqrestore(&cbb_bridge_lock, flags);
 
-	register_serr_hook(callback);
-
-	/* set “FaultEn=1” to enable error reporting signal “Fault” */
-	errlog->faulten(errlog->vaddr);
-
 	/* set “StallEn=1” to enable queuing of error packets till
 	 * first is served & cleared
 	 */
 	errlog->stallen(errlog->vaddr);
+
+	/* register handler for CBB errors due to CCPLEX master*/
+	register_serr_hook(callback);
+
+	/* register handler for CBB errors due to masters other than CCPLEX*/
+	err = cbb_register_isr(pdev, errlog);
+	if (err < 0) {
+		dev_err(&pdev->dev, "Failed to register CBB Interrupt ISR");
+		return err;
+	}
+
+	/* set “FaultEn=1” to enable error reporting signal “Fault” */
+	errlog->faulten(errlog->vaddr);
 
 	dev_info(&pdev->dev, "cbb bridge probed OK\n");
 
@@ -675,7 +754,18 @@ static struct platform_driver tegra_cbbnoc_driver = {
 	},
 };
 
-module_platform_driver(tegra_cbbnoc_driver);
+static int __init tegra_cbb_init(void)
+{
+	return platform_driver_register(&tegra_cbbnoc_driver);
+}
+
+static void __exit tegra_cbb_exit(void)
+{
+	platform_driver_unregister(&tegra_cbbnoc_driver);
+}
+
+arch_initcall(tegra_cbb_init);
+module_exit(tegra_cbb_exit);
 
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("SError handler for bridge errors within Control Backbone");

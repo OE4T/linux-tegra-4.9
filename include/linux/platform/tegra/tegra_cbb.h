@@ -106,6 +106,8 @@ struct tegra_cbb_errlog_record {
 	char            *name;
 	phys_addr_t     start;
 	void            __iomem *vaddr;
+	int		cbb_secure_irq;
+	int		cbb_nonsecure_irq;
 	u32             errlog0;
 	u32             errlog1;
 	u32             errlog2;

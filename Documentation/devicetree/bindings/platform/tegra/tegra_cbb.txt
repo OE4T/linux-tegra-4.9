@@ -1,18 +1,21 @@
 NVIDIA Tegra19x CBB NOC driver
 ==================================
 
-This document defines the device-specific binding for the Tegra19x CBB NOC driver.
+This document defines the device-specific binding for Tegra19x CBB NOC driver.
 
-Control Backbone (CBB) comprises of the physical path from a master (or initiator)
-to a slave’s (or target) register configuration space(Target’s Control Space).
-CBB has multiple hierarchical sub-NOC's(Network-on-Chip) and stretches to various
-master and slave partitions using different bridges like AXIP2P, AXI2APB.
+Control Backbone(CBB) comprises of the physical path from a master(or initiator)
+to a slave’s(or target) register configuration space(Target’s Control Space).
+CBB has multiple hierarchical sub-NOC's(Network-on-Chip) and stretches to
+various master and slave partitions using different bridges like AXIP2P,AXI2APB.
 
-This driver handles SError's from Control Backbone(CBB) to CCPLEX.
-SError will be reported in case of failed transaction in bridge within CBB.
+This driver handles Error's from Control Backbone(CBB) in case of failed
+transaction in bridge within CBB. For access frorm CCPLEX master, SError
+will be reported. For access by other masters, issuing master will get abort
+and interrupt will be reported to CCPLEX.
+
 The driver prints relevant debug information like Error Code, Error Description,
-Master, Address, AXI ID, Cache, Protection, Security Group etc in case of a
-bridge error using CBB's Error Logger registers.
+Master, Address, AXI ID, Cache, Protection, Security Group etc on receiving
+SError or interrupt due to bridge error using CBB's Error Logger registers.
 
 Required properties:
 

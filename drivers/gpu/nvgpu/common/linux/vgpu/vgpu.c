@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/mm.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
@@ -755,6 +756,10 @@ int vgpu_probe(struct platform_device *pdev)
 
 	vgpu_create_sysfs(dev);
 	gk20a_init_gr(gk20a);
+
+	gk20a_dbg_info("total ram pages : %lu", totalram_pages);
+	gk20a->gr.max_comptag_mem = totalram_pages
+				 >> (10 - (PAGE_SHIFT - 10));
 
 	nvgpu_ref_init(&gk20a->refcount);
 

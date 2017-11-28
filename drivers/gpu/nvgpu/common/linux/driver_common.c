@@ -15,6 +15,7 @@
  */
 
 #include <linux/dma-mapping.h>
+#include <linux/mm.h>
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
@@ -43,7 +44,6 @@ static void nvgpu_init_vars(struct gk20a *g)
 
 	nvgpu_cond_init(&l->sw_irq_stall_last_handled_wq);
 	nvgpu_cond_init(&l->sw_irq_nonstall_last_handled_wq);
-	gk20a_init_gr(g);
 
 	init_rwsem(&l->busy_lock);
 	nvgpu_rwsem_init(&g->deterministic_busy);
@@ -72,6 +72,15 @@ static void nvgpu_init_vars(struct gk20a *g)
 
 	nvgpu_init_list_node(&g->boardobj_head);
 	nvgpu_init_list_node(&g->boardobjgrp_head);
+}
+
+static void nvgpu_init_gr_vars(struct gk20a *g)
+{
+	gk20a_init_gr(g);
+
+	gk20a_dbg_info("total ram pages : %lu", totalram_pages);
+	g->gr.max_comptag_mem = totalram_pages
+				 >> (10 - (PAGE_SHIFT - 10));
 }
 
 static void nvgpu_init_timeout(struct gk20a *g)
@@ -187,6 +196,7 @@ int nvgpu_probe(struct gk20a *g,
 	int err = 0;
 
 	nvgpu_init_vars(g);
+	nvgpu_init_gr_vars(g);
 	nvgpu_init_timeout(g);
 	nvgpu_init_timeslice(g);
 	nvgpu_init_pm_vars(g);

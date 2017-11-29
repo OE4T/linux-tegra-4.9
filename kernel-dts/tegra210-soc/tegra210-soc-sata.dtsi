@@ -32,6 +32,7 @@
 		       <&tegra_car TEGRA210_CLK_SATA_COLD>;
 		reset-names = "sata", "sata-oob", "sata-cold";
 		iommus = <&smmu TEGRA_SWGROUP_SATA2>;
+                power-domains = <&sata_pd>;
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		phys = <&{/xusb_padctl@7009f000/pads/sata/lanes/sata-0}>;
 #else

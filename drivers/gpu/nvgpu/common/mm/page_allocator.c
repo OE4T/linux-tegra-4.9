@@ -279,7 +279,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 
 	slab_page = nvgpu_kmem_cache_alloc(a->slab_page_cache);
 	if (!slab_page) {
-		palloc_dbg(a, "OOM: unable to alloc slab_page struct!\n");
+		palloc_dbg(a, "OOM: unable to alloc slab_page struct!");
 		return NULL;
 	}
 
@@ -288,7 +288,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 	slab_page->page_addr = nvgpu_alloc(&a->source_allocator, a->page_size);
 	if (!slab_page->page_addr) {
 		nvgpu_kmem_cache_free(a->slab_page_cache, slab_page);
-		palloc_dbg(a, "OOM: vidmem is full!\n");
+		palloc_dbg(a, "OOM: vidmem is full!");
 		return NULL;
 	}
 
@@ -301,7 +301,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 
 	a->pages_alloced++;
 
-	palloc_dbg(a, "Allocated new slab page @ 0x%012llx size=%u\n",
+	palloc_dbg(a, "Allocated new slab page @ 0x%012llx size=%u",
 		   slab_page->page_addr, slab_page->slab_size);
 
 	return slab_page;
@@ -310,7 +310,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 static void free_slab_page(struct nvgpu_page_allocator *a,
 			   struct page_alloc_slab_page *slab_page)
 {
-	palloc_dbg(a, "Freeing slab page @ 0x%012llx\n", slab_page->page_addr);
+	palloc_dbg(a, "Freeing slab page @ 0x%012llx", slab_page->page_addr);
 
 	BUG_ON((slab_page->state != SP_NONE && slab_page->state != SP_EMPTY) ||
 	       slab_page->nr_objects_alloced != 0 ||
@@ -418,7 +418,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 
 	alloc = nvgpu_kmem_cache_alloc(a->alloc_cache);
 	if (!alloc) {
-		palloc_dbg(a, "OOM: could not alloc page_alloc struct!\n");
+		palloc_dbg(a, "OOM: could not alloc page_alloc struct!");
 		goto fail;
 	}
 
@@ -426,7 +426,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 
 	sgl = nvgpu_kzalloc(a->owner->g, sizeof(*sgl));
 	if (!sgl) {
-		palloc_dbg(a, "OOM: could not alloc sgl struct!\n");
+		palloc_dbg(a, "OOM: could not alloc sgl struct!");
 		goto fail;
 	}
 
@@ -435,7 +435,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 	if (err)
 		goto fail;
 
-	palloc_dbg(a, "Alloc 0x%04llx sr=%d id=0x%010llx [slab]\n",
+	palloc_dbg(a, "Alloc 0x%04llx sr=%d id=0x%010llx [slab]",
 		   len, slab_nr, alloc->base);
 	a->nr_slab_allocs++;
 
@@ -549,7 +549,7 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 
 			/* Divide by 2 and try again */
 			if (!chunk_addr) {
-				palloc_dbg(a, "balloc failed: 0x%llx\n",
+				palloc_dbg(a, "balloc failed: 0x%llx",
 					   chunk_len);
 				chunk_len >>= 1;
 				max_chunk_len = chunk_len;
@@ -559,7 +559,7 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 		chunk_pages = chunk_len >> a->page_shift;
 
 		if (!chunk_addr) {
-			palloc_dbg(a, "bailing @ 0x%llx\n", chunk_len);
+			palloc_dbg(a, "bailing @ 0x%llx", chunk_len);
 			goto fail_cleanup;
 		}
 
@@ -622,22 +622,22 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages(
 
 	alloc = __do_nvgpu_alloc_pages(a, pages);
 	if (!alloc) {
-		palloc_dbg(a, "Alloc 0x%llx (%llu) (failed)\n",
+		palloc_dbg(a, "Alloc 0x%llx (%llu) (failed)",
 			   pages << a->page_shift, pages);
 		return NULL;
 	}
 
-	palloc_dbg(a, "Alloc 0x%llx (%llu) id=0x%010llx\n",
+	palloc_dbg(a, "Alloc 0x%llx (%llu) id=0x%010llx",
 		   pages << a->page_shift, pages, alloc->base);
 	sgl = alloc->sgt.sgl;
 	while (sgl) {
-		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx\n",
+		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx",
 			   i++,
 			   nvgpu_sgt_get_phys(&alloc->sgt, sgl),
 			   nvgpu_sgt_get_length(&alloc->sgt, sgl));
 		sgl = nvgpu_sgt_get_next(&alloc->sgt, sgl);
 	}
-	palloc_dbg(a, "Alloc done\n");
+	palloc_dbg(a, "Alloc done");
 
 	return alloc;
 }
@@ -708,13 +708,13 @@ static void nvgpu_page_free(struct nvgpu_allocator *__a, u64 base)
 			((struct nvgpu_page_alloc *)(uintptr_t)base)->base);
 
 	if (!alloc) {
-		palloc_dbg(a, "Hrm, found no alloc?\n");
+		palloc_dbg(a, "Hrm, found no alloc?");
 		goto done;
 	}
 
 	a->nr_frees++;
 
-	palloc_dbg(a, "Free  0x%llx id=0x%010llx\n",
+	palloc_dbg(a, "Free  0x%llx id=0x%010llx",
 		   alloc->length, alloc->base);
 
 	/*
@@ -794,11 +794,11 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 	__insert_page_alloc(a, alloc);
 	alloc_unlock(__a);
 
-	palloc_dbg(a, "Alloc [fixed] @ 0x%010llx + 0x%llx (%llu)\n",
+	palloc_dbg(a, "Alloc [fixed] @ 0x%010llx + 0x%llx (%llu)",
 		   alloc->base, aligned_len, pages);
 	sgl = alloc->sgt.sgl;
 	while (sgl) {
-		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx\n",
+		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx",
 			   i++,
 			   nvgpu_sgt_get_phys(&alloc->sgt, sgl),
 			   nvgpu_sgt_get_length(&alloc->sgt, sgl));
@@ -830,7 +830,7 @@ static void nvgpu_page_free_fixed(struct nvgpu_allocator *__a,
 		alloc = (struct nvgpu_page_alloc *) (uintptr_t) base;
 	}
 
-	palloc_dbg(a, "Free  [fixed] 0x%010llx + 0x%llx\n",
+	palloc_dbg(a, "Free  [fixed] 0x%010llx + 0x%llx",
 		   alloc->base, alloc->length);
 
 	a->nr_fixed_frees++;
@@ -868,47 +868,47 @@ static void nvgpu_page_print_stats(struct nvgpu_allocator *__a,
 	if (lock)
 		alloc_lock(__a);
 
-	__alloc_pstat(s, __a, "Page allocator:\n");
-	__alloc_pstat(s, __a, "  allocs         %lld\n", a->nr_allocs);
-	__alloc_pstat(s, __a, "  frees          %lld\n", a->nr_frees);
-	__alloc_pstat(s, __a, "  fixed_allocs   %lld\n", a->nr_fixed_allocs);
-	__alloc_pstat(s, __a, "  fixed_frees    %lld\n", a->nr_fixed_frees);
-	__alloc_pstat(s, __a, "  slab_allocs    %lld\n", a->nr_slab_allocs);
-	__alloc_pstat(s, __a, "  slab_frees     %lld\n", a->nr_slab_frees);
-	__alloc_pstat(s, __a, "  pages alloced  %lld\n", a->pages_alloced);
-	__alloc_pstat(s, __a, "  pages freed    %lld\n", a->pages_freed);
-	__alloc_pstat(s, __a, "\n");
+	__alloc_pstat(s, __a, "Page allocator:");
+	__alloc_pstat(s, __a, "  allocs         %lld", a->nr_allocs);
+	__alloc_pstat(s, __a, "  frees          %lld", a->nr_frees);
+	__alloc_pstat(s, __a, "  fixed_allocs   %lld", a->nr_fixed_allocs);
+	__alloc_pstat(s, __a, "  fixed_frees    %lld", a->nr_fixed_frees);
+	__alloc_pstat(s, __a, "  slab_allocs    %lld", a->nr_slab_allocs);
+	__alloc_pstat(s, __a, "  slab_frees     %lld", a->nr_slab_frees);
+	__alloc_pstat(s, __a, "  pages alloced  %lld", a->pages_alloced);
+	__alloc_pstat(s, __a, "  pages freed    %lld", a->pages_freed);
+	__alloc_pstat(s, __a, "");
 
-	__alloc_pstat(s, __a, "Page size:       %lld KB\n",
+	__alloc_pstat(s, __a, "Page size:       %lld KB",
 		      a->page_size >> 10);
-	__alloc_pstat(s, __a, "Total pages:     %lld (%lld MB)\n",
+	__alloc_pstat(s, __a, "Total pages:     %lld (%lld MB)",
 		      a->length / a->page_size,
 		      a->length >> 20);
-	__alloc_pstat(s, __a, "Available pages: %lld (%lld MB)\n",
+	__alloc_pstat(s, __a, "Available pages: %lld (%lld MB)",
 		      nvgpu_alloc_space(&a->source_allocator) / a->page_size,
 		      nvgpu_alloc_space(&a->source_allocator) >> 20);
-	__alloc_pstat(s, __a, "\n");
+	__alloc_pstat(s, __a, "");
 
 	/*
 	 * Slab info.
 	 */
 	if (a->flags & GPU_ALLOC_4K_VIDMEM_PAGES) {
-		__alloc_pstat(s, __a, "Slabs:\n");
-		__alloc_pstat(s, __a, "  size      empty     partial   full\n");
-		__alloc_pstat(s, __a, "  ----      -----     -------   ----\n");
+		__alloc_pstat(s, __a, "Slabs:");
+		__alloc_pstat(s, __a, "  size      empty     partial   full");
+		__alloc_pstat(s, __a, "  ----      -----     -------   ----");
 
 		for (i = 0; i < a->nr_slabs; i++) {
 			struct page_alloc_slab *slab = &a->slabs[i];
 
-			__alloc_pstat(s, __a, "  %-9u %-9d %-9u %u\n",
+			__alloc_pstat(s, __a, "  %-9u %-9d %-9u %u",
 				      slab->slab_size,
 				      slab->nr_empty, slab->nr_partial,
 				      slab->nr_full);
 		}
-		__alloc_pstat(s, __a, "\n");
+		__alloc_pstat(s, __a, "");
 	}
 
-	__alloc_pstat(s, __a, "Source alloc: %s\n",
+	__alloc_pstat(s, __a, "Source alloc: %s",
 		      a->source_allocator.name);
 	nvgpu_alloc_print_stats(&a->source_allocator, s, lock);
 
@@ -1029,12 +1029,12 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 #ifdef CONFIG_DEBUG_FS
 	nvgpu_init_alloc_debug(g, __a);
 #endif
-	palloc_dbg(a, "New allocator: type      page\n");
-	palloc_dbg(a, "               base      0x%llx\n", a->base);
-	palloc_dbg(a, "               size      0x%llx\n", a->length);
-	palloc_dbg(a, "               page_size 0x%llx\n", a->page_size);
-	palloc_dbg(a, "               flags     0x%llx\n", a->flags);
-	palloc_dbg(a, "               slabs:    %d\n", a->nr_slabs);
+	palloc_dbg(a, "New allocator: type      page");
+	palloc_dbg(a, "               base      0x%llx", a->base);
+	palloc_dbg(a, "               size      0x%llx", a->length);
+	palloc_dbg(a, "               page_size 0x%llx", a->page_size);
+	palloc_dbg(a, "               flags     0x%llx", a->flags);
+	palloc_dbg(a, "               slabs:    %d", a->nr_slabs);
 
 	return 0;
 

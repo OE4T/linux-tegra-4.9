@@ -37,7 +37,7 @@
 #include <nvgpu/list.h>
 #include <nvgpu/types.h>
 
-/* #define ALLOCATOR_DEBUG */
+/* #define ALLOCATOR_DEBUG_FINE */
 
 struct nvgpu_allocator;
 struct nvgpu_alloc_carveout;
@@ -300,7 +300,7 @@ static inline void nvgpu_alloc_disable_dbg(struct nvgpu_allocator *a)
 #define __alloc_pstat(seq, allocator, fmt, arg...)		\
 	do {							\
 		if (seq)					\
-			seq_printf(seq, fmt, ##arg);		\
+			seq_printf(seq, fmt "\n", ##arg);	\
 		else						\
 			alloc_dbg(allocator, fmt, ##arg);	\
 	} while (0)
@@ -311,14 +311,14 @@ static inline void nvgpu_alloc_disable_dbg(struct nvgpu_allocator *a)
 
 /*
  * This gives finer control over debugging messages. By defining the
- * ALLOCATOR_DEBUG macro prints for an allocator will only get made if
+ * ALLOCATOR_DEBUG_FINE macro prints for an allocator will only get made if
  * that allocator's debug flag is set.
  *
  * Otherwise debugging is as normal: debug statements for all allocators
- * if the GPU debugging mask bit is set. Note: even when ALLOCATOR_DEBUG
+ * if the GPU debugging mask bit is set. Note: even when ALLOCATOR_DEBUG_FINE
  * is set gpu_dbg_alloc must still also be set to true.
  */
-#if defined(ALLOCATOR_DEBUG)
+#if defined(ALLOCATOR_DEBUG_FINE)
 #define alloc_dbg(a, fmt, arg...)				\
 	do {							\
 		if ((a)->debug)					\

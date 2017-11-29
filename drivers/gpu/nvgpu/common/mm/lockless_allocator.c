@@ -73,7 +73,7 @@ static u64 nvgpu_lockless_alloc(struct nvgpu_allocator *a, u64 len)
 		if (ret == head) {
 			addr = pa->base + head * pa->blk_size;
 			nvgpu_atomic_inc(&pa->nr_allocs);
-			alloc_dbg(a, "Alloc node # %d @ addr 0x%llx\n", head,
+			alloc_dbg(a, "Alloc node # %d @ addr 0x%llx", head,
 				  addr);
 			break;
 		}
@@ -81,9 +81,9 @@ static u64 nvgpu_lockless_alloc(struct nvgpu_allocator *a, u64 len)
 	}
 
 	if (addr)
-		alloc_dbg(a, "Alloc node # %d @ addr 0x%llx\n", head, addr);
+		alloc_dbg(a, "Alloc node # %d @ addr 0x%llx", head, addr);
 	else
-		alloc_dbg(a, "Alloc failed!\n");
+		alloc_dbg(a, "Alloc failed!");
 
 	return addr;
 }
@@ -96,7 +96,7 @@ static void nvgpu_lockless_free(struct nvgpu_allocator *a, u64 addr)
 
 	cur_idx = (addr - pa->base) / pa->blk_size;
 
-	alloc_dbg(a, "Free node # %llu @ addr 0x%llx\n", cur_idx, addr);
+	alloc_dbg(a, "Free node # %llu @ addr 0x%llx", cur_idx, addr);
 
 	while (1) {
 		head = NV_ACCESS_ONCE(pa->head);
@@ -104,7 +104,7 @@ static void nvgpu_lockless_free(struct nvgpu_allocator *a, u64 addr)
 		ret = cmpxchg(&pa->head, head, cur_idx);
 		if (ret == head) {
 			nvgpu_atomic_dec(&pa->nr_allocs);
-			alloc_dbg(a, "Free node # %llu\n", cur_idx);
+			alloc_dbg(a, "Free node # %llu", cur_idx);
 			break;
 		}
 	}
@@ -128,15 +128,15 @@ static void nvgpu_lockless_print_stats(struct nvgpu_allocator *a,
 {
 	struct nvgpu_lockless_allocator *pa = a->priv;
 
-	__alloc_pstat(s, a, "Lockless allocator params:\n");
-	__alloc_pstat(s, a, "  start = 0x%llx\n", pa->base);
-	__alloc_pstat(s, a, "  end   = 0x%llx\n", pa->base + pa->length);
+	__alloc_pstat(s, a, "Lockless allocator params:");
+	__alloc_pstat(s, a, "  start = 0x%llx", pa->base);
+	__alloc_pstat(s, a, "  end   = 0x%llx", pa->base + pa->length);
 
 	/* Actual stats. */
-	__alloc_pstat(s, a, "Stats:\n");
-	__alloc_pstat(s, a, "  Number allocs = %d\n",
+	__alloc_pstat(s, a, "Stats:");
+	__alloc_pstat(s, a, "  Number allocs = %d",
 		      nvgpu_atomic_read(&pa->nr_allocs));
-	__alloc_pstat(s, a, "  Number free   = %d\n",
+	__alloc_pstat(s, a, "  Number free   = %d",
 		      pa->nr_nodes - nvgpu_atomic_read(&pa->nr_allocs));
 }
 #endif
@@ -211,11 +211,11 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 #ifdef CONFIG_DEBUG_FS
 	nvgpu_init_alloc_debug(g, __a);
 #endif
-	alloc_dbg(__a, "New allocator: type          lockless\n");
-	alloc_dbg(__a, "               base          0x%llx\n", a->base);
-	alloc_dbg(__a, "               nodes         %d\n", a->nr_nodes);
-	alloc_dbg(__a, "               blk_size      0x%llx\n", a->blk_size);
-	alloc_dbg(__a, "               flags         0x%llx\n", a->flags);
+	alloc_dbg(__a, "New allocator: type          lockless");
+	alloc_dbg(__a, "               base          0x%llx", a->base);
+	alloc_dbg(__a, "               nodes         %d", a->nr_nodes);
+	alloc_dbg(__a, "               blk_size      0x%llx", a->blk_size);
+	alloc_dbg(__a, "               flags         0x%llx", a->flags);
 
 	return 0;
 

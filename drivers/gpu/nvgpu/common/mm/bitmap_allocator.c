@@ -91,13 +91,13 @@ static u64 nvgpu_bitmap_alloc_fixed(struct nvgpu_allocator *__a,
 	a->nr_fixed_allocs++;
 	alloc_unlock(__a);
 
-	alloc_dbg(__a, "Alloc-fixed 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]\n",
+	alloc_dbg(__a, "Alloc-fixed 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
 		  base, len, blks, blks);
 	return base;
 
 fail:
 	alloc_unlock(__a);
-	alloc_dbg(__a, "Alloc-fixed failed! (0x%llx)\n", base);
+	alloc_dbg(__a, "Alloc-fixed failed! (0x%llx)", base);
 	return 0;
 }
 
@@ -129,7 +129,7 @@ static void nvgpu_bitmap_free_fixed(struct nvgpu_allocator *__a,
 	a->bytes_freed += blks * a->blk_size;
 	alloc_unlock(__a);
 
-	alloc_dbg(__a, "Free-fixed 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]\n",
+	alloc_dbg(__a, "Free-fixed 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
 		  base, len, blks, blks);
 }
 
@@ -238,7 +238,7 @@ static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *__a, u64 len)
 	    __nvgpu_bitmap_store_alloc(a, addr, blks * a->blk_size))
 		goto fail_reset_bitmap;
 
-	alloc_dbg(__a, "Alloc 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]\n",
+	alloc_dbg(__a, "Alloc 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
 		  addr, len, blks, blks);
 
 	a->nr_allocs++;
@@ -252,7 +252,7 @@ fail_reset_bitmap:
 fail:
 	a->next_blk = 0;
 	alloc_unlock(__a);
-	alloc_dbg(__a, "Alloc failed!\n");
+	alloc_dbg(__a, "Alloc failed!");
 	return 0;
 }
 
@@ -283,7 +283,7 @@ static void nvgpu_bitmap_free(struct nvgpu_allocator *__a, u64 addr)
 	blks = alloc->length >> a->blk_shift;
 
 	bitmap_clear(a->bitmap, offs, blks);
-	alloc_dbg(__a, "Free  0x%-10llx\n", addr);
+	alloc_dbg(__a, "Free  0x%-10llx", addr);
 
 	a->bytes_freed += alloc->length;
 
@@ -323,18 +323,18 @@ static void nvgpu_bitmap_print_stats(struct nvgpu_allocator *__a,
 {
 	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
 
-	__alloc_pstat(s, __a, "Bitmap allocator params:\n");
-	__alloc_pstat(s, __a, "  start = 0x%llx\n", a->base);
-	__alloc_pstat(s, __a, "  end   = 0x%llx\n", a->base + a->length);
-	__alloc_pstat(s, __a, "  blks  = 0x%llx\n", a->num_bits);
+	__alloc_pstat(s, __a, "Bitmap allocator params:");
+	__alloc_pstat(s, __a, "  start = 0x%llx", a->base);
+	__alloc_pstat(s, __a, "  end   = 0x%llx", a->base + a->length);
+	__alloc_pstat(s, __a, "  blks  = 0x%llx", a->num_bits);
 
 	/* Actual stats. */
-	__alloc_pstat(s, __a, "Stats:\n");
-	__alloc_pstat(s, __a, "  Number allocs = 0x%llx\n", a->nr_allocs);
-	__alloc_pstat(s, __a, "  Number fixed  = 0x%llx\n", a->nr_fixed_allocs);
-	__alloc_pstat(s, __a, "  Bytes alloced = 0x%llx\n", a->bytes_alloced);
-	__alloc_pstat(s, __a, "  Bytes freed   = 0x%llx\n", a->bytes_freed);
-	__alloc_pstat(s, __a, "  Outstanding   = 0x%llx\n",
+	__alloc_pstat(s, __a, "Stats:");
+	__alloc_pstat(s, __a, "  Number allocs = 0x%llx", a->nr_allocs);
+	__alloc_pstat(s, __a, "  Number fixed  = 0x%llx", a->nr_fixed_allocs);
+	__alloc_pstat(s, __a, "  Bytes alloced = 0x%llx", a->bytes_alloced);
+	__alloc_pstat(s, __a, "  Bytes freed   = 0x%llx", a->bytes_freed);
+	__alloc_pstat(s, __a, "  Outstanding   = 0x%llx",
 		      a->bytes_alloced - a->bytes_freed);
 }
 #endif
@@ -421,12 +421,12 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 #ifdef CONFIG_DEBUG_FS
 	nvgpu_init_alloc_debug(g, __a);
 #endif
-	alloc_dbg(__a, "New allocator: type      bitmap\n");
-	alloc_dbg(__a, "               base      0x%llx\n", a->base);
-	alloc_dbg(__a, "               bit_offs  0x%llx\n", a->bit_offs);
-	alloc_dbg(__a, "               size      0x%llx\n", a->length);
-	alloc_dbg(__a, "               blk_size  0x%llx\n", a->blk_size);
-	alloc_dbg(__a, "               flags     0x%llx\n", a->flags);
+	alloc_dbg(__a, "New allocator: type      bitmap");
+	alloc_dbg(__a, "               base      0x%llx", a->base);
+	alloc_dbg(__a, "               bit_offs  0x%llx", a->bit_offs);
+	alloc_dbg(__a, "               size      0x%llx", a->length);
+	alloc_dbg(__a, "               blk_size  0x%llx", a->blk_size);
+	alloc_dbg(__a, "               flags     0x%llx", a->flags);
 
 	return 0;
 

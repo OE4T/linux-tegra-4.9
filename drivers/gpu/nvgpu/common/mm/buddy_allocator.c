@@ -128,7 +128,7 @@ static void __balloc_buddy_list_add(struct nvgpu_buddy_allocator *a,
 {
 	if (buddy_is_in_list(b)) {
 		alloc_dbg(balloc_owner(a),
-			  "Oops: adding added buddy (%llu:0x%llx)\n",
+			  "Oops: adding added buddy (%llu:0x%llx)",
 			  b->order, b->start);
 		BUG();
 	}
@@ -152,7 +152,7 @@ static void __balloc_buddy_list_rem(struct nvgpu_buddy_allocator *a,
 {
 	if (!buddy_is_in_list(b)) {
 		alloc_dbg(balloc_owner(a),
-			  "Oops: removing removed buddy (%llu:0x%llx)\n",
+			  "Oops: removing removed buddy (%llu:0x%llx)",
 			  b->order, b->start);
 		BUG();
 	}
@@ -304,19 +304,19 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 
 		if (a->buddy_list_len[i] != 0) {
 			nvgpu_info(__a->g,
-					"Excess buddies!!! (%d: %llu)\n",
+					"Excess buddies!!! (%d: %llu)",
 				i, a->buddy_list_len[i]);
 			BUG();
 		}
 		if (a->buddy_list_split[i] != 0) {
 			nvgpu_info(__a->g,
-					"Excess split nodes!!! (%d: %llu)\n",
+					"Excess split nodes!!! (%d: %llu)",
 				i, a->buddy_list_split[i]);
 			BUG();
 		}
 		if (a->buddy_list_alloced[i] != 0) {
 			nvgpu_info(__a->g,
-					"Excess alloced nodes!!! (%d: %llu)\n",
+					"Excess alloced nodes!!! (%d: %llu)",
 				i, a->buddy_list_alloced[i]);
 			BUG();
 		}
@@ -646,7 +646,7 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 					/* Welp, that's the end of that. */
 					alloc_dbg(balloc_owner(a),
 						  "Fixed buddy PTE "
-						  "size mismatch!\n");
+						  "size mismatch!");
 					return NULL;
 				}
 
@@ -663,7 +663,7 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 	}
 
 	if (cur_order > a->max_order) {
-		alloc_dbg(balloc_owner(a), "No buddy for range ???\n");
+		alloc_dbg(balloc_owner(a), "No buddy for range ???");
 		return NULL;
 	}
 
@@ -671,7 +671,7 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 	while (bud->start != base || bud->order != order) {
 		if (balloc_split_buddy(a, bud, pte_size)) {
 			alloc_dbg(balloc_owner(a),
-				  "split buddy failed? {0x%llx, %llu}\n",
+				  "split buddy failed? {0x%llx, %llu}",
 				  bud->start, bud->order);
 			balloc_coalesce(a, bud);
 			return NULL;
@@ -704,7 +704,7 @@ static u64 __balloc_do_alloc_fixed(struct nvgpu_buddy_allocator *a,
 
 	if (align_order > a->max_order) {
 		alloc_dbg(balloc_owner(a),
-			  "Align order too big: %llu > %llu\n",
+			  "Align order too big: %llu > %llu",
 			  align_order, a->max_order);
 		return 0;
 	}
@@ -723,7 +723,7 @@ static u64 __balloc_do_alloc_fixed(struct nvgpu_buddy_allocator *a,
 					align_order, pte_size);
 		if (!bud) {
 			alloc_dbg(balloc_owner(a),
-				  "Fixed buddy failed: {0x%llx, %llu}!\n",
+				  "Fixed buddy failed: {0x%llx, %llu}!",
 				  balloc_base_unshift(a, inc_base),
 				  align_order);
 			goto err_and_cleanup;
@@ -799,7 +799,7 @@ static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
 
 	if (order > a->max_order) {
 		alloc_unlock(__a);
-		alloc_dbg(balloc_owner(a), "Alloc fail\n");
+		alloc_dbg(balloc_owner(a), "Alloc fail");
 		return 0;
 	}
 
@@ -814,13 +814,13 @@ static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
 		a->bytes_alloced += len;
 		a->bytes_alloced_real += balloc_order_to_len(a, order);
 		alloc_dbg(balloc_owner(a),
-			  "Alloc 0x%-10llx %3lld:0x%-10llx pte_size=%s\n",
+			  "Alloc 0x%-10llx %3lld:0x%-10llx pte_size=%s",
 			  addr, order, len,
 			  pte_size == gmmu_page_size_big   ? "big" :
 			  pte_size == gmmu_page_size_small ? "small" :
 			  "NA/any");
 	} else {
-		alloc_dbg(balloc_owner(a), "Alloc failed: no mem!\n");
+		alloc_dbg(balloc_owner(a), "Alloc failed: no mem!");
 	}
 
 	a->alloc_made = 1;
@@ -869,7 +869,7 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 
 	if (!balloc_is_range_free(a, base, base + len)) {
 		alloc_dbg(balloc_owner(a),
-			  "Range not free: 0x%llx -> 0x%llx\n",
+			  "Range not free: 0x%llx -> 0x%llx",
 			  base, base + len);
 		goto fail_unlock;
 	}
@@ -877,7 +877,7 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 	ret = __balloc_do_alloc_fixed(a, falloc, base, len, pte_size);
 	if (!ret) {
 		alloc_dbg(balloc_owner(a),
-			  "Alloc-fixed failed ?? 0x%llx -> 0x%llx\n",
+			  "Alloc-fixed failed ?? 0x%llx -> 0x%llx",
 			  base, base + len);
 		goto fail_unlock;
 	}
@@ -891,7 +891,7 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 	a->bytes_alloced += len;
 	a->bytes_alloced_real += real_bytes;
 
-	alloc_dbg(balloc_owner(a), "Alloc (fixed) 0x%llx\n", base);
+	alloc_dbg(balloc_owner(a), "Alloc (fixed) 0x%llx", base);
 
 	return base;
 
@@ -962,7 +962,7 @@ static void nvgpu_buddy_bfree(struct nvgpu_allocator *__a, u64 addr)
 
 done:
 	alloc_unlock(__a);
-	alloc_dbg(balloc_owner(a), "Free 0x%llx\n", addr);
+	alloc_dbg(balloc_owner(a), "Free 0x%llx", addr);
 	return;
 }
 
@@ -1018,7 +1018,7 @@ static int nvgpu_buddy_reserve_co(struct nvgpu_allocator *__a,
 	if (!addr) {
 		err = -ENOMEM;
 		nvgpu_warn(__a->g,
-				"%s: Failed to reserve a valid carveout!\n",
+				"%s: Failed to reserve a valid carveout!",
 				__func__);
 		goto done;
 	}
@@ -1102,32 +1102,32 @@ static void nvgpu_buddy_print_stats(struct nvgpu_allocator *__a,
 	struct nvgpu_alloc_carveout *tmp;
 	struct nvgpu_buddy_allocator *a = __a->priv;
 
-	__alloc_pstat(s, __a, "base = %llu, limit = %llu, blk_size = %llu\n",
+	__alloc_pstat(s, __a, "base = %llu, limit = %llu, blk_size = %llu",
 		      a->base, a->length, a->blk_size);
-	__alloc_pstat(s, __a, "Internal params:\n");
-	__alloc_pstat(s, __a, "  start = 0x%llx\n", a->start);
-	__alloc_pstat(s, __a, "  end   = 0x%llx\n", a->end);
-	__alloc_pstat(s, __a, "  count = 0x%llx\n", a->count);
-	__alloc_pstat(s, __a, "  blks  = 0x%llx\n", a->blks);
-	__alloc_pstat(s, __a, "  max_order = %llu\n", a->max_order);
+	__alloc_pstat(s, __a, "Internal params:");
+	__alloc_pstat(s, __a, "  start = 0x%llx", a->start);
+	__alloc_pstat(s, __a, "  end   = 0x%llx", a->end);
+	__alloc_pstat(s, __a, "  count = 0x%llx", a->count);
+	__alloc_pstat(s, __a, "  blks  = 0x%llx", a->blks);
+	__alloc_pstat(s, __a, "  max_order = %llu", a->max_order);
 
 	if (lock)
 		alloc_lock(__a);
 
 	if (!nvgpu_list_empty(&a->co_list)) {
-		__alloc_pstat(s, __a, "\n");
-		__alloc_pstat(s, __a, "Carveouts:\n");
+		__alloc_pstat(s, __a, "");
+		__alloc_pstat(s, __a, "Carveouts:");
 		nvgpu_list_for_each_entry(tmp, &a->co_list,
 					nvgpu_alloc_carveout, co_entry)
 			__alloc_pstat(s, __a,
-				      "  CO %2d: %-20s 0x%010llx + 0x%llx\n",
+				      "  CO %2d: %-20s 0x%010llx + 0x%llx",
 				      i++, tmp->name, tmp->base, tmp->length);
 	}
 
-	__alloc_pstat(s, __a, "\n");
-	__alloc_pstat(s, __a, "Buddy blocks:\n");
-	__alloc_pstat(s, __a, "  Order   Free    Alloced   Split\n");
-	__alloc_pstat(s, __a, "  -----   ----    -------   -----\n");
+	__alloc_pstat(s, __a, "");
+	__alloc_pstat(s, __a, "Buddy blocks:");
+	__alloc_pstat(s, __a, "  Order   Free    Alloced   Split");
+	__alloc_pstat(s, __a, "  -----   ----    -------   -----");
 
 	for (i = a->max_order; i >= 0; i--) {
 		if (a->buddy_list_len[i] == 0 &&
@@ -1135,31 +1135,31 @@ static void nvgpu_buddy_print_stats(struct nvgpu_allocator *__a,
 		    a->buddy_list_split[i] == 0)
 			continue;
 
-		__alloc_pstat(s, __a, "  %3d     %-7llu %-9llu %llu\n", i,
+		__alloc_pstat(s, __a, "  %3d     %-7llu %-9llu %llu", i,
 			      a->buddy_list_len[i],
 			      a->buddy_list_alloced[i],
 			      a->buddy_list_split[i]);
 	}
 
-	__alloc_pstat(s, __a, "\n");
+	__alloc_pstat(s, __a, "");
 
 	nvgpu_rbtree_enum_start(0, &node, a->fixed_allocs);
 	i = 1;
 	while (node) {
 		falloc = nvgpu_fixed_alloc_from_rbtree_node(node);
 
-		__alloc_pstat(s, __a, "Fixed alloc (%d): [0x%llx -> 0x%llx]\n",
+		__alloc_pstat(s, __a, "Fixed alloc (%d): [0x%llx -> 0x%llx]",
 			      i, falloc->start, falloc->end);
 
 		nvgpu_rbtree_enum_next(&node, a->fixed_allocs);
 	}
 
-	__alloc_pstat(s, __a, "\n");
-	__alloc_pstat(s, __a, "Bytes allocated:        %llu\n",
+	__alloc_pstat(s, __a, "");
+	__alloc_pstat(s, __a, "Bytes allocated:        %llu",
 		      a->bytes_alloced);
-	__alloc_pstat(s, __a, "Bytes allocated (real): %llu\n",
+	__alloc_pstat(s, __a, "Bytes allocated (real): %llu",
 		      a->bytes_alloced_real);
-	__alloc_pstat(s, __a, "Bytes freed:            %llu\n",
+	__alloc_pstat(s, __a, "Bytes freed:            %llu",
 		      a->bytes_freed);
 
 	if (lock)
@@ -1294,16 +1294,16 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 #ifdef CONFIG_DEBUG_FS
 	nvgpu_init_alloc_debug(g, __a);
 #endif
-	alloc_dbg(__a, "New allocator: type      buddy\n");
-	alloc_dbg(__a, "               base      0x%llx\n", a->base);
-	alloc_dbg(__a, "               size      0x%llx\n", a->length);
-	alloc_dbg(__a, "               blk_size  0x%llx\n", a->blk_size);
+	alloc_dbg(__a, "New allocator: type      buddy");
+	alloc_dbg(__a, "               base      0x%llx", a->base);
+	alloc_dbg(__a, "               size      0x%llx", a->length);
+	alloc_dbg(__a, "               blk_size  0x%llx", a->blk_size);
 	if (flags & GPU_ALLOC_GVA_SPACE)
 		alloc_dbg(balloc_owner(a),
-		       "               pde_size  0x%llx\n",
+		       "               pde_size  0x%llx",
 			  balloc_order_to_len(a, a->pte_blk_order));
-	alloc_dbg(__a, "               max_order %llu\n", a->max_order);
-	alloc_dbg(__a, "               flags     0x%llx\n", a->flags);
+	alloc_dbg(__a, "               max_order %llu", a->max_order);
+	alloc_dbg(__a, "               flags     0x%llx", a->flags);
 
 	return 0;
 

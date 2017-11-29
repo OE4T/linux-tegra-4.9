@@ -478,6 +478,7 @@ int __nvgpu_mem_create_from_pages(struct gk20a *g, struct nvgpu_mem *dest,
 	return 0;
 }
 
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 int __nvgpu_mem_create_from_phys(struct gk20a *g, struct nvgpu_mem *dest,
 				 u64 src_phys, int nr_pages)
 {
@@ -496,6 +497,7 @@ int __nvgpu_mem_create_from_phys(struct gk20a *g, struct nvgpu_mem *dest,
 
 	return ret;
 }
+#endif
 
 static void *nvgpu_mem_linux_sgl_next(void *sgl)
 {

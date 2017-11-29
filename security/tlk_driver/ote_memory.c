@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 #include <linux/pagemap.h>
 #include <linux/syscalls.h>
 #include <asm/smp_plat.h>
+#include <linux/version.h>
 
 #include "ote_protocol.h"
 
@@ -129,11 +130,11 @@ static int te_load_page_list(unsigned long start,
 		 * Not performing this sanity check for 32 bit kernel as
 		 * PTE_ATTRINDX* macros are not available in 32 bit headers
 		 */
-		if ((vmas[i]->vm_page_prot & PTE_ATTRINDX_MASK) !=
+		if ((pgprot_val(vmas[i]->vm_page_prot) & PTE_ATTRINDX_MASK) !=
 			PTE_ATTRINDX(MT_NORMAL)) {
 			pr_err("%s: unsupported memory type: %llx\n",
 			       __func__,
-			       vmas[i]->vm_page_prot & PTE_ATTRINDX_MASK);
+			       pgprot_val(vmas[i]->vm_page_prot) & PTE_ATTRINDX_MASK);
 			bitmap_release_region(dev->plist_bitmap, idx, nbits);
 			return -EINVAL;
 		}
@@ -187,8 +188,13 @@ static int te_pin_user_pages(struct te_oper_param *param,
 	 * vmas are valid only when mmap_sem is held. Hence holding the lock
 	 * across get user pages and process returned vmas.
 	 */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	nr_pinned = get_user_pages(current, current->mm, start, nr_pages,
 				writable, 0, *pages, vmas);
+#else
+	nr_pinned = get_user_pages(start, nr_pages,
+				writable ? FOLL_WRITE : 0, *pages, vmas);
+#endif
 	if (nr_pinned != nr_pages) {
 		pr_err("%s: Error %d in get_user_pages for buffer 0x%lx\n",
 				__func__, nr_pinned, start);

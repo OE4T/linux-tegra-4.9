@@ -75,6 +75,9 @@
 
 		nvcsi@15a00000 {
 			num-channels = <6>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
 			channel@0 {
 				reg = <0>;
 				ports {
@@ -1228,7 +1231,7 @@
 					mode0 { // OV5693_MODE_2592X1944
 						mclk_khz = "24000";
 						num_lanes = "2";
-						tegra_sinterface = "serial_f";
+						tegra_sinterface = "serial_g";
 						discontinuous_clk = "no";
 						dpcm_enable = "false";
 						cil_settletime = "0";
@@ -1255,7 +1258,7 @@
 					mode1 { //OV5693_MODE_2592X1458
 						mclk_khz = "24000";
 						num_lanes = "2";
-						tegra_sinterface = "serial_f";
+						tegra_sinterface = "serial_g";
 						discontinuous_clk = "no";
 						dpcm_enable = "false";
 						cil_settletime = "0";
@@ -1282,7 +1285,7 @@
 					mode2 { //OV5693_MODE_1280X720
 						mclk_khz = "24000";
 						num_lanes = "2";
-						tegra_sinterface = "serial_f";
+						tegra_sinterface = "serial_g";
 						discontinuous_clk = "no";
 						dpcm_enable = "false";
 						cil_settletime = "0";

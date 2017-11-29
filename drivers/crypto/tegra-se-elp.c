@@ -785,6 +785,7 @@ static u32 pka1_ctrl_base(u32 mode)
 	u32 val, base_radix;
 
 	val = num_words(mode) * 32;
+
 	switch (val) {
 	case PKA1_OP_SIZE_256:
 		base_radix = TEGRA_SE_PKA1_CTRL_BASE_256;
@@ -4157,7 +4158,7 @@ static int tegra_se_ecdsa_verify(struct akcipher_request *req)
 	u64 r[ndigits], s[ndigits], v[ndigits];
 	u64 z[ndigits], w[ndigits];
 	u64 u1[ndigits], u2[ndigits];
-	unsigned int mod_op_mode;
+	int mod_op_mode;
 	int ret = -ENOMEM;
 
 	if (!curve)
@@ -4166,8 +4167,6 @@ static int tegra_se_ecdsa_verify(struct akcipher_request *req)
 	mod_op_mode = tegra_se_mod_op_mode(nbytes);
 	if (mod_op_mode < 0)
 		return mod_op_mode;
-
-	mod_op_mode = ret;
 
 	x1y1 = tegra_se_ecc_alloc_point(elp_dev, nwords);
 	x2y2 = tegra_se_ecc_alloc_point(elp_dev, nwords);

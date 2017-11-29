@@ -455,8 +455,6 @@ static int css_gr_create_client_data(struct gk20a *g,
 			u32 perfmon_count,
 			struct gk20a_cs_snapshot_client *cur)
 {
-	int ret = 0;
-
 	memset(cur->snapshot, 0, sizeof(*cur->snapshot));
 	cur->snapshot->start = sizeof(*cur->snapshot);
 	/* we should be ensure that can fit all fifo entries here */
@@ -475,21 +473,13 @@ static int css_gr_create_client_data(struct gk20a *g,
 	if (cur->perfmon_count && g->ops.css.allocate_perfmon_ids) {
 		cur->perfmon_start = g->ops.css.allocate_perfmon_ids(data,
 							cur->perfmon_count);
-		if (!cur->perfmon_start) {
-			ret = -ENOENT;
-			goto failed;
-		}
+		if (!cur->perfmon_start)
+			return -ENOENT;
 	}
 
 	nvgpu_list_add_tail(&cur->list, &data->clients);
 
 	return 0;
-
-failed:
-	if (cur)
-		css_gr_free_client_data(g, data, cur);
-
-	return ret;
 }
 
 

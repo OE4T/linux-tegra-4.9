@@ -24,7 +24,7 @@
 	};
 
 	tegra_rce: rtcpu@bc00000 {
-		compatible = "nvidia,tegra186-sce-ivc";
+		compatible = "nvidia,tegra194-rce";
 
 		nvidia,cpu-name = "rce";
 
@@ -33,7 +33,7 @@
 			<0 0xb840000 0 0x10000>,
 			<0 0xb850000 0 0x10000>;
 
-		reg-names = "sce-evp", "sce-pm",
+		reg-names = "rce-evp", "rce-pm",
 				"ast-cpu", "ast-dma";
 
 		clocks =

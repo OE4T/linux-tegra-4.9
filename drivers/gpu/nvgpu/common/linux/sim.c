@@ -179,10 +179,6 @@ static int rpc_send_message(struct gk20a *g)
 	g->sim->send_ring_put = (g->sim->send_ring_put + 2 * sizeof(u32)) %
 		PAGE_SIZE;
 
-	__cpuc_flush_dcache_area(sim_linux->msg_bfr.kvaddr, PAGE_SIZE);
-	__cpuc_flush_dcache_area(sim_linux->send_bfr.kvaddr, PAGE_SIZE);
-	__cpuc_flush_dcache_area(sim_linux->recv_bfr.kvaddr, PAGE_SIZE);
-
 	/* Update the put pointer. This will trap into the host. */
 	sim_writel(sim_linux, sim_send_put_r(), g->sim->send_ring_put);
 
@@ -233,10 +229,6 @@ static int rpc_recv_poll(struct gk20a *g)
 		/* Update GET pointer */
 		g->sim->recv_ring_get = (g->sim->recv_ring_get + 2*sizeof(u32)) %
 			PAGE_SIZE;
-
-		__cpuc_flush_dcache_area(sim_linux->msg_bfr.kvaddr, PAGE_SIZE);
-		__cpuc_flush_dcache_area(sim_linux->send_bfr.kvaddr, PAGE_SIZE);
-		__cpuc_flush_dcache_area(sim_linux->recv_bfr.kvaddr, PAGE_SIZE);
 
 		sim_writel(sim_linux, sim_recv_get_r(), g->sim->recv_ring_get);
 

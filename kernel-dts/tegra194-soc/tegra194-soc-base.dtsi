@@ -182,7 +182,7 @@
 		compatible = "nvidia,tegra194-mc-sid";
  		reg = <0x0 0x02c00000 0x0 0x00010000>, /* MC_SID_BASE */
  		      <0x0 0x02c10000 0x0 0x00010000>; /* MC_BASE */
-		status = "disabled";
+		status = "okay";
 	};
 
 	smmu: iommu@12000000{
@@ -201,7 +201,7 @@
 
 		iso-smmu-id = <2>;
 
-		status = "disabled";
+		status = "okay";
 
 		#iommu-cells = <1>;
 

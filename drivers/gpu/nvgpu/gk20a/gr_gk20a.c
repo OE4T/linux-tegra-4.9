@@ -47,8 +47,6 @@
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 
-#include "common/linux/os_linux.h"
-
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
@@ -6491,7 +6489,7 @@ int gr_gk20a_get_pm_ctx_buffer_offsets(struct gk20a *g,
 		return -ENODEV;
 
 	priv_registers = nvgpu_kzalloc(g, sizeof(u32) * potential_offsets);
-	if (ZERO_OR_NULL_PTR(priv_registers)) {
+	if (!priv_registers) {
 		gk20a_dbg_fn("failed alloc for potential_offsets=%d", potential_offsets);
 		return -ENOMEM;
 	}

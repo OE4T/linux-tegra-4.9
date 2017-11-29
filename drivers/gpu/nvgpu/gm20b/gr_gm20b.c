@@ -30,7 +30,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
-#include "common/linux/os_linux.h"
 
 #include "gr_gm20b.h"
 #include "pmu_gm20b.h"

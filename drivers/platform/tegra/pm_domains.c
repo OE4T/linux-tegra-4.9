@@ -59,6 +59,7 @@ static int __init tegra_init_legacy_ops(struct generic_pm_domain *pd)
 static const struct of_device_id tegra_pd_match[] __initconst = {
 	{.compatible = "nvidia,tegra210-ape-pd", .data = NULL},
 	{.compatible = "nvidia,tegra210-pcie-pd", .data = tegra_init_legacy_ops},
+	{.compatible = "nvidia,tegra210-sata-pd", .data = tegra_init_legacy_ops},
 	{},
 };
 

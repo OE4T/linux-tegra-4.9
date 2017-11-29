@@ -30,6 +30,7 @@ Required properties:
   number of lanes in XBAR configuration. Entries are of the form
   "pcie-p2u-N": where N ranges from 0 to the value specified in xbar config
 - nvidia,pex-rst-gpio: Specify GPIO for PCIe reset signal, see gpio binding
+- vddio-pex-ctl-supply: Regulator supply for PCIe side band signals
 
 Optional properties:
 - iommus: A reference to the IOMMU. See ../iommu/iommu.txt for details.

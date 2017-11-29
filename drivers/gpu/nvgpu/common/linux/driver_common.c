@@ -18,6 +18,7 @@
 #include <linux/mm.h>
 #include <uapi/linux/nvgpu.h>
 
+#include <nvgpu/defaults.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/soc.h>
@@ -88,7 +89,7 @@ static void nvgpu_init_timeout(struct gk20a *g)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
-	g->gr_idle_timeout_default = CONFIG_GK20A_DEFAULT_TIMEOUT;
+	g->gr_idle_timeout_default = NVGPU_DEFAULT_GR_IDLE_TIMEOUT;
 	if (nvgpu_platform_is_silicon(g))
 		g->timeouts_enabled = true;
 	else if (nvgpu_platform_is_fpga(g)) {

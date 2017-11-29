@@ -31,6 +31,7 @@
 #include <nvgpu/bus.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/defaults.h>
 
 #include "vgpu.h"
 #include "fecs_trace_vgpu.h"
@@ -750,8 +751,7 @@ int vgpu_probe(struct platform_device *pdev)
 	dev->dma_parms = &l->dma_parms;
 	dma_set_max_seg_size(dev, UINT_MAX);
 
-	gk20a->gr_idle_timeout_default =
-			CONFIG_GK20A_DEFAULT_TIMEOUT;
+	gk20a->gr_idle_timeout_default = NVGPU_DEFAULT_GR_IDLE_TIMEOUT;
 	gk20a->timeouts_enabled = true;
 
 	vgpu_create_sysfs(dev);

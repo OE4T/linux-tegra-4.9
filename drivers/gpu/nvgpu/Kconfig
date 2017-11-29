@@ -5,13 +5,6 @@ config GK20A
 	  Choose this option if you have an SoC with integrated
 	  Nvidia GPU IP.
 
-config GK20A_DEFAULT_TIMEOUT
-	depends on GK20A
-	int "Default timeout for submits"
-	default 3000
-	help
-	  Default timeout for jobs in milliseconds. Set to zero for no timeout.
-
 config GK20A_PMU
 	bool "Support GK20A PMU"
 	depends on GK20A

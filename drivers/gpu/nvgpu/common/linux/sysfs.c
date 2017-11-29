@@ -17,7 +17,9 @@
 #include <linux/device.h>
 #include <linux/pm_runtime.h>
 #include <linux/fb.h>
+#ifdef CONFIG_TEGRA_DVFS
 #include <soc/tegra/tegra-dvfs.h>
+#endif
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvhost.h>
@@ -726,6 +728,7 @@ static ssize_t emc3d_ratio_read(struct device *dev,
 
 static DEVICE_ATTR(emc3d_ratio, ROOTRW, emc3d_ratio_read, emc3d_ratio_store);
 
+#ifdef CONFIG_TEGRA_DVFS
 static ssize_t fmax_at_vmin_safe_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -739,6 +742,7 @@ static ssize_t fmax_at_vmin_safe_read(struct device *dev,
 }
 
 static DEVICE_ATTR(fmax_at_vmin_safe, S_IRUGO, fmax_at_vmin_safe_read, NULL);
+#endif
 
 #ifdef CONFIG_PM
 static ssize_t force_idle_store(struct device *dev,
@@ -1014,7 +1018,9 @@ void nvgpu_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_elpg_enable);
 	device_remove_file(dev, &dev_attr_mscg_enable);
 	device_remove_file(dev, &dev_attr_emc3d_ratio);
+#ifdef CONFIG_TEGRA_DVFS
 	device_remove_file(dev, &dev_attr_fmax_at_vmin_safe);
+#endif
 	device_remove_file(dev, &dev_attr_counters);
 	device_remove_file(dev, &dev_attr_counters_reset);
 	device_remove_file(dev, &dev_attr_load);
@@ -1061,7 +1067,9 @@ int nvgpu_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_elpg_enable);
 	error |= device_create_file(dev, &dev_attr_mscg_enable);
 	error |= device_create_file(dev, &dev_attr_emc3d_ratio);
+#ifdef CONFIG_TEGRA_DVFS
 	error |= device_create_file(dev, &dev_attr_fmax_at_vmin_safe);
+#endif
 	error |= device_create_file(dev, &dev_attr_counters);
 	error |= device_create_file(dev, &dev_attr_counters_reset);
 	error |= device_create_file(dev, &dev_attr_load);

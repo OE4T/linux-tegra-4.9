@@ -77,6 +77,7 @@ Required properties:
       0x1ac - C2, C3 and C4
       0x1c8 - C4
       0x1dc - C0 and C5
+- vddio-pex-ctl-supply: Regulator supply for PCIe side band signals
 
 Optional properties:
 - iommus: A reference to the IOMMU. See ../iommu/iommu.txt for details.

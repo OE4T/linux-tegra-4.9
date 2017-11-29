@@ -260,6 +260,8 @@ struct tegra_pcie_dw {
 	u32 cap_pl16g_status;
 	u32 event_cntr_ctrl;
 	u32 event_cntr_data;
+
+	struct regulator *pex_ctl_reg;
 };
 
 struct dma_tx {
@@ -1605,15 +1607,28 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
 	}
 
+	pcie->pex_ctl_reg = devm_regulator_get(&pdev->dev, "vddio-pex-ctl");
+	if (IS_ERR(pcie->pex_ctl_reg)) {
+		dev_err(&pdev->dev, "fail to get regulator: %ld\n",
+			PTR_ERR(pcie->pex_ctl_reg));
+		return PTR_ERR(pcie->pex_ctl_reg);
+	}
+	ret = regulator_enable(pcie->pex_ctl_reg);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "regulator enable failed: %d\n", ret);
+		return ret;
+	}
+
 	pcie->core_clk = devm_clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(pcie->core_clk)) {
 		dev_err(&pdev->dev, "Failed to get core clock\n");
-		return PTR_ERR(pcie->core_clk);
+		ret = PTR_ERR(pcie->core_clk);
+		goto fail_core_clk;
 	}
 	ret = clk_prepare_enable(pcie->core_clk);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to enable core clock\n");
-		return ret;
+		goto fail_core_clk;
 	}
 
 	appl_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "appl");
@@ -1772,6 +1787,8 @@ fail_phy:
 	reset_control_assert(pcie->core_apb_rst);
 fail_appl_res:
 	clk_disable_unprepare(pcie->core_clk);
+fail_core_clk:
+	regulator_disable(pcie->pex_ctl_reg);
 	return ret;
 }
 

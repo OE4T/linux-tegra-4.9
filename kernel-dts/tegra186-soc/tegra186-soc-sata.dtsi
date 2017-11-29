@@ -15,6 +15,7 @@
  */
 
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
+#include <dt-bindings/soc/tegra186-powergate.h>
 
 / {
 	pinmux@2430000 {
@@ -47,6 +48,7 @@
 		interrupts = <0 TEGRA186_IRQ_SATA 0x04>;
 		iommus = <&smmu TEGRA_SID_SATA2>;
 		iommu_sodev_map;
+		power-domains = <&bpmp TEGRA186_POWER_DOMAIN_SAX>;
 		clocks = <&tegra_car TEGRA186_CLK_SATA>,
 			<&tegra_car TEGRA186_CLK_SATA_OOB>,
 			<&tegra_car TEGRA186_CLK_PLLP>,

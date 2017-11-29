@@ -61,21 +61,22 @@
 enum tegra_cam_rtcpu_id {
 	TEGRA_CAM_RTCPU_SCE,
 	TEGRA_CAM_RTCPU_APE,
+	TEGRA_CAM_RTCPU_RCE,
 };
+
+#define CAMRTC_NUM_REGS		2
+#define CAMRTC_NUM_RESETS	2
+#define CAMRTC_NUM_IRQS		1
 
 struct tegra_cam_rtcpu_pdata {
 	const char *name;
 	void (*assert_resets)(struct device *);
 	int (*deassert_resets)(struct device *);
 	int (*suspend_core)(struct device *);
-	int (*check_fw)(struct device *);
 	const char * const *reset_names;
 	const char * const *reg_names;
 	const char * const *irq_names;
 	enum tegra_cam_rtcpu_id id;
-	u32 num_resets;
-	u32 num_regs;
-	u32 num_irqs;
 };
 
 /* Register specifics */
@@ -94,7 +95,6 @@ struct tegra_cam_rtcpu_pdata {
 #define AMISC_ADSP_L2_CLKSTOPPED		BIT(30)
 
 static int tegra_sce_cam_suspend_core(struct device *dev);
-static int tegra_sce_cam_check_fw(struct device *dev);
 static void tegra_sce_cam_assert_resets(struct device *dev);
 static int tegra_sce_cam_deassert_resets(struct device *dev);
 
@@ -103,45 +103,44 @@ static irqreturn_t tegra_camrtc_adsp_wfi_handler(int irq, void *data);
 static void tegra_ape_cam_assert_resets(struct device *dev);
 static int tegra_ape_cam_deassert_resets(struct device *dev);
 
+static void tegra_rce_cam_assert_resets(struct device *dev);
+static int tegra_rce_cam_deassert_resets(struct device *dev);
+
 static const char * const sce_reset_names[] = {
 	"nvidia,reset-group-1",
 	"nvidia,reset-group-2",
+	NULL,
 };
 
 static const char * const sce_reg_names[] = {
-	"sce-cfg",
 	"sce-pm",
-	"sce-fw",
-};
-
-static const char * const sce_irq_names[] = {
+	"sce-cfg",
+	NULL
 };
 
 static const struct tegra_cam_rtcpu_pdata sce_pdata = {
 	.name = "sce",
 	.suspend_core = tegra_sce_cam_suspend_core,
-	.check_fw = tegra_sce_cam_check_fw,
 	.assert_resets = tegra_sce_cam_assert_resets,
 	.deassert_resets = tegra_sce_cam_deassert_resets,
 	.id = TEGRA_CAM_RTCPU_SCE,
 	.reset_names = sce_reset_names,
-	.num_resets = ARRAY_SIZE(sce_reset_names),
 	.reg_names = sce_reg_names,
-	.num_regs = ARRAY_SIZE(sce_reg_names),
-	.irq_names = sce_irq_names,
-	.num_irqs = ARRAY_SIZE(sce_irq_names),
 };
 
 static const char * const ape_reg_names[] = {
 	"ape-amisc",
+	NULL,
 };
 
 static const char * const ape_reset_names[] = {
 	"reset-names",			/* all named resets */
+	NULL,
 };
 
 static const char * const ape_irq_names[] = {
 	"adsp-wfi",
+	NULL
 };
 
 static const struct tegra_cam_rtcpu_pdata ape_pdata = {
@@ -149,18 +148,34 @@ static const struct tegra_cam_rtcpu_pdata ape_pdata = {
 	.assert_resets = tegra_ape_cam_assert_resets,
 	.deassert_resets = tegra_ape_cam_deassert_resets,
 	.suspend_core = tegra_ape_cam_suspend_core,
-	.reset_names = ape_reset_names,
 	.id = TEGRA_CAM_RTCPU_APE,
-	.num_resets = ARRAY_SIZE(ape_reset_names),
+	.reset_names = ape_reset_names,
 	.reg_names = ape_reg_names,
-	.num_regs = ARRAY_SIZE(ape_reg_names),
 	.irq_names = ape_irq_names,
-	.num_irqs = ARRAY_SIZE(ape_irq_names),
+};
+
+static const char * const rce_reset_names[] = {
+	"reset-names",			/* all named resets */
+	NULL,
+};
+
+/* SCE and RCE share the PM regs */
+static const char * const rce_reg_names[] = {
+	"rce-pm",
+	NULL,
+};
+
+static const struct tegra_cam_rtcpu_pdata rce_pdata = {
+	.name = "rce",
+	.suspend_core = tegra_sce_cam_suspend_core,
+	.assert_resets = tegra_rce_cam_assert_resets,
+	.deassert_resets = tegra_rce_cam_deassert_resets,
+	.id = TEGRA_CAM_RTCPU_RCE,
+	.reset_names = rce_reset_names,
+	.reg_names = rce_reg_names,
 };
 
 #define NV(p) "nvidia," #p
-#define MAX(x, y) (x > y ? x : y)
-#define NUM(names) MAX(ARRAY_SIZE(sce_##names), ARRAY_SIZE(ape_##names))
 
 struct tegra_cam_rtcpu {
 	const char *name;
@@ -181,20 +196,19 @@ struct tegra_cam_rtcpu {
 	u32 fw_version;
 	u8 fw_hash[RTCPU_FW_HASH_SIZE];
 	union {
-		void __iomem *regs[NUM(reg_names)];
+		void __iomem *regs[CAMRTC_NUM_REGS];
 		struct {
-			void __iomem *cfg_base;
 			void __iomem *pm_base;
-			void __iomem *fw_base;
+			void __iomem *cfg_base;
 		};
 		struct {
 			void __iomem *amisc_base;
 		};
 	};
 	struct camrtc_clk_group *clocks;
-	struct camrtc_reset_group *resets[NUM(reset_names)];
+	struct camrtc_reset_group *resets[CAMRTC_NUM_RESETS];
 	union {
-		int irqs[NUM(irq_names)];
+		int irqs[CAMRTC_NUM_IRQS];
 		struct {
 			int adsp_wfi_irq;
 		};
@@ -261,7 +275,9 @@ static int tegra_camrtc_get_resources(struct device *dev)
 	}
 
 #define GET_RESOURCES(_res_, _get_, _null_, _toerr)	\
-	for (i = 0; i < pdata->num_##_res_##s; i++) { \
+	for (i = 0; i < ARRAY_SIZE(rtcpu->_res_##s); i++) { \
+		if (!pdata->_res_##_names[i]) \
+			break; \
 		rtcpu->_res_##s[i] = _get_(dev, pdata->_res_##_names[i]); \
 		err = _toerr(rtcpu->_res_##s[i]); \
 		if (err == 0) \
@@ -312,6 +328,9 @@ static int tegra_camrtc_get_irqs(struct device *dev)
 	 *
 	 * This can be called only after runtime resume.
 	 */
+
+	if (pdata->irq_names == NULL)
+		return 0;
 
 #define _get_irq(_dev, _name) of_irq_get_byname(_dev->of_node, _name)
 #define _int2err(x) ((x) < 0 ? (x) : 0)
@@ -469,18 +488,6 @@ static int tegra_sce_cam_suspend_core(struct device *dev)
 	return tegra_sce_cam_wait_for_wfi(dev, &timeout);
 }
 
-static int tegra_sce_cam_check_fw(struct device *dev)
-{
-	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
-
-	if (rtcpu->fw_base != NULL && readl(rtcpu->fw_base) == 0) {
-		dev_info(dev, "no firmware");
-		return -ENODEV;
-	}
-
-	return 0;
-}
-
 static void tegra_ape_cam_assert_resets(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -585,6 +592,33 @@ static int tegra_ape_cam_suspend_core(struct device *dev)
 		return err;
 
 	return tegra_ape_cam_wait_for_l2_idle(dev, &timeout);
+}
+
+static int tegra_rce_cam_deassert_resets(struct device *dev)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	int err;
+
+	err = camrtc_reset_group_deassert(rtcpu->resets[0]);
+	if (err)
+		return err;
+
+	/* nCPUHALT is a reset controlled by PM, not by CAR. */
+	if (rtcpu->pm_base != NULL) {
+		u32 val = readl(rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
+
+		writel(val | TEGRA_PM_FWLOADDONE,
+			rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
+	}
+
+	return 0;
+}
+
+static void tegra_rce_cam_assert_resets(struct device *dev)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+
+	camrtc_reset_group_assert(rtcpu->resets[0]);
 }
 
 static int tegra_camrtc_suspend_core(struct device *dev)
@@ -1152,9 +1186,6 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		goto fail;
 
 	/* Clocks are on, resets are deasserted, we can touch the hardware */
-	ret = pdata->check_fw ? pdata->check_fw(dev) : 0;
-	if (ret)
-		goto put_and_fail;
 
 	/* Tegra-agic driver routes IRQs when probing, do it when powered */
 	ret = tegra_camrtc_get_irqs(dev);
@@ -1279,6 +1310,9 @@ static const struct of_device_id tegra_cam_rtcpu_of_match[] = {
 	},
 	{
 		.compatible = NV(tegra186-ape-ivc), .data = &ape_pdata
+	},
+	{
+		.compatible = NV(tegra194-rce), .data = &rce_pdata
 	},
 	{ },
 };

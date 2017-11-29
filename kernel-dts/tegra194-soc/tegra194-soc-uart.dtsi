@@ -22,6 +22,7 @@
 		serial4 = &uarte;
 		serial5 = &uartf;
 		serial6 = &uartg;
+		serial7 = &uarth;
 	};
 
 	uarta: serial@3100000 {
@@ -146,6 +147,24 @@
 			<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
 		clock-names = "serial", "parent";
 		resets = <&bpmp_resets TEGRA194_RESET_UARTG>;
+		reset-names = "serial";
+		status = "disabled";
+	};
+
+	uarth: serial@3170000 {
+		compatible = "nvidia,tegra186-hsuart";
+		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dma-coherent;
+		reg = <0x0 0x3170000 0x0 0x10000>;
+		reg-shift = <2>;
+		interrupts = <0 TEGRA194_IRQ_UARTH 0x04>;
+		nvidia,memory-clients = <14>;
+		dmas = <&gpcdma 13>, <&gpcdma 13>;
+		dma-names = "rx", "tx";
+		clocks = <&bpmp_clks TEGRA194_CLK_UARTH>,
+			<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
+		clock-names = "serial", "parent";
+		resets = <&bpmp_resets TEGRA194_RESET_UARTH>;
 		reset-names = "serial";
 		status = "disabled";
 	};

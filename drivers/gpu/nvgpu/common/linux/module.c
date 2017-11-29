@@ -47,7 +47,7 @@
 #include "intr.h"
 #include "cde.h"
 #include "ioctl.h"
-#include "sim_gk20a.h"
+#include "sim.h"
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION

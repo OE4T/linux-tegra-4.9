@@ -1,5 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/sim_gk20a.h
  *
  * GK20A sim support
  *
@@ -18,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SIM_GK20A_LINUX_H__
-#define __SIM_GK20A_LINUX_H__
+#ifndef __SIM_LINUX_H__
+#define __SIM_LINUX_H__
 
 #include "gk20a/sim_gk20a.h"
 

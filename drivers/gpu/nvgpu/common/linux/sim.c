@@ -22,7 +22,7 @@
 #include <nvgpu/linux/vm.h>
 
 #include "gk20a/gk20a.h"
-#include "sim_gk20a.h"
+#include "sim.h"
 
 #include <nvgpu/hw/gk20a/hw_sim_gk20a.h>
 

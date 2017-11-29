@@ -31,11 +31,10 @@
 
 		reg =	<0 0xbc00000 0 0x1000>,	  /* RCE EVP (RCE_ATCM_EVP) */
 			<0 0xb9f0000 0 0x40000>,  /* RCE PM */
-			<0 0xbc80000 0 0x60000>,  /* RCE BTCM */
 			<0 0xb840000 0 0x10000>,
 			<0 0xb850000 0 0x10000>;
 
-		reg-names = "sce-evp", "sce-pm", "sce-fw",
+		reg-names = "sce-evp", "sce-pm",
 				"ast-cpu", "ast-dma";
 
 		clocks =

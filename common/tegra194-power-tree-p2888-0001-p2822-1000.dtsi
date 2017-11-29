@@ -32,4 +32,13 @@
 		vccq-supply = <&p2888_spmic_ldo7>;
 		vccq2-supply = <&p2888_spmic_sd2>;
 	};
+
+	ether_qos@2490000 {
+		vddio_sys_enet_bias-supply = <&battery_reg>;
+		vddio_enet-supply = <&battery_reg>;
+		phy_vdd_1v8-supply = <&p2888_spmic_sd2>;
+		phy_ovdd_rgmii-supply = <&p2888_spmic_sd2>;
+		phy_pllvdd-supply = <&battery_reg>;
+	};
+
 };

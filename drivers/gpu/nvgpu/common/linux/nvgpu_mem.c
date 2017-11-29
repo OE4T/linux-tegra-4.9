@@ -27,6 +27,8 @@
 #include <nvgpu/linux/dma.h>
 #include <nvgpu/linux/vidmem.h>
 
+#include <linux/vmalloc.h>
+
 #include "os_linux.h"
 
 #include "gk20a/gk20a.h"

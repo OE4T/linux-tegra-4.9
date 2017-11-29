@@ -18,6 +18,7 @@
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/property.h>
 
 #include <media/media-entity.h>
 #include <media/v4l2-async.h>
@@ -39,6 +40,10 @@
 #include "nvcsi/deskew.h"
 
 #define DEFAULT_NUM_TPG_CHANNELS 6
+
+// deskew should be run when the sensor data rate is >= 1.5 gbps
+// data is sent on both rising/falling edges of clock, so /2
+#define CLK_HZ_FOR_DESKEW ((1500*1000*1000)/2)
 
 static struct tegra_csi_device *mc_csi;
 
@@ -234,11 +239,67 @@ stream_okay:
 	mutex_unlock(&csi->source_update);
 	return 0;
 }
+
+static void deskew_setup(struct tegra_csi_channel *chan,
+				struct nvcsi_deskew_context *deskew_ctx)
+{
+	struct sensor_signal_properties *sig_props;
+	struct sensor_properties *props;
+	int i;
+	int mode_idx = -1;
+	u64 pix_clk_hz = 0;
+	u32 deskew_enable = 0;
+	unsigned int csi_lane_start = 0;
+	unsigned int csi_port, csi_lanes;
+
+	mode_idx = chan->s_data->mode_prop_idx;
+	props =  &chan->s_data->sensor_props;
+	sig_props = &props->sensor_modes[mode_idx].signal_properties;
+	pix_clk_hz = sig_props->pixel_clock.val;
+	deskew_enable = sig_props->deskew_initial_enable;
+
+	if (pix_clk_hz >= CLK_HZ_FOR_DESKEW && deskew_enable) {
+		csi_port = chan->ports[0].num;
+		csi_lanes = chan->ports[0].lanes;
+		switch (csi_port) {
+		case 0:
+			csi_lane_start = NVCSI_PHY_0_NVCSI_CIL_A_IO0;
+			break;
+		case 1:
+			csi_lane_start = NVCSI_PHY_0_NVCSI_CIL_B_IO0;
+			break;
+		case 2:
+			csi_lane_start = NVCSI_PHY_1_NVCSI_CIL_A_IO0;
+			break;
+		case 3:
+			csi_lane_start = NVCSI_PHY_1_NVCSI_CIL_B_IO0;
+			break;
+		case 4:
+			csi_lane_start = NVCSI_PHY_2_NVCSI_CIL_A_IO0;
+			break;
+		case 5:
+			csi_lane_start = NVCSI_PHY_2_NVCSI_CIL_B_IO0;
+			break;
+		default:
+			break;
+		}
+		deskew_ctx->deskew_lanes = 0;
+		for (i = 0; i < csi_lanes; ++i)
+			deskew_ctx->deskew_lanes |= csi_lane_start << i;
+// temp WAR to get t21x to build on kernel 4.4
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+		nvcsi_deskew_setup(deskew_ctx);
+#endif
+	}
+
+}
+
 static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 {
 	struct tegra_csi_device *csi;
 	struct tegra_csi_channel *chan = to_csi_chan(subdev);
 	struct tegra_channel *tegra_chan = v4l2_get_subdev_hostdata(subdev);
+
 	int i, ret = 0;
 
 	if (atomic_read(&chan->is_streaming) == enable)
@@ -259,12 +320,13 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 		atomic_set(&chan->is_streaming, enable);
 		return 0;
 	}
-
 	for (i = 0; i < tegra_chan->valid_ports; i++) {
 		if (enable) {
 			ret = tegra_csi_start_streaming(chan, i);
 			if (ret)
 				goto start_fail;
+			if (!tegra_chan->bypass && !tegra_chan->pg_mode)
+				deskew_setup(chan, tegra_chan->deskew_ctx);
 		} else
 			tegra_csi_stop_streaming(chan, i);
 	}

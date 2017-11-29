@@ -437,7 +437,7 @@ static int __nvgpu_vm_init(struct mm_gk20a *mm,
 	 * distinguish channel address spaces from other address spaces is by
 	 * size - if the address space is 4GB or less, it's not a channel.
 	 */
-	if (vm->va_limit > SZ_4G) {
+	if (vm->va_limit > 4ULL * SZ_1G) {
 		err = nvgpu_init_sema_pool(vm);
 		if (err)
 			goto clean_up_allocators;

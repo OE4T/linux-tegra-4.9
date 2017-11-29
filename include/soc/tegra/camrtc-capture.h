@@ -22,6 +22,9 @@ typedef uint64_t iova_t __CAPTURE_IVC_ALIGN;
 #define SYNCPOINT_ID_INVALID	U32_C(0)
 #define GOS_INDEX_INVALID	U8_C(0xFF)
 
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+#define CAMRTC_DEPRECATED __attribute__((deprecated))
+
 typedef struct syncpoint_info {
 	uint32_t id;
 	uint32_t threshold;	/* When storing a fence */
@@ -642,6 +645,8 @@ struct capture_isp_status {
 
 #define CAPTURE_ISP_STATUS_UNKNOWN		U32_C(0)
 #define CAPTURE_ISP_STATUS_SUCCESS		U32_C(1)
+// TODO : Further breakdown errors to sub-types, as per http://nvbugs/200336192/11
+#define CAPTURE_ISP_STATUS_ERROR		U32_C(2)
 /** Add error codes and data if any */
 } __CAPTURE_IVC_ALIGN;
 
@@ -654,6 +659,9 @@ struct capture_isp_program_status {
 
 #define CAPTURE_ISP_PROGRAM_STATUS_UNKNOWN	U32_C(0)
 #define CAPTURE_ISP_PROGRAM_STATUS_SUCCESS	U32_C(1)
+// TODO : Further breakdown errors to sub-types, as per http://nvbugs/200336192/11
+#define CAPTURE_ISP_PROGRAM_STATUS_ERROR	U32_C(2)
+#define CAPTURE_ISP_PROGRAM_STATUS_STALE	U32_C(3)
 /** Add error codes and data if any */
 } __CAPTURE_IVC_ALIGN;
 
@@ -681,10 +689,16 @@ struct capture_isp_program_status {
  * @param activate_flags: activation condition for given ISP program.
  *
  * @param isp_program_status: isp_program status written by RTCPU.
+ *
+ * @param vi_channel_id: VI channel bound to the isp channel. In case of mem_isp_mem set this to
+ * 		CAPTURE_NO_VI_ISP_BINDING
  */
 struct isp_program_descriptor {
 	uint8_t settings_id;
-	uint8_t __pad_sid[3];
+	uint8_t vi_channel_id;
+#define CAPTURE_NO_VI_ISP_BINDING U8_C(0xFF)
+
+	uint8_t __pad_sid[2];
 	uint32_t sequence;
 
 	uint32_t isp_program_offset;
@@ -755,10 +769,35 @@ struct stats_surface {
  * @param surface_configs.tile_of_config_h: Horizontal tile overfetch
  *                  configuration of RCE task submit driver. Information
  *                  in this field must match configuration in ISP PB2.
+ *                  Deprecated, will be removed.
  *
  * @param surface_configs.tile_of_config_v: Vertical tile overfetch
  *                  configuration of RCE task submit driver. Information
  *                  in this field must match configuration in ISP PB2.
+ *                  Deprecated. will be removed
+ *
+ * @param surface_configs.mr_width: Width of input surface in pixels
+ *
+ * @param surface_configs.mr_height: Height of input surface in pixels
+ *
+ * @param surface_configs.slice_height: Height of slices used in ISP to
+ *                  process the image
+ *
+ * @param surface_configs.chunk_width_first: Width of first VI chunk in line
+ *                  if DPCM compression is used. Not used if DPCM is not
+ *                  in use.
+ *
+ * @param surface_configs.chunk_width_middle: Width of the VI chunks in middle
+ *                  of a line if DPCM is user and width of ISP tiles in middle
+ *                  of line regardless of DPCM usage.
+ *
+ * @param surface_configs.chunk_overfetch_width: Width of the overfetch region
+ *                  in beginning of VI chunks if DPCM is in use. Unused if no
+ *                  DPCM
+ *
+ * @param surface_configs.tile_width_first: Width of the first tile in a slice.
+ *                  Width of the rest of tiles is defined by chunk_width_middle
+ *                  field
  *
  * @param surface_configs.mr_image_def: MR image format definition. Field
  *                  format is according to register ISP_MR_IMAGE_DEF_MR.
@@ -816,6 +855,13 @@ struct isp_capture_descriptor {
 	/** output surfaces */
 	struct {
 		struct image_surface surfaces[ISP_MAX_OUTPUT_SURFACES];
+		/**
+		 * Image format definition for output surface
+		 * TODO: Should we have here just image format enum value + block height instead?
+		 * Dither settings would logically be part of ISP program
+		 */
+		uint32_t image_def;
+		uint32_t _pad0;
 	} outputs_mw[ISP_MAX_OUTPUTS];
 
 	/**
@@ -823,7 +869,7 @@ struct isp_capture_descriptor {
 	 *
 	 * AFM, LAC0 and LAC1 surfaces are their respective base addresses.
 	 * RCE knows the offsets to all ROIs' addresses for each of these
-         * stats units.
+	 * stats units.
 	 */
 	struct stats_surface fb_surface;
 	struct stats_surface fm_surface;
@@ -836,29 +882,58 @@ struct isp_capture_descriptor {
 	struct stats_surface ltm_surface;
 
 	/** surfaces related configuration */
-	struct {
-		struct {
+
+	struct
+	{
+		/**
+		 * DEPRECATED. Overfetch information will be moved to ISP program
+		 */
+		struct
+		{
 			uint8_t l_adj_of;
 			uint8_t l_of;
 			uint8_t r_adj_of;
 			uint8_t r_of;
-		} tile_of_config_h;
+		} tile_of_config_h CAMRTC_DEPRECATED;
 
-		struct {
+		/**
+		 * DEPRECATED. Overfetch information will be moved of ISP program
+		 */
+		struct
+		{
 			uint16_t t_of;
 			uint16_t b_of;
-		} tile_of_config_v;
+		} tile_of_config_v CAMRTC_DEPRECATED;
 
+		/** Input image resolution */
+		uint16_t mr_width;
+		uint16_t mr_height;
+
+		/** Height of slices used for processing the image */
+		uint16_t slice_height;
+		/** Width of first VI chunk in a line */
+		uint16_t chunk_width_first;
+		/** Width of VI chunks in the middle of a line, and/or width of
+		 *  ISP tiles in middle of a slice */
+		uint16_t chunk_width_middle;
+		/** Width of overfetch area in the beginning of VI chunks */
+		uint16_t chunk_overfetch_width;
+		/** Width of the leftmost ISP tile in al slice */
+		uint16_t tile_width_first;
+		uint16_t __pad;
+		/** Input image format */
 		uint32_t mr_image_def;
-		/** TODO: Is this provided from nvisp? */
+		/** TODO: should this be exposed to user mode? */
 		uint32_t mr_image_def1;
-		/** TODO: Is all this information available for UMD? */
+		/** SURFACE_CTL_MR register value */
 		uint32_t surf_ctrl;
+		/** Byte stride between start of lines. Must be ATOM aligned */
 		uint32_t surf_stride_line;
+		/** Byte stride between start of DPCM chunks. Must be ATOM aligned */
 		uint32_t surf_stride_chunk;
-		uint32_t __pad2;
 	} surface_configs;
 
+	uint32_t __pad2;
 	/** Base address of ISP PB2 memory */
 	iova_t isp_pb2_mem;
 	/** TODO: Isn't PB2 size constant, do we need this? */
@@ -877,7 +952,7 @@ struct isp_capture_descriptor {
 	struct capture_isp_status status;
 
 	/** Pad to aligned size */
-	uint32_t __pad[6];
+	uint32_t __pad[12];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 /**
@@ -982,63 +1057,86 @@ struct isp5_program
 	*/
 	uint32_t pushbuffer[NVISP5_ISP_PROGRAM_PB_SIZE / sizeof(uint32_t)];
 
-	uint16_t frame_width;
-
-	uint16_t frame_height;
+	/**
+	 * DEPRECATED. Frame size will come from input surface
+	 */
+	uint16_t frame_width CAMRTC_DEPRECATED;
 
 	/**
-	* Tiles are now divided to 3 groups. First, Middle and last
-	*
-	* tile_width_first   : This holds width of very first tile.
-	* tiles_width_middle : This holds width of all middle tiles. Can be more than 1.
-	*
-	* Falcon fw automatically calculates last tile width based on above 2 values.
+	 * DEPRECATED. Frame size will come from input surface
+	 */
+	uint16_t frame_height CAMRTC_DEPRECATED;
+
+	/**
+	 * Tiles are divided to 3 groups. First, Middle and last
+	 *
+	 * tile_width_first   : This holds width of very first tile.
+	 * tiles_width_middle : This holds width of all middle tiles. Can be more than 1.
+	 *
+	 * Falcon fw automatically calculates last tile width based on above 2 values.
+	 * Falcon fw automatically calculates last tile width based on above 2 values.
+	 *
+	 * DEPRECATED - moved to capture descriptor
+	 *
 	*/
-	uint16_t tile_width_first;
+	uint16_t tile_width_first CAMRTC_DEPRECATED;
 
-	uint16_t tiles_width_middle;
+	uint16_t tiles_width_middle CAMRTC_DEPRECATED;
 
-	uint16_t tile_height;
-
-	uint8_t tiles_per_slice;
-
-	uint8_t slices_per_frame;
-
-	uint8_t frames_per_capture;
+	/*
+	 * Slice height is now ISP channel attribute
+	 * DEPRECATED - moved to capture descriptor
+	 */
+	uint16_t tile_height CAMRTC_DEPRECATED;
+	/**
+	 * Number of tiles in a slice is determined from image resolution and tile width
+	 * DEPRECATED - moved to capture descriptor
+	 */
+	uint8_t tiles_per_slice CAMRTC_DEPRECATED;
+	/**
+	 * Number of slices is determined from image resolution and slice height
+	 * DEPRECATED - moved to capture descriptor
+	 */
+	uint8_t slices_per_frame CAMRTC_DEPRECATED;
+	/**
+	 * DEPRECATED - moved to capture descriptor
+	 */
+	uint8_t frames_per_capture CAMRTC_DEPRECATED;
 
 	/**
-	* Settings ID for this ISP program
+	 *
+	 * Settings ID for this ISP program
 	*/
 	uint8_t settings_id;
 	uint8_t _pad0[2];
 	/*
-	* Settings needed by RCE ISP driver to generate config buffer.
-	* Content and format of these fields is the same as corresponding
-	* ISP config buffer fields.
-	* See T19X_ISP_Microcode.docx for detailed description.
+	 * Settings needed by RCE ISP driver to generate config buffer.
+	 * Content and format of these fields is the same as corresponding
+	 * ISP config buffer fields.
+	 * See T19X_ISP_Microcode.docx for detailed description.
 	*/
 
 	/**
-	* Sources for LS, AP and PRU blocks.
-	* Format is same as in ISP's XB_SRC_0 register
+	 * Sources for LS, AP and PRU blocks.
+	 * Format is same as in ISP's XB_SRC_0 register
 	*/
 	uint32_t xbsrc0;
 
 	/**
-	* Sources for AT[0-2] and TF[0-1] blocks
-	* Format is same as in ISP's XB_SRC_1 register
+	 * Sources for AT[0-2] and TF[0-1] blocks
+	 * Format is same as in ISP's XB_SRC_1 register
 	*/
 	uint32_t xbsrc1;
 
 	/**
-	* Sources for DS[0-2] and MW[0-2] blocks
-	* Format is same as in ISP's XB_SRC_2 register
+	 * Sources for DS[0-2] and MW[0-2] blocks
+	 * Format is same as in ISP's XB_SRC_2 register
 	*/
 	uint32_t xbsrc2;
 
 	/**
-	* Sources for FB, LAC[0-1] and HIST[0-1] blocks
-	* Format is same as in ISP's XB_SRC_3 register
+	 * Sources for FB, LAC[0-1] and HIST[0-1] blocks
+	 * Format is same as in ISP's XB_SRC_3 register
 	*/
 	uint32_t xbsrc3;
 
@@ -1066,12 +1164,55 @@ struct isp5_program
 	/**
 	* Downscaler configuration for DS[0-2]
 	*/
+	uint8_t __pad[8];
 	struct isp5_downscaler_configbuf ds0;
 	struct isp5_downscaler_configbuf ds1;
 	struct isp5_downscaler_configbuf ds2;
 
-	uint32_t _pad1[8];
-}__CAPTURE_DESCRIPTOR_ALIGN;
+	/**
+	 *  Overfetch needed by this ISP program.
+	 *
+	 * ISP kernel needs access to pixels outside the active area of a tile
+	 * to ensure continuous processing across tile borders. The amount of data
+	 * needed depends on features enabled and some ISP parameters so this
+	 * is program dependent.
+	 *
+	 * ISP extrapolates values outside image borders, so overfetch is needed only
+	 * for borders between tiles.
+	 */
+	struct
+	{
+		/**
+		 * Number of pixels needed from the left side of tile
+		 */
+		uint8_t left;
+		/**
+		 * Number of pixels needed from the right side of tile
+		 */
+		uint8_t right;
+		/**
+		 * Number of pixels needed from above the tile
+		 */
+		uint8_t top;
+		/**
+		 * Number of pixels needed from below the tile
+		 */
+		uint8_t bottom;
+		/**
+		 * Number of pixels needed by PRU unit from left and right sides of the tile.
+		 * This is needed to adjust tile border locations so that they align correctly
+		 * at demosaic input.
+		 */
+		uint8_t pru_ovf_h;
+		/**
+		 * Alignment requirement for tile width. Minimum alignment is 2 pixels, but
+		 * if CAR is used this must be set to half of LPF kernel width.
+		 */
+		uint8_t alignment;
+		uint8_t __pad1[2];
+	} overfetch;
+	uint32_t _pad1[4];
+} __CAPTURE_DESCRIPTOR_ALIGN;
 
 #pragma GCC diagnostic ignored "-Wpadded"
 

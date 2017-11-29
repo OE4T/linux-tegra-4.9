@@ -69,6 +69,8 @@ struct CAPTURE_MSG_HEADER {
 /**
  * Result codes.
  */
+typedef uint32_t capture_result;
+
 #define CAPTURE_OK				U32_C(0)
 #define CAPTURE_ERROR_INVALID_PARAMETER		U32_C(1)
 #define CAPTURE_ERROR_NO_MEMORY			U32_C(2)
@@ -104,7 +106,7 @@ struct CAPTURE_CHANNEL_SETUP_REQ_MSG {
  * @param vi_channel_mask	Allocated VI channel(s).
  */
 struct CAPTURE_CHANNEL_SETUP_RESP_MSG {
-	int32_t result;
+	capture_result result;
 	uint32_t channel_id;
 	uint64_t vi_channel_mask;
 } __CAPTURE_IVC_ALIGN;
@@ -134,7 +136,7 @@ struct CAPTURE_CHANNEL_RESET_REQ_MSG {
  * @param result	Return value.
  */
 struct CAPTURE_CHANNEL_RESET_RESP_MSG {
-	int32_t result;
+	capture_result result;
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
@@ -160,7 +162,7 @@ struct CAPTURE_CHANNEL_RELEASE_REQ_MSG {
  * @param result	Return value.
  */
 struct CAPTURE_CHANNEL_RELEASE_RESP_MSG {
-	int32_t result;
+	capture_result result;
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
@@ -172,7 +174,7 @@ struct CAPTURE_CHANNEL_TPG_SETUP_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CHANNEL_TPG_SETUP_RESP_MSG {
-	int32_t result;
+	capture_result result;
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
@@ -188,7 +190,7 @@ struct CAPTURE_CHANNEL_TPG_START_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CHANNEL_TPG_START_RESP_MSG {
-	int32_t result;
+	capture_result result;
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
@@ -203,7 +205,7 @@ struct CAPTURE_CHANNEL_TPG_STOP_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG {
-	int32_t result;
+	capture_result result;
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
@@ -219,7 +221,7 @@ struct CAPTURE_COMPAND_CONFIG_REQ_MSG {
 /** Acknowledge a companding configuration.
  */
 struct CAPTURE_COMPAND_CONFIG_RESP_MSG {
-	int32_t result;
+	capture_result result;
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
@@ -236,7 +238,7 @@ struct CAPTURE_PDAF_CONFIG_REQ_MSG {
  * @param result		Return value.
  */
 struct CAPTURE_PDAF_CONFIG_RESP_MSG {
-	int32_t result;
+	capture_result result;
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
@@ -254,7 +256,7 @@ struct CAPTURE_SYNCGEN_ENABLE_REQ_MSG {
 /** Acknowledge CAPTURE_SYNCGEN_ENABLE_REQ. */
 struct CAPTURE_SYNCGEN_ENABLE_RESP_MSG {
 	uint32_t unit;
-	int32_t result;
+	capture_result result;
 } __CAPTURE_IVC_ALIGN;
 
 /** Disable SLVS-EC synchronization
@@ -274,7 +276,7 @@ struct CAPTURE_SYNCGEN_DISABLE_REQ_MSG {
 /** Acknowledge CAPTURE_SYNCGEN_DISABLE_REQ. */
 struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG {
 	uint32_t unit;
-	int32_t result;
+	capture_result result;
 } __CAPTURE_IVC_ALIGN;
 
 
@@ -338,7 +340,7 @@ struct CAPTURE_CHANNEL_ISP_SETUP_REQ_MSG {
  * @param channel_id		Capture channel identifier for the new channel.
  */
 struct CAPTURE_CHANNEL_ISP_SETUP_RESP_MSG {
-	int32_t result;
+	capture_result result;
 	uint32_t channel_id;
 } __CAPTURE_IVC_ALIGN;
 

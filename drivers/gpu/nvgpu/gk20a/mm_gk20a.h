@@ -184,7 +184,9 @@ extern const struct gk20a_mmu_level gk20a_mm_levels_64k[];
 extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
 
 enum gmmu_pgsz_gk20a gk20a_get_pde_pgsz(struct gk20a *g,
+					const struct gk20a_mmu_level *l,
 					struct nvgpu_gmmu_pd *pd, u32 pd_idx);
 enum gmmu_pgsz_gk20a gk20a_get_pte_pgsz(struct gk20a *g,
+					const struct gk20a_mmu_level *l,
 					struct nvgpu_gmmu_pd *pd, u32 pd_idx);
 #endif /* MM_GK20A_H */

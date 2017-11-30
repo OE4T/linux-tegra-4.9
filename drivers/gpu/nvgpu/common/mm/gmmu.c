@@ -838,7 +838,7 @@ static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
 		if (!pd_next->mem)
 			return -EINVAL;
 
-		attrs->pgsz = l->get_pgsz(g, pd, pd_idx);
+		attrs->pgsz = l->get_pgsz(g, l, pd, pd_idx);
 
 		if (attrs->pgsz >= gmmu_nr_page_sizes)
 			return -EINVAL;

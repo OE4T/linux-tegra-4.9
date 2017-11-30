@@ -328,9 +328,11 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
  * big pages or small pages.
  */
 static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
+					const struct gk20a_mmu_level *l,
 					struct nvgpu_gmmu_pd *pd, u32 pd_idx)
 {
 	u32 pde_base = pd->mem_offs / sizeof(u32);
+	u32 pde_offset = pde_base + pd_offset_from_index(l, pd_idx);
 	u32 pde_v[GP10B_PDE0_ENTRY_SIZE >> 2];
 	u32 i;
 	enum gmmu_pgsz_gk20a pgsz = gmmu_nr_page_sizes;
@@ -340,18 +342,17 @@ static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
 
 	nvgpu_mem_begin(g, pd->mem);
 	for (i = 0; i < GP10B_PDE0_ENTRY_SIZE >> 2; i++)
-		pde_v[i] = nvgpu_mem_rd32(g, pd->mem, pde_base + i);
+		pde_v[i] = nvgpu_mem_rd32(g, pd->mem, pde_offset + i);
 	nvgpu_mem_end(g, pd->mem);
 
 	/*
 	 * Check if the aperture AND address are set
 	 */
-	if (pde_v[2] & (gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f() ||
+	if (pde_v[2] & (gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f() |
 			gmmu_new_dual_pde_aperture_small_video_memory_f())) {
-		u64 addr = ((u64) (pde_v[2] &
-			gmmu_new_dual_pde_address_small_sys_f(~0)) <<
-			gmmu_new_dual_pde_address_shift_v()) |
-			((u64) pde_v[3] << 32);
+		u64 addr = (((u64) pde_v[3] << 32) | (u64) (pde_v[2] &
+			gmmu_new_dual_pde_address_small_sys_f(~0))) <<
+			gmmu_new_dual_pde_address_shift_v();
 
 		if (addr)
 			pgsz = gmmu_page_size_small;
@@ -359,10 +360,10 @@ static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
 
 	if (pde_v[0] & (gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f() |
 			gmmu_new_dual_pde_aperture_big_video_memory_f())) {
-		u64 addr = ((u64) (pde_v[0] &
-			gmmu_new_dual_pde_address_big_sys_f(~0)) <<
-			gmmu_new_dual_pde_address_big_shift_v()) |
-			((u64) pde_v[1] << 32);
+		u64 addr = (((u64) pde_v[1] << 32) | (u64) (pde_v[0] &
+			gmmu_new_dual_pde_address_big_sys_f(~0))) <<
+			gmmu_new_dual_pde_address_big_shift_v();
+
 		if (addr) {
 			/*
 			 * If small is set that means that somehow MM allowed
@@ -374,8 +375,8 @@ static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
 					"both small and big apertures enabled");
 				return gmmu_nr_page_sizes;
 			}
+			pgsz = gmmu_page_size_big;
 		}
-		pgsz = gmmu_page_size_big;
 	}
 
 	return pgsz;

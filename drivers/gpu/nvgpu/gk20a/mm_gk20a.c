@@ -287,6 +287,7 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 }
 
 enum gmmu_pgsz_gk20a gk20a_get_pde_pgsz(struct gk20a *g,
+					const struct gk20a_mmu_level *l,
 					struct nvgpu_gmmu_pd *pd, u32 pd_idx)
 {
 	/*
@@ -296,6 +297,7 @@ enum gmmu_pgsz_gk20a gk20a_get_pde_pgsz(struct gk20a *g,
 }
 
 enum gmmu_pgsz_gk20a gk20a_get_pte_pgsz(struct gk20a *g,
+					const struct gk20a_mmu_level *l,
 					struct nvgpu_gmmu_pd *pd, u32 pd_idx)
 {
 	/*

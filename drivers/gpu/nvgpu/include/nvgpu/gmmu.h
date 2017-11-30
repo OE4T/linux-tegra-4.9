@@ -204,6 +204,7 @@ struct gk20a_mmu_level {
 	 * Get pde page size
 	 */
 	enum gmmu_pgsz_gk20a (*get_pgsz)(struct gk20a *g,
+					 const struct gk20a_mmu_level *l,
 					 struct nvgpu_gmmu_pd *pd, u32 pd_idx);
 };
 

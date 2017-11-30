@@ -77,6 +77,8 @@ int nvgpu_clk_arb_get_current_pstate(struct gk20a *g);
 
 void nvgpu_clk_arb_pstate_change_lock(struct gk20a *g, bool lock);
 
+void nvgpu_clk_arb_send_thermal_alarm(struct gk20a *g);
+
 void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm);
 #endif /* __NVGPU_CLK_ARB_H__ */
 

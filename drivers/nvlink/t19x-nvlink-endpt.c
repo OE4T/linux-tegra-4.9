@@ -35,31 +35,6 @@
 
 #define NVLINK_DRV_NAME	"t19x-nvlink-endpt"
 
-/* Main structure for the driver */
-struct t19x_nvlink_endpt {
-	/* NVLINK apertures */
-	void __iomem *nvlw_tioctrl_base;
-	void __iomem *nvlw_nvlipt_base;
-	void __iomem *nvlw_minion_base;
-	void __iomem *nvlw_nvl_base;
-	void __iomem *nvlw_sync2x_base;
-	void __iomem *nvlw_nvltlc_base;
-	void __iomem *mssnvlink_0_base;
-	void __iomem *mssnvlink_1_base;
-	void __iomem *mssnvlink_2_base;
-	void __iomem *mssnvlink_3_base;
-	void __iomem *mssnvlink_4_base;
-
-	/* struct for registering this endpoint driver with the NVLINK core
-	   driver */
-	struct nvlink_endpt_drv endpt_drv;
-
-	struct class class;
-	dev_t dev_t;
-	struct cdev cdev;
-	struct device *dev;
-};
-
 static struct of_device_id t19x_nvlink_controller_of_match[] = {
 	{
 		.compatible     = "nvidia,t19x-nvlink-controller",
@@ -69,134 +44,74 @@ static struct of_device_id t19x_nvlink_controller_of_match[] = {
 
 MODULE_DEVICE_TABLE(of, t19x_nvlink_controller_of_match);
 
-static inline u32 nvlw_tioctrl_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
+static inline u32 nvlw_tioctrl_readl(struct nvlink_device *ndev, u32 reg)
 {
-	return readl(nvlink->nvlw_tioctrl_base + reg);
+	return readl(ndev->nvlw_tioctrl_base + reg);
 }
 
-static inline void nvlw_tioctrl_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
+static inline void nvlw_tioctrl_writel(struct nvlink_device *ndev, u32 reg,
+									u32 val)
 {
-	writel(val, nvlink->nvlw_tioctrl_base + reg);
+	writel(val, ndev->nvlw_tioctrl_base + reg);
 }
 
-static inline u32 nvlw_nvlipt_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
+static inline u32 nvlw_nvlipt_readl(struct nvlink_device *ndev, u32 reg)
 {
-	return readl(nvlink->nvlw_nvlipt_base + reg);
+	return readl(ndev->nvlw_nvlipt_base + reg);
 }
 
-static inline void nvlw_nvlipt_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
+static inline void nvlw_nvlipt_writel(struct nvlink_device *ndev, u32 reg,
+									u32 val)
 {
-	writel(val, nvlink->nvlw_nvlipt_base + reg);
+	writel(val, ndev->nvlw_nvlipt_base + reg);
 }
 
-static inline u32 nvlw_nvl_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
+static inline u32 nvlw_nvl_readl(struct nvlink_device *ndev, u32 reg)
 {
-	return readl(nvlink->nvlw_nvl_base + reg);
+	return readl(ndev->links[0].nvlw_nvl_base + reg);
 }
 
-static inline void nvlw_nvl_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
+static inline void nvlw_nvl_writel(struct nvlink_device *ndev, u32 reg,
+									u32 val)
 {
-	writel(val, nvlink->nvlw_nvl_base + reg);
+	writel(val, ndev->links[0].nvlw_nvl_base + reg);
 }
 
-static inline u32 nvlw_sync2x_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
+static inline u32 nvlw_sync2x_readl(struct nvlink_device *ndev,	u32 reg)
 {
-	return readl(nvlink->nvlw_sync2x_base + reg);
+	return readl(((struct tegra_nvlink_device *)(ndev->priv))
+						->nvlw_sync2x_base + reg);
 }
 
-static inline void nvlw_sync2x_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
+static inline void nvlw_sync2x_writel(struct nvlink_device *ndev, u32 reg,
+									u32 val)
 {
-	writel(val, nvlink->nvlw_sync2x_base + reg);
+	writel(val, ((struct tegra_nvlink_device *)(ndev->priv))
+						->nvlw_sync2x_base + reg);
 }
 
-static inline u32 nvlw_nvltlc_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
+static inline u32 nvlw_nvltlc_readl(struct nvlink_device *ndev, u32 reg)
 {
-	return readl(nvlink->nvlw_nvltlc_base + reg);
+	return readl(ndev->links[0].nvlw_nvltlc_base + reg);
 }
 
-static inline void nvlw_nvltlc_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
+static inline void nvlw_nvltlc_writel(struct nvlink_device *ndev, u32 reg,
+									u32 val)
 {
-	writel(val, nvlink->nvlw_nvltlc_base + reg);
+	writel(val, ndev->links[0].nvlw_nvltlc_base + reg);
 }
 
-static inline u32 mssnvlink_0_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
+static inline u32 mssnvlink_0_readl(struct nvlink_device *ndev, u32 reg)
 {
-	return readl(nvlink->mssnvlink_0_base + reg);
+	return readl(((struct tegra_nvlink_link *)(ndev->links[0].priv))
+						->mssnvlink_0_base + reg);
 }
 
-static inline void mssnvlink_0_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
+static inline void mssnvlink_0_writel(struct nvlink_device *ndev, u32 reg,
+									u32 val)
 {
-	writel(val, nvlink->mssnvlink_0_base + reg);
-}
-
-static inline u32 mssnvlink_1_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
-{
-	return readl(nvlink->mssnvlink_1_base + reg);
-}
-
-static inline void mssnvlink_1_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
-{
-	writel(val, nvlink->mssnvlink_1_base + reg);
-}
-
-static inline u32 mssnvlink_2_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
-{
-	return readl(nvlink->mssnvlink_2_base + reg);
-}
-
-static inline void mssnvlink_2_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
-{
-	writel(val, nvlink->mssnvlink_2_base + reg);
-}
-
-static inline u32 mssnvlink_3_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
-{
-	return readl(nvlink->mssnvlink_3_base + reg);
-}
-
-static inline void mssnvlink_3_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
-{
-	writel(val, nvlink->mssnvlink_3_base + reg);
-}
-
-static inline u32 mssnvlink_4_readl(struct t19x_nvlink_endpt *nvlink,
-					u32 reg)
-{
-	return readl(nvlink->mssnvlink_4_base + reg);
-}
-
-static inline void mssnvlink_4_writel(struct t19x_nvlink_endpt *nvlink,
-					u32 reg,
-					u32 val)
-{
-	writel(val, nvlink->mssnvlink_4_base + reg);
+	writel(val, ((struct tegra_nvlink_link *)(ndev->links[0].priv))
+						->mssnvlink_0_base + reg);
 }
 
 /* TODO: Remove all non-NVLINK reads from the driver. */
@@ -227,10 +142,8 @@ static inline void non_nvlink_writel(u32 reg, u32 val)
  * happen.
  */
 /* TODO: Remove all non-NVLINK register accesses from the driver. */
-static int wait_for_reg_cond_non_nvlink(u32 reg,
-					u32 bit,
-					int bit_set,
-					char *bit_name)
+static int wait_for_reg_cond_non_nvlink(u32 reg, u32 bit, int bit_set,
+								char *bit_name)
 {
 	u32 elapsed_us = 0;
 
@@ -251,7 +164,7 @@ static int wait_for_reg_cond_non_nvlink(u32 reg,
 }
 
 /* Initialize the NVLIPT clock control regsiters */
-static void init_sysclk(struct t19x_nvlink_endpt *nvlink)
+static void init_sysclk(struct nvlink_device *ndev)
 {
 	nvlink_dbg("Initializing NVLINK_SYSCLK");
 
@@ -265,7 +178,7 @@ static void init_sysclk(struct t19x_nvlink_endpt *nvlink)
 	udelay(1);
 }
 
-static void release_resets(struct t19x_nvlink_endpt *nvlink)
+static void release_resets(struct nvlink_device *ndev)
 {
 	u32 reg_val = 0;
 
@@ -286,24 +199,24 @@ static void release_resets(struct t19x_nvlink_endpt *nvlink)
 	udelay(1);
 
 	/* Take link out of reset */
-	reg_val = nvlw_tioctrl_readl(nvlink, NVLW_RESET) |
+	reg_val = nvlw_tioctrl_readl(ndev, NVLW_RESET) |
 			BIT(NVLW_RESET_LINKRESET);
-	nvlw_tioctrl_writel(nvlink, NVLW_RESET, reg_val);
+	nvlw_tioctrl_writel(ndev, NVLW_RESET, reg_val);
 	udelay(NVLW_POST_RESET_DELAY_US);
 
 	/* Reset persistent HW state for this link */
-	reg_val = nvlw_tioctrl_readl(nvlink, NVLW_DEBUG_RESET) &
+	reg_val = nvlw_tioctrl_readl(ndev, NVLW_DEBUG_RESET) &
 			~BIT(NVLW_DEBUG_RESET_LINK);
-	nvlw_tioctrl_writel(nvlink, NVLW_DEBUG_RESET, reg_val);
+	nvlw_tioctrl_writel(ndev, NVLW_DEBUG_RESET, reg_val);
 	udelay(NVLW_POST_RESET_DELAY_US);
-	reg_val = nvlw_tioctrl_readl(nvlink, NVLW_DEBUG_RESET) |
+	reg_val = nvlw_tioctrl_readl(ndev, NVLW_DEBUG_RESET) |
 					BIT(NVLW_DEBUG_RESET_LINK) |
 					BIT(NVLW_DEBUG_RESET_COMMON);
-	nvlw_tioctrl_writel(nvlink, NVLW_DEBUG_RESET, reg_val);
+	nvlw_tioctrl_writel(ndev, NVLW_DEBUG_RESET, reg_val);
 	udelay(NVLW_POST_RESET_DELAY_US);
 }
 
-static void init_nvhs_pll(struct t19x_nvlink_endpt *nvlink)
+static void init_nvhs_pll(struct nvlink_device *ndev)
 {
 	nvlink_dbg("Initializing PLLNVHS");
 
@@ -331,7 +244,7 @@ static void init_nvhs_pll(struct t19x_nvlink_endpt *nvlink)
 	non_nvlink_writel(CAR_CLK_SOURCE_NVHS_PLL0_MGMT, 0x106);
 }
 
-static int switch_to_tx_ref_clk(struct t19x_nvlink_endpt *nvlink)
+static int switch_to_tx_ref_clk(struct nvlink_device *ndev)
 {
 	int ret = 0;
 
@@ -350,25 +263,25 @@ static int switch_to_tx_ref_clk(struct t19x_nvlink_endpt *nvlink)
 	return ret;
 }
 
-static void enable_hw_sequencer(struct t19x_nvlink_endpt *nvlink)
+static void enable_hw_sequencer(struct nvlink_device *ndev)
 {
 	nvlink_dbg("NVLIPT - enabling hardware sequencer");
 	non_nvlink_writel(CAR_NVHS_UPHY_PLL0_CFG0, 0x7493804);
 }
 
-static int init_nvhs(struct t19x_nvlink_endpt *nvlink)
+static int init_nvhs(struct nvlink_device *ndev)
 {
 	int ret = 0;
 
 	nvlink_dbg("Initializing NVHS");
 
-	init_nvhs_pll(nvlink);
+	init_nvhs_pll(ndev);
 
-	ret = switch_to_tx_ref_clk(nvlink);
+	ret = switch_to_tx_ref_clk(ndev);
 	if (ret < 0)
 		goto fail;
 
-	enable_hw_sequencer(nvlink);
+	enable_hw_sequencer(ndev);
 
 	goto success;
 
@@ -378,39 +291,39 @@ success:
 	return ret;
 }
 
-static void init_dlpl(struct t19x_nvlink_endpt *nvlink)
+static void init_dlpl(struct nvlink_device *ndev)
 {
 	u32 reg_val = 0;
 
 	nvlink_dbg("Initializing DLPL");
 
 	/* Enable link */
-	reg_val = nvlw_nvl_readl(nvlink, NVL_LINK_CONFIG) |
+	reg_val = nvlw_nvl_readl(ndev, NVL_LINK_CONFIG) |
 			BIT(NVL_LINK_CONFIG_LINK_EN) | BIT(3);
-	nvlw_nvl_writel(nvlink, NVL_LINK_CONFIG, reg_val);
+	nvlw_nvl_writel(ndev, NVL_LINK_CONFIG, reg_val);
 
-	nvlw_nvl_writel(nvlink, NVL_SL0_TRAIN0_TX, 0x63);
-	nvlw_nvl_writel(nvlink, NVL_SL0_TRAIN1_TX, 0xf0);
+	nvlw_nvl_writel(ndev, NVL_SL0_TRAIN0_TX, 0x63);
+	nvlw_nvl_writel(ndev, NVL_SL0_TRAIN1_TX, 0xf0);
 
-	nvlw_nvl_writel(nvlink, NVL_SL0_SAFE_CTRL2_TX, 0x2f53);
+	nvlw_nvl_writel(ndev, NVL_SL0_SAFE_CTRL2_TX, 0x2f53);
 
-	nvlw_nvl_writel(nvlink, NVL_SL1_CONFIG_RX, 0x70001000);
+	nvlw_nvl_writel(ndev, NVL_SL1_CONFIG_RX, 0x70001000);
 
-	nvlw_nvl_writel(nvlink, NVL_SUBLINK_CHANGE, 0x200000);
+	nvlw_nvl_writel(ndev, NVL_SUBLINK_CHANGE, 0x200000);
 
-	nvlw_nvl_writel(nvlink, NVL_SL1_RXSLSM_TIMEOUT_2, 0xfa0);
+	nvlw_nvl_writel(ndev, NVL_SL1_RXSLSM_TIMEOUT_2, 0xfa0);
 }
 
-static int go_to_safe_mode(struct t19x_nvlink_endpt *nvlink)
+static int go_to_safe_mode(struct nvlink_device *ndev)
 {
 	u32 reg_val = 0;
 	u32 state = 0;
 
 	nvlink_dbg("Transitioning to SAFE mode ...");
 
-	nvlw_nvl_writel(nvlink, NVL_LINK_CHANGE, 0x14);
+	nvlw_nvl_writel(ndev, NVL_LINK_CHANGE, 0x14);
 	usleep_range(1000, 2000);
-	reg_val = nvlw_nvl_readl(nvlink, NVL_LINK_STATE);
+	reg_val = nvlw_nvl_readl(ndev, NVL_LINK_STATE);
 	state = reg_val & NVL_LINK_STATE_STATE_MASK;
 	if (state != NVL_LINK_STATE_STATE_SWCFG) {
 		nvlink_err("Failed to transition to SAFE mode");
@@ -421,67 +334,67 @@ static int go_to_safe_mode(struct t19x_nvlink_endpt *nvlink)
 	return 0;
 }
 
-static void init_tlc_buffers(struct t19x_nvlink_endpt *nvlink)
+static void init_tlc_buffers(struct nvlink_device *ndev)
 {
 	nvlink_dbg("Initializing TLC buffers");
 
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_SZ_VC0, 0x7f003f);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_SZ_VC1, 0x7f005f);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_SZ_VC2, 0x7f007f);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_SZ_VC3, 0x7f009f);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_SZ_VC4, 0x7f00bf);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_SZ_VC5, 0xff007f);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_SZ_VC6, 0xff007f);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_SZ_VC7, 0xff007f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC0, 0x7f003f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC1, 0x7f005f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC2, 0x7f007f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC3, 0x7f009f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC4, 0x7f00bf);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC5, 0xff007f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC6, 0xff007f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC7, 0xff007f);
 
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC0, 0x800040);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC1, 0x20);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC2, 0x20);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC3, 0x20);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC4, 0x20);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC5, 0x800040);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC6, 0x0);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC7, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC0, 0x800040);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC1, 0x20);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC2, 0x20);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC3, 0x20);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC4, 0x20);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC5, 0x800040);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC6, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC7, 0x0);
 
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_ERR_LOG_EN_0, 0x3ffffff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_ERR_REPORT_EN_0, 0x3ffffff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_ERR_CONTAIN_EN_0, 0x3ffffff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_LOG_EN_0, 0x3ffffff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_REPORT_EN_0, 0x3ffffff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_CONTAIN_EN_0, 0x3ffffff);
 
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_SZ_VC0, 0xff007f);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_SZ_VC1, 0xff00bf);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_SZ_VC2, 0xff00ff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_SZ_VC3, 0xff013f);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_SZ_VC4, 0xff017f);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_SZ_VC5, 0x1ff01ff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_SZ_VC6, 0x1ff01ff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_SZ_VC7, 0x1ff01ff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC0, 0xff007f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC1, 0xff00bf);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC2, 0xff00ff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC3, 0xff013f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC4, 0xff017f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC5, 0x1ff01ff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC6, 0x1ff01ff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC7, 0x1ff01ff);
 
-	nvlw_nvltlc_writel(nvlink,
+	nvlw_nvltlc_writel(ndev,
 			NVLTLC_RX_CTRL_BUFFER_CREDITS_VC0,
 			0x1000080);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC1, 0x40);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC2, 0x40);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC3, 0x40);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC4, 0x40);
-	nvlw_nvltlc_writel(nvlink,
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC1, 0x40);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC2, 0x40);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC3, 0x40);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC4, 0x40);
+	nvlw_nvltlc_writel(ndev,
 			NVLTLC_RX_CTRL_BUFFER_CREDITS_VC5,
 			0x1000080);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC6, 0x0);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC7, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC6, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC7, 0x0);
 
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_ERR_LOG_EN_0, 0xffffff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_ERR_REPORT_EN_0, 0xffffff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_ERR_CONTAIN_EN_0, 0xffffff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_ERR_LOG_EN_1, 0x3fffff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_ERR_REPORT_EN_1, 0x3fffff);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_ERR_CONTAIN_EN_1, 0x3fffff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_LOG_EN_0, 0xffffff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_REPORT_EN_0, 0xffffff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_CONTAIN_EN_0, 0xffffff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_LOG_EN_1, 0x3fffff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_REPORT_EN_1, 0x3fffff);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_CONTAIN_EN_1, 0x3fffff);
 
-	nvlw_nvltlc_writel(nvlink, NVLTLC_TX_CTRL_BUFFER_READY, 0x1);
-	nvlw_nvltlc_writel(nvlink, NVLTLC_RX_CTRL_BUFFER_READY, 0x1);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_READY, 0x1);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_READY, 0x1);
 }
 
 /* Program the upper limit of the MSSNVLINK address space */
-static int program_mssnvlink_tom(struct t19x_nvlink_endpt *nvlink)
+static int program_mssnvlink_tom(struct nvlink_device *ndev)
 {
 	/* Program MSSNVLINK TOM to 512 GB */
 	nvlink_dbg("Programming MSSNVLINK_TOM to 0x7ffff (i.e 512 GB)");
@@ -497,7 +410,7 @@ static int program_mssnvlink_tom(struct t19x_nvlink_endpt *nvlink)
 }
 
 /* Write to the MSSNVLINK registers to release header and data credits */
-static int program_mssnvlink_hub_credits(struct t19x_nvlink_endpt *nvlink)
+static int program_mssnvlink_hub_credits(struct nvlink_device *ndev)
 {
 	u32 reg_val = 0;
 
@@ -507,40 +420,32 @@ static int program_mssnvlink_hub_credits(struct t19x_nvlink_endpt *nvlink)
 	 * FIXME: Do we need the reads to ensure the value was written
 	 * correctly? Or were these reads only useful for debugging?
 	 */
-	mssnvlink_0_writel(nvlink,
-			MSSNVLINK_MASTER_CREDIT_TRANSINFO,
-			0x14050000);
-	reg_val = mssnvlink_0_readl(nvlink, MSSNVLINK_MASTER_CREDIT_TRANSINFO);
+	mssnvlink_0_writel(ndev, MSSNVLINK_MASTER_CREDIT_TRANSINFO, 0x14050000);
+	reg_val = mssnvlink_0_readl(ndev, MSSNVLINK_MASTER_CREDIT_TRANSINFO);
 	reg_val &= 0x7fffffff;
 	if (reg_val != 0x14050000) {
 		nvlink_err("MSSNVLINK HUB credits programming failed");
 		return -1;
 	}
 
-	mssnvlink_0_writel(nvlink,
-			MSSNVLINK_MASTER_CREDIT_INGR_DATA,
-			0x8020000);
-	reg_val = mssnvlink_0_readl(nvlink, MSSNVLINK_MASTER_CREDIT_INGR_DATA);
+	mssnvlink_0_writel(ndev, MSSNVLINK_MASTER_CREDIT_INGR_DATA, 0x8020000);
+	reg_val = mssnvlink_0_readl(ndev, MSSNVLINK_MASTER_CREDIT_INGR_DATA);
 	reg_val &= 0x7fffffff;
 	if (reg_val != 0x8020000) {
 		nvlink_err("MSSNVLINK HUB credits programming failed");
 		return -1;
 	}
 
-	mssnvlink_0_writel(nvlink,
-			MSSNVLINK_SLAVE_CREDIT_TRANSINFO,
-			0x14050000);
-	reg_val = mssnvlink_0_readl(nvlink, MSSNVLINK_SLAVE_CREDIT_TRANSINFO);
+	mssnvlink_0_writel(ndev, MSSNVLINK_SLAVE_CREDIT_TRANSINFO, 0x14050000);
+	reg_val = mssnvlink_0_readl(ndev, MSSNVLINK_SLAVE_CREDIT_TRANSINFO);
 	reg_val &= 0x7fffffff;
 	if (reg_val != 0x14050000) {
 		nvlink_err("MSSNVLINK HUB credits programming failed");
 		return -1;
 	}
 
-	mssnvlink_0_writel(nvlink,
-			MSSNVLINK_SLAVE_CREDIT_INGR_DATA,
-			0x300c0000);
-	reg_val = mssnvlink_0_readl(nvlink, MSSNVLINK_SLAVE_CREDIT_INGR_DATA);
+	mssnvlink_0_writel(ndev, MSSNVLINK_SLAVE_CREDIT_INGR_DATA, 0x300c0000);
+	reg_val = mssnvlink_0_readl(ndev, MSSNVLINK_SLAVE_CREDIT_INGR_DATA);
 	reg_val &= 0x7fffffff;
 	if (reg_val != 0x300c0000) {
 		nvlink_err("MSSNVLINK HUB credits programming failed");
@@ -554,33 +459,30 @@ static int program_mssnvlink_hub_credits(struct t19x_nvlink_endpt *nvlink)
 }
 
 /* Initialize the link and transition to SAFE mode */
-int t19x_nvlink_endpt_enable_link(struct nvlink_endpt_drv *drv)
+int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 {
 	int ret = 0;
-	struct t19x_nvlink_endpt *nvlink = container_of(drv,
-						struct t19x_nvlink_endpt,
-						endpt_drv);
 
 	nvlink_dbg("Initializing link ...");
 
-	init_sysclk(nvlink);
-	release_resets(nvlink);
-	ret = init_nvhs(nvlink);
+	init_sysclk(ndev);
+	release_resets(ndev);
+	ret = init_nvhs(ndev);
 	if (ret < 0)
 		goto fail;
 	udelay(1);
 
-	init_dlpl(nvlink);
-	ret = go_to_safe_mode(nvlink);
+	init_dlpl(ndev);
+	ret = go_to_safe_mode(ndev);
 	if (ret < 0)
 		goto fail;
 
-	init_tlc_buffers(nvlink);
-	ret = program_mssnvlink_tom(nvlink);
+	init_tlc_buffers(ndev);
+	ret = program_mssnvlink_tom(ndev);
 	if (ret < 0)
 		goto fail;
 
-	ret = program_mssnvlink_hub_credits(nvlink);
+	ret = program_mssnvlink_hub_credits(ndev);
 	if (ret < 0)
 		goto fail;
 
@@ -597,8 +499,8 @@ static int t19x_nvlink_endpt_open(struct inode *in, struct file *filp)
 {
 	int ret = 0;
 	unsigned int minor = iminor(in);
-	struct t19x_nvlink_endpt *nvlink = container_of(in->i_cdev,
-						struct t19x_nvlink_endpt,
+	struct nvlink_device *ndev = container_of(in->i_cdev,
+						struct nvlink_device,
 						cdev);
 
 	if (minor > 0) {
@@ -606,13 +508,13 @@ static int t19x_nvlink_endpt_open(struct inode *in, struct file *filp)
 		return -EBADFD;
 	}
 
-	ret = nvlink_register_endpt_drv(&nvlink->endpt_drv);
+	ret = nvlink_register_endpt_drv(&ndev->links[0]);
 	if (ret) {
 		nvlink_err("Failed to register with the NVLINK core driver");
 		return ret;
 	}
 
-	ret = nvlink_init_link(&nvlink->endpt_drv);
+	ret = nvlink_init_link(ndev);
 
 	return ret;
 }
@@ -632,26 +534,43 @@ static const struct file_operations t19x_nvlink_endpt_ops = {
 static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	struct t19x_nvlink_endpt *nvlink;
+	struct nvlink_device *ndev;
 	struct device_node *np = pdev->dev.of_node;
 	struct device_node *local_endpoint = NULL;
 	struct device_node *remote_parent = NULL;
 	const void *compat_prop = NULL;
 	struct device *dev = NULL;
 
-	nvlink = kzalloc(sizeof(struct t19x_nvlink_endpt), GFP_KERNEL);
-	if (!nvlink) {
-		nvlink_err("Couldn't allocate struct t19x_nvlink_endpt");
+	ndev = kzalloc(sizeof(struct nvlink_device), GFP_KERNEL);
+	if (!ndev) {
+		nvlink_err("Couldn't allocate memory for t19x device struct");
 		ret = -ENOMEM;
-		goto err_alloc;
+		goto err_alloc_device;
 	}
 
-	nvlink->dev = &pdev->dev;
-	nvlink->class.owner = THIS_MODULE;
-	nvlink->class.name = NVLINK_DRV_NAME;
-	nvlink->endpt_drv.local_endpt =	NVLINK_ENDPT_TEGRA;
-	nvlink->endpt_drv.enable_link =	t19x_nvlink_endpt_enable_link;
-	platform_set_drvdata(pdev, nvlink);
+	ndev->priv =
+		(void*) kzalloc(sizeof(struct tegra_nvlink_device), GFP_KERNEL);
+	if (!ndev->priv) {
+		nvlink_err("Couldn't allocate memory for tegra_nvlink_device");
+		ret = -ENOMEM;
+		goto err_alloc_priv;
+	}
+
+	ndev->links = (struct nvlink_link *) kzalloc(T19X_MAX_NVLINK_SUPPORTED *
+					sizeof(struct nvlink_link), GFP_KERNEL);
+	if (!ndev->links) {
+		nvlink_err("Couldn't allocate memory for links");
+		ret = -ENOMEM;
+		goto err_alloc_links;
+	}
+
+	ndev->dev = &pdev->dev;
+	ndev->class.owner = THIS_MODULE;
+	ndev->class.name = NVLINK_DRV_NAME;
+	ndev->device_id = NVLINK_ENDPT_T19X;
+	ndev->number_of_links = T19X_MAX_NVLINK_SUPPORTED;
+	ndev->links[0].link_ops.enable_link = t19x_nvlink_endpt_enable_link;
+	platform_set_drvdata(pdev, ndev);
 
 	if (!np) {
 		nvlink_err("Invalid device_node");
@@ -661,105 +580,73 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 
 
 	/* Map NVLINK apertures listed in device tree node */
-	nvlink->nvlw_tioctrl_base =
+	ndev->nvlw_tioctrl_base =
 				of_io_request_and_map(np, 0,
 						"NVLW_TIOCTRL aperture");
-	if (IS_ERR(nvlink->nvlw_tioctrl_base)) {
+	if (IS_ERR(ndev->nvlw_tioctrl_base)) {
 		nvlink_err("Couldn't map the NVLW_TIOCTRL aperture");
-		ret = PTR_ERR(nvlink->nvlw_tioctrl_base);
+		ret = PTR_ERR(ndev->nvlw_tioctrl_base);
 		goto err_mapping;
 	}
 
-	nvlink->nvlw_nvlipt_base =
+	ndev->nvlw_nvlipt_base =
 				of_io_request_and_map(np, 1,
 						"NVLW_NVLIPT aperture");
-	if (IS_ERR(nvlink->nvlw_nvlipt_base)) {
+	if (IS_ERR(ndev->nvlw_nvlipt_base)) {
 		nvlink_err("Couldn't map the NVLW_NVLIPT aperture");
-		ret = PTR_ERR(nvlink->nvlw_nvlipt_base);
+		ret = PTR_ERR(ndev->nvlw_nvlipt_base);
 		goto err_mapping;
 	}
 
-	nvlink->nvlw_minion_base =
+	ndev->nvlw_minion_base =
 				of_io_request_and_map(np, 2,
 						"NVLW_MINION aperture");
-	if (IS_ERR(nvlink->nvlw_minion_base)) {
+	if (IS_ERR(ndev->nvlw_minion_base)) {
 		nvlink_err("Couldn't map the NVLW_MINION aperture");
-		ret = PTR_ERR(nvlink->nvlw_minion_base);
+		ret = PTR_ERR(ndev->nvlw_minion_base);
 		goto err_mapping;
 	}
 
-	nvlink->nvlw_nvl_base =
+	ndev->links[0].nvlw_nvl_base =
 				of_io_request_and_map(np, 3,
 						"NVLW_NVL aperture");
-	if (IS_ERR(nvlink->nvlw_nvl_base)) {
+	if (IS_ERR(ndev->links[0].nvlw_nvl_base)) {
 		nvlink_err("Couldn't map the NVLW_NVL aperture");
-		ret = PTR_ERR(nvlink->nvlw_nvl_base);
+		ret = PTR_ERR(ndev->links[0].nvlw_nvl_base);
 		goto err_mapping;
 	}
 
-	nvlink->nvlw_sync2x_base =
-				of_io_request_and_map(np, 4,
-						"NVLW_SYNC2X aperture");
-	if (IS_ERR(nvlink->nvlw_sync2x_base)) {
+	((struct tegra_nvlink_device *)(ndev->priv))->
+			nvlw_sync2x_base = of_io_request_and_map(np, 4,
+							"NVLW_SYNC2X aperture");
+	if (IS_ERR(((struct tegra_nvlink_device *)(ndev->priv))->
+							nvlw_sync2x_base)) {
 		nvlink_err("Couldn't map the NVLW_SYNC2X aperture");
-		ret = PTR_ERR(nvlink->nvlw_sync2x_base);
+		ret = PTR_ERR(((struct tegra_nvlink_device *)(ndev->priv))->
+							nvlw_sync2x_base);
 		goto err_mapping;
 	}
 
-	nvlink->nvlw_nvltlc_base =
+	ndev->links[0].nvlw_nvltlc_base =
 				of_io_request_and_map(np, 5,
 						"NVLW_NVLTLC aperture");
-	if (IS_ERR(nvlink->nvlw_nvltlc_base)) {
+	if (IS_ERR(ndev->links[0].nvlw_nvltlc_base)) {
 		nvlink_err("Couldn't map the NVLW_NVLTLC aperture");
-		ret = PTR_ERR(nvlink->nvlw_nvltlc_base);
+		ret = PTR_ERR(ndev->links[0].nvlw_nvltlc_base);
 		goto err_mapping;
 	}
 
-	nvlink->mssnvlink_0_base =
-				of_io_request_and_map(np, 6,
-						"MSSNVLINK_0 aperture");
-	if (IS_ERR(nvlink->mssnvlink_0_base)) {
+	((struct tegra_nvlink_link *)(ndev->links[0].priv))->
+			mssnvlink_0_base = of_io_request_and_map(np, 6,
+							"MSSNVLINK_0 aperture");
+	if (IS_ERR(((struct tegra_nvlink_link *)(ndev->links[0].priv))->
+							mssnvlink_0_base)) {
 		nvlink_err("Couldn't map the MSSNVLINK_0 aperture");
-		ret = PTR_ERR(nvlink->mssnvlink_0_base);
+		ret = PTR_ERR(((struct tegra_nvlink_link *)
+						(ndev->links[0].priv))->
+							mssnvlink_0_base);
 		goto err_mapping;
 	}
-
-	nvlink->mssnvlink_1_base =
-				of_io_request_and_map(np, 7,
-						"MSSNVLINK_1 aperture");
-	if (IS_ERR(nvlink->mssnvlink_1_base)) {
-		nvlink_err("Couldn't map the MSSNVLINK_1 aperture");
-		ret = PTR_ERR(nvlink->mssnvlink_1_base);
-		goto err_mapping;
-	}
-
-	nvlink->mssnvlink_2_base =
-				of_io_request_and_map(np, 8,
-						"MSSNVLINK_2 aperture");
-	if (IS_ERR(nvlink->mssnvlink_2_base)) {
-		nvlink_err("Couldn't map the MSSNVLINK_2 aperture");
-		ret = PTR_ERR(nvlink->mssnvlink_2_base);
-		goto err_mapping;
-	}
-
-	nvlink->mssnvlink_3_base =
-				of_io_request_and_map(np, 9,
-						"MSSNVLINK_3 aperture");
-	if (IS_ERR(nvlink->mssnvlink_3_base)) {
-		nvlink_err("Couldn't map the MSSNVLINK_3 aperture");
-		ret = PTR_ERR(nvlink->mssnvlink_3_base);
-		goto err_mapping;
-	}
-
-	nvlink->mssnvlink_4_base =
-				of_io_request_and_map(np, 10,
-						"MSSNVLINK_4 aperture");
-	if (IS_ERR(nvlink->mssnvlink_4_base)) {
-		nvlink_err("Couldn't map the MSSNVLINK_4 aperture");
-		ret = PTR_ERR(nvlink->mssnvlink_4_base);
-		goto err_mapping;
-	}
-
 
 	/* Read NVLINK topology information in device tree */
 	local_endpoint = of_graph_get_next_endpoint(np, NULL);
@@ -769,7 +656,8 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		if (strcmp(compat_prop,
 			t19x_nvlink_controller_of_match[0].compatible) == 0) {
 			nvlink_dbg("Loopback topology detected!");
-			nvlink->endpt_drv.remote_endpt = NVLINK_ENDPT_TEGRA;
+			ndev->links[0].remote_device_info.device_id =
+							NVLINK_ENDPT_T19X;
 		} else {
 			nvlink_err("Invalid topology info in device tree");
 			ret = -1;
@@ -783,30 +671,30 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 
 
 	/* Create device node */
-	ret = class_register(&nvlink->class);
+	ret = class_register(&ndev->class);
 	if (ret) {
 		nvlink_err("Failed to register class");
 		goto err_mapping;
 	}
 
-	ret = alloc_chrdev_region(&nvlink->dev_t, 0, 1, dev_name(nvlink->dev));
+	ret = alloc_chrdev_region(&ndev->dev_t, 0, 1, dev_name(ndev->dev));
 	if (ret) {
 		nvlink_err("Failed to allocate dev_t");
 		goto err_chrdev_region;
 	}
 
-	cdev_init(&nvlink->cdev, &t19x_nvlink_endpt_ops);
-	nvlink->cdev.owner = THIS_MODULE;
+	cdev_init(&ndev->cdev, &t19x_nvlink_endpt_ops);
+	ndev->cdev.owner = THIS_MODULE;
 
-	ret = cdev_add(&nvlink->cdev, nvlink->dev_t, 1);
+	ret = cdev_add(&ndev->cdev, ndev->dev_t, 1);
 	if (ret) {
 		nvlink_err("Failed to add cdev");
 		goto err_cdev;
 	}
 
-	dev = device_create(&nvlink->class,
+	dev = device_create(&ndev->class,
 				NULL,
-				nvlink->dev_t,
+				ndev->dev_t,
 				NULL,
 				NVLINK_DRV_NAME);
 	if (IS_ERR(dev)) {
@@ -819,47 +707,44 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	goto success;
 
 err_device:
-	cdev_del(&nvlink->cdev);
+	cdev_del(&ndev->cdev);
 err_cdev:
-	unregister_chrdev_region(nvlink->dev_t, 1);
+	unregister_chrdev_region(ndev->dev_t, 1);
 err_chrdev_region:
-	class_unregister(&nvlink->class);
+	class_unregister(&ndev->class);
 err_mapping:
-	if (!IS_ERR(nvlink->nvlw_tioctrl_base))
-		iounmap(nvlink->nvlw_tioctrl_base);
+	if (!IS_ERR(ndev->nvlw_tioctrl_base))
+		iounmap(ndev->nvlw_tioctrl_base);
 
-	if (!IS_ERR(nvlink->nvlw_nvlipt_base))
-		iounmap(nvlink->nvlw_nvlipt_base);
+	if (!IS_ERR(ndev->nvlw_nvlipt_base))
+		iounmap(ndev->nvlw_nvlipt_base);
 
-	if (!IS_ERR(nvlink->nvlw_minion_base))
-		iounmap(nvlink->nvlw_minion_base);
+	if (!IS_ERR(ndev->nvlw_minion_base))
+		iounmap(ndev->nvlw_minion_base);
 
-	if (!IS_ERR(nvlink->nvlw_nvl_base))
-		iounmap(nvlink->nvlw_nvl_base);
+	if (!IS_ERR(ndev->links[0].nvlw_nvl_base))
+		iounmap(ndev->links[0].nvlw_nvl_base);
 
-	if (!IS_ERR(nvlink->nvlw_sync2x_base))
-		iounmap(nvlink->nvlw_sync2x_base);
+	if (!IS_ERR(((struct tegra_nvlink_device *)(ndev->priv))->
+							nvlw_sync2x_base))
+		iounmap(((struct tegra_nvlink_device *)(ndev->priv))->
+							nvlw_sync2x_base);
 
-	if (!IS_ERR(nvlink->nvlw_nvltlc_base))
-		iounmap(nvlink->nvlw_nvltlc_base);
+	if (!IS_ERR(ndev->links[0].nvlw_nvltlc_base))
+		iounmap(ndev->links[0].nvlw_nvltlc_base);
 
-	if (!IS_ERR(nvlink->mssnvlink_0_base))
-		iounmap(nvlink->mssnvlink_0_base);
+	if (!IS_ERR(((struct tegra_nvlink_link *)(ndev->links[0].priv))->
+							mssnvlink_0_base))
+		iounmap(((struct tegra_nvlink_link *)(ndev->links[0].priv))->
+							mssnvlink_0_base);
 
-	if (!IS_ERR(nvlink->mssnvlink_1_base))
-		iounmap(nvlink->mssnvlink_1_base);
-
-	if (!IS_ERR(nvlink->mssnvlink_2_base))
-		iounmap(nvlink->mssnvlink_2_base);
-
-	if (!IS_ERR(nvlink->mssnvlink_3_base))
-		iounmap(nvlink->mssnvlink_3_base);
-
-	if (!IS_ERR(nvlink->mssnvlink_4_base))
-		iounmap(nvlink->mssnvlink_4_base);
 err_dt_node:
-	kfree(nvlink);
-err_alloc:
+	kfree(ndev->links);
+err_alloc_links:
+	kfree(ndev->priv);
+err_alloc_priv:
+	kfree(ndev);
+err_alloc_device:
 	nvlink_err("Probe failed!");
 success:
 	return ret;
@@ -867,24 +752,24 @@ success:
 
 static int t19x_nvlink_endpt_remove(struct platform_device *pdev)
 {
-	struct t19x_nvlink_endpt *nvlink = platform_get_drvdata(pdev);
+	struct nvlink_device *ndev = platform_get_drvdata(pdev);
 
-	device_destroy(&nvlink->class, nvlink->dev_t);
-	cdev_del(&nvlink->cdev);
-	unregister_chrdev_region(nvlink->dev_t, 1);
-	class_unregister(&nvlink->class);
-	iounmap(nvlink->nvlw_tioctrl_base);
-	iounmap(nvlink->nvlw_nvlipt_base);
-	iounmap(nvlink->nvlw_minion_base);
-	iounmap(nvlink->nvlw_nvl_base);
-	iounmap(nvlink->nvlw_sync2x_base);
-	iounmap(nvlink->nvlw_nvltlc_base);
-	iounmap(nvlink->mssnvlink_0_base);
-	iounmap(nvlink->mssnvlink_1_base);
-	iounmap(nvlink->mssnvlink_2_base);
-	iounmap(nvlink->mssnvlink_3_base);
-	iounmap(nvlink->mssnvlink_4_base);
-	kfree(nvlink);
+	device_destroy(&ndev->class, ndev->dev_t);
+	cdev_del(&ndev->cdev);
+	unregister_chrdev_region(ndev->dev_t, 1);
+	class_unregister(&ndev->class);
+
+	iounmap(ndev->nvlw_tioctrl_base);
+	iounmap(ndev->nvlw_nvlipt_base);
+	iounmap(ndev->nvlw_minion_base);
+	iounmap(ndev->links[0].nvlw_nvl_base);
+	iounmap(((struct tegra_nvlink_device *)(ndev->priv))->
+							nvlw_sync2x_base);
+	iounmap(ndev->links[0].nvlw_nvltlc_base);
+	iounmap(((struct tegra_nvlink_link *)(ndev->links[0].priv))->
+							mssnvlink_0_base);
+	kfree(ndev->priv);
+	kfree(ndev);
 
 	return 0;
 }

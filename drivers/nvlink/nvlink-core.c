@@ -29,10 +29,10 @@
 
 u32 nvlink_log_mask = NVLINK_DEFAULT_LOG_MASK;
 
-int nvlink_register_endpt_drv(struct nvlink_endpt_drv *drv)
+int nvlink_register_endpt_drv(struct nvlink_link *link)
 {
-	if (drv->local_endpt == NVLINK_ENDPT_TEGRA &&
-		drv->remote_endpt == NVLINK_ENDPT_TEGRA) {
+	if (link->device_id == NVLINK_ENDPT_T19X &&
+		link->remote_device_info.device_id == NVLINK_ENDPT_T19X) {
 		nvlink_dbg("Loopback topology detected!");
 		nvlink_dbg("Endpoint driver registered successfully!");
 		return 0;
@@ -43,11 +43,11 @@ int nvlink_register_endpt_drv(struct nvlink_endpt_drv *drv)
 	}
 }
 
-int nvlink_init_link(struct nvlink_endpt_drv *drv)
+int nvlink_init_link(struct nvlink_device *ndev)
 {
 	int ret = 0;
 
-	ret = drv->enable_link(drv);
+	ret = ndev->links[0].link_ops.enable_link(ndev);
 	if (ret < 0)
 		nvlink_err("Failed to enable the link!");
 	else

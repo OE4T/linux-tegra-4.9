@@ -855,7 +855,7 @@ struct hw_if_struct {
 	ULONG_LONG (*get_tx_tstamp)(struct s_tx_desc *txdesc);
 	UINT (*get_tx_tstamp_status_via_reg)(void);
 	ULONG_LONG(*get_tx_tstamp_via_reg)(void);
-	UINT (*rx_tstamp_available)(struct s_rx_desc *rxdesc);
+	INT(*rx_tstamp_available)(struct s_rx_desc *rxdesc);
 	UINT(*get_rx_tstamp_status)(struct s_rx_context_desc *rxdesc);
 	ULONG_LONG(*get_rx_tstamp)(struct s_rx_context_desc *rxdesc);
 	INT(*drop_tx_status_enabled)(void);

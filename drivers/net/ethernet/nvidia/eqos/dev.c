@@ -1104,18 +1104,22 @@ static UINT get_rx_tstamp_status(t_rx_context_desc *rxdesc)
 * \retval -1 Failure
 */
 
-static UINT rx_tstamp_available(t_rx_desc *rxdesc)
+static int rx_tstamp_available(t_rx_desc *rxdesc)
 {
-	UINT rs1v;
-	UINT tsa;
+	unsigned int rs1v;
+	unsigned int tsa;
+	unsigned int td;
 
 	RX_NORMAL_DESC_RDES3_RS1V_RD(rxdesc->rdes3, rs1v);
 	if (rs1v == 1) {
 		RX_NORMAL_DESC_RDES1_TSA_RD(rxdesc->rdes1, tsa);
-		return tsa;
-	} else {
-		return 0;
+		RX_NORMAL_DESC_RDES1_TD_RD(rxdesc->rdes1, td);
+
+		if (tsa && !td)
+			return 0;
 	}
+
+	return 1;
 }
 
 /*!

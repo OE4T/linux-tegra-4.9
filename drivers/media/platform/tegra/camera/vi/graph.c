@@ -259,6 +259,13 @@ static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 
 	dev_dbg(chan->vi->dev, "notify complete, all subdevs registered\n");
 
+	ret = video_register_device(&chan->video, VFL_TYPE_GRABBER, -1);
+	if (ret < 0) {
+		dev_err(&chan->video.dev, "failed to register %s\n",
+			chan->video.name);
+		return ret;
+	}
+
 	/* Create links for every entity. */
 	list_for_each_entry(entity, &chan->entities, list) {
 		if (entity->entity != NULL) {

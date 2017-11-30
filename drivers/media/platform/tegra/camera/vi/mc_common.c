@@ -94,10 +94,8 @@ void tegra_vi_v4l2_cleanup(struct tegra_mc_vi *vi)
 {
 	v4l2_ctrl_handler_free(&vi->ctrl_handler);
 	v4l2_device_unregister(&vi->v4l2_dev);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	if (!vi->pg_mode)
 		media_device_unregister(&vi->media_dev);
-#endif
 }
 EXPORT_SYMBOL(tegra_vi_v4l2_cleanup);
 
@@ -128,7 +126,6 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 		sizeof(vi->media_dev.model));
 	vi->media_dev.hw_revision = 3;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	ret = media_device_register(&vi->media_dev);
 	if (ret < 0) {
 		dev_err(vi->dev,
@@ -136,7 +133,7 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 			ret);
 		return ret;
 	}
-#else
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
 	media_device_init(&vi->media_dev);
 #endif
 
@@ -153,11 +150,10 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 	return 0;
 
 register_error:
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	media_device_unregister(&vi->media_dev);
-#else
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
 	media_device_cleanup(&vi->media_dev);
 #endif
+	media_device_unregister(&vi->media_dev);
 	return ret;
 }
 
@@ -224,6 +220,14 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 			devm_kfree(mc_vi->dev, item);
 			continue;
 		}
+
+		err = video_register_device(&item->video, VFL_TYPE_GRABBER, -1);
+		if (err < 0) {
+			dev_err(&item->video.dev, "failed to register %s\n",
+				item->video.name);
+			goto channel_init_error;
+		}
+
 		vi_tpg_fmts_bitmap_init(item);
 		/* only inited tpg channels are added */
 		list_add_tail(&item->list, &mc_vi->vi_chans);

@@ -1309,20 +1309,6 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 	 */
 	chan->subdev_on_csi = sd;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	if (!video_is_registered(&chan->video) &&
-			strstr(sd->name, "nvcsi") == NULL) {
-		int ret = 0;
-
-		ret = video_register_device(&chan->video, VFL_TYPE_GRABBER, -1);
-		if (ret < 0) {
-			dev_err(&chan->video.dev, "failed to register %s\n",
-				chan->video.name);
-			goto fail;
-		}
-	}
-#endif
-
 	/* initialize the available formats */
 	if (chan->num_subdevs)
 		tegra_channel_fmts_bitmap_init(chan);
@@ -1804,18 +1790,6 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->video.lock = &chan->video_lock;
 
 	video_set_drvdata(&chan->video, chan);
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
-	/*
-	 * 4.9 version has bunch of media device initialiation during
-	 * video registration, hence required to be done earlier
-	 */
-	ret = video_register_device(&chan->video, VFL_TYPE_GRABBER, -1);
-	if (ret < 0) {
-		dev_err(chan->vi->dev, "failed to register %s\n",
-			chan->video.name);
-		goto ctrl_init_error;
-	}
-#endif
 
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	/* get the buffers queue... */

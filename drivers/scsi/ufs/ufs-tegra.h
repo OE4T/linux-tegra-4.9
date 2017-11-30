@@ -107,7 +107,7 @@ enum ufs_state {
  * HCLKFrequency in MHz.
  * HCLKDIV is used to generate 1usec tick signal used by Unipro.
  */
-#define UFS_VNDR_HCLKDIV_1US_TICK	0x33
+#define UFS_VNDR_HCLKDIV_1US_TICK	0xCC
 
 
 /*UFS host controller vendor specific registers */

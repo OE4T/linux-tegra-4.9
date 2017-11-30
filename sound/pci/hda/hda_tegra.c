@@ -46,6 +46,7 @@
 
 
 static const struct of_device_id tegra_disb_pd[] = {
+	{ .compatible = "nvidia,tegra194-disa-pd", },
 	{ .compatible = "nvidia,tegra186-disa-pd", },
 	{ .compatible = "nvidia,tegra210-disb-pd", },
 	{ .compatible = "nvidia,tegra132-disb-pd", },

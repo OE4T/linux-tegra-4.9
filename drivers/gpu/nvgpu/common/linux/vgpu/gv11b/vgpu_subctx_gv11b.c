@@ -17,6 +17,7 @@
 #include "gk20a/gk20a.h"
 #include "common/linux/vgpu/vgpu.h"
 #include <linux/tegra_vgpu.h>
+#include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
 
 int vgpu_gv11b_alloc_subctx_header(struct channel_gk20a *c)
 {
@@ -24,14 +25,13 @@ int vgpu_gv11b_alloc_subctx_header(struct channel_gk20a *c)
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_alloc_ctx_header_params *p =
 				&msg.params.t19x.alloc_ctx_header;
-	struct gr_gk20a *gr = &c->g->gr;
 	int err;
 
 	msg.cmd = TEGRA_VGPU_CMD_ALLOC_CTX_HEADER;
 	msg.handle = vgpu_get_handle(c->g);
 	p->ch_handle = c->virt_ctx;
 	p->ctx_header_va = __nvgpu_vm_alloc_va(c->vm,
-				gr->ctx_vars.golden_image_size,
+				ctxsw_prog_fecs_header_v(),
 				gmmu_page_size_kernel);
 	if (!p->ctx_header_va) {
 		nvgpu_err(c->g, "alloc va failed for ctx_header");

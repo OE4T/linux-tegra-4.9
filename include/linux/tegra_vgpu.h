@@ -160,6 +160,9 @@ struct tegra_vgpu_as_map_params {
 	u32 ctag_offset;
 };
 
+#define TEGRA_VGPU_MAP_CACHEABLE	(1 << 0)
+#define TEGRA_VGPU_MAP_IO_COHERENT	(1 << 1)
+
 struct tegra_vgpu_as_map_ex_params {
 	u64 handle;
 	u64 gpu_va;
@@ -168,7 +171,7 @@ struct tegra_vgpu_as_map_ex_params {
 	u8 pgsz_idx;
 	u8 iova;
 	u8 kind;
-	u8 cacheable;
+	u32 flags;
 	u8 clear_ctags;
 	u8 prot;
 	u32 ctag_offset;

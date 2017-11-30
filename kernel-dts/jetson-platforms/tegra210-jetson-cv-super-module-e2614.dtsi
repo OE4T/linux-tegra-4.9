@@ -185,9 +185,12 @@
 				TEGRA_GPIO(B, 3) 0
 				TEGRA_GPIO(BB, 0) 0
 				TEGRA_GPIO(BB, 3) 0
+				TEGRA_GPIO(E, 4) 0
+				TEGRA_GPIO(E, 5) 0
 				>;
 			label = "I2S0_LRCLK", "I2S0_SDIN", "I2S0_SDOUT",
-				"I2S0_CLK", "AUDIO_MCLK", "AUD_RST";
+				"I2S0_CLK", "AUDIO_MCLK", "AUD_RST",
+				"DMIC3_CLK", "DMIC3_DAT";
 			status = "disabled";
 		};
 	};

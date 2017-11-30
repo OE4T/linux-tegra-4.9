@@ -2912,7 +2912,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	int check_val;
 #endif
 	const __be32 *p;
-	const char *dc_or_node = NULL;
 	struct tegra_dc_platform_data *pdata;
 	struct device_node *np = ndev->dev.of_node;
 	struct device_node *timings_np = NULL;
@@ -2995,24 +2994,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		}
 	} else {
 		pdata->conn_np = of_parse_phandle(np, "nvidia,dc-connector", 0);
-		/*
-		 * Note: boot-loader still uses "nvidia,dc-or-node" property.
-		 *       But that property is not mandatory for kernel.
-		 *       Kernel driver finds panel using phandle via
-		 *       "nvidia,dc-connector". However both should point to
-		 *       same node.
-		 */
-		err = of_property_read_string(np, "nvidia,dc-or-node",
-			&dc_or_node);
-		if (err) {
-			dev_err(&ndev->dev, "optional:nvidia,dc-or-node not defined\n");
-		} else {
-			if (strcmp(of_node_full_name(pdata->conn_np),
-					dc_or_node))
-				dev_err(&ndev->dev, "%s: does not match %s\n",
-					of_node_full_name(pdata->conn_np),
-					dc_or_node);
-		}
 	}
 
 	if (IS_ERR_OR_NULL(pdata->conn_np)) {

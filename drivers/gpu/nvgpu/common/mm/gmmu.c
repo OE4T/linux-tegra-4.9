@@ -691,6 +691,14 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		.aperture  = aperture
 	};
 
+	/*
+	 * We need to add the buffer_offset within compression_page_size so that
+	 * the programmed ctagline gets increased at compression_page_size
+	 * boundaries.
+	 */
+	if (attrs.ctag)
+		attrs.ctag += buffer_offset & (ctag_granularity - 1U);
+
 #ifdef CONFIG_TEGRA_19x_GPU
 	nvgpu_gmmu_add_t19x_attrs(&attrs, flags);
 #endif

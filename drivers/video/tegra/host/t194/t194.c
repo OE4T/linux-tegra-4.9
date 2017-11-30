@@ -188,7 +188,6 @@ struct nvhost_device_data t19_host1x_info = {
 	.private_data		= &host1x04_info,
 	.finalize_poweron	= nvhost_host1x_finalize_poweron,
 	.prepare_poweroff	= nvhost_host1x_prepare_poweroff,
-	.isolate_contexts	= true,
 };
 
 struct nvhost_device_data t19_host1x_hv_info = {
@@ -325,7 +324,6 @@ struct nvhost_device_data t19_msenc_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.transcfg_addr		= 0x1844,
 	.transcfg_val		= 0x20,
-	.isolate_contexts	= true,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
@@ -357,7 +355,6 @@ struct nvhost_device_data t19_nvenc1_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.transcfg_addr		= 0x1844,
 	.transcfg_val		= 0x20,
-	.isolate_contexts	= true,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(29),
@@ -550,7 +547,6 @@ struct nvhost_device_data t19_vic_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.transcfg_addr		= 0x2044,
 	.transcfg_val		= 0x20,
-	.isolate_contexts	= true,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VIC,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
@@ -589,7 +585,6 @@ struct nvhost_device_data t19_pva1_info = {
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(11),
-	.isolate_contexts	= true,
 	.engine_cg_regs		= t19x_pva_gating_registers,
 	.engine_can_cg		= false,
 };
@@ -621,7 +616,6 @@ struct nvhost_device_data t19_pva0_info = {
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(10),
-	.isolate_contexts	= true,
 	.engine_cg_regs		= t19x_pva_gating_registers,
 	.engine_can_cg		= false,
 };

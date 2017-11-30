@@ -2451,8 +2451,7 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 
 				if (pdata->hw_feat.tsstssel &&
 				    pdata->hwts_rx_en &&
-				    hw_if->
-				    rx_tstamp_available(prx_desc)) {
+				    !hw_if->rx_tstamp_available(prx_desc)) {
 					/* get rx tstamp if available */
 					ret = eqos_get_rx_hwtstamp(pdata, skb,
 								   prx_ring,

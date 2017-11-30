@@ -129,6 +129,34 @@ struct nvadsp_os_args {
 	char		reserved[128];
 } __packed;
 
+/* ARM MODE REGS */
+struct arm_mode_regs_shared {
+	uint32_t fiq_r13, fiq_r14;
+	uint32_t irq_r13, irq_r14;
+	uint32_t svc_r13, svc_r14;
+	uint32_t abt_r13, abt_r14;
+	uint32_t und_r13, und_r14;
+	uint32_t sys_r13, sys_r14;
+} __packed;
+
+/* ARM FAULT FRAME  */
+struct arm_fault_frame_shared {
+	uint32_t spsr;
+	uint32_t usp;
+	uint32_t ulr;
+	uint32_t r[13];
+	uint32_t pc;
+} __packed;
+
+/* ADSP ARM EXCEPTION CONTEXT  */
+struct nvadsp_exception_context {
+	struct arm_fault_frame_shared frame;
+	struct arm_mode_regs_shared regs;
+	uint32_t stack_addr;
+	uint32_t stack_dump[32];
+	uint32_t exception_reason;
+} __packed;
+
 /* ADSP OS info/status. Keep in sync with firmware. */
 #define MAX_OS_VERSION_BUF    32
 struct nvadsp_os_info {
@@ -141,6 +169,7 @@ struct nvadsp_shared_mem {
 	struct nvadsp_app_shared_msg_pool app_shared_msg_pool;
 	struct nvadsp_os_args os_args;
 	struct nvadsp_os_info os_info;
+	struct nvadsp_exception_context exception_context;
 } __packed;
 
 

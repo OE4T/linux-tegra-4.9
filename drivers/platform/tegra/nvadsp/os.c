@@ -1176,6 +1176,72 @@ static void print_agic_irq_states(void)
 	}
 }
 
+static void print_arm_mode_regs(void)
+{
+	struct nvadsp_exception_context *excep_context;
+	struct arm_fault_frame_shared *shared_frame;
+	struct arm_mode_regs_shared *shared_regs;
+	struct nvadsp_shared_mem *shared_mem;
+	struct device *dev = &priv.pdev->dev;
+	struct nvadsp_drv_data *drv_data;
+
+	drv_data = platform_get_drvdata(priv.pdev);
+	shared_mem = drv_data->shared_adsp_os_data;
+	excep_context = &shared_mem->exception_context;
+	shared_frame = &excep_context->frame;
+	shared_regs = &excep_context->regs;
+
+	dev_err(dev, "dumping arm mode register data...\n");
+	dev_err(dev, "%c fiq r13 0x%08x r14 0x%08x\n",
+		((shared_frame->spsr & MODE_MASK) == MODE_FIQ) ? '*' : ' ',
+		shared_regs->fiq_r13, shared_regs->fiq_r14);
+	dev_err(dev, "%c irq r13 0x%08x r14 0x%08x\n",
+		((shared_frame->spsr & MODE_MASK) == MODE_IRQ) ? '*' : ' ',
+		shared_regs->irq_r13, shared_regs->irq_r14);
+	dev_err(dev, "%c svc r13 0x%08x r14 0x%08x\n",
+		((shared_frame->spsr & MODE_MASK) == MODE_SVC) ? '*' : ' ',
+		shared_regs->svc_r13, shared_regs->svc_r14);
+	dev_err(dev, "%c und r13 0x%08x r14 0x%08x\n",
+		((shared_frame->spsr & MODE_MASK) == MODE_UND) ? '*' : ' ',
+		shared_regs->und_r13, shared_regs->und_r14);
+	dev_err(dev, "%c sys r13 0x%08x r14 0x%08x\n",
+		((shared_frame->spsr & MODE_MASK) == MODE_SYS) ? '*' : ' ',
+		shared_regs->sys_r13, shared_regs->sys_r14);
+	dev_err(dev, "%c abt r13 0x%08x r14 0x%08x\n",
+		((shared_frame->spsr & MODE_MASK) == MODE_ABT) ? '*' : ' ',
+		shared_regs->abt_r13, shared_regs->abt_r14);
+}
+
+static void print_arm_fault_frame(void)
+{
+	struct nvadsp_exception_context *excep_context;
+	struct arm_fault_frame_shared *shared_frame;
+	struct nvadsp_shared_mem *shared_mem;
+	struct device *dev = &priv.pdev->dev;
+	struct nvadsp_drv_data *drv_data;
+
+	drv_data = platform_get_drvdata(priv.pdev);
+	shared_mem = drv_data->shared_adsp_os_data;
+	excep_context = &shared_mem->exception_context;
+	shared_frame = &excep_context->frame;
+
+	dev_err(dev, "dumping fault frame...\n");
+	dev_err(dev, "r0  0x%08x r1  0x%08x r2  0x%08x r3  0x%08x\n",
+		 shared_frame->r[0], shared_frame->r[1], shared_frame->r[2],
+		 shared_frame->r[3]);
+	dev_err(dev, "r4  0x%08x r5  0x%08x r6  0x%08x r7  0x%08x\n",
+		 shared_frame->r[4], shared_frame->r[5], shared_frame->r[6],
+		 shared_frame->r[7]);
+	dev_err(dev, "r8  0x%08x r9  0x%08x r10 0x%08x r11 0x%08x\n",
+		 shared_frame->r[8], shared_frame->r[9], shared_frame->r[10],
+		 shared_frame->r[11]);
+	dev_err(dev, "r12 0x%08x usp 0x%08x ulr 0x%08x pc  0x%08x\n",
+		 shared_frame->r[12], shared_frame->usp, shared_frame->ulr,
+		 shared_frame->pc);
+	dev_err(dev, "spsr 0x%08x\n", shared_frame->spsr);
+
+}
+
 static void dump_thread_name(struct platform_device *pdev, u32 val)
 {
 	dev_info(&pdev->dev, "%s: adsp current thread: %c%c%c%c\n",
@@ -1378,6 +1444,8 @@ void dump_adsp_sys(void)
 
 	dump_adsp_logs();
 	dump_mailbox_regs();
+	print_arm_fault_frame();
+	print_arm_mode_regs();
 	get_adsp_state();
 	if (nvadsp_tegra_adma_dump_ch_reg)
 		(*nvadsp_tegra_adma_dump_ch_reg)();

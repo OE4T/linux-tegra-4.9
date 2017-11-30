@@ -54,6 +54,17 @@
 
 #define MIN_ADSP_FREQ 38400000lu /* in Hz */
 
+/* macros used to find the current mode of ADSP */
+#define MODE_MASK 0x1f
+#define MODE_USR 0x10
+#define MODE_FIQ 0x11
+#define MODE_IRQ 0x12
+#define MODE_SVC 0x13
+#define MODE_MON 0x16
+#define MODE_ABT 0x17
+#define MODE_UND 0x1b
+#define MODE_SYS 0x1f
+
 enum adsp_os_cmd {
 	ADSP_OS_BOOT_COMPLETE,
 	ADSP_OS_SUSPEND,

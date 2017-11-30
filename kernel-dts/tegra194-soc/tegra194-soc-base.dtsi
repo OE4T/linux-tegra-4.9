@@ -342,6 +342,10 @@
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SDMMC4A>;
 			};
+			smmu_test_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SMMU_TEST>;
+			};
 			ufshci_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_UFSHC>;
@@ -458,6 +462,11 @@
 				gap-page = <1>;
 			};
 		};
+	};
+
+	smmu_test: smmu_test {
+		compatible = "nvidia,smmu_test";
+		iommus = <&smmu TEGRA_SID_SMMU_TEST>;
 	};
 
 	mc {

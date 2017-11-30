@@ -15,6 +15,7 @@
 #include <dt-bindings/gpio/tegra194-gpio.h>
 #include "tegra194-audio-p2822-0000.dtsi"
 #include "tegra194-p2822-disp.dtsi"
+#include "tegra194-p2822-0000-camera-e3333-a00.dtsi"
 
 / {
 	sdhci@3400000 {

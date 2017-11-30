@@ -31,8 +31,8 @@
 	/* Default for all I2S is long fsync width(31) */
 	aconnect@2a41000 {
 		ahub {
-			/* I2S3 in Short frame sync for BT SCO */
-			i2s@2901200 {
+			/* I2S4 in Short frame sync for BT SCO */
+			i2s@2901300 {
 				fsync-width = <0>;
 			};
 		};
@@ -95,7 +95,7 @@
 			};
 
 			/* Override with BT SCO entries */
-			nvidia,dai-link-3 {
+			nvidia,dai-link-4 {
 				format = "dsp_a";
 				tx-mask = <0xFF>;
 				rx-mask = <0xFF>;

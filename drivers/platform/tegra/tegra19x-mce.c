@@ -168,8 +168,8 @@ int tegra19x_mce_read_versions(u32 *major, u32 *minor)
 
 	nvg_send_req_data(TEGRA_NVG_CHANNEL_VERSION, 0);
 	version = nvg_get_response();
-	*major = (u32)version;
-	*minor = (u32)(version >> 32);
+	*minor = (u32)version;
+	*major = (u32)(version >> 32);
 
 	/* enable preemption */
 	preempt_enable();

@@ -11,6 +11,8 @@
  * more details.
  */
 
+#include "dt-bindings/gpio/tegra194-gpio.h"
+#include "dt-bindings/extcon-ids.h"
 #include <t19x-common-modules/tegra194-cvb-e3366-0000-a00.dtsi>
 / {
 	i2c@3160000 {
@@ -96,6 +98,22 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 			vcc-supply = <&e3366_vdd_1v8_slt>;
+		};
+	};
+
+	external-connection {
+		vbus_id_extcon: extcon@1 {
+			compatible = "extcon-gpio-states";
+			reg = <0x1>;
+			extcon-gpio,name = "VBUS_ID";
+			extcon-gpio,wait-for-gpio-scan = <0>;
+			extcon-gpio,cable-states = <0x3 0x0
+						    0x0 0x2
+						    0x1 0x2
+						    0x2 0x1>;
+			gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(M, 5) 0 &e3366_gpio_u1403 15 0>;
+			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_HOST EXTCON_NONE>;
+			#extcon-cells = <1>;
 		};
 	};
 };

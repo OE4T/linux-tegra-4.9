@@ -67,6 +67,8 @@ static int tegra186_dspk_get_control(struct snd_kcontrol *kcontrol,
 
 	if (strstr(kcontrol->id.name, "Rx fifo threshold"))
 		ucontrol->value.integer.value[0] = dspk->rx_fifo_th;
+	else if (strstr(kcontrol->id.name, "OSR Value"))
+		ucontrol->value.integer.value[0] = dspk->osr_val;
 
 	return 0;
 }
@@ -83,7 +85,8 @@ static int tegra186_dspk_put_control(struct snd_kcontrol *kcontrol,
 			dspk->rx_fifo_th = val;
 		else
 			return -EINVAL;
-	}
+	} else if (strstr(kcontrol->id.name, "OSR Value"))
+		dspk->osr_val = val;
 
 	return 0;
 }
@@ -211,7 +214,7 @@ static int tegra186_dspk_hw_params(struct snd_pcm_substream *substream,
 	struct device *dev = dai->dev;
 	struct tegra186_dspk *dspk = snd_soc_dai_get_drvdata(dai);
 	int channels, srate, ret, dspk_clk;
-	int osr = TEGRA186_DSPK_OSR_64;
+	int osr = dspk->osr_val;
 	int interface_clk_ratio = 4; /* dspk interface clock should be fsout*4 */
 
 	channels = params_channels(params);
@@ -255,6 +258,7 @@ static int tegra186_dspk_codec_probe(struct snd_soc_codec *codec)
 
 	codec->control_data = dspk->regmap;
 	dspk->rx_fifo_th = 0;
+	dspk->osr_val = TEGRA186_DSPK_OSR_64;
 
 	return 0;
 }
@@ -330,18 +334,29 @@ static const struct snd_soc_dapm_route tegra186_dspk_routes[] = {
 	{ "DSPK Left Transmit", NULL, "DSPK TX" },
 };
 
+static const char * const tegra186_dspk_osr_text[] = {
+	"OSR_32", "OSR_64", "OSR_128", "OSR_256",
+};
+
+static const struct soc_enum tegra186_dspk_osr_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra186_dspk_osr_text),
+		tegra186_dspk_osr_text);
 
 #define NV_SOC_SINGLE_RANGE_EXT(xname, xmin, xmax, xget, xput) \
-{       .iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
-        .info = snd_soc_info_xr_sx, .get = xget, .put = xput, \
-        .private_value = (unsigned long)&(struct soc_mixer_control) \
-                {.invert = 0, .min = xmin, .max = xmax, \
-                .platform_max = xmax}}
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
+	.info = snd_soc_info_xr_sx, .get = xget, .put = xput, \
+	.private_value = (unsigned long)&(struct soc_mixer_control) \
+	{.invert = 0, .min = xmin, .max = xmax, \
+		.platform_max = xmax} \
+}
 
 static const struct snd_kcontrol_new tegrat186_dspk_controls[] = {
 	NV_SOC_SINGLE_RANGE_EXT("Rx fifo threshold", 0,
 		TEGRA186_DSPK_RX_FIFO_DEPTH - 1, tegra186_dspk_get_control,
 		tegra186_dspk_put_control),
+	SOC_ENUM_EXT("OSR Value", tegra186_dspk_osr_enum,
+		tegra186_dspk_get_control, tegra186_dspk_put_control),
 };
 
 static struct snd_soc_codec_driver tegra186_dspk_codec = {

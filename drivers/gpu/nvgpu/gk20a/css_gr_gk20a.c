@@ -75,7 +75,7 @@ static inline u32 css_hw_get_pending_snapshots(struct gk20a *g)
 }
 
 /* informs hw how many snapshots have been processed (frees up fifo space) */
-inline void css_hw_set_handled_snapshots(struct gk20a *g, u32 done)
+void css_hw_set_handled_snapshots(struct gk20a *g, u32 done)
 {
 	if (done > 0) {
 		gk20a_writel(g, perf_pmasys_mem_bump_r(),

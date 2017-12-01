@@ -25,8 +25,26 @@ enum {
 
 #define NVHOST_EVENT_PROVIDER_NAME "nvhost"
 
+/* Marks that the task is submitted to hardware */
+struct nvhost_task_submit {
+	/* Engine class ID */
+	u32 class_id;
+
+	/* Syncpoint ID */
+	u32 syncpt_id;
+
+	/* Threshold for task completion */
+	u32 syncpt_thresh;
+
+	/* PID */
+	u32 pid;
+
+	/* TID */
+	u32 tid;
+} __packed;
+
 /* Marks that the task is moving to execution */
-struct nvhost_task_start {
+struct nvhost_task_begin {
 	/* Engine class ID */
 	u32 class_id;
 
@@ -50,18 +68,22 @@ struct nvhost_task_end {
 } __packed;
 
 enum {
-	/* struct nvhost_task_start */
-	NVHOST_TASK_START = 0,
+	/* struct nvhost_task_submit */
+	NVHOST_TASK_SUBMIT = 0,
+
+	/* struct nvhost_task_begin */
+	NVHOST_TASK_BEGIN = 1,
 
 	/* struct nvhost_task_end */
-	NVHOST_TASK_END = 1,
+	NVHOST_TASK_END = 2,
 
-	NVHOST_NUM_EVENT_TYPES = 2
+	NVHOST_NUM_EVENT_TYPES = 3
 };
 
 union nvhost_event_union {
-	struct nvhost_task_start task_start;
+	struct nvhost_task_begin task_begin;
 	struct nvhost_task_end task_end;
+	struct nvhost_task_submit task_submit;
 };
 
 enum {

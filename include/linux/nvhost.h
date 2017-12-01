@@ -648,6 +648,12 @@ static inline void nvhost_eventlib_log_task(struct platform_device *pdev,
 					    u64 timestamp_end)
 {
 }
+
+static inline void nvhost_eventlib_log_submit(struct platform_device *pdev,
+					      u32 syncpt_id,
+					      u32 syncpt_thresh)
+{
+}
 #else
 
 #ifdef CONFIG_DEBUG_FS
@@ -755,6 +761,10 @@ void nvhost_eventlib_log_task(struct platform_device *pdev,
 			      u32 syncpt_thres,
 			      u64 timestamp_start,
 			      u64 timestamp_end);
+
+void nvhost_eventlib_log_submit(struct platform_device *pdev,
+			        u32 syncpt_id,
+			        u32 syncpt_thresh);
 
 /* public host1x interrupt management APIs */
 int nvhost_intr_register_notifier(struct platform_device *pdev,

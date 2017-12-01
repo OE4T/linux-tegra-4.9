@@ -1825,14 +1825,14 @@ void nvhost_eventlib_log_task(struct platform_device *pdev,
 	/*
 	 * Write task start event
 	 */
-	event.task_start.syncpt_id = syncpt_id;
-	event.task_start.syncpt_thresh = syncpt_thresh;
-	event.task_start.class_id = pdata->class;
+	event.task_begin.syncpt_id = syncpt_id;
+	event.task_begin.syncpt_thresh = syncpt_thresh;
+	event.task_begin.class_id = pdata->class;
 
 	keventlib_write(pdata->eventlib_id,
 			&event,
 			sizeof(event),
-			NVHOST_TASK_START,
+			NVHOST_TASK_BEGIN,
 			timestamp_start);
 
 	/*
@@ -1848,6 +1848,32 @@ void nvhost_eventlib_log_task(struct platform_device *pdev,
 			NVHOST_TASK_END,
 			timestamp_end);
 }
+
+void nvhost_eventlib_log_submit(struct platform_device *pdev,
+			        u32 syncpt_id,
+			        u32 syncpt_thresh)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	union nvhost_event_union event;
+
+	if (!pdata->eventlib_id)
+		return;
+
+	/*
+	 * Write task start event
+	 */
+	event.task_submit.syncpt_id = syncpt_id;
+	event.task_submit.syncpt_thresh = syncpt_thresh;
+	event.task_submit.class_id = pdata->class;
+	event.task_submit.pid = current->tgid;
+	event.task_submit.tid = current->pid;
+
+	keventlib_write(pdata->eventlib_id,
+			&event,
+			sizeof(event),
+			NVHOST_TASK_SUBMIT,
+			0);
+}
 #else
 void nvhost_eventlib_log_task(struct platform_device *pdev,
 			      u32 syncpt_id,
@@ -1856,5 +1882,12 @@ void nvhost_eventlib_log_task(struct platform_device *pdev,
 			      u64 timestamp_end)
 {
 }
+
+void nvhost_eventlib_log_submit(struct platform_device *pdev,
+			        u32 syncpt_id,
+			        u32 syncpt_thresh)
+{
+}
 #endif
+EXPORT_SYMBOL(nvhost_eventlib_log_submit);
 EXPORT_SYMBOL(nvhost_eventlib_log_task);

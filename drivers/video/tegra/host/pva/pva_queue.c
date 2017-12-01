@@ -1182,6 +1182,8 @@ static int pva_task_submit(struct pva_submit_task *task)
 	list_add_tail(&task->node, &queue->tasklist);
 	mutex_unlock(&queue->list_lock);
 
+	nvhost_eventlib_log_submit(task->pva->pdev, queue->syncpt_id, thresh);
+
 	nvhost_dbg_info("Postfence id=%u, value=%u",
 			queue->syncpt_id, thresh);
 

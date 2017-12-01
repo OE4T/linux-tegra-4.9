@@ -137,5 +137,6 @@ int nvs_vregs_sts(struct regulator_bulk_data *vregs, unsigned int vregs_n)
 EXPORT_SYMBOL_GPL(nvs_vregs_sts);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_DESCRIPTION("NVidia Sensor voltage regulator module");
 MODULE_AUTHOR("NVIDIA Corporation");
+

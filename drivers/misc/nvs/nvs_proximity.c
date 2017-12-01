@@ -640,5 +640,6 @@ void nvs_proximity_threshold_calibrate_hi(struct nvs_proximity *np, int hi)
 EXPORT_SYMBOL_GPL(nvs_proximity_threshold_calibrate_hi);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_DESCRIPTION("NVidia Sensor proximity module");
 MODULE_AUTHOR("NVIDIA Corporation");
+

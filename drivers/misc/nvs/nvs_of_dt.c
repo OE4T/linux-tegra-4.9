@@ -300,5 +300,6 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 EXPORT_SYMBOL_GPL(nvs_of_dt);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_DESCRIPTION("NVidia Sensor Open Firmware Device Tree module");
 MODULE_AUTHOR("NVIDIA Corporation");
+

@@ -669,11 +669,11 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 		push = true;
 	if (ts) {
 		st->ts_diff = ts - st->ts;
-		if (st->ts_diff < 0)
+		if (st->ts_diff < 0) {
 			dev_err(st->dev, "%s %s ts_diff=%lld\n",
 				__func__, st->cfg->name, st->ts_diff);
-		else if (st->on_change && (st->ts_diff <
-					   (s64)st->batch_period_us * 1000)) {
+		} else if (st->on_change && st->ts_diff <
+					     (s64)st->batch_period_us * 1000) {
 			/* data rate faster than requested */
 			if (!st->first_push)
 				push = false;
@@ -1973,9 +1973,9 @@ struct nvs_fn_if *nvs_iio(void)
 {
 	return &nvs_fn_if_iio;
 }
-
 EXPORT_SYMBOL_GPL(nvs_iio);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_DESCRIPTION("NVidia Sensor IIO module");
 MODULE_AUTHOR("NVIDIA Corporation");
+

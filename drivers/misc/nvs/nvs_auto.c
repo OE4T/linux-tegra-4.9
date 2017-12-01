@@ -30,5 +30,6 @@ struct nvs_fn_if *nvs_auto(void)
 }
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_DESCRIPTION("NVidia Sensor Kernel InterFace module");
 MODULE_AUTHOR("NVIDIA Corporation");
+

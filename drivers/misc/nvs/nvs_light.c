@@ -841,5 +841,6 @@ int nvs_light_threshold_calibrate_hi(struct nvs_light *nl, int hi)
 EXPORT_SYMBOL_GPL(nvs_light_threshold_calibrate_hi);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_DESCRIPTION("NVidia Sensor light module");
 MODULE_AUTHOR("NVIDIA Corporation");
+

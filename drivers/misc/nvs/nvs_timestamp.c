@@ -27,6 +27,6 @@ s64 nvs_timestamp(void)
 EXPORT_SYMBOL_GPL(nvs_timestamp);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_DESCRIPTION("NVidia Sensor timestamp module");
 MODULE_AUTHOR("NVIDIA Corporation");
 

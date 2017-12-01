@@ -521,6 +521,6 @@ static struct platform_driver dsm_driver = {
 module_platform_driver(dsm_driver);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVidia Sensor DSM driver");
+MODULE_DESCRIPTION("NVidia Sensor Dynamic Sensor Meta driver");
 MODULE_AUTHOR("NVIDIA Corporation");
 

@@ -153,6 +153,7 @@ struct nvs_fn_if *nvs_relay(void)
 {
 	return &nvs_fn_if_relay;
 }
+EXPORT_SYMBOL_GPL(nvs_relay);
 
 static int __init nvs_init(void)
 {
@@ -182,6 +183,6 @@ subsys_initcall(nvs_init);
 module_exit(nvs_exit);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("NVidia Sensor relay framework");
+MODULE_DESCRIPTION("NVidia Sensor Relay module");
 MODULE_AUTHOR("NVIDIA Corporation");
 

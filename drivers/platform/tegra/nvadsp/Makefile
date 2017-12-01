@@ -3,8 +3,7 @@ ccflags-y += -Werror
 
 obj-y := nvadsp.o
 nvadsp-objs += dev.o os.o app.o app_loader_linker.o\
-	 amc.o nvadsp_dram.o \
-	 nvadsp_shared_sema.o \
+	 amc.o nvadsp_shared_sema.o \
 	 hwmailbox.o mailbox.o msgq.o \
 	 mem_manager.o aram_manager.o dram_app_mem_manager.o \
 	 dev-t21x.o os-t21x.o dev-t18x.o os-t18x.o acast.o

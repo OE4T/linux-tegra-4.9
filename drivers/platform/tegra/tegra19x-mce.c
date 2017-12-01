@@ -22,15 +22,12 @@
 #include "tegra19x-mce.h"
 
 /* Issue a NVG request with data */
-static noinline notrace uint64_t nvg_send_req_data(uint64_t req, uint64_t data)
+static noinline notrace void nvg_send_req_data(uint64_t req, uint64_t data)
 {
-	uint64_t ret;
-
-	asm volatile ("msr s3_0_c15_c1_2, %0" :: "r" (req));
-	asm volatile ("msr s3_0_c15_c1_3, %0" :: "r" (data));
-	asm volatile ("mov %0, x0\n" : "=r" (ret));
-
-	return ret;
+	asm volatile (
+		"msr s3_0_c15_c1_2, %0	\n"
+		"msr s3_0_c15_c1_3, %1	\n"
+		:: "r" (req), "r" (data));
 }
 
 /* Issue a NVG request to read the command response */
@@ -53,7 +50,6 @@ int tegra19x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 				    u8 force, u32 wake_mask, bool valid)
 {
 	nvg_cstate_info_channel_t cstate_info = { 0 };
-	uint64_t ret;
 
 	/* disable preemption */
 	preempt_disable();
@@ -84,24 +80,17 @@ int tegra19x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 	cstate_info.bits.wake_mask = wake_mask;
 
 	/* set the updated cstate info */
-	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_INFO,
+	nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_INFO,
 				cstate_info.flat);
 
 	/* enable preemption */
 	preempt_enable();
-
-	if (ret) {
-		pr_err("%s failed with error (%lld)\n", __func__, ret);
-		return -ENOMSG;
-	}
 
 	return 0;
 }
 
 int tegra19x_mce_update_crossover_time(u32 type, u32 time)
 {
-	uint64_t ret;
-
 	if ((type != TEGRA_NVG_CHANNEL_CROSSOVER_C6_LOWER_BOUND) &&
 	    (type != TEGRA_NVG_CHANNEL_CROSSOVER_CC6_LOWER_BOUND) &&
 	    (type != TEGRA_NVG_CHANNEL_CROSSOVER_CG7_LOWER_BOUND)) {
@@ -112,44 +101,25 @@ int tegra19x_mce_update_crossover_time(u32 type, u32 time)
 	/* disable pre-emption*/
 	preempt_disable();
 
-	ret = nvg_send_req_data(type, (uint64_t)time);
+	nvg_send_req_data(type, (uint64_t)time);
 
 	/* enable pre-emption */
 	preempt_enable();
-
-	if (ret) {
-		pr_err("%s failed with error (%lld)\n", __func__, ret);
-		return -ENOMSG;
-	}
 
 	return 0;
 }
 
 int tegra19x_mce_read_cstate_stats(u32 state, u32 *stats)
 {
-	uint64_t ret;
-
 	if (!stats)
 		return -EINVAL;
 
 	/* disable preemption */
 	preempt_disable();
 
-	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_REQUEST,
+	nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_REQUEST,
 				(uint64_t)state);
-	if (ret) {
-		pr_err("%s failed with error (%lld)\n", __func__, ret);
-		preempt_enable();
-		return -ENOMSG;
-	}
-
-	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_VALUE, 0);
-	if (ret) {
-		pr_err("%s failed with error (%lld)\n", __func__, ret);
-		preempt_enable();
-		return -ENOMSG;
-	}
-
+	nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_VALUE, 0);
 	*stats = (u32)nvg_get_response();
 
 	/* enable preemption */
@@ -161,7 +131,6 @@ int tegra19x_mce_read_cstate_stats(u32 state, u32 *stats)
 int tegra19x_mce_cc3_ctrl(u32 ndiv, u32 vindex, u8 enable)
 {
 	nvg_cc3_control_channel_t cc3_ctrl;
-	uint64_t ret;
 
 	/* disable preemption */
 	preempt_disable();
@@ -179,21 +148,17 @@ int tegra19x_mce_cc3_ctrl(u32 ndiv, u32 vindex, u8 enable)
 	cc3_ctrl.bits.freq_req = ndiv;
 	cc3_ctrl.bits.enable = !!enable;
 
-	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_CC3_CTRL, cc3_ctrl.flat);
-	if (ret) {
-		pr_err("%s failed with error (%lld)\n", __func__, ret);
-		ret = -ENOMSG;
-	}
+	nvg_send_req_data(TEGRA_NVG_CHANNEL_CC3_CTRL, cc3_ctrl.flat);
 
 	/* enable preemption */
 	preempt_enable();
 
-	return ret;
+	return 0;
 }
 
 int tegra19x_mce_read_versions(u32 *major, u32 *minor)
 {
-	uint64_t version, ret;
+	uint64_t version;
 
 	if (!major || !minor)
 		return -EINVAL;
@@ -201,13 +166,7 @@ int tegra19x_mce_read_versions(u32 *major, u32 *minor)
 	/* disable preemption */
 	preempt_disable();
 
-	ret = nvg_send_req_data(TEGRA_NVG_CHANNEL_VERSION, 0);
-	if (ret != 0) {
-		pr_err("%s failed with error (%lld)\n", __func__, ret);
-		preempt_enable();
-		return -ENOMSG;
-	}
-
+	nvg_send_req_data(TEGRA_NVG_CHANNEL_VERSION, 0);
 	version = nvg_get_response();
 	*major = (u32)version;
 	*minor = (u32)(version >> 32);

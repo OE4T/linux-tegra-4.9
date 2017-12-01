@@ -255,6 +255,8 @@ struct nvhost_device_data t19_vi5_info = {
 	},
 	.ctrl_ops		= &tegra194_vi5_ctrl_ops,
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
+	.num_ppc		= 8,
+	.aggregate_constraints	= nvhost_vi5_aggregate_constraints,
 };
 #endif
 

@@ -26,4 +26,10 @@
 
 extern const struct file_operations tegra194_vi5_ctrl_ops;
 
+int nvhost_vi5_aggregate_constraints(struct platform_device *dev,
+				int clk_index,
+				unsigned long floor_rate,
+				unsigned long pixelrate,
+				unsigned long bw_constraint);
+
 #endif

@@ -150,10 +150,7 @@ int nvhost_vi4_aggregate_constraints(struct platform_device *dev,
 	 * in floor_rate, so we need to aggregate its request
 	 * with V4L2 pixelrate request
 	 */
-	if (floor_rate)
-		return floor_rate + (pixelrate / pdata->num_ppc);
-
-	return pixelrate / pdata->num_ppc;
+	return floor_rate + (pixelrate / pdata->num_ppc);
 }
 
 void nvhost_vi4_idle(struct platform_device *pdev)

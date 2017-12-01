@@ -78,6 +78,28 @@ static int vi5_alloc_syncpt(struct platform_device *pdev,
 	return t194_capture_alloc_syncpt(vi5->vi_thi, name, syncpt_id);
 }
 
+int nvhost_vi5_aggregate_constraints(struct platform_device *dev,
+				int clk_index,
+				unsigned long floor_rate,
+				unsigned long pixelrate,
+				unsigned long bw_constraint)
+{
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+
+	if (!pdata) {
+		dev_err(&dev->dev,
+			"No platform data, fall back to default policy\n");
+		return 0;
+	}
+	if (!pixelrate || clk_index != 0)
+		return 0;
+	/* SCF send request using NVHOST_CLK, which is calculated
+	 * in floor_rate, so we need to aggregate its request
+	 * with V4L2 pixelrate request
+	 */
+	return floor_rate + (pixelrate / pdata->num_ppc);
+}
+
 static void vi5_release_syncpt(struct platform_device *pdev, uint32_t id)
 {
 	struct host_vi5 *vi5 = nvhost_get_private_data(pdev);

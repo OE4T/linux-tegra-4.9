@@ -95,6 +95,9 @@
 #define APPL_CFG_IATU_DMA_BASE_ADDR		0x108
 #define APPL_CFG_IATU_DMA_BASE_ADDR_MASK	0xFFFC0000
 
+#define APPL_CFG_SLCG_OVERRIDE			0x114
+#define APPL_CFG_SLCG_OVERRIDE_SLCG_EN_MASTER	BIT(0)
+
 #define APPL_GTH_PHY				0x138
 #define APPL_GTH_PHY_RST			0x1
 
@@ -480,6 +483,12 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "failed to enable phy\n");
 		goto fail_phy;
 	}
+
+	/* Disable SLCG */
+	/* NOTE:- This needs to be removed after initial bringup */
+	val = readl(pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
+	writel(val | APPL_CFG_SLCG_OVERRIDE_SLCG_EN_MASTER,
+	       pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
 
 	/* clear any stale PEX_RST interrupt */
 	writel(1 << APPL_INTR_STATUS_L0_PEX_RST_INT_SHIFT,

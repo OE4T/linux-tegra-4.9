@@ -158,7 +158,7 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 {
 	struct device *dev = dai->dev;
 	struct tegra210_dmic *dmic = snd_soc_dai_get_drvdata(dai);
-	int channels, srate, dmic_clk, osr = TEGRA210_DMIC_OSR_64, ret;
+	int channels, srate, dmic_clk, osr = dmic->osr_val, ret;
 	struct tegra210_xbar_cif_conf cif_conf;
 	unsigned long long boost_gain;
 	int channel_select;
@@ -306,6 +306,8 @@ static int tegra210_dmic_get_control(struct snd_kcontrol *kcontrol,
 	else if (strstr(kcontrol->id.name, "Sample Rate"))
 		ucontrol->value.integer.value[0] =
 					dmic->sample_rate_via_control;
+	else if (strstr(kcontrol->id.name, "OSR Value"))
+		ucontrol->value.integer.value[0] = dmic->osr_val;
 
 	return 0;
 }
@@ -327,6 +329,8 @@ static int tegra210_dmic_put_control(struct snd_kcontrol *kcontrol,
 		dmic->format_out = value;
 	else if (strstr(kcontrol->id.name, "Sample Rate"))
 		dmic->sample_rate_via_control = value;
+	else if (strstr(kcontrol->id.name, "OSR Value"))
+		dmic->osr_val = value;
 
 	return 0;
 }
@@ -336,6 +340,7 @@ static int tegra210_dmic_codec_probe(struct snd_soc_codec *codec)
 	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
 
 	codec->control_data = dmic->regmap;
+	dmic->osr_val = TEGRA210_DMIC_OSR_64;
 
 	return 0;
 }
@@ -414,6 +419,15 @@ static const struct soc_enum tegra210_dmic_format_enum =
 		ARRAY_SIZE(tegra210_dmic_format_text),
 		tegra210_dmic_format_text);
 
+static const char * const tegra210_dmic_osr_text[] = {
+	"OSR_64", "OSR_128", "OSR_256",
+};
+
+static const struct soc_enum tegra210_dmic_osr_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_dmic_osr_text),
+		tegra210_dmic_osr_text);
+
 static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	SOC_SINGLE_EXT("Boost Gain", 0, 0, 25600, 0,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
@@ -424,6 +438,8 @@ static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	SOC_ENUM_EXT("output bit format", tegra210_dmic_format_enum,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	SOC_SINGLE_EXT("Sample Rate", 0, 0, 48000, 0,
+		tegra210_dmic_get_control, tegra210_dmic_put_control),
+	SOC_ENUM_EXT("OSR Value", tegra210_dmic_osr_enum,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	};
 

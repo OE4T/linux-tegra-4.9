@@ -27,6 +27,7 @@
 	chosen {
 		bootargs ="console=ttyS2,115200 earlycon=uart8250,mmio32,0x0c280000";
 		stdout-path = &uartc;
+		board-has-eeprom;
 	};
 
 	spi@3210000 {

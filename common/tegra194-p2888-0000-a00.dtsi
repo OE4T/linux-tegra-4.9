@@ -14,6 +14,8 @@
  */
 
 #include <t19x-common-modules/tegra194-cvm-p2888-0000-a00.dtsi>
+#include "tegra194-eeprom-manager-p2888-0000.dtsi"
+
 / {
 	serial@3100000 {
 		compatible = "nvidia,tegra186-hsuart";

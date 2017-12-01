@@ -350,6 +350,7 @@ struct tegra_xusb_soc {
 
 	bool handle_oc;
 	bool disable_hsic_wake;
+	bool disable_elpg;
 };
 
 struct tegra_xhci_ipfs_context {
@@ -3650,7 +3651,8 @@ static int tegra_xhci_runtime_suspend(struct device *dev)
 	int ret;
 
 	if ((!tegra->fw_loaded && !tegra->soc->is_xhci_vf) ||
-		(xhci->recovery_in_progress == true))
+		(xhci->recovery_in_progress == true) ||
+		tegra->soc->disable_elpg)
 		return 0;
 
 	mutex_lock(&tegra->lock);
@@ -3667,7 +3669,8 @@ static int tegra_xhci_runtime_resume(struct device *dev)
 	int ret;
 
 	if ((!tegra->fw_loaded && !tegra->soc->is_xhci_vf) ||
-		(xhci->recovery_in_progress == true))
+		(xhci->recovery_in_progress == true) ||
+		tegra->soc->disable_elpg)
 		return 0;
 
 	mutex_lock(&tegra->lock);
@@ -3724,6 +3727,7 @@ static const struct tegra_xusb_soc tegra124_soc = {
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
 	.disable_hsic_wake = false,
+	.disable_elpg = false,
 };
 MODULE_FIRMWARE("nvidia/tegra124/xusb.bin");
 
@@ -3764,6 +3768,7 @@ static const struct tegra_xusb_soc tegra210_soc = {
 	.ss_lfps_detector_war = true,
 	.handle_oc = false,
 	.disable_hsic_wake = false,
+	.disable_elpg = false,
 };
 MODULE_FIRMWARE("tegra21x_xusb_firmware");
 
@@ -3803,6 +3808,7 @@ static const struct tegra_xusb_soc tegra210b01_soc = {
 	.ss_lfps_detector_war = true,
 	.handle_oc = false,
 	.disable_hsic_wake = true,
+	.disable_elpg = false,
 };
 MODULE_FIRMWARE("tegra210b01_xusb_firmware");
 
@@ -3836,6 +3842,7 @@ static const struct tegra_xusb_soc tegra186_soc = {
 	.ss_lfps_detector_war = false,
 	.handle_oc = true,
 	.disable_hsic_wake = false,
+	.disable_elpg = false,
 };
 MODULE_FIRMWARE("tegra18x_xusb_firmware");
 
@@ -3845,6 +3852,7 @@ static const char * const tegra194_supply_names[] = {
 static const struct tegra_xusb_soc tegra194_soc = {
 	.device_id = XHCI_DEVICE_ID_T194,
 	.firmware = "tegra19x_xusb_firmware",
+	.lpm_support = false,
 	.supply_names = tegra194_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
 	.num_typed_phys[USB3_PHY] = 4,
@@ -3868,11 +3876,13 @@ static const struct tegra_xusb_soc tegra194_soc = {
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
 	.disable_hsic_wake = false,
+	.disable_elpg = true,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
 static const struct tegra_xusb_soc tegra194_vf1_soc = {
 	.device_id = XHCI_DEVICE_ID_T194,
+	.lpm_support = false,
 	.is_xhci_vf = true,
 	.vf_id = 1,
 	.supply_names = tegra194_supply_names,
@@ -3899,11 +3909,13 @@ static const struct tegra_xusb_soc tegra194_vf1_soc = {
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
 	.disable_hsic_wake = false,
+	.disable_elpg = true,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
 static const struct tegra_xusb_soc tegra194_vf2_soc = {
 	.device_id = XHCI_DEVICE_ID_T194,
+	.lpm_support = false,
 	.is_xhci_vf = true,
 	.vf_id = 2,
 	.supply_names = tegra194_supply_names,
@@ -3930,6 +3942,7 @@ static const struct tegra_xusb_soc tegra194_vf2_soc = {
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
 	.disable_hsic_wake = false,
+	.disable_elpg = true,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 

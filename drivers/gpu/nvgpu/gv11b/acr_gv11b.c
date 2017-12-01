@@ -54,6 +54,18 @@ static void flcn64_set_dma(struct falc_u64 *dma_addr, u64 value)
 
 /*Forwards*/
 
+int gv11b_alloc_blob_space(struct gk20a *g,
+		size_t size, struct nvgpu_mem *mem)
+{
+	int err;
+
+	gv11b_dbg_pmu("alloc blob space: NVGPU_DMA_FORCE_CONTIGUOUS");
+	err = nvgpu_dma_alloc_flags_sys(g, NVGPU_DMA_FORCE_CONTIGUOUS,
+						size, mem);
+
+	return err;
+}
+
 /*Loads ACR bin to FB mem and bootstraps PMU with bootloader code
  * start and end are addresses of ucode blob in non-WPR region*/
 int gv11b_bootstrap_hs_flcn(struct gk20a *g)

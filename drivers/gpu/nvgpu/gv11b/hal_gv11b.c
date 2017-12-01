@@ -743,7 +743,7 @@ int gv11b_init_hal(struct gk20a *g)
 		gops->pmu.prepare_ucode = gp106_prepare_ucode_blob,
 		gops->pmu.pmu_setup_hw_and_bootstrap = gv11b_bootstrap_hs_flcn,
 		gops->pmu.get_wpr = gm20b_wpr_info,
-		gops->pmu.alloc_blob_space = gm20b_alloc_blob_space,
+		gops->pmu.alloc_blob_space = gv11b_alloc_blob_space,
 		gops->pmu.pmu_populate_loader_cfg =
 			gp106_pmu_populate_loader_cfg,
 		gops->pmu.flcn_populate_bl_dmem_desc =

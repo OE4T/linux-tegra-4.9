@@ -63,7 +63,7 @@
 			reg = <0x25>;
 			gpio-controller;
 			#gpio-cells = <2>;
-			vcc-supply = <&e3366_vdd_1v8_slt>;
+			vcc-supply = <&battery_reg>;
 		};
 
 		e3366_gpio_u1407: gpio@26 {
@@ -71,7 +71,7 @@
 			reg = <0x26>;
 			gpio-controller;
 			#gpio-cells = <2>;
-			vcc-supply = <&e3366_vdd_1v8_slt>;
+			vcc-supply = <&battery_reg>;
 
 			/* DAP2 to codec */
 			dap_lb_cb {
@@ -88,7 +88,7 @@
 			reg = <0x27>;
 			gpio-controller;
 			#gpio-cells = <2>;
-			vcc-supply = <&e3366_vdd_1v8_slt>;
+			vcc-supply = <&battery_reg>;
 		};
 	};
 

@@ -14,7 +14,6 @@
 
 #include <dt-bindings/mfd/max77620.h>
 #include <dt-bindings/regulator/regulator.h>
-#include <dt-bindings/gpio/tegra194-gpio.h>
 #include <dt-bindings/thermal/thermal.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 
@@ -36,6 +35,7 @@
 			enable-clock32k-out;
 
 			system-pmic-power-off;
+			avoid-power-off-commands;
 
 			hot-die-threshold-temp = <110000>;
 			#thermal-sensor-cells = <0>;

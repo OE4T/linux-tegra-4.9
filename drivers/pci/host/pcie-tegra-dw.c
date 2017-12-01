@@ -87,6 +87,9 @@
 #define APPL_CFG_IATU_DMA_BASE_ADDR		0x108
 #define APPL_CFG_IATU_DMA_BASE_ADDR_MASK	0xFFFC0000
 
+#define APPL_CFG_SLCG_OVERRIDE			0x114
+#define APPL_CFG_SLCG_OVERRIDE_SLCG_EN_MASTER	BIT(0)
+
 #define APPL_CAR_RESET_OVRD				0x12C
 #define APPL_CAR_RESET_OVRD_CYA_OVERRIDE_CORE_RST_N	BIT(0)
 
@@ -1698,6 +1701,12 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	}
 	pp->va_cfg0_base = pp->dbi_base;
 	pp->va_cfg1_base = pp->dbi_base + resource_size(dbi_res) / 2;
+
+	/* Disable SLCG */
+	/* NOTE:- This needs to be removed after initial bringup */
+	val = readl(pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
+	writel(val | APPL_CFG_SLCG_OVERRIDE_SLCG_EN_MASTER,
+	       pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
 
 	/* update CFG base address */
 	writel(dbi_res->start & APPL_CFG_BASE_ADDR_MASK,

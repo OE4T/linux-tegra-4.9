@@ -728,12 +728,35 @@ static int tegra_pcie_request_resources(struct tegra_pcie *pcie)
 	pci_add_resource(windows, &pcie->busn);
 
 	err = devm_request_pci_bus_resources(dev, windows);
-	if (err < 0)
+	if (err < 0) {
+		pci_free_resource_list(windows);
 		return err;
+	}
 
 	pci_remap_iospace(&pcie->pio, pcie->io.start);
 
 	return 0;
+}
+
+static void tegra_pcie_free_resources(struct tegra_pcie *pcie)
+{
+	struct pci_host_bridge *host = pci_host_bridge_from_priv(pcie);
+	struct list_head *windows = &host->windows;
+	struct resource_entry *win, *tmp;
+
+	pci_unmap_iospace(&pcie->pio);
+
+	resource_list_for_each_entry_safe(win, tmp, &host->windows) {
+		switch (resource_type(win->res)) {
+		case IORESOURCE_IO:
+		case IORESOURCE_MEM:
+			devm_release_resource(pcie->dev, win->res);
+			break;
+		default:
+			continue;
+		}
+	}
+	pci_free_resource_list(windows);
 }
 
 static int tegra_pcie_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
@@ -1829,6 +1852,7 @@ static int tegra_pcie_save_device(struct device *dev)
 		tegra_pcie_prsnt_map_override(port, false);
 	}
 	tegra_pcie_pme_turnoff(pcie);
+	tegra_pcie_free_resources(pcie);
 	tegra_pcie_enable_pads(pcie, false);
 	tegra_pcie_unmap_resources(pcie);
 	if (pcie->soc_data->config_pex_io_dpd) {
@@ -4628,27 +4652,6 @@ static int tegra_pcie_probe_complete(struct tegra_pcie *pcie)
 	return 0;
 }
 
-static void tegra_pcie_free_host_bridge(struct pci_host_bridge *host)
-{
-	struct resource_entry *win, *tmp;
-	struct resource *res;
-	struct tegra_pcie *pcie = pci_host_bridge_priv(host);
-
-	resource_list_for_each_entry_safe(win, tmp, &host->windows) {
-		res = win->res;
-		switch (resource_type(res)) {
-		case IORESOURCE_IO:
-		case IORESOURCE_MEM:
-			devm_release_resource(pcie->dev, win->res);
-			break;
-		default:
-			continue;
-		}
-	}
-	pci_free_host_bridge(host);
-
-}
-
 static void pcie_delayed_detect(struct work_struct *work)
 {
 	struct tegra_pcie *pcie;
@@ -4674,10 +4677,9 @@ static void pcie_delayed_detect(struct work_struct *work)
 	return;
 
 release_regulators:
-	pci_unmap_iospace(&pcie->pio);
 	devm_kfree(pcie->dev, pcie->pcie_regulators);
 	devm_kfree(pcie->dev, pcie->plat_data);
-	tegra_pcie_free_host_bridge(pcie->host);
+	pci_free_host_bridge(pcie->host);
 	platform_set_drvdata(pdev, NULL);
 	return;
 }
@@ -4915,7 +4917,6 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 	if (IS_ENABLED(CONFIG_DEBUG_FS))
 		tegra_pcie_debugfs_exit(pcie);
 	pci_stop_root_bus(pcie->host->bus);
-	pci_unmap_iospace(&pcie->pio);
 	pci_bus_remove_resources(pcie->host->bus);
 	pci_remove_root_bus(pcie->host->bus);
 	iounmap(pcie->cfg_va_base);
@@ -4927,7 +4928,8 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 		tegra_pcie_phy_exit(pcie);
 	tegra_pcie_release_resources(pcie);
 	pm_runtime_disable(pcie->dev);
-	tegra_pcie_free_host_bridge(pcie->host);
+	tegra_pcie_free_resources(pcie);
+	pci_free_host_bridge(pcie->host);
 
 	return 0;
 }

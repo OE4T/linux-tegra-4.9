@@ -144,6 +144,7 @@
 					<&bpmp_clks TEGRA194_CLK_SCE_CPU_NIC>,
 					<&bpmp_clks TEGRA194_CLK_SCE_NIC>,
 					<&bpmp_clks TEGRA194_CLK_SDMMC1>,
+					<&bpmp_clks TEGRA194_CLK_UPHY_PLL3>,
 					<&bpmp_clks TEGRA194_CLK_SDMMC3>,
 					<&bpmp_clks TEGRA194_CLK_SDMMC4>,
 					<&bpmp_clks TEGRA194_CLK_SE>,
@@ -156,9 +157,11 @@
 					<&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
 					<&bpmp_clks TEGRA194_CLK_IQC1_IN>,
 					<&bpmp_clks TEGRA194_CLK_IQC2_IN>,
+					<&bpmp_clks TEGRA194_CLK_DMIC5>,
 					<&bpmp_clks TEGRA194_CLK_SPI1>,
 					<&bpmp_clks TEGRA194_CLK_SPI2>,
 					<&bpmp_clks TEGRA194_CLK_SPI3>,
+					<&bpmp_clks TEGRA194_CLK_I2C_SLOW>,
 					<&bpmp_clks TEGRA194_CLK_SYNC_DMIC1>,
 					<&bpmp_clks TEGRA194_CLK_SYNC_DMIC2>,
 					<&bpmp_clks TEGRA194_CLK_SYNC_DMIC3>,
@@ -303,7 +306,17 @@
 					<&bpmp_clks TEGRA194_CLK_NAFLL_CLUSTER0>,
 					<&bpmp_clks TEGRA194_CLK_NAFLL_CLUSTER1>,
 					<&bpmp_clks TEGRA194_CLK_NAFLL_CLUSTER2>,
-					<&bpmp_clks TEGRA194_CLK_NAFLL_CLUSTER3>;
+					<&bpmp_clks TEGRA194_CLK_NAFLL_CLUSTER3>,
+					<&bpmp_clks TEGRA194_CLK_CAN1_CORE>,
+					<&bpmp_clks TEGRA194_CLK_CAN2_CORE>,
+					<&bpmp_clks TEGRA194_CLK_PLLA1_OUT1>,
+					<&bpmp_clks TEGRA194_CLK_PLLNVHS_HPS>,
+					<&bpmp_clks TEGRA194_CLK_PLLREFE_VCOOUT>,
+					<&bpmp_clks TEGRA194_CLK_CLK_32K>,
+					<&bpmp_clks TEGRA194_CLK_SPDIFIN_SYNC_INPUT>,
+					<&bpmp_clks TEGRA194_CLK_UTMIPLL_CLKOUT48>,
+					<&bpmp_clks TEGRA194_CLK_UTMIPLL_CLKOUT480>,
+					<&bpmp_clks TEGRA194_CLK_CVNAS>;
 				clock-names = "actmon",
 					"adsp",
 					"adspneon",
@@ -424,6 +437,7 @@
 					"sce_cpu_nic",
 					"sce_nic",
 					"sdmmc1",
+					"uphy_pll3",
 					"sdmmc3",
 					"sdmmc4",
 					"se",
@@ -436,9 +450,11 @@
 					"sor_safe",
 					"iqc1_in",
 					"iqc2_in",
+					"dmic5",
 					"spi1",
 					"spi2",
 					"spi3",
+					"i2c_slow",
 					"sync_dmic1",
 					"sync_dmic2",
 					"sync_dmic3",
@@ -583,7 +599,17 @@
 					"nafll_cluster0",
 					"nafll_cluster1",
 					"nafll_cluster2",
-					"nafll_cluster3";
+					"nafll_cluster3",
+					"can1_core",
+					"can2_core",
+					"plla1_out1",
+					"pllnvhs_hps",
+					"pllrefe_vcoout",
+					"clk_32k",
+					"spdifin_sync_input",
+					"utmipll_clkout48",
+					"utmipll_clkout480",
+					"cvnas";
 
 				resets = <&bpmp_resets TEGRA194_RESET_ACTMON>,
 					<&bpmp_resets TEGRA194_RESET_ADSP_ALL>,
@@ -701,7 +727,11 @@
 					<&bpmp_resets TEGRA194_RESET_PEX0_CORE_4_APB>,
 					<&bpmp_resets TEGRA194_RESET_PEX0_COMMON_APB>,
 					<&bpmp_resets TEGRA194_RESET_SLVSEC>,
-					<&bpmp_resets TEGRA194_RESET_NVLINK>;
+					<&bpmp_resets TEGRA194_RESET_NVLINK>,
+					<&bpmp_resets TEGRA194_RESET_PEX1_CORE_5>,
+					<&bpmp_resets TEGRA194_RESET_PEX1_CORE_5_APB>,
+					<&bpmp_resets TEGRA194_RESET_CVNAS>,
+					<&bpmp_resets TEGRA194_RESET_CVNAS_FCM>;
 				reset-names = "actmon",
 					"adsp_all",
 					"afi",
@@ -818,8 +848,12 @@
 					"pex0_core_4_apb",
 					"pex0_common_apb",
 					"slvsec",
-					"nvlink";
+					"nvlink",
+					"pex1_core_5",
+					"pex1_core_5_apb",
+					"cvnas",
+					"cvnas_fcm";
 			};
-    };
+	};
 };
 

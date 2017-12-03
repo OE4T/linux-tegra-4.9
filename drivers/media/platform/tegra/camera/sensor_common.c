@@ -111,6 +111,37 @@ static int sensor_common_parse_signal_props(
 	else
 		signal->dpcm_enable = 0;
 
+	err = of_property_read_string(node, "tegra_sinterface", &temp_str);
+	if (err) {
+		dev_err(dev,
+			"%s: tegra_sinterface property missing\n", __func__);
+		return err;
+	}
+	if (strcmp(temp_str, "serial_a") == 0)
+		signal->tegra_sinterface = 0;
+	else if (strcmp(temp_str, "serial_b") == 0)
+		signal->tegra_sinterface = 1;
+	else if (strcmp(temp_str, "serial_c") == 0)
+		signal->tegra_sinterface = 2;
+	else if (strcmp(temp_str, "serial_d") == 0)
+		signal->tegra_sinterface = 3;
+	else if (strcmp(temp_str, "serial_e") == 0)
+		signal->tegra_sinterface = 4;
+	else if (strcmp(temp_str, "serial_f") == 0)
+		signal->tegra_sinterface = 5;
+	else if (strcmp(temp_str, "serial_g") == 0)
+		signal->tegra_sinterface = 6;
+	else if (strcmp(temp_str, "serial_h") == 0)
+		signal->tegra_sinterface = 7;
+	else if (strcmp(temp_str, "host") == 0)
+		signal->tegra_sinterface = 0; /* for vivid driver */
+	else {
+		dev_err(dev,
+			"%s: tegra_sinterface property out of range\n",
+			__func__);
+		return -EINVAL;
+	}
+
 	return 0;
 }
 

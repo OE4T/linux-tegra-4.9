@@ -1588,7 +1588,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		atomic_set(&hdmi->clock_refcount, 0);
 	}
 	atomic_set(&hdmi->suspended, 0);
-	if (!tegra_platform_is_sim()) {
+	if (!tegra_platform_is_sim() && !tegra_dc_is_t19x()) {
 		hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
 			dc->out->ddc_bus);
 		if (IS_ERR(hdmi->nvhdcp)) {
@@ -1768,8 +1768,8 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 #ifdef CONFIG_TEGRA_HDA_DC
 	tegra_hda_destroy(hdmi->hda_handle);
 #endif
-
-	tegra_nvhdcp_destroy(hdmi->nvhdcp);
+	if (!tegra_dc_is_t19x())
+		tegra_nvhdcp_destroy(hdmi->nvhdcp);
 
 	if (hdmi->dpaux)
 		tegra_dpaux_destroy_data(hdmi->dpaux);

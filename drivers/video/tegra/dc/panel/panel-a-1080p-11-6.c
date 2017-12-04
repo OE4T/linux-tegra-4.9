@@ -1,7 +1,7 @@
 /*
  * panel-a-1080p-11-6.c: Panel driver for 1080p-11-6 panel.
  *
- * Copyright (c) 2012-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -153,8 +153,6 @@ static struct tegra_dsi_out dsi_a_1080p_11_6_pdata = {
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
 	.refresh_rate = 61,
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
-
-	.dsi_instance = DSI_INSTANCE_0,
 
 	.panel_reset = DSI_PANEL_RESET,
 	.power_saving_suspend = true,
@@ -470,6 +468,7 @@ static void dsi_a_1080p_11_6_set_disp_device(
 static void dsi_a_1080p_11_6_dc_out_init(struct tegra_dc_out *dc)
 {
 	dc->dsi = &dsi_a_1080p_11_6_pdata;
+	dc->dsi.dsi_instance = tegra_dc_get_dsi_instance_0();
 	dc->parent_clk = "pll_d_out0";
 	dc->modes = dsi_a_1080p_11_6_modes;
 	dc->n_modes = ARRAY_SIZE(dsi_a_1080p_11_6_modes);

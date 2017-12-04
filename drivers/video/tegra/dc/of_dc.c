@@ -1653,9 +1653,9 @@ static int parse_dsi_settings(struct platform_device *ndev,
 	}
 	if (!of_property_read_u32(np_dsi_panel, "nvidia,dsi-instance", &temp)) {
 		dsi->dsi_instance = (u8)temp;
-		if (temp == DSI_INSTANCE_0)
+		if (temp == tegra_dc_get_dsi_instance_0())
 			OF_DC_LOG("dsi instance 0\n");
-		else if (temp == DSI_INSTANCE_1)
+		else if (temp == tegra_dc_get_dsi_instance_1())
 			OF_DC_LOG("dsi instance 1\n");
 		else {
 			pr_err("invalid dsi instance\n");

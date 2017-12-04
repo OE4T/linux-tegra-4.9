@@ -470,6 +470,22 @@ static inline u32 tegra_dc_get_dsi_base(void)
 		return 0x54300000;
 }
 
+static inline u32 tegra_dc_get_dsi_instance_0(void)
+{
+	return 0;
+}
+
+static inline u32 tegra_dc_get_dsi_instance_1(void)
+{
+	if (tegra_dc_is_nvdisplay())
+		/* T186 has 4 controllers. DSI-A and DSI-C are the main
+		 * controllers needed for ganged mode.
+		 */
+		return 2;
+	else
+		return 1;
+}
+
 #define TEGRA_DSI_SIZE			SZ_256K
 
 #define TEGRA_VIC_BASE			0x54340000

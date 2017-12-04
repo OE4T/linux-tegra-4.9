@@ -313,18 +313,6 @@ enum {
 	DSI_VS_1 = 0x1,
 };
 
-enum {
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	DSI_INSTANCE_0,
-	DSI_INSTANCE_1,
-#else
-/* T186 has 4 controllers. DSI-A and DSI-C are the main controllers
-   needed for ganged mode */
-	DSI_INSTANCE_0,
-	DSI_INSTANCE_1 = 2,
-#endif
-};
-
 /* Aggressiveness level of DSI suspend. The higher, the more aggressive. */
 #define DSI_NO_SUSPEND			0
 #define DSI_HOST_SUSPEND_LV0		1

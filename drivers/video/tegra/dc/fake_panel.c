@@ -93,15 +93,15 @@ static int tegra_dc_reset_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 	if (dc_outtype == TEGRA_DC_OUT_FAKE_DSI_GANGED) {
 		dc_out->dsi->ganged_type = TEGRA_DSI_GANGED_SYMMETRIC_EVEN_ODD;
 		dc_out->dsi->even_odd_split_width = 1;
-		dc_out->dsi->dsi_instance = DSI_INSTANCE_0;
+		dc_out->dsi->dsi_instance = tegra_dc_get_dsi_instance_0();
 		dc_out->dsi->n_data_lanes = 8;
 	} else if (dc_outtype == TEGRA_DC_OUT_FAKE_DSIB) {
 		dc_out->dsi->ganged_type = 0;
-		dc_out->dsi->dsi_instance = DSI_INSTANCE_1;
+		dc_out->dsi->dsi_instance = tegra_dc_get_dsi_instance_1();
 		dc_out->dsi->n_data_lanes = 4;
 	} else if (dc_outtype == TEGRA_DC_OUT_FAKE_DSIA) {
 		dc_out->dsi->ganged_type = 0;
-		dc_out->dsi->dsi_instance = DSI_INSTANCE_0;
+		dc_out->dsi->dsi_instance = tegra_dc_get_dsi_instance_0();
 		dc_out->dsi->n_data_lanes = 4;
 	}
 

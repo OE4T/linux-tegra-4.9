@@ -409,9 +409,11 @@ unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 {
 	unsigned long ret;
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
-	ret = readl(dsi->base[DSI_INSTANCE_0] + get_byte_offset(reg));
+	ret = readl(dsi->base[tegra_dc_get_dsi_instance_0()] +
+			      get_byte_offset(reg));
 	trace_display_readl(dsi->dc, ret,
-		(char *)dsi->base[DSI_INSTANCE_0] + get_byte_offset(reg));
+		(char *)dsi->base[tegra_dc_get_dsi_instance_0()] +
+				  get_byte_offset(reg));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_readl);
@@ -2520,12 +2522,12 @@ static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_mipi_calibration(DSIA|DSIB|DSIC|DSID);
 	} else {
 		/* Calibrate DSI 0 */
-		if (dsi->info.dsi_instance == DSI_INSTANCE_0) {
+		if (dsi->info.dsi_instance == tegra_dc_get_dsi_instance_0()) {
 			tegra_mipi_calibration(DSIA|DSIB);
 			tegra_mipi_calibration(DSIA|DSIB);
 		}
 		/* Calibrate DSI 1 */
-		if (dsi->info.dsi_instance == DSI_INSTANCE_1) {
+		if (dsi->info.dsi_instance == tegra_dc_get_dsi_instance_1()) {
 			tegra_mipi_calibration(DSIC|DSID);
 			tegra_mipi_calibration(DSIC|DSID);
 		}
@@ -2696,11 +2698,11 @@ static void tegra_dsi_ganged(struct tegra_dc *dc,
 	}
 
 	if (dsi->info.ganged_swap_links) {
-		dsi_instances[0] = DSI_INSTANCE_1;
-		dsi_instances[1] = DSI_INSTANCE_0;
+		dsi_instances[0] = tegra_dc_get_dsi_instance_1();
+		dsi_instances[1] = tegra_dc_get_dsi_instance_0();
 	} else {
-		dsi_instances[0] = DSI_INSTANCE_0;
-		dsi_instances[1] = DSI_INSTANCE_1;
+		dsi_instances[0] = tegra_dc_get_dsi_instance_0();
+		dsi_instances[1] = tegra_dc_get_dsi_instance_1();
 	}
 
 	if (dsi->info.ganged_type ==
@@ -4562,13 +4564,13 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 
 		dsi_clk = dsi_pdata->dsi_instance ?
 				tegra_disp_of_clk_get_by_name(np_dsi,
-				dsi_clk_name[DSI_INSTANCE_1]) :
+				dsi_clk_name[tegra_dc_get_dsi_instance_1()]) :
 				tegra_disp_of_clk_get_by_name(np_dsi,
 				dsi_clk_name[i]);
 		dsi_lp_clk = dsi_pdata->dsi_instance ?
 				tegra_disp_of_clk_get_by_name(np_dsi,
-				dsi_lp_clk_name[DSI_INSTANCE_1]) :
-				tegra_disp_of_clk_get_by_name(np_dsi,
+				dsi_lp_clk_name[tegra_dc_get_dsi_instance_1()])
+				: tegra_disp_of_clk_get_by_name(np_dsi,
 				dsi_lp_clk_name[i]);
 		if (IS_ERR_OR_NULL(dsi_clk) || IS_ERR_OR_NULL(dsi_lp_clk)) {
 			dev_err(&dc->ndev->dev, "dsi: can't get clock\n");

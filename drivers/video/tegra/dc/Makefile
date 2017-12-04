@@ -1,11 +1,9 @@
 GCOV_PROFILE := y
 subdir-ccflags-y := -Werror
 ccflags-y += -I$(overlay)/drivers/video/tegra/host
-ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 ccflags-y += -I$(overlay)/drivers/video/tegra/dc
 ccflags-y += -I$(overlay)/drivers/platform/tegra
 ccflags-$(CONFIG_TRUSTED_LITTLE_KERNEL) += -I$(overlay)/security/tlk_driver
-endif
 ccflags-y += -I$(srctree)/arch/arm/mach-tegra
 obj-y += dc_common.o dc.o mode.o clock.o window.o dc_client.o
 obj-y += bandwidth.o

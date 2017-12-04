@@ -6,7 +6,7 @@
  *         Colin Cross <ccross@android.com>
  *         Travis Geiselbrecht <travis@palm.com>
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -34,9 +34,7 @@
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 #include <linux/iommu.h>
-#endif
 
 #include <asm/atomic.h>
 #include <video/tegrafb.h>
@@ -1279,15 +1277,15 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 		goto err_iounmap_fb;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (ndev->id != info->node) {
-		dev_err(&ndev->dev, "FB device numbering does not\n"
-			  "match device numbering of extended\n"
-			  "display interfaces\n");
-		ret = -EINVAL;
-		goto err_iounmap_fb;
+	if (tegra_dc_is_nvdisplay()) {
+		if (ndev->id != info->node) {
+			dev_err(&ndev->dev, "FB device numbering does not\n"
+					"match device numbering of extended\n"
+					"display interfaces\n");
+			ret = -EINVAL;
+			goto err_iounmap_fb;
+		}
 	}
-#endif
 
 	tegra_fb->info = info;
 

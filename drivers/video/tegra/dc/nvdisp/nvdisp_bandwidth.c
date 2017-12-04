@@ -486,6 +486,27 @@ void tegra_nvdisp_get_max_bw_cfg(struct nvdisp_bandwidth_config *max_cfg)
 	*max_cfg = ihub_bw_info.max_config;
 }
 
+static u64 tegra_nvdisp_bw_get_emc(u64 requested_emc_floor)
+{
+	u64 final_emc_floor = requested_emc_floor;
+
+	if (final_emc_floor == U64_MAX)
+		final_emc_floor = tegra_bwmgr_get_max_emc_rate() /
+				bwmgr_get_emc_to_dram_freq_factor();
+
+	return final_emc_floor;
+}
+
+static u64 tegra_nvdisp_bw_get_hubclk(u64 requested_hubclk)
+{
+	u64 final_hubclk = requested_hubclk;
+
+	if (final_hubclk == U64_MAX)
+		final_hubclk = (u64)clk_round_rate(hubclk, ULONG_MAX);
+
+	return final_hubclk;
+}
+
 /*
  * Registers the max possible bandwidth configuration from platform data
  * Return 0 on success and -E2BIG/ENOENT/ENOMEM on failure
@@ -540,7 +561,13 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 
 		cfg->iso_bw = g_ents->total_iso_bw_with_catchup_kBps;
 		cfg->total_bw = g_ents->total_iso_bw_without_catchup_kBps;
+
+		g_ents->min_hubclk_hz =
+			tegra_nvdisp_bw_get_hubclk(g_ents->min_hubclk_hz);
 		cfg->hubclk = g_ents->min_hubclk_hz;
+
+		g_ents->emc_floor_hz =
+			tegra_nvdisp_bw_get_emc(g_ents->emc_floor_hz);
 		cfg->emc_la_floor = g_ents->emc_floor_hz;
 	}
 

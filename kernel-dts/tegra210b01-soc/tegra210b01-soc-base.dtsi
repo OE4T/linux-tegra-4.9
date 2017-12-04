@@ -295,6 +295,8 @@
 
 /delete-node/ &sor0;
 
+/delete-node/ &dpaux0;
+
 &sor1 {
 	compatible = "nvidia,tegra210b01-sor", "nvidia,tegra210-sor";
 };

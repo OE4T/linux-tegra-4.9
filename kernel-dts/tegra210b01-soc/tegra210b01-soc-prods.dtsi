@@ -1007,28 +1007,6 @@
 			};
 		};
 
-		dpaux {
-			prod-settings {
-				#prod-cells = <3>;
-				mask-one-style;
-
-				prod_c_dpaux_dp {
-					asic {
-						prod = <
-							0x00000124 0x000037fe 0x000024c2
-							>;
-					};
-				};
-				prod_c_dpaux_hdmi {
-					asic {
-						prod = <
-							0x00000124 0x00000700 0x00000400
-							>;
-					};
-				};
-			};
-		};
-
 		dpaux1 {
 			prod-settings	{
 				#prod-cells = <3>;

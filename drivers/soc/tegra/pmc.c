@@ -2399,7 +2399,7 @@ static int tegra_pmc_io_pad_power_enable(const struct tegra_pmc_io_pad_soc *pad)
 	if (err < 0) {
 		dev_err(pmc->dev, "Failed to enable I/O pad %s: %d\n",
 			pad->name, err);
-		dev_info(pmc->dev, "DPDREQ: 0x%08x DPD2REQ:: 0x%08x"
+		dev_err(pmc->dev, "DPDREQ: 0x%08x DPD2REQ:: 0x%08x"
 			"DPD_STATUS: 0x%08x DPD2_STATUS:: 0x%08x\n",
 			tegra_pmc_readl(TEGRA_PMC_IO_DPD_REQ),
 			tegra_pmc_readl(TEGRA_PMC_IO_DPD2_REQ),
@@ -2441,7 +2441,7 @@ static int tegra_pmc_io_pad_power_disable(
 	if (err < 0) {
 		dev_err(pmc->dev, "Failed to disable I/O pad %s: %d\n",
 			pad->name, err);
-		dev_info(pmc->dev, "DPDREQ: 0x%08x DPD2REQ:: 0x%08x"
+		dev_err(pmc->dev, "DPDREQ: 0x%08x DPD2REQ:: 0x%08x"
 			"DPD_STATUS: 0x%08x DPD2_STATUS:: 0x%08x\n",
 			tegra_pmc_readl(TEGRA_PMC_IO_DPD_REQ),
 			tegra_pmc_readl(TEGRA_PMC_IO_DPD2_REQ),

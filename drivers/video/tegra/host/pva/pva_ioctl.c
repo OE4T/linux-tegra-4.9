@@ -380,9 +380,12 @@ static int pva_unpin(struct pva_private *priv, void *arg)
 
 	nvhost_buffer_unpin(priv->buffers, dmabufs, count);
 
-	count = i;
-	for (i = 0; i < count; i++)
+	for (i = 0; i < count; i++) {
+		if (IS_ERR_OR_NULL(dmabufs[i]))
+			continue;
+
 		dma_buf_put(dmabufs[i]);
+	}
 
 pva_buffer_cpy_err:
 	kfree(handles);

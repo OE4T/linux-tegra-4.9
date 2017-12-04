@@ -221,10 +221,10 @@ set_parameters_for_cpu(struct quadd_pmu_setup_for_cpu *params)
 
 		if (is_event_supported(pmu_info, event)) {
 			pmu_events[nr_pmu++] = *event;
-			pr_info("[%d] PMU active event: %#x (%s)\n",
-				cpuid, event->id,
-				event->type == QUADD_EVENT_TYPE_RAW ?
-				"raw" : "hw");
+			pr_debug("[%d] PMU active event: %#x (%s)\n",
+				 cpuid, event->id,
+				 event->type == QUADD_EVENT_TYPE_RAW ?
+				 "raw" : "hw");
 		} else {
 			pr_err("[%d] Bad event: %#x (%s)\n", cpuid, event->id,
 			       event->type == QUADD_EVENT_TYPE_RAW ?
@@ -317,8 +317,8 @@ set_parameters(struct quadd_parameters *p)
 		    is_event_supported(&ctx.pl310_info, event)) {
 			pl310_events = event;
 
-			pr_info("PL310 active event: %s\n",
-				quadd_get_hw_event_str(id));
+			pr_debug("PL310 active event: %s\n",
+				 quadd_get_hw_event_str(id));
 
 			if (nr_pl310++ > 1) {
 				pr_err("error: multiply pl310 events\n");

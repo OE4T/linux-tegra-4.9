@@ -439,7 +439,7 @@ static void quadd_init_pmu(void)
 
 static int pmu_enable(void)
 {
-	pr_info("pmu was reserved\n");
+	pr_debug("pmu was reserved\n");
 	return 0;
 }
 
@@ -448,8 +448,8 @@ static void __pmu_disable(void *arg)
 	struct quadd_pmu_info *pi = this_cpu_ptr(&cpu_pmu_info);
 
 	if (!pi->is_already_active) {
-		pr_info("[%d] reset all counters\n",
-			smp_processor_id());
+		pr_debug("[%d] reset all counters\n",
+			 smp_processor_id());
 
 		disable_all_counters();
 		reset_all_counters();
@@ -457,8 +457,8 @@ static void __pmu_disable(void *arg)
 		int idx;
 
 		for_each_set_bit(idx, pi->used_cntrs, QUADD_MAX_PMU_COUNTERS) {
-			pr_info("[%d] reset counter: %d\n",
-				smp_processor_id(), idx);
+			pr_debug("[%d] reset counter: %d\n",
+				 smp_processor_id(), idx);
 
 			disable_counter(idx);
 			write_counter(idx, 0);
@@ -469,7 +469,7 @@ static void __pmu_disable(void *arg)
 static void pmu_disable(void)
 {
 	on_each_cpu(__pmu_disable, NULL, 1);
-	pr_info("pmu was released\n");
+	pr_debug("pmu was released\n");
 }
 
 static void pmu_start(void)
@@ -660,8 +660,8 @@ static void __get_free_counters(void *arg)
 	if (!ccntr)
 		ci->ccntr = 0;
 
-	pr_info("[%d] pcntrs/ccntr: %d/%d, free_bitmap: %#lx\n",
-		smp_processor_id(), pcntrs, ccntr, free_bitmap[0]);
+	pr_debug("[%d] pcntrs/ccntr: %d/%d, free_bitmap: %#lx\n",
+		 smp_processor_id(), pcntrs, ccntr, free_bitmap[0]);
 
 	spin_unlock(&ci->lock);
 }
@@ -700,8 +700,8 @@ set_events(int cpuid, const struct quadd_event *events, int size)
 	smp_call_function_single(cpuid, __get_free_counters, &free_ci, 1);
 
 	free_pcntrs = free_ci.pcntrs;
-	pr_info("free counters: pcntrs/ccntr: %d/%d\n",
-		free_pcntrs, free_ci.ccntr);
+	pr_debug("free counters: pcntrs/ccntr: %d/%d\n",
+		 free_pcntrs, free_ci.ccntr);
 
 	for (i = 0; i < size; i++) {
 		unsigned int type, id;
@@ -754,9 +754,9 @@ set_events(int cpuid, const struct quadd_event *events, int size)
 
 		ei->event = events[i];
 
-		pr_info("[%d] Event has been added: id: %#x (%s), hw value: %#x\n",
-			cpuid, id, type == QUADD_EVENT_TYPE_RAW ? "raw" : "hw",
-			ei->hw_value);
+		pr_debug("[%d] Event has been added: id: %#x (%s), hw value: %#x\n",
+			 cpuid, id, type == QUADD_EVENT_TYPE_RAW ? "raw" : "hw",
+			 ei->hw_value);
 	}
 
 	return 0;

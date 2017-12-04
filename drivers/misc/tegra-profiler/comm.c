@@ -327,10 +327,10 @@ init_mmap_hdr(struct quadd_mmap_rb_info *mmap_rb,
 
 	raw_spin_unlock_irqrestore(&rb->lock, flags);
 
-	pr_info("[cpu: %d] init_mmap_hdr: vma: %#lx - %#lx, data: %p - %p\n",
-		cpu_id,
-		vma->vm_start, vma->vm_end,
-		mmap->data, mmap->data + vma->vm_end - vma->vm_start);
+	pr_debug("[cpu: %d] init_mmap_hdr: vma: %#lx - %#lx, data: %p - %p\n",
+		 cpu_id,
+		 vma->vm_start, vma->vm_end,
+		 mmap->data, mmap->data + vma->vm_end - vma->vm_start);
 
 	return 0;
 }
@@ -483,7 +483,7 @@ device_ioctl(struct file *file,
 
 		per_cpu(cpu_ctx, cpuid).params_ok = 1;
 
-		pr_info("setup PMU success for cpu: %d\n", cpuid);
+		pr_info("setup PMU: success for cpu: %d\n", cpuid);
 
 		vfree(cpu_pmu_params);
 		break;
@@ -624,7 +624,7 @@ device_ioctl(struct file *file,
 				atomic_set(&comm_ctx.active, 0);
 				goto error_out;
 			}
-			pr_info("Start profiling success\n");
+			pr_info("Start profiling: success\n");
 		}
 		break;
 
@@ -633,7 +633,7 @@ device_ioctl(struct file *file,
 			reset_params_ok_flag();
 			comm_ctx.control->stop();
 			rb_stop();
-			pr_info("Stop profiling success\n");
+			pr_info("Stop profiling: success\n");
 		}
 		break;
 

@@ -1,7 +1,7 @@
 /*
  * ov10823.c - ov10823 sensor driver
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -292,12 +292,101 @@ static int ov10823_write_table(struct ov10823 *priv,
 					 OV10823_TABLE_END);
 }
 
+static int ov10823_i2c_addr_assign(struct ov10823 *priv, u8 i2c_addr)
+{
+	struct device *dev = &priv->i2c_client->dev;
+	struct i2c_msg msg;
+	unsigned char data[3];
+	int err = 0;
+
+	/*
+	 * It seems that the way SID works for the OV10823 I2C slave address is
+	 * that:
+	 *
+	 * SID 0 = 0x20
+	 * SID 1 = 0x6c
+	 *
+	 * Address 0x20 is programmable via register 0x300c, and
+	 * address 0x6c is programmable via register 0x3661.
+	 *
+	 * So, the scheme to assign addresses to an (almost) arbitrary
+	 * number of sensors is to consider 0x20 to be the "off" address.
+	 * Start each sensor with SID as 0 so that they appear to be off.
+	 *
+	 * Then, to assign an address to one sensor:
+	 *
+	 * 0. Set corresponding SID to 1 (now only that sensor responds
+	 *    to 0x6c).
+	 * 1. Use 0x6C to program address 0x20 to the new address.
+	 * 2. Set corresponding SID back to 0 (so it no longer responds
+	 *    to 0x6c, but instead responds to the new address).
+	 */
+
+	if (i2c_addr == OV10823_DEFAULT_I2C_ADDRESS_20) {
+		dev_info(dev, "Using default I2C address 0x%02x\n", i2c_addr);
+		if (gpio_is_valid(priv->cam_sid_gpio)) {
+			gpio_set_value(priv->cam_sid_gpio, 0);
+			msleep_range(1);
+		}
+		return 0;
+	} else if (i2c_addr == OV10823_DEFAULT_I2C_ADDRESS_6C) {
+		dev_info(dev, "Using default I2C address 0x%02x\n", i2c_addr);
+		if (gpio_is_valid(priv->cam_sid_gpio)) {
+			gpio_set_value(priv->cam_sid_gpio, 1);
+			msleep_range(1);
+		}
+		return 0;
+	}
+
+	/*
+	 * From this point on, we are trying to program the programmable
+	 * slave address.  We necessarily need to have a cam-sid-gpio for this.
+	 */
+	if (!gpio_is_valid(priv->cam_sid_gpio)) {
+		dev_err(dev, "Missing cam-sid-gpio, cannot program I2C addr\n");
+		return -EINVAL;
+	}
+
+	gpio_set_value(priv->cam_sid_gpio, 1);
+	msleep_range(1);
+
+	/*
+	 * Have to make the I2C message manually because we are using a
+	 * different I2C slave address for this transaction, rather than
+	 * the one in the device tree for this device.
+	 */
+	data[0] = (OV10823_SC_SCCB_ID_ADDR >> 8) & 0xff;
+	data[1] = OV10823_SC_SCCB_ID_ADDR & 0xff;
+	data[2] = ((i2c_addr) << 1) & 0xff;
+	/*
+	 * Use the programmable default I2C slave address so that if we have
+	 * multiple sensors of this same kind, when we change one sensor's
+	 * address, the next sensor address change message won't go to that
+	 * same sensor.
+	 */
+	msg.addr = OV10823_DEFAULT_I2C_ADDRESS_6C;
+	msg.flags = 0;
+	msg.len = 3;
+	msg.buf = data;
+
+	if (i2c_transfer(priv->i2c_client->adapter, &msg, 1) != 1) {
+		dev_err(dev, "Error assigning I2C address to 0x%02x\n",
+			i2c_addr);
+		err = -EIO;
+	}
+
+	gpio_set_value(priv->cam_sid_gpio, 0);
+	msleep_range(1);
+
+	return err;
+}
+
 static int ov10823_power_on(struct camera_common_data *s_data)
 {
-	int err = 0;
 	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 	struct device *dev = &priv->i2c_client->dev;
+	int err;
 
 	dev_dbg(dev, "%s: power on\n", __func__);
 
@@ -310,9 +399,49 @@ static int ov10823_power_on(struct camera_common_data *s_data)
 		return err;
 	}
 
+	if (pw->avdd) {
+		err = regulator_enable(pw->avdd);
+		if (err)
+			goto avdd_fail;
+	}
+
+	if (pw->dvdd) {
+		err = regulator_enable(pw->dvdd);
+		if (err)
+			goto dvdd_fail;
+	}
+
+	if (pw->iovdd) {
+		err = regulator_enable(pw->iovdd);
+		if (err)
+			goto iovdd_fail;
+	}
+
 	usleep_range(5350, 5360);
+
+	err = ov10823_i2c_addr_assign(priv, priv->i2c_client->addr);
+	if (err)
+		goto addr_assign_fail;
+
 	pw->state = SWITCH_ON;
 	return 0;
+
+addr_assign_fail:
+	if (pw->iovdd)
+		regulator_disable(pw->iovdd);
+
+iovdd_fail:
+	if (pw->dvdd)
+		regulator_disable(pw->dvdd);
+
+dvdd_fail:
+	if (pw->avdd)
+		regulator_disable(pw->avdd);
+
+avdd_fail:
+	dev_err(dev, "%s failed.\n", __func__);
+
+	return -ENODEV;
 }
 
 static int ov10823_power_off(struct camera_common_data *s_data)
@@ -333,6 +462,15 @@ static int ov10823_power_off(struct camera_common_data *s_data)
 			goto power_off_done;
 	}
 
+	if (pw->iovdd)
+		regulator_disable(pw->iovdd);
+
+	if (pw->dvdd)
+		regulator_disable(pw->dvdd);
+
+	if (pw->avdd)
+		regulator_disable(pw->avdd);
+
 	return err;
 
 power_off_done:
@@ -348,6 +486,7 @@ static int ov10823_power_put(struct ov10823 *priv)
 static int ov10823_power_get(struct ov10823 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
+	struct camera_common_pdata *pdata = priv->pdata;
 	struct device *dev = &priv->i2c_client->dev;
 	const char *mclk_name;
 	int err = 0;
@@ -360,6 +499,37 @@ static int ov10823_power_get(struct ov10823 *priv)
 		return PTR_ERR(pw->mclk);
 	}
 
+	if (priv->pdata->regulators.avdd) {
+		err = camera_common_regulator_get(dev,
+			&pw->avdd, pdata->regulators.avdd);
+		if (err) {
+			dev_err(dev, "unable to get regulator %s, err = %d\n",
+				pdata->regulators.avdd, err);
+			goto done;
+		}
+	}
+
+	if (priv->pdata->regulators.dvdd) {
+		err = camera_common_regulator_get(dev,
+			&pw->dvdd, pdata->regulators.dvdd);
+		if (err) {
+			dev_err(dev, "unable to get regulator %s, err = %d\n",
+				pdata->regulators.dvdd, err);
+			goto done;
+		}
+	}
+
+	if (priv->pdata->regulators.iovdd) {
+		err = camera_common_regulator_get(dev,
+			&pw->iovdd, pdata->regulators.iovdd);
+		if (err) {
+			dev_err(dev, "unable to get regulator %s, err = %d\n",
+				pdata->regulators.iovdd, err);
+			goto done;
+		}
+	}
+
+done:
 	pw->state = SWITCH_OFF;
 	return err;
 }
@@ -928,102 +1098,22 @@ static int ov10823_parse_dt(struct i2c_client *client, struct ov10823 *priv)
 	priv->mirror = of_property_read_bool(np, "mirror");
 	priv->flip = of_property_read_bool(np, "flip");
 
+	err = of_property_read_string(np, "avdd-reg",
+				      &priv->pdata->regulators.avdd);
+	if (err)
+		dev_warn(&client->dev, "avdd-reg not in DT\n");
+
+	err = of_property_read_string(np, "dvdd-reg",
+				      &priv->pdata->regulators.dvdd);
+	if (err)
+		dev_warn(&client->dev, "dvdd-reg not in DT\n");
+
+	err = of_property_read_string(np, "iovdd-reg",
+				      &priv->pdata->regulators.iovdd);
+	if (err)
+		dev_warn(&client->dev, "iovdd-reg not in DT\n");
+
 	return 0;
-}
-
-static int ov10823_i2c_addr_assign(struct ov10823 *priv, u8 i2c_addr)
-{
-	struct device *dev = &priv->i2c_client->dev;
-	struct i2c_msg msg;
-	unsigned char data[3];
-	int err = 0;
-
-	/*
-	 * I wish i2c_check_addr_validity() was available.  Oh well.
-	 * 7-bit address, reject the general call address
-	 */
-	if ((i2c_addr == 0x00) || (i2c_addr > 0x7f))
-		return -EINVAL;
-
-	/*
-	 * It seems that the way SID works for the OV10823 I2C slave address is
-	 * that:
-	 *
-	 * SID 0 = 0x20
-	 * SID 1 = 0x6c
-	 *
-	 * Address 0x20 is programmable via register 0x300c, and
-	 * address 0x6c is programmable via register 0x3661.
-	 *
-	 * So, the scheme to assign addresses to an (almost) arbitrary
-	 * number of sensors is to consider 0x20 to be the "off" address.
-	 * Start each sensor with SID as 0 so that they appear to be off.
-	 *
-	 * Then, to assign an address to one sensor:
-	 *
-	 * 0. Set corresponding SID to 1 (now only that sensor responds
-	 *    to 0x6c).
-	 * 1. Use 0x6C to program address 0x20 to the new address.
-	 * 2. Set corresponding SID back to 0 (so it no longer responds
-	 *    to 0x6c, but instead responds to the new address).
-	 */
-
-	if (i2c_addr == OV10823_DEFAULT_I2C_ADDRESS_20) {
-		dev_info(dev, "Using default I2C address 0x%02x\n", i2c_addr);
-		if (gpio_is_valid(priv->cam_sid_gpio)) {
-			gpio_set_value(priv->cam_sid_gpio, 0);
-			msleep_range(1);
-		}
-		return 0;
-	} else if (i2c_addr == OV10823_DEFAULT_I2C_ADDRESS_6C) {
-		dev_info(dev, "Using default I2C address 0x%02x\n", i2c_addr);
-		if (gpio_is_valid(priv->cam_sid_gpio)) {
-			gpio_set_value(priv->cam_sid_gpio, 1);
-			msleep_range(1);
-		}
-		return 0;
-	}
-
-	/*
-	 * From this point on, we are trying to program the programmable
-	 * slave address.  We necessarily need to have a cam-sid-gpio for this.
-	 */
-	if (!gpio_is_valid(priv->cam_sid_gpio)) {
-		dev_err(dev, "Missing cam-sid-gpio, cannot program I2C addr\n");
-		return -EINVAL;
-	}
-
-	gpio_set_value(priv->cam_sid_gpio, 1);
-	msleep_range(1);
-
-	dev_info(dev, "Changing I2C address to 0x%02x\n", i2c_addr);
-
-	/*
-	 * Have to make the I2C message manually because we are using a
-	 * different I2C slave address for this transaction, rather than
-	 * the one in the device tree for this device.
-	 */
-	data[0] = (OV10823_SC_SCCB_ID_ADDR >> 8) & 0xff;
-	data[1] = OV10823_SC_SCCB_ID_ADDR & 0xff;
-	data[2] = ((i2c_addr) << 1) & 0xff;
-	/*
-	 * Use the programmable default I2C slave address so that if we have
-	 * multiple sensors of this same kind, when we change one sensor's
-	 * address, the next sensor address change message won't go to that
-	 * same sensor.
-	 */
-	msg.addr = OV10823_DEFAULT_I2C_ADDRESS_6C;
-	msg.flags = 0;
-	msg.len = 3;
-	msg.buf = data;
-
-	if (i2c_transfer(priv->i2c_client->adapter, &msg, 1) != 1)
-		err = -EIO;
-
-	gpio_set_value(priv->cam_sid_gpio, 0);
-	msleep_range(1);
-
-	return err;
 }
 
 static int ov10823_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
@@ -1141,10 +1231,6 @@ static int ov10823_probe(struct i2c_client *client,
 	err = camera_common_s_power(priv->subdev, true);
 	if (err)
 		return -ENODEV;
-
-	err = ov10823_i2c_addr_assign(priv, client->addr);
-	if (err)
-		goto error;
 
 	err = ov10823_verify_chip_id(priv);
 	if (err)

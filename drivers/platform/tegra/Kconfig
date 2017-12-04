@@ -120,6 +120,14 @@ config TEGRA_PM_IRQ
 	bool "Enable PM IRQ"
 	default y if ARCH_TEGRA_18x_SOC || ARCH_TEGRA_19x_SOC
 
+config TEGRA_PMC_AO_WAKE
+	bool "Enable AO WAKE from PMC"
+	default y if ARCH_TEGRA_18x_SOC || ARCH_TEGRA_19x_SOC
+
+config TEGRA_WAKEUP
+	bool "Enable WAKEUP"
+	default y if ARCH_TEGRA_18x_SOC || ARCH_TEGRA_19x_SOC
+
 config TEGRA_PTP_NOTIFIER
 	tristate "Enable PTP Notifier"
 	depends on ARCH_TEGRA_18x_SOC

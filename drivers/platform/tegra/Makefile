@@ -12,13 +12,13 @@ obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_speedo.o
 obj-$(CONFIG_TEGRA_NVDISPLAY) += panel-simulator.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18x-mce.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra-roc.o
-obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-aowake.o
+obj-$(CONFIG_TEGRA_PMC_AO_WAKE) += tegra186-aowake.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-system-config.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += tegra-camera-rtcpu.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += rtcpu/
 obj-$(CONFIG_TEGRA_PM_IRQ) += pm-irq-t18x.o
 ifeq ($(CONFIG_PM_SLEEP),y)
-obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += wakeups-t18x.o
+obj-$(CONFIG_TEGRA_WAKEUP) += wakeups-t18x.o
 endif
 obj-y += powergate/
 obj-$(CONFIG_TEGRA_AON) += tegra-aon.o

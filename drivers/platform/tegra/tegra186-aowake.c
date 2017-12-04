@@ -139,6 +139,7 @@ static int tegra_aowake_probe(struct platform_device *pdev)
 }
 
 static struct of_device_id tegra_aowake_of_match[] = {
+	{ .compatible = "nvidia,tegra194-aowake", NULL },
 	{ .compatible = "nvidia,tegra186-aowake", NULL },
 	{ },
 };

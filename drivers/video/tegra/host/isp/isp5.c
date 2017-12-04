@@ -153,8 +153,10 @@ static int isp5_probe(struct platform_device *pdev)
 		goto put_thi;
 
 	err = nvhost_client_device_init(pdev);
-	if (err)
-		goto deinit;
+	if (err) {
+		nvhost_module_deinit(pdev);
+		goto put_thi;
+	}
 
 #if defined(CONFIG_TEGRA_CAMERA_RTCPU)
 	err = isp_channel_drv_register(pdev, &isp5_channel_drv_ops);
@@ -166,11 +168,10 @@ static int isp5_probe(struct platform_device *pdev)
 
 device_release:
 	nvhost_client_device_release(pdev);
-deinit:
-	nvhost_module_deinit(pdev);
 put_thi:
 	platform_device_put(thi);
 error:
+	info->private_data = NULL;
 	if (err != -EPROBE_DEFER)
 		dev_err(dev, "probe failed: %d\n", err);
 	return err;

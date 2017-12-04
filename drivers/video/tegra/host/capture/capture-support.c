@@ -186,8 +186,10 @@ static int t194_capture_support_probe(struct platform_device *pdev)
 		goto error;
 
 	err = nvhost_client_device_init(pdev);
-	if (err)
-		goto deinit;
+	if (err) {
+		nvhost_module_deinit(pdev);
+		goto error;
+	}
 
 	err = nvhost_syncpt_unit_interface_init(pdev);
 	if (err)
@@ -211,8 +213,6 @@ static int t194_capture_support_probe(struct platform_device *pdev)
 
 device_release:
 	nvhost_client_device_release(pdev);
-deinit:
-	nvhost_module_deinit(pdev);
 error:
 	if (err != -EPROBE_DEFER)
 		dev_err(dev, "probe failed: %d\n", err);

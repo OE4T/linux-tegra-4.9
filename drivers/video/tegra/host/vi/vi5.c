@@ -230,6 +230,7 @@ put_rm:
 	platform_device_put(rm);
 	if (err != -EPROBE_DEFER)
 		dev_err(dev, "probe failed: %d\n", err);
+	info->private_data = NULL;
 	return err;
 }
 

@@ -177,8 +177,10 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 		return err;
 
 	err = nvhost_client_device_init(pdev);
-	if (err)
+	if (err) {
+		nvhost_module_deinit(pdev);
 		goto err_client_device_init;
+	}
 
 	nvcsi->pdev = pdev;
 	nvcsi->csi.fops = &csi5_fops;
@@ -189,8 +191,9 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 	return 0;
 
 err_mediacontroller_init:
+	nvhost_client_device_release(pdev);
 err_client_device_init:
-	nvhost_module_deinit(pdev);
+	pdata->private_data = NULL;
 	return err;
 }
 

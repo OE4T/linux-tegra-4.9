@@ -1594,6 +1594,13 @@
 		status = "disabled";
 	};
 
+	tegra_aowake: pmc@c370000 {
+		compatible = "nvidia,tegra194-aowake";
+		reg = <0x0 0xc370000 0x0 0x600>;
+		status = "disabled";
+	};
+
+
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 
 	xusb_padctl: xusb_padctl@3520000 {

@@ -133,4 +133,8 @@
 	pmc@c360000 {
 		status = "okay";
 	};
+
+	pmc@c370000 {
+		status = "okay";
+	};
 };

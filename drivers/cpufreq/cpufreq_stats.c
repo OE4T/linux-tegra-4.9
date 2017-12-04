@@ -232,7 +232,11 @@ void cpufreq_stats_record_transition(struct cpufreq_policy *policy,
 	new_index = freq_table_get_index(stats, new_freq);
 
 	/* We can't do stats->time_in_state[-1]= .. */
-	if (old_index == -1 || new_index == -1 || old_index == new_index)
+	if (old_index == -1 && new_index != -1) {
+		stats->last_index = new_index;
+		stats->last_time = get_jiffies_64();
+		return;
+	} else if (new_index == -1 || old_index == new_index)
 		return;
 
 	cpufreq_stats_update(stats);

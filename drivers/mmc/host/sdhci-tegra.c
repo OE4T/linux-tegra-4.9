@@ -201,7 +201,6 @@ struct sdhci_tegra {
 	bool set_1v8_calib_offsets;
 	int current_voltage;
 	unsigned int cd_irq;
-	bool config_pad_ctrl;
 	bool pwrdet_support;
 	bool wake_enable_failed;
 	bool cd_wakeup_capable;
@@ -220,6 +219,7 @@ struct sdhci_tegra {
 	bool disable_rtpm;
 	bool disable_clk_gate;
 	bool is_rail_enabled;
+	bool vqmmc_always_on;
 };
 
 static int sdhci_tegra_parse_parent_list_from_dt(struct platform_device *pdev,
@@ -620,7 +620,7 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 	 * even if the device supports it because the IO voltage
 	 * cannot be configured.
 	 */
-	if (!IS_ERR(host->mmc->supply.vqmmc)) {
+	if (tegra_host->vqmmc_always_on || !IS_ERR(host->mmc->supply.vqmmc)) {
 		/* Erratum: Enable SDHCI spec v3.00 support */
 		if (soc_data->nvquirks & NVQUIRK_ENABLE_SDHCI_SPEC_300)
 			misc_ctrl |= SDHCI_MISC_CTRL_ENABLE_SDHCI_SPEC_300;
@@ -909,6 +909,12 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	if (clock) {
 		dev_dbg(mmc_dev(host->mmc), "Enabling clk %u, clk enabled %d\n",
 			clock, host->mmc->is_host_clk_enabled);
+
+		if (host->mmc->skip_host_clkgate) {
+			sdhci_set_card_clock(host, true);
+			return;
+		}
+
 		if (!tegra_host->rate_change_needs_clk)
 			tegra_sdhci_set_clk_rate(host, host_clk);
 		/* Enable SDMMC host CAR clock */
@@ -961,11 +967,13 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	} else {
 		dev_dbg(mmc_dev(host->mmc), "Disabling clk %u, clk enabled %d\n",
 			clock, host->mmc->is_host_clk_enabled);
+
+		if (host->mmc->skip_host_clkgate) {
+			sdhci_set_card_clock(host, false);
+			return;
+		}
 		/* Disable the card and internal clocks first */
 		sdhci_set_clock(host, clock);
-
-		if (host->mmc->skip_host_clkgate)
-			return;
 
 		/* Disable SDMMC host CAR clock */
 		if (host->mmc->is_host_clk_enabled) {
@@ -1235,24 +1243,9 @@ static void tegra_sdhci_signal_voltage_switch_pre(struct sdhci_host *host,
 		return;
 	}
 
-	if (IS_ERR_OR_NULL(host->mmc->supply.vqmmc)) {
-		dev_err(mmc_dev(host->mmc), "vqmmc supply missing\n");
-		return;
-	}
-
-	tegra_host->current_voltage =
-		regulator_get_voltage(host->mmc->supply.vqmmc);
-
 	/* For 3.3V, pwrdet should be set before setting the voltage */
-	if (signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
-		if (tegra_host->current_voltage < 2700000) {
-			dev_dbg(mmc_dev(host->mmc),
-				"Setting 3.3V padctrl\n");
-			tegra_sdhci_set_padctrl(host, 3300000);
-		}
-	}
-
-	tegra_host->config_pad_ctrl = true;
+	if (signal_voltage == MMC_SIGNAL_VOLTAGE_330)
+		tegra_sdhci_set_padctrl(host, 3300000);
 }
 
 static void tegra_sdhci_signal_voltage_switch_post(struct sdhci_host *host,
@@ -1260,23 +1253,9 @@ static void tegra_sdhci_signal_voltage_switch_post(struct sdhci_host *host,
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
-	int voltage;
-	bool set;
 
-	if (IS_ERR_OR_NULL(host->mmc->supply.vqmmc)) {
-		dev_err(mmc_dev(host->mmc), "vqmmc supply missing\n");
-		return;
-	}
-
-	set = (signal_voltage == MMC_SIGNAL_VOLTAGE_180) ? true : false;
-	if (tegra_host->config_pad_ctrl) {
-		voltage = regulator_get_voltage(host->mmc->supply.vqmmc);
-		if ((voltage <= tegra_host->current_voltage) && set) {
-			dev_dbg(mmc_dev(host->mmc),
-				"Setting 1.8V padctrl\n");
-			tegra_sdhci_set_padctrl(host, 1800000);
-		}
-	}
+	if (signal_voltage == MMC_SIGNAL_VOLTAGE_180)
+		tegra_sdhci_set_padctrl(host, 1800000);
 
 	if (tegra_host->pad_calib_required)
 		tegra_sdhci_pad_autocalib(host);
@@ -1669,6 +1648,8 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 #endif
 	}
 
+	tegra_host->vqmmc_always_on = of_property_read_bool(np,
+		"nvidia,vqmmc-always-on");
 	return 0;
 }
 

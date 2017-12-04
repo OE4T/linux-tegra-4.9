@@ -45,7 +45,7 @@
 #include <linux/string.h>
 #include "nvs_sysfs.h"
 
-#define NVS_SYSFS_DRIVER_VERSION	(1)
+#define NVS_SYSFS_DRIVER_VERSION	(2)
 
 
 static const char * const nvs_snsr_names[] = {
@@ -188,31 +188,63 @@ static int nvs_disable(struct nvs_state *st)
 	return ret;
 }
 
-static ssize_t nvs_dbg_ch2buf(struct nvs_state *st, unsigned int ch,
-			      char *buf, ssize_t t)
+static ssize_t nvs_ch2buf(struct nvs_state *st, unsigned int ch,
+			  char *buf, size_t buf_n, ssize_t t, bool dbg)
 {
+	unsigned int i;
 	unsigned int n;
 	s64 val;
 
 	n = st->buf_ch[ch].byte_n;
-	if (n > sizeof(val))
-		n = sizeof(val);
-	val = 0;
-	memcpy(&val, &st->buf[st->buf_ch[ch].buf_i], n);
-	if (st->buf_ch[ch].sign) {
-		n = sizeof(val) - n;
-		if (n) {
-			n *= 8;
-			val <<= n;
-			val >>= n;
+	if (n) {
+		if (n <= sizeof(val)) {
+			val = 0;
+			memcpy(&val, &st->buf[st->buf_ch[ch].buf_i], n);
+			if (st->buf_ch[ch].sign) {
+				i = sizeof(val) - n;
+				if (i) {
+					i *= 8;
+					val <<= i;
+					val >>= i;
+				}
+				if (dbg)
+					t += snprintf(buf + t, buf_n - t,
+						      "%lld (0x", val);
+				else
+					return snprintf(buf + t, buf_n - t,
+							"%lld\n", val);
+			} else {
+				if (dbg)
+					t += snprintf(buf + t, buf_n - t,
+						      "%llu (0x", val);
+				else
+					return snprintf(buf + t, buf_n - t,
+							"%llu\n", (u64)val);
+			}
+		} else {
+			if (dbg)
+				t += snprintf(buf + t, buf_n - t, "? (0x");
+			else
+				t += snprintf(buf + t, buf_n - t, "(0x");
 		}
-		return snprintf(buf + t, PAGE_SIZE - t, "%lld ", val);
+
+		for (i = n - 1; i > 0; i--)
+			t += snprintf(buf + t, buf_n - t, "%02X",
+				      st->buf[st->buf_ch[ch].buf_i + i]);
+
+		if (dbg)
+			t += snprintf(buf + t, buf_n - t, "%02X)  ",
+				      st->buf[st->buf_ch[ch].buf_i]);
+		else
+			t += snprintf(buf + t, buf_n - t, "%02X\n",
+				      st->buf[st->buf_ch[ch].buf_i]);
+		return t;
 	}
 
-	return snprintf(buf + t, PAGE_SIZE - t, "%llu ", (u64)val);
+	return 0;
 }
 
-static ssize_t nvs_dbg_data(struct nvs_state *st, char *buf)
+static ssize_t nvs_dbg_data(struct nvs_state *st, char *buf, size_t buf_n)
 {
 	ssize_t t;
 	unsigned int ch;
@@ -221,13 +253,13 @@ static ssize_t nvs_dbg_data(struct nvs_state *st, char *buf)
 	t = snprintf(buf, PAGE_SIZE, "%s: ", st->cfg->name);
 	for (ch = 0; ch < n; ch++) {
 		if (!(st->enabled & (1 << ch))) {
-			t += snprintf(buf + t, PAGE_SIZE - t, "disabled ");
+			t += snprintf(buf + t, buf_n - t, "disabled ");
 			continue;
 		}
 
-		t += nvs_dbg_ch2buf(st, ch, buf, t);
+		t += nvs_ch2buf(st, ch, buf, buf_n, t, true);
 	}
-	t += snprintf(buf + t, PAGE_SIZE - t, "ts=%lld  ts_diff=%lld\n",
+	t += snprintf(buf + t, buf_n - t, "ts=%lld  ts_diff=%lld\n",
 		      st->ts, st->ts_diff);
 	return t;
 }
@@ -307,7 +339,7 @@ static int nvs_buf_push(struct nvs_state *st, unsigned char *data, s64 ts)
 			if (*st->fn_dev->sts & NVS_STS_SPEW_BUF) {
 				n = st->buf_ch[n].buf_i + st->buf_ch[n].byte_n;
 				for (i = 0; i < n; i++)
-					dev_info(st->dev, "%s buf[%u]=%X\n",
+					dev_info(st->dev, "%s buf[%u]=%02X\n",
 						 st->cfg->name, i, st->buf[i]);
 				dev_info(st->dev, "%s ts=%lld  diff=%lld\n",
 					 st->cfg->name, ts, st->ts_diff);
@@ -315,7 +347,7 @@ static int nvs_buf_push(struct nvs_state *st, unsigned char *data, s64 ts)
 		}
 	}
 	if ((*st->fn_dev->sts & NVS_STS_SPEW_DATA) && ts) {
-		nvs_dbg_data(st, char_buf);
+		nvs_dbg_data(st, char_buf, sizeof(char_buf));
 		dev_info(st->dev, "%s", char_buf);
 	}
 	if (!ret)
@@ -438,7 +470,7 @@ static ssize_t nvs_attr_ch_show(struct device *dev,
 	struct nvs_state *st = dev_to_nvs_state(dev);
 	struct nvs_dev_attr *nda = to_nvs_dev_attr(attr);
 
-	return nvs_dbg_ch2buf(st, nda->channel, buf, 0);
+	return nvs_ch2buf(st, nda->channel, buf, PAGE_SIZE, 0, false);
 }
 
 static ssize_t nvs_attr_ch_store(struct device *dev,
@@ -695,7 +727,7 @@ static ssize_t nvs_attr_nvs_show(struct device *dev,
 	st->dbg = NVS_INFO_DATA;
 	switch (dbg) {
 	case NVS_INFO_DATA:
-		return nvs_dbg_data(st, buf);
+		return nvs_dbg_data(st, buf, PAGE_SIZE);
 
 	case NVS_INFO_VER:
 		return snprintf(buf, PAGE_SIZE,
@@ -899,8 +931,9 @@ static ssize_t nvs_attr_part_show(struct device *dev,
 			st->cfg->part, st->cfg->name);
 }
 
-static ssize_t nvs_attr_range_show(struct device *dev,
-				   struct device_attribute *attr, char *buf)
+static ssize_t nvs_attr_range_max_show(struct device *dev,
+				       struct device_attribute *attr,
+				       char *buf)
 {
 	struct nvs_state *st = dev_to_nvs_state(dev);
 	int ival = st->cfg->max_range.ival;
@@ -909,9 +942,9 @@ static ssize_t nvs_attr_range_show(struct device *dev,
 	return nvs_attr_ret(st, buf, ival, fval);
 }
 
-static ssize_t nvs_attr_range_store(struct device *dev,
-				    struct device_attribute *attr,
-				    const char *buf, size_t count)
+static ssize_t nvs_attr_range_max_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
 {
 	struct nvs_state *st = dev_to_nvs_state(dev);
 	int ival;
@@ -1312,8 +1345,8 @@ static DEVICE_ATTR(nvs, S_IRUGO | S_IWUSR | S_IWGRP,
 		   nvs_attr_nvs_show, nvs_attr_nvs_store);
 static DEVICE_ATTR(part, S_IRUGO,
 		   nvs_attr_part_show, NULL);
-static DEVICE_ATTR(range, S_IRUGO | S_IWUSR | S_IWGRP,
-		   nvs_attr_range_show, nvs_attr_range_store);
+static DEVICE_ATTR(range_max, S_IRUGO | S_IWUSR | S_IWGRP,
+		   nvs_attr_range_max_show, nvs_attr_range_max_store);
 static DEVICE_ATTR(resolution, S_IRUGO | S_IWUSR | S_IWGRP,
 		   nvs_attr_resolution_show, nvs_attr_resolution_store);
 static DEVICE_ATTR(self_test, S_IRUGO,
@@ -1347,7 +1380,7 @@ static struct attribute *nvs_attrs[] = {
 	&dev_attr_nvs.attr,
 	/* &dev_attr_offset.attr, */
 	&dev_attr_part.attr,
-	&dev_attr_range.attr,
+	&dev_attr_range_max.attr,
 	&dev_attr_resolution.attr,
 	/* &dev_attr_scale.attr, */
 	&dev_attr_self_test.attr,

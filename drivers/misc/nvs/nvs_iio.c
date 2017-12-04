@@ -83,7 +83,7 @@
 #include <linux/nvs.h>
 #include <linux/version.h>
 
-#define NVS_IIO_DRIVER_VERSION		(221)
+#define NVS_IIO_DRIVER_VERSION		(222)
 
 enum NVS_ATTR {
 	NVS_ATTR_ENABLE,
@@ -167,13 +167,19 @@ static struct attribute *nvs_attrs[] = {
 	NULL
 };
 
+struct nvs_iio_channel {
+	unsigned int n;
+	int i;
+};
+
 struct nvs_state {
 	void *client;
 	struct device *dev;
 	struct nvs_fn_dev *fn_dev;
 	struct sensor_cfg *cfg;
+	struct nvs_iio_channel *ch;
 	struct iio_trigger *trig;
-	struct iio_chan_spec *ch;
+	struct iio_chan_spec *chs;
 	struct attribute *attrs[ARRAY_SIZE(nvs_attrs)];
 	struct attribute_group attr_group;
 	struct iio_info info;
@@ -620,8 +626,6 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 	unsigned int n;
 	unsigned int i;
 	unsigned int src_i = 0;
-	unsigned int dst_i;
-	unsigned int bytes = 0;
 	unsigned int data_chan_n;
 	int ret = 0;
 
@@ -634,14 +638,10 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 			/* on-change needs data change for push */
 			push = false;
 		for (i = 0; i < data_chan_n; i++) {
-			if (iio_scan_mask_query(indio_dev,
-						indio_dev->buffer, i)) {
-				n = indio_dev->channels[i].
-						     scan_type.storagebits / 8;
-				dst_i = nvs_buf_index(n, &bytes);
+			if (st->ch[i].i >= 0) {
 				if (!data) {
 					/* buffer calculations only */
-					src_i += n;
+					src_i += st->ch[i].n;
 					continue;
 				}
 
@@ -650,16 +650,17 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 					/* wasted cycles when st->first_push
 					 * but saved cycles in the long run.
 					 */
-					ret = memcmp(&st->buf[dst_i],
-						     &data[src_i], n);
+					ret = memcmp(&st->buf[st->ch[i].i],
+						     &data[src_i],
+						     st->ch[i].n);
 					if (ret)
 						/* data changed */
 						push = true;
 				}
 				if (!(st->dbg_data_lock & (1 << i)))
-					memcpy(&st->buf[dst_i],
-					       &data[src_i], n);
-				src_i += n;
+					memcpy(&st->buf[st->ch[i].i],
+					       &data[src_i], st->ch[i].n);
+				src_i += st->ch[i].n;
 			}
 		}
 	}
@@ -684,11 +685,9 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 			dev_info(st->dev, "%s %s FLUSH\n",
 				 __func__, st->cfg->name);
 	}
-	if (indio_dev->buffer->scan_timestamp) {
-		n = sizeof(ts);
-		dst_i = nvs_buf_index(n, &bytes);
-		memcpy(&st->buf[dst_i], &ts, n);
-	}
+	if (indio_dev->buffer->scan_timestamp)
+		memcpy(&st->buf[st->ch[data_chan_n].i], &ts,
+		       st->ch[data_chan_n].n);
 	if (push && iio_buffer_enabled(indio_dev)) {
 		ret = iio_push_to_buffers(indio_dev, st->buf);
 		if (!ret) {
@@ -700,7 +699,9 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 					nvs_disable(st);
 			}
 			if (*st->fn_dev->sts & NVS_STS_SPEW_BUF) {
-				for (i = 0; i < bytes; i++)
+				n = st->ch[data_chan_n].i +
+							 st->ch[data_chan_n].n;
+				for (i = 0; i < n; i++)
 					dev_info(st->dev, "%s buf[%u]=%02X\n",
 						 st->cfg->name, i, st->buf[i]);
 				dev_info(st->dev, "%s ts=%lld  diff=%lld\n",
@@ -735,19 +736,29 @@ static int nvs_enable(struct iio_dev *indio_dev, bool en)
 {
 	struct nvs_state *st = iio_priv(indio_dev);
 	unsigned int i;
+	unsigned int n;
 	int enable = 0;
 	int ret;
 
 	if (en) {
+		i = 0;
+		n = 0;
 		if (indio_dev->num_channels > 1) {
-			for (i = 0; i < indio_dev->num_channels - 1; i++) {
+			for (; i < indio_dev->num_channels - 1; i++) {
 				if (iio_scan_mask_query(indio_dev,
-							indio_dev->buffer, i))
+							indio_dev->buffer,
+							i)) {
 					enable |= 1 << i;
+					st->ch[i].i =
+						nvs_buf_index(st->ch[i].n, &n);
+				} else {
+					st->ch[i].i = -1;
+				}
 			}
 		} else {
 			enable = 1;
 		}
+		st->ch[i].i = nvs_buf_index(st->ch[i].n, &n);
 		st->first_push = true;
 		ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, enable);
 		if (!ret)
@@ -1586,6 +1597,24 @@ static void nvs_chan_scan_type(struct iio_chan_spec *ch, int ch_sz)
 	ch->scan_type.realbits = ch->scan_type.storagebits;
 }
 
+static int nvs_ch_init(struct nvs_state *st, struct iio_dev *indio_dev)
+{
+	int i;
+	size_t n;
+
+	n = indio_dev->num_channels * sizeof(struct nvs_iio_channel);
+	st->ch = devm_kzalloc(st->dev, n, GFP_KERNEL);
+	if (st->ch == NULL)
+		return -ENOMEM;
+
+	for (i = 0; i < indio_dev->num_channels; i++) {
+		st->ch[i].n = indio_dev->channels[i].scan_type.storagebits / 8;
+		st->ch[i].i = -1;
+	}
+
+	return 0;
+}
+
 static int nvs_chan(struct iio_dev *indio_dev)
 {
 	struct nvs_state *st = iio_priv(indio_dev);
@@ -1611,7 +1640,7 @@ static int nvs_chan(struct iio_dev *indio_dev)
 		if (st->buf == NULL)
 			return -ENOMEM;
 
-		return 0;
+		return nvs_ch_init(st, indio_dev);
 	}
 
 	/* create IIO channels */
@@ -1652,9 +1681,9 @@ static int nvs_chan(struct iio_dev *indio_dev)
 		else
 			i++;
 	}
-	st->ch = devm_kzalloc(st->dev,  i * sizeof(struct iio_chan_spec),
+	st->chs = devm_kzalloc(st->dev,  i * sizeof(struct iio_chan_spec),
 			      GFP_KERNEL);
-	if (st->ch == NULL)
+	if (st->chs == NULL)
 		return -ENOMEM;
 
 	if (st->one_shot)
@@ -1678,50 +1707,50 @@ static int nvs_chan(struct iio_dev *indio_dev)
 	i = 0;
 	if (st->cfg->ch_n) { /* It's possible to not have any data channels */
 		for (; i < st->cfg->ch_n; i++) {
-			st->ch[i].type = nvs_iio_chs[ch_type_i].typ;
-			nvs_chan_scan_type(&st->ch[i], st->cfg->ch_sz);
+			st->chs[i].type = nvs_iio_chs[ch_type_i].typ;
+			nvs_chan_scan_type(&st->chs[i], st->cfg->ch_sz);
 			if (st->cfg->ch_n - 1) {
 				/* multiple channels */
 				if (nvs_iio_chs[ch_type_i].mod)
-					st->ch[i].channel2 =
+					st->chs[i].channel2 =
 						 nvs_iio_chs[ch_type_i].mod[i];
-				st->ch[i].info_mask_shared_by_type =
+				st->chs[i].info_mask_shared_by_type =
 						      info_mask_shared_by_type;
-				st->ch[i].info_mask_separate = info_mask &
+				st->chs[i].info_mask_separate = info_mask &
 						     ~info_mask_shared_by_type;
-				st->ch[i].modified = 1;
+				st->chs[i].modified = 1;
 			} else {
 				/* single channel */
-				st->ch[i].info_mask_separate = info_mask;
+				st->chs[i].info_mask_separate = info_mask;
 			}
-			st->ch[i].scan_index = i;
-			nvs_buf_index(st->ch[i].scan_type.storagebits / 8,
+			st->chs[i].scan_index = i;
+			nvs_buf_index(st->chs[i].scan_type.storagebits / 8,
 				      &buf_sz);
 		}
 	}
 	if (ch_status_sz) {
 		/* create a status channel */
-		st->ch[i].type = nvs_iio_chs[ch_type_i].typ;
-		st->ch[i].channel2 = IIO_MOD_STATUS;
-		nvs_chan_scan_type(&st->ch[i], ch_status_sz);
-		st->ch[i].info_mask_separate = BIT(IIO_CHAN_INFO_RAW);
-		st->ch[i].modified = 1;
-		st->ch[i].scan_index = i;
-		nvs_buf_index(st->ch[i].scan_type.storagebits / 8, &buf_sz);
+		st->chs[i].type = nvs_iio_chs[ch_type_i].typ;
+		st->chs[i].channel2 = IIO_MOD_STATUS;
+		nvs_chan_scan_type(&st->chs[i], ch_status_sz);
+		st->chs[i].info_mask_separate = BIT(IIO_CHAN_INFO_RAW);
+		st->chs[i].modified = 1;
+		st->chs[i].scan_index = i;
+		nvs_buf_index(st->chs[i].scan_type.storagebits / 8, &buf_sz);
 		i++;
 	}
 	/* timestamp channel */
-	memcpy(&st->ch[i], &nvs_ch_ts, sizeof(nvs_ch_ts));
-	st->ch[i].scan_index = i;
-	nvs_buf_index(st->ch[i].scan_type.storagebits / 8, &buf_sz);
+	memcpy(&st->chs[i], &nvs_ch_ts, sizeof(nvs_ch_ts));
+	st->chs[i].scan_index = i;
+	nvs_buf_index(st->chs[i].scan_type.storagebits / 8, &buf_sz);
 	i++;
 	st->buf = devm_kzalloc(st->dev, (size_t)buf_sz, GFP_KERNEL);
 	if (st->buf == NULL)
 		return -ENOMEM;
 
-	indio_dev->channels = st->ch;
+	indio_dev->channels = st->chs;
 	indio_dev->num_channels = i;
-	return 0;
+	return nvs_ch_init(st, indio_dev);
 }
 
 static const struct iio_trigger_ops nvs_trigger_ops = {
@@ -1942,6 +1971,8 @@ static int nvs_probe(void **handle, void *dev_client, struct device *dev,
 		else
 			dev_err(st->dev, "%s snsr_id=%d EXIT ERR=%d\n",
 				__func__, st->cfg->snsr_id, ret);
+		if (st->chs)
+			devm_kfree(st->dev, st->chs);
 		if (st->ch)
 			devm_kfree(st->dev, st->ch);
 		if (st->buf)

@@ -1198,9 +1198,9 @@ static int mttcan_close(struct net_device *dev)
 	struct mttcan_priv *priv = netdev_priv(dev);
 	netif_stop_queue(dev);
 	napi_disable(&priv->napi);
-	mttcan_power_down(dev);
 	mttcan_stop(priv);
 	close_candev(dev);
+	mttcan_power_down(dev);
 	mttcan_pm_runtime_put_sync(priv);
 
 	can_led_event(dev, CAN_LED_EVENT_STOP);
@@ -1708,12 +1708,12 @@ static int mttcan_suspend(struct platform_device *pdev, pm_message_t state)
 	}
 
 	if (ndev->flags & IFF_UP) {
+		mttcan_stop(priv);
 		ret = mttcan_power_down(ndev);
 		if (ret) {
 			netdev_err(ndev, "failed to enter power down mode\n");
 			return ret;
 		}
-		mttcan_stop(priv);
 	}
 
 	priv->can.state = CAN_STATE_SLEEPING;

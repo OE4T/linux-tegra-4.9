@@ -253,16 +253,6 @@ static unsigned long adsp_get_target_freq(unsigned long tfreq, int *index)
 	return 0;
 }
 
-static void adspfreq_stats_update(void)
-{
-	unsigned long long cur_time;
-
-	cur_time = get_jiffies_64();
-	freq_stats.time_in_state[freq_stats.last_index] += cur_time -
-		freq_stats.last_time;
-	freq_stats.last_time = cur_time;
-}
-
 static struct adsp_dfs_policy dfs_policy =  {
 	.enable = 1,
 	.clk_name = "adsp_cpu",
@@ -592,6 +582,16 @@ exit_out:
 
 DEFINE_SIMPLE_ATTRIBUTE(cur_fops, policy_cur_get,
 	policy_cur_set, "%llu\n");
+
+static void adspfreq_stats_update(void)
+{
+	unsigned long long cur_time;
+
+	cur_time = get_jiffies_64();
+	freq_stats.time_in_state[freq_stats.last_index] += cur_time -
+		freq_stats.last_time;
+	freq_stats.last_time = cur_time;
+}
 
 /*
  * Print residency in each freq levels

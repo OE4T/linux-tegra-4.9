@@ -315,6 +315,9 @@ void gk20a_tsg_release(struct nvgpu_ref *ref)
 	struct gk20a *g = tsg->g;
 	struct gk20a_event_id_data *event_id_data, *event_id_data_temp;
 
+	if (g->ops.fifo.tsg_release)
+		g->ops.fifo.tsg_release(tsg);
+
 	if (tsg->tsg_gr_ctx) {
 		gr_gk20a_free_tsg_gr_ctx(tsg);
 		tsg->tsg_gr_ctx = NULL;

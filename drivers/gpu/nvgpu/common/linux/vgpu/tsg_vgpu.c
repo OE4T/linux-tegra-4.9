@@ -28,7 +28,7 @@
 int vgpu_tsg_open(struct tsg_gk20a *tsg)
 {
 	struct tegra_vgpu_cmd_msg msg = {};
-	struct tegra_vgpu_tsg_open_params *p =
+	struct tegra_vgpu_tsg_open_rel_params *p =
 				&msg.params.tsg_open;
 	int err;
 
@@ -45,6 +45,26 @@ int vgpu_tsg_open(struct tsg_gk20a *tsg)
 	}
 
 	return err;
+}
+
+void vgpu_tsg_release(struct tsg_gk20a *tsg)
+{
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct tegra_vgpu_tsg_open_rel_params *p =
+				&msg.params.tsg_release;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_TSG_RELEASE;
+	msg.handle = vgpu_get_handle(tsg->g);
+	p->tsg_id = tsg->tsgid;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (err) {
+		nvgpu_err(tsg->g,
+			"vgpu_tsg_release failed, tsgid %d", tsg->tsgid);
+	}
 }
 
 int vgpu_enable_tsg(struct tsg_gk20a *tsg)

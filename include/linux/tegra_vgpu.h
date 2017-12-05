@@ -110,6 +110,7 @@ enum {
 	TEGRA_VGPU_CMD_PROF_MGT = 72,
 	TEGRA_VGPU_CMD_PERFBUF_MGT = 73,
 	TEGRA_VGPU_CMD_GET_TIMESTAMPS_ZIPPER = 74,
+	TEGRA_VGPU_CMD_TSG_RELEASE = 75,
 };
 
 struct tegra_vgpu_connect_params {
@@ -384,7 +385,7 @@ struct tegra_vgpu_tsg_timeslice_params {
 	u32 timeslice_us;
 };
 
-struct tegra_vgpu_tsg_open_params {
+struct tegra_vgpu_tsg_open_rel_params {
 	u32 tsg_id;
 };
 
@@ -562,7 +563,8 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_channel_bind_gr_ctx_params ch_bind_gr_ctx;
 		struct tegra_vgpu_tsg_bind_gr_ctx_params tsg_bind_gr_ctx;
 		struct tegra_vgpu_tsg_bind_unbind_channel_params tsg_bind_unbind_channel;
-		struct tegra_vgpu_tsg_open_params tsg_open;
+		struct tegra_vgpu_tsg_open_rel_params tsg_open;
+		struct tegra_vgpu_tsg_open_rel_params tsg_release;
 		struct tegra_vgpu_tsg_preempt_params tsg_preempt;
 		struct tegra_vgpu_tsg_timeslice_params tsg_timeslice;
 		struct tegra_vgpu_tsg_runlist_interleave_params tsg_interleave;

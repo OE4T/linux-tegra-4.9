@@ -279,16 +279,12 @@
 #define TEGRA194_CLK_SDMMC4			123
 /** @brief gated version of SE_FREE clk */
 #define TEGRA194_CLK_SE				124
-/** @deprecated do not use */
-#define TEGRA194_CLK_SOR0			TEGRA194_CLK_SOR0_OUT
 /** @brief output of mux controlled by SOR0_CLK_SEL1 and SOR0_CLK_SEL0 */
 #define TEGRA194_CLK_SOR0_OUT			125
 /** @brief output of mux controlled by SOR0_CLK_SRC */
 #define TEGRA194_CLK_SOR0_REF			126
 /** @brief SOR0 brick output which feeds into SOR0_CLK_SEL0 mux */
 #define TEGRA194_CLK_SOR0_PAD_CLKOUT		127
-/** @deprecated do not use */
-#define TEGRA194_CLK_SOR1			TEGRA194_CLK_SOR1_OUT
 /** @brief output of mux controlled by SOR1_CLK_SEL1 and SOR1_CLK_SEL0 */
 #define TEGRA194_CLK_SOR1_OUT			128
 /** @brief output of mux controlled by SOR1_CLK_SRC */
@@ -389,16 +385,12 @@
 #define TEGRA194_CLK_DLA1_FALCON		176
 /** @brief DLA1_core_clk */
 #define TEGRA194_CLK_DLA1_CORE			177
-/** @deprecated do not use */
-#define TEGRA194_CLK_SOR2			TEGRA194_CLK_SOR2_OUT
 /** @brief output of mux controlled by SOR2_CLK_SEL1 and SOR2_CLK_SEL0 */
 #define TEGRA194_CLK_SOR2_OUT			178
 /** @brief output of mux controlled by SOR2_CLK_SRC */
 #define TEGRA194_CLK_SOR2_REF			179
 /** @brief SOR2 brick output which feeds into SOR2_CLK_SEL0 mux */
 #define TEGRA194_CLK_SOR2_PAD_CLKOUT		180
-/** @deprecated do not use */
-#define TEGRA194_CLK_SOR3			TEGRA194_CLK_SOR3_OUT
 /** @brief output of mux controlled by SOR3_CLK_SEL1 and SOR3_CLK_SEL0 */
 #define TEGRA194_CLK_SOR3_OUT			181
 /** @brief output of mux controlled by SOR3_CLK_SRC */
@@ -625,5 +617,25 @@
 #define TEGRA194_CLK_UTMIPLL_CLKOUT480		292
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_CVNAS switch divider output */
 #define TEGRA194_CLK_CVNAS			293
+/** @brief PLL controlled by CLK_RST_CONTROLLER_PLLNVCSI_BASE  */
+#define TEGRA194_CLK_PLLNVCSI			294
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PVA0_CPU_AXI switch divider output */
+#define TEGRA194_CLK_PVA0_CPU_AXI		295
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PVA1_CPU_AXI switch divider output */
+#define TEGRA194_CLK_PVA1_CPU_AXI		296
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PVA0_VPS switch divider output */
+#define TEGRA194_CLK_PVA0_VPS			297
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_PVA1_VPS switch divider output */
+#define TEGRA194_CLK_PVA1_VPS			298
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_DLA0_FALCON switch divider output */
+#define TEGRA194_CLK_DLA0_FALCON_MUX		299
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_DLA1_FALCON switch divider output */
+#define TEGRA194_CLK_DLA1_FALCON_MUX		300
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_DLA0_CORE switch divider output */
+#define TEGRA194_CLK_DLA0_CORE_MUX		301
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_DLA1_CORE switch divider output */
+#define TEGRA194_CLK_DLA1_CORE_MUX		302
+/** @brief Controls CLK_RST_CONTROLLER_NVLINK_CLK_CTRL_0.NVLINK_TXCLK_CTRL */
+#define TEGRA194_CLK_NVLINK_TXCLK_CTRL		303
 
 #endif

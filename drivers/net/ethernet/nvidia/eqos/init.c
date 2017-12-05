@@ -302,15 +302,24 @@ static int eqos_clock_init(struct eqos_prv_data *pdata)
 		dev_err(&pdev->dev,
 		"ptp_ref_clk read failed %d, setting default to 125MHz\n", ret);
 		/* take default as 125MHz */
-		ptp_ref_clock_speed = 125;
+		if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+			ptp_ref_clock_speed = 312500000;
+		else
+			ptp_ref_clock_speed = 125;
 	} else if (ptp_ref_clock_speed > 625) { /* max parent clock is 625MHz */
 		dev_warn(&pdev->dev,
 		"ptp_ref_clk read set to more than 625MHz\n");
 		/* take default as 125MHz */
-		ptp_ref_clock_speed = 125;
+		if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+			ptp_ref_clock_speed = 312500000;
+		else
+			ptp_ref_clock_speed = 125;
 	}
-
-	ret = clk_set_rate(pdata->ptp_ref_clk, ptp_ref_clock_speed * 1000000);
+	if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+		ret = clk_set_rate(pdata->ptp_ref_clk, ptp_ref_clock_speed);
+	else
+		ret = clk_set_rate(pdata->ptp_ref_clk,
+				   ptp_ref_clock_speed * 1000000);
 	if (ret) {
 		dev_err(&pdev->dev, "ptp_ref clk set rate failed (%d)\n", ret);
 		goto ptp_ref_set_rate_failed;

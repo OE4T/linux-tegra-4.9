@@ -153,6 +153,7 @@ struct mrq_response {
 #define MRQ_PG			66
 #define MRQ_CPU_NDIV_LIMITS	67
 #define MRQ_STRAP               68
+#define MRQ_UPHY		69
 
 /** @} */
 
@@ -161,7 +162,7 @@ struct mrq_response {
  * @brief Maximum MRQ code to be sent by CPU software to
  * BPMP. Subject to change in future
  */
-#define MAX_CPU_MRQ_ID		68
+#define MAX_CPU_MRQ_ID		69
 
 /**
  * @addtogroup MRQ_Payloads
@@ -182,6 +183,7 @@ struct mrq_response {
  *   @defgroup CPU NDIV Limits
  *   @defgroup RingbufConsole Ring Buffer Console
  *   @defgroup Strap Straps
+ *   @defgroup UPHY UPHY
  * @}
  */
 
@@ -1989,6 +1991,93 @@ struct mrq_strap_request {
  * @defgroup Strap_Ids Strap Identifiers
  * @}
  */
+
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_UPHY
+ * @brief Perform a UPHY operation
+ *
+ * * Platforms: T194
+ * * Initiators: CCPLEX
+ * * Targets: BPMP
+ * * Request Payload: @ref mrq_uphy_request
+ * * Response Payload: @ref mrq_uphy_response
+ *
+ * @addtogroup UPHY
+ * @{
+ */
+enum {
+	CMD_UPHY_PCIE_LANE_MARGIN_CONTROL = 1,
+	CMD_UPHY_PCIE_LANE_MARGIN_STATUS = 2,
+	CMD_UPHY_MAX,
+};
+
+struct cmd_uphy_margin_control_request {
+	/** @brief Enable margin */
+	int32_t en;
+	/** @brief Clear the number of error and sections */
+	int32_t clr;
+	/** @brief Set x offset (1's complement) for left/right margin type (y should be 0) */
+	uint32_t x;
+	/** @brief Set y offset (1's complement) for left/right margin type (x should be 0) */
+	uint32_t y;
+	/** @brief Set number of bit blocks for each margin section */
+	uint32_t nblks;
+} __ABI_PACKED;
+
+struct cmd_uphy_margin_status_response {
+	/** @brief Number of errors observed */
+	uint32_t status;
+} __ABI_PACKED;
+
+/**
+ * @ingroup UPHY
+ * @brief Request with #MRQ_UPHY
+ *
+ * Used by the sender of an #MRQ_UPHY message to control UPHY Lane RX margining.
+ * The uphy_request is split into several sub-commands. Some sub-commands
+ * require no additional data. Others have a sub-command specific payload
+ *
+ * |sub-command                       |payload                 |
+ * |----------------------------      |------------------------|
+ * |CMD_UPHY_PCIE_LANE_MARGIN_CONTROL |uphy_set_margin_control |
+ * |CMD_UPHY_PCIE_LANE_MARGIN_STATUS  |                        |
+ *
+ */
+
+struct mrq_uphy_request {
+	/** @brief Lane number. */
+	uint16_t lane;
+	/** @brief Sub-command id. */
+	uint16_t cmd;
+
+	union {
+		struct cmd_uphy_margin_control_request uphy_set_margin_control;
+	} __UNION_ANON;
+} __ABI_PACKED;
+
+/**
+ * @ingroup UPHY
+ * @brief Response to MRQ_UPHY
+ *
+ * Each sub-command supported by @ref mrq_uphy_request may return
+ * sub-command-specific data. Some do and some do not as indicated in
+ * the following table
+ *
+ * |sub-command                       |payload                 |
+ * |----------------------------      |------------------------|
+ * |CMD_UPHY_PCIE_LANE_MARGIN_CONTROL |                        |
+ * |CMD_UPHY_PCIE_LANE_MARGIN_STATUS  |uphy_get_margin_status  |
+ *
+ */
+
+struct mrq_uphy_response {
+	union {
+		struct cmd_uphy_margin_status_response uphy_get_margin_status;
+	} __UNION_ANON;
+} __ABI_PACKED;
+
+/** @} */
 
 /**
  * @addtogroup Error_Codes

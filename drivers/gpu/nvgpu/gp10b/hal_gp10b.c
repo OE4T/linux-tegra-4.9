@@ -547,6 +547,7 @@ static const struct gpu_ops gp10b_ops = {
 		.dump_secure_fuses = pmu_dump_security_fuses_gp10b,
 		.reset_engine = gk20a_pmu_engine_reset,
 		.is_engine_in_reset = gk20a_pmu_is_engine_in_reset,
+		.get_irqdest = gk20a_pmu_get_irqdest,
 	},
 	.regops = {
 		.get_global_whitelist_ranges =

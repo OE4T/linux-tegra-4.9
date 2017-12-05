@@ -243,6 +243,9 @@ static struct device_attribute *dev_attr_mmu_hubtlb_ecc_uncorrected_err_count_ar
 static struct device_attribute *dev_attr_mmu_fillunit_ecc_corrected_err_count_array;
 static struct device_attribute *dev_attr_mmu_fillunit_ecc_uncorrected_err_count_array;
 
+static struct device_attribute *dev_attr_pmu_ecc_corrected_err_count_array;
+static struct device_attribute *dev_attr_pmu_ecc_uncorrected_err_count_array;
+
 void gr_gv11b_create_sysfs(struct gk20a *g)
 {
 	struct device *dev = dev_from_gk20a(g);
@@ -414,6 +417,21 @@ void gr_gv11b_create_sysfs(struct gk20a *g)
 				&g->ecc.eng.t19x.mmu_fillunit_corrected_err_count,
 				&dev_attr_mmu_fillunit_ecc_corrected_err_count_array);
 
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"eng",
+				"pmu_ecc_uncorrected_err_count",
+				&g->ecc.eng.t19x.pmu_uncorrected_err_count,
+				&dev_attr_pmu_ecc_uncorrected_err_count_array);
+
+	error |= gp10b_ecc_stat_create(dev,
+				1,
+				"eng",
+				"pmu_ecc_corrected_err_count",
+				&g->ecc.eng.t19x.pmu_corrected_err_count,
+				&dev_attr_pmu_ecc_corrected_err_count_array);
+
+
 	if (error)
 		dev_err(dev, "Failed to create gv11b sysfs attributes!\n");
 }
@@ -541,4 +559,14 @@ static void gr_gv11b_remove_sysfs(struct device *dev)
 			1,
 			&g->ecc.eng.t19x.mmu_fillunit_corrected_err_count,
 			dev_attr_mmu_fillunit_ecc_corrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.eng.t19x.pmu_uncorrected_err_count,
+			dev_attr_pmu_ecc_uncorrected_err_count_array);
+
+	gp10b_ecc_stat_remove(dev,
+			1,
+			&g->ecc.eng.t19x.pmu_corrected_err_count,
+			dev_attr_pmu_ecc_corrected_err_count_array);
 }

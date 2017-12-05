@@ -888,6 +888,7 @@ struct gpu_ops {
 		void (*set_irqmask)(struct gk20a *g);
 		void (*update_lspmu_cmdline_args)(struct gk20a *g);
 		void (*setup_apertures)(struct gk20a *g);
+		u32 (*get_irqdest)(struct gk20a *g);
 	} pmu;
 	struct {
 		int (*init_debugfs)(struct gk20a *g);

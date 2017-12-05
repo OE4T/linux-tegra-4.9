@@ -88,6 +88,30 @@ static inline u32 pwr_falcon_irqstat_ext_second_true_f(void)
 {
 	return 0x800U;
 }
+static inline u32 pwr_falcon_irqstat_ext_ecc_parity_true_f(void)
+{
+	return 0x400U;
+}
+static inline u32 pwr_pmu_ecc_intr_status_r(void)
+{
+	return 0x0010abfcU;
+}
+static inline u32 pwr_pmu_ecc_intr_status_corrected_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 pwr_pmu_ecc_intr_status_corrected_m(void)
+{
+	return 0x1U << 0U;
+}
+static inline u32 pwr_pmu_ecc_intr_status_uncorrected_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 pwr_pmu_ecc_intr_status_uncorrected_m(void)
+{
+	return 0x1U << 1U;
+}
 static inline u32 pwr_falcon_irqmode_r(void)
 {
 	return 0x0010a00cU;
@@ -160,6 +184,10 @@ static inline u32 pwr_falcon_irqmset_ext_rsvd8_f(u32 v)
 {
 	return (v & 0x1U) << 15U;
 }
+static inline u32 pwr_falcon_irqmset_ext_ecc_parity_f(u32 v)
+{
+	return (v & 0x1U) << 10U;
+}
 static inline u32 pwr_falcon_irqmclr_r(void)
 {
 	return 0x0010a014U;
@@ -227,6 +255,10 @@ static inline u32 pwr_falcon_irqmclr_ext_rttimer_f(u32 v)
 static inline u32 pwr_falcon_irqmclr_ext_rsvd8_f(u32 v)
 {
 	return (v & 0x1U) << 15U;
+}
+static inline u32 pwr_falcon_irqmclr_ext_ecc_parity_f(u32 v)
+{
+	return (v & 0x1U) << 10U;
 }
 static inline u32 pwr_falcon_irqmask_r(void)
 {
@@ -300,6 +332,10 @@ static inline u32 pwr_falcon_irqdest_host_ext_rsvd8_f(u32 v)
 {
 	return (v & 0x1U) << 15U;
 }
+static inline u32 pwr_falcon_irqdest_host_ext_ecc_parity_f(u32 v)
+{
+	return (v & 0x1U) << 10U;
+}
 static inline u32 pwr_falcon_irqdest_target_gptmr_f(u32 v)
 {
 	return (v & 0x1U) << 16U;
@@ -363,6 +399,10 @@ static inline u32 pwr_falcon_irqdest_target_ext_rttimer_f(u32 v)
 static inline u32 pwr_falcon_irqdest_target_ext_rsvd8_f(u32 v)
 {
 	return (v & 0x1U) << 31U;
+}
+static inline u32 pwr_falcon_irqdest_target_ext_ecc_parity_f(u32 v)
+{
+	return (v & 0x1U) << 26U;
 }
 static inline u32 pwr_falcon_curctx_r(void)
 {
@@ -907,6 +947,174 @@ static inline u32 pwr_pmu_pg_idle_cnt_r(u32 i)
 static inline u32 pwr_pmu_pg_intren_r(u32 i)
 {
 	return 0x0010a760U + i*4U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_r(void)
+{
+	return 0x0010a6b0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_corrected_err_imem_f(u32 v)
+{
+	return (v & 0x1U) << 0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_corrected_err_imem_m(void)
+{
+	return 0x1U << 0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_corrected_err_dmem_f(u32 v)
+{
+	return (v & 0x1U) << 1U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_corrected_err_dmem_m(void)
+{
+	return 0x1U << 1U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_uncorrected_err_imem_f(u32 v)
+{
+	return (v & 0x1U) << 8U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_uncorrected_err_imem_m(void)
+{
+	return 0x1U << 8U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_uncorrected_err_dmem_f(u32 v)
+{
+	return (v & 0x1U) << 9U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_uncorrected_err_dmem_m(void)
+{
+	return 0x1U << 9U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_corrected_err_total_counter_overflow_f(u32 v)
+{
+	return (v & 0x1U) << 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_corrected_err_total_counter_overflow_m(void)
+{
+	return 0x1U << 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_uncorrected_err_total_counter_overflow_f(u32 v)
+{
+	return (v & 0x1U) << 18U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_uncorrected_err_total_counter_overflow_m(void)
+{
+	return 0x1U << 18U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_reset_f(u32 v)
+{
+	return (v & 0x1U) << 31U;
+}
+static inline u32 pwr_pmu_falcon_ecc_status_reset_task_f(void)
+{
+	return 0x80000000U;
+}
+static inline u32 pwr_pmu_falcon_ecc_address_r(void)
+{
+	return 0x0010a6b4U;
+}
+static inline u32 pwr_pmu_falcon_ecc_address_index_f(u32 v)
+{
+	return (v & 0xffffffU) << 0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_address_type_f(u32 v)
+{
+	return (v & 0xfU) << 20U;
+}
+static inline u32 pwr_pmu_falcon_ecc_address_type_imem_f(void)
+{
+	return 0x0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_address_type_dmem_f(void)
+{
+	return 0x100000U;
+}
+static inline u32 pwr_pmu_falcon_ecc_address_row_address_s(void)
+{
+	return 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_address_row_address_f(u32 v)
+{
+	return (v & 0xffffU) << 0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_address_row_address_m(void)
+{
+	return 0xffffU << 0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_address_row_address_v(u32 r)
+{
+	return (r >> 0U) & 0xffffU;
+}
+static inline u32 pwr_pmu_falcon_ecc_corrected_err_count_r(void)
+{
+	return 0x0010a6b8U;
+}
+static inline u32 pwr_pmu_falcon_ecc_corrected_err_count_total_s(void)
+{
+	return 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_corrected_err_count_total_f(u32 v)
+{
+	return (v & 0xffffU) << 0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_corrected_err_count_total_m(void)
+{
+	return 0xffffU << 0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_corrected_err_count_total_v(u32 r)
+{
+	return (r >> 0U) & 0xffffU;
+}
+static inline u32 pwr_pmu_falcon_ecc_corrected_err_count_unique_total_s(void)
+{
+	return 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_corrected_err_count_unique_total_f(u32 v)
+{
+	return (v & 0xffffU) << 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_corrected_err_count_unique_total_m(void)
+{
+	return 0xffffU << 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_corrected_err_count_unique_total_v(u32 r)
+{
+	return (r >> 16U) & 0xffffU;
+}
+static inline u32 pwr_pmu_falcon_ecc_uncorrected_err_count_r(void)
+{
+	return 0x0010a6bcU;
+}
+static inline u32 pwr_pmu_falcon_ecc_uncorrected_err_count_total_s(void)
+{
+	return 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_uncorrected_err_count_total_f(u32 v)
+{
+	return (v & 0xffffU) << 0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_uncorrected_err_count_total_m(void)
+{
+	return 0xffffU << 0U;
+}
+static inline u32 pwr_pmu_falcon_ecc_uncorrected_err_count_total_v(u32 r)
+{
+	return (r >> 0U) & 0xffffU;
+}
+static inline u32 pwr_pmu_falcon_ecc_uncorrected_err_count_unique_total_s(void)
+{
+	return 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_uncorrected_err_count_unique_total_f(u32 v)
+{
+	return (v & 0xffffU) << 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_uncorrected_err_count_unique_total_m(void)
+{
+	return 0xffffU << 16U;
+}
+static inline u32 pwr_pmu_falcon_ecc_uncorrected_err_count_unique_total_v(u32 r)
+{
+	return (r >> 16U) & 0xffffU;
 }
 static inline u32 pwr_fbif_transcfg_r(u32 i)
 {

@@ -35,4 +35,6 @@ bool gv11b_is_lazy_bootstrap(u32 falcon_id);
 bool gv11b_is_priv_load(u32 falcon_id);
 int gv11b_pmu_setup_elpg(struct gk20a *g);
 
+u32 gv11b_pmu_get_irqdest(struct gk20a *g);
+void gv11b_pmu_handle_ext_irq(struct gk20a *g, u32 intr0);
 #endif /*__PMU_GV11B_H_*/

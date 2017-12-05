@@ -59,6 +59,8 @@ struct ecc_eng_t19x {
 	struct gk20a_ecc_stat mmu_fillunit_corrected_err_count;
 	struct gk20a_ecc_stat mmu_fillunit_uncorrected_err_count;
 	/* PMU */
+	struct gk20a_ecc_stat pmu_corrected_err_count;
+	struct gk20a_ecc_stat pmu_uncorrected_err_count;
 };
 
 #endif

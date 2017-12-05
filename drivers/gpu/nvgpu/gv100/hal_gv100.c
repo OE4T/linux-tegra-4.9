@@ -603,6 +603,7 @@ static const struct gpu_ops gv100_ops = {
 		.pmu_mutex_size = pwr_pmu_mutex__size_1_v,
 		.is_engine_in_reset = gp106_pmu_is_engine_in_reset,
 		.pmu_get_queue_tail = pwr_pmu_queue_tail_r,
+		.get_irqdest = gk20a_pmu_get_irqdest,
 	},
 	.clk = {
 		.init_clk_support = gp106_init_clk_support,

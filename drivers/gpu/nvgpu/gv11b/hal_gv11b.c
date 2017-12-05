@@ -611,6 +611,8 @@ static const struct gpu_ops gv11b_ops = {
 		.pmu_nsbootstrap = gv11b_pmu_bootstrap,
 		.pmu_pg_set_sub_feature_mask = gv11b_pg_set_subfeature_mask,
 		.is_pmu_supported = gv11b_is_pmu_supported,
+		.get_irqdest = gv11b_pmu_get_irqdest,
+		.handle_ext_irq = gv11b_pmu_handle_ext_irq,
 	},
 	.regops = {
 		.get_global_whitelist_ranges =

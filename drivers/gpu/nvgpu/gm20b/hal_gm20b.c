@@ -495,6 +495,7 @@ static const struct gpu_ops gm20b_ops = {
 		.dump_secure_fuses = pmu_dump_security_fuses_gm20b,
 		.reset_engine = gk20a_pmu_engine_reset,
 		.is_engine_in_reset = gk20a_pmu_is_engine_in_reset,
+		.get_irqdest = gk20a_pmu_get_irqdest,
 	},
 	.clk = {
 		.init_clk_support = gm20b_init_clk_support,

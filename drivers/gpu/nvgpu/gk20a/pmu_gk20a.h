@@ -76,5 +76,5 @@ void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data);
 bool gk20a_pmu_is_engine_in_reset(struct gk20a *g);
 int gk20a_pmu_engine_reset(struct gk20a *g, bool do_reset);
-
+u32 gk20a_pmu_get_irqdest(struct gk20a *g);
 #endif /*__PMU_GK20A_H__*/

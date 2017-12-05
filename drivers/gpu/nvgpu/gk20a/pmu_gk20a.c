@@ -110,6 +110,33 @@ static void print_pmu_trace(struct nvgpu_pmu *pmu)
 	nvgpu_kfree(g, tracebuffer);
 }
 
+u32 gk20a_pmu_get_irqdest(struct gk20a *g)
+{
+	u32 intr_dest;
+
+	/* dest 0=falcon, 1=host; level 0=irq0, 1=irq1 */
+	intr_dest = pwr_falcon_irqdest_host_gptmr_f(0)    |
+		pwr_falcon_irqdest_host_wdtmr_f(1)    |
+		pwr_falcon_irqdest_host_mthd_f(0)     |
+		pwr_falcon_irqdest_host_ctxsw_f(0)    |
+		pwr_falcon_irqdest_host_halt_f(1)     |
+		pwr_falcon_irqdest_host_exterr_f(0)   |
+		pwr_falcon_irqdest_host_swgen0_f(1)   |
+		pwr_falcon_irqdest_host_swgen1_f(0)   |
+		pwr_falcon_irqdest_host_ext_f(0xff)   |
+		pwr_falcon_irqdest_target_gptmr_f(1)  |
+		pwr_falcon_irqdest_target_wdtmr_f(0)  |
+		pwr_falcon_irqdest_target_mthd_f(0)   |
+		pwr_falcon_irqdest_target_ctxsw_f(0)  |
+		pwr_falcon_irqdest_target_halt_f(0)   |
+		pwr_falcon_irqdest_target_exterr_f(0) |
+		pwr_falcon_irqdest_target_swgen0_f(0) |
+		pwr_falcon_irqdest_target_swgen1_f(0) |
+		pwr_falcon_irqdest_target_ext_f(0xff);
+
+	return intr_dest;
+}
+
 void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -126,26 +153,7 @@ void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 	nvgpu_flcn_set_irq(pmu->flcn, false, 0x0, 0x0);
 
 	if (enable) {
-		/* dest 0=falcon, 1=host; level 0=irq0, 1=irq1 */
-		intr_dest = pwr_falcon_irqdest_host_gptmr_f(0)    |
-			pwr_falcon_irqdest_host_wdtmr_f(1)    |
-			pwr_falcon_irqdest_host_mthd_f(0)     |
-			pwr_falcon_irqdest_host_ctxsw_f(0)    |
-			pwr_falcon_irqdest_host_halt_f(1)     |
-			pwr_falcon_irqdest_host_exterr_f(0)   |
-			pwr_falcon_irqdest_host_swgen0_f(1)   |
-			pwr_falcon_irqdest_host_swgen1_f(0)   |
-			pwr_falcon_irqdest_host_ext_f(0xff)   |
-			pwr_falcon_irqdest_target_gptmr_f(1)  |
-			pwr_falcon_irqdest_target_wdtmr_f(0)  |
-			pwr_falcon_irqdest_target_mthd_f(0)   |
-			pwr_falcon_irqdest_target_ctxsw_f(0)  |
-			pwr_falcon_irqdest_target_halt_f(0)   |
-			pwr_falcon_irqdest_target_exterr_f(0) |
-			pwr_falcon_irqdest_target_swgen0_f(0) |
-			pwr_falcon_irqdest_target_swgen1_f(0) |
-			pwr_falcon_irqdest_target_ext_f(0xff);
-
+		intr_dest = g->ops.pmu.get_irqdest(g);
 		/* 0=disable, 1=enable */
 		intr_mask = pwr_falcon_irqmset_gptmr_f(1)  |
 			pwr_falcon_irqmset_wdtmr_f(1)  |
@@ -729,6 +737,10 @@ void gk20a_pmu_isr(struct gk20a *g)
 			gk20a_readl(g, pwr_falcon_exterrstat_r()) &
 				~pwr_falcon_exterrstat_valid_m());
 	}
+
+	if (g->ops.pmu.handle_ext_irq)
+		g->ops.pmu.handle_ext_irq(g, intr);
+
 	if (intr & pwr_falcon_irqstat_swgen0_true_f()) {
 		nvgpu_pmu_process_message(pmu);
 		recheck = true;

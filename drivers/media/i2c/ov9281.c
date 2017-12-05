@@ -1,7 +1,7 @@
 /*
  * ov9281.c - ov9281 sensor driver
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -174,100 +174,12 @@ static const struct regmap_config ov9281_regmap_config = {
 	.use_single_rw = true,
 };
 
-/* NVIDIA camera_common stuff */
-static int ov9281_power_on(struct camera_common_data *s_data)
-{
-	struct ov9281 *priv = (struct ov9281 *)s_data->priv;
-	struct camera_common_power_rail *pw = &priv->power;
-	struct device *dev = &priv->i2c_client->dev;
-	int err;
-
-	dev_dbg(dev, "%s: power on\n", __func__);
-
-	if (priv->pdata->power_on) {
-		err = priv->pdata->power_on(pw);
-		if (err)
-			dev_err(dev, "%s failed.\n", __func__);
-		else
-			pw->state = SWITCH_ON;
-		return err;
-	}
-
-	usleep_range(5350, 5360);
-	pw->state = SWITCH_ON;
-	return 0;
-}
-
-static int ov9281_power_off(struct camera_common_data *s_data)
-{
-	struct ov9281 *priv = (struct ov9281 *)s_data->priv;
-	struct camera_common_power_rail *pw = &priv->power;
-	struct device *dev = &priv->i2c_client->dev;
-	int err = 0;
-
-	dev_dbg(dev, "%s: power off\n", __func__);
-	ov9281_write_table(priv, ov9281_mode_table[OV9281_MODE_STOP_STREAM]);
-
-	if (priv->pdata->power_off) {
-		err = priv->pdata->power_off(pw);
-		if (err)
-			dev_err(dev, "%s failed.\n", __func__);
-		else
-			goto power_off_done;
-	}
-
-	return err;
-
-power_off_done:
-	pw->state = SWITCH_OFF;
-	return 0;
-}
-
-static int ov9281_power_put(struct ov9281 *priv)
-{
-	return 0;
-}
-
-static int ov9281_power_get(struct ov9281 *priv)
-{
-	struct camera_common_power_rail *pw = &priv->power;
-	struct device *dev = &priv->i2c_client->dev;
-	const char *mclk_name;
-	int err = 0;
-
-	mclk_name = priv->pdata->mclk_name ?
-		    priv->pdata->mclk_name : "cam_mclk1";
-	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
-	if (IS_ERR(pw->mclk)) {
-		dev_err(dev, "unable to get clock %s\n", mclk_name);
-		return PTR_ERR(pw->mclk);
-	}
-
-	pw->state = SWITCH_OFF;
-	return err;
-}
-
-static struct camera_common_sensor_ops ov9281_common_ops = {
-	.power_on = ov9281_power_on,
-	.power_off = ov9281_power_off,
-	.write_reg = ov9281_write_reg,
-	.read_reg = ov9281_read_reg,
-};
-
-/* Miscellaneous OV9281-specific stuff */
 static int ov9281_i2c_addr_assign(struct ov9281 *priv, u8 i2c_addr)
 {
 	struct device *dev = &priv->i2c_client->dev;
 	struct i2c_msg msg;
 	unsigned char data[3];
 	int err = 0;
-
-	/*
-	 * I wish i2c_check_addr_validity() was available.  Oh well.
-	 * 7-bit address, reject the general call address
-	 */
-	if ((i2c_addr == 0x00) || (i2c_addr > 0x7f))
-		return -EINVAL;
 
 	/*
 	 * It seems that the way SID works for the OV9281 I2C slave address is
@@ -324,8 +236,6 @@ static int ov9281_i2c_addr_assign(struct ov9281 *priv, u8 i2c_addr)
 	gpio_set_value(priv->cam_sid_gpio, 0);
 	msleep_range(1);
 
-	dev_info(dev, "Changing I2C address to 0x%02x\n", i2c_addr);
-
 	/*
 	 * Have to make the I2C message manually because we are using a
 	 * different I2C slave address for this transaction, rather than
@@ -346,8 +256,11 @@ static int ov9281_i2c_addr_assign(struct ov9281 *priv, u8 i2c_addr)
 	msg.len = 3;
 	msg.buf = data;
 
-	if (i2c_transfer(priv->i2c_client->adapter, &msg, 1) != 1)
+	if (i2c_transfer(priv->i2c_client->adapter, &msg, 1) != 1) {
+		dev_err(dev, "Error assigning I2C address to 0x%02x\n",
+			i2c_addr);
 		err = -EIO;
+	}
 
 	gpio_set_value(priv->cam_sid_gpio, 1);
 	msleep_range(1);
@@ -355,6 +268,168 @@ static int ov9281_i2c_addr_assign(struct ov9281 *priv, u8 i2c_addr)
 	return err;
 }
 
+/* NVIDIA camera_common stuff */
+static int ov9281_power_on(struct camera_common_data *s_data)
+{
+	struct ov9281 *priv = (struct ov9281 *)s_data->priv;
+	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
+	int err;
+
+	dev_dbg(dev, "%s: power on\n", __func__);
+
+	if (priv->pdata->power_on) {
+		err = priv->pdata->power_on(pw);
+		if (err)
+			dev_err(dev, "%s failed.\n", __func__);
+		else
+			pw->state = SWITCH_ON;
+		return err;
+	}
+
+	if (pw->avdd) {
+		err = regulator_enable(pw->avdd);
+		if (err)
+			goto avdd_fail;
+	}
+
+	if (pw->dvdd) {
+		err = regulator_enable(pw->dvdd);
+		if (err)
+			goto dvdd_fail;
+	}
+
+	if (pw->iovdd) {
+		err = regulator_enable(pw->iovdd);
+		if (err)
+			goto iovdd_fail;
+	}
+
+	usleep_range(5350, 5360);
+
+	err = ov9281_i2c_addr_assign(priv, priv->i2c_client->addr);
+	if (err)
+		goto addr_assign_fail;
+
+	pw->state = SWITCH_ON;
+	return 0;
+
+addr_assign_fail:
+	if (pw->iovdd)
+		regulator_disable(pw->iovdd);
+
+iovdd_fail:
+	if (pw->dvdd)
+		regulator_disable(pw->dvdd);
+
+dvdd_fail:
+	if (pw->avdd)
+		regulator_disable(pw->avdd);
+
+avdd_fail:
+	dev_err(dev, "%s failed.\n", __func__);
+
+	return -ENODEV;
+}
+
+static int ov9281_power_off(struct camera_common_data *s_data)
+{
+	struct ov9281 *priv = (struct ov9281 *)s_data->priv;
+	struct camera_common_power_rail *pw = &priv->power;
+	struct device *dev = &priv->i2c_client->dev;
+	int err = 0;
+
+	dev_dbg(dev, "%s: power off\n", __func__);
+	ov9281_write_table(priv, ov9281_mode_table[OV9281_MODE_STOP_STREAM]);
+
+	if (priv->pdata->power_off) {
+		err = priv->pdata->power_off(pw);
+		if (err)
+			dev_err(dev, "%s failed.\n", __func__);
+		else
+			goto power_off_done;
+	}
+
+	if (pw->iovdd)
+		regulator_disable(pw->iovdd);
+
+	if (pw->dvdd)
+		regulator_disable(pw->dvdd);
+
+	if (pw->avdd)
+		regulator_disable(pw->avdd);
+
+	return err;
+
+power_off_done:
+	pw->state = SWITCH_OFF;
+	return 0;
+}
+
+static int ov9281_power_put(struct ov9281 *priv)
+{
+	return 0;
+}
+
+static int ov9281_power_get(struct ov9281 *priv)
+{
+	struct camera_common_power_rail *pw = &priv->power;
+	struct camera_common_pdata *pdata = priv->pdata;
+	struct device *dev = &priv->i2c_client->dev;
+	const char *mclk_name;
+	int err = 0;
+
+	mclk_name = priv->pdata->mclk_name ?
+		    priv->pdata->mclk_name : "cam_mclk1";
+	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
+	if (IS_ERR(pw->mclk)) {
+		dev_err(dev, "unable to get clock %s\n", mclk_name);
+		return PTR_ERR(pw->mclk);
+	}
+
+	if (priv->pdata->regulators.avdd) {
+		err = camera_common_regulator_get(dev,
+			&pw->avdd, pdata->regulators.avdd);
+		if (err) {
+			dev_err(dev, "unable to get regulator %s, err = %d\n",
+				pdata->regulators.avdd, err);
+			goto done;
+		}
+	}
+
+	if (priv->pdata->regulators.dvdd) {
+		err = camera_common_regulator_get(dev,
+			&pw->dvdd, pdata->regulators.dvdd);
+		if (err) {
+			dev_err(dev, "unable to get regulator %s, err = %d\n",
+				pdata->regulators.dvdd, err);
+			goto done;
+		}
+	}
+
+	if (priv->pdata->regulators.iovdd) {
+		err = camera_common_regulator_get(dev,
+			&pw->iovdd, pdata->regulators.iovdd);
+		if (err) {
+			dev_err(dev, "unable to get regulator %s, err = %d\n",
+				pdata->regulators.iovdd, err);
+			goto done;
+		}
+	}
+
+done:
+	pw->state = SWITCH_OFF;
+	return 0;
+}
+
+static struct camera_common_sensor_ops ov9281_common_ops = {
+	.power_on = ov9281_power_on,
+	.power_off = ov9281_power_off,
+	.write_reg = ov9281_write_reg,
+	.read_reg = ov9281_read_reg,
+};
+
+/* Miscellaneous OV9281-specific stuff */
 static int ov9281_set_group_hold(struct ov9281 *priv)
 {
 	struct device *dev = &priv->i2c_client->dev;
@@ -1012,6 +1087,21 @@ static int ov9281_parse_dt(struct i2c_client *client, struct ov9281 *priv)
 	priv->mirror = of_property_read_bool(np, "mirror");
 	priv->flip = of_property_read_bool(np, "flip");
 
+	err = of_property_read_string(np, "avdd-reg",
+				      &priv->pdata->regulators.avdd);
+	if (err)
+		dev_warn(&client->dev, "avdd-reg not in DT\n");
+
+	err = of_property_read_string(np, "dvdd-reg",
+				      &priv->pdata->regulators.dvdd);
+	if (err)
+		dev_warn(&client->dev, "dvdd-reg not in DT\n");
+
+	err = of_property_read_string(np, "iovdd-reg",
+				      &priv->pdata->regulators.iovdd);
+	if (err)
+		dev_warn(&client->dev, "iovdd-reg not in DT\n");
+
 	return 0;
 }
 
@@ -1146,10 +1236,6 @@ static int ov9281_probe(struct i2c_client *client,
 	err = camera_common_s_power(priv->subdev, true);
 	if (err)
 		return -ENODEV;
-
-	err = ov9281_i2c_addr_assign(priv, client->addr);
-	if (err)
-		goto error;
 
 	err = ov9281_verify_chip_id(priv);
 	if (err)

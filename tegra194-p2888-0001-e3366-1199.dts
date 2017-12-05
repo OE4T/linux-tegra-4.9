@@ -19,3 +19,7 @@
 / {
 	nvidia,dtsfilename = __FILE__;
 };
+
+/* Last include for status overrides */
+#include "tegra194-p2888-0001-e3366-1199-minimal.dtsi"
+

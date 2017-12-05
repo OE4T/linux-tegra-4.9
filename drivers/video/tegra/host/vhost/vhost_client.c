@@ -211,6 +211,9 @@ static int vhost_client_probe(struct platform_device *dev)
 
 	pdata->hw_init = NULL;
 
+	/* in virtualization context isolation is necessary */
+	pdata->isolate_contexts = true;
+
 	dev->dev.platform_data = NULL;
 
 	nvhost_module_init(dev);

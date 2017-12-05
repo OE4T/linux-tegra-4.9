@@ -1331,7 +1331,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 				priv->hwts_rx_en = false;
 				raw_spin_unlock_irqrestore(&priv->tc_lock,
 							   flags);
-				goto error;
+				return -ERANGE;
 			}
 			timecounter_init(&priv->tc, &priv->cc, tref);
 			raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
@@ -1340,7 +1340,6 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 		}
 	}
 
-error:
 	return (copy_to_user(ifr->ifr_data, &config,
 			sizeof(struct hwtstamp_config))) ? -EFAULT : 0;
 }

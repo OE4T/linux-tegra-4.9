@@ -31,7 +31,7 @@
 					      <&intc 1 GIC_SPI 0>;
 			interrupt-ranges = < 0  15 0>,
 					   <16  31 1>,
-					   <32 344 2>;
+					   <32 430 2>;
 		};
 
 		fiq {

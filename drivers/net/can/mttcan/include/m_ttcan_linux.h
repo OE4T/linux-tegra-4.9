@@ -90,7 +90,6 @@ struct mttcan_priv {
 	struct cyclecounter cc;
 	struct timecounter tc;
 	struct hwtstamp_config hwtstamp_config;
-	struct notifier_block ttcan_nb;
 	struct mbox_client cl;
 	struct completion xfer_completion;
 	struct mbox_chan *mbox;

@@ -1117,9 +1117,6 @@ static int mttcan_power_up(struct mttcan_priv *priv)
 	int level;
 	mttcan_pm_runtime_get_sync(priv);
 
-	if (priv->hwts_rx_en)
-		tegra_register_hwtime_notifier(&priv->ttcan_nb);
-
 	if (gpio_is_valid(priv->gpio_can_stb.gpio)) {
 		level = !priv->gpio_can_stb.active_low;
 		gpio_direction_output(priv->gpio_can_stb.gpio, level);
@@ -1137,9 +1134,6 @@ static int mttcan_power_down(struct net_device *dev)
 {
 	int level;
 	struct mttcan_priv *priv = netdev_priv(dev);
-
-	if (priv->hwts_rx_en)
-		tegra_unregister_hwtime_notifier(&priv->ttcan_nb);
 
 	if (ttcan_set_power(priv->ttcan, 0))
 		return -ETIMEDOUT;
@@ -1323,7 +1317,6 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 	/* Setup hardware time stamping cyclecounter */
 	if (rx_config_chg) {
 		if (priv->hwts_rx_en) {
-			tegra_register_hwtime_notifier(&priv->ttcan_nb);
 			priv->cc.read = ttcan_read_ts_cntr;
 			priv->cc.mask = CLOCKSOURCE_MASK(16);
 			priv->cc.mult = ((u64)NSEC_PER_SEC *
@@ -1344,8 +1337,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 			raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 			mod_timer(&priv->timer, jiffies +
 				(msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
-		} else
-			tegra_unregister_hwtime_notifier(&priv->ttcan_nb);
+		}
 	}
 
 error:
@@ -1491,27 +1483,6 @@ pclk_exit:
 	priv->cclk = cclk;
 	priv->hclk = hclk;
 	return 0;
-}
-
-static int mttcan_notifier(struct notifier_block *nb,
-			   unsigned long event, void *data)
-{
-	unsigned long flags;
-	u64 tref;
-	int ret = 0;
-	struct mttcan_priv *priv =
-		container_of(nb, struct mttcan_priv, ttcan_nb);
-
-	/* disable context switch between EAVB and CAN counter reads */
-	raw_spin_lock_irqsave(&priv->tc_lock, flags);
-	ret = get_ptp_hwtime(&tref);
-	if (ret != 0)
-		dev_err(priv->device, "mttcan notifier: HW PTP not running\n");
-	else
-		timecounter_init(&priv->tc, &priv->cc, tref);
-	raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
-
-	return NOTIFY_OK;
 }
 
 static int mttcan_probe(struct platform_device *pdev)
@@ -1680,8 +1651,6 @@ static int mttcan_probe(struct platform_device *pdev)
 			KBUILD_MODNAME, ret);
 		goto exit_hw_deinit;
 	}
-
-	priv->ttcan_nb.notifier_call = mttcan_notifier;
 
 	ret = mttcan_create_sys_files(&dev->dev);
 	if (ret)

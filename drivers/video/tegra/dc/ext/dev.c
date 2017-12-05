@@ -137,7 +137,7 @@ struct tegra_dc_ext_flip_data {
 
 struct tegra_dc_ext_scanline_data {
 	struct tegra_dc_ext		*ext;
-	struct work_struct		work;
+	struct kthread_work		scanline_work;
 	int				triggered_line;
 	int				max_val;
 };
@@ -307,7 +307,7 @@ int tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 	set_enable(ext, false);
 
 	/* Flush any scanline work */
-	flush_workqueue(ext->scanline_wq);
+	kthread_flush_worker(&ext->scanline_worker);
 
 	/*
 	 * Disable vblank requests
@@ -735,17 +735,15 @@ static void tegra_dc_ext_incr_vpulse3(struct tegra_dc_ext *ext)
 				DC_CMD_GENERAL_INCR_SYNCPT);
 }
 
-static void tegra_dc_ext_scanline_worker(struct work_struct *work)
+static void tegra_dc_ext_scanline_worker(struct kthread_work *work)
 {
 	struct tegra_dc_ext_scanline_data *data =
-		container_of(work, struct tegra_dc_ext_scanline_data, work);
+		container_of(work, struct tegra_dc_ext_scanline_data,
+				scanline_work);
 	struct tegra_dc_ext *ext = data->ext;
 	struct tegra_dc *dc = ext->dc;
 	unsigned int vpulse3_sync_id = dc->vpulse3_syncpt;
 	int min_val;
-
-	/* Allow only one scanline operation at a time */
-	mutex_lock(&ext->scanline_lock);
 
 	/* Wait for frame end before programming new request */
 	_tegra_dc_wait_for_frame_end(dc,
@@ -784,9 +782,6 @@ static void tegra_dc_ext_scanline_worker(struct work_struct *work)
 
 	/* Free arg allocated in the ioctl call */
 	kfree(data);
-
-	/* Release lock */
-	mutex_unlock(&ext->scanline_lock);
 }
 
 int tegra_dc_ext_vpulse3(struct tegra_dc_ext *ext,
@@ -803,8 +798,7 @@ int tegra_dc_ext_vpulse3(struct tegra_dc_ext *ext,
 	 * scanline workqueue is not setup, return error
 	 */
 	if (!dc->enabled || !dc->connected ||
-		vpulse3_sync_id == NVSYNCPT_INVALID ||
-		!ext->scanline_wq) {
+		vpulse3_sync_id == NVSYNCPT_INVALID) {
 		dev_err(&dc->ndev->dev, "DC not setup\n");
 		return -EACCES;
 	}
@@ -863,8 +857,8 @@ int tegra_dc_ext_vpulse3(struct tegra_dc_ext *ext,
 
 	/* Queue work to setup/increment/remove scanline trigger */
 	data->ext = ext;
-	INIT_WORK(&data->work, tegra_dc_ext_scanline_worker);
-	queue_work(ext->scanline_wq, &data->work);
+	kthread_init_work(&data->scanline_work, tegra_dc_ext_scanline_worker);
+	kthread_queue_work(&ext->scanline_worker, &data->scanline_work);
 
 	return 0;
 }
@@ -3650,6 +3644,7 @@ struct tegra_dc_ext *tegra_dc_ext_register(struct platform_device *ndev,
 	struct tegra_dc_ext *ext;
 	dev_t devno;
 	char name[16];
+	struct sched_param sparm = { .sched_priority = 1 };
 
 	ext = kzalloc(sizeof(*ext), GFP_KERNEL);
 	if (!ext)
@@ -3689,13 +3684,14 @@ struct tegra_dc_ext *tegra_dc_ext_register(struct platform_device *ndev,
 	/* Setup scanline workqueues */
 	ext->scanline_trigger = -1;
 	snprintf(name, sizeof(name), "tegradc.%d/sl", dc->ndev->id);
-	ext->scanline_wq = create_singlethread_workqueue(name);
-	if (!ext->scanline_wq) {
+	kthread_init_worker(&ext->scanline_worker);
+	ext->scanline_task = kthread_run(kthread_worker_fn,
+				&ext->scanline_worker, name);
+	if (!ext->scanline_task) {
 		ret = -ENOMEM;
 		goto cleanup_device;
 	}
-	/* Setup scanline mutex */
-	mutex_init(&ext->scanline_lock);
+	sched_setscheduler(ext->scanline_task, SCHED_FIFO, &sparm);
 
 	head_count++;
 
@@ -3724,10 +3720,9 @@ void tegra_dc_ext_unregister(struct tegra_dc_ext *ext)
 		kthread_stop(win->flip_kthread);
 	}
 
-	/* Remove scanline workqueues */
-	flush_workqueue(ext->scanline_wq);
-	destroy_workqueue(ext->scanline_wq);
-	ext->scanline_wq = NULL;
+	/* Remove scanline work */
+	kthread_flush_worker(&ext->scanline_worker);
+	ext->scanline_task = NULL;
 	/* Clear trigger line value */
 	ext->scanline_trigger = -1;
 	/* Udate min val all the way to max. */

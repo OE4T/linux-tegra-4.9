@@ -95,10 +95,9 @@ struct tegra_dc_ext {
 
 	/* scanline trigger */
 	int			scanline_trigger;
-	/* scanline work queue */
-	struct workqueue_struct	*scanline_wq;
-	/* scanline work queue lock */
-	struct mutex		scanline_lock;
+	/* scanline work */
+	struct kthread_worker	scanline_worker;
+	struct task_struct	*scanline_task;
 };
 
 #define TEGRA_DC_EXT_EVENT_MASK_ALL		\

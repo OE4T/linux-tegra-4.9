@@ -599,6 +599,7 @@ struct tegra_xudc_soc_data {
 	bool invalid_seq_num;
 	bool pls_quirk;
 	bool init_clks;
+	bool disable_elpg;
 };
 
 static bool u1_enable;
@@ -3786,6 +3787,7 @@ static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
 	.invalid_seq_num = false,
 	.pls_quirk = false,
 	.init_clks = true,
+	.disable_elpg = true,
 };
 
 static struct of_device_id tegra_xudc_of_match[] = {
@@ -4176,6 +4178,9 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 	unsigned long flags;
 	int partition_id;
 
+	if (xudc->soc->disable_elpg)
+		return 0;
+
 	dev_info(xudc->dev, "entering ELPG\n");
 	spin_lock_irqsave(&xudc->lock, flags);
 	xudc->powergated = true;
@@ -4216,6 +4221,9 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 	unsigned long flags;
 	int err;
 	int partition_id;
+
+	if (xudc->soc->disable_elpg)
+		return 0;
 
 	dev_info(xudc->dev, "exiting ELPG\n");
 

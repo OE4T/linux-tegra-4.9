@@ -17,6 +17,7 @@
  */
 
 #include "tegra-platforms-audio-simple-bus.dtsi"
+#include "tegra-platforms-audio-enable.dtsi"
 / {
 	aconnect@2a41000 {
 		adsp_audio {

@@ -101,7 +101,6 @@ struct cvnas_device {
 
 	void __iomem *cvsram_iobase;
 	void __iomem *cvreg_iobase;
-	void __iomem *car_iobase;
 	void __iomem *hsm_iobase;
 
 	struct device dma_dev;
@@ -116,11 +115,6 @@ struct cvnas_device {
 	struct reset_control *rst;
 	struct reset_control *rst_fcm;
 };
-
-static void nvcvnas_car_writel(struct cvnas_device *dev, u32 val, u32 reg)
-{
-	writel(val, dev->car_iobase + reg);
-}
 
 static struct platform_device *cvnas_plat_dev;
 
@@ -374,12 +368,6 @@ static int nvcvnas_power_on(struct cvnas_device *cvnas_dev)
 	if (err < 0)
 		goto err_deassert_reset;
 
-	/* Clear CVNAS_FCM reset */
-	nvcvnas_car_writel(cvnas_dev, 0x1, RST_DEV_CVNAS_FCM_CLR);
-
-	/* Set CVNAS_FCM reset */
-	nvcvnas_car_writel(cvnas_dev, 0x1, RST_DEV_CVNAS_FCM_SET);
-
 
 	pr_info("initializing cvsram FCMs\n");
 	for (i = 0; i < ARRAY_SIZE(fcm_upg_seq); i++) {
@@ -481,13 +469,6 @@ static int nvcvnas_probe(struct platform_device *pdev)
 		goto err_cvsram_of_iomap;
 	}
 
-	cvnas_dev->car_iobase = of_iomap(pdev->dev.of_node, 2);
-	if (!cvnas_dev->car_iobase) {
-		dev_err(&pdev->dev, "No cvnas car reg property found\n");
-		ret = PTR_ERR(cvnas_dev->car_iobase);
-		goto err_car_of_iomap;
-	}
-
 	cvnas_dev->hsm_iobase = of_iomap(pdev->dev.of_node, 2);
 	if (!cvnas_dev->hsm_iobase) {
 		dev_err(&pdev->dev, "No hsm reg property found\n");
@@ -567,8 +548,6 @@ err_cvsram_get_reg_data:
 err_cvsram_get_slice_data:
 	iounmap(cvnas_dev->hsm_iobase);
 err_hsm_of_iomap:
-	iounmap(cvnas_dev->car_iobase);
-err_car_of_iomap:
 	iounmap(cvnas_dev->cvsram_iobase);
 err_cvsram_of_iomap:
 	iounmap(cvnas_dev->cvreg_iobase);
@@ -591,7 +570,6 @@ static int nvcvnas_remove(struct platform_device *pdev)
 		return ret;
 	debugfs_remove(cvnas_dev->debugfs_root);
 	of_reserved_mem_device_release(&pdev->dev);
-	iounmap(cvnas_dev->car_iobase);
 	iounmap(cvnas_dev->cvsram_iobase);
 	iounmap(cvnas_dev->cvreg_iobase);
 	kfree(cvnas_dev);

@@ -198,9 +198,56 @@ struct nvlink_status {
 	struct nvlink_link_status_info link_info;
 };
 
+/* TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS */
+
+/* These are the bitmask definitions for different counter types */
+#define TEGRA_CTRL_NVLINK_COUNTER_INVALID			0x00000000
+
+#define TEGRA_CTRL_NVLINK_COUNTER_TL_TX0			0x00000001
+#define TEGRA_CTRL_NVLINK_COUNTER_TL_TX1			0x00000002
+#define TEGRA_CTRL_NVLINK_COUNTER_TL_RX0			0x00000004
+#define TEGRA_CTRL_NVLINK_COUNTER_TL_RX1			0x00000008
+
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_FLIT		0x00010000
+
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L(i)	(1 << (i + 17))
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE__SIZE	8
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L0	0x00020000
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L1	0x00040000
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L2	0x00080000
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L3	0x00100000
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L4	0x00200000
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L5	0x00400000
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L6	0x00800000
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L7	0x01000000
+
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_REPLAY		0x02000000
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_RECOVERY		0x04000000
+
+#define TEGRA_CTRL_NVLINK_COUNTER_MAX_TYPES			32
+
+/*
+ * Return index of the bit that is set in 'n'. This assumes there is only
+ * one such set bit in 'n'. Even if multiple bits are set,
+ * result is in range of 0-31.
+ */
+#define BIT_IDX_32(n)						\
+			((((n) & 0xFFFF0000) ? 0x10 : 0) |	\
+			(((n) & 0xFF00FF00) ? 0x08 : 0) |	\
+			(((n) & 0xF0F0F0F0) ? 0x04 : 0) |	\
+			(((n) & 0xCCCCCCCC) ? 0x02 : 0) |	\
+			(((n) & 0xAAAAAAAA) ? 0x01 : 0))
+
+struct nvlink_clear_counters {
+	__u32 link_mask;
+	__u32 counter_mask;
+};
+
 /* TODO: choose a unique MAGIC number for ioctl implementation */
 #define TEGRA_NVLINK_IOC_MAGIC	  'T'
 #define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS		\
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC,  1, struct nvlink_caps)
 #define TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_STATUS		\
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC,  2, struct nvlink_status)
+#define TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS		\
+		_IOWR(TEGRA_NVLINK_IOC_MAGIC,  3, struct nvlink_clear_counters)

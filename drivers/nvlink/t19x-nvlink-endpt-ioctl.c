@@ -215,12 +215,74 @@ static int t19x_nvlink_get_status(struct nvlink_device *ndev,
 	return 0;
 }
 
+static int t19x_nvlink_clear_counters(struct nvlink_device *ndev,
+				struct nvlink_clear_counters *clear_counters)
+{
+	u32 reg_val = 0;
+	u32 counter_mask = clear_counters->counter_mask;
+
+	if ((counter_mask) & (TEGRA_CTRL_NVLINK_COUNTER_TL_TX0 |
+				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1 |
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX0 |
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX1)) {
+		reg_val = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL);
+		if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_TL_TX0)
+			reg_val |= BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_RESETTX0);
+		if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_TL_TX1)
+			reg_val |= BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_RESETTX1);
+		nvlw_nvltlc_writel(ndev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL, reg_val);
+
+		reg_val = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL);
+		if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_TL_RX0)
+			reg_val |= BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_RESETRX0);
+		if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_TL_RX1)
+			reg_val |= BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_RESETRX1);
+		nvlw_nvltlc_writel(ndev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL, reg_val);
+	}
+
+	if ((counter_mask) & (TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L0 |
+			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L1 |
+			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L2 |
+			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L3 |
+			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L4 |
+			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L5 |
+			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L6 |
+			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L7)) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_SL1_ERROR_COUNT_CTRL);
+		reg_val |= BIT(NVL_SL1_ERROR_COUNT_CTRL_CLEAR_LANE_CRC);
+		reg_val |= BIT(NVL_SL1_ERROR_COUNT_CTRL_CLEAR_RATES);
+		nvlw_nvl_writel(ndev, NVL_SL1_ERROR_COUNT_CTRL, reg_val);
+	}
+
+	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_FLIT) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_SL1_ERROR_COUNT_CTRL);
+		reg_val |= BIT(NVL_SL1_ERROR_COUNT_CTRL_CLEAR_FLIT_CRC);
+		reg_val |= BIT(NVL_SL1_ERROR_COUNT_CTRL_CLEAR_RATES);
+		nvlw_nvl_writel(ndev, NVL_SL1_ERROR_COUNT_CTRL, reg_val);
+	}
+
+	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_REPLAY) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_SL0_ERROR_COUNT_CTRL);
+		reg_val |= BIT(NVL_SL0_ERROR_COUNT_CTRL_CLEAR_REPLAY);
+		nvlw_nvl_writel(ndev, NVL_SL0_ERROR_COUNT_CTRL, reg_val);
+	}
+
+	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_RECOVERY) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_ERROR_COUNT_CTRL);
+		reg_val |= BIT(NVL_ERROR_COUNT_CTRL_CLEAR_RECOVERY);
+		nvlw_nvl_writel(ndev, NVL_ERROR_COUNT_CTRL, reg_val);
+	}
+
+	return 0;
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct nvlink_device *ndev = file->private_data;
 	struct nvlink_caps *caps;
 	struct nvlink_status *status;
+	struct nvlink_clear_counters *clear_counters;
 	int ret = 0;
 
 	if (!ndev) {
@@ -271,6 +333,45 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 			ret = -EFAULT;
 		}
 		kfree(status);
+		break;
+
+	case TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS:
+		clear_counters = devm_kzalloc(ndev->dev,
+				sizeof(struct nvlink_clear_counters),
+				GFP_KERNEL);
+		if (!clear_counters) {
+			nvlink_err("Can't allocate memory for clear counters");
+			return -ENOMEM;
+		}
+
+		ret = copy_from_user(clear_counters, (void __user *)arg,
+					sizeof(*clear_counters));
+		if (ret) {
+			nvlink_err("Error while copying from userspace");
+			ret = -EFAULT;
+			kfree(clear_counters);
+			break;
+		}
+
+		if (clear_counters->link_mask & 0x1) {
+			ret = t19x_nvlink_clear_counters(ndev, clear_counters);
+			if (ret < 0) {
+				nvlink_err("nvlink clear counters failed");
+				kfree(clear_counters);
+				break;
+			}
+			ret = copy_to_user((void __user *)arg, clear_counters,
+						sizeof(*clear_counters));
+			if (ret) {
+				nvlink_err("Error while copying clear"
+						" counters");
+				ret = -EFAULT;
+			}
+		} else {
+			nvlink_err("Invalid link mask specified");
+			ret = -EINVAL;
+		}
+		kfree(clear_counters);
 		break;
 
 	default:

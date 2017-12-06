@@ -392,6 +392,8 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	struct tegra_pcie_dw_ep *pcie;
 	struct device_node *np = pdev->dev.of_node;
 	struct phy **phy;
+	struct pinctrl *pin = NULL;
+	struct pinctrl_state *pin_state = NULL;
 	char name[10];
 	int phy_count;
 	u32 i = 0;
@@ -416,6 +418,30 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "regulator enable failed: %d\n", ret);
 		return ret;
+	}
+
+	pin = devm_pinctrl_get(pcie->dev);
+	if (!IS_ERR(pin)) {
+		pin_state = pinctrl_lookup_state(pin, "pex_rst");
+		if (IS_ERR(pin_state)) {
+			dev_err(pcie->dev, "missing pex_rst state\n");
+			return PTR_ERR(pin_state);
+		}
+		ret = pinctrl_select_state(pin, pin_state);
+		if (ret < 0) {
+			dev_err(pcie->dev, "setting pex_rst state failed\n");
+			return ret;
+		}
+		pin_state = pinctrl_lookup_state(pin, "clkreq");
+		if (IS_ERR(pin_state)) {
+			dev_err(pcie->dev, "missing clkreq state\n");
+			return PTR_ERR(pin_state);
+		}
+		ret = pinctrl_select_state(pin, pin_state);
+		if (ret < 0) {
+			dev_err(pcie->dev, "setting clkreq state failed\n");
+			return ret;
+		}
 	}
 
 	pcie->core_clk = devm_clk_get(&pdev->dev, "core_clk");

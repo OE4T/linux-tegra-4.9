@@ -241,7 +241,7 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 				break;
 			case NETLIST_REGIONID_CTXSW_REG_BASE_INDEX:
 				g->gr.ctx_vars.regs_base_index = *src;
-				gk20a_dbg_info("NETLIST_REGIONID_CTXSW_REG_BASE_INDEX : %d",
+				gk20a_dbg_info("NETLIST_REGIONID_CTXSW_REG_BASE_INDEX : %u",
 					g->gr.ctx_vars.regs_base_index);
 				break;
 			case NETLIST_REGIONID_MAJORV:

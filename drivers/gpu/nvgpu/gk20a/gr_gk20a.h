@@ -311,7 +311,7 @@ struct gr_gk20a {
 			struct aiv_list_gk20a pm_ucgpc;
 			struct aiv_list_gk20a etpc;
 		} ctxsw_regs;
-		int regs_base_index;
+		u32 regs_base_index;
 		bool valid;
 
 		u32 preempt_image_size;

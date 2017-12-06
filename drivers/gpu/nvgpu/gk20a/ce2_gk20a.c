@@ -490,7 +490,8 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 	}
 
 	/* allocate gpfifo (1024 should be more than enough) */
-	err = gk20a_channel_alloc_gpfifo(ce_ctx->ch, 1024, 0, 0);
+	err = gk20a_channel_alloc_gpfifo(ce_ctx->ch, 1024, 0,
+			NVGPU_GPFIFO_FLAGS_ALLOW_BARE_CHANNEL);
 	if (err) {
 		nvgpu_err(g, "ce: unable to allocate gpfifo");
 		goto end;

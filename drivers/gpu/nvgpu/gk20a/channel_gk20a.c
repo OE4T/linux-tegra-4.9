@@ -1134,6 +1134,12 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	gpfifo_size = num_entries;
 	gpfifo_entry_size = nvgpu_get_gpfifo_entry_size();
 
+	if (!(flags & NVGPU_GPFIFO_FLAGS_ALLOW_BARE_CHANNEL) &&
+	    !gk20a_is_channel_marked_as_tsg(c)) {
+		nvgpu_err(g, "channel not part of a TSG");
+		return -EINVAL;
+	}
+
 	if (flags & NVGPU_GPFIFO_FLAGS_SUPPORT_VPR)
 		c->vpr = true;
 

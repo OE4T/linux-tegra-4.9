@@ -49,6 +49,7 @@ struct fifo_profile_gk20a;
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_VPR			(1 << 0)
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC	(1 << 1)
 #define NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1 << 2)
+#define NVGPU_GPFIFO_FLAGS_ALLOW_BARE_CHANNEL		(1 << 3)
 
 /* Flags to be passed to g->ops.gr.alloc_obj_ctx() */
 #define NVGPU_OBJ_CTX_FLAGS_SUPPORT_GFXP		(1 << 1)

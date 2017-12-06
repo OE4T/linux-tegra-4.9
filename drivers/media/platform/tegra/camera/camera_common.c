@@ -392,6 +392,20 @@ const struct camera_common_colorfmt *camera_common_find_datafmt(
 }
 EXPORT_SYMBOL_GPL(camera_common_find_datafmt);
 
+/* Find a data format by pixel format in an array*/
+const struct camera_common_colorfmt *camera_common_find_pixelfmt(
+		unsigned int pix_fmt)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(camera_common_color_fmts); i++)
+		if (camera_common_color_fmts[i].pix_fmt == pix_fmt)
+			return camera_common_color_fmts + i;
+
+	return NULL;
+}
+EXPORT_SYMBOL_GPL(camera_common_find_pixelfmt);
+
 /* Filters for the sensor's supported colors */
 static const struct camera_common_colorfmt *find_matching_color_fmt(
 		const struct camera_common_data *s_data,
@@ -693,7 +707,7 @@ int camera_common_enum_frameintervals(struct v4l2_subdev *sd,
 }
 EXPORT_SYMBOL_GPL(camera_common_enum_frameintervals);
 
-static void camera_common_mclk_disable(struct camera_common_data *s_data)
+void camera_common_mclk_disable(struct camera_common_data *s_data)
 {
 	struct camera_common_power_rail *pw = s_data->power;
 
@@ -706,8 +720,9 @@ static void camera_common_mclk_disable(struct camera_common_data *s_data)
 	dev_dbg(s_data->dev, "%s: disable MCLK\n", __func__);
 	clk_disable_unprepare(pw->mclk);
 }
+EXPORT_SYMBOL_GPL(camera_common_mclk_disable);
 
-static int camera_common_mclk_enable(struct camera_common_data *s_data)
+int camera_common_mclk_enable(struct camera_common_data *s_data)
 {
 	int err;
 	struct camera_common_power_rail *pw = s_data->power;
@@ -728,6 +743,7 @@ static int camera_common_mclk_enable(struct camera_common_data *s_data)
 
 	return err;
 }
+EXPORT_SYMBOL_GPL(camera_common_mclk_enable);
 
 void camera_common_dpd_disable(struct camera_common_data *s_data)
 {

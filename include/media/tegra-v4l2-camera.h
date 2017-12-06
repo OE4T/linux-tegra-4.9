@@ -67,6 +67,11 @@
  */
 #define FIXED_POINT_SCALING_FACTOR (1ULL << 22)
 
+#define TEGRA_CAM_MAX_STRING_CONTROLS 8
+#define TEGRA_CAM_STRING_CTRL_EEPROM_INDEX 0
+#define TEGRA_CAM_STRING_CTRL_FUSEID_INDEX 1
+#define TEGRA_CAM_STRING_CTRL_OTP_INDEX 2
+
 struct unpackedU64 {
 	__u32 high;
 	__u32 low;
@@ -86,6 +91,7 @@ struct sensor_signal_properties {
 	__u32 discontinuous_clk;
 	__u32 dpcm_enable;
 	__u32 tegra_sinterface;
+	__u32 reserved[7];
 };
 
 struct sensor_image_properties {
@@ -94,6 +100,7 @@ struct sensor_image_properties {
 	__u32 line_length;
 	__u32 pixel_format;
 	__u32 embedded_metadata_height;
+	__u32 reserved[11];
 };
 
 struct sensor_dv_timings {
@@ -103,6 +110,7 @@ struct sensor_dv_timings {
 	__u32 vfrontporch;
 	__u32 vsync;
 	__u32 vbackporch;
+	__u32 reserved[10];
 };
 
 struct sensor_control_properties {
@@ -117,6 +125,11 @@ struct sensor_control_properties {
 	__u32 max_framerate;
 	union __u64val min_exp_time;
 	union __u64val max_exp_time;
+	__u32 step_gain_val;
+	__u32 step_framerate;
+	__u32 exposure_factor;
+	union __u64val step_exp_time;
+	__u32 reserved[14];
 };
 
 struct sensor_mode_properties {

@@ -327,6 +327,14 @@ static int sensor_common_parse_control_props(
 	} else
 		control->framerate_factor = value;
 
+	err = read_property_u32(node, "exposure_factor", &value);
+	if (err) {
+		dev_err(dev, "%s:%s:property missing\n",
+			__func__, "framerate_factor");
+		control->exposure_factor = 1;
+	} else
+		control->exposure_factor = value;
+
 	/* ignore err for this prop */
 	err = read_property_u32(node, "inherent_gain", &value);
 	if (err)
@@ -349,6 +357,14 @@ static int sensor_common_parse_control_props(
 		control->max_gain_val = 0;
 	} else
 		control->max_gain_val = value;
+
+	err = read_property_u32(node, "step_gain_val", &value);
+	if (err) {
+		dev_err(dev, "%s:%s:property missing\n",
+			__func__, "step_gain_val");
+		control->step_gain_val = 0;
+	} else
+		control->step_gain_val = value;
 
 	/* ignore err for this prop */
 	err = read_property_u32(node, "min_hdr_ratio", &value);
@@ -379,6 +395,14 @@ static int sensor_common_parse_control_props(
 	} else
 		control->max_framerate = value;
 
+	err = read_property_u32(node, "step_framerate", &value);
+	if (err) {
+		dev_err(dev, "%s:%s:property missing\n",
+			__func__, "step_framerate");
+		control->step_framerate = 0;
+	} else
+		control->step_framerate = value;
+
 	err = read_property_u64(node, "min_exp_time", &val64);
 	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
@@ -395,7 +419,15 @@ static int sensor_common_parse_control_props(
 	} else
 		control->max_exp_time.val = val64;
 
-	return err;
+	err = read_property_u64(node, "step_exp_time", &val64);
+	if (err) {
+		dev_err(dev, "%s:%s:property missing\n",
+			__func__, "step_exp_time");
+		control->step_exp_time.val = 0;
+	} else
+		control->step_exp_time.val = val64;
+
+	return 0;
 }
 
 int sensor_common_init_sensor_properties(

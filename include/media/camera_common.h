@@ -158,14 +158,40 @@ struct camera_common_framesync {
 struct camera_common_data;
 
 struct camera_common_sensor_ops {
+	u32 numfrmfmts;
+	const struct camera_common_frmfmt *frmfmt_table;
 	int (*power_on)(struct camera_common_data *s_data);
 	int (*power_off)(struct camera_common_data *s_data);
 	int (*write_reg)(struct camera_common_data *s_data,
 	  u16 addr, u8 val);
 	int (*read_reg)(struct camera_common_data *s_data,
 	  u16 addr, u8 *val);
+	struct camera_common_pdata *(*parse_dt)(struct device *dev);
+	int (*power_get)(struct camera_common_data *s_data);
+	int (*power_put)(struct camera_common_data *s_data);
 	int (*get_framesync)(struct camera_common_data *s_data,
 		struct camera_common_framesync *vshs);
+};
+
+struct tegracam_ctrl_ops {
+	u32 numctrls;
+	u32 string_ctrl_size[TEGRA_CAM_MAX_STRING_CONTROLS];
+	const u32 *ctrl_cid_list;
+	int (*set_gain)(struct camera_common_data *s_data, s64 val);
+	int (*set_exposure)(struct camera_common_data *s_data, s64 val);
+	int (*set_frame_rate)(struct camera_common_data *s_data, s64 val);
+	int (*set_group_hold)(struct camera_common_data *s_data, bool val);
+	int (*fill_string_ctrl)(struct camera_common_data *s_data,
+		struct v4l2_ctrl *ctrl);
+};
+
+struct tegracam_ctrl_handler {
+	struct v4l2_ctrl_handler	ctrl_handler;
+	const struct tegracam_ctrl_ops	*ctrl_ops;
+	struct camera_common_data	*s_data;
+
+	int				numctrls;
+	struct v4l2_ctrl		*ctrls[MAX_CID_CONTROLS];
 };
 
 struct camera_common_data {
@@ -181,6 +207,10 @@ struct camera_common_data {
 	struct v4l2_ctrl			**ctrls;
 
 	struct sensor_properties		sensor_props;
+	/* TODO: cleanup neeeded once all the sensors adapt new framework */
+	struct tegracam_ctrl_handler		*tegracam_ctrl_hdl;
+	struct regmap				*regmap;
+	struct camera_common_pdata		*pdata;
 
 	void	*priv;
 	int	numctrls;
@@ -247,6 +277,9 @@ int camera_common_parse_clocks(struct device *dev,
 			struct camera_common_pdata *pdata);
 int camera_common_parse_ports(struct device *dev,
 			      struct camera_common_data *s_data);
+int camera_common_mclk_enable(struct camera_common_data *s_data);
+void camera_common_mclk_disable(struct camera_common_data *s_data);
+
 
 int camera_common_debugfs_show(struct seq_file *s, void *unused);
 ssize_t camera_common_debugfs_write(
@@ -293,6 +326,15 @@ void camera_common_cleanup(struct camera_common_data *s_data);
 /* Focuser */
 int camera_common_focuser_init(struct camera_common_focuser_data *s_data);
 int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on);
+
+const struct camera_common_colorfmt *camera_common_find_pixelfmt(
+	unsigned int pix_fmt);
+
+/* common control layer init */
+int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler);
+int tegracam_init_ctrl_ranges_by_mode(
+		struct tegracam_ctrl_handler *handler,
+		u32 modeidx);
 
 /* Regmap / RTCPU I2C driver interface */
 struct tegra_i2c_rtcpu_sensor;

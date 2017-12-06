@@ -1,7 +1,7 @@
 /*
  * drivers/cpuidle/cpuidle-tegra18x.c
  *
- * Copyright (C) 2015-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -359,7 +359,7 @@ static int denver_idle_write(void *data, u64 val)
 
         sleep = ktime_sub(ktime_get(), time);
         time = ktime_sub(sleep, interval);
-        trace_printk("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
+        pr_info("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
 
         local_irq_enable();
         local_fiq_enable();
@@ -412,7 +412,7 @@ static int a57_idle_write(void *data, u64 val)
 
         sleep = ktime_sub(ktime_get(), time);
         time = ktime_sub(sleep, interval);
-        trace_printk("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
+        pr_info("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
 
         local_irq_enable();
         local_fiq_enable();

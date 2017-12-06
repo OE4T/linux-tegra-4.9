@@ -274,7 +274,7 @@ static int forced_idle_write(void *data, u64 val)
 	time = ktime_sub(sleep, interval);
 	if (dbg_gpio)
 		gpio_set_value(dbg_gpio, 0);
-	trace_printk("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
+	pr_info("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
 
 	local_irq_enable();
 	local_fiq_enable();

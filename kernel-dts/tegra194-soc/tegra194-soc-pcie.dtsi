@@ -19,6 +19,31 @@
 
 / {
 
+	pinmux@2430000 {
+		pex_rst_c5_out_state: pex_rst_c5_out {
+			pex_rst {
+				nvidia,pins = "pex_l5_rst_n_pgg1";
+				nvidia,schmitt = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+			};
+		};
+		clkreq_c5_bi_dir_state: clkreq_c5_bi_dir {
+			clkreq {
+				nvidia,pins = "pex_l5_clkreq_n_pgg0";
+				nvidia,schmitt = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+			};
+		};
+	};
+
 	pcie_common {
 		compatible = "nvidia,tegra194-pcie-common";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX1A>;
@@ -571,6 +596,10 @@
 					 <0 54 0x04>;	/* MSI interrupt */
 		interrupt-names = "intr", "msi";
 
+		pinctrl-names = "pex_rst", "clkreq";
+		pinctrl-0 = <&pex_rst_c5_out_state>;
+		pinctrl-1 = <&clkreq_c5_bi_dir_state>;
+
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;
 
@@ -694,6 +723,10 @@
 
 		interrupts = <0 53 0x04>;	/* controller interrupt */
 		interrupt-names = "intr";
+
+		pinctrl-names = "pex_rst", "clkreq";
+		pinctrl-0 = <&pex_rst_c5_out_state>;
+		pinctrl-1 = <&clkreq_c5_bi_dir_state>;
 
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;

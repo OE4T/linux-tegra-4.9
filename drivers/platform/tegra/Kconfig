@@ -110,6 +110,10 @@ config TEGRA_MC
         help
           Enable Tegra MC.
 
+config TEGRA_MC_TRACE_PRINTK
+	bool "Enable trace_printk debugging for MC"
+	depends on FTRACE_PRINTK
+
 config TEGRA_OF_MCERR
         bool "Tegra MCERR OF"
         default y

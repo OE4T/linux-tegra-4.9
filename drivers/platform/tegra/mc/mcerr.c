@@ -3,7 +3,7 @@
  *
  * MC error code common to T3x and T11x. T20 has been left alone.
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,7 +98,9 @@ exit:
  */
 static irqreturn_t tegra_mcerr_hard_irq(int irq, void *data)
 {
+#ifdef CONFIG_TEGRA_MC_TRACE_PRINTK
 	trace_printk("MCERR detected.\n");
+#endif
 	 /*
 	  * Disable MC Error interrupt till the MC Error info is logged.
 	  * MC Errors can be lost as MC HW holds one MC error at a time.

@@ -1,7 +1,7 @@
 /*
  * Tegra 18x SoC-specific DRAM ECC Error handling code.
  *
- * Copyright (c) 2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,6 +45,7 @@ void __iomem *emc_regs[MAX_CHANNELS];
 static u32 emc_int_status[MAX_CHANNELS];
 static u32 gbl_int_status;
 u32 ecc_int_mask;
+#ifdef CONFIG_TEGRA_MC_TRACE_PRINTK
 static u32 ecc_err_silenced;
 
 #define ecc_err_pr(fmt, ...)					\
@@ -54,6 +55,9 @@ static u32 ecc_err_silenced;
 			pr_err(fmt, ##__VA_ARGS__);		\
 		}						\
 	} while (0)
+#else
+#define ecc_err_pr(fmt, ...)
+#endif
 
 static int mc_check_ebe(struct mc_ecc_err_log *log)
 {
@@ -608,8 +612,10 @@ static int mc_ecc_debugfs_init(struct dentry *mc_parent)
 	debugfs_create_file("error_rate", 0644, ecc_err_debugfs_dir, NULL,
 			    &ecc_err_rate_debugfs_fops);
 
+#ifdef CONFIG_TEGRA_MC_TRACE_PRINTK
 	debugfs_create_u32("quiet", 0644, ecc_err_debugfs_dir,
 					&ecc_err_silenced);
+#endif
 
 	return 0;
 }

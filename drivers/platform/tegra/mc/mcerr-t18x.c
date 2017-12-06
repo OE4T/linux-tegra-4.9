@@ -1,7 +1,7 @@
 /*
  * Tegra 18x SoC-specific mcerr code.
  *
- * Copyright (c) 2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -394,8 +394,10 @@ static void log_mcerr_fault(unsigned int irq)
 	} else if (g_intstatus & (BIT(INTSTATUS_HUBC))) {
 		mc_channel = MC_BROADCAST_CHANNEL;
 	} else {
+#ifdef CONFIG_TEGRA_MC_TRACE_PRINTK
 		trace_printk("mcerr: unknown source (intstatus = 0x%08x)\n",
 			     g_intstatus);
+#endif
 		return;
 	}
 

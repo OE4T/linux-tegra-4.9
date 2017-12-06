@@ -2084,7 +2084,8 @@ int gr_gp10b_suspend_contexts(struct gk20a *g,
 
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 
-	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch_data, &dbg_s->ch_list,
+			dbg_session_channel_data, ch_entry) {
 		ch = g->fifo.channel + ch_data->chid;
 
 		ctx_resident = gr_gp10b_suspend_context(ch,

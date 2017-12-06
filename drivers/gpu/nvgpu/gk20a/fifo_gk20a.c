@@ -1378,7 +1378,7 @@ bool gk20a_fifo_error_tsg(struct gk20a *g,
 	bool verbose = false;
 
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		if (gk20a_channel_get(ch)) {
 			verbose |= gk20a_fifo_error_ch(g, ch);
 			gk20a_channel_put(ch);
@@ -1408,7 +1408,7 @@ void gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 		"TSG %d generated a mmu fault", tsg->tsgid);
 
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		if (gk20a_channel_get(ch)) {
 			gk20a_fifo_set_ctx_mmu_error_ch(g, ch);
 			gk20a_channel_put(ch);
@@ -1431,7 +1431,7 @@ void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt)
 		g->ops.fifo.preempt_tsg(g, tsgid);
 
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		if (gk20a_channel_get(ch)) {
 			ch->has_timedout = true;
 			gk20a_channel_abort_clean_up(ch);
@@ -1932,7 +1932,8 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 
-		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
 				nvgpu_set_error_notifier(ch_tsg, err_code);
 				gk20a_channel_put(ch_tsg);
@@ -2127,7 +2128,7 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 	 * fifo recovery is needed if at least one channel reached the
 	 * maximum timeout without progress (update in gpfifo pointers).
 	 */
-	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		if (gk20a_channel_get(ch)) {
 			recover = gk20a_channel_update_and_check_timeout(ch,
 					*ms, &progress);
@@ -2146,7 +2147,8 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 				tsg->tsgid, ch->chid);
 		gk20a_channel_put(ch);
 		*ms = GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000;
-		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch)) {
 				ch->timeout_accumulated_ms = *ms;
 				gk20a_channel_put(ch);
@@ -2163,7 +2165,8 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 				tsg->tsgid, ch->chid);
 		*ms = ch->timeout_accumulated_ms;
 		gk20a_channel_put(ch);
-		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch)) {
 				nvgpu_set_error_notifier(ch,
 					NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
@@ -2490,7 +2493,8 @@ static void gk20a_fifo_pbdma_fault_rc(struct gk20a *g,
 		struct channel_gk20a *ch = NULL;
 
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch)) {
 				nvgpu_set_error_notifier(ch,
 					error_notifier);
@@ -2650,7 +2654,8 @@ void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 			"preempt TSG %d timeout", id);
 
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
 			if (!gk20a_channel_get(ch))
 				continue;
 			nvgpu_set_error_notifier(ch,
@@ -3147,7 +3152,8 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 		/* add runnable channels bound to this TSG */
-		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
 			if (!test_bit(ch->chid,
 				      runlist->active_channels))
 				continue;

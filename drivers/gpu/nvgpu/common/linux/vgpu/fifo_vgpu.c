@@ -692,7 +692,8 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 
-		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
 				nvgpu_set_error_notifier(ch_tsg, err_code);
 				ch_tsg->has_timedout = true;
@@ -747,7 +748,8 @@ static void vgpu_fifo_set_ctx_mmu_error_ch_tsg(struct gk20a *g,
 
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 
-		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
 				vgpu_fifo_set_ctx_mmu_error_ch(g, ch_tsg);
 				gk20a_channel_put(ch_tsg);

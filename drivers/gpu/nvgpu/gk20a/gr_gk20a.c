@@ -5106,7 +5106,8 @@ static void gk20a_gr_set_error_notifier(struct gk20a *g,
 		if (gk20a_is_channel_marked_as_tsg(ch)) {
 			tsg = &g->fifo.tsg[ch->tsgid];
 			nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-			list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
+			nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
+					channel_gk20a, ch_entry) {
 				if (gk20a_channel_get(ch_tsg)) {
 					nvgpu_set_error_notifier(ch_tsg,
 							 error_notifier);
@@ -8384,7 +8385,8 @@ int gr_gk20a_suspend_contexts(struct gk20a *g,
 
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 
-	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch_data, &dbg_s->ch_list,
+			dbg_session_channel_data, ch_entry) {
 		ch = g->fifo.channel + ch_data->chid;
 
 		ctx_resident = gr_gk20a_suspend_context(ch);
@@ -8424,7 +8426,8 @@ int gr_gk20a_resume_contexts(struct gk20a *g,
 		goto clean_up;
 	}
 
-	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch_data, &dbg_s->ch_list,
+			dbg_session_channel_data, ch_entry) {
 		ch = g->fifo.channel + ch_data->chid;
 
 		ctx_resident = gr_gk20a_resume_context(ch);

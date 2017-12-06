@@ -560,7 +560,7 @@ static void gv11b_reset_eng_faulted_tsg(struct tsg_gk20a *tsg)
 	struct channel_gk20a *ch;
 
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		gv11b_reset_eng_faulted_ch(g, ch->chid);
 	}
 	nvgpu_rwsem_up_read(&tsg->ch_list_lock);
@@ -581,7 +581,7 @@ static void gv11b_reset_pbdma_faulted_tsg(struct tsg_gk20a *tsg)
 	struct channel_gk20a *ch;
 
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		gv11b_reset_pbdma_faulted_ch(g, ch->chid);
 	}
 	nvgpu_rwsem_up_read(&tsg->ch_list_lock);

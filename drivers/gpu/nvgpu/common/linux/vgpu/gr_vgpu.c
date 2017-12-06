@@ -1132,7 +1132,8 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 	}
 
 	n = 0;
-	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry)
+	nvgpu_list_for_each_entry(ch_data, &dbg_s->ch_list,
+			dbg_session_channel_data, ch_entry)
 		n++;
 
 	if (oob_size < n * sizeof(u16)) {
@@ -1145,7 +1146,8 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 	p = &msg.params.suspend_contexts;
 	p->num_channels = n;
 	n = 0;
-	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry)
+	nvgpu_list_for_each_entry(ch_data, &dbg_s->ch_list,
+			dbg_session_channel_data, ch_entry)
 		oob[n++] = (u16)ch_data->chid;
 
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -1155,7 +1157,8 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 	}
 
 	if (p->resident_chid != (u16)~0) {
-		list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry(ch_data, &dbg_s->ch_list,
+				dbg_session_channel_data, ch_entry) {
 			if (ch_data->chid == p->resident_chid) {
 				channel_fd = ch_data->channel_fd;
 				break;

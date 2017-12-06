@@ -791,8 +791,8 @@ static int gk20a_channel_get_event_data_from_id(struct channel_gk20a *ch,
 	bool event_found = false;
 
 	nvgpu_mutex_acquire(&ch->event_id_list_lock);
-	list_for_each_entry(local_event_id_data, &ch->event_id_list,
-						 event_id_node) {
+	nvgpu_list_for_each_entry(local_event_id_data, &ch->event_id_list,
+			gk20a_event_id_data, event_id_node) {
 		if (local_event_id_data->event_id == event_id) {
 			event_found = true;
 			break;

@@ -521,12 +521,12 @@ unbind:
 	/* unlink all debug sessions */
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
-	list_for_each_entry_safe(session_data, tmp_s,
-				&ch->dbg_s_list, dbg_s_entry) {
+	nvgpu_list_for_each_entry_safe(session_data, tmp_s,
+			&ch->dbg_s_list, dbg_session_data, dbg_s_entry) {
 		dbg_s = session_data->dbg_s;
 		nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
-		list_for_each_entry_safe(ch_data, tmp,
-					&dbg_s->ch_list, ch_entry) {
+		nvgpu_list_for_each_entry_safe(ch_data, tmp, &dbg_s->ch_list,
+				dbg_session_channel_data, ch_entry) {
 			if (ch_data->chid == ch->chid)
 				ch_data->unbind_single_channel(dbg_s, ch_data);
 		}

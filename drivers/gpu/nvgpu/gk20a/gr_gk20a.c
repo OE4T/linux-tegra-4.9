@@ -7895,7 +7895,7 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 				}
 				if (!pm_ctx_ready) {
 					/* Make sure ctx buffer was initialized */
-					if (!ch_ctx->pm_ctx.mem.priv.pages) {
+					if (!nvgpu_mem_is_valid(&ch_ctx->pm_ctx.mem)) {
 						nvgpu_err(g,
 							"Invalid ctx buffer");
 						err = -EINVAL;

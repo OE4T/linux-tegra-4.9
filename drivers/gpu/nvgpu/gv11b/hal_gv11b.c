@@ -589,7 +589,7 @@ static const struct gpu_ops gv11b_ops = {
 		.elcg_init_idle_filters = gv11b_elcg_init_idle_filters,
 	},
 	.pmu = {
-		.pmu_setup_elpg = gp10b_pmu_setup_elpg,
+		.pmu_setup_elpg = gv11b_pmu_setup_elpg,
 		.pmu_get_queue_head = pwr_pmu_queue_head_r,
 		.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v,
 		.pmu_get_queue_tail = pwr_pmu_queue_tail_r,

@@ -39,14 +39,6 @@
 
 #define gp10b_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
-/*!
- * Structure/object which single register write need to be done during PG init
- * sequence to set PROD values.
- */
-struct pg_init_sequence_list {
-	u32 regaddr;
-	u32 writeval;
-};
 
 /* PROD settings for ELPG sequencing registers*/
 static struct pg_init_sequence_list _pginitseq_gp10b[] = {

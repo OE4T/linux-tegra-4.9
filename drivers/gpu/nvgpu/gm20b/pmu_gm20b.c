@@ -37,15 +37,6 @@
 #include <nvgpu/hw/gm20b/hw_pwr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 
-/*!
- * Structure/object which single register write need to be done during PG init
- * sequence to set PROD values.
- */
-struct pg_init_sequence_list {
-	u32 regaddr;
-	u32 writeval;
-};
-
 #define gm20b_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
 

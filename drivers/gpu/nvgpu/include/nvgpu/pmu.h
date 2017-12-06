@@ -380,6 +380,15 @@ struct pmu_pg_stats_data {
 	u32 avg_exit_latency_us;
 };
 
+/*!
+ * Structure/object which single register write need to be done during PG init
+ * sequence to set PROD values.
+ */
+struct pg_init_sequence_list {
+	u32 regaddr;
+	u32 writeval;
+};
+
 /* PMU IPC Methods */
 void nvgpu_pmu_seq_init(struct nvgpu_pmu *pmu);
 

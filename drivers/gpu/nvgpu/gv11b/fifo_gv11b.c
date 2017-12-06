@@ -1,7 +1,7 @@
 /*
  * GV11B fifo
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -184,13 +184,7 @@ int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 
 	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->chid));
 
-	if (c->t19x.subctx_id == CHANNEL_INFO_VEID0)
-		nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
-			pbdma_set_channel_info_scg_type_graphics_compute0_f() |
-			pbdma_set_channel_info_veid_f(c->t19x.subctx_id));
-	else
-		nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
-			pbdma_set_channel_info_scg_type_compute1_f() |
+	nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
 			pbdma_set_channel_info_veid_f(c->t19x.subctx_id));
 
 	gv11b_fifo_init_ramfc_eng_method_buffer(g, c, mem);

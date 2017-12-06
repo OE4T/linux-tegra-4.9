@@ -628,14 +628,6 @@ static inline u32 pbdma_set_channel_info_r(u32 i)
 {
 	return 0x000400fcU + i*8192U;
 }
-static inline u32 pbdma_set_channel_info_scg_type_graphics_compute0_f(void)
-{
-	return 0x0U;
-}
-static inline u32 pbdma_set_channel_info_scg_type_compute1_f(void)
-{
-	return 0x1U;
-}
 static inline u32 pbdma_set_channel_info_veid_f(u32 v)
 {
 	return (v & 0x3fU) << 8U;

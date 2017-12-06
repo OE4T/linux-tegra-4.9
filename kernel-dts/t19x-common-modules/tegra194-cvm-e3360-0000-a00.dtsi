@@ -27,6 +27,16 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	pmc@c360000 {
+		nvidia,restrict-voltage-switch;
+		iopad-defaults {
+			sdmmc-io-pads {
+				pins = "sdmmc1-hv", "sdmmc3-hv";
+				nvidia,enable-voltage-switching;
+			};
+		};
+	};
+
 	plugin-manager {
 		fragment-e3360-a00-xusb {
 			ids = "3360-1099-000", "3360-1098-000";

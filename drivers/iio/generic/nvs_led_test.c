@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -64,9 +64,11 @@ static void nvs_led_test_generate_event(struct nvs_led_test_context *ctx,
 	 * to see the event, so we just insert some bogus data.
 	 */
 	ts = nvs_timestamp();
+#ifdef CONFIG_NVS_LED_TRACE_PRINTK
 	trace_printk(
 		"Sensor event occurred at %llu nsec (-500usec(hw/irq latency) -sampling_period)\n",
 		ts);
+#endif
 	ctx->nvs->handler(ctx->nvs_st, &data, ts);
 }
 

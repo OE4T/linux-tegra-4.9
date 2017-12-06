@@ -339,6 +339,10 @@ config TEGRA_DC_FAKE_PANEL_SUPPORT
 	  automated testing. should not be enabled
 	  for production.
 
+config TEGRA_DC_TRACE_PRINTK
+	bool "Enable trace_printk debugging"
+	depends on FTRACE_PRINTK
+
 source "drivers/misc/tegra-cec/Kconfig"
 source "drivers/video/tegra/host/Kconfig"
 source "drivers/video/tegra/nvmap/Kconfig"

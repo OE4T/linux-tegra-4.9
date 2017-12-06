@@ -379,9 +379,11 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	}
 
 	if (!check_fb_videomode_timings(dc, mode)) {
+#if defined(CONFIG_TEGRA_DC_TRACE_PRINTK)
 		trace_printk("check_fb_videomode_timings: false\n"
 			     "%u x %u @ %u Hz\n",
 			     mode->xres, mode->yres, mode->pixclock);
+#endif
 		return false;
 	}
 

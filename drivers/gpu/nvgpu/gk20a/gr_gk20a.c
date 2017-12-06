@@ -4752,11 +4752,11 @@ static int gr_gk20a_init_access_map(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	struct nvgpu_mem *mem = &gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem;
-	u32 w, nr_pages =
+	u32 nr_pages =
 		DIV_ROUND_UP(gr->ctx_vars.priv_access_map_size,
 			     PAGE_SIZE);
 	u32 *whitelist = NULL;
-	unsigned int num_entries = 0;
+	int w, num_entries = 0;
 
 	if (nvgpu_mem_begin(g, mem)) {
 		nvgpu_err(g,

@@ -1416,21 +1416,19 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	val &= ~APPL_PINMUX_PEX_RST;
 	writel(val, pcie->appl_base + APPL_PINMUX);
 
-	msleep(100);
+	usleep_range(100, 200);
 
 	/* enable LTSSM */
 	val = readl(pcie->appl_base + APPL_CTRL);
 	val |= APPL_CTRL_LTSSM_EN;
 	writel(val, pcie->appl_base + APPL_CTRL);
 
-	msleep(100);
-
 	/* de-assert RST */
 	val = readl(pcie->appl_base + APPL_PINMUX);
 	val |= APPL_PINMUX_PEX_RST;
 	writel(val, pcie->appl_base + APPL_PINMUX);
 
-	msleep(200);
+	msleep(100);
 
 	if (!dw_pcie_link_up(pp))
 		return;

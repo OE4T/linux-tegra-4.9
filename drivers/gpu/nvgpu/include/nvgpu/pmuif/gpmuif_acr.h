@@ -131,4 +131,29 @@ struct nv_pmu_rpc_struct_acr_init_wpr_region {
 	u32 scratch[1];
 };
 
+/*
+ * structure that holds data used to
+ * execute BOOTSTRAP_GR_FALCONS RPC.
+ */
+struct nv_pmu_rpc_struct_acr_bootstrap_gr_falcons {
+	/*[IN/OUT] Must be first field in RPC structure */
+	struct nv_pmu_rpc_header hdr;
+	/* [IN] Mask of falcon IDs @ref LSF_FALCON_ID_<XYZ> */
+	u32  falcon_id_mask;
+	/*
+	 * [IN] Boostrapping flags @ref
+	 * PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_<XYZ>
+	 */
+	u32 flags;
+	/* [IN] Indicate whether the particular falon uses VA */
+	u32  falcon_va_mask;
+	/*
+	 * [IN] WPR Base Address in VA. The Inst Block containing
+	 * this VA should be bound to both PMU and GR falcons
+	 * during the falcon boot
+	 */
+	struct falc_u64  wpr_base_virtual;
+	u32  scratch[1];
+};
+
 #endif /* _GPMUIFACR_H_ */

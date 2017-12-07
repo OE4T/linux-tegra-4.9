@@ -28,5 +28,6 @@
 struct gk20a;
 
 int gv100_pmu_init_acr(struct gk20a *g);
+int gv100_load_falcon_ucode(struct gk20a *g, u32 falconidmask);
 
 #endif /*__PMU_GV100_H_*/

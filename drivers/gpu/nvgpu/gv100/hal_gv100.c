@@ -574,7 +574,7 @@ static const struct gpu_ops gv100_ops = {
 	},
 	.pmu = {
 		.init_wpr_region = gv100_pmu_init_acr,
-		.load_lsfalcon_ucode = gp106_load_falcon_ucode,
+		.load_lsfalcon_ucode = gv100_load_falcon_ucode,
 		.is_lazy_bootstrap = gp106_is_lazy_bootstrap,
 		.is_priv_load = gp106_is_priv_load,
 		.prepare_ucode = gp106_prepare_ucode_blob,

@@ -1000,6 +1000,11 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 				"reply NV_PMU_RPC_ID_ACR_INIT_WPR_REGION");
 			g->pmu_lsf_pmu_wpr_init_done = 1;
 			break;
+		case NV_PMU_RPC_ID_ACR_BOOTSTRAP_GR_FALCONS:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_ACR_BOOTSTRAP_GR_FALCONS");
+			g->pmu_lsf_loaded_falcon_id = 1;
+			break;
 		}
 		break;
 	case PMU_UNIT_PERFMON_T18X:

@@ -276,6 +276,174 @@ static int tegra_ahci_port_resume(struct ata_port *ap)
 	return ret;
 }
 
+static int tegra_ahci_compliance_mode_testing;
+
+static ssize_t tegra_ahci_compliance_mode_set(struct device *dev,
+				 struct device_attribute *attr,
+				 const char *buf, size_t count)
+{
+	struct ata_host *host = dev_get_drvdata(dev);
+	struct ahci_host_priv *hpriv = host->private_data;
+	u32 val;
+	u32 mask;
+
+	switch (buf[0]) {
+	case '1':
+		dev_info(dev, "Starting compliance mode."
+				" unregistering from SATA subsystem\n");
+		tegra_ahci_compliance_mode_testing = 1;
+		ata_host_detach(host);
+		dev_info(dev, "compliance Testing can be started\n");
+		break;
+	case '2':
+		dev_info(dev, "Starting Rx compliance Test\n");
+		tegra_ahci_compliance_mode_testing = 2;
+
+		tegra_ahci_scfg_writel(hpriv,
+					T_SATA0_AHCI_HBA_BIST_DWORD_DATA,
+					T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+				T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA1,
+				T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+		tegra_ahci_scfg_writel(hpriv,
+					T_SATA0_AHCI_HBA_BIST_DWORD_DATA,
+					T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+				T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA2,
+				T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+
+		val = tegra_ahci_scfg_readl(hpriv, T_SATA_CFG_PHY_0);
+		dev_info(dev,
+			"SATA0_CFG_PHY_0_0 DONT_INSERT_ALIGNS_IN_BIST_L= %x\n",
+			val);
+		val = tegra_ahci_scfg_readl(hpriv, T_SATA0_SPARE_2);
+		dev_info(dev,
+			"SATA0_SPARE_2_0 REM_TWO_ALIGNS_IN_BIST_L = %x\n", val);
+		val = tegra_ahci_scfg_readl(hpriv, T_SATA0_CHXCFG4_CHX);
+		dev_info(dev,
+			" SATA0_CHXCFG4_CHX_0 PHY_ALIGN_DWORD_CNT = %x\n", val);
+
+		tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_CH1, T_SATA0_INDEX);
+
+		mask = T_SATA0_CFG_PHY_0_DONT_INSERT_ALIGNS_IN_BIST_L;
+		val = (u32) ~mask;
+		tegra_ahci_scfg_update(hpriv, val, mask, T_SATA_CFG_PHY_0);
+
+		tegra_ahci_scfg_update(hpriv,
+			T_SATA0_SPARE_2_REM_TWO_ALIGNS_IN_BIST_L,
+			T_SATA0_SPARE_2_REM_TWO_ALIGNS_IN_BIST_L,
+			T_SATA0_SPARE_2);
+
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_CHXCFG4_CHX_DATA,
+			T_SATA0_CHXCFG4_CHX);
+
+		tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_NONE_SELECTED,
+								T_SATA0_INDEX);
+
+
+		val = tegra_ahci_scfg_readl(hpriv, T_SATA_CFG_PHY_0);
+		dev_info(dev,
+			"SATA0_CFG_PHY_0_0 DONT_INSERT_ALIGNS_IN_BIST_L= %x\n",
+			val);
+		val = tegra_ahci_scfg_readl(hpriv, T_SATA0_SPARE_2);
+		dev_info(dev,
+			"SATA0_SPARE_2_0 REM_TWO_ALIGNS_IN_BIST_L = %x\n", val);
+		val = tegra_ahci_scfg_readl(hpriv, T_SATA0_CHXCFG4_CHX);
+		dev_info(dev,
+			" SATA0_CHXCFG4_CHX_0 PHY_ALIGN_DWORD_CNT = %x\n", val);
+
+		break;
+	case '3':
+		dev_info(dev, "Starting Tx compliance Test: HFTP\n");
+		tegra_ahci_compliance_mode_testing = 3;
+
+		tegra_ahci_scfg_writel(hpriv,
+					T_SATA0_AHCI_HBA_BIST_DWORD_DATA,
+					T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+				T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA1,
+				T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+		tegra_ahci_scfg_writel(hpriv,
+					T_SATA0_AHCI_HBA_BIST_DWORD_DATA,
+					T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+				T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA3,
+				T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+
+		break;
+	case '4':
+		dev_info(dev, "Starting Tx compliance Test: MFTP\n");
+		tegra_ahci_compliance_mode_testing = 4;
+
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_DWORD_DATA_MFTP,
+			T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA1,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_DWORD_DATA_MFTP,
+			T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA3,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+
+		break;
+	case '5':
+		dev_info(dev, "Starting Tx compliance Test: LFTP\n");
+		tegra_ahci_compliance_mode_testing = 5;
+
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_DWORD_DATA_LFTP,
+			T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA1,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_DWORD_DATA_LFTP,
+			T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA3,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+
+		break;
+
+	case '6':
+		dev_info(dev, "Starting Tx compliance Test: LBP\n");
+		tegra_ahci_compliance_mode_testing = 4;
+
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_DWORD_DATA_LBP,
+			T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA1,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_DWORD_DATA_LBP,
+			T_SATA0_AHCI_HBA_BIST_DWORD);
+		tegra_ahci_scfg_writel(hpriv,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA3,
+			T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL);
+
+		break;
+
+	default:
+		dev_info(dev, "unknown options...\n");
+	}
+
+	return count;
+}
+
+static ssize_t tegra_ahci_compliance_mode_show(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", tegra_ahci_compliance_mode_testing);
+}
+
+static DEVICE_ATTR(tegra_ahci_compliance_mode_testing, S_IWUSR | S_IRUGO,
+	tegra_ahci_compliance_mode_show, tegra_ahci_compliance_mode_set);
+
 static unsigned int tegra_ahci_qc_issue(struct ata_queued_cmd *qc)
 {
 
@@ -1649,6 +1817,12 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 								ret);
 	else
 		pm_runtime_enable(&pdev->dev);
+
+	ret = device_create_file(&pdev->dev,
+			&dev_attr_tegra_ahci_compliance_mode_testing);
+	if (ret)
+		dev_warn(&pdev->dev,
+		"Failed to create compliance mode attricute err=%d\n", ret);
 
 #ifdef CONFIG_DEBUG_FS
 	tegra_ahci_dump_debuginit(hpriv);

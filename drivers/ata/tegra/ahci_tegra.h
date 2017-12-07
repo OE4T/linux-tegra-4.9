@@ -101,6 +101,7 @@
 #define T_SATA_CFG_PHY_0				0x120
 #define T_SATA_CFG_PHY_0_MASK_SQUELCH			BIT(24)
 #define T_SATA_CFG_PHY_0_USE_7BIT_ALIGN_DET_FOR_SPD	BIT(11)
+#define T_SATA0_CFG_PHY_0_DONT_INSERT_ALIGNS_IN_BIST_L  BIT(8)
 
 #define T_SATA0_NVOOB					0x114
 #define T_SATA0_NVOOB_SQUELCH_FILTER_LENGTH_MASK	(0x3 << 26)
@@ -142,6 +143,23 @@
 
 #define T_SATA0_CFG_LINK_0				0x174
 #define T_SATA0_CFG_LINK_0_USE_POSEDGE_SCTL_DET		BIT(24)
+
+#define T_SATA0_AHCI_HBA_BIST_DWORD			0x31c
+#define T_SATA0_AHCI_HBA_BIST_DWORD_DATA		0x4a4a4a4a
+#define T_SATA0_AHCI_HBA_BIST_DWORD_DATA_MFTP		0x78787878
+#define T_SATA0_AHCI_HBA_BIST_DWORD_DATA_LFTP		0x7e7e7e7e
+#define T_SATA0_AHCI_HBA_BIST_DWORD_DATA_LBP		0x0C8B0C6B
+
+#define T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL		0x318
+#define T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA1	0x00000680
+#define T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA2	0xff000640
+#define T_SATA0_AHCI_HBA_BIST_OVERRIDE_CTL_DATA3	0xff00062e
+
+#define T_SATA0_SPARE_2					0x528
+#define T_SATA0_SPARE_2_REM_TWO_ALIGNS_IN_BIST_L	BIT(0)
+
+#define T_SATA0_CHXCFG4_CHX				0x704
+#define T_SATA0_CHXCFG4_CHX_DATA			0x0
 
 
 /* AHCI registers */
@@ -386,6 +404,18 @@ static inline void tegra_ahci_scfg_writel(struct ahci_host_priv *hpriv, u32 val,
 	writel(val, tegra->base_list[TEGRA_SATA_CONFIG] + offset);
 	readl(tegra->base_list[TEGRA_SATA_CONFIG] + offset);
 }
+
+static inline u32 tegra_ahci_scfg_readl(struct ahci_host_priv *hpriv,
+					u32 offset)
+{
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	u32 rval = 0;
+
+	rval = readl(tegra->base_list[TEGRA_SATA_CONFIG] + offset);
+	return rval;
+}
+
+
 
 static inline void tegra_ahci_scfg_update(struct ahci_host_priv *hpriv, u32 val,
 					u32 mask, u32 offset)

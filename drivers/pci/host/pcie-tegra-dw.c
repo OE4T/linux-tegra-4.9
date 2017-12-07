@@ -1446,7 +1446,7 @@ static int tegra_pcie_dw_link_up(struct pcie_port *pp)
 		while (val & CFG_LINK_STATUS_LT) {
 			if (!count) {
 				dev_info(pp->dev,
-					 "link is down after training\n");
+					 "link training didn't complete\n");
 				return 0;
 			}
 			dev_info(pp->dev, "link is in training\n");

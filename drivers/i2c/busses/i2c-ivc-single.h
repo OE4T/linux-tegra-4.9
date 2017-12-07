@@ -14,10 +14,11 @@
 #ifndef _LINUX_I2C_IVC_SINGLE_H
 #define _LINUX_I2C_IVC_SINGLE_H
 
-struct tegra_i2c_ivc_single_dev;
+#include <linux/types.h>
 
-struct tegra_i2c_ivc_single_dev *tegra_i2c_ivc_get_dev(u32 reg_base);
-int tegra_i2c_ivc_single_xfer(struct tegra_i2c_ivc_single_dev *ivc_dev,
-	const struct i2c_msg *reqs, int num);
+struct i2c_msg;
+
+int tegra_i2c_ivc_single_xfer(u32 reg_base,
+		const struct i2c_msg *reqs, int num);
 
 #endif /* _LINUX_I2C_IVC_SINGLE_H */

@@ -31,22 +31,13 @@
 /*
  * I2C bus driver internal data structure
  */
-
 struct tegra_i2c_rtcpu {
 	struct device *dev;
 	struct i2c_adapter adapter;
-	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev;
 	struct tegra_i2c_clk_config i2c_clk_config;
-	bool is_shutdown;
+	u32 i2c_base;
 	bool is_suspended;
 };
-
-static void tegra_i2c_rtcpu_parse_dt(struct tegra_i2c_rtcpu *i2c_dev)
-{
-	struct device_node *np = i2c_dev->dev->of_node;
-	i2c_dev->i2c_clk_config.is_clkon_always =
-		of_property_read_bool(np, "nvidia,clock-always-on");
-}
 
 /*
  * I2C bus driver interface
@@ -55,14 +46,13 @@ static int tegra_i2c_rtcpu_xfer(struct i2c_adapter *adap,
 	struct i2c_msg msgs[], int num)
 {
 	struct tegra_i2c_rtcpu *i2c_dev = i2c_get_adapdata(adap);
-	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev = i2c_dev->i2c_ivc_dev;
 	int ret;
 
 	if (i2c_dev->is_suspended)
 		return -EBUSY;
 
 	pm_runtime_get_sync(&adap->dev);
-	ret = tegra_i2c_ivc_single_xfer(i2c_ivc_dev, msgs, num);
+	ret = tegra_i2c_ivc_single_xfer(i2c_dev->i2c_base, msgs, num);
 	pm_runtime_put(&adap->dev);
 
 	return ret;
@@ -89,16 +79,19 @@ static int tegra_i2c_rtcpu_probe(struct platform_device *pdev)
 	struct clk *div_clk;
 	struct clk *parent_clk;
 	struct clk *slow_clk;
+	u32 i2c_base;
 	void __iomem *base;
 	int ret = 0;
-	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev;
 	struct tegra_i2c_clk_config *i2c_clk_config;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
-	i2c_ivc_dev = tegra_i2c_ivc_get_dev((u32) res->start);
-	if (IS_ERR(i2c_ivc_dev))
-		return PTR_ERR(i2c_ivc_dev);
+	i2c_base = tegra_i2c_get_reg_base(pdev->dev.of_node);
+	if (i2c_base == 0)
+		return -ENODEV;
+
+	if (tegra_i2c_ivc_single_xfer(i2c_base, NULL, 0) != 0)
+		return -EPROBE_DEFER;
 
 	base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(base))
@@ -132,9 +125,10 @@ static int tegra_i2c_rtcpu_probe(struct platform_device *pdev)
 	if (!i2c_dev)
 		return -ENOMEM;
 
+	platform_set_drvdata(pdev, i2c_dev);
+
 	i2c_dev->dev = &pdev->dev;
-	i2c_dev->i2c_ivc_dev = i2c_ivc_dev;
-	i2c_dev->is_shutdown = false;
+	i2c_dev->i2c_base = i2c_base;
 	i2c_dev->is_suspended = false;
 
 	i2c_clk_config = &i2c_dev->i2c_clk_config;
@@ -149,9 +143,10 @@ static int tegra_i2c_rtcpu_probe(struct platform_device *pdev)
 
 	i2c_clk_config->bus_clk_rate = tegra_i2c_get_clk_freq(
 			i2c_dev->dev->of_node);
-	tegra_i2c_rtcpu_parse_dt(i2c_dev);
 
-	platform_set_drvdata(pdev, i2c_dev);
+	i2c_clk_config->is_clkon_always =
+		of_property_read_bool(pdev->dev.of_node,
+				"nvidia,clock-always-on");
 
 	i2c_clk_config->clk_divisor_non_hs_mode = 0x19;
 	if (i2c_clk_config->bus_clk_rate == I2C_FAST_MODE_PLUS)
@@ -219,8 +214,6 @@ unprepare_div_clk:
 	clk_unprepare(i2c_clk_config->div_clk);
 
 fail:
-	devm_kfree(&pdev->dev, i2c_dev);
-
 	return ret;
 }
 
@@ -240,7 +233,6 @@ static void tegra_i2c_rtcpu_shutdown(struct platform_device *pdev)
 
 	dev_info(i2c_dev->dev, "Bus is shutdown down..\n");
 	i2c_shutdown_adapter(&i2c_dev->adapter);
-	i2c_dev->is_shutdown = true;
 }
 
 /*

@@ -14,30 +14,31 @@
  *
  */
 
+#include "i2c-ivc-single.h"
+
 #include <linux/debugfs.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 
 #include <soc/tegra/tegra-ivc-rpc.h>
 
 #include "soc/tegra/camrtc-i2c-common.h"
-#include "i2c-ivc-single.h"
 #include "i2c-rtcpu-common.h"
 
 /*
  * I2C IVC Single driver internal data structure
  */
 
-#define TEGRA_I2C_SINGLE_MAX_DEV    4
+#define MAX_DEVS    4
 
 #define I2C_CAMRTC_RPC_IVC_SINGLE_TIMEOUT_MS   250
 
 struct tegra_i2c_ivc_single_dev {
 	/* IVC RPC */
-	const char *name;
 	struct tegra_ivc_channel *chan;
-	bool is_taken;
-	bool is_failed;
+	struct mutex inuse;
+
 	bool is_added;
 	bool is_online;
 
@@ -61,7 +62,8 @@ struct tegra_i2c_ivc_single_dev {
 	struct camrtc_rpc_i2c_response rpc_i2c_rsp;
 };
 
-static struct tegra_i2c_ivc_single_dev g_i2c_ivc_devs[TEGRA_I2C_SINGLE_MAX_DEV];
+static DEFINE_MUTEX(g_i2c_ivc_lock);
+static struct tegra_i2c_ivc_single_dev *g_i2c_ivc_devs[MAX_DEVS];
 
 u32 tegra_i2c_get_clk_freq(struct device_node *np)
 {
@@ -93,57 +95,76 @@ EXPORT_SYMBOL(tegra_i2c_get_reg_base);
 /*
  * I2C interface
  */
-struct tegra_i2c_ivc_single_dev *tegra_i2c_ivc_get_dev(u32 reg_base)
+static struct tegra_i2c_ivc_single_dev *tegra_i2c_ivc_get_dev(u32 reg_base)
 {
-	int i;
-	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev = ERR_PTR(-ENODEV);
+	size_t i;
+	struct tegra_i2c_ivc_single_dev *sdev = NULL;
 
-	/* Find an IVC channel */
-	for (i = 0; i < TEGRA_I2C_SINGLE_MAX_DEV; ++i) {
-		if (g_i2c_ivc_devs[i].is_taken) {
-			if (g_i2c_ivc_devs[i].reg_base == reg_base) {
-				if (g_i2c_ivc_devs[i].is_failed)
-					return ERR_PTR(-ENODEV);
-				else
-					break;
-			}
-		} else
-			return ERR_PTR(-EPROBE_DEFER);
+	mutex_lock(&g_i2c_ivc_lock);
+
+	/* Find an IVC channel corresponding to base */
+	for (i = 0; i < ARRAY_SIZE(g_i2c_ivc_devs); ++i) {
+		if (!g_i2c_ivc_devs[i])
+			continue;
+
+		if (g_i2c_ivc_devs[i]->reg_base == reg_base) {
+			sdev = g_i2c_ivc_devs[i];
+			mutex_lock(&sdev->inuse);
+			break;
+		}
 	}
 
-	if (i == TEGRA_I2C_SINGLE_MAX_DEV)
-		return ERR_PTR(-ENOMEM);
+	mutex_unlock(&g_i2c_ivc_lock);
 
-	i2c_ivc_dev = g_i2c_ivc_devs + i;
-
-	return i2c_ivc_dev;
+	return sdev;
 }
-EXPORT_SYMBOL(tegra_i2c_ivc_get_dev);
+
+static void tegra_i2c_ivc_put_dev(struct tegra_i2c_ivc_single_dev *sdev)
+{
+	if (sdev)
+		mutex_unlock(&sdev->inuse);
+}
+
+static int tegra_i2c_ivc_register(struct tegra_i2c_ivc_single_dev *sdev)
+{
+	size_t i;
+	int ret = -EBUSY;
+
+	mutex_lock(&g_i2c_ivc_lock);
+
+	for (i = 0; i < ARRAY_SIZE(g_i2c_ivc_devs); ++i) {
+		if (!g_i2c_ivc_devs[i]) {
+			g_i2c_ivc_devs[i] = sdev;
+			ret = 0;
+			break;
+		}
+	}
+
+	mutex_unlock(&g_i2c_ivc_lock);
+
+	return ret;
+}
+
+static void tegra_i2c_ivc_unregister(struct tegra_i2c_ivc_single_dev *sdev)
+{
+	size_t i;
+
+	mutex_lock(&g_i2c_ivc_lock);
+
+	for (i = 0; i < ARRAY_SIZE(g_i2c_ivc_devs); ++i) {
+		if (g_i2c_ivc_devs[i] == sdev) {
+			g_i2c_ivc_devs[i] = NULL;
+			break;
+		}
+	}
+
+	mutex_unlock(&g_i2c_ivc_lock);
+}
 
 static int tegra_i2c_ivc_add_single(struct tegra_ivc_channel *chan);
 
-static void tegra_i2c_ivc_single_call_callback(
-	int ret,
-	const struct tegra_ivc_rpc_response_frame *rep,
-	void *param)
-{
-	struct device *dev = param;
-	struct camrtc_rpc_i2c_response *rpc_rsp;
-
-	if (ret != 0) {
-		dev_err(dev, "I2C transaction callback failure: %d\n", ret);
-		return;
-	}
-
-	rpc_rsp = (struct camrtc_rpc_i2c_response *)rep->payload32;
-	if (rpc_rsp->result != 0) {
-		dev_err(dev,
-			"I2C transaction callback response failure: %d\n",
-			(int)rpc_rsp->result);
-	}
-}
-
-int tegra_i2c_ivc_single_xfer(struct tegra_i2c_ivc_single_dev *i2c_ivc_dev,
+static int tegra_i2c_ivc_do_single_xfer(
+	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev,
 	const struct i2c_msg *reqs, int num)
 {
 	u8 *pbuf = NULL, *pprev_len = NULL;
@@ -151,35 +172,9 @@ int tegra_i2c_ivc_single_xfer(struct tegra_i2c_ivc_single_dev *i2c_ivc_dev,
 	int ret = 0, len = 0;
 	u8 *read_ptr = NULL;
 	int read_len = 0;
-    /*
-     * blocking call always enabled, make false to enable
-	 * non-blocking calls
-	 */
-	bool is_blocking = true;
-
-	if (i2c_ivc_dev == NULL || i2c_ivc_dev->chan == NULL)
-		return -EIO;
 
 	if (num == 0)
 		return 0;
-
-	ret = tegra_ivc_channel_runtime_get(i2c_ivc_dev->chan);
-	if (ret < 0)
-		return ret;
-
-	if (tegra_ivc_rpc_channel_is_suspended(i2c_ivc_dev->chan)) {
-		ret = -EBUSY;
-		goto error;
-	}
-	if (!i2c_ivc_dev->is_added) {
-		BUG_ON(!i2c_ivc_dev->is_online);
-		ret = tegra_i2c_ivc_add_single(i2c_ivc_dev->chan);
-		if (ret != 0) {
-			dev_err(&i2c_ivc_dev->chan->dev,
-				"I2C device not ready\n");
-			goto error;
-		}
-	}
 
 	++i2c_ivc_dev->stat.xfer_requests;
 
@@ -192,16 +187,17 @@ int tegra_i2c_ivc_single_xfer(struct tegra_i2c_ivc_single_dev *i2c_ivc_dev,
 	preq_end = reqs + num;
 
 	for (;;) {
-		int bytes;
-		bool is_read;
+		bool is_read = (preq->flags & I2C_M_RD);
+		u32 bytes = 0;
 
-		if ((preq == preq_end) || ((len + 4 + preq->len) >
-			CAMRTC_I2C_REQUEST_MAX_LEN)) {
+		if ((preq == preq_end) || (is_read && read_ptr != NULL) ||
+			((len + 4 + preq->len) > CAMRTC_I2C_REQUEST_MAX_LEN)) {
 			struct camrtc_rpc_i2c_response *rpc_rsp;
 
+			rpc_rsp = &i2c_ivc_dev->rpc_i2c_rsp;
+
 			i2c_ivc_dev->rpc_i2c_req.request_len = len;
-			i2c_ivc_dev->rpc_i2c_req.callback = is_blocking ?
-				NULL : tegra_i2c_ivc_single_call_callback;
+			i2c_ivc_dev->rpc_i2c_req.callback = NULL;
 			i2c_ivc_dev->rpc_i2c_req.callback_param =
 				&i2c_ivc_dev->chan->dev;
 			ret = tegra_ivc_rpc_call(i2c_ivc_dev->chan,
@@ -212,20 +208,14 @@ int tegra_i2c_ivc_single_xfer(struct tegra_i2c_ivc_single_dev *i2c_ivc_dev,
 				dev_err(&i2c_ivc_dev->chan->dev,
 					"I2C transaction to 0x%x failed: %d\n",
 					reqs[0].addr, ret);
-				ret = -EIO;
-				goto error;
+				return -EIO;
 			}
 
-			rpc_rsp = &i2c_ivc_dev->rpc_i2c_rsp;
-			/* response results only matter if the call is blocking,
-			 * else ignore
-			 */
-			if (rpc_rsp->result && is_blocking) {
+			if (rpc_rsp->result != 0) {
 				dev_err(&i2c_ivc_dev->chan->dev,
 					"I2C transaction response at addr 0x%x failed: %d\n",
 					reqs[0].addr, rpc_rsp->result);
-				ret = -EIO;
-				goto error;
+				return -EIO;
 			}
 			if (read_ptr) {
 				memcpy(read_ptr, rpc_rsp->read_data, read_len);
@@ -233,13 +223,11 @@ int tegra_i2c_ivc_single_xfer(struct tegra_i2c_ivc_single_dev *i2c_ivc_dev,
 			}
 
 			if (preq == preq_end)
-				break;
+				return num;
 
 			pbuf = i2c_ivc_dev->rpc_i2c_req_buf + 1;
 			len = 1;
 		}
-
-		is_read = (preq->flags & I2C_M_RD);
 
 		if (!is_read) {
 			pbuf[0] = 0;
@@ -251,15 +239,12 @@ int tegra_i2c_ivc_single_xfer(struct tegra_i2c_ivc_single_dev *i2c_ivc_dev,
 			pbuf[0] = CAMRTC_I2C_REQUEST_FLAG_READ;
 			++i2c_ivc_dev->stat.reads;
 			i2c_ivc_dev->stat.read_bytes += preq->len;
-			/* a single read request among all requests makes the
-			 * whole request to rtcpu blocking
-			 */
-			is_blocking = true;
 		}
 
 		if ((preq->flags & I2C_M_NOSTART) == 0) {
 			pbuf[1] = preq->addr & 0xff;
-			if (preq->flags & I2C_M_TEN) {
+			if (WARN_ON(preq->flags & I2C_M_TEN)) {
+				/* This is not yet implemented */
 				pbuf[0] |= CAMRTC_I2C_REQUEST_FLAG_TEN;
 				pbuf[2] = (preq->addr >> 8) & 0xff;
 				bytes = 2;
@@ -272,83 +257,93 @@ int tegra_i2c_ivc_single_xfer(struct tegra_i2c_ivc_single_dev *i2c_ivc_dev,
 			/* slave address is don't care */
 			pbuf[1] = 0;
 			pbuf[2] = 0;
-			bytes = 0;
 		}
+
+		i2c_ivc_dev->stat.total_bytes += bytes + preq->len;
 
 		pbuf[3] = preq->len;
 		pprev_len = pbuf + 3;
-		bytes += preq->len;
 
 		pbuf += 4;
 		len += 4;
 
-		if (!is_read) {
-			u8 *psrc = preq->buf;
-
-			switch (preq->len) {
-			case 4:
-				*pbuf++ = *psrc++;
-			case 3:
-				*pbuf++ = *psrc++;
-			case 2:
-				*pbuf++ = *psrc++;
-			case 1:
-				*pbuf++ = *psrc++;
-			case 0:
-				break;
-			default:
-				memcpy(pbuf, psrc, preq->len);
-				pbuf += preq->len;
-				break;
-			}
-
-			len += preq->len;
+		if (is_read) {
+			preq++;
+			continue;
 		}
+
+		memcpy(pbuf, preq->buf, preq->len);
+		pbuf += preq->len;
+		len += preq->len;
+
 		++preq;
 
-		/* Merge requests with NOSTART */
+		/* Merge write requests with NOSTART */
 		while (preq != preq_end && (preq->flags & I2C_M_NOSTART)) {
 			u8 *psrc = preq->buf;
 
-			if ((len + preq->len) >
-				CAMRTC_I2C_REQUEST_MAX_LEN)
-				continue;
-
-			switch (preq->len) {
-			case 4:
-				*pbuf++ = *psrc++;
-			case 3:
-				*pbuf++ = *psrc++;
-			case 2:
-				*pbuf++ = *psrc++;
-			case 1:
-				*pbuf++ = *psrc++;
-			case 0:
+			if ((len + preq->len) > CAMRTC_I2C_REQUEST_MAX_LEN)
 				break;
-			default:
-				memcpy(pbuf, psrc, preq->len);
-				pbuf += preq->len;
-				break;
-			}
 
+			memcpy(pbuf, psrc, preq->len);
+
+			pbuf += preq->len;
 			*pprev_len += preq->len;
 			len += preq->len;
-			bytes += preq->len;
 
-			if (!is_read)
-				i2c_ivc_dev->stat.write_bytes += preq->len;
-			else
-				i2c_ivc_dev->stat.read_bytes += preq->len;
+			i2c_ivc_dev->stat.write_bytes += preq->len;
+			i2c_ivc_dev->stat.total_bytes += preq->len;
 
 			++preq;
 		}
-
-		i2c_ivc_dev->stat.total_bytes += bytes;
 	}
+}
+
+int tegra_i2c_ivc_single_xfer(u32 i2c_base,
+	const struct i2c_msg *reqs, int num)
+{
+	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev;
+	int ret = 0;
+
+	i2c_ivc_dev = tegra_i2c_ivc_get_dev(i2c_base);
+	if (i2c_ivc_dev == NULL)
+		return -ENODEV;
+
+	if (num <= 0)
+		goto unlock;
+
+	ret = tegra_ivc_channel_runtime_get(i2c_ivc_dev->chan);
+	if (ret < 0)
+		goto unlock;
+
+	if (tegra_ivc_rpc_channel_is_suspended(i2c_ivc_dev->chan)) {
+		ret = -EBUSY;
+		goto error;
+	}
+
+	if (!i2c_ivc_dev->is_online) {
+		ret = -ECONNRESET;
+		goto error;
+	}
+
+	if (!i2c_ivc_dev->is_added) {
+		ret = tegra_i2c_ivc_add_single(i2c_ivc_dev->chan);
+		if (ret != 0) {
+			dev_err(&i2c_ivc_dev->chan->dev,
+				"I2C device not ready\n");
+			ret = -EIO;
+			goto error;
+		}
+	}
+
+	ret = tegra_i2c_ivc_do_single_xfer(i2c_ivc_dev, reqs, num);
 
 error:
 	tegra_ivc_channel_runtime_put(i2c_ivc_dev->chan);
-	return (ret < 0) ? -EIO : num;
+unlock:
+	tegra_i2c_ivc_put_dev(i2c_ivc_dev);
+
+	return ret;
 }
 EXPORT_SYMBOL(tegra_i2c_ivc_single_xfer);
 
@@ -431,8 +426,7 @@ static int tegra_i2c_ivc_add_single(struct tegra_ivc_channel *chan)
 		dev_err(&chan->dev,
 			"Failed to register an I2C device at 0x%08x: %d\n",
 			i2c_ivc_dev->reg_base, ret);
-		ret = -EIO;
-		goto fail_remove_chan;
+		return -EIO;
 	}
 
 	dev_info(&chan->dev,
@@ -455,11 +449,6 @@ static int tegra_i2c_ivc_add_single(struct tegra_ivc_channel *chan)
 	i2c_ivc_dev->is_added = true;
 
 	return 0;
-
-fail_remove_chan:
-	tegra_ivc_rpc_channel_remove(chan);
-	i2c_ivc_dev->is_failed = true;
-	return ret;
 }
 
 static void tegra_i2c_ivc_single_ready(
@@ -483,61 +472,66 @@ static struct tegra_ivc_rpc_ops tegra_ivc_rpc_user_ops = {
 static int tegra_ivc_rpc_i2c_single_probe(struct tegra_ivc_channel *chan)
 {
 	int ret;
-	int i;
 	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev;
 	struct device_node *i2c_node;
-
-	/* Find an empty slot */
-	for (i = 0; i < TEGRA_I2C_SINGLE_MAX_DEV; ++i) {
-		if (!g_i2c_ivc_devs[i].is_taken)
-			break;
-	}
-
-	if (i == TEGRA_I2C_SINGLE_MAX_DEV)
-		return -ENOMEM;
-
-	i2c_ivc_dev = g_i2c_ivc_devs + i;
-
-	i2c_node = of_parse_phandle(chan->dev.of_node, "device", 0);
-	if (i2c_node == NULL) {
-		dev_err(&chan->dev, "Cannot get i2c device node");
-		return -ENODEV;
-	}
-
-	/* Read properties */
-	ret = of_property_read_string(chan->dev.of_node, "nvidia,service",
-		&i2c_ivc_dev->name);
-	if (ret) {
-		dev_err(&chan->dev,
-		"Cannot read property nvidia,service: %d\n", ret);
-		return ret;
-	}
+	u32 reg_base;
 
 	/* Register IVC/RPC channel */
 	ret = tegra_ivc_rpc_channel_probe(chan, &tegra_ivc_rpc_user_ops);
 	if (ret < 0) {
 		dev_err(&chan->dev, "Cannot start IVC/RPC interface");
-		goto fail_free_ivc_dev;
+		return ret;
 	}
 
+	i2c_node = of_parse_phandle(chan->dev.of_node, "device", 0);
+	if (i2c_node == NULL) {
+		dev_err(&chan->dev, "Cannot get i2c device node");
+		ret = -ENODEV;
+		goto remove;
+	}
+
+	reg_base = tegra_i2c_get_reg_base(i2c_node);
+	if (reg_base == 0) {
+		ret = -ENODEV;
+		goto put;
+	}
+
+	i2c_ivc_dev = devm_kzalloc(&chan->dev, sizeof(*i2c_ivc_dev),
+			GFP_KERNEL);
+	if (i2c_ivc_dev == NULL) {
+		ret = -ENOMEM;
+		goto put;
+	}
+
+	mutex_init(&i2c_ivc_dev->inuse);
+
 	i2c_ivc_dev->is_added = false;
-	i2c_ivc_dev->is_failed = false;
 	i2c_ivc_dev->is_online = false;
-	i2c_ivc_dev->reg_base = tegra_i2c_get_reg_base(i2c_node);
+	i2c_ivc_dev->reg_base = reg_base;
 	i2c_ivc_dev->bus_clk_rate = tegra_i2c_get_clk_freq(i2c_node);
 	i2c_ivc_dev->chan = chan;
+
 	tegra_ivc_channel_set_drvdata(chan, i2c_ivc_dev);
-	i2c_ivc_dev->is_taken = true;
+
+	ret = tegra_i2c_ivc_register(i2c_ivc_dev);
+	if (ret < 0)
+		goto put;
 
 	return 0;
 
-fail_free_ivc_dev:
-	devm_kfree(&chan->dev, i2c_ivc_dev);
+put:
+	of_node_put(i2c_node);
+remove:
+	tegra_ivc_rpc_channel_remove(chan);
 	return ret;
 }
 
 static void tegra_ivc_rpc_i2c_single_remove(struct tegra_ivc_channel *chan)
 {
+	struct tegra_i2c_ivc_single_dev *i2c_ivc_dev;
+
+	i2c_ivc_dev = tegra_ivc_channel_get_drvdata(chan);
+	tegra_i2c_ivc_unregister(i2c_ivc_dev);
 	tegra_ivc_rpc_channel_remove(chan);
 }
 

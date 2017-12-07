@@ -125,6 +125,13 @@
 			pinctrl-1 = <>;
 			regulator-supplies = "vddio-dmic";
 			vddio-dmic-supply = <&max77620_sd3>;
+
+			/*
+			 * I2S4 on Jetson TX1 uses the I2S4B pads and
+			 * to use these pads bit 0 in the I2S_CYA
+			 * register must be set.
+			 */
+			enable-cya;
 		};
 
 		i2s@702d1100 {
@@ -135,6 +142,15 @@
 			vdd-1v8-spi-hv-supply = <&max77620_sd3>;
 			vdd-1v8-spi-hv-bias-supply = <&max77620_sd3>;
 			fsync-width = <0>;
+		};
+
+		i2s@702d1400 {
+			/*
+			 * I2S5 on Jetson TX1 uses the I2S5B pads and
+			 * to use these pads bit 0 in the I2S_CYA
+			 * register must be set.
+			 */
+			enable-cya;
 		};
 	};
 #if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2

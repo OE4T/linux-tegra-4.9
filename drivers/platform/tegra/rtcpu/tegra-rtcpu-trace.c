@@ -690,14 +690,14 @@ static void rtcpu_trace_vinotify_event(struct camrtc_event_struct *event)
 	case camrtc_trace_vinotify_event_ts64:
 		trace_rtcpu_vinotify_event(event->header.tstamp,
 		(event->data.data32[0] >> 1) & 0x7f, event->data.data32[0],
-		event->data.data32[1],
-		((u64)event->data.data32[3] << 32) | event->data.data32[2]);
+		((u64)event->data.data32[3] << 32) | event->data.data32[1],
+		event->data.data32[2]);
 		break;
 	case camrtc_trace_vinotify_error_ts64:
 		trace_rtcpu_vinotify_error(event->header.tstamp,
 		(event->data.data32[0] >> 1) & 0x7f, event->data.data32[0],
-		event->data.data32[1],
-		((u64)event->data.data32[3] << 32) | event->data.data32[2]);
+		((u64)event->data.data32[3] << 32) | event->data.data32[1],
+		event->data.data32[2]);
 		break;
 	default:
 		trace_rtcpu_unknown(event->header.tstamp,

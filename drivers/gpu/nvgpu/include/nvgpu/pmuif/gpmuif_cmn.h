@@ -127,4 +127,22 @@ union name##_aligned {		                         \
 		(PMU_FB_COPY_RW_ALIGNMENT))];            \
 }
 
+/* RPC (Remote Procedure Call) header structure */
+#define NV_PMU_RPC_FLAGS_TYPE_SYNC 0x00000000
+
+struct nv_pmu_rpc_header {
+	/* Identifies the unit servicing requested RPC*/
+	u8  unit_id;
+	/* Identifies the requested RPC (within the unit)*/
+	u8  function;
+	/* RPC call flags (@see PMU_RPC_FLAGS) */
+	u8  flags;
+	/* Falcon's status code to describe failures*/
+	u8  flcn_status;
+	/* RPC's total exec. time (measured on nvgpu driver side)*/
+	u32  exec_time_nv_ns;
+	/* RPC's actual exec. time (measured on PMU side)*/
+	u32  exec_time_pmu_ns;
+};
+
 #endif /* _GPMUIFCMN_H_*/

@@ -143,8 +143,28 @@ enum {
 #define APCTRL_POWER_BREAKEVEN_DEFAULT_US                       (2000)
 #define APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT                    (200)
 
+/* RPC */
+#define PMU_RPC_EXECUTE(_stat, _pmu, _unit, _func, _prpc, _size)\
+	do {                                                 \
+		memset(&((_prpc)->hdr), 0, sizeof((_prpc)->hdr));\
+		\
+		(_prpc)->hdr.unit_id   = PMU_UNIT_##_unit;       \
+		(_prpc)->hdr.function = NV_PMU_RPC_ID_##_unit##_##_func;\
+		(_prpc)->hdr.flags    = 0x0;    \
+		\
+		_stat = nvgpu_pmu_rpc_execute(_pmu, &((_prpc)->hdr),    \
+			(sizeof(*(_prpc)) - sizeof((_prpc)->scratch)),\
+			(_size), NULL, NULL);	\
+	} while (0)
+
 typedef void (*pmu_callback)(struct gk20a *, struct pmu_msg *, void *, u32,
 	u32);
+
+struct pmu_rpc_desc {
+	void   *prpc;
+	u16 size_rpc;
+	u16 size_scratch;
+};
 
 struct pmu_payload {
 	struct {
@@ -153,6 +173,7 @@ struct pmu_payload {
 		u32 size;
 		u32 fb_size;
 	} in, out;
+	struct pmu_rpc_desc rpc;
 };
 
 struct pmu_ucode_desc {
@@ -471,5 +492,9 @@ int nvgpu_pmu_ap_send_command(struct gk20a *g,
 void nvgpu_pmu_dump_falcon_stats(struct nvgpu_pmu *pmu);
 void nvgpu_pmu_dump_elpg_stats(struct nvgpu_pmu *pmu);
 bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos);
+
+/* PMU RPC */
+int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
+	u16 size_rpc, u16 size_scratch, pmu_callback callback, void *cb_param);
 
 #endif /* __NVGPU_PMU_H__ */

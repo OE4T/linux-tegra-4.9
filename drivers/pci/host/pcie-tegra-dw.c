@@ -64,6 +64,12 @@
 #define APPL_INTR_STATUS_L1_0_0_LINK_REQ_RST_NOT_CHGED	BIT(1)
 #define APPL_INTR_STATUS_L1_0_0_SURPRISE_DOWN_ERR_STATE	BIT(4)
 
+#define APPL_INTR_STATUS_L1_1			0x2C
+#define APPL_INTR_STATUS_L1_2			0x30
+#define APPL_INTR_STATUS_L1_3			0x34
+#define APPL_INTR_STATUS_L1_6			0x3C
+#define APPL_INTR_STATUS_L1_7			0x40
+
 #define APPL_INTR_EN_L1_8_0			0x44
 #define APPL_INTR_EN_L1_8_AER_INT_EN		BIT(15)
 #define APPL_INTR_EN_L1_8_INTX_EN		BIT(11)
@@ -73,6 +79,14 @@
 #define APPL_INTR_STATUS_L1_8_0			0x4C
 #define APPL_INTR_STATUS_L1_8_0_EDMA_INT_MASK	0xFC0
 #define APPL_INTR_STATUS_L1_8_0_AUTO_BW_INT_STS	BIT(3)
+
+#define APPL_INTR_STATUS_L1_9			0x54
+#define APPL_INTR_STATUS_L1_10			0x58
+#define APPL_INTR_STATUS_L1_11			0x64
+#define APPL_INTR_STATUS_L1_13			0x74
+#define APPL_INTR_STATUS_L1_14			0x78
+#define APPL_INTR_STATUS_L1_15			0x7C
+#define APPL_INTR_STATUS_L1_17			0x88
 
 #define APPL_APPL_DEBUG				0xD0
 #define APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT	BIT(21)
@@ -1244,6 +1258,25 @@ static void tegra_pcie_enable_msi_interrupts(struct pcie_port *pp)
 
 static void tegra_pcie_enable_interrupts(struct pcie_port *pp)
 {
+	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
+
+	/* Clear interrupt statuses before enabling interrupts */
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L0);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_0_0);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_1);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_2);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_3);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_6);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_7);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_9);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_10);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_11);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_13);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_14);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_15);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_17);
+
 	tegra_pcie_enable_system_interrupts(pp);
 	tegra_pcie_enable_legacy_interrupts(pp);
 	if (IS_ENABLED(CONFIG_PCI_MSI))

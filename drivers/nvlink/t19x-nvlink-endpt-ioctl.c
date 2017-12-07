@@ -276,6 +276,221 @@ static int t19x_nvlink_clear_counters(struct nvlink_device *ndev,
 	return 0;
 }
 
+static bool t19x_nvlink_is_lane_reversal(struct nvlink_device *ndev)
+{
+	u32 reg_val;
+	bool lane_reversal;
+
+	reg_val = nvlw_nvl_readl(ndev, NVL_SL1_CONFIG_RX);
+	if (reg_val & BIT(NVL_SL1_CONFIG_RX_REVERSAL_OVERRIDE)) {
+		if (reg_val & BIT(NVL_SL1_CONFIG_RX_LANE_REVERSE))
+			lane_reversal = true;
+		else
+			lane_reversal = false;
+	} else {
+		if (reg_val & BIT(NVL_SL1_CONFIG_RX_HW_LANE_REVERSE))
+			lane_reversal = true;
+		else
+			lane_reversal = false;
+	}
+
+	return lane_reversal;
+}
+
+static void t19x_nvlink_get_lane_crc_errors(struct nvlink_device *ndev,
+				struct nvlink_get_counters *get_counters)
+{
+	int i;
+	int lane_id;
+	u32 reg_val;
+	u64 lane_crc_val;
+	u32 counter_mask = get_counters->counter_mask;
+
+	for (i = 0; i < TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_SIZE;
+				i++) {
+		if (counter_mask &
+			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L(i)) {
+
+			lane_id = i;
+
+			if (t19x_nvlink_is_lane_reversal(ndev))
+				lane_id = 7 - lane_id;
+
+			if (lane_id < 4) {
+				reg_val = nvlw_nvl_readl(ndev,
+						NVL_SL1_ERROR_COUNT2_LANECRC);
+			} else {
+				reg_val = nvlw_nvl_readl(ndev,
+						NVL_SL1_ERROR_COUNT3_LANECRC);
+			}
+
+			switch (lane_id) {
+			case 0:
+				lane_crc_val = (u64)
+					NVL_SL1_ERROR_COUNT2_LANECRC_L0_V(
+					reg_val);
+				get_counters->nvlink_counters[
+					nvlink_counter(i)] = lane_crc_val;
+				break;
+			case 1:
+				lane_crc_val = (u64)
+					NVL_SL1_ERROR_COUNT2_LANECRC_L1_V(
+					reg_val);
+				get_counters->nvlink_counters[
+					nvlink_counter(i)] = lane_crc_val;
+				break;
+			case 2:
+				lane_crc_val = (u64)
+					NVL_SL1_ERROR_COUNT2_LANECRC_L2_V(
+					reg_val);
+				get_counters->nvlink_counters[
+					nvlink_counter(i)] = lane_crc_val;
+				break;
+			case 3:
+				lane_crc_val = (u64)
+					NVL_SL1_ERROR_COUNT2_LANECRC_L3_V(
+					reg_val);
+				get_counters->nvlink_counters[
+					nvlink_counter(i)] = lane_crc_val;
+				break;
+			case 4:
+				lane_crc_val = (u64)
+					NVL_SL1_ERROR_COUNT3_LANECRC_L4_V(
+					reg_val);
+				get_counters->nvlink_counters[
+					nvlink_counter(i)] = lane_crc_val;
+				break;
+			case 5:
+				lane_crc_val = (u64)
+					NVL_SL1_ERROR_COUNT3_LANECRC_L5_V(
+					reg_val);
+				get_counters->nvlink_counters[
+					nvlink_counter(i)] = lane_crc_val;
+				break;
+			case 6:
+				lane_crc_val = (u64)
+					NVL_SL1_ERROR_COUNT3_LANECRC_L6_V(
+					reg_val);
+				get_counters->nvlink_counters[
+					nvlink_counter(i)] = lane_crc_val;
+				break;
+			case 7:
+				lane_crc_val = (u64)
+					NVL_SL1_ERROR_COUNT3_LANECRC_L7_V(
+					reg_val);
+				get_counters->nvlink_counters[
+					nvlink_counter(i)] = lane_crc_val;
+				break;
+			default:
+				break;
+			}
+		}
+	}
+}
+
+static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
+				struct nvlink_get_counters *get_counters)
+{
+	u32 reg_val = 0;
+	u64 reg_low = 0;
+	u64 reg_hi = 0;
+	u32 counter_mask = get_counters->counter_mask;
+
+	if (counter_mask & (TEGRA_CTRL_NVLINK_COUNTER_TL_TX0 |
+				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1 |
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX0 |
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX1)) {
+		reg_low = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR0_LO);
+		reg_hi = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR0_HI);
+		if (reg_hi & BIT(NVLTLC_TX_DEBUG_TP_CNTR0_HI_ROLLOVER)) {
+			get_counters->bTx0_tl_counter_overflow = true;
+			reg_hi &= ~BIT(NVLTLC_TX_DEBUG_TP_CNTR0_HI_ROLLOVER);
+		}
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_TX0)] = 0;
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_TX0)] |=
+				((u64) 0xffffffff & reg_low);
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_TX0)] |=
+				(((u64) 0xffffffff & reg_hi) << 32);
+
+		reg_low = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR1_LO);
+		reg_hi = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR1_HI);
+		if (reg_hi & BIT(NVLTLC_TX_DEBUG_TP_CNTR1_HI_ROLLOVER)) {
+			get_counters->bTx1_tl_counter_overflow = true;
+			reg_hi &= ~BIT(NVLTLC_TX_DEBUG_TP_CNTR1_HI_ROLLOVER);
+		}
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1)] = 0;
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1)] |=
+				((u64) 0xffffffff & reg_low);
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1)] |=
+				(((u64) 0xffffffff & reg_hi) << 32);
+
+		reg_low = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR0_LO);
+		reg_hi = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR0_HI);
+		if (reg_hi & BIT(NVLTLC_RX_DEBUG_TP_CNTR0_HI_ROLLOVER)) {
+			get_counters->bRx0_tl_counter_overflow = true;
+			reg_hi &= ~BIT(NVLTLC_RX_DEBUG_TP_CNTR0_HI_ROLLOVER);
+		}
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX0)] = 0;
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX0)] |=
+				((u64) 0xffffffff & reg_low);
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX0)] |=
+				(((u64) 0xffffffff & reg_hi) << 32);
+
+		reg_low = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR1_LO);
+		reg_hi = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR1_HI);
+		if (reg_hi & BIT(NVLTLC_RX_DEBUG_TP_CNTR1_HI_ROLLOVER)) {
+			get_counters->bRx1_tl_counter_overflow = true;
+			reg_hi &= ~BIT(NVLTLC_RX_DEBUG_TP_CNTR1_HI_ROLLOVER);
+		}
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX1)] = 0;
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX1)] |=
+				((u64) 0xffffffff & reg_low);
+		get_counters->nvlink_counters[BIT_IDX_32(
+				TEGRA_CTRL_NVLINK_COUNTER_TL_RX1)] |=
+				(((u64) 0xffffffff & reg_hi) << 32);
+	}
+
+	/* Get the count of flit CRC errors */
+	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_FLIT) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_SL1_ERROR_COUNT1);
+		get_counters->nvlink_counters[BIT_IDX_32(
+			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_FLIT)] =
+			(u64)NVL_SL1_ERROR_COUNT1_FLIT_CRC_ERRORS_V(reg_val);
+	}
+
+	/* Get the count of lane CRC errors */
+	t19x_nvlink_get_lane_crc_errors(ndev, get_counters);
+
+	/* Get the count of replays for the link */
+	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_REPLAY) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_SL0_ERROR_COUNT4);
+		get_counters->nvlink_counters[BIT_IDX_32(
+			TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_REPLAY)] =
+			(u64) NVL_SL0_ERROR_COUNT4_REPLAY_EVENTS_V(reg_val);
+	}
+
+	/*  Get the count of HW recoveries for the link */
+	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_RECOVERY) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_ERROR_COUNT1);
+		get_counters->nvlink_counters[BIT_IDX_32(
+			TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_RECOVERY)] =
+			(u64) NVL_ERROR_COUNT1_RECOVERY_EVENTS_V(reg_val);
+	}
+
+	return 0;
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -283,6 +498,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	struct nvlink_caps *caps;
 	struct nvlink_status *status;
 	struct nvlink_clear_counters *clear_counters;
+	struct nvlink_get_counters *get_counters;
 	int ret = 0;
 
 	if (!ndev) {
@@ -372,6 +588,47 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 			ret = -EINVAL;
 		}
 		kfree(clear_counters);
+		break;
+
+	case TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS:
+		get_counters = devm_kzalloc(ndev->dev,
+					sizeof(struct nvlink_get_counters),
+					GFP_KERNEL);
+		if (!get_counters) {
+			nvlink_err("Can't allocate memory for get counters");
+			return -ENOMEM;
+		}
+
+		ret = copy_from_user(get_counters, (void __user *)arg,
+					sizeof(*get_counters));
+		if (ret) {
+			nvlink_err("Error while copying from userspace");
+			ret = -EFAULT;
+			kfree(get_counters);
+			break;
+		}
+
+		if (get_counters->link_id != 0) {
+			nvlink_err("Invalid link id specified");
+			ret = -EINVAL;
+			kfree(get_counters);
+			break;
+		}
+
+		ret = t19x_nvlink_get_counters(ndev, get_counters);
+		if (ret < 0) {
+			nvlink_err("nvlink get counters failed");
+			kfree(get_counters);
+			break;
+		}
+
+		ret = copy_to_user((void __user *)arg, get_counters,
+					sizeof(*get_counters));
+		if (ret) {
+			nvlink_err("Error while copying get counters");
+			ret = -EFAULT;
+		}
+		kfree(get_counters);
 		break;
 
 	default:

@@ -211,7 +211,7 @@ struct nvlink_status {
 #define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_FLIT		0x00010000
 
 #define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L(i)	(1 << (i + 17))
-#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE__SIZE	8
+#define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_SIZE	8
 #define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L0	0x00020000
 #define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L1	0x00040000
 #define TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L2	0x00080000
@@ -243,6 +243,20 @@ struct nvlink_clear_counters {
 	__u32 counter_mask;
 };
 
+/* TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS */
+#define nvlink_counter(x)	\
+		BIT_IDX_32(TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L(x))
+
+struct nvlink_get_counters {
+	__u8 link_id;
+	__u32 counter_mask;
+	bool bTx0_tl_counter_overflow;
+	bool bTx1_tl_counter_overflow;
+	bool bRx0_tl_counter_overflow;
+	bool bRx1_tl_counter_overflow;
+	__u64 nvlink_counters[TEGRA_CTRL_NVLINK_COUNTER_MAX_TYPES];
+};
+
 /* TODO: choose a unique MAGIC number for ioctl implementation */
 #define TEGRA_NVLINK_IOC_MAGIC	  'T'
 #define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS		\
@@ -251,3 +265,5 @@ struct nvlink_clear_counters {
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC,  2, struct nvlink_status)
 #define TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS		\
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC,  3, struct nvlink_clear_counters)
+#define TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS		\
+		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 4, struct nvlink_get_counters)

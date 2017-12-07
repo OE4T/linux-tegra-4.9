@@ -599,6 +599,7 @@ static void tegra_adma_stop(struct tegra_adma_chan *tdc)
 
 	kfree(tdc->desc);
 	tdc->desc = NULL;
+	tdc->vc.cyclic = NULL;
 }
 
 static void adsp_shrd_sem_wait(struct tegra_adma_chan *tdc)

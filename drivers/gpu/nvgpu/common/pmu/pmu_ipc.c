@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -993,6 +993,15 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 	}
 
 	switch (msg->hdr.unit_id) {
+	case PMU_UNIT_ACR:
+		switch (rpc.function) {
+		case NV_PMU_RPC_ID_ACR_INIT_WPR_REGION:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_ACR_INIT_WPR_REGION");
+			g->pmu_lsf_pmu_wpr_init_done = 1;
+			break;
+		}
+		break;
 	case PMU_UNIT_PERFMON_T18X:
 	case PMU_UNIT_PERFMON:
 		switch (rpc.function) {

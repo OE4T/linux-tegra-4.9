@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -108,6 +108,27 @@ struct pmu_acr_msg {
 		u8 msg_type;
 		struct pmu_acr_msg_bootstrap_falcon acrmsg;
 	};
+};
+
+/* ACR RPC */
+#define NV_PMU_RPC_ID_ACR_INIT_WPR_REGION      0x00
+#define NV_PMU_RPC_ID_ACR_WRITE_CBC_BASE       0x01
+#define NV_PMU_RPC_ID_ACR_BOOTSTRAP_FALCON     0x02
+#define NV_PMU_RPC_ID_ACR_BOOTSTRAP_GR_FALCONS 0x03
+#define NV_PMU_RPC_ID_ACR__COUNT               0x04
+
+/*
+ * structure that holds data used
+ * to execute INIT_WPR_REGION RPC.
+ */
+struct nv_pmu_rpc_struct_acr_init_wpr_region {
+	/*[IN/OUT] Must be first field in RPC structure */
+	struct nv_pmu_rpc_header hdr;
+	/*[IN] ACR region ID of WPR region */
+	u32 wpr_regionId;
+	/* [IN] WPR offset from startAddress */
+	u32 wpr_offset;
+	u32 scratch[1];
 };
 
 #endif /* _GPMUIFACR_H_ */

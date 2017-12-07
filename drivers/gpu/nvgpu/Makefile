@@ -246,6 +246,7 @@ nvgpu-y += \
 	gv100/gr_gv100.o \
 	gv100/regops_gv100.o \
 	gv100/hal_gv100.o \
+	gv100/pmu_gv100.o \
 	pstate/pstate.o \
 	clk/clk_vin.o \
 	clk/clk_fll.o \

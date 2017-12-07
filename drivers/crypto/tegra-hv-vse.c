@@ -3258,6 +3258,27 @@ exit:
 	return err;
 }
 
+static void tegra_hv_vse_shutdown(struct platform_device *pdev)
+{
+	struct tegra_virtual_se_dev *se_dev = platform_get_drvdata(pdev);
+
+	/* Set engine to suspend state */
+	atomic_set(&se_dev->se_suspended, 1);
+
+	if (se_dev->engine_id == VIRTUAL_SE_AES1) {
+		/* Make sure to complete pending async requests */
+		flush_workqueue(se_dev->vse_work_q);
+
+		/* Make sure that there are no pending tasks with SE server */
+		while (atomic_read(&se_dev->ivc_count) != 0)
+			usleep_range(8, 10);
+	}
+
+	/* Wait for  SE server to be free*/
+	while (mutex_is_locked(&se_dev->server_lock))
+		usleep_range(8, 10);
+}
+
 static int tegra_hv_vse_remove(struct platform_device *pdev)
 {
 	int i;
@@ -3278,24 +3299,9 @@ static int tegra_hv_vse_remove(struct platform_device *pdev)
 static int tegra_hv_vse_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct tegra_virtual_se_dev *se_dev = platform_get_drvdata(pdev);
 
-	/* Set engine to suspend state */
-	atomic_set(&se_dev->se_suspended, 1);
-
-	if (se_dev->engine_id == VIRTUAL_SE_AES1) {
-		/* Make sure to complete pending async requests */
-		flush_workqueue(se_dev->vse_work_q);
-
-		/* Make sure that there are no pending tasks with SE server */
-		while (atomic_read(&se_dev->ivc_count) != 0)
-			usleep_range(8, 10);
-	}
-
-	/* Wait for  SE server to be free*/
-	while (mutex_is_locked(&se_dev->server_lock))
-		usleep_range(8, 10);
-
+	/* Keep engine in suspended state */
+	tegra_hv_vse_shutdown(pdev);
 	return 0;
 }
 
@@ -3319,6 +3325,7 @@ static const struct dev_pm_ops tegra_hv_pm_ops = {
 static struct platform_driver tegra_hv_vse_driver = {
 	.probe = tegra_hv_vse_probe,
 	.remove = tegra_hv_vse_remove,
+	.shutdown = tegra_hv_vse_shutdown,
 	.driver = {
 		.name = "tegra_hv_vse",
 		.owner = THIS_MODULE,

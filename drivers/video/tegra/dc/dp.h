@@ -92,6 +92,9 @@ struct tegra_dc_dp_data {
 	bool enabled; /* Controller ready. LT not yet initiated. */
 	bool suspended;
 
+	int test_max_lanes; /* Test maximum cfg settings */
+	int test_max_link_bw;
+
 	u8 edid_src;
 	struct tegra_hpd_data hpd_data;
 #ifdef CONFIG_SWITCH

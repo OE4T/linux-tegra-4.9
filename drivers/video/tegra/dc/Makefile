@@ -23,22 +23,14 @@ obj-$(CONFIG_TEGRA_EDP2LVDS_PS8625) += ps8625_edp2lvds.o
 ccflags-y +=-DCOMMON_MIPICAL_SUPPORTED\
 	-I$(overlay)/drivers/media/platform/tegra
 
-ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
+ifneq ($(filter y,$(CONFIG_TRUSTY) $(CONFIG_TRUSTED_LITTLE_KERNEL)),)
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
 obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o
 obj-$(CONFIG_TEGRA_DPHDCP) += dphdcp.o
 ccflags-$(CONFIG_TEGRA_HDMIHDCP) += -DCONFIG_HDCP
 ccflags-$(CONFIG_TEGRA_DPHDCP) += -DCONFIG_DPHDCP
 endif
-ifeq ($(CONFIG_TEGRA_NVDISPLAY),y)
-ifeq ($(CONFIG_TRUSTY),y)
-obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
-obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o
-obj-$(CONFIG_TEGRA_DPHDCP) += dphdcp.o
-ccflags-$(CONFIG_TEGRA_HDMIHDCP) += -DCONFIG_HDCP
-ccflags-$(CONFIG_TEGRA_DPHDCP) += -DCONFIG_DPHDCP
-endif
-endif
+
 obj-y += edid.o edid_disp_id_ext.o edid_quirks.o
 obj-y += nvsd.o
 obj-y += dsi.o

@@ -14,7 +14,6 @@
  */
 
 #include <dt-bindings/display/tegra-dc.h>
-#include <tegra194-soc/tegra194-soc-base.dtsi>
 
 &sor0 {
 	nvidia,hpd-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(M, 0) GPIO_ACTIVE_HIGH>;

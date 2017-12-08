@@ -14,7 +14,6 @@
  */
 
 #include <dt-bindings/display/tegra-dc.h>
-#include <tegra194-soc/tegra194-soc-base.dtsi>
 
 &sor0_dp_display {
 	nvidia,pc2-disabled;

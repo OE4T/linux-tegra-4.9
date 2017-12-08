@@ -107,16 +107,8 @@ static enum cluster get_cpu_cluster(uint8_t cpu)
 static uint64_t read_freq_feedback(void)
 {
 	uint64_t val;
-	static bool s_val;
 
-	if (tegra_platform_is_sim()) {
-		if (!s_val)
-			val = (0x1L << 32) | 1;
-		else
-			val = (0x5L << 32) | 2;
-		s_val = !s_val;
-	} else
-		asm volatile("mrs %0, s3_0_c15_c0_5" : "=r" (val) : );
+	asm volatile("mrs %0, s3_0_c15_c0_5" : "=r" (val) : );
 
 	return val;
 }
@@ -272,8 +264,7 @@ static void write_ndiv_request(void *val)
 {
 	uint64_t regval = *((uint64_t *) val);
 
-	if (!tegra_platform_is_sim())
-		asm volatile("msr s3_0_c15_c0_4, %0" : : "r" (regval));
+	asm volatile("msr s3_0_c15_c0_4, %0" : : "r" (regval));
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -282,10 +273,7 @@ static void read_ndiv_request(void *ret)
 {
 	uint64_t val = 0;
 
-	if (!tegra_platform_is_sim())
-		asm volatile("mrs %0, s3_0_c15_c0_4" : "=r" (val) : );
-	else
-		val = 4;
+	asm volatile("mrs %0, s3_0_c15_c0_4" : "=r" (val) : );
 	*((uint64_t *) ret) = val;
 }
 #endif

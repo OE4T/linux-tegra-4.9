@@ -142,4 +142,19 @@
 			};
 		};
 	};
+
+	/* SDMMC4 */
+	sdhci@3460000 {
+		nvidia,disable-rtpm;
+	};
+
+	/* SDMMC3 */
+	sdhci@3440000 {
+		nvidia,disable-rtpm;
+	};
+
+	/* SDMMC1 */
+	sdhci@3400000 {
+		nvidia,disable-rtpm;
+	};
 };

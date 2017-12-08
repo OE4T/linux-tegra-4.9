@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T194 Architecture Chips
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -620,7 +620,6 @@ struct nvhost_device_data t19_pva0_info = {
 		{0x80000, false, 8} },
 	.poweron_reset		= true,
 	.serialize		= true,
-	.push_work_done		= true,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(10),
@@ -653,7 +652,6 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.keepalive		= true,
 	.poweron_reset		= true,
 	.serialize		= true,
-	.push_work_done		= true,
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,

@@ -62,6 +62,7 @@ struct nvgpu_ctxsw_trace_filter;
 #include <nvgpu/barrier.h>
 #include <nvgpu/rwsem.h>
 #include <nvgpu/clk_arb.h>
+#include <nvgpu/nvlink.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -961,6 +962,7 @@ struct gpu_ops {
 				bool enable, bool is_stalling, u32 unit);
 		void (*isr_stall)(struct gk20a *g);
 		bool (*is_intr_hub_pending)(struct gk20a *g, u32 mc_intr);
+		bool (*is_intr_nvlink_pending)(struct gk20a *g, u32 mc_intr);
 		u32 (*intr_stall)(struct gk20a *g);
 		void (*intr_stall_pause)(struct gk20a *g);
 		void (*intr_stall_resume)(struct gk20a *g);
@@ -1057,7 +1059,27 @@ struct gpu_ops {
 	struct {
 		int (*check_priv_security)(struct gk20a *g);
 	} fuse;
-
+	struct {
+		u32 (*init)(struct gk20a *g);
+		u32 (*discover_ioctrl)(struct gk20a *g);
+		u32 (*discover_link)(struct gk20a *g);
+		u32 (*isr)(struct gk20a *g);
+		/* API */
+		int (*link_early_init)(struct gk20a *g, unsigned long mask);
+		u32 (*link_get_mode)(struct gk20a *g, u32 link_id);
+		u32 (*link_get_state)(struct gk20a *g, u32 link_id);
+		int (*link_set_mode)(struct gk20a *g, u32 link_id, u32 mode);
+		u32 (*get_sublink_mode)(struct gk20a *g, u32 link_id,
+			bool is_rx_sublink);
+		u32 (*get_rx_sublink_state)(struct gk20a *g, u32 link_id);
+		u32 (*get_tx_sublink_state)(struct gk20a *g, u32 link_id);
+		int (*set_sublink_mode)(struct gk20a *g, u32 link_id,
+			bool is_rx_sublink, u32 mode);
+		int (*interface_init)(struct gk20a *g);
+		int (*reg_init)(struct gk20a *g);
+		int (*shutdown)(struct gk20a *g);
+		int (*early_init)(struct gk20a *g);
+	} nvlink;
 };
 
 struct nvgpu_bios_ucode {
@@ -1100,6 +1122,8 @@ struct nvgpu_bios {
 	struct bit_token *clock_token;
 	struct bit_token *virt_token;
 	u32 expansion_rom_offset;
+
+	u32 nvlink_config_data_offset;
 };
 
 struct nvgpu_gpu_params {
@@ -1153,8 +1177,10 @@ struct gk20a {
 	struct nvgpu_falcon fecs_flcn;
 	struct nvgpu_falcon gpccs_flcn;
 	struct nvgpu_falcon nvdec_flcn;
+	struct nvgpu_falcon minion_flcn;
 	struct clk_gk20a clk;
 	struct fifo_gk20a fifo;
+	struct nvgpu_nvlink_dev nvlink;
 	struct gr_gk20a gr;
 	struct sim_gk20a *sim;
 	struct mm_gk20a mm;

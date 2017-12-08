@@ -77,7 +77,8 @@ struct gk20a;
 #define NVGPU_SUPPORT_MAP_BUFFER_BATCH		25
 /* Support DMA coherence */
 #define NVGPU_DMA_COHERENT			26
-
+/* Use physical scatter tables instead of IOMMU */
+#define NVGPU_MM_USE_PHYSICAL_SG		27
 
 /*
  * Host flags
@@ -113,6 +114,11 @@ struct gk20a;
 #define NVGPU_SEC_SECUREGPCCS			41
 #define NVGPU_SEC_PRIVSECURITY			42
 
+/*
+ * Nvlink flags
+ */
+
+#define NVGPU_SUPPORT_NVLINK			45
 /*
  * PMU flags.
  */

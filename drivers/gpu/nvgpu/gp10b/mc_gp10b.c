@@ -1,7 +1,7 @@
 /*
  * GP10B master
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -122,6 +122,9 @@ void mc_gp10b_isr_stall(struct gk20a *g)
 		g->ops.ltc.isr(g);
 	if (mc_intr_0 & mc_intr_pbus_pending_f())
 		g->ops.bus.isr(g);
+	if (g->ops.mc.is_intr_nvlink_pending &&
+			g->ops.mc.is_intr_nvlink_pending(g, mc_intr_0))
+		g->ops.nvlink.isr(g);
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr done 0x%08x\n", mc_intr_0);
 

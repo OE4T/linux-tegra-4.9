@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -79,6 +79,7 @@ enum nvgpu_log_categories {
 	gpu_dbg_dma        = BIT(22),	/* DMA allocation prints. */
 	gpu_dbg_sgl        = BIT(23),	/* SGL related traces. */
 	gpu_dbg_vidmem     = BIT(24),	/* VIDMEM tracing. */
+	gpu_dbg_nvlink     = BIT(25),   /* nvlink Operation tracing. */
 	gpu_dbg_mem        = BIT(31),	/* memory accesses; very verbose. */
 };
 

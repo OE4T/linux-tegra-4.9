@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -73,6 +73,22 @@ struct bit {
 #define TOKEN_ID_CLOCK_PTRS 0x43
 #define TOKEN_ID_VIRT_PTRS 0x56
 #define TOKEN_ID_MEMORY_PTRS 0x4D
+
+#define NVLINK_CONFIG_DATA_HDR_VER_10 0x1
+#define NVLINK_CONFIG_DATA_HDR_10_SIZE 16
+#define NVLINK_CONFIG_DATA_HDR_11_SIZE 17
+#define NVLINK_CONFIG_DATA_HDR_12_SIZE 21
+
+struct nvlink_config_data_hdr_v1 {
+	u8 version;
+	u8 hdr_size;
+	u16 rsvd0;
+	u32 link_disable_mask;
+	u32 link_mode_mask;
+	u32 link_refclk_mask;
+	u8 train_at_boot;
+	u32 ac_coupling_mask;
+} __packed;
 
 #define MEMORY_PTRS_V1 1
 #define MEMORY_PTRS_V2 2
@@ -369,6 +385,41 @@ static void nvgpu_bios_parse_nvinit_ptrs(struct gk20a *g, int offset)
 	g->bios.bootscripts = &g->bios.data[nvinit_ptrs.bootscripts_ptr];
 	g->bios.bootscripts_size = nvinit_ptrs.bootscripts_size;
 	g->bios.condition_table_ptr = nvinit_ptrs.condition_table_ptr;
+	g->bios.nvlink_config_data_offset = nvinit_ptrs.nvlink_config_data_ptr;
+}
+
+u32 nvgpu_bios_get_nvlink_config_data(struct gk20a *g)
+{
+	struct nvlink_config_data_hdr_v1 config;
+
+	if (g->bios.nvlink_config_data_offset == 0)
+		return -EINVAL;
+
+	memcpy(&config, &g->bios.data[g->bios.nvlink_config_data_offset],
+		sizeof(config));
+
+	if (config.version != NVLINK_CONFIG_DATA_HDR_VER_10) {
+		nvgpu_err(g, "unsupported nvlink bios version: 0x%x",
+								config.version);
+		return -EINVAL;
+	}
+
+	switch (config.hdr_size) {
+	case NVLINK_CONFIG_DATA_HDR_12_SIZE:
+		g->nvlink.ac_coupling_mask = config.ac_coupling_mask;
+	case NVLINK_CONFIG_DATA_HDR_11_SIZE:
+		g->nvlink.train_at_boot = config.train_at_boot;
+	case NVLINK_CONFIG_DATA_HDR_10_SIZE:
+		g->nvlink.link_disable_mask = config.link_disable_mask;
+		g->nvlink.link_mode_mask = config.link_mode_mask;
+		g->nvlink.link_refclk_mask = config.link_refclk_mask;
+		break;
+	default:
+		nvgpu_err(g, "invalid nvlink bios config size");
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 static void nvgpu_bios_parse_memory_ptrs(struct gk20a *g, int offset, u8 version)

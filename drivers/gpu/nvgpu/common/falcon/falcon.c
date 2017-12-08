@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -383,6 +383,10 @@ void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
 		break;
 	case FALCON_ID_NVDEC:
 		flcn = &g->nvdec_flcn;
+		flcn->flcn_id = flcn_id;
+		break;
+	case FALCON_ID_MINION:
+		flcn = &g->minion_flcn;
 		flcn->flcn_id = flcn_id;
 		break;
 	default:

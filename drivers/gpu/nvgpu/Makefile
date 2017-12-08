@@ -55,6 +55,7 @@ nvgpu-y := \
 	common/linux/ce2.o \
 	common/linux/sim.o \
 	common/linux/os_sched.o \
+	common/linux/nvlink.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
@@ -290,7 +291,6 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/gp10b/vgpu_gr_gp10b.o  \
 	common/linux/vgpu/gp10b/vgpu_fuse_gp10b.o  \
 	common/linux/vgpu/gp10b/vgpu_mm_gp10b.o
-
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/gv11b/platform_gv11b_vgpu_tegra.o \

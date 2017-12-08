@@ -21,6 +21,7 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/nvlink.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
 
@@ -627,6 +628,18 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	if (err) {
 		nvgpu_err(g, "pm init failed");
 		return err;
+	}
+
+	err = nvgpu_nvlink_probe(g);
+	/*
+	 * ENODEV is a legal error which means there is no NVLINK
+	 * any other error is fatal
+	 */
+	if (err) {
+		if (err != -ENODEV) {
+			nvgpu_err(g, "fatal error probing nvlink, bailing out");
+			return err;
+		}
 	}
 
 	g->mm.has_physical_mode = false;

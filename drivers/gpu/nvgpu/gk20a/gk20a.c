@@ -186,6 +186,18 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_NVLINK)) {
+		if (g->ops.nvlink.init) {
+			err = g->ops.nvlink.init(g);
+			if (err) {
+				nvgpu_err(g, "failed to init nvlink");
+				__nvgpu_set_enabled(g, NVGPU_SUPPORT_NVLINK,
+									false);
+			}
+		} else
+			__nvgpu_set_enabled(g, NVGPU_SUPPORT_NVLINK, false);
+	}
+
 	if (g->ops.fb.mem_unlock) {
 		err = g->ops.fb.mem_unlock(g);
 		if (err) {

@@ -246,6 +246,11 @@
                 tx-config = <8 8 0 64>;
                 rx-config = <64 64 64>;
         };
+
+        mc {
+               ecc_on_camera_fw;
+        };
+
 };
 
 #ifdef KERNEL_VERSION_4_9

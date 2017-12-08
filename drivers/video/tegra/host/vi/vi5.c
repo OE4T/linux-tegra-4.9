@@ -31,7 +31,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
-#include <linux/tegra-rce-rm.h>
 #include <linux/uaccess.h>
 #include <media/capture_vi_channel.h>
 #include <soc/tegra/camrtc-capture.h>
@@ -53,7 +52,6 @@
 
 struct host_vi5 {
 	struct platform_device *pdev;
-	struct platform_device *rce_rm;
 	struct platform_device *vi_thi;
 	struct vi vi_common;
 
@@ -139,8 +137,6 @@ static int vi5_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
 	struct device_node *thi_np;
-	struct device_node *rm_np;
-	struct platform_device *rm = NULL;
 	struct platform_device *thi = NULL;
 	struct host_vi5 *vi5;
 	int err = 0;
@@ -151,37 +147,17 @@ static int vi5_probe(struct platform_device *pdev)
 		return -ENODATA;
 	}
 
-	rm_np = of_parse_phandle(dev->of_node, "nvidia,rce-rm-device", 0);
-	if (rm_np == NULL) {
-		dev_WARN(dev, "missing %s handle\n", "nvidia,rce-rm-device");
-		return -ENODEV;
-	}
-
-	rm = of_find_device_by_node(rm_np);
-	of_node_put(rm_np);
-
-	if (rm == NULL)
-		return -ENODEV;
-
-	if (rm->dev.driver == NULL) {
-		err = -EPROBE_DEFER;
-		goto put_rm;
-	}
-
 	thi_np = of_parse_phandle(dev->of_node, "nvidia,vi-falcon-device", 0);
 	if (thi_np == NULL) {
 		dev_WARN(dev, "missing %s handle\n", "nvidia,vi-falcon-device");
-		err = -ENODEV;
-		goto put_rm;
+		return -ENODEV;
 	}
 
 	thi = of_find_device_by_node(thi_np);
 	of_node_put(thi_np);
 
-	if (thi == NULL) {
-		err = -ENODEV;
-		goto put_rm;
-	}
+	if (thi == NULL)
+		return -ENODEV;
 
 	if (thi->dev.driver == NULL) {
 		err = -EPROBE_DEFER;
@@ -194,7 +170,6 @@ static int vi5_probe(struct platform_device *pdev)
 		goto put_vi;
 	}
 
-	vi5->rce_rm = rm;
 	vi5->vi_thi = thi;
 	vi5->pdev = pdev;
 	info->pdev = pdev;
@@ -214,16 +189,9 @@ static int vi5_probe(struct platform_device *pdev)
 	if (err)
 		goto deinit;
 
-	err = rce_rm_map_carveout_for_device(rm, dev, &vi5->rm_sgt);
-	if (err < 0)
-		goto device_release;
-
-	dev_info(dev, "mapped vi scratch at 0x%llx\n",
-		vi5->rm_sgt.sgl->dma_address);
-
 	err = vi_channel_drv_register(pdev, &vi5_channel_drv_ops);
 	if (err)
-		goto unmap;
+		goto device_release;
 
 	vi5_init_debugfs(vi5);
 
@@ -237,19 +205,12 @@ static int vi5_probe(struct platform_device *pdev)
 
 	return 0;
 
-unmap:
-	dma_unmap_sg(dev, vi5->rm_sgt.sgl, vi5->rm_sgt.orig_nents,
-		DMA_FROM_DEVICE);
-	sg_free_table(&vi5->rm_sgt);
-
 device_release:
 	nvhost_client_device_release(pdev);
 deinit:
 	nvhost_module_deinit(pdev);
 put_vi:
 	platform_device_put(thi);
-put_rm:
-	platform_device_put(rm);
 	if (err != -EPROBE_DEFER)
 		dev_err(dev, "probe failed: %d\n", err);
 	info->private_data = NULL;
@@ -373,7 +334,6 @@ static int vi5_remove(struct platform_device *pdev)
 
 	vi5_remove_debugfs(vi5);
 	platform_device_put(vi5->vi_thi);
-	platform_device_put(vi5->rce_rm);
 
 	return 0;
 }

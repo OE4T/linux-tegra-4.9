@@ -120,36 +120,6 @@ int t194_capture_get_syncpt_gos_backing(struct platform_device *pdev,
 }
 EXPORT_SYMBOL_GPL(t194_capture_get_syncpt_gos_backing);
 
-static int check_rce_rm(struct device *dev)
-{
-	struct device_node *rm_np;
-	struct platform_device *rm = NULL;
-
-	rm_np = of_parse_phandle(dev->of_node, "nvidia,rce-rm-device", 0);
-	if (rm_np == NULL) {
-		dev_warn(dev, "missing %s handle\n", "nvidia,rce-rm-device");
-		return -ENODEV;
-	}
-
-	rm = of_find_device_by_node(rm_np);
-	of_node_put(rm_np);
-
-	if (rm == NULL)
-		return -ENODEV;
-
-	/* Make sure rce_rm is probed before trying to use GoS */
-
-	if (rm->dev.driver == NULL) {
-		dev_info(dev, "rce-rm not probed, deferring\n");
-		platform_device_put(rm);
-		return -EPROBE_DEFER;
-	}
-
-	platform_device_put(rm);
-
-	return 0;
-}
-
 static int t194_capture_support_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -161,10 +131,6 @@ static int t194_capture_support_probe(struct platform_device *pdev)
 	info = (void *)of_device_get_match_data(dev);
 	if (WARN_ON(info == NULL))
 		return -ENODATA;
-
-	err = check_rce_rm(dev);
-	if (err)
-		return err;
 
 	info->pdev = pdev;
 	mutex_init(&info->lock);

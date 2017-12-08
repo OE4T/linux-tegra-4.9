@@ -92,7 +92,7 @@
 			nvidia,frame-size = <8192>;
 			nvidia,ivc-timeout = <50>;
 			nvidia,test-timeout = <5000>;
-			nvidia,mem-map = <&rce_rm &vi &isp>;
+			nvidia,mem-map = <&tegra_rce &vi &isp>;
 		};
 		ivccontrol@3 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";
@@ -116,15 +116,5 @@
 		nvidia,enable-printk;
 		nvidia,interval-ms = <50>;
 		nvidia,log-prefix = "[RCE]";
-	};
-
-	rce_rm: rce-rm@bc00000 {
-		compatible = "nvidia,tegra194-rce-rm";
-		reg = <0 0xbc00000 0 0x1000>;
-
-		iommus = <&smmu TEGRA_SID_RCE_RM>;
-		dma-coherent;
-
-		nvidia,scratch-area = <0x80000000 0x600000>; /* 6M */
 	};
 };

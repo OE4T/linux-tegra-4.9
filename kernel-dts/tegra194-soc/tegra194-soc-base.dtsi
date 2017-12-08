@@ -284,6 +284,10 @@
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
 			};
+			isp_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID(ISP)>;
+			};
 			pcie0_domain {
 				address-space = <&pcie0_as>;
 				sid-list = <TEGRA_SID_PCIE0>;
@@ -319,13 +323,6 @@
 			rce_domain {
 				address-space = <&camera_vm1_as>;
 				sid-list = <TEGRA_SID(RCE)>;
-			};
-			rce_rm_domain {
-				address-space = <&camera_vm0_as>;
-				sid-list = <TEGRA_SID(RCE_RM)
-					    TEGRA_SID(ISP)
-					    TEGRA_SID(ISPFALC)
-					    TEGRA_SID(VIFALC)>;
 			};
 			sata2_domain {
 				address-space = <&common_as>;
@@ -1258,7 +1255,6 @@
 			clock-names = "vi", "vi-const", "nvcsi", "nvcsilp";
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VE>;
 
-			nvidia,rce-rm-device = <&rce_rm>;
 			nvidia,vi-falcon-device = <&vi_thi>;
 
 			iommus = <&smmu TEGRA_SID_VI>;
@@ -1269,13 +1265,10 @@
 			compatible = "nvidia,tegra194-vi-thi";
 
 			/* vi-thi host1x is used for pixel injection tests */
-			nvidia,rce-rm-device = <&rce_rm>;
 			clocks = <&bpmp_clks TEGRA194_CLK_VI>,
 			         <&bpmp_clks TEGRA194_CLK_VI_CONST>;
 			clock-names = "vi", "vi-const";
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VE>;
-
-			iommus = <&smmu TEGRA_SID_VIFALC>;
 		};
 
 		isp: isp@14800000 {
@@ -1297,11 +1290,6 @@
 		isp_thi: isp-thi@14b00000 {
 			compatible = "nvidia,tegra194-isp-thi";
                         reg = <0x0 0x14b00000 0x0 0x00100000>;
-
-			nvidia,rce-rm-device = <&rce_rm>;
-
-			iommus = <&smmu TEGRA_SID_ISPFALC>;
-			dma-coherent;
 		};
 
 		nvcsi: nvcsi@15a00000 {

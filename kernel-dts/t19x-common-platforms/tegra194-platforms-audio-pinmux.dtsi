@@ -26,6 +26,7 @@
 				nvidia,function = "dmic1";
 			};
 		};
+
 		/* Dynamic pinmux config for DMIC2 */
 		dmic2_dap_active_state: dmic2_dap_active {
 			dmic_dap3_din_pt3 {
@@ -37,6 +38,7 @@
 				nvidia,function = "dmic2";
 			};
 		};
+
 		/* Dynamic pinmux config for DMIC3 */
 		dmic3_dap_active_state: dmic3_dap_active {
 			dmic_can1_stb_pbb0 {
@@ -58,17 +60,43 @@
 				nvidia,function = "dmic5";
 			};
 		};
+
 		/* Dynamic pinmux config for DMIC4 */
 		dmic4_dap_active_state: dmic4_dap_active {
-			dmic_dap5_din_pt7 {
+			dmic4_dap5_din_pt7 {
 				nvidia,pins = "dap5_din_pt7";
 				nvidia,function = "dmic4";
 			};
-			dmic_dap5_fs_pu0 {
+			dmic4_dap5_fs_pu0 {
 				nvidia,pins = "dap5_fs_pu0";
 				nvidia,function = "dmic4";
 			};
 		};
+
+		/* Dynamic pinmux config for DSPK0 */
+		dspk0_dap_active_state: dspk0_dap_active {
+			dspk0_dap5_dout_pt6 {
+				nvidia,pins = "dap5_dout_pt6";
+				nvidia,function = "dspk0";
+			};
+			dspk0_dap5_sclk_pt5 {
+				nvidia,pins = "dap5_sclk_pt5";
+				nvidia,function = "dspk0";
+			};
+		};
+
+		/* Dynamic pinmux config for DSPK1 */
+		dspk1_dap_active_state: dspk1_dap_active {
+			dspk1_dap5_din_pt7 {
+				nvidia,pins = "dap5_din_pt7";
+				nvidia,function = "dspk1";
+			};
+			dspk1_dap5_fs_pu0 {
+				nvidia,pins = "dap5_fs_pu0";
+				nvidia,function = "dspk1";
+			};
+		};
+
 		/* Dynamic pinmux config for I2S3 */
 		i2s3_dap_active_state: i2s3_dap_active {
 			i2s3_dap3_sclk_pt1 {
@@ -86,6 +114,26 @@
 			i2s3_dap3_fs_pt4 {
 				nvidia,pins = "dap3_fs_pt4";
 				nvidia,function = "i2s3";
+			};
+		};
+
+		/* Dynamic pinmux config for I2S5 */
+		i2s5_dap_active_state: i2s5_dap_active {
+			i2s5_dap5_fs_pu0 {
+				nvidia,pins = "dap5_fs_pu0";
+				nvidia,function = "i2s5";
+			};
+			i2s5_dap5_din_pt7 {
+				nvidia,pins = "dap5_din_pt7";
+				nvidia,function = "i2s5";
+			};
+			i2s5_dap5_dout_pt6 {
+				nvidia,pins = "dap5_dout_pt6";
+				nvidia,function = "i2s5";
+			};
+			i2s5_dap5_sclk_pt5 {
+				nvidia,pins = "dap5_sclk_pt5";
+				nvidia,function = "i2s5";
 			};
 		};
 	};
@@ -117,10 +165,28 @@
 				pinctrl-0 = <&dmic4_dap_active_state>;
 				pinctrl-1 = <>;
 			};
+			dspk@2905000 {
+				nvidia,is-pinctrl = <1>;
+				pinctrl-names = "dap_active", "dap_inactive";
+				pinctrl-0 = <&dspk0_dap_active_state>;
+				pinctrl-1 = <>;
+			};
+			dspk@2905100 {
+				nvidia,is-pinctrl = <1>;
+				pinctrl-names = "dap_active", "dap_inactive";
+				pinctrl-0 = <&dspk1_dap_active_state>;
+				pinctrl-1 = <>;
+			};
 			i2s@2901200 {
 				nvidia,is-pinctrl = <1>;
 				pinctrl-names = "dap_active", "dap_inactive";
 				pinctrl-0 = <&i2s3_dap_active_state>;
+				pinctrl-1 = <>;
+			};
+			i2s@2901400 {
+				nvidia,is-pinctrl = <1>;
+				pinctrl-names = "dap_active", "dap_inactive";
+				pinctrl-0 = <&i2s5_dap_active_state>;
 				pinctrl-1 = <>;
 			};
 		};

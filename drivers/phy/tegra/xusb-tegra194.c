@@ -264,6 +264,145 @@ static const struct tegra_xusb_lane_ops tegra194_usb2_lane_ops = {
 	.remove = tegra194_usb2_lane_remove,
 };
 
+static void tegra194_utmi_bias_pad_power_on(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra194_xusb_padctl *priv = to_tegra194_xusb_padctl(padctl);
+	u32 reg;
+
+	mutex_lock(&padctl->lock);
+	if (priv->bias_pad_enable++ > 0) {
+		mutex_unlock(&padctl->lock);
+		return;
+	}
+
+	if (clk_prepare_enable(priv->usb2_trk_clk))
+		dev_warn(padctl->dev, "failed to enable USB2 trk clock\n");
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
+	reg &= ~USB2_TRK_START_TIMER(~0);
+	reg |= USB2_TRK_START_TIMER(0x1e);
+	reg &= ~USB2_TRK_DONE_RESET_TIMER(~0);
+	reg |= USB2_TRK_DONE_RESET_TIMER(0xa);
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+	reg &= ~BIAS_PAD_PD;
+	reg &= ~HS_SQUELCH_LEVEL(~0);
+	reg |= HS_SQUELCH_LEVEL(priv->calib.hs_squelch);
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+
+	udelay(1);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
+	reg &= ~USB2_PD_TRK;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
+
+	mutex_unlock(&padctl->lock);
+}
+
+static void tegra194_utmi_bias_pad_power_off(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra194_xusb_padctl *priv = to_tegra194_xusb_padctl(padctl);
+	u32 reg;
+
+	mutex_lock(&padctl->lock);
+
+	if (WARN_ON(priv->bias_pad_enable == 0)) {
+		mutex_unlock(&padctl->lock);
+		return;
+	}
+
+	if (--priv->bias_pad_enable > 0) {
+		mutex_unlock(&padctl->lock);
+		return;
+	}
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
+	reg |= USB2_PD_TRK;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
+
+	clk_disable_unprepare(priv->usb2_trk_clk);
+
+	mutex_unlock(&padctl->lock);
+}
+
+
+static inline bool is_utmi_phy(struct phy *phy);
+void tegra194_utmi_pad_power_on(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_usb2_lane *usb2;
+	struct tegra_xusb_padctl *padctl;
+	unsigned int index;
+	struct device *dev;
+	u32 reg;
+
+	if (!phy || !is_utmi_phy(phy))
+		return;
+
+	lane = phy_get_drvdata(phy);
+	usb2 = to_usb2_lane(lane);
+	padctl = lane->pad->padctl;
+	index = lane->index;
+	dev = padctl->dev;
+
+	dev_dbg(dev, "power on UTMI pads %d\n", index);
+
+	if (usb2->powered_on)
+		return;
+
+	tegra194_utmi_bias_pad_power_on(padctl);
+
+	udelay(2);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+	reg &= ~USB2_OTG_PD;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
+	reg &= ~USB2_OTG_PD_DR;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
+
+	usb2->powered_on = true;
+}
+
+void tegra194_utmi_pad_power_down(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_usb2_lane *usb2;
+	struct tegra_xusb_padctl *padctl;
+	unsigned int index;
+	struct device *dev;
+	u32 reg;
+
+	if (!phy || !is_utmi_phy(phy))
+		return;
+
+	lane = phy_get_drvdata(phy);
+	usb2 = to_usb2_lane(lane);
+	padctl = lane->pad->padctl;
+	index = lane->index;
+	dev = padctl->dev;
+
+	dev_dbg(dev, "power down UTMI pad %d\n", index);
+
+	if (!usb2->powered_on)
+		return;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+	reg |= USB2_OTG_PD;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
+	reg |= USB2_OTG_PD_DR;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
+
+	udelay(2);
+
+	tegra194_utmi_bias_pad_power_off(padctl);
+	usb2->powered_on = false;
+}
+
 static int tegra194_utmi_phy_power_on(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
@@ -1314,6 +1453,8 @@ static const struct tegra_xusb_padctl_ops tegra194_xusb_padctl_ops = {
 	.vbus_override = tegra194_xusb_padctl_vbus_override,
 	.phy_sleepwalk = tegra194_xusb_padctl_phy_sleepwalk,
 	.phy_wake = tegra194_xusb_padctl_phy_wake,
+	.utmi_pad_power_on = tegra194_utmi_pad_power_on,
+	.utmi_pad_power_down = tegra194_utmi_pad_power_down,
 };
 
 static const char * const tegra194_supply_names[] = {

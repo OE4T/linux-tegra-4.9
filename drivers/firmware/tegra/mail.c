@@ -197,27 +197,23 @@ static int bpmp_write_threaded_ch(int *ch, int mrq, void *data, int sz)
 	int ret;
 	int i;
 
-	ret = down_timeout(&tch_sem, usecs_to_jiffies(THREAD_CH_TIMEOUT));
-	if (ret) {
-		pr_err("%s() down_timeout return %d\n", __func__, ret);
-		pr_err("tch_free 0x%x to_complete 0x%x\n",
-				tch_free, to_complete);
-		return ret;
-	}
-
 	spin_lock_irqsave(&lock, flags);
 
 	i = __ffs(tch_free);
 	*ch = bpmp_thread_ch(i);
 
 	ret = mail_ops->master_free(mail_ops, *ch) ? 0 : -EFAULT;
-	if (!ret) {
+
+	if (ret) {
+		pr_err("bpmp: channel %d is not free to write\n", *ch);
+	} else {
 		tch_free &= ~(1 << i);
 		__bpmp_write_ch(*ch, mrq, DO_ACK | RING_DOORBELL, data, sz);
 		to_complete |= 1 << *ch;
 	}
 
 	spin_unlock_irqrestore(&lock, flags);
+
 	return ret;
 }
 
@@ -247,7 +243,6 @@ static int bpmp_read_ch(int ch, void *data, int sz)
 	tch_free |= (1 << tchi);
 	spin_unlock_irqrestore(&lock, flags);
 
-	up(&tch_sem);
 	return r;
 }
 
@@ -384,9 +379,17 @@ int tegra_bpmp_send_receive(int mrq, void *ob_data, int ob_sz,
 	if (!mail_ops)
 		return -ENODEV;
 
+	r = down_timeout(&tch_sem, usecs_to_jiffies(THREAD_CH_TIMEOUT));
+	if (r) {
+		pr_err("%s() down_timeout return %d\n", __func__, r);
+		pr_err("tch_free 0x%x to_complete 0x%x\n",
+				tch_free, to_complete);
+		return r;
+	}
+
 	r = bpmp_write_threaded_ch(&ch, mrq, ob_data, ob_sz);
 	if (r)
-		return r;
+		goto out;
 
 	if (mail_ops->ring_doorbell)
 		mail_ops->ring_doorbell(ch);
@@ -395,7 +398,12 @@ int tegra_bpmp_send_receive(int mrq, void *ob_data, int ob_sz,
 	if (r)
 		return r;
 
-	return bpmp_read_ch(ch, ib_data, ib_sz);
+	r = bpmp_read_ch(ch, ib_data, ib_sz);
+
+out:
+	up(&tch_sem);
+
+	return r;
 }
 EXPORT_SYMBOL(tegra_bpmp_send_receive);
 

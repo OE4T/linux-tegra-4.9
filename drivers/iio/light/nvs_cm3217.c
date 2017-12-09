@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -26,7 +26,7 @@
 #include <linux/nvs.h>
 #include <linux/nvs_light.h>
 
-#define CM_DRIVER_VERSION		(102)
+#define CM_DRIVER_VERSION		(103)
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3217"
 #define CM_LIGHT_VERSION		(1)
@@ -81,7 +81,8 @@ struct cm_state {
 	struct nvs_fn_if *nvs;
 	void *nvs_st;
 	struct sensor_cfg cfg;
-	struct delayed_work dw;
+	struct workqueue_struct *wq;
+	struct work_struct ws;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(cm_vregs)];
 	struct nvs_light light;
 	struct nld_thresh nld_thr[ARRAY_SIZE(cm_nld_tbl)];
@@ -252,30 +253,31 @@ static int cm_rd(struct cm_state *st)
 	return 0;
 }
 
-static void cm_read(struct cm_state *st)
+static int cm_read(struct cm_state *st)
 {
+	int ret;
+
 	st->nvs->nvs_mutex_lock(st->nvs_st);
-	if (st->enabled) {
-		cm_rd(st);
-		schedule_delayed_work(&st->dw,
-				    msecs_to_jiffies(st->light.poll_delay_ms));
-	}
+	ret = cm_rd(st);
 	st->nvs->nvs_mutex_unlock(st->nvs_st);
+	return ret;
 }
 
 static void cm_work(struct work_struct *ws)
 {
-	struct cm_state *st = container_of((struct delayed_work *)ws,
-					   struct cm_state, dw);
+	struct cm_state *st = container_of((struct work_struct *)ws,
+					   struct cm_state, ws);
 
-	cm_read(st);
+	while (st->enabled) {
+		msleep(st->light.poll_delay_ms);
+		cm_read(st);
+	}
 }
 
 static int cm_disable(struct cm_state *st)
 {
 	int ret;
 
-	cancel_delayed_work(&st->dw);
 	ret = cm_pm(st, false);
 	if (!ret)
 		st->enabled = 0;
@@ -285,7 +287,6 @@ static int cm_disable(struct cm_state *st)
 static int cm_enable(void *client, int snsr_id, int enable)
 {
 	struct cm_state *st = (struct cm_state *)client;
-	unsigned int ms;
 	int ret;
 
 	if (enable < 0)
@@ -300,9 +301,8 @@ static int cm_enable(void *client, int snsr_id, int enable)
 				cm_disable(st);
 			} else {
 				st->enabled = 1;
-				ms = st->light.poll_delay_ms;
-				schedule_delayed_work(&st->dw,
-						      msecs_to_jiffies(ms));
+				cancel_work_sync(&st->ws);
+				queue_work(st->wq, &st->ws);
 			}
 		}
 	} else {
@@ -442,8 +442,10 @@ static int cm_remove(struct i2c_client *client)
 		cm_shutdown(client);
 		if (st->nvs && st->nvs_st)
 			st->nvs->remove(st->nvs_st);
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
+		if (st->wq) {
+			destroy_workqueue(st->wq);
+			st->wq = NULL;
+		}
 		cm_pm_exit(st);
 	}
 	dev_info(&client->dev, "%s\n", __func__);
@@ -567,7 +569,14 @@ static int cm_probe(struct i2c_client *client,
 	}
 
 	st->light.nvs_st = st->nvs_st;
-	INIT_DELAYED_WORK(&st->dw, cm_work);
+	st->wq = create_workqueue(CM_NAME);
+	if (!st->wq) {
+		dev_err(&client->dev, "%s create_workqueue ERR\n", __func__);
+		ret = -ENOMEM;
+		goto cm_probe_exit;
+	}
+
+	INIT_WORK(&st->ws, cm_work);
 	dev_info(&client->dev, "%s done\n", __func__);
 	return 0;
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -30,7 +30,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define LTR_DRIVER_VERSION		(2)
+#define LTR_DRIVER_VERSION		(3)
 #define LTR_VENDOR			"Lite-On Technology Corp."
 #define LTR_NAME			"ltrX5X"
 #define LTR_NAME_LTR558ALS		"ltr558als"
@@ -156,7 +156,8 @@ struct ltr_state {
 	struct nvs_fn_if *nvs;
 	void *nvs_st[LTR_DEV_N];
 	struct sensor_cfg cfg[LTR_DEV_N];
-	struct delayed_work dw;
+	struct workqueue_struct *wq;
+	struct work_struct ws;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(ltr_vregs)];
 	struct nvs_light light;
 	struct nvs_proximity prox;
@@ -582,35 +583,46 @@ static unsigned int ltr_polldelay(struct ltr_state *st)
 	return poll_delay_ms;
 }
 
-static void ltr_read(struct ltr_state *st)
+static int ltr_read(struct ltr_state *st)
 {
 	int ret;
 
 	ltr_mutex_lock(st);
-	if (st->enabled) {
-		ret = ltr_rd(st);
-		if (ret < 1)
-			schedule_delayed_work(&st->dw,
-					  msecs_to_jiffies(ltr_polldelay(st)));
-	}
+	ret = ltr_rd(st);
 	ltr_mutex_unlock(st);
+	return ret;
 }
 
 static void ltr_work(struct work_struct *ws)
 {
-	struct ltr_state *st = container_of((struct delayed_work *)ws,
-					   struct ltr_state, dw);
+	struct ltr_state *st = container_of((struct work_struct *)ws,
+					   struct ltr_state, ws);
+	int ret;
 
-	ltr_read(st);
+	while (st->enabled) {
+		msleep(ltr_polldelay(st));
+		ret = ltr_read(st);
+		if (ret == RET_HW_UPDATE)
+			/* switch to IRQ driven */
+			break;
+	}
 }
 
 static irqreturn_t ltr_irq_thread(int irq, void *dev_id)
 {
 	struct ltr_state *st = (struct ltr_state *)dev_id;
+	int ret;
 
 	if (st->sts & NVS_STS_SPEW_IRQ)
 		dev_info(&st->i2c->dev, "%s\n", __func__);
-	ltr_read(st);
+	if (st->enabled) {
+		ret = ltr_read(st);
+		if (ret < RET_HW_UPDATE) {
+			/* switch to polling */
+			cancel_work_sync(&st->ws);
+			queue_work(st->wq, &st->ws);
+		}
+	}
 	return IRQ_HANDLED;
 }
 
@@ -631,7 +643,6 @@ static int ltr_disable(struct ltr_state *st, int snsr_id)
 		}
 	}
 	if (disable) {
-		cancel_delayed_work(&st->dw);
 		ret |= ltr_pm(st, 0);
 		if (!ret)
 			st->enabled = 0;
@@ -656,8 +667,8 @@ static int ltr_enable(void *client, int snsr_id, int enable)
 				ltr_disable(st, snsr_id);
 			} else {
 				st->enabled = enable;
-				schedule_delayed_work(&st->dw,
-					msecs_to_jiffies(LTR_POLL_DLY_MS_MIN));
+				cancel_work_sync(&st->ws);
+				queue_work(st->wq, &st->ws);
 			}
 		}
 	} else {
@@ -912,8 +923,10 @@ static int ltr_remove(struct i2c_client *client)
 					st->nvs->remove(st->nvs_st[i]);
 			}
 		}
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
+		if (st->wq) {
+			destroy_workqueue(st->wq);
+			st->wq = NULL;
+		}
 		ltr_pm_exit(st);
 	}
 	dev_info(&client->dev, "%s\n", __func__);
@@ -1197,7 +1210,14 @@ static int ltr_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	st->light.nvs_st = st->nvs_st[LTR_DEV_LIGHT];
 	st->prox.nvs_st = st->nvs_st[LTR_DEV_PROX];
-	INIT_DELAYED_WORK(&st->dw, ltr_work);
+	st->wq = create_workqueue(LTR_NAME);
+	if (!st->wq) {
+		dev_err(&client->dev, "%s create_workqueue ERR\n", __func__);
+		ret = -ENOMEM;
+		goto ltr_probe_exit;
+	}
+
+	INIT_WORK(&st->ws, ltr_work);
 	if (client->irq) {
 		irqflags = IRQF_ONESHOT;
 		if (st->interrupt & LTR_REG_INTERRUPT_POLARITY)

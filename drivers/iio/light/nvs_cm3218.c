@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,7 +29,7 @@
 #include <linux/nvs.h>
 #include <linux/nvs_light.h>
 
-#define CM_DRIVER_VERSION		(302)
+#define CM_DRIVER_VERSION		(303)
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3218x"
 #define CM_NAME_CM3218			"cm3218"
@@ -134,7 +134,8 @@ struct cm_state {
 	struct i2c_client *ara;
 	struct nvs_fn_if *nvs;
 	struct sensor_cfg cfg;
-	struct delayed_work dw;
+	struct workqueue_struct *wq;
+	struct work_struct ws;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(cm_vregs)];
 	struct nvs_light light;
 	struct nvs_light_dynamic nld_tbl[ARRAY_SIZE(cm32181_nld_tbl)];
@@ -376,39 +377,46 @@ static int cm_rd(struct cm_state *st)
 	return ret;
 }
 
-static void cm_read(struct cm_state *st)
+static int cm_read(struct cm_state *st)
 {
 	int ret;
 
 	st->nvs->nvs_mutex_lock(st->light.nvs_st);
-	if (st->enabled) {
-		ret = cm_rd(st);
-		if (ret < RET_HW_UPDATE) {
-			schedule_delayed_work(&st->dw,
-				    msecs_to_jiffies(st->light.poll_delay_ms));
-			if (st->sts & NVS_STS_SPEW_MSG)
-				dev_info(&st->i2c->dev, "%s poll delay=%ums\n",
-					 __func__, st->light.poll_delay_ms);
-		}
-	}
+	ret = cm_rd(st);
 	st->nvs->nvs_mutex_unlock(st->light.nvs_st);
+	return ret;
 }
 
 static void cm_work(struct work_struct *ws)
 {
-	struct cm_state *st = container_of((struct delayed_work *)ws,
-					   struct cm_state, dw);
+	struct cm_state *st = container_of((struct work_struct *)ws,
+					   struct cm_state, ws);
+	int ret;
 
-	cm_read(st);
+	while (st->enabled) {
+		msleep(st->light.poll_delay_ms);
+		ret = cm_read(st);
+		if (ret == RET_HW_UPDATE)
+			/* switch to IRQ driven */
+			break;
+	}
 }
 
 static irqreturn_t cm_irq_thread(int irq, void *dev_id)
 {
 	struct cm_state *st = (struct cm_state *)dev_id;
+	int ret;
 
 	if (st->sts & NVS_STS_SPEW_IRQ)
 		dev_info(&st->i2c->dev, "%s\n", __func__);
-	cm_read(st);
+	if (st->enabled) {
+		ret = cm_read(st);
+		if (ret < RET_HW_UPDATE) {
+			/* switch to polling */
+			cancel_work_sync(&st->ws);
+			queue_work(st->wq, &st->ws);
+		}
+	}
 	return IRQ_HANDLED;
 }
 
@@ -416,7 +424,6 @@ static int cm_disable(struct cm_state *st)
 {
 	int ret;
 
-	cancel_delayed_work(&st->dw);
 	ret = cm_pm(st, false);
 	if (!ret)
 		st->enabled = 0;
@@ -426,7 +433,6 @@ static int cm_disable(struct cm_state *st)
 static int cm_enable(void *client, int snsr_id, int enable)
 {
 	struct cm_state *st = (struct cm_state *)client;
-	unsigned int ms;
 	int ret;
 
 	if (enable < 0)
@@ -441,9 +447,8 @@ static int cm_enable(void *client, int snsr_id, int enable)
 				cm_disable(st);
 			} else {
 				st->enabled = enable;
-				ms = st->light.poll_delay_ms;
-				schedule_delayed_work(&st->dw,
-						      msecs_to_jiffies(ms));
+				cancel_work_sync(&st->ws);
+				queue_work(st->wq, &st->ws);
 			}
 		}
 	} else {
@@ -473,7 +478,8 @@ static int cm_resolution(void *client, int snsr_id, int resolution)
 	ret = nvs_light_resolution(&st->light, resolution);
 	if (st->light.nld_i_change) {
 		cm_cmd_wr(st, false);
-		schedule_delayed_work(&st->dw, 0);
+		cancel_work_sync(&st->ws);
+		queue_work(st->wq, &st->ws);
 	}
 	return ret;
 }
@@ -486,7 +492,8 @@ static int cm_max_range(void *client, int snsr_id, int max_range)
 	ret = nvs_light_max_range(&st->light, max_range);
 	if (st->light.nld_i_change) {
 		cm_cmd_wr(st, false);
-		schedule_delayed_work(&st->dw, 0);
+		cancel_work_sync(&st->ws);
+		queue_work(st->wq, &st->ws);
 	}
 	return ret;
 }
@@ -672,8 +679,10 @@ static int cm_remove(struct i2c_client *client)
 		cm_shutdown(client);
 		if (st->nvs && st->light.nvs_st)
 			st->nvs->remove(st->light.nvs_st);
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
+		if (st->wq) {
+			destroy_workqueue(st->wq);
+			st->wq = NULL;
+		}
 		cm_pm_exit(st);
 		if (st->ara)
 			i2c_unregister_device(st->ara);
@@ -954,7 +963,14 @@ static int cm_probe(struct i2c_client *client,
 		goto cm_probe_exit;
 	}
 
-	INIT_DELAYED_WORK(&st->dw, cm_work);
+	st->wq = create_workqueue(CM_NAME);
+	if (!st->wq) {
+		dev_err(&client->dev, "%s create_workqueue ERR\n", __func__);
+		ret = -ENOMEM;
+		goto cm_probe_exit;
+	}
+
+	INIT_WORK(&st->ws, cm_work);
 	if (st->gpio_irq >= 0 && !client->irq)
 		client->irq = gpio_to_irq(st->gpio_irq);
 	if (client->irq) {

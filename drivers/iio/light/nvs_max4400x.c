@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -30,7 +30,7 @@
 #include <linux/nvs_proximity.h>
 
 
-#define MX_DRIVER_VERSION		(2)
+#define MX_DRIVER_VERSION		(3)
 #define MX_VENDOR			"Maxim"
 #define MX_NAME				"max4400x"
 #define MX_NAME_MAX44005		"max44005"
@@ -194,7 +194,8 @@ struct mx_state {
 	struct nvs_fn_if *nvs;
 	void *nvs_st[MX_DEV_N];
 	struct sensor_cfg cfg[MX_DEV_N];
-	struct delayed_work dw;
+	struct workqueue_struct *wq;
+	struct work_struct ws;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(mx_vregs)];
 	struct nvs_light light;
 	struct nvs_proximity prox;
@@ -578,35 +579,46 @@ static unsigned int mx_polldelay(struct mx_state *st)
 	return poll_delay_ms;
 }
 
-static void mx_read(struct mx_state *st)
+static int mx_read(struct mx_state *st)
 {
 	int ret;
 
 	mx_mutex_lock(st);
-	if (st->enabled) {
-		ret = mx_rd(st);
-		if (ret < 1)
-			schedule_delayed_work(&st->dw,
-					   msecs_to_jiffies(mx_polldelay(st)));
-	}
+	ret = mx_rd(st);
 	mx_mutex_unlock(st);
+	return ret;
 }
 
 static void mx_work(struct work_struct *ws)
 {
-	struct mx_state *st = container_of((struct delayed_work *)ws,
-					   struct mx_state, dw);
+	struct mx_state *st = container_of((struct work_struct *)ws,
+					   struct mx_state, ws);
+	int ret;
 
-	mx_read(st);
+	while (st->enabled) {
+		msleep(mx_polldelay(st));
+		ret = mx_read(st);
+		if (ret == RET_HW_UPDATE)
+			/* switch to IRQ driven */
+			break;
+	}
 }
 
 static irqreturn_t mx_irq_thread(int irq, void *dev_id)
 {
 	struct mx_state *st = (struct mx_state *)dev_id;
+	int ret;
 
 	if (st->sts & NVS_STS_SPEW_IRQ)
 		dev_info(&st->i2c->dev, "%s\n", __func__);
-	mx_read(st);
+	if (st->enabled) {
+		ret = mx_read(st);
+		if (ret < RET_HW_UPDATE) {
+			/* switch to polling */
+			cancel_work_sync(&st->ws);
+			queue_work(st->wq, &st->ws);
+		}
+	}
 	return IRQ_HANDLED;
 }
 
@@ -625,7 +637,6 @@ static int mx_disable(struct mx_state *st, int snsr_id)
 		}
 	}
 	if (disable) {
-		cancel_delayed_work(&st->dw);
 		ret = mx_pm(st, 0);
 		if (!ret)
 			st->enabled = 0;
@@ -650,8 +661,8 @@ static int mx_enable(void *client, int snsr_id, int enable)
 				mx_disable(st, snsr_id);
 			} else {
 				st->enabled = enable;
-				schedule_delayed_work(&st->dw,
-					 msecs_to_jiffies(MX_POLL_DLY_MS_MIN));
+				cancel_work_sync(&st->ws);
+				queue_work(st->wq, &st->ws);
 			}
 		}
 	} else {
@@ -851,8 +862,10 @@ static int mx_remove(struct i2c_client *client)
 					st->nvs->remove(st->nvs_st[i]);
 			}
 		}
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
+		if (st->wq) {
+			destroy_workqueue(st->wq);
+			st->wq = NULL;
+		}
 		mx_pm_exit(st);
 	}
 	dev_info(&client->dev, "%s\n", __func__);
@@ -1117,7 +1130,14 @@ static int mx_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	st->light.nvs_st = st->nvs_st[MX_DEV_LIGHT];
 	st->prox.nvs_st = st->nvs_st[MX_DEV_PROX];
-	INIT_DELAYED_WORK(&st->dw, mx_work);
+	st->wq = create_workqueue(MX_NAME);
+	if (!st->wq) {
+		dev_err(&client->dev, "%s create_workqueue ERR\n", __func__);
+		ret = -ENOMEM;
+		goto mx_probe_exit;
+	}
+
+	INIT_WORK(&st->ws, mx_work);
 	if (client->irq) {
 		irqflags = IRQF_TRIGGER_FALLING | IRQF_ONESHOT;
 		for (i = 0; i < MX_DEV_N; i++) {

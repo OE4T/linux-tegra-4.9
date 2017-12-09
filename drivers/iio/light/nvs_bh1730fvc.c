@@ -32,7 +32,7 @@
 
 #define BH1730_VENDOR			"ROHM"
 #define BH1730_NAME			"bh1730fvc"
-#define BH1730_LIGHT_VERSION		(2)
+#define BH1730_LIGHT_VERSION		(3)
 #define BH1730_LIGHT_MAX_RANGE_IVAL	(100000)
 #define BH1730_LIGHT_MAX_RANGE_MICRO	(0)
 #define BH1730_LIGHT_RESOLUTION_IVAL	(1)
@@ -119,7 +119,8 @@ struct bh1730_state {
 	struct nvs_fn_if *nvs;
 	void *nvs_st;
 	struct sensor_cfg cfg;
-	struct delayed_work dw;
+	struct workqueue_struct *wq;
+	struct work_struct ws;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(bh1730_vregs)];
 	struct nvs_light light;
 	struct lux_cal_data_t lux;
@@ -314,23 +315,25 @@ static int bh1730_rd(struct bh1730_state *st)
 	return 0;
 }
 
-static void bh1730_read(struct bh1730_state *st)
+static int bh1730_read(struct bh1730_state *st)
 {
+	int ret;
+
 	st->nvs->nvs_mutex_lock(st->nvs_st);
-	if (st->enabled) {
-		bh1730_rd(st);
-		schedule_delayed_work(&st->dw,
-				    msecs_to_jiffies(st->light.poll_delay_ms));
-	}
+	ret = bh1730_rd(st);
 	st->nvs->nvs_mutex_unlock(st->nvs_st);
+	return ret;
 }
 
 static void bh1730_work(struct work_struct *ws)
 {
-	struct bh1730_state *st = container_of((struct delayed_work *)ws,
-					   struct bh1730_state, dw);
+	struct bh1730_state *st = container_of((struct work_struct *)ws,
+					   struct bh1730_state, ws);
 
-	bh1730_read(st);
+	while (st->enabled) {
+		msleep(st->light.poll_delay_ms);
+		bh1730_read(st);
+	}
 }
 
 static int bh1730_disable(struct bh1730_state *st)
@@ -340,7 +343,6 @@ static int bh1730_disable(struct bh1730_state *st)
 	if (st->always_on)
 		return 0;
 
-	cancel_delayed_work(&st->dw);
 	ret = bh1730_pm(st, false);
 	if (!ret)
 		st->enabled = 0;
@@ -350,7 +352,6 @@ static int bh1730_disable(struct bh1730_state *st)
 static int bh1730_enable(void *client, int snsr_id, int enable)
 {
 	struct bh1730_state *st = (struct bh1730_state *)client;
-	unsigned int ms;
 	int ret;
 
 	if (enable < 0)
@@ -367,9 +368,8 @@ static int bh1730_enable(void *client, int snsr_id, int enable)
 				bh1730_disable(st);
 			} else {
 				st->enabled = 1;
-				ms = st->light.poll_delay_ms;
-				schedule_delayed_work(&st->dw,
-						      msecs_to_jiffies(ms));
+				cancel_work_sync(&st->ws);
+				queue_work(st->wq, &st->ws);
 			}
 		}
 	} else {
@@ -509,8 +509,10 @@ static int bh1730_remove(struct i2c_client *client)
 		bh1730_shutdown(client);
 		if (st->nvs && st->nvs_st)
 			st->nvs->remove(st->nvs_st);
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
+		if (st->wq) {
+			destroy_workqueue(st->wq);
+			st->wq = NULL;
+		}
 		bh1730_pm_exit(st);
 	}
 	dev_info(&client->dev, "%s\n", __func__);
@@ -811,7 +813,14 @@ static int bh1730_probe(struct i2c_client *client,
 #endif
 
 	st->light.nvs_st = st->nvs_st;
-	INIT_DELAYED_WORK(&st->dw, bh1730_work);
+	st->wq = create_workqueue(BH1730_NAME);
+	if (!st->wq) {
+		dev_err(&client->dev, "%s create_workqueue ERR\n", __func__);
+		ret = -ENOMEM;
+		goto bh1730_probe_exit;
+	}
+
+	INIT_WORK(&st->ws, bh1730_work);
 	dev_info(&client->dev, "%s done\n", __func__);
 	return 0;
 

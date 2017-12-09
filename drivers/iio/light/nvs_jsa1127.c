@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -28,7 +28,7 @@
 
 #define JSA_VENDOR			"SolteamOpto"
 #define JSA_NAME			"jsa1127"
-#define JSA_LIGHT_VERSION		(2)
+#define JSA_LIGHT_VERSION		(3)
 #define JSA_LIGHT_MILLIAMP_IVAL		(0)
 #define JSA_LIGHT_MILLIAMP_FVAL		(90000)
 #define JSA_LIGHT_SCALE_IVAL		(0)
@@ -73,7 +73,8 @@ struct jsa_state {
 	struct nvs_fn_if *nvs;
 	void *nvs_st;
 	struct sensor_cfg cfg;
-	struct delayed_work dw;
+	struct workqueue_struct *wq;
+	struct work_struct ws;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(jsa_vregs)];
 	struct nvs_light light;
 	struct nvs_light_dynamic hnld[2]; /* hybrid NLD table */
@@ -269,18 +270,23 @@ static int jsa_rd(struct jsa_state *st)
 	return 0;
 }
 
-static void jsa_read(struct jsa_state *st)
+static void jsa_work(struct work_struct *ws)
 {
+	struct jsa_state *st = container_of((struct work_struct *)ws,
+					    struct jsa_state, ws);
 	unsigned int ms;
 	int ret;
 
-	st->nvs->nvs_mutex_lock(st->nvs_st);
-	if (st->enabled) {
+	ms = st->light.poll_delay_ms;
+	while (st->enabled) {
+		msleep(ms);
+		st->nvs->nvs_mutex_lock(st->nvs_st);
+		ms = st->light.poll_delay_ms;
 		if (st->hw_it) {
+			st->light.nld_i = 1;
 			jsa_rd(st);
-			ms = st->light.poll_delay_ms;
 		} else {
-			ms = st->light.poll_delay_ms;
+			st->light.nld_i = 0;
 			if (st->rc_cmd == JSA_CMD_START) {
 				ret = jsa_i2c_wr(st, JSA_CMD_STOP);
 				if (!ret) {
@@ -294,31 +300,18 @@ static void jsa_read(struct jsa_state *st)
 				jsa_start(st);
 			}
 		}
-		schedule_delayed_work(&st->dw, msecs_to_jiffies(ms));
+		st->nvs->nvs_mutex_unlock(st->nvs_st);
 		if (st->sts & NVS_STS_SPEW_MSG)
 			dev_info(&st->i2c->dev,
 				 "%s schedule_delayed_work=%ums\n",
 				 __func__, ms);
 	}
-	st->nvs->nvs_mutex_unlock(st->nvs_st);
-}
-
-static void jsa_work(struct work_struct *ws)
-{
-	struct jsa_state *st = container_of((struct delayed_work *)ws,
-					    struct jsa_state, dw);
-	if (!(st->hw_it))
-		st->light.nld_i = 0;
-	else
-		st->light.nld_i = 1;
-	jsa_read(st);
 }
 
 static int jsa_disable(struct jsa_state *st)
 {
 	int ret;
 
-	cancel_delayed_work(&st->dw);
 	ret = jsa_pm(st, false);
 	if (!ret)
 		st->enabled = 0;
@@ -329,8 +322,8 @@ static int jsa_enable(void *client, int snsr_id, int enable)
 {
 	struct jsa_state *st = (struct jsa_state *)client;
 	int ret;
-	dev_info(&st->i2c->dev, "%s\n", __func__);
 
+	dev_info(&st->i2c->dev, "%s\n", __func__);
 	if (enable < 0)
 		return st->enabled;
 
@@ -343,9 +336,8 @@ static int jsa_enable(void *client, int snsr_id, int enable)
 				jsa_disable(st);
 			} else {
 				st->enabled = enable;
-				schedule_delayed_work(&st->dw,
-						      usecs_to_jiffies(st->cfg.
-								delay_us_min));
+				cancel_work_sync(&st->ws);
+				queue_work(st->wq, &st->ws);
 			}
 		}
 	} else {
@@ -484,8 +476,10 @@ static int jsa_remove(struct i2c_client *client)
 		jsa_shutdown(client);
 		if (st->nvs && st->nvs_st)
 			st->nvs->remove(st->nvs_st);
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
+		if (st->wq) {
+			destroy_workqueue(st->wq);
+			st->wq = NULL;
+		}
 		jsa_pm_exit(st);
 	}
 	dev_info(&client->dev, "%s\n", __func__);
@@ -711,7 +705,14 @@ static int jsa_probe(struct i2c_client *client,
 	}
 
 	st->light.nvs_st = st->nvs_st;
-	INIT_DELAYED_WORK(&st->dw, jsa_work);
+	st->wq = create_workqueue(JSA_NAME);
+	if (!st->wq) {
+		dev_err(&client->dev, "%s create_workqueue ERR\n", __func__);
+		ret = -ENOMEM;
+		goto jsa_probe_exit;
+	}
+
+	INIT_WORK(&st->ws, jsa_work);
 	dev_info(&client->dev, "%s done\n", __func__);
 	return 0;
 

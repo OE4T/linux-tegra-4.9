@@ -146,6 +146,7 @@ static void tegra_channel_surface_setup(
 
 	desc->sequence = chan->capture_descr_sequence;
 	desc->ch_cfg.match.stream = (1u << csi_port); /* one-hot bit encoding */
+	desc->ch_cfg.match.vc = (1u << chan->virtual_channel); /* one-hot bit encoding */
 	desc->ch_cfg.frame.frame_x = width;
 	desc->ch_cfg.frame.frame_y = height;
 	desc->ch_cfg.match.datatype = data_type;

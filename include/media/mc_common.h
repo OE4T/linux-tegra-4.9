@@ -152,6 +152,7 @@ struct tegra_channel {
 	struct mutex stop_kthread_lock;
 
 	unsigned char port[TEGRA_CSI_BLOCKS];
+	unsigned int virtual_channel;
 	unsigned int syncpt[TEGRA_CSI_BLOCKS][MAX_SYNCPT_PER_CHANNEL];
 	unsigned int syncpoint_fifo[TEGRA_CSI_BLOCKS];
 	unsigned int buffer_offset[TEGRA_CSI_BLOCKS];

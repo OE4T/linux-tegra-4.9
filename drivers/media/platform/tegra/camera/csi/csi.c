@@ -856,8 +856,16 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 		 * from 2 for the first TPG channel, which uses PORT_A(0).
 		 * To get the correct PORT number, subtract existing number of
 		 * channels from chan->id.
+		 * when virtual channel is used, tpg0->pp0/vc0, tpg1->pp1/vc0,
+		 * tpg2->pp2/vc0, tpg3->pp3/vc0, tpg4->pp4/vc0, tpg5->pp5/vc0,
+		 * tpg6->pp0/vc1, tpg7->pp1/vc1 etc.
+		 * pp means pixel parser, correspond to port[0] below.
+		 * tpg id correspond to chan->id
 		 */
-		chan->port[0] = chan->id - csi->num_channels;
+		chan->port[0] = (chan->id - csi->num_channels)
+				% NUM_TPG_INSTANCE;
+		chan->virtual_channel = (chan->id - csi->num_channels)
+				/ NUM_TPG_INSTANCE;
 		WARN_ON(chan->port[0] > csi->num_tpg_channels);
 		chan->ports[0].num = chan->id - csi->num_channels;
 		chan->ports->lanes = 2;
@@ -878,7 +886,7 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 			 chan->pg_mode ? "tpg" :
 			 (strlen(csi->devname) == 0 ?
 			  dev_name(csi->dev) : csi->devname),
-			  chan->port[0]);
+			  (chan->id - csi->num_channels));
 	/* Initialize media entity */
 	ret = tegra_media_entity_init(&sd->entity, chan->pg_mode ? 1 : 2,
 				chan->pads, true, false);

@@ -1864,7 +1864,11 @@ static int tegra_channel_csi_init(struct tegra_channel *chan)
 		 * To get the correct PORT number, subtract existing number of
 		 * channels from chan->id.
 		 */
-		chan->port[0] = chan->id - vi->num_channels;
+		chan->port[0] = (chan->id - vi->num_channels)
+				% NUM_TPG_INSTANCE;
+		chan->virtual_channel =  (chan->id - vi->num_channels)
+				/ NUM_TPG_INSTANCE;
+
 		WARN_ON(chan->port[0] > vi->csi->num_tpg_channels);
 		chan->numlanes = 2;
 	} else {
@@ -1948,7 +1952,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->video.queue = &chan->queue;
 	snprintf(chan->video.name, sizeof(chan->video.name), "%s-%s-%u",
 		dev_name(vi->dev), chan->pg_mode ? "tpg" : "output",
-		chan->port[0]);
+		chan->pg_mode ? (chan->id - vi->num_channels) : chan->port[0]);
 	chan->video.vfl_type = VFL_TYPE_GRABBER;
 	chan->video.vfl_dir = VFL_DIR_RX;
 	chan->video.release = video_device_release_empty;

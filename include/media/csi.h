@@ -24,6 +24,7 @@
 #include <linux/platform_device.h>
 
 #define MAX_CSI_BLOCK_LANES 4
+#define NUM_TPG_INSTANCE 6
 
 enum tegra_csi_port_num {
 	PORT_A = 0,
@@ -116,6 +117,7 @@ struct tegra_csi_channel {
 	struct tegra_csi_device *csi;
 	struct tegra_csi_port *ports;
 	unsigned char port[TEGRA_CSI_BLOCKS];
+	unsigned int virtual_channel;
 	struct mutex format_lock;
 	unsigned int numports;
 	unsigned int numlanes;

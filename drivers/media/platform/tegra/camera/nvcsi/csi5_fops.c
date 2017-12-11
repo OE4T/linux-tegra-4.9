@@ -212,7 +212,7 @@ static int csi5_stream_tpg_start(struct tegra_csi_channel *chan,
 
 	tpg_config = &(msg.csi_stream_tpg_set_config_req.tpg_config);
 
-	tpg_config->t194.virtual_channel_id = 0;
+	tpg_config->t194.virtual_channel_id = chan->virtual_channel;
 	tpg_config->t194.datatype = port->core_format->img_dt;
 
 	tpg_config->t194.lane_count = chan->numlanes;
@@ -240,7 +240,7 @@ static int csi5_stream_tpg_start(struct tegra_csi_channel *chan,
 	msg.header.channel_id = TEMP_CHANNEL_ID;
 
 	msg.csi_stream_tpg_start_req.stream_id = csi_port;
-	msg.csi_stream_tpg_start_req.virtual_channel_id = 0;
+	msg.csi_stream_tpg_start_req.virtual_channel_id = chan->virtual_channel;
 	msg.csi_stream_tpg_start_req.tpg_rate_config.hblank = TPG_HBLANK;
 	msg.csi_stream_tpg_start_req.tpg_rate_config.vblank = TPG_VBLANK;
 	msg.csi_stream_tpg_start_req.tpg_rate_config.pixel_interval = 0;
@@ -264,7 +264,7 @@ static void csi5_stream_tpg_stop(struct tegra_csi_channel *chan, int csi_port)
 	msg.header.channel_id = TEMP_CHANNEL_ID;
 
 	msg.csi_stream_tpg_stop_req.stream_id = csi_port;
-	msg.csi_stream_tpg_stop_req.virtual_channel_id = 0;
+	msg.csi_stream_tpg_stop_req.virtual_channel_id = chan->virtual_channel;
 
 	tegra_capture_ivc_control_submit(&msg, sizeof(msg));
 }

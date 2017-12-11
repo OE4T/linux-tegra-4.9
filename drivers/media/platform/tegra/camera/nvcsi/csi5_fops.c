@@ -11,11 +11,14 @@
  */
 #include <media/csi.h>
 #include <media/mc_common.h>
+#include <media/csi5_registers.h>
 #include "nvhost_acm.h"
 #include "nvcsi/nvcsi.h"
 #include "csi5_fops.h"
 #include <linux/tegra-capture-ivc.h>
 #include "soc/tegra/camrtc-capture-messages.h"
+
+#include "mipical/mipi_cal.h"
 
 /* Referred from capture-scheduler.c defined in rtcpu-fw */
 #define NUM_CAPTURE_CHANNELS 64
@@ -28,6 +31,16 @@
 #define TEMP_CHANNEL_ID (NUM_CAPTURE_CHANNELS + 1)
 #define TPG_HBLANK 0
 #define TPG_VBLANK 40800
+
+
+static void csi5_phy_write(struct tegra_csi_channel *chan,
+		unsigned int index, unsigned int addr, u32 val)
+{
+	struct tegra_csi_device *csi = chan->csi;
+
+	writel(val, csi->iomem_base +
+		CSI5_BASE_ADDRESS + (CSI5_PHY_OFFSET * index) + addr);
+}
 
 static int csi5_power_on(struct tegra_csi_device *csi)
 {
@@ -154,16 +167,88 @@ static void csi5_stop_streaming(struct tegra_csi_channel *chan,
 
 static int csi5_mipi_cal(struct tegra_csi_channel *chan)
 {
+	unsigned int lanes, num_ports, port, addr;
+	unsigned int cila, cilb;
 	struct tegra_csi_device *csi = chan->csi;
 
-	dev_info(csi->dev, "csi5_mipi_cal\n");
+	lanes = 0;
+	num_ports = 0;
+	port = 0;
+	while (num_ports < chan->numports) {
+		port = chan->ports[num_ports].num;
+		dev_dbg(csi->dev, "csi port:%d\n", port);
 
-	return 0;
+		if (chan->numlanes <= 2) {
+			lanes |= CSIA << port;
+			addr = (port % 2 == 0 ?
+				CSI5_NVCSI_CIL_A_SW_RESET :
+				CSI5_NVCSI_CIL_B_SW_RESET);
+			csi5_phy_write(chan, port >> 1, addr,
+				CSI5_SW_RESET1_EN | CSI5_SW_RESET0_EN);
+		} else if (chan->numlanes == 3) { /* CPHY */
+			lanes |= (CSIA | CSIB) << port;
+			cila =  (0x01 << CSI5_E_INPUT_LP_IO0_SHIFT) |
+				(0x01 << CSI5_E_INPUT_LP_IO1_SHIFT) |
+				(0x00 << CSI5_E_INPUT_LP_CLK_SHIFT) |
+				(0x01 << CSI5_PD_CLK_SHIFT) |
+				(0x00 << CSI5_PD_IO0_SHIFT) |
+				(0x00 << CSI5_PD_IO1_SHIFT);
+			cilb =  (0x01 << CSI5_E_INPUT_LP_IO0_SHIFT) |
+				(0x00 << CSI5_E_INPUT_LP_IO1_SHIFT) |
+				(0x00 << CSI5_E_INPUT_LP_CLK_SHIFT) |
+				(0x01 << CSI5_PD_CLK_SHIFT) |
+				(0x00 << CSI5_PD_IO0_SHIFT) |
+				(0x01 << CSI5_PD_IO1_SHIFT);
+			csi5_phy_write(chan, port >> 1,
+				CSI5_NVCSI_CIL_A_BASE + CSI5_PAD_CONFIG_0,
+					cila);
+			csi5_phy_write(chan, port >> 1,
+				CSI5_NVCSI_CIL_B_BASE + CSI5_PAD_CONFIG_0,
+					cilb);
+			/*TODO configure and enable mipical for cphy*/
+			return 0;
+		} else {
+			lanes |= (CSIA | CSIB) << port;
+			cila =  (0x01 << CSI5_E_INPUT_LP_IO0_SHIFT) |
+				(0x01 << CSI5_E_INPUT_LP_IO1_SHIFT) |
+				(0x01 << CSI5_E_INPUT_LP_CLK_SHIFT) |
+				(0x00 << CSI5_PD_CLK_SHIFT) |
+				(0x00 << CSI5_PD_IO0_SHIFT) |
+				(0x00 << CSI5_PD_IO1_SHIFT);
+			cilb =  (0x01 << CSI5_E_INPUT_LP_IO0_SHIFT) |
+				(0x01 << CSI5_E_INPUT_LP_IO1_SHIFT) |
+				(0x01 << CSI5_PD_CLK_SHIFT) |
+				(0x00 << CSI5_PD_IO0_SHIFT) |
+				(0x00 << CSI5_PD_IO1_SHIFT);
+			csi5_phy_write(chan, port >> 1,
+				CSI5_NVCSI_CIL_A_BASE + CSI5_PAD_CONFIG_0,
+					cila);
+			csi5_phy_write(chan, port >> 1,
+				CSI5_NVCSI_CIL_B_BASE + CSI5_PAD_CONFIG_0,
+					cilb);
+			csi5_phy_write(chan, port >> 1,
+				CSI5_NVCSI_CIL_A_SW_RESET,
+				CSI5_SW_RESET1_EN | CSI5_SW_RESET0_EN);
+			csi5_phy_write(chan, port >> 1,
+				CSI5_NVCSI_CIL_B_SW_RESET,
+				CSI5_SW_RESET1_EN | CSI5_SW_RESET0_EN);
+		}
+		num_ports++;
+	}
+	if (!lanes) {
+		dev_err(csi->dev,
+			"Selected no CSI lane, cannot do calibration");
+		return -EINVAL;
+	}
+	return tegra_mipi_calibration(lanes);
+
 }
 
 static int csi5_hw_init(struct tegra_csi_device *csi)
 {
-	dev_info(csi->dev, "csi5_hw_init\n");
+	csi->iomem[0] = csi->iomem_base + CSI5_TEGRA_CSI_STREAM_0_BASE;
+	csi->iomem[1] = csi->iomem_base + CSI5_TEGRA_CSI_STREAM_2_BASE;
+	csi->iomem[2] = csi->iomem_base + CSI5_TEGRA_CSI_STREAM_4_BASE;
 
 	return 0;
 }

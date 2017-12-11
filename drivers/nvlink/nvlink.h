@@ -39,6 +39,7 @@
 #define NVLINK_MAX_LINKS			2
 #define MINION_BYTES_PER_BLOCK		256
 #define MINION_WORD_SIZE		4
+#define NVLINK_TRANSITION_HS_TIMEOUT_MS		2000 /* msec */
 
 struct nvlink_link;
 struct nvlink_device;
@@ -194,6 +195,11 @@ struct minion_hdr {
 	u32 ovl_offset;
 	u32 ovl_size;
 	u32 ucode_img_size;
+};
+
+struct nvlink_intranode_conn {
+	struct nvlink_device *ndev0;
+	struct nvlink_device *ndev1;
 };
 
 struct nvlink_device {

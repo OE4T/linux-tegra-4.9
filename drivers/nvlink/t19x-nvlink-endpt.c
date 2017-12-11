@@ -437,9 +437,11 @@ static inline void program_scf_tom(void)
 int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 {
 	int ret = 0;
+	struct nvlink_intranode_conn conn;
 
 	nvlink_dbg("Initializing link ...");
 	tegra_nvlink_car_enable(ndev);
+	nvlink_enable_AN0_packets(ndev);
 	ret = minion_boot(ndev);
 	if (ret < 0)
 		goto fail;
@@ -459,6 +461,13 @@ int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 	init_tlc_buffers(ndev);
 	mssnvlink_init(ndev);
 	program_scf_tom();
+
+	/* Setup intranode connection for loopback mode */
+	conn.ndev0 = ndev;
+	conn.ndev1 = ndev;
+	ret = nvlink_train_intranode_conn_to_hs(&conn);
+	if (ret < 0)
+		goto fail;
 
 	nvlink_dbg("Link initialization succeeded!");
 	goto success;

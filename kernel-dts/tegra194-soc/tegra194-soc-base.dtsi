@@ -1875,6 +1875,26 @@
 		       0x0 0x1f40000 0x0 0x20000 /* MSSNVLINK_2 */
 		       0x0 0x1f60000 0x0 0x20000 /* MSSNVLINK_3 */
 		       0x0 0x1f80000 0x0 0x20000>; /* MSSNVLINK_4 */
+		clocks = <&bpmp_clks TEGRA194_CLK_NVHS_PLL0_MGMT>,
+				<&bpmp_clks TEGRA194_CLK_NVLINK_SYS>,
+				<&bpmp_clks TEGRA194_CLK_PLLNVHS>,
+				<&bpmp_clks TEGRA194_CLK_NVLINK_TXCLK_CTRL>;
+		clock-names = "nvhs_pll0_mgmt", "nvlink_sys", "pllnvhs", "txclk_ctrl";
+		resets = <&bpmp_resets TEGRA194_RESET_NVHS_UPHY_PM>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_PLL0>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L0>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L1>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L2>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L3>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L4>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L5>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L6>,
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L7>;
+		reset-names = "nvhs_uphy_pm", "nvhs_uphy", "nvhs_uphy_pll0",
+				"nvhs_uphy_l0", "nvhs_uphy_l1", "nvhs_uphy_l2",
+				"nvhs_uphy_l3",	"nvhs_uphy_l4",	"nvhs_uphy_l5",
+				"nvhs_uphy_l6",	"nvhs_uphy_l7";
 		status = "disabled";
 	};
 };

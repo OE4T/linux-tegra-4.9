@@ -20,6 +20,16 @@
 #include <tegra194-soc/tegra194-soc-prod.dtsi>
 
 / {
+
+	timer {
+		status = "okay";
+	};
+
+	interrupt-controller@3881000 {
+		status = "okay";
+	};
+
+
 	clock@0 {
 	        status = "okay";
 	};

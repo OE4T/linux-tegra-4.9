@@ -129,9 +129,7 @@ int tegra194_nvcsi_finalize_poweron(struct platform_device *pdev)
 {
 	struct t194_nvcsi *nvcsi = nvhost_get_private_data(pdev);
 
-	(void)nvcsi;
-
-	return 0;
+	return tegra_csi_mipi_calibrate(&nvcsi->csi, true);
 }
 EXPORT_SYMBOL_GPL(tegra194_nvcsi_finalize_poweron);
 
@@ -139,8 +137,7 @@ int tegra194_nvcsi_prepare_poweroff(struct platform_device *pdev)
 {
 	struct t194_nvcsi *nvcsi = nvhost_get_private_data(pdev);
 
-	(void)nvcsi;
-	return 0;
+	return tegra_csi_mipi_calibrate(&nvcsi->csi, false);
 }
 EXPORT_SYMBOL_GPL(tegra194_nvcsi_prepare_poweroff);
 

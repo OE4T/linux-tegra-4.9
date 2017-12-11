@@ -118,9 +118,11 @@ struct cmdq_host {
 #define CMDQ_TASK_DESC_SZ_128 0x1
 
 	u32 quirks;
-#define CMDQ_QUIRK_SHORT_TXFR_DESC_SZ 0x1
-#define CMDQ_QUIRK_NO_DCMD	0x2
-#define CMDQ_QUIRK_CQIC_SUPPORT	0x4
+#define CMDQ_QUIRK_SHORT_TXFR_DESC_SZ		(1<<0)
+#define CMDQ_QUIRK_NO_DCMD			(1<<1)
+#define CMDQ_QUIRK_CQIC_SUPPORT			(1<<2)
+/* Set CMD_TIMING bit to 1 for R1B DCMDs */
+#define CMDQ_QUIRK_SET_CMD_TIMING_R1B_DCMD	(1<<3)
 
 	bool enabled;
 	bool halted;
@@ -150,7 +152,6 @@ struct cmdq_host {
 	struct mmc_data *data;	/* Current data request */
 	size_t desc_size;
 	size_t data_size;
-	bool cqic_support; /* CQIC feature support */
 	void *private;
 };
 

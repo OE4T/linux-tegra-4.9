@@ -168,6 +168,7 @@ static char prod_device_states[MMC_TIMING_COUNTER][20] = {
 struct sdhci_tegra_soc_data {
 	const struct sdhci_pltfm_data *pdata;
 	u32 nvquirks;
+	u32 cqequirks;
 };
 
 struct sdhci_tegra_clk_src_data {
@@ -1539,6 +1540,7 @@ static const struct sdhci_tegra_soc_data soc_data_tegra186 = {
 		    NVQUIRK_ENABLE_DDR50 |
 		    NVQUIRK_ENABLE_SDR104 |
 		    SDHCI_MISC_CTRL_ENABLE_SDR50,
+	.cqequirks = CMDQ_QUIRK_SET_CMD_TIMING_R1B_DCMD,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra194_pdata = {
@@ -1561,6 +1563,7 @@ static const struct sdhci_tegra_soc_data soc_data_tegra194 = {
 		    NVQUIRK_ENABLE_DDR50 |
 		    NVQUIRK_ENABLE_SDR104 |
 		    SDHCI_MISC_CTRL_ENABLE_SDR50,
+	.cqequirks = CMDQ_QUIRK_CQIC_SUPPORT,
 };
 static const struct of_device_id sdhci_tegra_dt_match[] = {
 	{ .compatible = "nvidia,tegra194-sdhci", .data = &soc_data_tegra194 },
@@ -1874,10 +1877,12 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (tegra_host->enable_hwcq) {
 		host->mmc->caps2 |= MMC_CAP2_HW_CQ;
 		host->cq_host = cmdq_pltfm_init(pdev);
-		if (IS_ERR(host->cq_host))
+		if (IS_ERR(host->cq_host)) {
 			pr_err("CMDQ: Error in cmdq_platfm_init function\n");
-		else
+		} else {
 			pr_info("CMDQ: cmdq_platfm_init successful\n");
+			host->cq_host->quirks = soc_data->cqequirks;
+		}
 	}
 #endif
 

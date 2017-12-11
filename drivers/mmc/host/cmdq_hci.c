@@ -530,7 +530,8 @@ static void cmdq_prep_dcmd_desc(struct mmc_host *mmc,
 		resp_type = 0;
 	} else if (mrq->cmd->flags & MMC_RSP_R1B) {
 		resp_type = 3;
-		r1b = 1;
+		if (cq_host->quirks & CMDQ_QUIRK_SET_CMD_TIMING_R1B_DCMD)
+			r1b = 1;
 	} else if (mrq->cmd->flags & (MMC_RSP_R1 | MMC_RSP_R4 | MMC_RSP_R5)) {
 		resp_type = 2;
 	} else {
@@ -823,7 +824,6 @@ struct cmdq_host *cmdq_pltfm_init(struct platform_device *pdev)
 {
 	struct cmdq_host *cq_host;
 	struct resource *cmdq_memres = NULL;
-	struct device_node *np = pdev->dev.of_node;
 
 	/* check and setup CMDQ interface */
 	cmdq_memres = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -837,8 +837,6 @@ struct cmdq_host *cmdq_pltfm_init(struct platform_device *pdev)
 		dev_err(&pdev->dev, "CMDQ: failed to allocate memory for CMDQ\n");
 		return ERR_PTR(-ENOMEM);
 	}
-
-	cq_host->cqic_support = of_property_read_bool(np, "enable-cqic");
 
 	cq_host->mmio = devm_ioremap(&pdev->dev, cmdq_memres->start + CQE_BASE,
 			CQE_RES_SZ);
@@ -870,8 +868,11 @@ int cmdq_init(struct cmdq_host *cq_host, struct mmc_host *mmc,
 	if (!cq_host->dma64)
 		cq_host->quirks |= CMDQ_QUIRK_SHORT_TXFR_DESC_SZ;
 
-	if (cq_host->cqic_support)
-		cq_host->quirks |= CMDQ_QUIRK_CQIC_SUPPORT;
+	if (cq_host->quirks & CMDQ_QUIRK_CQIC_SUPPORT)
+		pr_info("CQE: CQIC feature enabled\n");
+
+	if (cq_host->quirks & CMDQ_QUIRK_SET_CMD_TIMING_R1B_DCMD)
+		pr_info("CQE: CMD_TIMING bit set for R1B DCMD\n");
 
 	cq_host->caps |= CMDQ_TASK_DESC_SZ_128;
 

@@ -38,9 +38,12 @@
 #define hdcp_err(...) \
 		pr_err("hdcp: Error: " __VA_ARGS__)
 
-#define HDCP22_SRM_PATH "etc/hdcpsrm/hdcp2x.srm"
+#define HDCP22_SRM_PATH "vendor/etc/hdcpsrm/hdcp2x.srm"
 
-#define HDCP11_SRM_PATH "etc/hdcpsrm/hdcp1x.srm"
+#define HDCP11_SRM_PATH "vendor/etc/hdcpsrm/hdcp1x.srm"
+
+#define HDCP22_SRM_PATH_SYSTEM "etc/hdcpsrm/hdcp2x.srm"
+#define HDCP11_SRM_PATH_SYSTEM "etc/hdcpsrm/hdcp1x.srm"
 
 static u8 g_seq_num_init;
 
@@ -487,10 +490,18 @@ int tsec_hdcp_srm_read(struct hdcp_context_t *hdcp_context,
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 
-	if (hdcp_version == HDCP_22)
+	if (hdcp_version == HDCP_22) {
 		fp = filp_open(HDCP22_SRM_PATH, O_RDONLY, 0);
-	else if (hdcp_version == HDCP_1x)
+		if (IS_ERR(fp) || !fp) {
+			fp = filp_open(HDCP22_SRM_PATH_SYSTEM, O_RDONLY, 0);
+		}
+	}
+	else if (hdcp_version == HDCP_1x) {
 		fp = filp_open(HDCP11_SRM_PATH, O_RDONLY, 0);
+		if (IS_ERR(fp) || !fp) {
+			fp = filp_open(HDCP11_SRM_PATH_SYSTEM, O_RDONLY, 0);
+		}
+	}
 	else {
 		hdcp_err("Invalid HDCP version sent!\n");
 		return -EINVAL;

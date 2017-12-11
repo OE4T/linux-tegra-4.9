@@ -107,7 +107,8 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_KEY_LOAD			0x100
 #define KFUSE_MASK			0x10
 
-#define HDCP11_SRM_PATH			"etc/hdcpsrm/hdcp1x.srm"
+#define HDCP11_SRM_PATH			"vendor/etc/hdcpsrm/hdcp1x.srm"
+#define HDCP11_SRM_PATH_SYSTEM		"etc/hdcpsrm/hdcp1x.srm"
 
 #define CP_IRQ_OFFSET			(1 << 2)
 #define CP_IRQ_RESET			0x4

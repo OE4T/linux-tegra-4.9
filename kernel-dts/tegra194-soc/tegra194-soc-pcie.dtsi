@@ -31,6 +31,17 @@
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 			};
 		};
+		pex_rst_c5_in_state: pex_rst_c5_in {
+			pex_rst {
+				nvidia,pins = "pex_l5_rst_n_pgg1";
+				nvidia,schmitt = <TEGRA_PIN_DISABLE>;
+				nvidia,lpdr = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+			};
+		};
 		clkreq_c5_bi_dir_state: clkreq_c5_bi_dir {
 			clkreq {
 				nvidia,pins = "pex_l5_clkreq_n_pgg0";
@@ -449,7 +460,7 @@
 		interrupt-names = "intr";
 
 		pinctrl-names = "pex_rst", "clkreq";
-		pinctrl-0 = <&pex_rst_c5_out_state>;
+		pinctrl-0 = <&pex_rst_c5_in_state>;
 		pinctrl-1 = <&clkreq_c5_bi_dir_state>;
 
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */

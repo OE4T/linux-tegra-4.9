@@ -257,6 +257,28 @@ struct nvlink_get_counters {
 	__u64 nvlink_counters[TEGRA_CTRL_NVLINK_COUNTER_MAX_TYPES];
 };
 
+/* TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO */
+struct nvlink_err_info {
+	__u32 tl_err_log;
+	__u32 tl_intr_en;
+	__u32 tlc_tx_err_status0;
+	__u32 tlc_rx_err_status0;
+	__u32 tlc_rx_err_status1;
+	__u32 tlc_tx_err_log_en0;
+	__u32 tlc_rx_err_log_en0;
+	__u32 tlc_rx_err_log_en1;
+	__u32 mif_tx_err_status0;
+	__u32 mif_rx_err_status0;
+	__u32 dl_speed_status_tx;
+	__u32 dl_speed_status_rx;
+	bool bExcess_error_dl;
+};
+
+struct nvlink_get_err_info {
+	__u32 link_mask;
+	struct nvlink_err_info link_err_info;
+};
+
 /* TODO: choose a unique MAGIC number for ioctl implementation */
 #define TEGRA_NVLINK_IOC_MAGIC	  'T'
 #define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS		\
@@ -267,3 +289,5 @@ struct nvlink_get_counters {
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC,  3, struct nvlink_clear_counters)
 #define TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS		\
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 4, struct nvlink_get_counters)
+#define TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO		\
+		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 5, struct nvlink_get_err_info)

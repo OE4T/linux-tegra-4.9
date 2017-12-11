@@ -491,6 +491,61 @@ static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
 	return 0;
 }
 
+static int t19x_nvlink_get_err_info(struct nvlink_device *ndev,
+				struct nvlink_get_err_info *get_err_info)
+{
+	u32 reg_val = 0;
+	u32 state = 0;
+	bool excess_err_dl = false;
+
+	get_err_info->link_mask = BIT(0);
+
+	get_err_info->link_err_info.tl_err_log = 0;
+	get_err_info->link_err_info.tl_intr_en = 0;
+
+	get_err_info->link_err_info.tlc_tx_err_status0 =
+				ndev->link.tlc_tx_err_status0;
+	get_err_info->link_err_info.tlc_rx_err_status0 =
+				ndev->link.tlc_rx_err_status0;
+	get_err_info->link_err_info.tlc_rx_err_status1 =
+				ndev->link.tlc_rx_err_status1;
+
+	get_err_info->link_err_info.tlc_tx_err_log_en0 =
+				nvlw_nvltlc_readl(ndev, NVLTLC_TX_ERR_STATUS_0);
+	get_err_info->link_err_info.tlc_rx_err_log_en0 =
+				nvlw_nvltlc_readl(ndev, NVLTLC_RX_ERR_STATUS_0);
+	get_err_info->link_err_info.tlc_rx_err_log_en1 =
+				nvlw_nvltlc_readl(ndev, NVLTLC_RX_ERR_STATUS_1);
+
+	/* Reset Errlog after clients get the value */
+	ndev->link.tlc_tx_err_status0 = 0;
+	ndev->link.tlc_rx_err_status0 = 0;
+	ndev->link.tlc_rx_err_status1 = 0;
+
+	/* MIF blocks doesn't exist on tegra. Hence 0 the mif err fields */
+	get_err_info->link_err_info.mif_tx_err_status0 = 0;
+	get_err_info->link_err_info.mif_rx_err_status0 = 0;
+
+	t19x_nvlink_get_tx_sublink_state(ndev, &state);
+	get_err_info->link_err_info.dl_speed_status_tx = state;
+
+	t19x_nvlink_get_rx_sublink_state(ndev, &state);
+	get_err_info->link_err_info.dl_speed_status_rx = state;
+
+	if (nvlw_nvl_readl(ndev, NVL_INTR_STALL_EN) &
+				BIT(NVL_INTR_STALL_EN_RX_SHORT_ERROR_RATE)) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_INTR);
+		if (reg_val & BIT(NVL_INTR_RX_SHORT_ERROR_RATE)) {
+			excess_err_dl = true;
+			nvlw_nvl_writel(ndev, NVL_INTR, reg_val);
+		}
+	}
+
+	get_err_info->link_err_info.bExcess_error_dl = excess_err_dl;
+
+	return 0;
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -499,6 +554,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	struct nvlink_status *status;
 	struct nvlink_clear_counters *clear_counters;
 	struct nvlink_get_counters *get_counters;
+	struct nvlink_get_err_info *get_err_info;
 	int ret = 0;
 
 	if (!ndev) {
@@ -629,6 +685,39 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 			ret = -EFAULT;
 		}
 		kfree(get_counters);
+		break;
+
+	case TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO:
+		get_err_info = devm_kzalloc(ndev->dev,
+					sizeof(struct nvlink_get_err_info),
+					GFP_KERNEL);
+		if (!get_err_info) {
+			nvlink_err("Can't allocate memory for get err info");
+			return -ENOMEM;
+		}
+
+		ret = copy_from_user(get_err_info, (void __user *)arg,
+					sizeof(*get_err_info));
+		if (ret) {
+			nvlink_err("Error while copying from userspace");
+			ret = -EFAULT;
+			kfree(get_err_info);
+			break;
+		}
+
+		ret = t19x_nvlink_get_err_info(ndev, get_err_info);
+		if (ret < 0) {
+			nvlink_err("nvlink get err info failed");
+			kfree(get_err_info);
+			break;
+		}
+		ret = copy_to_user((void __user *)arg, get_err_info,
+					sizeof(*get_err_info));
+		if (ret) {
+			nvlink_err("Error while copying get err info");
+			ret = -EFAULT;
+		}
+		kfree(get_err_info);
 		break;
 
 	default:

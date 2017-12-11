@@ -22,6 +22,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/os_sched.h>
 
 #include "gk20a.h"
 #include "tsg_gk20a.h"
@@ -286,7 +287,7 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 	tsg->timeslice_timeout = 0;
 	tsg->timeslice_scale = 0;
 	tsg->runlist_id = ~0;
-	tsg->tgid = current->tgid;
+	tsg->tgid = nvgpu_current_pid(g);
 
 	if (g->ops.fifo.init_eng_method_buffers)
 		g->ops.fifo.init_eng_method_buffers(g, tsg);

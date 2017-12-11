@@ -49,6 +49,7 @@ nvgpu-y := \
 	common/linux/channel.o \
 	common/linux/ce2.o \
 	common/linux/sim.o \
+	common/linux/os_sched.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \

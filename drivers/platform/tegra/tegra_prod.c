@@ -539,13 +539,13 @@ static struct tegra_prod *tegra_prod_init(struct device *dev,
 
 	/* Check whether child is enabled or not */
 	if (!of_device_is_available(np_prod)) {
-		dev_err(dev, "Node %s: Node is not enabled\n", np_prod->name);
+		dev_info(dev, "Node %s: Node is not enabled\n", np_prod->name);
 		return ERR_PTR(-ENODEV);
 	}
 
-	prod_num = of_get_child_count(np_prod);
+	prod_num = of_get_available_child_count(np_prod);
 	if (prod_num <= 0) {
-		dev_err(dev, "Node %s: No child node for prod settings\n",
+		dev_info(dev, "Node %s: No child node for prod settings\n",
 			np_prod->name);
 		return  ERR_PTR(-ENODEV);
 	}

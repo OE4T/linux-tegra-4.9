@@ -615,6 +615,18 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	}
 	dev_info(pcie->dev, "-> EP BAR DMA addr = 0x%llX\n", pcie->dma_handle);
 
+	if (of_property_read_bool(pdev->dev.of_node, "nvidia,update_fc_fixup"))
+		pcie->update_fc_fixup = true;
+
+	INIT_WORK(&pcie->pcie_ep_work, pcie_ep_work_fn);
+
+	pcie->core_rst = devm_reset_control_get(pcie->dev, "core_rst");
+	if (IS_ERR(pcie->core_rst)) {
+		dev_err(pcie->dev, "PCIE : core_rst reset is missing\n");
+		ret = PTR_ERR(pcie->core_rst);
+		goto fail_dbi_res;
+	}
+
 	pcie->irq = platform_get_irq_byname(pdev, "intr");
 	if (!pcie->irq) {
 		dev_err(pcie->dev, "failed to get intr interrupt\n");
@@ -626,18 +638,6 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 			       IRQF_SHARED, "tegra-pcie-intr", pcie);
 	if (ret) {
 		dev_err(pcie->dev, "failed to request \"intr\" irq\n");
-		goto fail_dbi_res;
-	}
-
-	if (of_property_read_bool(pdev->dev.of_node, "nvidia,update_fc_fixup"))
-		pcie->update_fc_fixup = true;
-
-	INIT_WORK(&pcie->pcie_ep_work, pcie_ep_work_fn);
-
-	pcie->core_rst = devm_reset_control_get(pcie->dev, "core_rst");
-	if (IS_ERR(pcie->core_rst)) {
-		dev_err(pcie->dev, "PCIE : core_rst reset is missing\n");
-		ret = PTR_ERR(pcie->core_rst);
 		goto fail_dbi_res;
 	}
 

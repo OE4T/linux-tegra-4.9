@@ -644,6 +644,8 @@
 		interrupts = <0 72 0x04>;	/* controller interrupt */
 		interrupt-names = "intr";
 
+		nvidia,bar0-size = <0x100000>;	/* 1 MB */
+
 		iommus = <&smmu TEGRA_SID_PCIE0>;
 		dma-coherent;
 	};
@@ -671,6 +673,8 @@
 		interrupts = <0 45 0x04>;	/* controller interrupt */
 		interrupt-names = "intr";
 
+		nvidia,bar0-size = <0x100000>;	/* 1 MB */
+
 		iommus = <&smmu TEGRA_SID_PCIE1>;
 		dma-coherent;
 	};
@@ -696,6 +700,8 @@
 
 		interrupts = <0 51 0x04>;	/* controller interrupt */
 		interrupt-names = "intr";
+
+		nvidia,bar0-size = <0x100000>;	/* 1 MB */
 
 		iommus = <&smmu TEGRA_SID_PCIE4>;
 		dma-coherent;
@@ -727,6 +733,8 @@
 		pinctrl-names = "pex_rst", "clkreq";
 		pinctrl-0 = <&pex_rst_c5_out_state>;
 		pinctrl-1 = <&clkreq_c5_bi_dir_state>;
+
+		nvidia,bar0-size = <0x100000>;	/* 1 MB */
 
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;

@@ -26,6 +26,12 @@
 struct gk20a;
 
 /**
+ * nvgpu_current_tid - Query the id of current thread
+ *
+ */
+int nvgpu_current_tid(struct gk20a *g);
+
+/**
  * nvgpu_current_pid - Query the id of current process
  *
  */

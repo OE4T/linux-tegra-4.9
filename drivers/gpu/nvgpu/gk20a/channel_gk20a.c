@@ -44,6 +44,7 @@
 #include <nvgpu/barrier.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/os_sched.h>
 
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -726,8 +727,8 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	/* now the channel is in a limbo out of the free list but not marked as
 	 * alive and used (i.e. get-able) yet */
 
-	ch->pid = current->pid;
-	ch->tgid = current->tgid;  /* process granularity for FECS traces */
+	ch->pid = nvgpu_current_tid(g);
+	ch->tgid = nvgpu_current_pid(g);  /* process granularity for FECS traces */
 
 	/* By default, channel is regular (non-TSG) channel */
 	ch->tsgid = NVGPU_INVALID_TSG_ID;

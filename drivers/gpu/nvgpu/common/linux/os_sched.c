@@ -15,6 +15,11 @@
 
 #include <linux/sched.h>
 
+int nvgpu_current_tid(struct gk20a *g)
+{
+	return current->pid;
+}
+
 int nvgpu_current_pid(struct gk20a *g)
 {
 	return current->tgid;

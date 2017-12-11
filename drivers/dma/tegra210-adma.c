@@ -1,7 +1,7 @@
 /*
  * ADMA driver for Nvidia's Tegra210 ADMA controller.
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1253,6 +1253,7 @@ static const struct of_device_id tegra_adma_of_match[] = {
 	{ .compatible = "nvidia,tegra210-adma-hv", .data = &tegra186_chip_data},
 	{ .compatible = "nvidia,tegra186-adma", .data = &tegra186_chip_data},
 	{ .compatible = "nvidia,tegra194-adma", .data = &tegra194_chip_data},
+	{ .compatible = "nvidia,tegra194-adma-hv", .data = &tegra194_chip_data},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_adma_of_match);
@@ -1262,6 +1263,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	const struct tegra_adma_chip_data *cdata;
 	struct tegra_adma *tdma;
 	struct resource	*res;
+	struct device_node *node = pdev->dev.of_node;
 	unsigned int dma_start_index, adma_page;
 	int ret, i;
 
@@ -1276,7 +1278,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	if (!tdma)
 		return -ENOMEM;
 
-	if (of_property_read_u32(pdev->dev.of_node, "dma-channels",
+	if (of_property_read_u32(node, "dma-channels",
 						&tdma->nr_channels))
 		tdma->nr_channels = cdata->nr_channels;
 
@@ -1285,22 +1287,20 @@ static int tegra_adma_probe(struct platform_device *pdev)
 
 	dma_start_index = 0;
 	adma_page = 1;
-	if (!of_device_is_compatible(pdev->dev.of_node,
-					"nvidia,tegra210-adma")) {
-		of_property_read_u32(pdev->dev.of_node, "dma-start-index",
+	if (!of_device_is_compatible(node, "nvidia,tegra210-adma")) {
+		of_property_read_u32(node, "dma-start-index",
 					&dma_start_index);
 		if ((dma_start_index + tdma->nr_channels) > cdata->nr_channels)
 			dma_start_index = cdata->nr_channels -
 							tdma->nr_channels;
 
-		of_property_read_u32(pdev->dev.of_node, "adma-page",
-					&adma_page);
+		of_property_read_u32(node, "adma-page", &adma_page);
 		if (adma_page < 1 || adma_page > 4)
 			adma_page = 1;
 	}
 
-	if (of_device_is_compatible(pdev->dev.of_node,
-				    "nvidia,tegra210-adma-hv"))
+	if (of_device_is_compatible(node, "nvidia,tegra210-adma-hv") ||
+	    of_device_is_compatible(node, "nvidia,tegra194-adma-hv"))
 		tdma->is_virt = true;
 	else
 		tdma->is_virt = false;
@@ -1361,8 +1361,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
 		tdc->chan_addr = tdma->base_addr + tdma->ch_base_offset +
 			(cdata->ch_reg_size * (i + tdma->dma_start_index));
 
-		tdc->irq = of_irq_get(pdev->dev.of_node,
-					i + tdma->dma_start_index);
+		tdc->irq = of_irq_get(node, i + tdma->dma_start_index);
 		if (tdc->irq < 0) {
 			ret = tdc->irq;
 			goto irq_dispose;
@@ -1400,8 +1399,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
 		goto irq_dispose;
 	}
 
-	ret = of_dma_controller_register(pdev->dev.of_node,
-					 tegra_dma_of_xlate, tdma);
+	ret = of_dma_controller_register(node, tegra_dma_of_xlate, tdma);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "ADMA OF registration failed %d\n", ret);
 		goto dma_remove;

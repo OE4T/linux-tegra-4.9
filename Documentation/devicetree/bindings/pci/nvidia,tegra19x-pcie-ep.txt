@@ -54,6 +54,7 @@ Optional properties:
     2. If C0/C4/C5 operate at their respective max link widths and
        a) speed is Gen-2 and MPS is 256B
        b) speed is >= Gen-3 with any MPS
+- nvidia,bar0-size: Size of BAR-0 through which memory gets exposed to host
 
 Power supplies for Tegra194:
 //TODO

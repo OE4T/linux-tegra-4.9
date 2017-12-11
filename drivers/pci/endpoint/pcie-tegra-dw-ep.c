@@ -131,8 +131,6 @@
 #define PCIE_ATU_LOWER_TARGET	0x14
 #define PCIE_ATU_UPPER_TARGET	0x18
 
-#define MB_1	(1 * 1024 * 1024)
-
 #define LTR_MSG_TIMEOUT (100*1000)
 
 enum ep_event {
@@ -158,6 +156,7 @@ struct tegra_pcie_dw_ep {
 	int			phy_count;
 	struct phy		**phy;
 	struct work_struct pcie_ep_work;
+	u32 bar0_size;
 	dma_addr_t dma_handle;
 	void *cpu_virt;
 	bool update_fc_fixup;
@@ -251,7 +250,7 @@ void pcie_ep_work_fn(struct work_struct *work)
 		}
 
 		/* Enable only 1MB of BAR */
-		writel(MB_1 - 1, pcie->dbi_base + 0x1010);
+		writel(pcie->bar0_size - 1, pcie->dbi_base + 0x1010);
 		writel(0x00000000, pcie->dbi_base + 0x1014);
 
 		val = readl(pcie->dbi_base + AUX_CLK_FREQ);
@@ -263,7 +262,7 @@ void pcie_ep_work_fn(struct work_struct *work)
 		writel(val, pcie->dbi_base + AUX_CLK_FREQ);
 
 		inbound_atu(pcie, PCIE_ATU_REGION_INDEX0, PCIE_ATU_TYPE_MEM,
-			    0x0, pcie->dma_handle, MB_1,
+			    0x0, pcie->dma_handle, pcie->bar0_size,
 			    PCIE_ATU_CR2_MATCH_MODE_BAR, 0);
 
 		if (pcie->update_fc_fixup) {
@@ -599,8 +598,14 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	val |= APPL_INTR_EN_L1_0_HOT_RESET_DONE_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_0);
 
-	pcie->cpu_virt = dma_alloc_coherent(pcie->dev, MB_1, &pcie->dma_handle,
-					    GFP_KERNEL);
+	ret = of_property_read_u32(np, "nvidia,bar0-size", &pcie->bar0_size);
+	if (!ret) {
+		dev_info(pcie->dev, "Setting default BAR0 size to 1MB\n");
+		pcie->bar0_size = SZ_1M;
+	}
+
+	pcie->cpu_virt = dma_alloc_coherent(pcie->dev, pcie->bar0_size,
+					    &pcie->dma_handle, GFP_KERNEL);
 	if (!pcie->cpu_virt) {
 		dev_err(pcie->dev, "BAR memory alloc failed\n");
 		ret = -ENOMEM;

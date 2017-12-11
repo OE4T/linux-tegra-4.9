@@ -543,9 +543,11 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	val |= APPL_CTRL_HW_HOT_RST_EN;
 	writel(val, pcie->appl_base + APPL_CTRL);
 
-	val = readl(pcie->appl_base + APPL_PINMUX);
-	val &= ~APPL_PINMUX_PEX_RST_IN_OVERRIDE_EN;
-	writel(val, pcie->appl_base + APPL_PINMUX);
+	if (tegra_platform_is_fpga()) {
+		val = readl(pcie->appl_base + APPL_PINMUX);
+		val &= ~APPL_PINMUX_PEX_RST_IN_OVERRIDE_EN;
+		writel(val, pcie->appl_base + APPL_PINMUX);
+	}
 
 	pcie->dbi_res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						     "config");

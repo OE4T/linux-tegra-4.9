@@ -516,9 +516,22 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	writel(val | APPL_CFG_SLCG_OVERRIDE_SLCG_EN_MASTER,
 	       pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
 
-	/* clear any stale PEX_RST interrupt */
-	writel(1 << APPL_INTR_STATUS_L0_PEX_RST_INT_SHIFT,
-	       pcie->appl_base + APPL_INTR_STATUS_L0);
+	/* clear any stale interrupt statuses */
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L0);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_1);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_2);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_3);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_6);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_7);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_8);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_9);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_10);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_11);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_13);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_14);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_15);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_17);
 
 	/* configure this core for EP mode operation */
 	val = readl(pcie->appl_base + APPL_DM_TYPE);

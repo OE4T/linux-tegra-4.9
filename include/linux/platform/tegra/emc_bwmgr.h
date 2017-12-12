@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -87,6 +87,7 @@ enum bwmgr_dram_types {
 };
 
 extern u8 bwmgr_dram_efficiency;
+extern u8 bwmgr_dram_num_channels;
 extern u32 *bwmgr_dram_iso_eff_table;
 extern int bwmgr_iso_bw_percentage;
 extern enum bwmgr_dram_types bwmgr_dram_type;
@@ -125,6 +126,14 @@ struct tegra_bwmgr_client *tegra_bwmgr_register(
  * @handle      handle acquired during tegra_bwmgr_register
  */
 void tegra_bwmgr_unregister(struct tegra_bwmgr_client *handle);
+
+/**
+ * tegra_bwmgr_get_dram_num_channels - get the number of DRAM channels
+ *
+ * Returns the number of DRAM channels that are configured on the underlying
+ * platform.
+ */
+u8 tegra_bwmgr_get_dram_num_channels(void);
 
 /**
  * tegra_bwmgr_get_emc_rate - get the current EMC rate.
@@ -230,6 +239,11 @@ static inline int bwmgr_init(void)
 }
 
 static inline void bwmgr_exit(void) {}
+
+static u8 tegra_bwmgr_get_dram_num_channels(void)
+{
+	return 0;
+}
 
 static inline unsigned long tegra_bwmgr_get_emc_rate(void)
 {

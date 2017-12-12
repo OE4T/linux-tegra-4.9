@@ -26,7 +26,6 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/module.h>
-#include <linux/pm_runtime.h>
 #include <linux/delay.h>
 #include <linux/debugfs.h>
 #include <linux/of_address.h>
@@ -120,8 +119,6 @@ static void nvcvnas_car_writel(struct cvnas_device *dev, u32 val, u32 reg)
 {
 	writel(val, dev->car_iobase + reg);
 }
-
-static struct platform_device *cvnas_plat_dev;
 
 static u32 nvcvsram_readl(struct cvnas_device *dev, int sid, u32 reg)
 {
@@ -361,7 +358,7 @@ static int nvcvnas_power_on(struct cvnas_device *cvnas_dev)
 	int i, j;
 	int err;
 
-	if (!tegra_platform_is_silicon())
+	if (!tegra_platform_is_qt())
 		return 0;
 
 	pr_info("initializing cvnas hardware\n");
@@ -458,8 +455,6 @@ static int nvcvnas_probe(struct platform_device *pdev)
 	u32 cvsram_slice_data[2];
 	u32 cvsram_reg_data[4];
 
-	cvnas_plat_dev = pdev;
-
 	cvnas_dev = (struct cvnas_device *)kzalloc(
 			sizeof(*cvnas_dev), GFP_KERNEL);
 	if (!cvnas_dev)
@@ -534,7 +529,11 @@ static int nvcvnas_probe(struct platform_device *pdev)
 		goto err_get_reset_fcm;
 	}
 
-	pm_runtime_enable(&pdev->dev);
+	ret = nvcvnas_power_on(cvnas_dev);
+	if (ret) {
+		dev_err(&pdev->dev, "ECC init failed. ret=%d\n", ret);
+		goto err_cvsram_ecc_setup;
+	}
 
 	ret = nvcvnas_debugfs_init(cvnas_dev);
 	if (ret) {
@@ -561,6 +560,7 @@ err_cvnas_debugfs_init:
 err_get_reset_fcm:
 err_get_reset:
 err_get_clk:
+err_cvsram_ecc_setup:
 err_cvsram_get_reg_data:
 err_cvsram_get_slice_data:
 	iounmap(cvnas_dev->hsm_iobase);
@@ -644,49 +644,7 @@ static int nvcvnas_resume(struct device *dev)
 	return 0;
 }
 
-/* Call at the time we allocate something from CVNAS */
-int nvcvnas_busy(void)
-{
-	if (!cvnas_plat_dev) {
-		pr_err("CVNAS Platform Device not found\n");
-		return -ENODEV;
-	}
-
-	return pm_runtime_get_sync(&cvnas_plat_dev->dev);
-}
-EXPORT_SYMBOL(nvcvnas_busy);
-
-/* Call after we release a buffer */
-int nvcvnas_idle(void)
-{
-	if (!cvnas_plat_dev) {
-		pr_err("CVNAS Platform Device not found\n");
-		return -ENODEV;
-	}
-
-	return pm_runtime_put(&cvnas_plat_dev->dev);
-}
-EXPORT_SYMBOL(nvcvnas_idle);
-
-static int nvcvnas_runtime_suspend(struct device *dev)
-{
-	nvcvnas_suspend(dev);
-	return 0;
-}
-
-static int nvcvnas_runtime_resume(struct device *dev)
-{
-	nvcvnas_resume(dev);
-	return 0;
-}
-
-static const struct dev_pm_ops nvcvnas_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
-	SET_RUNTIME_PM_OPS(nvcvnas_runtime_suspend,
-			nvcvnas_runtime_resume, NULL)
-};
-
+static SIMPLE_DEV_PM_OPS(nvcvnas_pm_ops, nvcvnas_suspend, nvcvnas_resume);
 #define NVCVNAS_PM_OPS (&nvcvnas_pm_ops)
 #else
 #define NVCVNAs_PM_OPS NULL
@@ -702,9 +660,7 @@ static struct platform_driver nvcvnas_driver = {
 		.name	= "tegra-cvnas",
 		.owner	= THIS_MODULE,
 		.of_match_table = nvcvnas_of_ids,
-#ifdef CONFIG_PM
 		.pm = NVCVNAS_PM_OPS,
-#endif
 	},
 
 	.probe		= nvcvnas_probe,

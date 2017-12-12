@@ -180,6 +180,14 @@ static inline u32 therm_config2_r(void)
 {
 	return 0x00020130U;
 }
+static inline u32 therm_config2_grad_step_duration_f(u32 v)
+{
+	return (v & 0xfU) << 8U;
+}
+static inline u32 therm_config2_grad_step_duration_m(void)
+{
+	return 0xfU << 8U;
+}
 static inline u32 therm_config2_slowdown_factor_extended_f(u32 v)
 {
 	return (v & 0x1U) << 24U;
@@ -336,6 +344,10 @@ static inline u32 therm_grad_stepping_table_slowdown_factor0_m(void)
 {
 	return 0x3fU << 0U;
 }
+static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by1_f(void)
+{
+	return 0x0U;
+}
 static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by1p5_f(void)
 {
 	return 0x1U;
@@ -351,6 +363,14 @@ static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by4_f(void)
 static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by8_f(void)
 {
 	return 0xeU;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by16_f(void)
+{
+	return 0x1eU;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by32_f(void)
+{
+	return 0x3eU;
 }
 static inline u32 therm_grad_stepping_table_slowdown_factor1_f(u32 v)
 {

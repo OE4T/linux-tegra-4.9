@@ -24,5 +24,6 @@
 
 struct gk20a;
 int gv11b_elcg_init_idle_filters(struct gk20a *g);
+int gv11b_init_therm_setup_hw(struct gk20a *g);
 
 #endif /* THERM_GV11B_H */

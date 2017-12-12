@@ -586,7 +586,7 @@ static const struct gpu_ops gv11b_ops = {
 		.fault_info_mem_destroy = gv11b_mm_fault_info_mem_destroy,
 	},
 	.therm = {
-		.init_therm_setup_hw = gp10b_init_therm_setup_hw,
+		.init_therm_setup_hw = gv11b_init_therm_setup_hw,
 		.elcg_init_idle_filters = gv11b_elcg_init_idle_filters,
 	},
 	.pmu = {

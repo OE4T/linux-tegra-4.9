@@ -107,6 +107,10 @@ __must_hold(&cde_app->mutex)
 			 cde_ctx->backing_store_vaddr);
 
 	/* free the channel */
+	if (cde_ctx->tsg && ch) {
+		gk20a_tsg_unbind_channel(cde_ctx->ch);
+	}
+
 	gk20a_channel_close(ch);
 
 	/* housekeeping on app */
@@ -1266,6 +1270,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	struct gk20a *g = &l->g;
 	struct nvgpu_firmware *img;
 	struct channel_gk20a *ch;
+	struct tsg_gk20a *tsg;
 	struct gr_gk20a *gr = &g->gr;
 	int err = 0;
 	u64 vaddr;
@@ -1274,6 +1279,12 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	if (!img) {
 		nvgpu_err(g, "cde: could not fetch the firmware");
 		return -ENOSYS;
+	}
+
+	tsg = gk20a_tsg_open(g);
+	if (!tsg) {
+		nvgpu_err(g, "cde: could not create TSG");
+		goto err_get_gk20a_channel;
 	}
 
 	ch = gk20a_open_new_channel_with_cb(g, gk20a_cde_finished_ctx_cb,
@@ -1291,6 +1302,12 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	if (err) {
 		nvgpu_warn(g, "cde: could not bind vm");
 		goto err_commit_va;
+	}
+
+	err = gk20a_tsg_bind_channel(tsg, ch);
+	if (err) {
+		nvgpu_err(g, "cde: unable to bind to tsg");
+		goto err_alloc_gpfifo;
 	}
 
 	/* allocate gpfifo (1024 should be more than enough) */
@@ -1317,6 +1334,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 
 	/* store initialisation data */
 	cde_ctx->ch = ch;
+	cde_ctx->tsg = tsg;
 	cde_ctx->vm = ch->vm;
 	cde_ctx->backing_store_vaddr = vaddr;
 

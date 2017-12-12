@@ -232,6 +232,7 @@ struct gk20a_cde_ctx {
 
 	/* channel related data */
 	struct channel_gk20a *ch;
+	struct tsg_gk20a *tsg;
 	struct vm_gk20a *vm;
 
 	/* buf converter configuration */

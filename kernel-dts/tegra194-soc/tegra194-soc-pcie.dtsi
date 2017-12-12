@@ -374,6 +374,7 @@
 		interrupt-names = "intr";
 
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
+		nvidia,device-id = /bits/ 16 <0x1AD4>;
 
 		iommus = <&smmu TEGRA_SID_PCIE0>;
 		dma-coherent;
@@ -431,6 +432,7 @@
 		interrupt-names = "intr";
 
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
+		nvidia,device-id = /bits/ 16 <0x1AD5>;
 
 		iommus = <&smmu TEGRA_SID_PCIE4>;
 		dma-coherent;
@@ -464,6 +466,7 @@
 		pinctrl-1 = <&clkreq_c5_bi_dir_state>;
 
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
+		nvidia,device-id = /bits/ 16 <0x1AD4>;
 
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;

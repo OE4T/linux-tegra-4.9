@@ -189,8 +189,7 @@ static void xhci_pci_quirks(struct device *dev, struct xhci_hcd *xhci)
 		xhci->quirks |= XHCI_TRUST_TX_LENGTH;
 		xhci->quirks |= XHCI_BROKEN_STREAMS;
 	}
-	if (pdev->vendor == PCI_VENDOR_ID_RENESAS &&
-			pdev->device == 0x0014)
+	if (pdev->vendor == PCI_VENDOR_ID_RENESAS)
 		xhci->quirks |= XHCI_TRUST_TX_LENGTH;
 	if (pdev->vendor == PCI_VENDOR_ID_RENESAS &&
 			pdev->device == 0x0015)

@@ -3,7 +3,7 @@
  * This file contains code for booting and interacting with the MINION
  * microcontroller located inside the Tegra NVLINK controller.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -256,6 +256,124 @@ static void minion_print_ucode(struct nvlink_device *ndev)
 }
 
 /*
+ * Dump the MINION PC trace. This is useful for debugging MINION
+ * errors/hangs/crashes.
+ */
+static void minion_dump_pc_trace(struct nvlink_device *ndev)
+{
+	u32 trace_pc_count = 0;
+	u32 pc = 0;
+	u32 traceidx = 0;
+	u32 tracepc = 0;
+	u32 i = 0;
+	u32 idx = 0;
+	u32 reg_val = 0;
+
+	reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_SCTL);
+	nvlink_err("CMINION_FALCON_SCTL = 0x%x", reg_val);
+	if (reg_val & BIT(CMINION_FALCON_SCTL_HSMODE)) {
+		nvlink_err("MINION is in HS mode."
+			" MINION PC TRACE dump is not supported in HS mode.");
+		return;
+	}
+
+	nvlink_err("");
+	nvlink_err("MINION PC TRACE DUMP - START");
+	nvlink_err("");
+
+	/* Get total number of PC trace entries */
+	reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_TRACEIDX);
+	nvlink_err("CMINION_FALCON_TRACEIDX = 0x%x", reg_val);
+	trace_pc_count = CMINION_FALCON_TRACEIDX_MAXIDX_V(reg_val);
+	nvlink_err("PC TRACE (Total entries = %d - "
+		"entry 0 is the most recent branch):",
+		trace_pc_count);
+
+	/* Print the entire PC trace */
+	for (i = 0; i < trace_pc_count; i++) {
+		idx = CMINION_FALCON_TRACEIDX_IDX_F(i);
+		nvlw_minion_writel(ndev, CMINION_FALCON_TRACEIDX, idx);
+		traceidx = nvlw_minion_readl(ndev, CMINION_FALCON_TRACEIDX);
+
+		tracepc = nvlw_minion_readl(ndev, CMINION_FALCON_TRACEPC);
+		pc = CMINION_FALCON_TRACEPC_PC_V(tracepc);
+
+		nvlink_err("   - PC(%d) = %#010x", idx, pc);
+		nvlink_err("        - CMINION_FALCON_TRACEIDX = 0x%x",
+			traceidx);
+		nvlink_err("        - CMINION_FALCON_TRACEPC = 0x%x",
+			tracepc);
+	}
+
+	nvlink_err("");
+	nvlink_err("MINION PC TRACE DUMP - END");
+	nvlink_err("");
+}
+
+
+/*
+ * Dump the MINION registers which are useful for debugging MINION
+ * errors/hangs/crashes.
+ */
+static void minion_dump_registers(struct nvlink_device *ndev)
+{
+	nvlink_err("");
+	nvlink_err("MINION REGISTER DUMP - START");
+	nvlink_err("");
+
+	nvlink_err("CMINION_FALCON_OS = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_OS));
+	nvlink_err("CMINION_FALCON_CPUCTL = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_CPUCTL));
+	nvlink_err("CMINION_FALCON_IDLESTATE = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_IDLESTATE));
+	nvlink_err("CMINION_FALCON_MAILBOX0 = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_MAILBOX0));
+	nvlink_err("CMINION_FALCON_MAILBOX1 = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_MAILBOX1));
+	nvlink_err("CMINION_FALCON_IRQSTAT = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_IRQSTAT));
+	nvlink_err("CMINION_FALCON_IRQMASK = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_IRQMASK));
+	nvlink_err("CMINION_FALCON_DEBUG1 = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_DEBUG1));
+	nvlink_err("CMINION_FALCON_DEBUGINFO = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_DEBUGINFO));
+	nvlink_err("CMINION_FALCON_BOOTVEC = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_BOOTVEC));
+	nvlink_err("CMINION_FALCON_HWCFG = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_HWCFG));
+	nvlink_err("CMINION_FALCON_ENGCTL = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_ENGCTL));
+	nvlink_err("CMINION_FALCON_CURCTX = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_CURCTX));
+	nvlink_err("CMINION_FALCON_NXTCTX = 0x%x",
+		nvlw_minion_readl(ndev, CMINION_FALCON_NXTCTX));
+
+	/* DL_CMD related registers */
+	nvlink_err("MINION_MINION_DEVICES = 0x%x",
+		nvlw_minion_readl(ndev, MINION_MINION_DEVICES));
+	nvlink_err("MINION_MINION_INTR = 0x%x",
+		nvlw_minion_readl(ndev, MINION_MINION_INTR));
+	nvlink_err("MINION_MINION_INTR_STALL_EN = 0x%x",
+		nvlw_minion_readl(ndev, MINION_MINION_INTR_STALL_EN));
+	nvlink_err("MINION_MINION_INTR_NONSTALL_EN = 0x%x",
+		nvlw_minion_readl(ndev, MINION_MINION_INTR_NONSTALL_EN));
+	nvlink_err("MINION_NVLINK_LINK_INTR = 0x%x",
+		nvlw_minion_readl(ndev, MINION_NVLINK_LINK_INTR));
+	nvlink_err("MINION_NVLINK_DL_CMD = 0x%x",
+		nvlw_minion_readl(ndev, MINION_NVLINK_DL_CMD));
+	nvlink_err("MINION_NVLINK_LINK_DL_STAT = 0x%x",
+		nvlw_minion_readl(ndev, MINION_NVLINK_LINK_DL_STAT));
+	nvlink_err("MINION_MINION_STATUS = 0x%x",
+		nvlw_minion_readl(ndev, MINION_MINION_STATUS));
+
+	nvlink_err("");
+	nvlink_err("MINION REGISTER DUMP - END");
+	nvlink_err("");
+}
+
+/*
  * minion_boot:
  * ------------
  * Boot the MINION microcontroller by executing the following steps:
@@ -496,7 +614,7 @@ int minion_boot(struct nvlink_device *ndev)
 				nvlink_err("MINION_MINION_STATUS = 0x%x",
 					reg_val);
 				ret = -1;
-				goto cleanup;
+				goto err_dump;
 			} else {
 				u32 os = 0;
 				u32 os_maj_ver = 0;
@@ -540,7 +658,7 @@ int minion_boot(struct nvlink_device *ndev)
 			nvlink_err("Timeout waiting for MINION to boot!");
 			nvlink_err("MINION_MINION_STATUS = 0x%x", reg_val);
 			ret = -1;
-			goto cleanup;
+			goto err_dump;
 		}
 
 		/* Service any pending falcon interrupts */
@@ -557,7 +675,7 @@ int minion_boot(struct nvlink_device *ndev)
 					&reg_val);
 	if (ret < 0) {
 		nvlink_err("MINION booted but its not accepting commands");
-		goto cleanup;
+		goto err_dump;
 	}
 
 	/*
@@ -567,7 +685,7 @@ int minion_boot(struct nvlink_device *ndev)
 	ret = minion_send_cmd(ndev, MINION_NVLINK_DL_CMD_COMMAND_SWINTR, 0);
 	if (ret < 0) {
 		nvlink_err("MINION SWINTR DLCMD failed!");
-		goto cleanup;
+		goto err_dump;
 	}
 
 	/* Check interrupt register to see if interrupt was received */
@@ -581,8 +699,15 @@ int minion_boot(struct nvlink_device *ndev)
 			" SW requested interrupt was not received.");
 		nvlink_err("MINION_NVLINK_LINK_INTR: 0x%x", reg_val);
 		ret = -1;
-		goto cleanup;
+		goto err_dump;
 	}
+
+	goto cleanup;
+
+err_dump:
+	/* Dump the PC trace and misc registers for error conditions */
+	minion_dump_pc_trace(ndev);
+	minion_dump_registers(ndev);
 
 cleanup:
 	release_firmware(ndev->minion_fw);
@@ -608,6 +733,7 @@ exit:
 int init_nvhs_phy(struct nvlink_device *ndev)
 {
 	int ret = 0;
+	bool dump_minion = true;
 	u32 reg_val = 0;
 	u32 link_state = 0;
 	struct tegra_nvlink_device *tdev =
@@ -637,6 +763,12 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 		nvlink_err("Link is not in INIT state."
 				" INITPLL can only be executed in INIT state.");
 		ret = -1;
+
+		/*
+		 * This is not a MINION error condition. We don't need a MINION
+		 * debug dump.
+		 */
+		dump_minion = false;
 		goto fail;
 	}
 
@@ -661,6 +793,12 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 	ret = clk_prepare_enable(tdev->clk_txclk_ctrl);
 	if (ret < 0) {
 		nvlink_err("txclk_ctrl's clk_prepare_enable() call failed");
+
+		/*
+		 * This is not a MINION error condition. We don't need a MINION
+		 * debug dump.
+		 */
+		dump_minion = false;
 		goto fail;
 	}
 
@@ -690,6 +828,12 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 					&reg_val);
 	if (ret < 0) {
 		nvlink_err("RX calibration failed!");
+
+		/*
+		 * This is not a MINION error condition. We don't need a MINION
+		 * debug dump.
+		 */
+		dump_minion = false;
 		goto undo_clk;
 	}
 
@@ -716,6 +860,15 @@ undo_clk:
 	clk_disable_unprepare(tdev->clk_txclk_ctrl);
 fail:
 	nvlink_err("NVHS PHY init failed!");
+
+	/*
+	 * Dump the MINION PC trace and misc registers for MINION error
+	 * conditions
+	 */
+	if (dump_minion) {
+		minion_dump_pc_trace(ndev);
+		minion_dump_registers(ndev);
+	}
 success:
 	return ret;
 }

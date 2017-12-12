@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -226,6 +226,7 @@ struct bwmgr_ops *bwmgr_eff_init_t18x(void)
 	default:
 		BUG_ON(true);
 	}
+	bwmgr_dram_num_channels = ch_num;
 
 	for (i = ARRAY_SIZE(bwmgr_t186_iso_bw_table) - 1; i >= 0; i--) {
 		if (bwmgr_dram_iso_eff_table[i] > 1) {

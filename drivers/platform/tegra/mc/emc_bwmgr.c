@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 - 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015 - 2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,6 +21,7 @@
 #include <soc/tegra/chip-id.h>
 
 u8 bwmgr_dram_efficiency;
+u8 bwmgr_dram_num_channels;
 u32 *bwmgr_dram_iso_eff_table;
 int bwmgr_iso_bw_percentage;
 enum bwmgr_dram_types bwmgr_dram_type;
@@ -195,6 +196,12 @@ void tegra_bwmgr_unregister(struct tegra_bwmgr_client *handle)
 	bwmgr_unlock();
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_unregister);
+
+u8 tegra_bwmgr_get_dram_num_channels(void)
+{
+	return bwmgr_dram_num_channels;
+}
+EXPORT_SYMBOL_GPL(tegra_bwmgr_get_dram_num_channels);
 
 unsigned long tegra_bwmgr_get_max_emc_rate(void)
 {

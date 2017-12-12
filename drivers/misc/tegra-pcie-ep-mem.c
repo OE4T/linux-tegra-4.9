@@ -871,7 +871,8 @@ static void ep_test_dma_remove(struct pci_dev *pdev)
 }
 
 static const struct pci_device_id ep_pci_tbl[] = {
-	{ PCI_DEVICE(0x10DE, 0x1AD1)},
+	{ PCI_DEVICE(0x10DE, 0x1AD4)},
+	{ PCI_DEVICE(0x10DE, 0x1AD5)},
 	{},
 };
 

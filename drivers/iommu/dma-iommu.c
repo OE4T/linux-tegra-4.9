@@ -299,46 +299,40 @@ static struct page **__iommu_dma_alloc_pages(unsigned int count,
 		return NULL;
 
 	/* IOMMU can map any pages, so himem can also be used here */
-	gfp |= __GFP_NOWARN | __GFP_HIGHMEM;
-	gfp &= ~__GFP_DMA;
+	if (!(gfp & GFP_DMA) && !(gfp & GFP_DMA32))
+		gfp |= __GFP_HIGHMEM;
+
+	gfp |= __GFP_NOWARN;
 
 	while (count) {
-		struct page *page = NULL;
-		unsigned int order_size;
+		int j, order = __fls(count);
 
-		/*
-		 * Higher-order allocations are a convenience rather
-		 * than a necessity, hence using __GFP_NORETRY until
-		 * falling back to minimum-order allocations.
-		 */
-		for (order_mask &= (2U << __fls(count)) - 1;
-		     order_mask; order_mask &= ~order_size) {
-			unsigned int order = __fls(order_mask);
+		pages[i] = alloc_pages(gfp, order);
+		while (!pages[i] && order)
+			pages[i] = alloc_pages(gfp, --order);
+		if (!pages[i])
+			goto error;
 
-			order_size = 1U << order;
-			page = alloc_pages((order_mask - order_size) ?
-					   gfp | __GFP_NORETRY : gfp, order);
-			if (!page)
-				continue;
-			if (!order)
-				break;
-			if (!PageCompound(page)) {
-				split_page(page, order);
-				break;
-			} else if (!split_huge_page(page)) {
-				break;
-			}
-			__free_pages(page, order);
+		if (order) {
+			split_page(pages[i], order);
+			j = 1 << order;
+			while (--j)
+				pages[i + j] = pages[i] + j;
 		}
-		if (!page) {
-			__iommu_dma_free_pages(pages, i);
-			return NULL;
-		}
-		count -= order_size;
-		while (order_size--)
-			pages[i++] = page++;
+		i += 1 << order;
+		count -= 1 << order;
 	}
+
 	return pages;
+error:
+	while (i--)
+		if (pages[i])
+			__free_pages(pages[i], 0);
+	if (array_size <= PAGE_SIZE)
+		kfree(pages);
+	else
+		vfree(pages);
+	return NULL;
 }
 
 /**

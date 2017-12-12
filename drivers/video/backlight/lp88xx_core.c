@@ -1022,3 +1022,5 @@ int lp88xx_common_probe(struct device *dev, struct lp88xx *lp)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(lp88xx_common_probe);
+
+MODULE_LICENSE("GPL v2");

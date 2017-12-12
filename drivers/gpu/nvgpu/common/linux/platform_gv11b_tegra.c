@@ -59,18 +59,24 @@ static int gv11b_tegra_probe(struct device *dev)
 		return err;
 	}
 
-	err = nvgpu_nvhost_syncpt_unit_interface_get_aperture(
+	if (g->has_syncpoints) {
+		err = nvgpu_nvhost_syncpt_unit_interface_get_aperture(
 				g->nvhost_dev,
 				&g->syncpt_unit_base,
 				&g->syncpt_unit_size);
-	if (err) {
-		dev_err(dev, "Failed to get syncpt interface");
-		return -ENOSYS;
+		if (err) {
+			dev_err(dev, "Failed to get syncpt interface");
+			return -ENOSYS;
+		}
+		g->syncpt_size =
+			nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(1);
+		nvgpu_info(g, "syncpt_unit_base %llx "
+				"syncpt_unit_size %zx size %x\n",
+				g->syncpt_unit_base, g->syncpt_unit_size,
+				g->syncpt_size);
 	}
-	g->syncpt_size = nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(1);
-	gk20a_dbg_info("syncpt_unit_base %llx syncpt_unit_size %zx size %x\n",
-			g->syncpt_unit_base, g->syncpt_unit_size,
-			g->syncpt_size);
+#else
+	g->has_syncpoints = false;
 #endif
 
 	platform->bypass_smmu = !device_is_iommuable(dev);

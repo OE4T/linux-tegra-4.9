@@ -1644,77 +1644,47 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			 (dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
 			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI)) {
 		struct fb_monspecs specs;
-		struct fb_videomode fb_mode;
 
 		specs.modedb = NULL;
-		if (tegra_dc_hpd(dc)) {
-			if (!tegra_edid_get_monspecs(hdmi->edid, &specs)) {
-				if (dc->initialized) {
-					err = tegra_dc_to_fb_videomode(&fb_mode,
-							&dc->mode);
-					if (err) {
-						dev_err(&dc->ndev->dev,
-						"%s: convert dc to fb mode for "
-						"bootloader mode, err=%d\n",
-						__func__, err);
-					}
+
+		/* If dc is initialized by bootloader or if display-timings
+		 * are specified in DT, dc mode would already be set.
+		 */
+		if (!dc->initialized && !dc->out->n_modes) {
+			if (tegra_dc_hpd(dc)) {
+				if (!tegra_edid_get_monspecs(hdmi->edid,
+								&specs)) {
 					err = tegra_dc_set_fb_mode(dc,
-							&fb_mode, false);
+						specs.modedb, false);
 					if (err) {
 						dev_err(&dc->ndev->dev,
-						"%s: set FB mode with "
-						"bootloader mode, err=%d\n",
-						__func__, err);
+						"%s: set DC mode from modedb,"
+						" err = %d\n", __func__, err);
 					}
 				} else {
-					err = tegra_dc_set_fb_mode(dc,
-							specs.modedb, false);
-					if (err) {
-						dev_err(&dc->ndev->dev,
-						"%s: set FB mode with modedb,"
-						" err=%d\n", __func__, err);
-					}
-				}
-			} else {
-				/* if edid read failed */
-				if (dc->initialized) {
-					err = tegra_dc_to_fb_videomode(&fb_mode,
-							&dc->mode);
-					if (err) {
-						dev_err(&dc->ndev->dev,
-						"%s: no edid. convert dc to fb "
-						"mode for bootloader mode, "
-						"err=%d\n", __func__, err);
-					}
-					err = tegra_dc_set_fb_mode(dc,
-							&fb_mode, false);
-					if (err) {
-						dev_err(&dc->ndev->dev,
-						"%s: no edid. set FB mode with "
-						"bootloader mode, err=%d\n",
-						__func__, err);
-					}
-				} else {
+					/* Reading edid from monitor failed */
 					err = tegra_dc_set_fb_mode(dc,
 						&tegra_dc_vga_mode, false);
 					if (err) {
 						dev_err(&dc->ndev->dev,
-						"%s: set FB mode without EDID, "
+						"%s: no edid, set VGA mode,"
 						" err=%d\n", __func__, err);
 					}
 				}
-			}
-		} else {
-			/* hpd not detected */
-			err = tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
-			if (err) {
-				dev_err(&dc->ndev->dev,
-					"%s: set FB mode without HPD, err=%d\n",
+			} else {
+				/* No DT mode and HPD not detected */
+				err = tegra_dc_set_fb_mode(dc,
+					&tegra_dc_vga_mode, false);
+				if (err) {
+					dev_err(&dc->ndev->dev,
+					"%s: fallback to VGA mode, err=%d\n",
 					__func__, err);
+				}
 			}
+
+			if (specs.modedb != NULL)
+				kfree(specs.modedb);
 		}
-		if (specs.modedb != NULL)
-			kfree(specs.modedb);
 	}
 
 #ifdef CONFIG_SWITCH

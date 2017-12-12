@@ -3,7 +3,7 @@
  *
  * Multiple GPIO state based based on extcon class driver.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -90,6 +90,12 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 					struct gpio_extcon_info, work);
 	int gstate = 0;
 	int i;
+
+	/* skip update as it's already done in state_store through sysfs */
+	if (gpex->last_cstate != gpex->edev->state) {
+		gpex->last_cstate = gpex->edev->state;
+		return;
+	}
 
 	for (i = 0; i < gpex->pdata->n_gpio; ++i) {
 		state = gpio_get_value_cansleep(gpex->pdata->gpios[i].gpio);

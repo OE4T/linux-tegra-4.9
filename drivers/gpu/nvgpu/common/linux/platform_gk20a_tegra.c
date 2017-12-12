@@ -972,4 +972,6 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.soc_name = "tegra21x",
 
 	.unified_memory = true,
+
+	.tsg_required = true,
 };

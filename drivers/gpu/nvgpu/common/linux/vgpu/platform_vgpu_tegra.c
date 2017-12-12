@@ -66,4 +66,6 @@ struct gk20a_platform vgpu_tegra_platform = {
 	.devfreq_governor = "userspace",
 
 	.virtual_dev = true,
+
+	.tsg_required = true,
 };

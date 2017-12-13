@@ -80,7 +80,7 @@
 							>;
 					};
 				};
-				prod_c_hdmi_223m_340m {
+				prod_c_hdmi_223m_300m {
 					asic {
 						prod = <0x000003a0 0x00000002 0x00000000>;	/* SOR_NV_PDISP_INPUT_CONTROL  	00:00=HDMI_SRC_SELECT	0x0 */
 					};
@@ -97,7 +97,7 @@
 							>;
 					};
 				};
-				prod_c_hdmi_340m_600m {
+				prod_c_hdmi_300m_600m {
 					asic {
 						prod = <0x000003a0 0x00000002 0x00000002>;	/* SOR_NV_PDISP_INPUT_CONTROL  	00:00=HDMI_SRC_SELECT	0x0 */
 					};

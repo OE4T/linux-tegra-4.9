@@ -308,8 +308,8 @@ static int nvgpu_init_bar1_vm(struct mm_gk20a *mm)
 	nvgpu_log_info(g, "bar1 vm size = 0x%x", mm->bar1.aperture_size);
 	mm->bar1.vm = nvgpu_vm_init(g,
 				    big_page_size,
-				    SZ_4K,
-				    mm->bar1.aperture_size - SZ_4K,
+				    SZ_64K,
+				    mm->bar1.aperture_size - SZ_64K,
 				    mm->bar1.aperture_size,
 				    true, false,
 				    "bar1");

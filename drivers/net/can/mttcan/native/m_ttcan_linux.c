@@ -523,10 +523,8 @@ static void mttcan_tx_event(struct net_device *dev)
 		id = (txevt.f0 & MTT_TXEVT_ELE_F0_ID_MASK) >>
 			MTT_TXEVT_ELE_F0_ID_SHIFT;
 
-		pr_debug("%s:TS %llu:(index %u) ID %x(%s %s %s) Evt_Type %02d\n",
-			__func__, timecounter_cyc2time(&priv->tc,
-			ttcan_read_ts_cntr(&priv->cc)),
-			(txevt.f1 & MTT_TXEVT_ELE_F1_MM_MASK) >>
+		pr_debug("%s:(index %u) ID %x(%s %s %s) Evt_Type %02d\n",
+			 __func__, (txevt.f1 & MTT_TXEVT_ELE_F1_MM_MASK) >>
 			MTT_TXEVT_ELE_F1_MM_SHIFT,
 			xtd ? id : id >> 18, xtd ? "XTD" : "STD",
 			txevt.f1 & MTT_TXEVT_ELE_F1_FDF_MASK ? "FD" : "NON-FD",
@@ -1171,8 +1169,7 @@ static int mttcan_open(struct net_device *dev)
 		goto exit_open_fail;
 	}
 
-	err = devm_request_irq(priv->device, dev->irq, mttcan_isr, IRQF_SHARED,
-			dev->name, dev);
+	err = request_irq(dev->irq, mttcan_isr, 0, dev->name, dev);
 	if (err < 0) {
 		netdev_err(dev, "failed to request interrupt\n");
 		goto fail;
@@ -1196,9 +1193,11 @@ exit_open_fail:
 static int mttcan_close(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
+
 	netif_stop_queue(dev);
 	napi_disable(&priv->napi);
 	mttcan_stop(priv);
+	free_irq(dev->irq, dev);
 	close_candev(dev);
 	mttcan_power_down(dev);
 	mttcan_pm_runtime_put_sync(priv);

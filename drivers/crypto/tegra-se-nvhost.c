@@ -2951,6 +2951,7 @@ static int tegra_se_rsa_setkey(struct crypto_akcipher *tfm, const void *key,
 	u32 *cmdbuf_cpuvaddr = NULL;
 	dma_addr_t cmdbuf_iova = 0;
 	int err = 0;
+	int timeout = 0;
 
 	se_dev = se_devices[SE_RSA];
 
@@ -2961,12 +2962,22 @@ static int tegra_se_rsa_setkey(struct crypto_akcipher *tfm, const void *key,
 
 	/* Allocate rsa key slot */
 	if (!ctx->slot) {
-		pslot = tegra_se_alloc_rsa_key_slot();
+		for (timeout = 0; timeout < SE_KEYSLOT_TIMEOUT; timeout++) {
+			pslot = tegra_se_alloc_rsa_key_slot();
+			if (!pslot) {
+				mdelay(SE_KEYSLOT_MDELAY);
+				continue;
+			} else {
+				break;
+			}
+		}
+
 		if (!pslot) {
 			dev_err(se_dev->dev, "no free key slot\n");
 			return -ENOMEM;
+		} else {
+			ctx->slot = pslot;
 		}
-		ctx->slot = pslot;
 	}
 
 	module_key_length = (keylen >> 16);

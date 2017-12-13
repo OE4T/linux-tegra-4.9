@@ -101,6 +101,7 @@
 		status = "okay";
 		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
 		phy-names = "usb2";
+		nvidia,boost-cpu-freq = <1200>;
 	};
 
 	usb_cd {
@@ -115,6 +116,7 @@
 		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 		phy-names = "usb2";
 		emc-frequency = <150000000>;
+		nvidia,boost-cpu-freq = <1200>;
 	};
 #endif
 

@@ -3693,8 +3693,15 @@ static int tegra_xusb_suspend(struct device *dev)
 	}
 
 	ret = tegra_xhci_enter_elpg(tegra, false);
-	if (ret < 0)
+	if (ret < 0) {
+		if (pm_runtime_suspended(dev)) {
+			pm_runtime_disable(dev);
+			pm_runtime_set_active(dev);
+			pm_runtime_enable(dev);
+		}
+
 		goto out;
+	}
 
 	/* disable CDP for all ports */
 	if (tegra->cdp_enabled) {

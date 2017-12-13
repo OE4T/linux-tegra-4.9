@@ -449,6 +449,7 @@ struct gr_ctx_desc {
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;
 #endif
+	bool golden_img_loaded;
 };
 
 struct ctx_header_desc {

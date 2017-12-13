@@ -669,6 +669,11 @@ static int pva_probe(struct platform_device *pdev)
 	/* Initialize PVA private data */
 	pva->pdev = pdev;
 
+
+	/* Enable powergating only on silicon */
+	if (!tegra_platform_is_silicon())
+		pdata->can_powergate = false;
+
 	/* Initialize nvhost specific data */
 	pdata->pdev = pdev;
 	mutex_init(&pdata->lock);

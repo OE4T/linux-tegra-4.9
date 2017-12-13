@@ -595,6 +595,7 @@ struct nvhost_device_data t19_pva1_info = {
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(11),
 	.engine_cg_regs		= t19x_pva_gating_registers,
+	.can_powergate		= true,
 };
 
 struct nvhost_device_data t19_pva0_info = {
@@ -624,6 +625,7 @@ struct nvhost_device_data t19_pva0_info = {
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.reset_clamp_mask	= BIT(10),
 	.engine_cg_regs		= t19x_pva_gating_registers,
+	.can_powergate		= true,
 };
 #endif
 

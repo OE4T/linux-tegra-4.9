@@ -34,7 +34,8 @@
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mc-regs-t19x.h>
 
-#define T19X_MAX_NVLINK_SUPPORTED	1
+#define NVLINK_MAX_DEVICES			2
+#define NVLINK_MAX_LINKS			2
 #define MINION_BYTES_PER_BLOCK		256
 #define MINION_WORD_SIZE		4
 
@@ -102,11 +103,7 @@ struct remote_device_info {
 	/* Device id of device connected - to be filled from device tree */
 	enum nvlink_endpt device_id;
 	/* Link id of the link connected - to be filled from device tree */
-	u8 link_id;
-	/* Pointer to Link info of connected end point. */
-	struct nvlink_link *remote_link;
-	/* Pointer to device info of connected end point. */
-	struct nvlink_device *remote_device;
+	u32 link_id;
 };
 
 struct nvlink_link {
@@ -129,7 +126,7 @@ struct nvlink_link {
 	/* is the link connected to an endpt - to be filled from device tree */
 	bool is_connected;
 	/* Pointer to device info of connected end point */
-	struct remote_device_info remote_device_info;
+	struct remote_device_info remote_dev_info;
 	/* Pointer to struct containing callback functions to do link specific
 	 * operation from core driver
 	 */
@@ -162,8 +159,6 @@ struct minion_hdr {
 struct nvlink_device {
 	/* device_id */
 	enum nvlink_endpt device_id;
-	/* number of links present in this device */
-	u8 number_of_links;
 	/* device state */
 	enum device_state state;
 	/* if true, then ONLY the driver of this device can initiate enumeration
@@ -181,7 +176,7 @@ struct nvlink_device {
 	struct cdev cdev;
 	struct device *dev;
 	/*nvlink link data*/
-	struct nvlink_link *links;
+	struct nvlink_link link;
 	/* Pointer to struct containing callback functions to do device specific
 	* operation from core driver
 	*/
@@ -202,8 +197,10 @@ struct tegra_nvlink_device {
 };
 
 /* APIs used by endpoint drivers for interfacing with the core driver */
-int nvlink_register_endpt_drv(struct nvlink_link *link);
-
+int nvlink_register_device(struct nvlink_device* device);
+int nvlink_register_link(struct nvlink_link* link);
+int nvlink_unregister_device(struct nvlink_device* device);
+int nvlink_unregister_link(struct nvlink_link* link);
 int nvlink_init_link(struct nvlink_device *ndev);
 
 #endif /* NVLINK_H */

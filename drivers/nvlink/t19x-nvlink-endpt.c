@@ -81,13 +81,13 @@ static inline void nvlw_minion_writel(struct nvlink_device *ndev, u32 reg,
 
 static inline u32 nvlw_nvl_readl(struct nvlink_device *ndev, u32 reg)
 {
-	return readl(ndev->links[0].nvlw_nvl_base + reg);
+	return readl(ndev->link.nvlw_nvl_base + reg);
 }
 
 static inline void nvlw_nvl_writel(struct nvlink_device *ndev, u32 reg,
 									u32 val)
 {
-	writel(val, ndev->links[0].nvlw_nvl_base + reg);
+	writel(val, ndev->link.nvlw_nvl_base + reg);
 }
 
 static inline u32 nvlw_sync2x_readl(struct nvlink_device *ndev,	u32 reg)
@@ -105,26 +105,28 @@ static inline void nvlw_sync2x_writel(struct nvlink_device *ndev, u32 reg,
 
 static inline u32 nvlw_nvltlc_readl(struct nvlink_device *ndev, u32 reg)
 {
-	return readl(ndev->links[0].nvlw_nvltlc_base + reg);
+	return readl(ndev->link.nvlw_nvltlc_base + reg);
 }
 
 static inline void nvlw_nvltlc_writel(struct nvlink_device *ndev, u32 reg,
 									u32 val)
 {
-	writel(val, ndev->links[0].nvlw_nvltlc_base + reg);
+	writel(val, ndev->link.nvlw_nvltlc_base + reg);
 }
 
 static inline u32 mssnvlink_0_readl(struct nvlink_device *ndev, u32 reg)
 {
-	return readl(((struct tegra_nvlink_link *)(ndev->links[0].priv))
-						->mssnvlink_0_base + reg);
+	struct tegra_nvlink_link *priv =
+			(struct tegra_nvlink_link *)(ndev->link.priv);
+	return readl(priv->mssnvlink_0_base + reg);
 }
 
 static inline void mssnvlink_0_writel(struct nvlink_device *ndev, u32 reg,
 									u32 val)
 {
-	writel(val, ((struct tegra_nvlink_link *)(ndev->links[0].priv))
-						->mssnvlink_0_base + reg);
+	struct tegra_nvlink_link *priv =
+			(struct tegra_nvlink_link *)(ndev->link.priv);
+	writel(val, priv->mssnvlink_0_base + reg);
 }
 
 /* TODO: Remove all non-NVLINK reads from the driver. */
@@ -1185,12 +1187,6 @@ static int t19x_nvlink_endpt_open(struct inode *in, struct file *filp)
 		return -EBADFD;
 	}
 
-	ret = nvlink_register_endpt_drv(&ndev->links[0]);
-	if (ret) {
-		nvlink_err("Failed to register with the NVLINK core driver");
-		return ret;
-	}
-
 	ret = nvlink_init_link(ndev);
 
 	return ret;
@@ -1212,10 +1208,9 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct nvlink_device *ndev;
+	struct tegra_nvlink_link *tegra_link = NULL;
 	struct device_node *np = pdev->dev.of_node;
-	struct device_node *local_endpoint = NULL;
-	struct device_node *remote_parent = NULL;
-	const void *compat_prop = NULL;
+	struct device_node *endpt_dt_node = NULL;
 	struct device *dev = NULL;
 
 	ndev = kzalloc(sizeof(struct nvlink_device), GFP_KERNEL);
@@ -1233,20 +1228,18 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		goto err_alloc_priv;
 	}
 
-	ndev->links = (struct nvlink_link *) kzalloc(T19X_MAX_NVLINK_SUPPORTED *
-					sizeof(struct nvlink_link), GFP_KERNEL);
-	if (!ndev->links) {
-		nvlink_err("Couldn't allocate memory for links");
+	ndev->link.priv =
+		(void *) kzalloc(sizeof(struct tegra_nvlink_link), GFP_KERNEL);
+	if (!ndev->link.priv) {
+		nvlink_err("Couldn't allocate memory for link's private data");
 		ret = -ENOMEM;
-		goto err_alloc_links;
+		goto err_alloc_link_priv;
 	}
+	tegra_link = (struct tegra_nvlink_link *)(ndev->link.priv);
 
 	ndev->dev = &pdev->dev;
 	ndev->class.owner = THIS_MODULE;
 	ndev->class.name = NVLINK_DRV_NAME;
-	ndev->device_id = NVLINK_ENDPT_T19X;
-	ndev->number_of_links = T19X_MAX_NVLINK_SUPPORTED;
-	ndev->links[0].link_ops.enable_link = t19x_nvlink_endpt_enable_link;
 	platform_set_drvdata(pdev, ndev);
 
 	if (!np) {
@@ -1284,12 +1277,12 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		goto err_mapping;
 	}
 
-	ndev->links[0].nvlw_nvl_base =
+	ndev->link.nvlw_nvl_base =
 				of_io_request_and_map(np, 3,
 						"NVLW_NVL aperture");
-	if (IS_ERR(ndev->links[0].nvlw_nvl_base)) {
+	if (IS_ERR(ndev->link.nvlw_nvl_base)) {
 		nvlink_err("Couldn't map the NVLW_NVL aperture");
-		ret = PTR_ERR(ndev->links[0].nvlw_nvl_base);
+		ret = PTR_ERR(ndev->link.nvlw_nvl_base);
 		goto err_mapping;
 	}
 
@@ -1304,48 +1297,43 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		goto err_mapping;
 	}
 
-	ndev->links[0].nvlw_nvltlc_base =
+	ndev->link.nvlw_nvltlc_base =
 				of_io_request_and_map(np, 5,
 						"NVLW_NVLTLC aperture");
-	if (IS_ERR(ndev->links[0].nvlw_nvltlc_base)) {
+	if (IS_ERR(ndev->link.nvlw_nvltlc_base)) {
 		nvlink_err("Couldn't map the NVLW_NVLTLC aperture");
-		ret = PTR_ERR(ndev->links[0].nvlw_nvltlc_base);
+		ret = PTR_ERR(ndev->link.nvlw_nvltlc_base);
 		goto err_mapping;
 	}
 
-	((struct tegra_nvlink_link *)(ndev->links[0].priv))->
-			mssnvlink_0_base = of_io_request_and_map(np, 6,
+	tegra_link->mssnvlink_0_base = of_io_request_and_map(np, 6,
 							"MSSNVLINK_0 aperture");
-	if (IS_ERR(((struct tegra_nvlink_link *)(ndev->links[0].priv))->
-							mssnvlink_0_base)) {
+	if (IS_ERR(tegra_link->mssnvlink_0_base)) {
 		nvlink_err("Couldn't map the MSSNVLINK_0 aperture");
-		ret = PTR_ERR(((struct tegra_nvlink_link *)
-						(ndev->links[0].priv))->
-							mssnvlink_0_base);
+		ret = PTR_ERR(tegra_link->mssnvlink_0_base);
 		goto err_mapping;
 	}
 
 	/* Read NVLINK topology information in device tree */
-	local_endpoint = of_graph_get_next_endpoint(np, NULL);
-	remote_parent = of_graph_get_remote_port_parent(local_endpoint);
-	compat_prop = of_get_property(remote_parent, "compatible", NULL);
-	if (compat_prop) {
-		if (strcmp(compat_prop,
-			t19x_nvlink_controller_of_match[0].compatible) == 0) {
-			nvlink_dbg("Loopback topology detected!");
-			ndev->links[0].remote_device_info.device_id =
-							NVLINK_ENDPT_T19X;
-		} else {
-			nvlink_err("Invalid topology info in device tree");
-			ret = -1;
-			goto err_mapping;
-		}
-	} else {
-		nvlink_err("Invalid topology info in device tree");
-		ret = -1;
-		goto err_mapping;
-	}
+	endpt_dt_node = of_get_child_by_name(np, "endpoint");
+	of_property_read_u32(endpt_dt_node, "local_dev_id", &ndev->device_id);
+	of_property_read_u32(endpt_dt_node, "local_link_id", &ndev->link.link_id);
+	ndev->is_master = of_property_read_bool(endpt_dt_node, "is_master");
+	of_property_read_u32(endpt_dt_node, "remote_dev_id", &ndev->link.remote_dev_info.device_id);
+	of_property_read_u32(endpt_dt_node, "remote_link_id", &ndev->link.remote_dev_info.link_id);
 
+	nvlink_dbg("Device Tree Topology Information:");
+	nvlink_dbg("  - Local Device: Device ID = %d, Link ID = %d, Is master? = %s",
+		ndev->device_id,
+		ndev->link.link_id,
+		ndev->is_master ? "True" : "False");
+	nvlink_dbg("  - Remote Device: Device ID = %d, Link ID = %d",
+		ndev->link.remote_dev_info.device_id,
+		ndev->link.remote_dev_info.link_id);
+
+	/* Fill in the link struct */
+	ndev->link.device_id = ndev->device_id;
+	ndev->link.link_ops.enable_link = t19x_nvlink_endpt_enable_link;
 
 	/* Create device node */
 	ret = class_register(&ndev->class);
@@ -1380,9 +1368,25 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		goto err_device;
 	}
 
+	/* Register device with core driver*/
+	ret = nvlink_register_device(ndev);
+	if (ret < 0) {
+		goto err_ndev_register;
+	}
+
+	/* Register link with core driver */
+	ret = nvlink_register_link(&ndev->link);
+	if (ret < 0) {
+		goto err_nlink_register;
+	}
+
 	nvlink_dbg("Probe successful!");
 	goto success;
 
+err_nlink_register:
+	nvlink_unregister_device(ndev);
+err_ndev_register:
+	device_destroy(&ndev->class, ndev->dev_t);
 err_device:
 	cdev_del(&ndev->cdev);
 err_cdev:
@@ -1399,25 +1403,23 @@ err_mapping:
 	if (!IS_ERR(ndev->nvlw_minion_base))
 		iounmap(ndev->nvlw_minion_base);
 
-	if (!IS_ERR(ndev->links[0].nvlw_nvl_base))
-		iounmap(ndev->links[0].nvlw_nvl_base);
+	if (!IS_ERR(ndev->link.nvlw_nvl_base))
+		iounmap(ndev->link.nvlw_nvl_base);
 
 	if (!IS_ERR(((struct tegra_nvlink_device *)(ndev->priv))->
 							nvlw_sync2x_base))
 		iounmap(((struct tegra_nvlink_device *)(ndev->priv))->
 							nvlw_sync2x_base);
 
-	if (!IS_ERR(ndev->links[0].nvlw_nvltlc_base))
-		iounmap(ndev->links[0].nvlw_nvltlc_base);
+	if (!IS_ERR(ndev->link.nvlw_nvltlc_base))
+		iounmap(ndev->link.nvlw_nvltlc_base);
 
-	if (!IS_ERR(((struct tegra_nvlink_link *)(ndev->links[0].priv))->
-							mssnvlink_0_base))
-		iounmap(((struct tegra_nvlink_link *)(ndev->links[0].priv))->
-							mssnvlink_0_base);
+	if (!IS_ERR(tegra_link->mssnvlink_0_base))
+		iounmap(tegra_link->mssnvlink_0_base);
 
 err_dt_node:
-	kfree(ndev->links);
-err_alloc_links:
+	kfree(tegra_link);
+err_alloc_link_priv:
 	kfree(ndev->priv);
 err_alloc_priv:
 	kfree(ndev);
@@ -1430,7 +1432,11 @@ success:
 static int t19x_nvlink_endpt_remove(struct platform_device *pdev)
 {
 	struct nvlink_device *ndev = platform_get_drvdata(pdev);
+	struct tegra_nvlink_link *tegra_link =
+				(struct tegra_nvlink_link *)(ndev->link.priv);
 
+	nvlink_unregister_link(&ndev->link);
+	nvlink_unregister_device(ndev);
 	device_destroy(&ndev->class, ndev->dev_t);
 	cdev_del(&ndev->cdev);
 	unregister_chrdev_region(ndev->dev_t, 1);
@@ -1439,12 +1445,12 @@ static int t19x_nvlink_endpt_remove(struct platform_device *pdev)
 	iounmap(ndev->nvlw_tioctrl_base);
 	iounmap(ndev->nvlw_nvlipt_base);
 	iounmap(ndev->nvlw_minion_base);
-	iounmap(ndev->links[0].nvlw_nvl_base);
+	iounmap(ndev->link.nvlw_nvl_base);
 	iounmap(((struct tegra_nvlink_device *)(ndev->priv))->
 							nvlw_sync2x_base);
-	iounmap(ndev->links[0].nvlw_nvltlc_base);
-	iounmap(((struct tegra_nvlink_link *)(ndev->links[0].priv))->
-							mssnvlink_0_base);
+	iounmap(ndev->link.nvlw_nvltlc_base);
+	iounmap(tegra_link->mssnvlink_0_base);
+	kfree(tegra_link);
 	kfree(ndev->priv);
 	kfree(ndev);
 

@@ -32,4 +32,6 @@
 
 #define __NV_ACCESS_ONCE(x)	ACCESS_ONCE(x)
 
+#define __nvgpu_speculation_barrier() speculation_barrier()
+
 #endif /* __NVGPU_BARRIER_LINUX_H__ */

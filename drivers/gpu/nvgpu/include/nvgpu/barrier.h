@@ -47,4 +47,13 @@
 
 #define NV_ACCESS_ONCE(x)	__NV_ACCESS_ONCE(x)
 
+/*
+ * Sometimes we want to prevent speculation.
+ */
+#ifdef __NVGPU_PREVENT_UNTRUSTED_SPECULATION
+#define nvgpu_speculation_barrier()	__nvgpu_speculation_barrier()
+#else
+#define nvgpu_speculation_barrier()
+#endif
+
 #endif /* __NVGPU_BARRIER_H__ */

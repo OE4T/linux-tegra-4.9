@@ -1688,7 +1688,6 @@ void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 
 void gr_gv11b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
-	u32 tpc_count_mask;
 	u32 fuse_val;
 
 	if (!g->gr.gpc_tpc_mask[gpc_index])
@@ -1701,11 +1700,9 @@ void gr_gv11b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	 * So we need to flip the bits and ensure we don't write to bits greater
 	 * than TPC count
 	 */
-	tpc_count_mask = (1 << gr_gk20a_get_tpc_count(&g->gr, gpc_index)) - 1;
-
 	fuse_val = g->gr.gpc_tpc_mask[gpc_index];
 	fuse_val = ~fuse_val;
-	fuse_val = fuse_val & tpc_count_mask;
+	fuse_val = fuse_val & 0xf; /* tpc0_disable fuse is only 4-bit wide */
 
 	nvgpu_tegra_fuse_write_bypass(g, 0x1);
 	nvgpu_tegra_fuse_write_access_sw(g, 0x0);

@@ -190,6 +190,7 @@ int vgpu_mmap_user_buffer(struct gk20a *g, struct vm_area_struct *vma)
 			vma->vm_page_prot);
 }
 
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 int vgpu_fecs_trace_max_entries(struct gk20a *g,
 			struct nvgpu_ctxsw_trace_filter *filter)
 {
@@ -223,3 +224,4 @@ void vgpu_fecs_trace_data_update(struct gk20a *g)
 {
 	gk20a_ctxsw_trace_wake_up(g, 0);
 }
+#endif /* CONFIG_GK20A_CTXSW_TRACE */

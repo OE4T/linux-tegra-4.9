@@ -191,9 +191,11 @@ static int vgpu_intr_thread(void *dev_id)
 				vgpu_ce2_nonstall_isr(g,
 					&msg->info.ce2_nonstall_intr);
 			break;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 		case TEGRA_VGPU_EVENT_FECS_TRACE:
 			vgpu_fecs_trace_data_update(g);
 			break;
+#endif
 		case TEGRA_VGPU_EVENT_CHANNEL:
 			vgpu_handle_channel_event(g, &msg->info.channel_event);
 			break;
@@ -508,7 +510,9 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 	if (err)
 		goto done;
 
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	gk20a_ctxsw_trace_init(g);
+#endif
 	gk20a_sched_ctrl_init(g);
 	gk20a_channel_resume(g);
 

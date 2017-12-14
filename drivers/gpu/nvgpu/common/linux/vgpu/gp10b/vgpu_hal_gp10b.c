@@ -522,7 +522,9 @@ int vgpu_gp10b_init_hal(struct gk20a *g)
 	gops->clock_gating = vgpu_gp10b_ops.clock_gating;
 	gops->fifo = vgpu_gp10b_ops.fifo;
 	gops->gr_ctx = vgpu_gp10b_ops.gr_ctx;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	gops->fecs_trace = vgpu_gp10b_ops.fecs_trace;
+#endif
 	gops->mm = vgpu_gp10b_ops.mm;
 	gops->pramin = vgpu_gp10b_ops.pramin;
 	gops->therm = vgpu_gp10b_ops.therm;

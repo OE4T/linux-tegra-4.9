@@ -568,7 +568,9 @@ int vgpu_gv11b_init_hal(struct gk20a *g)
 	gops->fifo = vgpu_gv11b_ops.fifo;
 	gops->gr_ctx = vgpu_gv11b_ops.gr_ctx;
 	gops->mm = vgpu_gv11b_ops.mm;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
 	gops->fecs_trace = vgpu_gv11b_ops.fecs_trace;
+#endif
 	gops->therm = vgpu_gv11b_ops.therm;
 	gops->pmu = vgpu_gv11b_ops.pmu;
 	gops->regops = vgpu_gv11b_ops.regops;

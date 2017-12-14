@@ -153,8 +153,6 @@
 						discontinuous_clk = "no";
 						dpcm_enable = "false";
 						cil_settletime = "0"; /* TODO check this, send 8 to reg for default 15 cycles*/
-						mode_type = "bayer";
-						pixel_phase = "rggb";
 
 						active_w = "5488";
 						active_h = "4112";

@@ -19,6 +19,7 @@
 #include "t18x-common-platforms/tegra186-quill-camera-e3322-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-li-mipi-adpt-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-imx274-a00.dtsi"
+#include "t18x-common-platforms/tegra186-quill-camera-imx274-dual.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-vivid.dtsi"
 
 #define CAM0_RST_L	TEGRA_MAIN_GPIO(R, 5)
@@ -262,14 +263,22 @@
 		tca9546_70: tca9546@70 {
 			status = "disabled";
 			i2c@0 {
+				pca9570_a_24: pca9570_a@24 {
+					status = "disabled";
+				};
 				imx185_cam0: imx185_a@1a {
 					status = "disabled";
 				};
-                imx274_cam0: imx274_a@1a {
+				imx274_cam0: imx274_a@1a {
 					status = "disabled";
 				};
-                e3331_cam0: imx318_a@10 {
-					status = "disable";
+				e3331_cam0: imx318_a@10 {
+					status = "disabled";
+				};
+			};
+			i2c@1 {
+				imx274_cam1: imx274_c@1a {
+					status = "disabled";
 				};
 			};
 		};

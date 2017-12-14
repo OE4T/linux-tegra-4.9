@@ -52,6 +52,11 @@
 				label = "cam";
 				enable-gpio = <2 9>;
 			};
+			eeprom@1 {
+				slave-address = <0x57>;
+				label = "cam";
+				enable-gpio = <2 9>;
+			};
 		};
 	};
 	plugin-manager {

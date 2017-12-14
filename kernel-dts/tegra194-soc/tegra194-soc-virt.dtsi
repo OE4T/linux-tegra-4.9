@@ -182,5 +182,8 @@
 		se-engine-id = <4>;
 		status = "dislabled";
 	};
-};
 
+	cbbnocaxi@2300000 {
+		status = "disabled";
+	};
+};

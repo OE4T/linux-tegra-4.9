@@ -254,6 +254,7 @@ struct tegra_ahci_soc_data {
 		u32 t_satao_nvoob_comma_cnt;
 	} reg;
 	int	powergate_id;
+	bool	enable_pose_edge;
 };
 
 #ifdef CONFIG_DEBUG_FS

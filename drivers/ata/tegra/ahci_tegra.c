@@ -40,6 +40,7 @@ static int tegra_ahci_quirks(struct ahci_host_priv *hpriv);
 static int tegra_ahci_disable_features(struct ahci_host_priv *hpriv);
 static struct ahci_host_priv *
 tegra_ahci_platform_get_resources(struct tegra_ahci_priv *);
+static int tegra194_ahci_platform_get_resources(struct tegra_ahci_priv *tegra);
 static int tegra186_ahci_platform_get_resources(struct tegra_ahci_priv *tegra);
 static int tegra210_ahci_platform_get_resources(struct tegra_ahci_priv *tegra);
 #ifdef CONFIG_PM
@@ -54,6 +55,24 @@ static int tegra_ahci_resume(struct device *dev);
 static void tegra_ahci_shutdown(struct platform_device *pdev);
 
 static char * const tegra_rail_names[] = {};
+
+static const struct tegra_ahci_soc_data tegra194_ahci_data = {
+	.sata_regulator_names = tegra_rail_names,
+	.num_sata_regulators = ARRAY_SIZE(tegra_rail_names),
+	.ops = {
+		.tegra_ahci_power_on = tegra_ahci_power_on,
+		.tegra_ahci_power_off = tegra_ahci_power_off,
+		.tegra_ahci_quirks = tegra_ahci_quirks,
+		.tegra_ahci_platform_get_resources =
+			tegra194_ahci_platform_get_resources,
+	},
+	.reg = {
+		.t_satao_nvoob_comma_cnt_mask = (0XFF << 16),
+		.t_satao_nvoob_comma_cnt = (0X07 << 16),
+	},
+	.powergate_id = TEGRA194_POWER_DOMAIN_SAX,
+	.enable_pose_edge = false,
+};
 
 static const struct tegra_ahci_soc_data tegra186_ahci_data = {
 	.sata_regulator_names = tegra_rail_names,
@@ -70,6 +89,7 @@ static const struct tegra_ahci_soc_data tegra186_ahci_data = {
 		.t_satao_nvoob_comma_cnt = (0X07 << 16),
 	},
 	.powergate_id = TEGRA186_POWER_DOMAIN_SAX,
+	.enable_pose_edge = true,
 };
 
 static const struct tegra_ahci_soc_data tegra210_ahci_data = {
@@ -87,9 +107,13 @@ static const struct tegra_ahci_soc_data tegra210_ahci_data = {
 		.t_satao_nvoob_comma_cnt = (0X7 << 28),
 	},
 	.powergate_id = TEGRA210_POWER_DOMAIN_SATA,
+	.enable_pose_edge = true,
 };
 
 static const struct of_device_id tegra_ahci_of_match[] = {
+	{ .compatible = "nvidia,tegra194-ahci-sata",
+		.data = &tegra194_ahci_data,
+	},
 	{ .compatible = "nvidia,tegra186-ahci-sata",
 		.data = &tegra186_ahci_data,
 	},
@@ -283,12 +307,13 @@ static int tegra_ahci_hardreset(struct ata_link *link, unsigned int *class,
 {
 	struct ata_host *host = link->ap->host;
 	struct ahci_host_priv *hpriv =  host->private_data;
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	int ret;
 	u32 val;
 	u32 mask;
 
 	ret = ahci_ops.hardreset(link, class, deadline);
-	if (ret < 0) {
+	if (ret < 0 && tegra->soc_data->enable_pose_edge) {
 		mask = val = T_SATA0_CFG_LINK_0_USE_POSEDGE_SCTL_DET;
 		tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_CFG_LINK_0);
 	}
@@ -300,12 +325,13 @@ static int tegra_ahci_softreset(struct ata_link *link, unsigned int *class,
 {
 	struct ata_host *host = link->ap->host;
 	struct ahci_host_priv *hpriv =  host->private_data;
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	int ret;
 	u32 val;
 	u32 mask;
 
 	ret = ahci_ops.softreset(link, class, deadline);
-	if (ret < 0) {
+	if (ret < 0 && tegra->soc_data->enable_pose_edge) {
 		mask = val = T_SATA0_CFG_LINK_0_USE_POSEDGE_SCTL_DET;
 		tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_CFG_LINK_0);
 	}
@@ -1388,6 +1414,15 @@ static int tegra_ahci_set_lpm(struct ahci_host_priv *hpriv)
 	}
 	return ret;
 }
+
+static int tegra194_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
+{
+	tegra->pllp_uphy_clk = tegra->pllp_clk;
+	tegra->sata_oob_rst = NULL;
+
+	return 0;
+}
+
 
 static int tegra186_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 {

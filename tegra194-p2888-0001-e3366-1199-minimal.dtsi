@@ -525,4 +525,17 @@
 	xhci@3610000 {
 		status = "disabled";
 	};
+
+	iommu@12000000 {
+		status = "disabled";
+	};
+
+	pmc@c370000 {
+		status = "disabled";
+	};
+
+	eeprom-manager {
+		status = "disabled";
+	};
+
 };

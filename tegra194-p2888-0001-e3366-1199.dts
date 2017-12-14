@@ -18,6 +18,18 @@
 #include "common/tegra194-power-tree-p2888-0001-e3366-1199.dtsi"
 / {
 	nvidia,dtsfilename = __FILE__;
+
+	arm64_ras {
+		status = "okay";
+	};
+
+	carmel_ras {
+		status = "okay";
+	};
+
+	cbbnocaxi@2300000 {
+		status = "okay";
+	};
 };
 
 /* Last include for status overrides */

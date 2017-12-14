@@ -204,6 +204,20 @@ int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle, unsigned long val,
 		enum tegra_bwmgr_request_type req);
 
 /**
+ * tegra_bwmgr_get_client_info - outputs the value previously set with
+ *                       tegra_bwmgr_set_emc or 0 if no value has been set.
+ *
+ * @handle      handle acquired during tegra_bwmgr_register
+ * @out_val     bandwidth value in Hz
+ * @req         chosen type from tegra_bwmgr_request_type
+ *
+ * Returns success (0) or negative errno.
+ */
+int tegra_bwmgr_get_client_info(struct tegra_bwmgr_client *handle,
+		unsigned long *out_val,
+		enum tegra_bwmgr_request_type req);
+
+/**
  * tegra_bwmgr_notifier_register - register a notifier callback when
  *		emc rate changes. Must be called from non-atomic
  *		context. The callback must not call any bwmgr API.
@@ -342,6 +356,16 @@ static inline unsigned long tegra_bwmgr_round_rate(unsigned long bw)
 static inline int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle,
 		unsigned long val, enum tegra_bwmgr_request_type req)
 {
+	return 0;
+}
+
+static inline int tegra_bwmgr_get_client_info(struct tegra_bwmgr_client *handle,
+		unsigned long *out_val,
+		enum tegra_bwmgr_request_type req)
+{
+	if (!out_val)
+		return -EINVAL;
+	*out_val = 0;
 	return 0;
 }
 

@@ -2922,7 +2922,8 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	struct property *prop;
 	struct tegra_dc_out *def_out;
 	bool pdata_initialized = false;
-	struct tegra_dc *dc;
+	bool restore_topology = false;
+	struct tegra_dc *dc = NULL;
 	char dc_or_conn_node[CHAR_BUF_SIZE_MAX];
 	struct device_node *cmu_np = NULL;
 	struct device_node *cmu_adbRGB_np = NULL;
@@ -2936,7 +2937,12 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	if (boot_pdata) {
 		pdata_initialized = true;
 		pdata = boot_pdata;
+
 		dc = tegra_get_dc_from_dev(&ndev->dev);
+
+		if (dc && dc->current_topology.conn_inst ==
+			TEGRA_DC_TOPOLOGY_RESTORE)
+			restore_topology = true;
 	} else {
 		pdata = devm_kzalloc(&ndev->dev,
 			sizeof(struct tegra_dc_platform_data), GFP_KERNEL);
@@ -2970,9 +2976,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	}
 
 	/* Check for connector during crossbar */
-	if (pdata_initialized &&
-			(dc->current_topology.conn_inst !=
-			TEGRA_DC_TOPOLOGY_RESTORE)) {
+	if (pdata_initialized && !restore_topology) {
 		switch (def_out->type) {
 		case TEGRA_DC_OUT_FAKE_DP:
 		case TEGRA_DC_OUT_HDMI:
@@ -3016,7 +3020,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		(int)pdata->ctrl_num, of_node_full_name(pdata->conn_np));
 
 	/* Check for panel node during crossbar */
-	if (pdata_initialized) {
+	if (pdata_initialized && !restore_topology) {
 		pdata->panel_np = NULL;
 		if (def_out->type == TEGRA_DC_OUT_HDMI)
 			pdata->panel_np = of_get_child_by_name(pdata->conn_np,
@@ -3421,9 +3425,16 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	}
 	OF_DC_LOG("dc flag %lu\n", pdata->flags);
 
-	if (!of_property_read_u32(np, "nvidia,fb-win", &temp)) {
-		pdata->fb->win = (int)temp;
-		OF_DC_LOG("fb window Index %d\n", pdata->fb->win);
+	if (!pdata_initialized) {
+		if (!of_property_read_u32(np, "nvidia,fb-win", &temp)) {
+			pdata->fb->win = (int)temp;
+			OF_DC_LOG("fb window Index %d\n", pdata->fb->win);
+		}
+
+		if (!of_property_read_u32(np, "win-mask", &temp)) {
+			pdata->win_mask = (u32)temp;
+			OF_DC_LOG("win mask 0x%x\n", temp);
+		}
 	}
 
 	if (!of_property_read_u32(np, "nvidia,emc-clk-rate", &temp)) {
@@ -3431,10 +3442,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		OF_DC_LOG("emc clk rate %lu\n", pdata->emc_clk_rate);
 	}
 
-	if (!of_property_read_u32(np, "win-mask", &temp)) {
-		pdata->win_mask = (u32)temp;
-		OF_DC_LOG("win mask 0x%x\n", temp);
-	}
 	if (!of_property_read_u32(np, "nvidia,cmu-enable", &temp)) {
 		pdata->cmu_enable = (bool)temp;
 		OF_DC_LOG("cmu enable %d\n", pdata->cmu_enable);

@@ -2057,8 +2057,9 @@ static ssize_t dbg_nvdisp_topology_write(struct file *file,
 		/* Destroy out_type and sor for reconfigured displays */
 		for (i = 0; i < tegra_dc_get_numof_reg_disps(); i++) {
 			curr = tegra_dc_get_dc(i);
-			if (!is_topology_same(curr->current_topology,
-					curr->boot_topology)) {
+			if (curr->current_topology.valid &&
+				!is_topology_same(curr->current_topology,
+				curr->boot_topology)) {
 				/* disable the dc and output controllers */
 				tegra_dc_shutdown(curr->ndev);
 				if (curr->out_ops && curr->out_ops->destroy)
@@ -2069,10 +2070,12 @@ static ssize_t dbg_nvdisp_topology_write(struct file *file,
 		/* Reinitialize only reconfigured displays */
 		for (i = 0; i < tegra_dc_get_numof_reg_disps(); i++) {
 			curr = tegra_dc_get_dc(i);
-			if (!is_topology_same(curr->current_topology,
-					curr->boot_topology)) {
+			if (!curr->current_topology.valid ||
+				!is_topology_same(curr->current_topology,
+				curr->boot_topology)) {
 				ret = tegra_dc_crossbar_display_reinit(curr,
-					curr->boot_topology);
+					topology);
+				curr->current_topology = curr->boot_topology;
 				if (ret < 0)
 					break;
 			}

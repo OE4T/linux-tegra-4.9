@@ -2689,6 +2689,10 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))
 		return true;
 
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && !dc->vedid &&
+		dp->edid_src != EDID_SRC_DT)
+		return false;
+
 	tegra_dp_pending_hpd(dp);
 
 	return tegra_dc_hpd(dc);

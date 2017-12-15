@@ -198,15 +198,10 @@ static int gk20a_sched_dev_ioctl_get_params(struct gk20a_sched_ctrl *sched,
 	arg->runlist_interleave = tsg->interleave_level;
 	arg->timeslice = tsg->timeslice_us;
 
-	if (tsg->tsg_gr_ctx) {
-		arg->graphics_preempt_mode =
-			tsg->tsg_gr_ctx->graphics_preempt_mode;
-		arg->compute_preempt_mode =
-			tsg->tsg_gr_ctx->compute_preempt_mode;
-	} else {
-		arg->graphics_preempt_mode = 0;
-		arg->compute_preempt_mode = 0;
-	}
+	arg->graphics_preempt_mode =
+		tsg->gr_ctx.graphics_preempt_mode;
+	arg->compute_preempt_mode =
+		tsg->gr_ctx.compute_preempt_mode;
 
 	nvgpu_ref_put(&tsg->refcount, nvgpu_ioctl_tsg_release);
 

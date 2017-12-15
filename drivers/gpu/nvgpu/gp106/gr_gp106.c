@@ -135,7 +135,7 @@ void gr_gp106_cb_size_default(struct gk20a *g)
 }
 
 int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
-				struct gr_ctx_desc *gr_ctx,
+				struct nvgpu_gr_ctx *gr_ctx,
 				struct vm_gk20a *vm, u32 class,
 				u32 graphics_preempt_mode,
 				u32 compute_preempt_mode)

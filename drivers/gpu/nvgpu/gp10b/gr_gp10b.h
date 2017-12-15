@@ -29,9 +29,8 @@
 
 struct gk20a;
 struct gr_gk20a_isr_data;
-struct channel_ctx_gk20a;
+struct nvgpu_gr_ctx;
 struct zbc_entry;
-struct gr_ctx_desc;
 struct nvgpu_preemption_modes_rec;
 struct gk20a_debug_output;
 
@@ -75,7 +74,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 			struct channel_gk20a *c, bool patch);
 void gr_gp10b_commit_global_pagepool(struct gk20a *g,
-					    struct channel_ctx_gk20a *ch_ctx,
+					    struct nvgpu_gr_ctx *ch_ctx,
 					    u64 addr, u32 size, bool patch);
 u32 gr_gp10b_get_gpcs_swdx_dss_zbc_c_format_reg(struct gk20a *g);
 u32 gr_gp10b_get_gpcs_swdx_dss_zbc_z_format_reg(struct gk20a *g);
@@ -93,28 +92,28 @@ void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data);
 void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data);
 int gr_gp10b_init_ctx_state(struct gk20a *g);
 int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
-				struct gr_ctx_desc *gr_ctx,
+				struct nvgpu_gr_ctx *gr_ctx,
 				struct vm_gk20a *vm, u32 class,
 				u32 graphics_preempt_mode,
 				u32 compute_preempt_mode);
 int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
-			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
+			  struct nvgpu_gr_ctx *gr_ctx, struct vm_gk20a *vm,
 			  u32 class,
 			  u32 flags);
 void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
-		struct channel_ctx_gk20a *ch_ctx,
+		struct channel_gk20a *c,
 		struct nvgpu_mem *mem);
 int gr_gp10b_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o);
 void gr_gp10b_dump_ctxsw_stats(struct gk20a *g, struct vm_gk20a *vm,
-			       struct gr_ctx_desc *gr_ctx);
+			       struct nvgpu_gr_ctx *gr_ctx);
 int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			       u32 expect_delay);
 void gr_gp10b_commit_global_attrib_cb(struct gk20a *g,
-					     struct channel_ctx_gk20a *ch_ctx,
+					     struct nvgpu_gr_ctx *ch_ctx,
 					     u64 addr, bool patch);
 void gr_gp10b_commit_global_bundle_cb(struct gk20a *g,
-					    struct channel_ctx_gk20a *ch_ctx,
+					    struct nvgpu_gr_ctx *ch_ctx,
 					    u64 addr, u64 size, bool patch);
 int gr_gp10b_load_smid_config(struct gk20a *g);
 void gr_gp10b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index);
@@ -133,7 +132,7 @@ int gr_gp10b_suspend_contexts(struct gk20a *g,
 int gr_gp10b_set_boosted_ctx(struct channel_gk20a *ch,
 				    bool boost);
 void gr_gp10b_update_boosted_ctx(struct gk20a *g, struct nvgpu_mem *mem,
-				       struct gr_ctx_desc *gr_ctx);
+				       struct nvgpu_gr_ctx *gr_ctx);
 int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 					u32 graphics_preempt_mode,
 					u32 compute_preempt_mode);

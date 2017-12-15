@@ -29,6 +29,7 @@ struct dbg_session_gk20a;
 
 void vgpu_gr_detect_sm_arch(struct gk20a *g);
 void vgpu_gr_free_channel_ctx(struct channel_gk20a *c, bool is_tsg);
+void vgpu_gr_free_tsg_ctx(struct tsg_gk20a *tsg);
 int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags);
 int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 				struct channel_gk20a *c, u64 zcull_va,

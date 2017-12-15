@@ -41,9 +41,10 @@ struct zbc_s_table {
 };
 
 struct gk20a;
+struct gr_gk20a;
 struct zbc_entry;
 struct zbc_query_params;
-struct channel_ctx_gk20a;
+struct nvgpu_gr_ctx;
 struct nvgpu_warpstate;
 struct nvgpu_gr_sm_error_state;
 struct gr_ctx_desc;
@@ -128,7 +129,7 @@ int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
 int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 		       u32 expect_delay);
 void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
-					     struct channel_ctx_gk20a *ch_ctx,
+					     struct nvgpu_gr_ctx *ch_ctx,
 					     u64 addr, bool patch);
 void gr_gv11b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index);
 void gr_gv11b_get_access_map(struct gk20a *g,
@@ -222,13 +223,13 @@ unsigned long gr_gv11b_get_max_gfxp_wfi_timeout_count(struct gk20a *g);
 void gr_gv11b_ecc_init_scrub_reg(struct gk20a *g);
 
 int gr_gv11b_set_ctxsw_preemption_mode(struct gk20a *g,
-                                struct gr_ctx_desc *gr_ctx,
+                                struct nvgpu_gr_ctx *gr_ctx,
                                 struct vm_gk20a *vm, u32 class,
                                 u32 graphics_preempt_mode,
                                 u32 compute_preempt_mode);
 
 void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
-                struct channel_ctx_gk20a *ch_ctx,
+                struct channel_gk20a *ch_ctx,
                 struct nvgpu_mem *mem);
 
 #endif

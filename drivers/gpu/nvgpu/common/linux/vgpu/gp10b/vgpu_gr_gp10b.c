@@ -27,12 +27,11 @@
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 
 int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
-				struct gr_ctx_desc **__gr_ctx,
+				struct nvgpu_gr_ctx *gr_ctx,
 				struct vm_gk20a *vm,
 				u32 class,
 				u32 flags)
 {
-	struct gr_ctx_desc *gr_ctx;
 	u32 graphics_preempt_mode = 0;
 	u32 compute_preempt_mode = 0;
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
@@ -40,11 +39,9 @@ int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	err = vgpu_gr_alloc_gr_ctx(g, __gr_ctx, vm, class, flags);
+	err = vgpu_gr_alloc_gr_ctx(g, gr_ctx, vm, class, flags);
 	if (err)
 		return err;
-
-	gr_ctx = *__gr_ctx;
 
 	if (flags & NVGPU_OBJ_CTX_FLAGS_SUPPORT_GFXP)
 		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
@@ -84,7 +81,7 @@ fail:
 }
 
 int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
-				struct gr_ctx_desc *gr_ctx,
+				struct nvgpu_gr_ctx *gr_ctx,
 				struct vm_gk20a *vm, u32 class,
 				u32 graphics_preempt_mode,
 				u32 compute_preempt_mode)
@@ -240,7 +237,7 @@ int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 					u32 graphics_preempt_mode,
 					u32 compute_preempt_mode)
 {
-	struct gr_ctx_desc *gr_ctx = ch->ch_ctx.gr_ctx;
+	struct nvgpu_gr_ctx *gr_ctx;
 	struct gk20a *g = ch->g;
 	struct tsg_gk20a *tsg;
 	struct vm_gk20a *vm;
@@ -250,6 +247,13 @@ int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 	class = ch->obj_class;
 	if (!class)
 		return -EINVAL;
+
+	tsg = tsg_gk20a_from_ch(ch);
+	if (!tsg)
+		return -EINVAL;
+
+	vm = tsg->vm;
+	gr_ctx = &tsg->gr_ctx;
 
 	/* skip setting anything if both modes are already set */
 	if (graphics_preempt_mode &&
@@ -262,13 +266,6 @@ int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 
 	if (graphics_preempt_mode == 0 && compute_preempt_mode == 0)
 		return 0;
-
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		tsg = &g->fifo.tsg[ch->tsgid];
-		vm = tsg->vm;
-	} else {
-		vm = ch->vm;
-	}
 
 	if (g->ops.gr.set_ctxsw_preemption_mode) {
 		err = g->ops.gr.set_ctxsw_preemption_mode(g, gr_ctx, vm, class,

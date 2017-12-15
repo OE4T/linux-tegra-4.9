@@ -91,8 +91,8 @@ static int gk20a_fifo_sched_debugfs_seq_show(
 				tsg->timeslice_us,
 				ch->timeout_ms_max,
 				tsg->interleave_level,
-				ch->ch_ctx.gr_ctx ? ch->ch_ctx.gr_ctx->graphics_preempt_mode : U32_MAX,
-				ch->ch_ctx.gr_ctx ? ch->ch_ctx.gr_ctx->compute_preempt_mode : U32_MAX);
+				tsg->gr_ctx.graphics_preempt_mode,
+				tsg->gr_ctx.compute_preempt_mode);
 		gk20a_channel_put(ch);
 	}
 	return 0;

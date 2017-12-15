@@ -1373,7 +1373,7 @@ fail_free:
 }
 
 int gr_gv11b_set_ctxsw_preemption_mode(struct gk20a *g,
-				struct gr_ctx_desc *gr_ctx,
+				struct nvgpu_gr_ctx *gr_ctx,
 				struct vm_gk20a *vm, u32 class,
 				u32 graphics_preempt_mode,
 				u32 compute_preempt_mode)
@@ -1497,13 +1497,13 @@ fail:
 }
 
 void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
-		struct channel_ctx_gk20a *ch_ctx,
+		struct channel_gk20a *c,
 		struct nvgpu_mem *mem)
 {
-	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
-	struct ctx_header_desc *ctx = &ch_ctx->ctx_header;
+	struct tsg_gk20a *tsg;
+	struct nvgpu_gr_ctx *gr_ctx;
+	struct ctx_header_desc *ctx = &c->ctx_header;
 	struct nvgpu_mem *ctxheader = &ctx->mem;
-
 	u32 gfxp_preempt_option =
 		ctxsw_prog_main_image_graphics_preemption_options_control_gfxp_f();
 	u32 cilp_preempt_option =
@@ -1513,6 +1513,12 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 	int err;
 
 	gk20a_dbg_fn("");
+
+	tsg = tsg_gk20a_from_ch(c);
+	if (!tsg)
+		return;
+
+	gr_ctx = &tsg->gr_ctx;
 
 	if (gr_ctx->graphics_preempt_mode ==
 					NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP) {
@@ -1552,7 +1558,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 				gr_ctx->preempt_ctxsw_buffer.gpu_va);
 		}
 
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, true);
+		err = gr_gk20a_ctx_patch_write_begin(g, gr_ctx, true);
 		if (err) {
 			nvgpu_err(g, "can't map patch context");
 			goto out;
@@ -1564,7 +1570,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 			 (32 - gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()));
 
 		gk20a_dbg_info("attrib cb addr : 0x%016x", addr);
-		g->ops.gr.commit_global_attrib_cb(g, ch_ctx, addr, true);
+		g->ops.gr.commit_global_attrib_cb(g, gr_ctx, addr, true);
 
 		addr = (u64_lo32(gr_ctx->pagepool_ctxsw_buffer.gpu_va) >>
 			gr_scc_pagepool_base_addr_39_8_align_bits_v()) |
@@ -1575,7 +1581,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 		if (size == g->ops.gr.pagepool_default_size(g))
 			size = gr_scc_pagepool_total_pages_hwmax_v();
 
-		g->ops.gr.commit_global_pagepool(g, ch_ctx, addr, size, true);
+		g->ops.gr.commit_global_pagepool(g, gr_ctx, addr, size, true);
 
 		addr = (u64_lo32(gr_ctx->spill_ctxsw_buffer.gpu_va) >>
 			gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v()) |
@@ -1584,28 +1590,28 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 		size = gr_ctx->spill_ctxsw_buffer.size /
 			gr_gpc0_swdx_rm_spill_buffer_size_256b_byte_granularity_v();
 
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
+		gr_gk20a_ctx_patch_write(g, gr_ctx,
 				gr_gpc0_swdx_rm_spill_buffer_addr_r(),
 				gr_gpc0_swdx_rm_spill_buffer_addr_39_8_f(addr),
 				true);
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
+		gr_gk20a_ctx_patch_write(g, gr_ctx,
 				gr_gpc0_swdx_rm_spill_buffer_size_r(),
 				gr_gpc0_swdx_rm_spill_buffer_size_256b_f(size),
 				true);
 
 		cbes_reserve = gr_gpcs_swdx_beta_cb_ctrl_cbes_reserve_gfxp_v();
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
+		gr_gk20a_ctx_patch_write(g, gr_ctx,
 				gr_gpcs_swdx_beta_cb_ctrl_r(),
 				gr_gpcs_swdx_beta_cb_ctrl_cbes_reserve_f(
 					cbes_reserve),
 				true);
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
+		gr_gk20a_ctx_patch_write(g, gr_ctx,
 				gr_gpcs_ppcs_cbm_beta_cb_ctrl_r(),
 				gr_gpcs_ppcs_cbm_beta_cb_ctrl_cbes_reserve_f(
 					cbes_reserve),
 				true);
 
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx, true);
+		gr_gk20a_ctx_patch_write_end(g, gr_ctx, true);
 	}
 
 out:
@@ -1902,10 +1908,9 @@ int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 }
 
 void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
-					     struct channel_ctx_gk20a *ch_ctx,
+					     struct nvgpu_gr_ctx *gr_ctx,
 					     u64 addr, bool patch)
 {
-	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
 	int attrBufferSize;
 
 	if (gr_ctx->preempt_ctxsw_buffer.gpu_va)
@@ -1915,16 +1920,16 @@ void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 
 	attrBufferSize /= gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_granularity_f();
 
-	gr_gm20b_commit_global_attrib_cb(g, ch_ctx, addr, patch);
+	gr_gm20b_commit_global_attrib_cb(g, gr_ctx, addr, patch);
 
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_r(),
+	gr_gk20a_ctx_patch_write(g, gr_ctx, gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_r(),
 		gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_v_f(addr) |
 		gr_gpcs_tpcs_mpc_vtg_cb_global_base_addr_valid_true_f(), patch);
 
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_tex_rm_cb_0_r(),
+	gr_gk20a_ctx_patch_write(g, gr_ctx, gr_gpcs_tpcs_tex_rm_cb_0_r(),
 		gr_gpcs_tpcs_tex_rm_cb_0_base_addr_43_12_f(addr), patch);
 
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_tex_rm_cb_1_r(),
+	gr_gk20a_ctx_patch_write(g, gr_ctx, gr_gpcs_tpcs_tex_rm_cb_1_r(),
 		gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_f(attrBufferSize) |
 		gr_gpcs_tpcs_tex_rm_cb_1_valid_true_f(), patch);
 }
@@ -2042,6 +2047,7 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
 			gk20a_gr_tpc_offset(g, tpc) +
 			gv11b_gr_sm_offset(g, sm);
+	struct tsg_gk20a *tsg;
 
 	*early_exit = false;
 	*ignore_debugger = false;
@@ -2054,9 +2060,14 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 		return gr_gv11b_handle_warp_esr_error_mmu_nack(g, gpc, tpc, sm,
 				warp_esr, fault_ch);
 
-	if (fault_ch)
-		cilp_enabled = (fault_ch->ch_ctx.gr_ctx->compute_preempt_mode ==
+	if (fault_ch) {
+		tsg = tsg_gk20a_from_ch(fault_ch);
+		if (!tsg)
+			return -EINVAL;
+
+		cilp_enabled = (tsg->gr_ctx.compute_preempt_mode ==
 			NVGPU_PREEMPTION_MODE_COMPUTE_CILP);
+	}
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 			"SM Exception received on gpc %d tpc %d sm %d = 0x%08x",
@@ -2509,7 +2520,7 @@ int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	if (err)
 		return err;
 
-	ctx = &c->ch_ctx.ctx_header;
+	ctx = &c->ctx_header;
 	addr_lo = u64_lo32(ctx->mem.gpu_va) >> ram_in_base_shift_v();
 	addr_hi = u64_hi32(ctx->mem.gpu_va);
 
@@ -2529,7 +2540,7 @@ int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 
 int gr_gv11b_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c)
 {
-	struct channel_ctx_gk20a *ch_ctx = NULL;
+	struct nvgpu_gr_ctx *ch_ctx = NULL;
 	u32 pd_ab_dist_cfg0;
 	u32 ds_debug;
 	u32 mpc_vtg_debug;
@@ -2836,10 +2847,17 @@ int gv11b_gr_update_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id,
 		struct nvgpu_gr_sm_error_state *sm_error_state)
 {
+	struct tsg_gk20a *tsg;
 	u32 gpc, tpc, sm, offset;
 	struct gr_gk20a *gr = &g->gr;
-	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
+	struct nvgpu_gr_ctx *ch_ctx;
 	int err = 0;
+
+	tsg = tsg_gk20a_from_ch(ch);
+	if (!tsg)
+		return -EINVAL;
+
+	ch_ctx = &tsg->gr_ctx;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 

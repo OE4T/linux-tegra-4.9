@@ -187,16 +187,16 @@ struct gpu_ops {
 		void (*cb_size_default)(struct gk20a *g);
 		int (*calc_global_ctx_buffer_size)(struct gk20a *g);
 		void (*commit_global_attrib_cb)(struct gk20a *g,
-						struct channel_ctx_gk20a *ch_ctx,
+						struct nvgpu_gr_ctx *ch_ctx,
 						u64 addr, bool patch);
 		void (*commit_global_bundle_cb)(struct gk20a *g,
-						struct channel_ctx_gk20a *ch_ctx,
+						struct nvgpu_gr_ctx *ch_ctx,
 						u64 addr, u64 size, bool patch);
 		int (*commit_global_cb_manager)(struct gk20a *g,
 						struct channel_gk20a *ch,
 						bool patch);
 		void (*commit_global_pagepool)(struct gk20a *g,
-					       struct channel_ctx_gk20a *ch_ctx,
+					       struct nvgpu_gr_ctx *ch_ctx,
 					       u64 addr, u32 size, bool patch);
 		void (*init_gpc_mmu)(struct gk20a *g);
 		int (*handle_sw_method)(struct gk20a *g, u32 addr,
@@ -230,7 +230,6 @@ struct gpu_ops {
 		int (*load_ctxsw_ucode)(struct gk20a *g);
 		u32 (*get_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
 		void (*set_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
-		void (*free_channel_ctx)(struct channel_gk20a *c, bool is_tsg);
 		int (*alloc_obj_ctx)(struct channel_gk20a  *c,
 				     u32 class_num, u32 flags);
 		int (*bind_ctxsw_zcull)(struct gk20a *g, struct gr_gk20a *gr,
@@ -285,13 +284,12 @@ struct gpu_ops {
 		u32 (*pagepool_default_size)(struct gk20a *g);
 		int (*init_ctx_state)(struct gk20a *g);
 		int (*alloc_gr_ctx)(struct gk20a *g,
-			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
+			  struct nvgpu_gr_ctx *gr_ctx, struct vm_gk20a *vm,
 			  u32 class, u32 padding);
 		void (*free_gr_ctx)(struct gk20a *g,
-			  struct vm_gk20a *vm,
-			  struct gr_ctx_desc *gr_ctx);
+				    struct vm_gk20a *vm, struct nvgpu_gr_ctx *gr_ctx);
 		void (*update_ctxsw_preemption_mode)(struct gk20a *g,
-				struct channel_ctx_gk20a *ch_ctx,
+				struct channel_gk20a *c,
 				struct nvgpu_mem *mem);
 		int (*update_smpc_ctxsw_mode)(struct gk20a *g,
 				struct channel_gk20a *c,
@@ -384,14 +382,14 @@ struct gpu_ops {
 		int (*get_preemption_mode_flags)(struct gk20a *g,
 		       struct nvgpu_preemption_modes_rec *preemption_modes_rec);
 		int (*set_ctxsw_preemption_mode)(struct gk20a *g,
-				struct gr_ctx_desc *gr_ctx,
+				struct nvgpu_gr_ctx *gr_ctx,
 				struct vm_gk20a *vm, u32 class,
 				u32 graphics_preempt_mode,
 				u32 compute_preempt_mode);
 		int (*set_boosted_ctx)(struct channel_gk20a *ch, bool boost);
 		void (*update_boosted_ctx)(struct gk20a *g,
 					   struct nvgpu_mem *mem,
-					   struct gr_ctx_desc *gr_ctx);
+					   struct nvgpu_gr_ctx *gr_ctx);
 		int (*init_sm_id_table)(struct gk20a *g);
 		int (*load_smid_config)(struct gk20a *g);
 		void (*program_sm_id_numbering)(struct gk20a *g,
@@ -440,7 +438,7 @@ struct gpu_ops {
 		u32 (*get_gpcs_swdx_dss_zbc_c_format_reg)(struct gk20a *g);
 		u32 (*get_gpcs_swdx_dss_zbc_z_format_reg)(struct gk20a *g);
 		void (*dump_ctxsw_stats)(struct gk20a *g, struct vm_gk20a *vm,
-					 struct gr_ctx_desc *gr_ctx);
+					 struct nvgpu_gr_ctx *gr_ctx);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

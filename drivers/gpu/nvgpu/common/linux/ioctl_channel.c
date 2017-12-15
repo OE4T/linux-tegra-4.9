@@ -85,10 +85,10 @@ static void gk20a_channel_trace_sched_param(
 		tsg_gk20a_from_ch(ch)->timeslice_us,
 		ch->timeout_ms_max,
 		gk20a_fifo_interleave_level_name(tsg->interleave_level),
-		gr_gk20a_graphics_preempt_mode_name(ch->ch_ctx.gr_ctx ?
-			ch->ch_ctx.gr_ctx->graphics_preempt_mode : 0),
-		gr_gk20a_compute_preempt_mode_name(ch->ch_ctx.gr_ctx ?
-			ch->ch_ctx.gr_ctx->compute_preempt_mode : 0));
+		gr_gk20a_graphics_preempt_mode_name(
+			tsg->gr_ctx.graphics_preempt_mode),
+		gr_gk20a_compute_preempt_mode_name(
+			tsg->gr_ctx.compute_preempt_mode));
 }
 
 /*

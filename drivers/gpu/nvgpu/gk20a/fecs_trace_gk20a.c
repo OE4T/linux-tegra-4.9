@@ -625,9 +625,10 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	u32 lo;
 	u32 hi;
 	u64 pa;
-	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
+	struct tsg_gk20a *tsg;
+	struct nvgpu_gr_ctx *ch_ctx;
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
-	struct nvgpu_mem *mem = &ch_ctx->gr_ctx->mem;
+	struct nvgpu_mem *mem;
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(g, ch);
 	pid_t pid;
 	u32 aperture;
@@ -636,6 +637,13 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 			"chid=%d context_ptr=%x inst_block=%llx",
 			ch->chid, context_ptr,
 			nvgpu_inst_block_addr(g, &ch->inst_block));
+
+	tsg = tsg_gk20a_from_ch(ch);
+	if (!tsg)
+		return -EINVAL;
+
+	ch_ctx = &tsg->gr_ctx;
+	mem = &ch_ctx->mem;
 
 	if (!trace)
 		return -ENOMEM;

@@ -280,7 +280,6 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 	tsg->num_active_channels = 0;
 	nvgpu_ref_init(&tsg->refcount);
 
-	tsg->tsg_gr_ctx = NULL;
 	tsg->vm = NULL;
 	tsg->interleave_level = NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW;
 	tsg->timeslice_us = 0;
@@ -319,10 +318,8 @@ void gk20a_tsg_release(struct nvgpu_ref *ref)
 	if (g->ops.fifo.tsg_release)
 		g->ops.fifo.tsg_release(tsg);
 
-	if (tsg->tsg_gr_ctx) {
+	if (nvgpu_mem_is_valid(&tsg->gr_ctx.mem))
 		gr_gk20a_free_tsg_gr_ctx(tsg);
-		tsg->tsg_gr_ctx = NULL;
-	}
 
 	if (g->ops.fifo.deinit_eng_method_buffers)
 		g->ops.fifo.deinit_eng_method_buffers(g, tsg);

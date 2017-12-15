@@ -259,7 +259,7 @@ void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 
 	ch->g->ops.fifo.disable_channel(ch);
 
-	if (channel_preempt && ch->ch_ctx.gr_ctx)
+	if (channel_preempt && gk20a_is_channel_marked_as_tsg(ch))
 		ch->g->ops.fifo.preempt_channel(ch->g, ch->chid);
 
 	gk20a_channel_abort_clean_up(ch);
@@ -421,8 +421,8 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 		g->ops.fecs_trace.unbind_channel(g, ch);
 #endif
 
-	/* release channel ctx */
-	g->ops.gr.free_channel_ctx(ch, was_tsg);
+	if(g->ops.fifo.free_channel_ctx_header)
+		g->ops.fifo.free_channel_ctx_header(ch);
 
 	gk20a_gr_flush_channel_tlb(gr);
 

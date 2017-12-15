@@ -28,7 +28,6 @@
 #include "gr_t19x.h"
 #endif
 
-#include "tsg_gk20a.h"
 #include "gr_ctx_gk20a.h"
 #include "mm_gk20a.h"
 
@@ -48,6 +47,10 @@
 
 #define GK20A_TIMEOUT_FPGA		100000 /* 100 sec */
 
+/* Flags to be passed to g->ops.gr.alloc_obj_ctx() */
+#define NVGPU_OBJ_CTX_FLAGS_SUPPORT_GFXP		(1 << 1)
+#define NVGPU_OBJ_CTX_FLAGS_SUPPORT_CILP		(1 << 2)
+
 /*
  * allocate a minimum of 1 page (4KB) worth of patch space, this is 512 entries
  * of address and data pairs
@@ -64,6 +67,7 @@
 #define NVGPU_PREEMPTION_MODE_COMPUTE_CTA	(1 << 1)
 #define NVGPU_PREEMPTION_MODE_COMPUTE_CILP	(1 << 2)
 
+struct tsg_gk20a;
 struct channel_gk20a;
 struct nvgpu_warpstate;
 
@@ -433,7 +437,12 @@ struct gr_gk20a {
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);
 
-struct gr_ctx_desc {
+struct ctx_header_desc {
+	struct nvgpu_mem mem;
+};
+
+/* contexts associated with a TSG */
+struct nvgpu_gr_ctx {
 	struct nvgpu_mem mem;
 
 	u32 graphics_preempt_mode;
@@ -452,10 +461,16 @@ struct gr_ctx_desc {
 	u64 virt_ctx;
 #endif
 	bool golden_img_loaded;
-};
 
-struct ctx_header_desc {
-	struct nvgpu_mem mem;
+	struct patch_desc	patch_ctx;
+	struct zcull_ctx_desc	zcull_ctx;
+	struct pm_ctx_desc	pm_ctx;
+	u64	global_ctx_buffer_va[NR_GLOBAL_CTX_BUF_VA];
+	u64	global_ctx_buffer_size[NR_GLOBAL_CTX_BUF_VA];
+	int	global_ctx_buffer_index[NR_GLOBAL_CTX_BUF_VA];
+	bool	global_ctx_buffer_mapped;
+
+	u32 tsgid;
 };
 
 struct gk20a_ctxsw_ucode_segment {
@@ -552,7 +567,6 @@ int gk20a_init_gr_channel(struct channel_gk20a *ch_gk20a);
 int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr);
 
 int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags);
-void gk20a_free_channel_ctx(struct channel_gk20a *c, bool is_tsg);
 
 int gk20a_gr_isr(struct gk20a *g);
 int gk20a_gr_nonstall_isr(struct gk20a *g);
@@ -633,17 +647,17 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				  struct channel_gk20a *c,
 				  bool enable_hwpm_ctxsw);
 
-struct channel_ctx_gk20a;
-void gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_ctx_gk20a *ch_ctx,
+struct nvgpu_gr_ctx;
+void gr_gk20a_ctx_patch_write(struct gk20a *g, struct nvgpu_gr_ctx *ch_ctx,
 				    u32 addr, u32 data, bool patch);
 int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
-					  struct channel_ctx_gk20a *ch_ctx,
+					  struct nvgpu_gr_ctx *ch_ctx,
 					  bool update_patch_count);
 void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
-					struct channel_ctx_gk20a *ch_ctx,
+					struct nvgpu_gr_ctx *ch_ctx,
 					bool update_patch_count);
 void gr_gk20a_commit_global_pagepool(struct gk20a *g,
-				     struct channel_ctx_gk20a *ch_ctx,
+				     struct nvgpu_gr_ctx *ch_ctx,
 				     u64 addr, u32 size, bool patch);
 void gk20a_gr_set_shader_exceptions(struct gk20a *g, u32 data);
 void gr_gk20a_enable_hww_exceptions(struct gk20a *g);
@@ -694,10 +708,10 @@ int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 int gr_gk20a_submit_fecs_sideband_method_op(struct gk20a *g,
 		struct fecs_method_op_gk20a op);
 int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
-			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
+			  struct nvgpu_gr_ctx *gr_ctx, struct vm_gk20a *vm,
 			  u32 class, u32 padding);
 void gr_gk20a_free_gr_ctx(struct gk20a *g,
-			  struct vm_gk20a *vm, struct gr_ctx_desc *gr_ctx);
+		       struct vm_gk20a *vm, struct nvgpu_gr_ctx *gr_ctx);
 int gr_gk20a_halt_pipe(struct gk20a *g);
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)

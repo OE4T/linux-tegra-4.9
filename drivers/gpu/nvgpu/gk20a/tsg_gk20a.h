@@ -26,6 +26,8 @@
 #include <nvgpu/kref.h>
 #include <nvgpu/rwsem.h>
 
+#include "gr_gk20a.h"
+
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "tsg_t19x.h"
 #endif
@@ -56,8 +58,6 @@ struct tsg_gk20a {
 	unsigned int timeslice_timeout;
 	unsigned int timeslice_scale;
 
-	struct gr_ctx_desc *tsg_gr_ctx;
-
 	struct vm_gk20a *vm;
 
 	u32 interleave_level;
@@ -71,6 +71,8 @@ struct tsg_gk20a {
 #ifdef CONFIG_TEGRA_19x_GPU
 	struct tsg_t19x t19x;
 #endif
+
+	struct nvgpu_gr_ctx gr_ctx;
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);

@@ -236,7 +236,6 @@ static const struct gpu_ops gp10b_ops = {
 		.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode,
 		.set_gpc_tpc_mask = gr_gp10b_set_gpc_tpc_mask,
 		.get_gpc_tpc_mask = gr_gm20b_get_gpc_tpc_mask,
-		.free_channel_ctx = gk20a_free_channel_ctx,
 		.alloc_obj_ctx = gk20a_alloc_obj_ctx,
 		.bind_ctxsw_zcull = gr_gk20a_bind_ctxsw_zcull,
 		.get_zcull_info = gr_gk20a_get_zcull_info,

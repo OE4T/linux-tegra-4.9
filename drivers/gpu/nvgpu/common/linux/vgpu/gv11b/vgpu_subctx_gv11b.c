@@ -21,7 +21,7 @@
 
 int vgpu_gv11b_alloc_subctx_header(struct channel_gk20a *c)
 {
-	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
+	struct ctx_header_desc *ctx = &c->ctx_header;
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_alloc_ctx_header_params *p =
 				&msg.params.alloc_ctx_header;
@@ -52,7 +52,7 @@ int vgpu_gv11b_alloc_subctx_header(struct channel_gk20a *c)
 
 void vgpu_gv11b_free_subctx_header(struct channel_gk20a *c)
 {
-	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
+	struct ctx_header_desc *ctx = &c->ctx_header;
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_free_ctx_header_params *p =
 				&msg.params.free_ctx_header;

@@ -31,7 +31,6 @@
 #include <nvgpu/atomic.h>
 
 struct gk20a;
-struct gr_gk20a;
 struct dbg_session_gk20a;
 struct gk20a_fence;
 struct fifo_profile_gk20a;
@@ -50,10 +49,6 @@ struct fifo_profile_gk20a;
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC	(1 << 1)
 #define NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1 << 2)
 
-/* Flags to be passed to g->ops.gr.alloc_obj_ctx() */
-#define NVGPU_OBJ_CTX_FLAGS_SUPPORT_GFXP		(1 << 1)
-#define NVGPU_OBJ_CTX_FLAGS_SUPPORT_CILP		(1 << 2)
-
 struct notification {
 	struct {
 		u32 nanoseconds[2];
@@ -61,19 +56,6 @@ struct notification {
 	u32 info32;
 	u16 info16;
 	u16 status;
-};
-
-/* contexts associated with a channel */
-struct channel_ctx_gk20a {
-	struct gr_ctx_desc	*gr_ctx;
-	struct patch_desc	patch_ctx;
-	struct zcull_ctx_desc	zcull_ctx;
-	struct pm_ctx_desc	pm_ctx;
-	u64	global_ctx_buffer_va[NR_GLOBAL_CTX_BUF_VA];
-	u64	global_ctx_buffer_size[NR_GLOBAL_CTX_BUF_VA];
-	int	global_ctx_buffer_index[NR_GLOBAL_CTX_BUF_VA];
-	bool	global_ctx_buffer_mapped;
-	struct ctx_header_desc ctx_header;
 };
 
 struct channel_gk20a_job {
@@ -190,7 +172,6 @@ struct channel_gk20a {
 	int chid;
 	bool wdt_enabled;
 	nvgpu_atomic_t bound;
-	bool first_init;
 	bool vpr;
 	bool deterministic;
 	/* deterministic, but explicitly idle and submits disallowed */
@@ -209,8 +190,6 @@ struct channel_gk20a {
 	struct vm_gk20a *vm;
 
 	struct gpfifo_desc gpfifo;
-
-	struct channel_ctx_gk20a ch_ctx;
 
 	struct nvgpu_mem inst_block;
 
@@ -261,6 +240,8 @@ struct channel_gk20a {
 #ifdef CONFIG_TEGRA_19x_GPU
 	struct channel_t19x t19x;
 #endif
+
+	struct ctx_header_desc ctx_header;
 
 	/* Any operating system specific data. */
 	void *os_priv;

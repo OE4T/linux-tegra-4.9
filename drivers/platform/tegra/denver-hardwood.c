@@ -37,6 +37,7 @@
 #include <asm/cpu.h>
 #include <asm/cputype.h>
 #include <asm/smp_plat.h>
+#include <asm/barrier.h>
 
 #include "denver-knobs.h" /* backdoor detection */
 
@@ -244,6 +245,9 @@ static long hardwood_ioctl(struct file *file, unsigned int cmd,
 
 	if (op.buffer_id >= num_buffers)
 		return -EINVAL;
+	if (op.core_id >= N_CPU)
+		return -EINVAL;
+	speculation_barrier();
 
 	trace_cmd = HW_CMD(op.core_id, op.buffer_id, _IOC_NR(cmd));
 

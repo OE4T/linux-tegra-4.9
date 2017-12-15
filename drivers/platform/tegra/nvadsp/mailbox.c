@@ -1,7 +1,7 @@
 /*
  * ADSP mailbox manager
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,6 +14,7 @@
  */
 
 #include "dev.h"
+#include <asm/barrier.h>
 
 #define NVADSP_MAILBOX_START	512
 #define NVADSP_MAILBOX_MAX	1024
@@ -184,6 +185,7 @@ status_t nvadsp_mbox_open(struct nvadsp_mbox *mbox, uint16_t *mid,
 			ret = -ERANGE;
 			goto out;
 		}
+		speculation_barrier();
 		if (nvadsp_drv_data->mboxes[*mid]) {
 			pr_debug("%s: mailbox %d already opened.\n",
 				 __func__, *mid);

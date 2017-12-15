@@ -689,7 +689,6 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
-	struct gk20a_event_id_data *event_id_data, *event_id_data_temp;
 
 	/* compatibility with existing code */
 	if (!gk20a_fifo_is_valid_runlist_id(g, runlist_id)) {
@@ -729,16 +728,6 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 
 	ch->pid = current->pid;
 	ch->tgid = current->tgid;  /* process granularity for FECS traces */
-
-	/* unhook all events created on this channel */
-	nvgpu_mutex_acquire(&ch->event_id_list_lock);
-	nvgpu_list_for_each_entry_safe(event_id_data, event_id_data_temp,
-				&ch->event_id_list,
-				gk20a_event_id_data,
-				event_id_node) {
-		nvgpu_list_del(&event_id_data->event_id_node);
-	}
-	nvgpu_mutex_release(&ch->event_id_list_lock);
 
 	/* By default, channel is regular (non-TSG) channel */
 	ch->tsgid = NVGPU_INVALID_TSG_ID;
@@ -2134,7 +2123,6 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 
 	nvgpu_init_list_node(&c->joblist.dynamic.jobs);
 	nvgpu_init_list_node(&c->dbg_s_list);
-	nvgpu_init_list_node(&c->event_id_list);
 	nvgpu_init_list_node(&c->worker_item);
 
 	err = nvgpu_mutex_init(&c->ioctl_lock);
@@ -2157,19 +2145,14 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	if (err)
 		goto fail_5;
 #endif
-	err = nvgpu_mutex_init(&c->event_id_list_lock);
-	if (err)
-		goto fail_6;
 	err = nvgpu_mutex_init(&c->dbg_s_lock);
 	if (err)
-		goto fail_7;
+		goto fail_6;
 
 	nvgpu_list_add(&c->free_chs, &g->fifo.free_chs);
 
 	return 0;
 
-fail_7:
-	nvgpu_mutex_destroy(&c->event_id_list_lock);
 fail_6:
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	nvgpu_mutex_destroy(&c->cs_client_mutex);
@@ -2285,9 +2268,6 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 							&g->fifo.tsg[c->tsgid];
 
 						gk20a_tsg_event_id_post_event(tsg,
-						    NVGPU_EVENT_ID_BLOCKING_SYNC);
-					} else {
-						gk20a_channel_event_id_post_event(c,
 						    NVGPU_EVENT_ID_BLOCKING_SYNC);
 					}
 				}

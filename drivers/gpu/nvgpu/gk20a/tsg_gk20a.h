@@ -87,5 +87,24 @@ u32 gk20a_tsg_get_timeslice(struct tsg_gk20a *tsg);
 int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
 				u32 priority);
 
+struct gk20a_event_id_data {
+	struct gk20a *g;
+
+	int id; /* ch or tsg */
+	u32 event_id;
+
+	bool event_posted;
+
+	struct nvgpu_cond event_id_wq;
+	struct nvgpu_mutex lock;
+	struct nvgpu_list_node event_id_node;
+};
+
+static inline struct gk20a_event_id_data *
+gk20a_event_id_data_from_event_id_node(struct nvgpu_list_node *node)
+{
+	return (struct gk20a_event_id_data *)
+		((uintptr_t)node - offsetof(struct gk20a_event_id_data, event_id_node));
+};
 
 #endif /* __TSG_GK20A_H_ */

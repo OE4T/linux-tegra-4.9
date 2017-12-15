@@ -1709,6 +1709,7 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 {
 	int ret;
 	struct gr_ctx_desc *gr_ctx = fault_ch->ch_ctx.gr_ctx;
+	struct tsg_gk20a *tsg;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
 
@@ -1773,15 +1774,10 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 	gr_ctx->cilp_preempt_pending = true;
 	g->gr.cilp_preempt_pending_chid = fault_ch->chid;
 
-	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
-		struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
+	tsg = &g->fifo.tsg[fault_ch->tsgid];
 
-		gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_EVENT_ID_CILP_PREEMPTION_STARTED);
-	} else {
-		gk20a_channel_event_id_post_event(fault_ch,
-				NVGPU_EVENT_ID_CILP_PREEMPTION_STARTED);
-	}
+	gk20a_tsg_event_id_post_event(tsg,
+			NVGPU_EVENT_ID_CILP_PREEMPTION_STARTED);
 
 	return 0;
 }
@@ -1948,6 +1944,7 @@ int gr_gp10b_handle_fecs_error(struct gk20a *g,
 	struct channel_gk20a *ch;
 	int chid = -1;
 	int ret = 0;
+	struct tsg_gk20a *tsg;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
 
@@ -1984,15 +1981,10 @@ int gr_gp10b_handle_fecs_error(struct gk20a *g,
 		/* Post events to UMD */
 		gk20a_dbg_gpu_post_events(ch);
 
-		if (gk20a_is_channel_marked_as_tsg(ch)) {
-			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+		tsg = &g->fifo.tsg[ch->tsgid];
 
-			gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_EVENT_ID_CILP_PREEMPTION_COMPLETE);
-		} else {
-			gk20a_channel_event_id_post_event(ch,
-				NVGPU_EVENT_ID_CILP_PREEMPTION_COMPLETE);
-		}
+		gk20a_tsg_event_id_post_event(tsg,
+			NVGPU_EVENT_ID_CILP_PREEMPTION_COMPLETE);
 
 		gk20a_channel_put(ch);
 	}

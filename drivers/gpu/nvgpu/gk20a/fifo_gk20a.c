@@ -564,7 +564,6 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 		nvgpu_mutex_destroy(&c->cyclestate.cyclestate_buffer_mutex);
 		nvgpu_mutex_destroy(&c->cs_client_mutex);
 #endif
-		nvgpu_mutex_destroy(&c->event_id_list_lock);
 		nvgpu_mutex_destroy(&c->dbg_s_lock);
 
 	}

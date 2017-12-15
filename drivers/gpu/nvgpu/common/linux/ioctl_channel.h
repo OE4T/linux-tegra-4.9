@@ -39,10 +39,8 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 int gk20a_channel_free_cycle_stats_snapshot(struct channel_gk20a *ch);
 void gk20a_channel_free_cycle_stats_buffer(struct channel_gk20a *ch);
 
-extern const struct file_operations gk20a_event_id_ops;
 extern const struct file_operations gk20a_channel_ops;
 
-u32 nvgpu_event_id_to_ioctl_channel_event_id(u32 event_id);
 u32 nvgpu_get_common_runlist_level(u32 level);
 
 u32 nvgpu_get_ioctl_graphics_preempt_mode_flags(u32 graphics_preempt_mode_flags);

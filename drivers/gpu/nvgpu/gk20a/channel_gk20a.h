@@ -124,27 +124,6 @@ struct channel_gk20a_timeout {
 	u64 pb_get;
 };
 
-struct gk20a_event_id_data {
-	struct gk20a *g;
-
-	int id; /* ch or tsg */
-	bool is_tsg;
-	u32 event_id;
-
-	bool event_posted;
-
-	struct nvgpu_cond event_id_wq;
-	struct nvgpu_mutex lock;
-	struct nvgpu_list_node event_id_node;
-};
-
-static inline struct gk20a_event_id_data *
-gk20a_event_id_data_from_event_id_node(struct nvgpu_list_node *node)
-{
-	return (struct gk20a_event_id_data *)
-	((uintptr_t)node - offsetof(struct gk20a_event_id_data, event_id_node));
-};
-
 /*
  * Track refcount actions, saving their stack traces. This number specifies how
  * many most recent actions are stored in a buffer. Set to 0 to disable. 128
@@ -265,9 +244,6 @@ struct channel_gk20a {
 	struct nvgpu_mutex dbg_s_lock;
 	struct nvgpu_list_node dbg_s_list;
 
-	struct nvgpu_list_node event_id_list;
-	struct nvgpu_mutex event_id_list_lock;
-
 	bool has_timedout;
 	u32 timeout_ms_max;
 	bool timeout_debug_dump;
@@ -385,8 +361,6 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int *__timeslice_timeout, int *__timeslice_scale);
 int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 		u32 level);
-void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
-				       u32 event_id);
 
 int channel_gk20a_alloc_job(struct channel_gk20a *c,
 		struct channel_gk20a_job **job_out);

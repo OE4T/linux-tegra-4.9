@@ -125,27 +125,22 @@ int vgpu_get_attribute(u64 handle, u32 attrib, u32 *value)
 static void vgpu_handle_channel_event(struct gk20a *g,
 			struct tegra_vgpu_channel_event_info *info)
 {
+	struct tsg_gk20a *tsg;
+
+	if (!info->is_tsg) {
+		nvgpu_err(g, "channel event posted");
+		return;
+	}
+
 	if (info->id >= g->fifo.num_channels ||
 		info->event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX) {
 		nvgpu_err(g, "invalid channel event");
 		return;
 	}
 
-	if (info->is_tsg) {
-		struct tsg_gk20a *tsg = &g->fifo.tsg[info->id];
+	tsg = &g->fifo.tsg[info->id];
 
-		gk20a_tsg_event_id_post_event(tsg, info->event_id);
-	} else {
-		struct channel_gk20a *ch = &g->fifo.channel[info->id];
-
-		if (!gk20a_channel_get(ch)) {
-			nvgpu_err(g, "invalid channel %d for event %d",
-					(int)info->id, (int)info->event_id);
-			return;
-		}
-		gk20a_channel_event_id_post_event(ch, info->event_id);
-		gk20a_channel_put(ch);
-	}
+	gk20a_tsg_event_id_post_event(tsg, info->event_id);
 }
 
 

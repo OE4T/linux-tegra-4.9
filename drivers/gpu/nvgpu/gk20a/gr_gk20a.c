@@ -5256,16 +5256,10 @@ static int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
+	struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
-
-		gk20a_tsg_event_id_post_event(tsg,
-			NVGPU_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
-	} else {
-		gk20a_channel_event_id_post_event(ch,
-			NVGPU_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
-	}
+	gk20a_tsg_event_id_post_event(tsg,
+		NVGPU_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
 
 	nvgpu_cond_broadcast(&ch->semaphore_wq);
 
@@ -5806,26 +5800,16 @@ static int gk20a_gr_post_bpt_events(struct gk20a *g, struct channel_gk20a *ch,
 				    u32 global_esr)
 {
 	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()) {
-		if (gk20a_is_channel_marked_as_tsg(ch)) {
-			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+		struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
-			gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_EVENT_ID_BPT_INT);
-		} else {
-			gk20a_channel_event_id_post_event(ch,
-				NVGPU_EVENT_ID_BPT_INT);
-		}
+		gk20a_tsg_event_id_post_event(tsg,
+			NVGPU_EVENT_ID_BPT_INT);
 	}
 	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f()) {
-		if (gk20a_is_channel_marked_as_tsg(ch)) {
-			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+		struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
-			gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_EVENT_ID_BPT_PAUSE);
-		} else {
-			gk20a_channel_event_id_post_event(ch,
-				NVGPU_EVENT_ID_BPT_PAUSE);
-		}
+		gk20a_tsg_event_id_post_event(tsg,
+			NVGPU_EVENT_ID_BPT_PAUSE);
 	}
 
 	return 0;

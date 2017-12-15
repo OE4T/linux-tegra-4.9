@@ -18,6 +18,7 @@
 #include <linux/file.h>
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
+#include <linux/poll.h>
 #include <uapi/linux/nvgpu.h>
 #include <linux/anon_inodes.h>
 
@@ -79,6 +80,30 @@ static int gk20a_tsg_get_event_data_from_id(struct tsg_gk20a *tsg,
 	}
 }
 
+/*
+ * Convert common event_id of the form NVGPU_EVENT_ID_* to Linux specific
+ * event_id of the form NVGPU_IOCTL_CHANNEL_EVENT_ID_* which is used in IOCTLs
+ */
+static u32 nvgpu_event_id_to_ioctl_channel_event_id(u32 event_id)
+{
+	switch (event_id) {
+	case NVGPU_EVENT_ID_BPT_INT:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT;
+	case NVGPU_EVENT_ID_BPT_PAUSE:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE;
+	case NVGPU_EVENT_ID_BLOCKING_SYNC:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC;
+	case NVGPU_EVENT_ID_CILP_PREEMPTION_STARTED:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_STARTED;
+	case NVGPU_EVENT_ID_CILP_PREEMPTION_COMPLETE:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE;
+	case NVGPU_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN:
+		return NVGPU_IOCTL_CHANNEL_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN;
+	}
+
+	return NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX;
+}
+
 void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 				       int __event_id)
 {
@@ -106,6 +131,57 @@ void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 
 	nvgpu_mutex_release(&event_id_data->lock);
 }
+
+static unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
+{
+	unsigned int mask = 0;
+	struct gk20a_event_id_data *event_id_data = filep->private_data;
+	struct gk20a *g = event_id_data->g;
+	u32 event_id = event_id_data->event_id;
+	struct tsg_gk20a *tsg = g->fifo.tsg + event_id_data->id;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info, "");
+
+	poll_wait(filep, &event_id_data->event_id_wq.wq, wait);
+
+	nvgpu_mutex_acquire(&event_id_data->lock);
+
+	if (event_id_data->event_posted) {
+		gk20a_dbg_info(
+			"found pending event_id=%d on TSG=%d\n",
+			event_id, tsg->tsgid);
+		mask = (POLLPRI | POLLIN);
+		event_id_data->event_posted = false;
+	}
+
+	nvgpu_mutex_release(&event_id_data->lock);
+
+	return mask;
+}
+
+static int gk20a_event_id_release(struct inode *inode, struct file *filp)
+{
+	struct gk20a_event_id_data *event_id_data = filp->private_data;
+	struct gk20a *g = event_id_data->g;
+	struct tsg_gk20a *tsg = g->fifo.tsg + event_id_data->id;
+
+	nvgpu_mutex_acquire(&tsg->event_id_list_lock);
+	nvgpu_list_del(&event_id_data->event_id_node);
+	nvgpu_mutex_release(&tsg->event_id_list_lock);
+
+	nvgpu_mutex_destroy(&event_id_data->lock);
+	gk20a_put(g);
+	nvgpu_kfree(g, event_id_data);
+	filp->private_data = NULL;
+
+	return 0;
+}
+
+const struct file_operations gk20a_event_id_ops = {
+	.owner = THIS_MODULE,
+	.poll = gk20a_event_id_poll,
+	.release = gk20a_event_id_release,
+};
 
 static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 					 int event_id,
@@ -152,7 +228,6 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 	}
 	event_id_data->g = g;
 	event_id_data->id = tsg->tsgid;
-	event_id_data->is_tsg = true;
 	event_id_data->event_id = event_id;
 
 	nvgpu_cond_init(&event_id_data->event_id_wq);

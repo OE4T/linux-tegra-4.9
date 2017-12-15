@@ -26,6 +26,8 @@
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
 
+#include <asm/barrier.h>
+
 /* Referred from capture-scheduler.c defined in rtcpu-fw */
 #define NUM_CAPTURE_CHANNELS 64
 
@@ -153,6 +155,7 @@ int tegra_capture_ivc_register_control_cb(
 		goto fail;
 	}
 
+
 	cb_ctx = list_first_entry(&civc->avl_ctx_list,
 			struct tegra_capture_ivc_cb_ctx, node);
 
@@ -202,6 +205,7 @@ int tegra_capture_ivc_notify_chan_id(uint32_t chan_id, uint32_t trans_id)
 		return -EINVAL;
 	if (WARN_ON(!__scivc_control))
 		return -ENODEV;
+	speculation_barrier();
 
 	civc = __scivc_control;
 
@@ -251,6 +255,7 @@ int tegra_capture_ivc_register_capture_cb(
 	if (WARN(chan_id >= NUM_CAPTURE_CHANNELS,
 			"invalid channel id %u", chan_id))
 		return -EINVAL;
+	speculation_barrier();
 
 	if (!__scivc_capture)
 		return -ENODEV;

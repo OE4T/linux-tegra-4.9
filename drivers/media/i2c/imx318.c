@@ -402,6 +402,12 @@ static int imx318_power_off(struct camera_common_data *s_data)
 			regulator_disable(pw->iovdd);
 		if (pw->dvdd)
 			regulator_disable(pw->dvdd);
+		/*
+		 * Sleep for atleast 5ms after power off, discussions with
+		 * sony revealed that this has to be investigated for the
+		 * right delay and rootcause, for not add a WAR to pass testing
+		 */
+		usleep_range(5000, 6000);
 	}
 
 	pw->state = SWITCH_OFF;

@@ -3,7 +3,7 @@
  *
  * A header file containing shared data structures shared with ADSP OS
  *
- * Copyright (C) 2015-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2018 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -126,7 +126,8 @@ struct nvadsp_os_args {
 	int32_t		timer_prescalar;
 	char		logger[DRAM_DEBUG_LOG_SIZE];
 	uint64_t	adsp_freq_hz;
-	char		reserved[128];
+	uint32_t        dynamic_app_support;
+	char		reserved[124];
 } __packed;
 
 /* ARM MODE REGS */

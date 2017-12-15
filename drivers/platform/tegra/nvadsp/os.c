@@ -5,7 +5,7 @@
  * Copyright (C) 2011 Texas Instruments, Inc.
  * Copyright (C) 2011 Google, Inc.
  *
- * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -651,6 +651,7 @@ static int __nvadsp_os_secload(struct platform_device *pdev)
 	}
 
 	shared_mem = dram_va;
+	shared_mem->os_args.dynamic_app_support = 0;
 	drv_data->shared_adsp_os_data = shared_mem;
 	/* set logger strcuture with required properties */
 	priv.logger.debug_ram_rdr = shared_mem->os_args.logger;
@@ -725,6 +726,8 @@ int nvadsp_os_load(void)
 		dev_err(dev, "failed to load %s\n", NVADSP_FIRMWARE);
 		goto deallocate_os_memory;
 	}
+
+	shared_mem->os_args.dynamic_app_support = 1;
 
 	ret = dram_app_mem_init(priv.app_alloc_addr, priv.app_size);
 	if (ret) {

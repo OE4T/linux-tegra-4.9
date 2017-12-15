@@ -3732,16 +3732,6 @@ static const char * const tegra186_xudc_supply_names[] = {
 };
 
 static const char * const tegra194_xudc_supply_names[] = {
-	/* for USB2 pads */
-	"avdd-usb",
-
-	/* for PEX USB pads */
-	"dvdd-pex",
-	"hvdd-pex",
-
-	/* for PEX PLL */
-	"dvdd-pex-pll",
-	"hvdd-pex-pll",
 };
 
 static struct tegra_xudc_soc_data tegra210_xudc_soc_data = {

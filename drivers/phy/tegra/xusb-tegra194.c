@@ -873,6 +873,7 @@ static const struct tegra_xusb_lane_soc tegra194_usb2_lanes[] = {
 	TEGRA194_LANE("usb2-0", 0,  0, 0, usb2),
 	TEGRA194_LANE("usb2-1", 0,  0, 0, usb2),
 	TEGRA194_LANE("usb2-2", 0,  0, 0, usb2),
+	TEGRA194_LANE("usb2-3", 0,  0, 0, usb2),
 };
 
 static const struct tegra_xusb_pad_soc tegra194_usb2_pad = {
@@ -1291,6 +1292,8 @@ static const struct tegra_xusb_lane_soc tegra194_usb3_lanes[] = {
 	TEGRA194_LANE("usb3-0", 0,  0, 0, usb3),
 	TEGRA194_LANE("usb3-1", 0,  0, 0, usb3),
 	TEGRA194_LANE("usb3-2", 0,  0, 0, usb3),
+	TEGRA194_LANE("usb3-3", 0,  0, 0, usb3),
+
 };
 
 static const struct tegra_xusb_pad_soc tegra194_usb3_pad = {

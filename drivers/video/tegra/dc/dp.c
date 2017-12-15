@@ -1315,7 +1315,7 @@ void tegra_dp_set_max_link_bw(struct tegra_dc_sor_data *sor,
 	cfg->max_link_bw = sor->link_speeds[key].link_rate;
 }
 
-static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
+static int tegra_dp_init_sink_link_cfg(struct tegra_dc_dp_data *dp,
 					struct tegra_dc_dp_link_config *cfg)
 {
 	u8 dpcd_data = 0;
@@ -1345,6 +1345,14 @@ static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 		if (ret)
 			return ret;
 	}
+
+	/*
+	 * The check for TPS4 should be after the check for TPS3. That helps
+	 * assign a higher priority to TPS4.
+	 */
+	if (tegra_dc_is_t19x() &&
+		(dpcd_data & NV_DPCD_MAX_DOWNSPREAD_TPS4_SUPPORTED_YES))
+		cfg->tps = TEGRA_DC_DP_TRAINING_PATTERN_4;
 
 	cfg->downspread =
 		(dpcd_data & NV_DPCD_MAX_DOWNSPREAD_VAL_0_5_PCT) ?
@@ -1401,10 +1409,8 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 
 	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
 		tegra_dc_init_default_panel_link_cfg(dp);
-	else if (tegra_dc_is_t19x())
-		ret = tegra_dp_init_max_link_cfg_t19x(dp, cfg);
 	else
-		ret = __tegra_dp_init_max_link_cfg(dp, cfg);
+		ret = tegra_dp_init_sink_link_cfg(dp, cfg);
 
 	if (ret)
 		return ret;

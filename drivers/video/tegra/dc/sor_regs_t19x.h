@@ -1,7 +1,7 @@
 /*
  * sor_regs_t19x.h: T19x SOR register definitions
  *
- * Copyright (c) 2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -114,19 +114,6 @@
 #define NV_SOR_TEST_TESTMUX_PLL_LOCK		(1 << 24)
 #define NV_SOR_TEST_TESTMUX_INTR_LOCK	(3 << 24)
 #define NV_SOR_TEST_HEAD_NUMBER_HEAD3		(4 << 12)
-
-#define NV_SOR_DP_TPG_LANE3_PATTERN_CP2520_PAT1	(9 << 24)
-#define NV_SOR_DP_TPG_LANE3_PATTERN_CP2520_PAT3	(10 << 24)
-#define NV_SOR_DP_TPG_LANE3_PATTERN_TRAINING4	(11 << 24)
-#define NV_SOR_DP_TPG_LANE2_PATTERN_CP2520_PAT1	(9 << 16)
-#define NV_SOR_DP_TPG_LANE2_PATTERN_CP2520_PAT3	(10 << 16)
-#define NV_SOR_DP_TPG_LANE2_PATTERN_TRAINING4	(11 << 16)
-#define NV_SOR_DP_TPG_LANE1_PATTERN_CP2520_PAT1	(9 << 8)
-#define NV_SOR_DP_TPG_LANE1_PATTERN_CP2520_PAT3	(10 << 8)
-#define NV_SOR_DP_TPG_LANE1_PATTERN_TRAINING4	(11 << 8)
-#define NV_SOR_DP_TPG_LANE0_PATTERN_CP2520_PAT1	(9 << 0)
-#define NV_SOR_DP_TPG_LANE0_PATTERN_CP2520_PAT3	(10 << 0)
-#define NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING4	(11 << 0)
 /* Group C */
 
 

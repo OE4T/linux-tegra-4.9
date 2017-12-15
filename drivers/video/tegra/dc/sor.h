@@ -1,7 +1,7 @@
 /*
  * sor.h: tegra dc sor structue and function declarations.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -42,6 +42,7 @@ enum tegra_dc_dp_training_pattern_key {
 	TEGRA_DC_DP_TRAINING_PATTERN_PRBS7,
 	TEGRA_DC_DP_TRAINING_PATTERN_CSTM,
 	TEGRA_DC_DP_TRAINING_PATTERN_HBR2_COMPLIANCE,
+	TEGRA_DC_DP_TRAINING_PATTERN_4,
 };
 
 /*
@@ -273,8 +274,6 @@ void __attribute__((weak)) tegra_sor_clk_switch_setup_t19x(
 void __attribute__((weak)) tegra_sor_program_fpga_clk_mux_t19x(
 				struct tegra_dc_sor_data *sor);
 u32 __attribute__((weak)) tegra_sor_yuv420_8bpc_pixel_depth_t19x(void);
-void __attribute__((weak)) tegra_sor_init_quirks_t19x(
-				struct tegra_dc_sor_data *sor);
 
 static inline u32 nv_sor_head_state0(u32 i)
 {

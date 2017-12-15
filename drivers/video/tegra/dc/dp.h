@@ -1,7 +1,7 @@
 /*
  * dp.h: tegra dp driver.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -233,6 +233,7 @@ static inline void tegra_dp_set_outdata(struct tegra_dc_dp_data *dp,
 #define NV_DPCD_MAX_DOWNSPREAD_VAL_0_5_PCT		(0x00000001)
 #define NV_DPCD_MAX_DOWNSPREAD_NO_AUX_HANDSHAKE_LT_F	(0x00000000 << 6)
 #define NV_DPCD_MAX_DOWNSPREAD_NO_AUX_HANDSHAKE_LT_T	(0x00000001 << 6)
+#define NV_DPCD_MAX_DOWNSPREAD_TPS4_SUPPORTED_YES	(0x00000001 << 7)
 #define NV_DPCD_EDP_CONFIG_CAP				(0x0000000D)
 #define NV_DPCD_EDP_CONFIG_CAP_ASC_RESET_NO		(0x00000000)
 #define NV_DPCD_EDP_CONFIG_CAP_ASC_RESET_YES		(0x00000001)
@@ -253,6 +254,7 @@ static inline void tegra_dp_set_outdata(struct tegra_dc_dp_data *dp,
 #define NV_DPCD_TRAINING_PATTERN_SET_TPS_TP1		(0x00000001)
 #define NV_DPCD_TRAINING_PATTERN_SET_TPS_TP2		(0x00000002)
 #define NV_DPCD_TRAINING_PATTERN_SET_TPS_TP3		(0x00000003)
+#define NV_DPCD_TRAINING_PATTERN_SET_TPS_TP4		(0x00000007)
 #define NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_F	(0x00000000 << 5)
 #define NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_T	(0x00000001 << 5)
 #define NV_DPCD_TRAINING_LANE0_SET			(0x00000103)
@@ -389,9 +391,6 @@ static inline void tegra_dp_set_outdata(struct tegra_dc_dp_data *dp,
 #define NV_DPCD_HDCP_RSVD                               (0x00069494)
 #define NV_DPCD_HDCP_DBG                                (0x00069518)
 
-int __attribute__((weak)) tegra_dp_init_max_link_cfg_t19x(
-					struct tegra_dc_dp_data *dp,
-					struct tegra_dc_dp_link_config *cfg);
 void tegra_dp_set_max_link_bw(struct tegra_dc_sor_data *sor,
 			      struct tegra_dc_dp_link_config *cfg);
 int tegra_dc_dp_get_max_link_bw(struct tegra_dc_dp_data *dp);

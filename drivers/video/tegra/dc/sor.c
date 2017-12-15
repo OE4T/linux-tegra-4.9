@@ -54,6 +54,11 @@ static const struct tegra_dc_sor_link_speed link_speed_table[] = {
 		.max_link_bw = 5400,
 		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_5_40_GBPS,
 	},
+	[TEGRA_DC_SOR_LINK_SPEED_G8_1] = {
+		.prod_prop = "prod_c_hbr3",
+		.max_link_bw = 8100,
+		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_8_10_GBPS,
+	},
 };
 
 static const struct tegra_dc_dp_training_pattern training_pattern_table[] = {
@@ -61,56 +66,62 @@ static const struct tegra_dc_dp_training_pattern training_pattern_table[] = {
 		.chan_coding = true,
 		.scrambling = true,
 		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_NONE,
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_NOPATTERN
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_NOPATTERN,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_1] = {
 		.chan_coding = true,
 		.scrambling = false,
 		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP1,
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING1
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING1,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_2] = {
 		.chan_coding = true,
 		.scrambling = false,
 		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP2,
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING2
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING2,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_3] = {
 		.chan_coding = true,
 		.scrambling = false,
 		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP3,
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING3
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING3,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_D102] = {
 		.chan_coding = true,
 		.scrambling = false,
 		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_D102
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_D102,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_SBLERRRATE] = {
 		.chan_coding = true,
 		.scrambling = true,
 		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_SBLERRRATE
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_SBLERRRATE,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_PRBS7] = {
 		.chan_coding = false,
 		.scrambling = false,
 		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_PRBS7
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_PRBS7,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_CSTM] = {
 		.chan_coding = false,
 		.scrambling = false,
 		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_CSTM
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_CSTM,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_HBR2_COMPLIANCE] = {
 		.chan_coding = true,
 		.scrambling = true,
 		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_HBR2_COMPLIANCE
-	}
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_HBR2_COMPLIANCE,
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_4] = {
+		.chan_coding = true,
+		.scrambling = true,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP4,
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING4,
+	},
 };
 
 static struct of_device_id tegra_sor_pd[] = {
@@ -861,9 +872,6 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	init_rwsem(&sor->reset_lock);
 
 	tegra_dc_populate_min_mode();
-
-	if (tegra_dc_is_t19x())
-		tegra_sor_init_quirks_t19x(sor);
 
 	return sor;
 

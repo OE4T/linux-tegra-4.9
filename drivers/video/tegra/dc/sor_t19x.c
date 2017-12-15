@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sor_t19x.c
  *
- * Copyright (c) 2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -20,109 +20,7 @@
 #include "hw_nvdisp_nvdisp.h"
 #include "nvdisp.h"
 #include "sor.h"
-#include "sor_t19x.h"
 #include "sor_regs_t19x.h"
-#include "dp.h"
-#include "dp_t19x.h"
-
-static const struct tegra_dc_sor_link_speed link_speed_table_t19x[] = {
-	[TEGRA_DC_SOR_LINK_SPEED_G1_62] = {
-		.prod_prop = "prod_c_rbr",
-		.max_link_bw = 1620,
-		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GBPS,
-	},
-	[TEGRA_DC_SOR_LINK_SPEED_G2_7] = {
-		.prod_prop = "prod_c_hbr",
-		.max_link_bw = 2700,
-		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_2_70_GBPS,
-	},
-	[TEGRA_DC_SOR_LINK_SPEED_G5_4] = {
-		.prod_prop = "prod_c_hbr2",
-		.max_link_bw = 5400,
-		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_5_40_GBPS,
-	},
-	[TEGRA_DC_SOR_LINK_SPEED_G8_1] = {
-		.prod_prop = "prod_c_hbr3",
-		.max_link_bw = 8100,
-		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_8_10_GBPS,
-	},
-};
-
-static const struct tegra_dc_dp_training_pattern training_pattern_table_t19x[] =
-{
-	[TEGRA_DC_DP_TRAINING_PATTERN_DISABLE] = {
-		.chan_coding = true,
-		.scrambling = true,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_NONE,
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_NOPATTERN
-	},
-	[TEGRA_DC_DP_TRAINING_PATTERN_1] = {
-		.chan_coding = true,
-		.scrambling = false,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP1,
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING1
-	},
-	[TEGRA_DC_DP_TRAINING_PATTERN_2] = {
-		.chan_coding = true,
-		.scrambling = false,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP2,
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING2
-	},
-	[TEGRA_DC_DP_TRAINING_PATTERN_3] = {
-		.chan_coding = true,
-		.scrambling = false,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP3,
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING3
-	},
-	[TEGRA_DC_DP_TRAINING_PATTERN_D102] = {
-		.chan_coding = true,
-		.scrambling = false,
-		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_D102
-	},
-	[TEGRA_DC_DP_TRAINING_PATTERN_SBLERRRATE] = {
-		.chan_coding = true,
-		.scrambling = true,
-		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_SBLERRRATE
-	},
-	[TEGRA_DC_DP_TRAINING_PATTERN_PRBS7] = {
-		.chan_coding = false,
-		.scrambling = false,
-		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_PRBS7
-	},
-	[TEGRA_DC_DP_TRAINING_PATTERN_CSTM] = {
-		.chan_coding = false,
-		.scrambling = false,
-		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_CSTM
-	},
-	[TEGRA_DC_DP_TRAINING_PATTERN_HBR2_COMPLIANCE] = {
-		.chan_coding = true,
-		.scrambling = true,
-		.dpcd_val = 0, /* unused */
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_HBR2_COMPLIANCE
-	},
-	[TEGRA_DC_DP_TRAINING_PATTERN_4] = {
-		.chan_coding = true,
-		.scrambling = true,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP4,
-		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING4
-	},
-};
-
-/* "Quirks" is a deliberate misnomer, so that we could potentially use this
- * function to add more Xavier specific init overrides here
- */
-inline void tegra_sor_init_quirks_t19x(struct tegra_dc_sor_data *sor)
-{
-	sor->link_speeds = link_speed_table_t19x;
-	sor->num_link_speeds = ARRAY_SIZE(link_speed_table_t19x);
-
-	sor->training_patterns = training_pattern_table_t19x;
-	sor->num_training_patterns = ARRAY_SIZE(training_pattern_table_t19x);
-}
 
 inline u32 nv_sor_head_state0_t19x(u32 i)
 {

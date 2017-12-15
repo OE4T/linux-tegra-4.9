@@ -29,9 +29,15 @@
 #include <linux/of_graph.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mc-regs-t19x.h>
+#include <linux/clk.h>
+#include <linux/reset.h>
+#include <linux/tegra_pm_domains.h>
+#include <linux/tegra-powergate.h>
 
 #include "t19x-nvlink-endpt.h"
 #include "nvlink-hw.h"
+
+#define PLLNVHS_FREQ_150MHZ	(150 * 1000 * 1000)
 
 static struct of_device_id t19x_nvlink_controller_of_match[] = {
 	{
@@ -39,6 +45,13 @@ static struct of_device_id t19x_nvlink_controller_of_match[] = {
 	}, {
 	},
 };
+
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
+static struct of_device_id tegra_nvl_pd[] = {
+	{ .compatible = "nvidia,tegra194-nvl-pd", },
+	{},
+};
+#endif
 
 MODULE_DEVICE_TABLE(of, t19x_nvlink_controller_of_match);
 
@@ -109,25 +122,6 @@ static inline void mssnvlink_0_writel(struct nvlink_device *ndev, u32 reg,
 	writel(val, priv->mssnvlink_0_base + reg);
 }
 
-/* TODO: Remove all non-NVLINK reads from the driver. */
-static inline u32 non_nvlink_readl(u32 reg)
-{
-	void __iomem *ptr = ioremap(reg, 0x4);
-	u32 val = __raw_readl(ptr);
-
-	iounmap(ptr);
-	return val;
-}
-
-/* TODO: Remove all non-NVLINK writes from the driver. */
-static inline void non_nvlink_writel(u32 reg, u32 val)
-{
-	void __iomem *ptr = ioremap(reg, 0x4);
-
-	__raw_writel(val, ptr);
-	iounmap(ptr);
-}
-
 /*
  * Wait for a bit to be set or cleared in an NVLINK register. If the desired bit
  * condition doesn't happen in a certain amount of time, a timeout will happen.
@@ -168,78 +162,38 @@ int wait_for_reg_cond_nvlink(
 }
 
 /*
- * Wait for a bit to be set or cleared in a non-NVLINK register. If the desired
- * bit condition doesn't happen in a certain amount of time, a timeout will
- * happen.
+ * tegra_nvlink_car_init(): initializes UPHY mgmt and sys clk
+ * clears the resets to uphy
  */
-/* TODO: Remove all non-NVLINK register accesses from the driver. */
-static int wait_for_reg_cond_non_nvlink(u32 reg,
-					u32 bit,
-					int bit_set,
-					char *bit_name,
-					u32 *reg_val)
+static int tegra_nvlink_car_enable(struct nvlink_device *ndev)
 {
-	u32 elapsed_us = 0;
-
-	do {
-		usleep_range(DEFAULT_LOOP_SLEEP_US, DEFAULT_LOOP_SLEEP_US*2);
-		elapsed_us += DEFAULT_LOOP_SLEEP_US;
-
-		*reg_val = non_nvlink_readl(reg);
-		if ((bit_set && (*reg_val & BIT(bit))) ||
-		    (!bit_set && ((*reg_val & BIT(bit)) == 0)))
-			break;
-	} while (elapsed_us < DEFAULT_LOOP_TIMEOUT_US);
-	if (elapsed_us >= DEFAULT_LOOP_TIMEOUT_US) {
-		if (bit_set) {
-			nvlink_err("Timeout waiting for the %s bit to get set",
-				bit_name);
-		} else {
-			nvlink_err(
-				"Timeout waiting for the %s bit to get cleared",
-				bit_name);
-		}
-		return -1;
-	}
-
-	return 0;
-}
-
-/* Initialize the NVLIPT clock control regsiters */
-static void init_sysclk(struct nvlink_device *ndev)
-{
-	nvlink_dbg("Initializing NVLINK_SYSCLK");
-
-	non_nvlink_writel(CAR_CLK_OUT_ENB_NVLINK_SYSCLK, 0x1);
-	non_nvlink_writel(CAR_CLK_OUT_ENB_NVLINK_SYSCLK, 0x0);
-
-	non_nvlink_writel(CAR_CLOCK_SOURCE_NVLINK_SYSCLK, 0x0);
-	non_nvlink_writel(CAR_CLOCK_SOURCE_NVLINK_SYSCLK, 0x40000000);
-
-	non_nvlink_writel(CAR_CLK_OUT_ENB_NVLINK_SYSCLK, 0x1);
-	udelay(1);
-}
-
-static void release_resets(struct nvlink_device *ndev)
-{
+	struct tegra_nvlink_device *tnvlink_dev = ndev->priv;
+	int ret;
+	unsigned long clk_rate = 0;
 	u32 reg_val = 0;
 
-	nvlink_dbg("Releasing resets");
+	/* enable the Management clock */
+	ret = clk_prepare_enable(tnvlink_dev->clk_nvhs_pll0_mgmt);
+	if (ret < 0) {
+		nvlink_err("nvlink mgmt clock enable failed : %d", ret);
+		goto fail;
+	}
+	/* Clear reset for UPHY PM */
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_pm);
+	/* Enable clock for nvlink_sys */
+	ret = clk_prepare_enable(tnvlink_dev->clk_nvlink_sys);
+	if (ret < 0) {
+		nvlink_err("nvlink sys clock enable failed : %d", ret);
+		goto nvlink_sys_fail;
+	}
 
-	/* De-assert the NVHS rail reset */
-	non_nvlink_writel(CAR_RST_DEV_NVHS_RAIL_CLR, 0x1);
-	/*
-	 * FIXME: The NVLINK HW test does a read of a CAR NVHS rail reset
-	 *        register to introduce a delay before accessing nvlink core CAR
-	 *        registers. But this is a really ambiguous way of adding a
-	 *        delay. I am approximating the delay caused by a register read
-	 *        to be 100us. But we need a more precise delay value from HW.
-	 */
-	usleep_range(100, 200);
-
-	non_nvlink_writel(CAR_RST_DEV_NVLINK, 0x0);
-	udelay(1);
-
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
+	ret = tegra_unpowergate_partition(tnvlink_dev->pgid_nvl);
+	if (ret < 0) {
+		nvlink_err("Couldn't unpowergate : %d", ret);
+		goto unpowergate_partition_fail;
+	}
+#endif
 	/* Take link out of reset */
 	reg_val = nvlw_tioctrl_readl(ndev, NVLW_RESET) |
 			BIT(NVLW_RESET_LINKRESET);
@@ -256,61 +210,60 @@ static void release_resets(struct nvlink_device *ndev)
 					BIT(NVLW_DEBUG_RESET_COMMON);
 	nvlw_tioctrl_writel(ndev, NVLW_DEBUG_RESET, reg_val);
 	udelay(NVLW_POST_RESET_DELAY_US);
-}
 
-static void init_nvhs_pll(struct nvlink_device *ndev)
-{
-	nvlink_dbg("Initializing PLLNVHS");
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_l0);
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_l1);
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_l2);
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_l3);
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_l4);
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_l5);
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_l6);
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_l7);
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy);
+	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_pll0);
 
-	non_nvlink_writel(CAR_PLLNVHS_MISC, 0xfa00);
-	non_nvlink_writel(CAR_PLLNVHS_BASE, 0x0);
-	non_nvlink_writel(CAR_PLLNVHS_BASE1, 0x0);
-	non_nvlink_writel(CAR_PLLNVHS_MISC, 0xe000);
-	non_nvlink_writel(CAR_PLLNVHS_MISC1, 0x0);
-	non_nvlink_writel(CAR_PLLNVHS_MISC, 0xd800);
-	udelay(4);
+	ret = clk_set_rate(tnvlink_dev->clk_pllnvhs, PLLNVHS_FREQ_150MHZ);
+	if (ret < 0) {
+		nvlink_err("nvlink pllnvhs setrate failed : %d", ret);
+		goto pllnvhs_fail;
+	} else {
+		clk_rate = clk_get_rate(tnvlink_dev->clk_pllnvhs);
+		if (clk_rate != PLLNVHS_FREQ_150MHZ) {
+			nvlink_err("clk_pllnvhs rate = %lu", clk_rate);
+			ret = -EINVAL;
+			goto pllnvhs_fail;
+		}
+		ret = clk_prepare_enable(tnvlink_dev->clk_pllnvhs);
+		if (ret < 0) {
+			nvlink_err("pllnvhs clock enable failed : %d", ret);
+			goto pllnvhs_fail;
+		}
+	}
+	return ret;
 
-	non_nvlink_writel(CAR_PLLNVHS_BASE, 0x7d01);
-	non_nvlink_writel(CAR_PLLNVHS_BASE1, 0x18);
-	non_nvlink_writel(CAR_PLLNVHS_SS_CNTL, 0x1c00);
-	non_nvlink_writel(CAR_PLLNVHS_SS_CNTL1, 0x0);
-	non_nvlink_writel(CAR_PLLNVHS_SS_CNTL2, 0x0);
-	non_nvlink_writel(CAR_PLLNVHS_MISC, 0xc200);
-	non_nvlink_writel(CAR_PLLNVHS_MISC1, 0x0);
-	non_nvlink_writel(CAR_PLLNVHS_BASE, 0x7d01);
-	non_nvlink_writel(CAR_PLLNVHS_BASE1, 0x18);
-	non_nvlink_writel(CAR_PLLNVHS_BASE, 0x80007d01);
-	non_nvlink_writel(CAR_PLLNVHS_BASE1, 0x18);
-	non_nvlink_writel(CAR_PLLNVHS_MISC, 0x5a00);
-
-	non_nvlink_writel(CAR_CLK_SOURCE_NVHS_PLL0_MGMT, 0x106);
+pllnvhs_fail:
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
+	tegra_powergate_partition(tnvlink_dev->pgid_nvl);
+#endif
+unpowergate_partition_fail:
+	clk_disable_unprepare(tnvlink_dev->clk_nvlink_sys);
+nvlink_sys_fail:
+	clk_disable_unprepare(tnvlink_dev->clk_nvhs_pll0_mgmt);
+fail:
+	return ret;
 }
 
 static int switch_to_tx_ref_clk(struct nvlink_device *ndev)
 {
 	int ret = 0;
-	u32 reg_val = 0;
+	struct tegra_nvlink_device *tnvlink_dev = ndev->priv;
 
 	nvlink_dbg("NVLIPT - Switching to TXREFCLK");
 
-	non_nvlink_writel(CAR_NVLINK_CLK_CTRL, 0x101);
-
-	/* Wait for NVLINK_TXCLK_STS bit to be set */
-	ret = wait_for_reg_cond_non_nvlink(CAR_NVLINK_CLK_CTRL,
-					CAR_NVLINK_CLK_CTRL_NVLINK_TXCLK_STS,
-					1,
-					"NVLINK_TXCLK_STS",
-					&reg_val);
+	ret = clk_prepare_enable(tnvlink_dev->clk_txclk_ctrl);
 	if (ret < 0)
-		nvlink_err("NVLIPT - Switching to TXREFCLK failed!");
-
+		nvlink_err("nvlink txclk_control enable failed : %d\n", ret);
 	return ret;
-}
-
-static void enable_hw_sequencer(struct nvlink_device *ndev)
-{
-	nvlink_dbg("NVLIPT - enabling hardware sequencer");
-	non_nvlink_writel(CAR_NVHS_UPHY_PLL0_CFG0, 0x7493804);
 }
 
 static int init_nvhs(struct nvlink_device *ndev)
@@ -319,13 +272,9 @@ static int init_nvhs(struct nvlink_device *ndev)
 
 	nvlink_dbg("Initializing NVHS");
 
-	init_nvhs_pll(ndev);
-
 	ret = switch_to_tx_ref_clk(ndev);
 	if (ret < 0)
 		goto fail;
-
-	enable_hw_sequencer(ndev);
 
 	goto success;
 
@@ -488,9 +437,7 @@ int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 	int ret = 0;
 
 	nvlink_dbg("Initializing link ...");
-
-	init_sysclk(ndev);
-	release_resets(ndev);
+	tegra_nvlink_car_enable(ndev);
 	minion_boot(ndev);
 	nvlink_config_common_intr(ndev);
 	ret = init_nvhs(ndev);
@@ -523,6 +470,145 @@ success:
 	return ret;
 }
 
+static int tegra_nvlink_clk_rst_init(struct nvlink_device *ndev)
+{
+	struct tegra_nvlink_device *tnvlink_dev = ndev->priv;
+
+	/* clocks */
+	tnvlink_dev->clk_nvhs_pll0_mgmt = devm_clk_get(ndev->dev,
+			"nvhs_pll0_mgmt");
+	if (IS_ERR(tnvlink_dev->clk_nvhs_pll0_mgmt)) {
+		nvlink_err("missing mgmt clock");
+		return PTR_ERR(tnvlink_dev->clk_nvhs_pll0_mgmt);
+	}
+
+	tnvlink_dev->clk_nvlink_sys = devm_clk_get(ndev->dev,
+			"nvlink_sys");
+	if (IS_ERR(tnvlink_dev->clk_nvlink_sys)) {
+		nvlink_err("missing sys clock");
+		return PTR_ERR(tnvlink_dev->clk_nvlink_sys);
+	}
+
+	tnvlink_dev->clk_pllnvhs = devm_clk_get(ndev->dev,
+			"pllnvhs");
+	if (IS_ERR(tnvlink_dev->clk_pllnvhs)) {
+		nvlink_err("missing pllnvhs clock");
+		return PTR_ERR(tnvlink_dev->clk_pllnvhs);
+	}
+
+	tnvlink_dev->clk_txclk_ctrl = devm_clk_get(ndev->dev,
+			"txclk_ctrl");
+	if (IS_ERR(tnvlink_dev->clk_txclk_ctrl)) {
+		nvlink_err("missing txclk_ctrl clock");
+		return PTR_ERR(tnvlink_dev->clk_txclk_ctrl);
+	}
+
+	/* Resets */
+	tnvlink_dev->rst_nvhs_uphy_pm = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_pm");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_pm)) {
+		nvlink_err("missing rst_nvhs_uphy_pm reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_pm);
+	}
+	tnvlink_dev->rst_nvhs_uphy = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy)) {
+		nvlink_err("missing rst_nvhs_uphy reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy);
+	}
+	tnvlink_dev->rst_nvhs_uphy_pll0 = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_pll0");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_pll0)) {
+		nvlink_err("missing rst_nvhs_uphy_pll0 reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_pll0);
+	}
+	tnvlink_dev->rst_nvhs_uphy_l0 = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_l0");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_l0)) {
+		nvlink_err("missing rst_nvhs_uphy_l0 reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_l0);
+	}
+	tnvlink_dev->rst_nvhs_uphy_l1 = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_l1");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_l1)) {
+		nvlink_err("missing rst_nvhs_uphy_l1 reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_l1);
+	}
+	tnvlink_dev->rst_nvhs_uphy_l2 = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_l2");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_l2)) {
+		nvlink_err("missing rst_nvhs_uphy_l2 reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_l2);
+	}
+	tnvlink_dev->rst_nvhs_uphy_l3 = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_l3");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_l3)) {
+		nvlink_err("missing rst_nvhs_uphy_l3 reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_l3);
+	}
+	tnvlink_dev->rst_nvhs_uphy_l4 = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_l4");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_l4)) {
+		nvlink_err("missing rst_nvhs_uphy_l4 reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_l4);
+	}
+	tnvlink_dev->rst_nvhs_uphy_l5 = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_l5");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_l5)) {
+		nvlink_err("missing rst_nvhs_uphy_l5 reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_l5);
+	}
+	tnvlink_dev->rst_nvhs_uphy_l6 = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_l6");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_l6)) {
+		nvlink_err("missing rst_nvhs_uphy_l6 reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_l6);
+	}
+	tnvlink_dev->rst_nvhs_uphy_l7 = devm_reset_control_get(ndev->dev,
+			"nvhs_uphy_l7");
+	if (IS_ERR(tnvlink_dev->rst_nvhs_uphy_l7)) {
+		nvlink_err("missing rst_nvhs_uphy_l7 reset");
+		return PTR_ERR(tnvlink_dev->rst_nvhs_uphy_l7);
+	}
+
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
+	tnvlink_dev->pgid_nvl = tegra_pd_get_powergate_id(tegra_nvl_pd);
+#endif
+
+	return 0;
+}
+
+static void tegra_nvlink_clk_rst_deinit(struct nvlink_device *ndev)
+{
+	struct tegra_nvlink_device *tnvlink_dev = ndev->priv;
+
+	/* clocks */
+	if (tnvlink_dev->clk_nvhs_pll0_mgmt)
+		devm_clk_put(ndev->dev, tnvlink_dev->clk_nvhs_pll0_mgmt);
+
+	if (tnvlink_dev->clk_nvlink_sys)
+		devm_clk_put(ndev->dev, tnvlink_dev->clk_nvlink_sys);
+
+	if (tnvlink_dev->clk_pllnvhs)
+		devm_clk_put(ndev->dev, tnvlink_dev->clk_pllnvhs);
+
+	if (tnvlink_dev->clk_txclk_ctrl)
+		devm_clk_put(ndev->dev, tnvlink_dev->clk_txclk_ctrl);
+
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_pm);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_pll0);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_l0);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_l1);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_l2);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_l3);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_l4);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_l5);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_l6);
+	reset_control_assert(tnvlink_dev->rst_nvhs_uphy_l7);
+
+}
+
 static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -531,6 +617,12 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct device_node *endpt_dt_node = NULL;
 	struct device *dev = NULL;
+
+	if (!np) {
+		nvlink_err("Invalid device_node");
+		ret = -ENODEV;
+		goto err_dt_node;
+	}
 
 	ndev = kzalloc(sizeof(struct nvlink_device), GFP_KERNEL);
 	if (!ndev) {
@@ -561,12 +653,9 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	ndev->class.name = NVLINK_DRV_NAME;
 	platform_set_drvdata(pdev, ndev);
 
-	if (!np) {
-		nvlink_err("Invalid device_node");
-		ret = -ENODEV;
-		goto err_dt_node;
-	}
-
+	ret = tegra_nvlink_clk_rst_init(ndev);
+	if (ret)
+		goto err_clk_rst;
 
 	/* Map NVLINK apertures listed in device tree node */
 	ndev->nvlw_tioctrl_base =
@@ -738,7 +827,8 @@ err_mapping:
 	if (!IS_ERR(tegra_link->mssnvlink_0_base))
 		iounmap(tegra_link->mssnvlink_0_base);
 
-err_dt_node:
+err_clk_rst:
+	tegra_nvlink_clk_rst_deinit(ndev);
 	kfree(tegra_link);
 err_alloc_link_priv:
 	kfree(ndev->priv);
@@ -746,6 +836,7 @@ err_alloc_priv:
 	kfree(ndev);
 err_alloc_device:
 	nvlink_err("Probe failed!");
+err_dt_node:
 success:
 	return ret;
 }
@@ -763,6 +854,8 @@ static int t19x_nvlink_endpt_remove(struct platform_device *pdev)
 	cdev_del(&ndev->cdev);
 	unregister_chrdev_region(ndev->dev_t, 1);
 	class_unregister(&ndev->class);
+
+	tegra_nvlink_clk_rst_deinit(ndev);
 
 	iounmap(ndev->nvlw_tioctrl_base);
 	iounmap(ndev->nvlw_nvlipt_base);

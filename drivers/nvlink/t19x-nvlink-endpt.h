@@ -35,6 +35,25 @@ struct tegra_nvlink_device {
 	/* This is the debugfs directory for the Tegra endpoint driver */
 	struct dentry *tegra_debugfs;
 #endif /* CONFIG_DEBUG_FS  */
+	/* clocks */
+	struct clk *clk_nvhs_pll0_mgmt;
+	struct clk *clk_nvlink_sys;
+	struct clk *clk_pllnvhs;
+	struct clk *clk_txclk_ctrl;
+	/* resets */
+	struct reset_control *rst_nvhs_uphy_pm;
+	struct reset_control *rst_nvhs_uphy;
+	struct reset_control *rst_nvhs_uphy_pll0;
+	struct reset_control *rst_nvhs_uphy_l0;
+	struct reset_control *rst_nvhs_uphy_l1;
+	struct reset_control *rst_nvhs_uphy_l2;
+	struct reset_control *rst_nvhs_uphy_l3;
+	struct reset_control *rst_nvhs_uphy_l4;
+	struct reset_control *rst_nvhs_uphy_l5;
+	struct reset_control *rst_nvhs_uphy_l6;
+	struct reset_control *rst_nvhs_uphy_l7;
+	/* Powergate id */
+	int pgid_nvl;
 };
 
 struct tegra_nvlink_link {

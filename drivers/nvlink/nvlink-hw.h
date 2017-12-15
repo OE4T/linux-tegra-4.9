@@ -265,69 +265,6 @@
 
 #define MSSNVLINK_SLAVE_CREDIT_INGR_DATA			0x24
 
-
 /* NVLINK APERTURES - END */
-
-
-/* NON-NVLINK APERTURES - START */
-/* TODO: Remove all non-NVLINK register accesses from the driver */
-
-
-/* NVHS_SOC_CAR Registers */
-#define NVHS_SOC_CAR_BASE				0x202f0000
-
-#define CAR_RST_DEV_NVHS_RAIL_CLR			(NVHS_SOC_CAR_BASE + \
-							0x8)
-
-
-/* NVHS_UPHY_CAR Registers */
-#define NVHS_UPHY_CAR_BASE				0x211b0000
-
-#define CAR_CLK_SOURCE_NVHS_PLL0_MGMT			(NVHS_UPHY_CAR_BASE + \
-							0x1c)
-
-#define CAR_NVHS_UPHY_PLL0_CFG0				(NVHS_UPHY_CAR_BASE + \
-							0x20)
-
-
-/* PLLNVHS_CAR Registers */
-#define PLLNVHS_CAR_BASE				0x211f0000
-
-#define CAR_PLLNVHS_SS_CNTL				(PLLNVHS_CAR_BASE + 0x0)
-
-#define CAR_PLLNVHS_MISC1				(PLLNVHS_CAR_BASE + 0x4)
-
-#define CAR_PLLNVHS_BASE				(PLLNVHS_CAR_BASE + 0x8)
-
-#define CAR_PLLNVHS_BASE1				(PLLNVHS_CAR_BASE + 0xc)
-
-#define CAR_PLLNVHS_MISC				(PLLNVHS_CAR_BASE + \
-							0x10)
-
-#define CAR_PLLNVHS_SS_CNTL1				(PLLNVHS_CAR_BASE + \
-							0x14)
-
-#define CAR_PLLNVHS_SS_CNTL2				(PLLNVHS_CAR_BASE + \
-							0x18)
-
-
-/* NVLINK_CORE_CAR Registers */
-#define NVLINK_CORE_CAR_BASE				0x21260000
-
-#define CAR_RST_DEV_NVLINK				(NVLINK_CORE_CAR_BASE \
-							+ 0x0)
-
-#define CAR_NVLINK_CLK_CTRL				(NVLINK_CORE_CAR_BASE \
-							+ 0x2000)
-#define CAR_NVLINK_CLK_CTRL_NVLINK_TXCLK_STS		4
-
-#define CAR_CLK_OUT_ENB_NVLINK_SYSCLK			(NVLINK_CORE_CAR_BASE \
-							+ 0x3000)
-
-#define CAR_CLOCK_SOURCE_NVLINK_SYSCLK			(NVLINK_CORE_CAR_BASE \
-							+ 0x4000)
-
-
-/* NON-NVLINK APERTURES - END */
 
 #endif /* NVLINK_REGS_H */

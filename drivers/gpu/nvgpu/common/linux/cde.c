@@ -1311,8 +1311,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	}
 
 	/* allocate gpfifo (1024 should be more than enough) */
-	err = gk20a_channel_alloc_gpfifo(ch, 1024, 0,
-			NVGPU_GPFIFO_FLAGS_ALLOW_BARE_CHANNEL);
+	err = gk20a_channel_alloc_gpfifo(ch, 1024, 0, 0);
 	if (err) {
 		nvgpu_warn(g, "cde: unable to allocate gpfifo");
 		goto err_alloc_gpfifo;

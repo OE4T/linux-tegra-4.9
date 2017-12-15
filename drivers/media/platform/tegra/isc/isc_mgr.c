@@ -40,6 +40,8 @@
 #include <media/isc-dev.h>
 #include <media/isc-mgr.h>
 
+#include <asm/barrier.h>
+
 #include "isc-mgr-priv.h"
 
 #define PW_ON(flag)	((flag) ? 0 : 1)
@@ -422,6 +424,7 @@ static int isc_mgr_get_pwr_info(struct isc_mgr_priv *isc_mgr,
 		goto pwr_info_end;
 	}
 
+	speculation_barrier();
 	pinfo.pwr_status  = gpio_get_value(pd->pwr_gpios[pinfo.pwr_gpio]);
 	err = 0;
 
@@ -448,9 +451,11 @@ int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	if (arg >= MAX_ISC_GPIOS)
 		arg = MAX_ISC_GPIOS - 1;
 
+	speculation_barrier();
 	pwr_gpio = pd->pwr_mapping[arg];
 
 	if (pwr_gpio < pd->num_pwr_gpios) {
+		speculation_barrier();
 		gpio_set_value(pd->pwr_gpios[pwr_gpio],
 			PW_ON(pd->pwr_flags[pwr_gpio]));
 		isc_mgr->pwr_state |= BIT(pwr_gpio);
@@ -482,9 +487,11 @@ int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	if (arg >= MAX_ISC_GPIOS)
 		arg = MAX_ISC_GPIOS - 1;
 
+	speculation_barrier();
 	pwr_gpio = pd->pwr_mapping[arg];
 
 	if (pwr_gpio < pd->num_pwr_gpios) {
+		speculation_barrier();
 		gpio_set_value(pd->pwr_gpios[pwr_gpio],
 				PW_OFF(pd->pwr_flags[pwr_gpio]));
 		isc_mgr->pwr_state &= ~BIT(pwr_gpio);

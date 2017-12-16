@@ -81,6 +81,16 @@ void nvlw_nvlipt_writel(struct nvlink_device *ndev, u32 reg, u32 val)
 	writel(val, ndev->nvlw_nvlipt_base + reg);
 }
 
+u32 nvlw_minion_readl(struct nvlink_device *ndev, u32 reg)
+{
+	return readl(ndev->nvlw_minion_base + reg);
+}
+
+void nvlw_minion_writel(struct nvlink_device *ndev, u32 reg, u32 val)
+{
+	writel(val, ndev->nvlw_minion_base + reg);
+}
+
 u32 nvlw_nvl_readl(struct nvlink_device *ndev, u32 reg)
 {
 	return readl(ndev->link.nvlw_nvl_base + reg);
@@ -430,7 +440,9 @@ int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 
 	nvlink_dbg("Initializing link ...");
 	tegra_nvlink_car_enable(ndev);
-	minion_boot(ndev);
+	ret = minion_boot(ndev);
+	if (ret < 0)
+		goto fail;
 	nvlink_config_common_intr(ndev);
 	ret = init_nvhs(ndev);
 	if (ret < 0)
@@ -706,6 +718,22 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	if (IS_ERR(tegra_link->mssnvlink_0_base)) {
 		nvlink_err("Couldn't map the MSSNVLINK_0 aperture");
 		ret = PTR_ERR(tegra_link->mssnvlink_0_base);
+		goto err_mapping;
+	}
+
+	ndev->irq = platform_get_irq(pdev, 0);
+	if (ndev->irq < 0) {
+		nvlink_err("Couldn't get interrupt listed in device tree");
+		ret = -EINVAL;
+		goto err_mapping;
+	}
+
+	ret = devm_request_threaded_irq(&pdev->dev, ndev->irq,
+					NULL, t19x_nvlink_endpt_isr,
+					IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
+					dev_name(&pdev->dev), ndev);
+	if (ret < 0) {
+		nvlink_err("Failed to register irq %d", ndev->irq);
 		goto err_mapping;
 	}
 

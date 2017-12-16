@@ -33,6 +33,7 @@
 #include <linux/of_graph.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mc-regs-t19x.h>
+#include <linux/interrupt.h>
 
 #define NVLINK_MAX_DEVICES			2
 #define NVLINK_MAX_LINKS			2
@@ -173,6 +174,10 @@ struct nvlink_link {
 	struct link_operations link_ops;
 	/* Pointer to implementations specific private data */
 	void *priv;
+
+	u32 tlc_tx_err_status0;
+	u32 tlc_rx_err_status0;
+	u32 tlc_rx_err_status1;
 };
 
 /* Structure representing the MINION ucode header */
@@ -206,6 +211,7 @@ struct nvlink_device {
 	void __iomem *nvlw_minion_base;
 	/* base address of IOCTRL */
 	void __iomem *nvlw_tioctrl_base;
+	int irq;
 	struct class class;
 	dev_t dev_t;
 	struct cdev cdev;
@@ -224,6 +230,73 @@ struct nvlink_device {
 	/* MINION ucode image */
 	const u8 *minion_img;
 	void *priv;
+};
+
+/* Struct used for passing around error masks in error handling functions */
+struct nvlink_link_error_masks {
+	u32 dl;
+	u32 tl;
+	u32 tl_injected;
+	u32 tlc_rx0;
+	u32 tlc_rx0_injected;
+	u32 tlc_rx1;
+	u32 tlc_rx1_injected;
+	u32 tlc_tx;
+	u32 tlc_tx_injected;
+};
+
+/* Fatal Errors */
+enum inforom_nvlink_fatal_err {
+	/* NVLink 2.0 */
+	TLC_RX_DL_DATA_PARITY,
+	TLC_RX_DL_CTRL_PARITY,
+	TLC_RX_RAM_DATA_PARITY,
+	TLC_RX_RAM_HDR_PARITY,
+	TLC_RX_DATA_POISONED_PKT_RCVD,
+	TLC_TX_RAM_DATA_PARITY,
+	TLC_TX_RAM_HDR_PARITY,
+	TLC_TX_DL_FLOW_CONTROL_PARITY,
+	DL_TX_RECOVERY_LONG,
+	DL_TX_FAULT_RAM,
+	DL_TX_FAULT_INTERFACE,
+	DL_TX_FAULT_SUBLINK_CHANGE,
+	DL_RX_FAULT_SUBLINK_CHANGE,
+	DL_RX_FAULT_DL_PROTOCOL,
+	DL_LTSSM_FAULT,
+	TLC_RX_DL_HDR_PARITY,
+	TLC_RX_INVALID_AE_FLIT_RCVD,
+	TLC_RX_INVALID_BE_FLIT_RCVD,
+	TLC_RX_INVALID_ADDR_ALIGN,
+	TLC_RX_PKT_LEN,
+	TLC_RX_RSVD_CMD_ENC,
+	TLC_RX_RSVD_DAT_LEN_ENC,
+	TLC_RX_RSVD_ADDR_TYPE,
+	TLC_RX_RSVD_RSP_STATUS,
+	TLC_RX_RSVD_PKT_STATUS,
+	TLC_RX_RSVD_CACHE_ATTR_ENC_IN_PROBE_REQ,
+	TLC_RX_RSVD_CACHE_ATTR_ENC_IN_PROBE_RESP,
+	TLC_RX_DAT_LEN_GT_ATOMIC_REQ_MAX_SIZE,
+	TLC_RX_DAT_LEN_GT_RMW_REQ_MAX_SIZE,
+	TLC_RX_DAT_LEN_LT_ATR_RESP_MIN_SIZE,
+	TLC_RX_INVALID_PO_FOR_CACHE_ATTR,
+	TLC_RX_INVALID_COMPRESSED_RESP,
+	TLC_RX_RESP_STATUS_TARGET,
+	TLC_RX_RESP_STATUS_UNSUPPORTED_REQUEST,
+	TLC_RX_HDR_OVERFLOW,
+	TLC_RX_DATA_OVERFLOW,
+	TLC_RX_STOMPED_PKT_RCVD,
+	TLC_RX_CORRECTABLE_INTERNAL,
+	TLC_RX_UNSUPPORTED_VC_OVERFLOW,
+	TLC_RX_UNSUPPORTED_NVLINK_CREDIT_RELEASE,
+	TLC_RX_UNSUPPORTED_NCISOC_CREDIT_RELEASE,
+	TLC_TX_HDR_CREDIT_OVERFLOW,
+	TLC_TX_DATA_CREDIT_OVERFLOW,
+	TLC_TX_DL_REPLAY_CREDIT_OVERFLOW,
+	TLC_TX_UNSUPPORTED_VC_OVERFLOW,
+	TLC_TX_STOMPED_PKT_SENT,
+	TLC_TX_DATA_POISONED_PKT_SENT,
+	TLC_TX_RESP_STATUS_TARGET,
+	TLC_TX_RESP_STATUS_UNSUPPORTED_REQUEST,
 };
 
 /* APIs used by endpoint drivers for interfacing with the core driver */

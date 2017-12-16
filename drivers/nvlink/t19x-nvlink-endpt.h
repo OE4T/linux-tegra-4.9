@@ -69,6 +69,9 @@ void nvlw_tioctrl_writel(struct nvlink_device *ndev, u32 reg, u32 val);
 u32 nvlw_nvlipt_readl(struct nvlink_device *ndev, u32 reg);
 void nvlw_nvlipt_writel(struct nvlink_device *ndev, u32 reg, u32 val);
 
+u32 nvlw_minion_readl(struct nvlink_device *ndev, u32 reg);
+void nvlw_minion_writel(struct nvlink_device *ndev, u32 reg, u32 val);
+
 u32 nvlw_nvl_readl(struct nvlink_device *ndev, u32 reg);
 void nvlw_nvl_writel(struct nvlink_device *ndev, u32 reg, u32 val);
 
@@ -91,6 +94,8 @@ int minion_boot(struct nvlink_device *ndev);
 
 void nvlink_config_common_intr(struct nvlink_device *ndev);
 void nvlink_enable_link_interrupts(struct nvlink_device *ndev);
+void minion_service_falcon_intr(struct nvlink_device *ndev);
+irqreturn_t t19x_nvlink_endpt_isr(int irq, void *dev_id);
 
 int go_to_safe_mode(struct nvlink_device *ndev);
 u32 t19x_nvlink_get_link_state(struct nvlink_device *ndev);

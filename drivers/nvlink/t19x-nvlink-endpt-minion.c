@@ -25,17 +25,6 @@
 
 #define MINION_FW_PATH	"nvlink/t194_minion_ucode.bin"
 
-static inline u32 nvlw_minion_readl(struct nvlink_device *ndev, u32 reg)
-{
-	return readl(ndev->nvlw_minion_base + reg);
-}
-
-static inline void nvlw_minion_writel(struct nvlink_device *ndev, u32 reg,
-									u32 val)
-{
-	writel(val, ndev->nvlw_minion_base + reg);
-}
-
 /* Extract a WORD from the MINION ucode */
 static inline u32 minion_extract_word(struct nvlink_device *ndev, int idx)
 {
@@ -137,58 +126,6 @@ static int minion_load_ucode_section(struct nvlink_device *ndev,
 	}
 
 	return 0;
-}
-
-/* Service MINION Falcon interrupts */
-static void minion_service_falcon_intr(struct nvlink_device *ndev)
-{
-	u32 irq_stat = 0;
-	u32 irq_mask = 0;
-	u32 irq_dest = 0;
-	u32 interrupts = 0;
-	u32 clear_bits = 0;
-
-	/*
-	 * Get the current IRQ status and mask the sources not directed to
-	 * host
-	 */
-	irq_stat = nvlw_minion_readl(ndev, CMINION_FALCON_IRQSTAT);
-
-	/* TODO: Fix this when interrupts are enabled */
-	irq_mask = 0x7;
-
-	irq_dest = nvlw_minion_readl(ndev, CMINION_FALCON_IRQDEST);
-
-	interrupts = irq_stat & irq_mask & irq_dest;
-
-	/* Exit if there is nothing to do */
-	if (interrupts == 0)
-		return;
-
-	/* Service the pending interrupt(s) */
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_WDTMR)) {
-		nvlink_dbg("Received MINION Falcon WDTMR interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_WDTMR);
-	}
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_HALT)) {
-		nvlink_dbg("Received MINION Falcon HALT interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_HALT);
-	}
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_EXTERR)) {
-		nvlink_dbg("Received MINION Falcon EXTERR interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_EXTERR);
-	}
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_SWGEN0)) {
-		nvlink_dbg("Received MINION Falcon SWGEN0 interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_SWGEN0);
-	}
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_SWGEN1)) {
-		nvlink_dbg("Received MINION Falcon SWGEN1 interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_SWGEN1);
-	}
-
-	/* Clear interrupt (W1C) */
-	nvlw_minion_writel(ndev, CMINION_FALCON_IRQSCLR, clear_bits);
 }
 
 /* Send a command to the MINION and wait for command completion */

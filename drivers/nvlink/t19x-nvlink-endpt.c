@@ -2,7 +2,7 @@
  * t19x-nvlink-endpt.c:
  * This is the NVLINK endpoint driver for the Tegra NVLINK controller.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -383,9 +383,18 @@ static inline void program_scf_tom(void)
 int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 {
 	int ret = 0;
+	struct tegra_nvlink_link *priv =
+				(struct tegra_nvlink_link *)(ndev->link.priv);
 	struct nvlink_intranode_conn conn;
 	enum device_state state = NVLINK_DEVICE_OFF;
+	struct tegra_nvlink_device *tnvlink_dev = ndev->priv;
 
+	if (tnvlink_dev->prod_list) {
+		ret = tegra_prod_set_by_name(&priv->mssnvlink_0_base,
+				"prod", tnvlink_dev->prod_list);
+		if (ret < 0)
+			nvlink_err("Prod config for nvlink failed");
+	}
 	/* Check the state of device initialisation */
 	ret = nvlink_get_dev_state(ndev, &state);
 	if (ret < 0) {
@@ -608,6 +617,7 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct device_node *endpt_dt_node = NULL;
 	struct device *dev = NULL;
+	struct tegra_prod *nvlink_prod;
 
 	if (!np) {
 		nvlink_err("Invalid device_node");
@@ -799,6 +809,12 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		ret = PTR_ERR(dev);
 		goto err_device;
 	}
+	nvlink_prod = devm_tegra_prod_get(ndev->dev);
+	if (IS_ERR_OR_NULL(nvlink_prod)) {
+		nvlink_err("Prod-setting not available");
+		nvlink_prod = NULL;
+	}
+	((struct tegra_nvlink_device *)(ndev->priv))->prod_list = nvlink_prod;
 
 	/* Register device with core driver*/
 	ret = nvlink_register_device(ndev);

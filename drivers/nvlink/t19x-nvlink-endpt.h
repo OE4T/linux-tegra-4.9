@@ -3,7 +3,7 @@
  * This header contains the structures and APIs needed by the Tegra NVLINK
  * endpoint driver.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #define T19X_NVLINK_ENDPT_H
 
 #include "nvlink.h"
+#include <linux/tegra_prod.h>
 
 #define NVLINK_DRV_NAME		"t19x-nvlink-endpt"
 #define DEFAULT_LOOP_SLEEP_US	100
@@ -54,6 +55,7 @@ struct tegra_nvlink_device {
 	struct reset_control *rst_nvhs_uphy_l7;
 	/* Powergate id */
 	int pgid_nvl;
+	struct tegra_prod *prod_list;
 };
 
 struct tegra_nvlink_link {

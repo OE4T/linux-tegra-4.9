@@ -20,7 +20,7 @@
 	host1x {
 		disp_imp_table: disp_imp_table {
 			status = "okay";
-			num_settings = <3>;
+			num_settings = <4>;
 
 			/*
 			 * The ISO bw values were calculated with these fixed
@@ -117,6 +117,33 @@
 				/* Global settings */
 				nvidia,total_disp_bw_with_catchup = <0 3920400>;
 				nvidia,total_disp_bw_without_catchup = <0 3564000>;
+				nvidia,disp_emc_floor = <0xffffffff 0xffffffff>;
+				nvidia,disp_min_hubclk = <0xffffffff 0xffffffff>;
+				nvidia,total_win_fetch_slots = /bits/ 16 <1>;
+				nvidia,total_cursor_fetch_slots = /bits/ 16 <1>;
+
+				/* Window settings */
+				nvidia,imp_win_mapping = /bits/ 8 <0 1 2 3 4 5>;
+				nvidia,win_fetch_meter_slots = /bits/ 16 <1 1 1 1 1 1>;
+				nvidia,win_dvfs_watermark_values = <0 0 0 0 0 0 0 0 0 0 0 0>;
+				nvidia,win_pipe_meter_values = <0 0 0 0 0 0>;
+				nvidia,win_mempool_buffer_entries = <0 814 0 814 0 814 0 814 0 814 0 814>;
+				nvidia,win_thread_groups = /bits/ 8 <0 1 2 3 4 5>;
+
+				/* Cursor settings */
+				nvidia,imp_head_mapping = /bits/ 8 <0 1 2 3>;
+				nvidia,cursor_fetch_meter_slots = /bits/ 16 <1 1 1 1>;
+				nvidia,cursor_dvfs_watermark_values = <0 0 0 0 0 0 0 0>;
+				nvidia,cursor_pipe_meter_values = <0 0 0 0>;
+				nvidia,cursor_mempool_buffer_entries = <0 16 0 16 0 16 0 16>;
+			};
+
+			disp_imp_settings_3 {
+				/* Calculated with 1280x720@60Hz per head */
+
+				/* Global settings */
+				nvidia,total_disp_bw_with_catchup = <0 1966800>;
+				nvidia,total_disp_bw_without_catchup = <0 1788000>;
 				nvidia,disp_emc_floor = <0xffffffff 0xffffffff>;
 				nvidia,disp_min_hubclk = <0xffffffff 0xffffffff>;
 				nvidia,total_win_fetch_slots = /bits/ 16 <1>;

@@ -25,6 +25,10 @@
 		status = "okay";
 	};
 
+	ether_qos@2490000 {
+		status = "okay";
+	};
+
 	bpmp_reset@0 {
 		status = "okay";
 	};

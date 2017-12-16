@@ -92,6 +92,10 @@
 		};
 	};
 
+	kfuse@3830000 {
+		status = "okay";
+	};
+
 	tegra194-pm-irq {
 		status = "okay";
 	};

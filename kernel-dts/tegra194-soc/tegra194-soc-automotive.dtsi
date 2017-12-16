@@ -68,6 +68,10 @@
 		};
 	};
 
+	kfuse@3830000 {
+		status = "okay";
+	};
+
 	/* Wake irq support */
 	tegra194-pm-irq {
 		status = "okay";

@@ -585,6 +585,14 @@
 		};
 	};
 
+	kfuse@3830000 {
+		compatible = "nvidia,tegra194-kfuse";
+		reg = <0x0 0x3830000 0x0 0x10000>;
+		clocks = <&bpmp_clks TEGRA194_CLK_KFUSE>;
+		clock-names = "kfuse";
+		status = "disabled";
+	};
+
 	bpmp: bpmp {
 		compatible = "nvidia,tegra186-bpmp";
 		iommus = <&smmu TEGRA_SID_BPMP>;

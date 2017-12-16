@@ -39,6 +39,12 @@
 
 #define PLLNVHS_FREQ_150MHZ	(150 * 1000 * 1000)
 
+/* NVLINK TOM is the top of the NVLINK aperture */
+#define NVLINK_TOM_GB	512
+
+/* Convert the NVLINK TOM value from GB to MB for register programming */
+#define NVLINK_TOM_MB	(((NVLINK_TOM_GB) * 1024) - 1)
+
 static struct of_device_id t19x_nvlink_controller_of_match[] = {
 	{
 		.compatible     = "nvidia,t19x-nvlink-controller",
@@ -385,8 +391,8 @@ static void init_tlc_buffers(struct nvlink_device *ndev)
 static void mssnvlink_init(struct nvlink_device *ndev)
 {
 	/* Program the upper limit of the NVLINK aperture in MSSNVLINK */
-	nvlink_dbg("Programming MSSNVLINK_TOM to 0x7ffff (i.e 512 GB)");
-	non_nvlink_writel(MCB_BASE + MC_MSSNVLINK_TOM, 0x7ffff);
+	nvlink_dbg("Programming MSSNVLINK_TOM to %u GB", NVLINK_TOM_GB);
+	non_nvlink_writel(MCB_BASE + MC_MSSNVLINK_TOM, NVLINK_TOM_MB);
 	non_nvlink_writel(MCB_BASE + MC_MSSNVLINK_REG_CTRL, 0x1);
 
 	/* MSSNVLINK credit programming */
@@ -401,6 +407,20 @@ static void mssnvlink_init(struct nvlink_device *ndev)
 	 */
 	non_nvlink_writel(MCB_BASE + MC_MCF_IREQX_VCARB_CONFIG, 0x8f0);
 	non_nvlink_writel(MCB_BASE + MC_MCF_OREQX_VCARB_CONFIG, 0x8f0);
+}
+
+/*
+ * Program the upper limit of the NVLINK aperture in SCF.
+ * The bottom of the aperture is fixed at 128 GB. So we don't need to program
+ * that.
+ */
+static inline void program_scf_tom(void)
+{
+	u32 reg_val = SCF_NVLINK_CFG_TOM_MB_F(NVLINK_TOM_MB) |
+			BIT(SCF_NVLINK_CFG_EN);
+
+	nvlink_dbg("Programming SCF TOM to %u GB", NVLINK_TOM_GB);
+	asm volatile("msr s3_0_c15_c0_3, %0" : : "r" (reg_val));
 }
 
 /* Initialize the link and transition to SAFE mode */
@@ -426,6 +446,7 @@ int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 
 	init_tlc_buffers(ndev);
 	mssnvlink_init(ndev);
+	program_scf_tom();
 
 	nvlink_dbg("Link initialization succeeded!");
 	goto success;

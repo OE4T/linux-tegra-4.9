@@ -320,6 +320,11 @@
 /* NON-NVLINK APERTURES - START */
 
 
+/* CPU System Registers */
+#define SCF_NVLINK_CFG_TOM_MB_F(x)			(((x) & 0xfffff) << 0)
+#define SCF_NVLINK_CFG_EN				31
+
+
 /*
  * TODO: Currently the MC driver is disabled for T194. Therefore we can't use
  * the MC driver's register read/write APIs (i.e. mc_writel()/mc_readl()). The

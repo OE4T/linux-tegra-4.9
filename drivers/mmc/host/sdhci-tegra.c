@@ -1126,7 +1126,7 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 				SDHCI_CLOCK_CTRL_TAP_MASK <<
 				SDHCI_CLOCK_CTRL_TAP_SHIFT);
 		if (err < 0)
-			dev_err(mmc_dev(host->mmc),
+			dev_dbg(mmc_dev(host->mmc),
 				"%s: error %d in tap settings, timing: %d\n",
 				__func__, err, host->mmc->ios.timing);
 	} else {

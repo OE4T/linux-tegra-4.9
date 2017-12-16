@@ -65,6 +65,8 @@
 						 GPIO_SCR_SEC_REN | \
 						 GPIO_SCR_SEC_G1R | \
 						 GPIO_SCR_SEC_G1W)
+#define GPIO_SCR_SEC_ENABLE			(GPIO_SCR_SEC_WEN | \
+						 GPIO_SCR_SEC_REN)
 
 #define GPIO_INT_LVL_NO_TRIGGER			0x0
 #define GPIO_INT_LVL_LEVEL_TRIGGER		0x1
@@ -723,6 +725,9 @@ static inline bool gpio_is_accessible(struct tegra_gpio_info *tgi, u32 offset)
 
 	val = __raw_readl(tgi->scr_regs + scr_offset +
 			(pin * GPIO_SCR_DIFF) + GPIO_SCR_REG);
+
+	if ((val & GPIO_SCR_SEC_ENABLE) == 0)
+		return true;
 
 	if ((val & GPIO_FULL_ACCESS) == GPIO_FULL_ACCESS)
 		return true;

@@ -319,10 +319,17 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod_c_dpaux_hdmi {
-					status = "disabled";
+					prod = <
+						0 0x00000124 0x00000700 0x00000400
+						>;
 				};
 				prod_c_dpaux_dp {
-					status = "disabled";
+					prod = <
+						0 0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
+											//				10:08=AUX_DRVZ		0x04
+											//				07:02=AUX_DRVI		0x30
+											//				01:01=AUX_INPUT_RCV	0x01
+						>;
 				};
 			};
 		};
@@ -331,10 +338,17 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod_c_dpaux_hdmi {
-					status = "disabled";
+					prod = <
+						0 0x00000124 0x00000700 0x00000400
+						>;
 				};
 				prod_c_dpaux_dp {
-					status = "disabled";
+					prod = <
+						0 0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
+											//				10:08=AUX_DRVZ		0x04
+											//				07:02=AUX_DRVI		0x30
+											//				01:01=AUX_INPUT_RCV	0x01
+						>;
 				};
 			};
 		};
@@ -343,10 +357,17 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod_c_dpaux_hdmi {
-					status = "disabled";
+					prod = <
+						0 0x00000124 0x00000700 0x00000400
+						>;
 				};
 				prod_c_dpaux_dp {
-					status = "disabled";
+					prod = <
+						0 0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
+											//				10:08=AUX_DRVZ		0x04
+											//				07:02=AUX_DRVI		0x30
+											//				01:01=AUX_INPUT_RCV	0x01
+						>;
 				};
 			};
 		};
@@ -355,10 +376,17 @@
 			prod-settings {
 				#prod-cells = <4>;
 				prod_c_dpaux_hdmi {
-					status = "disabled";
+					prod = <
+						0 0x00000124 0x00000700 0x00000400
+						>;
 				};
 				prod_c_dpaux_dp {
-					status = "disabled";
+					prod = <
+						0 0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
+											//				10:08=AUX_DRVZ		0x04
+											//				07:02=AUX_DRVI		0x30
+											//				01:01=AUX_INPUT_RCV	0x01
+						>;
 				};
 			};
 		};

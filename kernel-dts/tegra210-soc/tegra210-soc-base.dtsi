@@ -2085,9 +2085,9 @@
 	};
 
 	actmon@6000c800 {
-		status = "okay";
+		status = "disabled";
 		mc_all {        /* MC_ALL actmon device */
-			status = "okay";
+			status = "disabled";
 		};
 	};
 

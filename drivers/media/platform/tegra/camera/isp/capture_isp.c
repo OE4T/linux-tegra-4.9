@@ -26,6 +26,8 @@
 #include "soc/tegra/camrtc-capture.h"
 #include "soc/tegra/camrtc-capture-messages.h"
 
+#include <soc/tegra/chip-id.h>
+
 #define CAPTURE_CHANNEL_UNKNOWN_RESP 0xFFFFFFFF
 #define CAPTURE_CHANNEL_ISP_INVALID_ID 0xFFFF
 
@@ -1075,6 +1077,12 @@ int isp_capture_status(struct tegra_isp_channel *chan,
 		dev_err(chan->isp_dev,
 			"%s: setup channel first\n", __func__);
 		return -ENODEV;
+	}
+
+	if (tegra_platform_is_sim()) {
+		dev_dbg(chan->isp_dev, "%s timeout : %d extended by 10x on VDK",
+			__func__, timeout_ms);
+		timeout_ms *= 10;
 	}
 
 	err = wait_for_completion_killable_timeout(

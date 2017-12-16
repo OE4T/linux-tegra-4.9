@@ -311,49 +311,45 @@ static void init_tlc_buffers(struct nvlink_device *ndev)
 {
 	nvlink_dbg("Initializing TLC buffers");
 
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC0, 0x7f003f);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC1, 0x7f005f);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC2, 0x7f007f);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC3, 0x7f009f);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC4, 0x7f00bf);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC5, 0xff007f);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC6, 0xff007f);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC7, 0xff007f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC0, 0x10000C0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC1, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC2, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC3, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC4, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC5, 0x10000C0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC6, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC7, 0x0);
+
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC0, 0xff00bf);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC1, 0xff00bf);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC2, 0xff00bf);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC3, 0xff00bf);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC4, 0xff00bf);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC5, 0x1ff017f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC6, 0x1ff017f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC7, 0x1ff017f);
 
 	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC0, 0x800040);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC1, 0x20);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC2, 0x20);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC3, 0x20);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC4, 0x20);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC1, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC2, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC3, 0x0);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC4, 0x0);
 	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC5, 0x800040);
 	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC6, 0x0);
 	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_CREDITS_VC7, 0x0);
 
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC0, 0x7f003f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC1, 0x7f003f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC2, 0x7f003f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC3, 0x7f003f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC4, 0x7f003f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC5, 0xff007f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC6, 0xff007f);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_CTRL_BUFFER_SZ_VC7, 0xff007f);
+
 	nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_LOG_EN_0, 0x3ffffff);
 	nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_REPORT_EN_0, 0x3ffffff);
 	nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_CONTAIN_EN_0, 0x3ffffff);
-
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC0, 0xff007f);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC1, 0xff00bf);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC2, 0xff00ff);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC3, 0xff013f);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC4, 0xff017f);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC5, 0x1ff01ff);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC6, 0x1ff01ff);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_SZ_VC7, 0x1ff01ff);
-
-	nvlw_nvltlc_writel(ndev,
-			NVLTLC_RX_CTRL_BUFFER_CREDITS_VC0,
-			0x1000080);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC1, 0x40);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC2, 0x40);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC3, 0x40);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC4, 0x40);
-	nvlw_nvltlc_writel(ndev,
-			NVLTLC_RX_CTRL_BUFFER_CREDITS_VC5,
-			0x1000080);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC6, 0x0);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_CREDITS_VC7, 0x0);
 
 	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_LOG_EN_0, 0xffffff);
 	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_REPORT_EN_0, 0xffffff);

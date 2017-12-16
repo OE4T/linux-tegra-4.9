@@ -1198,6 +1198,7 @@ enum {
 	SOR_LINK_SPEED_G1_62 = 6,
 	SOR_LINK_SPEED_G2_7 = 10,
 	SOR_LINK_SPEED_G5_4 = 20,
+	SOR_LINK_SPEED_G8_1 = 30,
 };
 
 struct tegra_dc_dp_lt_settings {

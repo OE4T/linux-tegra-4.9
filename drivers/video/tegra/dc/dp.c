@@ -324,7 +324,7 @@ static ssize_t lane_count_set(struct file *file, const char __user *buf,
 		return ret;
 
 	if (cfg->lane_count == lane_count)
-		return -EINVAL;
+		return count;
 
 	/* disable the dc and output controllers */
 	if (dp->dc->enabled)
@@ -333,8 +333,10 @@ static ssize_t lane_count_set(struct file *file, const char __user *buf,
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		dp->test_max_lanes = lane_count;
 	} else {
-		dev_info(&dp->dc->ndev->dev,
-			"Setting max lanecount from %d to %ld\n",
+		if (lane_count == 0) /* Reset lane count to max */
+			lane_count = 4;
+
+		dev_info(&dp->dc->ndev->dev, "Setting max lanecount from %d to %ld\n",
 			cfg->lane_count, lane_count);
 
 		cfg->max_lane_count = lane_count;
@@ -391,7 +393,7 @@ static ssize_t link_speed_set(struct file *file, const char __user *buf,
 		return ret;
 
 	if (cfg->link_bw == link_speed)
-		return -EINVAL;
+		return count;
 
 	/* disable the dc and output controllers */
 	if (dp->dc->enabled)
@@ -400,9 +402,15 @@ static ssize_t link_speed_set(struct file *file, const char __user *buf,
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		dp->test_max_link_bw = link_speed;
 	} else {
-		dev_info(&dp->dc->ndev->dev,
-			"Setting max linkspeed from %d to %ld\n",
-			cfg->link_bw, link_speed);
+		if (link_speed == 0) { /* Reset link speed to max */
+			if (tegra_dc_is_t19x())
+				link_speed = SOR_LINK_SPEED_G8_1;
+			else
+				link_speed = SOR_LINK_SPEED_G5_4;
+		}
+
+		dev_info(&dp->dc->ndev->dev, "Setting max linkspeed from %d to %ld\n",
+				cfg->link_bw, link_speed);
 
 		cfg->max_link_bw = link_speed;
 
@@ -1165,9 +1173,9 @@ static int tegra_dc_init_default_panel_link_cfg(struct tegra_dc_dp_link_config *
 {
 	if (!cfg->is_valid) {
 		if (tegra_dc_is_t19x())
-			cfg->max_link_bw = 30;
+			cfg->max_link_bw = SOR_LINK_SPEED_G8_1;
 		else
-			cfg->max_link_bw = 20;
+			cfg->max_link_bw = SOR_LINK_SPEED_G5_4;
 		cfg->max_lane_count = 4;
 		cfg->tps = TEGRA_DC_DP_TRAINING_PATTERN_2;
 		cfg->support_enhanced_framing = true;

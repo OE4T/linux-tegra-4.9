@@ -105,14 +105,7 @@ int t194_capture_get_syncpt_gos_backing(struct platform_device *pdev,
 
 	err = nvhost_syncpt_get_gos(pdev, id, &index, &offset);
 	if (err < 0) {
-		if (!tegra_platform_is_sim()) {
-			dev_err(&pdev->dev,
-				"%s: get GoS failed for syncpoint id %d\n",
-				__func__, id);
-			return err;
-		}
-
-		dev_warn(&pdev->dev, "%s: GoS not supported on VDK\n",
+		dev_warn(&pdev->dev, "%s: failed to get GoS backing\n",
 			__func__);
 	}
 
@@ -198,14 +191,7 @@ static int t194_capture_support_probe(struct platform_device *pdev)
 	err = nvhost_syncpt_get_cv_dev_address_table(pdev,
 						&gos_count, &gos_table);
 	if (err) {
-		if (!tegra_platform_is_sim()) {
-			dev_err(&pdev->dev,
-				"%s: failed to get GoS table: err=%d\n",
-				__func__, err);
-			goto device_release;
-		}
-
-		dev_warn(&pdev->dev, "%s: GoS not supported on VDK\n",
+		dev_warn(&pdev->dev, "%s: failed to get GoS tables\n",
 			__func__);
 	}
 

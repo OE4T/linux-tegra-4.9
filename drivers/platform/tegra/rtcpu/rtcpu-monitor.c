@@ -74,8 +74,10 @@ static int tegra_camrtc_mon_wdt_irq_setup(
 	int ret;
 
 	cam_rtcpu_mon->wdt_irq = platform_get_irq_byname(pdev, "wdt-remote");
-	if (cam_rtcpu_mon->wdt_irq < 0)
+	if (cam_rtcpu_mon->wdt_irq < 0) {
+		dev_warn(&pdev->dev, "missing irq wdt-remote\n");
 		return -ENODEV;
+	}
 
 	ret = devm_request_threaded_irq(&pdev->dev, cam_rtcpu_mon->wdt_irq,
 			NULL, tegra_camrtc_mon_wdt_remote_isr, IRQF_ONESHOT,

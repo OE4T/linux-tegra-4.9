@@ -738,8 +738,10 @@ static int tegra_camrtc_poweron(struct device *dev)
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 	int ret;
 
-	if (rtcpu->powered)
+	if (rtcpu->powered) {
+		camrtc_clk_group_adjust_fast(rtcpu->clocks);
 		return 0;
+	}
 
 	/* APE power domain may misbehave and try to resume while probing */
 	if (rtcpu->sm_pair == NULL)
@@ -752,6 +754,8 @@ static int tegra_camrtc_poweron(struct device *dev)
 			rtcpu->name, ret);
 		return ret;
 	}
+
+	camrtc_clk_group_adjust_fast(rtcpu->clocks);
 
 	ret = tegra_camrtc_deassert_resets(dev);
 	if (ret)
@@ -950,8 +954,6 @@ static int tegra_cam_rtcpu_runtime_resume(struct device *dev)
 	ret = tegra_camrtc_poweron(dev);
 	if (ret)
 		goto error;
-
-	camrtc_clk_group_adjust_fast(rtcpu->clocks);
 
 	ret = tegra_camrtc_boot_sync(dev);
 	if (ret)
@@ -1184,7 +1186,6 @@ fail:
 int tegra_camrtc_reboot(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
-	int ret;
 
 	if (pm_runtime_suspended(dev)) {
 		dev_info(dev, "cannot reboot while suspended\n");
@@ -1202,9 +1203,7 @@ int tegra_camrtc_reboot(struct device *dev)
 
 	tegra_camrtc_assert_resets(dev);
 
-	ret = tegra_camrtc_deassert_resets(dev);
-	if (ret)
-		return ret;
+	rtcpu->powered = false;
 
 	return tegra_camrtc_boot(dev);
 }

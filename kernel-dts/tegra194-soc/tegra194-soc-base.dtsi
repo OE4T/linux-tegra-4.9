@@ -1918,6 +1918,7 @@
 				"nvhs_uphy_l0", "nvhs_uphy_l1", "nvhs_uphy_l2",
 				"nvhs_uphy_l3",	"nvhs_uphy_l4",	"nvhs_uphy_l5",
 				"nvhs_uphy_l6",	"nvhs_uphy_l7";
+		interrupts = <0 178 0x4>; /* NVLINK2HOST interrupt */
 		status = "disabled";
 	};
 };

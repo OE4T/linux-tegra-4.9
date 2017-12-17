@@ -1600,7 +1600,12 @@
 			0x0 0xC390000 0x0 0x2fff
 			0x0 0xC3a0000 0x0 0xfff>;
 		#padcontroller-cells = <1>;
+		nvidia,restrict-voltage-switch;
+		pinctrl-names = "default";
+		pinctrl-0 = <&iopad_defaults>;
 		status = "disabled";
+		iopad_defaults: iopad-defaults {
+		};
 	};
 
 	tegra_aowake: pmc@c370000 {

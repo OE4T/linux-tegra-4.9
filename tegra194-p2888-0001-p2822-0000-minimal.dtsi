@@ -38,73 +38,7 @@
 	};
 
 	host1x {
-		status = "disabled";
-
 		disp_imp_table {
-			status = "disabled";
-		};
-
-		ctx0 {
-			status = "disabled";
-		};
-
-		ctx1 {
-			status = "disabled";
-		};
-
-		ctx2 {
-			status = "disabled";
-		};
-
-		ctx3 {
-			status = "disabled";
-		};
-
-		ctx4 {
-			status = "disabled";
-		};
-
-		ctx5 {
-			status = "disabled";
-		};
-
-		ctx6 {
-			status = "disabled";
-		};
-
-		ctx7 {
-			status = "disabled";
-		};
-
-		vic@15340000 {
-			status = "disabled";
-		};
-
-		nvjpg@15380000 {
-			status = "disabled";
-		};
-
-		tsec@15500000 {
-			status = "disabled";
-		};
-
-		tsecb@15100000 {
-			status = "disabled";
-		};
-
-		nvdec@15480000 {
-			status = "disabled";
-		};
-
-		nvdec1@15140000 {
-			status = "disabled";
-		};
-
-		nvenc@154c0000 {
-			status = "disabled";
-		};
-
-		nvenc1@15a80000 {
 			status = "disabled";
 		};
 
@@ -291,10 +225,6 @@
 	};
 
 	mods-simple-bus {
-		status = "disabled";
-	};
-
-	tegra-carveouts {
 		status = "disabled";
 	};
 

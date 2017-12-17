@@ -28,8 +28,7 @@
 	#size-cells = <2>;
 
 	pmc@c360000 {
-		nvidia,restrict-voltage-switch;
-		iopad-defaults {
+		iopad_defaults: iopad-defaults {
 			sdmmc-io-pads {
 				pins = "sdmmc1-hv", "sdmmc3-hv";
 				nvidia,enable-voltage-switching;

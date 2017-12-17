@@ -2382,6 +2382,7 @@ void gr_gv11b_set_preemption_buffer_va(struct gk20a *g,
 int gr_gv11b_init_fs_state(struct gk20a *g)
 {
 	u32 data;
+	int err;
 
 	gk20a_dbg_fn("");
 
@@ -2401,7 +2402,20 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 			g->gr.fecs_feature_override_ecc_val);
 	}
 
-	return gr_gm20b_init_fs_state(g);
+	err = gr_gk20a_init_fs_state(g);
+	if (err)
+		return err;
+
+	g->ops.gr.load_tpc_mask(g);
+
+	gk20a_writel(g, gr_bes_zrop_settings_r(),
+		     gr_bes_zrop_settings_num_active_ltcs_f(g->ltc_count));
+	gk20a_writel(g, gr_bes_crop_settings_r(),
+		     gr_bes_crop_settings_num_active_ltcs_f(g->ltc_count));
+
+	g->ops.gr.load_smid_config(g);
+
+	return err;
 }
 
 void gv11b_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,

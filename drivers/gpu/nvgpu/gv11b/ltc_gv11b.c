@@ -69,10 +69,6 @@ void gv11b_ltc_init_fs_state(struct gk20a *g)
 	g->ltc_count = gk20a_readl(g, pri_ringmaster_enum_ltc_r());
 	gk20a_dbg_info("%u ltcs out of %u", g->ltc_count, g->max_ltc_count);
 
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_cfg0_r(),
-		gk20a_readl(g, ltc_ltc0_lts0_dstg_cfg0_r()) |
-		ltc_ltcs_ltss_dstg_cfg0_vdc_4to2_disable_m());
-
 	/* Disable LTC interrupts */
 	reg = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
 	reg &= ~ltc_ltcs_ltss_intr_en_evicted_cb_m();

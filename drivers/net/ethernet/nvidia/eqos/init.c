@@ -1083,7 +1083,10 @@ int eqos_probe(struct platform_device *pdev)
 
 	ret = eqos_get_mac_address_dtb("/chosen", "nvidia,ether-mac", mac_addr);
 	if (ret < 0) {
-		pr_err("ether-mac read from DT failed %d\n", ret);
+		netdev_err(ndev, "ether-mac read from DT failed %d\n", ret);
+		eth_hw_addr_random(ndev);
+		netdev_info(ndev, "EQOS using random MAC address: %pM\n",
+			    ndev->dev_addr);
 	} else {
 		dev_info(&pdev->dev, "Setting local MAC: %x %x %x %x %x %x\n",
 			mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],

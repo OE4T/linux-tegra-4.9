@@ -2096,7 +2096,7 @@ static int tegra_nvhdcp_off(struct tegra_nvhdcp *nvhdcp)
 
 void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 {
-	if (tegra_platform_is_sim())
+	if (tegra_platform_is_sim() || tegra_dc_is_t19x())
 		return;
 
 	nvhdcp_debug("hdmi hotplug detected (hpd = %d)\n", hpd);

@@ -2085,6 +2085,9 @@ static int tegra_dphdcp_renegotiate(struct tegra_dphdcp *dphdcp)
 
 void tegra_dphdcp_set_plug(struct tegra_dphdcp *dphdcp, bool hpd)
 {
+	if (tegra_dc_is_t19x())
+		return;
+
 	/* ensure all previous values are reset on hotplug */
 	vprime_check_done = false;
 	repeater_flag = false;

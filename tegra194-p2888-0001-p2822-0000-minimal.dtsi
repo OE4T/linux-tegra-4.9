@@ -238,10 +238,6 @@
 		status = "disabled";
 	};
 
-	clock@0 {
-		status = "disabled";
-	};
-
 	tegra-hsp@c150000 {
 		status = "disabled";
 	};
@@ -251,10 +247,6 @@
 	};
 
 	tegra-hsp@b950000 {
-		status = "disabled";
-	};
-
-	bpmp {
 		status = "disabled";
 	};
 
@@ -295,10 +287,6 @@
 	};
 
 	xhci_server {
-		status = "disabled";
-	};
-
-	tegra194-pm-irq {
 		status = "disabled";
 	};
 
@@ -354,10 +342,6 @@
 		status = "disabled";
 	};
 
-	bpmp_i2c {
-		status = "disabled";
-	};
-
 	i2c@31b0000 {
 		status = "disabled";
 	};
@@ -374,18 +358,6 @@
 		status = "disabled";
 	};
 
-	dma@2600000 {
-		status = "disabled";
-	};
-
-	gpio@2200000 {
-		status = "disabled";
-	};
-
-	gpio@c2f0000 {
-		status = "okay";
-	};
-
 	soft_watchdog {
 		status = "disabled";
 	};
@@ -398,16 +370,8 @@
 		status = "disabled";
 	};
 
-	fixed-regulators {
-		status = "disabled";
-	};
-
 	external-connection {
 		status = "disabled";
-	};
-
-	pinmux@2430000 {
-		status = "okay";
 	};
 
 	serial@3100000 {
@@ -432,10 +396,6 @@
 
 	efuse@3820000 {
 		status = "okay";
-	};
-
-	bpmp_reset@0 {
-		status = "disabled";
 	};
 
 	reserved-memory {
@@ -472,10 +432,6 @@
 		status = "disabled";
 	};
 
-	sdhci@3460000 {
-		status = "disabled";
-	};
-
 	sdhci@3440000 {
 		status = "disabled";
 	};
@@ -498,10 +454,6 @@
 
 	generic_pwm_tachometer {
 		status = "disabled";
-	};
-
-	pmc@c360000 {
-		status = "okay";
 	};
 
 	hsio_p2u {
@@ -553,10 +505,6 @@
 	};
 
 	iommu@12000000 {
-		status = "okay";
-	};
-
-	pmc@c370000 {
 		status = "okay";
 	};
 

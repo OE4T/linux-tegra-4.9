@@ -114,6 +114,10 @@
 					"pcie-p2u-4", "pcie-p2u-5", "pcie-p2u-6", "pcie-p2u-7";
 	};
 
+	pmc@c370000 {
+		nvidia,invert-interrupt;
+	};
+
 	external-connection {
 		vbus_id_extcon: extcon@1 {
 			compatible = "extcon-gpio-states";

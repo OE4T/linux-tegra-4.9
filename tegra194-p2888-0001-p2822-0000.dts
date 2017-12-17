@@ -37,15 +37,15 @@
 	};
 
 	arm64_ras {
-		status = "okay";
+		status = "disabled";
 	};
 
 	carmel_ras {
-		status = "okay";
+		status = "disabled";
 	};
 
 	cbbnocaxi@2300000 {
-		status = "okay";
+		status = "disabled";
 	};
 
 	spi@3210000 {

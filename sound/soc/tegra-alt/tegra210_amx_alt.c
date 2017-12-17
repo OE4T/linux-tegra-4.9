@@ -948,6 +948,13 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	/* following is necessary to have the required codec-dai-name */
+	if (dev_set_name(&pdev->dev, "%s.%d", DRV_NAME, pdev->dev.id)) {
+		dev_err(&pdev->dev, "error in setting AMX dev name\n");
+		ret = -ENODEV;
+		goto err;
+	}
+
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
 		ret = tegra210_amx_runtime_resume(&pdev->dev);

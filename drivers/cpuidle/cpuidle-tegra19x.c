@@ -86,9 +86,7 @@ static bool check_mce_version(void)
 static void t19x_cpu_enter_c6(u32 wake_time)
 {
 	cpu_pm_enter();
-	tegra_mce_update_cstate_info(0, 0, 0, 0, CORE_WAKE_MASK, 1);
-	tegra_mce_enter_cstate(TEGRA_NVG_CORE_C6, wake_time);
-	asm volatile("wfi\n");
+	arm_cpuidle_suspend(T19x_CPUIDLE_C6_STATE);
 	cpu_pm_exit();
 }
 

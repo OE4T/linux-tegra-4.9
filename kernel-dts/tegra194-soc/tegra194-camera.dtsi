@@ -45,6 +45,9 @@
 		resets = <&bpmp_resets TEGRA194_RESET_RCE_ALL>;
 		reset-names = "rce-all";
 
+		interrupts = <0 TEGRA194_IRQ_RCE_WDT_REMOTE 0x4>;
+		interrupt-names = "wdt-remote";
+
 		nvidia,camera-devices = <&isp &vi &nvcsi &slvs_ec>;
 
 		iommus = <&smmu TEGRA_SID_RCE>;

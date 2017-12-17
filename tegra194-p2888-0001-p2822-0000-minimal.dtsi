@@ -383,7 +383,7 @@
 	};
 
 	gpio@c2f0000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	soft_watchdog {
@@ -407,7 +407,7 @@
 	};
 
 	pinmux@2430000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	serial@3100000 {
@@ -431,7 +431,7 @@
 	};
 
 	efuse@3820000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	bpmp_reset@0 {
@@ -489,7 +489,7 @@
 	};
 
 	mc_sid@2c00000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	tachometer@39c0000 {
@@ -501,7 +501,7 @@
 	};
 
 	pmc@c360000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	hsio_p2u {
@@ -514,6 +514,14 @@
 
 	interrupt-controller {
 		status = "disabled";
+	};
+
+	interrupt-controller@3881000 {
+		status = "okay";
+	};
+
+	timer {
+		status="okay";
 	};
 
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
@@ -545,11 +553,11 @@
 	};
 
 	iommu@12000000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	pmc@c370000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	eeprom-manager {

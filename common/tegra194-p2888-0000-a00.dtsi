@@ -29,6 +29,7 @@
 
 	serial@c280000 {
 		compatible = "nvidia,tegra20-uart";
+		clock-frequency = <0x18519600>;
 		status = "okay";
 		/delete-property/ resets;
 		/delete-property/ reset-names;

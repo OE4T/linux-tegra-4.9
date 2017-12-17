@@ -280,7 +280,77 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
 	.tsg_required = true,
-	}
+	},
+	{
+	/* ptimer src frequency in hz */
+	.ptimer_src_freq	= 31250000,
+
+	.probe = nvgpu_pci_tegra_probe,
+	.remove = nvgpu_pci_tegra_remove,
+
+	/* power management configuration */
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= false,
+	.can_elpg_init = false,
+	.enable_elpg = false,
+	.enable_elcg = false,
+	.enable_slcg = false,
+	.enable_blcg = false,
+	.enable_mscg = false,
+	.can_slcg    = false,
+	.can_blcg    = false,
+	.can_elcg    = false,
+	.default_pri_timeout = 0x3ff,
+
+	.disable_aspm = true,
+
+	/* power management callbacks */
+	.is_railgated = nvgpu_pci_tegra_is_railgated,
+	.clk_round_rate = nvgpu_pci_clk_round_rate,
+
+	.ch_wdt_timeout_ms = 7000,
+
+	.honors_aperture = true,
+	.vbios_min_version = 0x88000126,
+	.hardcode_sw_threshold = false,
+	.run_preos = true,
+	.tsg_required = true,
+	},
+	{ /* SKU250 */
+	/* ptimer src frequency in hz */
+	.ptimer_src_freq	= 31250000,
+
+	.probe = nvgpu_pci_tegra_probe,
+	.remove = nvgpu_pci_tegra_remove,
+
+	/* power management configuration */
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= false,
+	.can_elpg_init = false,
+	.enable_elpg = false,
+	.enable_elcg = false,
+	.enable_slcg = false,
+	.enable_blcg = false,
+	.enable_mscg = false,
+	.can_slcg    = false,
+	.can_blcg    = false,
+	.can_elcg    = false,
+	.default_pri_timeout = 0x3ff,
+
+	.disable_aspm = true,
+
+	/* power management callbacks */
+	.is_railgated = nvgpu_pci_tegra_is_railgated,
+	.clk_round_rate = nvgpu_pci_clk_round_rate,
+
+	.ch_wdt_timeout_ms = 7000,
+
+	.honors_aperture = true,
+	.vbios_min_version = 0x1,
+	.hardcode_sw_threshold = false,
+	.run_preos = true,
+	.tsg_required = true,
+	},
 };
 
 static struct pci_device_id nvgpu_pci_table[] = {
@@ -318,7 +388,19 @@ static struct pci_device_id nvgpu_pci_table[] = {
 		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1db0),
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
-		.driver_data = 4,
+		.driver_data = 5,
+	},
+	{
+		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1dbe),
+		.class = PCI_BASE_CLASS_DISPLAY << 16,
+		.class_mask = 0xff << 16,
+		.driver_data = 6,
+	},
+	{
+		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1df1),
+		.class = PCI_BASE_CLASS_DISPLAY << 16,
+		.class_mask = 0xff << 16,
+		.driver_data = 7,
 	},
 	{}
 };

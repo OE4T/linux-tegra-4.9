@@ -637,5 +637,25 @@
 #define TEGRA194_CLK_DLA1_CORE_MUX		302
 /** @brief Controls CLK_RST_CONTROLLER_NVLINK_CLK_CTRL_0.NVLINK_TXCLK_CTRL */
 #define TEGRA194_CLK_NVLINK_TXCLK_CTRL		303
+/** @brief UTMI PLL HW power sequencer */
+#define TEGRA194_CLK_UTMIPLL_HPS		304
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C5 */
+#define TEGRA194_CLK_I2C5			305
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C10 */
+#define TEGRA194_CLK_I2C10			306
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_BPMP_CPU_NIC switch divider output */
+#define TEGRA194_CLK_BPMP_CPU_NIC		307
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_BPMP_APB switch divider output */
+#define TEGRA194_CLK_BPMP_APB			308
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_TSC switch divider output */
+#define TEGRA194_CLK_TSC			309
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_EMC switch divider output */
+#define TEGRA194_CLK_EMCSA			310
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_EMCSB switch divider output */
+#define TEGRA194_CLK_EMCSB			311
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_EMCSC switch divider output */
+#define TEGRA194_CLK_EMCSC			312
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_EMCSD switch divider output */
+#define TEGRA194_CLK_EMCSD			313
 
 #endif

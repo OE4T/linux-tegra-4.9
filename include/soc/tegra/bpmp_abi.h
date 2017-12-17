@@ -154,6 +154,7 @@ struct mrq_response {
 #define MRQ_CPU_NDIV_LIMITS	67
 #define MRQ_STRAP               68
 #define MRQ_UPHY		69
+#define MRQ_CPU_AUTO_CC3	70
 
 /** @} */
 
@@ -162,7 +163,7 @@ struct mrq_response {
  * @brief Maximum MRQ code to be sent by CPU software to
  * BPMP. Subject to change in future
  */
-#define MAX_CPU_MRQ_ID		69
+#define MAX_CPU_MRQ_ID		70
 
 /**
  * @addtogroup MRQ_Payloads
@@ -184,6 +185,7 @@ struct mrq_response {
  *   @defgroup RingbufConsole Ring Buffer Console
  *   @defgroup Strap Straps
  *   @defgroup UPHY UPHY
+ *   @defgroup CC3 Auto-CC3
  * @}
  */
 
@@ -1739,6 +1741,49 @@ struct mrq_cpu_ndiv_limits_response {
 
 /**
  * @ingroup MRQ_Codes
+ * @def MRQ_CPU_AUTO_CC3
+ * @brief Query CPU cluster auto-CC3 configuration
+ *
+ * * Platforms: T194 onwards
+ * * Initiators: CCPLEX
+ * * Targets: BPMP
+ * * Request Payload: @ref mrq_cpu_auto_cc3_request
+ * * Response Payload: @ref mrq_cpu_auto_cc3_response
+ * @addtogroup CC3
+ *
+ * Queries from BPMP auto-CC3 configuration (allowed/not allowed) for a
+ * specified cluster. CCPLEX s/w uses this information to override its own
+ * device tree auto-CC3 settings, so that BPMP device tree is a single source of
+ * auto-CC3 platform configuration.
+ *
+ * @{
+ */
+
+/**
+ * @brief Request for auto-CC3 configuration of a cluster
+ */
+struct mrq_cpu_auto_cc3_request {
+	/** @brief Enum cluster_id (logical cluster id, known to CCPLEX s/w) */
+	uint32_t cluster_id;
+} __ABI_PACKED;
+
+/**
+ * @brief Response to #MRQ_CPU_AUTO_CC3
+ */
+struct mrq_cpu_auto_cc3_response {
+	/**
+	 * @brief auto-CC3 configuration
+	 *
+	 * - bits[31..1] reserved.
+	 * - bit [0] if "1" auto-CC3 is allowed, if "0" auto-CC3 is not allowed
+	 */
+	uint32_t auto_cc3_config;
+} __ABI_PACKED;
+
+/** @} */
+
+/**
+ * @ingroup MRQ_Codes
  * @def MRQ_TRACE_ITER
  * @brief Manage the trace iterator
  *
@@ -2111,6 +2156,8 @@ struct mrq_uphy_response {
 #define BPMP_ETIMEDOUT  23
 /** @brief Out of range */
 #define BPMP_ERANGE	34
+/** @brief Invalid slot */
+#define BPMP_EBADSLT	57
 
 /** @} */
 

@@ -120,22 +120,6 @@
 			status = "disabled";
 		};
 
-		vi@15c10000 {
-			status = "disabled";
-		};
-
-		vi-thi@15f00000 {
-			status = "disabled";
-		};
-
-		isp@14800000 {
-			status = "disabled";
-		};
-
-		isp-thi@14b00000 {
-			status = "disabled";
-		};
-
 		pva0 {
 			status = "disabled";
 		};
@@ -267,18 +251,6 @@
 	};
 
 	power-domain {
-		status = "disabled";
-	};
-
-	rce-rm@bc00000 {
-		status = "disabled";
-	};
-
-	tegra-rtcpu-trace {
-		status = "disabled";
-	};
-
-	camera-ivc-channels {
 		status = "disabled";
 	};
 

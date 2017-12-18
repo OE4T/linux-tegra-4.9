@@ -74,4 +74,13 @@ config NVS_MAX4400X
 	  The driver uses the NVS (NVidia Sensor) IIO, light and
 	  proximity framework.
 
+config NVS_VEML6030
+	tristate "Vishay VEML6030 ALS"
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO && NVS_LIGHT
+	help
+	  Say Y here for Vishay Semiconductors VEML6030
+	  Ambient Light Sensor (ALS) driver support.
+
+	  The driver uses the NVS (NVidia Sensor) IIO, light framework.
+
 endmenu

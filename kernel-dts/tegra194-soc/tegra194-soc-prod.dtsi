@@ -1155,6 +1155,9 @@
 	xusb_padctl@3520000 {
 		prod-settings {
 			#prod-cells = <4>;
+			prod_c_bias {
+				prod = <0 0x284 0x00000038 0x38>;			//XUSB_PADCTL_USB2_BIAS_PAD_CTL_0[HS_DISCON_LEVEL]=7
+			};
 			prod {
 				prod = <
 					0 0x00000024 0x00000fff 0x00000000>;            //XUSB_PADCTL_ELPG_PROGRAM_1_0

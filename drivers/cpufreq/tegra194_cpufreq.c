@@ -100,6 +100,11 @@ struct read_counters_work {
 	struct tegra_cpu_ctr c;
 };
 
+static enum cluster get_cpu_cluster(uint8_t cpu)
+{
+	return MPIDR_AFFINITY_LEVEL(cpu_logical_map(cpu), 1);
+}
+
 static uint64_t read_freq_feedback(void)
 {
 	uint64_t val;
@@ -258,7 +263,7 @@ static void set_cpufreq_to_emcfreq(enum cluster cl, uint32_t cluster_freq)
 
 static struct cpufreq_frequency_table *get_freqtable(uint8_t cpu)
 {
-	enum cluster cur_cl = topology_physical_package_id(cpu);
+	enum cluster cur_cl = get_cpu_cluster(cpu);
 
 	return tfreq_data.pcluster[cur_cl].clft;
 }
@@ -298,7 +303,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	enum cluster cur_cl;
 	uint16_t ndiv;
 
-	cur_cl = topology_physical_package_id(cpu);
+	cur_cl = get_cpu_cluster(cpu);
 	nltbl = &tfreq_data.pcluster[cur_cl].ndiv_limits_tbl;
 
 	if (!nltbl->ref_clk_hz)
@@ -336,7 +341,7 @@ static int tegra194_set_speed(struct cpufreq_policy *policy, unsigned int index)
 
 	cpufreq_freq_transition_begin(policy, &freqs);
 
-	cl = topology_physical_package_id(policy->cpu);
+	cl = get_cpu_cluster(policy->cpu);
 
 	for_each_cpu(cpu, &tfreq_data.pcluster[cl].cpu_mask)
 		tegra_update_cpu_speed(tgt_freq, cpu);
@@ -717,7 +722,7 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 
 	policy->cur = tegra194_get_speed(policy->cpu);
 
-	cl = topology_physical_package_id(policy->cpu);
+	cl = get_cpu_cluster(policy->cpu);
 	if (tfreq_data.pcluster[cl].bwmgr)
 		set_cpufreq_to_emcfreq(cl, policy->cur);
 
@@ -736,7 +741,7 @@ static int tegra194_cpufreq_exit(struct cpufreq_policy *policy)
 
 	ftbl = get_freqtable(policy->cpu);
 	cpufreq_frequency_table_cpuinfo(policy, ftbl);
-	cl = topology_physical_package_id(policy->cpu);
+	cl = get_cpu_cluster(policy->cpu);
 	if (tfreq_data.pcluster[cl].bwmgr)
 		tegra_bwmgr_set_emc(tfreq_data.pcluster[cl].bwmgr, 0,
 			TEGRA_BWMGR_SET_EMC_FLOOR);
@@ -943,7 +948,7 @@ static void set_cpu_mask(void)
 	}
 
 	for_each_possible_cpu(cpu_num) {
-		cl = topology_physical_package_id(cpu_num);
+		cl = get_cpu_cluster(cpu_num);
 		if (!tfreq_data.pcluster[cl].configured)
 			continue;
 		cpumask_set_cpu(cpu_num,
@@ -1013,7 +1018,7 @@ static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 	tfreq_data.freq_compute_delay = US_DELAY;
 
 	for_each_possible_cpu(cpu) {
-		cl = topology_physical_package_id(cpu);
+		cl = get_cpu_cluster(cpu);
 		if (!tfreq_data.pcluster[cl].configured)
 			tfreq_data.pcluster[cl].configured = 1;
 	}

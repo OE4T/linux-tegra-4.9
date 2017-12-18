@@ -25,8 +25,7 @@
 	nvidia,dtbbuildtime = __DATE__, __TIME__;
 
 	chosen {
-		bootargs ="console=ttyS2,115200 earlycon=uart8250,mmio32,0x0c280000";
-		stdout-path = &uartc;
+		bootargs ="console=ttyTCU0,115200";
 		board-has-eeprom;
 	};
 

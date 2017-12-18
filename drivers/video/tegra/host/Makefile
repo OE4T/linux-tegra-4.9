@@ -57,3 +57,15 @@ obj-$(CONFIG_TEGRA_GRHOST_SLVSEC) += slvsec/
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost_minimal_pm/
 
 endif
+
+ifdef CONFIG_EVENTLIB
+
+$(obj)/bus_client.o: $(obj)/nvhost_events_json.h
+
+$(obj)/nvhost_events_json.h: $(src)/nvhost_events.json
+	xxd -i $< $@
+	sed -i 's/\(.*\) \(.*\)nvhost_events_json\(.*\)/\1 nvhost_events_json\3/g' $@
+
+clean-files := nvhost_events_json.h
+
+endif

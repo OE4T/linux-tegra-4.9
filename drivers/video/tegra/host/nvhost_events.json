@@ -1,0 +1,59 @@
+{
+    "Type"   : "EventProvider",
+    "Version": "1",
+
+    "EventProviderName": "nvhost",
+    "StructPrefix"     : "nvhost_",
+    "MacroPrefix"      : "NVHOST_",
+
+    "EventTypes": [
+
+        {
+            "Name"   : "task_submit",
+            "Comment": "Marks that the task is submitted to hardware",
+            "Fields" : [
+                { "Name": "class_id",        "Comment": "Engine class ID",
+                  "Type": "uint32_t",        "Format": "%x" },
+                { "Name": "syncpt_id",       "Comment": "Syncpoint ID",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "syncpt_thresh",   "Comment": "Threshold for task completion",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "pid",             "Comment": "PID",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "tid",             "Comment": "TID",
+                  "Type": "uint32_t",        "Format": "%u" }
+            ]
+        },
+
+        {
+            "Name"   : "task_begin",
+            "Comment": "Marks that the task is moving to execution",
+            "Fields" : [
+                { "Name": "class_id",        "Comment": "Engine class ID",
+                  "Type": "uint32_t",        "Format": "%x" },
+                { "Name": "syncpt_id",       "Comment": "Syncpoint ID",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "syncpt_thresh",   "Comment": "Threshold for task completion",
+                  "Type": "uint32_t",        "Format": "%u" }
+            ]
+        },
+
+        {
+            "Name"   : "task_end",
+            "Comment": "Marks that the task is completed",
+            "Fields" : [
+                { "Name": "class_id",        "Comment": "Engine class ID",
+                  "Type": "uint32_t",        "Format": "%x" },
+                { "Name": "syncpt_id",       "Comment": "Syncpoint ID",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "syncpt_thresh",   "Comment": "Threshold for task completion",
+                  "Type": "uint32_t",        "Format": "%u" }
+            ]
+        }
+
+
+    ],
+
+    "Filtering": {
+    }
+}

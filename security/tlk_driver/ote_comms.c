@@ -26,6 +26,7 @@
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/pagemap.h>
+#include <linux/ote_protocol.h>
 #include <asm/smp_plat.h>
 
 #include "ote_protocol.h"
@@ -171,6 +172,9 @@ static void do_smc(struct te_request *request, struct tlk_device *dev)
 void tlk_restore_keyslots(void)
 {
 	uint32_t retval;
+
+	if (!te_is_secos_dev_enabled())
+		return;
 
 	/* Share the same lock used when request is send from user side */
 	mutex_lock(&smc_lock);

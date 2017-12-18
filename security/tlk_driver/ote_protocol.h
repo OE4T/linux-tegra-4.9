@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __OTE_PROTOCOL_H__
-#define __OTE_PROTOCOL_H__
+#ifndef __TLK_OTE_PROTOCOL_H__
+#define __TLK_OTE_PROTOCOL_H__
 
 #include "ote_types.h"
 

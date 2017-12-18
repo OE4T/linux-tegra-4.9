@@ -62,14 +62,6 @@
 			status = "disabled";
 		};
 
-		pva0 {
-			status = "disabled";
-		};
-
-		pva1 {
-			status = "disabled";
-		};
-
 		se@15810000 {
 			status = "disabled";
 		};

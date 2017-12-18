@@ -454,6 +454,10 @@ static void print_errlog(struct seq_file *file,
 			int errvld_status)
 {
 	pr_crit("**************************************\n");
+	pr_crit("* For more Internal Decode Help\n");
+	pr_crit("*     http://nv/cbberr\n");
+	pr_crit("* NVIDIA userID is required to access\n");
+	pr_crit("**************************************\n");
 	pr_crit("CPU:%d, Error:%s\n", smp_processor_id(), errlog->name);
 
 	if (errvld_status & 0x1)

@@ -144,8 +144,8 @@ static bool tegra_admaif_volatile_reg(struct device *dev, unsigned int reg)
 	struct tegra_admaif *admaif = dev_get_drvdata(dev);
 	unsigned int offset_tx_enable = admaif->soc_data->reg_offsets.tx_enable;
 
-	if (reg > 0 && (reg < admaif->soc_data->num_ch *
-					TEGRA_ADMAIF_CHANNEL_REG_STRIDE * 2))
+	if (reg > 0 && (reg < (offset_tx_enable + (admaif->soc_data->num_ch *
+					TEGRA_ADMAIF_CHANNEL_REG_STRIDE))))
 		reg = reg % TEGRA_ADMAIF_CHANNEL_REG_STRIDE;
 
 	if ((reg == TEGRA_ADMAIF_XBAR_RX_ENABLE) ||
@@ -451,7 +451,7 @@ static void tegra_admaif_stop_playback(struct snd_soc_dai *dai)
 	/* HW needs sw reset to make sure previous transaction be clean */
 	ret = tegra_admaif_sw_reset(dai, SNDRV_PCM_STREAM_PLAYBACK, 0xffff);
 	if (ret)
-		dev_err(dev, "Failed at ADMAIF%d_TX sw reset\n", dev->id);
+		dev_err(dev, "Failed at ADMAIF%d_TX sw reset\n", dai->id);
 }
 
 static void tegra_admaif_start_capture(struct snd_soc_dai *dai)
@@ -487,7 +487,7 @@ static void tegra_admaif_stop_capture(struct snd_soc_dai *dai)
 	/* HW needs sw reset to make sure previous transaction be clean */
 	ret = tegra_admaif_sw_reset(dai, SNDRV_PCM_STREAM_CAPTURE, 0xffff);
 	if (ret)
-		dev_err(dev, "Failed at ADMAIF%d_RX sw reset\n", dev->id);
+		dev_err(dev, "Failed at ADMAIF%d_RX sw reset\n", dai->id);
 }
 
 static int tegra_admaif_trigger(struct snd_pcm_substream *substream, int cmd,

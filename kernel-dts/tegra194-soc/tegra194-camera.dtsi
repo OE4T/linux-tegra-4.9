@@ -48,7 +48,7 @@
 		interrupts = <0 TEGRA194_IRQ_RCE_WDT_REMOTE 0x4>;
 		interrupt-names = "wdt-remote";
 
-		nvidia,camera-devices = <&isp &vi &nvcsi &slvs_ec>;
+		nvidia,camera-devices = <&isp &vi &nvcsi>;
 
 		iommus = <&smmu TEGRA_SID_RCE>;
 		dma-coherent;

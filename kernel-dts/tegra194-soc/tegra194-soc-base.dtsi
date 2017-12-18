@@ -1303,7 +1303,6 @@
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
 			clock-names = "nvcsi", "nvcsilp", "nvcsilp_parent";
 			interrupts = <0 119 0x04>;
-			status = "disabled";
 			num-ports = <6>;
 		};
 

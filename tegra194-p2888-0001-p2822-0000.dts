@@ -240,6 +240,14 @@
 #endif
 		status = "okay";
 	};
+
+	actmon@d230000 {
+		status = "okay";
+
+		mc_all {
+			status = "okay";
+		};
+	};
 };
 
 /* Last include for status overrides */

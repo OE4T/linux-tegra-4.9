@@ -49,6 +49,7 @@
 		iommus = <&smmu TEGRA_SID_EQOS>;
 		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
 		nvidia,iso_bw = <81920>; /* sum of read and write bw, 80Mb/s */
+		nvidia,use_multi_queues;
 		status = "disabled";
         };
 

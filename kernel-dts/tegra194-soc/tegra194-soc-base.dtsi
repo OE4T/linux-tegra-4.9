@@ -1630,6 +1630,9 @@
 
 		pads {
 			usb2 {
+				clocks = <&bpmp_clks TEGRA194_CLK_USB2_TRK>;
+				clock-names = "trk";
+
 				lanes {
 					usb2-0 {
 						status = "disabled";

@@ -154,11 +154,13 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 	int err = 0;
 #ifdef CONFIG_DTS
 	if (on) {
-		err = regulator_enable(wifi_regulator);
+		if (wifi_regulator)
+			err = regulator_enable(wifi_regulator);
 		is_power_on = TRUE;
 	}
 	else {
-		err = regulator_disable(wifi_regulator);
+		if (wifi_regulator)
+			err = regulator_disable(wifi_regulator);
 		is_power_on = FALSE;
 	}
 	if (err < 0)
@@ -362,7 +364,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 #else
 		DHD_ERROR(("%s regulator is null\n", __FUNCTION__));
 #endif
-		return -1;
+		wifi_regulator = NULL;
 	}
 #if defined(OOB_INTR_ONLY) || defined(BCMPCIE_OOB_HOST_WAKE)
 	OOB_PARAM_IF(!(adapter->oob_disable)) {
@@ -370,7 +372,6 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 		irq = platform_get_irq(pdev, 0);
 		if (irq < 0) {
 			DHD_ERROR(("%s irq information is incorrect\n", __FUNCTION__));
-			return -1;
 		}
 		adapter->irq_num = irq;
 
@@ -425,7 +426,8 @@ static int wifi_plat_dev_drv_remove(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_DTS
-	regulator_put(wifi_regulator);
+	if (wifi_regulator)
+		regulator_put(wifi_regulator);
 #endif /* CONFIG_DTS */
 	return 0;
 }

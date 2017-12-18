@@ -1331,7 +1331,7 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	resource_size_t	tmp_io_base;
 	struct resource_entry *win;
 	u32 val, tmp;
-	int err;
+	int err, count = 100;
 
 	/* since struct pcie_port doesn't have ability to keep resource
 	 * information for both prefetchable and non-prefetchable memory,
@@ -1463,36 +1463,27 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 
 	msleep(100);
 
-	if (!dw_pcie_link_up(pp))
-		return;
+	val = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
+	while (!(val & CFG_LINK_STATUS_DLL_ACTIVE)) {
+		if (!count) {
+			dev_info(pp->dev, "link is down\n");
+			return;
+		}
+		dev_dbg(pp->dev, "polling for link up\n");
+		usleep_range(1000, 2000);
+		val = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
+		count--;
+	}
+	dev_info(pp->dev, "link is up\n");
 
 	tegra_pcie_enable_interrupts(pp);
 }
 
 static int tegra_pcie_dw_link_up(struct pcie_port *pp)
 {
-	u32 val;
-	int count = 5;
+	u32 val = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
 
-	val = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
-	if (!(val & CFG_LINK_STATUS_DLL_ACTIVE)) {
-		while (val & CFG_LINK_STATUS_LT) {
-			if (!count) {
-				dev_info(pp->dev,
-					 "link training didn't complete\n");
-				return 0;
-			}
-			dev_info(pp->dev, "link is in training\n");
-			usleep_range(1000, 2000);
-			val = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
-			count--;
-		}
-		if (!(val & CFG_LINK_STATUS_DLL_ACTIVE)) {
-			dev_info(pp->dev, "link is down after training\n");
-			return 0;
-		}
-	}
-	return 1;
+	return !!(val & CFG_LINK_STATUS_DLL_ACTIVE);
 }
 
 static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
@@ -1601,6 +1592,7 @@ static void tegra_pcie_disable_phy(struct tegra_pcie_dw *pcie)
 	}
 }
 
+#if defined(PHY)
 static int tegra_pcie_enable_phy(struct tegra_pcie_dw *pcie)
 {
 	int phy_count = pcie->phy_count;
@@ -1631,20 +1623,25 @@ err_phy_init:
 
 	return ret;
 }
+#endif
 
 static int tegra_pcie_dw_probe(struct platform_device *pdev)
 {
 	struct tegra_pcie_dw *pcie;
 	struct pcie_port *pp;
 	struct device_node *np = pdev->dev.of_node;
+#if defined(PHY)
 	struct phy **phy;
+#endif
 	struct resource *appl_res;
 	struct resource	*dbi_res;
 	struct resource	*atu_dma_res;
 	struct pinctrl *pin = NULL;
 	struct pinctrl_state *pin_state = NULL;
-	char name[10];
+#if defined(PHY)
+	char *name;
 	int phy_count;
+#endif
 	int ret, i = 0;
 	u32 val = 0;
 
@@ -1702,25 +1699,26 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	}
 
 	pin = devm_pinctrl_get(pcie->dev);
-	if (!IS_ERR(pin)) {
-		pin_state = pinctrl_lookup_state(pin, "pex_rst");
-		if (IS_ERR(pin_state)) {
-			dev_err(pcie->dev, "missing pex_rst state\n");
-			return PTR_ERR(pin_state);
-		}
+	if (IS_ERR(pin)) {
+		ret = PTR_ERR(pin);
+		dev_err(pcie->dev, "pinctrl_get failed: %d\n", ret);
+		return ret;
+	}
+	pin_state = pinctrl_lookup_state(pin, "pex_rst");
+	if (!IS_ERR(pin_state)) {
 		ret = pinctrl_select_state(pin, pin_state);
 		if (ret < 0) {
-			dev_err(pcie->dev, "setting pex_rst state failed\n");
+			dev_err(pcie->dev, "setting pex_rst state fail: %d\n",
+				ret);
 			return ret;
 		}
-		pin_state = pinctrl_lookup_state(pin, "clkreq");
-		if (IS_ERR(pin_state)) {
-			dev_err(pcie->dev, "missing clkreq state\n");
-			return PTR_ERR(pin_state);
-		}
+	}
+	pin_state = pinctrl_lookup_state(pin, "clkreq");
+	if (!IS_ERR(pin_state)) {
 		ret = pinctrl_select_state(pin, pin_state);
 		if (ret < 0) {
-			dev_err(pcie->dev, "setting clkreq state failed\n");
+			dev_err(pcie->dev, "setting clkreq state fail: %d\n",
+				ret);
 			return ret;
 		}
 	}
@@ -1759,6 +1757,7 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 
 	reset_control_deassert(pcie->core_apb_rst);
 
+#if defined(PHY)
 	phy_count = of_property_count_strings(np, "phy-names");
 	if (phy_count < 0) {
 		dev_err(pcie->dev, "unable to find phy entries\n");
@@ -1773,10 +1772,12 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < phy_count; i++) {
-		snprintf(name, sizeof(name), "pcie-p2u-%d", i);
+		name = kasprintf(GFP_KERNEL, "pcie-p2u-%u", i);
 		phy[i] = devm_phy_get(pcie->dev, name);
+		kfree(name);
 		if (IS_ERR(phy[i])) {
 			ret = PTR_ERR(phy[i]);
+			dev_err(pcie->dev, "phy_get error: %d\n", ret);
 			goto fail_phy;
 		}
 	}
@@ -1789,6 +1790,7 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "failed to enable phy\n");
 		goto fail_phy;
 	}
+#endif
 
 	dbi_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "config");
 	if (!dbi_res) {
@@ -1895,7 +1897,9 @@ fail_add_port:
 	reset_control_assert(pcie->core_rst);
 fail_dbi_res:
 	tegra_pcie_disable_phy(pcie);
+#if defined(PHY)
 fail_phy:
+#endif
 	reset_control_assert(pcie->core_apb_rst);
 fail_appl_res:
 	clk_disable_unprepare(pcie->core_clk);
@@ -1918,7 +1922,12 @@ static struct platform_driver tegra_pcie_dw_driver = {
 	},
 };
 
-module_platform_driver_probe(tegra_pcie_dw_driver, tegra_pcie_dw_probe);
+static int __init tegra_pcie_rp_late_init(void)
+{
+	return platform_driver_probe(&tegra_pcie_dw_driver,
+				     tegra_pcie_dw_probe);
+}
+late_initcall(tegra_pcie_rp_late_init);
 
 MODULE_AUTHOR("Vidya Sagar <vidyas@nvidia.com>");
 MODULE_DESCRIPTION("Nvidia PCIe host controller driver");

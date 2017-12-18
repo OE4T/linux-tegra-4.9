@@ -86,42 +86,6 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15210000 {
-			status = "disabled";
-		};
-
-		nvdisplay@15220000 {
-			status = "disabled";
-		};
-
-		nvdisplay@15230000 {
-			status = "disabled";
-		};
-
-		sor {
-			status = "disabled";
-		};
-
-		sor1 {
-			status = "disabled";
-		};
-
-		sor3 {
-			status = "disabled";
-		};
-
-		dpaux@155c0000 {
-			status = "disabled";
-		};
-
-		dpaux@155D0000 {
-			status = "disabled";
-		};
-
-		dpaux@155F0000 {
-			status = "disabled";
-		};
-
 		nvcsi@15a00000 {
 			status = "disabled";
 		};

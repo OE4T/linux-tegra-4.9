@@ -501,6 +501,7 @@ int tegra_flush_cache_all(void)
 
 	return ret;
 }
+EXPORT_SYMBOL(tegra_flush_cache_all);
 
 int tegra_flush_dcache_all(void *__maybe_unused unused)
 {
@@ -526,6 +527,7 @@ int tegra_flush_dcache_all(void *__maybe_unused unused)
 
 	return ret;
 }
+EXPORT_SYMBOL(tegra_flush_dcache_all);
 
 int tegra_clean_dcache_all(void *__maybe_unused unused)
 {
@@ -551,6 +553,7 @@ int tegra_clean_dcache_all(void *__maybe_unused unused)
 
 	return ret;
 }
+EXPORT_SYMBOL(tegra_clean_dcache_all);
 
 /* Make sure functions will be available for other drivers */
 static __init int tegra_mce_early_init(void)

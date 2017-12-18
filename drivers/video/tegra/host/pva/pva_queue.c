@@ -946,9 +946,8 @@ static void pva_completed_task_status(struct pva *pva)
 
 }
 
-static void pva_task_update(void *priv, int nr_completed)
+static void pva_task_update(struct pva_submit_task *task)
 {
-	struct pva_submit_task *task = priv;
 	struct nvhost_queue *queue = task->queue;
 	struct pva_hw_task *hw_task = task->va;
 	struct pva *pva = task->pva;
@@ -983,15 +982,32 @@ static void pva_task_update(void *priv, int nr_completed)
 	nvhost_module_idle(task->pva->pdev);
 
 	/* remove the task from the queue */
-	mutex_lock(&queue->list_lock);
 	list_del(&task->node);
-	mutex_unlock(&queue->list_lock);
 
 	/* Release memory that was allocated for the task */
 	nvhost_queue_free_task_memory(task->queue, task->pool_index);
 
 	/* Drop queue reference to allow reusing it */
 	nvhost_queue_put(queue);
+}
+
+static void pva_queue_update(void *priv, int nr_completed)
+{
+	struct nvhost_queue *queue = priv;
+	struct pva_submit_task *task, *n;
+
+	mutex_lock(&queue->list_lock);
+
+	list_for_each_entry_safe(task, n, &queue->tasklist, node) {
+		if (!nvhost_syncpt_is_expired_ext(queue->pool->pdev,
+						  queue->syncpt_id,
+						  task->syncpt_thresh))
+			break;
+
+		pva_task_update(task);
+	}
+
+	mutex_unlock(&queue->list_lock);
 }
 
 static void pva_queue_dump(struct nvhost_queue *queue, struct seq_file *s)
@@ -1177,7 +1193,7 @@ static int pva_task_submit(struct pva_submit_task *task)
 
 	err = nvhost_intr_register_notifier(host1x_pdev,
 					    queue->syncpt_id, thresh,
-					    pva_task_update, task);
+					    pva_queue_update, queue);
 	if (err < 0)
 		goto err_register_isr;
 

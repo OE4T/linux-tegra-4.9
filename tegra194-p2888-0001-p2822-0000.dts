@@ -86,7 +86,7 @@
 	};
 
 	cbbnocaxi@2300000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	spi@3210000 {

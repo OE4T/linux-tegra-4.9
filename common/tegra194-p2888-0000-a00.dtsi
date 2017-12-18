@@ -54,4 +54,8 @@
 		nvidia,disable-rtpm;
 		status = "okay";
 	};
+
+	rtc@c2a0000 {
+		status = "disabled";
+	};
 };

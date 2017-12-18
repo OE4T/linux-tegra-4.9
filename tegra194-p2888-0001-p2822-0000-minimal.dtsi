@@ -266,14 +266,6 @@
 		status = "disabled";
 	};
 
-	hsio_p2u {
-		status = "disabled";
-	};
-
-	nvhs_p2u {
-		status = "disabled";
-	};
-
 	interrupt-controller {
 		status = "disabled";
 	};
@@ -312,23 +304,7 @@
 		status = "disabled";
 	};
 
-	pcie_common {
-		status = "disabled";
-	};
-
 	pcie_c0_rp {
-		status = "disabled";
-	};
-
-	pcie_c1_rp {
-		status = "disabled";
-	};
-
-	pcie_c3_rp {
-		status = "disabled";
-	};
-
-	pcie_c5_rp {
 		status = "disabled";
 	};
 

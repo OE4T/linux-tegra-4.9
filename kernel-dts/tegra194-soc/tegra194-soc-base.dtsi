@@ -94,7 +94,7 @@
 		l3-gpu-cpu-ways = <16>;
 		l3-gpu-only-ways = <8>;
 		l3-total-ways = <16>;
-		l3-size = /bits/ 64 <0x0000000000100000>; /* 1MB */
+		l3-size = /bits/ 64 <0x0000000000400000>; /* 4 MB */
 		status = "disabled";
 	};
 

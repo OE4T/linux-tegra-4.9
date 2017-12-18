@@ -171,4 +171,9 @@
 	sdhci@3400000 {
 		nvidia,disable-rtpm;
 	};
+
+	/* L3 cache */
+	tegra-cache {
+		status = "okay";
+	};
 };

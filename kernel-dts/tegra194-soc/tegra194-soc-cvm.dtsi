@@ -149,4 +149,9 @@
 	rtc@c2a0000 {
 		status = "okay";
 	};
+
+	/* L3 cache */
+	tegra-cache {
+		status = "okay";
+	};
 };

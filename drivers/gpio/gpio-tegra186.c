@@ -1141,7 +1141,7 @@ static void tegra_gpio_read_irq_routemap(struct tegra_gpio_info *tgi, int bank,
 		tgcont->irq_info[irq_offset].irq_map[j] =
 			 __raw_readl(tgi->scr_regs + (bank * 0x1000) + 0x800 +
 				     (j * GPIO_REG_DIFF) + ROUTE_MAP_OFFSET +
-				     (irq_count * 4));
+				     (irq_offset * 4));
 	}
 }
 

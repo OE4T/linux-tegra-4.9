@@ -296,10 +296,6 @@
 		status = "disabled";
 	};
 
-	external-connection {
-		status = "disabled";
-	};
-
 	serial@3100000 {
 		status = "disabled";
 	};
@@ -396,16 +392,6 @@
 
 	timer {
 		status="okay";
-	};
-
-#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
-	xusb_padctl@3520000 {
-		status = "disabled";
-	};
-#endif
-
-	xudc@3550000 {
-		status = "disabled";
 	};
 
 	xhci@3610000 {

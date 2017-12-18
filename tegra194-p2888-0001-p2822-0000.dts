@@ -216,9 +216,8 @@
 		extcon-cable-names = "vbus";
 		#extcon-cells = <1>;
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
-		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
-			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-2}>;
-		phy-names = "usb2", "usb3";
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
+		phy-names = "usb2";
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 		status = "okay";

@@ -25,7 +25,6 @@
 
 	tegra_rce: rtcpu@bc00000 {
 		compatible = "nvidia,tegra186-sce-ivc";
-		status = "disabled";
 
 		nvidia,cpu-name = "rce";
 

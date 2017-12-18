@@ -145,4 +145,8 @@
 	pmc@c370000 {
 		status = "okay";
 	};
+
+	rtc@c2a0000 {
+		status = "okay";
+	};
 };

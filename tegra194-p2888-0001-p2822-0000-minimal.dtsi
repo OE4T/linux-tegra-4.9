@@ -91,10 +91,6 @@
 		};
 	};
 
-	aondbg {
-		status = "disabled";
-	};
-
 	cpus {
 		cpu_core_power_states {
 
@@ -116,14 +112,6 @@
 		status = "disabled";
 	};
 
-	tegra-hsp@c150000 {
-		status = "disabled";
-	};
-
-	tegra-hsp@3c00000 {
-		status = "disabled";
-	};
-
 	tegra-hsp@b950000 {
 		status = "disabled";
 	};
@@ -133,10 +121,6 @@
 	};
 
 	psci {
-		status = "disabled";
-	};
-
-	aon@c000000 {
 		status = "disabled";
 	};
 

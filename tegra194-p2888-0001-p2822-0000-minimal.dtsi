@@ -38,19 +38,11 @@
 	};
 
 	host1x {
-		disp_imp_table {
-			status = "disabled";
-		};
-
 		nvdla0@15880000 {
 			status = "disabled";
 		};
 
 		nvdla1@158c0000 {
-			status = "disabled";
-		};
-
-		dc_common {
 			status = "disabled";
 		};
 
@@ -94,10 +86,6 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15200000 {
-			status = "disabled";
-		};
-
 		nvdisplay@15210000 {
 			status = "disabled";
 		};
@@ -118,10 +106,6 @@
 			status = "disabled";
 		};
 
-		sor2 {
-			status = "disabled";
-		};
-
 		sor3 {
 			status = "disabled";
 		};
@@ -131,10 +115,6 @@
 		};
 
 		dpaux@155D0000 {
-			status = "disabled";
-		};
-
-		dpaux@155E0000 {
 			status = "disabled";
 		};
 
@@ -229,14 +209,6 @@
 	};
 
 	i2c@c240000 {
-		status = "disabled";
-
-		gpio@22 {
-			en_vdd_hdmi {
-				status = "disabled";
-			};
-		};
-
 		gpio@23 {
 			usb_mux_sel {
 				status = "disabled";

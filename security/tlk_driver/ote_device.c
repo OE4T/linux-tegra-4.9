@@ -541,7 +541,7 @@ static struct device_node *get_tlk_device_node(void)
 	struct device_node *node = NULL;
 	node = of_find_compatible_node(NULL, NULL, "android,tlk-driver");
 	if (!node)
-		pr_info("TLK node not present in FDT\n");
+		pr_debug("TLK node not present in FDT\n");
 	return node;
 }
 

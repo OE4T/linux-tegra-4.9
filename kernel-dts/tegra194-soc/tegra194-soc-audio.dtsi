@@ -78,6 +78,7 @@
 
 		adsp@2993000 {
 			compatible = "nvidia,tegra18x-adsp";
+			interrupt-parent = <&tegra_agic>;
 			nvidia,adsp_os_secload;
 			reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
 				<0x0 0x02990000 0x0 0x2000>, /* AMISC */

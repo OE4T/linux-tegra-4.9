@@ -48,7 +48,6 @@
 
 #define LOOP_FOR_EACH_CLUSTER(cl)	for (cl = 0; \
 					cl < MAX_CLUSTERS; cl++)
-#define INDEX_STEP		2
 
 struct cpu_emc_map {
 	uint32_t cpufreq; /* unit in KHz */
@@ -368,9 +367,12 @@ static void __tegra_mce_cc3_ctrl(void *data)
 
 static void enable_cc3(struct device_node *dn)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 	struct mrq_cpu_ndiv_limits_response *nltbl;
+	struct mrq_cpu_auto_cc3_request mreq;
+	struct mrq_cpu_auto_cc3_response mres;
 	struct cc3_params *cc3;
-	u32 enb, freq = 0, idx = 0;
+	u32 freq = 0;
 	u16 ndiv;
 	int cl;
 	int ret = 0;
@@ -382,15 +384,18 @@ static void enable_cc3(struct device_node *dn)
 		cc3 = &tfreq_data.pcluster[cl].cc3;
 
 		if (!nltbl->ref_clk_hz)
-			goto idx_inc;
+			continue;
 
-		ret = of_property_read_u32_index(dn, "nvidia,enable-autocc3",
-			idx + 1, &enb);
-		if (!enb || ret)
-			goto idx_inc;
+		mreq.cluster_id = cl;
+		ret = tegra_bpmp_send_receive(MRQ_CPU_AUTO_CC3, &mreq,
+				sizeof(struct mrq_cpu_auto_cc3_request),
+				&mres,
+				sizeof(struct mrq_cpu_auto_cc3_response));
+		if (ret || !(mres.auto_cc3_config & 1))
+			continue;
 
 		ret = of_property_read_u32_index(dn, "nvidia,autocc3-freq",
-			idx + 1, &freq);
+			cl, &freq);
 		if (ret)
 			freq = 0;
 
@@ -403,9 +408,8 @@ static void enable_cc3(struct device_node *dn)
 				__tegra_mce_cc3_ctrl,
 				cc3, 1);
 		WARN_ON_ONCE(ret);
-idx_inc:
-		idx += INDEX_STEP;
 	}
+#endif
 }
 
 #ifdef CONFIG_DEBUG_FS

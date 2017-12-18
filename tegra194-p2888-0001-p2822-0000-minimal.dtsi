@@ -216,10 +216,6 @@
 		status = "disabled";
 	};
 
-	gv11b {
-		status = "disabled";
-	};
-
 	xhci_server {
 		status = "disabled";
 	};
@@ -322,10 +318,6 @@
 
 	serial@c290000 {
 		status = "disabled";
-	};
-
-	efuse@3820000 {
-		status = "okay";
 	};
 
 	reserved-memory {

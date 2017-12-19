@@ -984,10 +984,13 @@ static struct syscore_ops pinctrl_syscore_ops = {
 	.restore = tegra_pinctrl_resume,
 };
 
-static bool gpio_node_has_range(void)
+static bool gpio_node_has_range(struct device *dev)
 {
 	struct device_node *np;
 	bool has_prop = false;
+
+	if (of_property_read_bool(dev->of_node, "#gpio-range-cells"))
+		return true;
 
 	np = of_find_compatible_node(NULL, NULL, "nvidia,tegra30-gpio");
 	if (!np)
@@ -1133,7 +1136,7 @@ int tegra_pinctrl_probe(struct platform_device *pdev,
 	}
 
 
-	if (!gpio_node_has_range())
+	if (!gpio_node_has_range(&pdev->dev))
 		pinctrl_add_gpio_range(pmx->pctl, &tegra_pinctrl_gpio_range);
 
 	platform_set_drvdata(pdev, pmx);

@@ -174,6 +174,8 @@ struct pva_func_table {
  * pva_trace		struct for pva_trace_log
  * submit_mode		Select the task submit mode
  * dbg_vpu_app_id	Set the vpu_app id to debug
+ * r5_dbg_wait		Set the r5 debugger to wait
+ * timeout_enabled	Set pva timeout enabled based on debug
  *
  */
 struct pva {
@@ -201,6 +203,8 @@ struct pva {
 	u32 submit_mode;
 
 	u32 dbg_vpu_app_id;
+	u32 r5_dbg_wait;
+	bool timeout_enabled;
 
 	struct work_struct pva_abort_handler_work;
 	struct work_struct pva_restore_state_work;

@@ -75,7 +75,7 @@ int pva_mailbox_wait_event(struct pva *pva, int wait_time)
 	int err;
 
 	/* Wait for the event being triggered in ISR */
-	if (tegra_platform_is_silicon())
+	if (tegra_platform_is_silicon() && (pva->timeout_enabled == true))
 		timeout = wait_event_timeout(pva->mailbox_waitqueue,
 			pva->mailbox_status == PVA_MBOX_STATUS_DONE ||
 			pva->mailbox_status == PVA_MBOX_STATUS_ABORTED,

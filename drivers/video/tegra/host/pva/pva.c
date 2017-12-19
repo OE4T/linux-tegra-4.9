@@ -90,9 +90,11 @@ static int pva_init_fw(struct platform_device *pdev)
 	u32 *ucode_ptr;
 	int err = 0, w;
 	u64 ucode_useg_addr;
+	int sema_value = 0;
 
 	nvhost_dbg_fn("");
 
+	pva->timeout_enabled = true;
 	priv1_buffer = &fw_info->priv1_buffer;
 	priv2_buffer = &fw_info->priv2_buffer;
 	ucode_ptr = priv1_buffer->va;
@@ -165,7 +167,14 @@ static int pva_init_fw(struct platform_device *pdev)
 
 	/* Indicate the OS is waiting for PVA ready Interrupt */
 	pva->mailbox_status = PVA_MBOX_STATUS_WFI;
-	host1x_writel(pdev, hsp_ss0_set_r(), (PVA_BOOT_INT | PVA_TEST_WAIT));
+
+	if (pva->r5_dbg_wait) {
+		sema_value = PVA_WAIT_DEBUG;
+		pva->timeout_enabled = false;
+	}
+
+	sema_value |= (PVA_BOOT_INT | PVA_TEST_WAIT);
+	host1x_writel(pdev, hsp_ss0_set_r(), sema_value);
 
 	/* Take R5 out of reset */
 	host1x_writel(pdev, proc_cpuhalt_r(),

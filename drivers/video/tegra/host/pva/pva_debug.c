@@ -224,6 +224,11 @@ void pva_debugfs_init(struct platform_device *pdev)
 	if (!ret)
 		nvhost_dbg_info("Failed to create vpu_app id debug file");
 
+	ret = debugfs_create_u32("r5_dbg_wait", 0644, de,
+				 &pva->r5_dbg_wait);
+	if (!ret)
+		nvhost_dbg_info("Failed to create r5_dbg_wait file");
+
 	ret = debugfs_create_file("firmware_version", S_IRUGO, de,
 				pva, &print_version_fops);
 	if (!ret)

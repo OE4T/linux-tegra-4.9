@@ -33,6 +33,7 @@
 #define PVA_OS_PRINT		PVA_BIT(30)	/* OS will process print */
 #define PVA_TEST_WAIT		PVA_BIT(29)	/* R5 wait to start tests */
 #define PVA_TEST_RUN		PVA_BIT(28)	/* Start tests */
+#define PVA_WAIT_DEBUG		PVA_BIT(24)	/* Spin-wait early in boot */
 
 /*
  * Bits set by the R5 and examined by the OS

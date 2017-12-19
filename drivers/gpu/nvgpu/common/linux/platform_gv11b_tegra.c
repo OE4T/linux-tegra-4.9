@@ -334,112 +334,144 @@ void gr_gv11b_create_sysfs(struct gk20a *g)
 
 	error |= gp10b_ecc_stat_create(dev,
 				g->ltc_count,
+				0,
 				"ltc",
+				NULL,
 				"l2_cache_uncorrected_err_count",
 				&g->ecc.ltc.t19x.l2_cache_uncorrected_err_count,
 				&dev_attr_l2_cache_ecc_uncorrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				g->ltc_count,
+				0,
 				"ltc",
+				NULL,
 				"l2_cache_corrected_err_count",
 				&g->ecc.ltc.t19x.l2_cache_corrected_err_count,
 				&dev_attr_l2_cache_ecc_corrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"gpc",
+				NULL,
 				"fecs_ecc_uncorrected_err_count",
 				&g->ecc.gr.t19x.fecs_uncorrected_err_count,
 				&dev_attr_fecs_ecc_uncorrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"gpc",
+				NULL,
 				"fecs_ecc_corrected_err_count",
 				&g->ecc.gr.t19x.fecs_corrected_err_count,
 				&dev_attr_fecs_ecc_corrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				g->gr.gpc_count,
+				0,
 				"gpc",
+				NULL,
 				"gpccs_ecc_uncorrected_err_count",
 				&g->ecc.gr.t19x.gpccs_uncorrected_err_count,
 				&dev_attr_gpccs_ecc_uncorrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				g->gr.gpc_count,
+				0,
 				"gpc",
+				NULL,
 				"gpccs_ecc_corrected_err_count",
 				&g->ecc.gr.t19x.gpccs_corrected_err_count,
 				&dev_attr_gpccs_ecc_corrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				g->gr.gpc_count,
+				0,
 				"gpc",
+				NULL,
 				"mmu_l1tlb_ecc_uncorrected_err_count",
 				&g->ecc.gr.t19x.mmu_l1tlb_uncorrected_err_count,
 				&dev_attr_mmu_l1tlb_ecc_uncorrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				g->gr.gpc_count,
+				0,
 				"gpc",
+				NULL,
 				"mmu_l1tlb_ecc_corrected_err_count",
 				&g->ecc.gr.t19x.mmu_l1tlb_corrected_err_count,
 				&dev_attr_mmu_l1tlb_ecc_corrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"eng",
+				NULL,
 				"mmu_l2tlb_ecc_uncorrected_err_count",
 				&g->ecc.eng.t19x.mmu_l2tlb_uncorrected_err_count,
 				&dev_attr_mmu_l2tlb_ecc_uncorrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"eng",
+				NULL,
 				"mmu_l2tlb_ecc_corrected_err_count",
 				&g->ecc.eng.t19x.mmu_l2tlb_corrected_err_count,
 				&dev_attr_mmu_l2tlb_ecc_corrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"eng",
+				NULL,
 				"mmu_hubtlb_ecc_uncorrected_err_count",
 				&g->ecc.eng.t19x.mmu_hubtlb_uncorrected_err_count,
 				&dev_attr_mmu_hubtlb_ecc_uncorrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"eng",
+				NULL,
 				"mmu_hubtlb_ecc_corrected_err_count",
 				&g->ecc.eng.t19x.mmu_hubtlb_corrected_err_count,
 				&dev_attr_mmu_hubtlb_ecc_corrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"eng",
+				NULL,
 				"mmu_fillunit_ecc_uncorrected_err_count",
 				&g->ecc.eng.t19x.mmu_fillunit_uncorrected_err_count,
 				&dev_attr_mmu_fillunit_ecc_uncorrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"eng",
+				NULL,
 				"mmu_fillunit_ecc_corrected_err_count",
 				&g->ecc.eng.t19x.mmu_fillunit_corrected_err_count,
 				&dev_attr_mmu_fillunit_ecc_corrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"eng",
+				NULL,
 				"pmu_ecc_uncorrected_err_count",
 				&g->ecc.eng.t19x.pmu_uncorrected_err_count,
 				&dev_attr_pmu_ecc_uncorrected_err_count_array);
 
 	error |= gp10b_ecc_stat_create(dev,
 				1,
+				0,
 				"eng",
+				NULL,
 				"pmu_ecc_corrected_err_count",
 				&g->ecc.eng.t19x.pmu_corrected_err_count,
 				&dev_attr_pmu_ecc_corrected_err_count_array);

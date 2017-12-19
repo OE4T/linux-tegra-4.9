@@ -27,6 +27,7 @@
 struct gk20a_ecc_stat {
 	char **names;
 	u32 *counters;
+	u32 count;
 #ifdef CONFIG_SYSFS
 	struct hlist_node hash_node;
 #endif

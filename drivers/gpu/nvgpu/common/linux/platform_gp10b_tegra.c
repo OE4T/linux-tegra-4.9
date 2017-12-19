@@ -450,10 +450,11 @@ static struct device_attribute *dev_attr_l2_ecc_ded_count_array;
 static u32 gen_ecc_hash_key(char *str)
 {
 	int i = 0;
-	u32 hash_key = 0;
+	u32 hash_key = 0x811c9dc5;
 
 	while (str[i]) {
-		hash_key += (u32)(str[i]);
+		hash_key *= 0x1000193;
+		hash_key ^= (u32)(str[i]);
 		i++;
 	};
 
@@ -467,10 +468,16 @@ static ssize_t ecc_stat_show(struct device *dev,
 	const char *ecc_stat_full_name = attr->attr.name;
 	const char *ecc_stat_base_name;
 	unsigned int hw_unit;
+	unsigned int subunit;
 	struct gk20a_ecc_stat *ecc_stat;
 	u32 hash_key;
+	struct gk20a *g = get_gk20a(dev);
 
-	if (sscanf(ecc_stat_full_name, "ltc%u", &hw_unit) == 1) {
+	if (sscanf(ecc_stat_full_name, "ltc%u_lts%u", &hw_unit,
+							&subunit) == 2) {
+		ecc_stat_base_name = &(ecc_stat_full_name[strlen("ltc0_lts0_")]);
+		hw_unit = g->gr.slices_per_ltc * hw_unit + subunit;
+	} else if (sscanf(ecc_stat_full_name, "ltc%u", &hw_unit) == 1) {
 		ecc_stat_base_name = &(ecc_stat_full_name[strlen("ltc0_")]);
 	} else if (sscanf(ecc_stat_full_name, "gpc0_tpc%u", &hw_unit) == 1) {
 		ecc_stat_base_name = &(ecc_stat_full_name[strlen("gpc0_tpc0_")]);
@@ -485,10 +492,13 @@ static ssize_t ecc_stat_show(struct device *dev,
 	}
 
 	hash_key = gen_ecc_hash_key((char *)ecc_stat_base_name);
+
 	hash_for_each_possible(ecc_hash_table,
 				ecc_stat,
 				hash_node,
 				hash_key) {
+		if (hw_unit >= ecc_stat->count)
+			continue;
 		if (!strcmp(ecc_stat_full_name, ecc_stat->names[hw_unit]))
 			return snprintf(buf, PAGE_SIZE, "%u\n", ecc_stat->counters[hw_unit]);
 	}
@@ -505,16 +515,22 @@ int gr_gp10b_ecc_stat_create(struct device *dev,
 	struct gk20a *g = get_gk20a(dev);
 	char *ltc_unit_name = "ltc";
 	char *gr_unit_name = "gpc0_tpc";
+	char *lts_unit_name = "lts";
 	int num_hw_units = 0;
+	int num_subunits = 0;
 
-	if (is_l2)
+	if (is_l2 == 1)
 		num_hw_units = g->ltc_count;
-	else
+	else if (is_l2 == 2) {
+		num_hw_units = g->ltc_count;
+		num_subunits = g->gr.slices_per_ltc;
+	} else
 		num_hw_units = g->gr.tpc_count;
 
 
-	return gp10b_ecc_stat_create(dev, num_hw_units,
+	return gp10b_ecc_stat_create(dev, num_hw_units, num_subunits,
 				is_l2 ? ltc_unit_name : gr_unit_name,
+				num_subunits ? lts_unit_name: NULL,
 				ecc_stat_name,
 				ecc_stat,
 				dev_attr_array);
@@ -522,7 +538,9 @@ int gr_gp10b_ecc_stat_create(struct device *dev,
 
 int gp10b_ecc_stat_create(struct device *dev,
 				int num_hw_units,
+				int num_subunits,
 				char *ecc_unit_name,
+				char *ecc_subunit_name,
 				char *ecc_stat_name,
 				struct gk20a_ecc_stat *ecc_stat,
 				struct device_attribute **__dev_attr_array)
@@ -530,21 +548,56 @@ int gp10b_ecc_stat_create(struct device *dev,
 	int error = 0;
 	struct gk20a *g = get_gk20a(dev);
 	int hw_unit = 0;
+	int subunit = 0;
+	int element = 0;
 	u32 hash_key = 0;
 	struct device_attribute *dev_attr_array;
 
+	int num_elements = num_subunits ? num_subunits*num_hw_units :
+		num_hw_units;
+
 	/* Allocate arrays */
 	dev_attr_array = nvgpu_kzalloc(g, sizeof(struct device_attribute) *
-				       num_hw_units);
-	ecc_stat->counters = nvgpu_kzalloc(g, sizeof(u32) * num_hw_units);
-	ecc_stat->names = nvgpu_kzalloc(g, sizeof(char *) * num_hw_units);
-	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
+				       num_elements);
+	ecc_stat->counters = nvgpu_kzalloc(g, sizeof(u32) * num_elements);
+	ecc_stat->names = nvgpu_kzalloc(g, sizeof(char *) * num_elements);
+	for (hw_unit = 0; hw_unit < num_elements; hw_unit++) {
 		ecc_stat->names[hw_unit] = nvgpu_kzalloc(g, sizeof(char) *
 						ECC_STAT_NAME_MAX_SIZE);
 	}
+	ecc_stat->count = num_elements;
+	if (num_subunits) {
+		for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
+			for (subunit = 0; subunit < num_subunits; subunit++) {
+				element = hw_unit*num_subunits + subunit;
 
-	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
-		/* Fill in struct device_attribute members */
+				snprintf(ecc_stat->names[element],
+					ECC_STAT_NAME_MAX_SIZE,
+					"%s%d_%s%d_%s",
+					ecc_unit_name,
+					hw_unit,
+					ecc_subunit_name,
+					subunit,
+					ecc_stat_name);
+
+				sysfs_attr_init(&dev_attr_array[element].attr);
+				dev_attr_array[element].attr.name =
+					ecc_stat->names[element];
+				dev_attr_array[element].attr.mode =
+					VERIFY_OCTAL_PERMISSIONS(S_IRUGO);
+				dev_attr_array[element].show = ecc_stat_show;
+				dev_attr_array[element].store = NULL;
+
+				/* Create sysfs file */
+				error |= device_create_file(dev,
+						&dev_attr_array[element]);
+
+			}
+		}
+	} else {
+		for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
+
+			/* Fill in struct device_attribute members */
 			snprintf(ecc_stat->names[hw_unit],
 				ECC_STAT_NAME_MAX_SIZE,
 				"%s%d_%s",
@@ -552,14 +605,18 @@ int gp10b_ecc_stat_create(struct device *dev,
 				hw_unit,
 				ecc_stat_name);
 
-		sysfs_attr_init(&dev_attr_array[hw_unit].attr);
-		dev_attr_array[hw_unit].attr.name = ecc_stat->names[hw_unit];
-		dev_attr_array[hw_unit].attr.mode = VERIFY_OCTAL_PERMISSIONS(S_IRUGO);
-		dev_attr_array[hw_unit].show = ecc_stat_show;
-		dev_attr_array[hw_unit].store = NULL;
+			sysfs_attr_init(&dev_attr_array[hw_unit].attr);
+			dev_attr_array[hw_unit].attr.name =
+						ecc_stat->names[hw_unit];
+			dev_attr_array[hw_unit].attr.mode =
+					VERIFY_OCTAL_PERMISSIONS(S_IRUGO);
+			dev_attr_array[hw_unit].show = ecc_stat_show;
+			dev_attr_array[hw_unit].store = NULL;
 
-		/* Create sysfs file */
-		error |= device_create_file(dev, &dev_attr_array[hw_unit]);
+			/* Create sysfs file */
+			error |= device_create_file(dev,
+					&dev_attr_array[hw_unit]);
+		}
 	}
 
 	/* Add hash table entry */
@@ -581,8 +638,10 @@ void gr_gp10b_ecc_stat_remove(struct device *dev,
 	struct gk20a *g = get_gk20a(dev);
 	int num_hw_units = 0;
 
-	if (is_l2)
+	if (is_l2 == 1)
 		num_hw_units = g->ltc_count;
+	else if (is_l2 == 2)
+		num_hw_units = g->ltc_count * g->gr.slices_per_ltc;
 	else
 		num_hw_units = g->gr.tpc_count;
 
@@ -695,13 +754,13 @@ void gr_gp10b_create_sysfs(struct gk20a *g)
 				&dev_attr_tex_ecc_unique_ded_pipe1_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
-				1,
-				"lts0_ecc_sec_count",
+				2,
+				"ecc_sec_count",
 				&g->ecc.ltc.l2_sec_count,
 				&dev_attr_l2_ecc_sec_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
-				1,
-				"lts0_ecc_ded_count",
+				2,
+				"ecc_ded_count",
 				&g->ecc.ltc.l2_ded_count,
 				&dev_attr_l2_ecc_ded_count_array);
 
@@ -769,11 +828,11 @@ static void gr_gp10b_remove_sysfs(struct device *dev)
 			dev_attr_tex_ecc_unique_ded_pipe1_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
-			1,
+			2,
 			&g->ecc.ltc.l2_sec_count,
 			dev_attr_l2_ecc_sec_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
-			1,
+			2,
 			&g->ecc.ltc.l2_ded_count,
 			dev_attr_l2_ecc_ded_count_array);
 }

@@ -25,11 +25,13 @@ int gr_gp10b_ecc_stat_create(struct device *dev,
 				struct gk20a_ecc_stat *ecc_stat,
 				struct device_attribute **dev_attr_array);
 int gp10b_ecc_stat_create(struct device *dev,
-				int hw_units,
+				int num_hw_units,
+				int num_subunits,
 				char *ecc_unit_name,
+				char *ecc_subunit_name,
 				char *ecc_stat_name,
 				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute **dev_attr_array);
+				struct device_attribute **__dev_attr_array);
 
 void gr_gp10b_ecc_stat_remove(struct device *dev,
 				int is_l2,

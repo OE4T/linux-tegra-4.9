@@ -3,7 +3,7 @@
  * boot to console. The nodes that are disabled here are for CVM:P2888-0001 and
  * CVB:P28222-0000 platforms.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,10 +52,6 @@
 				status = "disabled";
 			};
 		};
-	};
-
-	tegra-cvnas {
-		status = "disabled";
 	};
 
 	psci {

@@ -768,7 +768,9 @@ static int vi2_channel_stop_streaming(struct vb2_queue *vq)
 	}
 
 	tegra_channel_set_stream(chan, false);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);
+#endif
 
 	if (!chan->bypass)
 		vi2_update_clknbw(chan, 0);

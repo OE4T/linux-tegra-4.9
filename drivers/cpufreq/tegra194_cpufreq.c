@@ -889,12 +889,12 @@ static int __init init_freqtbls(struct device_node *dn)
 				ndiv < nltbl->ndiv_max;
 				index++, ndiv += freq_table_step_size)
 			ftbl[index].frequency = (unsigned long)
-				(nltbl->ref_clk_hz * ndiv)
-				/ (nltbl->pdiv * nltbl->mdiv * 1000);
+				(nltbl->ref_clk_hz / 1000 * ndiv)
+				/ (nltbl->pdiv * nltbl->mdiv);
 
 		ftbl[index++].frequency = (unsigned long)
-			(nltbl->ndiv_max * nltbl->ref_clk_hz) /
-			(nltbl->pdiv * nltbl->mdiv * 1000);
+			(nltbl->ref_clk_hz / 1000 * nltbl->ndiv_max) /
+			(nltbl->pdiv * nltbl->mdiv);
 
 		ftbl[index].frequency = CPUFREQ_TABLE_END;
 

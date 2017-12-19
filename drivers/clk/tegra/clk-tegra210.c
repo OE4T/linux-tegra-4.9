@@ -2792,6 +2792,9 @@ static struct tegra_devclk devclks[] __initdata = {
 	{ .con_id = "pll_p_out5", .dt_id = TEGRA210_CLK_PLL_P_OUT5 },
 	{ .con_id = "gpu", .dt_id = TEGRA210_CLK_GM20B_GBUS },
 	{ .con_id = "gpu_gate", .dt_id = TEGRA210_CLK_GPU },
+	{ .con_id = "vi_v4l2", .dt_id = TEGRA210_CLK_VI_V4L2_CBUS },
+	{ .con_id = "ispa", .dt_id = TEGRA210_CLK_ISPA_ISP_CBUS },
+	{ .con_id = "ispb", .dt_id = TEGRA210_CLK_ISPB_ISP_CBUS },
 };
 
 static struct tegra_audio_clk_info tegra210_audio_plls[] = {

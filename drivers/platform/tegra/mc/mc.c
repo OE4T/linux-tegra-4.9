@@ -43,6 +43,9 @@
 #define MC_CLIENT_HOTRESET_STAT_1	0x974
 #define MC_LATENCY_ALLOWANCE_BASE	MC_LATENCY_ALLOWANCE_AFI_0
 
+#define MSSNVLINK_CYA_DESIGN_MODES		0x3c
+#define MSS_NVLINK_L3_ALLOC_HINT		(1 << 2)
+
 static DEFINE_SPINLOCK(tegra_mc_lock);
 int mc_channels;
 void __iomem *mc;
@@ -316,6 +319,51 @@ static void __iomem *tegra_mc_map_regs(struct platform_device *pdev, int device)
 	return regs_start;
 }
 
+/*
+ * Map mssnvlink igpu hubs. In t19x, 4 igpu links supported
+ */
+static void enable_mssnvlinks(struct platform_device *pdev)
+{
+	struct device_node *dn = NULL;
+	void __iomem *regs;
+	int ret = 0, i;
+	u32 nhubs;
+	u32 reg_val;
+
+	/* MSSNVLINK support is available in silicon or fpga only */
+	if (!tegra_platform_is_silicon())
+		return;
+
+	dn = of_get_next_child(pdev->dev.of_node, NULL);
+	if (!dn) {
+		dev_dbg(&pdev->dev, "No mssnvlink node\n");
+		return;
+	}
+
+	ret = of_property_read_u32(dn, "mssnvlink_hubs", &nhubs);
+	if (ret) {
+		dev_err(&pdev->dev, "<mssnvlink_hubs> property missing in %s\n",
+			pdev->dev.of_node->name);
+			ret = -EINVAL;
+			goto err_out;
+	}
+
+	for (i = 0; i < nhubs; i++) {
+		regs = of_iomap(dn, i);
+		if (!regs) {
+			dev_err(&pdev->dev, "Failed to get MSSNVLINK aperture: %d\n", i);
+			ret = PTR_ERR(regs);
+			goto err_out;
+		}
+
+		reg_val = __raw_readl(regs + MSSNVLINK_CYA_DESIGN_MODES);
+		reg_val |=  MSS_NVLINK_L3_ALLOC_HINT;
+		__raw_writel(reg_val, regs + MSSNVLINK_CYA_DESIGN_MODES);
+	}
+
+err_out:
+	WARN_ON(ret);
+}
 
 __weak const struct of_device_id tegra_mc_of_ids[] = {
 	{ .compatible = "nvidia,tegra-mc" },
@@ -381,6 +429,8 @@ static int tegra_mc_probe(struct platform_device *pdev)
 		/* Make channel 0 the same as the MC broadcast range. */
 		mc_regs[0] = mc;
 	}
+
+	enable_mssnvlinks(pdev);
 
 #if defined(CONFIG_TEGRA_MC_EARLY_ACK)
 	reg = mc_readl(MC_EMEM_ARB_OVERRIDE);

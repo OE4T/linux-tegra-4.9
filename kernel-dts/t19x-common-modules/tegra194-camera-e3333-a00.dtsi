@@ -1140,7 +1140,7 @@
 			};
 
 			i2c@5 {
-				ov5693_f@36 {
+				ov5693_g@36 {
 					compatible = "nvidia,ov5693";
 					reg = <0x36>;
 					devnode = "video5";

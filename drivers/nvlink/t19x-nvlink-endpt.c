@@ -390,7 +390,7 @@ static void mssnvlink_init(struct nvlink_device *ndev)
 	non_nvlink_writel(MCB_BASE + MC_MSSNVLINK_REG_CTRL, 0x1);
 
 	/* MSSNVLINK credit programming */
-	mssnvlink_0_writel(ndev, MSSNVLINK_MASTER_CREDIT_TRANSINFO, 0x14050000);
+	mssnvlink_0_writel(ndev, MSSNVLINK_MASTER_CREDIT_TRANSINFO, 0x15455000);
 	mssnvlink_0_writel(ndev, MSSNVLINK_MASTER_CREDIT_INGR_DATA, 0x8020000);
 	mssnvlink_0_writel(ndev, MSSNVLINK_SLAVE_CREDIT_TRANSINFO, 0x14050000);
 	mssnvlink_0_writel(ndev, MSSNVLINK_SLAVE_CREDIT_INGR_DATA, 0x300c0000);

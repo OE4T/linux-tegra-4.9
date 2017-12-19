@@ -313,6 +313,24 @@
 
 #define MSSNVLINK_SLAVE_CREDIT_INGR_DATA			0x24
 
+
 /* NVLINK APERTURES - END */
+
+
+/* NON-NVLINK APERTURES - START */
+
+
+/*
+ * TODO: Currently the MC driver is disabled for T194. Therefore we can't use
+ * the MC driver's register read/write APIs (i.e. mc_writel()/mc_readl()). The
+ * WAR for this is to introduce a temporary API to access MC registers. We're
+ * using MCB_BASE for this WAR. Remove this WAR once the MC driver gets enabled
+ * for T194.
+ */
+/* MC Registers */
+#define MCB_BASE					0x2c10000
+
+
+/* NON-NVLINK APERTURES - END */
 
 #endif /* NVLINK_REGS_H */

@@ -122,6 +122,15 @@ static inline void mssnvlink_0_writel(struct nvlink_device *ndev, u32 reg,
 	writel(val, priv->mssnvlink_0_base + reg);
 }
 
+/* TODO: Remove all non-NVLINK MMIO register writes from the driver */
+static inline void non_nvlink_writel(u32 reg, u32 val)
+{
+	void __iomem *ptr = ioremap(reg, 0x4);
+
+	__raw_writel(val, ptr);
+	iounmap(ptr);
+}
+
 /*
  * Wait for a bit to be set or cleared in an NVLINK register. If the desired bit
  * condition doesn't happen in a certain amount of time, a timeout will happen.
@@ -362,69 +371,36 @@ static void init_tlc_buffers(struct nvlink_device *ndev)
 	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_READY, 0x1);
 }
 
-/* Program the upper limit of the MSSNVLINK address space */
-static int program_mssnvlink_tom(struct nvlink_device *ndev)
+/*
+ * mssnvlink_init:
+ * Do the folllwing to initialize MSSNVLINK. This initialization is required to
+ * allow traffic to flow between the NVLINK controller and MSSNVLINK:
+ *    - Program the upper limit of the NVLINK aperture in MSSNVLINK. The bottom
+ *      of the aperture is fixed at 128 GB. So we don't need to program that.
+ *    - Release MSSNVLINK header and data credits to the NVLINK controller.
+ *
+ * TODO: Convert the magic values being programmed below into something that's
+ * more understandable.
+ */
+static void mssnvlink_init(struct nvlink_device *ndev)
 {
-	/* Program MSSNVLINK TOM to 512 GB */
+	/* Program the upper limit of the NVLINK aperture in MSSNVLINK */
 	nvlink_dbg("Programming MSSNVLINK_TOM to 0x7ffff (i.e 512 GB)");
-	mc_writel(0x7ffff, MC_MSSNVLINK_TOM);
+	non_nvlink_writel(MCB_BASE + MC_MSSNVLINK_TOM, 0x7ffff);
+	non_nvlink_writel(MCB_BASE + MC_MSSNVLINK_REG_CTRL, 0x1);
 
-	/* FIXME: Do we need this read or was it only useful for debugging? */
-	if (mc_readl(MC_MSSNVLINK_TOM) != 0x7ffff) {
-		nvlink_err("Failed to configure MSSNVLINK_TOM");
-		return -1;
-	}
-
-	return 0;
-}
-
-/* Write to the MSSNVLINK registers to release header and data credits */
-static int program_mssnvlink_hub_credits(struct nvlink_device *ndev)
-{
-	u32 reg_val = 0;
-
-	nvlink_dbg("Programming MSSNVLINK HUB credits");
+	/* MSSNVLINK credit programming */
+	mssnvlink_0_writel(ndev, MSSNVLINK_MASTER_CREDIT_TRANSINFO, 0x14050000);
+	mssnvlink_0_writel(ndev, MSSNVLINK_MASTER_CREDIT_INGR_DATA, 0x8020000);
+	mssnvlink_0_writel(ndev, MSSNVLINK_SLAVE_CREDIT_TRANSINFO, 0x14050000);
+	mssnvlink_0_writel(ndev, MSSNVLINK_SLAVE_CREDIT_INGR_DATA, 0x300c0000);
 
 	/*
-	 * FIXME: Do we need the reads to ensure the value was written
-	 * correctly? Or were these reads only useful for debugging?
+	 * Performance settings for balancing request and response bandwidth
+	 * across NVLINK
 	 */
-	mssnvlink_0_writel(ndev, MSSNVLINK_MASTER_CREDIT_TRANSINFO, 0x14050000);
-	reg_val = mssnvlink_0_readl(ndev, MSSNVLINK_MASTER_CREDIT_TRANSINFO);
-	reg_val &= 0x7fffffff;
-	if (reg_val != 0x14050000) {
-		nvlink_err("MSSNVLINK HUB credits programming failed");
-		return -1;
-	}
-
-	mssnvlink_0_writel(ndev, MSSNVLINK_MASTER_CREDIT_INGR_DATA, 0x8020000);
-	reg_val = mssnvlink_0_readl(ndev, MSSNVLINK_MASTER_CREDIT_INGR_DATA);
-	reg_val &= 0x7fffffff;
-	if (reg_val != 0x8020000) {
-		nvlink_err("MSSNVLINK HUB credits programming failed");
-		return -1;
-	}
-
-	mssnvlink_0_writel(ndev, MSSNVLINK_SLAVE_CREDIT_TRANSINFO, 0x14050000);
-	reg_val = mssnvlink_0_readl(ndev, MSSNVLINK_SLAVE_CREDIT_TRANSINFO);
-	reg_val &= 0x7fffffff;
-	if (reg_val != 0x14050000) {
-		nvlink_err("MSSNVLINK HUB credits programming failed");
-		return -1;
-	}
-
-	mssnvlink_0_writel(ndev, MSSNVLINK_SLAVE_CREDIT_INGR_DATA, 0x300c0000);
-	reg_val = mssnvlink_0_readl(ndev, MSSNVLINK_SLAVE_CREDIT_INGR_DATA);
-	reg_val &= 0x7fffffff;
-	if (reg_val != 0x300c0000) {
-		nvlink_err("MSSNVLINK HUB credits programming failed");
-		return -1;
-	}
-
-	mc_writel(0x8f0, MC_MCF_IREQX_VCARB_CONFIG);
-	mc_writel(0x8f0, MC_MCF_OREQX_VCARB_CONFIG);
-
-	return 0;
+	non_nvlink_writel(MCB_BASE + MC_MCF_IREQX_VCARB_CONFIG, 0x8f0);
+	non_nvlink_writel(MCB_BASE + MC_MCF_OREQX_VCARB_CONFIG, 0x8f0);
 }
 
 /* Initialize the link and transition to SAFE mode */
@@ -449,13 +425,7 @@ int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 	nvlink_enable_link_interrupts(ndev);
 
 	init_tlc_buffers(ndev);
-	ret = program_mssnvlink_tom(ndev);
-	if (ret < 0)
-		goto fail;
-
-	ret = program_mssnvlink_hub_credits(ndev);
-	if (ret < 0)
-		goto fail;
+	mssnvlink_init(ndev);
 
 	nvlink_dbg("Link initialization succeeded!");
 	goto success;

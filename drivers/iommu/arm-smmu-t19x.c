@@ -1023,7 +1023,8 @@ static void arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 }
 
 static irqreturn_t __arm_smmu_context_fault(int irq, void *dev,
-				void __iomem *cb_base, void __iomem *gr1_base)
+				void __iomem *cb_base, void __iomem *gr1_base,
+				int smmu_id)
 {
 	int flags, ret, sid;
 	u32 fsr, far, fsynr, fsynra, resume;
@@ -1041,8 +1042,8 @@ static irqreturn_t __arm_smmu_context_fault(int irq, void *dev,
 
 	if (fsr & FSR_IGN)
 		dev_err_ratelimited(smmu->dev,
-				    "Unexpected context fault (fsr 0x%x)\n",
-				    fsr);
+				    "Unexpected context fault (fsr 0x%x) smmu%d\n",
+				    fsr, smmu_id);
 
 	fsynr = readl_relaxed(cb_base + ARM_SMMU_CB_FSYNR0);
 	fsynra = readl_relaxed(gr1_base + ARM_SMMU_GR1_FRSYNRA(cfg->cbndx));
@@ -1055,7 +1056,7 @@ static irqreturn_t __arm_smmu_context_fault(int irq, void *dev,
 	iova |= ((unsigned long)far << 32);
 #endif
 	sid = (fsynra & FRSYNRA_STREAMID_MASK) >> FRSYNRA_STREAMID_SHIFT;
-	sid &= 0xff; /* Tegra hack. Why are the top 8bits not RAZ? */
+	sid &= 0x7f; /* Tegra hack. Why are the top 9-bits not RAZ? */
 
 	if (!report_iommu_fault(domain, smmu->dev, iova, flags)) {
 		ret = IRQ_HANDLED;
@@ -1069,14 +1070,14 @@ static irqreturn_t __arm_smmu_context_fault(int irq, void *dev,
 		get_pte_info(cfg, iova, &pgd, &pud, &pmd, &pte);
 
 		dev_err_ratelimited(smmu->dev,
-			"Unhandled context fault: iova=0x%08lx, fsynr=0x%x, "
+			"Unhandled context fault: smmu%d, iova=0x%08lx, fsynr=0x%x, "
 			"cb=%d, sid=%d(0x%x - %s), pgd=%llx, pud=%llx, "
-			"pmd=%llx, pte=%llx\n", iova, fsynr, cfg->cbndx,
+			"pmd=%llx, pte=%llx\n", smmu_id, iova, fsynr, cfg->cbndx,
 			sid, sid, tegra_mc_get_sid_name(sid), pgd,
 			pud, pmd, pte);
-		trace_printk("Unhandled context fault: iova=0x%08lx, "
+		trace_printk("Unhandled context fault: smmu=%d, iova=0x%08lx, "
 			"fsynr=0x%x, cb=%d, sid=%d(0x%x - %s), pgd=%llx "
-			"pud=%llx, pmd=%llx, pte=%llx\n", iova, fsynr,
+			"pud=%llx, pmd=%llx, pte=%llx\n", smmu_id, iova, fsynr,
 			cfg->cbndx, sid, sid, tegra_mc_get_sid_name(sid),
 			pgd, pud, pmd, pte);
 		ret = IRQ_NONE;
@@ -1097,37 +1098,42 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 {
 	int i;
 	struct arm_smmu_device *smmu = dev;
+	bool fault_handled = false;
 
 	for (i = 0; i < smmu->num_context_banks; i++) {
 		void __iomem *cb_base, *gr1;
 		struct iommu_domain *domain;
-		u32 fsr, fsr_offset, cb_offset;
+		u32 fsr, fsr_offset, cb_offset, gr1_offset;
 		int smmu_id = 0;
 
 		cb_base = ARM_SMMU_CB_BASE(smmu);
 		cb_offset = abs(cb_base - smmu->base[0]);
 		fsr_offset = ARM_SMMU_CB(smmu, i) + ARM_SMMU_CB_FSR;
-		gr1 = ARM_SMMU_GR1(smmu);
+		gr1_offset = abs(ARM_SMMU_GR1(smmu) - smmu->base[0]);
 
 		while (smmu_id < smmu->num_smmus) {
 			cb_base = smmu->base[smmu_id] + cb_offset;
+			gr1 = smmu->base[smmu_id] + gr1_offset;
 
 			fsr = readl_relaxed(cb_base + fsr_offset);
 			if (fsr & FSR_FAULT) {
 				domain = iommu_domains[i];
 				if (!domain) {
-					pr_err("%s: domain(%d) doesn't exist\n",
-					       __func__, i);
+					pr_err("%s: smmu%d domain(%d) doesn't exist\n",
+					       __func__, smmu_id, i);
 					continue;
 				}
 				__arm_smmu_context_fault(irq, domain,
-								cb_base, gr1);
-				return IRQ_HANDLED;
+								cb_base, gr1, smmu_id);
+				fault_handled = true;
 			}
 			smmu_id++;
 		}
 	}
-	return IRQ_NONE;
+	if (fault_handled)
+		return IRQ_HANDLED;
+	else
+		return IRQ_NONE;
 }
 
 static void arm_smmu_global_fault_printinfo(struct arm_smmu_device *smmu,
@@ -1166,6 +1172,7 @@ static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
 	void __iomem *cb_base = ARM_SMMU_CB_BASE(smmu);
 	void __iomem *gr0_base = ARM_SMMU_GR0_NS(smmu);
 	int smmu_id = 0;
+	bool fault_handled = false;
 
 	cb_offset = abs(cb_base - smmu->base[0]);
 	gr0_offset = abs(gr0_base - smmu->base[0]);
@@ -1176,24 +1183,25 @@ static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
 		cb_base = smmu->base[smmu_id] + cb_offset;
 
 		gfsr = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSR);
-		if (!gfsr) {
+		if (gfsr) {
+			arm_smmu_global_fault_printinfo(smmu, gr0_base, smmu_id);
+			fault_handled = true;
+		} else {
 			int ret;
 
 			ret = arm_smmu_context_fault(irq, dev);
 			if (ret == IRQ_HANDLED)
-				return ret;
+				fault_handled = true;
 		}
 		smmu_id++;
 	}
 
-	smmu_id = 0;
-	while (smmu_id < smmu->num_smmus) {
-		gr0_base = smmu->base[smmu_id] + gr0_offset;
-		arm_smmu_global_fault_printinfo(smmu, gr0_base, smmu_id);
-		smmu_id++;
+	if (fault_handled) {
+		return IRQ_HANDLED;
+	} else {
+		pr_err("No fault found! But SMMU fault irq occured.");
+		return IRQ_NONE;
 	}
-
-	return IRQ_HANDLED;
 }
 
 static void arm_smmu_flush_pgtable(struct arm_smmu_device *smmu, void *addr,

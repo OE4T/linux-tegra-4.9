@@ -32,7 +32,6 @@
 		android {
 			compatible = "android,firmware";
 			hardware = "galen";
-			bootmode = "shell";
 		};
 	};
 

@@ -58,6 +58,7 @@
 		vcc-max-microamp = <0>;
 		vccq-max-microamp = <0>;
 		vccq2-max-microamp = <0>;
+		nvidia,configure-uphy-pll3;
 		status = "disabled";
 
 		ufs_variant {

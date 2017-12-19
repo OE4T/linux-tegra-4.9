@@ -226,20 +226,6 @@
 		status="okay";
 	};
 
-	gpio@2200000 {
-		wifi-enable {
-			status = "disabled";
-		};
-	};
-
-	bluedroid_pm {
-		status = "disabled";
-	};
-
-	bcmdhd_pcie_wlan {
-		status = "disabled";
-	};
-
 	iommu@12000000 {
 		status = "okay";
 	};

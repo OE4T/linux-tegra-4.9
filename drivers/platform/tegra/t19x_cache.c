@@ -20,6 +20,7 @@
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
 #include <linux/platform_device.h>
+#include <soc/tegra/chip-id.h>
 #include <uapi/linux/tegra_l3_cache.h>
 
 #define MASK GENMASK(15, 12)
@@ -393,6 +394,11 @@ static int __init t19x_cache_probe(struct platform_device *pdev)
 	struct cache_drv_data *drv_data;
 	struct device *dev = &pdev->dev;
 	int ret = 0;
+
+	if (!tegra_platform_is_silicon()) {
+		dev_err(dev, "is not supported on this platform\n");
+		return -EPERM;
+	}
 
 	dev_dbg(dev, "in probe()...\n");
 

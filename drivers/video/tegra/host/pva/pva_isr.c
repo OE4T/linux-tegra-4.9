@@ -29,6 +29,7 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 {
 	struct pva *pva = dev_id;
 	struct platform_device *pdev = pva->pdev;
+	u32 checkpoint = host1x_readl(pdev, cfg_ccq_status8_r());
 	u32 status7 = host1x_readl(pdev, hsp_sm7_r());
 	u32 status6 = host1x_readl(pdev, hsp_sm6_r());
 	u32 status5 = host1x_readl(pdev, hsp_sm5_r());
@@ -52,6 +53,8 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_CRASH_LOG");
 		if (status5 & PVA_AISR_ABORT) {
 			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_ABORT");
+			nvhost_warn(&pdev->dev, "Checkpoint value: 0x%08x",
+				    checkpoint);
 			recover = true;
 		}
 

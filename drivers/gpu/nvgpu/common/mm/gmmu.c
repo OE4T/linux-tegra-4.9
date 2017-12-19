@@ -533,7 +533,8 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 			continue;
 		}
 
-		phys_addr = nvgpu_sgt_get_phys(sgt, sgl) + space_to_skip;
+		phys_addr = g->ops.mm.gpu_phys_addr(g, attrs,
+			    nvgpu_sgt_get_phys(sgt, sgl)) + space_to_skip;
 		chunk_length = min(length,
 			nvgpu_sgt_get_length(sgt, sgl) - space_to_skip);
 

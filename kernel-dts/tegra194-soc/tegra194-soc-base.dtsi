@@ -1579,6 +1579,7 @@
 	tegra_tachometer: tachometer@39c0000 {
 		compatible = "nvidia,pwm-tegra194-tachometer";
 		reg = <0x0 0x039c0000 0x0 0x10>;
+		#pwm-cells = <2>;
 		clocks = <&bpmp_clks TEGRA194_CLK_TACH>;
 		clock-names = "tach";
 		resets = <&bpmp_resets TEGRA194_RESET_TACH>;

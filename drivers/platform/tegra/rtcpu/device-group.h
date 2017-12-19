@@ -25,5 +25,6 @@ struct camrtc_device_group *camrtc_device_group_get(
 
 int camrtc_device_group_busy(const struct camrtc_device_group *grp);
 void camrtc_device_group_idle(const struct camrtc_device_group *grp);
+void camrtc_device_group_reset(const struct camrtc_device_group *grp);
 
 #endif /* INCLUDE_DEVICE_GROUP_H */

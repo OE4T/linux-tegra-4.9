@@ -756,6 +756,7 @@ static int tegra_camrtc_poweron(struct device *dev)
 	}
 
 	camrtc_clk_group_adjust_fast(rtcpu->clocks);
+	camrtc_device_group_reset(rtcpu->camera_devices);
 
 	ret = tegra_camrtc_deassert_resets(dev);
 	if (ret)
@@ -1202,7 +1203,7 @@ int tegra_camrtc_reboot(struct device *dev)
 	tegra_camrtc_set_online(dev, false);
 
 	tegra_camrtc_assert_resets(dev);
-
+	
 	rtcpu->powered = false;
 
 	return tegra_camrtc_boot(dev);

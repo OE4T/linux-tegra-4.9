@@ -16,6 +16,7 @@
 
 #include "device-group.h"
 
+#include <linux/kernel.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
@@ -94,6 +95,7 @@ struct camrtc_device_group *camrtc_device_group_get(
 	devres_add(dev, grp);
 	return grp;
 }
+EXPORT_SYMBOL(camrtc_device_group_get);
 
 int camrtc_device_group_busy(const struct camrtc_device_group *grp)
 {
@@ -122,6 +124,7 @@ error:
 
 	return err;
 }
+EXPORT_SYMBOL(camrtc_device_group_busy);
 
 void camrtc_device_group_idle(const struct camrtc_device_group *grp)
 {
@@ -134,3 +137,23 @@ void camrtc_device_group_idle(const struct camrtc_device_group *grp)
 		if (grp->devices[index])
 			nvhost_module_idle(grp->devices[index]);
 }
+EXPORT_SYMBOL(camrtc_device_group_idle);
+
+void camrtc_device_group_reset(const struct camrtc_device_group *grp)
+{
+	int index;
+
+	if (!grp)
+		return;
+
+	if (IS_ERR(grp))
+		return;
+
+	for (index = 0; index < grp->ndevices; index++) {
+		if (!grp->devices[index])
+			continue;
+
+		nvhost_module_reset(grp->devices[index], false);
+	}
+}
+EXPORT_SYMBOL(camrtc_device_group_reset);

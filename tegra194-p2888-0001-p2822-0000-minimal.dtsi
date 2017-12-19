@@ -133,7 +133,7 @@
 	};
 
 	mc {
-		status = "disabled";
+		status = "okay";
 	};
 
 	xhci_server {

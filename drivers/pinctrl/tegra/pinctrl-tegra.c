@@ -383,12 +383,19 @@ static int tegra_pinctrl_gpio_set_direction(struct pinctrl_dev *pctldev,
 	 * Set input = 1 for the input direction and
 	 * tristate = 0 for output direction.
 	 */
-	if (input)
+	if (input) {
 		ret = tegra_pinconfig_group_set(pctldev, group,
 					TEGRA_PINCONF_PARAM_ENABLE_INPUT, 1);
-	else
+		if (!ret && pmx->soc->input_tristate_enable)
+			ret = tegra_pinconfig_group_set(pctldev, group,
+					TEGRA_PINCONF_PARAM_TRISTATE, 1);
+	 } else {
 		ret = tegra_pinconfig_group_set(pctldev, group,
 					TEGRA_PINCONF_PARAM_TRISTATE, 0);
+		if (!ret && pmx->soc->output_input_disable)
+			ret = tegra_pinconfig_group_set(pctldev, group,
+					TEGRA_PINCONF_PARAM_ENABLE_INPUT, 0);
+	}
 
 	if (pmx->soc->is_gpio_reg_support)
 		ret = tegra_pinconfig_group_set(pctldev, group,

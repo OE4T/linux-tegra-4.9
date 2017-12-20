@@ -218,6 +218,8 @@ struct tegra_pingroup {
  * @nfunctions:	The numbmer of entries in @functions.
  * @groups:	An array describing all pin groups the pin SoC supports.
  * @ngroups:	The numbmer of entries in @groups.
+ * @input_tristate_enable: Enable tristate in input direction.
+ * @output_input_disable: Enable input mode in output direction.
  */
 struct tegra_pinctrl_soc_data {
 	unsigned ngpios;
@@ -234,6 +236,8 @@ struct tegra_pinctrl_soc_data {
 	bool hsm_in_mux;
 	bool schmitt_in_mux;
 	bool drvtype_in_mux;
+	bool input_tristate_enable;
+	bool output_input_disable;
 };
 
 int tegra_pinctrl_probe(struct platform_device *pdev,

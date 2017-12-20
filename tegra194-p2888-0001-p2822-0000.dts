@@ -241,6 +241,10 @@
 		status = "okay";
 	};
 
+	arm-pmu {
+		status = "okay";
+	};
+
 	psci {
 		status = "disabled";
 	};

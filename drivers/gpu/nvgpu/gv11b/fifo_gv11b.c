@@ -21,8 +21,6 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include <linux/delay.h>
-#include <linux/types.h>
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
@@ -455,7 +453,7 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 			break;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(unsigned long,
 				delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired_msg(&timeout,

@@ -322,6 +322,7 @@ static int pva_read_ucode(struct platform_device *pdev,
 			if (!useg->size)
 				useg->size = fw_info->trace_buffer_size;
 
+			useg->addr = ALIGN(useg->addr + 64, 64);
 			trace->size = useg->size;
 			trace->offset = useg->offset;
 

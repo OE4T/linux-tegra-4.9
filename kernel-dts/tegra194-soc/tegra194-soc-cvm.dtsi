@@ -40,6 +40,10 @@
 		status = "okay";
 	};
 
+	gv11b {
+	        status = "okay";
+	};
+
 	dma@2600000 {
 		status = "okay";
 	};

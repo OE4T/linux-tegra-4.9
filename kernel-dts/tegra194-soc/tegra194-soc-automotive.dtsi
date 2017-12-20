@@ -45,6 +45,10 @@
 	        status = "okay";
 	};
 
+	gv11b {
+	        status = "okay";
+	};
+
 	pinmux@2430000 {
 		status = "okay";
 	};

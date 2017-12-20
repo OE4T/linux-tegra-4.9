@@ -26,6 +26,7 @@
 #ifndef _GK20A_FENCE_H_
 #define _GK20A_FENCE_H_
 
+#include <nvgpu/types.h>
 #include <nvgpu/kref.h>
 
 struct platform_device;

@@ -17,4 +17,67 @@
 #include <tegra194-soc/tegra194-soc-base.dtsi>
 
 / {
+	reserved-memory {
+		grid-of-semaphores {
+			status = "okay";
+		};
+	};
+
+	tegra-cvnas {
+		status = "okay";
+	};
+
+	mc_sid@2c00000 {
+		status = "okay";
+	};
+
+	iommu@12000000 {
+		status = "okay";
+	};
+
+	tegra-hsp@c150000 {
+		status = "okay";
+	};
+
+	tegra-hsp@3c00000 {
+		status = "okay";
+	};
+
+	host1x {
+		ctx0 {
+			status = "okay";
+		};
+
+		ctx1 {
+			status = "okay";
+		};
+
+		ctx2 {
+			status = "okay";
+		};
+
+		ctx3 {
+			status = "okay";
+		};
+
+		ctx4 {
+			status = "okay";
+		};
+
+		ctx5 {
+			status = "okay";
+		};
+
+		ctx6 {
+			status = "okay";
+		};
+
+		ctx7 {
+			status = "okay";
+		};
+	};
+
+	psci {
+		status = "okay";
+	};
 };

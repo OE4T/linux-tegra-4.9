@@ -72,7 +72,7 @@
 			size = <0 0x600000>;
 			alignment = <0 0x1000>;
 			no-map;
-			status = "okay";
+			status = "disabled";
 			cvdevs = <&nvdla0 &nvdla1 &pva0 &pva1>;
 		};
 
@@ -113,7 +113,7 @@
 		cvsramslice = <4 0x1000>;
 		cvsram-reg = <0x0 0x50000000 0x0 0x400000>;
 		hsm-reg = <0x0 0x0BA40000 0x0 0x10000>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	timer {
@@ -183,7 +183,7 @@
 		compatible = "nvidia,tegra194-mc-sid";
  		reg = <0x0 0x02c00000 0x0 0x00010000>, /* MC_SID_BASE */
  		      <0x0 0x02c10000 0x0 0x00010000>; /* MC_BASE */
-		status = "okay";
+		status = "disabled";
 	};
 
 	smmu: iommu@12000000{
@@ -202,7 +202,7 @@
 
 		iso-smmu-id = <2>;
 
-		status = "okay";
+		status = "disabled";
 
 		#iommu-cells = <1>;
 
@@ -554,7 +554,7 @@
 				<0 TEGRA194_IRQ_AON_HSP_SHARED_3 0x4>,
 				<0 TEGRA194_IRQ_AON_HSP_SHARED_4 0x4>;
 		interrupt-names = "shared1", "shared2", "shared3", "shared4";
-		status = "okay";
+		status = "disabled";
 	};
 
 	hsp_top: tegra-hsp@3c00000 {
@@ -573,7 +573,7 @@
 				"shared0", "shared1", "shared2", "shared3",
 				"shared4", "shared5", "shared6", "shared7";
 		nvidia,mbox-ie;
-		status = "okay";
+		status = "disabled";
 	};
 
 	hsp_rce: tegra-hsp@b950000 {
@@ -670,56 +670,56 @@
 			compatible = "nvidia,tegra186-iommu-context";
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX0>;
 			dma-coherent;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx1: ctx1 {
 			compatible = "nvidia,tegra186-iommu-context";
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX1>;
 			dma-coherent;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx2: ctx2 {
 			compatible = "nvidia,tegra186-iommu-context";
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX2>;
 			dma-coherent;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx3: ctx3 {
 			compatible = "nvidia,tegra186-iommu-context";
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX3>;
 			dma-coherent;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx4: ctx4 {
 			compatible = "nvidia,tegra186-iommu-context";
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX4>;
 			dma-coherent;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx5: ctx5 {
 			compatible = "nvidia,tegra186-iommu-context";
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX5>;
 			dma-coherent;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx6: ctx6 {
 			compatible = "nvidia,tegra186-iommu-context";
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX6>;
 			dma-coherent;
-			status = "okay";
+			status = "disabled";
 		};
 
 		host1x_ctx7: ctx7 {
 			compatible = "nvidia,tegra186-iommu-context";
 			iommus = <&smmu TEGRA_SID_HOST1X_CTX7>;
 			dma-coherent;
-			status = "okay";
+			status = "disabled";
 		};
 
 		vic@15340000 {
@@ -1831,7 +1831,7 @@
 		cpu_off = <0x84000002>;
 		cpu_on = <0xC4000003>;
 		cpu_suspend = <0xC4000001>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	bwmgr {

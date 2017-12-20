@@ -278,10 +278,6 @@
 		status = "disabled";
 	};
 
-	i2c@3160000 {
-		status = "disabled";
-	};
-
 	i2c@c240000 {
 		status = "disabled";
 
@@ -314,31 +310,7 @@
 		};
 	};
 
-	i2c@3180000 {
-		status = "disabled";
-	};
-
-	i2c@3190000 {
-		status = "disabled";
-	};
-
 	bpmp_i2c {
-		status = "disabled";
-	};
-
-	i2c@31b0000 {
-		status = "disabled";
-	};
-
-	i2c@31c0000 {
-		status = "disabled";
-	};
-
-	i2c@c250000 {
-		status = "disabled";
-	};
-
-	i2c@31e0000 {
 		status = "disabled";
 	};
 

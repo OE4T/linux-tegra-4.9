@@ -1603,7 +1603,7 @@ static void gv11b_fifo_init_ramfc_eng_method_buffer(struct gk20a *g,
 	nvgpu_log_info(g, "init ramfc with method buffer");
 }
 
-unsigned int gv11b_fifo_get_eng_method_buffer_size(struct gk20a *g)
+static unsigned int gv11b_fifo_get_eng_method_buffer_size(struct gk20a *g)
 {
 	unsigned int buffer_size;
 

@@ -226,10 +226,6 @@
 		status="okay";
 	};
 
-	xhci@3610000 {
-		status = "disabled";
-	};
-
 	gpio@2200000 {
 		wifi-enable {
 			status = "disabled";

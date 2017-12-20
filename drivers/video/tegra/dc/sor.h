@@ -73,6 +73,7 @@ enum tegra_dc_sor_link_speed_key {
 	TEGRA_DC_SOR_LINK_SPEED_G1_62,
 	TEGRA_DC_SOR_LINK_SPEED_G2_7,
 	TEGRA_DC_SOR_LINK_SPEED_G5_4,
+	TEGRA_DC_SOR_LINK_SPEED_G8_1,
 	TEGRA_DC_SOR_LINK_SPEED_MAX,
 };
 
@@ -88,6 +89,20 @@ struct tegra_dc_sor_link_speed {
 	char *prod_prop;
 	u32 max_link_bw;
 	u8 link_rate;
+};
+
+/*
+ * tegra_dc_dp_ext_dpcd_caps - Data structure for Extended Receiver Capability
+ *				Field
+ *
+ * @valid       - Indicates whether these cap fields are valid and/or present.
+ * @revision    - DPCD_REV (DPCD offset 0x2200)
+ * @max_link_bw - MAX_LINK_RATE (DPCD offset 0x2201)
+ */
+struct tegra_dc_dp_ext_dpcd_caps {
+	bool valid;
+	u8 revision;
+	u8 max_link_bw;
 };
 
 struct tegra_dc_dp_link_config {
@@ -107,6 +122,8 @@ struct tegra_dc_dp_link_config {
 	bool	only_enhanced_framing;	/* enhanced_frame_en ignored */
 	bool	edp_cap;		/* eDP display control capable */
 	bool	support_fast_lt;	/* Support fast link training */
+
+	struct tegra_dc_dp_ext_dpcd_caps	ext_dpcd_caps;
 
 	/* Actual configuration */
 	u8	link_bw;

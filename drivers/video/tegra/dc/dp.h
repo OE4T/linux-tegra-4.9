@@ -195,6 +195,8 @@ void tegra_dp_tpg(struct tegra_dc_dp_data *dp, u32 tp, u32 n_lanes);
 bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 				const struct tegra_dc_mode *mode,
 				struct tegra_dc_dp_link_config *cfg);
+int tegra_dc_dp_read_ext_dpcd_caps(struct tegra_dc_dp_data *dp,
+				struct tegra_dc_dp_ext_dpcd_caps *ext_caps);
 
 static inline void *tegra_dp_get_outdata(struct tegra_dc_dp_data *dp)
 {
@@ -214,9 +216,10 @@ static inline void tegra_dp_set_outdata(struct tegra_dc_dp_data *dp,
 #define NV_DPCD_REV_MINOR_SHIFT				(0)
 #define NV_DPCD_REV_MINOR_MASK				(0xf)
 #define NV_DPCD_MAX_LINK_BANDWIDTH			(0x00000001)
-#define NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GPBS	(0x00000006)
-#define NV_DPCD_MAX_LINK_BANDWIDTH_VAL_2_70_GPBS	(0x0000000a)
-#define NV_DPCD_MAX_LINK_BANDWIDTH_VAL_5_40_GPBS	(0x00000014)
+#define NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GBPS	(0x00000006)
+#define NV_DPCD_MAX_LINK_BANDWIDTH_VAL_2_70_GBPS	(0x0000000a)
+#define NV_DPCD_MAX_LINK_BANDWIDTH_VAL_5_40_GBPS	(0x00000014)
+#define NV_DPCD_MAX_LINK_BANDWIDTH_VAL_8_10_GBPS	(0x0000001e)
 #define NV_DPCD_MAX_LANE_COUNT				(0x00000002)
 #define NV_DPCD_MAX_LANE_COUNT_MASK			(0x1f)
 #define NV_DPCD_MAX_LANE_COUNT_LANE_1			(0x00000001)
@@ -237,6 +240,8 @@ static inline void tegra_dp_set_outdata(struct tegra_dc_dp_data *dp,
 #define NV_DPCD_EDP_CONFIG_CAP_FRAMING_CHANGE_YES	(0x00000001 << 1)
 #define NV_DPCD_EDP_CONFIG_CAP_DISPLAY_CONTROL_CAP_YES	(0x00000001 << 3)
 #define NV_DPCD_TRAINING_AUX_RD_INTERVAL		(0x0000000E)
+#define NV_DPCD_TRAINING_AUX_RD_INTERVAL_MASK		(0x3f)
+#define NV_DPCD_EXT_RECEIVER_CAP_FIELD_PRESENT_SHIFT	(6)
 #define NV_DPCD_LINK_BANDWIDTH_SET			(0x00000100)
 #define NV_DPCD_LANE_COUNT_SET				(0x00000101)
 #define NV_DPCD_LANE_COUNT_SET_MASK			(0x1f)
@@ -337,6 +342,8 @@ static inline void tegra_dp_set_outdata(struct tegra_dc_dp_data *dp,
 #define NV_DPCD_SET_POWER_VAL_RESERVED			(0x00000000)
 #define NV_DPCD_SET_POWER_VAL_D0_NORMAL			(0x00000001)
 #define NV_DPCD_SET_POWER_VAL_D3_PWRDWN			(0x00000002)
+#define NV_DPCD_REV_EXT_CAP				(0x00002200)
+#define NV_DPCD_MAX_LINK_BANDWIDTH_EXT_CAP		(0x00002201)
 #define NV_DPCD_FEATURE_ENUM_LIST			(0x00002210)
 #define NV_DPCD_FEATURE_ENUM_LIST_VSC_EXT_COLORIMETRY	(1 << 3)
 #define NV_DPCD_HDCP_BKSV_OFFSET			(0x00068000)
@@ -387,4 +394,6 @@ int __attribute__((weak)) tegra_dp_init_max_link_cfg_t19x(
 					struct tegra_dc_dp_link_config *cfg);
 void tegra_dp_set_max_link_bw(struct tegra_dc_sor_data *sor,
 			      struct tegra_dc_dp_link_config *cfg);
+int tegra_dc_dp_get_max_link_bw(struct tegra_dc_dp_data *dp);
+int tegra_dc_dp_get_max_lane_count(struct tegra_dc_dp_data *dp, u8 *dpcd_data);
 #endif

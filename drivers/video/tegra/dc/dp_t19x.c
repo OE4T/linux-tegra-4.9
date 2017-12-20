@@ -16,6 +16,7 @@
 
 #include "dc.h"
 #include "dp.h"
+#include "dp_lt.h"
 #include "dp_t19x.h"
 #include "sor.h"
 #include "sor_t19x.h"
@@ -23,30 +24,15 @@
 int tegra_dp_init_max_link_cfg_t19x(struct tegra_dc_dp_data *dp,
 				    struct tegra_dc_dp_link_config *cfg)
 {
-	u8 dpcd_data;
-	int ret;
+	u8 dpcd_data = 0;
+	int ret = 0;
 
-	if (dp->sink_cap_valid) {
-		dpcd_data = dp->sink_cap[NV_DPCD_MAX_LANE_COUNT];
-	} else {
-		ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LANE_COUNT,
-					    &dpcd_data);
-		if (ret)
-			return ret;
+	cfg->max_lane_count = tegra_dc_dp_get_max_lane_count(dp, &dpcd_data);
+	if (cfg->max_lane_count == 0) {
+		dev_err(&dp->dc->ndev->dev,
+		"dp: Invalid max lane count: %u\n", cfg->max_lane_count);
+		return -EINVAL;
 	}
-
-	cfg->max_lane_count = dpcd_data & NV_DPCD_MAX_LANE_COUNT_MASK;
-
-	if (cfg->max_lane_count >= 4)
-		cfg->max_lane_count = 4;
-	else if (cfg->max_lane_count >= 2)
-		cfg->max_lane_count = 2;
-	else
-		cfg->max_lane_count = 1;
-
-	if (dp->pdata && dp->pdata->lanes &&
-		dp->pdata->lanes < cfg->max_lane_count)
-		cfg->max_lane_count = dp->pdata->lanes;
 
 	if (dpcd_data & NV_DPCD_MAX_LANE_COUNT_TPS3_SUPPORTED_YES)
 		cfg->tps = TEGRA_DC_DP_TRAINING_PATTERN_3;
@@ -85,22 +71,16 @@ int tegra_dp_init_max_link_cfg_t19x(struct tegra_dc_dp_data *dp,
 	if (ret)
 		return ret;
 
-	cfg->aux_rd_interval = dpcd_data;
+	cfg->aux_rd_interval = dpcd_data &
+				NV_DPCD_TRAINING_AUX_RD_INTERVAL_MASK;
 
-	if (dp->sink_cap_valid) {
-		cfg->max_link_bw = dp->sink_cap[NV_DPCD_MAX_LINK_BANDWIDTH];
-	} else {
-		ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
-					    &cfg->max_link_bw);
-		if (ret)
-			return ret;
+	cfg->max_link_bw = tegra_dc_dp_get_max_link_bw(dp);
+	if (cfg->max_link_bw == 0) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: Invalid max link bw: %u\n", cfg->max_link_bw);
+		return -EINVAL;
 	}
-
 	tegra_dp_set_max_link_bw(dp->sor, cfg);
-
-	if (dp->pdata && dp->pdata->link_bw &&
-		dp->pdata->link_bw < cfg->max_link_bw)
-		cfg->max_link_bw = dp->pdata->link_bw;
 
 	ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP, &dpcd_data);
 	if (ret)

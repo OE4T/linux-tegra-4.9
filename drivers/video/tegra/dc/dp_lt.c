@@ -42,16 +42,23 @@ static void set_lt_state(struct tegra_dp_lt_data *lt_data,
 			int target_state, int delay_ms);
 static void set_lt_tpg(struct tegra_dp_lt_data *lt_data, u32 tp);
 
+/*
+ * This fallback table needs to be updated in accordance with DP1.4, but adding
+ * new HBR3 entries here for now.
+ */
 static struct {
 	unsigned int key; /* Index into the link speed table */
 	unsigned int num_lanes;
 } const tegra_dp_link_config_priority[] = {/* CTS approved list. Do not alter */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G8_1, .num_lanes = 4},  /* 32.4Gbps */
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G5_4, .num_lanes = 4},  /* 21.6Gbps */
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G2_7, .num_lanes = 4},  /* 10.8Gbps */
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 4}, /* 6.48Gbps */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G8_1, .num_lanes = 2},  /* 16.2Gbps */
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G5_4, .num_lanes = 2},  /* 10.8Gbps */
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G2_7, .num_lanes = 2},  /* 5.4Gbps  */
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 2}, /* 3.24Gbps */
+	{.key = TEGRA_DC_SOR_LINK_SPEED_G8_1, .num_lanes = 1},  /* 8.1Gbps */
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G5_4, .num_lanes = 1},  /* 5.4Gbps  */
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G2_7, .num_lanes = 1},  /* 2.7Gbps  */
 	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 1}, /* 1.62Gbps */

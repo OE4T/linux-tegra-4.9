@@ -62,6 +62,7 @@
 #include "dsi.h"
 #include "edid.h"
 #include "hdmi2.0.h"
+#include "dp.h"
 #include "dp_lt.h"
 #include "panel/board-panel.h"
 #include "panel/tegra-board-id.h"
@@ -2286,6 +2287,11 @@ static int parse_dp_settings(struct platform_device *ndev,
 	if (!of_property_read_u32(np_dp_panel, "nvidia,link-bw", &temp)) {
 		dpout->link_bw = (u8)temp;
 		OF_DC_LOG("link_bw %d\n", dpout->link_bw);
+	} else {
+		dpout->link_bw = (tegra_dc_is_t19x()) ?
+			NV_DPCD_MAX_LINK_BANDWIDTH_VAL_8_10_GBPS :
+			NV_DPCD_MAX_LINK_BANDWIDTH_VAL_5_40_GBPS;
+		OF_DC_LOG("default link_bw %d\n", dpout->link_bw);
 	}
 
 	of_node_put(np_lt_data);

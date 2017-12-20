@@ -334,7 +334,7 @@ static ssize_t lane_count_set(struct file *file, const char __user *buf,
 		dp->test_max_lanes = lane_count;
 	} else {
 		if (lane_count == 0) /* Reset lane count to max */
-			lane_count = 4;
+			lane_count = dp->pdata->lanes;
 
 		dev_info(&dp->dc->ndev->dev, "Setting max lanecount from %d to %ld\n",
 			cfg->lane_count, lane_count);
@@ -402,12 +402,8 @@ static ssize_t link_speed_set(struct file *file, const char __user *buf,
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		dp->test_max_link_bw = link_speed;
 	} else {
-		if (link_speed == 0) { /* Reset link speed to max */
-			if (tegra_dc_is_t19x())
-				link_speed = SOR_LINK_SPEED_G8_1;
-			else
-				link_speed = SOR_LINK_SPEED_G5_4;
-		}
+		if (link_speed == 0) /* Reset link speed to max */
+			link_speed = dp->pdata->link_bw;
 
 		dev_info(&dp->dc->ndev->dev, "Setting max linkspeed from %d to %ld\n",
 				cfg->link_bw, link_speed);
@@ -1169,14 +1165,129 @@ bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	return true;
 }
 
-static int tegra_dc_init_default_panel_link_cfg(struct tegra_dc_dp_link_config *cfg)
+int tegra_dc_dp_read_ext_dpcd_caps(struct tegra_dc_dp_data *dp,
+				struct tegra_dc_dp_ext_dpcd_caps *ext_caps)
 {
+	u8 dpcd_data = 0;
+	int ret = 0;
+
+	ext_caps->valid = false;
+
+	ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_TRAINING_AUX_RD_INTERVAL,
+				&dpcd_data);
+	if (ret || !(dpcd_data >> NV_DPCD_EXT_RECEIVER_CAP_FIELD_PRESENT_SHIFT))
+		return ret;
+
+	ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_REV_EXT_CAP,
+				&ext_caps->revision);
+	if (ret)
+		return ret;
+
+	ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH_EXT_CAP,
+				&ext_caps->max_link_bw);
+	if (ret)
+		return ret;
+
+	ext_caps->valid = true;
+	return ret;
+}
+
+int tegra_dc_dp_get_max_link_bw(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
+	u8 max_link_bw = 0;
+
+	/*
+	 * The max link bw supported is a product of everything below:
+	 * 1) The max link bw supported by the DPRX.
+	 * 2) If the DPRX advertises an additional max link bw value as part of
+	 *    the Extended Receiver Capability field, this value should override
+	 *    the value in #1.
+	 * 3) The max link bw supported by the DPTX.
+	 * 4) If test configuration parameters are set on the DPTX side, these
+	 *    parameters need to be accounted for as well.
+	 */
+
+	/* Constraint #1 */
+	if (dp->sink_cap_valid) {
+		max_link_bw = dp->sink_cap[NV_DPCD_MAX_LINK_BANDWIDTH];
+	} else if (tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
+					&max_link_bw)) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: NV_DPCD_MAX_LINK_BANDWIDTH read failed\n");
+		return 0;
+	}
+
+	/* Constraint #2 */
+	if (tegra_dc_dp_read_ext_dpcd_caps(dp, &cfg->ext_dpcd_caps)) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: Failed to read ext DPCD caps\n");
+		return 0;
+	}
+
+	if (cfg->ext_dpcd_caps.valid)
+		max_link_bw = cfg->ext_dpcd_caps.max_link_bw;
+
+	/* Constraint #3 */
+	if (dp->pdata && dp->pdata->link_bw > 0)
+		max_link_bw = min(max_link_bw, (u8)dp->pdata->link_bw);
+
+	/* Constraint #4 */
+	if (dp->test_max_link_bw > 0)
+		max_link_bw = min(max_link_bw, (u8)dp->test_max_link_bw);
+
+	return max_link_bw;
+}
+
+int tegra_dc_dp_get_max_lane_count(struct tegra_dc_dp_data *dp, u8 *dpcd_data)
+{
+	u8 max_lane_count = 0;
+
+	/*
+	 * The max lane count supported is a product of everything below:
+	 * 1) The max lane count supported by the DPRX.
+	 * 2) The max lane count supported by the DPTX.
+	 * 3) If test configuration parameters are set on the DPTX side, these
+	 *    parameters need to be accounted for as well.
+	 */
+
+	/* Constraint #1 */
+	if (dp->sink_cap_valid) {
+		max_lane_count = dp->sink_cap[NV_DPCD_MAX_LANE_COUNT];
+	} else if (tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LANE_COUNT,
+				&max_lane_count)) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: NV_DPCD_MAX_LANE_COUNT read failed\n");
+		return 0;
+	}
+	*dpcd_data = max_lane_count;
+	max_lane_count = max_lane_count & NV_DPCD_MAX_LANE_COUNT_MASK;
+
+	/* Constraint #2 */
+	if (dp->pdata && dp->pdata->lanes > 0)
+		max_lane_count = min(max_lane_count, (u8)dp->pdata->lanes);
+
+	/* Constraint #3 */
+	if (dp->test_max_lanes > 0)
+		max_lane_count = min(max_lane_count, (u8)dp->test_max_lanes);
+
+	if (max_lane_count >= 4)
+		max_lane_count = 4;
+	else if (max_lane_count >= 2)
+		max_lane_count = 2;
+	else
+		max_lane_count = 1;
+
+	return max_lane_count;
+}
+
+static int tegra_dc_init_default_panel_link_cfg(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
+
 	if (!cfg->is_valid) {
-		if (tegra_dc_is_t19x())
-			cfg->max_link_bw = SOR_LINK_SPEED_G8_1;
-		else
-			cfg->max_link_bw = SOR_LINK_SPEED_G5_4;
-		cfg->max_lane_count = 4;
+		cfg->max_link_bw = dp->pdata->link_bw;
+		cfg->max_lane_count = dp->pdata->lanes;
 		cfg->tps = TEGRA_DC_DP_TRAINING_PATTERN_2;
 		cfg->support_enhanced_framing = true;
 		cfg->downspread = true;
@@ -1188,6 +1299,7 @@ static int tegra_dc_init_default_panel_link_cfg(struct tegra_dc_dp_link_config *
 		cfg->scramble_ena = 0;
 		cfg->lt_data_valid = 0;
 	}
+
 	return 0;
 }
 
@@ -1206,41 +1318,15 @@ void tegra_dp_set_max_link_bw(struct tegra_dc_sor_data *sor,
 static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 					struct tegra_dc_dp_link_config *cfg)
 {
-	u8 dpcd_data;
-	int ret;
+	u8 dpcd_data = 0;
+	int ret = 0;
 
-	if (dp->sink_cap_valid) {
-		dpcd_data = dp->sink_cap[NV_DPCD_MAX_LANE_COUNT];
-	} else {
-		ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LANE_COUNT,
-					    &dpcd_data);
-		if (ret)
-			return ret;
+	cfg->max_lane_count = tegra_dc_dp_get_max_lane_count(dp, &dpcd_data);
+	if (cfg->max_lane_count == 0) {
+		dev_err(&dp->dc->ndev->dev,
+		"dp: Invalid max lane count: %u\n", cfg->max_lane_count);
+		return -EINVAL;
 	}
-
-	cfg->max_lane_count = dpcd_data & NV_DPCD_MAX_LANE_COUNT_MASK;
-
-	/*
-	 * Note: The max link rate and max lane count are configured as
-	 * the minimum of:
-	 * a: sink specified settings
-	 * b: test settings
-	 * c: DT specified settings
-	 */
-	if (dp->test_max_lanes > 0)
-		cfg->max_lane_count = cfg->max_lane_count > dp->test_max_lanes ?
-			dp->test_max_lanes : cfg->max_lane_count;
-
-	if (cfg->max_lane_count >= 4)
-		cfg->max_lane_count = 4;
-	else if (cfg->max_lane_count >= 2)
-		cfg->max_lane_count = 2;
-	else
-		cfg->max_lane_count = 1;
-
-	if (dp->pdata && dp->pdata->lanes &&
-		dp->pdata->lanes < cfg->max_lane_count)
-		cfg->max_lane_count = dp->pdata->lanes;
 
 	if (dpcd_data & NV_DPCD_MAX_LANE_COUNT_TPS3_SUPPORTED_YES)
 		cfg->tps = TEGRA_DC_DP_TRAINING_PATTERN_3;
@@ -1272,26 +1358,16 @@ static int __tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	if (ret)
 		return ret;
 
-	cfg->aux_rd_interval = dpcd_data;
+	cfg->aux_rd_interval = dpcd_data &
+				NV_DPCD_TRAINING_AUX_RD_INTERVAL_MASK;
 
-	if (dp->sink_cap_valid) {
-		cfg->max_link_bw = dp->sink_cap[NV_DPCD_MAX_LINK_BANDWIDTH];
-	} else {
-		ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
-					    &cfg->max_link_bw);
-		if (ret)
-			return ret;
+	cfg->max_link_bw = tegra_dc_dp_get_max_link_bw(dp);
+	if (cfg->max_link_bw == 0) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: Invalid max link bw: %u\n", cfg->max_link_bw);
+		return -EINVAL;
 	}
-
-	if (dp->test_max_link_bw > 0)
-		cfg->max_link_bw = cfg->max_link_bw > dp->test_max_link_bw ?
-			dp->test_max_link_bw : cfg->max_link_bw;
-
 	tegra_dp_set_max_link_bw(dp->sor, cfg);
-
-	if (dp->pdata && dp->pdata->link_bw &&
-		dp->pdata->link_bw < cfg->max_link_bw)
-		cfg->max_link_bw = dp->pdata->link_bw;
 
 	ret = tegra_dc_dp_dpcd_read(dp, NV_DPCD_EDP_CONFIG_CAP, &dpcd_data);
 	if (ret)
@@ -1324,7 +1400,7 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	int ret = 0;
 
 	if (dp->dc->out->type == TEGRA_DC_OUT_FAKE_DP)
-		tegra_dc_init_default_panel_link_cfg(cfg);
+		tegra_dc_init_default_panel_link_cfg(dp);
 	else if (tegra_dc_is_t19x())
 		ret = tegra_dp_init_max_link_cfg_t19x(dp, cfg);
 	else
@@ -1863,7 +1939,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	 * this addresses usecases where modeset happens
 	 * before unblank without preset default configuration
 	 */
-	tegra_dc_init_default_panel_link_cfg(&dp->link_cfg);
+	tegra_dc_init_default_panel_link_cfg(dp);
 
 	/*
 	 * We don't really need hpd driver for eDP.
@@ -2642,12 +2718,6 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	/* set pll_d2 to pclk rate */
 	tegra_sor_setup_clk(dp->sor, clk, false);
 
-	/* Change for seamless */
-	if (!dc->initialized) {
-		/* fixed pll_dp@270MHz */
-		clk_set_rate(dp->parent_clk, 270000000);
-	}
-
 	if (tegra_dc_is_nvdisplay()) {
 		sor = dp->sor;
 
@@ -2783,7 +2853,7 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 				struct fb_videomode *mode)
 {
 	struct tegra_dc_dp_data *dp = dc->out_data;
-	u8 link_rate;
+	u8 link_rate = 0, lane_count = 0;
 	unsigned int key; /* Index into the link speed table */
 	int capability = 1;
 
@@ -2809,11 +2879,22 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 	 * bandwidth. In other words, one is derived from the other, and the
 	 * spec ends up using the two terms interchangeably
 	 */
-	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP) {
 		link_rate = dp->link_cfg.max_link_bw;
-	else if (tegra_dc_dp_dpcd_read(dp,
-		NV_DPCD_MAX_LINK_BANDWIDTH, &link_rate))
+		lane_count = dp->link_cfg.max_lane_count;
+	} else {
+		u8 dpcd_data = 0;
+
+		link_rate = tegra_dc_dp_get_max_link_bw(dp);
+		lane_count = tegra_dc_dp_get_max_lane_count(dp, &dpcd_data);
+	}
+
+	if (link_rate == 0 || lane_count == 0) {
+		dev_err(&dc->ndev->dev,
+			"dp: Invalid link rate (%u) or lane count (%u)\n",
+			link_rate, lane_count);
 		return false;
+	}
 
 	if (dc->out->dp_out != NULL) {
 		u32 bits_per_pixel;
@@ -2833,7 +2914,7 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 
 		/* max link bandwidth = lane_freq * lanes * 8 / 10 */
 		total_max_link_bw = (unsigned long)max_link_bw_rate
-				* 1000 * 1000 * 8 / 10 * dc->out->dp_out->lanes;
+				* 1000 * 1000 * 8 / 10 * lane_count;
 		mode_bw = (unsigned long)mode->xres * (unsigned long)mode->yres
 				* mode->refresh * bits_per_pixel;
 

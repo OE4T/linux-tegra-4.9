@@ -29,22 +29,22 @@ static const struct tegra_dc_sor_link_speed link_speed_table_t19x[] = {
 	[TEGRA_DC_SOR_LINK_SPEED_G1_62] = {
 		.prod_prop = "prod_c_rbr",
 		.max_link_bw = 1620,
-		.link_rate = 6,
+		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GBPS,
 	},
 	[TEGRA_DC_SOR_LINK_SPEED_G2_7] = {
 		.prod_prop = "prod_c_hbr",
 		.max_link_bw = 2700,
-		.link_rate = 10,
+		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_2_70_GBPS,
 	},
 	[TEGRA_DC_SOR_LINK_SPEED_G5_4] = {
 		.prod_prop = "prod_c_hbr2",
 		.max_link_bw = 5400,
-		.link_rate = 20,
+		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_5_40_GBPS,
 	},
 	[TEGRA_DC_SOR_LINK_SPEED_G8_1] = {
 		.prod_prop = "prod_c_hbr3",
 		.max_link_bw = 8100,
-		.link_rate = 30,
+		.link_rate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_8_10_GBPS,
 	},
 };
 

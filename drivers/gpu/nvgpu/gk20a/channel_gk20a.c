@@ -24,10 +24,6 @@
 
 #include <trace/events/gk20a.h>
 
-#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_GK20A_CYCLE_STATS)
-#include <linux/dma-buf.h>
-#endif
-
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>

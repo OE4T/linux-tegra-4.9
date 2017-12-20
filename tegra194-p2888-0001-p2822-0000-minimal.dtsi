@@ -156,26 +156,6 @@
 		status = "disabled";
 	};
 
-	serial@3100000 {
-		status = "disabled";
-	};
-
-	serial@3110000 {
-		status = "disabled";
-	};
-
-	serial@3130000 {
-		status = "disabled";
-	};
-
-	serial@3140000 {
-		status = "disabled";
-	};
-
-	serial@c290000 {
-		status = "disabled";
-	};
-
 	reserved-memory {
 		grid-of-semaphores {
 			status = "disabled";

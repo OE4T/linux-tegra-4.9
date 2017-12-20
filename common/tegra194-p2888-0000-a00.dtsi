@@ -23,11 +23,6 @@
 		status = "okay";
 	};
 
-	serial@3110000 {
-		compatible = "nvidia,tegra186-hsuart";
-		status = "okay";
-	};
-
 	serial@c280000 {
 		compatible = "nvidia,tegra20-uart";
 		clock-frequency = <0x18519600>;

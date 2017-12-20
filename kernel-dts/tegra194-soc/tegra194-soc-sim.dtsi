@@ -23,6 +23,10 @@
 		};
 	};
 
+	tegra-carveouts {
+		status = "okay";
+	};
+
 	tegra-cvnas {
 		status = "okay";
 	};

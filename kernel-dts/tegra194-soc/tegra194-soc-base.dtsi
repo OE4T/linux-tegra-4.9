@@ -87,6 +87,7 @@
 		 * "memory-region" before the zero sized ones.
 		 */
 		memory-region = <&gos_reserved &generic_reserved>;
+		status = "disabled";
 	};
 
 	tegra-cache {

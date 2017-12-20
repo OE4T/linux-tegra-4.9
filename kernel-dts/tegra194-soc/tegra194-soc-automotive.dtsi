@@ -20,6 +20,9 @@
 #include <tegra194-soc/tegra194-soc-prod.dtsi>
 
 / {
+	tegra-carveouts {
+		status = "okay";
+	};
 
 	timer {
 		status = "okay";

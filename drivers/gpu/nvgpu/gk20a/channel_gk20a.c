@@ -126,12 +126,12 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 }
 
 int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
-		int timeslice_period,
-		int *__timeslice_timeout, int *__timeslice_scale)
+		unsigned int timeslice_period,
+		unsigned int *__timeslice_timeout, unsigned int *__timeslice_scale)
 {
-	int value = scale_ptimer(timeslice_period,
+	unsigned int value = scale_ptimer(timeslice_period,
 			ptimer_scalingfactor10x(g->ptimer_src_freq));
-	int shift = 0;
+	unsigned int shift = 0;
 
 	/* value field is 8 bits long */
 	while (value >= 1 << 8) {

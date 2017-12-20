@@ -46,7 +46,7 @@
 	tegra_sound: sound {
 		status = "disabled";
 		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
-		nvidia,model = "tegra-snd-t19x-galen-mobile-rt565x";
+		nvidia,model = "tegra-snd-t19x-mobile-rt565x";
 		clocks = <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 			<&bpmp_clks TEGRA194_CLK_PLLA>,
 			<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,

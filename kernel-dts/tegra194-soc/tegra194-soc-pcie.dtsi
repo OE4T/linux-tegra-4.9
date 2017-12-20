@@ -337,7 +337,7 @@
 
 	pcie_c0_rp {
 		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
-		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8A>;
+		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8B>;
 		reg = <0x00 0x14180000 0x0 0x00020000   /* appl registers (128K)      */
 		       0x00 0x38000000 0x0 0x00040000   /* configuration space (256K) */
 		       0x00 0x38040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
@@ -572,7 +572,7 @@
 
 	pcie_c5_rp {
 		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
-		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8B>;
+		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8A>;
 		reg = <0x00 0x141a0000 0x0 0x00020000   /* appl registers (128K)      */
 		       0x00 0x3a000000 0x0 0x00040000   /* configuration space (256K) */
 		       0x00 0x3a040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
@@ -623,7 +623,7 @@
 
 	pcie_c0_ep {
 		compatible = "nvidia,tegra194-pcie-ep";
-		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8A>;
+		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8B>;
 		reg = <0x00 0x14180000 0x0 0x00020000   /* appl registers (128K)      */
 		       0x00 0x38000000 0x0 0x00040000   /* configuration space (256K) */
 		       0x00 0x38040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
@@ -709,7 +709,7 @@
 
 	pcie_c5_ep {
 		compatible = "nvidia,tegra194-pcie-ep";
-		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8B>;
+		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8A>;
 		reg = <0x00 0x141a0000 0x0 0x00020000   /* appl registers (128K)      */
 		       0x00 0x3a000000 0x0 0x00040000   /* configuration space (256K) */
 		       0x00 0x3a040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */

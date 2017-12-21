@@ -1,6 +1,6 @@
 /*
- * nvlink.h:
- * This header contains the structures and APIs needed by the NVLINK core and
+ * tegra-nvlink.h:
+ * This header contains the structures and APIs needed by Tegra NVLINK core and
  * endpoint drivers for interacting with each other.
  *
  * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
@@ -18,29 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NVLINK_H
-#define NVLINK_H
+#ifndef TEGRA_NVLINK_H
+#define TEGRA_NVLINK_H
 
-#include <linux/of.h>
 #include <linux/device.h>
 #include <linux/cdev.h>
-#include <linux/module.h>
-#include <linux/io.h>
-#include <linux/delay.h>
-#include <linux/platform_device.h>
-#include <linux/slab.h>
-#include <linux/of_address.h>
-#include <linux/of_graph.h>
-#include <linux/platform/tegra/mc.h>
-#include <linux/platform/tegra/mc-regs-t19x.h>
-#include <linux/interrupt.h>
 
 #define NVLINK_MAX_DEVICES			2
 #define NVLINK_MAX_LINKS			2
-#define MINION_BYTES_PER_BLOCK		256
-#define MINION_WORD_SIZE		4
-#define NVLINK_TRANSITION_HS_TIMEOUT_MS		2000 /* msec */
-#define NVLINK_TRANSITION_SAFE_TIMEOUT_MS	5 /* msec */
 
 struct nvlink_link;
 struct nvlink_device;
@@ -51,12 +36,12 @@ enum nvlink_log_categories {
 	nvlink_log_dbg	= BIT(1),	/* Debug prints */
 };
 
-extern u32 nvlink_log_mask;
 #ifdef CONFIG_DEBUG_FS
 /* This is the root debugfs directory for the entire NVLINK driver stack */
 extern struct dentry *nvlink_debugfs;
 #endif /* CONFIG_DEBUG_FS */
 
+extern u32 nvlink_log_mask;
 #define NVLINK_DEFAULT_LOG_MASK	nvlink_log_err
 
 #define nvlink_print(log_mask, fmt, arg...)		\
@@ -72,11 +57,16 @@ extern struct dentry *nvlink_debugfs;
 #define nvlink_err(fmt, arg...)	nvlink_print(nvlink_log_err, fmt, ##arg)
 #define nvlink_dbg(fmt, arg...)	nvlink_print(nvlink_log_dbg, fmt, ##arg)
 
+/* Enum nvlink_endpt will be used to initialize device ID in device struct */
 enum nvlink_endpt {
 	NVLINK_ENDPT_T19X,
 	NVLINK_ENDPT_GV100
 };
 
+/*
+ * Link modes are SW defined. Some modes map to HW link state, while some
+ * falicitate transiting to a power state or off state.
+ */
 enum link_mode {
 	NVLINK_LINK_OFF,
 	NVLINK_LINK_HS,
@@ -92,6 +82,11 @@ enum link_mode {
 	NVLINK_LINK_LANE_SHUTDOWN
 };
 
+/*
+ * TX_mode and RX_mode contains SW defined sublink modes. Some modes map to HW
+ * sublink states while some are intermediate states needed for link training
+ * and other sequences.
+ */
 enum tx_mode {
 	NVLINK_TX_HS,
 	NVLINK_TX_ENABLE_PM,
@@ -115,6 +110,7 @@ enum rx_mode {
 	NVLINK_RX_RXCAL,
 };
 
+/* Enum to represent link speed. Nvlink 2.0 can support below 2 speeds */
 enum nvlink_speed {
 	NVLINK_SPEED_20,
 	NVLINK_SPEED_25
@@ -125,17 +121,46 @@ enum nvlink_refclk {
 	NVLINK_REFCLK_156
 };
 
-enum device_state {
-	NVLINK_DEVICE_OFF,
-	NVLINK_DEVICE_HW_INIT_DONE,
-	NVLINK_DEVICE_LINK_HW_INIT_DONE,
-	NVLINK_DEVICE_LINK_SAFE_MODE_READY,
-	NVLINK_DEVICE_LINK_HS_MODE_READY,
-	NVLINK_DEVICE_STATE_INVALID
+/*
+ * During nvlink device initialization, we use enum init_state to keep track of
+ * what state we have reached. Based on the init state and the link mode, only
+ * necessary steps will be executed. This allows us to call enumerate function
+ * multiple times.
+ *
+ * NVLINK_DEV_OFF : The device is off and no part of nvlink controller hardware
+ *		is out of reset and clocked.
+ *
+ * NVLINK_DEV_EARLY_INIT_DONE: The clocks are up, all resets deasserted, the
+ * 		minion has booted and device level interrupts are initialized.
+ *
+ * NVLINK_LINK_EARLY_INIT_DONE: The link level initialization is done like -
+ *		initialization of PHY, link interrupts and TLC buffers.
+ *
+ * NVLINK_DEV_INTERFACE_INIT_DONE: The memory interface is initialized.
+ *
+ * NVLINK_REG_INIT_DONE: The prod settings are incorporated. At this point
+ * 		the link is ready to transition to safe mode and eventually to
+ * 		High-Speed mode.
+ */
+enum init_state {
+	NVLINK_DEV_OFF,
+	NVLINK_DEV_EARLY_INIT_DONE,
+	NVLINK_LINK_EARLY_INIT_DONE,
+	NVLINK_DEV_INTERFACE_INIT_DONE,
+	NVLINK_DEV_REG_INIT_DONE,
+	NVLINK_INIT_STATE_INVALID
 };
 
+/*
+ * These callbacks should be registered with core-driver during link
+ * registration. These link_ops allow core-driver to enquire/set link and
+ * sublink modes. Some help during link initializatiion.
+ *
+ * TODO: Pass struct nvlink_link as argument to below link_ops instead of using
+ * 	struct nvlink_device. All the link level readl/writel functions need to
+ * 	use link struct instead of device struct for above change.
+ */
 struct link_operations {
-	int (*enable_link)(struct nvlink_device *ndev);
 	u32 (*get_link_mode)(struct nvlink_device *ndev);
 	int (*set_link_mode)(struct nvlink_device *ndev, u32 mode);
 	u32 (*get_sublink_mode)(struct nvlink_device *ndev, bool is_rx_sublink);
@@ -146,18 +171,27 @@ struct link_operations {
 				u32 *tx_sublink_state);
 	void (*get_rx_sublink_state)(struct nvlink_device *ndev,
 				u32 *rx_sublink_state);
+	int (*link_early_init)(struct nvlink_device *ndev);
+	int (*link_interface_init)(struct nvlink_device *ndev);
 };
 
+/* These dev_ops expose interface between the core driver and endpoint device */
 struct device_operations {
 	int (*dev_early_init)(struct nvlink_device *ndev);
 	int (*dev_interface_init)(struct nvlink_device *ndev);
+	int (*dev_reg_init)(struct nvlink_device *ndev);
 	int (*dev_shutdown)(struct nvlink_device *ndev);
 };
 
+/*
+ * The core-driver maintains the topology information. The endpoint can also
+ * keep a record of same in remote_device_info struct. Note: We do not save
+ * pointers to remote device and link.
+ */
 struct remote_device_info {
-	/* Device id of device connected - to be filled from device tree */
+	/* Device id of  remote device connected */
 	enum nvlink_endpt device_id;
-	/* Link id of the link connected - to be filled from device tree */
+	/* Link id of the remote link connected */
 	u32 link_id;
 };
 
@@ -198,12 +232,18 @@ struct single_lane_params {
 	u32 ic_limit;
 };
 
+/* nvlink_link struct stores all link specific data. */
 struct nvlink_link {
-	/* Instance# of link under same device */
+	/*
+	 * The link id is unique across the entire nvlink system. Same link_id
+	 * should not be used in different device structs. This is a HACK we
+	 * need while we hardcode the topology in device tree.
+	 * TODO: Add an enum for link_id like we have for device_id.
+	 */
 	u32 link_id;
 	/* ID of the device that this link belongs to */
 	enum nvlink_endpt device_id;
-	/* link State */
+	/* link mode TODO: Add locks to protect the link_mode changes */
 	enum link_mode mode;
 	/* base address of DLPL */
 	void __iomem *nvlw_nvl_base;
@@ -213,17 +253,22 @@ struct nvlink_link {
 	u8 intr_bit_idx;
 	/* bit index of reset bit within nvlink reset_register */
 	u8 reset_bit_idx;
-	/* is the link connected to an endpt - to be filled from device tree */
+	/*
+	 * is the link connected to an endpt. Useful for devices with multiple
+	 * links. Currenly unused on Tegra.
+	 * TODO: Set this before registering the link
+	 */
 	bool is_connected;
 	/* Pointer to device info of connected end point */
 	struct remote_device_info remote_dev_info;
-	/* Pointer to struct containing callback functions to do link specific
+	/*
+	 * Pointer to struct containing callback functions to do link specific
 	 * operation from core driver
 	 */
 	struct link_operations link_ops;
 	/* Pointer to implementations specific private data */
 	void *priv;
-
+	/* TLC errors status. TODO: Add more description here */
 	u32 tlc_tx_err_status0;
 	u32 tlc_rx_err_status0;
 	u32 tlc_rx_err_status1;
@@ -249,21 +294,18 @@ struct minion_hdr {
 	u32 ucode_img_size;
 };
 
-struct nvlink_intranode_conn {
-	struct nvlink_device *ndev0;
-	struct nvlink_device *ndev1;
-};
-
+/* nvlink_device struct stores all device specific data. */
 struct nvlink_device {
 	/* device_id */
 	enum nvlink_endpt device_id;
-	/* device state */
-	enum device_state state;
-	/* Mutex to protect device_state access */
-	struct mutex dev_state_mutex;
-	/* if true, then ONLY the driver of this device can initiate enumeration
-	* and data transfer on nvlink
-	*/
+	/* init state */
+	enum init_state init_state;
+	/* Mutex to protect init_state access */
+	struct mutex init_state_mutex;
+	/*
+	 * Only the master device can initiate enumeration and data transfer
+	 * on nvlink. bool to check this device is master.
+	 */
 	bool is_master;
 	/* base address of NVLIPT */
 	void __iomem *nvlw_nvlipt_base;
@@ -271,12 +313,13 @@ struct nvlink_device {
 	void __iomem *nvlw_minion_base;
 	/* base address of IOCTRL */
 	void __iomem *nvlw_tioctrl_base;
+	/* TODO: Add more information here */
 	int irq;
 	struct class class;
 	dev_t dev_t;
 	struct cdev cdev;
 	struct device *dev;
-	/*nvlink link data*/
+	/*nvlink link data. We assume there is single link per device*/
 	struct nvlink_link link;
 	/* Pointer to struct containing callback functions to do device specific
 	* operation from core driver
@@ -364,11 +407,15 @@ enum inforom_nvlink_fatal_err {
 };
 
 /* APIs used by endpoint drivers for interfacing with the core driver */
+void nvlink_print_topology(void);
 int nvlink_register_device(struct nvlink_device* device);
 int nvlink_register_link(struct nvlink_link* link);
 int nvlink_unregister_device(struct nvlink_device* device);
 int nvlink_unregister_link(struct nvlink_link* link);
-int nvlink_init_link(struct nvlink_device *ndev);
-int nvlink_get_dev_state(struct nvlink_device *ndev, enum device_state *state);
-int nvlink_set_dev_state(struct nvlink_device *ndev, enum device_state state);
-#endif /* NVLINK_H */
+int nvlink_get_init_state(struct nvlink_device *ndev, enum init_state *state);
+int nvlink_set_init_state(struct nvlink_device *ndev, enum init_state state);
+int nvlink_enumerate(struct nvlink_device *ndev);
+int nvlink_transition_intranode_conn_off_to_safe(struct nvlink_device *ndev);
+int nvlink_train_intranode_conn_safe_to_hs(struct nvlink_device *ndev);
+int nvlink_transition_intranode_conn_hs_to_safe(struct nvlink_device *ndev);
+#endif /* TEGRA_NVLINK_H */

@@ -21,17 +21,30 @@
 #ifndef T19X_NVLINK_ENDPT_H
 #define T19X_NVLINK_ENDPT_H
 
-#include "nvlink.h"
+#include <linux/io.h>
+#include <linux/delay.h>
+#include <linux/platform_device.h>
+#include <linux/of.h>
+#include <linux/interrupt.h>
+#include <linux/of_graph.h>
+#include <linux/slab.h>
+#include <linux/of_address.h>
+#include <linux/module.h>
+#include <linux/platform/tegra/mc.h>
+#include <linux/platform/tegra/mc-regs-t19x.h>
 #include <linux/tegra_prod.h>
+#include <linux/platform/tegra/tegra-nvlink.h>
 
-#define NVLINK_DRV_NAME		"t19x-nvlink-endpt"
-#define NVLINK_IP_VERSION	2 /* NVLINK VERSION 2.0 */
-#define DEFAULT_LOOP_SLEEP_US	100
-#define DEFAULT_LOOP_TIMEOUT_US	1000000
+#define NVLINK_DRV_NAME				"t19x-nvlink-endpt"
+#define NVLINK_IP_VERSION			2 /* NVLINK VERSION 2.0 */
+#define DEFAULT_LOOP_SLEEP_US			100
+#define DEFAULT_LOOP_TIMEOUT_US			1000000
 
 struct tegra_nvlink_device {
 	/* base address of SYNC2X */
 	void __iomem *nvlw_sync2x_base;
+	/* base address of MSSNVLINK */
+	void __iomem *mssnvlink_0_base;
 
 #ifdef CONFIG_DEBUG_FS
 	/* This is the debugfs directory for the Tegra endpoint driver */
@@ -58,11 +71,6 @@ struct tegra_nvlink_device {
 	/* Powergate id */
 	int pgid_nvl;
 	struct tegra_prod *prod_list;
-};
-
-struct tegra_nvlink_link {
-	/* base address of MSSNVLINK */
-	void __iomem *mssnvlink_0_base;
 };
 
 extern const struct single_lane_params entry_100us_sl_params;
@@ -102,42 +110,27 @@ int init_nvhs_phy(struct nvlink_device *ndev);
 int minion_send_cmd(struct nvlink_device *ndev,
 				u32 cmd,
 				u32 scratch0_val);
-
+void nvlink_enable_AN0_packets(struct nvlink_device *ndev);
 void nvlink_config_common_intr(struct nvlink_device *ndev);
 void nvlink_enable_link_interrupts(struct nvlink_device *ndev);
 void minion_service_falcon_intr(struct nvlink_device *ndev);
 irqreturn_t t19x_nvlink_endpt_isr(int irq, void *dev_id);
 
 void init_single_lane_params(struct nvlink_device *ndev);
-int go_to_safe_mode(struct nvlink_device *ndev);
 u32 t19x_nvlink_get_link_state(struct nvlink_device *ndev);
 u32 t19x_nvlink_get_link_mode(struct nvlink_device *ndev);
-u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev,
-				bool is_rx_sublink);
+int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode);
 void t19x_nvlink_get_tx_sublink_state(struct nvlink_device *ndev,
 				u32 *tx_sublink_state);
 void t19x_nvlink_get_rx_sublink_state(struct nvlink_device *ndev,
 				u32 *rx_sublink_state);
-int t19x_nvlink_poll_link_state(struct nvlink_device *ndev, u32 link_state,
-				u32 timeout);
-int t19x_nvlink_poll_tx_sublink_state(struct nvlink_device *ndev,
-				u32 tx_sublink_state, u32 timeout);
-int t19x_nvlink_poll_rx_sublink_state(struct nvlink_device *ndev,
-				u32 rx_sublink_state, u32 timeout);
-int t19x_nvlink_poll_sublink_state(struct nvlink_device *ndev0,
-				u32 tx_sublink_state,
-				struct nvlink_device *ndev1,
-				u32 rx_sublink_state,
-				u32 timeout);
+u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev,
+				bool is_rx_sublink);
 int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 				u32 mode);
 int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode);
-int nvlink_train_intranode_conn_to_hs(struct nvlink_intranode_conn *conn);
 void nvlink_enable_AN0_packets(struct nvlink_device *ndev);
 int nvlink_retrain_link(struct nvlink_device *ndev, bool from_off);
-int nvlink_transition_intranode_conn_to_safe(
-				struct nvlink_intranode_conn *conn);
-
 
 #ifdef CONFIG_DEBUG_FS
 void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev);

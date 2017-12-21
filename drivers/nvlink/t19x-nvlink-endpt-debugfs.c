@@ -61,14 +61,14 @@ static ssize_t nvlink_refclk_rate_file_write(struct file *file,
 	struct nvlink_device *nvlink = file->private_data;
 	char tmp[3];
 	int ret;
-	enum device_state state = NVLINK_DEVICE_OFF;
+	enum init_state state = NVLINK_DEV_OFF;
 
-	ret = nvlink_get_dev_state(nvlink, &state);
+	ret = nvlink_get_init_state(nvlink, &state);
 	if (ret < 0) {
-		nvlink_err("Error retriving the device state!");
+		nvlink_err("Error retriving the init state!");
 		return ret;
 	}
-	if (NVLINK_DEVICE_OFF != state)
+	if (NVLINK_DEV_OFF != state)
 		return -EINVAL;
 
 	ret = copy_from_user(tmp, ubuf, count);
@@ -130,14 +130,14 @@ static ssize_t nvlink_speedcontrol_file_write(struct file *file,
 	struct nvlink_device *nvlink = file->private_data;
 	char tmp[2];
 	int ret;
-	enum device_state state = NVLINK_DEVICE_OFF;
+	enum init_state state = NVLINK_DEV_OFF;
 
-	ret = nvlink_get_dev_state(nvlink, &state);
+	ret = nvlink_get_init_state(nvlink, &state);
 	if (ret < 0) {
 		nvlink_err("Error retriving the device state!");
 		return ret;
 	}
-	if (NVLINK_DEVICE_OFF != state)
+	if (NVLINK_DEV_OFF != state)
 		return -EINVAL;
 
 	ret = copy_from_user(tmp, ubuf, count);

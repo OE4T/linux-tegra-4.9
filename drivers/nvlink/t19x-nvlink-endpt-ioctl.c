@@ -577,7 +577,6 @@ static void nvlink_get_endpoint_state(struct nvlink_device *ndev,
 static int t19x_nvlink_train_intranode_conn(struct nvlink_device *ndev,
 		struct nvlink_train_intranode_conn *train_intranode_conn)
 {
-	struct nvlink_intranode_conn conn;
 	int ret;
 
 	if (train_intranode_conn->src_end_point.node_id !=
@@ -592,27 +591,13 @@ static int t19x_nvlink_train_intranode_conn(struct nvlink_device *ndev,
 			ndev->link.remote_dev_info.link_id)
 		return -EINVAL;
 
-	if (is_nvlink_loopback_topology(ndev)) {
-		/* Setup intranode connection for loopback mode */
-		conn.ndev0 = ndev;
-		conn.ndev1 = ndev;
-	} else {
-		/* TODO :
-		 * Handle other topologies
-		 */
-	}
-
 	switch (train_intranode_conn->train_to) {
 	case nvlink_train_conn_off_to_swcfg:
-		/* TODO: Modify go_to_safe_mode such that it takes conn as
-		 * an argument. For loopback this is OK but needs to fixed
-		 * for other topologies.
-		 */
-		ret = go_to_safe_mode(ndev);
+		ret = nvlink_transition_intranode_conn_off_to_safe(ndev);
 		break;
 
 	case nvlink_train_conn_swcfg_to_active:
-		ret = nvlink_train_intranode_conn_to_hs(&conn);
+		ret = nvlink_train_intranode_conn_safe_to_hs(ndev);
 		break;
 
 	case nvlink_train_conn_to_off:
@@ -622,7 +607,7 @@ static int t19x_nvlink_train_intranode_conn(struct nvlink_device *ndev,
 		break;
 
 	case nvlink_train_conn_active_to_swcfg:
-		ret = nvlink_transition_intranode_conn_to_safe(&conn);
+		ret = nvlink_transition_intranode_conn_hs_to_safe(ndev);
 		break;
 
 	case nvlink_train_conn_swcfg_to_off:
@@ -990,10 +975,13 @@ static int t19x_nvlink_endpt_open(struct inode *in, struct file *filp)
 		return -EBADFD;
 	}
 
-	ret = nvlink_init_link(ndev);
+	ret = nvlink_enumerate(ndev);
+	if (ret < 0)
+		nvlink_err("Failed to enable the link!");
+	else
+		nvlink_dbg("Link enabled successfully!");
 
 	filp->private_data = ndev;
-
 	return ret;
 }
 

@@ -24,7 +24,9 @@
 #include "t19x-nvlink-endpt.h"
 #include "nvlink-hw.h"
 
-#define MINION_FW_PATH	"nvlink/t194_minion_ucode.bin"
+#define MINION_FW_PATH			"nvlink/t194_minion_ucode.bin"
+#define MINION_BYTES_PER_BLOCK		256
+#define MINION_WORD_SIZE		4
 
 /* Extract a WORD from the MINION ucode */
 static inline u32 minion_extract_word(struct nvlink_device *ndev, int idx)

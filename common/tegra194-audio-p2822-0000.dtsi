@@ -15,6 +15,7 @@
 
 #include <audio/tegra-platforms-audio-dai-links.dtsi>
 #include <t19x-common-platforms/tegra194-platforms-audio-pinmux.dtsi>
+#include <dt-bindings/gpio/tegra194-gpio.h>
 
 / {
 
@@ -38,7 +39,10 @@
 			/* refer include/sound/rt5659.h for the values to be used */
 			realtek,jd-src = <0>; /* RT5659_JD_NULL */
 			realtek,dmic1-data-pin = <2>; /* RT5659_DMIC1_DATA_GPIO5 */
-			status = "disabled";
+
+			gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(S, 5) 0>;
+
+			status = "okay";
 		};
 	};
 
@@ -57,7 +61,7 @@
 	};
 
 	tegra_sound: sound {
-		status = "disabled";
+		status = "okay";
 		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
 		nvidia,model = "tegra-snd-t19x-mobile-rt565x";
 		clocks = <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,

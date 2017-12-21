@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #include <linux/platform_device.h>
 #include <soc/tegra/chip-id.h>
 #include <uapi/linux/tegra_l3_cache.h>
+#include <soc/tegra/chip-id.h>
 
 #define MASK GENMASK(15, 12)
 #define T19x_CACHE_STR	"l3_cache"
@@ -30,6 +31,7 @@
 #define CCPLEX_CC_GPU_ONLY_BITS_SHIFT	8
 
 #define MAX_L3_WAYS			16
+#define L3_WAYS_MASK			GENMASK(4, 0)
 
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *t19x_l3cache_root;
@@ -119,6 +121,33 @@ int t19x_clean_dcache_all(void)
 		WARN_ONCE(!ret, "%s failed\n", __func__);
 		pr_err("SCF dcache clean: instruction error\n");
 		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int t19x_extract_l3_cache_ways(struct device *dev)
+{
+	u64 nvg_index = CCPLEX_CACHE_CONTROL;
+	u64 nvg_data;
+	u32 *gpu_cpu_ways = &cache_data->ioctl_data.igpu_cpu_ways;
+	u32 *gpu_only_ways = &cache_data->ioctl_data.igpu_only_ways;
+	u32 dt_gpu_cpu_ways = *gpu_cpu_ways;
+	u32 dt_gpu_only_ways = *gpu_only_ways;
+
+	asm volatile("msr s3_0_c15_c1_2, %0" : : "r" (nvg_index));
+	asm volatile ("mrs %0, s3_0_c15_c1_3" : "=r" (nvg_data));
+
+	*gpu_cpu_ways = nvg_data & L3_WAYS_MASK;
+	*gpu_only_ways = (nvg_data >> CCPLEX_CC_GPU_ONLY_BITS_SHIFT) & L3_WAYS_MASK;
+
+	if ((dt_gpu_cpu_ways != *gpu_cpu_ways) ||
+	    (dt_gpu_only_ways != *gpu_only_ways)) {
+		dev_info(dev, "L3 ways information mismatch "
+			 "between HW and DT!\n"
+			 "DT: %d  %d HW: %d %d\n",
+			 dt_gpu_cpu_ways, dt_gpu_only_ways,
+			 *gpu_cpu_ways, *gpu_only_ways);
 	}
 
 	return 0;
@@ -293,6 +322,9 @@ static int set_gpu_cpu_ways(void *data, u64 val)
 	u32 igpu_cpu_ways = (u32)val;
 	int ret = 0;
 
+	if (is_tegra_hypervisor_mode())
+		return -EPERM;
+
 	if (igpu_cpu_ways != cache_data->ioctl_data.igpu_cpu_ways) {
 		ret = t19x_set_l3_cache_ways(igpu_cpu_ways,
 				cache_data->ioctl_data.igpu_only_ways);
@@ -315,6 +347,9 @@ static int set_gpu_only_ways(void *data, u64 val)
 {
 	u32 igpu_only_ways = (u32)val;
 	int ret = 0;
+
+	if (is_tegra_hypervisor_mode())
+		return -EPERM;
 
 	if (igpu_only_ways != cache_data->ioctl_data.igpu_only_ways) {
 		ret = t19x_set_l3_cache_ways(
@@ -427,11 +462,19 @@ static int __init t19x_cache_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_out;
 
-	ret = t19x_set_l3_cache_ways(cache_data->ioctl_data.igpu_cpu_ways,
-			cache_data->ioctl_data.igpu_only_ways);
-	if (ret) {
-		dev_err(dev, "Could not set gpu_cpu_ways in L3\n");
-		goto err_out;
+	if (is_tegra_hypervisor_mode()) {
+		ret = t19x_extract_l3_cache_ways(dev);
+		if (ret) {
+			dev_err(dev, "Could not extract gpu_cpu_ways from L3\n");
+			goto err_out;
+		}
+	} else {
+		ret = t19x_set_l3_cache_ways(cache_data->ioctl_data.igpu_cpu_ways,
+					     cache_data->ioctl_data.igpu_only_ways);
+		if (ret) {
+			dev_err(dev, "Could not set gpu_cpu_ways in L3\n");
+			goto err_out;
+		}
 	}
 
 #ifdef CONFIG_DEBUG_FS

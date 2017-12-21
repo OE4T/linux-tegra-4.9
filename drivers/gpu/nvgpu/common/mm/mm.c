@@ -163,7 +163,9 @@ static void nvgpu_remove_mm_support(struct mm_gk20a *mm)
 	nvgpu_free_inst_block(g, &mm->pmu.inst_block);
 	nvgpu_free_inst_block(g, &mm->hwpm.inst_block);
 	nvgpu_vm_put(mm->pmu.vm);
-	nvgpu_vm_put(mm->cde.vm);
+
+	if (g->has_cde)
+		nvgpu_vm_put(mm->cde.vm);
 
 	nvgpu_semaphore_sea_destroy(g);
 	nvgpu_vidmem_destroy(g);
@@ -389,9 +391,11 @@ static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = nvgpu_init_cde_vm(mm);
-	if (err)
-		return err;
+	if (g->has_cde) {
+		err = nvgpu_init_cde_vm(mm);
+			if (err)
+				return err;
+	}
 
 	err = nvgpu_init_ce_vm(mm);
 	if (err)

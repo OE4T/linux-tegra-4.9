@@ -188,6 +188,9 @@ static int gv11b_tegra_suspend(struct device *dev)
 struct gk20a_platform t19x_gpu_tegra_platform = {
 	.has_syncpoints = true,
 
+	/* no cde. use sysmem compression */
+	.has_cde = false,
+
 	/* power management configuration */
 
 	/* ptimer src frequency in hz*/

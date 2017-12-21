@@ -1208,6 +1208,8 @@ struct gk20a {
 
 	bool is_virtual;
 
+	bool has_cde;
+
 	u32 emc3d_ratio;
 
 	struct nvgpu_spinlock ltc_enabled_lock;

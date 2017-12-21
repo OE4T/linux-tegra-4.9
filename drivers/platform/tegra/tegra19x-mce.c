@@ -30,6 +30,12 @@ static noinline notrace void nvg_send_req_data(uint64_t req, uint64_t data)
 		:: "r" (req), "r" (data));
 }
 
+/* Issue a NVG request with no data */
+static noinline notrace void nvg_send_req(uint64_t req)
+{
+	asm volatile ("msr s3_0_c15_c1_2, %0	\n" :: "r" (req));
+}
+
 /* Issue a NVG request to read the command response */
 static noinline notrace uint64_t nvg_get_response(void)
 {
@@ -119,7 +125,7 @@ int tegra19x_mce_read_cstate_stats(u32 state, u32 *stats)
 
 	nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_REQUEST,
 				(uint64_t)state);
-	nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_VALUE, 0);
+	nvg_send_req(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_VALUE);
 	*stats = (u32)nvg_get_response();
 
 	/* enable preemption */
@@ -166,7 +172,7 @@ int tegra19x_mce_read_versions(u32 *major, u32 *minor)
 	/* disable preemption */
 	preempt_disable();
 
-	nvg_send_req_data(TEGRA_NVG_CHANNEL_VERSION, 0);
+	nvg_send_req(TEGRA_NVG_CHANNEL_VERSION);
 	version = nvg_get_response();
 	*minor = (u32)version;
 	*major = (u32)(version >> 32);

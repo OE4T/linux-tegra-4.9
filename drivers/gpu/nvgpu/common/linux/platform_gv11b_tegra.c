@@ -53,10 +53,12 @@ static int gv11b_tegra_probe(struct device *dev)
 	struct gk20a *g = platform->g;
 	int err = 0;
 
-	err = nvgpu_get_nvhost_dev(g);
-	if (err) {
-		dev_err(dev, "host1x device not available");
-		return err;
+	if (g->has_syncpoints) {
+		err = nvgpu_get_nvhost_dev(g);
+		if (err) {
+			dev_err(dev, "host1x device not available");
+			return err;
+		}
 	}
 
 	if (g->has_syncpoints) {

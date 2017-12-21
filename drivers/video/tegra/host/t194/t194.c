@@ -332,6 +332,7 @@ struct nvhost_device_data t19_msenc_info = {
 	.reset_clamp_mask	= BIT(18),
 	.engine_cg_regs		= t19x_nvenc_gating_registers,
 	.engine_can_cg		= false,
+	.can_powergate		= true,
 };
 
 struct nvhost_device_data t19_nvenc1_info = {
@@ -363,6 +364,7 @@ struct nvhost_device_data t19_nvenc1_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVENC1,
 	.engine_cg_regs		= t19x_nvenc_gating_registers,
 	.engine_can_cg		= false,
+	.can_powergate		= true,
 };
 #endif
 
@@ -398,6 +400,7 @@ struct nvhost_device_data t19_nvdec_info = {
 	.reset_clamp_mask	= BIT(19),
 	.engine_cg_regs		= t19x_nvdec_gating_registers,
 	.engine_can_cg		= false,
+	.can_powergate		= true,
 };
 
 struct nvhost_device_data t19_nvdec1_info = {
@@ -431,6 +434,7 @@ struct nvhost_device_data t19_nvdec1_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC1,
 	.engine_cg_regs		= t19x_nvdec_gating_registers,
 	.engine_can_cg		= false,
+	.can_powergate		= true,
 };
 #endif
 
@@ -462,6 +466,7 @@ struct nvhost_device_data t19_nvjpg_info = {
 	.reset_clamp_mask	= BIT(20),
 	.engine_cg_regs		= t19x_nvjpg_gating_registers,
 	.engine_can_cg		= false,
+	.can_powergate		= true,
 };
 #endif
 
@@ -556,6 +561,7 @@ struct nvhost_device_data t19_vic_info = {
 	.reset_clamp_mask	= BIT(17),
 	.engine_cg_regs		= t19x_vic_gating_registers,
 	.engine_can_cg		= false,
+	.can_powergate		= true,
 };
 #endif
 

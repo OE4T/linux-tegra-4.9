@@ -144,30 +144,6 @@
 		status = "disabled";
 	};
 
-	i2c@c240000 {
-		gpio@23 {
-			usb_mux_sel {
-				status = "disabled";
-			};
-
-			usb_mux_oe0 {
-				status = "disabled";
-			};
-
-			usb_mux_oe1 {
-				status = "disabled";
-			};
-
-			dap_mux_en {
-				status = "disabled";
-			};
-
-			en_dap_mux_lb_cb {
-				status = "disabled";
-			};
-		};
-	};
-
 	soft_watchdog {
 		status = "disabled";
 	};

@@ -240,6 +240,22 @@
 		status = "okay";
 	};
 
+	cbbnocaxi@C600000 {
+		status = "okay";
+	};
+
+	cbbnocaxi@D600000 {
+		status = "okay";
+	};
+
+	cbbnocaxi@BE00000 {
+		status = "okay";
+	};
+
+	cbbnocaxi@B600000 {
+		status = "okay";
+	};
+
 	actmon@d230000 {
 		status = "okay";
 		mc_all {

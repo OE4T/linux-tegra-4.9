@@ -1868,6 +1868,34 @@
 		status = "disabled";
 	};
 
+	cbbnocaxi@C600000 {
+		compatible = "nvidia,tegra194-CBBNOCAON-bridge";
+		reg = <0x0 0xC600000 0x0 0x1000>;
+		interrupts = <0 260 4>, <0 172 4>;
+		status = "disabled";
+	};
+
+	cbbnocaxi@D600000 {
+		compatible = "nvidia,tegra194-CBBNOCBPMP-bridge";
+		reg = <0x0 0xD600000 0x0 0x1000>;
+		interrupts = <0 262 4>, <0 174 4>;
+		status = "disabled";
+	};
+
+	cbbnocaxi@BE00000 {
+		compatible = "nvidia,tegra194-CBBNOCRCE-bridge";
+		reg = <0x0 0xBE00000 0x0 0x1000>;
+		interrupts = <0 259 4>, <0 175 4>;
+		status = "disabled";
+	};
+
+	cbbnocaxi@B600000 {
+		compatible = "nvidia,tegra194-CBBNOCSCE-bridge";
+		reg = <0x0 0xB600000 0x0 0x1000>;
+		interrupts = <0 261 4>, <0 173 4>;
+		status = "disabled";
+	};
+
 	mipical@3990000{
 		compatible = "nvidia, tegra194-mipical";
 		reg = <0x0 0x03990000 0x0 0x10000>;

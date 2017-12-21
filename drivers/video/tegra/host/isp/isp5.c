@@ -19,6 +19,7 @@
 #include <asm/ioctls.h>
 #include <linux/debugfs.h>
 #include <linux/device.h>
+#include <linux/dma-mapping.h>
 #include <linux/export.h>
 #include <linux/fs.h>
 #include <linux/module.h>
@@ -149,6 +150,9 @@ static int isp5_probe(struct platform_device *pdev)
 	mutex_init(&info->lock);
 	platform_set_drvdata(pdev, info);
 	info->private_data = isp5;
+
+	/* A bit was stolen */
+	(void) dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(39));
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)

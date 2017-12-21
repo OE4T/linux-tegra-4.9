@@ -46,6 +46,7 @@
 
 #include <media/i2c/tc358840.h>
 #include "tc358840_regs.h"
+#include <asm/barrier.h>
 
 #define MAX_DATABUF 10
 
@@ -1922,7 +1923,7 @@ static int tc358840_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int tc358840_enum_framesizes(struct v4l2_subdev *sd,
-				struct v4l2_subdev_pad_config *cfg,                             
+				struct v4l2_subdev_pad_config *cfg,
 				struct v4l2_subdev_frame_size_enum *fse)
 {
 	const struct camera_common_frmfmt *frmfmt = tc358840_frmfmt;
@@ -1936,6 +1937,8 @@ static int tc358840_enum_framesizes(struct v4l2_subdev *sd,
 
 	if (fse->index >= num_frmfmt)
 		return -EINVAL;
+
+	speculation_barrier();
 
 	fse->min_width = fse->max_width = frmfmt[fse->index].size.width;
 	fse->min_height = fse->max_height = frmfmt[fse->index].size.height;
@@ -1967,6 +1970,8 @@ static int tc358840_enum_frameintervals(struct v4l2_subdev *sd,
 
 	if (fie->index >= frmfmt[i].num_framerates)
 		return -EINVAL;
+
+	speculation_barrier();
 
 	fie->interval.numerator = 1;
 	fie->interval.denominator = frmfmt[i].framerates[fie->index];

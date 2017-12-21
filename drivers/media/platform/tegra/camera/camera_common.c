@@ -25,6 +25,7 @@
 #include <trace/events/camera_common.h>
 #include <soc/tegra/chip-id.h>
 #include <soc/tegra/tegra-i2c-rtcpu.h>
+#include <asm/barrier.h>
 
 #define has_s_op(master, op) \
 	(master->ops && master->ops->op)
@@ -663,6 +664,8 @@ int camera_common_enum_framesizes(struct v4l2_subdev *sd,
 	if (ret)
 		return ret;
 
+	speculation_barrier();
+
 	fse->min_width = fse->max_width =
 		s_data->frmfmt[fse->index].size.width;
 	fse->min_height = fse->max_height =
@@ -698,6 +701,8 @@ int camera_common_enum_frameintervals(struct v4l2_subdev *sd,
 	/* Check index is in the rage of framerates array index */
 	if (fie->index >= s_data->frmfmt[i].num_framerates)
 		return -EINVAL;
+
+	speculation_barrier();
 
 	fie->interval.numerator = 1;
 	fie->interval.denominator =

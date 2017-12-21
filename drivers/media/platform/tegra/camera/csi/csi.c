@@ -31,6 +31,8 @@
 #include "mipical/mipi_cal.h"
 #include "linux/nvhost.h"
 #include <linux/version.h>
+#include <asm/barrier.h>
+
 #define DEFAULT_NUM_TPG_CHANNELS 6
 
 static struct tegra_csi_device *mc_csi;
@@ -288,6 +290,8 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 	}
 	if (i == ARRAY_SIZE(tegra_csi_tpg_fmts))
 		return -EINVAL;
+
+	speculation_barrier();
 
 	fse->min_width = fse->max_width =
 			tegra_csi_tpg_sizes[fse->index].width;

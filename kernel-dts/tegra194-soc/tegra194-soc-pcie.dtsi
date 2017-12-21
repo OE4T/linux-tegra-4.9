@@ -86,8 +86,10 @@
 	};
 
 	hsio_p2u {
+		compatible = "simple-bus";
 		#address-cells = <2>;
 		#size-cells = <2>;
+		ranges;
 		p2u_0: p2u@03e10000 {
 			compatible = "nvidia,phy-p2u";
 			reg = <0x0 0x03e10000 0x0 0x00010000>;
@@ -235,8 +237,10 @@
 	};
 
 	nvhs_p2u {
+		compatible = "simple-bus";
 		#address-cells = <2>;
 		#size-cells = <2>;
+		ranges;
 		p2u_12: p2u@03eb0000 {
 			compatible = "nvidia,phy-p2u";
 			reg = <0x0 0x03eb0000 0x0 0x00010000>;

@@ -501,10 +501,61 @@ static struct tegra_cbb_bridge_data tegra194_cbbnoc_data = {
 	.max_noc_aperture = ARRAY_SIZE(t194_lookup_noc_aperture)
 };
 
+static struct tegra_cbb_bridge_data tegra194_cbbnocaon_data = {
+	.name	= "CBBNOCAON",
+	.errvld = cbb_errlogger_errvld,
+	.faulten = cbb_errlogger_faulten,
+	.stallen = cbb_errlogger_stallen,
+	.errclr	= cbb_errlogger_errclr,
+	.errors	= cbbnoc_errors,
+	.noc_aperture = t194_lookup_noc_aperture,
+	.max_noc_aperture = ARRAY_SIZE(t194_lookup_noc_aperture)
+};
+
+static struct tegra_cbb_bridge_data tegra194_cbbnocbpmp_data = {
+	.name   = "CBBNOCBPMP",
+	.errvld = cbb_errlogger_errvld,
+	.faulten = cbb_errlogger_faulten,
+	.stallen = cbb_errlogger_stallen,
+	.errclr = cbb_errlogger_errclr,
+	.errors = cbbnoc_errors,
+	.noc_aperture = t194_lookup_noc_aperture,
+	.max_noc_aperture = ARRAY_SIZE(t194_lookup_noc_aperture)
+};
+
+static struct tegra_cbb_bridge_data tegra194_cbbnocrce_data = {
+	.name   = "CBBNOCRCE",
+	.errvld = cbb_errlogger_errvld,
+	.faulten = cbb_errlogger_faulten,
+	.stallen = cbb_errlogger_stallen,
+	.errclr = cbb_errlogger_errclr,
+	.errors = cbbnoc_errors,
+	.noc_aperture = t194_lookup_noc_aperture,
+	.max_noc_aperture = ARRAY_SIZE(t194_lookup_noc_aperture)
+};
+
+static struct tegra_cbb_bridge_data tegra194_cbbnocsce_data = {
+	.name   = "CBBNOCSCE",
+	.errvld = cbb_errlogger_errvld,
+	.faulten = cbb_errlogger_faulten,
+	.stallen = cbb_errlogger_stallen,
+	.errclr = cbb_errlogger_errclr,
+	.errors = cbbnoc_errors,
+	.noc_aperture = t194_lookup_noc_aperture,
+	.max_noc_aperture = ARRAY_SIZE(t194_lookup_noc_aperture)
+};
 
 static struct of_device_id tegra_cbb_match[] = {
 	{.compatible    = "nvidia,tegra194-CBBNOCAXI-bridge",
-	.data = &tegra194_cbbnoc_data},
+		.data = &tegra194_cbbnoc_data},
+	{.compatible    = "nvidia,tegra194-CBBNOCAON-bridge",
+		.data = &tegra194_cbbnocaon_data},
+	{.compatible    = "nvidia,tegra194-CBBNOCBPMP-bridge",
+		.data = &tegra194_cbbnocbpmp_data},
+	{.compatible    = "nvidia,tegra194-CBBNOCRCE-bridge",
+		.data = &tegra194_cbbnocrce_data},
+	{.compatible    = "nvidia,tegra194-CBBNOCSCE-bridge",
+		.data = &tegra194_cbbnocsce_data},
 	{},
 };
 

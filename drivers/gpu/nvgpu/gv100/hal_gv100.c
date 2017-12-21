@@ -691,8 +691,6 @@ static const struct gpu_ops gv100_ops = {
 #endif
 	.xve = {
 		.get_speed        = xve_get_speed_gp106,
-		.set_speed        = xve_set_speed_gp106,
-		.available_speeds = xve_available_speeds_gp106,
 		.xve_readl        = xve_xve_readl_gp106,
 		.xve_writel       = xve_xve_writel_gp106,
 		.disable_aspm     = xve_disable_aspm_gp106,

@@ -18,6 +18,7 @@
 #include "common/tegra194-power-tree-p2888-0001-e3366-1199.dtsi"
 / {
 	nvidia,dtsfilename = __FILE__;
+	nvidia,dtbbuildtime = __DATE__, __TIME__;
 
 	arm64_ras {
 		status = "okay";

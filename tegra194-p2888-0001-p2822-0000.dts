@@ -21,6 +21,7 @@
 
 / {
 	nvidia,dtsfilename = __FILE__;
+	nvidia,dtbbuildtime = __DATE__, __TIME__;
 
 	chosen {
 		bootargs ="console=ttyS2,115200 earlycon=uart8250,mmio32,0x0c280000";

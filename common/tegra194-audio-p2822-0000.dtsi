@@ -40,7 +40,7 @@
 	};
 
 	hda@3510000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	tegra_sound: sound {

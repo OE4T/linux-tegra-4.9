@@ -53,4 +53,14 @@
 	rtc@c2a0000 {
 		status = "disabled";
 	};
+
+	gpio@c2f0000 {
+		pex-refclk-sel-low {
+			gpio-hog;
+			output-low;
+			gpios = <TEGRA194_AON_GPIO(AA, 5) 0>;
+			label = "pex_refclk_sel_low";
+			status = "okay";
+		};
+	};
 };

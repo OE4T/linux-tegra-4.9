@@ -17,4 +17,14 @@
 #include <tegra194-soc/tegra194-soc-base.dtsi>
 
 / {
+	cpus {
+		/*
+		 * Override the MPIDR value for simulator because MPIDR
+		 * value returned by the CPU on simulator is different
+		 * from the one in soc-base dtsi.
+		 */
+		cpu@0 {
+			reg = <0x0 0x0>;
+		};
+	};
 };

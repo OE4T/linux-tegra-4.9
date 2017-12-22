@@ -139,11 +139,6 @@ struct nvlink_link {
 	void *priv;
 };
 
-struct tegra_nvlink_link {
-	/* base address of MSSNVLINK */
-	void __iomem *mssnvlink_0_base;
-};
-
 /* Structure representing the MINION ucode header */
 struct minion_hdr {
 	u32 os_code_offset;
@@ -193,11 +188,6 @@ struct nvlink_device {
 	/* MINION ucode image */
 	const u8 *minion_img;
 	void *priv;
-};
-
-struct tegra_nvlink_device {
-	/* base address of SYNC2X */
-	void __iomem *nvlw_sync2x_base;
 };
 
 /* APIs used by endpoint drivers for interfacing with the core driver */

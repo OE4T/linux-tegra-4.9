@@ -18,6 +18,11 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 
 / {
+       aliases {
+                rtc0 = &p2888_spmic;
+                rtc1 = &tegra_rtc;
+        };
+
 	bpmp_i2c {
 		p2888_spmic: spmic@3c {
 			compatible = "maxim,max20024";

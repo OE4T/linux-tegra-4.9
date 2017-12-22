@@ -50,10 +50,6 @@
 		status = "okay";
 	};
 
-	rtc@c2a0000 {
-		status = "disabled";
-	};
-
 	gpio@c2f0000 {
 		pex-refclk-sel-low {
 			gpio-hog;

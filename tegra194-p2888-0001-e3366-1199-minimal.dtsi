@@ -378,12 +378,6 @@
 		status = "disabled";
 	};
 
-	reserved-memory {
-		grid-of-semaphores {
-			status = "disabled";
-		};
-	};
-
 	plugin-manager {
 		status = "disabled";
 

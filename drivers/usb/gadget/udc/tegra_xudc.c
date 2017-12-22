@@ -3777,7 +3777,7 @@ static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
 	.invalid_seq_num = false,
 	.pls_quirk = false,
 	.init_clks = true,
-	.disable_elpg = true,
+	.disable_elpg = false,
 };
 
 static struct of_device_id tegra_xudc_of_match[] = {

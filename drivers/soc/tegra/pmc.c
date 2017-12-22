@@ -517,6 +517,7 @@ struct tegra_pmc_soc {
 	bool skip_restart_register;
 	bool skip_arm_pm_restart;
 	bool has_misc_base_address;
+	bool sata_power_gate_in_misc;
 };
 
 struct tegra_io_pad_regulator {
@@ -643,6 +644,17 @@ static u32 tegra_pmc_misc_readl(enum pmc_regs reg)
 static void tegra_pmc_misc_writel(u32 value, enum pmc_regs reg)
 {
 	writel(value, pmc->misc_base + pmc->soc->rmap[reg]);
+}
+
+static void tegra_pmc_misc_register_update(enum pmc_regs reg,
+					   unsigned long mask,
+					   unsigned long val)
+{
+	u32 pmc_reg;
+
+	pmc_reg = tegra_pmc_misc_readl(reg);
+	pmc_reg = (pmc_reg & ~mask) | (val & mask);
+	tegra_pmc_misc_writel(pmc_reg, reg);
 }
 
 /* PMC register read/write/update with pmc register enums */
@@ -1075,14 +1087,22 @@ void tegra_pmc_sata_pwrgt_update(unsigned long mask, unsigned long val)
 	unsigned long flags;
 
 	spin_lock_irqsave(&pwr_lock, flags);
-	tegra_pmc_register_update(TEGRA_PMC_SATA_PWRGT_0, mask, val);
+	if (pmc->soc->sata_power_gate_in_misc)
+		tegra_pmc_misc_register_update(TEGRA_PMC_SATA_PWRGT_0,
+					       mask, val);
+	else
+		tegra_pmc_register_update(TEGRA_PMC_SATA_PWRGT_0,
+					  mask, val);
 	spin_unlock_irqrestore(&pwr_lock, flags);
 }
 EXPORT_SYMBOL(tegra_pmc_sata_pwrgt_update);
 
 unsigned long tegra_pmc_sata_pwrgt_get(void)
 {
-	return tegra_pmc_readl(TEGRA_PMC_SATA_PWRGT_0);
+	if (pmc->soc->sata_power_gate_in_misc)
+		return tegra_pmc_misc_readl(TEGRA_PMC_SATA_PWRGT_0);
+	else
+		return tegra_pmc_readl(TEGRA_PMC_SATA_PWRGT_0);
 }
 EXPORT_SYMBOL(tegra_pmc_sata_pwrgt_get);
 
@@ -3663,6 +3683,19 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 		pmc->reboot_base = pmc->base;
 	}
 
+	if (pmc->soc->has_misc_base_address) {
+		base =  pmc->misc_base;
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+		pmc->misc_base = devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(pmc->misc_base))
+			return PTR_ERR(pmc->misc_base);
+
+		io_map_base[mem_count++] = pmc->misc_base;
+		iounmap(base);
+	} else {
+		pmc->misc_base = pmc->base;
+	}
+
 	while (mem_count < 5) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, mem_count);
 		if (!res)
@@ -4131,6 +4164,7 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 	.descs = tegra210_io_pads_pinctrl_desc,
 	.rmap = tegra210_register_map,
 	.has_misc_base_address = false,
+	.sata_power_gate_in_misc = false,
 };
 
 #define TEGRA210B01_IO_PAD_LP_N_PV(_pin, _name, _dpd, _vbit, _io, _reg, _bds) \
@@ -4357,6 +4391,7 @@ static const struct tegra_pmc_soc tegra186_pmc_soc = {
 	.rmap = tegra186_register_map,
 	.has_ps18 = true,
 	.has_misc_base_address = false,
+	.sata_power_gate_in_misc = false,
 };
 
 /* Tegra 194 register map */
@@ -4393,6 +4428,7 @@ static const struct tegra_pmc_soc tegra194_pmc_soc = {
 	.rmap = tegra194_register_map,
 	.has_ps18 = true,
 	.has_misc_base_address = true,
+	.sata_power_gate_in_misc = true,
 };
 
 static const struct of_device_id tegra_pmc_match[] = {

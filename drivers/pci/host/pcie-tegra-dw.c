@@ -1592,7 +1592,6 @@ static void tegra_pcie_disable_phy(struct tegra_pcie_dw *pcie)
 	}
 }
 
-#if defined(PHY)
 static int tegra_pcie_enable_phy(struct tegra_pcie_dw *pcie)
 {
 	int phy_count = pcie->phy_count;
@@ -1623,25 +1622,20 @@ err_phy_init:
 
 	return ret;
 }
-#endif
 
 static int tegra_pcie_dw_probe(struct platform_device *pdev)
 {
 	struct tegra_pcie_dw *pcie;
 	struct pcie_port *pp;
 	struct device_node *np = pdev->dev.of_node;
-#if defined(PHY)
 	struct phy **phy;
-#endif
 	struct resource *appl_res;
 	struct resource	*dbi_res;
 	struct resource	*atu_dma_res;
 	struct pinctrl *pin = NULL;
 	struct pinctrl_state *pin_state = NULL;
-#if defined(PHY)
 	char *name;
 	int phy_count;
-#endif
 	int ret, i = 0;
 	u32 val = 0;
 
@@ -1757,7 +1751,6 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 
 	reset_control_deassert(pcie->core_apb_rst);
 
-#if defined(PHY)
 	phy_count = of_property_count_strings(np, "phy-names");
 	if (phy_count < 0) {
 		dev_err(pcie->dev, "unable to find phy entries\n");
@@ -1790,7 +1783,6 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "failed to enable phy\n");
 		goto fail_phy;
 	}
-#endif
 
 	dbi_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "config");
 	if (!dbi_res) {
@@ -1897,9 +1889,7 @@ fail_add_port:
 	reset_control_assert(pcie->core_rst);
 fail_dbi_res:
 	tegra_pcie_disable_phy(pcie);
-#if defined(PHY)
 fail_phy:
-#endif
 	reset_control_assert(pcie->core_apb_rst);
 fail_appl_res:
 	clk_disable_unprepare(pcie->core_clk);

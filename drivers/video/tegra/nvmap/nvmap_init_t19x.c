@@ -36,7 +36,7 @@ const struct of_device_id nvmap_of_ids[] = {
 int nvmap_register_cvsram_carveout(struct device *dma_dev,
 		phys_addr_t base, size_t size)
 {
-	struct nvmap_platform_carveout cvsram = {
+	static struct nvmap_platform_carveout cvsram = {
 		.name = "cvsram",
 		.usage_mask = NVMAP_HEAP_CARVEOUT_CVSRAM,
 		.disable_dynamic_dma_map = true,
@@ -49,10 +49,7 @@ int nvmap_register_cvsram_carveout(struct device *dma_dev,
 	cvsram.base = base;
 	cvsram.size = size;
 
-	if (dma_dev)
-		cvsram.dma_dev = dma_dev;
-	else
-		cvsram.dma_dev = &cvsram.dev;
+	cvsram.dma_dev = &cvsram.dev;
 	return nvmap_create_carveout(&cvsram);
 }
 EXPORT_SYMBOL(nvmap_register_cvsram_carveout);

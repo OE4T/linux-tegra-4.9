@@ -1537,6 +1537,7 @@ static int mmc_select_hs400es(struct mmc_card *card)
 	struct mmc_host *host = card->host;
 	int err = -EINVAL;
 	u8 val;
+	bool use_busy_signal = true;
 
 	if (!(host->caps & MMC_CAP_8_BIT_DATA)) {
 		err = -ENOTSUPP;
@@ -1590,7 +1591,7 @@ static int mmc_select_hs400es(struct mmc_card *card)
 	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 			   EXT_CSD_HS_TIMING, val,
 			   card->ext_csd.generic_cmd6_time,
-			   true, false, true);
+			   use_busy_signal, false, true);
 	if (err) {
 		pr_err("%s: switch to hs400es failed, err:%d\n",
 			mmc_hostname(host), err);
@@ -1605,9 +1606,11 @@ static int mmc_select_hs400es(struct mmc_card *card)
 	if (host->ops->hs400_enhanced_strobe)
 		host->ops->hs400_enhanced_strobe(host, &host->ios);
 
-	err = mmc_switch_status(card);
-	if (err)
-		goto out_err;
+	if (!use_busy_signal) {
+		err = mmc_switch_status(card);
+		if (err)
+			goto out_err;
+	}
 
 	return 0;
 
@@ -1971,14 +1974,14 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		}
 	}
 
+	/* Execute post init if exists */
+	if (host->ops->post_init)
+		host->ops->post_init(host);
+
 	/*
 	 * Choose the power class with selected bus interface
 	 */
 	mmc_select_powerclass(card);
-
-	/* Execute post init if exists */
-	if (host->ops->post_init)
-		host->ops->post_init(host);
 
 	/*
 	 * Enable HPI feature (if supported)

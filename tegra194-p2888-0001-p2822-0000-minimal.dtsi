@@ -157,8 +157,4 @@
 	pcie_c0_rp {
 		status = "disabled";
 	};
-
-	mipical@3990000 {
-		status = "disabled";
-	};
 };

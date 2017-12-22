@@ -3852,7 +3852,7 @@ static const char * const tegra194_supply_names[] = {
 static const struct tegra_xusb_soc tegra194_soc = {
 	.device_id = XHCI_DEVICE_ID_T194,
 	.firmware = "tegra19x_xusb_firmware",
-	.lpm_support = false,
+	.lpm_support = true,
 	.supply_names = tegra194_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
 	.num_typed_phys[USB3_PHY] = 4,
@@ -3876,7 +3876,7 @@ static const struct tegra_xusb_soc tegra194_soc = {
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
 	.disable_hsic_wake = false,
-	.disable_elpg = true,
+	.disable_elpg = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 

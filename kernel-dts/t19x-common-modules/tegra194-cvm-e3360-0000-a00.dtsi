@@ -21,8 +21,8 @@
 #include <tegra194-soc/tegra194-soc-cvm.dtsi>
 
 / {
-	model = "nvidia,tegra194-e3360-1099";
-	compatible = "nvidia,tegra194-e3360-109", "nvidia,tegra194";
+	model = "e3360_1099";
+	compatible = "nvidia,e3360_1099", "nvidia,tegra194";
 
 	#address-cells = <2>;
 	#size-cells = <2>;

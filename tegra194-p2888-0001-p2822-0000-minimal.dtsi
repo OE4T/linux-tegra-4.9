@@ -151,10 +151,6 @@
 		status = "disabled";
 	};
 
-	sdhci@3400000 {
-		status = "disabled";
-	};
-
 	pwm@c340000 {
 		status = "disabled";
 	};

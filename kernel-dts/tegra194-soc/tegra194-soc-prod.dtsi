@@ -324,7 +324,7 @@
 				#prod-cells = <4>;
 				prod_c_dpaux_hdmi {
 					prod = <
-						0 0x00000124 0x00000700 0x00000400
+						0 0x00000124 0x000037fc 0x000023a0
 						>;
 				};
 				prod_c_dpaux_dp {
@@ -343,7 +343,7 @@
 				#prod-cells = <4>;
 				prod_c_dpaux_hdmi {
 					prod = <
-						0 0x00000124 0x00000700 0x00000400
+						0 0x00000124 0x000037fc 0x000023a0
 						>;
 				};
 				prod_c_dpaux_dp {
@@ -362,7 +362,7 @@
 				#prod-cells = <4>;
 				prod_c_dpaux_hdmi {
 					prod = <
-						0 0x00000124 0x00000700 0x00000400
+						0 0x00000124 0x000037fc 0x000023a0
 						>;
 				};
 				prod_c_dpaux_dp {
@@ -381,7 +381,7 @@
 				#prod-cells = <4>;
 				prod_c_dpaux_hdmi {
 					prod = <
-						0 0x00000124 0x00000700 0x00000400
+						0 0x00000124 0x000037fc 0x000023a0
 						>;
 				};
 				prod_c_dpaux_dp {

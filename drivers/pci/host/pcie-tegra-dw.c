@@ -146,6 +146,7 @@
 
 #define CFG_LINK_STATUS_CONTROL_2	0xA0
 #define CFG_LINK_STATUS_CONTROL_2_PCIE_CAP_EQ_CPL	BIT(17)
+#define CFG_LINK_STATUS_CONTROL_2_TARGET_LS_MASK	0xF
 
 #define CFG_LINK_CAP_L1SUB		0x154
 
@@ -1408,6 +1409,12 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 			tmp &= ~CFG_LINK_CAP_MAX_LINK_SPEED_MASK;
 			tmp |= val;
 			dw_pcie_cfg_write(pp->dbi_base + CFG_LINK_CAP, 4, tmp);
+			dw_pcie_cfg_read(pp->dbi_base +
+					 CFG_LINK_STATUS_CONTROL_2, 4, &tmp);
+			tmp &= ~CFG_LINK_STATUS_CONTROL_2_TARGET_LS_MASK;
+			tmp |= val;
+			dw_pcie_cfg_write(pp->dbi_base +
+					  CFG_LINK_STATUS_CONTROL_2, 4, tmp);
 		} else {
 			dev_err(pcie->dev, "incorrect max speed (%u)\n", val);
 		}

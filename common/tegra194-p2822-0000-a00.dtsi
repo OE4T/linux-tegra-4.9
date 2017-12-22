@@ -13,6 +13,7 @@
 
 #include <t19x-common-modules/tegra194-cvb-p2822-0000-a00.dtsi>
 #include <dt-bindings/gpio/tegra194-gpio.h>
+#include "dt-bindings/input/input.h"
 #include "tegra194-audio-p2822-0000.dtsi"
 #include "tegra194-p2822-disp.dtsi"
 #include "tegra194-p2822-0000-camera-e3333-a00.dtsi"
@@ -24,5 +25,17 @@
 		nvidia,disable-rtpm;
 		cd-gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(G, 7) 0>;
 		status = "okay";
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		gpio-keys,name = "gpio-keys";
+
+		forcerecovery {
+			label = "force-recovery";
+			gpios = <&tegra_aon_gpio TEGRA194_AON_GPIO(EE, 4) GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+			gpio-key,wakeup;
+		};
 	};
 };

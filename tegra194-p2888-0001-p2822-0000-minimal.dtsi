@@ -143,10 +143,6 @@
 		};
 	};
 
-	gpio-keys {
-		status = "disabled";
-	};
-
 	sdhci@3440000 {
 		status = "disabled";
 	};

@@ -41,6 +41,8 @@
 #define GPIO_INT_STATUS_OFFSET			0x100
 #define ROUTE_MAP_OFFSET			0x14
 
+#define GPIO_VM_REG				0x00
+#define GPIO_VM_RW				0x03
 /* GPIO SCR registers */
 #define GPIO_SCR_REG				0x04
 #define GPIO_SCR_DIFF				0x08
@@ -624,6 +626,7 @@ struct tegra_gpio_soc_info {
 	int num_irq_line;
 	int num_banks;
 	int start_irq_line;
+	bool do_vm_check;
 };
 
 struct tegra_gpio_irq_info {
@@ -722,6 +725,13 @@ static inline bool gpio_is_accessible(struct tegra_gpio_info *tgi, u32 offset)
 	cont_id = tgi->soc->port[port].cont_id;
 	if (cont_id  < 0)
 		return false;
+
+	if (tgi->soc->do_vm_check) {
+		val = __raw_readl(tgi->scr_regs + scr_offset +
+				  (pin * GPIO_SCR_DIFF) + GPIO_VM_REG);
+		if ((val & GPIO_VM_RW) != GPIO_VM_RW)
+			return false;
+	}
 
 	val = __raw_readl(tgi->scr_regs + scr_offset +
 			(pin * GPIO_SCR_DIFF) + GPIO_SCR_REG);
@@ -1451,6 +1461,7 @@ static const struct tegra_gpio_soc_info t186_gpio_soc = {
 	.num_irq_line = 1,
 	.num_banks = 0,
 	.start_irq_line = 0,
+	.do_vm_check = false,
 };
 
 static const struct tegra_gpio_soc_info t186_aon_gpio_soc = {
@@ -1463,6 +1474,7 @@ static const struct tegra_gpio_soc_info t186_aon_gpio_soc = {
 	.num_irq_line = 1,
 	.num_banks = 0,
 	.start_irq_line = 0,
+	.do_vm_check = false,
 };
 
 static const struct tegra_gpio_soc_info t194_gpio_soc = {
@@ -1475,6 +1487,7 @@ static const struct tegra_gpio_soc_info t194_gpio_soc = {
 	.num_irq_line = 8,
 	.num_banks = 6,
 	.start_irq_line = 0,
+	.do_vm_check = true,
 };
 
 static const struct tegra_gpio_soc_info t194_aon_gpio_soc = {
@@ -1487,6 +1500,7 @@ static const struct tegra_gpio_soc_info t194_aon_gpio_soc = {
 	.num_irq_line = 4,
 	.num_banks = 1,
 	.start_irq_line = 4,
+	.do_vm_check = false,
 };
 
 static struct of_device_id tegra_gpio_of_match[] = {

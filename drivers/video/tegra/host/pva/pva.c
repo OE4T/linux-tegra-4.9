@@ -613,11 +613,15 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 
 	flush_work(&pva->pva_restore_state_work);
 
+	/*
+	 * Disable IRQs. Interrupt handler won't be under execution after the
+	 * call returns.
+	 */
+	disable_irq(pva->irq);
+
 	/* Put PVA to reset to ensure that the firmware doesn't get accessed */
 	reset_control_assert(pdata->reset_control);
 	pva->booted = false;
-
-	disable_irq(pva->irq);
 
 	pva_free_fw(pdev, pva);
 

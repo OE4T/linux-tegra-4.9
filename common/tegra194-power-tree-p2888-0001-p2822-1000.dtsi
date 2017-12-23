@@ -60,7 +60,7 @@
 				vbus-supply = <&battery_reg>;
 			};
 			usb2-3 {
-				vbus-supply = <&p2888_usb3_vbus>;
+				vbus-supply = <&p2822_vdd_5v_sata>;
 			};
 		};
 	};

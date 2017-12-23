@@ -657,5 +657,7 @@
 #define TEGRA194_CLK_EMCSC			312
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_EMCSD switch divider output */
 #define TEGRA194_CLK_EMCSD			313
+/** @brief PLL controlled by CLK_RST_CONTROLLER_PLLC_BASE */
+#define TEGRA194_CLK_PLLC			314
 
 #endif

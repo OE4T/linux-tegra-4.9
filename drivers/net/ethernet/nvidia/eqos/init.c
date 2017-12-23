@@ -241,11 +241,36 @@ static void eqos_clock_deinit(struct eqos_prv_data *pdata)
 	devm_clk_put(&pdev->dev, pdata->axi_cbb_clk);
 }
 
+static int eqos_set_ptp_ref_clk(struct eqos_prv_data *pdata,
+				struct device_node *node)
+{
+	struct platform_device *pdev = pdata->pdev;
+	u32 ptp_ref_clock_speed;
+	int ret;
+
+	ret = of_property_read_u32(node, "nvidia,ptp_ref_clock_speed",
+				   &ptp_ref_clock_speed);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to read PTP ref clk (%d)\n", ret);
+		/* Setting default values */
+		if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+			ptp_ref_clock_speed = 312500000;
+		else
+			ptp_ref_clock_speed = 125;
+	}
+
+	if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+		ret = clk_set_rate(pdata->ptp_ref_clk, ptp_ref_clock_speed);
+	else
+		ret = clk_set_rate(pdata->ptp_ref_clk,
+				   ptp_ref_clock_speed * 1000000);
+
+	return ret;
+}
+
 static int eqos_clock_init(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
-	struct device_node *node = pdev->dev.of_node;
-	u32 ptp_ref_clock_speed;
 	int ret;
 
 	pdata->axi_cbb_clk = devm_clk_get(&pdev->dev, "axi_cbb");
@@ -295,36 +320,6 @@ static int eqos_clock_init(struct eqos_prv_data *pdata)
 	if (ret < 0)
 		goto ptp_ref_en_fail;
 
-	/* set ptp_ref_clk freq default 62.5Mhz */
-	ret = of_property_read_u32(node, "nvidia,ptp_ref_clock_speed",
-			&ptp_ref_clock_speed);
-	if (ret < 0) {
-		dev_err(&pdev->dev,
-		"ptp_ref_clk read failed %d, setting default to 125MHz\n", ret);
-		/* take default as 125MHz */
-		if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
-			ptp_ref_clock_speed = 312500000;
-		else
-			ptp_ref_clock_speed = 125;
-	} else if (ptp_ref_clock_speed > 625) { /* max parent clock is 625MHz */
-		dev_warn(&pdev->dev,
-		"ptp_ref_clk read set to more than 625MHz\n");
-		/* take default as 125MHz */
-		if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
-			ptp_ref_clock_speed = 312500000;
-		else
-			ptp_ref_clock_speed = 125;
-	}
-	if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
-		ret = clk_set_rate(pdata->ptp_ref_clk, ptp_ref_clock_speed);
-	else
-		ret = clk_set_rate(pdata->ptp_ref_clk,
-				   ptp_ref_clock_speed * 1000000);
-	if (ret) {
-		dev_err(&pdev->dev, "ptp_ref clk set rate failed (%d)\n", ret);
-		goto ptp_ref_set_rate_failed;
-	}
-
 	ret = clk_prepare_enable(pdata->tx_clk);
 	if (ret < 0)
 		goto tx_en_fail;
@@ -338,7 +333,6 @@ static int eqos_clock_init(struct eqos_prv_data *pdata)
 	return 0;
 
 tx_en_fail:
-ptp_ref_set_rate_failed:
 	clk_disable_unprepare(pdata->ptp_ref_clk);
 ptp_ref_en_fail:
 	clk_disable_unprepare(pdata->rx_clk);
@@ -1080,6 +1074,11 @@ int eqos_probe(struct platform_device *pdev)
 			MAC_1US_TIC_WR(pdata->csr_clock_speed - 1);
 	}
 	save_mdc(pdata);
+
+	if (eqos_set_ptp_ref_clk(pdata, node)) {
+		dev_err(&pdev->dev, "failed to set PTP ref clk\n");
+		goto err_out_q_alloc_failed;
+	}
 
 	ret = eqos_get_mac_address_dtb("/chosen", "nvidia,ether-mac", mac_addr);
 	if (ret < 0) {

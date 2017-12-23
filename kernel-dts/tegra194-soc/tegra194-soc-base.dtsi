@@ -1577,6 +1577,12 @@
 		status = "disabled";
 	};
 
+	tegra_fiq_debugger {
+		compatible = "nvidia,fiq-debugger";
+		use-console-port;
+		interrupts = <0 17 0x4>;
+	};
+
 	tegra_pcie_pexclk_pinctrl: pinctrl@3790000 {
 		compatible = "nvidia,tegra194-pexclk-padctl";
 		reg = <0x0 0x03790000 0x0 0x1000>,

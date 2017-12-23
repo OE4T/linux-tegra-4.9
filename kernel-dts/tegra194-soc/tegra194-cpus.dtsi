@@ -22,7 +22,7 @@
 		cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a57-64bit", "nvidia,carmel", "arm,armv8";
-			reg = <0x0 0x10000>;
+			reg = <0x0 0x0>;
 			enable-method = "psci";
 			cpu-idle-states = <&C6 &C7>;
 		};
@@ -30,7 +30,7 @@
 		cpu@1 {
 			device_type = "cpu";
 			compatible = "nvidia,carmel", "arm,armv8";
-			reg = <0x0 0x10001>;
+			reg = <0x0 0x1>;
 			enable-method = "psci";
 			status = "disabled";
 		};
@@ -54,7 +54,7 @@
 		cpu@4 {
 			device_type = "cpu";
 			compatible = "nvidia,carmel", "arm,armv8";
-			reg = <0x0 0x200>;
+			reg = <0x0 0x10200>;
 			enable-method = "psci";
 			status = "disabled";
 		};
@@ -62,7 +62,7 @@
 		cpu@5 {
 			device_type = "cpu";
 			compatible = "nvidia,carmel", "arm,armv8";
-			reg = <0x0 0x201>;
+			reg = <0x0 0x10201>;
 			enable-method = "psci";
 			status = "disabled";
 		};

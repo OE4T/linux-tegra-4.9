@@ -127,10 +127,13 @@
 #define I2C_RX_FIFO_THRESHOLD			1
 #define BYTES_PER_FIFO_WORD			4
 
+#define I2C_SLV_CLK_RATE			204000000
+
 struct tegra_i2cslv_dev {
 	struct device *dev;
 	struct i2c_adapter adap;
 	struct clk *div_clk;
+	u32 clk_rate;
 	struct reset_control *rstc;
 	void __iomem *base;
 	struct i2c_client *slave;
@@ -560,6 +563,9 @@ static int tegra_reg_slave(struct i2c_client *slave)
 		dev_err(i2cslv_dev->dev, "Enable div-clk failed: %d\n", ret);
 		return ret;
 	}
+	ret = clk_set_rate(i2cslv_dev->div_clk, i2cslv_dev->clk_rate);
+	if (ret < 0)
+		dev_warn(i2cslv_dev->dev, "Unable to set rate: %d\n", ret);
 
 	return tegra_i2cslv_init(i2cslv_dev);
 }
@@ -596,7 +602,7 @@ static int tegra_i2cslv_probe(struct platform_device *pdev)
 	struct resource *res;
 	phys_addr_t phys_addr;
 	void __iomem *base;
-	struct clk *div_clk;
+	struct clk *div_clk, *parent_clk;
 	struct reset_control *rstc;
 	int irq, ret;
 
@@ -623,6 +629,17 @@ static int tegra_i2cslv_probe(struct platform_device *pdev)
 		return PTR_ERR(div_clk);
 	}
 
+	parent_clk = devm_clk_get(&pdev->dev, "parent");
+	if (IS_ERR(parent_clk)) {
+		dev_err(&pdev->dev, "Unable to get parent_clk err:%ld\n",
+				PTR_ERR(parent_clk));
+	} else {
+		ret = clk_set_parent(div_clk, parent_clk);
+		if (ret < 0)
+			dev_warn(&pdev->dev, "Couldn't set parent clock : %d\n",
+				ret);
+	}
+
 	rstc = devm_reset_control_get(&pdev->dev, "i2c");
 	if (IS_ERR(rstc)) {
 		ret = PTR_ERR(rstc);
@@ -639,6 +656,11 @@ static int tegra_i2cslv_probe(struct platform_device *pdev)
 	i2cslv_dev->div_clk = div_clk;
 	i2cslv_dev->rstc = rstc;
 	raw_spin_lock_init(&i2cslv_dev->xfer_lock);
+
+	ret = of_property_read_u32(i2cslv_dev->dev->of_node, "clock-frequency",
+				   &i2cslv_dev->clk_rate);
+	if (ret)
+		i2cslv_dev->clk_rate = I2C_SLV_CLK_RATE;
 
 	adap = &i2cslv_dev->adap;
 	adap->algo = &tegra_i2cslv_algo;

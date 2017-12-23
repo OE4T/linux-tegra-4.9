@@ -43,7 +43,6 @@ struct nvlink_core {
 
 u32 nvlink_log_mask = NVLINK_DEFAULT_LOG_MASK;
 static struct nvlink_core nvlink_core;
-static int first_dev = 1;
 
 int nvlink_register_device(struct nvlink_device *ndev)
 {
@@ -55,9 +54,6 @@ int nvlink_register_device(struct nvlink_device *ndev)
 		return -EINVAL;
 	}
 
-	if (first_dev)
-		mutex_init(&nvlink_core.mutex);
-
 	mutex_lock(&nvlink_core.mutex);
 
 	if (ndev->device_id >= NVLINK_MAX_DEVICES) {
@@ -68,34 +64,32 @@ int nvlink_register_device(struct nvlink_device *ndev)
 
 	nvlink_core.ndevs[ndev->device_id] = ndev;
 
-	if (first_dev) {
-		if (ndev->is_master) {
-			nvlink_dbg("Device %d is the master", ndev->device_id);
-			topology->master_dev_id = ndev->device_id;
-			topology->master_link_id = ndev->link.link_id;
-			topology->slave_dev_id =
-					ndev->link.remote_dev_info.device_id;
-			topology->slave_link_id =
-					ndev->link.remote_dev_info.link_id;
-		} else {
-			nvlink_dbg("Device %d is the slave", ndev->device_id);
-			topology->master_dev_id =
-					ndev->link.remote_dev_info.device_id;
-			topology->master_link_id =
-					ndev->link.remote_dev_info.link_id;
-			topology->slave_dev_id = ndev->device_id;
-			topology->slave_link_id = ndev->link.link_id;
-		}
+	if (ndev->is_master) {
+		nvlink_dbg("Device %d is the master", ndev->device_id);
+		topology->master_dev_id = ndev->device_id;
+		topology->master_link_id = ndev->link.link_id;
+		topology->slave_dev_id =
+				ndev->link.remote_dev_info.device_id;
+		topology->slave_link_id =
+				ndev->link.remote_dev_info.link_id;
+	} else {
+		nvlink_dbg("Device %d is the slave", ndev->device_id);
+		topology->master_dev_id =
+				ndev->link.remote_dev_info.device_id;
+		topology->master_link_id =
+				ndev->link.remote_dev_info.link_id;
+		topology->slave_dev_id = ndev->device_id;
+		topology->slave_link_id = ndev->link.link_id;
+	}
 
-		if (topology->master_dev_id == topology->slave_dev_id) {
-			nvlink_dbg("Tegra loopback topology detected");
-		} else if (topology->master_dev_id == NVLINK_ENDPT_GV100) {
-			nvlink_dbg("GV100 (master) connected to Tegra ");
-		} else {
-			nvlink_err("Invalid topology info in device tree");
-			ret = -1;
-			goto fail;
-		}
+	if (topology->master_dev_id == topology->slave_dev_id) {
+		nvlink_dbg("Tegra loopback topology detected");
+	} else if (topology->master_dev_id == NVLINK_ENDPT_GV100) {
+		nvlink_dbg("GV100 (master) connected to Tegra ");
+	} else {
+		nvlink_err("Invalid topology info in device tree");
+		ret = -1;
+		goto fail;
 	}
 
 	goto success;
@@ -103,7 +97,6 @@ int nvlink_register_device(struct nvlink_device *ndev)
 fail:
 	nvlink_err("Device register failed!");
 success:
-	first_dev = 0;
 	mutex_unlock(&nvlink_core.mutex);
 	return ret;
 }
@@ -212,3 +205,42 @@ int nvlink_init_link(struct nvlink_device *ndev)
 	return ret;
 }
 EXPORT_SYMBOL(nvlink_init_link);
+
+/*
+ * nvlink_core_init:
+ * The NVLINK core driver init function is called after debugfs has been
+ * initialized but before the NVLINK endpoint drivers probe. This is the perfect
+ * time for the NVLINK core driver to initialize any variables/state. At this
+ * point during the kernel boot we should have access to debugfs, but we don't
+ * have to worry about race conditions due to endpoint driver nvlink_register_*
+ * calls.
+ */
+int __init nvlink_core_init(void)
+{
+	int i = 0;
+
+	mutex_init(&nvlink_core.mutex);
+
+	mutex_lock(&nvlink_core.mutex);
+
+	for (i = 0; i < NVLINK_MAX_DEVICES; i++)
+		nvlink_core.ndevs[i] = NULL;
+	for (i = 0; i < NVLINK_MAX_LINKS; i++)
+		nvlink_core.nlinks[i] = NULL;
+
+	nvlink_core.topology.slave_dev_id = -1;
+	nvlink_core.topology.master_dev_id = -1;
+	nvlink_core.topology.slave_link_id = -1;
+	nvlink_core.topology.master_link_id = -1;
+
+	mutex_unlock(&nvlink_core.mutex);
+
+	return 0;
+}
+subsys_initcall(nvlink_core_init);
+
+void __exit nvlink_core_exit(void)
+{
+	mutex_destroy(&nvlink_core.mutex);
+}
+module_exit(nvlink_core_exit);

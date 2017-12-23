@@ -49,6 +49,10 @@ enum nvlink_log_categories {
 };
 
 extern u32 nvlink_log_mask;
+#ifdef CONFIG_DEBUG_FS
+/* This is the root debugfs directory for the entire NVLINK driver stack */
+extern struct dentry *nvlink_debugfs;
+#endif /* CONFIG_DEBUG_FS */
 
 #define NVLINK_DEFAULT_LOG_MASK	nvlink_log_err
 

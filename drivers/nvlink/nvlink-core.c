@@ -25,7 +25,8 @@
 
 #include "nvlink.h"
 
-#define NVLINK_DRV_NAME "nvlink-core"
+#define NVLINK_DRV_NAME		"nvlink-core"
+#define NVLINK_DEBUGFS_ROOT	"nvlink"
 
 struct topology {
 	int slave_dev_id;
@@ -42,6 +43,12 @@ struct nvlink_core {
 };
 
 u32 nvlink_log_mask = NVLINK_DEFAULT_LOG_MASK;
+
+#ifdef CONFIG_DEBUG_FS
+/* This is the root debugfs directory for the entire NVLINK driver stack */
+struct dentry *nvlink_debugfs;
+#endif /* CONFIG_DEBUG_FS */
+
 static struct nvlink_core nvlink_core;
 
 int nvlink_register_device(struct nvlink_device *ndev)
@@ -206,6 +213,39 @@ int nvlink_init_link(struct nvlink_device *ndev)
 }
 EXPORT_SYMBOL(nvlink_init_link);
 
+#ifdef CONFIG_DEBUG_FS
+/* TODO: Add debugfs nodes to expose topology, etc */
+void nvlink_core_debugfs_init(void)
+{
+	struct dentry *core_debugfs = NULL;
+
+	nvlink_debugfs = debugfs_create_dir(NVLINK_DEBUGFS_ROOT, NULL);
+	if (!nvlink_debugfs) {
+		nvlink_err("Failed to create NVLINK debugfs root directory");
+		goto fail;
+	}
+
+	core_debugfs = debugfs_create_dir(NVLINK_DRV_NAME, nvlink_debugfs);
+	if (!core_debugfs) {
+		nvlink_err("Failed to create NVLINK core driver's debugfs directory");
+		goto fail;
+	}
+
+	return;
+
+fail:
+	nvlink_err("Failed to create debugfs nodes");
+	debugfs_remove_recursive(nvlink_debugfs);
+	nvlink_debugfs = NULL;
+}
+
+void nvlink_core_debugfs_deinit(void)
+{
+	debugfs_remove_recursive(nvlink_debugfs);
+	nvlink_debugfs = NULL;
+}
+#endif /* CONFIG_DEBUG_FS */
+
 /*
  * nvlink_core_init:
  * The NVLINK core driver init function is called after debugfs has been
@@ -233,14 +273,20 @@ int __init nvlink_core_init(void)
 	nvlink_core.topology.slave_link_id = -1;
 	nvlink_core.topology.master_link_id = -1;
 
-	mutex_unlock(&nvlink_core.mutex);
+#ifdef CONFIG_DEBUG_FS
+	nvlink_core_debugfs_init();
+#endif /* CONFIG_DEBUG_FS */
 
+	mutex_unlock(&nvlink_core.mutex);
 	return 0;
 }
 subsys_initcall(nvlink_core_init);
 
 void __exit nvlink_core_exit(void)
 {
+#ifdef CONFIG_DEBUG_FS
+	nvlink_core_debugfs_deinit();
+#endif /* CONFIG_DEBUG_FS */
 	mutex_destroy(&nvlink_core.mutex);
 }
 module_exit(nvlink_core_exit);

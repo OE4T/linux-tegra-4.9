@@ -1,7 +1,7 @@
 /*
  * tegra194-soc-ufshc.dtsi: Tegra186 soc dtsi file for UFS host controller
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 		reg = <0x0 0x02450000 0x0 0x4000>;
 		interrupts = < 0 44 0x04 >;
 		iommus = <&smmu TEGRA_SID_UFSHC>;
+		dma-coherent;
 		clocks = <&bpmp_clks TEGRA194_CLK_MPHY_CORE_PLL_FIXED>,
 				<&bpmp_clks TEGRA194_CLK_MPHY_L0_TX_SYMB>,
 				<&bpmp_clks TEGRA194_CLK_MPHY_TX_1MHZ_REF> ,

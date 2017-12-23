@@ -286,7 +286,7 @@ void dw_pcie_msi_init(struct pcie_port *pp)
 {
 	u64 msi_target;
 
-	pp->msi_data = __get_free_pages(GFP_KERNEL, 0);
+	pp->msi_data = __get_free_pages(GFP_DMA, 0);
 	msi_target = virt_to_phys((void *)pp->msi_data);
 
 	/* program the msi_data */

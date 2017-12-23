@@ -3717,25 +3717,35 @@ static int gr_gv11b_ecc_scrub_is_done(struct gk20a *g,
 			u32 scrub_reg, u32 scrub_mask, u32 scrub_done)
 {
 	struct nvgpu_timeout timeout;
-	int status = 0;
 	u32 val;
+	u32 gpc, tpc;
+	u32 gpc_offset, tpc_offset;
 
 	nvgpu_timeout_init(g, &timeout,
 		ECC_SCRUBBING_TIMEOUT_MAX /
 		ECC_SCRUBBING_TIMEOUT_DEFAULT,
 		NVGPU_TIMER_RETRY_TIMER);
-	do {
-		val = gk20a_readl(g, scrub_reg);
-		if ((val & scrub_mask) == scrub_done)
-			goto exit;
-		nvgpu_udelay(ECC_SCRUBBING_TIMEOUT_DEFAULT);
-	} while (!nvgpu_timeout_expired(&timeout));
 
-	if (nvgpu_timeout_peek_expired(&timeout))
-		status = -ETIMEDOUT;
-exit:
-	return status;
+	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
+		gpc_offset = gk20a_gr_gpc_offset(g, gpc);
 
+		for (tpc = 0; tpc < g->gr.tpc_count; tpc++) {
+			tpc_offset = gk20a_gr_tpc_offset(g, tpc);
+
+			do {
+				val = gk20a_readl(g, gpc_offset + tpc_offset + scrub_reg);
+				if ((val & scrub_mask) == scrub_done)
+					break;
+
+				if (nvgpu_timeout_expired(&timeout))
+					return -ETIMEDOUT;
+
+				nvgpu_udelay(ECC_SCRUBBING_TIMEOUT_DEFAULT);
+			} while (1);
+		}
+	}
+
+	return 0;
 }
 
 static int gr_gv11b_ecc_scrub_sm_lrf(struct gk20a *g)

@@ -38,14 +38,6 @@
 	};
 
 	host1x {
-		nvdla0@15880000 {
-			status = "disabled";
-		};
-
-		nvdla1@158c0000 {
-			status = "disabled";
-		};
-
 		se@15810000 {
 			status = "disabled";
 		};

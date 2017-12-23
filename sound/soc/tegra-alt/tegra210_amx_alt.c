@@ -382,11 +382,13 @@ static int tegra210_amx_in_hw_params(struct snd_pcm_substream *substream,
 	 * sample_rate = 8000
 	 * ahub_clk_rate = 49152000
 	 */
-	if (amx->soc_data->is_auto_disable_supported)
+	if (amx->soc_data->is_auto_disable_supported) {
 		regmap_write(amx->regmap,
 			TEGRA194_AMX_RX1_CTRL_FRAME_PERIOD +
 			(dai->id * TEGRA210_AMX_AUDIOCIF_CH_STRIDE),
 			0x1800);
+		regmap_write(amx->regmap, TEGRA210_AMX_CYA, 1);
+	}
 
 	ret = tegra210_amx_set_audio_cif(dai, params,
 				TEGRA210_AMX_AXBAR_RX1_CIF_CTRL +
@@ -784,6 +786,10 @@ static bool tegra210_amx_wr_reg(struct device *dev,
 	case TEGRA210_AMX_CYA:
 	case TEGRA210_AMX_AHUBRAMCTL_AMX_CTRL:
 	case TEGRA210_AMX_AHUBRAMCTL_AMX_DATA:
+	case TEGRA194_AMX_RX1_CTRL_FRAME_PERIOD:
+	case TEGRA194_AMX_RX2_CTRL_FRAME_PERIOD:
+	case TEGRA194_AMX_RX3_CTRL_FRAME_PERIOD:
+	case TEGRA194_AMX_RX4_CTRL_FRAME_PERIOD:
 		return true;
 	default:
 		return false;
@@ -821,6 +827,10 @@ static bool tegra210_amx_rd_reg(struct device *dev,
 	case TEGRA210_AMX_DBG:
 	case TEGRA210_AMX_AHUBRAMCTL_AMX_CTRL:
 	case TEGRA210_AMX_AHUBRAMCTL_AMX_DATA:
+	case TEGRA194_AMX_RX1_CTRL_FRAME_PERIOD:
+	case TEGRA194_AMX_RX2_CTRL_FRAME_PERIOD:
+	case TEGRA194_AMX_RX3_CTRL_FRAME_PERIOD:
+	case TEGRA194_AMX_RX4_CTRL_FRAME_PERIOD:
 		return true;
 	default:
 		return false;
@@ -863,13 +873,28 @@ static const struct regmap_config tegra210_amx_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
+static const struct regmap_config tegra194_amx_regmap_config = {
+	.reg_bits = 32,
+	.reg_stride = 4,
+	.val_bits = 32,
+	.max_register = TEGRA194_AMX_RX4_LAST_FRAME_PERIOD,
+	.writeable_reg = tegra210_amx_wr_reg,
+	.readable_reg = tegra210_amx_rd_reg,
+	.volatile_reg = tegra210_amx_volatile_reg,
+	.reg_defaults = tegra210_amx_reg_defaults,
+	.num_reg_defaults = ARRAY_SIZE(tegra210_amx_reg_defaults),
+	.cache_type = REGCACHE_FLAT,
+};
+
 static const struct tegra210_amx_soc_data soc_data_tegra210 = {
 	.set_audio_cif = tegra210_xbar_set_cif,
+	.regmap_conf = &tegra210_amx_regmap_config,
 	.is_auto_disable_supported = false,
 };
 
 static const struct tegra210_amx_soc_data soc_data_tegra194 = {
 	.set_audio_cif = tegra210_xbar_set_cif,
+	.regmap_conf = &tegra194_amx_regmap_config,
 	.is_auto_disable_supported = true,
 };
 
@@ -931,7 +956,7 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 	}
 
 	amx->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
-					    &tegra210_amx_regmap_config);
+					    soc_data->regmap_conf);
 	if (IS_ERR(amx->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		ret = PTR_ERR(amx->regmap);

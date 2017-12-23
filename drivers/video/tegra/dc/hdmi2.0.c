@@ -892,6 +892,12 @@ static int tegra_dc_hdmi_hpd_init(struct tegra_dc *dc)
 	}
 	hdmi->irq = hotplug_irq;
 
+	if (hotplug_state != TEGRA_HPD_STATE_NORMAL) {
+		dev_info(&dc->ndev->dev,
+			"hdmi: keeping hotplug irq disabled\n");
+		disable_irq(hotplug_irq);
+	}
+
 skip_gpio_irq_settings:
 	INIT_DELAYED_WORK(&hdmi->hpd_worker, tegra_hdmi_hpd_worker);
 

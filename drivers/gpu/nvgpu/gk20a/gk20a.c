@@ -294,8 +294,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	/* Restore the debug setting */
 	g->ops.fb.set_debug_mode(g, g->mmu_debug_ctrl);
 
-	gk20a_channel_resume(g);
-
 	gk20a_init_ce_support(g);
 
 	nvgpu_init_mm_ce_context(g);
@@ -328,6 +326,8 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 #endif
+
+	gk20a_channel_resume(g);
 
 done:
 	if (err)

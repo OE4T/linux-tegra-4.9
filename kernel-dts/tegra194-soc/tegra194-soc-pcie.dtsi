@@ -518,6 +518,7 @@
 
 		nvidia,cfg-link-cap-l1sub = <0x1c4>;
 		nvidia,cap-pl16g-status = <0x174>;
+		nvidia,cap-pl16g-cap-off = <0x188>;
 		nvidia,event-cntr-ctrl = <0x1d8>;
 		nvidia,event-cntr-data = <0x1dc>;
 	};
@@ -565,6 +566,7 @@
 
 		nvidia,cfg-link-cap-l1sub = <0x194>;
 		nvidia,cap-pl16g-status = <0x164>;
+		nvidia,cap-pl16g-cap-off = <0x178>;
 		nvidia,event-cntr-ctrl = <0x1a8>;
 		nvidia,event-cntr-data = <0x1ac>;
 	};
@@ -612,6 +614,7 @@
 
 		nvidia,cfg-link-cap-l1sub = <0x194>;
 		nvidia,cap-pl16g-status = <0x164>;
+		nvidia,cap-pl16g-cap-off = <0x178>;
 		nvidia,event-cntr-ctrl = <0x1a8>;
 		nvidia,event-cntr-data = <0x1ac>;
 	};
@@ -659,6 +662,7 @@
 
 		nvidia,cfg-link-cap-l1sub = <0x194>;
 		nvidia,cap-pl16g-status = <0x164>;
+		nvidia,cap-pl16g-cap-off = <0x178>;
 		nvidia,event-cntr-ctrl = <0x1a8>;
 		nvidia,event-cntr-data = <0x1ac>;
 	};
@@ -706,6 +710,7 @@
 
 		nvidia,cfg-link-cap-l1sub = <0x1b0>;
 		nvidia,cap-pl16g-status = <0x174>;
+		nvidia,cap-pl16g-cap-off = <0x188>;
 		nvidia,event-cntr-ctrl = <0x1c4>;
 		nvidia,event-cntr-data = <0x1c8>;
 	};
@@ -757,6 +762,7 @@
 
 		nvidia,cfg-link-cap-l1sub = <0x1c4>;
 		nvidia,cap-pl16g-status = <0x174>;
+		nvidia,cap-pl16g-cap-off = <0x188>;
 		nvidia,event-cntr-ctrl = <0x1d8>;
 		nvidia,event-cntr-data = <0x1dc>;
 	};

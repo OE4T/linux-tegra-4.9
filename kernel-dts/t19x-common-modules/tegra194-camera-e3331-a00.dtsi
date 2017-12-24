@@ -17,7 +17,7 @@
 
 / {
 	host1x {
-		vi@15700000 {
+		vi@15c10000 {
 			num-channels = <1>;
 			ports {
 				#address-cells = <1>;
@@ -33,7 +33,7 @@
 			};
 		};
 
-		nvcsi@150c0000 {
+		nvcsi@15a00000 {
 			num-channels = <1>;
 			channel@0 {
 				reg = <0>;
@@ -153,8 +153,6 @@
 						discontinuous_clk = "no";
 						dpcm_enable = "false";
 						cil_settletime = "0"; /* TODO check this, send 8 to reg for default 15 cycles*/
-						mode_type = "bayer";
-						pixel_phase = "rggb";
 
 						active_w = "5488";
 						active_h = "4112";

@@ -31,6 +31,20 @@ Required properties:
   "pcie-p2u-N": where N ranges from 0 to the value specified in xbar config
 - nvidia,pex-rst-gpio: Specify GPIO for PCIe reset signal, see gpio binding
 - vddio-pex-ctl-supply: Regulator supply for PCIe side band signals
+- Controller dependent register offsets
+  - nvidia,cfg-link-cap-l1sub: L1SUB_CAP_L1SUB reg offset
+      0x1b0 - C4
+      0x1c4 - C0 and C5
+- nvidia,device-id: Controller specific PCIe Device-ID
+      0x1AD4 - C0
+      0x1AD5 - C4
+      0x1AD4 - C5
+- nvidia,controller-id : Controller specific ID
+      0x0 - C0
+      0x4 - C4
+      0x5 - C5
+- nvidia,num-lanes: Must contain an entry to represent number of lanes
+  controller is given to get the link up
 
 Optional properties:
 - iommus: A reference to the IOMMU. See ../iommu/iommu.txt for details.

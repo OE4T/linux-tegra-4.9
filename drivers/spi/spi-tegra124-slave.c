@@ -1264,8 +1264,10 @@ static int tegra_spi_start_transfer_one(struct spi_device *spi,
 
 	if (tspi->chip_data->new_features) {
 		/* In case of new feature, all DMA interfaces are async.
-		 * so only 1.5x freq ration required */
-		core_speed = (speed * 3) >> 1;
+		 * so only 1.5x freq ration required
+		   Set speed to 2x to avoid border cases where actual
+		   clock is not same requested rate*/
+		core_speed = (speed * 2);
 	} else {
 		/* To maintain min 1.5x and max 4x ratio between
 		 * slave core clk and interface clk */

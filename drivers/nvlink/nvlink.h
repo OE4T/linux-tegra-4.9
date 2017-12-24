@@ -75,9 +75,37 @@ enum nvlink_endpt {
 };
 
 enum link_mode {
-	NVLINK_LINKSTATE_OFF,
-	NVLINK_LINKSTATE_SAFE,
-	NVLINK_LINKSTATE_HS
+	NVLINK_LINK_OFF,
+	NVLINK_LINK_HS,
+	NVLINK_LINK_SAFE,
+	NVLINK_LINK_FAULT,
+	NVLINK_LINK_RECOVERY,
+	NVLINK_LINK_DETECT,
+	NVLINK_LINK_RESET,
+	NVLINK_LINK_ENABLE_PM,
+	NVLINK_LINK_DISABLE_PM,
+	NVLINK_LINK_DISABLE_ERR_DETECT,
+	NVLINK_LINK_LANE_DISABLE,
+	NVLINK_LINK_LANE_SHUTDOWN
+};
+
+enum tx_mode {
+	NVLINK_TX_HS,
+	NVLINK_TX_SINGLE_LANE,
+	NVLINK_TX_SAFE,
+	NVLINK_TX_OFF,
+	NVLINK_TX_COMMON,
+	NVLINK_TX_COMMON_DISABLE,
+	NVLINK_TX_DATA_READY,
+	NVLINK_TX_PRBS_EN,
+};
+
+enum rx_mode {
+	NVLINK_RX_HS,
+	NVLINK_RX_SINGLE_LANE,
+	NVLINK_RX_SAFE,
+	NVLINK_RX_OFF,
+	NVLINK_RX_RXCAL,
 };
 
 enum nvlink_speed {
@@ -93,8 +121,16 @@ enum device_state {
 
 struct link_operations {
 	int (*enable_link)(struct nvlink_device *ndev);
-	int (*get_link_mode)(struct nvlink_link *link);
-	int (*set_link_mode)(struct nvlink_link *link, u32 mode);
+	u32 (*get_link_mode)(struct nvlink_device *ndev);
+	int (*set_link_mode)(struct nvlink_device *ndev, u32 mode);
+	u32 (*get_sublink_mode)(struct nvlink_device *ndev, bool is_rx_sublink);
+	int (*set_sublink_mode)(struct nvlink_device *ndev, bool is_rx_sublink,
+				u32 mode);
+	u32 (*get_link_state)(struct nvlink_device *ndev);
+	void (*get_tx_sublink_state)(struct nvlink_device *ndev,
+				u32 *tx_sublink_state);
+	void (*get_rx_sublink_state)(struct nvlink_device *ndev,
+				u32 *rx_sublink_state);
 };
 
 struct device_operations {

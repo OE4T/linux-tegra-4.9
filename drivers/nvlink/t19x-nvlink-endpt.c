@@ -742,6 +742,15 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	/* Fill in the link struct */
 	ndev->link.device_id = ndev->device_id;
 	ndev->link.link_ops.enable_link = t19x_nvlink_endpt_enable_link;
+	ndev->link.link_ops.get_link_mode = t19x_nvlink_get_link_mode;
+	ndev->link.link_ops.set_link_mode = t19x_nvlink_set_link_mode;
+	ndev->link.link_ops.get_sublink_mode = t19x_nvlink_get_sublink_mode;
+	ndev->link.link_ops.set_sublink_mode = t19x_nvlink_set_sublink_mode;
+	ndev->link.link_ops.get_link_state = t19x_nvlink_get_link_state;
+	ndev->link.link_ops.get_tx_sublink_state =
+					t19x_nvlink_get_tx_sublink_state;
+	ndev->link.link_ops.get_rx_sublink_state =
+					t19x_nvlink_get_rx_sublink_state;
 
 	/* Create device node */
 	ret = class_register(&ndev->class);

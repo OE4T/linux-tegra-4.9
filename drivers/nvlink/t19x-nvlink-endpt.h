@@ -93,6 +93,28 @@ void nvlink_config_common_intr(struct nvlink_device *ndev);
 void nvlink_enable_link_interrupts(struct nvlink_device *ndev);
 
 int go_to_safe_mode(struct nvlink_device *ndev);
+u32 t19x_nvlink_get_link_state(struct nvlink_device *ndev);
+u32 t19x_nvlink_get_link_mode(struct nvlink_device *ndev);
+u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev,
+				bool is_rx_sublink);
+void t19x_nvlink_get_tx_sublink_state(struct nvlink_device *ndev,
+				u32 *tx_sublink_state);
+void t19x_nvlink_get_rx_sublink_state(struct nvlink_device *ndev,
+				u32 *rx_sublink_state);
+int t19x_nvlink_poll_link_state(struct nvlink_device *ndev, u32 link_state,
+				u32 timeout);
+int t19x_nvlink_poll_tx_sublink_state(struct nvlink_device *ndev,
+				u32 tx_sublink_state, u32 timeout);
+int t19x_nvlink_poll_rx_sublink_state(struct nvlink_device *ndev,
+				u32 rx_sublink_state, u32 timeout);
+int t19x_nvlink_poll_sublink_state(struct nvlink_device *ndev0,
+				u32 tx_sublink_state,
+				struct nvlink_device *ndev1,
+				u32 rx_sublink_state,
+				u32 timeout);
+int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
+				u32 mode);
+int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode);
 
 #ifdef CONFIG_DEBUG_FS
 void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev);

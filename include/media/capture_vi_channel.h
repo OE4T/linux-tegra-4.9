@@ -46,6 +46,7 @@ struct tegra_vi_channel {
 	struct rcu_head rcu;
 	struct vi_capture *capture_data;
 	const struct vi_channel_drv_ops *ops;
+	struct device *rtcpu_dev;
 };
 
 int vi_channel_drv_register(struct platform_device *,

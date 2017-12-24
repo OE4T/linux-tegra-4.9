@@ -60,23 +60,28 @@ Required properties:
 - Controller dependent register offsets
   - nvidia,cfg-link-cap-l1sub: L1SUB_CAP_L1SUB reg offset
       0x154 - FPGA
-      0x194 - C2, C3 and C4
+      0x194 - C1, C2 and C3
       0x1b0 - C4
       0x1c4 - C0 and C5
   - nvidia,cap-pl16g-status: PL16G_CAP_PL16G_STATUS reg offset
-      0x164 - C2, C3 and C4
+      0x164 - C1, C2 and C3
       0x174 - C4
       0x174 - C0 and C5
   - nvidia,event-cntr-ctrl: EVENT_COUNTER_CONTROL reg offset
       0x168 - FPGA
-      0x1a8 - C2, C3 and C4
+      0x1a8 - C1, C2 and C3
       0x1c4 - C4
       0x1d8 - C0 and C5
   - nvidia,event-cntr-data: EVENT_COUNTER_DATA reg offset
       0x16c - FPGA
-      0x1ac - C2, C3 and C4
+      0x1ac - C1, C2 and C3
       0x1c8 - C4
       0x1dc - C0 and C5
+  - nvidia,cap_pl16g_cap_off: CAP_PL16G_CAP_OFF reg offset
+      0x178 - C1, C2 and C3
+      0x188 - C4
+      0x188 - C0 and C5
+
 - vddio-pex-ctl-supply: Regulator supply for PCIe side band signals
 
 Optional properties:

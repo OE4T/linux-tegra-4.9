@@ -175,6 +175,22 @@
 #define PORT_LOGIC_GEN2_CTRL		0x80C
 #define PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE	BIT(17)
 
+#define GEN3_EQ_CONTROL_OFF	0x8a8
+#define GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT	8
+#define GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK	GENMASK(23, 8)
+#define GEN3_EQ_CONTROL_OFF_FB_MODE_MASK	GENMASK(3, 0)
+
+#define GEN3_RELATED_OFF	0x890
+#define GEN3_RELATED_OFF_GEN3_EQ_DISABLE	BIT(16)
+#define GEN3_RELATED_OFF_RATE_SHADOW_SEL_SHIFT	24
+#define GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK	GENMASK(25, 24)
+
+#define CAP_SPCIE_CAP_OFF	0x154
+#define CAP_SPCIE_CAP_OFF_DSP_TX_PRESET0_MASK	GENMASK(3, 0)
+
+#define PL16G_CAP_OFF		0x188
+#define PL16G_CAP_OFF_DSP_16G_TX_PRESET_MASK	GENMASK(3, 0)
+
 #define AUX_CLK_FREQ			0xB40
 
 #define DMA_RD_CHNL_NUM			2
@@ -279,8 +295,12 @@ struct tegra_pcie_dw {
 
 	u32 cfg_link_cap_l1sub;
 	u32 cap_pl16g_status;
+	u32 cap_pl16g_cap_off;
 	u32 event_cntr_ctrl;
 	u32 event_cntr_data;
+
+	u32 num_lanes;
+	u32 max_speed;
 
 	struct regulator *pex_ctl_reg;
 };
@@ -1324,6 +1344,58 @@ static void disable_aspm_l12(struct tegra_pcie_dw *pcie)
 			  4, val);
 }
 
+static void program_gen3_gen4_eq_presets(struct pcie_port *pp)
+{
+	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
+	int i, init_preset = 5;
+	u32 val;
+
+	/* program init preset */
+	if (init_preset < 11) {
+		for (i = 0; i < pcie->num_lanes; i++) {
+			dw_pcie_cfg_read(pp->dbi_base + CAP_SPCIE_CAP_OFF
+					 + (i * 2), 2, &val);
+			val &= ~CAP_SPCIE_CAP_OFF_DSP_TX_PRESET0_MASK;
+			val |= init_preset;
+			dw_pcie_cfg_write(pp->dbi_base + CAP_SPCIE_CAP_OFF
+					 + (i* 2), 2, val);
+
+			dw_pcie_cfg_read(pp->dbi_base + pcie->cap_pl16g_cap_off
+					 + i, 1, &val);
+			val &= ~PL16G_CAP_OFF_DSP_16G_TX_PRESET_MASK;
+			val |= init_preset;
+			dw_pcie_cfg_write(pp->dbi_base + pcie->cap_pl16g_cap_off
+					 + i , 1, val);
+		}
+	}
+
+	dw_pcie_cfg_read(pp->dbi_base + GEN3_RELATED_OFF, 4, &val);
+	val &= ~GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK;
+	dw_pcie_cfg_write(pp->dbi_base + GEN3_RELATED_OFF, 4, val);
+
+	dw_pcie_cfg_read(pp->dbi_base + GEN3_EQ_CONTROL_OFF, 4, &val);
+	val &= ~GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK;
+	val |= (0x3ff << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
+	val &= ~GEN3_EQ_CONTROL_OFF_FB_MODE_MASK;
+	dw_pcie_cfg_write(pp->dbi_base + GEN3_EQ_CONTROL_OFF, 4, val);
+
+	dw_pcie_cfg_read(pp->dbi_base + GEN3_RELATED_OFF, 4, &val);
+	val &= ~GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK;
+	val |= (0x1 << GEN3_RELATED_OFF_RATE_SHADOW_SEL_SHIFT);
+	dw_pcie_cfg_write(pp->dbi_base + GEN3_RELATED_OFF, 4, val);
+
+	dw_pcie_cfg_read(pp->dbi_base + GEN3_EQ_CONTROL_OFF, 4, &val);
+	val &= ~GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK;
+	val |= (0x270 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
+	val &= ~GEN3_EQ_CONTROL_OFF_FB_MODE_MASK;
+	val |= 0x1;
+	dw_pcie_cfg_write(pp->dbi_base + GEN3_EQ_CONTROL_OFF, 4, val);
+
+	dw_pcie_cfg_read(pp->dbi_base + GEN3_RELATED_OFF, 4, &val);
+	val &= ~GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK;
+	dw_pcie_cfg_write(pp->dbi_base + GEN3_RELATED_OFF, 4, val);
+}
+
 static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 {
 	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
@@ -1402,23 +1474,16 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	}
 
 	/* Configure Max Speed from DT */
-	err = of_property_read_u32(np, "nvidia,max-speed", &val);
-	if (!err) {
-		if (val > 0 && val < 4) {
-			dw_pcie_cfg_read(pp->dbi_base + CFG_LINK_CAP, 4, &tmp);
-			tmp &= ~CFG_LINK_CAP_MAX_LINK_SPEED_MASK;
-			tmp |= val;
-			dw_pcie_cfg_write(pp->dbi_base + CFG_LINK_CAP, 4, tmp);
-			dw_pcie_cfg_read(pp->dbi_base +
-					 CFG_LINK_STATUS_CONTROL_2, 4, &tmp);
-			tmp &= ~CFG_LINK_STATUS_CONTROL_2_TARGET_LS_MASK;
-			tmp |= val;
-			dw_pcie_cfg_write(pp->dbi_base +
-					  CFG_LINK_STATUS_CONTROL_2, 4, tmp);
-		} else {
-			dev_err(pcie->dev, "incorrect max speed (%u)\n", val);
-		}
-	}
+	dw_pcie_cfg_read(pp->dbi_base + CFG_LINK_CAP, 4, &tmp);
+	tmp &= ~CFG_LINK_CAP_MAX_LINK_SPEED_MASK;
+	tmp |= pcie->max_speed;
+	dw_pcie_cfg_write(pp->dbi_base + CFG_LINK_CAP, 4, tmp);
+	dw_pcie_cfg_read(pp->dbi_base + CFG_LINK_STATUS_CONTROL_2, 4, &tmp);
+	tmp &= ~CFG_LINK_STATUS_CONTROL_2_TARGET_LS_MASK;
+	tmp |= pcie->max_speed;
+	dw_pcie_cfg_write(pp->dbi_base + CFG_LINK_STATUS_CONTROL_2, 4, tmp);
+
+	program_gen3_gen4_eq_presets(pp);
 
 	/* Program what ASPM states sould get advertised */
 	err = of_property_read_u32(np, "nvidia,disable-aspm-states", &val);
@@ -1668,6 +1733,12 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "fail to read cap-pl16g-status: %d\n", ret);
 		pcie->cap_pl16g_status = CAP_PL16G_STATUS_REG;
 	}
+	of_property_read_u32(np, "nvidia,cap-pl16g-cap-off",
+			     &pcie->cap_pl16g_cap_off);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read cap-pl16g-cap-off: %d\n", ret);
+		pcie->cap_pl16g_cap_off = PL16G_CAP_OFF;
+	}
 	of_property_read_u32(np, "nvidia,event-cntr-ctrl",
 			     &pcie->event_cntr_ctrl);
 	if (ret < 0) {
@@ -1679,6 +1750,17 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(pcie->dev, "fail to read event-cntr-data: %d\n", ret);
 		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
+	}
+	ret = of_property_read_u32(np, "num-lanes", &pcie->num_lanes);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read num-lanes: %d\n", ret);
+		pcie->num_lanes = 0;
+	}
+	ret = of_property_read_u32(np, "nvidia,max-speed", &pcie->max_speed);
+	if ((ret < 0) | (val < 0 && val > 4)) {
+		dev_err(pcie->dev, "invalid max-speed (err=%d), set to Gen-1\n",
+			ret);
+		pcie->max_speed = 1;
 	}
 
 	if (tegra_platform_is_fpga()) {

@@ -862,6 +862,7 @@ static void ep_test_dma_remove(struct pci_dev *pdev)
 	struct ep_pvt *ep = pci_get_drvdata(pdev);
 
 	debugfs_remove_recursive(ep->debugfs);
+	free_irq(pdev->irq, ep);
 	pci_disable_msi(pdev);
 	dma_free_coherent(&pdev->dev, alloc_size, p_cpu_addr, dma_addr);
 	iounmap(ep->mmio_addr);

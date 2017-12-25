@@ -58,7 +58,7 @@ struct quadd_mmap_area {
 
 	atomic_t state;
 	atomic_t ref_count;
-	spinlock_t state_lock;
+	raw_spinlock_t state_lock;
 };
 
 struct quadd_comm_control_interface {

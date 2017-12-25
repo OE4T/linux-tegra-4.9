@@ -44,7 +44,7 @@ struct quadd_cntrs_info {
 	int pcntrs;
 	int ccntr;
 
-	spinlock_t lock;
+	raw_spinlock_t lock;
 };
 
 static DEFINE_PER_CPU(struct quadd_pmu_info, cpu_pmu_info);
@@ -653,7 +653,7 @@ static void __get_free_counters(void *arg)
 
 	pcntrs = get_free_counters(free_bitmap, QUADD_MAX_PMU_COUNTERS, &ccntr);
 
-	spin_lock(&ci->lock);
+	raw_spin_lock(&ci->lock);
 
 	ci->pcntrs = min_t(int, pcntrs, ci->pcntrs);
 
@@ -663,7 +663,7 @@ static void __get_free_counters(void *arg)
 	pr_debug("[%d] pcntrs/ccntr: %d/%d, free_bitmap: %#lx\n",
 		 smp_processor_id(), pcntrs, ccntr, free_bitmap[0]);
 
-	spin_unlock(&ci->lock);
+	raw_spin_unlock(&ci->lock);
 }
 
 static void free_events(struct list_head *head)
@@ -693,7 +693,7 @@ set_events(int cpuid, const struct quadd_event *events, int size)
 		return -ENODEV;
 	}
 
-	spin_lock_init(&free_ci.lock);
+	raw_spin_lock_init(&free_ci.lock);
 	free_ci.pcntrs = QUADD_MAX_PMU_COUNTERS;
 	free_ci.ccntr = 1;
 

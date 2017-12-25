@@ -57,7 +57,7 @@ struct quadd_comm_ctx {
 	struct miscdevice *misc_dev;
 
 	struct list_head mmap_areas;
-	spinlock_t mmaps_lock;
+	raw_spinlock_t mmaps_lock;
 };
 
 struct comm_cpu_context {
@@ -651,12 +651,12 @@ device_ioctl(struct file *file,
 			 (unsigned long long)extabs.vm_start,
 			 (unsigned long long)extabs.vm_end);
 
-		spin_lock(&comm_ctx.mmaps_lock);
+		raw_spin_lock(&comm_ctx.mmaps_lock);
 		mmap = find_mmap(extabs.user_mmap_start);
 		if (!mmap) {
 			pr_err("%s: error: mmap is not found\n", __func__);
 			err = -ENXIO;
-			spin_unlock(&comm_ctx.mmaps_lock);
+			raw_spin_unlock(&comm_ctx.mmaps_lock);
 			goto error_out;
 		}
 
@@ -664,7 +664,7 @@ device_ioctl(struct file *file,
 		mmap->rb = NULL;
 
 		err = comm_ctx.control->set_extab(&extabs, mmap);
-		spin_unlock(&comm_ctx.mmaps_lock);
+		raw_spin_unlock(&comm_ctx.mmaps_lock);
 		if (err) {
 			pr_err("error: set_sections_info\n");
 			goto error_out;
@@ -679,9 +679,9 @@ device_ioctl(struct file *file,
 			goto error_out;
 		}
 
-		spin_lock(&comm_ctx.mmaps_lock);
+		raw_spin_lock(&comm_ctx.mmaps_lock);
 		mmap = find_mmap((unsigned long)mmap_rb.vm_start);
-		spin_unlock(&comm_ctx.mmaps_lock);
+		raw_spin_unlock(&comm_ctx.mmaps_lock);
 		if (!mmap) {
 			pr_err("%s: error: mmap is not found\n", __func__);
 			err = -ENXIO;
@@ -737,7 +737,7 @@ static void mmap_close(struct vm_area_struct *vma)
 	pr_debug("%s: mmap_close: vma: %#lx - %#lx\n",
 		 __func__, vma->vm_start, vma->vm_end);
 
-	spin_lock(&comm_ctx.mmaps_lock);
+	raw_spin_lock(&comm_ctx.mmaps_lock);
 
 	mmap = find_mmap(vma->vm_start);
 	if (!mmap) {
@@ -757,7 +757,7 @@ static void mmap_close(struct vm_area_struct *vma)
 	delete_mmap(mmap);
 
 out:
-	spin_unlock(&comm_ctx.mmaps_lock);
+	raw_spin_unlock(&comm_ctx.mmaps_lock);
 }
 
 static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
@@ -769,11 +769,11 @@ static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	pr_debug("mmap_fault: vma: %#lx - %#lx, pgoff: %#lx, vaddr: %p\n",
 		 vma->vm_start, vma->vm_end, vmf->pgoff, vmf->virtual_address);
 
-	spin_lock(&comm_ctx.mmaps_lock);
+	raw_spin_lock(&comm_ctx.mmaps_lock);
 
 	mmap = find_mmap(vma->vm_start);
 	if (!mmap) {
-		spin_unlock(&comm_ctx.mmaps_lock);
+		raw_spin_unlock(&comm_ctx.mmaps_lock);
 		return VM_FAULT_SIGBUS;
 	}
 
@@ -782,7 +782,7 @@ static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	vmf->page = vmalloc_to_page(data + offset);
 	get_page(vmf->page);
 
-	spin_unlock(&comm_ctx.mmaps_lock);
+	raw_spin_unlock(&comm_ctx.mmaps_lock);
 	return 0;
 }
 
@@ -817,7 +817,7 @@ device_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	atomic_set(&entry->state, QUADD_MMAP_STATE_ACTIVE);
 	atomic_set(&entry->ref_count, 0);
-	spin_lock_init(&entry->state_lock);
+	raw_spin_lock_init(&entry->state_lock);
 
 	INIT_LIST_HEAD(&entry->list);
 	INIT_LIST_HEAD(&entry->ex_entries);
@@ -835,9 +835,9 @@ device_mmap(struct file *filp, struct vm_area_struct *vma)
 		 __func__, entry->data, entry->data + nr_pages * PAGE_SIZE,
 		 nr_pages * PAGE_SIZE);
 
-	spin_lock(&comm_ctx.mmaps_lock);
+	raw_spin_lock(&comm_ctx.mmaps_lock);
 	list_add_tail(&entry->list, &comm_ctx.mmap_areas);
-	spin_unlock(&comm_ctx.mmaps_lock);
+	raw_spin_unlock(&comm_ctx.mmaps_lock);
 
 	vma->vm_ops = &mmap_vm_ops;
 	vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_DONTDUMP;
@@ -888,7 +888,7 @@ static int comm_init(void)
 	comm_ctx.nr_users = 0;
 
 	INIT_LIST_HEAD(&comm_ctx.mmap_areas);
-	spin_lock_init(&comm_ctx.mmaps_lock);
+	raw_spin_lock_init(&comm_ctx.mmaps_lock);
 
 	for_each_possible_cpu(cpu_id) {
 		struct comm_cpu_context *cc = &per_cpu(cpu_ctx, cpu_id);

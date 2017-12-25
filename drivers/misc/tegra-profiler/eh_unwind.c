@@ -61,7 +61,7 @@ struct quadd_unwind_ctx {
 
 	pid_t pid;
 	unsigned long ex_tables_size;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 };
 
 struct unwind_idx {
@@ -367,7 +367,7 @@ get_extabs_ehabi(unsigned long key, struct ex_region_info *ri)
 
 	mmap = ri->mmap;
 
-	spin_lock(&mmap->state_lock);
+	raw_spin_lock(&mmap->state_lock);
 
 	if (atomic_read(&mmap->state) != QUADD_MMAP_STATE_ACTIVE) {
 		err = -ENOENT;
@@ -382,7 +382,7 @@ get_extabs_ehabi(unsigned long key, struct ex_region_info *ri)
 		err = -ENOENT;
 
 out:
-	spin_unlock(&mmap->state_lock);
+	raw_spin_unlock(&mmap->state_lock);
 	return err;
 }
 
@@ -390,13 +390,13 @@ static void put_extabs_ehabi(struct ex_region_info *ri)
 {
 	struct quadd_mmap_area *mmap = ri->mmap;
 
-	spin_lock(&mmap->state_lock);
+	raw_spin_lock(&mmap->state_lock);
 
 	if (atomic_dec_and_test(&mmap->ref_count) &&
 	    atomic_read(&mmap->state) == QUADD_MMAP_STATE_CLOSING)
 		atomic_set(&mmap->state, QUADD_MMAP_STATE_CLOSED);
 
-	spin_unlock(&mmap->state_lock);
+	raw_spin_unlock(&mmap->state_lock);
 
 	if (atomic_read(&mmap->ref_count) < 0)
 		pr_err_once("%s: error: mmap ref_count\n", __func__);
@@ -415,7 +415,7 @@ quadd_get_dw_frames(unsigned long key, struct ex_region_info *ri)
 
 	mmap = ri->mmap;
 
-	spin_lock(&mmap->state_lock);
+	raw_spin_lock(&mmap->state_lock);
 
 	if (atomic_read(&mmap->state) != QUADD_MMAP_STATE_ACTIVE) {
 		err = -ENOENT;
@@ -439,7 +439,7 @@ quadd_get_dw_frames(unsigned long key, struct ex_region_info *ri)
 		err = -ENOENT;
 
 out:
-	spin_unlock(&mmap->state_lock);
+	raw_spin_unlock(&mmap->state_lock);
 	return err;
 }
 
@@ -447,13 +447,13 @@ void quadd_put_dw_frames(struct ex_region_info *ri)
 {
 	struct quadd_mmap_area *mmap = ri->mmap;
 
-	spin_lock(&mmap->state_lock);
+	raw_spin_lock(&mmap->state_lock);
 
 	if (atomic_dec_and_test(&mmap->ref_count) &&
 	    atomic_read(&mmap->state) == QUADD_MMAP_STATE_CLOSING)
 		atomic_set(&mmap->state, QUADD_MMAP_STATE_CLOSED);
 
-	spin_unlock(&mmap->state_lock);
+	raw_spin_unlock(&mmap->state_lock);
 
 	if (atomic_read(&mmap->ref_count) < 0)
 		pr_err_once("%s: error: mmap ref_count\n", __func__);
@@ -507,7 +507,7 @@ int quadd_unwind_set_extab(struct quadd_sections *extabs,
 	if (mmap->type != QUADD_MMAP_TYPE_EXTABS)
 		return -EIO;
 
-	spin_lock(&ctx.lock);
+	raw_spin_lock(&ctx.lock);
 
 	rd = rcu_dereference(ctx.rd);
 	if (!rd) {
@@ -582,14 +582,14 @@ int quadd_unwind_set_extab(struct quadd_sections *extabs,
 	if (rd)
 		call_rcu(&rd->rcu, rd_free_rcu);
 
-	spin_unlock(&ctx.lock);
+	raw_spin_unlock(&ctx.lock);
 
 	return 0;
 
 error_free:
 	rd_free(rd_new);
 error_out:
-	spin_unlock(&ctx.lock);
+	raw_spin_unlock(&ctx.lock);
 	return err;
 }
 
@@ -604,7 +604,7 @@ quadd_unwind_set_tail_info(unsigned long vm_start,
 	struct regions_data *rd, *rd_new;
 	struct extab_info *ti;
 
-	spin_lock(&ctx.lock);
+	raw_spin_lock(&ctx.lock);
 
 	rd = rcu_dereference(ctx.rd);
 
@@ -637,7 +637,7 @@ quadd_unwind_set_tail_info(unsigned long vm_start,
 	rcu_assign_pointer(ctx.rd, rd_new);
 
 	call_rcu(&rd->rcu, rd_free_rcu);
-	spin_unlock(&ctx.lock);
+	raw_spin_unlock(&ctx.lock);
 
 	return;
 
@@ -645,7 +645,7 @@ error_free:
 	rd_free(rd_new);
 
 error_out:
-	spin_unlock(&ctx.lock);
+	raw_spin_unlock(&ctx.lock);
 }
 
 static int
@@ -677,7 +677,7 @@ __quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
 	if (!mmap)
 		return;
 
-	spin_lock(&ctx.lock);
+	raw_spin_lock(&ctx.lock);
 
 	rd = rcu_dereference(ctx.rd);
 	if (!rd || !rd->curr_nr)
@@ -704,20 +704,20 @@ __quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
 	call_rcu(&rd->rcu, rd_free_rcu);
 
 error_out:
-	spin_unlock(&ctx.lock);
+	raw_spin_unlock(&ctx.lock);
 }
 
 void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
 {
 	int state;
 
-	spin_lock(&mmap->state_lock);
+	raw_spin_lock(&mmap->state_lock);
 
 	state = atomic_read(&mmap->ref_count) > 0 ?
 		QUADD_MMAP_STATE_CLOSING : QUADD_MMAP_STATE_CLOSED;
 	atomic_set(&mmap->state, state);
 
-	spin_unlock(&mmap->state_lock);
+	raw_spin_unlock(&mmap->state_lock);
 
 	while (atomic_read(&mmap->state) != QUADD_MMAP_STATE_CLOSED)
 		cpu_relax();
@@ -1413,7 +1413,7 @@ int quadd_unwind_start(struct task_struct *task)
 		return err;
 	}
 
-	spin_lock(&ctx.lock);
+	raw_spin_lock(&ctx.lock);
 
 	rd_old = rcu_dereference(ctx.rd);
 	if (rd_old)
@@ -1428,7 +1428,7 @@ int quadd_unwind_start(struct task_struct *task)
 
 	ctx.ex_tables_size = 0;
 
-	spin_unlock(&ctx.lock);
+	raw_spin_unlock(&ctx.lock);
 
 	return 0;
 }
@@ -1442,7 +1442,7 @@ void quadd_unwind_stop(void)
 
 	quadd_dwarf_unwind_stop();
 
-	spin_lock(&ctx.lock);
+	raw_spin_lock(&ctx.lock);
 
 	ctx.pid = 0;
 
@@ -1462,7 +1462,7 @@ void quadd_unwind_stop(void)
 	call_rcu(&rd->rcu, rd_free_rcu);
 
 out:
-	spin_unlock(&ctx.lock);
+	raw_spin_unlock(&ctx.lock);
 	pr_info("exception tables size: %lu bytes\n", ctx.ex_tables_size);
 }
 
@@ -1474,7 +1474,7 @@ int quadd_unwind_init(void)
 	if (err)
 		return err;
 
-	spin_lock_init(&ctx.lock);
+	raw_spin_lock_init(&ctx.lock);
 	rcu_assign_pointer(ctx.rd, NULL);
 	ctx.pid = 0;
 

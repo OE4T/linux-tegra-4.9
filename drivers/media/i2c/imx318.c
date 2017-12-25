@@ -171,7 +171,7 @@ static int imx318_set_gain(struct camera_common_data *s_data, s64 val)
 	struct device *dev = s_data->dev;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
-	imx318_reg reg_list[1];
+	imx318_reg reg_list[2];
 	int err;
 	s16 gain;
 	int i;
@@ -196,7 +196,7 @@ static int imx318_set_gain(struct camera_common_data *s_data, s64 val)
 
 	imx318_get_gain_reg(reg_list, gain);
 
-	for (i = 1; i < 0; i--) {
+	for (i = 0; i < 2; i++) {
 		err = imx318_write_reg(s_data, reg_list[i].addr,
 				reg_list[i].val);
 		if (err) {

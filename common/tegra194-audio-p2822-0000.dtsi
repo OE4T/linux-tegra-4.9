@@ -17,6 +17,15 @@
 #include <t19x-common-platforms/tegra194-platforms-audio-pinmux.dtsi>
 
 / {
+
+	aconnect@2a41000 {
+		status = "okay";
+
+		agic-controller@2a41000 {
+			status = "okay";
+		};
+	};
+
 	i2c@c250000 {
 		rt5658: rt5659.7-001a@1a {
 			compatible = "realtek,rt5658";

@@ -78,17 +78,11 @@
 		status = "disabled";
 	};
 
-	plugin-manager {
-		status = "disabled";
-	};
-
 	thermal-zones {
 		status = "disabled";
 	};
 
 	plugin-manager {
-		status = "disabled";
-
 		fragement-tegra-wdt-en {
 
 			override@0 {

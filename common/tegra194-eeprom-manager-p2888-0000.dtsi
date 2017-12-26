@@ -23,5 +23,14 @@
 				slave-address = <0x56>;
 			};
 		};
+		bus@1 {
+			i2c-bus = <&cam_i2c>;
+			eeprom@0 {
+				slave-address = <0x54>;
+			};
+			eeprom@1 {
+				slave-address = <0x57>;
+			};
+		};
 	};
 };

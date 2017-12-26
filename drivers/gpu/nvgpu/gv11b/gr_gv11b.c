@@ -3811,12 +3811,16 @@ static int gr_gv11b_ecc_scrub_sm_l1_tag(struct gk20a *g)
 	nvgpu_log_info(g, "gr_gv11b_ecc_scrub_sm_l1_tag");
 	scrub_mask =
 		(gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_0_task_f() |
-		gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_1_task_f());
+		gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_1_task_f() |
+		gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_pixprf_task_f() |
+		gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_miss_fifo_task_f());
 	gk20a_writel(g, gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_r(), scrub_mask);
 
 	scrub_done =
 		(gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_0_init_f() |
-		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_1_init_f());
+		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_1_init_f() |
+		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_pixprf_init_f() |
+		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_miss_fifo_init_f());
 	return gr_gv11b_ecc_scrub_is_done(g,
 				gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_r(),
 				scrub_mask, scrub_done);

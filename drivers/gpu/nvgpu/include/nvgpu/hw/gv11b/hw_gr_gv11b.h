@@ -1112,6 +1112,22 @@ static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_el1_1_task_f(void
 {
 	return 0x2U;
 }
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_pixprf_f(u32 v)
+{
+	return (v & 0x1U) << 4U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_pixprf_task_f(void)
+{
+	return 0x10U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_miss_fifo_f(u32 v)
+{
+	return (v & 0x1U) << 5U;
+}
+static inline u32 gr_pri_gpcs_tpcs_sm_l1_tag_ecc_control_scrub_miss_fifo_task_f(void)
+{
+	return 0x20U;
+}
 static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_r(void)
 {
 	return 0x00504620U;
@@ -1129,6 +1145,22 @@ static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_1_f(u32 v)
 	return (v & 0x1U) << 1U;
 }
 static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_el1_1_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_pixprf_f(u32 v)
+{
+	return (v & 0x1U) << 4U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_pixprf_init_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_miss_fifo_f(u32 v)
+{
+	return (v & 0x1U) << 5U;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_control_scrub_miss_fifo_init_f(void)
 {
 	return 0x0U;
 }

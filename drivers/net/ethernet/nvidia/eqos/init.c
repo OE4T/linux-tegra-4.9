@@ -1016,11 +1016,6 @@ int eqos_probe(struct platform_device *pdev)
 		&(pdata->ptp_cfg.ptp_dma_ch_id),
 		PTP_DMA_CH_DEFAULT, PTP_DMA_CH_MAX);
 
-	get_dt_u32(pdata, "nvidia,phy-max-frame-size",
-		   &pdata->dt_cfg.phy_max_frame_size,
-		   PHY_MAX_FRAME_SIZE_DEFAULT, PHY_MAX_FRAME_SIZE_MAX);
-	pdata->dt_cfg.phy_max_frame_size <<= 10;
-
 	pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 	get_dt_u32(pdata, "nvidia,pause_frames", &pdt_cfg->pause_frames,
 			PAUSE_FRAMES_DEFAULT, PAUSE_FRAMES_MAX);

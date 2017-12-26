@@ -1308,9 +1308,6 @@ typedef enum {
 #define ISO_BW_DEFAULT (80 * 1024)
 #define SLOT_INTVL_DEFAULT 124
 #define SLOT_INTVL_MAX 4095
-/* PHY max frame size in kb */
-#define PHY_MAX_FRAME_SIZE_DEFAULT 10
-#define PHY_MAX_FRAME_SIZE_MAX 10
 struct eqos_cfg {
 	bool	use_multi_q;	/* 0=single queue, jumbo frames enabled */
 	rxq_ctrl_e	rxq_ctrl[MAX_CHANS];
@@ -1319,7 +1316,6 @@ struct eqos_cfg {
 	pause_frames_e	pause_frames;
 	uint		iso_bw;
 	uint		eth_iso_enable;
-	u32		phy_max_frame_size; /* max size jumbo frames allowed */
 	bool		phy_apd_mode;	/* Represents PHY AUTO POWER DOWN mode */
 	u32		slot_intvl_val; /* Slot Interval Value*/
 };

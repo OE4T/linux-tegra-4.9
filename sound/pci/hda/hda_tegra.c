@@ -465,6 +465,7 @@ static int hda_tegra_first_init(struct azx *chip, struct platform_device *pdev)
 	int err;
 	unsigned short gcap;
 	int irq_id = platform_get_irq(pdev, 0);
+	const char *card_name;
 
 	err = hda_tegra_init_chip(chip, pdev);
 	if (err)
@@ -524,8 +525,18 @@ static int hda_tegra_first_init(struct azx *chip, struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	strcpy(card->driver, "tegra-hda");
-	strcpy(card->shortname, "tegra-hda");
+
+	/* xavier onwards, passing card name from DT */
+	if (!of_property_read_string(pdev->dev.of_node, "hda,card-name",
+		&card_name)) {
+		strcpy(card->driver, card_name);
+		strcpy(card->shortname, card_name);
+	} else {
+		/* for platforms < xavier */
+		strcpy(card->driver, "tegra-hda");
+		strcpy(card->shortname, "tegra-hda");
+	}
+
 	snprintf(card->longname, sizeof(card->longname),
 		 "%s at 0x%lx irq %i",
 		 card->shortname, bus->addr, bus->irq);

@@ -24,6 +24,10 @@
 		agic-controller@2a41000 {
 			status = "okay";
 		};
+
+		adsp@2993000 {
+			status = "okay";
+		};
 	};
 
 	i2c@c250000 {

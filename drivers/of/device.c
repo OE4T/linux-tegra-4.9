@@ -234,7 +234,8 @@ void of_device_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
 	const char *compat;
 	struct alias_prop *app;
-	int seen = 0, cplen, sl;
+	struct property *p;
+	int seen = 0;
 
 	if ((!dev) || (!dev->of_node))
 		return;
@@ -247,12 +248,8 @@ void of_device_uevent(struct device *dev, struct kobj_uevent_env *env)
 	/* Since the compatible field can contain pretty much anything
 	 * it's not really legal to split it out with commas. We split it
 	 * up using a number of environment variables instead. */
-	compat = of_get_property(dev->of_node, "compatible", &cplen);
-	while (compat && *compat && cplen > 0) {
+	of_property_for_each_string(dev->of_node, "compatible", p, compat) {
 		add_uevent_var(env, "OF_COMPATIBLE_%d=%s", seen, compat);
-		sl = strlen(compat) + 1;
-		compat += sl;
-		cplen -= sl;
 		seen++;
 	}
 	add_uevent_var(env, "OF_COMPATIBLE_N=%d", seen);

@@ -524,14 +524,16 @@ static void cmdq_prep_dcmd_desc(struct mmc_host *mmc,
 	u8 *desc;
 	__le64 *dataddr;
 	struct cmdq_host *cq_host = mmc_cmdq_private(mmc);
-	int r1b = 0;
+	int timing = 0;
+	int qbr = 0;
 
 	if (!(mrq->cmd->flags & MMC_RSP_PRESENT)) {
 		resp_type = 0;
 	} else if (mrq->cmd->flags & MMC_RSP_R1B) {
 		resp_type = 3;
+		qbr = 1;
 		if (cq_host->quirks & CMDQ_QUIRK_SET_CMD_TIMING_R1B_DCMD)
-			r1b = 1;
+			timing = 1;
 	} else if (mrq->cmd->flags & (MMC_RSP_R1 | MMC_RSP_R4 | MMC_RSP_R5)) {
 		resp_type = 2;
 	} else {
@@ -545,10 +547,10 @@ static void cmdq_prep_dcmd_desc(struct mmc_host *mmc,
 	data |= (VALID(1) |
 		 END(1) |
 		 INT(1) |
-		 QBAR(r1b) |
+		 QBAR(qbr) |
 		 ACT(0x5) |
 		 CMD_INDEX(mrq->cmd->opcode) |
-		 CMD_TIMING(r1b) | RESP_TYPE(resp_type));
+		 CMD_TIMING(timing) | RESP_TYPE(resp_type));
 	*task_desc |= data;
 	desc = (u8 *)task_desc;
 

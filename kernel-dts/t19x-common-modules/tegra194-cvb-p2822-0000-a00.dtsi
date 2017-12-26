@@ -11,6 +11,8 @@
  * more details.
  */
 
+#include "tegra194-camera-plugin-manager.dtsi"
+
 / {
 	soft_wdt:soft_watchdog {
 		compatible = "softdog-platform";

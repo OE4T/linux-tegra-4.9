@@ -25,6 +25,7 @@
 #include <linux/tegra_prod.h>
 
 #define NVLINK_DRV_NAME		"t19x-nvlink-endpt"
+#define NVLINK_IP_VERSION	2 /* NVLINK VERSION 2.0 */
 #define DEFAULT_LOOP_SLEEP_US	100
 #define DEFAULT_LOOP_TIMEOUT_US	1000000
 

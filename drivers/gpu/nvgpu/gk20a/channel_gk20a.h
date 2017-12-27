@@ -340,6 +340,9 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		unsigned int timeslice_period,
 		unsigned int *__timeslice_timeout, unsigned int *__timeslice_scale);
 
+void gk20a_wait_until_counter_is_N(
+	struct channel_gk20a *ch, nvgpu_atomic_t *counter, int wait_value,
+	struct nvgpu_cond *c, const char *caller, const char *counter_name);
 int channel_gk20a_alloc_job(struct channel_gk20a *c,
 		struct channel_gk20a_job **job_out);
 void channel_gk20a_free_job(struct channel_gk20a *c,

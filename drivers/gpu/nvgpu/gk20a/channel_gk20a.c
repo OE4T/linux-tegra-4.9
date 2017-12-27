@@ -256,7 +256,7 @@ void gk20a_disable_channel(struct channel_gk20a *ch)
 	channel_gk20a_update_runlist(ch, false);
 }
 
-static void gk20a_wait_until_counter_is_N(
+void gk20a_wait_until_counter_is_N(
 	struct channel_gk20a *ch, nvgpu_atomic_t *counter, int wait_value,
 	struct nvgpu_cond *c, const char *caller, const char *counter_name)
 {

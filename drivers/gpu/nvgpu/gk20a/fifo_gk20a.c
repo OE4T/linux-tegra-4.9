@@ -862,7 +862,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_init_fifo_setup_sw(struct gk20a *g)
+int gk20a_init_fifo_setup_sw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	unsigned int chid, i;
@@ -2093,7 +2093,7 @@ u32 gk20a_fifo_get_failing_engine_data(struct gk20a *g,
 	return active_engine_id;
 }
 
-static bool gk20a_fifo_check_ch_ctxsw_timeout(struct channel_gk20a *ch,
+bool gk20a_fifo_check_ch_ctxsw_timeout(struct channel_gk20a *ch,
 		bool *verbose, u32 *ms)
 {
 	bool recover = false;
@@ -2971,7 +2971,7 @@ static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 		gk20a_fifo_recover(g, engines, ~(u32)0, false, false, true);
 }
 
-static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
+int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 {
 	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
@@ -3032,7 +3032,7 @@ void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist)
 }
 
 /* recursively construct a runlist with interleaved bare channels and TSGs */
-static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
+u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 				struct fifo_runlist_info_gk20a *runlist,
 				u32 cur_level,
 				u32 *runlist_entry,

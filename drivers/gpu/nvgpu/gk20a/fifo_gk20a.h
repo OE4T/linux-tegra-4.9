@@ -378,6 +378,15 @@ int gk20a_fifo_setup_userd(struct channel_gk20a *c);
 u32 gk20a_fifo_pbdma_acquire_val(u64 timeout);
 
 
+u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
+				struct fifo_runlist_info_gk20a *runlist,
+				u32 cur_level,
+				u32 *runlist_entry,
+				bool interleave_enabled,
+				bool prev_empty,
+				u32 *entries_left);
+int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id);
+int gk20a_init_fifo_setup_sw(struct gk20a *g);
 void gk20a_fifo_handle_runlist_event(struct gk20a *g);
 bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 			u32 engine_subid, bool fake_fault);
@@ -386,6 +395,8 @@ void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 			u32 hw_id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault);
 
+bool gk20a_fifo_check_ch_ctxsw_timeout(struct channel_gk20a *ch,
+			bool *verbose, u32 *ms);
 bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 			bool *verbose, u32 *ms);
 bool gk20a_fifo_handle_sched_error(struct gk20a *g);

@@ -129,16 +129,6 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	return 0;
 }
 
-u32 gk20a_channel_get_timeslice(struct channel_gk20a *ch)
-{
-	struct gk20a *g = ch->g;
-
-	if (!ch->timeslice_us)
-		return g->ops.fifo.default_timeslice_us(g);
-
-	return ch->timeslice_us;
-}
-
 int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int timeslice_period,
 		int *__timeslice_timeout, int *__timeslice_scale)
@@ -310,34 +300,6 @@ void gk20a_disable_channel(struct channel_gk20a *ch)
 {
 	gk20a_channel_abort(ch, true);
 	channel_gk20a_update_runlist(ch, false);
-}
-
-int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
-						u32 level)
-{
-	struct gk20a *g = ch->g;
-	int ret;
-
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		nvgpu_err(g, "invalid operation for TSG!");
-		return -EINVAL;
-	}
-
-	switch (level) {
-	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW:
-	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
-	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_HIGH:
-		ret = g->ops.fifo.set_runlist_interleave(g, ch->chid,
-							false, 0, level);
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-
-	gk20a_dbg(gpu_dbg_sched, "chid=%u interleave=%u", ch->chid, level);
-
-	return ret ? ret : g->ops.fifo.update_runlist(g, ch->runlist_id, ~0, true, true);
 }
 
 static void gk20a_wait_until_counter_is_N(
@@ -742,8 +704,6 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	ch->has_timedout = false;
 	ch->wdt_enabled = true;
 	ch->obj_class = 0;
-	ch->interleave_level = NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW;
-	ch->timeslice_us = g->timeslice_low_priority_us;
 #ifdef CONFIG_TEGRA_19x_GPU
 	memset(&ch->t19x, 0, sizeof(struct channel_t19x));
 #endif

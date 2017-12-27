@@ -604,8 +604,8 @@ int vgpu_fifo_wait_engine_idle(struct gk20a *g)
 	return 0;
 }
 
-static int vgpu_fifo_tsg_set_runlist_interleave(struct gk20a *g,
-					u32 tsgid,
+int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
+					u32 id,
 					u32 runlist_id,
 					u32 new_level)
 {
@@ -618,60 +618,11 @@ static int vgpu_fifo_tsg_set_runlist_interleave(struct gk20a *g,
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_SET_RUNLIST_INTERLEAVE;
 	msg.handle = vgpu_get_handle(g);
-	p->tsg_id = tsgid;
+	p->tsg_id = id;
 	p->level = new_level;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 	return err ? err : msg.ret;
-}
-
-int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
-					u32 id,
-					bool is_tsg,
-					u32 runlist_id,
-					u32 new_level)
-{
-	struct tegra_vgpu_cmd_msg msg;
-	struct tegra_vgpu_channel_runlist_interleave_params *p =
-			&msg.params.channel_interleave;
-	struct channel_gk20a *ch;
-	int err;
-
-	gk20a_dbg_fn("");
-
-	if (is_tsg)
-		return vgpu_fifo_tsg_set_runlist_interleave(g, id,
-						runlist_id, new_level);
-
-	ch = &g->fifo.channel[id];
-	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_RUNLIST_INTERLEAVE;
-	msg.handle = vgpu_get_handle(ch->g);
-	p->handle = ch->virt_ctx;
-	p->level = new_level;
-	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	WARN_ON(err || msg.ret);
-	return err ? err : msg.ret;
-}
-
-int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
-{
-	struct tegra_vgpu_cmd_msg msg;
-	struct tegra_vgpu_channel_timeslice_params *p =
-			&msg.params.channel_timeslice;
-	int err;
-
-	gk20a_dbg_fn("");
-
-	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_TIMESLICE;
-	msg.handle = vgpu_get_handle(ch->g);
-	p->handle = ch->virt_ctx;
-	p->timeslice_us = timeslice;
-	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	err = err ? err : msg.ret;
-	WARN_ON(err);
-	if (!err)
-		ch->timeslice_us = p->timeslice_us;
-	return err;
 }
 
 int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,

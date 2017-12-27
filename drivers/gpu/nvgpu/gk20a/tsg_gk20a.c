@@ -211,7 +211,7 @@ int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
 	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_HIGH:
 		ret = g->ops.fifo.set_runlist_interleave(g, tsg->tsgid,
-							true, 0, level);
+							0, level);
 		if (!ret)
 			tsg->interleave_level = level;
 		break;

@@ -504,7 +504,7 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 
 	/* -1 means default channel timeslice value */
 	if (timeslice != -1) {
-		err = gk20a_fifo_set_timeslice(ce_ctx->ch, timeslice);
+		err = gk20a_fifo_tsg_set_timeslice(ce_ctx->tsg, timeslice);
 		if (err) {
 			nvgpu_err(g,
 				"ce: could not set the channel timeslice value for CE context");
@@ -514,7 +514,8 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 
 	/* -1 means default channel runlist level */
 	if (runlist_level != -1) {
-		err = gk20a_channel_set_runlist_interleave(ce_ctx->ch, runlist_level);
+		err = gk20a_tsg_set_runlist_interleave(ce_ctx->tsg,
+						       runlist_level);
 		if (err) {
 			nvgpu_err(g,
 				"ce: could not set the runlist interleave for CE context");

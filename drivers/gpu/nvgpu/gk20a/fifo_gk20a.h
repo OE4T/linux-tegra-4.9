@@ -297,11 +297,9 @@ struct channel_gk20a *gk20a_fifo_channel_from_chid(struct gk20a *g,
 void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg);
 int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
 				u32 id,
-				bool is_tsg,
 				u32 runlist_id,
 				u32 new_level);
 int gk20a_fifo_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice);
-
 
 const char *gk20a_fifo_interleave_level_name(u32 interleave_level);
 
@@ -383,7 +381,6 @@ void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries,
 			unsigned long timeout, u32 flags);
-int gk20a_fifo_set_timeslice(struct channel_gk20a *ch, unsigned int timeslice);
 void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c);
 int gk20a_fifo_alloc_inst(struct gk20a *g, struct channel_gk20a *ch);
 void gk20a_fifo_free_inst(struct gk20a *g, struct channel_gk20a *ch);

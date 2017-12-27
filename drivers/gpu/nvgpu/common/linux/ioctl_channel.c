@@ -76,11 +76,15 @@ static void gk20a_channel_trace_sched_param(
 		const char *compute_preempt_mode),
 	struct channel_gk20a *ch)
 {
+	struct tsg_gk20a *tsg = tsg_gk20a_from_ch(ch);
+
+	if (!tsg)
+		return;
+
 	(trace)(ch->chid, ch->tsgid, ch->pid,
-		gk20a_is_channel_marked_as_tsg(ch) ?
-			tsg_gk20a_from_ch(ch)->timeslice_us : ch->timeslice_us,
+		tsg_gk20a_from_ch(ch)->timeslice_us,
 		ch->timeout_ms_max,
-		gk20a_fifo_interleave_level_name(ch->interleave_level),
+		gk20a_fifo_interleave_level_name(tsg->interleave_level),
 		gr_gk20a_graphics_preempt_mode_name(ch->ch_ctx.gr_ctx ?
 			ch->ch_ctx.gr_ctx->graphics_preempt_mode : 0),
 		gr_gk20a_compute_preempt_mode_name(ch->ch_ctx.gr_ctx ?
@@ -795,28 +799,6 @@ u32 nvgpu_get_common_runlist_level(u32 level)
 	return level;
 }
 
-static int gk20a_ioctl_channel_set_runlist_interleave(struct channel_gk20a *ch,
-						      u32 level)
-{
-	int err = 0;
-
-	err = gk20a_busy(ch->g);
-	if (err) {
-		nvgpu_err(ch->g, "failed to power on, %d", err);
-		goto fail;
-	}
-
-	level = nvgpu_get_common_runlist_level(level);
-	err = gk20a_channel_set_runlist_interleave(ch, level);
-
-	gk20a_idle(ch->g);
-	gk20a_channel_trace_sched_param(
-		trace_gk20a_channel_set_runlist_interleave, ch);
-
-fail:
-	return err;
-}
-
 static u32 nvgpu_obj_ctx_user_flags_to_common_flags(u32 user_flags)
 {
 	u32 flags = 0;
@@ -1228,29 +1210,6 @@ long gk20a_channel_ioctl(struct file *filp,
 	case NVGPU_IOCTL_CHANNEL_WDT:
 		err = gk20a_channel_set_wdt_status(ch,
 				(struct nvgpu_channel_wdt_args *)buf);
-		break;
-	case NVGPU_IOCTL_CHANNEL_SET_RUNLIST_INTERLEAVE:
-		err = gk20a_ioctl_channel_set_runlist_interleave(ch,
-			((struct nvgpu_runlist_interleave_args *)buf)->level);
-		break;
-	case NVGPU_IOCTL_CHANNEL_SET_TIMESLICE:
-		err = gk20a_busy(ch->g);
-		if (err) {
-			dev_err(dev,
-				"%s: failed to host gk20a for ioctl cmd: 0x%x",
-				__func__, cmd);
-			break;
-		}
-		err = ch->g->ops.fifo.channel_set_timeslice(ch,
-			((struct nvgpu_timeslice_args *)buf)->timeslice_us);
-
-		gk20a_idle(ch->g);
-		gk20a_channel_trace_sched_param(
-			trace_gk20a_channel_set_timeslice, ch);
-		break;
-	case NVGPU_IOCTL_CHANNEL_GET_TIMESLICE:
-		((struct nvgpu_timeslice_args *)buf)->timeslice_us =
-			gk20a_channel_get_timeslice(ch);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE:
 		err = nvgpu_ioctl_channel_set_preemption_mode(ch,

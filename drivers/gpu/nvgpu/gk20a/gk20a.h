@@ -535,10 +535,8 @@ struct gpu_ops {
 		u32 (*get_num_fifos)(struct gk20a *g);
 		u32 (*get_pbdma_signature)(struct gk20a *g);
 		int (*set_runlist_interleave)(struct gk20a *g, u32 id,
-					bool is_tsg, u32 runlist_id,
+					u32 runlist_id,
 					u32 new_level);
-		int (*channel_set_timeslice)(struct channel_gk20a *ch,
-					u32 timeslice);
 		int (*tsg_set_timeslice)(struct tsg_gk20a *tsg, u32 timeslice);
 		u32 (*default_timeslice_us)(struct gk20a *);
 		int (*force_reset_ch)(struct channel_gk20a *ch,

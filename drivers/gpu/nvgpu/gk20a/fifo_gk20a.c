@@ -3075,47 +3075,10 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 	bool last_level = cur_level == NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_HIGH;
 	struct channel_gk20a *ch;
 	bool skip_next = false;
-	u32 chid, tsgid, count = 0;
+	u32 tsgid, count = 0;
 	u32 runlist_entry_words = f->runlist_entry_size / sizeof(u32);
 
 	gk20a_dbg_fn("");
-
-	/* for each bare channel, CH, on this level, insert all higher-level
-	   channels and TSGs before inserting CH. */
-	for_each_set_bit(chid, runlist->active_channels, f->num_channels) {
-		ch = &f->channel[chid];
-
-		if (ch->interleave_level != cur_level)
-			continue;
-
-		if (gk20a_is_channel_marked_as_tsg(ch))
-			continue;
-
-		if (!last_level && !skip_next) {
-			runlist_entry = gk20a_runlist_construct_locked(f,
-							runlist,
-							cur_level + 1,
-							runlist_entry,
-							interleave_enabled,
-							false,
-							entries_left);
-			/* if interleaving is disabled, higher-level channels
-			   and TSGs only need to be inserted once */
-			if (!interleave_enabled)
-				skip_next = true;
-		}
-
-		if (!(*entries_left))
-			return NULL;
-
-		gk20a_dbg_info("add channel %d to runlist", chid);
-		f->g->ops.fifo.get_ch_runlist_entry(ch, runlist_entry);
-		gk20a_dbg_info("run list count %d runlist [0] %x [1] %x\n",
-				count, runlist_entry[0], runlist_entry[1]);
-		runlist_entry += runlist_entry_words;
-		count++;
-		(*entries_left)--;
-	}
 
 	/* for each TSG, T, on this level, insert all higher-level channels
 	   and TSGs before inserting T. */
@@ -3204,16 +3167,12 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 
 int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
 				u32 id,
-				bool is_tsg,
 				u32 runlist_id,
 				u32 new_level)
 {
 	gk20a_dbg_fn("");
 
-	if (is_tsg)
-		g->fifo.tsg[id].interleave_level = new_level;
-	else
-		g->fifo.channel[id].interleave_level = new_level;
+	g->fifo.tsg[id].interleave_level = new_level;
 
 	return 0;
 }
@@ -3915,51 +3874,6 @@ int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 		gk20a_fifo_setup_ramfc_for_privileged_channel(c);
 
 	return gk20a_fifo_commit_userd(c);
-}
-
-static int channel_gk20a_set_schedule_params(struct channel_gk20a *c)
-{
-	int shift = 0, value = 0;
-
-	gk20a_channel_get_timescale_from_timeslice(c->g,
-		c->timeslice_us, &value, &shift);
-
-	/* disable channel */
-	c->g->ops.fifo.disable_channel(c);
-
-	/* preempt the channel */
-	WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->chid));
-
-	/* set new timeslice */
-	nvgpu_mem_wr32(c->g, &c->inst_block, ram_fc_runlist_timeslice_w(),
-		value | (shift << 12) |
-		fifo_runlist_timeslice_enable_true_f());
-
-	/* enable channel */
-	c->g->ops.fifo.enable_channel(c);
-
-	return 0;
-}
-
-int gk20a_fifo_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
-{
-	struct gk20a *g = ch->g;
-
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		nvgpu_err(g, "invalid operation for TSG!");
-		return -EINVAL;
-	}
-
-	if (timeslice < g->min_timeslice_us ||
-		timeslice > g->max_timeslice_us)
-		return -EINVAL;
-
-	ch->timeslice_us = timeslice;
-
-	gk20a_dbg(gpu_dbg_sched, "chid=%u timeslice=%u us",
-			 ch->chid, timeslice);
-
-	return channel_gk20a_set_schedule_params(ch);
 }
 
 void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c)

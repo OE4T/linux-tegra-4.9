@@ -247,7 +247,6 @@ struct channel_gk20a {
 	bool has_timedout;
 	u32 timeout_ms_max;
 	bool timeout_debug_dump;
-	unsigned int timeslice_us;
 
 	struct nvgpu_mutex sync_lock;
 	struct gk20a_channel_sync *sync;
@@ -255,8 +254,6 @@ struct channel_gk20a {
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;
 #endif
-
-	u32 interleave_level;
 
 	u32 runlist_id;
 
@@ -355,12 +352,9 @@ void channel_gk20a_joblist_unlock(struct channel_gk20a *c);
 bool channel_gk20a_joblist_is_empty(struct channel_gk20a *c);
 
 int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add);
-u32 gk20a_channel_get_timeslice(struct channel_gk20a *ch);
 int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int timeslice_period,
 		int *__timeslice_timeout, int *__timeslice_scale);
-int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
-		u32 level);
 
 int channel_gk20a_alloc_job(struct channel_gk20a *c,
 		struct channel_gk20a_job **job_out);

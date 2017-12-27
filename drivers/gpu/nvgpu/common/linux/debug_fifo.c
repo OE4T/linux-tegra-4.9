@@ -81,16 +81,16 @@ static int gk20a_fifo_sched_debugfs_seq_show(
 		return ret;
 
 	if (gk20a_channel_get(ch)) {
-		if (gk20a_is_channel_marked_as_tsg(ch))
-			tsg = &f->tsg[ch->tsgid];
+		tsg = tsg_gk20a_from_ch(ch);
 
-		seq_printf(s, "%-8d %-8d %-8d %-9d %-8d %-10d %-8d %-8d\n",
+		if (tsg)
+			seq_printf(s, "%-8d %-8d %-8d %-9d %-8d %-10d %-8d %-8d\n",
 				ch->chid,
 				ch->tsgid,
 				ch->tgid,
-				tsg ? tsg->timeslice_us : ch->timeslice_us,
+				tsg->timeslice_us,
 				ch->timeout_ms_max,
-				tsg ? tsg->interleave_level : ch->interleave_level,
+				tsg->interleave_level,
 				ch->ch_ctx.gr_ctx ? ch->ch_ctx.gr_ctx->graphics_preempt_mode : U32_MAX,
 				ch->ch_ctx.gr_ctx ? ch->ch_ctx.gr_ctx->compute_preempt_mode : U32_MAX);
 		gk20a_channel_put(ch);

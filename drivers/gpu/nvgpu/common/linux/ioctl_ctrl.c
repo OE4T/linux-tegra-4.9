@@ -1128,8 +1128,6 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	if (!session || args->flags)
 		return -EINVAL;
 
-	gk20a_dbg_info("line=%d", __LINE__);
-
 	clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
 	if (!clk_domains)
 		return -EINVAL;
@@ -1137,15 +1135,10 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	entry = (struct nvgpu_gpu_clk_info __user *)
 			(uintptr_t)args->clk_info_entries;
 
-	gk20a_dbg_info("line=%d", __LINE__);
-
 	for (i = 0; i < args->num_entries; i++, entry++) {
 
-	gk20a_dbg_info("line=%d", __LINE__);
 		if (copy_from_user(&clk_info, entry, sizeof(clk_info)))
 			return -EFAULT;
-
-	gk20a_dbg_info("i=%d domain=0x%08x", i, clk_info.clk_domain);
 
 		if (!nvgpu_clk_arb_is_valid_domain(g, clk_info.clk_domain))
 			return -EINVAL;

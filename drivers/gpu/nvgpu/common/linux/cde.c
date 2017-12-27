@@ -1284,6 +1284,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	tsg = gk20a_tsg_open(g);
 	if (!tsg) {
 		nvgpu_err(g, "cde: could not create TSG");
+		err = -ENOMEM;
 		goto err_get_gk20a_channel;
 	}
 

@@ -1136,6 +1136,18 @@ static void tegra_gpio_read_irq_routemap(struct tegra_gpio_info *tgi, int bank,
 	struct tegra_gpio_controller *tgcont = &tgi->tg_contrlr[bank];
 	int irq_offset = irq_count + tgi->soc->start_irq_line;
 	int j;
+	int ret;
+	u32 pval;
+
+	/* Port G interrupt is not mapped to any line. */
+	if (bank == 0) {
+		ret = of_property_read_u32(tgi->dev->of_node,
+					   "port-GG-interrupt-line", &pval);
+		if (!ret && (pval == irq_offset))
+			__raw_writel(0xF, tgi->scr_regs + (bank * 0x1000) + 0x800 +
+				     (0 * GPIO_REG_DIFF) + ROUTE_MAP_OFFSET +
+				     (irq_offset * 4));
+	}
 
 	for (j = 0; j < tgcont->num_ports; j++) {
 		tgcont->irq_info[irq_offset].irq_map[j] =

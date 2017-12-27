@@ -1267,6 +1267,15 @@
 			reset-names = "dpaux3";
 		}; //dpaux3
 
+		tegra_cec: tegra_cec {
+			status = "disabled";
+			compatible = "nvidia,tegra194-cec";
+			reg = <0x0 0x03960000 0x0 0x00001000>;
+			interrupts = <0 162 0x04>;
+			clocks = <&bpmp_clks TEGRA194_CLK_CEC>;
+			clock-names = "cec";
+		};
+
 		vi: vi@15c10000 {
 			compatible = "nvidia,tegra194-vi";
 			/* cfg page is used by slvsec as well as ch35 */

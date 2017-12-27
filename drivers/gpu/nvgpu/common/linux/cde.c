@@ -106,12 +106,12 @@ __must_hold(&cde_app->mutex)
 	nvgpu_gmmu_unmap(vm, &g->gr.compbit_store.mem,
 			 cde_ctx->backing_store_vaddr);
 
-	/* free the channel */
-	if (cde_ctx->tsg && ch) {
-		gk20a_tsg_unbind_channel(cde_ctx->ch);
-	}
-
+	/*
+	 * free the channel
+	 * gk20a_channel_close() will also unbind the channel from TSG
+	 */
 	gk20a_channel_close(ch);
+	nvgpu_ref_put(&cde_ctx->tsg->refcount, gk20a_tsg_release);
 
 	/* housekeeping on app */
 	nvgpu_list_del(&cde_ctx->list);

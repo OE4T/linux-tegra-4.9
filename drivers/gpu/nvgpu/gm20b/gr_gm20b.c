@@ -1087,15 +1087,17 @@ u32 *gr_gm20b_rop_l2_en_mask(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 i, tmp, max_fbps_count, max_ltc_per_fbp;
+	unsigned long fbp_en_mask;
 	u32 rop_l2_all_en;
 
 	tmp = gk20a_readl(g, top_num_fbps_r());
 	max_fbps_count = top_num_fbps_value_v(tmp);
 	max_ltc_per_fbp = gr_gm20b_get_max_ltc_per_fbp(g);
 	rop_l2_all_en = (1 << max_ltc_per_fbp) - 1;
+	fbp_en_mask = gr_gm20b_get_fbp_en_mask(g);
 
 	/* mask of Rop_L2 for each FBP */
-	for (i = 0; i < max_fbps_count; i++) {
+	for_each_set_bit(i, &fbp_en_mask, max_fbps_count) {
 		tmp = gk20a_readl(g, fuse_status_opt_rop_l2_fbp_r(i));
 		gr->fbp_rop_l2_en_mask[i] = rop_l2_all_en ^ tmp;
 	}

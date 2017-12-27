@@ -187,7 +187,7 @@
 #define I2C_MST_FIFO_STATUS_RX_SHIFT		0
 
 #define I2C_MAX_XFER_SIZE_4K			4096
-#define I2C_MAX_XFER_SIZE_64k			65536
+#define I2C_MAX_XFER_SIZE_64k			65535
 /* Allocate maximum of 64K bytes * 4 transfers size buffer*/
 #define I2C_TOTAL_BUFFER_LEN			(I2C_MAX_XFER_SIZE_64k * 4)
 #define I2C_CONFIG_LOAD_TIMEOUT			1000000

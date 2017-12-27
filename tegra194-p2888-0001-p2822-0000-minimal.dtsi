@@ -37,25 +37,6 @@
 		status = "disabled";
 	};
 
-	host1x {
-		se@15810000 {
-			status = "disabled";
-		};
-
-		se@15820000 {
-			status = "disabled";
-		};
-
-		se@15830000 {
-			status = "disabled";
-		};
-
-		se@15840000 {
-			status = "disabled";
-		};
-
-	};
-
 	cpus {
 		cpu_core_power_states {
 
@@ -74,10 +55,6 @@
 	};
 
 	tegra-cvnas {
-		status = "disabled";
-	};
-
-	se_elp@3ad0000 {
 		status = "disabled";
 	};
 

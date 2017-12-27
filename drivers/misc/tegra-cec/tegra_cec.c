@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-cec/tegra_cec.c
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,6 +32,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/of_device.h>
+#include <linux/version.h>
 
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
@@ -350,7 +351,7 @@ static int tegra_cec_send_one_touch_play(struct tegra_cec *cec)
 
 	res = tegra_dc_get_source_physical_address(phy_address);
 	if (res) {
-		dev_warn(cec->dev, "Can't find physical addresse.\n");
+		dev_notice(cec->dev, "Can't find physical addresse.\n");
 		return res;
 	}
 
@@ -739,9 +740,19 @@ static struct tegra_cec_soc tegra186_soc_data = {
 	.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
 };
 
+static struct tegra_cec_soc tegra194_soc_data = {
+// temporary WAR to get 4.4 builds working
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
+#else
+	.powergate_id = TEGRA194_POWER_DOMAIN_DISP,
+#endif
+};
+
 static struct of_device_id tegra_cec_of_match[] = {
 	{ .compatible = "nvidia,tegra210-cec", .data = &tegra210_soc_data },
 	{ .compatible = "nvidia,tegra186-cec", .data = &tegra186_soc_data },
+	{ .compatible = "nvidia,tegra194-cec", .data = &tegra194_soc_data },
 	{},
 };
 

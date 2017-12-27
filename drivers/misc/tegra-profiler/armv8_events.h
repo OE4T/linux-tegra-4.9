@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/armv8_events.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,7 @@
 #define __ARMV8_EVENTS_H
 
 #define QUADD_AA64_PMUVER_PMUV3		0x01
+#define QUADD_AA64_PMUVER_PMUV3_EVCNT16	0x04
 
 #define QUADD_AA64_CPU_IMP_NVIDIA	'N'
 

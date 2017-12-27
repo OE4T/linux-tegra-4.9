@@ -840,7 +840,7 @@ static struct quadd_event_source_interface pmu_armv8_int = {
 static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 {
 	int idx, err = 0;
-	u32 pmcr, ext_ver, idcode = 0;
+	u32 pmcr, ext_ver, idcode = 0, pmu_ver;
 	u64 aa64_dfr;
 	u8 implementer;
 	struct cpuinfo_arm64 *local_cpu_data = &per_cpu(cpu_data, cpuid);
@@ -862,9 +862,10 @@ static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 	implementer = (reg_midr >> 24) & 0xFF;
 
 	aa64_dfr = read_cpuid(ID_AA64DFR0_EL1);
-	aa64_dfr = (aa64_dfr >> 8) & 0x0f;
+	pmu_ver = (aa64_dfr >> 8) & 0x0f;
 
-	if (aa64_dfr != QUADD_AA64_PMUVER_PMUV3)
+	if (pmu_ver != QUADD_AA64_PMUVER_PMUV3 &&
+	    pmu_ver != QUADD_AA64_PMUVER_PMUV3_EVCNT16)
 		err = 1;
 
 	if (err == 0 && (implementer == 'A' || implementer == 'N')) {
@@ -948,9 +949,9 @@ static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 	}
 
 	local_pmu_ctx->arch.name[sizeof(local_pmu_ctx->arch.name) - 1] = '\0';
-	pr_info("[%d] arch: %s, type: %d, ver: %d\n",
+	pr_info("[%d] arch: %s, type: %d, ver: %d, pmu ver: %#x\n",
 		cpuid, local_pmu_ctx->arch.name, local_pmu_ctx->arch.type,
-		local_pmu_ctx->arch.ver);
+		local_pmu_ctx->arch.ver, pmu_ver);
 
 	return err;
 }

@@ -86,15 +86,14 @@
 		ignore-pm-notify;
 		resets = <&bpmp_resets TEGRA194_RESET_SDMMC3>;
 		reset-names = "sdmmc";
-		pll_source = "pll_p", "pll_c4_muxed", "pll_c4_out0_lj";
+		pll_source = "pll_p", "pll_c4_muxed";
 		nvidia,set-parent-clk;
-		nvidia,parent_clk_list = "pll_p", "pll_p", "pll_p", "pll_p", "pll_p", "pll_c4_muxed", "pll_c4_muxed", "pll_p", "pll_p", "pll_c4_out0_lj", "NULL";
+		nvidia,parent_clk_list = "pll_p", "pll_p", "pll_p", "pll_p", "pll_p", "pll_c4_muxed", "pll_c4_muxed", "pll_c4_muxed", "pll_c4_muxed", "pll_c4_muxed", "NULL";
 		clocks = <&bpmp_clks TEGRA194_CLK_SDMMC3>,
 			<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 			<&bpmp_clks TEGRA194_CLK_PLLC4_MUXED>,
-			<&bpmp_clks TEGRA194_CLK_PLLC4>,
 			<&bpmp_clks TEGRA194_CLK_SDMMC_LEGACY_TM>;
-		clock-names = "sdmmc", "pll_p", "pll_c4_muxed", "pll_c4_out0_lj", "sdmmc_legacy_tm";
+		clock-names = "sdmmc", "pll_p", "pll_c4_muxed", "sdmmc_legacy_tm";
 		status = "disabled";
 	 };
 
@@ -123,15 +122,14 @@
 		ignore-pm-notify;
 		resets = <&bpmp_resets TEGRA194_RESET_SDMMC1>;
 		reset-names = "sdmmc";
-		pll_source = "pll_p", "pll_c4_muxed", "pll_c4_out0_lj";
+		pll_source = "pll_p", "pll_c4_muxed";
 		nvidia,set-parent-clk;
-		nvidia,parent_clk_list = "pll_p", "pll_p", "pll_p", "pll_p", "pll_p", "pll_c4_muxed", "pll_c4_muxed", "pll_p", "pll_p", "pll_c4_out0_lj", "NULL";
+		nvidia,parent_clk_list = "pll_p", "pll_p", "pll_p", "pll_p", "pll_p", "pll_c4_muxed", "pll_c4_muxed", "pll_c4_muxed", "pll_c4_muxed", "pll_c4_muxed", "NULL";
 		clocks = <&bpmp_clks TEGRA194_CLK_SDMMC1>,
 			<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 			<&bpmp_clks TEGRA194_CLK_PLLC4_MUXED>,
-			<&bpmp_clks TEGRA194_CLK_PLLC4>,
 			<&bpmp_clks TEGRA194_CLK_SDMMC_LEGACY_TM>;
-		clock-names = "sdmmc", "pll_p", "pll_c4_muxed", "pll_c4_out0_lj", "sdmmc_legacy_tm";
+		clock-names = "sdmmc", "pll_p", "pll_c4_muxed", "sdmmc_legacy_tm";
 		status = "disabled";
 	 };
 };

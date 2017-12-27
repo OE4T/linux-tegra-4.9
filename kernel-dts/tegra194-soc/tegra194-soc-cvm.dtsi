@@ -47,6 +47,7 @@
 
 	gpio@2200000 {
 		status = "okay";
+		port-GG-interrupt-line = <0x0>;
 	};
 
 	gpio@c2f0000 {

@@ -5,6 +5,7 @@
  * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
  * 
  * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -690,7 +691,11 @@ typedef struct dhd_info {
 #define DHDIF_FWDER(dhdif)      FALSE
 
 /* Flag to indicate if we should download firmware on driver load */
+#ifdef ENABLE_INSMOD_NO_FW_LOAD
+uint dhd_download_fw_on_driverload = FALSE;
+#else
 uint dhd_download_fw_on_driverload = TRUE;
+#endif /* ENABLE_INSMOD_NO_FW_LOAD */
 
 /* Flag to indicate if driver is initialized */
 uint dhd_driver_init_done = FALSE;

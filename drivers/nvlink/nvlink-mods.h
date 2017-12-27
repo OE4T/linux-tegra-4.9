@@ -279,6 +279,12 @@ struct nvlink_get_err_info {
 	struct nvlink_err_info link_err_info;
 };
 
+/* TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES */
+struct nvlink_get_error_recoveries {
+	__u32 link_mask;
+	__u32 num_recoveries;
+};
+
 /* TODO: choose a unique MAGIC number for ioctl implementation */
 #define TEGRA_NVLINK_IOC_MAGIC	  'T'
 #define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS		\
@@ -291,3 +297,5 @@ struct nvlink_get_err_info {
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 4, struct nvlink_get_counters)
 #define TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO		\
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 5, struct nvlink_get_err_info)
+#define TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES	\
+	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 6, struct nvlink_get_error_recoveries)

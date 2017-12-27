@@ -3,7 +3,7 @@
  * This file contains link state transition and link trainig code for the Tegra
  * NVLINK controller.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -741,6 +741,87 @@ int nvlink_check_intranode_conn_mode(
 	return ret;
 }
 
+int nvlink_transition_intranode_conn_to_safe(struct nvlink_intranode_conn *conn)
+{
+	int ret = 0;
+	struct nvlink_device *ndev0 = conn->ndev0;
+	struct nvlink_device *ndev1 = conn->ndev1;
+	struct nvlink_link *link0 = &(ndev0->link);
+	struct nvlink_link *link1 = &(ndev1->link);
+	bool match = false;
+
+	/* Check if both the link and sublink state are SAFE for both ends */
+	ret = nvlink_check_intranode_conn_mode(conn, NVLINK_LINK_SAFE,
+					&match);
+	/* Return if the links are in bad state or already in SAFE mode */
+	if (ret < 0) {
+		nvlink_err("Can't transition to SAFE as link is in bad state");
+		return ret;
+	}
+	if (match) {
+		nvlink_dbg("link is already in SAFE mode");
+		return ret;
+	}
+
+	/* TODO:
+	 * Disable Power Management before moving link out of Active
+	 */
+
+	/* Move both ends to SWCFG */
+	link0->link_ops.set_link_mode(ndev0, NVLINK_LINK_SAFE);
+	link1->link_ops.set_link_mode(ndev1, NVLINK_LINK_SAFE);
+
+	/* Wait for the end0 to go to SWCFG */
+	ret = t19x_nvlink_poll_link_state(ndev0, NVLINK_LINK_SAFE,
+					NVLINK_TRANSITION_SAFE_TIMEOUT_MS);
+	if (ret < 0) {
+		nvlink_err("Unable to set link in swcfg");
+		return ret;
+	}
+
+	/* Wait for the end1 to go to SWCFG */
+	ret = t19x_nvlink_poll_link_state(ndev1, NVLINK_LINK_SAFE,
+					NVLINK_TRANSITION_SAFE_TIMEOUT_MS);
+	if (ret < 0) {
+		nvlink_err("Unable to set link in swcfg");
+		return ret;
+	}
+
+	/* Put TX sublink on end0 in SAFE Mode */
+	ret = link0->link_ops.set_sublink_mode(ndev0, false, NVLINK_TX_SAFE);
+	if (ret < 0) {
+		nvlink_err("Failed to set TX sublink mode to SAFE for ndev0");
+		return ret;
+	}
+
+	/* Put TX sublink on end1 in SAFE Mode */
+	ret = link1->link_ops.set_sublink_mode(ndev1, false, NVLINK_TX_SAFE);
+	if (ret < 0) {
+		nvlink_err("Failed to set TX sublink mode to SAFE for ndev1");
+		return ret;
+	}
+
+	/* wait for sublinks to go in SAFE Mode */
+	ret = t19x_nvlink_poll_sublink_state(ndev0, NVLINK_TX_SAFE,
+					ndev1, NVLINK_RX_SAFE,
+					NVLINK_TRANSITION_SAFE_TIMEOUT_MS);
+	if (ret < 0) {
+		nvlink_err("Unable to set sublinks in safe mode");
+		return ret;
+	}
+
+	ret = t19x_nvlink_poll_sublink_state(ndev1, NVLINK_TX_SAFE,
+					ndev0, NVLINK_RX_SAFE,
+					NVLINK_TRANSITION_SAFE_TIMEOUT_MS);
+	if (ret < 0) {
+		nvlink_err("Unable to set sublinks in safe mode");
+		return ret;
+	}
+
+	nvlink_dbg("Link in Safe mode!");
+	return ret;
+}
+
 int nvlink_train_intranode_conn_to_hs(struct nvlink_intranode_conn *conn)
 {
 	int ret = 0;
@@ -862,3 +943,61 @@ void nvlink_enable_AN0_packets(struct nvlink_device *ndev)
 	reg_val |= BIT(NVL_LINK_CONFIG_LINK_EN);
 	nvlw_nvl_writel(ndev, NVL_LINK_CONFIG, reg_val);
 }
+
+int nvlink_retrain_link_from_off(struct nvlink_device *ndev)
+{
+	/* We don't need this for now */
+	return -1;
+}
+
+int nvlink_retrain_link_from_safe(struct nvlink_device *ndev)
+{
+	int ret;
+	struct nvlink_intranode_conn conn;
+
+	/* Setup intranode connection for loopback mode */
+	conn.ndev0 = ndev;
+	conn.ndev1 = ndev;
+
+	ret = nvlink_transition_intranode_conn_to_safe(&conn);
+	if (ret < 0) {
+		nvlink_err("Transiting intranode conn to safe failed");
+		return ret;
+	}
+
+	ret = nvlink_train_intranode_conn_to_hs(&conn);
+	if (ret < 0) {
+		nvlink_err("Train intranode conn to HS failed");
+		return ret;
+	}
+
+	/* The link has successfully retrained */
+	ndev->link.error_recoveries++;
+
+	return 0;
+}
+
+/* Retrain a link from either safe mode or off */
+int nvlink_retrain_link(struct nvlink_device *ndev, bool from_off)
+{
+	int ret;
+
+	if (!ndev->is_master) {
+		/* TODO :
+		 * Not needed for loopback but needed for other topologies.
+		 *
+		 * If this is a slave endpoint requesting the retrain,
+		 * kick off a request to the master instead.
+		 * There is no need to (and indeed, we must not) hold
+		 * the master endpoint lock here.
+		 */
+	}
+
+	if (from_off)
+		ret = nvlink_retrain_link_from_off(ndev);
+	else
+		ret = nvlink_retrain_link_from_safe(ndev);
+
+	return ret;
+}
+

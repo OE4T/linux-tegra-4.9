@@ -546,6 +546,18 @@ static int t19x_nvlink_get_err_info(struct nvlink_device *ndev,
 	return 0;
 }
 
+/* Get the number of successful error recoveries */
+static int t19x_nvlink_get_error_recoveries(struct nvlink_device *ndev,
+			struct nvlink_get_error_recoveries *get_err_recoveries)
+{
+
+	get_err_recoveries->num_recoveries = ndev->link.error_recoveries;
+	/* Clear the counts */
+	ndev->link.error_recoveries = 0;
+
+	return 0;
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -555,6 +567,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	struct nvlink_clear_counters *clear_counters;
 	struct nvlink_get_counters *get_counters;
 	struct nvlink_get_err_info *get_err_info;
+	struct nvlink_get_error_recoveries *get_err_recoveries;
 	int ret = 0;
 
 	if (!ndev) {
@@ -718,6 +731,48 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 			ret = -EFAULT;
 		}
 		kfree(get_err_info);
+		break;
+
+	case TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES:
+		get_err_recoveries = devm_kzalloc(ndev->dev,
+				sizeof(struct nvlink_get_error_recoveries),
+				GFP_KERNEL);
+		if (!get_err_recoveries) {
+			nvlink_err("Can't allocate memory for get err"
+					" recoveries");
+			return -ENOMEM;
+		}
+
+		ret = copy_from_user(get_err_recoveries, (void __user *)arg,
+						sizeof(*get_err_recoveries));
+		if (ret) {
+			nvlink_err("Error while copying from userspace");
+			ret = -EFAULT;
+			kfree(get_err_recoveries);
+			break;
+		}
+
+		if (get_err_recoveries->link_mask & 0x1) {
+			ret = t19x_nvlink_get_error_recoveries(ndev,
+						get_err_recoveries);
+			if (ret < 0) {
+				nvlink_err("nvlink get err recoveries failed");
+				kfree(get_err_recoveries);
+				break;
+			}
+			ret = copy_to_user((void __user *)arg,
+					get_err_recoveries,
+					sizeof(*get_err_recoveries));
+			if (ret) {
+				nvlink_err("Error while copying get err"
+						" recoveries");
+				ret = -EFAULT;
+			}
+		} else {
+			nvlink_err("Invalid link mask specified");
+			ret = -EINVAL;
+		}
+		kfree(get_err_recoveries);
 		break;
 
 	default:

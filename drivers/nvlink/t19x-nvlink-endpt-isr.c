@@ -2,7 +2,7 @@
  * t19x-nvlink-endpt-isr.c:
  * This file contains interrupt handling code for the Tegra NVLINK controller.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -624,7 +624,11 @@ static int nvlink_service_dl_interrupts(struct nvlink_device *ndev)
 	}
 
 	if (retrain_from_safe) {
-		/* TODO: re-train the nvlink */
+		if (nvlink_retrain_link(ndev, false)) {
+			nvlink_err("Fatal: Unable to retrain Link from"
+				" SAFE mode");
+			ret = -1;
+		}
 	}
 
 	/* Clear interrupt register (W1C) */

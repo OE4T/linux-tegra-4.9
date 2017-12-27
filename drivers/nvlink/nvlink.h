@@ -3,7 +3,7 @@
  * This header contains the structures and APIs needed by the NVLINK core and
  * endpoint drivers for interacting with each other.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,6 +40,7 @@
 #define MINION_BYTES_PER_BLOCK		256
 #define MINION_WORD_SIZE		4
 #define NVLINK_TRANSITION_HS_TIMEOUT_MS		2000 /* msec */
+#define NVLINK_TRANSITION_SAFE_TIMEOUT_MS	5 /* msec */
 
 struct nvlink_link;
 struct nvlink_device;
@@ -182,6 +183,8 @@ struct nvlink_link {
 	u32 tlc_tx_err_status0;
 	u32 tlc_rx_err_status0;
 	u32 tlc_rx_err_status1;
+	/* Successful error recoveries */
+	u32 error_recoveries;
 };
 
 /* Structure representing the MINION ucode header */

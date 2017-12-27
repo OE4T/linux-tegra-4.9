@@ -46,6 +46,7 @@
 #include "tegra194-soc/tegra194-soc-disp-imp.dtsi"
 #include "tegra194-soc/tegra194-aon.dtsi"
 #include "tegra194-soc/tegra194-cpus.dtsi"
+#include "tegra194-soc-thermal.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";

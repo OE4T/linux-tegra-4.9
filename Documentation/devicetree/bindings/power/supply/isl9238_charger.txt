@@ -1,0 +1,59 @@
+* ISL9238 battery charger devicetree bindings
+
+Required properties:
+- compatible : "isl,isl9238"
+- reg: I2C slave address
+
+Required nodes:
+- regulators: There must a regulator subnode for the following purposes:
+               Enabling voltage supply to vbus port(to enable otg mode)
+
+Optional properties:
+- isl,charge-current-limit: to set the charging current limit
+
+- isl,max-system-voltage: to set the maximum charging voltage or
+			 system regualting voltage
+
+- isl,min-system-voltage: to set the minimum system voltage
+
+- isl,input-voltage-limit: to set input voltage limit
+
+- isl,adapter-current-limit1: to se the adapter current limit 1
+
+- isl,adapter-current-limit2: to se the adapter current limit 2
+
+- isl,acprochot-threshold: assertion threshold for adapter overcurrent
+			   condition.
+
+- isl,dcprochot-threshold: assertion threshold for adapter overcurrent
+			   condition.
+
+- isl,disable-regulation: disable input volatge regulation, by default
+			  input voltage regulation enabled
+
+- isl,enable-bat-learn-mode: enable battery learn mode, by default
+			    battery learn mode disabled
+
+- isl,disable-turbo-mode: disable turbo mode, by default
+			  turbo charging mode enabled
+
+- isl,enable-auto-charging: enable auto charging mode
+
+vbus properties:
+================
+regulator-name: vbus regulator name.
+
+Example
+isl9238: isl9238@16 {
+	compatible = "isl,isl9238";
+	reg = <0x16>;
+	isl,charge-current-limit = <4096000>;
+	isl,max-system-voltage = <8192000>;
+	isl,min-system-voltage = <1024000>;
+	isl,input-voltage-limit = <2730000>;
+	isl,enable-auto-charging;
+
+	vbus {
+		regulator-name = "vbus_regulator";
+	};
+};

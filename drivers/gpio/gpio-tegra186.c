@@ -920,6 +920,14 @@ static void tegra_gpio_irq_mask(struct irq_data *d)
 static void tegra_gpio_irq_unmask(struct irq_data *d)
 {
 	struct tegra_gpio_controller *c = irq_data_get_irq_chip_data(d);
+	struct gpio_chip *chip = &c->tgi->gc;
+	int ret;
+
+	ret = tegra_gpio_direction_input(chip, d->hwirq);
+	if (ret < 0)
+		dev_err(chip->parent,
+			"Failed to set input direction for irq-unmask: %d\n",
+			ret);
 
 	tegra_gpio_update(c->tgi, d->hwirq, GPIO_ENB_CONFIG_REG,
 			  GPIO_INT_FUNC_BIT, GPIO_INT_FUNC_BIT);

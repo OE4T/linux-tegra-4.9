@@ -213,10 +213,16 @@ struct ccg_dev_info {
 	u16 bl_last_row;
 } __packed;
 
+struct version_format {
+	u16 build;
+	u8 patch;
+	u8 min:4;
+	u8 maj:4;
+};
+
 struct version_info {
-	u64 bl;
-	u64 fw1;
-	u64 fw2;
+	struct version_format base;
+	struct version_format app;
 };
 
 struct ccg_typec_pd_info {
@@ -263,8 +269,7 @@ struct ucsi_ccg {
 #define PD1_CMD_PENDING 3
 #define INIT_PENDING	4
 	struct ccg_resp dev_resp;
-	struct ccg_resp pd0_resp;
-	struct ccg_resp pd1_resp;
+	struct ccg_resp pd_resp[2];
 	u8 cmd_resp;
 	struct completion hpi_cmd_done;
 	struct completion reset_comp;
@@ -369,7 +374,6 @@ static void ucsi_ccg_notify(struct ucsi_ccg *ccg)
 
 static int get_typec_info(struct ucsi_ccg *ccg, int port)
 {
-	struct device *dev = ccg->dev;
 	int ret;
 
 	if (port > ccg->info.two_pd_ports)
@@ -382,13 +386,20 @@ static int get_typec_info(struct ucsi_ccg *ccg, int port)
 	if (ret)
 		return -EIO;
 
+	return 0;
+}
+
+void show_typec_info(struct ucsi_ccg *ccg, int port)
+{
+	struct device *dev = ccg->dev;
+
 	dev_info(dev, "port%d typec_info:\n"
 		"dflt_data_role: %d\n"
 		"drd_dflt: %d\n"
 		"dflt_power_role: %d\n"
 		"drp_dflt: %d\n"
-		"cur_data_role: %d\n"
-		"cur_power_role: %d\n"
+		"cur_data_role: %s\n"
+		"cur_power_role: %s\n"
 		"pd_contract: %d\n"
 		"pd_revison: %d\n"
 		"connect_status: %d\n"
@@ -396,26 +407,33 @@ static int get_typec_info(struct ucsi_ccg *ccg, int port)
 		"dev_type: %d\n"
 		"typec_current: %d\n", port, ccg->port[port].dflt_data_role,
 		ccg->port[port].drd_dflt, ccg->port[port].dflt_power_role,
-		ccg->port[port].drp_dflt, ccg->port[port].cur_data_role,
-		ccg->port[port].cur_power_role, ccg->port[port].pd_contract,
-		ccg->port[port].pd_rev, ccg->port[port].connect_status,
-		ccg->port[port].cc_polarity, ccg->port[port].dev_type,
-		ccg->port[port].typec_current);
-
-	return 0;
+		ccg->port[port].drp_dflt,
+		(ccg->port[port].cur_data_role) ? "DFP" : "UFP",
+		(ccg->port[port].cur_power_role) ? "Source" : "Sink",
+		ccg->port[port].pd_contract, ccg->port[port].pd_rev,
+		ccg->port[port].connect_status, ccg->port[port].cc_polarity,
+		ccg->port[port].dev_type, ccg->port[port].typec_current);
 }
 
 static int get_fw_info(struct ucsi_ccg *ccg)
 {
 	struct device *dev = ccg->dev;
-	struct version_info version;
+	struct version_info version[3];
+	struct version_info *v;
+	int i;
 
 	if (ccg_reg_read(ccg, REG_READ_ALL_VER, (u8 *)(&version), 24))
 		dev_err(dev, "read version failed\n");
 	else {
-		dev_info(dev, "BL version: %llx\n", version.bl);
-		dev_info(dev, "FW1 version: %llx\n", version.fw1);
-		dev_info(dev, "FW2 version: %llx\n", version.fw2);
+		for (i = 1; i < 3; i++) {
+			v = &version[i];
+			dev_info(dev,
+			"FW%d Version: %c%c v%x.%x%x, [Base %d.%d.%d.%d]\n",
+			i, (v->app.build >> 8), (v->app.build & 0xFF),
+			v->app.patch, v->app.maj, v->app.min,
+			v->base.maj, v->base.min, v->base.patch,
+			v->base.build);
+		}
 	}
 
 	if (ccg_reg_read(ccg, REG_DEVICE_MODE, (u8 *)(&ccg->info), 6))
@@ -438,6 +456,37 @@ static inline bool invalid_resp(int code)
 static inline bool invalid_evt(int code)
 {
 	return (code >= 0xAB) || (code < 0x80);
+}
+
+static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
+{
+	struct device *dev = ccg->dev;
+	struct ccg_resp *resp = &ccg->pd_resp[index];
+
+	if (ccg_reg_read(ccg, REG_PD_RESPONSE(index), (u8 *)resp, 2)) {
+		dev_err(dev, "read REG_PD_RESPONSE(%d) failed\n", index);
+		return;
+	}
+	dev_dbg(dev, "port%d event code: 0x%02x, data len: %d\n",
+			index, resp->code, resp->length);
+
+	if (resp->code & ASYNC_EVENT) {
+		if (!invalid_evt(resp->code))
+			dev_info(dev, "port%d evt: %s\n",
+				index, ccg_evt_strs[resp->code - EVENT_INDEX]);
+		else
+			dev_err(dev, "port%d invalid evt %d\n",
+				index, resp->code);
+	} else {
+		if (test_bit(PD0_CMD_PENDING + index, &ccg->flags)) {
+			ccg->cmd_resp = resp->code;
+			complete(&ccg->hpi_cmd_done);
+			clear_bit(PD0_CMD_PENDING + index, &ccg->flags);
+		} else
+			dev_err(dev,
+				"PD port%d resp 0x%04x but no cmd pending\n",
+				index, resp->code);
+	}
 }
 
 static void ccg_int_handler(struct ucsi_ccg *ccg)
@@ -494,62 +543,12 @@ static void ccg_int_handler(struct ucsi_ccg *ccg)
 	}
 
 	/* PD port0 event */
-	if (intval & PORT0_INT) {
-		if (ccg_reg_read(
-			ccg, REG_PD_RESPONSE(0), (u8 *)(&ccg->pd0_resp), 2)) {
-			dev_err(dev, "read REG_PD_RESPONSE(0) failed\n");
-			return;
-		}
-		dev_info(dev, "port0 event code: 0x%02x, data len: %d\n",
-			ccg->pd0_resp.code, ccg->pd0_resp.length);
-
-		if (ccg->pd0_resp.code & ASYNC_EVENT) {
-			if (!invalid_evt(ccg->pd0_resp.code))
-				dev_info(dev, "port0 evt: %s\n",
-				ccg_evt_strs[ccg->pd0_resp.code - EVENT_INDEX]);
-			else
-				dev_err(dev, "port0 invalid evt %d\n",
-				ccg->pd0_resp.code);
-		} else {
-			if (test_bit(PD0_CMD_PENDING, &ccg->flags)) {
-				ccg->cmd_resp = ccg->pd0_resp.code;
-				complete(&ccg->hpi_cmd_done);
-				clear_bit(PD0_CMD_PENDING, &ccg->flags);
-			} else
-				dev_err(dev,
-				"PD port0 resp 0x%04x but no cmd pending\n",
-				ccg->pd0_resp.code);
-		}
-	}
+	if (intval & PORT0_INT)
+		ccg_pd_event(ccg, 0);
 
 	/* PD port1 event */
-	if (intval & PORT1_INT) {
-		if (ccg_reg_read(
-			ccg, REG_PD_RESPONSE(1), (u8 *)(&ccg->pd1_resp), 2)) {
-			dev_err(dev, "read REG_PD_RESPONSE(1) failed\n");
-			return;
-		}
-		dev_info(dev, "port1 event code: 0x%02x, data len: %d\n",
-			ccg->pd1_resp.code, ccg->pd1_resp.length);
-
-		if (ccg->pd1_resp.code & ASYNC_EVENT) {
-			if (!invalid_evt(ccg->pd1_resp.code))
-				dev_info(dev, "port1 evt: %s\n",
-				ccg_evt_strs[ccg->pd1_resp.code - EVENT_INDEX]);
-			else
-				dev_err(dev, "port1 invalid evt %d\n",
-				ccg->pd1_resp.code);
-		} else {
-			if (test_bit(PD1_CMD_PENDING, &ccg->flags)) {
-				ccg->cmd_resp = ccg->pd1_resp.code;
-				complete(&ccg->hpi_cmd_done);
-				clear_bit(PD1_CMD_PENDING, &ccg->flags);
-			} else
-				dev_err(dev,
-				"PD port1 resp 0x%04x but no cmd pending\n",
-				ccg->pd1_resp.code);
-		}
-	}
+	if (intval & PORT1_INT)
+		ccg_pd_event(ccg, 1);
 
 	/* Clear INTR */
 	if (intval && ccg_reg_write(ccg, REG_INTR, &intval, 1))
@@ -1147,11 +1146,13 @@ static ssize_t test_store(struct device *dev,
 
 	if (mode == 1)
 		ccg_cmd_reset(ccg);
-	else if (mode == 2)
+	else if (mode == 2) {
 		get_typec_info(ccg, 0); // query port1 pd status
-	else if (mode == 3)
+		show_typec_info(ccg, 0);
+	} else if (mode == 3) {
 		get_typec_info(ccg, 1); // query port2 pd status
-	else if (mode == 4)
+		show_typec_info(ccg, 1);
+	} else if (mode == 4)
 		ccg_cmd_select_sink_pdo(ccg, 1, 0xF); // change P2 PDO to 15V
 	else if (mode == 5)
 		ccg_cmd_select_sink_pdo(ccg, 1, 0x1F); // change P2 PDO to 20V
@@ -1252,6 +1253,7 @@ static int ucsi_ccg_remove(struct i2c_client *client)
 }
 
 static const struct of_device_id ucsi_ccg_of_match_table[] = {
+	{ .compatible = "nvidia,ucsi_ccg", },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, ucsi_ccg_of_match_table);

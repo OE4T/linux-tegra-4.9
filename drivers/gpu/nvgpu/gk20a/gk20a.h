@@ -531,6 +531,7 @@ struct gpu_ops {
 		void (*get_mmu_fault_info)(struct gk20a *g, u32 mmu_fault_id,
 			struct mmu_fault_info *mmfault);
 		void (*apply_pb_timeout)(struct gk20a *g);
+		void (*apply_ctxsw_timeout_intr)(struct gk20a *g);
 		int (*wait_engine_idle)(struct gk20a *g);
 		u32 (*get_num_fifos)(struct gk20a *g);
 		u32 (*get_pbdma_signature)(struct gk20a *g);

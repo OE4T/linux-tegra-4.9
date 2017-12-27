@@ -509,6 +509,7 @@ static const struct gpu_ops gv100_ops = {
 		.free_channel_ctx_header = gv11b_free_subctx_header,
 		.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg,
 		.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout,
+		.apply_ctxsw_timeout_intr = gv100_apply_ctxsw_timeout_intr,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gv100_get_netlist_name,

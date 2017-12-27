@@ -1287,7 +1287,7 @@ static const char *const gv11b_sched_error_str[] = {
 	"rl_ack_extra",
 	"rl_rdat_timeout",
 	"rl_rdat_extra",
-	"xxx-a",
+	"eng_ctxsw_timeout",
 	"xxx-b",
 	"rl_req_timeout",
 	"new_runlist",

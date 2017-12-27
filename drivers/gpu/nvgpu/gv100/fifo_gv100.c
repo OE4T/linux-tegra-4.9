@@ -22,9 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "gk20a/gk20a.h"
 #include "fifo_gv100.h"
+#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gv100/hw_ccsr_gv100.h>
+#include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 
 #define DEFAULT_FIFO_PREEMPT_TIMEOUT 0x3FFFFFUL
 
@@ -36,5 +39,16 @@ u32 gv100_fifo_get_num_fifos(struct gk20a *g)
 u32 gv100_fifo_get_preempt_timeout(struct gk20a *g)
 {
 	return DEFAULT_FIFO_PREEMPT_TIMEOUT;
+}
+
+void gv100_apply_ctxsw_timeout_intr(struct gk20a *g)
+{
+	u32 timeout;
+
+	timeout = g->ch_wdt_timeout_ms*1000;
+	timeout = scale_ptimer(timeout,
+		ptimer_scalingfactor10x(g->ptimer_src_freq));
+	timeout |= fifo_eng_timeout_detection_enabled_f();
+	gk20a_writel(g, fifo_eng_timeout_r(), timeout);
 }
 

@@ -135,13 +135,10 @@ void nvmap_select_cache_ops(struct device *dev)
 	memset(&op, 0, sizeof(op));
 
 	for_each_matching_node_and_match(np, matches, &match) {
-		int len = strlen(match->name);
+		const nvmap_setup_chip_cache_fn init_fn = match->data;
 
-		if (!strncmp(match->name, "nvidia,carveouts", min(len, 16))) {
-			const nvmap_setup_chip_cache_fn init_fn = match->data;
-
-			init_fn(&op);
-		}
+		init_fn(&op);
+		break;
 	}
 
 	inner_flush_cache_all = op.inner_flush_cache_all;

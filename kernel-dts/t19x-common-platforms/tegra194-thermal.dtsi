@@ -64,12 +64,14 @@
 		Tboard_tegra: Tboard_tegra {
 			status = "okay";
 			polling-delay = <0>;
+			polling-delay-passive = <1000>;
 			thermal-sensors = <&tegra_tmp451 0>;
 		};
 
 		Tdiode_tegra: Tdiode_tegra {
 			status = "okay";
 			polling-delay = <0>;
+			polling-delay-passive = <1000>;
 			thermal-sensors = <&tegra_tmp451 1>;
 		};
 		CPU-therm {

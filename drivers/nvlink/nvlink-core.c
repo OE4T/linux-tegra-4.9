@@ -51,6 +51,42 @@ struct dentry *nvlink_debugfs;
 
 static struct nvlink_core nvlink_core;
 
+int nvlink_get_dev_state(struct nvlink_device *ndev, enum device_state *state)
+{
+	int ret = 0;
+
+	if (!ndev) {
+		nvlink_err("Invalid device struct pointer");
+		return -EINVAL;
+	}
+	mutex_lock(&ndev->dev_state_mutex);
+	*state = ndev->state;
+	mutex_unlock(&ndev->dev_state_mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL(nvlink_get_dev_state);
+
+int nvlink_set_dev_state(struct nvlink_device *ndev, enum device_state state)
+{
+	int ret = 0;
+
+	if (!ndev) {
+		nvlink_err("Invalid device struct pointer");
+		return -EINVAL;
+	}
+	if ((state >= NVLINK_DEVICE_STATE_INVALID) || (state < 0)) {
+		nvlink_err("Invalid device state");
+		return -EINVAL;
+	}
+	mutex_lock(&ndev->dev_state_mutex);
+	ndev->state = state;
+	mutex_unlock(&ndev->dev_state_mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL(nvlink_set_dev_state);
+
 int nvlink_register_device(struct nvlink_device *ndev)
 {
 	int ret = 0;

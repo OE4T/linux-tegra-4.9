@@ -116,9 +116,12 @@ enum nvlink_speed {
 };
 
 enum device_state {
-	NVLINK_DEVICE_RESET,
-	NVLINK_DEVICE_INIT_IN_PROGRESS,
-	NVLINK_DEVICE_LINK_READY_FOR_INIT
+	NVLINK_DEVICE_OFF,
+	NVLINK_DEVICE_HW_INIT_DONE,
+	NVLINK_DEVICE_LINK_HW_INIT_DONE,
+	NVLINK_DEVICE_LINK_SAFE_MODE_READY,
+	NVLINK_DEVICE_LINK_HS_MODE_READY,
+	NVLINK_DEVICE_STATE_INVALID
 };
 
 struct link_operations {
@@ -207,6 +210,8 @@ struct nvlink_device {
 	enum nvlink_endpt device_id;
 	/* device state */
 	enum device_state state;
+	/* Mutex to protect device_state access */
+	struct mutex dev_state_mutex;
 	/* if true, then ONLY the driver of this device can initiate enumeration
 	* and data transfer on nvlink
 	*/
@@ -311,5 +316,6 @@ int nvlink_register_link(struct nvlink_link* link);
 int nvlink_unregister_device(struct nvlink_device* device);
 int nvlink_unregister_link(struct nvlink_link* link);
 int nvlink_init_link(struct nvlink_device *ndev);
-
+int nvlink_get_dev_state(struct nvlink_device *ndev, enum device_state *state);
+int nvlink_set_dev_state(struct nvlink_device *ndev, enum device_state state);
 #endif /* NVLINK_H */

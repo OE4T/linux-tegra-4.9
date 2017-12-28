@@ -379,42 +379,82 @@ static inline void program_scf_tom(void)
 	asm volatile("msr s3_0_c15_c0_3, %0" : : "r" (reg_val));
 }
 
-/* Initialize the link and transition to SAFE mode */
+/* Initialize the link and transition to HISPEED mode */
 int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 {
 	int ret = 0;
 	struct nvlink_intranode_conn conn;
+	enum device_state state = NVLINK_DEVICE_OFF;
 
-	nvlink_dbg("Initializing link ...");
-	tegra_nvlink_car_enable(ndev);
-	nvlink_enable_AN0_packets(ndev);
-	ret = minion_boot(ndev);
-	if (ret < 0)
+	/* Check the state of device initialisation */
+	ret = nvlink_get_dev_state(ndev, &state);
+	if (ret < 0) {
+		nvlink_err("Error retriving the device state!");
 		goto fail;
-	nvlink_config_common_intr(ndev);
-	ret = init_nvhs_phy(ndev);
-	if (ret < 0)
-		goto fail;
-	ret = go_to_safe_mode(ndev);
-	if (ret < 0)
-		goto fail;
+	}
 
-	nvlink_enable_link_interrupts(ndev);
+	switch (state) {
+	case NVLINK_DEVICE_OFF:
+		nvlink_dbg("Initializing link ...");
+		tegra_nvlink_car_enable(ndev);
+		ret = minion_boot(ndev);
+		if (ret < 0)
+			goto fail;
+		nvlink_config_common_intr(ndev);
+		ret = nvlink_set_dev_state(ndev, NVLINK_DEVICE_HW_INIT_DONE);
+		if (ret < 0) {
+			nvlink_err("Error setting device state HW_INIT_DONE");
+			goto fail;
+		}
 
-	init_tlc_buffers(ndev);
-	mssnvlink_init(ndev);
-	program_scf_tom();
+	case NVLINK_DEVICE_HW_INIT_DONE:
+		nvlink_enable_AN0_packets(ndev);
+		ret = init_nvhs_phy(ndev);
+		if (ret < 0)
+			goto fail;
+		nvlink_enable_link_interrupts(ndev);
+		ret = nvlink_set_dev_state(ndev,
+					NVLINK_DEVICE_LINK_HW_INIT_DONE);
+		if (ret < 0) {
+			nvlink_err(
+				"Error setting device state LINK_HW_INIT_DONE");
+			goto fail;
+		}
 
-	/* Setup intranode connection for loopback mode */
-	conn.ndev0 = ndev;
-	conn.ndev1 = ndev;
-	ret = nvlink_train_intranode_conn_to_hs(&conn);
-	if (ret < 0)
-		goto fail;
+	case NVLINK_DEVICE_LINK_HW_INIT_DONE:
+		ret = go_to_safe_mode(ndev);
+		if (ret < 0)
+			goto fail;
+		init_tlc_buffers(ndev);
+		mssnvlink_init(ndev);
+		program_scf_tom();
+		ret = nvlink_set_dev_state(ndev,
+					NVLINK_DEVICE_LINK_SAFE_MODE_READY);
+		if (ret < 0) {
+			nvlink_err(
+				"Error setting device state SAFE_MODE_READY");
+			goto fail;
+		}
 
-	nvlink_dbg("Link initialization succeeded!");
-	goto success;
-
+	case NVLINK_DEVICE_LINK_SAFE_MODE_READY:
+		/* Setup intranode connection for loopback mode */
+		conn.ndev0 = ndev;
+		conn.ndev1 = ndev;
+		ret = nvlink_train_intranode_conn_to_hs(&conn);
+		if (ret < 0)
+			goto fail;
+		ret = nvlink_set_dev_state(ndev,
+					NVLINK_DEVICE_LINK_HS_MODE_READY);
+		if (ret < 0) {
+			nvlink_err("Error setting device state HS_MODE_READY");
+			goto fail;
+		}
+	case NVLINK_DEVICE_LINK_HS_MODE_READY:
+		nvlink_dbg("Link initiased in High Speed mode!");
+		goto success;
+	default:
+		nvlink_err("Invalid device state!");
+	}
 fail:
 	nvlink_err("Link initialization failed!");
 success:
@@ -706,6 +746,14 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		ndev->link.remote_dev_info.device_id,
 		ndev->link.remote_dev_info.link_id);
 
+	mutex_init(&ndev->dev_state_mutex);
+	/* Initialize device state */
+	ret = nvlink_set_dev_state(ndev, NVLINK_DEVICE_OFF);
+	if (ret < 0) {
+		nvlink_err("Error initializing device state to OFF");
+		goto err_dev_state;
+	}
+
 	/* Fill in the link struct */
 	ndev->link.device_id = ndev->device_id;
 	ndev->link.link_ops.enable_link = t19x_nvlink_endpt_enable_link;
@@ -723,7 +771,7 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	ret = class_register(&ndev->class);
 	if (ret) {
 		nvlink_err("Failed to register class");
-		goto err_mapping;
+		goto err_dev_state;
 	}
 
 	ret = alloc_chrdev_region(&ndev->dev_t, 0, 1, dev_name(ndev->dev));
@@ -779,6 +827,8 @@ err_cdev:
 	unregister_chrdev_region(ndev->dev_t, 1);
 err_chrdev_region:
 	class_unregister(&ndev->class);
+err_dev_state:
+	mutex_destroy(&ndev->dev_state_mutex);
 err_mapping:
 	if (!IS_ERR(ndev->nvlw_tioctrl_base))
 		iounmap(ndev->nvlw_tioctrl_base);
@@ -832,7 +882,7 @@ static int t19x_nvlink_endpt_remove(struct platform_device *pdev)
 	class_unregister(&ndev->class);
 
 	tegra_nvlink_clk_rst_deinit(ndev);
-
+	mutex_destroy(&ndev->dev_state_mutex);
 	iounmap(ndev->nvlw_tioctrl_base);
 	iounmap(ndev->nvlw_nvlipt_base);
 	iounmap(ndev->nvlw_minion_base);

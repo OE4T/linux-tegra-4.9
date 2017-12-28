@@ -456,14 +456,12 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 
 	ce_ctx->vm = g->mm.ce.vm;
 
-	if (nvgpu_is_enabled(g, NVGPU_MM_CE_TSG_REQUIRED)) {
-		/* allocate a tsg if needed */
-		ce_ctx->tsg = gk20a_tsg_open(g);
+	/* allocate a tsg if needed */
+	ce_ctx->tsg = gk20a_tsg_open(g);
 
-		if (!ce_ctx->tsg) {
-			nvgpu_err(g, "ce: gk20a tsg not available");
-			goto end;
-		}
+	if (!ce_ctx->tsg) {
+		nvgpu_err(g, "ce: gk20a tsg not available");
+		goto end;
 	}
 
 	/* always kernel client needs privileged channel */
@@ -481,12 +479,10 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 		goto end;
 	}
 
-	if (nvgpu_is_enabled(g, NVGPU_MM_CE_TSG_REQUIRED)) {
-		err = gk20a_tsg_bind_channel(ce_ctx->tsg, ce_ctx->ch);
-		if (err) {
-			nvgpu_err(g, "ce: unable to bind to tsg");
-			goto end;
-		}
+	err = gk20a_tsg_bind_channel(ce_ctx->tsg, ce_ctx->ch);
+	if (err) {
+		nvgpu_err(g, "ce: unable to bind to tsg");
+		goto end;
 	}
 
 	/* allocate gpfifo (1024 should be more than enough) */

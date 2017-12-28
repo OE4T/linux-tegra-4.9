@@ -182,8 +182,6 @@ static void nvgpu_init_mm_vars(struct gk20a *g)
 			    platform->unified_memory);
 	__nvgpu_set_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES,
 			    platform->unify_address_spaces);
-	__nvgpu_set_enabled(g, NVGPU_MM_CE_TSG_REQUIRED,
-			    platform->tsg_required);
 
 	nvgpu_mutex_init(&g->mm.tlb_lock);
 	nvgpu_mutex_init(&g->mm.priv_lock);

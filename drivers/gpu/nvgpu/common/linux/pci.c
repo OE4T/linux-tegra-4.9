@@ -244,7 +244,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.vbios_min_version = 0x88001e00,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
-	.tsg_required = true,
 	},
 	{ /* DEVICE=PG503 SKU 200 ES */
 	/* ptimer src frequency in hz */
@@ -279,7 +278,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.vbios_min_version = 0x88001e00,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
-	.tsg_required = true,
 	},
 	{
 	/* ptimer src frequency in hz */
@@ -314,7 +312,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.vbios_min_version = 0x88000126,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
-	.tsg_required = true,
 	},
 	{ /* SKU250 */
 	/* ptimer src frequency in hz */
@@ -349,7 +346,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.vbios_min_version = 0x1,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
-	.tsg_required = true,
 	},
 };
 

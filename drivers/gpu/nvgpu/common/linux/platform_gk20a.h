@@ -224,9 +224,6 @@ struct gk20a_platform {
 	/* unified or split memory with separate vidmem? */
 	bool unified_memory;
 
-	/* true if all channels must be in TSG */
-	bool tsg_required;
-
 	/* minimum supported VBIOS version */
 	u32 vbios_min_version;
 

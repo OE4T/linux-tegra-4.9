@@ -222,8 +222,6 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 	.honors_aperture = true,
 	.unified_memory = true,
 
-	.tsg_required = true,
-
 	.reset_assert = gp10b_tegra_reset_assert,
 	.reset_deassert = gp10b_tegra_reset_deassert,
 };

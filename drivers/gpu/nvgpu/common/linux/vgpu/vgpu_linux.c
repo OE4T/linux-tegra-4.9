@@ -76,6 +76,7 @@ static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 
 	nvgpu_mutex_init(&g->poweron_lock);
 	nvgpu_mutex_init(&g->poweroff_lock);
+	nvgpu_mutex_init(&g->ctxsw_disable_lock);
 	l->regs_saved = l->regs;
 	l->bar1_saved = l->bar1;
 

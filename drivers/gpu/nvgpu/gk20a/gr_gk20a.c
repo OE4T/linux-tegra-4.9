@@ -616,22 +616,39 @@ static int gr_gk20a_ctrl_ctxsw(struct gk20a *g, u32 fecs_method, u32 *ret)
 		      .cond.fail = GR_IS_UCODE_OP_EQUAL }, true);
 }
 
-/* Stop processing (stall) context switches at FECS.
- * The caller must hold the dbg_sessions_lock, else if mutliple stop methods
- * are sent to the ucode in sequence, it can get into an undefined state. */
+/* Stop processing (stall) context switches at FECS. */
 int gr_gk20a_disable_ctxsw(struct gk20a *g)
 {
+	int err = 0;
+
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
-	return gr_gk20a_ctrl_ctxsw(g,
-			gr_fecs_method_push_adr_stop_ctxsw_v(), NULL);
+
+	nvgpu_mutex_acquire(&g->ctxsw_disable_lock);
+	g->ctxsw_disable_count++;
+	if (g->ctxsw_disable_count == 1)
+		err = gr_gk20a_ctrl_ctxsw(g,
+				gr_fecs_method_push_adr_stop_ctxsw_v(), NULL);
+	nvgpu_mutex_release(&g->ctxsw_disable_lock);
+
+	return err;
 }
 
 /* Start processing (continue) context switches at FECS */
 int gr_gk20a_enable_ctxsw(struct gk20a *g)
 {
+	int err = 0;
+
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
-	return gr_gk20a_ctrl_ctxsw(g,
-			gr_fecs_method_push_adr_start_ctxsw_v(), NULL);
+
+	nvgpu_mutex_acquire(&g->ctxsw_disable_lock);
+	g->ctxsw_disable_count--;
+	WARN_ON(g->ctxsw_disable_count < 0);
+	if (g->ctxsw_disable_count == 0)
+		err = gr_gk20a_ctrl_ctxsw(g,
+				gr_fecs_method_push_adr_start_ctxsw_v(), NULL);
+	nvgpu_mutex_release(&g->ctxsw_disable_lock);
+
+	return err;
 }
 
 int gr_gk20a_halt_pipe(struct gk20a *g)

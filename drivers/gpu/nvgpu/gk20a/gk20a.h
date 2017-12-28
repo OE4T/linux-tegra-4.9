@@ -1191,6 +1191,9 @@ struct gk20a {
 
 	nvgpu_atomic_t usage_count;
 
+	struct nvgpu_mutex ctxsw_disable_lock;
+	int ctxsw_disable_count;
+
 	struct nvgpu_ref refcount;
 
 	const char *name;

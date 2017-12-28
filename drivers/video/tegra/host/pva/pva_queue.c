@@ -1,7 +1,7 @@
 /*
  * PVA Task Management
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -912,40 +912,6 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	return 0;
 }
 
-static void pva_completed_task_status(struct pva *pva)
-{
-	struct pva_cmd cmd;
-	u32 nregs, flags;
-	struct pva_mailbox_status_regs status;
-	int err;
-
-	/* Construct the command */
-	flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
-	nregs = pva_cmd_completed_task(&cmd, flags);
-
-	/* Submit request to PVA and wait for response */
-	err = pva_mailbox_send_cmd_sync(pva, &cmd, nregs, &status);
-	if (err < 0) {
-		nvhost_warn(&pva->pdev->dev,
-			"Failed to check submit task: %d", err);
-		return;
-	}
-
-	/* Check the status returned */
-	nvhost_dbg_info("CCQ_Status4 0x%x\n",
-				status.status[PVA_CCQ_STATUS4_INDEX]);
-
-	nvhost_dbg_info("CCQ_Status5 0x%x\n",
-				status.status[PVA_CCQ_STATUS5_INDEX]);
-
-	nvhost_dbg_info("CCQ_Status6 0x%x\n",
-				status.status[PVA_CCQ_STATUS6_INDEX]);
-
-	nvhost_dbg_info("CCQ_Status7 0x%x\n",
-				status.status[PVA_CCQ_STATUS7_INDEX]);
-
-}
-
 static void pva_task_update(struct pva_submit_task *task)
 {
 	struct nvhost_queue *queue = task->queue;
@@ -975,9 +941,6 @@ static void pva_task_update(struct pva_submit_task *task)
 	/* Unpin job memory. PVA shouldn't be using it anymore */
 	pva_task_unpin_mem(task);
 
-	if (!task->invalid)
-		pva_completed_task_status(task->pva);
-
 	/* Drop PM runtime reference of PVA */
 	nvhost_module_idle(task->pva->pdev);
 
@@ -995,19 +958,25 @@ static void pva_queue_update(void *priv, int nr_completed)
 {
 	struct nvhost_queue *queue = priv;
 	struct pva_submit_task *task, *n;
+	struct list_head completed;
 
+	INIT_LIST_HEAD(&completed);
+
+	/* Move completed tasks to a separate list */
 	mutex_lock(&queue->list_lock);
-
 	list_for_each_entry_safe(task, n, &queue->tasklist, node) {
 		if (!nvhost_syncpt_is_expired_ext(queue->pool->pdev,
 						  queue->syncpt_id,
 						  task->syncpt_thresh))
 			break;
 
-		pva_task_update(task);
+		list_move_tail(&task->node, &completed);
 	}
-
 	mutex_unlock(&queue->list_lock);
+
+	/* Handle completed tasks */
+	list_for_each_entry_safe(task, n, &completed, node)
+		pva_task_update(task);
 }
 
 static void pva_queue_dump(struct nvhost_queue *queue, struct seq_file *s)

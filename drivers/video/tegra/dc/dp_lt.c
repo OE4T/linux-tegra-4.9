@@ -1,7 +1,7 @@
 /*
  * dp_lt.c: DP Link Training functions.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -38,31 +38,11 @@ module_param(force_trigger_lt, bool, 0644);
 MODULE_PARM_DESC(force_trigger_lt,
 	"Retrigger LT even if link is already stable");
 
+static int lane_fallback_table[] = {1, 2, 4};
+
 static void set_lt_state(struct tegra_dp_lt_data *lt_data,
 			int target_state, int delay_ms);
 static void set_lt_tpg(struct tegra_dp_lt_data *lt_data, u32 tp);
-
-/*
- * This fallback table needs to be updated in accordance with DP1.4, but adding
- * new HBR3 entries here for now.
- */
-static struct {
-	unsigned int key; /* Index into the link speed table */
-	unsigned int num_lanes;
-} const tegra_dp_link_config_priority[] = {/* CTS approved list. Do not alter */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G8_1, .num_lanes = 4},  /* 32.4Gbps */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G5_4, .num_lanes = 4},  /* 21.6Gbps */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G2_7, .num_lanes = 4},  /* 10.8Gbps */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 4}, /* 6.48Gbps */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G8_1, .num_lanes = 2},  /* 16.2Gbps */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G5_4, .num_lanes = 2},  /* 10.8Gbps */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G2_7, .num_lanes = 2},  /* 5.4Gbps  */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 2}, /* 3.24Gbps */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G8_1, .num_lanes = 1},  /* 8.1Gbps */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G5_4, .num_lanes = 1},  /* 5.4Gbps  */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G2_7, .num_lanes = 1},  /* 2.7Gbps  */
-	{.key = TEGRA_DC_SOR_LINK_SPEED_G1_62, .num_lanes = 1}, /* 1.62Gbps */
-};
 
 /* Check if post-cursor2 programming is supported */
 static inline bool is_pc2_supported(struct tegra_dp_lt_data *lt_data)
@@ -92,65 +72,73 @@ static inline u32 wait_aux_training(struct tegra_dp_lt_data *lt_data,
 	return lt_data->aux_rd_interval;
 }
 
-static int get_next_lower_link_config(struct tegra_dc_dp_data *dp,
-				struct tegra_dc_dp_link_config *link_cfg)
+static inline int get_next_lower_lane_count(struct tegra_dc_dp_data *dp)
 {
-	u8 cur_lanes = link_cfg->lane_count;
-	u8 cur_link_bw = link_cfg->link_bw;
-	u32 idx;
-	u32 size = ARRAY_SIZE(tegra_dp_link_config_priority);
-	unsigned int key; /* Index into the link speed table */
-	u8 link_rate, num_lanes; /* Per loop variables */
+	u8 cur_lanes = dp->link_cfg.lane_count;
+	int k;
 
-	for (idx = 0; idx < size; idx++) {
-		key = tegra_dp_link_config_priority[idx].key;
-		link_rate = dp->sor->link_speeds[key].link_rate;
-		num_lanes = tegra_dp_link_config_priority[idx].num_lanes;
-
-		if (link_rate == cur_link_bw && num_lanes == cur_lanes)
+	for (k = ARRAY_SIZE(lane_fallback_table) - 1; k >= 0; k--) {
+		if (cur_lanes == lane_fallback_table[k])
 			break;
 	}
 
-	/* already at lowest link config */
-	if (idx == size - 1)
+	if (k <= 0)
 		return -ENOENT;
 
-	for (idx++; idx < size; idx++) {
-		key = tegra_dp_link_config_priority[idx].key;
-		link_rate = dp->sor->link_speeds[key].link_rate;
-		num_lanes = tegra_dp_link_config_priority[idx].num_lanes;
-
-		if (link_rate <= link_cfg->max_link_bw &&
-		    num_lanes <= link_cfg->max_lane_count)
-			return idx;
-	}
-
-	/* we should never end up here */
-	return -ENOENT;
+	return lane_fallback_table[k - 1];
 }
 
-static bool get_clock_recovery_status(struct tegra_dp_lt_data *lt_data)
+static inline int get_next_lower_link_rate(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc_sor_data *sor = dp->sor;
+	u8 cur_link_rate = dp->link_cfg.link_bw;
+	int k;
+
+	for (k = sor->num_link_speeds - 1; k >= 0; k--) {
+		if (cur_link_rate == sor->link_speeds[k].link_rate)
+			break;
+	}
+
+	if (k <= 0)
+		return -ENOENT;
+
+	return sor->link_speeds[k - 1].link_rate;
+}
+
+static bool get_clock_recovery_status(struct tegra_dp_lt_data *lt_data,
+				u32 *cr_lane_mask)
 {
 	u32 cnt;
 	u32 n_lanes = lt_data->n_lanes;
 	u8 data_ptr = 0;
-
-	/* support for 1 lane */
+	u8 cr_done = 1;
 	u32 loopcnt = (n_lanes == 1) ? 1 : n_lanes >> 1;
 
+	*cr_lane_mask = 0;
 	for (cnt = 0; cnt < loopcnt; cnt++) {
 		tegra_dc_dp_dpcd_read(lt_data->dp,
 			(NV_DPCD_LANE0_1_STATUS + cnt), &data_ptr);
 
-		if (n_lanes == 1)
-			return (data_ptr & 0x1) ? true : false;
-		else if (!(data_ptr & 0x1) ||
-			!(data_ptr &
-			(0x1 << NV_DPCD_STATUS_LANEXPLUS1_CR_DONE_SHIFT)))
-			return false;
+		if (n_lanes == 1) {
+			cr_done = data_ptr & 0x1;
+			*cr_lane_mask = cr_done;
+		} else {
+			u32 tmp;
+
+			/* Lane 0 or 2 */
+			tmp = data_ptr & 0x1;
+			cr_done &= tmp;
+			*cr_lane_mask |= tmp << (cnt * 2);
+
+			/* Lane 1 or 3 */
+			data_ptr >>= NV_DPCD_STATUS_LANEXPLUS1_CR_DONE_SHIFT;
+			tmp = data_ptr & 0x1;
+			cr_done &= tmp;
+			*cr_lane_mask |= (tmp << 1) << (cnt * 2);
+		}
 	}
 
-	return true;
+	return cr_done;
 }
 
 static bool get_channel_eq_status(struct tegra_dp_lt_data *lt_data)
@@ -200,8 +188,9 @@ static bool get_channel_eq_status(struct tegra_dp_lt_data *lt_data)
 static bool get_lt_status(struct tegra_dp_lt_data *lt_data)
 {
 	bool cr_done, ce_done;
+	u32 cr_lane_mask;
 
-	cr_done = get_clock_recovery_status(lt_data);
+	cr_done = get_clock_recovery_status(lt_data, &cr_lane_mask);
 	if (!cr_done)
 		return false;
 
@@ -435,7 +424,8 @@ static void lt_data_sw_reset(struct tegra_dp_lt_data *lt_data)
 	BUG_ON(!dp);
 
 	lt_data->lt_config_valid = false;
-	lt_data->cr_retry = 0;
+	lt_data->cr_adj_retry = 0;
+	lt_data->cr_max_retry = 0;
 	lt_data->ce_retry = 0;
 	lt_data->tx_pu = 0;
 	lt_data->n_lanes = dp->link_cfg.lane_count;
@@ -606,7 +596,7 @@ static void fast_lt_state(struct tegra_dp_lt_data *lt_data)
 
 	cur_hpd = tegra_dc_hpd(dp->dc);
 	if (!cur_hpd) {
-		pr_info("lt: hpd deasserted, wait for sometime, then reset\n");
+		pr_info("dp lt: hpd deasserted, wait and reset\n");
 
 		lt_failed(lt_data);
 		tgt_state = STATE_RESET;
@@ -642,17 +632,39 @@ done:
 	set_lt_state(lt_data, tgt_state, timeout);
 }
 
-static void lt_reduce_bit_rate_state(struct tegra_dp_lt_data *lt_data)
+static inline int set_new_link_cfg(struct tegra_dp_lt_data *lt_data,
+			struct tegra_dc_dp_link_config *new_cfg)
+{
+	struct tegra_dc_dp_data *dp = lt_data->dp;
+
+	if (!tegra_dc_dp_calc_config(dp, dp->mode, new_cfg))
+		return -EINVAL;
+
+	new_cfg->is_valid = true;
+	dp->link_cfg = *new_cfg;
+
+	/*
+	 * Disable LT before updating the current lane count and/or link rate.
+	 */
+	set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_DISABLE);
+
+	tegra_dp_update_link_config(dp);
+
+	lt_data->n_lanes = dp->link_cfg.lane_count;
+	lt_data->link_bw = dp->link_cfg.link_bw;
+
+	return 0;
+}
+
+static void lt_reduce_link_rate_state(struct tegra_dp_lt_data *lt_data)
 {
 	struct tegra_dc_dp_data *dp = lt_data->dp;
 	struct tegra_dc_dp_link_config tmp_cfg;
-	int next_link_index;
 	bool cur_hpd;
-	unsigned int key; /* Index into the link speed table */
 
 	cur_hpd = tegra_dc_hpd(dp->dc);
 	if (!cur_hpd) {
-		pr_info("lt: hpd deasserted, wait for sometime, then reset\n");
+		pr_info("dp lt: hpd deasserted, wait and reset\n");
 
 		lt_failed(lt_data);
 		set_lt_state(lt_data, STATE_RESET, HPD_DROP_TIMEOUT_MS);
@@ -662,48 +674,116 @@ static void lt_reduce_bit_rate_state(struct tegra_dp_lt_data *lt_data)
 	dp->link_cfg.is_valid = false;
 	tmp_cfg = dp->link_cfg;
 
-	next_link_index = get_next_lower_link_config(dp, &tmp_cfg);
-	if (next_link_index < 0)
+	tmp_cfg.link_bw = get_next_lower_link_rate(dp);
+	if (tmp_cfg.link_bw < NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GBPS)
 		goto fail;
 
-	key = tegra_dp_link_config_priority[next_link_index].key;
-	tmp_cfg.link_bw = dp->sor->link_speeds[key].link_rate;
-	tmp_cfg.lane_count =
-		tegra_dp_link_config_priority[next_link_index].num_lanes;
-
-	if (!tegra_dc_dp_calc_config(dp, dp->mode, &tmp_cfg))
+	if (set_new_link_cfg(lt_data, &tmp_cfg))
 		goto fail;
 
-	tmp_cfg.is_valid = true;
-	dp->link_cfg = tmp_cfg;
-
-	tegra_dp_update_link_config(dp);
-
-	lt_data->n_lanes = tmp_cfg.lane_count;
-	lt_data->link_bw = tmp_cfg.link_bw;
-
-	pr_info("dp lt: retry CR, lanes: %d, link_bw: 0x%x\n",
+	pr_info("dp lt: retry CR, lanes: %d, link rate: 0x%x\n",
 		lt_data->n_lanes, lt_data->link_bw);
 	set_lt_state(lt_data, STATE_CLOCK_RECOVERY, 0);
 	return;
 fail:
-	pr_info("dp lt: bit rate already lowest\n");
+	pr_info("dp lt: link rate already lowest\n");
 	lt_failed(lt_data);
 	set_lt_state(lt_data, STATE_DONE_FAIL, -1);
+}
+
+static void lt_reduce_lane_count_state(struct tegra_dp_lt_data *lt_data)
+{
+	struct tegra_dc_dp_data *dp = lt_data->dp;
+	struct tegra_dc_dp_link_config tmp_cfg;
+	bool cur_hpd;
+
+	cur_hpd = tegra_dc_hpd(dp->dc);
+	if (!cur_hpd) {
+		pr_info("dp lt: hpd deasserted, wait and reset\n");
+
+		lt_failed(lt_data);
+		set_lt_state(lt_data, STATE_RESET, HPD_DROP_TIMEOUT_MS);
+		return;
+	}
+
+	dp->link_cfg.is_valid = false;
+	tmp_cfg = dp->link_cfg;
+
+	tmp_cfg.lane_count = get_next_lower_lane_count(dp);
+	if (tmp_cfg.lane_count < 1)
+		goto fail;
+
+	if (set_new_link_cfg(lt_data, &tmp_cfg))
+		goto fail;
+
+	pr_info("dp lt: retry CR, lanes: %d, link rate: 0x%x\n",
+		lt_data->n_lanes, lt_data->link_bw);
+	set_lt_state(lt_data, STATE_CLOCK_RECOVERY, 0);
 	return;
+fail:
+	pr_info("dp lt: lane count already lowest\n");
+	lt_failed(lt_data);
+	set_lt_state(lt_data, STATE_DONE_FAIL, -1);
+}
+
+static void lt_channel_equalization_fallback(struct tegra_dp_lt_data *lt_data,
+				int *tgt_state, int *timeout, u32 cr_lane_mask)
+{
+	struct tegra_dc_dp_data *dp = lt_data->dp;
+
+	/*
+	 * If we fallback during EQ, there are two paths that we can end up in:
+	 * 1) If 4 lanes are enabled, reduce to 2 lanes and go back to the start
+	 *    of CR. If 2 lanes are enabled, reduce to 1 lane and go back to the
+	 *    start of CR. If only 1 lane is currently enabled, go to step 2.
+	 * 2) If the current link rate is > RBR, downshift to the next lowest
+	 *    link rate and reset the lane count to the highest needed.
+	 *
+	 * Before deciding which path to take, we need to look at the current
+	 * CR status on all lanes:
+	 * - If *all* the target LANEX_CR_DONE bits are still set, then we
+	 *   didn't transition to this state due to loss of CR during EQ. Try
+	 *   fallback path #1 first.
+	 * - If *at least one* of the LANEX_CR_DONE bits is still set, it's
+	 *   likely that the earlier CR phase passed due to crosstalk issues on
+	 *   some unconnected lanes. In this case, prioritize lane count
+	 *   reduction, and choose fallback path #1 first.
+	 * - If *none* of the LANEX_CR_DONE bits are still set, it's likely that
+	 *   CR was lost due to the bandwidth that we're trying to drive. Try
+	 *   reducing the link rate first, and choose fallback path #2.
+	 *
+	 * If neither of the above two paths are valid, end link training and
+	 * fail.
+	 */
+	if (lt_data->n_lanes > 1 && cr_lane_mask) {
+		/* Fallback path #1 */
+		lt_data_sw_reset(lt_data);
+		*tgt_state = STATE_REDUCE_LANE_COUNT;
+	} else if (lt_data->link_bw >
+				NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GBPS) {
+		/* Fallback path #2 */
+		lt_data_sw_reset(lt_data);
+		dp->link_cfg.lane_count = dp->max_link_cfg.lane_count;
+		*tgt_state = STATE_REDUCE_LINK_RATE;
+	} else {
+		lt_failed(lt_data);
+		*tgt_state = STATE_DONE_FAIL;
+	}
+	*timeout = 0;
 }
 
 static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 {
-	int tgt_state;
-	int timeout;
+	int tgt_state = STATE_CHANNEL_EQUALIZATION;
+	int timeout = 0;
 	bool cr_done = true;
 	bool ce_done = true;
 	bool cur_hpd;
+	u32 cr_lane_mask;
 
 	cur_hpd = tegra_dc_hpd(lt_data->dp->dc);
 	if (!cur_hpd) {
-		pr_info("lt: hpd deasserted, wait for sometime, then reset\n");
+		pr_info("dp lt: hpd deasserted, wait and reset\n");
 
 		lt_failed(lt_data);
 		tgt_state = STATE_RESET;
@@ -714,16 +794,21 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 	set_lt_tpg(lt_data, lt_data->dp->link_cfg.tps);
 	wait_aux_training(lt_data, false);
 
-	cr_done = get_clock_recovery_status(lt_data);
+	/*
+	 * Fallback if any of these two conditions are true:
+	 * 1) CR is lost on any of the currently enabled lanes.
+	 * 2) The LANEx_CHANNEL_EQ_DONE, LANEx_SYMBOL_LOCKED, or
+	 *    INTERLANE_ALIGN_DONE bits have not been set for all enabled lanes
+	 *    after 5 retry attempts.
+	 */
+
+	/* Fallback condition #1 */
+	cr_done = get_clock_recovery_status(lt_data, &cr_lane_mask);
 	if (!cr_done) {
-		/*
-		 * No HW reset here. CTS waits on write to
-		 * reduced(where applicable) link BW dpcd offset.
-		 */
-		lt_data_sw_reset(lt_data);
-		tgt_state = STATE_REDUCE_BIT_RATE;
-		timeout = 0;
 		pr_info("dp lt: CR lost\n");
+
+		lt_channel_equalization_fallback(lt_data, &tgt_state, &timeout,
+						cr_lane_mask);
 		goto done;
 	}
 
@@ -737,29 +822,19 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 	}
 	pr_info("dp lt: CE not done\n");
 
+	/* Fallback condition #2 */
 	if (++(lt_data->ce_retry) > (CE_RETRY_LIMIT + 1)) {
 		pr_info("dp lt: CE retry limit %d reached\n",
 				lt_data->ce_retry - 2);
-		/*
-		 * Just do LT SW reset here. CTS mandates that
-		 * LT config should be reduced only after
-		 * training pattern 1 is set. Reduce bitrate
-		 * state would update new lane count and
-		 * bandwidth. Proceeding clock recovery/fail/reset
-		 * state would reset voltage swing, pre-emphasis
-		 * and post-cursor2 after setting tps 1/0.
-		 */
-		lt_data_sw_reset(lt_data);
-		tgt_state = STATE_REDUCE_BIT_RATE;
-		timeout = 0;
+
+		lt_channel_equalization_fallback(lt_data, &tgt_state, &timeout,
+						cr_lane_mask);
 		goto done;
 	}
 
 	get_lt_new_config(lt_data);
 	set_lt_config(lt_data);
 
-	tgt_state = STATE_CHANNEL_EQUALIZATION;
-	timeout = 0;
 	pr_info("dp lt: CE retry\n");
 done:
 	set_lt_state(lt_data, tgt_state, timeout);
@@ -782,16 +857,56 @@ static inline bool is_vs_already_max(struct tegra_dp_lt_data *lt_data,
 	return true;
 }
 
+static bool check_cr_fallback(struct tegra_dp_lt_data *lt_data, u32 *vs_temp,
+			size_t vs_temp_size)
+{
+	/*
+	 * Fallback if any of these three conditions are true:
+	 * 1) CR_DONE is not set for all enabled lanes after 10 total retries.
+	 * 2) The max voltage swing has been reached.
+	 * 3) The same ADJ_REQ voltage swing values have been requested by the
+	 *    sink for 5 consecutive retry attempts.
+	 */
+	u32 *vs = lt_data->drive_current;
+	bool need_fallback = false;
+
+	/* Fallback condition #1 */
+	if ((lt_data->cr_max_retry)++ >= (CR_MAX_RETRY_LIMIT - 1)) {
+		need_fallback = true;
+		pr_info("dp lt: CR max retry limit %d reached\n",
+			lt_data->cr_max_retry);
+	}
+
+	if (!memcmp(vs_temp, vs, vs_temp_size)) {
+		/* Fallback condition #2 */
+		if (is_vs_already_max(lt_data, vs_temp, vs)) {
+			need_fallback = true;
+			pr_info("dp lt: max vs reached\n");
+		}
+
+		/* Fallback condition #3 */
+		if ((lt_data->cr_adj_retry)++ >= (CR_ADJ_RETRY_LIMIT - 1)) {
+			need_fallback = true;
+			pr_info("dp lt: CR adj retry limit %d reached\n",
+				lt_data->cr_adj_retry);
+		}
+	} else {
+		lt_data->cr_adj_retry = 1;
+	}
+
+	return need_fallback;
+}
+
 static void lt_clock_recovery_state(struct tegra_dp_lt_data *lt_data)
 {
 	struct tegra_dc_dp_data *dp;
 	struct tegra_dc_sor_data *sor;
-	int tgt_state;
-	int timeout;
+	int tgt_state = STATE_CLOCK_RECOVERY;
+	int timeout = 0;
 	u32 *vs = lt_data->drive_current;
 	bool cr_done;
-	u32 vs_temp[4];
-	bool cur_hpd;
+	u32 vs_temp[4], cr_lane_mask;
+	bool cur_hpd, need_fallback = false;
 
 	BUG_ON(!lt_data || !lt_data->dp || !lt_data->dp->sor);
 	dp = lt_data->dp;
@@ -799,7 +914,7 @@ static void lt_clock_recovery_state(struct tegra_dp_lt_data *lt_data)
 
 	cur_hpd = tegra_dc_hpd(dp->dc);
 	if (!cur_hpd) {
-		pr_info("lt: hpd deasserted, wait for sometime, then reset\n");
+		pr_info("dp lt: hpd deasserted, wait and reset\n");
 
 		lt_failed(lt_data);
 		tgt_state = STATE_RESET;
@@ -808,15 +923,15 @@ static void lt_clock_recovery_state(struct tegra_dp_lt_data *lt_data)
 	}
 
 	set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_1);
-
 	set_lt_config(lt_data);
 	wait_aux_training(lt_data, true);
-	cr_done = get_clock_recovery_status(lt_data);
+	cr_done = get_clock_recovery_status(lt_data, &cr_lane_mask);
 	if (cr_done) {
-		lt_data->cr_retry = 0;
-		tgt_state = STATE_CHANNEL_EQUALIZATION;
-		timeout = 0;
 		pr_info("dp lt: CR done\n");
+
+		lt_data->cr_adj_retry = 0;
+		lt_data->cr_max_retry = 0;
+		tgt_state = STATE_CHANNEL_EQUALIZATION;
 		goto done;
 	}
 	pr_info("dp lt: CR not done\n");
@@ -824,37 +939,48 @@ static void lt_clock_recovery_state(struct tegra_dp_lt_data *lt_data)
 	memcpy(vs_temp, vs, sizeof(vs_temp));
 	get_lt_new_config(lt_data);
 
-	if (!memcmp(vs_temp, vs, sizeof(vs_temp))) {
-		/*
-		 * Reduce bit rate if voltage swing already max or
-		 * CR retry limit of 5 reached.
-		 */
-		if (is_vs_already_max(lt_data, vs_temp, vs) ||
-			(lt_data->cr_retry)++ >= (CR_RETRY_LIMIT - 1)) {
-			pr_info("dp lt: CR retry limit %d %s reached\n",
-				lt_data->cr_retry, is_vs_already_max(
-				lt_data, vs_temp, vs) ? "for max vs" : "");
-			/*
-			 * Just do LT SW reset here. CTS mandates that
-			 * LT config should be reduced only after
-			 * bit rate has been reduced. Reduce bitrate
-			 * state would update new lane count and
-			 * bandwidth. Proceeding clock recovery state
-			 * would reset voltage swing, pre-emphasis
-			 * and post-cursor2.
-			 */
+	/*
+	 * If we choose to fallback during CR, there are two paths:
+	 * 1) If the current link rate is > RBR, downshift to the next lower
+	 *    link rate. Prioritize link rate reduction over lane count
+	 *    reduction.
+	 * 2) If the current link rate is already RBR, check if only the
+	 *    lower-numbered lanes have their CR_DONE bits set. For example, in
+	 *    a 4-lane configuration, the lower-numbered lanes would be lanes 0
+	 *    and 1. In a 2-lane configuration, the lower-numbered lane is lane
+	 *    0 only. If this is the case, reduce the lane count accordingly
+	 *    and reset the link rate to the highest needed.
+	 *
+	 * If neither of the above two paths are valid, end link training and
+	 * fail.
+	 */
+	need_fallback = check_cr_fallback(lt_data, vs_temp, sizeof(vs_temp));
+	if (need_fallback) {
+		if (lt_data->link_bw >
+				NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GBPS) {
+			/* Fallback path #1 */
 			lt_data_sw_reset(lt_data);
-			tgt_state = STATE_REDUCE_BIT_RATE;
-			timeout = 0;
+			tgt_state = STATE_REDUCE_LINK_RATE;
 			goto done;
-		}
-	} else {
-		lt_data->cr_retry = 1;
-	}
+		} else if (lt_data->n_lanes > 1) {
+			/* Fallback path #2 */
+			u32 expected_cr_mask;
 
-	tgt_state = STATE_CLOCK_RECOVERY;
-	timeout = 0;
-	pr_info("dp lt: CR retry\n");
+			expected_cr_mask = (lt_data->n_lanes == 4) ? 0x3 : 0x1;
+			if (expected_cr_mask == cr_lane_mask) {
+				lt_data_sw_reset(lt_data);
+				dp->link_cfg.link_bw = dp->max_link_cfg.link_bw;
+				tgt_state = STATE_REDUCE_LANE_COUNT;
+				goto done;
+			}
+		}
+
+		lt_failed(lt_data);
+		tgt_state = STATE_DONE_FAIL;
+		goto done;
+	} else {
+		pr_info("dp lt: CR retry\n");
+	}
 done:
 	set_lt_state(lt_data, tgt_state, timeout);
 }
@@ -867,7 +993,8 @@ static const dispatch_func_t state_machine_dispatch[] = {
 	lt_channel_equalization_state,	/* STATE_CHANNEL_EQUALIZATION */
 	NULL,				/* STATE_DONE_FAIL */
 	NULL,				/* STATE_DONE_PASS */
-	lt_reduce_bit_rate_state,	/* STATE_REDUCE_BIT_RATE */
+	lt_reduce_link_rate_state,	/* STATE_REDUCE_LINK_RATE */
+	lt_reduce_lane_count_state,	/* STATE_REDUCE_LANE_COUNT */
 };
 
 static void handle_lt_hpd_evt(struct tegra_dp_lt_data *lt_data, int cur_hpd)

@@ -1,7 +1,7 @@
 /*
  * dp_lt.h: DP Link Training definitions.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -19,7 +19,8 @@
 
 #include "sor.h"
 
-#define CR_RETRY_LIMIT 5
+#define CR_ADJ_RETRY_LIMIT 5
+#define CR_MAX_RETRY_LIMIT 10
 #define CE_RETRY_LIMIT 5
 #define LT_TIMEOUT_MS 10000
 #define HPD_DROP_TIMEOUT_MS 1500
@@ -31,7 +32,8 @@ enum {
 	STATE_CHANNEL_EQUALIZATION,
 	STATE_DONE_FAIL,
 	STATE_DONE_PASS,
-	STATE_REDUCE_BIT_RATE,
+	STATE_REDUCE_LINK_RATE,
+	STATE_REDUCE_LANE_COUNT,
 	STATE_COUNT,
 };
 
@@ -42,7 +44,8 @@ static const char * const tegra_dp_lt_state_names[] = {
 	"channel equalization",
 	"link training fail/disable",
 	"link training pass",
-	"reduce bit rate",
+	"reduce link rate",
+	"reduce lane count",
 };
 
 struct tegra_dp_lt_data {
@@ -68,7 +71,8 @@ struct tegra_dp_lt_data {
 	u32 n_lanes;
 	u32 link_bw;
 
-	u32 cr_retry;
+	u32 cr_adj_retry;
+	u32 cr_max_retry;
 	u32 ce_retry;
 };
 

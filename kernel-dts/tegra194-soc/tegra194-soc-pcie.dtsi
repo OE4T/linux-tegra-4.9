@@ -375,6 +375,7 @@
 
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
 		nvidia,device-id = /bits/ 16 <0x1AD4>;
+		nvidia,controller-id = <0x0>;
 
 		iommus = <&smmu TEGRA_SID_PCIE0>;
 		dma-coherent;
@@ -433,6 +434,7 @@
 
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
 		nvidia,device-id = /bits/ 16 <0x1AD5>;
+		nvidia,controller-id = <0x4>;
 
 		iommus = <&smmu TEGRA_SID_PCIE4>;
 		dma-coherent;
@@ -467,6 +469,7 @@
 
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
 		nvidia,device-id = /bits/ 16 <0x1AD4>;
+		nvidia,controller-id = <0x5>;
 
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;

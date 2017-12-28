@@ -59,8 +59,6 @@ void nvmap_setup_t18x_cache_ops(struct nvmap_chip_cache_op *op)
 {
 	op->inner_flush_cache_all = nvmap_roc_flush_cache;
 	op->inner_clean_cache_all = nvmap_roc_clean_cache;
-        pr_info("set roc flush ops to replace cache ops by set/ways\n");
-        inner_flush_cache_all();
-        inner_clean_cache_all();
+	op->name = kstrdup("roc", GFP_KERNEL);
 }
 NVMAP_CACHE_OF_DECLARE("nvidia,carveouts-t18x", nvmap_setup_t18x_cache_ops);

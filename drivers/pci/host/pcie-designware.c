@@ -661,6 +661,7 @@ int dw_pcie_host_init(struct pcie_port *pp)
 		ret = -ENOMEM;
 		goto error;
 	}
+	pp->bus = bus;
 
 	if (pp->ops->scan_bus)
 		pp->ops->scan_bus(pp);
@@ -684,6 +685,43 @@ error:
 	return ret;
 }
 EXPORT_SYMBOL(dw_pcie_host_init);
+
+void dw_pcie_host_deinit(struct pcie_port *pp)
+{
+	LIST_HEAD(res);
+	struct resource_entry *win, *tmp;
+	struct device_node *np = pp->dev->of_node;
+	int i, irq;
+
+	pci_stop_root_bus(pp->bus);
+	pci_remove_root_bus(pp->bus);
+	if (pp->ops->host_deinit)
+		pp->ops->host_deinit(pp);
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		if (!pp->ops->msi_host_deinit) {
+			irq_domain_remove(pp->irq_domain);
+			for (i = 0; i < MAX_MSI_IRQS; i++) {
+				irq = irq_find_mapping(pp->irq_domain, i);
+				irq_dispose_mapping(irq);
+			}
+		} else {
+			pp->ops->msi_host_deinit(pp, &dw_pcie_msi_chip);
+		}
+	}
+
+	if (!of_pci_get_host_bridge_resources(np, 0, 0xff, &res,
+					      &pp->io_base)) {
+		resource_list_for_each_entry_safe(win, tmp, &res) {
+			switch (resource_type(win->res)) {
+			case IORESOURCE_IO:
+				pci_unmap_iospace(win->res);
+			}
+		}
+	}
+	pci_free_resource_list(&res);
+}
+EXPORT_SYMBOL(dw_pcie_host_deinit);
 
 static int dw_pcie_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 		u32 devfn, int where, int size, u32 *val)

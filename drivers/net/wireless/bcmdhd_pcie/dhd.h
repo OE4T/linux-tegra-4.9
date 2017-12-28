@@ -1785,5 +1785,5 @@ extern bool is_es4_module(void);
 #ifdef OOB_PARAM
 extern uint dhd_get_oob_disable(struct dhd_bus* bus);
 #endif /* OOB_PARAM */
-
+extern int wifi_get_mac_addr(unsigned char *buf);
 #endif /* _dhd_h_ */

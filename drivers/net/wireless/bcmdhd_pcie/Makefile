@@ -11,7 +11,7 @@ DHDCFLAGS += -Wall -Wstrict-prototypes -Dlinux -DLINUX -DBCMDRIVER            \
 	-DDHD_DONOT_FORWARD_BCMEVENT_AS_NETWORK_PKT                           \
 	-DCUSTOMER_HW2 -DGET_CUSTOM_MAC_ENABLE -DDHD_FW_COREDUMP              \
 	-DSEC_ENHANCEMENT -DDHD_VERSION_NO_DATE_TIME                          \
-	-DENABLE_INSMOD_NO_FW_LOAD -DCONFIG_DTS
+	-DENABLE_INSMOD_NO_FW_LOAD -DCONFIG_DTS -DGET_CUSTOM_MAC_ENABLE
 
 #################
 # Common feature
@@ -230,7 +230,7 @@ DHDOFILES := dhd_pno.o dhd_common.o dhd_ip.o dhd_custom_gpio.o \
 	dhd_linux.o dhd_linux_sched.o dhd_cfg80211.o dhd_linux_wq.o aiutils.o bcmevent.o \
 	bcmutils.o bcmwifi_channels.o hndpmu.o linux_osl.o sbutils.o siutils.o \
 	wl_android.o wl_roam.o wl_cfg80211.o wl_cfgp2p.o wl_cfg_btcoex.o wldev_common.o wl_linux_mon.o  \
-	dhd_linux_platdev.o dhd_pno.o dhd_linux_wq.o hnd_pktq.o hnd_pktpool.o
+	dhd_linux_platdev.o dhd_pno.o dhd_linux_wq.o hnd_pktq.o hnd_pktpool.o dhd_custom_tegra.o
 
 # RTT support
 #DHDCFLAGS += -DRTT_SUPPORT -DRTT_DEBUG

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -442,6 +442,8 @@ static int freq_get(void *data, u64 *val)
 	get_online_cpus();
 	if (cpu_online(cpu))
 		*val = tegra194_get_speed(cpu);
+	else
+		*val = 0LL;
 	put_online_cpus();
 
 	return 0;
@@ -486,7 +488,8 @@ static int get_ndiv(void *data, u64 *ndiv)
 	if (cpu_online(cpu)) {
 		smp_call_function_single(cpu, read_ndiv_request, ndiv, 1);
 		*ndiv = *ndiv & 0xffff;
-	}
+	} else
+		*ndiv = 0LL;
 
 	put_online_cpus();
 	return 0;
@@ -706,6 +709,8 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 		return -EINVAL;
 
 	freq = tegra194_get_speed(policy->cpu); /* boot freq */
+	if (!freq) /* 0 is invalid */
+		return -EIO;
 
 	ftbl = get_freqtable(policy->cpu);
 
@@ -725,6 +730,8 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 	}
 
 	policy->cur = tegra194_get_speed(policy->cpu);
+	if (!policy->cur) /* '0' is invalid */
+		return -EIO;
 
 	cl = get_cpu_cluster(policy->cpu);
 	if (tfreq_data.pcluster[cl].bwmgr)

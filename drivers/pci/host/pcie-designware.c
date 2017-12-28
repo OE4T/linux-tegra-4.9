@@ -123,6 +123,7 @@ int dw_pcie_cfg_read(void __iomem *addr, int size, u32 *val)
 
 	return PCIBIOS_SUCCESSFUL;
 }
+EXPORT_SYMBOL(dw_pcie_cfg_read);
 
 int dw_pcie_cfg_write(void __iomem *addr, int size, u32 val)
 {
@@ -140,6 +141,7 @@ int dw_pcie_cfg_write(void __iomem *addr, int size, u32 val)
 
 	return PCIBIOS_SUCCESSFUL;
 }
+EXPORT_SYMBOL(dw_pcie_cfg_write);
 
 u32 dw_pcie_readl_rc(struct pcie_port *pp, u32 reg)
 {
@@ -281,6 +283,7 @@ irqreturn_t dw_handle_msi_irq(struct pcie_port *pp)
 
 	return ret;
 }
+EXPORT_SYMBOL(dw_handle_msi_irq);
 
 void dw_pcie_msi_init(struct pcie_port *pp)
 {
@@ -295,6 +298,7 @@ void dw_pcie_msi_init(struct pcie_port *pp)
 	dw_pcie_wr_own_conf(pp, PCIE_MSI_ADDR_HI, 4,
 			    (u32)(msi_target >> 32 & 0xffffffff));
 }
+EXPORT_SYMBOL(dw_pcie_msi_init);
 
 static void dw_pcie_msi_clear_irq(struct pcie_port *pp, int irq)
 {
@@ -679,6 +683,7 @@ error:
 	pci_free_resource_list(&res);
 	return ret;
 }
+EXPORT_SYMBOL(dw_pcie_host_init);
 
 static int dw_pcie_rd_other_conf(struct pcie_port *pp, struct pci_bus *bus,
 		u32 devfn, int where, int size, u32 *val)
@@ -904,3 +909,4 @@ void dw_pcie_setup_rc(struct pcie_port *pp)
 	val |= PORT_LOGIC_SPEED_CHANGE;
 	dw_pcie_wr_own_conf(pp, PCIE_LINK_WIDTH_SPEED_CONTROL, 4, val);
 }
+EXPORT_SYMBOL(dw_pcie_setup_rc);

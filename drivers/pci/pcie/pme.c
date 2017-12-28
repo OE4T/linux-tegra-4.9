@@ -44,6 +44,7 @@ void pcie_pme_disable_msi(void)
 {
 	pcie_pme_msi_disabled = true;
 }
+EXPORT_SYMBOL(pcie_pme_disable_msi);
 
 enum pme_suspend_level {
 	PME_SUSPEND_NONE = 0,

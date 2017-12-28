@@ -302,8 +302,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 
 	gk20a_init_ce_support(g);
 
-	nvgpu_init_mm_ce_context(g);
-
 	if (g->ops.xve.available_speeds) {
 		u32 speed;
 
@@ -321,8 +319,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
-	nvgpu_vidmem_thread_unpause(&g->mm);
-
 #if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
 	if (gk20a_platform_has_syncpoints(g) && g->syncpt_unit_size) {
 		if (!nvgpu_mem_is_valid(&g->syncpt_mem)) {
@@ -334,6 +330,10 @@ int gk20a_finalize_poweron(struct gk20a *g)
 #endif
 
 	gk20a_channel_resume(g);
+
+	nvgpu_init_mm_ce_context(g);
+
+	nvgpu_vidmem_thread_unpause(&g->mm);
 
 done:
 	if (err)

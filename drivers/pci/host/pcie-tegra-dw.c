@@ -1598,8 +1598,8 @@ static struct pcie_host_ops tegra_pcie_dw_host_ops = {
 	.scan_bus = tegra_pcie_dw_scan_bus,
 };
 
-static int __init tegra_add_pcie_port(struct pcie_port *pp,
-				      struct platform_device *pdev)
+static int tegra_add_pcie_port(struct pcie_port *pp,
+			       struct platform_device *pdev)
 {
 	int ret;
 
@@ -1952,8 +1952,10 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	reset_control_deassert(pcie->core_rst);
 
 	ret = tegra_add_pcie_port(pp, pdev);
-	if (ret < 0)
+	if (ret < 0) {
+		dev_err(pcie->dev, "PCIE : Add PCIe port failed: %d\n", ret);
 		goto fail_add_port;
+	}
 
 	platform_set_drvdata(pdev, pcie);
 
@@ -2008,7 +2010,31 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 				 1, PME_ACK_TIMEOUT);
 	if (err)
 		dev_err(pcie->dev, "PME_TurnOff failed: %d\n", err);
+}
 
+static int tegra_pcie_dw_remove(struct platform_device *pdev)
+{
+	struct tegra_pcie_dw *pcie = platform_get_drvdata(pdev);
+	int i;
+
+	debugfs_remove_recursive(pcie->debugfs);
+
+	for (i = 0; i < DMA_WR_CHNL_NUM; i++)
+		mutex_destroy(&pcie->wr_lock[i]);
+
+	for (i = 0; i < DMA_RD_CHNL_NUM; i++)
+		mutex_destroy(&pcie->rd_lock[i]);
+
+	dw_pcie_host_deinit(&pcie->pp);
+	tegra_pcie_dw_pme_turnoff(pcie);
+
+	reset_control_assert(pcie->core_rst);
+	tegra_pcie_disable_phy(pcie);
+	reset_control_assert(pcie->core_apb_rst);
+	clk_disable_unprepare(pcie->core_clk);
+	regulator_disable(pcie->pex_ctl_reg);
+
+	return 0;
 }
 
 static int tegra_pcie_dw_suspend_noirq(struct device *dev)
@@ -2104,7 +2130,7 @@ static const struct dev_pm_ops tegra_pcie_dw_pm_ops = {
 
 static struct platform_driver tegra_pcie_dw_driver = {
 	.probe = tegra_pcie_dw_probe,
-	.remove	= __exit_p(tegra_pcie_dw_remove),
+	.remove = tegra_pcie_dw_remove,
 	.driver = {
 		.name	= "tegra-pcie-dw",
 #ifdef CONFIG_PM
@@ -2114,11 +2140,22 @@ static struct platform_driver tegra_pcie_dw_driver = {
 	},
 };
 
-static int __init tegra_pcie_rp_late_init(void)
+static int __init tegra_pcie_rp_init(void)
 {
 	return platform_driver_register(&tegra_pcie_dw_driver);
 }
-late_initcall(tegra_pcie_rp_late_init);
+
+#if IS_MODULE(CONFIG_PCIE_TEGRA_DW)
+static void __exit tegra_pcie_rp_deinit(void)
+{
+	platform_driver_unregister(&tegra_pcie_dw_driver);
+}
+
+module_init(tegra_pcie_rp_init);
+module_exit(tegra_pcie_rp_deinit);
+#else
+late_initcall(tegra_pcie_rp_init);
+#endif
 
 MODULE_AUTHOR("Vidya Sagar <vidyas@nvidia.com>");
 MODULE_DESCRIPTION("Nvidia PCIe host controller driver");

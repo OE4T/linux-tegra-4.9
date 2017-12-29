@@ -31,6 +31,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -368,6 +369,8 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 		return -EINVAL;
 	}
 
+	nvgpu_speculation_barrier();
+
 	/* map handle */
 	va = dma_buf_vmap(dmabuf);
 	if (!va) {
@@ -660,6 +663,8 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 			nvgpu_err(g, "invalid notifier offset");
 			return -EINVAL;
 		}
+
+		nvgpu_speculation_barrier();
 
 		notif = dma_buf_vmap(dmabuf);
 		if (!notif) {

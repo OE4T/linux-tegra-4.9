@@ -31,12 +31,12 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/mm.h>
 #include <nvgpu/sizes.h>
+#include <nvgpu/barrier.h>
+#include <nvgpu/log.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a.h"
 #include "css_gr_gk20a.h"
-
-#include <nvgpu/log.h>
-#include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gk20a/hw_perf_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
@@ -500,6 +500,8 @@ int gr_gk20a_css_attach(struct channel_gk20a *ch,
 	if (!perfmon_count ||
 	    perfmon_count > CSS_MAX_PERFMON_IDS - CSS_FIRST_PERFMON_ID)
 		return -EINVAL;
+
+	nvgpu_speculation_barrier();
 
 	gr = &g->gr;
 

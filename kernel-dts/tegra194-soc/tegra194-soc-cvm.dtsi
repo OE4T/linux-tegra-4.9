@@ -20,6 +20,41 @@
 #include <tegra194-soc/tegra194-soc-prod.dtsi>
 
 / {
+
+	cpus {
+		cpu@0 {
+			status = "okay";
+		};
+
+		cpu@1 {
+			status = "okay";
+		};
+
+		cpu@2 {
+			status = "okay";
+		};
+
+		cpu@3 {
+			status = "okay";
+		};
+
+		cpu@4 {
+			status = "okay";
+		};
+
+		cpu@5 {
+			status = "okay";
+		};
+
+		cpu@6 {
+			status = "okay";
+		};
+
+		cpu@7 {
+			status = "okay";
+		};
+	};
+
 	tegra-carveouts {
 		status = "okay";
 	};
@@ -185,8 +220,31 @@
 		status = "okay";
 	};
 
+	mc {
+		status = "okay";
+	};
+
 	mc_sid@2c00000 {
 		status = "okay";
+	};
+
+	interrupt-controller@3881000 {
+		status = "okay";
+	};
+
+	timer {
+		status = "okay";
+	};
+
+	cbbnocaxi@2300000 {
+		status = "okay";
+	};
+
+	actmon@d230000 {
+		status = "okay";
+		mc_all {
+			status = "okay";
+		};
 	};
 
 	iommu@12000000 {

@@ -1209,17 +1209,6 @@ static int dbg_dc_outtype_show(struct seq_file *s, void *unused)
  * Save and reuse on changing the output type
  */
 #if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT)
-struct tegra_dc_out_info {
-	struct tegra_dc_out_ops *out_ops;
-	void *out_data;
-	struct tegra_dc_out out;
-	struct tegra_dc_mode mode;
-	int fblistindex;
-	struct tegra_edid *edid;
-};
-
-static struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX];
-
 /* array for saving the out_type for each head */
 static int *boot_out_type;
 
@@ -1272,7 +1261,7 @@ static int set_avdd(struct tegra_dc *dc, long cur_out, long new_out)
 	 */
 	bool is_enable = false;
 	struct tegra_dc_out *dc_out =
-		&dbg_dc_out_info[boot_out_type[dc->ndev->id]].out;
+		&dc->dbg_dc_out_info[boot_out_type[dc->ndev->id]].out;
 
 	/* cur is fake and new is fake - skip */
 	if (is_valid_fake_support(dc, cur_out) &&
@@ -1341,37 +1330,37 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 
 	/* If output is already created - save it */
 	if (dc->out_data) {
-		dbg_dc_out_info[cur_dc_out].out_data = dc->out_data;
-		dbg_dc_out_info[cur_dc_out].out_ops  = dc->out_ops;
-		memcpy(&dbg_dc_out_info[cur_dc_out].out, dc->out,
+		dc->dbg_dc_out_info[cur_dc_out].out_data = dc->out_data;
+		dc->dbg_dc_out_info[cur_dc_out].out_ops  = dc->out_ops;
+		memcpy(&dc->dbg_dc_out_info[cur_dc_out].out, dc->out,
 					sizeof(struct tegra_dc_out));
-		dbg_dc_out_info[cur_dc_out].mode = dc->mode;
-		dbg_dc_out_info[cur_dc_out].edid = dc->edid;
+		dc->dbg_dc_out_info[cur_dc_out].mode = dc->mode;
+		dc->dbg_dc_out_info[cur_dc_out].edid = dc->edid;
 
 		if (is_valid_dsi_out(dc, cur_dc_out) &&
-			dbg_dc_out_info[cur_dc_out].out_data)
+		    dc->dbg_dc_out_info[cur_dc_out].out_data)
 			tegra_dc_destroy_dsi_resources(dc, cur_dc_out);
 
 		if (!is_valid_fake_support(dc, cur_dc_out))
-			dbg_dc_out_info[cur_dc_out].fblistindex =
+			dc->dbg_dc_out_info[cur_dc_out].fblistindex =
 						tegra_fb_update_modelist(dc, 0);
 
 		set_avdd(dc, cur_dc_out, out_type);
 	}
 
 	/* If output already created - reuse it */
-	if (dbg_dc_out_info[out_type].out_data) {
+	if (dc->dbg_dc_out_info[out_type].out_data) {
 		mutex_lock(&dc->lp_lock);
 		mutex_lock(&dc->lock);
 
 		/* Change the out type */
 		dc->pdata->default_out->type = out_type;
-		dc->out_ops = dbg_dc_out_info[out_type].out_ops;
-		dc->out_data = dbg_dc_out_info[out_type].out_data;
-		memcpy(dc->out, &dbg_dc_out_info[out_type].out,
+		dc->out_ops = dc->dbg_dc_out_info[out_type].out_ops;
+		dc->out_data = dc->dbg_dc_out_info[out_type].out_data;
+		memcpy(dc->out, &dc->dbg_dc_out_info[out_type].out,
 						sizeof(struct tegra_dc_out));
-		dc->mode = dbg_dc_out_info[out_type].mode;
-		dc->edid = dbg_dc_out_info[out_type].edid;
+		dc->mode = dc->dbg_dc_out_info[out_type].mode;
+		dc->edid = dc->dbg_dc_out_info[out_type].edid;
 
 		/* Re-init the resources that are destroyed for dsi */
 		if (is_valid_dsi_out(dc, out_type))
@@ -1379,7 +1368,7 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 
 		if (!is_valid_fake_support(dc, out_type))
 			tegra_fb_update_modelist(dc,
-					dbg_dc_out_info[out_type].fblistindex);
+				dc->dbg_dc_out_info[out_type].fblistindex);
 
 		mutex_unlock(&dc->lock);
 		mutex_unlock(&dc->lp_lock);
@@ -1416,7 +1405,7 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 			tegra_dc_init_fakedsi_panel(dc, out_type);
 
 		} else if (out_type == TEGRA_DC_OUT_NULL) {
-			if (!dbg_dc_out_info[TEGRA_DC_OUT_NULL].out_data) {
+			if (!dc->dbg_dc_out_info[TEGRA_DC_OUT_NULL].out_data) {
 				allocate = true;
 				tegra_dc_init_null_or(dc);
 			}
@@ -1438,12 +1427,12 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 				}
 		}
 
-		dbg_dc_out_info[out_type].out_ops = dc->out_ops;
-		dbg_dc_out_info[out_type].out_data = dc->out_data;
-		memcpy(&dbg_dc_out_info[out_type].out, dc->out,
+		dc->dbg_dc_out_info[out_type].out_ops = dc->out_ops;
+		dc->dbg_dc_out_info[out_type].out_data = dc->out_data;
+		memcpy(&dc->dbg_dc_out_info[out_type].out, dc->out,
 						sizeof(struct tegra_dc_out));
-		dbg_dc_out_info[out_type].mode = dc->mode;
-		dbg_dc_out_info[out_type].edid = dc->edid;
+		dc->dbg_dc_out_info[out_type].mode = dc->mode;
+		dc->dbg_dc_out_info[out_type].edid = dc->edid;
 
 	}
 	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))

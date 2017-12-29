@@ -423,6 +423,20 @@ struct tegra_dc_latency_measurement_data {
 	struct mutex lock;
 };
 
+/* Add specific variable related to each output type.
+ * Save and reuse on changing the output type
+ */
+#if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT)
+struct tegra_dc_out_info {
+	struct tegra_dc_out_ops *out_ops;
+	void *out_data;
+	struct tegra_dc_out out;
+	struct tegra_dc_mode mode;
+	int fblistindex;
+	struct tegra_edid *edid;
+};
+#endif
+
 struct tegra_dc {
 	struct platform_device		*ndev;
 	struct tegra_dc_platform_data	*pdata;
@@ -636,5 +650,9 @@ struct tegra_dc {
 	struct tegra_dc_crc_ref_cnt crc_ref_cnt;
 	bool crc_initialized;
 	struct tegra_dc_latency_measurement_data msrmnt_info;
+
+#if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT)
+	struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX];
+#endif
 };
 #endif

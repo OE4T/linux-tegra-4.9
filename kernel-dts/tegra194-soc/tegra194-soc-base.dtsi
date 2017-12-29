@@ -1298,9 +1298,8 @@
 			power-domains = <&bpmp TEGRA194_POWER_DOMAIN_VE>;
 			resets = <&bpmp_resets TEGRA194_RESET_NVCSI>;
 			clocks = <&bpmp_clks TEGRA194_CLK_NVCSI>,
-				 <&bpmp_clks TEGRA194_CLK_NVCSILP>,
-				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
-			clock-names = "nvcsi", "nvcsilp", "nvcsilp_parent";
+				 <&bpmp_clks TEGRA194_CLK_NVCSILP>;
+			clock-names = "nvcsi", "nvcsilp";
 			interrupts = <0 119 0x04>;
 			num-ports = <6>;
 		};

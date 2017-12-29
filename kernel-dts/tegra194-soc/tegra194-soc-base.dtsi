@@ -515,6 +515,7 @@
 
 		channels   = <16>;
 		ranges;
+		status = "disabled";
 
 		mssnvlink@1f20000 {
 			reg = <0x0 0x1f20000 0x0 0x20000   /* MSSNVLINK 1: igpu0 link */

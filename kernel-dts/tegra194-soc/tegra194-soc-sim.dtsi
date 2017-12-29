@@ -31,6 +31,10 @@
 		status = "okay";
 	};
 
+	mc {
+		status = "okay";
+	};
+
 	mc_sid@2c00000 {
 		status = "okay";
 	};

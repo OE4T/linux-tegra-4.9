@@ -24,6 +24,10 @@
 		status = "okay";
 	};
 
+	mc {
+		status = "okay";
+	};
+
 	clock@0 {
 		status = "okay";
 	};

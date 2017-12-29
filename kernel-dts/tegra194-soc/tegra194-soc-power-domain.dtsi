@@ -1,6 +1,7 @@
 / {
        power-domain {
                compatible = "tegra-power-domains";
+               status = "disabled";
 
                disa_pd: disa-pd {
                        compatible = "nvidia,tegra194-disa-pd";

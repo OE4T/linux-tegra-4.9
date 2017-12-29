@@ -36,6 +36,9 @@
 		status = "okay";
 	};
 
+	power-domain {
+		status = "okay";
+	};
 
 	clock@0 {
 	        status = "okay";

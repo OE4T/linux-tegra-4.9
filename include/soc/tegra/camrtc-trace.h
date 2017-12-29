@@ -193,6 +193,8 @@ struct camrtc_event_struct {
 #define	CAMRTC_EVENT_MODULE_MODS	U32_C(5)
 #define	CAMRTC_EVENT_MODULE_VINOTIFY	U32_C(6)
 #define	CAMRTC_EVENT_MODULE_I2C		U32_C(7)
+#define	CAMRTC_EVENT_MODULE_VI		U32_C(8)
+#define	CAMRTC_EVENT_MODULE_ISP		U32_C(9)
 
 // camrtc_trace_event_type_ids
 #define	camrtc_trace_type_exception \
@@ -371,5 +373,23 @@ struct camrtc_event_struct {
 		camrtc_trace_vinotify_ids_begin + U32_C(2)
 #define	camrtc_trace_vinotify_error_ts64 \
 		camrtc_trace_vinotify_ids_begin + U32_C(3)
+
+// camrtc_trace_vi_ids
+#define camrtc_trace_vi_ids_begin \
+		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
+			CAMRTC_EVENT_MODULE_VI, U32_C(0))
+#define	camrtc_trace_vi_task_begin \
+		camrtc_trace_vi_ids_begin + U32_C(1)
+#define	camrtc_trace_vi_task_end \
+		camrtc_trace_vi_ids_begin + U32_C(2)
+
+// camrtc_trace_isp_ids
+#define camrtc_trace_isp_ids_begin \
+		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
+			CAMRTC_EVENT_MODULE_ISP, U32_C(0))
+#define	camrtc_trace_isp_task_begin \
+		camrtc_trace_isp_ids_begin + U32_C(1)
+#define	camrtc_trace_isp_task_end \
+		camrtc_trace_isp_ids_begin + U32_C(2)
 
 #endif /* INCLUDE_CAMRTC_TRACE_H */

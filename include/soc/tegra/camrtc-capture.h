@@ -84,6 +84,7 @@ typedef struct syncpoint_info {
 
 #define ISP5_STATS_TOTAL_SIZE        (ISP5_STATS_LTM_OFFSET + ISP5_STATS_LTM_MAX_SIZE)
 
+#define VI_NUM_GOS_TABLES	12U
 #define VI_NUM_ATOMP_SURFACES	4
 
 /* Generic */
@@ -180,7 +181,10 @@ struct capture_channel_config {
 	uint8_t slvsec_stream_main;
 	uint8_t slvsec_stream_sub;
 	uint16_t reserved1;
-	uint32_t reserved2;
+
+#define HAVE_VI_GOS_TABLES
+	uint32_t num_vi_gos_tables;
+	iova_t vi_gos_tables[VI_NUM_GOS_TABLES];
 
 	struct syncpoint_info progress_sp;
 	struct syncpoint_info embdata_sp;

@@ -37,7 +37,12 @@ enum {
 /* SM4 firmware can restore itself after suspend */
 #define RTCPU_FW_SM4_VERSION 4U
 
-#define RTCPU_FW_CURRENT_VERSION (RTCPU_FW_SM4_VERSION)
+/* SM5 firmware supports IVC synchronization  */
+#define RTCPU_FW_SM5_VERSION 5U
+/* SM5 driver supports IVC synchronization  */
+#define RTCPU_DRIVER_SM5_VERSION 5U
+
+#define RTCPU_FW_CURRENT_VERSION (RTCPU_FW_SM5_VERSION)
 
 #define RTCPU_IVC_SANS_TRACE 1U
 #define RTCPU_IVC_WITH_TRACE 2U

@@ -1,0 +1,9 @@
+menu "Special HID drivers"
+
+config HID_SHIELD_REMOTE
+	tristate "SHIELD remote control support"
+	depends on USB_HID
+	---help---
+	Support for NVIDIA SHIELD remote control.
+
+endmenu

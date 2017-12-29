@@ -94,6 +94,7 @@ static int gv11b_tegra_probe(struct device *dev)
 
 	gp10b_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
+	gk20a_tegra_init_secure_alloc(platform->g);
 
 	return 0;
 }

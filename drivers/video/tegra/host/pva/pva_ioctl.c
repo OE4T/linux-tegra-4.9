@@ -1,7 +1,7 @@
 /*
  * PVA Ioctl Handling for T194
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -478,6 +478,77 @@ err_poweron:
 	return err;
 }
 
+/**
+ * pva_set_rate() - Set PVA minimum frequencies
+ *
+ * @priv: PVA Private data
+ * @arg: ioctl data
+ *
+ * This function sets PVA minimum frequencies
+ */
+static int pva_set_rate(struct pva_private *priv, void *arg)
+{
+	struct pva_ioctl_rate *ioctl_rate = (struct pva_ioctl_rate *)arg;
+	unsigned long new_rate = max_t(u64,
+				       MIN_PVA_FREQUENCY,
+				       ioctl_rate->rate);
+	int err;
+
+
+	/* Set R5 minimum frequency */
+	err = nvhost_module_set_rate(priv->pva->pdev,
+				     priv,
+				     new_rate,
+				     0,
+				     ioctl_rate->type);
+	if (err < 0)
+		return err;
+
+	/* Set VPU0 minimum frequency */
+	err = nvhost_module_set_rate(priv->pva->pdev,
+				     priv,
+				     new_rate,
+				     1,
+				     ioctl_rate->type);
+	if (err < 0)
+		return err;
+
+	/* Set VPU1 minimum frequency */
+	err = nvhost_module_set_rate(priv->pva->pdev,
+				     priv,
+				     new_rate,
+				     2,
+				     ioctl_rate->type);
+	if (err < 0)
+		return err;
+
+	return 0;
+}
+
+/**
+ * pva_get_rate() - Get current PVA frequency
+ *
+ * @priv: PVA Private data
+ * @arg: ioctl data
+ *
+ * This function gets the current PVA frequency
+ */
+static int pva_get_rate(struct pva_private *priv, void *arg)
+{
+	struct pva_ioctl_rate *ioctl_rate = (struct pva_ioctl_rate *)arg;
+	unsigned long rate;
+	int err;
+
+	err = nvhost_module_get_rate(priv->pva->pdev,
+				     &rate,
+				     0);
+
+	ioctl_rate->rate = rate;
+	ioctl_rate->type = NVHOST_CLOCK;
+
+	return err;
+}
+
 static long pva_ioctl(struct file *file, unsigned int cmd,
 			unsigned long arg)
 {
@@ -528,6 +599,16 @@ static long pva_ioctl(struct file *file, unsigned int cmd,
 	case PVA_IOCTL_COPY_VPU_FUNCTION_TABLE:
 	{
 		err = pva_copy_function_table(priv, buf);
+		break;
+	}
+	case PVA_IOCTL_SET_RATE:
+	{
+		err = pva_set_rate(priv, buf);
+		break;
+	}
+	case PVA_IOCTL_GET_RATE:
+	{
+		err = pva_get_rate(priv, buf);
 		break;
 	}
 	default:

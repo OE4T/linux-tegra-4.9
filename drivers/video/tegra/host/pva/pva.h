@@ -3,7 +3,7 @@
  *
  * Tegra PVA header
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -57,6 +57,11 @@ struct pva_version_info {
  * Action buffer size
  */
 #define ACTION_BUFFER_SIZE	128
+
+/**
+ * Minium PVA frequency (10MHz)
+ */
+#define MIN_PVA_FREQUENCY	10000000
 
 /**
  * @brief		struct to hold the segment details

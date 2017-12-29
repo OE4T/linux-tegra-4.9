@@ -1,7 +1,7 @@
 /*
  * Tegra PVA Driver ioctls
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -295,6 +295,33 @@ struct pva_ioctl_vpu_func_table {
 	__u32 size;
 };
 
+/**
+ * enum pva_clk_type - Clock type identifier while setting the frequency.
+ *
+ * PVA KMD supports three request types: Minimum, bandwidth and bandwidth
+ * (kHz). All bandwidth requests are summed up and treated as one of the
+ * minimum frequency requests. KMD then takes the maximum over all minimum
+ * requests and tries to set the frequency to PVA.
+ */
+enum pva_clk_type {
+	PVA_CLOCK	= 0,
+	PVA_BW		= 1,
+	PVA_BW_KHZ	= 3,
+};
+
+/**
+ * struct pva_ioctl_rate - Requesting PVA frequency update
+ *
+ * @param rate: Requested rate
+ * @param type: Type of the request according to pva_clk_type
+ * @param reserved: Reserved for future usage. Must be 0.
+ */
+struct pva_ioctl_rate {
+	__u64 rate;
+	__u32 type;
+	__u32 reserved;
+};
+
 #define PVA_IOCTL_CHARACTERISTICS	\
 	_IOWR(NVHOST_PVA_IOCTL_MAGIC, 1, struct pva_characteristics_req)
 #define PVA_IOCTL_PIN	\
@@ -307,9 +334,13 @@ struct pva_ioctl_vpu_func_table {
 	_IOW(NVHOST_PVA_IOCTL_MAGIC, 5, struct pva_ioctl_queue_attr)
 #define PVA_IOCTL_COPY_VPU_FUNCTION_TABLE	\
 	_IOWR(NVHOST_PVA_IOCTL_MAGIC, 6, struct pva_ioctl_vpu_func_table)
+#define PVA_IOCTL_SET_RATE	\
+	_IOWR(NVHOST_PVA_IOCTL_MAGIC, 7, struct pva_ioctl_rate)
+#define PVA_IOCTL_GET_RATE	\
+	_IOWR(NVHOST_PVA_IOCTL_MAGIC, 8, struct pva_ioctl_rate)
 
 
-#define NVHOST_PVA_IOCTL_LAST _IOC_NR(PVA_IOCTL_COPY_VPU_FUNCTION_TABLE)
+#define NVHOST_PVA_IOCTL_LAST _IOC_NR(PVA_IOCTL_GET_RATE)
 #define NVHOST_PVA_IOCTL_MAX_ARG_SIZE sizeof(struct pva_characteristics_req)
 
 #endif /* __LINUX_NVHOST_PVA_IOCTL_H */

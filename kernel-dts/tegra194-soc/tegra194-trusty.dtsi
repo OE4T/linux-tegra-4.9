@@ -51,5 +51,6 @@
 		compatible = "android,CustomIPI";
 		#interrupt-cells = <1>;
 		interrupt-controller;
+		status = "disabled";
 	};
 };

@@ -32,6 +32,10 @@
 		status = "okay";
 	};
 
+	interrupt-controller {
+		status = "okay";
+	};
+
 	clock@0 {
 		status = "okay";
 	};

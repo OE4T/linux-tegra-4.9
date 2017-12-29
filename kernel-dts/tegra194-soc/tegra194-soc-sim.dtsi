@@ -35,6 +35,10 @@
 		status = "okay";
 	};
 
+	interrupt-controller {
+		status = "okay";
+	};
+
 	mc {
 		status = "okay";
 	};

@@ -32,6 +32,10 @@
 		status = "okay";
 	};
 
+	interrupt-controller {
+		status = "okay";
+	};
+
 	interrupt-controller@3881000 {
 		status = "okay";
 	};

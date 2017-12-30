@@ -22,6 +22,7 @@
 
 #include <nvgpu/vm.h>
 #include <nvgpu/vm_area.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -110,6 +111,13 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 
 	if (pgsz_idx > gmmu_page_size_big)
 		return -EINVAL;
+
+	/*
+	 * pgsz_idx isn't likely to get too crazy, since it starts at 0 and
+	 * increments but this ensures that we still have a definitely valid
+	 * page size before proceeding.
+	 */
+	nvgpu_speculation_barrier();
 
 	if (!vm->big_pages && pgsz_idx == gmmu_page_size_big)
 		return -EINVAL;

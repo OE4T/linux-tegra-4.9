@@ -20,7 +20,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/suspend.h>
 #include <linux/kexec.h>
-#include <soc/tegra/chip-id.h>
 #include "pci.h"
 
 struct pci_dynid {
@@ -759,10 +758,6 @@ static int pci_pm_suspend_noirq(struct device *dev)
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
 
-	/* Hack: To be removed later */
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA19)
-		return 0;
-
 	if (pci_has_legacy_pm_support(pci_dev))
 		return pci_legacy_suspend_late(dev, PMSG_SUSPEND);
 
@@ -820,10 +815,6 @@ static int pci_pm_resume_noirq(struct device *dev)
 	struct pci_dev *pci_dev = to_pci_dev(dev);
 	struct device_driver *drv = dev->driver;
 	int error = 0;
-
-	/* Hack: To be removed later */
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA19)
-		return 0;
 
 	pci_pm_default_resume_early(pci_dev);
 

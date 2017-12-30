@@ -4,7 +4,7 @@
  * Serial Debugger Interface for Tegra
  *
  * Copyright (C) 2008 Google, Inc.
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -40,6 +40,7 @@ struct tegra_fiq_debugger {
 	bool break_seen;
 };
 
+/* Legacy UART start */
 static inline void tegra_write(struct tegra_fiq_debugger *t,
 	unsigned int val, unsigned int off)
 {
@@ -132,8 +133,51 @@ static void fiq_enable(struct platform_device *pdev, unsigned int irq, bool on)
 	; // do nothing
 #endif
 }
+/* Legacy UART end */
+
+/* Combined UART start */
+#define CONSOLE_NUM_BYTES_SHIFT		24
+#define CONSOLE_FLUSH_DATA_TO_PORT	(1 << 26)
+#define CONSOLE_RING_DOORBELL		(1 << 31)
+#define CONSOLE_IS_BUSY			(1 << 31)
+#define CONSOLE_WRITE			(CONSOLE_RING_DOORBELL | \
+					 CONSOLE_FLUSH_DATA_TO_PORT)
+
+static int combined_debug_getc(struct platform_device *pdev)
+{
+	return FIQ_DEBUGGER_NO_CHAR;
+}
+
+static void combined_debug_putc(struct platform_device *pdev, unsigned int c)
+{
+	struct tegra_fiq_debugger *t;
+	unsigned int val;
+
+	t = container_of(dev_get_platdata(&pdev->dev), typeof(*t), pdata);
+	while (__raw_readl(t->debug_port_base) & CONSOLE_IS_BUSY);
+
+	val = c;
+	val |= (CONSOLE_WRITE | (1 << CONSOLE_NUM_BYTES_SHIFT));
+	__raw_writel(val, t->debug_port_base);
+}
+
+static void combined_fiq_enable(struct platform_device *pdev,
+				unsigned int irq, bool on)
+{
+#ifdef CONFIG_ARM
+	if (on)
+		tegra_fiq_enable(irq);
+	else
+		tegra_fiq_disable(irq);
+#else
+	; // do nothing
+#endif
+}
+/* Combined UART end */
 
 static int tegra_fiq_debugger_id;
+static bool tegra_fiq_combined_uart;
+
 
 static void __tegra_serial_debug_init(unsigned int base, int fiq, int irq,
 			   struct clk *clk, int signal_irq, int wakeup_irq)
@@ -147,11 +191,19 @@ static void __tegra_serial_debug_init(unsigned int base, int fiq, int irq,
 	if (!t)
 		return;
 
-	t->pdata.uart_init = debug_port_init;
-	t->pdata.uart_getc = debug_getc;
-	t->pdata.uart_putc = debug_putc;
-	t->pdata.uart_flush = debug_flush;
-	t->pdata.fiq_enable = fiq_enable;
+	if (tegra_fiq_combined_uart) {
+		t->pdata.uart_init = NULL;
+		t->pdata.uart_getc = combined_debug_getc;
+		t->pdata.uart_putc = combined_debug_putc;
+		t->pdata.uart_flush = NULL;
+		t->pdata.fiq_enable = combined_fiq_enable;
+	} else {
+		t->pdata.uart_init = debug_port_init;
+		t->pdata.uart_getc = debug_getc;
+		t->pdata.uart_putc = debug_putc;
+		t->pdata.uart_flush = debug_flush;
+		t->pdata.fiq_enable = fiq_enable;
+	}
 
 	t->debug_port_base = ioremap(base, PAGE_SIZE);
 	if (!t->debug_port_base) {
@@ -252,10 +304,20 @@ static int __init tegra_fiq_debugger_init(void)
 	} else
 		dn = dn_debugger;
 
-	if (of_address_to_resource(dn, 0, &resource)) {
-		pr_err("%s: could not get IO memory\n", __func__);
-		return -ENXIO;
+	if (of_find_node_with_property(NULL, "combined-uart")) {
+		tegra_fiq_combined_uart = true;
+		if (of_address_to_resource(dn, 1, &resource)) {
+			pr_err("%s: could not get IO memory\n", __func__);
+			return -ENXIO;
+		}
+	} else {
+		tegra_fiq_combined_uart = false;
+		if (of_address_to_resource(dn, 0, &resource)) {
+			pr_err("%s: could not get IO memory\n", __func__);
+			return -ENXIO;
+		}
 	}
+
 	uartbase = resource.start;
 	pr_debug("%s: found console port at %08X\n", __func__, uartbase);
 

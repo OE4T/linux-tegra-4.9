@@ -13,6 +13,7 @@
 
 #include <linux/types.h>
 #include <linux/interrupt.h>
+#include <linux/iopoll.h>
 #include <linux/clk.h>
 #include <linux/reset.h>
 #include <linux/delay.h>
@@ -260,8 +261,12 @@
 #define DMA_LLP_LOW_OFF_RDCH		(0x1C + 0x100)
 #define DMA_LLP_HIGH_OFF_RDCH		(0x20 + 0x100)
 
+#define PME_ACK_TIMEOUT 10000
+
 struct tegra_pcie_dw {
 	struct device *dev;
+	struct resource	*dbi_res;
+	struct resource	*atu_dma_res;
 	void __iomem		*appl_base;
 	void __iomem		*atu_dma_base;
 	struct clk		*core_clk;
@@ -1879,6 +1884,7 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		ret = PTR_ERR(dbi_res);
 		goto fail_dbi_res;
 	}
+	pcie->dbi_res = dbi_res;
 	pp->dbi_base = devm_ioremap_resource(&pdev->dev, dbi_res);
 	if (IS_ERR(pp->dbi_base)) {
 		dev_err(&pdev->dev, "mapping dbi space failed\n");
@@ -1924,6 +1930,7 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		ret = PTR_ERR(atu_dma_res);
 		goto fail_dbi_res;
 	}
+	pcie->atu_dma_res = atu_dma_res;
 	pcie->atu_dma_base = devm_ioremap_resource(&pdev->dev, atu_dma_res);
 	if (IS_ERR(pcie->atu_dma_base)) {
 		dev_err(&pdev->dev, "mapping atu_dma space failed\n");
@@ -1987,24 +1994,129 @@ fail_core_clk:
 	return ret;
 }
 
+static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
+{
+	u32 val;
+	int err;
+
+	val = readl(pcie->appl_base + APPL_RADM_STATUS);
+	val |= APPL_PM_XMT_TURNOFF_STATE;
+	writel(val, pcie->appl_base + APPL_RADM_STATUS);
+
+	err = readl_poll_timeout(pcie->appl_base + APPL_APPL_DEBUG, val,
+				 val & APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT,
+				 1, PME_ACK_TIMEOUT);
+	if (err)
+		dev_err(pcie->dev, "PME_TurnOff failed: %d\n", err);
+
+}
+
+static int tegra_pcie_dw_suspend_noirq(struct device *dev)
+{
+	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
+
+	/*TODO re verify the sequence with IAS*/
+	tegra_pcie_dw_pme_turnoff(pcie);
+	reset_control_assert(pcie->core_rst);
+	tegra_pcie_disable_phy(pcie);
+	reset_control_assert(pcie->core_apb_rst);
+	clk_disable_unprepare(pcie->core_clk);
+	regulator_disable(pcie->pex_ctl_reg);
+
+	return 0;
+}
+
+static int tegra_pcie_dw_resume_noirq(struct device *dev)
+{
+	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
+	int ret;
+	u32 val;
+
+	/*TODO re verify the sequence with IAS*/
+	ret = regulator_enable(pcie->pex_ctl_reg);
+	if (ret < 0) {
+		dev_err(dev, "regulator enable failed: %d\n", ret);
+		return ret;
+	}
+	ret = clk_prepare_enable(pcie->core_clk);
+	if (ret) {
+		dev_err(dev, "Failed to enable core clock\n");
+		goto fail_core_clk;
+	}
+	reset_control_deassert(pcie->core_apb_rst);
+	ret = tegra_pcie_enable_phy(pcie);
+	if (ret) {
+		dev_err(dev, "failed to enable phy\n");
+		goto fail_phy;
+	}
+	writel(pcie->dbi_res->start & APPL_CFG_BASE_ADDR_MASK,
+	       pcie->appl_base + APPL_CFG_BASE_ADDR);
+
+	/* configure this core for RP mode operation */
+	writel(APPL_DM_TYPE_RP, pcie->appl_base + APPL_DM_TYPE);
+
+	val = readl(pcie->appl_base + APPL_CTRL);
+	writel(val | APPL_CTRL_SYS_PRE_DET_STATE, pcie->appl_base + APPL_CTRL);
+
+	if (pcie->disable_clock_request) {
+		val = readl(pcie->appl_base + APPL_PINMUX);
+		val |= APPL_PINMUX_CLKREQ_OUT_OVRD_EN;
+		val |= APPL_PINMUX_CLKREQ_OUT_OVRD;
+		writel(val, pcie->appl_base + APPL_PINMUX);
+
+		/* Disable ASPM-L1SS adv as there is no CLKREQ routing */
+		disable_aspm_l11(pcie); /* Disable L1.1 */
+		disable_aspm_l12(pcie); /* Disable L1.2 */
+	}
+
+	/* update iATU_DMA base address */
+	writel(pcie->atu_dma_res->start & APPL_CFG_IATU_DMA_BASE_ADDR_MASK,
+	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
+
+	reset_control_deassert(pcie->core_rst);
+
+	tegra_pcie_dw_host_init(&pcie->pp);
+
+	/* Enable ASPM counters */
+	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
+	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
+	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4, val);
+
+	return 0;
+fail_phy:
+	reset_control_assert(pcie->core_apb_rst);
+	clk_disable_unprepare(pcie->core_clk);
+fail_core_clk:
+	regulator_disable(pcie->pex_ctl_reg);
+	return ret;
+}
+
 static const struct of_device_id tegra_pcie_dw_of_match[] = {
 	{ .compatible = "nvidia,tegra194-pcie", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, tegra_pcie_dw_of_match);
 
+static const struct dev_pm_ops tegra_pcie_dw_pm_ops = {
+	.suspend_noirq = tegra_pcie_dw_suspend_noirq,
+	.resume_noirq = tegra_pcie_dw_resume_noirq,
+};
+
 static struct platform_driver tegra_pcie_dw_driver = {
-	.remove		= __exit_p(tegra_pcie_dw_remove),
+	.probe = tegra_pcie_dw_probe,
+	.remove	= __exit_p(tegra_pcie_dw_remove),
 	.driver = {
 		.name	= "tegra-pcie-dw",
+#ifdef CONFIG_PM
+		.pm = &tegra_pcie_dw_pm_ops,
+#endif
 		.of_match_table = tegra_pcie_dw_of_match,
 	},
 };
 
 static int __init tegra_pcie_rp_late_init(void)
 {
-	return platform_driver_probe(&tegra_pcie_dw_driver,
-				     tegra_pcie_dw_probe);
+	return platform_driver_register(&tegra_pcie_dw_driver);
 }
 late_initcall(tegra_pcie_rp_late_init);
 

@@ -1430,6 +1430,34 @@ int rt5659_set_jack_detect(struct snd_soc_codec *codec,
 }
 EXPORT_SYMBOL_GPL(rt5659_set_jack_detect);
 
+static void rt5659_jack_detect_intel_hd_header(struct work_struct *work)
+{
+	struct rt5659_priv *rt5659 =
+		container_of(work, struct rt5659_priv, jack_detect_work.work);
+	int report;
+	unsigned int value;
+	bool hp_flag;
+
+	regmap_read(rt5659->regmap, RT5659_GPIO_STA, &value);
+	hp_flag = (!(value & 0x8)) ? true : false;
+
+	if (hp_flag != rt5659->hp_state) {
+		rt5659->hp_state = hp_flag;
+		if (hp_flag) {
+			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_1, 0x10,
+                                0x0);
+			report = SND_JACK_HEADPHONE;
+		} else {
+			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_1, 0x10,
+                                0x10);
+			report = 0;
+		}
+
+		rt5659->jack_type = report;
+		snd_soc_jack_report(rt5659->hs_jack, report, SND_JACK_HEADPHONE);
+	}
+}
+
 static void rt5659_jack_detect_work(struct work_struct *work)
 {
 	struct rt5659_priv *rt5659 =
@@ -4331,6 +4359,8 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 			RT5659_DMIC_1_DP_IN2N | RT5659_DMIC_2_DP_IN2P);
 	}
 
+	rt5659->hp_state = false;
+
 	switch (rt5659->pdata.jd_src) {
 	case RT5659_JD3:
 		regmap_write(rt5659->regmap, RT5659_EJD_CTRL_1, 0xa880);
@@ -4340,8 +4370,18 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 				RT5659_PWR_MB, RT5659_PWR_MB);
 		regmap_write(rt5659->regmap, RT5659_PWR_ANLG_2, 0x0001);
 		regmap_write(rt5659->regmap, RT5659_IRQ_CTRL_2, 0x0040);
+		INIT_DELAYED_WORK(&rt5659->jack_detect_work,
+			rt5659_jack_detect_work);
 		break;
 	case RT5659_JD_NULL:
+		regmap_write(rt5659->regmap, RT5659_GPIO_CTRL_1, 0x8000);
+		regmap_write(rt5659->regmap, RT5659_GPIO_CTRL_3, 0x8000);
+		regmap_write(rt5659->regmap, RT5659_RC_CLK_CTRL, 0x0900);
+		regmap_write(rt5659->regmap, RT5659_EJD_CTRL_1,  0x70c0);
+		regmap_write(rt5659->regmap, RT5659_JD_CTRL_1,   0x2000);
+		regmap_write(rt5659->regmap, RT5659_IRQ_CTRL_1,  0x0040);
+		INIT_DELAYED_WORK(&rt5659->jack_detect_work,
+			rt5659_jack_detect_intel_hd_header);
 		break;
 	default:
 		dev_warn(&i2c->dev, "Currently, support JD3 only\n");
@@ -4349,8 +4389,6 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 	}
 
 	regmap_update_bits(rt5659->regmap, RT5659_CLK_DET, 0x4, 0x4);
-
-	INIT_DELAYED_WORK(&rt5659->jack_detect_work, rt5659_jack_detect_work);
 
 	jack_gpio = of_get_gpio(rt5659->i2c->dev.of_node, 0);
 	if (gpio_is_valid(jack_gpio)) {

@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1137,7 +1137,7 @@ static inline u32 count_bits(u32 mask)
 	return count;
 }
 
-void gr_gk20a_init_sm_id_table(struct gk20a *g)
+int gr_gk20a_init_sm_id_table(struct gk20a *g)
 {
 	u32 gpc, tpc;
 	u32 sm_id = 0;
@@ -1156,6 +1156,7 @@ void gr_gk20a_init_sm_id_table(struct gk20a *g)
 		}
 	}
 	g->gr.no_of_sm = sm_id;
+	return 0;
 }
 
 /*
@@ -1178,11 +1179,15 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 	u32 tpc_per_gpc;
 	u32 fuse_tpc_mask;
 	u32 reg_index;
+	int err;
 
 	gk20a_dbg_fn("");
 
 	if (g->ops.gr.init_sm_id_table) {
-		g->ops.gr.init_sm_id_table(g);
+		err = g->ops.gr.init_sm_id_table(g);
+		if (err)
+			return err;
+
 		/* Is table empty ? */
 		if (g->gr.no_of_sm == 0)
 			return -EINVAL;

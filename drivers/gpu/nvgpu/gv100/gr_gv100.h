@@ -1,7 +1,7 @@
 /*
  * GV100 GPU GR
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,7 @@
 void gr_gv100_bundle_cb_defaults(struct gk20a *g);
 void gr_gv100_cb_size_default(struct gk20a *g);
 void gr_gv100_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index);
-void gr_gv100_init_sm_id_table(struct gk20a *g);
+int gr_gv100_init_sm_id_table(struct gk20a *g);
 void gr_gv100_program_sm_id_numbering(struct gk20a *g,
 					u32 gpc, u32 tpc, u32 smid);
 int gr_gv100_load_smid_config(struct gk20a *g);

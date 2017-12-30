@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Graphics
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -610,6 +610,7 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	u32 gpc_index;
+	u32 sm_per_tpc;
 	int err = -ENOMEM;
 
 	gk20a_dbg_fn("");
@@ -628,8 +629,10 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	if (!gr->gpc_tpc_mask)
 		goto cleanup;
 
+	sm_per_tpc = priv->constants.sm_per_tpc;
 	gr->sm_to_cluster = nvgpu_kzalloc(g, gr->gpc_count *
 					  gr->max_tpc_per_gpc_count *
+					  sm_per_tpc *
 					  sizeof(struct sm_info));
 	if (!gr->sm_to_cluster)
 		goto cleanup;
@@ -1214,4 +1217,64 @@ void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 				info->hww_warp_esr_report_mask;
 
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
+}
+
+int vgpu_gr_init_sm_id_table(struct gk20a *g)
+{
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct tegra_vgpu_vsms_mapping_params *p = &msg.params.vsms_mapping;
+	struct tegra_vgpu_vsms_mapping_entry *entry;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
+	struct sm_info *sm_info;
+	int err;
+	struct gr_gk20a *gr = &g->gr;
+	size_t oob_size;
+	void *handle = NULL;
+	u32 sm_id;
+	u32 max_sm;
+
+	msg.cmd = TEGRA_VGPU_CMD_GET_VSMS_MAPPING;
+	msg.handle = vgpu_get_handle(g);
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (err) {
+		nvgpu_err(g, "get vsms mapping failed err %d", err);
+		return err;
+	}
+
+	handle = tegra_gr_comm_oob_get_ptr(TEGRA_GR_COMM_CTX_CLIENT,
+					   tegra_gr_comm_get_server_vmid(),
+					   TEGRA_VGPU_QUEUE_CMD,
+					   (void **)&entry, &oob_size);
+	if (!handle)
+		return -EINVAL;
+
+	max_sm = gr->gpc_count *
+			gr->max_tpc_per_gpc_count *
+			priv->constants.sm_per_tpc;
+	if (p->num_sm > max_sm)
+		return -EINVAL;
+
+	if ((p->num_sm * sizeof(*entry)) > oob_size)
+		return -EINVAL;
+
+	gr->no_of_sm = p->num_sm;
+	for (sm_id = 0; sm_id < p->num_sm; sm_id++, entry++) {
+		sm_info = &gr->sm_to_cluster[sm_id];
+		sm_info->tpc_index = entry->tpc_index;
+		sm_info->gpc_index = entry->gpc_index;
+		sm_info->sm_index = entry->sm_index;
+		sm_info->global_tpc_index = entry->global_tpc_index;
+	}
+	tegra_gr_comm_oob_put_ptr(handle);
+
+	return 0;
+}
+
+int vgpu_gr_init_fs_state(struct gk20a *g)
+{
+	if (!g->ops.gr.init_sm_id_table)
+		return -EINVAL;
+
+	return g->ops.gr.init_sm_id_table(g);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -126,7 +126,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.is_valid_compute_class = gr_gv11b_is_valid_compute_class,
 		.get_sm_dsm_perf_regs = gv11b_gr_get_sm_dsm_perf_regs,
 		.get_sm_dsm_perf_ctrl_regs = gv11b_gr_get_sm_dsm_perf_ctrl_regs,
-		.init_fs_state = vgpu_gm20b_init_fs_state,
+		.init_fs_state = vgpu_gr_init_fs_state,
 		.set_hww_esr_report_mask = gv11b_gr_set_hww_esr_report_mask,
 		.falcon_load_ucode = gr_gm20b_load_ctxsw_ucode_segments,
 		.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode,
@@ -179,7 +179,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.suspend_contexts = vgpu_gr_suspend_contexts,
 		.resume_contexts = vgpu_gr_resume_contexts,
 		.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags,
-		.init_sm_id_table = gr_gv100_init_sm_id_table,
+		.init_sm_id_table = vgpu_gr_init_sm_id_table,
 		.load_smid_config = gr_gv11b_load_smid_config,
 		.program_sm_id_numbering = gr_gv11b_program_sm_id_numbering,
 		.is_ltcs_ltss_addr = gr_gm20b_is_ltcs_ltss_addr,

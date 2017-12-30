@@ -1,7 +1,7 @@
 /*
  * GV100 GPU GR
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -199,14 +199,14 @@ void gr_gv100_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 }
 
-void gr_gv100_init_sm_id_table(struct gk20a *g)
+int gr_gv100_init_sm_id_table(struct gk20a *g)
 {
 	u32 gpc, tpc, sm, pes, gtpc;
 	u32 sm_id = 0;
 	u32 sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
 	u32 num_sm = sm_per_tpc * g->gr.tpc_count;
 	int perf, maxperf;
-	int err;
+	int err = 0;
 	unsigned long *gpc_tpc_mask;
 	u32 *tpc_table, *gpc_table;
 
@@ -217,6 +217,7 @@ void gr_gv100_init_sm_id_table(struct gk20a *g)
 
 	if (!gpc_table || !tpc_table || !gpc_tpc_mask) {
 		nvgpu_err(g, "Error allocating memory for sm tables");
+		err = -ENOMEM;
 		goto exit_build_table;
 	}
 
@@ -273,6 +274,7 @@ exit_build_table:
 	nvgpu_kfree(g, gpc_table);
 	nvgpu_kfree(g, tpc_table);
 	nvgpu_kfree(g, gpc_tpc_mask);
+	return err;
 }
 
 void gr_gv100_load_tpc_mask(struct gk20a *g)

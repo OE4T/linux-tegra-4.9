@@ -766,7 +766,7 @@ u32 gr_gk20a_tpc_enabled_exceptions(struct gk20a *g);
 
 int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c);
 
-void gr_gk20a_init_sm_id_table(struct gk20a *g);
+int gr_gk20a_init_sm_id_table(struct gk20a *g);
 
 int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 

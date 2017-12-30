@@ -1,7 +1,7 @@
 /*
  * Tegra GPU Virtualization Interfaces to Server
  *
- * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -111,6 +111,7 @@ enum {
 	TEGRA_VGPU_CMD_PERFBUF_MGT = 73,
 	TEGRA_VGPU_CMD_GET_TIMESTAMPS_ZIPPER = 74,
 	TEGRA_VGPU_CMD_TSG_RELEASE = 75,
+	TEGRA_VGPU_CMD_GET_VSMS_MAPPING = 76,
 };
 
 struct tegra_vgpu_connect_params {
@@ -482,6 +483,7 @@ struct tegra_vgpu_constants_params {
 	u32 channel_base;
 	struct tegra_vgpu_engines_info engines_info;
 	u32 num_pce;
+	u32 sm_per_tpc;
 };
 
 struct tegra_vgpu_channel_cyclestats_snapshot_params {
@@ -528,6 +530,17 @@ struct tegra_vgpu_perfbuf_mgt_params {
 struct tegra_vgpu_get_gpu_freq_table_params {
 	u32 num_freqs;
 	u32 freqs[TEGRA_VGPU_GPU_FREQ_TABLE_SIZE]; /* in kHz */
+};
+
+struct tegra_vgpu_vsms_mapping_params {
+	u32 num_sm;
+};
+
+struct tegra_vgpu_vsms_mapping_entry {
+	u32 gpc_index;
+	u32 tpc_index;
+	u32 sm_index;
+	u32 global_tpc_index;
 };
 
 struct tegra_vgpu_cmd_msg {
@@ -584,6 +597,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_perfbuf_mgt_params perfbuf_management;
 		struct tegra_vgpu_get_timestamps_zipper_params get_timestamps_zipper;
 		struct tegra_vgpu_get_gpu_freq_table_params get_gpu_freq_table;
+		struct tegra_vgpu_vsms_mapping_params vsms_mapping;
 #ifdef CONFIG_TEGRA_19x_GPU
 		union tegra_vgpu_t19x_params t19x;
 #endif

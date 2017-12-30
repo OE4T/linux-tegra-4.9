@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,24 +40,3 @@ void vgpu_gr_gm20b_init_cyclestats(struct gk20a *g)
 #endif
 }
 
-int vgpu_gm20b_init_fs_state(struct gk20a *g)
-{
-	struct gr_gk20a *gr = &g->gr;
-	u32 tpc_index, gpc_index;
-	u32 sm_id = 0;
-
-	gk20a_dbg_fn("");
-
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		for (tpc_index = 0; tpc_index < gr->gpc_tpc_count[gpc_index];
-								tpc_index++) {
-			g->gr.sm_to_cluster[sm_id].tpc_index = tpc_index;
-			g->gr.sm_to_cluster[sm_id].gpc_index = gpc_index;
-
-			sm_id++;
-		}
-	}
-
-	gr->no_of_sm = sm_id;
-	return 0;
-}

@@ -117,6 +117,8 @@
 
 		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
 
+		nvidia,max-speed = <1>;
+
 		phys = <&p2u_0>;
 		phy-names = "pcie-p2u-0";
 	};

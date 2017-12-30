@@ -136,6 +136,7 @@
 		status = "okay";
 
 		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
+		nvidia,disable-aspm-states = <0x8>;
 
 		phys = <&p2u_12>,
 		       <&p2u_13>,

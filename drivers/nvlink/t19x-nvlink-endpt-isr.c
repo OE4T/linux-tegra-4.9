@@ -42,7 +42,7 @@ static void nvlw_config_intr(struct nvlink_device *ndev)
 	nvlw_tioctrl_writel(ndev, NVLW_LINK_INTR_0_MASK, reg_val);
 
 	reg_val = BIT(NVLW_LINK_INTR_1_MASK_NONFATAL) |
-			BIT(NVLW_LINK_INTR_1_MASK_NONFATAL);
+			BIT(NVLW_LINK_INTR_1_MASK_CORRECTABLE);
 	nvlw_tioctrl_writel(ndev, NVLW_LINK_INTR_1_MASK, reg_val);
 
 	reg_val = BIT(NVLW_LINK_INTR_2_MASK_INTRA) |

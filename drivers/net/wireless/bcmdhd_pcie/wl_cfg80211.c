@@ -12211,6 +12211,7 @@ wl_notify_sched_scan_results(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 		}
 
 		request->wiphy = wiphy;
+		request->wdev = cfg->wdev;
 
 		for (i = 0; i < n_pfn_results; i++) {
 			netinfo = &pnetinfo[i];

@@ -131,6 +131,18 @@ static int tegra_nvdisp_crc_region_enable(struct tegra_dc *dc,
 	status |= masks[region->id].pending;
 	tegra_dc_writel(dc, status, nvdisp_rg_region_crc_r());
 
+	/*
+	 * HW Bug 2038907: In DP mode, vertical calculations are off by
+	 *                 1 line. Adjust them to match exactly with HDMI mode.
+	 */
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP ||
+	    dc->out->type == TEGRA_DC_OUT_DP) {
+		if (region->y == 0)
+			region->h += 1;
+		else
+			region->y += 1;
+	}
+
 	point = nvdisp_rg_region_0_point_x_f(region->x) |
 		nvdisp_rg_region_0_point_y_f(region->y);
 	tegra_dc_writel(dc, point, regs[region->id].point);

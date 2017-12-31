@@ -3687,7 +3687,8 @@ static int tegra_xhci_runtime_suspend(struct device *dev)
 	struct xhci_hcd *xhci;
 	int ret;
 
-	if (!tegra->fw_loaded && !tegra->soc->is_xhci_vf)
+	if ((!tegra->fw_loaded && !tegra->soc->is_xhci_vf) ||
+		tegra->soc->disable_elpg)
 		return 0;
 
 	xhci = hcd_to_xhci(tegra->hcd);
@@ -3708,7 +3709,8 @@ static int tegra_xhci_runtime_resume(struct device *dev)
 	struct xhci_hcd *xhci;
 	int ret;
 
-	if (!tegra->fw_loaded && !tegra->soc->is_xhci_vf)
+	if ((!tegra->fw_loaded && !tegra->soc->is_xhci_vf) ||
+		tegra->soc->disable_elpg)
 		return 0;
 
 	xhci = hcd_to_xhci(tegra->hcd);
@@ -3930,68 +3932,104 @@ MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
 static const struct tegra_xusb_soc tegra194_vf1_soc = {
 	.device_id = XHCI_DEVICE_ID_T194,
-	.lpm_support = false,
+	.lpm_support = true,
 	.is_xhci_vf = true,
 	.vf_id = 1,
 	.supply_names = tegra194_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
-	.num_typed_phys[USB3_PHY] = 1,
-	.num_typed_phys[USB2_PHY] = 1,
+	.num_typed_phys[USB3_PHY] = 4,
+	.num_typed_phys[USB2_PHY] = 4,
 	.num_typed_phys[HSIC_PHY] = 0,
 	/* assign ports (1 SS and 1 HS) on FPGA to linux VM */
 	.ports = {
-		.usb3 = { .offset = 0, .count = 1, },
-		.usb2 = { .offset = 1, .count = 1, },
-		.hsic = { .offset = 2, .count = 0, },
+		.usb3 = { .offset = 0, .count = 4, },
+		.usb2 = { .offset = 4, .count = 4, },
+		.hsic = { .offset = 8, .count = 0, },
 	},
 
-	.cfg_4_addr_shift = XUSB_T194_BASE_ADDR_SHIFT,
-	.cfg_4_addr_mask = XUSB_T194_BASE_ADDR_MASK,
-	.cfg_aru_mbox_cmd = XUSB_CFG_ARU_T194_MBOX_CMD,
-	.cfg_aru_mbox_data_in = XUSB_CFG_ARU_T194_MBOX_DATA_IN,
-	.cfg_aru_mbox_data_out = XUSB_CFG_ARU_T194_MBOX_DATA_OUT,
-	.cfg_aru_mbox_owner = XUSB_CFG_ARU_T194_MBOX_OWNER,
-
-	.scale_ss_clock = false,
 	.has_ipfs = false,
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
 	.disable_hsic_wake = false,
-	.disable_elpg = true,
+	.disable_elpg = false,
 	.otg_set_port_power = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
 static const struct tegra_xusb_soc tegra194_vf2_soc = {
 	.device_id = XHCI_DEVICE_ID_T194,
-	.lpm_support = false,
+	.lpm_support = true,
 	.is_xhci_vf = true,
 	.vf_id = 2,
 	.supply_names = tegra194_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
-	.num_typed_phys[USB3_PHY] = 1,
-	.num_typed_phys[USB2_PHY] = 1,
+	.num_typed_phys[USB3_PHY] = 4,
+	.num_typed_phys[USB2_PHY] = 4,
 	.num_typed_phys[HSIC_PHY] = 0,
 	/* assign ports (1 SS and 1 HS) on FPGA to linux VM */
 	.ports = {
-		.usb3 = { .offset = 0, .count = 1, },
-		.usb2 = { .offset = 1, .count = 1, },
-		.hsic = { .offset = 2, .count = 0, },
+		.usb3 = { .offset = 0, .count = 4, },
+		.usb2 = { .offset = 4, .count = 4, },
+		.hsic = { .offset = 8, .count = 0, },
 	},
 
-	.cfg_4_addr_shift = XUSB_T194_BASE_ADDR_SHIFT,
-	.cfg_4_addr_mask = XUSB_T194_BASE_ADDR_MASK,
-	.cfg_aru_mbox_cmd = XUSB_CFG_ARU_T194_MBOX_CMD,
-	.cfg_aru_mbox_data_in = XUSB_CFG_ARU_T194_MBOX_DATA_IN,
-	.cfg_aru_mbox_data_out = XUSB_CFG_ARU_T194_MBOX_DATA_OUT,
-	.cfg_aru_mbox_owner = XUSB_CFG_ARU_T194_MBOX_OWNER,
-
-	.scale_ss_clock = false,
 	.has_ipfs = false,
 	.ss_lfps_detector_war = false,
 	.handle_oc = false,
 	.disable_hsic_wake = false,
-	.disable_elpg = true,
+	.disable_elpg = false,
+	.otg_set_port_power = false,
+};
+MODULE_FIRMWARE("tegra19x_xusb_firmware");
+
+static const struct tegra_xusb_soc tegra194_vf3_soc = {
+	.device_id = XHCI_DEVICE_ID_T194,
+	.lpm_support = true,
+	.is_xhci_vf = true,
+	.vf_id = 3,
+	.supply_names = tegra194_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
+	.num_typed_phys[USB3_PHY] = 4,
+	.num_typed_phys[USB2_PHY] = 4,
+	.num_typed_phys[HSIC_PHY] = 0,
+	/* assign ports (1 SS and 1 HS) on FPGA to linux VM */
+	.ports = {
+		.usb3 = { .offset = 0, .count = 4, },
+		.usb2 = { .offset = 4, .count = 4, },
+		.hsic = { .offset = 8, .count = 0, },
+	},
+
+	.has_ipfs = false,
+	.ss_lfps_detector_war = false,
+	.handle_oc = false,
+	.disable_hsic_wake = false,
+	.disable_elpg = false,
+	.otg_set_port_power = false,
+};
+MODULE_FIRMWARE("tegra19x_xusb_firmware");
+
+static const struct tegra_xusb_soc tegra194_vf4_soc = {
+	.device_id = XHCI_DEVICE_ID_T194,
+	.lpm_support = true,
+	.is_xhci_vf = true,
+	.vf_id = 4,
+	.supply_names = tegra194_supply_names,
+	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
+	.num_typed_phys[USB3_PHY] = 4,
+	.num_typed_phys[USB2_PHY] = 4,
+	.num_typed_phys[HSIC_PHY] = 0,
+	/* assign ports (1 SS and 1 HS) on FPGA to linux VM */
+	.ports = {
+		.usb3 = { .offset = 0, .count = 4, },
+		.usb2 = { .offset = 4, .count = 4, },
+		.hsic = { .offset = 8, .count = 0, },
+	},
+
+	.has_ipfs = false,
+	.ss_lfps_detector_war = false,
+	.handle_oc = false,
+	.disable_hsic_wake = false,
+	.disable_elpg = false,
 	.otg_set_port_power = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
@@ -4004,6 +4042,8 @@ static const struct of_device_id tegra_xusb_of_match[] = {
 	{ .compatible = "nvidia,tegra194-xhci", .data = &tegra194_soc },
 	{ .compatible = "nvidia,tegra194-xhci-vf1", .data = &tegra194_vf1_soc },
 	{ .compatible = "nvidia,tegra194-xhci-vf2", .data = &tegra194_vf2_soc },
+	{ .compatible = "nvidia,tegra194-xhci-vf3", .data = &tegra194_vf3_soc },
+	{ .compatible = "nvidia,tegra194-xhci-vf4", .data = &tegra194_vf4_soc },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_xusb_of_match);

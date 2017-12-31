@@ -90,8 +90,8 @@ static int csi5_start_streaming(struct tegra_csi_channel *chan,
 		vfreq = py_max / port->format.height;
 
 		pgc->t194.virtual_channel = 0;
-		/* hardcode CSI_DT_RAW_16 */
-		pgc->t194.data_type = 46;
+		/* hardcode CSI_DT_RAW_10 */
+		pgc->t194.data_type = NVCSI_DATA_TYPE_RAW10;
 		pgc->t194.lane_count = chan->numlanes;
 		pgc->t194.flags	= NVCSI_TPG_FLAG_PATCH_MODE;
 

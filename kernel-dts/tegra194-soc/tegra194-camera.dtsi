@@ -99,7 +99,7 @@
 			nvidia,service = "capture-control";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
-			nvidia,frame-count = <16>;
+			nvidia,frame-count = <256>;
 			nvidia,frame-size = <320>;
 		};
 		ivccapture@4 {
@@ -107,7 +107,7 @@
 			nvidia,service = "capture";
 			nvidia,version = <0>;
 			nvidia,group = <1>;
-			nvidia,frame-count = <16>;
+			nvidia,frame-count = <256>;
 			nvidia,frame-size = <64>;
 		};
 	};

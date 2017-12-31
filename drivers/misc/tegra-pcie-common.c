@@ -90,38 +90,12 @@ static const struct of_device_id tegra_pcie_common_id_table[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_pcie_common_id_table);
 
-#ifdef CONFIG_PM
-static int tegra_pcie_common_suspend(struct device *dev)
-{
-	struct tegra_pcie_common *pcie_xbar = dev_get_drvdata(dev);
-
-	reset_control_assert(pcie_xbar->common_apb_rst);
-	return 0;
-}
-
-static int tegra_pcie_common_resume(struct device *dev)
-{
-	struct tegra_pcie_common *pcie_xbar = dev_get_drvdata(dev);
-
-	reset_control_deassert(pcie_xbar->common_apb_rst);
-	return 0;
-}
-
-static const struct dev_pm_ops tegra_pcie_common_pm_ops = {
-	.suspend = tegra_pcie_common_suspend,
-	.resume = tegra_pcie_common_resume,
-};
-#endif /* CONFIG_PM */
-
 static struct platform_driver tegra_pcie_common_driver = {
 	.probe		= tegra_pcie_common_probe,
 	.remove		= tegra_pcie_common_remove,
 	.driver		= {
 		.name	= "tegra_pcie_common",
 		.of_match_table = of_match_ptr(tegra_pcie_common_id_table),
-#ifdef CONFIG_PM
-		.pm    = &tegra_pcie_common_pm_ops,
-#endif
 	},
 };
 

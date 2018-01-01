@@ -16,6 +16,7 @@
 #include <audio/tegra-platforms-audio-dai-links.dtsi>
 #include <t19x-common-platforms/tegra194-platforms-audio-pinmux.dtsi>
 #include <dt-bindings/gpio/tegra194-gpio.h>
+#include <dt-bindings/sound/rt5659.h>
 
 / {
 
@@ -36,9 +37,9 @@
 			compatible = "realtek,rt5658";
 			reg = <0x1a>;
 
-			/* refer include/sound/rt5659.h for the values to be used */
-			realtek,jd-src = <0>; /* RT5659_JD_NULL */
-			realtek,dmic1-data-pin = <2>; /* RT5659_DMIC1_DATA_GPIO5 */
+			realtek,jd-src = <RT5659_JD_NULL>;
+			realtek,dmic1-data-pin = <RT5659_DMIC1_NULL>;
+			realtek,dmic2-data-pin = <RT5659_DMIC2_DATA_IN2P>;
 
 			gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(S, 5) 0>;
 

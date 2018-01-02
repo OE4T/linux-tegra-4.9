@@ -1,7 +1,7 @@
 /*
  * dphdcp.c: dp hdcp driver.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2085,9 +2085,6 @@ static int tegra_dphdcp_renegotiate(struct tegra_dphdcp *dphdcp)
 
 void tegra_dphdcp_set_plug(struct tegra_dphdcp *dphdcp, bool hpd)
 {
-	if (tegra_dc_is_t19x())
-		return;
-
 	/* ensure all previous values are reset on hotplug */
 	vprime_check_done = false;
 	repeater_flag = false;

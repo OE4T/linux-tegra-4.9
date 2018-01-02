@@ -1,7 +1,7 @@
 /*
  * hdmihdcp.c: hdmi hdcp functions.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2099,7 +2099,7 @@ static int tegra_nvhdcp_off(struct tegra_nvhdcp *nvhdcp)
 
 void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 {
-	if (tegra_platform_is_sim() || tegra_dc_is_t19x())
+	if (tegra_platform_is_sim())
 		return;
 
 	nvhdcp_debug("hdmi hotplug detected (hpd = %d)\n", hpd);

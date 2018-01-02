@@ -1405,29 +1405,16 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 {
 	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
 	struct device_node *np = pp->dev->of_node;
-	LIST_HEAD(pcie_resources);
-	resource_size_t	tmp_io_base;
 	struct resource_entry *win;
 	u32 val, tmp;
 	int err, count = 100;
 
-	/* since struct pcie_port doesn't have ability to keep resource
-	 * information for both prefetchable and non-prefetchable memory,
-	 * parsing 'ranges' here to get info to program iATU regions
-	 */
-	val = of_pci_get_host_bridge_resources(np, 0, 0xff, &pcie_resources,
-					       &tmp_io_base);
-	if (val) {
-		dev_err(pp->dev, "failed to parse PCIe ranges\n");
-		return;
-	}
-
 	/* Get the I/O and memory ranges from DT */
-	resource_list_for_each_entry(win, &pcie_resources) {
+	resource_list_for_each_entry(win, &pp->res) {
 		if (win->res->flags & IORESOURCE_IO) {
 			/* program iATU for IO mapping */
 			outbound_atu(pp, PCIE_ATU_REGION_INDEX1,
-				     PCIE_ATU_TYPE_IO, tmp_io_base,
+				     PCIE_ATU_TYPE_IO, pp->io_base,
 				     win->res->start - win->offset,
 				     resource_size(win->res));
 		} else if (win->res->flags & IORESOURCE_PREFETCH) {
@@ -1442,7 +1429,6 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 				     win->res->start, resource_size(win->res));
 		}
 	}
-	pci_free_resource_list(&pcie_resources);
 
 	dw_pcie_setup_rc(pp);
 

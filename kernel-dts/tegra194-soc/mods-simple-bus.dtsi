@@ -336,7 +336,10 @@
 					<&bpmp_clks TEGRA194_CLK_EMCSA>,
 					<&bpmp_clks TEGRA194_CLK_EMCSB>,
 					<&bpmp_clks TEGRA194_CLK_EMCSC>,
-					<&bpmp_clks TEGRA194_CLK_EMCSD>;
+					<&bpmp_clks TEGRA194_CLK_EMCSD>,
+					<&bpmp_clks TEGRA194_CLK_PLLC>,
+					<&bpmp_clks TEGRA194_CLK_PLLC2>,
+					<&bpmp_clks TEGRA194_CLK_PLLC3>;
 				clock-names = "actmon",
 					"adsp",
 					"adspneon",
@@ -649,7 +652,10 @@
 					"emcsa",
 					"emcsb",
 					"emcsc",
-					"emcsd";
+					"emcsd",
+					"pll_c",
+					"pll_c2",
+					"pll_c3";
 
 				resets = <&bpmp_resets TEGRA194_RESET_ACTMON>,
 					<&bpmp_resets TEGRA194_RESET_ADSP_ALL>,
@@ -782,7 +788,26 @@
 					<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L5>,
 					<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L6>,
 					<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L7>,
-					<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_PM>;
+					<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_PM>,
+					<&bpmp_resets TEGRA194_RESET_DMIC5>,
+					<&bpmp_resets TEGRA194_RESET_APE>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L0>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L1>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L2>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L3>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L4>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L5>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L6>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L7>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L8>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L9>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L10>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_L11>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_PLL0>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_PLL1>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_PLL2>,
+					<&bpmp_resets TEGRA194_RESET_PEX_USB_UPHY_PLL3>;
 				reset-names = "actmon",
 					"adsp_all",
 					"afi",
@@ -914,7 +939,26 @@
 					"nvhs_uphy_l5",
 					"nvhs_uphy_l6",
 					"nvhs_uphy_l7",
-					"nvhs_uphy_pm";
+					"nvhs_uphy_pm",
+					"dmic5",
+					"ape",
+					"pex_usb_uphy",
+					"pex_usb_uphy_l0",
+					"pex_usb_uphy_l1",
+					"pex_usb_uphy_l2",
+					"pex_usb_uphy_l3",
+					"pex_usb_uphy_l4",
+					"pex_usb_uphy_l5",
+					"pex_usb_uphy_l6",
+					"pex_usb_uphy_l7",
+					"pex_usb_uphy_l8",
+					"pex_usb_uphy_l9",
+					"pex_usb_uphy_l10",
+					"pex_usb_uphy_l11",
+					"pex_usb_uphy_pll0",
+					"pex_usb_uphy_pll1",
+					"pex_usb_uphy_pll2",
+					"pex_usb_uphy_pll3";
 			};
 	};
 };

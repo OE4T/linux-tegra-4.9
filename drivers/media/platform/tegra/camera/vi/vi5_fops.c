@@ -136,8 +136,7 @@ static void tegra_channel_surface_setup(
 	u32 height = chan->format.height;
 	u32 width = chan->format.width;
 	u32 format = chan->fmtinfo->img_fmt;
-	u32 data_type = chan->pg_mode ? NVCSI_DATA_TYPE_RAW16 :
-				chan->fmtinfo->img_dt;
+	u32 data_type = chan->fmtinfo->img_dt;
 	u32 csi_port = chan->port[index];
 	struct capture_descriptor *desc = chan->request;
 
@@ -427,12 +426,7 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 		free_ring_buffers(chan, chan->num_buffers);
 		/* dequeue buffers back to app which are in capture queue */
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR);
-	}
 
-	/* CSI channel to be closed before closing VI channel */
-	tegra_channel_set_stream(chan, false);
-
-	if (!chan->bypass) {
 		err = vi_capture_release(chan->tegra_vi_channel, 0);
 		if (err)
 			dev_err(&chan->video.dev, "vi capture release failed\n");
@@ -440,6 +434,7 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 		vi_channel_close_ex(chan->id, chan->tegra_vi_channel);
 	}
 
+	tegra_channel_set_stream(chan, false);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);
 #endif

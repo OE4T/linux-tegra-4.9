@@ -529,7 +529,6 @@ int dw_pcie_host_init(struct pcie_port *pp)
 	struct pci_bus *bus, *child;
 	struct resource *cfg_res;
 	int i, ret;
-	LIST_HEAD(res);
 	struct resource_entry *win, *tmp;
 
 	cfg_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "config");
@@ -542,16 +541,18 @@ int dw_pcie_host_init(struct pcie_port *pp)
 		dev_err(pp->dev, "missing *config* reg space\n");
 	}
 
-	ret = of_pci_get_host_bridge_resources(np, 0, 0xff, &res, &pp->io_base);
+	INIT_LIST_HEAD(&pp->res);
+	ret = of_pci_get_host_bridge_resources(np, 0, 0xff, &pp->res,
+					       &pp->io_base);
 	if (ret)
 		return ret;
 
-	ret = devm_request_pci_bus_resources(&pdev->dev, &res);
+	ret = devm_request_pci_bus_resources(&pdev->dev, &pp->res);
 	if (ret)
 		goto error;
 
 	/* Get the I/O and memory ranges from DT */
-	resource_list_for_each_entry_safe(win, tmp, &res) {
+	resource_list_for_each_entry_safe(win, tmp, &pp->res) {
 		switch (resource_type(win->res)) {
 		case IORESOURCE_IO:
 			ret = pci_remap_iospace(win->res, pp->io_base);
@@ -651,12 +652,12 @@ int dw_pcie_host_init(struct pcie_port *pp)
 	pp->root_bus_nr = pp->busn->start;
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
 		bus = pci_scan_root_bus_msi(pp->dev, pp->root_bus_nr,
-					    &dw_pcie_ops, pp, &res,
+					    &dw_pcie_ops, pp, &pp->res,
 					    &dw_pcie_msi_chip);
 		dw_pcie_msi_chip.dev = pp->dev;
 	} else
 		bus = pci_scan_root_bus(pp->dev, pp->root_bus_nr, &dw_pcie_ops,
-					pp, &res);
+					pp, &pp->res);
 	if (!bus) {
 		ret = -ENOMEM;
 		goto error;
@@ -681,7 +682,7 @@ int dw_pcie_host_init(struct pcie_port *pp)
 	return 0;
 
 error:
-	pci_free_resource_list(&res);
+	pci_free_resource_list(&pp->res);
 	return ret;
 }
 EXPORT_SYMBOL(dw_pcie_host_init);

@@ -42,6 +42,7 @@ struct pcie_port {
 	struct resource		*io;
 	struct resource		*mem;
 	struct resource		*busn;
+	struct list_head	res;
 	int			irq;
 	u32			lanes;
 	u32			num_viewport;

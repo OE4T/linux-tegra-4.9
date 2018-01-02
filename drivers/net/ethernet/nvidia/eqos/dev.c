@@ -3810,7 +3810,7 @@ static int enable_mac_interrupts(void)
 static INT configure_mac(struct eqos_prv_data *pdata)
 {
 	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
-	ULONG mac_mcr;
+	ULONG mac_mcr, rxq_ctrl1;
 	UINT qinx;
 
 	pr_debug("-->configure_mac\n");
@@ -3914,6 +3914,12 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 	if (pdata->hw_feat.rx_coe_sel &&
 	    ((pdata->dev_state & NETIF_F_RXCSUM) == NETIF_F_RXCSUM))
 		MAC_MCR_IPC_WR(0x1);
+
+	/* Program multicast/broadcast MTL Rx queue */
+	MAC_RQC1R_RD(rxq_ctrl1);
+	rxq_ctrl1 |= BIT(20); /* Multicast and Broadcast Queue Enable */
+	rxq_ctrl1 |= 0x10000; /* Multicast and Broadcast Queue (MTL Rx Q1)*/
+	MAC_RQC1R_WR(rxq_ctrl1);
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 	configure_mac_for_vlan_pkt();

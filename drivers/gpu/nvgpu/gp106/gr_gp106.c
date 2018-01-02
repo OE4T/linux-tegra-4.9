@@ -1,7 +1,7 @@
 /*
  * GP106 GPU GR
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -128,6 +128,10 @@ void gr_gp106_cb_size_default(struct gk20a *g)
 		gr->attrib_cb_default_size = 0x800;
 	gr->alpha_cb_default_size =
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
+	gr->attrib_cb_gfxp_default_size =
+			gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v();
+	gr->attrib_cb_gfxp_size =
+			gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v();
 }
 
 int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,

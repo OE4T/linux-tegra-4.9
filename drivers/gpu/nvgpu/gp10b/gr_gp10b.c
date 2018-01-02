@@ -1,7 +1,7 @@
 /*
  * GP10B GPU GR
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -406,12 +406,8 @@ int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	if (gr_ctx->graphics_preempt_mode == NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP) {
-		attrib_size_in_chunk = gr->attrib_cb_default_size +
-				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
-				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
-		cb_attrib_cache_size_init = gr->attrib_cb_default_size +
-				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
-				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
+		attrib_size_in_chunk = gr->attrib_cb_gfxp_size;
+		cb_attrib_cache_size_init = gr->attrib_cb_gfxp_default_size;
 	} else {
 		attrib_size_in_chunk = gr->attrib_cb_size;
 		cb_attrib_cache_size_init = gr->attrib_cb_default_size;
@@ -738,6 +734,10 @@ void gr_gp10b_cb_size_default(struct gk20a *g)
 		gr->attrib_cb_default_size = 0x800;
 	gr->alpha_cb_default_size =
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
+	gr->attrib_cb_gfxp_default_size =
+		gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v();
+	gr->attrib_cb_gfxp_size =
+		gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v();
 }
 
 void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)

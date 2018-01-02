@@ -18,6 +18,11 @@
 #include <linux/printk.h>
 #include <linux/tegra-capture-ivc.h>
 #include <media/capture.h>
+#include <media/capture_common.h>
+#include <media/capture_vi_channel.h>
+
+#include "soc/tegra/camrtc-capture.h"
+#include "soc/tegra/camrtc-capture-messages.h"
 
 /* Remove after constants integrated into camrtc-capture-messages.h */
 #ifndef CAPTURE_CHANNEL_TPG_SETUP_REQ
@@ -32,6 +37,31 @@
 #define CAPTURE_CHANNEL_UNKNOWN_RESP 0xFFFFFFFF
 #define CAPTURE_CHANNEL_INVALID_ID 0xFFFF
 #define CAPTURE_CHANNEL_INVALID_MASK 0llu
+
+struct vi_capture {
+	uint16_t channel_id;
+	struct device *rtcpu_dev;
+	struct tegra_vi_channel *vi_channel;
+	struct capture_common_buf requests;
+	size_t request_buf_size;
+	uint32_t queue_depth;
+	uint32_t request_size;
+
+	uint32_t num_gos_tables;
+	const dma_addr_t *gos_tables;
+
+	struct syncpoint_info progress_sp;
+	struct syncpoint_info embdata_sp;
+	struct syncpoint_info linetimer_sp;
+
+	struct completion control_resp;
+	struct completion capture_resp;
+	struct mutex control_msg_lock;
+	struct CAPTURE_CONTROL_MSG control_resp_msg;
+
+	struct mutex unpins_list_lock;
+	struct capture_common_unpins **unpins_list;
+};
 
 static void vi_capture_ivc_control_callback(const void *ivc_resp,
 		const void *pcontext)
@@ -73,6 +103,8 @@ static void vi_capture_ivc_control_callback(const void *ivc_resp,
 	}
 }
 
+static void vi_capture_request_unpin(struct tegra_vi_channel *chan,
+		uint32_t buffer_index);
 static void vi_capture_ivc_status_callback(const void *ivc_resp,
 		const void *pcontext)
 {
@@ -94,6 +126,11 @@ static void vi_capture_ivc_status_callback(const void *ivc_resp,
 	switch (status_msg->header.msg_id) {
 	case CAPTURE_STATUS_IND:
 		buffer_index = status_msg->capture_status_ind.buffer_index;
+		vi_capture_request_unpin(chan, buffer_index);
+		dma_sync_single_range_for_cpu(capture->rtcpu_dev,
+		    capture->requests.iova,
+		    buffer_index * capture->request_size,
+		    capture->request_size, DMA_FROM_DEVICE);
 		complete(&capture->capture_resp);
 		dev_dbg(chan->dev, "%s: status chan_id %u msg_id %u\n",
 				__func__, status_msg->header.channel_id,
@@ -141,7 +178,6 @@ int vi_capture_init(struct tegra_vi_channel *chan)
 
 	capture->vi_channel = chan;
 	chan->capture_data = capture;
-	chan->rtcpu_dev = capture->rtcpu_dev;
 
 	capture->channel_id = CAPTURE_CHANNEL_INVALID_ID;
 
@@ -316,12 +352,6 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	int i;
 #endif
 
-	if (setup->mem == 0 && setup->iova == 0) {
-		dev_err(chan->dev,
-			"%s: request buffer is NULL\n", __func__);
-		return -EINVAL;
-	}
-
 	if (capture == NULL) {
 		dev_err(chan->dev,
 			 "%s: vi capture uninitialized\n", __func__);
@@ -345,15 +375,32 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 			setup->request_size == 0)
 		return -EINVAL;
 
+	/* pin the capture descriptor ring buffer */
+	dev_dbg(chan->dev, "%s: descr buffer handle %u\n",
+			__func__, setup->mem);
+	err = capture_common_pin_memory(capture->rtcpu_dev,
+			setup->mem, &capture->requests);
+	if (err < 0) {
+		dev_err(chan->dev, "%s: memory setup failed\n", __func__);
+		return -EFAULT;
+	}
 	capture->queue_depth = setup->queue_depth;
 	capture->request_size = setup->request_size;
 	capture->request_buf_size = setup->request_size * setup->queue_depth;
 
-	err = vi_capture_setup_syncpts(chan, setup->channel_flags);
-	if (err < 0) {
-		dev_err(chan->dev, "failed to setup syncpts\n");
-		goto syncpt_fail;
+	/* allocate for unpin list based on queue depth */
+	capture->unpins_list = devm_kzalloc(chan->dev,
+			sizeof(struct capture_common_unpins *) *
+				capture->queue_depth,
+			GFP_KERNEL);
+	if (unlikely(capture->unpins_list == NULL)) {
+		dev_err(chan->dev, "failed to allocate unpins array\n");
+		goto unpins_list_fail;
 	}
+
+	err = vi_capture_setup_syncpts(chan, setup->channel_flags);
+	if (err < 0)
+		goto syncpt_fail;
 
 	err = tegra_capture_ivc_register_control_cb(
 			&vi_capture_ivc_control_callback,
@@ -374,7 +421,7 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 
 	config->queue_depth = setup->queue_depth;
 	config->request_size = setup->request_size;
-	config->requests = setup->iova;
+	config->requests = capture->requests.iova;
 
 #ifdef HAVE_VI_GOS_TABLES
 	dev_info(chan->dev, "%u GoS tables configured.\n",
@@ -430,7 +477,9 @@ submit_fail:
 control_cb_fail:
 	vi_capture_release_syncpts(chan);
 syncpt_fail:
-
+	devm_kfree(chan->dev, capture->unpins_list);
+unpins_list_fail:
+	capture_common_unpin_memory(&capture->requests);
 	return err;
 }
 
@@ -441,6 +490,7 @@ int vi_capture_reset(struct tegra_vi_channel *chan,
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_CONTROL_MSG control_desc;
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	int i;
 	int err = 0;
 
 	if (capture == NULL) {
@@ -470,6 +520,9 @@ int vi_capture_reset(struct tegra_vi_channel *chan,
 			resp_msg->channel_reset_resp.result);
 		err = -EINVAL;
 	}
+
+	for (i = 0; i < capture->queue_depth; i++)
+		vi_capture_request_unpin(chan, i);
 
 	return 0;
 
@@ -530,6 +583,7 @@ int vi_capture_release(struct tegra_vi_channel *chan,
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_CONTROL_MSG control_desc;
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	int i;
 	int err = 0;
 	int ret = 0;
 
@@ -575,7 +629,11 @@ int vi_capture_release(struct tegra_vi_channel *chan,
 		err = ret;
 	}
 
+	for (i = 0; i < capture->queue_depth; i++)
+		vi_capture_request_unpin(chan, i);
+
 	vi_capture_release_syncpts(chan);
+	capture_common_unpin_memory(&capture->requests);
 
 	capture->channel_id = CAPTURE_CHANNEL_INVALID_ID;
 
@@ -728,11 +786,31 @@ struct surface_t {
 	uint32_t offset_hi;
 };
 
+static void vi_capture_request_unpin(struct tegra_vi_channel *chan,
+		uint32_t buffer_index)
+{
+	struct vi_capture *capture = chan->capture_data;
+	struct capture_common_unpins *unpins;
+	int i = 0;
+
+	mutex_lock(&capture->unpins_list_lock);
+	unpins = capture->unpins_list[buffer_index];
+	if (unpins != NULL) {
+		for (i = 0; i < unpins->num_unpins; i++)
+			capture_common_unpin_memory(&unpins->data[i]);
+		capture->unpins_list[buffer_index] = NULL;
+		devm_kfree(chan->dev, unpins);
+	}
+	mutex_unlock(&capture->unpins_list_lock);
+}
+
 int vi_capture_request(struct tegra_vi_channel *chan,
 		struct vi_capture_req *req)
 {
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_desc;
+	struct capture_common_unpins *unpins = NULL;
+	struct capture_common_pin_req cap_common_req = {0};
 	int err = 0;
 
 	if (capture == NULL) {
@@ -753,10 +831,41 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 		return -EINVAL;
 	}
 
+	if (req->num_relocs == 0) {
+		dev_err(chan->dev,
+			"%s: request must have non-zero relocs\n", __func__);
+		return -EINVAL;
+	}
+
 	memset(&capture_desc, 0, sizeof(capture_desc));
 	capture_desc.header.msg_id = CAPTURE_REQUEST_REQ;
 	capture_desc.header.channel_id = capture->channel_id;
 	capture_desc.capture_request_req.buffer_index = req->buffer_index;
+
+	/* pin and reloc */
+	cap_common_req.dev = chan->dev;
+	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
+	cap_common_req.unpins = unpins;
+	cap_common_req.requests = &capture->requests;
+	cap_common_req.requests_dev = NULL;
+	cap_common_req.request_size = capture->request_size;
+	cap_common_req.request_offset = req->buffer_index *
+			capture->request_size;
+	cap_common_req.num_relocs = req->num_relocs;
+	cap_common_req.reloc_user = (uint32_t __user *)
+			(uintptr_t)req->reloc_relatives;
+
+	err = capture_common_request_pin_and_reloc(&cap_common_req);
+	if (err < 0) {
+		dev_err(chan->dev, "request relocation failed\n");
+		return err;
+	}
+
+	/* assign the unpins list to the capture to be unpinned and */
+	/* freed at capture completion (vi_capture_request_unpin) */
+	mutex_lock(&capture->unpins_list_lock);
+	capture->unpins_list[req->buffer_index] = unpins;
+	mutex_unlock(&capture->unpins_list_lock);
 
 	dev_dbg(chan->dev, "%s: sending chan_id %u msg_id %u buf:%u\n",
 			__func__, capture_desc.header.channel_id,
@@ -765,10 +874,14 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 			sizeof(capture_desc));
 	if (err < 0) {
 		dev_err(chan->dev, "IVC capture submit failed\n");
-		return err;
+		goto fail;
 	}
 
 	return 0;
+
+fail:
+	vi_capture_request_unpin(chan, req->buffer_index);
+	return err;
 }
 
 int vi_capture_status(struct tegra_vi_channel *chan,

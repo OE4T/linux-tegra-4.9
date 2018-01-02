@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdis_win.c
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -232,8 +232,8 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 	vbypass = (dfixed_trunc(vscalar) == win->out_h);
 
 	/* Select 2 taps vs 5 taps */
-	min_width = (dfixed_trunc(win->w) < win->out_w) ?
-		dfixed_trunc(win->w) : win->out_w;
+	min_width = (dfixed_trunc(hscalar) < win->out_w) ?
+		dfixed_trunc(hscalar) : win->out_w;
 
 	win_capc = nvdisp_win_read(win, win_precomp_wgrp_capc_r());
 	win_cape = nvdisp_win_read(win, win_precomp_wgrp_cape_r());

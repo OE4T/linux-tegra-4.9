@@ -1,7 +1,7 @@
 /*
 * NVIDIA XUSB device mode controller
 *
-* Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
 * Copyright (c) 2015, Google Inc.
 *
 * This program is free software; you can redistribute it and/or modify it
@@ -600,6 +600,7 @@ struct tegra_xudc_soc_data {
 	bool pls_quirk;
 	bool init_clks;
 	bool disable_elpg;
+	bool port_reset_quirk;
 };
 
 static bool u1_enable;
@@ -3023,9 +3024,11 @@ static void __tegra_xudc_handle_port_status(struct tegra_xudc *xudc)
 		dev_dbg(xudc->dev, "PRC, PR, PORTSC = %#x\n", portsc);
 		clear_port_change(xudc, PORTSC_PRC | PORTSC_PED);
 #define TOGGLE_VBUS_WAIT_MS 100
-		schedule_delayed_work(&xudc->port_reset_war_work,
-			msecs_to_jiffies(TOGGLE_VBUS_WAIT_MS));
-		xudc->wait_for_sec_prc = 1;
+		if (xudc->soc->port_reset_quirk) {
+			schedule_delayed_work(&xudc->port_reset_war_work,
+				msecs_to_jiffies(TOGGLE_VBUS_WAIT_MS));
+			xudc->wait_for_sec_prc = 1;
+		}
 	}
 
 	if ((portsc & PORTSC_PRC) && !(portsc & PORTSC_PR)) {
@@ -3743,6 +3746,7 @@ static struct tegra_xudc_soc_data tegra210_xudc_soc_data = {
 	.lpm_enable = false,
 	.invalid_seq_num = true,
 	.pls_quirk = true,
+	.port_reset_quirk = true,
 };
 
 static struct tegra_xudc_soc_data tegra210b01_xudc_soc_data = {
@@ -3754,6 +3758,7 @@ static struct tegra_xudc_soc_data tegra210b01_xudc_soc_data = {
 	.lpm_enable = false,
 	.invalid_seq_num = false,
 	.pls_quirk = false,
+	.port_reset_quirk = true,
 };
 
 static struct tegra_xudc_soc_data tegra186_xudc_soc_data = {
@@ -3765,6 +3770,7 @@ static struct tegra_xudc_soc_data tegra186_xudc_soc_data = {
 	.lpm_enable = false,
 	.invalid_seq_num = false,
 	.pls_quirk = false,
+	.port_reset_quirk = false,
 };
 
 static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
@@ -3778,6 +3784,7 @@ static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
 	.pls_quirk = false,
 	.init_clks = true,
 	.disable_elpg = false,
+	.port_reset_quirk = false,
 };
 
 static struct of_device_id tegra_xudc_of_match[] = {

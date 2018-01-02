@@ -1,7 +1,7 @@
 /*
  * hdmi2.0.c: hdmi2.0 driver.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -1594,7 +1594,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		atomic_set(&hdmi->clock_refcount, 0);
 	}
 	atomic_set(&hdmi->suspended, 0);
-	if (!tegra_platform_is_sim() && !tegra_dc_is_t19x()) {
+	if (!tegra_platform_is_sim()) {
 		hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
 			dc->out->ddc_bus);
 		if (IS_ERR(hdmi->nvhdcp)) {
@@ -1744,8 +1744,8 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 #ifdef CONFIG_TEGRA_HDA_DC
 	tegra_hda_destroy(hdmi->hda_handle);
 #endif
-	if (!tegra_dc_is_t19x())
-		tegra_nvhdcp_destroy(hdmi->nvhdcp);
+
+	tegra_nvhdcp_destroy(hdmi->nvhdcp);
 
 	if (hdmi->dpaux)
 		tegra_dpaux_destroy_data(hdmi->dpaux);

@@ -153,13 +153,12 @@ static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 		nvgpu_dma_unmap_free(ce_ctx->vm, &ce_ctx->cmd_buf_mem);
 	}
 
-	/* unbind tsg */
-	if (ce_ctx->tsg && ce_ctx->ch)
-		gk20a_tsg_unbind_channel(ce_ctx->ch);
-
-	/* free the channel */
-	if (ce_ctx->ch)
-		gk20a_channel_close(ce_ctx->ch);
+	/*
+	 * free the channel
+	 * gk20a_channel_close() will also unbind the channel from TSG
+	 */
+	gk20a_channel_close(ce_ctx->ch);
+	nvgpu_ref_put(&ce_ctx->tsg->refcount, gk20a_tsg_release);
 
 	/* housekeeping on app */
 	if (list->prev && list->next)

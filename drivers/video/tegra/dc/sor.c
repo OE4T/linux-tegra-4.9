@@ -1,7 +1,7 @@
 /*
  * sor.c: Functions implementing tegra dc sor interface.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -645,6 +645,7 @@ static void tegra_dc_sor_debug_destroy(struct tegra_dc_sor_data *sor)
 {
 	debugfs_remove_recursive(sor->debugdir);
 	sor->debugdir = NULL;
+	debugfs_remove(sor->dc->sor_link);
 }
 #else
 static inline void tegra_dc_sor_debug_create(struct tegra_dc_sor_data *sor,

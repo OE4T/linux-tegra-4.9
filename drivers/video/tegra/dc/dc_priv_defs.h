@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -576,6 +576,7 @@ struct tegra_dc {
 
 #ifdef CONFIG_DEBUG_FS
 	struct dentry			*debugdir;
+	struct dentry			*sor_link;  /*symbolic link to SOR debugfs*/
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	struct dentry			*debug_common_dir;
 #endif

@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1991,6 +1991,26 @@ static int tegra_dc_crossbar_display_reinit(struct tegra_dc *dc,
 
 	dc->hotplug_supported = tegra_dc_hotplug_supported(dc);
 
+	if (dc->out_ops->get_connector_instance) {
+		char sor_path[CHAR_BUF_SIZE_MAX];
+		int ctrl_num = -1;
+
+		ctrl_num = dc->out_ops->get_connector_instance(dc);
+		if (ctrl_num < 0) {
+			pr_err("crossbar: SOR controller instance not found\n");
+			return -EFAULT;
+		}
+
+		snprintf(sor_path, sizeof(sor_path),
+				"/sys/kernel/debug/tegra_sor%d", ctrl_num);
+		dc->sor_link = debugfs_create_symlink("sor", dc->debugdir, sor_path);
+		if (!dc->sor_link) {
+			pr_err("crossbar: couldn't create symbolic link to SOR%d for DC%d\n",
+				ctrl_num, dc->ctrl_num);
+			return -EFAULT;
+		}
+	}
+
 	if (dc->out_ops && dc->out_ops->hotplug_init)
 		dc->out_ops->hotplug_init(dc);
 
@@ -3047,8 +3067,8 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 
 		snprintf(sor_path, sizeof(sor_path),
 				"/sys/kernel/debug/tegra_sor%d", ctrl_num);
-		retval = debugfs_create_symlink("sor", dc->debugdir, sor_path);
-		if (!retval)
+		dc->sor_link = debugfs_create_symlink("sor", dc->debugdir, sor_path);
+		if (!dc->sor_link)
 			goto remove_out;
 	}
 /*Create directory for elements common to all DC heads*/

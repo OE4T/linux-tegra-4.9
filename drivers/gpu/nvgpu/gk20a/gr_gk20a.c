@@ -3809,6 +3809,8 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 				"invalid zbc color table index");
 			return -EINVAL;
 		}
+
+		nvgpu_speculation_barrier();
 		for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
 			query_params->color_l2[i] =
 				gr->zbc_col_tbl[index].color_l2[i];
@@ -3824,6 +3826,8 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 				"invalid zbc depth table index");
 			return -EINVAL;
 		}
+
+		nvgpu_speculation_barrier();
 		query_params->depth = gr->zbc_dep_tbl[index].depth;
 		query_params->format = gr->zbc_dep_tbl[index].format;
 		query_params->ref_cnt = gr->zbc_dep_tbl[index].ref_cnt;

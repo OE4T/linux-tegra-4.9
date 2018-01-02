@@ -1,7 +1,7 @@
 /*
  * GV11B Tegra HAL interface
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -290,7 +290,7 @@ static const struct gpu_ops gv11b_ops = {
 		.alloc_gr_ctx = gr_gp10b_alloc_gr_ctx,
 		.free_gr_ctx = gr_gp10b_free_gr_ctx,
 		.update_ctxsw_preemption_mode =
-			gr_gp10b_update_ctxsw_preemption_mode,
+			gr_gv11b_update_ctxsw_preemption_mode,
 		.dump_gr_regs = gr_gv11b_dump_gr_status_regs,
 		.update_pc_sampling = gr_gm20b_update_pc_sampling,
 		.get_fbp_en_mask = gr_gm20b_get_fbp_en_mask,
@@ -365,7 +365,7 @@ static const struct gpu_ops gv11b_ops = {
 		.update_boosted_ctx = gr_gp10b_update_boosted_ctx,
 		.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3,
 		.create_gr_sysfs = gr_gv11b_create_sysfs,
-		.set_ctxsw_preemption_mode = gr_gp10b_set_ctxsw_preemption_mode,
+		.set_ctxsw_preemption_mode = gr_gv11b_set_ctxsw_preemption_mode,
 		.is_etpc_addr = gv11b_gr_pri_is_etpc_addr,
 		.egpc_etpc_priv_addr_table = gv11b_gr_egpc_etpc_priv_addr_table,
 		.handle_tpc_mpc_exception = gr_gv11b_handle_tpc_mpc_exception,

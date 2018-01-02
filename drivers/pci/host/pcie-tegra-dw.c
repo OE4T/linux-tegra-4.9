@@ -1556,10 +1556,6 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 	u32 data = 0, pos = 0;
 
 	for_each_pci_dev(pdev) {
-		pdev->irq = pp->irq;
-	}
-
-	for_each_pci_dev(pdev) {
 		pos = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_L1SS);
 		if (!pos)
 			continue;

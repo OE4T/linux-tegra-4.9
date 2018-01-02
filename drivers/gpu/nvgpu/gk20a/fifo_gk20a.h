@@ -83,8 +83,6 @@ enum {
 #define	RUNLIST_DISABLED		0
 #define	RUNLIST_ENABLED			1
 
-#define RUNLIST_INFO_MUTEX_LOCKED	1
-
 /* generally corresponds to the "pbdma" engine */
 
 struct fifo_runlist_info_gk20a {
@@ -336,7 +334,7 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f);
 void gk20a_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist);
 void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist);
 void gk20a_fifo_set_runlist_state(struct gk20a *g, u32 runlists_mask,
-		 u32 runlist_state, int runlist_mutex_state);
+		 u32 runlist_state);
 
 u32 gk20a_fifo_userd_gp_get(struct gk20a *g, struct channel_gk20a *c);
 void gk20a_fifo_userd_gp_put(struct gk20a *g, struct channel_gk20a *c);

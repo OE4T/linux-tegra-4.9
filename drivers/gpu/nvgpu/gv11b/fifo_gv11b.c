@@ -948,8 +948,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	runlists_mask =  gv11b_fifo_get_runlists_mask(g, act_eng_bitmask, id,
 					 id_type, rc_type, mmfault);
 
-	gk20a_fifo_set_runlist_state(g, runlists_mask, RUNLIST_DISABLED,
-					 !RUNLIST_INFO_MUTEX_LOCKED);
+	gk20a_fifo_set_runlist_state(g, runlists_mask, RUNLIST_DISABLED);
 
 	g->fifo.deferred_reset_pending = false;
 
@@ -1080,8 +1079,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 		}
 	}
 
-	gk20a_fifo_set_runlist_state(g, runlists_mask, RUNLIST_ENABLED,
-					 !RUNLIST_INFO_MUTEX_LOCKED);
+	gk20a_fifo_set_runlist_state(g, runlists_mask, RUNLIST_ENABLED);
 
 	/* It is safe to enable ELPG again. */
 	if (g->support_pmu && g->elpg_enabled)

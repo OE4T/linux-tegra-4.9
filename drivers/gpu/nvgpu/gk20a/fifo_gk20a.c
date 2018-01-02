@@ -2787,25 +2787,13 @@ static void gk20a_fifo_sched_disable_rw(struct gk20a *g, u32 runlists_mask,
 }
 
 void gk20a_fifo_set_runlist_state(struct gk20a *g, u32 runlists_mask,
-		u32 runlist_state,
-		int is_runlist_info_mutex_locked)
+		u32 runlist_state)
 {
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 mutex_ret;
-	u32 runlist_id;
 
-	gk20a_dbg_fn("");
-
-	if (!is_runlist_info_mutex_locked) {
-		gk20a_dbg_info("acquire runlist_info mutex");
-		for (runlist_id = 0; runlist_id < g->fifo.max_runlists;
-							 runlist_id++) {
-			if (runlists_mask &
-				 fifo_sched_disable_runlist_m(runlist_id))
-				nvgpu_mutex_acquire(&g->fifo.
-					runlist_info[runlist_id].mutex);
-		}
-	}
+	nvgpu_log(g, gpu_dbg_info, "runlist mask = 0x%08x state = 0x%08x",
+			runlists_mask, runlist_state);
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
@@ -2813,48 +2801,28 @@ void gk20a_fifo_set_runlist_state(struct gk20a *g, u32 runlists_mask,
 
 	if (!mutex_ret)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
-
-	if (!is_runlist_info_mutex_locked) {
-		gk20a_dbg_info("release runlist_info mutex");
-		for (runlist_id = 0; runlist_id < g->fifo.max_runlists;
-						 runlist_id++) {
-			if (runlists_mask &
-				 fifo_sched_disable_runlist_m(runlist_id))
-
-				nvgpu_mutex_release(&g->fifo.
-					runlist_info[runlist_id].mutex);
-		}
-	}
-
-	gk20a_dbg_fn("done");
 }
 
 void gk20a_fifo_enable_tsg_sched(struct gk20a *g, struct tsg_gk20a *tsg)
 {
 	gk20a_fifo_set_runlist_state(g, fifo_sched_disable_runlist_m(
-					tsg->runlist_id), RUNLIST_ENABLED,
-					!RUNLIST_INFO_MUTEX_LOCKED);
+					tsg->runlist_id), RUNLIST_ENABLED);
 
 }
 
 void gk20a_fifo_disable_tsg_sched(struct gk20a *g, struct tsg_gk20a *tsg)
 {
 	gk20a_fifo_set_runlist_state(g, fifo_sched_disable_runlist_m(
-					tsg->runlist_id), RUNLIST_DISABLED,
-					!RUNLIST_INFO_MUTEX_LOCKED);
+					tsg->runlist_id), RUNLIST_DISABLED);
 }
 
 int gk20a_fifo_enable_engine_activity(struct gk20a *g,
 				struct fifo_engine_info_gk20a *eng_info)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_info, "start");
 
 	gk20a_fifo_set_runlist_state(g, fifo_sched_disable_runlist_m(
-				eng_info->runlist_id), RUNLIST_ENABLED,
-				 !RUNLIST_INFO_MUTEX_LOCKED);
-
-	gk20a_dbg_fn("done");
-
+				eng_info->runlist_id), RUNLIST_ENABLED);
 	return 0;
 }
 
@@ -2899,8 +2867,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	gk20a_fifo_set_runlist_state(g, fifo_sched_disable_runlist_m(
-					eng_info->runlist_id), RUNLIST_DISABLED,
-					!RUNLIST_INFO_MUTEX_LOCKED);
+				eng_info->runlist_id), RUNLIST_DISABLED);
 
 	/* chid from pbdma status */
 	pbdma_stat = gk20a_readl(g, fifo_pbdma_status_r(eng_info->pbdma_id));

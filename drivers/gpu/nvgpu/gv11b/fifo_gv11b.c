@@ -662,24 +662,6 @@ static u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
 	return runlists_mask;
 }
 
-static void gv11b_fifo_runlist_event_intr_disable(struct gk20a *g)
-{
-	u32 reg_val;
-
-	reg_val = gk20a_readl(g, fifo_intr_en_0_r());
-	reg_val &= fifo_intr_0_runlist_event_pending_f();
-	gk20a_writel(g, fifo_intr_en_0_r(), reg_val);
-}
-
-static void gv11b_fifo_runlist_event_intr_enable(struct gk20a *g)
-{
-	u32 reg_val;
-
-	reg_val = gk20a_readl(g, fifo_intr_en_0_r());
-	reg_val |= fifo_intr_0_runlist_event_pending_f();
-	gk20a_writel(g, fifo_intr_en_0_r(), reg_val);
-}
-
 static void gv11b_fifo_issue_runlist_preempt(struct gk20a *g,
 					 u32 runlists_mask)
 {
@@ -784,23 +766,24 @@ static int __locked_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 {
 	int ret;
 
-	/*
-	 * Disable runlist event interrupt as it will get
-	 * triggered after runlist preempt finishes
-	 */
-	gv11b_fifo_runlist_event_intr_disable(g);
-
 	/* issue runlist preempt */
 	gv11b_fifo_issue_runlist_preempt(g, runlists_mask);
 
 	/* poll for runlist preempt done */
 	ret = gv11b_fifo_poll_runlist_preempt_pending(g, runlists_mask);
 
-	/* Clear outstanding runlist event */
-	gk20a_fifo_handle_runlist_event(g);
+	/*
+	 * Even if runlist_event intr is not enabled in fifo_intr_en_0 , it gets
+	 * set in fifo_intr_0 status reg. Current fifo stall interrupt handler
+	 * is checking all set bits in fifo_intr_0 and handling runlist_event
+	 * too while handling other fifo interrupts e.g. pbdma fifo intr or
+	 * ctxsw timeout interrupt. It is better to clear this after runlist
+	 * preempt is done. Clearing runlist_event interrupt makes no
+	 * difference to pending runlist_preempt.
+	 */
 
-	/* Enable runlist event interrupt*/
-	gv11b_fifo_runlist_event_intr_enable(g);
+	if (!ret)
+		gk20a_fifo_handle_runlist_event(g);
 
 	return ret;
 }
@@ -1158,8 +1141,7 @@ static u32 gv11b_fifo_intr_0_en_mask(struct gk20a *g)
 
 	intr_0_en_mask = g->ops.fifo.intr_0_error_mask(g);
 
-	intr_0_en_mask |= fifo_intr_0_runlist_event_pending_f() |
-				 fifo_intr_0_pbdma_intr_pending_f() |
+	intr_0_en_mask |= fifo_intr_0_pbdma_intr_pending_f() |
 				 fifo_intr_0_ctxsw_timeout_pending_f();
 
 	return intr_0_en_mask;

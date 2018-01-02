@@ -1446,7 +1446,7 @@
 				drivernode0 {
 					pcl_id = "v4l2_sensor";
 					devname = "ov5693 34-0036";
-					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@4/ov5693_d@36";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@4/ov5693_e@36";
 				};
 				drivernode1 {
 					pcl_id = "v4l2_lens";
@@ -1460,7 +1460,7 @@
 				drivernode0 {
 					pcl_id = "v4l2_sensor";
 					devname = "ov5693 35-0036";
-					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@5/ov5693_e@36";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@5/ov5693_g@36";
 				};
 				drivernode1 {
 					pcl_id = "v4l2_lens";

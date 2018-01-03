@@ -1439,12 +1439,9 @@ static inline void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
 /* classes that the device supports */
 /* TBD: get these from an open-sourced SDK? */
 enum {
-	KEPLER_C                  = 0xA297,
 	FERMI_TWOD_A              = 0x902D,
-	KEPLER_COMPUTE_A          = 0xA0C0,
 	KEPLER_INLINE_TO_MEMORY_A = 0xA040,
 	KEPLER_DMA_COPY_A         = 0xA0B5,
-	KEPLER_CHANNEL_GPFIFO_C   = 0xA26F,
 };
 
 #define GK20A_BAR0_IORESOURCE_MEM 0

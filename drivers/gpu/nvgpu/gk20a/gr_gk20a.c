@@ -2979,65 +2979,6 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 			gr_gk20a_commit_global_ctx_buffers(g, c, true));
 	}
 
-	/* tweak any perf parameters per-context here */
-	if (class_num == KEPLER_COMPUTE_A) {
-		u32 tex_lock_disable_mask;
-		u32 texlock;
-		u32 lockboost_mask;
-		u32 lockboost;
-
-		if (g->support_pmu && g->can_elpg) {
-			err = nvgpu_pmu_disable_elpg(g);
-			if (err) {
-				nvgpu_err(g,
-						"failed to set disable elpg");
-			}
-		}
-
-		tex_lock_disable_mask =
-			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_m()         |
-			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tile_m()    |
-			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_phase_m()   |
-			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tex_m()     |
-			gr_gpcs_tpcs_sm_sch_texlock_tex_hash_timeout_m() |
-			gr_gpcs_tpcs_sm_sch_texlock_dot_t_unlock_m();
-
-		texlock = gk20a_readl(g, gr_gpcs_tpcs_sm_sch_texlock_r());
-
-		texlock = (texlock & ~tex_lock_disable_mask) |
-		(gr_gpcs_tpcs_sm_sch_texlock_tex_hash_disable_f()         |
-		 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tile_disable_f()    |
-		 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_phase_disable_f()   |
-		 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_tex_disable_f()     |
-		 gr_gpcs_tpcs_sm_sch_texlock_tex_hash_timeout_disable_f() |
-		 gr_gpcs_tpcs_sm_sch_texlock_dot_t_unlock_disable_f());
-
-		lockboost_mask =
-			gr_gpcs_tpcs_sm_sch_macro_sched_lockboost_size_m();
-
-		lockboost = gk20a_readl(g, gr_gpcs_tpcs_sm_sch_macro_sched_r());
-		lockboost = (lockboost & ~lockboost_mask) |
-			gr_gpcs_tpcs_sm_sch_macro_sched_lockboost_size_f(0);
-
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, false);
-
-		if (!err) {
-			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpcs_tpcs_sm_sch_texlock_r(),
-				texlock, true);
-			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpcs_tpcs_sm_sch_macro_sched_r(),
-				lockboost, true);
-			gr_gk20a_ctx_patch_write_end(g, ch_ctx, false);
-		} else {
-			nvgpu_err(g,
-				   "failed to set texlock for compute class");
-		}
-
-		if (g->support_pmu && g->can_elpg)
-			nvgpu_pmu_enable_elpg(g);
-	}
-
 	/* init golden image, ELPG enabled after this is done */
 	err = gr_gk20a_init_golden_ctx_image(g, c);
 	if (err) {

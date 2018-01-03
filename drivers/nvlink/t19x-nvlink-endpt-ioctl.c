@@ -568,6 +568,8 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	struct nvlink_get_counters *get_counters;
 	struct nvlink_get_err_info *get_err_info;
 	struct nvlink_get_error_recoveries *get_err_recoveries;
+	int arg_size = _IOC_SIZE(cmd);
+	void *arg_copy;
 	int ret = 0;
 
 	if (!ndev) {
@@ -575,212 +577,148 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 		return -ENODEV;
 	}
 
+	arg_copy = kzalloc(arg_size, GFP_KERNEL);
+	if (!arg_copy) {
+		nvlink_err("Can't allocate memory for arg_copy, cmd 0x%x", cmd);
+		return -ENOMEM;
+	}
+
+	if (copy_from_user(arg_copy, (void __user *)arg, arg_size)) {
+		nvlink_err("failed to copy ioctl data, cmd 0x%x", cmd);
+		ret = -EFAULT;
+		goto cleanup;
+	}
+
 	switch (cmd) {
 	case TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS:
-		caps = devm_kzalloc(ndev->dev, sizeof(struct nvlink_caps),
-					GFP_KERNEL);
-		if (!caps) {
-			nvlink_err("Can't allocate memory for nvlink caps");
-			return -ENOMEM;
+		if (arg_size != sizeof(struct nvlink_caps)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
 		}
 
+		caps = (struct nvlink_caps *) arg_copy;
 		ret = t19x_nvlink_get_caps(ndev, caps);
 		if (ret < 0) {
 			nvlink_err("nvlink get caps failed");
-			kfree(caps);
-			break;
+			goto cleanup;
 		}
-		ret = copy_to_user((void __user *)arg, caps, sizeof(*caps));
-		if (ret) {
-			nvlink_err("Error while copying caps to userspace");
-			ret = -EFAULT;
-		}
-		kfree(caps);
+
 		break;
 
 	case TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_STATUS:
-		status = devm_kzalloc(ndev->dev, sizeof(struct nvlink_status),
-					GFP_KERNEL);
-		if (!status) {
-			nvlink_err("Can't allocate memory for nvlink status");
-			return -ENOMEM;
+		if (arg_size != sizeof(struct nvlink_status)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
 		}
 
+		status = (struct nvlink_status *) arg_copy;
 		ret = t19x_nvlink_get_status(ndev, status);
 		if (ret < 0) {
 			nvlink_err("nvlink get status failed");
-			kfree(status);
-			break;
+			goto cleanup;
 		}
-		ret = copy_to_user((void __user *)arg, status, sizeof(*status));
-		if (ret) {
-			nvlink_err("Error while copying status to userspace");
-			ret = -EFAULT;
-		}
-		kfree(status);
+
 		break;
 
 	case TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS:
-		clear_counters = devm_kzalloc(ndev->dev,
-				sizeof(struct nvlink_clear_counters),
-				GFP_KERNEL);
-		if (!clear_counters) {
-			nvlink_err("Can't allocate memory for clear counters");
-			return -ENOMEM;
+		if (arg_size != sizeof(struct nvlink_clear_counters)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
 		}
 
-		ret = copy_from_user(clear_counters, (void __user *)arg,
-					sizeof(*clear_counters));
-		if (ret) {
-			nvlink_err("Error while copying from userspace");
-			ret = -EFAULT;
-			kfree(clear_counters);
-			break;
-		}
-
+		clear_counters = (struct nvlink_clear_counters *) arg_copy;
 		if (clear_counters->link_mask & 0x1) {
 			ret = t19x_nvlink_clear_counters(ndev, clear_counters);
 			if (ret < 0) {
 				nvlink_err("nvlink clear counters failed");
-				kfree(clear_counters);
-				break;
-			}
-			ret = copy_to_user((void __user *)arg, clear_counters,
-						sizeof(*clear_counters));
-			if (ret) {
-				nvlink_err("Error while copying clear"
-						" counters");
-				ret = -EFAULT;
+				goto cleanup;
 			}
 		} else {
 			nvlink_err("Invalid link mask specified");
 			ret = -EINVAL;
+			goto cleanup;
 		}
-		kfree(clear_counters);
+
 		break;
 
 	case TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS:
-		get_counters = devm_kzalloc(ndev->dev,
-					sizeof(struct nvlink_get_counters),
-					GFP_KERNEL);
-		if (!get_counters) {
-			nvlink_err("Can't allocate memory for get counters");
-			return -ENOMEM;
+		if (arg_size != sizeof(struct nvlink_get_counters)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
 		}
 
-		ret = copy_from_user(get_counters, (void __user *)arg,
-					sizeof(*get_counters));
-		if (ret) {
-			nvlink_err("Error while copying from userspace");
-			ret = -EFAULT;
-			kfree(get_counters);
-			break;
-		}
-
+		get_counters = (struct nvlink_get_counters *) arg_copy;
 		if (get_counters->link_id != 0) {
 			nvlink_err("Invalid link id specified");
 			ret = -EINVAL;
-			kfree(get_counters);
-			break;
+			goto cleanup;
 		}
 
 		ret = t19x_nvlink_get_counters(ndev, get_counters);
 		if (ret < 0) {
 			nvlink_err("nvlink get counters failed");
-			kfree(get_counters);
-			break;
+			goto cleanup;
 		}
 
-		ret = copy_to_user((void __user *)arg, get_counters,
-					sizeof(*get_counters));
-		if (ret) {
-			nvlink_err("Error while copying get counters");
-			ret = -EFAULT;
-		}
-		kfree(get_counters);
 		break;
 
 	case TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO:
-		get_err_info = devm_kzalloc(ndev->dev,
-					sizeof(struct nvlink_get_err_info),
-					GFP_KERNEL);
-		if (!get_err_info) {
-			nvlink_err("Can't allocate memory for get err info");
-			return -ENOMEM;
+		if (arg_size != sizeof(struct nvlink_get_err_info)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
 		}
 
-		ret = copy_from_user(get_err_info, (void __user *)arg,
-					sizeof(*get_err_info));
-		if (ret) {
-			nvlink_err("Error while copying from userspace");
-			ret = -EFAULT;
-			kfree(get_err_info);
-			break;
-		}
-
+		get_err_info = (struct nvlink_get_err_info *) arg_copy;
 		ret = t19x_nvlink_get_err_info(ndev, get_err_info);
 		if (ret < 0) {
 			nvlink_err("nvlink get err info failed");
-			kfree(get_err_info);
-			break;
+			goto cleanup;
 		}
-		ret = copy_to_user((void __user *)arg, get_err_info,
-					sizeof(*get_err_info));
-		if (ret) {
-			nvlink_err("Error while copying get err info");
-			ret = -EFAULT;
-		}
-		kfree(get_err_info);
+
 		break;
 
 	case TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES:
-		get_err_recoveries = devm_kzalloc(ndev->dev,
-				sizeof(struct nvlink_get_error_recoveries),
-				GFP_KERNEL);
-		if (!get_err_recoveries) {
-			nvlink_err("Can't allocate memory for get err"
-					" recoveries");
-			return -ENOMEM;
+		if (arg_size != sizeof(struct nvlink_get_error_recoveries)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
 		}
 
-		ret = copy_from_user(get_err_recoveries, (void __user *)arg,
-						sizeof(*get_err_recoveries));
-		if (ret) {
-			nvlink_err("Error while copying from userspace");
-			ret = -EFAULT;
-			kfree(get_err_recoveries);
-			break;
-		}
-
+		get_err_recoveries = (struct nvlink_get_error_recoveries *)
+					arg_copy;
 		if (get_err_recoveries->link_mask & 0x1) {
 			ret = t19x_nvlink_get_error_recoveries(ndev,
-						get_err_recoveries);
+							get_err_recoveries);
 			if (ret < 0) {
 				nvlink_err("nvlink get err recoveries failed");
-				kfree(get_err_recoveries);
-				break;
-			}
-			ret = copy_to_user((void __user *)arg,
-					get_err_recoveries,
-					sizeof(*get_err_recoveries));
-			if (ret) {
-				nvlink_err("Error while copying get err"
-						" recoveries");
-				ret = -EFAULT;
+				goto cleanup;
 			}
 		} else {
 			nvlink_err("Invalid link mask specified");
 			ret = -EINVAL;
+			goto cleanup;
 		}
-		kfree(get_err_recoveries);
+
 		break;
 
 	default:
 		nvlink_err("Unsupported IOCTL call");
 		ret = -EINVAL;
-		break;
+		goto cleanup;
 	}
 
+	if (copy_to_user((void __user *)arg, arg_copy, arg_size)) {
+		nvlink_err("Error while copying caps to userspace");
+		ret = -EFAULT;
+	}
+
+cleanup:
+	kfree(arg_copy);
 	return ret;
 }
 

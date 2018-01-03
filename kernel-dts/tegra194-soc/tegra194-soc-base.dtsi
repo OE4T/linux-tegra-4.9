@@ -373,6 +373,18 @@
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_XUSB_VF0>;
 			};
+			xusb_host_vf1_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_VF1>;
+			};
+			xusb_host_vf2_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_VF2>;
+			};
+			xusb_host_vf3_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_XUSB_VF3>;
+			};
 		};
 
 		address-space-prop {
@@ -1801,6 +1813,54 @@
 
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_VF0>;
+		dma-coherent;
+
+		status = "disabled";
+	};
+
+	tegra_xhci_vf2: xhci@36b0000 {
+		compatible = "nvidia,tegra194-xhci-vf2";
+		reg = <0x0 0x036b0000 0x0 0x40000>;
+		interrupts = <0 22 0x4>;
+
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+		nvidia,xusb-padctl = <&xusb_padctl>;
+#endif
+
+		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_XUSB_VF1>;
+		dma-coherent;
+
+		status = "disabled";
+	};
+
+	tegra_xhci_vf3: xhci@3700000 {
+		compatible = "nvidia,tegra194-xhci-vf3";
+		reg = <0x0 0x03700000 0x0 0x40000>;
+		interrupts = <0 23 0x4>;
+
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+		nvidia,xusb-padctl = <&xusb_padctl>;
+#endif
+
+		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_XUSB_VF2>;
+		dma-coherent;
+
+		status = "disabled";
+	};
+
+	tegra_xhci_vf4: xhci@3750000 {
+		compatible = "nvidia,tegra194-xhci-vf4";
+		reg = <0x0 0x03750000 0x0 0x40000>;
+		interrupts = <0 24 0x4>;
+
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+		nvidia,xusb-padctl = <&xusb_padctl>;
+#endif
+
+		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_XUSB_VF3>;
 		dma-coherent;
 
 		status = "disabled";

@@ -581,8 +581,7 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 			nvgpu_err(g, "fail to map global ctx buffer");
 			goto out;
 		}
-		gr_gk20a_elpg_protected_call(g,
-				vgpu_gr_commit_global_ctx_buffers(g, c, true));
+		vgpu_gr_commit_global_ctx_buffers(g, c, true);
 	}
 
 	/* load golden image */

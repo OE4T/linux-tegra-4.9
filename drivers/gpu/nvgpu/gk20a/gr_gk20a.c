@@ -2975,8 +2975,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 				"fail to map global ctx buffer");
 			goto out;
 		}
-		gr_gk20a_elpg_protected_call(g,
-			gr_gk20a_commit_global_ctx_buffers(g, c, true));
+		gr_gk20a_commit_global_ctx_buffers(g, c, true);
 	}
 
 	/* init golden image, ELPG enabled after this is done */

@@ -2,7 +2,7 @@
  *
  * Implementation of primary ALSA driver code base for NVIDIA Tegra HDA.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -56,6 +56,7 @@ static const struct of_device_id tegra_disb_pd[] = {
 
 /* Defines for Nvidia Tegra HDA support */
 #define HDA_BAR0           0x8000
+#define HDA_DFPCI_CFG      0x1000
 
 #define HDA_CFG_CMD        0x1004
 #define HDA_CFG_BAR0       0x1010
@@ -452,6 +453,7 @@ static int hda_tegra_init_chip(struct azx *chip, struct platform_device *pdev)
 
 	bus->remap_addr = hda->regs + HDA_BAR0;
 	bus->addr = res->start + HDA_BAR0;
+	bus->remap_addr_fpci = hda->regs + HDA_DFPCI_CFG;
 
 	hda_tegra_init(hda);
 
@@ -464,6 +466,7 @@ static int hda_tegra_first_init(struct azx *chip, struct platform_device *pdev)
 	struct snd_card *card = chip->card;
 	int err;
 	unsigned short gcap;
+	unsigned int num_sdo_lines;
 	int irq_id = platform_get_irq(pdev, 0);
 	const char *card_name;
 
@@ -482,6 +485,17 @@ static int hda_tegra_first_init(struct azx *chip, struct platform_device *pdev)
 	bus->irq = irq_id;
 
 	synchronize_irq(bus->irq);
+
+	/* WAR to override no. of SDO lines on T194    */
+	/* GCAP_NSDO is bits 19:18 in T_AZA_DBG_CFG_2  */
+	/* 0 for 1 SDO, 1 for 2 SDO, 2 for 4 SDO lines */
+	if (!of_property_read_u32(pdev->dev.of_node, "nvidia,num-sdo-stripe",
+			&num_sdo_lines)) {
+		dev_info(card->dev, "Override SDO lines to %u\n",
+			num_sdo_lines);
+		azx_fpci_updatel(chip, DBG_CFG_2, AZX_FPCI_GCAP_NSDO,
+				(((num_sdo_lines / 2) & 0x3) << 18));
+	}
 
 	gcap = azx_readw(chip, GCAP);
 	dev_dbg(card->dev, "chipset global capabilities = 0x%x\n", gcap);

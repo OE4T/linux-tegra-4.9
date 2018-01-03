@@ -3,7 +3,7 @@
  *
  * Tegra NvCapture ISP KMD
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -174,8 +174,7 @@ int isp_capture_init(struct tegra_isp_channel *chan)
 		return -ENODEV;
 	}
 
-	capture = devm_kzalloc(chan->isp_dev,
-			sizeof(*capture), GFP_KERNEL);
+	capture = kzalloc(sizeof(*capture), GFP_KERNEL);
 	if (unlikely(capture == NULL)) {
 		dev_err(chan->isp_dev, "failed to allocate capture channel\n");
 		return -ENOMEM;
@@ -210,7 +209,7 @@ void isp_capture_shutdown(struct tegra_isp_channel *chan)
 	if (capture->channel_id != CAPTURE_CHANNEL_ISP_INVALID_ID)
 		isp_capture_release(chan, 0);
 
-	devm_kfree(chan->isp_dev, capture);
+	kfree(capture);
 	chan->capture_data = NULL;
 }
 
@@ -402,9 +401,9 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 							setup->queue_depth;
 
 	/* allocate isp capture desc unpin list based on queue depth */
-	capture->capture_desc_ctx.unpins_list = devm_kzalloc(chan->isp_dev,
-			sizeof(struct capture_common_unpins *) *
+	capture->capture_desc_ctx.unpins_list = kcalloc(
 				capture->capture_desc_ctx.queue_depth,
+				sizeof(struct capture_common_unpins *),
 				GFP_KERNEL);
 	if (unlikely(capture->capture_desc_ctx.unpins_list == NULL)) {
 		dev_err(chan->isp_dev, "failed to allocate unpins array\n");
@@ -444,9 +443,9 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 						setup->isp_program_queue_depth;
 
 	/* allocate isp program unpin list based on queue depth */
-	capture->program_desc_ctx.unpins_list = devm_kzalloc(chan->isp_dev,
-			sizeof(struct capture_common_unpins *) *
-				capture->program_desc_ctx.queue_depth,
+	capture->program_desc_ctx.unpins_list = kcalloc(
+				capture->capture_desc_ctx.queue_depth,
+				sizeof(struct capture_common_unpins *),
 				GFP_KERNEL);
 	if (unlikely(capture->program_desc_ctx.unpins_list == NULL)) {
 		dev_err(chan->isp_dev,
@@ -526,11 +525,11 @@ submit_fail:
 control_cb_fail:
 	isp_capture_release_syncpts(chan);
 syncpt_fail:
-	devm_kfree(chan->isp_dev, capture->program_desc_ctx.unpins_list);
+	kfree(capture->program_desc_ctx.unpins_list);
 prog_unpins_list_fail:
 	capture_common_unpin_memory(&capture->program_desc_ctx.requests);
 prog_pin_fail:
-	devm_kfree(chan->isp_dev, capture->capture_desc_ctx.unpins_list);
+	kfree(capture->capture_desc_ctx.unpins_list);
 unpins_list_fail:
 	capture_common_unpin_memory(&capture->capture_desc_ctx.requests);
 	return err;
@@ -652,6 +651,10 @@ int isp_capture_release(struct tegra_isp_channel *chan,
 
 	capture_common_unpin_memory(&capture->capture_desc_ctx.requests);
 	capture_common_unpin_memory(&capture->capture_desc_ctx.requests_isp);
+
+	kfree(capture->program_desc_ctx.unpins_list);
+	kfree(capture->capture_desc_ctx.unpins_list);
+
 	capture->channel_id = CAPTURE_CHANNEL_ISP_INVALID_ID;
 
 	return 0;
@@ -750,7 +753,7 @@ static int isp_capture_setup_prefences(struct tegra_isp_channel *chan,
 
 	prefence_relocs = kcalloc(req->prog_prefence_relocs.num_relocs,
 		sizeof(uint32_t), GFP_KERNEL);
-	if (prefence_relocs == NULL) {
+	if (unlikely(prefence_relocs == NULL)) {
 		dev_err(chan->isp_dev,
 			"failed to allocate prefence reloc array\n");
 		return -ENOMEM;
@@ -833,7 +836,7 @@ static void isp_capture_request_unpin(struct tegra_isp_channel *chan,
 	if (unpins != NULL) {
 		for (i = 0; i < unpins->num_unpins; i++)
 			capture_common_unpin_memory(&unpins->data[i]);
-		devm_kfree(chan->isp_dev, unpins);
+		kfree(unpins);
 		capture->capture_desc_ctx.unpins_list[buffer_index] = NULL;
 	}
 	mutex_unlock(&capture->capture_desc_ctx.unpins_list_lock);
@@ -851,7 +854,7 @@ static void isp_capture_program_request_unpin(struct tegra_isp_channel *chan,
 	if (unpins != NULL) {
 		for (i = 0; i < unpins->num_unpins; i++)
 			capture_common_unpin_memory(&unpins->data[i]);
-		devm_kfree(chan->isp_dev, unpins);
+		kfree(unpins);
 		capture->program_desc_ctx.unpins_list[buffer_index] = NULL;
 	}
 	mutex_unlock(&capture->program_desc_ctx.unpins_list_lock);

@@ -1,7 +1,7 @@
 /*
  * Tegra capture common operations
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -97,18 +97,17 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 		return -EEXIST;
 	}
 
-	req->unpins = devm_kzalloc(req->dev,
-		sizeof(struct capture_common_unpins) +
-			(sizeof(struct capture_common_buf) * req->num_relocs),
+	req->unpins = kzalloc(sizeof(struct capture_common_unpins) +
+		(sizeof(struct capture_common_buf) * req->num_relocs),
 		GFP_KERNEL);
-	if (req->unpins == NULL) {
+	if (unlikely(req->unpins == NULL)) {
 		dev_err(req->dev, "failed to allocate request unpins\n");
 		return -ENOMEM;
 	}
 
 	reloc_relatives = kcalloc(req->num_relocs, sizeof(uint32_t),
 		GFP_KERNEL);
-	if (reloc_relatives == NULL) {
+	if (unlikely(reloc_relatives == NULL)) {
 		dev_err(req->dev, "failed to allocate request reloc array\n");
 		err = -ENOMEM;
 		goto reloc_fail;
@@ -226,7 +225,7 @@ pin_fail:
 
 reloc_fail:
 	if (err)
-		devm_kfree(req->dev, req->unpins);
+		kfree(req->unpins);
 
 	if (reloc_page_addr != NULL)
 		dma_buf_kunmap(req->requests->buf, last_page,

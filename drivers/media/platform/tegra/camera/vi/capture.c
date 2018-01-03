@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: David Wang <davidw@nvidia.com>
  *
@@ -16,6 +16,7 @@
 #include <linux/nvhost.h>
 #include <linux/of_platform.h>
 #include <linux/printk.h>
+#include <linux/slab.h>
 #include <linux/tegra-capture-ivc.h>
 #include <media/capture.h>
 #include <media/capture_common.h>
@@ -161,8 +162,7 @@ int vi_capture_init(struct tegra_vi_channel *chan)
 		return -ENODEV;
 	}
 
-	capture = devm_kzalloc(chan->dev,
-			sizeof(*capture), GFP_KERNEL);
+	capture = kzalloc(sizeof(*capture), GFP_KERNEL);
 	if (unlikely(capture == NULL)) {
 		dev_err(chan->dev, "failed to allocate capture channel\n");
 		return -ENOMEM;
@@ -195,7 +195,7 @@ void vi_capture_shutdown(struct tegra_vi_channel *chan)
 	if (capture->channel_id != CAPTURE_CHANNEL_INVALID_ID)
 		vi_capture_release(chan, 0);
 
-	devm_kfree(chan->dev, capture);
+	kfree(capture);
 	chan->capture_data = NULL;
 }
 
@@ -389,9 +389,8 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	capture->request_buf_size = setup->request_size * setup->queue_depth;
 
 	/* allocate for unpin list based on queue depth */
-	capture->unpins_list = devm_kzalloc(chan->dev,
-			sizeof(struct capture_common_unpins *) *
-				capture->queue_depth,
+	capture->unpins_list = kcalloc(capture->queue_depth,
+			sizeof(struct capture_common_unpins *),
 			GFP_KERNEL);
 	if (unlikely(capture->unpins_list == NULL)) {
 		dev_err(chan->dev, "failed to allocate unpins array\n");
@@ -477,7 +476,7 @@ submit_fail:
 control_cb_fail:
 	vi_capture_release_syncpts(chan);
 syncpt_fail:
-	devm_kfree(chan->dev, capture->unpins_list);
+	kfree(capture->unpins_list);
 unpins_list_fail:
 	capture_common_unpin_memory(&capture->requests);
 	return err;
@@ -635,6 +634,8 @@ int vi_capture_release(struct tegra_vi_channel *chan,
 	vi_capture_release_syncpts(chan);
 	capture_common_unpin_memory(&capture->requests);
 
+	kfree(capture->unpins_list);
+
 	capture->channel_id = CAPTURE_CHANNEL_INVALID_ID;
 
 	return 0;
@@ -729,7 +730,7 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 	msg_ptr = (const void __user *)(uintptr_t)msg->ptr;
 	response = (void __user *)(uintptr_t)msg->response;
 
-	msg_cpy = devm_kzalloc(chan->dev, msg->size, GFP_KERNEL);
+	msg_cpy = kzalloc(msg->size, GFP_KERNEL);
 	if (unlikely(msg_cpy == NULL))
 		return -ENOMEM;
 
@@ -777,7 +778,7 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 			sizeof(*resp_msg)) ? -EFAULT : 0;
 
 fail:
-	devm_kfree(chan->dev, msg_cpy);
+	kfree(msg_cpy);
 	return err;
 }
 
@@ -799,7 +800,7 @@ static void vi_capture_request_unpin(struct tegra_vi_channel *chan,
 		for (i = 0; i < unpins->num_unpins; i++)
 			capture_common_unpin_memory(&unpins->data[i]);
 		capture->unpins_list[buffer_index] = NULL;
-		devm_kfree(chan->dev, unpins);
+		kfree(unpins);
 	}
 	mutex_unlock(&capture->unpins_list_lock);
 }

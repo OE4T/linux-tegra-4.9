@@ -238,4 +238,8 @@
 	psci {
 		status = "okay";
 	};
+
+	cpufreq@d080000 {
+		status = "okay";
+	};
 };

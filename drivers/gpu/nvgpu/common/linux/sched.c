@@ -22,6 +22,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/barrier.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -190,6 +191,8 @@ static int gk20a_sched_dev_ioctl_get_params(struct gk20a_sched_ctrl *sched,
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
 
+	nvgpu_speculation_barrier();
+
 	tsg = &f->tsg[tsgid];
 	if (!nvgpu_ref_get_unless_zero(&tsg->refcount))
 		return -ENXIO;
@@ -223,6 +226,8 @@ static int gk20a_sched_dev_ioctl_tsg_set_timeslice(
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
 
+	nvgpu_speculation_barrier();
+
 	tsg = &f->tsg[tsgid];
 	if (!nvgpu_ref_get_unless_zero(&tsg->refcount))
 		return -ENXIO;
@@ -255,6 +260,8 @@ static int gk20a_sched_dev_ioctl_tsg_set_runlist_interleave(
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
+
+	nvgpu_speculation_barrier();
 
 	tsg = &f->tsg[tsgid];
 	if (!nvgpu_ref_get_unless_zero(&tsg->refcount))
@@ -316,6 +323,8 @@ static int gk20a_sched_dev_ioctl_get_tsg(struct gk20a_sched_ctrl *sched,
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
 
+	nvgpu_speculation_barrier();
+
 	tsg = &f->tsg[tsgid];
 	if (!nvgpu_ref_get_unless_zero(&tsg->refcount))
 		return -ENXIO;
@@ -350,6 +359,8 @@ static int gk20a_sched_dev_ioctl_put_tsg(struct gk20a_sched_ctrl *sched,
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
+
+	nvgpu_speculation_barrier();
 
 	nvgpu_mutex_acquire(&sched->status_lock);
 	if (!NVGPU_SCHED_ISSET(tsgid, sched->ref_tsg_bitmap)) {

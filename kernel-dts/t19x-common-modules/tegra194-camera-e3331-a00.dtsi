@@ -152,7 +152,7 @@
 						tegra_sinterface = "serial_a";
 						discontinuous_clk = "no";
 						dpcm_enable = "false";
-						cil_settletime = "0"; /* TODO check this, send 8 to reg for default 15 cycles*/
+						cil_settletime = "20"; /* TODO check this, send 8 to reg for default 15 cycles*/
 
 						active_w = "5488";
 						active_h = "4112";

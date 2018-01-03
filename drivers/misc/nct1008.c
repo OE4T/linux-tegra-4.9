@@ -3,7 +3,7 @@
  *
  * Driver for NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1368,11 +1368,8 @@ static void nct1008_setup_shutdown_warning(struct nct1008_data *data)
 */
 static int nct1008_offsets_program(struct i2c_client *client)
 {
-	int off, r = 0, val;
 	struct nct1008_platform_data *p = client->dev.platform_data;
-	/* TMP451 offset precision is 0.0625C, i.e. 4 bits, NCT has 0.25C. */
-	int lo_b = (p->offset % 4) << OFFSET_FRAC_BITS;
-	int hi_b = p->offset / 4;
+	int off = p->offset, r = 0, val, lo_b, hi_b;
 	s64 nf = 0, nadj = 0, cp2, cp1;
 
 	if (p->fuse_offset) {
@@ -1393,16 +1390,15 @@ static int nct1008_offsets_program(struct i2c_client *client)
 		 * for -ve offsets, roundup high byte & take carry from low byte
 		 */
 
-		hi_b = off * OFFSET_FRAC_MULT / 1000000;
-		lo_b = (hi_b & OFFSET_FRAC_MASK) << OFFSET_FRAC_BITS;
-		hi_b = hi_b >> OFFSET_FRAC_BITS;
-		dev_info(&client->dev,
-			"nf:%lld, nadj:%lld, off:%d, hi_b:%d, lo_b:%d\n",
-			 nf, nadj, off, hi_b, lo_b);
-
+		off = off * OFFSET_FRAC_MULT / 1000000;
 		r = nct1008_write_reg(client, NFACTOR_CORRECTION, nadj);
+		dev_info(&client->dev, "nf:%lld, nadj:%lld, off:%d ", nf, nadj,
+				off);
 	}
+	lo_b = ((off & OFFSET_FRAC_MASK) << OFFSET_FRAC_BITS);
+	hi_b = off >> OFFSET_FRAC_BITS;
 
+	dev_info(&client->dev, "hi_b:%d, lo_b:%d\n", hi_b, lo_b);
 	r = r ? r : nct1008_write_reg(client, OFFSET_WR, hi_b);
 	r = r ? r : nct1008_write_reg(client, OFFSET_QUARTER_WR, lo_b);
 
@@ -1642,8 +1638,13 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 	pdata->offset = 0;
 	pdata->fuse_offset = false;
 	if (!of_property_read_u32(np, "offset", &proc))
+		/* offset resolution is 0.25C resolution, TMP451 uses 0.0625C*/
+		pdata->offset = proc * 4;
+	else if (!of_property_read_u32(np, "offset-hi-res", &proc))
+		/* high resolution offset 0.0625C*/
 		pdata->offset = proc;
 	else if (of_property_read_bool(np, "support-fuse-offset"))
+		/* offset present in fuses */
 		pdata->fuse_offset = true;
 	else
 		dev_info(&client->dev, "programming offset of 0C\n");

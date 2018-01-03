@@ -1160,16 +1160,6 @@ static int pva_task_submit(struct pva_submit_task *task)
 
 	task->syncpt_thresh = thresh;
 
-	err = nvhost_intr_register_notifier(host1x_pdev,
-					    queue->syncpt_id, thresh,
-					    pva_queue_update, queue);
-	if (err < 0)
-		goto err_register_isr;
-
-	mutex_lock(&queue->list_lock);
-	list_add_tail(&task->node, &queue->tasklist);
-	mutex_unlock(&queue->list_lock);
-
 	nvhost_eventlib_log_submit(task->pva->pdev, queue->syncpt_id, thresh);
 
 	nvhost_dbg_info("Postfence id=%u, value=%u",
@@ -1209,9 +1199,26 @@ static int pva_task_submit(struct pva_submit_task *task)
 	}
 
 err_write_fences:
+	/*
+	 * Tasks in the queue list can be modified by the interrupt handler.
+	 * Adding the task into the list must be the last step before
+	 * registering the interrupt handler.
+	 */
+	mutex_lock(&queue->list_lock);
+	list_add_tail(&task->node, &queue->tasklist);
+	mutex_unlock(&queue->list_lock);
+
+	/*
+	 * Register the interrupt handler. This must be done after adding
+	 * the tasks into the queue since otherwise we may miss the completion
+	 * event.
+	 */
+	WARN_ON(nvhost_intr_register_notifier(host1x_pdev,
+					      queue->syncpt_id, thresh,
+					      pva_queue_update, queue));
+
 	return err;
 
-err_register_isr:
 err_submit:
 	nvhost_module_idle(task->pva->pdev);
 err_module_busy:

@@ -256,6 +256,8 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 	if (sm_id >= gr->no_of_sm)
 		return -EINVAL;
 
+	nvgpu_speculation_barrier();
+
 	if (args->sm_error_state_record_size > 0) {
 		size_t read_size = sizeof(sm_error_state_record);
 
@@ -311,6 +313,8 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 	sm_id = args->sm_id;
 	if (sm_id >= gr->no_of_sm)
 		return -EINVAL;
+
+	nvgpu_speculation_barrier();
 
 	sm_error_state = gr->sm_error_states + sm_id;
 	sm_error_state_record.hww_global_esr =
@@ -1432,9 +1436,10 @@ static int nvgpu_dbg_gpu_ioctl_clear_single_sm_error_state(
 		return -EINVAL;
 
 	sm_id = args->sm_id;
-
 	if (sm_id >= gr->no_of_sm)
 		return -EINVAL;
+
+	nvgpu_speculation_barrier();
 
 	err = gk20a_busy(g);
 	if (err)

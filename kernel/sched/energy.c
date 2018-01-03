@@ -64,7 +64,7 @@ void init_sched_energy_costs(void)
 		}
 
 		if (!of_find_property(cn, "sched-energy-costs", NULL)) {
-			pr_warn("CPU device node has no sched-energy-costs\n");
+			pr_debug("CPU device node has no sched-energy-costs\n");
 			return;
 		}
 

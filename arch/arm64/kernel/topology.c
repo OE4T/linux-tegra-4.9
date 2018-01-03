@@ -2,7 +2,7 @@
  * arch/arm64/kernel/topology.c
  *
  * Copyright (C) 2011,2013,2014 Linaro Limited.
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on the arm32 version written by Vincent Guittot in turn based on
  * arch/sh/kernel/topology.c
@@ -379,7 +379,7 @@ const struct sched_group_energy * cpu_cluster_energy(int cpu)
 	struct sched_group_energy *sge = sge_array[cpu][SD_LEVEL1];
 
 	if (!sge) {
-		pr_warn("Invalid sched_group_energy for Cluster%d\n", cpu);
+		pr_debug("Invalid sched_group_energy for Cluster%d\n", cpu);
 		return NULL;
 	}
 
@@ -392,7 +392,7 @@ const struct sched_group_energy * cpu_core_energy(int cpu)
 	struct sched_group_energy *sge = sge_array[cpu][SD_LEVEL0];
 
 	if (!sge) {
-		pr_warn("Invalid sched_group_energy for CPU%d\n", cpu);
+		pr_debug("Invalid sched_group_energy for CPU%d\n", cpu);
 		return NULL;
 	}
 

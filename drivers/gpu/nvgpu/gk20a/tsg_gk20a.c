@@ -347,7 +347,6 @@ void gk20a_tsg_release(struct nvgpu_ref *ref)
 	tsg->runlist_id = ~0;
 
 	gk20a_dbg(gpu_dbg_fn, "tsg released %d\n", tsg->tsgid);
-	gk20a_put(g);
 }
 
 struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch)

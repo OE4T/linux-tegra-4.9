@@ -359,6 +359,7 @@ void nvgpu_ioctl_tsg_release(struct nvgpu_ref *ref)
 	gk20a_sched_ctrl_tsg_removed(g, tsg);
 
 	gk20a_tsg_release(ref);
+	gk20a_put(g);
 }
 
 int nvgpu_ioctl_tsg_dev_release(struct inode *inode, struct file *filp)

@@ -71,12 +71,18 @@ const char *tegra_mc_get_sid_name(int sid)
 	for (i = 0; i < mc_sid->soc_data->nsid_to_oids; i++) {
 		entry = &mc_sid->soc_data->sid_to_oids[i];
 
-		if (entry->sid == sid)
+		if (entry->sid == sid) {
+			if (!entry->name)
+				pr_err("Entry is missing name\n");
 			return entry->name;
+		}
 	}
 
 end:
-	return NULL;
+	if (sid > TEGRA_SID_PASSTHROUGH)
+		return "Invalid SID";
+	else
+		return "Unassigned SID";
 }
 
 static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)

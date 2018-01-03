@@ -55,6 +55,11 @@ struct isp_capture {
 	/* isp program desc and it's ring buffer related details */
 	struct isp_desc_rec program_desc_ctx;
 
+#ifdef HAVE_ISP_GOS_TABLES
+	uint32_t num_gos_tables;
+	const dma_addr_t *gos_tables;
+#endif
+
 	struct syncpoint_info progress_sp;
 	struct syncpoint_info stats_progress_sp;
 
@@ -307,6 +312,11 @@ static int isp_capture_setup_syncpts(struct tegra_isp_channel *chan)
 	struct isp_capture *capture = chan->capture_data;
 	int err = 0;
 
+#ifdef HAVE_ISP_GOS_TABLES
+	capture->num_gos_tables = chan->ops->get_gos_table(chan->ndev,
+							&capture->gos_tables);
+#endif
+
 	err = isp_capture_setup_syncpt(chan, "progress", true,
 			&capture->progress_sp);
 	if (err < 0)
@@ -352,6 +362,9 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 	struct capture_channel_isp_config *config =
 		&control_msg.channel_isp_setup_req.channel_config;
 	int err = 0;
+#ifdef HAVE_ISP_GOS_TABLES
+	int i;
+#endif
 
 	if (capture == NULL) {
 		dev_err(chan->isp_dev,
@@ -485,6 +498,17 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 
 	config->progress_sp = capture->progress_sp;
 	config->stats_progress_sp = capture->stats_progress_sp;
+
+#ifdef HAVE_ISP_GOS_TABLES
+	dev_info(chan->isp_dev, "%u GoS tables configured.\n",
+		capture->num_gos_tables);
+	for (i = 0; i < capture->num_gos_tables; i++) {
+		config->isp_gos_tables[i] = (iova_t)capture->gos_tables[i];
+		dev_info(chan->isp_dev, "gos[%d] = 0x%08llx\n",
+			i, (u64)capture->gos_tables[i]);
+	}
+	config->num_isp_gos_tables = capture->num_gos_tables;
+#endif
 
 	err = isp_capture_ivc_send_control(chan, &control_msg,
 			sizeof(control_msg), CAPTURE_CHANNEL_ISP_SETUP_RESP);

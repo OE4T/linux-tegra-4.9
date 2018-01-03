@@ -8123,6 +8123,12 @@ wl_cfg80211_bcn_bringup_ap(
 		}
 #endif /* MFP */
 
+		err = wldev_ioctl(dev, WLC_SET_AP, &ap, sizeof(s32), true);
+		if (err < 0) {
+			WL_ERR(("%s: SET AP error %d\n", __FUNCTION__, err));
+			goto exit;
+		}
+
 		memset(&join_params, 0, sizeof(join_params));
 		/* join parameters starts with ssid */
 		join_params_size = sizeof(join_params.ssid);

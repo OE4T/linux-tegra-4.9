@@ -1159,6 +1159,9 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 			&caps);
 	if (err)
 		goto exit;
+
+	msleep(50);
+
 	hdcp_context->msg.txcaps_version = version;
 	hdcp_context->msg.txcaps_capmask = txcaps;
 	hdcp_context->msg.ake_init_msg_id = ID_AKE_INIT;

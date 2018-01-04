@@ -288,6 +288,12 @@ struct nvlink_get_error_recoveries {
 	__u32 num_recoveries;
 };
 
+/* TEGRA_CTRL_CMD_NVLINK_SETUP_EOM */
+struct nvlink_setup_eom {
+	__u8 link_id;
+	__u32 params;
+};
+
 /* TODO: choose a unique MAGIC number for ioctl implementation */
 #define TEGRA_NVLINK_IOC_MAGIC	  'T'
 #define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS		\
@@ -302,5 +308,7 @@ struct nvlink_get_error_recoveries {
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 5, struct nvlink_get_err_info)
 #define TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES	\
 	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 6, struct nvlink_get_error_recoveries)
+#define TEGRA_CTRL_CMD_NVLINK_SETUP_EOM			\
+		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 7, struct nvlink_setup_eom)
 
 #endif /* TEGRA_NVLINK_MODS_H */

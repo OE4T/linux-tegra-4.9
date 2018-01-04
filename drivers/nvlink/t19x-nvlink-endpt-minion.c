@@ -130,7 +130,7 @@ static int minion_load_ucode_section(struct nvlink_device *ndev,
 }
 
 /* Send a command to the MINION and wait for command completion */
-static int minion_send_cmd(struct nvlink_device *ndev,
+int minion_send_cmd(struct nvlink_device *ndev,
 				u32 cmd,
 				u32 scratch0_val)
 {

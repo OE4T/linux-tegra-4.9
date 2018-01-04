@@ -558,6 +558,13 @@ static int t19x_nvlink_get_error_recoveries(struct nvlink_device *ndev,
 	return 0;
 }
 
+static int t19x_nvlink_setup_eom(struct nvlink_device *ndev,
+				struct nvlink_setup_eom *setup_eom)
+{
+	return minion_send_cmd(ndev, MINION_NVLINK_DL_CMD_COMMAND_CONFIGEOM,
+			setup_eom->params);
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -568,6 +575,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	struct nvlink_get_counters *get_counters;
 	struct nvlink_get_err_info *get_err_info;
 	struct nvlink_get_error_recoveries *get_err_recoveries;
+	struct nvlink_setup_eom *setup_eom;
 	int arg_size = _IOC_SIZE(cmd);
 	void *arg_copy;
 	int ret = 0;
@@ -706,6 +714,28 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 
 		break;
 
+	case TEGRA_CTRL_CMD_NVLINK_SETUP_EOM:
+		if (arg_size != sizeof(struct nvlink_setup_eom)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
+		}
+
+		setup_eom = (struct nvlink_setup_eom *) arg_copy;
+		if (setup_eom->link_id != 0) {
+			nvlink_err("Invalid link id specified");
+			ret = -EINVAL;
+			goto cleanup;
+		}
+
+		ret = t19x_nvlink_setup_eom(ndev, setup_eom);
+		if (ret < 0) {
+			nvlink_err("nvlink setup eom failed");
+			goto cleanup;
+		}
+
+		break;
+
 	default:
 		nvlink_err("Unsupported IOCTL call");
 		ret = -EINVAL;
@@ -713,7 +743,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	}
 
 	if (copy_to_user((void __user *)arg, arg_copy, arg_size)) {
-		nvlink_err("Error while copying caps to userspace");
+		nvlink_err("Error while copying to userspace");
 		ret = -EFAULT;
 	}
 

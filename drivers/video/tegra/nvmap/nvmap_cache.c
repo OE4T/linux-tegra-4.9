@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/nvmap/nvmap_cache.c
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -128,22 +128,25 @@ NVMAP_CACHE_OF_DECLARE("nvidia,carveouts", nvmap_cache_of_setup);
 void nvmap_select_cache_ops(struct device *dev)
 {
 	struct nvmap_chip_cache_op op;
-	struct device_node *np;
-	const struct of_device_id *match = NULL;
+	bool match_found = false;
 	const struct of_device_id *matches = &__nvmapcache_of_table;
 
 	memset(&op, 0, sizeof(op));
 
-	for_each_matching_node_and_match(np, matches, &match) {
-		int len = strlen(match->name);
-
-		if (!strncmp(match->name, "nvidia,carveouts", min(len, 16))) {
-			const nvmap_setup_chip_cache_fn init_fn = match->data;
-
+	for (; matches; matches++) {
+		if (of_device_is_compatible(dev->of_node,
+					    matches->compatible)) {
+			const nvmap_setup_chip_cache_fn init_fn = matches->data;
 			init_fn(&op);
+			match_found = true;
+			break;
 		}
 	}
 
+	if (WARN_ON(match_found == false)) {
+		pr_err("%s: no cache ops found\n",__func__);
+		return;
+	}
 	inner_flush_cache_all = op.inner_flush_cache_all;
 	inner_clean_cache_all = op.inner_clean_cache_all;
 	pr_info("nvmap cache ops set to %s\n", op.name);

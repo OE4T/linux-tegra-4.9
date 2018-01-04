@@ -1,7 +1,7 @@
 /*
  * Device driver for owning the separate Stream-ID used for GoS
  *
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -102,11 +102,10 @@ int t194_capture_get_syncpt_gos_backing(struct platform_device *pdev,
 	}
 
 	addr = nvhost_syncpt_address(pdev, id);
-
 	err = nvhost_syncpt_get_gos(pdev, id, &index, &offset);
 	if (err < 0) {
-		dev_warn(&pdev->dev, "%s: failed to get GoS backing\n",
-			__func__);
+		dev_warn(&pdev->dev, "%s: failed to get GoS backing: %d\n",
+			__func__, err);
 	}
 
 	*syncpt_addr = addr;
@@ -125,8 +124,6 @@ static int t194_capture_support_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
 	int err = 0;
-	int gos_count;
-	dma_addr_t *gos_table;
 
 	info = (void *)of_device_get_match_data(dev);
 	if (WARN_ON(info == NULL))
@@ -153,13 +150,6 @@ static int t194_capture_support_probe(struct platform_device *pdev)
 	err = nvhost_syncpt_unit_interface_init(pdev);
 	if (err)
 		goto device_release;
-
-	err = nvhost_syncpt_get_cv_dev_address_table(pdev,
-						&gos_count, &gos_table);
-	if (err) {
-		dev_warn(&pdev->dev, "%s: failed to get GoS tables\n",
-			__func__);
-	}
 
 	return 0;
 

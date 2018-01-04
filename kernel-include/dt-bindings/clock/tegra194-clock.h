@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -663,5 +663,9 @@
 #define TEGRA194_CLK_PLLC2			315
 /** @brief PLL controlled by CLK_RST_CONTROLLER_PLLC3_BASE */
 #define TEGRA194_CLK_PLLC3			316
+/** @brief CLK_RST_CONTROLLER_TSC_HS_SUPER_CLK_DIVIDER skip divider output */
+#define TEGRA194_CLK_TSC_REF			317
+/** @brief Dummy clock to ensure minimum SoC voltage for fuse burning */
+#define TEGRA194_CLK_FUSE_BURN			318
 
 #endif

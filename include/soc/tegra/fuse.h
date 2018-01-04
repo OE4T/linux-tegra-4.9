@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -50,7 +50,7 @@
 
 #define FUSE_GCPLEX_CONFIG_FUSE_0	0x1c8
 
-#define FUSE_TDIODE_CALIB		0x208
+#define FUSE_TDIODE_CALIB		0x274
 #define FUSE_RESERVED_CALIB0_0		0x204
 
 #define FUSE_OPT_GPU_TPC0_DISABLE_0	0x20c

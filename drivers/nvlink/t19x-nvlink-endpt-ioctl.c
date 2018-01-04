@@ -711,6 +711,18 @@ static int t19x_nvlink_get_lp_counters(struct nvlink_device *ndev,
 	return 0;
 }
 
+static int t19x_nvlink_clear_lp_counters(struct nvlink_device *ndev,
+			struct nvlink_clear_lp_counters *clear_lp_counters)
+{
+	u32 reg_val;
+
+	reg_val = nvlw_nvl_readl(ndev, NVL_STATS_CTRL);
+	reg_val |= BIT(NVL_STATS_CTRL_CLEAR_ALL);
+	nvlw_nvl_writel(ndev, NVL_STATS_CTRL, reg_val);
+
+	return 0;
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -724,6 +736,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	struct nvlink_setup_eom *setup_eom;
 	struct nvlink_train_intranode_conn *train_intranode_conn;
 	struct nvlink_get_lp_counters *get_lp_counters;
+	struct nvlink_clear_lp_counters *clear_lp_counters;
 	int arg_size = _IOC_SIZE(cmd);
 	void *arg_copy;
 	int ret = 0;
@@ -920,6 +933,29 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 		ret = t19x_nvlink_get_lp_counters(ndev, get_lp_counters);
 		if (ret < 0) {
 			nvlink_err("nvlink get LP counters failed");
+			goto cleanup;
+		}
+
+		break;
+
+	case TEGRA_CTRL_CMD_NVLINK_CLEAR_LP_COUNTERS:
+		if (arg_size != sizeof(struct nvlink_clear_lp_counters)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
+		}
+
+		clear_lp_counters =
+			(struct nvlink_clear_lp_counters *) arg_copy;
+		if (clear_lp_counters->link_id != 0) {
+			nvlink_err("Invalid link id specified");
+			ret = -EINVAL;
+			goto cleanup;
+		}
+
+		ret = t19x_nvlink_clear_lp_counters(ndev, clear_lp_counters);
+		if (ret < 0) {
+			nvlink_err("nvlink clear LP counters failed");
 			goto cleanup;
 		}
 

@@ -411,6 +411,9 @@
 #define NVL_STATS_D_NUM_TX_LP_ENTER_V(x)		(((x) >> 0) & 0xffff)
 #define NVL_STATS_D_NUM_TX_LP_EXIT_V(x)			(((x) >> 16) & 0xffff)
 
+#define NVL_STATS_CTRL					0x190
+#define NVL_STATS_CTRL_CLEAR_ALL			0
+
 
 /* NVLTLC Registers */
 #define NVLTLC_TX_CTRL_BUFFER_SZ_VC0				0x200

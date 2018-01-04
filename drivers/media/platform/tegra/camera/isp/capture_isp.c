@@ -866,7 +866,6 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 	struct isp_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_msg;
 	int err = 0;
-	struct capture_common_unpins *unpins = NULL;
 	struct capture_common_pin_req cap_common_req;
 
 	if (capture == NULL) {
@@ -902,7 +901,7 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 	/* memory pin and reloc */
 	cap_common_req.dev = chan->isp_dev;
 	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
-	cap_common_req.unpins = unpins;
+	cap_common_req.unpins = NULL;
 	cap_common_req.requests = &capture->program_desc_ctx.requests;
 	cap_common_req.requests_dev = &capture->program_desc_ctx.requests_isp;
 	cap_common_req.request_size = capture->program_desc_ctx.request_size;
@@ -921,7 +920,8 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 
 	/* add pinned memory ctx to unpins_list */
 	mutex_lock(&capture->program_desc_ctx.unpins_list_lock);
-	capture->program_desc_ctx.unpins_list[req->buffer_index] = unpins;
+	capture->program_desc_ctx.unpins_list[req->buffer_index] =
+		cap_common_req.unpins;
 	mutex_unlock(&capture->program_desc_ctx.unpins_list_lock);
 
 	dev_dbg(chan->isp_dev, "%s: sending chan_id %u msg_id %u buf:%u\n",
@@ -978,7 +978,6 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 {
 	struct isp_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_msg;
-	struct capture_common_unpins *unpins = NULL;
 	struct capture_common_pin_req cap_common_req;
 	uint32_t request_offset;
 	int err = 0;
@@ -1024,7 +1023,7 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 	/* pin and reloc */
 	cap_common_req.dev = chan->isp_dev;
 	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
-	cap_common_req.unpins = unpins;
+	cap_common_req.unpins = NULL;
 	cap_common_req.requests = &capture->capture_desc_ctx.requests;
 	cap_common_req.requests_dev = &capture->capture_desc_ctx.requests_isp;
 	cap_common_req.request_size = capture->capture_desc_ctx.request_size;
@@ -1042,7 +1041,8 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 
 	/* add pinned memory ctx to unpins_list */
 	mutex_lock(&capture->capture_desc_ctx.unpins_list_lock);
-	capture->capture_desc_ctx.unpins_list[req->buffer_index] = unpins;
+	capture->capture_desc_ctx.unpins_list[req->buffer_index] =
+		cap_common_req.unpins;
 	mutex_unlock(&capture->capture_desc_ctx.unpins_list_lock);
 
 	dev_dbg(chan->isp_dev, "%s: sending chan_id %u msg_id %u buf:%u\n",

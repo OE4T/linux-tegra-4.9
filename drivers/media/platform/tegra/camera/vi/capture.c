@@ -810,7 +810,6 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 {
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_desc;
-	struct capture_common_unpins *unpins = NULL;
 	struct capture_common_pin_req cap_common_req = {0};
 	int err = 0;
 
@@ -846,7 +845,7 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 	/* pin and reloc */
 	cap_common_req.dev = chan->dev;
 	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
-	cap_common_req.unpins = unpins;
+	cap_common_req.unpins = NULL;
 	cap_common_req.requests = &capture->requests;
 	cap_common_req.requests_dev = NULL;
 	cap_common_req.request_size = capture->request_size;
@@ -865,7 +864,7 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 	/* assign the unpins list to the capture to be unpinned and */
 	/* freed at capture completion (vi_capture_request_unpin) */
 	mutex_lock(&capture->unpins_list_lock);
-	capture->unpins_list[req->buffer_index] = unpins;
+	capture->unpins_list[req->buffer_index] = cap_common_req.unpins;
 	mutex_unlock(&capture->unpins_list_lock);
 
 	dev_dbg(chan->dev, "%s: sending chan_id %u msg_id %u buf:%u\n",

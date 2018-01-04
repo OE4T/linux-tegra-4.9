@@ -24,10 +24,11 @@
 
 #include "gk20a/gk20a.h"
 #include "os_linux.h"
+#include "module.h"
 
 int nvgpu_get_nvhost_dev(struct gk20a *g)
 {
-	struct device_node *np = dev_from_gk20a(g)->of_node;
+	struct device_node *np = nvgpu_get_node(g);
 	struct platform_device *host1x_pdev = NULL;
 	const __be32 *host1x_ptr;
 

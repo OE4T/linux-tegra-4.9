@@ -24,6 +24,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/platform/tegra/common.h>
+#include <linux/pci.h>
+
 #include <uapi/linux/nvgpu.h>
 #include <dt-bindings/soc/gm20b-fuse.h>
 #include <dt-bindings/soc/gp10b-fuse.h>
@@ -69,6 +71,23 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
+
+
+struct device_node *nvgpu_get_node(struct gk20a *g)
+{
+	struct device *dev = dev_from_gk20a(g);
+
+	if (dev_is_pci(dev)) {
+		struct pci_bus *bus = to_pci_dev(dev)->bus;
+
+		while (!pci_is_root_bus(bus))
+			bus = bus->parent;
+
+		return bus->bridge->parent->of_node;
+	}
+
+	return dev->of_node;
+}
 
 void gk20a_busy_noresume(struct gk20a *g)
 {
@@ -1042,7 +1061,7 @@ static inline void set_gk20a(struct platform_device *pdev, struct gk20a *gk20a)
 
 static int nvgpu_read_fuse_overrides(struct gk20a *g)
 {
-	struct device_node *np = dev_from_gk20a(g)->of_node;
+	struct device_node *np = nvgpu_get_node(g);
 	u32 *fuses;
 	int count, i;
 

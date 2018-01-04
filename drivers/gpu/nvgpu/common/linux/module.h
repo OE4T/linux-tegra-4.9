@@ -28,6 +28,7 @@ void gk20a_driver_start_unload(struct gk20a *g);
 int nvgpu_quiesce(struct gk20a *g);
 int nvgpu_remove(struct device *dev, struct class *class);
 void nvgpu_free_irq(struct gk20a *g);
+struct device_node *nvgpu_get_node(struct gk20a *g);
 
 extern struct class nvgpu_class;
 

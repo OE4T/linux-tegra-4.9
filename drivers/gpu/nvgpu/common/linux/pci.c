@@ -21,6 +21,8 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/enabled.h>
+#include <linux/of_platform.h>
+#include <linux/of_address.h>
 
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
@@ -525,6 +527,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	struct gk20a *g;
 	int err;
 	char nodefmt[64];
+	struct device_node *np;
 
 	/* make sure driver_data is a sane index */
 	if (pent->driver_data >= sizeof(nvgpu_pci_device) /
@@ -631,6 +634,11 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	}
 
 	g->mm.has_physical_mode = false;
+
+	np = nvgpu_get_node(g);
+
+	if (of_dma_is_coherent(np))
+		__nvgpu_set_enabled(g, NVGPU_DMA_COHERENT, true);
 
 	return 0;
 }

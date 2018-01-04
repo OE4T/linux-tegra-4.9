@@ -61,6 +61,8 @@ u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
 int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	void *cpu_va;
+	pgprot_t prot = nvgpu_is_enabled(g, NVGPU_DMA_COHERENT) ? PAGE_KERNEL :
+		pgprot_writecombine(PAGE_KERNEL);
 
 	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
 		return 0;
@@ -80,7 +82,7 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 
 	cpu_va = vmap(mem->priv.pages,
 			PAGE_ALIGN(mem->size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
+			0, prot);
 
 	if (WARN_ON(!cpu_va))
 		return -ENOMEM;

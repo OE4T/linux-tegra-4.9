@@ -2054,6 +2054,7 @@ struct mrq_strap_request {
 enum {
 	CMD_UPHY_PCIE_LANE_MARGIN_CONTROL = 1,
 	CMD_UPHY_PCIE_LANE_MARGIN_STATUS = 2,
+	CMD_UPHY_PCIE_EP_CONTROLLER_PLL_INIT = 3,
 	CMD_UPHY_MAX,
 };
 
@@ -2075,6 +2076,11 @@ struct cmd_uphy_margin_status_response {
 	uint32_t status;
 } __ABI_PACKED;
 
+struct cmd_uphy_ep_controller_pll_init_request {
+	/** @brief EP controller number, valid: 0, 4, 5 */
+	uint8_t ep_controller;
+} __ABI_PACKED;
+
 /**
  * @ingroup UPHY
  * @brief Request with #MRQ_UPHY
@@ -2083,10 +2089,11 @@ struct cmd_uphy_margin_status_response {
  * The uphy_request is split into several sub-commands. Some sub-commands
  * require no additional data. Others have a sub-command specific payload
  *
- * |sub-command                       |payload                 |
- * |----------------------------      |------------------------|
- * |CMD_UPHY_PCIE_LANE_MARGIN_CONTROL |uphy_set_margin_control |
- * |CMD_UPHY_PCIE_LANE_MARGIN_STATUS  |                        |
+ * |sub-command                          |payload                                 |
+ * |------------------------------------ |----------------------------------------|
+ * |CMD_UPHY_PCIE_LANE_MARGIN_CONTROL    |uphy_set_margin_control                 |
+ * |CMD_UPHY_PCIE_LANE_MARGIN_STATUS     |                                        |
+ * |CMD_UPHY_PCIE_EP_CONTROLLER_PLL_INIT |cmd_uphy_ep_controller_pll_init_request |
  *
  */
 
@@ -2098,6 +2105,7 @@ struct mrq_uphy_request {
 
 	union {
 		struct cmd_uphy_margin_control_request uphy_set_margin_control;
+		struct cmd_uphy_ep_controller_pll_init_request ep_ctrlr_pll_init;
 	} __UNION_ANON;
 } __ABI_PACKED;
 

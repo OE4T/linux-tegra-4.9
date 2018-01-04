@@ -335,6 +335,23 @@ struct nvlink_train_intranode_conn {
 	struct nvlink_link_state dst_end_state;
 };
 
+/* TEGRA_CTRL_CMD_NVLINK_GET_LP_COUNTERS */
+#define TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_NVHS		0
+#define TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_EIGHTH	1
+#define TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_OTHER	2
+#define TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_NUM_TX_LP_ENTER	3
+#define TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_NUM_TX_LP_EXIT	4
+#define TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_MAX_COUNTERS		5
+
+struct nvlink_get_lp_counters {
+	/* input field */
+	__u32 link_id;
+	/* input, output field */
+	__u32 counter_valid_mask;
+	/* output field */
+	__u32 counter_values[TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_MAX_COUNTERS];
+};
+
 /* TODO: choose a unique MAGIC number for ioctl implementation */
 #define TEGRA_NVLINK_IOC_MAGIC	  'T'
 #define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS		\
@@ -353,5 +370,7 @@ struct nvlink_train_intranode_conn {
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 7, struct nvlink_setup_eom)
 #define TEGRA_CTRL_NVLINK_TRAIN_INTRANODE_CONN		\
 	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 8, struct nvlink_train_intranode_conn)
+#define TEGRA_CTRL_CMD_NVLINK_GET_LP_COUNTERS		\
+		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 9, struct nvlink_get_lp_counters)
 
 #endif /* TEGRA_NVLINK_MODS_H */

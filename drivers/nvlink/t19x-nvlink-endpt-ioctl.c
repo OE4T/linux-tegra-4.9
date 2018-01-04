@@ -654,6 +654,63 @@ static int t19x_nvlink_train_intranode_conn(struct nvlink_device *ndev,
 	return ret;
 }
 
+/*
+ * Get count for LP hardware counters that are specified in counter_valid_mask.
+ * Clear unsupported ones in counter_valid_mask.
+ */
+static int t19x_nvlink_get_lp_counters(struct nvlink_device *ndev,
+				struct nvlink_get_lp_counters *get_lp_counters)
+{
+	u32 counter_valid_mask_out = 0;
+	u32 counter_valid_mask = get_lp_counters->counter_valid_mask;
+	u32 reg_val;
+	u32 cnt_idx;
+
+	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_NVHS;
+	if (counter_valid_mask & BIT(cnt_idx)) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_A);
+		get_lp_counters->counter_values[cnt_idx] =
+				NVL_STATS_A_COUNT_TX_STATE_NVHS_V(reg_val);
+		counter_valid_mask_out |= BIT(cnt_idx);
+	}
+
+	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_EIGHTH;
+	if (counter_valid_mask & BIT(cnt_idx)) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_A);
+		get_lp_counters->counter_values[cnt_idx] =
+				NVL_STATS_A_COUNT_TX_STATE_EIGHTH_V(reg_val);
+		counter_valid_mask_out |= BIT(cnt_idx);
+	}
+
+	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_OTHER;
+	if (counter_valid_mask & BIT(cnt_idx)) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_B);
+		get_lp_counters->counter_values[cnt_idx] =
+				NVL_STATS_B_COUNT_TX_STATE_OTHER_V(reg_val);
+		counter_valid_mask_out |= BIT(cnt_idx);
+	}
+
+	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_NUM_TX_LP_ENTER;
+	if (counter_valid_mask & BIT(cnt_idx)) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_D);
+		get_lp_counters->counter_values[cnt_idx] =
+				NVL_STATS_D_NUM_TX_LP_ENTER_V(reg_val);
+		counter_valid_mask_out |= BIT(cnt_idx);
+	}
+
+	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_NUM_TX_LP_EXIT;
+	if (counter_valid_mask & BIT(cnt_idx)) {
+		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_D);
+		get_lp_counters->counter_values[cnt_idx] =
+				NVL_STATS_D_NUM_TX_LP_EXIT_V(reg_val);
+		counter_valid_mask_out |= BIT(cnt_idx);
+	}
+
+	get_lp_counters->counter_valid_mask = counter_valid_mask_out;
+
+	return 0;
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -666,6 +723,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	struct nvlink_get_error_recoveries *get_err_recoveries;
 	struct nvlink_setup_eom *setup_eom;
 	struct nvlink_train_intranode_conn *train_intranode_conn;
+	struct nvlink_get_lp_counters *get_lp_counters;
 	int arg_size = _IOC_SIZE(cmd);
 	void *arg_copy;
 	int ret = 0;
@@ -841,6 +899,28 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 		if (ret < 0) {
 			nvlink_err("nvlink train intranode conn failed");
 			break;
+		}
+
+		break;
+
+	case TEGRA_CTRL_CMD_NVLINK_GET_LP_COUNTERS:
+		if (arg_size != sizeof(struct nvlink_get_lp_counters)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
+		}
+
+		get_lp_counters = (struct nvlink_get_lp_counters *) arg_copy;
+		if (get_lp_counters->link_id != 0) {
+			nvlink_err("Invalid link id specified");
+			ret = -EINVAL;
+			goto cleanup;
+		}
+
+		ret = t19x_nvlink_get_lp_counters(ndev, get_lp_counters);
+		if (ret < 0) {
+			nvlink_err("nvlink get LP counters failed");
+			goto cleanup;
 		}
 
 		break;

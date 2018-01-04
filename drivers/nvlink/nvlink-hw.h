@@ -400,6 +400,17 @@
 #define NVL_ERROR_COUNT1				0x8c
 #define NVL_ERROR_COUNT1_RECOVERY_EVENTS_V(x)		(((x) >> 0) & 0x3ff)
 
+#define NVL_STATS_A					0x198
+#define NVL_STATS_A_COUNT_TX_STATE_NVHS_V(x)		(((x) >> 0) & 0xffff)
+#define NVL_STATS_A_COUNT_TX_STATE_EIGHTH_V(x)		(((x) >> 16) & 0xffff)
+
+#define NVL_STATS_B					0x19c
+#define NVL_STATS_B_COUNT_TX_STATE_OTHER_V(x)		(((x) >> 0) & 0xffff)
+
+#define NVL_STATS_D					0x1a4
+#define NVL_STATS_D_NUM_TX_LP_ENTER_V(x)		(((x) >> 0) & 0xffff)
+#define NVL_STATS_D_NUM_TX_LP_EXIT_V(x)			(((x) >> 16) & 0xffff)
+
 
 /* NVLTLC Registers */
 #define NVLTLC_TX_CTRL_BUFFER_SZ_VC0				0x200

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -3940,6 +3940,10 @@ static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_stack_overflow_repor
 {
 	return 0x400000U;
 }
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_mmu_nack_report_f(void)
+{
+	return 0x4000000U;
+}
 static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_en_r(void)
 {
 	return 0x00419d0cU;
@@ -4239,6 +4243,10 @@ static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_v(void)
 static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_f(void)
 {
 	return 0x0U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_mmu_nack_f(void)
+{
+	return 0x20U;
 }
 static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_wrap_id_m(void)
 {

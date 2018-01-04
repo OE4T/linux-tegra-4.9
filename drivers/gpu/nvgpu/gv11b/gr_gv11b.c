@@ -1994,6 +1994,39 @@ void gr_gv11b_get_access_map(struct gk20a *g,
 	*num_entries = ARRAY_SIZE(wl_addr_gv11b);
 }
 
+static int gr_gv11b_handle_warp_esr_error_mmu_nack(struct gk20a *g,
+	u32 gpc, u32 tpc, u32 sm,
+	u32 warp_esr,
+	struct channel_gk20a *fault_ch)
+{
+	struct tsg_gk20a *tsg;
+	u32 offset;
+
+	if (fault_ch) {
+		tsg = &g->fifo.tsg[fault_ch->tsgid];
+
+		/*
+		 * Upon receiving MMU_FAULT error, MMU will forward MMU_NACK
+		 * to SM. So MMU_FAULT handling path will take care of
+		 * triggering RC recovery
+		 *
+		 * In MMU_NACK handling path, we just set the error notifier
+		 * and clear the interrupt so that the User Space sees the error
+		 * as soon as semaphores are released by SM
+		 */
+		gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
+	}
+
+	/* clear interrupt */
+	offset = gk20a_gr_gpc_offset(g, gpc) +
+			gk20a_gr_tpc_offset(g, tpc) +
+			gv11b_gr_sm_offset(g, sm);
+	nvgpu_writel(g,
+		gr_gpc0_tpc0_sm0_hww_warp_esr_r() + offset, 0);
+
+	return 0;
+}
+
 /* @brief pre-process work on the SM exceptions to determine if we clear them or not.
  *
  * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
@@ -2012,6 +2045,14 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 
 	*early_exit = false;
 	*ignore_debugger = false;
+
+	/*
+	 * We don't need to trigger CILP in case of MMU_NACK
+	 * So just handle MMU_NACK and return
+	 */
+	if (warp_esr & gr_gpc0_tpc0_sm0_hww_warp_esr_error_mmu_nack_f())
+		return gr_gv11b_handle_warp_esr_error_mmu_nack(g, gpc, tpc, sm,
+				warp_esr, fault_ch);
 
 	if (fault_ch)
 		cilp_enabled = (fault_ch->ch_ctx.gr_ctx->compute_preempt_mode ==
@@ -2992,7 +3033,8 @@ void gv11b_gr_set_hww_esr_report_mask(struct gk20a *g)
 		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_invalid_addr_space_report_f() |
 		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_invalid_const_addr_ldc_report_f() |
 		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_stack_overflow_report_f() |
-		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_mmu_fault_report_f());
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_mmu_fault_report_f() |
+		gr_gpc0_tpc0_sm0_hww_warp_esr_report_mask_mmu_nack_report_f());
 
 	/* setup sm global esr report mask. vat_alarm_report is not enabled */
 	gk20a_writel(g, gr_gpcs_tpcs_sms_hww_global_esr_report_mask_r(),

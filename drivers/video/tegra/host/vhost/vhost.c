@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Host functions for HOST1X
  *
- * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -69,6 +69,10 @@ int vhost_virt_moduleid(int moduleid)
 		return TEGRA_VHOST_MODULE_NVDEC;
 	case NVHOST_MODULE_NVJPG:
 		return TEGRA_VHOST_MODULE_NVJPG;
+	case NVHOST_MODULE_NVDEC1:
+		return TEGRA_VHOST_MODULE_NVDEC1;
+	case NVHOST_MODULE_NVENC1:
+		return TEGRA_VHOST_MODULE_NVENC1;
 	default:
 		pr_err("module %d not virtualized\n", moduleid);
 		return -1;

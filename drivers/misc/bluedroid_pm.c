@@ -1,7 +1,7 @@
 /*
  * drivers/misc/bluedroid_pm.c
  *
- # Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
+ # Copyright (c) 2013-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -242,18 +242,22 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 	if (!bluedroid_pm)
 		return -ENOMEM;
 
-	bluedroid_pm->vdd_3v3 = regulator_get(&pdev->dev, "avdd");
-	if (IS_ERR(bluedroid_pm->vdd_3v3)) {
-		pr_warn("%s: regulator avdd not available\n", __func__);
-		bluedroid_pm->vdd_3v3 = NULL;
-	}
-	bluedroid_pm->vdd_1v8 = regulator_get(&pdev->dev, "dvdd");
-	if (IS_ERR(bluedroid_pm->vdd_1v8)) {
-		pr_warn("%s: regulator dvdd not available\n", __func__);
-		bluedroid_pm->vdd_1v8 = NULL;
-	}
-
 	node = pdev->dev.of_node;
+
+	if (of_get_property(node, "avdd-supply", NULL)) {
+		bluedroid_pm->vdd_3v3 = regulator_get(&pdev->dev, "avdd");
+		if (IS_ERR(bluedroid_pm->vdd_3v3)) {
+			pr_warn("%s: regulator avdd not available\n", __func__);
+			bluedroid_pm->vdd_3v3 = NULL;
+		}
+	}
+	if (of_get_property(node, "dvdd-supply", NULL)) {
+		bluedroid_pm->vdd_1v8 = regulator_get(&pdev->dev, "dvdd");
+		if (IS_ERR(bluedroid_pm->vdd_1v8)) {
+			pr_warn("%s: regulator dvdd not available\n", __func__);
+			bluedroid_pm->vdd_1v8 = NULL;
+		}
+	}
 
 	bluedroid_pm->gpio_reset =
 		of_get_named_gpio(node, "bluedroid_pm,reset-gpio", 0);

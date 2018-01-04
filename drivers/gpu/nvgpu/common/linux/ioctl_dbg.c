@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger/Profiler Driver
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -243,6 +243,10 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 	struct nvgpu_dbg_gpu_sm_error_state_record sm_error_state_record;
 	struct nvgpu_gr_sm_error_state sm_error_state;
 	int err = 0;
+
+	/* Not currently supported in the virtual case */
+	if (g->is_virtual)
+		return -ENOSYS;
 
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch)

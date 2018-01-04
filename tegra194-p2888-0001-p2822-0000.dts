@@ -312,18 +312,6 @@
 		status = "disabled";
 	};
 
-	pwm@c340000 {
-		status = "disabled";
-	};
-
-	tachometer@39c0000 {
-		status = "disabled";
-	};
-
-	generic_pwm_tachometer {
-		status = "disabled";
-	};
-
 	interrupt-controller@3881000 {
 		status = "okay";
 	};

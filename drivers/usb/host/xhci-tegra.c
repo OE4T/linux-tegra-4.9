@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra xHCI host controller driver
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
  * Copyright (C) 2014 Google, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -351,6 +351,7 @@ struct tegra_xusb_soc {
 	bool handle_oc;
 	bool disable_hsic_wake;
 	bool disable_elpg;
+	bool otg_set_port_power;
 };
 
 struct tegra_xhci_ipfs_context {
@@ -2045,6 +2046,14 @@ role_update:
 	dev_dbg(tegra->dev, "host mode %s\n", on ? "on" : "off");
 
 	mutex_unlock(&tegra->lock);
+
+	if (!tegra->soc->otg_set_port_power) {
+		pm_runtime_get_sync(tegra->dev);
+		if (on)
+			pm_runtime_mark_last_busy(tegra->dev);
+		pm_runtime_put_autosuspend(tegra->dev);
+		return;
+	}
 
 	pm_runtime_get_sync(tegra->dev);
 	if (on) {
@@ -3749,6 +3758,7 @@ static const struct tegra_xusb_soc tegra124_soc = {
 	.handle_oc = false,
 	.disable_hsic_wake = false,
 	.disable_elpg = false,
+	.otg_set_port_power = true,
 };
 MODULE_FIRMWARE("nvidia/tegra124/xusb.bin");
 
@@ -3790,6 +3800,7 @@ static const struct tegra_xusb_soc tegra210_soc = {
 	.handle_oc = false,
 	.disable_hsic_wake = false,
 	.disable_elpg = false,
+	.otg_set_port_power = true,
 };
 MODULE_FIRMWARE("tegra21x_xusb_firmware");
 
@@ -3830,6 +3841,7 @@ static const struct tegra_xusb_soc tegra210b01_soc = {
 	.handle_oc = false,
 	.disable_hsic_wake = true,
 	.disable_elpg = false,
+	.otg_set_port_power = true,
 };
 MODULE_FIRMWARE("tegra210b01_xusb_firmware");
 
@@ -3864,6 +3876,7 @@ static const struct tegra_xusb_soc tegra186_soc = {
 	.handle_oc = true,
 	.disable_hsic_wake = false,
 	.disable_elpg = false,
+	.otg_set_port_power = true,
 };
 MODULE_FIRMWARE("tegra18x_xusb_firmware");
 
@@ -3898,6 +3911,7 @@ static const struct tegra_xusb_soc tegra194_soc = {
 	.handle_oc = false,
 	.disable_hsic_wake = false,
 	.disable_elpg = false,
+	.otg_set_port_power = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
@@ -3931,6 +3945,7 @@ static const struct tegra_xusb_soc tegra194_vf1_soc = {
 	.handle_oc = false,
 	.disable_hsic_wake = false,
 	.disable_elpg = true,
+	.otg_set_port_power = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
@@ -3964,6 +3979,7 @@ static const struct tegra_xusb_soc tegra194_vf2_soc = {
 	.handle_oc = false,
 	.disable_hsic_wake = false,
 	.disable_elpg = true,
+	.otg_set_port_power = false,
 };
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 

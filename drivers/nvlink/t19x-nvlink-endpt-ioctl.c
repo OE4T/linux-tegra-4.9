@@ -565,6 +565,95 @@ static int t19x_nvlink_setup_eom(struct nvlink_device *ndev,
 			setup_eom->params);
 }
 
+static void nvlink_get_endpoint_state(struct nvlink_device *ndev,
+			struct nvlink_link_state *link_state)
+{
+	link_state->link_mode = t19x_nvlink_get_link_mode(ndev);
+	link_state->tx_sublink_mode = t19x_nvlink_get_sublink_mode(ndev, 0);
+	link_state->rx_sublink_mode = t19x_nvlink_get_sublink_mode(ndev, 1);
+}
+
+
+static int t19x_nvlink_train_intranode_conn(struct nvlink_device *ndev,
+		struct nvlink_train_intranode_conn *train_intranode_conn)
+{
+	struct nvlink_intranode_conn conn;
+	int ret;
+
+	if (train_intranode_conn->src_end_point.node_id !=
+			train_intranode_conn->dst_end_point.node_id)
+		return -EINVAL;
+
+	if (train_intranode_conn->src_end_point.link_index !=
+			ndev->link.link_id)
+		return -EINVAL;
+
+	if (train_intranode_conn->dst_end_point.link_index !=
+			ndev->link.remote_dev_info.link_id)
+		return -EINVAL;
+
+	if (is_nvlink_loopback_topology(ndev)) {
+		/* Setup intranode connection for loopback mode */
+		conn.ndev0 = ndev;
+		conn.ndev1 = ndev;
+	} else {
+		/* TODO :
+		 * Handle other topologies
+		 */
+	}
+
+	switch (train_intranode_conn->train_to) {
+	case nvlink_train_conn_off_to_swcfg:
+		/* TODO: Modify go_to_safe_mode such that it takes conn as
+		 * an argument. For loopback this is OK but needs to fixed
+		 * for other topologies.
+		 */
+		ret = go_to_safe_mode(ndev);
+		break;
+
+	case nvlink_train_conn_swcfg_to_active:
+		ret = nvlink_train_intranode_conn_to_hs(&conn);
+		break;
+
+	case nvlink_train_conn_to_off:
+		/* OFF state transitions are not supported/tested */
+		nvlink_err("OFF state transitions are not supported");
+		ret = -EINVAL;
+		break;
+
+	case nvlink_train_conn_active_to_swcfg:
+		ret = nvlink_transition_intranode_conn_to_safe(&conn);
+		break;
+
+	case nvlink_train_conn_swcfg_to_off:
+		/* OFF state transitions are not supported/tested */
+		nvlink_err("OFF state transitions are not supported");
+		ret = -EINVAL;
+		break;
+
+	default:
+		nvlink_err("Invalid training mode specified");
+		ret = -EINVAL;
+		break;
+	}
+
+	nvlink_get_endpoint_state(ndev, &train_intranode_conn->src_end_state);
+
+	if (is_nvlink_loopback_topology(ndev)) {
+		train_intranode_conn->dst_end_state.link_mode =
+			train_intranode_conn->src_end_state.link_mode;
+		train_intranode_conn->dst_end_state.tx_sublink_mode =
+			train_intranode_conn->src_end_state.tx_sublink_mode;
+		train_intranode_conn->dst_end_state.rx_sublink_mode =
+			train_intranode_conn->src_end_state.rx_sublink_mode;
+	} else {
+		/* TODO: */
+		/* Handle other topologies */
+	}
+
+	return ret;
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -576,6 +665,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	struct nvlink_get_err_info *get_err_info;
 	struct nvlink_get_error_recoveries *get_err_recoveries;
 	struct nvlink_setup_eom *setup_eom;
+	struct nvlink_train_intranode_conn *train_intranode_conn;
 	int arg_size = _IOC_SIZE(cmd);
 	void *arg_copy;
 	int ret = 0;
@@ -732,6 +822,25 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 		if (ret < 0) {
 			nvlink_err("nvlink setup eom failed");
 			goto cleanup;
+		}
+
+		break;
+
+	case TEGRA_CTRL_NVLINK_TRAIN_INTRANODE_CONN:
+		if (arg_size != sizeof(struct nvlink_train_intranode_conn)) {
+			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
+			ret = -EINVAL;
+			goto cleanup;
+		}
+
+		train_intranode_conn =
+				(struct nvlink_train_intranode_conn *) arg_copy;
+		ret = t19x_nvlink_train_intranode_conn(ndev,
+				train_intranode_conn);
+		train_intranode_conn->status = ret;
+		if (ret < 0) {
+			nvlink_err("nvlink train intranode conn failed");
+			break;
 		}
 
 		break;

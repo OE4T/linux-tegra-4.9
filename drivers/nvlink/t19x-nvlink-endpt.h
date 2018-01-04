@@ -130,6 +130,9 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode);
 int nvlink_train_intranode_conn_to_hs(struct nvlink_intranode_conn *conn);
 void nvlink_enable_AN0_packets(struct nvlink_device *ndev);
 int nvlink_retrain_link(struct nvlink_device *ndev, bool from_off);
+int nvlink_transition_intranode_conn_to_safe(
+				struct nvlink_intranode_conn *conn);
+
 
 #ifdef CONFIG_DEBUG_FS
 void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev);

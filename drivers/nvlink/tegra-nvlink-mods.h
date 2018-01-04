@@ -294,6 +294,47 @@ struct nvlink_setup_eom {
 	__u32 params;
 };
 
+/* TEGRA_CTRL_NVLINK_TRAIN_INTRANODE_CONN */
+struct nvlink_pci_dev_info {
+	__u16 domain;
+	__u8 bus;
+	__u8 device;
+	__u8 function;
+};
+
+struct nvlink_endpoint {
+	__u16 node_id;
+	__u32 link_index;
+	struct nvlink_pci_dev_info pci_info;
+};
+
+/* link and sublink state of an nvlink endpoint */
+struct nvlink_link_state {
+	__u64 link_mode;
+	__u64 tx_sublink_mode;
+	__u64 rx_sublink_mode;
+};
+
+enum nvlink_conn_train_type {
+	nvlink_train_conn_off_to_swcfg = 0,
+	nvlink_train_conn_swcfg_to_active,
+	nvlink_train_conn_to_off,
+	nvlink_train_conn_active_to_swcfg,
+	nvlink_train_conn_swcfg_to_off,
+};
+
+struct nvlink_train_intranode_conn {
+	/* input fields */
+	enum nvlink_conn_train_type train_to;
+	struct nvlink_endpoint src_end_point;
+	struct nvlink_endpoint dst_end_point;
+
+	/* output fields */
+	int status;
+	struct nvlink_link_state src_end_state;
+	struct nvlink_link_state dst_end_state;
+};
+
 /* TODO: choose a unique MAGIC number for ioctl implementation */
 #define TEGRA_NVLINK_IOC_MAGIC	  'T'
 #define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS		\
@@ -310,5 +351,7 @@ struct nvlink_setup_eom {
 	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 6, struct nvlink_get_error_recoveries)
 #define TEGRA_CTRL_CMD_NVLINK_SETUP_EOM			\
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 7, struct nvlink_setup_eom)
+#define TEGRA_CTRL_NVLINK_TRAIN_INTRANODE_CONN		\
+	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 8, struct nvlink_train_intranode_conn)
 
 #endif /* TEGRA_NVLINK_MODS_H */

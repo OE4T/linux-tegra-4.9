@@ -58,6 +58,10 @@
 		status = "disabled";
 	};
 
+	combined-uart {
+		status = "disabled";
+	};
+
 	/* ISO-clients cannot have stage-1 translation and hence
 	 * iommus node are deleted for ISO-Clients which are
 	 * nvdisplay, vi and vi-thi */

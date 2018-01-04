@@ -457,9 +457,9 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 
 	/* allocate a tsg if needed */
 	ce_ctx->tsg = gk20a_tsg_open(g);
-
 	if (!ce_ctx->tsg) {
 		nvgpu_err(g, "ce: gk20a tsg not available");
+		err = -ENOMEM;
 		goto end;
 	}
 
@@ -467,6 +467,7 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 	ce_ctx->ch = gk20a_open_new_channel(g, runlist_id, true);
 	if (!ce_ctx->ch) {
 		nvgpu_err(g, "ce: gk20a channel not available");
+		err = -ENOMEM;
 		goto end;
 	}
 	ce_ctx->ch->wdt_enabled = false;

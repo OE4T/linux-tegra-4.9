@@ -197,6 +197,8 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 	/* ptimer src frequency in hz*/
 	.ptimer_src_freq	= 31250000,
 
+	.ch_wdt_timeout_ms = 5000,
+
 	.probe = gv11b_tegra_probe,
 	.remove = gv11b_tegra_remove,
 

@@ -37,38 +37,6 @@
 	};
 
 	cpus {
-		cpu@0 {
-			status = "okay";
-		};
-
-		cpu@1 {
-			status = "okay";
-		};
-
-		cpu@2 {
-			status = "okay";
-		};
-
-		cpu@3 {
-			status = "okay";
-		};
-
-		cpu@4 {
-			status = "okay";
-		};
-
-		cpu@5 {
-			status = "okay";
-		};
-
-		cpu@6 {
-			status = "okay";
-		};
-
-		cpu@7 {
-			status = "okay";
-		};
-
 		cpu_core_power_states {
 
 			c1 {
@@ -91,10 +59,6 @@
 
 	carmel_ras {
 		status = "disabled";
-	};
-
-	cbbnocaxi@2300000 {
-		status = "okay";
 	};
 
 	spi@3270000 {
@@ -291,14 +255,6 @@
 		status = "okay";
 	};
 
-	actmon@d230000 {
-		status = "okay";
-
-		mc_all {
-			status = "okay";
-		};
-	};
-
 	psci {
 		status = "disabled";
 	};
@@ -309,14 +265,6 @@
 
 	interrupt-controller {
 		status = "disabled";
-	};
-
-	interrupt-controller@3881000 {
-		status = "okay";
-	};
-
-	timer {
-		status="okay";
 	};
 
 	mods-simple-bus {

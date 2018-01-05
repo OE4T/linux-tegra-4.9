@@ -71,6 +71,7 @@
 struct tegra210_ope_module_soc_data {
 	int (*init)(struct platform_device *pdev, int id);
 	int (*codec_init)(struct snd_soc_codec *codec);
+	int (*hw_params)(struct snd_soc_codec *codec);
 };
 
 struct tegra210_ope_soc_data {
@@ -91,6 +92,8 @@ struct tegra210_ope {
 
 extern int tegra210_peq_init(struct platform_device *pdev, int id);
 extern int tegra210_peq_codec_init(struct snd_soc_codec *codec);
+extern int tegra210_peq_hw_params(struct snd_soc_codec *codec);
 extern int tegra210_mbdrc_init(struct platform_device *pdev, int id);
 extern int tegra210_mbdrc_codec_init(struct snd_soc_codec *codec);
+extern int tegra210_mbdrc_hw_params(struct snd_soc_codec *codec);
 #endif

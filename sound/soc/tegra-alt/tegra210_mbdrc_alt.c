@@ -651,6 +651,32 @@ static const struct regmap_config tegra210_mbdrc_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
+int tegra210_mbdrc_hw_params(struct snd_soc_codec *codec)
+{
+	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
+	const struct tegra210_mbdrc_config *conf = &mbdrc_init_config;
+	u32 val = 0;
+	int i;
+
+	regmap_read(ope->mbdrc_regmap, TEGRA210_MBDRC_CONFIG, &val);
+	if (val & TEGRA210_MBDRC_CONFIG_MBDRC_MODE_BYPASS)
+		return 0;
+
+	for (i = 0; i < MBDRC_NUM_BAND; i++) {
+		const struct tegra210_mbdrc_band_params *params =
+		&conf->band_params[i];
+		u32 reg_off = i * TEGRA210_MBDRC_FILTER_PARAM_STRIDE;
+
+		tegra210_xbar_write_ahubram(ope->mbdrc_regmap,
+			reg_off + TEGRA210_MBDRC_AHUBRAMCTL_CONFIG_RAM_CTRL,
+			reg_off + TEGRA210_MBDRC_AHUBRAMCTL_CONFIG_RAM_DATA, 0,
+			(u32 *)&params->biquad_params[0],
+			TEGRA210_MBDRC_MAX_BIQUAD_STAGES * 5);
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra210_mbdrc_hw_params);
+
 int tegra210_mbdrc_codec_init(struct snd_soc_codec *codec)
 {
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);

@@ -151,6 +151,9 @@ static int tegra210_ope_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
+	ope->soc_data->peq_soc_data.hw_params(dai->codec);
+	ope->soc_data->mbdrc_soc_data.hw_params(dai->codec);
+
 	return ret;
 }
 
@@ -329,10 +332,12 @@ static const struct tegra210_ope_soc_data soc_data_tegra210 = {
 	.peq_soc_data = {
 		.init = tegra210_peq_init,
 		.codec_init = tegra210_peq_codec_init,
+		.hw_params = tegra210_peq_hw_params,
 	},
 	.mbdrc_soc_data = {
 		.init = tegra210_mbdrc_init,
 		.codec_init = tegra210_mbdrc_codec_init,
+		.hw_params = tegra210_mbdrc_hw_params,
 	},
 };
 

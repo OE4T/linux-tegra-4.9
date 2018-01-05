@@ -1115,8 +1115,8 @@ fail_free_gk20a_ctx:
 	return err;
 }
 
-static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
-		  struct gr_ctx_desc *gr_ctx)
+void gr_gp10b_dump_ctxsw_stats(struct gk20a *g, struct vm_gk20a *vm,
+			       struct gr_ctx_desc *gr_ctx)
 {
 	struct nvgpu_mem *mem = &gr_ctx->mem;
 
@@ -1175,8 +1175,9 @@ void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 	if (!gr_ctx)
 		return;
 
-	if (g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close)
-		dump_ctx_switch_stats(g, vm, gr_ctx);
+	if (g->ops.gr.dump_ctxsw_stats &&
+	    g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close)
+		g->ops.gr.dump_ctxsw_stats(g, vm, gr_ctx);
 
 	nvgpu_dma_unmap_free(vm, &gr_ctx->pagepool_ctxsw_buffer);
 	nvgpu_dma_unmap_free(vm, &gr_ctx->betacb_ctxsw_buffer);

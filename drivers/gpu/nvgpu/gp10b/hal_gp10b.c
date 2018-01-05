@@ -340,6 +340,7 @@ static const struct gpu_ops gp10b_ops = {
 				gr_gp10b_init_gfxp_wfi_timeout_count,
 		.get_max_gfxp_wfi_timeout_count =
 				gr_gp10b_get_max_gfxp_wfi_timeout_count,
+		.dump_ctxsw_stats = gr_gp10b_dump_ctxsw_stats,
 	},
 	.fb = {
 		.reset = fb_gk20a_reset,

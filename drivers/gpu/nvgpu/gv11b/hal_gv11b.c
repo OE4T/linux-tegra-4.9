@@ -397,6 +397,7 @@ static const struct gpu_ops gv11b_ops = {
 		.get_max_gfxp_wfi_timeout_count =
 			gr_gv11b_get_max_gfxp_wfi_timeout_count,
 		.ecc_init_scrub_reg = gr_gv11b_ecc_init_scrub_reg,
+		.dump_ctxsw_stats = gr_gp10b_dump_ctxsw_stats,
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,

@@ -108,6 +108,8 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct nvgpu_mem *mem);
 int gr_gp10b_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o);
+void gr_gp10b_dump_ctxsw_stats(struct gk20a *g, struct vm_gk20a *vm,
+			       struct gr_ctx_desc *gr_ctx);
 int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			       u32 expect_delay);
 void gr_gp10b_commit_global_attrib_cb(struct gk20a *g,

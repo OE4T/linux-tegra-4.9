@@ -186,13 +186,23 @@ int tegra_mcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 {
 	int irq;
 	const void *prop;
-	struct device_node *np;
-	const struct of_device_id *match, *matches = &__mcerr_of_table;
+	bool match_found = false;
+	struct device_node *np = pdev->dev.of_node;
+	const struct of_device_id *matches = &__mcerr_of_table;
 
-	for_each_matching_node_and_match(np, matches, &match) {
-		const of_mcerr_init_fn init_fn = match->data;
+	for (; matches; matches++) {
+		if (of_device_is_compatible(np, matches->compatible)) {
+			const of_mcerr_init_fn init_fn = matches->data;
 
-		mcerr_ops = init_fn(np);
+			mcerr_ops = init_fn(np);
+			match_found = true;
+			break;
+		}
+	}
+
+	if (WARN_ON(match_found == false)) {
+		pr_err("%s: no mcerr_ops found\n", __func__);
+		return -EINVAL;
 	}
 
 	if (!mcerr_ops || !mcerr_ops->clear_interrupt ||

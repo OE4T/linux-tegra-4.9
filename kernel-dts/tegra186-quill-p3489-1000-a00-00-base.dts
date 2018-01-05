@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-p3489-a00-00-base.dts Quill A00 Board
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,8 @@
 	nvidia,dtsfilename = __FILE__;
 	nvidia,boardids = "3489:0000:A0";
 	nvidia,proc-boardid = "3489:0000:A0";
+	nvidia,fastboot-usb-vid = <0x0955>;
+	nvidia,fastboot-usb-pid = <0x70fb>;
 
 	chosen {
 		board-has-eeprom;

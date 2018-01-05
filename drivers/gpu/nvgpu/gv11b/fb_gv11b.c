@@ -54,7 +54,7 @@ static int gv11b_fb_mmu_invalidate_replay(struct gk20a *g,
 static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 {
 	if (nvgpu_is_bpmp_running(g) && (!nvgpu_platform_is_simulation(g))) {
-		nvgpu_info(g, "nvlink soc credits init done by bpmp");
+		nvgpu_log(g, gpu_dbg_info, "nvlink soc credits init done by bpmp");
 	} else {
 		/* MSS_NVLINK_1_BASE */
 		void __iomem *soc1 = ioremap(0x01f20010, 4096);
@@ -66,7 +66,7 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 		void __iomem *soc4 = ioremap(0x01f80010, 4096);
 		u32 val;
 
-		nvgpu_info(g, "init nvlink soc credits");
+		nvgpu_log(g, gpu_dbg_info, "init nvlink soc credits");
 
 		val = readl_relaxed(soc1);
 		writel_relaxed(val, soc1);

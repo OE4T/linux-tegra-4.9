@@ -1,5 +1,5 @@
 /*
- * nvlink-mods.h:
+ * tegra-nvlink-mods.h:
  * This header contains the structures and variables needed for
  * the NVLINK MODs APIs exported by the Tegra NVLINK endpoint driver.
  *
@@ -17,6 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef TEGRA_NVLINK_MODS_H
+#define TEGRA_NVLINK_MODS_H
 
 /* TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS */
 
@@ -299,3 +302,5 @@ struct nvlink_get_error_recoveries {
 		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 5, struct nvlink_get_err_info)
 #define TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES	\
 	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 6, struct nvlink_get_error_recoveries)
+
+#endif /* TEGRA_NVLINK_MODS_H */

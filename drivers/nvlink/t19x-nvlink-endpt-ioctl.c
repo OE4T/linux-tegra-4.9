@@ -22,7 +22,7 @@
 
 #include "t19x-nvlink-endpt.h"
 #include "nvlink-hw.h"
-#include "nvlink-mods.h"
+#include "tegra-nvlink-mods.h"
 
 static bool is_nvlink_loopback_topology(struct nvlink_device *ndev)
 {

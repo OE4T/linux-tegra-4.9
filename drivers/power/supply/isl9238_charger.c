@@ -1,7 +1,7 @@
 /*
  * isl9238_charger.c -- ISL9238 Narrow o/p voltage DC charger driver
  *
- * Copyright (C) 2017 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2017-2018 NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Venkat Reddy Talla <vreddytalla@nvidia.com>
  *
@@ -27,43 +27,58 @@
 #include <linux/regulator/machine.h>
 
 /* Register definitions */
-#define ISL9238_CHG_CURR_LIMIT	0x14
-#define ISL9238_MAX_SYS_VOLTAGE	0x15
-#define ISL9238_T1_T2_TWO_LEVEL	0x38
+#define ISL9238_CHG_CURR_LIMIT		0x14
+#define ISL9238_MAX_SYS_VOLTAGE		0x15
+#define ISL9238_T1_T2_TWO_LEVEL		0x38
 #define ISL9238_CONTROL0_OPTIONS	0x39
 #define ISL9238_INFO1_CHG_STATUS	0x3A
 #define ISL9238_ADPTR_CURR_LIMIT2	0x3B
 #define ISL9238_CONTROL1_OPTIONS	0x3C
 #define ISL9238_CONTROL2_OPTIONS	0x3D
-#define ISL9238_MIN_SYS_VOLTAGE	0x3E
+#define ISL9238_MIN_SYS_VOLTAGE		0x3E
 #define ISL9238_ADPTR_CURR_LIMIT1	0x3F
 #define ISL9238_AC_PROCHOT		0x47
 #define ISL9238_DC_PROCHOT		0x48
-#define ISL9238_REG_OTG_VOLTAGE	0x49
-#define ISL9238_REG_OTG_CURRENT	0x4A
-#define ISL9238_INPUT_VOLTAGE	0x4B
+#define ISL9238_REG_OTG_VOLTAGE		0x49
+#define ISL9238_REG_OTG_CURRENT		0x4A
+#define ISL9238_INPUT_VOLTAGE		0x4B
 #define ISL9238_CONTROL3_OPTIONS	0x4C
-#define ISL9238_INFO2_CHARGER_STATUS	0x4D
+#define ISL9238_INFO2_CHG_STATUS	0x4D
 #define ISL9238_CONTROL4_OPTIONS	0x4E
-#define ISL9238_MANUFACTURER_ID	0xFE
-#define ISL9238_DEVICE_ID	0xFF
+#define ISL9238_MANUFACTURER_ID		0xFE
+#define ISL9238_DEVICE_ID		0xFF
 
 #define ISL9238_CHG_CURR_LIMIT_MASK	0x1FFC
 #define ISL9238_MAX_SYS_VOLTAGE_MASK	0x7FF8
 #define ISL9238_MIN_SYS_VOLTAGE_MASK	0x3F00
-#define ISL9238_INPUT_VOLTAGE_MASK		0x3F00
+#define ISL9238_INPUT_VOLTAGE_MASK	0x3F00
 #define ISL9238_ADPTR_CURR_LIMIT1_MASK	0x1FFC
 #define ISL9238_ADPTR_CURR_LIMIT2_MASK	0x1FFC
 #define ISL9238_AC_PROCHOT_MASK		0x1F80
 #define ISL9238_DC_PROCHOT_MASK		0x3F00
-#define ISL9238_OTG_MASK			0x800
-#define ISL9238_OTG_ENABLE			0x800
-#define ISL9238_OTG_DISABLE			0x0
+#define ISL9238_OTG_MASK		0x800
+#define ISL9238_OTG_ENABLE		0x800
+#define ISL9238_OTG_DISABLE		0x0
 #define ISL9238_REGULATION_MASK		0x4
 #define ISL9238_BAT_LEARN_MASK		0x1000
 #define ISL9238_TURBO_MODE_MASK		0x40
-#define ISL9238_TURBO_MODE_DISABLE		0x40
+#define ISL9238_TURBO_MODE_DISABLE	0x40
 #define ISL9238_AUTO_CHARGE_MODE_MASK	0x80
+
+#define ISL9238_TRICKLE_CHG_MODE		BIT(4)
+#define ISL9238_ACTIVE_CNTRL_LOOP_MASK		0x6000
+#define ISL9238_CHG_CURRENT_LOOP		0x10
+#define ISL9238_ADAPTER_CURRENT_LOOP		0x20
+#define ISL9238_INPUT_VOLTAGE_LOOP		0x30
+#define ISL9238_CHARGER_MODE_MASK		0xE0
+#define ISL9238_BOOST_MODE			0x10
+#define ISL9238_BUCK_MODE			0x20
+#define ISL9238_BUCK_BOOST_MODE			0x30
+#define ISL9238_OTG_BOOST_MODE			0x50
+#define ISL9238_OTG_BUCK_MODE			0x60
+#define ISL9238_OTG_BUCK_BOOST_MODE		0x70
+#define ISL9238_BATTERY_STATE			BIT(12)
+#define ISL9238_ADAPTER_STATE			BIT(14)
 
 static const struct regmap_config isl9238_rmap_config = {
 	.reg_bits		= 8,
@@ -100,8 +115,8 @@ struct isl9238_charger {
 	struct regmap		*rmap;
 	int			irq;
 
-	struct mutex			mutex;
-	struct mutex			otg_mutex;
+	struct mutex		mutex; /* mutex for charger */
+	struct mutex		otg_mutex; /* mutex for otg */
 
 	struct isl9238_chg_pdata *chg_pdata;
 
@@ -113,7 +128,7 @@ struct isl9238_charger {
 };
 
 static int isl9238_val_to_reg(int val, int offset, int div, int nbits,
-	bool roundup)
+			      bool roundup)
 {
 	int max_val = offset + (BIT(nbits) - 1) * div;
 
@@ -138,7 +153,7 @@ static int isl9238_otg_enable(struct regulator_dev *rdev)
 	isl9238->is_otg_connected = true;
 
 	ret = regmap_update_bits(isl9238->rmap, ISL9238_CONTROL1_OPTIONS,
-			ISL9238_OTG_MASK, ISL9238_OTG_ENABLE);
+				 ISL9238_OTG_MASK, ISL9238_OTG_ENABLE);
 	if (ret < 0) {
 		dev_err(isl9238->dev, "OTG enable failed %d", ret);
 		mutex_unlock(&isl9238->otg_mutex);
@@ -159,7 +174,7 @@ static int isl9238_otg_disable(struct regulator_dev *rdev)
 
 	isl9238->is_otg_connected = false;
 	ret = regmap_update_bits(isl9238->rmap, ISL9238_CONTROL1_OPTIONS,
-			ISL9238_OTG_MASK, ISL9238_OTG_DISABLE);
+				 ISL9238_OTG_MASK, ISL9238_OTG_DISABLE);
 	if (ret < 0) {
 		dev_err(isl9238->dev, "OTG disable failed %d", ret);
 		mutex_unlock(&isl9238->otg_mutex);
@@ -199,7 +214,7 @@ static struct regulator_desc isl9238_otg_reg_desc = {
 };
 
 static int isl9238_init_vbus_regulator(struct isl9238_charger *isl9238,
-		struct isl9238_chg_pdata *pdata)
+				       struct isl9238_chg_pdata *pdata)
 {
 	int ret = 0;
 	struct regulator_config rconfig = { };
@@ -258,6 +273,76 @@ static int isl9238_show_chip_version(struct isl9238_charger *isl9238)
 	return 0;
 }
 
+static void isl9238_charger_get_op_modes(struct isl9238_charger *isl9238)
+{
+	int ret;
+	unsigned int val;
+
+	ret = regmap_read(isl9238->rmap, ISL9238_INFO1_CHG_STATUS, &val);
+	if (ret < 0) {
+		dev_err(isl9238->dev, "info1 reg read failed: %d\n", ret);
+		return;
+	}
+	dev_info(isl9238->dev, "info1:charger operating modes 0x%02x\n", val);
+
+	if (val & ISL9238_TRICKLE_CHG_MODE)
+		dev_info(isl9238->dev, "trickle charging mode is active\n");
+
+	switch (val & ISL9238_ACTIVE_CNTRL_LOOP_MASK) {
+	case ISL9238_CHG_CURRENT_LOOP:
+		dev_info(isl9238->dev, "charging current loop is active\n");
+		break;
+	case ISL9238_ADAPTER_CURRENT_LOOP:
+		dev_info(isl9238->dev, "adapter current loop is active\n");
+		break;
+	case ISL9238_INPUT_VOLTAGE_LOOP:
+		dev_info(isl9238->dev, "input voltage loop is active\n");
+		break;
+	default:
+		dev_info(isl9238->dev,
+			 "max system voltage control loop is active\n");
+		break;
+	}
+
+	ret = regmap_read(isl9238->rmap, ISL9238_INFO2_CHG_STATUS, &val);
+	if (ret < 0) {
+		dev_err(isl9238->dev, "info2 reg read failed: %d\n", ret);
+		return;
+	}
+	dev_info(isl9238->dev, "info2:charger operating modes 0x%02x\n", val);
+
+	switch (val & ISL9238_CHARGER_MODE_MASK) {
+	case ISL9238_BOOST_MODE:
+		dev_info(isl9238->dev, "boost mode is active\n");
+		break;
+	case ISL9238_BUCK_MODE:
+		dev_info(isl9238->dev, "buck mode is active\n");
+		break;
+	case ISL9238_BUCK_BOOST_MODE:
+		dev_info(isl9238->dev, "buck boost mode is active\n");
+		break;
+	case ISL9238_OTG_BOOST_MODE:
+		dev_info(isl9238->dev, "otg boost mode is active\n");
+		break;
+	case ISL9238_OTG_BUCK_MODE:
+		dev_info(isl9238->dev, "otg buck mode is active\n");
+		break;
+	case ISL9238_OTG_BUCK_BOOST_MODE:
+		dev_info(isl9238->dev, "otg buck boost mode is active\n");
+		break;
+	default:
+		dev_info(isl9238->dev,
+			 "operating mode is not valid\n");
+		break;
+	}
+
+	if (val & ISL9238_ADAPTER_STATE)
+		dev_info(isl9238->dev, "adapter is connected\n");
+
+	if (val & ISL9238_BATTERY_STATE)
+		dev_info(isl9238->dev, "no battery present\n");
+}
+
 static int isl9238_charger_init(struct isl9238_charger *isl9238)
 {
 	unsigned int val;
@@ -265,10 +350,10 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 
 	if (isl9238->chg_pdata->enable_auto_charging) {
 		ret = regmap_update_bits(isl9238->rmap,
-				ISL9238_CONTROL3_OPTIONS,
-				ISL9238_AUTO_CHARGE_MODE_MASK, 0x0);
+					 ISL9238_CONTROL3_OPTIONS,
+					 ISL9238_AUTO_CHARGE_MODE_MASK, 0x0);
 		if (ret < 0) {
-		dev_err(isl9238->dev,
+			dev_err(isl9238->dev,
 				"auto charge mode enable failed %d\n", ret);
 			return ret;
 		}
@@ -312,7 +397,7 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 			isl9238->chg_pdata->input_voltage_limit,
 			0, 341, 6, 0);
 		ret = regmap_write(isl9238->rmap, ISL9238_INPUT_VOLTAGE,
-						val << 8);
+				   val << 8);
 		if (ret < 0) {
 			dev_err(isl9238->dev,
 				"input voltage update failed %d\n", ret);
@@ -324,7 +409,7 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 		val = isl9238->chg_pdata->adapter_current_lim1 &
 					ISL9238_ADPTR_CURR_LIMIT1_MASK;
 		ret = regmap_write(isl9238->rmap,
-				ISL9238_ADPTR_CURR_LIMIT1, val);
+				   ISL9238_ADPTR_CURR_LIMIT1, val);
 		if (ret < 0) {
 			dev_err(isl9238->dev,
 				"adapter current_1 update failed %d\n", ret);
@@ -336,7 +421,7 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 		val = isl9238->chg_pdata->adapter_current_lim2 &
 					ISL9238_ADPTR_CURR_LIMIT2_MASK;
 		ret = regmap_write(isl9238->rmap,
-				ISL9238_ADPTR_CURR_LIMIT2, val);
+				   ISL9238_ADPTR_CURR_LIMIT2, val);
 		if (ret < 0) {
 			dev_err(isl9238->dev,
 				"adapter current_2 update failed %d\n", ret);
@@ -368,10 +453,10 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 
 	if (isl9238->chg_pdata->disable_input_regulation) {
 		ret = regmap_update_bits(isl9238->rmap,
-				ISL9238_CONTROL0_OPTIONS,
-				ISL9238_REGULATION_MASK, 0x0);
+					 ISL9238_CONTROL0_OPTIONS,
+					 ISL9238_REGULATION_MASK, 0x0);
 		if (ret < 0) {
-		dev_err(isl9238->dev,
+			dev_err(isl9238->dev,
 				"regulation disable failed %d\n", ret);
 			return ret;
 		}
@@ -379,10 +464,11 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 
 	if (isl9238->chg_pdata->enable_bat_learn_mode) {
 		ret = regmap_update_bits(isl9238->rmap,
-				ISL9238_CONTROL1_OPTIONS,
-				ISL9238_BAT_LEARN_MASK, ISL9238_BAT_LEARN_MASK);
+					 ISL9238_CONTROL1_OPTIONS,
+					 ISL9238_BAT_LEARN_MASK,
+					 ISL9238_BAT_LEARN_MASK);
 		if (ret < 0) {
-		dev_err(isl9238->dev,
+			dev_err(isl9238->dev,
 				"bat learn mode enable failed %d\n", ret);
 			return ret;
 		}
@@ -390,11 +476,11 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 
 	if (isl9238->chg_pdata->disable_turbo_mode) {
 		ret = regmap_update_bits(isl9238->rmap,
-				ISL9238_CONTROL1_OPTIONS,
-				ISL9238_TURBO_MODE_MASK,
-				ISL9238_TURBO_MODE_DISABLE);
+					 ISL9238_CONTROL1_OPTIONS,
+					 ISL9238_TURBO_MODE_MASK,
+					 ISL9238_TURBO_MODE_DISABLE);
 		if (ret < 0) {
-		dev_err(isl9238->dev,
+			dev_err(isl9238->dev,
 				"Turbo mode disable failed %d\n", ret);
 			return ret;
 		}
@@ -417,27 +503,27 @@ static struct isl9238_chg_pdata *isl9238_parse_dt_data(
 
 	ret = of_property_read_u32(np, "isl,charge-current-limit", &pval);
 	if (!ret)
-		pdata->charge_current_lim = pval/1000;
+		pdata->charge_current_lim = pval / 1000;
 
 	ret = of_property_read_u32(np, "isl,max-system-voltage", &pval);
 	if (!ret)
-		pdata->max_sys_voltage = pval/1000;
+		pdata->max_sys_voltage = pval / 1000;
 
 	ret = of_property_read_u32(np, "isl,min-system-voltage", &pval);
 	if (!ret)
-		pdata->min_sys_voltage = pval/1000;
+		pdata->min_sys_voltage = pval / 1000;
 
 	ret = of_property_read_u32(np, "isl,input-voltage-limit", &pval);
 	if (!ret)
-		pdata->input_voltage_limit = pval/1000;
+		pdata->input_voltage_limit = pval / 1000;
 
 	ret = of_property_read_u32(np, "isl,adapter-current-limit1", &pval);
 	if (!ret)
-		pdata->adapter_current_lim1 = pval/1000;
+		pdata->adapter_current_lim1 = pval / 1000;
 
 	ret = of_property_read_u32(np, "isl,adapter-current-limit2", &pval);
 	if (!ret)
-		pdata->adapter_current_lim2 = pval/1000;
+		pdata->adapter_current_lim2 = pval / 1000;
 
 	ret = of_property_read_u32(np, "isl,acprochot-threshold", &pval);
 	if (!ret)
@@ -462,7 +548,7 @@ static struct isl9238_chg_pdata *isl9238_parse_dt_data(
 	vbus_reg_node = of_find_node_by_name(np, "vbus");
 	if (vbus_reg_node) {
 		pdata->vbus_pdata = devm_kzalloc(&client->dev,
-			sizeof(*(pdata->vbus_pdata)), GFP_KERNEL);
+			sizeof(*pdata->vbus_pdata), GFP_KERNEL);
 		if (!pdata->vbus_pdata)
 			return ERR_PTR(-ENOMEM);
 
@@ -479,7 +565,7 @@ static struct isl9238_chg_pdata *isl9238_parse_dt_data(
 }
 
 static int isl9238_probe(struct i2c_client *client,
-				const struct i2c_device_id *id)
+			 const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	struct isl9238_charger *isl9238;
@@ -537,6 +623,9 @@ static int isl9238_probe(struct i2c_client *client,
 		goto scrub_mutex;
 	}
 
+	/* get charger operating modes */
+	isl9238_charger_get_op_modes(isl9238);
+
 	return 0;
 
 scrub_mutex:
@@ -546,7 +635,7 @@ scrub_mutex:
 }
 
 static const struct of_device_id isl9238_of_match[] = {
-	{ .compatible = "isl,isl9238", },
+	{ .compatible = "isil,isl9238", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, isl9238_of_match);

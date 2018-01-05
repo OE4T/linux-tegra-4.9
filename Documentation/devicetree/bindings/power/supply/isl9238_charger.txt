@@ -1,7 +1,7 @@
 * ISL9238 battery charger devicetree bindings
 
 Required properties:
-- compatible : "isl,isl9238"
+- compatible : "isil,isl9238"
 - reg: I2C slave address
 
 Required nodes:
@@ -45,8 +45,8 @@ regulator-name: vbus regulator name.
 
 Example
 isl9238: isl9238@16 {
-	compatible = "isl,isl9238";
-	reg = <0x16>;
+	compatible = "isil,isl9238";
+	reg = <0x09>;
 	isl,charge-current-limit = <4096000>;
 	isl,max-system-voltage = <8192000>;
 	isl,min-system-voltage = <1024000>;

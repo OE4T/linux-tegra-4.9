@@ -1028,7 +1028,7 @@ repeater_auth:
 		dphdcp_err("open session failed\n");
 		goto failure;
 	}
-	if (tegra_dc_is_t18x()) {
+	if (tegra_dc_is_nvdisplay()) {
 		/* if session successfully opened, launch operations */
 		/* repeater flag in Bskv must be configured before
 		 * loading fuses
@@ -1251,7 +1251,7 @@ repeater_auth:
 			mutex_lock(&dphdcp->lock);
 			goto failure;
 		}
-		if (tegra_dc_is_t18x()) {
+		if (tegra_dc_is_nvdisplay()) {
 			*pkt = HDCP_TA_CMD_ENC;
 			*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
 			*(pkt + 2*HDCP_CMD_OFFSET) = b_caps;
@@ -1309,7 +1309,7 @@ repeater_auth:
 		 */
 		repeater_flag = false;
 		mutex_lock(&dphdcp->lock);
-		if (tegra_dc_is_t18x()) {
+		if (tegra_dc_is_nvdisplay()) {
 			*pkt = HDCP_TA_CMD_CTRL;
 			*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
 			*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
@@ -1375,7 +1375,7 @@ failure:
 lost_dp:
 	dphdcp_info("lost dp connection\n");
 	dphdcp->state = STATE_UNAUTHENTICATED;
-	if (tegra_dc_is_t18x()) {
+	if (tegra_dc_is_nvdisplay()) {
 		if (pkt) {
 			*pkt = HDCP_TA_CMD_CTRL;
 			*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;

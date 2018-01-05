@@ -40,6 +40,14 @@ int nvgpu_init_enabled_flags(struct gk20a *g)
 	return 0;
 }
 
+/*
+ * Call this on driver shutdown!
+ */
+void nvgpu_free_enabled_flags(struct gk20a *g)
+{
+	nvgpu_kfree(g, g->enabled_flags);
+}
+
 bool nvgpu_is_enabled(struct gk20a *g, int flag)
 {
 	return test_bit(flag, g->enabled_flags);

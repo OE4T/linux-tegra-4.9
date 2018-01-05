@@ -170,5 +170,6 @@ bool nvgpu_is_enabled(struct gk20a *g, int flag);
 bool __nvgpu_set_enabled(struct gk20a *g, int flag, bool state);
 
 int nvgpu_init_enabled_flags(struct gk20a *g);
+void nvgpu_free_enabled_flags(struct gk20a *g);
 
 #endif

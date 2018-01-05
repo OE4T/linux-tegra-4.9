@@ -673,6 +673,8 @@ void gk20a_remove_support(struct gk20a *g)
 #ifdef CONFIG_TEGRA_19x_GPU
 	t19x_remove_support(g);
 #endif
+
+	nvgpu_free_enabled_flags(g);
 }
 
 static int gk20a_init_support(struct platform_device *dev)

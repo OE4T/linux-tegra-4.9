@@ -43,7 +43,6 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 		unsigned int payload,
 		int launch_flags,
 		int request_operation,
-		struct gk20a_fence *gk20a_fence_in,
 		u32 submit_flags,
 		struct gk20a_fence **gk20a_fence_out)
 {
@@ -135,19 +134,9 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 					payload,
 					gk20a_get_valid_launch_flags(g, launch_flags),
 					request_operation,
-					dma_copy_class,
-					gk20a_fence_in);
+					dma_copy_class);
 
 	if (methodSize) {
-		/* TODO: Remove CPU pre-fence wait */
-		if (gk20a_fence_in) {
-			ret = gk20a_fence_wait(g, gk20a_fence_in,
-					       gk20a_get_gr_idle_timeout(g));
-			gk20a_fence_put(gk20a_fence_in);
-			if (ret)
-				goto noop;
-		}
-
 		/* store the element into gpfifo */
 		gpfifo.entry0 =
 			u64_lo32(cmd_buf_gpu_va);

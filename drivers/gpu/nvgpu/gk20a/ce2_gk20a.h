@@ -138,7 +138,6 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 		unsigned int payload,
 		int launch_flags,
 		int request_operation,
-		struct gk20a_fence *gk20a_fence_in,
 		u32 submit_flags,
 		struct gk20a_fence **gk20a_fence_out);
 void gk20a_ce_delete_context_priv(struct gk20a *g,
@@ -153,7 +152,6 @@ int gk20a_ce_prepare_submit(u64 src_buf,
 		unsigned int payload,
 		int launch_flags,
 		int request_operation,
-		u32 dma_copy_class,
-		struct gk20a_fence *gk20a_fence_in);
+		u32 dma_copy_class);
 
 #endif /*__CE2_GK20A_H__*/

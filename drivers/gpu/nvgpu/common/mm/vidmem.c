@@ -97,7 +97,6 @@ static int __nvgpu_vidmem_do_clear_all(struct gk20a *g)
 			0x00000000,
 			NVGPU_CE_DST_LOCATION_LOCAL_FB,
 			NVGPU_CE_MEMSET,
-			NULL,
 			0,
 			NULL);
 	if (err) {
@@ -116,7 +115,6 @@ static int __nvgpu_vidmem_do_clear_all(struct gk20a *g)
 			0x00000000,
 			NVGPU_CE_DST_LOCATION_LOCAL_FB,
 			NVGPU_CE_MEMSET,
-			NULL,
 			0,
 			&gk20a_fence_out);
 	if (err) {
@@ -437,7 +435,6 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 			0x00000000,
 			NVGPU_CE_DST_LOCATION_LOCAL_FB,
 			NVGPU_CE_MEMSET,
-			NULL,
 			0,
 			&gk20a_fence_out);
 

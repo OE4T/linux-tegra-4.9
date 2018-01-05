@@ -208,8 +208,7 @@ int gk20a_ce_prepare_submit(u64 src_buf,
 		unsigned int payload,
 		int launch_flags,
 		int request_operation,
-		u32 dma_copy_class,
-		struct gk20a_fence *gk20a_fence_in)
+		u32 dma_copy_class)
 {
 	u32 launch = 0;
 	u32 methodSize = 0;

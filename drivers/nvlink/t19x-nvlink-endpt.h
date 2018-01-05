@@ -36,6 +36,7 @@ struct tegra_nvlink_device {
 #ifdef CONFIG_DEBUG_FS
 	/* This is the debugfs directory for the Tegra endpoint driver */
 	struct dentry *tegra_debugfs;
+	struct dentry *tegra_debugfs_file;
 #endif /* CONFIG_DEBUG_FS  */
 	/* clocks */
 	struct clk *clk_nvhs_pll0_mgmt;

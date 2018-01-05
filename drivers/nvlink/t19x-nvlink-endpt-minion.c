@@ -772,14 +772,46 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 		goto fail;
 	}
 
-	ret = minion_send_cmd(ndev,
+	if ((ndev->refclk == NVLINK_REFCLK_150) &&
+		 (ndev->speed == NVLINK_SPEED_25)) {
+		ret = minion_send_cmd(ndev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_3,
 				0);
-	if (ret < 0) {
-		nvlink_err("Error sending INITPLL_3 command to MINION");
+		if (ret < 0) {
+			nvlink_err("Error sending INITPLL_3 command to MINION");
+			goto fail;
+		}
+	} else if ((ndev->refclk == NVLINK_REFCLK_150) &&
+			(ndev->speed == NVLINK_SPEED_20)) {
+		ret = minion_send_cmd(ndev,
+				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_5,
+				0);
+		if (ret < 0) {
+			nvlink_err("Error sending INITPLL_5 command to MINION");
+			goto fail;
+		}
+	} else if ((ndev->refclk == NVLINK_REFCLK_156) &&
+			(ndev->speed == NVLINK_SPEED_20)) {
+		ret = minion_send_cmd(ndev,
+				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_4,
+				0);
+		if (ret < 0) {
+			nvlink_err("Error sending INITPLL_4 command to MINION");
+			goto fail;
+		}
+	} else if ((ndev->refclk == NVLINK_REFCLK_156) &&
+			 (ndev->speed == NVLINK_SPEED_25)) {
+		ret = minion_send_cmd(ndev,
+				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_2,
+				0);
+		if (ret < 0) {
+			nvlink_err("Error sending INITPLL_2 command to MINION");
+			goto fail;
+		}
+	} else {
+		nvlink_err("Invalid speed or refclk");
 		goto fail;
 	}
-
 	ret = minion_send_cmd(ndev,
 			MINION_NVLINK_DL_CMD_COMMAND_XAVIER_CALIBRATEPLL,
 			0);

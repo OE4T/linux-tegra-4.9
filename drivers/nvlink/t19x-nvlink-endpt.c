@@ -247,16 +247,19 @@ static int tegra_nvlink_car_enable(struct nvlink_device *ndev)
 	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy);
 	reset_control_deassert(tnvlink_dev->rst_nvhs_uphy_pll0);
 
-	ret = clk_set_rate(tnvlink_dev->clk_pllnvhs, PLLNVHS_FREQ_150MHZ);
-	if (ret < 0) {
-		nvlink_err("nvlink pllnvhs setrate failed : %d", ret);
-		goto pllnvhs_fail;
-	} else {
-		clk_rate = clk_get_rate(tnvlink_dev->clk_pllnvhs);
-		if (clk_rate != PLLNVHS_FREQ_150MHZ) {
-			nvlink_err("clk_pllnvhs rate = %lu", clk_rate);
-			ret = -EINVAL;
+	if (ndev->refclk == NVLINK_REFCLK_150) {
+		ret = clk_set_rate(tnvlink_dev->clk_pllnvhs,
+				   PLLNVHS_FREQ_150MHZ);
+		if (ret < 0) {
+			nvlink_err("nvlink pllnvhs setrate failed : %d", ret);
 			goto pllnvhs_fail;
+		} else {
+			clk_rate = clk_get_rate(tnvlink_dev->clk_pllnvhs);
+			if (clk_rate != PLLNVHS_FREQ_150MHZ) {
+				nvlink_err("clk_pllnvhs rate = %lu", clk_rate);
+				ret = -EINVAL;
+				goto pllnvhs_fail;
+			}
 		}
 		ret = clk_prepare_enable(tnvlink_dev->clk_pllnvhs);
 		if (ret < 0) {
@@ -822,12 +825,13 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		goto err_ndev_register;
 	}
 
+	ndev->speed = NVLINK_SPEED_25;
+	ndev->refclk = NVLINK_REFCLK_150;
 	/* Register link with core driver */
 	ret = nvlink_register_link(&ndev->link);
 	if (ret < 0) {
 		goto err_nlink_register;
 	}
-
 	t19x_nvlink_endpt_debugfs_init(ndev);
 
 	nvlink_dbg("Probe successful!");

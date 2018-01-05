@@ -116,6 +116,11 @@ enum nvlink_speed {
 	NVLINK_SPEED_25
 };
 
+enum nvlink_refclk {
+	NVLINK_REFCLK_150,
+	NVLINK_REFCLK_156
+};
+
 enum device_state {
 	NVLINK_DEVICE_OFF,
 	NVLINK_DEVICE_HW_INIT_DONE,
@@ -159,8 +164,6 @@ struct nvlink_link {
 	enum nvlink_endpt device_id;
 	/* link State */
 	enum link_mode mode;
-	/* Nvlink Speed */
-	enum nvlink_speed speed;
 	/* base address of DLPL */
 	void __iomem *nvlw_nvl_base;
 	/* base address of TL */
@@ -244,6 +247,10 @@ struct nvlink_device {
 	/* MINION ucode image */
 	const u8 *minion_img;
 	void *priv;
+	/* Nvlink Speed */
+	enum nvlink_speed speed;
+	/* Nvlink refclk*/
+	enum nvlink_refclk refclk;
 };
 
 /* Struct used for passing around error masks in error handling functions */

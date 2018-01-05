@@ -38,10 +38,6 @@
 		status = "okay";
 	};
 
-	watchdog@30c0000 {
-		status = "okay";
-	};
-
 	pwm@c340000 {
 		status = "okay";
 	};

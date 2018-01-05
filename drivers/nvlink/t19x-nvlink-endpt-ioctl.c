@@ -18,6 +18,7 @@
  */
 
 #include <linux/uaccess.h>
+#include <linux/clk.h>
 
 #include "t19x-nvlink-endpt.h"
 #include "nvlink-hw.h"
@@ -97,11 +98,129 @@ static int t19x_nvlink_get_caps(struct nvlink_device *ndev,
 	return 0;
 }
 
+static int t19x_nvlink_get_status(struct nvlink_device *ndev,
+				struct nvlink_status *status)
+{
+	struct tegra_nvlink_device *tdev = ndev->priv;
+	struct nvlink_link *link = &ndev->link;
+	u32 reg_val = 0;
+	u32 state = 0;
+
+	/*
+	 * Link should be connected and in HS mode, otherwise
+	 * t19x_nvlink_endpt_open() will fail and we wouldn't be here.
+	 */
+	status->link_info.connected = true;
+
+	status->link_info.remote_device_link_number =
+					link->remote_dev_info.link_id;
+	status->link_info.local_device_link_number = link->link_id;
+
+	if (is_nvlink_loopback_topology(ndev)) {
+		status->link_info.caps |= TEGRA_CTRL_NVLINK_CAPS_VALID;
+		status->link_info.loop_property =
+			TEGRA_CTRL_NVLINK_STATUS_LOOP_PROPERTY_LOOPBACK;
+
+		status->link_info.local_device_info.device_type =
+			TEGRA_CTRL_NVLINK_DEVICE_INFO_DEVICE_TYPE_TEGRA;
+		status->link_info.local_device_info.domain = 0;
+		status->link_info.local_device_info.bus = 0;
+		status->link_info.local_device_info.device = 0;
+		status->link_info.local_device_info.function = 0;
+		status->link_info.local_device_info.pci_device_id = 0;
+
+		status->link_info.remote_device_info.device_type =
+			status->link_info.local_device_info.device_type;
+		status->link_info.remote_device_info.domain =
+			status->link_info.local_device_info.domain;
+		status->link_info.remote_device_info.bus =
+			status->link_info.local_device_info.bus;
+		status->link_info.remote_device_info.device =
+			status->link_info.local_device_info.device;
+		status->link_info.remote_device_info.function =
+			status->link_info.local_device_info.function;
+		status->link_info.remote_device_info.pci_device_id =
+			status->link_info.local_device_info.pci_device_id;
+	} else {
+		/* TODO: Handle other topologies */
+	}
+
+	status->enabled_link_mask = 1;
+	status->link_info.phy_type = TEGRA_CTRL_NVLINK_STATUS_PHY_NVHS;
+	status->link_info.sublink_width = 8;
+
+	status->link_info.link_state = t19x_nvlink_get_link_state(ndev);
+
+	t19x_nvlink_get_tx_sublink_state(ndev, &state);
+	status->link_info.tx_sublink_status = (u8)state;
+
+	t19x_nvlink_get_rx_sublink_state(ndev, &state);
+	status->link_info.rx_sublink_status = (u8)state;
+
+	reg_val = nvlw_nvl_readl(ndev, NVL_SL1_CONFIG_RX);
+	if (reg_val & BIT(NVL_SL1_CONFIG_RX_REVERSAL_OVERRIDE)) {
+		/* Overridden */
+		if (reg_val & BIT(NVL_SL1_CONFIG_RX_LANE_REVERSE))
+			status->link_info.bLane_reversal = true;
+		else
+			status->link_info.bLane_reversal = false;
+	} else {
+		/* Sensed in HW */
+		if (reg_val & BIT(NVL_SL1_CONFIG_RX_HW_LANE_REVERSE))
+			status->link_info.bLane_reversal = true;
+		else
+			status->link_info.bLane_reversal = false;
+	}
+
+	switch (NVLINK_IP_VERSION) {
+	case NVLINK_VERSION_22:
+		status->link_info.nvlink_version =
+				TEGRA_CTRL_NVLINK_STATUS_NVLINK_VERSION_2_2;
+		status->link_info.nci_version =
+				TEGRA_CTRL_NVLINK_STATUS_NCI_VERSION_2_2;
+		break;
+	case NVLINK_VERSION_20:
+		status->link_info.nvlink_version =
+				TEGRA_CTRL_NVLINK_STATUS_NVLINK_VERSION_2_0;
+		status->link_info.nci_version =
+				TEGRA_CTRL_NVLINK_STATUS_NCI_VERSION_2_0;
+		break;
+	default:
+		status->link_info.nvlink_version =
+				TEGRA_CTRL_NVLINK_STATUS_NVLINK_VERSION_1_0;
+		status->link_info.nci_version =
+				TEGRA_CTRL_NVLINK_STATUS_NCI_VERSION_1_0;
+		break;
+	}
+	status->link_info.phy_version =
+				TEGRA_CTRL_NVLINK_STATUS_NVHS_VERSION_1_0;
+
+	/* TODO: Change nvlink_link_clockKHz after having correct INITPLL */
+	status->link_info.nvlink_link_clockKHz = 24750000;
+	status->link_info.nvlink_ref_clk_speedKHz =
+				clk_get_rate(tdev->clk_pllnvhs) / 1000;
+	status->link_info.nvlink_common_clock_speedKHz =
+				status->link_info.nvlink_link_clockKHz / 16;
+
+	status->link_info.nvlink_link_clockMhz =
+				status->link_info.nvlink_link_clockKHz / 1000;
+	status->link_info.nvlink_ref_clk_speedMhz =
+			status->link_info.nvlink_ref_clk_speedKHz / 1000;
+	status->link_info.nvlink_common_clock_speedMhz =
+			status->link_info.nvlink_common_clock_speedKHz / 1000;
+
+	status->link_info.nvlink_ref_clk_type =
+				TEGRA_CTRL_NVLINK_REFCLK_TYPE_NVHS;
+
+	return 0;
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct nvlink_device *ndev = file->private_data;
 	struct nvlink_caps *caps;
+	struct nvlink_status *status;
 	int ret = 0;
 
 	if (!ndev) {
@@ -130,6 +249,28 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 			ret = -EFAULT;
 		}
 		kfree(caps);
+		break;
+
+	case TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_STATUS:
+		status = devm_kzalloc(ndev->dev, sizeof(struct nvlink_status),
+					GFP_KERNEL);
+		if (!status) {
+			nvlink_err("Can't allocate memory for nvlink status");
+			return -ENOMEM;
+		}
+
+		ret = t19x_nvlink_get_status(ndev, status);
+		if (ret < 0) {
+			nvlink_err("nvlink get status failed");
+			kfree(status);
+			break;
+		}
+		ret = copy_to_user((void __user *)arg, status, sizeof(*status));
+		if (ret) {
+			nvlink_err("Error while copying status to userspace");
+			ret = -EFAULT;
+		}
+		kfree(status);
 		break;
 
 	default:

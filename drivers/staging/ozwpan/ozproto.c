@@ -4,6 +4,7 @@
  * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
  * -----------------------------------------------------------------------------
  */
+#include <linux/completion.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/timer.h>
@@ -785,7 +786,7 @@ static void pd_stop_all_for_device(struct net_device *net_dev)
 	}
 	spin_unlock_bh(&g_polling_lock);
 	while (!list_empty(&h)) {
-		INIT_COMPLETION(oz_pd_done);
+		reinit_completion(&oz_pd_done);
 		pd = list_first_entry(&h, struct oz_pd, link);
 		oz_pd_stop(pd);
 		oz_pd_put(pd);

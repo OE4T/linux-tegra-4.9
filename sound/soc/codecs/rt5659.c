@@ -1434,27 +1434,59 @@ static void rt5659_jack_detect_intel_hd_header(struct work_struct *work)
 {
 	struct rt5659_priv *rt5659 =
 		container_of(work, struct rt5659_priv, jack_detect_work.work);
-	int report;
 	unsigned int value;
-	bool hp_flag;
+	bool hp_flag, mic_flag;
 
+	/* headphone jack */
 	regmap_read(rt5659->regmap, RT5659_GPIO_STA, &value);
 	hp_flag = (!(value & 0x8)) ? true : false;
 
 	if (hp_flag != rt5659->hp_state) {
 		rt5659->hp_state = hp_flag;
+
 		if (hp_flag) {
-			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_1, 0x10,
-                                0x0);
-			report = SND_JACK_HEADPHONE;
+			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_1,
+				0x10, 0x0);
+			rt5659->jack_type |= SND_JACK_HEADPHONE;
 		} else {
-			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_1, 0x10,
-                                0x10);
-			report = 0;
+			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_1,
+				0x10, 0x10);
+
+			rt5659->jack_type = rt5659->jack_type &
+				(~SND_JACK_HEADPHONE);
 		}
 
-		rt5659->jack_type = report;
-		snd_soc_jack_report(rt5659->hs_jack, report, SND_JACK_HEADPHONE);
+		snd_soc_jack_report(rt5659->hs_jack, rt5659->jack_type,
+			SND_JACK_HEADPHONE);
+	}
+
+	/* for mic jack */
+	regmap_read(rt5659->regmap, RT5659_4BTN_IL_CMD_1, &value);
+	regmap_write(rt5659->regmap, RT5659_4BTN_IL_CMD_1, value);
+	regmap_read(rt5659->regmap, RT5659_4BTN_IL_CMD_1, &value);
+	mic_flag = (value & 0x2000) ? true : false;
+
+	if (mic_flag != rt5659->mic_state) {
+		rt5659->mic_state = mic_flag;
+		if (mic_flag) {
+			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
+				0x2, 0x2);
+			regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
+                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P,
+                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P);
+			rt5659->jack_type |= SND_JACK_MICROPHONE;
+		} else {
+			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
+				0x2, 0x0);
+			regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
+                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P, 0);
+
+			rt5659->jack_type = rt5659->jack_type
+				& (~SND_JACK_MICROPHONE);
+		}
+
+		snd_soc_jack_report(rt5659->hs_jack, rt5659->jack_type,
+			SND_JACK_HEADSET);
 	}
 }
 
@@ -3801,9 +3833,46 @@ static int rt5659_set_bias_level(struct snd_soc_codec *codec,
 static int rt5659_probe(struct snd_soc_codec *codec)
 {
 	struct rt5659_priv *rt5659 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
+	int value;
 
 	rt5659->codec = codec;
 
+	switch (rt5659->pdata.jd_src) {
+	case RT5659_JD_NULL:
+		regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_1,
+			RT5659_PWR_VREF2 | RT5659_PWR_MB,
+			RT5659_PWR_VREF2 | RT5659_PWR_MB);
+		msleep(20);
+		regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_1,
+			RT5659_PWR_FV2, RT5659_PWR_FV2);
+
+		manage_dapm_pin(rt5659->codec, "LDO2", true);
+		manage_dapm_pin(rt5659->codec, "MICBIAS1", true);
+		manage_dapm_pin(rt5659->codec, "Mic Det Power", true);
+		snd_soc_dapm_sync(dapm);
+
+		msleep(20);
+
+		regmap_update_bits(rt5659->regmap, RT5659_4BTN_IL_CMD_2,
+			RT5659_4BTN_IL_MASK, RT5659_4BTN_IL_EN);
+		regmap_read(rt5659->regmap, RT5659_4BTN_IL_CMD_1, &value);
+		regmap_write(rt5659->regmap, RT5659_4BTN_IL_CMD_1, value);
+
+		regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
+                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P,
+                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P);
+
+		snd_soc_dapm_sync(dapm);
+
+		regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
+                                RT5659_IL_IRQ_MASK, RT5659_IL_IRQ_EN);
+
+		break;
+
+	default:
+		break;
+	}
 	return 0;
 }
 
@@ -4360,6 +4429,9 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 	}
 
 	rt5659->hp_state = false;
+	rt5659->mic_state = false;
+	rt5659->codec = NULL;
+	rt5659->jack_type = 0;
 
 	switch (rt5659->pdata.jd_src) {
 	case RT5659_JD3:
@@ -4380,6 +4452,7 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 		regmap_write(rt5659->regmap, RT5659_EJD_CTRL_1,  0x70c0);
 		regmap_write(rt5659->regmap, RT5659_JD_CTRL_1,   0x2000);
 		regmap_write(rt5659->regmap, RT5659_IRQ_CTRL_1,  0x0040);
+
 		INIT_DELAYED_WORK(&rt5659->jack_detect_work,
 			rt5659_jack_detect_intel_hd_header);
 		break;
@@ -4407,6 +4480,7 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 		/* Enable IRQ output for GPIO1 pin any way */
 		regmap_update_bits(rt5659->regmap, RT5659_GPIO_CTRL_1,
 				   RT5659_GP1_PIN_MASK, RT5659_GP1_PIN_IRQ);
+
 	}
 
 	return snd_soc_register_codec(&i2c->dev, &soc_codec_dev_rt5659,

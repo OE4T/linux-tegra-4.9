@@ -1815,6 +1815,7 @@ struct rt5659_priv {
 
 	/* for intel HD header */
 	bool hp_state;
+	bool mic_state;
 
 };
 

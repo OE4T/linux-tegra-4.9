@@ -126,9 +126,9 @@ lr	.req	x30		// link register
 /*
  * Vector entry
  */
-	 .macro	ventry	label
+	.macro ventry, el, label, regsize = 64
 	.align	7
-	b	\label
+	b	el\()\el\()_\label
 	.endm
 
 /*

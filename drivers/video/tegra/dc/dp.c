@@ -164,8 +164,9 @@ static int tegra_dc_dp_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 		if (!pmsg->flags) {
 			len = pmsg->len;
 
-			status = tegra_dc_dpaux_i2c_write(dp->dpaux, pmsg->addr,
-						pmsg->buf, &len, &aux_stat);
+			status = tegra_dc_dpaux_i2c_write(dp->dpaux,
+					DPAUX_DP_AUXCTL_CMD_MOTWR,
+					pmsg->addr, pmsg->buf, &len, &aux_stat);
 			if (status) {
 				dev_err(&dp->dc->ndev->dev,
 					"dp: Failed for I2C write"
@@ -745,7 +746,8 @@ static ssize_t dpaux_i2c_data_set(struct file *file,
 		goto free_mem;
 	}
 
-	ret = tegra_dc_dpaux_i2c_write(dp->dpaux, addr, data, &size, &aux_stat);
+	ret = tegra_dc_dpaux_i2c_write(dp->dpaux, DPAUX_DP_AUXCTL_CMD_I2CWR,
+					addr, data, &size, &aux_stat);
 	if (!ret)
 		ret = count;
 	else

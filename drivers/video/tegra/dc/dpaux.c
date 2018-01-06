@@ -1,7 +1,7 @@
 /*
  * dpaux.c: dpaux function definitions.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -259,8 +259,8 @@ int tegra_dc_dpaux_i2c_read(struct tegra_dc_dpaux_data *dpaux, u32 i2c_addr,
 }
 
 /* TODO: Handle update status scenario and size > 16 bytes*/
-int tegra_dc_dpaux_i2c_write(struct tegra_dc_dpaux_data *dpaux, u32 i2c_addr,
-				u8 *data, u32 *size, u32 *aux_stat)
+int tegra_dc_dpaux_i2c_write(struct tegra_dc_dpaux_data *dpaux, u32 cmd,
+			u32 i2c_addr, u8 *data, u32 *size, u32 *aux_stat)
 {
 	int ret = 0;
 
@@ -281,9 +281,8 @@ int tegra_dc_dpaux_i2c_write(struct tegra_dc_dpaux_data *dpaux, u32 i2c_addr,
 	mutex_lock(&dpaux->lock);
 	tegra_dpaux_get(dpaux);
 
-	ret = tegra_dc_dpaux_write_chunk_locked(dpaux,
-			DPAUX_DP_AUXCTL_CMD_MOTWR,
-			i2c_addr, data, size, aux_stat);
+	ret = tegra_dc_dpaux_write_chunk_locked(dpaux, cmd, i2c_addr, data,
+						size, aux_stat);
 
 	tegra_dpaux_put(dpaux);
 	mutex_unlock(&dpaux->lock);

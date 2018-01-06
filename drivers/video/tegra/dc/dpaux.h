@@ -1,7 +1,7 @@
 /*
  * dpaux.h: dpaux headers.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -71,8 +71,8 @@ int tegra_dc_dpaux_write(struct tegra_dc_dpaux_data *dpaux, u32 cmd, u32 addr,
 	u8 *data, u32 *size, u32 *aux_stat);
 int tegra_dc_dpaux_i2c_read(struct tegra_dc_dpaux_data *dpaux, u32 i2c_addr,
 				u8 *data, u32 *size, u32 *aux_stat);
-int tegra_dc_dpaux_i2c_write(struct tegra_dc_dpaux_data *dpaux, u32 i2c_addr,
-				u8 *data, u32 *size, u32 *aux_stat);
+int tegra_dc_dpaux_i2c_write(struct tegra_dc_dpaux_data *dpaux, u32 cmd,
+			u32 i2c_addr, u8 *data, u32 *size, u32 *aux_stat);
 struct clk *tegra_dpaux_get_clk(struct tegra_dc_dpaux_data *dpaux,
 				const char *clk_name);
 #endif

@@ -1,4 +1,6 @@
-menu "Special HID drivers"
+append_menu "HID support"
+
+menu "SHIELD accessory HID drivers"
 
 config HID_SHIELD_BLAKE
 	tristate "SHIELD game controller"
@@ -11,5 +13,7 @@ config HID_SHIELD_REMOTE
 	depends on USB_HID
 	---help---
 	Support for NVIDIA SHIELD remote control.
+
+endmenu
 
 endmenu

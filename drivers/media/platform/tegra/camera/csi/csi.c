@@ -31,7 +31,12 @@
 #include "mipical/mipi_cal.h"
 #include "linux/nvhost.h"
 #include <linux/version.h>
+
 #include <asm/barrier.h>
+
+#include "linux/nvhost_nvcsi_ioctl.h"
+#include "nvcsi/nvcsi.h"
+#include "nvcsi/deskew.h"
 
 #define DEFAULT_NUM_TPG_CHANNELS 6
 

@@ -3,7 +3,7 @@
  *
  * Tegra T194 Graphics Host NVCSI 2
  *
- * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,8 @@
 
 #ifndef __NVHOST_NVCSI_T194_H__
 #define __NVHOST_NVCSI_T194_H__
+
+#include "deskew.h"
 
 struct file_operations;
 struct platform_device;

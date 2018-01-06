@@ -6,7 +6,8 @@ ccflags-y += -I$(srctree.nvidia)/include
 ccflags-y += -Werror
 
 nvhost-nvcsi-objs  = \
-		nvcsi.o
+		nvcsi.o \
+		deskew.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-nvcsi.o
 

@@ -41,7 +41,10 @@
 #include <trace/events/camera_common.h>
 
 #include "mipical/mipi_cal.h"
+
+#include "linux/nvhost_nvcsi_ioctl.h"
 #include "nvcsi/nvcsi.h"
+#include "nvcsi/deskew.h"
 
 #define TPG_CSI_GROUP_ID	10
 

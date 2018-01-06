@@ -34,7 +34,10 @@ typedef struct {
 
 static inline bool arm64_kernel_unmapped_at_el0(void)
 {
-	return IS_ENABLED(CONFIG_UNMAP_KERNEL_AT_EL0);
+	/* TODO: when cpus_have_const_cap is added, change this invocation of
+	 * cpus_have_cap to it */
+	return IS_ENABLED(CONFIG_UNMAP_KERNEL_AT_EL0) &&
+	       cpus_have_cap(ARM64_UNMAP_KERNEL_AT_EL0);
 }
 
 extern void paging_init(void);

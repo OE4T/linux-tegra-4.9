@@ -23,6 +23,7 @@
 #ifndef __ASM_ASSEMBLER_H
 #define __ASM_ASSEMBLER_H
 
+#include <asm/alternative.h>
 #include <asm/asm-offsets.h>
 #include <asm/cpufeature.h>
 #include <asm/page.h>
@@ -129,6 +130,7 @@ lr	.req	x30		// link register
 	.macro ventry, el, label, regsize = 64
 	.align	7
 #ifdef CONFIG_UNMAP_KERNEL_AT_EL0
+alternative_if ARM64_UNMAP_KERNEL_AT_EL0
        .if     \el == 0
        .if     \regsize == 64
        mrs     x30, tpidrro_el0
@@ -137,6 +139,7 @@ lr	.req	x30		// link register
        mov     x30, xzr
        .endif
        .endif
+alternative_else_nop_endif
 #endif
 	b	el\()\el\()_\label
 	.endm

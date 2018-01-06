@@ -260,6 +260,11 @@
 		status = "disabled";
 	};
 
+	cpuidle {
+		compatible = "nvidia,tegra19x-cpuidle";
+		status = "okay";
+	};
+
 	thermal-zones {
 		status = "disabled";
 	};

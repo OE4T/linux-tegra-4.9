@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1064,4 +1064,13 @@ clean:
 	debugfs_remove_recursive(root);
 
 	return NULL;
+}
+
+struct dentry *tegra_bpmp_debugfs_add_file(char *name,
+	umode_t mode, void *data, const struct file_operations *fops)
+{
+	if (!bpmp_root)
+		return NULL;
+
+	return debugfs_create_file(name, mode, bpmp_root, data, fops);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -571,3 +571,41 @@ int tegra_bpmp_clk_init(struct device_node *np, int staged)
 
 	return r;
 }
+
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#include "clk.h"
+
+static int clk_init_set(void *data, u64 val)
+{
+	int i;
+	static struct clk *c;
+	struct of_phandle_args clkspec;
+	struct clk_data *clk_data = data;
+
+	if (!val)
+		return 0;
+
+	for (i = 0; i < clk_data->cell.clk_num; i++) {
+		clkspec.args[0] = i;
+
+		c = tegra_of_clk_src_onecell_get(&clkspec, data);
+		if (IS_ERR_OR_NULL(c))
+			continue;
+
+		tegra_clk_debugfs_add(c);
+	}
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(clk_init_fops, NULL, clk_init_set, "%llu\n");
+
+static int __init bpmp_clk_debug_init(void)
+{
+	if (!clk_data.staged && clk_data.cell.clks)
+		tegra_bpmp_debugfs_add_file("clk_init", S_IWUSR, &clk_data,
+					    &clk_init_fops);
+	return 0;
+}
+late_initcall(bpmp_clk_debug_init);
+
+#endif

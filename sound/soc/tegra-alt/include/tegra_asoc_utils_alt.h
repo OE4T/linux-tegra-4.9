@@ -2,7 +2,7 @@
  * tegra_alt_asoc_utils.h - Definitions for MCLK and DAP Utility driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -49,11 +49,14 @@ enum tegra_asoc_utils_clkrate {
 	MAX_NUM_RATES,
 };
 
-/* These values are copied from WiredAccessoryObserver */
+/* Note: WiredAccessoryManager.java monitors these h2w switch values,
+ * these values should not be changed independently.
+ */
 enum headset_state {
-	BIT_NO_HEADSET = 0,
-	BIT_HEADSET = (1 << 0),
-	BIT_HEADSET_NO_MIC = (1 << 1),
+	SWITCH_STATE_NONE = 0,
+	SWITCH_STATE_HS,
+	SWITCH_STATE_HP,
+	SWITCH_STATE_MIC,
 };
 
 struct tegra_asoc_audio_clock_info {

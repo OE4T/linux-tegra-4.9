@@ -339,6 +339,7 @@ static const char * const tegra_machine_jack_state_text[] = {
 	"None",
 	"HS",
 	"HP",
+	"MIC",
 };
 static struct switch_dev tegra_machine_headset_switch = {
 		.name = "h2w",
@@ -538,13 +539,18 @@ static int tegra_machine_codec_get_jack_state(struct snd_kcontrol *kcontrol,
 static int tegra_machine_codec_put_jack_state(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	if (ucontrol->value.integer.value[0] == 0)
-		switch_set_state(&tegra_machine_headset_switch, BIT_NO_HEADSET);
-	else if (ucontrol->value.integer.value[0] == 1)
-		switch_set_state(&tegra_machine_headset_switch, BIT_HEADSET);
-	else if (ucontrol->value.integer.value[0] == 2)
+	if (ucontrol->value.integer.value[0] == SWITCH_STATE_NONE)
 		switch_set_state(&tegra_machine_headset_switch,
-			BIT_HEADSET_NO_MIC);
+			SWITCH_STATE_NONE);
+	else if (ucontrol->value.integer.value[0] == SWITCH_STATE_HS)
+		switch_set_state(&tegra_machine_headset_switch,
+			SWITCH_STATE_HS);
+	else if (ucontrol->value.integer.value[0] == SWITCH_STATE_HP)
+		switch_set_state(&tegra_machine_headset_switch,
+			SWITCH_STATE_HP);
+	else if (ucontrol->value.integer.value[0] == SWITCH_STATE_MIC)
+		switch_set_state(&tegra_machine_headset_switch,
+			SWITCH_STATE_MIC);
 	return 0;
 }
 
@@ -555,7 +561,7 @@ static int tegra_machine_jack_notifier(struct notifier_block *self,
 	struct snd_soc_card *card = jack->card;
 
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-	enum headset_state state = BIT_NO_HEADSET;
+	enum headset_state state = SWITCH_STATE_NONE;
 	static bool button_pressed;
 	struct snd_soc_pcm_runtime *rtd;
 
@@ -581,15 +587,17 @@ static int tegra_machine_jack_notifier(struct notifier_block *self,
 
 	switch (jack->status) {
 	case SND_JACK_HEADPHONE:
-		state = BIT_HEADSET_NO_MIC;
+		state = SWITCH_STATE_HP;
 		break;
 	case SND_JACK_HEADSET:
-		state = BIT_HEADSET;
+		state = SWITCH_STATE_HS;
 		break;
 	case SND_JACK_MICROPHONE:
-		/* mic: would not report */
+		/* special case for intel HDA header */
+		state = SWITCH_STATE_MIC;
+		break;
 	default:
-		state = BIT_NO_HEADSET;
+		state = SWITCH_STATE_NONE;
 	}
 
 	dev_dbg(card->dev, "switch state to %x\n", state);

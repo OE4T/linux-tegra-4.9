@@ -24105,6 +24105,27 @@ extern ULONG eqos_base_addr;
 	DMA_BMR_WR(v);\
 } while (0)
 
+#define MAC_CSR_SW_CTRL_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x230))
+
+#define MAC_CSR_SW_CTRL_RD(data) do {\
+	(data) = ioread32((void *)MAC_CSR_SW_CTRL_OFFSET);\
+} while (0)
+
+#define MAC_CSR_SW_CTRL_WR(data) do {\
+	iowrite32(data, (void *)MAC_CSR_SW_CTRL_OFFSET);\
+} while (0)
+
+#define MAC_CSR_SEEN_WR_MASK (ULONG)(0xfffffeff)
+#define MAC_CSR_SEEN_MASK (ULONG)(0x1)
+
+#define MAC_CSR_SEEN_WR(data) do {\
+	ULONG v;\
+	MAC_CSR_SW_CTRL_RD(v);\
+	v = ((v & MAC_CSR_SEEN_WR_MASK)\
+	| (((data) & MAC_CSR_SEEN_MASK) << 8));\
+	MAC_CSR_SW_CTRL_WR(v);\
+} while (0)
+
 #define MTL_Q0RCR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd3c))
 
 #define MTL_Q0RCR_WR(data) do {\

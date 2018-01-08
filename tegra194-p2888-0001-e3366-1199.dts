@@ -20,19 +20,106 @@
 	nvidia,dtsfilename = __FILE__;
 	nvidia,dtbbuildtime = __DATE__, __TIME__;
 
-	arm64_ras {
+	chosen {
+		bootargs ="console=ttyS2,115200 earlycon=uart8250,mmio32,0x0c280000";
+		stdout-path = &uartc;
+		board-has-eeprom;
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "xavier-slt";
+		};
+	};
+
+	cpus {
+		cpu@1 {
+			status = "okay";
+		};
+
+		cpu@2 {
+			status = "okay";
+		};
+
+		cpu@3 {
+			status = "okay";
+		};
+
+		cpu@4 {
+			status = "okay";
+		};
+
+		cpu@5 {
+			status = "okay";
+		};
+
+		cpu@6 {
+			status = "okay";
+		};
+
+		cpu@7 {
+			status = "okay";
+		};
+
+		cpu_core_power_states {
+			c1 {
+				status = "disabled";
+			};
+
+			c6 {
+				status = "disabled";
+			};
+
+			c7 {
+				status = "disabled";
+			};
+		};
+	};
+
+	timer {
 		status = "okay";
 	};
 
-	carmel_ras {
+	serial@c280000 {
+		clock-frequency = <408000000>;
 		status = "okay";
+	};
+
+	interrupt-controller@3881000 {
+		status = "okay";
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0xc0000000>;
 	};
 
 	cbbnocaxi@2300000 {
 		status = "okay";
 	};
+
+	psci {
+		status = "disabled";
+	};
+
+	power-domain {
+		status = "disabled";
+	};
+
+	mods-simple-bus {
+		status = "disabled";
+	};
+
+	thermal-zones {
+		status = "disabled";
+	};
+
+	interrupt-controller {
+		status = "disabled";
+	};
+
+	eeprom-manager {
+		status = "disabled";
+	};
 };
-
-/* Last include for status overrides */
-#include "tegra194-p2888-0001-e3366-1199-minimal.dtsi"
-

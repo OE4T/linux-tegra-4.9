@@ -91,7 +91,8 @@ struct fifo_runlist_info_gk20a {
 	u32  reset_eng_bitmask;  /* engines to be reset during recovery */
 	bool stopped;
 	bool support_tsg;
-	struct nvgpu_mutex mutex; /* protect channel preempt and runlist update */
+	/* protect ch/tsg/runlist preempt & runlist update */
+	struct nvgpu_mutex runlist_lock;
 };
 
 enum {

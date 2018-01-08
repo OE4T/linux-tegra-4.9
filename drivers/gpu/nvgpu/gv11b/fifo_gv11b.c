@@ -817,7 +817,7 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	runlist_id = f->tsg[tsgid].runlist_id;
 	gk20a_dbg_fn("runlist_id %d", runlist_id);
 
-	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].mutex);
+	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].runlist_lock);
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
@@ -826,7 +826,7 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	if (!mutex_ret)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	nvgpu_mutex_release(&f->runlist_info[runlist_id].mutex);
+	nvgpu_mutex_release(&f->runlist_info[runlist_id].runlist_lock);
 
 	return ret;
 }
@@ -844,7 +844,7 @@ static int gv11b_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 	for (runlist_id = 0; runlist_id < g->fifo.max_runlists; runlist_id++) {
 		if (runlists_mask & fifo_runlist_preempt_runlist_m(runlist_id))
 			nvgpu_mutex_acquire(&g->fifo.
-				runlist_info[runlist_id].mutex);
+				runlist_info[runlist_id].runlist_lock);
 	}
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
@@ -861,7 +861,7 @@ static int gv11b_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 			g->fifo.runlist_info[runlist_id].reset_eng_bitmask =
 				 g->fifo.runlist_info[runlist_id].eng_bitmask;
 			nvgpu_mutex_release(&g->fifo.
-				runlist_info[runlist_id].mutex);
+				runlist_info[runlist_id].runlist_lock);
 		}
 	}
 
@@ -916,7 +916,7 @@ int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 
 	gk20a_dbg_fn("preempt id = %d, runlist_id = %d", id, runlist_id);
 
-	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].mutex);
+	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].runlist_lock);
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
@@ -925,7 +925,7 @@ int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 	if (!mutex_ret)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	nvgpu_mutex_release(&f->runlist_info[runlist_id].mutex);
+	nvgpu_mutex_release(&f->runlist_info[runlist_id].runlist_lock);
 
 	return ret;
 

@@ -249,7 +249,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 				goto clean_up_runlist;
 			}
 		}
-		nvgpu_mutex_init(&runlist->mutex);
+		nvgpu_mutex_init(&runlist->runlist_lock);
 
 		/* None of buffers is pinned if this value doesn't change.
 		    Otherwise, one of them (cur_buffer) must have been pinned. */
@@ -585,12 +585,12 @@ int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 
 	runlist = &f->runlist_info[runlist_id];
 
-	nvgpu_mutex_acquire(&runlist->mutex);
+	nvgpu_mutex_acquire(&runlist->runlist_lock);
 
 	ret = vgpu_fifo_update_runlist_locked(g, runlist_id, chid, add,
 					wait_for_finish);
 
-	nvgpu_mutex_release(&runlist->mutex);
+	nvgpu_mutex_release(&runlist->runlist_lock);
 	return ret;
 }
 

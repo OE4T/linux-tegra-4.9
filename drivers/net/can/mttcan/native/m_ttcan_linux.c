@@ -1,7 +1,7 @@
 /*
  * "drivers/staging/mttcan/m_ttcan_linux.c"
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * References are taken from "Bosch C_CAN controller" at
  * "drivers/net/can/c_can/c_can.c"
@@ -185,19 +185,22 @@ static const struct can_bittiming_const mttcan_data_bittiming_const = {
 	.brp_inc = 1,
 };
 
-static struct platform_device_id mttcan_id_table[] = {
-	[0] = {
-	       .name = "mttcan",
-	       .driver_data = 0,
-	       }, {
-		   }
+static const struct tegra_mttcan_soc_info t186_mttcan_sinfo = {
+	.set_can_core_clk = false,
+	.can_core_clk_rate = 40000000,
+	.can_clk_rate = 40000000,
 };
 
-MODULE_DEVICE_TABLE(platform, mttcan_id_table);
+static const struct tegra_mttcan_soc_info t194_mttcan_sinfo = {
+	.set_can_core_clk = true,
+	.can_core_clk_rate = 50000000,
+	.can_clk_rate = 200000000,
+};
 
 static const struct of_device_id mttcan_of_table[] = {
-	{ .compatible = "bosch,mttcan", .data = &mttcan_id_table[0]},
-	{ /* sentinel */ },
+	{ .compatible = "nvidia,tegra186-mttcan", .data = &t186_mttcan_sinfo},
+	{ .compatible = "nvidia,tegra194-mttcan", .data = &t194_mttcan_sinfo},
+	{},
 };
 
 MODULE_DEVICE_TABLE(of, mttcan_of_table);
@@ -1397,20 +1400,37 @@ static int mttcan_prepare_clock(struct mttcan_priv *priv)
 
 	mttcan_pm_runtime_enable(priv);
 
-	err = clk_prepare_enable(priv->hclk);
-	if (err)
+	err = clk_prepare_enable(priv->can_clk);
+	if (err) {
+		dev_err(priv->device, "CAN clk enable failed\n");
 		return err;
-	err = clk_prepare_enable(priv->cclk);
-	if (err)
-		clk_disable_unprepare(priv->hclk);
+	}
+
+	err = clk_prepare_enable(priv->host_clk);
+	if (err) {
+		dev_err(priv->device, "CAN_HOST clk enable failed\n");
+		clk_disable_unprepare(priv->can_clk);
+	}
+
+	if (priv->sinfo->set_can_core_clk) {
+		err = clk_prepare_enable(priv->core_clk);
+		if (err) {
+			dev_err(priv->device, "CAN_CORE clk enable failed\n");
+			clk_disable_unprepare(priv->host_clk);
+			clk_disable_unprepare(priv->can_clk);
+		}
+	}
 
 	return err;
 }
 
 static void mttcan_unprepare_clock(struct mttcan_priv *priv)
 {
-	clk_disable_unprepare(priv->hclk);
-	clk_disable_unprepare(priv->cclk);
+	if (priv->sinfo->set_can_core_clk)
+		clk_disable_unprepare(priv->core_clk);
+
+	clk_disable_unprepare(priv->host_clk);
+	clk_disable_unprepare(priv->can_clk);
 }
 
 static void unregister_mttcan_dev(struct net_device *dev)
@@ -1424,62 +1444,94 @@ static void unregister_mttcan_dev(struct net_device *dev)
 static void free_mttcan_dev(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
+
 	netif_napi_del(&priv->napi);
 	free_candev(dev);
 }
 
-static int set_can_clk_src_and_rate(struct mttcan_priv *priv, ulong rate)
+static int set_can_clk_src_and_rate(struct mttcan_priv *priv)
 {
 	int ret  = 0;
+	unsigned long rate = priv->sinfo->can_clk_rate;
 	unsigned long new_rate = 0;
-	struct clk *hclk, *cclk;
-	struct clk *pclk;
+	struct clk *host_clk = NULL, *can_clk = NULL, *core_clk = NULL;
+	struct clk *pclk = NULL;
 	const char *pclk_name;
+
 	/* get the appropriate clk */
-	hclk = devm_clk_get(priv->device, "can_host");
-	cclk = devm_clk_get(priv->device, "can");
-	if (IS_ERR(hclk) || IS_ERR(cclk)) {
-		dev_err(priv->device, "no clock defined\n");
+	host_clk = devm_clk_get(priv->device, "can_host");
+	can_clk = devm_clk_get(priv->device, "can");
+	if (IS_ERR(host_clk) || IS_ERR(can_clk)) {
+		dev_err(priv->device, "no CAN clock defined\n");
 		return -ENODEV;
 	}
 
+	if (priv->sinfo->set_can_core_clk) {
+		core_clk = devm_clk_get(priv->device, "can_core");
+		if (IS_ERR(core_clk)) {
+			dev_err(priv->device, "no CAN_CORE clock defined\n");
+			return -ENODEV;
+		}
+	}
+
 	ret = of_property_read_string(priv->device->of_node,
-		"pll_source", &pclk_name);
+			"pll_source", &pclk_name);
 	if (ret) {
-		dev_warn(priv->device, "clk-source not changed\n");
-		goto pclk_exit;
+		dev_warn(priv->device, "pll source not defined\n");
+		return -ENODEV;
 	}
 
 	pclk = clk_get(priv->device, pclk_name);
 	if (IS_ERR(pclk)) {
-		dev_warn(priv->device, "clk-source cannot change\n");
-		goto pclk_exit;
+		dev_warn(priv->device, "%s clock not defined\n", pclk_name);
+		return -ENODEV;
 	}
 
-	ret = clk_set_parent(cclk, pclk);
+	ret = clk_set_parent(can_clk, pclk);
 	if (ret) {
-		dev_warn(priv->device, "unable to change parent clk\n");
-		goto pclk_exit;
+		dev_warn(priv->device, "unable to set CAN_CLK parent\n");
+		return -ENODEV;
 	}
 
-	new_rate = clk_round_rate(cclk, rate);
+	new_rate = clk_round_rate(can_clk, rate);
 	if (!new_rate)
-		dev_warn(priv->device, "incorrect clock rate\n");
+		dev_warn(priv->device, "incorrect CAN clock rate\n");
 
-pclk_exit:
-	ret = clk_set_rate(cclk, new_rate > 0 ? new_rate : rate);
+	ret = clk_set_rate(can_clk, new_rate > 0 ? new_rate : rate);
 	if (ret) {
-		dev_warn(priv->device, "unable to set clock rate\n");
+		dev_warn(priv->device, "unable to set CAN clock rate\n");
 		return -EINVAL;
 	}
-	ret = clk_set_rate(hclk, new_rate > 0 ? new_rate : rate);
+
+	ret = clk_set_rate(host_clk, new_rate > 0 ? new_rate : rate);
 	if (ret) {
-		dev_warn(priv->device, "unable to set clock rate\n");
+		dev_warn(priv->device, "unable to set CAN_HOST clock rate\n");
 		return -EINVAL;
 	}
-	priv->can.clock.freq = clk_get_rate(cclk);
-	priv->cclk = cclk;
-	priv->hclk = hclk;
+
+	if (priv->sinfo->set_can_core_clk) {
+		rate = priv->sinfo->can_core_clk_rate;
+		new_rate = clk_round_rate(core_clk, rate);
+		if (!new_rate)
+			dev_warn(priv->device, "incorrect CAN_CORE clock rate\n");
+
+		ret = clk_set_rate(core_clk, new_rate > 0 ? new_rate : rate);
+		if (ret) {
+			dev_warn(priv->device, "unable to set CAN_CORE clock rate\n");
+			return -EINVAL;
+		}
+	}
+
+	priv->can_clk = can_clk;
+	priv->host_clk = host_clk;
+
+	if (priv->sinfo->set_can_core_clk) {
+		priv->core_clk = core_clk;
+		priv->can.clock.freq = clk_get_rate(core_clk);
+	} else {
+		priv->can.clock.freq = clk_get_rate(can_clk);
+	}
+
 	return 0;
 }
 
@@ -1495,13 +1547,12 @@ static int mttcan_probe(struct platform_device *pdev)
 	struct resource *ext_res;
 	struct reset_control *rstc;
 	struct resource *mesg_ram, *ctrl_res;
-	const struct of_device_id *match;
+	const struct tegra_mttcan_soc_info *sinfo;
 	struct device_node *np;
 
-	match = of_match_device(mttcan_of_table, &pdev->dev);
-	if (!match) {
-		dev_err(&pdev->dev, "Failed to find matching dt id\n");
-		dev_err(&pdev->dev, "probe failed\n");
+	sinfo = of_device_get_match_data(&pdev->dev);
+	if (!sinfo) {
+		dev_err(&pdev->dev, "No device match found\n");
 		return -EINVAL;
 	}
 
@@ -1527,6 +1578,7 @@ static int mttcan_probe(struct platform_device *pdev)
 	}
 
 	priv = netdev_priv(dev);
+	priv->sinfo = sinfo;
 
 	/* mem0 Controller Register Space
 	 * mem1 Controller Extra Registers Space
@@ -1540,6 +1592,7 @@ static int mttcan_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Resource allocation failed\n");
 		goto exit_free_can;
 	}
+
 	rstc = devm_reset_control_get(&pdev->dev, "can");
 	if (IS_ERR(rstc)) {
 		dev_err(&pdev->dev, "Missing controller reset\n");
@@ -1562,7 +1615,7 @@ static int mttcan_probe(struct platform_device *pdev)
 	dev->irq = irq;
 	priv->device = &pdev->dev;
 
-	if (set_can_clk_src_and_rate(priv, 40000000))
+	if (set_can_clk_src_and_rate(priv))
 		goto exit_free_device;
 
 	/* set device-tree properties */
@@ -1679,6 +1732,7 @@ static int mttcan_remove(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct mttcan_priv *priv = netdev_priv(dev);
+
 	if (priv->poll)
 		cancel_delayed_work_sync(&priv->can_work);
 
@@ -1763,7 +1817,6 @@ static struct platform_driver mttcan_plat_driver = {
 	.suspend = mttcan_suspend,
 	.resume = mttcan_resume,
 #endif
-	.id_table = mttcan_id_table,
 };
 
 module_platform_driver(mttcan_plat_driver);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -71,6 +71,12 @@
 /* block period in ms */
 #define TX_BLOCK_PERIOD 200
 
+struct tegra_mttcan_soc_info {
+	bool set_can_core_clk;
+	unsigned long can_core_clk_rate;
+	unsigned long can_clk_rate;
+};
+
 struct can_gpio {
 	int gpio;
 	int active_low;
@@ -79,11 +85,12 @@ struct can_gpio {
 struct mttcan_priv {
 	struct can_priv can;
 	struct ttcan_controller *ttcan;
+	const struct tegra_mttcan_soc_info *sinfo;
 	struct delayed_work can_work;
 	struct napi_struct napi;
 	struct net_device *dev;
 	struct device *device;
-	struct clk *hclk, *cclk;
+	struct clk *can_clk, *host_clk, *core_clk;
 	struct can_gpio gpio_can_en;
 	struct can_gpio gpio_can_stb;
 	struct timer_list timer;

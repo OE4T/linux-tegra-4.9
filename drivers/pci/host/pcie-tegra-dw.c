@@ -47,6 +47,7 @@
 #define APPL_INTR_EN_L0_0			0x8
 #define APPL_INTR_EN_L0_0_SYS_MSI_INTR_EN	BIT(31)
 #define APPL_INTR_EN_L0_0_SYS_INTR_EN		BIT(30)
+#define APPL_INTR_EN_L0_0_CDM_REG_CHK_INT_EN	BIT(19)
 #define APPL_INTR_EN_L0_0_AXI_APB_ERR_INT_EN	BIT(17)
 #define APPL_INTR_EN_L0_0_CPL_TIMEOUT_INT_EN	BIT(13)
 #define APPL_INTR_EN_L0_0_INT_INT_EN		BIT(8)
@@ -55,6 +56,7 @@
 #define APPL_INTR_EN_L0_0_LINK_STATE_INT_EN	BIT(0)
 
 #define APPL_INTR_STATUS_L0			0xC
+#define APPL_INTR_STATUS_L0_CDM_REG_CHK_INT	BIT(18)
 #define APPL_INTR_STATUS_L0_INT_INT		BIT(8)
 #define APPL_INTR_STATUS_L0_LINK_STATE_INT	BIT(0)
 
@@ -88,6 +90,16 @@
 #define APPL_INTR_STATUS_L1_14			0x78
 #define APPL_INTR_STATUS_L1_15			0x7C
 #define APPL_INTR_STATUS_L1_17			0x88
+
+#define APPL_INTR_EN_L1_18			0x90
+#define APPL_INTR_EN_L1_18_CDM_REG_CHK_CMPLT		BIT(2)
+#define APPL_INTR_EN_L1_18_CDM_REG_CHK_CMP_ERR		BIT(1)
+#define APPL_INTR_EN_L1_18_CDM_REG_CHK_LOGIC_ERR	BIT(0)
+
+#define APPL_INTR_STATUS_L1_18			0x94
+#define APPL_INTR_STATUS_L1_18_CDM_REG_CHK_CMPLT	BIT(2)
+#define APPL_INTR_STATUS_L1_18_CDM_REG_CHK_CMP_ERR	BIT(1)
+#define APPL_INTR_STATUS_L1_18_CDM_REG_CHK_LOGIC_ERR	BIT(0)
 
 #define APPL_APPL_DEBUG				0xD0
 #define APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT	BIT(21)
@@ -185,6 +197,15 @@
 #define GEN3_RELATED_OFF_GEN3_EQ_DISABLE	BIT(16)
 #define GEN3_RELATED_OFF_RATE_SHADOW_SEL_SHIFT	24
 #define GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK	GENMASK(25, 24)
+
+#define PORT_LOGIC_PL_CHK_REG_CONTROL_STATUS		0xB20
+#define PORT_LOGIC_PL_CHK_REG_CHK_REG_START		BIT(0)
+#define PORT_LOGIC_PL_CHK_REG_CHK_REG_CONTINUOUS	BIT(1)
+#define PORT_LOGIC_PL_CHK_REG_CHK_REG_COMPARISON_ERROR	BIT(16)
+#define PORT_LOGIC_PL_CHK_REG_CHK_REG_LOGIC_ERROR	BIT(17)
+#define PORT_LOGIC_PL_CHK_REG_CHK_REG_COMPLETE		BIT(18)
+
+#define PORT_LOGIC_PL_CHK_REG_ERR_ADDR			0xB28
 
 #define CAP_SPCIE_CAP_OFF	0x154
 #define CAP_SPCIE_CAP_OFF_DSP_TX_PRESET0_MASK	GENMASK(3, 0)
@@ -306,6 +327,7 @@ struct tegra_pcie_dw {
 
 	u32 num_lanes;
 	u32 max_speed;
+	bool cdm_check;
 
 	struct regulator *pex_ctl_reg;
 };
@@ -399,7 +421,7 @@ static void check_apply_link_bad_war(struct pcie_port *pp)
 
 static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 {
-	u32 val = 0, bit = 0;
+	u32 val = 0, bit = 0, tmp = 0;
 	int handled = 0;
 	struct pcie_port *pp = (struct pcie_port *)arg;
 	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
@@ -471,6 +493,30 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 			dw_pcie_cfg_write(pp->dbi_base + PORT_LOGIC_GEN2_CTRL,
 					  4, val);
 		}
+	}
+	val = readl(pcie->appl_base + APPL_INTR_STATUS_L0);
+	if (val & APPL_INTR_STATUS_L0_CDM_REG_CHK_INT) {
+		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_18);
+		dw_pcie_cfg_read(pp->dbi_base +
+				 PORT_LOGIC_PL_CHK_REG_CONTROL_STATUS, 4, &tmp);
+		dev_dbg(pp->dev, "APPL_INTR_STATUS_L1_18 = 0x%08X\n", val);
+		if (val & APPL_INTR_STATUS_L1_18_CDM_REG_CHK_CMPLT) {
+			dev_err(pp->dev, "CDM check complete\n");
+			tmp |= PORT_LOGIC_PL_CHK_REG_CHK_REG_COMPLETE;
+		}
+		if (val & APPL_INTR_STATUS_L1_18_CDM_REG_CHK_CMP_ERR) {
+			dev_err(pp->dev, "CDM comparison mismatch\n");
+			tmp |= PORT_LOGIC_PL_CHK_REG_CHK_REG_COMPARISON_ERROR;
+		}
+		if (val & APPL_INTR_STATUS_L1_18_CDM_REG_CHK_LOGIC_ERR) {
+			dev_err(pp->dev, "CDM Logic error\n");
+			tmp |= PORT_LOGIC_PL_CHK_REG_CHK_REG_LOGIC_ERROR;
+		}
+		dw_pcie_cfg_write(pp->dbi_base +
+				 PORT_LOGIC_PL_CHK_REG_CONTROL_STATUS, 4, tmp);
+		dw_pcie_cfg_read(pp->dbi_base +
+				 PORT_LOGIC_PL_CHK_REG_ERR_ADDR, 4, &tmp);
+		dev_err(pp->dev, "CDM Error Address Offset = 0x%08X\n", tmp);
 	}
 
 	return IRQ_RETVAL(handled);
@@ -1237,6 +1283,17 @@ static void tegra_pcie_enable_system_interrupts(struct pcie_port *pp)
 	val |= APPL_INTR_EN_L1_0_0_LINK_REQ_RST_NOT_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_0_0);
 
+	if (pcie->cdm_check) {
+		val = readl(pcie->appl_base + APPL_INTR_EN_L0_0);
+		val |= APPL_INTR_EN_L0_0_CDM_REG_CHK_INT_EN;
+		writel(val, pcie->appl_base + APPL_INTR_EN_L0_0);
+
+		val = readl(pcie->appl_base + APPL_INTR_EN_L1_18);
+		val |= APPL_INTR_EN_L1_18_CDM_REG_CHK_CMP_ERR;
+		val |= APPL_INTR_EN_L1_18_CDM_REG_CHK_LOGIC_ERR;
+		writel(val, pcie->appl_base + APPL_INTR_EN_L1_18);
+	}
+
 	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL, 4, &val);
 	pcie->init_link_width = ((val >> 16) & PCI_EXP_LNKSTA_NLW) >>
 				PCI_EXP_LNKSTA_NLW_SHIFT;
@@ -1498,6 +1555,17 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 		tmp |= 0x1 << CFG_TIMER_CTRL_ACK_NAK_SHIFT;
 		dw_pcie_cfg_write(pp->dbi_base +
 				  CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF, 4, tmp);
+	}
+
+	/* CDM check enable */
+	pcie->cdm_check = of_property_read_bool(np, "nvidia,cdm_check");
+	if (pcie->cdm_check) {
+		dw_pcie_cfg_read(pp->dbi_base +
+				 PORT_LOGIC_PL_CHK_REG_CONTROL_STATUS, 4, &tmp);
+		tmp |= PORT_LOGIC_PL_CHK_REG_CHK_REG_CONTINUOUS;
+		tmp |= PORT_LOGIC_PL_CHK_REG_CHK_REG_START;
+		dw_pcie_cfg_write(pp->dbi_base +
+				  PORT_LOGIC_PL_CHK_REG_CONTROL_STATUS, 4, tmp);
 	}
 
 	/* FPGA specific PHY initialization */

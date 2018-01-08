@@ -24,19 +24,6 @@
 #define CAMERA_I2C_MUX_BUS(x) (0x1E + x)
 
 / {
-	mipical@3990000 {
-		status = "okay";
-	};
-
-	tegra-hsp@b950000 {
-		status = "okay";
-	};
-
-	rtcpu@bc00000 {
-		status = "okay";
-		nvidia,cmd-timeout = <2000>;
-	};
-
 	gpio@2200000 {
 		camera-control-output-low {
 			gpio-hog;

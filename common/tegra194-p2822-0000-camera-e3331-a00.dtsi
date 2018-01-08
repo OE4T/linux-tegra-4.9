@@ -23,19 +23,6 @@
 
 /* TODO: Re-enable cam1 and cam2*/
 / {
-	mipical@3990000 {
-		status = "okay";
-	};
-
-	tegra-hsp@b950000 {
-		status = "okay";
-	};
-
-	rtcpu@bc00000 {
-		status = "okay";
-		nvidia,cmd-timeout = <2000>;
-	};
-
 	gpio@2200000 {
 		camera-control-output-low {
 			gpio-hog;

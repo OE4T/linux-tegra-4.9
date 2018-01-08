@@ -336,6 +336,12 @@ static void init_tlc_buffers(struct nvlink_device *ndev)
 	nvlw_nvltlc_writel(ndev, NVLTLC_RX_CTRL_BUFFER_READY, 0x1);
 }
 
+static void init_tlc(struct nvlink_device *ndev)
+{
+	init_tlc_buffers(ndev);
+	init_single_lane_params(ndev);
+}
+
 /*
  * mssnvlink_init:
  * Do the folllwing to initialize MSSNVLINK. This initialization is required to
@@ -437,7 +443,7 @@ int t19x_nvlink_endpt_enable_link(struct nvlink_device *ndev)
 		ret = go_to_safe_mode(ndev);
 		if (ret < 0)
 			goto fail;
-		init_tlc_buffers(ndev);
+		init_tlc(ndev);
 		mssnvlink_init(ndev);
 		program_scf_tom();
 		ret = nvlink_set_dev_state(ndev,
@@ -766,6 +772,9 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		nvlink_err("Error initializing device state to OFF");
 		goto err_dev_state;
 	}
+
+	/* Select Single-Lane (i.e 1/8th) mode policy */
+	ndev->link.sl_params = entry_100us_sl_params;
 
 	/* Fill in the link struct */
 	ndev->link.device_id = ndev->device_id;

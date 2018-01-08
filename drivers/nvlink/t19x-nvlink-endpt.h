@@ -65,6 +65,7 @@ struct tegra_nvlink_link {
 	void __iomem *mssnvlink_0_base;
 };
 
+extern const struct single_lane_params entry_100us_sl_params;
 extern const struct file_operations t19x_nvlink_endpt_ops;
 
 u32 nvlw_tioctrl_readl(struct nvlink_device *ndev, u32 reg);
@@ -94,6 +95,8 @@ int wait_for_reg_cond_nvlink(
 			u32 (*reg_readl)(struct nvlink_device *, u32),
 			u32 *reg_val);
 
+void minion_dump_pc_trace(struct nvlink_device *ndev);
+void minion_dump_registers(struct nvlink_device *ndev);
 int minion_boot(struct nvlink_device *ndev);
 int init_nvhs_phy(struct nvlink_device *ndev);
 int minion_send_cmd(struct nvlink_device *ndev,
@@ -105,6 +108,7 @@ void nvlink_enable_link_interrupts(struct nvlink_device *ndev);
 void minion_service_falcon_intr(struct nvlink_device *ndev);
 irqreturn_t t19x_nvlink_endpt_isr(int irq, void *dev_id);
 
+void init_single_lane_params(struct nvlink_device *ndev);
 int go_to_safe_mode(struct nvlink_device *ndev);
 u32 t19x_nvlink_get_link_state(struct nvlink_device *ndev);
 u32 t19x_nvlink_get_link_mode(struct nvlink_device *ndev);

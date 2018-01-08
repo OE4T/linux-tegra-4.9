@@ -94,6 +94,8 @@ enum link_mode {
 
 enum tx_mode {
 	NVLINK_TX_HS,
+	NVLINK_TX_ENABLE_PM,
+	NVLINK_TX_DISABLE_PM,
 	NVLINK_TX_SINGLE_LANE,
 	NVLINK_TX_SAFE,
 	NVLINK_TX_OFF,
@@ -105,6 +107,8 @@ enum tx_mode {
 
 enum rx_mode {
 	NVLINK_RX_HS,
+	NVLINK_RX_ENABLE_PM,
+	NVLINK_RX_DISABLE_PM,
 	NVLINK_RX_SINGLE_LANE,
 	NVLINK_RX_SAFE,
 	NVLINK_RX_OFF,
@@ -157,6 +161,43 @@ struct remote_device_info {
 	u32 link_id;
 };
 
+/*
+ * This structure is used for storing parameters which describe the Single-Lane
+ * (SL / 1/8th) mode policy. A few acronyms that are used in this structure are
+ * as follows:
+ *    - SL = Single-Lane / 1/8th mode - sublink low power mode where only 1 of
+ *           the 8 lanes is used
+ *    - FB = Full Bandwidth (i.e. HISPEED mode)
+ *    - LP = Low Power (i.e. SL / 1/8th mode)
+ *    - IC = Idle Counter - the idle counter is used to monitor traffic per
+ *           sub-link
+ */
+struct single_lane_params {
+	/* Is Single-Lane (SL) mode enabled? */
+	bool enabled;
+
+	/* Idle counter increment in FB */
+	u16 fb_ic_inc;
+
+	/* Idle counter increment in LP */
+	u16 lp_ic_inc;
+
+	/* Idle counter decrement in FB */
+	u16 fb_ic_dec;
+
+	/* Idle counter decrement in LP */
+	u16 lp_ic_dec;
+
+	/* SL entry threshold */
+	u32 enter_thresh;
+
+	/* SL exit threshold */
+	u32 exit_thresh;
+
+	/* Idle counter saturation limit */
+	u32 ic_limit;
+};
+
 struct nvlink_link {
 	/* Instance# of link under same device */
 	u32 link_id;
@@ -188,6 +229,8 @@ struct nvlink_link {
 	u32 tlc_rx_err_status1;
 	/* Successful error recoveries */
 	u32 error_recoveries;
+	/* Parameters which describe the selected Single-Lane policy */
+	struct single_lane_params sl_params;
 };
 
 /* Structure representing the MINION ucode header */

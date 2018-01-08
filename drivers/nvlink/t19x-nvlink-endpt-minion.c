@@ -259,7 +259,7 @@ static void minion_print_ucode(struct nvlink_device *ndev)
  * Dump the MINION PC trace. This is useful for debugging MINION
  * errors/hangs/crashes.
  */
-static void minion_dump_pc_trace(struct nvlink_device *ndev)
+void minion_dump_pc_trace(struct nvlink_device *ndev)
 {
 	u32 trace_pc_count = 0;
 	u32 pc = 0;
@@ -315,7 +315,7 @@ static void minion_dump_pc_trace(struct nvlink_device *ndev)
  * Dump the MINION registers which are useful for debugging MINION
  * errors/hangs/crashes.
  */
-static void minion_dump_registers(struct nvlink_device *ndev)
+void minion_dump_registers(struct nvlink_device *ndev)
 {
 	nvlink_err("");
 	nvlink_err("MINION REGISTER DUMP - START");

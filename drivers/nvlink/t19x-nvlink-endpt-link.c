@@ -23,6 +23,17 @@
 
 #define SUBLINK_TIMEOUT_MS	200 /* msec */
 
+const struct single_lane_params entry_100us_sl_params = {
+	.enabled = true,
+	.fb_ic_inc = 1,
+	.lp_ic_inc = 1,
+	.fb_ic_dec = 1,
+	.lp_ic_dec = 65535,
+	.enter_thresh = 161100,
+	.exit_thresh = 0,
+	.ic_limit = 161100,
+};
+
 u32 t19x_nvlink_get_link_state(struct nvlink_device *ndev)
 {
 	return (nvlw_nvl_readl(ndev, NVL_LINK_STATE) &
@@ -418,6 +429,49 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 
 			break;
 
+		case NVLINK_TX_ENABLE_PM:
+			if (!(ndev->link.sl_params.enabled)) {
+				nvlink_err("Single-Lane (SL / 1/8th) mode is"
+					" disabled due to the selected SL"
+					" policy. Can't enable SL mode for the"
+					" TX sublink.");
+				status = -EPERM;
+				break;
+			}
+
+			nvlink_dbg("Enabling Single-Lane (1/8th) mode for the"
+				" TX sublink");
+			reg_val = nvlw_nvltlc_readl(ndev,
+						NVLTLC_TX_PWRM_IC_SW_CTRL);
+			reg_val |=
+				BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_SOFTWAREDESIRED);
+			reg_val &=
+				~BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_HARDWAREDISABLE);
+			reg_val |=
+				BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_COUNTSTART);
+			nvlw_nvltlc_writel(ndev,
+					NVLTLC_TX_PWRM_IC_SW_CTRL,
+					reg_val);
+
+			break;
+
+		case NVLINK_TX_DISABLE_PM:
+			nvlink_dbg("Disabling Single-Lane (1/8th) mode for the"
+				" TX sublink");
+			reg_val = nvlw_nvltlc_readl(ndev,
+						NVLTLC_TX_PWRM_IC_SW_CTRL);
+			reg_val &=
+				~BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_SOFTWAREDESIRED);
+			reg_val |=
+				BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_HARDWAREDISABLE);
+			reg_val &=
+				~BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_COUNTSTART);
+			nvlw_nvltlc_writel(ndev,
+					NVLTLC_TX_PWRM_IC_SW_CTRL,
+					reg_val);
+
+			break;
+
 		case NVLINK_TX_OFF:
 			/* TODO */
 			break;
@@ -438,6 +492,49 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 					" in RXCAL for link");
 				return status;
 			}
+			break;
+
+		case NVLINK_RX_ENABLE_PM:
+			if (!(ndev->link.sl_params.enabled)) {
+				nvlink_err("Single-Lane (SL / 1/8th) mode is"
+					" disabled due to the selected SL"
+					" policy. Can't enable SL mode for the"
+					" RX sublink.");
+				status = -EPERM;
+				break;
+			}
+
+			nvlink_dbg("Enabling Single-Lane (1/8th) mode for the"
+				" RX sublink");
+			reg_val = nvlw_nvltlc_readl(ndev,
+						NVLTLC_RX_PWRM_IC_SW_CTRL);
+			reg_val |=
+				BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_SOFTWAREDESIRED);
+			reg_val &=
+				~BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_HARDWAREDISABLE);
+			reg_val |=
+				BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_COUNTSTART);
+			nvlw_nvltlc_writel(ndev,
+					NVLTLC_RX_PWRM_IC_SW_CTRL,
+					reg_val);
+
+			break;
+
+		case NVLINK_RX_DISABLE_PM:
+			nvlink_dbg("Disabling Single-Lane (1/8th) mode for the"
+				" RX sublink");
+			reg_val = nvlw_nvltlc_readl(ndev,
+						NVLTLC_RX_PWRM_IC_SW_CTRL);
+			reg_val &=
+				~BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_SOFTWAREDESIRED);
+			reg_val |=
+				BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_HARDWAREDISABLE);
+			reg_val &=
+				~BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_COUNTSTART);
+			nvlw_nvltlc_writel(ndev,
+					NVLTLC_RX_PWRM_IC_SW_CTRL,
+					reg_val);
+
 			break;
 
 		default:
@@ -526,8 +623,114 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 
 		break;
 
-	/* TODO: other "case"s need to be implemented here */
+	case NVLINK_LINK_ENABLE_PM:
+		if (!(ndev->link.sl_params.enabled)) {
+			nvlink_err("Single-Lane (SL / 1/8th) mode is disabled"
+				" due to the selected SL policy. Can't enable"
+				" SL mode.");
+			status = -EPERM;
+			break;
+		}
 
+		if (link_state == NVL_LINK_STATE_STATE_ACTIVE) {
+			nvlink_dbg("Link is in Active state."
+				" Enabling Single-Lane (1/8th) mode.");
+
+			/* Enable Single-Lane mode for the TX sublink */
+			status = t19x_nvlink_set_sublink_mode(ndev,
+							false,
+							NVLINK_TX_ENABLE_PM);
+			if (status) {
+				nvlink_err("Failed to enable SL (1/8th) mode"
+					" for the TX sublink");
+				break;
+			}
+
+			/* Enable Single-Lane mode for the RX sublink */
+			status = t19x_nvlink_set_sublink_mode(ndev,
+							true,
+							NVLINK_RX_ENABLE_PM);
+			if (status) {
+				nvlink_err("Failed to enable SL (1/8th) mode"
+					" for the RX sublink");
+				break;
+			}
+
+			/*
+			 * This is the final piece for enabling Single-Lane (SL)
+			 * mode. We send the ENABLEPM command to the MINION to
+			 * instruct MINION to enter/exit SL mode as per the
+			 * programmed SL policy.
+			 */
+			status = minion_send_cmd(ndev,
+					MINION_NVLINK_DL_CMD_COMMAND_ENABLEPM,
+					0);
+			if (status < 0) {
+				nvlink_err("Error encountered while sending the"
+					" ENABLEPM command to the MINION");
+				nvlink_err("Failed to enable SL (1/8th) mode");
+				minion_dump_pc_trace(ndev);
+				minion_dump_registers(ndev);
+				break;
+			}
+		} else {
+			nvlink_err("Link is not in Active state."
+				" Single-Lane (1/8th) mode can only be enabled"
+				" from the Active state.");
+			status = -EPERM;
+			break;
+		}
+
+		break;
+
+	case NVLINK_LINK_DISABLE_PM:
+		if (link_state == NVL_LINK_STATE_STATE_ACTIVE) {
+			nvlink_dbg("Link is in Active state."
+				" Disabling Single-Lane (1/8th) mode.");
+
+			/* Disable Single-Lane mode for the TX sublink */
+			status = t19x_nvlink_set_sublink_mode(ndev,
+							false,
+							NVLINK_TX_DISABLE_PM);
+			if (status) {
+				nvlink_err("Failed to disable SL (1/8th) mode"
+					" for the TX sublink");
+				break;
+			}
+
+			/* Disable Single-Lane mode for the RX sublink */
+			status = t19x_nvlink_set_sublink_mode(ndev,
+							true,
+							NVLINK_RX_DISABLE_PM);
+			if (status) {
+				nvlink_err("Failed to disable SL (1/8th) mode"
+					" for the RX sublink");
+				break;
+			}
+
+			/* Disable Single-Lane mode in MINION */
+			status = minion_send_cmd(ndev,
+					MINION_NVLINK_DL_CMD_COMMAND_DISABLEPM,
+					0);
+			if (status < 0) {
+				nvlink_err("Error encountered while sending the"
+					" DISABLEPM command to the MINION");
+				nvlink_err("Failed to disable SL (1/8th) mode");
+				minion_dump_pc_trace(ndev);
+				minion_dump_registers(ndev);
+				break;
+			}
+		} else {
+			nvlink_err("Link is not in Active state."
+				" Single-Lane (1/8th) mode can only be disabled"
+				" from the Active state.");
+			status = -EPERM;
+			break;
+		}
+
+		break;
+
+	/* TODO: other "case"s need to be implemented here */
 	default:
 		nvlink_err("Invalid link mode specified");
 		status = -EINVAL;
@@ -763,9 +966,19 @@ int nvlink_transition_intranode_conn_to_safe(struct nvlink_intranode_conn *conn)
 		return ret;
 	}
 
-	/* TODO:
-	 * Disable Power Management before moving link out of Active
-	 */
+	/* Disable Single-Lane mode for device 0 */
+	ret = t19x_nvlink_set_link_mode(ndev0, NVLINK_LINK_DISABLE_PM);
+	if (ret) {
+		nvlink_err("Failed to disable SL (1/8th) mode for device 0");
+		return ret;
+	}
+
+	/* Disable Single-Lane mode for device 1 */
+	ret = t19x_nvlink_set_link_mode(ndev1, NVLINK_LINK_DISABLE_PM);
+	if (ret) {
+		nvlink_err("Failed to disable SL (1/8th) mode for device 1");
+		return ret;
+	}
 
 	/* Move both ends to SWCFG */
 	link0->link_ops.set_link_mode(ndev0, NVLINK_LINK_SAFE);
@@ -819,6 +1032,72 @@ int nvlink_transition_intranode_conn_to_safe(struct nvlink_intranode_conn *conn)
 	}
 
 	nvlink_dbg("Link in Safe mode!");
+	return ret;
+}
+
+/* Initialize TLC settings which dictate Single-Lane (1/8th) mode policy */
+void init_single_lane_params(struct nvlink_device *ndev)
+{
+	u32 reg_val = 0;
+	struct single_lane_params *sl_params = &ndev->link.sl_params;
+
+	if (!(sl_params->enabled)) {
+		nvlink_dbg("Single-Lane (1/8th) mode is disabled."
+			" Skipping single-lane related TLC initialization.");
+		return;
+	}
+
+	nvlink_dbg("Initializing Single-Lane parameters");
+
+	/* Idle counter increments */
+	reg_val = NVLTLC_TX_PWRM_IC_INC_FBINC_F(sl_params->fb_ic_inc) |
+		NVLTLC_TX_PWRM_IC_INC_LPINC_F(sl_params->lp_ic_inc);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_PWRM_IC_INC, reg_val);
+
+	/* Idle counter decrements */
+	reg_val = NVLTLC_TX_PWRM_IC_DEC_FBDEC_F(sl_params->fb_ic_dec) |
+		NVLTLC_TX_PWRM_IC_DEC_LPDEC_F(sl_params->lp_ic_dec);
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_PWRM_IC_DEC, reg_val);
+
+	/* Entry threshold */
+	nvlw_nvltlc_writel(ndev,
+			NVLTLC_TX_PWRM_IC_LP_ENTER_THRESHOLD,
+			sl_params->enter_thresh);
+
+	/* Exit threshold */
+	nvlw_nvltlc_writel(ndev,
+			NVLTLC_TX_PWRM_IC_LP_EXIT_THRESHOLD,
+			sl_params->exit_thresh);
+
+	/* Idle counter saturation limit */
+	nvlw_nvltlc_writel(ndev, NVLTLC_TX_PWRM_IC_LIMIT, sl_params->ic_limit);
+}
+
+/*
+ * Enable or disable Single-Lane (1/8th) mode based on the selected SL mode
+ * policy
+ */
+static int enable_single_lane_policy(struct nvlink_device *ndev)
+{
+	int ret = 0;
+
+	if (ndev->link.sl_params.enabled) {
+		ret = t19x_nvlink_set_link_mode(ndev, NVLINK_LINK_ENABLE_PM);
+		if (ret) {
+			nvlink_err("Failed to enable SL (1/8th) mode");
+			goto exit;
+		}
+		nvlink_dbg("SL (1/8th) mode enabled");
+	} else {
+		ret = t19x_nvlink_set_link_mode(ndev, NVLINK_LINK_DISABLE_PM);
+		if (ret) {
+			nvlink_err("Failed to disable SL (1/8th) mode");
+			goto exit;
+		}
+		nvlink_dbg("SL (1/8th) mode disabled");
+	}
+
+exit:
 	return ret;
 }
 
@@ -927,6 +1206,22 @@ int nvlink_train_intranode_conn_to_hs(struct nvlink_intranode_conn *conn)
 					NVLINK_TRANSITION_HS_TIMEOUT_MS);
 	if (ret < 0) {
 		nvlink_err("Unable to set links in high speed mode");
+		return ret;
+	}
+
+	/* Enable Single-Lane policy for device 0 */
+	ret = enable_single_lane_policy(ndev0);
+	if (ret) {
+		nvlink_err("Error encountered while enabling Single-Lane mode"
+			" policy for device 0");
+		return ret;
+	}
+
+	/* Enable Single-Lane policy for device 1 */
+	ret = enable_single_lane_policy(ndev1);
+	if (ret) {
+		nvlink_err("Error encountered while enabling Single-Lane mode"
+			" policy for device 1");
 		return ret;
 	}
 

@@ -3885,6 +3885,9 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 	/* PLSEN is set to 1 so that LPI is not initiated */
 	MAC_LPS_PLSEN_WR(1);
 
+	if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+		MAC_CSR_SEEN_WR(1);
+
 	/* update the MAC address */
 	MAC_MA0HR_WR(((pdata->dev->dev_addr[5] << 8) |
 		      (pdata->dev->dev_addr[4])));

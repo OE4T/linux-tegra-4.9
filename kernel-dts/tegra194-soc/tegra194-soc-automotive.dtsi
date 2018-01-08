@@ -202,7 +202,7 @@
 	};
 
 	tegra-cvnas {
-		status = "disabled";
+		status = "okay";
 	};
 
 	mc_sid@2c00000 {

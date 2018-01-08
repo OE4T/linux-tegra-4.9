@@ -1,7 +1,7 @@
 /*
  * tegra_machine_driver_mobile.c - Tegra ASoC Machine driver for mobile
  *
- * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1229,7 +1229,8 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	if (!pdata) {
 		dev_err(&pdev->dev,
 			"Can't allocate tegra_asoc_platform_data struct\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err_switch_unregister;
 	}
 
 	pdata->gpio_codec1 = pdata->gpio_codec2 = pdata->gpio_codec3 =
@@ -1243,13 +1244,13 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 					&pdev->dev,
 					card);
 	if (ret)
-		goto err_alloc_dai_link;
+		goto err_switch_unregister;
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
 			ret);
-		goto err_alloc_dai_link;
+		goto err_switch_unregister;
 	}
 
 	rtd = snd_soc_get_pcm_runtime(card, "rt565x-playback");
@@ -1274,6 +1275,10 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	return 0;
 
+err_switch_unregister:
+#ifdef CONFIG_SWITCH
+	tegra_alt_asoc_switch_unregister(&tegra_machine_headset_switch);
+#endif
 err_alloc_dai_link:
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
@@ -1287,6 +1292,9 @@ static int tegra_machine_driver_remove(struct platform_device *pdev)
 
 	snd_soc_unregister_card(card);
 
+#ifdef CONFIG_SWITCH
+	tegra_alt_asoc_switch_unregister(&tegra_machine_headset_switch);
+#endif
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
 

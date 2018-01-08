@@ -1190,6 +1190,8 @@ void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 		mode &= ~SDHCI_CTRL_DMA_MASK;
 		mode |= SDHCI_CTRL_ADMA3_CQE;
 		sdhci_writeb(host, mode, SDHCI_HOST_CONTROL);
+		sdhci_writew(host, SDHCI_MAKE_BLKSZ(SDHCI_DEFAULT_BOUNDARY_ARG,
+			     SDHCI_DEFAULT_BLK_SIZE), SDHCI_BLOCK_SIZE);
 	}
 
 	if ((cmd->flags & MMC_RSP_136) && (cmd->flags & MMC_RSP_BUSY)) {

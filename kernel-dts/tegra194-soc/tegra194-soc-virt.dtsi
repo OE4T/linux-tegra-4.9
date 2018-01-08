@@ -148,5 +148,39 @@
 			};
 		};
 	};
+
+	vse@15810000 {
+		compatible = "nvidia,tegra186-hv-vse";
+		#stream-id-cells = <1>;
+		se-engine-id = <0>;
+		status = "dislabled";
+	};
+
+	vse@15820000 {
+		compatible = "nvidia,tegra186-hv-vse";
+		#stream-id-cells = <1>;
+		se-engine-id = <1>;
+		status = "dislabled";
+	};
+
+	vse@15830000 {
+		compatible = "nvidia,tegra186-hv-vse";
+		#stream-id-cells = <1>;
+		se-engine-id = <2>;
+		status = "dislabled";
+	};
+
+	vse@15840000 {
+		compatible = "nvidia,tegra186-hv-vse";
+		#stream-id-cells = <1>;
+		se-engine-id = <3>;
+		status = "dislabled";
+	};
+
+	vse@3ae0000 {
+		compatible = "nvidia,tegra186-hv-vse";
+		se-engine-id = <4>;
+		status = "dislabled";
+	};
 };
 

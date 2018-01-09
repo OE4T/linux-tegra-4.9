@@ -102,7 +102,6 @@ int vgpu_get_attribute(u64 handle, u32 attrib, u32 *value);
 int vgpu_comm_sendrecv(struct tegra_vgpu_cmd_msg *msg, size_t size_in,
 		size_t size_out);
 
-int vgpu_gm20b_init_hal(struct gk20a *g);
 int vgpu_gp10b_init_hal(struct gk20a *g);
 
 int vgpu_init_gpu_characteristics(struct gk20a *g);

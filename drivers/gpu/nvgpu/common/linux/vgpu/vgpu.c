@@ -433,11 +433,6 @@ static int vgpu_init_hal(struct gk20a *g)
 	int err;
 
 	switch (ver) {
-	case GK20A_GPUID_GM20B:
-	case GK20A_GPUID_GM20B_B:
-		gk20a_dbg_info("gm20b detected");
-		err = vgpu_gm20b_init_hal(g);
-		break;
 	case NVGPU_GPUID_GP10B:
 		gk20a_dbg_info("gp10b detected");
 		err = vgpu_gp10b_init_hal(g);

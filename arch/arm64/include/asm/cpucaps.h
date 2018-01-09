@@ -35,14 +35,6 @@
 #define ARM64_HYP_OFFSET_LOW			14
 #define ARM64_MISMATCHED_CACHE_LINE_SIZE	15
 
-// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-// TODO: davizhang, evaluate need for this define
-#define ARM64_WORKAROUND_QCOM_FALKOR_E1003	16
-// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-// Added by kaiser
-#define ARM64_UNMAP_KERNEL_AT_EL0		17
-
-#define ARM64_NCAPS				18
+#define ARM64_NCAPS				16
 
 #endif /* __ASM_CPUCAPS_H */

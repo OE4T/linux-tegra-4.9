@@ -23,7 +23,6 @@
 #ifndef __ASM_ASSEMBLER_H
 #define __ASM_ASSEMBLER_H
 
-#include <asm/alternative.h>
 #include <asm/asm-offsets.h>
 #include <asm/cpufeature.h>
 #include <asm/page.h>
@@ -127,21 +126,9 @@ lr	.req	x30		// link register
 /*
  * Vector entry
  */
-	.macro ventry, el, label, regsize = 64
+	 .macro	ventry	label
 	.align	7
-#ifdef CONFIG_UNMAP_KERNEL_AT_EL0
-alternative_if ARM64_UNMAP_KERNEL_AT_EL0
-       .if     \el == 0
-       .if     \regsize == 64
-       mrs     x30, tpidrro_el0
-       msr     tpidrro_el0, xzr
-       .else
-       mov     x30, xzr
-       .endif
-       .endif
-alternative_else_nop_endif
-#endif
-	b	el\()\el\()_\label
+	b	\label
 	.endm
 
 /*
@@ -443,9 +430,9 @@ alternative_endif
 	.endm
 
 /*
- * Errata workaround post TTBRx_EL1 update.
+ * Errata workaround post TTBR0_EL1 update.
  */
-	.macro	post_ttbr_update_workaround
+	.macro	post_ttbr0_update_workaround
 #ifdef CONFIG_CAVIUM_ERRATUM_27456
 alternative_if ARM64_WORKAROUND_CAVIUM_27456
 	ic	iallu

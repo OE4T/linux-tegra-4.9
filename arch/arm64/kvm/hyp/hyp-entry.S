@@ -181,23 +181,23 @@ ENDPROC(\label)
 	.align 11
 
 ENTRY(__kvm_hyp_vector)
-	ventry	2t, sync_invalid		// Synchronous EL2t
-	ventry	2t, irq_invalid		// IRQ EL2t
-	ventry	2t, fiq_invalid		// FIQ EL2t
-	ventry	2t, error_invalid		// Error EL2t
+	ventry	el2t_sync_invalid		// Synchronous EL2t
+	ventry	el2t_irq_invalid		// IRQ EL2t
+	ventry	el2t_fiq_invalid		// FIQ EL2t
+	ventry	el2t_error_invalid		// Error EL2t
 
-	ventry	2h, sync_invalid		// Synchronous EL2h
-	ventry	2h, irq_invalid		// IRQ EL2h
-	ventry	2h, fiq_invalid		// FIQ EL2h
-	ventry	2, error			// Error EL2h
+	ventry	el2h_sync_invalid		// Synchronous EL2h
+	ventry	el2h_irq_invalid		// IRQ EL2h
+	ventry	el2h_fiq_invalid		// FIQ EL2h
+	ventry	el2_error			// Error EL2h
 
-	ventry	1, sync			// Synchronous 64-bit EL1
-	ventry	1, irq				// IRQ 64-bit EL1
-	ventry	1, fiq_invalid			// FIQ 64-bit EL1
-	ventry	1, error			// Error 64-bit EL1
+	ventry	el1_sync			// Synchronous 64-bit EL1
+	ventry	el1_irq				// IRQ 64-bit EL1
+	ventry	el1_fiq_invalid			// FIQ 64-bit EL1
+	ventry	el1_error			// Error 64-bit EL1
 
-	ventry	1, sync			// Synchronous 32-bit EL1
-	ventry	1, irq				// IRQ 32-bit EL1
-	ventry	1, fiq_invalid			// FIQ 32-bit EL1
-	ventry	1, error			// Error 32-bit EL1
+	ventry	el1_sync			// Synchronous 32-bit EL1
+	ventry	el1_irq				// IRQ 32-bit EL1
+	ventry	el1_fiq_invalid			// FIQ 32-bit EL1
+	ventry	el1_error			// Error 32-bit EL1
 ENDPROC(__kvm_hyp_vector)

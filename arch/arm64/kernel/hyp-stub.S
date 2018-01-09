@@ -31,25 +31,25 @@
 	.align 11
 
 ENTRY(__hyp_stub_vectors)
-	ventry	2, sync_invalid		// Synchronous EL2t
-	ventry	2, irq_invalid			// IRQ EL2t
-	ventry	2, fiq_invalid			// FIQ EL2t
-	ventry	2, error_invalid		// Error EL2t
+	ventry	el2_sync_invalid		// Synchronous EL2t
+	ventry	el2_irq_invalid			// IRQ EL2t
+	ventry	el2_fiq_invalid			// FIQ EL2t
+	ventry	el2_error_invalid		// Error EL2t
 
-	ventry	2, sync_invalid		// Synchronous EL2h
-	ventry	2, irq_invalid			// IRQ EL2h
-	ventry	2, fiq_invalid			// FIQ EL2h
-	ventry	2, error_invalid		// Error EL2h
+	ventry	el2_sync_invalid		// Synchronous EL2h
+	ventry	el2_irq_invalid			// IRQ EL2h
+	ventry	el2_fiq_invalid			// FIQ EL2h
+	ventry	el2_error_invalid		// Error EL2h
 
-	ventry	1, sync			// Synchronous 64-bit EL1
-	ventry	1, irq_invalid			// IRQ 64-bit EL1
-	ventry	1, fiq_invalid			// FIQ 64-bit EL1
-	ventry	1, error_invalid		// Error 64-bit EL1
+	ventry	el1_sync			// Synchronous 64-bit EL1
+	ventry	el1_irq_invalid			// IRQ 64-bit EL1
+	ventry	el1_fiq_invalid			// FIQ 64-bit EL1
+	ventry	el1_error_invalid		// Error 64-bit EL1
 
-	ventry	1, sync_invalid		// Synchronous 32-bit EL1
-	ventry	1, irq_invalid			// IRQ 32-bit EL1
-	ventry	1, fiq_invalid			// FIQ 32-bit EL1
-	ventry	1, error_invalid		// Error 32-bit EL1
+	ventry	el1_sync_invalid		// Synchronous 32-bit EL1
+	ventry	el1_irq_invalid			// IRQ 32-bit EL1
+	ventry	el1_fiq_invalid			// FIQ 32-bit EL1
+	ventry	el1_error_invalid		// Error 32-bit EL1
 ENDPROC(__hyp_stub_vectors)
 
 	.align 11

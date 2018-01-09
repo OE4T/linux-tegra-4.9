@@ -1,7 +1,7 @@
 /*
  * GP10B L2
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -86,6 +86,10 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_dbg_fn("");
 
 	if (max_comptag_lines == 0)
+		return 0;
+
+	/* Already initialized */
+	if (gr->cacheline_size)
 		return 0;
 
 	if (max_comptag_lines > hw_max_comptag_lines)

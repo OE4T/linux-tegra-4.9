@@ -81,6 +81,10 @@ Required properties:
       0x178 - C1, C2 and C3
       0x188 - C4
       0x188 - C0 and C5
+  - nvidia,dl-feature-cap: DATA_LINK_FEATURE_CAP reg offset
+      0x2dc - C1, C2 and C3
+      0x2f8 - C4
+      0x30c - C5
 
 - vddio-pex-ctl-supply: Regulator supply for PCIe side band signals
 

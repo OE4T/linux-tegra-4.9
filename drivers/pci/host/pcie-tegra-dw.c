@@ -101,8 +101,13 @@
 #define APPL_INTR_STATUS_L1_18_CDM_REG_CHK_CMP_ERR	BIT(1)
 #define APPL_INTR_STATUS_L1_18_CDM_REG_CHK_LOGIC_ERR	BIT(0)
 
+#define APPL_LINK_STATUS			0xcc
+#define APPL_LINK_STATUS_RDLH_LINK_UP		BIT(0)
+
 #define APPL_APPL_DEBUG				0xD0
 #define APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT	BIT(21)
+#define APPL_APPL_DEBUG_SMLH_LTSSM_STATE_MASK	GENMASK(8, 3)
+#define APPL_APPL_DEBUG_SMLH_LTSSM_STATE_SHIFT	3
 
 #define APPL_RADM_STATUS			0xE4
 #define APPL_PM_XMT_TURNOFF_STATE		BIT(0)
@@ -184,6 +189,8 @@
 #define EVENT_COUNTER_GROUP_5		0x5
 
 #define EVENT_COUNTER_DATA_REG		0x16C
+
+#define DL_FEATURE_EXCHANGE_EN		BIT(31)
 
 #define PORT_LOGIC_GEN2_CTRL		0x80C
 #define PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE	BIT(17)
@@ -326,6 +333,7 @@ struct tegra_pcie_dw {
 	u32 cap_pl16g_cap_off;
 	u32 event_cntr_ctrl;
 	u32 event_cntr_data;
+	u32 dl_feature_cap;
 
 	u32 num_lanes;
 	u32 max_speed;
@@ -1627,6 +1635,33 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	val = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
 	while (!(val & CFG_LINK_STATUS_DLL_ACTIVE)) {
 		if (!count) {
+			val = readl(pcie->appl_base + APPL_APPL_DEBUG);
+			val &= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_MASK;
+			val >>= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_SHIFT;
+			tmp = readl(pcie->appl_base + APPL_LINK_STATUS);
+			tmp &= APPL_LINK_STATUS_RDLH_LINK_UP;
+			if ((val == 0x11) && !tmp) {
+				dev_info(pp->dev, "link is down in DLL, "
+					 "try again with DLFE disabled");
+				/* disable LTSSM */
+				val = readl(pcie->appl_base + APPL_CTRL);
+				val &= ~APPL_CTRL_LTSSM_EN;
+				writel(val, pcie->appl_base + APPL_CTRL);
+
+				reset_control_assert(pcie->core_rst);
+				reset_control_deassert(pcie->core_rst);
+
+				dw_pcie_cfg_read(pp->dbi_base +
+						 pcie->dl_feature_cap,
+						 4, &val);
+				val &= ~DL_FEATURE_EXCHANGE_EN;
+				dw_pcie_cfg_write(pp->dbi_base +
+						  pcie->dl_feature_cap,
+						  4, val);
+
+				tegra_pcie_dw_host_init(&pcie->pp);
+				return;
+			}
 			dev_info(pp->dev, "link is down\n");
 			return;
 		}
@@ -1838,6 +1873,12 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "fail to read event-cntr-data: %d\n", ret);
 		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
 	}
+
+	of_property_read_u32(np, "nvidia,dl-feature-cap",
+			     &pcie->dl_feature_cap);
+	if (ret < 0)
+		dev_err(pcie->dev, "fail to read dl_feature_cap: %d\n", ret);
+
 	ret = of_property_read_u32(np, "num-lanes", &pcie->num_lanes);
 	if (ret < 0) {
 		dev_err(pcie->dev, "fail to read num-lanes: %d\n", ret);

@@ -904,12 +904,15 @@ bool of_dma_is_coherent(struct device_node *np)
 	struct device_node *node = of_node_get(np);
 
 	while (node) {
+		if (of_property_read_bool(node, "non-coherent"))
+			goto exit;
 		if (of_property_read_bool(node, "dma-coherent")) {
 			of_node_put(node);
 			return true;
 		}
 		node = of_get_next_parent(node);
 	}
+exit:
 	of_node_put(node);
 	return false;
 }

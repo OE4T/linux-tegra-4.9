@@ -1099,8 +1099,6 @@ int eqos_probe(struct platform_device *pdev)
 	if (!pdata->phy_node)
 		pr_debug("%s(): phy handle not found\n", __func__);
 
-	pdata->use_fixed_phy = false;
-
 	/* If nvidia,eqos-mdio is passed from DT, always register the MDIO */
 	for_each_child_of_node(node, pdata->mdio_node) {
 		if (of_device_is_compatible(pdata->mdio_node,
@@ -1108,12 +1106,16 @@ int eqos_probe(struct platform_device *pdev)
 			break;
 	}
 
-	if (of_phy_is_fixed_link(node)) {
-		ret = eqos_fixed_phy_register(ndev);
-		if (ret) {
+	/* In the case of a fixed PHY, the DT node associated
+	 * to the PHY is the Ethernet MAC DT node.
+	 */
+	if (!pdata->phy_node && of_phy_is_fixed_link(node)) {
+		if ((of_phy_register_fixed_link(node) < 0)) {
 			netdev_err(ndev, "Failed to register fixed PHY device\n");
-			return ret;
+			ret = ENODEV;
+			goto err_out_q_alloc_failed;
 		}
+		pdata->phy_node = of_node_get(node);
 	}
 
 	if (pdata->mdio_node) {

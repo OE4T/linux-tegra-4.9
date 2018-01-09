@@ -1263,6 +1263,7 @@
 
 			iommus = <&smmu TEGRA_SID_VI>;
 			iso-smmu;
+			non-coherent;
 		};
 
 		vi_thi: vi-thi@15f00000 {

@@ -148,7 +148,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.pagepool_default_size = gr_gv11b_pagepool_default_size,
 		.init_ctx_state = vgpu_gr_gp10b_init_ctx_state,
 		.alloc_gr_ctx = vgpu_gr_gp10b_alloc_gr_ctx,
-		.free_gr_ctx = vgpu_gr_gp10b_free_gr_ctx,
+		.free_gr_ctx = vgpu_gr_free_gr_ctx,
 		.update_ctxsw_preemption_mode =
 			gr_gp10b_update_ctxsw_preemption_mode,
 		.dump_gr_regs = NULL,

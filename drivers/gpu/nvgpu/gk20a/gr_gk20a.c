@@ -2786,6 +2786,14 @@ void gr_gk20a_free_gr_ctx(struct gk20a *g,
 	if (!gr_ctx || !gr_ctx->mem.gpu_va)
 		return;
 
+	if (g->ops.gr.dump_ctxsw_stats &&
+	    g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close)
+		g->ops.gr.dump_ctxsw_stats(g, vm, gr_ctx);
+
+	nvgpu_dma_unmap_free(vm, &gr_ctx->pagepool_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->betacb_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->spill_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->preempt_ctxsw_buffer);
 	nvgpu_gmmu_unmap(vm, &gr_ctx->mem, gr_ctx->mem.gpu_va);
 	nvgpu_dma_free(g, &gr_ctx->mem);
 	nvgpu_kfree(g, gr_ctx);

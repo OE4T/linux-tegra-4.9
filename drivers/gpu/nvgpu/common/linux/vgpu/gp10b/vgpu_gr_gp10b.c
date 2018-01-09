@@ -26,34 +26,6 @@
 
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 
-void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
-				struct gr_ctx_desc *gr_ctx)
-{
-	struct tegra_vgpu_cmd_msg msg = {0};
-	struct tegra_vgpu_gr_ctx_params *p = &msg.params.gr_ctx;
-	int err;
-
-	gk20a_dbg_fn("");
-
-	if (!gr_ctx || !gr_ctx->mem.gpu_va)
-		return;
-
-	msg.cmd = TEGRA_VGPU_CMD_GR_CTX_FREE;
-	msg.handle = vgpu_get_handle(g);
-	p->gr_ctx_handle = gr_ctx->virt_ctx;
-	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	WARN_ON(err || msg.ret);
-
-	__nvgpu_vm_free_va(vm, gr_ctx->mem.gpu_va, gmmu_page_size_kernel);
-
-	nvgpu_dma_unmap_free(vm, &gr_ctx->pagepool_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->betacb_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->spill_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->preempt_ctxsw_buffer);
-
-	nvgpu_kfree(g, gr_ctx);
-}
-
 int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 				struct gr_ctx_desc **__gr_ctx,
 				struct vm_gk20a *vm,
@@ -107,7 +79,7 @@ int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	return err;
 
 fail:
-	vgpu_gr_gp10b_free_gr_ctx(g, vm, gr_ctx);
+	vgpu_gr_free_gr_ctx(g, vm, gr_ctx);
 	return err;
 }
 

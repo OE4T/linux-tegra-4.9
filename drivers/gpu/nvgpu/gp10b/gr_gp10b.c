@@ -1167,27 +1167,6 @@ void gr_gp10b_dump_ctxsw_stats(struct gk20a *g, struct vm_gk20a *vm,
 	nvgpu_mem_end(g, mem);
 }
 
-void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
-			  struct gr_ctx_desc *gr_ctx)
-{
-	gk20a_dbg_fn("");
-
-	if (!gr_ctx)
-		return;
-
-	if (g->ops.gr.dump_ctxsw_stats &&
-	    g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close)
-		g->ops.gr.dump_ctxsw_stats(g, vm, gr_ctx);
-
-	nvgpu_dma_unmap_free(vm, &gr_ctx->pagepool_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->betacb_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->spill_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->preempt_ctxsw_buffer);
-	gr_gk20a_free_gr_ctx(g, vm, gr_ctx);
-	gk20a_dbg_fn("done");
-}
-
-
 void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx,
 		struct nvgpu_mem *mem)

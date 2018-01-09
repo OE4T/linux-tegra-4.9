@@ -101,8 +101,6 @@ int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
 			  u32 class,
 			  u32 flags);
-void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
-			  struct gr_ctx_desc *gr_ctx);
 void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx,
 		struct nvgpu_mem *mem);

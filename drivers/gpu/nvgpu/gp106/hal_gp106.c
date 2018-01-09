@@ -292,7 +292,7 @@ static const struct gpu_ops gp106_ops = {
 		.pagepool_default_size = gr_gp106_pagepool_default_size,
 		.init_ctx_state = gr_gp10b_init_ctx_state,
 		.alloc_gr_ctx = gr_gp10b_alloc_gr_ctx,
-		.free_gr_ctx = gr_gp10b_free_gr_ctx,
+		.free_gr_ctx = gr_gk20a_free_gr_ctx,
 		.update_ctxsw_preemption_mode =
 			gr_gp10b_update_ctxsw_preemption_mode,
 		.dump_gr_regs = gr_gp10b_dump_gr_status_regs,

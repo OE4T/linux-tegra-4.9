@@ -89,6 +89,12 @@ static int gv11b_mm_mmu_fault_info_buf_init(struct gk20a *g,
 {
 	struct mmu_fault_info *fault_info_mem;
 
+	if (g->mm.fault_info[FAULT_TYPE_OTHER_AND_NONREPLAY] != NULL &&
+		g->mm.fault_info[FAULT_TYPE_REPLAY] != NULL) {
+		*hub_intr_types |= HUB_INTR_TYPE_OTHER;
+		return 0;
+	}
+
 	fault_info_mem = nvgpu_kzalloc(g, sizeof(struct mmu_fault_info) *
 						FAULT_TYPE_NUM);
 	if (!fault_info_mem) {
@@ -117,24 +123,31 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
 	fb_size = (g->ops.fifo.get_num_fifos(g) + 1) *
 				 gmmu_fault_buf_size_v();
 
-	err = nvgpu_dma_alloc_map_sys(vm, fb_size,
+	if (!nvgpu_mem_is_valid(
+		&g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY])) {
+
+		err = nvgpu_dma_alloc_map_sys(vm, fb_size,
 			&g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY]);
-	if (err) {
-		nvgpu_err(g,
-		"Error in hw mmu fault buf [0] alloc in bar2 vm ");
-		/* Fault will be snapped in pri reg but not in buffer */
-		return;
+		if (err) {
+			nvgpu_err(g,
+			"Error in hw mmu fault buf [0] alloc in bar2 vm ");
+			/* Fault will be snapped in pri reg but not in buffer */
+			return;
+		}
 	}
 
 	*hub_intr_types |= HUB_INTR_TYPE_NONREPLAY;
 
-	err = nvgpu_dma_alloc_map_sys(vm, fb_size,
-			&g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]);
-	if (err) {
-		nvgpu_err(g,
-		"Error in hw mmu fault buf [1] alloc in bar2 vm ");
-		/* Fault will be snapped in pri reg but not in buffer */
-		return;
+	if (!nvgpu_mem_is_valid(
+		&g->mm.hw_fault_buf[FAULT_TYPE_REPLAY])) {
+		err = nvgpu_dma_alloc_map_sys(vm, fb_size,
+				&g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]);
+		if (err) {
+			nvgpu_err(g,
+			"Error in hw mmu fault buf [1] alloc in bar2 vm ");
+			/* Fault will be snapped in pri reg but not in buffer */
+			return;
+		}
 	}
 
 	*hub_intr_types |= HUB_INTR_TYPE_REPLAY;

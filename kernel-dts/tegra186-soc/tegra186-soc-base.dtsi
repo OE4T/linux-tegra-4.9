@@ -2373,7 +2373,7 @@
 	};
 
 	mttcan0: mttcan@c310000 {
-		compatible = "bosch,mttcan";
+		compatible = "nvidia,tegra186-mttcan";
 		reg = <0x00 0x0c310000 0x00 0x400>,
 		      <0x00 0x0c311000 0x00 0x32>,
 		      <0x00 0x0c312000 0x00 0x1000>;
@@ -2390,7 +2390,7 @@
 	};
 
 	mttcan1: mttcan@c320000 {
-		compatible = "bosch,mttcan";
+		compatible = "nvidia,tegra186-mttcan";
 		reg = <0x00 0x0c320000 0x00 0x400>,
 		      <0x00 0x0c321000 0x00 0x32>,
 		      <0x00 0x0c322000 0x00 0x1000>;

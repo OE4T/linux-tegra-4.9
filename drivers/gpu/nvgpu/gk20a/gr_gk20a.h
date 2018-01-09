@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Engine
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -362,8 +362,6 @@ struct gr_gk20a {
 	u32 bundle_cb_token_limit;
 	u32 attrib_cb_default_size;
 	u32 attrib_cb_size;
-	u32 attrib_cb_gfxp_default_size;
-	u32 attrib_cb_gfxp_size;
 	u32 alpha_cb_default_size;
 	u32 alpha_cb_size;
 	u32 timeslice_mode;

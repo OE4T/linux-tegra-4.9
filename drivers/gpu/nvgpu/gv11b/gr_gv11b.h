@@ -1,7 +1,7 @@
 /*
  * GV11B GPU GR
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -46,7 +46,6 @@ struct zbc_query_params;
 struct channel_ctx_gk20a;
 struct nvgpu_warpstate;
 struct nvgpu_gr_sm_error_state;
-struct gr_ctx_desc;
 struct gr_gk20a_isr_data;
 struct gk20a_debug_output;
 
@@ -218,15 +217,5 @@ int gr_gv11b_init_preemption_state(struct gk20a *g);
 void gr_gv11b_init_gfxp_wfi_timeout_count(struct gk20a *g);
 unsigned long gr_gv11b_get_max_gfxp_wfi_timeout_count(struct gk20a *g);
 void gr_gv11b_ecc_init_scrub_reg(struct gk20a *g);
-
-int gr_gv11b_set_ctxsw_preemption_mode(struct gk20a *g,
-                                struct gr_ctx_desc *gr_ctx,
-                                struct vm_gk20a *vm, u32 class,
-                                u32 graphics_preempt_mode,
-                                u32 compute_preempt_mode);
-
-void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
-                struct channel_ctx_gk20a *ch_ctx,
-                struct nvgpu_mem *mem);
 
 #endif

@@ -1,7 +1,7 @@
 /*
  * GV11b GPU GR
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1224,10 +1224,6 @@ void gr_gv11b_cb_size_default(struct gk20a *g)
 			gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v();
 	gr->alpha_cb_default_size =
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
-	gr->attrib_cb_gfxp_default_size =
-		gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v();
-	gr->attrib_cb_gfxp_size =
-		gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v();
 }
 
 void gr_gv11b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
@@ -1372,245 +1368,6 @@ fail_free:
 	return err;
 }
 
-int gr_gv11b_set_ctxsw_preemption_mode(struct gk20a *g,
-				struct gr_ctx_desc *gr_ctx,
-				struct vm_gk20a *vm, u32 class,
-				u32 graphics_preempt_mode,
-				u32 compute_preempt_mode)
-{
-	int err = 0;
-
-	if (g->ops.gr.is_valid_gfx_class(g, class) &&
-				g->gr.ctx_vars.force_preemption_gfxp)
-		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
-
-	if (g->ops.gr.is_valid_compute_class(g, class) &&
-			g->gr.ctx_vars.force_preemption_cilp)
-		compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
-
-	/* check for invalid combinations */
-	if ((graphics_preempt_mode == 0) && (compute_preempt_mode == 0))
-		return -EINVAL;
-
-	if ((graphics_preempt_mode == NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP) &&
-		   (compute_preempt_mode == NVGPU_PREEMPTION_MODE_COMPUTE_CILP))
-		return -EINVAL;
-
-	/* Do not allow lower preemption modes than current ones */
-	if (graphics_preempt_mode &&
-	   (graphics_preempt_mode < gr_ctx->graphics_preempt_mode))
-		return -EINVAL;
-
-	if (compute_preempt_mode &&
-	   (compute_preempt_mode < gr_ctx->compute_preempt_mode))
-		return -EINVAL;
-
-	/* set preemption modes */
-	switch (graphics_preempt_mode) {
-	case NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP:
-		{
-		u32 spill_size =
-			gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v() *
-			gr_gpc0_swdx_rm_spill_buffer_size_256b_byte_granularity_v();
-		u32 pagepool_size = g->ops.gr.pagepool_default_size(g) *
-			gr_scc_pagepool_total_pages_byte_granularity_v();
-		u32 betacb_size = g->gr.attrib_cb_default_size +
-				(gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
-			  gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
-		u32 attrib_cb_size = (betacb_size + g->gr.alpha_cb_size) *
-			  gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v() *
-				  g->gr.max_tpc_count;
-		attrib_cb_size = ALIGN(attrib_cb_size, 128);
-
-		gk20a_dbg_info("gfxp context spill_size=%d", spill_size);
-		gk20a_dbg_info("gfxp context pagepool_size=%d", pagepool_size);
-		gk20a_dbg_info("gfxp context attrib_cb_size=%d",
-				attrib_cb_size);
-
-		err = gr_gp10b_alloc_buffer(vm,
-					g->gr.ctx_vars.preempt_image_size,
-					&gr_ctx->preempt_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(g, "cannot allocate preempt buffer");
-			goto fail;
-		}
-
-		err = gr_gp10b_alloc_buffer(vm,
-					spill_size,
-					&gr_ctx->spill_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(g, "cannot allocate spill buffer");
-			goto fail_free_preempt;
-		}
-
-		err = gr_gp10b_alloc_buffer(vm,
-					attrib_cb_size,
-					&gr_ctx->betacb_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(g, "cannot allocate beta buffer");
-			goto fail_free_spill;
-		}
-
-		err = gr_gp10b_alloc_buffer(vm,
-					pagepool_size,
-					&gr_ctx->pagepool_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(g, "cannot allocate page pool");
-			goto fail_free_betacb;
-		}
-
-		gr_ctx->graphics_preempt_mode = graphics_preempt_mode;
-		break;
-		}
-
-	case NVGPU_PREEMPTION_MODE_GRAPHICS_WFI:
-		gr_ctx->graphics_preempt_mode = graphics_preempt_mode;
-		break;
-
-	default:
-		break;
-	}
-
-	if (g->ops.gr.is_valid_compute_class(g, class) ||
-			g->ops.gr.is_valid_gfx_class(g, class)) {
-		switch (compute_preempt_mode) {
-		case NVGPU_PREEMPTION_MODE_COMPUTE_WFI:
-		case NVGPU_PREEMPTION_MODE_COMPUTE_CTA:
-		case NVGPU_PREEMPTION_MODE_COMPUTE_CILP:
-			gr_ctx->compute_preempt_mode = compute_preempt_mode;
-			break;
-		default:
-			break;
-		}
-	}
-
-	return 0;
-
-fail_free_betacb:
-	nvgpu_dma_unmap_free(vm, &gr_ctx->betacb_ctxsw_buffer);
-fail_free_spill:
-	nvgpu_dma_unmap_free(vm, &gr_ctx->spill_ctxsw_buffer);
-fail_free_preempt:
-	nvgpu_dma_unmap_free(vm, &gr_ctx->preempt_ctxsw_buffer);
-fail:
-	return err;
-}
-
-void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
-		struct channel_ctx_gk20a *ch_ctx,
-		struct nvgpu_mem *mem)
-{
-	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
-	struct ctx_header_desc *ctx = &ch_ctx->ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
-
-	u32 gfxp_preempt_option =
-		ctxsw_prog_main_image_graphics_preemption_options_control_gfxp_f();
-	u32 cilp_preempt_option =
-		ctxsw_prog_main_image_compute_preemption_options_control_cilp_f();
-	u32 cta_preempt_option =
-		ctxsw_prog_main_image_compute_preemption_options_control_cta_f();
-	int err;
-
-	gk20a_dbg_fn("");
-
-	if (gr_ctx->graphics_preempt_mode ==
-					NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP) {
-		gk20a_dbg_info("GfxP: %x", gfxp_preempt_option);
-		nvgpu_mem_wr(g, mem,
-			ctxsw_prog_main_image_graphics_preemption_options_o(),
-			gfxp_preempt_option);
-	}
-
-	if (gr_ctx->compute_preempt_mode ==
-					NVGPU_PREEMPTION_MODE_COMPUTE_CILP) {
-		gk20a_dbg_info("CILP: %x", cilp_preempt_option);
-		nvgpu_mem_wr(g, mem,
-			ctxsw_prog_main_image_compute_preemption_options_o(),
-			cilp_preempt_option);
-	}
-
-	if (gr_ctx->compute_preempt_mode ==
-					NVGPU_PREEMPTION_MODE_COMPUTE_CTA) {
-		gk20a_dbg_info("CTA: %x", cta_preempt_option);
-		nvgpu_mem_wr(g, mem,
-			ctxsw_prog_main_image_compute_preemption_options_o(),
-			cta_preempt_option);
-	}
-
-	if (gr_ctx->preempt_ctxsw_buffer.gpu_va) {
-		u32 addr;
-		u32 size;
-		u32 cbes_reserve;
-
-		if (g->ops.gr.set_preemption_buffer_va) {
-			if (ctxheader->gpu_va)
-				g->ops.gr.set_preemption_buffer_va(g, ctxheader,
-				gr_ctx->preempt_ctxsw_buffer.gpu_va);
-			else
-				g->ops.gr.set_preemption_buffer_va(g, mem,
-				gr_ctx->preempt_ctxsw_buffer.gpu_va);
-		}
-
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, true);
-		if (err) {
-			nvgpu_err(g, "can't map patch context");
-			goto out;
-		}
-
-		addr = (u64_lo32(gr_ctx->betacb_ctxsw_buffer.gpu_va) >>
-			gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()) |
-			(u64_hi32(gr_ctx->betacb_ctxsw_buffer.gpu_va) <<
-			 (32 - gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()));
-
-		gk20a_dbg_info("attrib cb addr : 0x%016x", addr);
-		g->ops.gr.commit_global_attrib_cb(g, ch_ctx, addr, true);
-
-		addr = (u64_lo32(gr_ctx->pagepool_ctxsw_buffer.gpu_va) >>
-			gr_scc_pagepool_base_addr_39_8_align_bits_v()) |
-			(u64_hi32(gr_ctx->pagepool_ctxsw_buffer.gpu_va) <<
-			 (32 - gr_scc_pagepool_base_addr_39_8_align_bits_v()));
-		size = gr_ctx->pagepool_ctxsw_buffer.size;
-
-		if (size == g->ops.gr.pagepool_default_size(g))
-			size = gr_scc_pagepool_total_pages_hwmax_v();
-
-		g->ops.gr.commit_global_pagepool(g, ch_ctx, addr, size, true);
-
-		addr = (u64_lo32(gr_ctx->spill_ctxsw_buffer.gpu_va) >>
-			gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v()) |
-			(u64_hi32(gr_ctx->spill_ctxsw_buffer.gpu_va) <<
-			 (32 - gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v()));
-		size = gr_ctx->spill_ctxsw_buffer.size /
-			gr_gpc0_swdx_rm_spill_buffer_size_256b_byte_granularity_v();
-
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_swdx_rm_spill_buffer_addr_r(),
-				gr_gpc0_swdx_rm_spill_buffer_addr_39_8_f(addr),
-				true);
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_swdx_rm_spill_buffer_size_r(),
-				gr_gpc0_swdx_rm_spill_buffer_size_256b_f(size),
-				true);
-
-		cbes_reserve = gr_gpcs_swdx_beta_cb_ctrl_cbes_reserve_gfxp_v();
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpcs_swdx_beta_cb_ctrl_r(),
-				gr_gpcs_swdx_beta_cb_ctrl_cbes_reserve_f(
-					cbes_reserve),
-				true);
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpcs_ppcs_cbm_beta_cb_ctrl_r(),
-				gr_gpcs_ppcs_cbm_beta_cb_ctrl_cbes_reserve_f(
-					cbes_reserve),
-				true);
-
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx, true);
-	}
-
-out:
-	gk20a_dbg_fn("done");
-}
 static void gr_gv11b_dump_gr_per_sm_regs(struct gk20a *g,
 			struct gk20a_debug_output *o,
 			u32 gpc, u32 tpc, u32 sm, u32 offset)
@@ -2624,9 +2381,6 @@ void gr_gv11b_set_preemption_buffer_va(struct gk20a *g,
 			struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 addr_lo, addr_hi;
-
-	/* gpu va still needs to be 8 bit aligned */
-	gpu_va = gpu_va >> 8;
 
 	addr_lo = u64_lo32(gpu_va);
 	addr_hi = u64_hi32(gpu_va);

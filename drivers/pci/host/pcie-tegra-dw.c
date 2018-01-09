@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017 - 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -197,6 +197,8 @@
 #define GEN3_RELATED_OFF_GEN3_EQ_DISABLE	BIT(16)
 #define GEN3_RELATED_OFF_RATE_SHADOW_SEL_SHIFT	24
 #define GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK	GENMASK(25, 24)
+
+#define PORT_LOGIC_MSIX_DOORBELL			0x948
 
 #define PORT_LOGIC_PL_CHK_REG_CONTROL_STATUS		0xB20
 #define PORT_LOGIC_PL_CHK_REG_CHK_REG_START		BIT(0)
@@ -548,6 +550,21 @@ static void outbound_atu(struct pcie_port *pp, int i, int type, u64 cpu_addr,
 	prog_atu(pp, i, upper_32_bits(pci_addr), PCIE_ATU_UPPER_TARGET);
 	prog_atu(pp, i, type | PCIE_ATU_INCREASE_REGION_SIZE, PCIE_ATU_CR1);
 	prog_atu(pp, i, PCIE_ATU_ENABLE, PCIE_ATU_CR2);
+}
+
+static int tegra_pcie_dw_rd_own_conf(struct pcie_port *pp, int where, int size,
+				     u32 *val)
+{
+	/* This is EP specific register and system hangs when it is
+	 * accessed with link being in ASPM-L1 state.
+	 * So skip accessing it altogether
+	 */
+	if (where == PORT_LOGIC_MSIX_DOORBELL) {
+		*val = 0x00000000;
+		return PCIBIOS_SUCCESSFUL;
+	} else {
+		return dw_pcie_cfg_read(pp->dbi_base + where, size, val);
+	}
 }
 
 static int tegra_pcie_dw_rd_other_conf(struct pcie_port *pp,
@@ -1242,6 +1259,19 @@ static int init_debugfs(struct tegra_pcie_dw *pcie)
 	return 0;
 }
 
+static int tegra_pcie_dw_wr_own_conf(struct pcie_port *pp, int where, int size,
+				     u32 val)
+{
+	/* This is EP specific register and system hangs when it is
+	 * accessed with link being in ASPM-L1 state.
+	 * So skip accessing it altogether
+	 */
+	if (where == PORT_LOGIC_MSIX_DOORBELL)
+		return PCIBIOS_SUCCESSFUL;
+	else
+		return dw_pcie_cfg_write(pp->dbi_base + where, size, val);
+}
+
 static int tegra_pcie_dw_wr_other_conf(struct pcie_port *pp,
 				       struct pci_bus *bus, unsigned int devfn,
 				       int where, int size, u32 val)
@@ -1641,6 +1671,8 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 }
 
 static struct pcie_host_ops tegra_pcie_dw_host_ops = {
+	.rd_own_conf = tegra_pcie_dw_rd_own_conf,
+	.wr_own_conf = tegra_pcie_dw_wr_own_conf,
 	.rd_other_conf = tegra_pcie_dw_rd_other_conf,
 	.wr_other_conf = tegra_pcie_dw_wr_other_conf,
 	.link_up = tegra_pcie_dw_link_up,

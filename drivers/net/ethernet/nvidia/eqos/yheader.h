@@ -1400,7 +1400,6 @@ struct eqos_prv_data {
 	int bus_id;
 	netdev_features_t dev_state;
 	u32 interface;
-	bool use_fixed_phy;
 
 	/* saving state for Wake-on-LAN */
 	int wolopts;
@@ -1609,7 +1608,6 @@ int eqos_handle_csr_iso_ioctl(struct eqos_prv_data *pdata, void *ptr);
 int eqos_handle_phy_loopback(struct eqos_prv_data *pdata, void *ptr);
 void eqos_fbe_work(struct work_struct *work);
 void eqos_iso_work(struct work_struct *work);
-int eqos_fixed_phy_register(struct net_device *ndev);
 
 /* For debug prints*/
 #define DRV_NAME "eqos_drv.c"

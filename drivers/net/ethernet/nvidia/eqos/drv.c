@@ -1265,20 +1265,19 @@ static int eqos_open(struct net_device *dev)
 	if (!is_valid_ether_addr(dev->dev_addr))
 		return -EADDRNOTAVAIL;
 
-	if (!pdata->use_fixed_phy) {
-		/* Reset the PHY */
-		if (gpio_is_valid(pdata->phy_reset_gpio)) {
-			gpio_set_value(pdata->phy_reset_gpio, 0);
-			usleep_range(10, 11);
-			gpio_set_value(pdata->phy_reset_gpio, 1);
-		}
+	/* Reset the PHY */
+	if (gpio_is_valid(pdata->phy_reset_gpio)) {
+		gpio_set_value(pdata->phy_reset_gpio, 0);
+		usleep_range(10, 11);
+		gpio_set_value(pdata->phy_reset_gpio, 1);
+	}
 
-		/* PHY initialisation */
-		ret = eqos_init_phy(dev);
-		if (ret) {
-			dev_err(&dev->dev, "%s: Cannot attach to PHY (error: %d)\n", __func__, ret);
-			return ret;
-		}
+	/* PHY initialisation */
+	ret = eqos_init_phy(dev);
+	if (ret) {
+		dev_err(&dev->dev, "%s: Cannot attach to PHY (error: %d)\n",
+			__func__, ret);
+		return ret;
 	}
 
 	ret = request_txrx_irqs(pdata);

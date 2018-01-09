@@ -530,6 +530,7 @@
 		nvidia,cap-pl16g-cap-off = <0x188>;
 		nvidia,event-cntr-ctrl = <0x1d8>;
 		nvidia,event-cntr-data = <0x1dc>;
+		nvidia,dl-feature-cap = <0x30c>;
 	};
 
 	pcie_c1_rp {
@@ -578,6 +579,7 @@
 		nvidia,cap-pl16g-cap-off = <0x178>;
 		nvidia,event-cntr-ctrl = <0x1a8>;
 		nvidia,event-cntr-data = <0x1ac>;
+		nvidia,dl-feature-cap = <0x2dc>;
 	};
 
 	pcie_c2_rp {
@@ -626,6 +628,7 @@
 		nvidia,cap-pl16g-cap-off = <0x178>;
 		nvidia,event-cntr-ctrl = <0x1a8>;
 		nvidia,event-cntr-data = <0x1ac>;
+		nvidia,dl-feature-cap = <0x2dc>;
 	};
 
 	pcie_c3_rp {
@@ -674,6 +677,7 @@
 		nvidia,cap-pl16g-cap-off = <0x178>;
 		nvidia,event-cntr-ctrl = <0x1a8>;
 		nvidia,event-cntr-data = <0x1ac>;
+		nvidia,dl-feature-cap = <0x2dc>;
 	};
 
 	pcie_c4_rp {
@@ -722,6 +726,7 @@
 		nvidia,cap-pl16g-cap-off = <0x188>;
 		nvidia,event-cntr-ctrl = <0x1c4>;
 		nvidia,event-cntr-data = <0x1c8>;
+		nvidia,dl-feature-cap = <0x2f8>;
 	};
 
 	pcie_c5_rp {
@@ -774,5 +779,6 @@
 		nvidia,cap-pl16g-cap-off = <0x188>;
 		nvidia,event-cntr-ctrl = <0x1d8>;
 		nvidia,event-cntr-data = <0x1dc>;
+		nvidia,dl-feature-cap = <0x30c>;
 	};
 };

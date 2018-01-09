@@ -4152,3 +4152,13 @@ void gr_gv11b_ecc_init_scrub_reg(struct gk20a *g)
 		nvgpu_warn(g, "ECC SCRUB SM ICACHE Failed");
 
 }
+
+u32 gr_gv11b_get_gpcs_swdx_dss_zbc_c_format_reg(struct gk20a *g)
+{
+	return gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r();
+}
+
+u32 gr_gv11b_get_gpcs_swdx_dss_zbc_z_format_reg(struct gk20a *g)
+{
+	return gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r();
+}

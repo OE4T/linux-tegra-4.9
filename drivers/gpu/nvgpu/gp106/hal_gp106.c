@@ -1,7 +1,7 @@
 /*
  * GP106 HAL interface
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -281,6 +281,10 @@ static const struct gpu_ops gp106_ops = {
 		.detect_sm_arch = gr_gm20b_detect_sm_arch,
 		.add_zbc_color = gr_gp10b_add_zbc_color,
 		.add_zbc_depth = gr_gp10b_add_zbc_depth,
+		.get_gpcs_swdx_dss_zbc_c_format_reg =
+			gr_gp10b_get_gpcs_swdx_dss_zbc_c_format_reg,
+		.get_gpcs_swdx_dss_zbc_z_format_reg =
+			gr_gp10b_get_gpcs_swdx_dss_zbc_z_format_reg,
 		.zbc_set_table = gk20a_gr_zbc_set_table,
 		.zbc_query_table = gr_gk20a_query_zbc,
 		.pmu_save_zbc = gk20a_pmu_save_zbc,

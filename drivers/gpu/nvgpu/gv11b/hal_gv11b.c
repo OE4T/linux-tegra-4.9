@@ -281,6 +281,10 @@ static const struct gpu_ops gv11b_ops = {
 		.detect_sm_arch = gr_gv11b_detect_sm_arch,
 		.add_zbc_color = gr_gp10b_add_zbc_color,
 		.add_zbc_depth = gr_gp10b_add_zbc_depth,
+		.get_gpcs_swdx_dss_zbc_c_format_reg =
+			gr_gv11b_get_gpcs_swdx_dss_zbc_c_format_reg,
+		.get_gpcs_swdx_dss_zbc_z_format_reg =
+			gr_gv11b_get_gpcs_swdx_dss_zbc_z_format_reg,
 		.zbc_set_table = gk20a_gr_zbc_set_table,
 		.zbc_query_table = gr_gk20a_query_zbc,
 		.pmu_save_zbc = gk20a_pmu_save_zbc,

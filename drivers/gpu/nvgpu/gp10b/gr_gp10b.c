@@ -507,11 +507,18 @@ void gr_gp10b_commit_global_pagepool(struct gk20a *g,
 		gr_gpcs_gcc_pagepool_total_pages_f(size), patch);
 }
 
+u32 gr_gp10b_get_gpcs_swdx_dss_zbc_c_format_reg(struct gk20a *g)
+{
+	return gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r();
+}
+
 int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *color_val, u32 index)
 {
 	u32 i;
 	u32 zbc_c;
+	u32 zbc_c_format_reg =
+		g->ops.gr.get_gpcs_swdx_dss_zbc_c_format_reg(g);
 
 	/* update l2 table */
 	g->ops.ltc.set_zbc_color_entry(g, color_val, index);
@@ -554,18 +561,25 @@ int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 			   color_val->color_ds[2]);
 	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_color_a_r(index),
 			   color_val->color_ds[3]);
-	zbc_c = gk20a_readl(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + (index & ~3));
+	zbc_c = gk20a_readl(g, zbc_c_format_reg + (index & ~3));
 	zbc_c &= ~(0x7f << ((index % 4) * 7));
 	zbc_c |= color_val->format << ((index % 4) * 7);
-	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + (index & ~3), zbc_c);
+	gk20a_writel_check(g, zbc_c_format_reg + (index & ~3), zbc_c);
 
 	return 0;
+}
+
+u32 gr_gp10b_get_gpcs_swdx_dss_zbc_z_format_reg(struct gk20a *g)
+{
+	return gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r();
 }
 
 int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 				struct zbc_entry *depth_val, u32 index)
 {
 	u32 zbc_z;
+	u32 zbc_z_format_reg =
+		g->ops.gr.get_gpcs_swdx_dss_zbc_z_format_reg(g);
 
 	/* update l2 table */
 	g->ops.ltc.set_zbc_depth_entry(g, depth_val, index);
@@ -592,10 +606,10 @@ int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 	gr->zbc_dep_tbl[index].ref_cnt++;
 
 	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_z_r(index), depth_val->depth);
-	zbc_z = gk20a_readl(g, gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r() + (index & ~3));
+	zbc_z = gk20a_readl(g, zbc_z_format_reg + (index & ~3));
 	zbc_z &= ~(0x7f << (index % 4) * 7);
 	zbc_z |= depth_val->format << (index % 4) * 7;
-	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r() + (index & ~3), zbc_z);
+	gk20a_writel(g, zbc_z_format_reg + (index & ~3), zbc_z);
 
 	return 0;
 }

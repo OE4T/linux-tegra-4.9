@@ -102,6 +102,8 @@ int gr_gv11b_handle_gpc_gpcmmu_exception(struct gk20a *g, u32 gpc,
 int gr_gv11b_handle_gpc_gpccs_exception(struct gk20a *g, u32 gpc,
 							u32 gpc_exception);
 void gr_gv11b_enable_gpc_exceptions(struct gk20a *g);
+u32 gr_gv11b_get_gpcs_swdx_dss_zbc_c_format_reg(struct gk20a *g);
+u32 gr_gv11b_get_gpcs_swdx_dss_zbc_z_format_reg(struct gk20a *g);
 int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event);
 int gr_gv11b_zbc_s_query_table(struct gk20a *g, struct gr_gk20a *gr,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * GK20A Graphics
  *
@@ -437,6 +437,8 @@ struct gpu_ops {
 		unsigned long (*get_max_gfxp_wfi_timeout_count)
 					(struct gk20a *g);
 		void (*ecc_init_scrub_reg)(struct gk20a *g);
+		u32 (*get_gpcs_swdx_dss_zbc_c_format_reg)(struct gk20a *g);
+		u32 (*get_gpcs_swdx_dss_zbc_z_format_reg)(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

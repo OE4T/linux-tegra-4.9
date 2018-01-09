@@ -1,7 +1,7 @@
 /*
  * GP10B GPU GR
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -77,6 +77,8 @@ int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 void gr_gp10b_commit_global_pagepool(struct gk20a *g,
 					    struct channel_ctx_gk20a *ch_ctx,
 					    u64 addr, u32 size, bool patch);
+u32 gr_gp10b_get_gpcs_swdx_dss_zbc_c_format_reg(struct gk20a *g);
+u32 gr_gp10b_get_gpcs_swdx_dss_zbc_z_format_reg(struct gk20a *g);
 int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *color_val, u32 index);
 int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,

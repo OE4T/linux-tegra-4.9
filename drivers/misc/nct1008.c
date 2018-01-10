@@ -647,52 +647,64 @@ static ssize_t nct1008_show_regs(struct device *dev,
 	return sz;
 }
 
-static ssize_t nct1008_set_offsets(struct device *dev,
+static ssize_t nct1008_set_nadjust(struct device *dev,
+			struct device_attribute *attr, const char *buf,
+			size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	int r, nadj;
+
+	sscanf(buf, "%d", &nadj);
+	r = nct1008_write_reg(client, NFACTOR_CORRECTION, nadj);
+	if (r)
+		return r;
+
+	return count;
+}
+
+static ssize_t nct1008_show_nadjust(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	int nadj, nf, sz = 0;
+
+	nadj = nct1008_read_reg(client, NFACTOR_CORRECTION);
+	nf = (TMP451_NFACTOR * TMP451_NFACTOR_STEP) /
+			(TMP451_NFACTOR_STEP + nadj);
+
+	sz += snprintf(buf + sz, PAGE_SIZE - sz,
+				"nadj: %d, nf: %d\n", nadj, nf);
+	return sz;
+}
+
+static ssize_t nct1008_set_offset(struct device *dev,
 			struct device_attribute *attr,
 			const char *buf, size_t count)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct nct1008_data *nct = i2c_get_clientdata(client);
-	int index, temp, off;
-	int rv = count;
+	int r = count, hi_b, lo_b;
 
-	strim((char *)buf);
-	if (sscanf(buf, "[%u] %u %d", &index, &temp, &off) != 3)
-		return -EINVAL;
+	sscanf(buf, "%d %d", &hi_b, &lo_b);
+	r = nct1008_write_reg(client, OFFSET_WR, hi_b);
+	r = r ? r : nct1008_write_reg(client, OFFSET_QUARTER_WR, lo_b << 4);
+	if (r)
+		return r;
 
-	if (index >= ARRAY_SIZE(nct->sensors[EXT].offset_table)) {
-		pr_info("%s: invalid index [%d]\n", __func__, index);
-		rv = -EINVAL;
-	} else {
-		nct->sensors[EXT].offset_table[index].temp = temp;
-		nct->sensors[EXT].offset_table[index].offset = off;
-	}
-
-	return rv;
+	return count;
 }
 
-static ssize_t nct1008_show_offsets(struct device *dev,
+static ssize_t nct1008_show_offset(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct nct1008_data *nct = i2c_get_clientdata(client);
-	int i, sz = 0;
+	int hi_b, lo_b, sz = 0;
 
+	hi_b = nct1008_read_reg(client, OFFSET_WR);
+	lo_b = nct1008_read_reg(client, OFFSET_QUARTER_WR);
 	sz += snprintf(buf + sz, PAGE_SIZE - sz,
-				"%s offsets table\n", nct->chip_name);
-	sz += snprintf(buf + sz, PAGE_SIZE - sz,
-				"%2s  %4s  %s\n", " #", "temp", "offset");
-	sz += snprintf(buf + sz, PAGE_SIZE - sz,
-				"%2s  %4s  %s\n", "--", "----", "------");
-
-	for (i = 0; i < ARRAY_SIZE(nct->sensors[EXT].offset_table); i++)
-		sz += snprintf(buf + sz, PAGE_SIZE - sz,
-				"%2d  %4d  %3d\n",
-				i, nct->sensors[EXT].offset_table[i].temp,
-				nct->sensors[EXT].offset_table[i].offset);
+				"offset: %d, %d\n", hi_b, lo_b);
 	return sz;
 }
-
 
 /* This function is used by the system to show the temperature. */
 static ssize_t nct1008_show_ext_temp(struct device *dev,
@@ -709,8 +721,10 @@ static DEVICE_ATTR(temperature_alert, (S_IRUGO | (S_IWUSR | S_IWGRP)),
 		nct1008_show_temp_alert, nct1008_set_temp_alert);
 static DEVICE_ATTR(ext_temperature, S_IRUGO, nct1008_show_ext_temp, NULL);
 static DEVICE_ATTR(registers, S_IRUGO, nct1008_show_regs, NULL);
-static DEVICE_ATTR(offsets, (S_IRUGO | (S_IWUSR | S_IWGRP)),
-		nct1008_show_offsets, nct1008_set_offsets);
+static DEVICE_ATTR(offset, (S_IRUGO | (S_IWUSR | S_IWGRP)),
+		nct1008_show_offset, nct1008_set_offset);
+static DEVICE_ATTR(nadj, (S_IRUGO | (S_IWUSR | S_IWGRP)),
+		nct1008_show_nadjust, nct1008_set_nadjust);
 
 static struct attribute *nct1008_attributes[] = {
 	&dev_attr_temperature.attr,
@@ -718,7 +732,8 @@ static struct attribute *nct1008_attributes[] = {
 	&dev_attr_temperature_alert.attr,
 	&dev_attr_ext_temperature.attr,
 	&dev_attr_registers.attr,
-	&dev_attr_offsets.attr,
+	&dev_attr_offset.attr,
+	&dev_attr_nadj.attr,
 	NULL
 };
 

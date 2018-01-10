@@ -866,7 +866,7 @@ static int tx_swcx_alloc(struct net_device *dev, struct sk_buff *skb)
 	}
 
 	if (is_pkt_tso) {
-		hdr_len = skb_transport_offset(skb) + tcp_hdrlen(skb);
+		hdr_len = skb_transport_offset(skb) + tcp_udp_hdrlen(skb);
 		len = hdr_len;
 	} else {
 		len = (skb->len - skb->data_len);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,8 +22,10 @@
 
 #include "fence_gk20a.h"
 
+#ifdef CONFIG_SYNC
 #include <linux/file.h>
 #include <linux/fs.h>
+#endif
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>

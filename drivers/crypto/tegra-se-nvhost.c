@@ -2050,6 +2050,7 @@ static int tegra_se_sha_process_buf(struct ahash_request *req, bool is_last,
 	struct tegra_se_ll *src_ll;
 	u32 current_total = 0, num_sgs, bytes_process_in_req = 0, num_blks;
 	int err = 0;
+	bool buf_mapped = false;
 
 	if (is_last) {
 		/* Prepare buf for residual and current data */
@@ -2070,6 +2071,7 @@ static int tegra_se_sha_process_buf(struct ahash_request *req, bool is_last,
 			if (!err)
 				return -EINVAL;
 
+			buf_mapped = true;
 			current_total = req->nbytes + sha_ctx->residual_bytes;
 			sha_ctx->total_count += current_total;
 		} else {
@@ -2120,6 +2122,7 @@ static int tegra_se_sha_process_buf(struct ahash_request *req, bool is_last,
 		if (!err)
 			return -EINVAL;
 
+		buf_mapped = true;
 		/* Copy residual data */
 		sha_ctx->residual_bytes = current_total - (num_blks *
 							   sha_ctx->blk_size);
@@ -2135,14 +2138,14 @@ static int tegra_se_sha_process_buf(struct ahash_request *req, bool is_last,
 	err = tegra_se_send_sha_data(se_dev, req_ctx, sha_ctx,
 				     current_total, is_last);
 	if (err) {
-		if (is_last && process_cur_req)
+		if (buf_mapped)
 			tegra_unmap_sg(se_dev->dev, src_sg, DMA_TO_DEVICE,
 				       bytes_process_in_req);
 		return err;
 	}
 	sha_ctx->is_first = false;
 
-	if (process_cur_req)
+	if (buf_mapped)
 		tegra_unmap_sg(se_dev->dev, src_sg, DMA_TO_DEVICE,
 			       bytes_process_in_req);
 
@@ -2233,8 +2236,10 @@ static int tegra_se_sha_op(struct ahash_request *req, bool is_last,
 	}
 	mutex_lock(&se_dev->mtx);
 	ret = tegra_se_sha_process_buf(req, is_last, process_cur_req);
-	if (ret)
+	if (ret) {
+		mutex_unlock(&se_dev->mtx);
 		return ret;
+	}
 
 	if (is_last) {
 		tegra_se_read_hash_result(se_dev, req->result,

@@ -290,6 +290,10 @@ static int isp_capture_setup_syncpt(struct tegra_isp_channel *chan,
 	if (err)
 		return err;
 
+	err = nvhost_syncpt_read_ext_check(pdev, sp->id, &sp->threshold);
+	if (err)
+		goto cleanup;
+
 	err = chan->ops->get_syncpt_gos_backing(pdev, sp->id, &sp->shim_addr,
 				&gos_index, &gos_offset);
 	if (err)

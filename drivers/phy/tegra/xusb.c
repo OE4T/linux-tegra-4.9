@@ -608,6 +608,13 @@ static int tegra_xusb_usb2_port_parse_dt(struct tegra_xusb_usb2_port *usb2)
 			usb2->port_cap = USB_OTG_CAP;
 	}
 
+	if (usb2->port_cap == USB_OTG_CAP || usb2->port_cap == USB_DEVICE_CAP) {
+		usb2->vbus_id = 0;
+		err = of_property_read_u32(np, "vbus-id", &value);
+		if (!err)
+			usb2->vbus_id = value;
+	}
+
 	usb2->supply = devm_regulator_get(&port->dev, "vbus");
 	if (IS_ERR(usb2->supply))
 		return PTR_ERR(usb2->supply);
@@ -664,6 +671,12 @@ static int tegra_xusb_add_usb2_port(struct tegra_xusb_padctl *padctl,
 	if (err < 0) {
 		tegra_xusb_port_unregister(&usb2->base);
 		goto out;
+	}
+	if (usb2->port_cap == USB_OTG_CAP || usb2->port_cap == USB_DEVICE_CAP) {
+		padctl->otg_vbus_usb2_port_base_1[usb2->vbus_id] = index + 1;
+		dev_dbg(padctl->dev, "vbus_id %d => usb2 %d\n", usb2->vbus_id,
+			padctl->otg_vbus_usb2_port_base_1[usb2->vbus_id]);
+		padctl->otg_port_num++;
 	}
 
 	if (usb2->oc_pin > 0 && usb2->oc_pin >= padctl->soc->num_oc_pins) {
@@ -809,6 +822,7 @@ static int tegra_xusb_add_usb3_port(struct tegra_xusb_padctl *padctl,
 				    unsigned int index)
 {
 	struct tegra_xusb_usb3_port *usb3;
+	struct tegra_xusb_usb2_port *usb2;
 	struct device_node *np;
 	int err = 0;
 
@@ -846,6 +860,17 @@ static int tegra_xusb_add_usb3_port(struct tegra_xusb_padctl *padctl,
 	if (err < 0) {
 		tegra_xusb_port_unregister(&usb3->base);
 		goto out;
+	}
+
+	usb2 = tegra_xusb_find_usb2_port(padctl, usb3->port);
+	if (!usb2) {
+		tegra_xusb_port_unregister(&usb3->base);
+		goto out;
+	}
+	if (usb2->port_cap == USB_OTG_CAP || usb2->port_cap == USB_DEVICE_CAP) {
+		padctl->otg_vbus_usb3_port_base_1[usb2->vbus_id] = index + 1;
+		dev_dbg(padctl->dev, "vbus_id %d => usb3 %d\n", usb2->vbus_id,
+			padctl->otg_vbus_usb3_port_base_1[usb2->vbus_id]);
 	}
 
 	list_add_tail(&usb3->base.list, &padctl->ports);
@@ -954,11 +979,19 @@ static void tegra_xusb_otg_vbus_work(struct work_struct *work)
 	struct tegra_xusb_padctl *padctl =
 		container_of(work, struct tegra_xusb_padctl, otg_vbus_work);
 
-	if (!padctl->usb2_otg_port_base_1)
-		return; /* nothing to do if there is no USB2 otg port */
+	int i, port;
 
-	padctl->soc->ops->otg_vbus_handle(padctl,
-					  padctl->usb2_otg_port_base_1 - 1);
+	for (i = 0; i < XUSB_MAX_OTG_PORT_NUM; i++) {
+		if (!padctl->otg_vbus_updating[i])
+			continue;
+
+		port = padctl->otg_vbus_usb2_port_base_1[i];
+		if (!port)
+			continue;
+
+		padctl->soc->ops->otg_vbus_handle(padctl, i, port - 1);
+		padctl->otg_vbus_updating[i] = false;
+	}
 }
 
 static ssize_t otg_vbus_show(struct device *dev,
@@ -966,9 +999,9 @@ static ssize_t otg_vbus_show(struct device *dev,
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_xusb_padctl *padctl = platform_get_drvdata(pdev);
-	int index = padctl->usb2_otg_port_base_1 - 1;
+	int index = padctl->otg_vbus_usb2_port_base_1[0] - 1;
 
-	if (!padctl->usb2_otg_port_base_1)
+	if (!index)
 		return sprintf(buf, "No UTMI OTG port\n");
 
 	return sprintf(buf, "OTG port %d vbus always-on: %s\n",
@@ -980,14 +1013,14 @@ static ssize_t otg_vbus_store(struct device *dev,
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_xusb_padctl *padctl = platform_get_drvdata(pdev);
-	int index = padctl->usb2_otg_port_base_1 - 1;
+	int index = padctl->otg_vbus_usb2_port_base_1[0] - 1;
 	unsigned int on;
 	int err = 0;
 
 	if (kstrtouint(buf, 10, &on))
 		return -EINVAL;
 
-	if (!padctl->usb2_otg_port_base_1) {
+	if (!index) {
 		dev_err(dev, "No UTMI OTG port\n");
 		return -EINVAL;
 	}
@@ -1409,37 +1442,51 @@ int tegra_xusb_padctl_usb3_set_lfps_detect(struct tegra_xusb_padctl *padctl,
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_usb3_set_lfps_detect);
 
-int tegra_xusb_padctl_set_vbus_override(struct tegra_xusb_padctl *padctl)
+int tegra_xusb_padctl_set_vbus_override_early(struct tegra_xusb_padctl *padctl,
+		unsigned int i)
+{
+	if (padctl->soc->ops->vbus_override_early)
+		return padctl->soc->ops->vbus_override_early(padctl, i, true);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_set_vbus_override_early);
+
+int tegra_xusb_padctl_set_vbus_override(struct tegra_xusb_padctl *padctl,
+		unsigned int i)
 {
 	if (padctl->soc->ops->vbus_override)
-		return padctl->soc->ops->vbus_override(padctl, true);
+		return padctl->soc->ops->vbus_override(padctl, i, true);
 
 	return -ENOSYS;
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_set_vbus_override);
 
-int tegra_xusb_padctl_clear_vbus_override(struct tegra_xusb_padctl *padctl)
+int tegra_xusb_padctl_clear_vbus_override(struct tegra_xusb_padctl *padctl,
+		unsigned int i)
 {
 	if (padctl->soc->ops->vbus_override)
-		return padctl->soc->ops->vbus_override(padctl, false);
+		return padctl->soc->ops->vbus_override(padctl, i, false);
 
 	return -ENOSYS;
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_clear_vbus_override);
 
-int tegra_xusb_padctl_set_id_override(struct tegra_xusb_padctl *padctl)
+int tegra_xusb_padctl_set_id_override(struct tegra_xusb_padctl *padctl,
+		unsigned int i)
 {
 	if (padctl->soc->ops->id_override)
-		return padctl->soc->ops->id_override(padctl, true);
+		return padctl->soc->ops->id_override(padctl, i, true);
 
 	return -ENOTSUPP;
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_set_id_override);
 
-int tegra_xusb_padctl_clear_id_override(struct tegra_xusb_padctl *padctl)
+int tegra_xusb_padctl_clear_id_override(struct tegra_xusb_padctl *padctl,
+		unsigned int i)
 {
 	if (padctl->soc->ops->id_override)
-		return padctl->soc->ops->id_override(padctl, false);
+		return padctl->soc->ops->id_override(padctl, i, false);
 
 	return -ENOTSUPP;
 }
@@ -1700,6 +1747,29 @@ int tegra_phy_xusb_utmi_port_reset_quirk(struct phy *phy)
 	return -ENOSYS;
 }
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_port_reset_quirk);
+
+int tegra_xusb_padctl_get_vbus_id_num(struct tegra_xusb_padctl *padctl)
+{
+	return padctl->otg_port_num;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_get_vbus_id_num);
+
+void tegra_xusb_padctl_get_vbus_id_ports(struct tegra_xusb_padctl *padctl,
+	int i, int *usb2_port, int *usb3_port)
+{
+	*usb2_port = *usb3_port = -1;
+
+	if (i < 0 || i >= padctl->otg_port_num)
+		return;
+
+	/* only check usb2 port for usb2-only otg port support */
+	if (!padctl->otg_vbus_usb2_port_base_1[i])
+		return;
+
+	*usb2_port = padctl->otg_vbus_usb2_port_base_1[i] - 1;
+	*usb3_port = padctl->otg_vbus_usb3_port_base_1[i] - 1;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_get_vbus_id_ports);
 
 MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
 MODULE_DESCRIPTION("Tegra XUSB Pad Controller driver");

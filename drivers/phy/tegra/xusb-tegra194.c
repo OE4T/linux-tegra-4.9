@@ -60,6 +60,7 @@
 #define     PORT_CAP_HOST			(0x1)
 #define     PORT_CAP_DEVICE			(0x2)
 #define     PORT_CAP_OTG			(0x3)
+#define   PORT_CAP(x, i)			(((x) >> (i * 4)) & 0xf)
 
 #define XUSB_PADCTL_USB2_OC_MAP                 (0x10)
 #define XUSB_PADCTL_SS_OC_MAP                   (0x14)
@@ -100,6 +101,13 @@
 #define   SSPX_ELPG_CLAMP_EN(x)			(1 << (0 + (x) * 3))
 #define   SSPX_ELPG_CLAMP_EN_EARLY(x)		(1 << (1 + (x) * 3))
 #define   SSPX_ELPG_VCORE_DOWN(x)		(1 << (2 + (x) * 3))
+
+#define XUSB_PADCTL_USB2_VBUS_ID_MAP		(0x30)
+#define   PORT_VBUS_ID_MASK(i)			(0x7 << (i * 4))
+#define   PORT_VBUS_ID_NUM(i, x)		(((x) & 0x7) << (i * 4))
+#define   PORT_VBUS_ID(x, i)			(((x) >> (i * 4)) & 0x7)
+
+#define XUSB_PADCTL_SS_VBUS_ID_MAP		(0x34)
 
 #define XUSB_PADCTL_USB2_OTG_PADX_CTL0(x)	(0x88 + (x) * 0x40)
 #define   HS_CURR_LEVEL(x)			((x) & 0x3f)
@@ -161,7 +169,7 @@
 #define   USB2_PD_TRK				(1 << 26)
 #define   USB2_TRK_COMPLETED			(1 << 31)
 
-#define USB2_VBUS_ID				(0x360)
+#define USB2_VBUS_ID(x)				(0x360 + (x * 4))
 #define   VBUS_OVERRIDE				(1 << 14)
 #define   ID_OVERRIDE(x)			(((x) & 0xf) << 18)
 #define   ID_OVERRIDE_FLOATING			ID_OVERRIDE(8)
@@ -262,7 +270,7 @@ struct tegra_xusb_fuse_calibration {
 };
 
 struct tegra194_xusb_padctl_context {
-	u32 vbus_id;
+	u32 vbus_id[XUSB_MAX_OTG_PORT_NUM];
 	u32 usb2_pad_mux;
 	u32 usb2_port_cap;
 	u32 ss_port_cap;
@@ -284,6 +292,9 @@ struct tegra194_xusb_padctl {
 
 	/* padctl context */
 	struct tegra194_xusb_padctl_context context;
+
+	u32 usb2_port_cap_mask;
+	u32 ss_port_cap_mask;
 };
 
 static inline void ao_writel(struct tegra194_xusb_padctl *priv, u32 value,
@@ -671,6 +682,21 @@ static void tegra194_disable_vbus_oc(struct phy *phy)
 	padctl_writel(padctl, reg, XUSB_PADCTL_VBUS_OC_MAP);
 }
 
+static bool
+tegra194_xusb_padctl_is_device_mode_on(struct tegra_xusb_padctl *padctl)
+{
+	int i;
+	u32 reg;
+
+	for (i = 0; i < XUSB_MAX_OTG_PORT_NUM; i++) {
+		reg = padctl_readl(padctl, USB2_VBUS_ID(i));
+		if (reg & VBUS_OVERRIDE)
+			return true;
+	}
+
+	return false;
+}
+
 static int tegra194_utmi_phy_power_on(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
@@ -681,6 +707,7 @@ static int tegra194_utmi_phy_power_on(struct phy *phy)
 	struct device *dev = padctl->dev;
 	struct tegra_xusb_usb2_port *port;
 	u32 reg;
+	bool is_device_mode_on;
 
 	dev_dbg(dev, "phy power on UTMI %d\n", index);
 
@@ -708,10 +735,21 @@ static int tegra194_utmi_phy_power_on(struct phy *phy)
 			dev_dbg(dev, "failed to apply prod for bias pad\n");
 	}
 
+	is_device_mode_on = tegra194_xusb_padctl_is_device_mode_on(padctl);
+
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
 	reg &= ~(USB2_PORT_MASK << USB2_PORT_SHIFT(index));
 	reg |= (PORT_XUSB << USB2_PORT_SHIFT(index));
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_PAD_MUX);
+
+	if (port->port_cap == USB_OTG_CAP) {
+		dev_dbg(dev, "UTMI port %d: vbus_id = %d\n", port->base.index,
+				port->vbus_id);
+		reg = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID_MAP);
+		reg &= ~PORT_VBUS_ID_MASK(port->base.index);
+		reg |= PORT_VBUS_ID_NUM(port->base.index, port->vbus_id);
+		padctl_writel(padctl, reg, XUSB_PADCTL_USB2_VBUS_ID_MAP);
+	}
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_PORT_CAP);
 	reg &= ~(PORT_CAP_MASK << PORTX_CAP_SHIFT(index));
@@ -721,8 +759,13 @@ static int tegra194_utmi_phy_power_on(struct phy *phy)
 		reg |= (PORT_CAP_DEVICE << PORTX_CAP_SHIFT(index));
 	else if (port->port_cap == USB_HOST_CAP)
 		reg |= (PORT_CAP_HOST << PORTX_CAP_SHIFT(index));
-	else if (port->port_cap == USB_OTG_CAP)
-		reg |= (PORT_CAP_OTG << PORTX_CAP_SHIFT(index));
+	else if (port->port_cap == USB_OTG_CAP) {
+		if (is_device_mode_on)
+			reg |= (PORT_CAP_HOST << PORTX_CAP_SHIFT(index));
+		else
+			reg |= (PORT_CAP_OTG << PORTX_CAP_SHIFT(index));
+		priv->usb2_port_cap_mask |= BIT(index);
+	}
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_PORT_CAP);
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(index));
@@ -1034,8 +1077,6 @@ static int tegra194_utmi_phy_init(struct phy *phy)
 	}
 
 	if (port->port_cap == USB_OTG_CAP) {
-		if (padctl->usb2_otg_port_base_1)
-			dev_warn(padctl->dev, "enabling OTG on multiple USB2 ports\n");
 		padctl->usb2_otg_port_base_1 = index + 1;
 	}
 
@@ -1281,6 +1322,8 @@ static int tegra194_usb3_phy_power_on(struct phy *phy)
 	struct tegra_xusb_usb3_port *port;
 	int pin;
 	u32 reg;
+	bool is_device_mode_on;
+	struct tegra194_xusb_padctl *priv;
 
 	dev_dbg(dev, "phy power on USB3 %d\n", index);
 
@@ -1293,6 +1336,18 @@ static int tegra194_usb3_phy_power_on(struct phy *phy)
 
 	mutex_lock(&padctl->lock);
 
+	priv = to_tegra194_xusb_padctl(padctl);
+	is_device_mode_on = tegra194_xusb_padctl_is_device_mode_on(padctl);
+
+	if (port->port_cap == USB_OTG_CAP) {
+		dev_dbg(dev, "USB3 port %d: vbus_id = %d\n", port->base.index,
+				port->vbus_id);
+		reg = padctl_readl(padctl, XUSB_PADCTL_SS_VBUS_ID_MAP);
+		reg &= ~PORT_VBUS_ID_MASK(port->base.index);
+		reg |= PORT_VBUS_ID_NUM(port->base.index, port->vbus_id);
+		padctl_writel(padctl, reg, XUSB_PADCTL_SS_VBUS_ID_MAP);
+	}
+
 	reg = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CAP);
 	reg &= ~(PORT_CAP_MASK << PORTX_CAP_SHIFT(index));
 	if (port->port_cap == USB_PORT_DISABLED)
@@ -1301,8 +1356,13 @@ static int tegra194_usb3_phy_power_on(struct phy *phy)
 		reg |= (PORT_CAP_DEVICE << PORTX_CAP_SHIFT(index));
 	else if (port->port_cap == USB_HOST_CAP)
 		reg |= (PORT_CAP_HOST << PORTX_CAP_SHIFT(index));
-	else if (port->port_cap == USB_OTG_CAP)
-		reg |= (PORT_CAP_OTG << PORTX_CAP_SHIFT(index));
+	else if (port->port_cap == USB_OTG_CAP) {
+		if (is_device_mode_on)
+			reg |= (PORT_CAP_HOST << PORTX_CAP_SHIFT(index));
+		else
+			reg |= (PORT_CAP_OTG << PORTX_CAP_SHIFT(index));
+		priv->ss_port_cap_mask |= BIT(index);
+	}
 	padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_CAP);
 
 	if (port->port_cap == USB_OTG_CAP || port->gen1_only) {
@@ -1521,10 +1581,9 @@ static int tegra194_usb3_phy_init(struct phy *phy)
 
 	port->port_cap = companion_usb2_port->port_cap;
 	port->oc_pin = companion_usb2_port->oc_pin;
+	port->vbus_id = companion_usb2_port->vbus_id;
 
 	if (port->port_cap == USB_OTG_CAP) {
-		if (padctl->usb3_otg_port_base_1)
-			dev_warn(dev, "enabling OTG on multiple USB3 ports\n");
 		padctl->usb3_otg_port_base_1 = index + 1;
 	}
 
@@ -1764,21 +1823,25 @@ static void tegra194_xusb_padctl_remove(struct tegra_xusb_padctl *padctl)
 
 static void tegra194_xusb_padctl_save(struct tegra_xusb_padctl *padctl)
 {
+	int i;
 	struct tegra194_xusb_padctl *priv = to_tegra194_xusb_padctl(padctl);
 
-	priv->context.vbus_id = padctl_readl(padctl, USB2_VBUS_ID);
+	for (i = 0; i < XUSB_MAX_OTG_PORT_NUM; i++)
+		priv->context.vbus_id[i] =
+			padctl_readl(padctl, USB2_VBUS_ID(i));
 	priv->context.usb2_pad_mux =
-				padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
+			padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
 	priv->context.usb2_port_cap =
-				padctl_readl(padctl, XUSB_PADCTL_USB2_PORT_CAP);
+			padctl_readl(padctl, XUSB_PADCTL_USB2_PORT_CAP);
 	priv->context.ss_port_cap =
-				padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CAP);
+			padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CAP);
 	priv->context.ss_port_cfg =
-				padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CFG);
+			padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CFG);
 }
 
 static void tegra194_xusb_padctl_restore(struct tegra_xusb_padctl *padctl)
 {
+	int i;
 	struct tegra194_xusb_padctl *priv = to_tegra194_xusb_padctl(padctl);
 
 	padctl_writel(padctl, priv->context.usb2_pad_mux,
@@ -1789,7 +1852,9 @@ static void tegra194_xusb_padctl_restore(struct tegra_xusb_padctl *padctl)
 			XUSB_PADCTL_SS_PORT_CAP);
 	padctl_writel(padctl, priv->context.ss_port_cfg,
 			XUSB_PADCTL_SS_PORT_CFG);
-	padctl_writel(padctl, priv->context.vbus_id, USB2_VBUS_ID);
+	for (i = 0; i < XUSB_MAX_OTG_PORT_NUM; i++)
+		padctl_writel(padctl,
+			priv->context.vbus_id[i], USB2_VBUS_ID(i));
 }
 
 static int tegra194_xusb_padctl_suspend_noirq(struct tegra_xusb_padctl *padctl)
@@ -1806,37 +1871,122 @@ static int tegra194_xusb_padctl_resume_noirq(struct tegra_xusb_padctl *padctl)
 	return 0;
 }
 
+static u32 set_unused_otg_port_cap_to_host(u32 vbus_id_map, u32 port_cap,
+		int cur_vbus_id, int num)
+{
+	int i, vbus_id, cap;
+
+	for (i = 0; i < num; i++) {
+		vbus_id = PORT_VBUS_ID(vbus_id_map, i);
+		if (vbus_id == cur_vbus_id)
+			continue;
+		cap = PORT_CAP(port_cap, i);
+		if (cap != PORT_CAP_OTG)
+			continue;
+		port_cap &= ~(PORT_CAP_MASK << PORTX_CAP_SHIFT(i));
+		port_cap |= (PORT_CAP_HOST << PORTX_CAP_SHIFT(i));
+	}
+
+	return port_cap;
+}
+
+static void tegra194_xusb_padctl_set_unused_otg_cap_to_host(
+	struct tegra_xusb_padctl *padctl, unsigned int i)
+{
+	u32 port_cap, vbus_map;
+
+	dev_dbg(padctl->dev, "%s: %u\n", __func__, i);
+
+	/* update usb2 port cap */
+	port_cap = padctl_readl(padctl, XUSB_PADCTL_USB2_PORT_CAP);
+	vbus_map = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID_MAP);
+	port_cap = set_unused_otg_port_cap_to_host(vbus_map, port_cap, i,
+						TEGRA194_UTMI_PHYS);
+	padctl_writel(padctl, port_cap, XUSB_PADCTL_USB2_PORT_CAP);
+
+	/* update ss port cap */
+	port_cap = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CAP);
+	vbus_map = padctl_readl(padctl, XUSB_PADCTL_SS_VBUS_ID_MAP);
+	port_cap = set_unused_otg_port_cap_to_host(vbus_map, port_cap, i,
+						TEGRA194_USB3_PHYS);
+	padctl_writel(padctl, port_cap, XUSB_PADCTL_SS_PORT_CAP);
+}
+
+static void restore_otg_port_cap_to_host(struct tegra_xusb_padctl *padctl,
+					u32 addr, u32 mask, int num)
+{
+	int i;
+	u32 port_cap;
+
+	if (!mask)
+		return;
+
+	port_cap = padctl_readl(padctl, addr);
+	for (i = 0; i < num; i++) {
+		if (mask & BIT(i)) {
+			port_cap &= ~(PORT_CAP_MASK << PORTX_CAP_SHIFT(i));
+			port_cap |= (PORT_CAP_OTG << PORTX_CAP_SHIFT(i));
+		}
+	}
+	padctl_writel(padctl, port_cap, addr);
+}
+
+static void tegra194_xusb_padctl_restore_otg_cap(
+	struct tegra_xusb_padctl *padctl, unsigned int i)
+{
+	struct tegra194_xusb_padctl *priv = to_tegra194_xusb_padctl(padctl);
+
+	dev_dbg(padctl->dev, "%s: %u\n", __func__, i);
+
+	restore_otg_port_cap_to_host(padctl, XUSB_PADCTL_USB2_PORT_CAP,
+				priv->usb2_port_cap_mask, TEGRA194_UTMI_PHYS);
+	restore_otg_port_cap_to_host(padctl, XUSB_PADCTL_SS_PORT_CAP,
+				priv->ss_port_cap_mask, TEGRA194_USB3_PHYS);
+}
+
+static int tegra194_xusb_padctl_vbus_override_early(
+	struct tegra_xusb_padctl *padctl, unsigned int i, bool set)
+{
+	if (set)
+		tegra194_xusb_padctl_set_unused_otg_cap_to_host(padctl, i);
+
+	return 0;
+}
+
 static int tegra194_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
-					      bool set)
+		unsigned int i, bool set)
 {
 	u32 reg;
 
-	reg = padctl_readl(padctl, USB2_VBUS_ID);
+	reg = padctl_readl(padctl, USB2_VBUS_ID(i));
 	if (set) {
 		reg |= VBUS_OVERRIDE;
 		reg &= ~ID_OVERRIDE(~0);
 		reg |= ID_OVERRIDE_FLOATING;
 	} else
 		reg &= ~VBUS_OVERRIDE;
-	padctl_writel(padctl, reg, USB2_VBUS_ID);
+	padctl_writel(padctl, reg, USB2_VBUS_ID(i));
+	if (!set)
+		tegra194_xusb_padctl_restore_otg_cap(padctl, i);
 
+	padctl->otg_vbus_updating[i] = true;
 	schedule_work(&padctl->otg_vbus_work);
 	return 0;
 }
 
 static int tegra194_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
-					bool set)
+			unsigned int i, bool set)
 {
 	u32 reg;
 
-	reg = padctl_readl(padctl, USB2_VBUS_ID);
+	reg = padctl_readl(padctl, USB2_VBUS_ID(i));
 	if (set) {
 		if (reg & VBUS_OVERRIDE) {
 			reg &= ~VBUS_OVERRIDE;
-			padctl_writel(padctl, reg, USB2_VBUS_ID);
+			padctl_writel(padctl, reg, USB2_VBUS_ID(i));
 			usleep_range(1000, 2000);
 
-			reg = padctl_readl(padctl, USB2_VBUS_ID);
+			reg = padctl_readl(padctl, USB2_VBUS_ID(i));
 		}
 
 		reg &= ~ID_OVERRIDE(~0);
@@ -1845,8 +1995,9 @@ static int tegra194_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
 		reg &= ~ID_OVERRIDE(~0);
 		reg |= ID_OVERRIDE_FLOATING;
 	}
-	padctl_writel(padctl, reg, USB2_VBUS_ID);
+	padctl_writel(padctl, reg, USB2_VBUS_ID(i));
 
+	padctl->otg_vbus_updating[i] = true;
 	schedule_work(&padctl->otg_vbus_work);
 
 	return 0;
@@ -1955,30 +2106,31 @@ static int tegra194_xusb_padctl_vbus_power_off(struct tegra_xusb_padctl *padctl,
 	return rc;
 }
 
-static void tegra194_xusb_padctl_otg_vbus_handle
-			(struct tegra_xusb_padctl *padctl, unsigned int index)
+static void
+tegra194_xusb_padctl_otg_vbus_handle(struct tegra_xusb_padctl *padctl,
+		unsigned int vbus_id, unsigned int index)
 {
 	u32 reg;
 	int err;
 
-	reg = padctl_readl(padctl, USB2_VBUS_ID);
-	dev_dbg(padctl->dev, "USB2_VBUS_ID 0x%x otg_vbus_on was %d\n", reg,
-		padctl->otg_vbus_on);
+	reg = padctl_readl(padctl, USB2_VBUS_ID(vbus_id));
+	dev_dbg(padctl->dev, "USB2_VBUS_ID 0x%x otg_vbus_on[%d, %d] was %d\n",
+		reg, vbus_id, index, padctl->otg_vbus_on[vbus_id]);
 
 	if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_GROUNDED) {
 		/* entering host mode role */
-		if (!padctl->otg_vbus_on) {
+		if (!padctl->otg_vbus_on[vbus_id]) {
 			err = tegra194_xusb_padctl_vbus_power_on(padctl, index);
 			if (!err)
-				padctl->otg_vbus_on = true;
+				padctl->otg_vbus_on[vbus_id] = true;
 		}
 	} else if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_FLOATING) {
 		/* leaving host mode role */
-		if (padctl->otg_vbus_on) {
+		if (padctl->otg_vbus_on[vbus_id]) {
 			err = tegra194_xusb_padctl_vbus_power_off(padctl,
 				index);
 			if (!err)
-				padctl->otg_vbus_on = false;
+				padctl->otg_vbus_on[vbus_id] = false;
 		}
 	}
 }
@@ -2480,6 +2632,7 @@ static const struct tegra_xusb_padctl_ops tegra194_xusb_padctl_ops = {
 	.remove = tegra194_xusb_padctl_remove,
 	.suspend_noirq = tegra194_xusb_padctl_suspend_noirq,
 	.resume_noirq = tegra194_xusb_padctl_resume_noirq,
+	.vbus_override_early = tegra194_xusb_padctl_vbus_override_early,
 	.vbus_override = tegra194_xusb_padctl_vbus_override,
 	.id_override = tegra194_xusb_padctl_id_override,
 	.has_otg_cap = tegra194_xusb_padctl_has_otg_cap,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2368,7 +2368,7 @@ static int tegra186_xusb_padctl_resume_noirq(struct tegra_xusb_padctl *padctl)
 }
 
 static int tegra186_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
-					      bool set)
+		unsigned int i, bool set)
 {
 	u32 reg;
 
@@ -2386,7 +2386,7 @@ static int tegra186_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
 }
 
 static int tegra186_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
-					 bool set)
+		unsigned int i, bool set)
 {
 	u32 reg;
 
@@ -2515,30 +2515,31 @@ static int tegra186_xusb_padctl_vbus_power_off(struct tegra_xusb_padctl *padctl,
 	return rc;
 }
 
-static void tegra186_xusb_padctl_otg_vbus_handle
-			(struct tegra_xusb_padctl *padctl, unsigned int index)
+static void
+tegra186_xusb_padctl_otg_vbus_handle(struct tegra_xusb_padctl *padctl,
+		unsigned int vbus_id, unsigned int index)
 {
 	u32 reg;
 	int err;
 
 	reg = padctl_readl(padctl, USB2_VBUS_ID);
 	dev_dbg(padctl->dev, "USB2_VBUS_ID 0x%x otg_vbus_on was %d\n", reg,
-		padctl->otg_vbus_on);
+		padctl->otg_vbus_on[0]);
 
 	if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_GROUNDED) {
 		/* entering host mode role */
-		if (!padctl->otg_vbus_on) {
+		if (!padctl->otg_vbus_on[0]) {
 			err = tegra186_xusb_padctl_vbus_power_on(padctl, index);
 			if (!err)
-				padctl->otg_vbus_on = true;
+				padctl->otg_vbus_on[0] = true;
 		}
 	} else if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_FLOATING) {
 		/* leaving host mode role */
-		if (padctl->otg_vbus_on) {
+		if (padctl->otg_vbus_on[0]) {
 			err = tegra186_xusb_padctl_vbus_power_off(padctl,
 								  index);
 			if (!err)
-				padctl->otg_vbus_on = false;
+				padctl->otg_vbus_on[0] = false;
 		}
 	}
 }

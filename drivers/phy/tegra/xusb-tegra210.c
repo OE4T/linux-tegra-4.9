@@ -3272,7 +3272,7 @@ static bool tegra210_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,
 }
 
 static int tegra210_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
-					      bool set)
+		unsigned int i, bool set)
 {
 	u32 reg;
 
@@ -3292,7 +3292,7 @@ static int tegra210_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
 }
 
 static int tegra210_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
-					 bool set)
+		unsigned int i, bool set)
 {
 	u32 reg;
 
@@ -3341,8 +3341,8 @@ static int tegra210_utmi_port_reset_quirk(struct phy *phy)
 
 	if ((reg & ZIP) || (reg & ZIN)) {
 		dev_dbg(dev, "Toggle vbus\n");
-		tegra210_xusb_padctl_vbus_override(padctl, false);
-		tegra210_xusb_padctl_vbus_override(padctl, true);
+		tegra210_xusb_padctl_vbus_override(padctl, 0, false);
+		tegra210_xusb_padctl_vbus_override(padctl, 0, true);
 		return 1;
 	}
 	return 0;
@@ -3873,30 +3873,31 @@ void tegra210_phy_xusb_handle_overcurrent(struct tegra_xusb_padctl *padctl)
 	mutex_unlock(&padctl->lock);
 }
 
-static void tegra210_xusb_padctl_otg_vbus_handle
-			(struct tegra_xusb_padctl *padctl, unsigned int index)
+static void
+tegra210_xusb_padctl_otg_vbus_handle(struct tegra_xusb_padctl *padctl,
+	unsigned int vbus_id, unsigned int index)
 {
 	u32 reg;
 	int err;
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_VBUS_ID);
 	dev_dbg(padctl->dev, "USB2_VBUS_ID 0x%x otg_vbus_on was %d\n", reg,
-		padctl->otg_vbus_on);
+		padctl->otg_vbus_on[0]);
 
 	if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_GROUNDED) {
 		/* entering host mode role */
-		if (!padctl->otg_vbus_on) {
+		if (!padctl->otg_vbus_on[0]) {
 			err = tegra210_xusb_padctl_vbus_power_on(padctl, index);
 			if (!err)
-				padctl->otg_vbus_on = true;
+				padctl->otg_vbus_on[0] = true;
 		}
 	} else if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_FLOATING) {
 		/* leaving host mode role */
-		if (padctl->otg_vbus_on) {
+		if (padctl->otg_vbus_on[0]) {
 			err = tegra210_xusb_padctl_vbus_power_off(padctl,
 								  index);
 			if (!err)
-				padctl->otg_vbus_on = false;
+				padctl->otg_vbus_on[0] = false;
 		}
 	}
 }

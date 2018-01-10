@@ -311,6 +311,7 @@ struct tegra_xusb_usb2_port {
 	enum tegra_xusb_usb_port_cap port_cap;
 	int oc_pin;
 	int usb3_port_fake; /* only required for T210 device mode */
+	int vbus_id;
 };
 
 static inline struct tegra_xusb_usb2_port *
@@ -357,6 +358,7 @@ struct tegra_xusb_usb3_port {
 	enum tegra_xusb_usb_port_cap port_cap;
 	int oc_pin;
 	bool gen1_only;
+	int vbus_id;
 
 	u32 tap1;
 	u32 amp;
@@ -399,15 +401,19 @@ struct tegra_xusb_padctl_ops {
 	int (*hsic_reset)(struct tegra_xusb_padctl *padctl, unsigned int index);
 	int (*usb3_set_lfps_detect)(struct tegra_xusb_padctl *padctl,
 				    unsigned int index, bool enable);
-	int (*vbus_override)(struct tegra_xusb_padctl *padctl, bool set);
-	int (*id_override)(struct tegra_xusb_padctl *padctl, bool set);
+	int (*vbus_override_early)(struct tegra_xusb_padctl *padctl,
+				unsigned int i, bool set);
+	int (*vbus_override)(struct tegra_xusb_padctl *padctl, unsigned int i,
+				bool set);
+	int (*id_override)(struct tegra_xusb_padctl *padctl, unsigned int i,
+				bool set);
 	bool (*has_otg_cap)(struct tegra_xusb_padctl *padctl, struct phy *phy);
 	int (*vbus_power_on)(struct tegra_xusb_padctl *padctl,
 				unsigned int index);
 	int (*vbus_power_off)(struct tegra_xusb_padctl *padctl,
 				unsigned int index);
 	void (*otg_vbus_handle)(struct tegra_xusb_padctl *padctl,
-				unsigned int index);
+				unsigned int vbus_id, unsigned int index);
 	int (*phy_sleepwalk)(struct tegra_xusb_padctl *padctl, struct phy *phy,
 			     bool enable, enum usb_device_speed speed);
 	int (*phy_wake)(struct tegra_xusb_padctl *padctl, struct phy *phy,
@@ -486,8 +492,12 @@ struct tegra_xusb_padctl {
 	int usb2_otg_port_base_1; /* one based usb2 port number */
 	int usb3_otg_port_base_1; /* one based usb3 port number */
 	struct work_struct otg_vbus_work;
-	bool otg_vbus_on;
+	bool otg_vbus_updating[XUSB_MAX_OTG_PORT_NUM];
+	int otg_vbus_usb2_port_base_1[XUSB_MAX_OTG_PORT_NUM];
+	int otg_vbus_usb3_port_base_1[XUSB_MAX_OTG_PORT_NUM];
+	bool otg_vbus_on[XUSB_MAX_OTG_PORT_NUM];
 	bool otg_vbus_alwayson;
+	int otg_port_num;
 
 	bool cdp_used;
 	bool is_xhci_iov;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,6 +30,8 @@ enum tegra_vbus_dir {
 };
 struct phy;
 
+#define XUSB_MAX_OTG_PORT_NUM	4
+
 struct tegra_xusb_padctl *tegra_xusb_padctl_get(struct device *dev);
 void tegra_xusb_padctl_put(struct tegra_xusb_padctl *padctl);
 
@@ -41,11 +43,16 @@ int tegra_xusb_padctl_hsic_reset(struct tegra_xusb_padctl *padctl,
 				unsigned int port);
 int tegra_xusb_padctl_usb3_set_lfps_detect(struct tegra_xusb_padctl *padctl,
 					   unsigned int port, bool enable);
-int tegra_xusb_padctl_set_vbus_override(struct tegra_xusb_padctl *padctl);
-int tegra_xusb_padctl_clear_vbus_override(struct tegra_xusb_padctl *padctl);
-
-int tegra_xusb_padctl_set_id_override(struct tegra_xusb_padctl *padctl);
-int tegra_xusb_padctl_clear_id_override(struct tegra_xusb_padctl *padctl);
+int tegra_xusb_padctl_set_vbus_override_early(struct tegra_xusb_padctl *padctl,
+				unsigned int i);
+int tegra_xusb_padctl_set_vbus_override(struct tegra_xusb_padctl *padctl,
+				unsigned int i);
+int tegra_xusb_padctl_clear_vbus_override(struct tegra_xusb_padctl *padctl,
+				unsigned int i);
+int tegra_xusb_padctl_set_id_override(struct tegra_xusb_padctl *padctl,
+				unsigned int i);
+int tegra_xusb_padctl_clear_id_override(struct tegra_xusb_padctl *padctl,
+				unsigned int i);
 bool tegra_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,
 				struct phy *phy);
 
@@ -97,4 +104,8 @@ int tegra_xusb_padctl_disable_host_cdp(struct tegra_xusb_padctl
 int tegra_xusb_padctl_overcurrent_detected(struct tegra_xusb_padctl *padctl,
 					struct phy *phy);
 void tegra_xusb_padctl_handle_overcurrent(struct tegra_xusb_padctl *padctl);
+int tegra_xusb_padctl_get_vbus_id_num(struct tegra_xusb_padctl *padctl);
+void tegra_xusb_padctl_get_vbus_id_ports(struct tegra_xusb_padctl *padctl,
+	int i, int *usb2_port, int *usb3_port);
+
 #endif /* PHY_TEGRA_XUSB_H */

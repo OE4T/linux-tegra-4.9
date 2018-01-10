@@ -3,7 +3,7 @@
  *
  * Tegra NvDLA Driver
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -157,6 +157,22 @@ struct nvdla_ioctl_submit_task {
 };
 
 /**
+ * struct nvdla_ioctl_emu_submit_task structure for single emulator task
+ * information
+ *
+ * @num_postfences		number of post-fences in task
+ * @reserved			reserved for padding and future use
+ * @postfences			pointer to post-fence struct table
+ *
+ */
+struct nvdla_ioctl_emu_submit_task {
+	__u32 num_postfences;
+	__u32 reserved;
+
+	__u64 postfences;
+};
+
+/**
  * struct nvdla_fence structure for passing fence information
  *
  * @type			type of fence: syncpoint, Linux Sync Fd
@@ -208,8 +224,10 @@ struct nvdla_status_notify {
 	_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 6, struct nvdla_get_fw_ver_args)
 #define NVDLA_IOCTL_GET_QUEUE_STATUS \
 	_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 7, struct nvdla_get_q_status_args)
+#define NVDLA_IOCTL_EMU_TASK_SUBMIT \
+	_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 8, struct nvdla_submit_args)
 #define NVDLA_IOCTL_LAST		\
-		_IOC_NR(NVDLA_IOCTL_GET_QUEUE_STATUS)
+		_IOC_NR(NVDLA_IOCTL_EMU_TASK_SUBMIT)
 
 #define NVDLA_IOCTL_MAX_ARG_SIZE  \
 		sizeof(struct nvdla_pin_unpin_args)

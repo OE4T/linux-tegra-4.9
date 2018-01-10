@@ -388,6 +388,61 @@ fail:
 	return err;
 }
 
+int nvdla_send_emu_postfences(struct nvdla_emu_task *task,
+			struct nvdla_ioctl_emu_submit_task *user_task)
+{
+	int err = 0, i;
+	struct platform_device *dla_pdev = task->queue->pool->pdev;
+	struct platform_device *host_pdev =
+				to_platform_device(dla_pdev->dev.parent);
+	struct nvdla_fence __user *postfences =
+		(struct nvdla_fence __user *)(uintptr_t)user_task->postfences;
+	char fence_name[32];
+
+	nvdla_dbg_fn(dla_pdev, "sending post fences");
+
+	for (i = 0; i < task->num_postfences; i++) {
+		if (task->postfences[i].type == NVDLA_FENCE_TYPE_SYNC_FD) {
+			struct nvhost_ctrl_sync_fence_info info;
+
+			info.id = task->postfences[i].syncpoint_index;
+			info.thresh = task->postfences[i].syncpoint_value;
+
+			nvdla_dbg_info(dla_pdev,
+					"creating post sync fd [%d]:[%d]\n",
+					info.id, info.thresh);
+
+			/* create fence name format example: nvdla0_1_fence */
+			snprintf(fence_name, sizeof(fence_name),
+				"%s_%d_fence", dev_name(&dla_pdev->dev),
+				task->postfences[i].syncpoint_index);
+
+			err = nvhost_sync_create_fence_fd(host_pdev,
+				&info, 1, fence_name,
+				&task->postfences[i].sync_fd);
+
+			if (err) {
+				nvdla_dbg_err(dla_pdev,
+					"fail to create postfence syncfd\n");
+				goto fail;
+			}
+		}
+	}
+
+	nvdla_dbg_fn(dla_pdev, "copy postfences to user");
+	/* send post fences */
+	if (copy_to_user(postfences, task->postfences,
+		(task->num_postfences * sizeof(struct nvdla_fence)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(dla_pdev, "failed to send postfences");
+		goto fail;
+	}
+	nvdla_dbg_info(dla_pdev, "postfences sent");
+
+fail:
+	return err;
+}
+
 int nvdla_send_postfences(struct nvdla_task *task,
 			struct nvdla_ioctl_submit_task *user_task)
 {
@@ -623,6 +678,86 @@ static void nvdla_dump_task(struct nvdla_task *task)
 	}
 }
 
+static int nvdla_emu_task_submit(struct nvdla_private *priv, void *arg)
+{
+	struct nvdla_submit_args *args =
+			(struct nvdla_submit_args *)arg;
+	struct nvdla_ioctl_emu_submit_task __user *user_tasks;
+	struct nvdla_ioctl_emu_submit_task local_tasks[MAX_TASKS_PER_SUBMIT];
+	struct platform_device *pdev;
+	struct nvhost_queue *queue;
+	struct nvdla_emu_task task;
+	int err = 0, i = 0;
+	u32 num_tasks;
+
+	if (!args || !priv)
+		return -EINVAL;
+
+	pdev = priv->pdev;
+	queue = priv->queue;
+	if (!(queue && pdev))
+		return -EINVAL;
+
+	nvdla_dbg_fn(pdev, "inside emulator task submit");
+
+	task.queue = queue;
+	task.sp = &nvhost_get_host(pdev)->syncpt;
+
+	user_tasks = (struct nvdla_ioctl_emu_submit_task __user *)
+			(uintptr_t)args->tasks;
+	if (!user_tasks)
+		return -EINVAL;
+
+	num_tasks = args->num_tasks;
+	if (num_tasks == 0 || num_tasks > MAX_TASKS_PER_SUBMIT)
+		return -EINVAL;
+
+	nvdla_dbg_info(pdev, "num of emulator tasks [%d]", num_tasks);
+
+	/* IOCTL copy descriptors*/
+	if (copy_from_user(local_tasks, (void __user *)user_tasks,
+			(num_tasks * sizeof(*user_tasks)))) {
+		err = -EFAULT;
+		goto exit;
+	}
+	nvdla_dbg_info(pdev, "copy of user tasks done");
+
+	for (i = 0; i < num_tasks; i++) {
+
+		nvdla_dbg_info(pdev, "submit [%d]th task", i + 1);
+
+		task.num_postfences = local_tasks[i].num_postfences;
+
+		/* get post fences */
+		if (copy_from_user(task.postfences,
+			(void __user *)local_tasks[i].postfences,
+			(task.num_postfences * sizeof(struct nvdla_fence)))) {
+			err = -EFAULT;
+			nvdla_dbg_err(pdev, "failed to copy postfences");
+			goto exit;
+		}
+
+		err = nvdla_emulator_submit(queue, &task);
+		if (err) {
+			nvdla_dbg_err(pdev, "fail to submit task: %d", i + 1);
+			goto exit;
+		}
+		nvdla_dbg_info(pdev, "task[%d] submitted", i + 1);
+
+		/* send fences to user */
+		err = nvdla_send_emu_postfences(&task, local_tasks + i);
+		if (err) {
+			nvdla_dbg_err(pdev, "fail to send postfence%d", i + 1);
+			goto exit;
+		}
+		nvdla_dbg_info(pdev, "postfences of task[%d] sent", i + 1);
+	}
+	nvdla_dbg_fn(pdev, "Emulator task submitted, done!");
+
+exit:
+	return 0;
+}
+
 static int nvdla_submit(struct nvdla_private *priv, void *arg)
 {
 	struct nvdla_submit_args *args =
@@ -775,6 +910,9 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 		break;
 	case NVDLA_IOCTL_GET_QUEUE_STATUS:
 		err = nvdla_get_q_status(priv, (void *)buf);
+		break;
+	case NVDLA_IOCTL_EMU_TASK_SUBMIT:
+		err = nvdla_emu_task_submit(priv, (void *)buf);
 		break;
 	default:
 		nvdla_dbg_err(pdev, "invalid IOCTL CMD");

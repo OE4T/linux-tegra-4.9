@@ -942,6 +942,63 @@ done:
 	return 0;
 }
 
+int nvdla_emulator_submit(struct nvhost_queue *queue, struct nvdla_emu_task *task)
+{
+	int i;
+	uint32_t counter;
+	struct platform_device *pdev = queue->pool->pdev;
+
+	/* reset fence counter */
+	task->fence_counter = 0;
+	/* fill all postactions */
+	for (i = 0; i < task->num_postfences; i++) {
+
+		/* update action */
+		switch (task->postfences[i].type) {
+		case NVDLA_FENCE_TYPE_SYNCPT:
+		case NVDLA_FENCE_TYPE_SYNC_FD: {
+			task->fence_counter = task->fence_counter + 1;
+			break;
+		}
+		default:
+			nvdla_dbg_err(pdev, "Invalid postfence sync type[%d]",
+				task->postfences[i].type);
+			return -EINVAL;
+		}
+	}
+
+	/* get fence from nvhost */
+	task->fence = nvhost_syncpt_incr_max(task->sp, queue->syncpt_id,
+						task->fence_counter);
+
+	nvdla_dbg_fn(pdev, "syncpt[%d] fence[%d] task[%p] fence_counter[%u]",
+				queue->syncpt_id, task->fence,
+				task, task->fence_counter);
+
+	/* get syncpoint reference */
+	nvhost_syncpt_get_ref(task->sp, queue->syncpt_id);
+
+	/* Update postfences for all */
+	counter = task->fence_counter - 1;
+	for (i = 0; i < task->num_postfences; i++) {
+		if ((task->postfences[i].type == NVDLA_FENCE_TYPE_SYNCPT) ||
+		    (task->postfences[i].type == NVDLA_FENCE_TYPE_SYNC_FD)) {
+			task->postfences[i].syncpoint_index =
+					queue->syncpt_id;
+			task->postfences[i].syncpoint_value =
+					task->fence - counter;
+
+			nvdla_dbg_info(pdev, "[%d] postfence set[%u]:[%u]",
+				i, task->postfences[i].syncpoint_index,
+				task->postfences[i].syncpoint_value);
+
+			counter = counter - 1;
+		}
+	}
+
+	return 0;
+}
+
 /* Queue management API */
 static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 {

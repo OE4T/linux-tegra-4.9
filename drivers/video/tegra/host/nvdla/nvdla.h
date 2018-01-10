@@ -208,6 +208,26 @@ struct nvdla_device {
 };
 
 /**
+ * struct nvdla_emu_task:	structure for emulator task info
+ *
+ * @queue		Queue in which task submitted
+ * @sp			pointer to syncpt
+ * @postfences		pointer to post fences
+ * @num_postfences	Number of postfences in task
+ * @fence		Fence tracking for current task
+ * @fence_counter	Counter used to track fence value
+ *
+ */
+struct nvdla_emu_task {
+	struct nvhost_queue *queue;
+	struct nvhost_syncpt *sp;
+	struct nvdla_fence postfences[MAX_NUM_NVDLA_POSTFENCES];
+	u32 num_postfences;
+	u32 fence;
+	u32 fence_counter;
+};
+
+/**
  * struct nvdla_task:	structure for task info
  *
  * @queue		Queue in which task submitted
@@ -371,5 +391,8 @@ void nvdla_put_task_mem(struct nvdla_task *task);
 size_t nvdla_get_max_task_size(void);
 int nvdla_alloc_gcov_region(struct platform_device *pdev);
 int nvdla_free_gcov_region(struct platform_device *pdev, bool update_region);
+
+int nvdla_emulator_submit(struct nvhost_queue *queue,
+				struct nvdla_emu_task *task);
 
 #endif /* End of __NVHOST_NVDLA_H__ */

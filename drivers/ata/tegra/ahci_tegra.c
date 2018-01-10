@@ -70,7 +70,9 @@ static const struct tegra_ahci_soc_data tegra194_ahci_data = {
 		.t_satao_nvoob_comma_cnt_mask = (0XFF << 16),
 		.t_satao_nvoob_comma_cnt = (0X07 << 16),
 	},
+#ifdef CONFIG_ARCH_TEGRA_19x_SOC
 	.powergate_id = TEGRA194_POWER_DOMAIN_SAX,
+#endif
 	.enable_pose_edge = false,
 };
 

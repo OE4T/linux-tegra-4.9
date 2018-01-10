@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2217,35 +2217,20 @@ static int tegra_se_sha_op(struct ahash_request *req, bool is_last,
 		dev_err(se_dev->dev, "Invalid SHA digest size\n");
 		return -EINVAL;
 	}
-
-	/* If request length, total length are zero and this is last
-	 * request return zero hash result.
-	 */
-	if (!req->nbytes && !sha_ctx->total_count && is_last) {
-		/*
-		 *  SW WAR for zero length SHA operation since
-		 *  SE HW can't accept zero length SHA operation.
-		 */
-		mode = sha_ctx->op_mode - SE_AES_OP_MODE_SHA1;
-		memcpy(req->result, zero_vec[mode].digest, zero_vec[mode].size);
-		return 0;
+	/* If both the request length and total length are zero, */
+	if (!req->nbytes && !sha_ctx->total_count) {
+		if (is_last) {
+			/* If this is the last packet SW WAR for zero
+			 * length SHA operation since SE HW can't accept
+			 * zero length SHA operation.
+			 */
+			mode = sha_ctx->op_mode - SE_AES_OP_MODE_SHA1;
+			memcpy(req->result, zero_vec[mode].digest,
+					zero_vec[mode].size);
+			return 0;
+		} else
+			return 0;	/* empty packets are allowed */
 	}
-
-	/* If request length, total length are zero and this is not last
-	 * request return without any processing.
-	 */
-	if (!req->nbytes && !sha_ctx->total_count && !is_last)
-		return 0;
-
-	/* If request length is zero, total processed length is not zero
-	 * is considered as error.
-	 */
-	if (!req->nbytes && sha_ctx->total_count) {
-		dev_err(se_dev->dev,
-			"Invalid input size for the total processed length\n");
-		return -EINVAL;
-	}
-
 	mutex_lock(&se_dev->mtx);
 	ret = tegra_se_sha_process_buf(req, is_last, process_cur_req);
 	if (ret)
@@ -2253,7 +2238,7 @@ static int tegra_se_sha_op(struct ahash_request *req, bool is_last,
 
 	if (is_last) {
 		tegra_se_read_hash_result(se_dev, req->result,
-					  crypto_ahash_digestsize(tfm), true);
+				crypto_ahash_digestsize(tfm), true);
 
 		if ((sha_ctx->op_mode == SE_AES_OP_MODE_SHA384) ||
 		    (sha_ctx->op_mode == SE_AES_OP_MODE_SHA512)) {

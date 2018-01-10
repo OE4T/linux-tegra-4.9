@@ -48,7 +48,7 @@
 void populate_desc_header(u8 *lun_desc_buf)
 {
 	lun_desc_buf[LENGTH_OFFSET] = CONFIG_DESC_SIZE;
-	lun_desc_buf[DESC_TYPE_OFFFSET] = QUERY_DESC_IDN_CONFIGURAION;
+	lun_desc_buf[DESC_TYPE_OFFFSET] = QUERY_DESC_IDN_CONFIGURATION;
 	lun_desc_buf[INIT_PWR_MODE_OFFSET] = ACTIVE_MODE;
 	lun_desc_buf[HIGH_PRIORITY_LUN_OFFSET] = EQUAL_PRIORITY;
 }

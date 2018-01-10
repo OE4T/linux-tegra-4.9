@@ -1266,11 +1266,11 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 			dev_info(&pdev->dev, "This is a dummy codec\n");
 			machine->is_codec_dummy = 1;
 		}
-	}
 
-	if (!machine->is_codec_dummy) {
-		/* setup for jack detection only in non-dummy case */
-		rt5659_set_jack_detect(codec, &tegra_machine_hp_jack);
+		if (!machine->is_codec_dummy) {
+			/* setup for jack detection only in non-dummy case */
+			rt5659_set_jack_detect(codec, &tegra_machine_hp_jack);
+		}
 	}
 
 	return 0;

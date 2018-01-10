@@ -1310,11 +1310,21 @@ bool gv11b_fifo_handle_sched_error(struct gk20a *g)
 	return false;
 }
 
-static u32 gv11b_fifo_ctxsw_timeout_info(struct gk20a *g, u32 active_eng_id)
+static const char * const invalid_str = "invalid";
+
+static const char *const ctxsw_timeout_status_desc[] = {
+	"awaiting ack",
+	"eng was reset",
+	"ack received",
+	"dropped timeout"
+};
+
+static u32 gv11b_fifo_ctxsw_timeout_info(struct gk20a *g, u32 active_eng_id,
+						u32 *info_status)
 {
 	u32 tsgid = FIFO_INVAL_TSG_ID;
 	u32 timeout_info;
-	u32 ctx_status, info_status;
+	u32 ctx_status;
 
 	timeout_info = gk20a_readl(g,
 			 fifo_intr_ctxsw_timeout_info_r(active_eng_id));
@@ -1374,35 +1384,22 @@ static u32 gv11b_fifo_ctxsw_timeout_info(struct gk20a *g, u32 active_eng_id)
 	 * DROPPED_TIMEOUT state, as that request may
 	 * be acked in the interim.
 	 */
-	info_status = fifo_intr_ctxsw_timeout_info_status_v(timeout_info);
-	if (info_status ==
-		 fifo_intr_ctxsw_timeout_info_status_awaiting_ack_v()) {
-
-		gk20a_dbg_info("ctxsw timeout info : awaiting ack");
-
-	} else if (info_status ==
-		 fifo_intr_ctxsw_timeout_info_status_eng_was_reset_v()) {
-
-		gk20a_dbg_info("ctxsw timeout info : eng was reset");
-
-	} else if (info_status ==
+	*info_status = fifo_intr_ctxsw_timeout_info_status_v(timeout_info);
+	if (*info_status ==
 		 fifo_intr_ctxsw_timeout_info_status_ack_received_v()) {
 
 		gk20a_dbg_info("ctxsw timeout info : ack received");
 		/* no need to recover */
 		tsgid = FIFO_INVAL_TSG_ID;
 
-	} else if (info_status ==
+	} else if (*info_status ==
 		fifo_intr_ctxsw_timeout_info_status_dropped_timeout_v()) {
 
 		gk20a_dbg_info("ctxsw timeout info : dropped timeout");
 		/* no need to recover */
 		tsgid = FIFO_INVAL_TSG_ID;
 
-	} else {
-		gk20a_dbg_info("ctxsw timeout info status = %u", info_status);
 	}
-
 	return tsgid;
 }
 
@@ -1412,6 +1409,8 @@ bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
 	u32 tsgid = FIFO_INVAL_TSG_ID;
 	u32 engine_id, active_eng_id;
 	u32 timeout_val, ctxsw_timeout_engines;
+	u32 info_status;
+	const char *info_status_str;
 
 
 	if (!(fifo_intr & fifo_intr_0_ctxsw_timeout_pending_f()))
@@ -1440,7 +1439,8 @@ bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
 			u32 ms = 0;
 			bool verbose = false;
 
-			tsgid = gv11b_fifo_ctxsw_timeout_info(g, active_eng_id);
+			tsgid = gv11b_fifo_ctxsw_timeout_info(g, active_eng_id,
+						&info_status);
 
 			if (tsgid == FIFO_INVAL_TSG_ID)
 				continue;
@@ -1448,10 +1448,17 @@ bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
 			if (gk20a_fifo_check_tsg_ctxsw_timeout(
 				&f->tsg[tsgid], &verbose, &ms)) {
 				ret = true;
-				nvgpu_err(g,
-				 "ctxsw timeout error:"
-				"active engine id =%u, %s=%d, ms=%u",
-				active_eng_id, "tsg", tsgid, ms);
+
+				info_status_str =  invalid_str;
+				if (info_status <
+					ARRAY_SIZE(ctxsw_timeout_status_desc))
+					info_status_str =
+					ctxsw_timeout_status_desc[info_status];
+
+				nvgpu_err(g, "ctxsw timeout error: "
+				"active engine id =%u, %s=%d, info: %s ms=%u",
+				active_eng_id, "tsg", tsgid, info_status_str,
+				ms);
 
 				/* Cancel all channels' timeout */
 				gk20a_channel_timeout_restart_all_channels(g);

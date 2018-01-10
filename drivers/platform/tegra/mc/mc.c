@@ -35,6 +35,8 @@
 #include <linux/platform/tegra/mcerr.h>
 #include <linux/platform/tegra/tegra_emc.h>
 
+#include <linux/platform/tegra/bwmgr_mc.h>
+
 #include <soc/tegra/fuse.h>
 
 #define MC_CLIENT_HOTRESET_CTRL		0x200
@@ -134,16 +136,7 @@ EXPORT_SYMBOL(mc_get_carveout_info);
  */
 unsigned long tegra_emc_bw_to_freq_req(unsigned long bw)
 {
-	unsigned int bytes_per_emc_clk;
-
-	bytes_per_emc_clk = tegra_mc_get_effective_bytes_width() * 2;
-
-	/*
-	 * Round to the nearest Hz, KHz, etc. This is so that the value
-	 * returned by this function will always be >= to the number of
-	 * clock cycles required to satisfy the passed BW.
-	 */
-	return (bw + bytes_per_emc_clk - 1) / bytes_per_emc_clk;
+	return bwmgr_bw_to_freq(bw);
 }
 EXPORT_SYMBOL_GPL(tegra_emc_bw_to_freq_req);
 
@@ -158,11 +151,7 @@ EXPORT_SYMBOL_GPL(tegra_emc_bw_to_freq_req);
  */
 unsigned long tegra_emc_freq_req_to_bw(unsigned long freq)
 {
-	unsigned int bytes_per_emc_clk;
-
-	bytes_per_emc_clk = tegra_mc_get_effective_bytes_width() * 2;
-
-	return freq * bytes_per_emc_clk;
+	return bwmgr_freq_to_bw(freq);
 }
 EXPORT_SYMBOL_GPL(tegra_emc_freq_req_to_bw);
 

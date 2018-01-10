@@ -1,7 +1,7 @@
 /*
  * PVA mailbox code
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -137,6 +137,11 @@ void pva_mailbox_isr(struct pva *pva)
 		pva->mailbox_status_regs.status[PVA_CCQ_STATUS7_INDEX] =
 			host1x_readl(pdev, cfg_ccq_status7_r());
 
+	/* Clear the mailbox interrupt status */
+	int_status = int_status & PVA_READY;
+	host1x_writel(pdev, hsp_sm7_r(), int_status);
+
+	/* Wake up the waiters */
 	pva->mailbox_status = PVA_MBOX_STATUS_DONE;
 	wake_up(&pva->mailbox_waitqueue);
 }

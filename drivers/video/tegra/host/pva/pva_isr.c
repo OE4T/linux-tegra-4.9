@@ -1,7 +1,7 @@
 /*
  * PVA ISR code for T194
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -70,12 +70,6 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 		nvhost_dbg_info("PVA ISR (%x)", status7);
 
 		pva_mailbox_isr(pva);
-
-		/* Leave PVA_READY bit untouched in purpose as
-		 * per ISS recommendation
-		 */
-		status7 = status7 & PVA_READY;
-		host1x_writel(pdev, hsp_sm7_r(), status7);
 	}
 
 	/* Check for watchdog timer interrupt */

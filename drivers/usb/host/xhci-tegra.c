@@ -410,6 +410,16 @@ struct tegra_xhci_firmware_log {
 	unsigned long flags;
 };
 
+struct xusb_otg_port {
+	int usb2_otg_port_base_1; /* one based usb2 port number */
+	int usb3_otg_port_base_1; /* one based usb3 port number */
+
+	struct extcon_dev *edev;
+	bool changed;
+	bool host_mode;
+	bool inited;
+};
+
 struct tegra_xusb {
 	struct device *dev;
 	void __iomem *regs;
@@ -479,15 +489,11 @@ struct tegra_xusb {
 	struct tegra_xhci_fpci_context fpci_ctx;
 	struct tegra_xhci_ipfs_context ipfs_ctx;
 
+	struct xusb_otg_port otg_ports[XUSB_MAX_OTG_PORT_NUM];
+	int otg_port_num;
 
-	int usb2_otg_port_base_1; /* one based usb2 port number */
-	int usb3_otg_port_base_1; /* one based usb3 port number */
-	struct extcon_dev *id_extcon;
-	struct notifier_block id_extcon_nb;
-	struct work_struct id_extcon_work;
-
-	bool host_mode;
-	bool otg_role_initialized;
+	struct notifier_block id_extcons_nb;
+	struct work_struct id_extcons_work;
 
 	u8 *connected_usb2_ports; /* keep track of connected UTMI ports */
 	bool cdp_enabled;
@@ -528,6 +534,55 @@ static const struct of_device_id tegra_xusbc_pd[] = {
 	{},
 };
 #endif
+
+static struct xusb_otg_port *find_otg_port(struct tegra_xusb *tegra,
+				enum tegra_xhci_phy_type type, int index)
+{
+	int i;
+	struct xusb_otg_port *port;
+
+	for (i = 0; i < tegra->otg_port_num; i++) {
+
+		port = &tegra->otg_ports[i];
+
+		if ((type == USB2_PHY) &&
+			(index != port->usb2_otg_port_base_1 - 1))
+			continue;
+
+		if ((type == USB3_PHY) &&
+			(index != port->usb3_otg_port_base_1 - 1))
+			continue;
+
+		return port;
+	}
+
+	return NULL;
+}
+
+static bool is_otg_phy(struct tegra_xusb *tegra,
+				enum tegra_xhci_phy_type type, int index)
+{
+	struct xusb_otg_port *otg_port;
+
+	otg_port = find_otg_port(tegra, type, index);
+
+	return otg_port != NULL;
+}
+
+static bool is_host_mode_phy(struct tegra_xusb *tegra,
+				enum tegra_xhci_phy_type type, int index)
+{
+	struct xusb_otg_port *otg_port;
+
+	if (!tegra->typed_phys[type][index])
+		return false;
+
+	otg_port = find_otg_port(tegra, type, index);
+	if (otg_port)
+		return otg_port->host_mode;
+
+	return true;
+}
 
 static void tegra_xusb_boost_cpu_freq_fn(struct work_struct *work)
 {
@@ -1763,7 +1818,7 @@ static int tegra_xusb_phy_enable(struct tegra_xusb *tegra)
 
 	/* enable CDP on non-OTG port */
 	for (j = 0; j < tegra->soc->num_typed_phys[USB2_PHY]; j++) {
-		if (j == tegra->usb2_otg_port_base_1 - 1)
+		if (is_otg_phy(tegra, USB2_PHY, j))
 			continue;
 		err = phy_init(tegra->cdp_ext_phys[j]);
 		if (err)
@@ -1783,6 +1838,9 @@ static int tegra_xusb_phy_enable(struct tegra_xusb *tegra)
 			if (err)
 				goto disable_phy;
 
+			if (!is_host_mode_phy(tegra, i, j))
+				continue;
+
 			err = phy_power_on(tegra->typed_phys[i][j]);
 			if (err) {
 				phy_exit(tegra->typed_phys[i][j]);
@@ -1796,7 +1854,8 @@ static int tegra_xusb_phy_enable(struct tegra_xusb *tegra)
 disable_phy:
 	for (; i >= 0; i--) {
 		for (j = j - 1; j >= 0; j--) {
-			phy_power_off(tegra->typed_phys[i][j]);
+			if (is_host_mode_phy(tegra, i, j))
+				phy_power_off(tegra->typed_phys[i][j]);
 			phy_exit(tegra->typed_phys[i][j]);
 		}
 		if (i)
@@ -1808,16 +1867,19 @@ disable_phy:
 
 static void tegra_xusb_phy_disable(struct tegra_xusb *tegra)
 {
-	unsigned int i;
+	unsigned int i, j;
 
-	for (i = 0; i < tegra->num_phys; i++) {
-		phy_power_off(tegra->phys[i]);
-		phy_exit(tegra->phys[i]);
+	for (i = 0; i < MAX_PHY_TYPES; i++) {
+		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
+			if (is_host_mode_phy(tegra, i, j))
+				phy_power_off(tegra->typed_phys[i][j]);
+			phy_exit(tegra->typed_phys[i][j]);
+		}
 	}
 
 	/* disable CDP on non-OTG ports */
 	for (i = 0; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
-		if (i == tegra->usb2_otg_port_base_1 - 1)
+		if (is_otg_phy(tegra, USB2_PHY, i))
 			continue;
 		phy_power_off(tegra->cdp_ext_phys[i]);
 		phy_exit(tegra->cdp_ext_phys[i]);
@@ -2043,34 +2105,21 @@ static void tegra_firmware_retry_work(struct work_struct *work)
 	}
 }
 
-static bool is_host_mode_phy(struct tegra_xusb *tegra,
-				enum tegra_xhci_phy_type type, int index)
-{
-	if (!tegra->typed_phys[type][index])
-		return false;
 
-	if (type == HSIC_PHY)
-		return true;
-
-	if (tegra->host_mode)
-		return true;
-
-	if ((type == USB2_PHY) && (index != (tegra->usb2_otg_port_base_1 - 1)))
-		return true;
-
-	if ((type == USB3_PHY) && (index != (tegra->usb3_otg_port_base_1 - 1)))
-		return true;
-
-	return false;
-}
-
-static void tegra_xhci_set_host_mode(struct tegra_xusb *tegra, bool on)
+static void tegra_xhci_set_host_mode(struct tegra_xusb *tegra, int i, bool on)
 {
 	struct xhci_hcd *xhci;
 	u32 status;
-	int wait, ret;
+	int wait;
 
-	if (!tegra->usb2_otg_port_base_1)
+	struct xusb_otg_port *port;
+	struct phy *usb2_phy = NULL, *usb3_phy = NULL;
+
+	port = &tegra->otg_ports[i];
+	dev_dbg(tegra->dev, "%s: vbus_id #%d, usb2 #%d\n", __func__,
+			i, port ? port->usb2_otg_port_base_1 - 1 : -1);
+
+	if (!port)
 		return;
 
 	if (!tegra->fw_loaded && !tegra->soc->is_xhci_vf)
@@ -2088,26 +2137,40 @@ static void tegra_xhci_set_host_mode(struct tegra_xusb *tegra, bool on)
 		return;
 	}
 
-	if (!on) {
-		ret = tegra_xusb_padctl_clear_id_override(tegra->padctl);
-		if (ret)
-			dev_dbg(tegra->dev, "clear ID override failed:%d\n"
-				, ret);
-	}
+	if (!on)
+		tegra_xusb_padctl_clear_id_override(tegra->padctl, i);
 
-	if (!tegra->otg_role_initialized) {
-		tegra->otg_role_initialized = true;
+	if (!port->inited && on)
 		goto role_update;
-	}
 
-	if ((tegra->host_mode && on) || (!tegra->host_mode && !on)) {
+	if ((port->host_mode && on) || (!port->host_mode && !on)) {
 		mutex_unlock(&tegra->lock);
 		return;
 	}
 
 role_update:
-	tegra->host_mode = on;
-	dev_dbg(tegra->dev, "host mode %s\n", on ? "on" : "off");
+
+	port->host_mode = on;
+	port->inited = true;
+	dev_dbg(tegra->dev, "host mode %s on #%d\n", on ? "on" : "off", i);
+
+	if (port->usb2_otg_port_base_1)
+		usb2_phy = tegra->typed_phys[USB2_PHY][
+			port->usb2_otg_port_base_1 - 1];
+	if (port->usb3_otg_port_base_1)
+		usb3_phy = tegra->typed_phys[USB3_PHY][
+			port->usb3_otg_port_base_1 - 1];
+
+	if (!pm_runtime_suspended(tegra->dev)) {
+		if (on) {
+			phy_power_on(usb2_phy);
+			phy_power_on(usb3_phy);
+			tegra_xusb_padctl_set_id_override(tegra->padctl, i);
+		} else {
+			phy_power_off(usb2_phy);
+			phy_power_off(usb3_phy);
+		}
+	}
 
 	mutex_unlock(&tegra->lock);
 
@@ -2122,15 +2185,15 @@ role_update:
 	pm_runtime_get_sync(tegra->dev);
 	if (on) {
 		/* switch to host mode */
-		if (tegra->usb3_otg_port_base_1) {
+		if (port->usb3_otg_port_base_1) {
 			xhci_hub_control(xhci->shared_hcd, SetPortFeature,
-				USB_PORT_FEAT_POWER, tegra->usb3_otg_port_base_1
+				USB_PORT_FEAT_POWER, port->usb3_otg_port_base_1
 				, NULL, 0);
 
 			wait = 10;
 			do {
 				xhci_hub_control(xhci->shared_hcd, GetPortStatus
-					, 0, tegra->usb3_otg_port_base_1
+					, 0, port->usb3_otg_port_base_1
 					, (char *) &status, sizeof(status));
 				if (status & USB_SS_PORT_STAT_POWER)
 					break;
@@ -2142,13 +2205,13 @@ role_update:
 		}
 
 		xhci_hub_control(xhci->main_hcd, SetPortFeature,
-			USB_PORT_FEAT_POWER, tegra->usb2_otg_port_base_1,
+			USB_PORT_FEAT_POWER, port->usb2_otg_port_base_1,
 			NULL, 0);
 
 		wait = 10;
 		do {
 			xhci_hub_control(xhci->main_hcd, GetPortStatus
-				, 0, tegra->usb2_otg_port_base_1
+				, 0, port->usb2_otg_port_base_1
 				, (char *) &status, sizeof(status));
 			if (status & USB_PORT_STAT_POWER)
 				break;
@@ -2160,15 +2223,15 @@ role_update:
 
 		pm_runtime_mark_last_busy(tegra->dev);
 	} else {
-		if (tegra->usb3_otg_port_base_1) {
+		if (port->usb3_otg_port_base_1) {
 			xhci_hub_control(xhci->shared_hcd, ClearPortFeature,
-				USB_PORT_FEAT_POWER, tegra->usb3_otg_port_base_1
+				USB_PORT_FEAT_POWER, port->usb3_otg_port_base_1
 				, NULL, 0);
 
 			wait = 1000;
 			do {
 				xhci_hub_control(xhci->shared_hcd, GetPortStatus
-					, 0, tegra->usb3_otg_port_base_1
+					, 0, port->usb3_otg_port_base_1
 					, (char *) &status, sizeof(status));
 				if (!(status & USB_SS_PORT_STAT_POWER))
 					break;
@@ -2180,13 +2243,13 @@ role_update:
 		}
 
 		xhci_hub_control(xhci->main_hcd, ClearPortFeature,
-			USB_PORT_FEAT_POWER, tegra->usb2_otg_port_base_1,
+			USB_PORT_FEAT_POWER, port->usb2_otg_port_base_1,
 			NULL, 0);
 
 		wait = 10;
 		do {
 			xhci_hub_control(xhci->main_hcd, GetPortStatus
-				, 0, tegra->usb2_otg_port_base_1
+				, 0, port->usb2_otg_port_base_1
 				, (char *) &status, sizeof(status));
 			if (!(status & USB_PORT_STAT_POWER))
 				break;
@@ -2198,44 +2261,69 @@ role_update:
 
 	}
 	pm_runtime_put_autosuspend(tegra->dev);
-
 }
 
-static void tegra_xhci_update_otg_role(struct tegra_xusb *tegra)
+static void tegra_xhci_update_otg_role(struct tegra_xusb *tegra, bool check)
 {
+	int state;
+	struct xusb_otg_port *port;
+	int i;
+
 	if (tegra_platform_is_fpga()) {
-		tegra_xhci_set_host_mode(tegra, true);
+		tegra_xhci_set_host_mode(tegra, 0, true);
 		return;
 	}
 
-	if (IS_ERR(tegra->id_extcon))
-		return;
+	if (check) {
+		for (i = 0; i < tegra->otg_port_num; i++) {
+			port = &tegra->otg_ports[i];
 
-	if (extcon_get_cable_state_(tegra->id_extcon, EXTCON_USB_HOST))
-		tegra_xhci_set_host_mode(tegra, true);
-	else
-		tegra_xhci_set_host_mode(tegra, false);
+			if (port->edev == NULL)
+				return;
+			if (extcon_get_cable_state_(port->edev,
+						EXTCON_USB_HOST))
+				port->changed = true;
+		}
+	}
+
+	for (i = 0; i < tegra->otg_port_num; i++) {
+		port = &tegra->otg_ports[i];
+
+		if (port->edev == NULL)
+			return;
+		if (!port->changed)
+			continue;
+		state = extcon_get_cable_state_(port->edev, EXTCON_USB_HOST);
+		tegra_xhci_set_host_mode(tegra, i, !!state);
+		port->changed = false;
+	}
 }
 
 static void tegra_xhci_id_extcon_work(struct work_struct *work)
 {
 	struct tegra_xusb *tegra = container_of(work, struct tegra_xusb,
-						    id_extcon_work);
+						    id_extcons_work);
 
-	tegra_xhci_update_otg_role(tegra);
+	tegra_xhci_update_otg_role(tegra, false);
 }
 
 static int tegra_xhci_id_notifier(struct notifier_block *nb,
 					 unsigned long action, void *data)
 {
+	struct extcon_dev *edev = (struct extcon_dev *) data;
 	struct tegra_xusb *tegra = container_of(nb, struct tegra_xusb,
-						    id_extcon_nb);
+						    id_extcons_nb);
+	int i;
+	struct xusb_otg_port *port;
 
-	/* nothing to do if there is no USB2 otg_cap port */
-	if (tegra->usb2_otg_port_base_1 == 0)
-		return NOTIFY_OK;
-
-	schedule_work(&tegra->id_extcon_work);
+	for (i = 0; i < tegra->otg_port_num; i++) {
+		port = &tegra->otg_ports[i];
+		if (port->edev == edev) {
+			port->changed = true;
+			schedule_work(&tegra->id_extcons_work);
+			break;
+		}
+	}
 
 	return NOTIFY_OK;
 }
@@ -2535,7 +2623,7 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 		}
 	}
 
-	tegra_xhci_update_otg_role(tegra);
+	tegra_xhci_update_otg_role(tegra, true);
 
 	if (tegra->hsic_set_idle) {
 		ret = tegra_xusb_power(tegra, true);
@@ -2596,12 +2684,31 @@ put_usb2:
 	tegra->hcd = NULL;
 }
 
+static void tegra_xhci_init_otg_cap(struct tegra_xusb *tegra, int vbus_id,
+		int usb2_port, int usb3_port)
+{
+	struct xusb_otg_port *port = &tegra->otg_ports[vbus_id];
+
+	port->usb2_otg_port_base_1 = usb2_port + 1;
+	port->usb3_otg_port_base_1 = usb3_port + 1;
+	port->edev = NULL;
+	port->changed = false;
+	port->host_mode = false;
+
+	dev_dbg(tegra->dev, "vbus_id %d: bind usb2 %d and usb3 %d\n",
+		vbus_id, port->usb2_otg_port_base_1 - 1,
+		port->usb3_otg_port_base_1 - 1);
+}
+
 static int tegra_xhci_phy_init(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
 	struct phy *phy;
-	int i, j, k;
+	int i, j, k, num;
 	int ret;
+	struct xusb_otg_port *otg_port;
+	int usb3_otg_port_base_1 = 0;
+	int usb2_otg_port_base_1 = 0;
 
 	for (i = 0; i < MAX_PHY_TYPES; i++)
 		tegra->num_phys += tegra->soc->num_typed_phys[i];
@@ -2658,26 +2765,15 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 				if (phy && strstr(prop, "usb3") &&
 				   tegra_xusb_padctl_has_otg_cap(tegra->padctl,
 									phy)) {
-					if (tegra->soc->is_xhci_vf) {
-						tegra->usb3_otg_port_base_1 =
-									k + 1;
-					} else {
-						tegra->usb3_otg_port_base_1 =
-									j + 1;
-					}
+					if (tegra->soc->is_xhci_vf)
+						usb3_otg_port_base_1 = k + 1;
 				}
 
 				if (phy && strstr(prop, "usb2") &&
 				   tegra_xusb_padctl_has_otg_cap(tegra->padctl,
 								phy)) {
-					if (tegra->soc->is_xhci_vf) {
-						tegra->usb2_otg_port_base_1 =
-									k + 1;
-					} else {
-						tegra->usb2_otg_port_base_1 =
-									j + 1;
-
-					}
+					if (tegra->soc->is_xhci_vf)
+						usb2_otg_port_base_1 = k + 1;
 				}
 
 				if (phy && strstr(prop, "hsic"))
@@ -2697,6 +2793,24 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 				}
 			}
 		}
+	}
+
+	num = tegra_xusb_padctl_get_vbus_id_num(tegra->padctl);
+	for (i = 0; i < num; i++) {
+		int usb2_port, usb3_port;
+
+		tegra_xusb_padctl_get_vbus_id_ports(tegra->padctl,
+			i, &usb2_port, &usb3_port);
+		tegra_xhci_init_otg_cap(tegra, i, usb2_port, usb3_port);
+	}
+	tegra->otg_port_num = num;
+
+	/* not support multiple device mode for VF */
+	if (tegra->soc->is_xhci_vf) {
+		otg_port = &tegra->otg_ports[0];
+		otg_port->usb2_otg_port_base_1 = usb2_otg_port_base_1;
+		otg_port->usb3_otg_port_base_1 = usb3_otg_port_base_1;
+		tegra->otg_port_num = 1;
 	}
 
 	/* allocate optional cdp_ext_phys */
@@ -2741,17 +2855,17 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 					tegra->soc->num_typed_phys[USB2_PHY],
 					sizeof(u8), GFP_KERNEL);
 
-	if (tegra->usb2_otg_port_base_1) {
-		dev_info(&pdev->dev, "USB2 port %d has OTG_CAP\n",
-			tegra->usb2_otg_port_base_1 - 1);
-	} else
-		dev_info(&pdev->dev, "No USB2 port has OTG_CAP\n");
-
-	if (tegra->usb3_otg_port_base_1) {
-		dev_info(&pdev->dev, "USB3 port %d has OTG_CAP\n",
-			tegra->usb3_otg_port_base_1 - 1);
-	} else
-		dev_info(&pdev->dev, "No USB3 port has OTG_CAP\n");
+	for (i = 0; i < tegra->otg_port_num; i++) {
+		otg_port = &tegra->otg_ports[i];
+		if (otg_port->usb2_otg_port_base_1)
+			dev_info(&pdev->dev, "USB2 port %d has OTG_CAP\n",
+				otg_port->usb2_otg_port_base_1 - 1);
+		if (otg_port->usb3_otg_port_base_1)
+			dev_info(&pdev->dev, "USB3 port %d has OTG_CAP\n",
+				otg_port->usb3_otg_port_base_1 - 1);
+	}
+	if (tegra->otg_port_num == 0)
+		dev_info(&pdev->dev, "No USB port has OTG_CAP\n");
 
 	return 0;
 }
@@ -2823,6 +2937,58 @@ static struct attribute *tegra_xhci_attrs[] = {
 static struct attribute_group tegra_xhci_attr_group = {
 	.attrs = tegra_xhci_attrs,
 };
+
+static void tegra_xusb_deinit_extcon(struct tegra_xusb *tegra)
+{
+	int i;
+	struct xusb_otg_port *otg_port;
+
+	for (i = 0; i < tegra->otg_port_num; i++) {
+		otg_port = &tegra->otg_ports[i];
+		if (!IS_ERR(otg_port->edev)) {
+			extcon_unregister_notifier(otg_port->edev,
+					EXTCON_USB_HOST, &tegra->id_extcons_nb);
+			otg_port->edev = NULL;
+		}
+	}
+}
+
+static int tegra_xusb_init_extcon(struct tegra_xusb *tegra)
+{
+	int err = 0, i;
+	char edev_name[] = "idx";
+	struct xusb_otg_port *port;
+
+	INIT_WORK(&tegra->id_extcons_work, tegra_xhci_id_extcon_work);
+	tegra->id_extcons_nb.notifier_call = tegra_xhci_id_notifier;
+
+	for (i = 0; i < tegra->otg_port_num; i++) {
+		struct extcon_dev *edev;
+
+		port = &tegra->otg_ports[i];
+		edev_name[2] = (i == 0) ? 0 : '0' + i;
+		edev = extcon_get_extcon_dev_by_cable(tegra->dev, edev_name);
+		if (!IS_ERR(edev)) {
+			dev_info(tegra->dev, "extcon %d: %p %s\n", i,
+				edev, edev_name);
+			extcon_register_notifier(edev, EXTCON_USB_HOST,
+					&tegra->id_extcons_nb);
+			port->edev = edev;
+		} else if (PTR_ERR(edev) == -EPROBE_DEFER) {
+			err = -EPROBE_DEFER;
+			goto exit;
+		} else {
+			dev_info(tegra->dev, "no USB ID extcon found: %s\n",
+				edev_name);
+			goto exit;
+		}
+	}
+exit:
+	if (err)
+		tegra_xusb_deinit_extcon(tegra);
+
+	return err;
+}
 
 static int tegra_xusb_probe(struct platform_device *pdev)
 {
@@ -3095,19 +3261,9 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 		tegra_xusb_disable_hsic_wake(tegra);
 
 	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
-		INIT_WORK(&tegra->id_extcon_work, tegra_xhci_id_extcon_work);
-		tegra->id_extcon = extcon_get_extcon_dev_by_cable(&pdev->dev,
-						"id");
-		if (!IS_ERR(tegra->id_extcon)) {
-			tegra->id_extcon_nb.notifier_call =
-					tegra_xhci_id_notifier;
-			extcon_register_notifier(tegra->id_extcon,
-					EXTCON_USB_HOST, &tegra->id_extcon_nb);
-		} else if (PTR_ERR(tegra->id_extcon) == -EPROBE_DEFER) {
-			err = -EPROBE_DEFER;
+		err = tegra_xusb_init_extcon(tegra);
+		if (err)
 			goto powergate_partitions;
-		} else
-			dev_info(&pdev->dev, "no USB ID extcon found\n");
 	}
 
 	if (tegra->soc->is_xhci_vf) {
@@ -3147,11 +3303,8 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 
 unregister_extcon:
 	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
-		cancel_work_sync(&tegra->id_extcon_work);
-		if (!IS_ERR(tegra->id_extcon)) {
-			extcon_unregister_notifier(tegra->id_extcon,
-					EXTCON_USB_HOST, &tegra->id_extcon_nb);
-		}
+		cancel_work_sync(&tegra->id_extcons_work);
+		tegra_xusb_deinit_extcon(tegra);
 	}
 powergate_partitions:
 	if (tegra->xhci_err_init && tegra->dev != NULL) {
@@ -3210,11 +3363,8 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 		tegra_xusb_boost_cpu_deinit(tegra);
 
 	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
-		cancel_work_sync(&tegra->id_extcon_work);
-		if (!IS_ERR(tegra->id_extcon)) {
-			extcon_unregister_notifier(tegra->id_extcon,
-					EXTCON_USB_HOST, &tegra->id_extcon_nb);
-		}
+		cancel_work_sync(&tegra->id_extcons_work);
+		tegra_xusb_deinit_extcon(tegra);
 	}
 
 	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_fw_version.attr);
@@ -3462,7 +3612,7 @@ static void tegra_xhci_disable_phy_wake(struct tegra_xusb *tegra)
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
 			phy = tegra->typed_phys[i][j];
 
-			if (!phy)
+			if (!phy || !is_host_mode_phy(tegra, i, j))
 				continue;
 
 			if (tegra_xusb_padctl_remote_wake_detected(
@@ -3487,7 +3637,7 @@ static void tegra_xhci_disable_phy_sleepwalk(struct tegra_xusb *tegra)
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
 			phy = tegra->typed_phys[i][j];
 
-			if (!phy)
+			if (!phy || !is_host_mode_phy(tegra, i, j))
 				continue;
 
 			tegra_xusb_padctl_disable_phy_sleepwalk(padctl, phy);
@@ -3591,7 +3741,7 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 	struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
 	struct device *dev = tegra->dev;
 	bool do_wakeup = runtime ? true : device_may_wakeup(dev);
-	unsigned int i;
+	unsigned int i, j;
 	int ret;
 
 	dev_info(dev, "entering ELPG\n");
@@ -3635,21 +3785,20 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 		}
 	}
 
-	for (i = 0; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
-		struct phy *phy = tegra->typed_phys[USB2_PHY][i];
+	for (i = 0; i < MAX_PHY_TYPES; i++) {
+		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
+			struct phy *phy = tegra->typed_phys[i][j];
 
-		if (!phy)
-			continue;
-		if (!is_host_mode_phy(tegra, USB2_PHY, i))
-			continue;
-		tegra_phy_xusb_utmi_pad_power_down(phy);
-	}
+			if (!phy || !is_host_mode_phy(tegra, i, j))
+				continue;
 
+			if (i == USB2_PHY)
+				tegra_phy_xusb_utmi_pad_power_down(phy);
 
-	for (i = 0; i < tegra->num_phys; i++) {
-		phy_power_off(tegra->phys[i]);
-		if (!do_wakeup)
-			phy_exit(tegra->phys[i]);
+			phy_power_off(phy);
+			if (!do_wakeup)
+				phy_exit(phy);
+		}
 	}
 
 	if (!tegra->soc->is_xhci_vf)
@@ -3706,6 +3855,10 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 
 	for (i = 0; i < MAX_PHY_TYPES; i++) {
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
+
+			if (!is_host_mode_phy(tegra, i, j))
+				continue;
+
 			if (!do_wakeup) {
 				ret = phy_init(tegra->typed_phys[i][j]);
 				if (ret) {
@@ -3723,10 +3876,13 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 	}
 
 	/* ID override to ground needs to be set after VCORE_DOWN is 0 */
-	if (tegra->host_mode) {
-		ret = tegra_xusb_padctl_set_id_override(tegra->padctl);
-		if (ret)
-			dev_dbg(tegra->dev, "set ID override failed:%d\n", ret);
+	for (i = 0; i < tegra->otg_port_num; i++) {
+		struct xusb_otg_port *port;
+
+		port = &tegra->otg_ports[i];
+		if (!port->host_mode)
+			continue;
+		tegra_xusb_padctl_set_id_override(tegra->padctl, i);
 	}
 
 	if (tegra->suspended)
@@ -3852,19 +4008,15 @@ static int tegra_xusb_suspend(struct device *dev)
 			 * turn off VBUS for CDP enabled case.
 			 * skip vbus off for OTG port when it isn't host role
 			 */
-			if (j != tegra->usb2_otg_port_base_1 - 1 ||
-					tegra->host_mode) {
+			if (is_host_mode_phy(tegra, USB2_PHY, j)) {
+				int port = j;
 
-				if (!tegra->soc->is_xhci_vf) {
-					tegra_xusb_padctl_vbus_power_off(
-							tegra->padctl, j);
-				} else {
-					tegra_xusb_padctl_vbus_power_off(
-					tegra->padctl,
-					tegra->port_to_phy[USB2_PHY][j]);
-				}
+				if (tegra->soc->is_xhci_vf)
+					port = tegra->port_to_phy[USB2_PHY][j];
+
+				tegra_xusb_padctl_vbus_power_off(
+					tegra->padctl, port);
 			}
-
 		}
 	}
 
@@ -3904,16 +4056,14 @@ static int tegra_xhci_resume_common(struct device *dev)
 			if (!tegra->typed_phys[USB2_PHY][j])
 				continue;
 			/* skip vbus on for OTG port when it isn't host role */
-			if (j != tegra->usb2_otg_port_base_1 - 1 ||
-					tegra->host_mode) {
-				if (!tegra->soc->is_xhci_vf) {
-					tegra_xusb_padctl_vbus_power_on(
-						tegra->padctl, j);
-				} else {
-					tegra_xusb_padctl_vbus_power_on(
-					tegra->padctl,
-					tegra->port_to_phy[USB2_PHY][j]);
-				}
+			if (is_host_mode_phy(tegra, USB2_PHY, j)) {
+				int port = j;
+
+				if (tegra->soc->is_xhci_vf)
+					port = tegra->port_to_phy[USB2_PHY][j];
+
+				tegra_xusb_padctl_vbus_power_on(
+					tegra->padctl, port);
 			}
 		}
 	}
@@ -3927,7 +4077,7 @@ static int tegra_xhci_resume_common(struct device *dev)
 	tegra->suspended = false;
 	mutex_unlock(&tegra->lock);
 
-	tegra_xhci_update_otg_role(tegra);
+	tegra_xhci_update_otg_role(tegra, true);
 
 	pm_runtime_mark_last_busy(tegra->dev);
 	pm_runtime_set_active(dev);

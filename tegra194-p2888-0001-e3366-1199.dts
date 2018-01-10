@@ -23,8 +23,7 @@
 	nvidia,fastboot-usb-pid = <0x70fb>;
 
 	chosen {
-		bootargs ="console=ttyS2,115200 earlycon=uart8250,mmio32,0x0c280000";
-		stdout-path = &uartc;
+		bootargs ="console=ttyTCU0,115200";
 		board-has-eeprom;
 	};
 
@@ -67,11 +66,6 @@
 	};
 
 	timer {
-		status = "okay";
-	};
-
-	serial@c280000 {
-		clock-frequency = <408000000>;
 		status = "okay";
 	};
 

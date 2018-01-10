@@ -159,6 +159,9 @@
 #define EP_THREAD_ACTIVE 0x074
 #define EP_STOPPED 0x078
 #define HSFSPI_COUNT0 0x100
+#define HSFSPI_COUNT13 0x134
+#define  HSFSPI_COUNT13_U2_RESUME_K_DURATION_SHIFT 0
+#define  HSFSPI_COUNT13_U2_RESUME_K_DURATION_MASK 0x3fffffff
 #define HSFSPI_COUNT16 0x19c
 #define SSPX_CORE_CNT0 0x610
 #define  SSPX_CORE_CNT0_PING_TBURST_SHIFT 0
@@ -3459,6 +3462,15 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 		 SSPX_CORE_CNT30_LMPITP_TIMER_SHIFT);
 	val |= 0x978 << SSPX_CORE_CNT30_LMPITP_TIMER_SHIFT;
 	xudc_writel(xudc, val, SSPX_CORE_CNT30);
+
+	if (lpm_enable) {
+		/* Set L1 resume duration to 95 us. */
+		val = xudc_readl(xudc, HSFSPI_COUNT13);
+		val &= ~(HSFSPI_COUNT13_U2_RESUME_K_DURATION_MASK <<
+				HSFSPI_COUNT13_U2_RESUME_K_DURATION_SHIFT);
+		val |= 0x2c88 << HSFSPI_COUNT13_U2_RESUME_K_DURATION_SHIFT;
+		xudc_writel(xudc, val, HSFSPI_COUNT13);
+	}
 
 	/*
 	 * Compliacne suite appears to be violating polling LFPS tBurst max

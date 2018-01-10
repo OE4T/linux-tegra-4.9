@@ -197,6 +197,7 @@ struct tegra_adma_chip_data {
  * struct tegra_adma_chan_regs - Tegra ADMA channel registers
  */
 struct tegra_adma_chan_regs {
+	unsigned int cmd;
 	unsigned int ctrl;
 	unsigned int config;
 	unsigned int src_addr;
@@ -1065,6 +1066,7 @@ static int tegra_adma_runtime_suspend(struct device *dev)
 			struct tegra_adma_chan *tdc = &tdma->channels[i];
 			struct tegra_adma_chan_regs *ch_reg = &tdc->ch_regs;
 
+			ch_reg->cmd = tdma_ch_read(tdc, ADMA_CH_CMD);
 			ch_reg->tc = tdma_ch_read(tdc, ADMA_CH_TC);
 			ch_reg->src_addr =
 				tdma_ch_read(tdc, ADMA_CH_LOWER_SRC_ADDR);
@@ -1120,6 +1122,7 @@ static int tegra_adma_runtime_resume(struct device *dev)
 			tdma_ch_write(tdc, ADMA_CH_FIFO_CTRL,
 					ch_reg->fifo_ctrl);
 			tdma_ch_write(tdc, ADMA_CH_CONFIG, ch_reg->config);
+			tdma_ch_write(tdc, ADMA_CH_CMD, ch_reg->cmd);
 		}
 	}
 	return 0;

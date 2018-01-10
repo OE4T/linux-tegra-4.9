@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google, Inc.
+ * Copyright (C) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@android.com>
@@ -105,37 +106,5 @@ static inline int tegra210_emc_set_over_temp_state(unsigned long state)
 { return -ENODEV; }
 static inline void tegra210_emc_mr4_set_freq_thresh(unsigned long thresh) { }
 #endif
-
-static __maybe_unused inline int tegra_mc_get_effective_bytes_width(void)
-{
-	if (of_machine_is_compatible("nvidia,tegra124"))
-		return 8;
-	else
-		return 4;
-}
-
-static __maybe_unused unsigned int
-tegra_emc_bw_to_freq_req(unsigned int bw_kbps)
-{
-	unsigned int freq;
-	unsigned int bytes_per_emc_clk;
-
-	bytes_per_emc_clk = tegra_mc_get_effective_bytes_width() * 2;
-	/* EMC_TO_DDR_CLOCK is 1 */
-	freq = (bw_kbps + bytes_per_emc_clk - 1) / bytes_per_emc_clk;
-	return freq;
-}
-
-static __maybe_unused unsigned int
-tegra_emc_freq_req_to_bw(unsigned int freq_khz)
-{
-	unsigned int bw;
-	unsigned int bytes_per_emc_clk;
-
-	bytes_per_emc_clk = tegra_mc_get_effective_bytes_width() * 2;
-	/* EMC_TO_DDR_CLOCK is 1 */
-	bw = freq_khz * bytes_per_emc_clk;
-	return bw;
-}
 
 #endif

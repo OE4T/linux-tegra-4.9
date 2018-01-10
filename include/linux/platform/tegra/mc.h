@@ -183,20 +183,6 @@ static inline void mssnvlink_writel(unsigned int idx, u32 val, u32 reg)
 	writel(val, mssnvlink_regs[idx] + reg);
 }
 
-/*
- * Tegra21 has either dual 32 bit channels (LP4) or a single
- * 64 bit channel (LP3).
- *
- * MC effectively operates as 64-bit bus.
- */
-static inline int tegra_mc_get_effective_bytes_width(void)
-{
-	if (tegra_get_chip_id() == TEGRA210)
-		return 8;
-	else
-		return 4;
-}
-
 unsigned long tegra_emc_bw_to_freq_req(unsigned long bw);
 unsigned long tegra_emc_freq_req_to_bw(unsigned long freq);
 

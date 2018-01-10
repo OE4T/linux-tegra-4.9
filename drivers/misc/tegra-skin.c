@@ -142,8 +142,10 @@ static int tegra_skin_sensor_get_temp(void *data, int *out_temp)
 
 	list_for_each_entry(cur, &sensor->hotspot_list, node) {
 		err = tegra_skin_hotspot_get_temp(cur, &temp);
-		if (err)
+		if (err < 0)
 			goto out;
+		else
+			err = 0;
 
 		if (temp > max_temp)
 			max_temp = temp;

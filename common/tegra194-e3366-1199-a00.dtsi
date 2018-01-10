@@ -112,9 +112,95 @@
 						    0x0 0x2
 						    0x1 0x2
 						    0x2 0x1>;
-			gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(M, 5) 0 &e3366_gpio_u1403 15 0>;
+			gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(M, 3) 0
+				&tegra_main_gpio TEGRA194_MAIN_GPIO(Q, 0) 0>;
 			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_HOST EXTCON_NONE>;
 			#extcon-cells = <1>;
 		};
 	};
+
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+
+	xusb_padctl: xusb_padctl@3520000 {
+		status = "okay";
+
+		pads {
+			usb2 {
+				lanes {
+					usb2-0 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-1 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-2 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-3 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+				};
+			};
+			usb3 {
+				lanes {
+					usb3-0 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb3-1 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb3-2 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb3-3 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+				};
+			};
+		};
+
+		ports {
+			usb2-0 {
+				mode = "otg";
+				status = "okay";
+			};
+			usb2-1 {
+				mode = "host";
+				status = "okay";
+			};
+			usb2-2 {
+				mode = "host";
+				status = "okay";
+			};
+			usb2-3 {
+				mode = "host";
+				status = "okay";
+			};
+			usb3-0 {
+				nvidia,usb2-companion = <2>;
+				status = "okay";
+			};
+			usb3-2 {
+				nvidia,usb2-companion = <0>;
+				status = "okay";
+			};
+			usb3-1 {
+				nvidia,usb2-companion = <3>;
+				status = "okay";
+			};
+			usb3-3 {
+				nvidia,usb2-companion = <1>;
+				status = "okay";
+			};
+		};
+	};
+#endif
 };

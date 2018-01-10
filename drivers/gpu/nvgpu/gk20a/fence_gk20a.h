@@ -44,7 +44,6 @@ struct gk20a_fence {
 	/* Valid for all fence types: */
 	bool valid;
 	struct nvgpu_ref ref;
-	bool wfi;
 	struct sync_fence *sync_fence;
 	const struct gk20a_fence_ops *ops;
 
@@ -68,12 +67,12 @@ int gk20a_fence_from_semaphore(
 		struct sync_timeline *timeline,
 		struct nvgpu_semaphore *semaphore,
 		struct nvgpu_cond *semaphore_wq,
-		bool wfi, bool need_sync_fence);
+		bool need_sync_fence);
 
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
 		struct nvgpu_nvhost_dev *nvhost_dev,
-		u32 id, u32 value, bool wfi,
+		u32 id, u32 value,
 		bool need_sync_fence);
 
 int gk20a_alloc_fence_pool(
@@ -88,7 +87,7 @@ struct gk20a_fence *gk20a_alloc_fence(
 
 void gk20a_init_fence(struct gk20a_fence *f,
 		const struct gk20a_fence_ops *ops,
-		struct sync_fence *sync_fence, bool wfi);
+		struct sync_fence *sync_fence);
 
 /* Fence operations */
 void gk20a_fence_put(struct gk20a_fence *f);

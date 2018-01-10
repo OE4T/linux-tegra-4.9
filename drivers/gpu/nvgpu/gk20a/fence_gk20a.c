@@ -195,13 +195,12 @@ struct gk20a_fence *gk20a_alloc_fence(struct channel_gk20a *c)
 
 void gk20a_init_fence(struct gk20a_fence *f,
 		const struct gk20a_fence_ops *ops,
-		struct sync_fence *sync_fence, bool wfi)
+		struct sync_fence *sync_fence)
 {
 	if (!f)
 		return;
 	f->ops = ops;
 	f->sync_fence = sync_fence;
-	f->wfi = wfi;
 	f->syncpt_id = -1;
 }
 
@@ -235,7 +234,7 @@ int gk20a_fence_from_semaphore(
 		struct sync_timeline *timeline,
 		struct nvgpu_semaphore *semaphore,
 		struct nvgpu_cond *semaphore_wq,
-		bool wfi, bool need_sync_fence)
+		bool need_sync_fence)
 {
 	struct gk20a_fence *f = fence_out;
 	struct sync_fence *sync_fence = NULL;
@@ -250,7 +249,7 @@ int gk20a_fence_from_semaphore(
 	}
 #endif
 
-	gk20a_init_fence(f, &nvgpu_semaphore_fence_ops, sync_fence, wfi);
+	gk20a_init_fence(f, &nvgpu_semaphore_fence_ops, sync_fence);
 	if (!f) {
 #ifdef CONFIG_SYNC
 		if (sync_fence)
@@ -310,7 +309,7 @@ static const struct gk20a_fence_ops gk20a_syncpt_fence_ops = {
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
 		struct nvgpu_nvhost_dev *nvhost_dev,
-		u32 id, u32 value, bool wfi,
+		u32 id, u32 value,
 		bool need_sync_fence)
 {
 	struct gk20a_fence *f = fence_out;
@@ -325,7 +324,7 @@ int gk20a_fence_from_syncpt(
 	}
 #endif
 
-	gk20a_init_fence(f, &gk20a_syncpt_fence_ops, sync_fence, wfi);
+	gk20a_init_fence(f, &gk20a_syncpt_fence_ops, sync_fence);
 	if (!f) {
 #ifdef CONFIG_SYNC
 		if (sync_fence)
@@ -347,7 +346,7 @@ int gk20a_fence_from_syncpt(
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
 		struct nvgpu_nvhost_dev *nvhost_dev,
-		u32 id, u32 value, bool wfi,
+		u32 id, u32 value,
 		bool need_sync_fence)
 {
 	return -EINVAL;

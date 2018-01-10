@@ -223,7 +223,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	}
 
 	err = gk20a_fence_from_syncpt(fence, sp->nvhost_dev, sp->id, thresh,
-					 wfi_cmd, need_sync_fence);
+					 need_sync_fence);
 	if (err)
 		goto clean_up_priv_cmd;
 
@@ -648,7 +648,7 @@ static int gk20a_channel_semaphore_wait_fd(
 					sema->timeline,
 					fp_sema,
 					&c->semaphore_wq,
-					false, false);
+					false);
 			if (err) {
 				nvgpu_semaphore_put(fp_sema);
 				goto clean_up_priv_cmd;
@@ -658,7 +658,7 @@ static int gk20a_channel_semaphore_wait_fd(
 			 * Init an empty fence. It will instantly return
 			 * from gk20a_fence_wait().
 			 */
-			gk20a_init_fence(fence, NULL, NULL, false);
+			gk20a_init_fence(fence, NULL, NULL);
 
 		sync_fence_put(sync_fence);
 		goto skip_slow_path;
@@ -708,7 +708,7 @@ static int gk20a_channel_semaphore_wait_fd(
 	 *  already signaled
 	 */
 	err = gk20a_fence_from_semaphore(c->g, fence, sema->timeline, w->sema,
-			&c->semaphore_wq, false, false);
+			&c->semaphore_wq, false);
 	if (err)
 		goto clean_up_sema;
 
@@ -785,7 +785,6 @@ static int __gk20a_channel_semaphore_incr(
 	err = gk20a_fence_from_semaphore(c->g, fence,
 			sp->timeline, semaphore,
 			&c->semaphore_wq,
-			wfi_cmd,
 			need_sync_fence);
 	if (err)
 		goto clean_up_sema;

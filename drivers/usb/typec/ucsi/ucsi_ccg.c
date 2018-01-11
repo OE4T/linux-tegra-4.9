@@ -1,7 +1,7 @@
 /*
  * drivers/usb/ucsi/ucsi_ccg.c
  *
- * Copyright (C) 2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2017-2018 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -23,6 +23,7 @@
 #include <linux/timer.h>
 #include <linux/string.h>
 #include <linux/i2c.h>
+#include <linux/extcon.h>
 
 #include "ucsi.h"
 
@@ -105,6 +106,9 @@ enum enum_fw_mode {
 /* CCGx events & async msg codes */
 #define RESET_COMPLETE		0x80
 #define EVENT_INDEX		RESET_COMPLETE
+#define PORT_CONNECT_DET	0x84
+#define PORT_DISCONNECT_DET	0x85
+#define ROLE_SWAP_COMPELETE	0x87
 
 /* CCGx response codes */
 enum ccg_resp_code {
@@ -253,6 +257,13 @@ struct ccg_typec_pd_info {
 	u8 typec_current:2;
 } __packed;
 
+struct ucsi_ccg_extcon {
+	struct device dev;
+	struct extcon_dev *edev;
+	int port_id;
+	int cstate;
+};
+
 struct ucsi_ccg {
 	struct device *dev;
 	struct i2c_client *i2c_cl;
@@ -260,6 +271,9 @@ struct ucsi_ccg {
 	struct mutex lock;
 	struct ucsi *ucsi;
 	struct ucsi_ppm ppm;
+
+	struct ucsi_ccg_extcon **typec_extcon;
+	int port_num;
 
 	/* CCG HPI communication flags */
 	unsigned long flags;
@@ -458,6 +472,36 @@ static inline bool invalid_evt(int code)
 	return (code >= 0xAB) || (code < 0x80);
 }
 
+static void update_typec_extcon_state(struct ucsi_ccg *ccg, int index)
+{
+	struct ucsi_ccg_extcon *extcon;
+	struct ccg_typec_pd_info *info;
+
+	info = &ccg->port[index];
+	extcon = ccg->typec_extcon[index];
+
+	if (!extcon || !info)
+		return;
+
+	get_typec_info(ccg, index);
+
+	if (!info->connect_status) {
+		if (extcon->cstate)
+			extcon_set_state_sync(extcon->edev, extcon->cstate, 0);
+		extcon->cstate = EXTCON_NONE;
+	} else {
+		if (!info->cur_data_role) {
+			extcon_set_state_sync(extcon->edev, EXTCON_USB, 1);
+			extcon->cstate = EXTCON_USB;
+		} else {
+			extcon_set_state_sync(extcon->edev, EXTCON_USB_HOST, 1);
+			extcon->cstate = EXTCON_USB_HOST;
+		}
+	}
+	dev_info(ccg->dev, "[typec-port%d] Cable state:%d, cable id:%d\n",
+			extcon->port_id, !!extcon->cstate, extcon->cstate);
+}
+
 static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 {
 	struct device *dev = ccg->dev;
@@ -471,10 +515,20 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 			index, resp->code, resp->length);
 
 	if (resp->code & ASYNC_EVENT) {
-		if (!invalid_evt(resp->code))
+		if (!invalid_evt(resp->code)) {
 			dev_info(dev, "port%d evt: %s\n",
 				index, ccg_evt_strs[resp->code - EVENT_INDEX]);
-		else
+
+			switch (resp->code) {
+			case PORT_DISCONNECT_DET:
+			case PORT_CONNECT_DET:
+			case ROLE_SWAP_COMPELETE:
+				update_typec_extcon_state(ccg, index);
+				break;
+			default:
+				break;
+			}
+		} else
 			dev_err(dev, "port%d invalid evt %d\n",
 				index, resp->code);
 	} else {
@@ -1080,8 +1134,6 @@ static int ucsi_ccg_init(struct ucsi_ccg *ccg)
 	struct device *dev = ccg->dev;
 	int err = 0;
 
-	get_fw_info(ccg);
-
 	/* Asymmetric FW should always run on FW2 (primary FW) */
 	if (ccg->info.fw_mode != FW2) {
 		dev_err(dev, "CCG can't boot to FW mode\n");
@@ -1192,12 +1244,120 @@ ucsi_ccg_attr_group = {
 	.attrs = ucsi_ccg_sysfs_attrs,
 };
 
+static int ucsi_ccg_extcon_cables[] = {
+	EXTCON_USB, EXTCON_USB_HOST, EXTCON_NONE
+};
+
+static struct device_node *
+ucsi_ccg_find_typec_extcon_node(struct device *dev, unsigned int index)
+{
+	/*
+	 * of_find_node_by_name() drops a reference, so make sure to grab one.
+	 */
+	struct device_node *np = of_node_get(dev->of_node);
+
+	np = of_find_node_by_name(np, "typec-extcon");
+	if (np) {
+		char *name;
+
+		name = kasprintf(GFP_KERNEL, "port-%u", index);
+		np = of_find_node_by_name(np, name);
+		kfree(name);
+	} else
+		dev_err(dev, "failed to find typec-extcon node\n");
+
+	return np;
+}
+
+static inline struct ucsi_ccg_extcon *to_ucsi_ccg_extcon(struct device *dev)
+{
+	return container_of(dev, struct ucsi_ccg_extcon, dev);
+}
+
+static void ucsi_ccg_extcon_release(struct device *dev)
+{
+	struct ucsi_ccg_extcon *extcon = to_ucsi_ccg_extcon(dev);
+
+	kfree(extcon);
+}
+
+static struct device_type ucsi_ccg_extcon_type = {
+	.release = ucsi_ccg_extcon_release,
+};
+
+static struct ucsi_ccg_extcon *
+ucsi_ccg_extcon_probe
+(struct device *parent, unsigned int i, struct device_node *np)
+{
+	struct ucsi_ccg_extcon *extcon;
+	int err;
+
+	extcon = devm_kzalloc(parent, sizeof(*extcon), GFP_KERNEL);
+	if (!extcon)
+		return extcon;
+
+	extcon->port_id = i;
+	extcon->dev.parent = parent;
+	extcon->dev.type = &ucsi_ccg_extcon_type;
+	extcon->dev.of_node = np;
+
+	dev_set_name(&extcon->dev, "typec-extcon-%u", extcon->port_id);
+
+	err = device_register(&extcon->dev);
+	if (err)
+		goto unregister;
+
+	extcon->edev = devm_extcon_dev_allocate(&extcon->dev,
+						ucsi_ccg_extcon_cables);
+	if (IS_ERR(extcon->edev))
+		goto unregister;
+
+	err = devm_extcon_dev_register(&extcon->dev, extcon->edev);
+	if (err < 0)
+		goto unregister;
+
+	return extcon;
+
+unregister:
+	device_unregister(&extcon->dev);
+
+	return NULL;
+}
+
+static int ucsi_ccg_setup_extcon(struct ucsi_ccg *ccg)
+{
+	struct device *dev = ccg->dev;
+	int i;
+
+	ccg->typec_extcon = devm_kzalloc(dev,
+			sizeof(*ccg->typec_extcon) * ccg->port_num, GFP_KERNEL);
+
+	for (i = 0; i < ccg->port_num; i++) {
+		struct ucsi_ccg_extcon *extcon;
+		struct device_node *np;
+
+		np = ucsi_ccg_find_typec_extcon_node(dev, i);
+		if (!np || !of_device_is_available(np)) {
+			of_node_put(np);
+			continue;
+		}
+
+		extcon = ucsi_ccg_extcon_probe(dev, i, np);
+		if (extcon)
+			dev_info(dev, "typec-port%d extcon dev created\n", i);
+
+		ccg->typec_extcon[i] = extcon;
+	}
+
+	return 0;
+}
+
 static int ucsi_ccg_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct ucsi_ccg *ccg;
 	struct device *dev = &client->dev;
-	int err = 0;
+	int i, err = 0;
 
 	ccg = devm_kzalloc(dev, sizeof(struct ucsi_ccg), GFP_KERNEL);
 
@@ -1211,6 +1371,15 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 
 	init_completion(&ccg->hpi_cmd_done);
 	init_completion(&ccg->reset_comp);
+
+	get_fw_info(ccg);
+
+	if (ccg->info.two_pd_ports)
+		ccg->port_num = 2;
+	else
+		ccg->port_num = 1;
+
+	ucsi_ccg_setup_extcon(ccg);
 
 	err = ucsi_ccg_setup_irq(ccg);
 	if (err) {
@@ -1234,6 +1403,10 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 	ucsi_ccg_init(ccg);
 
 	i2c_set_clientdata(client, ccg);
+
+	/* Perform initial detection */
+	for (i = 0; i < ccg->port_num; i++)
+		update_typec_extcon_state(ccg, i);
 
 	err = sysfs_create_group(&dev->kobj, &ucsi_ccg_attr_group);
 	if (err)

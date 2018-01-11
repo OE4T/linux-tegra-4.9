@@ -1,0 +1,22 @@
+menu "Tegra BPMP Driver"
+
+config TEGRA_BPMP
+	bool "Tegra BPMP driver"
+	default n
+	select TEGRA_IVC
+	select TEGRA_HSP
+	help
+	  Manages firmware running on Tegra BPMP
+
+config BPMP_DEBUGFS_MOUNT_ON_BOOT
+	bool "Mount the BPMP debug fs on boot"
+	default y
+	depends on DEBUG_FS
+	help
+	  Disable this if you don't want to mount the BPMP debug fs by default
+	  on boot.
+
+	  Note disabling this will save some boot time. BPMP debugfs still can
+	  be mounted after the boot.
+
+endmenu

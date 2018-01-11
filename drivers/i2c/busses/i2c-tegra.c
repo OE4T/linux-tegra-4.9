@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Colin Cross <ccross@android.com>
  *
- * Copyright (C) 2010-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2010-2018 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1124,16 +1124,22 @@ static irqreturn_t tegra_i2c_isr(int irq, void *dev_id)
 	bool is_curr_dma_xfer;
 
 	raw_spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
+	status_raw = i2c_readl(i2c_dev, I2C_INT_STATUS);
+	mask = i2c_readl(i2c_dev, I2C_INT_MASK);
 	if (!i2c_dev->transfer_in_progress) {
+		status = i2c_readl(i2c_dev, I2C_STATUS);
 		dev_err(i2c_dev->dev, "ISR called even though no transfer\n");
+		dev_err(i2c_dev->dev, "int_status - 0x%x, mask - 0x%x status - 0x%x\n",
+			status_raw, mask, status);
+		if (!i2c_dev->irq_disabled) {
+			disable_irq_nosync(i2c_dev->irq);
+			i2c_dev->irq_disabled = true;
+		}
 		goto done;
 	}
 
 	/* Ignore status bits that we are not expecting */
-	status_raw = i2c_readl(i2c_dev, I2C_INT_STATUS);
-	mask = i2c_readl(i2c_dev, I2C_INT_MASK);
 	status = status_raw & mask;
-
 	is_curr_dma_xfer = i2c_dev->is_curr_dma_xfer;
 
 	if (status == 0) {
@@ -2035,6 +2041,10 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 		return ret;
 	}
 	i2c_dev->transfer_in_progress = true;
+	if (i2c_dev->irq_disabled) {
+		i2c_dev->irq_disabled = false;
+		enable_irq(i2c_dev->irq);
+	}
 	tegra_i2c_flush_fifos(i2c_dev);
 
 	if (adap->bus_clk_rate != i2c_dev->bus_clk_rate) {

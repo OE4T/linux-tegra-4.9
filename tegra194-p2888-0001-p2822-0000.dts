@@ -1,7 +1,7 @@
 /*
  * Top level DTS file for CVM:P2888-0001 and CVB:P2822-0000.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,19 +130,19 @@
 		nvidia,invert-interrupt;
 	};
 
-	external-connection {
-		vbus_id_extcon: extcon@1 {
-			compatible = "extcon-gpio-states";
-			reg = <0x1>;
-			extcon-gpio,name = "VBUS_ID";
-			extcon-gpio,wait-for-gpio-scan = <0>;
-			extcon-gpio,cable-states = <0x3 0x0
-							0x0 0x2
-							0x1 0x2
-							0x2 0x1>;
-			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_HOST EXTCON_NONE>;
-			cable-connected-on-boot = <0>;
-			#extcon-cells = <1>;
+	i2c@c240000 {
+		ucsi_ccg: ucsi_ccg@8 {
+			status = "okay";
+			typec-extcon {
+				typec_port0: port-0 {
+					status = "okay";
+					#extcon-cells = <1>;
+				};
+				typec_port1: port-1 {
+					status = "okay";
+					#extcon-cells = <1>;
+				};
+			};
 		};
 	};
 
@@ -224,7 +224,7 @@
 #endif
 
 	tegra_xudc: xudc@3550000 {
-		extcon-cables = <&vbus_id_extcon 0>;
+		extcon-cables = <&typec_port0 0>;
 		extcon-cable-names = "vbus";
 		#extcon-cells = <1>;
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
@@ -237,7 +237,7 @@
 	};
 
 	tegra_xhci: xhci@3610000 {
-		extcon-cables = <&vbus_id_extcon 1>;
+		extcon-cables = <&typec_port0 1>;
 		extcon-cable-names = "id";
 		#extcon-cells = <1>;
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2

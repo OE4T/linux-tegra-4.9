@@ -1306,7 +1306,6 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 		config.rx_filter = HWTSTAMP_FILTER_ALL;
 		if (priv->hwts_rx_en == false)
 			rx_config_chg = true;
-		priv->hwts_rx_en = true;
 		break;
 	default:
 		return -ERANGE;
@@ -1315,7 +1314,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 	priv->hwtstamp_config = config;
 	/* Setup hardware time stamping cyclecounter */
 	if (rx_config_chg) {
-		if (priv->hwts_rx_en) {
+		if (config.rx_filter == HWTSTAMP_FILTER_ALL) {
 			priv->cc.read = ttcan_read_ts_cntr;
 			priv->cc.mask = CLOCKSOURCE_MASK(16);
 			priv->cc.mult = ((u64)NSEC_PER_SEC *
@@ -1333,6 +1332,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 				return -ERANGE;
 			}
 			timecounter_init(&priv->tc, &priv->cc, tref);
+			priv->hwts_rx_en = true;
 			raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 			mod_timer(&priv->timer, jiffies +
 				(msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));

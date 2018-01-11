@@ -113,6 +113,8 @@ struct gk20a;
 
 #define NVGPU_SEC_SECUREGPCCS			41
 #define NVGPU_SEC_PRIVSECURITY			42
+/* VPR is supported */
+#define NVGPU_SUPPORT_VPR			43
 
 /*
  * Nvlink flags

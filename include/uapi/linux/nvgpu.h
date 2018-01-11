@@ -156,6 +156,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_SCG			(1ULL << 25)
 /* GPU_VA address of a syncpoint is supported */
 #define NVGPU_GPU_FLAGS_SUPPORT_SYNCPOINT_ADDRESS	(1ULL << 26)
+/* VPR is supported */
+#define NVGPU_GPU_FLAGS_SUPPORT_VPR			(1ULL << 27)
 /* SM LRF ECC is enabled */
 #define NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF	(1ULL << 60)
 /* SM SHM ECC is enabled */

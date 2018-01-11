@@ -176,6 +176,8 @@ static struct nvgpu_flags_mapping flags_mapping[] = {
 		NVGPU_SUPPORT_TSG_SUBCONTEXTS},
 	{NVGPU_GPU_FLAGS_SUPPORT_SCG,
 		NVGPU_SUPPORT_SCG},
+	{NVGPU_GPU_FLAGS_SUPPORT_VPR,
+		NVGPU_SUPPORT_VPR},
 };
 
 static u64 nvgpu_ctrl_ioctl_gpu_characteristics_flags(struct gk20a *g)

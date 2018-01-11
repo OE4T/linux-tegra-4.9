@@ -213,8 +213,6 @@ struct gk20a_platform gv11b_tegra_platform = {
 	/* no cde. use sysmem compression */
 	.has_cde = false,
 
-	/* power management configuration */
-
 	/* ptimer src frequency in hz*/
 	.ptimer_src_freq	= 31250000,
 
@@ -231,6 +229,10 @@ struct gk20a_platform gv11b_tegra_platform = {
 	.enable_blcg            = true,
 	.enable_elcg            = true,
 	.enable_perfmon         = true,
+
+	/* power management configuration */
+	.enable_elpg		= true,
+	.can_elpg_init		= true,
 
 	/* power management callbacks */
 	.suspend = gv11b_tegra_suspend,

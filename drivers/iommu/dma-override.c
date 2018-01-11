@@ -1,7 +1,7 @@
 /*
  * Dma override functions
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,9 +23,10 @@ static bool is_t19x;
 
 void dma_qualify_ioprot(enum dma_data_direction dir, unsigned long *ioprot)
 {
-	if (is_t19x && (dir & DMA_FOR_NVLINK))
+	if (is_t19x && (dir & DMA_FOR_NVLINK)) {
 		*ioprot |= DMA_FOR_NVLINK;
-
+		*ioprot &= ~IOMMU_CACHE;
+	}
 }
 
 void dma_marshal_handle(enum dma_data_direction dir, dma_addr_t *handle)

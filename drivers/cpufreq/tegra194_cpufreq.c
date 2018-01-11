@@ -330,7 +330,7 @@ static int tegra194_set_speed(struct cpufreq_policy *policy, unsigned int index)
 
 	cl = get_cpu_cluster(policy->cpu);
 
-	for_each_cpu(cpu, &tfreq_data.pcluster[cl].cpu_mask)
+	for_each_cpu(cpu, policy->cpus)
 		tegra_update_cpu_speed(tgt_freq, cpu);
 
 	if (tfreq_data.pcluster[cl].bwmgr)

@@ -76,7 +76,7 @@
 	};
 
 	pcie_c0_rp {
-		status = "disabled";
+		status = "okay";
 
 		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
 

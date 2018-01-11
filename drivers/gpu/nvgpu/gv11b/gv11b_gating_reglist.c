@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -95,7 +95,6 @@ static const struct gating_desc gv11b_slcg_gr[] = {
 	{.addr = 0x00419d24, .prod = 0x00000000, .disable = 0x000000ff},
 	{.addr = 0x0041986c, .prod = 0x00000104, .disable = 0x00fffffe},
 	{.addr = 0x00419c74, .prod = 0x0000001e, .disable = 0x0000001e},
-	{.addr = 0x00419c84, .prod = 0x0003fff8, .disable = 0x0003fffe},
 	{.addr = 0x00419c8c, .prod = 0xffffff84, .disable = 0xfffffffe},
 	{.addr = 0x00419c94, .prod = 0x00080040, .disable = 0x000ffffe},
 	{.addr = 0x00419ca4, .prod = 0x00003ffe, .disable = 0x00003ffe},
@@ -189,7 +188,6 @@ static const struct gating_desc gv11b_blcg_fb[] = {
 	{.addr = 0x00100d30, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x00100d3c, .prod = 0x00000242, .disable = 0x00000000},
 	{.addr = 0x00100d48, .prod = 0x0000c242, .disable = 0x00000000},
-	{.addr = 0x00100d1c, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x00100c98, .prod = 0x00004242, .disable = 0x00000000},
 };
 

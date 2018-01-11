@@ -208,12 +208,12 @@ struct gk20a_platform gv11b_tegra_platform = {
 	.late_probe = gv11b_tegra_late_probe,
 	.remove = gv11b_tegra_remove,
 
-	.enable_slcg            = false,
-	.enable_blcg            = false,
-	.enable_elcg            = false,
-	.can_slcg               = false,
-	.can_blcg               = false,
-	.can_elcg               = false,
+	.can_slcg               = true,
+	.can_blcg               = true,
+	.can_elcg               = true,
+	.enable_slcg            = true,
+	.enable_blcg            = true,
+	.enable_elcg            = true,
 	.enable_perfmon         = true,
 
 	/* power management callbacks */

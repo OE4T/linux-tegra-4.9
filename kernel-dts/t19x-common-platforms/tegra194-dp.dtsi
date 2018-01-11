@@ -16,6 +16,7 @@
 #include <dt-bindings/display/tegra-dc.h>
 
 &sor0_dp_display {
+	nvidia,is_ext_dp_panel = <1>;
 	nvidia,pc2-disabled;
 	disp-default-out {
 		nvidia,out-type = <TEGRA_DC_OUT_DP>;
@@ -153,6 +154,7 @@
 };
 
 &sor1_dp_display {
+	nvidia,is_ext_dp_panel = <1>;
 	nvidia,pc2-disabled;
 	disp-default-out {
 		nvidia,out-type = <TEGRA_DC_OUT_DP>;
@@ -290,6 +292,7 @@
 };
 
 &sor2_dp_display {
+	nvidia,is_ext_dp_panel = <1>;
 	nvidia,pc2-disabled;
 	disp-default-out {
 		nvidia,out-type = <TEGRA_DC_OUT_DP>;
@@ -427,6 +430,7 @@
 };
 
 &sor3_dp_display {
+	nvidia,is_ext_dp_panel = <1>;
 	nvidia,pc2-disabled;
 	disp-default-out {
 		nvidia,out-type = <TEGRA_DC_OUT_DP>;

@@ -319,6 +319,9 @@ struct hdac_bus {
 	/* i915 component interface */
 	struct i915_audio_component *audio_component;
 	int i915_power_refcount;
+
+	/* WAR for SDO limitation */
+	bool avoid_compact_sdo_bw;
 };
 
 int snd_hdac_bus_init(struct hdac_bus *bus, struct device *dev,

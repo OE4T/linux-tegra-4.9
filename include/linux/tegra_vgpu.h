@@ -21,10 +21,6 @@
 
 #include <nvgpu/types.h>
 
-#ifdef CONFIG_TEGRA_19x_GPU
-#include <linux/tegra_vgpu_t19x.h>
-#endif
-
 enum {
 	TEGRA_VGPU_MODULE_GPU = 0,
 };
@@ -112,6 +108,10 @@ enum {
 	TEGRA_VGPU_CMD_GET_TIMESTAMPS_ZIPPER = 74,
 	TEGRA_VGPU_CMD_TSG_RELEASE = 75,
 	TEGRA_VGPU_CMD_GET_VSMS_MAPPING = 76,
+	TEGRA_VGPU_CMD_ALLOC_CTX_HEADER = 77,
+	TEGRA_VGPU_CMD_FREE_CTX_HEADER = 78,
+	TEGRA_VGPU_CMD_MAP_SYNCPT = 79,
+	TEGRA_VGPU_CMD_TSG_BIND_CHANNEL_EX = 80,
 };
 
 struct tegra_vgpu_connect_params {
@@ -484,6 +484,7 @@ struct tegra_vgpu_constants_params {
 	struct tegra_vgpu_engines_info engines_info;
 	u32 num_pce;
 	u32 sm_per_tpc;
+	u32 max_subctx_count;
 };
 
 struct tegra_vgpu_channel_cyclestats_snapshot_params {
@@ -543,6 +544,30 @@ struct tegra_vgpu_vsms_mapping_entry {
 	u32 global_tpc_index;
 };
 
+struct tegra_vgpu_alloc_ctx_header_params {
+	u64 ch_handle;
+	u64 ctx_header_va;
+};
+
+struct tegra_vgpu_free_ctx_header_params {
+	u64 ch_handle;
+};
+
+struct tegra_vgpu_map_syncpt_params {
+	u64 as_handle;
+	u64 gpu_va;
+	u64 len;
+	u64 offset;
+	u8 prot;
+};
+
+struct tegra_vgpu_tsg_bind_channel_ex_params {
+	u32 tsg_id;
+	u64 ch_handle;
+	u32 subctx_id;
+	u32 runqueue_sel;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -598,9 +623,10 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_get_timestamps_zipper_params get_timestamps_zipper;
 		struct tegra_vgpu_get_gpu_freq_table_params get_gpu_freq_table;
 		struct tegra_vgpu_vsms_mapping_params vsms_mapping;
-#ifdef CONFIG_TEGRA_19x_GPU
-		union tegra_vgpu_t19x_params t19x;
-#endif
+		struct tegra_vgpu_alloc_ctx_header_params alloc_ctx_header;
+		struct tegra_vgpu_free_ctx_header_params free_ctx_header;
+		struct tegra_vgpu_map_syncpt_params map_syncpt;
+		struct tegra_vgpu_tsg_bind_channel_ex_params tsg_bind_channel_ex;
 		char padding[192];
 	} params;
 };

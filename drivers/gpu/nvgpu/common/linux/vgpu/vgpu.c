@@ -48,7 +48,6 @@
 #include "common/linux/driver_common.h"
 
 #ifdef CONFIG_TEGRA_19x_GPU
-#include "common/linux/vgpu/vgpu_t19x.h"
 #include <nvgpu_gpuid_t19x.h>
 #endif
 
@@ -439,7 +438,7 @@ static int vgpu_init_hal(struct gk20a *g)
 		break;
 #ifdef CONFIG_TEGRA_19x_GPU
 	case TEGRA_19x_GPUID:
-		err = vgpu_t19x_init_hal(g);
+		err = vgpu_gv11b_init_hal(g);
 		break;
 #endif
 	default:

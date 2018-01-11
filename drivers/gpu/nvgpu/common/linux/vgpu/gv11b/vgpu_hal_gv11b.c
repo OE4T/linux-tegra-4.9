@@ -25,7 +25,6 @@
 #include "common/linux/vgpu/dbg_vgpu.h"
 #include "common/linux/vgpu/fecs_trace_vgpu.h"
 #include "common/linux/vgpu/css_vgpu.h"
-#include "common/linux/vgpu/vgpu_t19x.h"
 #include "common/linux/vgpu/gm20b/vgpu_gr_gm20b.h"
 #include "common/linux/vgpu/gp10b/vgpu_mm_gp10b.h"
 #include "common/linux/vgpu/gp10b/vgpu_gr_gp10b.h"

@@ -25,7 +25,7 @@ int vgpu_gv11b_tsg_bind_channel(struct tsg_gk20a *tsg,
 {
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_tsg_bind_channel_ex_params *p =
-				&msg.params.t19x.tsg_bind_channel_ex;
+				&msg.params.tsg_bind_channel_ex;
 	int err;
 
 	gk20a_dbg_fn("");

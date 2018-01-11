@@ -30,7 +30,7 @@ int vgpu_gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 	struct gk20a *g = c->g;
 	struct vm_gk20a *vm = c->vm;
 	struct tegra_vgpu_cmd_msg msg = {};
-	struct tegra_vgpu_map_syncpt_params *p = &msg.params.t19x.map_syncpt;
+	struct tegra_vgpu_map_syncpt_params *p = &msg.params.map_syncpt;
 
 	/*
 	 * Add ro map for complete sync point shim range in vm.
@@ -97,15 +97,9 @@ int vgpu_gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 int vgpu_gv11b_init_fifo_setup_hw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	int err;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	err = vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_MAX_SUBCTX_COUNT,
-			&f->t19x.max_subctx_count);
-	if (err) {
-		nvgpu_err(g, "get max_subctx_count failed %d", err);
-		return err;
-	}
+	f->t19x.max_subctx_count = priv->constants.max_subctx_count;
 
 	return 0;
 }

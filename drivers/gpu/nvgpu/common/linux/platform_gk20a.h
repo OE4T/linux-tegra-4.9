@@ -252,6 +252,7 @@ extern struct gk20a_platform gm20b_tegra_platform;
 extern struct gk20a_platform gp10b_tegra_platform;
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 extern struct gk20a_platform vgpu_tegra_platform;
+extern struct gk20a_platform gv11b_vgpu_tegra_platform;
 #endif
 #endif
 

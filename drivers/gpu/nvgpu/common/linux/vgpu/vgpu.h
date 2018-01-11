@@ -103,6 +103,7 @@ int vgpu_comm_sendrecv(struct tegra_vgpu_cmd_msg *msg, size_t size_in,
 		size_t size_out);
 
 int vgpu_gp10b_init_hal(struct gk20a *g);
+int vgpu_gv11b_init_hal(struct gk20a *g);
 
 int vgpu_init_gpu_characteristics(struct gk20a *g);
 

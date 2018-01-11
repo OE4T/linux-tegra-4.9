@@ -708,11 +708,26 @@ static int pva_release(struct inode *inode, struct file *file)
 {
 	struct pva_private *priv = file->private_data;
 
+	/*
+	 * Queue attributes are referenced from the queue
+	 * structure. Release the attributes before the queue
+	 * reference.
+	 */
+	kfree(priv->queue->attr);
+
+	/*
+	 * Release handle to the queue (on-going tasks have their
+	 * own references to the queue
+	 */
 	nvhost_queue_put(priv->queue);
+
+	/* Release handle to nvhost_acm */
 	nvhost_module_remove_client(priv->pva->pdev, priv);
 
+	/* Release the handle to buffer structure */
 	nvhost_buffer_release(priv->buffers);
-	kfree(priv->queue->attr);
+
+	/* Finally, release the private data */
 	kfree(priv);
 
 	return 0;

@@ -139,6 +139,8 @@ struct tegra_se_dev {
 	u32 dst_ll_size;	/* Size of destination linked list buffer */
 	struct tegra_se_ll *src_ll;
 	struct tegra_se_ll *dst_ll;
+	struct tegra_se_ll *aes_src_ll;
+	struct tegra_se_ll *aes_dst_ll;
 	u32 *dh_buf1, *dh_buf2;
 	struct ablkcipher_request *reqs[SE_MAX_TASKS_PER_SUBMIT];
 	unsigned int req_cnt;
@@ -1277,14 +1279,19 @@ static void tegra_se_send_data(struct tegra_se_dev *se_dev,
 	u32 cmdbuf_num_words = 0, i = 0;
 	u32 total, val;
 	unsigned int restart_op;
-	struct tegra_se_ll *src_ll = se_dev->src_ll;
-	struct tegra_se_ll *dst_ll = se_dev->dst_ll;
+	struct tegra_se_ll *src_ll;
+	struct tegra_se_ll *dst_ll;
 
 	if (req) {
+		src_ll = se_dev->aes_src_ll;
+		dst_ll = se_dev->aes_dst_ll;
 		src_ll->addr = se_dev->aes_cur_addr;
 		dst_ll->addr = se_dev->aes_cur_addr;
 		src_ll->data_len = req->nbytes;
 		dst_ll->data_len = req->nbytes;
+	} else {
+		src_ll = se_dev->src_ll;
+		dst_ll = se_dev->dst_ll;
 	}
 
 	i = se_dev->cmdbuf_cnt;
@@ -4192,10 +4199,14 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto reg_fail;
 	}
 
-	se_dev->src_ll = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_ll),
+	se_dev->aes_src_ll = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_ll),
 				      GFP_KERNEL);
-	se_dev->dst_ll = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_ll),
+	se_dev->aes_dst_ll = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_ll),
 				      GFP_KERNEL);
+	if (!se_dev->aes_src_ll || !se_dev->aes_dst_ll) {
+		dev_err(se_dev->dev, "Linked list memory allocation failed\n");
+		goto aes_buf_alloc_fail;
+	}
 
 	se_dev->total_aes_buf = kzalloc(SE_MAX_MEM_ALLOC, GFP_KERNEL);
 	if (!se_dev->total_aes_buf) {

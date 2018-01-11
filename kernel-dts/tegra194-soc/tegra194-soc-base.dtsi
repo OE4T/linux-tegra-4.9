@@ -1879,7 +1879,7 @@
 		status = "disabled";
 	};
 
-	tegra_nvlink_controller {
+	tnvlink_controller: tegra_nvlink_controller {
 		compatible = "nvidia,t19x-nvlink-controller";
 		reg = <0x0 0x3b80000 0x0 0x1000 /* NVLW_TIOCTRL */
 		       0x0 0x3b84000 0x0 0x1000 /* NVLW_NVLIPT */

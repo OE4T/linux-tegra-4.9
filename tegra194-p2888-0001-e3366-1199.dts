@@ -64,19 +64,6 @@
 			status = "okay";
 		};
 
-		cpu_core_power_states {
-			c1 {
-				status = "disabled";
-			};
-
-			c6 {
-				status = "disabled";
-			};
-
-			c7 {
-				status = "disabled";
-			};
-		};
 	};
 
 	timer {

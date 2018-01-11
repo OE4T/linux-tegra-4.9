@@ -38,23 +38,6 @@
 		};
 	};
 
-	cpus {
-		cpu_core_power_states {
-
-			c1 {
-				status = "disabled";
-			};
-
-			c6 {
-				status = "disabled";
-			};
-
-			c7 {
-				status = "disabled";
-			};
-		};
-	};
-
 	arm64_ras {
 		status = "disabled";
 	};

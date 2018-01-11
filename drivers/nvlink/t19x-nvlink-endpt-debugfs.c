@@ -2,7 +2,7 @@
  * t19x-nvlink-endpt-debugfs.c:
  * This file adds various debugfs nodes for the Tegra NVLINK controller.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -158,7 +158,90 @@ static const struct file_operations  nvlink_speedcontrol_fops = {
 	.owner	= THIS_MODULE,
 };
 
-/* TODO: Add debugfs nodes */
+static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
+{
+	struct tegra_nvlink_device *tdev =
+				(struct tegra_nvlink_device *)ndev->priv;
+	struct dentry *tegra_sl_debugfs;
+	int ret = 0;
+
+	tegra_sl_debugfs = debugfs_create_dir("single_lane_params",
+						tdev->tegra_debugfs);
+	if (!tegra_sl_debugfs) {
+		nvlink_err("Failed to create Tegra NVLINK endpoint driver's"
+		" single lane debugfs directory");
+		ret = -1;
+		goto fail;
+	}
+
+	if (!debugfs_create_bool("enabled", (S_IWUSR | S_IRUGO),
+					tegra_sl_debugfs,
+					&ndev->link.sl_params.enabled)) {
+		nvlink_err("Unable to create debugfs node for sl_enabled");
+		ret = -1;
+		goto fail;
+	}
+
+	if (!debugfs_create_u16("fb_ic_inc", (S_IWUSR | S_IRUGO),
+					tegra_sl_debugfs,
+					&ndev->link.sl_params.fb_ic_inc)) {
+		nvlink_err("Unable to create debugfs node for fb_ic_inc");
+		ret = -1;
+		goto fail;
+	}
+
+	if (!debugfs_create_u16("lp_ic_inc", (S_IWUSR | S_IRUGO),
+					tegra_sl_debugfs,
+					&ndev->link.sl_params.lp_ic_inc)) {
+		nvlink_err("Unable to create debugfs node for lp_ic_inc");
+		ret = -1;
+		goto fail;
+	}
+
+	if (!debugfs_create_u16("fb_ic_dec", (S_IWUSR | S_IRUGO),
+					tegra_sl_debugfs,
+					&ndev->link.sl_params.fb_ic_dec)) {
+		nvlink_err("Unable to create debugfs node for fb_ic_dec");
+		ret = -1;
+		goto fail;
+	}
+
+	if (!debugfs_create_u16("lp_ic_dec", (S_IWUSR | S_IRUGO),
+					tegra_sl_debugfs,
+					&ndev->link.sl_params.lp_ic_dec)) {
+		nvlink_err("Unable to create debugfs node for lp_ic_dec");
+		ret = -1;
+		goto fail;
+	}
+
+	if (!debugfs_create_u32("enter_thresh", (S_IWUSR | S_IRUGO),
+					tegra_sl_debugfs,
+					&ndev->link.sl_params.enter_thresh)) {
+		nvlink_err("Unable to create debugfs node for enter_thresh");
+		ret = -1;
+		goto fail;
+	}
+
+	if (!debugfs_create_u32("exit_thresh", (S_IWUSR | S_IRUGO),
+					tegra_sl_debugfs,
+					&ndev->link.sl_params.exit_thresh)) {
+		nvlink_err("Unable to create debugfs node for exit_thresh");
+		ret = -1;
+		goto fail;
+	}
+
+	if (!debugfs_create_u32("ic_limit", (S_IWUSR | S_IRUGO),
+					tegra_sl_debugfs,
+					&ndev->link.sl_params.ic_limit)) {
+		nvlink_err("Unable to create debugfs node for ic_limit");
+		ret = -1;
+		goto fail;
+	}
+
+fail:
+	return ret;
+}
+
 void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev)
 {
 	struct tegra_nvlink_device *tdev =
@@ -195,6 +278,9 @@ void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev)
 		nvlink_dbg("debugfs_create_file() for nvlink_rate_config failed");
 		goto fail;
 	}
+
+	if (nvlink_single_lane_debugfs_init(ndev) < 0)
+		goto fail;
 
 	return;
 

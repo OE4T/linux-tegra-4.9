@@ -46,6 +46,7 @@
  */
 #include "yheader.h"
 #include <linux/brcmphy.h>
+
 void eqos_enable_eee_mode(struct eqos_prv_data *pdata)
 {
 	struct tx_ring *ptx_ring = NULL;
@@ -109,242 +110,6 @@ static void eqos_eee_ctrl_timer(unsigned long data)
 	DBGPR_EEE("<--eqos_eee_ctrl_timer\n");
 }
 
-
-static void eqos_mmd_phy_indirect(struct mii_bus *bus,
-					 int reg_addr,
-					 int dev_addr,
-					 int phy_addr)
-{
-	/* Write the desired MMD dev_addr */
-	bus->write(bus, phy_addr, MMD_CTRL_REG, dev_addr);
-
-	/* Write the desired MMD reg_addr */
-	bus->write(bus, phy_addr, MMD_ADDR_DATA_REG, reg_addr);
-
-	/* Select the Function : DATA with no post increment */
-	bus->write(bus, phy_addr, MMD_CTRL_REG,
-		(dev_addr | MMD_CTRL_FUNC_DATA_NOINCR));
-}
-
-
-/*!
-* \brief API to read data from the MMD registers.
-*
-* \details This function will read data from the MMD(clause 45) registers
-* using clause 22 registers. The procedure to read MMD registers is,
-* 1. Write the desired MMD device addr into reg 13
-* 2. Write the desired MMD reg addr into reg 14
-* 3. Select the desired Function - MMD data command by writing in reg 13
-* 4. Read the content of the MMD's selected reg through reg 14
-*
-* \param[in] bus - the target MII bus
-* \param[in] reg_addr - desired MMD reg addr to be read
-* \param[in] dev_addr - desired MMD address
-* \param[in] phy_addr - PHY addr/id on the MII bus
-*
-* \return integer
-*/
-static int eqos_phy_read_mmd_indirect(struct mii_bus *bus,
-					     int reg_addr,
-					     int dev_addr,
-					     int phy_addr)
-{
-	u32 ret;
-
-	DBGPR_EEE("-->eqos_phy_read_mmd_indirect\n");
-
-	eqos_mmd_phy_indirect(bus, reg_addr, dev_addr, phy_addr);
-	/* read the content of the MMD's selected register */
-	ret = bus->read(bus, phy_addr, MMD_ADDR_DATA_REG);
-
-	DBGPR_EEE("<--eqos_phy_read_mmd_indirect\n");
-
-	return ret;
-}
-
-
-/*!
-* \brief API to write data into the MMD registers.
-*
-* \details This function will write data into MMD(clause 45) registers
-* using clause 22 registers. The procedure to write MMD registers is,
-* 1. Write the desired MMD device addr into reg 13
-* 2. Write the desired MMD reg addr into reg 14
-* 3. Select the desired Function - MMD data command by writing in reg 13
-* 4. Write the data into MMD's selected reg through reg 14
-*
-* \param[in] bus - the target MII bus
-* \param[in] reg_addr - desired MMD reg addr to be written
-* \param[in] dev_addr - desired MMD address
-* \param[in] phy_addr - PHY addr/id on the MII bus
-* \param[in] data - data to write into the MMD register
-*
-* \return void
-*/
-static void eqos_phy_write_mmd_indirect(struct mii_bus *bus,
-					     int reg_addr,
-					     int dev_addr,
-					     int phy_addr,
-					     u32 data)
-{
-	DBGPR_EEE("-->eqos_phy_write_mmd_indirect\n");
-
-	eqos_mmd_phy_indirect(bus, reg_addr, dev_addr, phy_addr);
-	/* Write the data into MMD's selected register */
-	bus->write(bus, phy_addr, MMD_ADDR_DATA_REG, data);
-
-	DBGPR_EEE("<--eqos_phy_write_mmd_indirect\n");
-}
-
-#if 0
-
-#define MDIO_EEE_100TX		0x0002	/* EEE is supported for 100BASE-TX */
-#define MDIO_EEE_1000T		0x0004	/* EEE is supported for 1000BASE-T */
-#define MDIO_EEE_10GT		0x0008	/* EEE is supported for 10GBASE-T */
-#define MDIO_EEE_1000KX		0x0010	/* EEE is supported for 1000BASE-KX */
-#define MDIO_EEE_10GKX4		0x0020	/* EEE is supported for 10GBASE-KX4 */
-#define MDIO_EEE_10GKR		0x0040	/* EEE is supported for 10GBASE KR */
-
- /* A small helper function that translates MMD EEE Capability (3.20) bits
- * to ethtool supported settings.
- */
-static u32 eqos_mmd_eee_cap_to_ethtool_sup_t(u16 eee_cap)
-{
-	u32 supported = 0;
-
-	if (eee_cap & MDIO_EEE_100TX)
-		supported |= SUPPORTED_100baseT_Full;
-	if (eee_cap & MDIO_EEE_1000T)
-		supported |= SUPPORTED_1000baseT_Full;
-	if (eee_cap & MDIO_EEE_10GT)
-		supported |= SUPPORTED_10000baseT_Full;
-	if (eee_cap & MDIO_EEE_1000KX)
-		supported |= SUPPORTED_1000baseKX_Full;
-	if (eee_cap & MDIO_EEE_10GKX4)
-		supported |= SUPPORTED_10000baseKX4_Full;
-	if (eee_cap & MDIO_EEE_10GKR)
-		supported |= SUPPORTED_10000baseKR_Full;
-
-	return supported;
-}
-
- /* A small helper function that translates the MMD EEE Advertisment (7.60)
-  * and MMD EEE Link Partner Ability (7.61) bits to ethtool advertisement
-  * settings.
-  */
-static inline u32 eqos_mmd_eee_adv_to_ethtool_adv_t(u16 eee_adv)
-{
-	u32 adv = 0;
-
-	if (eee_adv & MDIO_EEE_100TX)
-		adv |= ADVERTISED_100baseT_Full;
-	if (eee_adv & MDIO_EEE_1000T)
-		adv |= ADVERTISED_1000baseT_Full;
-	if (eee_adv & MDIO_EEE_10GT)
-		adv |= ADVERTISED_10000baseT_Full;
-	if (eee_adv & MDIO_EEE_1000KX)
-		adv |= ADVERTISED_1000baseKX_Full;
-	if (eee_adv & MDIO_EEE_10GKX4)
-		adv |= ADVERTISED_10000baseKX4_Full;
-	if (eee_adv & MDIO_EEE_10GKR)
-		adv |= ADVERTISED_10000baseKR_Full;
-
-	return adv;
-}
-#endif
-
-/*!
-* \brief API to initialize and check EEE mode.
-*
-* \details This function checks if the EEE is supported by
-* looking at the MMD registes and it also programs the MMD
-* register 3.0 setting the "Clock stop enable" bit if required.
-*
-* \param[in] phydev - pointer to target phy_device structure
-* \param[in] clk_stop_enable - PHY may stop the clock during LPI
-*
-* \return integer
-*
-* \retval zero if EEE is supported else return -ve number.
-*/
-static int eqos_phy_init_eee(struct phy_device *phydev,
-		bool clk_stop_enable)
-{
-	int ret = -EPROTONOSUPPORT;
-
-	DBGPR_EEE("-->eqos_phy_init_eee\n");
-
-	/* According to 802.3az,the EEE is supported only in full duplex-mode.
-	 * Also EEE feature is active when core is operating with MII, GMII,
-	 * SGMII or RGMII.
-	 */
-	if ((phydev->duplex == DUPLEX_FULL) &&
-	    ((phydev->interface == PHY_INTERFACE_MODE_MII) ||
-	    (phydev->interface == PHY_INTERFACE_MODE_GMII) ||
-	    (phydev->interface == PHY_INTERFACE_MODE_SGMII) ||
-	    (phydev->interface == PHY_INTERFACE_MODE_RGMII))) {
-		int eee_lp, eee_cap, eee_adv;
-		int status;
-
-		/* Read phy status to properly get the right settings */
-		status = phy_read_status(phydev);
-		if (status)
-			return status;
-
-		/* First check if the EEE ability is supported */
-		eee_cap = eqos_phy_read_mmd_indirect(phydev->mdio.bus,
-				CL45_PCS_EEE_ABLE, MDIO_MMD_PCS, phydev->mdio.addr);
-		if (eee_cap < 0)
-			return eee_cap;
-/*
-		cap = eqos_mmd_eee_cap_to_ethtool_sup_t(eee_cap);
-		if (!cap)
-			goto eee_exit;
-*/
-		/* check whether link Partner support EEE or not */
-		eee_lp = eqos_phy_read_mmd_indirect(phydev->mdio.bus,
-			CL45_AN_EEE_LPABLE_REG, MDIO_MMD_AN, phydev->mdio.addr);
-		if (eee_lp < 0)
-			return eee_lp;
-
-		eee_adv = eqos_phy_read_mmd_indirect(phydev->mdio.bus,
-				CL45_ADV_EEE_REG, MDIO_MMD_AN, phydev->mdio.addr);
-		if (eee_adv < 0)
-			return eee_adv;
-/*
-		//TODO:check this
-		adv = eqos_mmd_eee_adv_to_ethtool_adv_t(eee_adv);
-		lp = eqos_mmd_eee_adv_to_ethtool_adv_t(eee_lp);
-		idx = phy_find_setting(phydev->speed, phydev->duplex);
-		if ((lp & adv & settings[idx].setting))
-			goto eee_exit;
-*/
-		if (clk_stop_enable) {
-			/* Configure the PHY to stop receiving xMII
-			 * clock while it is signaling LPI.
-			 */
-			int val = eqos_phy_read_mmd_indirect(phydev->mdio.bus,
-					CL45_CLK_STOP_EN_REG, MDIO_MMD_PCS,
-					phydev->mdio.addr);
-			if (val < 0)
-				return val;
-
-			val |= CL45_CLK_STOP_EN;
-			eqos_phy_write_mmd_indirect(phydev->mdio.bus,
-					CL45_CLK_STOP_EN_REG, MDIO_MMD_PCS,
-					phydev->mdio.addr, val);
-		}
-
-		ret = 0; /* EEE supported */
-	}
-
-	DBGPR_EEE("<--eqos_phy_init_eee\n");
-
-/* eee_exit: */
-	return ret;
-}
-
-
 /*!
 * \brief API to initialize EEE mode.
 *
@@ -362,56 +127,52 @@ static int eqos_phy_init_eee(struct phy_device *phydev,
 bool eqos_eee_init(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	bool ret = false;
 	int twt_timer = EQOS_DEFAULT_LPI_TWT_TIMER;
+	unsigned long flags;
 
 	DBGPR_EEE("-->eqos_eee_init\n");
 
-	/* HW supports the EEE feature */
-	if (pdata->hw_feat.eee_sel) {
-		/* check if the PHY supports EEE */
-		if (eqos_phy_init_eee(pdata->phydev, 1))
-			goto phy_eee_failed;
+	/* Check if MAC supports EEE */
+	if (!pdata->hw_feat.eee_sel)
+		return false;
 
-		spin_lock(&pdata->lock);
-		if (!pdata->eee_active) {
-			pdata->eee_active = 1;
-			init_timer(&pdata->eee_ctrl_timer);
-			pdata->eee_ctrl_timer.function = eqos_eee_ctrl_timer;
-			pdata->eee_ctrl_timer.data = (unsigned long)pdata;
-			pdata->eee_ctrl_timer.expires =
-				EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER);
-			add_timer(&pdata->eee_ctrl_timer);
-			if (((pdata->phydev->phy_id & ~0xF) == PHY_ID_BCM89610) ||
-				((pdata->phydev->phy_id & ~0xF) == PHY_ID_BCM50610)) {
-				/* For BRCM PHY set TWT timer to 21usec */
-				twt_timer = 0x15;
-			} else {
-				DBGPR_EEE("Please program corresponding TWT timer value\
-						for non BRCM PHY accordingly \n");
-			}
-			hw_if->set_eee_timer(EQOS_DEFAULT_LPI_LS_TIMER, twt_timer);
-			if (pdata->use_lpi_tx_automate)
-				hw_if->set_lpi_tx_automate();
-		} else {
-			/* When EEE has been already initialized we have to
-			 * modify the PLS bit in MAC_LPI_Control_Status reg
-			 * according to PHY link status.
-			 */
-			hw_if->set_eee_pls(pdata->phydev->link);
+	/* Check if PHY supports EEE */
+	if (phy_init_eee(pdata->phydev, 1)) {
+		/* If EEE disabled at PHY during runtime
+		 * then disable MAC EEE timers
+		 */
+		spin_lock_irqsave(&pdata->lock, flags);
+		if (pdata->eee_active) {
+			del_timer_sync(&pdata->eee_ctrl_timer);
+			hw_if->set_eee_timer(0, twt_timer);
 		}
-
-		ret = true;
-		spin_unlock(&pdata->lock);
-
-		DBGPR_EEE("EEE initialized\n");
+		pdata->eee_active = 0;
+		spin_unlock_irqrestore(&pdata->lock, flags);
+		return false;
 	}
+
+	spin_lock_irqsave(&pdata->lock, flags);
+	if (!pdata->eee_active) {
+		pdata->eee_active = 1;
+		setup_timer(&pdata->eee_ctrl_timer, eqos_eee_ctrl_timer,
+			    (unsigned long)pdata);
+		mod_timer(&pdata->eee_ctrl_timer,
+			  EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER));
+
+		hw_if->set_eee_timer(EQOS_DEFAULT_LPI_LS_TIMER, twt_timer);
+		if (pdata->use_lpi_tx_automate)
+			hw_if->set_lpi_tx_automate();
+	}
+
+	hw_if->set_eee_pls(pdata->phydev->link);
+
+	spin_unlock_irqrestore(&pdata->lock, flags);
+
+	DBGPR_EEE("EEE initialized\n");
 
 	DBGPR_EEE("<--eqos_eee_init\n");
 
- phy_eee_failed:
-
-	return ret;
+	return true;
 }
 
 #define MAC_LPS_TLPIEN 0x00000001

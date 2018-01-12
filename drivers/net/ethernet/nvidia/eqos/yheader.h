@@ -539,7 +539,7 @@
 
 /* for EEE */
 #define EQOS_DEFAULT_LPI_LS_TIMER 0x3E8 /* 1000 in decimal */
-#define EQOS_DEFAULT_LPI_TWT_TIMER 0x0
+#define EQOS_DEFAULT_LPI_TWT_TIMER 0x15
 
 #define EQOS_DEFAULT_LPI_TIMER 1000 /* LPI Tx local expiration time in msec */
 #define EQOS_LPI_TIMER(x) (jiffies + msecs_to_jiffies(x))

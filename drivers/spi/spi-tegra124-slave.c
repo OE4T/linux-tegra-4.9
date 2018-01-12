@@ -1,7 +1,7 @@
 /*
  * SPI driver for NVIDIA's Tegra124 SPI Controller.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2083,6 +2083,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "TxDma Init failed, err %d\n", ret);
 		goto exit_rx_dma_free;
 	}
+	tspi->max_buf_size = tspi->dma_buf_size;
 	init_completion(&tspi->tx_dma_complete);
 	init_completion(&tspi->rx_dma_complete);
 	init_completion(&tspi->xfer_completion);

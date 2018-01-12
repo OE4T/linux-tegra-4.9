@@ -1,7 +1,7 @@
 /*
  * sensor_common.c - utilities for tegra sensor drivers
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -140,6 +140,21 @@ static int sensor_common_parse_signal_props(
 			"%s: tegra_sinterface property out of range\n",
 			__func__);
 		return -EINVAL;
+	}
+
+	err = of_property_read_string(node, "phy_mode", &temp_str);
+	if (err) {
+		dev_dbg(dev, "%s: use default phy mode DPHY\n", __func__);
+		signal->phy_mode = CSI_PHY_MODE_DPHY;
+	} else {
+		if (strcmp(temp_str, "CPHY") == 0)
+			signal->phy_mode = CSI_PHY_MODE_CPHY;
+		else if (strcmp(temp_str, "DPHY") == 0)
+			signal->phy_mode = CSI_PHY_MODE_DPHY;
+		else {
+			dev_err(dev, "%s: Invalid Phy mode\n", __func__);
+			return -EINVAL;
+		}
 	}
 
 	return 0;

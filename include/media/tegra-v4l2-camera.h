@@ -1,7 +1,7 @@
 /**
  * TEGRA_V4L2_CAMERA.h - utilities for tegra camera driver
  *
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -72,6 +72,9 @@
 #define TEGRA_CAM_STRING_CTRL_FUSEID_INDEX 1
 #define TEGRA_CAM_STRING_CTRL_OTP_INDEX 2
 
+#define	CSI_PHY_MODE_DPHY	0
+#define	CSI_PHY_MODE_CPHY	1
+
 struct unpackedU64 {
 	__u32 high;
 	__u32 low;
@@ -91,7 +94,8 @@ struct sensor_signal_properties {
 	__u32 discontinuous_clk;
 	__u32 dpcm_enable;
 	__u32 tegra_sinterface;
-	__u32 reserved[7];
+	__u32 phy_mode;
+	__u32 reserved[6];
 };
 
 struct sensor_image_properties {

@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra CSI Device
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -70,6 +70,69 @@ static void update_blank_intervals(struct tegra_csi_channel *chan,
 	port->framerate = tegra_csi_tpg_frmfmt[fmtindex].framerate;
 	port->h_blank = tegra_csi_tpg_frmfmt[fmtindex].h_blank;
 	port->v_blank = tegra_csi_tpg_frmfmt[fmtindex].v_blank;
+}
+
+static struct sensor_mode_properties*
+read_mode_from_dt(struct camera_common_data *s_data)
+{
+	struct sensor_mode_properties *mode = NULL;
+
+	if (s_data) {
+		int idx = s_data->mode_prop_idx;
+
+		if (idx < s_data->sensor_props.num_modes)
+			mode = &s_data->sensor_props.sensor_modes[idx];
+	}
+
+	return mode;
+}
+
+u32 read_settle_time_from_dt(struct tegra_csi_channel *chan)
+{
+	struct camera_common_data *s_data = chan->s_data;
+	struct sensor_mode_properties *mode = read_mode_from_dt(s_data);
+	struct device *dev = chan->csi->dev;
+	unsigned int cil_settletime = 0;
+
+	if (mode) {
+		dev_dbg(dev, "settle time reading from props\n");
+		cil_settletime = mode->signal_properties.cil_settletime;
+	} else if (chan->of_node) {
+		int err = 0;
+		const char *str;
+
+		dev_dbg(dev, "settle time reading from of_node\n");
+		err = of_property_read_string(chan->of_node, "cil_settletime",
+			&str);
+		if (!err) {
+			err = kstrtou32(str, 10, &cil_settletime);
+			if (err) {
+				dev_dbg(dev,
+					"no cil_settletime in of_node");
+				cil_settletime = 0;
+			}
+		}
+	}
+
+	return cil_settletime;
+}
+
+u32 read_phy_mode_from_dt(struct tegra_csi_channel *chan)
+{
+	struct camera_common_data *s_data = chan->s_data;
+	struct sensor_mode_properties *mode = read_mode_from_dt(s_data);
+	struct device *dev = chan->csi->dev;
+	u32 phy_mode = 0;
+
+	if (mode) {
+		dev_dbg(dev, "settle time reading from props\n");
+		phy_mode = mode->signal_properties.phy_mode;
+	} else {
+		dev_dbg(dev, "phy mode unavailable in props, use default\n");
+		phy_mode = CSI_PHY_MODE_DPHY;
+	}
+
+	return phy_mode;
 }
 
 void set_csi_portinfo(struct tegra_csi_device *csi,

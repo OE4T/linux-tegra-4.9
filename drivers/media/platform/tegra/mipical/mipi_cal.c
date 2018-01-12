@@ -1,7 +1,7 @@
 /*
  * mipi_cal.c
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -649,25 +649,27 @@ err:
 	return -ENODEV;
 }
 #endif
-static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
+static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes_info)
 {
-	int err = -1, val = 0;
+	int err = -1;
 	int i;
 	u32 csi_mask = 0;
-
+	int is_cphy = lanes_info & 0x1;
+	u32 lanes = 0;
 
 	for (i = 0; i < mipi->soc->total_cillanes; ++i)
 		csi_mask |= (CSIA << i);
 
+	lanes = lanes_info - is_cphy;
 	mutex_lock(&mipi->lock);
 
 	/* clean up lanes */
 	clear_all(mipi);
 
 	/* Apply MIPI_CAL PROD_Set */
-	regmap_read(mipi->regmap, ADDR(MIPI_CAL_MODE), &val);
+	mipical_write(mipi->regmap, ADDR(MIPI_CAL_MODE), is_cphy);
 
-	if (val & SEL_DPHY_CPHY) { /*CPHY*/
+	if (is_cphy) { /*CPHY*/
 
 		err = tegra_mipical_prodset_helper(mipi, "prod");
 		if (err)
@@ -685,7 +687,7 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 				goto prod_set_fail;
 
 			err = tegra_mipical_prodset_helper(mipi,
-									"prod_c_dphy_csi");
+							"prod_c_dphy_csi");
 			if (err)
 				goto prod_set_fail;
 
@@ -695,7 +697,7 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 				goto prod_set_fail;
 
 			err = tegra_mipical_prodset_helper(mipi,
-									"prod_c_dphy_dsi");
+							"prod_c_dphy_dsi");
 			if (err)
 				goto prod_set_fail;
 

@@ -1,7 +1,7 @@
 /*
  * Tegra CSI5 device common APIs
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frankc@nvidia.com>
  *
@@ -171,6 +171,8 @@ static int csi5_mipi_cal(struct tegra_csi_channel *chan)
 	unsigned int lanes, num_ports, port, addr;
 	unsigned int cila, cilb;
 	struct tegra_csi_device *csi = chan->csi;
+	u32 phy_mode = read_phy_mode_from_dt(chan);
+	bool is_cphy = (phy_mode == CSI_PHY_MODE_CPHY);
 
 	lanes = 0;
 	num_ports = 0;
@@ -186,7 +188,7 @@ static int csi5_mipi_cal(struct tegra_csi_channel *chan)
 				CSI5_NVCSI_CIL_B_SW_RESET);
 			csi5_phy_write(chan, port >> 1, addr,
 				CSI5_SW_RESET1_EN | CSI5_SW_RESET0_EN);
-		} else if (chan->numlanes == 3) { /* CPHY */
+		} else if (chan->numlanes == 3) {
 			lanes |= (CSIA | CSIB) << port;
 			cila =  (0x01 << CSI5_E_INPUT_LP_IO0_SHIFT) |
 				(0x01 << CSI5_E_INPUT_LP_IO1_SHIFT) |
@@ -206,8 +208,12 @@ static int csi5_mipi_cal(struct tegra_csi_channel *chan)
 			csi5_phy_write(chan, port >> 1,
 				CSI5_NVCSI_CIL_B_BASE + CSI5_PAD_CONFIG_0,
 					cilb);
-			/*TODO configure and enable mipical for cphy*/
-			return 0;
+			csi5_phy_write(chan, port >> 1,
+				CSI5_NVCSI_CIL_A_SW_RESET,
+				CSI5_SW_RESET1_EN | CSI5_SW_RESET0_EN);
+			csi5_phy_write(chan, port >> 1,
+				CSI5_NVCSI_CIL_B_SW_RESET,
+				CSI5_SW_RESET1_EN | CSI5_SW_RESET0_EN);
 		} else {
 			lanes |= (CSIA | CSIB) << port;
 			cila =  (0x01 << CSI5_E_INPUT_LP_IO0_SHIFT) |
@@ -241,6 +247,7 @@ static int csi5_mipi_cal(struct tegra_csi_channel *chan)
 			"Selected no CSI lane, cannot do calibration");
 		return -EINVAL;
 	}
+	lanes |= is_cphy ? 0x1 : 0;
 	return tegra_mipi_calibration(lanes);
 
 }

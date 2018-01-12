@@ -1,7 +1,7 @@
 /*
  * Tegra CSI4 device common APIs
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frankc@nvidia.com>
  *
@@ -102,14 +102,11 @@ static void csi4_stream_config(struct tegra_csi_channel *chan, int port_num)
 			__func__, port_num, val);
 }
 
-
 static void csi4_phy_config(
 	struct tegra_csi_channel *chan, int csi_port,
 	int csi_lanes, bool enable)
 {
 	struct tegra_csi_device *csi = chan->csi;
-	struct camera_common_data *s_data = chan->s_data;
-	const struct sensor_mode_properties *mode = NULL;
 	int phy_num = (csi_port & 0x6) >> 1;
 	bool cil_a = (csi_port & 0x1) ? false : true;
 	int cil_config;
@@ -117,12 +114,14 @@ static void csi4_phy_config(
 	const unsigned int cil_clk_mhz = TEGRA_CSICIL_CLK_MHZ;
 	const unsigned int csi_clk_mhz = csi->clk_freq / 1000000;
 	/* Calculated clock settling times for cil and csi clocks */
-	unsigned int cil_settletime = 0;
+	unsigned int cil_settletime = read_settle_time_from_dt(chan);
 	unsigned int csi_settletime;
+	u32 phy_mode = read_phy_mode_from_dt(chan);
 
 	dev_dbg(csi->dev, "%s\n", __func__);
 
-	if (csi_lanes == 3) /* set to CPHY */
+
+	if (phy_mode == CSI_PHY_MODE_CPHY) /* set to CPHY */
 		csi4_phy_write(chan, phy_num, NVCSI_CIL_PHY_CTRL, CPHY);
 	else /* set to DPHY */
 		csi4_phy_write(chan, phy_num, NVCSI_CIL_PHY_CTRL, DPHY);
@@ -186,36 +185,6 @@ static void csi4_phy_config(
 	/* power on de-serializer */
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0);
 
-	/* Attempt to find the cil_settingtime from the device tree */
-	if (s_data) {
-		int idx = s_data->mode_prop_idx;
-
-		dev_dbg(csi->dev, "cil_settingtime is pulled from device");
-		if (idx < s_data->sensor_props.num_modes) {
-			mode = &s_data->sensor_props.sensor_modes[idx];
-			cil_settletime = mode->signal_properties.cil_settletime;
-		} else {
-			dev_dbg(csi->dev, "mode not listed in DT, use default");
-			cil_settletime = 0;
-		}
-	} else if (chan->of_node) {
-		int err = 0;
-		const char *str;
-
-		dev_dbg(csi->dev,
-			"cil_settletime is pulled from device of_node");
-		err = of_property_read_string(chan->of_node, "cil_settletime",
-			&str);
-		if (!err) {
-			err = kstrtou32(str, 10, &cil_settletime);
-			if (err) {
-				dev_dbg(csi->dev,
-					"no cil_settletime in of_node");
-				cil_settletime = 0;
-			}
-		}
-	}
-
 	/* calculate MIPI settling times */
 	dev_dbg(csi->dev, "cil core clock: %u, csi clock: %u", cil_clk_mhz,
 		csi_clk_mhz);
@@ -252,7 +221,7 @@ static void csi4_phy_config(
 		csi4_phy_write(chan, phy_num, NVCSI_CIL_A_SW_RESET, 0x0);
 
 		/* setting up CIL B for 3 lane CPHY */
-		if (csi_lanes == 3) {
+		if (phy_mode == CSI_PHY_MODE_CPHY) {
 			/* set this to reset for pushing more settings */
 			csi4_phy_write(chan, phy_num, NVCSI_CIL_A_SW_RESET,
 				SW_RESET1_EN | SW_RESET0_EN);
@@ -619,6 +588,8 @@ static int csi4_mipi_cal(struct tegra_csi_channel *chan)
 	unsigned int lanes, num_ports, port, addr;
 	unsigned int cila, cilb;
 	struct tegra_csi_device *csi = chan->csi;
+	u32 phy_mode = read_phy_mode_from_dt(chan);
+	bool is_cphy = (phy_mode == CSI_PHY_MODE_CPHY);
 
 	lanes = 0;
 	num_ports = 0;
@@ -633,7 +604,7 @@ static int csi4_mipi_cal(struct tegra_csi_channel *chan)
 				NVCSI_CIL_A_SW_RESET : NVCSI_CIL_B_SW_RESET);
 			csi4_phy_write(chan, port >> 1, addr,
 				SW_RESET1_EN | SW_RESET0_EN);
-		} else if (chan->numlanes == 3) { /* CPHY */
+		} else if (chan->numlanes == 3) {
 			lanes |= (CSIA | CSIB) << port;
 			cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
 				(0x01 << E_INPUT_LP_IO1_SHIFT) |
@@ -651,7 +622,10 @@ static int csi4_mipi_cal(struct tegra_csi_channel *chan)
 				NVCSI_CIL_A_BASE + PAD_CONFIG_0, cila);
 			csi4_phy_write(chan, port >> 1,
 				NVCSI_CIL_B_BASE + PAD_CONFIG_0, cilb);
-			return 0; /*TODO configure and enable mipical for cphy*/
+			csi4_phy_write(chan, port >> 1, NVCSI_CIL_A_SW_RESET,
+				SW_RESET1_EN | SW_RESET0_EN);
+			csi4_phy_write(chan, port >> 1, NVCSI_CIL_B_SW_RESET,
+				SW_RESET1_EN | SW_RESET0_EN);
 		} else {
 			lanes |= (CSIA | CSIB) << port;
 			cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
@@ -680,6 +654,7 @@ static int csi4_mipi_cal(struct tegra_csi_channel *chan)
 		dev_err(csi->dev, "Selected no CSI lane, cannot do calibration");
 		return -EINVAL;
 	}
+	lanes |= is_cphy ? 0x1 : 0;
 	return tegra_mipi_calibration(lanes);
 }
 struct tegra_csi_fops csi4_fops = {

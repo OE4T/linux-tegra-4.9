@@ -68,6 +68,9 @@ extern struct tegra_dc_out_ops tegra_dc_nvsr_ops;
 
 extern struct tegra_dc_out_ops tegra_dc_null_ops;
 
+/* defined in dc.c */
+bool tegra_dc_in_cmode(struct tegra_dc *dc);
+
 /* defined in dc_sysfs.c, used by dc.c */
 void tegra_dc_remove_sysfs(struct device *dev);
 void tegra_dc_create_sysfs(struct device *dev);

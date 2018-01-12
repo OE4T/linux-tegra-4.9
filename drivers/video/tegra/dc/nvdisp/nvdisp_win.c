@@ -484,7 +484,7 @@ int tegra_nvdisp_set_degamma_user_config(struct tegra_dc_win *win,
 	tegra_dc_writel(win->dc, act_req_mask, nvdisp_cmd_state_ctrl_r());
 	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r());
 
-	if (dc->out->flags == TEGRA_DC_OUT_CONTINUOUS_MODE) {
+	if (tegra_dc_in_cmode(dc)) {
 		/* wait for ACT_REQ to complete or time out */
 		if (tegra_dc_poll_register(dc, nvdisp_cmd_state_ctrl_r(),
 					   act_req_mask, 0, 1,

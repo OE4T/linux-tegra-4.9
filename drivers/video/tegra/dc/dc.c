@@ -697,6 +697,16 @@ unsigned tegra_dc_out_flags_from_dev(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_dc_out_flags_from_dev);
 
+inline bool tegra_dc_in_cmode(struct tegra_dc *dc)
+{
+	u32 nc_mode_flags = (TEGRA_DC_OUT_ONE_SHOT_MODE |
+				TEGRA_DC_OUT_N_SHOT_MODE |
+				TEGRA_DC_OUT_ONE_SHOT_LP_MODE);
+
+	return !(dc->out->flags & nc_mode_flags);
+}
+EXPORT_SYMBOL(tegra_dc_in_cmode);
+
 bool tegra_dc_initialized(struct device *dev)
 {
 	struct platform_device *ndev = NULL;

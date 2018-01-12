@@ -793,8 +793,9 @@ static int nvdisp_alloc_output_lut(struct tegra_dc *dc)
 		return -ENOMEM;
 
 	/* Init LUT with cmu data provided from DT file */
-	if (dc->pdata->cmu && dc->pdata->cmu_enable) {
-		memcpy(nvdisp_lut->rgb, dc->pdata->cmu, nvdisp_lut->size);
+	if (dc->pdata->nvdisp_cmu && dc->pdata->cmu_enable) {
+		memcpy(nvdisp_lut->rgb, dc->pdata->nvdisp_cmu->rgb,
+			nvdisp_lut->size);
 		return 0;
 	}
 
@@ -2614,7 +2615,7 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc,
 	tegra_dc_writel(dc, act_req_mask, nvdisp_cmd_state_ctrl_r());
 	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r());
 
-	if (dc->out->flags == TEGRA_DC_OUT_CONTINUOUS_MODE) {
+	if (tegra_dc_in_cmode(dc)) {
 		/* wait for ACT_REQ to complete or time out */
 		if (tegra_dc_poll_register(dc, nvdisp_cmd_state_ctrl_r(),
 					   act_req_mask, 0, 1,

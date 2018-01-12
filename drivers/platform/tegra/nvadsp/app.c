@@ -132,6 +132,16 @@ static int size_app_file_node(struct seq_file *s, void *data)
 	return 0;
 }
 
+static int version_app_file_node(struct seq_file *s, void *data)
+{
+	struct nvadsp_app_service *ser = s->private;
+	struct adsp_module *mod = ser->mod;
+
+	seq_printf(s, "%s\n", strcmp(mod->version, "") ? mod->version : "unavailable");
+
+	return 0;
+}
+
 static int dram_app_file_node(struct seq_file *s, void *data)
 {
 	const struct app_mem_size *mem_size = s->private;
@@ -215,6 +225,7 @@ ADSP_APP_FILE_OPERATION(dump_binary_in_words);
 ADSP_APP_FILE_OPERATION(host_load_addr);
 ADSP_APP_FILE_OPERATION(adsp_load_addr);
 ADSP_APP_FILE_OPERATION(size);
+ADSP_APP_FILE_OPERATION(version);
 
 ADSP_APP_FILE_OPERATION(dram);
 ADSP_APP_FILE_OPERATION(dram_shared);
@@ -243,6 +254,7 @@ static int create_adsp_app_debugfs(struct nvadsp_app_service *ser)
 	ADSP_APP_CREATE_FILE(host_load_addr, ser, root);
 	ADSP_APP_CREATE_FILE(adsp_load_addr, ser, root);
 	ADSP_APP_CREATE_FILE(size, ser, root);
+	ADSP_APP_CREATE_FILE(version, ser, root);
 	ADSP_APP_CREATE_FOLDER(instance_mem_sizes, root);
 	ADSP_APP_CREATE_FILE(dram, mem_size, instance_mem_sizes);
 	ADSP_APP_CREATE_FILE(dram_shared, mem_size, instance_mem_sizes);

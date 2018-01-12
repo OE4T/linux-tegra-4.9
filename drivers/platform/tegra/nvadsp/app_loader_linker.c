@@ -844,6 +844,7 @@ struct adsp_module *load_adsp_static_module(const char *appname,
 
 	mod->adsp_module_ptr = shared_app->mod_ptr;
 	mod->dynamic = false;
+	memcpy(mod->version, shared_app->version, sizeof(shared_app->version));
 
 	return mod;
 }

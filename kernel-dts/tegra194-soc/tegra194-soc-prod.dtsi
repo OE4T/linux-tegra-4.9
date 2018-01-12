@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1064,7 +1064,8 @@
 			prod_c_hs200 {
 				prod = <
 					0 0x0000003c 0x00070000 0x00030000              //SDMMCA_AUTO_CMD12_ERR_STATUS_0
-					0 0x000001c0 0x0000e000 0x00004000>;            //SDMMCA_VENDOR_TUNING_CNTRL0_0
+					0 0x000001c0 0x0000e000 0x00004000              //SDMMCA_VENDOR_TUNING_CNTRL0_0
+					0 0x000001e4 0x00007f7f 0x00000503>;            //SDMMCA_AUTO_CAL_CONFIG_0
 			};
 			prod_c_sdr104 {
 				prod = <

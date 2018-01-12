@@ -46,6 +46,7 @@ struct adsp_shared_app {
 	int32_t dram_data_ptr;
 	int32_t shared_data_ptr;
 	int32_t shared_wc_data_ptr;
+	char version[16];
 } __packed;
 
 /* ADSP app loader message queue */

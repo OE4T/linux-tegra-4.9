@@ -96,8 +96,8 @@ static char *tegra_master_ids[] = {
 	"APE",                                  /* 0xb */
 	"PEATR",                                /* 0xc */
 	"NVDEC",                                /* 0xd */
-	"NVDEC1",                               /* 0xe */
-	"RCE"					/* 0xf */
+	"RCE",					/* 0xe */
+	"NVDEC1"				/* 0xf */
 };
 
 

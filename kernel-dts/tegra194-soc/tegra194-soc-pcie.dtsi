@@ -519,6 +519,7 @@
 
 		nvidia,max-speed = <3>;
 		nvidia,disable-aspm-states = <0xf>;
+		nvidia,controller-id = <0x0>;
 
 		bus-range = <0x0 0xff>;
 		ranges = <0x81000000 0x0 0x38100000 0x0 0x38100000 0x0 0x00100000      /* downstream I/O (1MB) */
@@ -568,6 +569,7 @@
 
 		nvidia,max-speed = <3>;
 		nvidia,disable-aspm-states = <0xf>;
+		nvidia,controller-id = <0x1>;
 
 		bus-range = <0x0 0xff>;
 		ranges = <0x81000000 0x0 0x30100000 0x0 0x30100000 0x0 0x00100000      /* downstream I/O (1MB) */
@@ -617,6 +619,7 @@
 
 		nvidia,max-speed = <3>;
 		nvidia,disable-aspm-states = <0xf>;
+		nvidia,controller-id = <0x2>;
 
 		bus-range = <0x0 0xff>;
 		ranges = <0x81000000 0x0 0x32100000 0x0 0x32100000 0x0 0x00100000      /* downstream I/O (1MB) */
@@ -666,6 +669,7 @@
 
 		nvidia,max-speed = <3>;
 		nvidia,disable-aspm-states = <0xf>;
+		nvidia,controller-id = <0x3>;
 
 		bus-range = <0x0 0xff>;
 		ranges = <0x81000000 0x0 0x34100000 0x0 0x34100000 0x0 0x00100000      /* downstream I/O (1MB) */
@@ -715,6 +719,7 @@
 
 		nvidia,max-speed = <3>;
 		nvidia,disable-aspm-states = <0xf>;
+		nvidia,controller-id = <0x4>;
 
 		bus-range = <0x0 0xff>;
 		ranges = <0x81000000 0x0 0x36100000 0x0 0x36100000 0x0 0x00100000      /* downstream I/O (1MB) */
@@ -768,6 +773,7 @@
 
 		nvidia,max-speed = <3>;
 		nvidia,disable-aspm-states = <0xf>;
+		nvidia,controller-id = <0x5>;
 
 		bus-range = <0x0 0xff>;
 		ranges = <0x81000000 0x0 0x3a100000 0x0 0x3a100000 0x0 0x00100000      /* downstream I/O (1MB) */

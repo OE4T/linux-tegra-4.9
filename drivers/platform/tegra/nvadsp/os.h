@@ -104,6 +104,7 @@ struct adsp_module {
 	size_t				size;
 	const struct app_mem_size	mem_size;
 	bool				dynamic;
+	char				version[16];
 };
 
 struct app_load_stats {

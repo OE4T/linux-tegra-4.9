@@ -338,6 +338,7 @@ int tegra_vi_channels_init(struct tegra_mc_vi *vi);
 int tegra_channel_cleanup(struct tegra_channel *chan);
 int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi);
 int tegra_channel_init_subdevices(struct tegra_channel *chan);
+void tegra_channel_remove_subdevices(struct tegra_channel *chan);
 struct v4l2_subdev *tegra_channel_find_linked_csi_subdev(
 	struct tegra_channel *chan);
 int tegra_vi2_power_on(struct tegra_mc_vi *vi);

@@ -1,7 +1,7 @@
 /*
  * NVIDIA Media controller graph management
  *
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -348,6 +348,22 @@ static int tegra_vi_graph_build_links(struct tegra_channel *chan)
 	return 0;
 }
 
+static void tegra_vi_graph_remove_links(struct tegra_channel *chan)
+{
+	struct tegra_vi_graph_entity *entity;
+
+	/* remove entity links and subdev for nvcsi */
+	entity = list_first_entry(&chan->entities,
+			struct tegra_vi_graph_entity, list);
+	if (entity->entity != NULL) {
+		media_entity_remove_links(entity->entity);
+		video_unregister_device(entity->subdev->devnode);
+	}
+
+	/* remove video node for vi */
+	tegra_channel_remove_subdevices(chan);
+}
+
 static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 {
 	struct tegra_channel *chan =
@@ -429,6 +445,34 @@ static int tegra_vi_graph_notify_bound(struct v4l2_async_notifier *notifier,
 
 	dev_err(chan->vi->dev, "no entity for subdev %s\n", subdev->name);
 	return -EINVAL;
+}
+
+static void tegra_vi_graph_notify_unbind(struct v4l2_async_notifier *notifier,
+				   struct v4l2_subdev *subdev,
+				   struct v4l2_async_subdev *asd)
+{
+	struct tegra_channel *chan =
+		container_of(notifier, struct tegra_channel, notifier);
+	struct tegra_vi_graph_entity *entity;
+
+	/* cleanup for complete */
+	if (chan->link_status) {
+		tegra_vi_graph_remove_links(chan);
+		chan->link_status--;
+	}
+
+	/* cleanup for bound */
+	list_for_each_entry(entity, &chan->entities, list) {
+		if (entity->subdev == subdev) {
+			/* remove subdev node */
+			chan->subdevs_bound--;
+			entity->subdev = NULL;
+			entity->entity = NULL;
+			dev_info(chan->vi->dev, "subdev %s unbind\n",
+				subdev->name);
+			break;
+		}
+	}
 }
 
 void tegra_vi_graph_cleanup(struct tegra_mc_vi *vi)
@@ -762,6 +806,7 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 		chan->notifier.subdevs = subdevs;
 		chan->notifier.num_subdevs = num_subdevs;
 		chan->notifier.bound = tegra_vi_graph_notify_bound;
+		chan->notifier.unbind = tegra_vi_graph_notify_unbind;
 		chan->notifier.complete = tegra_vi_graph_notify_complete;
 		chan->link_status = 0;
 		chan->subdevs_bound = 0;

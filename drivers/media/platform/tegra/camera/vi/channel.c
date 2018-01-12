@@ -1675,6 +1675,13 @@ static void tegra_channel_populate_dev_info(struct tegra_camera_dev_info *cdev,
 	cdev->bw = cdev->pixel_rate * cdev->bpp / 1024;
 }
 
+void tegra_channel_remove_subdevices(struct tegra_channel *chan)
+{
+	video_unregister_device(&chan->video);
+	chan->num_subdevs = 0;
+	chan->subdev_on_csi = NULL;
+}
+
 int tegra_channel_init_subdevices(struct tegra_channel *chan)
 {
 	int ret = 0;

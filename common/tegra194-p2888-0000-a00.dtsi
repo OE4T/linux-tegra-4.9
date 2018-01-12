@@ -44,6 +44,7 @@
 
 	sdhci@3460000 {
 		uhs-mask = <0x0>;
+		nvidia,enable-hwcq;
 		status = "okay";
 	};
 

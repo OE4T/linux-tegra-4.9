@@ -94,23 +94,17 @@ M:	Laxman Dewangan <ldewangan@nvidia.com>
 L:	sw-mobile-kernel-bus@exchange.nvidia.com
 B:      Mobile_Android_IO_Peripherals
 S:	Supported
-F:	drivers/pci/host/pci-tegra.c
-F:	drivers/base/regmap/regmap-mmio.c
+F:	drivers/base/regmap/*
 F:	drivers/i2c/*
 F:	drivers/i2c/busses/*
-F:	drivers/misc/inter-tegra/inter_tegra_spi.c
-F:	drivers/mfd/aat2870-core.c
-F:	drivers/mfd/max77663-core.c
-F:	drivers/mfd/max8831.c
-F:	drivers/mfd/max8907c-irq.c
-F:	drivers/rtc/rtc-*.c
+F:	drivers/misc/inter-tegra/*
+F:	drivers/mfd/*
+F:	drivers/rtc/*
 F:	drivers/spi/*
-F:	drivers/platform/tegra/ahb.c
-F:	drivers/platform/tegra/apbio.c
-F:	drivers/platform/tegra/devices.c
-F:	drivers/platform/tegra/board-touch-raydium_spi.c
-F:	drivers/platform/tegra/mipi_cal.c
+F:	drivers/soc/tegra/*
 F:	drivers/tty/serial/*
+F:	drivers/platform/tegra/tegra_prod.c
+F:	drivers/platform/tegra/tegra-wakeups.c
 
 CAMERA
 M:	Jihoon Bang <jbang@nvidia.com>
@@ -270,6 +264,7 @@ L:	sw-mobile-pcie@exchange.nvidia.com
 B:	Mobile_Kernel_PCIe
 S:	Supported
 F:	drivers/nvme/host/pci.c
+F:	drivers/pci/host/pci-tegra.c
 F:	drivers/pci/
 
 PLATFORM
@@ -277,26 +272,17 @@ M:	Laxman Dewangan <ldewangan@nvidia.com>
 L:	sw-mobile-kernel-platform@exchange.nvidia.com
 B:	Mobile_Android_IO_Peripherals
 S:	Supported
-F:	drivers/base/platform.c
-F:	drivers/misc/tegra-fuse/tegra_fuse.c
 F:	drivers/gpio/*
 F:	drivers/hwmon/*
-F:	drivers/leds/leds-max8831.c
-F:	drivers/misc/bcm4329_rfkill.c
-F:	drivers/misc/max1749.c
-F:	drivers/misc/nct1008.c
 F:	drivers/pinctrl/*
-F:	drivers/platform/tegra/kfuse.c
-F:	drivers/usb/serial/baseband_usb_chr.c
 
 PLATFORM POWER
 M:	Laxman Dewangan <ldewangan@nvidia.com>
 L:	sw-mobile-pmic@exchange.nvidia.com
 B:	Mobile_Android_IO_PMIC
 S:	Supported
-F:	drivers/mfd/tps65090.c
-F:	drivers/mfd/tps6591x.c
 F:	drivers/power/
+F:	drivers/power/reset
 F:	drivers/regulator/
 F:	drivers/extcon/
 
@@ -351,15 +337,12 @@ F:	drivers/soc/tegra/*edp*
 F:	include/linux/tegra_ppm.h
 
 POWER: GATING AND STATES
-M:	Laxman Dewangan <ldewangan@nvidia.com>
 M:	Jonathan Hunter <jonathanh@nvidia.com>
 L:	sw-mobile-power@exchange.nvidia.com
 B:	Mobile_Linux_Kernel
 S:	Supported
 F:	drivers/platform/tegra/pm*.c
 F:	drivers/platform/tegra/powergate/
-F:	drivers/platform/tegra/reboot.c
-F:	drivers/platform/tegra/*wakeups*.c
 
 PROFILING
 M:	Mark Peters <mpeters@nvidia.com>
@@ -452,12 +435,9 @@ M:	Laxman Dewangan <ldewangan@nvidia.com>
 L:	sw-mobile-system@exchange.nvidia.com
 B:	Mobile_Android_IO_Peripheral
 S:	Supported
-F:	drivers/dma/tegra*
-F:	drivers/input/keyboard/tegra-kbc.c
-F:	drivers/platform/tegra/dma.c
-F:	drivers/platform/tegra/i2c_error_recovery.c
-F:	drivers/platform/tegra/io.c
-F:	drivers/pwm/pwm-tegra.c
+F:	drivers/dma/*
+F:	drivers/input/keyboard/*
+F:	drivers/pwm/*
 F:	drivers/watchdog/*
 
 TOUCHSCREEN

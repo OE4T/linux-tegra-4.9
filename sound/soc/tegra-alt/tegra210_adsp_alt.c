@@ -2,7 +2,7 @@
  * tegra210_adsp_alt.c - Tegra ADSP audio driver
  *
  * Author: Sumit Bhattacharya <sumitb@nvidia.com>
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -4183,7 +4183,7 @@ static int tegra210_adsp_param_info(struct snd_kcontrol *kcontrol,
 	if (params->mask == SNDRV_CTL_ELEM_TYPE_INTEGER) {
 		params->num_regs = 128;
 		uinfo->value.integer.min = 0;
-		uinfo->value.integer.max = 0x7fffffff;
+		uinfo->value.integer.max = 0xffffffff;
 	}
 	uinfo->type = params->mask;
 	uinfo->count = params->num_regs;

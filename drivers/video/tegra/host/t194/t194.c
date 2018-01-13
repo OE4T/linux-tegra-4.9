@@ -235,8 +235,8 @@ struct nvhost_device_data t19_vi_thi_info = {
 	.autosuspend_delay      = 500,
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
-		{"vi", 408000000},
-		{"vi-const", 408000000},
+		{"vi", UINT_MAX},
+		{"vi-const", UINT_MAX},
 	},
 	.num_channels		= 1,
 	.reset_clamp_mask	= BIT(5),
@@ -249,8 +249,8 @@ struct nvhost_device_data t19_vi5_info = {
 	.poweron_reset		= true,
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
-		{"vi", 408000000},
-		{"vi-const", 408000000},
+		{"vi", UINT_MAX},
+		{"vi-const", UINT_MAX},
 		{"nvcsi", 204000000},
 		{"nvcsilp", 204000000},
 	},
@@ -705,8 +705,8 @@ struct nvhost_device_data t19_nvdla1_info = {
 struct nvhost_device_data t19_slvsec_info = {
 	.num_channels		= 1,
 	.clocks			= {
-		{"slvs-ec", 234000000},
-		{"slvs-ec-lp", 234000000},
+		{"slvs-ec", UINT_MAX},
+		{"slvs-ec-lp", UINT_MAX},
 	},
 	.devfs_name		= "slvs-ec",
 	.class			= NV_SLVSEC_CLASS_ID,

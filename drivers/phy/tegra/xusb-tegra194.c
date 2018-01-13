@@ -764,7 +764,8 @@ static int tegra194_utmi_phy_init(struct phy *phy)
 
 	mutex_lock(&padctl->lock);
 
-	if (port->supply && port->port_cap == USB_HOST_CAP) {
+	if (!IS_ERR(port->supply) && port->port_cap == USB_HOST_CAP &&
+		!regulator_is_enabled(port->supply)) {
 		rc = regulator_enable(port->supply);
 		if (rc) {
 			dev_err(padctl->dev, "enable port %d vbus failed %d\n",
@@ -801,7 +802,8 @@ static int tegra194_utmi_phy_exit(struct phy *phy)
 
 	mutex_lock(&padctl->lock);
 
-	if (port->supply && port->port_cap == USB_HOST_CAP) {
+	if (!IS_ERR(port->supply) && regulator_is_enabled(port->supply) &&
+		port->port_cap == USB_HOST_CAP) {
 		rc = regulator_disable(port->supply);
 		if (rc) {
 			dev_err(padctl->dev, "disable port %d vbus failed %d\n",
@@ -1589,7 +1591,7 @@ static int tegra194_xusb_padctl_vbus_power_on(struct tegra_xusb_padctl *padctl,
 		return -ENODEV;
 	}
 
-	if (!port->supply) {
+	if (IS_ERR(port->supply)) {
 		dev_err(padctl->dev, "no vbus-supply found for USB2-%u\n",
 			index);
 		return -ENODEV;
@@ -1632,7 +1634,7 @@ static int tegra194_xusb_padctl_vbus_power_off(struct tegra_xusb_padctl *padctl,
 		return -EINVAL;
 	}
 
-	if (!port->supply) {
+	if (IS_ERR(port->supply)) {
 		dev_err(padctl->dev, "no vbus-supply found for USB2-%u\n",
 			index);
 		return -ENODEV;

@@ -1,7 +1,7 @@
 /*
  * VI channel driver for T186/T194
  *
- * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA Corporation.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -246,8 +246,8 @@ int vi_channel_close_ex(unsigned channel, struct tegra_vi_channel *chan)
 {
 	struct vi_channel_drv *chan_drv = chan->drv;
 
-	vi_channel_power_off_vi_device(chan);
 	vi_capture_shutdown(chan);
+	vi_channel_power_off_vi_device(chan);
 
 	mutex_lock(&chan_drv->lock);
 

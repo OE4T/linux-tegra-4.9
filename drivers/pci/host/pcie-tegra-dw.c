@@ -29,11 +29,20 @@
 #include <linux/phy/phy.h>
 #include <linux/resource.h>
 #include <soc/tegra/chip-id.h>
+#include <soc/tegra/bpmp_abi.h>
+#include <soc/tegra/tegra_bpmp.h>
 #include <linux/random.h>
 
 #include "pcie-designware.h"
 
 #define to_tegra_pcie(x)	container_of(x, struct tegra_pcie_dw, pp)
+
+#define CTRL_0	(0)
+#define CTRL_1	(1)
+#define CTRL_2	(2)
+#define CTRL_3	(3)
+#define CTRL_4	(4)
+#define CTRL_5	(5)
 
 #define APPL_PINMUX				(0X0)
 #define APPL_PINMUX_PEX_RST			BIT(0)
@@ -312,6 +321,7 @@ struct tegra_pcie_dw {
 	dma_addr_t dma_addr;
 	void *cpu_virt_addr;
 	bool disable_clock_request;
+	bool power_down_en;
 	u8 init_link_width;
 
 	/* DMA operation */
@@ -338,6 +348,7 @@ struct tegra_pcie_dw {
 	u32 num_lanes;
 	u32 max_speed;
 	bool cdm_check;
+	u32 cid;
 
 	struct regulator *pex_ctl_reg;
 };
@@ -530,6 +541,51 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 	}
 
 	return IRQ_RETVAL(handled);
+}
+
+static int bpmp_send_uphy_message_atomic(struct mrq_uphy_request *req, int size,
+					 struct mrq_uphy_response *reply,
+					 int reply_size)
+{
+	unsigned long flags;
+	int err;
+
+	local_irq_save(flags);
+	err = tegra_bpmp_send_receive_atomic(MRQ_UPHY, req, size, reply,
+					     reply_size);
+	local_irq_restore(flags);
+
+	return err;
+}
+
+static int bpmp_send_uphy_message(struct mrq_uphy_request *req, int size,
+				  struct mrq_uphy_response *reply,
+				  int reply_size)
+{
+	int err;
+
+	err = tegra_bpmp_send_receive(MRQ_UPHY, req, size, reply, reply_size);
+	if (err != -EAGAIN)
+		return err;
+
+	/*
+	 * in case the mail systems worker threads haven't been started yet,
+	 * use the atomic send/receive interface. This happens because the
+	 * clocks are initialized before the IPC mechanism.
+	 */
+	return bpmp_send_uphy_message_atomic(req, size, reply, reply_size);
+}
+
+static int uphy_bpmp_pcie_controller_state_set(int controller, int enable)
+{
+	struct mrq_uphy_request req;
+	struct mrq_uphy_response resp;
+
+	req.cmd = CMD_UPHY_PCIE_CONTROLLER_STATE;
+	req.controller_state.pcie_controller = controller;
+	req.controller_state.enable = enable;
+
+	return bpmp_send_uphy_message(&req, sizeof(req), &resp, sizeof(resp));
 }
 
 static irqreturn_t tegra_pcie_msi_irq_handler(int irq, void *arg)
@@ -1731,6 +1787,7 @@ static struct pcie_host_ops tegra_pcie_dw_host_ops = {
 static int tegra_add_pcie_port(struct pcie_port *pp,
 			       struct platform_device *pdev)
 {
+	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
 	int ret;
 
 	pp->irq = platform_get_irq_byname(pdev, "intr");
@@ -1774,10 +1831,21 @@ static int tegra_add_pcie_port(struct pcie_port *pp,
 	pcie_pme_disable_msi();
 
 	ret = dw_pcie_host_init(pp);
-	if (ret) {
+
+	if (ret == -ENOMEDIUM && pcie->power_down_en) {
+		if (pcie->cid != CTRL_5) {
+			if (uphy_bpmp_pcie_controller_state_set(pcie->cid,
+								false))
+				dev_err(pcie->dev,
+					"Disabling controller-%d failed\n",
+					pcie->cid);
+		}
+		goto fail_host_init;
+	} else if (ret && ret != -ENOMEDIUM) {
 		dev_err(pp->dev, "failed to initialize host\n");
 		goto fail_host_init;
 	}
+	ret = 0;
 
 	return ret;
 
@@ -1904,10 +1972,29 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		pcie->max_speed = 1;
 	}
 
+	pcie->power_down_en = of_property_read_bool(pcie->dev->of_node,
+		"nvidia,enable-power-down");
+	pp->skip_enum = pcie->power_down_en;
+
 	if (tegra_platform_is_fpga()) {
 		pcie->cfg_link_cap_l1sub = CFG_LINK_CAP_L1SUB;
 		pcie->event_cntr_ctrl = EVENT_COUNTER_CONTROL_REG;
 		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
+	}
+
+	ret = of_property_read_u32(np, "nvidia,controller-id", &pcie->cid);
+	if (ret) {
+		dev_err(pcie->dev, "Controller-ID is missing in DT: %d\n", ret);
+		return ret;
+	}
+
+	if (pcie->cid != CTRL_5) {
+		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
+		if (ret) {
+			dev_err(pcie->dev, "Enabling controller-%d failed:%d\n",
+				pcie->cid, ret);
+			return ret;
+		}
 	}
 
 	pcie->pex_ctl_reg = devm_regulator_get(&pdev->dev, "vddio-pex-ctl");
@@ -2089,7 +2176,9 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 
 	ret = tegra_add_pcie_port(pp, pdev);
 	if (ret < 0) {
-		dev_err(pcie->dev, "PCIE : Add PCIe port failed: %d\n", ret);
+		if (ret != -ENOMEDIUM)
+			dev_err(pcie->dev, "PCIE : Add PCIe port failed: %d\n",
+				ret);
 		goto fail_add_port;
 	}
 
@@ -2179,6 +2268,7 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 {
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
+	int ret = 0;
 
 	/*TODO re verify the sequence with IAS*/
 	tegra_pcie_dw_pme_turnoff(pcie);
@@ -2187,8 +2277,16 @@ static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 	reset_control_assert(pcie->core_apb_rst);
 	clk_disable_unprepare(pcie->core_clk);
 	regulator_disable(pcie->pex_ctl_reg);
+	if (pcie->cid != CTRL_5) {
+		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
+		if (ret) {
+			dev_err(pcie->dev, "Disabling ctrl-%d failed:%d\n",
+				pcie->cid, ret);
+			return ret;
+		}
+	}
 
-	return 0;
+	return ret;
 }
 
 static int tegra_pcie_dw_resume_noirq(struct device *dev)
@@ -2198,6 +2296,15 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	u32 val;
 
 	/*TODO re verify the sequence with IAS*/
+	if (pcie->cid != CTRL_5) {
+		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
+		if (ret) {
+			dev_err(pcie->dev, "Enabling controller-%d failed:%d\n",
+				pcie->cid, ret);
+			return ret;
+		}
+	}
+
 	ret = regulator_enable(pcie->pex_ctl_reg);
 	if (ret < 0) {
 		dev_err(dev, "regulator enable failed: %d\n", ret);

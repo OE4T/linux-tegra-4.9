@@ -85,7 +85,13 @@ Required properties:
       0x2dc - C1, C2 and C3
       0x2f8 - C4
       0x30c - C5
-
+- nvidia,controller-id : Controller specific ID
+      0x0 - C0
+      0x1 - C1
+      0x2 - C2
+      0x3 - C3
+      0x4 - C4
+      0x5 - C5
 - vddio-pex-ctl-supply: Regulator supply for PCIe side band signals
 
 Optional properties:
@@ -114,6 +120,8 @@ Optional properties:
        b) speed is >= Gen-3 with any MPS
 - nvidia,cdm_check : Enables CDM checking. For more information, refer synopsis
     data book
+- nvidia,enable-power-down : Enables power down of respective controller and
+    corresponding PLLs if they are not shared by any other entity
 
 Power supplies for Tegra194:
 //TODO

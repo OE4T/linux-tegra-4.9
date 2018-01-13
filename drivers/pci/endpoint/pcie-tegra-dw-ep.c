@@ -301,6 +301,18 @@ static int uphy_bpmp_pcie_ep_controller_pll_init(u32 id)
 	return bpmp_send_uphy_message(&req, sizeof(req), &resp, sizeof(resp));
 }
 
+static int uphy_bpmp_pcie_controller_state_set(int controller, int enable)
+{
+	struct mrq_uphy_request req;
+	struct mrq_uphy_response resp;
+
+	req.cmd = CMD_UPHY_PCIE_CONTROLLER_STATE;
+	req.controller_state.pcie_controller = controller;
+	req.controller_state.enable = enable;
+
+	return bpmp_send_uphy_message(&req, sizeof(req), &resp, sizeof(resp));
+}
+
 static void disable_aspm_l0s(struct tegra_pcie_dw_ep *pcie)
 {
 	u32 val = 0;
@@ -708,6 +720,19 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "fail to read cfg-link-cap-l1sub: %d\n",
 			ret);
 		pcie->cfg_link_cap_l1sub = CFG_LINK_CAP_L1SUB;
+	}
+
+	ret = of_property_read_u32(np, "nvidia,controller-id", &pcie->cid);
+	if (ret) {
+		dev_err(pcie->dev, "Controller-ID is missing in DT: %d\n", ret);
+		return ret;
+	}
+
+	ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
+	if (ret) {
+		dev_err(pcie->dev, "Enabling controller-%d failed:%d\n",
+			pcie->cid, ret);
+		return ret;
 	}
 
 	pcie->pex_ctl_reg = devm_regulator_get(&pdev->dev, "vddio-pex-ctl");

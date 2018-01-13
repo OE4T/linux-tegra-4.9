@@ -517,7 +517,7 @@
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 72 0x04>;
 
-		nvidia,max-speed = <3>;
+		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <0x0>;
 
@@ -567,7 +567,7 @@
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 45 0x04>;
 
-		nvidia,max-speed = <3>;
+		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <0x1>;
 
@@ -617,7 +617,7 @@
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 47 0x04>;
 
-		nvidia,max-speed = <3>;
+		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <0x2>;
 
@@ -667,7 +667,7 @@
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 49 0x04>;
 
-		nvidia,max-speed = <3>;
+		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <0x3>;
 
@@ -717,7 +717,7 @@
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 51 0x04>;
 
-		nvidia,max-speed = <3>;
+		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <0x4>;
 
@@ -771,7 +771,7 @@
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 53 0x04>;
 
-		nvidia,max-speed = <3>;
+		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <0x5>;
 

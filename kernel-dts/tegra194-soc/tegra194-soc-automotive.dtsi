@@ -270,4 +270,8 @@
 	cpufreq@d080000 {
 		status = "okay";
 	};
+
+	ufshci@2450000 {
+		nvidia,enable-wlu-scsi-device-add;
+	};
 };

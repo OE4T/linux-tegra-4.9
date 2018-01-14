@@ -2124,6 +2124,9 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 	u32 val;
 	int err;
 
+	if (!tegra_pcie_dw_link_up(&pcie->pp))
+		return;
+
 	val = readl(pcie->appl_base + APPL_RADM_STATUS);
 	val |= APPL_PM_XMT_TURNOFF_STATE;
 	writel(val, pcie->appl_base + APPL_RADM_STATUS);

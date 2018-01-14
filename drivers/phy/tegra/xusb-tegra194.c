@@ -291,8 +291,9 @@ static void tegra194_utmi_bias_pad_power_on(struct tegra_xusb_padctl *padctl)
 		return;
 	}
 
-	if (clk_prepare_enable(priv->usb2_trk_clk))
-		dev_warn(padctl->dev, "failed to enable USB2 trk clock\n");
+	if (!padctl->is_xhci_iov)
+		if (clk_prepare_enable(priv->usb2_trk_clk))
+			dev_warn(padctl->dev, "failed to enable USB2 trk clock\n");
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 	reg &= ~USB2_TRK_START_TIMER(~0);
@@ -337,7 +338,8 @@ static void tegra194_utmi_bias_pad_power_off(struct tegra_xusb_padctl *padctl)
 	reg |= USB2_PD_TRK;
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 
-	clk_disable_unprepare(priv->usb2_trk_clk);
+	if (!padctl->is_xhci_iov)
+		clk_disable_unprepare(priv->usb2_trk_clk);
 
 	mutex_unlock(&padctl->lock);
 }
@@ -878,7 +880,7 @@ tegra194_usb2_pad_probe(struct tegra_xusb_padctl *padctl,
 		goto out;
 	}
 
-	if (tegra_platform_is_silicon()) {
+	if (!padctl->is_xhci_iov && tegra_platform_is_silicon()) {
 		priv->usb2_trk_clk = devm_clk_get(&pad->dev, "trk");
 		if (IS_ERR(usb2->clk)) {
 			err = PTR_ERR(usb2->clk);

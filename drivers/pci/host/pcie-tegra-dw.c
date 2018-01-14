@@ -1687,20 +1687,33 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 	struct pci_dev *pdev = NULL;
 	u16 val = 0;
 	u32 data = 0, pos = 0;
+	struct pci_bus *child;
 
-	for_each_pci_dev(pdev) {
-		pos = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_L1SS);
-		if (!pos)
-			continue;
-		pci_read_config_dword(pdev, pos + PCI_L1SS_CAP, &data);
-		if (!((data & PCI_L1SS_CAP_ASPM_L12S) ||
-		      (data & PCI_L1SS_CAP_PM_L12S)))
-			continue;
-		pcie_capability_read_dword(pdev, PCI_EXP_DEVCAP2, &data);
-		if (data & PCI_EXP_DEVCAP2_LTR) {
-			pcie_capability_read_word(pdev, PCI_EXP_DEVCTL2, &val);
-			val |= PCI_EXP_DEVCTL2_LTR_EN;
-			pcie_capability_write_word(pdev, PCI_EXP_DEVCTL2, val);
+	list_for_each_entry(child, &pp->bus->children, node) {
+		/* L1SS programming only for immediate downstream devices */
+		if (child->parent == pp->bus) {
+			pdev = pci_get_slot(child, PCI_DEVFN(0, 0));
+			if (!pdev)
+				break;
+			pos = pci_find_ext_capability(pdev,
+						      PCI_EXT_CAP_ID_L1SS);
+			if (!pos)
+				continue;
+			pci_read_config_dword(pdev, pos + PCI_L1SS_CAP, &data);
+			if (!((data & PCI_L1SS_CAP_ASPM_L12S) ||
+			      (data & PCI_L1SS_CAP_PM_L12S)))
+				continue;
+			pcie_capability_read_dword(pdev, PCI_EXP_DEVCAP2,
+						   &data);
+			if (data & PCI_EXP_DEVCAP2_LTR) {
+				pcie_capability_read_word(pdev,
+							  PCI_EXP_DEVCTL2,
+							  &val);
+				val |= PCI_EXP_DEVCTL2_LTR_EN;
+				pcie_capability_write_word(pdev,
+							   PCI_EXP_DEVCTL2,
+							   val);
+			}
 		}
 	}
 }

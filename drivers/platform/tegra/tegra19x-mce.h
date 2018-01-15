@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,6 +25,8 @@ int tegra19x_mce_update_crossover_time(u32 type, u32 time);
 int tegra19x_mce_read_cstate_stats(u32 state, u32 *stats);
 int tegra19x_mce_cc3_ctrl(u32 ndiv, u32 vindex, u8 enable);
 int tegra19x_mce_read_versions(u32 *major, u32 *minor);
+int tegra19x_mce_write_dda_ctrl(u32 index, u64 value);
+int tegra19x_mce_read_dda_ctrl(u32 index, u64 *value);
 
 #ifdef CONFIG_DEBUG_FS
 int tegra19x_mce_features_get(void *data, u64 *val);
@@ -61,6 +63,16 @@ static int tegra19x_mce_cc3_ctrl(u32 ndiv, u32 vindex, u8 enable)
 	return -ENOTSUPP;
 }
 static int tegra19x_mce_read_versions(u32 *major, u32 *minor)
+{
+	return -ENOTSUPP;
+}
+
+static int tegra19x_mce_write_dda_ctrl(u32 index, u64 value)
+{
+	return -ENOTSUPP;
+}
+
+static int tegra19x_mce_read_dda_ctrl(u32 index, u64 *value)
 {
 	return -ENOTSUPP;
 }

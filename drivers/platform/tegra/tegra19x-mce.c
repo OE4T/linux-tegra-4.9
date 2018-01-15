@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -176,6 +176,52 @@ int tegra19x_mce_read_versions(u32 *major, u32 *minor)
 	version = nvg_get_response();
 	*minor = (u32)version;
 	*major = (u32)(version >> 32);
+
+	/* enable preemption */
+	preempt_enable();
+
+	return 0;
+}
+
+/* Check for valid dda channel id.*/
+static int tegra19x_check_dda_channel_id(u32 index) {
+	if ((index < TEGRA_NVG_CHANNEL_DDA_SNOC_MCF) ||
+		(index > TEGRA_NVG_CHANNEL_DDA_SNOC_CLIENT_REPLENTISH_CTRL)) {
+		pr_err("mce: invalid dda channel id: %u\n", index);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+int tegra19x_mce_write_dda_ctrl(u32 index, u64 value)
+{
+	if (tegra19x_check_dda_channel_id(index))
+		return -EINVAL;
+
+	/* disable preemption */
+	preempt_disable();
+
+	nvg_send_req_data(index, value);
+
+	/* enable preemption */
+	preempt_enable();
+
+	return 0;
+}
+
+int tegra19x_mce_read_dda_ctrl(u32 index, u64* value)
+{
+	if (tegra19x_check_dda_channel_id(index))
+		return -EINVAL;
+
+	if (!value)
+		return -EINVAL;
+
+	/* disable preemption */
+	preempt_disable();
+
+	nvg_send_req(index);
+	*value = nvg_get_response();
 
 	/* enable preemption */
 	preempt_enable();

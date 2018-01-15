@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -51,6 +51,8 @@ int (*_tegra_mce_write_uncore_mca)(mca_cmd_t, u64, u32 *);
 int (*_tegra_mce_read_uncore_perfmon)(u32, u32 *);
 int (*_tegra_mce_write_uncore_perfmon)(u32, u32);
 int (*_tegra_mce_enable_latic)(void);
+int (*_tegra_mce_write_dda_ctrl)(u32 index, u64 value);
+int (*_tegra_mce_read_dda_ctrl)(u32 index, u64 *value);
 
 /**
  * Specify power state and wake time for entering upon STANDBYWFI
@@ -310,6 +312,38 @@ int tegra_mce_enable_latic(void)
 	return _tegra_mce_enable_latic();
 }
 EXPORT_SYMBOL_GPL(tegra_mce_enable_latic);
+
+/**
+ * Write to NVG DDA registers
+ *
+ * @index:   NVG communication channel id
+ * @value:   Register value to be written
+ *
+ * Returns 0 on success
+ */
+int tegra_mce_write_dda_ctrl(u32 index, u64 value)
+{
+	if(!_tegra_mce_write_dda_ctrl)
+		return -ENOTSUPP;
+	return _tegra_mce_write_dda_ctrl(index, value);
+}
+EXPORT_SYMBOL_GPL(tegra_mce_write_dda_ctrl);
+
+/**
+ * Read NVG DDA registers
+ *
+ * @index:   NVG communication channel id
+ * @value:   Associated register value read
+ *
+ * Returns 0 on success
+ */
+int tegra_mce_read_dda_ctrl(u32 index, u64 *value)
+{
+	if(!_tegra_mce_read_dda_ctrl)
+		return -ENOTSUPP;
+	return _tegra_mce_read_dda_ctrl(index, value);
+}
+EXPORT_SYMBOL_GPL(tegra_mce_read_dda_ctrl);
 
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *mce_debugfs;
@@ -590,6 +624,8 @@ static __init int tegra_mce_early_init(void)
 		_tegra_mce_read_cstate_stats = tegra19x_mce_read_cstate_stats;
 		_tegra_mce_cc3_ctrl = tegra19x_mce_cc3_ctrl;
 		_tegra_mce_read_versions = tegra19x_mce_read_versions;
+		_tegra_mce_write_dda_ctrl = tegra19x_mce_write_dda_ctrl;
+		_tegra_mce_read_dda_ctrl = tegra19x_mce_read_dda_ctrl;
 		break;
 	default:
 		/* Do not support any other platform */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -114,6 +114,8 @@ int tegra_mce_write_uncore_mca(mca_cmd_t cmd, u64 data, u32 *error);
 int tegra_mce_read_uncore_perfmon(u32 req, u32 *data);
 int tegra_mce_write_uncore_perfmon(u32 req, u32 data);
 int tegra_mce_enable_latic(void);
+int tegra_mce_write_dda_ctrl(u32 index, u64 value);
+int tegra_mce_read_dda_ctrl(u32 index, u64 *value);
 
 /* Tegra cache functions */
 int tegra_flush_cache_all(void);

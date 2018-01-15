@@ -73,12 +73,6 @@
 #define PD_PORT0_REG_IDX        0x1000
 #define PD_PORT1_REG_IDX        0x2000
 
-/* UCSI registers */
-#define REG_UCSI_STATUS         0x0038
-#define REG_UCSI_CONTROL        0x0039
-#define  UCSI_START             0x01
-#define  UCSI_STOP              0x02
-#define  UCSI_SILENCE           0x03
 /* UCSI memory region */
 #define REG_UCSI_VERSION	0xF000
 #define REG_UCSI_CCI		0xF004
@@ -260,6 +254,7 @@ struct ccg_typec_pd_info {
 struct ucsi_ccg_extcon {
 	struct device dev;
 	struct extcon_dev *edev;
+	struct mutex lock;
 	int port_id;
 	int cstate;
 };
@@ -272,7 +267,7 @@ struct ucsi_ccg {
 	struct ucsi *ucsi;
 	struct ucsi_ppm ppm;
 
-	struct ucsi_ccg_extcon **typec_extcon;
+	struct ucsi_ccg_extcon *typec_extcon[2];
 	int port_num;
 
 	/* CCG HPI communication flags */
@@ -434,30 +429,34 @@ static int get_fw_info(struct ucsi_ccg *ccg)
 	struct device *dev = ccg->dev;
 	struct version_info version[3];
 	struct version_info *v;
-	int i;
+	int err, i;
 
-	if (ccg_reg_read(ccg, REG_READ_ALL_VER, (u8 *)(&version), 24))
+	err = ccg_reg_read(ccg, REG_READ_ALL_VER, (u8 *)(&version), 24);
+	if (err) {
 		dev_err(dev, "read version failed\n");
-	else {
-		for (i = 1; i < 3; i++) {
-			v = &version[i];
-			dev_info(dev,
-			"FW%d Version: %c%c v%x.%x%x, [Base %d.%d.%d.%d]\n",
-			i, (v->app.build >> 8), (v->app.build & 0xFF),
-			v->app.patch, v->app.maj, v->app.min,
-			v->base.maj, v->base.min, v->base.patch,
-			v->base.build);
-		}
+		return err;
 	}
 
-	if (ccg_reg_read(ccg, REG_DEVICE_MODE, (u8 *)(&ccg->info), 6))
-		dev_err(dev, "read device mode failed\n");
-	else {
-		dev_info(dev, "fw_mode: %d\n", ccg->info.fw_mode);
-		dev_info(dev, "fw1_invalid: %d\n", ccg->info.fw1_invalid);
-		dev_info(dev, "fw2_invalid: %d\n", ccg->info.fw2_invalid);
-		dev_info(dev, "silicon_id: 0x%04x\n", ccg->info.silicon_id);
+	for (i = 1; i < 3; i++) {
+		v = &version[i];
+		dev_info(dev,
+		"FW%d Version: %c%c v%x.%x%x, [Base %d.%d.%d.%d]\n",
+		i, (v->app.build >> 8), (v->app.build & 0xFF),
+		v->app.patch, v->app.maj, v->app.min,
+		v->base.maj, v->base.min, v->base.patch,
+		v->base.build);
 	}
+
+	err = ccg_reg_read(ccg, REG_DEVICE_MODE, (u8 *)(&ccg->info), 6);
+	if (err) {
+		dev_err(dev, "read device mode failed\n");
+		return err;
+	}
+
+	dev_info(dev, "fw_mode: %d\n", ccg->info.fw_mode);
+	dev_info(dev, "fw1_invalid: %d\n", ccg->info.fw1_invalid);
+	dev_info(dev, "fw2_invalid: %d\n", ccg->info.fw2_invalid);
+	dev_info(dev, "silicon_id: 0x%04x\n", ccg->info.silicon_id);
 
 	return 0;
 }
@@ -476,6 +475,7 @@ static void update_typec_extcon_state(struct ucsi_ccg *ccg, int index)
 {
 	struct ucsi_ccg_extcon *extcon;
 	struct ccg_typec_pd_info *info;
+	int last_cstate;
 
 	info = &ccg->port[index];
 	extcon = ccg->typec_extcon[index];
@@ -483,23 +483,41 @@ static void update_typec_extcon_state(struct ucsi_ccg *ccg, int index)
 	if (!extcon || !info)
 		return;
 
+	mutex_lock(&extcon->lock);
+
+	last_cstate = extcon->cstate;
+
 	get_typec_info(ccg, index);
 
-	if (!info->connect_status) {
-		if (extcon->cstate)
-			extcon_set_state_sync(extcon->edev, extcon->cstate, 0);
+	if (!info->connect_status)
 		extcon->cstate = EXTCON_NONE;
-	} else {
-		if (!info->cur_data_role) {
-			extcon_set_state_sync(extcon->edev, EXTCON_USB, 1);
+	else {
+		if (!info->cur_data_role)
 			extcon->cstate = EXTCON_USB;
-		} else {
-			extcon_set_state_sync(extcon->edev, EXTCON_USB_HOST, 1);
+		else
 			extcon->cstate = EXTCON_USB_HOST;
-		}
 	}
-	dev_info(ccg->dev, "[typec-port%d] Cable state:%d, cable id:%d\n",
+
+	if (last_cstate == extcon->cstate) {
+		mutex_unlock(&extcon->lock);
+		return;
+	}
+
+	if (last_cstate) {
+		extcon_set_state_sync(extcon->edev, last_cstate, 0);
+		dev_info(ccg->dev,
+			"[typec-port%d] Cable state:0, cable id:%d\n",
+			extcon->port_id, last_cstate);
+	}
+
+	if (extcon->cstate) {
+		extcon_set_state_sync(extcon->edev, extcon->cstate, 1);
+		dev_info(ccg->dev,
+			"[typec-port%d] Cable state:%d, cable id:%d\n",
 			extcon->port_id, !!extcon->cstate, extcon->cstate);
+	}
+
+	mutex_unlock(&extcon->lock);
 }
 
 static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
@@ -515,6 +533,10 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 			index, resp->code, resp->length);
 
 	if (resp->code & ASYNC_EVENT) {
+		/* Ignore Async events before ccg init */
+		if (test_bit(INIT_PENDING, &ccg->flags))
+			return;
+
 		if (!invalid_evt(resp->code)) {
 			dev_info(dev, "port%d evt: %s\n",
 				index, ccg_evt_strs[resp->code - EVENT_INDEX]);
@@ -633,8 +655,8 @@ static int ucsi_ccg_setup_irq(struct ucsi_ccg *ccg)
 
 	err = of_property_read_u32(dev->of_node, "ccg,irqflags", &irqflags);
 	if (err) {
-		dev_warn(dev, "Default irqflags: TRIGGER_FALLING\n");
-		irqflags = IRQF_TRIGGER_FALLING;
+		dev_warn(dev, "Default irqflags: TRIGGER_LOW\n");
+		irqflags = IRQF_TRIGGER_LOW;
 	}
 
 	err = devm_request_threaded_irq(dev, ccg->irq, NULL,
@@ -822,27 +844,6 @@ err_clear_flag:
 	mutex_unlock(&ccg->lock);
 
 	return ret;
-}
-
-static int ccg_cmd_ucsi_start(struct ucsi_ccg *ccg)
-{
-	struct ccg_cmd cmd;
-	int ret;
-
-	cmd.reg = REG_UCSI_CONTROL;
-	cmd.data = UCSI_START;
-	cmd.len = 1;
-
-	mutex_lock(&ccg->lock);
-
-	ret = ccg_send_command(ccg, &cmd);
-
-	mutex_unlock(&ccg->lock);
-
-	if (ret != CMD_SUCCESS)
-		return ret;
-
-	return 0;
 }
 
 #ifdef FW_FLASH_READ_VALIDATE
@@ -1132,24 +1133,24 @@ static int ccg_fw_update(struct ucsi_ccg *ccg, int flashing_fw)
 static int ucsi_ccg_init(struct ucsi_ccg *ccg)
 {
 	struct device *dev = ccg->dev;
-	int err = 0;
+	int i;
 
 	/* Asymmetric FW should always run on FW2 (primary FW) */
 	if (ccg->info.fw_mode != FW2) {
 		dev_err(dev, "CCG can't boot to FW mode\n");
 		clear_bit(INIT_PENDING, &ccg->flags);
-		return err;
+		return -EINVAL;
 	}
+
+	/* Perform initial detection */
+	for (i = 0; i < ccg->port_num; i++)
+		update_typec_extcon_state(ccg, i);
 
 	/* Update event mask for ports */
 	ccg_cmd_update_event_mask(ccg, 0);
 
 	if (ccg->info.two_pd_ports)
 		ccg_cmd_update_event_mask(ccg, 1);
-
-	err = ccg_cmd_ucsi_start(ccg);
-	if (err)
-		dev_err(dev, "CCG start ucsi failed.\n");
 
 	clear_bit(INIT_PENDING, &ccg->flags);
 
@@ -1161,7 +1162,7 @@ static int ucsi_ccg_init(struct ucsi_ccg *ccg)
 
 	dev_info(dev, "%s: complete\n", __func__);
 
-	return err;
+	return 0;
 }
 
 static ssize_t do_flash_store(struct device *dev,
@@ -1269,22 +1270,6 @@ ucsi_ccg_find_typec_extcon_node(struct device *dev, unsigned int index)
 	return np;
 }
 
-static inline struct ucsi_ccg_extcon *to_ucsi_ccg_extcon(struct device *dev)
-{
-	return container_of(dev, struct ucsi_ccg_extcon, dev);
-}
-
-static void ucsi_ccg_extcon_release(struct device *dev)
-{
-	struct ucsi_ccg_extcon *extcon = to_ucsi_ccg_extcon(dev);
-
-	kfree(extcon);
-}
-
-static struct device_type ucsi_ccg_extcon_type = {
-	.release = ucsi_ccg_extcon_release,
-};
-
 static struct ucsi_ccg_extcon *
 ucsi_ccg_extcon_probe
 (struct device *parent, unsigned int i, struct device_node *np)
@@ -1298,19 +1283,20 @@ ucsi_ccg_extcon_probe
 
 	extcon->port_id = i;
 	extcon->dev.parent = parent;
-	extcon->dev.type = &ucsi_ccg_extcon_type;
 	extcon->dev.of_node = np;
 
 	dev_set_name(&extcon->dev, "typec-extcon-%u", extcon->port_id);
 
 	err = device_register(&extcon->dev);
 	if (err)
-		goto unregister;
+		return NULL;
 
 	extcon->edev = devm_extcon_dev_allocate(&extcon->dev,
 						ucsi_ccg_extcon_cables);
 	if (IS_ERR(extcon->edev))
 		goto unregister;
+
+	mutex_init(&extcon->lock);
 
 	err = devm_extcon_dev_register(&extcon->dev, extcon->edev);
 	if (err < 0)
@@ -1329,9 +1315,6 @@ static int ucsi_ccg_setup_extcon(struct ucsi_ccg *ccg)
 	struct device *dev = ccg->dev;
 	int i;
 
-	ccg->typec_extcon = devm_kzalloc(dev,
-			sizeof(*ccg->typec_extcon) * ccg->port_num, GFP_KERNEL);
-
 	for (i = 0; i < ccg->port_num; i++) {
 		struct ucsi_ccg_extcon *extcon;
 		struct device_node *np;
@@ -1343,10 +1326,11 @@ static int ucsi_ccg_setup_extcon(struct ucsi_ccg *ccg)
 		}
 
 		extcon = ucsi_ccg_extcon_probe(dev, i, np);
-		if (extcon)
+		if (extcon) {
 			dev_info(dev, "typec-port%d extcon dev created\n", i);
-
-		ccg->typec_extcon[i] = extcon;
+			ccg->typec_extcon[i] = extcon;
+		} else
+			return -EINVAL;
 	}
 
 	return 0;
@@ -1357,7 +1341,7 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 {
 	struct ucsi_ccg *ccg;
 	struct device *dev = &client->dev;
-	int i, err = 0;
+	int err = 0;
 
 	ccg = devm_kzalloc(dev, sizeof(struct ucsi_ccg), GFP_KERNEL);
 
@@ -1372,14 +1356,24 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 	init_completion(&ccg->hpi_cmd_done);
 	init_completion(&ccg->reset_comp);
 
-	get_fw_info(ccg);
+	err = get_fw_info(ccg);
+	if (err) {
+		dev_err(dev, "get_fw_info fail,, err=%d\n", err);
+		return err;
+	}
 
 	if (ccg->info.two_pd_ports)
 		ccg->port_num = 2;
 	else
 		ccg->port_num = 1;
 
-	ucsi_ccg_setup_extcon(ccg);
+	err = ucsi_ccg_setup_extcon(ccg);
+	if (err) {
+		dev_err(dev, "Setup extcon fail, err=%d\n", err);
+		return err;
+	}
+
+	set_bit(INIT_PENDING, &ccg->flags);
 
 	err = ucsi_ccg_setup_irq(ccg);
 	if (err) {
@@ -1387,10 +1381,6 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 		return err;
 	}
 
-	set_bit(INIT_PENDING, &ccg->flags);
-
-	/* check event happened before irq setup */
-	ccg_int_handler(ccg);
 	ccg->ppm.data = devm_kzalloc(dev, sizeof(struct ucsi_data), GFP_KERNEL);
 	if (!ccg->ppm.data) {
 		dev_err(dev, "failed to create ccg->ppm.data\n");
@@ -1403,10 +1393,6 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 	ucsi_ccg_init(ccg);
 
 	i2c_set_clientdata(client, ccg);
-
-	/* Perform initial detection */
-	for (i = 0; i < ccg->port_num; i++)
-		update_typec_extcon_state(ccg, i);
 
 	err = sysfs_create_group(&dev->kobj, &ucsi_ccg_attr_group);
 	if (err)

@@ -128,10 +128,6 @@ static struct nvhost_gating_register __attribute__((__unused__))
 	{ .addr = 0x00200050, .prod = 0x00000000, .disable = 0x00000001 },
 	/* PVA_PM_ICG_EN_OVERRIDE_0 */
 	{ .addr = 0x00200054, .prod = 0x00000000, .disable = 0x00000001 },
-	/* PVA_VPUMEM1_VPS_SLCG_CTRL_0 */
-	{ .addr = 0x00050100, .prod = 0x80000008, .disable = 0x00000000 },
-	/* PVA_VPUMEM0_VPS_SLCG_CTRL_0 */
-	{ .addr = 0x00040100, .prod = 0x80000008, .disable = 0x00000000 },
 	{}
 };
 

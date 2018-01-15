@@ -2229,23 +2229,67 @@ fail_core_clk:
 	return ret;
 }
 
-static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
+static int tegra_pcie_try_link_l2(struct tegra_pcie_dw *pcie)
 {
 	u32 val;
-	int err;
 
 	if (!tegra_pcie_dw_link_up(&pcie->pp))
-		return;
+		return 0;
 
 	val = readl(pcie->appl_base + APPL_RADM_STATUS);
 	val |= APPL_PM_XMT_TURNOFF_STATE;
 	writel(val, pcie->appl_base + APPL_RADM_STATUS);
 
-	err = readl_poll_timeout(pcie->appl_base + APPL_APPL_DEBUG, val,
+	return readl_poll_timeout(pcie->appl_base + APPL_APPL_DEBUG, val,
 				 val & APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT,
 				 1, PME_ACK_TIMEOUT);
-	if (err)
-		dev_err(pcie->dev, "PME_TurnOff failed: %d\n", err);
+}
+
+static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
+{
+	struct pci_dev *pdev = NULL;
+	struct pci_bus *child;
+	struct pcie_port *pp = &pcie->pp;
+	u16 val;
+
+	if (!tegra_pcie_dw_link_up(&pcie->pp))
+		return;
+
+	if (!tegra_pcie_try_link_l2(pcie))
+		return;
+
+	list_for_each_entry(child, &pp->bus->children, node) {
+		/* Bring downstream devices to D0 if they are not already in */
+		if (child->parent == pp->bus) {
+			pdev = pci_get_slot(child, PCI_DEVFN(0, 0));
+			if (!pdev)
+				break;
+			pci_read_config_word(pdev, pdev->pm_cap + PCI_PM_CTRL,
+					     &val);
+			if ((val & PCI_PM_CTRL_STATE_MASK) == PCI_D0) {
+				dev_dbg(pcie->dev,
+					"Downstream device is in D0\n");
+				break;
+			}
+			val &= ~PCI_PM_CTRL_STATE_MASK;
+			val |= PCI_D0;
+			pci_write_config_word(pdev, pdev->pm_cap + PCI_PM_CTRL,
+					      val);
+			msleep(100);
+			pci_read_config_word(pdev, pdev->pm_cap + PCI_PM_CTRL,
+					     &val);
+			if ((val & PCI_PM_CTRL_STATE_MASK) == PCI_D0) {
+				dev_dbg(pcie->dev,
+					"D0 transition successful\n");
+				break;
+			} else {
+				dev_err(pcie->dev, "D0 transition failed\n");
+			}
+		}
+	}
+
+	if (tegra_pcie_try_link_l2(pcie))
+		dev_err(pcie->dev, "Link transition to L2 state failed\n");
 }
 
 static int tegra_pcie_dw_remove(struct platform_device *pdev)

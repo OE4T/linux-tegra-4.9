@@ -102,7 +102,8 @@ static inline void set_flcn(struct platform_device *dev, struct flcn *flcn)
 int nvhost_vic_prepare_poweroff(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
 int nvhost_vic_finalize_poweron(struct platform_device *);
-int nvhost_vic_init_context(struct platform_device *, struct nvhost_cdma *);
+int nvhost_vic_init_context(struct platform_device *, struct nvhost_cdma *,
+			    dma_addr_t);
 int nvhost_flcn_prepare_poweroff(struct platform_device *);
 int nvhost_flcn_common_isr(struct platform_device *);
 
@@ -130,6 +131,7 @@ int flcn_reload_fw(struct platform_device *pdev);
 #define NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID		(0x00000200)
 #define NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE		(0x0000071C)
 #define NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET		(0x0000072C)
+#define NVB1B6_VIDEO_COMPOSITOR_SET_STATUS_OFFSET		(0x00000738)
 #define VIC_UCLASS_METHOD_OFFSET 0x10
 #define VIC_UCLASS_METHOD_DATA 0x11
 

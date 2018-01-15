@@ -121,6 +121,12 @@ struct nvhost_job {
 	/* error notifiers used channel submit timeout */
 	struct dma_buf *error_notifier_ref;
 	u64 error_notifier_offset;
+
+	/* engine job timestamps */
+	struct {
+		dma_addr_t dma;
+		u64 *ptr;
+	} engine_timestamps;
 };
 
 /*

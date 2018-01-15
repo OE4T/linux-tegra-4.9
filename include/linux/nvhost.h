@@ -278,7 +278,8 @@ struct nvhost_device_data {
 
 	/* Called each time we enter the class */
 	int (*init_class_context)(struct platform_device *dev,
-				  struct nvhost_cdma *cdma);
+				  struct nvhost_cdma *cdma,
+				  dma_addr_t timestamp_addr);
 
 	/*
 	 * Reset the unit. Used for timeout recovery, resetting the unit on
@@ -382,6 +383,9 @@ struct nvhost_device_data {
 
 	/* eventlib id for the device */
 	int eventlib_id;
+
+	/* supports delivering task timestamps (falcon) */
+	bool supports_task_timestamps;
 };
 
 

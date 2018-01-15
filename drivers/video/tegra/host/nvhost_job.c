@@ -103,6 +103,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 	struct nvhost_job *job = NULL;
 	size_t size =
 		job_size(num_cmdbufs, num_relocs, num_waitchks, num_syncpts);
+	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->dev);
 
 	if(!size)
 		return NULL;
@@ -119,6 +120,14 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 
 	init_fields(job, num_cmdbufs, num_relocs, num_waitchks, num_syncpts);
 
+	if (pdata->supports_task_timestamps) {
+		job->engine_timestamps.ptr =
+			dma_zalloc_coherent(&ch->vm->pdev->dev, sizeof(u64) * 2,
+			&job->engine_timestamps.dma, GFP_KERNEL);
+		if (!job->engine_timestamps.ptr)
+			return NULL;
+	}
+
 	return job;
 }
 EXPORT_SYMBOL(nvhost_job_alloc);
@@ -131,6 +140,17 @@ void nvhost_job_get(struct nvhost_job *job)
 static void job_free(struct kref *ref)
 {
 	struct nvhost_job *job = container_of(ref, struct nvhost_job, ref);
+
+	if (job->engine_timestamps.ptr) {
+		if (job->engine_timestamps.ptr[0] != 0) {
+			nvhost_eventlib_log_task(job->ch->dev, job->sp->id,
+				job->sp->fence, job->engine_timestamps.ptr[0],
+				job->engine_timestamps.ptr[1]);
+		}
+		dma_free_coherent(&job->ch->vm->pdev->dev, sizeof(u64) * 2,
+			job->engine_timestamps.ptr,
+			job->engine_timestamps.dma);
+	}
 
 	if (job->error_notifier_ref)
 		dma_buf_put(job->error_notifier_ref);

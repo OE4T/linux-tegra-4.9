@@ -565,6 +565,7 @@ struct nvhost_device_data t19_vic_info = {
 	.engine_cg_regs		= t19x_vic_gating_registers,
 	.engine_can_cg		= true,
 	.can_powergate		= true,
+	.supports_task_timestamps = true,
 };
 #endif
 

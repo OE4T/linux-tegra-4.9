@@ -585,8 +585,10 @@ int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 }
 
 int nvhost_vic_init_context(struct platform_device *pdev,
-			    struct nvhost_cdma *cdma)
+			    struct nvhost_cdma *cdma,
+			    dma_addr_t timestamp_addr)
 {
+	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
 	struct flcn *v;
 	int err;
 
@@ -623,6 +625,18 @@ int nvhost_vic_init_context(struct platform_device *pdev,
 		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
 			VIC_UCLASS_METHOD_DATA, 1),
 		v->fce_dma_addr >> 8);
+
+	if (pdata->supports_task_timestamps) {
+		/* set timestamp buffer offset */
+		nvhost_cdma_push(cdma,
+			nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
+				VIC_UCLASS_METHOD_OFFSET, 1),
+			NVB1B6_VIDEO_COMPOSITOR_SET_STATUS_OFFSET >> 2);
+		nvhost_cdma_push(cdma,
+			nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
+				VIC_UCLASS_METHOD_DATA, 1),
+			timestamp_addr >> 8);
+	}
 
 	return 0;
 }

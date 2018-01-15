@@ -300,8 +300,9 @@ static void submit_work(struct nvhost_job *job)
 			/* initialize class context */
 			if (cur_class != NV_HOST1X_CLASS_ID &&
 			    pdata->init_class_context)
-				pdata->init_class_context(job->ch->dev,
-							  &job->ch->cdma);
+				pdata->init_class_context(
+					job->ch->dev, &job->ch->cdma,
+					job->engine_timestamps.dma);
 		}
 
 		op1 = nvhost_opcode_gather(g->words);

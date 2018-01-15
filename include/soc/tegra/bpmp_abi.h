@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2055,6 +2055,7 @@ enum {
 	CMD_UPHY_PCIE_LANE_MARGIN_CONTROL = 1,
 	CMD_UPHY_PCIE_LANE_MARGIN_STATUS = 2,
 	CMD_UPHY_PCIE_EP_CONTROLLER_PLL_INIT = 3,
+	CMD_UPHY_PCIE_CONTROLLER_STATE = 4,
 	CMD_UPHY_MAX,
 };
 
@@ -2081,6 +2082,12 @@ struct cmd_uphy_ep_controller_pll_init_request {
 	uint8_t ep_controller;
 } __ABI_PACKED;
 
+struct cmd_uphy_pcie_controller_state_request {
+	/** @brief PCIE controller number, valid: 0, 1, 2, 3, 4 */
+	uint8_t pcie_controller;
+	uint8_t enable;
+} __ABI_PACKED;
+
 /**
  * @ingroup UPHY
  * @brief Request with #MRQ_UPHY
@@ -2094,6 +2101,7 @@ struct cmd_uphy_ep_controller_pll_init_request {
  * |CMD_UPHY_PCIE_LANE_MARGIN_CONTROL    |uphy_set_margin_control                 |
  * |CMD_UPHY_PCIE_LANE_MARGIN_STATUS     |                                        |
  * |CMD_UPHY_PCIE_EP_CONTROLLER_PLL_INIT |cmd_uphy_ep_controller_pll_init_request |
+ * |CMD_UPHY_PCIE_CONTROLLER_STATE       |cmd_uphy_pcie_controller_state_request  |
  *
  */
 
@@ -2106,6 +2114,7 @@ struct mrq_uphy_request {
 	union {
 		struct cmd_uphy_margin_control_request uphy_set_margin_control;
 		struct cmd_uphy_ep_controller_pll_init_request ep_ctrlr_pll_init;
+		struct cmd_uphy_pcie_controller_state_request controller_state;
 	} __UNION_ANON;
 } __ABI_PACKED;
 

@@ -55,47 +55,6 @@
 		};
 	};
 
-	pcie_common {
-		compatible = "nvidia,tegra194-pcie-common";
-		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX1A>;
-		reg = <0x0 0x03e00000 0x0 0x00010000>;   /* common registers */
-		reg-names = "common";
-
-		status = "disabled";
-
-		resets = <&bpmp_resets TEGRA194_RESET_PEX0_COMMON_APB>;
-		reset-names = "common_apb_rst";
-
-		/* Following are supported XBAR configurations
-		 * 0 = XBAR_2_1_1_1_2
-		 * 1 = XBAR_4_1_0_1_2
-		 * 2 = XBAR_4_1_1_1_2
-		 * 3 = XBAR_4_0_0_1_2
-		 * 4 = XBAR_4_1_0_1_2_C1L6
-		 * 5 = XBAR_4_0_1_1_2
-		 * 6 = XBAR_4_1_1_1_2_C1L6
-		 * 7 = XBAR_2_1_1_0_4
-		 * 8 = XBAR_2_1_1_1_4
-		 * 9 = XBAR_4_1_0_0_4
-		 * 10 = XBAR_4_1_0_1_4
-		 * 11 = XBAR_4_1_1_0_4
-		 * 12 = XBAR_4_1_1_1_4
-		 * 13 = XBAR_8_1_0_0_0
-		 * 14 = XBAR_8_1_0_1_0
-		 * 15 = XBAR_8_0_0_0_2
-		 * 16 = XBAR_8_1_0_0_1
-		 * 17 = XBAR_8_1_0_1_1
-		 * 18 = XBAR_8_1_1_0_0
-		 * 19 = XBAR_8_1_1_1_0
-		 * 20 = XBAR_8_0_1_0_2
-		 * 21 = XBAR_8_1_1_0_1
-		 * 22 = XBAR_8_1_1_1_1
-		 * 23 = XBAR_8_1_0_0_2
-		 * 24 = XBAR_8_1_0_1_2
-		 */
-		nvidia,xbar = <1>;
-	};
-
 	hsio_p2u {
 		compatible = "simple-bus";
 		#address-cells = <2>;

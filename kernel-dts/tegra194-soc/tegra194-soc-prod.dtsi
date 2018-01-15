@@ -1086,16 +1086,6 @@
 		};
 	};
 
-	pcie_common {
-		prod-settings {
-			#prod-cells = <4>;
-			prod {
-				prod = <
-					0 0x00000004 0x0001ffff 0x00000000>;            //PCIE_COMMON_STAGGER_WINDOW_TIME_0
-			};
-		};
-	};
-
 	pmc@c360000 {
 		prod-settings {
 			#prod-cells = <4>;

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/latency_allowance.c
  *
- * Copyright (C) 2011-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2011-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -41,7 +41,6 @@
 #include "la_priv.h"
 
 #define TEST_LA_CODE		0
-
 /* Bug 995270 */
 #define HACK_LA_FIFO 1
 static int default_set_la(enum tegra_la_id id, unsigned int bw_mbps);
@@ -53,6 +52,10 @@ module_param_named(disable_disp_ptsa,
 	cs.disable_disp_ptsa, bool, S_IRUGO | S_IWUSR);
 module_param_named(disable_bbc_ptsa,
 	cs.disable_bbc_ptsa, bool, S_IRUGO | S_IWUSR);
+
+#ifdef CONFIG_DEBUG_FS
+static int la_ptsa_debugfs_init(void);
+#endif
 
 static void init_chip_specific(void)
 {
@@ -68,6 +71,9 @@ static void init_chip_specific(void)
 	cid = tegra_get_chip_id();
 
 	switch (cid) {
+	case TEGRA194:
+		tegra_la_get_t19x_specific(&cs);
+		break;
 	case TEGRA186:
 		tegra_la_get_t18x_specific(&cs);
 		break;
@@ -77,6 +83,9 @@ static void init_chip_specific(void)
 	default:
 		cs.set_init_la = NULL;
 	}
+#ifdef CONFIG_DEBUG_FS
+	la_ptsa_debugfs_init();
+#endif
 }
 
 struct la_to_dc_params tegra_get_la_to_dc_params(void)
@@ -97,7 +106,7 @@ static void set_la(struct la_client_info *ci, int la)
 	mc_writel(reg_write, ci->reg_addr);
 	cs.scaling_info[idx].la_set = la;
 	ci->la_set = la;
-	la_debug("reg=0x%x, read=0x%x, write=0x%x",
+	la_debug("name=%s, reg=0x%x, read=0x%x, write=0x%x\n", ci->name,
 		(u32)ci->reg_addr, (u32)reg_read, (u32)reg_write);
 	spin_unlock(&cs.lock);
 }
@@ -141,10 +150,10 @@ static int default_set_la(enum tegra_la_id id, unsigned int bw_mbps)
 		ideal_la = (fifo_size_in_atoms * bytes_per_atom * 1000) /
 			   (bw_mbps * cs.ns_per_tick);
 		la_to_set = ideal_la -
-			    (ci->expiration_in_ns / cs.ns_per_tick) - 1;
+				(ci->expiration_in_ns / cs.ns_per_tick) - 1;
 	}
 
-	la_debug("\n%s:id=%d,idx=%d, bw=%dmbps, la_to_set=%d",
+	la_debug("\n%s:id=%d,idx=%d, bw=%dmbps, la_to_set=%d\n",
 		__func__, id, idx, bw_mbps, la_to_set);
 	la_to_set = (la_to_set < 0) ? 0 : la_to_set;
 	cs.scaling_info[idx].actual_la_to_set = la_to_set;
@@ -167,7 +176,7 @@ void program_la(struct la_client_info *ci, int la)
 	u32 reg_read;
 	u32 reg_write;
 
-	BUG_ON(la > MC_LA_MAX_VALUE);
+	BUG_ON(la > cs.la_max_value);
 
 	spin_lock(&cs.lock);
 	reg_read = mc_readl(ci->reg_addr);
@@ -175,7 +184,7 @@ void program_la(struct la_client_info *ci, int la)
 			(la << ci->shift);
 	mc_writel(reg_write, ci->reg_addr);
 	ci->la_set = la;
-	la_debug("reg_addr=0x%x, read=0x%x, write=0x%x",
+	la_debug("name=%s, reg_addr=0x%x, read=0x%x, write=0x%x\n", ci->name,
 		(u32)(uintptr_t)ci->reg_addr, (u32)reg_read, (u32)reg_write);
 
 	program_scaled_la(ci, la);
@@ -233,9 +242,9 @@ int tegra_set_disp_latency_allowance(enum tegra_la_id id,
  * this function returns true (i.e 0).
  */
 int tegra_check_disp_latency_allowance(enum tegra_la_id id,
-				       unsigned long emc_freq_hz,
-				       unsigned int bw_mbps,
-				       struct dc_to_la_params disp_params) {
+					   unsigned long emc_freq_hz,
+					   unsigned int bw_mbps,
+					   struct dc_to_la_params disp_params) {
 	if (cs.check_disp_la)
 		return cs.check_disp_la(id, emc_freq_hz, bw_mbps, disp_params);
 	return 0;
@@ -273,9 +282,9 @@ int tegra_set_camera_ptsa(enum tegra_la_id id,
  * When the fifo is free between 80 to 100%, use la as 0(highest priority).
  */
 int tegra_enable_latency_scaling(enum tegra_la_id id,
-				    unsigned int threshold_low,
-				    unsigned int threshold_mid,
-				    unsigned int threshold_high)
+					unsigned int threshold_low,
+					unsigned int threshold_mid,
+					unsigned int threshold_high)
 {
 	if (cs.enable_la_scaling)
 		return cs.enable_la_scaling(id, threshold_low,
@@ -409,6 +418,8 @@ static int __init tegra_latency_allowance_init(void)
 
 	if (cs.init_ptsa)
 		cs.init_ptsa();
+
+	pr_info("la/ptsa driver initialized.\n");
 	return 0;
 }
 
@@ -417,6 +428,315 @@ subsys_initcall(tegra_la_syscore_init);
 
 /* Must happen after MC init which is done by device tree. */
 fs_initcall(tegra_latency_allowance_init);
+
+/* Must be called after LA/PTSA init */
+void mc_pcie_init(void)
+{
+	if (cs.mc_pcie_init)
+		cs.mc_pcie_init();
+}
+EXPORT_SYMBOL(mc_pcie_init);
+
+#ifdef CONFIG_DEBUG_FS
+
+#include <linux/debugfs.h>
+#include <linux/uaccess.h>
+
+static unsigned long debugfs_display_emc_freq_hz;
+static unsigned int debugfs_display_bw_mbps;
+static int debugfs_camera_la_id;
+static unsigned int debugfs_camera_bw_mbps;
+static int debugfs_camera_is_hiso;
+static int debugfs_other_la_id;
+static unsigned int debugfs_other_bw_mbps;
+
+static int display_emc_freq_hz_get(void *data, u64 *val)
+{
+	*val = (u64) debugfs_display_emc_freq_hz;
+	return 0;
+}
+
+static int display_emc_freq_hz_set(void *data, u64 val)
+{
+	debugfs_display_emc_freq_hz = val;
+	return 0;
+}
+
+static int display_bw_mbps_get(void *data, u64 *val)
+{
+	*val = (u64) debugfs_display_bw_mbps;
+	return 0;
+}
+
+static int display_bw_mbps_set(void *data, u64 val)
+{
+	debugfs_display_bw_mbps = (u32) val;
+	return 0;
+}
+
+static int display_set_la_ptsa_set(void *data, u64 val)
+{
+	struct dc_to_la_params disp_params;
+
+	if (cs.set_disp_la(ID(NVDISPLAYR),
+				debugfs_display_emc_freq_hz,
+				debugfs_display_bw_mbps,
+				disp_params))
+		return -1;
+	return 0;
+}
+
+static int camera_la_id_get(void *data, u64 *val)
+{
+	*val = (u64) debugfs_camera_la_id;
+	return 0;
+}
+
+static int camera_la_id_set(void *data, u64 val)
+{
+	debugfs_camera_la_id = (u32) val;
+	return 0;
+}
+
+static int camera_bw_mbps_get(void *data, u64 *val)
+{
+	*val = (u64) debugfs_camera_bw_mbps;
+	return 0;
+}
+
+static int camera_bw_mbps_set(void *data, u64 val)
+{
+	debugfs_camera_bw_mbps = (u32) val;
+	return 0;
+}
+
+static int camera_is_hiso_get(void *data, u64 *val)
+{
+	*val = (u64) debugfs_camera_is_hiso;
+	return 0;
+}
+
+static int camera_is_hiso_set(void *data, u64 val)
+{
+	debugfs_camera_is_hiso = (u32) val;
+	return 0;
+}
+
+static int camera_set_ptsa_set(void *data, u64 val)
+{
+	if (cs.update_camera_ptsa_rate(debugfs_camera_la_id,
+				debugfs_camera_bw_mbps,
+				debugfs_camera_is_hiso))
+		return -1;
+	return 0;
+}
+
+static int other_la_id_get(void *data, u64 *val)
+{
+	*val = (u64) debugfs_other_la_id;
+	return 0;
+}
+
+static int other_la_id_set(void *data, u64 val)
+{
+	debugfs_other_la_id = (u32) val;
+	return 0;
+}
+
+static int other_bw_mbps_get(void *data, u64 *val)
+{
+	*val = (u64) debugfs_other_bw_mbps;
+	return 0;
+}
+
+static int other_bw_mbps_set(void *data, u64 val)
+{
+	debugfs_other_bw_mbps = (u32) val;
+	return 0;
+}
+
+static int other_set_la_ptsa_set(void *data, u64 val)
+{
+	if (cs.set_dynamic_la(debugfs_other_la_id,
+				debugfs_other_bw_mbps))
+		return -1;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(display_emc_freq_hz_fops,
+		display_emc_freq_hz_get,
+		display_emc_freq_hz_set,
+		"%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(display_bw_mbps_fops,
+		display_bw_mbps_get,
+		display_bw_mbps_set,
+		"%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(display_set_la_ptsa_fops,
+		NULL,
+		display_set_la_ptsa_set,
+		"%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(camera_la_id_fops,
+		camera_la_id_get,
+		camera_la_id_set,
+		"%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(camera_bw_mbps_fops,
+		camera_bw_mbps_get,
+		camera_bw_mbps_set,
+		"%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(camera_is_hiso_fops,
+		camera_is_hiso_get,
+		camera_is_hiso_set,
+		"%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(camera_set_ptsa_fops,
+		NULL,\
+		camera_set_ptsa_set,
+		"%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(other_la_id_fops,
+		other_la_id_get,
+		other_la_id_set,
+		"%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(other_bw_mbps_fops,
+		other_bw_mbps_get,
+		other_bw_mbps_set,
+		"%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(other_set_la_ptsa_fops,
+		NULL,
+		other_set_la_ptsa_set,
+		"%llu\n");
+
+static int la_ptsa_debugfs_init(void)
+{
+	struct dentry *la_ptsa_debugfs_root;
+	struct dentry *display_dir;
+	struct dentry *camera_dir;
+	struct dentry *other_dir;
+
+	la_ptsa_debugfs_root = debugfs_create_dir("tegra_la_ptsa", NULL);
+	if (!la_ptsa_debugfs_root) {
+		pr_err("%s: Couldn't create the LA\\PTSA root debugfs node.\n",
+				__func__);
+		return -1;
+	}
+
+	/* Display nodes*/
+	display_dir = debugfs_create_dir("display", la_ptsa_debugfs_root);
+	if (!display_dir) {
+		pr_err("%s: Couldn't create the \"display\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("emc_freq_hz",
+				S_IRUGO | S_IWUSR,
+				display_dir,
+				NULL,
+				&display_emc_freq_hz_fops)) {
+		pr_err("%s: Couldn't create the display \"emc_freq_hz\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("bw_mbps",
+				S_IRUGO | S_IWUSR,
+				display_dir,
+				NULL,
+				&display_bw_mbps_fops)) {
+		pr_err("%s: Couldn't create the display \"bw_mbps\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("set_la_ptsa",
+				S_IWUSR,
+				display_dir,
+				NULL,
+				&display_set_la_ptsa_fops)) {
+		pr_err("%s: Couldn't create the display \"set_la_ptsa\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+
+	/* Camera nodes*/
+	camera_dir = debugfs_create_dir("camera", la_ptsa_debugfs_root);
+	if (!camera_dir) {
+		pr_err("%s: Couldn't create the \"camera\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("la_id",
+				S_IRUGO | S_IWUSR,
+				camera_dir,
+				NULL,
+				&camera_la_id_fops)) {
+		pr_err("%s: Couldn't create the camera \"la_id\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("bw_mbps",
+				S_IRUGO | S_IWUSR,
+				camera_dir,
+				NULL,
+				&camera_bw_mbps_fops)) {
+		pr_err("%s: Couldn't create the camera \"bw_mbps\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("is_hiso",
+				S_IRUGO | S_IWUSR,
+				camera_dir,
+				NULL,
+				&camera_is_hiso_fops)) {
+		pr_err("%s: Couldn't create the camera \"is_hiso\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("set_ptsa",
+				S_IWUSR,
+				camera_dir,
+				NULL,
+				&camera_set_ptsa_fops)) {
+		pr_err("%s: Couldn't create the camera \"set_ptsa\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+
+	/* Non-display nodes */
+	other_dir = debugfs_create_dir("other", la_ptsa_debugfs_root);
+	if (!other_dir) {
+		pr_err("%s: Couldn't create the \"other\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("la_id",
+				S_IRUGO | S_IWUSR,
+				other_dir,
+				NULL,
+				&other_la_id_fops)) {
+		pr_err("%s: Couldn't create the other \"la_id\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("bw_mbps",
+				S_IRUGO | S_IWUSR,
+				other_dir,
+				NULL,
+				&other_bw_mbps_fops)) {
+		pr_err("%s: Couldn't create the other \"bw_mbps\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+	if (!debugfs_create_file("set_la_ptsa",
+				S_IWUSR,
+				other_dir,
+				NULL,
+				&other_set_la_ptsa_fops)) {
+		pr_err("%s: Couldn't create the other \"set_la_ptsa\" debugfs node.\n",
+				__func__);
+		return -1;
+	}
+
+	return 0;
+}
+
+#endif // "CONFIG_DEBUG_FS"
+
 
 #if TEST_LA_CODE
 #define PRINT_ID_IDX_MAPPING 0
@@ -437,7 +757,7 @@ static int __init test_la(void)
 			err = tegra_set_latency_allowance(id, 200);
 			if (err)
 				la_debug("\n***tegra_set_latency_allowance,"
-					" err=%d", err);
+						" err=%d", err);
 		}
 
 		for (id = 0; id < TEGRA_LA_MAX_ID; id++) {
@@ -448,11 +768,11 @@ static int __init test_la(void)
 			err = tegra_enable_latency_scaling(id, 20, 50, 80);
 			if (err)
 				la_debug("\n***tegra_enable_latency_scaling,"
-					" err=%d", err);
+						" err=%d", err);
 		}
 
 		la_debug("la_scaling_enable_count =%d",
-			cs.la_scaling_enable_count);
+				cs.la_scaling_enable_count);
 		for (id = 0; id < TEGRA_LA_MAX_ID; id++) {
 			if (id >= ID(DISPLAY_0AB) && id <= ID(DISPLAY_HCB))
 				continue;
@@ -461,7 +781,7 @@ static int __init test_la(void)
 			tegra_disable_latency_scaling(id);
 		}
 		la_debug("la_scaling_enable_count=%d",
-			cs.la_scaling_enable_count);
+				cs.la_scaling_enable_count);
 	} while (--repeat_count);
 	return 0;
 }

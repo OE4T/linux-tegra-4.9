@@ -16,6 +16,7 @@ obj-y                                   += mcerr-t21.o
 obj-y                                   += latency_allowance.o
 obj-y                                   += tegra21x_la.o
 
+obj-y                                   += tegra19x_la_ptsa_core.o tegra19x_la_ptsa.o fixed_point.o
 obj-$(CONFIG_TEGRA_ISOMGR)              += isomgr.o
 obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr.o pmqos_bwmgr_client.o
 obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr-t21x.o emc_bwmgr-t18x.o emc_bwmgr-t19x.o

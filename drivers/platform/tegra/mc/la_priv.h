@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/la_priv.h
  *
- * Copyright (C) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -282,7 +282,15 @@ enum la_client_type {
 	TEGRA_LA_DYNAMIC_READ_CLIENT,
 	TEGRA_LA_CONSTANT_READ_CLIENT,
 	TEGRA_LA_DISPLAY_READ_CLIENT,
-	TEGRA_LA_WRITE_CLIENT
+	TEGRA_LA_WRITE_CLIENT,
+	TEGRA_LA_HUB_READ_CLIENT,
+	TEGRA_LA_HUB_WRITE_CLIENT,
+	TEGRA_LA_CPU_READ_CLIENT,
+	TEGRA_LA_CIFLL_WRITE_CLIENT,
+	TEGRA_LA_WCAM_WRITE_CLIENT,
+	TEGRA_LA_NVLRHP_READ_CLIENT,
+	TEGRA_LA_GPU_READ_CLIENT,
+	TEGRA_LA_NUM_CLIENT_TYPES
 };
 
 enum la_traffic_type {
@@ -611,6 +619,7 @@ struct la_chip_specific {
 	void (*program_ptsa)(void);
 	int (*suspend)(void);
 	void (*resume)(void);
+	void (*mc_pcie_init)(void);
 };
 
 
@@ -620,5 +629,6 @@ void tegra_la_get_t11x_specific(struct la_chip_specific *cs);
 void tegra_la_get_t12x_specific(struct la_chip_specific *cs);
 void tegra_la_get_t18x_specific(struct la_chip_specific *cs);
 void tegra_la_get_t21x_specific(struct la_chip_specific *cs);
+void tegra_la_get_t19x_specific(struct la_chip_specific *cs);
 
 #endif /* _MACH_TEGRA_LA_PRIV_H_ */

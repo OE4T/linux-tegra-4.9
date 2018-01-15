@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -635,6 +635,7 @@ void tegra_la_get_t18x_specific(struct la_chip_specific *cs_la)
 	unsigned int client_traffic_type_config_2;
 
 	cs_la->ns_per_tick = 30;
+	cs_la->la_max_value = MC_LA_MAX_VALUE;
 
 	cs_la->la_info_array = t18x_la_info_array;
 	cs_la->la_info_array_size = ARRAY_SIZE(t18x_la_info_array);

@@ -1,7 +1,7 @@
 /*
  * GK20A Address Spaces
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -256,6 +256,33 @@ static int gk20a_as_ioctl_get_va_regions(
 	return 0;
 }
 
+static int nvgpu_as_ioctl_get_sync_ro_map(
+	struct gk20a_as_share *as_share,
+	struct nvgpu_as_get_sync_ro_map_args *args)
+{
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	struct vm_gk20a *vm = as_share->vm;
+	struct gk20a *g = gk20a_from_vm(vm);
+	u64 base_gpuva;
+	u32 sync_size;
+	int err = 0;
+
+	if (!g->ops.fifo.get_sync_ro_map)
+		return -EINVAL;
+
+	err = g->ops.fifo.get_sync_ro_map(vm, &base_gpuva, &sync_size);
+	if (err)
+		return err;
+
+	args->base_gpuva = base_gpuva;
+	args->sync_size = sync_size;
+
+	return err;
+#else
+	return -EINVAL;
+#endif
+}
+
 int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 {
 	struct nvgpu_os_linux *l;
@@ -366,6 +393,10 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case NVGPU_AS_IOCTL_MAP_BUFFER_BATCH:
 		err = gk20a_as_ioctl_map_buffer_batch(as_share,
 				(struct nvgpu_as_map_buffer_batch_args *)buf);
+		break;
+	case NVGPU_AS_IOCTL_GET_SYNC_RO_MAP:
+		err = nvgpu_as_ioctl_get_sync_ro_map(as_share,
+			(struct nvgpu_as_get_sync_ro_map_args *)buf);
 		break;
 	default:
 		err = -ENOTTY;

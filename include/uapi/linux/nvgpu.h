@@ -1968,6 +1968,12 @@ struct nvgpu_as_map_buffer_batch_args {
 	__u64 reserved;
 };
 
+struct nvgpu_as_get_sync_ro_map_args {
+	__u64 base_gpuva;
+	__u32 sync_size;
+	__u32 padding;
+};
+
 #define NVGPU_AS_IOCTL_BIND_CHANNEL \
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 1, struct nvgpu_as_bind_channel_args)
 #define NVGPU32_AS_IOCTL_ALLOC_SPACE \
@@ -1990,9 +1996,11 @@ struct nvgpu_as_map_buffer_batch_args {
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 10, struct nvgpu_as_map_buffer_compbits_args)
 #define NVGPU_AS_IOCTL_MAP_BUFFER_BATCH	\
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 11, struct nvgpu_as_map_buffer_batch_args)
+#define NVGPU_AS_IOCTL_GET_SYNC_RO_MAP	\
+	_IOR(NVGPU_AS_IOCTL_MAGIC,  12, struct nvgpu_as_get_sync_ro_map_args)
 
 #define NVGPU_AS_IOCTL_LAST            \
-	_IOC_NR(NVGPU_AS_IOCTL_MAP_BUFFER_BATCH)
+	_IOC_NR(NVGPU_AS_IOCTL_GET_SYNC_RO_MAP)
 #define NVGPU_AS_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_as_map_buffer_ex_args)
 

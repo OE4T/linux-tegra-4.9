@@ -341,6 +341,7 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.get_syncpt_wait_cmd_size = gk20a_fifo_get_syncpt_wait_cmd_size,
 		.add_syncpt_incr_cmd = gk20a_fifo_add_syncpt_incr_cmd,
 		.get_syncpt_incr_cmd_size = gk20a_fifo_get_syncpt_incr_cmd_size,
+		.get_sync_ro_map = NULL,
 #endif
 		.resetup_ramfc = NULL,
 		.device_info_fault_id = top_device_info_data_fault_id_enum_v,

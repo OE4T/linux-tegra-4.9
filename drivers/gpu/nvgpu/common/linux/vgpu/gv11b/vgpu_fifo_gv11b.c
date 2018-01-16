@@ -23,12 +23,52 @@
 #include <linux/tegra_vgpu.h>
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
+
+static int set_syncpt_ro_map_gpu_va_locked(struct vm_gk20a *vm)
+{
+	int err;
+	struct gk20a *g = gk20a_from_vm(vm);
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct tegra_vgpu_map_syncpt_params *p = &msg.params.map_syncpt;
+
+	if (vm->syncpt_ro_map_gpu_va)
+		return 0;
+
+	vm->syncpt_ro_map_gpu_va = __nvgpu_vm_alloc_va(vm,
+			g->syncpt_unit_size,
+			gmmu_page_size_kernel);
+	if (!vm->syncpt_ro_map_gpu_va) {
+		nvgpu_err(g, "allocating read-only va space failed");
+		return -ENOMEM;
+	}
+
+	msg.cmd = TEGRA_VGPU_CMD_MAP_SYNCPT;
+	msg.handle = vgpu_get_handle(g);
+	p->as_handle = vm->handle;
+	p->gpu_va = vm->syncpt_ro_map_gpu_va;
+	p->len = g->syncpt_unit_size;
+	p->offset = 0;
+	p->prot = TEGRA_VGPU_MAP_PROT_READ_ONLY;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (err) {
+		nvgpu_err(g,
+			"mapping read-only va space failed err %d",
+			err);
+		__nvgpu_vm_free_va(vm, vm->syncpt_ro_map_gpu_va,
+				gmmu_page_size_kernel);
+		vm->syncpt_ro_map_gpu_va = 0;
+		return err;
+	}
+
+	return 0;
+}
+
 int vgpu_gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 				u32 syncpt_id, struct nvgpu_mem *syncpt_buf)
 {
 	int err;
 	struct gk20a *g = c->g;
-	struct vm_gk20a *vm = c->vm;
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_map_syncpt_params *p = &msg.params.map_syncpt;
 
@@ -37,34 +77,11 @@ int vgpu_gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 	 * All channels sharing same vm will share same ro mapping.
 	 * Create rw map for current channel sync point.
 	 */
-	if (!vm->syncpt_ro_map_gpu_va) {
-		vm->syncpt_ro_map_gpu_va = __nvgpu_vm_alloc_va(vm,
-				g->syncpt_unit_size,
-				gmmu_page_size_kernel);
-		if (!vm->syncpt_ro_map_gpu_va) {
-			nvgpu_err(g, "allocating read-only va space failed");
-			return -ENOMEM;
-		}
-
-		msg.cmd = TEGRA_VGPU_CMD_MAP_SYNCPT;
-		msg.handle = vgpu_get_handle(g);
-		p->as_handle = c->vm->handle;
-		p->gpu_va = vm->syncpt_ro_map_gpu_va;
-		p->len = g->syncpt_unit_size;
-		p->offset = 0;
-		p->prot = TEGRA_VGPU_MAP_PROT_READ_ONLY;
-		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-		err = err ? err : msg.ret;
-		if (err) {
-			nvgpu_err(g,
-				"mapping read-only va space failed err %d",
-				err);
-			__nvgpu_vm_free_va(c->vm, vm->syncpt_ro_map_gpu_va,
-					gmmu_page_size_kernel);
-			vm->syncpt_ro_map_gpu_va = 0;
-			return err;
-		}
-	}
+	nvgpu_mutex_acquire(&c->vm->syncpt_ro_map_lock);
+	err = set_syncpt_ro_map_gpu_va_locked(c->vm);
+	nvgpu_mutex_release(&c->vm->syncpt_ro_map_lock);
+	if (err)
+		return err;
 
 	syncpt_buf->gpu_va = __nvgpu_vm_alloc_va(c->vm, g->syncpt_size,
 			gmmu_page_size_kernel);
@@ -89,6 +106,24 @@ int vgpu_gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 				gmmu_page_size_kernel);
 		return err;
 	}
+
+	return 0;
+}
+
+int vgpu_gv11b_fifo_get_sync_ro_map(struct vm_gk20a *vm,
+	u64 *base_gpuva, u32 *sync_size)
+{
+	struct gk20a *g = gk20a_from_vm(vm);
+	int err;
+
+	nvgpu_mutex_acquire(&vm->syncpt_ro_map_lock);
+	err = set_syncpt_ro_map_gpu_va_locked(vm);
+	nvgpu_mutex_release(&vm->syncpt_ro_map_lock);
+	if (err)
+		return err;
+
+	*base_gpuva = vm->syncpt_ro_map_gpu_va;
+	*sync_size = g->syncpt_size;
 
 	return 0;
 }

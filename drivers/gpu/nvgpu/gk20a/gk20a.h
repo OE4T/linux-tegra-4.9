@@ -617,6 +617,8 @@ struct gpu_ops {
 			bool wfi_cmd, struct priv_cmd_entry *cmd,
 			u32 id, u64 gpu_va);
 		u32 (*get_syncpt_incr_cmd_size)(bool wfi_cmd);
+		int (*get_sync_ro_map)(struct vm_gk20a *vm,
+				u64 *base_gpuva, u32 *sync_size);
 #endif
 	} fifo;
 	struct pmu_v {

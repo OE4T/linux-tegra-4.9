@@ -1657,31 +1657,43 @@ void gv11b_fifo_deinit_eng_method_buffers(struct gk20a *g,
 }
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
+static int set_syncpt_ro_map_gpu_va_locked(struct vm_gk20a *vm)
+{
+	struct gk20a *g = gk20a_from_vm(vm);
+
+	if (vm->syncpt_ro_map_gpu_va)
+		return 0;
+
+	vm->syncpt_ro_map_gpu_va = nvgpu_gmmu_map(vm,
+			&g->syncpt_mem, g->syncpt_unit_size,
+			0, gk20a_mem_flag_read_only,
+			false, APERTURE_SYSMEM);
+
+	if (!vm->syncpt_ro_map_gpu_va) {
+		nvgpu_err(g, "failed to ro map syncpt buffer");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
 int gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 			u32 syncpt_id, struct nvgpu_mem *syncpt_buf)
 {
 	u32 nr_pages;
 	int err = 0;
 	struct gk20a *g = c->g;
-	struct vm_gk20a *vm = c->vm;
 
 	/*
 	 * Add ro map for complete sync point shim range in vm
 	 * All channels sharing same vm will share same ro mapping.
 	 * Create rw map for current channel sync point
 	 */
-	if (!vm->syncpt_ro_map_gpu_va) {
-		vm->syncpt_ro_map_gpu_va = nvgpu_gmmu_map(c->vm,
-				&g->syncpt_mem, g->syncpt_unit_size,
-				0, gk20a_mem_flag_read_only,
-				false, APERTURE_SYSMEM);
-
-		if (!vm->syncpt_ro_map_gpu_va) {
-			nvgpu_err(g, "failed to ro map syncpt buffer");
-			nvgpu_dma_free(g, &g->syncpt_mem);
-			err = -ENOMEM;
-		}
-	}
+	nvgpu_mutex_acquire(&c->vm->syncpt_ro_map_lock);
+	err = set_syncpt_ro_map_gpu_va_locked(c->vm);
+	nvgpu_mutex_release(&c->vm->syncpt_ro_map_lock);
+	if (err)
+		return err;
 
 	nr_pages = DIV_ROUND_UP(g->syncpt_size, PAGE_SIZE);
 	__nvgpu_mem_create_from_phys(g, syncpt_buf,
@@ -1705,6 +1717,24 @@ void gv11b_fifo_free_syncpt_buf(struct channel_gk20a *c,
 {
 	nvgpu_gmmu_unmap(c->vm, syncpt_buf, syncpt_buf->gpu_va);
 	nvgpu_dma_free(c->g, syncpt_buf);
+}
+
+int gv11b_fifo_get_sync_ro_map(struct vm_gk20a *vm,
+	u64 *base_gpuva, u32 *sync_size)
+{
+	struct gk20a *g = gk20a_from_vm(vm);
+	int err;
+
+	nvgpu_mutex_acquire(&vm->syncpt_ro_map_lock);
+	err = set_syncpt_ro_map_gpu_va_locked(vm);
+	nvgpu_mutex_release(&vm->syncpt_ro_map_lock);
+	if (err)
+		return err;
+
+	*base_gpuva = vm->syncpt_ro_map_gpu_va;
+	*sync_size = g->syncpt_size;
+
+	return 0;
 }
 
 void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,

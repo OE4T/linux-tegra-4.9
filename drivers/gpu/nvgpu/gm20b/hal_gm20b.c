@@ -436,6 +436,7 @@ static const struct gpu_ops gm20b_ops = {
 		.get_syncpt_wait_cmd_size = gk20a_fifo_get_syncpt_wait_cmd_size,
 		.add_syncpt_incr_cmd = gk20a_fifo_add_syncpt_incr_cmd,
 		.get_syncpt_incr_cmd_size = gk20a_fifo_get_syncpt_incr_cmd_size,
+		.get_sync_ro_map = NULL,
 #endif
 	},
 	.gr_ctx = {

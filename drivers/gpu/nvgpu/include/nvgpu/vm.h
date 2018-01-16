@@ -198,6 +198,8 @@ struct vm_gk20a {
 	 * Channels sharing same vm will also share same sync point ro map
 	 */
 	u64 syncpt_ro_map_gpu_va;
+	/* Protect allocation of sync point map */
+	struct nvgpu_mutex syncpt_ro_map_lock;
 };
 
 /*

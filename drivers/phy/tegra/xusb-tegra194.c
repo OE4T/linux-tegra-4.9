@@ -100,6 +100,11 @@
 #define   ID_OVERRIDE_FLOATING			ID_OVERRIDE(8)
 #define   ID_OVERRIDE_GROUNDED			ID_OVERRIDE(0)
 
+#define XUSB_PADCTL_SS_PORT_CFG			(0x2c)
+#define   PORTX_SPEED_SUPPORT_SHIFT(x)		((x) * 4)
+#define   PORTX_SPEED_SUPPORT_MASK		(0x3)
+#define     PORT_SPEED_SUPPORT_GEN1		(0x0)
+
 /* XUSB AO registers */
 #define XUSB_AO_USB_DEBOUNCE_DEL		(0x4)
 #define   UTMIP_LINE_DEB_CNT(x)			((x) & 0xf)
@@ -1024,6 +1029,13 @@ static int tegra194_usb3_phy_power_on(struct phy *phy)
 	else if (port->port_cap == USB_OTG_CAP)
 		reg |= (PORT_CAP_OTG << PORTX_CAP_SHIFT(index));
 	padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_CAP);
+
+	if (port->port_cap == USB_OTG_CAP) {
+		reg = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CFG);
+		reg &= ~(PORTX_SPEED_SUPPORT_MASK << PORTX_SPEED_SUPPORT_SHIFT(index));
+		reg |= (PORT_SPEED_SUPPORT_GEN1 << PORTX_SPEED_SUPPORT_SHIFT(index));
+		padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_CFG);
+	}
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
 	reg &= ~SSPX_ELPG_VCORE_DOWN(index);

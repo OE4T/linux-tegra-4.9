@@ -138,7 +138,7 @@ static int tegra_vi5_s_ctrl(struct v4l2_ctrl *ctrl)
 		chan->write_ispformat = ctrl->val;
 		break;
 	default:
-		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
+		dev_err(&chan->video->dev, "%s:Not valid ctrl\n", __func__);
 		return -EINVAL;
 	}
 
@@ -466,7 +466,7 @@ static int vi5_channel_error_recover(struct tegra_channel *chan,
 	err = vi_capture_release(chan->tegra_vi_channel,
 		CAPTURE_CHANNEL_RESET_FLAG_IMMEDIATE);
 	if (err) {
-		dev_err(&chan->video.dev, "vi capture release failed\n");
+		dev_err(&chan->video->dev, "vi capture release failed\n");
 		goto done;
 	}
 
@@ -625,9 +625,9 @@ static int vi5_channel_start_kthreads(struct tegra_channel *chan)
 		goto done;
 	}
 	chan->kthread_capture_start = kthread_run(
-		tegra_channel_kthread_capture_enqueue, chan, chan->video.name);
+		tegra_channel_kthread_capture_enqueue, chan, chan->video->name);
 	if (IS_ERR(chan->kthread_capture_start)) {
-		dev_err(&chan->video.dev,
+		dev_err(&chan->video->dev,
 			"failed to run kthread for capture enqueue\n");
 		err = PTR_ERR(chan->kthread_capture_start);
 		goto done;
@@ -640,9 +640,9 @@ static int vi5_channel_start_kthreads(struct tegra_channel *chan)
 		goto done;
 	}
 	chan->kthread_capture_dequeue = kthread_run(
-		tegra_channel_kthread_capture_dequeue, chan, chan->video.name);
+		tegra_channel_kthread_capture_dequeue, chan, chan->video->name);
 	if (IS_ERR(chan->kthread_capture_dequeue)) {
-		dev_err(&chan->video.dev,
+		dev_err(&chan->video->dev,
 			"failed to run kthread for capture dequeue\n");
 		err = PTR_ERR(chan->kthread_capture_dequeue);
 		goto done;
@@ -677,7 +677,7 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	/* WAR: With newer version pipe init has some race condition */
 	/* TODO: resolve this issue to block userspace not to cleanup media */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	struct media_pipeline *pipe = chan->video.entity.pipe;
+	struct media_pipeline *pipe = chan->video->entity.pipe;
 #endif
 	int ret = 0;
 	unsigned long flags;
@@ -688,7 +688,7 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	unsigned int emb_buf_size = 0;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	ret = media_entity_pipeline_start(&chan->video.entity, pipe);
+	ret = media_entity_pipeline_start(&chan->video->entity, pipe);
 	if (ret < 0)
 		goto error_pipeline_start;
 #endif
@@ -755,7 +755,7 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 						emb_buf_size,
 						&chan->vi->emb_buf, GFP_KERNEL);
 				if (!chan->vi->emb_buf_addr) {
-					dev_err(&chan->video.dev,
+					dev_err(&chan->video->dev,
 							"Can't allocate memory"
 							"for embedded data\n");
 					goto error;
@@ -792,7 +792,7 @@ error_stream:
 error:
 	vi5_channel_stop_kthreads(chan);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	media_entity_pipeline_stop(&chan->video.entity);
+	media_entity_pipeline_stop(&chan->video->entity);
 error_pipeline_start:
 #endif
 	vq->start_streaming_called = 0;
@@ -816,7 +816,7 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 		err = vi_capture_release(chan->tegra_vi_channel,
 			CAPTURE_CHANNEL_RESET_FLAG_IMMEDIATE);
 		if (err)
-			dev_err(&chan->video.dev,
+			dev_err(&chan->video->dev,
 				"vi capture release failed\n");
 
 		vi_channel_close_ex(chan->id, chan->tegra_vi_channel);
@@ -826,7 +826,7 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 	}
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	media_entity_pipeline_stop(&chan->video.entity);
+	media_entity_pipeline_stop(&chan->video->entity);
 #endif
 
 	return 0;

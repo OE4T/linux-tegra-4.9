@@ -88,7 +88,7 @@ static int tegra_vi4_s_ctrl(struct v4l2_ctrl *ctrl)
 		chan->write_ispformat = ctrl->val;
 		break;
 	default:
-		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
+		dev_err(&chan->video->dev, "%s:Not valid ctrl\n", __func__);
 		return -EINVAL;
 	}
 
@@ -220,7 +220,7 @@ static bool vi_notify_wait(struct tegra_channel *chan,
 			else {
 				*ts = ns_to_timespec((s64)status.sof_ts);
 
-				dev_dbg(&chan->video.dev,
+				dev_dbg(&chan->video->dev,
 					"%s: vi4 got SOF syncpt buf[%p]\n",
 					__func__, buf);
 			}
@@ -716,7 +716,7 @@ static void tegra_channel_release_frame(struct tegra_channel *chan,
 			dev_err(chan->vi->dev,
 				"ATOMP_FE syncpt timeout! err = %d\n", err);
 		else
-			dev_dbg(&chan->video.dev,
+			dev_dbg(&chan->video->dev,
 			"%s: vi4 got EOF syncpt buf[%p]\n", __func__, buf);
 	}
 
@@ -968,7 +968,7 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	/* WAR: With newer version pipe init has some race condition */
 	/* TODO: resolve this issue to block userspace not to cleanup media */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	struct media_pipeline *pipe = chan->video.entity.pipe;
+	struct media_pipeline *pipe = chan->video->entity.pipe;
 #endif
 	int ret = 0, i;
 	unsigned long flags;
@@ -979,7 +979,7 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	unsigned int emb_buf_size = 0;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	ret = media_entity_pipeline_start(&chan->video.entity, pipe);
+	ret = media_entity_pipeline_start(&chan->video->entity, pipe);
 	if (ret < 0)
 		goto error_pipeline_start;
 #endif
@@ -1048,7 +1048,7 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 					emb_buf_size,
 					&chan->vi->emb_buf, GFP_KERNEL);
 			if (!chan->vi->emb_buf_addr) {
-				dev_err(&chan->video.dev,
+				dev_err(&chan->video->dev,
 						"Can't allocate memory for embedded data\n");
 				goto error_capture_setup;
 			}
@@ -1095,9 +1095,9 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	/* Start kthread to capture data to buffer */
 	chan->kthread_capture_start = kthread_run(
 					tegra_channel_kthread_capture_start,
-					chan, chan->video.name);
+					chan, chan->video->name);
 	if (IS_ERR(chan->kthread_capture_start)) {
-		dev_err(&chan->video.dev,
+		dev_err(&chan->video->dev,
 			"failed to run kthread for capture start\n");
 		ret = PTR_ERR(chan->kthread_capture_start);
 		goto error_capture_setup;
@@ -1107,9 +1107,9 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		/* Start thread to release buffers */
 		chan->kthread_release = kthread_run(
 					tegra_channel_kthread_release,
-					chan, chan->video.name);
+					chan, chan->video->name);
 		if (IS_ERR(chan->kthread_release)) {
-			dev_err(&chan->video.dev,
+			dev_err(&chan->video->dev,
 				"failed to run kthread for release\n");
 			ret = PTR_ERR(chan->kthread_release);
 			goto error_capture_setup;
@@ -1125,7 +1125,7 @@ error_capture_setup:
 	}
 error_set_stream:
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	media_entity_pipeline_stop(&chan->video.entity);
+	media_entity_pipeline_stop(&chan->video->entity);
 error_pipeline_start:
 #endif
 	vq->start_streaming_called = 0;
@@ -1177,7 +1177,7 @@ static int vi4_channel_stop_streaming(struct vb2_queue *vq)
 		return err;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	media_entity_pipeline_stop(&chan->video.entity);
+	media_entity_pipeline_stop(&chan->video->entity);
 #endif
 
 	return 0;
@@ -1246,7 +1246,7 @@ static int vi4_power_on(struct tegra_channel *chan)
 	/* Use chan->video as identifier of vi4 nvhost_module client
 	 * since they are unique per channel
 	 */
-	ret = nvhost_module_add_client(vi->ndev, &chan->video);
+	ret = nvhost_module_add_client(vi->ndev, chan->video);
 	if (ret < 0)
 		return ret;
 
@@ -1281,7 +1281,7 @@ static void vi4_power_off(struct tegra_channel *chan)
 	}
 
 	tegra_vi4_power_off(vi);
-	nvhost_module_remove_client(vi->ndev, &chan->video);
+	nvhost_module_remove_client(vi->ndev, chan->video);
 }
 
 static void tegra_channel_error_worker(struct work_struct *error_work)

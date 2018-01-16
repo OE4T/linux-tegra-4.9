@@ -152,7 +152,7 @@ struct tegra_vi_graph_entity {
 struct tegra_channel {
 	int id;
 	struct list_head list;
-	struct video_device video;
+	struct video_device *video;
 	struct media_pad pad;
 	struct media_pipeline pipe;
 	struct mutex video_lock;
@@ -395,6 +395,9 @@ void enqueue_inflight(struct tegra_channel *chan,
 			struct tegra_channel_buffer *buf);
 struct tegra_channel_buffer *dequeue_inflight(struct tegra_channel *chan);
 int tegra_channel_set_power(struct tegra_channel *chan, bool on);
+
+int tegra_channel_init_video(struct tegra_channel *chan);
+int tegra_channel_cleanup_video(struct tegra_channel *chan);
 
 struct tegra_vi_fops {
 	int (*vi_power_on)(struct tegra_channel *chan);

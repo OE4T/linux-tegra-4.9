@@ -278,7 +278,7 @@ static int tegra_vi_graph_build_links(struct tegra_channel *chan)
 	}
 
 	dev_dbg(chan->vi->dev, "creating link for channel %s\n",
-		chan->video.name);
+		chan->video->name);
 
 	/* Find the remote entity. */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
@@ -314,7 +314,7 @@ static int tegra_vi_graph_build_links(struct tegra_channel *chan)
 
 	source = ent->entity;
 	source_pad = &source->pads[link.remote_port];
-	sink = &chan->video.entity;
+	sink = &chan->video->entity;
 	sink_pad = &chan->pad;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
@@ -373,11 +373,19 @@ static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 
 	dev_dbg(chan->vi->dev, "notify complete, all subdevs registered\n");
 
-	ret = video_register_device(&chan->video, VFL_TYPE_GRABBER, -1);
+	/* Allocate video_device */
+	ret = tegra_channel_init_video(chan);
 	if (ret < 0) {
-		dev_err(&chan->video.dev, "failed to register %s\n",
-			chan->video.name);
+		dev_err(&chan->video->dev, "failed to allocate video device %s\n",
+			chan->video->name);
 		return ret;
+	}
+
+	ret = video_register_device(chan->video, VFL_TYPE_GRABBER, -1);
+	if (ret < 0) {
+		dev_err(&chan->video->dev, "failed to register %s\n",
+			chan->video->name);
+		goto register_device_error;
 	}
 
 	/* Create links for every entity. */
@@ -385,20 +393,29 @@ static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 		if (entity->entity != NULL) {
 			ret = tegra_vi_graph_build_one(chan, entity);
 			if (ret < 0)
-				return ret;
+				goto graph_error;
 		}
 	}
 
 	/* Create links for channels */
 	ret = tegra_vi_graph_build_links(chan);
 	if (ret < 0)
-		return ret;
+		goto graph_error;
 
 	ret = v4l2_device_register_subdev_nodes(&chan->vi->v4l2_dev);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(chan->vi->dev, "failed to register subdev nodes\n");
+		goto graph_error;
+	}
 
 	chan->link_status++;
+
+	return 0;
+
+graph_error:
+	video_unregister_device(chan->video);
+register_device_error:
+	video_device_release(chan->video);
 
 	return ret;
 }
@@ -457,6 +474,7 @@ static void tegra_vi_graph_notify_unbind(struct v4l2_async_notifier *notifier,
 
 	/* cleanup for complete */
 	if (chan->link_status) {
+		tegra_channel_cleanup_video(chan);
 		tegra_vi_graph_remove_links(chan);
 		chan->link_status--;
 	}
@@ -528,18 +546,18 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 
 			/* Consider max simultaneous sensor streams to be 16 */
 			if (value > 16) {
-				dev_err(&chan->video.dev, "vc id >16!\n");
+				dev_err(&chan->video->dev, "vc id >16!\n");
 				return -EINVAL;
 			}
 
 			/* Get CSI port */
 			ret = of_property_read_u32(ep, "port-index", &value);
 			if (ret < 0)
-				dev_err(&chan->video.dev, "port index error\n");
+				dev_err(&chan->video->dev, "port index error\n");
 			chan->port[0] = value;
 
 			if (value > NVCSI_PORT_H) {
-				dev_err(&chan->video.dev, "port index >%d!\n",
+				dev_err(&chan->video->dev, "port index >%d!\n",
 					NVCSI_PORT_H);
 				return -EINVAL;
 			}
@@ -547,11 +565,11 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 			/* Get number of data lanes for the endpoint */
 			ret = of_property_read_u32(ep, "bus-width", &value);
 			if (ret < 0)
-				dev_err(&chan->video.dev, "num lanes error\n");
+				dev_err(&chan->video->dev, "num lanes error\n");
 			chan->numlanes = value;
 
 			if (value > 12) {
-				dev_err(&chan->video.dev, "num lanes >12!\n");
+				dev_err(&chan->video->dev, "num lanes >12!\n");
 				return -EINVAL;
 			}
 			/*
@@ -655,7 +673,7 @@ int tegra_vi_tpg_graph_init(struct tegra_mc_vi *mc_vi)
 
 		list_for_each_entry_from(csi_it, &csi->csi_chans, list) {
 			struct media_entity *source = &csi_it->subdev.entity;
-			struct media_entity *sink = &vi_it->video.entity;
+			struct media_entity *sink = &vi_it->video->entity;
 			struct media_pad *source_pad = csi_it->pads;
 			struct media_pad *sink_pad = &vi_it->pad;
 

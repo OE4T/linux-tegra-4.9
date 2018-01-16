@@ -290,6 +290,8 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		return err;
 	}
 
+	g->sw_ready = true;
+
 done:
 	if (err)
 		g->power_on = false;
@@ -1041,6 +1043,7 @@ void gk20a_driver_start_unload(struct gk20a *g)
 	/* GR SW ready needs to be invalidated at this time with the busy lock
 	 * held to prevent a racing condition on the gr/mm code */
 	g->gr.sw_ready = false;
+	g->sw_ready = false;
 	up_write(&l->busy_lock);
 
 	if (g->is_virtual)

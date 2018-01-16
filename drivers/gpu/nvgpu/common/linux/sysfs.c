@@ -815,6 +815,7 @@ static ssize_t tpc_fs_mask_store(struct device *dev,
 		g->gr.ctx_vars.local_golden_image = NULL;
 		g->gr.ctx_vars.golden_image_initialized = false;
 		g->gr.ctx_vars.golden_image_size = 0;
+		/* Cause next poweron to reinit just gr */
 		g->gr.sw_ready = false;
 	}
 

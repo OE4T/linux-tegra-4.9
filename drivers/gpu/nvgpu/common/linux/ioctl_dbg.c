@@ -1835,7 +1835,7 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 	}
 
-	if (!g->gr.sw_ready) {
+	if (!g->sw_ready) {
 		err = gk20a_busy(g);
 		if (err)
 			return err;

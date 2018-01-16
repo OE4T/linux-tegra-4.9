@@ -86,7 +86,7 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 	 */
 	priv->g = g;
 
-	if (!g->gr.sw_ready) {
+	if (!g->sw_ready) {
 		err = gk20a_busy(g);
 		if (err)
 			goto free_ref;
@@ -1556,7 +1556,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			return -EFAULT;
 	}
 
-	if (!g->gr.sw_ready) {
+	if (!g->sw_ready) {
 		err = gk20a_busy(g);
 		if (err)
 			return err;

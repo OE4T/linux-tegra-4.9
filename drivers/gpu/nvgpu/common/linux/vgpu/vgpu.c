@@ -505,6 +505,8 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 	gk20a_sched_ctrl_init(g);
 	gk20a_channel_resume(g);
 
+	g->sw_ready = true;
+
 done:
 	return err;
 }

@@ -541,7 +541,6 @@ end:
 	return ctx_id;
 
 }
-EXPORT_SYMBOL(gk20a_ce_create_context);
 
 void gk20a_ce_delete_context(struct gk20a *g,
 		u32 ce_ctx_id)
@@ -572,4 +571,3 @@ void gk20a_ce_delete_context_priv(struct gk20a *g,
 	nvgpu_mutex_release(&ce_app->app_mutex);
 	return;
 }
-EXPORT_SYMBOL(gk20a_ce_delete_context);

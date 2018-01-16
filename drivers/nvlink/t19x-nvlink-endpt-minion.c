@@ -29,14 +29,14 @@
 #define MINION_WORD_SIZE		4
 
 /* Extract a WORD from the MINION ucode */
-static inline u32 minion_extract_word(struct nvlink_device *ndev, int idx)
+static inline u32 minion_extract_word(struct tnvlink_dev *tdev, int idx)
 {
 	u32 out_data = 0;
 	u8 byte = 0;
 	int i = 0;
 
 	for (i = 0; i < 4; i++) {
-		byte = ndev->minion_fw->data[idx + i];
+		byte = tdev->minion_fw->data[idx + i];
 		out_data |= ((u32)byte) << (8 * i);
 	}
 
@@ -44,26 +44,26 @@ static inline u32 minion_extract_word(struct nvlink_device *ndev, int idx)
 }
 
 /* Helper function for writing 1 word of data to the MINION's IMEM */
-static inline void minion_write_imem(struct nvlink_device *ndev,
+static inline void minion_write_imem(struct tnvlink_dev *tdev,
 					u32 byte_offs,
 					u32 word,
 					u32 tag)
 {
 	/* Need to write tag at the start of each new 256B block */
 	if ((byte_offs % MINION_BYTES_PER_BLOCK) < 4)
-		nvlw_minion_writel(ndev, CMINION_FALCON_IMEMT, tag);
+		nvlw_minion_writel(tdev, CMINION_FALCON_IMEMT, tag);
 
-	nvlw_minion_writel(ndev, CMINION_FALCON_IMEMD, word);
+	nvlw_minion_writel(tdev, CMINION_FALCON_IMEMD, word);
 }
 
 /* Helper function for writing 1 word of data to the MINION's DMEM */
-static inline void minion_write_dmem(struct nvlink_device *ndev, u32 word)
+static inline void minion_write_dmem(struct tnvlink_dev *tdev, u32 word)
 {
-	nvlw_minion_writel(ndev, CMINION_FALCON_DMEMD, word);
+	nvlw_minion_writel(tdev, CMINION_FALCON_DMEMD, word);
 }
 
 /* Load a section of the MINION ucode into IMEM or DMEM */
-static int minion_load_ucode_section(struct nvlink_device *ndev,
+static int minion_load_ucode_section(struct tnvlink_dev *tdev,
 					int is_imem,
 					u32 offset,
 					u32 size,
@@ -76,7 +76,7 @@ static int minion_load_ucode_section(struct nvlink_device *ndev,
 	u32 word = 0;
 	u32 tag = 0;
 
-	if ((offset + size) > ndev->minion_hdr.ucode_img_size) {
+	if ((offset + size) > tdev->minion_hdr.ucode_img_size) {
 		nvlink_err("Section size is bigger than MINION ucode binary");
 		return -1;
 	}
@@ -84,7 +84,7 @@ static int minion_load_ucode_section(struct nvlink_device *ndev,
 	/* Extract bytes from ucode image and write them to IMEM or DMEM */
 	for (i = offset; i < (offset + size); i++) {
 		byte_pos = i % 4;
-		byte = ndev->minion_img[i];
+		byte = tdev->minion_img[i];
 
 		/* Increment app tag at the start of each new 256B block */
 		if (use_app_tag &&
@@ -94,7 +94,7 @@ static int minion_load_ucode_section(struct nvlink_device *ndev,
 		}
 
 		/* Last byte */
-		if (i == ndev->minion_hdr.ucode_img_size - 1) {
+		if (i == tdev->minion_hdr.ucode_img_size - 1) {
 			if (byte_pos != 0) {
 				if (is_imem) {
 					if (use_app_tag)
@@ -102,9 +102,9 @@ static int minion_load_ucode_section(struct nvlink_device *ndev,
 					else
 						tag = i/MINION_BYTES_PER_BLOCK;
 
-					minion_write_imem(ndev, i, word, tag);
+					minion_write_imem(tdev, i, word, tag);
 				} else {
-					minion_write_dmem(ndev, word);
+					minion_write_dmem(tdev, word);
 				}
 			}
 		} else {
@@ -120,9 +120,9 @@ static int minion_load_ucode_section(struct nvlink_device *ndev,
 					else
 						tag = i/MINION_BYTES_PER_BLOCK;
 
-					minion_write_imem(ndev, i, word, tag);
+					minion_write_imem(tdev, i, word, tag);
 				} else {
-					minion_write_dmem(ndev, word);
+					minion_write_dmem(tdev, word);
 				}
 			}
 		}
@@ -132,7 +132,7 @@ static int minion_load_ucode_section(struct nvlink_device *ndev,
 }
 
 /* Send a command to the MINION and wait for command completion */
-int minion_send_cmd(struct nvlink_device *ndev,
+int minion_send_cmd(struct tnvlink_dev *tdev,
 				u32 cmd,
 				u32 scratch0_val)
 {
@@ -141,17 +141,16 @@ int minion_send_cmd(struct nvlink_device *ndev,
 
 	/* Write to minion scratch if needed by command */
 	if (cmd == MINION_NVLINK_DL_CMD_COMMAND_CONFIGEOM)
-		nvlw_minion_writel(ndev, MINION_MISC, scratch0_val);
+		nvlw_minion_writel(tdev, MINION_MISC, scratch0_val);
 
 	/* Send command to MINION */
 	reg_val = (cmd << MINION_NVLINK_DL_CMD_COMMAND_SHIFT) &
 			MINION_NVLINK_DL_CMD_COMMAND_MASK;
 	reg_val |= BIT(MINION_NVLINK_DL_CMD_FAULT);
-	nvlw_minion_writel(ndev, MINION_NVLINK_DL_CMD, reg_val);
-
+	nvlw_minion_writel(tdev, MINION_NVLINK_DL_CMD, reg_val);
 
 	/* Wait for MINION_NVLINK_DL_CMD_READY bit to be set */
-	err = wait_for_reg_cond_nvlink(ndev,
+	err = wait_for_reg_cond_nvlink(tdev,
 					MINION_NVLINK_DL_CMD,
 					MINION_NVLINK_DL_CMD_READY,
 					1,
@@ -167,7 +166,7 @@ int minion_send_cmd(struct nvlink_device *ndev,
 		nvlink_err("MINION command (cmd = %d) faulted!", cmd);
 
 		/* Clear the fault and return */
-		nvlw_minion_writel(ndev, MINION_NVLINK_DL_CMD, reg_val);
+		nvlw_minion_writel(tdev, MINION_NVLINK_DL_CMD, reg_val);
 		return -1;
 	}
 
@@ -183,20 +182,20 @@ int minion_send_cmd(struct nvlink_device *ndev,
  *       the IMEM/DMEM sections and then dump out the contents of each section
  *       in the derived order.
  */
-static void minion_print_ucode(struct nvlink_device *ndev)
+static void minion_print_ucode(struct tnvlink_dev *tdev)
 {
 	int i = 0;
 	int j = 0;
 	u32 reg_val = 0;
 	u32 byte_num = 0;
-	struct minion_hdr *hdr = &(ndev->minion_hdr);
+	struct minion_hdr *hdr = &(tdev->minion_hdr);
 
 	/* Dump the IMEM's contents */
 	nvlink_dbg("");
 	nvlink_dbg("MINION IMEM DUMP - START");
 
 	/* Initialize address of IMEM to 0x0 and set auto-increment on read */
-	nvlw_minion_writel(ndev,
+	nvlw_minion_writel(tdev,
 			CMINION_FALCON_IMEMC,
 			BIT(CMINION_FALCON_IMEMC_AINCR));
 
@@ -204,7 +203,7 @@ static void minion_print_ucode(struct nvlink_device *ndev)
 	nvlink_dbg("");
 	nvlink_dbg("OS Code Section:");
 	for (i = 0; i < hdr->os_code_size/MINION_WORD_SIZE; i++) {
-		reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_IMEMD);
+		reg_val = nvlw_minion_readl(tdev, CMINION_FALCON_IMEMD);
 		nvlink_dbg("Byte 0x%x, Data = 0x%x", byte_num, reg_val);
 		byte_num += MINION_WORD_SIZE;
 	}
@@ -214,7 +213,7 @@ static void minion_print_ucode(struct nvlink_device *ndev)
 		nvlink_dbg("");
 		nvlink_dbg("App %d Code Section:", i);
 		for (j = 0; j < hdr->app_code_sizes[i]/MINION_WORD_SIZE; j++) {
-			reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_IMEMD);
+			reg_val = nvlw_minion_readl(tdev, CMINION_FALCON_IMEMD);
 			nvlink_dbg("Byte 0x%x, Data = 0x%x", byte_num, reg_val);
 			byte_num += MINION_WORD_SIZE;
 		}
@@ -227,7 +226,7 @@ static void minion_print_ucode(struct nvlink_device *ndev)
 	nvlink_dbg("MINION DMEM DUMP - START");
 
 	/* Initialize address of DMEM to 0x0 and set auto-increment on read */
-	nvlw_minion_writel(ndev,
+	nvlw_minion_writel(tdev,
 			CMINION_FALCON_DMEMC,
 			BIT(CMINION_FALCON_DMEMC_AINCR));
 
@@ -236,7 +235,7 @@ static void minion_print_ucode(struct nvlink_device *ndev)
 	nvlink_dbg("OS Data Section:");
 	byte_num = 0;
 	for (i = 0; i < hdr->os_data_size/MINION_WORD_SIZE; i++) {
-		reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_DMEMD);
+		reg_val = nvlw_minion_readl(tdev, CMINION_FALCON_DMEMD);
 		nvlink_dbg("Byte 0x%x, Data = 0x%x", byte_num, reg_val);
 		byte_num += MINION_WORD_SIZE;
 	}
@@ -246,7 +245,7 @@ static void minion_print_ucode(struct nvlink_device *ndev)
 		nvlink_dbg("");
 		nvlink_dbg("App %d Data Section:", i);
 		for (j = 0; j < hdr->app_data_sizes[i]/MINION_WORD_SIZE; j++) {
-			reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_DMEMD);
+			reg_val = nvlw_minion_readl(tdev, CMINION_FALCON_DMEMD);
 			nvlink_dbg("Byte 0x%x, Data = 0x%x", byte_num, reg_val);
 			byte_num += MINION_WORD_SIZE;
 		}
@@ -261,7 +260,7 @@ static void minion_print_ucode(struct nvlink_device *ndev)
  * Dump the MINION PC trace. This is useful for debugging MINION
  * errors/hangs/crashes.
  */
-void minion_dump_pc_trace(struct nvlink_device *ndev)
+void minion_dump_pc_trace(struct tnvlink_dev *tdev)
 {
 	u32 trace_pc_count = 0;
 	u32 pc = 0;
@@ -271,7 +270,7 @@ void minion_dump_pc_trace(struct nvlink_device *ndev)
 	u32 idx = 0;
 	u32 reg_val = 0;
 
-	reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_SCTL);
+	reg_val = nvlw_minion_readl(tdev, CMINION_FALCON_SCTL);
 	nvlink_err("CMINION_FALCON_SCTL = 0x%x", reg_val);
 	if (reg_val & BIT(CMINION_FALCON_SCTL_HSMODE)) {
 		nvlink_err("MINION is in HS mode."
@@ -284,7 +283,7 @@ void minion_dump_pc_trace(struct nvlink_device *ndev)
 	nvlink_err("");
 
 	/* Get total number of PC trace entries */
-	reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_TRACEIDX);
+	reg_val = nvlw_minion_readl(tdev, CMINION_FALCON_TRACEIDX);
 	nvlink_err("CMINION_FALCON_TRACEIDX = 0x%x", reg_val);
 	trace_pc_count = CMINION_FALCON_TRACEIDX_MAXIDX_V(reg_val);
 	nvlink_err("PC TRACE (Total entries = %d - "
@@ -294,10 +293,10 @@ void minion_dump_pc_trace(struct nvlink_device *ndev)
 	/* Print the entire PC trace */
 	for (i = 0; i < trace_pc_count; i++) {
 		idx = CMINION_FALCON_TRACEIDX_IDX_F(i);
-		nvlw_minion_writel(ndev, CMINION_FALCON_TRACEIDX, idx);
-		traceidx = nvlw_minion_readl(ndev, CMINION_FALCON_TRACEIDX);
+		nvlw_minion_writel(tdev, CMINION_FALCON_TRACEIDX, idx);
+		traceidx = nvlw_minion_readl(tdev, CMINION_FALCON_TRACEIDX);
 
-		tracepc = nvlw_minion_readl(ndev, CMINION_FALCON_TRACEPC);
+		tracepc = nvlw_minion_readl(tdev, CMINION_FALCON_TRACEPC);
 		pc = CMINION_FALCON_TRACEPC_PC_V(tracepc);
 
 		nvlink_err("   - PC(%d) = %#010x", idx, pc);
@@ -317,58 +316,58 @@ void minion_dump_pc_trace(struct nvlink_device *ndev)
  * Dump the MINION registers which are useful for debugging MINION
  * errors/hangs/crashes.
  */
-void minion_dump_registers(struct nvlink_device *ndev)
+void minion_dump_registers(struct tnvlink_dev *tdev)
 {
 	nvlink_err("");
 	nvlink_err("MINION REGISTER DUMP - START");
 	nvlink_err("");
 
 	nvlink_err("CMINION_FALCON_OS = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_OS));
+		nvlw_minion_readl(tdev, CMINION_FALCON_OS));
 	nvlink_err("CMINION_FALCON_CPUCTL = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_CPUCTL));
+		nvlw_minion_readl(tdev, CMINION_FALCON_CPUCTL));
 	nvlink_err("CMINION_FALCON_IDLESTATE = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_IDLESTATE));
+		nvlw_minion_readl(tdev, CMINION_FALCON_IDLESTATE));
 	nvlink_err("CMINION_FALCON_MAILBOX0 = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_MAILBOX0));
+		nvlw_minion_readl(tdev, CMINION_FALCON_MAILBOX0));
 	nvlink_err("CMINION_FALCON_MAILBOX1 = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_MAILBOX1));
+		nvlw_minion_readl(tdev, CMINION_FALCON_MAILBOX1));
 	nvlink_err("CMINION_FALCON_IRQSTAT = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_IRQSTAT));
+		nvlw_minion_readl(tdev, CMINION_FALCON_IRQSTAT));
 	nvlink_err("CMINION_FALCON_IRQMASK = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_IRQMASK));
+		nvlw_minion_readl(tdev, CMINION_FALCON_IRQMASK));
 	nvlink_err("CMINION_FALCON_DEBUG1 = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_DEBUG1));
+		nvlw_minion_readl(tdev, CMINION_FALCON_DEBUG1));
 	nvlink_err("CMINION_FALCON_DEBUGINFO = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_DEBUGINFO));
+		nvlw_minion_readl(tdev, CMINION_FALCON_DEBUGINFO));
 	nvlink_err("CMINION_FALCON_BOOTVEC = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_BOOTVEC));
+		nvlw_minion_readl(tdev, CMINION_FALCON_BOOTVEC));
 	nvlink_err("CMINION_FALCON_HWCFG = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_HWCFG));
+		nvlw_minion_readl(tdev, CMINION_FALCON_HWCFG));
 	nvlink_err("CMINION_FALCON_ENGCTL = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_ENGCTL));
+		nvlw_minion_readl(tdev, CMINION_FALCON_ENGCTL));
 	nvlink_err("CMINION_FALCON_CURCTX = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_CURCTX));
+		nvlw_minion_readl(tdev, CMINION_FALCON_CURCTX));
 	nvlink_err("CMINION_FALCON_NXTCTX = 0x%x",
-		nvlw_minion_readl(ndev, CMINION_FALCON_NXTCTX));
+		nvlw_minion_readl(tdev, CMINION_FALCON_NXTCTX));
 
 	/* DL_CMD related registers */
 	nvlink_err("MINION_MINION_DEVICES = 0x%x",
-		nvlw_minion_readl(ndev, MINION_MINION_DEVICES));
+		nvlw_minion_readl(tdev, MINION_MINION_DEVICES));
 	nvlink_err("MINION_MINION_INTR = 0x%x",
-		nvlw_minion_readl(ndev, MINION_MINION_INTR));
+		nvlw_minion_readl(tdev, MINION_MINION_INTR));
 	nvlink_err("MINION_MINION_INTR_STALL_EN = 0x%x",
-		nvlw_minion_readl(ndev, MINION_MINION_INTR_STALL_EN));
+		nvlw_minion_readl(tdev, MINION_MINION_INTR_STALL_EN));
 	nvlink_err("MINION_MINION_INTR_NONSTALL_EN = 0x%x",
-		nvlw_minion_readl(ndev, MINION_MINION_INTR_NONSTALL_EN));
+		nvlw_minion_readl(tdev, MINION_MINION_INTR_NONSTALL_EN));
 	nvlink_err("MINION_NVLINK_LINK_INTR = 0x%x",
-		nvlw_minion_readl(ndev, MINION_NVLINK_LINK_INTR));
+		nvlw_minion_readl(tdev, MINION_NVLINK_LINK_INTR));
 	nvlink_err("MINION_NVLINK_DL_CMD = 0x%x",
-		nvlw_minion_readl(ndev, MINION_NVLINK_DL_CMD));
+		nvlw_minion_readl(tdev, MINION_NVLINK_DL_CMD));
 	nvlink_err("MINION_NVLINK_LINK_DL_STAT = 0x%x",
-		nvlw_minion_readl(ndev, MINION_NVLINK_LINK_DL_STAT));
+		nvlw_minion_readl(tdev, MINION_NVLINK_LINK_DL_STAT));
 	nvlink_err("MINION_MINION_STATUS = 0x%x",
-		nvlw_minion_readl(ndev, MINION_MINION_STATUS));
+		nvlw_minion_readl(tdev, MINION_MINION_STATUS));
 
 	nvlink_err("");
 	nvlink_err("MINION REGISTER DUMP - END");
@@ -392,7 +391,7 @@ void minion_dump_registers(struct nvlink_device *ndev)
  *       sections. We need to do a run-time sort on the starting offsets of all
  *       the IMEM/DMEM sections and then load each section in the derived order.
  */
-int minion_boot(struct nvlink_device *ndev)
+int minion_boot(struct tnvlink_dev *tdev)
 {
 	int ret = 0;
 	int data_idx = 0;
@@ -404,25 +403,25 @@ int minion_boot(struct nvlink_device *ndev)
 	int dump_ucode = 0;
 	u32 minion_status = 0;
 	u32 intr_code = 0;
-	struct minion_hdr *hdr = &(ndev->minion_hdr);
+	struct minion_hdr *hdr = &(tdev->minion_hdr);
 
 	/* Get MINION ucode from the filesystem */
-	ret = request_firmware(&(ndev->minion_fw), MINION_FW_PATH, ndev->dev);
+	ret = request_firmware(&(tdev->minion_fw), MINION_FW_PATH, tdev->dev);
 	if (ret) {
 		nvlink_err("Can't get MINION ucode binary");
 		goto exit;
 	}
 
 	/* Read ucode header */
-	hdr->os_code_offset = minion_extract_word(ndev, data_idx);
+	hdr->os_code_offset = minion_extract_word(tdev, data_idx);
 	data_idx += 4;
-	hdr->os_code_size = minion_extract_word(ndev, data_idx);
+	hdr->os_code_size = minion_extract_word(tdev, data_idx);
 	data_idx += 4;
-	hdr->os_data_offset = minion_extract_word(ndev, data_idx);
+	hdr->os_data_offset = minion_extract_word(tdev, data_idx);
 	data_idx += 4;
-	hdr->os_data_size = minion_extract_word(ndev, data_idx);
+	hdr->os_data_size = minion_extract_word(tdev, data_idx);
 	data_idx += 4;
-	hdr->num_apps = minion_extract_word(ndev, data_idx);
+	hdr->num_apps = minion_extract_word(tdev, data_idx);
 	data_idx += 4;
 
 	nvlink_dbg("MINION Ucode Header Info:");
@@ -464,9 +463,9 @@ int minion_boot(struct nvlink_device *ndev)
 
 	/* Get app code offsets and sizes */
 	for (i = 0; i < hdr->num_apps; i++) {
-		hdr->app_code_offsets[i] = minion_extract_word(ndev, data_idx);
+		hdr->app_code_offsets[i] = minion_extract_word(tdev, data_idx);
 		data_idx += 4;
-		hdr->app_code_sizes[i] = minion_extract_word(ndev, data_idx);
+		hdr->app_code_sizes[i] = minion_extract_word(tdev, data_idx);
 		data_idx += 4;
 
 		nvlink_dbg("  - App Code:");
@@ -478,9 +477,9 @@ int minion_boot(struct nvlink_device *ndev)
 
 	/* Get app data offsets and sizes */
 	for (i = 0; i < hdr->num_apps; i++) {
-		hdr->app_data_offsets[i] = minion_extract_word(ndev, data_idx);
+		hdr->app_data_offsets[i] = minion_extract_word(tdev, data_idx);
 		data_idx += 4;
-		hdr->app_data_sizes[i] = minion_extract_word(ndev, data_idx);
+		hdr->app_data_sizes[i] = minion_extract_word(tdev, data_idx);
 		data_idx += 4;
 
 		nvlink_dbg("  - App Data:");
@@ -490,22 +489,22 @@ int minion_boot(struct nvlink_device *ndev)
 			hdr->app_data_sizes[i]);
 	}
 
-	hdr->ovl_offset = minion_extract_word(ndev, data_idx);
+	hdr->ovl_offset = minion_extract_word(tdev, data_idx);
 	data_idx += 4;
-	hdr->ovl_size = minion_extract_word(ndev, data_idx);
+	hdr->ovl_size = minion_extract_word(tdev, data_idx);
 	data_idx += 4;
 
-	ndev->minion_img = &(ndev->minion_fw->data[data_idx]);
-	hdr->ucode_img_size = ndev->minion_fw->size - data_idx;
+	tdev->minion_img = &(tdev->minion_fw->data[data_idx]);
+	hdr->ucode_img_size = tdev->minion_fw->size - data_idx;
 
 	nvlink_dbg("  - Overlay Offset = %u", hdr->ovl_offset);
 	nvlink_dbg("  - Overlay Size = %u", hdr->ovl_size);
 	nvlink_dbg("  - Ucode Image Size = %u", hdr->ucode_img_size);
 
 	/* Do memory scrub */
-	nvlw_minion_writel(ndev, CMINION_FALCON_DMACTL, 0);
+	nvlw_minion_writel(tdev, CMINION_FALCON_DMACTL, 0);
 	while (dmem_scrub_pending || imem_scrub_pending) {
-		reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_DMACTL);
+		reg_val = nvlw_minion_readl(tdev, CMINION_FALCON_DMACTL);
 		dmem_scrub_pending =
 			reg_val & BIT(CMINION_FALCON_DMACTL_DMEM_SCRUBBING);
 		imem_scrub_pending =
@@ -513,13 +512,13 @@ int minion_boot(struct nvlink_device *ndev)
 	}
 
 	/* Initialize address of IMEM to 0x0 and set auto-increment on write */
-	nvlw_minion_writel(ndev,
+	nvlw_minion_writel(tdev,
 			CMINION_FALCON_IMEMC,
 			BIT(CMINION_FALCON_IMEMC_AINCW));
 
 	/* Load OS code into the IMEM */
 	nvlink_dbg("Loading OS code into the IMEM");
-	ret = minion_load_ucode_section(ndev,
+	ret = minion_load_ucode_section(tdev,
 					1,
 					hdr->os_code_offset,
 					hdr->os_code_size,
@@ -531,13 +530,13 @@ int minion_boot(struct nvlink_device *ndev)
 	}
 
 	/* Initialize address of DMEM to 0x0 and set auto-increment on write */
-	nvlw_minion_writel(ndev,
+	nvlw_minion_writel(tdev,
 			CMINION_FALCON_DMEMC,
 			BIT(CMINION_FALCON_DMEMC_AINCW));
 
 	/* Load OS data into the DMEM */
 	nvlink_dbg("Loading OS data into the DMEM");
-	ret = minion_load_ucode_section(ndev,
+	ret = minion_load_ucode_section(tdev,
 					0,
 					hdr->os_data_offset,
 					hdr->os_data_size,
@@ -551,13 +550,13 @@ int minion_boot(struct nvlink_device *ndev)
 	/* Load the ucode apps */
 	for (i = 0; i < hdr->num_apps; i++) {
 		/* Mark the app code as secure */
-		reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_IMEMC);
+		reg_val = nvlw_minion_readl(tdev, CMINION_FALCON_IMEMC);
 		reg_val |= BIT(CMINION_FALCON_IMEMC_SECURE);
-		nvlw_minion_writel(ndev, CMINION_FALCON_IMEMC, reg_val);
+		nvlw_minion_writel(tdev, CMINION_FALCON_IMEMC, reg_val);
 
 		/* Load app code into the IMEM */
 		nvlink_dbg("Loading app %d code into the IMEM", i);
-		ret = minion_load_ucode_section(ndev,
+		ret = minion_load_ucode_section(tdev,
 						1,
 						hdr->app_code_offsets[i],
 						hdr->app_code_sizes[i],
@@ -572,7 +571,7 @@ int minion_boot(struct nvlink_device *ndev)
 
 		/* Load app data into the DMEM */
 		nvlink_dbg("Loading app %d data into the DMEM", i);
-		ret = minion_load_ucode_section(ndev,
+		ret = minion_load_ucode_section(tdev,
 						0,
 						hdr->app_data_offsets[i],
 						hdr->app_data_sizes[i],
@@ -591,22 +590,22 @@ int minion_boot(struct nvlink_device *ndev)
 	 * we can verify that we're loading the ucode correctly.
 	 */
 	if (dump_ucode)
-		minion_print_ucode(ndev);
+		minion_print_ucode(tdev);
 
 	/* Write boot vector */
-	nvlw_minion_writel(ndev, CMINION_FALCON_BOOTVEC, hdr->os_code_offset);
+	nvlw_minion_writel(tdev, CMINION_FALCON_BOOTVEC, hdr->os_code_offset);
 
 	/* Start MINION CPU */
-	reg_val = nvlw_minion_readl(ndev, CMINION_FALCON_CPUCTL);
+	reg_val = nvlw_minion_readl(tdev, CMINION_FALCON_CPUCTL);
 	reg_val |= BIT(CMINION_FALCON_CPUCTL_STARTCPU);
-	nvlw_minion_writel(ndev, CMINION_FALCON_CPUCTL, reg_val);
+	nvlw_minion_writel(tdev, CMINION_FALCON_CPUCTL, reg_val);
 
 	/* Wait for MINION to boot */
 	while (1) {
 		usleep_range(DEFAULT_LOOP_SLEEP_US, DEFAULT_LOOP_SLEEP_US*2);
 		elapsed_us += DEFAULT_LOOP_SLEEP_US;
 
-		reg_val = nvlw_minion_readl(ndev, MINION_MINION_STATUS);
+		reg_val = nvlw_minion_readl(tdev, MINION_MINION_STATUS);
 		minion_status = (reg_val & MINION_MINION_STATUS_STATUS_MASK) >>
 					MINION_MINION_STATUS_STATUS_SHIFT;
 		if (minion_status != MINION_MINION_STATUS_STATUS_INIT) {
@@ -626,7 +625,7 @@ int minion_boot(struct nvlink_device *ndev)
 
 				nvlink_dbg("MINION booted successfully!");
 
-				os = nvlw_minion_readl(ndev,
+				os = nvlw_minion_readl(tdev,
 							CMINION_FALCON_OS);
 				os_maj_ver =
 					(os &
@@ -636,9 +635,9 @@ int minion_boot(struct nvlink_device *ndev)
 					(os &
 					CMINION_FALCON_OS_MINOR_VER_MASK) >>
 					CMINION_FALCON_OS_MINOR_VER_SHIFT;
-				mbox = nvlw_minion_readl(ndev,
+				mbox = nvlw_minion_readl(tdev,
 						CMINION_FALCON_MAILBOX1);
-				sctl = nvlw_minion_readl(ndev,
+				sctl = nvlw_minion_readl(tdev,
 							CMINION_FALCON_SCTL);
 
 				/* Dump the ucode ID string epilog */
@@ -664,11 +663,11 @@ int minion_boot(struct nvlink_device *ndev)
 		}
 
 		/* Service any pending falcon interrupts */
-		minion_service_falcon_intr(ndev);
+		minion_service_falcon_intr(tdev);
 	}
 
 	/* Wait until MINION is ready to accept commands */
-	ret = wait_for_reg_cond_nvlink(ndev,
+	ret = wait_for_reg_cond_nvlink(tdev,
 					MINION_NVLINK_DL_CMD,
 					MINION_NVLINK_DL_CMD_READY,
 					1,
@@ -684,14 +683,14 @@ int minion_boot(struct nvlink_device *ndev)
 	 * Send a SWINTR DLCMD to MINION to test if it’s functioning
 	 * properly
 	 */
-	ret = minion_send_cmd(ndev, MINION_NVLINK_DL_CMD_COMMAND_SWINTR, 0);
+	ret = minion_send_cmd(tdev, MINION_NVLINK_DL_CMD_COMMAND_SWINTR, 0);
 	if (ret < 0) {
 		nvlink_err("MINION SWINTR DLCMD failed!");
 		goto err_dump;
 	}
 
 	/* Check interrupt register to see if interrupt was received */
-	reg_val = nvlw_minion_readl(ndev, MINION_NVLINK_LINK_INTR);
+	reg_val = nvlw_minion_readl(tdev, MINION_NVLINK_LINK_INTR);
 	intr_code = (reg_val & MINION_NVLINK_LINK_INTR_CODE_MASK) >>
 			MINION_NVLINK_LINK_INTR_CODE_SHIFT;
 	if (intr_code == MINION_NVLINK_LINK_INTR_CODE_SWREQ) {
@@ -708,11 +707,11 @@ int minion_boot(struct nvlink_device *ndev)
 
 err_dump:
 	/* Dump the PC trace and misc registers for error conditions */
-	minion_dump_pc_trace(ndev);
-	minion_dump_registers(ndev);
+	minion_dump_pc_trace(tdev);
+	minion_dump_registers(tdev);
 
 cleanup:
-	release_firmware(ndev->minion_fw);
+	release_firmware(tdev->minion_fw);
 	kfree(hdr->app_code_offsets);
 	kfree(hdr->app_code_sizes);
 	kfree(hdr->app_data_offsets);
@@ -720,8 +719,8 @@ cleanup:
 	memset(hdr, 0, sizeof(struct minion_hdr));
 
 exit:
-	ndev->minion_fw = NULL;
-	ndev->minion_img = NULL;
+	tdev->minion_fw = NULL;
+	tdev->minion_img = NULL;
 	return ret;
 }
 
@@ -732,16 +731,15 @@ exit:
  *    - Switching the TX clock from OSC to brick PLL
  *    - RX calibration of lanes
  */
-int init_nvhs_phy(struct nvlink_device *ndev)
+int init_nvhs_phy(struct tnvlink_dev *tdev)
 {
 	int ret = 0;
 	bool dump_minion = true;
 	u32 reg_val = 0;
 	u32 link_state = 0;
-	struct tegra_nvlink_device *tdev =
-				(struct tegra_nvlink_device *)ndev->priv;
+	struct nvlink_device *ndev = tdev->ndev;
 
-	ret = minion_send_cmd(ndev,
+	ret = minion_send_cmd(tdev,
 			MINION_NVLINK_DL_CMD_COMMAND_XAVIER_PLLOVERRIDE_ON,
 			0);
 	if (ret < 0) {
@@ -751,16 +749,16 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 	}
 
 	if (tdev->is_nea) {
-		ret = minion_send_cmd(ndev,
-				MINION_NVLINK_DL_CMD_COMMAND_SETNEA,
-				0);
+		ret = minion_send_cmd(tdev,
+					MINION_NVLINK_DL_CMD_COMMAND_SETNEA,
+					0);
 		if (ret < 0) {
 			nvlink_err("Error sending SETNEA command to MINION");
 			goto fail;
 		}
 	}
 
-	reg_val = nvlw_nvl_readl(ndev, NVL_LINK_STATE);
+	reg_val = nvlw_nvl_readl(tdev, NVL_LINK_STATE);
 	link_state = (reg_val & NVL_LINK_STATE_STATE_MASK) >>
 					NVL_LINK_STATE_STATE_SHIFT;
 	if (link_state != NVL_LINK_STATE_STATE_INIT) {
@@ -776,36 +774,36 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 		goto fail;
 	}
 
-	if ((ndev->refclk == NVLINK_REFCLK_150) &&
+	if ((tdev->refclk == NVLINK_REFCLK_150) &&
 		 (ndev->speed == NVLINK_SPEED_25)) {
-		ret = minion_send_cmd(ndev,
+		ret = minion_send_cmd(tdev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_3,
 				0);
 		if (ret < 0) {
 			nvlink_err("Error sending INITPLL_3 command to MINION");
 			goto fail;
 		}
-	} else if ((ndev->refclk == NVLINK_REFCLK_150) &&
+	} else if ((tdev->refclk == NVLINK_REFCLK_150) &&
 			(ndev->speed == NVLINK_SPEED_20)) {
-		ret = minion_send_cmd(ndev,
+		ret = minion_send_cmd(tdev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_5,
 				0);
 		if (ret < 0) {
 			nvlink_err("Error sending INITPLL_5 command to MINION");
 			goto fail;
 		}
-	} else if ((ndev->refclk == NVLINK_REFCLK_156) &&
+	} else if ((tdev->refclk == NVLINK_REFCLK_156) &&
 			(ndev->speed == NVLINK_SPEED_20)) {
-		ret = minion_send_cmd(ndev,
+		ret = minion_send_cmd(tdev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_4,
 				0);
 		if (ret < 0) {
 			nvlink_err("Error sending INITPLL_4 command to MINION");
 			goto fail;
 		}
-	} else if ((ndev->refclk == NVLINK_REFCLK_156) &&
+	} else if ((tdev->refclk == NVLINK_REFCLK_156) &&
 			 (ndev->speed == NVLINK_SPEED_25)) {
-		ret = minion_send_cmd(ndev,
+		ret = minion_send_cmd(tdev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_2,
 				0);
 		if (ret < 0) {
@@ -816,7 +814,7 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 		nvlink_err("Invalid speed or refclk");
 		goto fail;
 	}
-	ret = minion_send_cmd(ndev,
+	ret = minion_send_cmd(tdev,
 			MINION_NVLINK_DL_CMD_COMMAND_XAVIER_CALIBRATEPLL,
 			0);
 	if (ret < 0) {
@@ -840,7 +838,7 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 
 	/* TODO: Enable the CAR PLL sequencer FSM for NVHS brick PLL */
 
-	ret = minion_send_cmd(ndev,
+	ret = minion_send_cmd(tdev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITPHY,
 				0);
 	if (ret < 0) {
@@ -852,10 +850,10 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 	reg_val = BIT(NVL_BR0_CFG_CTL_CAL_RXCAL) |
 			BIT(NVL_BR0_CFG_CTL_CAL_INIT_TRAIN_DONE) |
 			BIT(NVL_BR0_CFG_CTL_CAL_EOM_DIS);
-	nvlw_nvl_writel(ndev, NVL_BR0_CFG_CTL_CAL, reg_val);
+	nvlw_nvl_writel(tdev, NVL_BR0_CFG_CTL_CAL, reg_val);
 
 	/* Wait for RXCAL_DONE bit to be set */
-	ret = wait_for_reg_cond_nvlink(ndev,
+	ret = wait_for_reg_cond_nvlink(tdev,
 					NVL_BR0_CFG_STATUS_CAL,
 					NVL_BR0_CFG_STATUS_CAL_RXCAL_DONE,
 					1,
@@ -873,7 +871,7 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 		goto undo_clk;
 	}
 
-	ret = minion_send_cmd(ndev,
+	ret = minion_send_cmd(tdev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITLANEENABLE,
 				0);
 	if (ret < 0) {
@@ -881,7 +879,7 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 		goto undo_clk;
 	}
 
-	ret = minion_send_cmd(ndev,
+	ret = minion_send_cmd(tdev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITDLPL,
 				0);
 	if (ret < 0) {
@@ -902,8 +900,8 @@ fail:
 	 * conditions
 	 */
 	if (dump_minion) {
-		minion_dump_pc_trace(ndev);
-		minion_dump_registers(ndev);
+		minion_dump_pc_trace(tdev);
+		minion_dump_registers(tdev);
 	}
 success:
 	return ret;

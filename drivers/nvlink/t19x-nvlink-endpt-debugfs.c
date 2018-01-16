@@ -32,11 +32,11 @@ static ssize_t nvlink_refclk_rate_file_read(struct file *file,
 				char __user *ubuf,
 				size_t count, loff_t *offp)
 {
-	struct nvlink_device *nvlink = file->private_data;
+	struct tnvlink_dev *tdev = file->private_data;
 	char buf[5];
 	int str_len;
 
-	switch (nvlink->refclk) {
+	switch (tdev->refclk) {
 	case NVLINK_REFCLK_150:
 		strcpy(buf, "150");
 		break;
@@ -54,12 +54,13 @@ static ssize_t nvlink_refclk_rate_file_write(struct file *file,
 				const char __user *ubuf,
 				size_t count, loff_t *offp)
 {
-	struct nvlink_device *nvlink = file->private_data;
+	struct tnvlink_dev *tdev = file->private_data;
+	struct nvlink_device *ndev = tdev->ndev;
 	char tmp[3];
 	int ret;
 	enum init_state state = NVLINK_DEV_OFF;
 
-	ret = nvlink_get_init_state(nvlink, &state);
+	ret = nvlink_get_init_state(ndev, &state);
 	if (ret < 0) {
 		nvlink_err("Error retriving the init state!");
 		return ret;
@@ -70,9 +71,9 @@ static ssize_t nvlink_refclk_rate_file_write(struct file *file,
 	ret = copy_from_user(tmp, ubuf, count);
 
 	if (!strncmp(tmp, "150", 3))
-		nvlink->refclk = NVLINK_REFCLK_150;
+		tdev->refclk = NVLINK_REFCLK_150;
 	else if (!strncmp(tmp, "156", 3))
-                nvlink->refclk = NVLINK_REFCLK_156;
+		tdev->refclk = NVLINK_REFCLK_156;
 	else
 		return -EINVAL;
 	return count;
@@ -97,11 +98,12 @@ static ssize_t nvlink_speedcontrol_file_read(struct file *file,
 					     size_t count,
 					     loff_t *offp)
 {
-	struct nvlink_device *nvlink = file->private_data;
+	struct tnvlink_dev *tdev = file->private_data;
+	struct nvlink_device *ndev = tdev->ndev;
 	char buf[4];
 	int str_len;
 
-	switch (nvlink->speed) {
+	switch (ndev->speed) {
 	case NVLINK_SPEED_20:
 		strcpy(buf, "20");
 		break;
@@ -119,12 +121,13 @@ static ssize_t nvlink_speedcontrol_file_write(struct file *file,
 						const char __user *ubuf,
 						size_t count, loff_t *offp)
 {
-	struct nvlink_device *nvlink = file->private_data;
+	struct tnvlink_dev *tdev = file->private_data;
+	struct nvlink_device *ndev = tdev->ndev;
 	char tmp[2];
 	int ret;
 	enum init_state state = NVLINK_DEV_OFF;
 
-	ret = nvlink_get_init_state(nvlink, &state);
+	ret = nvlink_get_init_state(ndev, &state);
 	if (ret < 0) {
 		nvlink_err("Error retriving the device state!");
 		return ret;
@@ -135,9 +138,9 @@ static ssize_t nvlink_speedcontrol_file_write(struct file *file,
 	ret = copy_from_user(tmp, ubuf, count);
 
 	if (!strncmp(tmp, "20", 2))
-		nvlink->speed = NVLINK_SPEED_20;
+		ndev->speed = NVLINK_SPEED_20;
 	else if (!strncmp(tmp, "25", 2))
-		nvlink->speed = NVLINK_SPEED_25;
+		ndev->speed = NVLINK_SPEED_25;
 	else
 		return -EINVAL;
 	return count;
@@ -150,10 +153,8 @@ static const struct file_operations  nvlink_speedcontrol_fops = {
 	.owner	= THIS_MODULE,
 };
 
-static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
+static int nvlink_single_lane_debugfs_init(struct tnvlink_dev *tdev)
 {
-	struct tegra_nvlink_device *tdev =
-				(struct tegra_nvlink_device *)ndev->priv;
 	struct dentry *tegra_sl_debugfs;
 	int ret = 0;
 
@@ -168,7 +169,7 @@ static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
 
 	if (!debugfs_create_bool("enabled", (S_IWUSR | S_IRUGO),
 					tegra_sl_debugfs,
-					&ndev->link.sl_params.enabled)) {
+					&tdev->tlink.sl_params.enabled)) {
 		nvlink_err("Unable to create debugfs node for sl_enabled");
 		ret = -1;
 		goto fail;
@@ -176,7 +177,7 @@ static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
 
 	if (!debugfs_create_u16("fb_ic_inc", (S_IWUSR | S_IRUGO),
 					tegra_sl_debugfs,
-					&ndev->link.sl_params.fb_ic_inc)) {
+					&tdev->tlink.sl_params.fb_ic_inc)) {
 		nvlink_err("Unable to create debugfs node for fb_ic_inc");
 		ret = -1;
 		goto fail;
@@ -184,7 +185,7 @@ static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
 
 	if (!debugfs_create_u16("lp_ic_inc", (S_IWUSR | S_IRUGO),
 					tegra_sl_debugfs,
-					&ndev->link.sl_params.lp_ic_inc)) {
+					&tdev->tlink.sl_params.lp_ic_inc)) {
 		nvlink_err("Unable to create debugfs node for lp_ic_inc");
 		ret = -1;
 		goto fail;
@@ -192,7 +193,7 @@ static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
 
 	if (!debugfs_create_u16("fb_ic_dec", (S_IWUSR | S_IRUGO),
 					tegra_sl_debugfs,
-					&ndev->link.sl_params.fb_ic_dec)) {
+					&tdev->tlink.sl_params.fb_ic_dec)) {
 		nvlink_err("Unable to create debugfs node for fb_ic_dec");
 		ret = -1;
 		goto fail;
@@ -200,7 +201,7 @@ static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
 
 	if (!debugfs_create_u16("lp_ic_dec", (S_IWUSR | S_IRUGO),
 					tegra_sl_debugfs,
-					&ndev->link.sl_params.lp_ic_dec)) {
+					&tdev->tlink.sl_params.lp_ic_dec)) {
 		nvlink_err("Unable to create debugfs node for lp_ic_dec");
 		ret = -1;
 		goto fail;
@@ -208,7 +209,7 @@ static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
 
 	if (!debugfs_create_u32("enter_thresh", (S_IWUSR | S_IRUGO),
 					tegra_sl_debugfs,
-					&ndev->link.sl_params.enter_thresh)) {
+					&tdev->tlink.sl_params.enter_thresh)) {
 		nvlink_err("Unable to create debugfs node for enter_thresh");
 		ret = -1;
 		goto fail;
@@ -216,7 +217,7 @@ static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
 
 	if (!debugfs_create_u32("exit_thresh", (S_IWUSR | S_IRUGO),
 					tegra_sl_debugfs,
-					&ndev->link.sl_params.exit_thresh)) {
+					&tdev->tlink.sl_params.exit_thresh)) {
 		nvlink_err("Unable to create debugfs node for exit_thresh");
 		ret = -1;
 		goto fail;
@@ -224,7 +225,7 @@ static int nvlink_single_lane_debugfs_init(struct nvlink_device *ndev)
 
 	if (!debugfs_create_u32("ic_limit", (S_IWUSR | S_IRUGO),
 					tegra_sl_debugfs,
-					&ndev->link.sl_params.ic_limit)) {
+					&tdev->tlink.sl_params.ic_limit)) {
 		nvlink_err("Unable to create debugfs node for ic_limit");
 		ret = -1;
 		goto fail;
@@ -234,11 +235,8 @@ fail:
 	return ret;
 }
 
-void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev)
+void t19x_nvlink_endpt_debugfs_init(struct tnvlink_dev *tdev)
 {
-	struct tegra_nvlink_device *tdev =
-				(struct tegra_nvlink_device *)ndev->priv;
-
 	if (!nvlink_debugfs) {
 		nvlink_err("Root NVLINK debugfs directory doesn't exist");
 		goto fail;
@@ -255,7 +253,7 @@ void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev)
 	/* nvlink_rate_config: to switch and set different NVLINK RefCLK rate */
 	tdev->tegra_debugfs_file = debugfs_create_file("refclk_rate",
 				(S_IWUSR | S_IRUGO), tdev->tegra_debugfs,
-				ndev, &nvlink_refclk_rate_fops);
+				tdev, &nvlink_refclk_rate_fops);
 	if (IS_ERR_OR_NULL(tdev->tegra_debugfs_file)) {
 		tdev->tegra_debugfs_file = NULL;
 		nvlink_dbg("debugfs_create_file() for nvlink_refclk_rate failed");
@@ -264,14 +262,14 @@ void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev)
 	/* nvlink_rate_config: to switch and set different NVLINK Speed Control */
 	tdev->tegra_debugfs_file = debugfs_create_file("speed_control",
 				(S_IWUSR | S_IRUGO), tdev->tegra_debugfs,
-				ndev, &nvlink_speedcontrol_fops);
+				tdev, &nvlink_speedcontrol_fops);
 	if (IS_ERR_OR_NULL(tdev->tegra_debugfs_file)) {
 		tdev->tegra_debugfs_file = NULL;
 		nvlink_dbg("debugfs_create_file() for nvlink_rate_config failed");
 		goto fail;
 	}
 
-	if (nvlink_single_lane_debugfs_init(ndev) < 0)
+	if (nvlink_single_lane_debugfs_init(tdev) < 0)
 		goto fail;
 
 	if (!debugfs_create_bool("is_nea", (S_IWUSR | S_IRUGO),
@@ -289,11 +287,8 @@ fail:
 	tdev->tegra_debugfs = NULL;
 }
 
-void t19x_nvlink_endpt_debugfs_deinit(struct nvlink_device *ndev)
+void t19x_nvlink_endpt_debugfs_deinit(struct tnvlink_dev *tdev)
 {
-	struct tegra_nvlink_device *tdev =
-				(struct tegra_nvlink_device *)ndev->priv;
-
 	debugfs_remove_recursive(tdev->tegra_debugfs);
 	tdev->tegra_debugfs = NULL;
 }

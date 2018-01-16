@@ -33,20 +33,174 @@
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mc-regs-t19x.h>
 #include <linux/tegra_prod.h>
+#include <linux/device.h>
+#include <linux/cdev.h>
 #include <linux/platform/tegra/tegra-nvlink.h>
 
 #define NVLINK_DRV_NAME				"t19x-nvlink-endpt"
 #define NVLINK_IP_VERSION			2 /* NVLINK VERSION 2.0 */
-#define DEFAULT_LOOP_SLEEP_US			100
-#define DEFAULT_LOOP_TIMEOUT_US			1000000
 #define DEFAULT_IS_NEA				0
 
-struct tegra_nvlink_device {
+enum nvlink_refclk {
+	NVLINK_REFCLK_150,
+	NVLINK_REFCLK_156
+};
+
+/* Structure representing the MINION ucode header */
+struct minion_hdr {
+	u32 os_code_offset;
+	u32 os_code_size;
+	u32 os_data_offset;
+	u32 os_data_size;
+	u32 num_apps;
+	u32 *app_code_offsets;
+	u32 *app_code_sizes;
+	u32 *app_data_offsets;
+	u32 *app_data_sizes;
+	u32 ovl_offset;
+	u32 ovl_size;
+	u32 ucode_img_size;
+};
+
+/* Struct used for passing around error masks in error handling functions */
+struct nvlink_link_error_masks {
+	u32 dl;
+	u32 tl;
+	u32 tl_injected;
+	u32 tlc_rx0;
+	u32 tlc_rx0_injected;
+	u32 tlc_rx1;
+	u32 tlc_rx1_injected;
+	u32 tlc_tx;
+	u32 tlc_tx_injected;
+};
+
+/* Fatal Errors */
+enum inforom_nvlink_fatal_err {
+	/* NVLink 2.0 */
+	TLC_RX_DL_DATA_PARITY,
+	TLC_RX_DL_CTRL_PARITY,
+	TLC_RX_RAM_DATA_PARITY,
+	TLC_RX_RAM_HDR_PARITY,
+	TLC_RX_DATA_POISONED_PKT_RCVD,
+	TLC_TX_RAM_DATA_PARITY,
+	TLC_TX_RAM_HDR_PARITY,
+	TLC_TX_DL_FLOW_CONTROL_PARITY,
+	DL_TX_RECOVERY_LONG,
+	DL_TX_FAULT_RAM,
+	DL_TX_FAULT_INTERFACE,
+	DL_TX_FAULT_SUBLINK_CHANGE,
+	DL_RX_FAULT_SUBLINK_CHANGE,
+	DL_RX_FAULT_DL_PROTOCOL,
+	DL_LTSSM_FAULT,
+	TLC_RX_DL_HDR_PARITY,
+	TLC_RX_INVALID_AE_FLIT_RCVD,
+	TLC_RX_INVALID_BE_FLIT_RCVD,
+	TLC_RX_INVALID_ADDR_ALIGN,
+	TLC_RX_PKT_LEN,
+	TLC_RX_RSVD_CMD_ENC,
+	TLC_RX_RSVD_DAT_LEN_ENC,
+	TLC_RX_RSVD_ADDR_TYPE,
+	TLC_RX_RSVD_RSP_STATUS,
+	TLC_RX_RSVD_PKT_STATUS,
+	TLC_RX_RSVD_CACHE_ATTR_ENC_IN_PROBE_REQ,
+	TLC_RX_RSVD_CACHE_ATTR_ENC_IN_PROBE_RESP,
+	TLC_RX_DAT_LEN_GT_ATOMIC_REQ_MAX_SIZE,
+	TLC_RX_DAT_LEN_GT_RMW_REQ_MAX_SIZE,
+	TLC_RX_DAT_LEN_LT_ATR_RESP_MIN_SIZE,
+	TLC_RX_INVALID_PO_FOR_CACHE_ATTR,
+	TLC_RX_INVALID_COMPRESSED_RESP,
+	TLC_RX_RESP_STATUS_TARGET,
+	TLC_RX_RESP_STATUS_UNSUPPORTED_REQUEST,
+	TLC_RX_HDR_OVERFLOW,
+	TLC_RX_DATA_OVERFLOW,
+	TLC_RX_STOMPED_PKT_RCVD,
+	TLC_RX_CORRECTABLE_INTERNAL,
+	TLC_RX_UNSUPPORTED_VC_OVERFLOW,
+	TLC_RX_UNSUPPORTED_NVLINK_CREDIT_RELEASE,
+	TLC_RX_UNSUPPORTED_NCISOC_CREDIT_RELEASE,
+	TLC_TX_HDR_CREDIT_OVERFLOW,
+	TLC_TX_DATA_CREDIT_OVERFLOW,
+	TLC_TX_DL_REPLAY_CREDIT_OVERFLOW,
+	TLC_TX_UNSUPPORTED_VC_OVERFLOW,
+	TLC_TX_STOMPED_PKT_SENT,
+	TLC_TX_DATA_POISONED_PKT_SENT,
+	TLC_TX_RESP_STATUS_TARGET,
+	TLC_TX_RESP_STATUS_UNSUPPORTED_REQUEST,
+};
+
+/*
+ * This structure is used for storing parameters which describe the Single-Lane
+ * (SL / 1/8th) mode policy. A few acronyms that are used in this structure are
+ * as follows:
+ *    - SL = Single-Lane / 1/8th mode - sublink low power mode where only 1 of
+ *           the 8 lanes is used
+ *    - FB = Full Bandwidth (i.e. HISPEED mode)
+ *    - LP = Low Power (i.e. SL / 1/8th mode)
+ *    - IC = Idle Counter - the idle counter is used to monitor traffic per
+ *           sub-link
+ */
+struct single_lane_params {
+	/* Is Single-Lane (SL) mode enabled? */
+	bool enabled;
+
+	/* Idle counter increment in FB */
+	u16 fb_ic_inc;
+
+	/* Idle counter increment in LP */
+	u16 lp_ic_inc;
+
+	/* Idle counter decrement in FB */
+	u16 fb_ic_dec;
+
+	/* Idle counter decrement in LP */
+	u16 lp_ic_dec;
+
+	/* SL entry threshold */
+	u32 enter_thresh;
+
+	/* SL exit threshold */
+	u32 exit_thresh;
+
+	/* Idle counter saturation limit */
+	u32 ic_limit;
+};
+
+/* Tegra endpoint driver's private link struct */
+struct tnvlink_link {
+	/* base address of DLPL */
+	void __iomem *nvlw_nvl_base;
+	/* base address of TL */
+	void __iomem *nvlw_nvltlc_base;
+	/* TLC errors status. TODO: Add more description here */
+	u32 tlc_tx_err_status0;
+	u32 tlc_rx_err_status0;
+	u32 tlc_rx_err_status1;
+	/* Successful error recoveries */
+	u32 error_recoveries;
+	/* Parameters which describe the selected Single-Lane policy */
+	struct single_lane_params sl_params;
+	struct nvlink_link *nlink;
+};
+
+/* Tegra endpoint driver's private device struct */
+struct tnvlink_dev {
+	/* base address of minion */
+	void __iomem *nvlw_minion_base;
+	/* base address of IOCTRL */
+	void __iomem *nvlw_tioctrl_base;
+	/* base address of NVLIPT */
+	void __iomem *nvlw_nvlipt_base;
 	/* base address of SYNC2X */
 	void __iomem *nvlw_sync2x_base;
 	/* base address of MSSNVLINK */
 	void __iomem *mssnvlink_0_base;
-
+	/* irq below represents the interrupt line going to GIC and LIC */
+	int irq;
+	struct class class;
+	dev_t dev_t;
+	struct cdev cdev;
+	struct device *dev;
 #ifdef CONFIG_DEBUG_FS
 	/* This is the debugfs directory for the Tegra endpoint driver */
 	struct dentry *tegra_debugfs;
@@ -73,52 +227,62 @@ struct tegra_nvlink_device {
 	int pgid_nvl;
 	struct tegra_prod *prod_list;
 	bool is_nea;
+	/* MINION FW - contains both the ucode header and image */
+	const struct firmware *minion_fw;
+	/* MINION ucode header */
+	struct minion_hdr minion_hdr;
+	/* MINION ucode image */
+	const u8 *minion_img;
+	/* Nvlink refclk*/
+	enum nvlink_refclk refclk;
+	struct tnvlink_link tlink;
+	struct nvlink_device *ndev;
 };
 
 extern const struct single_lane_params entry_100us_sl_params;
 extern const struct file_operations t19x_nvlink_endpt_ops;
 
-u32 nvlw_tioctrl_readl(struct nvlink_device *ndev, u32 reg);
-void nvlw_tioctrl_writel(struct nvlink_device *ndev, u32 reg, u32 val);
+u32 nvlw_tioctrl_readl(struct tnvlink_dev *tdev, u32 reg);
+void nvlw_tioctrl_writel(struct tnvlink_dev *tdev, u32 reg, u32 val);
 
-u32 nvlw_nvlipt_readl(struct nvlink_device *ndev, u32 reg);
-void nvlw_nvlipt_writel(struct nvlink_device *ndev, u32 reg, u32 val);
+u32 nvlw_nvlipt_readl(struct tnvlink_dev *tdev, u32 reg);
+void nvlw_nvlipt_writel(struct tnvlink_dev *tdev, u32 reg, u32 val);
 
-u32 nvlw_minion_readl(struct nvlink_device *ndev, u32 reg);
-void nvlw_minion_writel(struct nvlink_device *ndev, u32 reg, u32 val);
+u32 nvlw_minion_readl(struct tnvlink_dev *tdev, u32 reg);
+void nvlw_minion_writel(struct tnvlink_dev *tdev, u32 reg, u32 val);
 
-u32 nvlw_nvl_readl(struct nvlink_device *ndev, u32 reg);
-void nvlw_nvl_writel(struct nvlink_device *ndev, u32 reg, u32 val);
+u32 nvlw_nvl_readl(struct tnvlink_dev *tdev, u32 reg);
+void nvlw_nvl_writel(struct tnvlink_dev *tdev, u32 reg, u32 val);
 
-u32 nvlw_sync2x_readl(struct nvlink_device *ndev, u32 reg);
-void nvlw_sync2x_writel(struct nvlink_device *ndev, u32 reg, u32 val);
+u32 nvlw_sync2x_readl(struct tnvlink_dev *tdev, u32 reg);
+void nvlw_sync2x_writel(struct tnvlink_dev *tdev, u32 reg, u32 val);
 
-u32 nvlw_nvltlc_readl(struct nvlink_device *ndev, u32 reg);
-void nvlw_nvltlc_writel(struct nvlink_device *ndev, u32 reg, u32 val);
+u32 nvlw_nvltlc_readl(struct tnvlink_dev *tdev, u32 reg);
+void nvlw_nvltlc_writel(struct tnvlink_dev *tdev, u32 reg, u32 val);
 
 int wait_for_reg_cond_nvlink(
-			struct nvlink_device *ndev,
+			struct tnvlink_dev *tdev,
 			u32 reg,
 			u32 bit,
 			int bit_set,
 			char *bit_name,
-			u32 (*reg_readl)(struct nvlink_device *, u32),
+			u32 (*reg_readl)(struct tnvlink_dev *, u32),
 			u32 *reg_val);
 
-void minion_dump_pc_trace(struct nvlink_device *ndev);
-void minion_dump_registers(struct nvlink_device *ndev);
-int minion_boot(struct nvlink_device *ndev);
-int init_nvhs_phy(struct nvlink_device *ndev);
-int minion_send_cmd(struct nvlink_device *ndev,
+void minion_dump_pc_trace(struct tnvlink_dev *tdev);
+void minion_dump_registers(struct tnvlink_dev *tdev);
+int minion_boot(struct tnvlink_dev *tdev);
+int init_nvhs_phy(struct tnvlink_dev *tdev);
+int minion_send_cmd(struct tnvlink_dev *tdev,
 				u32 cmd,
 				u32 scratch0_val);
-void nvlink_enable_AN0_packets(struct nvlink_device *ndev);
-void nvlink_config_common_intr(struct nvlink_device *ndev);
-void nvlink_enable_link_interrupts(struct nvlink_device *ndev);
-void minion_service_falcon_intr(struct nvlink_device *ndev);
+void nvlink_enable_AN0_packets(struct tnvlink_dev *tdev);
+void nvlink_config_common_intr(struct tnvlink_dev *tdev);
+void nvlink_enable_link_interrupts(struct tnvlink_dev *tdev);
+void minion_service_falcon_intr(struct tnvlink_dev *tdev);
 irqreturn_t t19x_nvlink_endpt_isr(int irq, void *dev_id);
 
-void init_single_lane_params(struct nvlink_device *ndev);
+void init_single_lane_params(struct tnvlink_dev *tdev);
 u32 t19x_nvlink_get_link_state(struct nvlink_device *ndev);
 u32 t19x_nvlink_get_link_mode(struct nvlink_device *ndev);
 int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode);
@@ -130,17 +294,15 @@ u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev,
 				bool is_rx_sublink);
 int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 				u32 mode);
-int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode);
-void nvlink_enable_AN0_packets(struct nvlink_device *ndev);
-int nvlink_retrain_link(struct nvlink_device *ndev, bool from_off);
+int nvlink_retrain_link(struct tnvlink_dev *tdev, bool from_off);
 
 #ifdef CONFIG_DEBUG_FS
-void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev);
-void t19x_nvlink_endpt_debugfs_deinit(struct nvlink_device *ndev);
+void t19x_nvlink_endpt_debugfs_init(struct tnvlink_dev *tdev);
+void t19x_nvlink_endpt_debugfs_deinit(struct tnvlink_dev *tdev);
 #else
-static inline void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev) {}
+static inline void t19x_nvlink_endpt_debugfs_init(struct tnvlink_dev *tdev) {}
 static inline void t19x_nvlink_endpt_debugfs_deinit(
-						struct nvlink_device *ndev) {}
+						struct tnvlink_dev *tdev) {}
 #endif /* CONFIG_DEBUG_FS  */
 
 #endif /* T19X_NVLINK_ENDPT_H */

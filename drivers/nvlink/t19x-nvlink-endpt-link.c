@@ -36,7 +36,9 @@ const struct single_lane_params entry_100us_sl_params = {
 
 u32 t19x_nvlink_get_link_state(struct nvlink_device *ndev)
 {
-	return (nvlw_nvl_readl(ndev, NVL_LINK_STATE) &
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)ndev->priv;
+
+	return (nvlw_nvl_readl(tdev, NVL_LINK_STATE) &
 				NVL_LINK_STATE_STATE_MASK);
 }
 
@@ -79,9 +81,10 @@ u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink)
 	u32 reg_val;
 	u8 state;
 	u32 sublink_mode;
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)ndev->priv;
 
 	if (!is_rx_sublink) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_SL0_SLSM_STATUS_TX);
+		reg_val = nvlw_nvl_readl(tdev, NVL_SL0_SLSM_STATUS_TX);
 		state = (reg_val & NVL_SL0_SLSM_STATUS_TX_PRIMARY_STATE_MASK) >>
 				NVL_SL0_SLSM_STATUS_TX_PRIMARY_STATE_SHIFT;
 
@@ -107,7 +110,7 @@ u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink)
 			break;
 		}
 	} else {
-		reg_val = nvlw_nvl_readl(ndev, NVL_SL1_SLSM_STATUS_RX);
+		reg_val = nvlw_nvl_readl(tdev, NVL_SL1_SLSM_STATUS_RX);
 		state = (reg_val & NVL_SL1_SLSM_STATUS_RX_PRIMARY_STATE_MASK) >>
 				NVL_SL1_SLSM_STATUS_RX_PRIMARY_STATE_SHIFT;
 
@@ -140,9 +143,10 @@ u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink)
 void t19x_nvlink_get_tx_sublink_state(struct nvlink_device *ndev,
 				u32 *tx_sublink_state)
 {
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)ndev->priv;
 	u32 reg_val;
 
-	reg_val = nvlw_nvl_readl(ndev, NVL_SL0_SLSM_STATUS_TX);
+	reg_val = nvlw_nvl_readl(tdev, NVL_SL0_SLSM_STATUS_TX);
 	*tx_sublink_state = (reg_val &
 			NVL_SL0_SLSM_STATUS_TX_PRIMARY_STATE_MASK) >>
 			NVL_SL0_SLSM_STATUS_TX_PRIMARY_STATE_SHIFT;
@@ -151,9 +155,10 @@ void t19x_nvlink_get_tx_sublink_state(struct nvlink_device *ndev,
 void t19x_nvlink_get_rx_sublink_state(struct nvlink_device *ndev,
 				u32 *rx_sublink_state)
 {
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)ndev->priv;
 	u32 reg_val;
 
-	reg_val = nvlw_nvl_readl(ndev, NVL_SL1_SLSM_STATUS_RX);
+	reg_val = nvlw_nvl_readl(tdev, NVL_SL1_SLSM_STATUS_RX);
 	*rx_sublink_state = (reg_val &
 			NVL_SL1_SLSM_STATUS_RX_PRIMARY_STATE_MASK) >>
 			NVL_SL1_SLSM_STATUS_RX_PRIMARY_STATE_SHIFT;
@@ -162,12 +167,12 @@ void t19x_nvlink_get_rx_sublink_state(struct nvlink_device *ndev,
 
 
 /* Configure and Start the PRBS generator */
-int t19x_nvlink_prbs_gen_en(struct nvlink_device *ndev)
+static int t19x_nvlink_prbs_gen_en(struct tnvlink_dev *tdev)
 {
 	u32 reg_val;
 
 	/* Not specified in doc but is required as per HW team */
-	nvlw_nvl_writel(ndev, NVL_SL1_RXSLSM_TIMEOUT_2, 0);
+	nvlw_nvl_writel(tdev, NVL_SL1_RXSLSM_TIMEOUT_2, 0);
 
 	/*
 	 * Minion will set these *_PBRS_* and *_SCRAM_* registers
@@ -177,19 +182,19 @@ int t19x_nvlink_prbs_gen_en(struct nvlink_device *ndev)
 	 * and *_SCRAM_* values. Otherwise, link training fails.
 	 */
 
-	reg_val = nvlw_nvl_readl(ndev, NVL_TXIOBIST_CONFIG);
+	reg_val = nvlw_nvl_readl(tdev, NVL_TXIOBIST_CONFIG);
 	reg_val |= BIT(NVL_TXIOBIST_CONFIG_DPG_PRBSSEEDLD);
-	nvlw_nvl_writel(ndev, NVL_TXIOBIST_CONFIG, reg_val);
+	nvlw_nvl_writel(tdev, NVL_TXIOBIST_CONFIG, reg_val);
 
-	reg_val = nvlw_nvl_readl(ndev, NVL_TXIOBIST_CONFIG);
+	reg_val = nvlw_nvl_readl(tdev, NVL_TXIOBIST_CONFIG);
 	reg_val &= ~BIT(NVL_TXIOBIST_CONFIG_DPG_PRBSSEEDLD);
-	nvlw_nvl_writel(ndev, NVL_TXIOBIST_CONFIG, reg_val);
+	nvlw_nvl_writel(tdev, NVL_TXIOBIST_CONFIG, reg_val);
 
 	return 0;
 }
 
 /* Put RX in calibration */
-int t19x_nvlink_rxcal_enable(struct nvlink_device *ndev)
+static int t19x_nvlink_rxcal_enable(struct tnvlink_dev *tdev)
 {
 	/* TODO: Put RX in calibration */
 
@@ -199,6 +204,7 @@ int t19x_nvlink_rxcal_enable(struct nvlink_device *ndev)
 int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 				u32 mode)
 {
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)ndev->priv;
 	u32 rx_sublink_state, tx_sublink_state;
 	u32 reg_val, timeout_us;
 	int status = 0;
@@ -210,7 +216,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 
 	/* Check if SLSM is ready to accept a sublink change request */
 	do {
-		reg_val = nvlw_nvl_readl(ndev, NVL_SUBLINK_CHANGE);
+		reg_val = nvlw_nvl_readl(tdev, NVL_SUBLINK_CHANGE);
 		if ((reg_val & NVL_SUBLINK_CHANGE_STATUS_MASK) ==
 					NVL_SUBLINK_CHANGE_STATUS_DONE)
 			break;
@@ -241,7 +247,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			break;
 
 		case NVLINK_TX_PRBS_EN:
-			status = t19x_nvlink_prbs_gen_en(ndev);
+			status = t19x_nvlink_prbs_gen_en(tdev);
 			if (status) {
 				nvlink_err("Unable to start PRBS generator"
 					" for link");
@@ -263,7 +269,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			}
 
 			nvlink_dbg("Changing TX sublink state to High Speed");
-			reg_val = nvlw_nvl_readl(ndev, NVL_SUBLINK_CHANGE);
+			reg_val = nvlw_nvl_readl(tdev, NVL_SUBLINK_CHANGE);
 			reg_val &= ~NVL_SUBLINK_CHANGE_NEWSTATE_F(~0);
 			reg_val |= NVL_SUBLINK_CHANGE_NEWSTATE_F(
 					NVL_SUBLINK_CHANGE_NEWSTATE_HS);
@@ -273,11 +279,11 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			reg_val &= ~NVL_SUBLINK_CHANGE_ACTION_F(~0);
 			reg_val |= NVL_SUBLINK_CHANGE_ACTION_F(
 					NVL_SUBLINK_CHANGE_ACTION_SLSM_CHANGE);
-			nvlw_nvl_writel(ndev, NVL_SUBLINK_CHANGE, reg_val);
+			nvlw_nvl_writel(tdev, NVL_SUBLINK_CHANGE, reg_val);
 
 			timeout_us = SUBLINK_TIMEOUT_MS * 1000;
 			do {
-				reg_val = nvlw_nvl_readl(ndev,
+				reg_val = nvlw_nvl_readl(tdev,
 							NVL_SUBLINK_CHANGE);
 				if ((reg_val &
 				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
@@ -311,7 +317,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			}
 
 			nvlink_dbg("Changing TX sublink state to Safe mode");
-			reg_val = nvlw_nvl_readl(ndev, NVL_SUBLINK_CHANGE);
+			reg_val = nvlw_nvl_readl(tdev, NVL_SUBLINK_CHANGE);
 			reg_val &= ~NVL_SUBLINK_CHANGE_NEWSTATE_F(~0);
 			reg_val |= NVL_SUBLINK_CHANGE_NEWSTATE_F(
 					NVL_SUBLINK_CHANGE_NEWSTATE_SAFE);
@@ -321,11 +327,11 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			reg_val &= ~NVL_SUBLINK_CHANGE_ACTION_F(~0);
 			reg_val |= NVL_SUBLINK_CHANGE_ACTION_F(
 					NVL_SUBLINK_CHANGE_ACTION_SLSM_CHANGE);
-			nvlw_nvl_writel(ndev, NVL_SUBLINK_CHANGE, reg_val);
+			nvlw_nvl_writel(tdev, NVL_SUBLINK_CHANGE, reg_val);
 
 			timeout_us = SUBLINK_TIMEOUT_MS * 1000;
 			do {
-				reg_val = nvlw_nvl_readl(ndev,
+				reg_val = nvlw_nvl_readl(tdev,
 							NVL_SUBLINK_CHANGE);
 				if ((reg_val &
 				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
@@ -352,7 +358,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			break;
 
 		case NVLINK_TX_ENABLE_PM:
-			if (!(ndev->link.sl_params.enabled)) {
+			if (!(tdev->tlink.sl_params.enabled)) {
 				nvlink_err("Single-Lane (SL / 1/8th) mode is"
 					" disabled due to the selected SL"
 					" policy. Can't enable SL mode for the"
@@ -363,7 +369,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 
 			nvlink_dbg("Enabling Single-Lane (1/8th) mode for the"
 				" TX sublink");
-			reg_val = nvlw_nvltlc_readl(ndev,
+			reg_val = nvlw_nvltlc_readl(tdev,
 						NVLTLC_TX_PWRM_IC_SW_CTRL);
 			reg_val |=
 				BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_SOFTWAREDESIRED);
@@ -371,7 +377,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 				~BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_HARDWAREDISABLE);
 			reg_val |=
 				BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_COUNTSTART);
-			nvlw_nvltlc_writel(ndev,
+			nvlw_nvltlc_writel(tdev,
 					NVLTLC_TX_PWRM_IC_SW_CTRL,
 					reg_val);
 
@@ -380,7 +386,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 		case NVLINK_TX_DISABLE_PM:
 			nvlink_dbg("Disabling Single-Lane (1/8th) mode for the"
 				" TX sublink");
-			reg_val = nvlw_nvltlc_readl(ndev,
+			reg_val = nvlw_nvltlc_readl(tdev,
 						NVLTLC_TX_PWRM_IC_SW_CTRL);
 			reg_val &=
 				~BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_SOFTWAREDESIRED);
@@ -388,7 +394,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 				BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_HARDWAREDISABLE);
 			reg_val &=
 				~BIT(NVLTLC_TX_PWRM_IC_SW_CTRL_COUNTSTART);
-			nvlw_nvltlc_writel(ndev,
+			nvlw_nvltlc_writel(tdev,
 					NVLTLC_TX_PWRM_IC_SW_CTRL,
 					reg_val);
 
@@ -408,7 +414,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			/* TODO */
 			break;
 		case NVLINK_RX_RXCAL:
-			status = t19x_nvlink_rxcal_enable(ndev);
+			status = t19x_nvlink_rxcal_enable(tdev);
 			if (status) {
 				nvlink_err("Unable to put RX"
 					" in RXCAL for link");
@@ -417,7 +423,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			break;
 
 		case NVLINK_RX_ENABLE_PM:
-			if (!(ndev->link.sl_params.enabled)) {
+			if (!(tdev->tlink.sl_params.enabled)) {
 				nvlink_err("Single-Lane (SL / 1/8th) mode is"
 					" disabled due to the selected SL"
 					" policy. Can't enable SL mode for the"
@@ -428,7 +434,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 
 			nvlink_dbg("Enabling Single-Lane (1/8th) mode for the"
 				" RX sublink");
-			reg_val = nvlw_nvltlc_readl(ndev,
+			reg_val = nvlw_nvltlc_readl(tdev,
 						NVLTLC_RX_PWRM_IC_SW_CTRL);
 			reg_val |=
 				BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_SOFTWAREDESIRED);
@@ -436,7 +442,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 				~BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_HARDWAREDISABLE);
 			reg_val |=
 				BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_COUNTSTART);
-			nvlw_nvltlc_writel(ndev,
+			nvlw_nvltlc_writel(tdev,
 					NVLTLC_RX_PWRM_IC_SW_CTRL,
 					reg_val);
 
@@ -445,7 +451,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 		case NVLINK_RX_DISABLE_PM:
 			nvlink_dbg("Disabling Single-Lane (1/8th) mode for the"
 				" RX sublink");
-			reg_val = nvlw_nvltlc_readl(ndev,
+			reg_val = nvlw_nvltlc_readl(tdev,
 						NVLTLC_RX_PWRM_IC_SW_CTRL);
 			reg_val &=
 				~BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_SOFTWAREDESIRED);
@@ -453,7 +459,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 				BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_HARDWAREDISABLE);
 			reg_val &=
 				~BIT(NVLTLC_RX_PWRM_IC_SW_CTRL_COUNTSTART);
-			nvlw_nvltlc_writel(ndev,
+			nvlw_nvltlc_writel(tdev,
 					NVLTLC_RX_PWRM_IC_SW_CTRL,
 					reg_val);
 
@@ -470,6 +476,7 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 
 int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 {
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)ndev->priv;
 	u32 link_state;
 	u32 reg_val;
 	int status = 0;
@@ -490,7 +497,7 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 		nvlink_dbg("Changing Link state to Safe for link");
 
 		if (link_state == NVL_LINK_STATE_STATE_INIT) {
-			reg_val = nvlw_nvl_readl(ndev, NVL_LINK_CHANGE);
+			reg_val = nvlw_nvl_readl(tdev, NVL_LINK_CHANGE);
 			reg_val &= ~NVL_LINK_CHANGE_NEWSTATE_F(~0);
 			reg_val |= NVL_LINK_CHANGE_NEWSTATE_F(
 					NVL_LINK_CHANGE_NEWSTATE_HWCFG);
@@ -500,13 +507,13 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 			reg_val &= ~NVL_LINK_CHANGE_ACTION_F(~0);
 			reg_val |= NVL_LINK_CHANGE_ACTION_F(
 					NVL_LINK_CHANGE_ACTION_LTSSM_CHANGE);
-			nvlw_nvl_writel(ndev, NVL_LINK_CHANGE, reg_val);
+			nvlw_nvl_writel(tdev, NVL_LINK_CHANGE, reg_val);
 		} else if (link_state == NVL_LINK_STATE_STATE_ACTIVE) {
 			/* TODO :
 			 * Disable PM first since we are moving out of
 			 * ACTIVE state.
 			 */
-			reg_val = nvlw_nvl_readl(ndev, NVL_LINK_CHANGE);
+			reg_val = nvlw_nvl_readl(tdev, NVL_LINK_CHANGE);
 			reg_val &= ~NVL_LINK_CHANGE_NEWSTATE_F(~0);
 			reg_val |= NVL_LINK_CHANGE_NEWSTATE_F(
 					NVL_LINK_CHANGE_NEWSTATE_SWCFG);
@@ -516,7 +523,7 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 			reg_val &= ~NVL_LINK_CHANGE_ACTION_F(~0);
 			reg_val |= NVL_LINK_CHANGE_ACTION_F(
 					NVL_LINK_CHANGE_ACTION_LTSSM_CHANGE);
-			nvlw_nvl_writel(ndev, NVL_LINK_CHANGE, reg_val);
+			nvlw_nvl_writel(tdev, NVL_LINK_CHANGE, reg_val);
 		}
 		break;
 
@@ -531,7 +538,7 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 		}
 
 		nvlink_dbg("changing Link state to Active...");
-		reg_val = nvlw_nvl_readl(ndev, NVL_LINK_CHANGE);
+		reg_val = nvlw_nvl_readl(tdev, NVL_LINK_CHANGE);
 		reg_val &= ~NVL_LINK_CHANGE_NEWSTATE_F(~0);
 		reg_val |= NVL_LINK_CHANGE_NEWSTATE_F(
 				NVL_LINK_CHANGE_NEWSTATE_ACTIVE);
@@ -541,12 +548,12 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 		reg_val &= ~NVL_LINK_CHANGE_ACTION_F(~0);
 		reg_val |= NVL_LINK_CHANGE_ACTION_F(
 				NVL_LINK_CHANGE_ACTION_LTSSM_CHANGE);
-		nvlw_nvl_writel(ndev, NVL_LINK_CHANGE, reg_val);
+		nvlw_nvl_writel(tdev, NVL_LINK_CHANGE, reg_val);
 
 		break;
 
 	case NVLINK_LINK_ENABLE_PM:
-		if (!(ndev->link.sl_params.enabled)) {
+		if (!(tdev->tlink.sl_params.enabled)) {
 			nvlink_err("Single-Lane (SL / 1/8th) mode is disabled"
 				" due to the selected SL policy. Can't enable"
 				" SL mode.");
@@ -584,15 +591,15 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 			 * instruct MINION to enter/exit SL mode as per the
 			 * programmed SL policy.
 			 */
-			status = minion_send_cmd(ndev,
+			status = minion_send_cmd(tdev,
 					MINION_NVLINK_DL_CMD_COMMAND_ENABLEPM,
 					0);
 			if (status < 0) {
 				nvlink_err("Error encountered while sending the"
 					" ENABLEPM command to the MINION");
 				nvlink_err("Failed to enable SL (1/8th) mode");
-				minion_dump_pc_trace(ndev);
-				minion_dump_registers(ndev);
+				minion_dump_pc_trace(tdev);
+				minion_dump_registers(tdev);
 				break;
 			}
 		} else {
@@ -631,15 +638,15 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 			}
 
 			/* Disable Single-Lane mode in MINION */
-			status = minion_send_cmd(ndev,
+			status = minion_send_cmd(tdev,
 					MINION_NVLINK_DL_CMD_COMMAND_DISABLEPM,
 					0);
 			if (status < 0) {
 				nvlink_err("Error encountered while sending the"
 					" DISABLEPM command to the MINION");
 				nvlink_err("Failed to disable SL (1/8th) mode");
-				minion_dump_pc_trace(ndev);
-				minion_dump_registers(ndev);
+				minion_dump_pc_trace(tdev);
+				minion_dump_registers(tdev);
 				break;
 			}
 		} else {
@@ -663,10 +670,10 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 }
 
 /* Initialize TLC settings which dictate Single-Lane (1/8th) mode policy */
-void init_single_lane_params(struct nvlink_device *ndev)
+void init_single_lane_params(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
-	struct single_lane_params *sl_params = &ndev->link.sl_params;
+	struct single_lane_params *sl_params = &tdev->tlink.sl_params;
 
 	if (!(sl_params->enabled)) {
 		nvlink_dbg("Single-Lane (1/8th) mode is disabled."
@@ -679,47 +686,48 @@ void init_single_lane_params(struct nvlink_device *ndev)
 	/* Idle counter increments */
 	reg_val = NVLTLC_TX_PWRM_IC_INC_FBINC_F(sl_params->fb_ic_inc) |
 		NVLTLC_TX_PWRM_IC_INC_LPINC_F(sl_params->lp_ic_inc);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_PWRM_IC_INC, reg_val);
+	nvlw_nvltlc_writel(tdev, NVLTLC_TX_PWRM_IC_INC, reg_val);
 
 	/* Idle counter decrements */
 	reg_val = NVLTLC_TX_PWRM_IC_DEC_FBDEC_F(sl_params->fb_ic_dec) |
 		NVLTLC_TX_PWRM_IC_DEC_LPDEC_F(sl_params->lp_ic_dec);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_PWRM_IC_DEC, reg_val);
+	nvlw_nvltlc_writel(tdev, NVLTLC_TX_PWRM_IC_DEC, reg_val);
 
 	/* Entry threshold */
-	nvlw_nvltlc_writel(ndev,
+	nvlw_nvltlc_writel(tdev,
 			NVLTLC_TX_PWRM_IC_LP_ENTER_THRESHOLD,
 			sl_params->enter_thresh);
 
 	/* Exit threshold */
-	nvlw_nvltlc_writel(ndev,
+	nvlw_nvltlc_writel(tdev,
 			NVLTLC_TX_PWRM_IC_LP_EXIT_THRESHOLD,
 			sl_params->exit_thresh);
 
 	/* Idle counter saturation limit */
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_PWRM_IC_LIMIT, sl_params->ic_limit);
+	nvlw_nvltlc_writel(tdev, NVLTLC_TX_PWRM_IC_LIMIT, sl_params->ic_limit);
 }
 
 
 /* Enable ANO packets over link */
-void nvlink_enable_AN0_packets(struct nvlink_device *ndev)
+void nvlink_enable_AN0_packets(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
 
-	reg_val = nvlw_nvl_readl(ndev, NVL_LINK_CONFIG);
+	reg_val = nvlw_nvl_readl(tdev, NVL_LINK_CONFIG);
 	reg_val |= BIT(NVL_LINK_CONFIG_LINK_EN);
-	nvlw_nvl_writel(ndev, NVL_LINK_CONFIG, reg_val);
+	nvlw_nvl_writel(tdev, NVL_LINK_CONFIG, reg_val);
 }
 
-int nvlink_retrain_link_from_off(struct nvlink_device *ndev)
+static int nvlink_retrain_link_from_off(struct tnvlink_dev *tdev)
 {
 	/* We don't need this for now */
 	return -1;
 }
 
-int nvlink_retrain_link_from_safe(struct nvlink_device *ndev)
+static int nvlink_retrain_link_from_safe(struct tnvlink_dev *tdev)
 {
 	int ret;
+	struct nvlink_device *ndev = tdev->ndev;
 
 	ret = nvlink_transition_intranode_conn_hs_to_safe(ndev);
 	if (ret < 0) {
@@ -734,14 +742,15 @@ int nvlink_retrain_link_from_safe(struct nvlink_device *ndev)
 	}
 
 	/* The link has successfully retrained */
-	ndev->link.error_recoveries++;
+	tdev->tlink.error_recoveries++;
 
 	return 0;
 }
 
 /* Retrain a link from either safe mode or off */
-int nvlink_retrain_link(struct nvlink_device *ndev, bool from_off)
+int nvlink_retrain_link(struct tnvlink_dev *tdev, bool from_off)
 {
+	struct nvlink_device *ndev = tdev->ndev;
 	int ret;
 
 	if (!ndev->is_master) {
@@ -756,9 +765,9 @@ int nvlink_retrain_link(struct nvlink_device *ndev, bool from_off)
 	}
 
 	if (from_off)
-		ret = nvlink_retrain_link_from_off(ndev);
+		ret = nvlink_retrain_link_from_off(tdev);
 	else
-		ret = nvlink_retrain_link_from_safe(ndev);
+		ret = nvlink_retrain_link_from_safe(tdev);
 
 	return ret;
 }

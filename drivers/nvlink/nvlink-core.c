@@ -33,8 +33,8 @@
 #define NVLINK_TRANSITION_SAFE_TIMEOUT_MS	5
 
 struct nvlink_intranode_conn {
-        struct nvlink_device *ndev0;
-        struct nvlink_device *ndev1;
+	struct nvlink_device *ndev0;
+	struct nvlink_device *ndev1;
 };
 
 struct topology {
@@ -77,7 +77,8 @@ int nvlink_get_init_state(struct nvlink_device *ndev, enum init_state *state)
 }
 EXPORT_SYMBOL(nvlink_get_init_state);
 
-int nvlink_set_init_state(struct nvlink_device *ndev, enum init_state state)
+static int nvlink_set_init_state(struct nvlink_device *ndev,
+							enum init_state state)
 {
 	int ret = 0;
 
@@ -95,7 +96,6 @@ int nvlink_set_init_state(struct nvlink_device *ndev, enum init_state state)
 
 	return ret;
 }
-EXPORT_SYMBOL(nvlink_set_init_state);
 
 void nvlink_print_topology(void)
 {
@@ -263,11 +263,20 @@ int nvlink_register_device(struct nvlink_device *ndev)
 		goto release_mutex;
 	}
 
+	mutex_init(&ndev->init_state_mutex);
+	ret = nvlink_set_init_state(ndev, NVLINK_DEV_OFF);
+	if (ret < 0) {
+		nvlink_err("Error initializing init state to DEV_OFF");
+		mutex_destroy(&ndev->init_state_mutex);
+		goto release_mutex;
+	}
+
 	nvlink_core.ndevs[ndev->device_id] = ndev;
 	mutex_unlock(&nvlink_core.mutex);
 
 	ret = nvlink_update_topology(ndev);
 	if (ret < 0) {
+		mutex_destroy(&ndev->init_state_mutex);
 		goto fail;
 	}
 
@@ -298,7 +307,7 @@ int nvlink_register_link(struct nvlink_link *link)
 		ret = -ENODEV;
 		goto fail;
 	}
-
+	link->mode = NVLINK_LINK_OFF;
 	nvlink_core.nlinks[link->link_id] = link;
 
 	goto success;
@@ -327,7 +336,7 @@ int nvlink_unregister_device(struct nvlink_device* ndev)
 		ret = -ENODEV;
 		goto fail;
 	}
-
+	mutex_destroy(&ndev->init_state_mutex);
 	nvlink_core.ndevs[ndev->device_id] = NULL;
 
 	nvlink_core.topology.master_link_id = -1;

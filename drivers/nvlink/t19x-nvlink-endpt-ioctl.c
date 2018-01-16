@@ -24,8 +24,9 @@
 #include "nvlink-hw.h"
 #include "tegra-nvlink-mods.h"
 
-static bool is_nvlink_loopback_topology(struct nvlink_device *ndev)
+static bool is_nvlink_loopback_topology(struct tnvlink_dev *tdev)
 {
+	struct nvlink_device *ndev = tdev->ndev;
 	struct nvlink_link *link = &ndev->link;
 
 	if (link->device_id == NVLINK_ENDPT_T19X &&
@@ -35,10 +36,10 @@ static bool is_nvlink_loopback_topology(struct nvlink_device *ndev)
 	return false;
 }
 
-static int t19x_nvlink_get_caps(struct nvlink_device *ndev,
+static int t19x_nvlink_get_caps(struct tnvlink_dev *tdev,
 			struct nvlink_caps *caps)
 {
-	if (is_nvlink_loopback_topology(ndev)) {
+	if (is_nvlink_loopback_topology(tdev)) {
 		caps->nvlink_caps |= (TEGRA_CTRL_NVLINK_CAPS_SUPPORTED |
 					TEGRA_CTRL_NVLINK_CAPS_VALID);
 	} else {
@@ -98,10 +99,10 @@ static int t19x_nvlink_get_caps(struct nvlink_device *ndev,
 	return 0;
 }
 
-static int t19x_nvlink_get_status(struct nvlink_device *ndev,
+static int t19x_nvlink_get_status(struct tnvlink_dev *tdev,
 				struct nvlink_status *status)
 {
-	struct tegra_nvlink_device *tdev = ndev->priv;
+	struct nvlink_device *ndev = tdev->ndev;
 	struct nvlink_link *link = &ndev->link;
 	u32 reg_val = 0;
 	u32 state = 0;
@@ -116,7 +117,7 @@ static int t19x_nvlink_get_status(struct nvlink_device *ndev,
 					link->remote_dev_info.link_id;
 	status->link_info.local_device_link_number = link->link_id;
 
-	if (is_nvlink_loopback_topology(ndev)) {
+	if (is_nvlink_loopback_topology(tdev)) {
 		status->link_info.caps |= TEGRA_CTRL_NVLINK_CAPS_VALID;
 		status->link_info.loop_property =
 			TEGRA_CTRL_NVLINK_STATUS_LOOP_PROPERTY_LOOPBACK;
@@ -157,7 +158,7 @@ static int t19x_nvlink_get_status(struct nvlink_device *ndev,
 	t19x_nvlink_get_rx_sublink_state(ndev, &state);
 	status->link_info.rx_sublink_status = (u8)state;
 
-	reg_val = nvlw_nvl_readl(ndev, NVL_SL1_CONFIG_RX);
+	reg_val = nvlw_nvl_readl(tdev, NVL_SL1_CONFIG_RX);
 	if (reg_val & BIT(NVL_SL1_CONFIG_RX_REVERSAL_OVERRIDE)) {
 		/* Overridden */
 		if (reg_val & BIT(NVL_SL1_CONFIG_RX_LANE_REVERSE))
@@ -215,7 +216,7 @@ static int t19x_nvlink_get_status(struct nvlink_device *ndev,
 	return 0;
 }
 
-static int t19x_nvlink_clear_counters(struct nvlink_device *ndev,
+static int t19x_nvlink_clear_counters(struct tnvlink_dev *tdev,
 				struct nvlink_clear_counters *clear_counters)
 {
 	u32 reg_val = 0;
@@ -225,19 +226,19 @@ static int t19x_nvlink_clear_counters(struct nvlink_device *ndev,
 				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1 |
 				TEGRA_CTRL_NVLINK_COUNTER_TL_RX0 |
 				TEGRA_CTRL_NVLINK_COUNTER_TL_RX1)) {
-		reg_val = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL);
+		reg_val = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL);
 		if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_TL_TX0)
 			reg_val |= BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_RESETTX0);
 		if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_TL_TX1)
 			reg_val |= BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_RESETTX1);
-		nvlw_nvltlc_writel(ndev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL, reg_val);
+		nvlw_nvltlc_writel(tdev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL, reg_val);
 
-		reg_val = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL);
+		reg_val = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL);
 		if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_TL_RX0)
 			reg_val |= BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_RESETRX0);
 		if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_TL_RX1)
 			reg_val |= BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_RESETRX1);
-		nvlw_nvltlc_writel(ndev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL, reg_val);
+		nvlw_nvltlc_writel(tdev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL, reg_val);
 	}
 
 	if ((counter_mask) & (TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L0 |
@@ -248,40 +249,40 @@ static int t19x_nvlink_clear_counters(struct nvlink_device *ndev,
 			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L5 |
 			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L6 |
 			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L7)) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_SL1_ERROR_COUNT_CTRL);
+		reg_val = nvlw_nvl_readl(tdev, NVL_SL1_ERROR_COUNT_CTRL);
 		reg_val |= BIT(NVL_SL1_ERROR_COUNT_CTRL_CLEAR_LANE_CRC);
 		reg_val |= BIT(NVL_SL1_ERROR_COUNT_CTRL_CLEAR_RATES);
-		nvlw_nvl_writel(ndev, NVL_SL1_ERROR_COUNT_CTRL, reg_val);
+		nvlw_nvl_writel(tdev, NVL_SL1_ERROR_COUNT_CTRL, reg_val);
 	}
 
 	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_FLIT) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_SL1_ERROR_COUNT_CTRL);
+		reg_val = nvlw_nvl_readl(tdev, NVL_SL1_ERROR_COUNT_CTRL);
 		reg_val |= BIT(NVL_SL1_ERROR_COUNT_CTRL_CLEAR_FLIT_CRC);
 		reg_val |= BIT(NVL_SL1_ERROR_COUNT_CTRL_CLEAR_RATES);
-		nvlw_nvl_writel(ndev, NVL_SL1_ERROR_COUNT_CTRL, reg_val);
+		nvlw_nvl_writel(tdev, NVL_SL1_ERROR_COUNT_CTRL, reg_val);
 	}
 
 	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_REPLAY) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_SL0_ERROR_COUNT_CTRL);
+		reg_val = nvlw_nvl_readl(tdev, NVL_SL0_ERROR_COUNT_CTRL);
 		reg_val |= BIT(NVL_SL0_ERROR_COUNT_CTRL_CLEAR_REPLAY);
-		nvlw_nvl_writel(ndev, NVL_SL0_ERROR_COUNT_CTRL, reg_val);
+		nvlw_nvl_writel(tdev, NVL_SL0_ERROR_COUNT_CTRL, reg_val);
 	}
 
 	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_RECOVERY) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_ERROR_COUNT_CTRL);
+		reg_val = nvlw_nvl_readl(tdev, NVL_ERROR_COUNT_CTRL);
 		reg_val |= BIT(NVL_ERROR_COUNT_CTRL_CLEAR_RECOVERY);
-		nvlw_nvl_writel(ndev, NVL_ERROR_COUNT_CTRL, reg_val);
+		nvlw_nvl_writel(tdev, NVL_ERROR_COUNT_CTRL, reg_val);
 	}
 
 	return 0;
 }
 
-static bool t19x_nvlink_is_lane_reversal(struct nvlink_device *ndev)
+static bool t19x_nvlink_is_lane_reversal(struct tnvlink_dev *tdev)
 {
 	u32 reg_val;
 	bool lane_reversal;
 
-	reg_val = nvlw_nvl_readl(ndev, NVL_SL1_CONFIG_RX);
+	reg_val = nvlw_nvl_readl(tdev, NVL_SL1_CONFIG_RX);
 	if (reg_val & BIT(NVL_SL1_CONFIG_RX_REVERSAL_OVERRIDE)) {
 		if (reg_val & BIT(NVL_SL1_CONFIG_RX_LANE_REVERSE))
 			lane_reversal = true;
@@ -297,7 +298,7 @@ static bool t19x_nvlink_is_lane_reversal(struct nvlink_device *ndev)
 	return lane_reversal;
 }
 
-static void t19x_nvlink_get_lane_crc_errors(struct nvlink_device *ndev,
+static void t19x_nvlink_get_lane_crc_errors(struct tnvlink_dev *tdev,
 				struct nvlink_get_counters *get_counters)
 {
 	int i;
@@ -313,14 +314,14 @@ static void t19x_nvlink_get_lane_crc_errors(struct nvlink_device *ndev,
 
 			lane_id = i;
 
-			if (t19x_nvlink_is_lane_reversal(ndev))
+			if (t19x_nvlink_is_lane_reversal(tdev))
 				lane_id = 7 - lane_id;
 
 			if (lane_id < 4) {
-				reg_val = nvlw_nvl_readl(ndev,
+				reg_val = nvlw_nvl_readl(tdev,
 						NVL_SL1_ERROR_COUNT2_LANECRC);
 			} else {
-				reg_val = nvlw_nvl_readl(ndev,
+				reg_val = nvlw_nvl_readl(tdev,
 						NVL_SL1_ERROR_COUNT3_LANECRC);
 			}
 
@@ -388,7 +389,7 @@ static void t19x_nvlink_get_lane_crc_errors(struct nvlink_device *ndev,
 	}
 }
 
-static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
+static int t19x_nvlink_get_counters(struct tnvlink_dev *tdev,
 				struct nvlink_get_counters *get_counters)
 {
 	u32 reg_val = 0;
@@ -400,8 +401,8 @@ static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
 				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1 |
 				TEGRA_CTRL_NVLINK_COUNTER_TL_RX0 |
 				TEGRA_CTRL_NVLINK_COUNTER_TL_RX1)) {
-		reg_low = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR0_LO);
-		reg_hi = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR0_HI);
+		reg_low = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR0_LO);
+		reg_hi = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR0_HI);
 		if (reg_hi & BIT(NVLTLC_TX_DEBUG_TP_CNTR0_HI_ROLLOVER)) {
 			get_counters->bTx0_tl_counter_overflow = true;
 			reg_hi &= ~BIT(NVLTLC_TX_DEBUG_TP_CNTR0_HI_ROLLOVER);
@@ -415,8 +416,8 @@ static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
 				TEGRA_CTRL_NVLINK_COUNTER_TL_TX0)] |=
 				(((u64) 0xffffffff & reg_hi) << 32);
 
-		reg_low = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR1_LO);
-		reg_hi = nvlw_nvltlc_readl(ndev, NVLTLC_TX_DEBUG_TP_CNTR1_HI);
+		reg_low = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR1_LO);
+		reg_hi = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR1_HI);
 		if (reg_hi & BIT(NVLTLC_TX_DEBUG_TP_CNTR1_HI_ROLLOVER)) {
 			get_counters->bTx1_tl_counter_overflow = true;
 			reg_hi &= ~BIT(NVLTLC_TX_DEBUG_TP_CNTR1_HI_ROLLOVER);
@@ -430,8 +431,8 @@ static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
 				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1)] |=
 				(((u64) 0xffffffff & reg_hi) << 32);
 
-		reg_low = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR0_LO);
-		reg_hi = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR0_HI);
+		reg_low = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR0_LO);
+		reg_hi = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR0_HI);
 		if (reg_hi & BIT(NVLTLC_RX_DEBUG_TP_CNTR0_HI_ROLLOVER)) {
 			get_counters->bRx0_tl_counter_overflow = true;
 			reg_hi &= ~BIT(NVLTLC_RX_DEBUG_TP_CNTR0_HI_ROLLOVER);
@@ -445,8 +446,8 @@ static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
 				TEGRA_CTRL_NVLINK_COUNTER_TL_RX0)] |=
 				(((u64) 0xffffffff & reg_hi) << 32);
 
-		reg_low = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR1_LO);
-		reg_hi = nvlw_nvltlc_readl(ndev, NVLTLC_RX_DEBUG_TP_CNTR1_HI);
+		reg_low = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR1_LO);
+		reg_hi = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR1_HI);
 		if (reg_hi & BIT(NVLTLC_RX_DEBUG_TP_CNTR1_HI_ROLLOVER)) {
 			get_counters->bRx1_tl_counter_overflow = true;
 			reg_hi &= ~BIT(NVLTLC_RX_DEBUG_TP_CNTR1_HI_ROLLOVER);
@@ -463,18 +464,18 @@ static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
 
 	/* Get the count of flit CRC errors */
 	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_FLIT) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_SL1_ERROR_COUNT1);
+		reg_val = nvlw_nvl_readl(tdev, NVL_SL1_ERROR_COUNT1);
 		get_counters->nvlink_counters[BIT_IDX_32(
 			TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_FLIT)] =
 			(u64)NVL_SL1_ERROR_COUNT1_FLIT_CRC_ERRORS_V(reg_val);
 	}
 
 	/* Get the count of lane CRC errors */
-	t19x_nvlink_get_lane_crc_errors(ndev, get_counters);
+	t19x_nvlink_get_lane_crc_errors(tdev, get_counters);
 
 	/* Get the count of replays for the link */
 	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_REPLAY) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_SL0_ERROR_COUNT4);
+		reg_val = nvlw_nvl_readl(tdev, NVL_SL0_ERROR_COUNT4);
 		get_counters->nvlink_counters[BIT_IDX_32(
 			TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_REPLAY)] =
 			(u64) NVL_SL0_ERROR_COUNT4_REPLAY_EVENTS_V(reg_val);
@@ -482,7 +483,7 @@ static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
 
 	/*  Get the count of HW recoveries for the link */
 	if (counter_mask & TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_RECOVERY) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_ERROR_COUNT1);
+		reg_val = nvlw_nvl_readl(tdev, NVL_ERROR_COUNT1);
 		get_counters->nvlink_counters[BIT_IDX_32(
 			TEGRA_CTRL_NVLINK_COUNTER_DL_TX_ERR_RECOVERY)] =
 			(u64) NVL_ERROR_COUNT1_RECOVERY_EVENTS_V(reg_val);
@@ -491,9 +492,10 @@ static int t19x_nvlink_get_counters(struct nvlink_device *ndev,
 	return 0;
 }
 
-static int t19x_nvlink_get_err_info(struct nvlink_device *ndev,
+static int t19x_nvlink_get_err_info(struct tnvlink_dev *tdev,
 				struct nvlink_get_err_info *get_err_info)
 {
+	struct nvlink_device *ndev = tdev->ndev;
 	u32 reg_val = 0;
 	u32 state = 0;
 	bool excess_err_dl = false;
@@ -504,23 +506,23 @@ static int t19x_nvlink_get_err_info(struct nvlink_device *ndev,
 	get_err_info->link_err_info.tl_intr_en = 0;
 
 	get_err_info->link_err_info.tlc_tx_err_status0 =
-				ndev->link.tlc_tx_err_status0;
+				tdev->tlink.tlc_tx_err_status0;
 	get_err_info->link_err_info.tlc_rx_err_status0 =
-				ndev->link.tlc_rx_err_status0;
+				tdev->tlink.tlc_rx_err_status0;
 	get_err_info->link_err_info.tlc_rx_err_status1 =
-				ndev->link.tlc_rx_err_status1;
+				tdev->tlink.tlc_rx_err_status1;
 
 	get_err_info->link_err_info.tlc_tx_err_log_en0 =
-				nvlw_nvltlc_readl(ndev, NVLTLC_TX_ERR_STATUS_0);
+				nvlw_nvltlc_readl(tdev, NVLTLC_TX_ERR_STATUS_0);
 	get_err_info->link_err_info.tlc_rx_err_log_en0 =
-				nvlw_nvltlc_readl(ndev, NVLTLC_RX_ERR_STATUS_0);
+				nvlw_nvltlc_readl(tdev, NVLTLC_RX_ERR_STATUS_0);
 	get_err_info->link_err_info.tlc_rx_err_log_en1 =
-				nvlw_nvltlc_readl(ndev, NVLTLC_RX_ERR_STATUS_1);
+				nvlw_nvltlc_readl(tdev, NVLTLC_RX_ERR_STATUS_1);
 
 	/* Reset Errlog after clients get the value */
-	ndev->link.tlc_tx_err_status0 = 0;
-	ndev->link.tlc_rx_err_status0 = 0;
-	ndev->link.tlc_rx_err_status1 = 0;
+	tdev->tlink.tlc_tx_err_status0 = 0;
+	tdev->tlink.tlc_rx_err_status0 = 0;
+	tdev->tlink.tlc_rx_err_status1 = 0;
 
 	/* MIF blocks doesn't exist on tegra. Hence 0 the mif err fields */
 	get_err_info->link_err_info.mif_tx_err_status0 = 0;
@@ -532,12 +534,12 @@ static int t19x_nvlink_get_err_info(struct nvlink_device *ndev,
 	t19x_nvlink_get_rx_sublink_state(ndev, &state);
 	get_err_info->link_err_info.dl_speed_status_rx = state;
 
-	if (nvlw_nvl_readl(ndev, NVL_INTR_STALL_EN) &
+	if (nvlw_nvl_readl(tdev, NVL_INTR_STALL_EN) &
 				BIT(NVL_INTR_STALL_EN_RX_SHORT_ERROR_RATE)) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_INTR);
+		reg_val = nvlw_nvl_readl(tdev, NVL_INTR);
 		if (reg_val & BIT(NVL_INTR_RX_SHORT_ERROR_RATE)) {
 			excess_err_dl = true;
-			nvlw_nvl_writel(ndev, NVL_INTR, reg_val);
+			nvlw_nvl_writel(tdev, NVL_INTR, reg_val);
 		}
 	}
 
@@ -547,36 +549,38 @@ static int t19x_nvlink_get_err_info(struct nvlink_device *ndev,
 }
 
 /* Get the number of successful error recoveries */
-static int t19x_nvlink_get_error_recoveries(struct nvlink_device *ndev,
+static int t19x_nvlink_get_error_recoveries(struct tnvlink_dev *tdev,
 			struct nvlink_get_error_recoveries *get_err_recoveries)
 {
-
-	get_err_recoveries->num_recoveries = ndev->link.error_recoveries;
+	get_err_recoveries->num_recoveries = tdev->tlink.error_recoveries;
 	/* Clear the counts */
-	ndev->link.error_recoveries = 0;
+	tdev->tlink.error_recoveries = 0;
 
 	return 0;
 }
 
-static int t19x_nvlink_setup_eom(struct nvlink_device *ndev,
+static int t19x_nvlink_setup_eom(struct tnvlink_dev *tdev,
 				struct nvlink_setup_eom *setup_eom)
 {
-	return minion_send_cmd(ndev, MINION_NVLINK_DL_CMD_COMMAND_CONFIGEOM,
+	return minion_send_cmd(tdev, MINION_NVLINK_DL_CMD_COMMAND_CONFIGEOM,
 			setup_eom->params);
 }
 
-static void nvlink_get_endpoint_state(struct nvlink_device *ndev,
+static void nvlink_get_endpoint_state(struct tnvlink_dev *tdev,
 			struct nvlink_link_state *link_state)
 {
+	struct nvlink_device *ndev = tdev->ndev;
+
 	link_state->link_mode = t19x_nvlink_get_link_mode(ndev);
 	link_state->tx_sublink_mode = t19x_nvlink_get_sublink_mode(ndev, 0);
 	link_state->rx_sublink_mode = t19x_nvlink_get_sublink_mode(ndev, 1);
 }
 
 
-static int t19x_nvlink_train_intranode_conn(struct nvlink_device *ndev,
+static int t19x_nvlink_train_intranode_conn(struct tnvlink_dev *tdev,
 		struct nvlink_train_intranode_conn *train_intranode_conn)
 {
+	struct nvlink_device *ndev = tdev->ndev;
 	int ret;
 
 	if (train_intranode_conn->src_end_point.node_id !=
@@ -622,9 +626,9 @@ static int t19x_nvlink_train_intranode_conn(struct nvlink_device *ndev,
 		break;
 	}
 
-	nvlink_get_endpoint_state(ndev, &train_intranode_conn->src_end_state);
+	nvlink_get_endpoint_state(tdev, &train_intranode_conn->src_end_state);
 
-	if (is_nvlink_loopback_topology(ndev)) {
+	if (is_nvlink_loopback_topology(tdev)) {
 		train_intranode_conn->dst_end_state.link_mode =
 			train_intranode_conn->src_end_state.link_mode;
 		train_intranode_conn->dst_end_state.tx_sublink_mode =
@@ -643,7 +647,7 @@ static int t19x_nvlink_train_intranode_conn(struct nvlink_device *ndev,
  * Get count for LP hardware counters that are specified in counter_valid_mask.
  * Clear unsupported ones in counter_valid_mask.
  */
-static int t19x_nvlink_get_lp_counters(struct nvlink_device *ndev,
+static int t19x_nvlink_get_lp_counters(struct tnvlink_dev *tdev,
 				struct nvlink_get_lp_counters *get_lp_counters)
 {
 	u32 counter_valid_mask_out = 0;
@@ -653,7 +657,7 @@ static int t19x_nvlink_get_lp_counters(struct nvlink_device *ndev,
 
 	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_NVHS;
 	if (counter_valid_mask & BIT(cnt_idx)) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_A);
+		reg_val = nvlw_nvl_readl(tdev, NVL_STATS_A);
 		get_lp_counters->counter_values[cnt_idx] =
 				NVL_STATS_A_COUNT_TX_STATE_NVHS_V(reg_val);
 		counter_valid_mask_out |= BIT(cnt_idx);
@@ -661,7 +665,7 @@ static int t19x_nvlink_get_lp_counters(struct nvlink_device *ndev,
 
 	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_EIGHTH;
 	if (counter_valid_mask & BIT(cnt_idx)) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_A);
+		reg_val = nvlw_nvl_readl(tdev, NVL_STATS_A);
 		get_lp_counters->counter_values[cnt_idx] =
 				NVL_STATS_A_COUNT_TX_STATE_EIGHTH_V(reg_val);
 		counter_valid_mask_out |= BIT(cnt_idx);
@@ -669,7 +673,7 @@ static int t19x_nvlink_get_lp_counters(struct nvlink_device *ndev,
 
 	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_OTHER;
 	if (counter_valid_mask & BIT(cnt_idx)) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_B);
+		reg_val = nvlw_nvl_readl(tdev, NVL_STATS_B);
 		get_lp_counters->counter_values[cnt_idx] =
 				NVL_STATS_B_COUNT_TX_STATE_OTHER_V(reg_val);
 		counter_valid_mask_out |= BIT(cnt_idx);
@@ -677,7 +681,7 @@ static int t19x_nvlink_get_lp_counters(struct nvlink_device *ndev,
 
 	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_NUM_TX_LP_ENTER;
 	if (counter_valid_mask & BIT(cnt_idx)) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_D);
+		reg_val = nvlw_nvl_readl(tdev, NVL_STATS_D);
 		get_lp_counters->counter_values[cnt_idx] =
 				NVL_STATS_D_NUM_TX_LP_ENTER_V(reg_val);
 		counter_valid_mask_out |= BIT(cnt_idx);
@@ -685,7 +689,7 @@ static int t19x_nvlink_get_lp_counters(struct nvlink_device *ndev,
 
 	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_NUM_TX_LP_EXIT;
 	if (counter_valid_mask & BIT(cnt_idx)) {
-		reg_val = nvlw_nvl_readl(ndev, NVL_STATS_D);
+		reg_val = nvlw_nvl_readl(tdev, NVL_STATS_D);
 		get_lp_counters->counter_values[cnt_idx] =
 				NVL_STATS_D_NUM_TX_LP_EXIT_V(reg_val);
 		counter_valid_mask_out |= BIT(cnt_idx);
@@ -696,14 +700,14 @@ static int t19x_nvlink_get_lp_counters(struct nvlink_device *ndev,
 	return 0;
 }
 
-static int t19x_nvlink_clear_lp_counters(struct nvlink_device *ndev,
+static int t19x_nvlink_clear_lp_counters(struct tnvlink_dev *tdev,
 			struct nvlink_clear_lp_counters *clear_lp_counters)
 {
 	u32 reg_val;
 
-	reg_val = nvlw_nvl_readl(ndev, NVL_STATS_CTRL);
+	reg_val = nvlw_nvl_readl(tdev, NVL_STATS_CTRL);
 	reg_val |= BIT(NVL_STATS_CTRL_CLEAR_ALL);
-	nvlw_nvl_writel(ndev, NVL_STATS_CTRL, reg_val);
+	nvlw_nvl_writel(tdev, NVL_STATS_CTRL, reg_val);
 
 	return 0;
 }
@@ -711,7 +715,7 @@ static int t19x_nvlink_clear_lp_counters(struct nvlink_device *ndev,
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
-	struct nvlink_device *ndev = file->private_data;
+	struct tnvlink_dev *tdev = file->private_data;
 	struct nvlink_caps *caps;
 	struct nvlink_status *status;
 	struct nvlink_clear_counters *clear_counters;
@@ -726,8 +730,8 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 	void *arg_copy;
 	int ret = 0;
 
-	if (!ndev) {
-		nvlink_err("Invalid nvlink device");
+	if (!tdev) {
+		nvlink_err("Invalid Tegra nvlink device");
 		return -ENODEV;
 	}
 
@@ -752,7 +756,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 		}
 
 		caps = (struct nvlink_caps *) arg_copy;
-		ret = t19x_nvlink_get_caps(ndev, caps);
+		ret = t19x_nvlink_get_caps(tdev, caps);
 		if (ret < 0) {
 			nvlink_err("nvlink get caps failed");
 			goto cleanup;
@@ -768,7 +772,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 		}
 
 		status = (struct nvlink_status *) arg_copy;
-		ret = t19x_nvlink_get_status(ndev, status);
+		ret = t19x_nvlink_get_status(tdev, status);
 		if (ret < 0) {
 			nvlink_err("nvlink get status failed");
 			goto cleanup;
@@ -785,7 +789,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 
 		clear_counters = (struct nvlink_clear_counters *) arg_copy;
 		if (clear_counters->link_mask & 0x1) {
-			ret = t19x_nvlink_clear_counters(ndev, clear_counters);
+			ret = t19x_nvlink_clear_counters(tdev, clear_counters);
 			if (ret < 0) {
 				nvlink_err("nvlink clear counters failed");
 				goto cleanup;
@@ -812,7 +816,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 			goto cleanup;
 		}
 
-		ret = t19x_nvlink_get_counters(ndev, get_counters);
+		ret = t19x_nvlink_get_counters(tdev, get_counters);
 		if (ret < 0) {
 			nvlink_err("nvlink get counters failed");
 			goto cleanup;
@@ -828,7 +832,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 		}
 
 		get_err_info = (struct nvlink_get_err_info *) arg_copy;
-		ret = t19x_nvlink_get_err_info(ndev, get_err_info);
+		ret = t19x_nvlink_get_err_info(tdev, get_err_info);
 		if (ret < 0) {
 			nvlink_err("nvlink get err info failed");
 			goto cleanup;
@@ -846,7 +850,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 		get_err_recoveries = (struct nvlink_get_error_recoveries *)
 					arg_copy;
 		if (get_err_recoveries->link_mask & 0x1) {
-			ret = t19x_nvlink_get_error_recoveries(ndev,
+			ret = t19x_nvlink_get_error_recoveries(tdev,
 							get_err_recoveries);
 			if (ret < 0) {
 				nvlink_err("nvlink get err recoveries failed");
@@ -874,7 +878,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 			goto cleanup;
 		}
 
-		ret = t19x_nvlink_setup_eom(ndev, setup_eom);
+		ret = t19x_nvlink_setup_eom(tdev, setup_eom);
 		if (ret < 0) {
 			nvlink_err("nvlink setup eom failed");
 			goto cleanup;
@@ -891,7 +895,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 
 		train_intranode_conn =
 				(struct nvlink_train_intranode_conn *) arg_copy;
-		ret = t19x_nvlink_train_intranode_conn(ndev,
+		ret = t19x_nvlink_train_intranode_conn(tdev,
 				train_intranode_conn);
 		train_intranode_conn->status = ret;
 		if (ret < 0) {
@@ -915,7 +919,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 			goto cleanup;
 		}
 
-		ret = t19x_nvlink_get_lp_counters(ndev, get_lp_counters);
+		ret = t19x_nvlink_get_lp_counters(tdev, get_lp_counters);
 		if (ret < 0) {
 			nvlink_err("nvlink get LP counters failed");
 			goto cleanup;
@@ -938,7 +942,7 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 			goto cleanup;
 		}
 
-		ret = t19x_nvlink_clear_lp_counters(ndev, clear_lp_counters);
+		ret = t19x_nvlink_clear_lp_counters(tdev, clear_lp_counters);
 		if (ret < 0) {
 			nvlink_err("nvlink clear LP counters failed");
 			goto cleanup;
@@ -966,9 +970,11 @@ static int t19x_nvlink_endpt_open(struct inode *in, struct file *filp)
 {
 	int ret = 0;
 	unsigned int minor = iminor(in);
-	struct nvlink_device *ndev = container_of(in->i_cdev,
-						struct nvlink_device,
+	struct tnvlink_dev *tdev = container_of(in->i_cdev,
+						struct tnvlink_dev,
 						cdev);
+
+	struct nvlink_device *ndev = tdev->ndev;
 
 	if (minor > 0) {
 		nvlink_err("Incorrect minor number");
@@ -981,7 +987,7 @@ static int t19x_nvlink_endpt_open(struct inode *in, struct file *filp)
 	else
 		nvlink_dbg("Link enabled successfully!");
 
-	filp->private_data = ndev;
+	filp->private_data = tdev;
 	return ret;
 }
 

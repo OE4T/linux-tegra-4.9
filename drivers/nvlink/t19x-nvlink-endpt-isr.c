@@ -21,37 +21,37 @@
 #include "nvlink-hw.h"
 
 /* Configure NVLW interrupts */
-static void nvlw_config_intr(struct nvlink_device *ndev)
+static void nvlw_config_intr(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
 
 	/* Configure non link specific common registers */
 	reg_val = BIT(NVLW_COMMON_INTR_0_MASK_FATAL);
-	nvlw_tioctrl_writel(ndev, NVLW_COMMON_INTR_0_MASK, reg_val);
+	nvlw_tioctrl_writel(tdev, NVLW_COMMON_INTR_0_MASK, reg_val);
 
 	reg_val = BIT(NVLW_COMMON_INTR_1_MASK_NONFATAL) |
 			BIT(NVLW_COMMON_INTR_1_MASK_CORRECTABLE);
-	nvlw_tioctrl_writel(ndev, NVLW_COMMON_INTR_1_MASK, reg_val);
+	nvlw_tioctrl_writel(tdev, NVLW_COMMON_INTR_1_MASK, reg_val);
 
 	reg_val = BIT(NVLW_COMMON_INTR_2_MASK_INTRA) |
 			BIT(NVLW_COMMON_INTR_2_MASK_INTRB);
-	nvlw_tioctrl_writel(ndev, NVLW_COMMON_INTR_2_MASK, reg_val);
+	nvlw_tioctrl_writel(tdev, NVLW_COMMON_INTR_2_MASK, reg_val);
 
 	/* Configure link specific registers */
 	reg_val = BIT(NVLW_LINK_INTR_0_MASK_FATAL);
-	nvlw_tioctrl_writel(ndev, NVLW_LINK_INTR_0_MASK, reg_val);
+	nvlw_tioctrl_writel(tdev, NVLW_LINK_INTR_0_MASK, reg_val);
 
 	reg_val = BIT(NVLW_LINK_INTR_1_MASK_NONFATAL) |
 			BIT(NVLW_LINK_INTR_1_MASK_CORRECTABLE);
-	nvlw_tioctrl_writel(ndev, NVLW_LINK_INTR_1_MASK, reg_val);
+	nvlw_tioctrl_writel(tdev, NVLW_LINK_INTR_1_MASK, reg_val);
 
 	reg_val = BIT(NVLW_LINK_INTR_2_MASK_INTRA) |
 			BIT(NVLW_LINK_INTR_2_MASK_INTRB);
-	nvlw_tioctrl_writel(ndev, NVLW_LINK_INTR_2_MASK, reg_val);
+	nvlw_tioctrl_writel(tdev, NVLW_LINK_INTR_2_MASK, reg_val);
 }
 
 /* Initialize NVLIPT common interrupts */
-static void nvlipt_config_common_intr(struct nvlink_device *ndev)
+static void nvlipt_config_common_intr(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
 
@@ -61,51 +61,51 @@ static void nvlipt_config_common_intr(struct nvlink_device *ndev)
 	reg_val = BIT(NVLIPT_INTR_CONTROL_COMMON_STALLENABLE) |
 			BIT(NVLIPT_INTR_CONTROL_COMMON_NOSTALLENABLE);
 
-	nvlw_nvlipt_writel(ndev, NVLIPT_INTR_CONTROL_COMMON, reg_val);
+	nvlw_nvlipt_writel(tdev, NVLIPT_INTR_CONTROL_COMMON, reg_val);
 }
 
 /* Initialize MINION common interrupts */
-static void minion_config_common_intr(struct nvlink_device *ndev)
+static void minion_config_common_intr(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
 
 	/* Tree 1 (non-stall) is disabled until there is a need */
-	nvlw_minion_writel(ndev, MINION_MINION_INTR_NONSTALL_EN, 0);
+	nvlw_minion_writel(tdev, MINION_MINION_INTR_NONSTALL_EN, 0);
 
 	/* Tree 0 (stall) is where we route all MINION interrupts for now */
 	reg_val = BIT(MINION_MINION_INTR_STALL_EN_FATAL) |
 			BIT(MINION_MINION_INTR_STALL_EN_NONFATAL) |
 			BIT(MINION_MINION_INTR_STALL_EN_FALCON_STALL) |
 			BIT(MINION_MINION_INTR_STALL_EN_FALCON_NOSTALL);
-	nvlw_minion_writel(ndev, MINION_MINION_INTR_STALL_EN, reg_val);
+	nvlw_minion_writel(tdev, MINION_MINION_INTR_STALL_EN, reg_val);
 }
 
-void nvlink_config_common_intr(struct nvlink_device *ndev)
+void nvlink_config_common_intr(struct tnvlink_dev *tdev)
 {
-	nvlw_config_intr(ndev);
-	nvlipt_config_common_intr(ndev);
-	minion_config_common_intr(ndev);
+	nvlw_config_intr(tdev);
+	nvlipt_config_common_intr(tdev);
+	minion_config_common_intr(tdev);
 }
 
 /* Enable MINION link interrupts */
-static void nvlink_enable_minion_link_intr(struct nvlink_device *ndev)
+static void nvlink_enable_minion_link_intr(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
 
 	/* Tree 0 (stall) only support for now */
-	reg_val = nvlw_minion_readl(ndev, MINION_MINION_INTR_STALL_EN);
+	reg_val = nvlw_minion_readl(tdev, MINION_MINION_INTR_STALL_EN);
 	reg_val |= MINION_MINION_INTR_STALL_EN_LINK(
 			MINION_MINION_INTR_STALL_EN_LINK_ENABLE_ALL);
-	nvlw_minion_writel(ndev, MINION_MINION_INTR_STALL_EN, reg_val);
+	nvlw_minion_writel(tdev, MINION_MINION_INTR_STALL_EN, reg_val);
 }
 
-static void nvlink_enable_dl_interrupts(struct nvlink_device *ndev)
+static void nvlink_enable_dl_interrupts(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
 
 	/* Clear interrupt register to get rid of any stale state. (W1C) */
-	nvlw_nvl_writel(ndev, NVL_INTR, 0xffffffff);
-	nvlw_nvl_writel(ndev, NVL_INTR_SW2, 0xffffffff);
+	nvlw_nvl_writel(tdev, NVL_INTR, 0xffffffff);
+	nvlw_nvl_writel(tdev, NVL_INTR_SW2, 0xffffffff);
 
 	/* Recommend non-fatal interrupt line.
 	 * This indicates that we have seen a significant number of bit errors
@@ -140,23 +140,23 @@ static void nvlink_enable_dl_interrupts(struct nvlink_device *ndev)
 	reg_val |= BIT(NVL_INTR_STALL_EN_LTSSM_FAULT);
 
 	/* Enable Stall interrupts */
-	nvlw_nvl_writel(ndev, NVL_INTR_STALL_EN, reg_val);
+	nvlw_nvl_writel(tdev, NVL_INTR_STALL_EN, reg_val);
 
 	/* TODO: Check if below WAR is still needed */
 	/* Configure the error threshold that generates interrupt as a WAR
 	 * for bug 1710544
 	 */
-	reg_val = nvlw_nvl_readl(ndev, NVL_SL1_ERROR_RATE_CTRL);
+	reg_val = nvlw_nvl_readl(tdev, NVL_SL1_ERROR_RATE_CTRL);
 	reg_val |= NVL_SL1_ERROR_RATE_CTRL_SHORT_THRESHOLD_MAN_F(0x2);
 	reg_val |= NVL_SL1_ERROR_RATE_CTRL_LONG_THRESHOLD_MAN_F(0x2);
-	nvlw_nvl_writel(ndev, NVL_SL1_ERROR_RATE_CTRL, reg_val);
+	nvlw_nvl_writel(tdev, NVL_SL1_ERROR_RATE_CTRL, reg_val);
 
 	/* Don't hookup interrupts on NON-STALL line */
-	nvlw_nvl_writel(ndev, NVL_INTR_NONSTALL_EN, 0);
+	nvlw_nvl_writel(tdev, NVL_INTR_NONSTALL_EN, 0);
 }
 
 /* Enable TLC link interrupts */
-static void nvlink_enable_tl_interrupts(struct nvlink_device *ndev)
+static void nvlink_enable_tl_interrupts(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
 
@@ -185,7 +185,7 @@ static void nvlink_enable_tl_interrupts(struct nvlink_device *ndev)
 		BIT(NVLTLC_RX_ERR_REPORT_EN_0_RXRESPSTATUSTARGETERR) |
 		BIT(
 		NVLTLC_RX_ERR_REPORT_EN_0_RXRESPSTATUSUNSUPPORTEDREQUESTERR);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_REPORT_EN_0, reg_val);
+	nvlw_nvltlc_writel(tdev, NVLTLC_RX_ERR_REPORT_EN_0, reg_val);
 
 	reg_val = 0;
 	reg_val |= NVLTLC_RX_ERR_REPORT_EN_1_RXHDROVFERR_F(0xFF);
@@ -196,7 +196,7 @@ static void nvlink_enable_tl_interrupts(struct nvlink_device *ndev)
 		BIT(NVLTLC_RX_ERR_REPORT_EN_1_RXUNSUPVCOVFERR) |
 		BIT(NVLTLC_RX_ERR_REPORT_EN_1_RXUNSUPNVLINKCREDITRELERR) |
 		BIT(NVLTLC_RX_ERR_REPORT_EN_1_RXUNSUPNCISOCCREDITRELERR);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_REPORT_EN_1, reg_val);
+	nvlw_nvltlc_writel(tdev, NVLTLC_RX_ERR_REPORT_EN_1, reg_val);
 
 	/* Enable TLC TX interrupts */
 	reg_val = 0;
@@ -211,11 +211,11 @@ static void nvlink_enable_tl_interrupts(struct nvlink_device *ndev)
 		BIT(NVLTLC_TX_ERR_REPORT_EN_0_TXPOISONDET) |
 		BIT(NVLTLC_TX_ERR_REPORT_EN_0_TARGETERR) |
 		BIT(NVLTLC_TX_ERR_REPORT_EN_0_UNSUPPORTEDREQUESTERR);
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_REPORT_EN_0, reg_val);
+	nvlw_nvltlc_writel(tdev, NVLTLC_TX_ERR_REPORT_EN_0, reg_val);
 }
 
 /* Enable NVLIPT Link interrupts */
-static void nvlink_enable_nvlipt_interrupts(struct nvlink_device *ndev)
+static void nvlink_enable_nvlipt_interrupts(struct tnvlink_dev *tdev)
 {
 	u32 reg_val;
 
@@ -224,23 +224,23 @@ static void nvlink_enable_nvlipt_interrupts(struct nvlink_device *ndev)
 	 * This is a rollup of all interrupts in all devices for
 	 * this link and is required for any interrupts to be handled by SW.
 	 */
-	reg_val = nvlw_nvlipt_readl(ndev, NVLIPT_INTR_CONTROL_LINK0);
+	reg_val = nvlw_nvlipt_readl(tdev, NVLIPT_INTR_CONTROL_LINK0);
 	reg_val |= BIT(NVLIPT_INTR_CONTROL_LINK0_STALLENABLE);
 	reg_val |= BIT(NVLIPT_INTR_CONTROL_LINK0_NOSTALLENABLE);
-	nvlw_nvlipt_writel(ndev, NVLIPT_INTR_CONTROL_LINK0, reg_val);
+	nvlw_nvlipt_writel(tdev, NVLIPT_INTR_CONTROL_LINK0, reg_val);
 }
 
 /* Enable link interrupts */
-void nvlink_enable_link_interrupts(struct nvlink_device *ndev)
+void nvlink_enable_link_interrupts(struct tnvlink_dev *tdev)
 {
-	nvlink_enable_minion_link_intr(ndev);
-	nvlink_enable_dl_interrupts(ndev);
-	nvlink_enable_tl_interrupts(ndev);
-	nvlink_enable_nvlipt_interrupts(ndev);
+	nvlink_enable_minion_link_intr(tdev);
+	nvlink_enable_dl_interrupts(tdev);
+	nvlink_enable_tl_interrupts(tdev);
+	nvlink_enable_nvlipt_interrupts(tdev);
 }
 
 /* Service MINION Falcon interrupts */
-void minion_service_falcon_intr(struct nvlink_device *ndev)
+void minion_service_falcon_intr(struct tnvlink_dev *tdev)
 {
 	u32 irq_stat = 0;
 	u32 irq_mask = 0;
@@ -252,12 +252,12 @@ void minion_service_falcon_intr(struct nvlink_device *ndev)
 	 * Get the current IRQ status and mask the sources not directed to
 	 * host
 	 */
-	irq_stat = nvlw_minion_readl(ndev, CMINION_FALCON_IRQSTAT);
+	irq_stat = nvlw_minion_readl(tdev, CMINION_FALCON_IRQSTAT);
 
 	/* TODO: Fix this when interrupts are enabled */
 	irq_mask = 0x7;
 
-	irq_dest = nvlw_minion_readl(ndev, CMINION_FALCON_IRQDEST);
+	irq_dest = nvlw_minion_readl(tdev, CMINION_FALCON_IRQDEST);
 
 	interrupts = irq_stat & irq_mask & irq_dest;
 
@@ -288,67 +288,67 @@ void minion_service_falcon_intr(struct nvlink_device *ndev)
 	}
 
 	/* Clear interrupt (W1C) */
-	nvlw_minion_writel(ndev, CMINION_FALCON_IRQSCLR, clear_bits);
+	nvlw_minion_writel(tdev, CMINION_FALCON_IRQSCLR, clear_bits);
 }
 
 /* Disable MINION FALCON interrupts */
-static void nvlink_minion_disable_falcon_interrupts(struct nvlink_device *ndev)
+static void nvlink_minion_disable_falcon_interrupts(struct tnvlink_dev *tdev)
 {
 	u32 reg_data;
 
-	reg_data = nvlw_minion_readl(ndev, MINION_MINION_INTR_STALL_EN);
+	reg_data = nvlw_minion_readl(tdev, MINION_MINION_INTR_STALL_EN);
 	reg_data &= ~BIT(MINION_MINION_INTR_STALL_EN_FATAL);
 	reg_data &= ~BIT(MINION_MINION_INTR_STALL_EN_NONFATAL);
 	reg_data &= ~BIT(MINION_MINION_INTR_STALL_EN_FALCON_STALL);
 	reg_data &= ~BIT(MINION_MINION_INTR_STALL_EN_FALCON_NOSTALL);
-	nvlw_minion_writel(ndev, MINION_MINION_INTR_STALL_EN, reg_data);
+	nvlw_minion_writel(tdev, MINION_MINION_INTR_STALL_EN, reg_data);
 }
 
 /* Service MINION FATAL notification interrupt */
-static bool minion_service_fatal_intr(struct nvlink_device *ndev)
+static bool minion_service_fatal_intr(struct tnvlink_dev *tdev)
 {
 	nvlink_dbg("Received MINION Falcon FATAL notification interrupt");
 
 	/* Disable interrupts - cannot recover */
-	nvlink_minion_disable_falcon_interrupts(ndev);
+	nvlink_minion_disable_falcon_interrupts(tdev);
 
 	nvlink_err("MINION Falcon interrupts disabled due to fatal"
 			" notification interrupt");
 
 	/* Clear interrupt (W1C) */
-	nvlw_minion_writel(ndev, MINION_MINION_INTR,
+	nvlw_minion_writel(tdev, MINION_MINION_INTR,
 				BIT(MINION_MINION_INTR_FATAL));
 
 	return 0;
 }
 
 /* Service MINION NONFATAL notification interrupt */
-static bool minion_service_non_fatal_intr(struct nvlink_device *ndev)
+static bool minion_service_non_fatal_intr(struct tnvlink_dev *tdev)
 {
 	nvlink_dbg("Received MINION Falcon NONFATAL notification interrupt");
 
 	/* Clear interrupt (W1C) */
-	nvlw_minion_writel(ndev, MINION_MINION_INTR,
+	nvlw_minion_writel(tdev, MINION_MINION_INTR,
 			BIT(MINION_MINION_INTR_NONFATAL));
 	return 0;
 }
 
 /* Disable MINION link interrupts */
-static void minion_disable_link_intr(struct nvlink_device *ndev)
+static void minion_disable_link_intr(struct tnvlink_dev *tdev)
 {
 	u32 intr_en;
 
 	/* Tree 0 (stall) only support for now */
-	intr_en = nvlw_minion_readl(ndev, MINION_MINION_INTR_STALL_EN);
+	intr_en = nvlw_minion_readl(tdev, MINION_MINION_INTR_STALL_EN);
 	intr_en &= ~MINION_MINION_INTR_STALL_EN_LINK(
 		MINION_MINION_INTR_STALL_EN_LINK_ENABLE_ALL);
-	nvlw_minion_writel(ndev, MINION_MINION_INTR_STALL_EN, intr_en);
+	nvlw_minion_writel(tdev, MINION_MINION_INTR_STALL_EN, intr_en);
 }
 
 /* Service MINION link interrupts */
-static bool minion_service_link_intr(struct nvlink_device *ndev)
+static bool minion_service_link_intr(struct tnvlink_dev *tdev)
 {
-	u32 link_intr = nvlw_minion_readl(ndev, MINION_NVLINK_LINK_INTR);
+	u32 link_intr = nvlw_minion_readl(tdev, MINION_NVLINK_LINK_INTR);
 	bool fatal_interrupt = false;
 	int intr_code;
 
@@ -395,76 +395,76 @@ static bool minion_service_link_intr(struct nvlink_device *ndev)
 
 	/* On fatal interrupts, disable interrupts for that link */
 	if (fatal_interrupt) {
-		minion_disable_link_intr(ndev);
+		minion_disable_link_intr(tdev);
 		nvlink_err("NVLink MINION link interrupts disabled due to fatal"
 			" MINION error: INTR_CODE = 0x%x", intr_code);
 	}
 
 	/* Clear the interrupt state and move on */
 	link_intr |= BIT(MINION_NVLINK_LINK_INTR_STATE);
-	nvlw_minion_writel(ndev, MINION_NVLINK_LINK_INTR, link_intr);
+	nvlw_minion_writel(tdev, MINION_NVLINK_LINK_INTR, link_intr);
 
 	return true;
 }
 
 /* Service MINION interrupts */
-static bool nvlink_minion_service_intr(struct nvlink_device *ndev)
+static bool nvlink_minion_service_intr(struct tnvlink_dev *tdev)
 {
 	u32 interrupts;
 	u32 interrupting_links;
 
 	/* Currently we only handle tree 0 */
 	/* Filter any interrupts against selected tree */
-	interrupts = nvlw_minion_readl(ndev, MINION_MINION_INTR) &
-			nvlw_minion_readl(ndev, MINION_MINION_INTR_STALL_EN);
+	interrupts = nvlw_minion_readl(tdev, MINION_MINION_INTR) &
+			nvlw_minion_readl(tdev, MINION_MINION_INTR_STALL_EN);
 
 	/* Service Falcon interrupts before we process engine interrutps */
 	if (interrupts & (BIT(MINION_MINION_INTR_FALCON_STALL) |
 			BIT(MINION_MINION_INTR_FALCON_NOSTALL)))
-		minion_service_falcon_intr(ndev);
+		minion_service_falcon_intr(tdev);
 
 	/* Process ucode->driver FATAL notifications */
 	if (interrupts & BIT(MINION_MINION_INTR_FATAL))
-		minion_service_fatal_intr(ndev);
+		minion_service_fatal_intr(tdev);
 
 	/* Process ucode->driver NONFATAL notifications */
 	if (interrupts & BIT(MINION_MINION_INTR_NONFATAL))
-		minion_service_non_fatal_intr(ndev);
+		minion_service_non_fatal_intr(tdev);
 
 	/* Process interrupting links */
 	interrupting_links = MINION_MINION_INTR_LINK_V(interrupts);
 
 	if (interrupting_links & 1)
-		minion_service_link_intr(ndev);
+		minion_service_link_intr(tdev);
 
-	interrupts = nvlw_minion_readl(ndev, MINION_MINION_INTR) &
-			nvlw_minion_readl(ndev, MINION_MINION_INTR_STALL_EN);
+	interrupts = nvlw_minion_readl(tdev, MINION_MINION_INTR) &
+			nvlw_minion_readl(tdev, MINION_MINION_INTR_STALL_EN);
 
 	return (interrupts == 0);
 }
 
 /* Disable DL/PL interrupts */
-static void nvlink_disable_dl_interrupts(struct nvlink_device *ndev)
+static void nvlink_disable_dl_interrupts(struct tnvlink_dev *tdev)
 {
-	nvlw_nvl_writel(ndev, NVL_INTR_NONSTALL_EN, 0);
-	nvlw_nvl_writel(ndev, NVL_INTR_STALL_EN, 0);
+	nvlw_nvl_writel(tdev, NVL_INTR_NONSTALL_EN, 0);
+	nvlw_nvl_writel(tdev, NVL_INTR_STALL_EN, 0);
 }
 
 /* Disable TLC interrupts */
-static void nvlink_disable_tl_interrupts(struct nvlink_device *ndev)
+static void nvlink_disable_tl_interrupts(struct tnvlink_dev *tdev)
 {
 	/* Disable TLC RX interrupts */
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_REPORT_EN_0, 0);
-	nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_REPORT_EN_1, 0);
+	nvlw_nvltlc_writel(tdev, NVLTLC_RX_ERR_REPORT_EN_0, 0);
+	nvlw_nvltlc_writel(tdev, NVLTLC_RX_ERR_REPORT_EN_1, 0);
 
 	/* Disable TLC TX interrupts */
-	nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_REPORT_EN_0, 0);
+	nvlw_nvltlc_writel(tdev, NVLTLC_TX_ERR_REPORT_EN_0, 0);
 }
 
 /* Handles errors reported on a link. This will disable link interrupts
  *  for fatal, non-injected interrupts on the device that reports them
  */
-static void nvlink_handle_link_errors(struct nvlink_device *ndev,
+static void nvlink_handle_link_errors(struct tnvlink_dev *tdev,
 				struct nvlink_link_error_masks *err_masks,
 				u64 inforom_mask)
 {
@@ -476,11 +476,11 @@ static void nvlink_handle_link_errors(struct nvlink_device *ndev,
 	/* Disable interrupts after fatal errors */
 	if (err_masks->tl || err_masks->tlc_rx0 ||
 		err_masks->tlc_rx1 || err_masks->tlc_tx) {
-		nvlink_disable_tl_interrupts(ndev);
+		nvlink_disable_tl_interrupts(tdev);
 	}
 
 	if (err_masks->dl)
-		nvlink_disable_dl_interrupts(ndev);
+		nvlink_disable_dl_interrupts(tdev);
 
 	/* Log publicly if a fatal NVLink error has occurred - these are never
 	 * expected.
@@ -495,7 +495,7 @@ static void nvlink_handle_link_errors(struct nvlink_device *ndev,
 	}
 }
 
-static int nvlink_service_dl_interrupts(struct nvlink_device *ndev)
+static int nvlink_service_dl_interrupts(struct tnvlink_dev *tdev)
 {
 	u32 nonfatal_mask = 0;
 	u32 fatal_mask = 0;
@@ -503,7 +503,6 @@ static int nvlink_service_dl_interrupts(struct nvlink_device *ndev)
 	u32 intr_status = 0;
 	int ret = 0;
 	struct nvlink_link_error_masks err_masks = {0};
-
 	bool retrain_from_safe = false;
 
 	/*
@@ -513,8 +512,8 @@ static int nvlink_service_dl_interrupts(struct nvlink_device *ndev)
 	 * Hence, SW needs to follow the same masking logic to filter out
 	 * interrupts.
 	 */
-	intr_status = nvlw_nvl_readl(ndev, NVL_INTR) &
-			nvlw_nvl_readl(ndev, NVL_INTR_STALL_EN);
+	intr_status = nvlw_nvl_readl(tdev, NVL_INTR) &
+			nvlw_nvl_readl(tdev, NVL_INTR_STALL_EN);
 
 	if (intr_status & BIT(NVL_INTR_TX_REPLAY)) {
 		nvlink_err("Non Fatal: TX Replay DL interrupt hit on link");
@@ -620,11 +619,11 @@ static int nvlink_service_dl_interrupts(struct nvlink_device *ndev)
 	 */
 	if (fatal_mask | inforom_mask) {
 		err_masks.dl = fatal_mask;
-		nvlink_handle_link_errors(ndev, &err_masks, inforom_mask);
+		nvlink_handle_link_errors(tdev, &err_masks, inforom_mask);
 	}
 
 	if (retrain_from_safe) {
-		if (nvlink_retrain_link(ndev, false)) {
+		if (nvlink_retrain_link(tdev, false)) {
 			nvlink_err("Fatal: Unable to retrain Link from"
 				" SAFE mode");
 			ret = -1;
@@ -632,33 +631,33 @@ static int nvlink_service_dl_interrupts(struct nvlink_device *ndev)
 	}
 
 	/* Clear interrupt register (W1C) */
-	nvlw_nvl_writel(ndev, NVL_INTR, (nonfatal_mask | fatal_mask));
+	nvlw_nvl_writel(tdev, NVL_INTR, (nonfatal_mask | fatal_mask));
 
 	/* Always clear SW2 to cover sideband "err" interfaces to NVLIPT */
-	nvlw_nvl_writel(ndev, NVL_INTR_SW2, 0xffffffff);
+	nvlw_nvl_writel(tdev, NVL_INTR_SW2, 0xffffffff);
 
 	return ret;
 }
 
 /* Get status of TL interrupts */
-static void nvltlc_get_intr_status(struct nvlink_device *ndev,
+static void nvltlc_get_intr_status(struct tnvlink_dev *tdev,
 				u32 *tlc_tx_err_status0,
 				u32 *tlc_rx_err_status0,
 				u32 *tlc_rx_err_status1)
 {
-	*tlc_tx_err_status0 = nvlw_nvltlc_readl(ndev, NVLTLC_TX_ERR_STATUS_0);
-	*tlc_rx_err_status0 = nvlw_nvltlc_readl(ndev, NVLTLC_RX_ERR_STATUS_0);
-	*tlc_rx_err_status1 = nvlw_nvltlc_readl(ndev, NVLTLC_RX_ERR_STATUS_1);
+	*tlc_tx_err_status0 = nvlw_nvltlc_readl(tdev, NVLTLC_TX_ERR_STATUS_0);
+	*tlc_rx_err_status0 = nvlw_nvltlc_readl(tdev, NVLTLC_RX_ERR_STATUS_0);
+	*tlc_rx_err_status1 = nvlw_nvltlc_readl(tdev, NVLTLC_RX_ERR_STATUS_1);
 }
 
-static void nvltlc_service_rx0_intr(struct nvlink_device *ndev)
+static void nvltlc_service_rx0_intr(struct tnvlink_dev *tdev)
 {
 	u32 intr_status, fatal_mask = 0;
 	u64 inforom_mask = 0;
 	u32 intr_injected_mask = 0;
 	struct nvlink_link_error_masks err_masks = {0};
 
-	intr_status = ndev->link.tlc_rx_err_status0;
+	intr_status = tdev->tlink.tlc_rx_err_status0;
 
 	if (!intr_status)
 		return;
@@ -666,7 +665,7 @@ static void nvltlc_service_rx0_intr(struct nvlink_device *ndev)
 	/* TODO: Do the below step only if  Error Injection Mode Refcnt state
 	 * set to REFCNT_STATE_ENABLED
 	 */
-	intr_injected_mask = nvlw_nvltlc_readl(ndev, NVLTLC_RX_ERR_INJECT_0);
+	intr_injected_mask = nvlw_nvltlc_readl(tdev, NVLTLC_RX_ERR_INJECT_0);
 
 	if (intr_status & BIT(NVLTLC_RX_ERR_STATUS_0_RXDLHDRPARITYERR)) {
 		nvlink_err("Fatal TLC RX interrupt hit on link");
@@ -967,16 +966,16 @@ static void nvltlc_service_rx0_intr(struct nvlink_device *ndev)
 		 */
 		err_masks.tlc_rx0 = fatal_mask & ~intr_injected_mask;
 		err_masks.tlc_rx0_injected = fatal_mask & intr_injected_mask;
-		nvlink_handle_link_errors(ndev, &err_masks, inforom_mask);
+		nvlink_handle_link_errors(tdev, &err_masks, inforom_mask);
 
 		/* Clear signaled first and then status bits (W1C) */
-		nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_FIRST_0, fatal_mask);
-		nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_STATUS_0, fatal_mask);
+		nvlw_nvltlc_writel(tdev, NVLTLC_RX_ERR_FIRST_0, fatal_mask);
+		nvlw_nvltlc_writel(tdev, NVLTLC_RX_ERR_STATUS_0, fatal_mask);
 	}
 }
 
 /* Service TLC RX 1 interrupts */
-static void nvltlc_service_rx1_intr(struct nvlink_device *ndev)
+static void nvltlc_service_rx1_intr(struct tnvlink_dev *tdev)
 {
 	u32 intr_status, fatal_mask = 0;
 	u64 inforom_mask = 0;
@@ -984,7 +983,7 @@ static void nvltlc_service_rx1_intr(struct nvlink_device *ndev)
 	int i;
 	struct nvlink_link_error_masks err_masks = {0};
 
-	intr_status = ndev->link.tlc_rx_err_status1;
+	intr_status = tdev->tlink.tlc_rx_err_status1;
 
 	if (!intr_status)
 		return;
@@ -992,7 +991,7 @@ static void nvltlc_service_rx1_intr(struct nvlink_device *ndev)
 	/* TODO: Do the below step only if  Error Injection Mode Refcnt state
 	 * set to REFCNT_STATE_ENABLED
 	 */
-	intr_injected_mask = nvlw_nvltlc_readl(ndev, NVLTLC_RX_ERR_INJECT_1);
+	intr_injected_mask = nvlw_nvltlc_readl(tdev, NVLTLC_RX_ERR_INJECT_1);
 
 	for (i = 0; i < 8; i++) {
 		if (NVLTLC_RX_ERR_STATUS_1_RXHDROVFERR_V(intr_status) &
@@ -1109,15 +1108,15 @@ static void nvltlc_service_rx1_intr(struct nvlink_device *ndev)
 		 */
 		err_masks.tlc_rx1 = fatal_mask & ~intr_injected_mask;
 		err_masks.tlc_rx1_injected = fatal_mask & intr_injected_mask;
-		nvlink_handle_link_errors(ndev, &err_masks, inforom_mask);
+		nvlink_handle_link_errors(tdev, &err_masks, inforom_mask);
 
 		/* Clear signaled first and then status bits (W1C) */
-		nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_FIRST_1, fatal_mask);
-		nvlw_nvltlc_writel(ndev, NVLTLC_RX_ERR_STATUS_1, fatal_mask);
+		nvlw_nvltlc_writel(tdev, NVLTLC_RX_ERR_FIRST_1, fatal_mask);
+		nvlw_nvltlc_writel(tdev, NVLTLC_RX_ERR_STATUS_1, fatal_mask);
 	}
 }
 
-static void nvltlc_service_tx_intr(struct nvlink_device *ndev)
+static void nvltlc_service_tx_intr(struct tnvlink_dev *tdev)
 {
 	u32 intr_status, fatal_mask = 0;
 	u64 inforom_mask = 0;
@@ -1125,7 +1124,7 @@ static void nvltlc_service_tx_intr(struct nvlink_device *ndev)
 	int i;
 	struct nvlink_link_error_masks err_masks = {0};
 
-	intr_status = ndev->link.tlc_tx_err_status0;
+	intr_status = tdev->tlink.tlc_tx_err_status0;
 
 	if (!intr_status)
 		return;
@@ -1133,7 +1132,7 @@ static void nvltlc_service_tx_intr(struct nvlink_device *ndev)
 	/* TODO: Do the below step only if  Error Injection Mode Refcnt state
 	 * set to REFCNT_STATE_ENABLED
 	 */
-	intr_injected_mask = nvlw_nvltlc_readl(ndev, NVLTLC_TX_ERR_INJECT_0);
+	intr_injected_mask = nvlw_nvltlc_readl(tdev, NVLTLC_TX_ERR_INJECT_0);
 
 	for (i = 0; i < 8; i++) {
 		if (NVLTLC_TX_ERR_STATUS_0_TXHDRCREDITOVFERR_V(intr_status) &
@@ -1289,16 +1288,16 @@ static void nvltlc_service_tx_intr(struct nvlink_device *ndev)
 		 */
 		err_masks.tlc_tx = fatal_mask & ~intr_injected_mask;
 		err_masks.tlc_tx_injected = fatal_mask & intr_injected_mask;
-		nvlink_handle_link_errors(ndev, &err_masks, inforom_mask);
+		nvlink_handle_link_errors(tdev, &err_masks, inforom_mask);
 
 		// Clear signaled first and then status bits (W1C)
-		nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_FIRST_0, fatal_mask);
-		nvlw_nvltlc_writel(ndev, NVLTLC_TX_ERR_STATUS_0, fatal_mask);
+		nvlw_nvltlc_writel(tdev, NVLTLC_TX_ERR_FIRST_0, fatal_mask);
+		nvlw_nvltlc_writel(tdev, NVLTLC_TX_ERR_STATUS_0, fatal_mask);
 	}
 }
 
 /* Service NVLIPT interrupts */
-static void nvlink_service_nvlipt_interrupts(struct nvlink_device *ndev)
+static void nvlink_service_nvlipt_interrupts(struct tnvlink_dev *tdev)
 {
 	u32 nvlipt_err_uc_active_bits = 0;
 
@@ -1319,25 +1318,25 @@ static void nvlink_service_nvlipt_interrupts(struct nvlink_device *ndev)
 	 * here we simply assume all interrupts were handled and clear the
 	 * roll ups.
 	 */
-	nvlw_nvlipt_writel(ndev, NVLIPT_ERR_UC_FIRST_LINK0,
+	nvlw_nvlipt_writel(tdev, NVLIPT_ERR_UC_FIRST_LINK0,
 			nvlipt_err_uc_active_bits);
-	nvlw_nvlipt_writel(ndev, NVLIPT_ERR_UC_STATUS_LINK0,
+	nvlw_nvlipt_writel(tdev, NVLIPT_ERR_UC_STATUS_LINK0,
 			nvlipt_err_uc_active_bits);
 }
 
-static int nvlink_service_tlc_interrupts(struct nvlink_device *ndev)
+static int nvlink_service_tlc_interrupts(struct tnvlink_dev *tdev)
 {
 	/* TLC RX interrupts (0) */
-	nvltlc_service_rx0_intr(ndev);
+	nvltlc_service_rx0_intr(tdev);
 	/* TLC RX interrupts (1) */
-	nvltlc_service_rx1_intr(ndev);
+	nvltlc_service_rx1_intr(tdev);
 	/* TLC TX interrupts */
-	nvltlc_service_tx_intr(ndev);
+	nvltlc_service_tx_intr(tdev);
 
 	return 0;
 }
 
-static u32 nvlink_service_link(struct nvlink_device *ndev)
+static u32 nvlink_service_link(struct tnvlink_dev *tdev)
 {
 	u32 tlc_tx_err_status0;
 	u32 tlc_rx_err_status0;
@@ -1348,33 +1347,33 @@ static u32 nvlink_service_link(struct nvlink_device *ndev)
 	 * because if the link is retrained during the DL interrupt handler
 	 * it will clear the TL interrupt status.
 	 */
-	nvltlc_get_intr_status(ndev, &tlc_tx_err_status0,
+	nvltlc_get_intr_status(tdev, &tlc_tx_err_status0,
 					&tlc_rx_err_status0,
 					&tlc_rx_err_status1);
-	ndev->link.tlc_tx_err_status0 |= tlc_tx_err_status0;
-	ndev->link.tlc_rx_err_status0 |= tlc_rx_err_status0;
-	ndev->link.tlc_rx_err_status1 |= tlc_rx_err_status1;
+	tdev->tlink.tlc_tx_err_status0 |= tlc_tx_err_status0;
+	tdev->tlink.tlc_rx_err_status0 |= tlc_rx_err_status0;
+	tdev->tlink.tlc_rx_err_status1 |= tlc_rx_err_status1;
 
-	nvlink_service_dl_interrupts(ndev);
+	nvlink_service_dl_interrupts(tdev);
 
-	nvlink_service_tlc_interrupts(ndev);
+	nvlink_service_tlc_interrupts(tdev);
 
 	/* NVLIPT is the IP top level, it goes last */
-	nvlink_service_nvlipt_interrupts(ndev);
+	nvlink_service_nvlipt_interrupts(tdev);
 
 	return 0;
 }
 
 irqreturn_t t19x_nvlink_endpt_isr(int irq, void *dev_id)
 {
-	struct nvlink_device *ndev = dev_id;
+	struct tnvlink_dev *tdev = dev_id;
 
 	nvlink_dbg("Interrupt received! IRQ # = %d", irq);
 
 	/* Service MINION first (per arch) */
-	nvlink_minion_service_intr(ndev);
+	nvlink_minion_service_intr(tdev);
 
-	nvlink_service_link(ndev);
+	nvlink_service_link(tdev);
 
 	return IRQ_HANDLED;
 }

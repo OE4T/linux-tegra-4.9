@@ -15,7 +15,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  * Copyright (C) 2013 ARM Limited
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Will Deacon <will.deacon@arm.com>
  *
@@ -307,6 +307,8 @@
 #define ARM_SMMU_CB_S1_TLBIVAL		0x620
 #define ARM_SMMU_CB_S2_TLBIIPAS2	0x630
 #define ARM_SMMU_CB_S2_TLBIIPAS2L	0x638
+#define ARM_SMMU_CB_TLBSYNC		0x7f0
+#define ARM_SMMU_CB_TLBSTATUS		0x7f4
 
 #define SCTLR_S1_ASIDPNE		(1 << 12)
 #define SCTLR_CFCFG			(1 << 7)
@@ -901,6 +903,54 @@ static void arm_smmu_tlb_sync_wait_for_complete(struct arm_smmu_device *smmu,
 	}
 }
 
+static void arm_smmu_cb_tlb_sync_wait_for_complete(struct arm_smmu_device *smmu,
+		void __iomem *base)
+{
+	int count = 0;
+
+	while (readl_relaxed(base + ARM_SMMU_CB_TLBSTATUS)
+			& sTLBGSTATUS_GSACTIVE) {
+		cpu_relax();
+		if (++count == TLB_LOOP_TIMEOUT) {
+			dev_err_ratelimited(smmu->dev,
+			"TLB sync timed out -- SMMU may be deadlocked\n");
+			return;
+		}
+		udelay(1);
+	}
+}
+
+static void arm_smmu_cb_tlb_sync(struct arm_smmu_domain *smmu_domain, bool iso_client)
+{
+	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
+	struct arm_smmu_device *smmu = smmu_domain->smmu;
+	void __iomem *base;
+	uint64_t offset;
+	int smmu_id = 0;
+
+	base = ARM_SMMU_CB_BASE(smmu) + ARM_SMMU_CB(smmu, cfg->cbndx);
+
+	writel_relaxed_iso(0, base + ARM_SMMU_CB_TLBSYNC, iso_client);
+	offset = abs(base - smmu_handle->base[0]);
+
+	if (iso_client) {
+		if (smmu_handle->iso_smmu_id < 0)
+			return;
+		base = smmu->base[smmu->iso_smmu_id] + offset;
+		arm_smmu_cb_tlb_sync_wait_for_complete(smmu, base);
+		return;
+	}
+
+	while (smmu_id < smmu->num_smmus) {
+		if (smmu_id != smmu->iso_smmu_id) {
+			base = smmu->base[smmu_id] + offset;
+			arm_smmu_cb_tlb_sync_wait_for_complete(smmu, base);
+		}
+		smmu_id++;
+	}
+
+}
+
 static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu, bool iso_client)
 {
 	int smmu_id = 0;
@@ -937,6 +987,7 @@ static void arm_smmu_tlb_inv_context(struct arm_smmu_domain *smmu_domain)
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	void __iomem *base;
 	bool stage1 = cfg->cbar != CBAR_TYPE_S2_TRANS;
+	bool do_cb_inval_sync = false;
 
 #ifdef CONFIG_TRACEPOINTS
 	if (static_key_false(&__tracepoint_arm_smmu_tlb_inv_context.key)
@@ -949,6 +1000,8 @@ static void arm_smmu_tlb_inv_context(struct arm_smmu_domain *smmu_domain)
 		writel_relaxed_cfg_iso(ARM_SMMU_CB_ASID(cfg),
 			       base + ARM_SMMU_CB_S1_TLBIASID,
 			       cfg);
+		if (!tegra_platform_is_sim())
+			do_cb_inval_sync = true;
 	} else {
 		base = ARM_SMMU_GR0(smmu);
 		writel_relaxed_cfg_iso(ARM_SMMU_CB_VMID(cfg),
@@ -956,11 +1009,19 @@ static void arm_smmu_tlb_inv_context(struct arm_smmu_domain *smmu_domain)
 			       cfg);
 	}
 
-	if (cfg->iso_client_count)
-		arm_smmu_tlb_sync(smmu, 1);
+	if (do_cb_inval_sync) {
+		if (cfg->iso_client_count)
+			arm_smmu_cb_tlb_sync(smmu_domain, 1);
 
-	if (cfg->non_iso_client_count)
-		arm_smmu_tlb_sync(smmu, 0);
+		if (cfg->non_iso_client_count)
+			arm_smmu_cb_tlb_sync(smmu_domain, 0);
+	} else {
+		if (cfg->iso_client_count)
+			arm_smmu_tlb_sync(smmu, 1);
+
+		if (cfg->non_iso_client_count)
+			arm_smmu_tlb_sync(smmu, 0);
+	}
 
 	if (time_before)
 		trace_arm_smmu_tlb_inv_context(time_before, cfg->cbndx);
@@ -999,6 +1060,7 @@ static void arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 	unsigned long iova_orig = iova;
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
+	bool stage1 = cfg->cbar != CBAR_TYPE_S2_TRANS;
 
 #ifdef CONFIG_TRACEPOINTS
 	if (static_key_false(&__tracepoint_arm_smmu_tlb_inv_range.key)
@@ -1011,11 +1073,20 @@ static void arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 		iova += PAGE_SIZE;
 	}
 
-	if (cfg->iso_client_count)
-		arm_smmu_tlb_sync(smmu, 1);
+	if (!tegra_platform_is_sim() &&
+	    (stage1 || smmu->version == ARM_SMMU_V2)) {
+		if (cfg->iso_client_count)
+			arm_smmu_cb_tlb_sync(smmu_domain, 1);
 
-	if (cfg->non_iso_client_count)
-		arm_smmu_tlb_sync(smmu, 0);
+		if (cfg->non_iso_client_count)
+			arm_smmu_cb_tlb_sync(smmu_domain, 0);
+	} else {
+		if (cfg->iso_client_count)
+			arm_smmu_tlb_sync(smmu, 1);
+
+		if (cfg->non_iso_client_count)
+			arm_smmu_tlb_sync(smmu, 0);
+	}
 
 	if (time_before)
 		trace_arm_smmu_tlb_inv_range(time_before, cfg->cbndx,

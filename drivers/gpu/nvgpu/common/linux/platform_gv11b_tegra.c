@@ -1,7 +1,7 @@
 /*
  * GV11B Tegra Platform Interface
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -94,6 +94,13 @@ static int gv11b_tegra_probe(struct device *dev)
 	nvgpu_linux_init_clk_support(platform->g);
 	gk20a_tegra_init_secure_alloc(platform->g);
 
+	return 0;
+}
+
+static int gv11b_tegra_late_probe(struct device *dev)
+{
+	/* Cause early VPR resize */
+	gk20a_tegra_secure_page_alloc(dev);
 	return 0;
 }
 
@@ -198,6 +205,7 @@ struct gk20a_platform gv11b_tegra_platform = {
 	.ch_wdt_timeout_ms = 5000,
 
 	.probe = gv11b_tegra_probe,
+	.late_probe = gv11b_tegra_late_probe,
 	.remove = gv11b_tegra_remove,
 
 	.enable_slcg            = false,

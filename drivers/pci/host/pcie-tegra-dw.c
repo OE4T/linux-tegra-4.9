@@ -1558,30 +1558,8 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 {
 	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
 	struct device_node *np = pp->dev->of_node;
-	struct resource_entry *win;
 	u32 val, tmp;
 	int err, count = 100;
-
-	/* Get the I/O and memory ranges from DT */
-	resource_list_for_each_entry(win, &pp->res) {
-		if (win->res->flags & IORESOURCE_IO) {
-			/* program iATU for IO mapping */
-			outbound_atu(pp, PCIE_ATU_REGION_INDEX1,
-				     PCIE_ATU_TYPE_IO, pp->io_base,
-				     win->res->start - win->offset,
-				     resource_size(win->res));
-		} else if (win->res->flags & IORESOURCE_PREFETCH) {
-			/* program iATU for Non-prefetchable MEM mapping */
-			outbound_atu(pp, PCIE_ATU_REGION_INDEX3,
-				     PCIE_ATU_TYPE_MEM, win->res->start,
-				     win->res->start, resource_size(win->res));
-		} else if (win->res->flags & IORESOURCE_MEM) {
-			/* program iATU for Non-prefetchable MEM mapping */
-			outbound_atu(pp, PCIE_ATU_REGION_INDEX2,
-				     PCIE_ATU_TYPE_MEM, win->res->start,
-				     win->res->start, resource_size(win->res));
-		}
-	}
 
 	dw_pcie_setup_rc(pp);
 
@@ -1748,10 +1726,32 @@ static int tegra_pcie_dw_link_up(struct pcie_port *pp)
 
 static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 {
+	struct pci_host_bridge *host = pci_find_host_bridge(pp->bus);
+	struct resource_entry *win;
 	struct pci_dev *pdev = NULL;
 	u16 val = 0;
 	u32 data = 0, pos = 0;
 	struct pci_bus *child;
+
+	resource_list_for_each_entry(win, &host->windows) {
+		if (win->res->flags & IORESOURCE_IO) {
+			/* program iATU for IO mapping */
+			outbound_atu(pp, PCIE_ATU_REGION_INDEX1,
+				     PCIE_ATU_TYPE_IO, pp->io_base,
+				     win->res->start - win->offset,
+				     resource_size(win->res));
+		} else if (win->res->flags & IORESOURCE_PREFETCH) {
+			/* program iATU for Non-prefetchable MEM mapping */
+			outbound_atu(pp, PCIE_ATU_REGION_INDEX3,
+				     PCIE_ATU_TYPE_MEM, win->res->start,
+				     win->res->start, resource_size(win->res));
+		} else if (win->res->flags & IORESOURCE_MEM) {
+			/* program iATU for Non-prefetchable MEM mapping */
+			outbound_atu(pp, PCIE_ATU_REGION_INDEX2,
+				     PCIE_ATU_TYPE_MEM, win->res->start,
+				     win->res->start, resource_size(win->res));
+		}
+	}
 
 	list_for_each_entry(child, &pp->bus->children, node) {
 		/* L1SS programming only for immediate downstream devices */
@@ -2394,6 +2394,7 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	reset_control_deassert(pcie->core_rst);
 
 	tegra_pcie_dw_host_init(&pcie->pp);
+	tegra_pcie_dw_scan_bus(&pcie->pp);
 
 	/* Enable ASPM counters */
 	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;

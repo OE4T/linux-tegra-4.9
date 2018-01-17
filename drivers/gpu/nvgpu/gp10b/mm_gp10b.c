@@ -431,8 +431,9 @@ void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		  ram_in_page_dir_base_target_sys_mem_ncoh_f(),
 		  ram_in_page_dir_base_target_vid_mem_f()) |
 		ram_in_page_dir_base_vol_true_f() |
+		ram_in_big_page_size_64kb_f() |
 		ram_in_page_dir_base_lo_f(pdb_addr_lo) |
-		1 << 10);
+		ram_in_use_ver2_pt_format_true_f());
 
 	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_hi_w(),
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));

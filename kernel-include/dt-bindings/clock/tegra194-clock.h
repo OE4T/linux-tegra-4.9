@@ -667,5 +667,19 @@
 #define TEGRA194_CLK_TSC_REF			317
 /** @brief Dummy clock to ensure minimum SoC voltage for fuse burning */
 #define TEGRA194_CLK_FUSE_BURN			318
+/** @brief Monitored branch of PEX0_CORE_0 clock */
+#define TEGRA194_CLK_PEX0_CORE_0M		319
+/** @brief Monitored branch of PEX0_CORE_1 clock */
+#define TEGRA194_CLK_PEX0_CORE_1M		320
+/** @brief Monitored branch of PEX0_CORE_2 clock */
+#define TEGRA194_CLK_PEX0_CORE_2M		321
+/** @brief Monitored branch of PEX0_CORE_3 clock */
+#define TEGRA194_CLK_PEX0_CORE_3M		322
+/** @brief Monitored branch of PEX0_CORE_4 clock */
+#define TEGRA194_CLK_PEX0_CORE_4M		323
+/** @brief Monitored branch of PEX1_CORE_5 clock */
+#define TEGRA194_CLK_PEX1_CORE_5M		324
+/** @brief NVHS UPHY PLL0-based NVLINK TX clock output */
+#define TEGRA194_CLK_NVLINK_PLL_TXCLK		325
 
 #endif

@@ -65,7 +65,6 @@ static struct {
 	unsigned long req_freq;
 } debug_info;
 
-int get_iso_bw_table_idx(unsigned long iso_bw);
 static void bwmgr_debugfs_init(void);
 
 static inline void bwmgr_lock(void)
@@ -93,10 +92,14 @@ static void purge_client(struct tegra_bwmgr_client *handle)
 	handle->refcount = 0;
 }
 
-static unsigned long bwmgr_apply_efficiency(
+static unsigned long tegra_bwmgr_apply_efficiency(
 		unsigned long total_bw, unsigned long iso_bw,
 		unsigned long max_rate, u64 usage_flags,
-		unsigned long *iso_bw_min);
+		unsigned long *iso_bw_min)
+{
+	return bwmgr.ops->bwmgr_apply_efficiency(total_bw, iso_bw,
+			max_rate, usage_flags, iso_bw_min);
+}
 
 /* call with bwmgr lock held */
 static int bwmgr_update_clk(void)
@@ -135,7 +138,7 @@ static int bwmgr_update_clk(void)
 	debug_info.iso_cap = iso_cap;
 	debug_info.non_iso_cap = non_iso_cap;
 	bw += iso_bw;
-	bw = bwmgr_apply_efficiency(
+	bw = tegra_bwmgr_apply_efficiency(
 			bw, iso_bw, bwmgr.emc_max_rate,
 			iso_client_flags, &iso_bw_min);
 	debug_info.total_bw_aftr_eff = bw;
@@ -352,32 +355,6 @@ unsigned long tegra_bwmgr_get_emc_rate(void)
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_get_emc_rate);
 
-static unsigned long bwmgr_apply_efficiency(
-		unsigned long total_bw, unsigned long iso_bw,
-		unsigned long max_rate, u64 usage_flags,
-		unsigned long *iso_bw_min)
-{
-	u8 efficiency = bwmgr_dram_efficiency;
-	if (total_bw && efficiency && (efficiency < 100)) {
-		total_bw = total_bw / efficiency;
-		total_bw = (total_bw < max_rate / 100) ?
-				(total_bw * 100) : max_rate;
-	}
-
-	efficiency = bwmgr_dram_iso_eff_table[get_iso_bw_table_idx(iso_bw)];
-	WARN_ON(efficiency == 1);
-	if (iso_bw && efficiency && (efficiency < 100)) {
-		iso_bw /= efficiency;
-		iso_bw = (iso_bw < max_rate / 100) ?
-			(iso_bw * 100) : max_rate;
-	}
-
-	if (iso_bw_min)
-		*iso_bw_min = iso_bw;
-
-	return max(total_bw, iso_bw);
-}
-
 int bwmgr_iso_bw_percentage_max(void)
 {
 	return bwmgr_iso_bw_percentage;
@@ -462,7 +439,8 @@ int __init bwmgr_init(void)
 
 	/* On some pre-si platforms max rate is acquired via DT */
 	if (tegra_platform_is_sim() || tegra_platform_is_fpga()) {
-		if (of_property_read_u64(dn, "max_rate_Hz", (u64 *) &round_rate) == 0) {
+		if (of_property_read_u64(dn, "max_rate_Hz",
+					(u64 *) &round_rate) == 0) {
 			pr_err("bwmgr: using max rate from device tree.\n");
 			bwmgr.emc_max_rate = round_rate;
 		}

@@ -138,11 +138,39 @@ static u32 dvfs_latency(u32 ufreq)
 	return lt / 1000; /* convert nsec to usec, Bug 1697424 */
 }
 
+static unsigned long t18x_bwmgr_apply_efficiency(
+		unsigned long total_bw, unsigned long iso_bw,
+		unsigned long max_rate, u64 usage_flags,
+		unsigned long *iso_bw_min)
+{
+	u8 efficiency = bwmgr_dram_efficiency;
+
+	if (total_bw && efficiency && (efficiency < 100)) {
+		total_bw = total_bw / efficiency;
+		total_bw = (total_bw < max_rate / 100) ?
+			(total_bw * 100) : max_rate;
+	}
+
+	efficiency = bwmgr_dram_iso_eff_table[get_iso_bw_table_idx(iso_bw)];
+	WARN_ON(efficiency == 1);
+	if (iso_bw && efficiency && (efficiency < 100)) {
+		iso_bw /= efficiency;
+		iso_bw = (iso_bw < max_rate / 100) ?
+		(iso_bw * 100) : max_rate;
+	}
+
+	if (iso_bw_min)
+		*iso_bw_min = iso_bw;
+
+	return max(total_bw, iso_bw);
+}
+
 static struct bwmgr_ops bwmgr_ops_t18x = {
 	.get_iso_bw_table_idx = get_iso_bw_table_idx,
 	.freq_to_bw = freq_to_bw,
 	.bw_to_freq = bw_to_freq,
 	.dvfs_latency = dvfs_latency,
+	.bwmgr_apply_efficiency = t18x_bwmgr_apply_efficiency,
 };
 
 struct bwmgr_ops *bwmgr_eff_init_t18x(void)

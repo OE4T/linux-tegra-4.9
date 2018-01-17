@@ -667,6 +667,11 @@ config QSPI_TEGRA210
 config QSPI_TEGRA
 	bool "Nvidia Tegra QSPI Controller"
 
+config SPI_IM501
+	tristate "FM IM501 SPI interface"
+	help
+	  SPI driver for FM IM501 voice processor.
+
 config SPI_THUNDERX
 	tristate "Cavium ThunderX SPI controller"
 	depends on PCI && 64BIT && (ARM64 || COMPILE_TEST)

@@ -23,6 +23,7 @@
 #include <linux/seq_file.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/regmap.h>
 #include <soc/tegra/chip-id.h>
 #include <media/camera_common.h>
@@ -46,12 +47,12 @@
 #define IMX204_DEFAULT_FRAME_LENGTH	(0x0E51)
 #define IMX204_DEFAULT_EXPOSURE_COARSE	\
 	(IMX204_DEFAULT_FRAME_LENGTH-IMX204_MAX_COARSE_DIFF)
-#define	IMX204_DEFAULT_MODE	IMX204_MODE_5208x3924
-#define IMX204_DEFAULT_WIDTH	5184
-#define IMX204_DEFAULT_HEIGHT	3924
+#define IMX204_DEFAULT_MODE	IMX204_MODE_5352x3950
+#define IMX204_DEFAULT_WIDTH	5352
+#define IMX204_DEFAULT_HEIGHT	3950
 #define IMX204_DEFAULT_WIDTH_FPGA	1784
 #define IMX204_DEFAULT_HEIGHT_FPGA	1318
-#define IMX204_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB12_1X12
+#define IMX204_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SGRBG10_1X10
 #define IMX204_DEFAULT_CLK_FREQ	72000000
 
 #define IMX204_CHIP_ID 0x81
@@ -289,6 +290,16 @@ static int imx204_write_table(struct imx204 *priv,
 #endif
 }
 
+static void imx204_gpio_set(struct imx204 *priv,
+			    unsigned int gpio, int val)
+{
+	if (gpio_cansleep(gpio))
+		gpio_set_value_cansleep(gpio, val);
+	else
+		gpio_set_value(gpio, val);
+}
+
+
 static int imx204_power_on(struct camera_common_data *s_data)
 {
 	struct imx204 *priv = (struct imx204 *)s_data->priv;
@@ -298,7 +309,8 @@ static int imx204_power_on(struct camera_common_data *s_data)
 		/* VGP1 is used as reset GPIO on uFPGA */
 		writel(0x10001, priv->vi_base + VGP1_OFFSET);
 	} else {
-		// TODO
+		if (gpio_is_valid(pw->reset_gpio))
+			imx204_gpio_set(priv, pw->reset_gpio, 1);
 	}
 
 	pw->state = SWITCH_ON;
@@ -314,7 +326,8 @@ static int imx204_power_off(struct camera_common_data *s_data)
 		/* VGP1 is used as reset GPIO on uFPGA */
 		writel(0, priv->vi_base + VGP1_OFFSET);
 	} else {
-		// TODO
+		if (gpio_is_valid(pw->reset_gpio))
+			imx204_gpio_set(priv, pw->reset_gpio, 0);
 	}
 
 	pw->state = SWITCH_OFF;
@@ -323,7 +336,10 @@ static int imx204_power_off(struct camera_common_data *s_data)
 
 static int imx204_power_put(struct imx204 *priv)
 {
-	// TODO
+	struct camera_common_power_rail *pw = &priv->power;
+
+	if (gpio_is_valid(pw->reset_gpio))
+		gpio_free(pw->reset_gpio);
 
 	return 0;
 }
@@ -331,8 +347,17 @@ static int imx204_power_put(struct imx204 *priv)
 static int imx204_power_get(struct imx204 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
+	struct camera_common_pdata *pdata = priv->pdata;
+	int ret = 0;
 
-	// TODO
+	pw->reset_gpio = pdata->reset_gpio;
+	if (gpio_is_valid(pw->reset_gpio)) {
+		ret = gpio_request(pw->reset_gpio, "cam_reset_gpio");
+		if (ret < 0) {
+			dev_dbg(priv->dev, "%s can't request reset_gpio %d\n",
+			__func__, ret);
+		}
+	}
 
 	pw->state = SWITCH_OFF;
 	return 0;
@@ -635,6 +660,8 @@ static struct camera_common_pdata *imx204_parse_dt(struct spi_device *spi)
 	struct device_node *np = spi->dev.of_node;
 	struct camera_common_pdata *board_priv_pdata;
 	const struct of_device_id *match;
+	struct camera_common_pdata *ret = NULL;
+	int gpio;
 
 	match = of_match_device(imx204_of_match, &spi->dev);
 	if (!match) {
@@ -658,7 +685,23 @@ static struct camera_common_pdata *imx204_parse_dt(struct spi_device *spi)
 	of_property_read_string(np, "iovdd-reg",
 			&board_priv_pdata->regulators.iovdd);
 
+	gpio = of_get_named_gpio(np, "reset-gpios", 0);
+	if (gpio < 0) {
+		/* reset-gpio is not absolutely needed */
+		if (gpio == -EPROBE_DEFER) {
+			ret = ERR_PTR(-EPROBE_DEFER);
+			goto error;
+		}
+		dev_dbg(&spi->dev, "reset gpios not in DT\n");
+		gpio = 0;
+	}
+	board_priv_pdata->reset_gpio = (unsigned int)gpio;
+
 	return board_priv_pdata;
+
+error:
+	devm_kfree(&spi->dev, board_priv_pdata);
+	return ret;
 }
 
 static int imx204_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
@@ -799,6 +842,7 @@ static int imx204_probe(struct spi_device *spi)
 			dev_err(priv->dev, "can't get vi base address\n");
 	}
 
+	pr_info("[IMX204]: probing v4l2 sensor done\n");
 	return ret;
 }
 

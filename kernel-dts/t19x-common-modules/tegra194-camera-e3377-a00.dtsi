@@ -25,16 +25,17 @@
 				port@0 {
 					reg = <0>;
 					status = "okay";
-					e3211_vi_in0: endpoint {
+					e3377_vi_in0: endpoint {
 						port-index = <0>;
 						bus-width = <4>;
-						remote-endpoint = <&e3211_slvs_ec_out0>;
+						remote-endpoint = <&e3377_slvs_ec_out0>;
 					};
 				};
 			};
 		};
 
 		slvs-ec@15ac0000 {
+			status = "okay";
 			streams {
 				stream@0 {
 					ports {
@@ -42,16 +43,16 @@
 						#size-cells = <0>;
 						port@0 {
 							reg = <0>;
-							e3211_slvs_ec_in0: endpoint@0 {
+							e3377_slvs_ec_in0: endpoint@0 {
 								port-index = <0>;
 								bus-width = <4>;
-								remote-endpoint = <&e3211_imx204_out0>;
+								remote-endpoint = <&e3377_imx204_out0>;
 							};
 						};
 						port@1 {
 							reg = <1>;
-							e3211_slvs_ec_out0: endpoint@1 {
-								remote-endpoint = <&e3211_vi_in0>;
+							e3377_slvs_ec_out0: endpoint@1 {
+								remote-endpoint = <&e3377_vi_in0>;
 							};
 						};
 					};
@@ -60,7 +61,7 @@
 		};
 	};
 
-	spi@3230000 {
+	spi@c260000 {
 		status = "okay";
 		spi-max-frequency = <12000000>;
 		imx204@0 {
@@ -126,10 +127,10 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					e3211_imx204_out0: endpoint {
+					e3377_imx204_out0: endpoint {
 						port-index = <0>;
 						bus-width = <4>;
-						remote-endpoint = <&e3211_slvs_ec_in0>;
+						remote-endpoint = <&e3377_slvs_ec_in0>;
 					};
 				};
 			};
@@ -148,7 +149,7 @@
 		*/
 		modules {
 			module0 {
-				badge = "e3211_rear_IMX204";
+				badge = "e3377_rear_IMX204";
 				position = "rear";
 				orientation = "1";
 				drivernode0 {

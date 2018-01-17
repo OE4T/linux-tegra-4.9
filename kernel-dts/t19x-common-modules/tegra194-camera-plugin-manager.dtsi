@@ -16,6 +16,7 @@
 #define CAM0_PWDN	TEGRA194_MAIN_GPIO(H, 6)
 #define CAM1_RST_L	TEGRA194_MAIN_GPIO(T, 5)
 #define CAM1_PWDN	TEGRA194_MAIN_GPIO(T, 6)
+#define SLVS_CAM0_RST_L	TEGRA194_MAIN_GPIO(Y, 1)
 
 / {
 	gpio@2200000 {
@@ -1289,6 +1290,111 @@
 						/*<CAM1_RST_L 0> <CAM2_RST_L 0>*/
 						label = "cam0-rst";
 						/*"cam1-rst", "cam2-rst";*/
+						output-low;
+						status = "okay";
+					};
+					camera-control-output-high {
+						status = "disabled";
+					};
+				};
+			};
+		};
+
+		/* E3377 camera board */
+		fragment-e3377@0 {
+			ids = "3377-1000-*";
+			override@0 {
+				target = <&e3377_cam0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&cam_module0>;
+				_overlay_ {
+					status = "okay";
+					badge = "e3377_rear_IMX204";
+					position = "rear";
+					orientation = "1";
+				};
+			};
+			override@2 {
+				target = <&cam_module0_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx204_spi";
+					proc-device-tree = "/proc/device-tree/spi@c260000/imx204@0";
+				};
+			};
+			/* Enable VI ports */
+			override@4 {
+				target = <&vi_base>;
+				_overlay_ {
+					num-channels=<1>;
+				};
+			};
+			override@5 {
+				target = <&vi_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@6 {
+				target = <&e3377_vi_in0>;
+				_overlay_ {
+					status = "okay";
+					port-index = <0>;
+					bus-width = <4>;
+					remote-endpoint = <&e3377_slvs_ec_out0>;
+				};
+			};
+			/* Enable SLVS-EC ports */
+			override@8 {
+				target = <&slvs_ec_stream0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@9 {
+				target = <&slvs_ec_stream0_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@10 {
+				target = <&e3377_slvs_ec_in0>;
+				_overlay_ {
+					status = "okay";
+					port-index = <0>;
+					bus-width = <4>;
+					remote-endpoint = <&e3377_imx204_out0>;
+				};
+			};
+			override@11 {
+				target = <&slvs_ec_stream0_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@12 {
+				target = <&e3377_slvs_ec_out0>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&e3377_vi_in0>;
+				};
+			};
+			/* GPIO */
+			override@14 {
+				target = <&{/gpio@2200000}>;
+				_overlay_ {
+					camera-control-input {
+						status = "disabled";
+					};
+					camera-control-output-low {
+						gpio-hog;
+						gpios = <SLVS_CAM0_RST_L 0>;
+						label = "slvs-cam0-rst";
 						output-low;
 						status = "okay";
 					};

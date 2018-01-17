@@ -407,10 +407,11 @@ static const struct mc_error slice_mc_errors[] = {
 	MC_ERR(MC_INT_DECERR_MTS,
 	       "MTS carveout access violation",
 	       0, MC_ERR_MTS_STATUS, MC_ERR_MTS_ADR),
-	MC_ERR(MC_INT_DECERR_GENERALIZED_CARVEOUT,
+	MC_ERR_GSC(MC_INT_DECERR_GENERALIZED_CARVEOUT,
 	       "GSC access violation", 0,
 	       MC_ERR_GENERALIZED_CARVEOUT_STATUS,
-	       MC_ERR_GENERALIZED_CARVEOUT_ADR),
+	       MC_ERR_GENERALIZED_CARVEOUT_ADR,
+	       MC_ERR_GENERALIZED_CARVEOUT_STATUS_1),
 	MC_ERR(MC_INT_DECERR_ROUTE_SANITY,
 		"Route Sanity error", 0,
 		MC_ERR_ROUTE_SANITY_STATUS,
@@ -496,6 +497,7 @@ static void log_fault(int src_chan, const struct mc_error *fault)
 	phys_addr_t addr;
 	struct mc_client *client;
 	u32 status, write, secure, client_id;
+	u32 gsc_status_1, high_addr_reg = 0;
 
 
 	if (fault->flags & E_VPR)
@@ -530,16 +532,27 @@ static void log_fault(int src_chan, const struct mc_error *fault)
 	client = &mc_clients[client_id <= mc_client_last
 			     ? client_id : mc_client_last];
 
-	if (fault->flags & E_ADR_HI_REG)
-		addr |= ((phys_addr_t)__mc_readl(src_chan, fault->addr_hi_reg) << 32);
-	else
+	if (fault->flags & E_GSC) {
+		high_addr_reg = __mc_readl(src_chan, fault->addr_hi_reg);
+		addr |= ((phys_addr_t)(high_addr_reg >> 16) << 32);
+	} else if (fault->flags & E_ADR_HI_REG) {
+		high_addr_reg = __mc_readl(src_chan, fault->addr_hi_reg);
+		addr |= ((phys_addr_t)high_addr_reg << 32);
+	} else {
 		addr |= (((phys_addr_t)(status & MC_ERR_STATUS_ADR_HI_BITS)) << 12);
+	}
 
 	mcerr_pr("(%d) %s: %s\n", client->swgid, client->name, fault->msg);
-	mcerr_pr("  status = 0x%08x; addr = 0x%08llx\n", status,
-		 (long long unsigned int)addr);
+	mcerr_pr("  status = 0x%08x; addr = 0x%08llx; hi_adr_reg=%x08\n",
+		status, (long long unsigned int)addr, high_addr_reg);
 	mcerr_pr("  secure: %s, access-type: %s\n",
 		secure ? "yes" : "no", write ? "write" : "read");
+	if (fault->flags & E_GSC) {
+		gsc_status_1 = __mc_readl(src_chan, fault->addr_hi_reg);
+		mcerr_pr("gsc_id=%d, gsc_co_id=%d\n",
+			((status >> 8) & 0x7) | ((gsc_status_1 & 3) << 3),
+			((status >> 24) & 0x7) | (((gsc_status_1 >> 7) & 0x3) << 3));
+	}
 }
 
 #define LOG_FAULT(n, m, r) \

@@ -78,8 +78,12 @@ enum tegra_bwmgr_request_type {
 
 enum bwmgr_dram_types {
 	DRAM_TYPE_NONE,
+	DRAM_TYPE_LPDDR4_16CH_ECC,
+	DRAM_TYPE_LPDDR4_8CH_ECC,
 	DRAM_TYPE_LPDDR4_4CH_ECC,
 	DRAM_TYPE_LPDDR4_2CH_ECC,
+	DRAM_TYPE_LPDDR4_16CH,
+	DRAM_TYPE_LPDDR4_8CH,
 	DRAM_TYPE_LPDDR4_4CH,
 	DRAM_TYPE_LPDDR4_2CH,
 	DRAM_TYPE_LPDDR3_2CH,
@@ -89,6 +93,11 @@ enum bwmgr_dram_types {
 extern u8 bwmgr_dram_efficiency;
 extern u8 bwmgr_dram_num_channels;
 extern u32 *bwmgr_dram_iso_eff_table;
+extern u32 *bwmgr_dram_noniso_eff_table;
+extern u32 *bwmgr_max_nvdis_bw_reqd;
+extern u32 *bwmgr_max_vi_bw_reqd;
+extern int *bwmgr_slope;
+extern u32 *bwmgr_vi_bw_reqd_offset;
 extern int bwmgr_iso_bw_percentage;
 extern enum bwmgr_dram_types bwmgr_dram_type;
 extern int emc_to_dram_freq_factor;
@@ -96,18 +105,21 @@ extern int emc_to_dram_freq_factor;
 struct tegra_bwmgr_client;
 
 struct bwmgr_ops {
-	int (*get_iso_bw_table_idx)(unsigned long iso_bw);
 	unsigned long (*freq_to_bw)(unsigned long freq);
 	unsigned long (*bw_to_freq)(unsigned long bw);
 	u32 (*dvfs_latency)(u32 ufreq);
 	unsigned long (*bwmgr_apply_efficiency)(
 		unsigned long total_bw, unsigned long iso_bw,
 		unsigned long max_rate, u64 usage_flags,
-		unsigned long *iso_bw_min);
+		unsigned long *iso_bw_min, unsigned long iso_bw_nvdis,
+		unsigned long iso_bw_vi);
+	unsigned long (*get_best_iso_freq)(long iso_bw,
+		long iso_bw_nvdis, long iso_bw_vi);
 };
 
 struct bwmgr_ops *bwmgr_eff_init_t21x(void);
 struct bwmgr_ops *bwmgr_eff_init_t18x(void);
+struct bwmgr_ops *bwmgr_eff_init_t19x(void);
 
 #if defined(CONFIG_TEGRA_BWMGR)
 /**

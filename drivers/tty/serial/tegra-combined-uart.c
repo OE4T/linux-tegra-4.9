@@ -365,7 +365,11 @@ static struct uart_port tegra_combined_uart_port = {
 static struct console tegra_combined_uart_console = {
 	.name		= "ttyTCU",
 	.device		= uart_console_device,
+#ifdef CONFIG_SERIAL_LOGLEVEL_PRINT
+	.flags		= CON_PRINTBUFFER | CON_ANYTIME | CON_FORCE_LEVEL,
+#else
 	.flags		= CON_PRINTBUFFER | CON_ANYTIME,
+#endif
 	.index		= -1,
 	.write		= tegra_combined_uart_console_write,
 	.setup		= tegra_combined_uart_console_setup,

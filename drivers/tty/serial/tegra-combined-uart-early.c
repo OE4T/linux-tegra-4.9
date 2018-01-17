@@ -78,6 +78,9 @@ int __init early_tegra_combined_uart_setup(struct earlycon_device *device,
 		return -ENODEV;
 
 	device->con->write = early_tcu_write;
+#ifdef CONFIG_SERIAL_LOGLEVEL_PRINT
+	device->con->flags |= CON_FORCE_LEVEL;
+#endif
 
 	return 0;
 }

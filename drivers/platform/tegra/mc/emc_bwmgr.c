@@ -23,6 +23,11 @@
 u8 bwmgr_dram_efficiency;
 u8 bwmgr_dram_num_channels;
 u32 *bwmgr_dram_iso_eff_table;
+u32 *bwmgr_dram_noniso_eff_table;
+u32 *bwmgr_max_nvdis_bw_reqd;
+u32 *bwmgr_max_vi_bw_reqd;
+int *bwmgr_slope;
+u32 *bwmgr_vi_bw_reqd_offset;
 int bwmgr_iso_bw_percentage;
 enum bwmgr_dram_types bwmgr_dram_type;
 int emc_to_dram_freq_factor;
@@ -95,10 +100,12 @@ static void purge_client(struct tegra_bwmgr_client *handle)
 static unsigned long tegra_bwmgr_apply_efficiency(
 		unsigned long total_bw, unsigned long iso_bw,
 		unsigned long max_rate, u64 usage_flags,
-		unsigned long *iso_bw_min)
+		unsigned long *iso_bw_min, unsigned long iso_bw_nvdis,
+		unsigned long iso_bw_vi)
 {
 	return bwmgr.ops->bwmgr_apply_efficiency(total_bw, iso_bw,
-			max_rate, usage_flags, iso_bw_min);
+			max_rate, usage_flags, iso_bw_min,
+			iso_bw_nvdis, iso_bw_vi);
 }
 
 /* call with bwmgr lock held */
@@ -106,7 +113,10 @@ static int bwmgr_update_clk(void)
 {
 	int i;
 	unsigned long bw = 0;
-	unsigned long iso_bw = 0;
+	unsigned long iso_bw = 0; // iso_bw_guarantee
+	unsigned long iso_bw_nvdis = 0; //DISP0 + DISP1 + DISP2
+	unsigned long iso_bw_vi = 0; //CAMERA
+	unsigned long iso_bw_other_clients = 0; //Other ISO clients
 	unsigned long non_iso_cap = bwmgr.emc_max_rate;
 	unsigned long iso_cap = bwmgr.emc_max_rate;
 	unsigned long floor = 0;
@@ -124,7 +134,25 @@ static int bwmgr_update_clk(void)
 
 		if (bwmgr.bwmgr_client[i].iso_bw > 0) {
 			iso_client_flags |= BIT(i);
-			iso_bw += bwmgr.bwmgr_client[i].iso_bw;
+
+			if ((i == TEGRA_BWMGR_CLIENT_DISP0) ||
+					(i == TEGRA_BWMGR_CLIENT_DISP1) ||
+					(i == TEGRA_BWMGR_CLIENT_DISP2)) {
+				iso_bw_nvdis += bwmgr.bwmgr_client[i].iso_bw;
+				iso_bw_nvdis = min(iso_bw_nvdis,
+							bwmgr.emc_max_rate);
+			} else if (i == TEGRA_BWMGR_CLIENT_CAMERA) {
+				iso_bw_vi += bwmgr.bwmgr_client[i].iso_bw;
+				iso_bw_vi = min(iso_bw_vi, bwmgr.emc_max_rate);
+			} else {
+				iso_bw_other_clients +=
+						bwmgr.bwmgr_client[i].iso_bw;
+				iso_bw_other_clients = min(iso_bw_other_clients,
+							bwmgr.emc_max_rate);
+			}
+
+			iso_bw = iso_bw_nvdis + iso_bw_vi +
+						iso_bw_other_clients;
 			iso_bw = min(iso_bw, bwmgr.emc_max_rate);
 		}
 
@@ -140,7 +168,8 @@ static int bwmgr_update_clk(void)
 	bw += iso_bw;
 	bw = tegra_bwmgr_apply_efficiency(
 			bw, iso_bw, bwmgr.emc_max_rate,
-			iso_client_flags, &iso_bw_min);
+			iso_client_flags, &iso_bw_min,
+			iso_bw_nvdis, iso_bw_vi);
 	debug_info.total_bw_aftr_eff = bw;
 	debug_info.iso_bw_aftr_eff = iso_bw_min;
 	iso_bw_min = clk_round_rate(bwmgr.emc_clk, iso_bw_min);
@@ -355,17 +384,25 @@ unsigned long tegra_bwmgr_get_emc_rate(void)
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_get_emc_rate);
 
+/* bwmgr_get_lowest_iso_emc_freq
+ * bwmgr_apply_efficiency function will use this api to calculate
+ * the lowest emc frequency that satisfies the requests of ISO clients.
+ *
+ * A return value of 0 indicates that the requested
+ * iso bandwidth cannot be supported.
+ */
+unsigned long bwmgr_get_lowest_iso_emc_freq(long iso_bw,
+				long iso_bw_nvdis, long iso_bw_vi)
+{
+	return bwmgr.ops->get_best_iso_freq(iso_bw, iso_bw_nvdis, iso_bw_vi);
+}
+EXPORT_SYMBOL_GPL(bwmgr_get_lowest_iso_emc_freq);
+
 int bwmgr_iso_bw_percentage_max(void)
 {
 	return bwmgr_iso_bw_percentage;
 }
 EXPORT_SYMBOL_GPL(bwmgr_iso_bw_percentage_max);
-
-int get_iso_bw_table_idx(unsigned long iso_bw)
-{
-	return bwmgr.ops->get_iso_bw_table_idx(iso_bw);
-}
-EXPORT_SYMBOL(get_iso_bw_table_idx);
 
 unsigned long bwmgr_freq_to_bw(unsigned long freq)
 {
@@ -398,11 +435,13 @@ int __init bwmgr_init(void)
 		bwmgr.ops = bwmgr_eff_init_t21x();
 	else if (tegra_get_chip_id() == TEGRA186)
 		bwmgr.ops = bwmgr_eff_init_t18x();
+	else if (tegra_get_chip_id() == TEGRA194)
+		bwmgr.ops = bwmgr_eff_init_t19x();
 	else
 		/*
-		 * Fall back to t18x if we are running on a new chip.
+		 * Fall back to t19x if we are running on a new chip.
 		 */
-		bwmgr.ops = bwmgr_eff_init_t18x();
+		bwmgr.ops = bwmgr_eff_init_t19x();
 
 	dn = of_find_compatible_node(NULL, NULL, "nvidia,bwmgr");
 	if (dn == NULL) {
@@ -457,6 +496,7 @@ int __init bwmgr_init(void)
 		bwmgr.status = true;
 	else
 		bwmgr.status = false;
+
 	return 0;
 }
 subsys_initcall_sync(bwmgr_init);

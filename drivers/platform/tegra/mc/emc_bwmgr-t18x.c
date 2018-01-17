@@ -141,7 +141,8 @@ static u32 dvfs_latency(u32 ufreq)
 static unsigned long t18x_bwmgr_apply_efficiency(
 		unsigned long total_bw, unsigned long iso_bw,
 		unsigned long max_rate, u64 usage_flags,
-		unsigned long *iso_bw_min)
+		unsigned long *iso_bw_min, unsigned long iso_bw_nvdis,
+		unsigned long iso_bw_vi)
 {
 	u8 efficiency = bwmgr_dram_efficiency;
 
@@ -166,7 +167,6 @@ static unsigned long t18x_bwmgr_apply_efficiency(
 }
 
 static struct bwmgr_ops bwmgr_ops_t18x = {
-	.get_iso_bw_table_idx = get_iso_bw_table_idx,
 	.freq_to_bw = freq_to_bw,
 	.bw_to_freq = bw_to_freq,
 	.dvfs_latency = dvfs_latency,

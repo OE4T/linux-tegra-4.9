@@ -18,7 +18,7 @@ obj-y                                   += tegra21x_la.o
 
 obj-$(CONFIG_TEGRA_ISOMGR)              += isomgr.o
 obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr.o pmqos_bwmgr_client.o
-obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr-t21x.o emc_bwmgr-t18x.o
+obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr-t21x.o emc_bwmgr-t18x.o emc_bwmgr-t19x.o
 
 obj-y                                   += tegra-mc-sid.o
 obj-y                                   += mcerr_ecc_t18x.o

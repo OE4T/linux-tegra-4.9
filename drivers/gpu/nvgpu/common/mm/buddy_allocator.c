@@ -1255,7 +1255,7 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 
 	a->vm = vm;
 	if (flags & GPU_ALLOC_GVA_SPACE) {
-		pde_size = ((u64)vm->big_page_size) << 10;
+		pde_size = 1ULL << nvgpu_vm_pde_coverage_bit_count(vm);
 		a->pte_blk_order = balloc_get_order(a, pde_size);
 	}
 

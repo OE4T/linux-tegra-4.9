@@ -78,7 +78,7 @@ int gp10b_init_mm_setup_hw(struct gk20a *g)
 
 }
 
-int gb10b_init_bar2_vm(struct gk20a *g)
+int gp10b_init_bar2_vm(struct gk20a *g)
 {
 	int err;
 	struct mm_gk20a *mm = &g->mm;
@@ -109,7 +109,7 @@ clean_up_va:
 	return err;
 }
 
-int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
+int gp10b_init_bar2_mm_hw_setup(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
